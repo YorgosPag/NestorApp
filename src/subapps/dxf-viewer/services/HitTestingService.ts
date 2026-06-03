@@ -26,6 +26,8 @@ import { computeStairGeometry } from '../bim/geometry/stairs/StairGeometryServic
 import { computeColumnGeometry } from '../bim/geometry/column-geometry';
 import { computeMepFixtureGeometry } from '../bim/mep-fixtures/mep-fixture-geometry';
 import { computeElectricalPanelGeometry } from '../bim/electrical-panels/electrical-panel-geometry';
+import { computeMepSegmentGeometry } from '../bim/geometry/mep-segment-geometry';
+import { computeFurnitureGeometry } from '../bim/furniture/furniture-geometry';
 import { buildBimEntityModel } from '../bim/utils/bim-entity-passthrough';
 import type { BimElementType } from '../bim/types/bim-base';
 
@@ -336,6 +338,21 @@ export class HitTestingService {
         const pnl = entity as unknown as Partial<import('../bim/types/electrical-panel-types').ElectricalPanelEntity>;
         const geometry = pnl.geometry ?? (pnl.params ? computeElectricalPanelGeometry(pnl.params) : undefined);
         return buildBimEntityModel('electrical-panel', { ...(entity as object), geometry } as typeof entity, baseModel);
+      }
+      // ADR-408 Φ8 — MEP segment needs the same geometry-recompute fallback (mirror beam).
+      case 'mep-segment': {
+        const seg = entity as unknown as Partial<import('../bim/types/mep-segment-types').MepSegmentEntity>;
+        const geometry = seg.geometry ?? (seg.params ? computeMepSegmentGeometry(seg.params) : undefined);
+        return buildBimEntityModel('mep-segment', { ...(entity as object), geometry } as typeof entity, baseModel);
+      }
+      // ADR-410 — furniture needs the same geometry-recompute fallback (mirror mep-fixture):
+      // a Firestore-loaded FurnitureEntity may arrive before its geometry cache is
+      // hydrated; without `geometry.bbox` BoundsCalculator drops it from the spatial
+      // index → no hover-highlight and body-click selection silently fails.
+      case 'furniture': {
+        const fn = entity as unknown as Partial<import('../bim/types/furniture-types').FurnitureEntity>;
+        const geometry = fn.geometry ?? (fn.params ? computeFurnitureGeometry(fn.params) : undefined);
+        return buildBimEntityModel('furniture', { ...(entity as object), geometry } as typeof entity, baseModel);
       }
       // ADR-363 Phases 1B/5 — wall/beam are direct entities (no DXF wrapper).
       // `geometry.bbox` powers spatial broad-phase via BoundsCalculator.calculateBimEntityBounds.

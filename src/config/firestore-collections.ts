@@ -334,6 +334,8 @@ export const COLLECTIONS = {
   FLOORPLAN_STAIRS: process.env.NEXT_PUBLIC_FLOORPLAN_STAIRS_COLLECTION || 'floorplan_stairs',
   /** Stair library presets (3 scopes: user/company/project). Discriminator `scope` + tenant fields. IDs via sprst_* prefix. */
   STAIR_PRESETS: process.env.NEXT_PUBLIC_STAIR_PRESETS_COLLECTION || 'stair_presets',
+  /** Shared parametric BIM family type definitions (system/company/project scope). IDs via bimftype_* prefix. */
+  BIM_FAMILY_TYPES: process.env.NEXT_PUBLIC_BIM_FAMILY_TYPES_COLLECTION || 'bim_family_types',
 
   // 🗂️ DXF LAYER STATE TEMPLATES — ADR-358 §5.9 Q12 Phase 13B (cross-project shareable layer states, companyId-scoped)
   /** Cross-project layer state templates. Schema: { id, companyId, name, description?, tags[], category, snapshot[], createdBy, createdAt, updatedAt, deletedAt? }. IDs via lstpl_* prefix. */
@@ -364,6 +366,8 @@ export const COLLECTIONS = {
   FLOORPLAN_MEP_SYSTEMS: process.env.NEXT_PUBLIC_FLOORPLAN_MEP_SYSTEMS_COLLECTION || 'floorplan_mep_systems',
   /** ADR-408 Φ3 — point-based electrical panels (circuit sources). IDs via elecpnl_* prefix. */
   FLOORPLAN_ELECTRICAL_PANELS: process.env.NEXT_PUBLIC_FLOORPLAN_ELECTRICAL_PANELS_COLLECTION || 'floorplan_electrical_panels',
+  /** ADR-408 Φ8 — linear duct/pipe MEP segments. IDs via mepseg_* prefix. */
+  FLOORPLAN_MEP_SEGMENTS: process.env.NEXT_PUBLIC_FLOORPLAN_MEP_SEGMENTS_COLLECTION || 'floorplan_mep_segments',
   /** ADR-410 — mesh-based CC0 furniture (chair first). IDs via furn_* prefix. */
   FLOORPLAN_FURNITURE: process.env.NEXT_PUBLIC_FLOORPLAN_FURNITURE_COLLECTION || 'floorplan_furniture',
   /** BIM element presets (system/company/project/user scope). IDs via bpst_* prefix. */

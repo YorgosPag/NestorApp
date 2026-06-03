@@ -13,7 +13,7 @@ import type { DxfEntityUnion, DxfTextStyle } from '../../canvas-v2/dxf-canvas/dx
 import type { DxfColor } from '../../text-engine/types';
 import type { Point2D } from '../../rendering/types/Types';
 import type { SceneModel, TextEntity } from '../../types/entities';
-import { isSlabEntity, isSlabOpeningEntity, isOpeningEntity, isWallEntity, isBeamEntity, isColumnEntity, isMepFixtureEntity, isElectricalPanelEntity, isRailingEntity, isFurnitureEntity, isXLineEntity, isRayEntity } from '../../types/entities';
+import { isSlabEntity, isSlabOpeningEntity, isOpeningEntity, isWallEntity, isBeamEntity, isColumnEntity, isMepFixtureEntity, isElectricalPanelEntity, isRailingEntity, isFurnitureEntity, isMepSegmentEntity, isXLineEntity, isRayEntity } from '../../types/entities';
 import type { XLineEntity, RayEntity } from '../../types/entities';
 import type { StairEntity } from '../../bim/types/stair-types';
 import type { SlabEntity } from '../../bim/types/slab-types';
@@ -31,6 +31,7 @@ import type { ElectricalPanelEntity } from '../../bim/types/electrical-panel-typ
 // ADR-407 — railing direct entity for DXF render pipeline.
 import type { RailingEntity } from '../../bim/types/railing-types';
 import type { FurnitureEntity } from '../../bim/types/furniture-types';
+import type { MepSegmentEntity } from '../../bim/types/mep-segment-types';
 import type { DimensionEntity } from '../../types/dimension';
 import type { DxfTextNode, TextRun } from '../../text-engine/types';
 import { extractFlatText } from '../../utils/text-node-utils';
@@ -338,6 +339,14 @@ export function convertEntity(entity: SceneEntity, layers: SceneLayers, layersBy
       if (!isFurnitureEntity(entity)) return null;
       const fn = entity as FurnitureEntity;
       return { ...base, type: 'furniture' as const, kind: fn.kind, params: fn.params, geometry: fn.geometry, validation: fn.validation } as DxfEntityUnion;
+    }
+    case 'mep-segment': {
+      // ADR-408 Φ8 — direct entity (same pattern as beam). MepSegmentRenderer reads
+      // geometry.outline + axisPolyline + params at top level. Without this case,
+      // freshly-committed segments are silently dropped here → invisible on 2D.
+      if (!isMepSegmentEntity(entity)) return null;
+      const seg = entity as MepSegmentEntity;
+      return { ...base, type: 'mep-segment' as const, kind: seg.kind, params: seg.params, geometry: seg.geometry, validation: seg.validation } as DxfEntityUnion;
     }
     case 'xline': {
       // ADR-359 Phase 11 — wrap XLineEntity for grip computation pipeline.

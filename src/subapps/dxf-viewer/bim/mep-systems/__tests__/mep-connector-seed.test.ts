@@ -12,6 +12,8 @@ import { seedDefaultConnectors } from '../mep-connector-seed';
 import {
   FIXTURE_POWER_CONNECTOR_ID,
   PANEL_OUT_CONNECTOR_ID,
+  SEGMENT_START_CONNECTOR_ID,
+  SEGMENT_END_CONNECTOR_ID,
 } from '../../types/mep-connector-types';
 
 const legacyFixture = (id = 'fx1'): Entity =>
@@ -19,6 +21,9 @@ const legacyFixture = (id = 'fx1'): Entity =>
 
 const legacyPanel = (id = 'pnl1'): Entity =>
   ({ type: 'electrical-panel', id, params: {} } as unknown as Entity);
+
+const legacySegment = (domain: 'duct' | 'pipe' = 'pipe', id = 'seg1'): Entity =>
+  ({ type: 'mep-segment', id, params: { domain } } as unknown as Entity);
 
 describe('seedDefaultConnectors', () => {
   it('seeds a legacy fixture with the default lighting power-in connector', () => {
@@ -36,6 +41,34 @@ describe('seedDefaultConnectors', () => {
     expect(connectors).toHaveLength(1);
     expect(connectors[0].connectorId).toBe(PANEL_OUT_CONNECTOR_ID);
     expect(connectors[0].flow).toBe('out');
+  });
+
+  it('seeds a legacy pipe segment with start + end endpoint connectors', () => {
+    const seeded = seedDefaultConnectors(legacySegment('pipe'));
+    const connectors = (seeded as { params: { connectors: Array<{ connectorId: string; flow: string; domain: string }> } }).params.connectors;
+    expect(connectors).toHaveLength(2);
+    expect(connectors.map((c) => c.connectorId)).toEqual([
+      SEGMENT_START_CONNECTOR_ID,
+      SEGMENT_END_CONNECTOR_ID,
+    ]);
+    // A segment is a conduit (not a source/load) → bidirectional, domain mirrors segment.
+    expect(connectors.every((c) => c.flow === 'bidirectional')).toBe(true);
+    expect(connectors.every((c) => c.domain === 'pipe')).toBe(true);
+  });
+
+  it('seeds a duct segment with connector domain "duct"', () => {
+    const seeded = seedDefaultConnectors(legacySegment('duct'));
+    const connectors = (seeded as { params: { connectors: Array<{ domain: string }> } }).params.connectors;
+    expect(connectors.every((c) => c.domain === 'duct')).toBe(true);
+  });
+
+  it('is idempotent for a segment that already carries connectors', () => {
+    const segment = {
+      type: 'mep-segment',
+      id: 'seg1',
+      params: { domain: 'pipe', connectors: [{ connectorId: SEGMENT_START_CONNECTOR_ID, domain: 'pipe', flow: 'bidirectional', localPosition: { x: 0, y: 0 } }] },
+    } as unknown as Entity;
+    expect(seedDefaultConnectors(segment)).toBe(segment);
   });
 
   it('is idempotent — same reference when the host already has a connector', () => {

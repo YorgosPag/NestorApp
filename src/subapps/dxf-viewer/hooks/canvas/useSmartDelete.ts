@@ -244,6 +244,14 @@ export function useSmartDelete({
       const panelIdsInBatch = idsToDelete.filter(
         (id) => adapter.getEntity(id)?.type === 'electrical-panel',
       );
+      // ADR-410 — collect furniture IDs so we can trigger Firestore deleteDoc.
+      const furnitureIdsInBatch = idsToDelete.filter(
+        (id) => adapter.getEntity(id)?.type === 'furniture',
+      );
+      // ADR-408 Φ8 — collect MEP segment IDs so we can trigger Firestore deleteDoc.
+      const mepSegmentIdsInBatch = idsToDelete.filter(
+        (id) => adapter.getEntity(id)?.type === 'mep-segment',
+      );
 
       const deleteCommand: ICommand = idsToDelete.length === 1
         ? new DeleteEntityCommand(idsToDelete[0], adapter)
@@ -303,6 +311,14 @@ export function useSmartDelete({
       // ADR-408 Φ3 — trigger Firestore deleteDoc + prevent subscription re-add for each panel.
       for (const panelId of panelIdsInBatch) {
         eventBus.emit('bim:electrical-panel-delete-requested', { panelId });
+      }
+      // ADR-410 — trigger Firestore deleteDoc + prevent subscription re-add for each furniture.
+      for (const furnitureId of furnitureIdsInBatch) {
+        eventBus.emit('bim:furniture-delete-requested', { furnitureId });
+      }
+      // ADR-408 Φ8 — trigger Firestore deleteDoc + prevent subscription re-add for each segment.
+      for (const segmentId of mepSegmentIdsInBatch) {
+        eventBus.emit('bim:mep-segment-delete-requested', { segmentId });
       }
 
       return true;

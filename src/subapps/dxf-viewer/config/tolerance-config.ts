@@ -428,6 +428,8 @@ export const SNAP_ENGINE_PRIORITIES = {
   DIM_LINE: 3,
   /** ADR-363 Phase 5.5i: Structural column center-axis snap — supersedes generic ENDPOINT at center point */
   BIM_COLUMN_CENTER: -1,
+  /** ADR-408 Φ9: MEP connector attach point — above column centre & endpoint, below BIM face corners */
+  BIM_MEP_CONNECTOR:  -1.5,
   /** ADR-370: BIM face corner snaps — highest structural precision, supersedes BIM_COLUMN_CENTER */
   BIM_WALL_CORNER:    -2,
   BIM_BEAM_CORNER:    -2,

@@ -39,7 +39,7 @@ import { createSceneManagerAdapter } from './grip-commit-adapters';
 
 // ADR-397 — MOVE→COPY hot-grip handlers live in grip-parametric-copy.ts
 // (N.7.1 file-size split). Re-exported here so the commit API stays one import.
-export { commitWallCopy, commitBeamCopy, commitColumnCopy, commitMepFixtureCopy, commitElectricalPanelCopy, commitHotGripCopy } from './grip-parametric-copy';
+export { commitWallCopy, commitBeamCopy, commitColumnCopy, commitMepFixtureCopy, commitElectricalPanelCopy, commitFurnitureCopy, commitHotGripCopy } from './grip-parametric-copy';
 
 // Linear / non-parametric grip commits (xline / ray / dimension) live in
 // grip-linear-commits.ts (N.7.1 file-size split). Re-exported here so the
@@ -50,12 +50,13 @@ export {
   commitDimensionGripDrag,
 } from './grip-linear-commits';
 
-// ADR-406 / ADR-408 Φ3 — centred-box MEP grip commits (mep-fixture / electrical
-// panel) live in grip-parametric-centred-box-commits.ts (N.7.1 file-size split).
-// Re-exported here so the commit API stays one import.
+// ADR-406 / ADR-408 Φ3 / ADR-410 — centred-box grip commits (mep-fixture /
+// electrical panel / furniture) live in grip-parametric-centred-box-commits.ts
+// (N.7.1 file-size split). Re-exported here so the commit API stays one import.
 export {
   commitMepFixtureGripDrag,
   commitElectricalPanelGripDrag,
+  commitFurnitureGripDrag,
 } from './grip-parametric-centred-box-commits';
 
 /**

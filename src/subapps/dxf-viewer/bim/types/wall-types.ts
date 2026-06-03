@@ -30,6 +30,7 @@ import type { SceneUnits } from '../../utils/scene-units';
 import type { IfcEntityMixin } from './ifc-entity-mixin';
 import type { WallBaseBinding, WallTopBinding } from './bim-binding';
 import type { EnvelopeFunction } from './thermal-envelope-types';
+import type { WallTypeParams } from './bim-family-type';
 
 // ─── Sub-type & category enums (ADR-363 §5.3) ────────────────────────────────
 
@@ -208,6 +209,14 @@ export interface WallEntity
   readonly hostedOpeningIds?: readonly string[];
   /** ADR-369 §9 Q8 — IFC4 class. 'IfcWallStandardCase' για straight, 'IfcWall' για curved/polyline. */
   readonly ifcType: 'IfcWall' | 'IfcWallStandardCase';
+  /** ADR-412 — FK → BimFamilyType.id. Absent on legacy/untyped walls. */
+  readonly typeId?: string;
+  /**
+   * ADR-412 — Per-instance overrides of type-level params. Present only when
+   * the instance deviates from its type. Merged over type params at resolution
+   * time (type params first, overrides win). Absent = use type as-is.
+   */
+  readonly typeOverrides?: Partial<WallTypeParams>;
 }
 
 // ─── Defaults & constants ────────────────────────────────────────────────────

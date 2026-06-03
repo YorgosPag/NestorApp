@@ -15,10 +15,13 @@ import type { UnifiedGripInfo } from './unified-grip-types';
 import type { DxfCommitDeps } from './unified-grip-types';
 import type { MepFixtureEntity } from '../../bim/types/mep-fixture-types';
 import type { ElectricalPanelEntity } from '../../bim/types/electrical-panel-types';
+import type { FurnitureEntity } from '../../bim/types/furniture-types';
 import { applyMepFixtureGripDrag } from '../../bim/mep-fixtures/mep-fixture-grips';
 import { UpdateMepFixtureParamsCommand } from '../../core/commands/entity-commands/UpdateMepFixtureParamsCommand';
 import { applyElectricalPanelGripDrag } from '../../bim/electrical-panels/electrical-panel-grips';
 import { UpdateElectricalPanelParamsCommand } from '../../core/commands/entity-commands/UpdateElectricalPanelParamsCommand';
+import { applyFurnitureGripDrag } from '../../bim/furniture/furniture-grips';
+import { UpdateFurnitureParamsCommand } from '../../core/commands/entity-commands/UpdateFurnitureParamsCommand';
 import { BimRotateHotGripStore } from '../../bim/grips/bim-rotate-hotgrip-store';
 import { cadToggleState } from '../../systems/constraints/cad-toggle-state';
 import { EventBus } from '../../systems/events/EventBus';
@@ -128,4 +131,57 @@ export function commitElectricalPanelGripDrag(
   if (command.validate() !== null) return;
   deps.execute(command);
   EventBus.emit('bim:electrical-panel-params-updated', { panelId: grip.entityId });
+}
+
+/**
+ * ADR-410 — Parametric furniture grip commit (centre translate + rotation +
+ * opposite-corner-anchored width/depth resize). Bypasses stretch/move because
+ * `FurnitureEntity` is params-driven; `UpdateFurnitureParamsCommand` recomputes
+ * geometry + validation atomically. Merge window enabled (isDragging=true) so a
+ * continuous drag collapses into one undo entry (ADR-031). ORTHO (F8) is read
+ * from the non-React `cadToggleState` snapshot (same source as the BIM drawing
+ * commit path) and constrains corner drags to the dominant local axis. 1:1
+ * mirror of `commitMepFixtureGripDrag` (rectangular-only — no diameter).
+ */
+export function commitFurnitureGripDrag(
+  grip: UnifiedGripInfo,
+  delta: Point2D,
+  deps: DxfCommitDeps,
+): void {
+  if (!grip.entityId || !grip.furnitureGripKind) return;
+  const sceneManager = createSceneManagerAdapter(deps);
+  if (!sceneManager) return;
+  const raw = sceneManager.getEntity(grip.entityId);
+  if (!raw) return;
+  const candidate = raw as unknown as Partial<FurnitureEntity>;
+  if (candidate.type !== 'furniture' || !candidate.params) return;
+  const originalParams = candidate.params;
+  // ADR-410 / ADR-397 — the `furniture-rotation` 6-click hot-grip orbits a picked
+  // centre. The hook publishes {pivot, anchor} in BimRotateHotGripStore; the delta
+  // here is `alignDir − refDir`, so `currentPos = anchor + delta` is the live align
+  // point and `pivot` is the rotation centre (mirror `commitMepFixtureGripDrag`).
+  // All other grips use the grip position as anchor (currentPos ignored downstream).
+  const rotateCtx = BimRotateHotGripStore.getSnapshot();
+  const useRotatePivot =
+    grip.furnitureGripKind === 'furniture-rotation' && rotateCtx.pivot !== null && rotateCtx.anchor !== null;
+  const anchor: Point2D = useRotatePivot ? rotateCtx.anchor! : grip.position;
+  const currentPos: Point2D = { x: anchor.x + delta.x, y: anchor.y + delta.y };
+  const newParams = applyFurnitureGripDrag(grip.furnitureGripKind, {
+    originalParams,
+    delta,
+    currentPos,
+    ortho: cadToggleState.isOrthoOn(),
+    ...(useRotatePivot ? { pivot: rotateCtx.pivot! } : {}),
+  });
+  if (newParams === originalParams) return;
+  const command = new UpdateFurnitureParamsCommand(
+    grip.entityId,
+    newParams,
+    originalParams,
+    sceneManager,
+    true,
+  );
+  if (command.validate() !== null) return;
+  deps.execute(command);
+  EventBus.emit('bim:furniture-params-updated', { furnitureId: grip.entityId });
 }

@@ -66,6 +66,10 @@
 
 ## Pending tasks (priority order)
 
+### 🪑 ADR-407 RAILING — 2D hit-testing gap (priorità bassa, Boy-Scout flag 2026-06-03)
+
+- [ ] **`railing` λείπει από 2 hit-testing switch** (ίδιο κενό που διορθώθηκε για `furniture` στο ADR-410 v2.2). Το `RailingEntity` δεν έχει `case 'railing'` σε: (1) `services/HitTestingService.ts` → `convertToEntityModel()` (χρειάζεται geometry-recompute fallback με `computeRailingGeometry` από `../bim/railings/railing-geometry`, mirror του `furniture` case) και (2) `systems/selection/shared/selection-duplicate-utils.ts` → `calculateEntityBounds()` (πρόσθεσε `case 'railing'` στη fall-through λίστα → `calculateBimEntity2DBounds`). **Συνέπεια:** τα κάγκελα πιθανότατα δεν φωτίζονται σε hover ούτε επιλέγονται με click/marquee στο 2Δ. **Μικρό fix (~15min, 2 cases).** Επιβεβαίωσε ότι `RailingEntity` έχει `params`+`geometry` και ότι `'railing'` είναι στο `Entity` union πριν. Ο Giorgio ζήτησε μόνο έπιπλα σε αυτή τη συνεδρία → αναβλήθηκε.
+
 ### 🔥 CRITICAL PATH (Scenario A — ~21h expected)
 
 - [x] **CHECK 3.17 Entity Audit Coverage** — COMPLETATO. Baseline 9→0. _(Batch 4: 4 wire-up server-side + 5 HARD_EXEMPT nel scanner.)_

@@ -48,6 +48,8 @@ import { BeamCornerSnapEngine } from '../engines/BeamCornerSnapEngine';
 import { SlabCornerSnapEngine } from '../engines/SlabCornerSnapEngine';
 import { ColumnCornerSnapEngine } from '../engines/ColumnCornerSnapEngine';
 import { OpeningCornerSnapEngine } from '../engines/OpeningCornerSnapEngine';
+// ADR-408 Φ9: MEP connector attach-point snap (segment endpoints / fixture / panel)
+import { MepConnectorSnapEngine } from '../engines/MepConnectorSnapEngine';
 // ADR-378 Phase 3: Text snap engine (TEXT/MTEXT 8-point snap — completes ADR-344 Phase 6.C)
 import { TextSnapEngine } from '../engines/TextSnapEngine';
 
@@ -100,6 +102,8 @@ export class SnapEngineRegistry {
     this.engines.set(ExtendedSnapType.BIM_SLAB_CORNER,    new SlabCornerSnapEngine());
     this.engines.set(ExtendedSnapType.BIM_COLUMN_CORNER,  new ColumnCornerSnapEngine());
     this.engines.set(ExtendedSnapType.BIM_OPENING_CORNER, new OpeningCornerSnapEngine());
+    // ADR-408 Φ9: MEP connector attach point (priority -1.5 — above endpoint/column centre)
+    this.engines.set(ExtendedSnapType.BIM_MEP_CONNECTOR, new MepConnectorSnapEngine());
     // ADR-378 Phase 3: TEXT/MTEXT 8-point snap (insertion + corners + center + edges)
     this.engines.set(ExtendedSnapType.TEXT, new TextSnapEngine());
   }

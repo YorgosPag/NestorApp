@@ -40,10 +40,14 @@ export type AuditEntityType =
   | 'mep-fixture'
   | 'mep-system'
   | 'electrical-panel'
+  | 'mep-segment'
   | 'performance_diagnostic'
   | 'performance_telemetry'
   | 'bim_dimension_3d'
-  | 'bim_animation';
+  | 'bim_animation'
+  // ADR-412 Φ5 — BIM family types (Revit Type/Instance). Subcollection-scoped
+  // under companies/{companyId}/bim_family_types/{typeId}.
+  | 'bim_family_type';
 
 /** Actions that can be recorded in the audit trail */
 export type AuditAction =

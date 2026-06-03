@@ -16,6 +16,8 @@ export const MEP_CIRCUIT_RIBBON_ACTIONS = {
   addMembers: 'mepCircuit.actions.addMembers',
   /** ADR-408 Φ6 — remove the selected member fixtures from the active circuit. */
   removeMembers: 'mepCircuit.actions.removeMembers',
+  /** ADR-408 Φ10 — auto-derive pipe networks from physical connectivity (whole scene). */
+  deriveNetworks: 'mepCircuit.actions.deriveNetworks',
 } as const;
 
 const MEP_CIRCUIT_ACTION_KEY_SET: ReadonlySet<string> = new Set<string>(

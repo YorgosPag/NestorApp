@@ -244,4 +244,7 @@ export const STORAGE_RULES_PENDING: readonly string[] = [
   // super_admin curates writes/deletes). Supersedes /furniture-library/.
   // Test suite to be added in follow-up: tests/storage-rules/suites/bim-mesh-library.storage.test.ts
   '/bim-mesh-library/{assetFile=**}',
+  // ADR-413 CC0 PBR texture content library (shared read-only catalog; super_admin curates writes/deletes).
+  // Test suite to be added in follow-up: tests/storage-rules/suites/bim-texture-library.storage.test.ts
+  '/bim-texture-library/{assetFile=**}',
 ] as const;

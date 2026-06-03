@@ -26,7 +26,7 @@
  */
 
 import type { MepSystemEntity, ConductorBreakdown } from '../types/mep-system-types';
-import { DEFAULT_CONDUCTORS } from '../types/mep-system-types';
+import { DEFAULT_CONDUCTORS, isElectricalSystemParams } from '../types/mep-system-types';
 import { systemColor } from './mep-system-color';
 import { endpointKey, getOrientedWaypoints } from './mep-wire-waypoints';
 
@@ -222,6 +222,9 @@ export function computeCircuitWirePaths(
 ): CircuitWirePath[] {
   const paths: CircuitWirePath[] = [];
   for (const system of systems) {
+    // Only electrical circuits carry a home-run wire. Pipe networks (Φ9) have
+    // real geometry (the segments) and are skipped here entirely.
+    if (!isElectricalSystemParams(system.params)) continue;
     const hosts = routeHosts(system, resolve);
     if (!hosts) continue;
     const waypointMap = system.params.wireWaypoints;

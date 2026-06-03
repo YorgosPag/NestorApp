@@ -29,11 +29,12 @@ import type { ElectricalPanelEntity } from '../../bim/types/electrical-panel-typ
 import type { RailingEntity } from '../../bim/types/railing-types';
 // ADR-410 — furniture direct entity for DXF render pipeline.
 import type { FurnitureEntity } from '../../bim/types/furniture-types';
+import type { MepSegmentEntity } from '../../bim/types/mep-segment-types';
 
 // === DXF ENTITY TYPES ===
 export interface DxfEntity {
   id: string;
-  type: 'line' | 'circle' | 'arc' | 'polyline' | 'text' | 'angle-measurement' | 'stair' | 'dimension' | 'slab' | 'slab-opening' | 'opening' | 'wall' | 'column' | 'xline' | 'ray' | 'beam' | 'mep-fixture' | 'electrical-panel' | 'railing' | 'furniture';
+  type: 'line' | 'circle' | 'arc' | 'polyline' | 'text' | 'angle-measurement' | 'stair' | 'dimension' | 'slab' | 'slab-opening' | 'opening' | 'wall' | 'column' | 'xline' | 'ray' | 'beam' | 'mep-fixture' | 'electrical-panel' | 'railing' | 'furniture' | 'mep-segment';
   /**
    * @deprecated ADR-358 Phase 9D-5b-ii — transitional name backref. Resolve via
    * `LayerStore.resolveEntityLayerName()`. Made optional to align with BaseEntity
@@ -273,6 +274,18 @@ export interface DxfFurniture extends DxfEntity {
   validation?: FurnitureEntity['validation'];
 }
 
+/**
+ * ADR-408 Φ8 — DxfMepSegment direct entity (same pattern as DxfBeam).
+ * MepSegmentRenderer reads geometry.outline + axisPolyline + params at top level.
+ */
+export interface DxfMepSegment extends DxfEntity {
+  type: 'mep-segment';
+  kind: MepSegmentEntity['kind'];
+  params: MepSegmentEntity['params'];
+  geometry: MepSegmentEntity['geometry'];
+  validation?: MepSegmentEntity['validation'];
+}
+
 /** ADR-359 Phase 11 — XLine wrapper for grip computation pipeline. */
 export interface DxfXLine extends DxfEntity {
   type: 'xline';
@@ -285,7 +298,7 @@ export interface DxfRay extends DxfEntity {
   rayEntity: RayEntity;
 }
 
-export type DxfEntityUnion = DxfLine | DxfCircle | DxfPolyline | DxfArc | DxfText | DxfAngleMeasurement | DxfStair | DxfDimension | DxfSlab | DxfSlabOpening | DxfOpening | DxfWall | DxfColumn | DxfMepFixture | DxfElectricalPanel | DxfRailing | DxfFurniture | DxfBeam | DxfXLine | DxfRay;
+export type DxfEntityUnion = DxfLine | DxfCircle | DxfPolyline | DxfArc | DxfText | DxfAngleMeasurement | DxfStair | DxfDimension | DxfSlab | DxfSlabOpening | DxfOpening | DxfWall | DxfColumn | DxfMepFixture | DxfElectricalPanel | DxfRailing | DxfFurniture | DxfMepSegment | DxfBeam | DxfXLine | DxfRay;
 
 // === DXF SCENE ===
 export interface DxfScene {

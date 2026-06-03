@@ -39,7 +39,11 @@ export type BimCategory =
   // ADR-408 Φ7 — home-run circuit wires (derived electrical annotation overlay).
   | 'mep-wire'
   // ADR-410 — mesh-based CC0 furniture (interior discipline).
-  | 'furniture';
+  | 'furniture'
+  // ADR-408 Φ8 — linear MEP duct run (mechanical discipline).
+  | 'duct'
+  // ADR-408 Φ8 — linear MEP pipe run (plumbing discipline).
+  | 'pipe';
 
 /**
  * Per-subcategory style overrides (ADR-377).
@@ -107,6 +111,7 @@ export const BIM_CATEGORIES: readonly BimCategory[] = [
   'wall', 'column', 'beam', 'slab', 'opening', 'slab-opening',
   'stair', 'roof', 'ceiling', 'dimension', 'hatch', 'grip', 'envelope',
   'light-fixture', 'electrical-panel', 'railing', 'mep-wire', 'furniture',
+  'duct', 'pipe',
 ] as const;
 
 /**
@@ -135,6 +140,8 @@ export const MODEL_BIM_CATEGORIES: readonly BimCategory[] = [
   'mep-wire',
   // ADR-410 — mesh-based CC0 furniture.
   'furniture',
+  // ADR-408 Φ8 — linear MEP duct + pipe runs.
+  'duct', 'pipe',
 ] as const;
 
 /**
@@ -178,4 +185,8 @@ export const DEFAULT_OBJECT_STYLES: Readonly<Record<BimCategory, ObjectStyle>> =
   'mep-wire':     { projectionPen: 3, cutPen: 3 },
   // ADR-410 — έπιπλο: λεπτή γραμμή footprint (interior plan symbol).
   furniture:      { projectionPen: 3, cutPen: 3 },
+  // ADR-408 Φ8 — αεραγωγός: μεσαία γραμμή (mechanical duct run, plan rectangle).
+  duct:           { projectionPen: 4, cutPen: 5 },
+  // ADR-408 Φ8 — σωλήνας: λεπτή γραμμή (plumbing pipe run, plan centerline).
+  pipe:           { projectionPen: 3, cutPen: 4 },
 } as const;

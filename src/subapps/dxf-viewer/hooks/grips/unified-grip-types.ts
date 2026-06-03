@@ -10,7 +10,7 @@
  */
 
 import type { Point2D } from '../../rendering/types/Types';
-import type { StairGripKind, DimensionGripKind, WallGripKind, OpeningGripKind, SlabGripKind, SlabOpeningGripKind, BeamGripKind, ColumnGripKind, MepFixtureGripKind, ElectricalPanelGripKind, XLineGripKind, RayGripKind } from '../useGripMovement';
+import type { StairGripKind, DimensionGripKind, WallGripKind, OpeningGripKind, SlabGripKind, SlabOpeningGripKind, BeamGripKind, ColumnGripKind, MepFixtureGripKind, ElectricalPanelGripKind, FurnitureGripKind, XLineGripKind, RayGripKind } from '../useGripMovement';
 import type {
   DxfGripDragPreview,
   DxfGripInteractionState,
@@ -200,6 +200,13 @@ export interface UnifiedGripInfo {
    * (center translate + rotation + opposite-corner-anchored width/length resize).
    */
   readonly electricalPanelGripKind?: ElectricalPanelGripKind;
+  /**
+   * ADR-410 — parametric furniture grip discriminator (forwarded from
+   * `GripInfo.furnitureGripKind`). Routes commit through
+   * `applyFurnitureGripDrag()` + `UpdateFurnitureParamsCommand` (center
+   * translate + rotation + opposite-corner-anchored width/depth resize).
+   */
+  readonly furnitureGripKind?: FurnitureGripKind;
   /**
    * ADR-359 Phase 11 — XLine grip discriminator (forwarded from
    * `GripInfo.xlineGripKind`). Routes commit through `applyXLineGripDrag()` +

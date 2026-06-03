@@ -121,6 +121,13 @@ interface BimRenderSettingsState extends ResolvedBimSettings {
    * Single state update + single debounced write (idempotent).
    */
   setColorBySystem: (colorBySystem: boolean) => void;
+  /**
+   * ADR-413 — toggle the realistic-PBR-materials master switch (Revit
+   * "Realistic" visual style). `false` ⇒ flat colour materials; `true` ⇒ textured
+   * MeshStandardMaterials (albedo/normal/roughness/ao). Single state update +
+   * single debounced write (idempotent).
+   */
+  setRealisticMaterials: (realisticMaterials: boolean) => void;
   /** Override projection or cut color for a category (null = canvas token). */
   setObjectStyleVgColor: (
     category: BimCategory,
@@ -171,6 +178,7 @@ export const useBimRenderSettingsStore = create<BimRenderSettingsState>((set, ge
       objectStyles: state.objectStyles,
       disciplineVisibility: state.disciplineVisibility,
       colorBySystem: state.colorBySystem,
+      realisticMaterials: state.realisticMaterials,
     };
   }
 
@@ -196,6 +204,7 @@ export const useBimRenderSettingsStore = create<BimRenderSettingsState>((set, ge
         objectStyles: resolved.objectStyles,
         disciplineVisibility: resolved.disciplineVisibility,
         colorBySystem: resolved.colorBySystem,
+        realisticMaterials: resolved.realisticMaterials,
         lastLocalMutationAt: 0,
         bimVisibilitySnapshot: null,
       });
@@ -292,6 +301,14 @@ export const useBimRenderSettingsStore = create<BimRenderSettingsState>((set, ge
         debounceWrite(state.currentLevelId, buildRaw({ ...get(), colorBySystem }));
     },
 
+    setRealisticMaterials(realisticMaterials) {
+      const state = get();
+      if (state.realisticMaterials === realisticMaterials) return; // idempotent — no-op write
+      set({ realisticMaterials, lastLocalMutationAt: Date.now() });
+      if (state.currentLevelId)
+        debounceWrite(state.currentLevelId, buildRaw({ ...get(), realisticMaterials }));
+    },
+
     setObjectStyleVgColor(category, key, color) {
       const state = get();
       const prev = state.objectStyles[category];
@@ -375,6 +392,7 @@ function commitObjectStyles(
       objectStyles: nextStyles,
       disciplineVisibility: get().disciplineVisibility,
       colorBySystem: get().colorBySystem,
+      realisticMaterials: get().realisticMaterials,
     });
   }
 }

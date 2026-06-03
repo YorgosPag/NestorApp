@@ -745,6 +745,23 @@ const ELECTRICAL_PANEL_TRACKED_FIELDS_RAW: Record<string, string> = {
 export const ELECTRICAL_PANEL_TRACKED_FIELDS: Record<string, TrackedFieldDef> =
   mergeDefs(ELECTRICAL_PANEL_TRACKED_FIELDS_RAW, {});
 
+// ADR-408 Φ8 — unified linear MEP segment (duct + pipe).
+const MEP_SEGMENT_TRACKED_FIELDS_RAW: Record<string, string> = {
+  domain: 'domain',
+  sectionKind: 'sectionKind',
+  layerId: 'layerId',
+  width: 'width',
+  height: 'height',
+  diameter: 'diameter',
+  wallThickness: 'wallThickness',
+  centerlineElevationMm: 'centerlineElevationMm',
+  material: 'material',
+  storeyId: 'storeyId',
+};
+
+export const MEP_SEGMENT_TRACKED_FIELDS: Record<string, TrackedFieldDef> =
+  mergeDefs(MEP_SEGMENT_TRACKED_FIELDS_RAW, {});
+
 // ADR-407 — standalone path-based railing.
 const RAILING_TRACKED_FIELDS_RAW: Record<string, string> = {
   layerId: 'layerId',
@@ -885,6 +902,24 @@ const STAIR_TRACKED_FIELDS_RAW: Record<string, string> = {
 export const STAIR_TRACKED_FIELDS: Record<string, TrackedFieldDef> =
   mergeDefs(STAIR_TRACKED_FIELDS_RAW, {});
 
+/**
+ * ADR-412 Φ5 — BIM family type (Revit Type) tracked fields. The audit snapshot
+ * flattens `{ name, ...typeParams }`, so `name` + the wall type-level params
+ * (`category`/`thickness`/`material`/`dna`) are tracked. `dna` is an object
+ * (totalThickness + layers[]) serialized as a JSON scalar — same pattern as
+ * `WALL_TRACKED_FIELDS.dna`.
+ */
+const BIM_FAMILY_TYPE_TRACKED_FIELDS_RAW: Record<string, string> = {
+  name: 'name',
+  category: 'category',
+  thickness: 'thickness',
+  material: 'material',
+  dna: 'dna',
+};
+
+export const BIM_FAMILY_TYPE_TRACKED_FIELDS: Record<string, TrackedFieldDef> =
+  mergeDefs(BIM_FAMILY_TYPE_TRACKED_FIELDS_RAW, {});
+
 /** Project audit registry — `field → TrackedFieldDef`. */
 export const PROJECT_TRACKED_FIELDS: Record<string, TrackedFieldDef> =
   mergeDefs(PROJECT_TRACKED_FIELDS_RAW, PROJECT_COLLECTION_DEFS);
@@ -929,6 +964,8 @@ export function getTrackedFieldsForEntityAuditType(
       return MEP_SYSTEM_TRACKED_FIELDS;
     case 'electrical-panel':
       return ELECTRICAL_PANEL_TRACKED_FIELDS;
+    case 'mep-segment':
+      return MEP_SEGMENT_TRACKED_FIELDS;
     case 'railing':
       return RAILING_TRACKED_FIELDS;
     case 'slab':
@@ -941,6 +978,8 @@ export function getTrackedFieldsForEntityAuditType(
       return SLAB_OPENING_TRACKED_FIELDS;
     case 'stair':
       return STAIR_TRACKED_FIELDS;
+    case 'bim_family_type':
+      return BIM_FAMILY_TYPE_TRACKED_FIELDS;
     default:
       return null;
   }

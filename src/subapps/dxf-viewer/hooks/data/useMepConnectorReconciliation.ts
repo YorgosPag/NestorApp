@@ -32,9 +32,14 @@ import { useCallback, useEffect, useRef } from 'react';
 
 import type { SceneModel } from '../../types/scene';
 import type { useLevels } from '../../systems/levels';
-import { isMepFixtureEntity, isElectricalPanelEntity } from '../../types/entities';
+import {
+  isMepFixtureEntity,
+  isElectricalPanelEntity,
+  isMepSegmentEntity,
+} from '../../types/entities';
 import type { MepFixtureEntity } from '../../bim/types/mep-fixture-types';
 import type { ElectricalPanelEntity } from '../../bim/types/electrical-panel-types';
+import type { MepSegmentEntity } from '../../bim/types/mep-segment-types';
 import { useMepSystemStore } from '../../bim/mep-systems/mep-system-store';
 import {
   buildConnectorSystemIndex,
@@ -53,7 +58,9 @@ export interface UseMepConnectorReconciliationParams {
 }
 
 /** Re-derive one connector host's `systemId` cache; same ref when unchanged. */
-function reconcileHost<T extends MepFixtureEntity | ElectricalPanelEntity>(
+function reconcileHost<
+  T extends MepFixtureEntity | ElectricalPanelEntity | MepSegmentEntity,
+>(
   entity: T,
   index: ReadonlyMap<string, string>,
 ): T {
@@ -90,6 +97,11 @@ export function useMepConnectorReconciliation(
         return next;
       }
       if (isElectricalPanelEntity(seeded)) {
+        const next = reconcileHost(seeded, index);
+        if (next !== e) changed = true;
+        return next;
+      }
+      if (isMepSegmentEntity(seeded)) {
         const next = reconcileHost(seeded, index);
         if (next !== e) changed = true;
         return next;

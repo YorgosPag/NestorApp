@@ -8,6 +8,7 @@ import {
   buildEntitySystemColorIndex,
   buildEntitySystemColorIntIndex,
   resolveEntitySystemColor,
+  classificationDefaultColor,
   hexToThreeInt,
   hexToRgba,
 } from '../mep-system-color';
@@ -72,5 +73,20 @@ describe('colour conversions', () => {
 
   it('hexToRgba builds an rgba string', () => {
     expect(hexToRgba('#2563eb', 0.18)).toBe('rgba(37, 99, 235, 0.18)');
+  });
+});
+
+describe('classificationDefaultColor (ADR-408 Φ9/Φ10)', () => {
+  it('maps plumbing classifications to industry-convention colours', () => {
+    expect(classificationDefaultColor('domestic-cold-water')).toBe('#2563eb'); // blue
+    expect(classificationDefaultColor('domestic-hot-water')).toBe('#dc2626'); // red
+    expect(classificationDefaultColor('sanitary-drainage')).toBe('#b45309'); // brown
+    expect(classificationDefaultColor('hydronic-supply')).toBe('#dc2626'); // red
+    expect(classificationDefaultColor('hydronic-return')).toBe('#2563eb'); // blue
+  });
+
+  it('returns a palette colour (so colour-by-system stays consistent)', () => {
+    expect(MEP_SYSTEM_PALETTE).toContain(classificationDefaultColor('domestic-cold-water'));
+    expect(MEP_SYSTEM_PALETTE).toContain(classificationDefaultColor('sanitary-drainage'));
   });
 });

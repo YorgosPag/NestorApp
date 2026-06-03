@@ -28,7 +28,11 @@ import type { WallEntity } from '../bim/types/wall-types';
 import { isWallEntity } from '../types/entities';
 import { useWallPersistence } from '../hooks/data/useWallPersistence';
 import { useWallSplitPersistence } from '../hooks/data/useWallSplitPersistence';
+import { useBimFamilyTypes } from '../bim/family-types/useBimFamilyTypes';
+import { useFamilyTypeBoqRefeed } from '../hooks/data/useFamilyTypeBoqRefeed';
 import { WallCascadeDeleteDialog } from '../ui/dialogs/WallCascadeDeleteDialog';
+import { EditWallTypeDialog } from '../ui/ribbon/components/EditWallTypeDialog';
+import { BimFamilyTypeDeleteDialog } from '../ui/dialogs/BimFamilyTypeDeleteDialog';
 import { useBim3DEntitiesStore } from '../bim-3d/stores/Bim3DEntitiesStore';
 import { useBimPersistenceStateStore } from '../bim/persistence/bim-persistence-state-store';
 
@@ -57,6 +61,27 @@ export function WallPersistenceHost({
   floorId,
 }: WallPersistenceHostProps): React.ReactElement | null {
   const { user } = useAuth();
+
+  // ADR-412 — load the company's BIM family types into the resolution store so
+  // typed walls resolve their type-governed params at scene-sync time («type
+  // always wins»). Sole writer of `bim-family-type-store`. Untyped walls never
+  // need this (legacy fast-path), so a missing catalog is harmless.
+  useBimFamilyTypes({
+    companyId: user?.companyId ?? null,
+    userId: user?.uid ?? null,
+    projectId,
+  });
+
+  // ADR-412 Φ5 — when a wall family type is edited (UpdateWallFamilyTypeCommand
+  // emits `bim:family-type-changed`), re-feed BOQ for every instance across all
+  // floors of the building. Geometry re-flows for free (useWallTypeReresolution
+  // on the active floor + docToEntity on load elsewhere); only the BOQ
+  // aggregate cache needs an eager fan-out, which lives here (host has context).
+  useFamilyTypeBoqRefeed({
+    companyId: user?.companyId ?? null,
+    projectId,
+    buildingId,
+  });
 
   const primarySelectedWall: WallEntity | null = React.useMemo(() => {
     if (!primarySelectedId || !currentScene) return null;
@@ -101,5 +126,11 @@ export function WallPersistenceHost({
     userId: user?.uid ?? null,
   });
 
-  return <WallCascadeDeleteDialog />;
+  return (
+    <>
+      <WallCascadeDeleteDialog />
+      <EditWallTypeDialog />
+      <BimFamilyTypeDeleteDialog />
+    </>
+  );
 }

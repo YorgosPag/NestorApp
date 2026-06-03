@@ -273,6 +273,31 @@ export function drawGhostEntity(
       return;
     }
 
+    // ADR-410 — furniture ghost: footprint polygon (scene-units, from
+    // FurnitureGeometry). Mirror mep-fixture/electrical-panel so the live
+    // move/rotation/corner-resize ghost paints.
+    case 'furniture': {
+      const furn = entity as unknown as {
+        geometry?: { footprint?: { vertices: ReadonlyArray<{ x: number; y: number }> } };
+      };
+      const verts = furn.geometry?.footprint?.vertices ?? [];
+      if (verts.length < 2) return;
+      drawPolygon(ctx, verts, toScreen);
+      return;
+    }
+
+    // ADR-408 Φ8 — MEP segment ghost: plan-view outline polygon (section-width ×
+    // axis length). Mirrors the beam/column pattern: read geometry.outline.vertices.
+    case 'mep-segment': {
+      const seg = entity as unknown as {
+        geometry?: { outline?: { vertices: ReadonlyArray<{ x: number; y: number }> } };
+      };
+      const verts = seg.geometry?.outline?.vertices ?? [];
+      if (verts.length < 2) return;
+      drawPolygon(ctx, verts, toScreen);
+      return;
+    }
+
     // ADR-363 Phase 2.5 — opening ghost: cutout rectangle outline from raw OpeningEntity.geometry.
     case 'opening': {
       const opening = entity as unknown as {

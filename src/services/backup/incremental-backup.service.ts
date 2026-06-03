@@ -85,6 +85,10 @@ const ENTITY_TYPE_TO_COLLECTION_KEY: Record<AuditEntityType, string> = {
   'mep-system': '',
   // Electrical panels (ADR-408 Φ3) — not backed up via this service at this stage
   'electrical-panel': '',
+  // MEP segments (ADR-408 Φ8) — not backed up via this service at this stage
+  'mep-segment': '',
+  // BIM family types (ADR-412) — not backed up via this service at this stage
+  bim_family_type: '',
   // Performance / 3D BIM telemetry (ADR-366) — not backed up via this service
   performance_diagnostic: '',
   performance_telemetry: '',

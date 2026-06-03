@@ -303,6 +303,7 @@ import {
   commitColumnGripDrag,
   commitMepFixtureGripDrag,
   commitElectricalPanelGripDrag,
+  commitFurnitureGripDrag,
   commitXLineGripDrag,
   commitRayGripDrag,
   commitDimensionGripDrag,
@@ -403,6 +404,13 @@ export function commitDxfGripDragModeAware(
   // recomputes geometry.
   if (grip.electricalPanelGripKind) {
     commitElectricalPanelGripDrag(grip, delta, deps);
+    return;
+  }
+  // ADR-410 — furniture parametric grip path (center translate + rotation +
+  // opposite-corner-anchored width/depth resize). Bypasses stretch because the
+  // furniture is params-driven; UpdateFurnitureParamsCommand recomputes geometry.
+  if (grip.furnitureGripKind) {
+    commitFurnitureGripDrag(grip, delta, deps);
     return;
   }
   // ADR-359 Phase 11 — XLine grip path (basePoint translate or direction rotate).

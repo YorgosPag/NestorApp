@@ -98,6 +98,40 @@ export const CONTEXTUAL_WALL_TAB: RibbonTab = {
       ],
     },
     {
+      // ADR-412 Φ4 — BIM Family Type: selector (Radix Select, ADR-001) +
+      // per-instance override editor. Selector assigns/detaches the wall's
+      // `typeId`; properties widget edits overrides + renames user types.
+      id: 'wall-family-type',
+      labelKey: 'ribbon.panels.wallFamilyType',
+      rows: [
+        {
+          isInFlyout: false,
+          buttons: [
+            {
+              type: 'widget',
+              size: 'small',
+              widgetId: 'wall-family-type',
+              command: {
+                id: 'wall.familyType',
+                labelKey: 'ribbon.commands.bimFamilyType.label',
+                commandKey: 'wall.familyType.select',
+              },
+            },
+            {
+              type: 'widget',
+              size: 'small',
+              widgetId: 'wall-type-properties',
+              command: {
+                id: 'wall.typeProperties',
+                labelKey: 'ribbon.commands.bimFamilyType.properties',
+                commandKey: 'wall.familyType.properties',
+              },
+            },
+          ],
+        },
+      ],
+    },
+    {
       id: 'wall-geometry',
       labelKey: 'ribbon.panels.wallGeometry',
       rows: [

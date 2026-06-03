@@ -47,6 +47,34 @@ export type MepFlowDirection = 'in' | 'out' | 'bidirectional';
  */
 export type ElectricalSystemClassification = 'power' | 'lighting' | 'data' | 'controls';
 
+/**
+ * Revit plumbing/piping "System Classification" (ADR-408 Φ9). The hydraulic
+ * sub-type a pipe connector — and the pipe network it joins — carries. Disjoint
+ * value space from {@link ElectricalSystemClassification}; the two are kept apart
+ * by the System's `systemType` discriminant (electrical-circuit vs pipe-network).
+ *
+ *   - `domestic-cold-water` / `domestic-hot-water` — ύδρευση κρύου / ζεστού.
+ *   - `sanitary-drainage`                          — αποχέτευση (gravity, sloped).
+ *   - `hydronic-supply` / `hydronic-return`        — θέρμανση προσαγωγή / επιστροφή.
+ */
+export type PlumbingSystemClassification =
+  | 'domestic-cold-water'
+  | 'domestic-hot-water'
+  | 'sanitary-drainage'
+  | 'hydronic-supply'
+  | 'hydronic-return';
+
+/**
+ * Any MEP system classification across domains. Held only where the domain is
+ * not yet narrowed; once `systemType` is known, prefer the domain-specific union.
+ */
+export type MepSystemClassification =
+  | ElectricalSystemClassification
+  | PlumbingSystemClassification;
+
+/** Conveyed fluid for a plumbing connector/segment (drives later sizing/analysis). */
+export type PipeFluid = 'water' | 'hot-water' | 'wastewater' | 'glycol' | 'other';
+
 // ─── Domain-specific params ───────────────────────────────────────────────────
 
 /** Electrical-domain connector params (Revit Electrical Connector). */
@@ -58,6 +86,25 @@ export interface MepElectricalConnectorParams {
   /** VA — apparent connected load; a circuit source sums member loads. */
   readonly connectedLoadVa?: number;
   readonly numberOfPhases?: 1 | 3;
+}
+
+/**
+ * Plumbing/piping-domain connector params (Revit Pipe Connector), present when
+ * `MepConnector.domain === 'pipe'` (ADR-408 Φ9).
+ */
+export interface MepPipeConnectorParams {
+  readonly systemClassification: PlumbingSystemClassification;
+  /** mm — nominal connector diameter (matches the host segment section). */
+  readonly diameterMm?: number;
+  /** Conveyed fluid. */
+  readonly fluid?: PipeFluid;
+  /**
+   * % slope along the run, signed toward `flow` (drainage convention, e.g. 1–2%).
+   * Relevant for `sanitary-drainage`; absent ⇒ level run.
+   */
+  readonly slopePercent?: number;
+  /** L/s — design flow (optional; feeds future sizing). */
+  readonly flowLps?: number;
 }
 
 // ─── Connector ────────────────────────────────────────────────────────────────
@@ -78,6 +125,8 @@ export interface MepConnector {
   readonly localDirection?: Point3D;
   /** Domain-specific payload — present when `domain === 'electrical'`. */
   readonly electrical?: MepElectricalConnectorParams;
+  /** Domain-specific payload — present when `domain === 'pipe'` (ADR-408 Φ9). */
+  readonly pipe?: MepPipeConnectorParams;
   /**
    * Derived back-reference to the owning System — NOT truth (see file header).
    * Reconciled System→connector; absent = unassigned.
@@ -149,5 +198,36 @@ export function buildDefaultPanelOutgoingConnector(): MepConnector {
     flow: 'out',
     localPosition: { x: 0, y: 0, z: 0 },
     electrical: { systemClassification: 'power' },
+  };
+}
+
+// ─── Linear segment endpoint connectors (ADR-408 Φ9) ─────────────────────────────
+
+/** Connector id for the START endpoint of a linear duct/pipe segment. */
+export const SEGMENT_START_CONNECTOR_ID = 'seg-start';
+/** Connector id for the END endpoint of a linear duct/pipe segment. */
+export const SEGMENT_END_CONNECTOR_ID = 'seg-end';
+
+/**
+ * The two endpoint connectors a freshly seeded linear `mep-segment` carries
+ * (ADR-408 Φ9) so it can join a pipe/duct network. A segment is a conduit, not a
+ * source or load → `flow: 'bidirectional'`. Carries NO `pipe` payload at seed
+ * time: the **System** owns the classification (derived), exactly as the
+ * electrical connector defers its circuit identity to the owning circuit.
+ *
+ * Unlike a point host (fixture/panel) a segment has no `position`+`rotation`; its
+ * two world endpoints ARE its transform. So `localPosition` is the zero vector and
+ * the world position is resolved directly from `startPoint`/`endPoint` by the
+ * segment-specific resolver (see `mep-segments/` Φ9, NOT `connectorWorldPosition`).
+ */
+export function buildSegmentEndpointConnector(
+  role: 'start' | 'end',
+  domain: 'duct' | 'pipe',
+): MepConnector {
+  return {
+    connectorId: role === 'start' ? SEGMENT_START_CONNECTOR_ID : SEGMENT_END_CONNECTOR_ID,
+    domain,
+    flow: 'bidirectional',
+    localPosition: { x: 0, y: 0, z: 0 },
   };
 }

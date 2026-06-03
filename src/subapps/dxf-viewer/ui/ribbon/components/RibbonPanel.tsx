@@ -29,11 +29,14 @@ import { VisibilityGraphicsPanel } from '../panels/VisibilityGraphicsPanel';
 import { HideBimToggle } from './HideBimToggle';
 import { MepWireToggle } from './MepWireToggle';
 import { ColorBySystemToggle } from './ColorBySystemToggle';
+import { RealisticMaterialsToggle } from './RealisticMaterialsToggle';
 import { DisciplineVisibilityToggle } from './DisciplineVisibilityToggle';
 import { RibbonInsertTokenWidget } from './RibbonInsertTokenWidget';
 import { RibbonStairFloorInfoWidget } from './RibbonStairFloorInfoWidget';
 import { RibbonStairDimensionsWidget } from './RibbonStairDimensionsWidget';
 import { RibbonWallDimensionWidget } from './RibbonWallDimensionWidget';
+import { RibbonWallFamilyTypeWidget } from './RibbonWallFamilyTypeWidget';
+import { RibbonWallTypePropertiesWidget } from './RibbonWallTypePropertiesWidget';
 import { RibbonMepCircuitPickerWidget } from './RibbonMepCircuitPickerWidget';
 import { RibbonMepFixtureCircuitWidget } from './RibbonMepFixtureCircuitWidget';
 import { RibbonMepCircuitNameWidget } from './RibbonMepCircuitNameWidget';
@@ -103,6 +106,9 @@ function renderButton(button: RibbonButton): React.ReactNode {
     if (button.widgetId === 'color-by-system-toggle') {
       return <ColorBySystemToggle key="color-by-system-toggle-widget" />;
     }
+    if (button.widgetId === 'realistic-materials-toggle') {
+      return <RealisticMaterialsToggle key="realistic-materials-toggle-widget" />;
+    }
     if (button.widgetId === 'discipline-visibility') {
       return <DisciplineVisibilityToggle key="discipline-visibility-widget" />;
     }
@@ -126,6 +132,12 @@ function renderButton(button: RibbonButton): React.ReactNode {
     }
     if (button.widgetId === 'wall-thickness') {
       return <RibbonWallDimensionWidget key="wall-thickness-widget" dimension="thickness" />;
+    }
+    if (button.widgetId === 'wall-family-type') {
+      return <RibbonWallFamilyTypeWidget key="wall-family-type-widget" />;
+    }
+    if (button.widgetId === 'wall-type-properties') {
+      return <RibbonWallTypePropertiesWidget key="wall-type-properties-widget" />;
     }
     if (button.widgetId === 'multi-selection-common-properties') {
       return <MultiSelectionCommonPropertiesPanel key="multi-selection-common-widget" />;

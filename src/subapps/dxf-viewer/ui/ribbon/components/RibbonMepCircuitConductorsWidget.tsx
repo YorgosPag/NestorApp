@@ -26,7 +26,7 @@ import { useCommandHistory } from '../../../core/commands';
 import { UpdateMepSystemParamsCommand } from '../../../core/commands/entity-commands/UpdateMepSystemParamsCommand';
 import { useMepSystemStore } from '../../../bim/mep-systems/mep-system-store';
 import { useMepCircuitEditorStore } from '../../../bim/mep-systems/mep-circuit-editor-store';
-import { DEFAULT_CONDUCTORS, type ConductorBreakdown } from '../../../bim/types/mep-system-types';
+import { DEFAULT_CONDUCTORS, isElectricalSystemParams, type ConductorBreakdown } from '../../../bim/types/mep-system-types';
 
 type ConductorField = keyof ConductorBreakdown;
 
@@ -54,7 +54,9 @@ export function RibbonMepCircuitConductorsWidget(): React.JSX.Element | null {
     () => systems.find((s) => s.id === activeSystemId) ?? null,
     [systems, activeSystemId],
   );
-  const committed: ConductorBreakdown = active?.params.conductors ?? DEFAULT_CONDUCTORS;
+  // Conductors are an electrical-circuit feature; ignore pipe networks (Φ9).
+  const params = active && isElectricalSystemParams(active.params) ? active.params : null;
+  const committed: ConductorBreakdown = params?.conductors ?? DEFAULT_CONDUCTORS;
 
   const [draft, setDraft] = useState<Record<ConductorField, string>>({
     hot: String(committed.hot),
@@ -81,22 +83,22 @@ export function RibbonMepCircuitConductorsWidget(): React.JSX.Element | null {
 
   const commit = useCallback(
     (field: ConductorField, raw: string, isDragging: boolean) => {
-      if (!active) return;
+      if (!active || !params) return;
       const parsed = parseInt(raw, 10);
       if (Number.isNaN(parsed)) return; // mid-edit empty / invalid → skip
-      const base = active.params.conductors ?? DEFAULT_CONDUCTORS;
+      const base = params.conductors ?? DEFAULT_CONDUCTORS;
       const value = clamp(parsed);
       if (value === base[field]) return; // no-op
       execute(
         new UpdateMepSystemParamsCommand(
           active.id,
-          { ...active.params, conductors: { ...base, [field]: value } },
-          active.params,
+          { ...params, conductors: { ...base, [field]: value } },
+          params,
           isDragging,
         ),
       );
     },
-    [active, execute],
+    [active, params, execute],
   );
 
   const onChange = useCallback(
@@ -128,7 +130,7 @@ export function RibbonMepCircuitConductorsWidget(): React.JSX.Element | null {
     }
   }, []);
 
-  if (!active) return null;
+  if (!active || !params) return null;
 
   return (
     <span className="dxf-ribbon-combobox-row">

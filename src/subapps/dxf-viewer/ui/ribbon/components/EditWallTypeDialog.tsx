@@ -1,0 +1,210 @@
+'use client';
+
+/**
+ * ADR-412 Φ5 — «Edit Wall Type» dialog.
+ *
+ * Edits a wall TYPE's `typeParams` (category / material / thickness / full DNA
+ * layer composition). Changes re-flow to EVERY instance of the type, on all
+ * floors (Revit «Edit Type»). One undoable op via `controller.updateTypeParams`
+ * → `UpdateWallFamilyTypeCommand` (optimistic store + persist + audit + BOQ
+ * re-feed). Built-ins are read-only — the trigger Duplicates first.
+ *
+ * Mounted always-on in `WallPersistenceHost`; opened via `openEditWallType`
+ * (RibbonWallTypePropertiesWidget «Edit type…» button). The heavy controller
+ * runs only while the dialog is open (inner component).
+ *
+ * Reuses `WallDnaEditor` (entity-agnostic) for the layer editor — zero new DNA
+ * UI/i18n. Thickness is derived (read-only) when DNA is present, manual
+ * otherwise (SSoT `thickness === dna.totalThickness`).
+ *
+ * @see ../hooks/useWallFamilyTypeController.ts §updateTypeParams
+ * @see ../../wall-advanced-panel/sections/WallDnaEditor.tsx
+ * @see ../../../bim/family-types/edit-wall-type-store.ts
+ */
+
+import React, { useCallback, useEffect, useState, useSyncExternalStore } from 'react';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { SELECT_CLEAR_VALUE } from '@/config/domain-constants';
+import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { useWallFamilyTypeController } from '../hooks/useWallFamilyTypeController';
+import { WallDnaEditor } from '../../wall-advanced-panel/sections/WallDnaEditor';
+import { useBimFamilyTypeStore } from '../../../bim/family-types/bim-family-type-store';
+import { asWallFamilyType, resolveTypeDisplayName } from '../../../bim/family-types/family-type-ui-helpers';
+import {
+  closeEditWallType,
+  getEditWallTypeState,
+  subscribeEditWallType,
+} from '../../../bim/family-types/edit-wall-type-store';
+import type { WallCategory } from '../../../bim/types/wall-types';
+import type { WallDna } from '../../../bim/types/wall-dna-types';
+import type { WallTypeParams } from '../../../bim/types/bim-family-type';
+
+const CATEGORY_VALUES: readonly WallCategory[] = [
+  'exterior',
+  'interior',
+  'partition',
+  'parapet',
+  'fence',
+] as const;
+
+/** Wall-level material value → i18n key suffix (mirror RibbonWallTypePropertiesWidget). */
+const MATERIAL_OPTIONS: readonly { value: string; key: string }[] = [
+  { value: 'rc', key: 'rc' },
+  { value: 'masonry', key: 'masonry' },
+  { value: 'aerated-concrete', key: 'aeratedConcrete' },
+  { value: 'gypsum', key: 'gypsum' },
+] as const;
+
+export function EditWallTypeDialog(): React.ReactElement | null {
+  const state = useSyncExternalStore(subscribeEditWallType, getEditWallTypeState, getEditWallTypeState);
+  if (!state.open || !state.typeId) return null;
+  return <EditWallTypeDialogContent typeId={state.typeId} />;
+}
+
+function EditWallTypeDialogContent({ typeId }: { typeId: string }): React.ReactElement | null {
+  const { t } = useTranslation('dxf-viewer-shell');
+  const { updateTypeParams } = useWallFamilyTypeController();
+  const getType = useBimFamilyTypeStore((s) => s.getType);
+  const type = asWallFamilyType(getType(typeId));
+
+  const [draft, setDraft] = useState<WallTypeParams | null>(type ? type.typeParams : null);
+  // (Re)seed the draft when the target type changes.
+  useEffect(() => {
+    setDraft(type ? type.typeParams : null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [typeId]);
+
+  const onClose = useCallback(() => closeEditWallType(), []);
+
+  const onSave = useCallback(() => {
+    if (draft) updateTypeParams(typeId, draft);
+    closeEditWallType();
+  }, [draft, typeId, updateTypeParams]);
+
+  const onDnaChange = useCallback((next: WallDna | undefined) => {
+    setDraft((d) =>
+      d ? { ...d, dna: next, thickness: next ? next.totalThickness : d.thickness } : d,
+    );
+  }, []);
+
+  if (!type || !draft) return null;
+  const title = `${t('ribbon.commands.bimFamilyType.editTypeTitle')} · ${resolveTypeDisplayName(type, t)}`;
+
+  return (
+    <Dialog open onOpenChange={(o) => { if (!o) onClose(); }}>
+      <DialogContent size="lg">
+        <DialogHeader>
+          <DialogTitle>{title}</DialogTitle>
+          <DialogDescription>{t('ribbon.commands.bimFamilyType.editTypeDescription')}</DialogDescription>
+        </DialogHeader>
+
+        <div className="flex flex-col gap-3">
+          <label className="flex items-center gap-2 text-xs text-foreground">
+            <span className="w-24 shrink-0">{t('ribbon.commands.bimFamilyType.paramCategory')}</span>
+            <Select
+              value={draft.category}
+              onValueChange={(v) => setDraft((d) => (d ? { ...d, category: v as WallCategory } : d))}
+            >
+              <SelectTrigger size="sm" aria-label={t('ribbon.commands.bimFamilyType.paramCategory')}>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent className="w-auto min-w-[9rem]">
+                {CATEGORY_VALUES.map((c) => (
+                  <SelectItem key={c} value={c} className="whitespace-nowrap">
+                    {t(`ribbon.commands.wallEditor.category.${c}`)}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </label>
+
+          <label className="flex items-center gap-2 text-xs text-foreground">
+            <span className="w-24 shrink-0">{t('ribbon.commands.bimFamilyType.paramMaterial')}</span>
+            <Select
+              value={draft.material ?? SELECT_CLEAR_VALUE}
+              onValueChange={(v) =>
+                setDraft((d) =>
+                  d ? { ...d, material: v === SELECT_CLEAR_VALUE ? undefined : v } : d,
+                )
+              }
+            >
+              <SelectTrigger size="sm" aria-label={t('ribbon.commands.bimFamilyType.paramMaterial')}>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent className="w-auto min-w-[9rem]">
+                <SelectItem value={SELECT_CLEAR_VALUE}>
+                  {t('ribbon.commands.bimFamilyType.materialNone')}
+                </SelectItem>
+                {MATERIAL_OPTIONS.map((m) => (
+                  <SelectItem key={m.value} value={m.value} className="whitespace-nowrap">
+                    {t(`ribbon.commands.wallEditor.material.${m.key}`)}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </label>
+
+          <label className="flex items-center gap-2 text-xs text-foreground">
+            <span className="w-24 shrink-0">{t('ribbon.commands.bimFamilyType.paramThickness')}</span>
+            {draft.dna ? (
+              // DNA present → thickness is derived (SSoT); show read-only.
+              <span className="dxf-ribbon-wall-length-value">
+                {Math.round(draft.thickness)} {t('ribbon.commands.bimFamilyType.thicknessUnit')}
+              </span>
+            ) : (
+              <input
+                type="number"
+                min={1}
+                step={1}
+                value={draft.thickness}
+                onChange={(e) =>
+                  setDraft((d) => (d ? { ...d, thickness: parseFloat(e.target.value) || 0 } : d))
+                }
+                aria-label={t('ribbon.commands.bimFamilyType.paramThickness')}
+                className="w-24 rounded border border-border bg-background px-2 py-0.5 text-xs text-foreground"
+              />
+            )}
+          </label>
+
+          <WallDnaEditor
+            dna={draft.dna}
+            category={draft.category}
+            fallbackThickness={draft.thickness}
+            onChange={onDnaChange}
+          />
+        </div>
+
+        <DialogFooter>
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded border border-border bg-card px-3 py-1.5 text-sm text-foreground hover:bg-accent"
+          >
+            {t('ribbon.commands.bimFamilyType.cancel')}
+          </button>
+          <button
+            type="button"
+            onClick={onSave}
+            className="rounded border border-primary bg-primary px-3 py-1.5 text-sm text-primary-foreground hover:bg-primary/90"
+          >
+            {t('ribbon.commands.bimFamilyType.save')}
+          </button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}

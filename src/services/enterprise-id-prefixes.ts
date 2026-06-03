@@ -249,11 +249,13 @@ export const ENTERPRISE_ID_PREFIXES = {
   MEP_FIXTURE: 'mepfix',       // floorplan_mep_fixtures collection — point-based MEP fixture (ADR-406, light fixture first)
   MEP_SYSTEM: 'mepsys',        // floorplan_mep_systems collection — logical MEP network (ADR-408, electrical circuit first)
   ELECTRICAL_PANEL: 'elecpnl', // floorplan_electrical_panels collection — point-based electrical panel / circuit source (ADR-408 Φ3)
+  MEP_SEGMENT: 'mepseg',       // floorplan_mep_segments collection — linear duct/pipe distribution run (ADR-408 Φ8)
   RAILING: 'ral',              // floorplan_railings collection — standalone path-based railing (ADR-407)
   FURNITURE: 'furn',           // floorplan_furniture collection — mesh-based CC0 furniture (ADR-410, chair first)
   BIM_PRESET: 'bpst',          // bim_presets collection — element type presets (system/company/project/user scope)
   BIM_MATERIAL: 'bmat',        // bim_materials collection — material library (Phase 6+)
   BIM_SETTINGS: 'bset',        // bim_settings collection — per-company BIM configuration
+  BIM_FAMILY_TYPE: 'bimftype', // bim_family_types collection — shared parametric family type definitions (ADR-driven)
 
   // DXF 3D BIM Viewer — Performance Diagnostics (ADR-366 §B.5)
   PERF_DIAG: 'perfdiag',       // performance_diagnostics collection — user-submitted HUD snapshots

@@ -30,6 +30,7 @@ import {
   IfcPropertySetSchema,
 } from './ifc-entity-mixin';
 import { EnvelopeFunctionSchema } from './thermal-envelope.schemas';
+import { WallTypeParamsSchema } from './bim-family-type.schemas';
 
 // ─── Primitive schemas (Point3D) ─────────────────────────────────────────────
 
@@ -177,6 +178,14 @@ export const WallEntitySchema = z
     ifcGuid: IfcGuidSchema,
     ifcType: WallIfcTypeSchema,
     pset: IfcPropertySetSchema.optional(),
+    // ─── ADR-412 — Family-type linkage (optional, absent on legacy walls) ──────
+    /** FK → BimFamilyType.id. Absent on untyped walls. */
+    typeId: z.string().min(1).optional(),
+    /**
+     * Per-instance param overrides. Merged over type params at resolution time.
+     * Uses `.partial()` to accept any subset of WallTypeParams keys.
+     */
+    typeOverrides: WallTypeParamsSchema.partial().optional(),
   })
   // Allow other BaseEntity-derived fields without validating them here.
   .passthrough();

@@ -114,7 +114,11 @@ export function mmToEntityUnitFactor(entity: Entity): number {
     // without this their meter-scene gizmo move delta is 1000× off (entity flies
     // away then snaps back on resync). Same fix as the structural types above.
     entity.type === 'mep-fixture' ||
-    entity.type === 'electrical-panel'
+    entity.type === 'electrical-panel' ||
+    // ADR-410 — furniture also carries `params.sceneUnits` (same pattern).
+    entity.type === 'furniture' ||
+    // ADR-408 Φ8 — linear MEP segment carries `params.sceneUnits` too.
+    entity.type === 'mep-segment'
   ) {
     return mmScaleFor(entity.params);
   }

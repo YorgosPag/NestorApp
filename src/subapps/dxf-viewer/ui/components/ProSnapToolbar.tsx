@@ -47,6 +47,8 @@ const SNAP_MODE_KEYS: Record<ExtendedSnapType, string> = {
   [ExtendedSnapType.BIM_SLAB_CORNER]:    'bim.slabCorner',
   [ExtendedSnapType.BIM_COLUMN_CORNER]:  'bim.columnCorner',
   [ExtendedSnapType.BIM_OPENING_CORNER]: 'bim.openingCorner',
+  // ADR-408 Φ9: MEP connector attach-point snap — nested i18n path
+  [ExtendedSnapType.BIM_MEP_CONNECTOR]:  'bim.mepConnector',
   // ADR-378 Phase 3: TEXT/MTEXT 8-point snap — flat label key (sub-keys for individual points in snapModes.labels.text.*)
   [ExtendedSnapType.TEXT]: 'text',
 };
@@ -132,6 +134,7 @@ const BIM_MODES = [
   ExtendedSnapType.BIM_SLAB_CORNER,
   ExtendedSnapType.BIM_COLUMN_CORNER,
   ExtendedSnapType.BIM_OPENING_CORNER,
+  ExtendedSnapType.BIM_MEP_CONNECTOR, // ADR-408 Φ9: MEP connector attach point
 ];
 
 interface ProSnapToolbarProps {

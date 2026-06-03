@@ -224,6 +224,9 @@ export interface DrawingEventMap {
   // ADR-408 Φ3 — BIM electrical panel params + delete events
   'bim:electrical-panel-params-updated': { panelId: string };
   'bim:electrical-panel-delete-requested': { panelId: string };
+  // ADR-408 Φ8 — BIM MEP segment (duct/pipe) params + delete events
+  'bim:mep-segment-params-updated': { segmentId: string };
+  'bim:mep-segment-delete-requested': { segmentId: string };
   // ADR-408 — MEP system (electrical circuit) lifecycle + integrity events.
   'bim:mep-system-changed': { systemId: string };
   'bim:mep-system-member-missing': { systemId: string; entityId: string; connectorId: string };
@@ -234,9 +237,18 @@ export interface DrawingEventMap {
   'bim:mep-circuit-members-added': { memberCount: number };
   'bim:mep-circuit-members-removed': { memberCount: number };
   'bim:mep-circuit-edit-failed': { reason: 'noActiveCircuit' | 'addFailed' | 'removeFailed' };
+  // ADR-408 Φ10 — pipe-network auto-derivation feedback (whole-scene connectivity).
+  'bim:mep-networks-derived': { networkCount: number };
   // ADR-407 — BIM railing params + delete events
   'bim:railing-params-updated': { railingId: string };
   'bim:railing-delete-requested': { railingId: string };
+  // ADR-412 Φ5 — a BIM family type's `typeParams` changed (edit or delete).
+  // The optimistic store `setTypes` already re-flows geometry to in-scene
+  // instances (useWallTypeReresolution); this event drives the all-floors BOQ
+  // re-feed side-effect, which needs project/building context only the
+  // persistence host holds. Fires on command execute/undo. `category` reserved
+  // for future non-wall family types (host handler currently scopes to 'wall').
+  'bim:family-type-changed': { typeId: string; category: 'wall' | 'stair' };
   // ADR-403 — 3D column placement: the 3D viewport projected a click onto the
   // active floor plane and converted it to the active scene units. The 2D
   // `useColumnTool` listens and runs its existing `onCanvasClick(point)` commit
@@ -246,6 +258,8 @@ export interface DrawingEventMap {
   'bim:place-mep-fixture-3d': { point: Point2D };
   // ADR-408 Φ3 — 3D electrical panel placement (mirror of bim:place-column-3d).
   'bim:place-electrical-panel-3d': { point: Point2D };
+  // ADR-408 Φ8 — 3D MEP segment placement (2-click bridge; reserved for 3D tool).
+  'bim:place-mep-segment-3d': { point: Point2D };
   // ADR-407 — 3D railing placement (mirror of bim:place-column-3d).
   'bim:place-railing-3d': { point: Point2D };
   // ADR-410 — 3D furniture placement (mirror of bim:place-column-3d).
@@ -272,8 +286,8 @@ export interface DrawingEventMap {
   // via `payload.entityType` + `isXType(snapshot)`. Emitted by
   // DeleteEntityCommand.undo() and DeleteMultipleEntitiesCommand.undo().
   'bim:entity-restore-requested': {
-    // ADR-406 — 'mep-fixture' appended. ADR-407 — 'railing' appended. ADR-408 Φ3 — 'electrical-panel'.
-    entityType: 'wall' | 'opening' | 'slab' | 'slab-opening' | 'column' | 'beam' | 'stair' | 'mep-fixture' | 'electrical-panel' | 'railing';
+    // ADR-406 — 'mep-fixture' appended. ADR-407 — 'railing' appended. ADR-408 Φ3 — 'electrical-panel'. ADR-408 Φ8 — 'mep-segment'. ADR-410 — 'furniture'.
+    entityType: 'wall' | 'opening' | 'slab' | 'slab-opening' | 'column' | 'beam' | 'stair' | 'mep-fixture' | 'electrical-panel' | 'railing' | 'mep-segment' | 'furniture';
     entitySnapshot: AnySceneEntity;
     source: 'undo-delete' | 'redo-restore';
   };

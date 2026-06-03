@@ -1,0 +1,389 @@
+'use client';
+
+/**
+ * ADR-408 Φ8 — MEP segment Firestore persistence React adapter.
+ *
+ * Bridges `MepSegmentFirestoreService` to the scene model owned by
+ * `LevelsSystem`. Mirrors `useElectricalPanelPersistence` — same hybrid
+ * auto-save, selective-skip diff-merge, and first-save listener wired to
+ * `drawing:entity-created` with `tool === 'mep-segment'`.
+ *
+ * @see docs/centralized-systems/reference/adrs/ADR-408-mep-connectors-and-systems.md §Φ8
+ */
+
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { dequal } from 'dequal';
+
+import type { AnySceneEntity, SceneModel } from '../../types/entities';
+import type { MepSegmentEntity } from '../../bim/types/mep-segment-types';
+import { computeMepSegmentGeometry } from '../../bim/geometry/mep-segment-geometry';
+import { makeBimValidation } from '../../bim/types/bim-base';
+import { EventBus } from '../../systems/events/EventBus';
+import {
+  createMepSegmentFirestoreService,
+  entityToSaveInput,
+  MepSegmentFirestoreService,
+  type MepSegmentDoc,
+} from '../../bim/mep-segments/mep-segment-firestore-service';
+import { recordMepSegmentChange } from '../../bim/mep-segments/mep-segment-audit-client';
+import { useBimEntityMovedPersistEffect } from './useBimEntityMovedPersistEffect';
+import { useBimEntityRestoredPersistEffect } from './useBimEntityRestoredPersistEffect';
+
+// ============================================================================
+// TYPES
+// ============================================================================
+
+export type MepSegmentSaveState = 'idle' | 'saving' | 'saved' | 'error';
+
+interface LevelManagerLike {
+  readonly currentLevelId: string | null;
+  getLevelScene(levelId: string): SceneModel | null;
+  setLevelScene(levelId: string, scene: SceneModel): void;
+}
+
+export interface UseMepSegmentPersistenceParams {
+  readonly companyId: string | null;
+  readonly projectId: string | null | undefined;
+  readonly floorplanId: string | null | undefined;
+  readonly userId: string | null;
+  readonly levelManager: LevelManagerLike;
+  readonly primarySelectedSegment: MepSegmentEntity | null;
+}
+
+export interface UseMepSegmentPersistenceResult {
+  readonly saveState: MepSegmentSaveState;
+  readonly lastSavedAt: number | null;
+  readonly error: string | null;
+  readonly saveNow: () => Promise<void>;
+  readonly deleteSegment: (segmentId: string) => Promise<void>;
+}
+
+// ============================================================================
+// CONSTANTS
+// ============================================================================
+
+const AUTO_SAVE_DEBOUNCE_MS = 500;
+
+// ============================================================================
+// HELPERS
+// ============================================================================
+
+function isSegment(entity: AnySceneEntity): entity is MepSegmentEntity {
+  return (entity as { type?: string }).type === 'mep-segment';
+}
+
+/** Build scene-side `MepSegmentEntity` from a persisted `MepSegmentDoc`. */
+function docToEntity(d: MepSegmentDoc): MepSegmentEntity {
+  return {
+    id: d.id,
+    type: 'mep-segment',
+    kind: d.kind,
+    layerId: d.layerId ?? '0',
+    params: d.params,
+    geometry: d.geometry ?? computeMepSegmentGeometry(d.params),
+    validation: d.validation ?? makeBimValidation(),
+    visible: true,
+    // IFC mixin fields — derived from domain; older docs may not persist them.
+    ifcType: d.params.domain === 'pipe' ? 'IfcPipeSegment' : 'IfcDuctSegment',
+  } as MepSegmentEntity;
+}
+
+// ============================================================================
+// HOOK
+// ============================================================================
+
+export function useMepSegmentPersistence(
+  params: UseMepSegmentPersistenceParams,
+): UseMepSegmentPersistenceResult {
+  const {
+    companyId,
+    projectId,
+    floorplanId,
+    userId,
+    levelManager,
+    primarySelectedSegment,
+  } = params;
+
+  const [saveState, setSaveState] = useState<MepSegmentSaveState>('idle');
+  const [lastSavedAt, setLastSavedAt] = useState<number | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  const serviceRef = useRef<MepSegmentFirestoreService | null>(null);
+  const dirtyIdsRef = useRef<Set<string>>(new Set());
+  const lastSavedParamsRef = useRef<Map<string, MepSegmentEntity['params']>>(new Map());
+  const pendingFirstSaveIdsRef = useRef<Set<string>>(new Set());
+  const deletedIdsRef = useRef<Set<string>>(new Set());
+  const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const selectedSegmentRef = useRef<MepSegmentEntity | null>(null);
+  selectedSegmentRef.current = primarySelectedSegment;
+
+  // Instantiate service when auth + scope ready.
+  useEffect(() => {
+    if (!companyId || !projectId || !floorplanId || !userId) {
+      serviceRef.current = null;
+      return;
+    }
+    serviceRef.current = createMepSegmentFirestoreService({
+      companyId,
+      projectId,
+      floorplanId,
+      userId,
+    });
+  }, [companyId, projectId, floorplanId, userId]);
+
+  // Subscribe + diff-merge + selective skip locally-dirty segments.
+  useEffect(() => {
+    const svc = serviceRef.current;
+    const levelId = levelManager.currentLevelId;
+    if (!svc || !levelId) return;
+
+    const unsubscribe = svc.subscribeSegments(
+      (docs) => {
+        const scene = levelManager.getLevelScene(levelId);
+        if (!scene) return;
+
+        const docsById = new Map<string, MepSegmentDoc>();
+        for (const d of docs) docsById.set(d.id, d);
+
+        const dirty = dirtyIdsRef.current;
+        const sceneSegments = new Map<string, MepSegmentEntity>();
+        const nonSegments: AnySceneEntity[] = [];
+        for (const e of scene.entities) {
+          if (isSegment(e)) sceneSegments.set(e.id, e);
+          else nonSegments.push(e);
+        }
+
+        const nextSegments: MepSegmentEntity[] = [];
+        let mutated = false;
+
+        const deleted = deletedIdsRef.current;
+        const pending = pendingFirstSaveIdsRef.current;
+
+        for (const d of docs) {
+          if (deleted.has(d.id)) continue;
+          const existing = sceneSegments.get(d.id);
+          if (!existing) {
+            if (!dirty.has(d.id)) {
+              nextSegments.push(docToEntity(d));
+              mutated = true;
+            }
+            continue;
+          }
+          if (dirty.has(d.id)) {
+            nextSegments.push(existing);
+            continue;
+          }
+          const fresh = docToEntity(d);
+          if (!dequal(existing.params, fresh.params)) {
+            nextSegments.push(fresh);
+            mutated = true;
+          } else {
+            nextSegments.push(existing);
+          }
+        }
+
+        // Seed last-saved baseline for every Firestore doc.
+        for (const d of docs) {
+          if (!lastSavedParamsRef.current.has(d.id)) {
+            lastSavedParamsRef.current.set(d.id, d.params);
+          }
+        }
+
+        for (const [id, entity] of sceneSegments) {
+          if (docsById.has(id)) continue;
+          if (dirty.has(id) || pending.has(id)) {
+            nextSegments.push(entity);
+          } else {
+            mutated = true;
+          }
+        }
+
+        if (mutated) {
+          levelManager.setLevelScene(levelId, {
+            ...scene,
+            entities: [...nonSegments, ...nextSegments],
+          });
+        }
+      },
+      (err: Error) => {
+        setError(err.message);
+        setSaveState('error');
+      },
+    );
+
+    return () => unsubscribe();
+  }, [levelManager, companyId, projectId, floorplanId, userId]);
+
+  // Immediate persist (used by auto-save flush and explicit button).
+  const persist = useCallback(async (entity: MepSegmentEntity) => {
+    const svc = serviceRef.current;
+    if (!svc) return;
+    const prevParams = lastSavedParamsRef.current.get(entity.id) ?? null;
+    const isNew = prevParams === null;
+    setSaveState('saving');
+    setError(null);
+    try {
+      if (isNew) {
+        await svc.saveSegment(entityToSaveInput(entity));
+      } else {
+        await svc.updateSegment(entity.id, {
+          params: entity.params,
+          validation: entity.validation,
+          geometry: entity.geometry,
+          layerId: entity.layerId,
+        });
+      }
+      lastSavedParamsRef.current.set(entity.id, entity.params);
+      dirtyIdsRef.current.delete(entity.id);
+      pendingFirstSaveIdsRef.current.delete(entity.id);
+      setSaveState('saved');
+      setLastSavedAt(Date.now());
+      void recordMepSegmentChange(
+        isNew ? 'created' : 'updated',
+        entity,
+        { prevParams: prevParams ?? undefined },
+      );
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'MEP_SEGMENT_SAVE_ERROR');
+      setSaveState('error');
+    }
+  }, []);
+
+  // Auto-save debounce on bim:mep-segment-params-updated.
+  useEffect(() => {
+    const cleanup = EventBus.on('bim:mep-segment-params-updated', ({ segmentId }) => {
+      const svc = serviceRef.current;
+      if (!svc) return;
+      const levelId = levelManager.currentLevelId;
+      if (!levelId) return;
+      const scene = levelManager.getLevelScene(levelId);
+      const entity = scene?.entities.find((e) => e.id === segmentId && isSegment(e));
+      if (!entity || !isSegment(entity)) return;
+
+      const known = lastSavedParamsRef.current.has(entity.id);
+      const isPending = pendingFirstSaveIdsRef.current.has(entity.id);
+      if (!known && !isPending) return;
+      const lastSaved = lastSavedParamsRef.current.get(entity.id);
+      if (lastSaved && dequal(lastSaved, entity.params)) return;
+
+      dirtyIdsRef.current.add(entity.id);
+      if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+      saveTimerRef.current = setTimeout(() => {
+        void persist(entity);
+      }, AUTO_SAVE_DEBOUNCE_MS);
+    });
+    return cleanup;
+  }, [levelManager, persist]);
+
+  const saveNow = useCallback(async () => {
+    const segment = selectedSegmentRef.current;
+    if (!segment) return;
+    if (saveTimerRef.current) {
+      clearTimeout(saveTimerRef.current);
+      saveTimerRef.current = null;
+    }
+    await persist(segment);
+  }, [persist]);
+
+  // Delete segment: remove from Firestore + scene + audit.
+  const deleteSegment = useCallback(async (segmentId: string) => {
+    const svc = serviceRef.current;
+    if (!svc) return;
+    const levelId = levelManager.currentLevelId;
+    if (!levelId) return;
+
+    if (saveTimerRef.current) {
+      clearTimeout(saveTimerRef.current);
+      saveTimerRef.current = null;
+    }
+
+    const scene = levelManager.getLevelScene(levelId);
+    const deletedEntity = scene?.entities.find((e) => e.id === segmentId);
+    const deletedSegment = deletedEntity && isSegment(deletedEntity) ? deletedEntity : null;
+    try {
+      await svc.deleteSegment(segmentId);
+      void recordMepSegmentChange(
+        'deleted',
+        deletedSegment
+          ? { id: deletedSegment.id, kind: deletedSegment.kind, layerId: deletedSegment.layerId, params: deletedSegment.params }
+          : { id: segmentId, kind: 'duct' },
+      );
+    } catch {
+      // Non-fatal: deletion failure silent — user retries.
+    }
+
+    if (scene) {
+      const nextEntities = scene.entities.filter((e) => e.id !== segmentId);
+      levelManager.setLevelScene(levelId, { ...scene, entities: nextEntities });
+    }
+
+    dirtyIdsRef.current.delete(segmentId);
+    lastSavedParamsRef.current.delete(segmentId);
+    pendingFirstSaveIdsRef.current.delete(segmentId);
+    deletedIdsRef.current.add(segmentId);
+  }, [levelManager]);
+
+  // persistRestore: undo→Firestore re-create + audit 'restored'.
+  const persistRestore = useCallback(async (entity: MepSegmentEntity) => {
+    const svc = serviceRef.current;
+    if (!svc) return;
+    setSaveState('saving');
+    setError(null);
+    try {
+      await svc.saveSegment(entityToSaveInput(entity));
+      lastSavedParamsRef.current.set(entity.id, entity.params);
+      dirtyIdsRef.current.delete(entity.id);
+      pendingFirstSaveIdsRef.current.delete(entity.id);
+      setSaveState('saved');
+      setLastSavedAt(Date.now());
+      void recordMepSegmentChange('restored', entity);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'MEP_SEGMENT_RESTORE_ERROR');
+      setSaveState('error');
+    }
+  }, []);
+
+  // First-save listener — fires immediately for freshly drawn segments.
+  useEffect(() => {
+    const cleanup = EventBus.on('drawing:entity-created', (payload) => {
+      if (payload.tool !== 'mep-segment') return;
+      const entity = payload.entity as MepSegmentEntity | undefined;
+      if (!entity || (entity as { type?: string }).type !== 'mep-segment') return;
+      if (!serviceRef.current) return;
+      pendingFirstSaveIdsRef.current.add(entity.id);
+      dirtyIdsRef.current.add(entity.id);
+      void persist(entity);
+    });
+    return cleanup;
+  }, [persist]);
+
+  // Delete-requested listener.
+  useEffect(() => {
+    const cleanup = EventBus.on('bim:mep-segment-delete-requested', ({ segmentId }) => {
+      void deleteSegment(segmentId);
+    });
+    return cleanup;
+  }, [deleteSegment]);
+
+  useBimEntityMovedPersistEffect(isSegment, serviceRef, dirtyIdsRef, persist);
+  useBimEntityRestoredPersistEffect(
+    'mep-segment',
+    isSegment,
+    serviceRef,
+    pendingFirstSaveIdsRef,
+    deletedIdsRef,
+    persistRestore,
+  );
+
+  // Unmount cleanup — flush pending timers.
+  useEffect(() => {
+    return () => {
+      if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+    };
+  }, []);
+
+  return useMemo(
+    () => ({ saveState, lastSavedAt, error, saveNow, deleteSegment }),
+    [saveState, lastSavedAt, error, saveNow, deleteSegment],
+  );
+}

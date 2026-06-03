@@ -48,7 +48,9 @@ import type { ColumnEntity, ColumnParams } from '../types/column-types';
 import type { BeamEntity, BeamParams } from '../types/beam-types';
 import type { StairEntity, StairParams } from '../types/stair-types';
 import type { MepFixtureEntity, MepFixtureParams } from '../types/mep-fixture-types';
+import type { MepSegmentEntity, MepSegmentParams } from '../types/mep-segment-types';
 import type { ElectricalPanelEntity, ElectricalPanelParams } from '../types/electrical-panel-types';
+import type { FurnitureEntity, FurnitureParams } from '../types/furniture-types';
 import type { Point3D, Polygon3D } from '../types/bim-base';
 import { computeWallGeometry } from '../geometry/wall-geometry';
 import { computeSlabGeometry } from '../geometry/slab-geometry';
@@ -58,6 +60,8 @@ import { computeBeamGeometry } from '../geometry/beam-geometry';
 import { computeStairGeometry } from '../geometry/stairs/StairGeometryService';
 import { computeMepFixtureGeometry } from '../mep-fixtures/mep-fixture-geometry';
 import { computeElectricalPanelGeometry } from '../electrical-panels/electrical-panel-geometry';
+import { computeMepSegmentGeometry } from '../geometry/mep-segment-geometry';
+import { computeFurnitureGeometry } from '../furniture/furniture-geometry';
 
 // ─── Point3D delta helpers ──────────────────────────────────────────────────
 
@@ -160,6 +164,27 @@ function moveElectricalPanel(entity: ElectricalPanelEntity, delta: Point2D): Par
   return { params: newParams, geometry } as unknown as Partial<SceneEntity>;
 }
 
+// ADR-410 — point-based furniture: shift the single `position` anchor (same shape as column).
+function moveFurniture(entity: FurnitureEntity, delta: Point2D): Partial<SceneEntity> {
+  const newParams: FurnitureParams = {
+    ...entity.params,
+    position: shiftPoint3D(entity.params.position, delta),
+  };
+  const geometry = computeFurnitureGeometry(newParams);
+  return { params: newParams, geometry } as unknown as Partial<SceneEntity>;
+}
+
+// ADR-408 Φ8 — linear MEP segment: shift both axis endpoints (mirror beam).
+function moveMepSegment(entity: MepSegmentEntity, delta: Point2D): Partial<SceneEntity> {
+  const newParams: MepSegmentParams = {
+    ...entity.params,
+    startPoint: shiftPoint3D(entity.params.startPoint, delta),
+    endPoint: shiftPoint3D(entity.params.endPoint, delta),
+  };
+  const geometry = computeMepSegmentGeometry(newParams);
+  return { params: newParams, geometry } as unknown as Partial<SceneEntity>;
+}
+
 /**
  * Returns the partial entity patch (`{params, geometry}`) for moving a BIM
  * entity by a 2D delta. Returns `null` if the entity is not a BIM type
@@ -197,6 +222,10 @@ export function calculateBimMovedGeometry(
       return moveMepFixture(entity, delta);
     case 'electrical-panel':
       return moveElectricalPanel(entity, delta);
+    case 'furniture':
+      return moveFurniture(entity, delta);
+    case 'mep-segment':
+      return moveMepSegment(entity, delta);
     default:
       return null;
   }

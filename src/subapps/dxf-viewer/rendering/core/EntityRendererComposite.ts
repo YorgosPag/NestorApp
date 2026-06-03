@@ -41,6 +41,8 @@ import { ElectricalPanelRenderer } from '../../bim/renderers/ElectricalPanelRend
 import { RailingRenderer } from '../../bim/renderers/RailingRenderer';
 // ADR-410 — furniture leaf (mesh-based CC0 item; 2D footprint + glyph).
 import { FurnitureRenderer } from '../../bim/renderers/FurnitureRenderer';
+// ADR-408 Φ8 — MEP segment leaf (linear duct/pipe run, dashed outline + centerline).
+import { MepSegmentRenderer } from '../../bim/renderers/MepSegmentRenderer';
 // ADR-362 Phase C1 — persistent dimension leaf (consumes DimGeometry discriminated union).
 import { DimensionRenderer } from '../entities/DimensionRenderer';
 import type { DimensionLookup } from '../../systems/dimensions/dim-geometry-builder';
@@ -101,6 +103,8 @@ export class EntityRendererComposite {
     const railingRenderer = new RailingRenderer(this.ctx);
     // ADR-410 — furniture renderer (mesh-based CC0 item; 2D footprint + glyph).
     const furnitureRenderer = new FurnitureRenderer(this.ctx);
+    // ADR-408 Φ8 — MEP segment renderer (linear duct/pipe run, dashed outline + centerline).
+    const mepSegmentRenderer = new MepSegmentRenderer(this.ctx);
     // ADR-362 Phase C1 — dimension renderer (10 variants via DimGeometry union).
     const dimensionRenderer = new DimensionRenderer(this.ctx);
     // ADR-359 Phase 4.b — Liang-Barsky clipped construction line renderers.
@@ -132,6 +136,7 @@ export class EntityRendererComposite {
     this.renderers.set('electrical-panel', electricalPanelRenderer);
     this.renderers.set('railing', railingRenderer);
     this.renderers.set('furniture', furnitureRenderer);
+    this.renderers.set('mep-segment', mepSegmentRenderer);
     this.renderers.set('dimension', dimensionRenderer);
     this.renderers.set('xline', xlineRenderer);
     this.renderers.set('ray', rayRenderer);

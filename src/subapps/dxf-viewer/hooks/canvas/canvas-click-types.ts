@@ -116,6 +116,12 @@ export interface MepFixtureToolLike {
   onCanvasClick: (point: Point2D) => boolean;
 }
 
+/** ADR-408 Φ8 — Minimal MEP segment (duct/pipe) tool interface for click routing. */
+export interface MepSegmentToolLike {
+  readonly isActive: boolean;
+  onCanvasClick: (point: Point2D) => boolean;
+}
+
 /** ADR-408 Φ3 — Minimal electrical panel tool interface for click routing. */
 export interface ElectricalPanelToolLike {
   readonly isActive: boolean;
@@ -184,6 +190,8 @@ export interface UseCanvasClickHandlerParams {
   mepFixtureTool?: MepFixtureToolLike;
   /** ADR-408 Φ3 — Electrical panel tool click pipeline. */
   electricalPanelTool?: ElectricalPanelToolLike;
+  /** ADR-408 Φ8 — MEP segment (duct/pipe) tool click pipeline. */
+  mepSegmentTool?: MepSegmentToolLike;
   /** ADR-410 — Furniture tool click pipeline (single-click placement). */
   furnitureTool?: FurnitureToolLike;
   /** ADR-407 — Railing tool click pipeline (2-click straight guardrail). */

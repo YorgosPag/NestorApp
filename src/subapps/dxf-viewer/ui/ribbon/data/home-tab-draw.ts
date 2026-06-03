@@ -421,6 +421,34 @@ export const HOME_DRAW_PANEL: RibbonPanelDef = {
               commandKey: 'furniture',
               shortcut: 'FN',
             },
+            // ADR-408 Φ8 — linear MEP duct run (2-click). Discipline = mechanical.
+            {
+              id: 'draw.bim.mepDuct',
+              labelKey: 'ribbon.commands.bim.mepDuct.label',
+              tooltipKey: 'ribbon.commands.bim.mepDuct.tooltip',
+              icon: 'bim-duct',
+              commandKey: 'mep-duct',
+              shortcut: 'DU',
+            },
+            // ADR-408 Φ8 — linear MEP pipe run (2-click). Discipline = plumbing.
+            {
+              id: 'draw.bim.mepPipe',
+              labelKey: 'ribbon.commands.bim.mepPipe.label',
+              tooltipKey: 'ribbon.commands.bim.mepPipe.tooltip',
+              icon: 'bim-pipe',
+              commandKey: 'mep-pipe',
+              shortcut: 'PP',
+            },
+            // ADR-408 Φ10 — auto-derive pipe networks from physical connectivity.
+            // Action (not a tool): routed to the MEP circuit bridge via the
+            // `mepCircuit.actions.deriveNetworks` key (isMepCircuitActionKey).
+            {
+              id: 'draw.bim.mepPipeNetwork',
+              labelKey: 'ribbon.commands.bim.mepPipeNetwork.label',
+              tooltipKey: 'ribbon.commands.bim.mepPipeNetwork.tooltip',
+              icon: 'bim-pipe',
+              commandKey: 'mepCircuit.actions.deriveNetworks',
+            },
           ],
         },
       ],

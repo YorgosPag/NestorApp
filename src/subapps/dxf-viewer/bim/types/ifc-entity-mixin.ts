@@ -32,7 +32,10 @@ export type IfcEntityType =
   // ADR-408 Φ3 — electrical panel (panelboard / consumer unit).
   | 'IfcElectricDistributionBoard'
   // ADR-410 — mesh-based furniture (IfcFurnishingElement family, IFC4 ADD2).
-  | 'IfcFurniture';
+  | 'IfcFurniture'
+  // ADR-408 Φ8 — linear MEP segments (IfcDistributionFlowElement family).
+  | 'IfcDuctSegment'
+  | 'IfcPipeSegment';
 
 export const IFC_ENTITY_TYPE_VALUES: readonly IfcEntityType[] = [
   'IfcWall',
@@ -50,6 +53,9 @@ export const IFC_ENTITY_TYPE_VALUES: readonly IfcEntityType[] = [
   'IfcElectricDistributionBoard',
   // ADR-410 — mesh-based furniture.
   'IfcFurniture',
+  // ADR-408 Φ8 — linear MEP segments.
+  'IfcDuctSegment',
+  'IfcPipeSegment',
 ] as const;
 
 export type IfcPropertySetValue = string | number | boolean | null;
@@ -91,6 +97,9 @@ export const IfcEntityTypeSchema = z.enum([
   'IfcElectricDistributionBoard',
   // ADR-410 — mesh-based furniture.
   'IfcFurniture',
+  // ADR-408 Φ8 — linear MEP segments.
+  'IfcDuctSegment',
+  'IfcPipeSegment',
 ]);
 
 export const IfcPropertySetValueSchema = z.union([

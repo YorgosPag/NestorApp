@@ -115,6 +115,8 @@ export const SUBCATEGORY_TAXONOMY: Readonly<Record<BimCategory, ReadonlyArray<st
   railing:         [],
   'mep-wire':      [],
   furniture:       [],
+  duct:            [],
+  pipe:            [],
 };
 
 /**

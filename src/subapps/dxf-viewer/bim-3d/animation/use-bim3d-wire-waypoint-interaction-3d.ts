@@ -43,7 +43,8 @@ import { applyWaypointGesture, type WaypointGesture } from '../../bim/mep-system
 import { worldToPlanMm, planMmToScenePoint } from '../placement/world-to-scene-point';
 import { resolveActiveFloorElevationMm } from '../placement/raycast-floor-point';
 import { sceneUnitsToMeters, type SceneUnits } from '../../utils/scene-units';
-import type { MepSystemEntity } from '../../bim/types/mep-system-types';
+import type { MepSystemEntity, MepElectricalSystemParams } from '../../bim/types/mep-system-types';
+import { isElectricalSystemParams } from '../../bim/types/mep-system-types';
 import type { MepFixtureEntity } from '../../bim/types/mep-fixture-types';
 import type { ElectricalPanelEntity } from '../../bim/types/electrical-panel-types';
 import { WireWaypointHandles3D, type WireHandleNode } from './WireWaypointHandles3D';
@@ -58,6 +59,8 @@ export interface UseBim3DWireWaypointInteractionParams {
 /** Per-event resolved context for the active circuit in 3D. */
 interface Active3DContext {
   readonly system: MepSystemEntity;
+  /** Narrowed electrical params (waypoints are an electrical-circuit feature). */
+  readonly params: MepElectricalSystemParams;
   readonly segments: CircuitHostSegment[];
   readonly sceneToM: number;
   readonly sceneUnits: SceneUnits;
@@ -85,6 +88,8 @@ export function useBim3DWireWaypointInteraction({ managerRef, canvasEl }: UseBim
       if (!activeId) return null;
       const system = useMepSystemStore.getState().systems.find((s) => s.id === activeId);
       if (!system) return null;
+      // Waypoint editing applies only to electrical circuits (home-run wires).
+      if (!isElectricalSystemParams(system.params)) return null;
       const { fixtures, panels } = useBim3DEntitiesStore.getState();
       const hosts = new Map<string, WireHostXform>();
       let sceneUnits: SceneUnits = 'mm';
@@ -105,7 +110,7 @@ export function useBim3DWireWaypointInteraction({ managerRef, canvasEl }: UseBim
       const segments = computeCircuitHostSegments([system], resolverFromHosts(hosts));
       const sceneToM = sceneUnitsToMeters(sceneUnits);
       const worldYBaseM = resolveActiveFloorElevationMm() * 0.001;
-      return { system, segments, sceneToM, sceneUnits, worldYBaseM };
+      return { system, params: system.params, segments, sceneToM, sceneUnits, worldYBaseM };
     };
 
     /** Plan point (canvas units) + elevation (mm) → Three.js world point (m). */
@@ -120,7 +125,7 @@ export function useBim3DWireWaypointInteraction({ managerRef, canvasEl }: UseBim
     const collectHandleNodes = (ctx: Active3DContext): WireHandleNode[] => {
       const out: WireHandleNode[] = [];
       for (const seg of ctx.segments) {
-        const wps = getOrientedWaypoints(ctx.system.params.wireWaypoints, seg.keyA, seg.keyB);
+        const wps = getOrientedWaypoints(ctx.params.wireWaypoints, seg.keyA, seg.keyB);
         // SSoT: the SAME spliced points the conduit is built from (arc-length z),
         // so the sphere sits exactly on the wire — not a separate index-fraction z
         // that floats off the line when the segment endpoints differ in height.
@@ -222,7 +227,7 @@ export function useBim3DWireWaypointInteraction({ managerRef, canvasEl }: UseBim
         gesture = {
           mode: 'move',
           system: ctx.system,
-          startParams: ctx.system.params,
+          startParams: ctx.params,
           keyA: ud['keyA'] as string,
           keyB: ud['keyB'] as string,
           orientedIndex: ud['orientedIndex'] as number,
@@ -233,9 +238,9 @@ export function useBim3DWireWaypointInteraction({ managerRef, canvasEl }: UseBim
       // 2) The conduit tube → insert a vertex at the picked point, then drag it.
       const wireHit = raycastWire(ctx.system.id);
       if (!wireHit) return false;
-      const ins = hitTestInsertion(worldToPlan(wireHit, ctx), ctx.segments, ctx.system.params.wireWaypoints, Number.POSITIVE_INFINITY);
+      const ins = hitTestInsertion(worldToPlan(wireHit, ctx), ctx.segments, ctx.params.wireWaypoints, Number.POSITIVE_INFINITY);
       if (!ins) return false;
-      gesture = { mode: 'insert', system: ctx.system, startParams: ctx.system.params, keyA: ins.keyA, keyB: ins.keyB, orientedIndex: ins.orientedInsertIndex };
+      gesture = { mode: 'insert', system: ctx.system, startParams: ctx.params, keyA: ins.keyA, keyB: ins.keyB, orientedIndex: ins.orientedInsertIndex };
       planeY = wireHit.y;
       pushOptimistic(wireHit); // show the new vertex immediately
       return true;
@@ -298,13 +303,13 @@ export function useBim3DWireWaypointInteraction({ managerRef, canvasEl }: UseBim
       if (!nodeHit) return false;
       const ud = nodeHit.object.userData;
       const nextMap = deleteWaypointOriented(
-        ctx.system.params.wireWaypoints,
+        ctx.params.wireWaypoints,
         ud['keyA'] as string,
         ud['keyB'] as string,
         ud['orientedIndex'] as number,
       );
       getGlobalCommandHistory().execute(
-        new UpdateMepSystemParamsCommand(ctx.system.id, { ...ctx.system.params, wireWaypoints: nextMap }, ctx.system.params),
+        new UpdateMepSystemParamsCommand(ctx.system.id, { ...ctx.params, wireWaypoints: nextMap }, ctx.params),
       );
       return true;
     };

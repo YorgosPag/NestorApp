@@ -349,11 +349,13 @@ export class EnterpriseIdService {
   generateMepFixtureId(): string { return this.generateId(P.MEP_FIXTURE).id; }
   generateMepSystemId(): string { return this.generateId(P.MEP_SYSTEM).id; }
   generateElectricalPanelId(): string { return this.generateId(P.ELECTRICAL_PANEL).id; }
+  generateMepSegmentId(): string { return this.generateId(P.MEP_SEGMENT).id; }
   generateRailingId(): string { return this.generateId(P.RAILING).id; }
   generateFurnitureId(): string { return this.generateId(P.FURNITURE).id; }
   generateBimPresetId(): string { return this.generateId(P.BIM_PRESET).id; }
   generateBimMaterialId(): string { return this.generateId(P.BIM_MATERIAL).id; }
   generateBimSettingsId(): string { return this.generateId(P.BIM_SETTINGS).id; }
+  generateBimFamilyTypeId(): string { return this.generateId(P.BIM_FAMILY_TYPE).id; }
 
   // --- Deterministic Composite Key Generators ---
 

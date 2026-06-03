@@ -309,6 +309,60 @@ export type ElectricalPanelGripKind =
   | 'electrical-panel-corner-se';
 
 /**
+ * ADR-410 — Furniture grip kind (parametric grip type).
+ * Routes commit through `applyFurnitureGripDrag()` +
+ * `UpdateFurnitureParamsCommand` instead of the standard `StretchEntityCommand`
+ * vertex path.
+ *
+ * Grips exposed by `FurnitureEntity` (`bim/furniture/furniture-grips.ts`) —
+ * rectangular-only (no diameter), full wall-parity mirror of the rectangular
+ * MEP fixture / electrical panel:
+ *   - `furniture-move`     → translate `position` (whole-entity MOVE glyph).
+ *   - `furniture-rotation` → rotate about `position` (curved ROTATION glyph).
+ *   - `furniture-corner-{ne,nw,sw,se}` → two-direction resize of width × depth.
+ *     The DIAGONALLY-OPPOSITE corner stays pinned (anchor); the body grows/shrinks
+ *     toward the dragged corner and `position` re-centres. ORTHO (F8) constrains
+ *     the drag to the dominant local axis (pure width OR pure depth). Clamped to
+ *     `MIN_FURNITURE_DIMENSION_MM`.
+ */
+export type FurnitureGripKind =
+  | 'furniture-move'
+  | 'furniture-rotation'
+  | 'furniture-corner-ne'
+  | 'furniture-corner-nw'
+  | 'furniture-corner-sw'
+  | 'furniture-corner-se';
+
+/**
+ * ADR-408 Φ8 — MEP segment (duct / pipe) grip kind (parametric grip type).
+ * Routes commit through `applyMepSegmentGripDrag()` + `UpdateMepSegmentParamsCommand`
+ * instead of the standard `StretchEntityCommand` vertex path.
+ *
+ * Grips exposed by `MepSegmentEntity` (`bim/mep-segments/mep-segment-grips.ts`) —
+ * mirrors `BeamGripKind` for a linear 2-click element:
+ *   - `mep-segment-start`    → translate axis start endpoint.
+ *   - `mep-segment-end`      → translate axis end endpoint.
+ *   - `mep-segment-midpoint` → translate whole segment (both endpoints); renders
+ *                              the 4-arrow MOVE glyph + 3-click hot-grip.
+ *   - `mep-segment-section`  → resize section width (plan axis, symmetric × 2)
+ *                              perpendicular to the axis at midpoint. For
+ *                              rectangular duct: resizes `width`; for round duct /
+ *                              pipe: resizes `diameter`. Clamped to
+ *                              `MIN_SEGMENT_DIMENSION_MM`.
+ *   - `mep-segment-rotation` → rotate the whole segment (startPoint + endPoint)
+ *                              about a picked centre / the axis midpoint. Curved
+ *                              ROTATION glyph + 6-click ROTATE→Reference hot-grip
+ *                              (full beam-rotation parity). Skipped on degenerate
+ *                              (zero-length) axis.
+ */
+export type MepSegmentGripKind =
+  | 'mep-segment-start'
+  | 'mep-segment-end'
+  | 'mep-segment-midpoint'
+  | 'mep-segment-section'
+  | 'mep-segment-rotation';
+
+/**
  * ADR-359 Phase 11 — XLine grip kind.
  * Routes commit through `applyXLineGripDrag()` + direct scene patch instead of
  * the standard `StretchEntityCommand` vertex path.
@@ -400,6 +454,20 @@ export interface GripInfo {
    * (center translate + rotation + opposite-corner-anchored width/length resize).
    */
   electricalPanelGripKind?: ElectricalPanelGripKind;
+  /**
+   * ADR-410 — parametric furniture grip discriminator. Present only when the
+   * grip belongs to a `FurnitureEntity`; routes the commit through
+   * `applyFurnitureGripDrag()` + `UpdateFurnitureParamsCommand` (center
+   * translate + rotation + opposite-corner-anchored width/depth resize).
+   */
+  furnitureGripKind?: FurnitureGripKind;
+  /**
+   * ADR-408 Φ8 — parametric MEP segment grip discriminator. Present only when
+   * the grip belongs to a `MepSegmentEntity`; routes the commit through
+   * `applyMepSegmentGripDrag()` + `UpdateMepSegmentParamsCommand` (start/end/
+   * midpoint translate + section resize + rotation).
+   */
+  mepSegmentGripKind?: MepSegmentGripKind;
   /**
    * ADR-359 Phase 11 — XLine grip discriminator. Present only when the grip
    * belongs to an `XLineEntity`; routes commit through `applyXLineGripDrag()` +

@@ -344,6 +344,17 @@ export type {
 } from '../bim/types/furniture-types';
 import type { FurnitureEntity } from '../bim/types/furniture-types';
 
+// ADR-408 Φ8: unified linear MEP segment (duct + pipe) types live in bim/types/mep-segment-types.ts (SRP).
+export type {
+  MepSegmentDomain,
+  MepSegmentKind,
+  MepSegmentSectionKind,
+  MepSegmentParams,
+  MepSegmentGeometry,
+  MepSegmentEntity,
+} from '../bim/types/mep-segment-types';
+import type { MepSegmentEntity } from '../bim/types/mep-segment-types';
+
 // ADR-363 Phase 5: Beam concrete types live in bim/types/beam-types.ts (SRP).
 export type {
   BeamKind,
@@ -509,6 +520,8 @@ export type Entity = (
   | RailingEntity
   // ADR-410 — mesh-based CC0 furniture.
   | FurnitureEntity
+  // ADR-408 Φ8 — unified linear MEP segment (duct + pipe).
+  | MepSegmentEntity
 ) & Pick<BaseEntity,
   // Required identifiers — needed everywhere (ADR-363 fix: BIM entities now in union)
   'id' | 'name' | 'layerId' |
@@ -668,12 +681,16 @@ export const isRailingEntity = (entity: Entity): entity is RailingEntity =>
 export const isFurnitureEntity = (entity: Entity): entity is FurnitureEntity =>
   entity.type === 'furniture';
 
+/** ADR-408 Φ8 — unified linear MEP segment (duct + pipe). */
+export const isMepSegmentEntity = (entity: Entity): entity is MepSegmentEntity =>
+  entity.type === 'mep-segment';
+
 /** True for any ADR-363/406/407/408/410 BIM parametric entity */
-export const isBimEntity = (entity: Entity): entity is WallEntity | OpeningEntity | SlabEntity | SlabOpeningEntity | ColumnEntity | BeamEntity | MepFixtureEntity | ElectricalPanelEntity | RailingEntity | FurnitureEntity =>
+export const isBimEntity = (entity: Entity): entity is WallEntity | OpeningEntity | SlabEntity | SlabOpeningEntity | ColumnEntity | BeamEntity | MepFixtureEntity | ElectricalPanelEntity | RailingEntity | FurnitureEntity | MepSegmentEntity =>
   entity.type === 'wall' || entity.type === 'opening' || entity.type === 'slab' ||
   entity.type === 'slab-opening' || entity.type === 'column' || entity.type === 'beam' ||
   entity.type === 'mep-fixture' || entity.type === 'electrical-panel' || entity.type === 'railing' ||
-  entity.type === 'furniture';
+  entity.type === 'furniture' || entity.type === 'mep-segment';
 
 // ✅ ENTERPRISE MIGRATION: generateEntityId moved to systems/entity-creation/utils.ts
 // Re-export from centralized location for backward compatibility

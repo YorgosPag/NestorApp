@@ -2,7 +2,7 @@
 
 import { useEffect, type RefObject } from 'react';
 import { useBimRenderSettingsStore } from '../../state/bim-render-settings-store';
-import { type Bim3DEntities, EMPTY_BIM_ENTITIES } from '../stores/Bim3DEntitiesStore';
+import { type Bim3DEntities, EMPTY_BIM_ENTITIES, useBim3DEntitiesStore } from '../stores/Bim3DEntitiesStore';
 import { subscribeEnvelopeSpec } from '../../bim/stores/envelope-spec-store';
 import { subscribeEnvelopeFloorSlabs } from '../../bim/stores/envelope-floor-slabs-store';
 import { useMepSystemStore } from '../../bim/mep-systems/mep-system-store';
@@ -58,11 +58,23 @@ export function useBim3DVgResync(
       resync();
     });
 
+    // (e) ADR-413 — PBR textures load async; when a texture set finishes loading
+    // the cache bumps `textureAssetVersion`, so rebuild to swap the flat material
+    // for the textured variant. Mode-agnostic (this hook runs in both the store
+    // and external-entities feeds), so it covers the read-only overlay too.
+    let prevTexV = useBim3DEntitiesStore.getState().textureAssetVersion;
+    const unsubTextures = useBim3DEntitiesStore.subscribe((state) => {
+      if (state.textureAssetVersion === prevTexV) return;
+      prevTexV = state.textureAssetVersion;
+      resync();
+    });
+
     return () => {
       unsubVg();
       unsubEnvelope();
       unsubFloorSlabs();
       unsubSystems();
+      unsubTextures();
     };
   }, [managerRef, externalEntitiesMode, bimEntities]);
 }

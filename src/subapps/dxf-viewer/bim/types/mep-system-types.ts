@@ -26,12 +26,21 @@
  */
 
 import type { Timestamp } from 'firebase/firestore';
-import type { ElectricalSystemClassification } from './mep-connector-types';
+import type {
+  ElectricalSystemClassification,
+  PlumbingSystemClassification,
+  PipeFluid,
+} from './mep-connector-types';
 import type { WireStyle } from '../mep-systems/mep-wire-routing';
 import type { WireWaypointMap } from '../mep-systems/mep-wire-waypoints';
 
-/** System type discriminator. First slice ships `electrical-circuit`. */
-export type MepSystemType = 'electrical-circuit';
+/**
+ * System type discriminator (ADR-408). `electrical-circuit` (Φ2) and
+ * `pipe-network` (Φ9 — plumbing: ύδρευση / αποχέτευση / θέρμανση). The discriminant
+ * narrows {@link MepSystemParams} so electrical-only fields (wireStyle, conductors,
+ * …) never appear on a pipe network and vice-versa.
+ */
+export type MepSystemType = 'electrical-circuit' | 'pipe-network';
 
 /** One member of a System: a specific connector on a specific component. */
 export interface MepSystemMember {
@@ -41,24 +50,33 @@ export interface MepSystemMember {
   readonly connectorId: string;
 }
 
-/** User-editable SSoT params for a MEP system. */
-export interface MepSystemParams {
-  readonly systemType: MepSystemType;
-  /** Display name, e.g. "Circuit L1-04". */
+/**
+ * Fields shared by every MEP system regardless of domain. The domain-specific
+ * arms ({@link MepElectricalSystemParams} / {@link MepPipeSystemParams}) extend
+ * this and pin `systemType` + the matching `systemClassification`.
+ */
+export interface MepSystemParamsBase {
+  /** Display name, e.g. "Circuit L1-04" / "Κρύο νερό 1". */
   readonly name: string;
-  readonly systemClassification: ElectricalSystemClassification;
-  /** Source / base equipment — the panel connector that feeds the circuit. */
+  /** Source / base equipment connector — panel (circuit) or root segment/manifold (pipe). */
   readonly sourceEntityId: string;
   readonly sourceConnectorId: string;
-  /** MEMBERSHIP TRUTH — ordered list of downstream members. */
+  /** MEMBERSHIP TRUTH — ordered list of members. */
   readonly members: readonly MepSystemMember[];
   /**
    * The System **owns** its display colour (Revit "System Colour"): the hex
    * applied to every member + source when colour-by-system renders (ADR-408 Φ5).
    * SSoT truth — `MepConnector.systemId` is the membership cache, this is the
-   * paint. Assigned a deterministic palette default at creation; user-editable.
+   * paint. Defaulted at creation (palette for circuits, classification colour for
+   * pipe networks); user-editable.
    */
   readonly color?: string;
+}
+
+/** Electrical-circuit params (ADR-408 Φ2). */
+export interface MepElectricalSystemParams extends MepSystemParamsBase {
+  readonly systemType: 'electrical-circuit';
+  readonly systemClassification: ElectricalSystemClassification;
   /**
    * Per-circuit wire-drawing style (Revit "Wiring Type") for the derived
    * home-run run: `'straight'` (default) / `'orthogonal'` / `'arc'`. SSoT lives
@@ -77,15 +95,42 @@ export interface MepSystemParams {
    * Per-circuit conductor breakdown (Revit "#wires" / home-run tick marks): how
    * many ungrounded (`hot`), grounded (`neutral`) and equipment-ground (`ground`)
    * conductors run on the home-run leg. Drives the 2D tick annotation
-   * (`buildConductorTicks` → `MepWireRenderer`) — long ticks for hots, short for
-   * neutrals, short+dot for grounds. SSoT annotation data, INDEPENDENT of the
-   * electrical `poles` rollup below (this is the drawn wire count, not load calc).
-   * Absent ⇒ {@link DEFAULT_CONDUCTORS}.
+   * (`buildConductorTicks` → `MepWireRenderer`). Absent ⇒ {@link DEFAULT_CONDUCTORS}.
    */
   readonly conductors?: ConductorBreakdown;
   /** Optional electrical rollups (derivable from member connectedLoadVa). */
   readonly ratedVoltage?: number;
   readonly poles?: 1 | 2 | 3;
+}
+
+/** Pipe-network params (ADR-408 Φ9 — plumbing: ύδρευση / αποχέτευση / θέρμανση). */
+export interface MepPipeSystemParams extends MepSystemParamsBase {
+  readonly systemType: 'pipe-network';
+  readonly systemClassification: PlumbingSystemClassification;
+  /** mm — nominal network diameter (optional; feeds future sizing). */
+  readonly diameterMm?: number;
+  /** Conveyed fluid (defaulted from classification). */
+  readonly fluid?: PipeFluid;
+}
+
+/**
+ * User-editable SSoT params for a MEP system — a **discriminated union** on
+ * `systemType`. Narrow before touching domain-specific fields.
+ */
+export type MepSystemParams = MepElectricalSystemParams | MepPipeSystemParams;
+
+/** Narrow to the electrical-circuit arm (Revit circuit). */
+export function isElectricalSystemParams(
+  params: MepSystemParams,
+): params is MepElectricalSystemParams {
+  return params.systemType === 'electrical-circuit';
+}
+
+/** Narrow to the pipe-network arm (ADR-408 Φ9 — plumbing). */
+export function isPipeSystemParams(
+  params: MepSystemParams,
+): params is MepPipeSystemParams {
+  return params.systemType === 'pipe-network';
 }
 
 /**
@@ -131,11 +176,36 @@ export function buildDefaultCircuitParams(
   sourceConnectorId: string,
   members: readonly MepSystemMember[] = [],
   color?: string,
-): MepSystemParams {
+): MepElectricalSystemParams {
   return {
     systemType: 'electrical-circuit',
     name,
     systemClassification: 'lighting',
+    sourceEntityId,
+    sourceConnectorId,
+    members,
+    ...(color ? { color } : {}),
+  };
+}
+
+/**
+ * Default pipe-network params (ADR-408 Φ9). Unlike a circuit there is no panel
+ * source; the caller passes the deterministic root segment connector as source
+ * and the classification derived/chosen for the network. Members filled by the
+ * caller (typically the connectivity-graph walk, `mep-pipe-network-derive.ts`).
+ */
+export function buildDefaultPipeNetworkParams(
+  name: string,
+  systemClassification: PlumbingSystemClassification,
+  sourceEntityId: string,
+  sourceConnectorId: string,
+  members: readonly MepSystemMember[] = [],
+  color?: string,
+): MepPipeSystemParams {
+  return {
+    systemType: 'pipe-network',
+    name,
+    systemClassification,
     sourceEntityId,
     sourceConnectorId,
     members,

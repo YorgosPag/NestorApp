@@ -33,6 +33,7 @@ import {
 import { resolverFromHosts, type WireHostXform } from '../../bim/mep-systems/mep-wire-resolver';
 import { drawCircuitWires, drawWaypointHandles, DEFAULT_WIRE_COLOR } from '../../bim/renderers/MepWireRenderer';
 import { useMepCircuitEditorStore } from '../../bim/mep-systems/mep-circuit-editor-store';
+import { isElectricalSystemParams } from '../../bim/types/mep-system-types';
 import {
   getWireWaypointHover,
   subscribeWireWaypointHover,
@@ -142,7 +143,7 @@ export function HomeRunWiresOverlay({
     // appear on the selected wire). Drawn on top of the wire so the user can grab
     // existing vertices or insert a new one on a segment.
     const active = activeSystemId ? systems.find((s) => s.id === activeSystemId) ?? null : null;
-    if (active) {
+    if (active && isElectricalSystemParams(active.params)) {
       const segments = computeCircuitHostSegments([active], resolve);
       const path = paths.find((p) => p.systemId === active.id);
       drawWaypointHandles(

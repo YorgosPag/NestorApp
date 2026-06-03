@@ -21,6 +21,7 @@ import type { MepFixtureEntity } from '../../bim/types/mep-fixture-types';
 import type { ElectricalPanelEntity } from '../../bim/types/electrical-panel-types';
 import type { RailingEntity } from '../../bim/types/railing-types';
 import type { FurnitureEntity } from '../../bim/types/furniture-types';
+import type { MepSegmentEntity } from '../../bim/types/mep-segment-types';
 import type { BuildingRef, FloorRef } from '../../bim/utils/bim-floor-utils';
 import { applyBuildingsPreset } from '../utils/building-visibility-state';
 import type { BuildingVisMode, BuildingPreset } from '../utils/building-visibility-state';
@@ -53,6 +54,8 @@ export interface Bim3DEntities {
   readonly railings: readonly RailingEntity[];
   /** ADR-410 — mesh-based CC0 furniture (chair first). */
   readonly furnitures: readonly FurnitureEntity[];
+  /** ADR-408 Φ8 — linear MEP segments (duct + pipe). */
+  readonly mepSegments: readonly MepSegmentEntity[];
 }
 
 /**
@@ -73,6 +76,7 @@ export const EMPTY_BIM_ENTITIES: Bim3DEntities = {
   panels: [],
   railings: [],
   furnitures: [],
+  mepSegments: [],
 };
 
 interface Bim3DEntitiesStoreState extends Bim3DEntities {
@@ -96,6 +100,14 @@ interface Bim3DEntitiesStoreState extends Bim3DEntities {
    * sync pass. One shared resync signal for every mesh category (ADR-411 Δ5).
    */
   meshAssetVersion: number;
+  /**
+   * ADR-413 — monotonic counter bumped when a PBR texture *set* finishes loading
+   * into the `bimTextureCache`. Mirrors `meshAssetVersion`: any change triggers
+   * the entities-store subscriber in `BimViewport3D` → `resyncBimScene`, so flat
+   * materials are swapped for textured `MeshStandardMaterial`s on the next sync
+   * pass. One shared resync signal for every texture slug.
+   */
+  textureAssetVersion: number;
   setWalls: (walls: readonly WallEntity[]) => void;
   setColumns: (columns: readonly ColumnEntity[]) => void;
   setBeams: (beams: readonly BeamEntity[]) => void;
@@ -107,8 +119,12 @@ interface Bim3DEntitiesStoreState extends Bim3DEntities {
   setPanels: (panels: readonly ElectricalPanelEntity[]) => void;
   setRailings: (railings: readonly RailingEntity[]) => void;
   setFurnitures: (furnitures: readonly FurnitureEntity[]) => void;
+  /** ADR-408 Φ8 — feed the linear MEP segments (duct + pipe) slice. */
+  setMepSegments: (mepSegments: readonly MepSegmentEntity[]) => void;
   /** ADR-411 — bump after any mesh glTF load resolves (triggers 3D resync). */
   bumpMeshAssetVersion: () => void;
+  /** ADR-413 — bump after any PBR texture set load resolves (triggers 3D resync). */
+  bumpTextureAssetVersion: () => void;
   setActiveLevelId: (id: string | null) => void;
   setBuildings: (buildings: readonly BuildingRef[]) => void;
   setFloors: (floors: readonly FloorRef[]) => void;
@@ -131,7 +147,9 @@ export const useBim3DEntitiesStore = create<Bim3DEntitiesStoreState>()(
     panels: [],
     railings: [],
     furnitures: [],
+    mepSegments: [],
     meshAssetVersion: 0,
+    textureAssetVersion: 0,
     activeLevelId: null,
     buildings: [],
     floors: [],
@@ -149,7 +167,9 @@ export const useBim3DEntitiesStore = create<Bim3DEntitiesStoreState>()(
     setPanels: (panels) => set({ panels }),
     setRailings: (railings) => set({ railings }),
     setFurnitures: (furnitures) => set({ furnitures }),
+    setMepSegments: (mepSegments) => set({ mepSegments }),
     bumpMeshAssetVersion: () => set((s) => ({ meshAssetVersion: s.meshAssetVersion + 1 })),
+    bumpTextureAssetVersion: () => set((s) => ({ textureAssetVersion: s.textureAssetVersion + 1 })),
     setActiveLevelId: (activeLevelId) => set({ activeLevelId }),
     setBuildings: (buildings) => set({ buildings }),
     setFloors: (floors) => set({ floors }),
@@ -184,5 +204,6 @@ export function selectBim3DEntities(state: Bim3DEntitiesStoreState): Bim3DEntiti
     panels: state.panels,
     railings: state.railings,
     furnitures: state.furnitures,
+    mepSegments: state.mepSegments,
   };
 }

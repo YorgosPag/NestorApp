@@ -43,6 +43,12 @@ export interface BimRenderSettings {
    * default colour. Persisted per-view.
    */
   colorBySystem?: boolean;
+  /**
+   * ADR-413 — realistic PBR materials master toggle (Revit "Realistic" visual
+   * style). Absent ⇒ `true` (textured `MeshStandardMaterial`s with albedo/normal/
+   * roughness/ao maps). `false` ⇒ flat colour materials. Persisted per-view.
+   */
+  realisticMaterials?: boolean;
 }
 
 export interface ResolvedBimSettings {
@@ -51,6 +57,7 @@ export interface ResolvedBimSettings {
   objectStyles: Record<BimCategory, ObjectStyle>;
   disciplineVisibility: Partial<Record<Discipline, boolean>>;
   colorBySystem: boolean;
+  realisticMaterials: boolean;
 }
 
 // ── Resolver ───────────────────────────────────────────────────────────────
@@ -68,5 +75,7 @@ export function resolveBimSettings(s?: BimRenderSettings | null): ResolvedBimSet
     disciplineVisibility: s?.disciplineVisibility ?? {},
     // ADR-408 Φ7 — absent ⇒ true (colour-by-system on, the legacy behaviour).
     colorBySystem: s?.colorBySystem ?? true,
+    // ADR-413 — absent ⇒ true (realistic PBR materials on, the visible default).
+    realisticMaterials: s?.realisticMaterials ?? true,
   };
 }

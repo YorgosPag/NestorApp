@@ -32,6 +32,7 @@ import { UpdateMepSystemParamsCommand } from '../../../core/commands/entity-comm
 import { useMepSystemStore } from '../../../bim/mep-systems/mep-system-store';
 import { useMepCircuitEditorStore } from '../../../bim/mep-systems/mep-circuit-editor-store';
 import type { WireStyle } from '../../../bim/mep-systems/mep-wire-routing';
+import { isElectricalSystemParams } from '../../../bim/types/mep-system-types';
 
 /** Selectable wire styles, in display order. */
 const WIRE_STYLE_OPTIONS: readonly WireStyle[] = ['straight', 'orthogonal', 'arc'];
@@ -46,23 +47,25 @@ export function RibbonMepCircuitWireStyleWidget(): React.JSX.Element | null {
     () => systems.find((s) => s.id === activeSystemId) ?? null,
     [systems, activeSystemId],
   );
-  const value: WireStyle = active?.params.wireStyle ?? 'straight';
+  // Wire style is an electrical-circuit feature; ignore pipe networks (Φ9).
+  const params = active && isElectricalSystemParams(active.params) ? active.params : null;
+  const value: WireStyle = params?.wireStyle ?? 'straight';
 
   const handleChange = useCallback(
     (next: string) => {
-      if (!active || next === value) return;
+      if (!active || !params || next === value) return;
       execute(
         new UpdateMepSystemParamsCommand(
           active.id,
-          { ...active.params, wireStyle: next as WireStyle },
-          active.params,
+          { ...params, wireStyle: next as WireStyle },
+          params,
         ),
       );
     },
-    [active, value, execute],
+    [active, params, value, execute],
   );
 
-  if (!active) return null;
+  if (!active || !params) return null;
   const label = t('ribbon.commands.mepWireStyle.label');
 
   return (

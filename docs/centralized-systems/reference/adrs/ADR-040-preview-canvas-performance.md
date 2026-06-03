@@ -71,6 +71,13 @@ Mouse Event → DxfCanvas.onMouseMove
 
 ## Changelog
 
+### 2026-06-04 — ADR-408 Φ9/Φ10 plumbing network leaves (micro-leaf compliance note)
+
+**Status**: IMPLEMENTED 2026-06-04. ADR-408 Στρώμα Β touches two perf-sensitive files, both additive:
+- `canvas-v2/overlays/SnapIndicatorOverlay.tsx` (CHECK 6D) — adds the `bim_mep_connector` ◇ marker case + its i18n description key. Pure switch addition; no new store subscription, no cache-key change.
+- `bim-3d/scene/BimSceneLayer.ts` (CHECK 6B) — `syncMepSegments` now passes `ctx.systemColorIndex.get(segment.id)` to `mepSegmentToMesh` for colour-by-system (the index already existed and carries segment ids as network members). Pure pass-through; no `useSyncExternalStore` added, no micro-leaf structural change.
+- The 2D `MepSegmentRenderer` colour-by-system gate lives in `bim/renderers/` (entity-render pipeline leaf, **outside** the CHECK 6D path — same as `MepWireRenderer`), reads the system store synchronously at draw time. Detail in ADR-408 changelog.
+
 ### 2026-06-03 — ADR-410 furniture tool wiring (compliance note)
 
 **Status**: IMPLEMENTED 2026-06-03. The new ADR-410 `furniture` placement tool is threaded through the orchestrator exactly like the existing `mep-fixture`/`electrical-panel`/`railing` tools: `CanvasSection.tsx` destructures `furnitureTool` from `useSpecialTools` and passes it into the click-handler bundle, and `canvas-click-types.ts` adds the `furnitureTool` field to the handler-args type. Pure additive pass-through — **no `useSyncExternalStore` added to any orchestrator** (Cardinal Rule #1 / CHECK 6C respected), no bitmap cache-key change, no micro-leaf structural change. 2D furniture render is a `FurnitureRenderer` leaf in the existing entity-render pipeline. Detail in ADR-410 changelog.

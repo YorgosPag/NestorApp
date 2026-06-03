@@ -176,3 +176,6 @@ gcp-key*
 
 # Generated Firestore rules deploy artifact (SSoT = firestore.rules; built by scripts/build-firestore-rules.js)
 firestore.rules.compiled
+
+# Local scratch — CC0 mesh-import working dir (binary GLBs trip the secret scanner; not source)
+.sofa-lib/

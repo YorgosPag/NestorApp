@@ -23,9 +23,12 @@ import type { OpeningEntity } from '../../bim/types/opening-types';
 import type { Point3D } from '../../bim/types/bim-base';
 import { getMaterial3D, getElementMaterial3D } from '../materials/MaterialCatalog3D';
 import { buildWallMeshWithOpenings } from './wall-opening-extrude';
-import { computeWallOpeningPieces, type WallTopLocalFn, type WallBaseLocalFn } from './wall-opening-pieces';
+import { computeWallOpeningPieces, type WallTopLocalFn, type WallBaseLocalFn, type WallOpeningPiece } from './wall-opening-pieces';
 import { buildSlopedWallPieceGeometry, buildWallLoftBandGeometry } from './wall-piece-geometry';
 import { buildColumnPrismGeometry } from './column-piece-geometry';
+import { isMultiLayerWall, splitPieceByLayers } from './wall-layer-geometry';
+import { buildMultiLayerSolidWall } from './wall-multilayer-solid-3d';
+import { ensureWorldUvs } from './bim-uv-helpers';
 import {
   clipWallBandTopRegions,
   clipWallBandTopRegionsTilted,
@@ -154,73 +157,88 @@ export function buildStraightWallWithOpenings(
 
   const floorY = floorElevationMm * MM_TO_M + buildingBaseElevationM;
   const group = new THREE.Group();
-  const emit = (geo: THREE.BufferGeometry, yOffset: number): void => {
+  // ADR-413 — per-layer split: a multi-DNA wall renders one sub-solid per layer
+  // (own material/texture). Single-layer / no-DNA → one quad = the core material.
+  const dna = wall.params.dna;
+  const multiLayer = isMultiLayerWall(dna);
+  const emit = (geo: THREE.BufferGeometry, yOffset: number, mat: THREE.Material, layerId?: string): void => {
     // ADR-404 — battered wall στον pieces path (Δρόμος Β): το ίδιο shear με τον solid
     // path, αλλά αγκυρωμένο στο floor-local ύψος της βάσης του κομματιού (`yOffset −
     // floorY`: flat piece → zBotAM· wedge/prism → 0). No-op flat → byte-for-byte.
     // ΠΡΙΝ το mesh/edges ώστε τα attachEdgesProjection edges να ακολουθούν την κλίση.
     applyWallTilt(geo, wall.params, yOffset - floorY);
-    const mesh = new THREE.Mesh(geo, material);
+    // ADR-413 — texture UVs: ExtrudeGeometry carries auto-UVs (copy → uv2 for aoMap);
+    // custom wedge/prism/loft BufferGeometry has none → planar world-meter UVs.
+    ensureWorldUvs(geo);
+    const mesh = new THREE.Mesh(geo, mat);
     mesh.position.y = yOffset;
     mesh.userData['bimId'] = wall.id;
     mesh.userData['bimType'] = 'wall';
+    if (layerId !== undefined) mesh.userData['layerId'] = layerId;
     mesh.castShadow = true;
     mesh.receiveShadow = true;
     attachEdgesProjection(mesh, 'wall', 'common-edges');
     group.add(mesh);
   };
 
-  for (const pc of pieces) {
-    const flatBase = Math.abs(pc.zBotAM - pc.zBotBM) < 1e-6;
-    // ADR-401 γωνιακή διασταύρωση: profile-following κομμάτι attached τοίχου με επίπεδο
-    // πάτο → κόψε το plan-quad με τα host footprints σε επίπεδες περιοχές (κάθε μία
-    // prism). Δίνει διαγώνιο κατακόρυφο σκαλοπάτι στην αληθινή ακμή του host → μηδέν
-    // τριγωνικά κενά. Curved/sloped-base/μη-attached → δεν μπαίνει εδώ (fast path κάτω).
-    if (effTopClip && pc.topFollowsProfile && flatBase) {
-      if (isWallTilted(wall.params)) {
-        // ADR-404 Phase 4.2 — γερμένος τοίχος: σπάσε τα outside regions οριζόντια στο
-        // Hu → κάτω prism (base→Hu) + πάνω loft band (Hu→nominal, κατακόρυφη κοπή
-        // δοκαριού μετά τον ομοιόμορφο emit shear). 7→9 κομμάτια στη μεταβατική ζώνη.
-        const { prisms, lofts } = clipWallBandTopRegionsTilted(
-          pc.quad, effTopClip.hosts, effTopClip.nominalTopMm, floorElevationMm, pc.zBotAM, wall.params,
-        );
-        if (prisms.length > 0 || lofts.length > 0) {
-          for (const r of prisms) {
-            const prism = buildColumnPrismGeometry(r.footprint, r.baseLocalM, r.topLocalM);
-            if (prism) emit(prism, floorY);
-          }
-          for (const band of lofts) {
-            const loft = buildWallLoftBandGeometry(band);
-            if (loft) emit(loft, floorY);
-          }
-          continue;
-        }
-      } else {
-        const regions = clipWallBandTopRegions(
-          pc.quad, effTopClip.hosts, effTopClip.nominalTopMm, floorElevationMm, pc.zBotAM,
-        );
-        if (regions.length > 0) {
-          for (const r of regions) {
-            const prism = buildColumnPrismGeometry(r.footprint, r.baseLocalM, r.topLocalM);
-            if (prism) emit(prism, floorY);
-          }
-          continue;
-        }
-      }
-      // regions κενό (clip απέτυχε/degenerate) → πέσε στο fast path παρακάτω.
+  // ADR-401 γωνιακή διασταύρωση — attached profile-following piece με επίπεδο πάτο:
+  // κόβει το plan-quad με τα host footprints (tilted → prisms+loft bands, flat →
+  // prisms). Επιστρέφει `true` αν έκοψε (handled), αλλιώς `false` (fast path κάτω).
+  const tryEmitClip = (
+    pc: WallOpeningPiece,
+    quad: readonly [Point3D, Point3D, Point3D, Point3D],
+    mat: THREE.Material,
+    layerId?: string,
+  ): boolean => {
+    if (!effTopClip) return false;
+    if (isWallTilted(wall.params)) {
+      const { prisms, lofts } = clipWallBandTopRegionsTilted(
+        quad, effTopClip.hosts, effTopClip.nominalTopMm, floorElevationMm, pc.zBotAM, wall.params,
+      );
+      if (prisms.length === 0 && lofts.length === 0) return false;
+      for (const r of prisms) { const g = buildColumnPrismGeometry(r.footprint, r.baseLocalM, r.topLocalM); if (g) emit(g, floorY, mat, layerId); }
+      for (const band of lofts) { const g = buildWallLoftBandGeometry(band); if (g) emit(g, floorY, mat, layerId); }
+      return true;
     }
+    const regions = clipWallBandTopRegions(quad, effTopClip.hosts, effTopClip.nominalTopMm, floorElevationMm, pc.zBotAM);
+    if (regions.length === 0) return false;
+    for (const r of regions) { const g = buildColumnPrismGeometry(r.footprint, r.baseLocalM, r.topLocalM); if (g) emit(g, floorY, mat, layerId); }
+    return true;
+  };
+
+  // Emit ONE thickness-quad of a piece (the full piece quad in single-layer mode,
+  // or a layer sub-quad in multi-layer mode) with all the slope/clip branching.
+  const emitPieceQuad = (
+    pc: WallOpeningPiece,
+    quad: readonly [Point3D, Point3D, Point3D, Point3D],
+    mat: THREE.Material,
+    layerId?: string,
+  ): void => {
+    const flatBase = Math.abs(pc.zBotAM - pc.zBotBM) < 1e-6;
+    if (pc.topFollowsProfile && flatBase && tryEmitClip(pc, quad, mat, layerId)) return;
 
     if (Math.abs(pc.zTopAM - pc.zTopBM) < 1e-6 && flatBase) {
       // Επίπεδη κορυφή ΚΑΙ επίπεδος πάτος → extrude κατά (zTop − zBot).
       const depth = pc.zTopAM - pc.zBotAM;
-      if (depth <= 1e-6) continue;
-      const shape = buildShape(pc.quad);
-      if (!shape) continue;
-      emit(extrudeAndRotate(shape, depth), floorY + pc.zBotAM);
+      if (depth <= 1e-6) return;
+      const shape = buildShape(quad);
+      if (!shape) return;
+      emit(extrudeAndRotate(shape, depth), floorY + pc.zBotAM, mat, layerId);
     } else {
-      // Κεκλιμένη κορυφή ή/και πάτος → wedge με ρητές κορυφές σε floor-local Y.
-      const wedge = buildSlopedWallPieceGeometry(pc);
-      if (wedge) emit(wedge, floorY);
+      // Κεκλιμένη κορυφή ή/και πάτος → wedge από ΑΥΤΟ το quad (full piece ή layer sub-quad).
+      const wedge = buildSlopedWallPieceGeometry({ ...pc, quad });
+      if (wedge) emit(wedge, floorY, mat, layerId);
+    }
+  };
+
+  for (const pc of pieces) {
+    if (multiLayer) {
+      // ADR-413 — split this along-length piece across its thickness into layers.
+      for (const lp of splitPieceByLayers(pc, dna)) {
+        emitPieceQuad(lp.piece, lp.quad, getMaterial3D(lp.materialId), lp.layerId);
+      }
+    } else {
+      emitPieceQuad(pc, pc.quad, material);
     }
   }
   if (group.children.length === 0) return null;
@@ -251,6 +269,11 @@ export function wallToMesh(
   // ADR-401 (γ) — μεταβλητός πάτος (base-attach) μόνο όταν η βάση κολλάει σε host.
   const wallBase = baseProfile?.hasAttach ? makeWallBaseLocalFn(baseProfile, floorElevationMm) : undefined;
 
+  // ADR-413 — multi-layer DNA straight wall (no openings/profile) still routes
+  // through the piece path: it produces a single full-span piece that the
+  // per-layer split turns into one sub-solid per layer (preserves miters too).
+  const multiLayerStraight = isMultiLayerWall(wall.params.dna) && wall.kind === 'straight';
+
   // ADR-363 Bug 2 — opening cutouts.
   //   - straight walls: vertical-split pieces from the MITERED footprint
   //     (`buildStraightWallWithOpenings`) so corner miters survive (Phase 1J fix).
@@ -258,7 +281,7 @@ export function wallToMesh(
   //     N/A on multi-segment ends; ADR-370 Phase 7 slab-opening pattern).
   // ADR-401 B2/(γ): ο piece path ενεργοποιείται ΚΑΙ χωρίς ανοίγματα όταν υπάρχει
   // μεταβλητή κορυφή Ή μεταβλητός πάτος (το ίσιο solid extrude δεν τα υποστηρίζει).
-  if (openings.length > 0 || wallTop || wallBase) {
+  if (openings.length > 0 || wallTop || wallBase || multiLayerStraight) {
     const group =
       wall.kind === 'straight'
         ? buildStraightWallWithOpenings(wall, openings, material, floorElevationMm, buildingBaseElevationM, wallTop, wallBase, topClip)
@@ -271,6 +294,18 @@ export function wallToMesh(
     // Fall through to solid path if segmenting failed (defensive).
   }
 
+  // ADR-413 — multi-layer curved/polyline (or defensive fall-through): split the
+  // single solid into per-layer band solids via the shared layer helper.
+  if (isMultiLayerWall(wall.params.dna)) {
+    const grp = buildMultiLayerSolidWall(wall, floorElevationMm, buildingBaseElevationM);
+    if (grp) {
+      grp.userData['matId'] = matId;
+      if (levelId !== undefined) grp.userData['levelId'] = levelId;
+      return grp;
+    }
+    // Degenerate → fall through to single-mesh solid (defensive).
+  }
+
   const shape = buildWallShape(
     wall.geometry.outerEdge.points,
     wall.geometry.innerEdge.points,
@@ -278,6 +313,7 @@ export function wallToMesh(
   if (!shape) return null;
 
   const geo = extrudeAndRotate(shape, wall.params.height * MM_TO_M);
+  ensureWorldUvs(geo); // ADR-413 — aoMap uv2 (ExtrudeGeometry auto-UVs in meters).
   // ADR-404 — battered wall: shear το X/Z βάσει ύψους (η κορυφή γέρνει). No-op flat.
   applyWallTilt(geo, wall.params);
   const mesh = new THREE.Mesh(geo, material);
@@ -311,6 +347,7 @@ export function columnToMesh(
   if (topProfile?.hasAttach || baseProfile?.hasAttach) {
     const prism = buildAttachedColumnPrism(verts, floorElevationMm, topProfile, baseProfile);
     if (prism) {
+      ensureWorldUvs(prism); // ADR-413 — custom prism has no uv → planar world UVs.
       // ADR-404 — raking column στον attached prism path: το prism ζει σε floor-local
       // Y με βάση στο FFL → baseHeightM=0 (ίδιο datum με τον flat path & το 2Δ). No-op flat.
       applyColumnTilt(prism, column.params);
@@ -327,6 +364,7 @@ export function columnToMesh(
   if (!shape) return null;
 
   const geo = extrudeAndRotate(shape, column.params.height * MM_TO_M);
+  ensureWorldUvs(geo); // ADR-413 — aoMap uv2 (ExtrudeGeometry auto-UVs in meters).
   // ADR-404 — raking column: shear το X/Z βάσει ύψους (η κορυφή γέρνει). No-op flat.
   applyColumnTilt(geo, column.params);
   const mesh = new THREE.Mesh(geo, getElementMaterial3D('column'));
@@ -389,6 +427,7 @@ export function beamToMesh(
     geo = extrudeAndRotate(shape, beamDepthM);
   }
 
+  ensureWorldUvs(geo); // ADR-413 — box-extrude auto-UVs OR planar for swept-I custom geo.
   applyBeamSlope(geo, beam.params);
   const matId = beam.params.material ?? 'elem-beam';
   const mesh = new THREE.Mesh(geo, getElementMaterial3D('beam'));
@@ -436,6 +475,7 @@ export function slabToMesh(
 
   const thicknessM = slab.params.thickness * MM_TO_M;
   const geo = extrudeAndRotate(shape, thicknessM);
+  ensureWorldUvs(geo); // ADR-413 — aoMap uv2 (ExtrudeGeometry auto-UVs in meters).
   applySlabSlope(geo, slab.params);
   const matId = slab.params.material ?? 'elem-slab';
   const mesh = new THREE.Mesh(geo, getElementMaterial3D('slab'));

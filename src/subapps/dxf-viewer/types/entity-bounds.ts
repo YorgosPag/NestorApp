@@ -140,6 +140,10 @@ function computeBounds(entity: Entity, forExtents: boolean): SpatialBounds {
     case 'mep-fixture':
     // ADR-408 Φ3 — electrical panel uses pre-computed geometry.bbox (same).
     case 'electrical-panel':
+    // ADR-410 — furniture uses pre-computed geometry.bbox (same).
+    case 'furniture':
+    // ADR-408 Φ8 — MEP segment uses pre-computed geometry.bbox (same).
+    case 'mep-segment':
       if ('geometry' in entity && entity.geometry && entity.geometry.bbox) {
         const { min, max } = entity.geometry.bbox;
         return { minX: min.x, minY: min.y, maxX: max.x, maxY: max.y };

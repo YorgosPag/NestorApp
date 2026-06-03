@@ -47,7 +47,8 @@
     "membersRemoved": "Fixtures removed from the circuit — members: {count}.",
     "noActiveCircuit": "No active circuit to edit.",
     "addFailed": "Select at least one light fixture to add to the circuit.",
-    "removeFailed": "Select at least one member fixture to remove."
+    "removeFailed": "Select at least one member fixture to remove.",
+    "networksDerived": "Pipe networks derived from connectivity — networks: {count}."
   },
   "bim": {
     "wallCascadeDelete": {
@@ -470,6 +471,10 @@
     "electricalPanel": {
       "statusPosition": "Click to place electrical panel"
     },
+    "mepSegment": {
+      "statusStart": "Pick run start",
+      "statusEnd": "Pick run end"
+    },
     "railing": {
       "statusStart": "Pick railing start",
       "statusEnd": "Pick railing end"
@@ -638,7 +643,8 @@
         "beamCorner": "Beam corner",
         "slabCorner": "Slab corner",
         "columnCorner": "Column corner",
-        "openingCorner": "Opening corner"
+        "openingCorner": "Opening corner",
+        "mepConnector": "MEP connector"
       },
       "text": "Text",
       "textPoints": {
@@ -677,7 +683,8 @@
         "beamCorner": "Beam Corner - Snap to beam end face corner",
         "slabCorner": "Slab Corner - Snap to slab outline vertex",
         "columnCorner": "Column Corner - Snap to column perimeter corner",
-        "openingCorner": "Opening Corner - Snap to door/window face corner"
+        "openingCorner": "Opening Corner - Snap to door/window face corner",
+        "mepConnector": "MEP Connector - Snap to a pipe/duct/fixture/panel connection point"
       },
       "text": "Text - Snap to insertion point, corners, center and edge midpoints of TEXT/MTEXT"
     },
@@ -764,6 +771,7 @@
       "wallCategory": "Category",
       "wallGeometry": "Geometry",
       "wallMaterial": "Material",
+      "wallFamilyType": "Type",
       "wallActions": "Actions",
       "wallStructuralAttach": "Structural Attach",
       "openingMark": "Mark",
@@ -995,6 +1003,18 @@
         "furniture": {
           "label": "Furniture",
           "tooltip": "Place furniture (CC0) with a single click (discipline: interior) (shortcut FN)"
+        },
+        "mepDuct": {
+          "label": "Duct",
+          "tooltip": "Draw a duct run with 2 clicks (discipline: mechanical) (shortcut DU)"
+        },
+        "mepPipe": {
+          "label": "Pipe",
+          "tooltip": "Draw a pipe run with 2 clicks (discipline: plumbing) (shortcut PP)"
+        },
+        "mepPipeNetwork": {
+          "label": "Pipe networks",
+          "tooltip": "Auto-derive pipe networks from physical connectivity (connected pipes → one network)"
         }
       },
       "select": "Select",
@@ -1275,6 +1295,51 @@
           "gypsum": "Gypsum Board",
           "tooltip": "Select wall material for hatch pattern",
           "comingSoon": "Available with WallDna Phase 1D"
+        }
+      },
+      "bimFamilyType": {
+        "label": "Type",
+        "selectPlaceholder": "Select type…",
+        "noType": "No type (ad-hoc)",
+        "duplicate": "Duplicate",
+        "duplicateTooltip": "Create an editable copy of the type",
+        "duplicateNamePrefix": "Copy",
+        "rename": "Rename",
+        "renameTooltip": "Rename the type",
+        "save": "Save",
+        "cancel": "Cancel",
+        "builtinBadge": "Built-in",
+        "properties": "Type Properties",
+        "override": "Override",
+        "overrideTooltip": "This value overrides the type on this instance",
+        "resetToType": "Reset to type",
+        "resetToTypeTooltip": "Clear all overrides — return to the type's values",
+        "paramCategory": "Category",
+        "paramThickness": "Thickness",
+        "paramMaterial": "Material",
+        "thicknessUnit": "mm",
+        "materialNone": "—",
+        "editType": "Edit type…",
+        "editTypeTitle": "Edit wall type",
+        "editTypeDescription": "Changes apply to every instance of this type, on all floors.",
+        "duplicateAndEdit": "Duplicate & edit",
+        "deleteType": "Delete type…",
+        "deleteTypeTitle": "Delete wall type?",
+        "deleteTypeBody": "Type \"{name}\" is used by {count} instance(s). Deleting detaches them — each keeps its current dimensions (no geometry is lost).",
+        "deleteTypeBodyUnused": "Type \"{name}\" is not in use. Delete it?",
+        "deleteTypeConfirm": "Delete & detach",
+        "builtin": {
+          "wall": {
+            "exterior": "Exterior",
+            "interior": "Interior",
+            "partition": "Partition",
+            "parapet": "Parapet",
+            "fence": "Fence"
+          },
+          "stair": {
+            "residential": "Residential",
+            "narrow": "Narrow"
+          }
         }
       },
       "envelopeFunction": {
@@ -1614,6 +1679,7 @@
         "createTooltip": "Create an electrical circuit from the selected panel (source) and fixtures (members).",
         "close": "Close",
         "defaultName": "Circuit {n}",
+        "networkDefaultName": "Pipe network {n}",
         "name": "Name",
         "color": "Color",
         "circuitPicker": "Circuit",
@@ -1878,6 +1944,13 @@
         "disable": "Disable Colour",
         "tooltipEnable": "Colour fixtures, panels and wires by their circuit (system)",
         "tooltipDisable": "Turn off colour-by-system — use the default colour"
+      },
+      "realisticMaterials": {
+        "label": "Realistic Materials",
+        "enable": "Enable Materials",
+        "disable": "Disable Materials",
+        "tooltipEnable": "Realistic PBR materials (albedo/normal/roughness/ao textures) on BIM elements",
+        "tooltipDisable": "Turn off realistic materials — use flat colours"
       },
       "mepWireStyle": {
         "label": "Wire Style",
@@ -2354,14 +2427,37 @@
   },
   "furniture": {
     "catalog": {
-      "chair01": "Chair",
       "diningChair02": "Dining chair",
       "paintedWoodenChair01": "Painted wooden chair",
       "plasticMonoblocChair01": "Plastic chair",
       "coffeeTableRound01": "Round coffee table",
       "modernCoffeeTable01": "Modern coffee table",
       "modernCoffeeTable02": "Modern coffee table II",
-      "sideTable01": "Side table"
+      "sideTable01": "Side table",
+      "sofaMidcentury01": "Mid-century sofa",
+      "sofaModern01": "Modern sofa",
+      "sofaModern02": "Modern 3-seater sofa",
+      "sofaDelica01": "Delica sofa",
+      "bedModern01": "Modern bed",
+      "bedBlanc01": "Blanc bed",
+      "chairDining03": "Wooden dining chair",
+      "chairOffice01": "Office chair",
+      "chairOffice02": "Office chair II",
+      "tableNoguchi01": "Noguchi coffee table",
+      "armchairPatricia01": "Patricia armchair",
+      "armchairMidcentury01": "Mid-century armchair",
+      "desk01": "Desk",
+      "cabinetTall01": "Tall cabinet",
+      "cabinetSideboard01": "Sideboard",
+      "wardrobeModern01": "Modern wardrobe",
+      "wardrobeClassic01": "Classic wardrobe",
+      "bookshelfWooden01": "Wooden bookcase",
+      "nightstand01": "Nightstand",
+      "nightstand02": "Nightstand II",
+      "benchModern01": "Modern bench",
+      "dresserIkea01": "Chest of drawers",
+      "stoolBar01": "Bar stool",
+      "tvStand01": "TV stand"
     },
     "validation": {
       "hardErrors": {

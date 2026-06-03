@@ -30,6 +30,18 @@ export const ElectricalSystemClassificationSchema = z.enum([
   'controls',
 ]);
 
+/** ADR-408 Φ9 — plumbing/piping system classification. */
+export const PlumbingSystemClassificationSchema = z.enum([
+  'domestic-cold-water',
+  'domestic-hot-water',
+  'sanitary-drainage',
+  'hydronic-supply',
+  'hydronic-return',
+]);
+
+/** ADR-408 Φ9 — conveyed fluid. */
+export const PipeFluidSchema = z.enum(['water', 'hot-water', 'wastewater', 'glycol', 'other']);
+
 export const MepElectricalConnectorParamsSchema = z
   .object({
     systemClassification: ElectricalSystemClassificationSchema,
@@ -37,6 +49,17 @@ export const MepElectricalConnectorParamsSchema = z
     poles: z.union([z.literal(1), z.literal(2), z.literal(3)]).optional(),
     connectedLoadVa: z.number().nonnegative().optional(),
     numberOfPhases: z.union([z.literal(1), z.literal(3)]).optional(),
+  })
+  .strict();
+
+/** ADR-408 Φ9 — plumbing/piping connector params (present when domain === 'pipe'). */
+export const MepPipeConnectorParamsSchema = z
+  .object({
+    systemClassification: PlumbingSystemClassificationSchema,
+    diameterMm: z.number().positive().optional(),
+    fluid: PipeFluidSchema.optional(),
+    slopePercent: z.number().optional(),
+    flowLps: z.number().nonnegative().optional(),
   })
   .strict();
 
@@ -48,6 +71,7 @@ export const MepConnectorSchema = z
     localPosition: Point3DSchema,
     localDirection: Point3DSchema.optional(),
     electrical: MepElectricalConnectorParamsSchema.optional(),
+    pipe: MepPipeConnectorParamsSchema.optional(),
     systemId: z.string().min(1).optional(),
   })
   .strict();

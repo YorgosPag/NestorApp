@@ -27,6 +27,8 @@ import { HOVER_HIGHLIGHT } from '../../config/color-config';
 import { getLayer } from '../../stores/LayerStore';
 import { bimMeshCache } from '../../bim-3d/library/bim-mesh-library/bim-mesh-cache';
 import { drawMeshSilhouette } from './mesh-silhouette-draw';
+import { getFurnitureGrips } from '../furniture/furniture-grips';
+import { gripGlyphShape } from '../grips/grip-glyph-registry';
 
 /** BIM category → Storage library folder for furniture meshes. */
 const FURNITURE_MESH_CATEGORY = 'furniture';
@@ -105,10 +107,22 @@ export class FurnitureRenderer extends BaseEntityRenderer {
     this.finalizeRender(entity, options);
   }
 
-  getGrips(_entity: EntityModel): GripInfo[] {
-    // ADR-410 slice — parametric 2D grips deferred. Move/rotate is available via
-    // the entity-agnostic hot-grip / 3D gizmo path; no per-vertex grips here yet.
-    return [];
+  getGrips(entity: EntityModel): GripInfo[] {
+    // ADR-410 — parametric grips: move (centre) + rotation + 4 corner resize.
+    // Mirror of `MepFixtureRenderer.getGrips`; move/rotation handles get their
+    // icon glyph from the shared `gripGlyphShape` registry SSoT, corners stay
+    // square. Drag is routed through `applyFurnitureGripDrag()` +
+    // `UpdateFurnitureParamsCommand` by `commitFurnitureGripDrag`.
+    if (!isFurnitureEntity(entity)) return [];
+    return getFurnitureGrips(entity as FurnitureEntity).map((g) => ({
+      id: `${g.entityId}-grip-${g.gripIndex}`,
+      position: g.position,
+      type: g.type === 'center' ? ('center' as const) : ('vertex' as const),
+      entityId: g.entityId,
+      isVisible: true,
+      gripIndex: g.gripIndex,
+      shape: gripGlyphShape(g.furnitureGripKind),
+    }));
   }
 
   hitTest(entity: EntityModel, point: Point2D, tolerance: number): boolean {

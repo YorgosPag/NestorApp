@@ -34,7 +34,8 @@ import { useCommandHistory } from '../../core/commands';
 import { UpdateMepSystemParamsCommand } from '../../core/commands/entity-commands/UpdateMepSystemParamsCommand';
 import { useMepSystemStore } from '../../bim/mep-systems/mep-system-store';
 import { useMepCircuitEditorStore } from '../../bim/mep-systems/mep-circuit-editor-store';
-import type { MepSystemEntity, MepSystemParams } from '../../bim/types/mep-system-types';
+import type { MepSystemEntity, MepElectricalSystemParams } from '../../bim/types/mep-system-types';
+import { isElectricalSystemParams } from '../../bim/types/mep-system-types';
 import type { MepConnector } from '../../bim/types/mep-connector-types';
 import {
   computeCircuitHostSegments,
@@ -72,6 +73,8 @@ export interface UseMepWireWaypointInteractionParams {
 
 interface ActiveContext {
   readonly system: MepSystemEntity;
+  /** Narrowed electrical params (waypoints are an electrical-circuit feature). */
+  readonly params: MepElectricalSystemParams;
   readonly segments: CircuitHostSegment[];
   readonly resolve: ResolveWireHost;
 }
@@ -128,13 +131,15 @@ export function useMepWireWaypointInteraction(
       if (!activeId) return null;
       const system = useMepSystemStore.getState().systems.find((s) => s.id === activeId);
       if (!system) return null;
+      // Waypoint editing applies only to electrical circuits (home-run wires).
+      if (!isElectricalSystemParams(system.params)) return null;
       const levelId = getCurrentLevelIdRef.current();
       if (!levelId) return null;
       const scene = getLevelSceneRef.current(levelId);
       if (!scene) return null;
       const resolve = resolverFromHosts(collectHosts(scene));
       const segments = computeCircuitHostSegments([system], resolve);
-      return { system, segments, resolve };
+      return { system, params: system.params, segments, resolve };
     }
 
     function toWorld(e: PointerEvent | MouseEvent): { world: Point2D; scale: number } {
@@ -172,17 +177,17 @@ export function useMepWireWaypointInteraction(
       const ctx = getActiveContext();
       if (!ctx) return false;
       const { world, scale } = toWorld(e);
-      const map = ctx.system.params.wireWaypoints;
+      const map = ctx.params.wireWaypoints;
       const node = hitTestWaypointNode(world, ctx.segments, map, NODE_TOL_PX / scale);
       let gesture: WaypointGesture;
       let startPoint: WirePlanPoint;
       if (node) {
-        gesture = { mode: 'move', system: ctx.system, startParams: ctx.system.params, keyA: node.keyA, keyB: node.keyB, orientedIndex: node.orientedIndex };
+        gesture = { mode: 'move', system: ctx.system, startParams: ctx.params, keyA: node.keyA, keyB: node.keyB, orientedIndex: node.orientedIndex };
         startPoint = node.point;
       } else {
         const ins = hitTestInsertion(world, ctx.segments, map, WIRE_TOL_PX / scale);
         if (!ins) return false;
-        gesture = { mode: 'insert', system: ctx.system, startParams: ctx.system.params, keyA: ins.keyA, keyB: ins.keyB, orientedIndex: ins.orientedInsertIndex };
+        gesture = { mode: 'insert', system: ctx.system, startParams: ctx.params, keyA: ins.keyA, keyB: ins.keyB, orientedIndex: ins.orientedInsertIndex };
         startPoint = ins.point;
       }
       gestureRef.current = gesture;
@@ -198,11 +203,11 @@ export function useMepWireWaypointInteraction(
       const ctx = getActiveContext();
       if (!ctx) return false;
       const { world, scale } = toWorld(e);
-      const node = hitTestWaypointNode(world, ctx.segments, ctx.system.params.wireWaypoints, NODE_TOL_PX / scale);
+      const node = hitTestWaypointNode(world, ctx.segments, ctx.params.wireWaypoints, NODE_TOL_PX / scale);
       if (!node) return false;
-      const nextMap = deleteWaypointOriented(ctx.system.params.wireWaypoints, node.keyA, node.keyB, node.orientedIndex);
-      const nextParams: MepSystemParams = { ...ctx.system.params, wireWaypoints: nextMap };
-      executeRef.current(new UpdateMepSystemParamsCommand(ctx.system.id, nextParams, ctx.system.params));
+      const nextMap = deleteWaypointOriented(ctx.params.wireWaypoints, node.keyA, node.keyB, node.orientedIndex);
+      const nextParams: MepElectricalSystemParams = { ...ctx.params, wireWaypoints: nextMap };
+      executeRef.current(new UpdateMepSystemParamsCommand(ctx.system.id, nextParams, ctx.params));
       return true;
     }
 
@@ -240,7 +245,7 @@ export function useMepWireWaypointInteraction(
         return;
       }
       const { world, scale } = toWorld(e);
-      const map = ctx.system.params.wireWaypoints;
+      const map = ctx.params.wireWaypoints;
       const node = hitTestWaypointNode(world, ctx.segments, map, NODE_TOL_PX / scale);
       if (node) {
         setWireWaypointHover({ systemId: ctx.system.id, x: node.point.x, y: node.point.y, kind: 'node' });
@@ -300,7 +305,7 @@ export function useMepWireWaypointInteraction(
       const ctx = getActiveContext();
       if (!ctx) return;
       const { world, scale } = toWorld(e);
-      if (hitTestWaypointNode(world, ctx.segments, ctx.system.params.wireWaypoints, NODE_TOL_PX / scale)) {
+      if (hitTestWaypointNode(world, ctx.segments, ctx.params.wireWaypoints, NODE_TOL_PX / scale)) {
         e.preventDefault();
         e.stopPropagation();
       }

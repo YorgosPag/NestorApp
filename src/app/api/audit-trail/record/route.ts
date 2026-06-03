@@ -32,7 +32,18 @@ const logger = createModuleLogger('AuditTrailRecord');
 // ============================================================================
 
 const VALID_ENTITY_TYPES: ReadonlySet<string> = new Set<AuditEntityType>([
-  'contact', 'building', 'property', 'project', 'parking', 'storage', 'wall', 'opening', 'slab', 'slab-opening', 'column', 'beam', 'stair', 'mep-fixture', 'mep-system', 'electrical-panel',
+  'contact', 'building', 'property', 'project', 'parking', 'storage', 'wall', 'opening', 'slab', 'slab-opening', 'column', 'beam', 'stair', 'mep-fixture', 'mep-system', 'electrical-panel', 'mep-segment', 'bim_family_type',
+]);
+
+/**
+ * Entity types whose documents live in a per-company subcollection
+ * (`companies/{companyId}/<collection>/{id}`) rather than a top-level
+ * collection. Ownership verification reads from the caller's OWN company
+ * subcollection (path derived from `ctx.companyId`), so a forged id can only
+ * ever touch the caller's own tenant — cross-tenant access is impossible.
+ */
+const SUBCOLLECTION_ENTITY_TYPES: ReadonlySet<string> = new Set<AuditEntityType>([
+  'bim_family_type',
 ]);
 
 const VALID_ACTIONS: ReadonlySet<string> = new Set<AuditAction>([
@@ -62,6 +73,10 @@ const ENTITY_COLLECTION_MAP: Record<string, string> = {
   'mep-system': COLLECTIONS.FLOORPLAN_MEP_SYSTEMS,
   // ADR-408 Φ3 — point-based electrical panels.
   'electrical-panel': COLLECTIONS.FLOORPLAN_ELECTRICAL_PANELS,
+  // ADR-408 Φ8 — linear duct/pipe MEP segments.
+  'mep-segment': COLLECTIONS.FLOORPLAN_MEP_SEGMENTS,
+  // ADR-412 Φ5 — BIM family types (subcollection — see SUBCOLLECTION_ENTITY_TYPES).
+  bim_family_type: COLLECTIONS.BIM_FAMILY_TYPES,
 };
 
 // ============================================================================
@@ -112,7 +127,14 @@ export const POST = withStandardRateLimit(
         throw new ApiError(400, `No collection mapping for entity type: ${body.entityType}`);
       }
 
-      const entityDoc = await db.collection(collectionName).doc(body.entityId).get();
+      const entityRef = SUBCOLLECTION_ENTITY_TYPES.has(body.entityType)
+        ? db
+            .collection(COLLECTIONS.COMPANIES)
+            .doc(ctx.companyId)
+            .collection(collectionName)
+            .doc(body.entityId)
+        : db.collection(collectionName).doc(body.entityId);
+      const entityDoc = await entityRef.get();
 
       // Action 'deleted' is recorded AFTER the entity is removed from
       // Firestore, so `!entityDoc.exists` is the normal case. Returning 404

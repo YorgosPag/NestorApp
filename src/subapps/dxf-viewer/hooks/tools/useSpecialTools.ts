@@ -26,6 +26,7 @@ import { useColumnTool } from '../drawing/useColumnTool';
 import { useMepFixtureTool } from '../drawing/useMepFixtureTool';
 import { useFurnitureTool } from '../drawing/useFurnitureTool';
 import { useElectricalPanelTool } from '../drawing/useElectricalPanelTool';
+import { useMepSegmentTool } from '../drawing/useMepSegmentTool';
 import { useRailingTool } from '../drawing/useRailingTool';
 import { useBeamTool } from '../drawing/useBeamTool';
 import { useSlabOpeningTool } from '../drawing/useSlabOpeningTool';
@@ -42,6 +43,7 @@ import { addColumnToScene } from '../../bim/columns/add-column-to-scene';
 import { addMepFixtureToScene } from '../../bim/mep-fixtures/add-mep-fixture-to-scene';
 import { addFurnitureToScene } from '../../bim/furniture/add-furniture-to-scene';
 import { addElectricalPanelToScene } from '../../bim/electrical-panels/add-electrical-panel-to-scene';
+import { addMepSegmentToScene } from '../../bim/mep-segments/add-mep-segment-to-scene';
 import { addRailingToScene } from '../../bim/railings/add-railing-to-scene';
 import { appendEntityToScene } from '../../bim/scene/append-entity-to-scene';
 // 🏢 ENTERPRISE: Import actual level system types for type safety
@@ -81,6 +83,7 @@ export interface UseSpecialToolsReturn extends SelectionToolsReturn {
   mepFixtureTool: ReturnType<typeof useMepFixtureTool>; // ADR-406
   furnitureTool: ReturnType<typeof useFurnitureTool>; // ADR-410
   electricalPanelTool: ReturnType<typeof useElectricalPanelTool>; // ADR-408 Φ3
+  mepSegmentTool: ReturnType<typeof useMepSegmentTool>; // ADR-408 Φ8
   railingTool: ReturnType<typeof useRailingTool>; // ADR-407
   beamTool: ReturnType<typeof useBeamTool>;
   slabOpeningTool: ReturnType<typeof useSlabOpeningTool>;
@@ -318,6 +321,24 @@ export function useSpecialTools(props: UseSpecialToolsProps): UseSpecialToolsRet
   });
   useToolLifecycle(activeTool === 'electrical-panel', electricalPanelTool.activate, electricalPanelTool.deactivate);
 
+  // ADR-408 Φ8 — MEP SEGMENT TOOL (duct + pipe): 2-click linear placement.
+  const mepSegmentTool = useMepSegmentTool({
+    currentLevelId: levelManager.currentLevelId || '0',
+    onSegmentCreated: (segmentEntity) => addMepSegmentToScene(segmentEntity, levelManager),
+    getSceneUnits: () => {
+      const lid = levelManager.currentLevelId;
+      return lid ? resolveSceneUnits(levelManager.getLevelScene(lid)) : 'mm';
+    },
+  });
+  // 'mep-duct' and 'mep-pipe' share ONE useMepSegmentTool instance; the domain
+  // is driven by the active tool id.
+  const isMepSegmentTool = activeTool === 'mep-duct' || activeTool === 'mep-pipe';
+  useToolLifecycle(isMepSegmentTool, mepSegmentTool.activate, mepSegmentTool.deactivate);
+  useEffect(() => {
+    if (activeTool === 'mep-duct') mepSegmentTool.setDomain('duct');
+    else if (activeTool === 'mep-pipe') mepSegmentTool.setDomain('pipe');
+  }, [activeTool, mepSegmentTool.setDomain]);
+
   // ADR-407 — RAILING TOOL: 2-click straight guardrail; entity appended+broadcast.
   const railingTool = useRailingTool({
     currentLevelId: levelManager.currentLevelId || '0',
@@ -389,6 +410,7 @@ export function useSpecialTools(props: UseSpecialToolsProps): UseSpecialToolsRet
     mepFixtureTool,
     furnitureTool,
     electricalPanelTool,
+    mepSegmentTool,
     railingTool,
     beamTool,
     slabOpeningTool,

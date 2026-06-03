@@ -35,6 +35,10 @@ import type { ElectricalPanelEntity } from '../../bim/types/electrical-panel-typ
 import { applyElectricalPanelGripDrag } from '../../bim/electrical-panels/electrical-panel-grips';
 import { buildElectricalPanelEntity } from '../drawing/electrical-panel-completion';
 import { addElectricalPanelToScene } from '../../bim/electrical-panels/add-electrical-panel-to-scene';
+import type { FurnitureEntity } from '../../bim/types/furniture-types';
+import { applyFurnitureGripDrag } from '../../bim/furniture/furniture-grips';
+import { buildFurnitureEntity } from '../drawing/furniture-completion';
+import { addFurnitureToScene } from '../../bim/furniture/add-furniture-to-scene';
 import { createSceneManagerAdapter } from './grip-commit-adapters';
 
 /**
@@ -187,6 +191,34 @@ export function commitElectricalPanelCopy(
 }
 
 /**
+ * ADR-410 — Ctrl-COPY at the terminal click of a furniture MOVE hot-grip
+ * (AutoCAD MOVE→COPY). Mirror of `commitMepFixtureCopy`: builds a NEW
+ * `FurnitureEntity` whose params are the original shifted by `delta` (the same
+ * `furniture-move` whole-entity translate the MOVE uses) and inserts it via the
+ * shared `addFurnitureToScene` SSoT — fresh enterprise ID (N.6, via
+ * `buildFurnitureEntity` → `createFurniture`), `drawing:entity-created`
+ * broadcast so persistence saves the copy. Original untouched; single copy.
+ */
+export function commitFurnitureCopy(
+  grip: UnifiedGripInfo,
+  delta: Point2D,
+  deps: DxfCommitDeps,
+): void {
+  if (!grip.entityId || grip.furnitureGripKind !== 'furniture-move') return;
+  const sceneManager = createSceneManagerAdapter(deps);
+  if (!sceneManager) return;
+  const raw = sceneManager.getEntity(grip.entityId);
+  if (!raw) return;
+  const candidate = raw as unknown as Partial<FurnitureEntity>;
+  if (candidate.type !== 'furniture' || !candidate.params) return;
+  const furniture = candidate as FurnitureEntity;
+  const translated = applyFurnitureGripDrag('furniture-move', { originalParams: furniture.params, delta });
+  const built = buildFurnitureEntity(translated, furniture.layerId);
+  if (!built.ok) return;
+  addFurnitureToScene(built.entity, deps);
+}
+
+/**
  * ADR-397 — entity-agnostic Ctrl-COPY dispatch for the MOVE hot-grip terminal
  * click. Routes to the per-entity copy SSoT by the grip's kind. Returns `true`
  * when a copy was made (caller skips the translate), `false` when the kind has
@@ -216,6 +248,10 @@ export function commitHotGripCopy(
   }
   if (grip.electricalPanelGripKind === 'electrical-panel-move') {
     commitElectricalPanelCopy(grip, delta, deps);
+    return true;
+  }
+  if (grip.furnitureGripKind === 'furniture-move') {
+    commitFurnitureCopy(grip, delta, deps);
     return true;
   }
   return false;

@@ -37,6 +37,8 @@ const BIM_DESCRIPTION_KEY: Record<string, string> = {
   'bim-slab-corner':    'snapModes.labels.bim.slabCorner',
   'bim-column-corner':  'snapModes.labels.bim.columnCorner',
   'bim-opening-corner': 'snapModes.labels.bim.openingCorner',
+  // ADR-408 Φ9: MEP connector attach point
+  'bim-mep-connector':  'snapModes.labels.bim.mepConnector',
 };
 
 interface SnapResult {
@@ -242,6 +244,23 @@ function SnapShape({ type, color }: { type: string; color: string }) {
             strokeLinecap="square"
             strokeLinejoin="miter"
           />
+        </svg>
+      );
+
+    // ◇ BIM_MEP_CONNECTOR: Diamond + center dot — ADR-408 Φ9 MEP connector attach point.
+    // Distinct from ⊕ column centre (circle+cross) and ■ endpoint; mirrors the
+    // Revit/MEP "Connector" marker convention.
+    case 'bim_mep_connector':
+      return (
+        <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
+          <polygon
+            points={`${half},${strokeWidth} ${size - strokeWidth},${half} ${half},${size - strokeWidth} ${strokeWidth},${half}`}
+            fill="none"
+            stroke={color}
+            strokeWidth={strokeWidth}
+            strokeLinejoin="miter"
+          />
+          <circle cx={half} cy={half} r={getNodeDotRadius()} fill={color} />
         </svg>
       );
 

@@ -1,11 +1,11 @@
 /**
  * MEP Connector Seeding — ADR-408 Φ5 (legacy back-fill, scene-only).
  *
- * A connector host (light fixture / electrical panel) placed **before** the
- * connector model landed (Φ1/Φ2) carries no `params.connectors`, so it cannot
- * join a circuit, take a derived `systemId` cache, or route a home-run wire. In
- * Revit terms its **family definition** already declares a connector — the
- * placed instance simply has not materialised it yet.
+ * A connector host (light fixture / electrical panel / duct-pipe segment) placed
+ * **before** the connector model landed (Φ1/Φ2/Φ9) carries no `params.connectors`,
+ * so it cannot join a circuit/network, take a derived `systemId` cache, or route a
+ * home-run wire. In Revit terms its **family definition** already declares its
+ * connector(s) — the placed instance simply has not materialised them yet.
  *
  * This is the SSoT for that materialisation: re-derive the host's default
  * connector from its type via the builders in `mep-connector-types.ts` (the
@@ -26,11 +26,16 @@
  */
 
 import type { Entity } from '../../types/entities';
-import { isMepFixtureEntity, isElectricalPanelEntity } from '../../types/entities';
+import {
+  isMepFixtureEntity,
+  isElectricalPanelEntity,
+  isMepSegmentEntity,
+} from '../../types/entities';
 import { getEntityConnectors } from './connector-access';
 import {
   buildDefaultLightingConnector,
   buildDefaultPanelOutgoingConnector,
+  buildSegmentEndpointConnector,
 } from '../types/mep-connector-types';
 
 /**
@@ -48,6 +53,22 @@ export function seedDefaultConnectors(entity: Entity): Entity {
   }
   if (isElectricalPanelEntity(entity)) {
     return { ...entity, params: { ...entity.params, connectors: [buildDefaultPanelOutgoingConnector()] } };
+  }
+  // A linear duct/pipe segment carries TWO endpoint connectors (start + end) so
+  // it can join a pipe/duct network (Φ9). Its connector domain mirrors the
+  // segment's own `domain` ('duct' | 'pipe').
+  if (isMepSegmentEntity(entity)) {
+    const { domain } = entity.params;
+    return {
+      ...entity,
+      params: {
+        ...entity.params,
+        connectors: [
+          buildSegmentEndpointConnector('start', domain),
+          buildSegmentEndpointConnector('end', domain),
+        ],
+      },
+    };
   }
   return entity;
 }

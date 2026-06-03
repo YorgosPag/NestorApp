@@ -47,7 +47,8 @@
     "membersRemoved": "Αφαιρέθηκαν φωτιστικά από το κύκλωμα — μέλη: {count}.",
     "noActiveCircuit": "Δεν υπάρχει ενεργό κύκλωμα προς επεξεργασία.",
     "addFailed": "Επίλεξε τουλάχιστον ένα φωτιστικό για προσθήκη στο κύκλωμα.",
-    "removeFailed": "Επίλεξε τουλάχιστον ένα μέλος-φωτιστικό για αφαίρεση."
+    "removeFailed": "Επίλεξε τουλάχιστον ένα μέλος-φωτιστικό για αφαίρεση.",
+    "networksDerived": "Δημιουργήθηκαν δίκτυα σωλήνων από τη συνδεσιμότητα — δίκτυα: {count}."
   },
   "bim": {
     "wallCascadeDelete": {
@@ -470,6 +471,10 @@
     "electricalPanel": {
       "statusPosition": "Κλικ για τοποθέτηση ηλεκτρικού πίνακα"
     },
+    "mepSegment": {
+      "statusStart": "Επίλεξε αρχή διαδρομής",
+      "statusEnd": "Επίλεξε τέλος διαδρομής"
+    },
     "railing": {
       "statusStart": "Επιλέξτε αρχή κιγκλιδώματος",
       "statusEnd": "Επιλέξτε τέλος κιγκλιδώματος"
@@ -638,7 +643,8 @@
         "beamCorner": "Γωνία δοκαριού",
         "slabCorner": "Γωνία πλάκας",
         "columnCorner": "Γωνία κολώνας",
-        "openingCorner": "Γωνία κουφώματος"
+        "openingCorner": "Γωνία κουφώματος",
+        "mepConnector": "Σύνδεσμος ΜΕΡ"
       },
       "text": "Κείμενο",
       "textPoints": {
@@ -677,7 +683,8 @@
         "beamCorner": "Γωνία Δοκαριού - Snap στη γωνία άκρης δοκαριού",
         "slabCorner": "Γωνία Πλάκας - Snap στη γωνία περιγράμματος πλάκας",
         "columnCorner": "Γωνία Κολώνας - Snap στη γωνία περιμέτρου κολώνας",
-        "openingCorner": "Γωνία Κουφώματος - Snap στη γωνία κουφώματος"
+        "openingCorner": "Γωνία Κουφώματος - Snap στη γωνία κουφώματος",
+        "mepConnector": "Σύνδεσμος ΜΕΡ - Snap στο σημείο σύνδεσης σωλήνα/αεραγωγού/φωτιστικού/πίνακα"
       },
       "text": "Κείμενο - Snap σε σημεία εισαγωγής, γωνίες, κέντρο και μέσα ακμών κειμένου (TEXT/MTEXT)"
     },
@@ -764,6 +771,7 @@
       "wallCategory": "Κατηγορία",
       "wallGeometry": "Γεωμετρία",
       "wallMaterial": "Υλικό",
+      "wallFamilyType": "Τύπος",
       "wallActions": "Ενέργειες",
       "wallStructuralAttach": "Σύνδεση δομικού",
       "openingMark": "Mark",
@@ -995,6 +1003,18 @@
         "furniture": {
           "label": "Έπιπλο",
           "tooltip": "Τοποθέτησε έπιπλο (CC0) με ένα κλικ (κατηγορία: εσωτερικά) (συντόμευση FN)"
+        },
+        "mepDuct": {
+          "label": "Αεραγωγός",
+          "tooltip": "Σχεδίαση αεραγωγού με 2 κλικ (πειθαρχία: μηχανολογικά) (συντόμευση DU)"
+        },
+        "mepPipe": {
+          "label": "Σωλήνας",
+          "tooltip": "Σχεδίαση σωλήνα με 2 κλικ (πειθαρχία: υδραυλικά) (συντόμευση PP)"
+        },
+        "mepPipeNetwork": {
+          "label": "Δίκτυα σωλήνων",
+          "tooltip": "Αυτόματη δημιουργία δικτύων σωλήνων από τη φυσική συνδεσιμότητα (συνδεδεμένοι σωλήνες → ένα δίκτυο)"
         }
       },
       "select": "Επιλογή",
@@ -1275,6 +1295,51 @@
           "gypsum": "Γυψοσανίδα",
           "tooltip": "Επιλογή υλικού τοίχου για μοτίβο διαγράμμισης",
           "comingSoon": "Διαθέσιμο σε επόμενη φάση"
+        }
+      },
+      "bimFamilyType": {
+        "label": "Τύπος",
+        "selectPlaceholder": "Επιλογή τύπου…",
+        "noType": "Χωρίς τύπο (ελεύθερος)",
+        "duplicate": "Διπλασιασμός",
+        "duplicateTooltip": "Δημιουργία επεξεργάσιμου αντιγράφου του τύπου",
+        "duplicateNamePrefix": "Αντίγραφο",
+        "rename": "Μετονομασία",
+        "renameTooltip": "Μετονομασία του τύπου",
+        "save": "Αποθήκευση",
+        "cancel": "Άκυρο",
+        "builtinBadge": "Ενσωματωμένος",
+        "properties": "Ιδιότητες Τύπου",
+        "override": "Παράκαμψη",
+        "overrideTooltip": "Η τιμή παρακάμπτει τον τύπο σε αυτό το στοιχείο",
+        "resetToType": "Επαναφορά στον τύπο",
+        "resetToTypeTooltip": "Αφαίρεση όλων των παρακάμψεων — επιστροφή στις τιμές του τύπου",
+        "paramCategory": "Κατηγορία",
+        "paramThickness": "Πάχος",
+        "paramMaterial": "Υλικό",
+        "thicknessUnit": "mm",
+        "materialNone": "—",
+        "editType": "Επεξεργασία τύπου…",
+        "editTypeTitle": "Επεξεργασία τύπου τοίχου",
+        "editTypeDescription": "Οι αλλαγές εφαρμόζονται σε όλα τα στοιχεία αυτού του τύπου, σε όλους τους ορόφους.",
+        "duplicateAndEdit": "Διπλασιασμός & επεξεργασία",
+        "deleteType": "Διαγραφή τύπου…",
+        "deleteTypeTitle": "Διαγραφή τύπου τοίχου;",
+        "deleteTypeBody": "Ο τύπος «{name}» χρησιμοποιείται σε {count} στοιχεία. Με τη διαγραφή, τα στοιχεία αποσυνδέονται και διατηρούν τις τρέχουσες διαστάσεις τους (καμία γεωμετρία δεν χάνεται).",
+        "deleteTypeBodyUnused": "Ο τύπος «{name}» δεν χρησιμοποιείται. Να διαγραφεί;",
+        "deleteTypeConfirm": "Διαγραφή & αποσύνδεση",
+        "builtin": {
+          "wall": {
+            "exterior": "Εξωτερικός",
+            "interior": "Εσωτερικός",
+            "partition": "Διαχωριστικός",
+            "parapet": "Στηθαίο",
+            "fence": "Περίφραξη"
+          },
+          "stair": {
+            "residential": "Κατοικίας",
+            "narrow": "Στενή"
+          }
         }
       },
       "envelopeFunction": {
@@ -1614,6 +1679,7 @@
         "createTooltip": "Δημιουργία ηλεκτρικού κυκλώματος από τον επιλεγμένο πίνακα (πηγή) και τα φωτιστικά (μέλη).",
         "close": "Κλείσιμο",
         "defaultName": "Κύκλωμα {n}",
+        "networkDefaultName": "Δίκτυο σωλήνων {n}",
         "name": "Όνομα",
         "color": "Χρώμα",
         "circuitPicker": "Κύκλωμα",
@@ -1878,6 +1944,13 @@
         "disable": "Απενεργοποίηση Χρώματος",
         "tooltipEnable": "Χρωματισμός φωτιστικών, πινάκων και καλωδίων ανά κύκλωμα (σύστημα)",
         "tooltipDisable": "Απενεργοποίηση χρωματισμού ανά σύστημα — χρήση προεπιλεγμένου χρώματος"
+      },
+      "realisticMaterials": {
+        "label": "Ρεαλιστικά Υλικά",
+        "enable": "Ενεργοποίηση Υλικών",
+        "disable": "Απενεργοποίηση Υλικών",
+        "tooltipEnable": "Ρεαλιστικά υλικά PBR (υφές albedo/normal/roughness/ao) στα στοιχεία BIM",
+        "tooltipDisable": "Απενεργοποίηση ρεαλιστικών υλικών — χρήση επίπεδων χρωμάτων"
       },
       "mepWireStyle": {
         "label": "Στυλ Καλωδίου",
@@ -2354,14 +2427,37 @@
   },
   "furniture": {
     "catalog": {
-      "chair01": "Καρέκλα",
       "diningChair02": "Καρέκλα τραπεζαρίας",
       "paintedWoodenChair01": "Βαμμένη ξύλινη καρέκλα",
       "plasticMonoblocChair01": "Πλαστική καρέκλα",
       "coffeeTableRound01": "Στρογγυλό τραπεζάκι σαλονιού",
       "modernCoffeeTable01": "Μοντέρνο τραπεζάκι σαλονιού",
       "modernCoffeeTable02": "Μοντέρνο τραπεζάκι σαλονιού II",
-      "sideTable01": "Βοηθητικό τραπεζάκι"
+      "sideTable01": "Βοηθητικό τραπεζάκι",
+      "sofaMidcentury01": "Καναπές mid-century",
+      "sofaModern01": "Μοντέρνος καναπές",
+      "sofaModern02": "Μοντέρνος τριθέσιος καναπές",
+      "sofaDelica01": "Καναπές Delica",
+      "bedModern01": "Μοντέρνο κρεβάτι",
+      "bedBlanc01": "Κρεβάτι Blanc",
+      "chairDining03": "Ξύλινη καρέκλα τραπεζαρίας",
+      "chairOffice01": "Καρέκλα γραφείου",
+      "chairOffice02": "Καρέκλα γραφείου II",
+      "tableNoguchi01": "Τραπεζάκι Noguchi",
+      "armchairPatricia01": "Πολυθρόνα Patricia",
+      "armchairMidcentury01": "Πολυθρόνα mid-century",
+      "desk01": "Γραφείο",
+      "cabinetTall01": "Ψηλό ντουλάπι",
+      "cabinetSideboard01": "Μπουφές",
+      "wardrobeModern01": "Μοντέρνα ντουλάπα",
+      "wardrobeClassic01": "Κλασική ντουλάπα",
+      "bookshelfWooden01": "Ξύλινη βιβλιοθήκη",
+      "nightstand01": "Κομοδίνο",
+      "nightstand02": "Κομοδίνο II",
+      "benchModern01": "Μοντέρνο παγκάκι",
+      "dresserIkea01": "Συρταριέρα",
+      "stoolBar01": "Σκαμπό μπαρ",
+      "tvStand01": "Έπιπλο τηλεόρασης"
     },
     "validation": {
       "hardErrors": {

@@ -22,7 +22,22 @@ const Point3DSchema = z
 
 // ─── Enums (mirror furniture-types.ts unions) ─────────────────────────────────
 
-export const FurnitureKindSchema = z.enum(['chair', 'table']);
+export const FurnitureKindSchema = z.enum([
+  'chair',
+  'table',
+  'bed',
+  'sofa',
+  'armchair',
+  'desk',
+  'cabinet',
+  'wardrobe',
+  'bookshelf',
+  'nightstand',
+  'bench',
+  'dresser',
+  'stool',
+  'tvStand',
+]);
 
 export const FurnitureIfcTypeSchema = z.literal('IfcFurniture');
 

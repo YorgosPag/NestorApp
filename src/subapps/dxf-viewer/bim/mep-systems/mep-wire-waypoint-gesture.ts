@@ -13,7 +13,7 @@
  * @see ./mep-wire-waypoints.ts (the orientation-aware record editors)
  */
 
-import type { MepSystemEntity, MepSystemParams } from '../types/mep-system-types';
+import type { MepSystemEntity, MepElectricalSystemParams } from '../types/mep-system-types';
 import {
   insertWaypointOriented,
   moveWaypointOriented,
@@ -26,7 +26,7 @@ export interface WaypointGesture {
   /** The system snapshot at gesture start (for the optimistic upsert host fields). */
   readonly system: MepSystemEntity;
   /** Pre-gesture params — the undo target + the base every frame recomputes from. */
-  readonly startParams: MepSystemParams;
+  readonly startParams: MepElectricalSystemParams;
   readonly keyA: string;
   readonly keyB: string;
   readonly orientedIndex: number;
@@ -37,7 +37,7 @@ export interface WaypointGesture {
  * always derived from `gesture.startParams`, so calling it every drag frame (and
  * once more on commit) never accumulates drift, and `insert` vs `move` unify.
  */
-export function applyWaypointGesture(gesture: WaypointGesture, point: WirePlanPoint): MepSystemParams {
+export function applyWaypointGesture(gesture: WaypointGesture, point: WirePlanPoint): MepElectricalSystemParams {
   const base = gesture.startParams.wireWaypoints;
   const next =
     gesture.mode === 'insert'

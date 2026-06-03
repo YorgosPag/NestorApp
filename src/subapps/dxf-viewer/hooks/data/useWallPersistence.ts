@@ -40,8 +40,17 @@ import { recordWallChange } from '../../bim/walls/wall-audit-client';
 import { bimToBoqBridge } from '../../bim/services/BimToBoqBridge';
 import { useBimEntityMovedPersistEffect } from './useBimEntityMovedPersistEffect';
 import { useBimEntityRestoredPersistEffect } from './useBimEntityRestoredPersistEffect';
-import { docToEntity, isWall } from './wall-persistence-helpers';
+import {
+  docToEntity,
+  isWall,
+  wallEntityDiffersFromDoc,
+  wallUpdatePatch,
+  wallTypeLinkChanged,
+  type WallTypeLink,
+} from './wall-persistence-helpers';
 import { wallBoqEntity } from './wall-boq-feed';
+import { useWallTypeReresolution } from './useWallTypeReresolution';
+import { useWallSoftLock } from './useWallSoftLock';
 
 // ============================================================================
 // TYPES
@@ -80,7 +89,6 @@ export interface UseWallPersistenceResult {
 // ============================================================================
 
 const AUTO_SAVE_DEBOUNCE_MS = 500;
-const LOCK_TTL_MS = 5 * 60 * 1000;
 
 // ============================================================================
 // HOOK
@@ -110,8 +118,10 @@ export function useWallPersistence(
   // ADR-390 — pending first save (drawn or restored).
   const pendingFirstSaveIdsRef = useRef<Set<string>>(new Set());
   const lastSavedParamsRef = useRef<Map<string, WallEntity['params']>>(new Map());
-  const lockHeldRef = useRef<string | null>(null);
-  const lockTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // ADR-412 — last-persisted family-type link per wall. The params-only diff
+  // cannot see a detach (params stay identical, Q6), so the auto-save trigger
+  // ORs in a type-link change detected against this snapshot.
+  const lastSavedTypeRef = useRef<Map<string, WallTypeLink>>(new Map());
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const selectedWallRef = useRef<WallEntity | null>(null);
   selectedWallRef.current = primarySelectedWall;
@@ -169,7 +179,8 @@ export function useWallPersistence(
             nextWalls.push(existing);
             continue;
           }
-          if (!dequal(existing.params, doc.params) || !dequal(existing.editingBy, doc.editingBy)) {
+          // ADR-412 — diff vs EFFECTIVE (type-resolved) params (see helper).
+          if (wallEntityDiffersFromDoc(existing, doc)) {
             nextWalls.push(docToEntity(doc));
             mutated = true;
           } else {
@@ -186,6 +197,13 @@ export function useWallPersistence(
         for (const doc of docs) {
           if (!lastSavedParamsRef.current.has(doc.id)) {
             lastSavedParamsRef.current.set(doc.id, doc.params);
+          }
+          // ADR-412 — seed the family-type link so a later detach is detectable.
+          if (!lastSavedTypeRef.current.has(doc.id)) {
+            lastSavedTypeRef.current.set(doc.id, {
+              typeId: doc.typeId,
+              typeOverrides: doc.typeOverrides,
+            });
           }
         }
 
@@ -219,56 +237,14 @@ export function useWallPersistence(
     return () => unsubscribe();
   }, [levelManager, companyId, projectId, floorplanId, userId]);
 
-  // Acquire / release soft-lock around primary selection lifecycle.
-  const releaseLock = useCallback(async () => {
-    const svc = serviceRef.current;
-    const held = lockHeldRef.current;
-    if (!svc || !held) return;
-    lockHeldRef.current = null;
-    if (lockTimerRef.current) {
-      clearTimeout(lockTimerRef.current);
-      lockTimerRef.current = null;
-    }
-    try {
-      await svc.releaseLock(held);
-    } catch {
-      /* non-fatal — lock will TTL-expire on remote side */
-    }
-  }, []);
+  // ADR-412 «type always wins» — re-resolve typed walls on catalog change.
+  useWallTypeReresolution(levelManager, dirtyIdsRef);
 
-  const acquireLock = useCallback(async (wallId: string) => {
-    const svc = serviceRef.current;
-    if (!svc) return;
-    if (lockHeldRef.current === wallId) return;
-    if (lockHeldRef.current && lockHeldRef.current !== wallId) {
-      await releaseLock();
-    }
-    try {
-      await svc.acquireLock(wallId);
-      lockHeldRef.current = wallId;
-      if (lockTimerRef.current) clearTimeout(lockTimerRef.current);
-      lockTimerRef.current = setTimeout(() => {
-        void releaseLock();
-      }, LOCK_TTL_MS);
-    } catch {
-      /* non-fatal */
-    }
-  }, [releaseLock]);
-
-  // Release lock when primary selection drops or changes wall.
-  useEffect(() => {
-    if (!primarySelectedWall) {
-      void releaseLock();
-    } else if (
-      lockHeldRef.current &&
-      lockHeldRef.current !== primarySelectedWall.id
-    ) {
-      void releaseLock();
-    }
-    return () => {
-      void releaseLock();
-    };
-  }, [primarySelectedWall?.id, releaseLock]);
+  // Acquire / release soft-lock around primary selection lifecycle (extracted).
+  const { acquireLock, releaseLock, getHeldWallId } = useWallSoftLock(
+    serviceRef,
+    primarySelectedWall,
+  );
 
   // Immediate persist (used by both auto-save flush and explicit button).
   const persist = useCallback(async (entity: WallEntity) => {
@@ -287,14 +263,14 @@ export function useWallPersistence(
       if (isNew) {
         await svc.saveWall(entityToSaveInput(entity));
       } else {
-        await svc.updateWall(entity.id, {
-          params: entity.params,
-          validation: entity.validation,
-          geometry: entity.geometry,
-          layerId: entity.layerId,
-        });
+        // ADR-412 — patch carries the family-type link (clear → deleteField).
+        await svc.updateWall(entity.id, wallUpdatePatch(entity));
       }
       lastSavedParamsRef.current.set(entity.id, entity.params);
+      lastSavedTypeRef.current.set(entity.id, {
+        typeId: entity.typeId,
+        typeOverrides: entity.typeOverrides,
+      });
       dirtyIdsRef.current.delete(entity.id);
       pendingFirstSaveIdsRef.current.delete(entity.id);
       setSaveState('saved');
@@ -329,7 +305,11 @@ export function useWallPersistence(
     const pendingWall = pendingFirstSaveIdsRef.current.has(wall.id);
     if (!known && !pendingWall) return;
     const lastSaved = lastSavedParamsRef.current.get(wall.id);
-    if (lastSaved && dequal(lastSaved, wall.params)) return;
+    // ADR-412 — bail only when BOTH params AND the family-type link are unchanged
+    // (a detach keeps params identical, so params-only would never re-save it).
+    const paramsUnchanged = !!lastSaved && dequal(lastSaved, wall.params);
+    const typeUnchanged = !wallTypeLinkChanged(lastSavedTypeRef.current.get(wall.id), wall);
+    if (paramsUnchanged && typeUnchanged) return;
 
     dirtyIdsRef.current.add(wall.id);
     if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
@@ -399,10 +379,10 @@ export function useWallPersistence(
     lastSavedParamsRef.current.delete(wallId);
     pendingFirstSaveIdsRef.current.delete(wallId);
 
-    if (lockHeldRef.current === wallId) {
+    if (getHeldWallId() === wallId) {
       void releaseLock();
     }
-  }, [levelManager, releaseLock, companyId]);
+  }, [levelManager, releaseLock, getHeldWallId, companyId]);
 
   // ADR-390 — persistRestore: undo→Firestore re-create + audit 'restored'.
   const persistRestore = useCallback(async (entity: WallEntity) => {
@@ -488,14 +468,13 @@ export function useWallPersistence(
     persistRestore,
   );
 
-  // Unmount cleanup — release lock + flush pending timers.
+  // Unmount cleanup — flush pending auto-save timer (soft-lock timer + release
+  // are owned by useWallSoftLock's own unmount cleanup).
   useEffect(() => {
     return () => {
       if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
-      if (lockTimerRef.current) clearTimeout(lockTimerRef.current);
-      void releaseLock();
     };
-  }, [releaseLock]);
+  }, []);
 
   return useMemo(
     () => ({ saveState, lastSavedAt, error, saveNow, deleteWall }),

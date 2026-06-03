@@ -45,7 +45,21 @@ import type { IfcEntityMixin } from './ifc-entity-mixin';
  * families append here (e.g. `'sofa'`, `'table'`, `'cabinet'`, `'bed'`). Each
  * kind maps to the `'furniture'` BimCategory (granular V/G can split later).
  */
-export type FurnitureKind = 'chair' | 'table';
+export type FurnitureKind =
+  | 'chair'
+  | 'table'
+  | 'bed'
+  | 'sofa'
+  | 'armchair'
+  | 'desk'
+  | 'cabinet'
+  | 'wardrobe'
+  | 'bookshelf'
+  | 'nightstand'
+  | 'bench'
+  | 'dresser'
+  | 'stool'
+  | 'tvStand';
 
 // ─── Parameters (user-editable SSoT) ──────────────────────────────────────────
 

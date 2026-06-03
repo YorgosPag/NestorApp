@@ -141,6 +141,13 @@ export function useDxfViewerNotifications(): void {
       }),
     );
 
+    // ADR-408 Φ10 — pipe-network auto-derivation feedback (whole-scene).
+    unsubs.push(
+      EventBus.on('bim:mep-networks-derived', ({ networkCount }) => {
+        toast.success(t('mepCircuit.networksDerived', { count: networkCount }));
+      }),
+    );
+
     // ADR-401 Phase G.3 — stair attach mirrors (reuse the generic messages).
     unsubs.push(
       EventBus.on('bim:stairs-auto-attached', () => {

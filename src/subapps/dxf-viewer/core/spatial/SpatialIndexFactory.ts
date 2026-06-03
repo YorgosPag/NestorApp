@@ -252,7 +252,7 @@ class PlaceholderSpatialIndex implements ISpatialIndex {
     return null;
   }
 
-  querySnap(_point: Point2D, _tolerance: number, _snapType: 'endpoint' | 'midpoint' | 'center' | 'dim_def_point' | 'dim_line' | 'beam_corner' | 'column_center' | 'column_corner' | 'opening_corner' | 'slab_corner' | 'wall_corner'): SpatialQueryResult[] {
+  querySnap(_point: Point2D, _tolerance: number, _snapType: 'endpoint' | 'midpoint' | 'center' | 'dim_def_point' | 'dim_line' | 'beam_corner' | 'column_center' | 'column_corner' | 'opening_corner' | 'slab_corner' | 'wall_corner' | 'mep_connector'): SpatialQueryResult[] {
     dwarn('SpatialIndex', '🚧 PlaceholderSpatialIndex.querySnap() - not implemented');
     return [];
   }

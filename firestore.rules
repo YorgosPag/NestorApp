@@ -603,6 +603,59 @@ service cloud.firestore {
                                && isCompanyAdminOfCompany(companyId))
                          );
       }
+
+      // =========================================================================
+      // 🏗️ BIM_FAMILY_TYPES SUBCOLLECTION — ADR-412
+      // =========================================================================
+      // 📅 Added: 2026-06-03
+      // 🏢 ENTERPRISE: 3-scope BIM family type library (user / company / project).
+      // 🔒 SECURITY: Tenant isolation via companyId === parent path segment.
+      //              Scope discrimination by `scope` field on the document.
+      // 📘 ADR-412
+      match /bim_family_types/{typeId} {
+
+        // 📖 READ — Tenant-scoped + scope filter
+        // user scope: only owner reads.
+        // company scope: any tenant member reads.
+        // project scope: any tenant member reads (project isolation handled by service-layer query).
+        allow read: if isAuthenticated()
+                    && belongsToCompany(companyId)
+                    && (
+                         resource.data.scope == 'company'
+                         || resource.data.scope == 'project'
+                         || (resource.data.scope == 'user'
+                             && resource.data.ownerId == request.auth.uid)
+                       );
+
+        // ✍️ CREATE — Tenant member + companyId == path + ownerId == self + valid scope
+        allow create: if isAuthenticated()
+                      && resource == null
+                      && belongsToCompany(companyId)
+                      && request.resource.data.companyId == companyId
+                      && request.resource.data.ownerId == request.auth.uid
+                      && request.resource.data.scope in ['user', 'company', 'project']
+                      && (request.resource.data.scope != 'project'
+                          || request.resource.data.keys().hasAny(['projectId']));
+
+        // 📝 UPDATE — Owner only (immutable companyId/scope/ownerId)
+        allow update: if isAuthenticated()
+                      && belongsToCompany(companyId)
+                      && resource.data.ownerId == request.auth.uid
+                      && request.resource.data.companyId == resource.data.companyId
+                      && request.resource.data.scope == resource.data.scope
+                      && request.resource.data.ownerId == resource.data.ownerId;
+
+        // 🗑️ DELETE — Owner or company_admin (per scope)
+        // user scope: owner only.
+        // company / project scope: owner or company_admin.
+        allow delete: if isAuthenticated()
+                      && belongsToCompany(companyId)
+                      && (
+                           resource.data.ownerId == request.auth.uid
+                           || (resource.data.scope in ['company', 'project']
+                               && isCompanyAdminOfCompany(companyId))
+                         );
+      }
     }
 
     // =========================================================================
@@ -3839,6 +3892,32 @@ service cloud.firestore {
     // ADR-408 Φ3 — point-based electrical panels (circuit sources). Mirror of
     // floorplan_mep_fixtures (company-scoped, owner/admin writes).
     match /floorplan_electrical_panels/{panelId} {
+      allow read: if isAuthenticated()
+                  && (isSuperAdminOnly() || belongsToCompany(resource.data.companyId));
+      allow create: if isAuthenticated()
+                    && (isSuperAdminOnly()
+                        || (request.resource.data.companyId == getUserCompanyId()
+                            && request.resource.data.createdBy == request.auth.uid
+                            && request.resource.data.keys().hasAll(['companyId', 'projectId', 'floorplanId', 'kind', 'params'])));
+      allow update: if isAuthenticated()
+                    && (isSuperAdminOnly()
+                        || ((resource.data.createdBy == request.auth.uid || isCompanyAdminOfCompany(resource.data.companyId))
+                            && request.resource.data.companyId == resource.data.companyId
+                            && request.resource.data.projectId == resource.data.projectId
+                            && request.resource.data.floorplanId == resource.data.floorplanId
+                            && request.resource.data.createdBy == resource.data.createdBy
+                            && request.resource.data.createdAt == resource.data.createdAt
+                            && (!request.resource.data.keys().hasAny(['editingBy'])
+                                || request.resource.data.editingBy.userId == request.auth.uid)));
+      allow delete: if isAuthenticated()
+                    && (isSuperAdminOnly()
+                        || resource.data.createdBy == request.auth.uid
+                        || isCompanyAdminOfCompany(resource.data.companyId));
+    }
+
+    // ADR-408 Φ8 — linear MEP segments (duct/pipe runs). Mirror of
+    // floorplan_electrical_panels (company-scoped, owner/admin writes).
+    match /floorplan_mep_segments/{segmentId} {
       allow read: if isAuthenticated()
                   && (isSuperAdminOnly() || belongsToCompany(resource.data.companyId));
       allow create: if isAuthenticated()

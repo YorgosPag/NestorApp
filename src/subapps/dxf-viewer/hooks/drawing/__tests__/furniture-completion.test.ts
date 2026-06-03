@@ -11,7 +11,7 @@ describe('buildDefaultFurnitureParams', () => {
   it('places at the clicked point with catalog footprint defaults', () => {
     const p = buildDefaultFurnitureParams({ x: 1500, y: 2500 });
     expect(p.position).toEqual({ x: 1500, y: 2500, z: 0 });
-    expect(p.assetId).toBe('chair_01');
+    expect(p.assetId).toBe('dining_chair_02');
     expect(p.kind).toBe('chair');
     expect(p.widthMm).toBeGreaterThan(0);
     expect(p.depthMm).toBeGreaterThan(0);

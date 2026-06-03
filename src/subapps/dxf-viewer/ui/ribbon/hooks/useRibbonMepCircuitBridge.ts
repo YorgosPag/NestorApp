@@ -33,13 +33,21 @@ import {
   type CircuitDraft,
 } from '../../../bim/mep-systems/mep-circuit-from-selection';
 import {
+  derivePipeNetworks,
+  type PipeNetworkDraft,
+} from '../../../bim/mep-systems/mep-pipe-network-derive';
+import {
   buildAddMembersUpdate,
   buildRemoveMembersUpdate,
   type MepSystemParamsUpdate,
 } from '../../../bim/mep-systems/mep-circuit-editor';
-import { pickNextSystemColor } from '../../../bim/mep-systems/mep-system-color';
+import {
+  pickNextSystemColor,
+  classificationDefaultColor,
+} from '../../../bim/mep-systems/mep-system-color';
 import {
   buildDefaultCircuitParams,
+  buildDefaultPipeNetworkParams,
   type MepSystemEntity,
 } from '../../../bim/types/mep-system-types';
 import { generateMepSystemId } from '@/services/enterprise-id-convenience';
@@ -83,6 +91,11 @@ export function useRibbonMepCircuitBridge(
     return scene.entities.filter((e) => ids.has(e.id));
   }, [levelManager, universalSelection]);
 
+  const resolveAllEntities = useCallback((): readonly Entity[] => {
+    if (!levelManager.currentLevelId) return [];
+    return levelManager.getLevelScene(levelManager.currentLevelId)?.entities ?? [];
+  }, [levelManager]);
+
   const handleCreate = useCallback((): void => {
     const systems = useMepSystemStore.getState().getSystems();
     const resolution = resolveCircuitFromSelection(resolveSelectedEntities(), systems);
@@ -96,6 +109,20 @@ export function useRibbonMepCircuitBridge(
       memberCount: resolution.draft.members.length,
     });
   }, [resolveSelectedEntities, executeCommand, t]);
+
+  // ADR-408 Φ10 — auto-derive pipe networks from the scene's physical
+  // connectivity (Revit "create systems from connected piping"). Whole-scene, no
+  // selection needed. Each connected run becomes one classification-coloured
+  // pipe network, all bundled into a single undo. Idempotent in practice — a run
+  // already covered by a network is re-derived as the same draft; the user can
+  // undo to discard. Skips when the scene has no pipe segments.
+  const handleDeriveNetworks = useCallback((): void => {
+    const drafts = derivePipeNetworks(resolveAllEntities());
+    if (drafts.length === 0) return; // no pipe segments — nothing to derive
+    const existing = useMepSystemStore.getState().getSystems();
+    executeCommand(buildDeriveNetworksCommand(drafts, existing, t));
+    EventBus.emit('bim:mep-networks-derived', { networkCount: drafts.length });
+  }, [resolveAllEntities, executeCommand, t]);
 
   // ADR-408 Φ6 — the circuit the properties panel is editing (selection-synced).
   const resolveActiveSystem = useCallback((): MepSystemEntity | null => {
@@ -141,13 +168,14 @@ export function useRibbonMepCircuitBridge(
   const onAction = useCallback(
     (action: string): void => {
       if (action === MEP_CIRCUIT_RIBBON_ACTIONS.create) return handleCreate();
+      if (action === MEP_CIRCUIT_RIBBON_ACTIONS.deriveNetworks) return handleDeriveNetworks();
       if (action === MEP_CIRCUIT_RIBBON_ACTIONS.addMembers) return handleAddMembers();
       if (action === MEP_CIRCUIT_RIBBON_ACTIONS.removeMembers) return handleRemoveMembers();
       if (action === MEP_CIRCUIT_RIBBON_ACTIONS.close) {
         universalSelection.clearAll();
       }
     },
-    [handleCreate, handleAddMembers, handleRemoveMembers, universalSelection],
+    [handleCreate, handleDeriveNetworks, handleAddMembers, handleRemoveMembers, universalSelection],
   );
 
   return useMemo(() => ({ onAction }), [onAction]);
@@ -185,4 +213,33 @@ function buildCreateCommand(
     (r) => new UpdateMepSystemParamsCommand(r.systemId, r.nextParams, r.prevParams),
   );
   return new CompoundCommand('Create MEP circuit', [create, ...reassigns]);
+}
+
+/**
+ * ADR-408 Φ10 — turn the derived pipe-network drafts into one undoable command.
+ * Each draft mints an enterprise id and a classification-coloured pipe network;
+ * all creates are bundled into a single `CompoundCommand` so one undo discards
+ * the whole auto-derivation. Pure given its inputs.
+ */
+function buildDeriveNetworksCommand(
+  drafts: readonly PipeNetworkDraft[],
+  existing: readonly MepSystemEntity[],
+  t: (key: string, opts?: Record<string, unknown>) => string,
+): ICommand {
+  const creates = drafts.map((draft, i) => {
+    const name = t('ribbon.commands.mepCircuit.networkDefaultName', { n: existing.length + i + 1 });
+    const entity: MepSystemEntity = {
+      id: generateMepSystemId(),
+      params: buildDefaultPipeNetworkParams(
+        name,
+        draft.systemClassification,
+        draft.sourceEntityId,
+        draft.sourceConnectorId,
+        draft.members,
+        classificationDefaultColor(draft.systemClassification),
+      ),
+    };
+    return new CreateMepSystemCommand(entity);
+  });
+  return creates.length === 1 ? creates[0]! : new CompoundCommand('Derive pipe networks', creates);
 }

@@ -24,6 +24,7 @@ import type { StairEntity, Polygon3D, Polyline3D, Segment3D } from '../../bim/ty
 import { resolveStairMaterial } from '../materials/stair-material-resolver';
 import { inferSceneUnitsFromWidth, sceneUnitsToMeters } from '../../utils/scene-units';
 import { attachEdgesProjection } from './bim-three-edges';
+import { ensureWorldUvs } from './bim-uv-helpers';
 
 // ADR-375 Phase C.7 — stair subcategory wiring (ADR-377 SUBCATEGORY_TAXONOMY).
 // ADR-377 Phase E — unified onto the shared `attachEdgesProjection` SSoT (was a
@@ -93,6 +94,7 @@ function buildTreadMeshes(
     if (!shape) continue;
     const geo = new THREE.ExtrudeGeometry(shape, { depth: thicknessM, bevelEnabled: false });
     geo.applyMatrix4(ROT_X_NEG_90);
+    ensureWorldUvs(geo); // ADR-413 — aoMap uv2.
     const mat = resolveStairMaterial(stair, 'stair-tread', i);
     const mesh = new THREE.Mesh(geo, mat);
     // Polygon z = top-face elevation (walkable surface). ExtrudeGeometry extrudes
@@ -152,6 +154,7 @@ function buildRiserBox(
   const midXScene = (seg.start.x + seg.end.x) * 0.5;
   const midYScene = (seg.start.y + seg.end.y) * 0.5;
   const geo = new THREE.BoxGeometry(thicknessM, riseM, widthM);
+  ensureWorldUvs(geo); // ADR-413 — aoMap uv2 (BoxGeometry auto-UVs).
   const mesh = new THREE.Mesh(geo, mat);
   mesh.position.set(
     midXScene * sceneToM,
@@ -209,6 +212,7 @@ function stringerSegmentsAlong(
     const lengthM = Math.hypot(dxM, dyM, dzM);
     if (lengthM < 1e-6) continue;
     const geo = new THREE.BoxGeometry(lengthM, heightM, widthM);
+    ensureWorldUvs(geo); // ADR-413 — aoMap uv2 (BoxGeometry auto-UVs).
     const mesh = new THREE.Mesh(geo, mat);
     const midX = (a.x + b.x) * 0.5 * sceneToM;
     const midY = (a.y + b.y) * 0.5 * sceneToM;
@@ -269,6 +273,7 @@ function handrailTube(
   const curve = new THREE.CatmullRomCurve3(points, false, 'catmullrom', 0.0);
   const tubularSegments = Math.max(8, (polyline.length - 1) * 4);
   const geo = new THREE.TubeGeometry(curve, tubularSegments, radiusM, HANDRAIL_TUBE_SEGMENTS, false);
+  ensureWorldUvs(geo); // ADR-413 — aoMap uv2 (TubeGeometry auto-UVs).
   return new THREE.Mesh(geo, mat);
 }
 
@@ -288,6 +293,7 @@ function buildLandingMeshes(
     if (!shape) continue;
     const geo = new THREE.ExtrudeGeometry(shape, { depth: thicknessM, bevelEnabled: false });
     geo.applyMatrix4(ROT_X_NEG_90);
+    ensureWorldUvs(geo); // ADR-413 — aoMap uv2.
     const mesh = new THREE.Mesh(geo, mat);
     // Same convention as treads: poly.z = walkable top face. Translate DOWN.
     const topZ = poly[0]!.z * sceneToM;

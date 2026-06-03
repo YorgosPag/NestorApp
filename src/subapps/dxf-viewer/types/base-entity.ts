@@ -55,7 +55,9 @@ export type EntityType =
   // ADR-407 — standalone path-based railing (IfcRailing).
   | 'railing'
   // ADR-410 — mesh-based CC0 furniture (chair first; generic over kind).
-  | 'furniture';
+  | 'furniture'
+  // ADR-408 Φ8 — unified linear MEP segment (duct + pipe; domain-discriminated).
+  | 'mep-segment';
 
 export interface BaseEntity {
   id: string;

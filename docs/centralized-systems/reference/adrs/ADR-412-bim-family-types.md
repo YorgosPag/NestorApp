@@ -1,6 +1,6 @@
 # ADR-412 — BIM Family Types (Revit-grade Type/Instance system)
 
-**Status:** 🟡 DRAFT v0.1 — awaiting Giorgio approval (NO code until approved)
+**Status:** 🟢 v0.7 — Φ1+Φ2+Φ3+Φ4+Φ5 IMPLEMENTED (Giorgio-approved Plan Mode for Φ5). Φ6 (stair migration) remains. Pending commit + browser verify (Giorgio commits).
 **Date:** 2026-06-03
 **Author:** Claude (Opus 4.8)
 **Supersedes numbering note:** This is the "BIM Family Types" successor that ADR-377 §Related
@@ -216,20 +216,25 @@ for defaults). Seeded lazily on first read per company (idempotent, `setDoc` wit
 
 ---
 
-## 5. Phase plan (vertical slice = Wall, then unify)
+## 5. Phase plan (Wall + Stair unified from the start — Q7)
+
+Q7 (locked): the existing `stair_presets` system is folded into the unified Type system **from the
+start**, not deferred. Initial scope therefore covers **Wall (new) + Stair (migrated)**; other
+categories (column/beam/opening/slab) follow on the same architecture in later slices.
 
 | Phase | Scope | Files (est.) | Notes |
 |---|---|---|---|
-| **Φ1 Foundation** | `BimFamilyType` types + Zod schema + collection const + `generateBimFamilyTypeId` + Firestore rules + `BimFamilyTypeService` + rules test | ~8 | No UI, no entity wiring. Wall typeParams only. |
-| **Φ2 Resolution** | `resolveEffectiveParams` SSoT + `WallEntity.typeId/typeOverrides` + thread resolver into geometry/render/BOQ + params-cache refresh | ~10 | The full-SSoT core. Legacy fast-path = zero regression. |
-| **Φ3 Built-in seed** | 5 wall built-ins from `getDefaultDnaForCategory()` + lazy idempotent seeding | ~3 | Unifies wall-DNA defaults. |
-| **Φ4 UI** | Type Selector (Radix Select) + Type Properties panel + Duplicate/Edit Type + i18n el+en | ~8 | Contextual ribbon, ADR-001. |
-| **Φ5 Propagation + undo** | `UpdateFamilyTypeCommand` CompoundCommand + BOQ re-feed + audit + per-param override skip | ~5 | Google-level N.7.2. |
-| **Φ6 Unification roadmap** | Migrate `stair_presets` → `bim_family_types` (snapshot→live); fold `section-catalog`/`wall-DNA` defaults as built-ins (column/beam/stair slices) | separate ADR slices | Documented target, not in slice #1. |
+| **Φ1 Foundation** ✅ | `BimFamilyType` types + Zod schema + `COLLECTIONS.BIM_FAMILY_TYPES` + `generateBimFamilyTypeId` + Firestore rules + rules test + `BimFamilyTypeService` (3-scope, cache) | ~9 | ✅ DONE (v0.3). No UI. `WallTypeParams` + `StairTypeParams`. |
+| **Φ2 Resolution SSoT** ✅ | `resolveEffectiveParams` + `WallEntity.typeId/typeOverrides` + thread resolver into geometry/render/BOQ/grips + params derived-cache refresh | ~10 | ✅ DONE (v0.4). Full-SSoT core. Legacy fast-path (no `typeId`) = zero regression. |
+| **Φ3 Built-in catalog** ✅ | Wall built-ins from `getDefaultDnaForCategory()` (5) + Stair built-ins from `buildDefaultStairParams` defaults; client-store merge | ~4 | ✅ DONE (v0.5). **Architecture deviation (CODE wins, N.0.1): built-ins are CODE CONSTANTS** in `built-in-types.ts`, NOT lazy Firestore-seeded — no drift, zero seeding step, every company sees identical factory catalog. `cloneTypeToInput` = clone-to-edit. Merged in `useBimFamilyTypes` (idempotent, built-ins first → fetched win on id collision). |
+| **Φ4 UI** ✅ | Type Selector (Radix Select, ADR-001) + Type Properties panel + Duplicate/Rename Type + per-param override + i18n el+en | ~10 | ✅ DONE (v0.6). Contextual Wall ribbon «Τύπος» panel. Per-param override scoped to `category` in Φ4 (always-defined enum); `thickness`/`material` read-only (DNA/structural). New `AssignWallTypeCommand` (undoable) + persistence clear-via-`deleteField` + auto-save type-link detection. |
+| **Φ5 Propagation + undo** ✅ | Type-param editing (Edit Type dialog + DNA editor) + all-floors BOQ re-feed + audit + delete→warn→detach (Q6) | ~18 | ✅ DONE (v0.7, Plan Mode). Sync optimistic `UpdateWallFamilyTypeCommand` (NOT compound — in-scene re-flow is free via store-version `useWallTypeReresolution`; emits `bim:family-type-changed`). `DeleteWallFamilyTypeCommand` = CompoundCommand (N×`AssignWallTypeCommand` detach + `CatalogDeleteOp`). All-floors BOQ fan-out via `family-type-side-effects` + host hook `useFamilyTypeBoqRefeed` (`loadFileV2`, no new index). DNA editor = Boy-Scout extracted `WallDnaEditor` (reuse). |
+| **Φ6 Stair migration** | Migrate `stair_presets` docs → `bim_family_types` (snapshot→live); `StairEntity.typeId`; data-migration pass; deprecate `StairPresetsService` (re-export shim); update ADR-358 | ~8 | Replaces snapshot model with live links. Back-compat shim during transition. |
 
-**N.8 note:** Φ1–Φ5 together = 15+ files across 3+ domains (types/persistence/render/UI/commands) =
-**Orchestrator territory**. Per N.8, orchestrator runs **only with Giorgio's explicit approval after
-this ADR is approved**. Alternative: Plan-Mode, one phase per session.
+**N.8 — Orchestrator territory (CONFIRMED).** Φ1–Φ6 = 40+ files across types / persistence /
+rendering / UI / commands / migration = clearly 5+ files & 2+ domains. Per N.8 this needs Giorgio's
+**explicit approval** before running an orchestrator (~2.5–3.5× tokens). Alternative = Plan-Mode, one
+phase per session (slower, cheaper, more checkpoints). **Decision pending Giorgio (see §7 / handoff).**
 
 ---
 
@@ -243,17 +248,17 @@ New `.ssot-registry.json` Tier 3 module `bim-family-types`:
 
 ---
 
-## 7. Open Questions (for Giorgio — review before code)
+## 7. Locked decisions (Giorgio, 2026-06-03)
 
-| Q | Topic | Proposed (review) |
+| Q | Topic | Decision |
 |---|---|---|
-| **Q1** | `params` as derived cache vs denormalized copy | **Derived cache** (SSoT = type+instance, params re-derived; Revit-true). Trade-off: every read path must resolve. Alternative = denormalized copy + propagation rewrite (simpler, less pure). **Confirm.** |
-| Q2 | `height` type vs instance | **Instance** (Revit). Confirm — some users expect "wall type" to fix height. |
-| Q3 | Built-in editing | **Clone-to-edit** (Revit Duplicate). Built-ins read-only. Confirm. |
-| Q4 | Override granularity | **Per-parameter** (Vectorworks by-style/by-instance). Confirm vs all-or-nothing. |
-| Q5 | Scope default for new types | **company** (team reuse). Confirm vs user. |
-| Q6 | Type rename / delete with live instances | On delete: instances fall back to ad-hoc (snapshot last resolved params, `typeId` cleared). Confirm. |
-| Q7 | Unify `stair_presets` now or later | **Later** (Φ6, separate slice) to keep slice #1 small. Confirm. |
+| **Q1** | Where shared params live | **Central live type card** (Revit). `entity.params` = derived read-model cache; SSoT = type + instance fields. Edit type → instances update live. |
+| **Q2** | `height` type vs instance | **Instance** (per-wall) — Revit. Type owns structure/thickness/function/material only. |
+| **Q3** | Built-in editing | **Clone-to-edit** (Revit Duplicate). Built-ins read-only; editing forks a `user` copy. |
+| **Q4** | Override granularity | **Per-parameter** — change one param on one instance, rest stays type-linked; overridden param badged. |
+| **Q5** | Default scope for new types | **company** (team-wide). User/project still selectable per save. |
+| **Q6** | Delete type in use | **Revit-faithful, non-destructive:** warning dialog; on confirm, instances **detach** (snapshot last resolved params + clear `typeId`) and keep their appearance. Geometry is **never silently deleted**. (Giorgio said "like Revit"; interpreted as Revit's warn-before-acting safety, minus destructive instance deletion. Re-open if hard-delete desired.) |
+| **Q7** | Unify `stair_presets` | **From the start** (Φ6 in initial scope, not deferred). Stair snapshot presets → live Types alongside Wall. |
 
 ---
 
@@ -272,6 +277,107 @@ New `.ssot-registry.json` Tier 3 module `bim-family-types`:
 
 ## 9. Changelog
 
+- **v0.7 (2026-06-03)** — **Φ5 Propagation + undo + delete IMPLEMENTED** (Plan Mode, recognition-first).
+  Revit-grade «Edit Type» → re-flows to ALL instances on ALL floors, FULL SSoT.
+  **Architecture (recognition, N.0.1):** the in-scene geometry re-flow ALREADY exists from Φ2
+  (`useWallTypeReresolution` re-resolves the active scene synchronously on the store `version` bump), so the
+  edit command is a **synchronous optimistic** op — NOT a CompoundCommand and with NO per-instance children
+  (that would double-propagate). NEW `core/commands/entity-commands/UpdateWallFamilyTypeCommand.ts`
+  (injected `FamilyTypeMutationDeps`: optimistic `setTypes` + fire-and-forget `service.updateType` + audit +
+  EventBus `bim:family-type-changed`). **All-floors BOQ re-feed** (only the BOQ aggregate cache needs eager
+  fan-out — geometry re-resolves on load elsewhere): NEW pure `bim/family-types/family-type-side-effects.ts`
+  (`findWallsByTypeId` + `refeedBoqForTypeAcrossFloors` via `useLevels().levels` + `DxfFirestoreService.loadFileV2`
+  — **no new Firestore index**) driven by NEW host hook `hooks/data/useFamilyTypeBoqRefeed.ts` (mounted in
+  `WallPersistenceHost`, which holds project/building context — same separation as wall BOQ). **Edit Type UI:**
+  NEW `ui/ribbon/components/EditWallTypeDialog.tsx` (Radix Dialog, ADR-001) editing category/material/thickness +
+  full DNA layers; opened via NEW `edit-wall-type-store.ts` from a «Edit type…» button in
+  `RibbonWallTypePropertiesWidget` (built-ins → «Duplicate & edit» clone-first). **DNA editor = Boy-Scout SSoT
+  extraction (N.0.2):** NEW entity-agnostic `ui/wall-advanced-panel/sections/WallDnaEditor.tsx`; `WallDnaSection`
+  is now a thin wrapper — both consumers share one editor, zero new DNA i18n. **Delete→warn→detach (Q6):** NEW
+  `DeleteWallFamilyTypeCommand.ts` = `CompoundCommand` of N×`AssignWallTypeCommand` (detach current-scene
+  instances, params kept = non-destructive) + `CatalogDeleteOp` (optimistic store removal + `service.deleteType`,
+  undo restores via NEW `service.restoreType` preserving the ORIGINAL id). Warn dialog: NEW
+  `bim-family-type-delete-store.ts` (Promise handshake) + `ui/dialogs/BimFamilyTypeDeleteDialog.tsx` (mirror
+  `WallCascadeDeleteDialog`). **Audit (N.11 CHECK 3.17):** `bim_family_type` added to `AuditEntityType` +
+  `/api/audit-trail/record` route (subcollection ownership-verify path: `companies/{companyId}/bim_family_types`)
+  + `BIM_FAMILY_TYPE_TRACKED_FIELDS` + NEW client `bim-family-type-audit-client.ts`; service comment updated
+  (audit now at command layer). i18n: + `editType*`/`duplicateAndEdit`/`deleteType*` keys (el+en parity,
+  single-brace ICU per CHECK 3.9). **Known limitation (documented, not silent):** instances on levels without a
+  `sceneFileId`, and cross-floor walls on type DELETE, keep correct geometry (type=SSoT on load with graceful
+  fallback when the type is gone) but their BOQ / dangling `typeId` are eventual — full eager coverage would need
+  a `floorplan_walls WHERE buildingId==X AND typeId==Y` composite-index query (out of Φ5 scope). **Tests:** 22 new
+  (`UpdateWallFamilyTypeCommand` 7 + `family-type-side-effects` 5 + `DeleteWallFamilyTypeCommand` 5 + reuse) →
+  309 family-types+commands tests PASS; tsc 0 own errors (the single repo error
+  `bim-3d/converters/mesh-to-object3d.ts:124` is unrelated shared-tree mesh work). No canvas/micro-leaf file →
+  no ADR-040 staging (CHECK 6B/6D N/A). **Next: Φ6 stair migration.** Pending commit + 🔴 browser verify. | Claude (Opus 4.8)
+- **v0.6 (2026-06-03)** — **Φ4 UI IMPLEMENTED** (orchestrator, recognition-first → serial,
+  Giorgio-approved N.8). Contextual Wall ribbon gains a «Τύπος» panel with two leaf widgets:
+  NEW `ui/ribbon/components/RibbonWallFamilyTypeWidget.tsx` (Radix `Select`, ADR-001 — built-in +
+  user wall types + «no type / ad-hoc» clear via `SELECT_CLEAR_VALUE`, NOT '' per the ADR-411 lesson;
+  «Duplicate» = clone-to-edit Q3) and NEW `RibbonWallTypePropertiesWidget.tsx` (effective type-governed
+  params display + per-param **override** badge with reset-to-type Q4 + inline rename of user types).
+  Both are presentational; all logic lives in NEW `ui/ribbon/hooks/useWallFamilyTypeController.ts` (SSoT:
+  assign/clear/override via the NEW undoable `core/commands/entity-commands/AssignWallTypeCommand.ts`,
+  duplicate/rename via `BimFamilyTypeService` + optimistic `bim-family-type-store` update — the MEP
+  «optimistic upsert» idiom). NEW pure `bim/family-types/family-type-ui-helpers.ts` (catalog slicing,
+  display-name resolution, override detection, effective-param assignment builder). Panel registered in
+  `contextual-wall-tab.ts` + `RibbonPanel.tsx` `renderButton` switch. i18n: new `ribbon.commands.bimFamilyType.*`
+  block (el+en, 28 keys, parity verified) + `ribbon.panels.wallFamilyType`. **Persistence gap closed:**
+  `useWallPersistence.persist` now sends the family-type link through `updateWall` (NEW `wallUpdatePatch`
+  helper) and a clear/detach persists as `deleteField()` (`WallUpdateInput.typeId/typeOverrides` accept
+  `null`); the auto-save trigger ORs in a type-link change (NEW `wallTypeLinkChanged`) so a non-destructive
+  detach — which keeps params identical (Q6) — still re-saves. **Φ4 scoping (recorded N.0.1):** the
+  per-param override editor exposes `category` only (always-defined enum, no none-ambiguity); `thickness`/
+  `material` are shown read-only (DNA-/structurally-governed, edited on the type itself). Full propagation +
+  undo on a type edit (BOQ re-feed + audit) remains Φ5 (`UpdateFamilyTypeCommand`); Φ4 «Rename» updates the
+  doc + bumps the store version, and the existing `useWallTypeReresolution` re-flows it onto instances. 17
+  new tests (`family-type-ui-helpers` 10 + `AssignWallTypeCommand` 7), 76/76 family-types+command tests PASS,
+  0 tsc errors in own files (the single repo error `bim-3d/converters/mesh-to-object3d.ts:124` is unrelated
+  furniture/mesh work). NOT a canvas/micro-leaf file → no ADR-040 staging (CHECK 6B/6D do not apply). **Next:
+  Φ5 propagation + undo.** | Claude (Opus 4.8)
+- **v0.5 (2026-06-03)** — **Φ3 Built-in catalog CONFIRMED DONE** (was folded into the Φ2 orchestrator
+  output; verified in a fresh session after the orchestrator screen froze mid-run). `bim/family-types/built-in-types.ts`
+  ships `getBuiltInWallTypes` (5 categories from `getDefaultDnaForCategory` SSoT), `getBuiltInStairTypes`
+  (residential + narrow, seeded from `buildDefaultStairParams` constants — rise 175 / tread 280, ΝΟΚ
+  profile), `getAllBuiltInTypes`, and `cloneTypeToInput` (clone-to-edit, Q3). **Architecture deviation from
+  the §5 Φ3 plan, recorded per N.0.1 (CODE = source of truth): built-ins are CODE CONSTANTS, NOT lazy
+  Firestore per-company seeding** — rationale: no drift (code is SSoT), zero seeding step, identical
+  factory catalog for every company, and built-ins derive directly from the wall-DNA / stair-default
+  SSoTs so they can never disagree with the defaults they are named after. `useBimFamilyTypes` merges
+  built-ins (built-ins first, Firestore-fetched user/company/project types win on id collision) and the
+  store's `dequal` guard keeps the merge idempotent. 104/104 family-types tests PASS, 0 tsc (own files);
+  the single repo tsc error (`bim-3d/converters/mesh-to-object3d.ts:124`) is pre-existing furniture/mesh
+  work by another agent, unrelated to ADR-412. **Next: Φ4 UI.** | Claude (Opus 4.8)
+- **v0.4 (2026-06-03)** — **Φ2 Resolution IMPLEMENTED**. NEW `bim/family-types/resolve-effective-params.ts`
+  — pure SSoT: `resolveEffectiveParams<P,TP>(params, typeParams, overrides)` = `{...params, ...typeParams,
+  ...overrides}` (type wins over instance for type-governed fields, overrides win last) +
+  `resolveEffectiveWallParams(instance, type)` with legacy fast-path (no `typeId`/no type → params
+  unchanged = ZERO regression). NEW `bim-family-type-store.ts` (zustand + `subscribeWithSelector` +
+  dequal idempotent set + monotonic `version`, mirrors `mep-system-store`) + `useBimFamilyTypes` hook
+  (sole store writer, mounted in `WallPersistenceHost`). `WallEntity.typeId?`/`typeOverrides?` +
+  `wall.schemas` + `wall-firestore-service` round-trip (additive, optional). Resolution injected in
+  `docToEntity` (single WallDoc→WallEntity point, static store read so the pure helper resolves;
+  recomputes geometry+validation only when effective params changed); `wallEntityDiffersFromDoc`
+  compares **effective** params (no per-snapshot churn). Re-resolution on type edit / late type-load via
+  `useWallTypeReresolution` (subscribes to store `version`, re-resolves only non-dirty typed walls —
+  local edits win). 92/92 tests PASS, 0 tsc (own files). | Claude (Opus 4.8)
+- **v0.3 (2026-06-03)** — **Φ1 Foundation IMPLEMENTED** (orchestrator, Giorgio-approved N.8). NEW
+  `bim/types/bim-family-type.ts` (`BimFamilyType<C>`, `WallTypeParams`, `StairTypeParams`,
+  `BimTypeParamsByCategory`, scope/origin — 14 exports) + `bim/types/bim-family-type.schemas.ts` (Zod
+  1:1). Plumbing: `COLLECTIONS.BIM_FAMILY_TYPES` + `generateBimFamilyTypeId` (prefix `bimftype` in
+  `enterprise-id-prefixes.ts`, N.6) + Firestore rules `match /companies/{companyId}/bim_family_types/{typeId}`
+  (verbatim clone of the hardened `stair_presets` block, 3-scope, owner-create, immutable
+  companyId/scope/owner on update, owner-or-company_admin delete). NEW
+  `bim/family-types/bim-family-type-service.ts` (353 lines: listTypes/saveType/updateType/deleteType +
+  5-min cache + factory, Zod-validated writes, mirrors `StairPresetsService`). 77/77 tests PASS, 0 tsc
+  errors (own files). `height`=instance confirmed (not in `WallTypeParams`). | Claude (Opus 4.8)
+- **v0.2 (2026-06-03)** — Clarification phase with Giorgio complete (Q1-Q7 locked, asked one-by-one
+  in plain language). §7 Open Questions → **Locked decisions**: Q1 central live type card (params =
+  derived cache), Q2 height=instance, Q3 clone-to-edit, Q4 per-parameter override, Q5 default
+  scope=company, Q6 non-destructive warn+detach on delete, Q7 unify `stair_presets` from the start.
+  §5 phase plan restructured → **Wall + Stair unified from the start** (Φ6 stair migration now in
+  initial scope, was deferred), N.8 orchestrator territory CONFIRMED (40+ files, decision pending).
+  Still DRAFT — awaiting Giorgio's go-ahead on the design + the orchestrator-vs-Plan-Mode choice. | Claude (Opus 4.8)
 - **v0.1 (2026-06-03)** — DRAFT created (Opus 4.8). RECOGNITION (N.0.1): confirmed ADR number =
   **412** (not 378 = Snap System); mapped existing proto-type systems (`stair_presets`,
   `section-catalog`, `wall-DNA`, material catalogs). Locked with Giorgio: Q1 hybrid live+override,

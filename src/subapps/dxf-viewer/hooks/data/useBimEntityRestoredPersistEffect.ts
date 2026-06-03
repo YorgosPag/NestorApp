@@ -35,7 +35,9 @@ type BimRestoreEntityType =
   // ADR-407 — standalone path-based railing.
   | 'railing'
   // ADR-410 — mesh-based CC0 furniture.
-  | 'furniture';
+  | 'furniture'
+  // ADR-408 Φ8 — unified linear MEP segment (duct + pipe).
+  | 'mep-segment';
 
 export function useBimEntityRestoredPersistEffect<T extends AnySceneEntity, S>(
   entityType: BimRestoreEntityType,

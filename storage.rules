@@ -364,5 +364,23 @@ service firebase.storage {
       allow delete: if isSuperAdmin();
     }
 
+    // =========================================================================
+    // 🗂️ BIM TEXTURE LIBRARY (ADR-413 — CC0 PBR texture content library)
+    // =========================================================================
+    // Path: /bim-texture-library/<slug>/<map>.jpg (albedo/normal/roughness/ao)
+    // Shared, read-only content library (like a Revit material/appearance asset
+    // library) of CC0 (Poly Haven) PBR texture sets, used by the 3D realistic
+    // material catalog. Recursive (`=**`) so it covers every slug folder + maps.
+    // =========================================================================
+    match /bim-texture-library/{assetFile=**} {
+
+      // 📖 READ: any authenticated user (shared catalog)
+      allow read: if isAuthenticated();
+
+      // ✍️ WRITE / 🗑️ DELETE: super_admin only (library curation)
+      allow write: if isSuperAdmin() && isValidFileSize();
+      allow delete: if isSuperAdmin();
+    }
+
   }
 }

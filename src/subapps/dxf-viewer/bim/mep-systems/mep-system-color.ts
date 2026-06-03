@@ -20,6 +20,7 @@
  */
 
 import type { MepSystemEntity } from '../types/mep-system-types';
+import type { PlumbingSystemClassification } from '../types/mep-connector-types';
 
 /**
  * Curated, high-contrast palette for electrical circuits (distinct hues, readable
@@ -54,6 +55,30 @@ function paletteColorForId(id: string): string {
 /** A system's effective colour: its owned `color`, or a deterministic fallback. */
 export function systemColor(system: MepSystemEntity): string {
   return system.params.color ?? paletteColorForId(system.id);
+}
+
+/**
+ * Industry-convention colour for a plumbing classification (ADR-408 Φ9/Φ10) —
+ * unlike electrical circuits (categorical palette), pipe networks are coloured by
+ * **what they carry** (Revit/CIBSE plumbing convention): cold water blue, hot
+ * water red, drainage brown, heating supply red / return blue. Used to seed a
+ * derived network's owned `color` so colour-by-system reads it for free.
+ */
+export function classificationDefaultColor(
+  classification: PlumbingSystemClassification,
+): string {
+  switch (classification) {
+    case 'domestic-cold-water':
+      return '#2563eb'; // blue
+    case 'domestic-hot-water':
+      return '#dc2626'; // red
+    case 'sanitary-drainage':
+      return '#b45309'; // brown
+    case 'hydronic-supply':
+      return '#dc2626'; // red (heating flow)
+    case 'hydronic-return':
+      return '#2563eb'; // blue (heating return)
+  }
 }
 
 /**

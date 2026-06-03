@@ -132,6 +132,8 @@ export class BoundsCalculator {
       case 'railing':
       // ADR-410 — furniture projects `geometry.bbox` (FurnitureGeometry) to 2D (same).
       case 'furniture':
+      // ADR-408 Φ8 — MEP segment projects `geometry.bbox` (MepSegmentGeometry) to 2D (same).
+      case 'mep-segment':
         return this.calculateBimEntityBounds(entity, tolerance);
       // ADR-359 Phase 11 follow-up — XLINE/RAY bounds extracted to sibling module.
       case 'xline':

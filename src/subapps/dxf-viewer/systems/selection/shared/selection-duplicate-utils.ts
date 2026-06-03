@@ -223,6 +223,8 @@ export function calculateEntityBounds(entity: AnySceneEntity): { min: Point2D, m
     case 'stair':
     case 'mep-fixture':
     case 'electrical-panel':
+    case 'mep-segment':
+    case 'furniture':   // ADR-410 — point/mesh-based BIM furniture, marquee select
       return calculateBimEntity2DBounds(entity as unknown as Entity);
     case 'text':
     case 'mtext': {

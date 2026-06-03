@@ -148,6 +148,9 @@ export type ToolType =
   | 'railing'
   // ADR-410: mesh-based CC0 furniture drawing tool (single-click placement)
   | 'furniture'
+  // ADR-408 Φ8: linear MEP segment tools (duct/pipe, 2-click; one entity, two tools like Revit)
+  | 'mep-duct'
+  | 'mep-pipe'
   // ADR-359 Phase 1: Auxiliary geometry tools (infinite/semi-infinite construction lines)
   | 'xline'             // Infinite line through basePoint in direction (AutoCAD XLINE)
   | 'ray'               // Semi-infinite line from basePoint in direction (AutoCAD RAY)

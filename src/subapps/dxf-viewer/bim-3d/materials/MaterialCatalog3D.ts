@@ -8,6 +8,9 @@
  */
 
 import * as THREE from 'three';
+import { textureSlugForKey } from '../../bim/materials/bim-texture-registry';
+import { getTextureSet, preloadTextureSet, type LoadedTextureSet } from './bim-texture-cache';
+import { useBimRenderSettingsStore } from '../../state/bim-render-settings-store';
 
 interface PbrDef {
   color: number;
@@ -59,6 +62,13 @@ const MAT_DEFS: Record<string, PbrDef> = {
   // glTF carries no own materials). Warm wood-tan, matte. The real CC0 mesh keeps
   // its own glTF materials; this only paints the placeholder box.
   'elem-furniture':      { color: 0xb48250, roughness: 0.65, metalness: 0.05 },
+  // ADR-408 Φ8 — MEP duct (rectangular/round HVAC duct): galvanised sheet-steel
+  // grey (similar to RAL 9006 / zinc-coated surface). Low roughness (smooth
+  // sheet metal), mid metalness.
+  'elem-mep-duct':       { color: 0xb0b4b8, roughness: 0.35, metalness: 0.60 },
+  // ADR-408 Φ8 — MEP pipe (plumbing / hydronic pipe): copper/brass tone.
+  // Low roughness (polished pipe), high metalness.
+  'elem-mep-pipe':       { color: 0xb87333, roughness: 0.30, metalness: 0.75 },
 };
 
 export type Stair3DComponent =
@@ -88,9 +98,8 @@ function resolveKey(materialId: string): string {
   return 'mat-concrete';
 }
 
-/** Resolve MeshStandardMaterial from a DNA materialId (e.g. 'mat-concrete-c25'). */
-export function getMaterial3D(materialId: string): THREE.MeshStandardMaterial {
-  const key = resolveKey(materialId);
+/** The flat (non-textured) singleton for a resolved key — cached for app lifetime. */
+function getFlatMaterial(key: string): THREE.MeshStandardMaterial {
   let mat = CACHE.get(key);
   if (!mat) {
     mat = buildMat(MAT_DEFS[key] ?? MAT_DEFS['mat-concrete']!);
@@ -99,17 +108,66 @@ export function getMaterial3D(materialId: string): THREE.MeshStandardMaterial {
   return mat;
 }
 
-/** Resolve MeshStandardMaterial for element types without DNA. */
-export function getElementMaterial3D(
-  type: 'column' | 'beam' | 'slab' | 'envelope' | 'mep-fixture' | 'electrical-panel' | 'railing' | 'mep-wire' | 'furniture' | Stair3DComponent,
-): THREE.MeshStandardMaterial {
-  const key = `elem-${type}`;
-  let mat = CACHE.get(key);
+/** Build a textured clone of a key's flat material, attaching the loaded PBR maps. */
+function buildTexturedMaterial(key: string, set: LoadedTextureSet): THREE.MeshStandardMaterial {
+  const def = MAT_DEFS[key] ?? MAT_DEFS['mat-concrete']!;
+  const mat = buildMat(def);
+  mat.map = set.map;
+  if (set.normalMap) mat.normalMap = set.normalMap;
+  if (set.roughnessMap) mat.roughnessMap = set.roughnessMap;
+  // aoMap needs uv2 — the geometry layer ensures one; three ignores it gracefully
+  // when absent (ADR-413 contract).
+  if (set.aoMap) mat.aoMap = set.aoMap;
+  mat.needsUpdate = true;
+  return mat;
+}
+
+/**
+ * ADR-413 — texture-aware resolution for a resolved material key. When realistic
+ * materials are ON and the key maps to a texture slug:
+ *   - set loaded  → return a cached textured variant (`${key}::tex`);
+ *   - set missing → fire `preloadTextureSet` + return the flat material for now
+ *     (the resync swaps it in once the load resolves).
+ * Otherwise (toggle off / unmapped key) → the flat singleton, unchanged.
+ */
+function resolveTexturedMaterial(key: string): THREE.MeshStandardMaterial {
+  if (!useBimRenderSettingsStore.getState().realisticMaterials) return getFlatMaterial(key);
+  const slug = textureSlugForKey(key);
+  if (!slug) return getFlatMaterial(key);
+
+  const set = getTextureSet(slug);
+  if (!set) {
+    preloadTextureSet(slug);
+    return getFlatMaterial(key);
+  }
+  const texKey = `${key}::tex`;
+  let mat = CACHE.get(texKey);
   if (!mat) {
-    mat = buildMat(MAT_DEFS[key] ?? MAT_DEFS['mat-concrete']!);
-    CACHE.set(key, mat);
+    mat = buildTexturedMaterial(key, set);
+    CACHE.set(texKey, mat);
   }
   return mat;
+}
+
+/**
+ * ADR-413 — the resolved MaterialCatalog3D key behind a DNA materialId (e.g.
+ * 'mat-concrete-c25' → 'mat-concrete'). Exposed for downstream geometry/UI agents
+ * that need the texture-slug mapping for the same key the material uses.
+ */
+export function getResolvedTextureKeyForMaterialId(materialId: string): string {
+  return resolveKey(materialId);
+}
+
+/** Resolve MeshStandardMaterial from a DNA materialId (e.g. 'mat-concrete-c25'). */
+export function getMaterial3D(materialId: string): THREE.MeshStandardMaterial {
+  return resolveTexturedMaterial(resolveKey(materialId));
+}
+
+/** Resolve MeshStandardMaterial for element types without DNA. */
+export function getElementMaterial3D(
+  type: 'column' | 'beam' | 'slab' | 'envelope' | 'mep-fixture' | 'electrical-panel' | 'railing' | 'mep-wire' | 'furniture' | 'mep-duct' | 'mep-pipe' | Stair3DComponent,
+): THREE.MeshStandardMaterial {
+  return resolveTexturedMaterial(`elem-${type}`);
 }
 
 /**
@@ -118,7 +176,7 @@ export function getElementMaterial3D(
  * `${type}:${colorInt}` — never mutates the shared element singleton.
  */
 export function getSystemTintedMaterial3D(
-  type: 'mep-fixture' | 'electrical-panel' | 'mep-wire',
+  type: 'mep-fixture' | 'electrical-panel' | 'mep-wire' | 'mep-duct' | 'mep-pipe',
   colorInt: number,
 ): THREE.MeshStandardMaterial {
   const baseKey = `elem-${type}`;

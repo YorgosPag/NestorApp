@@ -34,7 +34,11 @@ export function calculateBimEntity2DBounds(entity: Entity): { min: Point2D; max:
     // ADR-406 — MEP fixture projects geometry.bbox to 2D for marquee selection.
     case 'mep-fixture':
     // ADR-408 Φ3 — electrical panel projects geometry.bbox to 2D (same).
-    case 'electrical-panel': {
+    case 'electrical-panel':
+    // ADR-410 — furniture projects geometry.bbox to 2D (same).
+    case 'furniture':
+    // ADR-408 Φ8 — MEP segment projects geometry.bbox to 2D (same).
+    case 'mep-segment': {
       const bbox = entity.geometry?.bbox;
       if (!bbox) return null;
       return {

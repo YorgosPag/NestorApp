@@ -51,6 +51,7 @@ import type {
   WallKind,
   WallParams,
 } from '../types/wall-types';
+import type { WallTypeParams } from '../types/bim-family-type';
 import type { BimValidation, SoftLock } from '../types/bim-base';
 
 // ============================================================================
@@ -75,6 +76,10 @@ export interface WallDoc {
   readonly buildingId?: string;
   readonly floorId?: string;
   readonly layerId?: string;
+  /** ADR-412 — FK → BimFamilyType.id. Absent on untyped/legacy walls. */
+  readonly typeId?: string;
+  /** ADR-412 — Per-instance overrides of type-level params. Absent = use type as-is. */
+  readonly typeOverrides?: Partial<WallTypeParams>;
   readonly createdAt: Timestamp;
   readonly createdBy: string;
   readonly updatedAt: Timestamp;
@@ -97,6 +102,10 @@ export interface WallSaveInput {
   readonly buildingId?: string;
   readonly floorId?: string;
   readonly layerId?: string;
+  /** ADR-412 — FK → BimFamilyType.id. Omit for untyped walls. */
+  readonly typeId?: string;
+  /** ADR-412 — Per-instance overrides of type-level params. */
+  readonly typeOverrides?: Partial<WallTypeParams>;
 }
 
 export interface WallUpdateInput {
@@ -104,6 +113,15 @@ export interface WallUpdateInput {
   readonly validation?: BimValidation;
   readonly geometry?: WallGeometry;
   readonly layerId?: string;
+  /**
+   * ADR-412 — FK → BimFamilyType.id.
+   *   - omit (`undefined`) → leave the stored field unchanged,
+   *   - `string`           → set the linkage,
+   *   - `null`             → clear it (detach to ad-hoc, `deleteField()`).
+   */
+  readonly typeId?: string | null;
+  /** ADR-412 — Per-instance overrides; `null` clears the field (`deleteField()`). */
+  readonly typeOverrides?: Partial<WallTypeParams> | null;
 }
 
 // ============================================================================
@@ -175,6 +193,9 @@ export class WallFirestoreService {
     if (input.buildingId !== undefined) base.buildingId = input.buildingId;
     if (input.floorId !== undefined) base.floorId = input.floorId;
     if (input.layerId !== undefined) base.layerId = input.layerId;
+    // ADR-412 — Family-type linkage (optional; omit when absent).
+    if (input.typeId !== undefined) base.typeId = input.typeId;
+    if (input.typeOverrides !== undefined) base.typeOverrides = stripUndefinedDeep(input.typeOverrides);
 
     await setDoc(ref, base);
     return base as unknown as WallDoc;
@@ -193,6 +214,17 @@ export class WallFirestoreService {
     if (patch.validation !== undefined) payload.validation = stripUndefinedDeep(patch.validation);
     if (patch.geometry !== undefined) payload.geometry = stripUndefinedDeep(patch.geometry);
     if (patch.layerId !== undefined) payload.layerId = patch.layerId;
+    // ADR-412 — Family-type linkage. `null` clears the field (detach to ad-hoc);
+    // a string sets it; `undefined` leaves the stored value untouched.
+    if (patch.typeId !== undefined) {
+      payload.typeId = patch.typeId === null ? deleteField() : patch.typeId;
+    }
+    if (patch.typeOverrides !== undefined) {
+      payload.typeOverrides =
+        patch.typeOverrides === null
+          ? deleteField()
+          : stripUndefinedDeep(patch.typeOverrides);
+    }
 
     await updateDoc(ref, payload);
   }
@@ -256,5 +288,8 @@ export function entityToSaveInput(entity: WallEntity): WallSaveInput {
     params: entity.params,
     validation: entity.validation,
     layerId: entity.layerId,
+    // ADR-412 — pass through when present; omit when absent (no undefined in output).
+    ...(entity.typeId !== undefined && { typeId: entity.typeId }),
+    ...(entity.typeOverrides !== undefined && { typeOverrides: entity.typeOverrides }),
   };
 }

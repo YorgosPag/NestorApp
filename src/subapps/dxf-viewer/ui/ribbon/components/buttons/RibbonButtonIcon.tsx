@@ -210,6 +210,9 @@ export const RibbonButtonIcon: React.FC<RibbonButtonIconProps> = ({ icon, size }
     case 'bim-electrical-panel': return <Server width={sizePx[size]} height={sizePx[size]} className={className} />;
     case 'bim-railing': return <Fence width={sizePx[size]} height={sizePx[size]} className={className} />;
     case 'bim-furniture': return <Armchair width={sizePx[size]} height={sizePx[size]} className={className} />;
+    // ADR-408 Φ8 — duct (rectangular section) + pipe (round section) launchers.
+    case 'bim-duct': return <RectangleHorizontal width={sizePx[size]} height={sizePx[size]} className={className} />;
+    case 'bim-pipe': return <Diameter width={sizePx[size]} height={sizePx[size]} className={className} />;
     case 'bim-wall-split': return <Scissors width={sizePx[size]} height={sizePx[size]} className={className} />;
     // ADR-401 Phase E.1 — Wall Attach/Detach Top/Base (manual structural attach).
     case 'bim-wall-attach-top': return <ArrowUpToLine width={sizePx[size]} height={sizePx[size]} className={className} />;

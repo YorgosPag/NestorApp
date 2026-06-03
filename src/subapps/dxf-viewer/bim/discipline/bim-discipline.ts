@@ -78,6 +78,10 @@ export const DISCIPLINE_BY_CATEGORY: Readonly<Record<BimCategory, DisciplineOrAn
   'mep-wire':      'electrical',
   // ADR-410 — furniture (first placeable `interior` category).
   furniture:       'interior',
+  // ADR-408 Φ8 — duct run (first placeable `mechanical` category).
+  duct:            'mechanical',
+  // ADR-408 Φ8 — pipe run (first placeable `plumbing` category).
+  pipe:            'plumbing',
 } as const;
 
 /**

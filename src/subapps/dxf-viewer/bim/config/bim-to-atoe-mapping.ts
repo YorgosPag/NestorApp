@@ -130,8 +130,20 @@ const RAILING_MAPPING: Readonly<Record<RailingKind, AtoeMappingEntry>> = {
  * τροφοδοτεί BOQ ως καθαρό count από το `interior` discipline.
  */
 const FURNITURE_MAPPING: Readonly<Record<FurnitureKind, AtoeMappingEntry>> = {
-  chair: { categoryCode: 'OIK-12.50', unit: 'pcs', titleEL: 'Έπιπλο — καρέκλα (BIM)' },
-  table: { categoryCode: 'OIK-12.50', unit: 'pcs', titleEL: 'Έπιπλο — τραπέζι (BIM)' },
+  chair:      { categoryCode: 'OIK-12.50', unit: 'pcs', titleEL: 'Έπιπλο — καρέκλα (BIM)' },
+  table:      { categoryCode: 'OIK-12.50', unit: 'pcs', titleEL: 'Έπιπλο — τραπέζι (BIM)' },
+  bed:        { categoryCode: 'OIK-12.50', unit: 'pcs', titleEL: 'Έπιπλο — κρεβάτι (BIM)' },
+  sofa:       { categoryCode: 'OIK-12.50', unit: 'pcs', titleEL: 'Έπιπλο — καναπές (BIM)' },
+  armchair:   { categoryCode: 'OIK-12.50', unit: 'pcs', titleEL: 'Έπιπλο — πολυθρόνα (BIM)' },
+  desk:       { categoryCode: 'OIK-12.50', unit: 'pcs', titleEL: 'Έπιπλο — γραφείο (BIM)' },
+  cabinet:    { categoryCode: 'OIK-12.50', unit: 'pcs', titleEL: 'Έπιπλο — ντουλάπι/μπουφές (BIM)' },
+  wardrobe:   { categoryCode: 'OIK-12.50', unit: 'pcs', titleEL: 'Έπιπλο — ντουλάπα (BIM)' },
+  bookshelf:  { categoryCode: 'OIK-12.50', unit: 'pcs', titleEL: 'Έπιπλο — βιβλιοθήκη (BIM)' },
+  nightstand: { categoryCode: 'OIK-12.50', unit: 'pcs', titleEL: 'Έπιπλο — κομοδίνο (BIM)' },
+  bench:      { categoryCode: 'OIK-12.50', unit: 'pcs', titleEL: 'Έπιπλο — παγκάκι (BIM)' },
+  dresser:    { categoryCode: 'OIK-12.50', unit: 'pcs', titleEL: 'Έπιπλο — συρταριέρα (BIM)' },
+  stool:      { categoryCode: 'OIK-12.50', unit: 'pcs', titleEL: 'Έπιπλο — σκαμπό (BIM)' },
+  tvStand:    { categoryCode: 'OIK-12.50', unit: 'pcs', titleEL: 'Έπιπλο — έπιπλο TV (BIM)' },
 };
 
 /** Lookup map keyed by entity type for runtime dispatch. */

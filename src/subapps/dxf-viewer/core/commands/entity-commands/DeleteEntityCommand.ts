@@ -24,11 +24,13 @@ const BIM_ENTITY_TYPES = new Set<string>([
   'electrical-panel',
   // ADR-407 — standalone path-based railing.
   'railing',
+  // ADR-408 Φ8 — unified linear MEP segment (duct + pipe).
+  'mep-segment',
 ]);
 
 type BimEntityType =
   | 'wall' | 'opening' | 'slab' | 'slab-opening' | 'column' | 'beam' | 'stair'
-  | 'mep-fixture' | 'electrical-panel' | 'railing';
+  | 'mep-fixture' | 'electrical-panel' | 'railing' | 'mep-segment';
 
 function emitBimRestoreIfApplicable(snapshot: SceneEntity): void {
   const type = (snapshot as { type?: string }).type;

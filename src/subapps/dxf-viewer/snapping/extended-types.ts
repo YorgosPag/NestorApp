@@ -47,6 +47,7 @@ export enum ExtendedSnapType {
   BIM_SLAB_CORNER    = 'bim_slab_corner',    // ADR-370: slab polygon vertex
   BIM_COLUMN_CORNER  = 'bim_column_corner',  // ADR-370: column perimeter corner
   BIM_OPENING_CORNER = 'bim_opening_corner', // ADR-370: opening (door/window) face corner
+  BIM_MEP_CONNECTOR  = 'bim_mep_connector',  // ADR-408 Φ9: MEP connector attach point (segment endpoints / fixture / panel)
   TEXT               = 'text',                // ADR-378 Phase 3: TEXT/MTEXT 8-point snap (insertion + 4 corners + center + 2 edge mids)
   AUTO = 'auto'
 }
@@ -127,6 +128,7 @@ export const DEFAULT_PRO_SNAP_SETTINGS: ProSnapSettings = {
     ExtendedSnapType.BIM_SLAB_CORNER,     // ADR-370: slab polygon vertex
     ExtendedSnapType.BIM_COLUMN_CORNER,   // ADR-370: column perimeter corner
     ExtendedSnapType.BIM_OPENING_CORNER,  // ADR-370: opening face corner
+    ExtendedSnapType.BIM_MEP_CONNECTOR,   // ADR-408 Φ9: MEP connector attach point
     ExtendedSnapType.TEXT,                // ADR-378 Phase 3: TEXT/MTEXT 8-point snap
   ]),
   showSnapMarkers: true,
@@ -137,6 +139,7 @@ export const DEFAULT_PRO_SNAP_SETTINGS: ProSnapSettings = {
     ExtendedSnapType.BIM_SLAB_CORNER,     // ADR-370
     ExtendedSnapType.BIM_COLUMN_CORNER,   // ADR-370
     ExtendedSnapType.BIM_OPENING_CORNER,  // ADR-370
+    ExtendedSnapType.BIM_MEP_CONNECTOR,   // ADR-408 Φ9: MEP attach point — before column centre & endpoint
     ExtendedSnapType.BIM_COLUMN_CENTER,   // ADR-363 Phase 5.5i: structural precision — before generic endpoint
     ExtendedSnapType.INTERSECTION,
     ExtendedSnapType.ENDPOINT,
@@ -185,6 +188,7 @@ export const DEFAULT_PRO_SNAP_SETTINGS: ProSnapSettings = {
     [ExtendedSnapType.BIM_SLAB_CORNER]:     10, // ADR-370
     [ExtendedSnapType.BIM_COLUMN_CORNER]:   10, // ADR-370
     [ExtendedSnapType.BIM_OPENING_CORNER]:  10, // ADR-370
+    [ExtendedSnapType.BIM_MEP_CONNECTOR]:   10, // ADR-408 Φ9: MEP connector attach point
     [ExtendedSnapType.TEXT]:                10, // ADR-378 Phase 3: text 8-point snap (insertion/corners/center/edges)
   }
 };

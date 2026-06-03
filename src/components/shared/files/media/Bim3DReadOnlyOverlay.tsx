@@ -41,6 +41,9 @@ export function Bim3DReadOnlyOverlay({ bimSnapshot, projectId, onClose }: Bim3DR
       // ADR-410 — same as above: read-only preview does not load
       // floorplan_furniture yet (deferred). Empty keeps the bundle valid.
       furnitures: [],
+      // ADR-408 Φ8 — same as above: read-only preview does not load
+      // floorplan_mep_segments yet (deferred). Empty keeps the bundle valid.
+      mepSegments: [],
     }),
     [bimSnapshot.walls, bimSnapshot.columns, bimSnapshot.beams, bimSnapshot.slabs, bimSnapshot.slabOpenings, bimSnapshot.openings, bimSnapshot.stairs],
   );

@@ -1,0 +1,149 @@
+/**
+ * MEP segment geometry computation (ADR-408 Φ8).
+ *
+ * Pure SSoT: derives `MepSegmentGeometry` cache from `MepSegmentParams`.
+ * Idempotent + side-effect free. Mirrors `beam-geometry.ts` (axis + perpendicular
+ * offset → plan outline) — a duct/pipe run renders in plan as a single closed
+ * rectangle (section-width × length), like a beam.
+ *
+ * Units: geometric points in canvas units; numeric scalars (length/area/volume)
+ * in m / m² / m³ for direct BOQ feed.
+ *
+ * @see ./beam-geometry.ts (template)
+ * @see docs/centralized-systems/reference/adrs/ADR-408-mep-connectors-and-systems.md §Φ8
+ */
+
+import type { Point3D, Polyline3D, Polygon3D, BoundingBox3D } from '../types/bim-base';
+import type { MepSegmentGeometry, MepSegmentParams } from '../types/mep-segment-types';
+import { resolveSegmentSection, MIN_SEGMENT_DIMENSION_MM, MIN_SEGMENT_LENGTH_MM } from '../types/mep-segment-types';
+import { mmToSceneUnits } from '../../utils/scene-units';
+import { offsetPolyline } from './shared/polygon-utils';
+import { roundCrossSectionAreaMm2, roundPerimeterMm, rectPerimeterMm } from './shared/round-profile';
+
+const MM_TO_M = 1 / 1000;
+const MM2_TO_M2 = 1e-6;
+
+export interface MepSegmentValidationResult {
+  readonly errors: readonly string[];
+  readonly warnings: readonly string[];
+}
+
+/**
+ * Compute `MepSegmentGeometry` from `MepSegmentParams`. Pure SSoT. Caller MUST
+ * ensure section dims > 0 (validator guard upstream).
+ */
+export function computeMepSegmentGeometry(params: MepSegmentParams): MepSegmentGeometry {
+  // s: canvas units per 1 mm — converts mm section dims → canvas-unit offsets for
+  // the 2D plan outline. Axis vertices are always in canvas units already.
+  const s = mmToSceneUnits(params.sceneUnits ?? 'mm');
+  const section = resolveSegmentSection(params);
+
+  const axisVertices: readonly Point3D[] = [params.startPoint, params.endPoint];
+  const axisPolyline: Polyline3D = { points: axisVertices, closed: false };
+
+  // Plan footprint width = the section's HORIZONTAL extent (round ⇒ diameter,
+  // rectangular ⇒ width). Height is the out-of-plan (vertical) extent.
+  const planWidthMm = section.widthMm;
+  const outlineVertices = buildOutlineRect(axisVertices, planWidthMm, s);
+  const outline: Polygon3D = { vertices: outlineVertices };
+
+  // BOQ rollups. Axis length canvas → m via (1/s)*MM_TO_M.
+  const lengthCanvas = computePolylineLengthMm(axisVertices);
+  const lengthM = lengthCanvas * (1 / s) * MM_TO_M;
+
+  const crossSectionAreaMm2 =
+    section.diameterMm !== null
+      ? roundCrossSectionAreaMm2(section.diameterMm)
+      : section.widthMm * section.heightMm;
+  const perimeterMm =
+    section.diameterMm !== null
+      ? roundPerimeterMm(section.diameterMm)
+      : rectPerimeterMm(section.widthMm, section.heightMm);
+
+  const crossSectionAreaM2 = crossSectionAreaMm2 * MM2_TO_M2;
+  const surfaceAreaM2 = perimeterMm * MM_TO_M * lengthM;
+  const volume = crossSectionAreaM2 * lengthM;
+
+  const bbox = computeBbox(axisVertices, outlineVertices, params.centerlineElevationMm, section.heightMm);
+
+  return {
+    axisPolyline,
+    outline,
+    bbox,
+    length: lengthM,
+    crossSectionAreaM2,
+    surfaceAreaM2,
+    volume,
+  };
+}
+
+/**
+ * Hard/soft validation of segment params. Errors abort entity creation; warnings
+ * are advisory (mirror beam validator shape).
+ */
+export function validateMepSegmentParams(params: MepSegmentParams): MepSegmentValidationResult {
+  const errors: string[] = [];
+  const section = resolveSegmentSection(params);
+  const s = mmToSceneUnits(params.sceneUnits ?? 'mm');
+  const lengthMm = computePolylineLengthMm([params.startPoint, params.endPoint]) * (1 / s);
+
+  if (lengthMm < MIN_SEGMENT_LENGTH_MM) {
+    errors.push('mepSegment.tooShort');
+  }
+  if (section.widthMm < MIN_SEGMENT_DIMENSION_MM || section.heightMm < MIN_SEGMENT_DIMENSION_MM) {
+    errors.push('mepSegment.sectionTooSmall');
+  }
+  return { errors, warnings: [] };
+}
+
+// ─── Internal helpers (mirror beam-geometry) ─────────────────────────────────────
+
+function buildOutlineRect(axis: readonly Point3D[], widthMm: number, s: number): Point3D[] {
+  const n = axis.length;
+  if (n < 2 || widthMm <= 0) {
+    return [...axis];
+  }
+  const half = (widthMm * s) / 2;
+  const plus = offsetPolyline(axis, half, 1);
+  const minus = offsetPolyline(axis, half, -1);
+  const polygon: Point3D[] = [...plus];
+  for (let i = minus.length - 1; i >= 0; i--) polygon.push(minus[i]);
+  return polygon;
+}
+
+function computePolylineLengthMm(vertices: readonly Point3D[]): number {
+  let len = 0;
+  for (let i = 1; i < vertices.length; i++) {
+    const a = vertices[i - 1];
+    const b = vertices[i];
+    len += Math.hypot(b.x - a.x, b.y - a.y);
+  }
+  return len;
+}
+
+/**
+ * Axis-aligned 3D bbox. z range centred on the centreline elevation:
+ * [centerline − height/2, centerline + height/2] (mm → m).
+ */
+function computeBbox(
+  axis: readonly Point3D[],
+  outline: readonly Point3D[],
+  centerlineMm: number,
+  heightMm: number,
+): BoundingBox3D {
+  let minX = Infinity, minY = Infinity;
+  let maxX = -Infinity, maxY = -Infinity;
+  const fold = (p: Point3D): void => {
+    if (p.x < minX) minX = p.x;
+    if (p.x > maxX) maxX = p.x;
+    if (p.y < minY) minY = p.y;
+    if (p.y > maxY) maxY = p.y;
+  };
+  for (const p of axis) fold(p);
+  for (const p of outline) fold(p);
+  const halfH = heightMm / 2;
+  return {
+    min: { x: minX, y: minY, z: (centerlineMm - halfH) / 1000 },
+    max: { x: maxX, y: maxY, z: (centerlineMm + halfH) / 1000 },
+  };
+}

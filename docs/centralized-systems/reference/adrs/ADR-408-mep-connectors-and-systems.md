@@ -286,11 +286,82 @@ Scope = 2D annotation + 3D conduit· τοπολογία = **daisy-chain + home-r
 - ✅ «colour by system» view toggle **DONE** (2026-06-03)· ✅ per-circuit edit από φωτιστικό **DONE** (2026-06-03)· ✅ seed legacy connectors **DONE** (2026-06-03) — **ο κορμός ADR-408 «MEP σαν Revit» (electrical) πλήρης.**
 - Φ7 follow-ups: ✅ `orthogonal`/`arc` wire styles **DONE** (#1, 2026-06-03)· ✅ waypoints **DONE** (#3,
   2026-06-03)· ✅ conductor-count ticks **DONE** (2026-06-03)· ✅ colour-by-system toggle **DONE** (2026-06-03)· ✅ per-circuit edit από φωτιστικό **DONE** (2026-06-03)· ✅ seed legacy connectors **DONE** (2026-06-03).
-- duct/pipe domains & systems — reserved στα types, no pipeline (επόμενο frontier).
+- ✅ duct/pipe **element pipeline** (Φ8) **DONE** (2026-06-03) — ΕΝΑ ενοποιημένο `mep-segment` entity (domain `duct|pipe` + sectionKind `rectangular|round`), placement/γεωμετρία/2D/3D/persistence/BOQ/grips, mirror του δοκαριού. **❌ υπόλοιπο:** duct/pipe **systems** (grouping segments σε δίκτυα + routing — αντίστοιχο των Φ2/Φ7 electrical· επόμενο frontier)· contextual props tab (edit size/elevation)· 3D 2-click placement· connectors στο segment (forward hook, empty).
 
 ---
 
 ## Changelog
+- **2026-06-04 (Opus 4.8)** — **Φ9/Φ10 ΣΤΡΩΜΑ Β — Plumbing network leaves (connectors + snap + auto-system + colour + UI)** (pending commit, 🔴 browser verify).
+  Ολοκλήρωση του φυσικού δικτύου πάνω στο θεμέλιο τύπων του Στρώματος Α. **5 leaves, full SSOT, 196/196 MEP PASS, tsc 0 νέα.** ΕΚΤΟΣ ADR-040
+  ΕΚΤΟΣ τα 3D-scene αρχεία (BimSceneLayer = CHECK 6B → STAGE ADR-040· SnapIndicatorOverlay = CHECK 6D → STAGE ADR-040).
+  - **Leaf 1 — Segment endpoint connectors:** NEW `bim/mep-segments/mep-segment-connectors.ts` `segmentConnectorWorldPosition(connectorId, params)`
+    (seg-start→`startPoint`, seg-end→`endPoint`, z=`centerlineElevationMm`· ΟΧΙ point-host `connectorWorldPosition` — ο σωλήνας ΔΕΝ έχει position+rotation).
+    `connector-access.ts` (getEntityConnectors/isMepConnectorHost) + `mep-connector-seed.ts` (2 connectors start+end, domain mirror duct/pipe) +
+    `useMepConnectorReconciliation.ts` (widen generic + segment arm) — όλα +`isMepSegmentEntity` arm.
+  - **Leaf 2 — Snap-to-connect:** NEW `snapping/engines/MepConnectorSnapEngine.ts` (πρότυπο WallCornerSnapEngine· segment→2 endpoints direct,
+    fixture/panel→`connectorWorldPosition`). `ExtendedSnapType.BIM_MEP_CONNECTOR` (priority **-1.5**: πάνω από endpoint/column-centre, κάτω από face corners) +
+    enabledTypes/priority/tolerance + register SnapEngineRegistry + ◇ SnapIndicatorOverlay symbol + `'mep_connector'` στο querySnap union (ISpatialIndex/QuadTree/Placeholder) +
+    ProSnapToolbar Record/BIM_MODES + i18n `snapModes.labels.bim.mepConnector`. Το snap εφαρμόζεται κεντρικά (mouse-handler-up) → start/end click του segment tool κουμπώνουν δωρεάν.
+  - **Leaf 3 — Φ10 auto-system (pure):** NEW `bim/mep-systems/mep-pipe-network-derive.ts` `derivePipeNetworks(entities, tol, defaultClass)` — union-find connected
+    components στα **pipe** endpoints (≤1 scene-unit tolerance), 1 network/component, deterministic source = lexικά-μικρότερο segment seg-start, members = όλοι οι
+    endpoint connectors. Default classification = `domestic-cold-water` (re-classify στο UI). Πρότυπο `mep-circuit-from-selection.ts` αλλά topology αντί selection.
+  - **Leaf 4 — Colour-by-classification:** NEW `classificationDefaultColor(PlumbingSystemClassification)` (cold=#2563eb, hot=#dc2626, drainage=#b45309,
+    hydronic-supply=#dc2626, hydronic-return=#2563eb — CIBSE/Revit convention). 2D gate στον `MepSegmentRenderer` (resolveEntitySystemColor + colorBySystem toggle,
+    segment.id = colour-index key). 3D: `getSystemTintedMaterial3D` += duct/pipe, `mepSegmentToMesh` += `systemColor` param, `BimSceneLayer.syncMepSegments` passthrough.
+  - **Leaf 5 — UI «Δίκτυα σωλήνων»:** action key `mepCircuit.actions.deriveNetworks` (folded στο υπάρχον `useRibbonMepCircuitBridge` → μηδέν νέο prop-threading στο
+    useRibbonCommands) + `handleDeriveNetworks` (derivePipeNetworks → 1 CompoundCommand CreateMepSystemCommand/draft, single undo) + home-tab-draw button +
+    EventBus `bim:mep-networks-derived` + toast + i18n el/en (button label/tooltip, networkDefaultName, networksDerived). Reuse buildDefaultPipeNetworkParams + classificationDefaultColor.
+  - **Roadmap:** Φ11 auto-fittings (elbow/tee/reducer)· Φ12 inline valves· Φ13 manifold/water-heater (multi-connector equipment)· Φ14 system browser/sizing· duct (air) systems.
+- **2026-06-03 (Opus 4.8)** — **Φ9 ΣΤΡΩΜΑ Α — Θεμέλιο τύπων plumbing (discriminated union)** (pending commit, 🔴 browser verify· Στρώμα Β leaves εκκρεμούν).
+  Πρώτο βήμα του υδραυλικού δικτύου (ύδρευση/αποχέτευση/θέρμανση — επιλογή Giorgio). Recognition: 4 παράλληλοι χαρτογράφοι →
+  ο πυρήνας (commands/coordinator/mutator/color) είναι ΗΔΗ domain-agnostic· μόνο οι **τύποι** ήταν hard-typed στο ηλεκτρολογικό.
+  **Αλλαγή:** `MepSystemParams` έγινε **discriminated union** σε `systemType` (`MepElectricalSystemParams | MepPipeSystemParams`):
+  τα electrical-only πεδία (`wireStyle`/`wireWaypoints`/`conductors`/`ratedVoltage`/`poles`) ζουν ΜΟΝΟ στο electrical arm →
+  ο compiler αναγκάζει guards ώστε pipe-network να μην μπει ποτέ στο `computeCircuitWirePaths`. ΝΕΑ: `PlumbingSystemClassification`
+  (cold/hot-water, sanitary-drainage, hydronic-supply/return), `PipeFluid`, `MepPipeConnectorParams` (diameter/fluid/**slopePercent** για
+  αποχέτευση/flowLps), `MepConnector.pipe?`, `MepSystemType += 'pipe-network'`, `buildDefaultPipeNetworkParams`, type-guards
+  `isElectricalSystemParams`/`isPipeSystemParams`, segment endpoint connector builders (`buildSegmentEndpointConnector` start/end,
+  `flow:'bidirectional'`, ΧΩΡΙΣ classification στο seed — η κλάση ανήκει στο System). Zod: `MepSystemParamsSchema` = `z.discriminatedUnion`,
+  `MepPipeConnectorParamsSchema`. Narrowing guards σε 6 consumers (mep-wire-routing filter· waypoint gesture/2D+3D interaction → narrowed
+  `params`· HomeRunWiresOverlay· 2 ribbon widgets). tsc 0 νέα, **151/151 MEP PASS** (ηλεκτρολογικό ανέπαφο). ΕΚΤΟΣ ADR-040.
+  **Στρώμα Β (επόμενο, παραλληλοποιήσιμο):** segment endpoint connectors wiring (seed/connector-access/reconciliation + `segmentConnectorWorldPosition`)·
+  `MepConnectorSnapEngine` (snap-to-connect)· `mep-pipe-network-derive.ts` (connected-component auto-system, Φ10)· `classificationDefaultColor` +
+  color-by-system στον MepSegmentRenderer (2D+3D)· UI «Δίκτυο σωλήνων».
+- **2026-06-03 (Opus 4.8)** — **Φ8 FIX — pipe midpoint tick units bug** (pending commit, 🔴 browser verify).
+  Σύμπτωμα Giorgio: σχεδιάζοντας **σωλήνα**, τεράστια κάθετη γραμμή στο μέσον. Root: το pipe symbol tick στο
+  `mep-segment-symbol.ts` υπολόγιζε `tickHalf` σε **world units** με absolute clamp `[4, 20]` → σε σχέδιο **μέτρων**
+  το `MIN_TICK_HALF=4` σήμαινε **4 μέτρα** (ίδια κλάση με τα meter-scale bugs). **Fix (screen-constant, «σαν Revit»):**
+  το tick βγήκε από το pure SSoT (`buildSegmentSymbol` πλέον επιστρέφει ΜΟΝΟ centerline, domain-agnostic) και
+  ζωγραφίζεται render-time στον `MepSegmentRenderer` με **σταθερό μήκος pixels** (`PIPE_TICK_HALF_PX=7`) μέσω ΝΕΟΥ pure
+  `buildPipeTickScreen(startScreen, endScreen)` — ίδιο μοτίβο με `mep-wire-conductor-ticks.ts` (zoom- & scene-independent).
+  NEW `mep-segment-symbol.test.ts` (unit-parity mm vs m + screen-constant + perpendicular· 6 tests). 21/21 mep-segment
+  PASS, tsc 0 (δικά μου). MepSegmentRenderer ζει στο `bim/renderers/` → ΕΚΤΟΣ CHECK 6D → ΟΧΙ ADR-040 staging.
+- **2026-06-03 (Opus 4.8, orchestrator)** — **Φ8 — DUCT/PIPE ELEMENT PIPELINE DONE** (pending commit, 🔴 browser verify).
+  Πρώτο **μηχανολογικό/υδραυλικό** BIM στοιχείο — ο counterpart του point-based electrical fixture/panel. **Απόφαση
+  Giorgio (AskUserQuestion):** ΕΝΑ **ενοποιημένο** linear MEP entity (`type: 'mep-segment'`) με δύο ορθογώνιους
+  discriminators — `domain` (`'duct'` μηχανολογικά / `'pipe'` υδραυλικά → discipline + BimCategory + IFC class + BOQ) και
+  `sectionKind` (`'rectangular'` duct / `'round'` round-duct/pipe → swept διατομή) — ακριβώς όπως το δοκάρι ενοποίησε
+  rectangular+I-shape κάτω από ΕΝΑ `sectionKind` (data, όχι 2ο entity type). Κόβει στη μέση τα ~34 vs 68 registration
+  points, καθαρό SSoT, ικανοποιεί «όλο μαζί» (ΕΝΑ pipeline καλύπτει ΚΑΙ duct ΚΑΙ pipe). **Template = ΔΟΚΑΡΙ** (όχι
+  fixture): γραμμικό 2-click με διατομή σαρωμένη κατά άξονα· units-safe `MM_TO_M` (basis-matrix sweep όπως
+  `buildSweptIBeamGeometry`, ΟΧΙ buggy `fixtureToMesh`). Elevation = **centreline** (Revit «Middle Elevation», η διατομή
+  κεντράρεται κάθετα — όχι top-face). **Υλοποίηση (ΜΙΑ orchestrator συνεδρία, 4 parallel subagents + main):**
+  Foundation NEW `mep-segment-types`/`.schemas`/`mep-segment-geometry`/`shared/round-profile`/`mep-segment-completion`/
+  `mep-segment.factory`. 3D NEW `mep-segment-to-mesh` (rect+round sweep) + `MaterialCatalog3D` elem-mep-duct/pipe +
+  `BimSceneLayer.syncMepSegments` + `Bim3DEntitiesStore.mepSegments`. 2D NEW `MepSegmentRenderer` + `mep-segment-symbol`
+  + `EntityRendererComposite`. Ghost+grips NEW `mep-segment-grips`/`MepSegmentGhostRenderer`/ghost-preview/mount + grip
+  registrations. Data NEW `mep-segment-firestore-service` (setDoc + `generateMepSegmentId`, N.6) + `useMepSegmentPersistence`
+  + `MepSegmentPersistenceHost` + `mep-segment-audit-client` + `add-mep-segment-to-scene` + `UpdateMepSegmentParamsCommand`
+  + `useMepSegmentTool` (2-click FSM). **~34 global registrations** (EntityType/BimElementType/entities union+guard·
+  BimCategory `duct`/`pipe`+styles+subcat+discipline mechanical/plumbing· audit type+tracked-fields+route maps· IFC
+  `IfcDuctSegment`/`IfcPipeSegment`· EventBus· ToolType `mep-duct`/`mep-pipe`+tool-defs· dxf-types+2 converters· hit-test ×4·
+  delete/restore/smart-delete· aggregator· backup×3· move/selection/edit-math· enterprise-id `mepseg`+collection·
+  firestore.rules+indexes×2). Ribbon: 2 home-tab buttons (Αεραγωγός/Σωλήνας)+icons+i18n el/en. **Connectivity:** το
+  segment κρατά το `MepConnectorHostParams` mixin ως **forward hook** (empty) — duct/pipe **systems** = επόμενο Φ.
+  Tests: NEW `mep-segment-geometry.test` 15/15 PASS (geometry + round-profile + unit-parity + validation), tsc 0 (δικά
+  μου αρχεία). **STAGE ADR-040** (CHECK 6B `BimSceneLayer`/`canvas-layer-stack-leaves` + 6D ghost renderers). ⚠️ SHARED
+  TREE με ADR-412 (enterprise-id/collections/rules co-edited)· `git add` ΜΟΝΟ specific, ΠΟΤΕ -A. **❌ DEFERRED:**
+  contextual props tab· 3D 2-click placement· duct/pipe systems+routing.
 - **2026-06-03 (Opus 4.8)** — **Φ5 roadmap — SEED LEGACY CONNECTORS DONE** (pending commit, 🔴 browser verify).
   Κλείνει το τελευταίο Φ5 caveat: φωτιστικά/πίνακες που φτιάχτηκαν **πριν** το connector model (Φ1/Φ2) δεν είχαν
   `params.connectors`, οπότε δεν συμμετείχαν πλήρως σε reconciliation / wire-routing / `connector.systemId` cache.
