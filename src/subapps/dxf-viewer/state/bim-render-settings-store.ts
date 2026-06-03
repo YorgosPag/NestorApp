@@ -30,8 +30,11 @@ import {
 import { type ViewRange } from '../config/bim-view-range';
 import {
   STRUCTURAL_BIM_CATEGORIES,
+  BIM_CATEGORIES,
+  DEFAULT_OBJECT_STYLES,
   type BimCategory,
   type ObjectStyle,
+  type SubcategoryStyle,
 } from '../config/bim-object-styles';
 import type { Discipline } from '../bim/discipline/bim-discipline';
 import { type LinePatternKey } from '../config/bim-line-patterns';
@@ -123,6 +126,26 @@ interface BimRenderSettingsState extends ResolvedBimSettings {
     key: 'projectionPattern' | 'cutPattern',
     pattern: LinePatternKey,
   ) => void;
+  // ────────────────────────────────────────────────────────────────────────
+
+  // ── ADR-377 Phase D — per-subcategory style setters ─────────────────────
+  /**
+   * Set ONE field of `objectStyles[category].subcategories[subcategoryKey]`
+   * (Revit Object Styles per-subcategory override). Missing fields fall back
+   * to the parent ObjectStyle at render time. Persisted after 500 ms idle.
+   */
+  setSubcategoryStyleField: <K extends keyof SubcategoryStyle>(
+    category: BimCategory,
+    subcategoryKey: string,
+    field: K,
+    value: SubcategoryStyle[K],
+  ) => void;
+  /** Per-row [×] — remove all overrides for one subcategory (revert to parent). */
+  clearSubcategoryStyle: (category: BimCategory, subcategoryKey: string) => void;
+  /** Per-category Reset — restore that category's subcategories to defaults. */
+  resetCategorySubcategories: (category: BimCategory) => void;
+  /** Global Reset All — restore EVERY category's subcategories to defaults. */
+  resetAllSubcategories: () => void;
   // ────────────────────────────────────────────────────────────────────────
 
   /** Reset all settings to defaults for the current level — persisted immediately. */
@@ -272,6 +295,42 @@ export const useBimRenderSettingsStore = create<BimRenderSettingsState>((set, ge
         debounceWrite(state.currentLevelId, buildRaw({ ...get(), objectStyles: nextStyles }));
     },
 
+    setSubcategoryStyleField(category, subcategoryKey, field, value) {
+      const state = get();
+      const nextStyles = withSubcategoryStyle(
+        state.objectStyles,
+        category,
+        subcategoryKey,
+        (prevSub) => ({ ...prevSub, [field]: value }),
+      );
+      commitObjectStyles(set, get, nextStyles);
+    },
+
+    clearSubcategoryStyle(category, subcategoryKey) {
+      const state = get();
+      const prev = state.objectStyles[category];
+      const prevSubs = prev.subcategories ?? {};
+      if (!(subcategoryKey in prevSubs)) return; // idempotent — nothing to clear
+      const { [subcategoryKey]: _removed, ...rest } = prevSubs;
+      const nextCat: ObjectStyle = { ...prev, subcategories: rest };
+      commitObjectStyles(set, get, { ...state.objectStyles, [category]: nextCat });
+    },
+
+    resetCategorySubcategories(category) {
+      const state = get();
+      const nextCat = withDefaultSubcategories(state.objectStyles[category], category);
+      commitObjectStyles(set, get, { ...state.objectStyles, [category]: nextCat });
+    },
+
+    resetAllSubcategories() {
+      const state = get();
+      const nextStyles = { ...state.objectStyles };
+      for (const cat of BIM_CATEGORIES) {
+        nextStyles[cat] = withDefaultSubcategories(nextStyles[cat], cat);
+      }
+      commitObjectStyles(set, get, nextStyles);
+    },
+
     resetToDefaults() {
       const { currentLevelId } = get();
       const resolved = resolveBimSettings(null);
@@ -281,3 +340,62 @@ export const useBimRenderSettingsStore = create<BimRenderSettingsState>((set, ge
     },
   };
 });
+
+// ── ADR-377 Phase D — subcategory mutation helpers (module-level, pure-ish) ──
+
+/** Commit a new objectStyles map: single state update + single debounced write. */
+function commitObjectStyles(
+  set: (partial: Partial<BimRenderSettingsState>) => void,
+  get: () => BimRenderSettingsState,
+  nextStyles: Record<BimCategory, ObjectStyle>,
+): void {
+  set({ objectStyles: nextStyles, lastLocalMutationAt: Date.now() });
+  const { currentLevelId } = get();
+  if (currentLevelId) {
+    debounceWrite(currentLevelId, {
+      drawingScale: get().drawingScale,
+      viewRange: get().viewRange,
+      objectStyles: nextStyles,
+      disciplineVisibility: get().disciplineVisibility,
+    });
+  }
+}
+
+/** Immutably transform one subcategory's style under a category. */
+function withSubcategoryStyle(
+  styles: Record<BimCategory, ObjectStyle>,
+  category: BimCategory,
+  subcategoryKey: string,
+  transform: (prev: SubcategoryStyle) => SubcategoryStyle,
+): Record<BimCategory, ObjectStyle> {
+  const prev = styles[category];
+  const prevSubs = prev.subcategories ?? {};
+  const nextSub = transform(prevSubs[subcategoryKey] ?? {});
+  const nextCat: ObjectStyle = {
+    ...prev,
+    subcategories: { ...prevSubs, [subcategoryKey]: nextSub },
+  };
+  return { ...styles, [category]: nextCat };
+}
+
+/**
+ * Return a copy of `style` with its `subcategories` reset to the category's
+ * defaults. When the category has no default subcategories the key is dropped
+ * entirely (avoids persisting empty `subcategories: {}` noise + Firestore
+ * undefined writes).
+ */
+function withDefaultSubcategories(style: ObjectStyle, category: BimCategory): ObjectStyle {
+  const def = DEFAULT_OBJECT_STYLES[category].subcategories;
+  const next: ObjectStyle = { ...style };
+  if (!def) {
+    delete next.subcategories;
+    return next;
+  }
+  const cloned: Partial<Record<string, SubcategoryStyle>> = {};
+  for (const [key, sub] of Object.entries(def)) {
+    if (sub) cloned[key] = { ...sub };
+  }
+  if (Object.keys(cloned).length === 0) delete next.subcategories;
+  else next.subcategories = cloned;
+  return next;
+}

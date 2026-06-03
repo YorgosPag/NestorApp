@@ -22,6 +22,7 @@ import { RibbonAnnotationScaleWidget } from './RibbonAnnotationScaleWidget';
 import { DrawingScaleWidget } from './DrawingScaleWidget';
 import { ViewRangePanel } from '../panels/ViewRangePanel';
 import { ObjectStylesPanel } from '../panels/ObjectStylesPanel';
+import { SubcategoriesPanel } from '../panels/SubcategoriesPanel';
 import { PenTablePanel } from '../panels/PenTablePanel';
 import { ViewTemplatesPanel } from '../panels/ViewTemplatesPanel';
 import { VisibilityGraphicsPanel } from '../panels/VisibilityGraphicsPanel';
@@ -77,6 +78,9 @@ function renderButton(button: RibbonButton): React.ReactNode {
     }
     if (button.widgetId === 'object-styles') {
       return <ObjectStylesPanel key="object-styles-widget" />;
+    }
+    if (button.widgetId === 'subcategories') {
+      return <SubcategoriesPanel key="subcategories-widget" />;
     }
     if (button.widgetId === 'pen-table') {
       return <PenTablePanel key="pen-table-widget" />;

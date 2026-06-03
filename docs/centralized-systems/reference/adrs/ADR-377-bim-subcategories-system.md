@@ -1,6 +1,6 @@
 # ADR-377: BIM Subcategories System
 
-**Status**: 🟡 ACTIVE v0.6 — Phase A + B + C.1 + C.2 + C.3 implemented, D + E + F pending
+**Status**: 🟡 ACTIVE v0.8 — Phase A + B + C (C.1+C.2+C.3) + D implemented, E + F pending
 **Date**: 2026-05-26
 **Author**: Giorgio Pagonis (orchestrated via Claude)
 **Related**:
@@ -473,19 +473,38 @@ Commit chain (3 commits, isolation per renderer cluster):
 - `feat(bim/subcategories): ADR-377 Phase C.2 — Beam + Column wiring`
 - `feat(bim/subcategories): ADR-377 Phase C.3 — Opening + Stair wiring`
 
-### Phase D — UI panel (~5-8h)
+### Phase D — UI panel (~5-8h) — ✅ IMPLEMENTED 2026-06-03
 
-Files NEW:
-- `src/subapps/dxf-viewer/ui/ribbon/panels/SubcategoriesPanel.tsx` — Tabs per BIM category (Wall/Slab/Column/Beam/Door/Window/Stair/SlabOpening) with scrollable rows
-- `src/subapps/dxf-viewer/ui/ribbon/panels/SubcategoryRow.tsx` — Single row component (pen dropdown / pattern dropdown / color picker / stub badge)
-- `src/subapps/dxf-viewer/ui/ribbon/components/LinePatternPicker.tsx` — Dropdown with visual preview of each pattern
+Revit Object Styles-grade dialog: widget trigger (registered in `RibbonPanel.tsx`
+widget-registry as `widgetId: 'subcategories'`, sits in the View tab `BIM_STYLES_PANEL`
+beside Object Styles) opens a Radix `<Dialog>` with ArchiCAD-style per-category tabs.
+**Dual** controls per wired row (projection + cut pen & color) + line pattern; stub
+rows greyed with 🔒 tooltip. Footer: per-category Reset + global Reset All (AlertDialog
+confirm) + Apply-to-All-Levels. `opening` is split into **Door / Window / Cutout** tabs
+(prefix grouping) but all write back to the single `'opening'` BimCategory.
 
-Files MODIFIED:
-- `view-tab-bim-settings.ts` — VIEW_SUBCATEGORIES_PANEL registration
-- `ribbon-default-tabs.ts` — wiring
-- i18n locale files (el + en) — keys for 47 subcategory display names + UI labels
+Files NEW (5):
+- `ui/ribbon/panels/SubcategoriesPanel.tsx` — widget trigger + Dialog + Tabs + grid
+- `ui/ribbon/panels/SubcategoryRow.tsx` — one row (dual pen/color + pattern + clear [×]; stub greyed)
+- `ui/ribbon/panels/SubcategoriesPanelFooter.tsx` — reset-category / reset-all / apply-to-all
+- `ui/ribbon/panels/subcategory-tabs.ts` — pure SSoT tab model (opening split helper)
+- `services/subcategory-propagation.service.ts` — Apply-to-All-Levels fan-out + pure `mergeSubcategoriesInto`
 
-Tests: ~15 (panel render + tab switching + dropdown interaction + stub badge visibility).
+Files MODIFIED (4):
+- `state/bim-render-settings-store.ts` — 4 new actions: `setSubcategoryStyleField` / `clearSubcategoryStyle` / `resetCategorySubcategories` / `resetAllSubcategories`
+- `ui/ribbon/components/RibbonPanel.tsx` — widget registry branch `'subcategories'`
+- `ui/ribbon/data/view-tab-bim-settings.ts` — `SUBCATEGORIES_BUTTON` in `BIM_STYLES_PANEL`
+- i18n `dxf-viewer-shell.json` (el + en) — `ribbon.commands.subcategories.*` (40 key names + 9 tab labels + UI labels)
+
+**SSoT reuse** (no new controls): `BimPenSelect` + `BimPatternSelect` (`BimStyleSelects.tsx`) +
+`UnifiedColorPicker` (no separate `LinePatternPicker` was needed). Persistence end-to-end
+via existing `SubcategoryStyleSchema` (ADR-375 v2.13) — the 4 store actions share the same
+500ms `debounceWrite`. 2D updates live (bitmap-cache key includes objectStyles). **3D parity = Phase E.**
+
+Tests (22, all PASS): `bim-render-settings-subcategory.test.ts` (10 — store actions + persistence),
+`subcategory-tabs.test.ts` (6 — opening split + no-key-loss), `subcategory-propagation.service.test.ts`
+(6 — pure merge + fan-out). Boy-Scout fix: `SUBCATEGORY_TAXONOMY` gained `'mep-wire'`/`'furniture'`
+empty entries (pre-existing `Record<BimCategory>` completeness gap from ADR-408/410).
 
 Commit: `feat(bim/subcategories): ADR-377 Phase D — Subcategories ribbon panel`
 
@@ -690,6 +709,7 @@ Deferred to draft review (best-guess in this doc):
 
 ## 11. Changelog
 
+- **v0.8 (2026-06-03)** — Phase D IMPLEMENTED. Subcategories ribbon panel (Revit Object Styles dialog). 5 NEW (`SubcategoriesPanel` widget→Radix Dialog + per-category Tabs, `SubcategoryRow` dual projection/cut pen+color + line pattern + clear[×] + stub 🔒, `SubcategoriesPanelFooter` per-category/global reset + Apply-to-All-Levels, `subcategory-tabs.ts` pure tab-model SSoT with Door/Window/Cutout split of `opening`, `subcategory-propagation.service.ts` fan-out + pure `mergeSubcategoriesInto`) + 4 MODIFIED (`bim-render-settings-store.ts` 4 new actions `setSubcategoryStyleField`/`clearSubcategoryStyle`/`resetCategorySubcategories`/`resetAllSubcategories` sharing the 500ms debounce; `RibbonPanel.tsx` widget-registry `'subcategories'`; `view-tab-bim-settings.ts` `SUBCATEGORIES_BUTTON`; i18n el+en `ribbon.commands.subcategories.*`). SSoT reuse — `BimPenSelect`/`BimPatternSelect`/`UnifiedColorPicker` (no new `LinePatternPicker`). Persistence end-to-end via the v0.7-confirmed `SubcategoryStyleSchema`. Boy-Scout: `SUBCATEGORY_TAXONOMY` gained `'mep-wire'`/`'furniture'` empty entries (pre-existing `Record<BimCategory>` gap). 22 new tests PASS, tsc 0 (own files). Phase E (3D parity) + Phase F (stub-badge polish + ratchet entry) remain. | Claude (Opus 4.8)
 - **v0.7 (2026-05-27)** — Cross-reference / latent persistence gap closed via ADR-375 v2.13. The Phase A→C resolver + renderer wiring landed fully tested at unit level (45/45 PASS) but the **server-side persistence layer was silently stripping the `subcategories` field** from every `/api/dxf-levels` PATCH: `UpdateDxfLevelSchema.objectStyles[category]` only validated `{projectionPen, cutPen}` and Zod's default `.strip()` mode dropped the entire `subcategories?: Partial<Record<string, SubcategoryStyle>>` block before reaching Firestore. Zero production impact (Phase D UI not built yet, so no user could persist subcategory overrides through the ribbon), but a latent gap that would have surfaced as soon as Phase D shipped. The ADR-375 v2.13 root-cause fix introduced reusable named sub-schemas — `SubcategoryStyleSchema` (cutPen?/projectionPen?/linePattern?/cutColor?/projectionColor? — exact 1:1 mirror of the TS `SubcategoryStyle` interface defined in `bim-object-styles.ts`) and `ObjectStyleSchema.subcategories?: z.record(SubcategoryStyleSchema).optional()` — so the persistence path is now end-to-end correct ahead of Phase D. **No code changes required in ADR-377 scope**; this entry exists for traceability. See ADR-375 §8 v2.13 + `dxf-levels.schemas.test.ts` (test 4: "preserves ADR-377 subcategories block"). | Claude (Sonnet 4.6)
 - **v0.6 (2026-05-26)** — Phase C.3 IMPLEMENTED. Opening + Stair 2D renderers wired. `OpeningRenderer`: per-kind subcategory key routing via `openingOutlineSubcat()` + `openingOverlaySubcat()` helpers (door-opening / window-opening / wall-cutout-jambs / sliding-track / door-plan-swing / window-glass). `StairRenderer`: all 5 draw methods wired (`drawWalkline`, `drawHandrails`, `drawArrow`, treads/stringers via extended `StairStyleContext`). `StairStyleContext` extended with `treadsLineWidth?` + `stringersLineWidth?`. `stair-render-structure-style.ts` updated to use per-subcategory widths. `DEFAULT_OBJECT_STYLES.stair` gets default subcategories: walkline='dashed' [8,4] + handrails='dashed2' [4,2] (visual non-regression). 11 new tests (OpeningRenderer-subcategory-wiring 6 + StairRenderer-subcategory-wiring 5). 26/26 PASS (new C.2+C.3) + 19/19 PASS (C.1 regression). TSC pending.
 - **v0.5 (2026-05-26)** — Phase C.2 IMPLEMENTED. Beam + Column 2D renderers wired. `BeamRenderer`: `hidden-lines` subcategory for dashed outline (resolveSubcategoryStyle replaces resolveLineWeightPx), `section-profile` subcategory for steel I/H symbol (color + lineWidth override). `ColumnRenderer`: `section-profile` subcategory for L/T steel symbol (color + lineWidth override). `DEFAULT_OBJECT_STYLES.beam` gets default subcategory: hidden-lines='dashed' [8,4] (exact match for OUTLINE_DASH, zero visual regression). 8 new tests (BeamRenderer-subcategory-wiring 5 + ColumnRenderer-subcategory-wiring 3). TSC pending.

@@ -44,6 +44,19 @@ const OBJECT_STYLES_BUTTON: RibbonButton = {
   },
 };
 
+/** ADR-377 Phase D — per-subcategory line styles (Revit Object Styles subcategories). */
+const SUBCATEGORIES_BUTTON: RibbonButton = {
+  type: 'widget',
+  size: 'small',
+  widgetId: 'subcategories',
+  command: {
+    id: 'view.subcategories',
+    labelKey: 'ribbon.commands.subcategories.label',
+    icon: '',
+    commandKey: 'subcategories',
+  },
+};
+
 /** ADR-375 Phase C.1 — per-company editable 16×6 pen table. */
 const PEN_TABLE_BUTTON: RibbonButton = {
   type: 'widget',
@@ -150,10 +163,10 @@ export const BIM_STYLES_PANEL: RibbonPanelDef = {
   labelKey: 'ribbon.panels.bimStyles',
   rows: [
     // Single vertical column (small row stacks its buttons), in order:
-    // Object Styles → Pen Table → View Range → View Templates.
+    // Object Styles → Subcategories → Pen Table → View Range → View Templates.
     {
       isInFlyout: false,
-      buttons: [OBJECT_STYLES_BUTTON, PEN_TABLE_BUTTON, VIEW_RANGE_BUTTON, VIEW_TEMPLATES_BUTTON],
+      buttons: [OBJECT_STYLES_BUTTON, SUBCATEGORIES_BUTTON, PEN_TABLE_BUTTON, VIEW_RANGE_BUTTON, VIEW_TEMPLATES_BUTTON],
     },
   ],
 };
