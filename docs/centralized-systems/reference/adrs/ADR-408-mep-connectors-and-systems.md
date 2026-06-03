@@ -256,8 +256,11 @@ Scope = 2D annotation + 3D conduit· τοπολογία = **daisy-chain + home-r
 - **Routing SSoT (καρδιά):** NEW `bim/mep-systems/mep-wire-routing.ts` — `computeCircuitWirePaths(systems,
   resolve)` (greedy nearest-neighbor αλυσίδα από τον πίνακα, ντετερμινιστικό tie-break = σειρά members,
   skip off-scene hosts)· `WireHostPoint {x,y (canvas units), zMm (mm above FFL)}` ώστε **ΜΙΑ** υπολογιστική
-  διαδρομή να τροφοδοτεί ΚΑΙ το 2D (x/y) ΚΑΙ το 3D (x/y/zMm)· `WireStyle` seam (`'straight'` ships,
-  `'orthogonal'`/`'arc'` plug μέσω `expandSegment`/`buildWirePolyline` χωρίς αλλαγή renderers). Χρώμα =
+  διαδρομή να τροφοδοτεί ΚΑΙ το 2D (x/y) ΚΑΙ το 3D (x/y/zMm)· `WireStyle` **per-circuit** (Φ7 follow-up #1:
+  και τα τρία `'straight'`/`'orthogonal'`/`'arc'` ship· το `'arc'` = quadratic-Bézier sampled-σε-polyline
+  στο `expandSegment`, άρα 2D `lineTo` & 3D `LineCurve3` το παίρνουν ίδιο, μηδέν curve maths στους renderers).
+  Το style ζει στο `MepSystemParams.wireStyle` (SSoT), διαχέεται ως `CircuitWirePath.style`, διαβάζεται στο
+  `buildWirePolyline(path)` — οι renderers δεν κρατούν default. Χρώμα =
   `systemColor` (το System κατέχει το χρώμα). Pure (no store/React/Date/Math.random).
 - **2D micro-leaf (ADR-040):** NEW `components/dxf-layout/HomeRunWiresOverlay.tsx` (clone `EnvelopeOverlay`) +
   NEW pure `bim/renderers/MepWireRenderer.ts` (`drawCircuitWires`: polyline σε system colour + **home-run
@@ -281,12 +284,31 @@ Scope = 2D annotation + 3D conduit· τοπολογία = **daisy-chain + home-r
 ## Roadmap (επόμενο push)
 
 - «colour by system» view toggle (τώρα always-on)· per-circuit edit από φωτιστικό (system-browser panel).
-- Φ7 follow-ups: `orthogonal`/`arc` wire styles (seam έτοιμο)· conductor-count ticks στο home-run· waypoints.
+- Φ7 follow-ups: ✅ `orthogonal`/`arc` wire styles **DONE** (#1, 2026-06-03)· ❌ conductor-count ticks στο
+  home-run· ❌ waypoints· ❌ seed legacy connectors.
 - duct/pipe domains & systems — reserved στα types, no pipeline.
 
 ---
 
 ## Changelog
+- **2026-06-03 (Opus 4.8, Plan Mode)** — **Φ7 follow-up #1: orthogonal/arc wire styles DONE** (pending commit,
+  🔴 browser verify). Per-circuit «Wiring Type» (Revit) — ο χρήστης επιλέγει `straight`/`orthogonal`/`arc`
+  ανά κύκλωμα, εφαρμόζεται ταυτόχρονα 2D + 3D. **FULL SSoT, μηδέν διπλασιασμός geometry:** το style ζει ως
+  `MepSystemParams.wireStyle` (+ Zod enum, persisted), διαχέεται ως `CircuitWirePath.style` στο
+  `computeCircuitWirePaths` (αδελφός του `colorHex`), και διαβάζεται **σε ΕΝΑ σημείο** στο `buildWirePolyline(path)`
+  — αφαιρέθηκε το dead `style` param από `drawCircuitWires`/`wirePathToMesh`, οπότε **κανένα call-site δεν
+  άλλαξε** (overlay/3D περνούν ήδη systems). Το `'arc'` έγινε **πραγματική καμπύλη**: quadratic-Bézier
+  sampled-σε-polyline στο `expandSegment` (control = midpoint + κάθετο bulge), άρα 2D (`lineTo`) & 3D
+  (`LineCurve3` tube) ζωγραφίζουν ίδια καμπύλη χωρίς curve maths στους renderers. UI: NEW leaf widget
+  `RibbonMepCircuitWireStyleWidget` (canonical Radix `@/components/ui/select`, ADR-001· mirror color widget) στο
+  contextual circuit tab (Row 4)· dispatch μέσω **έτοιμου** `UpdateMepSystemParamsCommand` (generic patch,
+  undoable — μηδέν νέο command). i18n `ribbon.commands.mepWireStyle.*` (el+en). Live-follow P2/P2b ανέπαφα
+  (το style ρέει μέσω `path.style`). **Δεν αγγίχτηκαν** `HomeRunWiresOverlay`/`CanvasLayerStack`/
+  `sync-circuit-wires`/`bim3d-wire-preview-rebuild` → ADR-040 6B/6C καθαρά· `MepWireRenderer` (canvas) → stage
+  ADR-040 (6D). 95/95 MEP + 118/118 fixture/panel/3D-preview regression PASS, tsc 0. Αρχεία: `mep-wire-routing.ts`
+  + `MepWireRenderer.ts` + `mep-wire-to-three.ts` + `mep-system-types.ts` + `mep-system.schemas.ts` +
+  `RibbonMepCircuitWireStyleWidget.tsx` (NEW) + `RibbonPanel.tsx` + `contextual-mep-circuit-tab.ts` + i18n el/en
+  + `mep-wire-routing.test.ts`.
 - **2026-06-03 (Opus 4.8, Plan Mode)** — **🐛 IDLE PING-PONG FIX DONE** (pending commit, 🔴 browser verify).
   Σε ηρεμία ο viewer εκτελούσε ~2490 React fibers/idle commit. **Root cause:** ping-pong δύο writers που
   διαφωνούσαν για το derived `MepConnector.systemId`. Ο `useMepConnectorReconciliation` (Φ5) σφραγίζει
