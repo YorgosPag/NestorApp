@@ -91,9 +91,6 @@ const SLEEVE_HALF_FACTOR = 1.8;
 /** Coupling/reducer sleeve half-width (across axis) as a multiple of pipe radius. */
 const SLEEVE_WIDTH_FACTOR = 1;
 
-/** Elbow quarter-bend arc radius as a multiple of the pipe radius. */
-const ELBOW_ARC_FACTOR = 1.3;
-
 // ─── Type guard (local — main agent adds to entities.ts union) ───────────────────
 
 function isMepFittingEntity(entity: EntityModel): entity is MepFittingEntity {
@@ -219,7 +216,8 @@ export class MepFittingRenderer extends BaseEntityRenderer {
         this.drawSleeveGlyph(center, incidents, unitPx);
         return;
       case 'elbow':
-        this.drawElbowGlyph(center, incidents, unitPx);
+        // No glyph: the geometry footprint IS the swept bend body (concentric
+        // wall arcs), drawn by the fill/outline pass — a real Revit-grade elbow.
         return;
       case 'tee':
       case 'cross':
@@ -268,58 +266,6 @@ export class MepFittingRenderer extends BaseEntityRenderer {
       this.ctx.lineTo(center.x + dir.x * stub, center.y + dir.y * stub);
       this.ctx.stroke();
     }
-  }
-
-  /**
-   * Elbow — a real pipe bend: a fillet arc TANGENT to both legs that rounds the
-   * corner (concave toward the bend), not an arc centred on the node. The fillet
-   * centre sits on the inner bisector at `r / sin(½θ)`; the arc runs between the
-   * two tangent points (each `r / tan(½θ)` along its leg). Short stubs join the
-   * node to those tangent points. Falls back to two stubs if a direction is
-   * degenerate or the legs are collinear (a straight pass-through, no bend).
-   */
-  private drawElbowGlyph(center: Point2D, incidents: readonly MepFittingIncident[], unitPx: number): void {
-    const dirs = incidents
-      .map((i) => this.screenDirection(i.directionUnit))
-      .filter((d): d is Point2D => d !== null);
-    if (dirs.length < 2) {
-      this.drawRadialGlyph(center, incidents, unitPx);
-      return;
-    }
-
-    // Inner bisector of the two outward legs + half-angle (|dA| = |dB| = 1, so
-    // |dA + dB| = 2·cos(½θ)).
-    const sx = dirs[0].x + dirs[1].x;
-    const sy = dirs[0].y + dirs[1].y;
-    const blen = Math.hypot(sx, sy);
-    const arcR = unitPx * ELBOW_ARC_FACTOR;
-    const cosHalf = blen / 2;
-    const sinHalf = Math.sqrt(Math.max(0, 1 - cosHalf * cosHalf));
-    // Collinear legs (straight run) → no bend; just two stubs.
-    if (blen < 1e-6 || sinHalf < 1e-6) {
-      this.drawRadialGlyph(center, incidents, unitPx);
-      return;
-    }
-    const bis = { x: sx / blen, y: sy / blen };
-    const tangentLen = arcR * (cosHalf / sinHalf); // r / tan(½θ)
-    const tA = { x: center.x + dirs[0].x * tangentLen, y: center.y + dirs[0].y * tangentLen };
-    const tB = { x: center.x + dirs[1].x * tangentLen, y: center.y + dirs[1].y * tangentLen };
-
-    // Stubs: node → each tangent point (so the leg meets the fillet cleanly).
-    this.strokeSegment(center, tA);
-    this.strokeSegment(center, tB);
-
-    // Fillet centre on the inner bisector; minor arc between the tangent points.
-    const cx = center.x + bis.x * (arcR / sinHalf);
-    const cy = center.y + bis.y * (arcR / sinHalf);
-    const angA = Math.atan2(tA.y - cy, tA.x - cx);
-    const angB = Math.atan2(tB.y - cy, tB.x - cx);
-    let delta = angB - angA;
-    while (delta > Math.PI) delta -= 2 * Math.PI;
-    while (delta < -Math.PI) delta += 2 * Math.PI;
-    this.ctx.beginPath();
-    this.ctx.arc(cx, cy, arcR, angA, angB, delta < 0);
-    this.ctx.stroke();
   }
 
   /**
