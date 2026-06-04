@@ -46,6 +46,8 @@ import type { MepFittingEntity, MepFittingDraft } from '../../bim/types/mep-fitt
 import { mepFittingIfcType } from '../../bim/types/mep-fitting-types';
 import { computeMepFittingGeometry } from '../../bim/geometry/mep-fitting-geometry';
 import { resolveDesiredFittings } from '../../bim/mep-fittings/mep-fitting-resolve';
+import { resolveSegmentTrims } from '../../bim/mep-fittings/mep-segment-trim';
+import { useMepSegmentTrimStore } from '../../bim/mep-fittings/mep-segment-trim-store';
 import { makeBimValidation } from '../../bim/types/bim-base';
 import {
   createMepFittingFirestoreService,
@@ -261,6 +263,19 @@ export function useMepFittingAutoReconciliation(
       if (reconcileTimerRef.current) clearTimeout(reconcileTimerRef.current);
     };
   }, [pipeTopologySig, reconcile]);
+
+  // ── (c) Trim index: shorten each pipe where a fitting sits on its end so the
+  //        run butts against the fitting (Revit). Render-only (no Firestore / no
+  //        persistence / no segment mutation); independent of the hydration gate,
+  //        so trims apply even before the fitting docs load. The store's deep-equal
+  //        guard makes a no-op topology produce no churn.
+  useEffect(() => {
+    const levelId = levelManager.currentLevelId;
+    const scene = levelId ? levelManager.getLevelScene(levelId) : null;
+    useMepSegmentTrimStore.getState().setTrims(
+      scene ? resolveSegmentTrims(scene.entities) : new Map(),
+    );
+  }, [pipeTopologySig, levelManager]);
 }
 
 // ============================================================================
