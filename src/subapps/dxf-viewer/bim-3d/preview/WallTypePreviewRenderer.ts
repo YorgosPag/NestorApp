@@ -27,6 +27,7 @@ import type { WallDna } from '../../bim/types/wall-dna-types';
 import { getMaterial3D } from '../materials/MaterialCatalog3D';
 import { setPlanarWorldUvs } from '../converters/bim-uv-helpers';
 import { createBimLights } from '../scene/scene-setup';
+import { PreviewOrbitControls } from './preview-orbit-controls';
 import {
   buildWallTypePreviewBands,
   type WallPreviewBand,
@@ -56,6 +57,7 @@ export class WallTypePreviewRenderer {
   private readonly scene: THREE.Scene;
   private readonly camera: THREE.PerspectiveCamera;
   private readonly bandGroup: THREE.Group;
+  private readonly controls: PreviewOrbitControls;
   private readonly raycaster = new THREE.Raycaster();
   private bands: BandMesh[] = [];
   private outline: THREE.LineSegments | null = null;
@@ -77,6 +79,13 @@ export class WallTypePreviewRenderer {
     this.camera = new THREE.PerspectiveCamera(35, this.aspect(), 0.01, 100);
     this.bandGroup = new THREE.Group();
     this.scene.add(this.bandGroup);
+
+    // Zoom (wheel) + pan (left drag) + rotate (right drag), render-on-demand.
+    this.controls = new PreviewOrbitControls(
+      this.camera,
+      this.renderer.domElement,
+      () => this.render(),
+    );
   }
 
   /** Replace the previewed composition (rebuilds bands + reframes the camera). */
@@ -89,7 +98,12 @@ export class WallTypePreviewRenderer {
         this.bands.push(this.buildBand(band));
       }
     }
-    this.fitCamera();
+    // Keep auto-framing while editing layers — but never override a view the
+    // user has zoomed/panned/rotated themselves.
+    if (!this.controls.adjusted) {
+      this.fitCamera();
+      this.controls.recenter();
+    }
     this.render();
   }
 
@@ -134,7 +148,12 @@ export class WallTypePreviewRenderer {
     if (width <= 0 || height <= 0) return;
     this.renderer.setSize(width, height);
     this.camera.aspect = width / height;
-    this.fitCamera(); // distance depends on aspect → refit so nothing is clipped
+    if (!this.controls.adjusted) {
+      this.fitCamera(); // distance depends on aspect → refit so nothing is clipped
+      this.controls.recenter();
+    } else {
+      this.camera.updateProjectionMatrix(); // preserve the user's view, just fix aspect
+    }
     this.render();
   }
 
@@ -142,6 +161,7 @@ export class WallTypePreviewRenderer {
   dispose(): void {
     this.clearBands();
     this.clearOutline();
+    this.controls.dispose();
     this.renderer.dispose();
     this.renderer.domElement.remove();
   }
