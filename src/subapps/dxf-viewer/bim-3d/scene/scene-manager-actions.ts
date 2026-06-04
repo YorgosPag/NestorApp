@@ -23,7 +23,7 @@ import type { SectionSceneController } from './section-scene-controller';
 import type { DxfToThreeConverter } from '../converters/DxfToThreeConverter';
 import type { ViewportCamera } from '../viewport/viewport-types';
 import type { DxfScene } from '../../canvas-v2/dxf-canvas/dxf-types';
-import { raycastWorldPoint } from '../systems/raycaster/BimEntityRaycaster';
+import { raycastWorldPointOrPlane } from '../systems/raycaster/BimEntityRaycaster';
 
 export interface SyncBimEntitiesDeps {
   readonly bimLayer: BimSceneLayer;
@@ -138,19 +138,25 @@ export interface OrbitPivotDeps {
   readonly bimGroup: THREE.Group;
   readonly camera: THREE.Camera;
   readonly canvas: HTMLCanvasElement;
+  /** Current orbit target — the camera-facing fallback plane passes through it. */
+  readonly currentTarget: THREE.Vector3;
   readonly setOrbitPivot: (point: THREE.Vector3) => void;
   readonly onNavigationActive: () => void;
   readonly markDirty: () => void;
 }
 
 /**
- * ADR-366 §A.6.Q5 — Alt+click orbit-pivot picking. Raycasts the BIM scene at the
- * cursor; on a hit makes that world point the camera orbit center (no camera
- * movement) + flashes the POI cross. Returns true when a pivot was set, false
- * when the ray missed (caller leaves the current pivot + selection untouched).
+ * ADR-366 §A.6.Q5 — Alt+click/Alt-press orbit-pivot picking. Raycasts the BIM
+ * scene at the cursor; on a hit makes that world point the camera orbit center,
+ * else falls back to a camera-facing plane through the current target so an
+ * Alt+drag ALWAYS orbits around the cursor point (v3 fix: empty-space / DXF-only
+ * clicks no longer no-op → «δεν γυρίζει γύρω από το σημείο»). Flashes the POI
+ * cross. Returns true (a pivot is always resolvable unless the canvas has no size).
  */
 export function setBimOrbitPivot(deps: OrbitPivotDeps, clientX: number, clientY: number): boolean {
-  const point = raycastWorldPoint(deps.bimGroup, deps.camera, deps.canvas, clientX, clientY);
+  const point = raycastWorldPointOrPlane(
+    deps.bimGroup, deps.camera, deps.canvas, clientX, clientY, deps.currentTarget,
+  );
   if (!point) return false;
   deps.setOrbitPivot(point);
   deps.onNavigationActive();
