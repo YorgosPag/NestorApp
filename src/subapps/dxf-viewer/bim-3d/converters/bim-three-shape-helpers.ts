@@ -13,6 +13,7 @@
 
 import * as THREE from 'three';
 import type { Point3D } from '../../bim/types/bim-base';
+import type { SlabOpeningEntity } from '../../bim/types/slab-opening-types';
 
 // ── Shared rotation matrix: shape XY → Three.js Y-up ─────────────────────────
 const ROT_X_NEG_90 = new THREE.Matrix4().makeRotationX(-Math.PI / 2);
@@ -54,6 +55,28 @@ export function tagMesh(mesh: THREE.Mesh, id: string, type: string, matId: strin
   mesh.castShadow = true;
   mesh.receiveShadow = true;
   return mesh;
+}
+
+// ADR-363 §11.Q3 Phase 3.7d + ADR-370 §6 Phase 7 — slab-opening cutouts.
+// THREE.Shape.holes requires opposite winding from the outer ring (CCW outer +
+// CW holes — clipper-style). BIM polygons are CCW by convention, so we reverse
+// each opening's outline before pushing as a THREE.Path. ExtrudeGeometry runs
+// native ear-clipping triangulation with holes, mirroring IFC IfcOpeningElement
+// voiding IfcSlab (Revit Floor + Opening family pattern). Extracted from
+// BimToThreeConverter (N.7.1 SSoT) so the single- AND multi-layer slab builders
+// share one hole-cutting routine.
+export function pushHoles(shape: THREE.Shape, openings: readonly SlabOpeningEntity[]): void {
+  for (const op of openings) {
+    const verts = op.params.outline.vertices;
+    if (verts.length < 3) continue;
+    const path = new THREE.Path();
+    // CCW → CW: traverse vertices in reverse.
+    const last = verts[verts.length - 1];
+    path.moveTo(last.x, last.y);
+    for (let i = verts.length - 2; i >= 0; i--) path.lineTo(verts[i].x, verts[i].y);
+    path.closePath();
+    shape.holes.push(path);
+  }
 }
 
 // Wall footprint: outerEdge and innerEdge are each open polylines (not closed polygons).
