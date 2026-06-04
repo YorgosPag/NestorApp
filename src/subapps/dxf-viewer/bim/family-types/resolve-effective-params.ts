@@ -32,8 +32,9 @@
  * @see bim/types/wall-types.ts      — WallParams (instance-level superset)
  */
 
-import type { BimFamilyType, WallTypeParams } from '../types/bim-family-type';
+import type { BimFamilyType, SlabTypeParams, WallTypeParams } from '../types/bim-family-type';
 import type { WallParams } from '../types/wall-types';
+import type { SlabParams } from '../types/slab-types';
 
 /**
  * Generic resolution core — «type always wins, overrides win last».
@@ -80,6 +81,37 @@ export function resolveEffectiveWallParams(
   type: BimFamilyType<'wall'> | null | undefined,
 ): WallParams {
   // Legacy fast-path: untyped wall OR unresolved type → unchanged params.
+  if (!instance.typeId || !type) return instance.params;
+  return resolveEffectiveParams(
+    instance.params,
+    type.typeParams,
+    instance.typeOverrides,
+  );
+}
+
+/**
+ * Slab convenience wrapper around {@link resolveEffectiveParams} — the slab
+ * analogue of {@link resolveEffectiveWallParams}.
+ *
+ * Returns the instance's own params unchanged when it has no `typeId` (legacy
+ * fast-path) or when its type cannot be resolved (`type == null`) — zero
+ * regression. Otherwise resolves `kind`/`thickness`/`dna`/`material` from the
+ * type (type wins), applies any `typeOverrides` last, and preserves all
+ * instance-level fields (`outline`/`levelElevation`/`geometryType`/`slope`/…).
+ *
+ * @param instance Slab instance: cached `params`, optional `typeId`/`typeOverrides`.
+ * @param type     The resolved slab family type (or null/undefined if unresolved).
+ * @returns The effective `SlabParams` for geometry/render.
+ */
+export function resolveEffectiveSlabParams(
+  instance: {
+    params: SlabParams;
+    typeId?: string;
+    typeOverrides?: Partial<SlabTypeParams>;
+  },
+  type: BimFamilyType<'slab'> | null | undefined,
+): SlabParams {
+  // Legacy fast-path: untyped slab OR unresolved type → unchanged params.
   if (!instance.typeId || !type) return instance.params;
   return resolveEffectiveParams(
     instance.params,
