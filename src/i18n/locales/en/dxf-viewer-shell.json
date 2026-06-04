@@ -763,6 +763,8 @@
       "mepCircuit": "Electrical Circuit",
       "mepPipeNetwork": "Water Network",
       "mepFixtureProperties": "Fixture Properties",
+      "mepManifoldProperties": "Manifold Properties",
+      "mepSegmentProperties": "Pipe / Duct Properties",
       "validationBadge": "Code violation",
       "dimension": "Dimension",
       "lineToolStyle": "Line Style",
@@ -820,6 +822,7 @@
       "openingSchedule": "Schedule",
       "annotateOpenings": "Openings",
       "slabKind": "Type",
+      "slabType": "Slab Type",
       "slabGeometry": "Geometry",
       "slabMaterial": "Material",
       "slabActions": "Actions",
@@ -848,6 +851,13 @@
       "mepFixtureRectParams": "Rectangular",
       "mepFixtureActions": "Actions",
       "mepFixtureCircuit": "Circuit",
+      "mepManifoldGeometry": "Geometry",
+      "mepManifoldOutlets": "Outlets",
+      "mepManifoldActions": "Actions",
+      "mepSegmentSection": "Section",
+      "mepSegmentDimensions": "Dimensions",
+      "mepSegmentGeometry": "Geometry",
+      "mepSegmentActions": "Actions",
       "mepCircuit": "Circuit",
       "mepCircuitProperties": "Circuit Properties",
       "mepPipeNetwork": "Network",
@@ -1395,10 +1405,65 @@
             "parapet": "Parapet",
             "fence": "Fence"
           },
+          "slab": {
+            "floor": "Interstorey Floor",
+            "ceiling": "Suspended Ceiling",
+            "roof": "Roof",
+            "ground": "Ground Slab",
+            "foundation": "Foundation"
+          },
           "stair": {
             "residential": "Residential",
             "narrow": "Narrow"
           }
+        }
+      },
+      "slabFamilyType": {
+        "type": "Type",
+        "typeNone": "No type (ad-hoc)",
+        "duplicateNamePrefix": "Copy",
+        "save": "Save",
+        "cancel": "Cancel",
+        "paramKind": "Kind",
+        "paramThickness": "Thickness",
+        "paramMaterial": "Material",
+        "thicknessUnit": "mm",
+        "materialNone": "—",
+        "editType": "Edit type…",
+        "editTypeTitle": "Edit slab type",
+        "editTypeDescription": "Changes apply to every slab of this type, on all floors.",
+        "editTypeBuiltinNotice": "Built-in type (read-only). Duplicate to edit the layers.",
+        "editTypeAffectsCount": "Changes apply to {count} slabs of this type.",
+        "duplicateAndEdit": "Duplicate & edit",
+        "deleteType": "Delete type…",
+        "preview": {
+          "title": "Preview",
+          "emptyHint": "Load a preset or add layers to see the preview."
+        },
+        "dna": {
+          "title": "Layers",
+          "totalThickness": "Total: {value} mm",
+          "loadPreset": "Load preset",
+          "addLayer": "Add layer",
+          "detach": "Detach",
+          "detachedHint": "Single layer (no composition). Load a preset for layers.",
+          "removeLayer": "Remove layer",
+          "moveUp": "Move up",
+          "moveDown": "Move down",
+          "fields": {
+            "zone": "Zone",
+            "name": "Name",
+            "thickness": "Thickness",
+            "material": "Material",
+            "materialCustom": "Custom…"
+          }
+        }
+      },
+      "layeredBuildup": {
+        "zone": {
+          "top": "Top (finishes)",
+          "core": "Core (structural)",
+          "bottom": "Bottom (soffit)"
         }
       },
       "envelopeFunction": {
@@ -1728,6 +1793,34 @@
           },
           "rectangular": "Rectangular",
           "circular": "Circular"
+        }
+      },
+      "mepManifoldEditor": {
+        "width": "Width",
+        "length": "Depth",
+        "bodyHeight": "Body height",
+        "mountingElevation": "Mounting height",
+        "outletCount": "Outlets",
+        "inletDiameter": "Inlet diameter",
+        "outletDiameter": "Outlet diameter",
+        "close": "Close",
+        "delete": "Delete",
+        "deleteConfirm": "Delete manifold? This action cannot be undone."
+      },
+      "mepSegmentEditor": {
+        "width": "Width",
+        "height": "Height",
+        "diameter": "Diameter",
+        "centerlineElevation": "Centreline height",
+        "close": "Close",
+        "delete": "Delete",
+        "deleteConfirm": "Delete element? This action cannot be undone.",
+        "sectionKind": {
+          "section": {
+            "title": "Section"
+          },
+          "rectangular": "Rectangular",
+          "round": "Round"
         }
       },
       "psetEditor": {
