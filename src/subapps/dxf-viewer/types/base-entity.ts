@@ -63,7 +63,9 @@ export type EntityType =
   // ADR-408 Φ11 — auto pipe fitting (point-based junction element; IfcPipeFitting).
   | 'mep-fitting'
   // ADR-415 — pure-vector 2D floorplan symbol (category-driven; WC/sanitary first).
-  | 'floorplan-symbol';
+  | 'floorplan-symbol'
+  // ADR-417 — parametric pitched roof (footprint + per-edge slopes; IfcRoof).
+  | 'roof';
 
 export interface BaseEntity {
   id: string;
