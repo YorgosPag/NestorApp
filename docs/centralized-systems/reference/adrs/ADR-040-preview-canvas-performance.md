@@ -71,6 +71,21 @@ Mouse Event → DxfCanvas.onMouseMove
 
 ## Changelog
 
+### 2026-06-04 — Cursor-lag Phase 2: compositor crosshair (AutoCAD/Revit-grade, off-main-thread)
+
+**Status**: IMPLEMENTED 2026-06-04 (Opus 4.8). 🔴 browser verify pending.
+
+**Why Phase 1 wasn't enough**: a second React DevTools profile (`profiling-data.04-06-2026.15-59-43.json`, 248 commits) confirmed Phase 1 worked — React per-mousemove dropped to **0.41ms** (negligible), frames>33ms 52→11, ghost/preview leaves gone. But Giorgio still felt lag. Root cause re-diagnosed: the crosshair was **painted on a main-thread `<canvas>`** (`CrosshairOverlay` v3, repainted inside `ImmediatePositionStore.setPosition` via `registerDirectRender`). Even painted synchronously+early, under main-thread load (snap engine + hover hit-test still run synchronously in `mouse-handler-move.ts`, plus the per-move `layer-canvas` dirty) the **compositor can't present the freshly-painted crosshair** until the main thread frees up → the drawn cursor trails the physical mouse. While the crosshair lives on a main-thread canvas it will lag under load no matter what else is optimised.
+
+**Fix — how AutoCAD/Revit do it (compositor crosshair)**: `CrosshairOverlay` rewritten from a `<canvas>` to **promoted DOM elements moved purely with `transform: translate3d(...)`** — GPU-composited, off the main thread. The cross tracks the pointer 1:1 regardless of main-thread load.
+- **Geometry / gap preserved**: each axis split into TWO fixed-size segment `<div>`s (left/right, top/bottom); the centre gap is the translate offset between them. At `size_percent: 100` each arm spans `max(area)` so a full-screen cross always reaches the edges from any position; below 100% arms are a fixed fraction (AutoCAD "equal arms"). Every element only ever changes `transform` → zero per-move layout/paint.
+- **All features kept**: gap (`use_cursor_gap`/`center_gap_px`), pick box (circle/square via `border-radius`), aperture box (APBOX), `+`/`−` selection badge (hover + Shift), line styles (solid → `background-color`; dashed/dotted/dash-dot → static `repeating-linear-gradient`), ruler-margin clipping (inner area `<div>` inset by margins + `overflow:hidden`), pan-lock (the direct-render callback just receives the recomputed screen pos and sets `transform`).
+- **Position SSoT unchanged**: still `ImmediatePositionStore.registerDirectRender` (synchronous, called from the mouse handler) — the callback now writes `transform` strings instead of canvas draw calls. No DPR math needed (CSS handles it). `applyStaticStyles` (sizes/colours) runs only on settings/size change (`ResizeObserver`), never per move.
+- **Files**: `canvas-v2/overlays/CrosshairOverlay.tsx` (rewritten, ~330 lines), new pure helper `canvas-v2/overlays/crosshair-compositor-layout.ts` (arm length / segment boxes / gap / area-local / dash bg — 12 unit tests PASS). Removed: the old `registerRenderCallback('crosshair-overlay', …)` RAF fallback, `useCanvasSizeObserver`/DPR/`pixelPerfect`/canvas dash usage, and the now-orphaned `crosshair-selection-indicator.ts` (deleted — badge logic inlined; Boy-Scout N.0.2).
+- **Scheduler note**: `'crosshair-overlay'` is no longer a registered `UnifiedFrameScheduler` system, so `markSystemsDirty(['layer-canvas','crosshair-overlay'])` in `ImmediatePositionStore` now only affects `layer-canvas` (the `crosshair-overlay` id is a harmless no-op). The redundant `layer-canvas` per-move dirty + pointer coalescing remain as optional Phase 3 items.
+
+✅ Google-level: YES — crosshair is now immune to main-thread load (the actual AutoCAD/Revit pattern); pure geometry helper is unit-tested; SSoT position channel unchanged; all visual features preserved.
+
 ### 2026-06-04 — Cursor-lag Phase 1: SSoT leaf-gating of the 60fps world-position stream
 
 **Status**: IMPLEMENTED 2026-06-04 (Opus 4.8, staged phase 1 of a cursor-tracking-lag fix). 🔴 browser verify pending. The `systems/cursor/useCursor.ts` gate itself landed in a separate follow-up commit (committed one-file-at-a-time); this changelog note is co-staged with it to satisfy CHECK 6D.
