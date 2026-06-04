@@ -47,6 +47,7 @@ import {
   WallTypeParamsSchema,
   SlabTypeParamsSchema,
   StairTypeParamsSchema,
+  RoofTypeParamsSchema,
 } from '../types/bim-family-type.schemas';
 import type {
   BimFamilyType,
@@ -111,6 +112,7 @@ function validateTypeParams(
     wall: WallTypeParamsSchema,
     slab: SlabTypeParamsSchema,
     stair: StairTypeParamsSchema,
+    roof: RoofTypeParamsSchema,
   } as const;
 
   const schema = schemaByCategory[category];
