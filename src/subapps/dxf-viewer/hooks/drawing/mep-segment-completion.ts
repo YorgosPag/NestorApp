@@ -27,6 +27,7 @@ import {
   type MepSegmentParams,
   type MepSegmentSectionKind,
 } from '../../bim/types/mep-segment-types';
+import { deriveCenterlineElevationMm } from '../../bim/types/mep-segment-types';
 import { computeMepSegmentGeometry, validateMepSegmentParams } from '../../bim/geometry/mep-segment-geometry';
 import { createMepSegment } from '@/services/factories/mep-segment.factory';
 import type { SceneUnits } from '../../utils/scene-units';
@@ -69,20 +70,27 @@ export function buildDefaultMepSegmentParams(
   domainArg?: MepSegmentDomain,
   overrides: MepSegmentParamOverrides = {},
   sceneUnits: SceneUnits = 'mm',
+  startElevationMm: number | null = null,
+  endElevationMm: number | null = null,
 ): MepSegmentParams {
   const domain = overrides.domain ?? domainArg ?? 'duct';
   // A pipe forces round; otherwise honour the override / default.
   const sectionKind: MepSegmentSectionKind =
     domain === 'pipe' ? 'round' : overrides.sectionKind ?? defaultSectionKind(domain);
 
-  const centerlineElevationMm =
+  const baseCenterMm =
     overrides.centerlineElevationMm ?? DEFAULT_SEGMENT_CENTERLINE_ELEVATION_MM;
-  // ADR-408 Φ-A: each endpoint carries its OWN elevation (mm) as the authoritative
-  // z. A freshly drawn run is horizontal, so both ends start at the centreline; the
-  // ribbon (start/end elevation fields) or a connector-mate snap (Φ-B) can later
-  // lift one end into a riser/slope.
-  const start: Point3D = { x: startPoint.x, y: startPoint.y, z: centerlineElevationMm };
-  const end: Point3D = { x: endPoint.x, y: endPoint.y, z: centerlineElevationMm };
+  // ADR-408 Φ-A/Φ-B1: each endpoint carries its OWN elevation (mm) as the
+  // authoritative z. Connector-mate cascade (Revit "Connect To"): an endpoint that
+  // snapped to a connector inherits its elevation; a FREE end follows the snapped
+  // end (horizontal continuation); if NEITHER snapped, both sit at the centreline
+  // default. So: start@manifold(400)+free end ⇒ flat @400; start@manifold(400)+
+  // end@pipe(2800) ⇒ sloped riser. `centerlineElevationMm` stays the derived cache.
+  const startZ = startElevationMm ?? endElevationMm ?? baseCenterMm;
+  const endZ = endElevationMm ?? startElevationMm ?? baseCenterMm;
+  const centerlineElevationMm = deriveCenterlineElevationMm(startZ, endZ);
+  const start: Point3D = { x: startPoint.x, y: startPoint.y, z: startZ };
+  const end: Point3D = { x: endPoint.x, y: endPoint.y, z: endZ };
 
   const base: MepSegmentParams = {
     domain,
@@ -148,7 +156,17 @@ export function completeMepSegmentFromTwoClicks(
   domain: MepSegmentDomain = 'duct',
   overrides: MepSegmentParamOverrides = {},
   sceneUnits: SceneUnits = 'mm',
+  startElevationMm: number | null = null,
+  endElevationMm: number | null = null,
 ): BuildMepSegmentEntityResult {
-  const params = buildDefaultMepSegmentParams(startPoint, endPoint, domain, overrides, sceneUnits);
+  const params = buildDefaultMepSegmentParams(
+    startPoint,
+    endPoint,
+    domain,
+    overrides,
+    sceneUnits,
+    startElevationMm,
+    endElevationMm,
+  );
   return buildMepSegmentEntity(params, layerId);
 }
