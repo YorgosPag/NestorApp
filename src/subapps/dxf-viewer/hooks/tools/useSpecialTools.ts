@@ -22,6 +22,7 @@ import { useStairTool } from '../drawing/useStairTool';
 import { useWallTool } from '../drawing/useWallTool';
 import { useOpeningTool } from '../drawing/useOpeningTool';
 import { useSlabTool, SLAB_AUTO_CLOSE_TOLERANCE_DEFAULT } from '../drawing/useSlabTool';
+import { useRoofTool, ROOF_AUTO_CLOSE_TOLERANCE_DEFAULT } from '../drawing/useRoofTool';
 import { useColumnTool } from '../drawing/useColumnTool';
 import { useMepFixtureTool } from '../drawing/useMepFixtureTool';
 import { useFurnitureTool } from '../drawing/useFurnitureTool';
@@ -83,6 +84,7 @@ export interface UseSpecialToolsReturn extends SelectionToolsReturn {
   wallTool: ReturnType<typeof useWallTool>;
   openingTool: ReturnType<typeof useOpeningTool>;
   slabTool: ReturnType<typeof useSlabTool>;
+  roofTool: ReturnType<typeof useRoofTool>; // ADR-417
   columnTool: ReturnType<typeof useColumnTool>;
   mepFixtureTool: ReturnType<typeof useMepFixtureTool>; // ADR-406
   furnitureTool: ReturnType<typeof useFurnitureTool>; // ADR-410
@@ -258,6 +260,24 @@ export function useSpecialTools(props: UseSpecialToolsProps): UseSpecialToolsRet
     onSlabCreated: (slabEntity) => appendAndBroadcast(levelManager, slabEntity, 'slab'),
   });
   useToolLifecycle(activeTool === 'slab', slabTool.activate, slabTool.deactivate);
+  // ADR-417 — ROOF TOOL: footprint polygon N-click + Enter (mirror slab). The
+  // created `RoofEntity` is appended + broadcast so `RoofPersistenceHost` saves it.
+  const roofTool = useRoofTool({
+    currentLevelId: levelManager.currentLevelId || '0',
+    getAutoCloseTolerance: () => {
+      const levelId = levelManager.currentLevelId;
+      const scene = levelId ? levelManager.getLevelScene(levelId) : null;
+      const units = scene ? resolveSceneUnits(scene) : 'mm';
+      return ROOF_AUTO_CLOSE_TOLERANCE_DEFAULT * mmToSceneUnits(units);
+    },
+    getSceneUnits: () => {
+      const levelId = levelManager.currentLevelId;
+      if (!levelId) return 'mm';
+      return resolveSceneUnits(levelManager.getLevelScene(levelId));
+    },
+    onRoofCreated: (roofEntity) => appendAndBroadcast(levelManager, roofEntity, 'roof'),
+  });
+  useToolLifecycle(activeTool === 'roof', roofTool.activate, roofTool.deactivate);
   // ADR-363 Phase 4 — COLUMN TOOL
   /**
    * Column drawing tool — single-click placement με 9-position anchor + Tab
@@ -434,6 +454,7 @@ export function useSpecialTools(props: UseSpecialToolsProps): UseSpecialToolsRet
     wallTool,
     openingTool,
     slabTool,
+    roofTool,
     columnTool,
     mepFixtureTool,
     furnitureTool,
