@@ -55,6 +55,9 @@ export const GRIP_GLYPH_REGISTRY: Readonly<Record<string, GripShape>> = {
   // Furniture (ADR-410) — corners render the default 'square' glyph.
   'furniture-move': 'move',
   'furniture-rotation': 'rotation',
+  // Floorplan symbols (ADR-415) — corners render the default 'square' glyph.
+  'floorplan-symbol-move': 'move',
+  'floorplan-symbol-rotation': 'rotation',
 } as const;
 
 /**
