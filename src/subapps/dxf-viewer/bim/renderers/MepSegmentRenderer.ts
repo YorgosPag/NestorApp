@@ -29,6 +29,8 @@ import type { EntityModel, GripInfo, RenderOptions, Point2D } from '../../render
 import type { Entity } from '../../types/entities';
 import type { MepSegmentEntity, MepSegmentDomain } from '../types/mep-segment-types';
 import { pointInPolygon } from '../geometry/shared/polygon-utils';
+import { computeTrimmedSegmentGeometry } from '../geometry/mep-segment-geometry';
+import { useMepSegmentTrimStore } from '../mep-fittings/mep-segment-trim-store';
 import { buildSegmentSymbol, buildPipeTickScreen } from '../mep-segments/mep-segment-symbol';
 import { getMepSegmentGrips } from '../mep-segments/mep-segment-grips';
 import { RENDER_LINE_WIDTHS } from '../../config/text-rendering-config';
@@ -101,7 +103,16 @@ export class MepSegmentRenderer extends BaseEntityRenderer {
     )) return;
 
     if (!segment.geometry || !segment.params) return;
-    const verts = segment.geometry.outline.vertices;
+
+    // ADR-408 Φ11 — trim the run so it stops at any fitting on its ends (Revit
+    // "pipe meets the fitting face"). Render-time, scene-derived (trim store),
+    // zero persistence/mutation. Untrimmed segments use the cached geometry.
+    const trim = useMepSegmentTrimStore.getState().getTrim(segment.id);
+    const geometry = trim && (trim.startMm > 0 || trim.endMm > 0)
+      ? computeTrimmedSegmentGeometry(segment.params, trim.startMm, trim.endMm)
+      : segment.geometry;
+
+    const verts = geometry.outline.vertices;
     if (verts.length < 3) return;
 
     const domain = segment.params.domain;
@@ -149,7 +160,7 @@ export class MepSegmentRenderer extends BaseEntityRenderer {
     this.ctx.stroke();
 
     // 3. Axis centerline — thinner dashed stroke along the run centreline.
-    const axisPoints = segment.geometry.axisPolyline.points;
+    const axisPoints = geometry.axisPolyline.points;
     if (axisPoints.length >= 2) {
       this.ctx.setLineDash(AXIS_DASH as unknown as number[]);
       this.ctx.lineWidth = RENDER_LINE_WIDTHS.THIN;
@@ -157,7 +168,7 @@ export class MepSegmentRenderer extends BaseEntityRenderer {
     }
 
     // 4. Domain symbol — centerline (world-space) from buildSegmentSymbol SSoT.
-    const symbol = buildSegmentSymbol(segment.geometry);
+    const symbol = buildSegmentSymbol(geometry);
     this.ctx.setLineDash([]);
     this.ctx.lineWidth = RENDER_LINE_WIDTHS.THIN;
     for (const stroke of symbol.strokes) {
