@@ -25,7 +25,7 @@
 import * as THREE from 'three';
 import type { WallDna } from '../../bim/types/wall-dna-types';
 import { getMaterial3D } from '../materials/MaterialCatalog3D';
-import { setPlanarWorldUvs } from '../converters/bim-uv-helpers';
+import { setBoxWorldUvs } from '../converters/bim-uv-helpers';
 import { createBimLights } from '../scene/scene-setup';
 import { PreviewOrbitControls } from './preview-orbit-controls';
 import { resolvePreviewPivot, PreviewPivotMarker } from './preview-pivot';
@@ -191,7 +191,7 @@ export class WallTypePreviewRenderer {
 
   private buildBand(band: WallPreviewBand): BandMesh {
     const geo = new THREE.BoxGeometry(STUB_LENGTH_M, STUB_HEIGHT_M, band.depthM);
-    setPlanarWorldUvs(geo, { dominantAxis: 'z' }); // front face (x,y) world UVs
+    setBoxWorldUvs(geo); // per-face world-meter UVs → matches the 3D (no stripes)
     const mesh = new THREE.Mesh(geo, getMaterial3D(band.materialId));
     mesh.position.set(0, 0, band.centerZM);
     this.bandGroup.add(mesh);
