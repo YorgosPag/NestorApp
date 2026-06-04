@@ -26,7 +26,7 @@
 import { apiClient } from '@/lib/api/enterprise-api-client';
 import type { AuditAction, AuditFieldChange } from '@/types/audit-trail';
 import { BIM_FAMILY_TYPE_TRACKED_FIELDS } from '@/config/audit-tracked-fields';
-import type { BimFamilyType, WallTypeParams } from '../types/bim-family-type';
+import type { BimFamilyType, SlabTypeParams, WallTypeParams } from '../types/bim-family-type';
 import {
   buildBimCreationChanges,
   buildBimDeletionChanges,
@@ -37,14 +37,24 @@ import {
 
 export type FamilyTypeAuditAction = 'created' | 'updated' | 'deleted';
 
-/** Minimum shape needed to audit a wall family type. `BimFamilyType<'wall'>` satisfies it. */
-export type FamilyTypeAuditSnapshot = Pick<BimFamilyType<'wall'>, 'id' | 'name' | 'category'> & {
-  readonly typeParams: WallTypeParams;
+/**
+ * Type-level params of any auditable family-type category. Wall is keyed by
+ * `category`, slab by `kind` — `toSnapshot` reads whichever discriminator is
+ * present (both feed the same `BimAuditSnapshot.kind`).
+ */
+export type AnyFamilyTypeParams = WallTypeParams | SlabTypeParams;
+
+/**
+ * Minimum shape needed to audit a family type. `BimFamilyType<'wall'>` and
+ * `BimFamilyType<'slab'>` both satisfy it.
+ */
+export type FamilyTypeAuditSnapshot = Pick<BimFamilyType, 'id' | 'name' | 'category'> & {
+  readonly typeParams: AnyFamilyTypeParams;
 };
 
 export interface RecordFamilyTypeChangeOptions {
   /** Required for `updated` to compute a meaningful diff; ignored otherwise. */
-  readonly prevTypeParams?: WallTypeParams | null;
+  readonly prevTypeParams?: AnyFamilyTypeParams | null;
 }
 
 /**
@@ -73,9 +83,11 @@ export function recordFamilyTypeChange(
 }
 
 /** Flatten a family type to the audit snapshot shape (`name` + type params). */
-function toSnapshot(name: string, params: WallTypeParams): BimAuditSnapshot {
+function toSnapshot(name: string, params: AnyFamilyTypeParams): BimAuditSnapshot {
+  // Wall types discriminate on `category`, slab types on `kind`.
+  const kind = 'category' in params ? params.category : params.kind;
   return {
-    kind: params.category,
+    kind,
     params: { name, ...params } as Record<string, unknown>,
   };
 }
@@ -83,7 +95,7 @@ function toSnapshot(name: string, params: WallTypeParams): BimAuditSnapshot {
 function buildChanges(
   action: FamilyTypeAuditAction,
   type: FamilyTypeAuditSnapshot,
-  prevTypeParams: WallTypeParams | null,
+  prevTypeParams: AnyFamilyTypeParams | null,
 ): AuditFieldChange[] | null {
   const snapshot = toSnapshot(type.name, type.typeParams);
 
