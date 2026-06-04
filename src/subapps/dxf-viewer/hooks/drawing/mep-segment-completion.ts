@@ -75,10 +75,14 @@ export function buildDefaultMepSegmentParams(
   const sectionKind: MepSegmentSectionKind =
     domain === 'pipe' ? 'round' : overrides.sectionKind ?? defaultSectionKind(domain);
 
-  const start: Point3D = { x: startPoint.x, y: startPoint.y, z: 0 };
-  const end: Point3D = { x: endPoint.x, y: endPoint.y, z: 0 };
   const centerlineElevationMm =
     overrides.centerlineElevationMm ?? DEFAULT_SEGMENT_CENTERLINE_ELEVATION_MM;
+  // ADR-408 Φ-A: each endpoint carries its OWN elevation (mm) as the authoritative
+  // z. A freshly drawn run is horizontal, so both ends start at the centreline; the
+  // ribbon (start/end elevation fields) or a connector-mate snap (Φ-B) can later
+  // lift one end into a riser/slope.
+  const start: Point3D = { x: startPoint.x, y: startPoint.y, z: centerlineElevationMm };
+  const end: Point3D = { x: endPoint.x, y: endPoint.y, z: centerlineElevationMm };
 
   const base: MepSegmentParams = {
     domain,
