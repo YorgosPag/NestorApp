@@ -24,6 +24,7 @@ import type { FurnitureEntity } from '../../bim/types/furniture-types';
 import type { MepSegmentEntity } from '../../bim/types/mep-segment-types';
 import type { MepFittingEntity } from '../../bim/types/mep-fitting-types';
 import type { MepManifoldEntity } from '../../bim/types/mep-manifold-types';
+import type { RoofEntity } from '../../bim/types/roof-types';
 import type { BuildingRef, FloorRef } from '../../bim/utils/bim-floor-utils';
 import { applyBuildingsPreset } from '../utils/building-visibility-state';
 import type { BuildingVisMode, BuildingPreset } from '../utils/building-visibility-state';
@@ -56,6 +57,8 @@ export interface Bim3DEntities {
   readonly railings: readonly RailingEntity[];
   /** ADR-410 — mesh-based CC0 furniture (chair first). */
   readonly furnitures: readonly FurnitureEntity[];
+  /** ADR-417 — parametric pitched roofs (footprint + per-edge slopes). */
+  readonly roofs: readonly RoofEntity[];
   /** ADR-408 Φ8 — linear MEP segments (duct + pipe). */
   readonly mepSegments: readonly MepSegmentEntity[];
   /** ADR-408 Φ11 — auto pipe fittings (point-based junction elements). */
@@ -127,6 +130,8 @@ interface Bim3DEntitiesStoreState extends Bim3DEntities {
   setPanels: (panels: readonly ElectricalPanelEntity[]) => void;
   setRailings: (railings: readonly RailingEntity[]) => void;
   setFurnitures: (furnitures: readonly FurnitureEntity[]) => void;
+  /** ADR-417 — feed the parametric pitched roofs slice. */
+  setRoofs: (roofs: readonly RoofEntity[]) => void;
   /** ADR-408 Φ8 — feed the linear MEP segments (duct + pipe) slice. */
   setMepSegments: (mepSegments: readonly MepSegmentEntity[]) => void;
   /** ADR-408 Φ11 — feed the auto pipe fittings slice. */
@@ -159,6 +164,7 @@ export const useBim3DEntitiesStore = create<Bim3DEntitiesStoreState>()(
     panels: [],
     railings: [],
     furnitures: [],
+    roofs: [],
     mepSegments: [],
     mepFittings: [],
     manifolds: [],
@@ -181,6 +187,7 @@ export const useBim3DEntitiesStore = create<Bim3DEntitiesStoreState>()(
     setPanels: (panels) => set({ panels }),
     setRailings: (railings) => set({ railings }),
     setFurnitures: (furnitures) => set({ furnitures }),
+    setRoofs: (roofs) => set({ roofs }),
     setMepSegments: (mepSegments) => set({ mepSegments }),
     setMepFittings: (mepFittings) => set({ mepFittings }),
     setManifolds: (manifolds) => set({ manifolds }),
@@ -220,6 +227,7 @@ export function selectBim3DEntities(state: Bim3DEntitiesStoreState): Bim3DEntiti
     panels: state.panels,
     railings: state.railings,
     furnitures: state.furnitures,
+    roofs: state.roofs,
     mepSegments: state.mepSegments,
     mepFittings: state.mepFittings,
     manifolds: state.manifolds,
