@@ -59,6 +59,33 @@ export const WallTypeParamsSchema = z
 
 export type WallTypeParamsParsed = z.infer<typeof WallTypeParamsSchema>;
 
+// ─── Slab kind (mirror slab-types.ts SlabKind) ───────────────────────────────
+
+const SlabKindSchema = z.enum([
+  'floor',
+  'ceiling',
+  'roof',
+  'ground',
+  'foundation',
+]);
+
+// ─── SlabTypeParams ──────────────────────────────────────────────────────────
+
+/**
+ * Mirrors `SlabTypeParams`. `dna` is opaque pass-through (validated by the
+ * slab-dna layer), same convention as `WallTypeParamsSchema`.
+ */
+export const SlabTypeParamsSchema = z
+  .object({
+    kind: SlabKindSchema,
+    thickness: z.number().positive(),
+    dna: z.unknown().optional(),
+    material: z.string().min(1).optional(),
+  })
+  .strict();
+
+export type SlabTypeParamsParsed = z.infer<typeof SlabTypeParamsSchema>;
+
 // ─── Stair enum schemas (mirror stair-types.ts unions) ───────────────────────
 
 const StairNosingSideSchema = z.enum(['front', 'none', 'front-and-sides']);
@@ -197,6 +224,13 @@ export const BimFamilyTypeSchema = z.discriminatedUnion('category', [
       ...BimFamilyTypeBaseShape,
       category: z.literal('wall'),
       typeParams: WallTypeParamsSchema,
+    })
+    .strict(),
+  z
+    .object({
+      ...BimFamilyTypeBaseShape,
+      category: z.literal('slab'),
+      typeParams: SlabTypeParamsSchema,
     })
     .strict(),
   z
