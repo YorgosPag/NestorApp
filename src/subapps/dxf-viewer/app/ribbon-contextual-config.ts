@@ -19,6 +19,8 @@ import { CONTEXTUAL_MULTI_SELECTION_TAB, MULTI_SELECTION_CONTEXTUAL_TRIGGER } fr
 import { CONTEXTUAL_MEP_CIRCUIT_TAB, MEP_CIRCUIT_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-mep-circuit-tab';
 import { CONTEXTUAL_MEP_PIPE_NETWORK_TAB, MEP_PIPE_NETWORK_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-mep-pipe-network-tab';
 import { CONTEXTUAL_MEP_FIXTURE_TAB, MEP_FIXTURE_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-mep-fixture-tab';
+import { CONTEXTUAL_MEP_MANIFOLD_TAB, MEP_MANIFOLD_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-mep-manifold-tab';
+import { CONTEXTUAL_MEP_SEGMENT_TAB, MEP_SEGMENT_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-mep-segment-tab';
 import { CONTEXTUAL_FURNITURE_TAB, FURNITURE_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-furniture-tab';
 import { CONTEXTUAL_FLOORPLAN_SYMBOL_TAB, FLOORPLAN_SYMBOL_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-floorplan-symbol-tab';
 import { CONTEXTUAL_MEP_FIXTURE_LIBRARY_TAB, MEP_FIXTURE_LIBRARY_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-mep-fixture-library-tab';
@@ -51,6 +53,8 @@ export const RIBBON_CONTEXTUAL_TABS = [
   CONTEXTUAL_MEP_CIRCUIT_TAB,
   CONTEXTUAL_MEP_PIPE_NETWORK_TAB,
   CONTEXTUAL_MEP_FIXTURE_TAB,
+  CONTEXTUAL_MEP_MANIFOLD_TAB,
+  CONTEXTUAL_MEP_SEGMENT_TAB,
   CONTEXTUAL_MEP_FIXTURE_LIBRARY_TAB,
   CONTEXTUAL_FURNITURE_TAB,
   CONTEXTUAL_FLOORPLAN_SYMBOL_TAB,
@@ -128,18 +132,11 @@ export function useActiveContextualTrigger({
         return MEP_CIRCUIT_CONTEXTUAL_TRIGGER;
       }
     }
-    // ADR-408 Φ13: selecting a manifold that sources ≥1 pipe network surfaces the
-    // network tab in manage mode (picker → its networks). Source-centric, mirror
-    // of the panel manage branch above.
-    if (primarySelectedId && currentScene && mepSystems.length > 0) {
-      const primary = currentScene.entities.find((e) => e.id === primarySelectedId);
-      if (
-        primary?.type === 'mep-manifold' &&
-        resolveManagedSystems([primary], mepSystems).length > 0
-      ) {
-        return MEP_PIPE_NETWORK_CONTEXTUAL_TRIGGER;
-      }
-    }
+    // ADR-408 Φ13 fold-in: a selected manifold ALWAYS shows «Ιδιότητες Συλλέκτη»
+    // (resolveContextualTrigger below); its network management is folded into that
+    // tab as a self-hiding «Δίκτυο» panel (Revit "System Properties" from the
+    // equipment), mirroring the fixture's «Κύκλωμα» panel. So — unlike the panel
+    // manage branch above — there is no separate manifold→network-tab branch here.
     // ADR-363 Phase 7.1: multi-selection of BIM entities → dedicated tab.
     if (selectedEntityIds && selectedEntityIds.length >= 2 && currentScene) {
       let bimCount = 0;
@@ -222,6 +219,11 @@ export function resolveContextualTrigger(entity: EntityLike): string | null {
   if (entity.type === 'slab-opening') return SLAB_OPENING_CONTEXTUAL_TRIGGER;
   // ADR-406 — φωτιστικό (point-based MEP fixture) → contextual properties tab.
   if (entity.type === 'mep-fixture') return MEP_FIXTURE_CONTEXTUAL_TRIGGER;
+  // ADR-408 Φ12 — συλλέκτης (plumbing manifold) → «Ιδιότητες Συλλέκτη» (with the
+  // pipe-network management folded in as a self-hiding panel).
+  if (entity.type === 'mep-manifold') return MEP_MANIFOLD_CONTEXTUAL_TRIGGER;
+  // ADR-408 Φ8 — σωλήνας / αεραγωγός (MEP segment, one tab for both domains).
+  if (entity.type === 'mep-segment') return MEP_SEGMENT_CONTEXTUAL_TRIGGER;
   if (entity.type === 'text' || entity.type === 'mtext') return TEXT_EDITOR_CONTEXTUAL_TRIGGER;
   if (entity.type === 'array') {
     const kind = readArrayKind(entity.params);
