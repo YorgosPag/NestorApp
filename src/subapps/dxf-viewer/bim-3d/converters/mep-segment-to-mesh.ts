@@ -29,6 +29,7 @@ import * as THREE from 'three';
 import type { MepSegmentEntity } from '../../bim/types/mep-segment-types';
 import { resolveSegmentSection } from '../../bim/types/mep-segment-types';
 import { buildRoundProfile } from '../../bim/geometry/shared/round-profile';
+import { useMepSegmentTrimStore } from '../../bim/mep-fittings/mep-segment-trim-store';
 import { sceneUnitsToMeters } from '../../utils/scene-units';
 import { getElementMaterial3D, getSystemTintedMaterial3D } from '../materials/MaterialCatalog3D';
 import { tagMesh } from './bim-three-shape-helpers';
@@ -93,10 +94,32 @@ export function mepSegmentToMesh(
 
   // Scale canvas-world axis vertices to Three.js world metres.
   const sceneToM = sceneUnitsToMeters(segment.params.sceneUnits ?? 'mm');
-  const sx = startPoint.x * sceneToM;
-  const sy = startPoint.y * sceneToM;
-  const ex = endPoint.x * sceneToM;
-  const ey = endPoint.y * sceneToM;
+  let sx = startPoint.x * sceneToM;
+  let sy = startPoint.y * sceneToM;
+  let ex = endPoint.x * sceneToM;
+  let ey = endPoint.y * sceneToM;
+
+  // ADR-408 Φ11 — shorten the run at any fitting on its ends (metres), so the 3D
+  // pipe butts against the elbow/tee torus instead of poking through it. Trim is a
+  // physical mm length (scene-derived store, read synchronously). Clamped to 90%.
+  const trim = useMepSegmentTrimStore.getState().getTrim(segment.id);
+  if (trim && (trim.startMm > 0 || trim.endMm > 0)) {
+    const fullLen = Math.hypot(ex - sx, ey - sy);
+    if (fullLen > 1e-9) {
+      const ax = (ex - sx) / fullLen;
+      const ay = (ey - sy) / fullLen;
+      let startM = Math.max(0, trim.startMm) * MM_TO_M;
+      let endM = Math.max(0, trim.endMm) * MM_TO_M;
+      const maxTrim = fullLen * 0.9;
+      if (startM + endM > maxTrim) {
+        const k = maxTrim / (startM + endM);
+        startM *= k;
+        endM *= k;
+      }
+      sx += ax * startM; sy += ay * startM;
+      ex -= ax * endM; ey -= ay * endM;
+    }
+  }
 
   // plan X,Y → world X,−Z (Three.js Y-up: plan Y = north → world −Z).
   const dxWorld = ex - sx;
