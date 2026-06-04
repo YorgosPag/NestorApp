@@ -149,8 +149,6 @@ export function useMepFittingAutoReconciliation(
   useEffect(() => {
     if (!companyId || !projectId || !floorplanId || !userId) {
       serviceRef.current = null;
-      // [Φ11-DEBUG] temporary — the reconcile cannot run without full scope.
-      console.warn('[Φ11] service NOT ready (missing scope)', { companyId, projectId, floorplanId, userId });
       return;
     }
     serviceRef.current = createMepFittingFirestoreService({
@@ -159,8 +157,6 @@ export function useMepFittingAutoReconciliation(
       floorplanId,
       userId,
     });
-    // [Φ11-DEBUG] temporary diagnostics — remove after verify.
-    console.info('[Φ11] service ready', { companyId, projectId, floorplanId, userId });
   }, [companyId, projectId, floorplanId, userId]);
 
   // ── (a) Subscribe + diff-merge fitting docs into the active level scene ─────
@@ -176,8 +172,7 @@ export function useMepFittingAutoReconciliation(
 
     const unsubscribe = svc.subscribeFittings(
       (docs) => {
-        // [Φ11-DEBUG] temporary — first snapshot flips hydration → unblocks reconcile.
-        console.info('[Φ11] subscription snapshot → hydrated', { docCount: docs.length });
+        // First snapshot flips hydration → unblocks reconcile.
         setHydrated(true);
         mergeDocsIntoScene(docs, levelId, levelManager, {
           persistedByKey: persistedByKeyRef.current,
@@ -185,11 +180,10 @@ export function useMepFittingAutoReconciliation(
           pending: pendingIdsRef.current,
         });
       },
-      (err) => {
-        // [Φ11-DEBUG] temporary — was silent; a failed subscription left hydrated=false
-        // forever, blocking ALL reconcile. Log it AND hydrate with empty set so the
-        // topology-driven reconcile can still create fittings in dev.
-        console.error('[Φ11] subscription ERROR — hydrating empty so reconcile can run', err);
+      () => {
+        // A failed subscription must NOT leave hydrated=false forever (that blocks
+        // ALL reconcile). Hydrate with the empty set so the topology-driven reconcile
+        // can still create fittings.
         setHydrated(true);
       },
     );
@@ -200,37 +194,13 @@ export function useMepFittingAutoReconciliation(
   const reconcile = useCallback(async () => {
     const svc = serviceRef.current;
     const levelId = levelManager.currentLevelId;
-    if (!svc || !levelId) {
-      console.warn('[Φ11] reconcile skip', { hasService: !!svc, levelId });
-      return;
-    }
+    if (!svc || !levelId) return;
     // Block until the first snapshot lands (avoids duplicate-create on cold load).
-    if (!hydrated) {
-      console.warn('[Φ11] reconcile skip — not hydrated yet');
-      return;
-    }
+    if (!hydrated) return;
     const scene = levelManager.getLevelScene(levelId);
     if (!scene) return;
 
-    // [Φ11-DEBUG] temporary — what IS in the scene? Type histogram + mep-segment domains.
-    const typeHistogram: Record<string, number> = {};
-    const segDomains: string[] = [];
-    for (const e of scene.entities) {
-      const t = (e as { type?: string }).type ?? 'undefined';
-      typeHistogram[t] = (typeHistogram[t] ?? 0) + 1;
-      if (t === 'mep-segment') {
-        segDomains.push(String((e as { params?: { domain?: string } }).params?.domain));
-      }
-    }
     const desired = resolveDesiredFittings(scene.entities);
-    console.info('[Φ11] reconcile run', {
-      totalEntities: scene.entities.length,
-      mepSegments: typeHistogram['mep-segment'] ?? 0,
-      segDomains,
-      desiredFittings: desired.length,
-      desiredKinds: desired.map((d) => d.kind),
-      typesPresent: Object.keys(typeHistogram).filter((k) => k.startsWith('mep') || k.includes('fitting')),
-    });
     const sig = desiredSignature(desired);
     // No-op short-circuit: identical topology ⇒ no writes ⇒ no echo.
     if (lastDesiredSigRef.current && dequal(lastDesiredSigRef.current, sig)) return;
@@ -430,15 +400,13 @@ async function createFitting(
   // optimistic scene entity is not dropped as an "orphan" before its doc round-trips.
   refs.pending.add(id);
   createdInto.push(entity);
-  console.info('[Φ11] fitting CREATED (scene)', { id, kind: draft.kind, junctionKey: draft.params.junctionKey });
   try {
     await svc.saveFitting(entityToSaveInput(entity));
     recordMepFittingChange('created', entity);
-  } catch (err) {
+  } catch {
     // Persistence failed — keep it in the scene (visible), drop the pending guard so
     // the next subscription snapshot doesn't treat it as a confirmed-then-vanished doc.
     refs.pending.delete(id);
-    console.error('[Φ11] fitting persist FAILED (still shown in scene)', err);
   }
 }
 

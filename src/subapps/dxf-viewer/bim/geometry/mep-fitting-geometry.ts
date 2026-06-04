@@ -24,7 +24,11 @@
 import type { Point3D, Polygon3D, BoundingBox3D } from '../types/bim-base';
 import type { MepFittingGeometry, MepFittingParams } from '../types/mep-fitting-types';
 import { mmToSceneUnits } from '../../utils/scene-units';
-import { computeElbowBend, tessellateBendFootprint } from './mep-fitting-bend';
+import {
+  computeFittingBody,
+  tessellateFittingFootprint,
+  type FittingBodyInput,
+} from './mep-fitting-body';
 
 const MM_TO_M = 1 / 1000;
 
@@ -71,22 +75,37 @@ export function computeMepFittingGeometry(params: MepFittingParams): MepFittingG
 // ─── Internal helpers (mirror mep-segment-geometry) ──────────────────────────────
 
 /**
- * Plan footprint per kind. Elbow with two incidents → the swept bend body
- * (concentric wall arcs, canvas units) via the bend SSoT; everything else → the
- * centred square. `s` = canvas units per mm; `half` = square half-side fallback.
+ * Plan footprint per kind — the REAL fitting body (canvas units) via the generic
+ * body SSoT: the swept bend (elbow), the union of arms (tee/cross), an axial
+ * rectangle/trapezoid (coupling/reducer), or a dome (cap). Falls back to a centred
+ * square only for a degenerate node. `s` = canvas units per mm; `half` = square
+ * half-side fallback.
  */
 function buildFootprint(params: MepFittingParams, s: number, half: number): Point3D[] {
-  if (params.kind === 'elbow' && params.incidents.length >= 2) {
-    const diameterCanvas = params.primaryDiameterMm * s;
-    const bend = computeElbowBend(
-      { x: params.position.x, y: params.position.y },
-      params.incidents[0]!.directionUnit,
-      params.incidents[1]!.directionUnit,
-      diameterCanvas,
-    );
-    if (bend) return tessellateBendFootprint(bend);
-  }
+  const body = computeFittingBody(toBodyInput(params, s));
+  if (body) return tessellateFittingFootprint(body);
   return buildSquare(params.position, half);
+}
+
+/**
+ * Adapt fitting params → the unit-agnostic body input, converting every mm
+ * diameter to canvas units (`s` = canvas units per mm) so the footprint comes back
+ * in canvas units. `secondaryDiameter` is attached conditionally
+ * (exactOptionalPropertyTypes-safe).
+ */
+function toBodyInput(params: MepFittingParams, s: number): FittingBodyInput {
+  const base: FittingBodyInput = {
+    kind: params.kind,
+    node: { x: params.position.x, y: params.position.y },
+    incidents: params.incidents.map((inc) => ({
+      dir: { x: inc.directionUnit.x, y: inc.directionUnit.y },
+      diameter: inc.diameterMm * s,
+    })),
+    primaryDiameter: params.primaryDiameterMm * s,
+  };
+  return params.secondaryDiameterMm !== undefined
+    ? { ...base, secondaryDiameter: params.secondaryDiameterMm * s }
+    : base;
 }
 
 /** CCW square centred on `centre`, half-side `half` (canvas units). */

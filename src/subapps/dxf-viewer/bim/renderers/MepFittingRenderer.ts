@@ -5,21 +5,14 @@
  * element materialised at a junction of two or more pipe segments (Revit "Pipe
  * Fitting"; IFC `IfcPipeFitting`). It is the point-based counterpart of the
  * linear `mep-segment` (ADR-408 Φ8) and mirrors that renderer's structure:
- * unified visibility gate, hover halo, translucent footprint fill, dashed
- * outline, then a per-kind plan glyph drawn from the incident directions.
+ * unified visibility gate, hover halo, translucent footprint fill, dashed outline.
  *
- * The glyph is the topology signature of the junction, oriented by
- * `params.incidents[].directionUnit` and sized by the incident diameters:
- *   - `'elbow'`            → quarter-bend arc between the two angled directions.
- *   - `'coupling'`/`'reducer'` → short sleeve straddling the two collinear dirs.
- *   - `'tee'`              → a T (three radial stubs).
- *   - `'cross'`            → a + (four radial stubs).
- *   - `'cap'`              → a closed circle (dead end).
- *
- * Glyph stub lengths are SCREEN-space (fixed pixel length, zoom- and
- * scene-unit-independent) — exactly like the pipe midpoint tick in
- * `mep-segment-symbol.ts`. A world-unit length cannot stay legible across mm /
- * metre scenes; a fixed pixel length is correct at every zoom and `sceneUnits`.
+ * The footprint IS the real fitting body (Revit-grade): the swept bend of an
+ * elbow, the union of arms of a tee/cross, the axial rectangle/trapezoid of a
+ * coupling/reducer, or the dome of a cap — all derived from the generic body SSoT
+ * (`mep-fitting-body.ts`), the same source the 3D mesh + the pipe trim read. So the
+ * fill + outline alone draw the true shape; NO per-kind screen-space glyph is
+ * needed (unlike the Φ11 foundation slice, which drew schematic glyphs on a square).
  *
  * Palette mirrors the segment's pipe convention (copper / amber). When the
  * fitting derives a system colour later (Φ9/Φ10), the same override pattern as
@@ -30,20 +23,15 @@
  * `useDrawingScaleStore.getState()`.
  *
  * @see ./MepSegmentRenderer.ts (the linear-element template)
- * @see ../mep-segments/mep-segment-symbol.ts (the screen-space tick model)
+ * @see ../geometry/mep-fitting-body.ts (the body footprint SSoT)
  * @see docs/centralized-systems/reference/adrs/ADR-408-mep-connectors-and-systems.md §Φ11
  */
 
 import { BaseEntityRenderer } from '../../rendering/entities/BaseEntityRenderer';
 import type { EntityModel, GripInfo, RenderOptions, Point2D } from '../../rendering/types/Types';
 import type { Entity } from '../../types/entities';
-import type {
-  MepFittingEntity,
-  MepFittingDomain,
-  MepFittingIncident,
-} from '../types/mep-fitting-types';
+import type { MepFittingEntity, MepFittingDomain } from '../types/mep-fitting-types';
 import { pointInPolygon } from '../geometry/shared/polygon-utils';
-import { mmToSceneUnits } from '../../utils/scene-units';
 import { RENDER_LINE_WIDTHS } from '../../config/text-rendering-config';
 import { resolveIsEntityVisible } from '../visibility/visibility-resolver';
 import { useDrawingScaleStore } from '../../state/drawing-scale-store';
@@ -70,26 +58,6 @@ const DOMAIN_FILL: Readonly<Record<MepFittingDomain, string>> = {
 
 /** Dash pattern for the plan outline (dashed = above cut plane, segment mirror). */
 const OUTLINE_DASH: readonly [number, number] = [8, 4];
-
-// Glyph metrics are expressed as MULTIPLES of the pipe radius (world-space,
-// resolved to screen px at draw time via `pipeRadiusPx`), so a fitting glyph
-// grows/shrinks with the pipe cross-section — and with zoom — exactly like real
-// geometry. A small screen-px floor keeps a thin pipe legible at low zoom.
-
-/** Minimum on-screen pipe-radius unit (px) — legibility floor at far zoom. */
-const MIN_PIPE_RADIUS_PX = 3;
-
-/** Radial stub half-length as a multiple of the pipe radius (tee/cross/elbow). */
-const GLYPH_STUB_FACTOR = 2;
-
-/** Cap dead-end circle radius as a multiple of the pipe radius. */
-const CAP_RADIUS_FACTOR = 1;
-
-/** Coupling/reducer sleeve half-length (along axis) as a multiple of pipe radius. */
-const SLEEVE_HALF_FACTOR = 1.8;
-
-/** Coupling/reducer sleeve half-width (across axis) as a multiple of pipe radius. */
-const SLEEVE_WIDTH_FACTOR = 1;
 
 // ─── Type guard (local — main agent adds to entities.ts union) ───────────────────
 
@@ -119,6 +87,7 @@ export class MepFittingRenderer extends BaseEntityRenderer {
 
     if (!fitting.geometry || !fitting.params) return;
     const verts = fitting.geometry.footprint.vertices;
+    if (verts.length < 3) return;
     const domain = fitting.params.domain;
     const strokeColor = DOMAIN_STROKE[domain];
     const fillColor = DOMAIN_FILL[domain];
@@ -126,7 +95,7 @@ export class MepFittingRenderer extends BaseEntityRenderer {
     const phaseState = this.phaseManager.determinePhase(entity as Entity, options);
 
     // Hover halo via outline thicker glow (mirror segment / fixture renderer).
-    if (phaseState.phase === 'highlighted' && verts.length >= 3) {
+    if (phaseState.phase === 'highlighted') {
       this.ctx.save();
       this.ctx.strokeStyle = HOVER_HIGHLIGHT.ENTITY.glowColor;
       this.ctx.lineWidth = RENDER_LINE_WIDTHS.NORMAL + HOVER_HIGHLIGHT.ENTITY.glowExtraWidth;
@@ -140,27 +109,17 @@ export class MepFittingRenderer extends BaseEntityRenderer {
     this.phaseManager.applyPhaseStyle(entity as Entity, phaseState);
     this.ctx.save();
 
-    // 1. Translucent footprint fill — communicates the node extent in plan.
-    if (verts.length >= 3) {
-      this.ctx.fillStyle = fillColor;
-      this.drawPolygonPath(verts);
-      this.ctx.fill();
+    // 1. Translucent footprint fill — the real body in plan.
+    this.ctx.fillStyle = fillColor;
+    this.drawPolygonPath(verts);
+    this.ctx.fill();
 
-      // 2. Dashed outline (linear-run-above-cut-plane convention, segment mirror).
-      this.ctx.strokeStyle = strokeColor;
-      this.ctx.lineWidth = RENDER_LINE_WIDTHS.THIN;
-      this.ctx.setLineDash(OUTLINE_DASH as unknown as number[]);
-      this.drawPolygonPath(verts);
-      this.ctx.stroke();
-    }
-
-    // 3. Per-kind plan glyph — the junction topology signature, screen-space so
-    //    it stays legible at every zoom and in every scene-unit system.
-    this.ctx.setLineDash([]);
+    // 2. Dashed outline (linear-run-above-cut-plane convention, segment mirror).
     this.ctx.strokeStyle = strokeColor;
-    this.ctx.fillStyle = strokeColor;
-    this.ctx.lineWidth = RENDER_LINE_WIDTHS.NORMAL;
-    this.drawKindGlyph(fitting);
+    this.ctx.lineWidth = RENDER_LINE_WIDTHS.THIN;
+    this.ctx.setLineDash(OUTLINE_DASH as unknown as number[]);
+    this.drawPolygonPath(verts);
+    this.ctx.stroke();
 
     this.ctx.restore();
     this.finalizeRender(entity, options);
@@ -186,154 +145,11 @@ export class MepFittingRenderer extends BaseEntityRenderer {
       return false;
     }
     const verts = fitting.geometry.footprint.vertices;
-    if (verts.length < 3) return true; // glyph-only fitting → bbox is the target.
+    if (verts.length < 3) return true; // degenerate footprint → bbox is the target.
     return pointInPolygon(point, verts);
   }
 
-  // ─── Glyph dispatch ────────────────────────────────────────────────────────────
-
-  /**
-   * Draw the per-kind plan glyph at the node centre, oriented by the incident
-   * directions and SIZED to the pipe cross-section: `pipeRadiusPx` converts the
-   * fitting's nominal radius (world) to screen px, so the glyph scales with both
-   * the pipe diameter and the zoom (a fat pipe → a fat fitting), with a small
-   * floor for legibility at far zoom.
-   */
-  private drawKindGlyph(fitting: MepFittingEntity): void {
-    const center = this.worldToScreen({
-      x: fitting.params.position.x,
-      y: fitting.params.position.y,
-    });
-    const incidents = fitting.params.incidents;
-    const unitPx = this.pipeRadiusPx(fitting);
-
-    switch (fitting.params.kind) {
-      case 'cap':
-        this.drawCapGlyph(center, unitPx);
-        return;
-      case 'coupling':
-      case 'reducer':
-        this.drawSleeveGlyph(center, incidents, unitPx);
-        return;
-      case 'elbow':
-        // No glyph: the geometry footprint IS the swept bend body (concentric
-        // wall arcs), drawn by the fill/outline pass — a real Revit-grade elbow.
-        return;
-      case 'tee':
-      case 'cross':
-        this.drawRadialGlyph(center, incidents, unitPx);
-        return;
-      default:
-        return;
-    }
-  }
-
-  /**
-   * Screen-px length of the fitting's nominal pipe RADIUS. Derived from the
-   * world-space radius (`primaryDiameterMm/2` → canvas units via `mmToSceneUnits`)
-   * measured through `worldToScreen`, so it tracks diameter AND zoom. Floored at
-   * `MIN_PIPE_RADIUS_PX` so a thin pipe stays visible when zoomed far out.
-   */
-  private pipeRadiusPx(fitting: MepFittingEntity): number {
-    const s = mmToSceneUnits(fitting.params.sceneUnits ?? 'mm');
-    const radiusWorld = (fitting.params.primaryDiameterMm * s) / 2;
-    const o = this.worldToScreen({ x: fitting.params.position.x, y: fitting.params.position.y });
-    const t = this.worldToScreen({ x: fitting.params.position.x + radiusWorld, y: fitting.params.position.y });
-    const px = Math.hypot(t.x - o.x, t.y - o.y);
-    return Math.max(px, MIN_PIPE_RADIUS_PX);
-  }
-
-  // ─── Glyph primitives (all sizes = unitPx × factor) ──────────────────────────
-
-  /** Cap — a closed circle (pipe-bore sized) at the dead end. */
-  private drawCapGlyph(center: Point2D, unitPx: number): void {
-    this.ctx.beginPath();
-    this.ctx.arc(center.x, center.y, unitPx * CAP_RADIUS_FACTOR, 0, Math.PI * 2);
-    this.ctx.stroke();
-  }
-
-  /**
-   * Tee / cross — one radial stub per incident, pointing along its (screen)
-   * direction. A simple "T" or "+" signature whose arm count IS the topology.
-   */
-  private drawRadialGlyph(center: Point2D, incidents: readonly MepFittingIncident[], unitPx: number): void {
-    const stub = unitPx * GLYPH_STUB_FACTOR;
-    for (const incident of incidents) {
-      const dir = this.screenDirection(incident.directionUnit);
-      if (!dir) continue;
-      this.ctx.beginPath();
-      this.ctx.moveTo(center.x, center.y);
-      this.ctx.lineTo(center.x + dir.x * stub, center.y + dir.y * stub);
-      this.ctx.stroke();
-    }
-  }
-
-  /**
-   * Coupling / reducer — a short rectangular sleeve straddling the two collinear
-   * incident directions. The sleeve axis follows the first incident direction;
-   * the cross-bars mark the inline join. Sized to the pipe radius.
-   */
-  private drawSleeveGlyph(center: Point2D, incidents: readonly MepFittingIncident[], unitPx: number): void {
-    const axis = incidents.length > 0 ? this.screenDirection(incidents[0].directionUnit) : null;
-    if (!axis) {
-      this.drawCapGlyph(center, unitPx);
-      return;
-    }
-    // Perpendicular unit (screen-space) for the sleeve width.
-    const px = -axis.y;
-    const py = axis.x;
-    const halfLen = unitPx * SLEEVE_HALF_FACTOR;
-    const halfWid = unitPx * SLEEVE_WIDTH_FACTOR;
-
-    const ax = center.x + axis.x * halfLen;
-    const ay = center.y + axis.y * halfLen;
-    const bx = center.x - axis.x * halfLen;
-    const by = center.y - axis.y * halfLen;
-
-    // Two long edges (the sleeve walls).
-    this.strokeSegment(
-      { x: ax + px * halfWid, y: ay + py * halfWid },
-      { x: bx + px * halfWid, y: by + py * halfWid },
-    );
-    this.strokeSegment(
-      { x: ax - px * halfWid, y: ay - py * halfWid },
-      { x: bx - px * halfWid, y: by - py * halfWid },
-    );
-    // Two end caps (the join faces).
-    this.strokeSegment(
-      { x: ax + px * halfWid, y: ay + py * halfWid },
-      { x: ax - px * halfWid, y: ay - py * halfWid },
-    );
-    this.strokeSegment(
-      { x: bx + px * halfWid, y: by + py * halfWid },
-      { x: bx - px * halfWid, y: by - py * halfWid },
-    );
-  }
-
   // ─── Internal helpers ────────────────────────────────────────────────────────
-
-  /**
-   * Convert a world-space incident direction unit vector to a screen-space unit
-   * vector. Computes the direction from two `worldToScreen` points (rather than
-   * negating Y) so any axis flip / transform handling is respected — same
-   * approach as the segment pipe-tick. Returns `null` for a degenerate vector.
-   */
-  private screenDirection(dir: { x: number; y: number }): Point2D | null {
-    const origin = this.worldToScreen({ x: 0, y: 0 });
-    const tip = this.worldToScreen({ x: dir.x, y: dir.y });
-    const dx = tip.x - origin.x;
-    const dy = tip.y - origin.y;
-    const len = Math.hypot(dx, dy);
-    if (len < 1e-9) return null;
-    return { x: dx / len, y: dy / len };
-  }
-
-  private strokeSegment(a: Point2D, b: Point2D): void {
-    this.ctx.beginPath();
-    this.ctx.moveTo(a.x, a.y);
-    this.ctx.lineTo(b.x, b.y);
-    this.ctx.stroke();
-  }
 
   private drawPolygonPath(vertices: ReadonlyArray<{ x: number; y: number }>): void {
     if (vertices.length < 3) return;

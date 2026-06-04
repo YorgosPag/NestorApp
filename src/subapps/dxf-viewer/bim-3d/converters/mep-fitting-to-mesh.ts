@@ -6,15 +6,16 @@
  * (ADR-408 Φ8) the fitting is point-based: it sits at `params.position` (node
  * centre) and bridges the incident pipe centrelines.
  *
- * Geometry per `kind` (parametric on `primaryDiameterMm`, oriented by each
- * `incidents[].directionUnit`, centred at `position`, z = centerlineElevationMm):
- *   - `'elbow'`    → `'radiused'`: TubeGeometry along an arc between the two
- *                    incident directions; `'mitered'`: two short mitred cylinders.
- *   - `'coupling'` → short cylinder along the collinear axis, Ø slightly > pipe.
- *   - `'reducer'`  → truncated cone (radiusTop = primary/2, radiusBottom = secondary/2).
- *   - `'tee'`      → main-run cylinder + branch cylinder.
- *   - `'cross'`    → two crossed cylinders.
- *   - `'cap'`      → hemisphere (dead end).
+ * Geometry is derived from the SAME generic body SSoT as the 2D footprint
+ * (`mep-fitting-body.ts`) — `computeFittingBody` runs in plan-metres (node at the
+ * local origin) and the result is switched on `body.form` to build the THREE solid,
+ * so the 3D mesh and the 2D plan can never drift:
+ *   - `'bend'`   (elbow)            → TubeGeometry swept along the circular bend.
+ *   - `'inline'` (coupling/reducer) → a cylinder (equal radii) or reducing cone.
+ *   - `'legs'`   (tee/cross)        → one arm cylinder per incident.
+ *   - `'cap'`    (cap)              → a hemisphere dome facing outward.
+ * The mitered elbow style stays a converter-level special case (the body SSoT
+ * models only the radiused bend).
  *
  * Coordinate convention (same as `mepSegmentToMesh` / BimToThreeConverter):
  *   DXF plan: X = East, Y = North (canvas world; metres when sceneUnits='m').
@@ -26,19 +27,20 @@
  * before entering Three.js. Mirrors the `mepSegmentToMesh` (stair-safe) pattern
  * — NOT the legacy `fixtureToMesh` bug.
  *
+ * @see ../../bim/geometry/mep-fitting-body.ts — the shared body SSoT (2D + 3D + trim)
  * @see ./mep-segment-to-mesh.ts  — units-safe sweep template
  * @see docs/centralized-systems/reference/adrs/ADR-408-mep-connectors-and-systems.md §Φ11
  */
 
 import * as THREE from 'three';
 import type { Point3D } from '../../bim/types/bim-base';
-import type {
-  MepFittingEntity,
-  MepFittingIncident,
-  MepFittingParams,
-} from '../../bim/types/mep-fitting-types';
+import type { MepFittingEntity, MepFittingParams } from '../../bim/types/mep-fitting-types';
 import { sceneUnitsToMeters } from '../../utils/scene-units';
-import { computeElbowBend } from '../../bim/geometry/mep-fitting-bend';
+import {
+  computeFittingBody,
+  type FittingBody,
+  type FittingBodyInput,
+} from '../../bim/geometry/mep-fitting-body';
 import { getElementMaterial3D } from '../materials/MaterialCatalog3D';
 import { tagMesh } from './bim-three-shape-helpers';
 
@@ -47,6 +49,9 @@ const MM_TO_M = 0.001;
 
 /** Radial segment count for cylindrical fitting bodies. */
 const RADIAL_SEGMENTS = 16;
+
+/** Tube sample count along the elbow centreline arc. */
+const ELBOW_ARC_SEGMENTS = 16;
 
 /** Material id for all fitting solids (MaterialCatalog3D, foundation). */
 const FITTING_MAT_ID = 'elem-mep-fitting';
@@ -91,49 +96,33 @@ function bodyLengthM(diameterMm: number): number {
   return Math.max(diameterMm, 1) * MM_TO_M;
 }
 
-/** Coupling: a short cylinder along the collinear axis, Ø slightly > pipe. */
-function buildCoupling(params: MepFittingParams, material: THREE.Material): THREE.Object3D {
-  const axis = planDirToWorld(params.incidents[0]?.directionUnit ?? { x: 1, y: 0 });
-  const r = (params.primaryDiameterMm * MM_TO_M) / 2 * 1.15;
-  return buildCylinderAlong(axis, r, bodyLengthM(params.primaryDiameterMm), material);
+/** Adapt fitting params → the body SSoT input in metres (node at the local origin). */
+function toBodyInput(params: MepFittingParams): FittingBodyInput {
+  const base: FittingBodyInput = {
+    kind: params.kind,
+    node: { x: 0, y: 0 },
+    incidents: params.incidents.map((inc) => ({
+      dir: { x: inc.directionUnit.x, y: inc.directionUnit.y },
+      diameter: inc.diameterMm * MM_TO_M,
+    })),
+    primaryDiameter: params.primaryDiameterMm * MM_TO_M,
+  };
+  return params.secondaryDiameterMm !== undefined
+    ? { ...base, secondaryDiameter: params.secondaryDiameterMm * MM_TO_M }
+    : base;
 }
-
-/** Reducer: truncated cone (radiusTop = primary/2, radiusBottom = secondary/2). */
-function buildReducer(params: MepFittingParams, material: THREE.Material): THREE.Object3D {
-  const axis = planDirToWorld(params.incidents[0]?.directionUnit ?? { x: 1, y: 0 });
-  const rTop = (params.primaryDiameterMm * MM_TO_M) / 2;
-  const rBot = ((params.secondaryDiameterMm ?? params.primaryDiameterMm) * MM_TO_M) / 2;
-  const lengthM = bodyLengthM(params.primaryDiameterMm);
-  const geo = new THREE.CylinderGeometry(rTop, rBot, lengthM, RADIAL_SEGMENTS);
-  return orientAlongAxis(new THREE.Mesh(geo, material), axis);
-}
-
-/** Cap: a hemisphere closing a dead-end pipe, dome facing along the incident dir. */
-function buildCap(params: MepFittingParams, material: THREE.Material): THREE.Object3D {
-  const axis = planDirToWorld(params.incidents[0]?.directionUnit ?? { x: 1, y: 0 });
-  const r = (params.primaryDiameterMm * MM_TO_M) / 2;
-  const geo = new THREE.SphereGeometry(r, RADIAL_SEGMENTS, RADIAL_SEGMENTS, 0, Math.PI * 2, 0, Math.PI / 2);
-  return orientAlongAxis(new THREE.Mesh(geo, material), axis);
-}
-
-/** Tube sample count along the elbow centreline arc. */
-const ELBOW_ARC_SEGMENTS = 16;
 
 /**
  * Radiused elbow: a TubeGeometry swept along the TRUE circular centreline bend
- * (Revit long-radius R = 1.5·D), tangent to both legs — the 3D counterpart of the
- * 2D bend body. The bend SSoT (`computeElbowBend`) runs in plan-metres (node at
- * the local origin); each centreline sample maps plan → world (x, 0, −y), so the
- * tube's ends land exactly on the legs' tangent points. Straight/degenerate node
- * (collinear pipes) → fall back to a short inline coupling.
+ * (Revit long-radius R = 1.5·D), tangent to both legs. The pipe radius is recovered
+ * from the bend's concentric walls (`outerRadius − centerRadius = Ø/2`). Each
+ * centreline sample maps plan → world (x, 0, −y), so the tube ends land on the legs'
+ * tangent points.
  */
-function buildRadiusedElbow(params: MepFittingParams, material: THREE.Material): THREE.Object3D {
-  const dM = params.primaryDiameterMm * MM_TO_M;
-  const dirA = params.incidents[0]?.directionUnit ?? { x: 1, y: 0 };
-  const dirB = params.incidents[1]?.directionUnit ?? { x: 0, y: 1 };
-  const bend = computeElbowBend({ x: 0, y: 0 }, dirA, dirB, dM);
-  if (!bend) return buildCoupling(params, material);
-
+function buildBendTube(
+  bend: Extract<FittingBody, { form: 'bend' }>['bend'],
+  material: THREE.Material,
+): THREE.Object3D {
   let sweep = bend.endAngle - bend.startAngle;
   if (bend.anticlockwise && sweep > 0) sweep -= 2 * Math.PI;
   if (!bend.anticlockwise && sweep < 0) sweep += 2 * Math.PI;
@@ -146,8 +135,58 @@ function buildRadiusedElbow(params: MepFittingParams, material: THREE.Material):
     pts.push(new THREE.Vector3(px, 0, -py)); // plan → world (Y-up, north = −Z)
   }
   const curve = new THREE.CatmullRomCurve3(pts);
-  const geo = new THREE.TubeGeometry(curve, ELBOW_ARC_SEGMENTS, dM / 2, RADIAL_SEGMENTS, false);
+  const tubeRadius = Math.max(bend.outerRadius - bend.centerRadius, 1e-4);
+  const geo = new THREE.TubeGeometry(curve, ELBOW_ARC_SEGMENTS, tubeRadius, RADIAL_SEGMENTS, false);
   return new THREE.Mesh(geo, material);
+}
+
+/** Inline body → a cylinder (coupling, equal radii) or a reducing cone (reducer). */
+function buildInlineMesh(
+  body: Extract<FittingBody, { form: 'inline' }>,
+  material: THREE.Material,
+): THREE.Object3D {
+  const axis = planDirToWorld({ x: body.axis.x, y: body.axis.y, z: 0 });
+  // CylinderGeometry(radiusTop=+Y, radiusBottom=−Y); +Y maps to +axis = radiusPos.
+  const geo = new THREE.CylinderGeometry(
+    body.radiusPos,
+    body.radiusNeg,
+    body.halfLength * 2,
+    RADIAL_SEGMENTS,
+  );
+  return orientAlongAxis(new THREE.Mesh(geo, material), axis);
+}
+
+/** Tee/cross → one arm cylinder per incident, from the node centre outward. */
+function buildLegsMesh(
+  body: Extract<FittingBody, { form: 'legs' }>,
+  material: THREE.Material,
+): THREE.Object3D {
+  const group = new THREE.Group();
+  for (const leg of body.legs) {
+    const axis = planDirToWorld({ x: leg.dir.x, y: leg.dir.y, z: 0 });
+    const arm = buildCylinderAlong(axis, leg.radius, leg.halfLength, material);
+    arm.position.copy(axis.clone().multiplyScalar(leg.halfLength / 2));
+    group.add(arm);
+  }
+  return group;
+}
+
+/** Cap → a hemisphere dome facing the outward `dir` (away from the pipe). */
+function buildCapMesh(
+  body: Extract<FittingBody, { form: 'cap' }>,
+  material: THREE.Material,
+): THREE.Object3D {
+  const axis = planDirToWorld({ x: body.dir.x, y: body.dir.y, z: 0 });
+  const geo = new THREE.SphereGeometry(
+    body.radius,
+    RADIAL_SEGMENTS,
+    RADIAL_SEGMENTS,
+    0,
+    Math.PI * 2,
+    0,
+    Math.PI / 2,
+  );
+  return orientAlongAxis(new THREE.Mesh(geo, material), axis);
 }
 
 /** Two short cylinders mitred at the node, one per incident direction. */
@@ -164,42 +203,30 @@ function buildMiteredElbow(params: MepFittingParams, material: THREE.Material): 
   return group;
 }
 
-/** Elbow dispatcher (radiused default, mitered alternative). */
-function buildElbow(params: MepFittingParams, material: THREE.Material): THREE.Object3D {
-  return params.elbowStyle === 'mitered'
-    ? buildMiteredElbow(params, material)
-    : buildRadiusedElbow(params, material);
+/** Degenerate node (collinear/no body) → a short inline stub along incident[0]. */
+function buildFallbackStub(params: MepFittingParams, material: THREE.Material): THREE.Object3D {
+  const axis = planDirToWorld(params.incidents[0]?.directionUnit ?? { x: 1, y: 0, z: 0 });
+  const r = (params.primaryDiameterMm * MM_TO_M) / 2;
+  return buildCylinderAlong(axis, r, bodyLengthM(params.primaryDiameterMm), material);
 }
 
-/**
- * One half-arm cylinder per incident, each from the node centre outward, sized
- * by the incident's own Ø. Shared by tee (3 arms) + cross (4 arms).
- */
-function buildArms(
-  incidents: readonly MepFittingIncident[],
-  material: THREE.Material,
-): THREE.Group {
-  const group = new THREE.Group();
-  for (const inc of incidents) {
-    const axis = planDirToWorld(inc.directionUnit);
-    const r = (inc.diameterMm * MM_TO_M) / 2;
-    const half = bodyLengthM(inc.diameterMm) / 2;
-    const arm = buildCylinderAlong(axis, r, half, material);
-    arm.position.copy(axis.clone().multiplyScalar(half / 2));
-    group.add(arm);
+/** Resolve the per-kind body Object3D (local space, centred at the node origin). */
+function buildFittingBodyMesh(params: MepFittingParams, material: THREE.Material): THREE.Object3D {
+  // Mitered elbow: the body SSoT models only the radiused bend.
+  if (params.kind === 'elbow' && params.elbowStyle === 'mitered') {
+    return buildMiteredElbow(params, material);
   }
-  return group;
-}
-
-/** Resolve the per-kind local-space Object3D (centred at the node origin). */
-function buildFittingBody(params: MepFittingParams, material: THREE.Material): THREE.Object3D {
-  switch (params.kind) {
-    case 'elbow':    return buildElbow(params, material);
-    case 'coupling': return buildCoupling(params, material);
-    case 'reducer':  return buildReducer(params, material);
-    case 'tee':      return buildArms(params.incidents, material);
-    case 'cross':    return buildArms(params.incidents, material);
-    case 'cap':      return buildCap(params, material);
+  const body = computeFittingBody(toBodyInput(params));
+  if (!body) return buildFallbackStub(params, material);
+  switch (body.form) {
+    case 'bend':
+      return buildBendTube(body.bend, material);
+    case 'inline':
+      return buildInlineMesh(body, material);
+    case 'legs':
+      return buildLegsMesh(body, material);
+    case 'cap':
+      return buildCapMesh(body, material);
   }
 }
 
@@ -228,7 +255,7 @@ export function mepFittingToMesh(
   if (params.incidents.length === 0 || params.primaryDiameterMm < 1) return null;
 
   const material = getElementMaterial3D('mep-fitting');
-  const body = buildFittingBody(params, material);
+  const body = buildFittingBodyMesh(params, material);
 
   const group = new THREE.Group();
   group.add(body);

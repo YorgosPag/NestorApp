@@ -6,26 +6,38 @@
  * ugly X). This pure resolver computes, per pipe segment endpoint, how far (mm) to
  * shorten the drawn/meshed pipe so it butts exactly against the fitting:
  *
- *   - elbow  → the bend tangent length `R/tan(φ/2)` (R = 1.5·D) — the pipe stops
- *              where the curved bend body begins (the tangent point).
- *   - tee / cross / coupling / reducer → a half-diameter stub (the body half-extent).
- *   - cap    → 0 (the cap sits on the pipe end; nothing is trimmed).
+ *   - elbow            → the bend tangent length `R/tan(φ/2)` (the pipe stops where
+ *                        the curved bend body begins, the tangent point).
+ *   - coupling/reducer → the inline body half-length.
+ *   - tee / cross      → the arm half-extent.
+ *   - cap              → 0 (the cap sits on the pipe end; nothing is trimmed).
  *
- * Pure & deterministic (reuses the junction derivation + classify + bend SSoT).
+ * Every distance comes from the SAME generic body SSoT (`fittingTrimExtent`) that
+ * draws the 2D footprint + the 3D mesh, so a pipe is cut exactly to the body it
+ * meets — no per-resolver heuristic that could drift from the drawn shape.
+ *
+ * Pure & deterministic (reuses the junction derivation + classify + body SSoT).
  * The host writes the result into `mep-segment-trim-store`; the 2D renderer + 3D
  * converter read it synchronously at draw time (ADR-040-safe, zero persistence).
  *
  * @see ../mep-systems/mep-pipe-junctions.ts
  * @see ./mep-fitting-classify.ts
- * @see ../geometry/mep-fitting-bend.ts
+ * @see ../geometry/mep-fitting-body.ts
  * @see docs/centralized-systems/reference/adrs/ADR-408-mep-connectors-and-systems.md §Φ11
  */
 
 import type { Entity } from '../../types/entities';
+import type { MepFittingKind } from '../types/mep-fitting-types';
 import { SEGMENT_START_CONNECTOR_ID } from '../types/mep-connector-types';
 import { derivePipeJunctions } from '../mep-systems/mep-pipe-junctions';
+import type { PipeJunction } from '../mep-systems/mep-pipe-junctions';
 import { classifyJunction } from './mep-fitting-classify';
-import { computeElbowBend } from '../geometry/mep-fitting-bend';
+import type { FittingClassification } from './mep-fitting-classify';
+import {
+  computeFittingBody,
+  fittingTrimExtent,
+  type FittingBodyInput,
+} from '../geometry/mep-fitting-body';
 
 /** Trim distances (mm) to remove from each end of a pipe segment. */
 export interface SegmentTrim {
@@ -33,8 +45,8 @@ export interface SegmentTrim {
   readonly endMm: number;
 }
 
-/** Non-elbow body half-extent as a fraction of the nominal diameter. */
-const BODY_STUB_FACTOR = 0.5;
+/** Rare degenerate (null-body) fallback half-extent as a fraction of the Ø. */
+const DEGENERATE_TRIM_FACTOR = 0.5;
 
 /**
  * Resolve the per-segment trim map for a scene. Key = segmentId; value = how much
@@ -55,7 +67,7 @@ export function resolveSegmentTrims(entities: readonly Entity[]): Map<string, Se
     const classification = classifyJunction(junction);
     if (classification.kind === null || classification.kind === 'cap') continue;
 
-    const trimMm = junctionTrimMm(junction, classification.kind, classification.primaryDiameterMm);
+    const trimMm = junctionTrimMm(junction, classification.kind, classification);
     if (trimMm <= 0) continue;
 
     for (const inc of junction.incidents) {
@@ -66,20 +78,36 @@ export function resolveSegmentTrims(entities: readonly Entity[]): Map<string, Se
   return trims;
 }
 
-/** Trim length (mm) the fitting body extends along each incident leg. */
+/**
+ * Trim length (mm) the fitting body extends along each incident leg — the body
+ * half-extent from the shared SSoT (`computeFittingBody` runs in mm, node at the
+ * origin). Falls back to a half-diameter stub only for a degenerate node.
+ */
 function junctionTrimMm(
-  junction: ReturnType<typeof derivePipeJunctions>[number],
-  kind: string,
-  primaryDiameterMm: number,
+  junction: PipeJunction,
+  kind: MepFittingKind,
+  classification: FittingClassification,
 ): number {
-  if (kind === 'elbow' && junction.incidents.length >= 2) {
-    const bend = computeElbowBend(
-      { x: 0, y: 0 },
-      junction.incidents[0]!.directionUnit,
-      junction.incidents[1]!.directionUnit,
-      primaryDiameterMm,
-    );
-    if (bend) return bend.tangentLen;
-  }
-  return primaryDiameterMm * BODY_STUB_FACTOR;
+  const body = computeFittingBody(toBodyInput(junction, kind, classification));
+  return body ? fittingTrimExtent(body) : classification.primaryDiameterMm * DEGENERATE_TRIM_FACTOR;
+}
+
+/** Adapt a classified junction → the body SSoT input (mm, node at the origin). */
+function toBodyInput(
+  junction: PipeJunction,
+  kind: MepFittingKind,
+  classification: FittingClassification,
+): FittingBodyInput {
+  const base: FittingBodyInput = {
+    kind,
+    node: { x: 0, y: 0 },
+    incidents: junction.incidents.map((inc) => ({
+      dir: { x: inc.directionUnit.x, y: inc.directionUnit.y },
+      diameter: inc.diameterMm,
+    })),
+    primaryDiameter: classification.primaryDiameterMm,
+  };
+  return classification.secondaryDiameterMm !== undefined
+    ? { ...base, secondaryDiameter: classification.secondaryDiameterMm }
+    : base;
 }
