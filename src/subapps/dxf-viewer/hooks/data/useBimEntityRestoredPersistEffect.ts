@@ -41,7 +41,9 @@ type BimRestoreEntityType =
   // ADR-415 — pure-vector 2D floorplan symbol.
   | 'floorplan-symbol'
   // ADR-408 Φ12 — plumbing manifold (floor-mounted distributor).
-  | 'mep-manifold';
+  | 'mep-manifold'
+  // ADR-417 — parametric pitched roof.
+  | 'roof';
 
 export function useBimEntityRestoredPersistEffect<T extends AnySceneEntity, S>(
   entityType: BimRestoreEntityType,
