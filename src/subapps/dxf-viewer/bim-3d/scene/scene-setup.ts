@@ -29,6 +29,8 @@ export interface InitViewportCameraDeps {
   readonly getReducedMotionOverride: () => ReducedMotionOverride;
   /** ADR-366 §A.6.Q5 — static Alt+left-click → orbit-pivot pick (clientX, clientY). */
   readonly onAltClick: (clientX: number, clientY: number) => void;
+  /** Alt+left pointer-down → orbit-pivot pick so the drag orbits around the cursor point. */
+  readonly onAltPress: (clientX: number, clientY: number) => void;
 }
 
 export function initViewportCamera(deps: InitViewportCameraDeps): ViewportCamera {
@@ -40,6 +42,7 @@ export function initViewportCamera(deps: InitViewportCameraDeps): ViewportCamera
     onInteractionEnd: deps.onInteractionEnd,
     getReducedMotion: () => checkReducedMotion(deps.getReducedMotionOverride()),
     onAltClick: deps.onAltClick,
+    onAltPress: deps.onAltPress,
   });
 }
 
