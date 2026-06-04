@@ -304,6 +304,7 @@ import {
   commitMepFixtureGripDrag,
   commitElectricalPanelGripDrag,
   commitFurnitureGripDrag,
+  commitFloorplanSymbolGripDrag,
   commitXLineGripDrag,
   commitRayGripDrag,
   commitDimensionGripDrag,
@@ -411,6 +412,13 @@ export function commitDxfGripDragModeAware(
   // furniture is params-driven; UpdateFurnitureParamsCommand recomputes geometry.
   if (grip.furnitureGripKind) {
     commitFurnitureGripDrag(grip, delta, deps);
+    return;
+  }
+  // ADR-415 — floorplan-symbol parametric grip path (center translate + rotation +
+  // opposite-corner-anchored width/depth resize). Bypasses stretch because the
+  // symbol is params-driven; UpdateFloorplanSymbolParamsCommand recomputes geometry.
+  if (grip.floorplanSymbolGripKind) {
+    commitFloorplanSymbolGripDrag(grip, delta, deps);
     return;
   }
   // ADR-359 Phase 11 — XLine grip path (basePoint translate or direction rotate).
