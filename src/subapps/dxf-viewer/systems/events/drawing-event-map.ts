@@ -256,8 +256,8 @@ export interface DrawingEventMap {
   // instances (useWallTypeReresolution); this event drives the all-floors BOQ
   // re-feed side-effect, which needs project/building context only the
   // persistence host holds. Fires on command execute/undo. `category` reserved
-  // for future non-wall family types (host handler currently scopes to 'wall').
-  'bim:family-type-changed': { typeId: string; category: 'wall' | 'stair' };
+  // for non-wall family types (host handler scopes to 'wall' + 'slab').
+  'bim:family-type-changed': { typeId: string; category: 'wall' | 'slab' | 'stair' };
   // ADR-403 — 3D column placement: the 3D viewport projected a click onto the
   // active floor plane and converted it to the active scene units. The 2D
   // `useColumnTool` listens and runs its existing `onCanvasClick(point)` commit
