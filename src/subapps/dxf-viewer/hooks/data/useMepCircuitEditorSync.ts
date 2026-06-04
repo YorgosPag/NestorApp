@@ -24,7 +24,7 @@ import { useEffect, useMemo } from 'react';
 import type { SceneModel } from '../../types/scene';
 import { useMepSystemStore } from '../../bim/mep-systems/mep-system-store';
 import { useMepCircuitEditorStore } from '../../bim/mep-systems/mep-circuit-editor-store';
-import { resolveManagedCircuits } from '../../bim/mep-systems/mep-circuit-editor';
+import { resolveManagedSystems } from '../../bim/mep-systems/mep-circuit-editor';
 
 export interface UseMepCircuitEditorSyncProps {
   readonly primarySelectedId: string | null;
@@ -42,7 +42,7 @@ export function useMepCircuitEditorSync({
     if (!primarySelectedId || !currentScene) return [];
     const entity = currentScene.entities.find((e) => e.id === primarySelectedId);
     if (!entity) return [];
-    return resolveManagedCircuits([entity], systems).map((c) => c.id);
+    return resolveManagedSystems([entity], systems).map((c) => c.id);
   }, [primarySelectedId, currentScene, systems]);
 
   useEffect(() => {
