@@ -71,6 +71,20 @@ Mouse Event → DxfCanvas.onMouseMove
 
 ## Changelog
 
+### 2026-06-04 — Cursor-lag Phase 3: coordinate-readout React-commit elimination
+
+**Status**: IMPLEMENTED 2026-06-04 (Opus 4.8). 🔴 browser verify pending.
+
+**Diagnosis source**: a **Chrome Performance** profile (not React DevTools — which had hit its limit) taken while moving the cursor. Key findings: **54.6% of the recorded time was "profiling overhead"** (React DevTools `installHook.js` `measureHostInstance`/`updateFiberRecursively` + Chrome recording + crypto-wallet extensions + ~30 tabs) — i.e. the measured lag was substantially an artefact of the measurement environment. The compositor crosshair (`CrosshairOverlay applyTransform`) cost only **0.6%** — confirming Phase 2 works. Genuine app-side costs that also affect normal use: `commitTextUpdate` **832ms / 22.4%** (coordinate readouts mutating text every move) and the `DynamicInputSubscriber` leaf re-rendering **186×** (the #1 per-move app component). The `console task` 324ms was confirmed NOT ours (`DEBUG_MOUSE_HANDLERS = false` already) — a DevTools artefact.
+
+**Fixes (2 files, normal-use wins, independent of the profiling overhead)**:
+- `components/dxf-layout/DynamicInputSubscriber.tsx` — gate its two `useSyncExternalStore` cursor subscriptions behind `interactive = dynInput.on && isInteractiveTool(activeTool)` (NO-OP store + stable `null` when idle), same SSoT gate idea as the Phase-1 leaves. Idle (the common case) → zero per-move re-render; previously it subscribed unconditionally and only bailed out with `return null` AFTER re-rendering.
+- `ui/toolbar/ToolbarCoordinatesDisplay.tsx` — replaced `useCursorWorldPosition()` (React re-render + `commitTextUpdate` per move) with a direct `textContent` write from a `subscribeToImmediateWorldPosition` subscription — same bypass-React pattern as the compositor crosshair. Zero React reconciliation on the cursor stream.
+
+**Not changed (reported to Giorgio)**: `CoordinateDebugOverlay` (its own `window` mousemove listener + `getBoundingClientRect` + a SECOND crosshair) is gated behind the `ENTERPRISE_SETTINGS_SHADOW_MODE` feature flag (`layout/FloatingPanelsSection.tsx`); it was active during the profile. Disabling that flag removes the overhead — left to Giorgio since it's a debug/shadow-mode toggle, not a perf bug per se. The real takeaway: **measure in a clean environment** (no React DevTools profiler, extensions disabled / incognito) — over half the observed cost was profiling overhead.
+
+✅ Google-level: YES — high-frequency text readout bypasses React entirely; idle dynamic-input leaf no longer subscribes; both reuse established ADR-040 patterns; no orchestrator/Cardinal-Rule change.
+
 ### 2026-06-04 — Cursor-lag Phase 2: compositor crosshair (AutoCAD/Revit-grade, off-main-thread)
 
 **Status**: IMPLEMENTED 2026-06-04 (Opus 4.8). 🔴 browser verify pending.

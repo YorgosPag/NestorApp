@@ -28,7 +28,7 @@
 import * as THREE from 'three';
 import type { MepSegmentEntity } from '../../bim/types/mep-segment-types';
 import { resolveSegmentSection } from '../../bim/types/mep-segment-types';
-import { buildRoundProfile } from '../../bim/geometry/shared/round-profile';
+import { ROUND_PROFILE_SEGMENTS } from '../../bim/geometry/shared/round-profile';
 import { useMepSegmentTrimStore } from '../../bim/mep-fittings/mep-segment-trim-store';
 import { sceneUnitsToMeters } from '../../utils/scene-units';
 import { getElementMaterial3D, getSystemTintedMaterial3D } from '../materials/MaterialCatalog3D';
@@ -52,14 +52,6 @@ function buildRectProfile(widthMm: number, heightMm: number): ReadonlyArray<{ x:
     { x:  hw, y:  hh },
     { x: -hw, y:  hh },
   ];
-}
-
-/**
- * Convert `buildRoundProfile` output (Point3D[]) to the {x,y} flat form used
- * by THREE.Shape. The round profile's z is always 0 — discard it safely.
- */
-function toXY(pts: ReadonlyArray<{ x: number; y: number; z?: number }>): ReadonlyArray<{ x: number; y: number }> {
-  return pts.map((p) => ({ x: p.x, y: p.y }));
 }
 
 /**
@@ -131,67 +123,54 @@ export function mepSegmentToMesh(
   const { widthMm, heightMm } = section;
   if (widthMm < 1 || heightMm < 1) return null;
 
-  // ── Build the 2D cross-section profile in section-frame (u=width, v=height) ──
-  // The profile lives in the THREE.Shape XY plane (local section-frame) and is
-  // swept along the axis direction (local +Z of ExtrudeGeometry).
-  const shape = new THREE.Shape();
+  // ── Elevation: the section is centred on the (absolute) centreline elevation. ──
+  const centreWorldY = segment.params.centerlineElevationMm * MM_TO_M + buildingBaseElevationM;
 
-  if (section.diameterMm !== null) {
-    // Round section: use the shared SSoT profile (N-gon in mm·MM_TO_M = metres).
-    const profilePts = toXY(buildRoundProfile(section.diameterMm, MM_TO_M));
-    if (profilePts.length < 3) return null;
-    shape.moveTo(profilePts[0].x, profilePts[0].y);
-    for (let i = 1; i < profilePts.length; i++) {
-      shape.lineTo(profilePts[i].x, profilePts[i].y);
-    }
-    shape.closePath();
-  } else {
-    // Rectangular section: build w × h rect centred on origin (metres).
-    const rectPts = buildRectProfile(widthMm, heightMm);
-    shape.moveTo(rectPts[0].x, rectPts[0].y);
-    for (let i = 1; i < rectPts.length; i++) {
-      shape.lineTo(rectPts[i].x, rectPts[i].y);
-    }
-    shape.closePath();
-  }
-
-  // ── Sweep the section along the axis length ────────────────────────────────
-  const geo = new THREE.ExtrudeGeometry(shape, { depth: lenPlan, bevelEnabled: false });
-
-  // ── Basis matrix: orient swept solid in Three.js world (Y-up) ─────────────
-  //
-  //   local X (section u = width dir)  → world perpendicular to axis (in XZ plane)
-  //   local Y (section v = height dir) → world Y (up) — Revit "height" is vertical
-  //   local Z (extrusion dir)          → world axis direction (dir)
-  //
-  // Plan axis direction: (dxWorld / lenPlan, dzWorld / lenPlan) in the XZ plane.
-  // Perp in XZ plane (90° CCW): (−dzWorld/len, dxWorld/len) → world (perpX, 0, perpZ).
-  //
-  // This follows the beam-ishape basis exactly (see buildSweptIBeamGeometry).
-
+  // World axis direction (horizontal — pipes/ducts run flat in plan-space).
   const ux = dxWorld / lenPlan; // world X component of axis dir
   const uz = dzWorld / lenPlan; // world Z component of axis dir
 
-  const dir = new THREE.Vector3(ux, 0, uz);
-  const up = new THREE.Vector3(0, 1, 0);
-  // perp = perpendicular to axis in the horizontal (XZ) plane, pointing 90° CCW.
-  const perp = new THREE.Vector3(-uz, 0, ux);
+  let geo: THREE.BufferGeometry;
 
-  const m = new THREE.Matrix4().makeBasis(perp, up, dir);
+  if (section.diameterMm !== null) {
+    // ── Round pipe/duct → a SMOOTH cylinder. CylinderGeometry gives radial-smooth
+    //    side normals + flat caps — the SAME primitive the fitting bodies use
+    //    (coupling / elbow tube). The old ExtrudeGeometry of an N-gon profile baked
+    //    per-FACE (flat) normals, so a round run looked faceted next to the smooth
+    //    elbow/coupling. Now the run and its fittings render with one continuous
+    //    surface. `ROUND_PROFILE_SEGMENTS` keeps the 2D glyph + 3D side count in sync.
+    const rM = (section.diameterMm * MM_TO_M) / 2;
+    geo = new THREE.CylinderGeometry(rM, rM, lenPlan, ROUND_PROFILE_SEGMENTS);
+    // Orient the cylinder's local +Y axis → world axis dir, centred at the segment
+    // midpoint (CylinderGeometry is centred on its origin, spanning ±length/2 in Y).
+    const q = new THREE.Quaternion().setFromUnitVectors(
+      new THREE.Vector3(0, 1, 0),
+      new THREE.Vector3(ux, 0, uz),
+    );
+    const m = new THREE.Matrix4().makeRotationFromQuaternion(q);
+    m.setPosition((sx + ex) / 2, centreWorldY, -(sy + ey) / 2);
+    geo.applyMatrix4(m);
+  } else {
+    // ── Rectangular duct → swept rect profile via ExtrudeGeometry. Sharp faceted
+    //    edges are CORRECT for a box duct (a rect duct has flat walls + crisp arrises).
+    const rectPts = buildRectProfile(widthMm, heightMm);
+    const shape = new THREE.Shape();
+    shape.moveTo(rectPts[0].x, rectPts[0].y);
+    for (let i = 1; i < rectPts.length; i++) shape.lineTo(rectPts[i].x, rectPts[i].y);
+    shape.closePath();
+    geo = new THREE.ExtrudeGeometry(shape, { depth: lenPlan, bevelEnabled: false });
 
-  // ── Elevation: centre the section on the centreline elevation ──────────────
-  // centerlineElevationMm is absolute project mm (not floor-relative).
-  // The ExtrudeGeometry is built with section centred on (0,0), so at matrix
-  // application time the section's Y=0 is the centreline — we place the origin
-  // there directly (no half-height offset needed, unlike beam which shifts +hM/2
-  // because the beam's section origin sits at its base corner, not its centre).
-  const centreWorldY = segment.params.centerlineElevationMm * MM_TO_M + buildingBaseElevationM;
-
-  // Origin of sweep: start point in Three.js world coords, at centreline Y.
-  // plan → world: x = planX, z = −planY. The section is already centred in Y.
-  m.setPosition(sx, centreWorldY, -sy);
-
-  geo.applyMatrix4(m);
+    // Basis matrix (beam-ishape pattern): local X (width) → perp (90° CCW in XZ),
+    // local Y (height) → world up, local Z (extrude) → axis dir. Origin at the start
+    // point @ centreline Y (the section is centred on (0,0) in its frame).
+    const m = new THREE.Matrix4().makeBasis(
+      new THREE.Vector3(-uz, 0, ux),
+      new THREE.Vector3(0, 1, 0),
+      new THREE.Vector3(ux, 0, uz),
+    );
+    m.setPosition(sx, centreWorldY, -sy);
+    geo.applyMatrix4(m);
+  }
 
   // ── Material by domain (ADR-408 Φ8) or by system colour (Φ9/Φ10) ───────────
   // A segment joined to a pipe network paints with the System's tinted PBR;

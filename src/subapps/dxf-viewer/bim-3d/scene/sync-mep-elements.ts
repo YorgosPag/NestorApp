@@ -15,6 +15,7 @@ import * as THREE from 'three';
 import type { Bim3DEntities } from '../stores/Bim3DEntitiesStore';
 import { mepSegmentToMesh } from '../converters/mep-segment-to-mesh';
 import { mepFittingToMesh } from '../converters/mep-fitting-to-mesh';
+import { resolveFittingSystemColor } from '../../bim/mep-systems/mep-system-color';
 import type { SyncContext } from './bim-scene-context';
 import type { BimCategory } from '../../config/bim-object-styles';
 import type { Discipline } from '../../bim/discipline/bim-discipline';
@@ -67,6 +68,11 @@ export function syncMepSegments(
  * `domain` ('pipe' | 'duct'), so a fitting follows the same discipline /
  * visibility gates as the pipes it joins.
  *
+ * Colour-by-system (Φ11): a fitting is NOT a system member (it is auto-derived),
+ * so it inherits the colour of the pipes it joins — resolved from its incident
+ * segment ids against the same `systemColorIndex` the pipes use (Revit). The index
+ * is empty when the per-view `colorBySystem` toggle is OFF ⇒ default material.
+ *
  * Defensive: legacy floor-stack entries predating Φ11 carry no `mepFittings`
  * array — never crash the whole floor sync over a missing slice.
  */
@@ -80,8 +86,13 @@ export function syncFittings(
     const category = fitting.params.domain as BimCategory;
     const r = resolveEntity(fitting, category);
     if (!r) continue;
+    const systemColor = resolveFittingSystemColor(
+      fitting.params.incidents.map((inc) => inc.segmentId),
+      ctx.systemColorIndex,
+    );
     const mesh = mepFittingToMesh(
       fitting, ctx.floorElevationMm, ctx.activeLevelId, r.baseElevation,
+      systemColor ?? undefined,
     );
     if (mesh) { mesh.userData['buildingId'] = r.buildingId; group.add(mesh); }
   }

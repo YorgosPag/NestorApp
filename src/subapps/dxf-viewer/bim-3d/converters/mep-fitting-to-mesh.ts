@@ -258,12 +258,15 @@ export function mepFittingToMesh(
   const { params } = fitting;
   if (params.incidents.length === 0 || params.primaryDiameterMm < 1) return null;
 
-  // Colour-by-system: a fitting reads as the same network as its pipes (tinted
-  // PBR), falling back to the default fitting material when its pipes carry no
-  // system (or the per-view colour-by-system toggle is OFF ⇒ no colour passed).
+  // Material: a fitting is part of the pipe run, so it uses the SAME domain PBR as
+  // the segment it joins (Revit — a continuous material/finish, NOT a separate
+  // fitting look), tinted by the system colour when its pipes are assigned. This is
+  // identical resolution to `mepSegmentToMesh`, so the fitting and its pipes read as
+  // one element instead of two different shades.
+  const domainMatType = params.domain === 'pipe' ? 'mep-pipe' : 'mep-duct';
   const material = systemColor !== undefined
-    ? getSystemTintedMaterial3D('mep-fitting', systemColor)
-    : getElementMaterial3D('mep-fitting');
+    ? getSystemTintedMaterial3D(domainMatType, systemColor)
+    : getElementMaterial3D(domainMatType);
   const body = buildFittingBodyMesh(params, material);
 
   const group = new THREE.Group();

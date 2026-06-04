@@ -37,6 +37,7 @@ interface DynamicInputSubscriberProps {
 }
 
 const NULL_POINT = (): Point2D | null => null;
+const NOOP_SUBSCRIBE = (): (() => void) => () => {};
 
 export const DynamicInputSubscriber = React.memo(function DynamicInputSubscriber({
   activeTool,
@@ -46,15 +47,21 @@ export const DynamicInputSubscriber = React.memo(function DynamicInputSubscriber
 }: DynamicInputSubscriberProps) {
   const { dynInput } = useCadToggles();
 
-  // High-frequency cursor subscriptions — isolated to this leaf only.
+  // SSoT gate (ADR-040): the dynamic-input readout only consumes the 60fps cursor
+  // stream while it is actually shown (toggle ON + an interactive tool). When idle
+  // we subscribe to a NO-OP store, so this leaf does NOT re-render on every
+  // mousemove (it was the #1 per-move re-render before this gate).
+  const interactive = dynInput.on && isInteractiveTool(activeTool);
+
+  // High-frequency cursor subscriptions — isolated to this leaf, gated by `interactive`.
   const cursorPosition = useSyncExternalStore(
-    subscribeToImmediatePosition,
-    getImmediatePosition,
+    interactive ? subscribeToImmediatePosition : NOOP_SUBSCRIBE,
+    interactive ? getImmediatePosition : NULL_POINT,
     NULL_POINT,
   );
   const mouseWorldPosition = useSyncExternalStore(
-    subscribeToImmediateWorldPosition,
-    getImmediateWorldPosition,
+    interactive ? subscribeToImmediateWorldPosition : NOOP_SUBSCRIBE,
+    interactive ? getImmediateWorldPosition : NULL_POINT,
     NULL_POINT,
   );
 
@@ -73,7 +80,7 @@ export const DynamicInputSubscriber = React.memo(function DynamicInputSubscriber
     onEntityCreated: noopEntityCreated,
   });
 
-  if (!dynInput.on || !isInteractiveTool(activeTool)) {
+  if (!interactive) {
     return null;
   }
 

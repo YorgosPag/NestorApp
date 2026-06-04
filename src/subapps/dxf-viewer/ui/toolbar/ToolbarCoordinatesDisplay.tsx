@@ -13,8 +13,11 @@
  * stable; only this component re-renders at mousemove rate. ADR-040 Phase H.
  */
 
-import React from 'react';
-import { useCursorWorldPosition } from '../../systems/cursor/useCursor';
+import React, { useEffect, useRef } from 'react';
+import {
+  getImmediateWorldPosition,
+  subscribeToImmediateWorldPosition,
+} from '../../systems/cursor/ImmediatePositionStore';
 import { formatCoordinate } from '../../rendering/entities/shared/distance-label-utils';
 
 interface ToolbarCoordinatesDisplayProps {
@@ -22,15 +25,30 @@ interface ToolbarCoordinatesDisplayProps {
   className?: string;
 }
 
+/**
+ * Live cursor X/Y in the status bar. ADR-040: instead of subscribing via React
+ * (`useCursorWorldPosition` → a React re-render + `commitTextUpdate` on every
+ * mousemove), the readout writes `textContent` DIRECTLY from the world-position
+ * store subscription — same bypass-React pattern as the compositor crosshair.
+ * Result: zero React reconciliation on the 60fps cursor stream.
+ */
 export const ToolbarCoordinatesDisplay: React.FC<ToolbarCoordinatesDisplayProps> = React.memo(
   function ToolbarCoordinatesDisplay({ precision, className }) {
-    const worldPosition = useCursorWorldPosition();
-    const x = worldPosition?.x ?? 0;
-    const y = worldPosition?.y ?? 0;
-    return (
-      <strong className={className}>
-        X: {formatCoordinate(x, precision)}, Y: {formatCoordinate(y, precision)}
-      </strong>
-    );
+    const ref = useRef<HTMLElement>(null);
+
+    useEffect(() => {
+      const render = (): void => {
+        const wp = getImmediateWorldPosition();
+        const x = wp?.x ?? 0;
+        const y = wp?.y ?? 0;
+        if (ref.current) {
+          ref.current.textContent = `X: ${formatCoordinate(x, precision)}, Y: ${formatCoordinate(y, precision)}`;
+        }
+      };
+      render();
+      return subscribeToImmediateWorldPosition(render);
+    }, [precision]);
+
+    return <strong ref={ref} className={className} />;
   },
 );

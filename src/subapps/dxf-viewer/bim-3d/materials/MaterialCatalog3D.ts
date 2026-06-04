@@ -83,6 +83,14 @@ export type Stair3DComponent =
 
 const CACHE = new Map<string, THREE.MeshStandardMaterial>();
 
+/**
+ * Colour-by-system "flat schematic" clamps (Revit look): a system-tinted surface is
+ * pushed toward diffuse so the colour is orientation-independent (pipe = elbow = cap).
+ * Min roughness floor + max metalness ceiling — only affect metallic/shiny bases.
+ */
+const SYSTEM_TINT_MIN_ROUGHNESS = 0.6;
+const SYSTEM_TINT_MAX_METALNESS = 0.1;
+
 function buildMat(def: PbrDef): THREE.MeshStandardMaterial {
   return new THREE.MeshStandardMaterial({
     color: def.color,
@@ -174,9 +182,14 @@ export function getElementMaterial3D(
 }
 
 /**
- * ADR-408 Φ5 — colour-by-system material: the element's base PBR (roughness /
- * metalness / transparency) tinted with the System's colour. Cached per
- * `${type}:${colorInt}` — never mutates the shared element singleton.
+ * ADR-408 Φ5 — colour-by-system material: the System's colour applied as a FLAT
+ * schematic surface (Revit "Color by system"). The base PBR's transparency is kept
+ * (e.g. translucent luminaires), but the surface is clamped toward DIFFUSE — low
+ * metalness, higher roughness — so the colour reads UNIFORMLY across every element
+ * and orientation. Without this clamp a metallic base (e.g. `elem-mep-pipe`,
+ * metalness 0.75) catches direct light differently on a straight pipe vs a curved
+ * elbow / cap / coupling, so the SAME colour looks like several different shades.
+ * Cached per `${type}:${colorInt}` — never mutates the shared element singleton.
  */
 export function getSystemTintedMaterial3D(
   type: 'mep-fixture' | 'electrical-panel' | 'mep-wire' | 'mep-duct' | 'mep-pipe',
@@ -187,7 +200,12 @@ export function getSystemTintedMaterial3D(
   let mat = CACHE.get(cacheKey);
   if (!mat) {
     const def = MAT_DEFS[baseKey] ?? MAT_DEFS['mat-concrete']!;
-    mat = buildMat({ ...def, color: colorInt });
+    mat = buildMat({
+      ...def,
+      color: colorInt,
+      roughness: Math.max(def.roughness, SYSTEM_TINT_MIN_ROUGHNESS),
+      metalness: Math.min(def.metalness, SYSTEM_TINT_MAX_METALNESS),
+    });
     CACHE.set(cacheKey, mat);
   }
   return mat;

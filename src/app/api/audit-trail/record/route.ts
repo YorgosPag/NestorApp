@@ -32,7 +32,7 @@ const logger = createModuleLogger('AuditTrailRecord');
 // ============================================================================
 
 const VALID_ENTITY_TYPES: ReadonlySet<string> = new Set<AuditEntityType>([
-  'contact', 'building', 'property', 'project', 'parking', 'storage', 'wall', 'opening', 'slab', 'slab-opening', 'column', 'beam', 'stair', 'mep-fixture', 'mep-system', 'electrical-panel', 'mep-segment', 'bim_family_type',
+  'contact', 'building', 'property', 'project', 'parking', 'storage', 'wall', 'opening', 'slab', 'slab-opening', 'column', 'beam', 'stair', 'mep-fixture', 'mep-system', 'electrical-panel', 'mep-segment', 'mep-fitting', 'bim_family_type',
 ]);
 
 /**
