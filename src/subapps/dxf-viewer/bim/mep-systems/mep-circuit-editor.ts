@@ -18,7 +18,7 @@
  */
 
 import type { Entity } from '../../types/entities';
-import { isElectricalPanelEntity, isMepFixtureEntity } from '../../types/entities';
+import { isMepFixtureEntity } from '../../types/entities';
 import type {
   MepSystemEntity,
   MepSystemMember,
@@ -58,11 +58,19 @@ export interface RemoveMembersPlan {
 }
 
 /**
- * The circuits a selection can manage: every circuit a selected fixture belongs
- * to (member-of) plus every circuit a selected panel feeds (source-of), deduped
- * in first-seen order. Empty when the selection touches no circuit.
+ * The MEP systems a selection can manage: every system a selected entity belongs
+ * to (member-of) plus every system a selected entity is the source of (source-of),
+ * deduped in first-seen order. Empty when the selection touches no system.
+ *
+ * **Entity-type-agnostic (ADR-408 Φ13).** Membership is resolved by entity id, not
+ * kind, so the SAME resolver serves the electrical circuit (panel = source, fixture
+ * = member) and the plumbing pipe network (manifold = source, pipe segment = member)
+ * — the System backbone is domain-agnostic, so there is no reason to fork. The two
+ * passes (all member-of, then all source-of) are deliberately NOT interleaved: this
+ * preserves the original electrical ordering — a selected device's system ranks
+ * before a selected equipment's sourced systems.
  */
-export function resolveManagedCircuits(
+export function resolveManagedSystems(
   selected: readonly Entity[],
   systems: readonly MepSystemEntity[],
 ): MepSystemEntity[] {
@@ -74,16 +82,12 @@ export function resolveManagedCircuits(
     orderedIds.push(sid);
   };
 
-  const panelIds = new Set<string>();
+  // Pass 1 — systems each selected entity is a MEMBER of (device/segment → system).
   for (const e of selected) {
-    if (isElectricalPanelEntity(e)) panelIds.add(e.id);
-    else if (isMepFixtureEntity(e)) {
-      for (const m of findSystemMembershipsByEntity(e.id, systems)) push(m.systemId);
-    }
+    for (const m of findSystemMembershipsByEntity(e.id, systems)) push(m.systemId);
   }
-  if (panelIds.size > 0) {
-    for (const sid of findSystemsBySource(panelIds, systems)) push(sid);
-  }
+  // Pass 2 — systems each selected entity is the SOURCE of (equipment → its systems).
+  for (const sid of findSystemsBySource(new Set(selected.map((e) => e.id)), systems)) push(sid);
 
   const byId = new Map(systems.map((s) => [s.id, s]));
   return orderedIds.map((id) => byId.get(id)).filter((s): s is MepSystemEntity => !!s);
