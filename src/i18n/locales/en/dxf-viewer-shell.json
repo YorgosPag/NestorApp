@@ -1812,6 +1812,8 @@
         "height": "Height",
         "diameter": "Diameter",
         "centerlineElevation": "Centreline height",
+        "startElevation": "Start height",
+        "endElevation": "End height",
         "close": "Close",
         "delete": "Delete",
         "deleteConfirm": "Delete element? This action cannot be undone.",
