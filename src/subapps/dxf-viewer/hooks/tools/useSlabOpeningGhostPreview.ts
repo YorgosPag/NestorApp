@@ -51,7 +51,10 @@ export interface UseSlabOpeningGhostPreviewProps {
 
 export function useSlabOpeningGhostPreview(props: Readonly<UseSlabOpeningGhostPreviewProps>): void {
   const { isAwaitingPosition, kind, overrides, hoveredEdgeMidpointGrip, transform, getCanvas, getViewportElement, getSceneUnits } = props;
-  const cursorWorld = useCursorWorldPosition();
+  // SSoT gate (ADR-040): subscribe to the 60fps cursor stream only while awaiting a position.
+  // NOTE: the +vertex hover affordance (hoveredEdgeMidpointGrip) is drawn from a
+  // separate low-freq prop, so gating the cursor subscription here is safe.
+  const cursorWorld = useCursorWorldPosition(isAwaitingPosition);
   const rafRef = useRef<number>(0);
   const prevActiveRef = useRef<boolean>(false);
 

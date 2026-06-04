@@ -65,7 +65,8 @@ export function useMepSegmentGhostPreview(
   props: Readonly<UseMepSegmentGhostPreviewProps>,
 ): void {
   const { isAwaitingEnd, transform, getGhostSegment, getCanvas, getViewportElement } = props;
-  const cursorWorld = useCursorWorldPosition();
+  // SSoT gate (ADR-040): subscribe to the 60fps cursor stream only while awaiting the end point.
+  const cursorWorld = useCursorWorldPosition(isAwaitingEnd);
   const rafRef = useRef<number>(0);
   const prevActiveRef = useRef<boolean>(false);
 

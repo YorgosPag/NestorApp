@@ -54,13 +54,14 @@ export interface UseStretchPreviewProps {
 
 export function useStretchPreview(props: UseStretchPreviewProps): void {
   const { levelManager, transform, getCanvas, getViewportElement } = props;
-  const cursorWorld = useCursorWorldPosition();
   const rafRef = useRef<number>(0);
 
   const phase = useSyncExternalStore(
     StretchToolStore.subscribe,
     () => StretchToolStore.getState().phase,
   );
+  // SSoT gate (ADR-040): subscribe to the 60fps cursor stream only while the tool is active.
+  const cursorWorld = useCursorWorldPosition(phase !== 'idle');
 
   // O(1) entity lookup memoised on scene array identity (rebuilt only when scene swaps).
   const entityMapRef = useRef<Map<string, AnySceneEntity>>(new Map());

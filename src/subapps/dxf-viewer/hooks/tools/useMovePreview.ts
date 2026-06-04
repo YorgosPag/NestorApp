@@ -80,7 +80,9 @@ export function useMovePreview(props: UseMovePreviewProps): void {
     getViewportElement,
   } = props;
 
-  const cursorWorld = useCursorWorldPosition();
+  // SSoT gate (ADR-040): only subscribe to the 60fps cursor stream while a
+  // preview phase is active. Idle/other tools → no listener, no re-render.
+  const cursorWorld = useCursorWorldPosition(PREVIEW_PHASES.has(phase));
   const rafRef = useRef<number>(0);
   const prevPhaseRef = useRef<MovePhase>('idle');
 

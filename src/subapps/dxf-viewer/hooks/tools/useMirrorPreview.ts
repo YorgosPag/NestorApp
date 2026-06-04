@@ -50,7 +50,8 @@ const PREVIEW_PHASES: ReadonlySet<MirrorPhase> = new Set(['awaiting-second-point
 
 export function useMirrorPreview(props: UseMirrorPreviewProps): void {
   const { phase, firstPoint, secondPoint, selectedEntityIds, levelManager, transform, getCanvas, getViewportElement } = props;
-  const cursorWorld = useCursorWorldPosition();
+  // SSoT gate (ADR-040): subscribe to the 60fps cursor stream only in a preview phase.
+  const cursorWorld = useCursorWorldPosition(PREVIEW_PHASES.has(phase));
 
   const { ortho } = useCadToggles();
   const orthoOnRef = useRef(ortho.on);

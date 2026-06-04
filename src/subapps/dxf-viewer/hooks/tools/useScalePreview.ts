@@ -33,11 +33,12 @@ export interface UseScalePreviewProps {
 
 export function useScalePreview(props: UseScalePreviewProps): void {
   const { levelManager, transform, getCanvas, getViewportElement } = props;
-  const cursorWorld = useCursorWorldPosition();
   const rafRef = useRef<number>(0);
 
   // Reactive phase read — triggers re-render when phase changes so RAF restarts
   const phase = useSyncExternalStore(ScaleToolStore.subscribe, () => ScaleToolStore.getState().phase);
+  // SSoT gate (ADR-040): subscribe to the 60fps cursor stream only while the tool is active.
+  const cursorWorld = useCursorWorldPosition(phase !== 'idle');
 
   const getEntity = useCallback((id: string): AnySceneEntity | null => {
     if (!levelManager.currentLevelId) return null;

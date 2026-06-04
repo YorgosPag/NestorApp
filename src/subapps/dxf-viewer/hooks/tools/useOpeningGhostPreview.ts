@@ -56,7 +56,8 @@ export interface UseOpeningGhostPreviewProps {
 
 export function useOpeningGhostPreview(props: Readonly<UseOpeningGhostPreviewProps>): void {
   const { isAwaitingPosition, kind, overrides, getHostWall, transform, getCanvas, getViewportElement, getSceneUnits } = props;
-  const cursorWorld = useCursorWorldPosition();
+  // SSoT gate (ADR-040): subscribe to the 60fps cursor stream only while awaiting a position.
+  const cursorWorld = useCursorWorldPosition(isAwaitingPosition);
   const rafRef = useRef<number>(0);
   const prevActiveRef = useRef<boolean>(false);
 

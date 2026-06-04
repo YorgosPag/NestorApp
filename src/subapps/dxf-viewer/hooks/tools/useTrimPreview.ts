@@ -31,10 +31,11 @@ export interface UseTrimPreviewProps {
 
 export function useTrimPreview(props: UseTrimPreviewProps): void {
   const { transform, getCanvas, getViewportElement } = props;
-  const cursorWorld = useCursorWorldPosition();
   const rafRef = useRef<number>(0);
 
   const phase = useSyncExternalStore(TrimToolStore.subscribe, () => TrimToolStore.getState().phase);
+  // SSoT gate (ADR-040): subscribe to the 60fps cursor stream only while the tool is active.
+  const cursorWorld = useCursorWorldPosition(phase !== 'idle');
 
   const getViewport = useCallback(
     (canvas: HTMLCanvasElement) => {

@@ -52,6 +52,10 @@ export interface UseRotationPreviewProps {
   // hook's leaf consumer, not CanvasSection.
 }
 
+// Phases where the rotation preview consumes the live cursor (SSoT for both
+// the cursor-subscription gate and the clear-on-exit effect below).
+const PREVIEW_PHASES: ReadonlySet<RotationPhase> = new Set(['awaiting-reference', 'awaiting-angle']);
+
 // ============================================================================
 // HOOK
 // ============================================================================
@@ -62,7 +66,8 @@ export function useRotationPreview(props: UseRotationPreviewProps): void {
     selectedEntityIds, levelManager,
     transform, getCanvas, getViewportElement,
   } = props;
-  const cursorWorld = useCursorWorldPosition();
+  // SSoT gate (ADR-040): subscribe to the 60fps cursor stream only in a preview phase.
+  const cursorWorld = useCursorWorldPosition(PREVIEW_PHASES.has(phase));
 
   const rafRef = useRef<number>(0);
   /** Track previous phase to clear canvas ONLY on transition out of awaiting-angle */
@@ -215,7 +220,6 @@ export function useRotationPreview(props: UseRotationPreviewProps): void {
   }, [phase, basePoint, referencePoint, currentAngle, selectedEntityIds, getEntity, transform, getCanvas, getViewportElement, cursorWorld]);
 
   // Clear canvas when transitioning from active preview phase → idle/base-point
-  const PREVIEW_PHASES: ReadonlySet<RotationPhase> = new Set(['awaiting-reference', 'awaiting-angle']);
   useEffect(() => {
     const wasPreviewActive = PREVIEW_PHASES.has(prevPhaseRef.current);
     const isPreviewActive = PREVIEW_PHASES.has(phase);

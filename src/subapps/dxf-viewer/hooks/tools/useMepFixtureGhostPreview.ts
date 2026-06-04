@@ -33,7 +33,8 @@ export interface UseMepFixtureGhostPreviewProps {
 
 export function useMepFixtureGhostPreview(props: Readonly<UseMepFixtureGhostPreviewProps>): void {
   const { isAwaitingPosition, transform, getGhostFootprint, getCanvas, getViewportElement } = props;
-  const cursorWorld = useCursorWorldPosition();
+  // SSoT gate (ADR-040): subscribe to the 60fps cursor stream only while awaiting a position.
+  const cursorWorld = useCursorWorldPosition(isAwaitingPosition);
   const rafRef = useRef<number>(0);
   const prevActiveRef = useRef<boolean>(false);
 
