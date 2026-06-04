@@ -19,7 +19,7 @@
 import * as THREE from 'three';
 import type { SlabDna } from '../../bim/types/slab-dna-types';
 import { getMaterial3D } from '../materials/MaterialCatalog3D';
-import { setPlanarWorldUvs } from '../converters/bim-uv-helpers';
+import { setBoxWorldUvs } from '../converters/bim-uv-helpers';
 import { createBimLights } from '../scene/scene-setup';
 import { PreviewOrbitControls } from './preview-orbit-controls';
 import { resolvePreviewPivot, PreviewPivotMarker } from './preview-pivot';
@@ -184,7 +184,7 @@ export class SlabTypePreviewRenderer {
 
   private buildBand(band: SlabPreviewBand): BandMesh {
     const geo = new THREE.BoxGeometry(STUB_WIDTH_M, band.heightM, STUB_DEPTH_M);
-    setPlanarWorldUvs(geo, { dominantAxis: 'z' }); // front face (x,y) world UVs
+    setBoxWorldUvs(geo); // per-face world-meter UVs → matches the 3D (no stripes)
     const mesh = new THREE.Mesh(geo, getMaterial3D(band.materialId));
     mesh.position.set(0, band.centerYM, 0);
     this.bandGroup.add(mesh);
