@@ -93,6 +93,14 @@ export const HOT_GRIP_OP_REGISTRY: Readonly<Record<string, WallHotGripOp>> = {
   'furniture-corner-nw': 'corner',
   'furniture-corner-sw': 'corner',
   'furniture-corner-se': 'corner',
+  // Floorplan symbols (ADR-415) — full wall parity: move MOVE (3-click),
+  // rotation REFERENCE (6-click), 4 corners 2-click. Status-bar prompts inherited.
+  'floorplan-symbol-move': 'move',
+  'floorplan-symbol-rotation': 'rotate',
+  'floorplan-symbol-corner-ne': 'corner',
+  'floorplan-symbol-corner-nw': 'corner',
+  'floorplan-symbol-corner-sw': 'corner',
+  'floorplan-symbol-corner-se': 'corner',
 } as const;
 
 /** Map any grip kind to its hot-grip operation, or null if it stays drag. */
@@ -113,7 +121,7 @@ export function isWallHotGripKind(kind: string | undefined | null): boolean {
  */
 export function hotGripKindOf(grip: UnifiedGripInfo | null | undefined): string | undefined {
   if (!grip) return undefined;
-  return grip.wallGripKind ?? grip.beamGripKind ?? grip.columnGripKind ?? grip.stairGripKind ?? grip.mepFixtureGripKind ?? grip.electricalPanelGripKind ?? grip.furnitureGripKind;
+  return grip.wallGripKind ?? grip.beamGripKind ?? grip.columnGripKind ?? grip.stairGripKind ?? grip.mepFixtureGripKind ?? grip.electricalPanelGripKind ?? grip.furnitureGripKind ?? grip.floorplanSymbolGripKind;
 }
 
 /**
