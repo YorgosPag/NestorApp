@@ -19,6 +19,7 @@
 
 import type { Point3D } from '../types/bim-base';
 import type { MepSegmentParams } from '../types/mep-segment-types';
+import { resolveSegmentEndpointElevationsMm } from '../types/mep-segment-types';
 import {
   SEGMENT_START_CONNECTOR_ID,
   SEGMENT_END_CONNECTOR_ID,
@@ -26,9 +27,11 @@ import {
 
 /**
  * World position of a segment endpoint connector. `seg-start` → `startPoint`,
- * `seg-end` → `endPoint` (both world canvas-unit plan coords); `z` carries the
- * centreline elevation (mm). Returns `null` for any other connector id (a
- * segment owns exactly these two endpoint connectors).
+ * `seg-end` → `endPoint` (both world canvas-unit plan coords); `z` carries that
+ * endpoint's OWN elevation (mm) — the start and end may sit at different heights
+ * (sloped run / riser, ADR-408 Φ-A), so each connector reports its own z, NOT a
+ * shared centreline. Returns `null` for any other connector id (a segment owns
+ * exactly these two endpoint connectors).
  *
  * The result follows the segment for free: `startPoint`/`endPoint` ARE the
  * segment's persisted transform, so a move/edit of the segment relocates the
@@ -38,12 +41,12 @@ export function segmentConnectorWorldPosition(
   connectorId: string,
   params: MepSegmentParams,
 ): Point3D | null {
-  const planPoint =
-    connectorId === SEGMENT_START_CONNECTOR_ID
-      ? params.startPoint
-      : connectorId === SEGMENT_END_CONNECTOR_ID
-        ? params.endPoint
-        : null;
-  if (!planPoint) return null;
-  return { x: planPoint.x, y: planPoint.y, z: params.centerlineElevationMm };
+  const elev = resolveSegmentEndpointElevationsMm(params);
+  if (connectorId === SEGMENT_START_CONNECTOR_ID) {
+    return { x: params.startPoint.x, y: params.startPoint.y, z: elev.startMm };
+  }
+  if (connectorId === SEGMENT_END_CONNECTOR_ID) {
+    return { x: params.endPoint.x, y: params.endPoint.y, z: elev.endMm };
+  }
+  return null;
 }
