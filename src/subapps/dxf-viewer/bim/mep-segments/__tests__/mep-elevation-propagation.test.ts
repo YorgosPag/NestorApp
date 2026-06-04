@@ -7,13 +7,17 @@
  * the node cannot drag away from.
  */
 
-import { resolveConnectedElevationPatches } from '../mep-elevation-propagation';
+import {
+  resolveConnectedElevationPatches,
+  resolveManifoldConnectedPipePatches,
+} from '../mep-elevation-propagation';
 import {
   resolveSegmentEndpointElevationsMm,
   deriveCenterlineElevationMm,
 } from '../../types/mep-segment-types';
 import type { Entity } from '../../../types/entities';
 import type { MepSegmentEntity, MepSegmentParams } from '../../types/mep-segment-types';
+import type { MepManifoldParams } from '../../types/mep-manifold-types';
 
 /** Build a pipe segment between two plan points at the given endpoint z's (mm). */
 function pipe(
@@ -158,5 +162,48 @@ describe('resolveConnectedElevationPatches', () => {
     // a's end did not actually change → no changed node → edited-only patch.
     expect(patches).toHaveLength(1);
     expect(patches[0]!.segment.id).toBe('a');
+  });
+});
+
+describe('resolveManifoldConnectedPipePatches (host moves, pipes follow)', () => {
+  /** Manifold at origin, one outlet at world (50, 40), datum `mountingElevationMm`. */
+  function manifoldParams(mountingElevationMm: number): MepManifoldParams {
+    return {
+      kind: 'floor-manifold',
+      shape: 'rectangular',
+      position: { x: 0, y: 0, z: 0 },
+      rotation: 0,
+      width: 400,
+      length: 80,
+      bodyHeightMm: 60,
+      mountingElevationMm,
+      outletCount: 1,
+      inletDiameterMm: 25,
+      outletDiameterMm: 16,
+      sceneUnits: 'mm',
+      connectors: [
+        { connectorId: 'm-out-0', domain: 'pipe', flow: 'out', localPosition: { x: 50, y: 40, z: 0 } },
+      ],
+    } as unknown as MepManifoldParams;
+  }
+
+  it('moves a pipe end snapped to an outlet to the new manifold elevation', () => {
+    const p = pipe('p', { x: 50, y: 40 }, { x: 1000, y: 40 }, 400, 400); // start on the outlet
+    const patches = resolveManifoldConnectedPipePatches([p], 'mfld-1', manifoldParams(0));
+
+    expect(patches).toHaveLength(1);
+    expect(resolveSegmentEndpointElevationsMm(patches[0]!.nextParams).startMm).toBe(0);
+    // The free end is untouched.
+    expect(resolveSegmentEndpointElevationsMm(patches[0]!.nextParams).endMm).toBe(400);
+  });
+
+  it('leaves pipes not on any outlet alone', () => {
+    const p = pipe('p', { x: 5000, y: 0 }, { x: 6000, y: 0 }, 400, 400);
+    expect(resolveManifoldConnectedPipePatches([p], 'mfld-1', manifoldParams(0))).toHaveLength(0);
+  });
+
+  it('is a no-op when the pipe end is already at the outlet elevation', () => {
+    const p = pipe('p', { x: 50, y: 40 }, { x: 1000, y: 40 }, 400, 400);
+    expect(resolveManifoldConnectedPipePatches([p], 'mfld-1', manifoldParams(400))).toHaveLength(0);
   });
 });

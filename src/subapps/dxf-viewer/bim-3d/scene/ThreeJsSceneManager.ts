@@ -407,9 +407,13 @@ export class ThreeJsSceneManager {
   /** ADR-366 §A.6.Q5 — Alt+click orbit-pivot picking (delegates to `setBimOrbitPivot`). */
   setOrbitPivotAt(clientX: number, clientY: number): boolean {
     if (this.disposed) return false;
+    // DXF overlay floor-plane elevation (Y) so a BIM-miss click on the DXF
+    // wireframe orbits around the real cursor point, not a wrong-depth fallback.
+    const dxfBounds = this.dxfConverter.getBounds();
+    const groundY = dxfBounds ? dxfBounds.min.y : null;
     return setBimOrbitPivot(
       { bimGroup: this.bimLayer.group, camera: this.viewport.camera, canvas: this.renderer.domElement,
-        currentTarget: this.viewport.target,
+        currentTarget: this.viewport.target, groundY,
         setOrbitPivot: (p) => this.viewport.setOrbitPivot(p),
         onNavigationActive: () => this.poi.onNavigationActive(),
         markDirty: () => this.markSceneDirty() },

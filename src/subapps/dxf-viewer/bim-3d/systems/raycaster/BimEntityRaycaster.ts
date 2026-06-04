@@ -19,6 +19,10 @@ const _raycaster = new THREE.Raycaster();
 const _ndc = new THREE.Vector2();
 const _planeNormal = new THREE.Vector3();
 const _plane = new THREE.Plane();
+const _worldUp = new THREE.Vector3(0, 1, 0);
+const _groundPlane = new THREE.Plane();
+const _groundCoplanar = new THREE.Vector3();
+const _groundPoint = new THREE.Vector3();
 
 /**
  * SSoT client (px) → NDC [-1,1] conversion against a dom element rect.
@@ -94,12 +98,17 @@ export function raycastWorldPoint(
 }
 
 /**
- * Like `raycastWorldPoint`, but on a geometry MISS falls back to a camera-facing
- * plane through `fallbackThrough` (the current orbit target). So Alt+click on
- * empty space — or on the DXF overlay / ground rather than a BIM mesh — still
- * yields a sensible pivot at the cursor location instead of a no-op (ADR-366
- * §A.6.Q5 v3: «δεν γυρίζει γύρω από το σημείο» όταν αστοχούσε το pick). Mirrors
- * the preview's `resolvePreviewPivot` fallback so the two viewports behave alike.
+ * Like `raycastWorldPoint`, but on a geometry MISS falls back — in order — to:
+ *   1. the horizontal floor plane at `groundY` (when provided), where the DXF
+ *      overlay lives (`DxfToThreeConverter` maps DXF → Y-up floor plane at Y=0),
+ *      so a click on the DXF wireframe / empty floor yields the REAL point under
+ *      the cursor at floor depth — not a point at the wrong depth;
+ *   2. a camera-facing plane through `fallbackThrough` (the current orbit target)
+ *      for upward / "sky" clicks that never meet the floor in front of the camera.
+ *
+ * Without (1), Alt+drag on a DXF object orbited around the wrong-depth fallback
+ * point → «σε αντικείμενο DXF η περιστροφή έφευγε στο κέντρο» (a BIM mesh hit was
+ * fine because it returns the true surface point). ADR-366 §A.6.Q5 v5.
  */
 export function raycastWorldPointOrPlane(
   group: THREE.Group,
@@ -108,6 +117,7 @@ export function raycastWorldPointOrPlane(
   clientX: number,
   clientY: number,
   fallbackThrough: THREE.Vector3,
+  groundY: number | null = null,
 ): THREE.Vector3 | null {
   const ndc = clientToNdc(domElement, clientX, clientY);
   if (!ndc) return null;
@@ -116,6 +126,14 @@ export function raycastWorldPointOrPlane(
   const hits = _raycaster.intersectObjects(group.children, true);
   if (hits.length > 0) return hits[0].point.clone();
 
+  // (1) DXF / floor-plan click → intersect the real horizontal floor plane.
+  if (groundY !== null) {
+    _groundCoplanar.set(0, groundY, 0);
+    _groundPlane.setFromNormalAndCoplanarPoint(_worldUp, _groundCoplanar);
+    if (_raycaster.ray.intersectPlane(_groundPlane, _groundPoint)) return _groundPoint.clone();
+  }
+
+  // (2) Upward / empty-sky click → camera-facing plane through the look target.
   camera.getWorldDirection(_planeNormal);
   _plane.setFromNormalAndCoplanarPoint(_planeNormal, fallbackThrough);
   const point = new THREE.Vector3();

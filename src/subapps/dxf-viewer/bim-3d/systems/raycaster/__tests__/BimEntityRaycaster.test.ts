@@ -18,6 +18,16 @@ function cameraLookingAtOrigin(): THREE.PerspectiveCamera {
   return cam;
 }
 
+/** Oblique camera ABOVE the floor, looking down at the origin — the realistic
+ *  3D-viewer pose where a DXF floor-plan click should pivot on the Y=0 plane. */
+function cameraAboveLookingDown(): THREE.PerspectiveCamera {
+  const cam = new THREE.PerspectiveCamera(50, 1, 0.1, 1000);
+  cam.position.set(0, 5, 5);
+  cam.lookAt(0, 0, 0);
+  cam.updateMatrixWorld(true);
+  return cam;
+}
+
 describe('raycastWorldPoint — ADR-366 §A.6.Q5 orbit-pivot picking', () => {
   it('returns the world point of the front face hit at viewport center', () => {
     const group = new THREE.Group();
@@ -100,6 +110,47 @@ describe('raycastWorldPointOrPlane — Alt-pivot with plane fallback (v3)', () =
       new THREE.Group(), cameraLookingAtOrigin(), mockDom(0, 0), 50, 50, new THREE.Vector3(),
     );
     expect(point).toBeNull();
+  });
+});
+
+describe('raycastWorldPointOrPlane — DXF floor-plane fallback (v5, groundY)', () => {
+  const fallback = new THREE.Vector3(0, 0, 0);
+
+  it('falls back to the horizontal floor plane at groundY on a geometry miss', () => {
+    const point = raycastWorldPointOrPlane(
+      new THREE.Group(), cameraAboveLookingDown(), mockDom(), 50, 50, fallback, 0,
+    );
+    expect(point).not.toBeNull();
+    // Centre click from an above-looking camera lands on the Y=0 floor at origin.
+    expect(point!.y).toBeCloseTo(0, 5);
+  });
+
+  it('floor pivot tracks the cursor at constant floor depth (y stays on the plane)', () => {
+    const cam = cameraAboveLookingDown();
+    const near = raycastWorldPointOrPlane(new THREE.Group(), cam, mockDom(), 50, 90, fallback, 0)!;
+    const far = raycastWorldPointOrPlane(new THREE.Group(), cam, mockDom(), 50, 10, fallback, 0)!;
+    expect(near.y).toBeCloseTo(0, 5);
+    expect(far.y).toBeCloseTo(0, 5);
+    // Higher on screen (smaller clientY) looks farther across the floor (more −Z).
+    expect(far.z).toBeLessThan(near.z);
+  });
+
+  it('a geometry hit still wins over the floor plane', () => {
+    const group = new THREE.Group();
+    const box = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1));
+    group.add(box);
+    box.updateMatrixWorld(true);
+    const point = raycastWorldPointOrPlane(group, cameraAboveLookingDown(), mockDom(), 50, 50, fallback, 0)!;
+    // The box surface (≈0.7 from origin) is returned, NOT the floor point at origin.
+    expect(point.distanceTo(new THREE.Vector3(0, 0, 0))).toBeGreaterThan(0.3);
+  });
+
+  it('groundY changes the resolved pivot vs the camera-facing fallback', () => {
+    const cam = cameraAboveLookingDown();
+    const withGround = raycastWorldPointOrPlane(new THREE.Group(), cam, mockDom(), 50, 90, fallback, 0)!;
+    const noGround = raycastWorldPointOrPlane(new THREE.Group(), cam, mockDom(), 50, 90, fallback)!;
+    expect(withGround.y).toBeCloseTo(0, 5);
+    expect(withGround.distanceTo(noGround)).toBeGreaterThan(0.01);
   });
 });
 

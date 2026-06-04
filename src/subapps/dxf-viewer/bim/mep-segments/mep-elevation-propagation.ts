@@ -46,6 +46,7 @@ import {
   resolveSegmentEndpointElevationsMm,
   deriveCenterlineElevationMm,
 } from '../types/mep-segment-types';
+import type { MepManifoldParams } from '../types/mep-manifold-types';
 import { connectorWorldPosition } from '../types/mep-connector-types';
 import { getEntityConnectors } from '../mep-systems/connector-access';
 import { resolvePipeJoinTolerance } from '../mep-systems/mep-pipe-network-derive';
@@ -204,6 +205,58 @@ export function resolveConnectedElevationPatches(
     if (other.params.domain !== 'pipe') continue;
     const patched = patchCoincidentEndpoints(other, changed, tol2);
     if (patched) patches.push({ segment: other, nextParams: patched });
+  }
+  return patches;
+}
+
+/**
+ * ADR-408 Φ-B2a (host side) — when a manifold MOVES in elevation, the pipe ends
+ * snapped to its outlets follow (Revit "host moves, connectors move with it").
+ *
+ * Given the manifold's NEXT params (already carrying the new `mountingElevationMm`
+ * + rebuilt `connectors`), retarget every pipe endpoint coincident (xy within
+ * `tolerance`) with one of its connector world positions to that connector's new
+ * elevation (`mountingElevationMm` + the connector's local z). Only the `z` moves;
+ * a manifold elevation edit leaves outlet xy unchanged, so the same pipe ends stay
+ * matched. The manifold is the anchor — pipes follow it, never the reverse.
+ *
+ * Pure. Returns one patch per affected pipe segment (empty when none connect).
+ */
+export function resolveManifoldConnectedPipePatches(
+  entities: readonly Entity[],
+  manifoldId: string,
+  nextManifoldParams: MepManifoldParams,
+  tolerance?: number,
+): SegmentElevationPatch[] {
+  const tol = tolerance ?? resolvePipeJoinTolerance(entities);
+  const tol2 = tol * tol;
+  const { position, mountingElevationMm } = nextManifoldParams;
+  const rotation = nextManifoldParams.rotation ?? 0;
+  const ports = (nextManifoldParams.connectors ?? []).map((c) => {
+    const w = connectorWorldPosition(c, position, rotation);
+    return { x: w.x, y: w.y, zMm: mountingElevationMm + (c.localPosition.z ?? 0) };
+  });
+  if (ports.length === 0) return [];
+
+  const patches: SegmentElevationPatch[] = [];
+  for (const e of entities) {
+    if (e.id === manifoldId || !isMepSegmentEntity(e) || e.params.domain !== 'pipe') continue;
+    const elev = resolveSegmentEndpointElevationsMm(e.params);
+    let startZ = elev.startMm;
+    let endZ = elev.endMm;
+    let touched = false;
+    const { startPoint, endPoint } = e.params;
+    for (const port of ports) {
+      if (dist2(port.x, port.y, startPoint.x, startPoint.y) <= tol2 && startZ !== port.zMm) {
+        startZ = port.zMm;
+        touched = true;
+      }
+      if (dist2(port.x, port.y, endPoint.x, endPoint.y) <= tol2 && endZ !== port.zMm) {
+        endZ = port.zMm;
+        touched = true;
+      }
+    }
+    if (touched) patches.push({ segment: e, nextParams: withEndpointZ(e.params, startZ, endZ) });
   }
   return patches;
 }

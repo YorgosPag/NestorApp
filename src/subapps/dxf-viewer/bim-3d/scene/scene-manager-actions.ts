@@ -140,6 +140,13 @@ export interface OrbitPivotDeps {
   readonly canvas: HTMLCanvasElement;
   /** Current orbit target — the camera-facing fallback plane passes through it. */
   readonly currentTarget: THREE.Vector3;
+  /**
+   * Floor-plane elevation (metres) of the DXF overlay, or null when no DXF is
+   * loaded. When set, a BIM-miss raycast falls back to this horizontal plane
+   * (where the DXF wireframe lives) so clicking the floor plan yields the real
+   * cursor point — fixes «σε DXF η περιστροφή έφευγε στο κέντρο» (ADR-366 §A.6.Q5).
+   */
+  readonly groundY: number | null;
   readonly setOrbitPivot: (point: THREE.Vector3) => void;
   readonly onNavigationActive: () => void;
   readonly markDirty: () => void;
@@ -155,16 +162,16 @@ export interface OrbitPivotDeps {
  */
 export function setBimOrbitPivot(deps: OrbitPivotDeps, clientX: number, clientY: number): boolean {
   const point = raycastWorldPointOrPlane(
-    deps.bimGroup, deps.camera, deps.canvas, clientX, clientY, deps.currentTarget,
+    deps.bimGroup, deps.camera, deps.canvas, clientX, clientY, deps.currentTarget, deps.groundY,
   );
   // [ORBIT-DBG] TEMP — remove after diagnosis (handoff 2026-06-04).
   const _r = deps.canvas.getBoundingClientRect();
   const _ndcX = ((clientX - _r.left) / _r.width) * 2 - 1;
   const _ndcY = -((clientY - _r.top) / _r.height) * 2 + 1;
   // eslint-disable-next-line no-console
-  console.debug('[ORBIT-DBG] setBimOrbitPivot NDC=%s,%s (0,0=center) rect=%sx%s@%s,%s point=%s',
+  console.debug('[ORBIT-DBG] setBimOrbitPivot NDC=%s,%s (0,0=center) groundY=%s point=%s',
     _ndcX.toFixed(3), _ndcY.toFixed(3),
-    Math.round(_r.width), Math.round(_r.height), Math.round(_r.left), Math.round(_r.top),
+    deps.groundY === null ? 'none' : deps.groundY.toFixed(2),
     point ? point.toArray().map((n) => n.toFixed(2)).join(',') : 'NULL(miss)');
   if (!point) return false;
   deps.setOrbitPivot(point);

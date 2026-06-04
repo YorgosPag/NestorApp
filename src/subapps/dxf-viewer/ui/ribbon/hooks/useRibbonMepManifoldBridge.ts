@@ -34,8 +34,10 @@ import {
   MIN_MANIFOLD_OUTLET_COUNT,
 } from '../../../bim/types/mep-manifold-types';
 import { buildMepManifoldConnectors } from '../../../bim/mep-manifolds/mep-manifold-geometry';
-import { useCommandHistory } from '../../../core/commands';
+import { useCommandHistory, CompoundCommand } from '../../../core/commands';
 import { UpdateMepManifoldParamsCommand } from '../../../core/commands/entity-commands/UpdateMepManifoldParamsCommand';
+import { UpdateMepSegmentParamsCommand } from '../../../core/commands/entity-commands/UpdateMepSegmentParamsCommand';
+import { resolveManifoldConnectedPipePatches } from '../../../bim/mep-segments/mep-elevation-propagation';
 import { LevelSceneManagerAdapter } from '../../../systems/entity-creation/LevelSceneManagerAdapter';
 import {
   MEP_MANIFOLD_RIBBON_KEYS,
@@ -122,9 +124,35 @@ export function useRibbonMepManifoldBridge(
         levelManager.setLevelScene,
         levelManager.currentLevelId,
       );
-      executeCommand(
-        new UpdateMepManifoldParamsCommand(manifold.id, withConnectors, manifold.params, sm, false),
+      const manifoldCmd = new UpdateMepManifoldParamsCommand(
+        manifold.id,
+        withConnectors,
+        manifold.params,
+        sm,
+        false,
       );
+
+      // Revit "host moves, connectors follow": when the manifold's elevation
+      // changes, pipe ends snapped to its outlets follow. Bundle the manifold
+      // update + each connected-pipe update into ONE undo (ADR-408 Φ-B2a host side).
+      const scene = levelManager.getLevelScene(levelManager.currentLevelId);
+      const pipePatches = resolveManifoldConnectedPipePatches(
+        scene?.entities ?? [],
+        manifold.id,
+        withConnectors,
+      );
+      if (pipePatches.length === 0) {
+        executeCommand(manifoldCmd);
+        return;
+      }
+      const pipeCmds = pipePatches.map(
+        (p) => new UpdateMepSegmentParamsCommand(p.segment.id, p.nextParams, p.segment.params, sm, false),
+      );
+      executeCommand(new CompoundCommand('Update manifold + connected pipes', [manifoldCmd, ...pipeCmds]));
+      // The segment command does not emit — persistence auto-saves on this event.
+      for (const p of pipePatches) {
+        EventBus.emit('bim:mep-segment-params-updated', { segmentId: p.segment.id });
+      }
     },
     [executeCommand, levelManager],
   );

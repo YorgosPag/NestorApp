@@ -24,6 +24,7 @@ import type { Point2D } from '../../rendering/types/Types';
 import type { Point3D } from '../../bim/types/bim-base';
 import {
   DEFAULT_ROOF_BASE_PIVOT_Z_MM,
+  DEFAULT_ROOF_SLOPE_DEG,
   DEFAULT_ROOF_SLOPE_UNIT,
   DEFAULT_ROOF_THICKNESS_MM,
   type RoofEntity,
@@ -31,7 +32,7 @@ import {
 } from '../../bim/types/roof-types';
 import type { SlabDna } from '../../bim/types/slab-dna-types';
 import { createDefaultRoofBuildup } from '../../bim/types/slab-dna-types';
-import { computeRoofGeometry, validateRoofParams, buildDefaultRoofEdges } from '../../bim/geometry/roof-geometry';
+import { computeRoofGeometry, validateRoofParams, buildDefaultRoofEdges, applyRoofShapePreset } from '../../bim/geometry/roof-geometry';
 import { createRoof } from '@/services/factories/roof.factory';
 import type { SceneUnits } from '../../utils/scene-units';
 
@@ -60,6 +61,14 @@ export interface RoofParamOverrides {
   readonly storeyId?: string;
   /** mm. Offset της στάθμης γείσου από τη storey reference. */
   readonly offsetFromStorey?: number;
+  /**
+   * ADR-417 — μορφή στέγης (Φ1: flat / mono-pitch / gable). Default 'gable' ώστε
+   * η νέα στέγη να βγαίνει αμέσως κεκλιμένη (το per-roof contextual tab θα την
+   * αλλάζει στη Φ1-part-2). 'flat' → επίπεδο δώμα.
+   */
+  readonly shape?: 'flat' | 'mono-pitch' | 'gable';
+  /** Κλίση (στη μονάδα `slopeUnit`) για slope-defining ακμές. Default DEFAULT_ROOF_SLOPE_DEG. */
+  readonly slope?: number;
 }
 
 // ─── Defaults factory ────────────────────────────────────────────────────────
@@ -89,7 +98,14 @@ export function buildDefaultRoofParams(
 
   const lifted: Point3D[] = vertices.map((v) => ({ x: v.x, y: v.y, z: 0 }));
   const outline = { vertices: lifted };
-  const edges = buildDefaultRoofEdges(outline);
+  // ADR-417 — default σε δίρριχτη (gable) ώστε η νέα στέγη να βγαίνει κεκλιμένη·
+  // 'flat' → επίπεδο δώμα (buildDefaultRoofEdges). Το per-roof contextual tab
+  // (Φ1-part-2) θα οδηγεί αυτά τα overrides.
+  const shape = overrides.shape ?? 'gable';
+  const slopeValue = overrides.slope ?? DEFAULT_ROOF_SLOPE_DEG;
+  const edges = shape === 'flat'
+    ? buildDefaultRoofEdges(outline)
+    : applyRoofShapePreset(outline, shape, slopeValue, slopeUnit);
 
   const params: RoofParams = {
     outline,
