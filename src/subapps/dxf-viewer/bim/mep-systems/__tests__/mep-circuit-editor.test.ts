@@ -3,7 +3,7 @@
  */
 
 import {
-  resolveManagedCircuits,
+  resolveManagedSystems,
   buildAddMembersUpdate,
   buildRemoveMembersUpdate,
 } from '../mep-circuit-editor';
@@ -38,10 +38,10 @@ function sys(id: string, members: Array<[string, string]>, source = 'pnlX'): Mep
   return { id, params };
 }
 
-describe('resolveManagedCircuits', () => {
+describe('resolveManagedSystems', () => {
   it('returns the circuit a selected fixture belongs to', () => {
     const systems = [sys('A', [['fx1', 'c1']]), sys('B', [['fx2', 'c1']])];
-    const out = resolveManagedCircuits([fixture('fx1')], systems);
+    const out = resolveManagedSystems([fixture('fx1')], systems);
     expect(out.map((s) => s.id)).toEqual(['A']);
   });
 
@@ -51,19 +51,19 @@ describe('resolveManagedCircuits', () => {
       sys('B', [['fx2', 'c1']], 'pnl1'),
       sys('C', [['fx3', 'c1']], 'pnlOther'),
     ];
-    const out = resolveManagedCircuits([panel('pnl1')], systems);
+    const out = resolveManagedSystems([panel('pnl1')], systems);
     expect(out.map((s) => s.id)).toEqual(['A', 'B']);
   });
 
   it('dedupes when a selection touches the same circuit twice', () => {
     const systems = [sys('A', [['fx1', 'c1'], ['fx2', 'c1']], 'pnl1')];
-    const out = resolveManagedCircuits([fixture('fx1'), fixture('fx2')], systems);
+    const out = resolveManagedSystems([fixture('fx1'), fixture('fx2')], systems);
     expect(out.map((s) => s.id)).toEqual(['A']);
   });
 
   it('returns empty when the selection touches no circuit', () => {
     const systems = [sys('A', [['fx1', 'c1']], 'pnl1')];
-    expect(resolveManagedCircuits([fixture('fxNope')], systems)).toEqual([]);
+    expect(resolveManagedSystems([fixture('fxNope')], systems)).toEqual([]);
   });
 });
 
