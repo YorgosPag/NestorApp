@@ -207,3 +207,65 @@ export function resolveSegmentSection(params: MepSegmentParams): {
 export function isPipeSegment(params: MepSegmentParams): boolean {
   return params.domain === 'pipe';
 }
+
+// ─── Per-endpoint elevation SSoT (ADR-408 Φ-A, true 3D segment) ───────────────────
+
+/** Resolved per-endpoint centreline elevations (mm) of a segment's two ends. */
+export interface SegmentEndpointElevationsMm {
+  /** mm — elevation of the `startPoint` end. */
+  readonly startMm: number;
+  /** mm — elevation of the `endPoint` end. */
+  readonly endMm: number;
+}
+
+/**
+ * SSoT resolver for a segment's two endpoint elevations (mm). The authoritative
+ * source is `startPoint.z` / `endPoint.z` (true 3D points) — a segment may slope
+ * (riser / inclined run), so each end carries its own elevation. `centerlineElevationMm`
+ * is the DERIVED back-compat midpoint, NOT the truth.
+ *
+ * Back-compat / migration is self-healing (no destructive Firestore migration):
+ *   - **Both** ends at z=0/undefined ⇒ a legacy or freshly-created HORIZONTAL run —
+ *     `centerlineElevationMm` is the single elevation, applied to both ends.
+ *   - Otherwise (at least one end has a non-zero z) ⇒ the doc is in the per-endpoint
+ *     format — read each `z`, falling back to `centerlineElevationMm` only where an
+ *     individual `z` is absent.
+ *
+ * This is unambiguous because `centerlineElevationMm` is itself derived: a NEW doc
+ * with both ends at z=0 always has `centerlineElevationMm === 0`, so the "both-zero"
+ * branch is a no-op for it; it only ever lifts genuine LEGACY docs (independent
+ * centreline) and never corrupts a riser whose start sits at floor (z=0, end≠0).
+ *
+ * Pure & idempotent — applying it to its own output is stable.
+ */
+export function resolveSegmentEndpointElevationsMm(
+  params: MepSegmentParams,
+): SegmentEndpointElevationsMm {
+  const c = params.centerlineElevationMm;
+  const sz = params.startPoint.z;
+  const ez = params.endPoint.z;
+  const startUnset = sz === undefined || sz === 0;
+  const endUnset = ez === undefined || ez === 0;
+  if (startUnset && endUnset) {
+    return { startMm: c, endMm: c };
+  }
+  return { startMm: sz ?? c, endMm: ez ?? c };
+}
+
+/**
+ * Derive the centreline ("Middle Elevation") from two endpoint elevations (mm) —
+ * the midpoint. Used by builders/bridge to keep `centerlineElevationMm` in sync
+ * as a derived cache whenever the endpoint z's change.
+ */
+export function deriveCenterlineElevationMm(startMm: number, endMm: number): number {
+  return (startMm + endMm) / 2;
+}
+
+/**
+ * Is the run inclined (start elevation ≠ end elevation, beyond 1mm)? Pure helper
+ * for renderers / fitting risers (ADR-408 Φ-C). Reads the per-endpoint SSoT.
+ */
+export function isSegmentInclined(params: MepSegmentParams): boolean {
+  const { startMm, endMm } = resolveSegmentEndpointElevationsMm(params);
+  return Math.abs(startMm - endMm) > 1;
+}
