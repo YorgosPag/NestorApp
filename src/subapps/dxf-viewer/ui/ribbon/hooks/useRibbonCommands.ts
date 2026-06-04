@@ -26,6 +26,8 @@ import type { RibbonSlabOpeningBridge } from './useRibbonSlabOpeningBridge';
 import { isSlabOpeningBadgeKey } from './useRibbonSlabOpeningBridge';
 import type { RibbonMepCircuitBridge } from './useRibbonMepCircuitBridge';
 import { isMepCircuitActionKey } from './bridge/mep-circuit-command-keys';
+import type { RibbonMepPipeNetworkBridge } from './useRibbonMepPipeNetworkBridge';
+import { isMepPipeNetworkActionKey } from './bridge/mep-pipe-network-command-keys';
 import type { RibbonMepFixtureBridge } from './useRibbonMepFixtureBridge';
 import { isMepFixturePanelVisibilityKey } from './useRibbonMepFixtureBridge';
 import {
@@ -93,6 +95,8 @@ interface UseRibbonCommandsProps {
   slabOpeningBridge: RibbonSlabOpeningBridge;
   /** ADR-408 Φ5 — MEP circuit contextual tab bridge (create-from-selection). */
   mepCircuitBridge: RibbonMepCircuitBridge;
+  /** ADR-408 Φ13 — MEP pipe-network contextual tab bridge (manifold + pipes). */
+  mepPipeNetworkBridge: RibbonMepPipeNetworkBridge;
   /** ADR-406 — MEP fixture (φωτιστικό) contextual tab bridge. */
   mepFixtureBridge: RibbonMepFixtureBridge;
   /** ADR-410 — furniture library contextual tab bridge. */
@@ -130,6 +134,7 @@ export function useRibbonCommands({
   beamBridge,
   slabOpeningBridge,
   mepCircuitBridge,
+  mepPipeNetworkBridge,
   mepFixtureBridge,
   furnitureBridge,
   floorplanSymbolBridge,
@@ -337,6 +342,10 @@ export function useRibbonCommands({
         mepCircuitBridge.onAction(action);
         return;
       }
+      if (isMepPipeNetworkActionKey(action)) {
+        mepPipeNetworkBridge.onAction(action);
+        return;
+      }
       if (isMepFixtureActionKey(action)) {
         mepFixtureBridge.onAction(action);
         return;
@@ -347,7 +356,7 @@ export function useRibbonCommands({
       }
       wrappedHandleAction(action, data);
     },
-    [wallBridge, openingBridge, slabBridge, columnBridge, beamBridge, slabOpeningBridge, stairBridge, mepCircuitBridge, mepFixtureBridge, furnitureBridge, wrappedHandleAction],
+    [wallBridge, openingBridge, slabBridge, columnBridge, beamBridge, slabOpeningBridge, stairBridge, mepCircuitBridge, mepPipeNetworkBridge, mepFixtureBridge, furnitureBridge, wrappedHandleAction],
   );
 
   return React.useMemo(
