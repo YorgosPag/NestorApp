@@ -35,7 +35,9 @@ export interface UseColumnGhostPreviewProps {
 
 export function useColumnGhostPreview(props: Readonly<UseColumnGhostPreviewProps>): void {
   const { isAwaitingPosition, kind, transform, getGhostFootprints, getCanvas, getViewportElement } = props;
-  const cursorWorld = useCursorWorldPosition();
+  // SSoT gate (ADR-040): only subscribe to the 60fps cursor stream while this
+  // tool is awaiting a position. Idle → no listener, no mousemove re-render.
+  const cursorWorld = useCursorWorldPosition(isAwaitingPosition);
   const rafRef = useRef<number>(0);
   const prevActiveRef = useRef<boolean>(false);
 
