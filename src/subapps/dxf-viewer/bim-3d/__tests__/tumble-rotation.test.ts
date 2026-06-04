@@ -159,4 +159,30 @@ describe('createTumbleRotation — ADR-366 §A.6.Q5 Alt+click orbit-pivot', () =
     fire('pointerup', { altKey: false, clientX: 100, clientY: 100 });
     expect(onAltClick).not.toHaveBeenCalled();
   });
+
+  function makeTumbleWithPress(onAltPress: jest.Mock) {
+    const camera = new THREE.PerspectiveCamera(50, 1, 0.1, 1000);
+    camera.position.set(0, 0, 5);
+    const target = new THREE.Vector3(0, 0, 0);
+    const { el, fire } = listenerCapturingElement();
+    createTumbleRotation({
+      getCamera: () => camera, getTarget: () => target, domElement: el,
+      onStart: jest.fn(), onChange: jest.fn(), onEnd: jest.fn(), onAltPress,
+    });
+    return fire;
+  }
+
+  it('fires onAltPress on Alt+left pointer-DOWN (before any drag), so rotation orbits the click point', () => {
+    const onAltPress = jest.fn();
+    const fire = makeTumbleWithPress(onAltPress);
+    fire('pointerdown', { altKey: true, clientX: 200, clientY: 150 });
+    expect(onAltPress).toHaveBeenCalledWith(200, 150);
+  });
+
+  it('does NOT fire onAltPress when Alt was not held at pointerdown', () => {
+    const onAltPress = jest.fn();
+    const fire = makeTumbleWithPress(onAltPress);
+    fire('pointerdown', { altKey: false, clientX: 200, clientY: 150 });
+    expect(onAltPress).not.toHaveBeenCalled();
+  });
 });
