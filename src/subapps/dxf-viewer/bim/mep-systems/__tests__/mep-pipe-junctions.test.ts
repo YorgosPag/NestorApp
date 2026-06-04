@@ -178,4 +178,33 @@ describe('derivePipeJunctions', () => {
       expect([...keys].sort((x, y) => x.localeCompare(y))).toEqual(keys);
     });
   });
+
+  // ── ADR-408 Φ-A: junction elevation from per-endpoint z (sloped runs) ──────
+  describe('per-endpoint elevation', () => {
+    /** A riser: start at floor (z=0), end at ceiling (z=2800). */
+    const riser = (id: string, start: [number, number], end: [number, number]): Entity =>
+      ({
+        id,
+        type: 'mep-segment',
+        params: {
+          domain: 'pipe',
+          sectionKind: 'round',
+          startPoint: { x: start[0], y: start[1], z: 0 },
+          endPoint: { x: end[0], y: end[1], z: 2800 },
+          diameter: 50,
+          centerlineElevationMm: 1400,
+        },
+      } as unknown as Entity);
+
+    it('a junction carries the incident endpoint own elevation, not the centreline', () => {
+      // riser end (z=2800) meets a horizontal pipe end at the same plan node.
+      const junctions = derivePipeJunctions([
+        riser('r1', [0, 0], [100, 0]),
+        seg('p2', [100, 0], [200, 0], { elevation: 2800 }),
+      ]);
+      const shared = junctions.find((j) => j.incidents.length === 2)!;
+      // r1 end z=2800, p2 start (horizontal, centreline 2800 ⇒ both ends 2800).
+      expect(shared.centerlineElevationMm).toBeCloseTo(2800, 5);
+    });
+  });
 });
