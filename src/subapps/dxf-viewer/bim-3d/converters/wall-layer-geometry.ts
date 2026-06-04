@@ -31,6 +31,7 @@
 
 import type { Point3D } from '../../bim/types/bim-base';
 import type { WallDna, WallDnaLayer } from '../../bim/types/wall-dna-types';
+import { buildupBoundaryFractions } from '../../bim/types/layered-buildup';
 import type { WallOpeningPiece } from './wall-opening-pieces';
 
 /** One layer's share of a `WallOpeningPiece`: its own quad + the source piece z range + identity. */
@@ -59,16 +60,12 @@ function lerpPt(p: Point3D, q: Point3D, t: number): Point3D {
  * Cumulative thickness fractions [0..1] at each layer boundary, measured from the
  * OUTER face. `[0, f1, f2, …, 1]` (length = layers.length + 1). Uses
  * `totalThickness` as the SSoT denominator (matches `WallParams.thickness`).
+ *
+ * Thin wall-typed wrapper over the entity-agnostic SSoT
+ * `buildupBoundaryFractions` (shared with slabs — `layered-buildup.ts`).
  */
 export function layerBoundaryFractions(dna: WallDna): number[] {
-  const total = dna.totalThickness;
-  const fracs: number[] = [0];
-  let acc = 0;
-  for (const layer of dna.layers) {
-    acc += layer.thickness;
-    fracs.push(total > 1e-9 ? Math.min(acc / total, 1) : 1);
-  }
-  return fracs;
+  return buildupBoundaryFractions(dna);
 }
 
 /**

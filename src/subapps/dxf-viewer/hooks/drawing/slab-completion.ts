@@ -31,6 +31,7 @@ import {
   type SlabReinforcement,
   type SlabSlope,
 } from '../../bim/types/slab-types';
+import type { SlabDna } from '../../bim/types/slab-dna-types';
 import { computeSlabGeometry } from '../../bim/geometry/slab-geometry';
 import { validateSlabParams } from '../../bim/validators/slab-validator';
 import { createSlab } from '@/services/factories/slab.factory';
@@ -58,6 +59,12 @@ export interface SlabParamOverrides {
   readonly slope?: SlabSlope;
   readonly reinforcement?: SlabReinforcement;
   readonly material?: string;
+  /**
+   * Composite layered build-up. When supplied, `thickness` is derived from
+   * `dna.totalThickness` (SSoT — overrides any explicit `thickness`). Legacy
+   * single-material slabs omit it. Usually injected by the slab family-type.
+   */
+  readonly dna?: SlabDna;
 }
 
 // ─── Defaults factory ────────────────────────────────────────────────────────
@@ -82,7 +89,11 @@ export function buildDefaultSlabParams(
   sceneUnits: SceneUnits = 'mm',
 ): SlabParams {
   const kind = overrides.kind ?? 'floor';
-  const thickness = overrides.thickness ?? DEFAULT_SLAB_THICKNESS_MM;
+  // SSoT: dna (when present) owns the thickness — derive, do not double-enter.
+  const thickness =
+    overrides.dna?.totalThickness ??
+    overrides.thickness ??
+    DEFAULT_SLAB_THICKNESS_MM;
   const levelElevation =
     overrides.levelElevation ?? SLAB_KIND_DEFAULT_LEVEL_ELEVATION_MM[kind];
   const geometryType = overrides.geometryType ?? DEFAULT_SLAB_GEOMETRY_TYPE;
@@ -104,6 +115,7 @@ export function buildDefaultSlabParams(
       ? { reinforcement: overrides.reinforcement }
       : {}),
     ...(overrides.material !== undefined ? { material: overrides.material } : {}),
+    ...(overrides.dna !== undefined ? { dna: overrides.dna } : {}),
   };
   return params;
 }

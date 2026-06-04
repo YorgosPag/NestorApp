@@ -64,6 +64,28 @@ export const SlabPivotEdgeSchema = z.enum(['N', 'S', 'E', 'W', 'center']);
 /** Slab-specific IFC4 class. */
 export const SlabIfcTypeSchema = z.literal('IfcSlab');
 
+/** Slab layer functional zone (Revit Core Boundary). */
+export const SlabLayerZoneSchema = z.enum(['top', 'core', 'bottom']);
+
+// ─── DNA build-up schema (composite slab types) ──────────────────────────────
+
+export const SlabDnaLayerSchema = z
+  .object({
+    id: z.string().min(1),
+    name: z.string().min(1),
+    thickness: z.number().positive(),
+    materialId: z.string().min(1),
+    zone: SlabLayerZoneSchema,
+  })
+  .strict();
+
+export const SlabDnaSchema = z
+  .object({
+    layers: z.array(SlabDnaLayerSchema).min(1),
+    totalThickness: z.number().positive(),
+  })
+  .strict();
+
 // ─── Slope schema (required when geometryType='tilted') ──────────────────────
 
 export const SlabSlopeSchema = z
@@ -88,6 +110,7 @@ const SlabParamsBaseSchema = z
     slabOpeningIds: z.array(z.string().min(1)).optional(),
     reinforcement: SlabReinforcementSchema.optional(),
     material: z.string().min(1).optional(),
+    dna: SlabDnaSchema.optional(),
     sceneUnits: z.string().optional(),
     storeyId: z.string().min(1).optional(),
     offsetFromStorey: z.number().finite().optional(),
@@ -117,6 +140,19 @@ export const SlabParamsSchema = SlabParamsBaseSchema.superRefine((data, ctx) => 
       path: ['slope'],
       message:
         "SlabParams: slope επιτρέπεται μόνο όταν geometryType='tilted'.",
+    });
+  }
+  // SSoT: όταν υπάρχει dna, το thickness παράγεται από το totalThickness
+  // (μηδέν διπλο-καταχώρηση — ίδιος κανόνας με WallParams.thickness).
+  if (
+    data.dna !== undefined &&
+    Math.abs(data.thickness - data.dna.totalThickness) > 1e-3
+  ) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['thickness'],
+      message:
+        'SlabParams: όταν υπάρχει dna, thickness πρέπει να ισούται με dna.totalThickness.',
     });
   }
 });

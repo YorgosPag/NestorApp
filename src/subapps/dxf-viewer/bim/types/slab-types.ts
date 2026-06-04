@@ -37,6 +37,7 @@ import type {
 import type { SceneUnits } from '../../utils/scene-units';
 import type { IfcEntityMixin } from './ifc-entity-mixin';
 import type { EnvelopeLayer } from './thermal-envelope-types';
+import type { SlabDna } from './slab-dna-types';
 
 // ─── Sub-type discriminator (ADR-363 §5.5) ───────────────────────────────────
 
@@ -110,6 +111,16 @@ export interface SlabParams {
   readonly reinforcement?: SlabReinforcement;
   /** Material library ID (Phase 6+). */
   readonly material?: string;
+  /**
+   * Composite layered build-up (top→bottom). Revit "Floor → Edit Type →
+   * Structure", IFC `IfcMaterialLayerSet`. Optional/non-breaking — legacy
+   * single-material slabs leave it absent. When present, `thickness` is
+   * derived from `dna.totalThickness` (SSoT, no double-entry — mirrors
+   * `WallParams.thickness`). Usually supplied by the slab family-type and
+   * re-resolved into the instance ("type always wins").
+   * @see bim/types/slab-dna-types.ts
+   */
+  readonly dna?: SlabDna;
   /**
    * DXF canvas coordinate unit. Always stored so `computeSlabGeometry` can
    * convert canvas-unit² polygon areas → m² for BOQ.
