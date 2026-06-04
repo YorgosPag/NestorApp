@@ -64,6 +64,8 @@ export function buildDxfDragPreview(
     ...(activeGrip.electricalPanelGripKind ? { electricalPanelGripKind: activeGrip.electricalPanelGripKind, anchorPos } : {}),
     // ADR-410 — furniture grip kind + anchor for the live corner/move/rotate ghost.
     ...(activeGrip.furnitureGripKind ? { furnitureGripKind: activeGrip.furnitureGripKind, anchorPos } : {}),
+    // ADR-415 — floorplan-symbol grip kind + anchor for the live ghost.
+    ...(activeGrip.floorplanSymbolGripKind ? { floorplanSymbolGripKind: activeGrip.floorplanSymbolGripKind, anchorPos } : {}),
     // ADR-363 Phase 3.5 / 3.7a / 2.5 — slab / slab-opening / opening grip kinds.
     ...(activeGrip.slabGripKind        ? { slabGripKind:        activeGrip.slabGripKind,        anchorPos } : {}),
     ...(activeGrip.slabOpeningGripKind ? { slabOpeningGripKind: activeGrip.slabOpeningGripKind, anchorPos } : {}),
@@ -109,6 +111,8 @@ export function buildRotateReferencePreview(
     ...(activeGrip.electricalPanelGripKind ? { electricalPanelGripKind: activeGrip.electricalPanelGripKind } : {}),
     // ADR-410 — furniture 6-click rotate live ghost.
     ...(activeGrip.furnitureGripKind ? { furnitureGripKind: activeGrip.furnitureGripKind } : {}),
+    // ADR-415 — floorplan-symbol 6-click rotate live ghost.
+    ...(activeGrip.floorplanSymbolGripKind ? { floorplanSymbolGripKind: activeGrip.floorplanSymbolGripKind } : {}),
     hotGrip: true as const,
     rotatePivot: pivot,
     delta: { x: 0, y: 0 },
