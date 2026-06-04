@@ -25,8 +25,12 @@ export const MEP_SEGMENT_RIBBON_KEYS = {
     height: 'mepSegment.params.height',
     /** mm — outer diameter (round only). */
     diameter: 'mepSegment.params.diameter',
-    /** mm — centreline elevation from project origin (Revit "Middle Elevation"). */
+    /** mm — centreline ("Middle Elevation"): edits BOTH endpoint z's (whole-run lift). */
     centerlineElevation: 'mepSegment.params.centerlineElevation',
+    /** mm — start-endpoint elevation (Φ-A, per-endpoint riser/slope). */
+    startElevation: 'mepSegment.params.startElevation',
+    /** mm — end-endpoint elevation (Φ-A, per-endpoint riser/slope). */
+    endElevation: 'mepSegment.params.endElevation',
   },
 } as const;
 
@@ -34,7 +38,9 @@ export type MepSegmentRibbonNumberCommandKey =
   | typeof MEP_SEGMENT_RIBBON_KEYS.params.width
   | typeof MEP_SEGMENT_RIBBON_KEYS.params.height
   | typeof MEP_SEGMENT_RIBBON_KEYS.params.diameter
-  | typeof MEP_SEGMENT_RIBBON_KEYS.params.centerlineElevation;
+  | typeof MEP_SEGMENT_RIBBON_KEYS.params.centerlineElevation
+  | typeof MEP_SEGMENT_RIBBON_KEYS.params.startElevation
+  | typeof MEP_SEGMENT_RIBBON_KEYS.params.endElevation;
 
 export type MepSegmentRibbonStringCommandKey =
   typeof MEP_SEGMENT_RIBBON_KEYS.stringParams.sectionKind;
@@ -44,6 +50,8 @@ export const MEP_SEGMENT_RIBBON_NUMBER_KEYS: readonly MepSegmentRibbonNumberComm
   MEP_SEGMENT_RIBBON_KEYS.params.height,
   MEP_SEGMENT_RIBBON_KEYS.params.diameter,
   MEP_SEGMENT_RIBBON_KEYS.params.centerlineElevation,
+  MEP_SEGMENT_RIBBON_KEYS.params.startElevation,
+  MEP_SEGMENT_RIBBON_KEYS.params.endElevation,
 ];
 
 export const MEP_SEGMENT_RIBBON_STRING_KEYS: readonly MepSegmentRibbonStringCommandKey[] = [
