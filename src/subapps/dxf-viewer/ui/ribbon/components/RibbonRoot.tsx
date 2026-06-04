@@ -26,6 +26,7 @@ import {
   type RibbonCommandsApi,
 } from '../context/RibbonCommandContext';
 import type { RibbonTab } from '../types/ribbon-types';
+import { useRenderTrace } from '../../../debug/useRenderTrace'; // 🔴 TEMP DEBUG — remove after hover-lag diagnosis
 
 interface RibbonRootProps {
   /** ADR-345 Fase 3 — command bridge to the DXF viewer state. */
@@ -51,6 +52,8 @@ const RibbonRootInner: React.FC<RibbonRootProps> = ({
   activeContextualTrigger = null,
   settingsTabContent,
 }) => {
+  // 🔴 TEMP DEBUG — if RibbonRoot re-renders on hover, which prop broke the memo?
+  useRenderTrace('RibbonRoot', { commands, contextualTabs, activeContextualTrigger });
   const { t } = useTranslation('dxf-viewer-shell');
   const state = useRibbonState();
   const drag = useRibbonTabDrag(state.tabOrder, state.setTabOrder);
