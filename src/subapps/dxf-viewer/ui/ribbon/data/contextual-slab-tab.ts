@@ -82,6 +82,30 @@ export const CONTEXTUAL_SLAB_TAB: RibbonTab = {
   badgeKey: SLAB_RIBBON_BADGE_KEYS.violations,
   panels: [
     {
+      // ADR-412 — Slab Family Type: pick/assign the composite type + open the
+      // «Edit Slab Type» dialog (layers + live 3D preview). Self-hides for
+      // untyped slabs via the widget. Mirrors the wall «Τύπος» panel.
+      id: 'slab-family-type',
+      labelKey: 'ribbon.panels.slabType',
+      rows: [
+        {
+          isInFlyout: false,
+          buttons: [
+            {
+              type: 'widget',
+              size: 'small',
+              widgetId: 'slab-family-type',
+              command: {
+                id: 'slab.familyType',
+                labelKey: 'ribbon.commands.slabFamilyType.type',
+                commandKey: 'slab.familyType',
+              },
+            },
+          ],
+        },
+      ],
+    },
+    {
       id: 'slab-kind',
       labelKey: 'ribbon.panels.slabKind',
       rows: [
