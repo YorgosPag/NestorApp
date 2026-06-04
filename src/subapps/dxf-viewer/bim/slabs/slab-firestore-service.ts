@@ -38,6 +38,7 @@ import type {
   SlabKind,
   SlabParams,
 } from '../types/slab-types';
+import type { SlabTypeParams } from '../types/bim-family-type';
 import type { BimValidation } from '../types/bim-base';
 
 // ============================================================================
@@ -61,6 +62,10 @@ export interface SlabDoc {
   readonly buildingId?: string;
   readonly floorId?: string;
   readonly layerId?: string;
+  /** ADR-412 — FK → BimFamilyType.id. Absent on legacy/untyped slabs. */
+  readonly typeId?: string;
+  /** ADR-412 — per-instance overrides of type-level slab params. */
+  readonly typeOverrides?: Partial<SlabTypeParams>;
   readonly createdAt: Timestamp;
   readonly createdBy: string;
   readonly updatedAt: Timestamp;
@@ -83,6 +88,9 @@ export interface SlabSaveInput {
   readonly buildingId?: string;
   readonly floorId?: string;
   readonly layerId?: string;
+  /** ADR-412 — family-type link (FK + per-instance overrides). */
+  readonly typeId?: string;
+  readonly typeOverrides?: Partial<SlabTypeParams>;
 }
 
 export interface SlabUpdateInput {
@@ -151,10 +159,14 @@ export class SlabFirestoreService {
     };
 
     // Firestore rejects `undefined` — include optional fields μόνο όταν set.
+    // `setDoc` REPLACES the doc, so omitting `typeId`/`typeOverrides` on a
+    // detach removes them (non-destructive — params kept; ADR-412 Q6).
     if (input.geometry !== undefined) base.geometry = input.geometry;
     if (input.buildingId !== undefined) base.buildingId = input.buildingId;
     if (input.floorId !== undefined) base.floorId = input.floorId;
     if (input.layerId !== undefined) base.layerId = input.layerId;
+    if (input.typeId !== undefined) base.typeId = input.typeId;
+    if (input.typeOverrides !== undefined) base.typeOverrides = input.typeOverrides;
 
     await setDoc(ref, base);
     return base as unknown as SlabDoc;
@@ -205,5 +217,9 @@ export function entityToSaveInput(entity: SlabEntity): SlabSaveInput {
     params: entity.params,
     validation: entity.validation,
     layerId: entity.layerId,
+    // ADR-412 — carry the family-type link so a typed slab round-trips its
+    // `typeId`/overrides. Omitted (undefined) for untyped/legacy slabs.
+    ...(entity.typeId !== undefined && { typeId: entity.typeId }),
+    ...(entity.typeOverrides !== undefined && { typeOverrides: entity.typeOverrides }),
   };
 }
