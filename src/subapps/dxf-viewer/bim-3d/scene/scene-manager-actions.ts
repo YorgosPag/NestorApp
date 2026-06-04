@@ -157,6 +157,12 @@ export function setBimOrbitPivot(deps: OrbitPivotDeps, clientX: number, clientY:
   const point = raycastWorldPointOrPlane(
     deps.bimGroup, deps.camera, deps.canvas, clientX, clientY, deps.currentTarget,
   );
+  // [ORBIT-DBG] TEMP — remove after diagnosis (handoff 2026-06-04).
+  // eslint-disable-next-line no-console
+  console.debug('[ORBIT-DBG] setBimOrbitPivot client=%s,%s point=%s currentTarget=%s',
+    clientX, clientY,
+    point ? point.toArray().map((n) => n.toFixed(2)).join(',') : 'NULL(miss)',
+    deps.currentTarget.toArray().map((n) => n.toFixed(2)).join(','));
   if (!point) return false;
   deps.setOrbitPivot(point);
   deps.onNavigationActive();
