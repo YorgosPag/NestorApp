@@ -50,6 +50,19 @@
     "removeFailed": "Select at least one member fixture to remove.",
     "networksDerived": "Pipe networks derived from connectivity — networks: {count}."
   },
+  "mepPipeNetwork": {
+    "created": "Water network created — pipes: {count}.",
+    "failed": {
+      "no-source": "Select a manifold as the network source.",
+      "multiple-sources": "Select only one manifold as the source.",
+      "no-members": "Select at least one pipe for the network."
+    },
+    "membersAdded": "Pipes added to the network — pipes: {count}.",
+    "membersRemoved": "Pipes removed from the network — pipes: {count}.",
+    "noActiveNetwork": "No active network to edit.",
+    "addFailed": "Select at least one pipe to add to the network.",
+    "removeFailed": "Select at least one member pipe to remove."
+  },
   "bim": {
     "wallCascadeDelete": {
       "title": "Delete Wall",
@@ -748,6 +761,7 @@
       "slabOpeningProperties": "Slab Opening Properties",
       "multiSelection": "Multi-Selection",
       "mepCircuit": "Electrical Circuit",
+      "mepPipeNetwork": "Water Network",
       "mepFixtureProperties": "Fixture Properties",
       "validationBadge": "Code violation",
       "dimension": "Dimension",
@@ -836,6 +850,8 @@
       "mepFixtureCircuit": "Circuit",
       "mepCircuit": "Circuit",
       "mepCircuitProperties": "Circuit Properties",
+      "mepPipeNetwork": "Network",
+      "mepPipeNetworkProperties": "Network Properties",
       "multiSelectionCommon": "Common Properties",
       "multiSelectionFilter": "Filter",
       "placeholder": "Coming soon",
@@ -1726,10 +1742,20 @@
         "name": "Name",
         "color": "Color",
         "circuitPicker": "Circuit",
+        "networkPicker": "Network",
         "addMembers": "Add selected",
         "addMembersTooltip": "Add the selected fixtures to the current circuit (moved from another circuit if already assigned).",
         "removeMembers": "Remove selected",
         "removeMembersTooltip": "Remove the selected member fixtures from the current circuit."
+      },
+      "mepPipeNetwork": {
+        "create": "Create water network",
+        "createTooltip": "Create a water network from the selected manifold (source) and pipes (members).",
+        "close": "Close",
+        "addMembers": "Add selected",
+        "addMembersTooltip": "Add the selected pipes to the current network (moved from another network if already assigned).",
+        "removeMembers": "Remove selected",
+        "removeMembersTooltip": "Remove the selected member pipes from the current network."
       },
       "measureAngle": "Angle",
       "measureAngleVariants": {
