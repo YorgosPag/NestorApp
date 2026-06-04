@@ -140,6 +140,8 @@ export type ToolType =
   | 'beam-from-wall'
   // ADR-363 Phase 3.7: BIM Slab-Opening drawing tool (shaft/well/duct/chimney)
   | 'slab-opening'
+  // ADR-417: BIM Roof drawing tool (footprint polygon + per-edge slopes)
+  | 'roof'
   // ADR-406: point-based MEP fixture drawing tool (light fixture first)
   | 'mep-fixture'
   // ADR-408 Φ3: point-based electrical panel drawing tool (circuit source)
