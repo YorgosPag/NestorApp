@@ -389,7 +389,15 @@ export function createViewportCamera(
   }
 
   function update(): void {
+    // [ORBIT-DBG] TEMP — remove after diagnosis (handoff 2026-06-04).
+    const _dbgBefore = activeCamera.position.clone();
+    const _dbgQuat = activeCamera.quaternion.clone();
     controls.update();
+    const _dbgMoved = _dbgBefore.distanceTo(activeCamera.position);
+    const _dbgRot = _dbgQuat.angleTo(activeCamera.quaternion);
+    // eslint-disable-next-line no-console
+    if (_dbgMoved > 1e-5 || _dbgRot > 1e-4) console.debug('[ORBIT-DBG] controls.update CHANGED cam pos=%s rotRad=%s',
+      _dbgMoved.toFixed(5), _dbgRot.toFixed(5));
     tumble.update();
     // Phase 4.2: tick animation from main RAF (no separate requestAnimationFrame).
     animation.tick(performance.now());
