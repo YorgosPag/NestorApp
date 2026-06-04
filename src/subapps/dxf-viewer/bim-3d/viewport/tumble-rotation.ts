@@ -29,6 +29,14 @@ export interface TumbleOptions {
    * (the React `onClick` is suppressed by the intervening pointer drag).
    */
   readonly onAltClick?: (clientX: number, clientY: number) => void;
+  /**
+   * Fired on Alt+left pointer-DOWN, BEFORE any rotation. Re-centres the orbit
+   * pivot on the point under the cursor so the drag that follows orbits around
+   * THAT point (Giorgio: «το σημείο του κλικ = το σημείο περιστροφής»). Without
+   * this the pivot only moved on a static click (pointer-up), so an Alt-press-
+   * and-drag rotated around the stale scene centre.
+   */
+  readonly onAltPress?: (clientX: number, clientY: number) => void;
 }
 
 const DRAG_THRESHOLD_SQ = 9;
@@ -41,7 +49,7 @@ const _qH = new THREE.Quaternion();
 const _qV = new THREE.Quaternion();
 
 export function createTumbleRotation(opts: TumbleOptions): TumbleRotation {
-  const { getCamera, getTarget, domElement, onStart, onChange, onEnd, onAltClick } = opts;
+  const { getCamera, getTarget, domElement, onStart, onChange, onEnd, onAltClick, onAltPress } = opts;
 
   let speed = TUMBLE_BASE_SPEED;
   let enabled = true;
@@ -84,6 +92,10 @@ export function createTumbleRotation(opts: TumbleOptions): TumbleRotation {
     startY = prevY = e.clientY;
     velX = 0;
     velY = 0;
+    // Re-centre the orbit pivot on the cursor point NOW, so the drag that
+    // follows orbits around it (not the stale scene centre). applyRotation
+    // reads getTarget() live, so this takes effect on the very first move.
+    onAltPress?.(e.clientX, e.clientY);
   }
 
   function onPointerMove(e: PointerEvent): void {
