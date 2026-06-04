@@ -39,6 +39,10 @@ import type { FurnitureEntity } from '../../bim/types/furniture-types';
 import { applyFurnitureGripDrag } from '../../bim/furniture/furniture-grips';
 import { buildFurnitureEntity } from '../drawing/furniture-completion';
 import { addFurnitureToScene } from '../../bim/furniture/add-furniture-to-scene';
+import type { FloorplanSymbolEntity } from '../../bim/types/floorplan-symbol-types';
+import { applyFloorplanSymbolGripDrag } from '../../bim/floorplan-symbols/floorplan-symbol-grips';
+import { buildFloorplanSymbolEntity } from '../drawing/floorplan-symbol-completion';
+import { addFloorplanSymbolToScene } from '../../bim/floorplan-symbols/add-floorplan-symbol-to-scene';
 import { createSceneManagerAdapter } from './grip-commit-adapters';
 
 /**
@@ -219,6 +223,34 @@ export function commitFurnitureCopy(
 }
 
 /**
+ * ADR-415 — Ctrl-COPY at the terminal click of a floorplan-symbol MOVE hot-grip
+ * (AutoCAD MOVE→COPY). 1:1 mirror of `commitFurnitureCopy`: builds a NEW
+ * `FloorplanSymbolEntity` whose params are the original shifted by `delta` (the
+ * same `floorplan-symbol-move` whole-entity translate) and inserts it via the
+ * shared `addFloorplanSymbolToScene` SSoT — fresh enterprise ID (N.6),
+ * `drawing:entity-created` broadcast so persistence saves the copy. Original
+ * untouched; single copy.
+ */
+export function commitFloorplanSymbolCopy(
+  grip: UnifiedGripInfo,
+  delta: Point2D,
+  deps: DxfCommitDeps,
+): void {
+  if (!grip.entityId || grip.floorplanSymbolGripKind !== 'floorplan-symbol-move') return;
+  const sceneManager = createSceneManagerAdapter(deps);
+  if (!sceneManager) return;
+  const raw = sceneManager.getEntity(grip.entityId);
+  if (!raw) return;
+  const candidate = raw as unknown as Partial<FloorplanSymbolEntity>;
+  if (candidate.type !== 'floorplan-symbol' || !candidate.params) return;
+  const symbol = candidate as FloorplanSymbolEntity;
+  const translated = applyFloorplanSymbolGripDrag('floorplan-symbol-move', { originalParams: symbol.params, delta });
+  const built = buildFloorplanSymbolEntity(translated, symbol.layerId);
+  if (!built.ok) return;
+  addFloorplanSymbolToScene(built.entity, deps);
+}
+
+/**
  * ADR-397 — entity-agnostic Ctrl-COPY dispatch for the MOVE hot-grip terminal
  * click. Routes to the per-entity copy SSoT by the grip's kind. Returns `true`
  * when a copy was made (caller skips the translate), `false` when the kind has
@@ -252,6 +284,10 @@ export function commitHotGripCopy(
   }
   if (grip.furnitureGripKind === 'furniture-move') {
     commitFurnitureCopy(grip, delta, deps);
+    return true;
+  }
+  if (grip.floorplanSymbolGripKind === 'floorplan-symbol-move') {
+    commitFloorplanSymbolCopy(grip, delta, deps);
     return true;
   }
   return false;
