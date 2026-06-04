@@ -28,7 +28,8 @@ import { useLevels } from '../../../systems/levels';
 import { useUniversalSelection } from '../../../systems/selection';
 import { useMepSystemStore } from '../../../bim/mep-systems/mep-system-store';
 import { useMepCircuitEditorStore } from '../../../bim/mep-systems/mep-circuit-editor-store';
-import { resolveManagedCircuits } from '../../../bim/mep-systems/mep-circuit-editor';
+import { resolveManagedSystems } from '../../../bim/mep-systems/mep-circuit-editor';
+import { isPipeSystemParams } from '../../../bim/types/mep-system-types';
 
 export function RibbonMepCircuitPickerWidget(): React.JSX.Element | null {
   const { t } = useTranslation('dxf-viewer-shell');
@@ -45,7 +46,7 @@ export function RibbonMepCircuitPickerWidget(): React.JSX.Element | null {
     const scene = levelManager.getLevelScene(levelManager.currentLevelId);
     const entity = scene?.entities.find((e) => e.id === id);
     if (!entity) return [];
-    return resolveManagedCircuits([entity], systems);
+    return resolveManagedSystems([entity], systems);
   }, [levelManager, universalSelection, systems]);
 
   const activeName = useMemo(
@@ -61,7 +62,13 @@ export function RibbonMepCircuitPickerWidget(): React.JSX.Element | null {
   );
 
   if (candidates.length === 0) return null;
-  const label = t('ribbon.commands.mepCircuit.circuitPicker');
+  // System-agnostic widget (ADR-408 Φ13): the same picker serves electrical
+  // circuits and plumbing pipe networks. Adapt only the label to the active
+  // system's domain so a water network never reads "Circuit".
+  const active = candidates.find((c) => c.id === activeSystemId) ?? candidates[0]!;
+  const label = isPipeSystemParams(active.params)
+    ? t('ribbon.commands.mepCircuit.networkPicker')
+    : t('ribbon.commands.mepCircuit.circuitPicker');
 
   if (candidates.length === 1) {
     return (
