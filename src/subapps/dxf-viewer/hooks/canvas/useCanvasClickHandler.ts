@@ -319,7 +319,12 @@ export function useCanvasClickHandler(params: UseCanvasClickHandlerParams): UseC
     // ORTHO/POLAR-aware `bimPoint` (like beam/railing) so the run snaps to
     // axis-locked angles during the 2-click chain.
     if ((activeTool === 'mep-duct' || activeTool === 'mep-pipe') && mepSegmentTool?.isActive) {
-      mepSegmentTool.onCanvasClick(bimPoint);
+      // ADR-408 Φ-B1 — connector-mate: when the click snapped to an MEP connector
+      // (carries a 3D `z`), use the EXACT snapped point so the endpoint lands on the
+      // connector — the snap overrides ORTHO/POLAR (which would shift x,y off it).
+      // Otherwise the ORTHO/POLAR-constrained `bimPoint` drives free 2-click drawing.
+      const connectorZ = (worldPoint as { z?: number }).z;
+      mepSegmentTool.onCanvasClick(connectorZ !== undefined ? worldPoint : bimPoint);
       return;
     }
     // PRIORITY 4.93: ADR-407 — Railing tool 2-click straight guardrail. Uses the
