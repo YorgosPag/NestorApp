@@ -17,11 +17,14 @@
 
 import {
   resolveEffectiveParams,
+  resolveEffectiveSlabParams,
   resolveEffectiveWallParams,
 } from '../resolve-effective-params';
-import type { BimFamilyType, WallTypeParams } from '../../types/bim-family-type';
+import type { BimFamilyType, SlabTypeParams, WallTypeParams } from '../../types/bim-family-type';
 import type { WallParams } from '../../types/wall-types';
 import type { WallDna } from '../../types/wall-dna-types';
+import type { SlabParams } from '../../types/slab-types';
+import type { SlabDna } from '../../types/slab-dna-types';
 
 // ---------------------------------------------------------------------------
 // Fixtures
@@ -194,6 +197,89 @@ describe('resolveEffectiveWallParams — per-param override', () => {
 
     expect(result.thickness).toBe(250);
     expect(result.category).toBe('exterior');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// resolveEffectiveSlabParams — slab analogue (type wins / fast-path / override)
+// ---------------------------------------------------------------------------
+
+const SLAB_TYPE_DNA = { totalThickness: 285 } as unknown as SlabDna;
+
+/** Instance-level SlabParams whose type-governed cache deliberately drifts. */
+function makeSlabInstanceParams(overrides: Partial<SlabParams> = {}): SlabParams {
+  return {
+    kind: 'roof', // drifted cache (type says 'floor')
+    outline: { vertices: [{ x: 0, y: 0, z: 0 }, { x: 1000, y: 0, z: 0 }, { x: 0, y: 1000, z: 0 }] },
+    levelElevation: 3000, // instance-level — must survive
+    thickness: 200, // drifted cache (type says 285)
+    geometryType: 'box', // instance-level — must survive
+    material: 'mat-concrete', // drifted cache (type says 'mat-finish')
+    ...overrides,
+  };
+}
+
+/** Slab family type whose typeParams own kind/thickness/dna/material. */
+function makeSlabType(typeParams: Partial<SlabTypeParams> = {}): BimFamilyType<'slab'> {
+  return {
+    id: 'bimfamtype_slab_1',
+    category: 'slab',
+    name: 'Floor 285',
+    scope: 'company',
+    origin: 'user',
+    companyId: 'company_1',
+    ownerId: 'user_1',
+    typeParams: {
+      kind: 'floor',
+      thickness: 285,
+      dna: SLAB_TYPE_DNA,
+      material: 'mat-finish',
+      ...typeParams,
+    },
+  };
+}
+
+describe('resolveEffectiveSlabParams', () => {
+  it('returns instance params UNCHANGED (same reference) when no typeId', () => {
+    const params = makeSlabInstanceParams();
+    expect(resolveEffectiveSlabParams({ params }, makeSlabType())).toBe(params);
+  });
+
+  it('returns instance params UNCHANGED when type is null', () => {
+    const params = makeSlabInstanceParams();
+    expect(
+      resolveEffectiveSlabParams({ params, typeId: 'bimfamtype_slab_1' }, null),
+    ).toBe(params);
+  });
+
+  it('overwrites type-governed fields from the type («type always wins»)', () => {
+    const params = makeSlabInstanceParams();
+    const type = makeSlabType();
+    const result = resolveEffectiveSlabParams({ params, typeId: type.id }, type);
+
+    expect(result.kind).toBe('floor');
+    expect(result.thickness).toBe(285);
+    expect(result.dna).toBe(SLAB_TYPE_DNA);
+    expect(result.material).toBe('mat-finish');
+    // instance-level fields preserved
+    expect(result.levelElevation).toBe(3000);
+    expect(result.geometryType).toBe('box');
+    // new object, original untouched
+    expect(result).not.toBe(params);
+    expect(params.thickness).toBe(200);
+  });
+
+  it('lets a per-param override win over BOTH type and instance', () => {
+    const params = makeSlabInstanceParams();
+    const type = makeSlabType();
+    const result = resolveEffectiveSlabParams(
+      { params, typeId: type.id, typeOverrides: { material: 'mat-tile' } },
+      type,
+    );
+
+    expect(result.material).toBe('mat-tile'); // overridden
+    expect(result.thickness).toBe(285); // from type
+    expect(result.kind).toBe('floor'); // from type
   });
 });
 
