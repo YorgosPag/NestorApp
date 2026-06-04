@@ -37,6 +37,12 @@ import { resolveIsEntityVisible } from '../visibility/visibility-resolver';
 import { useDrawingScaleStore } from '../../state/drawing-scale-store';
 import { HOVER_HIGHLIGHT } from '../../config/color-config';
 import { getLayer } from '../../stores/LayerStore';
+import { useMepSystemStore } from '../mep-systems/mep-system-store';
+import {
+  getEntitySystemColorIndexCached,
+  resolveFittingSystemColor,
+  hexToRgba,
+} from '../mep-systems/mep-system-color';
 
 // ─── Palette ────────────────────────────────────────────────────────────────────
 
@@ -58,6 +64,9 @@ const DOMAIN_FILL: Readonly<Record<MepFittingDomain, string>> = {
 
 /** Dash pattern for the plan outline (dashed = above cut plane, segment mirror). */
 const OUTLINE_DASH: readonly [number, number] = [8, 4];
+
+/** Translucent fill alpha for the colour-by-system override (segment mirror). */
+const SYSTEM_FILL_ALPHA = 0.15;
 
 // ─── Type guard (local — main agent adds to entities.ts union) ───────────────────
 
@@ -89,8 +98,21 @@ export class MepFittingRenderer extends BaseEntityRenderer {
     const verts = fitting.geometry.footprint.vertices;
     if (verts.length < 3) return;
     const domain = fitting.params.domain;
-    const strokeColor = DOMAIN_STROKE[domain];
-    const fillColor = DOMAIN_FILL[domain];
+
+    // ADR-408 Φ11 — colour-by-system: a fitting reads as the same network as its
+    // pipes (Revit). It is NOT a system member (auto-derived), so it inherits the
+    // colour of the FIRST incident pipe that belongs to a system. Gated by the
+    // per-view `colorBySystem` master toggle (Φ7): OFF ⇒ the per-domain default.
+    const colorBySystem = useDrawingScaleStore.getState().colorBySystem;
+    const systems = useMepSystemStore.getState().getSystems();
+    const systemColor = colorBySystem && systems.length > 0
+      ? resolveFittingSystemColor(
+          fitting.params.incidents.map((inc) => inc.segmentId),
+          getEntitySystemColorIndexCached(systems),
+        )
+      : null;
+    const strokeColor = systemColor ?? DOMAIN_STROKE[domain];
+    const fillColor = systemColor ? hexToRgba(systemColor, SYSTEM_FILL_ALPHA) : DOMAIN_FILL[domain];
 
     const phaseState = this.phaseManager.determinePhase(entity as Entity, options);
 
