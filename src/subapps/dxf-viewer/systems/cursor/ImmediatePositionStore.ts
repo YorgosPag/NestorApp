@@ -35,7 +35,15 @@ import { markSystemsDirty } from '../../rendering/core/UnifiedFrameScheduler';
 // cursor sync group. Cursor mousemove no longer invalidates the DXF entity
 // bitmap cache (transform unchanged). Pan still invalidates dxf-canvas because
 // the transform changes — see PAN_SYNC_CANVAS_IDS used by updateTransform().
-const CURSOR_SYNC_CANVAS_IDS = ['layer-canvas', 'crosshair-overlay'];
+//
+// Phase E (ADR-040, 2026-06-04, cursor-lag Φ4): 'layer-canvas' removed too. The
+// crosshair + cursor pickbox moved to the compositor <CrosshairOverlay> (driven
+// by registerDirectRender below), and the live layer-canvas no longer draws any
+// cursor-frequency content (snap → SnapIndicatorSubscriber; selection box →
+// dxf-canvas; overlay-hover/draft → own `layers`-prop dirty path). So a plain
+// mousemove must NOT force a full layer-canvas repaint. ('crosshair-overlay' was
+// never a registered scheduler system — the entry was a no-op since Phase 2.)
+// Pan still repaints layer-canvas via PAN_SYNC_CANVAS_IDS (transform changes).
 const PAN_SYNC_CANVAS_IDS = ['dxf-canvas', 'layer-canvas', 'crosshair-overlay'];
 
 type PositionListener = (position: Point2D | null) => void;
@@ -91,15 +99,13 @@ class ImmediatePositionStoreClass {
     this.debugCallCount++;
 
     // 🚀 DIRECT RENDER: Call crosshair render IMMEDIATELY (no RAF wait!)
+    // The compositor <CrosshairOverlay> moves the crosshair off-main-thread via
+    // translate3d. Phase E (ADR-040, 2026-06-04): no canvas is marked dirty on a
+    // plain cursor move — the layer-canvas has no cursor-frequency content left
+    // (see PAN_SYNC_CANVAS_IDS comment above). This is the cursor-lag Φ4 win.
     if (this.directRenderCallback) {
       try {
         this.directRenderCallback(this.position);
-        // 🏢 ADR-163: Canvas Layer Synchronization Fix
-        // 🔧 FIX (2026-02-01): Mark ONLY dxf/layer/crosshair canvases dirty
-        // EXCLUDES preview-canvas to prevent RAF race condition:
-        // - preview-canvas is managed by PreviewRenderer.drawPreview() with immediate render
-        // - including it here caused preview to disappear during mouse movement
-        markSystemsDirty(CURSOR_SYNC_CANVAS_IDS);
       } catch (error) {
         console.error('ImmediatePositionStore direct render error:', error);
       }

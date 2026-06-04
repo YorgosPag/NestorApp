@@ -27,6 +27,16 @@
 - Διαγράφηκε ορφανό `crosshair-selection-indicator.ts` (badge inlined).
 - **Αποτέλεσμα:** ο crosshair κοστίζει **0.6%** στο Chrome profile — δουλεύει. Giorgio: «φαίνεται σωστά».
 
+### Φ4 — Stop per-move layer-canvas repaint (ADR-040 «Phase E») 🔴 UNCOMMITTED
+- **Διάγνωση από καθαρό profile** (`profiling-data.04-06-2026.17-05-48.json` — React DevTools Profiler export, 113 commits/4.4s, ΧΩΡΙΣ το 49-54% fake overhead). Επιβεβαίωσε Φ1-Φ3: React work 172ms/4.4s (~4%), median commit 1ms. Ο crosshair εκτός React. **Το πραγματικό εναπομείνον κόστος = imperative full-repaint του `layer-canvas` σε κάθε move (μέσω scheduler RAF — αόρατο στο React profiler).**
+- Root cause: `ImmediatePositionStore.setPosition` καλούσε `markSystemsDirty(['layer-canvas','crosshair-overlay'])` ανά move. `'crosshair-overlay'`=no-op από Φ2 → ουσιαστικά full repaint του layer-canvas για legacy crosshair+pickbox που ΗΔΗ κατέχει ο compositor.
+- **Fix (2 αρχεία):**
+  - `components/dxf-layout/CanvasLayerStack.tsx`: `layerRenderOptions` → `showCrosshair:false`, `showCursor:false`.
+  - `systems/cursor/ImmediatePositionStore.ts`: αφαίρεση `'layer-canvas'` από cursor-sync (έσβησα την `markSystemsDirty` κλήση + const). Pan ανέπαφο (`PAN_SYNC_CANVAS_IDS`).
+  - `docs/.../ADR-040`: εγγραφή «Phase 4 / Phase E».
+- **Ασφάλεια:** snap→SnapIndicatorSubscriber, marquee→DxfCanvas (showSelectionBox ήδη false), hover/draft→δικό τους `params.layers` dirty path, grips→gripStyleStore deps. Plain hover → μηδέν canvas dirty.
+- tsc: **0 errors δικά μου** (το 1 repo error=`mesh-to-object3d.ts` του codex, άσχετο). Δεν άγγιξα orchestrators/scheduler.
+
 ### Φ3 — Coordinate readouts 🔴 UNCOMMITTED
 - `components/dxf-layout/DynamicInputSubscriber.tsx`: gate των 2 cursor `useSyncExternalStore` πίσω από `interactive = dynInput.on && isInteractiveTool(activeTool)`. (Ήταν ο #1 app component: 186 re-renders/move.)
 - `ui/toolbar/ToolbarCoordinatesDisplay.tsx`: αντικατάσταση `useCursorWorldPosition()` με **direct `textContent` write** από `subscribeToImmediateWorldPosition` (bypass React → μηδέν `commitTextUpdate`).

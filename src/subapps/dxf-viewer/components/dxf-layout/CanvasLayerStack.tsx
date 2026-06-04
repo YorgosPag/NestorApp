@@ -218,8 +218,14 @@ export const CanvasLayerStack = React.memo(function CanvasLayerStack({
   );
   const layerRenderOptions = useMemo(
     () => ({
-      showCrosshair: true,
-      showCursor: true,
+      // ADR-040 Phase E (2026-06-04, cursor-lag Φ4): the crosshair + cursor pickbox
+      // are now owned exclusively by the compositor <CrosshairOverlay> (translate3d,
+      // off-main-thread). Drawing them here too forced a full layer-canvas repaint on
+      // every mouse move (via ImmediatePositionStore cursor-sync) for redundant pixels.
+      // Disabled here so the layer-canvas no longer has ANY cursor-frequency content —
+      // it now repaints only when its real content changes (layers/grips/transform).
+      showCrosshair: false,
+      showCursor: false,
       showSnapIndicators: true,
       showGrid: false,
       showRulers: false,

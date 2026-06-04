@@ -71,6 +71,22 @@ Mouse Event → DxfCanvas.onMouseMove
 
 ## Changelog
 
+### 2026-06-04 — Cursor-lag Phase 4: stop the per-move `layer-canvas` repaint (Phase E)
+
+**Status**: IMPLEMENTED 2026-06-04 (Opus 4.8). 🔴 browser verify pending.
+
+**Diagnosis source**: a **clean React DevTools Profiler** export (`profiling-data.04-06-2026.17-05-48.json`, 113 commits / 4.4s) — NOT the polluted Chrome profile (which carried 49–54% measurement overhead). It confirms Phases 1–3 worked: total React work **172ms over 4.4s** (~4%), **median commit 1ms**, ~26 commits/s; the crosshair is fully off React (compositor). Two takeaways: (1) the single most expensive React component per render is `CoordinateDebugOverlay` (~25ms / 37 renders ≈ **15% of all React work** — the shadow-mode debug overlay; Giorgio's toggle, not a code bug); (2) **the React profiler cannot see the real residual cost** — the per-move `layer-canvas` repaint runs imperatively (`markSystemsDirty` → `UnifiedFrameScheduler` RAF), invisible to React profiling, on the main thread competing with the compositor crosshair. This completes the item explicitly deferred in Phase 1 ("Deferred to Phase 2") and flagged in Phase 2 (§"Scheduler note").
+
+**Root cause**: `ImmediatePositionStore.setPosition` fired `markSystemsDirty(['layer-canvas','crosshair-overlay'])` on **every** cursor move. `'crosshair-overlay'` has been a no-op since Phase 2 (not a registered scheduler system), so this effectively forced a **full `layer-canvas` repaint per move** — to draw a legacy crosshair + cursor pickbox that the compositor `<CrosshairOverlay>` already owns. The live ADR-040 layer-canvas (`layerRenderOptions` in `CanvasLayerStack`) carries NO other cursor-frequency content: `showSnapIndicators` is fed `EMPTY_SNAP_RESULTS` (snap → `SnapIndicatorSubscriber`), `showSelectionBox:false` (marquee → `DxfCanvas`), grid/rulers off, and overlay-hover/draft-polygon each have their **own** `layers`-prop dirty path (`useHoveredOverlay`/`useDraftPolygonLayer` → new `finalLayers` ref → `params.layers` dep → `isDirtyRef`).
+
+**Fix (2 files + this ADR)**:
+- `components/dxf-layout/CanvasLayerStack.tsx` — `layerRenderOptions`: `showCrosshair:false`, `showCursor:false` (was `true`). The compositor overlay is the sole crosshair/pickbox owner; without this the layer-canvas would freeze a stale crosshair at its last-repainted spot once cursor-sync is removed.
+- `systems/cursor/ImmediatePositionStore.ts` — removed `'layer-canvas'` from the cursor-move dirty set (deleted the now-redundant `markSystemsDirty(CURSOR_SYNC_CANVAS_IDS)` call + the unused const). The crosshair still updates via `registerDirectRender` (synchronous, compositor). **Pan path unchanged** — `updateTransform` still repaints `layer-canvas`+`dxf-canvas` via `PAN_SYNC_CANVAS_IDS` (transform changes move the layer polygons). Net: a plain hover marks zero canvases dirty; layer-canvas repaints only when its real content changes.
+
+**Not changed**: `UnifiedFrameScheduler` (its `canvasIds` sync group still renders layer-canvas when *it* is dirty via `isDirty()` — works unchanged; avoids touching another perf-critical file). `CoordinateDebugOverlay` (Giorgio's shadow-mode flag).
+
+✅ Google-level: YES — removes a redundant full-canvas repaint on the hottest path; each surviving cursor-frequency consumer keeps its own SSoT dirty trigger; no orchestrator/Cardinal-Rule change; pan correctness preserved.
+
 ### 2026-06-04 — Cursor-lag Phase 3: coordinate-readout React-commit elimination
 
 **Status**: IMPLEMENTED 2026-06-04 (Opus 4.8). 🔴 browser verify pending.
