@@ -1,0 +1,201 @@
+'use client';
+
+/**
+ * ADR-417 — Roof Firestore persistence SSoT.
+ *
+ * Path: top-level `floorplan_roofs/{roofId}` (companyId-scoped via field).
+ * Mirrors `RailingFirestoreService` (ADR-407). Re-uses `firestoreQueryService`
+ * SSoT (ADR-355) + ADR-361 equality guard.
+ *
+ * Writes → direct Firestore SDK (`setDoc` + `generateRoofId`) για το
+ * enterprise-id contract (SOS N.6). Auto-id writes are forbidden by the SSoT
+ * ratchet.
+ *
+ * @see docs/centralized-systems/reference/adrs/ADR-417-bim-roof-element.md
+ */
+
+import {
+  deleteDoc,
+  doc,
+  serverTimestamp,
+  setDoc,
+  updateDoc,
+  where,
+  type Timestamp,
+  type Unsubscribe,
+} from 'firebase/firestore';
+
+import { db } from '@/lib/firebase';
+import { COLLECTIONS } from '@/config/firestore-collections';
+import { generateRoofId } from '@/services/enterprise-id-convenience';
+import { firestoreQueryService } from '@/services/firestore';
+import type {
+  RoofEntity,
+  RoofGeometry,
+  RoofKind,
+  RoofParams,
+} from '../types/roof-types';
+import type { BimValidation } from '../types/bim-base';
+
+// ============================================================================
+// TYPES
+// ============================================================================
+
+/**
+ * Canonical Firestore document shape για ένα persisted roof. Mirrors
+ * `RailingDoc`: params + validation persisted· geometry optional
+ * (re-derivable από `computeRoofGeometry(params)`).
+ */
+export interface RoofDoc {
+  readonly id: string;
+  readonly companyId: string;
+  readonly projectId: string;
+  readonly floorplanId: string;
+  readonly kind: RoofKind;
+  readonly params: RoofParams;
+  readonly validation: BimValidation;
+  readonly geometry?: RoofGeometry;
+  readonly buildingId?: string;
+  readonly floorId?: string;
+  readonly layerId?: string;
+  readonly createdAt: Timestamp;
+  readonly createdBy: string;
+  readonly updatedAt: Timestamp;
+  readonly updatedBy: string;
+}
+
+export interface RoofFirestoreServiceConfig {
+  readonly companyId: string;
+  readonly projectId: string;
+  readonly floorplanId: string;
+  readonly userId: string;
+}
+
+export interface RoofSaveInput {
+  readonly id?: string;
+  readonly kind: RoofKind;
+  readonly params: RoofParams;
+  readonly validation: BimValidation;
+  readonly geometry?: RoofGeometry;
+  readonly buildingId?: string;
+  readonly floorId?: string;
+  readonly layerId?: string;
+}
+
+export interface RoofUpdateInput {
+  readonly params?: RoofParams;
+  readonly validation?: BimValidation;
+  readonly geometry?: RoofGeometry;
+  readonly layerId?: string;
+}
+
+// ============================================================================
+// SERVICE
+// ============================================================================
+
+export class RoofFirestoreService {
+  constructor(private readonly config: RoofFirestoreServiceConfig) {}
+
+  private docRef(roofId: string) {
+    return doc(db, COLLECTIONS.FLOORPLAN_ROOFS, roofId);
+  }
+
+  /**
+   * Real-time subscription scoped σε `(projectId, floorplanId)`. Tenant
+   * `companyId` auto-applied από `firestoreQueryService`.
+   */
+  subscribeRoofs(
+    onChange: (roofs: readonly RoofDoc[]) => void,
+    onError: (err: Error) => void,
+  ): Unsubscribe {
+    return firestoreQueryService.subscribe<RoofDoc>(
+      'FLOORPLAN_ROOFS',
+      (result) => onChange(result.documents),
+      onError,
+      {
+        constraints: [
+          where('projectId', '==', this.config.projectId),
+          where('floorplanId', '==', this.config.floorplanId),
+        ],
+      },
+    );
+  }
+
+  /**
+   * Persist νέα στέγη ή overwrite υπάρχουσας (id-preserving).
+   * Enterprise-id (SOS N.6): `generateRoofId()` όταν δεν υπάρχει `id`.
+   */
+  async saveRoof(input: RoofSaveInput): Promise<RoofDoc> {
+    const id = input.id ?? generateRoofId();
+    const ref = this.docRef(id);
+
+    const base: Record<string, unknown> = {
+      id,
+      companyId: this.config.companyId,
+      projectId: this.config.projectId,
+      floorplanId: this.config.floorplanId,
+      kind: input.kind,
+      params: input.params,
+      validation: input.validation,
+      createdBy: this.config.userId,
+      createdAt: serverTimestamp(),
+      updatedBy: this.config.userId,
+      updatedAt: serverTimestamp(),
+    };
+
+    // Firestore rejects `undefined` — include optional fields only when set.
+    if (input.geometry !== undefined) base.geometry = input.geometry;
+    if (input.buildingId !== undefined) base.buildingId = input.buildingId;
+    if (input.floorId !== undefined) base.floorId = input.floorId;
+    if (input.layerId !== undefined) base.layerId = input.layerId;
+
+    await setDoc(ref, base);
+    return base as unknown as RoofDoc;
+  }
+
+  async updateRoof(roofId: string, patch: RoofUpdateInput): Promise<void> {
+    const ref = this.docRef(roofId);
+    const payload: Record<string, unknown> = {
+      updatedBy: this.config.userId,
+      updatedAt: serverTimestamp(),
+    };
+    if (patch.params !== undefined) payload.params = patch.params;
+    if (patch.validation !== undefined) payload.validation = patch.validation;
+    if (patch.geometry !== undefined) payload.geometry = patch.geometry;
+    if (patch.layerId !== undefined) payload.layerId = patch.layerId;
+
+    await updateDoc(ref, payload);
+  }
+
+  async deleteRoof(roofId: string): Promise<void> {
+    await deleteDoc(this.docRef(roofId));
+  }
+}
+
+// ============================================================================
+// FACTORY
+// ============================================================================
+
+export function createRoofFirestoreService(
+  config: RoofFirestoreServiceConfig,
+): RoofFirestoreService {
+  return new RoofFirestoreService(config);
+}
+
+// ============================================================================
+// HELPERS
+// ============================================================================
+
+/**
+ * Convert a scene-side `RoofEntity` σε `RoofSaveInput`. Re-derivable
+ * `geometry` intentionally omitted — recomputed client-side από params on hydrate.
+ */
+export function entityToSaveInput(entity: RoofEntity): RoofSaveInput {
+  return {
+    id: entity.id,
+    kind: entity.kind,
+    params: entity.params,
+    validation: entity.validation,
+    layerId: entity.layerId,
+  };
+}
