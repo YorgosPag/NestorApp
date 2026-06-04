@@ -267,6 +267,7 @@ export const generateIso19650CostLogId = () => enterpriseIdService.generateIso19
 export const generateWallId = () => enterpriseIdService.generateWallId();
 export const generateOpeningId = () => enterpriseIdService.generateOpeningId();
 export const generateSlabId = () => enterpriseIdService.generateSlabId();
+export const generateRoofId = () => enterpriseIdService.generateRoofId();
 export const generateSlabOpeningId = () => enterpriseIdService.generateSlabOpeningId();
 export const generateBimStackGroupId = () => enterpriseIdService.generateBimStackGroupId();
 export const generateColumnId = () => enterpriseIdService.generateColumnId();
