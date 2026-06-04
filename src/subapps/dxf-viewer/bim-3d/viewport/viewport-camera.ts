@@ -32,6 +32,8 @@ export interface ViewportCameraOptions {
   readonly getReducedMotion?: () => boolean;
   /** ADR-366 §A.6.Q5 — static Alt+left-click in perspective (forwarded to tumble). */
   readonly onAltClick?: (clientX: number, clientY: number) => void;
+  /** Alt+left pointer-down → re-centre orbit pivot on the cursor point (forwarded to tumble). */
+  readonly onAltPress?: (clientX: number, clientY: number) => void;
 }
 
 const _snapDir = new THREE.Vector3();
@@ -84,6 +86,7 @@ export function createViewportCamera(
     onChange: onRenderNeeded,
     onEnd: onInteractionEnd,
     onAltClick: options.onAltClick,
+    onAltPress: options.onAltPress,
   });
 
   const animation = createViewportAnimation();
