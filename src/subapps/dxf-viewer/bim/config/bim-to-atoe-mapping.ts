@@ -17,12 +17,13 @@ import type { ColumnKind } from '../types/column-types';
 import type { BeamKind } from '../types/beam-types';
 import type { RailingKind } from '../types/railing-types';
 import type { FurnitureKind } from '../types/furniture-types';
+import type { RoofKind } from '../types/roof-types';
 
 // ============================================================================
 // TYPES
 // ============================================================================
 
-export type BimEntityType = 'wall' | 'opening' | 'slab' | 'column' | 'beam' | 'stair' | 'railing' | 'furniture';
+export type BimEntityType = 'wall' | 'opening' | 'slab' | 'column' | 'beam' | 'stair' | 'railing' | 'furniture' | 'roof';
 
 export interface AtoeMappingEntry {
   /** Latin OIK-x.xx code — must match boq_categories or be a valid subcategory. */
@@ -146,6 +147,13 @@ const FURNITURE_MAPPING: Readonly<Record<FurnitureKind, AtoeMappingEntry>> = {
   tvStand:    { categoryCode: 'OIK-12.50', unit: 'pcs', titleEL: 'Έπιπλο — έπιπλο TV (BIM)' },
 };
 
+// ADR-417 — κεκλιμένη στέγη → OIK-7 Επικαλύψεις στεγών. Μετριέται με το ΚΕΚΛΙΜΕΝΟ
+// εμβαδό (GrossArea m², geometry.area alias), όχι την κάτοψη (ADR-417 Q7: η
+// επικάλυψη κεραμιδιών/μεμβράνης ακολουθεί την πραγματική κεκλιμένη επιφάνεια).
+const ROOF_MAPPING: Readonly<Record<RoofKind, AtoeMappingEntry>> = {
+  roof: { categoryCode: 'OIK-7.01', unit: 'm2', titleEL: 'Επικάλυψη στέγης (BIM)' },
+};
+
 /** Lookup map keyed by entity type for runtime dispatch. */
 export const BIM_TO_ATOE_MAPPING = {
   wall:    WALL_MAPPING,
@@ -155,6 +163,7 @@ export const BIM_TO_ATOE_MAPPING = {
   beam:    BEAM_MAPPING,
   railing: RAILING_MAPPING,
   furniture: FURNITURE_MAPPING,
+  roof:    ROOF_MAPPING,
 } as const;
 
 // ============================================================================
