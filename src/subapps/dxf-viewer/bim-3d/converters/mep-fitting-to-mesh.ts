@@ -41,7 +41,7 @@ import {
   type FittingBody,
   type FittingBodyInput,
 } from '../../bim/geometry/mep-fitting-body';
-import { getElementMaterial3D } from '../materials/MaterialCatalog3D';
+import { getElementMaterial3D, getSystemTintedMaterial3D } from '../materials/MaterialCatalog3D';
 import { tagMesh } from './bim-three-shape-helpers';
 
 /** mm → Three.js world metres (shared constant, same as all other converters). */
@@ -244,17 +244,26 @@ function buildFittingBodyMesh(params: MepFittingParams, material: THREE.Material
  * @param levelId                 Optional storey levelId for userData tagging.
  * @param buildingBaseElevationM  Building datum offset (m), same param as every
  *                                per-floor converter in BimSceneLayer.
+ * @param systemColor             ADR-408 Φ11 colour-by-system — the THREE colour
+ *                                int the fitting inherits from the pipes it joins
+ *                                (Revit). `undefined` ⇒ the default fitting material.
  */
 export function mepFittingToMesh(
   fitting: MepFittingEntity,
   floorElevationMm = 0,
   levelId?: string,
   buildingBaseElevationM = 0,
+  systemColor?: number,
 ): THREE.Object3D | null {
   const { params } = fitting;
   if (params.incidents.length === 0 || params.primaryDiameterMm < 1) return null;
 
-  const material = getElementMaterial3D('mep-fitting');
+  // Colour-by-system: a fitting reads as the same network as its pipes (tinted
+  // PBR), falling back to the default fitting material when its pipes carry no
+  // system (or the per-view colour-by-system toggle is OFF ⇒ no colour passed).
+  const material = systemColor !== undefined
+    ? getSystemTintedMaterial3D('mep-fitting', systemColor)
+    : getElementMaterial3D('mep-fitting');
   const body = buildFittingBodyMesh(params, material);
 
   const group = new THREE.Group();
