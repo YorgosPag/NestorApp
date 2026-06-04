@@ -42,7 +42,9 @@ import { evaluateWallBaseAt, type WallBaseProfile } from '../../bim/geometry/wal
 // ADR-404 P1 — slope/tilt shear helpers (εξήχθησαν από εδώ για file-size, N.7.1).
 import { applyBeamSlope, applySlabSlope, applyColumnTilt, applyWallTilt } from './mesh-slope-shear';
 // File-private geometry primitives (N.7.1 file-size split, 2026-06-01).
-import { buildShape, extrudeAndRotate, tagMesh, buildWallShape } from './bim-three-shape-helpers';
+import { buildShape, extrudeAndRotate, tagMesh, buildWallShape, pushHoles } from './bim-three-shape-helpers';
+import { buildMultiLayerSlabSolid } from './slab-multilayer-solid-3d';
+import { isMultiLayerSlab } from '../../bim/types/slab-dna-types';
 import { buildSweptIBeamGeometry } from './beam-ishape-geometry';
 // Shared 3D edge overlay + point-based converters (N.7.1 file-size split, 2026-06-02).
 import { attachEdgesProjection } from './bim-three-edges';
@@ -440,34 +442,22 @@ export function beamToMesh(
   return tagged;
 }
 
-// ADR-363 §11.Q3 Phase 3.7d + ADR-370 §6 Phase 7 — slab-opening cutouts.
-// THREE.Shape.holes requires opposite winding from the outer ring (CCW outer +
-// CW holes — clipper-style). BIM polygons are CCW by convention, so we reverse
-// each opening's outline before pushing as a THREE.Path. ExtrudeGeometry runs
-// native ear-clipping triangulation with holes, mirroring IFC IfcOpeningElement
-// voiding IfcSlab (Revit Floor + Opening family pattern).
-function pushHoles(shape: THREE.Shape, openings: readonly SlabOpeningEntity[]): void {
-  for (const op of openings) {
-    const verts = op.params.outline.vertices;
-    if (verts.length < 3) continue;
-    const path = new THREE.Path();
-    // CCW → CW: traverse vertices in reverse.
-    const last = verts[verts.length - 1];
-    path.moveTo(last.x, last.y);
-    for (let i = verts.length - 2; i >= 0; i--) path.lineTo(verts[i].x, verts[i].y);
-    path.closePath();
-    shape.holes.push(path);
-  }
-}
-
 export function slabToMesh(
   slab: SlabEntity,
   openings: readonly SlabOpeningEntity[] = [],
   levelId?: string,
   buildingBaseElevationM = 0,
-): THREE.Mesh | null {
+): THREE.Mesh | THREE.Group | null {
   const verts = slab.params.outline.vertices;
   if (verts.length < 3) return null;
+
+  // ADR-416 — composite Floor/Slab Type: a slab carrying a multi-layer DNA renders
+  // as a vertical stack of per-layer sub-solids (Revit Compound Structure / IFC
+  // IfcMaterialLayerSet). Single-layer / untyped slabs keep the legacy single
+  // extrude below (byte-for-byte — zero regression for the existing ~30 tests).
+  if (isMultiLayerSlab(slab.params.dna)) {
+    return buildMultiLayerSlabSolid(slab, openings, levelId, buildingBaseElevationM);
+  }
 
   const shape = buildShape(verts);
   if (!shape) return null;
