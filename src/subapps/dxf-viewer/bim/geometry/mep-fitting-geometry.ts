@@ -24,6 +24,7 @@
 import type { Point3D, Polygon3D, BoundingBox3D } from '../types/bim-base';
 import type { MepFittingGeometry, MepFittingParams } from '../types/mep-fitting-types';
 import { mmToSceneUnits } from '../../utils/scene-units';
+import { computeElbowBend, tessellateBendFootprint } from './mep-fitting-bend';
 
 const MM_TO_M = 1 / 1000;
 
@@ -54,7 +55,10 @@ export function computeMepFittingGeometry(params: MepFittingParams): MepFittingG
   const sizeMm = diameterMm * (KIND_SIZE_FACTOR[params.kind] ?? 1);
   const halfCanvas = (sizeMm * s) / 2;
 
-  const footprint: Polygon3D = { vertices: buildSquare(params.position, halfCanvas) };
+  // Elbow: the footprint is the real swept BEND BODY (concentric wall arcs),
+  // tangent to both legs — a Revit long-radius elbow, NOT an axis-aligned box.
+  // Falls back to the centred square for a degenerate/straight node.
+  const footprint: Polygon3D = { vertices: buildFootprint(params, s, halfCanvas) };
   const bbox = computeBbox(footprint.vertices, params.centerlineElevationMm, sizeMm);
   const volumeM3 = computeVolumeM3(params, sizeMm);
   const length = inlineLengthM(params, sizeMm);
@@ -65,6 +69,25 @@ export function computeMepFittingGeometry(params: MepFittingParams): MepFittingG
 }
 
 // ─── Internal helpers (mirror mep-segment-geometry) ──────────────────────────────
+
+/**
+ * Plan footprint per kind. Elbow with two incidents → the swept bend body
+ * (concentric wall arcs, canvas units) via the bend SSoT; everything else → the
+ * centred square. `s` = canvas units per mm; `half` = square half-side fallback.
+ */
+function buildFootprint(params: MepFittingParams, s: number, half: number): Point3D[] {
+  if (params.kind === 'elbow' && params.incidents.length >= 2) {
+    const diameterCanvas = params.primaryDiameterMm * s;
+    const bend = computeElbowBend(
+      { x: params.position.x, y: params.position.y },
+      params.incidents[0]!.directionUnit,
+      params.incidents[1]!.directionUnit,
+      diameterCanvas,
+    );
+    if (bend) return tessellateBendFootprint(bend);
+  }
+  return buildSquare(params.position, half);
+}
 
 /** CCW square centred on `centre`, half-side `half` (canvas units). */
 function buildSquare(centre: Point3D, half: number): Point3D[] {
