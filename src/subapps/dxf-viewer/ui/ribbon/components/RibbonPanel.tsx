@@ -37,6 +37,7 @@ import { RibbonStairDimensionsWidget } from './RibbonStairDimensionsWidget';
 import { RibbonWallDimensionWidget } from './RibbonWallDimensionWidget';
 import { RibbonWallFamilyTypeWidget } from './RibbonWallFamilyTypeWidget';
 import { RibbonWallTypePropertiesWidget } from './RibbonWallTypePropertiesWidget';
+import { RibbonSlabFamilyTypeWidget } from './RibbonSlabFamilyTypeWidget';
 import { RibbonMepCircuitPickerWidget } from './RibbonMepCircuitPickerWidget';
 import { RibbonMepFixtureCircuitWidget } from './RibbonMepFixtureCircuitWidget';
 import { RibbonMepCircuitNameWidget } from './RibbonMepCircuitNameWidget';
@@ -138,6 +139,9 @@ function renderButton(button: RibbonButton): React.ReactNode {
     }
     if (button.widgetId === 'wall-type-properties') {
       return <RibbonWallTypePropertiesWidget key="wall-type-properties-widget" />;
+    }
+    if (button.widgetId === 'slab-family-type') {
+      return <RibbonSlabFamilyTypeWidget key="slab-family-type-widget" />;
     }
     if (button.widgetId === 'multi-selection-common-properties') {
       return <MultiSelectionCommonPropertiesPanel key="multi-selection-common-widget" />;
