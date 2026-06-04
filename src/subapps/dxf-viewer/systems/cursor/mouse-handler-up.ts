@@ -34,6 +34,8 @@ import {
 } from '../../bim/columns/column-corner-snap';
 import type { ColumnGripKind } from '../../hooks/useGripMovement';
 import { columnToolBridgeStore } from '../../ui/ribbon/hooks/bridge/column-tool-bridge-store';
+import { ExtendedSnapType } from '../../snapping/extended-types';
+import { resolveMepConnectorElevationMmAt } from '../../bim/mep-segments/mep-connector-elevation';
 import { LassoStore, computeLassoMode } from './LassoStore';
 import { ZoomWindowStore } from '../zoom-window/ZoomWindowStore';
 
@@ -186,6 +188,10 @@ export function useMouseUpHandler({ props, cursor, refs, snap }: MouseUpHandlerD
 
       const freshScreenPos = getScreenPosFromEvent(e, clickSnap);
       let worldPoint = screenToWorldWithSnapshot(freshScreenPos, transform, clickSnap);
+      // ADR-408 Φ-B1 — connector-mate: when a click snaps to an MEP connector, the
+      // connector's TRUE 3D elevation (mm) is captured here and threaded to the tool
+      // so a pipe/duct endpoint inherits it (Revit "Connect To"). null = free point.
+      let connectorZmm: number | null = null;
 
       // ADR-362 Round-3 hotfix: linear/aligned dim-line-offset pick is a free
       // position — AutoCAD disables OSNAP for it. Without this gate the click
@@ -212,11 +218,26 @@ export function useMouseUpHandler({ props, cursor, refs, snap }: MouseUpHandlerD
           const snapResult = findSnapPoint(worldPoint.x, worldPoint.y);
           if (snapResult && snapResult.found && snapResult.snappedPoint) {
             worldPoint = snapResult.snappedPoint;
+            // ADR-408 Φ-B1 — recover the connector's 3D elevation from the snapped
+            // host so the segment tool can mate the endpoint in xyz. The snap only
+            // carries plan (x,y); z is resolved per host type (segment per-endpoint,
+            // manifold/fixture mounting datum). Harmless to non-segment tools.
+            const cand = snapResult.snapPoint;
+            if (cand && cand.type === ExtendedSnapType.BIM_MEP_CONNECTOR && cand.entityId && scene) {
+              const host = scene.entities?.find((en) => en.id === cand.entityId) as Entity | undefined;
+              if (host) {
+                const zMm = resolveMepConnectorElevationMmAt(host, worldPoint.x, worldPoint.y);
+                if (zMm !== null) connectorZmm = zMm;
+              }
+            }
           }
         }
       }
 
-      onCanvasClick(worldPoint, e.shiftKey);
+      const clickPoint = connectorZmm !== null
+        ? { x: worldPoint.x, y: worldPoint.y, z: connectorZmm }
+        : worldPoint;
+      onCanvasClick(clickPoint, e.shiftKey);
     }
 
     // Lasso selection (button-held drag → free-form polygon).

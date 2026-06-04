@@ -73,6 +73,8 @@ export interface UseCanvasClickHandlerParams {
   wallTool?: WallToolLike;
   /** ADR-363 Phase 3 — Slab tool click pipeline. */
   slabTool?: SlabToolLike;
+  /** ADR-417 — Roof tool click pipeline (footprint polygon; same shape as slab). */
+  roofTool?: SlabToolLike;
   /** ADR-363 Phase 4 — Column tool click pipeline. */
   columnTool?: ColumnToolLike;
   /** ADR-363 Phase 5 — Beam tool click pipeline. */

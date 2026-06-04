@@ -48,7 +48,7 @@ import {
 } from '../types/mep-segment-types';
 import { connectorWorldPosition } from '../types/mep-connector-types';
 import { getEntityConnectors } from '../mep-systems/connector-access';
-import { DEFAULT_PIPE_JOIN_TOLERANCE } from '../mep-systems/mep-pipe-network-derive';
+import { resolvePipeJoinTolerance } from '../mep-systems/mep-pipe-network-derive';
 import { resolveMepConnectorElevationMmAt } from './mep-connector-elevation';
 
 /** One segment whose params must change so the network node moves together. */
@@ -181,13 +181,16 @@ export function resolveConnectedElevationPatches(
   entities: readonly Entity[],
   edited: MepSegmentEntity,
   editedNext: MepSegmentParams,
-  tolerance: number = DEFAULT_PIPE_JOIN_TOLERANCE,
+  tolerance?: number,
 ): SegmentElevationPatch[] {
   // Only pipes propagate (plumbing); ducts are a future phase.
   if (edited.params.domain !== 'pipe') {
     return [{ segment: edited, nextParams: editedNext }];
   }
-  const tol2 = tolerance * tolerance;
+  // Unit-aware default (ADR-408 Φ11 hotfix) — a raw 1-unit tolerance is 1 metre
+  // in a metre scene, which would propagate elevation to far-apart endpoints.
+  const tol = tolerance ?? resolvePipeJoinTolerance(entities);
+  const tol2 = tol * tol;
   const changed = collectChangedNodes(edited.params, editedNext, entities, tol2);
   if (changed.length === 0) {
     return [{ segment: edited, nextParams: editedNext }];

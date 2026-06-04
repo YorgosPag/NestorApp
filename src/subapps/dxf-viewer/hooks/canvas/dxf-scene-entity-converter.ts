@@ -13,7 +13,7 @@ import type { DxfEntityUnion, DxfTextStyle } from '../../canvas-v2/dxf-canvas/dx
 import type { DxfColor } from '../../text-engine/types';
 import type { Point2D } from '../../rendering/types/Types';
 import type { SceneModel, TextEntity } from '../../types/entities';
-import { isSlabEntity, isSlabOpeningEntity, isOpeningEntity, isWallEntity, isBeamEntity, isColumnEntity, isMepFixtureEntity, isElectricalPanelEntity, isRailingEntity, isFurnitureEntity, isMepSegmentEntity, isMepFittingEntity, isFloorplanSymbolEntity, isMepManifoldEntity, isXLineEntity, isRayEntity } from '../../types/entities';
+import { isSlabEntity, isSlabOpeningEntity, isOpeningEntity, isWallEntity, isBeamEntity, isColumnEntity, isMepFixtureEntity, isElectricalPanelEntity, isRailingEntity, isFurnitureEntity, isMepSegmentEntity, isMepFittingEntity, isFloorplanSymbolEntity, isMepManifoldEntity, isRoofEntity, isXLineEntity, isRayEntity } from '../../types/entities';
 import type { XLineEntity, RayEntity } from '../../types/entities';
 import type { StairEntity } from '../../bim/types/stair-types';
 import type { SlabEntity } from '../../bim/types/slab-types';
@@ -33,6 +33,8 @@ import type { MepManifoldEntity } from '../../bim/types/mep-manifold-types';
 import type { RailingEntity } from '../../bim/types/railing-types';
 import type { FurnitureEntity } from '../../bim/types/furniture-types';
 import type { FloorplanSymbolEntity } from '../../bim/types/floorplan-symbol-types';
+// ADR-417 — roof direct entity for DXF render pipeline.
+import type { RoofEntity } from '../../bim/types/roof-types';
 import type { MepSegmentEntity } from '../../bim/types/mep-segment-types';
 import type { MepFittingEntity } from '../../bim/types/mep-fitting-types';
 import type { DimensionEntity } from '../../types/dimension';
@@ -342,6 +344,15 @@ export function convertEntity(entity: SceneEntity, layers: SceneLayers, layersBy
       if (!isFurnitureEntity(entity)) return null;
       const fn = entity as FurnitureEntity;
       return { ...base, type: 'furniture' as const, kind: fn.kind, params: fn.params, geometry: fn.geometry, validation: fn.validation } as DxfEntityUnion;
+    }
+    case 'roof': {
+      // ADR-417 — direct entity (same pattern as slab/furniture). RoofRenderer
+      // reads geometry.faces + geometry.ridges + footprint at top level. Without
+      // this case, freshly-committed roofs are silently dropped → invisible on
+      // 2D canvas (visible only in 3D which reads params directly).
+      if (!isRoofEntity(entity)) return null;
+      const rf = entity as RoofEntity;
+      return { ...base, type: 'roof' as const, kind: rf.kind, params: rf.params, geometry: rf.geometry, validation: rf.validation } as DxfEntityUnion;
     }
     case 'floorplan-symbol': {
       // ADR-415 — direct entity (same pattern as furniture/mep-fixture).

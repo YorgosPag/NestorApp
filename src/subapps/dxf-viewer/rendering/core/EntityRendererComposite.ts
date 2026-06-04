@@ -39,6 +39,8 @@ import { MepFixtureRenderer } from '../../bim/renderers/MepFixtureRenderer';
 import { ElectricalPanelRenderer } from '../../bim/renderers/ElectricalPanelRenderer';
 // ADR-407 — railing leaf (path-based guardrail, posts + balusters + top rail).
 import { RailingRenderer } from '../../bim/renderers/RailingRenderer';
+// ADR-417 — roof leaf (parametric pitched roof; faces + ridge lines).
+import { RoofRenderer } from '../../bim/renderers/RoofRenderer';
 // ADR-410 — furniture leaf (mesh-based CC0 item; 2D footprint + glyph).
 import { FurnitureRenderer } from '../../bim/renderers/FurnitureRenderer';
 // ADR-408 Φ8 — MEP segment leaf (linear duct/pipe run, dashed outline + centerline).
@@ -105,6 +107,8 @@ export class EntityRendererComposite {
     const electricalPanelRenderer = new ElectricalPanelRenderer(this.ctx);
     // ADR-407 — railing renderer (path-based guardrail, posts + balusters + rail).
     const railingRenderer = new RailingRenderer(this.ctx);
+    // ADR-417 — roof renderer (parametric pitched roof; faces + ridge lines).
+    const roofRenderer = new RoofRenderer(this.ctx);
     // ADR-410 — furniture renderer (mesh-based CC0 item; 2D footprint + glyph).
     const furnitureRenderer = new FurnitureRenderer(this.ctx);
     // ADR-408 Φ8 — MEP segment renderer (linear duct/pipe run, dashed outline + centerline).
@@ -143,6 +147,7 @@ export class EntityRendererComposite {
     this.renderers.set('mep-fixture', mepFixtureRenderer);
     this.renderers.set('electrical-panel', electricalPanelRenderer);
     this.renderers.set('railing', railingRenderer);
+    this.renderers.set('roof', roofRenderer);
     this.renderers.set('furniture', furnitureRenderer);
     this.renderers.set('mep-segment', mepSegmentRenderer);
     this.renderers.set('mep-fitting', mepFittingRenderer);

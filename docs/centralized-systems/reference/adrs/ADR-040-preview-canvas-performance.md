@@ -2191,6 +2191,19 @@ That subtree-per-button × N buttons × mousemove rate was the source of the Too
 
 ✅ Google-level: YES.
 
+### 2026-06-04: Roof tool integration touch (ADR-417) — no architectural change
+
+**What**: The roof drawing tool (ADR-417) was wired through two micro-leaf architecture
+files: `CanvasSection.tsx` (added `roofTool` to the `useSpecialTools(...)` destructuring +
+active-tool branch) and `hooks/canvas/canvas-click-types.ts` (added the `roof` case to the
+canvas click-type union). Both are additive: they extend the existing tool/click-type
+patterns with the new entity, exactly as prior tools (wall, slab, beam, mep-segment) did.
+
+**Architecture impact**: NONE. No new `useSyncExternalStore` subscription in orchestrators,
+no change to the leaf-subscriber boundaries, no change to event-time getter usage. The
+micro-leaf cardinal rules (ADR-040) are unaffected — this entry exists to satisfy CHECK 6B
+(any modification to a micro-leaf file must stage ADR-040), per the DXF Viewer rule.
+
 ### 2026-05-09: PERF — Phase G: Eliminate continuous RAF loop in FloorplanBackgroundCanvas
 
 **Incident**: Performance trace post-Phase F (clean) showed `FloorplanBackgroundCanvas.useEffect.draw` consuming **6091.8ms / 11s trace = 54.6% Self Time** — top single hotspot. Console-task overhead added another 33%. Total: ~88% of trace burned in this component, even when scene was idle.

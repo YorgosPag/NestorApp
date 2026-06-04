@@ -382,12 +382,16 @@ async function runReconcileDiff(
     await createFitting(draft, svc, refs, sceneOps.create);
   }
 
-  // Delete — scene fittings whose junctionKey is no longer desired (topology changed).
-  for (const [key, entity] of sceneByKey) {
-    if (desiredByKey.has(key)) continue;
-    sceneOps.deleteIds.push(entity.id);
-    const doc = refs.persistedByKey.get(key);
-    if (doc) await deleteFitting(doc, svc, refs);
+  // Delete — ANY scene fitting whose junctionKey is no longer desired (topology
+  // changed). Iterate EVERY fitting by id (not the junctionKey-keyed map) so legacy
+  // duplicates that collided onto one coarse key are ALL removed, and delete from
+  // Firestore by the entity's OWN id — `persistedByKey` loses collided docs, so a
+  // key lookup would leave orphan docs behind (ADR-408 Φ11 hotfix: orphan self-heal).
+  for (const e of scene.entities) {
+    if (!isFitting(e)) continue;
+    if (desiredByKey.has(e.params.junctionKey)) continue;
+    sceneOps.deleteIds.push(e.id);
+    await deleteSceneFitting(e, svc, refs);
   }
 
   applySceneOps(levelId, levelManager, sceneOps.create, sceneOps.deleteIds);
@@ -448,18 +452,28 @@ async function updateFitting(
   }
 }
 
-async function deleteFitting(
-  doc: MepFittingDoc,
+/**
+ * Delete a fitting the scene shows but the topology no longer wants. Keyed off
+ * the SCENE entity's own id (collision-proof — `persistedByKey` drops fittings
+ * that collided onto one coarse junctionKey, so a key-based lookup would orphan
+ * the Firestore doc). The `deleted` guard stops the subscribe echo re-adding it.
+ */
+async function deleteSceneFitting(
+  entity: MepFittingEntity,
   svc: MepFittingFirestoreService,
   refs: ReconcileRefs,
 ): Promise<void> {
-  refs.deleted.add(doc.id);
+  refs.deleted.add(entity.id);
   try {
-    await svc.deleteFitting(doc.id);
-    refs.persistedByKey.delete(doc.params.junctionKey);
-    recordMepFittingChange('deleted', { id: doc.id, kind: doc.kind, params: doc.params });
+    await svc.deleteFitting(entity.id);
+    refs.persistedByKey.delete(entity.params.junctionKey);
+    recordMepFittingChange('deleted', {
+      id: entity.id,
+      kind: entity.kind,
+      params: entity.params,
+    });
   } catch {
-    refs.deleted.delete(doc.id);
+    refs.deleted.delete(entity.id);
   }
 }
 

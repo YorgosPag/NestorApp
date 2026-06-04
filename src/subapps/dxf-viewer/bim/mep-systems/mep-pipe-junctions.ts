@@ -34,7 +34,7 @@ import {
   SEGMENT_START_CONNECTOR_ID,
   SEGMENT_END_CONNECTOR_ID,
 } from '../types/mep-connector-types';
-import { DEFAULT_PIPE_JOIN_TOLERANCE } from './mep-pipe-network-derive';
+import { resolvePipeJoinTolerance } from './mep-pipe-network-derive';
 
 /** One resolved junction node: a coincidence point of pipe endpoints. */
 export interface PipeJunction {
@@ -157,8 +157,12 @@ function buildJunction(bucket: readonly SegmentEndpoint[], tolerance: number): P
  */
 export function derivePipeJunctions(
   entities: readonly Entity[],
-  tolerance: number = DEFAULT_PIPE_JOIN_TOLERANCE,
+  tolerance?: number,
 ): PipeJunction[] {
+  // Unit-aware default — a raw `1`-unit tolerance is 1 METRE in a metre scene,
+  // which merged a short pipe's own endpoints into a single (cross) junction and
+  // collapsed distinct nodes onto one quantized key (ADR-408 Φ11 hotfix).
+  const tol = tolerance ?? resolvePipeJoinTolerance(entities);
   const segments = entities
     .filter(isMepSegmentEntity)
     .filter((s) => s.params.domain === 'pipe')
@@ -168,7 +172,7 @@ export function derivePipeJunctions(
 
   const endpoints: SegmentEndpoint[] = segments.flatMap((seg) => [...endpointsOf(seg)]);
   const parent = endpoints.map((_, i) => i);
-  const tol2 = tolerance * tolerance;
+  const tol2 = tol * tol;
 
   for (let i = 0; i < endpoints.length; i++) {
     for (let j = i + 1; j < endpoints.length; j++) {
@@ -187,6 +191,6 @@ export function derivePipeJunctions(
   }
 
   return [...buckets.values()]
-    .map((bucket) => buildJunction(bucket, tolerance))
+    .map((bucket) => buildJunction(bucket, tol))
     .sort((a, b) => a.key.localeCompare(b.key));
 }

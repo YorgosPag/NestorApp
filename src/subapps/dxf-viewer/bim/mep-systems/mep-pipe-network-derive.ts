@@ -31,9 +31,40 @@ import {
   SEGMENT_START_CONNECTOR_ID,
   SEGMENT_END_CONNECTOR_ID,
 } from '../types/mep-connector-types';
+import { mmToSceneUnits, type SceneUnits } from '../../utils/scene-units';
 
-/** Default proximity (scene units) under which two endpoints count as connected. */
+/**
+ * Fallback proximity (scene units) for a scene with no segments to read units
+ * from. Real derivations use the UNIT-AWARE `resolvePipeJoinTolerance` instead.
+ */
 export const DEFAULT_PIPE_JOIN_TOLERANCE = 1;
+
+/**
+ * Physical proximity (mm) under which two pipe endpoints count as connected.
+ * ~half a small DN50 pipe — tight enough that a short run's own two ends never
+ * merge into one junction, loose enough to absorb snap/float jitter.
+ */
+export const PIPE_JOIN_TOLERANCE_MM = 25;
+
+/** Scene-unit scale of the pipe network — read from the first `mep-segment`. */
+function sceneUnitsFromSegments(entities: readonly Entity[]): SceneUnits {
+  for (const e of entities) {
+    if (isMepSegmentEntity(e) && e.params.sceneUnits) return e.params.sceneUnits;
+  }
+  return 'mm';
+}
+
+/**
+ * Unit-aware join tolerance (scene units): the 25mm physical threshold expressed
+ * in the scene's OWN units. Critical — a raw `1`-unit tolerance is 1 METRE in a
+ * metre scene, which merged a short pipe's two endpoints into one junction
+ * (spurious cross/tee) and collapsed distinct nodes onto one quantized
+ * `junctionKey` (un-deletable orphan fittings). The mm-based value scales
+ * correctly across mm / cm / m scenes. (ADR-408 Φ11 hotfix.)
+ */
+export function resolvePipeJoinTolerance(entities: readonly Entity[]): number {
+  return PIPE_JOIN_TOLERANCE_MM * mmToSceneUnits(sceneUnitsFromSegments(entities));
+}
 
 /**
  * Default classification for a freshly derived network — a just-drawn pipe
@@ -102,9 +133,10 @@ function find(parent: number[], i: number): number {
  */
 export function derivePipeNetworks(
   entities: readonly Entity[],
-  tolerance: number = DEFAULT_PIPE_JOIN_TOLERANCE,
+  tolerance?: number,
   defaultClassification: PlumbingSystemClassification = DEFAULT_DERIVED_PIPE_CLASSIFICATION,
 ): PipeNetworkDraft[] {
+  const tol = tolerance ?? resolvePipeJoinTolerance(entities);
   const segments = entities
     .filter(isMepSegmentEntity)
     .filter((s) => s.params.domain === 'pipe')
@@ -116,7 +148,7 @@ export function derivePipeNetworks(
   const parent = segments.map((_, i) => i);
   for (let i = 0; i < segments.length; i++) {
     for (let j = i + 1; j < segments.length; j++) {
-      if (touches(segments[i]!, segments[j]!, tolerance)) {
+      if (touches(segments[i]!, segments[j]!, tol)) {
         parent[find(parent, j)] = find(parent, i);
       }
     }

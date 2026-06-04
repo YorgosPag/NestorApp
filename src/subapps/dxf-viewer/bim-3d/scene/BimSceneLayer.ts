@@ -18,6 +18,7 @@ import type { FloorStackEntry } from './multi-floor-3d-source';
 import { wallToMesh, columnToMesh, beamToMesh, slabToMesh, fixtureToMesh, panelToMesh, manifoldToMesh } from '../converters/BimToThreeConverter';
 import { stairToMeshes } from '../converters/StairToThreeConverter';
 import { railingToMesh } from '../converters/railing-to-three';
+import { roofToMesh } from '../converters/roof-to-three';
 import { furnitureToObject3D } from '../converters/furniture-to-three';
 import { mepFixtureToObject3D } from '../converters/mep-fixture-to-mesh';
 import { syncCircuitWires } from './sync-circuit-wires';
@@ -154,6 +155,7 @@ export class BimSceneLayer {
     this.syncManifolds(entities, ctx);
     syncCircuitWires(this.group, entities, ctx, (entity, category) => this.resolveEntity(entity, category, ctx));
     this.syncRailings(entities, ctx);
+    this.syncRoofs(entities, ctx);
     this.syncFurnitures(entities, ctx);
     const resolve = (e: { layerId?: string; discipline?: Discipline }, c: BimCategory) =>
       this.resolveEntity(e, c, ctx);
@@ -383,6 +385,20 @@ export class BimSceneLayer {
         entities.slabOpenings, slab.id, r.buildingMode, ctx,
       );
       const mesh = slabToMesh(slab, openingsForSlab, ctx.activeLevelId, r.baseElevation);
+      if (mesh) { mesh.userData['buildingId'] = r.buildingId; this.group.add(mesh); }
+    }
+  }
+
+  /**
+   * ADR-417 — parametric pitched roofs (faces extruded down by thickness). Φ1
+   * piggybacks the 'slab' V/G category for visibility (roof category lands in a
+   * later phase). buildingBaseElevation passed through like slab/railing.
+   */
+  private syncRoofs(entities: Bim3DEntities, ctx: SyncContext): void {
+    for (const roof of entities.roofs ?? []) {
+      const r = this.resolveEntity(roof, 'slab', ctx);
+      if (!r) continue;
+      const mesh = roofToMesh(roof, ctx.activeLevelId, r.baseElevation);
       if (mesh) { mesh.userData['buildingId'] = r.buildingId; this.group.add(mesh); }
     }
   }

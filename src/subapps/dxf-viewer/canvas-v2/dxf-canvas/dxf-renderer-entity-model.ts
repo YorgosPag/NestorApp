@@ -115,6 +115,10 @@ export function buildEntityModelFromDxf(
       return { ...base, type: 'railing', kind: entity.kind, params: entity.params, geometry: entity.geometry, validation: entity.validation } as unknown as Entity;
     case 'furniture':
       return { ...base, type: 'furniture', kind: entity.kind, params: entity.params, geometry: entity.geometry, validation: entity.validation } as unknown as Entity;
+    case 'roof':
+      // ADR-417 — direct entity (same pattern as slab/furniture). RoofRenderer
+      // reads geometry.faces + ridges + footprint at top level.
+      return { ...base, type: 'roof', kind: entity.kind, params: entity.params, geometry: entity.geometry, validation: entity.validation } as unknown as Entity;
     case 'mep-segment':
       return { ...base, type: 'mep-segment', kind: entity.kind, params: entity.params, geometry: entity.geometry, validation: entity.validation } as unknown as Entity;
     case 'mep-fitting':

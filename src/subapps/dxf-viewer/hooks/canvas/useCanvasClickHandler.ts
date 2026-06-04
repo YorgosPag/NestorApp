@@ -68,6 +68,7 @@ export function useCanvasClickHandler(params: UseCanvasClickHandlerParams): UseC
     stairTool,
     wallTool,
     slabTool,
+    roofTool,
     columnTool,
     beamTool,
     mepFixtureTool,
@@ -260,6 +261,11 @@ export function useCanvasClickHandler(params: UseCanvasClickHandlerParams): UseC
       slabTool.onCanvasClick(bimPoint);
       return;
     }
+    // PRIORITY 4.7b: ADR-417 — Roof tool N-click footprint polygon (Enter to commit).
+    if (activeTool === 'roof' && roofTool?.isActive) {
+      roofTool.onCanvasClick(bimPoint);
+      return;
+    }
     // PRIORITY 4.8: ADR-363 Phase 4 — Column tool single-click placement.
     // Φάση 3 / 3c — 'column-from-perimeter' & 'column-discrete-from-perimeter' share
     // the same tool; click-inside a perimeter builds (RAW worldPoint — hit-tests
@@ -417,6 +423,7 @@ export function useCanvasClickHandler(params: UseCanvasClickHandlerParams): UseC
     stairTool,
     wallTool,
     slabTool,
+    roofTool,
     columnTool,
     beamTool,
     mepFixtureTool,

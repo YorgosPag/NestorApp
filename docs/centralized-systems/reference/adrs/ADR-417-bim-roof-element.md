@@ -1,6 +1,6 @@
 # ADR-417: BIM Roof Element (Δομικό στοιχείο «Στέγη»)
 
-- **Status**: 🟢 ACCEPTED (design) — Research complete + Q1–Q8 locked by Giorgio · ⏳ awaiting implementation (execution-mode approval, N.8)
+- **Status**: 🟢 ACCEPTED + 🟡 Φ1 PARTIALLY IMPLEMENTED (2026-06-04, Opus orchestrator) — entity+engine+2D+3D+tool+persistence+RoofTypes(built-ins)+BOQ+ribbon+i18n DONE· grips + contextual-tab (shape/slope UI) + family-type edit-UI + V/G category = Φ1-part-2 (βλ. §10). 🔴 browser-verify + commit pending.
 - **Date**: 2026-06-04
 - **Deciders**: Giorgio (Yorgos Pagonis)
 - **Scope**: DXF Viewer subapp (`src/subapps/dxf-viewer`) — νέο παραμετρικό BIM δομικό στοιχείο «Στέγη» (κεκλιμένη/πραγματική στέγη), πέρα από την υπάρχουσα επίπεδη `slab kind='roof'`.
@@ -254,3 +254,17 @@
 
 - **2026-06-04** — Δημιουργία ADR. Ολοκλήρωση βαθιάς έρευνας (IFC/Revit/ArchiCAD), καταγραφή ευρημάτων, χαρτογράφηση αρχείων-προτύπων.
 - **2026-06-04** — Κλείδωμα αποφάσεων Q1–Q8 (Giorgio, AskUserQuestion): και οι 4 μορφές (hip→Φ2), footprint+per-edge slopes (Revit-style), μοίρες+ποσοστό, Roof Types (ADR-412), wall-attach→Φ4. Status → ACCEPTED (design). Roadmap 6 φάσεων. Εκκρεμεί έγκριση execution-mode (N.8) πριν υλοποίηση.
+- **2026-06-04** — **Φ1 υλοποίηση (Opus, Orchestrator + 4 subagents).** Νέο παραμετρικό entity `'roof'` + pure SSoT μηχανή `computeRoofGeometry` (lower-envelope per-edge rising planes: flat / mono-pitch / gable· hip→Φ2 graceful flat fallback) με GrossArea (κεκλιμένο) + ProjectedArea. Παραδοτέα: types/schemas/μηχανή/buildup (concrete δώμα + κεραμοσκεπή)· factory + enterprise-id (`roof`) + collection `FLOORPLAN_ROOFS`· 6 πύλες καταγραφής (bim-base/entities-guard/dxf-scene-entity-converter/EntityRendererComposite/entity-bounds/bim-bounds/hitTesting-Bounds) + 2D pipeline (dxf-types/dxf-renderer-entity-model)· 2D RoofRenderer (faces+ridges)· 3D `roof-to-three` (units-safe, ShapeUtils + axis convention column/wall)· 3D feed (Bim3DEntitiesStore `roofs` slice + aggregator + BimSceneLayer.syncRoofs)· drawing tool `useRoofTool` + `roof-completion` (footprint polygon, default flat)· persistence (roof-firestore-service + useRoofPersistence + RoofPersistenceHost mount) με N.6 setDoc· Roof Types built-ins (ADR-412: «Μπετονένιο δώμα»+«Κεραμοσκεπή»)· BOQ (OIK-7.01 m² κεκλιμένο)· ribbon «Στέγη» (RF) + i18n el+en. **Φ1-part-2 (βλ. §10):** grips, contextual-tab (shape preset + slope deg↔percent UI), family-type edit-dialog/auto-assign, V/G category 'roof', roof-delete EventBus, audit-tracked-fields SSoT entry.
+
+## 10. Φ1-part-2 — Εκκρεμότητες (documented follow-ups)
+
+Η μηχανή ΥΠΟΣΤΗΡΙΖΕΙ ήδη flat/mono/gable· λείπει το **property UI** για να τα ορίσει ο χρήστης (το drawing tool παράγει default flat). Εκκρεμή:
+
+1. **Contextual ribbon tab «Στέγη»** — μορφή (flat/mono/gable preset μέσω `applyRoofShapePreset`) + κλίση με toggle μοίρες↔ποσοστό (`roofSlopeToRatio`/`roofSlopeFromRatio`) + base elevation + Roof Type picker. Χρειάζεται `UpdateRoofParamsCommand` (undoable).
+2. **Grips** — per-vertex move + edge-midpoint insert (mirror slab-grips `roofGripKind` → 15-file discriminant forwarding· γνωστή «πύλες» παγίδα).
+3. **Family-type UI** — edit-type dialog + re-resolution + auto-assign (ADR-412 plug-in πλήρες, πρότυπο slab/wall).
+4. **V/G category `'roof'`** — bim-object-styles + discipline + visibility-resolver (Φ1 piggybacks `'slab'` category στο 3D sync + minimal visible-guard στο 2D).
+5. **roof-delete EventBus** (`bim:roof-delete-requested`) + **audit-tracked-fields** SSoT entry (Φ1 χρησιμοποιεί local `ROOF_TRACKED_FIELDS` στο roof-audit-client).
+6. **Tests** — engine unit tests (flat/mono/gable areas + ridge) + grip tests.
+7. **Hip (Φ2)** — straight-skeleton solver.
+8. **Δικό icon** `bim-roof` (Φ1 reuse `bim-slab`).

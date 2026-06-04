@@ -138,6 +138,8 @@ export class BoundsCalculator {
       case 'mep-fitting':
       // ADR-415 — floorplan symbol projects `geometry.bbox` (FloorplanSymbolGeometry) to 2D (same).
       case 'floorplan-symbol':
+      // ADR-417 — roof projects `geometry.bbox` (RoofGeometry) to 2D (same).
+      case 'roof':
       // ADR-408 Φ12 — plumbing manifold projects `geometry.bbox` (MepManifoldGeometry) to 2D (same).
       case 'mep-manifold':
         return this.calculateBimEntityBounds(entity, tolerance);
