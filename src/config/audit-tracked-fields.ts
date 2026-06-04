@@ -964,6 +964,9 @@ export const STAIR_TRACKED_FIELDS: Record<string, TrackedFieldDef> =
 const BIM_FAMILY_TYPE_TRACKED_FIELDS_RAW: Record<string, string> = {
   name: 'name',
   category: 'category',
+  // ADR-412 — slab family types discriminate the build-up by `kind` (the slab
+  // analogue of wall `category`); track it so slab-type edits diff meaningfully.
+  kind: 'kind',
   thickness: 'thickness',
   material: 'material',
   dna: 'dna',
