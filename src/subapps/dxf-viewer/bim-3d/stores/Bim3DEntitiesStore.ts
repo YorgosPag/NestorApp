@@ -85,6 +85,7 @@ export const EMPTY_BIM_ENTITIES: Bim3DEntities = {
   panels: [],
   railings: [],
   furnitures: [],
+  roofs: [],
   mepSegments: [],
   mepFittings: [],
   manifolds: [],
