@@ -38,12 +38,14 @@
 
 import { getDefaultDnaForCategory } from '../types/wall-dna-types';
 import { getDefaultSlabBuildupForKind } from '../types/slab-dna-types';
+import { getRoofBuildupForKey, ROOF_BUILDUP_KEYS, type RoofBuildupKey } from '../types/roof-buildup';
 import type { WallCategory } from '../types/wall-types';
 import type { SlabKind } from '../types/slab-types';
 import type {
   BimFamilyType,
   BimFamilyTypeScope,
   BimTypeParamsByCategory,
+  RoofTypeParams,
   SlabTypeParams,
   StairTypeParams,
   WallTypeParams,
@@ -190,6 +192,50 @@ export function getBuiltInSlabTypes(
   return SLAB_KINDS.map((kind) => buildSlabType(kind, companyId));
 }
 
+// ─── Roof built-ins (ADR-417 Q8) ─────────────────────────────────────────────
+
+/**
+ * The deterministic synthetic id of the built-in roof family type for a build-up
+ * key. SSoT for the id derivation — the catalog builder ({@link buildRoofType})
+ * AND the auto-assign policy (`roof-type-auto-assign.ts`) both go through here so
+ * the string is declared exactly once (N.0.2).
+ */
+export function getBuiltInRoofTypeId(key: RoofBuildupKey): string {
+  return `${BUILTIN_ID_PREFIX}-roof-${key}`;
+}
+
+function buildRoofType(
+  key: RoofBuildupKey,
+  companyId: string,
+): BimFamilyType<'roof'> {
+  const dna = getRoofBuildupForKey(key);
+  const typeParams: RoofTypeParams = {
+    thickness: dna.totalThickness,
+    dna,
+  };
+  return {
+    id: getBuiltInRoofTypeId(key),
+    category: 'roof',
+    name: `builtin.roof.${key}`,
+    scope: 'company',
+    origin: 'built-in',
+    typeParams,
+    companyId,
+    ownerId: 'system',
+  };
+}
+
+/**
+ * The factory roof family types — «Μπετονένιο δώμα» (concrete) + «Κεραμοσκεπή»
+ * (tiled). Each derives its `thickness` + `dna` from the roof-build-up SSoT
+ * (`getRoofBuildupForKey`), so the built-in can never drift.
+ */
+export function getBuiltInRoofTypes(
+  companyId: string,
+): readonly BimFamilyType<'roof'>[] {
+  return ROOF_BUILDUP_KEYS.map((key) => buildRoofType(key, companyId));
+}
+
 // ─── Stair built-ins ──────────────────────────────────────────────────────────
 
 interface StairBuiltInSeed {
@@ -278,6 +324,7 @@ export function getAllBuiltInTypes(
   return [
     ...getBuiltInWallTypes(companyId),
     ...getBuiltInSlabTypes(companyId),
+    ...getBuiltInRoofTypes(companyId),
     ...getBuiltInStairTypes(companyId),
   ];
 }
