@@ -27,8 +27,6 @@ import { dequal } from 'dequal';
 
 import type { AnySceneEntity, SceneModel } from '../../types/entities';
 import type { SlabEntity } from '../../bim/types/slab-types';
-import { computeSlabGeometry } from '../../bim/geometry/slab-geometry';
-import { validateSlabParams } from '../../bim/validators/slab-validator';
 import { EventBus } from '../../systems/events/EventBus';
 import {
   createSlabFirestoreService,
@@ -41,6 +39,14 @@ import { bimToBoqBridge } from '../../bim/services/BimToBoqBridge';
 import { useBimEntityMovedPersistEffect } from './useBimEntityMovedPersistEffect';
 import { useBimEntityRestoredPersistEffect } from './useBimEntityRestoredPersistEffect';
 import { slabBoqGeometry } from './slab-boq-feed';
+import {
+  docToEntity,
+  isSlab,
+  slabEntityDiffersFromDoc,
+  slabTypeLinkChanged,
+  type SlabTypeLink,
+} from './slab-persistence-helpers';
+import { useSlabTypeReresolution } from './useSlabTypeReresolution';
 
 // ============================================================================
 // TYPES
@@ -81,34 +87,6 @@ export interface UseSlabPersistenceResult {
 const AUTO_SAVE_DEBOUNCE_MS = 500;
 
 // ============================================================================
-// HELPERS
-// ============================================================================
-
-function isSlab(entity: AnySceneEntity): entity is SlabEntity {
-  return (entity as { type?: string }).type === 'slab';
-}
-
-/**
- * Build scene-side `SlabEntity` από persisted `SlabDoc`. Geometry +
- * validation recomputed via SSoT pure functions. Phase 3.8: always recompute
- * geometry (ensures `maxFreeSpanM` present; wall/beam context added at
- * persist time via `computeSlabGeometry` with full footprints).
- */
-function docToEntity(doc: SlabDoc): SlabEntity {
-  const validation = doc.validation ?? validateSlabParams(doc.params).bimValidation;
-  return {
-    id: doc.id,
-    type: 'slab',
-    kind: doc.kind,
-    layerId: doc.layerId ?? '0',
-    params: doc.params,
-    geometry: computeSlabGeometry(doc.params),
-    validation,
-    visible: true,
-  } as SlabEntity;
-}
-
-// ============================================================================
 // HOOK
 // ============================================================================
 
@@ -133,6 +111,9 @@ export function useSlabPersistence(
   const serviceRef = useRef<SlabFirestoreService | null>(null);
   const dirtyIdsRef = useRef<Set<string>>(new Set());
   const lastSavedParamsRef = useRef<Map<string, SlabEntity['params']>>(new Map());
+  // ADR-412 — last-saved family-type link per slab, so a non-destructive detach
+  // (params kept, `typeId` cleared) still triggers an auto-save.
+  const lastSavedTypeLinkRef = useRef<Map<string, SlabTypeLink>>(new Map());
   // ADR-390 — tracks IDs με in-flight first save (drawn or restored). Replaces
   // the buggy `neverSaved` guard that kept DXF-JSON-only ghost entities in scene.
   const pendingFirstSaveIdsRef = useRef<Set<string>>(new Set());
@@ -200,7 +181,9 @@ export function useSlabPersistence(
             nextSlabs.push(existing);
             continue;
           }
-          if (!dequal(existing.params, doc.params)) {
+          // ADR-412 — diff against the doc's EFFECTIVE (type-resolved) params so
+          // a typed slab doesn't churn on every snapshot (scene holds resolved).
+          if (slabEntityDiffersFromDoc(existing, doc)) {
             nextSlabs.push(docToEntity(doc));
             mutated = true;
           } else {
@@ -249,6 +232,10 @@ export function useSlabPersistence(
     try {
       await svc.saveSlab(entityToSaveInput(entity));
       lastSavedParamsRef.current.set(entity.id, entity.params);
+      lastSavedTypeLinkRef.current.set(entity.id, {
+        typeId: entity.typeId,
+        typeOverrides: entity.typeOverrides,
+      });
       dirtyIdsRef.current.delete(entity.id);
       pendingFirstSaveIdsRef.current.delete(entity.id);
       setSaveState('saved');
@@ -286,7 +273,9 @@ export function useSlabPersistence(
     const pending = pendingFirstSaveIdsRef.current.has(slab.id);
     if (!known && !pending) return;
     const lastSaved = lastSavedParamsRef.current.get(slab.id);
-    if (lastSaved && dequal(lastSaved, slab.params)) return;
+    // ADR-412 — a detach keeps params identical, so OR-in the type-link diff.
+    const linkChanged = slabTypeLinkChanged(lastSavedTypeLinkRef.current.get(slab.id), slab);
+    if (lastSaved && dequal(lastSaved, slab.params) && !linkChanged) return;
 
     dirtyIdsRef.current.add(slab.id);
     if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
@@ -348,6 +337,7 @@ export function useSlabPersistence(
 
     dirtyIdsRef.current.delete(slabId);
     lastSavedParamsRef.current.delete(slabId);
+    lastSavedTypeLinkRef.current.delete(slabId);
     pendingFirstSaveIdsRef.current.delete(slabId);
     // ADR-390 — tombstone tracking για subscribe loop race protection.
     deletedIdsRef.current.add(slabId);
@@ -364,6 +354,10 @@ export function useSlabPersistence(
     try {
       await svc.saveSlab(entityToSaveInput(entity));
       lastSavedParamsRef.current.set(entity.id, entity.params);
+      lastSavedTypeLinkRef.current.set(entity.id, {
+        typeId: entity.typeId,
+        typeOverrides: entity.typeOverrides,
+      });
       dirtyIdsRef.current.delete(entity.id);
       pendingFirstSaveIdsRef.current.delete(entity.id);
       setSaveState('saved');
@@ -456,6 +450,10 @@ export function useSlabPersistence(
     });
     return cleanup;
   }, [levelManager, companyId, projectId, buildingId, floorId]);
+
+  // ADR-412 «type always wins» — re-flow type edits / late type loads onto the
+  // active scene's typed slabs (activates per-layer rendering). Mirrors wall.
+  useSlabTypeReresolution(levelManager, dirtyIdsRef);
 
   useBimEntityMovedPersistEffect(isSlab, serviceRef, dirtyIdsRef, persist);
   // ADR-390 — symmetric undo→Firestore restore.
