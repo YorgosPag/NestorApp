@@ -135,6 +135,36 @@ describe('derivePipeJunctions', () => {
       expect(d.y).toBeCloseTo(0.8, 5);
       expect(Math.hypot(d.x, d.y)).toBeCloseTo(1, 5);
     });
+
+    it('keeps z = 0 for a horizontal run (back-compat)', () => {
+      const junctions = derivePipeJunctions([seg('p1', [0, 0], [100, 0])]);
+      const startNode = junctions.find(
+        (j) => j.incidents[0]!.connectorId === SEGMENT_START_CONNECTOR_ID,
+      )!;
+      expect(startNode.incidents[0]!.directionUnit.z).toBeCloseTo(0, 5);
+    });
+
+    it('carries the vertical slope (Φ-B2b) for a riser, as a 3D unit vector', () => {
+      // Riser: start at floor (z=0) → end at ceiling (z=2800), 100mm plan run.
+      const riser = {
+        id: 'r1',
+        type: 'mep-segment',
+        params: {
+          domain: 'pipe',
+          sectionKind: 'round',
+          startPoint: { x: 0, y: 0, z: 0 },
+          endPoint: { x: 100, y: 0, z: 2800 },
+          diameter: 50,
+          centerlineElevationMm: 1400,
+        },
+      } as unknown as Entity;
+      const startNode = derivePipeJunctions([riser]).find(
+        (j) => j.incidents[0]!.connectorId === SEGMENT_START_CONNECTOR_ID,
+      )!;
+      const d = startNode.incidents[0]!.directionUnit;
+      expect(d.z).toBeGreaterThan(0.9); // mostly vertical (2800 rise vs 100 plan)
+      expect(Math.hypot(d.x, d.y, d.z ?? 0)).toBeCloseTo(1, 5); // still a unit vector
+    });
   });
 
   describe('junctionKey stability', () => {

@@ -17,6 +17,8 @@ export const MEP_SEGMENT_RIBBON_KEYS = {
   stringParams: {
     /** Cross-section profile selector (rectangular / round). */
     sectionKind: 'mepSegment.params.sectionKind',
+    /** ADR-408 Φ14 — plumbing classification (cold/hot/drainage), pipe only. */
+    classification: 'mepSegment.params.classification',
   },
   params: {
     /** mm — section width (rectangular only). */
@@ -31,6 +33,8 @@ export const MEP_SEGMENT_RIBBON_KEYS = {
     startElevation: 'mepSegment.params.startElevation',
     /** mm — end-endpoint elevation (Φ-A, per-endpoint riser/slope). */
     endElevation: 'mepSegment.params.endElevation',
+    /** % — gravity fall along the run (ADR-408 Φ14, pipe only). */
+    slopePercent: 'mepSegment.params.slopePercent',
   },
 } as const;
 
@@ -40,10 +44,12 @@ export type MepSegmentRibbonNumberCommandKey =
   | typeof MEP_SEGMENT_RIBBON_KEYS.params.diameter
   | typeof MEP_SEGMENT_RIBBON_KEYS.params.centerlineElevation
   | typeof MEP_SEGMENT_RIBBON_KEYS.params.startElevation
-  | typeof MEP_SEGMENT_RIBBON_KEYS.params.endElevation;
+  | typeof MEP_SEGMENT_RIBBON_KEYS.params.endElevation
+  | typeof MEP_SEGMENT_RIBBON_KEYS.params.slopePercent;
 
 export type MepSegmentRibbonStringCommandKey =
-  typeof MEP_SEGMENT_RIBBON_KEYS.stringParams.sectionKind;
+  | typeof MEP_SEGMENT_RIBBON_KEYS.stringParams.sectionKind
+  | typeof MEP_SEGMENT_RIBBON_KEYS.stringParams.classification;
 
 export const MEP_SEGMENT_RIBBON_NUMBER_KEYS: readonly MepSegmentRibbonNumberCommandKey[] = [
   MEP_SEGMENT_RIBBON_KEYS.params.width,
@@ -52,10 +58,12 @@ export const MEP_SEGMENT_RIBBON_NUMBER_KEYS: readonly MepSegmentRibbonNumberComm
   MEP_SEGMENT_RIBBON_KEYS.params.centerlineElevation,
   MEP_SEGMENT_RIBBON_KEYS.params.startElevation,
   MEP_SEGMENT_RIBBON_KEYS.params.endElevation,
+  MEP_SEGMENT_RIBBON_KEYS.params.slopePercent,
 ];
 
 export const MEP_SEGMENT_RIBBON_STRING_KEYS: readonly MepSegmentRibbonStringCommandKey[] = [
   MEP_SEGMENT_RIBBON_KEYS.stringParams.sectionKind,
+  MEP_SEGMENT_RIBBON_KEYS.stringParams.classification,
 ];
 
 export const MEP_SEGMENT_RIBBON_KEYS_ACTIONS = {
@@ -83,17 +91,21 @@ export const MEP_SEGMENT_RIBBON_VISIBILITY_KEYS = {
   domainAllowsSectionChoice: 'mepSegment.visibility.domainAllowsSectionChoice',
   rectangularSection: 'mepSegment.visibility.rectangularSection',
   roundSection: 'mepSegment.visibility.roundSection',
+  /** ADR-408 Φ14 — classification + slope panel, visible iff `domain === 'pipe'`. */
+  pipeDomain: 'mepSegment.visibility.pipeDomain',
 } as const;
 
 export type MepSegmentRibbonVisibilityKey =
   | typeof MEP_SEGMENT_RIBBON_VISIBILITY_KEYS.domainAllowsSectionChoice
   | typeof MEP_SEGMENT_RIBBON_VISIBILITY_KEYS.rectangularSection
-  | typeof MEP_SEGMENT_RIBBON_VISIBILITY_KEYS.roundSection;
+  | typeof MEP_SEGMENT_RIBBON_VISIBILITY_KEYS.roundSection
+  | typeof MEP_SEGMENT_RIBBON_VISIBILITY_KEYS.pipeDomain;
 
 const MEP_SEGMENT_VISIBILITY_KEY_SET: ReadonlySet<string> = new Set<string>([
   MEP_SEGMENT_RIBBON_VISIBILITY_KEYS.domainAllowsSectionChoice,
   MEP_SEGMENT_RIBBON_VISIBILITY_KEYS.rectangularSection,
   MEP_SEGMENT_RIBBON_VISIBILITY_KEYS.roundSection,
+  MEP_SEGMENT_RIBBON_VISIBILITY_KEYS.pipeDomain,
 ]);
 
 export function isMepSegmentVisibilityKey(

@@ -41,6 +41,7 @@ import {
   type FittingBody,
   type FittingBodyInput,
 } from '../../bim/geometry/mep-fitting-body';
+import { computeBend3DArcPoints } from '../../bim/geometry/mep-fitting-bend-3d';
 import { getElementMaterial3D, getSystemTintedMaterial3D } from '../materials/MaterialCatalog3D';
 import { tagMesh } from './bim-three-shape-helpers';
 
@@ -57,12 +58,14 @@ const ELBOW_ARC_SEGMENTS = 16;
 const FITTING_MAT_ID = 'elem-mep-fitting';
 
 /**
- * Plan direction unit (x=East, y=North) → Three.js world direction (Y-up).
- * Plan Y (north) maps to world −Z; vertical component is zero (pipes run flat
- * in plan-space). Returns a normalised vector (defensive against drift).
+ * Plan direction unit (x=East, y=North, z=vertical slope) → Three.js world
+ * direction (Y-up). Plan Y (north) maps to world −Z; the incident's VERTICAL
+ * component (ADR-408 Φ-B2b — sloped/riser pipes) maps to world +Y, so a fitting
+ * tilts to meet inclined pipes instead of sitting flat. A 2D direction (`z` absent
+ * / 0) collapses to the legacy flat mapping. Returns a normalised vector.
  */
 function planDirToWorld(dir: Point3D): THREE.Vector3 {
-  const v = new THREE.Vector3(dir.x, 0, -dir.y);
+  const v = new THREE.Vector3(dir.x, dir.z ?? 0, -dir.y);
   return v.lengthSq() > 1e-12 ? v.normalize() : new THREE.Vector3(1, 0, 0);
 }
 
@@ -113,70 +116,117 @@ function toBodyInput(params: MepFittingParams): FittingBodyInput {
 }
 
 /**
- * Radiused elbow: a TubeGeometry swept along the TRUE circular centreline bend
- * (Revit long-radius R = 1.5·D), tangent to both legs. The pipe radius is recovered
- * from the bend's concentric walls (`outerRadius − centerRadius = Ø/2`). Each
- * centreline sample maps plan → world (x, 0, −y), so the tube ends land on the legs'
- * tangent points.
+ * Radiused elbow: a TubeGeometry swept along the TRUE 3D centreline bend, tangent to
+ * both legs at `dir · tangentLen` — the SAME tangent length the segment trim uses, so
+ * the tube ends land exactly on each (sloped) pipe's trimmed end (ADR-408 Φ-B2b).
+ * `dirAWorld`/`dirBWorld` are the incidents' 3D world directions (`planDirToWorld`), so
+ * the bend lies in the real plane of the two pipes instead of flat in plan.
+ *
+ * The tube is built at the LARGER end radius, then each ring is scaled toward its
+ * own centre so the radius tapers `radiusStart → radiusEnd` along the arc — a true
+ * REDUCING elbow (Revit single component). For a uniform elbow the two radii are
+ * equal, every ring scales by 1, and the mesh is the plain torus.
  */
 function buildBendTube(
   bend: Extract<FittingBody, { form: 'bend' }>['bend'],
+  dirAWorld: THREE.Vector3,
+  dirBWorld: THREE.Vector3,
   material: THREE.Material,
 ): THREE.Object3D {
-  let sweep = bend.endAngle - bend.startAngle;
-  if (bend.anticlockwise && sweep > 0) sweep -= 2 * Math.PI;
-  if (!bend.anticlockwise && sweep < 0) sweep += 2 * Math.PI;
-
-  const pts: THREE.Vector3[] = [];
-  for (let i = 0; i <= ELBOW_ARC_SEGMENTS; i++) {
-    const t = bend.startAngle + (sweep * i) / ELBOW_ARC_SEGMENTS;
-    const px = bend.center.x + bend.centerRadius * Math.cos(t);
-    const py = bend.center.y + bend.centerRadius * Math.sin(t);
-    pts.push(new THREE.Vector3(px, 0, -py)); // plan → world (Y-up, north = −Z)
-  }
-  const curve = new THREE.CatmullRomCurve3(pts);
-  const tubeRadius = Math.max(bend.outerRadius - bend.centerRadius, 1e-4);
-  const geo = new THREE.TubeGeometry(curve, ELBOW_ARC_SEGMENTS, tubeRadius, RADIAL_SEGMENTS, false);
+  const samples = computeBend3DArcPoints(
+    { x: dirAWorld.x, y: dirAWorld.y, z: dirAWorld.z },
+    { x: dirBWorld.x, y: dirBWorld.y, z: dirBWorld.z },
+    bend.tangentLen,
+    ELBOW_ARC_SEGMENTS,
+  );
+  const curve = new THREE.CatmullRomCurve3(
+    samples.map((p) => new THREE.Vector3(p.x, p.y, p.z)),
+  );
+  const tubeRadius = Math.max(bend.radiusStart, bend.radiusEnd, 1e-4);
+  const tubularSegments = Math.max(samples.length - 1, 1);
+  const geo = new THREE.TubeGeometry(curve, tubularSegments, tubeRadius, RADIAL_SEGMENTS, false);
+  applyBendTaper(geo, curve, bend.radiusStart, bend.radiusEnd, tubeRadius, tubularSegments);
   return new THREE.Mesh(geo, material);
 }
 
-/** Inline body → a cylinder (coupling, equal radii) or a reducing cone (reducer). */
+/**
+ * Taper a uniform TubeGeometry to a reducing elbow. TubeGeometry lays out
+ * `(tubularSegments+1)` rings of `(RADIAL_SEGMENTS+1)` vertices; ring `i` is centred
+ * at `curve.getPointAt(i/tubularSegments)`. We scale each ring's radial offset by
+ * `targetRadius_i / tubeRadius` so the bore lerps start → end. No-op when the radii
+ * match (uniform elbow).
+ */
+function applyBendTaper(
+  geo: THREE.TubeGeometry,
+  curve: THREE.CatmullRomCurve3,
+  radiusStart: number,
+  radiusEnd: number,
+  tubeRadius: number,
+  tubularSegments: number,
+): void {
+  if (Math.abs(radiusStart - radiusEnd) < 1e-6) return;
+  const pos = geo.attributes['position'] as THREE.BufferAttribute;
+  const center = new THREE.Vector3();
+  const v = new THREE.Vector3();
+  for (let i = 0; i <= tubularSegments; i++) {
+    const f = i / tubularSegments;
+    const scale = (radiusStart + (radiusEnd - radiusStart) * f) / tubeRadius;
+    curve.getPointAt(f, center);
+    for (let j = 0; j <= RADIAL_SEGMENTS; j++) {
+      const idx = i * (RADIAL_SEGMENTS + 1) + j;
+      v.fromBufferAttribute(pos, idx).sub(center).multiplyScalar(scale).add(center);
+      pos.setXYZ(idx, v.x, v.y, v.z);
+    }
+  }
+  pos.needsUpdate = true;
+  geo.computeVertexNormals();
+}
+
+/**
+ * Inline body → a cylinder (coupling, equal radii) or a reducing cone (reducer),
+ * oriented along incident[0]'s TRUE 3D direction (`axisWorld`) so the body follows a
+ * sloped pipe (Φ-B2b). +axis (CylinderGeometry +Y) = radiusPos = incident[0].
+ */
 function buildInlineMesh(
   body: Extract<FittingBody, { form: 'inline' }>,
+  axisWorld: THREE.Vector3,
   material: THREE.Material,
 ): THREE.Object3D {
-  const axis = planDirToWorld({ x: body.axis.x, y: body.axis.y, z: 0 });
-  // CylinderGeometry(radiusTop=+Y, radiusBottom=−Y); +Y maps to +axis = radiusPos.
   const geo = new THREE.CylinderGeometry(
     body.radiusPos,
     body.radiusNeg,
     body.halfLength * 2,
     RADIAL_SEGMENTS,
   );
-  return orientAlongAxis(new THREE.Mesh(geo, material), axis);
+  return orientAlongAxis(new THREE.Mesh(geo, material), axisWorld);
 }
 
-/** Tee/cross → one arm cylinder per incident, from the node centre outward. */
+/**
+ * Tee/cross → one arm cylinder per incident, from the node centre outward, each
+ * along its incident's TRUE 3D direction (`worldDirs[i]`, aligned to `body.legs[i]`).
+ * Falls back to the flat 2D leg direction if a 3D dir is missing (degenerate).
+ */
 function buildLegsMesh(
   body: Extract<FittingBody, { form: 'legs' }>,
+  worldDirs: readonly THREE.Vector3[],
   material: THREE.Material,
 ): THREE.Object3D {
   const group = new THREE.Group();
-  for (const leg of body.legs) {
-    const axis = planDirToWorld({ x: leg.dir.x, y: leg.dir.y, z: 0 });
+  body.legs.forEach((leg, i) => {
+    const axis = worldDirs[i] ?? planDirToWorld({ x: leg.dir.x, y: leg.dir.y, z: 0 });
     const arm = buildCylinderAlong(axis, leg.radius, leg.halfLength, material);
     arm.position.copy(axis.clone().multiplyScalar(leg.halfLength / 2));
     group.add(arm);
-  }
+  });
   return group;
 }
 
-/** Cap → a hemisphere dome facing the outward `dir` (away from the pipe). */
+/** Cap → a hemisphere dome facing the outward 3D `axisWorld` (away from the pipe). */
 function buildCapMesh(
   body: Extract<FittingBody, { form: 'cap' }>,
+  axisWorld: THREE.Vector3,
   material: THREE.Material,
 ): THREE.Object3D {
-  const axis = planDirToWorld({ x: body.dir.x, y: body.dir.y, z: 0 });
   const geo = new THREE.SphereGeometry(
     body.radius,
     RADIAL_SEGMENTS,
@@ -186,7 +236,7 @@ function buildCapMesh(
     0,
     Math.PI / 2,
   );
-  return orientAlongAxis(new THREE.Mesh(geo, material), axis);
+  return orientAlongAxis(new THREE.Mesh(geo, material), axisWorld);
 }
 
 /** Two short cylinders mitred at the node, one per incident direction. */
@@ -218,15 +268,26 @@ function buildFittingBodyMesh(params: MepFittingParams, material: THREE.Material
   }
   const body = computeFittingBody(toBodyInput(params));
   if (!body) return buildFallbackStub(params, material);
+  // Each incident's TRUE 3D world direction (Φ-B2b) — orients the body along the
+  // sloped pipes instead of flat in plan. Aligned to body.legs / incidents order.
+  const worldDirs = params.incidents.map((inc) => planDirToWorld(inc.directionUnit));
   switch (body.form) {
     case 'bend':
-      return buildBendTube(body.bend, material);
+      return buildBendTube(
+        body.bend,
+        worldDirs[0] ?? new THREE.Vector3(1, 0, 0),
+        worldDirs[1] ?? new THREE.Vector3(0, 0, -1),
+        material,
+      );
     case 'inline':
-      return buildInlineMesh(body, material);
+      return buildInlineMesh(body, worldDirs[0] ?? new THREE.Vector3(1, 0, 0), material);
     case 'legs':
-      return buildLegsMesh(body, material);
-    case 'cap':
-      return buildCapMesh(body, material);
+      return buildLegsMesh(body, worldDirs, material);
+    case 'cap': {
+      const inc0 = params.incidents[0]?.directionUnit ?? { x: 1, y: 0, z: 0 };
+      const outward = planDirToWorld({ x: -inc0.x, y: -inc0.y, z: -(inc0.z ?? 0) });
+      return buildCapMesh(body, outward, material);
+    }
   }
 }
 

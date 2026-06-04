@@ -43,6 +43,7 @@ import type {
 import type { SceneUnits } from '../../utils/scene-units';
 import type { IfcEntityMixin } from './ifc-entity-mixin';
 import type { MepConnectorHostParams } from './mep-component-types';
+import type { PlumbingSystemClassification } from './mep-connector-types';
 
 // ─── Discriminators ────────────────────────────────────────────────────────────
 
@@ -96,6 +97,21 @@ export interface MepSegmentParams extends MepConnectorHostParams {
   readonly centerlineElevationMm: number;
   /** Optional material library ID (insulation/sheet/pipe material — future BOQ). */
   readonly material?: string;
+  /**
+   * Plumbing/piping classification of a `'pipe'` segment (ADR-408 Φ14) — what the
+   * run conveys (cold/hot water, sanitary drainage, hydronic). DERIVED CACHE / hint
+   * only: it colours + IFC-classifies a STANDALONE pipe (one not yet in a network).
+   * Once the segment joins a `MepSystem`, **the System owns the classification**
+   * (system colour wins) — exactly as `MepConnector.systemId` is a derived cache.
+   * Absent / `'duct'` ⇒ no plumbing classification.
+   */
+  readonly classification?: PlumbingSystemClassification;
+  /**
+   * % slope of the run (ADR-408 Φ14), the drainage convention (e.g. 1–2%) — an
+   * INSTANCE property of the segment (each gravity run has its own fall). Absent
+   * ⇒ level run. Mirrors {@link MepPipeConnectorParams.slopePercent}.
+   */
+  readonly slopePercent?: number;
   /**
    * DXF canvas coordinate unit. Stored so `computeMepSegmentGeometry` can convert
    * mm scalars (width/height/diameter) → canvas units for the 2D plan outline.
@@ -172,6 +188,12 @@ export const MIN_SEGMENT_LENGTH_MM = 50;
 
 /** Default centreline elevation (mm) — above a 3m ceiling, in the plenum. */
 export const DEFAULT_SEGMENT_CENTERLINE_ELEVATION_MM = 2800;
+
+/**
+ * Default gravity fall (%) for a freshly drawn sanitary-drainage run (ADR-408 Φ14).
+ * 1.5% is the common building-drainage minimum (between the 1–2% CIBSE range).
+ */
+export const DEFAULT_DRAINAGE_SLOPE_PERCENT = 1.5;
 
 /**
  * Resolve the IFC class for a domain. Pure SSoT used by the factory + converters.

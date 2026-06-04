@@ -27,6 +27,7 @@ import type {
   MepSegmentParams,
   MepSegmentSectionKind,
 } from '../../../bim/types/mep-segment-types';
+import type { PlumbingSystemClassification } from '../../../bim/types/mep-connector-types';
 import {
   resolveSegmentSection,
   resolveSegmentEndpointElevationsMm,
@@ -153,6 +154,11 @@ export function useRibbonMepSegmentBridge(
       if (commandKey === MEP_SEGMENT_RIBBON_KEYS.stringParams.sectionKind) {
         return { value: effectiveSectionKind(segment.params), options: [] };
       }
+      if (commandKey === MEP_SEGMENT_RIBBON_KEYS.stringParams.classification) {
+        // ADR-408 Φ14 — empty = unclassified (a plain water pipe drawn with the
+        // generic pipe tool); the combobox simply shows no selection.
+        return { value: segment.params.classification ?? '', options: [] };
+      }
       if (!isMepSegmentRibbonKey(commandKey)) return null;
       const section = resolveSegmentSection(segment.params);
       if (commandKey === MEP_SEGMENT_RIBBON_KEYS.params.width) {
@@ -163,6 +169,9 @@ export function useRibbonMepSegmentBridge(
       }
       if (commandKey === MEP_SEGMENT_RIBBON_KEYS.params.diameter) {
         return { value: String(Math.round(section.diameterMm ?? section.widthMm)), options: [] };
+      }
+      if (commandKey === MEP_SEGMENT_RIBBON_KEYS.params.slopePercent) {
+        return { value: String(segment.params.slopePercent ?? 0), options: [] };
       }
       const elev = resolveSegmentEndpointElevationsMm(segment.params);
       if (commandKey === MEP_SEGMENT_RIBBON_KEYS.params.centerlineElevation) {
@@ -190,6 +199,16 @@ export function useRibbonMepSegmentBridge(
         const nextParams: MepSegmentParams = {
           ...segment.params,
           sectionKind: value as MepSegmentSectionKind,
+        };
+        dispatchParams(segment, nextParams);
+        return;
+      }
+      if (commandKey === MEP_SEGMENT_RIBBON_KEYS.stringParams.classification) {
+        // ADR-408 Φ14 — set the instance classification hint (drives colour while
+        // standalone). Once the pipe joins a System, the System's colour wins.
+        const nextParams: MepSegmentParams = {
+          ...segment.params,
+          classification: value as PlumbingSystemClassification,
         };
         dispatchParams(segment, nextParams);
         return;
@@ -248,6 +267,9 @@ export function useRibbonMepSegmentBridge(
       if (visibilityKey === MEP_SEGMENT_RIBBON_VISIBILITY_KEYS.roundSection) {
         return effective === 'round';
       }
+      if (visibilityKey === MEP_SEGMENT_RIBBON_VISIBILITY_KEYS.pipeDomain) {
+        return segment.params.domain === 'pipe';
+      }
       return false;
     },
     [resolveSegment],
@@ -264,6 +286,7 @@ const NUMBER_KEY_TO_FIELD: Readonly<Record<string, keyof MepSegmentParams>> = {
   [MEP_SEGMENT_RIBBON_KEYS.params.width]: 'width',
   [MEP_SEGMENT_RIBBON_KEYS.params.height]: 'height',
   [MEP_SEGMENT_RIBBON_KEYS.params.diameter]: 'diameter',
+  [MEP_SEGMENT_RIBBON_KEYS.params.slopePercent]: 'slopePercent',
 };
 
 /**

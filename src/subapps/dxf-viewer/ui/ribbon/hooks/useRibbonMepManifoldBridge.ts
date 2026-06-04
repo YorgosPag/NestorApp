@@ -44,8 +44,10 @@ import {
   MEP_MANIFOLD_RIBBON_KEYS_ACTIONS,
   MEP_MANIFOLD_RIBBON_VISIBILITY_KEYS,
   isMepManifoldRibbonKey,
+  isMepManifoldClassificationKey,
   isMepManifoldVisibilityKey,
 } from './bridge/mep-manifold-command-keys';
+import type { PlumbingSystemClassification } from '../../../bim/types/mep-connector-types';
 import { EventBus } from '../../../systems/events/EventBus';
 import { useMepSystemStore } from '../../../bim/mep-systems/mep-system-store';
 import { resolveManagedSystems } from '../../../bim/mep-systems/mep-circuit-editor';
@@ -167,6 +169,13 @@ export function useRibbonMepManifoldBridge(
         if (typeof raw !== 'number') return null;
         return { value: String(Math.round(raw)), options: [] };
       }
+      // ADR-408 Φ-heating — string-enum classification (ύδρευση/θέρμανση).
+      if (isMepManifoldClassificationKey(commandKey)) {
+        return {
+          value: manifold.params.systemClassification ?? 'domestic-cold-water',
+          options: [],
+        };
+      }
       return null;
     },
     [resolveManifold],
@@ -176,6 +185,17 @@ export function useRibbonMepManifoldBridge(
     (commandKey: string, value: string): void => {
       const manifold = resolveManifold();
       if (!manifold) return;
+      // ADR-408 Φ-heating — classification change re-seeds connectors with the new
+      // hydraulic type (dispatchParams already rebuilds `connectors`). The manifold
+      // OWNS its classification; a network created from it inherits it.
+      if (isMepManifoldClassificationKey(commandKey)) {
+        const nextParams: MepManifoldParams = {
+          ...manifold.params,
+          systemClassification: value as PlumbingSystemClassification,
+        };
+        dispatchParams(manifold, nextParams);
+        return;
+      }
       if (!isMepManifoldRibbonKey(commandKey)) return;
       const numeric = Number.parseFloat(value);
       if (Number.isNaN(numeric)) return;

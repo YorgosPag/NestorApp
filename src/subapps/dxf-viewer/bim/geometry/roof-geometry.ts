@@ -82,13 +82,40 @@ interface EavePlane {
   readonly ratio: number;
 }
 
-/** Εσωτερικό κάθετο της ακμής v0→v1 σε CCW πολύγωνο (interior αριστερά). */
-function inwardNormal(v0: Point3D, v1: Point3D): Vec2 {
+/**
+ * Signed area (shoelace) στο xy επίπεδο των κορυφών. >0 = CCW στο σύστημα
+ * συντεταγμένων των verts, <0 = CW. Καθαρά αλγεβρικό — ανεξάρτητο από y-up/y-down.
+ */
+function polygonSignedAreaXY(verts: readonly Point3D[]): number {
+  let a = 0;
+  const n = verts.length;
+  for (let i = 0; i < n; i++) {
+    const p = verts[i];
+    const q = verts[(i + 1) % n];
+    a += p.x * q.y - q.x * p.y;
+  }
+  return a / 2;
+}
+
+/**
+ * Πρόσημο winding: +1 αν το footprint είναι CCW στο σύστημα των verts, −1 αν CW.
+ * Το χρησιμοποιεί ο `inwardNormal` ώστε το εσωτερικό κάθετο να δείχνει ΠΑΝΤΑ μέσα
+ * (ο χρήστης μπορεί να σχεδιάσει το περίγραμμα προς οποιαδήποτε φορά).
+ */
+function windingSign(verts: readonly Point3D[]): 1 | -1 {
+  return polygonSignedAreaXY(verts) >= 0 ? 1 : -1;
+}
+
+/**
+ * Εσωτερικό κάθετο της ακμής v0→v1. Το αριστερό κάθετο (−dy, dx) δείχνει μέσα
+ * για CCW πολύγωνο· για CW το πολλαπλασιάζουμε επί `sign = −1` ώστε να δείχνει
+ * πάλι μέσα. Έτσι η μηχανή είναι winding-agnostic (CW & CCW footprints).
+ */
+function inwardNormal(v0: Point3D, v1: Point3D, sign: 1 | -1): Vec2 {
   const dx = v1.x - v0.x;
   const dy = v1.y - v0.y;
   const len = Math.hypot(dx, dy) || 1;
-  // Αριστερό κάθετο της κατεύθυνσης = (−dy, dx).
-  return { x: -dy / len, y: dx / len };
+  return { x: (sign * -dy) / len, y: (sign * dx) / len };
 }
 
 /** Signed εσωτερική απόσταση (canvas) του `p` από το επίπεδο. */
@@ -105,6 +132,7 @@ function resolveEavePlanes(
   unit: RoofSlopeUnit,
 ): { planes: EavePlane[]; slopeEdgeIndices: number[] } {
   const n = verts.length;
+  const sign = windingSign(verts);
   const planes: EavePlane[] = [];
   const slopeEdgeIndices: number[] = [];
   for (let i = 0; i < n; i++) {
@@ -114,7 +142,7 @@ function resolveEavePlanes(
     if (ratio <= 0) continue;
     const v0 = verts[i];
     const v1 = verts[(i + 1) % n];
-    planes.push({ a: { x: v0.x, y: v0.y }, n: inwardNormal(v0, v1), ratio });
+    planes.push({ a: { x: v0.x, y: v0.y }, n: inwardNormal(v0, v1, sign), ratio });
     slopeEdgeIndices.push(i);
   }
   return { planes, slopeEdgeIndices };
@@ -324,13 +352,15 @@ export function applyRoofShapePreset(
   edges[mainIdx] = { definesSlope: true, slope, overhangMm: 0 };
   if (shape === 'mono-pitch') return edges;
 
-  // gable → η πιο αντικριστή ακμή (inward normals anti-parallel).
-  const mainN = inwardNormal(verts[mainIdx], verts[(mainIdx + 1) % n]);
+  // gable → η πιο αντικριστή ακμή (inward normals anti-parallel). Το dot είναι
+  // winding-invariant (sign² = 1) — περνάμε το sign για συνέπεια με τη μηχανή.
+  const sign = windingSign(verts);
+  const mainN = inwardNormal(verts[mainIdx], verts[(mainIdx + 1) % n], sign);
   let oppIdx = -1;
   let minDot = Infinity;
   for (let i = 0; i < n; i++) {
     if (i === mainIdx) continue;
-    const ni = inwardNormal(verts[i], verts[(i + 1) % n]);
+    const ni = inwardNormal(verts[i], verts[(i + 1) % n], sign);
     const dot = mainN.x * ni.x + mainN.y * ni.y;
     if (dot < minDot) { minDot = dot; oppIdx = i; }
   }

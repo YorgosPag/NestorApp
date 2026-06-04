@@ -122,15 +122,22 @@ function normalize(v: Vec2): Vec2 | null {
   return { x: v.x / len, y: v.y / len };
 }
 
-/** Elbow → the swept bend SSoT (null when the legs are collinear/degenerate). */
+/**
+ * Elbow → the swept bend SSoT (null when the legs are collinear/degenerate). Each
+ * incident's OWN diameter is passed so a reducing elbow (differing Ø) tapers the
+ * swept tube; equal diameters give the plain concentric elbow.
+ */
 function buildBendBody(input: FittingBodyInput): FittingBody | null {
   if (input.incidents.length < 2) return null;
+  const inc0 = input.incidents[0]!;
+  const inc1 = input.incidents[1]!;
   const bend = computeElbowBend(
     input.node,
-    input.incidents[0]!.dir,
-    input.incidents[1]!.dir,
-    input.primaryDiameter,
+    inc0.dir,
+    inc1.dir,
+    inc0.diameter,
     input.bendFactor ?? DEFAULT_BEND_FACTOR,
+    inc1.diameter,
   );
   return bend ? { form: 'bend', node: input.node, bend } : null;
 }

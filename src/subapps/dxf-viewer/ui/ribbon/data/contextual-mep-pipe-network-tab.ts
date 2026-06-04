@@ -59,7 +59,25 @@ export const CONTEXTUAL_MEP_PIPE_NETWORK_TAB: RibbonTab = {
           ],
         },
         {
-          // Row 2 — name (left column) + add-members action (right column).
+          // Row 2 — classification ("System Type": ύδρευση/θέρμανση). Reuses the
+          // dedicated pipe-network classification widget (self-hides when the active
+          // system is not a pipe network). ADR-408 Φ-heating.
+          isInFlyout: false,
+          buttons: [
+            {
+              type: 'widget',
+              size: 'small',
+              widgetId: 'mep-network-classification',
+              command: {
+                id: 'mepPipeNetwork.classification',
+                labelKey: 'ribbon.commands.mepClassification.label',
+                commandKey: 'mepPipeNetwork.classification',
+              },
+            },
+          ],
+        },
+        {
+          // Row 3 — name (left column) + add-members action (right column).
           isInFlyout: false,
           buttons: [
             {

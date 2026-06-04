@@ -9,8 +9,12 @@
 
 import {
   buildDefaultLightingConnector,
+  buildManifoldInletConnector,
+  buildManifoldOutletConnector,
   connectorWorldPosition,
   FIXTURE_POWER_CONNECTOR_ID,
+  MANIFOLD_INLET_CONNECTOR_ID,
+  MANIFOLD_OUTLET_CONNECTOR_ID_PREFIX,
   type MepConnector,
 } from '../mep-connector-types';
 
@@ -69,5 +73,35 @@ describe('buildDefaultLightingConnector', () => {
     expect(c.localPosition).toEqual({ x: 0, y: 0, z: 0 });
     expect(c.electrical?.systemClassification).toBe('lighting');
     expect(c.systemId).toBeUndefined();
+  });
+});
+
+describe('manifold connector classification (ADR-408 Φ-heating)', () => {
+  const pos = { x: -1, y: 0, z: 0 };
+
+  it('inlet defaults to domestic-cold-water (back-compat)', () => {
+    const c = buildManifoldInletConnector(pos, 25);
+    expect(c.connectorId).toBe(MANIFOLD_INLET_CONNECTOR_ID);
+    expect(c.domain).toBe('pipe');
+    expect(c.flow).toBe('in');
+    expect(c.pipe?.systemClassification).toBe('domestic-cold-water');
+  });
+
+  it('inlet carries an explicit heating classification', () => {
+    const c = buildManifoldInletConnector(pos, 25, 'hydronic-supply');
+    expect(c.pipe?.systemClassification).toBe('hydronic-supply');
+    expect(c.pipe?.diameterMm).toBe(25);
+  });
+
+  it('outlet defaults to domestic-cold-water and indexes its id', () => {
+    const c = buildManifoldOutletConnector(2, pos, 16);
+    expect(c.connectorId).toBe(`${MANIFOLD_OUTLET_CONNECTOR_ID_PREFIX}2`);
+    expect(c.flow).toBe('out');
+    expect(c.pipe?.systemClassification).toBe('domestic-cold-water');
+  });
+
+  it('outlet carries an explicit heating classification', () => {
+    const c = buildManifoldOutletConnector(0, pos, 16, 'hydronic-return');
+    expect(c.pipe?.systemClassification).toBe('hydronic-return');
   });
 });

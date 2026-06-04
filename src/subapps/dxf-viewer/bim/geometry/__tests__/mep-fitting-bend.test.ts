@@ -47,6 +47,51 @@ describe('computeElbowBend — 90° long-radius elbow', () => {
   });
 });
 
+describe('computeElbowBend — uniform elbow end radii', () => {
+  const bend = computeElbowBend(NODE, RIGHT, UP, 10)!;
+  it('sets equal start/end radii at D/2 when both legs share a diameter', () => {
+    expect(bend.radiusStart).toBeCloseTo(5);
+    expect(bend.radiusEnd).toBeCloseTo(5);
+  });
+});
+
+describe('computeElbowBend — reducing elbow (differing Ø)', () => {
+  // Leg A = Ø20 (radius 10), leg B = Ø6 (radius 3).
+  const bend = computeElbowBend(NODE, RIGHT, UP, 20, DEFAULT_BEND_FACTOR, 6)!;
+
+  it('tapers radiusStart (leg A) → radiusEnd (leg B)', () => {
+    expect(bend.radiusStart).toBeCloseTo(10);
+    expect(bend.radiusEnd).toBeCloseTo(3);
+  });
+
+  it('sizes the centreline radius on the LARGER pipe (R = 1.5 · maxØ)', () => {
+    expect(bend.centerRadius).toBeCloseTo(DEFAULT_BEND_FACTOR * 20); // 30, not 1.5·6
+  });
+
+  it('bounds the outer wall with the larger radius (back-compat field)', () => {
+    expect(bend.outerRadius).toBeCloseTo(30 + 10); // R + maxØ/2
+  });
+
+  it('returns null when either diameter is non-positive', () => {
+    expect(computeElbowBend(NODE, RIGHT, UP, 20, DEFAULT_BEND_FACTOR, 0)).toBeNull();
+  });
+});
+
+describe('tessellateBendFootprint — reducing taper', () => {
+  const bend = computeElbowBend(NODE, RIGHT, UP, 20, DEFAULT_BEND_FACTOR, 6)!;
+  it('narrows the wall band from tangentA to tangentB', () => {
+    const segments = 8;
+    const ring = tessellateBendFootprint(bend, segments);
+    // Ring = [outer(0..segments), inner(segments..0)]. Band width at a sample =
+    // |outer_i − inner_i| measured radially ≈ 2·r_i, so it must shrink start → end.
+    const outer = ring.slice(0, segments + 1);
+    const inner = ring.slice(segments + 1).reverse(); // back to start→end order
+    const band = (i: number) =>
+      Math.hypot(outer[i]!.x - inner[i]!.x, outer[i]!.y - inner[i]!.y);
+    expect(band(0)).toBeGreaterThan(band(segments));
+  });
+});
+
 describe('computeElbowBend — null cases', () => {
   it('returns null for collinear legs (straight pass-through, no bend)', () => {
     expect(computeElbowBend(NODE, RIGHT, LEFT, 10)).toBeNull();

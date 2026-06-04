@@ -207,6 +207,8 @@ export function buildDefaultPanelOutgoingConnector(): MepConnector {
 export const MANIFOLD_INLET_CONNECTOR_ID = 'm-in';
 /** Prefix for the per-index outlet connector ids of a plumbing manifold (`m-out-0`, …). */
 export const MANIFOLD_OUTLET_CONNECTOR_ID_PREFIX = 'm-out-';
+/** Prefix for the per-index inlet connector ids of a drainage collector (`m-in-0`, …). */
+export const MANIFOLD_BRANCH_INLET_CONNECTOR_ID_PREFIX = 'm-in-';
 
 /**
  * Inlet connector of a plumbing manifold (ADR-408 Φ12, συλλέκτης) — the supply
@@ -216,17 +218,24 @@ export const MANIFOLD_OUTLET_CONNECTOR_ID_PREFIX = 'm-out-';
  *
  * `localPosition` is host-local (scene units, pre-rotation) — the caller resolves
  * it from the bar geometry (see `buildMepManifoldConnectors`).
+ *
+ * `classification` (Revit "System Classification") is the hydraulic type the
+ * manifold distributes — `domestic-cold-water` (ύδρευση, default) … `hydronic-supply`
+ * (θέρμανση). It is owned by the manifold (`MepManifoldParams.systemClassification`)
+ * and threaded onto every seeded connector; the default keeps pre-Φ-heating callers
+ * unchanged.
  */
 export function buildManifoldInletConnector(
   localPosition: Point3D,
   diameterMm: number,
+  classification: PlumbingSystemClassification = 'domestic-cold-water',
 ): MepConnector {
   return {
     connectorId: MANIFOLD_INLET_CONNECTOR_ID,
     domain: 'pipe',
     flow: 'in',
     localPosition,
-    pipe: { systemClassification: 'domestic-cold-water', diameterMm },
+    pipe: { systemClassification: classification, diameterMm },
   };
 }
 
@@ -234,18 +243,42 @@ export function buildManifoldInletConnector(
  * One outlet (branch-out) connector of a plumbing manifold (ADR-408 Φ12). Pipes
  * snap to these to form the distributed water branches. `flow: 'out'`,
  * `domain: 'pipe'`. `index` (0-based) yields a host-local connectorId.
+ * `classification` mirrors {@link buildManifoldInletConnector} (manifold-owned).
  */
 export function buildManifoldOutletConnector(
   index: number,
   localPosition: Point3D,
   diameterMm: number,
+  classification: PlumbingSystemClassification = 'domestic-cold-water',
 ): MepConnector {
   return {
     connectorId: `${MANIFOLD_OUTLET_CONNECTOR_ID_PREFIX}${index}`,
     domain: 'pipe',
     flow: 'out',
     localPosition,
-    pipe: { systemClassification: 'domestic-cold-water', diameterMm },
+    pipe: { systemClassification: classification, diameterMm },
+  };
+}
+
+/**
+ * One branch-IN connector of a drainage collector (φρεάτιο, ADR-408 Φ14). The
+ * mirror of {@link buildManifoldOutletConnector}: a collector gathers N gravity
+ * branches (`flow: 'in'`) into a single sewer outlet, so its many connectors are
+ * inlets. `index` (0-based) yields a host-local connectorId (`m-in-0`, …).
+ * `classification` defaults to `sanitary-drainage` (the collector's purpose).
+ */
+export function buildManifoldBranchInletConnector(
+  index: number,
+  localPosition: Point3D,
+  diameterMm: number,
+  classification: PlumbingSystemClassification = 'sanitary-drainage',
+): MepConnector {
+  return {
+    connectorId: `${MANIFOLD_BRANCH_INLET_CONNECTOR_ID_PREFIX}${index}`,
+    domain: 'pipe',
+    flow: 'in',
+    localPosition,
+    pipe: { systemClassification: classification, diameterMm },
   };
 }
 

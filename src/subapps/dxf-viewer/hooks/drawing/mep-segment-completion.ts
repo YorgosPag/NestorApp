@@ -16,6 +16,7 @@
 
 import type { Point2D } from '../../rendering/types/Types';
 import type { Point3D } from '../../bim/types/bim-base';
+import type { PlumbingSystemClassification } from '../../bim/types/mep-connector-types';
 import {
   DEFAULT_DUCT_WIDTH_MM,
   DEFAULT_DUCT_HEIGHT_MM,
@@ -52,6 +53,10 @@ export interface MepSegmentParamOverrides {
   /** mm — centreline ("Middle Elevation") from project origin. */
   readonly centerlineElevationMm?: number;
   readonly material?: string;
+  /** ADR-408 Φ14 — plumbing classification (drainage/cold/hot) for a pipe run. */
+  readonly classification?: PlumbingSystemClassification;
+  /** ADR-408 Φ14 — % slope (drainage fall), instance property of the run. */
+  readonly slopePercent?: number;
 }
 
 /** A pipe is always round; a duct defaults to rectangular. */
@@ -100,6 +105,13 @@ export function buildDefaultMepSegmentParams(
     centerlineElevationMm,
     sceneUnits,
     ...(overrides.material !== undefined ? { material: overrides.material } : {}),
+    // ADR-408 Φ14 — drainage/plumbing instance hints (pipe only; a duct ignores them).
+    ...(domain === 'pipe' && overrides.classification !== undefined
+      ? { classification: overrides.classification }
+      : {}),
+    ...(domain === 'pipe' && overrides.slopePercent !== undefined
+      ? { slopePercent: overrides.slopePercent }
+      : {}),
   };
 
   if (sectionKind === 'round') {

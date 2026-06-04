@@ -36,16 +36,26 @@ import type {
 import type { SceneUnits } from '../../utils/scene-units';
 import type { IfcEntityMixin } from './ifc-entity-mixin';
 import type { MepConnectorHostParams } from './mep-component-types';
+import type { PlumbingSystemClassification } from './mep-connector-types';
 
 // ─── Sub-type discriminator (ADR-408 Φ12) ─────────────────────────────────────
 
 /**
- * Manifold kind discriminator. The opening slice ships `'floor-manifold'` (a
- * συλλέκτης δαπέδου — domestic water distributor); future plumbing equipment
- * families append here (e.g. `'wall-manifold'`) without a new EntityType.
- * Maps 1:1 to the `'mep-manifold'` BimCategory.
+ * Manifold kind discriminator.
+ *   - `'floor-manifold'` — συλλέκτης δαπέδου (domestic water DISTRIBUTOR): 1 inlet
+ *     + N outlets, feeds branches (the opening Φ12 slice).
+ *   - `'drainage-collector'` — φρεάτιο/συλλέκτης αποχέτευσης (sanitary COLLECTOR,
+ *     ADR-408 Φ14): the mirror — N gravity inlets + 1 sewer outlet. Same point-based
+ *     `IfcPipeFitting` body; only the connector roles + default classification flip.
+ * Future plumbing equipment families append here without a new EntityType. Maps 1:1
+ * to the `'mep-manifold'` BimCategory.
  */
-export type MepManifoldKind = 'floor-manifold';
+export type MepManifoldKind = 'floor-manifold' | 'drainage-collector';
+
+/** True for the drainage collector kind (N inlets + 1 outlet, sanitary). */
+export function isDrainageCollectorKind(kind: MepManifoldKind): boolean {
+  return kind === 'drainage-collector';
+}
 
 /**
  * Footprint shape of the manifold body. A manifold is a rectangular bar; the
@@ -83,6 +93,14 @@ export interface MepManifoldParams extends MepConnectorHostParams {
   readonly inletDiameterMm: number;
   /** mm — nominal outlet connector diameter. */
   readonly outletDiameterMm: number;
+  /**
+   * Revit "System Classification" the manifold distributes (ADR-408 Φ-heating) —
+   * `domestic-cold-water` (ύδρευση) … `hydronic-supply`/`hydronic-return`
+   * (θέρμανση). The manifold OWNS it; its seeded connectors derive from it
+   * (`buildMepManifoldConnectors`) and a pipe network created from this manifold
+   * inherits it. Absent ⇒ `domestic-cold-water` (back-compat with pre-heating docs).
+   */
+  readonly systemClassification?: PlumbingSystemClassification;
   /**
    * DXF canvas coordinate unit. Stored so `computeMepManifoldGeometry` can
    * convert mm scalars → canvas units for the 2D footprint. Defaults to `'mm'`.

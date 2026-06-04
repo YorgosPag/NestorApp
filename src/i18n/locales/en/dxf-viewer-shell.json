@@ -51,7 +51,7 @@
     "networksDerived": "Pipe networks derived from connectivity — networks: {count}."
   },
   "mepPipeNetwork": {
-    "created": "Water network created — pipes: {count}.",
+    "created": "Pipe network created — pipes: {count}.",
     "failed": {
       "no-source": "Select a manifold as the network source.",
       "multiple-sources": "Select only one manifold as the source.",
@@ -756,12 +756,13 @@
       "wallProperties": "Wall Properties",
       "openingProperties": "Opening Properties",
       "slabProperties": "Slab Properties",
+      "roofProperties": "Roof Properties",
       "columnProperties": "Column Properties",
       "beamProperties": "Beam Properties",
       "slabOpeningProperties": "Slab Opening Properties",
       "multiSelection": "Multi-Selection",
       "mepCircuit": "Electrical Circuit",
-      "mepPipeNetwork": "Water Network",
+      "mepPipeNetwork": "Pipe Network",
       "mepFixtureProperties": "Fixture Properties",
       "mepManifoldProperties": "Manifold Properties",
       "mepSegmentProperties": "Pipe / Duct Properties",
@@ -826,6 +827,10 @@
       "slabGeometry": "Geometry",
       "slabMaterial": "Material",
       "slabActions": "Actions",
+      "roofType": "Roof Type",
+      "roofShapeSlope": "Shape & Slope",
+      "roofGeometry": "Geometry",
+      "roofActions": "Actions",
       "columnKind": "Type",
       "columnGeometry": "Geometry",
       "columnPolygon": "Polygon",
@@ -851,12 +856,14 @@
       "mepFixtureRectParams": "Rectangular",
       "mepFixtureActions": "Actions",
       "mepFixtureCircuit": "Circuit",
+      "mepManifoldSystem": "System",
       "mepManifoldGeometry": "Geometry",
       "mepManifoldOutlets": "Outlets",
       "mepManifoldActions": "Actions",
       "mepSegmentSection": "Section",
       "mepSegmentDimensions": "Dimensions",
       "mepSegmentGeometry": "Geometry",
+      "mepSegmentPlumbing": "System / Drainage",
       "mepSegmentActions": "Actions",
       "mepCircuit": "Circuit",
       "mepCircuitProperties": "Circuit Properties",
@@ -1047,6 +1054,10 @@
           "label": "Manifold",
           "tooltip": "Place a plumbing manifold with a single click — 1 inlet + N outlets (discipline: plumbing)"
         },
+        "mepDrainageCollector": {
+          "label": "Drainage Collector",
+          "tooltip": "Place a drainage collector (φρεάτιο) with a single click — N inlets + 1 sewer outlet (discipline: plumbing)"
+        },
         "railing": {
           "label": "Railing",
           "tooltip": "Draw a railing with 2 clicks (shortcut RL)"
@@ -1078,6 +1089,10 @@
         "mepPipe": {
           "label": "Pipe",
           "tooltip": "Draw a pipe run with 2 clicks (discipline: plumbing) (shortcut PP)"
+        },
+        "mepDrainPipe": {
+          "label": "Drainage Pipe",
+          "tooltip": "Draw a sanitary drainage pipe with 2 clicks — a pipe preset with the drainage classification + fall (shortcut DP)"
         },
         "mepPipeNetwork": {
           "label": "Pipe networks",
@@ -1624,6 +1639,30 @@
           "comingSoon": "Available with material library Phase 6+"
         }
       },
+      "roofEditor": {
+        "slope": "Slope",
+        "slopeUnitPercent": "Percent %",
+        "basePivotZ": "Eaves Level",
+        "close": "Close",
+        "delete": "Delete",
+        "deleteConfirm": "Delete this roof? This action cannot be undone.",
+        "shape": {
+          "section": {
+            "title": "Shape"
+          },
+          "flat": "Flat Roof",
+          "monoPitch": "Mono-Pitch",
+          "gable": "Gable"
+        },
+        "roofType": {
+          "section": {
+            "title": "Roof Type"
+          },
+          "none": "No type",
+          "concrete": "Concrete Flat Roof",
+          "tiled": "Tiled Roof"
+        }
+      },
       "beamEditor": {
         "width": "Width",
         "depth": "Depth",
@@ -1818,6 +1857,8 @@
         "centerlineElevation": "Centreline height",
         "startElevation": "Start height",
         "endElevation": "End height",
+        "classification": "Classification",
+        "slopePercent": "Slope %",
         "close": "Close",
         "delete": "Delete",
         "deleteConfirm": "Delete element? This action cannot be undone.",
@@ -1848,8 +1889,8 @@
         "removeMembersTooltip": "Remove the selected member fixtures from the current circuit."
       },
       "mepPipeNetwork": {
-        "create": "Create water network",
-        "createTooltip": "Create a water network from the selected manifold (source) and pipes (members).",
+        "create": "Create network",
+        "createTooltip": "Create a pipe network from the selected manifold (source) and pipes (members). The system type (water/heating) is inherited from the manifold.",
         "close": "Close",
         "addMembers": "Add selected",
         "addMembersTooltip": "Add the selected pipes to the current network (moved from another network if already assigned).",
@@ -2125,6 +2166,14 @@
         "straight": "Straight",
         "orthogonal": "Orthogonal",
         "arc": "Arc"
+      },
+      "mepClassification": {
+        "label": "System",
+        "domestic-cold-water": "Cold Water",
+        "domestic-hot-water": "Hot Water",
+        "sanitary-drainage": "Drainage",
+        "hydronic-supply": "Heating Supply",
+        "hydronic-return": "Heating Return"
       },
       "mepConductors": {
         "label": "Conductors",

@@ -44,6 +44,7 @@ import { RibbonMepCircuitNameWidget } from './RibbonMepCircuitNameWidget';
 import { RibbonMepCircuitColorWidget } from './RibbonMepCircuitColorWidget';
 import { RibbonMepCircuitWireStyleWidget } from './RibbonMepCircuitWireStyleWidget';
 import { RibbonMepCircuitConductorsWidget } from './RibbonMepCircuitConductorsWidget';
+import { RibbonMepNetworkClassificationWidget } from './RibbonMepNetworkClassificationWidget';
 import { MultiSelectionCommonPropertiesPanel } from './MultiSelectionCommonPropertiesPanel';
 import { MultiSelectionFilterPanel } from './MultiSelectionFilterPanel';
 import { CurrentLayerPicker } from '../../components/layer-picker/CurrentLayerPicker';
@@ -172,6 +173,9 @@ function renderButton(button: RibbonButton): React.ReactNode {
     }
     if (button.widgetId === 'mep-circuit-conductors') {
       return <RibbonMepCircuitConductorsWidget key="mep-circuit-conductors-widget" />;
+    }
+    if (button.widgetId === 'mep-network-classification') {
+      return <RibbonMepNetworkClassificationWidget key="mep-network-classification-widget" />;
     }
     return null;
   }

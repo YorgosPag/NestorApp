@@ -75,6 +75,25 @@ const CENTERLINE_ELEVATION_MM_OPTIONS = [
   { value: '3200', labelKey: '3200', isLiteralLabel: true },
 ] as const;
 
+// ADR-408 Φ14 — plumbing classification (what the pipe conveys). Drives colour
+// (blue/red/brown) + IFC. The System wins once the pipe joins a network.
+const CLASSIFICATION_OPTIONS = [
+  { value: 'domestic-cold-water', labelKey: 'ribbon.commands.mepClassification.domestic-cold-water', isLiteralLabel: false },
+  { value: 'domestic-hot-water',  labelKey: 'ribbon.commands.mepClassification.domestic-hot-water',  isLiteralLabel: false },
+  { value: 'sanitary-drainage',   labelKey: 'ribbon.commands.mepClassification.sanitary-drainage',  isLiteralLabel: false },
+  { value: 'hydronic-supply',     labelKey: 'ribbon.commands.mepClassification.hydronic-supply',     isLiteralLabel: false },
+  { value: 'hydronic-return',     labelKey: 'ribbon.commands.mepClassification.hydronic-return',     isLiteralLabel: false },
+] as const;
+
+// ADR-408 Φ14 — gravity fall (%) of a drainage run.
+const SLOPE_PERCENT_OPTIONS = [
+  { value: '0',   labelKey: '0%',   isLiteralLabel: true },
+  { value: '1',   labelKey: '1%',   isLiteralLabel: true },
+  { value: '1.5', labelKey: '1.5%', isLiteralLabel: true },
+  { value: '2',   labelKey: '2%',   isLiteralLabel: true },
+  { value: '3',   labelKey: '3%',   isLiteralLabel: true },
+] as const;
+
 // ─── Tab definition ──────────────────────────────────────────────────────────
 
 export const CONTEXTUAL_MEP_SEGMENT_TAB: RibbonTab = {
@@ -205,6 +224,41 @@ export const CONTEXTUAL_MEP_SEGMENT_TAB: RibbonTab = {
                 commandKey: MEP_SEGMENT_RIBBON_KEYS.params.endElevation,
                 comboboxWidthPx: 90,
                 options: CENTERLINE_ELEVATION_MM_OPTIONS,
+              },
+            },
+          ],
+        },
+      ],
+    },
+    {
+      // ADR-408 Φ14 — plumbing classification + slope; visible iff domain === 'pipe'.
+      id: 'mep-segment-plumbing',
+      labelKey: 'ribbon.panels.mepSegmentPlumbing',
+      visibilityKey: MEP_SEGMENT_RIBBON_VISIBILITY_KEYS.pipeDomain,
+      rows: [
+        {
+          isInFlyout: false,
+          buttons: [
+            {
+              type: 'combobox',
+              size: 'small',
+              command: {
+                id: 'mepSegment.classification',
+                labelKey: 'ribbon.commands.mepSegmentEditor.classification',
+                commandKey: MEP_SEGMENT_RIBBON_KEYS.stringParams.classification,
+                comboboxWidthPx: 150,
+                options: CLASSIFICATION_OPTIONS,
+              },
+            },
+            {
+              type: 'combobox',
+              size: 'small',
+              command: {
+                id: 'mepSegment.slopePercent',
+                labelKey: 'ribbon.commands.mepSegmentEditor.slopePercent',
+                commandKey: MEP_SEGMENT_RIBBON_KEYS.params.slopePercent,
+                comboboxWidthPx: 80,
+                options: SLOPE_PERCENT_OPTIONS,
               },
             },
           ],

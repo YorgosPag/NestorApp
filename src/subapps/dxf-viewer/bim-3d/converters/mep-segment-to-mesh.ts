@@ -32,6 +32,7 @@ import { ROUND_PROFILE_SEGMENTS } from '../../bim/geometry/shared/round-profile'
 import { useMepSegmentTrimStore } from '../../bim/mep-fittings/mep-segment-trim-store';
 import { sceneUnitsToMeters } from '../../utils/scene-units';
 import { getElementMaterial3D, getSystemTintedMaterial3D } from '../materials/MaterialCatalog3D';
+import { resolveSegmentClassificationColor, hexToThreeInt } from '../../bim/mep-systems/mep-system-color';
 import { tagMesh } from './bim-three-shape-helpers';
 
 /** mm → Three.js world metres (shared constant, same as all other converters). */
@@ -165,12 +166,18 @@ export function mepSegmentToMesh(
     geo.applyMatrix4(m);
   }
 
-  // ── Material by domain (ADR-408 Φ8) or by system colour (Φ9/Φ10) ───────────
-  // A segment joined to a pipe network paints with the System's tinted PBR;
-  // unassigned (or colour-by-system OFF ⇒ undefined) keeps the domain default.
+  // ── Material by domain (ADR-408 Φ8), system colour (Φ9/Φ10) or classification
+  //    hint (Φ14) ──────────────────────────────────────────────────────────────
+  // System colour wins (joined to a pipe network); else the instance
+  // classification hint tints the PBR (drainage = brown) so a standalone drainage
+  // run reads correctly in 3D; else the per-domain default. ONE colour SSoT shared
+  // with the 2D renderer (`resolveSegmentClassificationColor`).
   const domainMatType = segment.params.domain === 'pipe' ? 'mep-pipe' : 'mep-duct';
-  const material = systemColor !== undefined
-    ? getSystemTintedMaterial3D(domainMatType, systemColor)
+  const classHex = resolveSegmentClassificationColor(segment.params.classification);
+  const classInt = classHex ? hexToThreeInt(classHex) : null;
+  const tintInt = systemColor ?? classInt ?? undefined;
+  const material = tintInt !== undefined
+    ? getSystemTintedMaterial3D(domainMatType, tintInt)
     : getElementMaterial3D(domainMatType);
 
   const mesh = new THREE.Mesh(geo, material);

@@ -72,12 +72,24 @@ function classifyPair(incidents: readonly MepFittingIncident[]): FittingClassifi
   const [a, b] = [incidents[0]!, incidents[1]!];
   const primaryDiameterMm = maxDiameter(incidents);
   const collinear = dot(a, b) <= COLLINEAR_DOT_THRESHOLD;
+  const diff = Math.abs(a.diameterMm - b.diameterMm);
 
   if (!collinear) {
-    return { kind: 'elbow', primaryDiameterMm, elbowStyle: DEFAULT_ELBOW_STYLE };
+    // Angled join → elbow. When the two ends differ in Ø it is a REDUCING elbow
+    // (Revit's single "Reducing Elbow" component / IFC `IfcPipeFitting` BEND with two
+    // port diameters): the swept bend tapers from the large Ø to the small one. We
+    // keep `kind: 'elbow'` (one fitting per node) and carry the smaller Ø so the body
+    // SSoT can taper — same idempotency, no extra entity.
+    const elbow: FittingClassification = {
+      kind: 'elbow',
+      primaryDiameterMm,
+      elbowStyle: DEFAULT_ELBOW_STYLE,
+    };
+    return diff > DIAMETER_EPSILON_MM
+      ? { ...elbow, secondaryDiameterMm: minDiameter(incidents) }
+      : elbow;
   }
 
-  const diff = Math.abs(a.diameterMm - b.diameterMm);
   if (diff > DIAMETER_EPSILON_MM) {
     return { kind: 'reducer', primaryDiameterMm, secondaryDiameterMm: minDiameter(incidents) };
   }

@@ -49,20 +49,14 @@ import { addFloorplanSymbolToScene } from '../../bim/floorplan-symbols/add-floor
 import { addElectricalPanelToScene } from '../../bim/electrical-panels/add-electrical-panel-to-scene';
 import { addMepManifoldToScene } from '../../bim/mep-manifolds/add-mep-manifold-to-scene';
 import { addMepSegmentToScene } from '../../bim/mep-segments/add-mep-segment-to-scene';
+import { DEFAULT_DRAINAGE_SLOPE_PERCENT } from '../../bim/types/mep-segment-types';
 import { addRailingToScene } from '../../bim/railings/add-railing-to-scene';
+// ADR-397 — slab / roof / beam draw delegate to the `appendEntityToScene` SSoT.
+// Column draw + Ctrl-copy go through `addColumnToScene` (same SSoT, 'column' tag).
 import { appendEntityToScene } from '../../bim/scene/append-entity-to-scene';
 // 🏢 ENTERPRISE: Import actual level system types for type safety
 import type { LevelsHookReturn } from '../../systems/levels';
 
-// ADR-397 — delegates to the `appendEntityToScene` SSoT (slab / beam draw).
-// Column draw + Ctrl-copy go through `addColumnToScene` (same SSoT, 'column' tag).
-function appendAndBroadcast<E extends { id: string }>(
-  levelManager: LevelsHookReturn,
-  entity: E,
-  tool: string,
-): void {
-  appendEntityToScene(levelManager, entity, tool);
-}
 // TYPES & INTERFACES
 /**
  * Props for useSpecialTools hook
@@ -257,7 +251,7 @@ export function useSpecialTools(props: UseSpecialToolsProps): UseSpecialToolsRet
       if (!levelId) return 'mm';
       return resolveSceneUnits(levelManager.getLevelScene(levelId));
     },
-    onSlabCreated: (slabEntity) => appendAndBroadcast(levelManager, slabEntity, 'slab'),
+    onSlabCreated: (slabEntity) => appendEntityToScene(levelManager, slabEntity, 'slab'),
   });
   useToolLifecycle(activeTool === 'slab', slabTool.activate, slabTool.deactivate);
   // ADR-417 — ROOF TOOL: footprint polygon N-click + Enter (mirror slab). The
@@ -275,7 +269,7 @@ export function useSpecialTools(props: UseSpecialToolsProps): UseSpecialToolsRet
       if (!levelId) return 'mm';
       return resolveSceneUnits(levelManager.getLevelScene(levelId));
     },
-    onRoofCreated: (roofEntity) => appendAndBroadcast(levelManager, roofEntity, 'roof'),
+    onRoofCreated: (roofEntity) => appendEntityToScene(levelManager, roofEntity, 'roof'),
   });
   useToolLifecycle(activeTool === 'roof', roofTool.activate, roofTool.deactivate);
   // ADR-363 Phase 4 — COLUMN TOOL
@@ -367,7 +361,18 @@ export function useSpecialTools(props: UseSpecialToolsProps): UseSpecialToolsRet
       return lid ? resolveSceneUnits(levelManager.getLevelScene(lid)) : 'mm';
     },
   });
-  useToolLifecycle(activeTool === 'mep-manifold', mepManifoldTool.activate, mepManifoldTool.deactivate);
+  // 'mep-manifold' (water distributor) and 'mep-drainage-collector' (φρεάτιο) share
+  // ONE manifold tool; the active tool id drives the `kind` preset (ADR-408 Φ14).
+  const isMepManifoldTool =
+    activeTool === 'mep-manifold' || activeTool === 'mep-drainage-collector';
+  useToolLifecycle(isMepManifoldTool, mepManifoldTool.activate, mepManifoldTool.deactivate);
+  useEffect(() => {
+    if (activeTool === 'mep-manifold') {
+      mepManifoldTool.setParamOverrides({ kind: 'floor-manifold' });
+    } else if (activeTool === 'mep-drainage-collector') {
+      mepManifoldTool.setParamOverrides({ kind: 'drainage-collector' });
+    }
+  }, [activeTool, mepManifoldTool.setParamOverrides]);
 
   // ADR-408 Φ8 — MEP SEGMENT TOOL (duct + pipe): 2-click linear placement.
   const mepSegmentTool = useMepSegmentTool({
@@ -378,14 +383,32 @@ export function useSpecialTools(props: UseSpecialToolsProps): UseSpecialToolsRet
       return lid ? resolveSceneUnits(levelManager.getLevelScene(lid)) : 'mm';
     },
   });
-  // 'mep-duct' and 'mep-pipe' share ONE useMepSegmentTool instance; the domain
-  // is driven by the active tool id.
-  const isMepSegmentTool = activeTool === 'mep-duct' || activeTool === 'mep-pipe';
+  // 'mep-duct', 'mep-pipe' and 'mep-drain-pipe' share ONE useMepSegmentTool
+  // instance; the domain + drainage preset are driven by the active tool id.
+  // ADR-408 Φ14: 'mep-drain-pipe' = a pipe preset with sanitary-drainage
+  // classification + a default fall, the Revit "draw under the Sanitary system"
+  // gesture. Switching to a non-drainage segment tool CLEARS the preset so a
+  // water pipe never inherits the drainage classification/slope.
+  const isMepSegmentTool =
+    activeTool === 'mep-duct' ||
+    activeTool === 'mep-pipe' ||
+    activeTool === 'mep-drain-pipe';
   useToolLifecycle(isMepSegmentTool, mepSegmentTool.activate, mepSegmentTool.deactivate);
   useEffect(() => {
-    if (activeTool === 'mep-duct') mepSegmentTool.setDomain('duct');
-    else if (activeTool === 'mep-pipe') mepSegmentTool.setDomain('pipe');
-  }, [activeTool, mepSegmentTool.setDomain]);
+    if (activeTool === 'mep-duct') {
+      mepSegmentTool.setDomain('duct');
+      mepSegmentTool.setParamOverrides({ classification: undefined, slopePercent: undefined });
+    } else if (activeTool === 'mep-pipe') {
+      mepSegmentTool.setDomain('pipe');
+      mepSegmentTool.setParamOverrides({ classification: undefined, slopePercent: undefined });
+    } else if (activeTool === 'mep-drain-pipe') {
+      mepSegmentTool.setDomain('pipe');
+      mepSegmentTool.setParamOverrides({
+        classification: 'sanitary-drainage',
+        slopePercent: DEFAULT_DRAINAGE_SLOPE_PERCENT,
+      });
+    }
+  }, [activeTool, mepSegmentTool.setDomain, mepSegmentTool.setParamOverrides]);
 
   // ADR-407 — RAILING TOOL: 2-click straight guardrail; entity appended+broadcast.
   const railingTool = useRailingTool({
@@ -420,7 +443,7 @@ export function useSpecialTools(props: UseSpecialToolsProps): UseSpecialToolsRet
       if (!levelId) return [];
       return levelManager.getLevelScene(levelId)?.entities ?? [];
     },
-    onBeamCreated: (beamEntity) => appendAndBroadcast(levelManager, beamEntity, 'beam'),
+    onBeamCreated: (beamEntity) => appendEntityToScene(levelManager, beamEntity, 'beam'),
   });
   // ADR-363 — the freehand beam ('beam') and the from-wall variant
   // ('beam-from-wall') share ONE useBeamTool instance; placement mode follows

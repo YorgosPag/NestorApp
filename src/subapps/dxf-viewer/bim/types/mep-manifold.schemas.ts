@@ -10,7 +10,7 @@
 
 import { z } from 'zod';
 import { IfcGuidSchema, IfcPropertySetSchema } from './ifc-entity-mixin';
-import { MepConnectorSchema } from './mep-connector.schemas';
+import { MepConnectorSchema, PlumbingSystemClassificationSchema } from './mep-connector.schemas';
 
 // ─── Point3D ──────────────────────────────────────────────────────────────────
 
@@ -24,7 +24,7 @@ const Point3DSchema = z
 
 // ─── Enums (mirror mep-manifold-types.ts unions) ──────────────────────────────
 
-export const MepManifoldKindSchema = z.enum(['floor-manifold']);
+export const MepManifoldKindSchema = z.enum(['floor-manifold', 'drainage-collector']);
 
 export const MepManifoldShapeSchema = z.enum(['rectangular']);
 
@@ -45,6 +45,9 @@ export const MepManifoldParamsSchema = z
     outletCount: z.number().int().positive(),
     inletDiameterMm: z.number().positive(),
     outletDiameterMm: z.number().positive(),
+    // ADR-408 Φ-heating — manifold-owned hydraulic classification (ύδρευση/θέρμανση).
+    // Optional/additive: absent docs default to domestic-cold-water at read time.
+    systemClassification: PlumbingSystemClassificationSchema.optional(),
     sceneUnits: z.string().optional(),
     storeyId: z.string().min(1).optional(),
     material: z.string().min(1).optional(),

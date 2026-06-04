@@ -207,6 +207,9 @@ export interface DrawingEventMap {
   // ADR-363 Phase 3 — BIM slab params + delete events
   'bim:slab-params-updated': { slabId: string };
   'bim:slab-delete-requested': { slabId: string };
+  // ADR-417 Φ1-part-2 — BIM roof (κεκλιμένη στέγη) params + delete events
+  'bim:roof-params-updated': { roofId: string };
+  'bim:roof-delete-requested': { roofId: string };
   // ADR-363 Phase 3.7 — BIM slab-opening params + delete events
   'bim:slab-opening-params-updated': { slabOpeningId: string };
   'bim:slab-opening-delete-requested': { slabOpeningId: string };

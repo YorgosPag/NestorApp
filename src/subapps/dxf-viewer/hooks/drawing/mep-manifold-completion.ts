@@ -31,6 +31,7 @@ import {
   type MepManifoldParams,
   type MepManifoldShape,
 } from '../../bim/types/mep-manifold-types';
+import type { PlumbingSystemClassification } from '../../bim/types/mep-connector-types';
 import {
   buildMepManifoldConnectors,
   computeMepManifoldGeometry,
@@ -66,6 +67,8 @@ export interface MepManifoldParamOverrides {
   readonly inletDiameterMm?: number;
   /** mm. Outlet diameter. */
   readonly outletDiameterMm?: number;
+  /** Revit "System Classification" the equipment distributes/collects (ADR-408 Φ14). */
+  readonly systemClassification?: PlumbingSystemClassification;
   readonly material?: string;
 }
 
@@ -92,6 +95,10 @@ export function buildDefaultMepManifoldParams(
   const outletCount = overrides.outletCount ?? DEFAULT_MANIFOLD_OUTLET_COUNT;
   const inletDiameterMm = overrides.inletDiameterMm ?? DEFAULT_MANIFOLD_INLET_DIAMETER_MM;
   const outletDiameterMm = overrides.outletDiameterMm ?? DEFAULT_MANIFOLD_OUTLET_DIAMETER_MM;
+  // ADR-408 Φ14 — a drainage collector defaults to sanitary-drainage (its purpose);
+  // a water manifold leaves it unset (⇒ domestic-cold-water at the connector layer).
+  const systemClassification: PlumbingSystemClassification | undefined =
+    overrides.systemClassification ?? (kind === 'drainage-collector' ? 'sanitary-drainage' : undefined);
 
   const position: Point3D = { x: clickPoint.x, y: clickPoint.y, z: 0 };
 
@@ -108,6 +115,7 @@ export function buildDefaultMepManifoldParams(
     inletDiameterMm,
     outletDiameterMm,
     sceneUnits,
+    ...(systemClassification !== undefined ? { systemClassification } : {}),
     ...(overrides.material !== undefined ? { material: overrides.material } : {}),
   };
 

@@ -114,8 +114,11 @@ export function manifoldToMesh(
   const geo = extrudeAndRotate(shape, bodyHeightM);
   const matId = manifold.params.material ?? 'elem-mep-manifold';
   // ADR-408 Φ12 — a manifold is a plumbing system source, not a member: not
-  // coloured by system (mirrors the panel convention for circuit sources).
-  const mesh = new THREE.Mesh(geo, getElementMaterial3D('mep-manifold'));
+  // coloured by system (mirrors the panel convention for circuit sources). Φ14 — a
+  // drainage collector (φρεάτιο) tints the equipment PBR brown (CIBSE sanitary).
+  const mesh = manifold.params.kind === 'drainage-collector'
+    ? new THREE.Mesh(geo, getSystemTintedMaterial3D('mep-manifold', 0xb45309))
+    : new THREE.Mesh(geo, getElementMaterial3D('mep-manifold'));
   // Box centred vertically on the mounting elevation (floor-mounted): the extrusion
   // grows UP from mesh.position.y, so the bottom sits at centre − bodyHeight/2.
   const centerMm = floorElevationMm + manifold.params.mountingElevationMm;

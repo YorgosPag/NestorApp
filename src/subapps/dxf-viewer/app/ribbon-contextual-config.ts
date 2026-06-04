@@ -9,6 +9,7 @@ import { CONTEXTUAL_STAIR_TAB, STAIR_CONTEXTUAL_TRIGGER } from '../ui/ribbon/dat
 import { CONTEXTUAL_WALL_TAB, WALL_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-wall-tab';
 import { CONTEXTUAL_OPENING_TAB, OPENING_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-opening-tab';
 import { CONTEXTUAL_SLAB_TAB, SLAB_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-slab-tab';
+import { CONTEXTUAL_ROOF_TAB, ROOF_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-roof-tab';
 import { CONTEXTUAL_COLUMN_TAB, COLUMN_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-column-tab';
 import { CONTEXTUAL_BEAM_TAB, BEAM_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-beam-tab';
 import { CONTEXTUAL_SLAB_OPENING_TAB, SLAB_OPENING_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-slab-opening-tab';
@@ -31,7 +32,7 @@ import { resolveManagedSystems } from '../bim/mep-systems/mep-circuit-editor';
 import { isMepSegmentEntity } from '../types/entities';
 
 const BIM_KIND_TYPES: ReadonlySet<string> = new Set([
-  'wall', 'opening', 'slab', 'slab-opening', 'column', 'beam', 'stair',
+  'wall', 'opening', 'slab', 'slab-opening', 'column', 'beam', 'stair', 'roof',
 ]);
 
 export const RIBBON_CONTEXTUAL_TABS = [
@@ -43,6 +44,7 @@ export const RIBBON_CONTEXTUAL_TABS = [
   CONTEXTUAL_WALL_TAB,
   CONTEXTUAL_OPENING_TAB,
   CONTEXTUAL_SLAB_TAB,
+  CONTEXTUAL_ROOF_TAB,
   CONTEXTUAL_COLUMN_TAB,
   CONTEXTUAL_BEAM_TAB,
   CONTEXTUAL_SLAB_OPENING_TAB,
@@ -166,6 +168,9 @@ export function useActiveContextualTrigger({
       return WALL_CONTEXTUAL_TRIGGER;
     if (activeTool === 'opening') return OPENING_CONTEXTUAL_TRIGGER;
     if (activeTool === 'slab') return SLAB_CONTEXTUAL_TRIGGER;
+    // ADR-417 — roof tool active → show the roof properties tab (shape/slope
+    // defaults apply to the next drawn roof, mirror slab tool-active behaviour).
+    if (activeTool === 'roof') return ROOF_CONTEXTUAL_TRIGGER;
     // ADR-363 Φάση 3 / 3c — «Τοιχίο/Κολώνα από περίγραμμα» μοιράζονται το column contextual tab.
     if (
       activeTool === 'column' ||
@@ -214,6 +219,8 @@ export function resolveContextualTrigger(entity: EntityLike): string | null {
   if (entity.type === 'wall') return WALL_CONTEXTUAL_TRIGGER;
   if (entity.type === 'opening') return OPENING_CONTEXTUAL_TRIGGER;
   if (entity.type === 'slab') return SLAB_CONTEXTUAL_TRIGGER;
+  // ADR-417 — κεκλιμένη στέγη (parametric roof) → contextual properties tab.
+  if (entity.type === 'roof') return ROOF_CONTEXTUAL_TRIGGER;
   if (entity.type === 'column') return COLUMN_CONTEXTUAL_TRIGGER;
   if (entity.type === 'beam') return BEAM_CONTEXTUAL_TRIGGER;
   if (entity.type === 'slab-opening') return SLAB_OPENING_CONTEXTUAL_TRIGGER;

@@ -7,6 +7,7 @@ import { useRibbonStairBridge, type UseRibbonStairBridgeProps } from '../bim/hoo
 import { useRibbonWallBridge, type UseRibbonWallBridgeProps } from '../ui/ribbon/hooks/useRibbonWallBridge';
 import { useRibbonOpeningBridge, type UseRibbonOpeningBridgeProps } from '../ui/ribbon/hooks/useRibbonOpeningBridge';
 import { useRibbonSlabBridge, type UseRibbonSlabBridgeProps } from '../ui/ribbon/hooks/useRibbonSlabBridge';
+import { useRibbonRoofBridge, type UseRibbonRoofBridgeProps } from '../ui/ribbon/hooks/useRibbonRoofBridge';
 import { useRibbonColumnBridge, type UseRibbonColumnBridgeProps } from '../ui/ribbon/hooks/useRibbonColumnBridge';
 import { useRibbonBeamBridge, type UseRibbonBeamBridgeProps } from '../ui/ribbon/hooks/useRibbonBeamBridge';
 import { useRibbonSlabOpeningBridge, type UseRibbonSlabOpeningBridgeProps } from '../ui/ribbon/hooks/useRibbonSlabOpeningBridge';
@@ -25,6 +26,7 @@ export type UseDxfBimBridgesProps =
   & UseRibbonWallBridgeProps
   & UseRibbonOpeningBridgeProps
   & UseRibbonSlabBridgeProps
+  & UseRibbonRoofBridgeProps
   & UseRibbonColumnBridgeProps
   & UseRibbonBeamBridgeProps
   & UseRibbonSlabOpeningBridgeProps
@@ -38,6 +40,8 @@ export function useDxfBimBridges(p: UseDxfBimBridgesProps) {
   const wallBridge = useRibbonWallBridge(p);
   const openingBridge = useRibbonOpeningBridge(p);
   const slabBridge = useRibbonSlabBridge(p);
+  // ADR-417 — roof (κεκλιμένη στέγη) contextual properties bridge.
+  const roofBridge = useRibbonRoofBridge(p);
   const columnBridge = useRibbonColumnBridge(p);
   const beamBridge = useRibbonBeamBridge(p);
   const slabOpeningBridge = useRibbonSlabOpeningBridge(p);
@@ -59,5 +63,5 @@ export function useDxfBimBridges(p: UseDxfBimBridgesProps) {
   const mepFixtureLibraryBridge = useRibbonMepFixtureLibraryBridge();
   // ADR-363 Phase 4.5e+ — Tab/Shift+Tab material cycling for selected BIM entities.
   useBimMaterialCycler(p);
-  return { stairBridge, wallBridge, openingBridge, slabBridge, columnBridge, beamBridge, slabOpeningBridge, mepCircuitBridge, mepPipeNetworkBridge, mepFixtureBridge, mepManifoldBridge, mepSegmentBridge, furnitureBridge, floorplanSymbolBridge, mepFixtureLibraryBridge };
+  return { stairBridge, wallBridge, openingBridge, slabBridge, roofBridge, columnBridge, beamBridge, slabOpeningBridge, mepCircuitBridge, mepPipeNetworkBridge, mepFixtureBridge, mepManifoldBridge, mepSegmentBridge, furnitureBridge, floorplanSymbolBridge, mepFixtureLibraryBridge };
 }

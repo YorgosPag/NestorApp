@@ -60,9 +60,6 @@ export function RoofPersistenceHost({
 
   React.useEffect(() => {
     const roofs = currentScene?.entities.filter(isRoofEntity) ?? [];
-    // NOTE: setRoofs is added to Bim3DEntitiesStore by the orchestrator
-    // (shared file — ADR-417 Φ1 constraint). The call is correct; tsc will
-    // resolve once the orchestrator adds the setter.
     useBim3DEntitiesStore.getState().setRoofs(roofs);
   }, [currentScene]);
 

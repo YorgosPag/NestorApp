@@ -58,3 +58,29 @@ describe('buildDefaultMepSegmentParams — connector-mate elevation cascade', ()
     expect(p.endPoint.y).toBe(0);
   });
 });
+
+describe('buildDefaultMepSegmentParams — ADR-408 Φ14 drainage classification + slope', () => {
+  it('propagates classification + slope for a pipe (drainage preset)', () => {
+    const p = buildDefaultMepSegmentParams(A, B, 'pipe', {
+      classification: 'sanitary-drainage',
+      slopePercent: 1.5,
+    });
+    expect(p.classification).toBe('sanitary-drainage');
+    expect(p.slopePercent).toBe(1.5);
+  });
+
+  it('omits classification + slope when not supplied (plain water pipe)', () => {
+    const p = buildDefaultMepSegmentParams(A, B, 'pipe');
+    expect(p.classification).toBeUndefined();
+    expect(p.slopePercent).toBeUndefined();
+  });
+
+  it('ignores the drainage hints for a duct (mechanical domain)', () => {
+    const p = buildDefaultMepSegmentParams(A, B, 'duct', {
+      classification: 'sanitary-drainage',
+      slopePercent: 2,
+    });
+    expect(p.classification).toBeUndefined();
+    expect(p.slopePercent).toBeUndefined();
+  });
+});

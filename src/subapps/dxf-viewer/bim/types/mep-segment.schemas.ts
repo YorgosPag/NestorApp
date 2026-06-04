@@ -10,7 +10,7 @@
  */
 
 import { z } from 'zod';
-import { MepConnectorSchema } from './mep-connector.schemas';
+import { MepConnectorSchema, PlumbingSystemClassificationSchema } from './mep-connector.schemas';
 
 const Point3DSchema = z
   .object({
@@ -40,6 +40,9 @@ export const MepSegmentParamsSchema = z
     wallThickness: z.number().positive().optional(),
     centerlineElevationMm: z.number().finite(),
     material: z.string().min(1).optional(),
+    // ADR-408 Φ14 — drainage/plumbing instance hints (System owns classification once joined).
+    classification: PlumbingSystemClassificationSchema.optional(),
+    slopePercent: z.number().finite().optional(),
     sceneUnits: SceneUnitsSchema.optional(),
     storeyId: z.string().min(1).optional(),
     // Forward hook (duct/pipe systems) — empty in the element-only slice.

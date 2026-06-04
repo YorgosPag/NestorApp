@@ -153,8 +153,11 @@ export function useBim3DMepManifoldPlacement(
     };
 
     const apply = (): void => {
+      // ADR-408 Φ14 — the φρεάτιο reuses the manifold tool instance; both tool ids
+      // place the same point-based 'mep-manifold' entity in 3D.
+      const tool = toolStateStore.get().activeTool;
       const active =
-        toolStateStore.get().activeTool === 'mep-manifold' &&
+        (tool === 'mep-manifold' || tool === 'mep-drainage-collector') &&
         selectIs3D(useViewMode3DStore.getState());
       if (active) setup();
       else teardown();

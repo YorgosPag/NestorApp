@@ -28,6 +28,12 @@ export const MEP_MANIFOLD_RIBBON_KEYS = {
     inletDiameter: 'mepManifold.params.inletDiameter',
     /** mm — outlet connector nominal diameter. */
     outletDiameter: 'mepManifold.params.outletDiameter',
+    /**
+     * Hydraulic system classification (ADR-408 Φ-heating) — ύδρευση/θέρμανση.
+     * STRING enum (not numeric): handled by a dedicated bridge branch, separate
+     * from the numeric combobox set, since its value is a classification token.
+     */
+    classification: 'mepManifold.params.classification',
   },
 } as const;
 
@@ -93,4 +99,13 @@ const MEP_MANIFOLD_NUMBER_KEY_SET: ReadonlySet<string> = new Set<string>(
 
 export function isMepManifoldRibbonKey(commandKey: string): boolean {
   return MEP_MANIFOLD_NUMBER_KEY_SET.has(commandKey);
+}
+
+/**
+ * The manifold classification combobox key (ADR-408 Φ-heating). Kept OUT of the
+ * numeric key set so the bridge routes it through its string-enum branch
+ * (`systemClassification` patch + connector re-seed) rather than `parseFloat`.
+ */
+export function isMepManifoldClassificationKey(commandKey: string): boolean {
+  return commandKey === MEP_MANIFOLD_RIBBON_KEYS.params.classification;
 }

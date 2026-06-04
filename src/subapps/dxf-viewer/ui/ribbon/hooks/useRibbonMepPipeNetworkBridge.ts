@@ -43,7 +43,6 @@ import {
   type MepSystemParamsUpdate,
 } from '../../../bim/mep-systems/mep-circuit-editor';
 import { classificationDefaultColor } from '../../../bim/mep-systems/mep-system-color';
-import { DEFAULT_DERIVED_PIPE_CLASSIFICATION } from '../../../bim/mep-systems/mep-pipe-network-derive';
 import {
   buildDefaultPipeNetworkParams,
   type MepSystemEntity,
@@ -180,15 +179,17 @@ function buildCreateCommand(
   t: (key: string, opts?: Record<string, unknown>) => string,
 ): ICommand {
   const name = t('ribbon.commands.mepCircuit.networkDefaultName', { n: existing.length + 1 });
+  // ADR-408 Φ-heating — the network inherits its classification (ύδρευση/θέρμανση)
+  // from the source manifold (carried on the draft); colour follows it (CIBSE/Revit).
   const entity: MepSystemEntity = {
     id: generateMepSystemId(),
     params: buildDefaultPipeNetworkParams(
       name,
-      DEFAULT_DERIVED_PIPE_CLASSIFICATION,
+      draft.systemClassification,
       draft.sourceEntityId,
       draft.sourceConnectorId,
       draft.members,
-      classificationDefaultColor(DEFAULT_DERIVED_PIPE_CLASSIFICATION),
+      classificationDefaultColor(draft.systemClassification),
     ),
   };
   const create = new CreateMepSystemCommand(entity);

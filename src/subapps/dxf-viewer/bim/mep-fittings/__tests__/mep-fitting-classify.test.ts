@@ -147,4 +147,22 @@ describe('classifyJunction — edge cases of the 2-incident branch', () => {
     expect(result.kind).toBe('elbow');
     expect(result.primaryDiameterMm).toBe(63);
   });
+
+  it('angled + differing Ø → REDUCING elbow (carries the smaller Ø to taper)', () => {
+    const result = classifyJunction(
+      junction([incident('a', RIGHT, 250), incident('b', UP, 50)]),
+    );
+    expect(result.kind).toBe('elbow');
+    expect(result.elbowStyle).toBe(DEFAULT_ELBOW_STYLE);
+    expect(result.primaryDiameterMm).toBe(250);
+    expect(result.secondaryDiameterMm).toBe(50);
+  });
+
+  it('angled + same Ø → plain elbow (no secondary diameter)', () => {
+    const result = classifyJunction(
+      junction([incident('a', RIGHT, 50), incident('b', UP, 50)]),
+    );
+    expect(result.kind).toBe('elbow');
+    expect(result.secondaryDiameterMm).toBeUndefined();
+  });
 });

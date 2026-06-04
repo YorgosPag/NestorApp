@@ -18,6 +18,8 @@ import type { RibbonOpeningBridge } from './useRibbonOpeningBridge';
 import { isOpeningBadgeKey } from './useRibbonOpeningBridge';
 import type { RibbonSlabBridge } from './useRibbonSlabBridge';
 import { isSlabBadgeKey } from './useRibbonSlabBridge';
+import type { RibbonRoofBridge } from './useRibbonRoofBridge';
+import { isRoofBadgeKey } from './useRibbonRoofBridge';
 import type { RibbonColumnBridge } from './useRibbonColumnBridge';
 import { isColumnBadgeKey, isColumnPanelVisibilityKey } from './useRibbonColumnBridge';
 import type { RibbonBeamBridge } from './useRibbonBeamBridge';
@@ -37,7 +39,11 @@ import {
 } from './bridge/mep-fixture-command-keys';
 import type { RibbonMepManifoldBridge } from './useRibbonMepManifoldBridge';
 import { isMepManifoldPanelVisibilityKey } from './useRibbonMepManifoldBridge';
-import { isMepManifoldRibbonKey, isMepManifoldActionKey } from './bridge/mep-manifold-command-keys';
+import {
+  isMepManifoldRibbonKey,
+  isMepManifoldActionKey,
+  isMepManifoldClassificationKey,
+} from './bridge/mep-manifold-command-keys';
 import type { RibbonMepSegmentBridge } from './useRibbonMepSegmentBridge';
 import { isMepSegmentPanelVisibilityKey } from './useRibbonMepSegmentBridge';
 import {
@@ -69,6 +75,7 @@ import { isStairRibbonKey, isStairRibbonStringKey, isStairActionKey } from './br
 import { isWallRibbonKey, isWallRibbonStringKey, isWallRibbonToggleKey, isWallActionKey } from './bridge/wall-command-keys';
 import { isOpeningRibbonKey, isOpeningRibbonStringKey, isOpeningActionKey, isOpeningTagStyleComboboxKey, isOpeningTagStyleToggleKey } from './bridge/opening-command-keys';
 import { isSlabRibbonKey, isSlabRibbonStringKey, isSlabActionKey } from './bridge/slab-command-keys';
+import { isRoofRibbonKey, isRoofRibbonStringKey, isRoofRibbonToggleKey, isRoofActionKey } from './bridge/roof-command-keys';
 import { isColumnRibbonKey, isColumnRibbonStringKey, isColumnActionKey } from './bridge/column-command-keys';
 import { isBeamRibbonKey, isBeamRibbonStringKey, isBeamActionKey } from './bridge/beam-command-keys';
 import { isSlabOpeningRibbonStringKey, isSlabOpeningActionKey } from './bridge/slab-opening-command-keys';
@@ -97,6 +104,8 @@ interface UseRibbonCommandsProps {
   openingBridge: RibbonOpeningBridge;
   /** ADR-363 Phase 3 — Slab contextual tab bridge. */
   slabBridge: RibbonSlabBridge;
+  /** ADR-417 Φ1-part-2 — Roof (κεκλιμένη στέγη) contextual tab bridge. */
+  roofBridge: RibbonRoofBridge;
   /** ADR-363 Phase 4 — Column contextual tab bridge. */
   columnBridge: RibbonColumnBridge;
   /** ADR-363 Phase 5 — Beam contextual tab bridge. */
@@ -144,6 +153,7 @@ export function useRibbonCommands({
   wallBridge,
   openingBridge,
   slabBridge,
+  roofBridge,
   columnBridge,
   beamBridge,
   slabOpeningBridge,
@@ -190,6 +200,10 @@ export function useRibbonCommands({
         slabBridge.onComboboxChange(key, value);
         return;
       }
+      if (isRoofRibbonKey(key) || isRoofRibbonStringKey(key)) {
+        roofBridge.onComboboxChange(key, value);
+        return;
+      }
       if (isColumnRibbonKey(key) || isColumnRibbonStringKey(key)) {
         columnBridge.onComboboxChange(key, value);
         return;
@@ -206,7 +220,7 @@ export function useRibbonCommands({
         mepFixtureBridge.onComboboxChange(key, value);
         return;
       }
-      if (isMepManifoldRibbonKey(key)) {
+      if (isMepManifoldRibbonKey(key) || isMepManifoldClassificationKey(key)) {
         mepManifoldBridge.onComboboxChange(key, value);
         return;
       }
@@ -240,7 +254,7 @@ export function useRibbonCommands({
       }
       textEditorBridge.onComboboxChange(key, value);
     },
-    [stairBridge, wallBridge, openingBridge, slabBridge, columnBridge, beamBridge, slabOpeningBridge, mepFixtureBridge, mepManifoldBridge, mepSegmentBridge, furnitureBridge, floorplanSymbolBridge, mepFixtureLibraryBridge, arrayBridge, lineToolBridge, xlineModeBridge, textEditorBridge],
+    [stairBridge, wallBridge, openingBridge, slabBridge, roofBridge, columnBridge, beamBridge, slabOpeningBridge, mepFixtureBridge, mepManifoldBridge, mepSegmentBridge, furnitureBridge, floorplanSymbolBridge, mepFixtureLibraryBridge, arrayBridge, lineToolBridge, xlineModeBridge, textEditorBridge],
   );
 
   const getComboboxState = React.useCallback(
@@ -252,11 +266,12 @@ export function useRibbonCommands({
       if (isWallRibbonKey(key) || isWallRibbonStringKey(key) || isWallRibbonToggleKey(key)) return wallBridge.getComboboxState(key);
       if (isOpeningRibbonKey(key) || isOpeningRibbonStringKey(key) || isOpeningTagStyleComboboxKey(key)) return openingBridge.getComboboxState(key);
       if (isSlabRibbonKey(key) || isSlabRibbonStringKey(key)) return slabBridge.getComboboxState(key);
+      if (isRoofRibbonKey(key) || isRoofRibbonStringKey(key)) return roofBridge.getComboboxState(key);
       if (isColumnRibbonKey(key) || isColumnRibbonStringKey(key)) return columnBridge.getComboboxState(key);
       if (isBeamRibbonKey(key) || isBeamRibbonStringKey(key)) return beamBridge.getComboboxState(key);
       if (isSlabOpeningRibbonStringKey(key)) return slabOpeningBridge.getComboboxState(key);
       if (isMepFixtureRibbonKey(key) || isMepFixtureRibbonStringKey(key)) return mepFixtureBridge.getComboboxState(key);
-      if (isMepManifoldRibbonKey(key)) return mepManifoldBridge.getComboboxState(key);
+      if (isMepManifoldRibbonKey(key) || isMepManifoldClassificationKey(key)) return mepManifoldBridge.getComboboxState(key);
       if (isMepSegmentRibbonKey(key) || isMepSegmentRibbonStringKey(key)) return mepSegmentBridge.getComboboxState(key);
       if (isFurnitureRibbonKey(key) || isFurnitureRibbonStringKey(key)) return furnitureBridge.getComboboxState(key);
       if (isFloorplanSymbolRibbonKey(key) || isFloorplanSymbolRibbonStringKey(key)) return floorplanSymbolBridge.getComboboxState(key);
@@ -266,7 +281,7 @@ export function useRibbonCommands({
       if (isXlineRibbonKey(key)) return xlineModeBridge.getComboboxState(key);
       return textEditorBridge.getComboboxState(key);
     },
-    [snapStepUnits, stairBridge, wallBridge, openingBridge, slabBridge, columnBridge, beamBridge, slabOpeningBridge, mepFixtureBridge, mepManifoldBridge, mepSegmentBridge, furnitureBridge, floorplanSymbolBridge, mepFixtureLibraryBridge, arrayBridge, lineToolBridge, xlineModeBridge, textEditorBridge],
+    [snapStepUnits, stairBridge, wallBridge, openingBridge, slabBridge, roofBridge, columnBridge, beamBridge, slabOpeningBridge, mepFixtureBridge, mepManifoldBridge, mepSegmentBridge, furnitureBridge, floorplanSymbolBridge, mepFixtureLibraryBridge, arrayBridge, lineToolBridge, xlineModeBridge, textEditorBridge],
   );
 
   const onToggle = React.useCallback(
@@ -283,9 +298,13 @@ export function useRibbonCommands({
         openingBridge.onToggle(key, next);
         return;
       }
+      if (isRoofRibbonToggleKey(key)) {
+        roofBridge.onToggle(key, next);
+        return;
+      }
       textEditorBridge.onToggle(key, next);
     },
-    [wallBridge, arrayBridge, openingBridge, textEditorBridge],
+    [wallBridge, arrayBridge, openingBridge, roofBridge, textEditorBridge],
   );
 
   const getToggleState = React.useCallback(
@@ -294,9 +313,10 @@ export function useRibbonCommands({
       if (isWallRibbonToggleKey(key)) return wallBridge.getToggleState(key);
       if (isArrayRibbonToggleKey(key)) return arrayBridge.getToggleState(key);
       if (isOpeningTagStyleToggleKey(key)) return openingBridge.getToggleState(key);
+      if (isRoofRibbonToggleKey(key)) return roofBridge.getToggleState(key);
       return textEditorBridge.getToggleState(key);
     },
-    [snapEnabled, wallBridge, arrayBridge, openingBridge, textEditorBridge],
+    [snapEnabled, wallBridge, arrayBridge, openingBridge, roofBridge, textEditorBridge],
   );
 
   // ADR-358 Phase 7b1 — Stair bridge owns badge keys; ADR-363 Phase 1B adds
@@ -307,12 +327,13 @@ export function useRibbonCommands({
       if (isWallBadgeKey(badgeKey)) return wallBridge.getBadgeState(badgeKey);
       if (isOpeningBadgeKey(badgeKey)) return openingBridge.getBadgeState(badgeKey);
       if (isSlabBadgeKey(badgeKey)) return slabBridge.getBadgeState(badgeKey);
+      if (isRoofBadgeKey(badgeKey)) return roofBridge.getBadgeState(badgeKey);
       if (isColumnBadgeKey(badgeKey)) return columnBridge.getBadgeState(badgeKey);
       if (isBeamBadgeKey(badgeKey)) return beamBridge.getBadgeState(badgeKey);
       if (isSlabOpeningBadgeKey(badgeKey)) return slabOpeningBridge.getBadgeState(badgeKey);
       return false;
     },
-    [stairBridge, wallBridge, openingBridge, slabBridge, columnBridge, beamBridge, slabOpeningBridge],
+    [stairBridge, wallBridge, openingBridge, slabBridge, roofBridge, columnBridge, beamBridge, slabOpeningBridge],
   );
 
   // ADR-358 Phase 7b2b-β Stream F — Only the stair bridge owns visibility
@@ -348,6 +369,10 @@ export function useRibbonCommands({
       }
       if (isSlabActionKey(action)) {
         slabBridge.onAction(action);
+        return;
+      }
+      if (isRoofActionKey(action)) {
+        roofBridge.onAction(action);
         return;
       }
       if (isColumnActionKey(action)) {
@@ -392,7 +417,7 @@ export function useRibbonCommands({
       }
       wrappedHandleAction(action, data);
     },
-    [wallBridge, openingBridge, slabBridge, columnBridge, beamBridge, slabOpeningBridge, stairBridge, mepCircuitBridge, mepPipeNetworkBridge, mepFixtureBridge, mepManifoldBridge, mepSegmentBridge, furnitureBridge, wrappedHandleAction],
+    [wallBridge, openingBridge, slabBridge, roofBridge, columnBridge, beamBridge, slabOpeningBridge, stairBridge, mepCircuitBridge, mepPipeNetworkBridge, mepFixtureBridge, mepManifoldBridge, mepSegmentBridge, furnitureBridge, wrappedHandleAction],
   );
 
   return React.useMemo(

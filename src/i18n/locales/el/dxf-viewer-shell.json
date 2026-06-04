@@ -51,7 +51,7 @@
     "networksDerived": "Δημιουργήθηκαν δίκτυα σωλήνων από τη συνδεσιμότητα — δίκτυα: {count}."
   },
   "mepPipeNetwork": {
-    "created": "Δημιουργήθηκε δίκτυο ύδρευσης — σωλήνες: {count}.",
+    "created": "Δημιουργήθηκε δίκτυο — σωλήνες: {count}.",
     "failed": {
       "no-source": "Επίλεξε έναν συλλέκτη ως πηγή του δικτύου.",
       "multiple-sources": "Επίλεξε μόνο έναν συλλέκτη ως πηγή.",
@@ -756,12 +756,13 @@
       "wallProperties": "Ιδιότητες Τοίχου",
       "openingProperties": "Ιδιότητες Ανοίγματος",
       "slabProperties": "Ιδιότητες Πλάκας",
+      "roofProperties": "Ιδιότητες Στέγης",
       "columnProperties": "Ιδιότητες Κολώνας",
       "beamProperties": "Ιδιότητες Δοκαριού",
       "slabOpeningProperties": "Ιδιότητες Διάνοιξης Πλάκας",
       "multiSelection": "Πολλαπλή Επιλογή",
       "mepCircuit": "Ηλεκτρικό Κύκλωμα",
-      "mepPipeNetwork": "Δίκτυο Ύδρευσης",
+      "mepPipeNetwork": "Δίκτυο Σωληνώσεων",
       "mepFixtureProperties": "Ιδιότητες Φωτιστικού",
       "mepManifoldProperties": "Ιδιότητες Συλλέκτη",
       "mepSegmentProperties": "Ιδιότητες Σωλήνα/Αεραγωγού",
@@ -826,6 +827,10 @@
       "slabGeometry": "Γεωμετρία",
       "slabMaterial": "Υλικό",
       "slabActions": "Ενέργειες",
+      "roofType": "Τύπος Στέγης",
+      "roofShapeSlope": "Μορφή & Κλίση",
+      "roofGeometry": "Γεωμετρία",
+      "roofActions": "Ενέργειες",
       "columnKind": "Τύπος",
       "columnGeometry": "Γεωμετρία",
       "columnPolygon": "Πολύγωνο",
@@ -851,12 +856,14 @@
       "mepFixtureRectParams": "Ορθογώνιο",
       "mepFixtureActions": "Ενέργειες",
       "mepFixtureCircuit": "Κύκλωμα",
+      "mepManifoldSystem": "Σύστημα",
       "mepManifoldGeometry": "Γεωμετρία",
       "mepManifoldOutlets": "Έξοδοι",
       "mepManifoldActions": "Ενέργειες",
       "mepSegmentSection": "Διατομή",
       "mepSegmentDimensions": "Διαστάσεις",
       "mepSegmentGeometry": "Γεωμετρία",
+      "mepSegmentPlumbing": "Δίκτυο / Αποχέτευση",
       "mepSegmentActions": "Ενέργειες",
       "mepCircuit": "Κύκλωμα",
       "mepCircuitProperties": "Ιδιότητες Κυκλώματος",
@@ -1045,7 +1052,11 @@
         },
         "mepManifold": {
           "label": "Συλλέκτης",
-          "tooltip": "Συλλέκτης ύδρευσης (1 είσοδος + N έξοδοι) — τοποθέτηση με ένα κλικ (πειθαρχία: υδραυλικά)"
+          "tooltip": "Συλλέκτης ύδρευσης/θέρμανσης (1 είσοδος + N έξοδοι) — τοποθέτηση με ένα κλικ· τύπος από το tab «Σύστημα» (πειθαρχία: υδραυλικά)"
+        },
+        "mepDrainageCollector": {
+          "label": "Φρεάτιο Αποχέτευσης",
+          "tooltip": "Φρεάτιο/συλλέκτης αποχέτευσης (N είσοδοι + 1 έξοδος προς υπόνομο) — τοποθέτηση με ένα κλικ (πειθαρχία: υδραυλικά)"
         },
         "railing": {
           "label": "Κιγκλίδωμα",
@@ -1078,6 +1089,10 @@
         "mepPipe": {
           "label": "Σωλήνας",
           "tooltip": "Σχεδίαση σωλήνα με 2 κλικ (πειθαρχία: υδραυλικά) (συντόμευση PP)"
+        },
+        "mepDrainPipe": {
+          "label": "Αγωγός Αποχέτευσης",
+          "tooltip": "Σχεδίαση αγωγού αποχέτευσης με 2 κλικ — σωλήνας με ταξινόμηση «αποχέτευση» + κλίση (συντόμευση DP)"
         },
         "mepPipeNetwork": {
           "label": "Δίκτυα σωλήνων",
@@ -1624,6 +1639,30 @@
           "comingSoon": "Διαθέσιμο σε επόμενη φάση"
         }
       },
+      "roofEditor": {
+        "slope": "Κλίση",
+        "slopeUnitPercent": "Ποσοστό %",
+        "basePivotZ": "Στάθμη Γείσου",
+        "close": "Κλείσιμο",
+        "delete": "Διαγραφή",
+        "deleteConfirm": "Διαγραφή στέγης; Η ενέργεια δεν μπορεί να αναιρεθεί.",
+        "shape": {
+          "section": {
+            "title": "Μορφή"
+          },
+          "flat": "Επίπεδο Δώμα",
+          "monoPitch": "Μονόρριχτη",
+          "gable": "Δίρριχτη"
+        },
+        "roofType": {
+          "section": {
+            "title": "Τύπος Στέγης"
+          },
+          "none": "Χωρίς τύπο",
+          "concrete": "Μπετονένιο Δώμα",
+          "tiled": "Κεραμοσκεπή"
+        }
+      },
       "beamEditor": {
         "width": "Πλάτος",
         "depth": "Βάθος",
@@ -1818,6 +1857,8 @@
         "centerlineElevation": "Ύψος άξονα",
         "startElevation": "Υψόμετρο αρχής",
         "endElevation": "Υψόμετρο τέλους",
+        "classification": "Ταξινόμηση",
+        "slopePercent": "Κλίση %",
         "close": "Κλείσιμο",
         "delete": "Διαγραφή",
         "deleteConfirm": "Διαγραφή στοιχείου; Η ενέργεια δεν μπορεί να αναιρεθεί.",
@@ -1848,8 +1889,8 @@
         "removeMembersTooltip": "Αφαίρεσε τα επιλεγμένα μέλη-φωτιστικά από το τρέχον κύκλωμα."
       },
       "mepPipeNetwork": {
-        "create": "Δημιουργία δικτύου ύδρευσης",
-        "createTooltip": "Δημιουργία δικτύου ύδρευσης από τον επιλεγμένο συλλέκτη (πηγή) και τους σωλήνες (μέλη).",
+        "create": "Δημιουργία δικτύου",
+        "createTooltip": "Δημιουργία δικτύου σωληνώσεων από τον επιλεγμένο συλλέκτη (πηγή) και τους σωλήνες (μέλη). Ο τύπος (ύδρευση/θέρμανση) κληρονομείται από τον συλλέκτη.",
         "close": "Κλείσιμο",
         "addMembers": "Προσθήκη επιλεγμένων",
         "addMembersTooltip": "Πρόσθεσε τους επιλεγμένους σωλήνες στο τρέχον δίκτυο (μεταφέρονται από άλλο δίκτυο αν ανήκουν αλλού).",
@@ -2125,6 +2166,14 @@
         "straight": "Ευθύ",
         "orthogonal": "Ορθογώνιο",
         "arc": "Τόξο"
+      },
+      "mepClassification": {
+        "label": "Σύστημα",
+        "domestic-cold-water": "Κρύο νερό",
+        "domestic-hot-water": "Ζεστό νερό",
+        "sanitary-drainage": "Αποχέτευση",
+        "hydronic-supply": "Θέρμανση (προσαγωγή)",
+        "hydronic-return": "Θέρμανση (επιστροφή)"
       },
       "mepConductors": {
         "label": "Αγωγοί",

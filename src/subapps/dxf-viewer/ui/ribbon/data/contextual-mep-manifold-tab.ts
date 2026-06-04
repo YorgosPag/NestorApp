@@ -95,6 +95,18 @@ const OUTLET_DIAMETER_MM_OPTIONS = [
   { value: '25', labelKey: '25', isLiteralLabel: true },
 ] as const;
 
+// System classification (ADR-408 Φ-heating) — the hydraulic type the manifold
+// distributes. Translated labels (NO isLiteralLabel → passes through t()). The 5
+// values mirror `PlumbingSystemClassification`; the manifold owns it and a network
+// created from this manifold inherits it.
+const CLASSIFICATION_OPTIONS = [
+  { value: 'domestic-cold-water', labelKey: 'ribbon.commands.mepClassification.domestic-cold-water' },
+  { value: 'domestic-hot-water', labelKey: 'ribbon.commands.mepClassification.domestic-hot-water' },
+  { value: 'sanitary-drainage', labelKey: 'ribbon.commands.mepClassification.sanitary-drainage' },
+  { value: 'hydronic-supply', labelKey: 'ribbon.commands.mepClassification.hydronic-supply' },
+  { value: 'hydronic-return', labelKey: 'ribbon.commands.mepClassification.hydronic-return' },
+] as const;
+
 // ─── Tab definition ──────────────────────────────────────────────────────────
 
 export const CONTEXTUAL_MEP_MANIFOLD_TAB: RibbonTab = {
@@ -103,6 +115,32 @@ export const CONTEXTUAL_MEP_MANIFOLD_TAB: RibbonTab = {
   isContextual: true,
   contextualTrigger: MEP_MANIFOLD_CONTEXTUAL_TRIGGER,
   panels: [
+    {
+      // ADR-408 Φ-heating — manifold-owned hydraulic classification (ύδρευση/
+      // θέρμανση). Always visible (an intrinsic manifold property). The combobox
+      // routes through the manifold bridge's string-enum branch, which re-seeds the
+      // connectors with the new classification.
+      id: 'mep-manifold-system',
+      labelKey: 'ribbon.panels.mepManifoldSystem',
+      rows: [
+        {
+          isInFlyout: false,
+          buttons: [
+            {
+              type: 'combobox',
+              size: 'small',
+              command: {
+                id: 'mepManifold.classification',
+                labelKey: 'ribbon.commands.mepClassification.label',
+                commandKey: MEP_MANIFOLD_RIBBON_KEYS.params.classification,
+                comboboxWidthPx: 150,
+                options: CLASSIFICATION_OPTIONS,
+              },
+            },
+          ],
+        },
+      ],
+    },
     {
       id: 'mep-manifold-geometry',
       labelKey: 'ribbon.panels.mepManifoldGeometry',

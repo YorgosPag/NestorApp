@@ -39,6 +39,10 @@ import { getLayer } from '../../stores/LayerStore';
  */
 const MANIFOLD_STROKE = '#0891b2';
 const MANIFOLD_FILL = 'rgba(8, 145, 178, 0.18)';
+// ADR-408 Φ14 — a drainage collector (φρεάτιο) reads brown (CIBSE sanitary
+// convention), distinguishing it at a glance from a water manifold.
+const DRAINAGE_COLLECTOR_STROKE = '#b45309';
+const DRAINAGE_COLLECTOR_FILL = 'rgba(180, 83, 9, 0.18)';
 
 export class MepManifoldRenderer extends BaseEntityRenderer {
   render(entity: EntityModel, options: RenderOptions = {}): void {
@@ -78,11 +82,13 @@ export class MepManifoldRenderer extends BaseEntityRenderer {
     this.ctx.save();
     this.ctx.setLineDash([]);
 
-    // Fill + outline (equipment cyan-teal — manifolds are not coloured by circuit).
-    this.ctx.fillStyle = MANIFOLD_FILL;
+    // Fill + outline — equipment cyan-teal for a water manifold; brown for a
+    // drainage collector (φρεάτιο). Manifolds are not coloured by circuit (source).
+    const isDrain = manifold.params.kind === 'drainage-collector';
+    this.ctx.fillStyle = isDrain ? DRAINAGE_COLLECTOR_FILL : MANIFOLD_FILL;
     this.drawPolygonPath(verts);
     this.ctx.fill();
-    this.ctx.strokeStyle = MANIFOLD_STROKE;
+    this.ctx.strokeStyle = isDrain ? DRAINAGE_COLLECTOR_STROKE : MANIFOLD_STROKE;
     this.ctx.lineWidth = RENDER_LINE_WIDTHS.NORMAL;
     this.drawPolygonPath(verts);
     this.ctx.stroke();

@@ -380,16 +380,14 @@ export function useRoofPersistence(
     return cleanup;
   }, [persist]);
 
-  // Delete-requested listener (bridge emits after confirm).
-  // NOTE: 'bim:roof-delete-requested' must be added to drawing-event-map.ts by the
-  // orchestrator (shared file — ADR-417 Φ1 constraint). Until then this block is
-  // inert; the event type will be wired when the event map is updated.
-  // useEffect(() => {
-  //   const cleanup = EventBus.on('bim:roof-delete-requested', ({ roofId }) => {
-  //     void deleteRoof(roofId);
-  //   });
-  //   return cleanup;
-  // }, [deleteRoof]);
+  // Delete-requested listener (bridge emits after confirm). ADR-417 Φ1-part-2 —
+  // 'bim:roof-delete-requested' wired in drawing-event-map.ts.
+  useEffect(() => {
+    const cleanup = EventBus.on('bim:roof-delete-requested', ({ roofId }) => {
+      void deleteRoof(roofId);
+    });
+    return cleanup;
+  }, [deleteRoof]);
 
   useBimEntityMovedPersistEffect(isRoof, serviceRef, dirtyIdsRef, persist);
   // 'roof' will be added to BimRestoreEntityType by the orchestrator.

@@ -10,6 +10,8 @@ import {
   resolveEntitySystemColor,
   resolveFittingSystemColor,
   classificationDefaultColor,
+  resolveSegmentClassificationColor,
+  isDefaultClassificationColor,
   hexToThreeInt,
   hexToRgba,
 } from '../mep-system-color';
@@ -108,5 +110,39 @@ describe('classificationDefaultColor (ADR-408 Φ9/Φ10)', () => {
   it('returns a palette colour (so colour-by-system stays consistent)', () => {
     expect(MEP_SYSTEM_PALETTE).toContain(classificationDefaultColor('domestic-cold-water'));
     expect(MEP_SYSTEM_PALETTE).toContain(classificationDefaultColor('sanitary-drainage'));
+  });
+});
+
+describe('resolveSegmentClassificationColor (ADR-408 Φ14 — standalone pipe colour)', () => {
+  it('returns the classification colour for a classified pipe (drainage = brown)', () => {
+    expect(resolveSegmentClassificationColor('sanitary-drainage')).toBe('#b45309');
+    expect(resolveSegmentClassificationColor('domestic-cold-water')).toBe('#2563eb');
+    expect(resolveSegmentClassificationColor('domestic-hot-water')).toBe('#dc2626');
+  });
+
+  it('returns null when unclassified (renderer falls back to the domain default)', () => {
+    expect(resolveSegmentClassificationColor(undefined)).toBeNull();
+  });
+
+  it('agrees with classificationDefaultColor (one SSoT for 2D + 3D)', () => {
+    expect(resolveSegmentClassificationColor('hydronic-supply')).toBe(
+      classificationDefaultColor('hydronic-supply'),
+    );
+  });
+});
+
+describe('isDefaultClassificationColor (ADR-408 Φ14 — re-seed only convention colours)', () => {
+  it('treats an unset colour as default (re-seedable)', () => {
+    expect(isDefaultClassificationColor(undefined)).toBe(true);
+  });
+
+  it('recognises every classification convention colour as default', () => {
+    expect(isDefaultClassificationColor('#b45309')).toBe(true); // drainage brown
+    expect(isDefaultClassificationColor('#2563eb')).toBe(true); // cold/return blue
+    expect(isDefaultClassificationColor('#dc2626')).toBe(true); // hot/supply red
+  });
+
+  it('preserves a custom (non-convention) colour', () => {
+    expect(isDefaultClassificationColor('#123456')).toBe(false);
   });
 });

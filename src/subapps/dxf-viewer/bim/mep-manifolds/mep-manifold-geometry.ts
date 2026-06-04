@@ -31,7 +31,9 @@ import type { MepConnector } from '../types/mep-connector-types';
 import {
   buildManifoldInletConnector,
   buildManifoldOutletConnector,
+  buildManifoldBranchInletConnector,
 } from '../types/mep-connector-types';
+import { isDrainageCollectorKind } from '../types/mep-manifold-types';
 import { polygonArea, polygonBbox } from '../geometry/shared/polygon-utils';
 import { mmToSceneUnits } from '../../utils/scene-units';
 
@@ -133,9 +135,28 @@ function manifoldConnectorLocalPositions(params: MepManifoldParams): {
  */
 export function buildMepManifoldConnectors(params: MepManifoldParams): MepConnector[] {
   const { inlet, outlets } = manifoldConnectorLocalPositions(params);
+  // ADR-408 Φ14 — a drainage collector (φρεάτιο) is the mirror of a water manifold:
+  // the geometry is identical (one −X connector + N front-edge connectors) but the
+  // ROLES flip. So the single −X connector becomes the sewer OUTLET and the N
+  // front-edge connectors become gravity branch INLETS. Default classification is
+  // sanitary-drainage for a collector, else the manifold-owned value (Φ-heating;
+  // absent ⇒ domestic-cold-water).
+  if (isDrainageCollectorKind(params.kind)) {
+    const classification = params.systemClassification ?? 'sanitary-drainage';
+    return [
+      buildManifoldOutletConnector(0, inlet, params.outletDiameterMm, classification),
+      ...outlets.map((p, i) =>
+        buildManifoldBranchInletConnector(i, p, params.inletDiameterMm, classification),
+      ),
+    ];
+  }
+  // ADR-408 Φ12 — water distributor: 1 inlet (−X) + N outlets (front edge).
+  const classification = params.systemClassification ?? 'domestic-cold-water';
   return [
-    buildManifoldInletConnector(inlet, params.inletDiameterMm),
-    ...outlets.map((p, i) => buildManifoldOutletConnector(i, p, params.outletDiameterMm)),
+    buildManifoldInletConnector(inlet, params.inletDiameterMm, classification),
+    ...outlets.map((p, i) =>
+      buildManifoldOutletConnector(i, p, params.outletDiameterMm, classification),
+    ),
   ];
 }
 

@@ -42,6 +42,7 @@ import { useMepSystemStore } from '../mep-systems/mep-system-store';
 import {
   getEntitySystemColorIndexCached,
   resolveEntitySystemColor,
+  resolveSegmentClassificationColor,
   hexToRgba,
 } from '../mep-systems/mep-system-color';
 
@@ -127,8 +128,11 @@ export class MepSegmentRenderer extends BaseEntityRenderer {
     const systemColor = colorBySystem && systems.length > 0
       ? resolveEntitySystemColor(segment.id, getEntitySystemColorIndexCached(systems))
       : null;
-    const strokeColor = systemColor ?? DOMAIN_STROKE[domain];
-    const fillColor = systemColor ? hexToRgba(systemColor, SEGMENT_SYSTEM_FILL_ALPHA) : DOMAIN_FILL[domain];
+    // ADR-408 Φ14 — System colour wins; else the instance classification hint
+    // (drainage = brown) colours a standalone pipe; else the per-domain default.
+    const baseColor = systemColor ?? resolveSegmentClassificationColor(segment.params.classification);
+    const strokeColor = baseColor ?? DOMAIN_STROKE[domain];
+    const fillColor = baseColor ? hexToRgba(baseColor, SEGMENT_SYSTEM_FILL_ALPHA) : DOMAIN_FILL[domain];
 
     const phaseState = this.phaseManager.determinePhase(entity as Entity, options);
 

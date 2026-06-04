@@ -148,6 +148,8 @@ export type ToolType =
   | 'electrical-panel'
   // ADR-408 Φ12: point-based plumbing manifold drawing tool (συλλέκτης, pipe-network source)
   | 'mep-manifold'
+  // ADR-408 Φ14: drainage collector (φρεάτιο) — point-based manifold, N inlets + 1 outlet
+  | 'mep-drainage-collector'
   // ADR-407: path-based railing drawing tool (2-click straight guardrail)
   | 'railing'
   // ADR-410: mesh-based CC0 furniture drawing tool (single-click placement)
@@ -157,6 +159,8 @@ export type ToolType =
   // ADR-408 Φ8: linear MEP segment tools (duct/pipe, 2-click; one entity, two tools like Revit)
   | 'mep-duct'
   | 'mep-pipe'
+  // ADR-408 Φ14: sanitary drainage pipe (mep-segment domain 'pipe' preset sanitary-drainage + slope)
+  | 'mep-drain-pipe'
   // ADR-359 Phase 1: Auxiliary geometry tools (infinite/semi-infinite construction lines)
   | 'xline'             // Infinite line through basePoint in direction (AutoCAD XLINE)
   | 'ray'               // Semi-infinite line from basePoint in direction (AutoCAD RAY)

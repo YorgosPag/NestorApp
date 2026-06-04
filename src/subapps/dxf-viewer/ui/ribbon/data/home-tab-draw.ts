@@ -410,6 +410,15 @@ export const HOME_DRAW_PANEL: RibbonPanelDef = {
               icon: 'bim-mep-manifold',
               commandKey: 'mep-manifold',
             },
+            // ADR-408 Φ14 — drainage collector (φρεάτιο). Same point-based manifold
+            // body, N inlets + 1 sewer outlet, brown (sanitary).
+            {
+              id: 'draw.bim.mepDrainageCollector',
+              labelKey: 'ribbon.commands.bim.mepDrainageCollector.label',
+              tooltipKey: 'ribbon.commands.bim.mepDrainageCollector.tooltip',
+              icon: 'bim-mep-manifold',
+              commandKey: 'mep-drainage-collector',
+            },
             // ADR-407 — path-based railing (guardrail). 2-click straight sketch;
             // discipline = architectural (ADR-405 discipline visibility).
             {
@@ -447,6 +456,16 @@ export const HOME_DRAW_PANEL: RibbonPanelDef = {
               icon: 'bim-pipe',
               commandKey: 'mep-pipe',
               shortcut: 'PP',
+            },
+            // ADR-408 Φ14 — sanitary drainage pipe (2-click). Same mep-segment
+            // pipe, preset sanitary-drainage classification + fall → brown.
+            {
+              id: 'draw.bim.mepDrainPipe',
+              labelKey: 'ribbon.commands.bim.mepDrainPipe.label',
+              tooltipKey: 'ribbon.commands.bim.mepDrainPipe.tooltip',
+              icon: 'bim-pipe',
+              commandKey: 'mep-drain-pipe',
+              shortcut: 'DP',
             },
             // ADR-408 Φ10 — auto-derive pipe networks from physical connectivity.
             // Action (NOT a tool): `action` makes the button fire `onAction(...)`

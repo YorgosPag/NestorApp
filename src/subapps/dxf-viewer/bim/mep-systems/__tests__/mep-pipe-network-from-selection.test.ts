@@ -18,14 +18,18 @@ import {
 
 const OUT0 = `${MANIFOLD_OUTLET_CONNECTOR_ID_PREFIX}0`;
 
-function manifold(id: string, withConnectors = true): Entity {
+function manifold(id: string, withConnectors = true, classification?: string): Entity {
   const connectors = withConnectors
     ? [
         { connectorId: MANIFOLD_INLET_CONNECTOR_ID, domain: 'pipe', flow: 'in', localPosition: { x: 0, y: 0, z: 0 } },
         { connectorId: OUT0, domain: 'pipe', flow: 'out', localPosition: { x: 0, y: 0, z: 0 } },
       ]
     : [];
-  return { type: 'mep-manifold', id, params: { connectors } } as unknown as Entity;
+  return {
+    type: 'mep-manifold',
+    id,
+    params: { connectors, ...(classification ? { systemClassification: classification } : {}) },
+  } as unknown as Entity;
 }
 
 function pipe(id: string): Entity {
@@ -75,6 +79,18 @@ describe('resolvePipeNetworkFromSelection', () => {
     const res = resolvePipeNetworkFromSelection([manifold('m1', false), pipe('p1')], []);
     expect(res.ok).toBe(true);
     if (res.ok) expect(res.draft.sourceConnectorId).toBe(OUT0);
+  });
+
+  it('inherits the heating classification from the source manifold (ADR-408 Φ-heating)', () => {
+    const res = resolvePipeNetworkFromSelection([manifold('m1', true, 'hydronic-supply'), pipe('p1')], []);
+    expect(res.ok).toBe(true);
+    if (res.ok) expect(res.draft.systemClassification).toBe('hydronic-supply');
+  });
+
+  it('defaults the network classification to domestic-cold-water for a pre-heating manifold', () => {
+    const res = resolvePipeNetworkFromSelection([manifold('m1'), pipe('p1')], []);
+    expect(res.ok).toBe(true);
+    if (res.ok) expect(res.draft.systemClassification).toBe('domestic-cold-water');
   });
 
   it('fails with no-source when no manifold is selected', () => {

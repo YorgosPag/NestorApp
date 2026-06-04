@@ -135,3 +135,32 @@ describe('buildMepManifoldConnectors', () => {
     expect(connectors[2].connectorId).toBe('m-out-1');
   });
 });
+
+describe('buildMepManifoldConnectors — ADR-408 Φ14 drainage collector (φρεάτιο)', () => {
+  function drain(overrides: Partial<MepManifoldParams> = {}): MepManifoldParams {
+    return params({ kind: 'drainage-collector', ...overrides });
+  }
+
+  it('MIRRORS the water manifold: N inlets + 1 outlet (roles flipped)', () => {
+    const connectors = buildMepManifoldConnectors(drain({ outletCount: 4 }));
+    expect(connectors).toHaveLength(1 + 4);
+    expect(connectors.filter((c) => c.flow === 'in')).toHaveLength(4);
+    expect(connectors.filter((c) => c.flow === 'out')).toHaveLength(1);
+    expect(connectors.every((c) => c.domain === 'pipe')).toBe(true);
+  });
+
+  it('puts the single sewer outlet at the −X end, branch inlets along +Y', () => {
+    const connectors = buildMepManifoldConnectors(drain({ outletCount: 3 }));
+    const outlet = connectors.find((c) => c.flow === 'out')!;
+    expect(outlet.connectorId).toBe('m-out-0');
+    expect(outlet.localPosition.x).toBeCloseTo(-200, 6);
+    const inlets = connectors.filter((c) => c.flow === 'in');
+    expect(inlets.map((c) => c.connectorId)).toEqual(['m-in-0', 'm-in-1', 'm-in-2']);
+    expect(inlets.every((c) => Math.abs((c.localPosition.y ?? 0) - 40) < 1e-6)).toBe(true);
+  });
+
+  it('defaults every connector to the sanitary-drainage classification', () => {
+    const connectors = buildMepManifoldConnectors(drain());
+    expect(connectors.every((c) => c.pipe?.systemClassification === 'sanitary-drainage')).toBe(true);
+  });
+});

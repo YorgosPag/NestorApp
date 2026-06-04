@@ -82,6 +82,40 @@ export function classificationDefaultColor(
 }
 
 /**
+ * ADR-408 Φ14 — the display colour a STANDALONE pipe segment carries from its own
+ * instance `classification` hint (cold = blue, hot = red, drainage = brown), or
+ * `null` when unclassified (the renderer then falls back to its domain default).
+ * The SINGLE source shared by the 2D renderer and the 3D converter so both colour
+ * a drainage run identically. A System membership ALWAYS wins over this (the System
+ * owns the classification once joined) — callers resolve system colour first.
+ */
+export function resolveSegmentClassificationColor(
+  classification: PlumbingSystemClassification | undefined,
+): string | null {
+  return classification ? classificationDefaultColor(classification) : null;
+}
+
+/** The 5 hydraulic classifications, for exhaustive default-colour checks. */
+const ALL_PLUMBING_CLASSIFICATIONS: readonly PlumbingSystemClassification[] = [
+  'domestic-cold-water',
+  'domestic-hot-water',
+  'sanitary-drainage',
+  'hydronic-supply',
+  'hydronic-return',
+];
+
+/**
+ * True when `color` is unset or equals the convention default of ANY classification
+ * (ADR-408 Φ-heating). Lets the classification picker re-seed the colour on a type
+ * change ONLY when the user has not chosen a custom one — a custom colour is
+ * preserved (Revit keeps an overridden System Colour across a System Type change).
+ */
+export function isDefaultClassificationColor(color?: string): boolean {
+  if (!color) return true;
+  return ALL_PLUMBING_CLASSIFICATIONS.some((c) => classificationDefaultColor(c) === color);
+}
+
+/**
  * Pick the next default colour for a new circuit: the least-used palette entry
  * across the existing systems (ties broken by palette order). Deterministic and
  * Date/Math.random-free, so it survives workflow replay.

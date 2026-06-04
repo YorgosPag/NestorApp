@@ -39,6 +39,7 @@ import {
   SEGMENT_START_CONNECTOR_ID,
   SEGMENT_END_CONNECTOR_ID,
 } from '../types/mep-connector-types';
+import type { PlumbingSystemClassification } from '../types/mep-connector-types';
 import { getEntityConnectors } from './connector-access';
 import {
   computeReassignRemovals,
@@ -54,6 +55,13 @@ export type PipeNetworkResolveError = 'no-source' | 'multiple-sources' | 'no-mem
 export interface PipeNetworkFromSelectionDraft {
   readonly sourceEntityId: string;
   readonly sourceConnectorId: string;
+  /**
+   * Hydraulic classification the new network inherits from its source manifold
+   * (Revit: a Piping System takes its System Type from the source equipment's
+   * connector — ADR-408 Φ-heating). Drives the seeded `systemClassification` +
+   * `classificationDefaultColor`. Falls back to `domestic-cold-water`.
+   */
+  readonly systemClassification: PlumbingSystemClassification;
   readonly members: readonly MepSystemMember[];
   /** Surviving networks that lose a reassigned member (Revit single-system rule). */
   readonly reassignRemovals: readonly MepMemberRemoval[];
@@ -115,6 +123,9 @@ export function resolvePipeNetworkFromSelection(
     draft: {
       sourceEntityId: manifolds[0]!.id,
       sourceConnectorId: findManifoldSourceConnectorId(manifolds[0]!),
+      // Inherit the source manifold's hydraulic classification (ύδρευση/θέρμανση);
+      // a pre-heating manifold carries none ⇒ domestic-cold-water (back-compat).
+      systemClassification: manifolds[0]!.params.systemClassification ?? 'domestic-cold-water',
       members,
       reassignRemovals: computeReassignRemovals(members, existingSystems),
     },

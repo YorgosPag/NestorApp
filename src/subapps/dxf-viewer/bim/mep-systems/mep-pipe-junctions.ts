@@ -35,6 +35,7 @@ import {
   SEGMENT_END_CONNECTOR_ID,
 } from '../types/mep-connector-types';
 import { resolvePipeJoinTolerance } from './mep-pipe-network-derive';
+import { mmToSceneUnits } from '../../utils/scene-units';
 
 /** One resolved junction node: a coincidence point of pipe endpoints. */
 export interface PipeJunction {
@@ -57,6 +58,8 @@ interface SegmentEndpoint {
   readonly other: Point3D;
   /** mm. This endpoint's own elevation (sloped runs differ start vs end, Φ-A). */
   readonly elevationMm: number;
+  /** mm. The OTHER endpoint's elevation — the vertical slope reference (Φ-B2b). */
+  readonly otherElevationMm: number;
 }
 
 /** Collect both endpoints (start, end) of a pipe segment, with direction refs. */
@@ -64,8 +67,8 @@ function endpointsOf(seg: MepSegmentEntity): readonly SegmentEndpoint[] {
   const { startPoint, endPoint } = seg.params;
   const elev = resolveSegmentEndpointElevationsMm(seg.params);
   return [
-    { segment: seg, connectorId: SEGMENT_START_CONNECTOR_ID, point: startPoint, other: endPoint, elevationMm: elev.startMm },
-    { segment: seg, connectorId: SEGMENT_END_CONNECTOR_ID, point: endPoint, other: startPoint, elevationMm: elev.endMm },
+    { segment: seg, connectorId: SEGMENT_START_CONNECTOR_ID, point: startPoint, other: endPoint, elevationMm: elev.startMm, otherElevationMm: elev.endMm },
+    { segment: seg, connectorId: SEGMENT_END_CONNECTOR_ID, point: endPoint, other: startPoint, elevationMm: elev.endMm, otherElevationMm: elev.startMm },
   ];
 }
 
@@ -88,13 +91,26 @@ function dist2(a: Point3D, b: Point3D): number {
   return dx * dx + dy * dy;
 }
 
-/** Unit vector from the node toward the segment's other endpoint. */
-function directionUnit(from: Point3D, to: Point3D): Point3D {
+/**
+ * Unit vector from the node toward the segment's other endpoint, in TRUE 3D
+ * (ADR-408 Φ-B2b). The vertical component is the run's slope, so a fitting can tilt
+ * to meet sloped/riser pipes (Φ-A per-endpoint z) instead of sitting flat. `dz`
+ * converts the mm elevation delta to canvas units (`mmToScene`) so x/y/z share one
+ * unit; the result's proportions therefore match the pipe's world-metre axis exactly.
+ */
+function directionUnit(
+  from: Point3D,
+  to: Point3D,
+  fromElevMm: number,
+  toElevMm: number,
+  mmToScene: number,
+): Point3D {
   const dx = to.x - from.x;
   const dy = to.y - from.y;
-  const len = Math.hypot(dx, dy);
+  const dz = (toElevMm - fromElevMm) * mmToScene;
+  const len = Math.hypot(dx, dy, dz);
   if (len === 0) return { x: 0, y: 0, z: 0 };
-  return { x: dx / len, y: dy / len, z: 0 };
+  return { x: dx / len, y: dy / len, z: dz / len };
 }
 
 /**
@@ -111,10 +127,11 @@ function junctionKey(position: Point3D, tolerance: number): string {
 
 /** Build a sorted incident snapshot for one endpoint. */
 function toIncident(ep: SegmentEndpoint): MepFittingIncident {
+  const mmToScene = mmToSceneUnits(ep.segment.params.sceneUnits ?? 'mm');
   return {
     segmentId: ep.segment.id,
     connectorId: ep.connectorId,
-    directionUnit: directionUnit(ep.point, ep.other),
+    directionUnit: directionUnit(ep.point, ep.other, ep.elevationMm, ep.otherElevationMm, mmToScene),
     diameterMm: resolveSegmentSection(ep.segment.params).widthMm,
   };
 }

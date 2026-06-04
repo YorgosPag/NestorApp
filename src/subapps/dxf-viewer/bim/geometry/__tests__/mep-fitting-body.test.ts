@@ -45,6 +45,35 @@ describe('computeFittingBody — elbow (bend form)', () => {
   });
 });
 
+describe('computeFittingBody — reducing elbow (bend form, tapering Ø)', () => {
+  // Leg A = Ø20, leg B = Ø6 at 90° → a reducing elbow.
+  const body = computeFittingBody(
+    input({
+      kind: 'elbow',
+      incidents: [{ dir: RIGHT, diameter: 20 }, { dir: UP, diameter: 6 }],
+      primaryDiameter: 20,
+      secondaryDiameter: 6,
+    }),
+  )!;
+
+  it('carries the per-leg end radii onto the bend (radiusStart → radiusEnd)', () => {
+    expect(body.form).toBe('bend');
+    if (body.form !== 'bend') return;
+    expect(body.bend.radiusStart).toBeCloseTo(10); // 20/2 at leg A
+    expect(body.bend.radiusEnd).toBeCloseTo(3); // 6/2 at leg B
+  });
+
+  it('narrows the footprint band from tangentA to tangentB', () => {
+    const segments = 8;
+    const ring = tessellateFittingFootprint(body, segments);
+    const outer = ring.slice(0, segments + 1);
+    const inner = ring.slice(segments + 1).reverse();
+    const band = (i: number) =>
+      Math.hypot(outer[i]!.x - inner[i]!.x, outer[i]!.y - inner[i]!.y);
+    expect(band(0)).toBeGreaterThan(band(segments));
+  });
+});
+
 describe('computeFittingBody — coupling (inline form)', () => {
   const body = computeFittingBody(
     input({ kind: 'coupling', incidents: [{ dir: RIGHT, diameter: D }, { dir: LEFT, diameter: D }] }),
