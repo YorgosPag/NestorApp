@@ -242,6 +242,12 @@ export interface DrawingEventMap {
   'bim:mep-circuit-edit-failed': { reason: 'noActiveCircuit' | 'addFailed' | 'removeFailed' };
   // ADR-408 Φ10 — pipe-network auto-derivation feedback (whole-scene connectivity).
   'bim:mep-networks-derived': { networkCount: number };
+  // ADR-408 Φ13 — plumbing pipe-network from-manifold-selection feedback.
+  'bim:mep-network-created': { memberCount: number };
+  'bim:mep-network-create-failed': { reason: 'no-source' | 'multiple-sources' | 'no-members' };
+  'bim:mep-network-members-added': { memberCount: number };
+  'bim:mep-network-members-removed': { memberCount: number };
+  'bim:mep-network-edit-failed': { reason: 'noActiveNetwork' | 'addFailed' | 'removeFailed' };
   // ADR-407 — BIM railing params + delete events
   'bim:railing-params-updated': { railingId: string };
   'bim:railing-delete-requested': { railingId: string };
