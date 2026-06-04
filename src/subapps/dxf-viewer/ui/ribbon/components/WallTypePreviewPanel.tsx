@@ -87,6 +87,7 @@ export function WallTypePreviewPanel({
     (e: React.PointerEvent<HTMLDivElement>): void => {
       const renderer = rendererRef.current;
       if (!renderer) return;
+      if (e.buttons !== 0) return; // a drag (pan/rotate) owns the pointer — don't re-pick
       const [x, y] = toNdc(e);
       const picked = renderer.pickLayerAt(x, y);
       if (picked !== lastPickedRef.current) {
