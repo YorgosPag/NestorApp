@@ -353,6 +353,7 @@ export class EnterpriseIdService {
   generateMepFittingId(): string { return this.generateId(P.MEP_FITTING).id; }
   generateMepManifoldId(): string { return this.generateId(P.MEP_MANIFOLD).id; }
   generateRailingId(): string { return this.generateId(P.RAILING).id; }
+  generateRoofId(): string { return this.generateId(P.ROOF).id; }
   generateFurnitureId(): string { return this.generateId(P.FURNITURE).id; }
   generateFloorplanSymbolId(): string { return this.generateId(P.FLOORPLAN_SYMBOL).id; }
   generateBimPresetId(): string { return this.generateId(P.BIM_PRESET).id; }
