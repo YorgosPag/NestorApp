@@ -138,6 +138,8 @@ export class BoundsCalculator {
       case 'mep-fitting':
       // ADR-415 — floorplan symbol projects `geometry.bbox` (FloorplanSymbolGeometry) to 2D (same).
       case 'floorplan-symbol':
+      // ADR-408 Φ12 — plumbing manifold projects `geometry.bbox` (MepManifoldGeometry) to 2D (same).
+      case 'mep-manifold':
         return this.calculateBimEntityBounds(entity, tolerance);
       // ADR-359 Phase 11 follow-up — XLINE/RAY bounds extracted to sibling module.
       case 'xline':

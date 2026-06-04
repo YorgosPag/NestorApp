@@ -401,6 +401,15 @@ export const HOME_DRAW_PANEL: RibbonPanelDef = {
               commandKey: 'electrical-panel',
               shortcut: 'EP',
             },
+            // ADR-408 Φ12 — point-based plumbing manifold (1 inlet + N outlets).
+            // Single-click placement; discipline = plumbing (ADR-405 discipline visibility).
+            {
+              id: 'draw.bim.mepManifold',
+              labelKey: 'ribbon.commands.bim.mepManifold.label',
+              tooltipKey: 'ribbon.commands.bim.mepManifold.tooltip',
+              icon: 'bim-mep-manifold',
+              commandKey: 'mep-manifold',
+            },
             // ADR-407 — path-based railing (guardrail). 2-click straight sketch;
             // discipline = architectural (ADR-405 discipline visibility).
             {

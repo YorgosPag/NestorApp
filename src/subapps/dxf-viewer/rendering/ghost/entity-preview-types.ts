@@ -19,6 +19,7 @@ import type {
   SlabOpeningGripKind,
   MepFixtureGripKind,
   ElectricalPanelGripKind,
+  MepManifoldGripKind,
   MepSegmentGripKind,
   FurnitureGripKind,
 } from '../../hooks/grip-types';
@@ -81,6 +82,14 @@ export interface EntityPreviewTransform {
    * the picked centre.
    */
   readonly electricalPanelGripKind?: ElectricalPanelGripKind;
+  /**
+   * ADR-408 Φ12 — parametric MEP manifold discriminator. Routes preview
+   * through `applyMepManifoldGripDrag` + `computeMepManifoldGeometry`.
+   * ORTHO (F8) is read from `cadToggleState` so the corner-resize ghost matches
+   * the commit. With `rotatePivot` set (manifold-rotation 6-click) the ghost orbits
+   * the picked centre.
+   */
+  readonly mepManifoldGripKind?: MepManifoldGripKind;
   /**
    * ADR-408 Φ8 — parametric MEP segment discriminator. Routes preview through
    * `applyMepSegmentGripDrag` + `computeMepSegmentGeometry`. With `rotatePivot`

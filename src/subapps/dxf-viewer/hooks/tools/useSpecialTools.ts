@@ -27,6 +27,7 @@ import { useMepFixtureTool } from '../drawing/useMepFixtureTool';
 import { useFurnitureTool } from '../drawing/useFurnitureTool';
 import { useFloorplanSymbolTool } from '../drawing/useFloorplanSymbolTool';
 import { useElectricalPanelTool } from '../drawing/useElectricalPanelTool';
+import { useMepManifoldTool } from '../drawing/useMepManifoldTool';
 import { useMepSegmentTool } from '../drawing/useMepSegmentTool';
 import { useRailingTool } from '../drawing/useRailingTool';
 import { useBeamTool } from '../drawing/useBeamTool';
@@ -45,6 +46,7 @@ import { addMepFixtureToScene } from '../../bim/mep-fixtures/add-mep-fixture-to-
 import { addFurnitureToScene } from '../../bim/furniture/add-furniture-to-scene';
 import { addFloorplanSymbolToScene } from '../../bim/floorplan-symbols/add-floorplan-symbol-to-scene';
 import { addElectricalPanelToScene } from '../../bim/electrical-panels/add-electrical-panel-to-scene';
+import { addMepManifoldToScene } from '../../bim/mep-manifolds/add-mep-manifold-to-scene';
 import { addMepSegmentToScene } from '../../bim/mep-segments/add-mep-segment-to-scene';
 import { addRailingToScene } from '../../bim/railings/add-railing-to-scene';
 import { appendEntityToScene } from '../../bim/scene/append-entity-to-scene';
@@ -86,6 +88,7 @@ export interface UseSpecialToolsReturn extends SelectionToolsReturn {
   furnitureTool: ReturnType<typeof useFurnitureTool>; // ADR-410
   floorplanSymbolTool: ReturnType<typeof useFloorplanSymbolTool>; // ADR-415
   electricalPanelTool: ReturnType<typeof useElectricalPanelTool>; // ADR-408 Φ3
+  mepManifoldTool: ReturnType<typeof useMepManifoldTool>; // ADR-408 Φ12
   mepSegmentTool: ReturnType<typeof useMepSegmentTool>; // ADR-408 Φ8
   railingTool: ReturnType<typeof useRailingTool>; // ADR-407
   beamTool: ReturnType<typeof useBeamTool>;
@@ -335,6 +338,17 @@ export function useSpecialTools(props: UseSpecialToolsProps): UseSpecialToolsRet
   });
   useToolLifecycle(activeTool === 'electrical-panel', electricalPanelTool.activate, electricalPanelTool.deactivate);
 
+  // ADR-408 Φ12 — PLUMBING MANIFOLD TOOL: single-click placement; entity appended+broadcast.
+  const mepManifoldTool = useMepManifoldTool({
+    currentLevelId: levelManager.currentLevelId || '0',
+    onMepManifoldCreated: (manifoldEntity) => addMepManifoldToScene(manifoldEntity, levelManager),
+    getSceneUnits: () => {
+      const lid = levelManager.currentLevelId;
+      return lid ? resolveSceneUnits(levelManager.getLevelScene(lid)) : 'mm';
+    },
+  });
+  useToolLifecycle(activeTool === 'mep-manifold', mepManifoldTool.activate, mepManifoldTool.deactivate);
+
   // ADR-408 Φ8 — MEP SEGMENT TOOL (duct + pipe): 2-click linear placement.
   const mepSegmentTool = useMepSegmentTool({
     currentLevelId: levelManager.currentLevelId || '0',
@@ -425,6 +439,7 @@ export function useSpecialTools(props: UseSpecialToolsProps): UseSpecialToolsRet
     furnitureTool,
     floorplanSymbolTool,
     electricalPanelTool,
+    mepManifoldTool,
     mepSegmentTool,
     railingTool,
     beamTool,

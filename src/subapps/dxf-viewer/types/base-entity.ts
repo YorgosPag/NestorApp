@@ -52,6 +52,8 @@ export type EntityType =
   | 'mep-fixture'
   // ADR-408 Φ3 — point-based electrical panel (circuit source, IfcElectricDistributionBoard).
   | 'electrical-panel'
+  // ADR-408 Φ12 — point-based plumbing manifold (pipe-network source, IfcPipeFitting).
+  | 'mep-manifold'
   // ADR-407 — standalone path-based railing (IfcRailing).
   | 'railing'
   // ADR-410 — mesh-based CC0 furniture (chair first; generic over kind).

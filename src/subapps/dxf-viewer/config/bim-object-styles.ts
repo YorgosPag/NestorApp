@@ -34,6 +34,8 @@ export type BimCategory =
   | 'light-fixture'
   // ADR-408 Φ3 — electrical panel / distribution board (circuit source).
   | 'electrical-panel'
+  // ADR-408 Φ12 — plumbing manifold / συλλέκτης (pipe-network source).
+  | 'mep-manifold'
   // ADR-407 — standalone path-based railing (architectural).
   | 'railing'
   // ADR-408 Φ7 — home-run circuit wires (derived electrical annotation overlay).
@@ -114,7 +116,7 @@ export interface ObjectStyle {
 export const BIM_CATEGORIES: readonly BimCategory[] = [
   'wall', 'column', 'beam', 'slab', 'opening', 'slab-opening',
   'stair', 'roof', 'ceiling', 'dimension', 'hatch', 'grip', 'envelope',
-  'light-fixture', 'electrical-panel', 'railing', 'mep-wire', 'furniture',
+  'light-fixture', 'electrical-panel', 'mep-manifold', 'railing', 'mep-wire', 'furniture',
   'duct', 'pipe', 'sanitary', 'kitchen',
 ] as const;
 
@@ -138,6 +140,8 @@ export const MODEL_BIM_CATEGORIES: readonly BimCategory[] = [
   'light-fixture',
   // ADR-408 Φ3 — electrical panel.
   'electrical-panel',
+  // ADR-408 Φ12 — plumbing manifold (συλλέκτης).
+  'mep-manifold',
   // ADR-407 — standalone path-based railing.
   'railing',
   // ADR-408 Φ7 — home-run circuit wires (hidden by "Show only DXF" with the rest).
@@ -184,6 +188,8 @@ export const DEFAULT_OBJECT_STYLES: Readonly<Record<BimCategory, ObjectStyle>> =
   'light-fixture': { projectionPen: 3, cutPen: 3 },
   // ADR-408 Φ3 — ηλεκτρικός πίνακας: μεσαία γραμμή (equipment box).
   'electrical-panel': { projectionPen: 4, cutPen: 5 },
+  // ADR-408 Φ12 — συλλέκτης ύδρευσης: μεσαία γραμμή (plumbing equipment bar).
+  'mep-manifold': { projectionPen: 4, cutPen: 5 },
   // ADR-407 — κάγκελο: μεσαία γραμμή προβολής (metal members, plan symbol).
   railing:        { projectionPen: 4, cutPen: 5 },
   // ADR-408 Φ7 — καλώδιο κυκλώματος: λεπτή γραμμή annotation (το χρώμα έρχεται

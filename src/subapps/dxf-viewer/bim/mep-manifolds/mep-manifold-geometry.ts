@@ -1,0 +1,192 @@
+/**
+ * Plumbing manifold geometry + validation + connector layout (ADR-408 Φ12).
+ *
+ * Pure SSoT functions — derive `MepManifoldGeometry` from `MepManifoldParams`,
+ * validate params, and lay out the inlet + N outlet connectors. Idempotent +
+ * side-effect free. Mirrors `electrical-panel-geometry.ts`; a manifold is a
+ * centred rectangular bar footprint at the mounting plane with an optional plan
+ * rotation.
+ *
+ * Footprint + connector local positions are built in canvas units (mm × `s`) so
+ * they share the same coordinate space as `params.position` — identical to the
+ * panel / fixture geometry. Connector `localPosition` is therefore consumed
+ * directly by `connectorWorldPosition` (which translates without re-scaling).
+ *
+ * @see docs/centralized-systems/reference/adrs/ADR-408-mep-connectors-and-systems.md
+ */
+
+import { nowTimestamp } from '@/lib/firestore-now';
+import type { Point3D } from '../types/bim-base';
+import type { BimValidation } from '../types/bim-base';
+import type {
+  MepManifoldGeometry,
+  MepManifoldParams,
+} from '../types/mep-manifold-types';
+import {
+  MAX_MANIFOLD_OUTLET_COUNT,
+  MIN_MANIFOLD_DIMENSION_MM,
+  MIN_MANIFOLD_OUTLET_COUNT,
+} from '../types/mep-manifold-types';
+import type { MepConnector } from '../types/mep-connector-types';
+import {
+  buildManifoldInletConnector,
+  buildManifoldOutletConnector,
+} from '../types/mep-connector-types';
+import { polygonArea, polygonBbox } from '../geometry/shared/polygon-utils';
+import { mmToSceneUnits } from '../../utils/scene-units';
+
+const MM_TO_M = 1 / 1000;
+const DEG_TO_RAD = Math.PI / 180;
+
+/**
+ * Compute `MepManifoldGeometry` from `MepManifoldParams`. Pure SSoT.
+ * Caller MUST ensure positive dimensions (validator guard upstream).
+ */
+export function computeMepManifoldGeometry(
+  params: MepManifoldParams,
+): MepManifoldGeometry {
+  const s = mmToSceneUnits(params.sceneUnits ?? 'mm');
+  const local = buildRectangularLocal(params.width, params.length, s);
+  const transformed = transformFootprint(local, params);
+
+  const bbox = polygonBbox(transformed);
+  const areaCanvas2 = polygonArea(transformed);
+  const canvasToM = (1 / s) * MM_TO_M;
+  const areaM2 = areaCanvas2 * canvasToM * canvasToM;
+
+  return {
+    footprint: { vertices: transformed },
+    bbox,
+    area: areaM2,
+    height: Math.max(0, params.bodyHeightMm),
+  };
+}
+
+// ─── Local footprint builder ───────────────────────────────────────────────────
+
+function buildRectangularLocal(width: number, length: number, s: number): Point3D[] {
+  const hw = (width * s) / 2;
+  const hl = (length * s) / 2;
+  return [
+    { x: -hw, y: -hl, z: 0 },
+    { x:  hw, y: -hl, z: 0 },
+    { x:  hw, y:  hl, z: 0 },
+    { x: -hw, y:  hl, z: 0 },
+  ];
+}
+
+/**
+ * Translate local-frame vertices to world coords (anchor = centre on
+ * `position`) and rotate around `position`.
+ */
+function transformFootprint(
+  local: readonly Point3D[],
+  params: MepManifoldParams,
+): Point3D[] {
+  const { position } = params;
+  const cos = Math.cos(params.rotation * DEG_TO_RAD);
+  const sin = Math.sin(params.rotation * DEG_TO_RAD);
+  return local.map((v) => {
+    const rx = v.x * cos - v.y * sin;
+    const ry = v.x * sin + v.y * cos;
+    return { x: position.x + rx, y: position.y + ry, z: 0 };
+  });
+}
+
+// ─── Connector layout (pure SSoT) ──────────────────────────────────────────────
+
+/** Clamp the requested outlet count to the supported range. */
+export function clampOutletCount(n: number): number {
+  if (!Number.isFinite(n)) return MIN_MANIFOLD_OUTLET_COUNT;
+  return Math.max(MIN_MANIFOLD_OUTLET_COUNT, Math.min(MAX_MANIFOLD_OUTLET_COUNT, Math.round(n)));
+}
+
+/**
+ * Host-local connector offsets (scene units, pre-rotation). The bar runs along
+ * local X (width). The inlet sits at the −X short end on the centreline; the
+ * outlets are evenly distributed along the +Y (front) edge across the bar width.
+ */
+function manifoldConnectorLocalPositions(params: MepManifoldParams): {
+  readonly inlet: Point3D;
+  readonly outlets: readonly Point3D[];
+} {
+  const s = mmToSceneUnits(params.sceneUnits ?? 'mm');
+  const hw = (params.width * s) / 2;
+  const hl = (params.length * s) / 2;
+  const count = clampOutletCount(params.outletCount);
+
+  const inlet: Point3D = { x: -hw, y: 0, z: 0 };
+
+  const outlets: Point3D[] = Array.from({ length: count }, (_, i) => {
+    // Even spread within the bar: x_i = -hw + width * (i+1)/(count+1).
+    const frac = (i + 1) / (count + 1);
+    return { x: -hw + params.width * s * frac, y: hl, z: 0 };
+  });
+
+  return { inlet, outlets };
+}
+
+/**
+ * Build the full embedded connector set for a manifold (1 inlet + N outlets),
+ * derived from `params`. SSoT consumed by both the completion builder (creation)
+ * and `seedDefaultConnectors` (load-time re-materialisation).
+ */
+export function buildMepManifoldConnectors(params: MepManifoldParams): MepConnector[] {
+  const { inlet, outlets } = manifoldConnectorLocalPositions(params);
+  return [
+    buildManifoldInletConnector(inlet, params.inletDiameterMm),
+    ...outlets.map((p, i) => buildManifoldOutletConnector(i, p, params.outletDiameterMm)),
+  ];
+}
+
+// ─── Validation ─────────────────────────────────────────────────────────────────
+
+/** Result of a manifold validation pass — hard errors non-empty when invalid. */
+export interface MepManifoldValidationResult {
+  /** When non-empty → caller MUST refuse entity creation. i18n keys. */
+  readonly hardErrors: readonly string[];
+  /** Non-blocking — surfaced as red badge in the property panel. i18n keys. */
+  readonly codeViolations: readonly string[];
+  /** `BimValidation` payload for direct assignment to `MepManifoldEntity.validation`. */
+  readonly bimValidation: BimValidation;
+}
+
+/**
+ * Validate `MepManifoldParams`. Operates purely on params — geometry
+ * re-derivable. Hard errors: non-positive width / length / body height, a
+ * footprint dimension below `MIN_MANIFOLD_DIMENSION_MM`, or zero outlets.
+ */
+export function validateMepManifoldParams(
+  params: MepManifoldParams,
+): MepManifoldValidationResult {
+  const hardErrors: string[] = [];
+  const codeViolations: string[] = [];
+
+  if (params.width <= 0) {
+    hardErrors.push('mepManifold.validation.hardErrors.nonPositiveWidth');
+  } else if (params.width < MIN_MANIFOLD_DIMENSION_MM) {
+    hardErrors.push('mepManifold.validation.hardErrors.dimensionTooSmall');
+  }
+
+  if (params.length <= 0) {
+    hardErrors.push('mepManifold.validation.hardErrors.nonPositiveLength');
+  } else if (params.length < MIN_MANIFOLD_DIMENSION_MM) {
+    hardErrors.push('mepManifold.validation.hardErrors.dimensionTooSmall');
+  }
+
+  if (params.bodyHeightMm <= 0) {
+    hardErrors.push('mepManifold.validation.hardErrors.nonPositiveBodyHeight');
+  }
+
+  if (clampOutletCount(params.outletCount) < MIN_MANIFOLD_OUTLET_COUNT) {
+    hardErrors.push('mepManifold.validation.hardErrors.noOutlets');
+  }
+
+  const bimValidation: BimValidation = {
+    hasCodeViolations: codeViolations.length > 0,
+    violationKeys: [...codeViolations],
+    lastValidatedAt: nowTimestamp(),
+  };
+
+  return { hardErrors, codeViolations, bimValidation };
+}

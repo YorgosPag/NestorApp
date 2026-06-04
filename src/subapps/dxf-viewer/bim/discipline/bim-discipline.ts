@@ -82,6 +82,8 @@ export const DISCIPLINE_BY_CATEGORY: Readonly<Record<BimCategory, DisciplineOrAn
   duct:            'mechanical',
   // ADR-408 Φ8 — pipe run (first placeable `plumbing` category).
   pipe:            'plumbing',
+  // ADR-408 Φ12 — plumbing manifold (συλλέκτης, water distribution source) ⊂ plumbing.
+  'mep-manifold':  'plumbing',
   // ADR-415 — sanitary plan symbols (WC/washbasin/…) ⊂ plumbing (Revit Plumbing Fixtures).
   sanitary:        'plumbing',
   // ADR-415 — kitchen plan symbols (sink/stove/fridge/counter) ⊂ architectural (Revit Casework).

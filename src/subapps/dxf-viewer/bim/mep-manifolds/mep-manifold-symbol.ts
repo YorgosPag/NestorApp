@@ -1,0 +1,87 @@
+/**
+ * Plumbing manifold 2D symbol SSoT (ADR-408 Φ12).
+ *
+ * Single source of truth for the *vector* symbol of a manifold (συλλέκτης),
+ * shared by the 2D renderer and the placement ghost. Pure + geometry-driven: it
+ * reads the already-computed (rotated) footprint and emits the bar outline plus
+ * one inlet stub (−X short end) and N outlet stubs along the +Y front edge — the
+ * architectural convention for a distribution manifold, distinct from a panel's
+ * breaker rows or a fixture's luminaire "X".
+ *
+ * All coordinates are in world canvas units (same space as the footprint), so
+ * the renderer just strokes them after applying its transform. Connector world
+ * positions are derived separately by `connectorWorldPosition`; this module only
+ * draws the visual symbol and keeps the stub count in sync with `outletCount`.
+ *
+ * @see docs/centralized-systems/reference/adrs/ADR-408-mep-connectors-and-systems.md
+ */
+
+import type { Point3D } from '../types/bim-base';
+import type {
+  MepManifoldGeometry,
+  MepManifoldParams,
+} from '../types/mep-manifold-types';
+import { clampOutletCount } from './mep-manifold-geometry';
+import { mmToSceneUnits } from '../../utils/scene-units';
+
+/** A polyline of world-space points (canvas units). */
+export type ManifoldStroke = readonly Point3D[];
+
+export interface ManifoldSymbolGeometry {
+  /** Closed outline polygon (= the footprint). */
+  readonly outline: readonly Point3D[];
+  /** Stub strokes — inlet (first) + one per outlet. */
+  readonly strokes: readonly ManifoldStroke[];
+}
+
+function lerp(a: Point3D, b: Point3D, t: number): Point3D {
+  return { x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t, z: 0 };
+}
+
+function unit(dx: number, dy: number): { x: number; y: number } {
+  const len = Math.hypot(dx, dy) || 1;
+  return { x: dx / len, y: dy / len };
+}
+
+/**
+ * Build the manifold symbol geometry from params + computed geometry.
+ * Rectangular bar → an inlet stub off the −X short edge and `outletCount` stubs
+ * off the +Y front edge, all rotation-aware because the footprint is rotated.
+ */
+export function buildMepManifoldSymbol(
+  params: MepManifoldParams,
+  geometry: MepManifoldGeometry,
+): ManifoldSymbolGeometry {
+  const outline = geometry.footprint.vertices;
+  if (outline.length !== 4) {
+    return { outline, strokes: [] };
+  }
+
+  // v0=(-hw,-hl) v1=(hw,-hl) v2=(hw,hl) v3=(-hw,hl) — rotated to world.
+  const [v0, v1, v2, v3] = outline;
+  const s = mmToSceneUnits(params.sceneUnits ?? 'mm');
+  const stubLen = Math.max(params.length * s * 0.6, 40 * s);
+  const strokes: ManifoldStroke[] = [];
+
+  // Inlet stub: from the midpoint of the −X edge (v0→v3), pointing outward −X.
+  const inletRoot = lerp(v0, v3, 0.5);
+  const inletDir = unit(v0.x - v1.x, v0.y - v1.y); // −X local (world-rotated)
+  strokes.push([
+    inletRoot,
+    { x: inletRoot.x + inletDir.x * stubLen, y: inletRoot.y + inletDir.y * stubLen, z: 0 },
+  ]);
+
+  // Outlet stubs: along the +Y front edge (v3→v2), pointing outward +Y.
+  const outletDir = unit(v3.x - v0.x, v3.y - v0.y); // +Y local (world-rotated)
+  const count = clampOutletCount(params.outletCount);
+  for (let i = 0; i < count; i++) {
+    const frac = (i + 1) / (count + 1);
+    const root = lerp(v3, v2, frac);
+    strokes.push([
+      root,
+      { x: root.x + outletDir.x * stubLen, y: root.y + outletDir.y * stubLen, z: 0 },
+    ]);
+  }
+
+  return { outline, strokes };
+}

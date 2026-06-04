@@ -58,6 +58,8 @@ function wrapDxfGrip(grip: GripInfo): UnifiedGripInfo {
     ...(grip.mepFixtureGripKind ? { mepFixtureGripKind: grip.mepFixtureGripKind } : {}),
     // ADR-408 Φ3 — forward electrical panel parametric grip discriminator.
     ...(grip.electricalPanelGripKind ? { electricalPanelGripKind: grip.electricalPanelGripKind } : {}),
+    // ADR-408 Φ12 — forward MEP manifold parametric grip discriminator.
+    ...(grip.mepManifoldGripKind ? { mepManifoldGripKind: grip.mepManifoldGripKind } : {}),
     // ADR-410 — forward furniture parametric grip discriminator.
     ...(grip.furnitureGripKind ? { furnitureGripKind: grip.furnitureGripKind } : {}),
     // ADR-415 — forward floorplan-symbol parametric grip discriminator.

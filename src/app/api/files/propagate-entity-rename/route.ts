@@ -60,6 +60,8 @@ const ENTITY_COLLECTION_MAP: Readonly<Record<AuditEntityType, string>> = {
   'mep-system': '',
   // Electrical panels (ADR-408 Φ3) — no rename propagation at this stage
   'electrical-panel': '',
+  // Plumbing manifolds (ADR-408 Φ12) — no rename propagation at this stage
+  'mep-manifold': '',
   // MEP segments (ADR-408 Φ8) — no rename propagation at this stage
   'mep-segment': '',
   // MEP fittings (ADR-408 Φ11) — auto-derived, no rename propagation

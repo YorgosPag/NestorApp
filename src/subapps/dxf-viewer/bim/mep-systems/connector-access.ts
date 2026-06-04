@@ -18,6 +18,7 @@ import {
   isMepFixtureEntity,
   isElectricalPanelEntity,
   isMepSegmentEntity,
+  isMepManifoldEntity,
 } from '../../types/entities';
 import type { MepConnector } from '../types/mep-connector-types';
 
@@ -26,6 +27,7 @@ export function getEntityConnectors(entity: Entity): readonly MepConnector[] {
   if (isMepFixtureEntity(entity)) return entity.params.connectors ?? [];
   if (isElectricalPanelEntity(entity)) return entity.params.connectors ?? [];
   if (isMepSegmentEntity(entity)) return entity.params.connectors ?? [];
+  if (isMepManifoldEntity(entity)) return entity.params.connectors ?? [];
   return [];
 }
 
@@ -34,6 +36,7 @@ export function isMepConnectorHost(entity: Entity): boolean {
   return (
     isMepFixtureEntity(entity) ||
     isElectricalPanelEntity(entity) ||
-    isMepSegmentEntity(entity)
+    isMepSegmentEntity(entity) ||
+    isMepManifoldEntity(entity)
   );
 }

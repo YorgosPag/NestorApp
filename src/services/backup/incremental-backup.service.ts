@@ -85,6 +85,8 @@ const ENTITY_TYPE_TO_COLLECTION_KEY: Record<AuditEntityType, string> = {
   'mep-system': '',
   // Electrical panels (ADR-408 Φ3) — not backed up via this service at this stage
   'electrical-panel': '',
+  // Plumbing manifolds (ADR-408 Φ12) — not backed up via this service at this stage
+  'mep-manifold': '',
   // MEP segments (ADR-408 Φ8) — not backed up via this service at this stage
   'mep-segment': '',
   // MEP fittings (ADR-408 Φ11) — not backed up via this service at this stage

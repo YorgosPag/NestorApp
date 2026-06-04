@@ -35,6 +35,10 @@ import type { ElectricalPanelEntity } from '../../bim/types/electrical-panel-typ
 import { applyElectricalPanelGripDrag } from '../../bim/electrical-panels/electrical-panel-grips';
 import { buildElectricalPanelEntity } from '../drawing/electrical-panel-completion';
 import { addElectricalPanelToScene } from '../../bim/electrical-panels/add-electrical-panel-to-scene';
+import type { MepManifoldEntity } from '../../bim/types/mep-manifold-types';
+import { applyMepManifoldGripDrag } from '../../bim/mep-manifolds/mep-manifold-grips';
+import { buildMepManifoldEntity } from '../drawing/mep-manifold-completion';
+import { addMepManifoldToScene } from '../../bim/mep-manifolds/add-mep-manifold-to-scene';
 import type { FurnitureEntity } from '../../bim/types/furniture-types';
 import { applyFurnitureGripDrag } from '../../bim/furniture/furniture-grips';
 import { buildFurnitureEntity } from '../drawing/furniture-completion';
@@ -195,6 +199,35 @@ export function commitElectricalPanelCopy(
 }
 
 /**
+ * ADR-408 Φ12 — Ctrl-COPY at the terminal click of a MEP manifold MOVE
+ * hot-grip (AutoCAD MOVE→COPY). Mirror of `commitElectricalPanelCopy`: builds a NEW
+ * `MepManifoldEntity` whose params are the original shifted by `delta` (the
+ * same `mep-manifold-move` whole-manifold translate the MOVE uses) and inserts
+ * it via the shared `addMepManifoldToScene` SSoT — fresh enterprise ID (N.6,
+ * via `buildMepManifoldEntity` → `createMepManifold`),
+ * `drawing:entity-created` broadcast so persistence saves the copy. Original
+ * untouched; single copy.
+ */
+export function commitMepManifoldCopy(
+  grip: UnifiedGripInfo,
+  delta: Point2D,
+  deps: DxfCommitDeps,
+): void {
+  if (!grip.entityId || grip.mepManifoldGripKind !== 'mep-manifold-move') return;
+  const sceneManager = createSceneManagerAdapter(deps);
+  if (!sceneManager) return;
+  const raw = sceneManager.getEntity(grip.entityId);
+  if (!raw) return;
+  const candidate = raw as unknown as Partial<MepManifoldEntity>;
+  if (candidate.type !== 'mep-manifold' || !candidate.params) return;
+  const manifold = candidate as MepManifoldEntity;
+  const translated = applyMepManifoldGripDrag('mep-manifold-move', { originalParams: manifold.params, delta });
+  const built = buildMepManifoldEntity(translated, manifold.layerId);
+  if (!built.ok) return;
+  addMepManifoldToScene(built.entity, deps);
+}
+
+/**
  * ADR-410 — Ctrl-COPY at the terminal click of a furniture MOVE hot-grip
  * (AutoCAD MOVE→COPY). Mirror of `commitMepFixtureCopy`: builds a NEW
  * `FurnitureEntity` whose params are the original shifted by `delta` (the same
@@ -280,6 +313,10 @@ export function commitHotGripCopy(
   }
   if (grip.electricalPanelGripKind === 'electrical-panel-move') {
     commitElectricalPanelCopy(grip, delta, deps);
+    return true;
+  }
+  if (grip.mepManifoldGripKind === 'mep-manifold-move') {
+    commitMepManifoldCopy(grip, delta, deps);
     return true;
   }
   if (grip.furnitureGripKind === 'furniture-move') {

@@ -112,6 +112,7 @@ export const SUBCATEGORY_TAXONOMY: Readonly<Record<BimCategory, ReadonlyArray<st
   envelope:        [],
   'light-fixture': [],
   'electrical-panel': [],
+  'mep-manifold':  [],
   railing:         [],
   'mep-wire':      [],
   furniture:       [],

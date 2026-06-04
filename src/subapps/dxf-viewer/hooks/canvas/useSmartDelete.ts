@@ -252,6 +252,10 @@ export function useSmartDelete({
       const mepSegmentIdsInBatch = idsToDelete.filter(
         (id) => adapter.getEntity(id)?.type === 'mep-segment',
       );
+      // ADR-408 Φ12 — collect plumbing manifold IDs so we can trigger Firestore deleteDoc.
+      const manifoldIdsInBatch = idsToDelete.filter(
+        (id) => adapter.getEntity(id)?.type === 'mep-manifold',
+      );
 
       const deleteCommand: ICommand = idsToDelete.length === 1
         ? new DeleteEntityCommand(idsToDelete[0], adapter)
@@ -319,6 +323,10 @@ export function useSmartDelete({
       // ADR-408 Φ8 — trigger Firestore deleteDoc + prevent subscription re-add for each segment.
       for (const segmentId of mepSegmentIdsInBatch) {
         eventBus.emit('bim:mep-segment-delete-requested', { segmentId });
+      }
+      // ADR-408 Φ12 — trigger Firestore deleteDoc + prevent subscription re-add for each manifold.
+      for (const manifoldId of manifoldIdsInBatch) {
+        eventBus.emit('bim:mep-manifold-delete-requested', { manifoldId });
       }
 
       return true;

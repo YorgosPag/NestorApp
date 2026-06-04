@@ -144,6 +144,8 @@ export type ToolType =
   | 'mep-fixture'
   // ADR-408 Φ3: point-based electrical panel drawing tool (circuit source)
   | 'electrical-panel'
+  // ADR-408 Φ12: point-based plumbing manifold drawing tool (συλλέκτης, pipe-network source)
+  | 'mep-manifold'
   // ADR-407: path-based railing drawing tool (2-click straight guardrail)
   | 'railing'
   // ADR-410: mesh-based CC0 furniture drawing tool (single-click placement)

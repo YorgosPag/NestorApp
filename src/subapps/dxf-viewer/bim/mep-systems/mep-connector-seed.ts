@@ -30,6 +30,7 @@ import {
   isMepFixtureEntity,
   isElectricalPanelEntity,
   isMepSegmentEntity,
+  isMepManifoldEntity,
 } from '../../types/entities';
 import { getEntityConnectors } from './connector-access';
 import {
@@ -37,6 +38,7 @@ import {
   buildDefaultPanelOutgoingConnector,
   buildSegmentEndpointConnector,
 } from '../types/mep-connector-types';
+import { buildMepManifoldConnectors } from '../mep-manifolds/mep-manifold-geometry';
 
 /**
  * Materialise the host type's default connector onto a legacy entity that lacks
@@ -53,6 +55,11 @@ export function seedDefaultConnectors(entity: Entity): Entity {
   }
   if (isElectricalPanelEntity(entity)) {
     return { ...entity, params: { ...entity.params, connectors: [buildDefaultPanelOutgoingConnector()] } };
+  }
+  // A plumbing manifold (Φ12) materialises 1 inlet + N outlet pipe connectors,
+  // derived from its `outletCount` + diameters (SSoT `buildMepManifoldConnectors`).
+  if (isMepManifoldEntity(entity)) {
+    return { ...entity, params: { ...entity.params, connectors: buildMepManifoldConnectors(entity.params) } };
   }
   // A linear duct/pipe segment carries TWO endpoint connectors (start + end) so
   // it can join a pipe/duct network (Φ9). Its connector domain mirrors the

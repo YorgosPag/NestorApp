@@ -13,7 +13,7 @@ import type { DxfEntityUnion, DxfTextStyle } from '../../canvas-v2/dxf-canvas/dx
 import type { DxfColor } from '../../text-engine/types';
 import type { Point2D } from '../../rendering/types/Types';
 import type { SceneModel, TextEntity } from '../../types/entities';
-import { isSlabEntity, isSlabOpeningEntity, isOpeningEntity, isWallEntity, isBeamEntity, isColumnEntity, isMepFixtureEntity, isElectricalPanelEntity, isRailingEntity, isFurnitureEntity, isMepSegmentEntity, isMepFittingEntity, isFloorplanSymbolEntity, isXLineEntity, isRayEntity } from '../../types/entities';
+import { isSlabEntity, isSlabOpeningEntity, isOpeningEntity, isWallEntity, isBeamEntity, isColumnEntity, isMepFixtureEntity, isElectricalPanelEntity, isRailingEntity, isFurnitureEntity, isMepSegmentEntity, isMepFittingEntity, isFloorplanSymbolEntity, isMepManifoldEntity, isXLineEntity, isRayEntity } from '../../types/entities';
 import type { XLineEntity, RayEntity } from '../../types/entities';
 import type { StairEntity } from '../../bim/types/stair-types';
 import type { SlabEntity } from '../../bim/types/slab-types';
@@ -28,6 +28,7 @@ import type { ColumnEntity } from '../../bim/types/column-types';
 // ADR-406 — MEP fixture direct entity for DXF render pipeline.
 import type { MepFixtureEntity } from '../../bim/types/mep-fixture-types';
 import type { ElectricalPanelEntity } from '../../bim/types/electrical-panel-types';
+import type { MepManifoldEntity } from '../../bim/types/mep-manifold-types';
 // ADR-407 — railing direct entity for DXF render pipeline.
 import type { RailingEntity } from '../../bim/types/railing-types';
 import type { FurnitureEntity } from '../../bim/types/furniture-types';
@@ -367,6 +368,15 @@ export function convertEntity(entity: SceneEntity, layers: SceneLayers, layersBy
       if (!isMepFittingEntity(entity)) return null;
       const fit = entity as MepFittingEntity;
       return { ...base, type: 'mep-fitting' as const, kind: fit.kind, params: fit.params, geometry: fit.geometry, validation: fit.validation } as DxfEntityUnion;
+    }
+    case 'mep-manifold': {
+      // ADR-408 Φ12 — plumbing manifold (same pattern as electrical-panel).
+      // MepManifoldRenderer reads geometry.footprint + kind + params at top level.
+      // Without this case, freshly-committed manifolds are silently dropped here →
+      // invisible on 2D canvas (visible only in 3D which reads params directly).
+      if (!isMepManifoldEntity(entity)) return null;
+      const mfld = entity as MepManifoldEntity;
+      return { ...base, type: 'mep-manifold' as const, kind: mfld.kind, params: mfld.params, geometry: mfld.geometry, validation: mfld.validation } as DxfEntityUnion;
     }
     case 'xline': {
       // ADR-359 Phase 11 — wrap XLineEntity for grip computation pipeline.

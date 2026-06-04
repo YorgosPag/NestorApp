@@ -115,6 +115,8 @@ export function mmToEntityUnitFactor(entity: Entity): number {
     // away then snaps back on resync). Same fix as the structural types above.
     entity.type === 'mep-fixture' ||
     entity.type === 'electrical-panel' ||
+    // ADR-408 Φ12 — plumbing manifold also carries `params.sceneUnits`.
+    entity.type === 'mep-manifold' ||
     // ADR-410 — furniture also carries `params.sceneUnits` (same pattern).
     entity.type === 'furniture' ||
     // ADR-408 Φ8 — linear MEP segment carries `params.sceneUnits` too.

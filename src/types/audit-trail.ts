@@ -42,6 +42,7 @@ export type AuditEntityType =
   | 'electrical-panel'
   | 'mep-segment'
   | 'mep-fitting'
+  | 'mep-manifold'
   // ADR-415 — pure-vector 2D floorplan symbol (WC/sanitary first).
   | 'floorplan-symbol'
   | 'performance_diagnostic'

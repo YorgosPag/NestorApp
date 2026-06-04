@@ -38,6 +38,8 @@ export function toEntityPreviewTransform(dp: DxfGripDragPreview): EntityPreviewT
     ...(dp.mepFixtureGripKind  ? { mepFixtureGripKind:  dp.mepFixtureGripKind }   : {}),
     // ADR-408 Φ3 — electrical panel parametric ghost (move / rotation / corner resize).
     ...(dp.electricalPanelGripKind ? { electricalPanelGripKind: dp.electricalPanelGripKind } : {}),
+    // ADR-408 Φ12 — MEP manifold parametric ghost (move / rotation / corner resize).
+    ...(dp.mepManifoldGripKind ? { mepManifoldGripKind: dp.mepManifoldGripKind } : {}),
     // ADR-410 — furniture parametric ghost (move / rotation / corner resize).
     ...(dp.furnitureGripKind   ? { furnitureGripKind:   dp.furnitureGripKind }    : {}),
     // ADR-415 — floorplan-symbol parametric ghost (move / rotation / corner resize).

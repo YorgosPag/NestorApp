@@ -10,7 +10,7 @@
  */
 
 import type { Point2D } from '../../rendering/types/Types';
-import type { StairGripKind, DimensionGripKind, WallGripKind, OpeningGripKind, SlabGripKind, SlabOpeningGripKind, BeamGripKind, ColumnGripKind, MepFixtureGripKind, ElectricalPanelGripKind, FurnitureGripKind, FloorplanSymbolGripKind, XLineGripKind, RayGripKind } from '../useGripMovement';
+import type { StairGripKind, DimensionGripKind, WallGripKind, OpeningGripKind, SlabGripKind, SlabOpeningGripKind, BeamGripKind, ColumnGripKind, MepFixtureGripKind, ElectricalPanelGripKind, MepManifoldGripKind, FurnitureGripKind, FloorplanSymbolGripKind, XLineGripKind, RayGripKind } from '../useGripMovement';
 import type {
   DxfGripDragPreview,
   DxfGripInteractionState,
@@ -200,6 +200,13 @@ export interface UnifiedGripInfo {
    * (center translate + rotation + opposite-corner-anchored width/length resize).
    */
   readonly electricalPanelGripKind?: ElectricalPanelGripKind;
+  /**
+   * ADR-408 Φ12 — parametric MEP manifold grip discriminator (forwarded from
+   * `GripInfo.mepManifoldGripKind`). Routes commit through
+   * `applyMepManifoldGripDrag()` + `UpdateMepManifoldParamsCommand`
+   * (center translate + rotation + opposite-corner-anchored width/length resize).
+   */
+  readonly mepManifoldGripKind?: MepManifoldGripKind;
   /**
    * ADR-410 — parametric furniture grip discriminator (forwarded from
    * `GripInfo.furnitureGripKind`). Routes commit through

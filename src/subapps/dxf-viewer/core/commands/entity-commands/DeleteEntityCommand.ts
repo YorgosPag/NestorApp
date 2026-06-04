@@ -26,11 +26,13 @@ const BIM_ENTITY_TYPES = new Set<string>([
   'railing',
   // ADR-408 Φ8 — unified linear MEP segment (duct + pipe).
   'mep-segment',
+  // ADR-408 Φ12 — plumbing manifold (floor-mounted distributor).
+  'mep-manifold',
 ]);
 
 type BimEntityType =
   | 'wall' | 'opening' | 'slab' | 'slab-opening' | 'column' | 'beam' | 'stair'
-  | 'mep-fixture' | 'electrical-panel' | 'railing' | 'mep-segment';
+  | 'mep-fixture' | 'electrical-panel' | 'railing' | 'mep-segment' | 'mep-manifold';
 
 function emitBimRestoreIfApplicable(snapshot: SceneEntity): void {
   const type = (snapshot as { type?: string }).type;

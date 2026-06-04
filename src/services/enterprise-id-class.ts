@@ -351,6 +351,7 @@ export class EnterpriseIdService {
   generateElectricalPanelId(): string { return this.generateId(P.ELECTRICAL_PANEL).id; }
   generateMepSegmentId(): string { return this.generateId(P.MEP_SEGMENT).id; }
   generateMepFittingId(): string { return this.generateId(P.MEP_FITTING).id; }
+  generateMepManifoldId(): string { return this.generateId(P.MEP_MANIFOLD).id; }
   generateRailingId(): string { return this.generateId(P.RAILING).id; }
   generateFurnitureId(): string { return this.generateId(P.FURNITURE).id; }
   generateFloorplanSymbolId(): string { return this.generateId(P.FLOORPLAN_SYMBOL).id; }

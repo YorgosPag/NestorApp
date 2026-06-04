@@ -325,6 +325,16 @@ export type {
 } from '../bim/types/electrical-panel-types';
 import type { ElectricalPanelEntity } from '../bim/types/electrical-panel-types';
 
+// ADR-408 Φ12: plumbing manifold concrete types live in bim/types/mep-manifold-types.ts (SRP).
+export type {
+  MepManifoldKind,
+  MepManifoldShape,
+  MepManifoldParams,
+  MepManifoldGeometry,
+  MepManifoldEntity,
+} from '../bim/types/mep-manifold-types';
+import type { MepManifoldEntity } from '../bim/types/mep-manifold-types';
+
 // ADR-407: standalone path-based railing concrete types live in bim/types/railing-types.ts (SRP).
 export type {
   RailingKind,
@@ -537,6 +547,8 @@ export type Entity = (
   | MepFixtureEntity
   // ADR-408 Φ3 — point-based electrical panel (circuit source).
   | ElectricalPanelEntity
+  // ADR-408 Φ12 — point-based plumbing manifold (pipe-network source).
+  | MepManifoldEntity
   // ADR-407 — standalone path-based railing.
   | RailingEntity
   // ADR-410 — mesh-based CC0 furniture.
@@ -698,6 +710,10 @@ export const isMepFixtureEntity = (entity: Entity): entity is MepFixtureEntity =
 export const isElectricalPanelEntity = (entity: Entity): entity is ElectricalPanelEntity =>
   entity.type === 'electrical-panel';
 
+/** ADR-408 Φ12 — point-based plumbing manifold (pipe-network source). */
+export const isMepManifoldEntity = (entity: Entity): entity is MepManifoldEntity =>
+  entity.type === 'mep-manifold';
+
 /** ADR-407 — standalone path-based railing. */
 export const isRailingEntity = (entity: Entity): entity is RailingEntity =>
   entity.type === 'railing';
@@ -719,10 +735,10 @@ export const isFloorplanSymbolEntity = (entity: Entity): entity is FloorplanSymb
   entity.type === 'floorplan-symbol';
 
 /** True for any ADR-363/406/407/408/410/415 BIM parametric entity */
-export const isBimEntity = (entity: Entity): entity is WallEntity | OpeningEntity | SlabEntity | SlabOpeningEntity | ColumnEntity | BeamEntity | MepFixtureEntity | ElectricalPanelEntity | RailingEntity | FurnitureEntity | MepSegmentEntity | MepFittingEntity | FloorplanSymbolEntity =>
+export const isBimEntity = (entity: Entity): entity is WallEntity | OpeningEntity | SlabEntity | SlabOpeningEntity | ColumnEntity | BeamEntity | MepFixtureEntity | ElectricalPanelEntity | MepManifoldEntity | RailingEntity | FurnitureEntity | MepSegmentEntity | MepFittingEntity | FloorplanSymbolEntity =>
   entity.type === 'wall' || entity.type === 'opening' || entity.type === 'slab' ||
   entity.type === 'slab-opening' || entity.type === 'column' || entity.type === 'beam' ||
-  entity.type === 'mep-fixture' || entity.type === 'electrical-panel' || entity.type === 'railing' ||
+  entity.type === 'mep-fixture' || entity.type === 'electrical-panel' || entity.type === 'mep-manifold' || entity.type === 'railing' ||
   entity.type === 'furniture' || entity.type === 'mep-segment' || entity.type === 'mep-fitting' ||
   entity.type === 'floorplan-symbol';
 

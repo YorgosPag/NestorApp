@@ -12,7 +12,7 @@
 import type { Point2D } from '../rendering/types/Types';
 import type { DxfEntityUnion } from '../canvas-v2/dxf-canvas/dxf-types';
 import type { GripInfo, StairGripKind, WallGripKind } from './useGripMovement';
-import type { ColumnGripKind, BeamGripKind, SlabGripKind, SlabOpeningGripKind, OpeningGripKind, MepFixtureGripKind, ElectricalPanelGripKind, FurnitureGripKind, FloorplanSymbolGripKind, MepSegmentGripKind } from './grip-types';
+import type { ColumnGripKind, BeamGripKind, SlabGripKind, SlabOpeningGripKind, OpeningGripKind, MepFixtureGripKind, ElectricalPanelGripKind, MepManifoldGripKind, FurnitureGripKind, FloorplanSymbolGripKind, MepSegmentGripKind } from './grip-types';
 import type { WallEntity } from '../bim/types/wall-types';
 import type { BeamEntity } from '../bim/types/beam-types';
 import type { ColumnEntity } from '../bim/types/column-types';
@@ -20,6 +20,7 @@ import type { StairEntity } from '../bim/types/stair-types';
 import type { SlabEntity } from '../bim/types/slab-types';
 import type { MepFixtureEntity } from '../bim/types/mep-fixture-types';
 import type { ElectricalPanelEntity } from '../bim/types/electrical-panel-types';
+import type { MepManifoldEntity } from '../bim/types/mep-manifold-types';
 import type { FurnitureEntity } from '../bim/types/furniture-types';
 import type { FloorplanSymbolEntity } from '../bim/types/floorplan-symbol-types';
 import type { MepSegmentEntity } from '../bim/types/mep-segment-types';
@@ -33,6 +34,7 @@ import { getSlabOpeningGrips } from '../bim/slab-openings/slab-opening-grips';
 import { getOpeningGrips } from '../bim/walls/opening-grips';
 import { getMepFixtureGrips } from '../bim/mep-fixtures/mep-fixture-grips';
 import { getElectricalPanelGrips } from '../bim/electrical-panels/electrical-panel-grips';
+import { getMepManifoldGrips } from '../bim/mep-manifolds/mep-manifold-grips';
 import { getFurnitureGrips } from '../bim/furniture/furniture-grips';
 import { getFloorplanSymbolGrips } from '../bim/floorplan-symbols/floorplan-symbol-grips';
 import { getMepSegmentGrips } from '../bim/mep-segments/mep-segment-grips';
@@ -96,6 +98,11 @@ export interface DxfGripDragPreview {
    * ghost through `applyElectricalPanelGripDrag` + `computeElectricalPanelGeometry`.
    */
   electricalPanelGripKind?: ElectricalPanelGripKind;
+  /**
+   * ADR-408 Φ12 — parametric MEP manifold grip discriminator. Routes the live
+   * ghost through `applyMepManifoldGripDrag` + `computeMepManifoldGeometry`.
+   */
+  mepManifoldGripKind?: MepManifoldGripKind;
   /**
    * ADR-410 — parametric furniture grip discriminator. Routes the live ghost
    * through `applyFurnitureGripDrag` + `computeFurnitureGeometry`.
@@ -358,6 +365,13 @@ export function computeDxfEntityGrips(entity: DxfEntityUnion): GripInfo[] {
       // ADR-408 Φ3 — parametric electrical panel grips (move + rotation + 4 corner
       // resize, rectangular-only). Carries params at top level (mirror mep-fixture).
       grips.push(...getElectricalPanelGrips(entity as unknown as ElectricalPanelEntity));
+      break;
+    }
+
+    case 'mep-manifold': {
+      // ADR-408 Φ12 — parametric MEP manifold grips (move + rotation + 4 corner
+      // resize, rectangular-only). 1:1 mirror of electrical-panel.
+      grips.push(...getMepManifoldGrips(entity as unknown as MepManifoldEntity));
       break;
     }
 

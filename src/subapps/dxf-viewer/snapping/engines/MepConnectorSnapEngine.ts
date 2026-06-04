@@ -36,6 +36,7 @@ import {
   isMepSegmentEntity,
   isMepFixtureEntity,
   isElectricalPanelEntity,
+  isMepManifoldEntity,
 } from '../../types/entities';
 import { getEntityConnectors } from '../../bim/mep-systems/connector-access';
 import { connectorWorldPosition } from '../../bim/types/mep-connector-types';
@@ -102,7 +103,7 @@ function extractMepConnectorPoints(entity: EntityModel): Point2D[] {
       { x: entity.params.endPoint.x, y: entity.params.endPoint.y },
     ];
   }
-  if (isMepFixtureEntity(entity) || isElectricalPanelEntity(entity)) {
+  if (isMepFixtureEntity(entity) || isElectricalPanelEntity(entity) || isMepManifoldEntity(entity)) {
     const { position, rotation } = entity.params;
     const connectors = getEntityConnectors(entity);
     // A legacy host with no materialised connector still snaps at its origin

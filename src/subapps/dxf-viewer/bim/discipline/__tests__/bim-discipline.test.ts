@@ -67,11 +67,13 @@ describe('ADR-405 CATEGORIES_BY_DISCIPLINE (inverse)', () => {
     }
   });
 
-  it('disciplines with no placeable category yet map to []', () => {
+  it('each discipline lists its placeable categories (inverse of DISCIPLINE_BY_CATEGORY)', () => {
     // ADR-406/408 populated electrical (light-fixture + electrical-panel + mep-wire);
-    // ADR-410 populated interior (furniture). mechanical/plumbing remain reserved.
-    expect(CATEGORIES_BY_DISCIPLINE.mechanical).toEqual([]);
-    expect(CATEGORIES_BY_DISCIPLINE.plumbing).toEqual([]);
+    // ADR-408 Φ8 populated mechanical (duct) + plumbing (pipe); ADR-415 added sanitary
+    // to plumbing; ADR-408 Φ12 added the plumbing manifold (συλλέκτης); ADR-410 added
+    // furniture (interior). Order follows DISCIPLINE_BY_CATEGORY declaration order.
+    expect(CATEGORIES_BY_DISCIPLINE.mechanical).toEqual(['duct']);
+    expect(CATEGORIES_BY_DISCIPLINE.plumbing).toEqual(['pipe', 'mep-manifold', 'sanitary']);
     expect(CATEGORIES_BY_DISCIPLINE.electrical).toEqual(['light-fixture', 'electrical-panel', 'mep-wire']);
     // ADR-410 — furniture is the first (and only) placeable interior category.
     expect(CATEGORIES_BY_DISCIPLINE.interior).toEqual(['furniture']);

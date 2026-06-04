@@ -50,6 +50,7 @@ import type { StairEntity, StairParams } from '../types/stair-types';
 import type { MepFixtureEntity, MepFixtureParams } from '../types/mep-fixture-types';
 import type { MepSegmentEntity, MepSegmentParams } from '../types/mep-segment-types';
 import type { ElectricalPanelEntity, ElectricalPanelParams } from '../types/electrical-panel-types';
+import type { MepManifoldEntity, MepManifoldParams } from '../types/mep-manifold-types';
 import type { FurnitureEntity, FurnitureParams } from '../types/furniture-types';
 import type { Point3D, Polygon3D } from '../types/bim-base';
 import { computeWallGeometry } from '../geometry/wall-geometry';
@@ -60,6 +61,7 @@ import { computeBeamGeometry } from '../geometry/beam-geometry';
 import { computeStairGeometry } from '../geometry/stairs/StairGeometryService';
 import { computeMepFixtureGeometry } from '../mep-fixtures/mep-fixture-geometry';
 import { computeElectricalPanelGeometry } from '../electrical-panels/electrical-panel-geometry';
+import { computeMepManifoldGeometry } from '../mep-manifolds/mep-manifold-geometry';
 import { computeMepSegmentGeometry } from '../geometry/mep-segment-geometry';
 import { computeFurnitureGeometry } from '../furniture/furniture-geometry';
 
@@ -164,6 +166,16 @@ function moveElectricalPanel(entity: ElectricalPanelEntity, delta: Point2D): Par
   return { params: newParams, geometry } as unknown as Partial<SceneEntity>;
 }
 
+// ADR-408 Φ12 — point-based plumbing manifold: shift the single `position` anchor (same shape as panel).
+function moveMepManifold(entity: MepManifoldEntity, delta: Point2D): Partial<SceneEntity> {
+  const newParams: MepManifoldParams = {
+    ...entity.params,
+    position: shiftPoint3D(entity.params.position, delta),
+  };
+  const geometry = computeMepManifoldGeometry(newParams);
+  return { params: newParams, geometry } as unknown as Partial<SceneEntity>;
+}
+
 // ADR-410 — point-based furniture: shift the single `position` anchor (same shape as column).
 function moveFurniture(entity: FurnitureEntity, delta: Point2D): Partial<SceneEntity> {
   const newParams: FurnitureParams = {
@@ -222,6 +234,8 @@ export function calculateBimMovedGeometry(
       return moveMepFixture(entity, delta);
     case 'electrical-panel':
       return moveElectricalPanel(entity, delta);
+    case 'mep-manifold':
+      return moveMepManifold(entity, delta);
     case 'furniture':
       return moveFurniture(entity, delta);
     case 'mep-segment':

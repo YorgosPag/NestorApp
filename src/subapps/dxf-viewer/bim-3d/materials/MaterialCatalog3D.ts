@@ -72,6 +72,10 @@ const MAT_DEFS: Record<string, PbrDef> = {
   // ADR-408 Φ11 — MEP fitting (auto pipe junction element): metallic grey
   // (cast/forged fitting body), mid roughness, high metalness.
   'elem-mep-fitting':    { color: 0x8a8f94, roughness: 0.40, metalness: 0.70 },
+  // ADR-408 Φ12 — MEP plumbing manifold (συλλέκτης): cyan-teal (plumbing
+  // equipment — distinguishable from copper pipe 0xb87333 and duct 0xb0b4b8).
+  // Matte-ish plastic/composite housing, low metalness.
+  'elem-mep-manifold':   { color: 0x0891b2, roughness: 0.50, metalness: 0.20 },
 };
 
 export type Stair3DComponent =
@@ -176,7 +180,7 @@ export function getMaterial3D(materialId: string): THREE.MeshStandardMaterial {
 
 /** Resolve MeshStandardMaterial for element types without DNA. */
 export function getElementMaterial3D(
-  type: 'column' | 'beam' | 'slab' | 'envelope' | 'mep-fixture' | 'electrical-panel' | 'railing' | 'mep-wire' | 'furniture' | 'mep-duct' | 'mep-pipe' | 'mep-fitting' | Stair3DComponent,
+  type: 'column' | 'beam' | 'slab' | 'envelope' | 'mep-fixture' | 'electrical-panel' | 'railing' | 'mep-wire' | 'furniture' | 'mep-duct' | 'mep-pipe' | 'mep-fitting' | 'mep-manifold' | Stair3DComponent,
 ): THREE.MeshStandardMaterial {
   return resolveTexturedMaterial(`elem-${type}`);
 }
@@ -192,7 +196,7 @@ export function getElementMaterial3D(
  * Cached per `${type}:${colorInt}` — never mutates the shared element singleton.
  */
 export function getSystemTintedMaterial3D(
-  type: 'mep-fixture' | 'electrical-panel' | 'mep-wire' | 'mep-duct' | 'mep-pipe',
+  type: 'mep-fixture' | 'electrical-panel' | 'mep-wire' | 'mep-duct' | 'mep-pipe' | 'mep-manifold',
   colorInt: number,
 ): THREE.MeshStandardMaterial {
   const baseKey = `elem-${type}`;

@@ -71,6 +71,13 @@ Mouse Event → DxfCanvas.onMouseMove
 
 ## Changelog
 
+### 2026-06-04 — ADR-408 Φ12 plumbing-manifold tool wiring + `canvas-click-types` split (CHECK 6B)
+
+**Status**: IMPLEMENTED 2026-06-04 (Opus 4.8). ADR-408 Φ12 (point-based `mep-manifold`) adds a 2D placement-ghost micro-leaf, all additive — no Cardinal-Rule or subscription change:
+- `components/dxf-layout/canvas-layer-stack-leaves.tsx` + `CanvasLayerStack.tsx` + `canvas-layer-stack-types.ts` — wire the new `canvas-layer-stack-mep-manifold-ghost.tsx` ghost leaf (mirrors the electrical-panel/MEP-fixture ghost leaves: a single null-rendering leaf that reads the manifold tool-bridge store, no high-freq subscription added).
+- `components/dxf-layout/CanvasSection.tsx` — passes the manifold tool through to the leaf, no `useSyncExternalStore` added (Phase XXII.A live-transform reads preserved).
+- `hooks/canvas/canvas-click-types.ts` (502→381, N.7.1 file-size split) — the entity-pick payloads + all `*ToolLike` interfaces (incl. the new `MepManifoldToolLike`) extracted to new `hooks/canvas/canvas-click-tool-types.ts`, **re-exported** so every import site is unchanged. Pure types-only extraction, zero control-flow/subscription change → CHECK 6B/6C still satisfied. CHECK 6B satisfied by staging this ADR with the edits. See ADR-408 §Φ12.
+
 ### 2026-06-04 — Cursor-lag Phase 4: stop the per-move `layer-canvas` repaint (Phase E)
 
 **Status**: IMPLEMENTED 2026-06-04 (Opus 4.8). 🔴 browser verify pending.

@@ -16,153 +16,38 @@ import type { MutableRefObject } from 'react';
 import type { Point2D } from '../../rendering/types/Types';
 import type { ViewTransform } from '../../rendering/types/Types';
 import type { OverlayEditorMode, Overlay } from '../../overlays/types';
-import type { AnySceneEntity, SceneModel } from '../../types/entities';
 import type { UniversalSelectionHook } from '../../systems/selection/SelectionSystem';
 import type { SelectedGrip } from '../grips/unified-grip-types';
 import type { Guide, ConstructionPoint } from '../../systems/guides/guide-types';
 import type { GridAxis } from '../../ai-assistant/grid-types';
 import type { CreateGuideCommand, DeleteGuideCommand, CreateDiagonalGuideCommand } from '../../systems/guides/commands';
 import type { AddConstructionPointCommand, DeleteConstructionPointCommand } from '../../systems/guides/construction-point-commands';
+import type {
+  ArcPickableEntity,
+  LinePickableEntity,
+  DrawingHandlersLike,
+  SpecialToolLike,
+  AngleEntityToolLike,
+  DxfGripInteractionLike,
+  StairToolLike,
+  WallToolLike,
+  SlabToolLike,
+  ColumnToolLike,
+  BeamToolLike,
+  MepFixtureToolLike,
+  MepSegmentToolLike,
+  ElectricalPanelToolLike,
+  MepManifoldToolLike,
+  FurnitureToolLike,
+  FloorplanSymbolToolLike,
+  RailingToolLike,
+  SlabOpeningToolLike,
+  OpeningToolLike,
+  LevelManagerLike,
+} from './canvas-click-tool-types';
 
-// ============================================================================
-// ENTITY TYPES
-// ============================================================================
-
-/** ADR-189 §3.9/3.10: Arc or circle entity for entity-picking callbacks */
-export interface ArcPickableEntity {
-  center: Point2D;
-  radius: number;
-  startAngle: number;
-  endAngle: number;
-  isFullCircle: boolean;
-}
-
-/** ADR-189 §3.12: Line entity for entity-picking callbacks */
-export interface LinePickableEntity {
-  start: Point2D;
-  end: Point2D;
-}
-
-// ============================================================================
-// MINIMAL INTERFACES FOR DEPENDENCIES
-// ============================================================================
-
-/** Minimal interface for drawing handlers ref */
-export interface DrawingHandlersLike {
-  onDrawingPoint?: (point: Point2D) => void;
-  drawingState?: { tempPoints?: Array<unknown> };
-}
-
-/** Minimal interface for special tool hooks */
-export interface SpecialToolLike {
-  isWaitingForSelection?: boolean;
-  isActive?: boolean;
-  currentStep?: number;
-  onEntityClick: (entity: AnySceneEntity, point: Point2D) => boolean;
-  onCanvasClick?: (point: Point2D) => void;
-}
-
-/** Minimal interface for angle entity measurement tool */
-export interface AngleEntityToolLike {
-  isActive: boolean;
-  isWaitingForEntitySelection: boolean;
-  currentStep: 0 | 1;
-  onEntityClick: (entity: AnySceneEntity, point: Point2D) => boolean;
-  acceptsEntityType: (entityType: string) => boolean;
-}
-
-/** Minimal interface for DXF grip interaction */
-export interface DxfGripInteractionLike {
-  handleGripClick: (worldPoint: Point2D) => boolean;
-}
-
-/** ADR-358 Phase 5a — Minimal stair tool interface for click routing. */
-export interface StairToolLike {
-  readonly isActive: boolean;
-  onCanvasClick: (point: Point2D) => boolean;
-}
-
-/** ADR-363 Phase 1B — Minimal wall tool interface for click routing. */
-export interface WallToolLike {
-  readonly isActive: boolean;
-  onCanvasClick: (point: Point2D) => boolean;
-  /** ADR-363 Phase 1J — true while the on-entity tool awaits the source pick (click 1). */
-  readonly isAwaitingStart?: boolean;
-  /** ADR-363 Phase 1K — entity ids of accumulated in-region line picks (highlight). */
-  getRegionPickIds?: () => string[];
-}
-
-/** ADR-363 Phase 3 — Minimal slab tool interface for click routing. */
-export interface SlabToolLike {
-  readonly isActive: boolean;
-  onCanvasClick: (point: Point2D) => boolean;
-}
-
-/** ADR-363 Phase 4 — Minimal column tool interface for click routing. */
-export interface ColumnToolLike {
-  readonly isActive: boolean;
-  onCanvasClick: (point: Point2D) => boolean;
-}
-
-/** ADR-363 Phase 5 — Minimal beam tool interface for click routing. */
-export interface BeamToolLike {
-  readonly isActive: boolean;
-  onCanvasClick: (point: Point2D) => boolean;
-}
-
-/** ADR-406 — Minimal MEP fixture tool interface for click routing. */
-export interface MepFixtureToolLike {
-  readonly isActive: boolean;
-  onCanvasClick: (point: Point2D) => boolean;
-}
-
-/** ADR-408 Φ8 — Minimal MEP segment (duct/pipe) tool interface for click routing. */
-export interface MepSegmentToolLike {
-  readonly isActive: boolean;
-  onCanvasClick: (point: Point2D) => boolean;
-}
-
-/** ADR-408 Φ3 — Minimal electrical panel tool interface for click routing. */
-export interface ElectricalPanelToolLike {
-  readonly isActive: boolean;
-  onCanvasClick: (point: Point2D) => boolean;
-}
-
-/** ADR-410 — Minimal furniture tool interface for click routing. */
-export interface FurnitureToolLike {
-  readonly isActive: boolean;
-  onCanvasClick: (point: Point2D) => boolean;
-}
-
-/** ADR-415 — Minimal floorplan-symbol tool interface for click routing. */
-export interface FloorplanSymbolToolLike {
-  readonly isActive: boolean;
-  onCanvasClick: (point: Point2D) => boolean;
-}
-
-/** ADR-407 — Minimal railing tool interface for click routing (2-click line). */
-export interface RailingToolLike {
-  readonly isActive: boolean;
-  onCanvasClick: (point: Point2D) => boolean;
-}
-
-/** ADR-363 Phase 3.7 — Minimal slab-opening tool interface for click routing. */
-export interface SlabOpeningToolLike {
-  readonly isActive: boolean;
-  onCanvasClick: (point: Point2D) => boolean;
-}
-
-/** ADR-363 Phase 2 — Minimal opening tool interface for click routing. */
-export interface OpeningToolLike {
-  readonly isActive: boolean;
-  onCanvasClick: (point: Point2D) => boolean;
-}
-
-/** Minimal interface for level manager (read-only for click handling) */
-export interface LevelManagerLike {
-  currentLevelId: string | null;
-  getLevelScene: (levelId: string) => SceneModel | null;
-}
+// Re-export supporting & tool types so existing import sites stay unchanged.
+export * from './canvas-click-tool-types';
 
 // ============================================================================
 // HOOK PARAMS & RETURN
@@ -196,6 +81,8 @@ export interface UseCanvasClickHandlerParams {
   mepFixtureTool?: MepFixtureToolLike;
   /** ADR-408 Φ3 — Electrical panel tool click pipeline. */
   electricalPanelTool?: ElectricalPanelToolLike;
+  /** ADR-408 Φ12 — Plumbing manifold tool click pipeline. */
+  mepManifoldTool?: MepManifoldToolLike;
   /** ADR-408 Φ8 — MEP segment (duct/pipe) tool click pipeline. */
   mepSegmentTool?: MepSegmentToolLike;
   /** ADR-410 — Furniture tool click pipeline (single-click placement). */

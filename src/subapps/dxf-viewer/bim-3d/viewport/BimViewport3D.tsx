@@ -37,6 +37,7 @@ import { useBim3DColumnPlacement } from '../placement/use-bim3d-column-placement
 import { useBim3DMepFixturePlacement } from '../placement/use-bim3d-mep-fixture-placement';
 import { useBim3DFurniturePlacement } from '../placement/use-bim3d-furniture-placement';
 import { useBim3DElectricalPanelPlacement } from '../placement/use-bim3d-electrical-panel-placement';
+import { useBim3DMepManifoldPlacement } from '../placement/use-bim3d-mep-manifold-placement';
 import { useBim3DAttachPick } from './use-bim3d-attach-pick';
 import { useBim3DBeamFromWallPick } from './use-bim3d-beam-from-wall-pick';
 import { useNotifications } from '@/providers/NotificationProvider';
@@ -285,6 +286,9 @@ export function BimViewport3D({ projectId: projectIdProp, readOnly = false, bimE
 
   // ADR-408 Φ3 — 3D electrical panel placement (mirror of MEP fixture placement).
   useBim3DElectricalPanelPlacement({ managerRef, canvasEl });
+
+  // ADR-408 Φ12 — 3D plumbing manifold placement (mirror of electrical panel placement).
+  useBim3DMepManifoldPlacement({ managerRef, canvasEl });
 
   // ADR-401 — 3D manual attach pick-host. Armed only while a `*-attach-top/-base`
   // tool is active AND the viewport is in 3D: a click raycasts a structural host

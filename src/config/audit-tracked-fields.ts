@@ -761,6 +761,27 @@ const ELECTRICAL_PANEL_TRACKED_FIELDS_RAW: Record<string, string> = {
 export const ELECTRICAL_PANEL_TRACKED_FIELDS: Record<string, TrackedFieldDef> =
   mergeDefs(ELECTRICAL_PANEL_TRACKED_FIELDS_RAW, {});
 
+// ADR-408 Φ12 — point-based plumbing manifold (συλλέκτης, pipe-network source).
+const MEP_MANIFOLD_TRACKED_FIELDS_RAW: Record<string, string> = {
+  kind: 'kind',
+  layerId: 'layerId',
+  shape: 'shape',
+  width: 'width',
+  length: 'length',
+  bodyHeightMm: 'bodyHeightMm',
+  mountingElevationMm: 'mountingElevationMm',
+  outletCount: 'outletCount',
+  inletDiameterMm: 'inletDiameterMm',
+  outletDiameterMm: 'outletDiameterMm',
+  rotation: 'rotation',
+  material: 'material',
+  storeyId: 'storeyId',
+  hostId: 'hostId',
+};
+
+export const MEP_MANIFOLD_TRACKED_FIELDS: Record<string, TrackedFieldDef> =
+  mergeDefs(MEP_MANIFOLD_TRACKED_FIELDS_RAW, {});
+
 // ADR-408 Φ8 — unified linear MEP segment (duct + pipe).
 const MEP_SEGMENT_TRACKED_FIELDS_RAW: Record<string, string> = {
   domain: 'domain',
@@ -995,6 +1016,8 @@ export function getTrackedFieldsForEntityAuditType(
       return MEP_SYSTEM_TRACKED_FIELDS;
     case 'electrical-panel':
       return ELECTRICAL_PANEL_TRACKED_FIELDS;
+    case 'mep-manifold':
+      return MEP_MANIFOLD_TRACKED_FIELDS;
     case 'mep-segment':
       return MEP_SEGMENT_TRACKED_FIELDS;
     case 'mep-fitting':

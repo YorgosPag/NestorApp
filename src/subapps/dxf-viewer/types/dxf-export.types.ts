@@ -325,6 +325,7 @@ export const ENTITY_TYPE_MAPPING: Record<EntityType, EzdxfEntityType | null> = {
   'furniture': null,       // ADR-410 BIM furniture — exported via composite
   'mep-segment': null,     // ADR-408 Φ8 BIM MEP segment (duct/pipe) — exported via composite
   'mep-fitting': null,     // ADR-408 Φ11 BIM MEP fitting (auto pipe junction) — exported via composite
+  'mep-manifold': null,   // ADR-408 Φ12 BIM plumbing manifold — exported via composite
 } as const;
 
 /**

@@ -27,7 +27,8 @@
 - Διαγράφηκε ορφανό `crosshair-selection-indicator.ts` (badge inlined).
 - **Αποτέλεσμα:** ο crosshair κοστίζει **0.6%** στο Chrome profile — δουλεύει. Giorgio: «φαίνεται σωστά».
 
-### Φ4 — Stop per-move layer-canvas repaint (ADR-040 «Phase E») 🔴 UNCOMMITTED
+### Φ4 — Stop per-move layer-canvas repaint (ADR-040 «Phase E») ✅ BROWSER-VERIFIED, 🔴 UNCOMMITTED
+- **VERIFY 2026-06-04 (console clearRect-counter test, idle hover 4s σε κενό):** `layer-canvas` repaints **1** (πριν Φ4: ~240) · `dxf-canvas` **0** · frames 236/4s=59fps · median=p90=**16.7ms** (locked 60fps) · jank(>33ms)=2/236. Main thread ελεύθερο σε idle move → crosshair 1:1. ΕΠΙΤΥΧΙΑ.
 - **Διάγνωση από καθαρό profile** (`profiling-data.04-06-2026.17-05-48.json` — React DevTools Profiler export, 113 commits/4.4s, ΧΩΡΙΣ το 49-54% fake overhead). Επιβεβαίωσε Φ1-Φ3: React work 172ms/4.4s (~4%), median commit 1ms. Ο crosshair εκτός React. **Το πραγματικό εναπομείνον κόστος = imperative full-repaint του `layer-canvas` σε κάθε move (μέσω scheduler RAF — αόρατο στο React profiler).**
 - Root cause: `ImmediatePositionStore.setPosition` καλούσε `markSystemsDirty(['layer-canvas','crosshair-overlay'])` ανά move. `'crosshair-overlay'`=no-op από Φ2 → ουσιαστικά full repaint του layer-canvas για legacy crosshair+pickbox που ΗΔΗ κατέχει ο compositor.
 - **Fix (2 αρχεία):**

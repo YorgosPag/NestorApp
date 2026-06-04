@@ -48,6 +48,9 @@ export const GRIP_GLYPH_REGISTRY: Readonly<Record<string, GripShape>> = {
   // Electrical panels (ADR-408 Φ3) — corners render the default 'square' glyph.
   'electrical-panel-move': 'move',
   'electrical-panel-rotation': 'rotation',
+  // MEP manifolds (ADR-408 Φ12) — corners render the default 'square' glyph.
+  'mep-manifold-move': 'move',
+  'mep-manifold-rotation': 'rotation',
   // MEP segments (ADR-408 Φ8) — start/end/section render 'square'; midpoint = MOVE,
   // rotation = ROTATION (full beam parity for the linear-element vocabulary).
   'mep-segment-midpoint': 'move',

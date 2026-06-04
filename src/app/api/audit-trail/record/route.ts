@@ -32,7 +32,7 @@ const logger = createModuleLogger('AuditTrailRecord');
 // ============================================================================
 
 const VALID_ENTITY_TYPES: ReadonlySet<string> = new Set<AuditEntityType>([
-  'contact', 'building', 'property', 'project', 'parking', 'storage', 'wall', 'opening', 'slab', 'slab-opening', 'column', 'beam', 'stair', 'mep-fixture', 'mep-system', 'electrical-panel', 'mep-segment', 'mep-fitting', 'bim_family_type',
+  'contact', 'building', 'property', 'project', 'parking', 'storage', 'wall', 'opening', 'slab', 'slab-opening', 'column', 'beam', 'stair', 'mep-fixture', 'mep-system', 'electrical-panel', 'mep-segment', 'mep-fitting', 'mep-manifold', 'bim_family_type',
 ]);
 
 /**
@@ -75,6 +75,8 @@ const ENTITY_COLLECTION_MAP: Record<string, string> = {
   'electrical-panel': COLLECTIONS.FLOORPLAN_ELECTRICAL_PANELS,
   // ADR-408 Φ8 — linear duct/pipe MEP segments.
   'mep-segment': COLLECTIONS.FLOORPLAN_MEP_SEGMENTS,
+  // ADR-408 Φ12 — point-based plumbing manifolds.
+  'mep-manifold': COLLECTIONS.FLOORPLAN_MEP_MANIFOLDS,
   // ADR-412 Φ5 — BIM family types (subcollection — see SUBCOLLECTION_ENTITY_TYPES).
   bim_family_type: COLLECTIONS.BIM_FAMILY_TYPES,
 };

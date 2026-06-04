@@ -39,7 +39,7 @@ import { createSceneManagerAdapter } from './grip-commit-adapters';
 
 // ADR-397 — MOVE→COPY hot-grip handlers live in grip-parametric-copy.ts
 // (N.7.1 file-size split). Re-exported here so the commit API stays one import.
-export { commitWallCopy, commitBeamCopy, commitColumnCopy, commitMepFixtureCopy, commitElectricalPanelCopy, commitFurnitureCopy, commitFloorplanSymbolCopy, commitHotGripCopy } from './grip-parametric-copy';
+export { commitWallCopy, commitBeamCopy, commitColumnCopy, commitMepFixtureCopy, commitElectricalPanelCopy, commitMepManifoldCopy, commitFurnitureCopy, commitFloorplanSymbolCopy, commitHotGripCopy } from './grip-parametric-copy';
 
 // Linear / non-parametric grip commits (xline / ray / dimension) live in
 // grip-linear-commits.ts (N.7.1 file-size split). Re-exported here so the
@@ -56,6 +56,7 @@ export {
 export {
   commitMepFixtureGripDrag,
   commitElectricalPanelGripDrag,
+  commitMepManifoldGripDrag,
   commitFurnitureGripDrag,
   commitFloorplanSymbolGripDrag,
 } from './grip-parametric-centred-box-commits';

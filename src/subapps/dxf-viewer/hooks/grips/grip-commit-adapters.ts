@@ -303,6 +303,7 @@ import {
   commitColumnGripDrag,
   commitMepFixtureGripDrag,
   commitElectricalPanelGripDrag,
+  commitMepManifoldGripDrag,
   commitFurnitureGripDrag,
   commitFloorplanSymbolGripDrag,
   commitXLineGripDrag,
@@ -405,6 +406,14 @@ export function commitDxfGripDragModeAware(
   // recomputes geometry.
   if (grip.electricalPanelGripKind) {
     commitElectricalPanelGripDrag(grip, delta, deps);
+    return;
+  }
+  // ADR-408 Φ12 — MEP manifold parametric grip path (center translate +
+  // rotation + opposite-corner-anchored width/length resize). Bypasses stretch
+  // because the manifold is params-driven; UpdateMepManifoldParamsCommand
+  // recomputes geometry.
+  if (grip.mepManifoldGripKind) {
+    commitMepManifoldGripDrag(grip, delta, deps);
     return;
   }
   // ADR-410 — furniture parametric grip path (center translate + rotation +

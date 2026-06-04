@@ -15,11 +15,14 @@ import type { UnifiedGripInfo } from './unified-grip-types';
 import type { DxfCommitDeps } from './unified-grip-types';
 import type { MepFixtureEntity } from '../../bim/types/mep-fixture-types';
 import type { ElectricalPanelEntity } from '../../bim/types/electrical-panel-types';
+import type { MepManifoldEntity } from '../../bim/types/mep-manifold-types';
 import type { FurnitureEntity } from '../../bim/types/furniture-types';
 import { applyMepFixtureGripDrag } from '../../bim/mep-fixtures/mep-fixture-grips';
 import { UpdateMepFixtureParamsCommand } from '../../core/commands/entity-commands/UpdateMepFixtureParamsCommand';
 import { applyElectricalPanelGripDrag } from '../../bim/electrical-panels/electrical-panel-grips';
 import { UpdateElectricalPanelParamsCommand } from '../../core/commands/entity-commands/UpdateElectricalPanelParamsCommand';
+import { applyMepManifoldGripDrag } from '../../bim/mep-manifolds/mep-manifold-grips';
+import { UpdateMepManifoldParamsCommand } from '../../core/commands/entity-commands/UpdateMepManifoldParamsCommand';
 import { applyFurnitureGripDrag } from '../../bim/furniture/furniture-grips';
 import { UpdateFurnitureParamsCommand } from '../../core/commands/entity-commands/UpdateFurnitureParamsCommand';
 import type { FloorplanSymbolEntity } from '../../bim/types/floorplan-symbol-types';
@@ -134,6 +137,59 @@ export function commitElectricalPanelGripDrag(
   if (command.validate() !== null) return;
   deps.execute(command);
   EventBus.emit('bim:electrical-panel-params-updated', { panelId: grip.entityId });
+}
+
+/**
+ * ADR-408 Φ12 — Parametric MEP manifold grip commit (centre translate +
+ * rotation + opposite-corner-anchored width/length resize). Bypasses
+ * stretch/move because `MepManifoldEntity` is params-driven;
+ * `UpdateMepManifoldParamsCommand` recomputes geometry + validation
+ * atomically. Merge window enabled (isDragging=true) so a continuous drag
+ * collapses into one undo entry (ADR-031). ORTHO (F8) is read from the
+ * non-React `cadToggleState` snapshot and constrains corner drags to the
+ * dominant local axis. 1:1 mirror of `commitElectricalPanelGripDrag`.
+ */
+export function commitMepManifoldGripDrag(
+  grip: UnifiedGripInfo,
+  delta: Point2D,
+  deps: DxfCommitDeps,
+): void {
+  if (!grip.entityId || !grip.mepManifoldGripKind) return;
+  const sceneManager = createSceneManagerAdapter(deps);
+  if (!sceneManager) return;
+  const raw = sceneManager.getEntity(grip.entityId);
+  if (!raw) return;
+  const candidate = raw as unknown as Partial<MepManifoldEntity>;
+  if (candidate.type !== 'mep-manifold' || !candidate.params) return;
+  const originalParams = candidate.params;
+  // ADR-408 Φ12 / ADR-397 — the `mep-manifold-rotation` 6-click hot-grip orbits
+  // a picked centre. The hook publishes {pivot, anchor} in BimRotateHotGripStore;
+  // the delta here is `alignDir − refDir`, so `currentPos = anchor + delta` is the
+  // live align point and `pivot` is the rotation centre (mirror
+  // `commitElectricalPanelGripDrag`). All other grips use the grip position as anchor.
+  const rotateCtx = BimRotateHotGripStore.getSnapshot();
+  const useRotatePivot =
+    grip.mepManifoldGripKind === 'mep-manifold-rotation' && rotateCtx.pivot !== null && rotateCtx.anchor !== null;
+  const anchor: Point2D = useRotatePivot ? rotateCtx.anchor! : grip.position;
+  const currentPos: Point2D = { x: anchor.x + delta.x, y: anchor.y + delta.y };
+  const newParams = applyMepManifoldGripDrag(grip.mepManifoldGripKind, {
+    originalParams,
+    delta,
+    currentPos,
+    ortho: cadToggleState.isOrthoOn(),
+    ...(useRotatePivot ? { pivot: rotateCtx.pivot! } : {}),
+  });
+  if (newParams === originalParams) return;
+  const command = new UpdateMepManifoldParamsCommand(
+    grip.entityId,
+    newParams,
+    originalParams,
+    sceneManager,
+    true,
+  );
+  if (command.validate() !== null) return;
+  deps.execute(command);
+  EventBus.emit('bim:mep-manifold-params-updated', { manifoldId: grip.entityId });
 }
 
 /**

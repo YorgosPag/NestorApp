@@ -35,7 +35,7 @@ import {
 } from '../../bim-3d/scene/multi-floor-3d-source';
 import {
   isWallEntity, isColumnEntity, isBeamEntity, isSlabEntity,
-  isSlabOpeningEntity, isOpeningEntity, isStairEntity, isMepFixtureEntity, isElectricalPanelEntity, isRailingEntity, isFurnitureEntity, isMepSegmentEntity, isMepFittingEntity,
+  isSlabOpeningEntity, isOpeningEntity, isStairEntity, isMepFixtureEntity, isElectricalPanelEntity, isRailingEntity, isFurnitureEntity, isMepSegmentEntity, isMepFittingEntity, isMepManifoldEntity,
 } from '../../types/entities';
 import type { SceneModel } from '../../types/scene';
 
@@ -63,6 +63,7 @@ function extractBim3DEntities(scene: SceneModel): Bim3DEntities {
     furnitures: e.filter(isFurnitureEntity),
     mepSegments: e.filter(isMepSegmentEntity),
     mepFittings: e.filter(isMepFittingEntity),
+    manifolds: e.filter(isMepManifoldEntity),
   };
 }
 
@@ -99,13 +100,14 @@ export function useFloors3DAggregator(active: boolean): void {
   const furnitures = useBim3DEntitiesStore((s) => s.furnitures);
   const mepSegments = useBim3DEntitiesStore((s) => s.mepSegments);
   const mepFittings = useBim3DEntitiesStore((s) => s.mepFittings);
+  const manifolds = useBim3DEntitiesStore((s) => s.manifolds);
 
   // Firestore snapshots for floors the user has not visited this session.
   const [loaded, setLoaded] = useState<ReadonlyMap<string, Bim3DEntities>>(new Map());
 
   const liveActive = useMemo<Bim3DEntities>(
-    () => ({ walls, columns, beams, slabs, slabOpenings, openings, stairs, fixtures, panels, railings, furnitures, mepSegments, mepFittings }),
-    [walls, columns, beams, slabs, slabOpenings, openings, stairs, fixtures, panels, railings, furnitures, mepSegments, mepFittings],
+    () => ({ walls, columns, beams, slabs, slabOpenings, openings, stairs, fixtures, panels, railings, furnitures, mepSegments, mepFittings, manifolds }),
+    [walls, columns, beams, slabs, slabOpenings, openings, stairs, fixtures, panels, railings, furnitures, mepSegments, mepFittings, manifolds],
   );
 
   // One target per building floor (first level wins for a floor with duplicates).

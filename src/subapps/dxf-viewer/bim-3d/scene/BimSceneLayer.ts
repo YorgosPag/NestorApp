@@ -15,7 +15,7 @@
 import * as THREE from 'three';
 import type { Bim3DEntities } from '../stores/Bim3DEntitiesStore';
 import type { FloorStackEntry } from './multi-floor-3d-source';
-import { wallToMesh, columnToMesh, beamToMesh, slabToMesh, fixtureToMesh, panelToMesh } from '../converters/BimToThreeConverter';
+import { wallToMesh, columnToMesh, beamToMesh, slabToMesh, fixtureToMesh, panelToMesh, manifoldToMesh } from '../converters/BimToThreeConverter';
 import { stairToMeshes } from '../converters/StairToThreeConverter';
 import { railingToMesh } from '../converters/railing-to-three';
 import { furnitureToObject3D } from '../converters/furniture-to-three';
@@ -151,6 +151,7 @@ export class BimSceneLayer {
     this.syncStairs(entities, ctx);
     this.syncFixtures(entities, ctx);
     this.syncPanels(entities, ctx);
+    this.syncManifolds(entities, ctx);
     syncCircuitWires(this.group, entities, ctx, (entity, category) => this.resolveEntity(entity, category, ctx));
     this.syncRailings(entities, ctx);
     this.syncFurnitures(entities, ctx);
@@ -323,6 +324,20 @@ export class BimSceneLayer {
       // ADR-408 Φ5 — panels are circuit sources, not members: not coloured by
       // system (only the member fixtures are; the index excludes panels).
       const mesh = panelToMesh(panel, ctx.floorElevationMm, ctx.activeLevelId, r.baseElevation);
+      if (mesh) { mesh.userData['buildingId'] = r.buildingId; this.group.add(mesh); }
+    }
+  }
+
+  /** ADR-408 Φ12 — point-based plumbing manifolds (distribution sources). */
+  private syncManifolds(entities: Bim3DEntities, ctx: SyncContext): void {
+    // Defensive: legacy floor-stack entries predating ADR-408 Φ12 carry no `manifolds`
+    // array — never crash the whole floor sync over a missing slice.
+    for (const manifold of entities.manifolds ?? []) {
+      const r = this.resolveEntity(manifold, 'mep-manifold', ctx);
+      if (!r) continue;
+      // ADR-408 Φ12 — manifolds are plumbing system sources, not members: not
+      // coloured by system (mirrors the panel convention for circuit sources).
+      const mesh = manifoldToMesh(manifold, ctx.floorElevationMm, ctx.activeLevelId, r.baseElevation);
       if (mesh) { mesh.userData['buildingId'] = r.buildingId; this.group.add(mesh); }
     }
   }

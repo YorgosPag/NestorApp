@@ -273,6 +273,19 @@ export function drawGhostEntity(
       return;
     }
 
+    // ADR-408 Φ12 — MEP manifold ghost: footprint polygon (scene-units, from
+    // MepManifoldGeometry). Mirror electrical-panel so the live move/rotation/resize
+    // ghost paints.
+    case 'mep-manifold': {
+      const manifold = entity as unknown as {
+        geometry?: { footprint?: { vertices: ReadonlyArray<{ x: number; y: number }> } };
+      };
+      const verts = manifold.geometry?.footprint?.vertices ?? [];
+      if (verts.length < 2) return;
+      drawPolygon(ctx, verts, toScreen);
+      return;
+    }
+
     // ADR-410 — furniture ghost: footprint polygon (scene-units, from
     // FurnitureGeometry). Mirror mep-fixture/electrical-panel so the live
     // move/rotation/corner-resize ghost paints.

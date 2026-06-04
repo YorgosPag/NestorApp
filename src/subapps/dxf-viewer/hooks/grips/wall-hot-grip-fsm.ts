@@ -81,6 +81,14 @@ export const HOT_GRIP_OP_REGISTRY: Readonly<Record<string, WallHotGripOp>> = {
   'electrical-panel-corner-nw': 'corner',
   'electrical-panel-corner-sw': 'corner',
   'electrical-panel-corner-se': 'corner',
+  // MEP manifolds (ADR-408 Φ12) — full wall parity (rectangular-only): move
+  // MOVE (3-click), rotation REFERENCE (6-click), 4 corners 2-click.
+  'mep-manifold-move': 'move',
+  'mep-manifold-rotation': 'rotate',
+  'mep-manifold-corner-ne': 'corner',
+  'mep-manifold-corner-nw': 'corner',
+  'mep-manifold-corner-sw': 'corner',
+  'mep-manifold-corner-se': 'corner',
   // MEP segments (ADR-408 Φ8) — linear element beam parity: midpoint MOVE (3-click),
   // rotation REFERENCE (6-click). Start/end/section stay press-drag (no hot-grip).
   'mep-segment-midpoint': 'move',
@@ -121,7 +129,7 @@ export function isWallHotGripKind(kind: string | undefined | null): boolean {
  */
 export function hotGripKindOf(grip: UnifiedGripInfo | null | undefined): string | undefined {
   if (!grip) return undefined;
-  return grip.wallGripKind ?? grip.beamGripKind ?? grip.columnGripKind ?? grip.stairGripKind ?? grip.mepFixtureGripKind ?? grip.electricalPanelGripKind ?? grip.furnitureGripKind ?? grip.floorplanSymbolGripKind;
+  return grip.wallGripKind ?? grip.beamGripKind ?? grip.columnGripKind ?? grip.stairGripKind ?? grip.mepFixtureGripKind ?? grip.electricalPanelGripKind ?? grip.mepManifoldGripKind ?? grip.furnitureGripKind ?? grip.floorplanSymbolGripKind;
 }
 
 /**

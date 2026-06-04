@@ -43,6 +43,8 @@ export type BimElementType =
   | 'mep-fixture'
   // ADR-408 Φ3 — point-based electrical panel.
   | 'electrical-panel'
+  // ADR-408 Φ12 — point-based plumbing manifold.
+  | 'mep-manifold'
   // ADR-407 — standalone path-based railing.
   | 'railing'
   // ADR-410 — mesh-based CC0 furniture.

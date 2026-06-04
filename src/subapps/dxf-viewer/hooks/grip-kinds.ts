@@ -310,6 +310,19 @@ export type ElectricalPanelGripKind =
   | 'electrical-panel-corner-se';
 
 /**
+ * ADR-408 Φ12 — Plumbing manifold grip kind (parametric grip type). Routes
+ * commit through `applyMepManifoldGripDrag()` + `UpdateMepManifoldParamsCommand`.
+ * Full wall-parity mirror of the electrical panel (rectangular-only → no diameter).
+ */
+export type MepManifoldGripKind =
+  | 'mep-manifold-move'
+  | 'mep-manifold-rotation'
+  | 'mep-manifold-corner-ne'
+  | 'mep-manifold-corner-nw'
+  | 'mep-manifold-corner-sw'
+  | 'mep-manifold-corner-se';
+
+/**
  * ADR-410 — Furniture grip kind (parametric grip type).
  * Routes commit through `applyFurnitureGripDrag()` +
  * `UpdateFurnitureParamsCommand` instead of the standard `StretchEntityCommand`

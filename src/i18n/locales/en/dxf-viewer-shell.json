@@ -471,6 +471,9 @@
     "electricalPanel": {
       "statusPosition": "Click to place electrical panel"
     },
+    "mepManifold": {
+      "statusPosition": "Click to place plumbing manifold"
+    },
     "mepSegment": {
       "statusStart": "Pick run start",
       "statusEnd": "Pick run end"
@@ -1013,6 +1016,10 @@
         "electricalPanel": {
           "label": "Electrical panel",
           "tooltip": "Place an electrical panel with a single click — the circuit source (discipline: electrical) (shortcut EP)"
+        },
+        "mepManifold": {
+          "label": "Manifold",
+          "tooltip": "Place a plumbing manifold with a single click — 1 inlet + N outlets (discipline: plumbing)"
         },
         "railing": {
           "label": "Railing",
@@ -2425,6 +2432,17 @@
         "nonPositiveLength": "Depth must be greater than 0",
         "nonPositiveBodyHeight": "Body height must be greater than 0",
         "dimensionTooSmall": "Dimension is below the minimum allowed"
+      }
+    }
+  },
+  "mepManifold": {
+    "validation": {
+      "hardErrors": {
+        "nonPositiveWidth": "Width must be greater than 0",
+        "nonPositiveLength": "Length must be greater than 0",
+        "dimensionTooSmall": "Dimension is below the minimum allowed",
+        "nonPositiveBodyHeight": "Body height must be greater than 0",
+        "noOutlets": "At least one outlet is required"
       }
     }
   },

@@ -24,6 +24,7 @@ import { useDraftPolygonLayer } from '../../hooks/layers/useDraftPolygonLayer';
 import { ColumnGhostPreviewMount, type ColumnGhostPreviewMountProps } from './canvas-layer-stack-column-ghost';
 import { MepFixtureGhostPreviewMount, type MepFixtureGhostPreviewMountProps } from './canvas-layer-stack-mep-fixture-ghost';
 import { ElectricalPanelGhostPreviewMount, type ElectricalPanelGhostPreviewMountProps } from './canvas-layer-stack-electrical-panel-ghost';
+import { MepManifoldGhostPreviewMount, type MepManifoldGhostPreviewMountProps } from './canvas-layer-stack-mep-manifold-ghost';
 import { MepSegmentGhostPreviewMount, type MepSegmentGhostPreviewMountProps, type GhostSegmentSpec } from './canvas-layer-stack-mep-segment-ghost';
 import { SlabOpeningGhostPreviewMount, type SlabOpeningGhostPreviewMountProps } from './canvas-layer-stack-slab-opening-ghost';
 import { OpeningGhostPreviewMount, type OpeningGhostPreviewMountProps } from './canvas-layer-stack-opening-ghost';
@@ -301,6 +302,8 @@ interface PreviewCanvasMountsProps {
   mepFixtureGhost: Omit<MepFixtureGhostPreviewMountProps, 'transform' | 'getCanvas' | 'getViewportElement'>;
   /** ADR-408 Φ3 — electrical panel 2D placement ghost payload. */
   electricalPanelGhost: Omit<ElectricalPanelGhostPreviewMountProps, 'transform' | 'getCanvas' | 'getViewportElement'>;
+  /** ADR-408 Φ12 — MEP manifold (plumbing) 2D placement ghost payload. */
+  mepManifoldGhost: Omit<MepManifoldGhostPreviewMountProps, 'transform' | 'getCanvas' | 'getViewportElement'>;
   /** ADR-408 Φ8 — MEP segment (duct/pipe) 2D rubber-band ghost payload. */
   mepSegmentGhost: Omit<MepSegmentGhostPreviewMountProps, 'transform' | 'getCanvas' | 'getViewportElement'>;
   slabOpeningGhost: Omit<SlabOpeningGhostPreviewMountProps, 'transform' | 'getCanvas' | 'getViewportElement'>;
@@ -322,7 +325,7 @@ interface PreviewCanvasMountsProps {
 export const PreviewCanvasMounts = React.memo(function PreviewCanvasMounts(
   props: PreviewCanvasMountsProps,
 ) {
-  const { rotation, move, mirror, scale, stretch, columnGhost, mepFixtureGhost, electricalPanelGhost, mepSegmentGhost, slabOpeningGhost, openingGhost, gripDragPreview, selectedEntityIds, levelManager, transform, getCanvas, getViewportElement } = props;
+  const { rotation, move, mirror, scale, stretch, columnGhost, mepFixtureGhost, electricalPanelGhost, mepManifoldGhost, mepSegmentGhost, slabOpeningGhost, openingGhost, gripDragPreview, selectedEntityIds, levelManager, transform, getCanvas, getViewportElement } = props;
   return (
     <>
       <RotationPreviewMount
@@ -394,6 +397,12 @@ export const PreviewCanvasMounts = React.memo(function PreviewCanvasMounts(
       />
       <ElectricalPanelGhostPreviewMount
         {...electricalPanelGhost}
+        transform={transform}
+        getCanvas={getCanvas}
+        getViewportElement={getViewportElement}
+      />
+      <MepManifoldGhostPreviewMount
+        {...mepManifoldGhost}
         transform={transform}
         getCanvas={getCanvas}
         getViewportElement={getViewportElement}

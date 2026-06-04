@@ -20,6 +20,7 @@ import type {
   ColumnGripKind,
   MepFixtureGripKind,
   ElectricalPanelGripKind,
+  MepManifoldGripKind,
   FurnitureGripKind,
   FloorplanSymbolGripKind,
   MepSegmentGripKind,
@@ -41,6 +42,7 @@ export type {
   ColumnGripKind,
   MepFixtureGripKind,
   ElectricalPanelGripKind,
+  MepManifoldGripKind,
   FurnitureGripKind,
   FloorplanSymbolGripKind,
   MepSegmentGripKind,
@@ -123,6 +125,13 @@ export interface GripInfo {
    * (center translate + rotation + opposite-corner-anchored width/length resize).
    */
   electricalPanelGripKind?: ElectricalPanelGripKind;
+  /**
+   * ADR-408 Φ12 — parametric plumbing manifold grip discriminator. Present only
+   * when the grip belongs to a `MepManifoldEntity`; routes the commit through
+   * `applyMepManifoldGripDrag()` + `UpdateMepManifoldParamsCommand` (center
+   * translate + rotation + opposite-corner-anchored width/length resize).
+   */
+  mepManifoldGripKind?: MepManifoldGripKind;
   /**
    * ADR-410 — parametric furniture grip discriminator. Present only when the
    * grip belongs to a `FurnitureEntity`; routes the commit through

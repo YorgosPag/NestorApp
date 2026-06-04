@@ -201,6 +201,54 @@ export function buildDefaultPanelOutgoingConnector(): MepConnector {
   };
 }
 
+// ─── Plumbing manifold connectors (ADR-408 Φ12) ──────────────────────────────────
+
+/** Connector id for the single inlet (supply-in) of a plumbing manifold. */
+export const MANIFOLD_INLET_CONNECTOR_ID = 'm-in';
+/** Prefix for the per-index outlet connector ids of a plumbing manifold (`m-out-0`, …). */
+export const MANIFOLD_OUTLET_CONNECTOR_ID_PREFIX = 'm-out-';
+
+/**
+ * Inlet connector of a plumbing manifold (ADR-408 Φ12, συλλέκτης) — the supply
+ * feed. `flow: 'in'` (the network's water enters here), `domain: 'pipe'`. The
+ * manifold is the distribution SOURCE: its outlet connectors feed the branches,
+ * exactly as an electrical panel's power-out feeds a circuit.
+ *
+ * `localPosition` is host-local (scene units, pre-rotation) — the caller resolves
+ * it from the bar geometry (see `buildMepManifoldConnectors`).
+ */
+export function buildManifoldInletConnector(
+  localPosition: Point3D,
+  diameterMm: number,
+): MepConnector {
+  return {
+    connectorId: MANIFOLD_INLET_CONNECTOR_ID,
+    domain: 'pipe',
+    flow: 'in',
+    localPosition,
+    pipe: { systemClassification: 'domestic-cold-water', diameterMm },
+  };
+}
+
+/**
+ * One outlet (branch-out) connector of a plumbing manifold (ADR-408 Φ12). Pipes
+ * snap to these to form the distributed water branches. `flow: 'out'`,
+ * `domain: 'pipe'`. `index` (0-based) yields a host-local connectorId.
+ */
+export function buildManifoldOutletConnector(
+  index: number,
+  localPosition: Point3D,
+  diameterMm: number,
+): MepConnector {
+  return {
+    connectorId: `${MANIFOLD_OUTLET_CONNECTOR_ID_PREFIX}${index}`,
+    domain: 'pipe',
+    flow: 'out',
+    localPosition,
+    pipe: { systemClassification: 'domestic-cold-water', diameterMm },
+  };
+}
+
 // ─── Linear segment endpoint connectors (ADR-408 Φ9) ─────────────────────────────
 
 /** Connector id for the START endpoint of a linear duct/pipe segment. */

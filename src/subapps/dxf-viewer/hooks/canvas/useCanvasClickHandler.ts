@@ -74,6 +74,7 @@ export function useCanvasClickHandler(params: UseCanvasClickHandlerParams): UseC
     furnitureTool,
     floorplanSymbolTool,
     electricalPanelTool,
+    mepManifoldTool,
     mepSegmentTool,
     railingTool,
     slabOpeningTool,
@@ -308,6 +309,12 @@ export function useCanvasClickHandler(params: UseCanvasClickHandlerParams): UseC
       electricalPanelTool.onCanvasClick(worldPoint);
       return;
     }
+    // PRIORITY 4.92b': ADR-408 Φ12 — Plumbing manifold tool single-click placement
+    // (RAW worldPoint; free-point placement, no existing-geometry hit-test).
+    if (activeTool === 'mep-manifold' && mepManifoldTool?.isActive) {
+      mepManifoldTool.onCanvasClick(worldPoint);
+      return;
+    }
     // PRIORITY 4.92c: ADR-408 Φ8 — duct/pipe MEP segment 2-click run. Uses the
     // ORTHO/POLAR-aware `bimPoint` (like beam/railing) so the run snaps to
     // axis-locked angles during the 2-click chain.
@@ -411,6 +418,7 @@ export function useCanvasClickHandler(params: UseCanvasClickHandlerParams): UseC
     furnitureTool,
     floorplanSymbolTool,
     electricalPanelTool,
+    mepManifoldTool,
     mepSegmentTool,
     railingTool,
     slabOpeningTool,

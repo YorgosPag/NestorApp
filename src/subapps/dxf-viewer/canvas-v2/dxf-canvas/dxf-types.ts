@@ -33,11 +33,13 @@ import type { MepSegmentEntity } from '../../bim/types/mep-segment-types';
 import type { MepFittingEntity } from '../../bim/types/mep-fitting-types';
 // ADR-415 — floorplan symbol direct entity for DXF render pipeline.
 import type { FloorplanSymbolEntity } from '../../bim/types/floorplan-symbol-types';
+// ADR-408 Φ12 — plumbing manifold direct entity for DXF render pipeline.
+import type { MepManifoldEntity } from '../../bim/types/mep-manifold-types';
 
 // === DXF ENTITY TYPES ===
 export interface DxfEntity {
   id: string;
-  type: 'line' | 'circle' | 'arc' | 'polyline' | 'text' | 'angle-measurement' | 'stair' | 'dimension' | 'slab' | 'slab-opening' | 'opening' | 'wall' | 'column' | 'xline' | 'ray' | 'beam' | 'mep-fixture' | 'electrical-panel' | 'railing' | 'furniture' | 'mep-segment' | 'mep-fitting' | 'floorplan-symbol';
+  type: 'line' | 'circle' | 'arc' | 'polyline' | 'text' | 'angle-measurement' | 'stair' | 'dimension' | 'slab' | 'slab-opening' | 'opening' | 'wall' | 'column' | 'xline' | 'ray' | 'beam' | 'mep-fixture' | 'electrical-panel' | 'railing' | 'furniture' | 'mep-segment' | 'mep-fitting' | 'floorplan-symbol' | 'mep-manifold';
   /**
    * @deprecated ADR-358 Phase 9D-5b-ii — transitional name backref. Resolve via
    * `LayerStore.resolveEntityLayerName()`. Made optional to align with BaseEntity
@@ -313,6 +315,18 @@ export interface DxfFloorplanSymbol extends DxfEntity {
   validation?: FloorplanSymbolEntity['validation'];
 }
 
+/**
+ * ADR-408 Φ12 — DxfMepManifold direct entity (same pattern as DxfElectricalPanel).
+ * MepManifoldRenderer reads geometry.footprint + kind + params at top level.
+ */
+export interface DxfMepManifold extends DxfEntity {
+  type: 'mep-manifold';
+  kind: MepManifoldEntity['kind'];
+  params: MepManifoldEntity['params'];
+  geometry: MepManifoldEntity['geometry'];
+  validation?: MepManifoldEntity['validation'];
+}
+
 /** ADR-359 Phase 11 — XLine wrapper for grip computation pipeline. */
 export interface DxfXLine extends DxfEntity {
   type: 'xline';
@@ -325,7 +339,7 @@ export interface DxfRay extends DxfEntity {
   rayEntity: RayEntity;
 }
 
-export type DxfEntityUnion = DxfLine | DxfCircle | DxfPolyline | DxfArc | DxfText | DxfAngleMeasurement | DxfStair | DxfDimension | DxfSlab | DxfSlabOpening | DxfOpening | DxfWall | DxfColumn | DxfMepFixture | DxfElectricalPanel | DxfRailing | DxfFurniture | DxfMepSegment | DxfMepFitting | DxfFloorplanSymbol | DxfBeam | DxfXLine | DxfRay;
+export type DxfEntityUnion = DxfLine | DxfCircle | DxfPolyline | DxfArc | DxfText | DxfAngleMeasurement | DxfStair | DxfDimension | DxfSlab | DxfSlabOpening | DxfOpening | DxfWall | DxfColumn | DxfMepFixture | DxfElectricalPanel | DxfRailing | DxfFurniture | DxfMepSegment | DxfMepFitting | DxfFloorplanSymbol | DxfMepManifold | DxfBeam | DxfXLine | DxfRay;
 
 // === DXF SCENE ===
 export interface DxfScene {

@@ -140,6 +140,8 @@ function computeBounds(entity: Entity, forExtents: boolean): SpatialBounds {
     case 'mep-fixture':
     // ADR-408 Φ3 — electrical panel uses pre-computed geometry.bbox (same).
     case 'electrical-panel':
+    // ADR-408 Φ12 — plumbing manifold uses pre-computed geometry.bbox (same).
+    case 'mep-manifold':
     // ADR-410 — furniture uses pre-computed geometry.bbox (same).
     case 'furniture':
     // ADR-408 Φ8 — MEP segment uses pre-computed geometry.bbox (same).
@@ -175,3 +177,25 @@ export const getEntityExtentsBounds = (entity: Entity): SpatialBounds =>
 
 /** @deprecated Use getEntityRenderBounds (rendering) or getEntityExtentsBounds (zoom). */
 export const getEntityBounds = getEntityRenderBounds;
+
+/**
+ * Union of BIM entity type strings that use pre-computed `geometry.bbox` for
+ * spatial bounds. Used for type-narrowing in downstream consumers.
+ * Mirror of the `case 'electrical-panel':` / `case 'mep-manifold':` branch.
+ */
+export type BimEntityWithBounds =
+  | 'wall' | 'opening' | 'slab' | 'slab-opening' | 'column' | 'beam' | 'stair'
+  // ADR-406 — MEP fixture
+  | 'mep-fixture'
+  // ADR-408 Φ3 — electrical panel
+  | 'electrical-panel'
+  // ADR-410 — furniture
+  | 'furniture'
+  // ADR-408 Φ8 — MEP segment
+  | 'mep-segment'
+  // ADR-408 Φ11 — MEP fitting
+  | 'mep-fitting'
+  // ADR-415 — floorplan symbol
+  | 'floorplan-symbol'
+  // ADR-408 Φ12 — plumbing manifold
+  | 'mep-manifold';

@@ -56,6 +56,10 @@ import type { MepFixtureEntity } from '../../bim/types/mep-fixture-types';
 import { applyElectricalPanelGripDrag } from '../../bim/electrical-panels/electrical-panel-grips';
 import { computeElectricalPanelGeometry } from '../../bim/electrical-panels/electrical-panel-geometry';
 import type { ElectricalPanelEntity } from '../../bim/types/electrical-panel-types';
+// ADR-408 Φ12 — parametric MEP manifold drag preview (move / rotation / corner resize).
+import { applyMepManifoldGripDrag } from '../../bim/mep-manifolds/mep-manifold-grips';
+import { computeMepManifoldGeometry } from '../../bim/mep-manifolds/mep-manifold-geometry';
+import type { MepManifoldEntity } from '../../bim/types/mep-manifold-types';
 // ADR-408 Φ8 — parametric MEP segment drag preview (start / end / midpoint / section / rotation).
 import { applyMepSegmentGripDrag } from '../../bim/mep-segments/mep-segment-grips';
 import { computeMepSegmentGeometry } from '../../bim/geometry/mep-segment-geometry';
@@ -86,7 +90,7 @@ export function applyEntityPreview(
   preview: EntityPreviewTransform | undefined,
 ): DxfEntityUnion {
   if (!preview || preview.entityId !== entity.id) return entity;
-  const { delta, gripIndex, movesEntity, edgeVertexIndices, stairGripKind, wallGripKind, beamGripKind, columnGripKind, slabGripKind, slabOpeningGripKind, mepFixtureGripKind, electricalPanelGripKind, mepSegmentGripKind, furnitureGripKind, anchorPos, rotatePivot } = preview;
+  const { delta, gripIndex, movesEntity, edgeVertexIndices, stairGripKind, wallGripKind, beamGripKind, columnGripKind, slabGripKind, slabOpeningGripKind, mepFixtureGripKind, electricalPanelGripKind, mepManifoldGripKind, mepSegmentGripKind, furnitureGripKind, anchorPos, rotatePivot } = preview;
   if (delta.x === 0 && delta.y === 0) return entity;
 
   // ── ADR-363 Phase 1C — parametric wall live preview ───────────────────────
@@ -178,6 +182,27 @@ export function applyEntityPreview(
     });
     if (newParams === panel.params) return entity;
     const newGeometry = computeElectricalPanelGeometry(newParams);
+    return { ...(entity as object), params: newParams, geometry: newGeometry } as unknown as DxfEntityUnion;
+  }
+
+  // ── ADR-408 Φ12 — parametric MEP manifold live preview (move/rotation/corner) ──
+  // Mirror of the electrical panel branch; ORTHO (F8) is read from `cadToggleState`
+  // so the corner-resize ghost matches the commit. `rotatePivot` (manifold-rotation
+  // 6-click) orbits the picked centre; move/corner ignore it (delta-driven).
+  if (mepManifoldGripKind && entity.type === 'mep-manifold') {
+    const manifold = entity as unknown as MepManifoldEntity;
+    const currentPos: Point2D = anchorPos
+      ? { x: anchorPos.x + delta.x, y: anchorPos.y + delta.y }
+      : { x: delta.x, y: delta.y };
+    const newParams = applyMepManifoldGripDrag(mepManifoldGripKind, {
+      originalParams: manifold.params,
+      delta,
+      currentPos,
+      ortho: cadToggleState.isOrthoOn(),
+      ...(rotatePivot ? { pivot: rotatePivot } : {}),
+    });
+    if (newParams === manifold.params) return entity;
+    const newGeometry = computeMepManifoldGeometry(newParams);
     return { ...(entity as object), params: newParams, geometry: newGeometry } as unknown as DxfEntityUnion;
   }
 
@@ -333,6 +358,14 @@ export function applyEntityPreview(
         const panel = entity as unknown as ElectricalPanelEntity;
         const newParams = applyElectricalPanelGripDrag('electrical-panel-move', { originalParams: panel.params, delta });
         const newGeometry = computeElectricalPanelGeometry(newParams);
+        return { ...(entity as object), params: newParams, geometry: newGeometry } as unknown as DxfEntityUnion;
+      }
+      case 'mep-manifold': {
+        // ADR-408 Φ12 — toolbar Move-tool ghost (no mepManifoldGripKind):
+        // translate via the `mep-manifold-move` SSoT, mirror electrical-panel.
+        const manifold = entity as unknown as MepManifoldEntity;
+        const newParams = applyMepManifoldGripDrag('mep-manifold-move', { originalParams: manifold.params, delta });
+        const newGeometry = computeMepManifoldGeometry(newParams);
         return { ...(entity as object), params: newParams, geometry: newGeometry } as unknown as DxfEntityUnion;
       }
       case 'furniture': {

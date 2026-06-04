@@ -251,6 +251,7 @@ export const ENTERPRISE_ID_PREFIXES = {
   ELECTRICAL_PANEL: 'elecpnl', // floorplan_electrical_panels collection — point-based electrical panel / circuit source (ADR-408 Φ3)
   MEP_SEGMENT: 'mepseg',       // floorplan_mep_segments collection — linear duct/pipe distribution run (ADR-408 Φ8)
   MEP_FITTING: 'mepfit',       // floorplan_mep_fittings collection — auto pipe fitting (junction element) (ADR-408 Φ11)
+  MEP_MANIFOLD: 'mfld',        // floorplan_mep_manifolds collection — point-based plumbing manifold / water distribution source (ADR-408 Φ12)
   RAILING: 'ral',              // floorplan_railings collection — standalone path-based railing (ADR-407)
   FURNITURE: 'furn',           // floorplan_furniture collection — mesh-based CC0 furniture (ADR-410, chair first)
   FLOORPLAN_SYMBOL: 'fpsym',   // floorplan_symbols collection — pure-vector 2D floorplan symbol (ADR-415, WC/sanitary first)

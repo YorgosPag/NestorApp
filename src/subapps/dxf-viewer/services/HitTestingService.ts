@@ -26,6 +26,7 @@ import { computeStairGeometry } from '../bim/geometry/stairs/StairGeometryServic
 import { computeColumnGeometry } from '../bim/geometry/column-geometry';
 import { computeMepFixtureGeometry } from '../bim/mep-fixtures/mep-fixture-geometry';
 import { computeElectricalPanelGeometry } from '../bim/electrical-panels/electrical-panel-geometry';
+import { computeMepManifoldGeometry } from '../bim/mep-manifolds/mep-manifold-geometry';
 import { computeMepSegmentGeometry } from '../bim/geometry/mep-segment-geometry';
 import { computeMepFittingGeometry } from '../bim/geometry/mep-fitting-geometry';
 import { computeFurnitureGeometry } from '../bim/furniture/furniture-geometry';
@@ -340,6 +341,14 @@ export class HitTestingService {
         const pnl = entity as unknown as Partial<import('../bim/types/electrical-panel-types').ElectricalPanelEntity>;
         const geometry = pnl.geometry ?? (pnl.params ? computeElectricalPanelGeometry(pnl.params) : undefined);
         return buildBimEntityModel('electrical-panel', { ...(entity as object), geometry } as typeof entity, baseModel);
+      }
+      // ADR-408 Φ12 — plumbing manifold needs the same geometry-recompute fallback (mirror electrical-panel):
+      // a Firestore-loaded MepManifoldEntity may arrive before its geometry cache is hydrated;
+      // without `geometry.bbox` BoundsCalculator drops it from the spatial index → no hover/select.
+      case 'mep-manifold': {
+        const mfld = entity as unknown as Partial<import('../bim/types/mep-manifold-types').MepManifoldEntity>;
+        const geometry = mfld.geometry ?? (mfld.params ? computeMepManifoldGeometry(mfld.params) : undefined);
+        return buildBimEntityModel('mep-manifold', { ...(entity as object), geometry } as typeof entity, baseModel);
       }
       // ADR-408 Φ8 — MEP segment needs the same geometry-recompute fallback (mirror beam).
       case 'mep-segment': {

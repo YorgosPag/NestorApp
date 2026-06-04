@@ -39,7 +39,9 @@ type BimRestoreEntityType =
   // ADR-408 Φ8 — unified linear MEP segment (duct + pipe).
   | 'mep-segment'
   // ADR-415 — pure-vector 2D floorplan symbol.
-  | 'floorplan-symbol';
+  | 'floorplan-symbol'
+  // ADR-408 Φ12 — plumbing manifold (floor-mounted distributor).
+  | 'mep-manifold';
 
 export function useBimEntityRestoredPersistEffect<T extends AnySceneEntity, S>(
   entityType: BimRestoreEntityType,
