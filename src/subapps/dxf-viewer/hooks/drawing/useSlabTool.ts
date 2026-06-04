@@ -31,6 +31,7 @@ import {
   type SlabParamOverrides,
   type SceneUnits,
 } from './slab-completion';
+import { getDefaultSlabBuildupForKind } from '../../bim/types/slab-dna-types';
 import { slabPreviewStore } from '../../bim/slabs/slab-preview-store';
 
 // ─── State machine types ─────────────────────────────────────────────────────
@@ -161,7 +162,21 @@ export function useSlabTool(options: UseSlabToolOptions = {}): UseSlabToolResult
    */
   const commitFromState = useCallback((s: SlabToolState): boolean => {
     if (s.vertices.length < 3) return false;
-    const overridesWithKind: SlabParamOverrides = { ...s.overrides, kind: s.kind };
+    // ADR-412 «type always wins» — a slab drawn with the kind's default cross-
+    // section gets the per-kind composite build-up (Revit: drawing a floor
+    // applies the active floor type), so `buildSlabEntity` auto-links it to the
+    // read-only built-in slab type and the per-layer 3D rendering activates. An
+    // explicit thickness override = ad-hoc single-material slab (no DNA, untyped)
+    // — mirrors the wall «explicit thickness ⇒ manual wall» rule.
+    const overridesWithKind: SlabParamOverrides = {
+      ...s.overrides,
+      kind: s.kind,
+      dna:
+        s.overrides.dna ??
+        (s.overrides.thickness === undefined
+          ? getDefaultSlabBuildupForKind(s.kind)
+          : undefined),
+    };
     const sceneUnits: SceneUnits = getSceneUnits?.() ?? 'mm';
     const params = buildDefaultSlabParams(s.vertices, overridesWithKind, sceneUnits);
     const result = buildSlabEntity(params, currentLevelId);
