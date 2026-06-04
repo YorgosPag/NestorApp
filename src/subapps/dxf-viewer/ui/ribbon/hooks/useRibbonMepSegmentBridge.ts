@@ -27,7 +27,11 @@ import type {
   MepSegmentParams,
   MepSegmentSectionKind,
 } from '../../../bim/types/mep-segment-types';
-import { resolveSegmentSection } from '../../../bim/types/mep-segment-types';
+import {
+  resolveSegmentSection,
+  resolveSegmentEndpointElevationsMm,
+  deriveCenterlineElevationMm,
+} from '../../../bim/types/mep-segment-types';
 import { useCommandHistory } from '../../../core/commands';
 import { UpdateMepSegmentParamsCommand } from '../../../core/commands/entity-commands/UpdateMepSegmentParamsCommand';
 import { LevelSceneManagerAdapter } from '../../../systems/entity-creation/LevelSceneManagerAdapter';
@@ -126,8 +130,16 @@ export function useRibbonMepSegmentBridge(
       if (commandKey === MEP_SEGMENT_RIBBON_KEYS.params.diameter) {
         return { value: String(Math.round(section.diameterMm ?? section.widthMm)), options: [] };
       }
+      const elev = resolveSegmentEndpointElevationsMm(segment.params);
       if (commandKey === MEP_SEGMENT_RIBBON_KEYS.params.centerlineElevation) {
-        return { value: String(Math.round(segment.params.centerlineElevationMm)), options: [] };
+        const mid = deriveCenterlineElevationMm(elev.startMm, elev.endMm);
+        return { value: String(Math.round(mid)), options: [] };
+      }
+      if (commandKey === MEP_SEGMENT_RIBBON_KEYS.params.startElevation) {
+        return { value: String(Math.round(elev.startMm)), options: [] };
+      }
+      if (commandKey === MEP_SEGMENT_RIBBON_KEYS.params.endElevation) {
+        return { value: String(Math.round(elev.endMm)), options: [] };
       }
       return null;
     },
@@ -151,6 +163,13 @@ export function useRibbonMepSegmentBridge(
       if (!isMepSegmentRibbonKey(commandKey)) return;
       const numeric = Number.parseFloat(value);
       if (Number.isNaN(numeric)) return;
+      // Elevation edits touch the per-endpoint z's + the derived centreline cache
+      // (Φ-A), not a single param field — handle them before the generic path.
+      const elevParams = buildElevationParams(segment.params, commandKey, numeric);
+      if (elevParams) {
+        dispatchParams(segment, elevParams);
+        return;
+      }
       const field = NUMBER_KEY_TO_FIELD[commandKey];
       if (!field) return;
       const nextParams = { ...segment.params, [field]: numeric } as MepSegmentParams;
@@ -206,13 +225,46 @@ export function useRibbonMepSegmentBridge(
   );
 }
 
-/** commandKey → numeric `MepSegmentParams` field. */
+/** commandKey → numeric `MepSegmentParams` field (section dims only). */
 const NUMBER_KEY_TO_FIELD: Readonly<Record<string, keyof MepSegmentParams>> = {
   [MEP_SEGMENT_RIBBON_KEYS.params.width]: 'width',
   [MEP_SEGMENT_RIBBON_KEYS.params.height]: 'height',
   [MEP_SEGMENT_RIBBON_KEYS.params.diameter]: 'diameter',
-  [MEP_SEGMENT_RIBBON_KEYS.params.centerlineElevation]: 'centerlineElevationMm',
 };
+
+/**
+ * Build next params for an elevation edit (Φ-A). The two endpoint z's are the
+ * authoritative source; `centerlineElevationMm` is kept in sync as the derived
+ * midpoint cache. Returns `null` for any non-elevation key.
+ *   - `centerlineElevation` → sets BOTH ends to `value` (whole-run flat lift).
+ *   - `startElevation`      → sets the start end only (riser/slope).
+ *   - `endElevation`        → sets the end end only (riser/slope).
+ */
+function buildElevationParams(
+  params: MepSegmentParams,
+  commandKey: string,
+  value: number,
+): MepSegmentParams | null {
+  const cur = resolveSegmentEndpointElevationsMm(params);
+  let startMm = cur.startMm;
+  let endMm = cur.endMm;
+  if (commandKey === MEP_SEGMENT_RIBBON_KEYS.params.centerlineElevation) {
+    startMm = value;
+    endMm = value;
+  } else if (commandKey === MEP_SEGMENT_RIBBON_KEYS.params.startElevation) {
+    startMm = value;
+  } else if (commandKey === MEP_SEGMENT_RIBBON_KEYS.params.endElevation) {
+    endMm = value;
+  } else {
+    return null;
+  }
+  return {
+    ...params,
+    startPoint: { ...params.startPoint, z: startMm },
+    endPoint: { ...params.endPoint, z: endMm },
+    centerlineElevationMm: deriveCenterlineElevationMm(startMm, endMm),
+  };
+}
 
 /** Type guard used by `useRibbonCommands` composer (panel visibility). */
 export function isMepSegmentPanelVisibilityKey(visibilityKey: string): boolean {
