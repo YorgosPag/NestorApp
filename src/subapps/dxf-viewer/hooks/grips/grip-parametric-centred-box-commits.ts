@@ -22,6 +22,9 @@ import { applyElectricalPanelGripDrag } from '../../bim/electrical-panels/electr
 import { UpdateElectricalPanelParamsCommand } from '../../core/commands/entity-commands/UpdateElectricalPanelParamsCommand';
 import { applyFurnitureGripDrag } from '../../bim/furniture/furniture-grips';
 import { UpdateFurnitureParamsCommand } from '../../core/commands/entity-commands/UpdateFurnitureParamsCommand';
+import type { FloorplanSymbolEntity } from '../../bim/types/floorplan-symbol-types';
+import { applyFloorplanSymbolGripDrag } from '../../bim/floorplan-symbols/floorplan-symbol-grips';
+import { UpdateFloorplanSymbolParamsCommand } from '../../core/commands/entity-commands/UpdateFloorplanSymbolParamsCommand';
 import { BimRotateHotGripStore } from '../../bim/grips/bim-rotate-hotgrip-store';
 import { cadToggleState } from '../../systems/constraints/cad-toggle-state';
 import { EventBus } from '../../systems/events/EventBus';
@@ -184,4 +187,50 @@ export function commitFurnitureGripDrag(
   if (command.validate() !== null) return;
   deps.execute(command);
   EventBus.emit('bim:furniture-params-updated', { furnitureId: grip.entityId });
+}
+
+/**
+ * ADR-415 — Parametric floorplan-symbol grip commit (centre translate + rotation
+ * + opposite-corner-anchored width/depth resize). 1:1 mirror of
+ * `commitFurnitureGripDrag` (rectangular-only, shares the centred-box SSoT).
+ * `UpdateFloorplanSymbolParamsCommand` recomputes geometry + validation
+ * atomically; merge window (isDragging=true) collapses a continuous drag into one
+ * undo entry. Persistence reacts via the selected-symbol auto-save (2D-only —
+ * no EventBus emit needed).
+ */
+export function commitFloorplanSymbolGripDrag(
+  grip: UnifiedGripInfo,
+  delta: Point2D,
+  deps: DxfCommitDeps,
+): void {
+  if (!grip.entityId || !grip.floorplanSymbolGripKind) return;
+  const sceneManager = createSceneManagerAdapter(deps);
+  if (!sceneManager) return;
+  const raw = sceneManager.getEntity(grip.entityId);
+  if (!raw) return;
+  const candidate = raw as unknown as Partial<FloorplanSymbolEntity>;
+  if (candidate.type !== 'floorplan-symbol' || !candidate.params) return;
+  const originalParams = candidate.params;
+  const rotateCtx = BimRotateHotGripStore.getSnapshot();
+  const useRotatePivot =
+    grip.floorplanSymbolGripKind === 'floorplan-symbol-rotation' && rotateCtx.pivot !== null && rotateCtx.anchor !== null;
+  const anchor: Point2D = useRotatePivot ? rotateCtx.anchor! : grip.position;
+  const currentPos: Point2D = { x: anchor.x + delta.x, y: anchor.y + delta.y };
+  const newParams = applyFloorplanSymbolGripDrag(grip.floorplanSymbolGripKind, {
+    originalParams,
+    delta,
+    currentPos,
+    ortho: cadToggleState.isOrthoOn(),
+    ...(useRotatePivot ? { pivot: rotateCtx.pivot! } : {}),
+  });
+  if (newParams === originalParams) return;
+  const command = new UpdateFloorplanSymbolParamsCommand(
+    grip.entityId,
+    newParams,
+    originalParams,
+    sceneManager,
+    true,
+  );
+  if (command.validate() !== null) return;
+  deps.execute(command);
 }
