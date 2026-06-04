@@ -11,7 +11,12 @@ import { useRef } from 'react';
 export function useRenderTrace(name: string, props?: Record<string, unknown>): void {
   const countRef = useRef(0);
   const prevProps = useRef<Record<string, unknown> | undefined>(undefined);
+  const lastTs = useRef(0);
   countRef.current += 1;
+
+  const now = performance.now();
+  const dt = lastTs.current ? Math.round(now - lastTs.current) : 0;
+  lastTs.current = now;
 
   let changed = '';
   if (props && prevProps.current) {
@@ -24,6 +29,6 @@ export function useRenderTrace(name: string, props?: Record<string, unknown>): v
 
   // eslint-disable-next-line no-console
   console.log(
-    `[RENDER] ${name} #${countRef.current}${changed ? `  Δprops=[${changed}]` : ''}`,
+    `[RENDER] ${name} #${countRef.current} +${dt}ms${changed ? `  Δprops=[${changed}]` : ''}`,
   );
 }
