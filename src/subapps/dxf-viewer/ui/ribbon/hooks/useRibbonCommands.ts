@@ -35,6 +35,16 @@ import {
   isMepFixtureRibbonStringKey,
   isMepFixtureActionKey,
 } from './bridge/mep-fixture-command-keys';
+import type { RibbonMepManifoldBridge } from './useRibbonMepManifoldBridge';
+import { isMepManifoldPanelVisibilityKey } from './useRibbonMepManifoldBridge';
+import { isMepManifoldRibbonKey, isMepManifoldActionKey } from './bridge/mep-manifold-command-keys';
+import type { RibbonMepSegmentBridge } from './useRibbonMepSegmentBridge';
+import { isMepSegmentPanelVisibilityKey } from './useRibbonMepSegmentBridge';
+import {
+  isMepSegmentRibbonKey,
+  isMepSegmentRibbonStringKey,
+  isMepSegmentActionKey,
+} from './bridge/mep-segment-command-keys';
 import type { RibbonFurnitureBridge } from './useRibbonFurnitureBridge';
 import { isFurniturePanelVisibilityKey } from './useRibbonFurnitureBridge';
 import {
@@ -99,6 +109,10 @@ interface UseRibbonCommandsProps {
   mepPipeNetworkBridge: RibbonMepPipeNetworkBridge;
   /** ADR-406 — MEP fixture (φωτιστικό) contextual tab bridge. */
   mepFixtureBridge: RibbonMepFixtureBridge;
+  /** ADR-408 Φ12 — MEP manifold (συλλέκτης) contextual properties tab bridge. */
+  mepManifoldBridge: RibbonMepManifoldBridge;
+  /** ADR-408 Φ8 — MEP segment (σωλήνας/αεραγωγός) contextual properties tab bridge. */
+  mepSegmentBridge: RibbonMepSegmentBridge;
   /** ADR-410 — furniture library contextual tab bridge. */
   furnitureBridge: RibbonFurnitureBridge;
   /** ADR-415 — floorplan-symbol library contextual tab bridge (tool-active picker). */
@@ -136,6 +150,8 @@ export function useRibbonCommands({
   mepCircuitBridge,
   mepPipeNetworkBridge,
   mepFixtureBridge,
+  mepManifoldBridge,
+  mepSegmentBridge,
   furnitureBridge,
   floorplanSymbolBridge,
   mepFixtureLibraryBridge,
@@ -190,6 +206,14 @@ export function useRibbonCommands({
         mepFixtureBridge.onComboboxChange(key, value);
         return;
       }
+      if (isMepManifoldRibbonKey(key)) {
+        mepManifoldBridge.onComboboxChange(key, value);
+        return;
+      }
+      if (isMepSegmentRibbonKey(key) || isMepSegmentRibbonStringKey(key)) {
+        mepSegmentBridge.onComboboxChange(key, value);
+        return;
+      }
       if (isFurnitureRibbonKey(key) || isFurnitureRibbonStringKey(key)) {
         furnitureBridge.onComboboxChange(key, value);
         return;
@@ -216,7 +240,7 @@ export function useRibbonCommands({
       }
       textEditorBridge.onComboboxChange(key, value);
     },
-    [stairBridge, wallBridge, openingBridge, slabBridge, columnBridge, beamBridge, slabOpeningBridge, mepFixtureBridge, furnitureBridge, floorplanSymbolBridge, mepFixtureLibraryBridge, arrayBridge, lineToolBridge, xlineModeBridge, textEditorBridge],
+    [stairBridge, wallBridge, openingBridge, slabBridge, columnBridge, beamBridge, slabOpeningBridge, mepFixtureBridge, mepManifoldBridge, mepSegmentBridge, furnitureBridge, floorplanSymbolBridge, mepFixtureLibraryBridge, arrayBridge, lineToolBridge, xlineModeBridge, textEditorBridge],
   );
 
   const getComboboxState = React.useCallback(
@@ -232,6 +256,8 @@ export function useRibbonCommands({
       if (isBeamRibbonKey(key) || isBeamRibbonStringKey(key)) return beamBridge.getComboboxState(key);
       if (isSlabOpeningRibbonStringKey(key)) return slabOpeningBridge.getComboboxState(key);
       if (isMepFixtureRibbonKey(key) || isMepFixtureRibbonStringKey(key)) return mepFixtureBridge.getComboboxState(key);
+      if (isMepManifoldRibbonKey(key)) return mepManifoldBridge.getComboboxState(key);
+      if (isMepSegmentRibbonKey(key) || isMepSegmentRibbonStringKey(key)) return mepSegmentBridge.getComboboxState(key);
       if (isFurnitureRibbonKey(key) || isFurnitureRibbonStringKey(key)) return furnitureBridge.getComboboxState(key);
       if (isFloorplanSymbolRibbonKey(key) || isFloorplanSymbolRibbonStringKey(key)) return floorplanSymbolBridge.getComboboxState(key);
       if (isMepFixtureLibraryKey(key) || isMepFixtureLibraryStringKey(key)) return mepFixtureLibraryBridge.getComboboxState(key);
@@ -240,7 +266,7 @@ export function useRibbonCommands({
       if (isXlineRibbonKey(key)) return xlineModeBridge.getComboboxState(key);
       return textEditorBridge.getComboboxState(key);
     },
-    [snapStepUnits, stairBridge, wallBridge, openingBridge, slabBridge, columnBridge, beamBridge, slabOpeningBridge, mepFixtureBridge, furnitureBridge, floorplanSymbolBridge, mepFixtureLibraryBridge, arrayBridge, lineToolBridge, xlineModeBridge, textEditorBridge],
+    [snapStepUnits, stairBridge, wallBridge, openingBridge, slabBridge, columnBridge, beamBridge, slabOpeningBridge, mepFixtureBridge, mepManifoldBridge, mepSegmentBridge, furnitureBridge, floorplanSymbolBridge, mepFixtureLibraryBridge, arrayBridge, lineToolBridge, xlineModeBridge, textEditorBridge],
   );
 
   const onToggle = React.useCallback(
@@ -299,11 +325,13 @@ export function useRibbonCommands({
       if (isColumnPanelVisibilityKey(visibilityKey)) return columnBridge.getPanelVisibility(visibilityKey);
       if (isBeamPanelVisibilityKey(visibilityKey)) return beamBridge.getPanelVisibility(visibilityKey);
       if (isMepFixturePanelVisibilityKey(visibilityKey)) return mepFixtureBridge.getPanelVisibility(visibilityKey);
+      if (isMepManifoldPanelVisibilityKey(visibilityKey)) return mepManifoldBridge.getPanelVisibility(visibilityKey);
+      if (isMepSegmentPanelVisibilityKey(visibilityKey)) return mepSegmentBridge.getPanelVisibility(visibilityKey);
       if (isFurniturePanelVisibilityKey(visibilityKey)) return furnitureBridge.getPanelVisibility(visibilityKey);
       if (isFloorplanSymbolPanelVisibilityKey(visibilityKey)) return floorplanSymbolBridge.getPanelVisibility(visibilityKey);
       return true;
     },
-    [stairBridge, columnBridge, beamBridge, mepFixtureBridge, furnitureBridge, floorplanSymbolBridge],
+    [stairBridge, columnBridge, beamBridge, mepFixtureBridge, mepManifoldBridge, mepSegmentBridge, furnitureBridge, floorplanSymbolBridge],
   );
 
   // ADR-363 Phase 1E — Wall action keys (delete) handled by bridge before
@@ -350,13 +378,21 @@ export function useRibbonCommands({
         mepFixtureBridge.onAction(action);
         return;
       }
+      if (isMepManifoldActionKey(action)) {
+        mepManifoldBridge.onAction(action);
+        return;
+      }
+      if (isMepSegmentActionKey(action)) {
+        mepSegmentBridge.onAction(action);
+        return;
+      }
       if (isFurnitureActionKey(action)) {
         furnitureBridge.onAction(action);
         return;
       }
       wrappedHandleAction(action, data);
     },
-    [wallBridge, openingBridge, slabBridge, columnBridge, beamBridge, slabOpeningBridge, stairBridge, mepCircuitBridge, mepPipeNetworkBridge, mepFixtureBridge, furnitureBridge, wrappedHandleAction],
+    [wallBridge, openingBridge, slabBridge, columnBridge, beamBridge, slabOpeningBridge, stairBridge, mepCircuitBridge, mepPipeNetworkBridge, mepFixtureBridge, mepManifoldBridge, mepSegmentBridge, furnitureBridge, wrappedHandleAction],
   );
 
   return React.useMemo(
