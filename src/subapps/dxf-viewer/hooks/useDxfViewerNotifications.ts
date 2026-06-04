@@ -148,6 +148,33 @@ export function useDxfViewerNotifications(): void {
       }),
     );
 
+    // ADR-408 Φ13 — pipe-network from-manifold-selection feedback (create + manage).
+    unsubs.push(
+      EventBus.on('bim:mep-network-created', ({ memberCount }) => {
+        toast.success(t('mepPipeNetwork.created', { count: memberCount }));
+      }),
+    );
+    unsubs.push(
+      EventBus.on('bim:mep-network-create-failed', ({ reason }) => {
+        toast.warning(t(`mepPipeNetwork.failed.${reason}`));
+      }),
+    );
+    unsubs.push(
+      EventBus.on('bim:mep-network-members-added', ({ memberCount }) => {
+        toast.success(t('mepPipeNetwork.membersAdded', { count: memberCount }));
+      }),
+    );
+    unsubs.push(
+      EventBus.on('bim:mep-network-members-removed', ({ memberCount }) => {
+        toast.success(t('mepPipeNetwork.membersRemoved', { count: memberCount }));
+      }),
+    );
+    unsubs.push(
+      EventBus.on('bim:mep-network-edit-failed', ({ reason }) => {
+        toast.warning(t(`mepPipeNetwork.${reason}`));
+      }),
+    );
+
     // ADR-401 Phase G.3 — stair attach mirrors (reuse the generic messages).
     unsubs.push(
       EventBus.on('bim:stairs-auto-attached', () => {
