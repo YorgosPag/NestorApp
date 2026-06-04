@@ -17,6 +17,7 @@ import { CONTEXTUAL_LINE_TOOL_TAB, LINE_TOOL_CONTEXTUAL_TRIGGER } from '../ui/ri
 import { CONTEXTUAL_XLINE_MODE_TAB, XLINE_MODE_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-xline-mode-tab';
 import { CONTEXTUAL_MULTI_SELECTION_TAB, MULTI_SELECTION_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-multi-selection-tab';
 import { CONTEXTUAL_MEP_CIRCUIT_TAB, MEP_CIRCUIT_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-mep-circuit-tab';
+import { CONTEXTUAL_MEP_PIPE_NETWORK_TAB, MEP_PIPE_NETWORK_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-mep-pipe-network-tab';
 import { CONTEXTUAL_MEP_FIXTURE_TAB, MEP_FIXTURE_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-mep-fixture-tab';
 import { CONTEXTUAL_FURNITURE_TAB, FURNITURE_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-furniture-tab';
 import { CONTEXTUAL_FLOORPLAN_SYMBOL_TAB, FLOORPLAN_SYMBOL_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-floorplan-symbol-tab';
@@ -24,7 +25,8 @@ import { CONTEXTUAL_MEP_FIXTURE_LIBRARY_TAB, MEP_FIXTURE_LIBRARY_CONTEXTUAL_TRIG
 import { ANIMATION_CONTEXTUAL_TAB, ANIMATION_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-animation-tab';
 import { selectAnimationToolActive, useAnimationStore } from '../bim-3d/animation/AnimationStore';
 import { useMepSystemStore } from '../bim/mep-systems/mep-system-store';
-import { resolveManagedCircuits } from '../bim/mep-systems/mep-circuit-editor';
+import { resolveManagedSystems } from '../bim/mep-systems/mep-circuit-editor';
+import { isMepSegmentEntity } from '../types/entities';
 
 const BIM_KIND_TYPES: ReadonlySet<string> = new Set([
   'wall', 'opening', 'slab', 'slab-opening', 'column', 'beam', 'stair',
@@ -47,6 +49,7 @@ export const RIBBON_CONTEXTUAL_TABS = [
   CONTEXTUAL_XLINE_MODE_TAB,
   CONTEXTUAL_MULTI_SELECTION_TAB,
   CONTEXTUAL_MEP_CIRCUIT_TAB,
+  CONTEXTUAL_MEP_PIPE_NETWORK_TAB,
   CONTEXTUAL_MEP_FIXTURE_TAB,
   CONTEXTUAL_MEP_FIXTURE_LIBRARY_TAB,
   CONTEXTUAL_FURNITURE_TAB,
@@ -96,6 +99,21 @@ export function useActiveContextualTrigger({
       }
       if (hasPanel && hasFixture) return MEP_CIRCUIT_CONTEXTUAL_TRIGGER;
     }
+    // ADR-408 Φ13: mixed plumbing selection (≥1 manifold = source + ≥1 pipe
+    // segment = members) → pipe-network-creation tab (Revit "create a Piping
+    // System from the manifold + its pipes"). Disjoint from the electrical case
+    // (manifold/segment are not panels/fixtures), so order is irrelevant.
+    if (selectedEntityIds && selectedEntityIds.length >= 2 && currentScene) {
+      let hasManifold = false;
+      let hasPipe = false;
+      for (const id of selectedEntityIds) {
+        const e = currentScene.entities.find((x) => x.id === id);
+        if (e?.type === 'mep-manifold') hasManifold = true;
+        else if (e && isMepSegmentEntity(e) && e.params.domain === 'pipe') hasPipe = true;
+        if (hasManifold && hasPipe) break;
+      }
+      if (hasManifold && hasPipe) return MEP_PIPE_NETWORK_CONTEXTUAL_TRIGGER;
+    }
     // ADR-408 Φ6: selecting an electrical panel that feeds ≥1 circuit surfaces
     // the circuit tab in manage mode (picker → its circuits). Panel-centric so a
     // selected fixture keeps its own fixture-properties tab (Revit shows the
@@ -105,9 +123,21 @@ export function useActiveContextualTrigger({
       const primary = currentScene.entities.find((e) => e.id === primarySelectedId);
       if (
         primary?.type === 'electrical-panel' &&
-        resolveManagedCircuits([primary], mepSystems).length > 0
+        resolveManagedSystems([primary], mepSystems).length > 0
       ) {
         return MEP_CIRCUIT_CONTEXTUAL_TRIGGER;
+      }
+    }
+    // ADR-408 Φ13: selecting a manifold that sources ≥1 pipe network surfaces the
+    // network tab in manage mode (picker → its networks). Source-centric, mirror
+    // of the panel manage branch above.
+    if (primarySelectedId && currentScene && mepSystems.length > 0) {
+      const primary = currentScene.entities.find((e) => e.id === primarySelectedId);
+      if (
+        primary?.type === 'mep-manifold' &&
+        resolveManagedSystems([primary], mepSystems).length > 0
+      ) {
+        return MEP_PIPE_NETWORK_CONTEXTUAL_TRIGGER;
       }
     }
     // ADR-363 Phase 7.1: multi-selection of BIM entities → dedicated tab.
