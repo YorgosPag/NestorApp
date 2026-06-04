@@ -116,6 +116,23 @@ export interface SlabTypeParams {
 }
 
 /**
+ * ROOF type-level parameters ONLY (ADR-417 Q8 — Roof Types). Roof analogue of
+ * {@link SlabTypeParams}: the layered build-up (`dna`) + derived `thickness`
+ * live on the TYPE («Μπετονένιο δώμα» / «Κεραμοσκεπή»); the footprint, per-edge
+ * slopes, slope unit and base elevation are per-instance (they live on the
+ * `RoofEntity`). A roof has no sub-kind, so there is no `kind`/`category`
+ * discriminator here — the two built-ins differ by their `dna` (build-up key).
+ */
+export interface RoofTypeParams {
+  /** mm. Cross-section depth. Equals `dna.totalThickness` when `dna` present. */
+  readonly thickness: number;
+  /** Layered composition (top→bottom). Undefined = bare single-material roof. */
+  readonly dna?: SlabDna;
+  /** Material key for roof-level hatch. Ignored when `dna` is present. */
+  readonly material?: string;
+}
+
+/**
  * STAIR type-level parameters — explicitly the subset of `StairParams` shared
  * across instances, i.e. everything EXCEPT the placement params `basePoint` and
  * `direction`. Kept field-for-field assignable to/from
@@ -198,6 +215,7 @@ export interface BimTypeParamsByCategory {
   readonly wall: WallTypeParams;
   readonly slab: SlabTypeParams;
   readonly stair: StairTypeParams;
+  readonly roof: RoofTypeParams;
 }
 
 // ─── Family type document (persisted, Firestore) ─────────────────────────────
