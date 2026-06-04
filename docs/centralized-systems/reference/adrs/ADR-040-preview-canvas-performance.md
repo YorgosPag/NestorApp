@@ -71,6 +71,24 @@ Mouse Event → DxfCanvas.onMouseMove
 
 ## Changelog
 
+### 2026-06-04 — Cursor-lag Phase 1: SSoT leaf-gating of the 60fps world-position stream
+
+**Status**: IMPLEMENTED 2026-06-04 (Opus 4.8, staged phase 1 of a cursor-tracking-lag fix). 🔴 browser verify pending. The `systems/cursor/useCursor.ts` gate itself landed in a separate follow-up commit (committed one-file-at-a-time); this changelog note is co-staged with it to satisfy CHECK 6D.
+
+**Symptom (Giorgio)**: moving the cursor over the canvas, the drawn crosshair does not track the physical mouse 1:1 (visible trailing / jumps). Diagnosed from a React DevTools profile (`profiling-data.04-06-2026.15-24-27.json`, 209 commits / 7.3s): the crosshair already has a zero-latency direct-render path (`ImmediatePositionStore.registerDirectRender` → synchronous canvas paint, bypassing React+RAF), so the lag is **main-thread contention** — every mousemove tick synchronously reconciles ~16 fibers, of which **13 are `*PreviewMount`/`*GhostPreviewMount` leaves that ALL re-render even when their tool is idle** (they each called `useCursorWorldPosition()` unconditionally → all sit permanently in `ImmediatePositionStore.worldListeners`). Profile frame gaps: p50 17ms, p90 53ms, **52/208 frames > 33ms** — those long frames delay the compositor present of the already-painted crosshair.
+
+**Root cause**: `useCursorWorldPosition()` had no activation gate. React hooks can't be called conditionally, so each leaf subscribed to the world-position channel at all times and bailed out *inside* its RAF (no canvas draw when idle) — but the **React re-render on every mousemove was not suppressed**, for 12 inactive leaves at once.
+
+**Fix (SSoT, 14 files, no behaviour change for the active tool)**:
+- `systems/cursor/useCursor.ts` — `useCursorWorldPosition(enabled = true)` is now the single gate. `enabled = false` → subscribe to a **no-op** store + return a stable `null` (the listener is never added to `worldListeners`, so zero mousemove re-renders). React re-subscribes automatically when `enabled` flips (subscribe-ref changes), so activation is reactive with no extra wiring.
+- 13 preview/ghost hooks now pass their **already-existing** activation predicate: ghost hooks pass `isAwaitingPosition` / `isAwaitingEnd`; `useMove/Mirror/RotationPreview` pass `PREVIEW_PHASES.has(phase)`; store-driven `useScale/Stretch/Trim/ExtendPreview` pass `phase !== 'idle'` (phase read hoisted above the gated call). `useRotationPreview`'s `PREVIEW_PHASES` was lifted to module scope to serve as the single source for both the gate and the clear-on-exit effect. `useGripGhostPreview` was already prop-driven (no cursor subscription) — untouched.
+- Net effect: ~13 leaf reconciles per mousemove tick → ~1 (only the active tool's leaf). No Cardinal-Rule change (leaves are still the sole subscribers; orchestrators untouched); no bitmap cache-key change.
+- Test: `systems/cursor/__tests__/useCursorWorldPosition-gate.test.ts` (3 tests, PASS) — verifies disabled leaf neither subscribes nor re-renders, and re-subscribes reactively when the gate flips.
+
+**Deferred to Phase 2** (higher risk, separate verify): pointer coalescing (`getCoalescedEvents`) on the cursor path; removing the redundant `markSystemsDirty(['layer-canvas','crosshair-overlay'])` double-paint in `ImmediatePositionStore.setPosition` (the crosshair already paints synchronously — but the `layer-canvas` member is in a canvas-sync group, so removal needs tearing/stale-snap-overlay verification); throttling `ToolbarCoordinatesDisplay` / `DynamicInputSubscriber`.
+
+✅ Google-level: YES — single SSoT gate funnels every leaf; each leaf reuses its existing activation predicate (no new state, no fork); reactive re-subscription on flip; covered by a unit test.
+
 ### 2026-06-04 — ADR-408 Φ11 auto-fittings: `BimSceneLayer.syncFittings` (CHECK 6B)
 
 **Status**: IMPLEMENTED 2026-06-04 (Opus 4.8, orchestrator). `bim-3d/scene/BimSceneLayer.ts` gains a `syncFittings()` category sync for the new persisted `mep-fitting` entity (ADR-408 Φ11 auto pipe fittings), mirroring `syncMepSegments` — per-entity loop, ADR-382 visibility intersection, cascade hide. No new high-frequency subscription, no Cardinal-Rule change. The 2D `MepFittingRenderer` is registered in `rendering/core/EntityRendererComposite.ts` (NOT a `canvas-layer-stack-leaves` micro-leaf — fittings are auto-managed, no ghost/hover-leaf needed). CHECK 6B satisfied by staging this ADR with the BimSceneLayer edit. See ADR-408 §Φ11.

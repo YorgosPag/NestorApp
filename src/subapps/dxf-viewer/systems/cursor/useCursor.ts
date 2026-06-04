@@ -4,6 +4,7 @@
  */
 
 import { useContext, useSyncExternalStore } from 'react';
+import type { Point2D } from '../../rendering/types/Types';
 import { CursorContext } from './CursorSystem';
 import { ImmediatePositionStore } from './ImmediatePositionStore';
 import { SelectionStore } from './SelectionStore';
@@ -29,11 +30,23 @@ export function useCursorPosition() {
 const subscribeWorldPosition = (cb: () => void): (() => void) =>
   ImmediatePositionStore.subscribeWorldPosition(cb);
 const getWorldPositionSnapshot = () => ImmediatePositionStore.getWorldPosition();
-export function useCursorWorldPosition() {
+
+// 🚀 PERF / SSoT GATING (2026-06-04, ADR-040): when a leaf is inactive
+// (its tool is idle / not awaiting a position) it passes `enabled = false`.
+// We then subscribe to a NO-OP store and return a stable `null`, so the
+// listener is NEVER registered on `worldListeners` and the leaf does NOT
+// re-render on the 60fps mousemove stream. Only the single active tool's
+// leaf subscribes. This is the SSoT gate — every preview/ghost leaf funnels
+// through it instead of forking its own subscription guard.
+// React re-subscribes automatically when `enabled` flips (the subscribe ref
+// changes), so activation/deactivation is reactive with zero extra wiring.
+const noopSubscribe = (): (() => void) => () => {};
+const getNullWorldPosition = (): Point2D | null => null;
+export function useCursorWorldPosition(enabled: boolean = true): Point2D | null {
   return useSyncExternalStore(
-    subscribeWorldPosition,
-    getWorldPositionSnapshot,
-    getWorldPositionSnapshot,
+    enabled ? subscribeWorldPosition : noopSubscribe,
+    enabled ? getWorldPositionSnapshot : getNullWorldPosition,
+    enabled ? getWorldPositionSnapshot : getNullWorldPosition,
   );
 }
 
