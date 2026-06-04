@@ -23,6 +23,7 @@ import type { SlabEntity } from '../bim/types/slab-types';
 import { isSlabEntity } from '../types/entities';
 import { useSlabPersistence } from '../hooks/data/useSlabPersistence';
 import { useBim3DEntitiesStore } from '../bim-3d/stores/Bim3DEntitiesStore';
+import { EditSlabTypeDialog } from '../ui/ribbon/components/EditSlabTypeDialog';
 
 type LevelManagerLike = Pick<
   ReturnType<typeof useLevels>,
@@ -73,5 +74,7 @@ export function SlabPersistenceHost({
     primarySelectedSlab,
   });
 
-  return null;
+  // ADR-412 — always-on «Edit Slab Type» dialog (opened via the slab contextual
+  // ribbon «Edit type…» button → `openEditSlabType`). Renders only when open.
+  return <EditSlabTypeDialog />;
 }
