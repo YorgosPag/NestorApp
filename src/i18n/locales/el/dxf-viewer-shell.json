@@ -1812,6 +1812,8 @@
         "height": "Ύψος",
         "diameter": "Διάμετρος",
         "centerlineElevation": "Ύψος άξονα",
+        "startElevation": "Υψόμετρο αρχής",
+        "endElevation": "Υψόμετρο τέλους",
         "close": "Κλείσιμο",
         "delete": "Διαγραφή",
         "deleteConfirm": "Διαγραφή στοιχείου; Η ενέργεια δεν μπορεί να αναιρεθεί.",
