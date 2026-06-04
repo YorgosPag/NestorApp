@@ -78,6 +78,46 @@ export function computeMepSegmentGeometry(params: MepSegmentParams): MepSegmentG
 }
 
 /**
+ * Recompute segment geometry with the run SHORTENED at each end by the given
+ * trim (mm) — Revit "pipe stops at the fitting face" (ADR-408 Φ11). Pure: moves
+ * `startPoint`/`endPoint` inward along the axis, then re-runs the geometry SSoT,
+ * so the outline/axis/bbox all follow. Over-trim (start+end ≥ length) is clamped
+ * to a thin sliver so the segment never inverts. `0/0` trim returns the unchanged
+ * geometry shape (callers pass the cached geometry instead in that case).
+ */
+export function computeTrimmedSegmentGeometry(
+  params: MepSegmentParams,
+  startMm: number,
+  endMm: number,
+): MepSegmentGeometry {
+  const s = mmToSceneUnits(params.sceneUnits ?? 'mm');
+  const { startPoint, endPoint } = params;
+  const dx = endPoint.x - startPoint.x;
+  const dy = endPoint.y - startPoint.y;
+  const lenCanvas = Math.hypot(dx, dy);
+  if (lenCanvas < 1e-9) return computeMepSegmentGeometry(params);
+
+  const ux = dx / lenCanvas;
+  const uy = dy / lenCanvas;
+  let startCanvas = Math.max(0, startMm) * s;
+  let endCanvas = Math.max(0, endMm) * s;
+  // Clamp so a sliver (10%) always remains — never invert the run.
+  const maxTrim = lenCanvas * 0.9;
+  if (startCanvas + endCanvas > maxTrim) {
+    const scale = maxTrim / (startCanvas + endCanvas);
+    startCanvas *= scale;
+    endCanvas *= scale;
+  }
+
+  const trimmed: MepSegmentParams = {
+    ...params,
+    startPoint: { ...startPoint, x: startPoint.x + ux * startCanvas, y: startPoint.y + uy * startCanvas },
+    endPoint: { ...endPoint, x: endPoint.x - ux * endCanvas, y: endPoint.y - uy * endCanvas },
+  };
+  return computeMepSegmentGeometry(trimmed);
+}
+
+/**
  * Hard/soft validation of segment params. Errors abort entity creation; warnings
  * are advisory (mirror beam validator shape).
  */
