@@ -78,10 +78,19 @@ export function createTumbleRotation(opts: TumbleOptions): TumbleRotation {
 
   /** Alt+drag — orbit around the Alt-clicked pivot (or the look target if none). */
   function applyRotation(dx: number, dy: number): void {
+    // [ORBIT-DBG] TEMP — remove after diagnosis (handoff 2026-06-04).
+    const t = getTarget();
+    // eslint-disable-next-line no-console
+    console.debug('[ORBIT-DBG] applyRotation pivot=%s target=%o',
+      customPivot ? customPivot.toArray().map((n) => n.toFixed(2)).join(',') : 'NULL(→center)',
+      t.toArray().map((n) => n.toFixed(2)).join(','));
     orbit(dx, dy, customPivot ?? getTarget());
   }
 
   function onPointerDown(e: PointerEvent): void {
+    // [ORBIT-DBG] TEMP — remove after diagnosis (handoff 2026-06-04).
+    // eslint-disable-next-line no-console
+    if (e.altKey) console.debug('[ORBIT-DBG] pointerdown alt=%s btn=%s enabled=%s', e.altKey, e.button, enabled);
     if (!enabled || e.button !== 0 || !e.altKey) return;
     pointerDown = true;
     dragActive = false;
@@ -146,6 +155,10 @@ export function createTumbleRotation(opts: TumbleOptions): TumbleRotation {
   function setSpeed(s: number): void { speed = s; }
   function setEnabled(e: boolean): void { enabled = e; }
   function setPivot(worldPoint: THREE.Vector3 | null): void {
+    // [ORBIT-DBG] TEMP — remove after diagnosis (handoff 2026-06-04).
+    // eslint-disable-next-line no-console
+    console.debug('[ORBIT-DBG] tumble.setPivot %s',
+      worldPoint ? worldPoint.toArray().map((n) => n.toFixed(2)).join(',') : 'null');
     customPivot = worldPoint ? worldPoint.clone() : null;
   }
 
