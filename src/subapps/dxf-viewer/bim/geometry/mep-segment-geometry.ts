@@ -15,7 +15,12 @@
 
 import type { Point3D, Polyline3D, Polygon3D, BoundingBox3D } from '../types/bim-base';
 import type { MepSegmentGeometry, MepSegmentParams } from '../types/mep-segment-types';
-import { resolveSegmentSection, MIN_SEGMENT_DIMENSION_MM, MIN_SEGMENT_LENGTH_MM } from '../types/mep-segment-types';
+import {
+  resolveSegmentSection,
+  resolveSegmentEndpointElevationsMm,
+  MIN_SEGMENT_DIMENSION_MM,
+  MIN_SEGMENT_LENGTH_MM,
+} from '../types/mep-segment-types';
 import { mmToSceneUnits } from '../../utils/scene-units';
 import { offsetPolyline } from './shared/polygon-utils';
 import { roundCrossSectionAreaMm2, roundPerimeterMm, rectPerimeterMm } from './shared/round-profile';
@@ -64,7 +69,10 @@ export function computeMepSegmentGeometry(params: MepSegmentParams): MepSegmentG
   const surfaceAreaM2 = perimeterMm * MM_TO_M * lengthM;
   const volume = crossSectionAreaM2 * lengthM;
 
-  const bbox = computeBbox(axisVertices, outlineVertices, params.centerlineElevationMm, section.heightMm);
+  // Per-endpoint elevations (ADR-408 Φ-A) — the run may slope, so the z range
+  // spans from the lower end to the higher end (± section half-height).
+  const elev = resolveSegmentEndpointElevationsMm(params);
+  const bbox = computeBbox(axisVertices, outlineVertices, elev.startMm, elev.endMm, section.heightMm);
 
   return {
     axisPolyline,
@@ -162,13 +170,15 @@ function computePolylineLengthMm(vertices: readonly Point3D[]): number {
 }
 
 /**
- * Axis-aligned 3D bbox. z range centred on the centreline elevation:
- * [centerline − height/2, centerline + height/2] (mm → m).
+ * Axis-aligned 3D bbox. The z range spans the two endpoint elevations (a sloped
+ * run rises from one end to the other), each padded by the section half-height:
+ * [min(startMm,endMm) − h/2, max(startMm,endMm) + h/2] (mm → m).
  */
 function computeBbox(
   axis: readonly Point3D[],
   outline: readonly Point3D[],
-  centerlineMm: number,
+  startElevMm: number,
+  endElevMm: number,
   heightMm: number,
 ): BoundingBox3D {
   let minX = Infinity, minY = Infinity;
@@ -182,8 +192,10 @@ function computeBbox(
   for (const p of axis) fold(p);
   for (const p of outline) fold(p);
   const halfH = heightMm / 2;
+  const lowMm = Math.min(startElevMm, endElevMm) - halfH;
+  const highMm = Math.max(startElevMm, endElevMm) + halfH;
   return {
-    min: { x: minX, y: minY, z: (centerlineMm - halfH) / 1000 },
-    max: { x: maxX, y: maxY, z: (centerlineMm + halfH) / 1000 },
+    min: { x: minX, y: minY, z: lowMm / 1000 },
+    max: { x: maxX, y: maxY, z: highMm / 1000 },
   };
 }
