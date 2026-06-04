@@ -354,6 +354,10 @@ export function createViewportCamera(
    * `viewport.target` each frame) flashes at the new center via the manager.
    */
   function setOrbitPivot(point: THREE.Vector3): void {
+    // [ORBIT-DBG] TEMP — remove after diagnosis (handoff 2026-06-04).
+    // eslint-disable-next-line no-console
+    console.debug('[ORBIT-DBG] viewport.setOrbitPivot enableRotate=%s mouseLEFT=%s damping=%s',
+      controls.enableRotate, controls.mouseButtons.LEFT, controls.enableDamping);
     animation.cancel();
     controls.enabled = true;
     // No recenter: hand the pivot to tumble, which orbits rigidly around it
