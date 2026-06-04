@@ -6,11 +6,15 @@
 import {
   cloneTypeToInput,
   getAllBuiltInTypes,
+  getBuiltInSlabTypes,
+  getBuiltInSlabTypeId,
   getBuiltInStairTypes,
   getBuiltInWallTypes,
 } from '../built-in-types';
 import { getDefaultDnaForCategory } from '../../types/wall-dna-types';
+import { getDefaultSlabBuildupForKind } from '../../types/slab-dna-types';
 import type { WallCategory } from '../../types/wall-types';
+import type { SlabKind } from '../../types/slab-types';
 import type { BimFamilyType } from '../../types/bim-family-type';
 
 const COMPANY_ID = 'company-abc';
@@ -75,6 +79,57 @@ describe('getBuiltInWallTypes', () => {
   });
 });
 
+const ALL_SLAB_KINDS: readonly SlabKind[] = [
+  'floor',
+  'ceiling',
+  'roof',
+  'ground',
+  'foundation',
+];
+
+describe('getBuiltInSlabTypes', () => {
+  it('produces exactly one built-in per slab kind (5)', () => {
+    const slabs = getBuiltInSlabTypes(COMPANY_ID);
+    expect(slabs).toHaveLength(5);
+    const kinds = slabs.map((s) => s.typeParams.kind);
+    expect(new Set(kinds)).toEqual(new Set(ALL_SLAB_KINDS));
+  });
+
+  it('derives thickness + dna from the slab-DNA SSoT per kind', () => {
+    for (const slab of getBuiltInSlabTypes(COMPANY_ID)) {
+      const expectedDna = getDefaultSlabBuildupForKind(slab.typeParams.kind);
+      expect(slab.typeParams.dna).toBeDefined();
+      expect(slab.typeParams.thickness).toBe(expectedDna.totalThickness);
+      expect(slab.typeParams.dna?.totalThickness).toBe(expectedDna.totalThickness);
+    }
+  });
+
+  it('marks every slab built-in origin=built-in, scope=company, ownerId=system', () => {
+    for (const slab of getBuiltInSlabTypes(COMPANY_ID)) {
+      expect(slab.origin).toBe('built-in');
+      expect(slab.scope).toBe('company');
+      expect(slab.ownerId).toBe('system');
+      expect(slab.companyId).toBe(COMPANY_ID);
+      expect(slab.category).toBe('slab');
+    }
+  });
+
+  it('uses stable technical-key names + deterministic ids', () => {
+    const slabs = getBuiltInSlabTypes(COMPANY_ID);
+    expect(slabs.map((s) => s.name).sort()).toEqual(
+      [
+        'builtin.slab.ceiling',
+        'builtin.slab.floor',
+        'builtin.slab.foundation',
+        'builtin.slab.ground',
+        'builtin.slab.roof',
+      ].sort(),
+    );
+    expect(getBuiltInSlabTypeId('floor')).toBe('bimftype-builtin-slab-floor');
+    expect(getBuiltInSlabTypes(COMPANY_ID)).toEqual(getBuiltInSlabTypes(COMPANY_ID));
+  });
+});
+
 describe('getBuiltInStairTypes', () => {
   it('produces sensible stair built-ins with origin=built-in', () => {
     const stairs = getBuiltInStairTypes(COMPANY_ID);
@@ -98,13 +153,15 @@ describe('getBuiltInStairTypes', () => {
 });
 
 describe('getAllBuiltInTypes', () => {
-  it('concatenates wall + stair built-ins', () => {
+  it('concatenates wall + slab + stair built-ins', () => {
     const all = getAllBuiltInTypes(COMPANY_ID);
     const walls = getBuiltInWallTypes(COMPANY_ID);
+    const slabs = getBuiltInSlabTypes(COMPANY_ID);
     const stairs = getBuiltInStairTypes(COMPANY_ID);
 
-    expect(all).toHaveLength(walls.length + stairs.length);
+    expect(all).toHaveLength(walls.length + slabs.length + stairs.length);
     expect(all.some((t) => t.category === 'wall')).toBe(true);
+    expect(all.some((t) => t.category === 'slab')).toBe(true);
     expect(all.some((t) => t.category === 'stair')).toBe(true);
   });
 
