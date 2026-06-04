@@ -41,7 +41,7 @@ import {
 import { EventBus } from '../../../systems/events/EventBus';
 import { useMepSystemStore } from '../../../bim/mep-systems/mep-system-store';
 import { useMepCircuitEditorStore } from '../../../bim/mep-systems/mep-circuit-editor-store';
-import { resolveManagedCircuits } from '../../../bim/mep-systems/mep-circuit-editor';
+import { resolveManagedSystems } from '../../../bim/mep-systems/mep-circuit-editor';
 import type {
   RibbonComboboxState,
   RibbonToggleState,
@@ -182,7 +182,7 @@ export function useRibbonMepFixtureBridge(
     const fixture = resolveFixture();
     if (!fixture) return null;
     const systems = useMepSystemStore.getState().getSystems();
-    const candidates = resolveManagedCircuits([fixture], systems);
+    const candidates = resolveManagedSystems([fixture], systems);
     if (candidates.length === 0) return null;
     const activeId = useMepCircuitEditorStore.getState().activeSystemId;
     return candidates.find((c) => c.id === activeId) ?? candidates[0]!;
