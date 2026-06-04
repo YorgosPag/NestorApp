@@ -172,6 +172,50 @@ describe('useRibbonMepSegmentBridge — onComboboxChange', () => {
   });
 });
 
+describe('useRibbonMepSegmentBridge — per-endpoint elevation (Φ-A)', () => {
+  it('reads centreline (midpoint) + per-endpoint elevations (legacy horizontal)', () => {
+    const { result } = renderHook(() =>
+      useRibbonMepSegmentBridge({
+        levelManager: makeLevelManager(rectDuct),
+        universalSelection: makeSelection('seg-duct-1'),
+      }),
+    );
+    // rectDuct: start/end z=0, centreline=2800 ⇒ resolver lifts both ends to 2800.
+    expect(result.current.getComboboxState(MEP_SEGMENT_RIBBON_KEYS.params.centerlineElevation)?.value).toBe('2800');
+    expect(result.current.getComboboxState(MEP_SEGMENT_RIBBON_KEYS.params.startElevation)?.value).toBe('2800');
+    expect(result.current.getComboboxState(MEP_SEGMENT_RIBBON_KEYS.params.endElevation)?.value).toBe('2800');
+  });
+
+  it('centreline edit lifts BOTH endpoint z and keeps the derived centreline in sync', () => {
+    const { result } = renderHook(() =>
+      useRibbonMepSegmentBridge({
+        levelManager: makeLevelManager(rectDuct),
+        universalSelection: makeSelection('seg-duct-1'),
+      }),
+    );
+    act(() => result.current.onComboboxChange(MEP_SEGMENT_RIBBON_KEYS.params.centerlineElevation, '1000'));
+    const next = (UpdateMepSegmentParamsCommand as jest.Mock).mock.calls[0]?.[1];
+    expect(next.startPoint.z).toBe(1000);
+    expect(next.endPoint.z).toBe(1000);
+    expect(next.centerlineElevationMm).toBe(1000);
+  });
+
+  it('start-elevation edit makes a riser (start≠end) with the centreline as the midpoint', () => {
+    const { result } = renderHook(() =>
+      useRibbonMepSegmentBridge({
+        levelManager: makeLevelManager(rectDuct),
+        universalSelection: makeSelection('seg-duct-1'),
+      }),
+    );
+    // start lifts to 0 (floor), end stays at 2800 ⇒ centreline = 1400.
+    act(() => result.current.onComboboxChange(MEP_SEGMENT_RIBBON_KEYS.params.startElevation, '0'));
+    const next = (UpdateMepSegmentParamsCommand as jest.Mock).mock.calls[0]?.[1];
+    expect(next.startPoint.z).toBe(0);
+    expect(next.endPoint.z).toBe(2800);
+    expect(next.centerlineElevationMm).toBe(1400);
+  });
+});
+
 describe('useRibbonMepSegmentBridge — getPanelVisibility', () => {
   it('duct: section choice allowed + rectangular dims visible', () => {
     const { result } = renderHook(() =>
