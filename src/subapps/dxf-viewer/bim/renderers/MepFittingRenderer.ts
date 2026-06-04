@@ -43,6 +43,7 @@ import type {
   MepFittingIncident,
 } from '../types/mep-fitting-types';
 import { pointInPolygon } from '../geometry/shared/polygon-utils';
+import { mmToSceneUnits } from '../../utils/scene-units';
 import { RENDER_LINE_WIDTHS } from '../../config/text-rendering-config';
 import { resolveIsEntityVisible } from '../visibility/visibility-resolver';
 import { useDrawingScaleStore } from '../../state/drawing-scale-store';
@@ -70,20 +71,28 @@ const DOMAIN_FILL: Readonly<Record<MepFittingDomain, string>> = {
 /** Dash pattern for the plan outline (dashed = above cut plane, segment mirror). */
 const OUTLINE_DASH: readonly [number, number] = [8, 4];
 
-/** Screen-space radial stub half-length (px) for tee/cross/elbow glyphs. */
-const GLYPH_STUB_PX = 11;
+// Glyph metrics are expressed as MULTIPLES of the pipe radius (world-space,
+// resolved to screen px at draw time via `pipeRadiusPx`), so a fitting glyph
+// grows/shrinks with the pipe cross-section — and with zoom — exactly like real
+// geometry. A small screen-px floor keeps a thin pipe legible at low zoom.
 
-/** Screen-space radius (px) of the cap dead-end circle. */
-const CAP_RADIUS_PX = 6;
+/** Minimum on-screen pipe-radius unit (px) — legibility floor at far zoom. */
+const MIN_PIPE_RADIUS_PX = 3;
 
-/** Screen-space half-length (px) of a coupling/reducer sleeve along its axis. */
-const SLEEVE_HALF_PX = 10;
+/** Radial stub half-length as a multiple of the pipe radius (tee/cross/elbow). */
+const GLYPH_STUB_FACTOR = 2;
 
-/** Screen-space half-width (px) of a coupling/reducer sleeve across its axis. */
-const SLEEVE_WIDTH_PX = 5;
+/** Cap dead-end circle radius as a multiple of the pipe radius. */
+const CAP_RADIUS_FACTOR = 1;
 
-/** Screen-space radius (px) of the elbow quarter-bend arc. */
-const ELBOW_ARC_PX = 10;
+/** Coupling/reducer sleeve half-length (along axis) as a multiple of pipe radius. */
+const SLEEVE_HALF_FACTOR = 1.8;
+
+/** Coupling/reducer sleeve half-width (across axis) as a multiple of pipe radius. */
+const SLEEVE_WIDTH_FACTOR = 1;
+
+/** Elbow quarter-bend arc radius as a multiple of the pipe radius. */
+const ELBOW_ARC_FACTOR = 1.3;
 
 // ─── Type guard (local — main agent adds to entities.ts union) ───────────────────
 
@@ -188,7 +197,10 @@ export class MepFittingRenderer extends BaseEntityRenderer {
 
   /**
    * Draw the per-kind plan glyph at the node centre, oriented by the incident
-   * directions. All glyph metrics are screen-space (fixed pixels).
+   * directions and SIZED to the pipe cross-section: `pipeRadiusPx` converts the
+   * fitting's nominal radius (world) to screen px, so the glyph scales with both
+   * the pipe diameter and the zoom (a fat pipe → a fat fitting), with a small
+   * floor for legibility at far zoom.
    */
   private drawKindGlyph(fitting: MepFittingEntity): void {
     const center = this.worldToScreen({
@@ -196,33 +208,49 @@ export class MepFittingRenderer extends BaseEntityRenderer {
       y: fitting.params.position.y,
     });
     const incidents = fitting.params.incidents;
+    const unitPx = this.pipeRadiusPx(fitting);
 
     switch (fitting.params.kind) {
       case 'cap':
-        this.drawCapGlyph(center);
+        this.drawCapGlyph(center, unitPx);
         return;
       case 'coupling':
       case 'reducer':
-        this.drawSleeveGlyph(center, incidents);
+        this.drawSleeveGlyph(center, incidents, unitPx);
         return;
       case 'elbow':
-        this.drawElbowGlyph(center, incidents);
+        this.drawElbowGlyph(center, incidents, unitPx);
         return;
       case 'tee':
       case 'cross':
-        this.drawRadialGlyph(center, incidents);
+        this.drawRadialGlyph(center, incidents, unitPx);
         return;
       default:
         return;
     }
   }
 
-  // ─── Glyph primitives ────────────────────────────────────────────────────────
+  /**
+   * Screen-px length of the fitting's nominal pipe RADIUS. Derived from the
+   * world-space radius (`primaryDiameterMm/2` → canvas units via `mmToSceneUnits`)
+   * measured through `worldToScreen`, so it tracks diameter AND zoom. Floored at
+   * `MIN_PIPE_RADIUS_PX` so a thin pipe stays visible when zoomed far out.
+   */
+  private pipeRadiusPx(fitting: MepFittingEntity): number {
+    const s = mmToSceneUnits(fitting.params.sceneUnits ?? 'mm');
+    const radiusWorld = (fitting.params.primaryDiameterMm * s) / 2;
+    const o = this.worldToScreen({ x: fitting.params.position.x, y: fitting.params.position.y });
+    const t = this.worldToScreen({ x: fitting.params.position.x + radiusWorld, y: fitting.params.position.y });
+    const px = Math.hypot(t.x - o.x, t.y - o.y);
+    return Math.max(px, MIN_PIPE_RADIUS_PX);
+  }
 
-  /** Cap — a small closed circle at the dead end. */
-  private drawCapGlyph(center: Point2D): void {
+  // ─── Glyph primitives (all sizes = unitPx × factor) ──────────────────────────
+
+  /** Cap — a closed circle (pipe-bore sized) at the dead end. */
+  private drawCapGlyph(center: Point2D, unitPx: number): void {
     this.ctx.beginPath();
-    this.ctx.arc(center.x, center.y, CAP_RADIUS_PX, 0, Math.PI * 2);
+    this.ctx.arc(center.x, center.y, unitPx * CAP_RADIUS_FACTOR, 0, Math.PI * 2);
     this.ctx.stroke();
   }
 
@@ -230,83 +258,109 @@ export class MepFittingRenderer extends BaseEntityRenderer {
    * Tee / cross — one radial stub per incident, pointing along its (screen)
    * direction. A simple "T" or "+" signature whose arm count IS the topology.
    */
-  private drawRadialGlyph(center: Point2D, incidents: readonly MepFittingIncident[]): void {
+  private drawRadialGlyph(center: Point2D, incidents: readonly MepFittingIncident[], unitPx: number): void {
+    const stub = unitPx * GLYPH_STUB_FACTOR;
     for (const incident of incidents) {
       const dir = this.screenDirection(incident.directionUnit);
       if (!dir) continue;
       this.ctx.beginPath();
       this.ctx.moveTo(center.x, center.y);
-      this.ctx.lineTo(center.x + dir.x * GLYPH_STUB_PX, center.y + dir.y * GLYPH_STUB_PX);
+      this.ctx.lineTo(center.x + dir.x * stub, center.y + dir.y * stub);
       this.ctx.stroke();
     }
   }
 
   /**
-   * Elbow — a quarter-bend: two short stubs along the incident directions joined
-   * by an arc. Falls back to two stubs if either direction is degenerate.
+   * Elbow — a real pipe bend: a fillet arc TANGENT to both legs that rounds the
+   * corner (concave toward the bend), not an arc centred on the node. The fillet
+   * centre sits on the inner bisector at `r / sin(½θ)`; the arc runs between the
+   * two tangent points (each `r / tan(½θ)` along its leg). Short stubs join the
+   * node to those tangent points. Falls back to two stubs if a direction is
+   * degenerate or the legs are collinear (a straight pass-through, no bend).
    */
-  private drawElbowGlyph(center: Point2D, incidents: readonly MepFittingIncident[]): void {
+  private drawElbowGlyph(center: Point2D, incidents: readonly MepFittingIncident[], unitPx: number): void {
     const dirs = incidents
       .map((i) => this.screenDirection(i.directionUnit))
       .filter((d): d is Point2D => d !== null);
     if (dirs.length < 2) {
-      this.drawRadialGlyph(center, incidents);
+      this.drawRadialGlyph(center, incidents, unitPx);
       return;
     }
 
-    // Two stubs along each leg.
-    for (const dir of dirs) {
-      this.ctx.beginPath();
-      this.ctx.moveTo(center.x, center.y);
-      this.ctx.lineTo(center.x + dir.x * GLYPH_STUB_PX, center.y + dir.y * GLYPH_STUB_PX);
-      this.ctx.stroke();
+    // Inner bisector of the two outward legs + half-angle (|dA| = |dB| = 1, so
+    // |dA + dB| = 2·cos(½θ)).
+    const sx = dirs[0].x + dirs[1].x;
+    const sy = dirs[0].y + dirs[1].y;
+    const blen = Math.hypot(sx, sy);
+    const arcR = unitPx * ELBOW_ARC_FACTOR;
+    const cosHalf = blen / 2;
+    const sinHalf = Math.sqrt(Math.max(0, 1 - cosHalf * cosHalf));
+    // Collinear legs (straight run) → no bend; just two stubs.
+    if (blen < 1e-6 || sinHalf < 1e-6) {
+      this.drawRadialGlyph(center, incidents, unitPx);
+      return;
     }
+    const bis = { x: sx / blen, y: sy / blen };
+    const tangentLen = arcR * (cosHalf / sinHalf); // r / tan(½θ)
+    const tA = { x: center.x + dirs[0].x * tangentLen, y: center.y + dirs[0].y * tangentLen };
+    const tB = { x: center.x + dirs[1].x * tangentLen, y: center.y + dirs[1].y * tangentLen };
 
-    // Sweep an arc between the two leg angles (the bend signature).
-    const a0 = Math.atan2(dirs[0].y, dirs[0].x);
-    const a1 = Math.atan2(dirs[1].y, dirs[1].x);
+    // Stubs: node → each tangent point (so the leg meets the fillet cleanly).
+    this.strokeSegment(center, tA);
+    this.strokeSegment(center, tB);
+
+    // Fillet centre on the inner bisector; minor arc between the tangent points.
+    const cx = center.x + bis.x * (arcR / sinHalf);
+    const cy = center.y + bis.y * (arcR / sinHalf);
+    const angA = Math.atan2(tA.y - cy, tA.x - cx);
+    const angB = Math.atan2(tB.y - cy, tB.x - cx);
+    let delta = angB - angA;
+    while (delta > Math.PI) delta -= 2 * Math.PI;
+    while (delta < -Math.PI) delta += 2 * Math.PI;
     this.ctx.beginPath();
-    this.ctx.arc(center.x, center.y, ELBOW_ARC_PX, a0, a1);
+    this.ctx.arc(cx, cy, arcR, angA, angB, delta < 0);
     this.ctx.stroke();
   }
 
   /**
    * Coupling / reducer — a short rectangular sleeve straddling the two collinear
    * incident directions. The sleeve axis follows the first incident direction;
-   * the cross-bars mark the inline join.
+   * the cross-bars mark the inline join. Sized to the pipe radius.
    */
-  private drawSleeveGlyph(center: Point2D, incidents: readonly MepFittingIncident[]): void {
+  private drawSleeveGlyph(center: Point2D, incidents: readonly MepFittingIncident[], unitPx: number): void {
     const axis = incidents.length > 0 ? this.screenDirection(incidents[0].directionUnit) : null;
     if (!axis) {
-      this.drawCapGlyph(center);
+      this.drawCapGlyph(center, unitPx);
       return;
     }
     // Perpendicular unit (screen-space) for the sleeve width.
     const px = -axis.y;
     const py = axis.x;
+    const halfLen = unitPx * SLEEVE_HALF_FACTOR;
+    const halfWid = unitPx * SLEEVE_WIDTH_FACTOR;
 
-    const ax = center.x + axis.x * SLEEVE_HALF_PX;
-    const ay = center.y + axis.y * SLEEVE_HALF_PX;
-    const bx = center.x - axis.x * SLEEVE_HALF_PX;
-    const by = center.y - axis.y * SLEEVE_HALF_PX;
+    const ax = center.x + axis.x * halfLen;
+    const ay = center.y + axis.y * halfLen;
+    const bx = center.x - axis.x * halfLen;
+    const by = center.y - axis.y * halfLen;
 
     // Two long edges (the sleeve walls).
     this.strokeSegment(
-      { x: ax + px * SLEEVE_WIDTH_PX, y: ay + py * SLEEVE_WIDTH_PX },
-      { x: bx + px * SLEEVE_WIDTH_PX, y: by + py * SLEEVE_WIDTH_PX },
+      { x: ax + px * halfWid, y: ay + py * halfWid },
+      { x: bx + px * halfWid, y: by + py * halfWid },
     );
     this.strokeSegment(
-      { x: ax - px * SLEEVE_WIDTH_PX, y: ay - py * SLEEVE_WIDTH_PX },
-      { x: bx - px * SLEEVE_WIDTH_PX, y: by - py * SLEEVE_WIDTH_PX },
+      { x: ax - px * halfWid, y: ay - py * halfWid },
+      { x: bx - px * halfWid, y: by - py * halfWid },
     );
     // Two end caps (the join faces).
     this.strokeSegment(
-      { x: ax + px * SLEEVE_WIDTH_PX, y: ay + py * SLEEVE_WIDTH_PX },
-      { x: ax - px * SLEEVE_WIDTH_PX, y: ay - py * SLEEVE_WIDTH_PX },
+      { x: ax + px * halfWid, y: ay + py * halfWid },
+      { x: ax - px * halfWid, y: ay - py * halfWid },
     );
     this.strokeSegment(
-      { x: bx + px * SLEEVE_WIDTH_PX, y: by + py * SLEEVE_WIDTH_PX },
-      { x: bx - px * SLEEVE_WIDTH_PX, y: by - py * SLEEVE_WIDTH_PX },
+      { x: bx + px * halfWid, y: by + py * halfWid },
+      { x: bx - px * halfWid, y: by - py * halfWid },
     );
   }
 
