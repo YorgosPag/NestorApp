@@ -45,7 +45,7 @@ import type { CanonicalViewId } from '../viewport/viewport-types';
 import { createAnimationManager } from '../viewport/animation-manager';
 import type { AnimationManager } from '../viewport/animation-manager';
 import { computeFramingTargetBounds, computeSceneFramingBounds } from './scene-framing-bounds';
-import { createBimRenderer, createBimLights, createBimScene, initViewportCamera, initViewCube } from './scene-setup';
+import { createBimRenderer, createBimLights, createBimScene, initViewportCamera, initViewCube, getRendererViewportSize } from './scene-setup';
 import { bimEdgeResolutionStore } from '../edges/bim-edge-resolution-store';
 import { createKeyboardFocusManager, type KeyboardFocusManagerApi } from '../accessibility/KeyboardFocusManager';
 import { FocusOutlineRenderer } from '../accessibility/FocusOutlineRenderer';
@@ -140,10 +140,13 @@ export class ThreeJsSceneManager {
       // perspective; React onClick fallback covers ortho). this.viewport is
       // assigned by the time this fires (click is always post-construction).
       onAltClick: (clientX, clientY) => { this.setOrbitPivotAt(clientX, clientY); },
+      // Alt+left press → re-centre orbit pivot on the cursor BEFORE the drag, so
+      // the rotation orbits around the clicked point (Giorgio's request).
+      onAltPress: (clientX, clientY) => { this.setOrbitPivotAt(clientX, clientY); },
     });
     const subs = createSceneRenderingSubsystems({
       renderer: this.renderer, scene: this.scene, sun: this.sun, bimLayer: this.bimLayer,
-      getCamera: () => this.viewport.camera, viewportSize: this.getViewportSize(),
+      getCamera: () => this.viewport.camera, viewportSize: getRendererViewportSize(this.renderer.domElement),
       onNeedsRender: () => this.markSceneDirty(),
     });
     this.qualityModulator = subs.qualityModulator;
@@ -189,13 +192,6 @@ export class ThreeJsSceneManager {
       idleDetector: this.idleDetector, ssaoModulator: this.ssaoModulator,
       pathTracerRenderer: this.pathTracerRenderer, sectionController: this.sectionController,
       poi: this.poi, isInteracting: () => this.isInteracting,
-    };
-  }
-
-  private getViewportSize(): { width: number; height: number } {
-    return {
-      width: this.renderer.domElement.clientWidth || 800,
-      height: this.renderer.domElement.clientHeight || 600,
     };
   }
 
@@ -413,6 +409,7 @@ export class ThreeJsSceneManager {
     if (this.disposed) return false;
     return setBimOrbitPivot(
       { bimGroup: this.bimLayer.group, camera: this.viewport.camera, canvas: this.renderer.domElement,
+        currentTarget: this.viewport.target,
         setOrbitPivot: (p) => this.viewport.setOrbitPivot(p),
         onNavigationActive: () => this.poi.onNavigationActive(),
         markDirty: () => this.markSceneDirty() },

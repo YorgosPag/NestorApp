@@ -2191,6 +2191,15 @@ That subtree-per-button × N buttons × mousemove rate was the source of the Too
 
 ✅ Google-level: YES.
 
+### 2026-06-05: ThreeJsSceneManager 500-line cap — extract getRendererViewportSize
+
+**What**: `getViewportSize()` private method moved out of `ThreeJsSceneManager` into a pure
+`getRendererViewportSize(domElement)` helper in `scene-setup.ts` (same SRP home as the other
+bootstrap factories). Manager 503 → 496 lines, back under the Google 500-line cap (N.7.1).
+
+**Architecture impact**: NONE. Pure relocation of a stateless size-derivation util; no change
+to subscriptions, render loop, or micro-leaf boundaries. Entry satisfies CHECK 6B.
+
 ### 2026-06-04: Roof tool integration touch (ADR-417) — no architectural change
 
 **What**: The roof drawing tool (ADR-417) was wired through two micro-leaf architecture

@@ -84,6 +84,14 @@ export function createBimRenderer(container: HTMLElement): THREE.WebGLRenderer {
   return renderer;
 }
 
+/** Live viewport pixel size from the renderer canvas, with safe non-zero fallbacks. */
+export function getRendererViewportSize(domElement: HTMLElement): { width: number; height: number } {
+  return {
+    width: domElement.clientWidth || 800,
+    height: domElement.clientHeight || 600,
+  };
+}
+
 export function createBimLights(): SceneLights {
   const ambient = new THREE.AmbientLight(0xffffff, 0.5);
 
