@@ -136,6 +136,27 @@ export function resolveEntitySystemColor(
   return index.get(entityId) ?? null;
 }
 
+/**
+ * ADR-408 Φ11 — a fitting inherits the system colour of the pipes it joins (Revit:
+ * "a fitting follows the system of its connectors"). A fitting is NOT itself a
+ * system member (it is auto-derived from the topology), so it has no own colour
+ * index entry; instead we read the colour of the FIRST incident pipe that belongs
+ * to a system. All pipes meeting at a junction share the same system, so any of
+ * them gives the right colour. Returns `null` when none of the incident pipes are
+ * assigned. Generic over the colour representation (hex string for the 2D renderer,
+ * THREE colour int for the 3D material) so both views share this ONE derivation.
+ */
+export function resolveFittingSystemColor<T>(
+  incidentSegmentIds: readonly string[],
+  index: ReadonlyMap<string, T>,
+): T | null {
+  for (const id of incidentSegmentIds) {
+    const c = index.get(id);
+    if (c !== undefined) return c;
+  }
+  return null;
+}
+
 // Memo so the ADR-040 micro-leaf renderers (which read the store at draw time,
 // once per entity per frame) rebuild the index only when the systems array
 // reference actually changes — zustand keeps it stable between mutations.
