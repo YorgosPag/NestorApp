@@ -150,6 +150,8 @@ function computeBounds(entity: Entity, forExtents: boolean): SpatialBounds {
     case 'mep-fitting':
     // ADR-415 — floorplan symbol uses pre-computed geometry.bbox (same).
     case 'floorplan-symbol':
+    // ADR-417 — roof uses pre-computed geometry.bbox (same).
+    case 'roof':
       if ('geometry' in entity && entity.geometry && entity.geometry.bbox) {
         const { min, max } = entity.geometry.bbox;
         return { minX: min.x, minY: min.y, maxX: max.x, maxY: max.y };
@@ -198,4 +200,6 @@ export type BimEntityWithBounds =
   // ADR-415 — floorplan symbol
   | 'floorplan-symbol'
   // ADR-408 Φ12 — plumbing manifold
-  | 'mep-manifold';
+  | 'mep-manifold'
+  // ADR-417 — parametric pitched roof
+  | 'roof';
