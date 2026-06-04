@@ -207,4 +207,51 @@ describe('derivePipeJunctions', () => {
       expect(shared.centerlineElevationMm).toBeCloseTo(2800, 5);
     });
   });
+
+  // ── ADR-408 Φ11 hotfix: unit-aware join tolerance ─────────────────────────
+  // A raw 1-unit tolerance is 1 METRE in a metre scene — it merged a short pipe's
+  // own two ends into one (cross) junction and collapsed distinct nodes onto a
+  // single 1m-cell junctionKey. The unit-aware default (25mm) scales per scene.
+  describe('unit-aware join tolerance (metre scene)', () => {
+    /** A short pipe in a `sceneUnits: 'm'` scene (≤1m — under the old 1m tol). */
+    const mSeg = (id: string, start: [number, number], end: [number, number]): Entity =>
+      ({
+        id,
+        type: 'mep-segment',
+        params: {
+          domain: 'pipe',
+          sectionKind: 'round',
+          startPoint: { x: start[0], y: start[1], z: 0 },
+          endPoint: { x: end[0], y: end[1], z: 0 },
+          diameter: 50,
+          centerlineElevationMm: 0,
+          sceneUnits: 'm',
+        },
+      } as unknown as Entity);
+
+    it("does NOT merge a short metre-scene pipe's own two ends", () => {
+      // 0.5m run: a raw 1m tol would collapse both ends into one self-junction.
+      const junctions = derivePipeJunctions([mSeg('p1', [0, 0], [0.5, 0])]);
+      expect(junctions).toHaveLength(2);
+      expect(junctions.every((j) => j.incidents.length === 1)).toBe(true);
+    });
+
+    it('two short angled pipes → a 2-incident node (elbow), NOT a 4-incident cross', () => {
+      const junctions = derivePipeJunctions([
+        mSeg('p1', [0, 0], [0.5, 0]),
+        mSeg('p2', [0.5, 0], [0.5, 0.5]),
+      ]);
+      expect(junctions.some((j) => j.incidents.length === 2)).toBe(true);
+      expect(junctions.some((j) => j.incidents.length >= 4)).toBe(false);
+    });
+
+    it('gives nodes 0.5m apart distinct keys (no 1m-cell collision)', () => {
+      const junctions = derivePipeJunctions([
+        mSeg('p1', [0, 0], [0.5, 0]),
+        mSeg('p2', [0.5, 0], [1.0, 0]),
+      ]);
+      const keys = junctions.map((j) => j.key);
+      expect(new Set(keys).size).toBe(keys.length); // all unique
+    });
+  });
 });
