@@ -78,9 +78,11 @@ describe('createTumbleRotation — quaternion orbit math', () => {
     expect(camera.position.distanceTo(target)).toBeCloseTo(distBefore, 2);
   });
 
-  it('pole clamp: camera directly above target triggers camera.up flip', () => {
+  it('pole: orbiting from directly above the target stays finite + preserves distance', () => {
+    // The rigid quaternion orbit (orbit-around-pivot SSoT) is pole-free — no
+    // camera.up flip needed. At the top-down pole a yaw must not blow up (NaN) and
+    // must keep the distance to the target constant.
     const camera = new THREE.PerspectiveCamera(50, 1, 0.1, 1000);
-    // Exactly above target → dotY = 1.0 > 0.99
     camera.position.set(0, 5, 0);
     const target = new THREE.Vector3(0, 0, 0);
     camera.lookAt(target);
@@ -94,12 +96,11 @@ describe('createTumbleRotation — quaternion orbit math', () => {
       onEnd: jest.fn(),
     });
 
-    // Zero-delta still runs applyRotation which evaluates the pole check
-    tumble.applyExternalRotation(0, 0);
-
-    // dotY = 1.0 > 0.99 → camera.up.z = -1 (dotY > 0 branch)
-    expect(camera.up.y).toBeCloseTo(0, 5);
-    expect(camera.up.z).toBeCloseTo(-1, 5);
+    tumble.applyExternalRotation(60, 0); // yaw at the pole
+    expect(Number.isFinite(camera.position.x)).toBe(true);
+    expect(Number.isFinite(camera.position.y)).toBe(true);
+    expect(Number.isFinite(camera.position.z)).toBe(true);
+    expect(camera.position.distanceTo(target)).toBeCloseTo(5, 5);
   });
 });
 
@@ -184,5 +185,33 @@ describe('createTumbleRotation — ADR-366 §A.6.Q5 Alt+click orbit-pivot', () =
     const fire = makeTumbleWithPress(onAltPress);
     fire('pointerdown', { altKey: false, clientX: 200, clientY: 150 });
     expect(onAltPress).not.toHaveBeenCalled();
+  });
+
+  it('FULL FLOW: Alt-press sets pivot → the drag orbits around the CLICK point (pivot stays fixed on screen)', () => {
+    const camera = new THREE.PerspectiveCamera(50, 1, 0.1, 1000);
+    camera.position.set(0, 0, 5);
+    camera.lookAt(0, 0, 0);
+    camera.updateMatrixWorld(true);
+    const target = new THREE.Vector3(0, 0, 0);
+    const { el, fire } = listenerCapturingElement();
+    const clicked = new THREE.Vector3(0.8, 0.3, 0); // OFF-centre clicked world point
+    let tumble!: ReturnType<typeof createTumbleRotation>;
+    tumble = createTumbleRotation({
+      getCamera: () => camera, getTarget: () => target, domElement: el,
+      onStart: jest.fn(), onChange: jest.fn(), onEnd: jest.fn(),
+      onAltPress: () => tumble.setPivot(clicked), // mirrors viewport.setOrbitPivot → tumble.setPivot
+    });
+
+    const pivotNdcBefore = clicked.clone().project(camera);
+    fire('pointerdown', { altKey: true, clientX: 100, clientY: 100 });
+    fire('pointermove', { clientX: 150, clientY: 125 }); // drag past threshold → rotate
+    camera.updateMatrixWorld(true);
+    const pivotNdcAfter = clicked.clone().project(camera);
+
+    // The CLICKED point — not the screen centre — is the fixed rotation centre.
+    expect(pivotNdcAfter.x).toBeCloseTo(pivotNdcBefore.x, 3);
+    expect(pivotNdcAfter.y).toBeCloseTo(pivotNdcBefore.y, 3);
+    // The look target (screen centre) moved → it is NOT the pivot anymore.
+    expect(target.distanceTo(new THREE.Vector3(0, 0, 0))).toBeGreaterThan(0.01);
   });
 });
