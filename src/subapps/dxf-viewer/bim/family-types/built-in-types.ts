@@ -37,11 +37,14 @@
  */
 
 import { getDefaultDnaForCategory } from '../types/wall-dna-types';
+import { getDefaultSlabBuildupForKind } from '../types/slab-dna-types';
 import type { WallCategory } from '../types/wall-types';
+import type { SlabKind } from '../types/slab-types';
 import type {
   BimFamilyType,
   BimFamilyTypeScope,
   BimTypeParamsByCategory,
+  SlabTypeParams,
   StairTypeParams,
   WallTypeParams,
 } from '../types/bim-family-type';
@@ -127,6 +130,64 @@ export function getBuiltInWallTypes(
   companyId: string,
 ): readonly BimFamilyType<'wall'>[] {
   return WALL_CATEGORIES.map((category) => buildWallType(category, companyId));
+}
+
+// ─── Slab built-ins ───────────────────────────────────────────────────────────
+
+/**
+ * All slab kinds in a fixed order — drives the one-built-in-per-kind catalog
+ * deterministically (slab analogue of {@link WALL_CATEGORIES}).
+ */
+const SLAB_KINDS: readonly SlabKind[] = [
+  'floor',
+  'ceiling',
+  'roof',
+  'ground',
+  'foundation',
+] as const;
+
+/**
+ * The deterministic synthetic id of the built-in slab family type for a kind.
+ * SSoT for the id derivation — the catalog builder ({@link buildSlabType}) AND
+ * the auto-assign policy (`slab-type-auto-assign.ts`) both go through here so
+ * the string is declared exactly once (N.0.2).
+ */
+export function getBuiltInSlabTypeId(kind: SlabKind): string {
+  return `${BUILTIN_ID_PREFIX}-slab-${kind}`;
+}
+
+function buildSlabType(
+  kind: SlabKind,
+  companyId: string,
+): BimFamilyType<'slab'> {
+  const dna = getDefaultSlabBuildupForKind(kind);
+  const typeParams: SlabTypeParams = {
+    kind,
+    thickness: dna.totalThickness,
+    dna,
+  };
+  return {
+    id: getBuiltInSlabTypeId(kind),
+    category: 'slab',
+    name: `builtin.slab.${kind}`,
+    scope: 'company',
+    origin: 'built-in',
+    typeParams,
+    companyId,
+    ownerId: 'system',
+  };
+}
+
+/**
+ * The factory slab family types — exactly one per {@link SlabKind} (5). Each
+ * derives its `thickness` + `dna` from the slab-DNA SSoT
+ * (`getDefaultSlabBuildupForKind`), so the built-in can never drift from the
+ * default build-up it is named after.
+ */
+export function getBuiltInSlabTypes(
+  companyId: string,
+): readonly BimFamilyType<'slab'>[] {
+  return SLAB_KINDS.map((kind) => buildSlabType(kind, companyId));
 }
 
 // ─── Stair built-ins ──────────────────────────────────────────────────────────
@@ -216,6 +277,7 @@ export function getAllBuiltInTypes(
 ): readonly BimFamilyType[] {
   return [
     ...getBuiltInWallTypes(companyId),
+    ...getBuiltInSlabTypes(companyId),
     ...getBuiltInStairTypes(companyId),
   ];
 }
