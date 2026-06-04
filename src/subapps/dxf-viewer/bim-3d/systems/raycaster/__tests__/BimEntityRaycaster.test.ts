@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { raycastWorldPoint, raycastBimGroup } from '../BimEntityRaycaster';
+import { raycastWorldPoint, raycastWorldPointOrPlane, raycastBimGroup } from '../BimEntityRaycaster';
 
 function mockDom(width = 100, height = 100): HTMLElement {
   return {
@@ -63,6 +63,43 @@ describe('raycastWorldPoint — ADR-366 §A.6.Q5 orbit-pivot picking', () => {
     const a = raycastWorldPoint(group, cameraLookingAtOrigin(), mockDom(), 50, 50);
     const b = raycastWorldPoint(group, cameraLookingAtOrigin(), mockDom(), 50, 50);
     expect(a).not.toBe(b); // distinct instances, not a shared module-level scratch
+  });
+});
+
+describe('raycastWorldPointOrPlane — Alt-pivot with plane fallback (v3)', () => {
+  it('returns the geometry hit when the ray hits a mesh', () => {
+    const group = new THREE.Group();
+    const box = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1));
+    group.add(box);
+    box.updateMatrixWorld(true);
+
+    const fallback = new THREE.Vector3(0, 0, 0);
+    const point = raycastWorldPointOrPlane(group, cameraLookingAtOrigin(), mockDom(), 50, 50, fallback);
+    expect(point!.z).toBeCloseTo(0.5, 5); // front face, NOT the fallback plane
+  });
+
+  it('falls back to a camera-facing plane through the target when geometry is missed', () => {
+    const group = new THREE.Group(); // empty → ray hits nothing
+    const fallback = new THREE.Vector3(0, 0, 0);
+    // Centre click, camera looks down -Z from z=5 → plane (normal -Z thru origin) hit at origin.
+    const point = raycastWorldPointOrPlane(group, cameraLookingAtOrigin(), mockDom(), 50, 50, fallback);
+    expect(point).not.toBeNull();
+    expect(point!.z).toBeCloseTo(0, 5);
+  });
+
+  it('fallback plane tracks the cursor (off-centre click → off-centre pivot)', () => {
+    const group = new THREE.Group();
+    const fallback = new THREE.Vector3(0, 0, 0);
+    const centre = raycastWorldPointOrPlane(group, cameraLookingAtOrigin(), mockDom(), 50, 50, fallback)!;
+    const right = raycastWorldPointOrPlane(group, cameraLookingAtOrigin(), mockDom(), 90, 50, fallback)!;
+    expect(right.x).toBeGreaterThan(centre.x);
+  });
+
+  it('returns null for a zero-area canvas', () => {
+    const point = raycastWorldPointOrPlane(
+      new THREE.Group(), cameraLookingAtOrigin(), mockDom(0, 0), 50, 50, new THREE.Vector3(),
+    );
+    expect(point).toBeNull();
   });
 });
 
