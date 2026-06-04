@@ -28,6 +28,7 @@ import { getMaterial3D } from '../materials/MaterialCatalog3D';
 import { setPlanarWorldUvs } from '../converters/bim-uv-helpers';
 import { createBimLights } from '../scene/scene-setup';
 import { PreviewOrbitControls } from './preview-orbit-controls';
+import { resolvePreviewPivot, PreviewPivotMarker } from './preview-pivot';
 import {
   buildWallTypePreviewBands,
   type WallPreviewBand,
@@ -59,6 +60,7 @@ export class WallTypePreviewRenderer {
   private readonly bandGroup: THREE.Group;
   private readonly controls: PreviewOrbitControls;
   private readonly raycaster = new THREE.Raycaster();
+  private readonly pivotMarker: PreviewPivotMarker;
   private bands: BandMesh[] = [];
   private outline: THREE.LineSegments | null = null;
   private dna: WallDna | undefined;
@@ -79,6 +81,7 @@ export class WallTypePreviewRenderer {
     this.camera = new THREE.PerspectiveCamera(35, this.aspect(), 0.01, 100);
     this.bandGroup = new THREE.Group();
     this.scene.add(this.bandGroup);
+    this.pivotMarker = new PreviewPivotMarker(this.scene);
 
     // Zoom (wheel) + pan (left drag) + rotate (right drag), render-on-demand.
     // Alt + left-click re-centres the orbit pivot on the picked band point.
@@ -163,6 +166,7 @@ export class WallTypePreviewRenderer {
   dispose(): void {
     this.clearBands();
     this.clearOutline();
+    this.pivotMarker.dispose();
     this.controls.dispose();
     this.renderer.dispose();
     this.renderer.domElement.remove();
@@ -170,17 +174,19 @@ export class WallTypePreviewRenderer {
 
   // ─── internals ─────────────────────────────────────────────────────────────
 
-  /** Alt+click: set the orbit pivot to the band world-point under the cursor. */
+  /**
+   * Alt+click: set the orbit pivot to the world-point under the cursor (a band
+   * point when one is hit, else a camera-facing plane through the centre) and
+   * flash a crosshair there so the re-centre is visible. SSoT in `preview-pivot`.
+   */
   private setPivotAt(clientX: number, clientY: number): void {
-    const rect = this.renderer.domElement.getBoundingClientRect();
-    if (rect.width <= 0 || rect.height <= 0) return;
-    const ndc = new THREE.Vector2(
-      ((clientX - rect.left) / rect.width) * 2 - 1,
-      -((clientY - rect.top) / rect.height) * 2 + 1,
+    const point = resolvePreviewPivot(
+      this.raycaster, this.camera, this.renderer.domElement,
+      this.bandGroup.children, clientX, clientY,
     );
-    this.raycaster.setFromCamera(ndc, this.camera);
-    const hit = this.raycaster.intersectObjects(this.bandGroup.children, false)[0];
-    if (hit) this.controls.setPivot(hit.point.clone()); // miss → keep current pivot
+    if (!point) return;
+    this.controls.setPivot(point);
+    this.pivotMarker.flashAt(point, () => this.render());
   }
 
   private buildBand(band: WallPreviewBand): BandMesh {
