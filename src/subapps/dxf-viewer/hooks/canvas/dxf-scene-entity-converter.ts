@@ -13,7 +13,7 @@ import type { DxfEntityUnion, DxfTextStyle } from '../../canvas-v2/dxf-canvas/dx
 import type { DxfColor } from '../../text-engine/types';
 import type { Point2D } from '../../rendering/types/Types';
 import type { SceneModel, TextEntity } from '../../types/entities';
-import { isSlabEntity, isSlabOpeningEntity, isOpeningEntity, isWallEntity, isBeamEntity, isColumnEntity, isMepFixtureEntity, isElectricalPanelEntity, isRailingEntity, isFurnitureEntity, isMepSegmentEntity, isFloorplanSymbolEntity, isXLineEntity, isRayEntity } from '../../types/entities';
+import { isSlabEntity, isSlabOpeningEntity, isOpeningEntity, isWallEntity, isBeamEntity, isColumnEntity, isMepFixtureEntity, isElectricalPanelEntity, isRailingEntity, isFurnitureEntity, isMepSegmentEntity, isMepFittingEntity, isFloorplanSymbolEntity, isXLineEntity, isRayEntity } from '../../types/entities';
 import type { XLineEntity, RayEntity } from '../../types/entities';
 import type { StairEntity } from '../../bim/types/stair-types';
 import type { SlabEntity } from '../../bim/types/slab-types';
@@ -33,6 +33,7 @@ import type { RailingEntity } from '../../bim/types/railing-types';
 import type { FurnitureEntity } from '../../bim/types/furniture-types';
 import type { FloorplanSymbolEntity } from '../../bim/types/floorplan-symbol-types';
 import type { MepSegmentEntity } from '../../bim/types/mep-segment-types';
+import type { MepFittingEntity } from '../../bim/types/mep-fitting-types';
 import type { DimensionEntity } from '../../types/dimension';
 import type { DxfTextNode, TextRun } from '../../text-engine/types';
 import { extractFlatText } from '../../utils/text-node-utils';
@@ -357,6 +358,15 @@ export function convertEntity(entity: SceneEntity, layers: SceneLayers, layersBy
       if (!isMepSegmentEntity(entity)) return null;
       const seg = entity as MepSegmentEntity;
       return { ...base, type: 'mep-segment' as const, kind: seg.kind, params: seg.params, geometry: seg.geometry, validation: seg.validation } as DxfEntityUnion;
+    }
+    case 'mep-fitting': {
+      // ADR-408 Φ11 — auto pipe fitting (same pattern as mep-segment/fixture).
+      // MepFittingRenderer reads geometry.footprint + params.position/incidents at
+      // top level. Without this case, auto-reconciled fittings are silently dropped
+      // here → invisible on 2D even though they exist in the scene (furniture trap).
+      if (!isMepFittingEntity(entity)) return null;
+      const fit = entity as MepFittingEntity;
+      return { ...base, type: 'mep-fitting' as const, kind: fit.kind, params: fit.params, geometry: fit.geometry, validation: fit.validation } as DxfEntityUnion;
     }
     case 'xline': {
       // ADR-359 Phase 11 — wrap XLineEntity for grip computation pipeline.
