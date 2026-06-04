@@ -32,8 +32,9 @@ import {
   resolveSegmentEndpointElevationsMm,
   deriveCenterlineElevationMm,
 } from '../../../bim/types/mep-segment-types';
-import { useCommandHistory } from '../../../core/commands';
+import { useCommandHistory, CompoundCommand } from '../../../core/commands';
 import { UpdateMepSegmentParamsCommand } from '../../../core/commands/entity-commands/UpdateMepSegmentParamsCommand';
+import { resolveConnectedElevationPatches } from '../../../bim/mep-segments/mep-elevation-propagation';
 import { LevelSceneManagerAdapter } from '../../../systems/entity-creation/LevelSceneManagerAdapter';
 import {
   MEP_SEGMENT_RIBBON_KEYS,
@@ -112,6 +113,39 @@ export function useRibbonMepSegmentBridge(
     [executeCommand, levelManager],
   );
 
+  /**
+   * Dispatch an elevation edit with Revit-style connected propagation (Φ-B2a):
+   * the edited z is propagated to all coincident pipe endpoints in the same node,
+   * batched into ONE CompoundCommand (single undo). Each affected segment emits
+   * the persistence event so every changed pipe auto-saves.
+   */
+  const dispatchElevationEdit = useCallback(
+    (segment: MepSegmentEntity, editedNext: MepSegmentParams): void => {
+      if (!levelManager.currentLevelId) return;
+      const scene = levelManager.getLevelScene(levelManager.currentLevelId);
+      const entities = scene?.entities ?? [];
+      const patches = resolveConnectedElevationPatches(entities, segment, editedNext);
+      const sm = new LevelSceneManagerAdapter(
+        levelManager.getLevelScene,
+        levelManager.setLevelScene,
+        levelManager.currentLevelId,
+      );
+      const commands = patches.map(
+        (p) => new UpdateMepSegmentParamsCommand(p.segment.id, p.nextParams, p.segment.params, sm, false),
+      );
+      executeCommand(
+        commands.length === 1
+          ? commands[0]!
+          : new CompoundCommand('Update connected MEP elevations', commands),
+      );
+      // The command(s) do not emit — persistence auto-saves on these events.
+      for (const p of patches) {
+        EventBus.emit('bim:mep-segment-params-updated', { segmentId: p.segment.id });
+      }
+    },
+    [executeCommand, levelManager],
+  );
+
   const getComboboxState = useCallback(
     (commandKey: string): RibbonComboboxState | null => {
       const segment = resolveSegment();
@@ -167,7 +201,7 @@ export function useRibbonMepSegmentBridge(
       // (Φ-A), not a single param field — handle them before the generic path.
       const elevParams = buildElevationParams(segment.params, commandKey, numeric);
       if (elevParams) {
-        dispatchParams(segment, elevParams);
+        dispatchElevationEdit(segment, elevParams);
         return;
       }
       const field = NUMBER_KEY_TO_FIELD[commandKey];
@@ -175,7 +209,7 @@ export function useRibbonMepSegmentBridge(
       const nextParams = { ...segment.params, [field]: numeric } as MepSegmentParams;
       dispatchParams(segment, nextParams);
     },
-    [resolveSegment, dispatchParams],
+    [resolveSegment, dispatchParams, dispatchElevationEdit],
   );
 
   const onToggle = useCallback((_key: string, _next: boolean): void => {
