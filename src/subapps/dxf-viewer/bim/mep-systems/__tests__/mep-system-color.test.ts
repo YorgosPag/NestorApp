@@ -8,6 +8,7 @@ import {
   buildEntitySystemColorIndex,
   buildEntitySystemColorIntIndex,
   resolveEntitySystemColor,
+  resolveFittingSystemColor,
   classificationDefaultColor,
   hexToThreeInt,
   hexToRgba,
@@ -55,6 +56,25 @@ describe('buildEntitySystemColorIndex', () => {
     const c = resolveEntitySystemColor('fx1', index);
     expect(c).not.toBeNull();
     expect(MEP_SYSTEM_PALETTE).toContain(c);
+  });
+});
+
+describe('resolveFittingSystemColor (ADR-408 Φ11 — fitting inherits its pipes)', () => {
+  it('returns the colour of the first incident pipe that belongs to a system', () => {
+    const index = buildEntitySystemColorIndex([sys('s1', '#2563eb', ['pipeA', 'pipeB'], 'src1')]);
+    // First incident unassigned, second is a member → the member colour wins.
+    expect(resolveFittingSystemColor(['loose', 'pipeB'], index)).toBe('#2563eb');
+  });
+
+  it('returns null when none of the incident pipes belong to a system', () => {
+    const index = buildEntitySystemColorIndex([sys('s1', '#2563eb', ['pipeA'], 'src1')]);
+    expect(resolveFittingSystemColor(['x', 'y'], index)).toBeNull();
+    expect(resolveFittingSystemColor([], index)).toBeNull();
+  });
+
+  it('is generic over the colour representation (THREE int index for 3D)', () => {
+    const intIndex = buildEntitySystemColorIntIndex([sys('s1', '#2563eb', ['pipeA'], 'src1')]);
+    expect(resolveFittingSystemColor(['pipeA'], intIndex)).toBe(0x2563eb);
   });
 });
 
