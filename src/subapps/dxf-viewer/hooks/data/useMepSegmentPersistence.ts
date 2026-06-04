@@ -191,7 +191,14 @@ export function useMepSegmentPersistence(
 
         for (const [id, entity] of sceneSegments) {
           if (docsById.has(id)) continue;
-          if (dirty.has(id) || pending.has(id)) {
+          // Keep a scene segment that is NOT in the Firestore snapshot when it is
+          // locally dirty, pending its first save, OR was never confirmed-saved
+          // (`!lastSavedParamsRef.has`). The last case is the critical one: a
+          // segment loaded from the DXF `scene.json` on reload has no Firestore doc
+          // yet — dropping it here is exactly why pipes vanished after every hard
+          // refresh. Only a segment that WAS persisted (in the baseline) and whose
+          // doc has since disappeared is a genuine remote delete → drop it.
+          if (dirty.has(id) || pending.has(id) || !lastSavedParamsRef.current.has(id)) {
             nextSegments.push(entity);
           } else {
             mutated = true;
