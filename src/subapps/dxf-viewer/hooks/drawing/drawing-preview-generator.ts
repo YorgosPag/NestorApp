@@ -106,6 +106,11 @@ export function generatePreviewEntity(
   if (tool === 'slab') {
     return generateSlabPreview(tempPoints, cursorPoint);
   }
+  // ── ADR-417 — Roof tool preview branch (footprint polygon ghost, reuses the
+  //    slab polygon-outline preview — both are closed footprints). ───────────
+  if (tool === 'roof') {
+    return generateSlabPreview(tempPoints, cursorPoint);
+  }
   // ── ADR-363 Phase 5.5P — Beam tool preview branch ────────────────────────
   if (tool === 'beam') {
     return generateBeamPreview(tempPoints, cursorPoint, sceneUnits);
