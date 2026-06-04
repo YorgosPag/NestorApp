@@ -27,7 +27,7 @@
 import type { Entity } from '../../types/entities';
 import { isMepSegmentEntity } from '../../types/entities';
 import type { MepSegmentEntity } from '../types/mep-segment-types';
-import { resolveSegmentSection } from '../types/mep-segment-types';
+import { resolveSegmentSection, resolveSegmentEndpointElevationsMm } from '../types/mep-segment-types';
 import type { Point3D } from '../types/bim-base';
 import type { MepFittingIncident } from '../types/mep-fitting-types';
 import {
@@ -55,14 +55,17 @@ interface SegmentEndpoint {
   readonly point: Point3D;
   /** The OTHER endpoint of the same segment — direction reference. */
   readonly other: Point3D;
+  /** mm. This endpoint's own elevation (sloped runs differ start vs end, Φ-A). */
+  readonly elevationMm: number;
 }
 
 /** Collect both endpoints (start, end) of a pipe segment, with direction refs. */
 function endpointsOf(seg: MepSegmentEntity): readonly SegmentEndpoint[] {
   const { startPoint, endPoint } = seg.params;
+  const elev = resolveSegmentEndpointElevationsMm(seg.params);
   return [
-    { segment: seg, connectorId: SEGMENT_START_CONNECTOR_ID, point: startPoint, other: endPoint },
-    { segment: seg, connectorId: SEGMENT_END_CONNECTOR_ID, point: endPoint, other: startPoint },
+    { segment: seg, connectorId: SEGMENT_START_CONNECTOR_ID, point: startPoint, other: endPoint, elevationMm: elev.startMm },
+    { segment: seg, connectorId: SEGMENT_END_CONNECTOR_ID, point: endPoint, other: startPoint, elevationMm: elev.endMm },
   ];
 }
 
@@ -125,7 +128,7 @@ function buildJunction(bucket: readonly SegmentEndpoint[], tolerance: number): P
   for (const ep of bucket) {
     sumX += ep.point.x;
     sumY += ep.point.y;
-    sumElev += ep.segment.params.centerlineElevationMm;
+    sumElev += ep.elevationMm;
   }
   const position: Point3D = { x: sumX / n, y: sumY / n, z: 0 };
   const incidents = bucket
