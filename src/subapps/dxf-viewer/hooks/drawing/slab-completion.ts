@@ -34,6 +34,7 @@ import {
 import type { SlabDna } from '../../bim/types/slab-dna-types';
 import { computeSlabGeometry } from '../../bim/geometry/slab-geometry';
 import { validateSlabParams } from '../../bim/validators/slab-validator';
+import { resolveAutoSlabTypeId } from '../../bim/family-types/slab-type-auto-assign';
 import { createSlab } from '@/services/factories/slab.factory';
 import type { SceneUnits } from '../../utils/scene-units';
 
@@ -148,7 +149,11 @@ export function buildSlabEntity(
     visible: true,
     validation: validation.bimValidation,
   });
-  return { ok: true, entity };
+  // ADR-412 — link the slab to its kind's read-only built-in family type when
+  // its cross-section matches the kind default (non-destructive; bare/customised
+  // slabs stay ad-hoc). Resolution + persistence already carry `typeId`.
+  const typeId = resolveAutoSlabTypeId(params);
+  return { ok: true, entity: typeId ? { ...entity, typeId } : entity };
 }
 
 // ─── Polygon-click completion helper ─────────────────────────────────────────
