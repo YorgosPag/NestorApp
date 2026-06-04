@@ -3,39 +3,52 @@
  * «Edit Type» preview viewports (slab + wall). SSoT so the two near-identical
  * preview renderers do NOT duplicate camera-interaction wiring (ADR-412/ADR-414).
  *
- * RENDER-ON-DEMAND: the OrbitControls `change` event drives a single re-render
- * (no RAF loop, damping OFF — there is no inertia to animate).
+ * RENDER-ON-DEMAND: a single re-render per gesture step (no RAF loop, damping OFF).
  *
  * NAVIGATION (mirrors the main 3D viewport, SSoT convention — Giorgio):
- *  - **Alt + left drag = ROTATE**, orbiting around the point under the cursor at
- *    press time (`onAltPick` re-centres the orbit target there first). The Alt
- *    state flips `mouseButtons.LEFT` between ROTATE (Alt held) and PAN, since
- *    OrbitControls reads the button mapping at pointer-down.
- *  - left drag (no Alt) = pan · right drag = rotate · wheel = zoom-to-cursor.
+ *  - **Alt + left drag = ROTATE**, orbiting RIGIDLY around the point under the
+ *    cursor at press time. The picked point stays FIXED on screen — the drawing
+ *    does NOT jump to centre. Rotation uses the shared `orbitCameraAroundPivot`
+ *    (same maths as the main tumble), NOT OrbitControls' rotate (which would
+ *    `lookAt(target)` and recenter). While Alt is held we disable OrbitControls'
+ *    left button so it does not also pan.
+ *  - left drag (no Alt) = pan · wheel = zoom-to-cursor.
  *
  * View-preservation: tracks whether the USER has moved the camera. Callers keep
  * auto-framing on every layer edit while `adjusted === false`, then preserve the
- * user's zoom/pan/rotate once they take over — so editing layers never snaps the
- * camera back.
+ * user's zoom/pan/rotate once they take over.
  *
  * Standalone THREE — OUTSIDE the ADR-040 high-frequency canvas path.
  *
  * @see ./SlabTypePreviewRenderer.ts, ./WallTypePreviewRenderer.ts — consumers
- * @see ../viewport/tumble-rotation.ts — the main viewport's Alt+drag orbit (same UX)
+ * @see ../viewport/orbit-around-pivot.ts — the shared rigid-orbit maths (SSoT)
  */
 
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { orbitCameraAroundPivot } from '../viewport/orbit-around-pivot';
+
+/** Rotation speed (radians per pixel of drag) — tuned for the small preview. */
+const PREVIEW_ROTATE_SPEED = 0.01;
 
 export class PreviewOrbitControls {
   private readonly controls: OrbitControls;
+  private readonly camera: THREE.PerspectiveCamera;
   private readonly dom: HTMLElement;
+  private readonly onChange: () => void;
   private readonly onPointerDown: (e: PointerEvent) => void;
+  private readonly onPointerMove: (e: PointerEvent) => void;
+  private readonly onPointerUp: (e: PointerEvent) => void;
   private readonly onAltKeyDown: (e: KeyboardEvent) => void;
   private readonly onAltKeyUp: (e: KeyboardEvent) => void;
   /** Guards our own `update()` calls so they don't register as user input. */
   private programmatic = false;
   private userAdjusted = false;
+  /** Alt-clicked rotation pivot (world); null → orbit about the look target. */
+  private customPivot: THREE.Vector3 | null = null;
+  private altDragActive = false;
+  private lastX = 0;
+  private lastY = 0;
 
   constructor(
     camera: THREE.PerspectiveCamera,
@@ -43,18 +56,20 @@ export class PreviewOrbitControls {
     onChange: () => void,
     onAltPick: (clientX: number, clientY: number) => void,
   ) {
+    this.camera = camera;
     this.dom = dom;
+    this.onChange = onChange;
     const controls = new OrbitControls(camera, dom);
-    controls.enableRotate = true;
+    controls.enableRotate = false; // rotation is our rigid Alt+drag orbit, not OrbitControls
     controls.enableZoom = true;
     controls.enablePan = true;
     controls.enableDamping = false; // render-on-demand — no inertia loop
     controls.zoomToCursor = true;
     controls.screenSpacePanning = true; // pan in the screen plane (intuitive for a flat preview)
     controls.mouseButtons = {
-      LEFT: THREE.MOUSE.PAN, // flipped to ROTATE while Alt is held (see key listeners)
+      LEFT: THREE.MOUSE.PAN, // no-op while Alt is held (pan disabled — see key listeners)
       MIDDLE: THREE.MOUSE.DOLLY,
-      RIGHT: THREE.MOUSE.ROTATE,
+      RIGHT: THREE.MOUSE.PAN,
     };
     controls.target.set(0, 0, 0);
     controls.addEventListener('change', () => {
@@ -63,25 +78,41 @@ export class PreviewOrbitControls {
     });
     this.controls = controls;
 
-    // Alt+left → orbit around the cursor point, matching the main viewport.
-    // OrbitControls reads `mouseButtons.LEFT` at pointer-down, so we flip it to
-    // ROTATE on the Alt keydown (window-level: the canvas need not be focused)
-    // and back to PAN on keyup. On the Alt+left pointer-down we re-centre the
-    // orbit target on the picked point FIRST (via `onAltPick`), so OrbitControls'
-    // rotate then orbits around it — identical to the main tumble's `onAltPress`.
+    // While Alt is held, disable OrbitControls' pan (so left-drag does NOT pan) —
+    // our pointer handlers own the Alt+left rigid orbit. A boolean toggle (clean,
+    // no button-enum cast); zoom/dolly stay live. Window-level so the canvas need
+    // not be focused for the modifier to register.
     this.onAltKeyDown = (e: KeyboardEvent): void => {
-      if (e.key === 'Alt') controls.mouseButtons.LEFT = THREE.MOUSE.ROTATE;
+      if (e.key === 'Alt') controls.enablePan = false;
     };
     this.onAltKeyUp = (e: KeyboardEvent): void => {
-      if (e.key === 'Alt') controls.mouseButtons.LEFT = THREE.MOUSE.PAN;
+      if (e.key === 'Alt') controls.enablePan = true;
     };
     this.onPointerDown = (e: PointerEvent): void => {
-      if (e.altKey && e.button === 0) {
-        controls.mouseButtons.LEFT = THREE.MOUSE.ROTATE; // belt-and-suspenders if keydown was missed
-        onAltPick(e.clientX, e.clientY);
-      }
+      if (!(e.altKey && e.button === 0)) return;
+      controls.enablePan = false; // belt-and-suspenders if keydown was missed
+      this.altDragActive = true;
+      this.lastX = e.clientX;
+      this.lastY = e.clientY;
+      onAltPick(e.clientX, e.clientY); // set pivot (+ flash marker) under the cursor
     };
+    this.onPointerMove = (e: PointerEvent): void => {
+      if (!this.altDragActive) return;
+      const dx = e.clientX - this.lastX;
+      const dy = e.clientY - this.lastY;
+      this.lastX = e.clientX;
+      this.lastY = e.clientY;
+      this.userAdjusted = true;
+      orbitCameraAroundPivot(
+        this.camera, this.customPivot ?? this.controls.target, this.controls.target,
+        dx, dy, PREVIEW_ROTATE_SPEED,
+      );
+      this.onChange();
+    };
+    this.onPointerUp = (): void => { this.altDragActive = false; };
     dom.addEventListener('pointerdown', this.onPointerDown);
+    dom.addEventListener('pointermove', this.onPointerMove);
+    dom.addEventListener('pointerup', this.onPointerUp);
     window.addEventListener('keydown', this.onAltKeyDown);
     window.addEventListener('keyup', this.onAltKeyUp);
 
@@ -94,13 +125,12 @@ export class PreviewOrbitControls {
   }
 
   /**
-   * Set the orbit pivot (rotation centre) to a world point. OrbitControls
-   * preserves the camera→target offset across `update()`, so the camera position
-   * is unchanged and the next rotation orbits around `point` (ADR-366 §A.6.Q5).
+   * Set the rotation pivot to a world point (Alt-press). NO recenter: the next
+   * Alt+drag orbits rigidly around it so the point stays fixed on screen — the
+   * drawing does not jump to centre. SSoT maths in `orbit-around-pivot`.
    */
   setPivot(point: THREE.Vector3): void {
-    this.controls.target.copy(point);
-    this.controls.update();
+    this.customPivot = point.clone();
   }
 
   /**
@@ -110,6 +140,7 @@ export class PreviewOrbitControls {
    */
   recenter(): void {
     this.programmatic = true;
+    this.customPivot = null;
     this.controls.target.set(0, 0, 0);
     this.controls.update();
     this.programmatic = false;
@@ -117,6 +148,8 @@ export class PreviewOrbitControls {
 
   dispose(): void {
     this.dom.removeEventListener('pointerdown', this.onPointerDown);
+    this.dom.removeEventListener('pointermove', this.onPointerMove);
+    this.dom.removeEventListener('pointerup', this.onPointerUp);
     window.removeEventListener('keydown', this.onAltKeyDown);
     window.removeEventListener('keyup', this.onAltKeyUp);
     this.controls.dispose();
