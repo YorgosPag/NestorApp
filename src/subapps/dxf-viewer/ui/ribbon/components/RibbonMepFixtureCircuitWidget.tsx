@@ -23,7 +23,7 @@ import { useLevels } from '../../../systems/levels';
 import { useUniversalSelection } from '../../../systems/selection';
 import { useMepSystemStore } from '../../../bim/mep-systems/mep-system-store';
 import { useMepCircuitEditorStore } from '../../../bim/mep-systems/mep-circuit-editor-store';
-import { resolveManagedCircuits } from '../../../bim/mep-systems/mep-circuit-editor';
+import { resolveManagedSystems } from '../../../bim/mep-systems/mep-circuit-editor';
 import { systemColor } from '../../../bim/mep-systems/mep-system-color';
 
 export function RibbonMepFixtureCircuitWidget(): React.JSX.Element | null {
@@ -40,7 +40,7 @@ export function RibbonMepFixtureCircuitWidget(): React.JSX.Element | null {
     const scene = levelManager.getLevelScene(levelManager.currentLevelId);
     const entity = scene?.entities.find((e) => e.id === id);
     if (!entity) return null;
-    const candidates = resolveManagedCircuits([entity], systems);
+    const candidates = resolveManagedSystems([entity], systems);
     return candidates.find((c) => c.id === activeSystemId) ?? candidates[0] ?? null;
   }, [levelManager, universalSelection, systems, activeSystemId]);
 
