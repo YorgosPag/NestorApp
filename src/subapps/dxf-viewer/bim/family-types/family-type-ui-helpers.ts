@@ -17,10 +17,12 @@
  * @see docs/centralized-systems/reference/adrs/ADR-412-bim-family-types.md §3.3 §3.4
  */
 
-import type { BimFamilyType, WallTypeParams } from '../types/bim-family-type';
+import type { BimFamilyType, SlabTypeParams, WallTypeParams } from '../types/bim-family-type';
 import type { WallParams } from '../types/wall-types';
-import { resolveEffectiveWallParams } from './resolve-effective-params';
+import type { SlabParams } from '../types/slab-types';
+import { resolveEffectiveSlabParams, resolveEffectiveWallParams } from './resolve-effective-params';
 import type { WallTypeAssignment } from '../../core/commands/entity-commands/AssignWallTypeCommand';
+import type { SlabTypeAssignment } from '../../core/commands/entity-commands/AssignSlabTypeCommand';
 
 /** i18n namespace prefix for every family-type label (mirror the locale block). */
 const I18N_PREFIX = 'ribbon.commands.bimFamilyType';
@@ -32,6 +34,16 @@ const I18N_PREFIX = 'ribbon.commands.bimFamilyType';
  */
 export const WALL_OVERRIDABLE_KEYS: readonly (keyof WallTypeParams)[] = [
   'category',
+  'material',
+] as const;
+
+/**
+ * Type-governed slab params that the per-instance override editor exposes.
+ * `thickness`/`dna` are structural (edited on the TYPE itself), so they are
+ * deliberately NOT per-instance overridable here. SSoT for the override badges.
+ */
+export const SLAB_OVERRIDABLE_KEYS: readonly (keyof SlabTypeParams)[] = [
+  'kind',
   'material',
 ] as const;
 
@@ -122,5 +134,70 @@ export function resolveWallTypeAssignment(
 export function normaliseOverrides(
   overrides: Partial<WallTypeParams>,
 ): Partial<WallTypeParams> | undefined {
+  return Object.keys(overrides).length === 0 ? undefined : overrides;
+}
+
+// ─── Slab helpers (analogue of the wall helpers above) ───────────────────────
+
+/** Narrows a category-agnostic family type to a slab type (null when not a slab). */
+export function asSlabFamilyType(
+  type: BimFamilyType | null | undefined,
+): BimFamilyType<'slab'> | null {
+  return type && type.category === 'slab'
+    ? (type as BimFamilyType<'slab'>)
+    : null;
+}
+
+/** The slab-only slice of the loaded catalog, in catalog order. */
+export function listSlabTypes(
+  types: readonly BimFamilyType[],
+): readonly BimFamilyType<'slab'>[] {
+  return types
+    .map(asSlabFamilyType)
+    .filter((t): t is BimFamilyType<'slab'> => t !== null);
+}
+
+/** The type-governed param keys a slab instance currently overrides (badge source). */
+export function getOverriddenSlabParamKeys(
+  typeOverrides: Partial<SlabTypeParams> | undefined,
+): readonly (keyof SlabTypeParams)[] {
+  if (!typeOverrides) return [];
+  return SLAB_OVERRIDABLE_KEYS.filter((k) => typeOverrides[k] !== undefined);
+}
+
+/**
+ * Builds the `next` + `previous` {@link SlabTypeAssignment} pair an
+ * `AssignSlabTypeCommand` needs. Mirror of {@link resolveWallTypeAssignment}.
+ */
+export function resolveSlabTypeAssignment(
+  slab: {
+    params: SlabParams;
+    typeId?: string;
+    typeOverrides?: Partial<SlabTypeParams>;
+  },
+  nextTypeId: string | undefined,
+  nextTypeOverrides: Partial<SlabTypeParams> | undefined,
+  getType: (id: string) => BimFamilyType | null,
+): { next: SlabTypeAssignment; previous: SlabTypeAssignment } {
+  const previous: SlabTypeAssignment = {
+    typeId: slab.typeId,
+    typeOverrides: slab.typeOverrides,
+    params: slab.params,
+  };
+  const nextType = nextTypeId ? asSlabFamilyType(getType(nextTypeId)) : null;
+  const nextParams = resolveEffectiveSlabParams(
+    { params: slab.params, typeId: nextTypeId, typeOverrides: nextTypeOverrides },
+    nextType,
+  );
+  return {
+    next: { typeId: nextTypeId, typeOverrides: nextTypeOverrides, params: nextParams },
+    previous,
+  };
+}
+
+/** Normalises a slab `typeOverrides` patch — `undefined` when empty. */
+export function normaliseSlabOverrides(
+  overrides: Partial<SlabTypeParams>,
+): Partial<SlabTypeParams> | undefined {
   return Object.keys(overrides).length === 0 ? undefined : overrides;
 }
