@@ -11,6 +11,7 @@ import { useRibbonColumnBridge, type UseRibbonColumnBridgeProps } from '../ui/ri
 import { useRibbonBeamBridge, type UseRibbonBeamBridgeProps } from '../ui/ribbon/hooks/useRibbonBeamBridge';
 import { useRibbonSlabOpeningBridge, type UseRibbonSlabOpeningBridgeProps } from '../ui/ribbon/hooks/useRibbonSlabOpeningBridge';
 import { useRibbonMepCircuitBridge, type UseRibbonMepCircuitBridgeProps } from '../ui/ribbon/hooks/useRibbonMepCircuitBridge';
+import { useRibbonMepPipeNetworkBridge } from '../ui/ribbon/hooks/useRibbonMepPipeNetworkBridge';
 import { useRibbonMepFixtureBridge, type UseRibbonMepFixtureBridgeProps } from '../ui/ribbon/hooks/useRibbonMepFixtureBridge';
 import { useRibbonFurnitureBridge } from '../ui/ribbon/hooks/useRibbonFurnitureBridge';
 import { useRibbonFloorplanSymbolBridge } from '../ui/ribbon/hooks/useRibbonFloorplanSymbolBridge';
@@ -38,6 +39,8 @@ export function useDxfBimBridges(p: UseDxfBimBridgesProps) {
   const slabOpeningBridge = useRibbonSlabOpeningBridge(p);
   // ADR-408 Φ5 — MEP circuit contextual bridge (create-from-selection).
   const mepCircuitBridge = useRibbonMepCircuitBridge(p);
+  // ADR-408 Φ13 — MEP pipe-network contextual bridge (manifold + pipes → network).
+  const mepPipeNetworkBridge = useRibbonMepPipeNetworkBridge(p);
   // ADR-406 — MEP fixture (φωτιστικό) contextual properties bridge.
   const mepFixtureBridge = useRibbonMepFixtureBridge(p);
   // ADR-410 — furniture library contextual bridge (tool-active picker).
@@ -48,5 +51,5 @@ export function useDxfBimBridges(p: UseDxfBimBridgesProps) {
   const mepFixtureLibraryBridge = useRibbonMepFixtureLibraryBridge();
   // ADR-363 Phase 4.5e+ — Tab/Shift+Tab material cycling for selected BIM entities.
   useBimMaterialCycler(p);
-  return { stairBridge, wallBridge, openingBridge, slabBridge, columnBridge, beamBridge, slabOpeningBridge, mepCircuitBridge, mepFixtureBridge, furnitureBridge, floorplanSymbolBridge, mepFixtureLibraryBridge };
+  return { stairBridge, wallBridge, openingBridge, slabBridge, columnBridge, beamBridge, slabOpeningBridge, mepCircuitBridge, mepPipeNetworkBridge, mepFixtureBridge, furnitureBridge, floorplanSymbolBridge, mepFixtureLibraryBridge };
 }
