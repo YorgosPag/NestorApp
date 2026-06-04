@@ -43,6 +43,8 @@ export function calculateBimEntity2DBounds(entity: Entity): { min: Point2D; max:
     case 'mep-fitting':
     // ADR-415 — floorplan symbol projects geometry.bbox to 2D (same).
     case 'floorplan-symbol':
+    // ADR-417 — roof projects geometry.bbox to 2D (same).
+    case 'roof':
     // ADR-408 Φ12 — plumbing manifold projects geometry.bbox to 2D (same).
     case 'mep-manifold': {
       const bbox = entity.geometry?.bbox;
