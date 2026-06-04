@@ -113,11 +113,14 @@ export class SlabTypePreviewRenderer {
       const edges = new THREE.EdgesGeometry(target.mesh.geometry);
       this.outline = new THREE.LineSegments(
         edges,
-        new THREE.LineBasicMaterial({ color: HIGHLIGHT_COLOR }),
+        // depthTest:false + high renderOrder → crisp on top, no z-fighting, so the
+        // outline can sit EXACTLY on the band edges (scale 1.0) and coincide with
+        // its boundaries instead of overhanging (the old 1.015 scale missed them).
+        new THREE.LineBasicMaterial({ color: HIGHLIGHT_COLOR, depthTest: false, transparent: true }),
       );
       this.outline.position.copy(target.mesh.position);
-      this.outline.scale.setScalar(1.015);
-      this.scene.add(this.outline);
+      this.outline.renderOrder = 998;
+      this.bandGroup.add(this.outline); // same parent as the bands → shared coords
     }
     this.render();
   }
@@ -236,7 +239,7 @@ export class SlabTypePreviewRenderer {
 
   private clearOutline(): void {
     if (!this.outline) return;
-    this.scene.remove(this.outline);
+    this.bandGroup.remove(this.outline);
     this.outline.geometry.dispose();
     (this.outline.material as THREE.Material).dispose();
     this.outline = null;
