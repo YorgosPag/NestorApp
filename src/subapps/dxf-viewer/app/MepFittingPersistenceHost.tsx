@@ -50,10 +50,21 @@ export function MepFittingPersistenceHost({
 }: MepFittingPersistenceHostProps): React.ReactElement | null {
   const { user } = useAuth();
 
+  // `currentScene` is a new reference on every render (getLevelScene returns a
+  // fresh object), so keying the 3D-store push on it churned `setMepFittings`
+  // every render. Push only when the fitting set actually changes (id + params).
+  const fittings = React.useMemo(
+    () => currentScene?.entities.filter(isMepFittingEntity) ?? [],
+    [currentScene],
+  );
+  const fittingsSig = React.useMemo(
+    () => fittings.map((f) => `${f.id}:${JSON.stringify(f.params)}`).join('|'),
+    [fittings],
+  );
   React.useEffect(() => {
-    const fittings = currentScene?.entities.filter(isMepFittingEntity) ?? [];
     useBim3DEntitiesStore.getState().setMepFittings(fittings);
-  }, [currentScene]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- push keyed on content signature, not the per-render array ref
+  }, [fittingsSig]);
 
   useMepFittingAutoReconciliation({
     companyId: user?.companyId ?? null,

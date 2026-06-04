@@ -129,6 +129,17 @@ export function useMepFittingAutoReconciliation(
 ): void {
   const { companyId, projectId, floorplanId, userId, levelManager } = params;
 
+  // ⚡ STABILITY (ADR-040 / render-loop fix 2026-06-04): `levelManager` is a NEW
+  // object on every render (`useLevels` returns a fresh wrapper). Depending on it
+  // in effects made the Firestore subscription unsubscribe + re-subscribe on
+  // EVERY render → `setHydrated(false/true)` → re-render → re-subscribe … a
+  // self-feeding render loop that re-rendered the whole viewer tree (ribbon +
+  // 83 tooltips). Read it through a ref instead and key effects off the STABLE
+  // scope primitives + `currentLevelId` only.
+  const levelManagerRef = useRef(levelManager);
+  levelManagerRef.current = levelManager;
+  const currentLevelId = levelManager.currentLevelId;
+
   const serviceRef = useRef<MepFittingFirestoreService | null>(null);
   // Persisted fittings keyed by junctionKey → the live doc (reconcile diff input).
   const persistedByKeyRef = useRef<Map<string, MepFittingDoc>>(new Map());
@@ -160,9 +171,11 @@ export function useMepFittingAutoReconciliation(
   }, [companyId, projectId, floorplanId, userId]);
 
   // ── (a) Subscribe + diff-merge fitting docs into the active level scene ─────
+  // Keyed on STABLE primitives only (scope + currentLevelId) — NOT the per-render
+  // `levelManager` object — so it subscribes once per real scope/level change.
   useEffect(() => {
     const svc = serviceRef.current;
-    const levelId = levelManager.currentLevelId;
+    const levelId = currentLevelId;
     if (!svc || !levelId) return;
 
     // Re-subscribe (new scope / level) ⇒ unknown persisted set again.
@@ -174,7 +187,7 @@ export function useMepFittingAutoReconciliation(
       (docs) => {
         // First snapshot flips hydration → unblocks reconcile.
         setHydrated(true);
-        mergeDocsIntoScene(docs, levelId, levelManager, {
+        mergeDocsIntoScene(docs, levelId, levelManagerRef.current, {
           persistedByKey: persistedByKeyRef.current,
           deleted: deletedIdsRef.current,
           pending: pendingIdsRef.current,
@@ -188,16 +201,19 @@ export function useMepFittingAutoReconciliation(
       },
     );
     return () => unsubscribe();
-  }, [levelManager, companyId, projectId, floorplanId, userId]);
+  }, [currentLevelId, companyId, projectId, floorplanId, userId]);
 
   // ── (b) Reconcile: topology → desired set → create / update / delete ───────
+  // Reads `levelManager` via ref so its identity stays stable across renders —
+  // otherwise the debounced-trigger effect below re-armed its timer every render.
   const reconcile = useCallback(async () => {
+    const lm = levelManagerRef.current;
     const svc = serviceRef.current;
-    const levelId = levelManager.currentLevelId;
+    const levelId = lm.currentLevelId;
     if (!svc || !levelId) return;
     // Block until the first snapshot lands (avoids duplicate-create on cold load).
     if (!hydrated) return;
-    const scene = levelManager.getLevelScene(levelId);
+    const scene = lm.getLevelScene(levelId);
     if (!scene) return;
 
     const desired = resolveDesiredFittings(scene.entities);
@@ -206,17 +222,17 @@ export function useMepFittingAutoReconciliation(
     if (lastDesiredSigRef.current && dequal(lastDesiredSigRef.current, sig)) return;
     lastDesiredSigRef.current = sig;
 
-    await runReconcileDiff(desired, scene, levelId, levelManager, svc, {
+    await runReconcileDiff(desired, scene, levelId, lm, svc, {
       persistedByKey: persistedByKeyRef.current,
       pending: pendingIdsRef.current,
       deleted: deletedIdsRef.current,
     });
-  }, [levelManager, hydrated]);
+  }, [hydrated]);
 
   // Debounced topology trigger — re-run whenever the active scene reference
   // changes (segment add / move / delete all replace `scene.entities`).
-  const currentScene = levelManager.currentLevelId
-    ? levelManager.getLevelScene(levelManager.currentLevelId)
+  const currentScene = currentLevelId
+    ? levelManager.getLevelScene(currentLevelId)
     : null;
   const pipeTopologySig = useMemo(
     () => buildPipeTopologySignature(currentScene),
@@ -240,12 +256,13 @@ export function useMepFittingAutoReconciliation(
   //        so trims apply even before the fitting docs load. The store's deep-equal
   //        guard makes a no-op topology produce no churn.
   useEffect(() => {
-    const levelId = levelManager.currentLevelId;
-    const scene = levelId ? levelManager.getLevelScene(levelId) : null;
+    const lm = levelManagerRef.current;
+    const levelId = lm.currentLevelId;
+    const scene = levelId ? lm.getLevelScene(levelId) : null;
     useMepSegmentTrimStore.getState().setTrims(
       scene ? resolveSegmentTrims(scene.entities) : new Map(),
     );
-  }, [pipeTopologySig, levelManager]);
+  }, [pipeTopologySig]);
 }
 
 // ============================================================================
