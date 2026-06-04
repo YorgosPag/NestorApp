@@ -94,7 +94,8 @@ export type DrawingTool =
   | 'beam'
   | 'xline'
   | 'ray'
-  | 'slab-opening';
+  | 'slab-opening'
+  | 'roof';
 
 export interface DrawingState {
   currentTool: DrawingTool;
