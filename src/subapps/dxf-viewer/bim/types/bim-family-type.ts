@@ -39,6 +39,8 @@ import type { Timestamp } from 'firebase/firestore';
 
 import type { WallCategory } from './wall-types';
 import type { WallDna } from './wall-dna-types';
+import type { SlabKind } from './slab-types';
+import type { SlabDna } from './slab-dna-types';
 import type { StairTopBinding, StairBaseBinding } from './bim-binding';
 import type {
   StairNosingSide,
@@ -88,6 +90,28 @@ export interface WallTypeParams {
   /** Layered composition. Undefined = bare structural wall (no plaster). */
   readonly dna?: WallDna;
   /** Material key for wall-level hatch. Ignored when `dna` is present. */
+  readonly material?: string;
+}
+
+/**
+ * SLAB type-level parameters ONLY (composite Floor/Slab Types, slab analogue of
+ * {@link WallTypeParams}). Excludes every placement/instance param (`outline`/
+ * `levelElevation`/`heightOffsetFromLevel`/`geometryType`/`slope`/storey
+ * linkage) — those live on the `SlabEntity` instance. The build-up (`dna`) lives
+ * on the TYPE (Revit «Floor → Edit Type → Structure»); `thickness` equals
+ * `dna.totalThickness` when a `dna` is present (SSoT, no double-entry).
+ *
+ * `kind` is the slab analogue of wall `category` — it selects the per-kind
+ * default build-up (floor/ceiling/roof/ground/foundation) and drives the
+ * one-built-in-per-kind catalog.
+ */
+export interface SlabTypeParams {
+  readonly kind: SlabKind;
+  /** mm. Cross-section depth. Equals `dna.totalThickness` when `dna` present. */
+  readonly thickness: number;
+  /** Layered composition (top→bottom). Undefined = bare single-material slab. */
+  readonly dna?: SlabDna;
+  /** Material key for slab-level hatch. Ignored when `dna` is present. */
   readonly material?: string;
 }
 
@@ -172,6 +196,7 @@ export interface StairTypeParams {
  */
 export interface BimTypeParamsByCategory {
   readonly wall: WallTypeParams;
+  readonly slab: SlabTypeParams;
   readonly stair: StairTypeParams;
 }
 
