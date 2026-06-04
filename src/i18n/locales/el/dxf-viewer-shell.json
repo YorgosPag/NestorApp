@@ -763,6 +763,8 @@
       "mepCircuit": "Ηλεκτρικό Κύκλωμα",
       "mepPipeNetwork": "Δίκτυο Ύδρευσης",
       "mepFixtureProperties": "Ιδιότητες Φωτιστικού",
+      "mepManifoldProperties": "Ιδιότητες Συλλέκτη",
+      "mepSegmentProperties": "Ιδιότητες Σωλήνα/Αεραγωγού",
       "validationBadge": "Παραβίαση κανονισμών",
       "dimension": "Διάσταση",
       "lineToolStyle": "Στυλ Γραμμής",
@@ -820,6 +822,7 @@
       "openingSchedule": "Πίνακας",
       "annotateOpenings": "Ανοίγματα",
       "slabKind": "Τύπος",
+      "slabType": "Τύπος Πλάκας",
       "slabGeometry": "Γεωμετρία",
       "slabMaterial": "Υλικό",
       "slabActions": "Ενέργειες",
@@ -848,6 +851,13 @@
       "mepFixtureRectParams": "Ορθογώνιο",
       "mepFixtureActions": "Ενέργειες",
       "mepFixtureCircuit": "Κύκλωμα",
+      "mepManifoldGeometry": "Γεωμετρία",
+      "mepManifoldOutlets": "Έξοδοι",
+      "mepManifoldActions": "Ενέργειες",
+      "mepSegmentSection": "Διατομή",
+      "mepSegmentDimensions": "Διαστάσεις",
+      "mepSegmentGeometry": "Γεωμετρία",
+      "mepSegmentActions": "Ενέργειες",
       "mepCircuit": "Κύκλωμα",
       "mepCircuitProperties": "Ιδιότητες Κυκλώματος",
       "mepPipeNetwork": "Δίκτυο",
@@ -1395,10 +1405,65 @@
             "parapet": "Στηθαίο",
             "fence": "Περίφραξη"
           },
+          "slab": {
+            "floor": "Δάπεδο ορόφου",
+            "ceiling": "Ψευδοροφή",
+            "roof": "Δώμα",
+            "ground": "Πλάκα εδάφους",
+            "foundation": "Θεμελίωση"
+          },
           "stair": {
             "residential": "Κατοικίας",
             "narrow": "Στενή"
           }
+        }
+      },
+      "slabFamilyType": {
+        "type": "Τύπος",
+        "typeNone": "Χωρίς τύπο (ελεύθερη)",
+        "duplicateNamePrefix": "Αντίγραφο",
+        "save": "Αποθήκευση",
+        "cancel": "Άκυρο",
+        "paramKind": "Είδος",
+        "paramThickness": "Πάχος",
+        "paramMaterial": "Υλικό",
+        "thicknessUnit": "mm",
+        "materialNone": "—",
+        "editType": "Επεξεργασία τύπου…",
+        "editTypeTitle": "Επεξεργασία τύπου πλάκας",
+        "editTypeDescription": "Οι αλλαγές εφαρμόζονται σε όλες τις πλάκες αυτού του τύπου, σε όλους τους ορόφους.",
+        "editTypeBuiltinNotice": "Ενσωματωμένος τύπος (μόνο ανάγνωση). Κάντε Διπλασιασμό για να επεξεργαστείτε τις στρώσεις.",
+        "editTypeAffectsCount": "Οι αλλαγές εφαρμόζονται σε {count} πλάκες αυτού του τύπου.",
+        "duplicateAndEdit": "Διπλασιασμός & επεξεργασία",
+        "deleteType": "Διαγραφή τύπου…",
+        "preview": {
+          "title": "Προεπισκόπηση",
+          "emptyHint": "Φόρτωσε προεπιλογή ή πρόσθεσε στρώσεις για να δεις την προεπισκόπηση."
+        },
+        "dna": {
+          "title": "Στρώσεις",
+          "totalThickness": "Σύνολο: {value} mm",
+          "loadPreset": "Φόρτωση προεπιλογής",
+          "addLayer": "Προσθήκη στρώσης",
+          "detach": "Αποσύνδεση",
+          "detachedHint": "Μονή στρώση (χωρίς σύνθεση). Φόρτωσε προεπιλογή για στρώσεις.",
+          "removeLayer": "Αφαίρεση στρώσης",
+          "moveUp": "Μετακίνηση πάνω",
+          "moveDown": "Μετακίνηση κάτω",
+          "fields": {
+            "zone": "Ζώνη",
+            "name": "Όνομα",
+            "thickness": "Πάχος",
+            "material": "Υλικό",
+            "materialCustom": "Προσαρμοσμένο…"
+          }
+        }
+      },
+      "layeredBuildup": {
+        "zone": {
+          "top": "Άνω (επικάλυψη)",
+          "core": "Πυρήνας (φέρων)",
+          "bottom": "Κάτω (οροφή)"
         }
       },
       "envelopeFunction": {
@@ -1728,6 +1793,34 @@
           },
           "rectangular": "Ορθογώνιο",
           "circular": "Κυκλικό"
+        }
+      },
+      "mepManifoldEditor": {
+        "width": "Πλάτος",
+        "length": "Βάθος",
+        "bodyHeight": "Ύψος σώματος",
+        "mountingElevation": "Ύψος τοποθέτησης",
+        "outletCount": "Έξοδοι",
+        "inletDiameter": "Διάμετρος εισόδου",
+        "outletDiameter": "Διάμετρος εξόδου",
+        "close": "Κλείσιμο",
+        "delete": "Διαγραφή",
+        "deleteConfirm": "Διαγραφή συλλέκτη; Η ενέργεια δεν μπορεί να αναιρεθεί."
+      },
+      "mepSegmentEditor": {
+        "width": "Πλάτος",
+        "height": "Ύψος",
+        "diameter": "Διάμετρος",
+        "centerlineElevation": "Ύψος άξονα",
+        "close": "Κλείσιμο",
+        "delete": "Διαγραφή",
+        "deleteConfirm": "Διαγραφή στοιχείου; Η ενέργεια δεν μπορεί να αναιρεθεί.",
+        "sectionKind": {
+          "section": {
+            "title": "Διατομή"
+          },
+          "rectangular": "Ορθογώνια",
+          "round": "Κυκλική"
         }
       },
       "psetEditor": {
