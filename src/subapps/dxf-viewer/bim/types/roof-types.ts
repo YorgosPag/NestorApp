@@ -165,6 +165,14 @@ export interface RoofGeometry {
   readonly perimeterM: number;
   /** m³. grossArea × thickness (κεκλιμένη πλάκα σταθερού πάχους). */
   readonly volumeM3: number;
+  /**
+   * m². BOQ primary-quantity alias = `grossAreaM2` (κεκλιμένο/επικάλυψη — ADR-417
+   * Q7: η επικάλυψη μετριέται με το κεκλιμένο εμβαδό). Read by the generic
+   * `deriveAtoeQuantity('m2')` BOQ bridge — keeps roof on the shared SSoT path.
+   */
+  readonly area: number;
+  /** m³. BOQ primary-quantity alias = `volumeM3`. Read by `deriveAtoeQuantity('m3')`. */
+  readonly volume: number;
   /** Παραγόμενη ταξινόμηση μορφής. */
   readonly shape: RoofShape;
   /** mm. Ύψος κορφιά πάνω από `basePivotZ` (0 = flat). */
