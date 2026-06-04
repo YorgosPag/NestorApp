@@ -43,4 +43,32 @@ describe('segmentConnectorWorldPosition', () => {
   it('returns null for an unknown connector id', () => {
     expect(segmentConnectorWorldPosition('c1', params())).toBeNull();
   });
+
+  // ── ADR-408 Φ-A: per-endpoint elevation (sloped run / riser) ──────────────
+  describe('per-endpoint elevation (riser)', () => {
+    const riser = (): MepSegmentParams =>
+      ({
+        domain: 'pipe',
+        sectionKind: 'round',
+        startPoint: { x: 10, y: 20, z: 0 }, // start at floor
+        endPoint: { x: 110, y: 20, z: 2800 }, // end at ceiling
+        centerlineElevationMm: 1400, // derived midpoint
+      } as unknown as MepSegmentParams);
+
+    it('seg-start reports the start endpoint own z (floor), not the centreline', () => {
+      expect(segmentConnectorWorldPosition(SEGMENT_START_CONNECTOR_ID, riser())).toEqual({
+        x: 10,
+        y: 20,
+        z: 0,
+      });
+    });
+
+    it('seg-end reports the end endpoint own z (ceiling), not the centreline', () => {
+      expect(segmentConnectorWorldPosition(SEGMENT_END_CONNECTOR_ID, riser())).toEqual({
+        x: 110,
+        y: 20,
+        z: 2800,
+      });
+    });
+  });
 });
