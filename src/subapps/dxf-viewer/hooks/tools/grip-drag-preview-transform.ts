@@ -40,6 +40,8 @@ export function toEntityPreviewTransform(dp: DxfGripDragPreview): EntityPreviewT
     ...(dp.electricalPanelGripKind ? { electricalPanelGripKind: dp.electricalPanelGripKind } : {}),
     // ADR-410 — furniture parametric ghost (move / rotation / corner resize).
     ...(dp.furnitureGripKind   ? { furnitureGripKind:   dp.furnitureGripKind }    : {}),
+    // ADR-415 — floorplan-symbol parametric ghost (move / rotation / corner resize).
+    ...(dp.floorplanSymbolGripKind ? { floorplanSymbolGripKind: dp.floorplanSymbolGripKind } : {}),
     ...(dp.anchorPos           ? { anchorPos:           dp.anchorPos }            : {}),
     // ADR-363 Phase 1G — rotation centre for the rotation hot-grip ghost.
     ...(dp.rotatePivot         ? { rotatePivot:         dp.rotatePivot }          : {}),
