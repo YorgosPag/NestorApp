@@ -105,7 +105,26 @@ export function resolveDesiredFittings(
   entities: readonly Entity[],
   opts: ResolveFittingsOptions = {},
 ): MepFittingDraft[] {
+  // A fitting MUST share the pipe network's canvas-unit scale, else its plan
+  // footprint is computed in the wrong unit (e.g. mm-square in a metre scene =
+  // a giant box). Inherit `sceneUnits` from the first pipe segment unless the
+  // caller overrides it.
+  const effectiveOpts: ResolveFittingsOptions = {
+    ...opts,
+    sceneUnits: opts.sceneUnits ?? sceneUnitsFromSegments(entities),
+  };
   return derivePipeJunctions(entities)
-    .map((junction) => toDraft(junction, opts))
+    .map((junction) => toDraft(junction, effectiveOpts))
     .filter((draft): draft is MepFittingDraft => draft !== null);
+}
+
+/** First pipe segment's `sceneUnits` — the network's canvas-unit scale. */
+function sceneUnitsFromSegments(entities: readonly Entity[]): SceneUnits | undefined {
+  for (const e of entities) {
+    const candidate = e as { type?: string; params?: { domain?: string; sceneUnits?: SceneUnits } };
+    if (candidate.type === 'mep-segment' && candidate.params?.domain === 'pipe' && candidate.params.sceneUnits) {
+      return candidate.params.sceneUnits;
+    }
+  }
+  return undefined;
 }
