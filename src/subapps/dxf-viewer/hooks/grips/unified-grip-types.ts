@@ -10,7 +10,7 @@
  */
 
 import type { Point2D } from '../../rendering/types/Types';
-import type { StairGripKind, DimensionGripKind, WallGripKind, OpeningGripKind, SlabGripKind, SlabOpeningGripKind, BeamGripKind, ColumnGripKind, MepFixtureGripKind, ElectricalPanelGripKind, FurnitureGripKind, XLineGripKind, RayGripKind } from '../useGripMovement';
+import type { StairGripKind, DimensionGripKind, WallGripKind, OpeningGripKind, SlabGripKind, SlabOpeningGripKind, BeamGripKind, ColumnGripKind, MepFixtureGripKind, ElectricalPanelGripKind, FurnitureGripKind, FloorplanSymbolGripKind, XLineGripKind, RayGripKind } from '../useGripMovement';
 import type {
   DxfGripDragPreview,
   DxfGripInteractionState,
@@ -207,6 +207,12 @@ export interface UnifiedGripInfo {
    * translate + rotation + opposite-corner-anchored width/depth resize).
    */
   readonly furnitureGripKind?: FurnitureGripKind;
+  /**
+   * ADR-415 — parametric floorplan-symbol grip discriminator (forwarded from
+   * `GripInfo.floorplanSymbolGripKind`). Routes commit through
+   * `applyFloorplanSymbolGripDrag()` + `UpdateFloorplanSymbolParamsCommand`.
+   */
+  readonly floorplanSymbolGripKind?: FloorplanSymbolGripKind;
   /**
    * ADR-359 Phase 11 — XLine grip discriminator (forwarded from
    * `GripInfo.xlineGripKind`). Routes commit through `applyXLineGripDrag()` +
