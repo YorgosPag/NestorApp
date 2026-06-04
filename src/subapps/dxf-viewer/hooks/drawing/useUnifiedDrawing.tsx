@@ -51,15 +51,9 @@ import { useLineStyles } from '../../settings-provider';
 import { completeEntity } from './completeEntity';
 import { createEntityFromTool as createEntityFromToolPure, isEntityComplete } from './drawing-entity-builders';
 import { generatePreviewEntity, applyPreviewStyling, createPartialPreview } from './drawing-preview-generator';
-// ADR-358 Phase 8 preview hotfix — read stair tool state (basePoint+direction)
-// from the SSoT store so the rubber-band preview renders during 2-click placement.
-import { stairPreviewStore } from '../../bim/stairs/stair-preview-store';
-// ADR-363 Phase 1C — wall preview SSoT (same single-writer pattern as stair).
-import { wallPreviewStore } from '../../bim/walls/wall-preview-store';
-// ADR-363 Phase 6.5.B — slab preview SSoT.
-import { slabPreviewStore } from '../../bim/slabs/slab-preview-store';
-// ADR-363 Phase 5.5P — beam preview SSoT.
-import { beamPreviewStore } from '../../bim/beams/beam-preview-store';
+// Per-BIM-tool preview point reconstruction (stair/wall/slab/roof/beam), extracted to
+// keep this hook under the 500-line cap (N.7.1). Each tool's preview SSoT lives behind it.
+import { resolveBimToolTempPoints } from './drawing-preview-tool-points';
 import { toolStateStore } from '../../stores/ToolStateStore';
 import { resolveSceneUnits } from '../../utils/scene-units';
 import { applyPreviewSettingsToEntity } from './apply-preview-settings';
@@ -261,52 +255,17 @@ export function useUnifiedDrawing() {
     const isWall = activeTool === 'wall';
     const isSlab = activeTool === 'slab';
     const isBeam = activeTool === 'beam';
-    const currentTool: DrawingTool = isStair ? 'stair' : isWall ? 'wall' : isSlab ? 'slab' : isBeam ? 'beam' : machineTool;
-    if (!isStair && !isWall && !isSlab && !isBeam && (!machineTool || machineTool === 'select')) return;
+    const isRoof = activeTool === 'roof';
+    const currentTool: DrawingTool = isStair ? 'stair' : isWall ? 'wall' : isSlab ? 'slab' : isBeam ? 'beam' : isRoof ? 'roof' : machineTool;
+    if (!isStair && !isWall && !isSlab && !isBeam && !isRoof && (!machineTool || machineTool === 'select')) return;
 
     // machineMoveCursor intentionally removed — it updated cursorPosition in machine context
     // (never read by any component) and notified React useSyncExternalStore subscribers on
     // every mousemove → 80-102ms commits on CanvasSection + 8 children during drawing.
     // Preview entity is generated from mousePoint directly (no machine cursor read needed).
-    let tempPoints: readonly Point2D[] = machineContext.points;
-    if (isStair) {
-      // Reconstruct the tuple consumed by `generateStairPreview`:
-      //   [] → basePoint marker, [base] → ghost direction line, [base, dir] → walkline.
-      const previewState = stairPreviewStore.get();
-      if (previewState.basePoint && previewState.direction !== null) {
-        const rad = previewState.direction * Math.PI / 180;
-        tempPoints = [
-          previewState.basePoint,
-          { x: previewState.basePoint.x + Math.cos(rad), y: previewState.basePoint.y + Math.sin(rad) },
-        ];
-      } else if (previewState.basePoint) {
-        tempPoints = [previewState.basePoint];
-      } else {
-        tempPoints = [];
-      }
-    }
-    if (isWall) {
-      // ADR-363 Phase 1C — reconstruct wall tempPoints from `wallPreviewStore`.
-      // Polyline mode → spine vertices array; otherwise straight/curved → start
-      // point only (cursor becomes the end during makeWallFootprintGhost).
-      const wp = wallPreviewStore.get();
-      if (wp.polylineVertices.length > 0) {
-        tempPoints = wp.polylineVertices;
-      } else if (wp.startPoint) {
-        tempPoints = [wp.startPoint];
-      } else {
-        tempPoints = [];
-      }
-    }
-    if (isSlab) {
-      // ADR-363 Phase 6.5.B — reconstruct slab tempPoints from `slabPreviewStore`.
-      tempPoints = slabPreviewStore.get().vertices;
-    }
-    if (isBeam) {
-      // ADR-363 Phase 5.5P — beam tempPoints from store.
-      const bp = beamPreviewStore.get();
-      tempPoints = bp.startPoint && bp.endPoint ? [bp.startPoint, bp.endPoint] : bp.startPoint ? [bp.startPoint] : [];
-    }
+    // BIM tools (stair/wall/slab/roof/beam) run their own placement state machine and
+    // store preview state in per-tool SSoT stores; reconstruct their point tuple here.
+    const tempPoints = resolveBimToolTempPoints(activeTool, machineContext.points);
 
     // ADR-358 Phase 8 — scene units propagated to stair preview so the
     // ghost rubber-band + walkline match the host floorplan scale.
@@ -314,7 +273,7 @@ export function useUnifiedDrawing() {
     // `$INSUNITS` propagated by dxf-scene-builder, falls back to bounds
     // heuristic for legacy / unitless scenes.
     const sceneUnitsForPreview = (() => {
-      if (!isStair && !isWall && !isSlab && !isBeam) return 'mm' as const;
+      if (!isStair && !isWall && !isSlab && !isBeam && !isRoof) return 'mm' as const;
       const levelId = currentLevelId;
       if (!levelId) return 'mm' as const;
       return resolveSceneUnits(getLevelScene(levelId));
