@@ -71,6 +71,10 @@ Mouse Event → DxfCanvas.onMouseMove
 
 ## Changelog
 
+### 2026-06-04 — TEMP render-trace diagnostics on `DxfViewerContent` (hover-lag)
+
+**Status**: TEMPORARY — to be removed after diagnosis. Adds two `useRenderTrace(...)` calls in `app/DxfViewerContent.tsx` (orchestrator + `.detail` prop-diff) to identify which subscription drives the idle render loop on hover. Diagnostic-only, no subscription/Cardinal-Rule change; the `🔴 TEMP DEBUG` markers flag both call sites for removal. Co-staged to satisfy CHECK 6D.
+
 ### 2026-06-04 — ADR-408 Φ12 plumbing-manifold tool wiring + `canvas-click-types` split (CHECK 6B)
 
 **Status**: IMPLEMENTED 2026-06-04 (Opus 4.8). ADR-408 Φ12 (point-based `mep-manifold`) adds a 2D placement-ghost micro-leaf, all additive — no Cardinal-Rule or subscription change:
