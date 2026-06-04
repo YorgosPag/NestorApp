@@ -54,7 +54,7 @@ import {
   type MepFittingDoc,
 } from '../../bim/mep-fittings/mep-fitting-firestore-service';
 import { recordMepFittingChange } from '../../bim/mep-fittings/mep-fitting-audit-client';
-import { generateMepFittingId } from '@/services/enterprise-id-convenience';
+import { createMepFitting } from '@/services/factories/mep-fitting.factory';
 
 // ============================================================================
 // TYPES
@@ -97,25 +97,13 @@ function docToEntity(d: MepFittingDoc): MepFittingEntity {
     kind: d.kind,
     layerId: d.layerId ?? '0',
     params: d.params,
-    geometry: d.geometry ?? computeMepFittingGeometry(d.params),
+    // ALWAYS recompute — geometry is a pure cache of params and the bend body
+    // shape evolves with the renderer (a persisted square from an older build must
+    // not pin a stale footprint). Cheap + idempotent.
+    geometry: computeMepFittingGeometry(d.params),
     validation: d.validation ?? makeBimValidation(),
     visible: true,
     ifcType: mepFittingIfcType(d.params.domain),
-  } as MepFittingEntity;
-}
-
-/** Build a scene-side `MepFittingEntity` from a resolved draft + assigned id. */
-function draftToEntity(id: string, draft: MepFittingDraft): MepFittingEntity {
-  return {
-    id,
-    type: 'mep-fitting',
-    kind: draft.kind,
-    layerId: '0',
-    params: draft.params,
-    geometry: draft.geometry,
-    validation: draft.validation,
-    visible: true,
-    ifcType: draft.ifcType,
   } as MepFittingEntity;
 }
 
@@ -409,8 +397,17 @@ async function createFitting(
   refs: ReconcileRefs,
   createdInto: MepFittingEntity[],
 ): Promise<void> {
-  const id = generateMepFittingId();
-  const entity = draftToEntity(id, draft);
+  // SSoT entity creation via the `createMepFitting` factory — auto-fills the
+  // enterprise id + a once-generated IFC GlobalId (`ifcGuid`) + `ifcType` from
+  // the fitting domain. Mirror of how `createMepSegment` owns segment creation.
+  const entity = createMepFitting({
+    params: draft.params,
+    geometry: draft.geometry,
+    validation: draft.validation,
+    layerId: '0',
+    visible: true,
+  });
+  const id = entity.id;
   // OPTIMISTIC: the scene is the source of truth for DISPLAY — show the fitting
   // immediately, then persist best-effort. A failed Firestore write (e.g. rules /
   // index not yet deployed) must NOT hide the fitting; on reload the idempotent
