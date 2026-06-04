@@ -27,7 +27,7 @@
 
 import * as THREE from 'three';
 import type { MepSegmentEntity } from '../../bim/types/mep-segment-types';
-import { resolveSegmentSection } from '../../bim/types/mep-segment-types';
+import { resolveSegmentSection, resolveSegmentEndpointElevationsMm } from '../../bim/types/mep-segment-types';
 import { ROUND_PROFILE_SEGMENTS } from '../../bim/geometry/shared/round-profile';
 import { useMepSegmentTrimStore } from '../../bim/mep-fittings/mep-segment-trim-store';
 import { sceneUnitsToMeters } from '../../utils/scene-units';
@@ -84,91 +84,84 @@ export function mepSegmentToMesh(
 ): THREE.Mesh | null {
   const { startPoint, endPoint } = segment.params;
 
-  // Scale canvas-world axis vertices to Three.js world metres.
+  // ── True 3D endpoints (ADR-408 Φ-A) ────────────────────────────────────────
+  // Plan X,Y are scaled canvas→metres; the per-endpoint elevation (mm) gives the
+  // world Y of each end (the run may slope/rise). plan Y (north) → world −Z.
   const sceneToM = sceneUnitsToMeters(segment.params.sceneUnits ?? 'mm');
-  let sx = startPoint.x * sceneToM;
-  let sy = startPoint.y * sceneToM;
-  let ex = endPoint.x * sceneToM;
-  let ey = endPoint.y * sceneToM;
+  const elev = resolveSegmentEndpointElevationsMm(segment.params);
+  const startW = new THREE.Vector3(
+    startPoint.x * sceneToM,
+    elev.startMm * MM_TO_M + buildingBaseElevationM,
+    -(startPoint.y * sceneToM),
+  );
+  const endW = new THREE.Vector3(
+    endPoint.x * sceneToM,
+    elev.endMm * MM_TO_M + buildingBaseElevationM,
+    -(endPoint.y * sceneToM),
+  );
 
   // ADR-408 Φ11 — shorten the run at any fitting on its ends (metres), so the 3D
-  // pipe butts against the elbow/tee torus instead of poking through it. Trim is a
-  // physical mm length (scene-derived store, read synchronously). Clamped to 90%.
+  // pipe butts against the elbow/tee body instead of poking through it. Trim is a
+  // physical mm length (scene-derived store, read synchronously), applied along the
+  // TRUE 3D axis (so a sloped run trims correctly). Clamped to 90%.
+  let fullLen = startW.distanceTo(endW);
+  if (fullLen < 1e-9) return null;
+  const dir = endW.clone().sub(startW).divideScalar(fullLen);
   const trim = useMepSegmentTrimStore.getState().getTrim(segment.id);
   if (trim && (trim.startMm > 0 || trim.endMm > 0)) {
-    const fullLen = Math.hypot(ex - sx, ey - sy);
-    if (fullLen > 1e-9) {
-      const ax = (ex - sx) / fullLen;
-      const ay = (ey - sy) / fullLen;
-      let startM = Math.max(0, trim.startMm) * MM_TO_M;
-      let endM = Math.max(0, trim.endMm) * MM_TO_M;
-      const maxTrim = fullLen * 0.9;
-      if (startM + endM > maxTrim) {
-        const k = maxTrim / (startM + endM);
-        startM *= k;
-        endM *= k;
-      }
-      sx += ax * startM; sy += ay * startM;
-      ex -= ax * endM; ey -= ay * endM;
+    let startM = Math.max(0, trim.startMm) * MM_TO_M;
+    let endM = Math.max(0, trim.endMm) * MM_TO_M;
+    const maxTrim = fullLen * 0.9;
+    if (startM + endM > maxTrim) {
+      const k = maxTrim / (startM + endM);
+      startM *= k;
+      endM *= k;
     }
+    startW.addScaledVector(dir, startM);
+    endW.addScaledVector(dir, -endM);
+    fullLen = startW.distanceTo(endW);
+    if (fullLen < 1e-9) return null;
   }
-
-  // plan X,Y → world X,−Z (Three.js Y-up: plan Y = north → world −Z).
-  const dxWorld = ex - sx;
-  const dzWorld = -(ey - sy); // world Z component: note negative
-  const lenPlan = Math.hypot(dxWorld, dzWorld);
-  if (lenPlan < 1e-9) return null;
 
   const section = resolveSegmentSection(segment.params);
   const { widthMm, heightMm } = section;
   if (widthMm < 1 || heightMm < 1) return null;
 
-  // ── Elevation: the section is centred on the (absolute) centreline elevation. ──
-  const centreWorldY = segment.params.centerlineElevationMm * MM_TO_M + buildingBaseElevationM;
-
-  // World axis direction (horizontal — pipes/ducts run flat in plan-space).
-  const ux = dxWorld / lenPlan; // world X component of axis dir
-  const uz = dzWorld / lenPlan; // world Z component of axis dir
+  const len = fullLen;
+  const mid = startW.clone().add(endW).multiplyScalar(0.5);
 
   let geo: THREE.BufferGeometry;
 
   if (section.diameterMm !== null) {
-    // ── Round pipe/duct → a SMOOTH cylinder. CylinderGeometry gives radial-smooth
-    //    side normals + flat caps — the SAME primitive the fitting bodies use
-    //    (coupling / elbow tube). The old ExtrudeGeometry of an N-gon profile baked
-    //    per-FACE (flat) normals, so a round run looked faceted next to the smooth
-    //    elbow/coupling. Now the run and its fittings render with one continuous
-    //    surface. `ROUND_PROFILE_SEGMENTS` keeps the 2D glyph + 3D side count in sync.
+    // ── Round pipe/duct → a SMOOTH cylinder swept along the TRUE 3D axis. The
+    //    cylinder's local +Y is rotated onto the (possibly inclined) axis dir and
+    //    centred at the 3D midpoint. `ROUND_PROFILE_SEGMENTS` keeps the 2D glyph +
+    //    3D side count in sync.
     const rM = (section.diameterMm * MM_TO_M) / 2;
-    geo = new THREE.CylinderGeometry(rM, rM, lenPlan, ROUND_PROFILE_SEGMENTS);
-    // Orient the cylinder's local +Y axis → world axis dir, centred at the segment
-    // midpoint (CylinderGeometry is centred on its origin, spanning ±length/2 in Y).
-    const q = new THREE.Quaternion().setFromUnitVectors(
-      new THREE.Vector3(0, 1, 0),
-      new THREE.Vector3(ux, 0, uz),
-    );
+    geo = new THREE.CylinderGeometry(rM, rM, len, ROUND_PROFILE_SEGMENTS);
+    const q = new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir);
     const m = new THREE.Matrix4().makeRotationFromQuaternion(q);
-    m.setPosition((sx + ex) / 2, centreWorldY, -(sy + ey) / 2);
+    m.setPosition(mid);
     geo.applyMatrix4(m);
   } else {
-    // ── Rectangular duct → swept rect profile via ExtrudeGeometry. Sharp faceted
-    //    edges are CORRECT for a box duct (a rect duct has flat walls + crisp arrises).
+    // ── Rectangular duct → swept rect profile via ExtrudeGeometry along the 3D axis.
+    //    Basis: local Z (extrude) → axis dir; local X (width) → a HORIZONTAL
+    //    perpendicular (cross(worldUp, axis)); local Y (height) → cross(z, x), the
+    //    tilt-following "up". Near-vertical axis (cross ≈ 0) falls back to world +X.
     const rectPts = buildRectProfile(widthMm, heightMm);
     const shape = new THREE.Shape();
     shape.moveTo(rectPts[0].x, rectPts[0].y);
     for (let i = 1; i < rectPts.length; i++) shape.lineTo(rectPts[i].x, rectPts[i].y);
     shape.closePath();
-    geo = new THREE.ExtrudeGeometry(shape, { depth: lenPlan, bevelEnabled: false });
+    geo = new THREE.ExtrudeGeometry(shape, { depth: len, bevelEnabled: false });
 
-    // Basis matrix (beam-ishape pattern): local X (width) → perp (90° CCW in XZ),
-    // local Y (height) → world up, local Z (extrude) → axis dir. Origin at the start
-    // point @ centreline Y (the section is centred on (0,0) in its frame).
-    const m = new THREE.Matrix4().makeBasis(
-      new THREE.Vector3(-uz, 0, ux),
-      new THREE.Vector3(0, 1, 0),
-      new THREE.Vector3(ux, 0, uz),
-    );
-    m.setPosition(sx, centreWorldY, -sy);
+    const zAxis = dir.clone();
+    let xAxis = new THREE.Vector3().crossVectors(new THREE.Vector3(0, 1, 0), zAxis);
+    if (xAxis.lengthSq() < 1e-9) xAxis = new THREE.Vector3(1, 0, 0); // axis is vertical
+    xAxis.normalize();
+    const yAxis = new THREE.Vector3().crossVectors(zAxis, xAxis).normalize();
+    const m = new THREE.Matrix4().makeBasis(xAxis, yAxis, zAxis);
+    m.setPosition(startW); // extrude origin at the (trimmed) start; profile centred at (0,0)
     geo.applyMatrix4(m);
   }
 
