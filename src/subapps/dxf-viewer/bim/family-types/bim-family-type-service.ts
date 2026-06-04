@@ -45,6 +45,7 @@ import { generateBimFamilyTypeId } from '@/services/enterprise-id.service';
 import {
   BimFamilyTypeSchema,
   WallTypeParamsSchema,
+  SlabTypeParamsSchema,
   StairTypeParamsSchema,
 } from '../types/bim-family-type.schemas';
 import type {
@@ -108,6 +109,7 @@ function validateTypeParams(
 ): void {
   const schemaByCategory = {
     wall: WallTypeParamsSchema,
+    slab: SlabTypeParamsSchema,
     stair: StairTypeParamsSchema,
   } as const;
 
