@@ -1051,6 +1051,10 @@
           "label": "Railing",
           "tooltip": "Draw a railing with 2 clicks (shortcut RL)"
         },
+        "roof": {
+          "label": "Roof",
+          "tooltip": "Draw a pitched roof by footprint (click-click) — flat/mono-pitch/gable (shortcut RF)"
+        },
         "group": {
           "label": "Structural Elements",
           "tooltip": "BIM structural elements (wall, opening, slab, slab opening, column, beam, stair, light fixture)"
