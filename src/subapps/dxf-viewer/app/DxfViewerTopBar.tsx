@@ -30,8 +30,10 @@ import { SlabPersistenceHost } from './SlabPersistenceHost';
 import { ColumnPersistenceHost } from './ColumnPersistenceHost';
 import { MepFixturePersistenceHost } from './MepFixturePersistenceHost';
 import { FurniturePersistenceHost } from './FurniturePersistenceHost';
+import { FloorplanSymbolPersistenceHost } from './FloorplanSymbolPersistenceHost';
 import { ElectricalPanelPersistenceHost } from './ElectricalPanelPersistenceHost';
 import { MepSegmentPersistenceHost } from './MepSegmentPersistenceHost';
+import { MepFittingPersistenceHost } from './MepFittingPersistenceHost';
 import { MepSystemPersistenceHost } from './MepSystemPersistenceHost';
 import { RailingPersistenceHost } from './RailingPersistenceHost';
 import { BeamPersistenceHost } from './BeamPersistenceHost';
@@ -147,6 +149,13 @@ export function DxfViewerTopBar({
         projectId={levelManager.saveContext?.projectId ?? undefined}
         floorplanId={levelManager.fileRecordId ?? undefined}
       />
+      <FloorplanSymbolPersistenceHost
+        primarySelectedId={primarySelectedId}
+        currentScene={currentScene}
+        levelManager={levelManager}
+        projectId={levelManager.saveContext?.projectId ?? undefined}
+        floorplanId={levelManager.fileRecordId ?? undefined}
+      />
       <ElectricalPanelPersistenceHost
         primarySelectedId={primarySelectedId}
         currentScene={currentScene}
@@ -155,6 +164,13 @@ export function DxfViewerTopBar({
         floorplanId={levelManager.fileRecordId ?? undefined}
       />
       <MepSegmentPersistenceHost
+        primarySelectedId={primarySelectedId}
+        currentScene={currentScene}
+        levelManager={levelManager}
+        projectId={levelManager.saveContext?.projectId ?? undefined}
+        floorplanId={levelManager.fileRecordId ?? undefined}
+      />
+      <MepFittingPersistenceHost
         primarySelectedId={primarySelectedId}
         currentScene={currentScene}
         levelManager={levelManager}

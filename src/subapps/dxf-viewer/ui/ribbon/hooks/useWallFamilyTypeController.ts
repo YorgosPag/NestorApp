@@ -87,6 +87,12 @@ export interface WallFamilyTypeController {
   /** Rename a (user) type. Built-ins are read-only — guard in the UI. */
   readonly renameType: (typeId: string, name: string) => Promise<void>;
   /**
+   * How many walls in the CURRENT level scene are linked to `typeId` — drives the
+   * «changes apply to N walls» warning in the Edit Type panel (ADR-414). Returns
+   * 0 when no scene is active. (Multi-floor count is future work.)
+   */
+  readonly countWallsOfType: (typeId: string) => number;
+  /**
    * Edit a (user) type's `typeParams` (thickness / dna / material / category) —
    * re-flows to every instance, all floors. Undoable. Built-ins are read-only
    * (the UI must Duplicate first). ADR-412 Φ5.
@@ -194,6 +200,15 @@ export function useWallFamilyTypeController(): WallFamilyTypeController {
     [service, currentType, dispatchAssignment],
   );
 
+  const countWallsOfType = useCallback(
+    (typeId: string): number => {
+      if (!levelManager.currentLevelId) return 0;
+      const scene = levelManager.getLevelScene(levelManager.currentLevelId);
+      return scene ? findWallsByTypeId(scene, typeId).length : 0;
+    },
+    [levelManager],
+  );
+
   const renameType = useCallback(
     async (typeId: string, name: string) => {
       if (!service) return;
@@ -289,5 +304,6 @@ export function useWallFamilyTypeController(): WallFamilyTypeController {
     renameType,
     updateTypeParams,
     deleteType,
+    countWallsOfType,
   };
 }

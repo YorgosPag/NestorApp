@@ -43,7 +43,11 @@ export type BimCategory =
   // ADR-408 Φ8 — linear MEP duct run (mechanical discipline).
   | 'duct'
   // ADR-408 Φ8 — linear MEP pipe run (plumbing discipline).
-  | 'pipe';
+  | 'pipe'
+  // ADR-415 — pure-vector 2D sanitary plan symbol (WC/washbasin/…; plumbing).
+  | 'sanitary'
+  // ADR-415 — pure-vector 2D kitchen plan symbol (sink/stove/fridge/counter; casework).
+  | 'kitchen';
 
 /**
  * Per-subcategory style overrides (ADR-377).
@@ -111,7 +115,7 @@ export const BIM_CATEGORIES: readonly BimCategory[] = [
   'wall', 'column', 'beam', 'slab', 'opening', 'slab-opening',
   'stair', 'roof', 'ceiling', 'dimension', 'hatch', 'grip', 'envelope',
   'light-fixture', 'electrical-panel', 'railing', 'mep-wire', 'furniture',
-  'duct', 'pipe',
+  'duct', 'pipe', 'sanitary', 'kitchen',
 ] as const;
 
 /**
@@ -142,6 +146,8 @@ export const MODEL_BIM_CATEGORIES: readonly BimCategory[] = [
   'furniture',
   // ADR-408 Φ8 — linear MEP duct + pipe runs.
   'duct', 'pipe',
+  // ADR-415 — pure-vector 2D floorplan symbols (sanitary + kitchen).
+  'sanitary', 'kitchen',
 ] as const;
 
 /**
@@ -189,4 +195,8 @@ export const DEFAULT_OBJECT_STYLES: Readonly<Record<BimCategory, ObjectStyle>> =
   duct:           { projectionPen: 4, cutPen: 5 },
   // ADR-408 Φ8 — σωλήνας: λεπτή γραμμή (plumbing pipe run, plan centerline).
   pipe:           { projectionPen: 3, cutPen: 4 },
+  // ADR-415 — είδος υγιεινής: λεπτή γραμμή (annotation-grade plan symbol).
+  sanitary:       { projectionPen: 3, cutPen: 3 },
+  // ADR-415 — στοιχείο κουζίνας: λεπτή γραμμή (casework plan symbol).
+  kitchen:        { projectionPen: 3, cutPen: 3 },
 } as const;

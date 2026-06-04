@@ -475,6 +475,22 @@
       "statusStart": "Επίλεξε αρχή διαδρομής",
       "statusEnd": "Επίλεξε τέλος διαδρομής"
     },
+    "mepFitting": {
+      "name": "Εξάρτημα",
+      "kinds": {
+        "elbow": "Γωνία",
+        "coupling": "Σύνδεσμος",
+        "reducer": "Συστολή",
+        "tee": "Ταυ",
+        "cross": "Σταυρός",
+        "cap": "Τάπα"
+      },
+      "validation": {
+        "tooManyIncidents": "Πολλοί κλάδοι στον κόμβο — παραλείπεται",
+        "missingSecondaryDiameter": "Η συστολή απαιτεί δεύτερη διάμετρο",
+        "degenerateDiameter": "Μη έγκυρη διάμετρος εξαρτήματος"
+      }
+    },
     "railing": {
       "statusStart": "Επιλέξτε αρχή κιγκλιδώματος",
       "statusEnd": "Επιλέξτε τέλος κιγκλιδώματος"
@@ -612,6 +628,9 @@
     },
     "furniture": {
       "statusPosition": "Κάνε κλικ για τοποθέτηση επίπλου"
+    },
+    "floorplanSymbol": {
+      "statusPosition": "Κάνε κλικ για τοποθέτηση είδους υγιεινής (WC)"
     }
   },
   "snapModes": {
@@ -733,6 +752,7 @@
       "xlineMode": "Γραμμή Κατασκευής",
       "analyze": "Ανάλυση",
       "furnitureProperties": "Ιδιότητες Επίπλου",
+      "floorplanSymbolProperties": "Ιδιότητες Συμβόλου",
       "mepFixtureLibrary": "Βιβλιοθήκη Φωτιστικών"
     },
     "panels": {
@@ -851,6 +871,8 @@
       "furnitureCatalog": "Κατάλογος",
       "furnitureGeometry": "Γεωμετρία",
       "furnitureActions": "Ενέργειες",
+      "floorplanSymbolCatalog": "Σύμβολο",
+      "floorplanSymbolGeometry": "Γεωμετρία",
       "mepFixtureLibrary": "Βιβλιοθήκη",
       "mepFixtureLibraryPlacement": "Τοποθέτηση"
     },
@@ -1000,9 +1022,17 @@
           "label": "Δομικά Στοιχεία",
           "tooltip": "Δομικά στοιχεία BIM (τοίχος, κούφωμα, πλάκα, διάνοιξη πλάκας, κολώνα, δοκός, σκάλα, φωτιστικό)"
         },
+        "objectsGroup": {
+          "label": "Αντικείμενα",
+          "tooltip": "Επιπλώσεις & εξοπλισμός (ΟΧΙ δομικά): 2D σύμβολα κάτοψης (είδη υγιεινής / κουζίνα / έπιπλα) + 3D έπιπλα — διάλεξε το σύμβολο από την καρτέλα ιδιοτήτων"
+        },
         "furniture": {
           "label": "Έπιπλο",
           "tooltip": "Τοποθέτησε έπιπλο (CC0) με ένα κλικ (κατηγορία: εσωτερικά) (συντόμευση FN)"
+        },
+        "floorplanSymbol": {
+          "label": "2D Σύμβολα",
+          "tooltip": "Τοποθέτησε 2D σύμβολο κάτοψης — είδη υγιεινής / κουζίνα / έπιπλα — με ένα κλικ· διάλεξε το σύμβολο από την καρτέλα ιδιοτήτων (συντόμευση WC)"
         },
         "mepDuct": {
           "label": "Αεραγωγός",
@@ -1322,6 +1352,8 @@
         "editType": "Επεξεργασία τύπου…",
         "editTypeTitle": "Επεξεργασία τύπου τοίχου",
         "editTypeDescription": "Οι αλλαγές εφαρμόζονται σε όλα τα στοιχεία αυτού του τύπου, σε όλους τους ορόφους.",
+        "editTypeBuiltinNotice": "Ενσωματωμένος τύπος (μόνο ανάγνωση). Κάντε Διπλασιασμό για να επεξεργαστείτε τις στρώσεις.",
+        "editTypeAffectsCount": "Οι αλλαγές εφαρμόζονται σε {count} τοίχους αυτού του τύπου.",
         "preview": {
           "title": "Προεπισκόπηση",
           "emptyHint": "Φόρτωσε προεπιλογή ή πρόσθεσε στρώσεις για να δεις την προεπισκόπηση."
@@ -2104,6 +2136,10 @@
           "close": "Κλείσιμο"
         }
       },
+      "floorplanSymbolEditor": {
+        "asset": "Σύμβολο",
+        "rotation": "Περιστροφή"
+      },
       "furnitureEditor": {
         "asset": "Μοντέλο",
         "rotation": "Περιστροφή",
@@ -2469,6 +2505,38 @@
         "nonPositiveDimension": "Οι διαστάσεις πρέπει να είναι μεγαλύτερες από 0",
         "dimensionTooSmall": "Η διάσταση είναι κάτω από το ελάχιστο επιτρεπτό",
         "nonPositiveHeight": "Το ύψος πρέπει να είναι μεγαλύτερο από 0"
+      }
+    }
+  },
+  "floorplanSymbol": {
+    "category": {
+      "sanitary": "Είδη υγιεινής",
+      "kitchen": "Κουζίνα",
+      "furniture": "Έπιπλα"
+    },
+    "catalog": {
+      "wc": "Λεκάνη WC",
+      "washbasin": "Νιπτήρας",
+      "shower": "Ντουζιέρα",
+      "bathtub": "Μπανιέρα",
+      "bidet": "Μπιντές",
+      "kitchenSink": "Νεροχύτης",
+      "stove": "Εστίες / κουζίνα",
+      "fridge": "Ψυγείο",
+      "counter": "Πάγκος",
+      "bedSingle": "Μονό κρεβάτι",
+      "bedDouble": "Διπλό κρεβάτι",
+      "sofa": "Καναπές",
+      "armchair": "Πολυθρόνα",
+      "diningTable": "Τραπέζι",
+      "chair": "Καρέκλα",
+      "desk": "Γραφείο"
+    },
+    "validation": {
+      "hardErrors": {
+        "missingAsset": "Λείπει ο τύπος συμβόλου",
+        "nonPositiveDimension": "Οι διαστάσεις πρέπει να είναι μεγαλύτερες από 0",
+        "dimensionTooSmall": "Η διάσταση είναι κάτω από το ελάχιστο επιτρεπτό"
       }
     }
   }

@@ -394,6 +394,7 @@
 | **ADR-409** | Πολιτική αδειοδότησης & redistribution εξωτερικών BIM βιβλιοθηκών/περιεχομένου | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-409-third-party-bim-library-licensing-policy.md) |
 | **ADR-410** | Εισαγωγή CC0 επίπλων ως mesh-based BIM στοιχείο (mesh-import subsystem) | 🟢 VERTICAL SLICE DONE 2026-06-03 (1 καρέκλα end-to-end· 23 tests, tsc 0· 🔴 Storage upload+verify+commit) | 2026-06-03 | Uncategorized | [📄](./adrs/ADR-410-cc0-mesh-furniture-import.md) |
 | **ADR-411** | BIM Mesh Library (entity-agnostic CC0 mesh assets) — γενίκευση furniture subsystem + φωτιστικά mesh opt-in | 🟢 VERTICAL SLICE DONE 2026-06-03 (1 CC0 κρεμαστό φωτιστικό end-to-end· furniture refactored onto SSoT· 90/90 tests, tsc 0· 🔴 verify+commit) | 2026-06-03 | Uncategorized | [📄](./adrs/ADR-411-bim-mesh-library.md) |
+| **ADR-415** | Βιβλιοθήκη 2D αποτυπωμάτων (floorplan symbol library) — pure-vector 2D σύμβολα επίπλων/sanitary/kitchen στον δισδιάστατο καμβά | 🟡 RESEARCH + DESIGN (PROPOSED) 2026-06-04 (έρευνα app+web licensing· plan 6 φάσεων· εκκρεμεί έγκριση Φ1) | 2026-06-04 | Uncategorized | [📄](./adrs/ADR-415-2d-floorplan-symbol-library.md) |
 | **ADR-UI-001** | Visual Primitive Ownership & Semantic Tokens | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-UI-001.md) |
 
 ---
@@ -772,6 +773,7 @@
 | **ADR-409** | Πολιτική αδειοδότησης & redistribution εξωτερικών BIM βιβλιοθηκών/περιεχομένου | ✅ APPROVED | [View](./adrs/ADR-409-third-party-bim-library-licensing-policy.md) |
 | **ADR-410** | Εισαγωγή CC0 επίπλων ως mesh-based BIM στοιχείο (mesh-import subsystem) | 🟢 VERTICAL SLICE DONE | [View](./adrs/ADR-410-cc0-mesh-furniture-import.md) |
 | **ADR-411** | BIM Mesh Library (entity-agnostic CC0 mesh assets) | 🟢 VERTICAL SLICE DONE | [View](./adrs/ADR-411-bim-mesh-library.md) |
+| **ADR-415** | Βιβλιοθήκη 2D αποτυπωμάτων (floorplan symbol library) | 🟡 RESEARCH + DESIGN | [View](./adrs/ADR-415-2d-floorplan-symbol-library.md) |
 | **ADR-UI-001** | Visual Primitive Ownership & Semantic Tokens | ✅ APPROVED | [View](./adrs/ADR-UI-001.md) |
 
 ---

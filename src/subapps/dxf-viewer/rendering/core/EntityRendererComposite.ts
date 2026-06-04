@@ -43,6 +43,8 @@ import { RailingRenderer } from '../../bim/renderers/RailingRenderer';
 import { FurnitureRenderer } from '../../bim/renderers/FurnitureRenderer';
 // ADR-408 Φ8 — MEP segment leaf (linear duct/pipe run, dashed outline + centerline).
 import { MepSegmentRenderer } from '../../bim/renderers/MepSegmentRenderer';
+// ADR-408 Φ11 — MEP fitting leaf (auto pipe junction element; footprint + per-kind glyph).
+import { MepFittingRenderer } from '../../bim/renderers/MepFittingRenderer';
 // ADR-362 Phase C1 — persistent dimension leaf (consumes DimGeometry discriminated union).
 import { DimensionRenderer } from '../entities/DimensionRenderer';
 import type { DimensionLookup } from '../../systems/dimensions/dim-geometry-builder';
@@ -105,6 +107,8 @@ export class EntityRendererComposite {
     const furnitureRenderer = new FurnitureRenderer(this.ctx);
     // ADR-408 Φ8 — MEP segment renderer (linear duct/pipe run, dashed outline + centerline).
     const mepSegmentRenderer = new MepSegmentRenderer(this.ctx);
+    // ADR-408 Φ11 — MEP fitting renderer (auto pipe junction element; footprint + glyph).
+    const mepFittingRenderer = new MepFittingRenderer(this.ctx);
     // ADR-362 Phase C1 — dimension renderer (10 variants via DimGeometry union).
     const dimensionRenderer = new DimensionRenderer(this.ctx);
     // ADR-359 Phase 4.b — Liang-Barsky clipped construction line renderers.
@@ -137,6 +141,7 @@ export class EntityRendererComposite {
     this.renderers.set('railing', railingRenderer);
     this.renderers.set('furniture', furnitureRenderer);
     this.renderers.set('mep-segment', mepSegmentRenderer);
+    this.renderers.set('mep-fitting', mepFittingRenderer);
     this.renderers.set('dimension', dimensionRenderer);
     this.renderers.set('xline', xlineRenderer);
     this.renderers.set('ray', rayRenderer);

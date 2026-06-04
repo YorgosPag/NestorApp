@@ -33,6 +33,7 @@ import {
   DEFAULT_WALL_TOP_BINDING,
 } from '../../bim/types/bim-binding';
 import { createWall } from '@/services/factories/wall.factory';
+import { resolveAutoWallTypeId } from '../../bim/family-types/wall-type-auto-assign';
 import { mmToSceneUnits, type SceneUnits } from '../../utils/scene-units';
 
 export type { SceneUnits };
@@ -196,7 +197,12 @@ export function buildWallEntity(
     visible: true,
     validation: validation.bimValidation,
   });
-  return { ok: true, entity };
+  // ADR-412/414 — link the wall to its category's read-only built-in family type
+  // when its cross-section still matches the category default (non-destructive;
+  // manual/customised walls stay ad-hoc). Resolution + persistence already carry
+  // `typeId` (zero extra wiring downstream).
+  const typeId = resolveAutoWallTypeId(params);
+  return { ok: true, entity: typeId ? { ...entity, typeId } : entity };
 }
 
 // ─── Two-click completion helper ─────────────────────────────────────────────

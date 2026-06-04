@@ -25,6 +25,7 @@ import { useSlabTool, SLAB_AUTO_CLOSE_TOLERANCE_DEFAULT } from '../drawing/useSl
 import { useColumnTool } from '../drawing/useColumnTool';
 import { useMepFixtureTool } from '../drawing/useMepFixtureTool';
 import { useFurnitureTool } from '../drawing/useFurnitureTool';
+import { useFloorplanSymbolTool } from '../drawing/useFloorplanSymbolTool';
 import { useElectricalPanelTool } from '../drawing/useElectricalPanelTool';
 import { useMepSegmentTool } from '../drawing/useMepSegmentTool';
 import { useRailingTool } from '../drawing/useRailingTool';
@@ -42,6 +43,7 @@ import { addWallToScene } from '../../bim/walls/add-wall-to-scene';
 import { addColumnToScene } from '../../bim/columns/add-column-to-scene';
 import { addMepFixtureToScene } from '../../bim/mep-fixtures/add-mep-fixture-to-scene';
 import { addFurnitureToScene } from '../../bim/furniture/add-furniture-to-scene';
+import { addFloorplanSymbolToScene } from '../../bim/floorplan-symbols/add-floorplan-symbol-to-scene';
 import { addElectricalPanelToScene } from '../../bim/electrical-panels/add-electrical-panel-to-scene';
 import { addMepSegmentToScene } from '../../bim/mep-segments/add-mep-segment-to-scene';
 import { addRailingToScene } from '../../bim/railings/add-railing-to-scene';
@@ -82,6 +84,7 @@ export interface UseSpecialToolsReturn extends SelectionToolsReturn {
   columnTool: ReturnType<typeof useColumnTool>;
   mepFixtureTool: ReturnType<typeof useMepFixtureTool>; // ADR-406
   furnitureTool: ReturnType<typeof useFurnitureTool>; // ADR-410
+  floorplanSymbolTool: ReturnType<typeof useFloorplanSymbolTool>; // ADR-415
   electricalPanelTool: ReturnType<typeof useElectricalPanelTool>; // ADR-408 Φ3
   mepSegmentTool: ReturnType<typeof useMepSegmentTool>; // ADR-408 Φ8
   railingTool: ReturnType<typeof useRailingTool>; // ADR-407
@@ -310,6 +313,17 @@ export function useSpecialTools(props: UseSpecialToolsProps): UseSpecialToolsRet
   });
   useToolLifecycle(activeTool === 'furniture', furnitureTool.activate, furnitureTool.deactivate);
 
+  // ADR-415 — FLOORPLAN SYMBOL TOOL: single-click placement; entity appended+broadcast.
+  const floorplanSymbolTool = useFloorplanSymbolTool({
+    currentLevelId: levelManager.currentLevelId || '0',
+    onFloorplanSymbolCreated: (symbolEntity) => addFloorplanSymbolToScene(symbolEntity, levelManager),
+    getSceneUnits: () => {
+      const lid = levelManager.currentLevelId;
+      return lid ? resolveSceneUnits(levelManager.getLevelScene(lid)) : 'mm';
+    },
+  });
+  useToolLifecycle(activeTool === 'floorplan-symbol', floorplanSymbolTool.activate, floorplanSymbolTool.deactivate);
+
   // ADR-408 Φ3 — ELECTRICAL PANEL TOOL: single-click placement; entity appended+broadcast.
   const electricalPanelTool = useElectricalPanelTool({
     currentLevelId: levelManager.currentLevelId || '0',
@@ -409,6 +423,7 @@ export function useSpecialTools(props: UseSpecialToolsProps): UseSpecialToolsRet
     columnTool,
     mepFixtureTool,
     furnitureTool,
+    floorplanSymbolTool,
     electricalPanelTool,
     mepSegmentTool,
     railingTool,

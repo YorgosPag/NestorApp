@@ -19,6 +19,7 @@ import { CONTEXTUAL_MULTI_SELECTION_TAB, MULTI_SELECTION_CONTEXTUAL_TRIGGER } fr
 import { CONTEXTUAL_MEP_CIRCUIT_TAB, MEP_CIRCUIT_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-mep-circuit-tab';
 import { CONTEXTUAL_MEP_FIXTURE_TAB, MEP_FIXTURE_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-mep-fixture-tab';
 import { CONTEXTUAL_FURNITURE_TAB, FURNITURE_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-furniture-tab';
+import { CONTEXTUAL_FLOORPLAN_SYMBOL_TAB, FLOORPLAN_SYMBOL_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-floorplan-symbol-tab';
 import { CONTEXTUAL_MEP_FIXTURE_LIBRARY_TAB, MEP_FIXTURE_LIBRARY_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-mep-fixture-library-tab';
 import { ANIMATION_CONTEXTUAL_TAB, ANIMATION_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-animation-tab';
 import { selectAnimationToolActive, useAnimationStore } from '../bim-3d/animation/AnimationStore';
@@ -49,6 +50,7 @@ export const RIBBON_CONTEXTUAL_TABS = [
   CONTEXTUAL_MEP_FIXTURE_TAB,
   CONTEXTUAL_MEP_FIXTURE_LIBRARY_TAB,
   CONTEXTUAL_FURNITURE_TAB,
+  CONTEXTUAL_FLOORPLAN_SYMBOL_TAB,
   ANIMATION_CONTEXTUAL_TAB,
 ] as const;
 
@@ -149,6 +151,8 @@ export function useActiveContextualTrigger({
     if (activeTool === 'beam' || activeTool === 'beam-from-wall') return BEAM_CONTEXTUAL_TRIGGER;
     // ADR-410 — furniture tool active → show the furniture library picker tab.
     if (activeTool === 'furniture') return FURNITURE_CONTEXTUAL_TRIGGER;
+    // ADR-415 — floorplan-symbol tool active → show the symbol library picker tab.
+    if (activeTool === 'floorplan-symbol') return FLOORPLAN_SYMBOL_CONTEXTUAL_TRIGGER;
     // ADR-411 — MEP fixture tool active → show the light-fixture library picker
     // tab (choose CC0 mesh or parametric). Selecting a placed fixture instead
     // surfaces the property editor (resolveContextualTrigger, checked earlier).

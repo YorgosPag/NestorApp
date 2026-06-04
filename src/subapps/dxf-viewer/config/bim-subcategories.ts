@@ -117,6 +117,9 @@ export const SUBCATEGORY_TAXONOMY: Readonly<Record<BimCategory, ReadonlyArray<st
   furniture:       [],
   duct:            [],
   pipe:            [],
+  // ADR-415 — floorplan symbols: no subcategory styling model (pure 2D symbol).
+  sanitary:        [],
+  kitchen:         [],
 };
 
 /**

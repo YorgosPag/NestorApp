@@ -10,8 +10,12 @@
  * here. The ribbon picker options are GENERATED from `FURNITURE_CATALOG` — never
  * hand-maintain a parallel list.
  *
- * Legality (ADR-409 §B-θετικό + §D.1): all assets are CC0 (Poly Haven, verified)
- * → we redistribute + enrich freely; the BIM metadata below is ours.
+ * Legality (ADR-409 §B-θετικό + §D.1): assets are MIXED licence —
+ *   • Poly Haven assets = CC0 (no obligation)
+ *   • Sketchfab assets  = CC-BY 4.0 (MANDATORY creator attribution, kept in `source`)
+ * Both licences allow commercial redistribution + enrichment; the BIM metadata
+ * below is ours. The exact licence + attribution per asset lives in each entry's
+ * `source` field — that is the SSoT, not this comment.
  *
  * @see docs/centralized-systems/reference/adrs/ADR-410-cc0-mesh-furniture-import.md
  * @see docs/centralized-systems/reference/adrs/ADR-409-third-party-bim-library-licensing-policy.md §D.1

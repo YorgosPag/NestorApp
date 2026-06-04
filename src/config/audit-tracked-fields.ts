@@ -711,6 +711,22 @@ const FURNITURE_TRACKED_FIELDS_RAW: Record<string, string> = {
 export const FURNITURE_TRACKED_FIELDS: Record<string, TrackedFieldDef> =
   mergeDefs(FURNITURE_TRACKED_FIELDS_RAW, {});
 
+// ADR-415 — pure-vector 2D floorplan symbol (WC/sanitary first).
+const FLOORPLAN_SYMBOL_TRACKED_FIELDS_RAW: Record<string, string> = {
+  category: 'category',
+  kind: 'kind',
+  layerId: 'layerId',
+  assetId: 'assetId',
+  widthMm: 'widthMm',
+  depthMm: 'depthMm',
+  rotationDeg: 'rotationDeg',
+  storeyId: 'storeyId',
+  hostId: 'hostId',
+};
+
+export const FLOORPLAN_SYMBOL_TRACKED_FIELDS: Record<string, TrackedFieldDef> =
+  mergeDefs(FLOORPLAN_SYMBOL_TRACKED_FIELDS_RAW, {});
+
 // ADR-408 — logical MEP system (electrical circuit first; geometry-less). The
 // `members` array serializes as a JSON scalar (mirror slab `slope`).
 const MEP_SYSTEM_TRACKED_FIELDS_RAW: Record<string, string> = {
@@ -761,6 +777,21 @@ const MEP_SEGMENT_TRACKED_FIELDS_RAW: Record<string, string> = {
 
 export const MEP_SEGMENT_TRACKED_FIELDS: Record<string, TrackedFieldDef> =
   mergeDefs(MEP_SEGMENT_TRACKED_FIELDS_RAW, {});
+
+// ADR-408 Φ11 — auto pipe fitting (junction element).
+const MEP_FITTING_TRACKED_FIELDS_RAW: Record<string, string> = {
+  domain: 'domain',
+  kind: 'kind',
+  junctionKey: 'junctionKey',
+  centerlineElevationMm: 'centerlineElevationMm',
+  primaryDiameterMm: 'primaryDiameterMm',
+  secondaryDiameterMm: 'secondaryDiameterMm',
+  elbowStyle: 'elbowStyle',
+  storeyId: 'storeyId',
+};
+
+export const MEP_FITTING_TRACKED_FIELDS: Record<string, TrackedFieldDef> =
+  mergeDefs(MEP_FITTING_TRACKED_FIELDS_RAW, {});
 
 // ADR-407 — standalone path-based railing.
 const RAILING_TRACKED_FIELDS_RAW: Record<string, string> = {
@@ -966,8 +997,12 @@ export function getTrackedFieldsForEntityAuditType(
       return ELECTRICAL_PANEL_TRACKED_FIELDS;
     case 'mep-segment':
       return MEP_SEGMENT_TRACKED_FIELDS;
+    case 'mep-fitting':
+      return MEP_FITTING_TRACKED_FIELDS;
     case 'railing':
       return RAILING_TRACKED_FIELDS;
+    case 'floorplan-symbol':
+      return FLOORPLAN_SYMBOL_TRACKED_FIELDS;
     case 'slab':
       return SLAB_TRACKED_FIELDS;
     case 'beam':

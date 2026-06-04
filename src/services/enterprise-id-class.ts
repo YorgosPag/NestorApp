@@ -350,8 +350,10 @@ export class EnterpriseIdService {
   generateMepSystemId(): string { return this.generateId(P.MEP_SYSTEM).id; }
   generateElectricalPanelId(): string { return this.generateId(P.ELECTRICAL_PANEL).id; }
   generateMepSegmentId(): string { return this.generateId(P.MEP_SEGMENT).id; }
+  generateMepFittingId(): string { return this.generateId(P.MEP_FITTING).id; }
   generateRailingId(): string { return this.generateId(P.RAILING).id; }
   generateFurnitureId(): string { return this.generateId(P.FURNITURE).id; }
+  generateFloorplanSymbolId(): string { return this.generateId(P.FLOORPLAN_SYMBOL).id; }
   generateBimPresetId(): string { return this.generateId(P.BIM_PRESET).id; }
   generateBimMaterialId(): string { return this.generateId(P.BIM_MATERIAL).id; }
   generateBimSettingsId(): string { return this.generateId(P.BIM_SETTINGS).id; }

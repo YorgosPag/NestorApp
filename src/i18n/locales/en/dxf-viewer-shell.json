@@ -475,6 +475,22 @@
       "statusStart": "Pick run start",
       "statusEnd": "Pick run end"
     },
+    "mepFitting": {
+      "name": "Fitting",
+      "kinds": {
+        "elbow": "Elbow",
+        "coupling": "Coupling",
+        "reducer": "Reducer",
+        "tee": "Tee",
+        "cross": "Cross",
+        "cap": "Cap"
+      },
+      "validation": {
+        "tooManyIncidents": "Too many branches at node — skipped",
+        "missingSecondaryDiameter": "Reducer requires a secondary diameter",
+        "degenerateDiameter": "Invalid fitting diameter"
+      }
+    },
     "railing": {
       "statusStart": "Pick railing start",
       "statusEnd": "Pick railing end"
@@ -612,6 +628,9 @@
     },
     "furniture": {
       "statusPosition": "Click to place furniture"
+    },
+    "floorplanSymbol": {
+      "statusPosition": "Click to place the sanitary fixture (WC)"
     }
   },
   "snapModes": {
@@ -733,6 +752,7 @@
       "xlineMode": "Construction Line",
       "analyze": "Analyze",
       "furnitureProperties": "Furniture Properties",
+      "floorplanSymbolProperties": "Symbol Properties",
       "mepFixtureLibrary": "Light Fixture Library"
     },
     "panels": {
@@ -851,6 +871,8 @@
       "furnitureCatalog": "Catalog",
       "furnitureGeometry": "Geometry",
       "furnitureActions": "Actions",
+      "floorplanSymbolCatalog": "Symbol",
+      "floorplanSymbolGeometry": "Geometry",
       "mepFixtureLibrary": "Library",
       "mepFixtureLibraryPlacement": "Placement"
     },
@@ -1000,9 +1022,17 @@
           "label": "Structural Elements",
           "tooltip": "BIM structural elements (wall, opening, slab, slab opening, column, beam, stair, light fixture)"
         },
+        "objectsGroup": {
+          "label": "Objects",
+          "tooltip": "Furnishings & equipment (NOT structural): 2D floorplan symbols (sanitary / kitchen / furniture) + 3D furniture — pick the symbol in the contextual tab"
+        },
         "furniture": {
           "label": "Furniture",
           "tooltip": "Place furniture (CC0) with a single click (discipline: interior) (shortcut FN)"
+        },
+        "floorplanSymbol": {
+          "label": "2D Symbols",
+          "tooltip": "Place a 2D floorplan symbol — sanitary / kitchen / furniture — with a single click; pick the symbol from the contextual tab (shortcut WC)"
         },
         "mepDuct": {
           "label": "Duct",
@@ -1322,6 +1352,8 @@
         "editType": "Edit type…",
         "editTypeTitle": "Edit wall type",
         "editTypeDescription": "Changes apply to every instance of this type, on all floors.",
+        "editTypeBuiltinNotice": "Built-in type (read-only). Duplicate it to edit the layers.",
+        "editTypeAffectsCount": "Changes apply to {count} walls of this type.",
         "preview": {
           "title": "Preview",
           "emptyHint": "Load a preset or add layers to see the preview."
@@ -2104,6 +2136,10 @@
           "close": "Close"
         }
       },
+      "floorplanSymbolEditor": {
+        "asset": "Symbol",
+        "rotation": "Rotation"
+      },
       "furnitureEditor": {
         "asset": "Model",
         "rotation": "Rotation",
@@ -2469,6 +2505,38 @@
         "nonPositiveDimension": "Dimensions must be greater than 0",
         "dimensionTooSmall": "Dimension is below the minimum allowed",
         "nonPositiveHeight": "Height must be greater than 0"
+      }
+    }
+  },
+  "floorplanSymbol": {
+    "category": {
+      "sanitary": "Sanitary fixtures",
+      "kitchen": "Kitchen",
+      "furniture": "Furniture"
+    },
+    "catalog": {
+      "wc": "WC (water closet)",
+      "washbasin": "Washbasin",
+      "shower": "Shower tray",
+      "bathtub": "Bathtub",
+      "bidet": "Bidet",
+      "kitchenSink": "Kitchen sink",
+      "stove": "Cooktop / stove",
+      "fridge": "Refrigerator",
+      "counter": "Counter",
+      "bedSingle": "Single bed",
+      "bedDouble": "Double bed",
+      "sofa": "Sofa",
+      "armchair": "Armchair",
+      "diningTable": "Dining table",
+      "chair": "Chair",
+      "desk": "Desk"
+    },
+    "validation": {
+      "hardErrors": {
+        "missingAsset": "Symbol type is missing",
+        "nonPositiveDimension": "Dimensions must be greater than 0",
+        "dimensionTooSmall": "Dimension is below the minimum allowed"
       }
     }
   }

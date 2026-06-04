@@ -275,8 +275,10 @@ export const generateMepFixtureId = () => enterpriseIdService.generateMepFixture
 export const generateMepSystemId = () => enterpriseIdService.generateMepSystemId();
 export const generateElectricalPanelId = () => enterpriseIdService.generateElectricalPanelId();
 export const generateMepSegmentId = () => enterpriseIdService.generateMepSegmentId();
+export const generateMepFittingId = () => enterpriseIdService.generateMepFittingId();
 export const generateRailingId = () => enterpriseIdService.generateRailingId();
 export const generateFurnitureId = () => enterpriseIdService.generateFurnitureId();
+export const generateFloorplanSymbolId = () => enterpriseIdService.generateFloorplanSymbolId();
 export const generateBimPresetId = () => enterpriseIdService.generateBimPresetId();
 export const generateBimMaterialId = () => enterpriseIdService.generateBimMaterialId();
 export const generateBimSettingsId = () => enterpriseIdService.generateBimSettingsId();

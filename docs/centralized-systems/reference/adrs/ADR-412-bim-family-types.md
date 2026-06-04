@@ -1,7 +1,7 @@
 # ADR-412 — BIM Family Types (Revit-grade Type/Instance system)
 
-**Status:** 🟢 v0.7 — Φ1+Φ2+Φ3+Φ4+Φ5 IMPLEMENTED (Giorgio-approved Plan Mode for Φ5). Φ6 (stair migration) remains. Pending commit + browser verify (Giorgio commits).
-**Date:** 2026-06-03
+**Status:** 🟢 v0.8 — Φ1+Φ2+Φ3+Φ4+Φ5 IMPLEMENTED + **wall auto-typing (ADR-414 link)**. Walls are now linked to their category's built-in type on create + on load (non-destructive). Φ6 (stair migration) remains. Pending commit + browser verify (Giorgio commits).
+**Date:** 2026-06-04
 **Author:** Claude (Opus 4.8)
 **Supersedes numbering note:** This is the "BIM Family Types" successor that ADR-377 §Related
 mistakenly called "ADR-378". **ADR-378 is the Snap System Master** — the correct number for Family
@@ -277,6 +277,27 @@ New `.ssot-registry.json` Tier 3 module `bim-family-types`:
 
 ## 9. Changelog
 
+- **v0.8 (2026-06-04)** — **Wall auto-typing — closes the ADR-414 gap «every wall shows the same layers»**
+  (Giorgio-approved Plan Mode, recognition-first). **Root cause:** walls were created + persisted WITHOUT a
+  `typeId`, so the «Edit Wall Type» panel (ADR-414) edited a type no instance referenced. The whole «type always
+  wins» machine was already wired (persistence reads/writes `typeId`, `resolveEffectiveWallParams` runs on load +
+  on store `version` bump, built-ins merged in the store) — only the two `typeId` injection points were missing.
+  **Decision (Giorgio, locked):** *Read-only built-in + Duplicate-to-edit* — new/legacy walls link to the
+  category's read-only built-in type; editing layers goes through Duplicate first (zero seeding/persistence of new
+  default types). **Implementation:** NEW SSoT `bim/family-types/built-in-types.ts §getBuiltInWallTypeId(category)`
+  (id string declared once, N.0.2) + NEW `bim/family-types/wall-type-auto-assign.ts §resolveAutoWallTypeId(params)`
+  — the ONE non-destructive policy: returns the built-in id ONLY when the wall's `thickness`+`dna` are byte-equal
+  to the category default (`dequal`), else `undefined` (manual/customised walls stay ad-hoc → resolution never
+  snaps geometry to default). Consumed by **creation** (`hooks/drawing/wall-completion.ts buildWallEntity`) and
+  **load** (`hooks/data/wall-persistence-helpers.ts docToEntity`, Revit «re-materialise on load»: in-scene +
+  drift-tolerant, persisted on next auto-save — NOT a destructive backfill). **Edit panel guard (ADR-414):**
+  `EditWallTypeDialog` now detects `origin==='built-in'` → read-only notice + «Duplicate & edit» (clone→assign→
+  retarget) + Save disabled; user types show an «applies to N walls» warning via NEW
+  `useWallFamilyTypeController.countWallsOfType` (reuse `findWallsByTypeId`). i18n + `editTypeBuiltinNotice`/
+  `editTypeAffectsCount` (el+en, single-brace ICU per CHECK 3.9). **Tests:** NEW `wall-type-auto-assign.test.ts`
+  (default→built-in id ×5, manual/customised/no-category→undefined) → family-types 83 PASS + wall-completion 22
+  PASS; tsc 0 own. Not in ADR-040 high-freq path → no CHECK 6B/6D staging. **Next: Φ6 stair migration.** Pending
+  commit + 🔴 browser verify. | Claude (Opus 4.8)
 - **v0.7 (2026-06-03)** — **Φ5 Propagation + undo + delete IMPLEMENTED** (Plan Mode, recognition-first).
   Revit-grade «Edit Type» → re-flows to ALL instances on ALL floors, FULL SSoT.
   **Architecture (recognition, N.0.1):** the in-scene geometry re-flow ALREADY exists from Φ2

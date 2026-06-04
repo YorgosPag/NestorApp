@@ -82,11 +82,21 @@ export function EditWallTypeDialog(): React.ReactElement | null {
 
 function EditWallTypeDialogContent({ typeId }: { typeId: string }): React.ReactElement | null {
   const { t } = useTranslation('dxf-viewer-shell');
-  const { updateTypeParams, wall } = useWallFamilyTypeController();
+  const { updateTypeParams, duplicateCurrent, countWallsOfType, wall } =
+    useWallFamilyTypeController();
   const getType = useBimFamilyTypeStore((s) => s.getType);
   const type = asWallFamilyType(getType(typeId));
+  // Built-in types are read-only code constants (ADR-412 Q3) — edits go through
+  // Duplicate-to-edit. The affected-wall count drives the «applies to N walls»
+  // warning for editable (user) types.
+  const isBuiltIn = type?.origin === 'built-in';
+  const affectedCount = countWallsOfType(typeId);
 
-  const [draft, setDraft] = useState<WallTypeParams | null>(type ? type.typeParams : null);
+  // Independent deep copy so editing the draft can NEVER bleed into the live
+  // store object (Cancel must fully discard — ADR-414).
+  const [draft, setDraft] = useState<WallTypeParams | null>(
+    type ? structuredClone(type.typeParams) : null,
+  );
   // ADR-414 — shared bidirectional highlight between the preview + the editor rows.
   const [highlightLayerId, setHighlightLayerId] = useState<string | null>(null);
 
@@ -99,19 +109,31 @@ function EditWallTypeDialogContent({ typeId }: { typeId: string }): React.ReactE
     if (selectedTypeId && selectedTypeId !== typeId) openEditWallType(selectedTypeId);
   }, [selectedTypeId, typeId]);
 
-  // (Re)seed the draft when the target type changes.
+  // (Re)seed the draft (deep copy) when the target type changes.
   useEffect(() => {
-    setDraft(type ? type.typeParams : null);
+    setDraft(type ? structuredClone(type.typeParams) : null);
     setHighlightLayerId(null);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [typeId]);
 
   const onClose = useCallback(() => closeEditWallType(), []);
 
+  // Save persists but KEEPS the panel open (ADR-414 — Giorgio: keep editing /
+  // selecting walls after a save). Close is explicit (Cancel / X / Esc).
+  // Built-ins are read-only — Save is disabled in the UI, but guard here too.
   const onSave = useCallback(() => {
-    if (draft) updateTypeParams(typeId, draft);
-    closeEditWallType();
-  }, [draft, typeId, updateTypeParams]);
+    if (draft && !isBuiltIn) updateTypeParams(typeId, draft);
+  }, [draft, isBuiltIn, typeId, updateTypeParams]);
+
+  // Duplicate-to-edit (Revit «a copy will be made»): clone the built-in to a new
+  // editable user type, assign it to the selected wall, and retarget the panel.
+  const onDuplicateAndEdit = useCallback(async () => {
+    if (!type) return;
+    const baseName = resolveTypeDisplayName(type, t);
+    const newName = `${baseName} ${t('ribbon.commands.bimFamilyType.duplicateNamePrefix')}`;
+    const newId = await duplicateCurrent(newName);
+    if (newId) openEditWallType(newId);
+  }, [type, t, duplicateCurrent]);
 
   const onDnaChange = useCallback((next: WallDna | undefined) => {
     setDraft((d) =>
@@ -136,6 +158,21 @@ function EditWallTypeDialogContent({ typeId }: { typeId: string }): React.ReactE
         <p className="mb-2 text-xs text-muted-foreground">
           {t('ribbon.commands.bimFamilyType.editTypeDescription')}
         </p>
+
+        {isBuiltIn ? (
+          <p
+            className="mb-2 rounded border border-[hsl(var(--text-warning))]/40 bg-[hsl(var(--bg-warning))]/10 px-2 py-1 text-xs text-[hsl(var(--text-warning))]"
+            role="note"
+          >
+            {t('ribbon.commands.bimFamilyType.editTypeBuiltinNotice')}
+          </p>
+        ) : (
+          affectedCount > 0 && (
+            <p className="mb-2 text-xs text-muted-foreground">
+              {t('ribbon.commands.bimFamilyType.editTypeAffectsCount', { count: affectedCount })}
+            </p>
+          )
+        )}
 
         <div className="grid grid-cols-1 gap-4 md:grid-cols-[1fr_25rem]">
           <WallTypePreviewPanel
@@ -231,13 +268,23 @@ function EditWallTypeDialogContent({ typeId }: { typeId: string }): React.ReactE
           >
             {t('ribbon.commands.bimFamilyType.cancel')}
           </button>
-          <button
-            type="button"
-            onClick={onSave}
-            className="rounded border border-primary bg-primary px-3 py-1.5 text-sm text-primary-foreground hover:bg-primary/90"
-          >
-            {t('ribbon.commands.bimFamilyType.save')}
-          </button>
+          {isBuiltIn ? (
+            <button
+              type="button"
+              onClick={onDuplicateAndEdit}
+              className="rounded border border-primary bg-primary px-3 py-1.5 text-sm text-primary-foreground hover:bg-primary/90"
+            >
+              {t('ribbon.commands.bimFamilyType.duplicateAndEdit')}
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={onSave}
+              className="rounded border border-primary bg-primary px-3 py-1.5 text-sm text-primary-foreground hover:bg-primary/90"
+            >
+              {t('ribbon.commands.bimFamilyType.save')}
+            </button>
+          )}
         </footer>
       </FloatingPanel.Content>
     </FloatingPanel>

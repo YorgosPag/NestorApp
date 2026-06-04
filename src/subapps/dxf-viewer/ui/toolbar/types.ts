@@ -148,6 +148,8 @@ export type ToolType =
   | 'railing'
   // ADR-410: mesh-based CC0 furniture drawing tool (single-click placement)
   | 'furniture'
+  // ADR-415: pure-vector 2D floorplan symbol drawing tool (single-click placement)
+  | 'floorplan-symbol'
   // ADR-408 Φ8: linear MEP segment tools (duct/pipe, 2-click; one entity, two tools like Revit)
   | 'mep-duct'
   | 'mep-pipe'

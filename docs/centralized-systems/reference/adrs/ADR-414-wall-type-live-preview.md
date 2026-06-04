@@ -74,3 +74,5 @@ HoverStore/leaves κ.λπ.). Το preview είναι αυτόνομο WebGL scen
 
 ## Changelog
 - **2026-06-04** — Vertical slice (Opus, Plan Mode): pure band geometry + mini-renderer + React panel + αμφίδρομο highlight + i18n el/en + 5 helper tests. tsc 0 (scope). 🔴 browser verify + commit εκκρεμούν.
+- **2026-06-04 (b)** — Camera refinements (browser-verified): VIEW_DIR=(1.5,1.05,0.85) (πλάι+πάνω όψη)· `fitCamera` = exact 8-corner frustum fit (όχι bounding-sphere) ×1.04 margin → κεντραρισμένο, καμία γωνία clipped.
+- **2026-06-04 (c)** — **Floating-panel pivot** (Giorgio): modal `Dialog` → SSOT `FloatingPanel` (`@/components/ui/floating`, μη-modal → καμβάς επιλέξιμος)· SSOT positioning `PanelPositionCalculator.getTopRightPosition`· width 1010 / grid `[1fr_25rem]`. **Save δεν κλείνει** (μόνο persist)· **Cancel απορρίπτει** (draft=`structuredClone`)· **follow-selection** effect (μόνο typed walls). 🔴 Επόμενο: πλήρες Revit wall-type system (auto-assign τύπου + migration untyped walls) — handoff `HANDOFFS/2026-06-04_adr414-preview-floating-DONE_revit-wall-types-NEXT.md`.

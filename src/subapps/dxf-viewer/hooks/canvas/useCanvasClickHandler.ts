@@ -72,6 +72,7 @@ export function useCanvasClickHandler(params: UseCanvasClickHandlerParams): UseC
     beamTool,
     mepFixtureTool,
     furnitureTool,
+    floorplanSymbolTool,
     electricalPanelTool,
     mepSegmentTool,
     railingTool,
@@ -295,6 +296,12 @@ export function useCanvasClickHandler(params: UseCanvasClickHandlerParams): UseC
       furnitureTool.onCanvasClick(worldPoint);
       return;
     }
+    // PRIORITY 4.92a-bis: ADR-415 — Floorplan-symbol tool single-click placement
+    // (RAW worldPoint; free-point placement, no existing-geometry hit-test).
+    if (activeTool === 'floorplan-symbol' && floorplanSymbolTool?.isActive) {
+      floorplanSymbolTool.onCanvasClick(worldPoint);
+      return;
+    }
     // PRIORITY 4.92b: ADR-408 Φ3 — Electrical panel tool single-click placement
     // (RAW worldPoint; free-point placement, no existing-geometry hit-test).
     if (activeTool === 'electrical-panel' && electricalPanelTool?.isActive) {
@@ -402,6 +409,7 @@ export function useCanvasClickHandler(params: UseCanvasClickHandlerParams): UseC
     beamTool,
     mepFixtureTool,
     furnitureTool,
+    floorplanSymbolTool,
     electricalPanelTool,
     mepSegmentTool,
     railingTool,

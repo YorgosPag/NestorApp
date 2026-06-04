@@ -22,6 +22,7 @@ import type { ElectricalPanelEntity } from '../../bim/types/electrical-panel-typ
 import type { RailingEntity } from '../../bim/types/railing-types';
 import type { FurnitureEntity } from '../../bim/types/furniture-types';
 import type { MepSegmentEntity } from '../../bim/types/mep-segment-types';
+import type { MepFittingEntity } from '../../bim/types/mep-fitting-types';
 import type { BuildingRef, FloorRef } from '../../bim/utils/bim-floor-utils';
 import { applyBuildingsPreset } from '../utils/building-visibility-state';
 import type { BuildingVisMode, BuildingPreset } from '../utils/building-visibility-state';
@@ -56,6 +57,8 @@ export interface Bim3DEntities {
   readonly furnitures: readonly FurnitureEntity[];
   /** ADR-408 Φ8 — linear MEP segments (duct + pipe). */
   readonly mepSegments: readonly MepSegmentEntity[];
+  /** ADR-408 Φ11 — auto pipe fittings (point-based junction elements). */
+  readonly mepFittings: readonly MepFittingEntity[];
 }
 
 /**
@@ -77,6 +80,7 @@ export const EMPTY_BIM_ENTITIES: Bim3DEntities = {
   railings: [],
   furnitures: [],
   mepSegments: [],
+  mepFittings: [],
 };
 
 interface Bim3DEntitiesStoreState extends Bim3DEntities {
@@ -121,6 +125,8 @@ interface Bim3DEntitiesStoreState extends Bim3DEntities {
   setFurnitures: (furnitures: readonly FurnitureEntity[]) => void;
   /** ADR-408 Φ8 — feed the linear MEP segments (duct + pipe) slice. */
   setMepSegments: (mepSegments: readonly MepSegmentEntity[]) => void;
+  /** ADR-408 Φ11 — feed the auto pipe fittings slice. */
+  setMepFittings: (mepFittings: readonly MepFittingEntity[]) => void;
   /** ADR-411 — bump after any mesh glTF load resolves (triggers 3D resync). */
   bumpMeshAssetVersion: () => void;
   /** ADR-413 — bump after any PBR texture set load resolves (triggers 3D resync). */
@@ -148,6 +154,7 @@ export const useBim3DEntitiesStore = create<Bim3DEntitiesStoreState>()(
     railings: [],
     furnitures: [],
     mepSegments: [],
+    mepFittings: [],
     meshAssetVersion: 0,
     textureAssetVersion: 0,
     activeLevelId: null,
@@ -168,6 +175,7 @@ export const useBim3DEntitiesStore = create<Bim3DEntitiesStoreState>()(
     setRailings: (railings) => set({ railings }),
     setFurnitures: (furnitures) => set({ furnitures }),
     setMepSegments: (mepSegments) => set({ mepSegments }),
+    setMepFittings: (mepFittings) => set({ mepFittings }),
     bumpMeshAssetVersion: () => set((s) => ({ meshAssetVersion: s.meshAssetVersion + 1 })),
     bumpTextureAssetVersion: () => set((s) => ({ textureAssetVersion: s.textureAssetVersion + 1 })),
     setActiveLevelId: (activeLevelId) => set({ activeLevelId }),
@@ -205,5 +213,6 @@ export function selectBim3DEntities(state: Bim3DEntitiesStoreState): Bim3DEntiti
     railings: state.railings,
     furnitures: state.furnitures,
     mepSegments: state.mepSegments,
+    mepFittings: state.mepFittings,
   };
 }

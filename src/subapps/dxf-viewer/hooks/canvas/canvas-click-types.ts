@@ -134,6 +134,12 @@ export interface FurnitureToolLike {
   onCanvasClick: (point: Point2D) => boolean;
 }
 
+/** ADR-415 — Minimal floorplan-symbol tool interface for click routing. */
+export interface FloorplanSymbolToolLike {
+  readonly isActive: boolean;
+  onCanvasClick: (point: Point2D) => boolean;
+}
+
 /** ADR-407 — Minimal railing tool interface for click routing (2-click line). */
 export interface RailingToolLike {
   readonly isActive: boolean;
@@ -194,6 +200,8 @@ export interface UseCanvasClickHandlerParams {
   mepSegmentTool?: MepSegmentToolLike;
   /** ADR-410 — Furniture tool click pipeline (single-click placement). */
   furnitureTool?: FurnitureToolLike;
+  /** ADR-415 — Floorplan-symbol tool click pipeline (single-click placement). */
+  floorplanSymbolTool?: FloorplanSymbolToolLike;
   /** ADR-407 — Railing tool click pipeline (2-click straight guardrail). */
   railingTool?: RailingToolLike;
   /** ADR-363 Phase 3.7 — Slab-opening tool click pipeline. */

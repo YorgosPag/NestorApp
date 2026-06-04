@@ -38,7 +38,11 @@ export function calculateBimEntity2DBounds(entity: Entity): { min: Point2D; max:
     // ADR-410 — furniture projects geometry.bbox to 2D (same).
     case 'furniture':
     // ADR-408 Φ8 — MEP segment projects geometry.bbox to 2D (same).
-    case 'mep-segment': {
+    case 'mep-segment':
+    // ADR-408 Φ11 — MEP fitting projects geometry.bbox to 2D (same).
+    case 'mep-fitting':
+    // ADR-415 — floorplan symbol projects geometry.bbox to 2D (same).
+    case 'floorplan-symbol': {
       const bbox = entity.geometry?.bbox;
       if (!bbox) return null;
       return {

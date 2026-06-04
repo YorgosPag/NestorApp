@@ -40,6 +40,12 @@ import {
   isFurnitureRibbonStringKey,
   isFurnitureActionKey,
 } from './bridge/furniture-command-keys';
+import type { RibbonFloorplanSymbolBridge } from './useRibbonFloorplanSymbolBridge';
+import { isFloorplanSymbolPanelVisibilityKey } from './useRibbonFloorplanSymbolBridge';
+import {
+  isFloorplanSymbolRibbonKey,
+  isFloorplanSymbolRibbonStringKey,
+} from './bridge/floorplan-symbol-command-keys';
 import type { RibbonMepFixtureLibraryBridge } from './useRibbonMepFixtureLibraryBridge';
 import {
   isMepFixtureLibraryKey,
@@ -91,6 +97,8 @@ interface UseRibbonCommandsProps {
   mepFixtureBridge: RibbonMepFixtureBridge;
   /** ADR-410 — furniture library contextual tab bridge. */
   furnitureBridge: RibbonFurnitureBridge;
+  /** ADR-415 — floorplan-symbol library contextual tab bridge (tool-active picker). */
+  floorplanSymbolBridge: RibbonFloorplanSymbolBridge;
   /** ADR-411 — light-fixture library contextual tab bridge (tool-active picker). */
   mepFixtureLibraryBridge: RibbonMepFixtureLibraryBridge;
   /** ADR-357 Phase 17 — Line tool Quick Style bridge. */
@@ -124,6 +132,7 @@ export function useRibbonCommands({
   mepCircuitBridge,
   mepFixtureBridge,
   furnitureBridge,
+  floorplanSymbolBridge,
   mepFixtureLibraryBridge,
   lineToolBridge,
   xlineModeBridge,
@@ -180,6 +189,10 @@ export function useRibbonCommands({
         furnitureBridge.onComboboxChange(key, value);
         return;
       }
+      if (isFloorplanSymbolRibbonKey(key) || isFloorplanSymbolRibbonStringKey(key)) {
+        floorplanSymbolBridge.onComboboxChange(key, value);
+        return;
+      }
       if (isMepFixtureLibraryKey(key) || isMepFixtureLibraryStringKey(key)) {
         mepFixtureLibraryBridge.onComboboxChange(key, value);
         return;
@@ -198,7 +211,7 @@ export function useRibbonCommands({
       }
       textEditorBridge.onComboboxChange(key, value);
     },
-    [stairBridge, wallBridge, openingBridge, slabBridge, columnBridge, beamBridge, slabOpeningBridge, mepFixtureBridge, furnitureBridge, mepFixtureLibraryBridge, arrayBridge, lineToolBridge, xlineModeBridge, textEditorBridge],
+    [stairBridge, wallBridge, openingBridge, slabBridge, columnBridge, beamBridge, slabOpeningBridge, mepFixtureBridge, furnitureBridge, floorplanSymbolBridge, mepFixtureLibraryBridge, arrayBridge, lineToolBridge, xlineModeBridge, textEditorBridge],
   );
 
   const getComboboxState = React.useCallback(
@@ -215,13 +228,14 @@ export function useRibbonCommands({
       if (isSlabOpeningRibbonStringKey(key)) return slabOpeningBridge.getComboboxState(key);
       if (isMepFixtureRibbonKey(key) || isMepFixtureRibbonStringKey(key)) return mepFixtureBridge.getComboboxState(key);
       if (isFurnitureRibbonKey(key) || isFurnitureRibbonStringKey(key)) return furnitureBridge.getComboboxState(key);
+      if (isFloorplanSymbolRibbonKey(key) || isFloorplanSymbolRibbonStringKey(key)) return floorplanSymbolBridge.getComboboxState(key);
       if (isMepFixtureLibraryKey(key) || isMepFixtureLibraryStringKey(key)) return mepFixtureLibraryBridge.getComboboxState(key);
       if (isArrayRibbonKey(key) || isArrayRibbonStringKey(key)) return arrayBridge.getComboboxState(key);
       if (isLineToolRibbonKey(key)) return lineToolBridge.getComboboxState(key);
       if (isXlineRibbonKey(key)) return xlineModeBridge.getComboboxState(key);
       return textEditorBridge.getComboboxState(key);
     },
-    [snapStepUnits, stairBridge, wallBridge, openingBridge, slabBridge, columnBridge, beamBridge, slabOpeningBridge, mepFixtureBridge, furnitureBridge, mepFixtureLibraryBridge, arrayBridge, lineToolBridge, xlineModeBridge, textEditorBridge],
+    [snapStepUnits, stairBridge, wallBridge, openingBridge, slabBridge, columnBridge, beamBridge, slabOpeningBridge, mepFixtureBridge, furnitureBridge, floorplanSymbolBridge, mepFixtureLibraryBridge, arrayBridge, lineToolBridge, xlineModeBridge, textEditorBridge],
   );
 
   const onToggle = React.useCallback(
@@ -281,9 +295,10 @@ export function useRibbonCommands({
       if (isBeamPanelVisibilityKey(visibilityKey)) return beamBridge.getPanelVisibility(visibilityKey);
       if (isMepFixturePanelVisibilityKey(visibilityKey)) return mepFixtureBridge.getPanelVisibility(visibilityKey);
       if (isFurniturePanelVisibilityKey(visibilityKey)) return furnitureBridge.getPanelVisibility(visibilityKey);
+      if (isFloorplanSymbolPanelVisibilityKey(visibilityKey)) return floorplanSymbolBridge.getPanelVisibility(visibilityKey);
       return true;
     },
-    [stairBridge, columnBridge, beamBridge, mepFixtureBridge, furnitureBridge],
+    [stairBridge, columnBridge, beamBridge, mepFixtureBridge, furnitureBridge, floorplanSymbolBridge],
   );
 
   // ADR-363 Phase 1E — Wall action keys (delete) handled by bridge before

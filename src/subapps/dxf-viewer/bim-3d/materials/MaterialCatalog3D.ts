@@ -69,6 +69,9 @@ const MAT_DEFS: Record<string, PbrDef> = {
   // ADR-408 Φ8 — MEP pipe (plumbing / hydronic pipe): copper/brass tone.
   // Low roughness (polished pipe), high metalness.
   'elem-mep-pipe':       { color: 0xb87333, roughness: 0.30, metalness: 0.75 },
+  // ADR-408 Φ11 — MEP fitting (auto pipe junction element): metallic grey
+  // (cast/forged fitting body), mid roughness, high metalness.
+  'elem-mep-fitting':    { color: 0x8a8f94, roughness: 0.40, metalness: 0.70 },
 };
 
 export type Stair3DComponent =
@@ -165,7 +168,7 @@ export function getMaterial3D(materialId: string): THREE.MeshStandardMaterial {
 
 /** Resolve MeshStandardMaterial for element types without DNA. */
 export function getElementMaterial3D(
-  type: 'column' | 'beam' | 'slab' | 'envelope' | 'mep-fixture' | 'electrical-panel' | 'railing' | 'mep-wire' | 'furniture' | 'mep-duct' | 'mep-pipe' | Stair3DComponent,
+  type: 'column' | 'beam' | 'slab' | 'envelope' | 'mep-fixture' | 'electrical-panel' | 'railing' | 'mep-wire' | 'furniture' | 'mep-duct' | 'mep-pipe' | 'mep-fitting' | Stair3DComponent,
 ): THREE.MeshStandardMaterial {
   return resolveTexturedMaterial(`elem-${type}`);
 }

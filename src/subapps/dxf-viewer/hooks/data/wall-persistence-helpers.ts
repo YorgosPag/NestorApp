@@ -18,6 +18,7 @@ import type { WallDoc, WallUpdateInput } from '../../bim/walls/wall-firestore-se
 import type { BimFamilyType } from '../../bim/types/bim-family-type';
 import { useBimFamilyTypeStore } from '../../bim/family-types/bim-family-type-store';
 import { resolveEffectiveWallParams } from '../../bim/family-types/resolve-effective-params';
+import { resolveAutoWallTypeId } from '../../bim/family-types/wall-type-auto-assign';
 
 /**
  * Migrate legacy WallParams (pre-ADR-363 SSOT fix) from scene-unit storage to mm.
@@ -115,9 +116,16 @@ export function reresolveWallEntity(wall: WallEntity): WallEntity {
  */
 export function docToEntity(doc: WallDoc): WallEntity {
   const cachedParams = migrateParamsToMm(doc.params);
+  // ADR-412/414 — «re-materialise on load»: an untyped legacy doc whose cross
+  // section still matches the category default is lazily linked to the read-only
+  // built-in type (in-scene, drift-tolerant — persisted on the next auto-save,
+  // NOT a destructive backfill). Customised/manual walls return undefined and
+  // keep the legacy fast-path. Effective === cached for a match → zero visual
+  // change and no spurious re-map (`wallEntityDiffersFromDoc` diffs effective).
+  const typeId = doc.typeId ?? resolveAutoWallTypeId(cachedParams);
   const params = resolveWallParamsFromStore({
     params: cachedParams,
-    typeId: doc.typeId,
+    typeId,
     typeOverrides: doc.typeOverrides,
   });
   // Validation/geometry follow the effective params. Reuse the persisted copies
@@ -138,7 +146,7 @@ export function docToEntity(doc: WallDoc): WallEntity {
     validation,
     visible: true,
     editingBy: doc.editingBy,
-    ...(doc.typeId !== undefined && { typeId: doc.typeId }),
+    ...(typeId !== undefined && { typeId }),
     ...(doc.typeOverrides !== undefined && { typeOverrides: doc.typeOverrides }),
   } as WallEntity;
 }

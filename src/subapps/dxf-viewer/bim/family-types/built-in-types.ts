@@ -52,6 +52,17 @@ import type { SaveTypeInput } from './bim-family-type-service';
 /** Fixed prefix for every built-in family-type id (deterministic, never random). */
 const BUILTIN_ID_PREFIX = 'bimftype-builtin';
 
+/**
+ * The deterministic synthetic id of the built-in wall family type for a
+ * category. SSoT for the id derivation — the catalog builder
+ * ({@link buildWallType}) AND the auto-assign policy
+ * (`wall-type-auto-assign.ts`, used at wall creation + load migration) both go
+ * through here so the string is declared exactly once (N.0.2).
+ */
+export function getBuiltInWallTypeId(category: WallCategory): string {
+  return `${BUILTIN_ID_PREFIX}-wall-${category}`;
+}
+
 // ─── Built-in stair seed constants (mm) ──────────────────────────────────────
 //
 // Mirror the residential defaults baked into `buildDefaultStairParams`
@@ -96,7 +107,7 @@ function buildWallType(
     dna,
   };
   return {
-    id: `${BUILTIN_ID_PREFIX}-wall-${category}`,
+    id: getBuiltInWallTypeId(category),
     category: 'wall',
     name: `builtin.wall.${category}`,
     scope: 'company',

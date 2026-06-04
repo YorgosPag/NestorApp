@@ -16,12 +16,12 @@ import * as THREE from 'three';
 import type { Bim3DEntities } from '../stores/Bim3DEntitiesStore';
 import type { FloorStackEntry } from './multi-floor-3d-source';
 import { wallToMesh, columnToMesh, beamToMesh, slabToMesh, fixtureToMesh, panelToMesh } from '../converters/BimToThreeConverter';
-import { mepSegmentToMesh } from '../converters/mep-segment-to-mesh';
 import { stairToMeshes } from '../converters/StairToThreeConverter';
 import { railingToMesh } from '../converters/railing-to-three';
 import { furnitureToObject3D } from '../converters/furniture-to-three';
 import { mepFixtureToObject3D } from '../converters/mep-fixture-to-mesh';
 import { syncCircuitWires } from './sync-circuit-wires';
+import { syncMepSegments, syncFittings } from './sync-mep-elements';
 import { resolveWallTopProfile, resolveWallNominalTopZmm } from '../../bim/geometry/wall-top-profile';
 import { resolveWallBaseProfile } from '../../bim/geometry/wall-base-profile';
 import { makeWallTopContext, makeWallBaseContext, buildWallHostInputs, type HostFootprintInput } from '../../bim/geometry/wall-host-plan-builder';
@@ -154,7 +154,10 @@ export class BimSceneLayer {
     syncCircuitWires(this.group, entities, ctx, (entity, category) => this.resolveEntity(entity, category, ctx));
     this.syncRailings(entities, ctx);
     this.syncFurnitures(entities, ctx);
-    this.syncMepSegments(entities, ctx);
+    const resolve = (e: { layerId?: string; discipline?: Discipline }, c: BimCategory) =>
+      this.resolveEntity(e, c, ctx);
+    syncMepSegments(this.group, entities, ctx, resolve);
+    syncFittings(this.group, entities, ctx, resolve);
     addEnvelopeToScene(this.group, entities, ctx, this.shouldRender.bind(this));
   }
 
@@ -345,36 +348,6 @@ export class BimSceneLayer {
       if (!r) continue;
       const obj = furnitureToObject3D(furniture, ctx.floorElevationMm, ctx.activeLevelId, r.baseElevation);
       if (obj) { obj.userData['buildingId'] = r.buildingId; this.group.add(obj); }
-    }
-  }
-
-  /**
-   * ADR-408 Φ8 — linear MEP segments (duct + pipe swept solids).
-   *
-   * Visibility is gated via the domain-derived BimCategory:
-   *   - domain 'duct' → BimCategory 'duct'
-   *   - domain 'pipe' → BimCategory 'pipe'
-   * These two categories are added to `BimCategory` by the main agent (bim-object-styles.ts).
-   * Until the main agent ships that change, this resolveEntity call will accept any
-   * string literal — the resolver falls back to "show" for unknown categories, so
-   * segments remain visible (safe degradation).
-   */
-  private syncMepSegments(entities: Bim3DEntities, ctx: SyncContext): void {
-    // Defensive: legacy floor-stack entries predating ADR-408 Φ8 carry no
-    // `mepSegments` array — never crash the whole floor sync over a missing slice.
-    for (const segment of entities.mepSegments ?? []) {
-      // domain → BimCategory: 'duct' | 'pipe' (main agent adds these to BimCategory).
-      const category = segment.params.domain as BimCategory;
-      const r = this.resolveEntity(segment, category, ctx);
-      if (!r) continue;
-      // ADR-408 Φ9/Φ10 — colour-by-system: segment id is the colour-index key
-      // (network members carry `entityId === segment.id`). Index is empty when the
-      // per-view `colorBySystem` toggle is OFF ⇒ default domain material.
-      const mesh = mepSegmentToMesh(
-        segment, ctx.floorElevationMm, ctx.activeLevelId, r.baseElevation,
-        ctx.systemColorIndex.get(segment.id),
-      );
-      if (mesh) { mesh.userData['buildingId'] = r.buildingId; this.group.add(mesh); }
     }
   }
 

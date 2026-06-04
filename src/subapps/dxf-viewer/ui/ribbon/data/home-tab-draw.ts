@@ -411,16 +411,6 @@ export const HOME_DRAW_PANEL: RibbonPanelDef = {
               commandKey: 'railing',
               shortcut: 'RL',
             },
-            // ADR-410 — mesh-based CC0 furniture (chair first). Single-click
-            // placement; discipline = interior (ADR-405 discipline visibility).
-            {
-              id: 'draw.bim.furniture',
-              labelKey: 'ribbon.commands.bim.furniture.label',
-              tooltipKey: 'ribbon.commands.bim.furniture.tooltip',
-              icon: 'bim-furniture',
-              commandKey: 'furniture',
-              shortcut: 'FN',
-            },
             // ADR-408 Φ8 — linear MEP duct run (2-click). Discipline = mechanical.
             {
               id: 'draw.bim.mepDuct',
@@ -451,6 +441,40 @@ export const HOME_DRAW_PANEL: RibbonPanelDef = {
               icon: 'bim-pipe',
               commandKey: 'mepCircuit.actions.deriveNetworks',
               action: 'mepCircuit.actions.deriveNetworks',
+            },
+          ],
+        },
+        // ADR-415 / ADR-410 — «Αντικείμενα»: επιπλώσεις/εξοπλισμός, ΟΧΙ δομικά.
+        // Ξεχωριστός launcher από τα «Δομικά Στοιχεία» (Giorgio 2026-06-04): 2D
+        // σύμβολα κάτοψης (είδη υγιεινής/κουζίνα/έπιπλα) + 3D mesh έπιπλα. Το ποιο
+        // 2D σύμβολο τοποθετείται επιλέγεται από την contextual καρτέλα «Ιδιότητες
+        // Συμβόλου» (16 σύμβολα), όχι από ξεχωριστά κουμπιά.
+        {
+          type: 'split',
+          size: 'large',
+          command: {
+            id: 'draw.objects.group',
+            labelKey: 'ribbon.commands.bim.objectsGroup.label',
+            tooltipKey: 'ribbon.commands.bim.objectsGroup.tooltip',
+            icon: 'bim-furniture',
+            commandKey: 'floorplan-symbol',
+          },
+          variants: [
+            {
+              id: 'draw.bim.floorplanSymbol',
+              labelKey: 'ribbon.commands.bim.floorplanSymbol.label',
+              tooltipKey: 'ribbon.commands.bim.floorplanSymbol.tooltip',
+              icon: 'bim-furniture',
+              commandKey: 'floorplan-symbol',
+              shortcut: 'WC',
+            },
+            {
+              id: 'draw.bim.furniture',
+              labelKey: 'ribbon.commands.bim.furniture.label',
+              tooltipKey: 'ribbon.commands.bim.furniture.tooltip',
+              icon: 'bim-furniture',
+              commandKey: 'furniture',
+              shortcut: 'FN',
             },
           ],
         },

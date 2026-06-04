@@ -62,6 +62,10 @@ const ENTITY_COLLECTION_MAP: Readonly<Record<AuditEntityType, string>> = {
   'electrical-panel': '',
   // MEP segments (ADR-408 Φ8) — no rename propagation at this stage
   'mep-segment': '',
+  // MEP fittings (ADR-408 Φ11) — auto-derived, no rename propagation
+  'mep-fitting': '',
+  // Floorplan symbols (ADR-415) — no rename propagation at this stage
+  'floorplan-symbol': '',
   // BIM family types (ADR-412) — no rename propagation at this stage
   bim_family_type: '',
   // Performance / 3D BIM telemetry (ADR-366) — no rename propagation

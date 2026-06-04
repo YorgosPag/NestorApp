@@ -344,6 +344,16 @@ export type {
 } from '../bim/types/furniture-types';
 import type { FurnitureEntity } from '../bim/types/furniture-types';
 
+// ADR-415: pure-vector 2D floorplan symbol types live in bim/types/floorplan-symbol-types.ts (SRP).
+export type {
+  FloorplanSymbolCategory,
+  FloorplanSymbolKind,
+  FloorplanSymbolParams,
+  FloorplanSymbolGeometry,
+  FloorplanSymbolEntity,
+} from '../bim/types/floorplan-symbol-types';
+import type { FloorplanSymbolEntity } from '../bim/types/floorplan-symbol-types';
+
 // ADR-408 Φ8: unified linear MEP segment (duct + pipe) types live in bim/types/mep-segment-types.ts (SRP).
 export type {
   MepSegmentDomain,
@@ -354,6 +364,17 @@ export type {
   MepSegmentEntity,
 } from '../bim/types/mep-segment-types';
 import type { MepSegmentEntity } from '../bim/types/mep-segment-types';
+
+// ADR-408 Φ11: auto pipe fittings (point-based junction element).
+export type {
+  MepFittingDomain,
+  MepFittingKind,
+  ElbowStyle,
+  MepFittingParams,
+  MepFittingGeometry,
+  MepFittingEntity,
+} from '../bim/types/mep-fitting-types';
+import type { MepFittingEntity } from '../bim/types/mep-fitting-types';
 
 // ADR-363 Phase 5: Beam concrete types live in bim/types/beam-types.ts (SRP).
 export type {
@@ -522,6 +543,10 @@ export type Entity = (
   | FurnitureEntity
   // ADR-408 Φ8 — unified linear MEP segment (duct + pipe).
   | MepSegmentEntity
+  // ADR-408 Φ11 — auto pipe fitting (point-based junction element).
+  | MepFittingEntity
+  // ADR-415 — pure-vector 2D floorplan symbol (category-driven; WC/sanitary first).
+  | FloorplanSymbolEntity
 ) & Pick<BaseEntity,
   // Required identifiers — needed everywhere (ADR-363 fix: BIM entities now in union)
   'id' | 'name' | 'layerId' |
@@ -685,12 +710,21 @@ export const isFurnitureEntity = (entity: Entity): entity is FurnitureEntity =>
 export const isMepSegmentEntity = (entity: Entity): entity is MepSegmentEntity =>
   entity.type === 'mep-segment';
 
-/** True for any ADR-363/406/407/408/410 BIM parametric entity */
-export const isBimEntity = (entity: Entity): entity is WallEntity | OpeningEntity | SlabEntity | SlabOpeningEntity | ColumnEntity | BeamEntity | MepFixtureEntity | ElectricalPanelEntity | RailingEntity | FurnitureEntity | MepSegmentEntity =>
+/** ADR-408 Φ11 — auto pipe fitting (point-based junction element). */
+export const isMepFittingEntity = (entity: Entity): entity is MepFittingEntity =>
+  entity.type === 'mep-fitting';
+
+/** ADR-415 — pure-vector 2D floorplan symbol (category-driven; WC first). */
+export const isFloorplanSymbolEntity = (entity: Entity): entity is FloorplanSymbolEntity =>
+  entity.type === 'floorplan-symbol';
+
+/** True for any ADR-363/406/407/408/410/415 BIM parametric entity */
+export const isBimEntity = (entity: Entity): entity is WallEntity | OpeningEntity | SlabEntity | SlabOpeningEntity | ColumnEntity | BeamEntity | MepFixtureEntity | ElectricalPanelEntity | RailingEntity | FurnitureEntity | MepSegmentEntity | MepFittingEntity | FloorplanSymbolEntity =>
   entity.type === 'wall' || entity.type === 'opening' || entity.type === 'slab' ||
   entity.type === 'slab-opening' || entity.type === 'column' || entity.type === 'beam' ||
   entity.type === 'mep-fixture' || entity.type === 'electrical-panel' || entity.type === 'railing' ||
-  entity.type === 'furniture' || entity.type === 'mep-segment';
+  entity.type === 'furniture' || entity.type === 'mep-segment' || entity.type === 'mep-fitting' ||
+  entity.type === 'floorplan-symbol';
 
 // ✅ ENTERPRISE MIGRATION: generateEntityId moved to systems/entity-creation/utils.ts
 // Re-export from centralized location for backward compatibility

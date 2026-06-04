@@ -71,6 +71,10 @@ Mouse Event → DxfCanvas.onMouseMove
 
 ## Changelog
 
+### 2026-06-04 — ADR-408 Φ11 auto-fittings: `BimSceneLayer.syncFittings` (CHECK 6B)
+
+**Status**: IMPLEMENTED 2026-06-04 (Opus 4.8, orchestrator). `bim-3d/scene/BimSceneLayer.ts` gains a `syncFittings()` category sync for the new persisted `mep-fitting` entity (ADR-408 Φ11 auto pipe fittings), mirroring `syncMepSegments` — per-entity loop, ADR-382 visibility intersection, cascade hide. No new high-frequency subscription, no Cardinal-Rule change. The 2D `MepFittingRenderer` is registered in `rendering/core/EntityRendererComposite.ts` (NOT a `canvas-layer-stack-leaves` micro-leaf — fittings are auto-managed, no ghost/hover-leaf needed). CHECK 6B satisfied by staging this ADR with the BimSceneLayer edit. See ADR-408 §Φ11.
+
 ### 2026-06-04 — File-size split (N.7.1, pure extractions — no behaviour change)
 
 **Status**: IMPLEMENTED 2026-06-04. Three perf-path files crossed the 500-line limit after the ADR-408 Φ9/Φ10 + ADR-414 batch; split by extracting pure, stateless helpers — **zero control-flow / subscription change**, so all Cardinal Rules + CHECK 6B/6C remain satisfied:

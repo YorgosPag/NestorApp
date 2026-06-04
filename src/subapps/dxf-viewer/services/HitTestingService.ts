@@ -27,7 +27,9 @@ import { computeColumnGeometry } from '../bim/geometry/column-geometry';
 import { computeMepFixtureGeometry } from '../bim/mep-fixtures/mep-fixture-geometry';
 import { computeElectricalPanelGeometry } from '../bim/electrical-panels/electrical-panel-geometry';
 import { computeMepSegmentGeometry } from '../bim/geometry/mep-segment-geometry';
+import { computeMepFittingGeometry } from '../bim/geometry/mep-fitting-geometry';
 import { computeFurnitureGeometry } from '../bim/furniture/furniture-geometry';
+import { computeFloorplanSymbolGeometry } from '../bim/floorplan-symbols/floorplan-symbol-geometry';
 import { buildBimEntityModel } from '../bim/utils/bim-entity-passthrough';
 import type { BimElementType } from '../bim/types/bim-base';
 
@@ -345,6 +347,15 @@ export class HitTestingService {
         const geometry = seg.geometry ?? (seg.params ? computeMepSegmentGeometry(seg.params) : undefined);
         return buildBimEntityModel('mep-segment', { ...(entity as object), geometry } as typeof entity, baseModel);
       }
+      // ADR-408 Φ11 — MEP fitting needs the same geometry-recompute fallback (mirror segment):
+      // an auto-derived / Firestore-loaded MepFittingEntity may arrive before its geometry
+      // cache is hydrated; without `geometry.bbox` BoundsCalculator drops it from the spatial
+      // index → no hover-highlight and click selection silently fails.
+      case 'mep-fitting': {
+        const fit = entity as unknown as Partial<import('../bim/types/mep-fitting-types').MepFittingEntity>;
+        const geometry = fit.geometry ?? (fit.params ? computeMepFittingGeometry(fit.params) : undefined);
+        return buildBimEntityModel('mep-fitting', { ...(entity as object), geometry } as typeof entity, baseModel);
+      }
       // ADR-410 — furniture needs the same geometry-recompute fallback (mirror mep-fixture):
       // a Firestore-loaded FurnitureEntity may arrive before its geometry cache is
       // hydrated; without `geometry.bbox` BoundsCalculator drops it from the spatial
@@ -353,6 +364,15 @@ export class HitTestingService {
         const fn = entity as unknown as Partial<import('../bim/types/furniture-types').FurnitureEntity>;
         const geometry = fn.geometry ?? (fn.params ? computeFurnitureGeometry(fn.params) : undefined);
         return buildBimEntityModel('furniture', { ...(entity as object), geometry } as typeof entity, baseModel);
+      }
+      // ADR-415 — floorplan symbol needs the same geometry-recompute fallback
+      // (mirror furniture): a Firestore-loaded FloorplanSymbolEntity may arrive
+      // before its geometry cache is hydrated; without `geometry.bbox`
+      // BoundsCalculator drops it from the spatial index → no hover/select.
+      case 'floorplan-symbol': {
+        const fs = entity as unknown as Partial<import('../bim/types/floorplan-symbol-types').FloorplanSymbolEntity>;
+        const geometry = fs.geometry ?? (fs.params ? computeFloorplanSymbolGeometry(fs.params) : undefined);
+        return buildBimEntityModel('floorplan-symbol', { ...(entity as object), geometry } as typeof entity, baseModel);
       }
       // ADR-363 Phases 1B/5 — wall/beam are direct entities (no DXF wrapper).
       // `geometry.bbox` powers spatial broad-phase via BoundsCalculator.calculateBimEntityBounds.

@@ -57,7 +57,11 @@ export type EntityType =
   // ADR-410 — mesh-based CC0 furniture (chair first; generic over kind).
   | 'furniture'
   // ADR-408 Φ8 — unified linear MEP segment (duct + pipe; domain-discriminated).
-  | 'mep-segment';
+  | 'mep-segment'
+  // ADR-408 Φ11 — auto pipe fitting (point-based junction element; IfcPipeFitting).
+  | 'mep-fitting'
+  // ADR-415 — pure-vector 2D floorplan symbol (category-driven; WC/sanitary first).
+  | 'floorplan-symbol';
 
 export interface BaseEntity {
   id: string;

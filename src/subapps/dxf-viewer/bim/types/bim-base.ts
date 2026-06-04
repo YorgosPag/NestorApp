@@ -48,7 +48,11 @@ export type BimElementType =
   // ADR-410 — mesh-based CC0 furniture.
   | 'furniture'
   // ADR-408 Φ8 — unified linear MEP segment (duct + pipe).
-  | 'mep-segment';
+  | 'mep-segment'
+  // ADR-408 Φ11 — auto pipe fitting (point-based junction element).
+  | 'mep-fitting'
+  // ADR-415 — pure-vector 2D floorplan symbol (category-driven; WC/sanitary first).
+  | 'floorplan-symbol';
 
 /**
  * Union of all BIM sub-type discriminators (one per element type).

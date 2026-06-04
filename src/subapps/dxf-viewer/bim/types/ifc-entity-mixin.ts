@@ -35,7 +35,12 @@ export type IfcEntityType =
   | 'IfcFurniture'
   // ADR-408 Φ8 — linear MEP segments (IfcDistributionFlowElement family).
   | 'IfcDuctSegment'
-  | 'IfcPipeSegment';
+  | 'IfcPipeSegment'
+  // ADR-408 Φ11 — auto pipe/duct fittings (IfcFlowFitting family).
+  | 'IfcPipeFitting'
+  | 'IfcDuctFitting'
+  // ADR-415 — sanitary plan symbols (WC/washbasin/…; IfcSanitaryTerminal family).
+  | 'IfcSanitaryTerminal';
 
 export const IFC_ENTITY_TYPE_VALUES: readonly IfcEntityType[] = [
   'IfcWall',
@@ -56,6 +61,11 @@ export const IFC_ENTITY_TYPE_VALUES: readonly IfcEntityType[] = [
   // ADR-408 Φ8 — linear MEP segments.
   'IfcDuctSegment',
   'IfcPipeSegment',
+  // ADR-408 Φ11 — auto pipe/duct fittings.
+  'IfcPipeFitting',
+  'IfcDuctFitting',
+  // ADR-415 — sanitary plan symbols.
+  'IfcSanitaryTerminal',
 ] as const;
 
 export type IfcPropertySetValue = string | number | boolean | null;
@@ -100,6 +110,11 @@ export const IfcEntityTypeSchema = z.enum([
   // ADR-408 Φ8 — linear MEP segments.
   'IfcDuctSegment',
   'IfcPipeSegment',
+  // ADR-408 Φ11 — auto pipe/duct fittings.
+  'IfcPipeFitting',
+  'IfcDuctFitting',
+  // ADR-415 — sanitary plan symbols.
+  'IfcSanitaryTerminal',
 ]);
 
 export const IfcPropertySetValueSchema = z.union([

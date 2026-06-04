@@ -30,11 +30,14 @@ import type { RailingEntity } from '../../bim/types/railing-types';
 // ADR-410 — furniture direct entity for DXF render pipeline.
 import type { FurnitureEntity } from '../../bim/types/furniture-types';
 import type { MepSegmentEntity } from '../../bim/types/mep-segment-types';
+import type { MepFittingEntity } from '../../bim/types/mep-fitting-types';
+// ADR-415 — floorplan symbol direct entity for DXF render pipeline.
+import type { FloorplanSymbolEntity } from '../../bim/types/floorplan-symbol-types';
 
 // === DXF ENTITY TYPES ===
 export interface DxfEntity {
   id: string;
-  type: 'line' | 'circle' | 'arc' | 'polyline' | 'text' | 'angle-measurement' | 'stair' | 'dimension' | 'slab' | 'slab-opening' | 'opening' | 'wall' | 'column' | 'xline' | 'ray' | 'beam' | 'mep-fixture' | 'electrical-panel' | 'railing' | 'furniture' | 'mep-segment';
+  type: 'line' | 'circle' | 'arc' | 'polyline' | 'text' | 'angle-measurement' | 'stair' | 'dimension' | 'slab' | 'slab-opening' | 'opening' | 'wall' | 'column' | 'xline' | 'ray' | 'beam' | 'mep-fixture' | 'electrical-panel' | 'railing' | 'furniture' | 'mep-segment' | 'mep-fitting' | 'floorplan-symbol';
   /**
    * @deprecated ADR-358 Phase 9D-5b-ii — transitional name backref. Resolve via
    * `LayerStore.resolveEntityLayerName()`. Made optional to align with BaseEntity
@@ -286,6 +289,30 @@ export interface DxfMepSegment extends DxfEntity {
   validation?: MepSegmentEntity['validation'];
 }
 
+/**
+ * ADR-408 Φ11 — DxfMepFitting direct entity (same pattern as DxfMepSegment).
+ * MepFittingRenderer reads geometry.footprint + kind + params at top level.
+ */
+export interface DxfMepFitting extends DxfEntity {
+  type: 'mep-fitting';
+  kind: MepFittingEntity['kind'];
+  params: MepFittingEntity['params'];
+  geometry: MepFittingEntity['geometry'];
+  validation?: MepFittingEntity['validation'];
+}
+
+/**
+ * ADR-415 — DxfFloorplanSymbol direct entity (same pattern as DxfFurniture).
+ * FloorplanSymbolRenderer reads geometry.footprint + kind + params at top level.
+ */
+export interface DxfFloorplanSymbol extends DxfEntity {
+  type: 'floorplan-symbol';
+  kind: FloorplanSymbolEntity['kind'];
+  params: FloorplanSymbolEntity['params'];
+  geometry: FloorplanSymbolEntity['geometry'];
+  validation?: FloorplanSymbolEntity['validation'];
+}
+
 /** ADR-359 Phase 11 — XLine wrapper for grip computation pipeline. */
 export interface DxfXLine extends DxfEntity {
   type: 'xline';
@@ -298,7 +325,7 @@ export interface DxfRay extends DxfEntity {
   rayEntity: RayEntity;
 }
 
-export type DxfEntityUnion = DxfLine | DxfCircle | DxfPolyline | DxfArc | DxfText | DxfAngleMeasurement | DxfStair | DxfDimension | DxfSlab | DxfSlabOpening | DxfOpening | DxfWall | DxfColumn | DxfMepFixture | DxfElectricalPanel | DxfRailing | DxfFurniture | DxfMepSegment | DxfBeam | DxfXLine | DxfRay;
+export type DxfEntityUnion = DxfLine | DxfCircle | DxfPolyline | DxfArc | DxfText | DxfAngleMeasurement | DxfStair | DxfDimension | DxfSlab | DxfSlabOpening | DxfOpening | DxfWall | DxfColumn | DxfMepFixture | DxfElectricalPanel | DxfRailing | DxfFurniture | DxfMepSegment | DxfMepFitting | DxfFloorplanSymbol | DxfBeam | DxfXLine | DxfRay;
 
 // === DXF SCENE ===
 export interface DxfScene {

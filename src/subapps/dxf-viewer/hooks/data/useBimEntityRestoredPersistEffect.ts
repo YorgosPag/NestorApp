@@ -37,7 +37,9 @@ type BimRestoreEntityType =
   // ADR-410 — mesh-based CC0 furniture.
   | 'furniture'
   // ADR-408 Φ8 — unified linear MEP segment (duct + pipe).
-  | 'mep-segment';
+  | 'mep-segment'
+  // ADR-415 — pure-vector 2D floorplan symbol.
+  | 'floorplan-symbol';
 
 export function useBimEntityRestoredPersistEffect<T extends AnySceneEntity, S>(
   entityType: BimRestoreEntityType,
