@@ -67,6 +67,13 @@ export const MATERIAL_TEXTURE_MAP: Record<string, PbrTextureSlug> = {
   'mat-tile':     'tile',
   'mat-wood':     'wood',
   'mat-metal':    'metal',
+  // ADR-416 — composite slab build-up layers. Mapped to the closest existing CC0
+  // slug until dedicated screed/insulation/membrane/gravel textures ship.
+  'mat-screed':     'plaster',
+  'mat-insulation': 'plaster',
+  'mat-membrane':   'stone',
+  'mat-gravel':     'stone',
+  'mat-finish':     'tile',
   // Element-type fallbacks.
   'elem-column': 'concrete',
   'elem-beam':   'wood',
