@@ -25,7 +25,10 @@ import { useEffect, useRef } from 'react';
 import { EventBus } from '../../systems/events/EventBus';
 import { useLevels } from '../../systems/levels';
 import { DxfFirestoreService } from '../../services/dxf-firestore.service';
-import { refeedBoqForTypeAcrossFloors } from '../../bim/family-types/family-type-side-effects';
+import {
+  refeedBoqForTypeAcrossFloors,
+  refeedSlabBoqForTypeAcrossFloors,
+} from '../../bim/family-types/family-type-side-effects';
 
 export interface FamilyTypeBoqRefeedContext {
   readonly companyId: string | null;
@@ -43,18 +46,23 @@ export function useFamilyTypeBoqRefeed(ctx: FamilyTypeBoqRefeedContext): void {
 
   useEffect(() => {
     return EventBus.on('bim:family-type-changed', ({ typeId, category }) => {
-      if (category !== 'wall') return;
+      if (category !== 'wall' && category !== 'slab') return;
       const snap = latest.current;
       const { companyId, projectId, buildingId } = snap.ctx;
       if (!companyId || !projectId || !buildingId) return;
-      void refeedBoqForTypeAcrossFloors({
+      const shared = {
         typeId,
         levels: snap.levels.filter((l) => l.buildingId === buildingId),
         activeLevelId: snap.currentLevelId,
         getLevelScene: snap.getLevelScene,
-        loadFileV2: (fileId) => DxfFirestoreService.loadFileV2(fileId),
+        loadFileV2: (fileId: string) => DxfFirestoreService.loadFileV2(fileId),
         boqContextBase: { companyId, projectId, buildingId },
-      });
+      };
+      if (category === 'slab') {
+        void refeedSlabBoqForTypeAcrossFloors(shared);
+      } else {
+        void refeedBoqForTypeAcrossFloors(shared);
+      }
     });
   }, []);
 }
