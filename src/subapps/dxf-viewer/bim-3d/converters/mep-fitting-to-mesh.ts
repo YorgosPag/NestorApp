@@ -38,6 +38,7 @@ import type {
   MepFittingParams,
 } from '../../bim/types/mep-fitting-types';
 import { sceneUnitsToMeters } from '../../utils/scene-units';
+import { computeElbowBend } from '../../bim/geometry/mep-fitting-bend';
 import { getElementMaterial3D } from '../materials/MaterialCatalog3D';
 import { tagMesh } from './bim-three-shape-helpers';
 
@@ -115,14 +116,37 @@ function buildCap(params: MepFittingParams, material: THREE.Material): THREE.Obj
   return orientAlongAxis(new THREE.Mesh(geo, material), axis);
 }
 
-/** Radiused elbow: a TubeGeometry along an arc between the two incident dirs. */
+/** Tube sample count along the elbow centreline arc. */
+const ELBOW_ARC_SEGMENTS = 16;
+
+/**
+ * Radiused elbow: a TubeGeometry swept along the TRUE circular centreline bend
+ * (Revit long-radius R = 1.5·D), tangent to both legs — the 3D counterpart of the
+ * 2D bend body. The bend SSoT (`computeElbowBend`) runs in plan-metres (node at
+ * the local origin); each centreline sample maps plan → world (x, 0, −y), so the
+ * tube's ends land exactly on the legs' tangent points. Straight/degenerate node
+ * (collinear pipes) → fall back to a short inline coupling.
+ */
 function buildRadiusedElbow(params: MepFittingParams, material: THREE.Material): THREE.Object3D {
-  const r = (params.primaryDiameterMm * MM_TO_M) / 2;
-  const reach = params.primaryDiameterMm * MM_TO_M;
-  const a = planDirToWorld(params.incidents[0]?.directionUnit ?? { x: 1, y: 0 }).multiplyScalar(reach);
-  const b = planDirToWorld(params.incidents[1]?.directionUnit ?? { x: 0, y: 1 }).multiplyScalar(reach);
-  const curve = new THREE.QuadraticBezierCurve3(a, new THREE.Vector3(0, 0, 0), b);
-  const geo = new THREE.TubeGeometry(curve, 12, r, RADIAL_SEGMENTS, false);
+  const dM = params.primaryDiameterMm * MM_TO_M;
+  const dirA = params.incidents[0]?.directionUnit ?? { x: 1, y: 0 };
+  const dirB = params.incidents[1]?.directionUnit ?? { x: 0, y: 1 };
+  const bend = computeElbowBend({ x: 0, y: 0 }, dirA, dirB, dM);
+  if (!bend) return buildCoupling(params, material);
+
+  let sweep = bend.endAngle - bend.startAngle;
+  if (bend.anticlockwise && sweep > 0) sweep -= 2 * Math.PI;
+  if (!bend.anticlockwise && sweep < 0) sweep += 2 * Math.PI;
+
+  const pts: THREE.Vector3[] = [];
+  for (let i = 0; i <= ELBOW_ARC_SEGMENTS; i++) {
+    const t = bend.startAngle + (sweep * i) / ELBOW_ARC_SEGMENTS;
+    const px = bend.center.x + bend.centerRadius * Math.cos(t);
+    const py = bend.center.y + bend.centerRadius * Math.sin(t);
+    pts.push(new THREE.Vector3(px, 0, -py)); // plan → world (Y-up, north = −Z)
+  }
+  const curve = new THREE.CatmullRomCurve3(pts);
+  const geo = new THREE.TubeGeometry(curve, ELBOW_ARC_SEGMENTS, dM / 2, RADIAL_SEGMENTS, false);
   return new THREE.Mesh(geo, material);
 }
 
