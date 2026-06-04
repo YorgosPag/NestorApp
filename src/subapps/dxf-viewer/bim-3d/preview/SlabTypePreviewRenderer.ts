@@ -56,6 +56,7 @@ export class SlabTypePreviewRenderer {
   private readonly pivotMarker: PreviewPivotMarker;
   private bands: BandMesh[] = [];
   private outline: THREE.LineSegments | null = null;
+  private highlightedLayerId: string | null = null;
   private dna: SlabDna | undefined;
 
   constructor(container: HTMLElement) {
@@ -107,7 +108,11 @@ export class SlabTypePreviewRenderer {
 
   /** Outline the active band (or clear when null). Never mutates materials. */
   setHighlight(layerId: string | null): void {
+    // Idempotent — same layer (e.g. a pointermove that stays on the band) is a
+    // no-op, so the outline does NOT clear+rebuild every frame (that flickered).
+    if (layerId === this.highlightedLayerId) return;
     this.clearOutline();
+    this.highlightedLayerId = layerId;
     const target = layerId ? this.bands.find((b) => b.layerId === layerId) : undefined;
     if (target) {
       const edges = new THREE.EdgesGeometry(target.mesh.geometry);
@@ -139,7 +144,10 @@ export class SlabTypePreviewRenderer {
   /** Hit-test a band at canvas-normalized coords (−1..1); returns its layer id. */
   pickLayerAt(ndcX: number, ndcY: number): string | null {
     this.raycaster.setFromCamera(new THREE.Vector2(ndcX, ndcY), this.camera);
-    const hits = this.raycaster.intersectObjects(this.bandGroup.children, false);
+    // Raycast ONLY the band meshes — never the highlight outline / pivot marker
+    // (LineSegments have a ~1-unit raycast threshold that would steal the hit and
+    // make the pick oscillate band↔null while the cursor moves → outline flicker).
+    const hits = this.raycaster.intersectObjects(this.bands.map((b) => b.mesh), false);
     const mesh = hits[0]?.object;
     return this.bands.find((b) => b.mesh === mesh)?.layerId ?? null;
   }
@@ -178,7 +186,7 @@ export class SlabTypePreviewRenderer {
   private setPivotAt(clientX: number, clientY: number): void {
     const point = resolvePreviewPivot(
       this.raycaster, this.camera, this.renderer.domElement,
-      this.bandGroup.children, clientX, clientY,
+      this.bands.map((b) => b.mesh), clientX, clientY, // bands only (skip outline/marker)
     );
     if (!point) return;
     this.controls.setPivot(point);
@@ -238,6 +246,7 @@ export class SlabTypePreviewRenderer {
   }
 
   private clearOutline(): void {
+    this.highlightedLayerId = null;
     if (!this.outline) return;
     this.bandGroup.remove(this.outline);
     this.outline.geometry.dispose();
