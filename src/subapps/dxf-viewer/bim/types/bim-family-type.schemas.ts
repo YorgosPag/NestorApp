@@ -86,6 +86,23 @@ export const SlabTypeParamsSchema = z
 
 export type SlabTypeParamsParsed = z.infer<typeof SlabTypeParamsSchema>;
 
+// ─── RoofTypeParams (ADR-417) ────────────────────────────────────────────────
+
+/**
+ * Mirrors `RoofTypeParams` (ADR-417). A roof has no sub-kind — the two built-ins
+ * («Μπετονένιο δώμα» / «Κεραμοσκεπή») differ by their `dna` build-up. `dna` is
+ * opaque pass-through (validated by the slab-dna layer), same as slab/wall.
+ */
+export const RoofTypeParamsSchema = z
+  .object({
+    thickness: z.number().positive(),
+    dna: z.unknown().optional(),
+    material: z.string().min(1).optional(),
+  })
+  .strict();
+
+export type RoofTypeParamsParsed = z.infer<typeof RoofTypeParamsSchema>;
+
 // ─── Stair enum schemas (mirror stair-types.ts unions) ───────────────────────
 
 const StairNosingSideSchema = z.enum(['front', 'none', 'front-and-sides']);
@@ -238,6 +255,13 @@ export const BimFamilyTypeSchema = z.discriminatedUnion('category', [
       ...BimFamilyTypeBaseShape,
       category: z.literal('stair'),
       typeParams: StairTypeParamsSchema,
+    })
+    .strict(),
+  z
+    .object({
+      ...BimFamilyTypeBaseShape,
+      category: z.literal('roof'),
+      typeParams: RoofTypeParamsSchema,
     })
     .strict(),
 ]);
