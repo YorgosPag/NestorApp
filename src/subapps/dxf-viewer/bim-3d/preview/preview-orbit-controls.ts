@@ -4,8 +4,14 @@
  * preview renderers do NOT duplicate camera-interaction wiring (ADR-412/ADR-414).
  *
  * RENDER-ON-DEMAND: the OrbitControls `change` event drives a single re-render
- * (no RAF loop, damping OFF — there is no inertia to animate). Mapping per
- * Giorgio: LEFT drag = pan, RIGHT drag = rotate, wheel = zoom (zoom-to-cursor).
+ * (no RAF loop, damping OFF — there is no inertia to animate).
+ *
+ * NAVIGATION (mirrors the main 3D viewport, SSoT convention — Giorgio):
+ *  - **Alt + left drag = ROTATE**, orbiting around the point under the cursor at
+ *    press time (`onAltPick` re-centres the orbit target there first). The Alt
+ *    state flips `mouseButtons.LEFT` between ROTATE (Alt held) and PAN, since
+ *    OrbitControls reads the button mapping at pointer-down.
+ *  - left drag (no Alt) = pan · right drag = rotate · wheel = zoom-to-cursor.
  *
  * View-preservation: tracks whether the USER has moved the camera. Callers keep
  * auto-framing on every layer edit while `adjusted === false`, then preserve the
@@ -15,26 +21,21 @@
  * Standalone THREE — OUTSIDE the ADR-040 high-frequency canvas path.
  *
  * @see ./SlabTypePreviewRenderer.ts, ./WallTypePreviewRenderer.ts — consumers
- * @see ../viewport/viewport-camera.ts — the main viewport's OrbitControls usage
+ * @see ../viewport/tumble-rotation.ts — the main viewport's Alt+drag orbit (same UX)
  */
 
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 
-/** A left-press that moves less than this (px) is a click, not a pan. */
-const ALT_CLICK_SLOP_PX = 4;
-
 export class PreviewOrbitControls {
   private readonly controls: OrbitControls;
   private readonly dom: HTMLElement;
   private readonly onPointerDown: (e: PointerEvent) => void;
-  private readonly onPointerUp: (e: PointerEvent) => void;
+  private readonly onAltKeyDown: (e: KeyboardEvent) => void;
+  private readonly onAltKeyUp: (e: KeyboardEvent) => void;
   /** Guards our own `update()` calls so they don't register as user input. */
   private programmatic = false;
   private userAdjusted = false;
-  private altArmed = false;
-  private downX = 0;
-  private downY = 0;
 
   constructor(
     camera: THREE.PerspectiveCamera,
@@ -51,7 +52,7 @@ export class PreviewOrbitControls {
     controls.zoomToCursor = true;
     controls.screenSpacePanning = true; // pan in the screen plane (intuitive for a flat preview)
     controls.mouseButtons = {
-      LEFT: THREE.MOUSE.PAN,
+      LEFT: THREE.MOUSE.PAN, // flipped to ROTATE while Alt is held (see key listeners)
       MIDDLE: THREE.MOUSE.DOLLY,
       RIGHT: THREE.MOUSE.ROTATE,
     };
@@ -62,24 +63,27 @@ export class PreviewOrbitControls {
     });
     this.controls = controls;
 
-    // Alt + left-click (a STATIC click, not a drag) → set the orbit pivot to the
-    // picked point. Detected on pointer-up so OrbitControls' (near-zero) left-pan
-    // is a no-op; mirrors the main viewport's tumble Alt+click convention
-    // (ADR-366 §A.6.Q5). Alt + left-DRAG stays a pan (gesture exceeded the slop).
-    this.onPointerDown = (e: PointerEvent): void => {
-      this.altArmed = e.altKey && e.button === 0;
-      this.downX = e.clientX;
-      this.downY = e.clientY;
+    // Alt+left → orbit around the cursor point, matching the main viewport.
+    // OrbitControls reads `mouseButtons.LEFT` at pointer-down, so we flip it to
+    // ROTATE on the Alt keydown (window-level: the canvas need not be focused)
+    // and back to PAN on keyup. On the Alt+left pointer-down we re-centre the
+    // orbit target on the picked point FIRST (via `onAltPick`), so OrbitControls'
+    // rotate then orbits around it — identical to the main tumble's `onAltPress`.
+    this.onAltKeyDown = (e: KeyboardEvent): void => {
+      if (e.key === 'Alt') controls.mouseButtons.LEFT = THREE.MOUSE.ROTATE;
     };
-    this.onPointerUp = (e: PointerEvent): void => {
-      if (!this.altArmed) return;
-      this.altArmed = false;
-      if (Math.hypot(e.clientX - this.downX, e.clientY - this.downY) < ALT_CLICK_SLOP_PX) {
+    this.onAltKeyUp = (e: KeyboardEvent): void => {
+      if (e.key === 'Alt') controls.mouseButtons.LEFT = THREE.MOUSE.PAN;
+    };
+    this.onPointerDown = (e: PointerEvent): void => {
+      if (e.altKey && e.button === 0) {
+        controls.mouseButtons.LEFT = THREE.MOUSE.ROTATE; // belt-and-suspenders if keydown was missed
         onAltPick(e.clientX, e.clientY);
       }
     };
     dom.addEventListener('pointerdown', this.onPointerDown);
-    dom.addEventListener('pointerup', this.onPointerUp);
+    window.addEventListener('keydown', this.onAltKeyDown);
+    window.addEventListener('keyup', this.onAltKeyUp);
 
     this.recenter();
   }
@@ -113,7 +117,8 @@ export class PreviewOrbitControls {
 
   dispose(): void {
     this.dom.removeEventListener('pointerdown', this.onPointerDown);
-    this.dom.removeEventListener('pointerup', this.onPointerUp);
+    window.removeEventListener('keydown', this.onAltKeyDown);
+    window.removeEventListener('keyup', this.onAltKeyUp);
     this.controls.dispose();
   }
 }
