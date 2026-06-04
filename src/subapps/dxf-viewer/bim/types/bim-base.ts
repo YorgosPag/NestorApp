@@ -54,7 +54,9 @@ export type BimElementType =
   // ADR-408 Φ11 — auto pipe fitting (point-based junction element).
   | 'mep-fitting'
   // ADR-415 — pure-vector 2D floorplan symbol (category-driven; WC/sanitary first).
-  | 'floorplan-symbol';
+  | 'floorplan-symbol'
+  // ADR-417 — parametric pitched roof (footprint + per-edge slopes).
+  | 'roof';
 
 /**
  * Union of all BIM sub-type discriminators (one per element type).
