@@ -24,6 +24,12 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { Point2D } from '../../rendering/types/Types';
+
+/**
+ * A click point that may carry a connector elevation `z` (mm) when it snapped to
+ * an MEP connector (ADR-408 Φ-B1 connector-mate). `z` absent ⇒ free point.
+ */
+export type MepSegmentClickPoint = Readonly<Point2D & { z?: number }>;
 import type { MepSegmentDomain, MepSegmentEntity } from '../../bim/types/mep-segment-types';
 import {
   completeMepSegmentFromTwoClicks,
@@ -43,6 +49,11 @@ export interface MepSegmentToolState {
   readonly phase: MepSegmentToolPhase;
   readonly domain: MepSegmentDomain;
   readonly startPoint: Point2D | null;
+  /**
+   * mm — elevation inherited from a connector the START click snapped to
+   * (ADR-408 Φ-B1 connector-mate). `null` ⇒ start was a free point.
+   */
+  readonly startElevationMm: number | null;
   readonly overrides: MepSegmentParamOverrides;
   readonly error: string | null;
 }
@@ -51,6 +62,7 @@ const INITIAL_STATE: MepSegmentToolState = {
   phase: 'idle',
   domain: 'duct',
   startPoint: null,
+  startElevationMm: null,
   overrides: {},
   error: null,
 };
@@ -72,7 +84,7 @@ export interface UseMepSegmentToolResult {
   deactivate(): void;
   reset(): void;
   /** Returns true when the click committed a new segment or advanced the FSM. */
-  onCanvasClick(point: Readonly<Point2D>): boolean;
+  onCanvasClick(point: MepSegmentClickPoint): boolean;
   /** Switch active domain. Resets the FSM, preserves overrides. */
   setDomain(domain: MepSegmentDomain): void;
   /** Ribbon / Dynamic Input overrides (section dims / elevation / material). */
@@ -147,7 +159,7 @@ export function useMepSegmentTool(
   // ── commit (2nd click) ────────────────────────────────────────────────────
 
   const commitFromState = useCallback(
-    (s: MepSegmentToolState, endPoint: Readonly<Point2D>): boolean => {
+    (s: MepSegmentToolState, endPoint: MepSegmentClickPoint): boolean => {
       if (s.startPoint === null) return false;
       const sceneUnits = getSceneUnitsRef.current?.() ?? 'mm';
       const result = completeMepSegmentFromTwoClicks(
@@ -157,6 +169,11 @@ export function useMepSegmentTool(
         s.domain,
         s.overrides,
         sceneUnits,
+        // ADR-408 Φ-B1 connector-mate elevations (mm). Each endpoint inherits the
+        // connector it snapped to; the completion applies the Revit-style cascade
+        // (a free end follows the snapped end's elevation).
+        s.startElevationMm,
+        endPoint.z ?? null,
       );
       if (!result.ok) {
         setState({ ...s, error: result.hardErrors[0] ?? null });
@@ -180,12 +197,18 @@ export function useMepSegmentTool(
   // ── click pipeline ───────────────────────────────────────────────────────
 
   const onCanvasClick = useCallback(
-    (point: Readonly<Point2D>): boolean => {
+    (point: MepSegmentClickPoint): boolean => {
       const s = stateRef.current;
       if (s.phase === 'idle') return false;
 
       if (s.phase === 'awaitingStart') {
-        setState({ ...s, phase: 'awaitingEnd', startPoint: { x: point.x, y: point.y }, error: null });
+        setState({
+          ...s,
+          phase: 'awaitingEnd',
+          startPoint: { x: point.x, y: point.y },
+          startElevationMm: point.z ?? null,
+          error: null,
+        });
         return true;
       }
 
