@@ -17,6 +17,8 @@ export interface RaycastHit {
 
 const _raycaster = new THREE.Raycaster();
 const _ndc = new THREE.Vector2();
+const _planeNormal = new THREE.Vector3();
+const _plane = new THREE.Plane();
 
 /**
  * SSoT client (px) → NDC [-1,1] conversion against a dom element rect.
@@ -89,4 +91,33 @@ export function raycastWorldPoint(
   const hits = _raycaster.intersectObjects(group.children, true);
   // intersectObjects returns hits sorted by distance ascending — first = closest.
   return hits.length > 0 ? hits[0].point.clone() : null;
+}
+
+/**
+ * Like `raycastWorldPoint`, but on a geometry MISS falls back to a camera-facing
+ * plane through `fallbackThrough` (the current orbit target). So Alt+click on
+ * empty space — or on the DXF overlay / ground rather than a BIM mesh — still
+ * yields a sensible pivot at the cursor location instead of a no-op (ADR-366
+ * §A.6.Q5 v3: «δεν γυρίζει γύρω από το σημείο» όταν αστοχούσε το pick). Mirrors
+ * the preview's `resolvePreviewPivot` fallback so the two viewports behave alike.
+ */
+export function raycastWorldPointOrPlane(
+  group: THREE.Group,
+  camera: THREE.Camera,
+  domElement: HTMLElement,
+  clientX: number,
+  clientY: number,
+  fallbackThrough: THREE.Vector3,
+): THREE.Vector3 | null {
+  const ndc = clientToNdc(domElement, clientX, clientY);
+  if (!ndc) return null;
+
+  _raycaster.setFromCamera(ndc, camera);
+  const hits = _raycaster.intersectObjects(group.children, true);
+  if (hits.length > 0) return hits[0].point.clone();
+
+  camera.getWorldDirection(_planeNormal);
+  _plane.setFromNormalAndCoplanarPoint(_planeNormal, fallbackThrough);
+  const point = new THREE.Vector3();
+  return _raycaster.ray.intersectPlane(_plane, point) ? point : null;
 }
