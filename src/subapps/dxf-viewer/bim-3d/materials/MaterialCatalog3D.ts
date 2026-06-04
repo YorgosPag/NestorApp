@@ -31,6 +31,17 @@ const MAT_DEFS: Record<string, PbrDef> = {
   'mat-wood':     { color: 0x8b5e3c, roughness: 0.70, metalness: 0.00 },
   'mat-glass':    { color: 0x88ccff, roughness: 0.10, metalness: 0.00, transparent: true, opacity: 0.35 },
   'mat-metal':    { color: 0x888888, roughness: 0.30, metalness: 0.90 },
+  // ADR-416 — composite slab build-up layer materials (Revit Floor Type).
+  // Cement screed: warm light grey, very matte cementitious surface.
+  'mat-screed':     { color: 0xc9c4bb, roughness: 0.88, metalness: 0.00 },
+  // Thermal/acoustic insulation (XPS/EPS/mineral wool): pale yellow board, matte.
+  'mat-insulation': { color: 0xede4b0, roughness: 0.95, metalness: 0.00 },
+  // Waterproof / vapour membrane (bitumen/PVC sheet): dark grey, smooth (low roughness).
+  'mat-membrane':   { color: 0x3a3a3e, roughness: 0.45, metalness: 0.00 },
+  // Gravel ballast / protection layer: grey-brown aggregate, fully rough.
+  'mat-gravel':     { color: 0x9a948a, roughness: 1.00, metalness: 0.00 },
+  // Generic floor finish (when not ceramic tile): neutral light, semi-matte.
+  'mat-finish':     { color: 0xe8e4dc, roughness: 0.50, metalness: 0.00 },
   // Element-type fallbacks (when no DNA is present).
   'elem-column':  { color: 0x8a8a8a, roughness: 0.75, metalness: 0.05 },
   'elem-beam':    { color: 0x6d4c3d, roughness: 0.75, metalness: 0.05 },
