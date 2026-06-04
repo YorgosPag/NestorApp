@@ -38,6 +38,7 @@ import type { SceneUnits } from '../../utils/scene-units';
 import type { IfcEntityMixin } from './ifc-entity-mixin';
 import type { EnvelopeLayer } from './thermal-envelope-types';
 import type { SlabDna } from './slab-dna-types';
+import type { SlabTypeParams } from './bim-family-type';
 
 // ─── Sub-type discriminator (ADR-363 §5.5) ───────────────────────────────────
 
@@ -183,6 +184,14 @@ export interface SlabEntity
   readonly type: 'slab';
   /** ADR-369 §9 Q8 — IFC4 class. Always 'IfcSlab'. */
   readonly ifcType: 'IfcSlab';
+  /** ADR-412 — FK → BimFamilyType.id. Absent on legacy/untyped slabs. */
+  readonly typeId?: string;
+  /**
+   * ADR-412 — Per-instance overrides of type-level params. Present only when
+   * the instance deviates from its type. Merged over type params at resolution
+   * time (type params first, overrides win). Absent = use type as-is.
+   */
+  readonly typeOverrides?: Partial<SlabTypeParams>;
 }
 
 // ─── Defaults & constants ────────────────────────────────────────────────────
