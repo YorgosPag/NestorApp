@@ -345,19 +345,15 @@ export function createViewportCamera(
   }
 
   /**
-   * ADR-366 §A.6.Q5 — re-center the orbit pivot on a world point.
+   * ADR-366 §A.6.Q5 — set the orbit pivot to a world point (Alt-press).
    *
-   * Copies `point` into `controls.target` and calls `controls.update()`. Because
-   * OrbitControls preserves the camera→target offset across an update, the camera
-   * position is unchanged → no visual jump. Tumble reads `controls.target` live,
-   * so the next rotation orbits around the new pivot. The POI cross (driven by
-   * `viewport.target` each frame) flashes at the new center via the manager.
+   * Hands the point to tumble, which orbits RIGIDLY around it (the picked point
+   * stays fixed on screen — no recenter jump). `controls.target` is left where it
+   * is and gets carried along the camera's forward axis by the rigid orbit, so the
+   * per-frame `controls.update()` `lookAt(target)` is a no-op and never fights it.
+   * The POI cross (driven by `viewport.target` each frame) flashes at the target.
    */
   function setOrbitPivot(point: THREE.Vector3): void {
-    // [ORBIT-DBG] TEMP — remove after diagnosis (handoff 2026-06-04).
-    // eslint-disable-next-line no-console
-    console.debug('[ORBIT-DBG] viewport.setOrbitPivot enableRotate=%s mouseLEFT=%s damping=%s',
-      controls.enableRotate, controls.mouseButtons.LEFT, controls.enableDamping);
     animation.cancel();
     controls.enabled = true;
     // No recenter: hand the pivot to tumble, which orbits rigidly around it
@@ -389,15 +385,7 @@ export function createViewportCamera(
   }
 
   function update(): void {
-    // [ORBIT-DBG] TEMP — remove after diagnosis (handoff 2026-06-04).
-    const _dbgBefore = activeCamera.position.clone();
-    const _dbgQuat = activeCamera.quaternion.clone();
     controls.update();
-    const _dbgMoved = _dbgBefore.distanceTo(activeCamera.position);
-    const _dbgRot = _dbgQuat.angleTo(activeCamera.quaternion);
-    // eslint-disable-next-line no-console
-    if (_dbgMoved > 1e-5 || _dbgRot > 1e-4) console.debug('[ORBIT-DBG] controls.update CHANGED cam pos=%s rotRad=%s',
-      _dbgMoved.toFixed(5), _dbgRot.toFixed(5));
     tumble.update();
     // Phase 4.2: tick animation from main RAF (no separate requestAnimationFrame).
     animation.tick(performance.now());
