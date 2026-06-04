@@ -34,6 +34,7 @@ import {
   type RoofParamOverrides,
   type SceneUnits,
 } from './roof-completion';
+import { roofPreviewStore } from '../../bim/roofs/roof-preview-store';
 
 // ─── State machine types ─────────────────────────────────────────────────────
 
@@ -102,6 +103,19 @@ export function useRoofTool(options: UseRoofToolOptions = {}): UseRoofToolResult
   const [state, setState] = useState<RoofToolState>(INITIAL_STATE);
   const stateRef = useRef<RoofToolState>(state);
   stateRef.current = state;
+
+  // ── live preview (ADR-417) — single-writer into roofPreviewStore so
+  //    useUnifiedDrawing draws the in-progress footprint rubber-band. ─────────
+  useEffect(() => {
+    if (state.phase === 'idle') {
+      roofPreviewStore.reset();
+      return;
+    }
+    roofPreviewStore.set({ vertices: state.vertices });
+  }, [state]);
+  useEffect(() => {
+    return () => roofPreviewStore.reset();
+  }, []);
 
   // ── lifecycle ────────────────────────────────────────────────────────────
   const activate = useCallback(() => {
