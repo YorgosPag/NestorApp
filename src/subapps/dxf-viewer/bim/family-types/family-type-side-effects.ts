@@ -31,10 +31,13 @@
 
 import { createModuleLogger } from '@/lib/telemetry';
 import type { SceneModel } from '../../types/entities';
-import { isWallEntity } from '../../types/entities';
+import { isSlabEntity, isWallEntity } from '../../types/entities';
 import type { WallEntity } from '../types/wall-types';
+import type { SlabEntity } from '../types/slab-types';
 import { reresolveWallEntity } from '../../hooks/data/wall-persistence-helpers';
+import { reresolveSlabEntity } from '../../hooks/data/slab-persistence-helpers';
 import { wallBoqEntity } from '../../hooks/data/wall-boq-feed';
+import { slabBoqGeometry } from '../../hooks/data/slab-boq-feed';
 import { bimToBoqBridge, type BimBoqContext, type BimEntityForBoq } from '../services/BimToBoqBridge';
 
 const logger = createModuleLogger('FamilyTypeSideEffects');
@@ -100,6 +103,81 @@ export async function refeedBoqForTypeAcrossFloors(args: RefeedBoqForTypeArgs): 
       );
     }
   }
+}
+
+// ─── Slab variant (analogue of the wall fan-out above) ───────────────────────
+
+/** All slabs in a scene linked to a given family type. Pure. */
+export function findSlabsByTypeId(scene: SceneModel | null, typeId: string): SlabEntity[] {
+  if (!scene) return [];
+  return scene.entities.filter(isSlabEntity).filter((s) => s.typeId === typeId);
+}
+
+export interface RefeedSlabBoqForTypeArgs {
+  readonly typeId: string;
+  /** Levels of the active building (caller pre-filters by `buildingId`). */
+  readonly levels: readonly FloorLevelLike[];
+  readonly activeLevelId: string | null;
+  readonly getLevelScene: (levelId: string) => SceneModel | null;
+  readonly loadFileV2: (fileId: string) => Promise<{ scene?: SceneModel | null } | null>;
+  readonly boqContextBase: Pick<BimBoqContext, 'companyId' | 'projectId' | 'buildingId'>;
+  /** Injectable for tests; defaults to the production fire-and-forget BOQ bridge. */
+  readonly upsertBoq?: (
+    entityType: 'slab',
+    entity: { id: string; kind: string; geometry: ReturnType<typeof slabBoqGeometry> },
+    context: BimBoqContext,
+    action: 'updated',
+  ) => void;
+}
+
+/**
+ * Re-feed the BOQ row of every slab of `typeId` across all of the building's
+ * floors. Geometry is re-resolved against the live catalog store, so callers
+ * MUST invoke this AFTER the optimistic `setTypes`. Mirror of
+ * {@link refeedBoqForTypeAcrossFloors}.
+ */
+export async function refeedSlabBoqForTypeAcrossFloors(args: RefeedSlabBoqForTypeArgs): Promise<void> {
+  const { companyId, projectId, buildingId } = args.boqContextBase;
+  if (!companyId || !projectId || !buildingId) return;
+  const upsert =
+    args.upsertBoq ??
+    ((entityType, entity, context, action) => {
+      void bimToBoqBridge.upsertBoqItemForBim(entityType, entity, context, action);
+    });
+
+  for (const level of args.levels) {
+    const scene = await sceneForSlabLevel(level, args);
+    if (!scene) continue;
+    for (const slab of findSlabsByTypeId(scene, args.typeId)) {
+      // «type always wins»: re-resolve against the already-updated store so the
+      // BOQ payload carries the NEW type-level params.
+      const resolved = reresolveSlabEntity(slab);
+      upsert(
+        'slab',
+        { id: resolved.id, kind: resolved.kind, geometry: slabBoqGeometry(resolved, scene) },
+        { companyId, projectId, buildingId, floorId: level.floorId },
+        'updated',
+      );
+    }
+  }
+}
+
+/** Active floor → in-memory (already re-resolved); other floors → one-shot load. */
+async function sceneForSlabLevel(
+  level: FloorLevelLike,
+  args: RefeedSlabBoqForTypeArgs,
+): Promise<SceneModel | null> {
+  if (level.id === args.activeLevelId) return args.getLevelScene(level.id);
+  if (!level.sceneFileId) {
+    logger.warn('Skipping slab BOQ re-feed for floor without sceneFileId (stale until loaded)', {
+      levelId: level.id,
+      floorId: level.floorId,
+      typeId: args.typeId,
+    });
+    return null;
+  }
+  const record = await args.loadFileV2(level.sceneFileId).catch(() => null);
+  return record?.scene ?? null;
 }
 
 /** Active floor → in-memory (already re-resolved); other floors → one-shot load. */
