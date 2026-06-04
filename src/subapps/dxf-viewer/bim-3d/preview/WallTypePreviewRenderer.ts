@@ -81,10 +81,12 @@ export class WallTypePreviewRenderer {
     this.scene.add(this.bandGroup);
 
     // Zoom (wheel) + pan (left drag) + rotate (right drag), render-on-demand.
+    // Alt + left-click re-centres the orbit pivot on the picked band point.
     this.controls = new PreviewOrbitControls(
       this.camera,
       this.renderer.domElement,
       () => this.render(),
+      (cx, cy) => this.setPivotAt(cx, cy),
     );
   }
 
@@ -167,6 +169,19 @@ export class WallTypePreviewRenderer {
   }
 
   // ─── internals ─────────────────────────────────────────────────────────────
+
+  /** Alt+click: set the orbit pivot to the band world-point under the cursor. */
+  private setPivotAt(clientX: number, clientY: number): void {
+    const rect = this.renderer.domElement.getBoundingClientRect();
+    if (rect.width <= 0 || rect.height <= 0) return;
+    const ndc = new THREE.Vector2(
+      ((clientX - rect.left) / rect.width) * 2 - 1,
+      -((clientY - rect.top) / rect.height) * 2 + 1,
+    );
+    this.raycaster.setFromCamera(ndc, this.camera);
+    const hit = this.raycaster.intersectObjects(this.bandGroup.children, false)[0];
+    if (hit) this.controls.setPivot(hit.point.clone()); // miss → keep current pivot
+  }
 
   private buildBand(band: WallPreviewBand): BandMesh {
     const geo = new THREE.BoxGeometry(STUB_LENGTH_M, STUB_HEIGHT_M, band.depthM);
