@@ -6,6 +6,7 @@
  *   steel   → cross-hatch × (χάλυβας)
  *   masonry → horizontal brick courses (τοιχοποιία / οπλισμένη)
  *   wood    → diagonal parallel lines (ξύλο / glulam)
+ *   insulation → batt zig-zag (μόνωση — ADR-416 composite slab layers)
  *   null    → grey solid fallback (glass / unknown)
  *
  * @see ADR-366 §A.3 Phase 7.1 — Hatched per-material cut surface
@@ -14,7 +15,7 @@
 import * as THREE from 'three';
 import { SECTION_CUT_SURFACE } from '../../../config/color-config';
 
-export type SectionHatchKey = 'rc' | 'steel' | 'masonry' | 'wood';
+export type SectionHatchKey = 'rc' | 'steel' | 'masonry' | 'wood' | 'insulation';
 
 /** World-space metres per hatch texture tile. */
 const TILE_M = 0.25;
@@ -34,6 +35,14 @@ const MAT_PREFIX_TO_HATCH: ReadonlyArray<readonly [string, SectionHatchKey]> = [
   ['mat-tile',     'rc'],
   ['mat-wood',     'wood'],
   ['mat-metal',    'steel'],
+  // ADR-416 — composite slab build-up layers. Cementitious finishes read as RC
+  // dots; gravel ballast as coarse masonry courses; thin membranes as dense steel
+  // cross-hatch; insulation gets the dedicated batt zig-zag.
+  ['mat-screed',     'rc'],
+  ['mat-finish',     'rc'],
+  ['mat-gravel',     'masonry'],
+  ['mat-membrane',   'steel'],
+  ['mat-insulation', 'insulation'],
   ['elem-column',  'rc'],
   ['elem-beam',    'rc'],
   ['elem-slab',    'rc'],
@@ -118,8 +127,32 @@ function buildWoodTexture(): HTMLCanvasElement {
   return c;
 }
 
+/**
+ * Insulation batt — the architectural zig-zag symbol (Revit / AutoCAD `INSUL`):
+ * a continuous triangular wave repeated in horizontal rows. Reads instantly as
+ * "thermal/acoustic insulation" in a section cut (ADR-416 composite slab layers).
+ */
+function buildInsulationTexture(): HTMLCanvasElement {
+  const c = document.createElement('canvas');
+  c.width = SZ; c.height = SZ;
+  const ctx = c.getContext('2d')!;
+  ctx.fillStyle = BG; ctx.fillRect(0, 0, SZ, SZ);
+  ctx.strokeStyle = STROKE; ctx.lineWidth = 1.2;
+  const rowH = 24; const amp = rowH * 0.4; const step = 8;
+  for (let y = rowH / 2; y < SZ + rowH; y += rowH) {
+    ctx.beginPath();
+    for (let x = 0; x <= SZ; x += step) {
+      const dy = ((x / step) % 2 === 0 ? -amp : amp);
+      x === 0 ? ctx.moveTo(x, y + dy) : ctx.lineTo(x, y + dy);
+    }
+    ctx.stroke();
+  }
+  return c;
+}
+
 const BUILDERS: Readonly<Record<SectionHatchKey, () => HTMLCanvasElement>> = {
-  rc: buildRcTexture, steel: buildSteelTexture, masonry: buildMasonryTexture, wood: buildWoodTexture,
+  rc: buildRcTexture, steel: buildSteelTexture, masonry: buildMasonryTexture,
+  wood: buildWoodTexture, insulation: buildInsulationTexture,
 };
 
 // ── Lazy caches ───────────────────────────────────────────────────────────────
