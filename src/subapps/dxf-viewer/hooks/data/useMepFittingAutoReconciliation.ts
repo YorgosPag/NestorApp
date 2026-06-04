@@ -400,7 +400,7 @@ async function runReconcileDiff(
     if (doc) await deleteFitting(doc, svc, refs);
   }
 
-  applySceneOps(scene, levelId, levelManager, sceneOps.create, sceneOps.deleteIds);
+  applySceneOps(levelId, levelManager, sceneOps.create, sceneOps.deleteIds);
 }
 
 async function createFitting(
@@ -466,15 +466,24 @@ async function deleteFitting(
   }
 }
 
-/** Apply the reconcile create/delete ops to the scene in a single setLevelScene. */
+/**
+ * Apply the reconcile create/delete ops to the scene in a single setLevelScene.
+ *
+ * RE-READS the CURRENT scene at apply time — never the stale snapshot captured at
+ * the start of the async reconcile. Otherwise a pipe drawn during the reconcile's
+ * `await` window (Firestore save) would be clobbered by writing back the old
+ * entity list — which then auto-saves a scene MISSING that pipe, so it vanishes on
+ * the next reload. Re-reading preserves every concurrent edit.
+ */
 function applySceneOps(
-  scene: SceneModel,
   levelId: string,
   levelManager: LevelManagerLike,
   created: readonly MepFittingEntity[],
   deletedIds: readonly string[],
 ): void {
   if (created.length === 0 && deletedIds.length === 0) return;
+  const scene = levelManager.getLevelScene(levelId);
+  if (!scene) return;
   const deleteSet = new Set(deletedIds);
   const kept = scene.entities.filter((e) => !deleteSet.has(e.id));
   levelManager.setLevelScene(levelId, {
