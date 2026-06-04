@@ -1,22 +1,28 @@
 'use client';
 
 /**
- * 🏢 ENTERPRISE CROSSHAIR OVERLAY
+ * 🏢 ENTERPRISE CROSSHAIR OVERLAY — Compositor edition (ADR-040)
  *
- * CAD-grade crosshair rendering with centralized cursor position from CursorSystem.
- * Pattern: Autodesk AutoCAD/Revit - Single Source of Truth for cursor position
+ * CAD-grade crosshair, AutoCAD/Revit pattern: the cross is built ONCE as promoted
+ * DOM elements and moved purely with `transform: translate3d(...)` on the GPU
+ * compositor — OFF the main thread. It therefore tracks the pointer 1:1 no matter
+ * how busy the main thread is (snap, hover, React commits, bitmap rebuilds).
+ *
+ * Why this replaces the previous main-thread `<canvas>` crosshair: the old version
+ * repainted the whole canvas on every position change inside `ImmediatePositionStore`;
+ * under load the compositor could not present the freshly-painted crosshair until the
+ * main thread freed up, so the drawn cursor visibly trailed the physical mouse.
+ *
+ * Geometry / gap: each axis is split into two FIXED-size segments (left/right,
+ * top/bottom). The center gap is the translate offset between them. Every element
+ * only ever changes its `transform`, so there is zero per-move layout/paint.
+ *
+ * The position SSoT is still `ImmediatePositionStore` via `registerDirectRender`
+ * (called synchronously from the mouse handler) — now the callback only writes
+ * `transform` strings instead of issuing canvas draw calls.
  *
  * @module CrosshairOverlay
- * @version 3.0.0 - Enterprise UnifiedFrameScheduler Integration (ADR-030)
- * @since 2025-01-25
- *
- * 🏆 ENTERPRISE FEATURES:
- * - Uses centralized CursorSystem for mouse position (ZERO duplicate tracking)
- * - Uses UnifiedFrameScheduler for coordinated rendering (ADR-030)
- * - ADR-008 compliant: CSS→Canvas coordinate contract
- * - High-DPI support with setTransform(dpr)
- * - Dirty-flag optimized (skips render if position unchanged)
- * - Full TypeScript support (ZERO any)
+ * @version 4.0.0 — Compositor crosshair (2026-06-04, ADR-040)
  */
 
 import React, { useRef, useEffect, useCallback } from 'react';
@@ -27,21 +33,20 @@ import type { Point2D } from '../../rendering/types/Types';
 import { PANEL_LAYOUT } from '../../config/panel-tokens';
 // 🏢 ENTERPRISE: Centralized ruler margins from Single Source of Truth
 import { COORDINATE_LAYOUT } from '../../rendering/core/CoordinateTransforms';
-// 🏢 ADR-088: Centralized Pixel-Perfect Alignment
-import { pixelPerfect } from '../../rendering/entities/shared/geometry-rendering-utils';
-// ✅ ADR-030: UnifiedFrameScheduler Integration
-import { registerRenderCallback, RENDER_PRIORITIES } from '../../rendering';
-import { LINE_DASH_PATTERNS } from '../../config/text-rendering-config';
-// 🚀 PERFORMANCE (2026-01-27): ImmediatePositionStore for zero-latency crosshair updates
+// 🚀 PERFORMANCE: ImmediatePositionStore for zero-latency crosshair updates
 import { registerDirectRender, getImmediatePosition } from '../../systems/cursor/ImmediatePositionStore';
 import { getHoveredEntity, subscribeHoveredEntity, getHoveredOverlay, subscribeHoveredOverlay } from '../../systems/hover/HoverStore';
-import { drawSelectionIndicator } from './crosshair-selection-indicator';
-import type { SelectionIndicatorMode } from './crosshair-selection-indicator';
-// 🏢 ADR-094: Centralized Device Pixel Ratio
-// 🏢 ADR-117: DPI-Aware Pixel Calculations Centralization
-import { getDevicePixelRatio, toDevicePixels } from '../../systems/cursor/utils';
-// 🏢 ADR-146: Canvas Size Observer Centralization
-import { useCanvasSizeObserver } from '../../hooks/canvas';
+import {
+  computeArmLength,
+  computeSegmentBoxes,
+  computeCenterGap,
+  toAreaLocal,
+  isWithinArea,
+  translate3d,
+  segmentBackground,
+  type CrosshairLineStyle,
+  type SegmentBox,
+} from './crosshair-compositor-layout';
 
 interface Viewport {
   width: number;
@@ -52,336 +57,237 @@ interface CrosshairOverlayProps {
   className?: string;
   isActive?: boolean;
   viewport?: Viewport;
-  /** ✅ ENTERPRISE: Ruler margins για να μην σχεδιάζεται το crosshair πάνω στους rulers */
+  /** ✅ ENTERPRISE: Ruler margins so the crosshair is not drawn over the rulers. */
   rulerMargins?: {
     left: number;
     top: number;
     bottom: number;
   };
-  /** ✅ ADR-007: Style prop για CAD-grade layout (height excludes ruler) */
+  /** ✅ ADR-007: Style prop for CAD-grade layout (height excludes ruler). */
   style?: React.CSSProperties;
-  /** AutoCAD-style selection indicator: returns true if entity is currently selected */
+  /** AutoCAD-style selection indicator: returns true if entity is currently selected. */
   isEntitySelected?: (id: string) => boolean;
 }
+
+/** Base style shared by the 4 line segments — only `transform` changes per move. */
+const SEGMENT_BASE: React.CSSProperties = {
+  position: 'absolute',
+  top: 0,
+  left: 0,
+  willChange: 'transform',
+  pointerEvents: 'none',
+};
 
 export default function CrosshairOverlay({
   className = '',
   isActive = true,
-  viewport = { width: 0, height: 0 },
   rulerMargins = COORDINATE_LAYOUT.MARGINS,
   style,
   isEntitySelected,
 }: CrosshairOverlayProps) {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const areaRef = useRef<HTMLDivElement>(null);
+  const segLeftRef = useRef<HTMLDivElement>(null);
+  const segRightRef = useRef<HTMLDivElement>(null);
+  const segTopRef = useRef<HTMLDivElement>(null);
+  const segBottomRef = useRef<HTMLDivElement>(null);
+  const pickboxRef = useRef<HTMLDivElement>(null);
+  const apertureRef = useRef<HTMLDivElement>(null);
+  const badgeRef = useRef<HTMLDivElement>(null);
 
-  // Selection indicator refs — read inside renderCrosshair without causing re-renders
+  const settingsRef = useRef<CursorSettings>(getCursorSettings());
   const hoveredEntityIdRef = useRef<string | null>(getHoveredEntity());
   const hoveredOverlayIdRef = useRef<string | null>(getHoveredOverlay());
   const shiftHeldRef = useRef<boolean>(false);
-  const isEntitySelectedRef = useRef<(id: string) => boolean>(isEntitySelected ?? (() => false));
+  const isActiveRef = useRef<boolean>(isActive);
+  const marginsRef = useRef(rulerMargins);
+  const areaSizeRef = useRef<{ w: number; h: number }>({ w: 0, h: 0 });
 
-  // ✅ ADR-030: Track previous state for dirty check
-  const prevPositionRef = useRef<Point2D | null>(null);
-  const prevIsActiveRef = useRef<boolean>(false); // Start false - first render always dirty
-  const hasRenderedOnceRef = useRef<boolean>(false); // Track first render
+  // Keep event-time refs current (read inside the compositor callbacks).
+  isActiveRef.current = isActive;
+  marginsRef.current = rulerMargins;
 
-  // ============================================================================
-  // 🏢 ENTERPRISE: Settings Subscription (singleton pattern)
-  // ============================================================================
-
-  const settingsRef = useRef<CursorSettings>(getCursorSettings());
-
-  useEffect(() => {
-    const unsubscribe = subscribeToCursorSettings((newSettings) => {
-      settingsRef.current = newSettings;
-    });
-    return unsubscribe;
-  }, []);
-
-  // === GRIP SETTINGS INTEGRATION ===
   const { gripSettings } = useGripContext();
   const { pickBoxSize, showAperture, apertureSize } = gripSettings;
 
   // ============================================================================
-  // 🏢 ADR-146: Centralized Canvas Size Observer
-  // Pattern: ADR-008 - Canvas size from actual layout, not from props
+  // STATIC STYLES — sizes/colours/boxes. Runs on settings or size change (rare),
+  // NEVER per mouse move. Mutating left/top/width here is the only layout cost.
   // ============================================================================
+  const applyStaticStyles = useCallback(() => {
+    const cross = settingsRef.current.crosshair;
+    if (!cross) return;
+    const { w: areaW, h: areaH } = areaSizeRef.current;
+    const lineWidth = cross.line_width || 1;
+    const arm = computeArmLength(areaW, areaH, cross.size_percent ?? 50);
+    const boxes = computeSegmentBoxes(arm, lineWidth);
+    const opacity = String(cross.opacity ?? 1);
+    const lineStyle = (cross.line_style ?? 'solid') as CrosshairLineStyle;
 
-  const handleCanvasSizeChange = useCallback((canvas: HTMLCanvasElement) => {
-    const rect = canvas.getBoundingClientRect();
-    const dpr = getDevicePixelRatio(); // 🏢 ADR-094
+    const setSeg = (el: HTMLDivElement | null, box: SegmentBox, orient: 'horizontal' | 'vertical') => {
+      if (!el) return;
+      el.style.width = `${box.width}px`;
+      el.style.height = `${box.height}px`;
+      el.style.left = `${box.left}px`;
+      el.style.top = `${box.top}px`;
+      el.style.opacity = opacity;
+      el.style.backgroundColor = '';
+      el.style.backgroundImage = '';
+      const bg = segmentBackground(orient, lineStyle, cross.color);
+      if (bg.backgroundColor) el.style.backgroundColor = bg.backgroundColor;
+      if (bg.backgroundImage) el.style.backgroundImage = bg.backgroundImage;
+    };
+    setSeg(segLeftRef.current, boxes.left, 'horizontal');
+    setSeg(segRightRef.current, boxes.right, 'horizontal');
+    setSeg(segTopRef.current, boxes.top, 'vertical');
+    setSeg(segBottomRef.current, boxes.bottom, 'vertical');
 
-    // 🏢 ADR-117: Use centralized toDevicePixels for DPI-aware calculations
-    const w = toDevicePixels(rect.width, dpr);
-    const h = toDevicePixels(rect.height, dpr);
-
-    if (canvas.width !== w || canvas.height !== h) {
-      canvas.width = w;
-      canvas.height = h;
-
-      const ctx = canvas.getContext('2d');
-      if (ctx) {
-        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-        ctx.imageSmoothingEnabled = settingsRef.current.performance.precision_mode;
+    // Cursor pick box (circle or square at the crosshair centre).
+    const pb = pickboxRef.current;
+    const cur = settingsRef.current.cursor;
+    if (pb) {
+      if (cur?.enabled) {
+        pb.style.display = '';
+        pb.style.width = `${cur.size}px`;
+        pb.style.height = `${cur.size}px`;
+        pb.style.left = `${-cur.size / 2}px`;
+        pb.style.top = `${-cur.size / 2}px`;
+        pb.style.border = `${cur.line_width || 1}px solid ${cur.color}`;
+        pb.style.borderRadius = cur.shape === 'circle' ? '50%' : '0';
+        pb.style.opacity = String(cur.opacity ?? 1);
+      } else {
+        pb.style.display = 'none';
       }
     }
-  }, []);
 
-  useCanvasSizeObserver({
-    canvasRef,
-    onSizeChange: handleCanvasSizeChange,
-  });
-
-  // ============================================================================
-  // 🏢 ENTERPRISE: Crosshair Render Function
-  // CAD-grade rendering with pixel-perfect alignment
-  // ============================================================================
-
-  const renderCrosshair = useCallback((opts: {
-    isActive: boolean;
-    pos: Point2D | null;
-    margins: { left: number; top: number; bottom?: number };
-  }) => {
-    const { isActive: active, pos, margins } = opts;
-    const settings = settingsRef.current;
-
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-
-    const dpr = getDevicePixelRatio(); // 🏢 ADR-094
-
-    // ✅ CAD-GRADE: Reset transform and clear entire canvas
-    ctx.setTransform(1, 0, 0, 1, 0, 0);
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-    // ✅ RESTORE DPR TRANSFORM
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-
-    // ✅ Early exit after clear
-    if (!active || !pos) return;
-    if (!settings.crosshair?.enabled) return;
-
-    const activeSettings = settings.crosshair;
-    const sizePercent = activeSettings.size_percent ?? 50;
-
-    // ✅ CAD-GRADE: Canvas dimensions
-    const canvasWidth = canvas.width / dpr;
-    const canvasHeight = canvas.height / dpr;
-
-    // ✅ ADR-008 + ADR-088: Pixel-perfect alignment (centralized)
-    const mouseX = pixelPerfect(pos.x);
-    const mouseY = pixelPerfect(pos.y);
-
-    // Calculate crosshair dimensions — equal arms regardless of canvas aspect ratio (AutoCAD behavior)
-    const halfBase = (Math.min(canvasWidth, canvasHeight) / 2) * (sizePercent / 100);
-    const crosshairHalfWidth = halfBase;
-    const crosshairHalfHeight = halfBase;
-
-    // Center gap calculation — zero when use_cursor_gap is disabled
-    const pickboxSize = pickBoxSize * dpr;
-    const centerGap = settings.crosshair.use_cursor_gap
-      ? Math.max(pickboxSize + 4, settings.crosshair.center_gap_px || 5)
-      : 0;
-
-    // Setup drawing style
-    ctx.strokeStyle = activeSettings.color;
-    ctx.lineWidth = activeSettings.line_width;
-    ctx.lineCap = 'square';
-    ctx.globalAlpha = activeSettings.opacity || 1.0;
-
-    // Apply line style (ADR-083 centralized patterns)
-    switch (activeSettings.line_style) {
-      case 'dashed':   ctx.setLineDash([...LINE_DASH_PATTERNS.CURSOR_DASHED]);  break;
-      case 'dotted':   ctx.setLineDash([...LINE_DASH_PATTERNS.CURSOR_DOTTED]);  break;
-      case 'dash-dot': ctx.setLineDash([...LINE_DASH_PATTERNS.CURSOR_DASH_DOT]); break;
-      default:         ctx.setLineDash(LINE_DASH_PATTERNS.SOLID);               break;
+    // Aperture box (AutoCAD APBOX) — snap acquisition zone indicator.
+    const ap = apertureRef.current;
+    if (ap) {
+      if (showAperture && apertureSize > 0) {
+        ap.style.display = '';
+        ap.style.width = `${apertureSize}px`;
+        ap.style.height = `${apertureSize}px`;
+        ap.style.left = `${-apertureSize / 2}px`;
+        ap.style.top = `${-apertureSize / 2}px`;
+        ap.style.border = `1px solid ${cross.color}`;
+        ap.style.opacity = opacity;
+      } else {
+        ap.style.display = 'none';
+      }
     }
+  }, [showAperture, apertureSize]);
 
-    // ✅ CAD-GRADE: Visibility check
-    const bottomLimit = canvasHeight - (margins.bottom ?? 0);
-    if (mouseX < margins.left || mouseY < margins.top || mouseY > bottomLimit) {
+  // ============================================================================
+  // PER-MOVE TRANSFORM — the ONLY thing called on every mouse move. Writes only
+  // `transform` (+ visibility), so the move is fully GPU-composited.
+  // ============================================================================
+  const applyTransform = useCallback((pos: Point2D | null) => {
+    const container = containerRef.current;
+    if (!container) return;
+    const cross = settingsRef.current.crosshair;
+    const active = isActiveRef.current && !!pos && (cross?.enabled ?? false);
+    if (!active || !pos) {
+      container.style.visibility = 'hidden';
       return;
     }
+    const local = toAreaLocal(pos, marginsRef.current);
+    const { w: areaW, h: areaH } = areaSizeRef.current;
+    if (!isWithinArea(local, areaW, areaH)) {
+      container.style.visibility = 'hidden';
+      return;
+    }
+    container.style.visibility = 'visible';
 
-    // Only draw if size > 0
-    if (sizePercent > 0) {
-      let actualHalfWidth: number;
-      let actualHalfHeight: number;
+    const gap = computeCenterGap({
+      useCursorGap: cross?.use_cursor_gap ?? false,
+      centerGapPx: cross?.center_gap_px ?? 5,
+      pickBoxSize,
+    });
+    const { x, y } = local;
+    if (segLeftRef.current) segLeftRef.current.style.transform = translate3d(x - gap, y);
+    if (segRightRef.current) segRightRef.current.style.transform = translate3d(x + gap, y);
+    if (segTopRef.current) segTopRef.current.style.transform = translate3d(x, y - gap);
+    if (segBottomRef.current) segBottomRef.current.style.transform = translate3d(x, y + gap);
+    if (pickboxRef.current) pickboxRef.current.style.transform = translate3d(x, y);
+    if (apertureRef.current) apertureRef.current.style.transform = translate3d(x, y);
 
-      if (sizePercent === 100) {
-        actualHalfWidth = canvasWidth;
-        actualHalfHeight = canvasHeight;
+    // AutoCAD-style "+"/"−" badge at the top-right of the centre gap.
+    const badge = badgeRef.current;
+    if (badge) {
+      const hoveredId = hoveredEntityIdRef.current || hoveredOverlayIdRef.current;
+      if (hoveredId) {
+        const add = !shiftHeldRef.current;
+        badge.textContent = add ? '+' : '−';
+        badge.style.color = add ? '#44FF88' : '#FF5555';
+        badge.style.backgroundColor = add ? '#0d2b0d' : '#2b0d0d';
+        const offset = Math.max(gap, 4) + 2;
+        badge.style.transform = translate3d(x + offset, y - offset - 11);
+        badge.style.display = '';
       } else {
-        actualHalfWidth = crosshairHalfWidth;
-        actualHalfHeight = crosshairHalfHeight;
+        badge.style.display = 'none';
       }
-
-      // Draw horizontal lines
-      ctx.beginPath();
-      const leftStart = Math.max(margins.left, mouseX - actualHalfWidth);
-      const leftEnd = mouseX - centerGap;
-      if (leftEnd > leftStart) {
-        ctx.moveTo(leftStart, mouseY);
-        ctx.lineTo(leftEnd, mouseY);
-      }
-
-      const rightStart = mouseX + centerGap;
-      const rightEnd = Math.min(canvasWidth, mouseX + actualHalfWidth);
-      if (rightStart < rightEnd) {
-        ctx.moveTo(rightStart, mouseY);
-        ctx.lineTo(rightEnd, mouseY);
-      }
-      ctx.stroke();
-
-      // Draw vertical lines
-      ctx.beginPath();
-      const topStart = Math.max(margins.top, mouseY - actualHalfHeight);
-      const topEnd = mouseY - centerGap;
-      if (topEnd > topStart) {
-        ctx.moveTo(mouseX, topStart);
-        ctx.lineTo(mouseX, topEnd);
-      }
-
-      const bottomStart = mouseY + centerGap;
-      const bottomEnd = Math.min(bottomLimit, mouseY + actualHalfHeight);
-      if (bottomStart < bottomEnd) {
-        ctx.moveTo(mouseX, bottomStart);
-        ctx.lineTo(mouseX, bottomEnd);
-      }
-      ctx.stroke();
     }
+  }, [pickBoxSize]);
 
-    ctx.setLineDash(LINE_DASH_PATTERNS.SOLID);
-    ctx.globalAlpha = 1;
-
-    // Aperture box (AutoCAD APBOX) — snap acquisition zone indicator
-    if (showAperture && apertureSize > 0) {
-      const halfAperture = apertureSize / 2;
-      ctx.save();
-      ctx.strokeStyle = activeSettings.color;
-      ctx.lineWidth = 1;
-      ctx.setLineDash(LINE_DASH_PATTERNS.SOLID);
-      ctx.globalAlpha = activeSettings.opacity || 1.0;
-      ctx.strokeRect(mouseX - halfAperture, mouseY - halfAperture, apertureSize, apertureSize);
-      ctx.restore();
+  // Recompute drawable-area size (overlay minus ruler margins) + re-apply styles.
+  const recompute = useCallback(() => {
+    const container = containerRef.current;
+    if (container) {
+      const rect = container.getBoundingClientRect();
+      const m = marginsRef.current;
+      areaSizeRef.current = {
+        w: Math.max(0, rect.width - m.left),
+        h: Math.max(0, rect.height - m.top - (m.bottom ?? 0)),
+      };
     }
+    applyStaticStyles();
+    applyTransform(getImmediatePosition());
+  }, [applyStaticStyles, applyTransform]);
 
-    // Cursor pick box (circle or square at crosshair center)
-    const cursorCfg = settings.cursor;
-    if (cursorCfg?.enabled) {
-      const halfBox = cursorCfg.size / 2;
-      ctx.save();
-      ctx.globalAlpha = cursorCfg.opacity ?? 1;
-      ctx.strokeStyle = cursorCfg.color;
-      ctx.lineWidth = cursorCfg.line_width || 1;
-      switch (cursorCfg.line_style) {
-        case 'dashed':   ctx.setLineDash([...LINE_DASH_PATTERNS.CURSOR_DASHED]);  break;
-        case 'dotted':   ctx.setLineDash([...LINE_DASH_PATTERNS.CURSOR_DOTTED]);  break;
-        case 'dash-dot': ctx.setLineDash([...LINE_DASH_PATTERNS.CURSOR_DASH_DOT]); break;
-        default:         ctx.setLineDash(LINE_DASH_PATTERNS.SOLID); break;
-      }
-      if (cursorCfg.shape === 'circle') {
-        ctx.beginPath();
-        ctx.arc(mouseX, mouseY, halfBox, 0, Math.PI * 2);
-        ctx.stroke();
-      } else {
-        ctx.strokeRect(mouseX - halfBox, mouseY - halfBox, cursorCfg.size, cursorCfg.size);
-      }
-      ctx.restore();
-    }
-
-    // AutoCAD-style "+" / "−" badge at top-right of crosshair center gap
-    const hoveredId = hoveredEntityIdRef.current || hoveredOverlayIdRef.current;
-    if (hoveredId) {
-      const mode: SelectionIndicatorMode = shiftHeldRef.current ? '−' : '+';
-      drawSelectionIndicator(ctx, mouseX, mouseY, centerGap || 6, mode);
-    }
-  }, [pickBoxSize, showAperture, apertureSize]);
-
-  // ============================================================================
-  // 🏢 ENTERPRISE: UnifiedFrameScheduler Integration (ADR-030)
-  // Single RAF loop coordinates all render systems
-  // ============================================================================
-
-  // ✅ Store current render args in ref for scheduler callback
-  // 🏢 ENTERPRISE FIX: Update SYNCHRONOUSLY during render (not in useEffect)
-  // This ensures RAF callback always has the latest state
-  const renderArgsRef = useRef<{
-    isActive: boolean;
-    pos: Point2D | null;
-    margins: { left: number; top: number; bottom?: number };
-  }>({
-    isActive: false,
-    pos: null,
-    margins: rulerMargins
-  });
-
-  // ✅ SYNCHRONOUS UPDATE: Write to ref during render phase (not in useEffect)
-  // isActive prop only — pos read live from getImmediatePosition() in RAF callback.
-  // No useSyncExternalStore here: rendering is handled by registerDirectRender (synchronous)
-  // + registerRenderCallback (RAF fallback). Zero React re-renders on mousemove.
-  renderArgsRef.current = {
-    isActive: isActive,
-    pos: null,
-    margins: rulerMargins
-  };
-  isEntitySelectedRef.current = isEntitySelected ?? (() => false);
-
-  // ============================================================================
-  // 🚀 PERFORMANCE (2026-01-27): IMMEDIATE RENDER via ImmediatePositionStore
-  // Bypasses React state and RAF scheduler for zero-latency crosshair movement
-  // This is called SYNCHRONOUSLY from mouse event handlers
-  // ============================================================================
+  // ResizeObserver: react to layout/size changes (ADR-146 intent, element-level).
   useEffect(() => {
-    /**
-     * 🚀 DIRECT RENDER: Called immediately when position changes
-     * No React re-render, no RAF wait - pure synchronous canvas update
-     */
-    const directRenderCallback = (pos: Point2D | null): void => {
-      // Use the render function with current settings from refs
-      renderCrosshair({
-        isActive: isActive && pos !== null,
-        pos,
-        margins: rulerMargins
-      });
+    const container = containerRef.current;
+    if (!container) return;
+    recompute();
+    const ro = new ResizeObserver(recompute);
+    ro.observe(container);
+    return () => ro.disconnect();
+  }, [recompute]);
 
-      // Update prev refs for dirty check
-      prevPositionRef.current = pos ? { ...pos } : null;
-      prevIsActiveRef.current = isActive && pos !== null;
-      hasRenderedOnceRef.current = true;
-    };
-
-    // Register the direct render callback
-    const unregister = registerDirectRender(directRenderCallback);
-
-    return () => {
-      unregister();
-    };
-  }, [renderCrosshair, isActive, rulerMargins]);
-
-  // Selection indicator: subscribe to hover changes + Shift key
+  // Re-apply on prop changes (margins / active toggle).
   useEffect(() => {
-    const triggerRender = (): void => {
-      const pos = getImmediatePosition();
-      renderCrosshair({ isActive, pos, margins: rulerMargins });
-    };
+    recompute();
+  }, [rulerMargins, isActive, recompute]);
 
+  // Settings subscription — colours/sizes/gap change ⇒ restyle (not per move).
+  useEffect(() => {
+    const unsubscribe = subscribeToCursorSettings((newSettings) => {
+      settingsRef.current = newSettings;
+      applyStaticStyles();
+      applyTransform(getImmediatePosition());
+    });
+    return unsubscribe;
+  }, [applyStaticStyles, applyTransform]);
+
+  // 🚀 DIRECT RENDER: synchronous, zero-latency, compositor-only position update.
+  useEffect(() => registerDirectRender((pos) => applyTransform(pos)), [applyTransform]);
+
+  // Selection badge: hover changes + Shift key (low-frequency).
+  useEffect(() => {
+    const trigger = (): void => applyTransform(getImmediatePosition());
     const unsubHover = subscribeHoveredEntity(() => {
       hoveredEntityIdRef.current = getHoveredEntity();
-      triggerRender();
+      trigger();
     });
     const unsubOverlayHover = subscribeHoveredOverlay(() => {
       hoveredOverlayIdRef.current = getHoveredOverlay();
-      triggerRender();
+      trigger();
     });
     const onKeyDown = (e: KeyboardEvent): void => {
-      if (e.key === 'Shift') { shiftHeldRef.current = true; triggerRender(); }
+      if (e.key === 'Shift') { shiftHeldRef.current = true; trigger(); }
     };
     const onKeyUp = (e: KeyboardEvent): void => {
-      if (e.key === 'Shift') { shiftHeldRef.current = false; triggerRender(); }
+      if (e.key === 'Shift') { shiftHeldRef.current = false; trigger(); }
     };
     window.addEventListener('keydown', onKeyDown);
     window.addEventListener('keyup', onKeyUp);
@@ -391,101 +297,54 @@ export default function CrosshairOverlay({
       window.removeEventListener('keydown', onKeyDown);
       window.removeEventListener('keyup', onKeyUp);
     };
-  }, [renderCrosshair, isActive, rulerMargins]);
-
-  // ✅ ADR-030: Register with UnifiedFrameScheduler (FALLBACK for non-ImmediatePositionStore updates)
-  useEffect(() => {
-    /**
-     * 🏢 ENTERPRISE: Dirty Check Function
-     * Returns true only if crosshair needs to be redrawn
-     * Pattern: Autodesk/Adobe - Skip render if nothing changed
-     */
-    const isDirty = (): boolean => {
-      // 🚀 PERFORMANCE (2026-01-27): Get position from ImmediatePositionStore
-      // This provides the latest position without React state delay
-      const immediatePos = getImmediatePosition();
-      const currentPos = immediatePos || renderArgsRef.current.pos;
-      const currentActive = renderArgsRef.current.isActive;
-
-      // 🏢 ENTERPRISE: First render is ALWAYS dirty (to clear canvas initially)
-      if (!hasRenderedOnceRef.current) {
-        return true;
-      }
-
-      // Check if active state changed
-      if (prevIsActiveRef.current !== currentActive) {
-        return true;
-      }
-
-      // Check if position changed significantly (> 0.5px movement)
-      const prevPos = prevPositionRef.current;
-
-      // If one is null and the other isn't, it's dirty
-      if ((prevPos === null) !== (currentPos === null)) {
-        return true;
-      }
-
-      // Both are non-null - check for significant movement
-      if (prevPos && currentPos) {
-        const dx = Math.abs(prevPos.x - currentPos.x);
-        const dy = Math.abs(prevPos.y - currentPos.y);
-        if (dx > 0.5 || dy > 0.5) {
-          return true;
-        }
-      }
-
-      return false;
-    };
-
-    /**
-     * 🏢 ENTERPRISE: Render Callback
-     * Called by UnifiedFrameScheduler on each frame (if dirty)
-     */
-    const onRender = (): void => {
-      // 🚀 PERFORMANCE (2026-01-27): Prefer ImmediatePositionStore position
-      const immediatePos = getImmediatePosition();
-      const args = {
-        ...renderArgsRef.current,
-        pos: immediatePos || renderArgsRef.current.pos
-      };
-
-      // Mark first render complete
-      hasRenderedOnceRef.current = true;
-
-      // Update previous state after render
-      prevIsActiveRef.current = args.isActive;
-      prevPositionRef.current = args.pos ? { ...args.pos } : null;
-
-      // Perform the actual render
-      renderCrosshair(args);
-    };
-
-    // ✅ Register with CRITICAL priority (crosshair must render every frame when dirty)
-    const unsubscribe = registerRenderCallback(
-      'crosshair-overlay',
-      'Crosshair Overlay',
-      RENDER_PRIORITIES.CRITICAL,
-      onRender,
-      isDirty
-    );
-
-    return () => {
-      unsubscribe();
-    };
-  }, [renderCrosshair]);
+  }, [applyTransform]);
 
   return (
-    <canvas
-      ref={canvasRef}
+    <div
+      ref={containerRef}
       data-dxf-overlay="crosshair"
       className={`${className} ${PANEL_LAYOUT.POINTER_EVENTS.NONE}`}
       style={{
         ...style,
         width: '100%',
         height: '100%',
-        zIndex: portalComponents.overlay.crosshair.zIndex()
+        visibility: 'hidden',
+        zIndex: portalComponents.overlay.crosshair.zIndex(),
       }}
-    />
+    >
+      <div
+        ref={areaRef}
+        style={{
+          position: 'absolute',
+          left: rulerMargins.left,
+          top: rulerMargins.top,
+          right: 0,
+          bottom: rulerMargins.bottom ?? 0,
+          overflow: 'hidden',
+          pointerEvents: 'none',
+        }}
+      >
+        <div ref={segLeftRef} style={SEGMENT_BASE} />
+        <div ref={segRightRef} style={SEGMENT_BASE} />
+        <div ref={segTopRef} style={SEGMENT_BASE} />
+        <div ref={segBottomRef} style={SEGMENT_BASE} />
+        <div ref={apertureRef} style={{ ...SEGMENT_BASE, display: 'none' }} />
+        <div ref={pickboxRef} style={{ ...SEGMENT_BASE, display: 'none' }} />
+        <div
+          ref={badgeRef}
+          style={{
+            ...SEGMENT_BASE,
+            display: 'none',
+            width: 11,
+            height: 11,
+            fontSize: 11,
+            fontFamily: 'monospace',
+            fontWeight: 'bold',
+            lineHeight: '11px',
+            textAlign: 'center',
+          }}
+        />
+      </div>
+    </div>
   );
 }
-
