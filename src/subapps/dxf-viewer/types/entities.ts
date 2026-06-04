@@ -364,6 +364,18 @@ export type {
 } from '../bim/types/floorplan-symbol-types';
 import type { FloorplanSymbolEntity } from '../bim/types/floorplan-symbol-types';
 
+// ADR-417: parametric pitched roof concrete types live in bim/types/roof-types.ts (SRP).
+export type {
+  RoofKind,
+  RoofShape,
+  RoofSlopeUnit,
+  RoofEdgeSlope,
+  RoofParams,
+  RoofGeometry,
+  RoofEntity,
+} from '../bim/types/roof-types';
+import type { RoofEntity } from '../bim/types/roof-types';
+
 // ADR-408 Φ8: unified linear MEP segment (duct + pipe) types live in bim/types/mep-segment-types.ts (SRP).
 export type {
   MepSegmentDomain,
@@ -559,6 +571,8 @@ export type Entity = (
   | MepFittingEntity
   // ADR-415 — pure-vector 2D floorplan symbol (category-driven; WC/sanitary first).
   | FloorplanSymbolEntity
+  // ADR-417 — parametric pitched roof (footprint + per-edge slopes).
+  | RoofEntity
 ) & Pick<BaseEntity,
   // Required identifiers — needed everywhere (ADR-363 fix: BIM entities now in union)
   'id' | 'name' | 'layerId' |
@@ -734,13 +748,17 @@ export const isMepFittingEntity = (entity: Entity): entity is MepFittingEntity =
 export const isFloorplanSymbolEntity = (entity: Entity): entity is FloorplanSymbolEntity =>
   entity.type === 'floorplan-symbol';
 
-/** True for any ADR-363/406/407/408/410/415 BIM parametric entity */
-export const isBimEntity = (entity: Entity): entity is WallEntity | OpeningEntity | SlabEntity | SlabOpeningEntity | ColumnEntity | BeamEntity | MepFixtureEntity | ElectricalPanelEntity | MepManifoldEntity | RailingEntity | FurnitureEntity | MepSegmentEntity | MepFittingEntity | FloorplanSymbolEntity =>
+/** ADR-417 — parametric pitched roof (footprint + per-edge slopes). */
+export const isRoofEntity = (entity: Entity): entity is RoofEntity =>
+  entity.type === 'roof';
+
+/** True for any ADR-363/406/407/408/410/415/417 BIM parametric entity */
+export const isBimEntity = (entity: Entity): entity is WallEntity | OpeningEntity | SlabEntity | SlabOpeningEntity | ColumnEntity | BeamEntity | MepFixtureEntity | ElectricalPanelEntity | MepManifoldEntity | RailingEntity | FurnitureEntity | MepSegmentEntity | MepFittingEntity | FloorplanSymbolEntity | RoofEntity =>
   entity.type === 'wall' || entity.type === 'opening' || entity.type === 'slab' ||
   entity.type === 'slab-opening' || entity.type === 'column' || entity.type === 'beam' ||
   entity.type === 'mep-fixture' || entity.type === 'electrical-panel' || entity.type === 'mep-manifold' || entity.type === 'railing' ||
   entity.type === 'furniture' || entity.type === 'mep-segment' || entity.type === 'mep-fitting' ||
-  entity.type === 'floorplan-symbol';
+  entity.type === 'floorplan-symbol' || entity.type === 'roof';
 
 // ✅ ENTERPRISE MIGRATION: generateEntityId moved to systems/entity-creation/utils.ts
 // Re-export from centralized location for backward compatibility
