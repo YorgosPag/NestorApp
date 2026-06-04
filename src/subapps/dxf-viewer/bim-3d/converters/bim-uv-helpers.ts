@@ -68,3 +68,33 @@ export function setPlanarWorldUvs(geo: THREE.BufferGeometry, opts: PlanarUvOptio
   geo.setAttribute('uv', new THREE.BufferAttribute(uv, 2));
   geo.setAttribute('uv2', new THREE.BufferAttribute(Float32Array.from(uv), 2));
 }
+
+/**
+ * Box-projected WORLD-METER UVs — per-FACE projection chosen by each vertex's
+ * normal, so every face of an axis-aligned box tiles physically (1 UV unit = 1 m)
+ * like the main 3D's ExtrudeGeometry auto-UVs. Unlike `setPlanarWorldUvs`, which
+ * projects ALL faces onto a single axis (correct only on the faces parallel to
+ * it, and STRETCHED into stripes on the perpendicular top/side faces), this maps
+ * each face with the two world axes orthogonal to its normal. Used by the «Edit
+ * Type» preview band boxes so their textures match the 3D scene (ADR-414).
+ */
+export function setBoxWorldUvs(geo: THREE.BufferGeometry): void {
+  const pos = geo.getAttribute('position');
+  const nor = geo.getAttribute('normal');
+  if (!pos || !nor) {
+    setPlanarWorldUvs(geo, {});
+    return;
+  }
+  const uv = new Float32Array(pos.count * 2);
+  for (let i = 0; i < pos.count; i++) {
+    const ax = Math.abs(nor.getX(i));
+    const ay = Math.abs(nor.getY(i));
+    const az = Math.abs(nor.getZ(i));
+    // Face normal ~X → (z,y) · ~Y (top/bottom) → (x,z) · ~Z (front/back) → (x,y).
+    const [iu, iv] = ax >= ay && ax >= az ? [2, 1] : ay >= az ? [0, 2] : [0, 1];
+    uv[i * 2] = pos.getComponent(i, iu);
+    uv[i * 2 + 1] = pos.getComponent(i, iv);
+  }
+  geo.setAttribute('uv', new THREE.BufferAttribute(uv, 2));
+  geo.setAttribute('uv2', new THREE.BufferAttribute(Float32Array.from(uv), 2));
+}
