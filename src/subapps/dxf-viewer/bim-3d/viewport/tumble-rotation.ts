@@ -5,6 +5,7 @@
 
 import * as THREE from 'three';
 import { TUMBLE_BASE_SPEED, TUMBLE_DAMPING } from './viewport-constants';
+import { orbitCameraAroundPivot } from './orbit-around-pivot';
 
 export interface TumbleRotation {
   readonly update: () => void;
@@ -12,6 +13,12 @@ export interface TumbleRotation {
   readonly setEnabled: (enabled: boolean) => void;
   readonly dispose: () => void;
   readonly applyExternalRotation: (dxPx: number, dyPx: number) => void;
+  /**
+   * Set the orbit pivot to a WORLD point (Alt-press). The next Alt+drag orbits
+   * rigidly around it — the point stays fixed on screen, no recenter jump. Pass
+   * null to revert to orbiting about the look target.
+   */
+  readonly setPivot: (worldPoint: THREE.Vector3 | null) => void;
 }
 
 export interface TumbleOptions {
@@ -42,17 +49,12 @@ export interface TumbleOptions {
 const DRAG_THRESHOLD_SQ = 9;
 const VEL_CUTOFF = 0.01;
 
-const _offset = new THREE.Vector3();
-const _right = new THREE.Vector3();
-const _up = new THREE.Vector3();
-const _qH = new THREE.Quaternion();
-const _qV = new THREE.Quaternion();
-
 export function createTumbleRotation(opts: TumbleOptions): TumbleRotation {
   const { getCamera, getTarget, domElement, onStart, onChange, onEnd, onAltClick, onAltPress } = opts;
 
   let speed = TUMBLE_BASE_SPEED;
   let enabled = true;
+  let customPivot: THREE.Vector3 | null = null;
   let pointerDown = false;
   let dragActive = false;
   let startX = 0;
@@ -63,24 +65,20 @@ export function createTumbleRotation(opts: TumbleOptions): TumbleRotation {
   let velY = 0;
   let damping = false;
 
-  function applyRotation(dx: number, dy: number): void {
-    const camera = getCamera();
-    const target = getTarget();
-    _offset.subVectors(camera.position, target);
-    _right.set(1, 0, 0).applyQuaternion(camera.quaternion);
-    _up.set(0, 1, 0).applyQuaternion(camera.quaternion);
-    _qH.setFromAxisAngle(_up, -dx * speed);
-    _qV.setFromAxisAngle(_right, -dy * speed);
-    _offset.applyQuaternion(_qH).applyQuaternion(_qV);
-    camera.position.copy(target).add(_offset);
-    const dotY = _offset.y / _offset.length();
-    if (Math.abs(dotY) > 0.99) {
-      camera.up.set(0, 0, dotY > 0 ? -1 : 1);
-    } else {
-      camera.up.set(0, 1, 0);
-    }
-    camera.lookAt(target);
+  /**
+   * Rigid orbit around `pivot` (SSoT `orbitCameraAroundPivot`). The pivot stays
+   * fixed on screen — no recenter jump — and `getTarget()` (controls.target) is
+   * rotated along the forward axis so OrbitControls' per-frame `lookAt(target)`
+   * is a no-op and never fights the orbit.
+   */
+  function orbit(dx: number, dy: number, pivot: THREE.Vector3): void {
+    orbitCameraAroundPivot(getCamera(), pivot, getTarget(), dx, dy, speed);
     onChange();
+  }
+
+  /** Alt+drag — orbit around the Alt-clicked pivot (or the look target if none). */
+  function applyRotation(dx: number, dy: number): void {
+    orbit(dx, dy, customPivot ?? getTarget());
   }
 
   function onPointerDown(e: PointerEvent): void {
@@ -147,6 +145,9 @@ export function createTumbleRotation(opts: TumbleOptions): TumbleRotation {
 
   function setSpeed(s: number): void { speed = s; }
   function setEnabled(e: boolean): void { enabled = e; }
+  function setPivot(worldPoint: THREE.Vector3 | null): void {
+    customPivot = worldPoint ? worldPoint.clone() : null;
+  }
 
   domElement.addEventListener('pointerdown', onPointerDown);
   domElement.addEventListener('pointermove', onPointerMove);
@@ -158,5 +159,10 @@ export function createTumbleRotation(opts: TumbleOptions): TumbleRotation {
     domElement.removeEventListener('pointerup', onPointerUp);
   }
 
-  return { update, setSpeed, setEnabled, dispose, applyExternalRotation: applyRotation };
+  // ViewCube drag orbits around the look target (not the Alt-click pivot).
+  function applyExternalRotation(dx: number, dy: number): void {
+    orbit(dx, dy, getTarget());
+  }
+
+  return { update, setSpeed, setEnabled, dispose, applyExternalRotation, setPivot };
 }
