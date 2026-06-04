@@ -420,6 +420,16 @@ export const HOME_DRAW_PANEL: RibbonPanelDef = {
               commandKey: 'railing',
               shortcut: 'RL',
             },
+            // ADR-417 — parametric pitched roof (footprint polygon + per-edge
+            // slopes). Click-click footprint like slab; discipline = architectural.
+            {
+              id: 'draw.bim.roof',
+              labelKey: 'ribbon.commands.bim.roof.label',
+              tooltipKey: 'ribbon.commands.bim.roof.tooltip',
+              icon: 'bim-slab',
+              commandKey: 'roof',
+              shortcut: 'RF',
+            },
             // ADR-408 Φ8 — linear MEP duct run (2-click). Discipline = mechanical.
             {
               id: 'draw.bim.mepDuct',
