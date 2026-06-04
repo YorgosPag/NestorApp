@@ -184,6 +184,29 @@ export const CONTEXTUAL_MEP_SEGMENT_TAB: RibbonTab = {
                 options: CENTERLINE_ELEVATION_MM_OPTIONS,
               },
             },
+            {
+              // Φ-A — per-endpoint elevation (riser/slope, Revit "Offset" per end).
+              type: 'combobox',
+              size: 'small',
+              command: {
+                id: 'mepSegment.startElevation',
+                labelKey: 'ribbon.commands.mepSegmentEditor.startElevation',
+                commandKey: MEP_SEGMENT_RIBBON_KEYS.params.startElevation,
+                comboboxWidthPx: 90,
+                options: CENTERLINE_ELEVATION_MM_OPTIONS,
+              },
+            },
+            {
+              type: 'combobox',
+              size: 'small',
+              command: {
+                id: 'mepSegment.endElevation',
+                labelKey: 'ribbon.commands.mepSegmentEditor.endElevation',
+                commandKey: MEP_SEGMENT_RIBBON_KEYS.params.endElevation,
+                comboboxWidthPx: 90,
+                options: CENTERLINE_ELEVATION_MM_OPTIONS,
+              },
+            },
           ],
         },
       ],
