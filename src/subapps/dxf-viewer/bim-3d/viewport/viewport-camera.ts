@@ -356,8 +356,10 @@ export function createViewportCamera(
   function setOrbitPivot(point: THREE.Vector3): void {
     animation.cancel();
     controls.enabled = true;
-    controls.target.copy(point);
-    controls.update();
+    // No recenter: hand the pivot to tumble, which orbits rigidly around it
+    // (the point stays fixed on screen — no jump). controls.target is left where
+    // it is and gets carried along the forward axis by the rigid orbit.
+    tumble.setPivot(point);
     onRenderNeeded();
   }
 
