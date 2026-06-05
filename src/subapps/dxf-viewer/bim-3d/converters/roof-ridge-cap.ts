@@ -173,7 +173,7 @@ export function buildRoundedRidgeCap(
   if (adjFaces.length < 2) return null;
   const planeA = facePlane(faceWorldVertices(adjFaces[0], sceneToM, baseY));
   const planeB = facePlane(faceWorldVertices(adjFaces[1], sceneToM, baseY));
-  if (!planeA || !planeB) return null;
+  if (!planeA || !planeB) { console.warn('CAPDBG plane null', !planeA, !planeB); return null; }
 
   const A = toWorld(ridge.a.x, ridge.a.y, ridge.a.z ?? 0, sceneToM); A.y += baseY;
   const B = toWorld(ridge.b.x, ridge.b.y, ridge.b.z ?? 0, sceneToM); B.y += baseY;
@@ -183,13 +183,18 @@ export function buildRoundedRidgeCap(
   const midR = new THREE.Vector3().addVectors(A, B).multiplyScalar(0.5);
 
   const dirA = sideDir(axisHat, midR, planeA);
-  if (!dirA) return null;
+  if (!dirA) { console.warn('CAPDBG dirA null'); return null; }
   const dirB = dirA.clone().negate();
   const w = RIDGE_CAP_HALF_WIDTH_M;
 
-  const ringA = buildArc(contactPoint(A, dirA, w, planeA), contactPoint(A, dirB, w, planeB));
-  const ringB = buildArc(contactPoint(B, dirA, w, planeA), contactPoint(B, dirB, w, planeB));
-  if (!ringA || !ringB) return null;
+  const cA1 = contactPoint(A, dirA, w, planeA);
+  const cA2 = contactPoint(A, dirB, w, planeB);
+  const cB1 = contactPoint(B, dirA, w, planeA);
+  const cB2 = contactPoint(B, dirB, w, planeB);
+  console.warn('CAPDBG contacts', JSON.stringify({ cA1, cA2, cB1, cB2 }));
+  const ringA = buildArc(cA1, cA2);
+  const ringB = buildArc(cB1, cB2);
+  if (!ringA || !ringB) { console.warn('CAPDBG arc null', !ringA, !ringB); return null; }
 
   const geo = new THREE.BufferGeometry();
   geo.setAttribute('position', new THREE.BufferAttribute(packCapPositions(ringA, ringB), 3));
