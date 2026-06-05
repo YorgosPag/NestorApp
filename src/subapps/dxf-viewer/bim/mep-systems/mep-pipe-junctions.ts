@@ -26,6 +26,7 @@
  * @see docs/centralized-systems/reference/adrs/ADR-408-mep-connectors-and-systems.md §Φ11
  */
 
+import { compareStrings } from '@/lib/array-utils';
 import type { Entity } from '../../types/entities';
 import { isMepSegmentEntity } from '../../types/entities';
 import type { MepSegmentEntity } from '../types/mep-segment-types';
@@ -233,8 +234,8 @@ function buildJunction(bucket: readonly JunctionEndpoint[], tolerance: number): 
     .map(toIncident)
     .sort((a, b) =>
       a.entityId === b.entityId
-        ? a.connectorId.localeCompare(b.connectorId)
-        : a.entityId.localeCompare(b.entityId),
+        ? compareStrings(a.connectorId, b.connectorId)
+        : compareStrings(a.entityId, b.entityId),
     );
   return {
     key: junctionKey(position, sumZScene / n, tolerance),
@@ -264,7 +265,7 @@ export function derivePipeJunctions(
   const segments = entities
     .filter(isMepSegmentEntity)
     .filter((s) => s.params.domain === 'pipe')
-    .sort((a, b) => a.id.localeCompare(b.id));
+    .sort((a, b) => compareStrings(a.id, b.id));
 
   if (segments.length === 0) return [];
 
@@ -296,5 +297,5 @@ export function derivePipeJunctions(
 
   return [...buckets.values()]
     .map((bucket) => buildJunction(bucket, tol))
-    .sort((a, b) => a.key.localeCompare(b.key));
+    .sort((a, b) => compareStrings(a.key, b.key));
 }

@@ -21,3 +21,22 @@ export function chunkArray<T>(array: T[], size: number): T[][] {
   }
   return chunks;
 }
+
+/**
+ * Deterministic, locale-independent string comparator for `Array.prototype.sort`.
+ *
+ * Uses lexicographic (UTF-16 code-unit) ordering. Unlike `compareByLocale`
+ * (`@/lib/intl-formatting`), the result NEVER depends on the active locale and
+ * NEVER collapses case/accent differences — so it is the correct choice for
+ * sorting machine identifiers, keys, and ISO timestamps where a stable,
+ * reproducible order is required (e.g. geometry derivation, network ordering).
+ *
+ * Do NOT use this for user-facing text — use `compareByLocale` for that.
+ *
+ * @example
+ * ids.sort(compareStrings);                          // ascending
+ * items.sort((a, b) => compareStrings(b.id, a.id));  // descending
+ */
+export function compareStrings(a: string, b: string): number {
+  return a < b ? -1 : a > b ? 1 : 0;
+}

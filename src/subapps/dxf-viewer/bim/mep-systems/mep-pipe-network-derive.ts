@@ -22,6 +22,7 @@
  * @see docs/centralized-systems/reference/adrs/ADR-408-mep-connectors-and-systems.md §Φ10
  */
 
+import { compareStrings } from '@/lib/array-utils';
 import type { Entity } from '../../types/entities';
 import { isMepSegmentEntity } from '../../types/entities';
 import type { MepSegmentEntity } from '../types/mep-segment-types';
@@ -140,7 +141,7 @@ export function derivePipeNetworks(
   const segments = entities
     .filter(isMepSegmentEntity)
     .filter((s) => s.params.domain === 'pipe')
-    .sort((a, b) => a.id.localeCompare(b.id));
+    .sort((a, b) => compareStrings(a.id, b.id));
 
   if (segments.length === 0) return [];
 
@@ -165,7 +166,7 @@ export function derivePipeNetworks(
 
   const drafts: PipeNetworkDraft[] = [];
   for (const bucket of components.values()) {
-    const sorted = bucket.slice().sort((a, b) => a.id.localeCompare(b.id));
+    const sorted = bucket.slice().sort((a, b) => compareStrings(a.id, b.id));
     const members: MepSystemMember[] = sorted.flatMap((seg) => [
       { entityId: seg.id, connectorId: SEGMENT_START_CONNECTOR_ID },
       { entityId: seg.id, connectorId: SEGMENT_END_CONNECTOR_ID },

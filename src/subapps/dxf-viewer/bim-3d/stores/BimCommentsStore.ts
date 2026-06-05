@@ -17,6 +17,7 @@ import { create } from 'zustand';
 import { devtools, subscribeWithSelector } from 'zustand/middleware';
 import { immer } from 'zustand/middleware/immer';
 import { castDraft } from 'immer';
+import { compareStrings } from '@/lib/array-utils';
 import { BimCommentsService } from '../comments/bim-comments.service';
 import type {
   BimComment,
@@ -140,7 +141,7 @@ export function selectFilteredComments(
     const q = filters.searchQuery.toLowerCase();
     result = result.filter((c) => c.content.toLowerCase().includes(q));
   }
-  return result.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  return result.sort((a, b) => compareStrings(b.createdAt, a.createdAt));
 }
 
 export function selectCommentsByEntityId(
@@ -149,5 +150,5 @@ export function selectCommentsByEntityId(
 ): readonly BimComment[] {
   return Object.values(comments)
     .filter((c) => c.anchor.type === 'entity' && c.anchor.entityId === entityId)
-    .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+    .sort((a, b) => compareStrings(b.createdAt, a.createdAt));
 }
