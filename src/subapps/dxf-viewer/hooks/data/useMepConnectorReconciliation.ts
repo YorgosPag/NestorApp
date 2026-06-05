@@ -41,6 +41,7 @@ import {
 import type { MepFixtureEntity } from '../../bim/types/mep-fixture-types';
 import type { ElectricalPanelEntity } from '../../bim/types/electrical-panel-types';
 import type { MepSegmentEntity } from '../../bim/types/mep-segment-types';
+import type { MepRadiatorEntity } from '../../bim/types/mep-radiator-types';
 import { useMepSystemStore } from '../../bim/mep-systems/mep-system-store';
 import {
   buildConnectorSystemIndex,
@@ -60,7 +61,7 @@ export interface UseMepConnectorReconciliationParams {
 
 /** Re-derive one connector host's `systemId` cache; same ref when unchanged. */
 function reconcileHost<
-  T extends MepFixtureEntity | ElectricalPanelEntity | MepSegmentEntity,
+  T extends MepFixtureEntity | ElectricalPanelEntity | MepSegmentEntity | MepRadiatorEntity,
 >(
   entity: T,
   index: ReadonlyMap<string, string>,

@@ -253,6 +253,13 @@ export interface CanvasLayerStackProps {
       cursorPos: Readonly<Point2D> | null,
     ) => readonly import('../../bim/types/bim-base').Point3D[] | null;
   };
+  // === ADR-408 Εύρος Β: heating radiator 2D placement ghost preview payload ===
+  mepRadiatorGhostPreview: {
+    isAwaitingPosition: boolean;
+    getGhostFootprint: (
+      cursorPos: Readonly<Point2D> | null,
+    ) => readonly import('../../bim/types/bim-base').Point3D[] | null;
+  };
   // === ADR-408 Φ8: MEP segment (duct/pipe) 2-click ghost preview payload ===
   mepSegmentGhostPreview: Omit<
     import('./canvas-layer-stack-mep-segment-ghost').MepSegmentGhostPreviewMountProps,

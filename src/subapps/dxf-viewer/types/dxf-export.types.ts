@@ -326,6 +326,9 @@ export const ENTITY_TYPE_MAPPING: Record<EntityType, EzdxfEntityType | null> = {
   'mep-segment': null,     // ADR-408 Φ8 BIM MEP segment (duct/pipe) — exported via composite
   'mep-fitting': null,     // ADR-408 Φ11 BIM MEP fitting (auto pipe junction) — exported via composite
   'mep-manifold': null,   // ADR-408 Φ12 BIM plumbing manifold — exported via composite
+  'mep-radiator': null,   // ADR-408 Εύρος Β BIM heating radiator — exported via composite
+  'floorplan-symbol': null, // ADR-415 BIM 2D floorplan symbol — exported via composite
+  'roof': null,           // ADR-417 BIM pitched roof — exported via composite
 } as const;
 
 /**

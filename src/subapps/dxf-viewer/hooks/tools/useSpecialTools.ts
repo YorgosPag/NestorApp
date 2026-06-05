@@ -24,13 +24,6 @@ import { useOpeningTool } from '../drawing/useOpeningTool';
 import { useSlabTool, SLAB_AUTO_CLOSE_TOLERANCE_DEFAULT } from '../drawing/useSlabTool';
 import { useRoofTool, ROOF_AUTO_CLOSE_TOLERANCE_DEFAULT } from '../drawing/useRoofTool';
 import { useColumnTool } from '../drawing/useColumnTool';
-import { useMepFixtureTool } from '../drawing/useMepFixtureTool';
-import { useFurnitureTool } from '../drawing/useFurnitureTool';
-import { useFloorplanSymbolTool } from '../drawing/useFloorplanSymbolTool';
-import { useElectricalPanelTool } from '../drawing/useElectricalPanelTool';
-import { useMepManifoldTool } from '../drawing/useMepManifoldTool';
-import { useMepSegmentTool } from '../drawing/useMepSegmentTool';
-import { useRailingTool } from '../drawing/useRailingTool';
 import { useBeamTool } from '../drawing/useBeamTool';
 import { useSlabOpeningTool } from '../drawing/useSlabOpeningTool';
 import { buildSlabOpeningResolvers } from './useSpecialTools-slab-opening';
@@ -41,16 +34,10 @@ import { resolveSceneUnits, mmToSceneUnits } from '../../utils/scene-units';
 import { useFloorMetadata } from '../data/useFloorMetadata';
 import type { StairFloorLinkInput } from '../drawing/stair-completion';
 import { useSpecialToolsSelectionTools, type SelectionToolsReturn } from './useSpecialTools-selection-tools';
+// ADR-408 — MEP + furnishing single/2-click placement tools extracted (N.7.1).
+import { useSpecialToolsPlacementTools, type PlacementToolsReturn } from './useSpecialTools-placement-tools';
 import { addWallToScene } from '../../bim/walls/add-wall-to-scene';
 import { addColumnToScene } from '../../bim/columns/add-column-to-scene';
-import { addMepFixtureToScene } from '../../bim/mep-fixtures/add-mep-fixture-to-scene';
-import { addFurnitureToScene } from '../../bim/furniture/add-furniture-to-scene';
-import { addFloorplanSymbolToScene } from '../../bim/floorplan-symbols/add-floorplan-symbol-to-scene';
-import { addElectricalPanelToScene } from '../../bim/electrical-panels/add-electrical-panel-to-scene';
-import { addMepManifoldToScene } from '../../bim/mep-manifolds/add-mep-manifold-to-scene';
-import { addMepSegmentToScene } from '../../bim/mep-segments/add-mep-segment-to-scene';
-import { DEFAULT_DRAINAGE_SLOPE_PERCENT } from '../../bim/types/mep-segment-types';
-import { addRailingToScene } from '../../bim/railings/add-railing-to-scene';
 // ADR-397 — slab / roof / beam draw delegate to the `appendEntityToScene` SSoT.
 // Column draw + Ctrl-copy go through `addColumnToScene` (same SSoT, 'column' tag).
 import { appendEntityToScene } from '../../bim/scene/append-entity-to-scene';
@@ -71,22 +58,18 @@ export interface UseSpecialToolsProps {
  * Return type of useSpecialTools hook
  * Uses ReturnType to automatically match the actual hook return types
  */
-export interface UseSpecialToolsReturn extends SelectionToolsReturn {
+export interface UseSpecialToolsReturn extends SelectionToolsReturn, PlacementToolsReturn {
   // SelectionToolsReturn provides: circleTTT, linePerpendicular, lineParallel,
   // angleEntityMeasurement (extracted to useSpecialTools-selection-tools.ts).
+  // PlacementToolsReturn provides: mepFixtureTool, furnitureTool,
+  // floorplanSymbolTool, electricalPanelTool, mepManifoldTool, mepRadiatorTool,
+  // mepSegmentTool, railingTool (extracted to useSpecialTools-placement-tools.ts).
   stairTool: ReturnType<typeof useStairTool>;
   wallTool: ReturnType<typeof useWallTool>;
   openingTool: ReturnType<typeof useOpeningTool>;
   slabTool: ReturnType<typeof useSlabTool>;
   roofTool: ReturnType<typeof useRoofTool>; // ADR-417
   columnTool: ReturnType<typeof useColumnTool>;
-  mepFixtureTool: ReturnType<typeof useMepFixtureTool>; // ADR-406
-  furnitureTool: ReturnType<typeof useFurnitureTool>; // ADR-410
-  floorplanSymbolTool: ReturnType<typeof useFloorplanSymbolTool>; // ADR-415
-  electricalPanelTool: ReturnType<typeof useElectricalPanelTool>; // ADR-408 Φ3
-  mepManifoldTool: ReturnType<typeof useMepManifoldTool>; // ADR-408 Φ12
-  mepSegmentTool: ReturnType<typeof useMepSegmentTool>; // ADR-408 Φ8
-  railingTool: ReturnType<typeof useRailingTool>; // ADR-407
   beamTool: ReturnType<typeof useBeamTool>;
   slabOpeningTool: ReturnType<typeof useSlabOpeningTool>;
 }
@@ -308,118 +291,21 @@ export function useSpecialTools(props: UseSpecialToolsProps): UseSpecialToolsRet
     else if (activeTool === 'column-discrete-from-perimeter')
       columnTool.setPlacementMode('discrete-perimeter');
   }, [activeTool, columnTool.setPlacementMode]);
-  // ADR-406 — MEP FIXTURE TOOL: single-click placement; entity appended+broadcast.
-  const mepFixtureTool = useMepFixtureTool({
-    currentLevelId: levelManager.currentLevelId || '0',
-    onMepFixtureCreated: (fixtureEntity) => addMepFixtureToScene(fixtureEntity, levelManager),
-    getSceneUnits: () => {
-      const lid = levelManager.currentLevelId;
-      return lid ? resolveSceneUnits(levelManager.getLevelScene(lid)) : 'mm';
-    },
-  });
-  useToolLifecycle(activeTool === 'mep-fixture', mepFixtureTool.activate, mepFixtureTool.deactivate);
-
-  // ADR-410 — FURNITURE TOOL: single-click placement; entity appended+broadcast.
-  const furnitureTool = useFurnitureTool({
-    currentLevelId: levelManager.currentLevelId || '0',
-    onFurnitureCreated: (furnitureEntity) => addFurnitureToScene(furnitureEntity, levelManager),
-    getSceneUnits: () => {
-      const lid = levelManager.currentLevelId;
-      return lid ? resolveSceneUnits(levelManager.getLevelScene(lid)) : 'mm';
-    },
-  });
-  useToolLifecycle(activeTool === 'furniture', furnitureTool.activate, furnitureTool.deactivate);
-
-  // ADR-415 — FLOORPLAN SYMBOL TOOL: single-click placement; entity appended+broadcast.
-  const floorplanSymbolTool = useFloorplanSymbolTool({
-    currentLevelId: levelManager.currentLevelId || '0',
-    onFloorplanSymbolCreated: (symbolEntity) => addFloorplanSymbolToScene(symbolEntity, levelManager),
-    getSceneUnits: () => {
-      const lid = levelManager.currentLevelId;
-      return lid ? resolveSceneUnits(levelManager.getLevelScene(lid)) : 'mm';
-    },
-  });
-  useToolLifecycle(activeTool === 'floorplan-symbol', floorplanSymbolTool.activate, floorplanSymbolTool.deactivate);
-
-  // ADR-408 Φ3 — ELECTRICAL PANEL TOOL: single-click placement; entity appended+broadcast.
-  const electricalPanelTool = useElectricalPanelTool({
-    currentLevelId: levelManager.currentLevelId || '0',
-    onElectricalPanelCreated: (panelEntity) => addElectricalPanelToScene(panelEntity, levelManager),
-    getSceneUnits: () => {
-      const lid = levelManager.currentLevelId;
-      return lid ? resolveSceneUnits(levelManager.getLevelScene(lid)) : 'mm';
-    },
-  });
-  useToolLifecycle(activeTool === 'electrical-panel', electricalPanelTool.activate, electricalPanelTool.deactivate);
-
-  // ADR-408 Φ12 — PLUMBING MANIFOLD TOOL: single-click placement; entity appended+broadcast.
-  const mepManifoldTool = useMepManifoldTool({
-    currentLevelId: levelManager.currentLevelId || '0',
-    onMepManifoldCreated: (manifoldEntity) => addMepManifoldToScene(manifoldEntity, levelManager),
-    getSceneUnits: () => {
-      const lid = levelManager.currentLevelId;
-      return lid ? resolveSceneUnits(levelManager.getLevelScene(lid)) : 'mm';
-    },
-  });
-  // 'mep-manifold' (water distributor) and 'mep-drainage-collector' (φρεάτιο) share
-  // ONE manifold tool; the active tool id drives the `kind` preset (ADR-408 Φ14).
-  const isMepManifoldTool =
-    activeTool === 'mep-manifold' || activeTool === 'mep-drainage-collector';
-  useToolLifecycle(isMepManifoldTool, mepManifoldTool.activate, mepManifoldTool.deactivate);
-  useEffect(() => {
-    if (activeTool === 'mep-manifold') {
-      mepManifoldTool.setParamOverrides({ kind: 'floor-manifold' });
-    } else if (activeTool === 'mep-drainage-collector') {
-      mepManifoldTool.setParamOverrides({ kind: 'drainage-collector' });
-    }
-  }, [activeTool, mepManifoldTool.setParamOverrides]);
-
-  // ADR-408 Φ8 — MEP SEGMENT TOOL (duct + pipe): 2-click linear placement.
-  const mepSegmentTool = useMepSegmentTool({
-    currentLevelId: levelManager.currentLevelId || '0',
-    onSegmentCreated: (segmentEntity) => addMepSegmentToScene(segmentEntity, levelManager),
-    getSceneUnits: () => {
-      const lid = levelManager.currentLevelId;
-      return lid ? resolveSceneUnits(levelManager.getLevelScene(lid)) : 'mm';
-    },
-  });
-  // 'mep-duct', 'mep-pipe' and 'mep-drain-pipe' share ONE useMepSegmentTool
-  // instance; the domain + drainage preset are driven by the active tool id.
-  // ADR-408 Φ14: 'mep-drain-pipe' = a pipe preset with sanitary-drainage
-  // classification + a default fall, the Revit "draw under the Sanitary system"
-  // gesture. Switching to a non-drainage segment tool CLEARS the preset so a
-  // water pipe never inherits the drainage classification/slope.
-  const isMepSegmentTool =
-    activeTool === 'mep-duct' ||
-    activeTool === 'mep-pipe' ||
-    activeTool === 'mep-drain-pipe';
-  useToolLifecycle(isMepSegmentTool, mepSegmentTool.activate, mepSegmentTool.deactivate);
-  useEffect(() => {
-    if (activeTool === 'mep-duct') {
-      mepSegmentTool.setDomain('duct');
-      mepSegmentTool.setParamOverrides({ classification: undefined, slopePercent: undefined });
-    } else if (activeTool === 'mep-pipe') {
-      mepSegmentTool.setDomain('pipe');
-      mepSegmentTool.setParamOverrides({ classification: undefined, slopePercent: undefined });
-    } else if (activeTool === 'mep-drain-pipe') {
-      mepSegmentTool.setDomain('pipe');
-      mepSegmentTool.setParamOverrides({
-        classification: 'sanitary-drainage',
-        slopePercent: DEFAULT_DRAINAGE_SLOPE_PERCENT,
-      });
-    }
-  }, [activeTool, mepSegmentTool.setDomain, mepSegmentTool.setParamOverrides]);
-
-  // ADR-407 — RAILING TOOL: 2-click straight guardrail; entity appended+broadcast.
-  const railingTool = useRailingTool({
-    currentLevelId: levelManager.currentLevelId || '0',
-    onRailingCreated: (railingEntity) => addRailingToScene(railingEntity, levelManager),
-    getSceneUnits: () => {
-      const lid = levelManager.currentLevelId;
-      return lid ? resolveSceneUnits(levelManager.getLevelScene(lid)) : 'mm';
-    },
-  });
-  useToolLifecycle(activeTool === 'railing', railingTool.activate, railingTool.deactivate);
+  // ADR-406/407/408/410/415 — MEP + furnishing single/2-click placement tools
+  // (mepFixture, furniture, floorplanSymbol, electricalPanel, mepManifold,
+  // mepRadiator, mepSegment, railing). Extracted to a sub-hook (N.7.1) — each
+  // shares the same scene-units resolver + lifecycle pattern; the active tool id
+  // drives activation and preset selection.
+  const {
+    mepFixtureTool,
+    furnitureTool,
+    floorplanSymbolTool,
+    electricalPanelTool,
+    mepManifoldTool,
+    mepRadiatorTool,
+    mepSegmentTool,
+    railingTool,
+  } = useSpecialToolsPlacementTools({ activeTool, levelManager });
 
   // ============================================================================
   // ADR-363 Phase 5 — BEAM TOOL
@@ -484,6 +370,7 @@ export function useSpecialTools(props: UseSpecialToolsProps): UseSpecialToolsRet
     floorplanSymbolTool,
     electricalPanelTool,
     mepManifoldTool,
+    mepRadiatorTool,
     mepSegmentTool,
     railingTool,
     beamTool,

@@ -21,6 +21,7 @@ import {
   type MepManifoldParamOverrides,
 } from '../../hooks/drawing/mep-manifold-completion';
 import { computeMepManifoldGeometry } from '../../bim/mep-manifolds/mep-manifold-geometry';
+import { resolveManifoldPalette } from '../../bim/mep-manifolds/mep-manifold-symbol';
 import { manifoldToMesh } from '../converters/BimToThreeConverter';
 import { mepManifoldToolBridgeStore } from '../../ui/ribbon/hooks/bridge/mep-manifold-tool-bridge-store';
 
@@ -55,6 +56,9 @@ export class MepManifoldPlacementGhost {
       return;
     }
     this.entity = entity;
+    // ADR-408 Φ14 — recolour the ghost to match the committed equipment (water =
+    // cyan-teal, drainage collector = brown) via the shared palette SSoT.
+    this.material.color.set(resolveManifoldPalette(entity.params.kind).strokeHex);
     this.removeMesh();
     const mesh = manifoldToMesh(entity, floorElevationMm, levelId);
     if (!mesh) return;

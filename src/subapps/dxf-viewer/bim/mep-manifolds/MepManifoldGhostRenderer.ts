@@ -16,16 +16,21 @@
 
 import type { Point2D, ViewTransform } from '../../rendering/types/Types';
 import { CoordinateTransforms } from '../../rendering/core/CoordinateTransforms';
+import type { MepManifoldKind } from '../types/mep-manifold-types';
+import { isDrainageCollectorKind } from '../types/mep-manifold-types';
+import { resolveManifoldPalette, buildDrainageGratingStrokes } from './mep-manifold-symbol';
 
-/** Cyan-teal manifold palette — mirror of `MepManifoldRenderer`. */
-const MANIFOLD_STROKE = '#0891b2';
-const MANIFOLD_FILL = 'rgba(8, 145, 178, 0.30)';
+/** Ghost fill translucency (slightly more opaque than the committed renderer). */
+const GHOST_FILL_ALPHA = 0.3;
 const GHOST_LINE_WIDTH = 2;
+const GHOST_GRATING_LINE_WIDTH = 1;
 const ANCHOR_MARKER_SIZE_PX = 5;
 
 export interface MepManifoldGhostRenderInput {
   /** Footprint vertices in world/scene units (from `getGhostFootprint`). */
   readonly footprint: ReadonlyArray<{ x: number; y: number }>;
+  /** Manifold kind — drives the palette + grating, so the ghost == the commit. */
+  readonly kind: MepManifoldKind;
   /** Cursor world position (anchor marker). */
   readonly cursor: Readonly<Point2D>;
   readonly transform: ViewTransform;
@@ -36,12 +41,18 @@ export class MepManifoldGhostRenderer {
   constructor(private readonly ctx: CanvasRenderingContext2D) {}
 
   render(input: Readonly<MepManifoldGhostRenderInput>): void {
-    const { footprint, cursor, transform, viewport } = input;
+    const { footprint, kind, cursor, transform, viewport } = input;
+    const palette = resolveManifoldPalette(kind);
     if (footprint.length >= 3) {
-      this.drawFill(footprint, transform, viewport);
-      this.drawOutline(footprint, transform, viewport);
+      this.drawFill(footprint, palette.fillRgb, transform, viewport);
+      this.drawOutline(footprint, palette.strokeHex, transform, viewport);
+      // ADR-408 Φ14 — a drainage collector (φρεάτιο) previews its grating too, so
+      // the ghost reads exactly as the committed catch-basin symbol (WYSIWYG).
+      if (footprint.length === 4 && isDrainageCollectorKind(kind)) {
+        this.drawGrating(footprint, palette.strokeHex, transform, viewport);
+      }
     }
-    this.drawAnchorMarker(cursor, transform, viewport);
+    this.drawAnchorMarker(cursor, palette.strokeHex, transform, viewport);
   }
 
   private tracePath(
@@ -62,12 +73,13 @@ export class MepManifoldGhostRenderer {
 
   private drawFill(
     vertices: ReadonlyArray<{ x: number; y: number }>,
+    fillRgb: string,
     transform: ViewTransform,
     viewport: { readonly width: number; readonly height: number },
   ): void {
     const ctx = this.ctx;
     ctx.save();
-    ctx.fillStyle = MANIFOLD_FILL;
+    ctx.fillStyle = `rgba(${fillRgb}, ${GHOST_FILL_ALPHA})`;
     this.tracePath(vertices, transform, viewport);
     ctx.fill();
     ctx.restore();
@@ -75,12 +87,13 @@ export class MepManifoldGhostRenderer {
 
   private drawOutline(
     vertices: ReadonlyArray<{ x: number; y: number }>,
+    strokeHex: string,
     transform: ViewTransform,
     viewport: { readonly width: number; readonly height: number },
   ): void {
     const ctx = this.ctx;
     ctx.save();
-    ctx.strokeStyle = MANIFOLD_STROKE;
+    ctx.strokeStyle = strokeHex;
     ctx.lineWidth = GHOST_LINE_WIDTH;
     ctx.globalAlpha = 1;
     ctx.setLineDash([]);
@@ -89,8 +102,39 @@ export class MepManifoldGhostRenderer {
     ctx.restore();
   }
 
+  /**
+   * ADR-408 Φ14 — preview the φρεάτιο grating (parallel bars), reusing the same
+   * `buildDrainageGratingStrokes` SSoT as the committed symbol. `footprint` is the
+   * 4 rotated rectangle verts (v0..v3) in world units.
+   */
+  private drawGrating(
+    footprint: ReadonlyArray<{ x: number; y: number }>,
+    strokeHex: string,
+    transform: ViewTransform,
+    viewport: { readonly width: number; readonly height: number },
+  ): void {
+    const [v0, v1, v2, v3] = footprint.map((v) => ({ x: v.x, y: v.y, z: 0 }));
+    const bars = buildDrainageGratingStrokes(v0, v1, v2, v3);
+    const ctx = this.ctx;
+    ctx.save();
+    ctx.strokeStyle = strokeHex;
+    ctx.lineWidth = GHOST_GRATING_LINE_WIDTH;
+    ctx.globalAlpha = 1;
+    ctx.setLineDash([]);
+    for (const bar of bars) {
+      const a = CoordinateTransforms.worldToScreen({ x: bar[0].x, y: bar[0].y }, transform, viewport);
+      const b = CoordinateTransforms.worldToScreen({ x: bar[1].x, y: bar[1].y }, transform, viewport);
+      ctx.beginPath();
+      ctx.moveTo(a.x, a.y);
+      ctx.lineTo(b.x, b.y);
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+
   private drawAnchorMarker(
     cursor: Readonly<Point2D>,
+    strokeHex: string,
     transform: ViewTransform,
     viewport: { readonly width: number; readonly height: number },
   ): void {
@@ -98,7 +142,7 @@ export class MepManifoldGhostRenderer {
     const half = ANCHOR_MARKER_SIZE_PX / 2;
     const ctx = this.ctx;
     ctx.save();
-    ctx.fillStyle = MANIFOLD_STROKE;
+    ctx.fillStyle = strokeHex;
     ctx.globalAlpha = 1;
     ctx.fillRect(s.x - half, s.y - half, ANCHOR_MARKER_SIZE_PX, ANCHOR_MARKER_SIZE_PX);
     ctx.restore();

@@ -193,7 +193,7 @@ export function getMaterial3D(materialId: string): THREE.MeshStandardMaterial {
 
 /** Resolve MeshStandardMaterial for element types without DNA. */
 export function getElementMaterial3D(
-  type: 'column' | 'beam' | 'slab' | 'envelope' | 'mep-fixture' | 'electrical-panel' | 'railing' | 'mep-wire' | 'furniture' | 'mep-duct' | 'mep-pipe' | 'mep-fitting' | 'mep-manifold' | Stair3DComponent,
+  type: 'column' | 'beam' | 'slab' | 'envelope' | 'mep-fixture' | 'electrical-panel' | 'railing' | 'mep-wire' | 'furniture' | 'mep-duct' | 'mep-pipe' | 'mep-fitting' | 'mep-manifold' | 'mep-radiator' | Stair3DComponent,
 ): THREE.MeshStandardMaterial {
   return resolveTexturedMaterial(`elem-${type}`);
 }

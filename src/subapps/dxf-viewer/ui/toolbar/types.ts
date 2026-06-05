@@ -148,6 +148,8 @@ export type ToolType =
   | 'electrical-panel'
   // ADR-408 Φ12: point-based plumbing manifold drawing tool (συλλέκτης, pipe-network source)
   | 'mep-manifold'
+  // ADR-408 Εύρος Β: point-based heating radiator drawing tool (καλοριφέρ, hydronic terminal)
+  | 'mep-radiator'
   // ADR-408 Φ14: drainage collector (φρεάτιο) — point-based manifold, N inlets + 1 outlet
   | 'mep-drainage-collector'
   // ADR-407: path-based railing drawing tool (2-click straight guardrail)

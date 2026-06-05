@@ -20,6 +20,7 @@ import type { Point3D } from '../../bim/types/bim-base';
 import { useCursorWorldPosition } from '../../systems/cursor/useCursor';
 import { getImmediateSnap } from '../../systems/cursor/ImmediateSnapStore';
 import { MepManifoldGhostRenderer } from '../../bim/mep-manifolds/MepManifoldGhostRenderer';
+import { mepManifoldToolBridgeStore } from '../../ui/ribbon/hooks/bridge/mep-manifold-tool-bridge-store';
 
 export interface UseMepManifoldGhostPreviewProps {
   readonly isAwaitingPosition: boolean;
@@ -75,9 +76,13 @@ export function useMepManifoldGhostPreview(
     const rect = viewportElement.getBoundingClientRect();
     const viewport = { width: rect.width, height: rect.height };
 
+    // Read the active kind imperatively (ADR-040 — no store subscription in the
+    // leaf); the bridge mirrors the tool's `overrides.kind` preset.
+    const kind = mepManifoldToolBridgeStore.get()?.kind ?? 'floor-manifold';
     const renderer = new MepManifoldGhostRenderer(ctx);
     renderer.render({
       footprint: footprint.map((v) => ({ x: v.x, y: v.y })),
+      kind,
       cursor: effectiveCursor,
       transform,
       viewport,

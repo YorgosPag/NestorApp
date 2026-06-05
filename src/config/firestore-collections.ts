@@ -374,6 +374,8 @@ export const COLLECTIONS = {
   FLOORPLAN_MEP_FITTINGS: process.env.NEXT_PUBLIC_FLOORPLAN_MEP_FITTINGS_COLLECTION || 'floorplan_mep_fittings',
   /** ADR-408 Φ12 — point-based plumbing manifolds (pipe-network sources). IDs via mfld_* prefix. */
   FLOORPLAN_MEP_MANIFOLDS: process.env.NEXT_PUBLIC_FLOORPLAN_MEP_MANIFOLDS_COLLECTION || 'floorplan_mep_manifolds',
+  /** ADR-408 Εύρος Β — point-based heating radiators (hydronic terminals). IDs via rad_* prefix. */
+  FLOORPLAN_MEP_RADIATORS: process.env.NEXT_PUBLIC_FLOORPLAN_MEP_RADIATORS_COLLECTION || 'floorplan_mep_radiators',
   /** ADR-410 — mesh-based CC0 furniture (chair first). IDs via furn_* prefix. */
   FLOORPLAN_FURNITURE: process.env.NEXT_PUBLIC_FLOORPLAN_FURNITURE_COLLECTION || 'floorplan_furniture',
   /** ADR-415 — pure-vector 2D floorplan symbols (WC/sanitary first). IDs via fpsym_* prefix. */

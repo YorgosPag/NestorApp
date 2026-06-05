@@ -71,7 +71,7 @@ export function resyncBimScene(
   manager.syncBimEntities(
     { walls: s.walls, columns: s.columns, beams: s.beams, slabs: s.slabs,
       slabOpenings: s.slabOpenings, openings: s.openings, stairs: s.stairs,
-      fixtures: s.fixtures, panels: s.panels, manifolds: s.manifolds, railings: s.railings,
+      fixtures: s.fixtures, panels: s.panels, manifolds: s.manifolds, radiators: s.radiators, railings: s.railings,
       furnitures: s.furnitures, roofs: s.roofs, mepSegments: s.mepSegments, mepFittings: s.mepFittings },
     0,
     s.activeLevelId ?? undefined,

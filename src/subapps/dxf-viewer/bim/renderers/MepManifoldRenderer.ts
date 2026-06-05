@@ -22,7 +22,7 @@ import type { Entity } from '../../types/entities';
 import { isMepManifoldEntity } from '../../types/entities';
 import type { MepManifoldEntity } from '../types/mep-manifold-types';
 import { pointInPolygon } from '../geometry/shared/polygon-utils';
-import { buildMepManifoldSymbol } from '../mep-manifolds/mep-manifold-symbol';
+import { buildMepManifoldSymbol, resolveManifoldPalette } from '../mep-manifolds/mep-manifold-symbol';
 import { getMepManifoldGrips } from '../mep-manifolds/mep-manifold-grips';
 import { gripGlyphShape } from '../grips/grip-glyph-registry';
 import { RENDER_LINE_WIDTHS } from '../../config/text-rendering-config';
@@ -32,17 +32,11 @@ import { HOVER_HIGHLIGHT } from '../../config/color-config';
 import { getLayer } from '../../stores/LayerStore';
 
 /**
- * Manifold palette — plumbing distribution equipment (cyan-teal). ADR-408 Φ12: the
- * manifold is a circuit **source**, not a member, so it is NOT coloured by system
- * (Revit: Plumbing Equipment carries no circuit colour). It keeps this equipment
- * cyan; only the connected pipe segments take the circuit colour.
+ * Manifold fill translucency. Colours come from the `resolveManifoldPalette` SSoT
+ * (ADR-408 Φ12/Φ14) — water manifold = cyan-teal equipment (a circuit **source**,
+ * NOT coloured by system); drainage collector (φρεάτιο) = brown (CIBSE sanitary).
  */
-const MANIFOLD_STROKE = '#0891b2';
-const MANIFOLD_FILL = 'rgba(8, 145, 178, 0.18)';
-// ADR-408 Φ14 — a drainage collector (φρεάτιο) reads brown (CIBSE sanitary
-// convention), distinguishing it at a glance from a water manifold.
-const DRAINAGE_COLLECTOR_STROKE = '#b45309';
-const DRAINAGE_COLLECTOR_FILL = 'rgba(180, 83, 9, 0.18)';
+const MANIFOLD_FILL_ALPHA = 0.18;
 
 export class MepManifoldRenderer extends BaseEntityRenderer {
   render(entity: EntityModel, options: RenderOptions = {}): void {
@@ -84,11 +78,11 @@ export class MepManifoldRenderer extends BaseEntityRenderer {
 
     // Fill + outline — equipment cyan-teal for a water manifold; brown for a
     // drainage collector (φρεάτιο). Manifolds are not coloured by circuit (source).
-    const isDrain = manifold.params.kind === 'drainage-collector';
-    this.ctx.fillStyle = isDrain ? DRAINAGE_COLLECTOR_FILL : MANIFOLD_FILL;
+    const palette = resolveManifoldPalette(manifold.params.kind);
+    this.ctx.fillStyle = `rgba(${palette.fillRgb}, ${MANIFOLD_FILL_ALPHA})`;
     this.drawPolygonPath(verts);
     this.ctx.fill();
-    this.ctx.strokeStyle = isDrain ? DRAINAGE_COLLECTOR_STROKE : MANIFOLD_STROKE;
+    this.ctx.strokeStyle = palette.strokeHex;
     this.ctx.lineWidth = RENDER_LINE_WIDTHS.NORMAL;
     this.drawPolygonPath(verts);
     this.ctx.stroke();

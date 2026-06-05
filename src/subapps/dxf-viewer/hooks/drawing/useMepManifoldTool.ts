@@ -165,7 +165,9 @@ export function useMepManifoldTool(
     const isActive = state.phase !== 'idle';
     mepManifoldToolBridgeStore.set({
       isActive,
-      kind: 'floor-manifold',
+      // ADR-408 Φ14 — reflect the ACTIVE kind preset (drainage-collector vs
+      // floor-manifold) so the 2D/3D placement ghosts colour + grate correctly.
+      kind: state.overrides.kind ?? 'floor-manifold',
       overrides: state.overrides,
       setParamOverrides,
       getSceneUnits: () => getSceneUnitsRef.current?.() ?? 'mm',

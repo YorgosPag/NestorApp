@@ -71,6 +71,13 @@ Mouse Event → DxfCanvas.onMouseMove
 
 ## Changelog
 
+### 2026-06-05 — ADR-408 Εύρος Β heating-radiator tool wiring (CHECK 6B)
+
+**Status**: IMPLEMENTED 2026-06-05 (Opus 4.8). ADR-408 Εύρος Β (point-based `mep-radiator`) adds a 2D placement-ghost micro-leaf, all additive — no Cardinal-Rule or subscription change (mirrors the Φ12 manifold wiring above):
+- `components/dxf-layout/canvas-layer-stack-leaves.tsx` + `CanvasLayerStack.tsx` + `canvas-layer-stack-types.ts` — wire the new `canvas-layer-stack-mep-radiator-ghost.tsx` ghost leaf (single null-rendering leaf reading the radiator tool-bridge store, no high-freq subscription added).
+- `components/dxf-layout/CanvasSection.tsx` — passes the radiator tool through to the leaf, no `useSyncExternalStore` added (Phase XXII.A live-transform reads preserved).
+- `hooks/canvas/canvas-click-types.ts` — `mepRadiatorTool?` param + `MepRadiatorToolLike` interface added (types-only, zero control-flow/subscription change → CHECK 6B/6C satisfied). CHECK 6B satisfied by staging this ADR with the edits. See ADR-408 §Εύρος Β.
+
 ### 2026-06-04 — TEMP render-trace diagnostics on `DxfViewerContent` (hover-lag)
 
 **Status**: TEMPORARY — to be removed after diagnosis. Adds two `useRenderTrace(...)` calls in `app/DxfViewerContent.tsx` (orchestrator + `.detail` prop-diff) to identify which subscription drives the idle render loop on hover. Diagnostic-only, no subscription/Cardinal-Rule change; the `🔴 TEMP DEBUG` markers flag both call sites for removal. Co-staged to satisfy CHECK 6D.

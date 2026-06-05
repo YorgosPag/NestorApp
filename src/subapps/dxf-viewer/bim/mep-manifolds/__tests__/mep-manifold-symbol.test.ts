@@ -4,8 +4,10 @@
  * equals the footprint.
  */
 
-import { buildMepManifoldSymbol } from '../mep-manifold-symbol';
+import { buildMepManifoldSymbol, resolveManifoldPalette } from '../mep-manifold-symbol';
 import { computeMepManifoldGeometry } from '../mep-manifold-geometry';
+import { buildDefaultMepManifoldParams } from '../../../hooks/drawing/mep-manifold-completion';
+import { DEFAULT_DRAINAGE_COLLECTOR_SIZE_MM } from '../../types/mep-manifold-types';
 import type { MepManifoldParams } from '../../types/mep-manifold-types';
 
 function params(overrides: Partial<MepManifoldParams> = {}): MepManifoldParams {
@@ -85,5 +87,36 @@ describe('buildMepManifoldSymbol — drainage collector grating', () => {
         expect(pt.y).toBeLessThanOrEqual(maxY + 1e-6);
       }
     }
+  });
+});
+
+// ADR-408 Φ14 — the equipment palette SSoT shared by the renderer + both ghosts.
+describe('resolveManifoldPalette', () => {
+  it('water manifold = cyan-teal', () => {
+    expect(resolveManifoldPalette('floor-manifold')).toEqual({ strokeHex: '#0891b2', fillRgb: '8, 145, 178' });
+  });
+  it('drainage collector = brown (CIBSE sanitary)', () => {
+    expect(resolveManifoldPalette('drainage-collector')).toEqual({ strokeHex: '#b45309', fillRgb: '180, 83, 9' });
+  });
+});
+
+// ADR-408 Φ14 — a drainage collector (φρεάτιο) defaults to a SQUARE catch-basin
+// footprint, not the thin water-manifold bar.
+describe('buildDefaultMepManifoldParams — drainage collector is square', () => {
+  it('defaults width === length === DEFAULT_DRAINAGE_COLLECTOR_SIZE_MM', () => {
+    const p = buildDefaultMepManifoldParams({ x: 0, y: 0 }, { kind: 'drainage-collector' });
+    expect(p.width).toBe(DEFAULT_DRAINAGE_COLLECTOR_SIZE_MM);
+    expect(p.length).toBe(DEFAULT_DRAINAGE_COLLECTOR_SIZE_MM);
+  });
+
+  it('water manifold keeps the thin bar default (width > length)', () => {
+    const p = buildDefaultMepManifoldParams({ x: 0, y: 0 }, { kind: 'floor-manifold' });
+    expect(p.width).toBeGreaterThan(p.length);
+  });
+
+  it('explicit width/length override the square default', () => {
+    const p = buildDefaultMepManifoldParams({ x: 0, y: 0 }, { kind: 'drainage-collector', width: 600, length: 300 });
+    expect(p.width).toBe(600);
+    expect(p.length).toBe(300);
   });
 });

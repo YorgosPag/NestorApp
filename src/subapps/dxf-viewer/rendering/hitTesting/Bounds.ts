@@ -117,31 +117,29 @@ export class BoundsCalculator {
       // ADR-362 Phase I3 — dimension spatial-index bounds via defPoints + textMidpoint.
       case 'dimension':
         return this.calculateDimensionBounds(entity, tolerance);
-      // ADR-363 Phase 1B — BIM parametric entities project `geometry.bbox` to 2D.
+      // BIM parametric entities all project their pre-computed `geometry.bbox`
+      // to 2D (XY plane) via the shared `calculateBimEntityBounds` SSoT. Added
+      // by: ADR-363 (wall/opening/slab/slab-opening/column/beam), ADR-406
+      // (mep-fixture), ADR-408 Φ3 (electrical-panel), ADR-407 (railing),
+      // ADR-410 (furniture), ADR-408 Φ8 (mep-segment), ADR-408 Φ11 (mep-fitting),
+      // ADR-415 (floorplan-symbol), ADR-417 (roof), ADR-408 Φ12 (mep-manifold),
+      // ADR-408 Εύρος Β (mep-radiator).
       case 'wall':
       case 'opening':
       case 'slab':
       case 'slab-opening':
       case 'column':
       case 'beam':
-      // ADR-406 — MEP fixture projects `geometry.bbox` to 2D (same as column/beam).
       case 'mep-fixture':
-      // ADR-408 Φ3 — electrical panel projects `geometry.bbox` to 2D (same).
       case 'electrical-panel':
-      // ADR-407 — railing projects `geometry.bbox` (RailingGeometry) to 2D (same).
       case 'railing':
-      // ADR-410 — furniture projects `geometry.bbox` (FurnitureGeometry) to 2D (same).
       case 'furniture':
-      // ADR-408 Φ8 — MEP segment projects `geometry.bbox` (MepSegmentGeometry) to 2D (same).
       case 'mep-segment':
-      // ADR-408 Φ11 — MEP fitting projects `geometry.bbox` (MepFittingGeometry) to 2D (same).
       case 'mep-fitting':
-      // ADR-415 — floorplan symbol projects `geometry.bbox` (FloorplanSymbolGeometry) to 2D (same).
       case 'floorplan-symbol':
-      // ADR-417 — roof projects `geometry.bbox` (RoofGeometry) to 2D (same).
       case 'roof':
-      // ADR-408 Φ12 — plumbing manifold projects `geometry.bbox` (MepManifoldGeometry) to 2D (same).
       case 'mep-manifold':
+      case 'mep-radiator':
         return this.calculateBimEntityBounds(entity, tolerance);
       // ADR-359 Phase 11 follow-up — XLINE/RAY bounds extracted to sibling module.
       case 'xline':

@@ -42,6 +42,8 @@ type BimRestoreEntityType =
   | 'floorplan-symbol'
   // ADR-408 Φ12 — plumbing manifold (floor-mounted distributor).
   | 'mep-manifold'
+  // ADR-408 Εύρος Β — heating radiator (wall-mounted terminal).
+  | 'mep-radiator'
   // ADR-417 — parametric pitched roof.
   | 'roof';
 

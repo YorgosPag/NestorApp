@@ -20,6 +20,7 @@ import type { Point2D } from '../../rendering/types/Types';
 import type { Point3D } from '../../bim/types/bim-base';
 import {
   DEFAULT_MANIFOLD_BODY_HEIGHT_MM,
+  DEFAULT_DRAINAGE_COLLECTOR_SIZE_MM,
   DEFAULT_MANIFOLD_INLET_DIAMETER_MM,
   DEFAULT_MANIFOLD_LENGTH_MM,
   DEFAULT_MANIFOLD_MOUNTING_ELEVATION_MM,
@@ -87,8 +88,11 @@ export function buildDefaultMepManifoldParams(
 ): MepManifoldParams {
   const kind: MepManifoldKind = overrides.kind ?? 'floor-manifold';
   const shape: MepManifoldShape = overrides.shape ?? 'rectangular';
-  const width = overrides.width ?? DEFAULT_MANIFOLD_WIDTH_MM;
-  const length = overrides.length ?? DEFAULT_MANIFOLD_LENGTH_MM;
+  // ADR-408 Φ14 — a drainage collector (φρεάτιο) is a SQUARE catch basin, not a thin
+  // distribution bar; default both sides equal so it reads as a φρεάτιο at a glance.
+  const isDrainCollector = kind === 'drainage-collector';
+  const width = overrides.width ?? (isDrainCollector ? DEFAULT_DRAINAGE_COLLECTOR_SIZE_MM : DEFAULT_MANIFOLD_WIDTH_MM);
+  const length = overrides.length ?? (isDrainCollector ? DEFAULT_DRAINAGE_COLLECTOR_SIZE_MM : DEFAULT_MANIFOLD_LENGTH_MM);
   const bodyHeightMm = overrides.bodyHeightMm ?? DEFAULT_MANIFOLD_BODY_HEIGHT_MM;
   const mountingElevationMm = overrides.mountingElevationMm ?? DEFAULT_MANIFOLD_MOUNTING_ELEVATION_MM;
   const rotation = overrides.rotation ?? 0;

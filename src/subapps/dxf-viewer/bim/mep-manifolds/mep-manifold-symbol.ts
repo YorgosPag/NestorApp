@@ -23,6 +23,7 @@
 import type { Point3D } from '../types/bim-base';
 import type {
   MepManifoldGeometry,
+  MepManifoldKind,
   MepManifoldParams,
 } from '../types/mep-manifold-types';
 import { clampOutletCount } from './mep-manifold-geometry';
@@ -50,6 +51,28 @@ const GRATING_BAR_COUNT = 6;
 /** Fractional inset of each grating bar from the short (−Y/+Y) edges. */
 const GRATING_INSET = 0.15;
 
+/**
+ * ADR-408 Φ12/Φ14 — the equipment palette for a manifold kind, the SINGLE source
+ * shared by the 2D renderer, the 2D placement ghost, and the 3D placement ghost so
+ * all three read identically (a water manifold = cyan-teal equipment; a drainage
+ * collector = brown, the CIBSE sanitary convention). `fillRgb` is the `r, g, b`
+ * triple so each caller composes its own translucency (renderer 0.18, ghost 0.30).
+ */
+export interface ManifoldPalette {
+  /** Outline / symbol stroke colour (`#rrggbb`). */
+  readonly strokeHex: string;
+  /** Fill colour as an `r, g, b` triple for `rgba(<rgb>, <alpha>)`. */
+  readonly fillRgb: string;
+}
+
+const MANIFOLD_PALETTE_WATER: ManifoldPalette = { strokeHex: '#0891b2', fillRgb: '8, 145, 178' };
+const MANIFOLD_PALETTE_DRAINAGE: ManifoldPalette = { strokeHex: '#b45309', fillRgb: '180, 83, 9' };
+
+/** Resolve the equipment palette for a manifold kind (SSoT for 2D + 3D + ghosts). */
+export function resolveManifoldPalette(kind: MepManifoldKind): ManifoldPalette {
+  return isDrainageCollectorKind(kind) ? MANIFOLD_PALETTE_DRAINAGE : MANIFOLD_PALETTE_WATER;
+}
+
 function lerp(a: Point3D, b: Point3D, t: number): Point3D {
   return { x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t, z: 0 };
 }
@@ -66,7 +89,7 @@ function unit(dx: number, dy: number): { x: number; y: number } {
  * stays inside the outline. Rotation-aware for free (the verts are already
  * rotated into world space).
  */
-function buildDrainageGratingStrokes(
+export function buildDrainageGratingStrokes(
   v0: Point3D,
   v1: Point3D,
   v2: Point3D,

@@ -15,7 +15,7 @@
 import * as THREE from 'three';
 import type { Bim3DEntities } from '../stores/Bim3DEntitiesStore';
 import type { FloorStackEntry } from './multi-floor-3d-source';
-import { wallToMesh, columnToMesh, beamToMesh, slabToMesh, fixtureToMesh, panelToMesh, manifoldToMesh } from '../converters/BimToThreeConverter';
+import { wallToMesh, columnToMesh, beamToMesh, slabToMesh, fixtureToMesh, panelToMesh, manifoldToMesh, radiatorToMesh } from '../converters/BimToThreeConverter';
 import { stairToMeshes } from '../converters/StairToThreeConverter';
 import { railingToMesh } from '../converters/railing-to-three';
 import { roofToMesh } from '../converters/roof-to-three';
@@ -153,6 +153,7 @@ export class BimSceneLayer {
     this.syncFixtures(entities, ctx);
     this.syncPanels(entities, ctx);
     this.syncManifolds(entities, ctx);
+    this.syncRadiators(entities, ctx);
     syncCircuitWires(this.group, entities, ctx, (entity, category) => this.resolveEntity(entity, category, ctx));
     this.syncRailings(entities, ctx);
     this.syncRoofs(entities, ctx);
@@ -344,6 +345,16 @@ export class BimSceneLayer {
     }
   }
 
+  /** ADR-408 Εύρος Β — point-based heating radiators (hydronic terminals); fixed warm-red material, `?? []` guards legacy floor-stack entries. */
+  private syncRadiators(entities: Bim3DEntities, ctx: SyncContext): void {
+    for (const radiator of entities.radiators ?? []) {
+      const r = this.resolveEntity(radiator, 'mep-radiator', ctx);
+      if (!r) continue;
+      const mesh = radiatorToMesh(radiator, ctx.floorElevationMm, ctx.activeLevelId, r.baseElevation);
+      if (mesh) { mesh.userData['buildingId'] = r.buildingId; this.group.add(mesh); }
+    }
+  }
+
   /** ADR-407 — standalone path-based railings (posts + balusters + rails). */
   private syncRailings(entities: Bim3DEntities, ctx: SyncContext): void {
     // Defensive: legacy floor-stack entries predating ADR-407 carry no `railings`
@@ -390,13 +401,13 @@ export class BimSceneLayer {
   }
 
   /**
-   * ADR-417 — parametric pitched roofs (faces extruded down by thickness). Φ1
-   * piggybacks the 'slab' V/G category for visibility (roof category lands in a
-   * later phase). buildingBaseElevation passed through like slab/railing.
+   * ADR-417 — parametric pitched roofs (faces extruded down by thickness). §10 #4:
+   * own V/G category `'roof'` (architectural discipline) — independent visibility
+   * from slab (Revit-parity). buildingBaseElevation passed through like slab/railing.
    */
   private syncRoofs(entities: Bim3DEntities, ctx: SyncContext): void {
     for (const roof of entities.roofs ?? []) {
-      const r = this.resolveEntity(roof, 'slab', ctx);
+      const r = this.resolveEntity(roof, 'roof', ctx);
       if (!r) continue;
       const mesh = roofToMesh(roof, ctx.activeLevelId, r.baseElevation);
       if (mesh) { mesh.userData['buildingId'] = r.buildingId; this.group.add(mesh); }

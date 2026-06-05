@@ -158,6 +158,14 @@ export const DEFAULT_MANIFOLD_WIDTH_MM = 400;
 /** Default manifold depth (mm). */
 export const DEFAULT_MANIFOLD_LENGTH_MM = 80;
 
+/**
+ * ADR-408 Φ14 — default footprint side (mm) for a drainage collector (φρεάτιο).
+ * A catch basin is **square** (Revit/CIBSE), NOT a thin distribution bar, so a
+ * drainage collector defaults to an equal width × depth — distinguishing it at a
+ * glance from the water manifold bar and giving the grating room to read.
+ */
+export const DEFAULT_DRAINAGE_COLLECTOR_SIZE_MM = 450;
+
 /** Default manifold box vertical height (mm). */
 export const DEFAULT_MANIFOLD_BODY_HEIGHT_MM = 60;
 
