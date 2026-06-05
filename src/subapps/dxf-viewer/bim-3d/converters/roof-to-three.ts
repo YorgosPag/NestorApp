@@ -32,34 +32,11 @@ import type { SlabDnaLayer } from '../../bim/types/slab-dna-types';
 import { sceneUnitsToMeters } from '../../utils/scene-units';
 import { getElementMaterial3D, getMaterial3D } from '../materials/MaterialCatalog3D';
 import { setBoxWorldUvs } from './bim-uv-helpers';
-
-const MM_TO_M = 0.001;
+import { toWorld } from './roof-world-transform';
+import { buildRoundedRidgeCap, findAdjacentFaces } from './roof-ridge-cap';
 
 /** ADR-417 — clay ridge/hip caps («κορφιάδες») use the roof-tile material. */
 const RIDGE_CAP_MATERIAL_ID = 'mat-roof-tile';
-/** Half-width (m) of a ridge cap dome (~12 cm κορφιάς — single ridge tile). */
-const RIDGE_CAP_RADIUS_M = 0.06;
-/**
- * How far (m) to SINK the cap below the ridge line. A real κορφιάς straddles the
- * apex and drapes DOWN over both slopes; without sinking, its horizontal flat
- * underside floats above the slopes that fall away from the ridge («πετάει»).
- * Sinking ~the radius drops the dome edges into the slopes so it hugs the ridge.
- */
-const RIDGE_CAP_SINK_M = 0.05;
-/** Semicircle resolution of the cap cross-section. */
-const RIDGE_CAP_SEGMENTS = 8;
-
-// ─── Vertex helpers ───────────────────────────────────────────────────────────
-
-/** canvas-unit XY + mm Z → Three.js world position (m, Y-up, z = -North). */
-function toWorld(
-  x: number,
-  y: number,
-  zMm: number,
-  sceneToM: number,
-): THREE.Vector3 {
-  return new THREE.Vector3(x * sceneToM, zMm * MM_TO_M, -y * sceneToM);
-}
 
 // ─── Per-face solid ───────────────────────────────────────────────────────────
 
@@ -161,66 +138,6 @@ function buildFaceLayerSolids(
   return out;
 }
 
-// ─── Ridge / hip caps (κορφιάδες) ─────────────────────────────────────────────
-
-/** Pack ringA(m) then ringB(m) world points → Float32 positions. */
-function packCapPositions(ringA: THREE.Vector3[], ringB: THREE.Vector3[]): Float32Array {
-  const m = ringA.length;
-  const pos = new Float32Array(2 * m * 3);
-  for (let k = 0; k < m; k++) {
-    pos[k * 3] = ringA[k].x; pos[k * 3 + 1] = ringA[k].y; pos[k * 3 + 2] = ringA[k].z;
-    pos[(m + k) * 3] = ringB[k].x; pos[(m + k) * 3 + 1] = ringB[k].y; pos[(m + k) * 3 + 2] = ringB[k].z;
-  }
-  return pos;
-}
-
-/** Strip index between ringA[0..segments] and ringB[0..segments]. */
-function buildCapIndex(segments: number): number[] {
-  const m = segments + 1;
-  const index: number[] = [];
-  for (let k = 0; k < segments; k++) {
-    index.push(k, k + 1, m + k + 1);
-    index.push(k, m + k + 1, m + k);
-  }
-  return index;
-}
-
-/**
- * A half-round clay ridge/hip cap («κορφιάς»): a semicircle cross-section (flat
- * side down, dome up) swept along the ridge line a→b. Null for a degenerate or
- * (near-)vertical line. Painted with the roof-tile material.
- */
-function buildRidgeCap(
-  line: RoofRidgeLine,
-  sceneToM: number,
-  baseElevationM: number,
-): THREE.BufferGeometry | null {
-  const A = toWorld(line.a.x, line.a.y, line.a.z ?? 0, sceneToM); A.y += baseElevationM - RIDGE_CAP_SINK_M;
-  const B = toWorld(line.b.x, line.b.y, line.b.z ?? 0, sceneToM); B.y += baseElevationM - RIDGE_CAP_SINK_M;
-  const axis = new THREE.Vector3().subVectors(B, A);
-  if (axis.lengthSq() < 1e-8) return null;
-  const up = new THREE.Vector3(0, 1, 0);
-  const u = new THREE.Vector3().crossVectors(axis.clone().normalize(), up);
-  if (u.lengthSq() < 1e-8) return null; // (near-)vertical line — no cap
-  u.normalize();
-  const ringA: THREE.Vector3[] = [];
-  const ringB: THREE.Vector3[] = [];
-  for (let k = 0; k <= RIDGE_CAP_SEGMENTS; k++) {
-    const theta = (Math.PI * k) / RIDGE_CAP_SEGMENTS;
-    const off = u.clone().multiplyScalar(Math.cos(theta) * RIDGE_CAP_RADIUS_M)
-      .addScaledVector(up, Math.sin(theta) * RIDGE_CAP_RADIUS_M);
-    ringA.push(A.clone().add(off));
-    ringB.push(B.clone().add(off));
-  }
-  const geo = new THREE.BufferGeometry();
-  geo.setAttribute('position', new THREE.BufferAttribute(packCapPositions(ringA, ringB), 3));
-  geo.setIndex(buildCapIndex(RIDGE_CAP_SEGMENTS));
-  const flat = geo.toNonIndexed();
-  flat.computeVertexNormals();
-  setBoxWorldUvs(flat);
-  return flat;
-}
-
 // ─── Material resolution ───────────────────────────────────────────────────────
 
 /**
@@ -296,11 +213,12 @@ function addFaceMeshes(group: THREE.Group, face: RoofFace, ctx: RoofFaceMeshCont
 function addRidgeCaps(
   group: THREE.Group,
   ridges: readonly RoofRidgeLine[],
+  faces: readonly RoofFace[],
   ctx: RoofFaceMeshContext,
 ): void {
   for (const line of ridges) {
     if (line.kind !== 'ridge' && line.kind !== 'hip') continue;
-    const cap = buildRidgeCap(line, ctx.sceneToM, ctx.baseElevationM);
+    const cap = buildRoundedRidgeCap(line, findAdjacentFaces(line, faces), ctx.sceneToM, ctx.baseElevationM);
     if (!cap) continue;
     const mesh = new THREE.Mesh(cap, getMaterial3D(RIDGE_CAP_MATERIAL_ID));
     tagRoofMesh(mesh, ctx.roofId, RIDGE_CAP_MATERIAL_ID, ctx.levelId);
@@ -339,7 +257,7 @@ export function roofToMesh(
 
   const group = new THREE.Group();
   for (const face of roof.geometry.faces) addFaceMeshes(group, face, ctx);
-  addRidgeCaps(group, roof.geometry.ridges, ctx); // κορφιάδες on ridge + hip lines
+  addRidgeCaps(group, roof.geometry.ridges, roof.geometry.faces, ctx); // κορφιάδες on ridge + hip lines
 
   if (group.children.length === 0) return null;
 

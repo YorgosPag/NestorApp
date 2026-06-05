@@ -1726,7 +1726,8 @@
           },
           "flat": "Flat Roof",
           "monoPitch": "Mono-Pitch",
-          "gable": "Gable"
+          "gable": "Gable",
+          "hip": "Hip"
         },
         "roofType": {
           "section": {

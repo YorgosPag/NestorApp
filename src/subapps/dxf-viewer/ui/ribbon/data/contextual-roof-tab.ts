@@ -7,7 +7,7 @@
  *
  * Panels (Φ1-part-2):
  *   Τύπος Στέγης   → roofType picker (built-in family types)
- *   Μορφή & Κλίση  → shape preset (flat/mono/gable) + slope + μονάδα toggle (°/%)
+ *   Μορφή & Κλίση  → shape preset (flat/mono/gable/hip) + slope + μονάδα toggle (°/%)
  *   Γεωμετρία      → στάθμη γείσου (basePivotZ)
  *   Ενέργειες      → close + delete
  *
@@ -36,6 +36,7 @@ const ROOF_SHAPE_OPTIONS = [
   { value: 'flat',       labelKey: 'ribbon.commands.roofEditor.shape.flat',      isLiteralLabel: false },
   { value: 'mono-pitch', labelKey: 'ribbon.commands.roofEditor.shape.monoPitch', isLiteralLabel: false },
   { value: 'gable',      labelKey: 'ribbon.commands.roofEditor.shape.gable',     isLiteralLabel: false },
+  { value: 'hip',        labelKey: 'ribbon.commands.roofEditor.shape.hip',       isLiteralLabel: false },
 ] as const;
 
 // mm — στάθμη γείσου (eaves datum / pivot line) presets.

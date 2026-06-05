@@ -22,7 +22,20 @@ const rect = (cw: boolean): Polygon3D => {
   return { vertices: cw ? [...ccw].reverse() : ccw };
 };
 
-const buildParams = (outline: Polygon3D, shape: 'flat' | 'mono-pitch' | 'gable'): RoofParams => ({
+const square = (cw: boolean): Polygon3D => {
+  const ccw: Point3D[] = [
+    { x: 0, y: 0, z: 0 },
+    { x: 3000, y: 0, z: 0 },
+    { x: 3000, y: 3000, z: 0 },
+    { x: 0, y: 3000, z: 0 },
+  ];
+  return { vertices: cw ? [...ccw].reverse() : ccw };
+};
+
+const buildParams = (
+  outline: Polygon3D,
+  shape: 'flat' | 'mono-pitch' | 'gable' | 'hip',
+): RoofParams => ({
   outline,
   edges: applyRoofShapePreset(outline, shape, 30, 'deg'),
   slopeUnit: 'deg',
@@ -67,6 +80,36 @@ describe('computeRoofGeometry — winding-agnostic heights', () => {
 
   it('gross (sloped) area exceeds projected area for a pitched roof', () => {
     const g = computeRoofGeometry(buildParams(rect(false), 'gable'));
+    expect(g.grossAreaM2).toBeGreaterThan(g.projectedAreaM2);
+  });
+});
+
+describe('computeRoofGeometry — hip (Φ2a, all edges slope)', () => {
+  it('rectangular hip → 4 νερά + κεντρικός ridge + 4 hip lines', () => {
+    const g = computeRoofGeometry(buildParams(rect(false), 'hip'));
+    expect(g.shape).toBe('hip');
+    expect(g.faces.length).toBe(4);
+    expect(g.ridges.filter((r) => r.kind === 'hip').length).toBe(4);
+    expect(g.ridges.filter((r) => r.kind === 'ridge').length).toBe(1);
+    expect(g.ridgeHeightMm).toBeGreaterThan(0);
+  });
+
+  it('square hip → πυραμίδα: 4 τριγωνικά νερά, 4 hips, ΚΑΝΕΝΑΣ οριζόντιος ridge', () => {
+    const g = computeRoofGeometry(buildParams(square(false), 'hip'));
+    expect(g.faces.length).toBe(4);
+    expect(g.ridges.filter((r) => r.kind === 'hip').length).toBe(4);
+    expect(g.ridges.filter((r) => r.kind === 'ridge').length).toBe(0);
+  });
+
+  it('hip είναι winding-agnostic (CW ίδιο ύψος με CCW)', () => {
+    const ccw = computeRoofGeometry(buildParams(rect(false), 'hip'));
+    const cw = computeRoofGeometry(buildParams(rect(true), 'hip'));
+    expect(cw.faces.length).toBe(4);
+    expect(cw.ridgeHeightMm).toBeCloseTo(ccw.ridgeHeightMm, 3);
+  });
+
+  it('hip gross area ξεπερνά το projected (κεκλιμένα νερά)', () => {
+    const g = computeRoofGeometry(buildParams(rect(false), 'hip'));
     expect(g.grossAreaM2).toBeGreaterThan(g.projectedAreaM2);
   });
 });

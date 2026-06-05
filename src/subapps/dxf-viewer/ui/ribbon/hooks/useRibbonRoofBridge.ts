@@ -98,9 +98,9 @@ const SLOPE_PCT_OPTIONS: readonly RibbonComboboxOption[] = [10, 20, 30, 40, 50, 
   (v) => ({ value: String(v), labelKey: `${v}%`, isLiteralLabel: true }),
 );
 
-/** Κλειδώνει το derived `geometry.shape` στις 3 preset μορφές της Φ1 (hip/complex → flat). */
-function clampShape(shape: RoofShape): 'flat' | 'mono-pitch' | 'gable' {
-  return shape === 'mono-pitch' || shape === 'gable' ? shape : 'flat';
+/** Κλειδώνει το derived `geometry.shape` στις preset μορφές (complex → flat). */
+function clampShape(shape: RoofShape): 'flat' | 'mono-pitch' | 'gable' | 'hip' {
+  return shape === 'mono-pitch' || shape === 'gable' || shape === 'hip' ? shape : 'flat';
 }
 
 /** Τρέχουσα τιμή κλίσης = η 1η slope-defining ακμή· fallback = default (στη μονάδα). */
@@ -179,7 +179,7 @@ export function useRibbonRoofBridge(
 
       switch (commandKey) {
         case ROOF_RIBBON_KEYS.stringParams.shape: {
-          const shape = value as 'flat' | 'mono-pitch' | 'gable';
+          const shape = value as 'flat' | 'mono-pitch' | 'gable' | 'hip';
           const edges = applyRoofShapePreset(p.outline, shape, currentSlope(p), p.slopeUnit);
           dispatchParams(roof, { ...p, edges });
           return;
