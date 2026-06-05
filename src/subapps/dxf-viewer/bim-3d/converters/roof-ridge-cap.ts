@@ -74,21 +74,25 @@ function faceWorldVertices(face: RoofFace, sceneToM: number, baseY: number): THR
   });
 }
 
-/** Επίπεδο του face από 3 μη-συγγραμμικές world κορυφές. Null αν degenerate/κάθετο. */
+/**
+ * Επίπεδο του face από όλες τις world κορυφές (Newell's method — robust σε
+ * degenerate μεμονωμένες ακμές που παράγει το clip). Null αν degenerate/κάθετο.
+ */
 function facePlane(verts: readonly THREE.Vector3[]): WorldPlane | null {
   if (verts.length < 3) return null;
-  const v0 = verts[0];
-  const e1 = new THREE.Vector3().subVectors(verts[1], v0);
-  let normal: THREE.Vector3 | null = null;
-  for (let i = 2; i < verts.length; i++) {
-    const e2 = new THREE.Vector3().subVectors(verts[i], v0);
-    const cross = new THREE.Vector3().crossVectors(e1, e2);
-    if (cross.lengthSq() > 1e-12) { normal = cross.normalize(); break; }
+  const normal = new THREE.Vector3();
+  for (let i = 0; i < verts.length; i++) {
+    const cur = verts[i];
+    const next = verts[(i + 1) % verts.length];
+    normal.x += (cur.y - next.y) * (cur.z + next.z);
+    normal.y += (cur.z - next.z) * (cur.x + next.x);
+    normal.z += (cur.x - next.x) * (cur.y + next.y);
   }
-  if (!normal || Math.abs(normal.y) < 1e-6) return null; // κάθετο → no roof plane
+  if (normal.lengthSq() < 1e-12 || Math.abs(normal.y) < 1e-6) return null; // degenerate/κάθετο
+  normal.normalize();
   if (normal.y < 0) normal.negate(); // δείχνει πάνω
   const centroid = verts.reduce((acc, v) => acc.add(v), new THREE.Vector3()).multiplyScalar(1 / verts.length);
-  return { normal, point: v0.clone(), centroid };
+  return { normal, point: verts[0].clone(), centroid };
 }
 
 /** Ύψος (world y) του επιπέδου στη θέση (x, z). */
@@ -173,7 +177,7 @@ export function buildRoundedRidgeCap(
   if (adjFaces.length < 2) return null;
   const planeA = facePlane(faceWorldVertices(adjFaces[0], sceneToM, baseY));
   const planeB = facePlane(faceWorldVertices(adjFaces[1], sceneToM, baseY));
-  if (!planeA || !planeB) { console.warn('CAPDBG plane null', !planeA, !planeB); return null; }
+  if (!planeA || !planeB) return null;
 
   const A = toWorld(ridge.a.x, ridge.a.y, ridge.a.z ?? 0, sceneToM); A.y += baseY;
   const B = toWorld(ridge.b.x, ridge.b.y, ridge.b.z ?? 0, sceneToM); B.y += baseY;
@@ -183,18 +187,13 @@ export function buildRoundedRidgeCap(
   const midR = new THREE.Vector3().addVectors(A, B).multiplyScalar(0.5);
 
   const dirA = sideDir(axisHat, midR, planeA);
-  if (!dirA) { console.warn('CAPDBG dirA null'); return null; }
+  if (!dirA) return null;
   const dirB = dirA.clone().negate();
   const w = RIDGE_CAP_HALF_WIDTH_M;
 
-  const cA1 = contactPoint(A, dirA, w, planeA);
-  const cA2 = contactPoint(A, dirB, w, planeB);
-  const cB1 = contactPoint(B, dirA, w, planeA);
-  const cB2 = contactPoint(B, dirB, w, planeB);
-  console.warn('CAPDBG contacts', JSON.stringify({ cA1, cA2, cB1, cB2 }));
-  const ringA = buildArc(cA1, cA2);
-  const ringB = buildArc(cB1, cB2);
-  if (!ringA || !ringB) { console.warn('CAPDBG arc null', !ringA, !ringB); return null; }
+  const ringA = buildArc(contactPoint(A, dirA, w, planeA), contactPoint(A, dirB, w, planeB));
+  const ringB = buildArc(contactPoint(B, dirA, w, planeA), contactPoint(B, dirB, w, planeB));
+  if (!ringA || !ringB) return null;
 
   const geo = new THREE.BufferGeometry();
   geo.setAttribute('position', new THREE.BufferAttribute(packCapPositions(ringA, ringB), 3));
