@@ -233,6 +233,9 @@ export interface DrawingEventMap {
   // ADR-408 Εύρος Β — BIM heating radiator params + delete events
   'bim:mep-radiator-params-updated': { radiatorId: string };
   'bim:mep-radiator-delete-requested': { radiatorId: string };
+  // ADR-408 Εύρος Β #2 — BIM heating boiler params + delete events
+  'bim:mep-boiler-params-updated': { boilerId: string };
+  'bim:mep-boiler-delete-requested': { boilerId: string };
   // ADR-408 Φ8 — BIM MEP segment (duct/pipe) params + delete events
   'bim:mep-segment-params-updated': { segmentId: string };
   'bim:mep-segment-delete-requested': { segmentId: string };
@@ -262,8 +265,8 @@ export interface DrawingEventMap {
   // instances (useWallTypeReresolution); this event drives the all-floors BOQ
   // re-feed side-effect, which needs project/building context only the
   // persistence host holds. Fires on command execute/undo. `category` reserved
-  // for non-wall family types (host handler scopes to 'wall' + 'slab').
-  'bim:family-type-changed': { typeId: string; category: 'wall' | 'slab' | 'stair' };
+  // for non-wall family types (host handler scopes to 'wall' + 'slab' + 'roof').
+  'bim:family-type-changed': { typeId: string; category: 'wall' | 'slab' | 'stair' | 'roof' };
   // ADR-403 — 3D column placement: the 3D viewport projected a click onto the
   // active floor plane and converted it to the active scene units. The 2D
   // `useColumnTool` listens and runs its existing `onCanvasClick(point)` commit
@@ -277,6 +280,8 @@ export interface DrawingEventMap {
   'bim:place-mep-manifold-3d': { point: Point2D };
   // ADR-408 Εύρος Β — 3D heating radiator placement (mirror of bim:place-mep-manifold-3d).
   'bim:place-mep-radiator-3d': { point: Point2D };
+  // ADR-408 Εύρος Β #2 — 3D heating boiler placement (mirror of bim:place-mep-radiator-3d).
+  'bim:place-mep-boiler-3d': { point: Point2D };
   // ADR-408 Φ8 — 3D MEP segment placement (2-click bridge; reserved for 3D tool).
   'bim:place-mep-segment-3d': { point: Point2D };
   // ADR-407 — 3D railing placement (mirror of bim:place-column-3d).
@@ -305,8 +310,8 @@ export interface DrawingEventMap {
   // via `payload.entityType` + `isXType(snapshot)`. Emitted by
   // DeleteEntityCommand.undo() and DeleteMultipleEntitiesCommand.undo().
   'bim:entity-restore-requested': {
-    // ADR-406 — 'mep-fixture' appended. ADR-407 — 'railing' appended. ADR-408 Φ3 — 'electrical-panel'. ADR-408 Φ8 — 'mep-segment'. ADR-410 — 'furniture'. ADR-408 Φ12 — 'mep-manifold'. ADR-408 Εύρος Β — 'mep-radiator'.
-    entityType: 'wall' | 'opening' | 'slab' | 'slab-opening' | 'column' | 'beam' | 'stair' | 'mep-fixture' | 'electrical-panel' | 'mep-manifold' | 'mep-radiator' | 'railing' | 'mep-segment' | 'furniture';
+    // ADR-406 — 'mep-fixture' appended. ADR-407 — 'railing' appended. ADR-408 Φ3 — 'electrical-panel'. ADR-408 Φ8 — 'mep-segment'. ADR-410 — 'furniture'. ADR-408 Φ12 — 'mep-manifold'. ADR-408 Εύρος Β — 'mep-radiator'. ADR-408 Εύρος Β #2 — 'mep-boiler'.
+    entityType: 'wall' | 'opening' | 'slab' | 'slab-opening' | 'column' | 'beam' | 'stair' | 'mep-fixture' | 'electrical-panel' | 'mep-manifold' | 'mep-radiator' | 'mep-boiler' | 'railing' | 'mep-segment' | 'furniture';
     entitySnapshot: AnySceneEntity;
     source: 'undo-delete' | 'redo-restore';
   };

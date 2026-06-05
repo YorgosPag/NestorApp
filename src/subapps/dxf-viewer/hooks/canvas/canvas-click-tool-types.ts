@@ -131,6 +131,12 @@ export interface MepRadiatorToolLike {
   onCanvasClick: (point: Point2D) => boolean;
 }
 
+/** ADR-408 Εύρος Β #2 — Minimal heating boiler tool interface for click routing. */
+export interface MepBoilerToolLike {
+  readonly isActive: boolean;
+  onCanvasClick: (point: Point2D) => boolean;
+}
+
 /** ADR-410 — Minimal furniture tool interface for click routing. */
 export interface FurnitureToolLike {
   readonly isActive: boolean;

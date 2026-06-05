@@ -306,6 +306,7 @@ import {
   commitElectricalPanelGripDrag,
   commitMepManifoldGripDrag,
   commitMepRadiatorGripDrag,
+  commitMepBoilerGripDrag,
   commitFurnitureGripDrag,
   commitFloorplanSymbolGripDrag,
   commitXLineGripDrag,
@@ -432,6 +433,14 @@ export function commitDxfGripDragModeAware(
   // recomputes geometry + re-seeds connectors.
   if (grip.mepRadiatorGripKind) {
     commitMepRadiatorGripDrag(grip, delta, deps);
+    return;
+  }
+  // ADR-408 Εύρος Β #2 — heating boiler parametric grip path (center translate +
+  // rotation + opposite-corner-anchored width/length resize). Bypasses stretch
+  // because the boiler is params-driven; UpdateMepBoilerParamsCommand
+  // recomputes geometry + re-seeds connectors.
+  if (grip.mepBoilerGripKind) {
+    commitMepBoilerGripDrag(grip, delta, deps);
     return;
   }
   // ADR-410 — furniture parametric grip path (center translate + rotation +

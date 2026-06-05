@@ -21,6 +21,10 @@ import type { Point3D } from '../../bim/types/bim-base';
 import {
   DEFAULT_MANIFOLD_BODY_HEIGHT_MM,
   DEFAULT_DRAINAGE_COLLECTOR_SIZE_MM,
+  DEFAULT_DRAINAGE_COLLECTOR_BODY_HEIGHT_MM,
+  DEFAULT_DRAINAGE_COLLECTOR_INLET_COUNT,
+  DEFAULT_DRAINAGE_COLLECTOR_INLET_DIAMETER_MM,
+  DEFAULT_DRAINAGE_COLLECTOR_OUTLET_DIAMETER_MM,
   DEFAULT_MANIFOLD_INLET_DIAMETER_MM,
   DEFAULT_MANIFOLD_LENGTH_MM,
   DEFAULT_MANIFOLD_MOUNTING_ELEVATION_MM,
@@ -93,12 +97,23 @@ export function buildDefaultMepManifoldParams(
   const isDrainCollector = kind === 'drainage-collector';
   const width = overrides.width ?? (isDrainCollector ? DEFAULT_DRAINAGE_COLLECTOR_SIZE_MM : DEFAULT_MANIFOLD_WIDTH_MM);
   const length = overrides.length ?? (isDrainCollector ? DEFAULT_DRAINAGE_COLLECTOR_SIZE_MM : DEFAULT_MANIFOLD_LENGTH_MM);
-  const bodyHeightMm = overrides.bodyHeightMm ?? DEFAULT_MANIFOLD_BODY_HEIGHT_MM;
+  // ADR-408 Φ14 — a φρεάτιο defaults to catch-basin dimensions (deeper body,
+  // fewer & larger DN gravity branch inlets, larger sewer outlet); a water
+  // manifold keeps its thin-bar distribution defaults.
+  const bodyHeightMm =
+    overrides.bodyHeightMm ??
+    (isDrainCollector ? DEFAULT_DRAINAGE_COLLECTOR_BODY_HEIGHT_MM : DEFAULT_MANIFOLD_BODY_HEIGHT_MM);
   const mountingElevationMm = overrides.mountingElevationMm ?? DEFAULT_MANIFOLD_MOUNTING_ELEVATION_MM;
   const rotation = overrides.rotation ?? 0;
-  const outletCount = overrides.outletCount ?? DEFAULT_MANIFOLD_OUTLET_COUNT;
-  const inletDiameterMm = overrides.inletDiameterMm ?? DEFAULT_MANIFOLD_INLET_DIAMETER_MM;
-  const outletDiameterMm = overrides.outletDiameterMm ?? DEFAULT_MANIFOLD_OUTLET_DIAMETER_MM;
+  const outletCount =
+    overrides.outletCount ??
+    (isDrainCollector ? DEFAULT_DRAINAGE_COLLECTOR_INLET_COUNT : DEFAULT_MANIFOLD_OUTLET_COUNT);
+  const inletDiameterMm =
+    overrides.inletDiameterMm ??
+    (isDrainCollector ? DEFAULT_DRAINAGE_COLLECTOR_INLET_DIAMETER_MM : DEFAULT_MANIFOLD_INLET_DIAMETER_MM);
+  const outletDiameterMm =
+    overrides.outletDiameterMm ??
+    (isDrainCollector ? DEFAULT_DRAINAGE_COLLECTOR_OUTLET_DIAMETER_MM : DEFAULT_MANIFOLD_OUTLET_DIAMETER_MM);
   // ADR-408 Φ14 — a drainage collector defaults to sanitary-drainage (its purpose);
   // a water manifold leaves it unset (⇒ domestic-cold-water at the connector layer).
   const systemClassification: PlumbingSystemClassification | undefined =

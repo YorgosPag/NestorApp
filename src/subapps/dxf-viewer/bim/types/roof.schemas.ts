@@ -14,6 +14,7 @@
 import { z } from 'zod';
 import { IfcGuidSchema, IfcPropertySetSchema } from './ifc-entity-mixin';
 import { SlabDnaSchema } from './slab.schemas';
+import { RoofTypeParamsSchema } from './bim-family-type.schemas';
 
 // ─── Primitive schemas ──────────────────────────────────────────────────────
 
@@ -99,6 +100,9 @@ export const RoofEntitySchema = z
     ifcGuid: IfcGuidSchema,
     ifcType: RoofIfcTypeSchema,
     pset: IfcPropertySetSchema.optional(),
+    // ADR-417 §10 #3 — family-type link (validated when present).
+    typeId: z.string().min(1).optional(),
+    typeOverrides: RoofTypeParamsSchema.partial().optional(),
   })
   .passthrough();
 

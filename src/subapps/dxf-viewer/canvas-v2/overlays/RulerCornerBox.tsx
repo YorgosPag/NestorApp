@@ -33,12 +33,8 @@ import {
 } from '@/components/ui/popover';
 import { cn } from '@/lib/utils';
 import styles from './RulerCornerBox.module.css';
-// 🏢 ADR-079: Centralized Movement Detection Constants (Zoom Preset Matching)
-import { MOVEMENT_DETECTION } from '../../config/tolerance-config';
 // 🏢 ADR-098: Centralized Timing Constants (Double-Click Window)
 import { PANEL_LAYOUT } from '../../config/panel-tokens';
-// 🏢 ADR-081: Centralized percentage formatting
-import { formatPercent } from '../../rendering/entities/shared/distance-label-utils';
 // 🏢 ENTERPRISE (2026-02-01): Centralized Menu Icons - ADR-133
 import {
   FitIcon,
@@ -48,8 +44,9 @@ import {
   HistoryIcon,
   OriginMarkerIcon,
 } from '../../ui/icons/MenuIcons';
-// ADR-040 Phase VIII: micro-leaf subscribes to ZoomStore directly
-import { useCurrentZoom } from '../../systems/zoom/ZoomStore';
+// 🏢 ADR-418: real view-scale (1:N) micro-leaf hook + ratio presets SSoT
+import { useViewScale } from '../../systems/zoom/hooks/useViewScale';
+import { VIEW_SCALE_MENU_PRESETS, isViewRatioActive } from '../../utils/view-scale';
 
 // ===== TYPES =====
 
@@ -64,79 +61,67 @@ interface RulerCornerBoxProps {
   textColor: string;
   /** Callback for Zoom to Fit */
   onZoomToFit: () => void;
-  /** Callback for Zoom to 100% */
-  onZoom100: () => void;
+  /** 🏢 ADR-418: Callback for Zoom to 1:1 actual size */
+  onZoomActualSize: () => void;
   /** Callback for Zoom In */
   onZoomIn: () => void;
   /** Callback for Zoom Out */
   onZoomOut: () => void;
   /** Callback for Zoom Previous (history) */
   onZoomPrevious: () => void;
-  /** Callback for Zoom to specific scale */
-  onZoomToScale: (scale: number) => void;
+  /** 🏢 ADR-418: Callback for Zoom to a real drawing scale 1:N */
+  onZoomToRatio: (ratioN: number) => void;
   /** Callback for wheel zoom */
   onWheelZoom?: (delta: number) => void;
   /** Optional className for custom styling */
   className?: string;
 }
 
-// ===== ZOOM PRESETS =====
-
-const ZOOM_PRESETS = [
-  { label: '25%', scale: 0.25 },
-  { label: '50%', scale: 0.5 },
-  { label: '100%', scale: 1.0 },
-  { label: '150%', scale: 1.5 },
-  { label: '200%', scale: 2.0 },
-  { label: '400%', scale: 4.0 },
-] as const;
-
 // ===== MICRO-LEAVES (ADR-040) =====
 
-// Subscribes to ZoomStore; renders zoom % + updates button aria-label imperatively.
-// Keeps RulerCornerBox stable under React.memo — no parent re-render on zoom.
+// 🏢 ADR-418: subscribes to the view-scale leaf; renders real "1:N" scale +
+// updates button aria-label imperatively. Keeps RulerCornerBox stable under
+// React.memo — no parent re-render on zoom.
 function ZoomDisplayLeaf({
   buttonRef,
   ariaLabelFn,
 }: {
   buttonRef: React.RefObject<HTMLButtonElement | null>;
-  ariaLabelFn: (zoomPercent: number) => string;
+  ariaLabelFn: (ratioLabel: string) => string;
 }) {
-  const scale = useCurrentZoom();
-  const zoomPercent = Math.round(scale * 100);
-  const display = zoomPercent >= 1000 ? `${(zoomPercent / 1000).toFixed(1)}k%` : formatPercent(scale);
+  const { label } = useViewScale();
   useEffect(() => {
-    buttonRef.current?.setAttribute('aria-label', ariaLabelFn(zoomPercent));
-  }, [zoomPercent, ariaLabelFn, buttonRef]);
-  return <span className={styles.zoomLevel} aria-live="polite">{display}</span>;
+    buttonRef.current?.setAttribute('aria-label', ariaLabelFn(label));
+  }, [label, ariaLabelFn, buttonRef]);
+  return <span className={styles.zoomLevel} aria-live="polite">{label}</span>;
 }
 
-// Subscribes to ZoomStore; renders preset buttons with correct active state.
+// 🏢 ADR-418: renders 1:N preset buttons with correct active state.
 // Radix lazy-renders PopoverContent → this leaf only runs when popover is open.
 function ZoomPresetButtons({
-  onZoomToScale,
+  onZoomToRatio,
   closeMenu,
 }: {
-  onZoomToScale: (scale: number) => void;
+  onZoomToRatio: (ratioN: number) => void;
   closeMenu: () => void;
 }) {
-  const currentScale = useCurrentZoom();
+  const { ratioN } = useViewScale();
   return (
     <>
-      {ZOOM_PRESETS.map(({ label, scale }) => (
-        <button
-          key={label}
-          type="button"
-          className={cn(
-            styles.zoomPresetButton,
-            Math.abs(currentScale - scale) < MOVEMENT_DETECTION.ZOOM_PRESET_MATCH && styles.active,
-          )}
-          onClick={() => { onZoomToScale(scale); closeMenu(); }}
-          aria-pressed={Math.abs(currentScale - scale) < MOVEMENT_DETECTION.ZOOM_PRESET_MATCH}
-        >
-          {label}
-        </button>
-      ))}
+      {VIEW_SCALE_MENU_PRESETS.map((presetN) => {
+        const active = isViewRatioActive(ratioN, presetN);
+        return (
+          <button
+            key={presetN}
+            type="button"
+            className={cn(styles.zoomPresetButton, active && styles.active)}
+            onClick={() => { onZoomToRatio(presetN); closeMenu(); }}
+            aria-pressed={active}
+          >
+            {`1:${presetN}`}
+          </button>
+        );
+      })}
     </>
   );
 }
@@ -151,24 +136,25 @@ const RulerCornerBox = memo(function RulerCornerBox({
   backgroundColor,
   textColor,
   onZoomToFit,
-  onZoom100,
+  onZoomActualSize,
   onZoomIn,
   onZoomOut,
   onZoomPrevious,
-  onZoomToScale,
+  onZoomToRatio,
   onWheelZoom,
   className,
 }: RulerCornerBoxProps) {
   const { t } = useTranslation('dxf-viewer-panels');
-  // No useCurrentZoom() here — zoom-reactive rendering pushed to ZoomDisplayLeaf + ZoomPresetButtons.
+  // No useViewScale() here — zoom-reactive rendering pushed to ZoomDisplayLeaf + ZoomPresetButtons.
   // React.memo on this component now works for zoom too (only re-renders on prop/state change).
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const lastClickRef = useRef<number>(0);
   const clickTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
 
+  // 🏢 ADR-418: aria reflects the real view scale (e.g. "1:69"), not a pixel %.
   const ariaLabelFn = useCallback(
-    (zoomPercent: number) => t('rulerCornerBox.aria.cornerBox', { zoomPercent }),
+    (ratioLabel: string) => t('rulerCornerBox.aria.viewScale', { scale: ratioLabel }),
     [t],
   );
 
@@ -193,7 +179,7 @@ const RulerCornerBox = memo(function RulerCornerBox({
         clearTimeout(clickTimeoutRef.current);
         clickTimeoutRef.current = null;
       }
-      onZoom100();
+      onZoomActualSize();
       lastClickRef.current = 0;
     } else {
       lastClickRef.current = now;
@@ -202,7 +188,7 @@ const RulerCornerBox = memo(function RulerCornerBox({
         clickTimeoutRef.current = null;
       }, PANEL_LAYOUT.TIMING.DOUBLE_CLICK_WINDOW);
     }
-  }, [isMenuOpen, onZoomToFit, onZoom100, onZoomPrevious]);
+  }, [isMenuOpen, onZoomToFit, onZoomActualSize, onZoomPrevious]);
 
   // ===== WHEEL HANDLER =====
 
@@ -231,7 +217,7 @@ const RulerCornerBox = memo(function RulerCornerBox({
         break;
       case '0':
         e.preventDefault();
-        onZoom100();
+        onZoomActualSize();
         break;
       case '+':
       case '=':
@@ -254,7 +240,7 @@ const RulerCornerBox = memo(function RulerCornerBox({
       default:
         break;
     }
-  }, [onZoomToFit, onZoom100, onZoomIn, onZoomOut, onZoomPrevious]);
+  }, [onZoomToFit, onZoomActualSize, onZoomIn, onZoomOut, onZoomPrevious]);
 
   // ===== CONTEXT MENU HANDLER =====
 
@@ -274,7 +260,7 @@ const RulerCornerBox = memo(function RulerCornerBox({
       </div>
       <div className={styles.tooltipLine}>
         <span className={styles.tooltipKey}>{t('rulerCornerBox.tooltip.double')}</span>
-        <span className={styles.tooltipAction}>{t('rulerCornerBox.tooltip.zoom100')}</span>
+        <span className={styles.tooltipAction}>{t('rulerCornerBox.tooltip.actualSize')}</span>
       </div>
       <div className={styles.tooltipLine}>
         <span className={styles.tooltipKey}>{t('rulerCornerBox.tooltip.ctrlClick')}</span>
@@ -322,7 +308,7 @@ const RulerCornerBox = memo(function RulerCornerBox({
               onContextMenu={handleContextMenu}
               onWheel={handleWheel}
               onKeyDown={handleKeyDown}
-              aria-label={t('rulerCornerBox.aria.cornerBox', { zoomPercent: 100 })}
+              aria-label={t('rulerCornerBox.aria.viewScale', { scale: '1:1' })}
               aria-haspopup="menu"
               aria-expanded={isMenuOpen}
               tabIndex={0}
@@ -359,9 +345,9 @@ const RulerCornerBox = memo(function RulerCornerBox({
           <span className={styles.menuItemShortcut}>F</span>
         </button>
 
-        <button type="button" role="menuitem" className={styles.menuItem} onClick={() => { onZoom100(); closeMenu(); }}>
+        <button type="button" role="menuitem" className={styles.menuItem} onClick={() => { onZoomActualSize(); closeMenu(); }}>
           <span className={styles.menuItemIcon}><Zoom100Icon /></span>
-          <span className={styles.menuItemLabel}>{t('rulerCornerBox.menu.zoom100')}</span>
+          <span className={styles.menuItemLabel}>{t('rulerCornerBox.menu.actualSize')}</span>
           <span className={styles.menuItemShortcut}>0</span>
         </button>
 
@@ -387,9 +373,9 @@ const RulerCornerBox = memo(function RulerCornerBox({
 
         <div role="separator" className={styles.menuSeparator} />
 
-        <div className={styles.menuSection}>{t('rulerCornerBox.menu.zoomPresets')}</div>
-        <nav className={styles.zoomPresets} aria-label={t('rulerCornerBox.aria.zoomPresets')}>
-          <ZoomPresetButtons onZoomToScale={onZoomToScale} closeMenu={closeMenu} />
+        <div className={styles.menuSection}>{t('rulerCornerBox.menu.viewScalePresets')}</div>
+        <nav className={styles.zoomPresets} aria-label={t('rulerCornerBox.aria.viewScalePresets')}>
+          <ZoomPresetButtons onZoomToRatio={onZoomToRatio} closeMenu={closeMenu} />
         </nav>
       </PopoverContent>
     </Popover>

@@ -32,9 +32,15 @@
  * @see bim/types/wall-types.ts      — WallParams (instance-level superset)
  */
 
-import type { BimFamilyType, SlabTypeParams, WallTypeParams } from '../types/bim-family-type';
+import type {
+  BimFamilyType,
+  RoofTypeParams,
+  SlabTypeParams,
+  WallTypeParams,
+} from '../types/bim-family-type';
 import type { WallParams } from '../types/wall-types';
 import type { SlabParams } from '../types/slab-types';
+import type { RoofParams } from '../types/roof-types';
 
 /**
  * Generic resolution core — «type always wins, overrides win last».
@@ -112,6 +118,38 @@ export function resolveEffectiveSlabParams(
   type: BimFamilyType<'slab'> | null | undefined,
 ): SlabParams {
   // Legacy fast-path: untyped slab OR unresolved type → unchanged params.
+  if (!instance.typeId || !type) return instance.params;
+  return resolveEffectiveParams(
+    instance.params,
+    type.typeParams,
+    instance.typeOverrides,
+  );
+}
+
+/**
+ * Roof convenience wrapper around {@link resolveEffectiveParams} (ADR-417 §10 #3)
+ * — the roof analogue of {@link resolveEffectiveSlabParams}.
+ *
+ * Returns the instance's own params unchanged when it has no `typeId` (legacy
+ * fast-path) or when its type cannot be resolved (`type == null`) — zero
+ * regression. Otherwise resolves `thickness`/`dna`/`material` from the type
+ * (type wins), applies any `typeOverrides` last, and preserves all per-instance
+ * fields (`outline`/`edges`/`slopeUnit`/`basePivotZ`/`sceneUnits`/storey…). A
+ * roof has no sub-kind, so the type carries only the build-up + thickness.
+ *
+ * @param instance Roof instance: cached `params`, optional `typeId`/`typeOverrides`.
+ * @param type     The resolved roof family type (or null/undefined if unresolved).
+ * @returns The effective `RoofParams` for geometry/render.
+ */
+export function resolveEffectiveRoofParams(
+  instance: {
+    params: RoofParams;
+    typeId?: string;
+    typeOverrides?: Partial<RoofTypeParams>;
+  },
+  type: BimFamilyType<'roof'> | null | undefined,
+): RoofParams {
+  // Legacy fast-path: untyped roof OR unresolved type → unchanged params.
   if (!instance.typeId || !type) return instance.params;
   return resolveEffectiveParams(
     instance.params,

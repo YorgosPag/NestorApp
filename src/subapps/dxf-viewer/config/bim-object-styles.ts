@@ -38,6 +38,8 @@ export type BimCategory =
   | 'mep-manifold'
   // ADR-408 Εύρος Β — heating radiator / καλοριφέρ (hydronic terminal).
   | 'mep-radiator'
+  // ADR-408 Εύρος Β #2 — heating boiler / λέβητας (hydronic source).
+  | 'mep-boiler'
   // ADR-407 — standalone path-based railing (architectural).
   | 'railing'
   // ADR-408 Φ7 — home-run circuit wires (derived electrical annotation overlay).
@@ -118,7 +120,7 @@ export interface ObjectStyle {
 export const BIM_CATEGORIES: readonly BimCategory[] = [
   'wall', 'column', 'beam', 'slab', 'opening', 'slab-opening',
   'stair', 'roof', 'ceiling', 'dimension', 'hatch', 'grip', 'envelope',
-  'light-fixture', 'electrical-panel', 'mep-manifold', 'mep-radiator', 'railing', 'mep-wire', 'furniture',
+  'light-fixture', 'electrical-panel', 'mep-manifold', 'mep-radiator', 'mep-boiler', 'railing', 'mep-wire', 'furniture',
   'duct', 'pipe', 'sanitary', 'kitchen',
 ] as const;
 
@@ -146,6 +148,8 @@ export const MODEL_BIM_CATEGORIES: readonly BimCategory[] = [
   'mep-manifold',
   // ADR-408 Εύρος Β — heating radiator (καλοριφέρ).
   'mep-radiator',
+  // ADR-408 Εύρος Β #2 — heating boiler (λέβητας, hydronic source).
+  'mep-boiler',
   // ADR-407 — standalone path-based railing.
   'railing',
   // ADR-408 Φ7 — home-run circuit wires (hidden by "Show only DXF" with the rest).
@@ -196,6 +200,8 @@ export const DEFAULT_OBJECT_STYLES: Readonly<Record<BimCategory, ObjectStyle>> =
   'mep-manifold': { projectionPen: 4, cutPen: 5 },
   // ADR-408 Εύρος Β — καλοριφέρ: μεσαία γραμμή (heating equipment panel).
   'mep-radiator': { projectionPen: 4, cutPen: 5 },
+  // ADR-408 Εύρος Β #2 — λέβητας: μεσαία γραμμή (heating source cabinet).
+  'mep-boiler': { projectionPen: 4, cutPen: 5 },
   // ADR-407 — κάγκελο: μεσαία γραμμή προβολής (metal members, plan symbol).
   railing:        { projectionPen: 4, cutPen: 5 },
   // ADR-408 Φ7 — καλώδιο κυκλώματος: λεπτή γραμμή annotation (το χρώμα έρχεται

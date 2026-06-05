@@ -21,6 +21,9 @@ import { CONTEXTUAL_MEP_CIRCUIT_TAB, MEP_CIRCUIT_CONTEXTUAL_TRIGGER } from '../u
 import { CONTEXTUAL_MEP_PIPE_NETWORK_TAB, MEP_PIPE_NETWORK_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-mep-pipe-network-tab';
 import { CONTEXTUAL_MEP_FIXTURE_TAB, MEP_FIXTURE_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-mep-fixture-tab';
 import { CONTEXTUAL_MEP_MANIFOLD_TAB, MEP_MANIFOLD_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-mep-manifold-tab';
+import { CONTEXTUAL_DRAINAGE_COLLECTOR_TAB, DRAINAGE_COLLECTOR_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-drainage-collector-tab';
+import { CONTEXTUAL_MEP_RADIATOR_TAB, MEP_RADIATOR_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-mep-radiator-tab';
+import { CONTEXTUAL_MEP_BOILER_TAB, MEP_BOILER_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-mep-boiler-tab';
 import { CONTEXTUAL_MEP_SEGMENT_TAB, MEP_SEGMENT_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-mep-segment-tab';
 import { CONTEXTUAL_FURNITURE_TAB, FURNITURE_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-furniture-tab';
 import { CONTEXTUAL_FLOORPLAN_SYMBOL_TAB, FLOORPLAN_SYMBOL_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-floorplan-symbol-tab';
@@ -29,6 +32,7 @@ import { ANIMATION_CONTEXTUAL_TAB, ANIMATION_CONTEXTUAL_TRIGGER } from '../ui/ri
 import { selectAnimationToolActive, useAnimationStore } from '../bim-3d/animation/AnimationStore';
 import { useMepSystemStore } from '../bim/mep-systems/mep-system-store';
 import { resolveManagedSystems } from '../bim/mep-systems/mep-circuit-editor';
+import { isPipeNetworkSourceEntity } from '../bim/mep-systems/pipe-network-source';
 import { isMepSegmentEntity } from '../types/entities';
 
 const BIM_KIND_TYPES: ReadonlySet<string> = new Set([
@@ -56,6 +60,9 @@ export const RIBBON_CONTEXTUAL_TABS = [
   CONTEXTUAL_MEP_PIPE_NETWORK_TAB,
   CONTEXTUAL_MEP_FIXTURE_TAB,
   CONTEXTUAL_MEP_MANIFOLD_TAB,
+  CONTEXTUAL_DRAINAGE_COLLECTOR_TAB,
+  CONTEXTUAL_MEP_RADIATOR_TAB,
+  CONTEXTUAL_MEP_BOILER_TAB,
   CONTEXTUAL_MEP_SEGMENT_TAB,
   CONTEXTUAL_MEP_FIXTURE_LIBRARY_TAB,
   CONTEXTUAL_FURNITURE_TAB,
@@ -66,6 +73,19 @@ export const RIBBON_CONTEXTUAL_TABS = [
 type EntityLike = { readonly type: string; readonly params?: unknown };
 
 function readArrayKind(params: unknown): string | undefined {
+  if (params && typeof params === 'object' && 'kind' in params) {
+    const k = (params as { kind?: unknown }).kind;
+    return typeof k === 'string' ? k : undefined;
+  }
+  return undefined;
+}
+
+/**
+ * ADR-408 Φ14 — read a manifold's `kind` from its params. A `drainage-collector`
+ * (φρεάτιο) surfaces its own contextual tab; a `floor-manifold` (συλλέκτης) the
+ * water-manifold tab. Both are `mep-manifold` entities sharing one bridge.
+ */
+function readManifoldKind(params: unknown): string | undefined {
   if (params && typeof params === 'object' && 'kind' in params) {
     const k = (params as { kind?: unknown }).kind;
     return typeof k === 'string' ? k : undefined;
@@ -105,20 +125,21 @@ export function useActiveContextualTrigger({
       }
       if (hasPanel && hasFixture) return MEP_CIRCUIT_CONTEXTUAL_TRIGGER;
     }
-    // ADR-408 Φ13: mixed plumbing selection (≥1 manifold = source + ≥1 pipe
-    // segment = members) → pipe-network-creation tab (Revit "create a Piping
-    // System from the manifold + its pipes"). Disjoint from the electrical case
-    // (manifold/segment are not panels/fixtures), so order is irrelevant.
+    // ADR-408 Φ13 / Εύρος Β #2: mixed plumbing selection (≥1 pipe-network SOURCE —
+    // manifold OR boiler, via the SSoT `isPipeNetworkSourceEntity` guard — + ≥1 pipe
+    // segment = members) → pipe-network-creation tab (Revit "create a Piping System
+    // from the source + its pipes"). Disjoint from the electrical case (source/segment
+    // are not panels/fixtures), so order is irrelevant.
     if (selectedEntityIds && selectedEntityIds.length >= 2 && currentScene) {
-      let hasManifold = false;
+      let hasNetworkSource = false;
       let hasPipe = false;
       for (const id of selectedEntityIds) {
         const e = currentScene.entities.find((x) => x.id === id);
-        if (e?.type === 'mep-manifold') hasManifold = true;
+        if (e && isPipeNetworkSourceEntity(e)) hasNetworkSource = true;
         else if (e && isMepSegmentEntity(e) && e.params.domain === 'pipe') hasPipe = true;
-        if (hasManifold && hasPipe) break;
+        if (hasNetworkSource && hasPipe) break;
       }
-      if (hasManifold && hasPipe) return MEP_PIPE_NETWORK_CONTEXTUAL_TRIGGER;
+      if (hasNetworkSource && hasPipe) return MEP_PIPE_NETWORK_CONTEXTUAL_TRIGGER;
     }
     // ADR-408 Φ6: selecting an electrical panel that feeds ≥1 circuit surfaces
     // the circuit tab in manage mode (picker → its circuits). Panel-centric so a
@@ -226,9 +247,18 @@ export function resolveContextualTrigger(entity: EntityLike): string | null {
   if (entity.type === 'slab-opening') return SLAB_OPENING_CONTEXTUAL_TRIGGER;
   // ADR-406 — φωτιστικό (point-based MEP fixture) → contextual properties tab.
   if (entity.type === 'mep-fixture') return MEP_FIXTURE_CONTEXTUAL_TRIGGER;
-  // ADR-408 Φ12 — συλλέκτης (plumbing manifold) → «Ιδιότητες Συλλέκτη» (with the
-  // pipe-network management folded in as a self-hiding panel).
-  if (entity.type === 'mep-manifold') return MEP_MANIFOLD_CONTEXTUAL_TRIGGER;
+  // ADR-408 Φ12 / Φ14 — point-based manifold. A drainage-collector (φρεάτιο)
+  // surfaces «Ιδιότητες Φρεατίου» (N inlets + 1 outlet); a floor-manifold the
+  // water «Ιδιότητες Συλλέκτη». Both fold in pipe-network management.
+  if (entity.type === 'mep-manifold') {
+    return readManifoldKind(entity.params) === 'drainage-collector'
+      ? DRAINAGE_COLLECTOR_CONTEXTUAL_TRIGGER
+      : MEP_MANIFOLD_CONTEXTUAL_TRIGGER;
+  }
+  // ADR-408 Εύρος Β — καλοριφέρ (heating radiator, terminal) → «Ιδιότητες Καλοριφέρ».
+  if (entity.type === 'mep-radiator') return MEP_RADIATOR_CONTEXTUAL_TRIGGER;
+  // ADR-408 Εύρος Β #2 — λέβητας (hydronic boiler, source) → «Ιδιότητες Λέβητα».
+  if (entity.type === 'mep-boiler') return MEP_BOILER_CONTEXTUAL_TRIGGER;
   // ADR-408 Φ8 — σωλήνας / αεραγωγός (MEP segment, one tab for both domains).
   if (entity.type === 'mep-segment') return MEP_SEGMENT_CONTEXTUAL_TRIGGER;
   if (entity.type === 'text' || entity.type === 'mtext') return TEXT_EDITOR_CONTEXTUAL_TRIGGER;

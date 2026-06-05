@@ -33,6 +33,9 @@ import { useLevels } from '../systems/levels';
 import { PolygonCropStore } from '../systems/lasso/LassoCropStore';
 import { LassoFreehandStore } from '../systems/lasso/LassoFreehandStore';
 import { useRenderTrace } from '../debug/useRenderTrace'; // 🔴 TEMP DEBUG — remove after hover-lag diagnosis
+// 🏢 ADR-418: real view-scale (1:N) → pixel-scale conversion SSoT
+import { ratioToScale } from '../utils/view-scale';
+import { resolveSceneUnits } from '../utils/scene-units';
 
 const clipService = new ClipToRegionService();
 const polygonClipService = new ClipToPolygonService();
@@ -343,11 +346,13 @@ export function useDxfViewerState() {
       case 'zoom-reset':
         canvasActions.resetToOrigin();
         break;
-      case 'set-zoom':
-        // data is a decimal value (e.g., 1.0 = 100%, 0.5 = 50%)
-        // Routes through zoomToScale — clamped, centered, via canonical imperative path
-        if (typeof data === 'number' && !isNaN(data) && data > 0) {
-          canvasActions.zoomToScale(data);
+      case 'set-view-ratio':
+        // 🏢 ADR-418: data is a drawing-scale denominator N (1:N). Convert to a
+        // CSS-px scale via the view-scale SSoT (DPI + active scene units), then
+        // route through the canonical imperative zoomToScale path.
+        if (typeof data === 'number' && Number.isFinite(data) && data > 0) {
+          const sceneUnits = resolveSceneUnits(sceneStateRef.current.currentScene);
+          canvasActions.zoomToScale(ratioToScale({ ratioN: data, sceneUnits }));
         }
         break;
       case 'zoom-window':

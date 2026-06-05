@@ -12,6 +12,7 @@ import type { DxfScene } from '../../canvas-v2/dxf-canvas/dxf-types';
 import type { ColorLayer } from '../../canvas-v2/layer-canvas/layer-types';
 import type { OverlayEditorMode } from '../../overlays/types';
 import type { ViewTransform, Point2D } from '../../rendering/types/Types';
+import type { SceneUnits } from '../../utils/scene-units';
 import type { CrosshairSettings } from '../../rendering/ui/crosshair/CrosshairTypes';
 import type { CursorSettings } from '../../systems/cursor/config';
 import type { GridSettings, RulerSettings, SnapSettings, SelectionSettings } from '../../canvas-v2';
@@ -62,11 +63,12 @@ interface ZoomSystemForStack {
   zoomToFit: (bounds: { min: Point2D; max: Point2D }, viewport: Viewport, alignToOrigin?: boolean) => { transform: ViewTransform } | null;
   setTransform: (transform: ViewTransform) => void;
   handleWheelZoom: (delta: number, center: Point2D) => void;
-  zoomTo100: () => void;
+  // 🏢 ADR-418: real drawing-scale (1:N) operations
+  zoomToActualSize: (sceneUnits: SceneUnits) => void;
   zoomIn: () => void;
   zoomOut: () => void;
   zoomPrevious: () => void;
-  zoomToScale: (scale: number) => void;
+  zoomToRatio: (ratioN: number, sceneUnits: SceneUnits) => void;
 }
 
 export interface CanvasLayerStackProps {
@@ -255,6 +257,13 @@ export interface CanvasLayerStackProps {
   };
   // === ADR-408 Εύρος Β: heating radiator 2D placement ghost preview payload ===
   mepRadiatorGhostPreview: {
+    isAwaitingPosition: boolean;
+    getGhostFootprint: (
+      cursorPos: Readonly<Point2D> | null,
+    ) => readonly import('../../bim/types/bim-base').Point3D[] | null;
+  };
+  // === ADR-408 Εύρος Β #2: heating boiler 2D placement ghost preview payload ===
+  mepBoilerGhostPreview: {
     isAwaitingPosition: boolean;
     getGhostFootprint: (
       cursorPos: Readonly<Point2D> | null,

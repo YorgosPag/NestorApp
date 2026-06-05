@@ -30,8 +30,6 @@ import type { ToolType, ToolDefinition } from './types';
 import { toolGroups } from './toolDefinitions';
 import { isMobileDisabledTool, isMobilePrimaryTool } from './toolbar-responsive-config';
 import { ToolButton } from './ToolButton';
-// ADR-040 Phase VII: subscribe to ZoomStore directly
-import { useCurrentZoom } from '../../systems/zoom/ZoomStore';
 
 interface MobileToolbarLayoutProps {
   activeTool: ToolType;
@@ -47,7 +45,6 @@ export const MobileToolbarLayout: React.FC<MobileToolbarLayoutProps> = ({
   onAction,
   onSidebarToggle,
 }) => {
-  const currentZoom = useCurrentZoom();
   const [moreOpen, setMoreOpen] = useState(false);
   const iconSizes = useIconSizes();
   const colors = useSemanticColors();

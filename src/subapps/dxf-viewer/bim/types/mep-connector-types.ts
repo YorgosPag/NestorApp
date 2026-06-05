@@ -362,3 +362,53 @@ export function buildRadiatorReturnConnector(
     pipe: { systemClassification: 'hydronic-return', diameterMm },
   };
 }
+
+// ─── Heating boiler connectors (ADR-408 Εύρος Β #2) ───────────────────────────────
+
+/** Connector id for the supply outlet (προσαγωγή) of a heating boiler. */
+export const BOILER_SUPPLY_CONNECTOR_ID = 'boiler-supply';
+/** Connector id for the return inlet (επιστροφή) of a heating boiler. */
+export const BOILER_RETURN_CONNECTOR_ID = 'boiler-return';
+
+/**
+ * Supply outlet connector of a hydronic boiler (ADR-408 Εύρος Β #2, λέβητας) — the
+ * hot-water feed. A boiler is the heating SOURCE (opposite of a radiator terminal):
+ * hot water LEAVES the supply outlet (`flow: 'out'`), so this connector SOURCES the
+ * hydronic-supply network. `domain: 'pipe'`, classification FIXED to `hydronic-supply`
+ * (a boiler's hydraulic role is set by physics — supply out / return in).
+ *
+ * `localPosition` is host-local (scene units, pre-rotation) — the caller resolves it
+ * from the body geometry (see `buildBoilerConnectors`).
+ */
+export function buildBoilerSupplyConnector(
+  localPosition: Point3D,
+  diameterMm: number,
+): MepConnector {
+  return {
+    connectorId: BOILER_SUPPLY_CONNECTOR_ID,
+    domain: 'pipe',
+    flow: 'out',
+    localPosition,
+    pipe: { systemClassification: 'hydronic-supply', diameterMm },
+  };
+}
+
+/**
+ * Return inlet connector of a hydronic boiler (ADR-408 Εύρος Β #2). The cooled water
+ * RETURNS into the boiler here (`flow: 'in'`), `domain: 'pipe'`, classification FIXED
+ * to `hydronic-return`. Together with {@link buildBoilerSupplyConnector} the boiler
+ * sources the hydronic-supply network (supply outlet) and is a member of the
+ * hydronic-return network (return inlet) — membership is per-(entity, connector).
+ */
+export function buildBoilerReturnConnector(
+  localPosition: Point3D,
+  diameterMm: number,
+): MepConnector {
+  return {
+    connectorId: BOILER_RETURN_CONNECTOR_ID,
+    domain: 'pipe',
+    flow: 'in',
+    localPosition,
+    pipe: { systemClassification: 'hydronic-return', diameterMm },
+  };
+}

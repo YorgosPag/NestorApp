@@ -91,6 +91,7 @@ export {
   generatePerformanceDiagnosticId,
   generateWallId, generateOpeningId, generateSlabId, generateSlabOpeningId,
   generateColumnId, generateBeamId, generateMepFixtureId, generateMepSystemId, generateElectricalPanelId, generateMepSegmentId, generateMepManifoldId, generateRailingId, generateFurnitureId, generateBimPresetId, generateBimMaterialId, generateBimSettingsId, generateBimFamilyTypeId,
+  generateMepBoilerId,
   generateBim3DPrefId, generateBim3DDimensionId,
   generateBimCommentId, generateBimCommentReplyId,
   generateBimTelemetryId,

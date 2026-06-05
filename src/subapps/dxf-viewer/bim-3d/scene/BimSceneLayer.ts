@@ -15,7 +15,7 @@
 import * as THREE from 'three';
 import type { Bim3DEntities } from '../stores/Bim3DEntitiesStore';
 import type { FloorStackEntry } from './multi-floor-3d-source';
-import { wallToMesh, columnToMesh, beamToMesh, slabToMesh, fixtureToMesh, panelToMesh, manifoldToMesh, radiatorToMesh } from '../converters/BimToThreeConverter';
+import { wallToMesh, columnToMesh, beamToMesh, slabToMesh, fixtureToMesh, panelToMesh, manifoldToMesh, radiatorToMesh, boilerToMesh } from '../converters/BimToThreeConverter';
 import { stairToMeshes } from '../converters/StairToThreeConverter';
 import { railingToMesh } from '../converters/railing-to-three';
 import { roofToMesh } from '../converters/roof-to-three';
@@ -154,6 +154,7 @@ export class BimSceneLayer {
     this.syncPanels(entities, ctx);
     this.syncManifolds(entities, ctx);
     this.syncRadiators(entities, ctx);
+    this.syncBoilers(entities, ctx);
     syncCircuitWires(this.group, entities, ctx, (entity, category) => this.resolveEntity(entity, category, ctx));
     this.syncRailings(entities, ctx);
     this.syncRoofs(entities, ctx);
@@ -351,6 +352,16 @@ export class BimSceneLayer {
       const r = this.resolveEntity(radiator, 'mep-radiator', ctx);
       if (!r) continue;
       const mesh = radiatorToMesh(radiator, ctx.floorElevationMm, ctx.activeLevelId, r.baseElevation);
+      if (mesh) { mesh.userData['buildingId'] = r.buildingId; this.group.add(mesh); }
+    }
+  }
+
+  /** ADR-408 Εύρος Β — point-based heating boilers (hydronic source); fixed warm-red material, `?? []` guards legacy floor-stack entries. */
+  private syncBoilers(entities: Bim3DEntities, ctx: SyncContext): void {
+    for (const boiler of entities.boilers ?? []) {
+      const r = this.resolveEntity(boiler, 'mep-boiler', ctx);
+      if (!r) continue;
+      const mesh = boilerToMesh(boiler, ctx.floorElevationMm, ctx.activeLevelId, r.baseElevation);
       if (mesh) { mesh.userData['buildingId'] = r.buildingId; this.group.add(mesh); }
     }
   }

@@ -28,6 +28,7 @@ import * as THREE from 'three';
 import { resolveTextureUrl, type TextureMap } from './texture-source';
 import { TEXTURE_SET_DEFS, type PbrTextureSlug } from '../../bim/materials/bim-texture-registry';
 import { useBim3DEntitiesStore } from '../stores/Bim3DEntitiesStore';
+import { configurePbrTexture } from './pbr-texture-config';
 
 /** A loaded PBR texture set. `map` (albedo) is always present; others optional. */
 export interface LoadedTextureSet {
@@ -38,8 +39,6 @@ export interface LoadedTextureSet {
 }
 
 type CacheState = 'loading' | 'error';
-
-const ANISOTROPY = 8;
 
 const loader = new THREE.TextureLoader();
 
@@ -53,24 +52,12 @@ function isKnownSlug(slug: string): slug is PbrTextureSlug {
   return slug in TEXTURE_SET_DEFS;
 }
 
-/** Configure a freshly-loaded texture: tiling repeat + wrap + anisotropy + colour space. */
-function configureTexture(tex: THREE.Texture, tileSizeM: number, isAlbedo: boolean): void {
-  tex.wrapS = THREE.RepeatWrapping;
-  tex.wrapT = THREE.RepeatWrapping;
-  const repeat = 1 / tileSizeM;
-  tex.repeat.set(repeat, repeat);
-  tex.anisotropy = ANISOTROPY;
-  // Albedo carries colour → sRGB; data maps (normal/roughness/ao) stay linear.
-  tex.colorSpace = isAlbedo ? THREE.SRGBColorSpace : THREE.NoColorSpace;
-  tex.needsUpdate = true;
-}
-
 /** Load + configure one map, or null if the source has no URL for it. */
 async function loadMap(slug: PbrTextureSlug, map: TextureMap, tileSizeM: number): Promise<THREE.Texture | null> {
   const url = await resolveTextureUrl(slug, map);
   if (!url) return null;
   const tex = await loader.loadAsync(url);
-  configureTexture(tex, tileSizeM, map === 'albedo');
+  configurePbrTexture(tex, tileSizeM, map === 'albedo');
   return tex;
 }
 

@@ -67,7 +67,9 @@ export type EntityType =
   // ADR-417 — parametric pitched roof (footprint + per-edge slopes; IfcRoof).
   | 'roof'
   // ADR-408 Εύρος Β — point-based hydronic radiator (heating terminal, IfcSpaceHeater).
-  | 'mep-radiator';
+  | 'mep-radiator'
+  // ADR-408 Εύρος Β #2 — point-based hydronic boiler (heating source, IfcBoiler).
+  | 'mep-boiler';
 
 export interface BaseEntity {
   id: string;

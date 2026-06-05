@@ -80,5 +80,37 @@
     "confirm": "Delete",
     "cancel": "Cancel"
   },
-  "readOnlyHint": "System material — editing and deletion are not allowed."
+  "readOnlyHint": "System material — editing and deletion are not allowed.",
+  "thumbnail": {
+    "label": "Appearance Thumbnail",
+    "upload": "Upload image",
+    "remove": "Remove image",
+    "uploading": "Uploading...",
+    "createFirstHint": "The image will upload once the material is saved.",
+    "errors": {
+      "format": "Unsupported file type. Allowed: PNG, JPG or WebP.",
+      "size": "Image is too large (max 2 MB).",
+      "uploadFailed": "Upload failed. Please try again."
+    }
+  },
+  "textures3d": {
+    "label": "3D Textures (PBR)",
+    "hint": "Upload your own photographic textures that render in the 3D view (walls). Albedo (base color) is required.",
+    "upload": "Upload",
+    "uploading": "Uploading...",
+    "remove": "Remove",
+    "tileSize": "Tile size (meters)",
+    "createFirstHint": "The textures will upload once the material is saved.",
+    "maps": {
+      "albedo": "Base Color (Albedo)",
+      "normal": "Normal",
+      "roughness": "Roughness",
+      "ao": "Ambient Occlusion"
+    },
+    "errors": {
+      "format": "Unsupported file type. Allowed: PNG, JPG or WebP.",
+      "size": "Texture is too large (max 8 MB).",
+      "uploadFailed": "Upload failed. Please try again."
+    }
+  }
 }

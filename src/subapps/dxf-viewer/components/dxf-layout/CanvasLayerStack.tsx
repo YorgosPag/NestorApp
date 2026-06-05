@@ -13,7 +13,11 @@ import React, { useCallback, useMemo, useRef } from 'react';
 import { PreviewCanvas } from '../../canvas-v2/preview-canvas';
 import CrosshairOverlay from '../../canvas-v2/overlays/CrosshairOverlay';
 import RulerCornerBox from '../../canvas-v2/overlays/RulerCornerBox';
+// 🏢 ADR-418: resolve active scene units imperatively at zoom time (no subscription)
+import { resolveSceneUnits } from '../../utils/scene-units';
 import { FloorplanBackgroundCanvas } from '../../floorplan-background';
+// 🏢 Grid as the BOTTOM-MOST layer (beneath the floorplan κάτοψη). ADR-040 (2026-06-05).
+import { GridUnderlayCanvas } from './GridUnderlayCanvas';
 import { COORDINATE_LAYOUT } from '../../rendering/core/CoordinateTransforms';
 import { PANEL_LAYOUT } from '../../config/panel-tokens';
 import { RULERS_GRID_CONFIG } from '../../systems/rulers-grid/config';
@@ -62,7 +66,7 @@ export const CanvasLayerStack = React.memo(function CanvasLayerStack({
   entityPickingActive,
   selectedGuideIds, constructionPoints,
   guideWorkflowState, guideStateObj, cpStateObj,
-  rotationPreview, movePreview, mirrorPreview, scalePreview, stretchPreview, columnGhostPreview, mepFixtureGhostPreview, electricalPanelGhostPreview, mepManifoldGhostPreview, mepRadiatorGhostPreview, mepSegmentGhostPreview, slabOpeningGhostPreview, openingGhostPreview, levelManager,
+  rotationPreview, movePreview, mirrorPreview, scalePreview, stretchPreview, columnGhostPreview, mepFixtureGhostPreview, electricalPanelGhostPreview, mepManifoldGhostPreview, mepRadiatorGhostPreview, mepBoilerGhostPreview, mepSegmentGhostPreview, slabOpeningGhostPreview, openingGhostPreview, levelManager,
 }: CanvasLayerStackProps) {
   // --- Destructure grouped props ---
   const {
@@ -163,11 +167,19 @@ export const CanvasLayerStack = React.memo(function CanvasLayerStack({
       zoomSystem.handleWheelZoom(delta, cssPos);
     }
   }, [zoomSystem]);
-  const handleZoom100 = useCallback(() => zoomSystem.zoomTo100(), [zoomSystem]);
+  // 🏢 ADR-418: zoom to 1:1 actual size — units resolved imperatively (ADR-040: no subscription)
+  const handleZoomActualSize = useCallback(
+    () => zoomSystem.zoomToActualSize(resolveSceneUnits(dxfSceneRef.current)),
+    [zoomSystem],
+  );
   const handleZoomIn = useCallback(() => zoomSystem.zoomIn(), [zoomSystem]);
   const handleZoomOut = useCallback(() => zoomSystem.zoomOut(), [zoomSystem]);
   const handleZoomPrevious = useCallback(() => zoomSystem.zoomPrevious(), [zoomSystem]);
-  const handleZoomToScale = useCallback((scale: number) => zoomSystem.zoomToScale(scale), [zoomSystem]);
+  // 🏢 ADR-418: preset/menu now passes a drawing-scale ratio N (1:N)
+  const handleZoomToRatio = useCallback(
+    (ratioN: number) => zoomSystem.zoomToRatio(ratioN, resolveSceneUnits(dxfSceneRef.current)),
+    [zoomSystem],
+  );
   // --- Computed props ---
   const draggingOverlayDelta =
     draggingOverlayBody && dragPreviewPosition
@@ -274,6 +286,8 @@ export const CanvasLayerStack = React.memo(function CanvasLayerStack({
     crosshairSettings,
     cursorSettings: cursorCanvasSettings,
     snapSettings,
+    // 🏢 Grid is NOT on this canvas — it lives on the bottom-most GridUnderlayCanvas
+    // (beneath the floorplan κάτοψη). See ADR-040 (2026-06-05).
     gridSettings: gridSettingsDisabled,
     rulerSettings: rulerSettingsDisabled,
     selectionSettings,
@@ -333,6 +347,14 @@ export const CanvasLayerStack = React.memo(function CanvasLayerStack({
           onDoubleClick={containerHandlers.onDoubleClick}
           onContextMenu={handleDrawingContextMenu}
         >
+          {/* 🏢 Grid underlay — bottom-most layer, BENEATH the floorplan κάτοψη.
+              Always mounted (grid shows on an empty canvas too). ADR-040 (2026-06-05). */}
+          <GridUnderlayCanvas
+            gridSettings={gridSettings}
+            transform={transform}
+            viewport={viewport}
+            className={`absolute ${PANEL_LAYOUT.INSET['0']} w-full h-full ${PANEL_LAYOUT.Z_INDEX['0']} ${PANEL_LAYOUT.POINTER_EVENTS.NONE}`}
+          />
           {floorId && (
             <FloorplanBackgroundCanvas
               floorId={floorId}
@@ -367,7 +389,7 @@ export const CanvasLayerStack = React.memo(function CanvasLayerStack({
               colorLayers={colorLayers}
               renderOptionsBase={dxfRenderOptionsBase}
               crosshairSettings={crosshairSettings}
-              gridSettings={gridSettings}
+              gridSettings={gridSettingsDisabled}
               rulerSettings={dxfRulerSettings}
               selectedGuideIds={selectedGuideIds}
               constructionPoints={constructionPoints}
@@ -413,6 +435,7 @@ export const CanvasLayerStack = React.memo(function CanvasLayerStack({
             electricalPanelGhost={electricalPanelGhostPreview}
             mepManifoldGhost={mepManifoldGhostPreview}
             mepRadiatorGhost={mepRadiatorGhostPreview}
+            mepBoilerGhost={mepBoilerGhostPreview}
             mepSegmentGhost={mepSegmentGhostPreview}
             slabOpeningGhost={slabOpeningGhostPreview}
             openingGhost={openingGhostPreview}
@@ -448,11 +471,11 @@ export const CanvasLayerStack = React.memo(function CanvasLayerStack({
             backgroundColor={globalRulerSettings.horizontal.backgroundColor}
             textColor={globalRulerSettings.horizontal.textColor}
             onZoomToFit={handleRulerZoomToFit}
-            onZoom100={handleZoom100}
+            onZoomActualSize={handleZoomActualSize}
             onZoomIn={handleZoomIn}
             onZoomOut={handleZoomOut}
             onZoomPrevious={handleZoomPrevious}
-            onZoomToScale={handleZoomToScale}
+            onZoomToRatio={handleZoomToRatio}
             onWheelZoom={handleRulerWheelZoom}
             className={PANEL_LAYOUT.Z_INDEX['30']}
           />

@@ -54,6 +54,9 @@ export const GRIP_GLYPH_REGISTRY: Readonly<Record<string, GripShape>> = {
   // Heating radiators (ADR-408 Εύρος Β) — corners render the default 'square' glyph.
   'mep-radiator-move': 'move',
   'mep-radiator-rotation': 'rotation',
+  // Heating boilers (ADR-408 Εύρος Β #2) — corners render the default 'square' glyph.
+  'mep-boiler-move': 'move',
+  'mep-boiler-rotation': 'rotation',
   // MEP segments (ADR-408 Φ8) — start/end/section render 'square'; midpoint = MOVE,
   // rotation = ROTATION (full beam parity for the linear-element vocabulary).
   'mep-segment-midpoint': 'move',

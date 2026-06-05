@@ -203,11 +203,10 @@ export function useDxfCanvasRenderer(params: DxfCanvasRendererParams) {
         }
       }
 
-      // 2: Grid
-      if (ctx && uiTransform && refs.gridRendererRef.current && curGrid?.enabled) {
-        const context = createUIRenderContext(ctx, currentViewport, uiTransform);
-        refs.gridRendererRef.current.render(context, currentViewport, curGrid as import('../../rendering/ui/core/UIRenderer').UIElementSettings);
-      }
+      // 2: Grid — rendered on the LOWER LayerCanvas (beneath the κάτοψη), NOT here.
+      // The DxfCanvas (z=10) sits above the κάτοψη's LayerCanvas (z=0), so a grid
+      // drawn here would always be on top. See ADR-040 "Grid is a background"
+      // (2026-06-05) + LayerRenderer background-grid pass.
 
       // 2.5: Guides
       if (ctx && refs.guideRendererRef.current && refs.guidesVisibleRef.current) {

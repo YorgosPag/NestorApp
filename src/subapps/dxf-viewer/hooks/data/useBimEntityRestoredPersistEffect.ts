@@ -44,6 +44,8 @@ type BimRestoreEntityType =
   | 'mep-manifold'
   // ADR-408 Εύρος Β — heating radiator (wall-mounted terminal).
   | 'mep-radiator'
+  // ADR-408 Εύρος Β #2 — heating boiler (wall-mounted heat source).
+  | 'mep-boiler'
   // ADR-417 — parametric pitched roof.
   | 'roof';
 

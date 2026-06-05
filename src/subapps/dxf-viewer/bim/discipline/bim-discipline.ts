@@ -86,6 +86,8 @@ export const DISCIPLINE_BY_CATEGORY: Readonly<Record<BimCategory, DisciplineOrAn
   'mep-manifold':  'plumbing',
   // ADR-408 Εύρος Β — heating radiator (καλοριφέρ, hydronic terminal) ⊂ plumbing.
   'mep-radiator':  'plumbing',
+  // ADR-408 Εύρος Β #2 — heating boiler (λέβητας, hydronic source) ⊂ plumbing.
+  'mep-boiler':    'plumbing',
   // ADR-415 — sanitary plan symbols (WC/washbasin/…) ⊂ plumbing (Revit Plumbing Fixtures).
   sanitary:        'plumbing',
   // ADR-415 — kitchen plan symbols (sink/stove/fridge/counter) ⊂ architectural (Revit Casework).

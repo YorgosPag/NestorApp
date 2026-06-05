@@ -4,6 +4,7 @@
  */
 
 import type { Point2D, ViewTransform } from '../../rendering/types/Types';
+import type { SceneUnits } from '../../utils/scene-units';
 
 // === ZOOM MODES ===
 export type ZoomMode =
@@ -101,6 +102,9 @@ export interface IZoomManager {
   zoomOut(center?: Point2D, constraints?: ZoomConstraints): ZoomResult;
   zoomToFit(bounds: { min: Point2D; max: Point2D }, viewport: { width: number; height: number }): ZoomResult;
   zoomToScale(scale: number, center?: Point2D): ZoomResult;
+  // 🏢 ADR-418: real drawing-scale (1:N) operations
+  zoomToRatio(ratioN: number, sceneUnits: SceneUnits, center?: Point2D): ZoomResult;
+  zoomToActualSize(sceneUnits: SceneUnits, center?: Point2D): ZoomResult;
   zoomToWindow(startPoint: Point2D, endPoint: Point2D, viewport: { width: number; height: number }): ZoomResult;
 
   // History

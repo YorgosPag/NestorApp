@@ -10,7 +10,7 @@
  */
 
 import type { Point2D } from '../../rendering/types/Types';
-import type { StairGripKind, DimensionGripKind, WallGripKind, OpeningGripKind, SlabGripKind, SlabOpeningGripKind, RoofGripKind, BeamGripKind, ColumnGripKind, MepFixtureGripKind, ElectricalPanelGripKind, MepManifoldGripKind, MepRadiatorGripKind, FurnitureGripKind, FloorplanSymbolGripKind, XLineGripKind, RayGripKind } from '../useGripMovement';
+import type { StairGripKind, DimensionGripKind, WallGripKind, OpeningGripKind, SlabGripKind, SlabOpeningGripKind, RoofGripKind, BeamGripKind, ColumnGripKind, MepFixtureGripKind, ElectricalPanelGripKind, MepManifoldGripKind, MepRadiatorGripKind, MepBoilerGripKind, FurnitureGripKind, FloorplanSymbolGripKind, XLineGripKind, RayGripKind } from '../useGripMovement';
 import type {
   DxfGripDragPreview,
   DxfGripInteractionState,
@@ -220,6 +220,13 @@ export interface UnifiedGripInfo {
    * translate + rotation + opposite-corner-anchored width/length resize).
    */
   readonly mepRadiatorGripKind?: MepRadiatorGripKind;
+  /**
+   * ADR-408 Εύρος Β #2 — parametric heating boiler grip discriminator (forwarded
+   * from `GripInfo.mepBoilerGripKind`). Routes commit through
+   * `applyMepBoilerGripDrag()` + `UpdateMepBoilerParamsCommand` (center
+   * translate + rotation + opposite-corner-anchored width/length resize).
+   */
+  readonly mepBoilerGripKind?: MepBoilerGripKind;
   /**
    * ADR-410 — parametric furniture grip discriminator (forwarded from
    * `GripInfo.furnitureGripKind`). Routes commit through

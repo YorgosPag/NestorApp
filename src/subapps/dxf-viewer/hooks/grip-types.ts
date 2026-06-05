@@ -23,6 +23,7 @@ import type {
   ElectricalPanelGripKind,
   MepManifoldGripKind,
   MepRadiatorGripKind,
+  MepBoilerGripKind,
   FurnitureGripKind,
   FloorplanSymbolGripKind,
   MepSegmentGripKind,
@@ -47,6 +48,7 @@ export type {
   ElectricalPanelGripKind,
   MepManifoldGripKind,
   MepRadiatorGripKind,
+  MepBoilerGripKind,
   FurnitureGripKind,
   FloorplanSymbolGripKind,
   MepSegmentGripKind,
@@ -150,6 +152,13 @@ export interface GripInfo {
    * translate + rotation + opposite-corner-anchored width/length resize).
    */
   mepRadiatorGripKind?: MepRadiatorGripKind;
+  /**
+   * ADR-408 Εύρος Β #2 — parametric heating boiler grip discriminator. Present
+   * only when the grip belongs to a `MepBoilerEntity`; routes the commit through
+   * `applyMepBoilerGripDrag()` + `UpdateMepBoilerParamsCommand` (center
+   * translate + rotation + opposite-corner-anchored width/length resize).
+   */
+  mepBoilerGripKind?: MepBoilerGripKind;
   /**
    * ADR-410 — parametric furniture grip discriminator. Present only when the
    * grip belongs to a `FurnitureEntity`; routes the commit through

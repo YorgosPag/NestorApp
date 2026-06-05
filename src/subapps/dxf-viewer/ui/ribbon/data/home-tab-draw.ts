@@ -428,6 +428,15 @@ export const HOME_DRAW_PANEL: RibbonPanelDef = {
               icon: 'bim-mep-radiator',
               commandKey: 'mep-radiator',
             },
+            // ADR-408 Εύρος Β #2 — heating boiler (λέβητας). Point-based hydronic
+            // source: supply outlet + return inlet; discipline = plumbing/heating.
+            {
+              id: 'draw.bim.mepBoiler',
+              labelKey: 'ribbon.commands.bim.mepBoiler.label',
+              tooltipKey: 'ribbon.commands.bim.mepBoiler.tooltip',
+              icon: 'bim-mep-boiler',
+              commandKey: 'mep-boiler',
+            },
             // ADR-407 — path-based railing (guardrail). 2-click straight sketch;
             // discipline = architectural (ADR-405 discipline visibility).
             {

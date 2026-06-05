@@ -17,10 +17,6 @@ import { dequal } from 'dequal';
 
 import type { AnySceneEntity, SceneModel } from '../../types/entities';
 import type { RoofEntity } from '../../bim/types/roof-types';
-import {
-  computeRoofGeometry,
-  validateRoofParams,
-} from '../../bim/geometry/roof-geometry';
 import { EventBus } from '../../systems/events/EventBus';
 import {
   createRoofFirestoreService,
@@ -30,6 +26,14 @@ import {
 } from '../../bim/roofs/roof-firestore-service';
 import { recordRoofChange } from '../../bim/roofs/roof-audit-client';
 import { bimToBoqBridge } from '../../bim/services/BimToBoqBridge';
+import {
+  docToEntity,
+  isRoof,
+  roofEntityDiffersFromDoc,
+  roofTypeLinkChanged,
+  type RoofTypeLink,
+} from './roof-persistence-helpers';
+import { useRoofTypeReresolution } from './useRoofTypeReresolution';
 import { useBimEntityMovedPersistEffect } from './useBimEntityMovedPersistEffect';
 import { useBimEntityRestoredPersistEffect } from './useBimEntityRestoredPersistEffect';
 
@@ -72,29 +76,6 @@ export interface UseRoofPersistenceResult {
 const AUTO_SAVE_DEBOUNCE_MS = 500;
 
 // ============================================================================
-// HELPERS
-// ============================================================================
-
-function isRoof(entity: AnySceneEntity): entity is RoofEntity {
-  return (entity as { type?: string }).type === 'roof';
-}
-
-/** Build scene-side `RoofEntity` από ένα persisted `RoofDoc`. */
-function docToEntity(doc: RoofDoc): RoofEntity {
-  const validation = doc.validation ?? validateRoofParams(doc.params).bimValidation;
-  return {
-    id: doc.id,
-    type: 'roof',
-    kind: doc.kind,
-    layerId: doc.layerId ?? '0',
-    params: doc.params,
-    geometry: doc.geometry ?? computeRoofGeometry(doc.params),
-    validation,
-    visible: true,
-  } as RoofEntity;
-}
-
-// ============================================================================
 // HOOK
 // ============================================================================
 
@@ -119,6 +100,9 @@ export function useRoofPersistence(
   const serviceRef = useRef<RoofFirestoreService | null>(null);
   const dirtyIdsRef = useRef<Set<string>>(new Set());
   const lastSavedParamsRef = useRef<Map<string, RoofEntity['params']>>(new Map());
+  // ADR-417 §10 #3 — last-saved family-type link per roof, so a detach (params
+  // kept, `typeId` cleared) still triggers an auto-save.
+  const lastSavedTypeLinkRef = useRef<Map<string, RoofTypeLink>>(new Map());
   const pendingFirstSaveIdsRef = useRef<Set<string>>(new Set());
   const deletedIdsRef = useRef<Set<string>>(new Set());
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -181,7 +165,9 @@ export function useRoofPersistence(
             nextRoofs.push(existing);
             continue;
           }
-          if (!dequal(existing.params, doc.params)) {
+          // ADR-412 — diff against EFFECTIVE (type-resolved) params so a typed
+          // roof does not re-map on every snapshot.
+          if (roofEntityDiffersFromDoc(existing, doc)) {
             nextRoofs.push(docToEntity(doc));
             mutated = true;
           } else {
@@ -193,6 +179,12 @@ export function useRoofPersistence(
         for (const doc of docs) {
           if (!lastSavedParamsRef.current.has(doc.id)) {
             lastSavedParamsRef.current.set(doc.id, doc.params);
+          }
+          if (!lastSavedTypeLinkRef.current.has(doc.id)) {
+            lastSavedTypeLinkRef.current.set(doc.id, {
+              typeId: doc.typeId,
+              typeOverrides: doc.typeOverrides,
+            });
           }
         }
 
@@ -238,9 +230,17 @@ export function useRoofPersistence(
           validation: entity.validation,
           geometry: entity.geometry,
           layerId: entity.layerId,
+          // ADR-417 §10 #3 — persist the family-type link; `null` detaches
+          // (deleteField) so the link is removed rather than left stale.
+          typeId: entity.typeId ?? null,
+          typeOverrides: entity.typeOverrides ?? null,
         });
       }
       lastSavedParamsRef.current.set(entity.id, entity.params);
+      lastSavedTypeLinkRef.current.set(entity.id, {
+        typeId: entity.typeId,
+        typeOverrides: entity.typeOverrides,
+      });
       dirtyIdsRef.current.delete(entity.id);
       pendingFirstSaveIdsRef.current.delete(entity.id);
       setSaveState('saved');
@@ -276,7 +276,9 @@ export function useRoofPersistence(
     const pending = pendingFirstSaveIdsRef.current.has(roof.id);
     if (!known && !pending) return;
     const lastSaved = lastSavedParamsRef.current.get(roof.id);
-    if (lastSaved && dequal(lastSaved, roof.params)) return;
+    // ADR-412 — a detach keeps params identical, so OR-in the type-link diff.
+    const linkChanged = roofTypeLinkChanged(lastSavedTypeLinkRef.current.get(roof.id), roof);
+    if (lastSaved && dequal(lastSaved, roof.params) && !linkChanged) return;
 
     dirtyIdsRef.current.add(roof.id);
     if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
@@ -336,6 +338,7 @@ export function useRoofPersistence(
 
     dirtyIdsRef.current.delete(roofId);
     lastSavedParamsRef.current.delete(roofId);
+    lastSavedTypeLinkRef.current.delete(roofId);
     pendingFirstSaveIdsRef.current.delete(roofId);
     deletedIdsRef.current.add(roofId);
   }, [levelManager]);
@@ -349,6 +352,10 @@ export function useRoofPersistence(
     try {
       await svc.saveRoof(entityToSaveInput(entity));
       lastSavedParamsRef.current.set(entity.id, entity.params);
+      lastSavedTypeLinkRef.current.set(entity.id, {
+        typeId: entity.typeId,
+        typeOverrides: entity.typeOverrides,
+      });
       dirtyIdsRef.current.delete(entity.id);
       pendingFirstSaveIdsRef.current.delete(entity.id);
       setSaveState('saved');
@@ -392,6 +399,9 @@ export function useRoofPersistence(
     deletedIdsRef,
     persistRestore,
   );
+
+  // ADR-417 §10 #3 — re-flow type edits / late type loads onto placed roofs.
+  useRoofTypeReresolution(levelManager, dirtyIdsRef);
 
   // Unmount cleanup — flush pending timers.
   useEffect(() => {

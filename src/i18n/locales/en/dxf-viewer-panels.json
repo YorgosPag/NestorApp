@@ -695,26 +695,27 @@
       "click": "Click:",
       "zoomToFit": "Zoom to Fit",
       "double": "Double:",
-      "zoom100": "Zoom 100%",
+      "actualSize": "Actual size (1:1)",
       "ctrlClick": "Ctrl+Click:",
       "previousView": "Previous View",
       "rightClick": "Right-Click:",
-      "zoomMenu": "Zoom Menu",
+      "zoomMenu": "Scale Menu",
       "scroll": "Scroll:",
-      "quickZoom": "Quick Zoom"
+      "quickZoom": "Quick Zoom",
+      "viewScaleHint": "Actual on-screen scale (depends on zoom) — not the drawing/annotation scale"
     },
     "menu": {
       "zoomToFit": "Zoom to Fit",
-      "zoom100": "Zoom 100%",
+      "actualSize": "Actual size (1:1)",
       "zoomIn": "Zoom In",
       "zoomOut": "Zoom Out",
       "previousView": "Previous View",
-      "zoomPresets": "Zoom Presets"
+      "viewScalePresets": "View Scales"
     },
     "aria": {
-      "cornerBox": "Zoom controls. Current zoom: {zoomPercent}%. Click to fit, double-click for 100%, right-click for menu.",
-      "zoomPresets": "Zoom presets",
-      "srOnly": "Corner box zoom controls"
+      "viewScale": "View scale {scale}. Click to fit, double-click for actual size, right-click for menu.",
+      "viewScalePresets": "View scales",
+      "srOnly": "Corner box scale controls"
     }
   },
   "layerFilters": {

@@ -30,17 +30,15 @@
  */
 
 import type { Entity } from '../../types/entities';
-import { isMepManifoldEntity, isMepSegmentEntity } from '../../types/entities';
+import { isMepSegmentEntity } from '../../types/entities';
 import type { MepSegmentEntity } from '../types/mep-segment-types';
-import type { MepManifoldEntity } from '../types/mep-manifold-types';
 import type { MepSystemEntity, MepSystemMember } from '../types/mep-system-types';
 import {
-  MANIFOLD_OUTLET_CONNECTOR_ID_PREFIX,
   SEGMENT_START_CONNECTOR_ID,
   SEGMENT_END_CONNECTOR_ID,
 } from '../types/mep-connector-types';
 import type { PlumbingSystemClassification } from '../types/mep-connector-types';
-import { getEntityConnectors } from './connector-access';
+import { isPipeNetworkSourceEntity, findPipeNetworkSourceConnectorId } from './pipe-network-source';
 import {
   computeReassignRemovals,
   memberKey,
@@ -71,24 +69,6 @@ export type PipeNetworkResolution =
   | { readonly ok: true; readonly draft: PipeNetworkFromSelectionDraft }
   | { readonly ok: false; readonly reason: PipeNetworkResolveError };
 
-/** The canonical first outlet id of a manifold (`m-out-0`) — the default source. */
-const DEFAULT_MANIFOLD_OUTLET_CONNECTOR_ID = `${MANIFOLD_OUTLET_CONNECTOR_ID_PREFIX}0`;
-
-/**
- * The manifold's source connector id: its first outgoing (`flow:'out'`) connector,
- * else any connector, else the canonical first-outlet id. A manifold placed before
- * the connector seed (or via a path that did not seed connectors) carries none — it
- * is still a valid distribution source, so we fall back rather than refuse.
- */
-function findManifoldSourceConnectorId(manifold: MepManifoldEntity): string {
-  const conns = getEntityConnectors(manifold);
-  return (
-    conns.find((c) => c.flow === 'out')?.connectorId
-    ?? conns[0]?.connectorId
-    ?? DEFAULT_MANIFOLD_OUTLET_CONNECTOR_ID
-  );
-}
-
 /** Both endpoint connectors of a pipe segment — its full membership in a network. */
 export function pipeSegmentMembers(segment: MepSegmentEntity): MepSystemMember[] {
   return [
@@ -104,16 +84,17 @@ function selectedPipeSegments(selected: readonly Entity[]): MepSegmentEntity[] {
 
 /**
  * Resolve a pipe network from the selected entities. Requires **exactly one**
- * manifold (the source) and **≥1 pipe segment** (members). Returns the draft, or a
- * typed error. Mirror of `resolveCircuitFromSelection`.
+ * pipe-network source — a manifold (συλλέκτης) OR a boiler (λέβητας), via the SSoT
+ * `isPipeNetworkSourceEntity` guard — and **≥1 pipe segment** (members). Returns the
+ * draft, or a typed error. Mirror of `resolveCircuitFromSelection`.
  */
 export function resolvePipeNetworkFromSelection(
   selected: readonly Entity[],
   existingSystems: readonly MepSystemEntity[],
 ): PipeNetworkResolution {
-  const manifolds = selected.filter(isMepManifoldEntity);
-  if (manifolds.length === 0) return { ok: false, reason: 'no-source' };
-  if (manifolds.length > 1) return { ok: false, reason: 'multiple-sources' };
+  const sources = selected.filter(isPipeNetworkSourceEntity);
+  if (sources.length === 0) return { ok: false, reason: 'no-source' };
+  if (sources.length > 1) return { ok: false, reason: 'multiple-sources' };
 
   const members: MepSystemMember[] = selectedPipeSegments(selected).flatMap(pipeSegmentMembers);
   if (members.length === 0) return { ok: false, reason: 'no-members' };
@@ -121,11 +102,12 @@ export function resolvePipeNetworkFromSelection(
   return {
     ok: true,
     draft: {
-      sourceEntityId: manifolds[0]!.id,
-      sourceConnectorId: findManifoldSourceConnectorId(manifolds[0]!),
-      // Inherit the source manifold's hydraulic classification (ύδρευση/θέρμανση);
-      // a pre-heating manifold carries none ⇒ domestic-cold-water (back-compat).
-      systemClassification: manifolds[0]!.params.systemClassification ?? 'domestic-cold-water',
+      sourceEntityId: sources[0]!.id,
+      sourceConnectorId: findPipeNetworkSourceConnectorId(sources[0]!),
+      // Inherit the source's hydraulic classification (ύδρευση/θέρμανση); a boiler
+      // defaults to hydronic-supply, a pre-heating manifold carries none ⇒
+      // domestic-cold-water (back-compat).
+      systemClassification: sources[0]!.params.systemClassification ?? 'domestic-cold-water',
       members,
       reassignRemovals: computeReassignRemovals(members, existingSystems),
     },

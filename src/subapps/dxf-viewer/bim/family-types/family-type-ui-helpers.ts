@@ -17,12 +17,23 @@
  * @see docs/centralized-systems/reference/adrs/ADR-412-bim-family-types.md §3.3 §3.4
  */
 
-import type { BimFamilyType, SlabTypeParams, WallTypeParams } from '../types/bim-family-type';
+import type {
+  BimFamilyType,
+  RoofTypeParams,
+  SlabTypeParams,
+  WallTypeParams,
+} from '../types/bim-family-type';
 import type { WallParams } from '../types/wall-types';
 import type { SlabParams } from '../types/slab-types';
-import { resolveEffectiveSlabParams, resolveEffectiveWallParams } from './resolve-effective-params';
+import type { RoofParams } from '../types/roof-types';
+import {
+  resolveEffectiveRoofParams,
+  resolveEffectiveSlabParams,
+  resolveEffectiveWallParams,
+} from './resolve-effective-params';
 import type { WallTypeAssignment } from '../../core/commands/entity-commands/AssignWallTypeCommand';
 import type { SlabTypeAssignment } from '../../core/commands/entity-commands/AssignSlabTypeCommand';
+import type { RoofTypeAssignment } from '../../core/commands/entity-commands/AssignRoofTypeCommand';
 
 /** i18n namespace prefix for every family-type label (mirror the locale block). */
 const I18N_PREFIX = 'ribbon.commands.bimFamilyType';
@@ -44,6 +55,16 @@ export const WALL_OVERRIDABLE_KEYS: readonly (keyof WallTypeParams)[] = [
  */
 export const SLAB_OVERRIDABLE_KEYS: readonly (keyof SlabTypeParams)[] = [
   'kind',
+  'material',
+] as const;
+
+/**
+ * Type-governed roof params that the per-instance override editor exposes.
+ * `thickness`/`dna` are structural (edited on the TYPE itself), so they are
+ * deliberately NOT per-instance overridable. A roof has no sub-kind, so the only
+ * overridable type-governed field is `material`. SSoT for the override badges.
+ */
+export const ROOF_OVERRIDABLE_KEYS: readonly (keyof RoofTypeParams)[] = [
   'material',
 ] as const;
 
@@ -199,5 +220,70 @@ export function resolveSlabTypeAssignment(
 export function normaliseSlabOverrides(
   overrides: Partial<SlabTypeParams>,
 ): Partial<SlabTypeParams> | undefined {
+  return Object.keys(overrides).length === 0 ? undefined : overrides;
+}
+
+// ─── Roof helpers (analogue of the slab helpers above, ADR-417 §10 #3) ───────
+
+/** Narrows a category-agnostic family type to a roof type (null when not a roof). */
+export function asRoofFamilyType(
+  type: BimFamilyType | null | undefined,
+): BimFamilyType<'roof'> | null {
+  return type && type.category === 'roof'
+    ? (type as BimFamilyType<'roof'>)
+    : null;
+}
+
+/** The roof-only slice of the loaded catalog, in catalog order. */
+export function listRoofTypes(
+  types: readonly BimFamilyType[],
+): readonly BimFamilyType<'roof'>[] {
+  return types
+    .map(asRoofFamilyType)
+    .filter((t): t is BimFamilyType<'roof'> => t !== null);
+}
+
+/** The type-governed param keys a roof instance currently overrides (badge source). */
+export function getOverriddenRoofParamKeys(
+  typeOverrides: Partial<RoofTypeParams> | undefined,
+): readonly (keyof RoofTypeParams)[] {
+  if (!typeOverrides) return [];
+  return ROOF_OVERRIDABLE_KEYS.filter((k) => typeOverrides[k] !== undefined);
+}
+
+/**
+ * Builds the `next` + `previous` {@link RoofTypeAssignment} pair an
+ * `AssignRoofTypeCommand` needs. Mirror of {@link resolveSlabTypeAssignment}.
+ */
+export function resolveRoofTypeAssignment(
+  roof: {
+    params: RoofParams;
+    typeId?: string;
+    typeOverrides?: Partial<RoofTypeParams>;
+  },
+  nextTypeId: string | undefined,
+  nextTypeOverrides: Partial<RoofTypeParams> | undefined,
+  getType: (id: string) => BimFamilyType | null,
+): { next: RoofTypeAssignment; previous: RoofTypeAssignment } {
+  const previous: RoofTypeAssignment = {
+    typeId: roof.typeId,
+    typeOverrides: roof.typeOverrides,
+    params: roof.params,
+  };
+  const nextType = nextTypeId ? asRoofFamilyType(getType(nextTypeId)) : null;
+  const nextParams = resolveEffectiveRoofParams(
+    { params: roof.params, typeId: nextTypeId, typeOverrides: nextTypeOverrides },
+    nextType,
+  );
+  return {
+    next: { typeId: nextTypeId, typeOverrides: nextTypeOverrides, params: nextParams },
+    previous,
+  };
+}
+
+/** Normalises a roof `typeOverrides` patch — `undefined` when empty. */
+export function normaliseRoofOverrides(
+  overrides: Partial<RoofTypeParams>,
+): Partial<RoofTypeParams> | undefined {
   return Object.keys(overrides).length === 0 ? undefined : overrides;
 }

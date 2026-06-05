@@ -11,6 +11,7 @@ import { ZoomManager } from '../ZoomManager';
 import { FitToViewService } from '../../../services/FitToViewService';
 import type { DxfScene } from '../../../canvas-v2/dxf-canvas/dxf-types';
 import type { ColorLayer } from '../../../canvas-v2/layer-canvas/layer-types';
+import type { SceneUnits } from '../../../utils/scene-units';
 
 interface UseZoomProps {
   initialTransform: ViewTransform;
@@ -28,7 +29,9 @@ interface UseZoomReturn {
   // ✅ ΚΕΝΤΡΙΚΟΠΟΙΗΣΗ: Προσθήκη unified fit-to-view για DXF scenes με color layers
   zoomToFitUnified: (scene: DxfScene | null, colorLayers: ColorLayer[], viewport: Viewport) => boolean;
   zoomToScale: (scale: number, center?: { x: number; y: number }) => void;
-  zoomTo100: (center?: { x: number; y: number }) => ZoomResult;
+  // 🏢 ADR-418: real drawing-scale (1:N) operations
+  zoomToRatio: (ratioN: number, sceneUnits: SceneUnits, center?: { x: number; y: number }) => ZoomResult;
+  zoomToActualSize: (sceneUnits: SceneUnits, center?: { x: number; y: number }) => ZoomResult;
   zoomToWindow: (start: { x: number; y: number }, end: { x: number; y: number }, viewport: { width: number; height: number }) => void;
 
   // Wheel zoom
@@ -116,10 +119,25 @@ export const useZoom = ({
     handleZoomResult(result);
   }, [zoomManager, handleZoomResult]);
 
-  const zoomTo100 = useCallback((center?: { x: number; y: number }): ZoomResult => {
-    const result = zoomManager.zoomTo100(center);
+  // 🏢 ADR-418: zoom to a real drawing scale 1:N (DPI + scene-units aware)
+  const zoomToRatio = useCallback((
+    ratioN: number,
+    sceneUnits: SceneUnits,
+    center?: { x: number; y: number },
+  ): ZoomResult => {
+    const result = zoomManager.zoomToRatio(ratioN, sceneUnits, center);
     handleZoomResult(result);
-    return result; // 🔥 Return the ZoomResult
+    return result;
+  }, [zoomManager, handleZoomResult]);
+
+  // 🏢 ADR-418: zoom to 1:1 actual physical size
+  const zoomToActualSize = useCallback((
+    sceneUnits: SceneUnits,
+    center?: { x: number; y: number },
+  ): ZoomResult => {
+    const result = zoomManager.zoomToActualSize(sceneUnits, center);
+    handleZoomResult(result);
+    return result;
   }, [zoomManager, handleZoomResult]);
 
   const zoomToWindow = useCallback((
@@ -239,7 +257,8 @@ export const useZoom = ({
     zoomToFit,
     zoomToFitUnified, // ✅ ΚΕΝΤΡΙΚΟΠΟΙΗΣΗ: Unified fit for DXF + layers
     zoomToScale,
-    zoomTo100, // 🎯 ENTERPRISE: Zoom to 100% (1:1 DPI-aware)
+    zoomToRatio, // 🏢 ADR-418: zoom to 1:N
+    zoomToActualSize, // 🏢 ADR-418: zoom to 1:1 actual size
     zoomToWindow,
 
     // Wheel zoom
@@ -265,7 +284,8 @@ export const useZoom = ({
     zoomToFit,
     zoomToFitUnified, // ✅ ΚΕΝΤΡΙΚΟΠΟΙΗΣΗ: Add to dependencies
     zoomToScale,
-    zoomTo100, // 🎯 ENTERPRISE: Add to dependencies
+    zoomToRatio, // 🏢 ADR-418
+    zoomToActualSize, // 🏢 ADR-418
     zoomToWindow,
     handleWheelZoom,
     zoomPrevious,

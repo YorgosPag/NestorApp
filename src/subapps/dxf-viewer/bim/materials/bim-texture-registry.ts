@@ -16,7 +16,7 @@
  * @see docs/centralized-systems/reference/adrs/ADR-413-pbr-textures.md
  */
 
-/** Our 7 BIM texture slugs (directory + registry keys). */
+/** Our 8 BIM texture slugs (directory + registry keys). */
 export type PbrTextureSlug =
   | 'concrete'
   | 'brick'
@@ -24,7 +24,8 @@ export type PbrTextureSlug =
   | 'wood'
   | 'tile'
   | 'stone'
-  | 'metal';
+  | 'metal'
+  | 'roof-tiles';
 
 /** Per-slug texture-set definition: physical tile size + capability flags. */
 export interface PbrTextureSetDef {
@@ -50,6 +51,9 @@ export const TEXTURE_SET_DEFS: Record<PbrTextureSlug, PbrTextureSetDef> = {
   tile:     { slug: 'tile',     tileSizeM: 0.6, hasNormal: true, hasRoughness: true, hasAo: true, license: 'CC0', attribution: 'Poly Haven' },
   stone:    { slug: 'stone',    tileSizeM: 1.5, hasNormal: true, hasRoughness: true, hasAo: true, license: 'CC0', attribution: 'Poly Haven' },
   metal:    { slug: 'metal',    tileSizeM: 1.0, hasNormal: true, hasRoughness: true, hasAo: true, license: 'CC0', attribution: 'Poly Haven' },
+  // ADR-417 — clay roof-tile set (Poly Haven «roof_tiles_14», CC0). One tile row
+  // band ≈ 1 m of roof, so `repeat = 1/1` lays physically-sized κεραμίδια.
+  'roof-tiles': { slug: 'roof-tiles', tileSizeM: 1.0, hasNormal: true, hasRoughness: true, hasAo: true, license: 'CC0', attribution: 'Poly Haven' },
 };
 
 /**
@@ -74,10 +78,14 @@ export const MATERIAL_TEXTURE_MAP: Record<string, PbrTextureSlug> = {
   'mat-membrane':   'stone',
   'mat-gravel':     'stone',
   'mat-finish':     'tile',
+  // ADR-417 — clay roof tile DNA material (κεραμίδι) → CC0 roof-tile PBR set.
+  'mat-roof-tile':  'roof-tiles',
   // Element-type fallbacks.
   'elem-column': 'concrete',
   'elem-beam':   'wood',
   'elem-slab':   'concrete',
+  // ADR-417 — pitched roof «νερά» render with clay roof tiles.
+  'elem-roof':   'roof-tiles',
   // Stair components.
   'elem-stair-tread':    'wood',
   'elem-stair-riser':    'concrete',

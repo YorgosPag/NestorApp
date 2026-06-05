@@ -2,17 +2,18 @@
 
 import React from 'react';
 import { ZoomControls } from '../../toolbar/ZoomControls';
-import { useTransformScale } from '../../../systems/cursor/ImmediateTransformStore';
+// 🏢 ADR-418: real view-scale (1:N) micro-leaf — drives display + emits ratio
+import { useViewScale } from '../../../systems/zoom/hooks/useViewScale';
 import { useRibbonCommand } from '../context/RibbonCommandContext';
 
 export const ZoomControlsWidget: React.FC = () => {
-  const scale = useTransformScale();
+  const { ratioN } = useViewScale();
   const { onAction } = useRibbonCommand();
 
   return (
     <ZoomControls
-      currentZoom={scale}
-      onSetZoom={(zoom) => onAction('set-zoom', zoom)}
+      currentRatioN={ratioN}
+      onSetRatio={(ratio) => onAction('set-view-ratio', ratio)}
     />
   );
 };

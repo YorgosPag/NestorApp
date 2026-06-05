@@ -3,6 +3,9 @@
 /**
  * ADR-363 Phase 6.5.B — Dialog για δημιουργία / επεξεργασία BIM υλικού.
  * Radix Dialog (ADR-001). System materials (builtin=true) read-only.
+ *
+ * Container only: owns form state + save/upload lifecycle. The presentational
+ * form sub-sections live in `./MaterialEditorSections.tsx` (file-size SSoT).
  */
 
 import React, { useState, useCallback, useEffect } from 'react';
@@ -13,43 +16,41 @@ import {
   DialogTitle,
   DialogFooter,
 } from '@/components/ui/dialog';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { useTranslation } from '@/i18n';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { useCompanyId } from '@/hooks/useCompanyId';
+import {
+  uploadMaterialThumbnail,
+  validateMaterialThumbnailFile,
+  MaterialThumbnailUploadError,
+  type MaterialThumbnailUploadErrorCode,
+} from '../../../bim/services/bim-material-thumbnail-upload.service';
+import {
+  RequiredSection,
+  DimensionsSection,
+  MetadataSection,
+  ThumbnailSection,
+  type FormState,
+} from './MaterialEditorSections';
+import { PbrTexturesSection } from './MaterialPbrTexturesSection';
+import {
+  useMaterialPbrTextureUpload,
+  type StagedPbrMaps,
+  type SetMapUrl,
+} from './hooks/useMaterialPbrTextureUpload';
+import type { BimMaterialTextureMapName } from '@/services/upload/utils/storage-path';
 import type {
   BimMaterial,
-  BimMaterialCategory,
-  BimMaterialFireRating,
-  BimMaterialScope,
-  BimMaterialUnit,
+  PbrMaterialTextures,
   SaveBimMaterialInput,
   UpdateBimMaterialPatch,
 } from '../../../bim/types/bim-material-types';
 
-// ─── Types ───────────────────────────────────────────────────────────────────
-
-interface FormState {
-  nameEl: string;
-  nameEn: string;
-  category: BimMaterialCategory;
-  density: string;
-  defaultThickness: string;
-  fireRating: BimMaterialFireRating;
-  atoeCategory: string;
-  atoeArticle: string;
-  defaultUnitCost: string;
-  defaultUnit: BimMaterialUnit;
-  brand: string;
-  brandModel: string;
-  notes: string;
-  scope: Exclude<BimMaterialScope, 'system'>;
+/** Staged PBR maps + tile size, handed to the panel for post-create upload. */
+export interface PendingPbrUpload {
+  readonly maps: StagedPbrMaps;
+  readonly tileSizeM: number;
 }
 
 export interface MaterialEditorDialogProps {
@@ -60,18 +61,15 @@ export interface MaterialEditorDialogProps {
   onSave: (
     input: SaveBimMaterialInput | UpdateBimMaterialPatch,
     mode: 'create' | 'edit',
+    /** Staged appearance image (create mode) — uploaded by the panel post-save. */
+    pendingThumbnail?: File | null,
+    /** Staged 3D PBR maps (create mode) — uploaded by the panel post-save. */
+    pendingPbr?: PendingPbrUpload | null,
   ) => Promise<void>;
   onCancel: () => void;
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
-
-const CATEGORIES: BimMaterialCategory[] = [
-  'plaster', 'masonry', 'concrete', 'insulation', 'flooring',
-  'window-frame', 'door-frame', 'paint', 'roofing', 'waterproofing', 'other',
-];
-const FIRE_RATINGS: BimMaterialFireRating[] = ['none', 'EI30', 'EI60', 'EI90', 'EI120'];
-const UNITS: BimMaterialUnit[] = ['m', 'm2', 'm3', 'kg', 'pcs'];
 
 function buildInitialState(initial: BimMaterial | undefined, projectId?: string): FormState {
   if (initial) {
@@ -89,6 +87,12 @@ function buildInitialState(initial: BimMaterial | undefined, projectId?: string)
       brand: initial.brand ?? '',
       brandModel: initial.brandModel ?? '',
       notes: initial.notes ?? '',
+      thumbnailUrl: initial.thumbnailUrl ?? '',
+      albedoUrl: initial.pbrTextures?.albedoUrl ?? '',
+      normalUrl: initial.pbrTextures?.normalUrl ?? '',
+      roughnessUrl: initial.pbrTextures?.roughnessUrl ?? '',
+      aoUrl: initial.pbrTextures?.aoUrl ?? '',
+      tileSizeM: initial.pbrTextures ? String(initial.pbrTextures.tileSizeM) : '1',
       scope: initial.scope === 'system' ? 'company' : initial.scope,
     };
   }
@@ -96,9 +100,39 @@ function buildInitialState(initial: BimMaterial | undefined, projectId?: string)
     nameEl: '', nameEn: '', category: 'concrete', density: '',
     defaultThickness: '', fireRating: 'none', atoeCategory: '',
     atoeArticle: '', defaultUnitCost: '', defaultUnit: 'm2',
-    brand: '', brandModel: '', notes: '',
+    brand: '', brandModel: '', notes: '', thumbnailUrl: '',
+    albedoUrl: '', normalUrl: '', roughnessUrl: '', aoUrl: '', tileSizeM: '1',
     scope: projectId ? 'project' : 'company',
   };
+}
+
+/**
+ * Build the Firestore `PbrMaterialTextures` from the form URL fields, or null when
+ * no albedo is present (albedo is mandatory — without it there is no textured
+ * material). In create mode the URLs are empty (maps are staged) so this returns
+ * null; the panel uploads + patches the textures after the doc exists.
+ */
+function buildPbrTextures(form: FormState): PbrMaterialTextures | null {
+  if (!form.albedoUrl) return null;
+  const tile = Number(form.tileSizeM);
+  return {
+    albedoUrl: form.albedoUrl,
+    normalUrl: form.normalUrl || null,
+    roughnessUrl: form.roughnessUrl || null,
+    aoUrl: form.aoUrl || null,
+    tileSizeM: tile > 0 ? tile : 1,
+  };
+}
+
+/** Maps an upload-service error to its i18n key under `thumbnail.errors`. */
+function thumbnailErrorKey(err: unknown): string {
+  const code: MaterialThumbnailUploadErrorCode | 'uploadFailed' =
+    err instanceof MaterialThumbnailUploadError ? err.code : 'uploadFailed';
+  switch (code) {
+    case 'format': return 'thumbnail.errors.format';
+    case 'size': return 'thumbnail.errors.size';
+    default: return 'thumbnail.errors.uploadFailed';
+  }
 }
 
 function validate(form: FormState, t: (k: string) => string): string | null {
@@ -131,6 +165,8 @@ function buildSaveInput(form: FormState): SaveBimMaterialInput {
     ...(form.brand.trim() ? { brand: form.brand.trim() } : {}),
     ...(form.brandModel.trim() ? { brandModel: form.brandModel.trim() } : {}),
     ...(form.notes.trim() ? { notes: form.notes.trim() } : {}),
+    ...(form.thumbnailUrl ? { thumbnailUrl: form.thumbnailUrl } : {}),
+    ...(buildPbrTextures(form) ? { pbrTextures: buildPbrTextures(form)! } : {}),
   };
 }
 
@@ -149,6 +185,10 @@ function buildUpdatePatch(form: FormState): UpdateBimMaterialPatch {
     brand: form.brand.trim() || undefined,
     brandModel: form.brandModel.trim() || undefined,
     notes: form.notes.trim() || undefined,
+    // Empty → null removes the uploaded image (back to albedo fallback).
+    thumbnailUrl: form.thumbnailUrl || null,
+    // Empty albedo → null removes the whole texture set (back to flat by category).
+    pbrTextures: buildPbrTextures(form),
   };
 }
 
@@ -159,28 +199,77 @@ export function MaterialEditorDialog({
 }: MaterialEditorDialogProps) {
   const { t } = useTranslation('bim-materials');
   const colors = useSemanticColors();
+  const companyId = useCompanyId()?.companyId;
   const isBuiltin = initial?.builtin === true;
 
   const [form, setForm] = useState<FormState>(() => buildInitialState(initial, projectId));
   const [saving, setSaving] = useState(false);
   const [fieldError, setFieldError] = useState<string | null>(null);
-
-  // Reset form whenever dialog opens with new data.
-  useEffect(() => {
-    if (open) {
-      setForm(buildInitialState(initial, projectId));
-      setFieldError(null);
-    }
-  }, [open, initial, projectId]);
+  // ADR-413 §2D Phase 2 — staged appearance image (create mode) + busy/error.
+  const [pendingThumb, setPendingThumb] = useState<File | null>(null);
+  const [thumbBusy, setThumbBusy] = useState(false);
+  const [thumbError, setThumbError] = useState<string | null>(null);
 
   const setField = useCallback(<K extends keyof FormState>(key: K, value: FormState[K]) => {
     setForm((prev) => ({ ...prev, [key]: value }));
     setFieldError(null);
   }, []);
 
+  // ADR-413 §2D Phase 3 — 3D PBR maps (albedo/normal/roughness/ao) upload lifecycle.
+  const setMapUrl = useCallback<SetMapUrl>((map: BimMaterialTextureMapName, url: string) => {
+    setForm((prev) => ({ ...prev, [`${map}Url`]: url }));
+    setFieldError(null);
+  }, []);
+  const pbr = useMaterialPbrTextureUpload({ mode, materialId: initial?.id, companyId, setMapUrl, t });
+
+  // Reset form whenever dialog opens with new data.
+  useEffect(() => {
+    if (open) {
+      setForm(buildInitialState(initial, projectId));
+      setFieldError(null);
+      setPendingThumb(null);
+      setThumbError(null);
+      pbr.reset();
+    }
+    // pbr.reset is stable (useCallback []); excluded to avoid re-running on identity.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, initial, projectId]);
+
   const handleOpenChange = useCallback((o: boolean) => {
     if (!o) onCancel();
   }, [onCancel]);
+
+  // Edit mode → upload immediately (materialId exists). Create mode → stage the
+  // file; the panel uploads it right after the doc is created (Revit-grade flow).
+  const handleSelectThumbnail = useCallback(async (file: File) => {
+    setThumbError(null);
+    try {
+      validateMaterialThumbnailFile(file);
+    } catch (e) {
+      setThumbError(t(thumbnailErrorKey(e)));
+      return;
+    }
+    if (mode === 'edit' && initial && companyId) {
+      setThumbBusy(true);
+      try {
+        const { downloadUrl } = await uploadMaterialThumbnail({ file, companyId, materialId: initial.id });
+        setField('thumbnailUrl', downloadUrl);
+        setPendingThumb(null);
+      } catch (e) {
+        setThumbError(t(thumbnailErrorKey(e)));
+      } finally {
+        setThumbBusy(false);
+      }
+    } else {
+      setPendingThumb(file);
+    }
+  }, [mode, initial, companyId, setField, t]);
+
+  const handleRemoveThumbnail = useCallback(() => {
+    setField('thumbnailUrl', '');
+    setPendingThumb(null);
+    setThumbError(null);
+  }, [setField]);
 
   const handleSubmit = useCallback(async () => {
     const err = validate(form, t);
@@ -188,13 +277,17 @@ export function MaterialEditorDialog({
     setSaving(true);
     try {
       const payload = mode === 'create' ? buildSaveInput(form) : buildUpdatePatch(form);
-      await onSave(payload, mode);
+      const pendingPbr: PendingPbrUpload | null =
+        Object.keys(pbr.staged).length > 0
+          ? { maps: pbr.staged, tileSizeM: Number(form.tileSizeM) > 0 ? Number(form.tileSizeM) : 1 }
+          : null;
+      await onSave(payload, mode, pendingThumb, pendingPbr);
     } catch (e) {
       setFieldError(e instanceof Error ? e.message : String(e));
     } finally {
       setSaving(false);
     }
-  }, [form, mode, onSave, t]);
+  }, [form, mode, onSave, pendingThumb, pbr.staged, t]);
 
   const inputClass = `w-full text-xs px-2 py-1.5 rounded ${colors.border.default} border ${colors.bg.primary} ${colors.text.primary} focus:outline-none focus:ring-1 focus:ring-ring`;
   const labelClass = `text-xs font-medium ${colors.text.muted}`;
@@ -222,6 +315,33 @@ export function MaterialEditorDialog({
           />
           <DimensionsSection form={form} setField={setField} inputClass={inputClass} labelClass={labelClass} t={t} />
           <MetadataSection form={form} setField={setField} inputClass={inputClass} labelClass={labelClass} t={t} />
+          <PbrTexturesSection
+            getUrl={(map) => form[`${map}Url`]}
+            staged={pbr.staged}
+            busyMap={pbr.busyMap}
+            error={pbr.error}
+            tileSizeM={form.tileSizeM}
+            mode={mode}
+            onSelect={pbr.onSelect}
+            onRemove={pbr.onRemove}
+            onTileSizeChange={(v) => setField('tileSizeM', v)}
+            inputClass={inputClass}
+            labelClass={labelClass}
+            colors={colors}
+            t={t}
+          />
+          <ThumbnailSection
+            form={form}
+            mode={mode}
+            pendingThumb={pendingThumb}
+            busy={thumbBusy}
+            error={thumbError}
+            onSelect={handleSelectThumbnail}
+            onRemove={handleRemoveThumbnail}
+            labelClass={labelClass}
+            colors={colors}
+            t={t}
+          />
         </fieldset>
 
         {fieldError && (
@@ -233,138 +353,12 @@ export function MaterialEditorDialog({
             {t('form.cancel')}
           </Button>
           {!isBuiltin && (
-            <Button size="sm" onClick={handleSubmit} disabled={saving}>
+            <Button size="sm" onClick={handleSubmit} disabled={saving || thumbBusy}>
               {saving ? t('form.saving') : t('form.save')}
             </Button>
           )}
         </DialogFooter>
       </DialogContent>
     </Dialog>
-  );
-}
-
-// ─── Sub-sections ─────────────────────────────────────────────────────────────
-
-interface SectionProps {
-  form: FormState;
-  setField: <K extends keyof FormState>(key: K, value: FormState[K]) => void;
-  inputClass: string;
-  labelClass: string;
-  t: (k: string) => string;
-}
-
-function RequiredSection({
-  form, setField, projectId, mode, inputClass, labelClass, t,
-}: SectionProps & { projectId?: string; mode: 'create' | 'edit' }) {
-  return (
-    <section className="flex flex-col gap-2">
-      <div className="grid grid-cols-2 gap-2">
-        <label className="flex flex-col gap-1">
-          <span className={labelClass}>{t('form.nameEl')}</span>
-          <input className={inputClass} value={form.nameEl} onChange={(e) => setField('nameEl', e.target.value)} />
-        </label>
-        <label className="flex flex-col gap-1">
-          <span className={labelClass}>{t('form.nameEn')}</span>
-          <input className={inputClass} value={form.nameEn} onChange={(e) => setField('nameEn', e.target.value)} />
-        </label>
-      </div>
-      <div className="grid grid-cols-2 gap-2">
-        <label className="flex flex-col gap-1">
-          <span className={labelClass}>{t('form.category')}</span>
-          <Select value={form.category} onValueChange={(v) => setField('category', v as BimMaterialCategory)}>
-            <SelectTrigger size="sm"><SelectValue /></SelectTrigger>
-            <SelectContent>
-              {CATEGORIES.map((c) => (
-                <SelectItem key={c} value={c}>{t(`categories.${c}`)}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </label>
-        <label className="flex flex-col gap-1">
-          <span className={labelClass}>{t('form.defaultUnit')}</span>
-          <Select value={form.defaultUnit} onValueChange={(v) => setField('defaultUnit', v as BimMaterialUnit)}>
-            <SelectTrigger size="sm"><SelectValue /></SelectTrigger>
-            <SelectContent>
-              {UNITS.map((u) => (
-                <SelectItem key={u} value={u}>{t(`units.${u}`)}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </label>
-      </div>
-      <label className="flex flex-col gap-1">
-        <span className={labelClass}>{t('form.atoeCategory')}</span>
-        <input className={inputClass} value={form.atoeCategory} onChange={(e) => setField('atoeCategory', e.target.value)} />
-      </label>
-      {mode === 'create' && projectId && (
-        <label className="flex flex-col gap-1">
-          <span className={labelClass}>{t('form.scope')}</span>
-          <Select value={form.scope} onValueChange={(v) => setField('scope', v as Exclude<BimMaterialScope, 'system'>)}>
-            <SelectTrigger size="sm"><SelectValue /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="company">{t('scopes.company')}</SelectItem>
-              <SelectItem value="project">{t('scopes.project')}</SelectItem>
-            </SelectContent>
-          </Select>
-        </label>
-      )}
-    </section>
-  );
-}
-
-function DimensionsSection({ form, setField, inputClass, labelClass, t }: SectionProps) {
-  return (
-    <section className="flex flex-col gap-2">
-      <div className="grid grid-cols-3 gap-2">
-        <label className="flex flex-col gap-1">
-          <span className={labelClass}>{t('form.density')}</span>
-          <input type="number" min={0} className={inputClass} value={form.density} onChange={(e) => setField('density', e.target.value)} />
-        </label>
-        <label className="flex flex-col gap-1">
-          <span className={labelClass}>{t('form.defaultThickness')}</span>
-          <input type="number" min={0} className={inputClass} value={form.defaultThickness} onChange={(e) => setField('defaultThickness', e.target.value)} />
-        </label>
-        <label className="flex flex-col gap-1">
-          <span className={labelClass}>{t('form.defaultUnitCost')}</span>
-          <input type="number" min={0} className={inputClass} value={form.defaultUnitCost} onChange={(e) => setField('defaultUnitCost', e.target.value)} />
-        </label>
-      </div>
-      <label className="flex flex-col gap-1">
-        <span className={labelClass}>{t('form.fireRating')}</span>
-        <Select value={form.fireRating} onValueChange={(v) => setField('fireRating', v as BimMaterialFireRating)}>
-          <SelectTrigger size="sm"><SelectValue /></SelectTrigger>
-          <SelectContent>
-            {FIRE_RATINGS.map((fr) => (
-              <SelectItem key={fr} value={fr}>{t(`fireRatings.${fr}`)}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </label>
-    </section>
-  );
-}
-
-function MetadataSection({ form, setField, inputClass, labelClass, t }: SectionProps) {
-  return (
-    <section className="flex flex-col gap-2">
-      <div className="grid grid-cols-2 gap-2">
-        <label className="flex flex-col gap-1">
-          <span className={labelClass}>{t('form.atoeArticle')}</span>
-          <input className={inputClass} value={form.atoeArticle} onChange={(e) => setField('atoeArticle', e.target.value)} />
-        </label>
-        <label className="flex flex-col gap-1">
-          <span className={labelClass}>{t('form.brand')}</span>
-          <input className={inputClass} value={form.brand} onChange={(e) => setField('brand', e.target.value)} />
-        </label>
-      </div>
-      <label className="flex flex-col gap-1">
-        <span className={labelClass}>{t('form.brandModel')}</span>
-        <input className={inputClass} value={form.brandModel} onChange={(e) => setField('brandModel', e.target.value)} />
-      </label>
-      <label className="flex flex-col gap-1">
-        <span className={labelClass}>{t('form.notes')}</span>
-        <textarea rows={2} className={`${inputClass} resize-none`} value={form.notes} onChange={(e) => setField('notes', e.target.value)} />
-      </label>
-    </section>
   );
 }

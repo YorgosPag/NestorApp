@@ -48,7 +48,9 @@ export function calculateBimEntity2DBounds(entity: Entity): { min: Point2D; max:
     // ADR-408 Φ12 — plumbing manifold projects geometry.bbox to 2D (same).
     case 'mep-manifold':
     // ADR-408 Εύρος Β — heating radiator projects geometry.bbox to 2D (same).
-    case 'mep-radiator': {
+    case 'mep-radiator':
+    // ADR-408 Εύρος Β #2 — heating boiler projects geometry.bbox to 2D (same).
+    case 'mep-boiler': {
       const bbox = entity.geometry?.bbox;
       if (!bbox) return null;
       return {

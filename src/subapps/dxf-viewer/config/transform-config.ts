@@ -176,6 +176,18 @@ export const FIT_TO_VIEW_DEFAULTS = {
   ALIGN_TO_ORIGIN: false,
 } as const;
 
+/**
+ * 🏢 ADR-418: degenerate-view guard threshold (CSS px).
+ *
+ * When restoring a persisted viewport on reload, if the WHOLE drawing projects
+ * to a diagonal smaller than this many pixels it is effectively an invisible
+ * "dot" (the legacy `100%` = 1px·unit pathology). In that case we re-fit instead
+ * of restoring. Independent of viewport size: a content diagonal under ~32px is
+ * unusable regardless of where it sits on screen. Conservative — only overrides
+ * clearly-broken restores toward fit, never makes a good view worse.
+ */
+export const MIN_VISIBLE_CONTENT_PX = 32;
+
 // ============================================
 // PAN CONSTANTS
 // ============================================

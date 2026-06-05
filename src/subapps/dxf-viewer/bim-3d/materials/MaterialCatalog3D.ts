@@ -9,87 +9,23 @@
 
 import * as THREE from 'three';
 import { textureSlugForKey } from '../../bim/materials/bim-texture-registry';
+import {
+  MATERIAL_DEFS,
+  DEFAULT_MATERIAL_KEY,
+  resolveMaterialKey,
+  type PbrMaterialDef,
+} from '../../bim/materials/material-catalog-defs';
 import { getTextureSet, preloadTextureSet, type LoadedTextureSet } from './bim-texture-cache';
+import {
+  getUserMaterialAppearance,
+  getUserMaterialTextureSet,
+  preloadUserMaterialTextures,
+  getUserMaterialSetVersion,
+} from './user-material-registry';
 import { useBimRenderSettingsStore } from '../../state/bim-render-settings-store';
 
-interface PbrDef {
-  color: number;
-  roughness: number;
-  metalness: number;
-  transparent?: boolean;
-  opacity?: number;
-}
-
-// ADR-366 §7.1 material definitions.
-const MAT_DEFS: Record<string, PbrDef> = {
-  // Keyed by materialId prefix — matches wall-dna-types.ts materialId conventions.
-  'mat-concrete': { color: 0xb0b0b0, roughness: 0.80, metalness: 0.00 },
-  'mat-plaster':  { color: 0xe8e0d0, roughness: 0.90, metalness: 0.00 },
-  'mat-brick':    { color: 0xb05030, roughness: 0.85, metalness: 0.00 },
-  'mat-stone':    { color: 0x907060, roughness: 0.95, metalness: 0.00 },
-  'mat-tile':     { color: 0xf0ece0, roughness: 0.30, metalness: 0.00 },
-  'mat-wood':     { color: 0x8b5e3c, roughness: 0.70, metalness: 0.00 },
-  'mat-glass':    { color: 0x88ccff, roughness: 0.10, metalness: 0.00, transparent: true, opacity: 0.35 },
-  'mat-metal':    { color: 0x888888, roughness: 0.30, metalness: 0.90 },
-  // ADR-416 — composite slab build-up layer materials (Revit Floor Type).
-  // Cement screed: warm light grey, very matte cementitious surface.
-  'mat-screed':     { color: 0xc9c4bb, roughness: 0.88, metalness: 0.00 },
-  // Thermal/acoustic insulation (XPS/EPS/mineral wool): pale yellow board, matte.
-  'mat-insulation': { color: 0xede4b0, roughness: 0.95, metalness: 0.00 },
-  // Waterproof / vapour membrane (bitumen/PVC sheet): dark grey, smooth (low roughness).
-  'mat-membrane':   { color: 0x3a3a3e, roughness: 0.45, metalness: 0.00 },
-  // Gravel ballast / protection layer: grey-brown aggregate, fully rough.
-  'mat-gravel':     { color: 0x9a948a, roughness: 1.00, metalness: 0.00 },
-  // Generic floor finish (when not ceramic tile): neutral light, semi-matte.
-  'mat-finish':     { color: 0xe8e4dc, roughness: 0.50, metalness: 0.00 },
-  // Element-type fallbacks (when no DNA is present).
-  'elem-column':  { color: 0x8a8a8a, roughness: 0.75, metalness: 0.05 },
-  'elem-beam':    { color: 0x6d4c3d, roughness: 0.75, metalness: 0.05 },
-  'elem-slab':    { color: 0xbdbdbd, roughness: 0.80, metalness: 0.00 },
-  // ADR-370 Phase 5 — stair element-type defaults (Revit-aligned: wood treads,
-  // concrete risers/landings, metal stringers/handrails).
-  'elem-stair-tread':    { color: 0x8b5e3c, roughness: 0.70, metalness: 0.00 },
-  'elem-stair-riser':    { color: 0xbdbdbd, roughness: 0.85, metalness: 0.00 },
-  'elem-stair-stringer': { color: 0x6b6b6b, roughness: 0.40, metalness: 0.80 },
-  'elem-stair-landing':  { color: 0xbdbdbd, roughness: 0.80, metalness: 0.00 },
-  'elem-stair-handrail': { color: 0x999999, roughness: 0.25, metalness: 0.90 },
-  // ADR-396 Phase P5 — envelope (ETICS) shell default. Insulation-board tint:
-  // warm light grey (graphite EPS / XPS boards), matte non-metallic surface.
-  'elem-envelope':       { color: 0xe6ddcf, roughness: 0.92, metalness: 0.00 },
-  // ADR-406 — MEP light fixture default: bright diffuser white, low roughness
-  // (frosted panel), slightly translucent so it reads as a luminaire.
-  'elem-mep-fixture':    { color: 0xfff4d6, roughness: 0.35, metalness: 0.00, transparent: true, opacity: 0.85 },
-  // ADR-408 Φ3 — electrical panel default: painted steel enclosure — grey-green
-  // (RAL 7035-ish equipment grey), matte, low metalness (powder-coated box).
-  'elem-electrical-panel': { color: 0x6b7280, roughness: 0.55, metalness: 0.30 },
-  // ADR-407 — railing (guardrail) default: brushed metal — mid grey, low
-  // roughness, high metalness (steel/aluminium posts, balusters, top rail).
-  'elem-railing':        { color: 0x999999, roughness: 0.30, metalness: 0.85 },
-  // ADR-408 Φ7 — home-run conduit/wire default. Always tinted by the circuit's
-  // system colour (via getSystemTintedMaterial3D), so this base colour is only a
-  // fallback; matte plastic-insulation look (low metalness, mid roughness).
-  'elem-mep-wire':       { color: 0xb45309, roughness: 0.60, metalness: 0.00 },
-  // ADR-410 — furniture fallback (used for the bbox placeholder + when a loaded
-  // glTF carries no own materials). Warm wood-tan, matte. The real CC0 mesh keeps
-  // its own glTF materials; this only paints the placeholder box.
-  'elem-furniture':      { color: 0xb48250, roughness: 0.65, metalness: 0.05 },
-  // ADR-408 Φ8 — MEP duct (rectangular/round HVAC duct): galvanised sheet-steel
-  // grey (similar to RAL 9006 / zinc-coated surface). Low roughness (smooth
-  // sheet metal), mid metalness.
-  'elem-mep-duct':       { color: 0xb0b4b8, roughness: 0.35, metalness: 0.60 },
-  // ADR-408 Φ8 — MEP pipe (plumbing / hydronic pipe): copper/brass tone.
-  // Low roughness (polished pipe), high metalness.
-  'elem-mep-pipe':       { color: 0xb87333, roughness: 0.30, metalness: 0.75 },
-  // ADR-408 Φ11 — MEP fitting (auto pipe junction element): metallic grey
-  // (cast/forged fitting body), mid roughness, high metalness.
-  'elem-mep-fitting':    { color: 0x8a8f94, roughness: 0.40, metalness: 0.70 },
-  // ADR-408 Φ12 — MEP plumbing manifold (συλλέκτης): cyan-teal (plumbing
-  // equipment — distinguishable from copper pipe 0xb87333 and duct 0xb0b4b8).
-  // Matte-ish plastic/composite housing, low metalness.
-  'elem-mep-manifold':   { color: 0x0891b2, roughness: 0.50, metalness: 0.20 },
-  // ADR-408 Εύρος Β — heating radiator: warm-red matte steel/aluminium panel.
-  'elem-mep-radiator':   { color: 0xdc2626, roughness: 0.60, metalness: 0.10 },
-};
+/** ADR-363 — prefix of `bim_materials` library document ids (enterprise id). */
+const USER_MATERIAL_ID_PREFIX = 'bmat_';
 
 export type Stair3DComponent =
   | 'stair-tread'
@@ -108,7 +44,7 @@ const CACHE = new Map<string, THREE.MeshStandardMaterial>();
 const SYSTEM_TINT_MIN_ROUGHNESS = 0.6;
 const SYSTEM_TINT_MAX_METALNESS = 0.1;
 
-function buildMat(def: PbrDef): THREE.MeshStandardMaterial {
+function buildMat(def: PbrMaterialDef): THREE.MeshStandardMaterial {
   return new THREE.MeshStandardMaterial({
     color: def.color,
     roughness: def.roughness,
@@ -119,26 +55,18 @@ function buildMat(def: PbrDef): THREE.MeshStandardMaterial {
   });
 }
 
-function resolveKey(materialId: string): string {
-  for (const prefix of Object.keys(MAT_DEFS)) {
-    if (materialId.startsWith(prefix)) return prefix;
-  }
-  return 'mat-concrete';
-}
-
 /** The flat (non-textured) singleton for a resolved key — cached for app lifetime. */
 function getFlatMaterial(key: string): THREE.MeshStandardMaterial {
   let mat = CACHE.get(key);
   if (!mat) {
-    mat = buildMat(MAT_DEFS[key] ?? MAT_DEFS['mat-concrete']!);
+    mat = buildMat(MATERIAL_DEFS[key] ?? MATERIAL_DEFS['mat-concrete']!);
     CACHE.set(key, mat);
   }
   return mat;
 }
 
-/** Build a textured clone of a key's flat material, attaching the loaded PBR maps. */
-function buildTexturedMaterial(key: string, set: LoadedTextureSet): THREE.MeshStandardMaterial {
-  const def = MAT_DEFS[key] ?? MAT_DEFS['mat-concrete']!;
+/** Attach a loaded PBR texture set onto a flat material def → textured material. */
+function applyTextureSet(def: PbrMaterialDef, set: LoadedTextureSet): THREE.MeshStandardMaterial {
   const mat = buildMat(def);
   mat.map = set.map;
   if (set.normalMap) mat.normalMap = set.normalMap;
@@ -148,6 +76,11 @@ function buildTexturedMaterial(key: string, set: LoadedTextureSet): THREE.MeshSt
   if (set.aoMap) mat.aoMap = set.aoMap;
   mat.needsUpdate = true;
   return mat;
+}
+
+/** Build a textured clone of a key's flat material, attaching the loaded PBR maps. */
+function buildTexturedMaterial(key: string, set: LoadedTextureSet): THREE.MeshStandardMaterial {
+  return applyTextureSet(MATERIAL_DEFS[key] ?? MATERIAL_DEFS['mat-concrete']!, set);
 }
 
 /**
@@ -183,17 +116,75 @@ function resolveTexturedMaterial(key: string): THREE.MeshStandardMaterial {
  * that need the texture-slug mapping for the same key the material uses.
  */
 export function getResolvedTextureKeyForMaterialId(materialId: string): string {
-  return resolveKey(materialId);
+  return resolveMaterialKey(materialId);
+}
+
+/**
+ * ADR-413 §2D Phase 3 — textured/flat resolution for a `bim_materials` library
+ * material (`bmat_*`), reading the reactive `userMaterialRegistry` (NOT the
+ * prefix collapse, which would render every library material as concrete).
+ *
+ * Precedence (Revit «Appearance asset»):
+ *   1. unknown id (registry not fed yet) → default concrete flat;
+ *   2. realistic OFF / no textures uploaded → flat by category;
+ *   3. textures uploaded but not loaded → preload + flat (resync swaps it in);
+ *   4. textures loaded → textured `MeshStandardMaterial` (per-material tileSize).
+ *
+ * Cached per id WITH the registry's change-version, so a re-upload / category
+ * change / deletion rebuilds the material (and disposes the stale one).
+ */
+const USER_TEX_CACHE = new Map<string, { mat: THREE.MeshStandardMaterial; version: number }>();
+
+function commitUserMaterial(
+  id: string,
+  version: number,
+  mat: THREE.MeshStandardMaterial,
+): THREE.MeshStandardMaterial {
+  const prev = USER_TEX_CACHE.get(id);
+  if (prev && prev.mat !== mat) prev.mat.dispose();
+  USER_TEX_CACHE.set(id, { mat, version });
+  return mat;
+}
+
+function resolveUserMaterial(id: string): THREE.MeshStandardMaterial {
+  const appearance = getUserMaterialAppearance(id);
+  if (!appearance) {
+    // Registry not fed yet / removed — drop any stale cache + show default flat.
+    const stale = USER_TEX_CACHE.get(id);
+    if (stale) {
+      stale.mat.dispose();
+      USER_TEX_CACHE.delete(id);
+    }
+    return getFlatMaterial(DEFAULT_MATERIAL_KEY);
+  }
+
+  const version = getUserMaterialSetVersion(id);
+  const cached = USER_TEX_CACHE.get(id);
+  if (cached && cached.version === version) return cached.mat;
+
+  const realistic = useBimRenderSettingsStore.getState().realisticMaterials;
+  const wantTextured = realistic && !!appearance.textures?.albedoUrl;
+  if (!wantTextured) {
+    return commitUserMaterial(id, version, buildMat(appearance.def));
+  }
+
+  const set = getUserMaterialTextureSet(id);
+  if (!set) {
+    preloadUserMaterialTextures(id);
+    return commitUserMaterial(id, version, buildMat(appearance.def));
+  }
+  return commitUserMaterial(id, version, applyTextureSet(appearance.def, set));
 }
 
 /** Resolve MeshStandardMaterial from a DNA materialId (e.g. 'mat-concrete-c25'). */
 export function getMaterial3D(materialId: string): THREE.MeshStandardMaterial {
-  return resolveTexturedMaterial(resolveKey(materialId));
+  if (materialId.startsWith(USER_MATERIAL_ID_PREFIX)) return resolveUserMaterial(materialId);
+  return resolveTexturedMaterial(resolveMaterialKey(materialId));
 }
 
 /** Resolve MeshStandardMaterial for element types without DNA. */
 export function getElementMaterial3D(
-  type: 'column' | 'beam' | 'slab' | 'envelope' | 'mep-fixture' | 'electrical-panel' | 'railing' | 'mep-wire' | 'furniture' | 'mep-duct' | 'mep-pipe' | 'mep-fitting' | 'mep-manifold' | 'mep-radiator' | Stair3DComponent,
+  type: 'column' | 'beam' | 'slab' | 'roof' | 'envelope' | 'mep-fixture' | 'electrical-panel' | 'railing' | 'mep-wire' | 'furniture' | 'mep-duct' | 'mep-pipe' | 'mep-fitting' | 'mep-manifold' | 'mep-radiator' | 'mep-boiler' | Stair3DComponent,
 ): THREE.MeshStandardMaterial {
   return resolveTexturedMaterial(`elem-${type}`);
 }
@@ -216,7 +207,7 @@ export function getSystemTintedMaterial3D(
   const cacheKey = `${baseKey}:${colorInt}`;
   let mat = CACHE.get(cacheKey);
   if (!mat) {
-    const def = MAT_DEFS[baseKey] ?? MAT_DEFS['mat-concrete']!;
+    const def = MATERIAL_DEFS[baseKey] ?? MATERIAL_DEFS['mat-concrete']!;
     mat = buildMat({
       ...def,
       color: colorInt,
@@ -235,4 +226,8 @@ export function getSystemTintedMaterial3D(
 export function disposeMaterialCatalog3D(): void {
   for (const mat of CACHE.values()) mat.dispose();
   CACHE.clear();
+  // ADR-413 §2D Phase 3 — per-material user variants (textures owned/disposed by
+  // the registry; here we only dispose the MeshStandardMaterial wrappers).
+  for (const { mat } of USER_TEX_CACHE.values()) mat.dispose();
+  USER_TEX_CACHE.clear();
 }

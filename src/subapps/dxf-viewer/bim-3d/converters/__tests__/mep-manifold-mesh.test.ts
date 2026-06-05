@@ -55,4 +55,60 @@ describe('manifoldToMesh', () => {
     expect(bboxSizeX(mmMesh)).toBeCloseTo(0.4, 4);
     expect(bboxSizeX(mMesh)).toBeCloseTo(0.4, 4);
   });
+
+  // ADR-408 Φ14 — drainage collector (φρεάτιο) 3D grating overlay.
+  describe('drainage collector grating (φρεάτιο)', () => {
+    const drain = (units: SceneUnits = 'mm') =>
+      manifold(units, { kind: 'drainage-collector' });
+
+    function gratingChild(mesh: THREE.Mesh): THREE.LineSegments | undefined {
+      return mesh.children.find((c): c is THREE.LineSegments => c instanceof THREE.LineSegments);
+    }
+
+    it('a water manifold has NO grating overlay', () => {
+      const mesh = manifoldToMesh(manifold(), 0, '0', 0) as THREE.Mesh;
+      expect(gratingChild(mesh)).toBeUndefined();
+    });
+
+    it('a drainage collector adds a LineSegments grating child', () => {
+      const mesh = manifoldToMesh(drain(), 0, '0', 0) as THREE.Mesh;
+      const grating = gratingChild(mesh);
+      expect(grating).toBeDefined();
+      // GRATING_BAR_COUNT (6) bars × 2 endpoints = 12 position vertices.
+      const pos = grating!.geometry.getAttribute('position');
+      expect(pos.count).toBe(12);
+    });
+
+    it('grating sits on the basin TOP face (local y = bodyHeightM)', () => {
+      // drainage default bodyHeightMm = 300 → 0.3m, + tiny z-fight lift.
+      const mesh = manifoldToMesh(drain(), 0, '0', 0) as THREE.Mesh;
+      const pos = gratingChild(mesh)!.geometry.getAttribute('position');
+      for (let i = 0; i < pos.count; i++) {
+        // Top face at 0.3m + a sub-millimetre anti-z-fight lift.
+        expect(pos.getY(i)).toBeGreaterThanOrEqual(0.3);
+        expect(pos.getY(i)).toBeLessThan(0.301);
+      }
+    });
+
+    it('grating is not a pick target (basin box owns selection)', () => {
+      const mesh = manifoldToMesh(drain(), 0, '0', 0) as THREE.Mesh;
+      const grating = gratingChild(mesh)!;
+      const hits: THREE.Intersection[] = [];
+      // Disabled raycast must push nothing regardless of the ray.
+      grating.raycast(new THREE.Raycaster(), hits);
+      expect(hits).toHaveLength(0);
+    });
+
+    it('UNITS-SAFE: mm-scene and m-scene gratings span the same world width', () => {
+      const widthOf = (m: THREE.Mesh) => {
+        const g = gratingChild(m)!.geometry;
+        g.computeBoundingBox();
+        const bb = g.boundingBox!;
+        return bb.max.x - bb.min.x;
+      };
+      const mmMesh = manifoldToMesh(drain('mm'), 0, '0', 0) as THREE.Mesh;
+      const mMesh = manifoldToMesh(drain('m'), 0, '0', 0) as THREE.Mesh;
+      expect(widthOf(mmMesh)).toBeCloseTo(widthOf(mMesh), 4);
+    });
+  });
 });

@@ -64,6 +64,8 @@ function wrapDxfGrip(grip: GripInfo): UnifiedGripInfo {
     ...(grip.mepManifoldGripKind ? { mepManifoldGripKind: grip.mepManifoldGripKind } : {}),
     // ADR-408 Εύρος Β — forward heating radiator parametric grip discriminator.
     ...(grip.mepRadiatorGripKind ? { mepRadiatorGripKind: grip.mepRadiatorGripKind } : {}),
+    // ADR-408 Εύρος Β #2 — forward heating boiler parametric grip discriminator.
+    ...(grip.mepBoilerGripKind ? { mepBoilerGripKind: grip.mepBoilerGripKind } : {}),
     // ADR-410 — forward furniture parametric grip discriminator.
     ...(grip.furnitureGripKind ? { furnitureGripKind: grip.furnitureGripKind } : {}),
     // ADR-415 — forward floorplan-symbol parametric grip discriminator.

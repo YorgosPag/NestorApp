@@ -1,4 +1,17 @@
 {
+  "constructionMaterials": {
+    "mat-concrete": "Σκυρόδεμα",
+    "mat-screed": "Τσιμεντοκονία",
+    "mat-insulation": "Θερμομόνωση",
+    "mat-tile": "Κεραμικό πλακάκι",
+    "mat-roof-tile": "Κεραμίδι στέγης",
+    "mat-plaster": "Σοβάς",
+    "mat-membrane": "Μεμβράνη στεγάνωσης",
+    "mat-gravel": "Χαλίκι",
+    "mat-finish": "Τελική επίστρωση",
+    "mat-wood": "Ξύλο",
+    "mat-metal": "Μέταλλο"
+  },
   "common": {
     "confirm": "Επιβεβαίωση",
     "cancel": "Ακύρωση"
@@ -305,6 +318,7 @@
   "toolbarStatus": {
     "tool": "Εργαλείο",
     "zoom": "Μεγέθυνση",
+    "viewScale": "Κλίμακα προβολής",
     "snap": "Πρόσδεση",
     "on": "ΕΝΕΡΓΟ",
     "off": "ΑΝΕΝΕΡΓΟ",
@@ -393,7 +407,9 @@
     "inputTitle": "Ποσοστό μεγέθυνσης (1-99999%, δεκαδικά με . ή ,) - Πατήστε Enter ή κλικ εκτός για εφαρμογή",
     "invalidInput": "Μη έγκυρη είσοδος μεγέθυνσης: \"{value}\". Επαναφορά σε {percentage}%",
     "badgeAriaLabel": "Ζουμ: {percentage}% — Επιλογή επιπέδου μεγέθυνσης",
-    "customInputPlaceholder": "π.χ. 150"
+    "customInputPlaceholder": "π.χ. 150",
+    "viewScaleAriaLabel": "Κλίμακα προβολής {ratio} — Επιλογή κλίμακας",
+    "viewScaleInputPlaceholder": "N για 1:N"
   },
   "overlayToolbar": {
     "objectSnap": "Ενεργοποίηση/Απενεργοποίηση Πρόσδεσης Αντικειμένου (F3)",
@@ -489,6 +505,9 @@
     },
     "mepRadiator": {
       "statusPosition": "Κλικ για τοποθέτηση καλοριφέρ"
+    },
+    "mepBoiler": {
+      "statusPosition": "Κλικ για τοποθέτηση λέβητα"
     },
     "mepSegment": {
       "statusStart": "Επίλεξε αρχή διαδρομής",
@@ -768,6 +787,9 @@
       "mepPipeNetwork": "Δίκτυο Σωληνώσεων",
       "mepFixtureProperties": "Ιδιότητες Φωτιστικού",
       "mepManifoldProperties": "Ιδιότητες Συλλέκτη",
+      "mepDrainageCollectorProperties": "Ιδιότητες Φρεατίου",
+      "mepRadiatorProperties": "Ιδιότητες Καλοριφέρ",
+      "mepBoilerProperties": "Ιδιότητες Λέβητα",
       "mepSegmentProperties": "Ιδιότητες Σωλήνα/Αεραγωγού",
       "validationBadge": "Παραβίαση κανονισμών",
       "dimension": "Διάσταση",
@@ -863,6 +885,13 @@
       "mepManifoldGeometry": "Γεωμετρία",
       "mepManifoldOutlets": "Έξοδοι",
       "mepManifoldActions": "Ενέργειες",
+      "mepDrainageCollectorInlets": "Είσοδοι / Έξοδος",
+      "mepRadiatorGeometry": "Γεωμετρία",
+      "mepRadiatorThermal": "Θερμικά",
+      "mepRadiatorActions": "Ενέργειες",
+      "mepBoilerGeometry": "Γεωμετρία",
+      "mepBoilerThermal": "Θερμικά",
+      "mepBoilerActions": "Ενέργειες",
       "mepSegmentSection": "Διατομή",
       "mepSegmentDimensions": "Διαστάσεις",
       "mepSegmentGeometry": "Γεωμετρία",
@@ -1064,6 +1093,10 @@
         "mepRadiator": {
           "label": "Καλοριφέρ",
           "tooltip": "Θερμαντικό σώμα/καλοριφέρ (είσοδος προσαγωγής + έξοδος επιστροφής) — τοποθέτηση με ένα κλικ (πειθαρχία: υδραυλικά/θέρμανση)"
+        },
+        "mepBoiler": {
+          "label": "Λέβητας",
+          "tooltip": "Λέβητας/καυστήρας θέρμανσης (έξοδος προσαγωγής + είσοδος επιστροφής) — τοποθέτηση με ένα κλικ (πειθαρχία: υδραυλικά/θέρμανση)"
         },
         "railing": {
           "label": "Κιγκλίδωμα",
@@ -1438,10 +1471,44 @@
             "ground": "Πλάκα εδάφους",
             "foundation": "Θεμελίωση"
           },
+          "roof": {
+            "concrete": "Μπετονένιο δώμα",
+            "tiled": "Κεραμοσκεπή"
+          },
           "stair": {
             "residential": "Κατοικίας",
             "narrow": "Στενή"
           }
+        }
+      },
+      "roofFamilyType": {
+        "type": "Τύπος",
+        "typeNone": "Χωρίς τύπο (ελεύθερη)",
+        "duplicateNamePrefix": "Αντίγραφο",
+        "save": "Αποθήκευση",
+        "cancel": "Άκυρο",
+        "builtinBadge": "Ενσωματωμένος",
+        "properties": "Ιδιότητες Τύπου",
+        "rename": "Μετονομασία",
+        "override": "Παράκαμψη",
+        "overrideTooltip": "Η τιμή παρακάμπτει τον τύπο σε αυτή τη στέγη",
+        "resetToType": "Επαναφορά στον τύπο",
+        "resetToTypeTooltip": "Αφαίρεση όλων των παρακάμψεων — επιστροφή στις τιμές του τύπου",
+        "paramThickness": "Πάχος",
+        "paramMaterial": "Υλικό",
+        "thicknessUnit": "mm",
+        "materialNone": "—",
+        "editType": "Επεξεργασία τύπου…",
+        "editTypeTitle": "Επεξεργασία τύπου στέγης",
+        "editTypeDescription": "Οι αλλαγές εφαρμόζονται σε όλες τις στέγες αυτού του τύπου, σε όλους τους ορόφους.",
+        "editTypeBuiltinNotice": "Ενσωματωμένος τύπος (μόνο ανάγνωση). Κάντε Διπλασιασμό για να επεξεργαστείτε τις στρώσεις.",
+        "editTypeAffectsCount": "Οι αλλαγές εφαρμόζονται σε {count} στέγες αυτού του τύπου.",
+        "duplicateAndEdit": "Διπλασιασμός & επεξεργασία",
+        "deleteType": "Διαγραφή τύπου…",
+        "material": {
+          "rc": "Οπλισμένο σκυρόδεμα",
+          "tile": "Κεραμίδι",
+          "wood": "Ξύλο"
         }
       },
       "slabFamilyType": {
@@ -1856,6 +1923,40 @@
         "close": "Κλείσιμο",
         "delete": "Διαγραφή",
         "deleteConfirm": "Διαγραφή συλλέκτη; Η ενέργεια δεν μπορεί να αναιρεθεί."
+      },
+      "mepDrainageCollectorEditor": {
+        "width": "Πλάτος",
+        "length": "Μήκος",
+        "bodyHeight": "Βάθος φρεατίου",
+        "mountingElevation": "Ύψος τοποθέτησης",
+        "inletCount": "Είσοδοι",
+        "inletDiameter": "Διάμετρος εισόδων",
+        "outletDiameter": "Διάμετρος εξόδου (υπόνομος)",
+        "close": "Κλείσιμο",
+        "delete": "Διαγραφή",
+        "deleteConfirm": "Διαγραφή φρεατίου; Η ενέργεια δεν μπορεί να αναιρεθεί."
+      },
+      "mepRadiatorEditor": {
+        "width": "Πλάτος",
+        "length": "Βάθος",
+        "bodyHeight": "Ύψος σώματος",
+        "mountingElevation": "Ύψος τοποθέτησης",
+        "connectorDiameter": "Διάμετρος σύνδεσης",
+        "thermalOutput": "Θερμική ισχύς (W)",
+        "close": "Κλείσιμο",
+        "delete": "Διαγραφή",
+        "deleteConfirm": "Διαγραφή καλοριφέρ; Η ενέργεια δεν μπορεί να αναιρεθεί."
+      },
+      "mepBoilerEditor": {
+        "width": "Πλάτος",
+        "length": "Βάθος",
+        "bodyHeight": "Ύψος σώματος",
+        "mountingElevation": "Ύψος τοποθέτησης",
+        "connectorDiameter": "Διάμετρος σύνδεσης",
+        "thermalOutput": "Θερμική ισχύς (W)",
+        "close": "Κλείσιμο",
+        "delete": "Διαγραφή",
+        "deleteConfirm": "Διαγραφή λέβητα; Η ενέργεια δεν μπορεί να αναιρεθεί."
       },
       "mepSegmentEditor": {
         "width": "Πλάτος",
@@ -2644,6 +2745,16 @@
         "nonPositiveLength": "Το βάθος πρέπει να είναι θετικό",
         "dimensionTooSmall": "Η διάσταση είναι μικρότερη από το ελάχιστο επιτρεπτό",
         "nonPositiveBodyHeight": "Το ύψος σώματος πρέπει να είναι θετικό"
+      }
+    }
+  },
+  "mepBoiler": {
+    "validation": {
+      "hardErrors": {
+        "nonPositiveWidth": "Το πλάτος πρέπει να είναι θετικό",
+        "nonPositiveLength": "Το βάθος πρέπει να είναι θετικό",
+        "dimensionTooSmall": "Η διάσταση είναι μικρότερη από το ελάχιστο επιτρεπτό",
+        "nonPositiveBodyHeight": "Το ύψος λέβητα πρέπει να είναι θετικό"
       }
     }
   },

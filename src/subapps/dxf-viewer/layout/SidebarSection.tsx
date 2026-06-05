@@ -45,7 +45,8 @@ import { PANEL_LAYOUT } from '../config/panel-tokens';  // ✅ ENTERPRISE: Centr
 // ADR-040 Phase XXII.B: ZoomStore subscription lives in a 1-fiber leaf (SidebarZoomLeaf),
 // NOT in the SidebarSection orchestrator. Subscribing in the orchestrator re-rendered the
 // whole sidebar subtree (~426 fibers) on every wheel notch — the #3 wheel-zoom freeze root cause.
-import { useCurrentZoom } from '../systems/zoom/ZoomStore';
+// 🏢 ADR-418: real view-scale (1:N) instead of pixel-%
+import { useViewScale } from '../systems/zoom/hooks/useViewScale';
 
 // ============================================================================
 // 🎯 LAYOUT CONSTANTS - Centralized, maintainable
@@ -86,16 +87,18 @@ interface SidebarSectionProps {
 // ============================================================================
 
 /**
- * SidebarZoomLeaf — sole ZoomStore subscriber in the sidebar footer.
+ * SidebarZoomLeaf — sole zoom subscriber in the sidebar footer.
  *
  * ADR-040 Cardinal Rule #1: high-frequency stores (zoom/transform) must be
  * subscribed ONLY by leaf renderers, never by orchestrators. Isolating the
- * `useCurrentZoom()` subscription here means a wheel notch re-renders this single
+ * `useViewScale()` subscription here means a wheel notch re-renders this single
  * `<span>` (1 fiber) instead of the whole SidebarSection subtree (~426 fibers).
+ *
+ * 🏢 ADR-418: shows the real drawing scale (e.g. "1:69") instead of a pixel-%.
  */
 const SidebarZoomLeaf = React.memo(function SidebarZoomLeaf() {
-  const currentZoom = useCurrentZoom();
-  return <span>Zoom: {Math.round(currentZoom * 100)}%</span>;
+  const { label } = useViewScale();
+  return <span>{label}</span>;
 });
 SidebarZoomLeaf.displayName = 'SidebarZoomLeaf';
 

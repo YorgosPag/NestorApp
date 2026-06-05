@@ -313,6 +313,19 @@ export function drawGhostEntity(
       return;
     }
 
+    // ADR-408 Εύρος Β #2 — heating boiler ghost: footprint polygon (scene-units,
+    // from MepBoilerGeometry). Mirror mep-radiator so the live
+    // move/rotation/corner-resize ghost paints.
+    case 'mep-boiler': {
+      const boiler = entity as unknown as {
+        geometry?: { footprint?: { vertices: ReadonlyArray<{ x: number; y: number }> } };
+      };
+      const verts = boiler.geometry?.footprint?.vertices ?? [];
+      if (verts.length < 2) return;
+      drawPolygon(ctx, verts, toScreen);
+      return;
+    }
+
     // ADR-410 — furniture ghost: footprint polygon (scene-units, from
     // FurnitureGeometry). Mirror mep-fixture/electrical-panel so the live
     // move/rotation/corner-resize ghost paints.

@@ -36,8 +36,9 @@ import {
   clampScale,
   getVisibleBounds
 } from './utils';
-// 🏢 ADR-094: Centralized Device Pixel Ratio
-import { getDevicePixelRatio } from '../../systems/cursor/utils';
+// 🏢 ADR-418: real view-scale (1:N) ↔ pixel-scale SSoT
+import { ratioToScale } from '../../utils/view-scale';
+import type { SceneUnits } from '../../utils/scene-units';
 
 export class ZoomManager implements IZoomManager {
   private config: ZoomConfig;
@@ -158,17 +159,26 @@ export class ZoomManager implements IZoomManager {
   }
 
   /**
-   * 🎯 ENTERPRISE: Zoom to 100% (1:1) - DPI-aware real-world scale
-   * @param center - Optional center point (defaults to viewport center)
+   * 🏢 ADR-418: Zoom to a real drawing scale 1:N.
+   * Converts the ratio to a CSS-px scale via the view-scale SSoT (DPI + scene
+   * units aware), then routes through the canonical `zoomToScale` path.
+   * @param ratioN - drawing-scale denominator (e.g. 100 → 1:100)
+   * @param sceneUnits - active scene units (drives the mm⇄px conversion)
+   * @param center - optional center point (defaults to viewport center)
    */
-  zoomTo100(center?: Point2D): ZoomResult {
-    // 🎯 DPI-aware 1:1 scale
-    // For CAD applications, 1.0 scale typically means 1 pixel = 1 drawing unit
-    // Device pixel ratio should be considered for true 1:1 on high-DPI displays
-    const dpr = getDevicePixelRatio(); // 🏢 ADR-094
-    const scale100 = 1.0 * dpr;
+  zoomToRatio(ratioN: number, sceneUnits: SceneUnits, center?: Point2D): ZoomResult {
+    const scaleCss = ratioToScale({ ratioN, sceneUnits });
+    return this.zoomToScale(scaleCss, center);
+  }
 
-    return this.zoomToScale(scale100, center);
+  /**
+   * 🏢 ADR-418: Zoom to 1:1 actual size — the drawing renders at true physical
+   * size on screen (replaces the meaningless legacy `zoomTo100` = 1px·dpr/unit).
+   * @param sceneUnits - active scene units
+   * @param center - optional center point (defaults to viewport center)
+   */
+  zoomToActualSize(sceneUnits: SceneUnits, center?: Point2D): ZoomResult {
+    return this.zoomToRatio(1, sceneUnits, center);
   }
 
   /**

@@ -16,6 +16,8 @@ import type { DxfCanvasRef } from '../canvas-v2';
 // 🏢 ENTERPRISE FIX (2026-01-27): Use canonical ViewTransform from centralized types
 // REMOVED duplicate type definition - using Single Source of Truth
 import type { ViewTransform } from '../rendering/types/Types';
+// 🏢 ADR-418: scene units type for real drawing-scale operations
+import type { SceneUnits } from '../utils/scene-units';
 // ADR-040 Phase XXII.B: setTransform writes ONLY to ImmediateTransformStore (SSoT).
 // The legacy `useState<transform>` was removed — it re-rendered CanvasProvider (a
 // high-up ancestor of DxfViewerContent) on every wheel notch, cascading 2502 fibers
@@ -63,7 +65,9 @@ interface CanvasContextType extends CanvasRefsContextType {
     zoomIn: () => void;
     zoomOut: () => void;
     zoomToFit: () => void;
-    zoomTo100: (center?: { x: number; y: number }) => void;
+    // 🏢 ADR-418: real drawing-scale (1:N) operations (replaced legacy zoomTo100)
+    zoomToActualSize: (sceneUnits: SceneUnits, center?: { x: number; y: number }) => void;
+    zoomToRatio: (ratioN: number, sceneUnits: SceneUnits, center?: { x: number; y: number }) => void;
     zoomToScale: (scale: number, center?: { x: number; y: number }) => void;
     resetZoom: () => void;
   };

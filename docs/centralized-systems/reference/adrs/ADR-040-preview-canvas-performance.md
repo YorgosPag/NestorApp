@@ -4,7 +4,7 @@
 |----------|-------|
 | **Status** | APPROVED |
 | **Date** | 2026-01-01 |
-| **Last Updated** | 2026-05-16 |
+| **Last Updated** | 2026-06-05 |
 | **Category** | Drawing System |
 | **Canonical Location** | `canvas-v2/preview-canvas/` |
 | **Author** | Γιώργος Παγώνης + Claude Code (Anthropic AI) |
@@ -70,6 +70,18 @@ Mouse Event → DxfCanvas.onMouseMove
 ---
 
 ## Changelog
+
+### 2026-06-05 — Grid moved to a dedicated BOTTOM-MOST canvas (cross-canvas z-order fix, CHECK 6B/6D)
+
+**Status**: IMPLEMENTED 2026-06-05 (Opus 4.8). **Symptom (Giorgio):** με φορτωμένη κάτοψη, ενεργοποιώντας το «Δυναμικό πλέγμα» το grid γεννά σωστά κύριες/δευτερεύουσες αλλά ζωγραφίζεται **πάνω** από την κάτοψη αντί για κάτω.
+
+**Root cause (cross-canvas — αποδείχθηκε με runtime trace + red-fill test):** το grid ζωγραφιζόταν από τον `GridRenderer` στον **DxfCanvas (z=10)**, ενώ η ορατή κάτοψη ζωγραφίζεται από τον **`FloorplanBackgroundCanvas`** — τον **πιο κάτω** καμβά (z=0, DOM-πρώτος· το φορτωμένο DXF γίνεται floor underlay). Επομένως **οποιοδήποτε** grid σε content canvas (DxfCanvas z=10, ή LayerCanvas z=0 αλλά DOM-μετά τον background) ήταν πάντα **πάνω** από την κάτοψη. Δύο προσπάθειες (`onBackground` hook στον DxfCanvas, μετά grid στον LayerCanvas) ΔΕΝ έλυναν το πρόβλημα γι' αυτόν τον λόγο — και οι δύο έγιναν revert.
+
+**Fix — αποκλειστικός grid καμβάς στον πάτο της στοίβας:**
+- **NEW** `components/dxf-layout/GridUnderlayCanvas.tsx` — αποκλειστικός καμβάς που ζωγραφίζει το adaptive grid (`GridRenderer.renderDirect`, ίδιος renderer → «Δυναμικό πλέγμα»/smooth-fade διατηρείται). Effect-based render (όχι 60fps RAF· repaint μόνο σε αλλαγή gridSettings/transform/viewport — ίδιο pattern με `FloorplanBackgroundCanvas`).
+- `components/dxf-layout/CanvasLayerStack.tsx` — ο `GridUnderlayCanvas` μπαίνει **πρώτο παιδί** της στοίβας (πριν τον `FloorplanBackgroundCanvas`), z=0 → ο πιο κάτω. Πάντα mounted (φαίνεται και σε κενό καμβά). Το grid αφαιρέθηκε από LayerCanvas & DxfCanvas (και τα δύο `gridSettingsDisabled`).
+- `canvas-v2/dxf-canvas/dxf-canvas-renderer.ts` — αφαιρέθηκε το grid render από τον DxfCanvas. (`DxfRenderer.ts` & `LayerRenderer.ts` επανήλθαν net-zero μετά τις ενδιάμεσες προσπάθειες.)
+- Render-order (bottom→top): **GridUnderlayCanvas (grid)** → FloorplanBackground (κάτοψη) → FloorUnderlay → LayerCanvas (color layers) → DxfCanvas (entities) → overlays. CHECK 6B/6D ικανοποιούνται με staging αυτού του ADR μαζί με τα code files.
 
 ### 2026-06-05 — ADR-408 Εύρος Β heating-radiator tool wiring (CHECK 6B)
 
@@ -2334,6 +2346,11 @@ This is the rule violated by Phase D v1: it included `hoveredEntityId` in the bi
 **Pipeline** (each RAF tick, `dxf-canvas-renderer.renderScene`):
 
 ```
+GridUnderlayCanvas (BOTTOM-most, z=0, DOM-first): adaptive GridRenderer.renderDirect.
+  └─ Grid lives here so it sits BENEATH the κάτοψη (FloorplanBackgroundCanvas) and
+     every content canvas. See "Grid moved to a dedicated BOTTOM-most canvas" (2026-06-05).
+
+DxfCanvas (z=10, UPPER):
 1a. DxfBitmapCache
     ├─ if isDirty(scene, transform, viewport, dpr) → rebuild offscreen
     │   (offscreen DxfRenderer.render with skipInteractive=true → loop N entities)
@@ -2344,7 +2361,7 @@ This is the rule violated by Phase D v1: it included `hoveredEntityId` in the bi
     ├─ for each selectedEntityId → DxfRenderer.renderSingleEntity('selected')
     └─ if dragPreview          → DxfRenderer.renderSingleEntity('drag-preview')
 
-2. Grid, guides, construction points
+2. Guides, construction points   (grid moved to step 0 — was here pre 2026-06-05)
 3. Rulers, guide bubbles, dimensions
 4. Selection box (marquee)
 ```

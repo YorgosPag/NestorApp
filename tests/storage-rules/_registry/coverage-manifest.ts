@@ -237,6 +237,13 @@ export const STORAGE_RULES_PENDING: readonly string[] = [
   // ADR-366 Group B custom HDRI environments (company-scoped, .hdr/.exr ≤ 50 MB).
   // Test suite to be added in follow-up: tests/storage-rules/suites/bim-environments.storage.test.ts
   '/companies/{companyId}/bim_environments/{fileName}',
+  // ADR-413 §2D Phase 2 BIM material appearance thumbnails (company-scoped, image/* ≤ 5 MB).
+  // Test suite to be added in follow-up: tests/storage-rules/suites/bim-material-thumbnails.storage.test.ts
+  '/companies/{companyId}/bim-material-thumbnails/{fileName}',
+  // ADR-413 §2D Phase 3 BIM material 3D PBR texture maps (company-scoped, image/* ≤ 10 MB,
+  // keyed by materialId + map). Test suite to be added in follow-up:
+  // tests/storage-rules/suites/bim-material-textures.storage.test.ts
+  '/companies/{companyId}/bim-material-textures/{materialId}/{fileName}',
   // ADR-410 CC0 furniture mesh library (shared read-only catalog; super_admin curates writes/deletes).
   // Test suite to be added in follow-up: tests/storage-rules/suites/furniture-library.storage.test.ts
   '/furniture-library/{assetFile}',

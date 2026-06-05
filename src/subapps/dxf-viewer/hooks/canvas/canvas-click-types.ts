@@ -39,6 +39,7 @@ import type {
   ElectricalPanelToolLike,
   MepManifoldToolLike,
   MepRadiatorToolLike,
+  MepBoilerToolLike,
   FurnitureToolLike,
   FloorplanSymbolToolLike,
   RailingToolLike,
@@ -88,6 +89,8 @@ export interface UseCanvasClickHandlerParams {
   mepManifoldTool?: MepManifoldToolLike;
   /** ADR-408 Εύρος Β — Heating radiator tool click pipeline. */
   mepRadiatorTool?: MepRadiatorToolLike;
+  /** ADR-408 Εύρος Β #2 — Heating boiler tool click pipeline. */
+  mepBoilerTool?: MepBoilerToolLike;
   /** ADR-408 Φ8 — MEP segment (duct/pipe) tool click pipeline. */
   mepSegmentTool?: MepSegmentToolLike;
   /** ADR-410 — Furniture tool click pipeline (single-click placement). */

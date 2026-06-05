@@ -57,23 +57,35 @@ export const CONTEXTUAL_ROOF_TAB: RibbonTab = {
   badgeKey: ROOF_RIBBON_BADGE_KEYS.violations,
   panels: [
     {
-      // ADR-417 §10 #1 — Roof Type picker (built-ins «Μπετονένιο δώμα» /
-      // «Κεραμοσκεπή»). Options come dynamically from the bridge. Το πλήρες
-      // edit-type dialog + re-resolution = §10 #3 (επόμενη φάση).
-      id: 'roof-type',
+      // ADR-417 §10 #3 — Roof Family Type: pick/assign the composite type + open
+      // the «Edit Roof Type» dialog (layers + live 3D preview) + per-instance
+      // override editor. Selector assigns/detaches the roof's `typeId`; properties
+      // widget edits the material override + renames user types. Self-hides via the
+      // widgets for untyped roofs. Mirrors the wall «Τύπος» panel.
+      id: 'roof-family-type',
       labelKey: 'ribbon.panels.roofType',
       rows: [
         {
           isInFlyout: false,
           buttons: [
             {
-              type: 'combobox',
+              type: 'widget',
               size: 'small',
+              widgetId: 'roof-family-type',
               command: {
-                id: 'roof.roofType',
-                labelKey: 'ribbon.commands.roofEditor.roofType.section.title',
-                commandKey: ROOF_RIBBON_KEYS.stringParams.roofType,
-                comboboxWidthPx: 180,
+                id: 'roof.familyType',
+                labelKey: 'ribbon.commands.roofFamilyType.type',
+                commandKey: 'roof.familyType.select',
+              },
+            },
+            {
+              type: 'widget',
+              size: 'small',
+              widgetId: 'roof-type-properties',
+              command: {
+                id: 'roof.typeProperties',
+                labelKey: 'ribbon.commands.roofFamilyType.properties',
+                commandKey: 'roof.familyType.properties',
               },
             },
           ],

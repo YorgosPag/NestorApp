@@ -27,6 +27,7 @@ import { useLevels } from '../../systems/levels';
 import { DxfFirestoreService } from '../../services/dxf-firestore.service';
 import {
   refeedBoqForTypeAcrossFloors,
+  refeedRoofBoqForTypeAcrossFloors,
   refeedSlabBoqForTypeAcrossFloors,
 } from '../../bim/family-types/family-type-side-effects';
 
@@ -46,7 +47,7 @@ export function useFamilyTypeBoqRefeed(ctx: FamilyTypeBoqRefeedContext): void {
 
   useEffect(() => {
     return EventBus.on('bim:family-type-changed', ({ typeId, category }) => {
-      if (category !== 'wall' && category !== 'slab') return;
+      if (category !== 'wall' && category !== 'slab' && category !== 'roof') return;
       const snap = latest.current;
       const { companyId, projectId, buildingId } = snap.ctx;
       if (!companyId || !projectId || !buildingId) return;
@@ -60,6 +61,8 @@ export function useFamilyTypeBoqRefeed(ctx: FamilyTypeBoqRefeedContext): void {
       };
       if (category === 'slab') {
         void refeedSlabBoqForTypeAcrossFloors(shared);
+      } else if (category === 'roof') {
+        void refeedRoofBoqForTypeAcrossFloors(shared);
       } else {
         void refeedBoqForTypeAcrossFloors(shared);
       }

@@ -35,7 +35,7 @@ import {
 } from '../../bim-3d/scene/multi-floor-3d-source';
 import {
   isWallEntity, isColumnEntity, isBeamEntity, isSlabEntity,
-  isSlabOpeningEntity, isOpeningEntity, isStairEntity, isMepFixtureEntity, isElectricalPanelEntity, isRailingEntity, isFurnitureEntity, isMepSegmentEntity, isMepFittingEntity, isMepManifoldEntity, isMepRadiatorEntity, isRoofEntity,
+  isSlabOpeningEntity, isOpeningEntity, isStairEntity, isMepFixtureEntity, isElectricalPanelEntity, isRailingEntity, isFurnitureEntity, isMepSegmentEntity, isMepFittingEntity, isMepManifoldEntity, isMepRadiatorEntity, isMepBoilerEntity, isRoofEntity,
 } from '../../types/entities';
 import type { SceneModel } from '../../types/scene';
 
@@ -66,6 +66,7 @@ function extractBim3DEntities(scene: SceneModel): Bim3DEntities {
     mepFittings: e.filter(isMepFittingEntity),
     manifolds: e.filter(isMepManifoldEntity),
     radiators: e.filter(isMepRadiatorEntity),
+    boilers: e.filter(isMepBoilerEntity),
   };
 }
 
@@ -105,13 +106,14 @@ export function useFloors3DAggregator(active: boolean): void {
   const mepFittings = useBim3DEntitiesStore((s) => s.mepFittings);
   const manifolds = useBim3DEntitiesStore((s) => s.manifolds);
   const radiators = useBim3DEntitiesStore((s) => s.radiators);
+  const boilers = useBim3DEntitiesStore((s) => s.boilers);
 
   // Firestore snapshots for floors the user has not visited this session.
   const [loaded, setLoaded] = useState<ReadonlyMap<string, Bim3DEntities>>(new Map());
 
   const liveActive = useMemo<Bim3DEntities>(
-    () => ({ walls, columns, beams, slabs, slabOpenings, openings, stairs, fixtures, panels, railings, furnitures, roofs, mepSegments, mepFittings, manifolds, radiators }),
-    [walls, columns, beams, slabs, slabOpenings, openings, stairs, fixtures, panels, railings, furnitures, roofs, mepSegments, mepFittings, manifolds, radiators],
+    () => ({ walls, columns, beams, slabs, slabOpenings, openings, stairs, fixtures, panels, railings, furnitures, roofs, mepSegments, mepFittings, manifolds, radiators, boilers }),
+    [walls, columns, beams, slabs, slabOpenings, openings, stairs, fixtures, panels, railings, furnitures, roofs, mepSegments, mepFittings, manifolds, radiators, boilers],
   );
 
   // One target per building floor (first level wins for a floor with duplicates).

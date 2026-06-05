@@ -4,6 +4,8 @@ import * as React from 'react';
 import type { SceneModel } from '../types/scene';
 import { readPersistedViewport } from '../services/viewport-persistence';
 import { EventBus } from '../systems/events';
+// 🏢 ADR-418: degenerate-view guard threshold
+import { MIN_VISIBLE_CONTENT_PX } from '../config/transform-config';
 
 interface UseAutoFitOnFileChangeParams {
   currentScene: SceneModel | null;
@@ -19,15 +21,37 @@ interface UseAutoFitOnFileChangeParams {
 const FIT_DELAY_MS = 200;
 
 /**
+ * 🏢 ADR-418: a persisted transform is degenerate when the WHOLE drawing would
+ * project to a diagonal under MIN_VISIBLE_CONTENT_PX — an invisible "dot" (the
+ * legacy 1px·unit `100%` pathology that used to stick across reloads). Viewport-
+ * independent: a content diagonal under the threshold is unusable wherever it sits.
+ */
+function isDegenerateRestore(
+  scene: SceneModel | null,
+  scale: number,
+): boolean {
+  const bounds = scene?.bounds;
+  if (!bounds || !Number.isFinite(scale) || scale <= 0) return false;
+  const bw = bounds.max.x - bounds.min.x;
+  const bh = bounds.max.y - bounds.min.y;
+  const diagonalPx = Math.hypot(bw, bh) * scale;
+  return Number.isFinite(diagonalPx) && diagonalPx > 0 && diagonalPx < MIN_VISIBLE_CONTENT_PX;
+}
+
+/**
  * ADR-400 — initial decision on first scene: restore the persisted viewport if
  * one exists (page refresh / shared link), otherwise fit to extents.
+ *
+ * 🏢 ADR-418: a restored viewport whose content collapses to a dot is rejected
+ * in favour of a fit (recovers stale `?s=1` URLs from the old pixel-% zoom).
  */
 function restoreOrFit(
   fileRecordId: string | null,
+  scene: SceneModel | null,
   handleAction: UseAutoFitOnFileChangeParams['handleAction'],
 ): void {
   const persisted = readPersistedViewport(fileRecordId);
-  if (persisted.transform) {
+  if (persisted.transform && !isDegenerateRestore(scene, persisted.transform.scale)) {
     EventBus.emit('canvas-restore-viewport', { transform: persisted.transform });
   } else {
     handleAction('fit-to-view');
@@ -61,6 +85,9 @@ export function useAutoFitOnFileChange({
   // load id that arrives after the scene is the one used for the restore lookup.
   const fileRecordIdRef = React.useRef(fileRecordId);
   fileRecordIdRef.current = fileRecordId;
+  // ADR-418: latest scene read at timer-fire time for the degenerate-restore check.
+  const currentSceneRef = React.useRef(currentScene);
+  currentSceneRef.current = currentScene;
 
   React.useEffect(() => {
     if (currentScene === null) return;
@@ -71,7 +98,7 @@ export function useAutoFitOnFileChange({
     if (!initialScheduledRef.current) {
       initialScheduledRef.current = true;
       timerRef.current = setTimeout(() => {
-        restoreOrFit(fileRecordIdRef.current, handleAction);
+        restoreOrFit(fileRecordIdRef.current, currentSceneRef.current, handleAction);
         prevFileRecordIdRef.current = fileRecordIdRef.current;
         initialDoneRef.current = true;
       }, FIT_DELAY_MS);

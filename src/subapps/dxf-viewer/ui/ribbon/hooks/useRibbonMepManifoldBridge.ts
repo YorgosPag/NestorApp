@@ -32,6 +32,7 @@ import type {
 import {
   MAX_MANIFOLD_OUTLET_COUNT,
   MIN_MANIFOLD_OUTLET_COUNT,
+  isDrainageCollectorKind,
 } from '../../../bim/types/mep-manifold-types';
 import { buildMepManifoldConnectors } from '../../../bim/mep-manifolds/mep-manifold-geometry';
 import { useCommandHistory, CompoundCommand } from '../../../core/commands';
@@ -226,7 +227,12 @@ export function useRibbonMepManifoldBridge(
       if (action !== MEP_MANIFOLD_RIBBON_KEYS_ACTIONS.delete) return;
       const manifold = resolveManifold();
       if (!manifold) return;
-      const confirmed = window.confirm(t('ribbon.commands.mepManifoldEditor.deleteConfirm'));
+      // ADR-408 Φ14 — a φρεάτιο reads "Διαγραφή φρεατίου;", a water manifold
+      // "Διαγραφή συλλέκτη;" (same delete path, kind-specific copy).
+      const confirmKey = isDrainageCollectorKind(manifold.params.kind)
+        ? 'ribbon.commands.mepDrainageCollectorEditor.deleteConfirm'
+        : 'ribbon.commands.mepManifoldEditor.deleteConfirm';
+      const confirmed = window.confirm(t(confirmKey));
       if (!confirmed) return;
       EventBus.emit('bim:mep-manifold-delete-requested', { manifoldId: manifold.id });
     },

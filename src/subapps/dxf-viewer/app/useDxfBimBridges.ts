@@ -15,6 +15,8 @@ import { useRibbonMepCircuitBridge, type UseRibbonMepCircuitBridgeProps } from '
 import { useRibbonMepPipeNetworkBridge } from '../ui/ribbon/hooks/useRibbonMepPipeNetworkBridge';
 import { useRibbonMepFixtureBridge, type UseRibbonMepFixtureBridgeProps } from '../ui/ribbon/hooks/useRibbonMepFixtureBridge';
 import { useRibbonMepManifoldBridge, type UseRibbonMepManifoldBridgeProps } from '../ui/ribbon/hooks/useRibbonMepManifoldBridge';
+import { useRibbonMepRadiatorBridge, type UseRibbonMepRadiatorBridgeProps } from '../ui/ribbon/hooks/useRibbonMepRadiatorBridge';
+import { useRibbonMepBoilerBridge, type UseRibbonMepBoilerBridgeProps } from '../ui/ribbon/hooks/useRibbonMepBoilerBridge';
 import { useRibbonMepSegmentBridge, type UseRibbonMepSegmentBridgeProps } from '../ui/ribbon/hooks/useRibbonMepSegmentBridge';
 import { useRibbonFurnitureBridge } from '../ui/ribbon/hooks/useRibbonFurnitureBridge';
 import { useRibbonFloorplanSymbolBridge } from '../ui/ribbon/hooks/useRibbonFloorplanSymbolBridge';
@@ -33,6 +35,8 @@ export type UseDxfBimBridgesProps =
   & UseRibbonMepCircuitBridgeProps
   & UseRibbonMepFixtureBridgeProps
   & UseRibbonMepManifoldBridgeProps
+  & UseRibbonMepRadiatorBridgeProps
+  & UseRibbonMepBoilerBridgeProps
   & UseRibbonMepSegmentBridgeProps;
 
 export function useDxfBimBridges(p: UseDxfBimBridgesProps) {
@@ -53,6 +57,10 @@ export function useDxfBimBridges(p: UseDxfBimBridgesProps) {
   const mepFixtureBridge = useRibbonMepFixtureBridge(p);
   // ADR-408 Φ12 — MEP manifold (συλλέκτης) contextual properties bridge.
   const mepManifoldBridge = useRibbonMepManifoldBridge(p);
+  // ADR-408 Εύρος Β — MEP radiator (καλοριφέρ) contextual properties bridge.
+  const mepRadiatorBridge = useRibbonMepRadiatorBridge(p);
+  // ADR-408 Εύρος Β #2 — MEP boiler (λέβητας) contextual properties bridge.
+  const mepBoilerBridge = useRibbonMepBoilerBridge(p);
   // ADR-408 Φ8 — MEP segment (σωλήνας/αεραγωγός) contextual properties bridge.
   const mepSegmentBridge = useRibbonMepSegmentBridge(p);
   // ADR-410 — furniture library contextual bridge (tool-active picker).
@@ -63,5 +71,5 @@ export function useDxfBimBridges(p: UseDxfBimBridgesProps) {
   const mepFixtureLibraryBridge = useRibbonMepFixtureLibraryBridge();
   // ADR-363 Phase 4.5e+ — Tab/Shift+Tab material cycling for selected BIM entities.
   useBimMaterialCycler(p);
-  return { stairBridge, wallBridge, openingBridge, slabBridge, roofBridge, columnBridge, beamBridge, slabOpeningBridge, mepCircuitBridge, mepPipeNetworkBridge, mepFixtureBridge, mepManifoldBridge, mepSegmentBridge, furnitureBridge, floorplanSymbolBridge, mepFixtureLibraryBridge };
+  return { stairBridge, wallBridge, openingBridge, slabBridge, roofBridge, columnBridge, beamBridge, slabOpeningBridge, mepCircuitBridge, mepPipeNetworkBridge, mepFixtureBridge, mepManifoldBridge, mepRadiatorBridge, mepBoilerBridge, mepSegmentBridge, furnitureBridge, floorplanSymbolBridge, mepFixtureLibraryBridge };
 }

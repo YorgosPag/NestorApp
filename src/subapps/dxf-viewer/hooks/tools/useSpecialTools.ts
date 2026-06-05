@@ -63,7 +63,7 @@ export interface UseSpecialToolsReturn extends SelectionToolsReturn, PlacementTo
   // angleEntityMeasurement (extracted to useSpecialTools-selection-tools.ts).
   // PlacementToolsReturn provides: mepFixtureTool, furnitureTool,
   // floorplanSymbolTool, electricalPanelTool, mepManifoldTool, mepRadiatorTool,
-  // mepSegmentTool, railingTool (extracted to useSpecialTools-placement-tools.ts).
+  // mepBoilerTool, mepSegmentTool, railingTool (extracted to useSpecialTools-placement-tools.ts).
   stairTool: ReturnType<typeof useStairTool>;
   wallTool: ReturnType<typeof useWallTool>;
   openingTool: ReturnType<typeof useOpeningTool>;
@@ -293,7 +293,7 @@ export function useSpecialTools(props: UseSpecialToolsProps): UseSpecialToolsRet
   }, [activeTool, columnTool.setPlacementMode]);
   // ADR-406/407/408/410/415 — MEP + furnishing single/2-click placement tools
   // (mepFixture, furniture, floorplanSymbol, electricalPanel, mepManifold,
-  // mepRadiator, mepSegment, railing). Extracted to a sub-hook (N.7.1) — each
+  // mepRadiator, mepBoiler, mepSegment, railing). Extracted to a sub-hook (N.7.1) — each
   // shares the same scene-units resolver + lifecycle pattern; the active tool id
   // drives activation and preset selection.
   const {
@@ -303,6 +303,7 @@ export function useSpecialTools(props: UseSpecialToolsProps): UseSpecialToolsRet
     electricalPanelTool,
     mepManifoldTool,
     mepRadiatorTool,
+    mepBoilerTool,
     mepSegmentTool,
     railingTool,
   } = useSpecialToolsPlacementTools({ activeTool, levelManager });
@@ -371,6 +372,7 @@ export function useSpecialTools(props: UseSpecialToolsProps): UseSpecialToolsRet
     electricalPanelTool,
     mepManifoldTool,
     mepRadiatorTool,
+    mepBoilerTool,
     mepSegmentTool,
     railingTool,
     beamTool,

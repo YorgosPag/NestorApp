@@ -7,28 +7,32 @@ import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { PANEL_LAYOUT } from '../../config/panel-tokens';
 import { ICON_CLICK_COLORS } from '../../config/color-config';
 import { useTranslation } from '@/i18n';
-// 🏢 ADR-081: Centralized percentage formatting
-// 🏢 ADR-090: Centralized Number Formatting
-import { formatPercent } from '../../rendering/entities/shared/distance-label-utils';
 // 🏢 ADR-082: Step-by-step tool hints
 import { useToolHints } from '../../hooks/useToolHints';
 // ADR-040 Phase H: leaf subscriber for live cursor coordinates
 import { ToolbarCoordinatesDisplay } from './ToolbarCoordinatesDisplay';
+// 🏢 ADR-418: real view-scale (1:N) micro-leaf
+import { useViewScale } from '../../systems/zoom/hooks/useViewScale';
 import type { ToolType } from './types';
+
+// 🏢 ADR-418: micro-leaf — subscribes to the view scale so the status bar does
+// not re-render on every zoom notch (ADR-040). Renders the real "1:N" scale.
+function StatusBarViewScaleLeaf({ className }: { className?: string }) {
+  const { label } = useViewScale();
+  return <strong className={className} aria-live="polite">{label}</strong>;
+}
 
 interface ToolbarStatusBarProps {
   activeTool: ToolType;
-  currentZoom: number;
   snapEnabled: boolean;
   commandCount?: number;
   showCoordinates?: boolean;
-  /** ADR-176: Compact mode — shows only tool name + zoom percentage */
+  /** ADR-176: Compact mode — shows only tool name + view scale */
   compact?: boolean;
 }
 
 export const ToolbarStatusBar: React.FC<ToolbarStatusBarProps> = ({
   activeTool,
-  currentZoom,
   snapEnabled,
   commandCount = 0,
   showCoordinates = false,
@@ -101,7 +105,7 @@ export const ToolbarStatusBar: React.FC<ToolbarStatusBarProps> = ({
         </span>
         <span className={colors.text.muted}>|</span>
         <span>
-          {t('toolbarStatus.zoom')}: <strong className={colors.text.success}>{formatPercent(currentZoom)}</strong>
+          {t('toolbarStatus.viewScale')}: <StatusBarViewScaleLeaf className={colors.text.success} />
         </span>
       </div>
     );
@@ -119,9 +123,7 @@ export const ToolbarStatusBar: React.FC<ToolbarStatusBarProps> = ({
         <span className={`${colors.text.muted}`}>|</span>
 
         <span>
-          {t('toolbarStatus.zoom')}: <strong className={`${colors.text.success}`}>
-            {formatPercent(currentZoom)}
-          </strong>
+          {t('toolbarStatus.viewScale')}: <StatusBarViewScaleLeaf className={colors.text.success} />
         </span>
 
         <span className={`${colors.text.muted}`}>|</span>

@@ -1,4 +1,17 @@
 {
+  "constructionMaterials": {
+    "mat-concrete": "Concrete",
+    "mat-screed": "Cement Screed",
+    "mat-insulation": "Thermal Insulation",
+    "mat-tile": "Ceramic Tile",
+    "mat-roof-tile": "Roof Tile",
+    "mat-plaster": "Plaster",
+    "mat-membrane": "Waterproof Membrane",
+    "mat-gravel": "Gravel",
+    "mat-finish": "Finish Layer",
+    "mat-wood": "Wood",
+    "mat-metal": "Metal"
+  },
   "common": {
     "confirm": "Confirm",
     "cancel": "Cancel"
@@ -305,6 +318,7 @@
   "toolbarStatus": {
     "tool": "Tool",
     "zoom": "Zoom",
+    "viewScale": "View scale",
     "snap": "Snap",
     "on": "ON",
     "off": "OFF",
@@ -393,7 +407,9 @@
     "inputTitle": "Zoom percentage (1-99999%, decimals with . or ,) - Press Enter or click away to apply",
     "invalidInput": "Invalid zoom input: \"{value}\". Reverting to {percentage}%",
     "badgeAriaLabel": "Zoom: {percentage}% — Select zoom level",
-    "customInputPlaceholder": "e.g. 150"
+    "customInputPlaceholder": "e.g. 150",
+    "viewScaleAriaLabel": "View scale {ratio} — Select scale",
+    "viewScaleInputPlaceholder": "N for 1:N"
   },
   "overlayToolbar": {
     "objectSnap": "Enable/Disable Object Snap (F3)",
@@ -489,6 +505,9 @@
     },
     "mepRadiator": {
       "statusPosition": "Click to place radiator"
+    },
+    "mepBoiler": {
+      "statusPosition": "Click to place boiler"
     },
     "mepSegment": {
       "statusStart": "Pick run start",
@@ -768,6 +787,9 @@
       "mepPipeNetwork": "Pipe Network",
       "mepFixtureProperties": "Fixture Properties",
       "mepManifoldProperties": "Manifold Properties",
+      "mepDrainageCollectorProperties": "Catch Basin Properties",
+      "mepRadiatorProperties": "Radiator Properties",
+      "mepBoilerProperties": "Boiler Properties",
       "mepSegmentProperties": "Pipe / Duct Properties",
       "validationBadge": "Code violation",
       "dimension": "Dimension",
@@ -863,6 +885,13 @@
       "mepManifoldGeometry": "Geometry",
       "mepManifoldOutlets": "Outlets",
       "mepManifoldActions": "Actions",
+      "mepDrainageCollectorInlets": "Inlets / Outlet",
+      "mepRadiatorGeometry": "Geometry",
+      "mepRadiatorThermal": "Thermal",
+      "mepRadiatorActions": "Actions",
+      "mepBoilerGeometry": "Geometry",
+      "mepBoilerThermal": "Thermal",
+      "mepBoilerActions": "Actions",
       "mepSegmentSection": "Section",
       "mepSegmentDimensions": "Dimensions",
       "mepSegmentGeometry": "Geometry",
@@ -1064,6 +1093,10 @@
         "mepRadiator": {
           "label": "Radiator",
           "tooltip": "Place a heating radiator with a single click — supply inlet + return outlet (discipline: plumbing/heating)"
+        },
+        "mepBoiler": {
+          "label": "Boiler",
+          "tooltip": "Heating boiler / burner (supply outlet + return inlet) — single-click placement (discipline: plumbing/heating)"
         },
         "railing": {
           "label": "Railing",
@@ -1438,10 +1471,44 @@
             "ground": "Ground Slab",
             "foundation": "Foundation"
           },
+          "roof": {
+            "concrete": "Concrete deck",
+            "tiled": "Tiled roof"
+          },
           "stair": {
             "residential": "Residential",
             "narrow": "Narrow"
           }
+        }
+      },
+      "roofFamilyType": {
+        "type": "Type",
+        "typeNone": "No type (free)",
+        "duplicateNamePrefix": "Copy",
+        "save": "Save",
+        "cancel": "Cancel",
+        "builtinBadge": "Built-in",
+        "properties": "Type Properties",
+        "rename": "Rename",
+        "override": "Override",
+        "overrideTooltip": "This value overrides the type on this roof",
+        "resetToType": "Reset to type",
+        "resetToTypeTooltip": "Remove all overrides — back to the type values",
+        "paramThickness": "Thickness",
+        "paramMaterial": "Material",
+        "thicknessUnit": "mm",
+        "materialNone": "—",
+        "editType": "Edit type…",
+        "editTypeTitle": "Edit roof type",
+        "editTypeDescription": "Changes apply to every roof of this type, on all floors.",
+        "editTypeBuiltinNotice": "Built-in type (read-only). Duplicate to edit the layers.",
+        "editTypeAffectsCount": "Changes apply to {count} roofs of this type.",
+        "duplicateAndEdit": "Duplicate & edit",
+        "deleteType": "Delete type…",
+        "material": {
+          "rc": "Reinforced concrete",
+          "tile": "Tile",
+          "wood": "Timber"
         }
       },
       "slabFamilyType": {
@@ -1856,6 +1923,40 @@
         "close": "Close",
         "delete": "Delete",
         "deleteConfirm": "Delete manifold? This action cannot be undone."
+      },
+      "mepDrainageCollectorEditor": {
+        "width": "Width",
+        "length": "Length",
+        "bodyHeight": "Basin depth",
+        "mountingElevation": "Mounting height",
+        "inletCount": "Inlets",
+        "inletDiameter": "Inlet diameter",
+        "outletDiameter": "Outlet diameter (sewer)",
+        "close": "Close",
+        "delete": "Delete",
+        "deleteConfirm": "Delete catch basin? This action cannot be undone."
+      },
+      "mepRadiatorEditor": {
+        "width": "Width",
+        "length": "Depth",
+        "bodyHeight": "Body height",
+        "mountingElevation": "Mounting height",
+        "connectorDiameter": "Connector diameter",
+        "thermalOutput": "Thermal output (W)",
+        "close": "Close",
+        "delete": "Delete",
+        "deleteConfirm": "Delete radiator? This action cannot be undone."
+      },
+      "mepBoilerEditor": {
+        "width": "Width",
+        "length": "Depth",
+        "bodyHeight": "Body height",
+        "mountingElevation": "Mounting height",
+        "connectorDiameter": "Connector diameter",
+        "thermalOutput": "Thermal output (W)",
+        "close": "Close",
+        "delete": "Delete",
+        "deleteConfirm": "Delete boiler? This action cannot be undone."
       },
       "mepSegmentEditor": {
         "width": "Width",
@@ -2644,6 +2745,16 @@
         "nonPositiveLength": "Depth must be greater than 0",
         "dimensionTooSmall": "Dimension is below the minimum allowed",
         "nonPositiveBodyHeight": "Body height must be greater than 0"
+      }
+    }
+  },
+  "mepBoiler": {
+    "validation": {
+      "hardErrors": {
+        "nonPositiveWidth": "Width must be greater than 0",
+        "nonPositiveLength": "Depth must be greater than 0",
+        "dimensionTooSmall": "Dimension is below the minimum allowed",
+        "nonPositiveBodyHeight": "Boiler height must be greater than 0"
       }
     }
   },

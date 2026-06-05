@@ -12,7 +12,7 @@
 import type { Point2D } from '../rendering/types/Types';
 import type { DxfEntityUnion } from '../canvas-v2/dxf-canvas/dxf-types';
 import type { GripInfo, StairGripKind, WallGripKind } from './useGripMovement';
-import type { ColumnGripKind, BeamGripKind, SlabGripKind, SlabOpeningGripKind, RoofGripKind, OpeningGripKind, MepFixtureGripKind, ElectricalPanelGripKind, MepManifoldGripKind, MepRadiatorGripKind, FurnitureGripKind, FloorplanSymbolGripKind, MepSegmentGripKind } from './grip-types';
+import type { ColumnGripKind, BeamGripKind, SlabGripKind, SlabOpeningGripKind, RoofGripKind, OpeningGripKind, MepFixtureGripKind, ElectricalPanelGripKind, MepManifoldGripKind, MepRadiatorGripKind, MepBoilerGripKind, FurnitureGripKind, FloorplanSymbolGripKind, MepSegmentGripKind } from './grip-types';
 import type { WallEntity } from '../bim/types/wall-types';
 import type { BeamEntity } from '../bim/types/beam-types';
 import type { ColumnEntity } from '../bim/types/column-types';
@@ -22,6 +22,7 @@ import type { MepFixtureEntity } from '../bim/types/mep-fixture-types';
 import type { ElectricalPanelEntity } from '../bim/types/electrical-panel-types';
 import type { MepManifoldEntity } from '../bim/types/mep-manifold-types';
 import type { MepRadiatorEntity } from '../bim/types/mep-radiator-types';
+import type { MepBoilerEntity } from '../bim/types/mep-boiler-types';
 import type { FurnitureEntity } from '../bim/types/furniture-types';
 import type { FloorplanSymbolEntity } from '../bim/types/floorplan-symbol-types';
 import type { MepSegmentEntity } from '../bim/types/mep-segment-types';
@@ -38,6 +39,7 @@ import { getMepFixtureGrips } from '../bim/mep-fixtures/mep-fixture-grips';
 import { getElectricalPanelGrips } from '../bim/electrical-panels/electrical-panel-grips';
 import { getMepManifoldGrips } from '../bim/mep-manifolds/mep-manifold-grips';
 import { getMepRadiatorGrips } from '../bim/mep-radiators/mep-radiator-grips';
+import { getMepBoilerGrips } from '../bim/mep-boilers/mep-boiler-grips';
 import { getFurnitureGrips } from '../bim/furniture/furniture-grips';
 import { getFloorplanSymbolGrips } from '../bim/floorplan-symbols/floorplan-symbol-grips';
 import { getMepSegmentGrips } from '../bim/mep-segments/mep-segment-grips';
@@ -112,6 +114,11 @@ export interface DxfGripDragPreview {
    * live ghost through `applyMepRadiatorGripDrag` + `computeMepRadiatorGeometry`.
    */
   mepRadiatorGripKind?: MepRadiatorGripKind;
+  /**
+   * ADR-408 Εύρος Β #2 — parametric heating boiler grip discriminator. Routes the
+   * live ghost through `applyMepBoilerGripDrag` + `computeMepBoilerGeometry`.
+   */
+  mepBoilerGripKind?: MepBoilerGripKind;
   /**
    * ADR-410 — parametric furniture grip discriminator. Routes the live ghost
    * through `applyFurnitureGripDrag` + `computeFurnitureGeometry`.
@@ -394,6 +401,13 @@ export function computeDxfEntityGrips(entity: DxfEntityUnion): GripInfo[] {
       // ADR-408 Εύρος Β — parametric heating radiator grips (move + rotation + 4
       // corner resize, rectangular-only). 1:1 mirror of mep-manifold.
       grips.push(...getMepRadiatorGrips(entity as unknown as MepRadiatorEntity));
+      break;
+    }
+
+    case 'mep-boiler': {
+      // ADR-408 Εύρος Β #2 — parametric heating boiler grips (move + rotation + 4
+      // corner resize, rectangular-only). 1:1 mirror of mep-radiator.
+      grips.push(...getMepBoilerGrips(entity as unknown as MepBoilerEntity));
       break;
     }
 

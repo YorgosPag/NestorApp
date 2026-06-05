@@ -16,6 +16,7 @@
 
 import {
   deleteDoc,
+  deleteField,
   doc,
   serverTimestamp,
   setDoc,
@@ -35,6 +36,7 @@ import type {
   RoofKind,
   RoofParams,
 } from '../types/roof-types';
+import type { RoofTypeParams } from '../types/bim-family-type';
 import type { BimValidation } from '../types/bim-base';
 
 // ============================================================================
@@ -58,6 +60,10 @@ export interface RoofDoc {
   readonly buildingId?: string;
   readonly floorId?: string;
   readonly layerId?: string;
+  /** ADR-417 §10 #3 — FK → BimFamilyType.id (RoofType). Absent on untyped roofs. */
+  readonly typeId?: string;
+  /** ADR-417 §10 #3 — per-instance overrides of type-level params. */
+  readonly typeOverrides?: Partial<RoofTypeParams>;
   readonly createdAt: Timestamp;
   readonly createdBy: string;
   readonly updatedAt: Timestamp;
@@ -80,6 +86,8 @@ export interface RoofSaveInput {
   readonly buildingId?: string;
   readonly floorId?: string;
   readonly layerId?: string;
+  readonly typeId?: string;
+  readonly typeOverrides?: Partial<RoofTypeParams>;
 }
 
 export interface RoofUpdateInput {
@@ -87,6 +95,10 @@ export interface RoofUpdateInput {
   readonly validation?: BimValidation;
   readonly geometry?: RoofGeometry;
   readonly layerId?: string;
+  /** `null` → `deleteField()` (non-destructive detach keeps params; ADR-412 Q6). */
+  readonly typeId?: string | null;
+  /** `null` → `deleteField()` (clear all per-instance overrides). */
+  readonly typeOverrides?: Partial<RoofTypeParams> | null;
 }
 
 // ============================================================================
@@ -144,10 +156,14 @@ export class RoofFirestoreService {
     };
 
     // Firestore rejects `undefined` — include optional fields only when set.
+    // `setDoc` REPLACES the doc, so omitting `typeId`/`typeOverrides` on a detach
+    // removes them (non-destructive — params kept; ADR-412 Q6).
     if (input.geometry !== undefined) base.geometry = input.geometry;
     if (input.buildingId !== undefined) base.buildingId = input.buildingId;
     if (input.floorId !== undefined) base.floorId = input.floorId;
     if (input.layerId !== undefined) base.layerId = input.layerId;
+    if (input.typeId !== undefined) base.typeId = input.typeId;
+    if (input.typeOverrides !== undefined) base.typeOverrides = input.typeOverrides;
 
     await setDoc(ref, base);
     return base as unknown as RoofDoc;
@@ -163,6 +179,13 @@ export class RoofFirestoreService {
     if (patch.validation !== undefined) payload.validation = patch.validation;
     if (patch.geometry !== undefined) payload.geometry = patch.geometry;
     if (patch.layerId !== undefined) payload.layerId = patch.layerId;
+    // `null` deletes the field (detach / clear overrides); a value writes it.
+    if (patch.typeId !== undefined) {
+      payload.typeId = patch.typeId === null ? deleteField() : patch.typeId;
+    }
+    if (patch.typeOverrides !== undefined) {
+      payload.typeOverrides = patch.typeOverrides === null ? deleteField() : patch.typeOverrides;
+    }
 
     await updateDoc(ref, payload);
   }
@@ -197,5 +220,9 @@ export function entityToSaveInput(entity: RoofEntity): RoofSaveInput {
     params: entity.params,
     validation: entity.validation,
     layerId: entity.layerId,
+    // ADR-417 §10 #3 — persist the family-type link. Omitted (undefined) for
+    // untyped/legacy roofs so `setDoc` writes no `typeId`/`typeOverrides`.
+    ...(entity.typeId !== undefined && { typeId: entity.typeId }),
+    ...(entity.typeOverrides !== undefined && { typeOverrides: entity.typeOverrides }),
   };
 }

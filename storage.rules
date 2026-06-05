@@ -285,6 +285,47 @@ service firebase.storage {
     }
 
     // =========================================================================
+    // 🎨 BIM MATERIAL APPEARANCE THUMBNAILS — ADR-413 §2D Phase 2
+    // =========================================================================
+    // Path: /companies/{companyId}/bim-material-thumbnails/{fileName}
+    //
+    // User-uploaded appearance image per material (Revit «Appearance asset →
+    // image»), keyed by materialId. The download URL is persisted on the
+    // bim_materials/{materialId} doc as `thumbnailUrl` and wins over the PBR
+    // albedo swatch everywhere. Company-scoped (tenant isolation). 5 MB cap;
+    // the client soft-caps at 2 MB.
+    // =========================================================================
+
+    match /companies/{companyId}/bim-material-thumbnails/{fileName} {
+      allow read: if isAuthenticated() && (belongsToCompany(companyId) || isSuperAdmin());
+      allow write: if (belongsToCompany(companyId) || isSuperAdmin())
+                   && request.resource.size < 5 * 1024 * 1024
+                   && request.resource.contentType.matches('image/.*');
+      allow delete: if (belongsToCompany(companyId) || isSuperAdmin());
+    }
+
+    // =========================================================================
+    // 🎨 BIM MATERIAL 3D PBR TEXTURES — ADR-413 §2D Phase 3
+    // =========================================================================
+    // Path: /companies/{companyId}/bim-material-textures/{materialId}/{fileName}
+    //
+    // User-uploaded PBR texture maps (albedo/normal/roughness/ao — Revit
+    // «Appearance asset → Image» per-map slots), keyed by materialId + sub-keyed
+    // by map. The download URLs are persisted on the bim_materials/{materialId}
+    // doc as pbrTextures.<map>Url and RENDER on walls in the 3D viewport (not just
+    // a 2D thumbnail). Company-scoped (tenant isolation). 10 MB cap per map; the
+    // client soft-caps at 8 MB.
+    // =========================================================================
+
+    match /companies/{companyId}/bim-material-textures/{materialId}/{fileName} {
+      allow read: if isAuthenticated() && (belongsToCompany(companyId) || isSuperAdmin());
+      allow write: if (belongsToCompany(companyId) || isSuperAdmin())
+                   && request.resource.size < 10 * 1024 * 1024
+                   && request.resource.contentType.matches('image/.*');
+      allow delete: if (belongsToCompany(companyId) || isSuperAdmin());
+    }
+
+    // =========================================================================
     // 🎨 CAD FILES (DXF/Technical Drawings)
     // =========================================================================
     // Path: /cad/{userId}/{fileId}/{filename}

@@ -391,6 +391,53 @@ export function buildBimEnvironmentHdriPath(params: {
   return `companies/${params.companyId}/bim_environments/${params.envId}.${params.ext}`;
 }
 
+/** Allowed image extensions for a BIM material appearance thumbnail. */
+export type BimMaterialThumbnailExt = 'png' | 'jpg' | 'jpeg' | 'webp';
+
+/**
+ * Builds the storage path for a user-uploaded BIM material appearance thumbnail
+ * (ADR-413 §2D Phase 2 — Revit «Appearance asset → image»).
+ *
+ * Path scheme: `companies/{companyId}/bim-material-thumbnails/{materialId}.{ext}`
+ *
+ * Single-purpose, company-scoped path (tenant isolation, mirrors the HDRI
+ * environment path). Keyed by `materialId` — the ONE central appearance asset
+ * per material (not per BIM-type that consumes it). The download URL is then
+ * persisted on the `bim_materials/{materialId}` doc as `thumbnailUrl`.
+ */
+export function buildBimMaterialThumbnailPath(params: {
+  companyId: string;
+  materialId: string;
+  ext: BimMaterialThumbnailExt;
+}): string {
+  return `companies/${params.companyId}/bim-material-thumbnails/${params.materialId}.${params.ext}`;
+}
+
+/** PBR texture map channel of a user-uploaded BIM material appearance asset. */
+export type BimMaterialTextureMapName = 'albedo' | 'normal' | 'roughness' | 'ao';
+
+/**
+ * Builds the storage path for a user-uploaded BIM material PBR texture map
+ * (ADR-413 §2D Phase 3 — Revit «Appearance asset → Image» per-map slot that
+ * RENDERS in the 3D viewport, not just a 2D thumbnail).
+ *
+ * Path scheme:
+ *   `companies/{companyId}/bim-material-textures/{materialId}/{map}.{ext}`
+ *
+ * Company-scoped (tenant isolation, mirrors the Phase-2 thumbnail path) but
+ * keyed by `materialId` + sub-keyed by `map` (albedo/normal/roughness/ao) so the
+ * four channels of ONE material live together. The download URLs are persisted on
+ * the `bim_materials/{materialId}` doc under `pbrTextures.<map>Url`.
+ */
+export function buildBimMaterialTextureMapPath(params: {
+  companyId: string;
+  materialId: string;
+  map: BimMaterialTextureMapName;
+  ext: BimMaterialThumbnailExt;
+}): string {
+  return `companies/${params.companyId}/bim-material-textures/${params.materialId}/${params.map}.${params.ext}`;
+}
+
 /**
  * Parses a storage path back to its components
  * Useful for debugging and migration tools

@@ -7,8 +7,9 @@
  *
  * Covers: MEP fixture (ADR-406), furniture (ADR-410), floorplan symbol
  * (ADR-415), electrical panel (ADR-408 Φ3), plumbing manifold / drainage
- * collector (ADR-408 Φ12/Φ14), heating radiator (ADR-408 Εύρος Β), MEP
- * segment duct/pipe/drain-pipe (ADR-408 Φ8/Φ14), railing (ADR-407).
+ * collector (ADR-408 Φ12/Φ14), heating radiator (ADR-408 Εύρος Β), heating
+ * boiler (ADR-408 Εύρος Β #2), MEP segment duct/pipe/drain-pipe (ADR-408
+ * Φ8/Φ14), railing (ADR-407).
  *
  * Pattern: Single Responsibility Principle — placement-tool management.
  */
@@ -19,6 +20,7 @@ import { useFloorplanSymbolTool } from '../drawing/useFloorplanSymbolTool';
 import { useElectricalPanelTool } from '../drawing/useElectricalPanelTool';
 import { useMepManifoldTool } from '../drawing/useMepManifoldTool';
 import { useMepRadiatorTool } from '../drawing/useMepRadiatorTool';
+import { useMepBoilerTool } from '../drawing/useMepBoilerTool';
 import { useMepSegmentTool } from '../drawing/useMepSegmentTool';
 import { useRailingTool } from '../drawing/useRailingTool';
 import { useToolLifecycle } from './useToolLifecycle';
@@ -29,6 +31,7 @@ import { addFloorplanSymbolToScene } from '../../bim/floorplan-symbols/add-floor
 import { addElectricalPanelToScene } from '../../bim/electrical-panels/add-electrical-panel-to-scene';
 import { addMepManifoldToScene } from '../../bim/mep-manifolds/add-mep-manifold-to-scene';
 import { addMepRadiatorToScene } from '../../bim/mep-radiators/add-mep-radiator-to-scene';
+import { addMepBoilerToScene } from '../../bim/mep-boilers/add-mep-boiler-to-scene';
 import { addMepSegmentToScene } from '../../bim/mep-segments/add-mep-segment-to-scene';
 import { DEFAULT_DRAINAGE_SLOPE_PERCENT } from '../../bim/types/mep-segment-types';
 import { addRailingToScene } from '../../bim/railings/add-railing-to-scene';
@@ -48,6 +51,7 @@ export interface PlacementToolsReturn {
   electricalPanelTool: ReturnType<typeof useElectricalPanelTool>; // ADR-408 Φ3
   mepManifoldTool: ReturnType<typeof useMepManifoldTool>; // ADR-408 Φ12
   mepRadiatorTool: ReturnType<typeof useMepRadiatorTool>; // ADR-408 Εύρος Β
+  mepBoilerTool: ReturnType<typeof useMepBoilerTool>; // ADR-408 Εύρος Β #2
   mepSegmentTool: ReturnType<typeof useMepSegmentTool>; // ADR-408 Φ8
   railingTool: ReturnType<typeof useRailingTool>; // ADR-407
 }
@@ -141,6 +145,17 @@ export function useSpecialToolsPlacementTools(
   });
   useToolLifecycle(activeTool === 'mep-radiator', mepRadiatorTool.activate, mepRadiatorTool.deactivate);
 
+  // ADR-408 Εύρος Β #2 — HEATING BOILER TOOL: single-click placement; entity appended+broadcast.
+  const mepBoilerTool = useMepBoilerTool({
+    currentLevelId: levelManager.currentLevelId || '0',
+    onMepBoilerCreated: (boilerEntity) => addMepBoilerToScene(boilerEntity, levelManager),
+    getSceneUnits: () => {
+      const lid = levelManager.currentLevelId;
+      return lid ? resolveSceneUnits(levelManager.getLevelScene(lid)) : 'mm';
+    },
+  });
+  useToolLifecycle(activeTool === 'mep-boiler', mepBoilerTool.activate, mepBoilerTool.deactivate);
+
   // ADR-408 Φ8 — MEP SEGMENT TOOL (duct + pipe): 2-click linear placement.
   const mepSegmentTool = useMepSegmentTool({
     currentLevelId: levelManager.currentLevelId || '0',
@@ -195,6 +210,7 @@ export function useSpecialToolsPlacementTools(
     electricalPanelTool,
     mepManifoldTool,
     mepRadiatorTool,
+    mepBoilerTool,
     mepSegmentTool,
     railingTool,
   };

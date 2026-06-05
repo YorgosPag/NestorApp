@@ -44,7 +44,9 @@ export type IfcEntityType =
   // ADR-417 — parametric pitched roof container (IfcRoofTypeEnum on derived shape).
   | 'IfcRoof'
   // ADR-408 Εύρος Β — hydronic heating terminal (radiator; IfcFlowTerminal family).
-  | 'IfcSpaceHeater';
+  | 'IfcSpaceHeater'
+  // ADR-408 Εύρος Β #2 — hydronic heat source (boiler; Mechanical Equipment family).
+  | 'IfcBoiler';
 
 export const IFC_ENTITY_TYPE_VALUES: readonly IfcEntityType[] = [
   'IfcWall',
@@ -74,6 +76,8 @@ export const IFC_ENTITY_TYPE_VALUES: readonly IfcEntityType[] = [
   'IfcRoof',
   // ADR-408 Εύρος Β — hydronic heating terminal (radiator).
   'IfcSpaceHeater',
+  // ADR-408 Εύρος Β #2 — hydronic heat source (boiler).
+  'IfcBoiler',
 ] as const;
 
 export type IfcPropertySetValue = string | number | boolean | null;
@@ -127,6 +131,8 @@ export const IfcEntityTypeSchema = z.enum([
   'IfcRoof',
   // ADR-408 Εύρος Β — hydronic heating terminal (radiator).
   'IfcSpaceHeater',
+  // ADR-408 Εύρος Β #2 — hydronic heat source (boiler).
+  'IfcBoiler',
 ]);
 
 export const IfcPropertySetValueSchema = z.union([

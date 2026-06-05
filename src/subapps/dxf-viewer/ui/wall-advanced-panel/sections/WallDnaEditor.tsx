@@ -23,6 +23,16 @@
 
 import React, { useCallback } from 'react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectLabel,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { MaterialSwatch } from '../../components/shared/MaterialSwatch';
 import type { BimMaterial } from '../../../bim/types/bim-material-types';
 import type { WallCategory } from '../../../bim/types/wall-types';
 import type {
@@ -399,14 +409,19 @@ function MaterialPicker({
   const { t } = useTranslation('dxf-viewer-shell');
   const isBmatId = value.startsWith('bmat_');
   const kind = isBmatId ? 'library' : classifyWallMaterial(value);
-  const selectValue = kind === 'custom' ? WALL_MATERIAL_CUSTOM_ID : value;
+  // Empty (unset) is treated as custom-like: the custom option stays selected and
+  // the free-form input shows (Radix forbids an empty SelectItem value anyway).
+  const isCustomLike = kind === 'custom' || kind === 'empty';
+  const selectValue = isCustomLike ? WALL_MATERIAL_CUSTOM_ID : value;
   const presetOptions = options.filter((opt) => opt.id !== WALL_MATERIAL_CUSTOM_ID);
   const customOption = options.find((opt) => opt.id === WALL_MATERIAL_CUSTOM_ID);
   const hasLibrary = libraryMaterials.length > 0;
+  const selectedLibraryMat = isBmatId
+    ? libraryMaterials.find((m) => m.id === value)
+    : undefined;
 
-  const onSelectChange = useCallback(
-    (event: React.ChangeEvent<HTMLSelectElement>): void => {
-      const next = event.target.value;
+  const onSelectValue = useCallback(
+    (next: string): void => {
       if (next === WALL_MATERIAL_CUSTOM_ID) { onChange(''); return; }
       if (next.startsWith('bmat_')) {
         const mat = libraryMaterials.find((m) => m.id === next);
@@ -420,46 +435,80 @@ function MaterialPicker({
 
   return (
     <span className="flex flex-1 items-center gap-1">
-      <select
-        aria-label={t('wallAdvancedPanel.sections.dna.fields.material')}
-        value={selectValue}
-        onChange={onSelectChange}
-        className="flex-1 rounded border border-border bg-background px-1 py-0.5 text-xs text-foreground"
-      >
-        {libraryLoading && !hasLibrary && (
-          <option value="" disabled>
-            {t('wallAdvancedPanel.sections.dna.fields.libraryLoading')}
-          </option>
-        )}
-        {hasLibrary && (
-          <optgroup label={t('wallAdvancedPanel.sections.dna.fields.libraryGroup')}>
-            {libraryMaterials.map((m) => (
-              <option key={m.id} value={m.id}>{m.nameEl}</option>
-            ))}
-          </optgroup>
-        )}
-        {hasLibrary ? (
-          <optgroup label={t('wallAdvancedPanel.sections.dna.fields.presetsGroup')}>
+      <Select value={selectValue} onValueChange={onSelectValue}>
+        <SelectTrigger
+          size="sm"
+          aria-label={t('wallAdvancedPanel.sections.dna.fields.material')}
+          className="flex-1 min-w-[8rem]"
+        >
+          {isCustomLike ? (
+            <SelectValue />
+          ) : isBmatId ? (
+            selectedLibraryMat ? (
+              <span className="flex items-center gap-2">
+                <MaterialSwatch
+                  category={selectedLibraryMat.category}
+                  thumbnailUrl={selectedLibraryMat.thumbnailUrl}
+                  albedoUrl={selectedLibraryMat.pbrTextures?.albedoUrl}
+                />
+                <span className="truncate">{selectedLibraryMat.nameEl}</span>
+              </span>
+            ) : (
+              <SelectValue />
+            )
+          ) : (
+            <span className="flex items-center gap-2">
+              <MaterialSwatch materialId={value} />
+              <span className="truncate">
+                {t(`wallAdvancedPanel.materials.preset.${value}`)}
+              </span>
+            </span>
+          )}
+        </SelectTrigger>
+        <SelectContent className="w-auto min-w-[8rem] max-w-[20rem]">
+          {libraryLoading && !hasLibrary && (
+            <SelectItem value="__loading__" disabled>
+              {t('wallAdvancedPanel.sections.dna.fields.libraryLoading')}
+            </SelectItem>
+          )}
+          {hasLibrary && (
+            <SelectGroup>
+              <SelectLabel>{t('wallAdvancedPanel.sections.dna.fields.libraryGroup')}</SelectLabel>
+              {libraryMaterials.map((m) => (
+                <SelectItem key={m.id} value={m.id} className="whitespace-nowrap">
+                  <span className="flex items-center gap-2">
+                    <MaterialSwatch
+                      category={m.category}
+                      thumbnailUrl={m.thumbnailUrl}
+                      albedoUrl={m.pbrTextures?.albedoUrl}
+                    />
+                    <span>{m.nameEl}</span>
+                  </span>
+                </SelectItem>
+              ))}
+            </SelectGroup>
+          )}
+          <SelectGroup>
+            {hasLibrary && (
+              <SelectLabel>{t('wallAdvancedPanel.sections.dna.fields.presetsGroup')}</SelectLabel>
+            )}
             {presetOptions.map((opt) => (
-              <option key={opt.id} value={opt.id}>
-                {t(`wallAdvancedPanel.materials.preset.${opt.labelKeySuffix}`)}
-              </option>
+              <SelectItem key={opt.id} value={opt.id} className="whitespace-nowrap">
+                <span className="flex items-center gap-2">
+                  <MaterialSwatch materialId={opt.id} />
+                  <span>{t(`wallAdvancedPanel.materials.preset.${opt.labelKeySuffix}`)}</span>
+                </span>
+              </SelectItem>
             ))}
-          </optgroup>
-        ) : (
-          presetOptions.map((opt) => (
-            <option key={opt.id} value={opt.id}>
-              {t(`wallAdvancedPanel.materials.preset.${opt.labelKeySuffix}`)}
-            </option>
-          ))
-        )}
-        {customOption && (
-          <option value={customOption.id}>
-            {t(`wallAdvancedPanel.materials.preset.${customOption.labelKeySuffix}`)}
-          </option>
-        )}
-      </select>
-      {kind === 'custom' && (
+          </SelectGroup>
+          {customOption && (
+            <SelectItem value={customOption.id} className="whitespace-nowrap">
+              {t(`wallAdvancedPanel.materials.preset.${customOption.labelKeySuffix}`)}
+            </SelectItem>
+          )}
+        </SelectContent>
+      </Select>
+      {isCustomLike && (
         <input
           type="text"
           value={value}

@@ -20,6 +20,7 @@ import { computeMepFixtureGeometry } from '../bim/mep-fixtures/mep-fixture-geome
 import { computeElectricalPanelGeometry } from '../bim/electrical-panels/electrical-panel-geometry';
 import { computeMepManifoldGeometry } from '../bim/mep-manifolds/mep-manifold-geometry';
 import { computeMepRadiatorGeometry } from '../bim/mep-radiators/mep-radiator-geometry';
+import { computeMepBoilerGeometry } from '../bim/mep-boilers/mep-boiler-geometry';
 import { computeMepSegmentGeometry } from '../bim/geometry/mep-segment-geometry';
 import { computeMepFittingGeometry } from '../bim/geometry/mep-fitting-geometry';
 import { computeFurnitureGeometry } from '../bim/furniture/furniture-geometry';
@@ -187,6 +188,14 @@ export function convertDxfEntityToEntityModel(entity: DxfEntityUnion): EntityMod
       const rad = entity as unknown as Partial<import('../bim/types/mep-radiator-types').MepRadiatorEntity>;
       const geometry = rad.geometry ?? (rad.params ? computeMepRadiatorGeometry(rad.params) : undefined);
       return buildBimEntityModel('mep-radiator', { ...(entity as object), geometry } as typeof entity, baseModel);
+    }
+    // ADR-408 Εύρος Β #2 — heating boiler needs the same geometry-recompute fallback (mirror mep-radiator):
+    // a Firestore-loaded MepBoilerEntity may arrive before its geometry cache is hydrated;
+    // without `geometry.bbox` BoundsCalculator drops it from the spatial index → no hover/select.
+    case 'mep-boiler': {
+      const blr = entity as unknown as Partial<import('../bim/types/mep-boiler-types').MepBoilerEntity>;
+      const geometry = blr.geometry ?? (blr.params ? computeMepBoilerGeometry(blr.params) : undefined);
+      return buildBimEntityModel('mep-boiler', { ...(entity as object), geometry } as typeof entity, baseModel);
     }
     // ADR-408 Φ8 — MEP segment needs the same geometry-recompute fallback (mirror beam).
     case 'mep-segment': {

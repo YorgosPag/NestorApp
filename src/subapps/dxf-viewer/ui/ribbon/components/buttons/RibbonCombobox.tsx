@@ -73,7 +73,13 @@ export const RibbonCombobox: React.FC<RibbonComboboxProps> = ({ command }) => {
   const dynamicOpts = dynamicState?.options;
   const baseOptions: readonly RibbonComboboxOption[] =
     (dynamicOpts && dynamicOpts.length > 0 ? dynamicOpts : null) ?? command.options ?? [];
-  const value = dynamicState?.value ?? null;
+  // Treat an empty-string value like "no selection" (null): Radix Select forbids a
+  // SelectItem with value="" (see select.tsx guard), so an empty value must never be
+  // injected as an option below. A bridge that returns '' for an unset/unclassified
+  // field (e.g. a pipe with no classification) therefore shows the placeholder, not
+  // a crash. SSoT render guard — covers every contextual combobox.
+  const rawValue = dynamicState?.value ?? null;
+  const value = rawValue === '' ? null : rawValue;
   const isMixed = value === null;
   // Inject current value as first option if not already present — ensures
   // free-form values (e.g. height=500) are always visible, not replaced by '—'.

@@ -181,6 +181,24 @@ export const DEFAULT_MANIFOLD_INLET_DIAMETER_MM = 25;
 /** Default outlet diameter (mm) — typical 16mm PEX branch. */
 export const DEFAULT_MANIFOLD_OUTLET_DIAMETER_MM = 16;
 
+// ADR-408 Φ14 — a drainage collector (φρεάτιο) is a catch basin, not a thin
+// distribution manifold: a deeper body, fewer & larger gravity branch inlets, and
+// a single larger sewer outlet. These defaults make a freshly placed φρεάτιο
+// read as a Revit/CIBSE catch basin out of the box (and match the φρεάτιο tab
+// presets in `contextual-drainage-collector-tab.ts`).
+
+/** Default φρεάτιο body depth (mm) — a basin is deeper than a manifold's 60mm. */
+export const DEFAULT_DRAINAGE_COLLECTOR_BODY_HEIGHT_MM = 300;
+
+/** Default φρεάτιο branch-inlet count (the N gravity inlets). */
+export const DEFAULT_DRAINAGE_COLLECTOR_INLET_COUNT = 2;
+
+/** Default φρεάτιο branch-inlet diameter (mm) — typical DN100 gravity branch. */
+export const DEFAULT_DRAINAGE_COLLECTOR_INLET_DIAMETER_MM = 100;
+
+/** Default φρεάτιο sewer-outlet diameter (mm) — typical DN125, larger than inlets. */
+export const DEFAULT_DRAINAGE_COLLECTOR_OUTLET_DIAMETER_MM = 125;
+
 /** Minimum manifold footprint dimension (mm) — below this is a placement error. */
 export const MIN_MANIFOLD_DIMENSION_MM = 20;
 

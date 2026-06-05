@@ -43,11 +43,11 @@ function buildup(layers: readonly SlabDnaLayer[]): SlabDna {
  */
 export function createTiledRoofBuildup(): SlabDna {
   return buildup([
-    { id: 'roof-tile', name: 'Clay Roof Tile', thickness: 40, materialId: 'mat-tile', zone: 'top' },
-    { id: 'roof-batten', name: 'Timber Battens', thickness: 30, materialId: 'mat-timber', zone: 'top' },
+    { id: 'roof-tile', name: 'Clay Roof Tile', thickness: 40, materialId: 'mat-roof-tile', zone: 'top' },
+    { id: 'roof-batten', name: 'Timber Battens', thickness: 30, materialId: 'mat-wood', zone: 'top' },
     { id: 'roof-membrane', name: 'Breather Membrane', thickness: 5, materialId: 'mat-membrane', zone: 'top' },
     { id: 'roof-thermal', name: 'Thermal Insulation', thickness: 100, materialId: 'mat-insulation', zone: 'top' },
-    { id: 'roof-sarking', name: 'Timber Sarking', thickness: 20, materialId: 'mat-timber', zone: 'core' },
+    { id: 'roof-sarking', name: 'Timber Sarking', thickness: 20, materialId: 'mat-wood', zone: 'core' },
     { id: 'roof-deck', name: 'Reinforced Concrete', thickness: 100, materialId: 'mat-concrete', zone: 'core' },
   ]);
 }

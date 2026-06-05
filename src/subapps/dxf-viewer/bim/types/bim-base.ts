@@ -58,7 +58,9 @@ export type BimElementType =
   // ADR-417 — parametric pitched roof (footprint + per-edge slopes).
   | 'roof'
   // ADR-408 Εύρος Β — point-based hydronic radiator (heating terminal).
-  | 'mep-radiator';
+  | 'mep-radiator'
+  // ADR-408 Εύρος Β #2 — point-based hydronic boiler (heating source).
+  | 'mep-boiler';
 
 /**
  * Union of all BIM sub-type discriminators (one per element type).

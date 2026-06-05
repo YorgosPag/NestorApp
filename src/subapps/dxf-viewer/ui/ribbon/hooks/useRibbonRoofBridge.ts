@@ -40,17 +40,8 @@ import {
   roofSlopeFromRatio,
   roofSlopeToRatio,
 } from '../../../bim/geometry/roof-geometry';
-import { getBuiltInRoofTypeId } from '../../../bim/family-types/built-in-types';
-import {
-  getRoofBuildupForKey,
-  ROOF_BUILDUP_KEYS,
-  type RoofBuildupKey,
-} from '../../../bim/types/roof-buildup';
 import { useCommandHistory } from '../../../core/commands';
-import {
-  UpdateRoofParamsCommand,
-  type RoofTypeChange,
-} from '../../../core/commands/entity-commands/UpdateRoofParamsCommand';
+import { UpdateRoofParamsCommand } from '../../../core/commands/entity-commands/UpdateRoofParamsCommand';
 import { LevelSceneManagerAdapter } from '../../../systems/entity-creation/LevelSceneManagerAdapter';
 import {
   ROOF_RIBBON_KEYS,
@@ -59,7 +50,6 @@ import {
   ROOF_RIBBON_BADGE_KEYS,
 } from './bridge/roof-command-keys';
 import { EventBus } from '../../../systems/events/EventBus';
-import { SELECT_CLEAR_VALUE } from '@/config/domain-constants';
 import type {
   RibbonComboboxState,
   RibbonToggleState,
@@ -108,29 +98,6 @@ const SLOPE_PCT_OPTIONS: readonly RibbonComboboxOption[] = [10, 20, 30, 40, 50, 
   (v) => ({ value: String(v), labelKey: `${v}%`, isLiteralLabel: true }),
 );
 
-/**
- * Roof Type picker options — built-in family types («Μπετονένιο δώμα» /
- * «Κεραμοσκεπή»). Πρώτη επιλογή = «Χωρίς τύπο» (SELECT_CLEAR_VALUE — Radix Select
- * απαγορεύει `value=""`, ADR-411 μάθημα).
- */
-const ROOF_TYPE_OPTIONS: readonly RibbonComboboxOption[] = [
-  {
-    value: SELECT_CLEAR_VALUE,
-    labelKey: 'ribbon.commands.roofEditor.roofType.none',
-    isLiteralLabel: false,
-  },
-  ...ROOF_BUILDUP_KEYS.map((key) => ({
-    value: getBuiltInRoofTypeId(key),
-    labelKey: `ribbon.commands.roofEditor.roofType.${key}`,
-    isLiteralLabel: false,
-  })),
-];
-
-/** typeId → build-up key (reverse lookup of the deterministic built-in id). */
-const TYPE_ID_TO_BUILDUP_KEY: ReadonlyMap<string, RoofBuildupKey> = new Map(
-  ROOF_BUILDUP_KEYS.map((key) => [getBuiltInRoofTypeId(key), key]),
-);
-
 /** Κλειδώνει το derived `geometry.shape` στις 3 preset μορφές της Φ1 (hip/complex → flat). */
 function clampShape(shape: RoofShape): 'flat' | 'mono-pitch' | 'gable' {
   return shape === 'mono-pitch' || shape === 'gable' ? shape : 'flat';
@@ -168,7 +135,7 @@ export function useRibbonRoofBridge(
    * picks up the patched entity via debounced auto-save.
    */
   const dispatchParams = useCallback(
-    (roof: RoofEntity, nextParams: RoofParams, typeChange?: RoofTypeChange): void => {
+    (roof: RoofEntity, nextParams: RoofParams): void => {
       if (!levelManager.currentLevelId) return;
       const sm = new LevelSceneManagerAdapter(
         levelManager.getLevelScene,
@@ -176,7 +143,7 @@ export function useRibbonRoofBridge(
         levelManager.currentLevelId,
       );
       executeCommand(
-        new UpdateRoofParamsCommand(roof.id, nextParams, roof.params, sm, false, typeChange),
+        new UpdateRoofParamsCommand(roof.id, nextParams, roof.params, sm, false),
       );
       EventBus.emit('bim:roof-params-updated', { roofId: roof.id });
     },
@@ -190,8 +157,6 @@ export function useRibbonRoofBridge(
       switch (commandKey) {
         case ROOF_RIBBON_KEYS.stringParams.shape:
           return { value: clampShape(roof.geometry.shape), options: [] };
-        case ROOF_RIBBON_KEYS.stringParams.roofType:
-          return { value: roof.typeId ?? SELECT_CLEAR_VALUE, options: ROOF_TYPE_OPTIONS };
         case ROOF_RIBBON_KEYS.params.slope:
           return {
             value: String(Math.round(currentSlope(roof.params))),
@@ -217,22 +182,6 @@ export function useRibbonRoofBridge(
           const shape = value as 'flat' | 'mono-pitch' | 'gable';
           const edges = applyRoofShapePreset(p.outline, shape, currentSlope(p), p.slopeUnit);
           dispatchParams(roof, { ...p, edges });
-          return;
-        }
-        case ROOF_RIBBON_KEYS.stringParams.roofType: {
-          // «Χωρίς τύπο» → καθάρισε το typeId (κράτα την τρέχουσα dna/thickness).
-          if (value === SELECT_CLEAR_VALUE) {
-            dispatchParams(roof, { ...p }, { next: undefined, prev: roof.typeId });
-            return;
-          }
-          const key = TYPE_ID_TO_BUILDUP_KEY.get(value);
-          if (!key) return;
-          const dna = getRoofBuildupForKey(key);
-          dispatchParams(
-            roof,
-            { ...p, dna, thickness: dna.totalThickness },
-            { next: value, prev: roof.typeId },
-          );
           return;
         }
         case ROOF_RIBBON_KEYS.params.slope: {

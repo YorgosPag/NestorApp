@@ -114,6 +114,8 @@ export const SUBCATEGORY_TAXONOMY: Readonly<Record<BimCategory, ReadonlyArray<st
   'electrical-panel': [],
   'mep-manifold':  [],
   'mep-radiator':  [],
+  // ADR-408 Εύρος Β #2 — λέβητας: no subcategory model yet.
+  'mep-boiler':    [],
   railing:         [],
   'mep-wire':      [],
   furniture:       [],

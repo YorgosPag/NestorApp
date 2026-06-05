@@ -38,6 +38,8 @@ import { RibbonWallDimensionWidget } from './RibbonWallDimensionWidget';
 import { RibbonWallFamilyTypeWidget } from './RibbonWallFamilyTypeWidget';
 import { RibbonWallTypePropertiesWidget } from './RibbonWallTypePropertiesWidget';
 import { RibbonSlabFamilyTypeWidget } from './RibbonSlabFamilyTypeWidget';
+import { RibbonRoofFamilyTypeWidget } from './RibbonRoofFamilyTypeWidget';
+import { RibbonRoofTypePropertiesWidget } from './RibbonRoofTypePropertiesWidget';
 import { RibbonMepCircuitPickerWidget } from './RibbonMepCircuitPickerWidget';
 import { RibbonMepFixtureCircuitWidget } from './RibbonMepFixtureCircuitWidget';
 import { RibbonMepCircuitNameWidget } from './RibbonMepCircuitNameWidget';
@@ -143,6 +145,12 @@ function renderButton(button: RibbonButton): React.ReactNode {
     }
     if (button.widgetId === 'slab-family-type') {
       return <RibbonSlabFamilyTypeWidget key="slab-family-type-widget" />;
+    }
+    if (button.widgetId === 'roof-family-type') {
+      return <RibbonRoofFamilyTypeWidget key="roof-family-type-widget" />;
+    }
+    if (button.widgetId === 'roof-type-properties') {
+      return <RibbonRoofTypePropertiesWidget key="roof-type-properties-widget" />;
     }
     if (button.widgetId === 'multi-selection-common-properties') {
       return <MultiSelectionCommonPropertiesPanel key="multi-selection-common-widget" />;

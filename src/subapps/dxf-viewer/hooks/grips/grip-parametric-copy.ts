@@ -43,6 +43,10 @@ import type { MepRadiatorEntity } from '../../bim/types/mep-radiator-types';
 import { applyMepRadiatorGripDrag } from '../../bim/mep-radiators/mep-radiator-grips';
 import { buildMepRadiatorEntity } from '../drawing/mep-radiator-completion';
 import { addMepRadiatorToScene } from '../../bim/mep-radiators/add-mep-radiator-to-scene';
+import type { MepBoilerEntity } from '../../bim/types/mep-boiler-types';
+import { applyMepBoilerGripDrag } from '../../bim/mep-boilers/mep-boiler-grips';
+import { buildMepBoilerEntity } from '../drawing/mep-boiler-completion';
+import { addMepBoilerToScene } from '../../bim/mep-boilers/add-mep-boiler-to-scene';
 import type { FurnitureEntity } from '../../bim/types/furniture-types';
 import { applyFurnitureGripDrag } from '../../bim/furniture/furniture-grips';
 import { buildFurnitureEntity } from '../drawing/furniture-completion';
@@ -260,6 +264,34 @@ export function commitMepRadiatorCopy(
 }
 
 /**
+ * ADR-408 Εύρος Β #2 — Ctrl-COPY at the terminal click of a heating boiler MOVE
+ * hot-grip (AutoCAD MOVE→COPY). Mirror of `commitMepRadiatorCopy`: builds a NEW
+ * `MepBoilerEntity` whose params are the original shifted by `delta` (the same
+ * `mep-boiler-move` whole-entity translate the MOVE uses) and inserts it via the
+ * shared `addMepBoilerToScene` SSoT — fresh enterprise ID (N.6, via
+ * `buildMepBoilerEntity` → `createMepBoiler`), `drawing:entity-created`
+ * broadcast so persistence saves the copy. Original untouched; single copy.
+ */
+export function commitMepBoilerCopy(
+  grip: UnifiedGripInfo,
+  delta: Point2D,
+  deps: DxfCommitDeps,
+): void {
+  if (!grip.entityId || grip.mepBoilerGripKind !== 'mep-boiler-move') return;
+  const sceneManager = createSceneManagerAdapter(deps);
+  if (!sceneManager) return;
+  const raw = sceneManager.getEntity(grip.entityId);
+  if (!raw) return;
+  const candidate = raw as unknown as Partial<MepBoilerEntity>;
+  if (candidate.type !== 'mep-boiler' || !candidate.params) return;
+  const boiler = candidate as MepBoilerEntity;
+  const translated = applyMepBoilerGripDrag('mep-boiler-move', { originalParams: boiler.params, delta });
+  const built = buildMepBoilerEntity(translated, boiler.layerId);
+  if (!built.ok) return;
+  addMepBoilerToScene(built.entity, deps);
+}
+
+/**
  * ADR-410 — Ctrl-COPY at the terminal click of a furniture MOVE hot-grip
  * (AutoCAD MOVE→COPY). Mirror of `commitMepFixtureCopy`: builds a NEW
  * `FurnitureEntity` whose params are the original shifted by `delta` (the same
@@ -353,6 +385,10 @@ export function commitHotGripCopy(
   }
   if (grip.mepRadiatorGripKind === 'mep-radiator-move') {
     commitMepRadiatorCopy(grip, delta, deps);
+    return true;
+  }
+  if (grip.mepBoilerGripKind === 'mep-boiler-move') {
+    commitMepBoilerCopy(grip, delta, deps);
     return true;
   }
   if (grip.furnitureGripKind === 'furniture-move') {

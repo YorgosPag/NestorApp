@@ -19,6 +19,19 @@
 
 import React, { useCallback } from 'react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { MaterialSwatch } from '../../components/shared/MaterialSwatch';
+import {
+  CONSTRUCTION_MATERIAL_IDS,
+  isConstructionMaterialId,
+  constructionMaterialLabelKey,
+} from '../../../bim/materials/construction-materials';
 import type { SlabKind } from '../../../bim/types/slab-types';
 import {
   computeSlabTotalThickness,
@@ -29,19 +42,6 @@ import {
 } from '../../../bim/types/slab-dna-types';
 
 const LAYER_ZONES: readonly SlabLayerZone[] = ['top', 'core', 'bottom'];
-
-/** Common slab material ids (preset picker). Custom ids stay typeable. */
-const SLAB_MATERIAL_IDS: readonly string[] = [
-  'mat-concrete',
-  'mat-screed',
-  'mat-insulation',
-  'mat-tile',
-  'mat-plaster',
-  'mat-membrane',
-  'mat-gravel',
-  'mat-finish',
-  'mat-wood',
-];
 
 // ─── Pure mutations (recompute totalThickness via SSoT) ──────────────────────
 
@@ -197,7 +197,7 @@ function SlabLayerRow(props: SlabLayerRowProps): React.ReactElement {
     layer, index, count, isHighlighted, onHighlight,
     onRemove, onUpdate, onMoveUp, onMoveDown,
   } = props;
-  const isPreset = SLAB_MATERIAL_IDS.includes(layer.materialId);
+  const isPreset = isConstructionMaterialId(layer.materialId);
   const highlightClass = isHighlighted
     ? 'border-[hsl(var(--ring))] ring-1 ring-[hsl(var(--ring))]'
     : 'border-border';
@@ -210,18 +210,25 @@ function SlabLayerRow(props: SlabLayerRowProps): React.ReactElement {
       className={`flex flex-col gap-1 rounded border bg-card/40 p-2 ${highlightClass}`}
     >
       <div className="flex items-center gap-2">
-        <select
-          aria-label={t('ribbon.commands.slabFamilyType.dna.fields.zone')}
+        <Select
           value={layer.zone}
-          onChange={(e) => onUpdate({ zone: e.target.value as SlabLayerZone })}
-          className="rounded border border-border bg-background px-1 py-0.5 text-xs text-foreground"
+          onValueChange={(v) => onUpdate({ zone: v as SlabLayerZone })}
         >
-          {LAYER_ZONES.map((zone) => (
-            <option key={zone} value={zone}>
-              {t(`ribbon.commands.layeredBuildup.zone.${zone}`)}
-            </option>
-          ))}
-        </select>
+          <SelectTrigger
+            size="sm"
+            aria-label={t('ribbon.commands.slabFamilyType.dna.fields.zone')}
+            className="w-auto min-w-[5rem]"
+          >
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent className="w-auto min-w-[5rem]">
+            {LAYER_ZONES.map((zone) => (
+              <SelectItem key={zone} value={zone} className="whitespace-nowrap">
+                {t(`ribbon.commands.layeredBuildup.zone.${zone}`)}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
         <input
           type="text"
           aria-label={t('ribbon.commands.slabFamilyType.dna.fields.name')}
@@ -257,17 +264,38 @@ function SlabLayerRow(props: SlabLayerRowProps): React.ReactElement {
           />
         </label>
         <span className="flex flex-1 items-center gap-1">
-          <select
-            aria-label={t('ribbon.commands.slabFamilyType.dna.fields.material')}
+          <Select
             value={isPreset ? layer.materialId : '__custom__'}
-            onChange={(e) => onUpdate({ materialId: e.target.value === '__custom__' ? '' : e.target.value })}
-            className="flex-1 rounded border border-border bg-background px-1 py-0.5 text-xs text-foreground"
+            onValueChange={(v) => onUpdate({ materialId: v === '__custom__' ? '' : v })}
           >
-            {SLAB_MATERIAL_IDS.map((id) => (
-              <option key={id} value={id}>{id}</option>
-            ))}
-            <option value="__custom__">{t('ribbon.commands.slabFamilyType.dna.fields.materialCustom')}</option>
-          </select>
+            <SelectTrigger
+              size="sm"
+              aria-label={t('ribbon.commands.slabFamilyType.dna.fields.material')}
+              className="flex-1 min-w-[8rem]"
+            >
+              {isPreset ? (
+                <span className="flex items-center gap-2">
+                  <MaterialSwatch materialId={layer.materialId} />
+                  <span className="truncate">{t(constructionMaterialLabelKey(layer.materialId))}</span>
+                </span>
+              ) : (
+                <SelectValue />
+              )}
+            </SelectTrigger>
+            <SelectContent className="w-auto min-w-[8rem]">
+              {CONSTRUCTION_MATERIAL_IDS.map((id) => (
+                <SelectItem key={id} value={id} className="whitespace-nowrap">
+                  <span className="flex items-center gap-2">
+                    <MaterialSwatch materialId={id} />
+                    <span>{t(constructionMaterialLabelKey(id))}</span>
+                  </span>
+                </SelectItem>
+              ))}
+              <SelectItem value="__custom__">
+                {t('ribbon.commands.slabFamilyType.dna.fields.materialCustom')}
+              </SelectItem>
+            </SelectContent>
+          </Select>
           {!isPreset && (
             <input
               type="text"

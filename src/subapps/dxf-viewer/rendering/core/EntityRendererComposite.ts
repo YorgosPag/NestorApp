@@ -50,6 +50,8 @@ import { MepFittingRenderer } from '../../bim/renderers/MepFittingRenderer';
 // ADR-408 Φ12 — plumbing manifold leaf (point-based floor-mounted distributor).
 import { MepManifoldRenderer } from '../../bim/renderers/MepManifoldRenderer';
 import { MepRadiatorRenderer } from '../../bim/renderers/MepRadiatorRenderer';
+// ADR-408 Εύρος Β #2 — heating boiler leaf (point-based wall-mounted hydronic source).
+import { MepBoilerRenderer } from '../../bim/renderers/MepBoilerRenderer';
 // ADR-362 Phase C1 — persistent dimension leaf (consumes DimGeometry discriminated union).
 import { DimensionRenderer } from '../entities/DimensionRenderer';
 import type { DimensionLookup } from '../../systems/dimensions/dim-geometry-builder';
@@ -120,6 +122,8 @@ export class EntityRendererComposite {
     const mepManifoldRenderer = new MepManifoldRenderer(this.ctx);
     // ADR-408 Εύρος Β — heating radiator renderer (point-based wall-mounted terminal).
     const mepRadiatorRenderer = new MepRadiatorRenderer(this.ctx);
+    // ADR-408 Εύρος Β #2 — heating boiler renderer (point-based wall-mounted hydronic source).
+    const mepBoilerRenderer = new MepBoilerRenderer(this.ctx);
     // ADR-362 Phase C1 — dimension renderer (10 variants via DimGeometry union).
     const dimensionRenderer = new DimensionRenderer(this.ctx);
     // ADR-359 Phase 4.b — Liang-Barsky clipped construction line renderers.
@@ -156,6 +160,7 @@ export class EntityRendererComposite {
     this.renderers.set('mep-fitting', mepFittingRenderer);
     this.renderers.set('mep-manifold', mepManifoldRenderer);
     this.renderers.set('mep-radiator', mepRadiatorRenderer);
+    this.renderers.set('mep-boiler', mepBoilerRenderer);
     this.renderers.set('dimension', dimensionRenderer);
     this.renderers.set('xline', xlineRenderer);
     this.renderers.set('ray', rayRenderer);

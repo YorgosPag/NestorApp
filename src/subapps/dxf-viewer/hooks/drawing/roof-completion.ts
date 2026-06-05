@@ -34,6 +34,7 @@ import type { SlabDna } from '../../bim/types/slab-dna-types';
 import { createDefaultRoofBuildup } from '../../bim/types/slab-dna-types';
 import { computeRoofGeometry, validateRoofParams, buildDefaultRoofEdges, applyRoofShapePreset } from '../../bim/geometry/roof-geometry';
 import { createRoof } from '@/services/factories/roof.factory';
+import { resolveAutoRoofTypeId } from '../../bim/family-types/roof-type-auto-assign';
 import type { SceneUnits } from '../../utils/scene-units';
 
 export type { SceneUnits };
@@ -152,7 +153,11 @@ export function buildRoofEntity(
     visible: true,
     validation: validation.bimValidation,
   });
-  return { ok: true, entity };
+  // ADR-417 §10 #3 — auto-link to the read-only built-in roof type whose build-up
+  // matches (non-destructive: params already equal the built-in, so resolution is
+  // a no-op visually). Untyped/custom build-ups stay ad-hoc (returns undefined).
+  const typeId = resolveAutoRoofTypeId(params);
+  return { ok: true, entity: typeId ? { ...entity, typeId } : entity };
 }
 
 // ─── Polygon-click completion helper ─────────────────────────────────────────

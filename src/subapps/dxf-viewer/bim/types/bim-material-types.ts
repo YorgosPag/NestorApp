@@ -31,6 +31,28 @@ export type BimMaterialFireRating = 'EI30' | 'EI60' | 'EI90' | 'EI120' | 'none';
 export type BimMaterialUnit = 'm' | 'm2' | 'm3' | 'kg' | 'pcs';
 
 /**
+ * ADR-413 §2D Phase 3 — user-uploaded PBR texture set (Revit «Appearance asset →
+ * Generic/Image» με per-map slots) που RENDER-ΑΡΕΤΑΙ στο 3D viewport (τοίχοι κλπ).
+ *
+ * `albedo` (base color) είναι ο ΜΟΝΟΣ υποχρεωτικός χάρτης· normal/roughness/ao
+ * είναι optional (`null` = δεν ανέβηκε → flat fallback για τον συγκεκριμένο χάρτη).
+ * `tileSizeM` = το φυσικό μέγεθος ενός tile σε ΜΕΤΡΑ (Revit «Sample Size»): η cache
+ * ρυθμίζει `texture.repeat = 1 / tileSizeM` ώστε η υφή να απλώνεται φυσικά πάνω σε
+ * γεωμετρία με UVs σε world meters.
+ *
+ * Firestore-safe: ολόκληρο το object είναι `null` (καμία υφή) ή πλήρες με `null`
+ * ανά optional map — mirror του conditional-spread pattern του `thumbnailUrl`.
+ */
+export interface PbrMaterialTextures {
+  readonly albedoUrl: string | null;
+  readonly normalUrl: string | null;
+  readonly roughnessUrl: string | null;
+  readonly aoUrl: string | null;
+  /** Real-world repeat size of one texture tile, σε ΜΕΤΡΑ (Revit «Sample Size»). */
+  readonly tileSizeM: number;
+}
+
+/**
  * Persisted shape σε Firestore. Mirror του ADR-363 §Q8 schema 1:1.
  *
  * Firestore rejects `undefined` — optional fields are stored as `null` ή
@@ -53,6 +75,17 @@ export interface BimMaterial {
   readonly brand: string | null;
   readonly brandModel: string | null;
   readonly notes: string | null;
+  /**
+   * ADR-413 §2D Phase 2 — user-uploaded appearance thumbnail (Revit «Appearance
+   * asset → image»). Firebase Storage download URL, keyed by this material's id.
+   * `null` = no custom image → falls back to the PBR albedo swatch (Phase 1).
+   */
+  readonly thumbnailUrl: string | null;
+  /**
+   * ADR-413 §2D Phase 3 — user-uploaded PBR texture set που render-άρεται στο 3D
+   * (όχι μόνο 2D thumbnail). `null` = καμία υφή → flat κατά κατηγορία στο 3D.
+   */
+  readonly pbrTextures: PbrMaterialTextures | null;
   /** System seed = non-deletable + non-editable από client. */
   readonly builtin: boolean;
   /** Scope-dependent: null για system, populated για company/project. */
@@ -85,10 +118,24 @@ export interface SaveBimMaterialInput {
   readonly brand?: string;
   readonly brandModel?: string;
   readonly notes?: string;
+  /** ADR-413 §2D Phase 2 — appearance thumbnail download URL (omit = none). */
+  readonly thumbnailUrl?: string;
+  /** ADR-413 §2D Phase 3 — user-uploaded 3D PBR texture set (omit = none). */
+  readonly pbrTextures?: PbrMaterialTextures;
 }
 
-/** Partial patch για update — same exclusions ως SaveBimMaterialInput. */
-export type UpdateBimMaterialPatch = Partial<Omit<SaveBimMaterialInput, 'scope'>>;
+/**
+ * Partial patch για update — same exclusions ως SaveBimMaterialInput, αλλά
+ * `thumbnailUrl` δέχεται και `null` (αφαίρεση ανεβασμένης εικόνας → επιστροφή
+ * στο albedo fallback).
+ */
+export type UpdateBimMaterialPatch = Partial<
+  Omit<SaveBimMaterialInput, 'scope' | 'thumbnailUrl' | 'pbrTextures'>
+> & {
+  readonly thumbnailUrl?: string | null;
+  /** ADR-413 §2D Phase 3 — `null` αφαιρεί ολόκληρο το texture set (επιστροφή flat). */
+  readonly pbrTextures?: PbrMaterialTextures | null;
+};
 
 /** Library query filters για list/subscribe. */
 export interface BimMaterialQuery {

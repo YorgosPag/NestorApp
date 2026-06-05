@@ -802,6 +802,27 @@ const MEP_RADIATOR_TRACKED_FIELDS_RAW: Record<string, string> = {
 export const MEP_RADIATOR_TRACKED_FIELDS: Record<string, TrackedFieldDef> =
   mergeDefs(MEP_RADIATOR_TRACKED_FIELDS_RAW, {});
 
+// ADR-408 Εύρος Β #2 — heating boiler audited fields.
+const MEP_BOILER_TRACKED_FIELDS_RAW: Record<string, string> = {
+  kind: 'kind',
+  layerId: 'layerId',
+  shape: 'shape',
+  width: 'width',
+  length: 'length',
+  bodyHeightMm: 'bodyHeightMm',
+  mountingElevationMm: 'mountingElevationMm',
+  connectorDiameterMm: 'connectorDiameterMm',
+  thermalOutputW: 'thermalOutputW',
+  rotation: 'rotation',
+  material: 'material',
+  storeyId: 'storeyId',
+  hostId: 'hostId',
+  systemClassification: 'systemClassification',
+};
+
+export const MEP_BOILER_TRACKED_FIELDS: Record<string, TrackedFieldDef> =
+  mergeDefs(MEP_BOILER_TRACKED_FIELDS_RAW, {});
+
 // ADR-408 Φ8 — unified linear MEP segment (duct + pipe).
 const MEP_SEGMENT_TRACKED_FIELDS_RAW: Record<string, string> = {
   domain: 'domain',
@@ -1061,6 +1082,8 @@ export function getTrackedFieldsForEntityAuditType(
       return MEP_MANIFOLD_TRACKED_FIELDS;
     case 'mep-radiator':
       return MEP_RADIATOR_TRACKED_FIELDS;
+    case 'mep-boiler':
+      return MEP_BOILER_TRACKED_FIELDS;
     case 'mep-segment':
       return MEP_SEGMENT_TRACKED_FIELDS;
     case 'mep-fitting':

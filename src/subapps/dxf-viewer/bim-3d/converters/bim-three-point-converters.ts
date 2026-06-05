@@ -13,12 +13,58 @@ import type { MepFixtureEntity } from '../../bim/types/mep-fixture-types';
 import type { ElectricalPanelEntity } from '../../bim/types/electrical-panel-types';
 import type { MepManifoldEntity } from '../../bim/types/mep-manifold-types';
 import type { MepRadiatorEntity } from '../../bim/types/mep-radiator-types';
+import type { MepBoilerEntity } from '../../bim/types/mep-boiler-types';
+import type { Point3D } from '../../bim/types/bim-base';
 import { sceneUnitsToMeters } from '../../utils/scene-units';
 import { getElementMaterial3D, getSystemTintedMaterial3D } from '../materials/MaterialCatalog3D';
+import { buildDrainageGratingStrokes } from '../../bim/mep-manifolds/mep-manifold-symbol';
 import { buildShape, extrudeAndRotate, tagMesh } from './bim-three-shape-helpers';
 import { attachEdgesProjection } from './bim-three-edges';
 
 const MM_TO_M = 0.001;
+
+// ADR-408 Φ14 — the CIBSE sanitary brown shared by the drainage collector (φρεάτιο)
+// body tint AND its 3D grating overlay (SSoT for both, mirrors the 2D
+// `MANIFOLD_PALETTE_DRAINAGE` strokeHex '#b45309').
+const DRAINAGE_TINT_HEX = 0xb45309;
+
+// ADR-408 Φ14 — one shared line material for every φρεάτιο grating overlay; the
+// grating is a schematic indicator (like the 2D thin strokes), not a lit surface,
+// so a single un-lit `LineBasicMaterial` is reused across all collectors.
+const DRAINAGE_GRATING_MATERIAL = new THREE.LineBasicMaterial({ color: DRAINAGE_TINT_HEX });
+
+// Lift the grating fractionally above the basin's top face to avoid z-fighting.
+const GRATING_LIFT_M = 0.0005;
+
+/**
+ * ADR-408 Φ14 — build the 3D grating overlay for a drainage collector (φρεάτιο).
+ * Reuses the 2D SSoT `buildDrainageGratingStrokes` for the bar layout (zero
+ * duplicated grating geometry), then projects each plan-space stroke onto the
+ * basin's TOP face. Returned as a child `LineSegments` so it inherits the basin
+ * mesh's vertical placement; picking is disabled so the basin box owns selection.
+ *
+ * Coordinate projection mirrors `extrudeAndRotate` (rot −π/2 about X): a footprint
+ * point (x, y) in scene units maps to mesh-local (x·sceneToM, topY, −y·sceneToM).
+ */
+function buildDrainageGrating3D(
+  verts: readonly Point3D[],
+  sceneToM: number,
+  topYm: number,
+): THREE.LineSegments | null {
+  if (verts.length !== 4) return null;
+  const [v0, v1, v2, v3] = verts;
+  const bars = buildDrainageGratingStrokes(v0, v1, v2, v3);
+  const y = topYm + GRATING_LIFT_M;
+  const positions: number[] = [];
+  for (const bar of bars) {
+    for (const p of bar) positions.push(p.x * sceneToM, y, -p.y * sceneToM);
+  }
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+  const lines = new THREE.LineSegments(geo, DRAINAGE_GRATING_MATERIAL);
+  lines.raycast = () => {}; // never a pick target — the basin box owns selection.
+  return lines;
+}
 
 /**
  * ADR-406 — point-based MEP fixture → solid mesh. The footprint is extruded by
@@ -117,8 +163,9 @@ export function manifoldToMesh(
   // ADR-408 Φ12 — a manifold is a plumbing system source, not a member: not
   // coloured by system (mirrors the panel convention for circuit sources). Φ14 — a
   // drainage collector (φρεάτιο) tints the equipment PBR brown (CIBSE sanitary).
-  const mesh = manifold.params.kind === 'drainage-collector'
-    ? new THREE.Mesh(geo, getSystemTintedMaterial3D('mep-manifold', 0xb45309))
+  const isDrainCollector = manifold.params.kind === 'drainage-collector';
+  const mesh = isDrainCollector
+    ? new THREE.Mesh(geo, getSystemTintedMaterial3D('mep-manifold', DRAINAGE_TINT_HEX))
     : new THREE.Mesh(geo, getElementMaterial3D('mep-manifold'));
   // Box centred vertically on the mounting elevation (floor-mounted): the extrusion
   // grows UP from mesh.position.y, so the bottom sits at centre − bodyHeight/2.
@@ -126,6 +173,14 @@ export function manifoldToMesh(
   mesh.position.y = centerMm * MM_TO_M - bodyHeightM / 2 + buildingBaseElevationM;
   const tagged = tagMesh(mesh, manifold.id, 'mep-manifold', matId, levelId);
   attachEdgesProjection(tagged, 'mep-manifold');
+  // ADR-408 Φ14 — a drainage collector (φρεάτιο) shows its grating on the TOP face
+  // (WYSIWYG with the 2D symbol), reusing the same 2D `buildDrainageGratingStrokes`
+  // SSoT. The body extrusion spans local y 0→bodyHeightM, so the top face is at
+  // mesh-local y = bodyHeightM (the child inherits `mesh.position.y`).
+  if (isDrainCollector) {
+    const grating = buildDrainageGrating3D(verts, sceneToM, bodyHeightM);
+    if (grating) tagged.add(grating);
+  }
   return tagged;
 }
 
@@ -159,5 +214,38 @@ export function radiatorToMesh(
   mesh.position.y = centerMm * MM_TO_M - bodyHeightM / 2 + buildingBaseElevationM;
   const tagged = tagMesh(mesh, radiator.id, 'mep-radiator', matId, levelId);
   attachEdgesProjection(tagged, 'mep-radiator');
+  return tagged;
+}
+
+/**
+ * ADR-408 Εύρος Β — point-based heating boiler (λέβητας) → solid mesh. The
+ * footprint is extruded by the body height; the box is centred vertically on the
+ * mounting elevation (floor-mounted). Units-safe: identical `sceneUnitsToMeters`
+ * pattern as `manifoldToMesh`/`radiatorToMesh`. A boiler is a hydronic-supply
+ * source and keeps its fixed warm-red material (not tinted by circuit colours).
+ */
+export function boilerToMesh(
+  boiler: MepBoilerEntity,
+  floorElevationMm = 0,
+  levelId?: string,
+  buildingBaseElevationM = 0,
+): THREE.Mesh | null {
+  const verts = boiler.geometry.footprint.vertices;
+  if (verts.length < 3) return null;
+
+  const sceneToM = sceneUnitsToMeters(boiler.params.sceneUnits ?? 'mm');
+  const shape = buildShape(verts.map((v) => ({ x: v.x * sceneToM, y: v.y * sceneToM, z: 0 })));
+  if (!shape) return null;
+
+  const bodyHeightM = boiler.params.bodyHeightMm * MM_TO_M;
+  const geo = extrudeAndRotate(shape, bodyHeightM);
+  const matId = boiler.params.material ?? 'elem-mep-boiler';
+  const mesh = new THREE.Mesh(geo, getElementMaterial3D('mep-boiler'));
+  // Box centred vertically on the mounting elevation: the extrusion
+  // grows UP from mesh.position.y, so the bottom sits at centre − bodyHeight/2.
+  const centerMm = floorElevationMm + boiler.params.mountingElevationMm;
+  mesh.position.y = centerMm * MM_TO_M - bodyHeightM / 2 + buildingBaseElevationM;
+  const tagged = tagMesh(mesh, boiler.id, 'mep-boiler', matId, levelId);
+  attachEdgesProjection(tagged, 'mep-boiler');
   return tagged;
 }

@@ -6,6 +6,7 @@
 import {
   cloneTypeToInput,
   getAllBuiltInTypes,
+  getBuiltInRoofTypes,
   getBuiltInSlabTypes,
   getBuiltInSlabTypeId,
   getBuiltInStairTypes,
@@ -153,15 +154,17 @@ describe('getBuiltInStairTypes', () => {
 });
 
 describe('getAllBuiltInTypes', () => {
-  it('concatenates wall + slab + stair built-ins', () => {
+  it('concatenates wall + slab + roof + stair built-ins', () => {
     const all = getAllBuiltInTypes(COMPANY_ID);
     const walls = getBuiltInWallTypes(COMPANY_ID);
     const slabs = getBuiltInSlabTypes(COMPANY_ID);
+    const roofs = getBuiltInRoofTypes(COMPANY_ID);
     const stairs = getBuiltInStairTypes(COMPANY_ID);
 
-    expect(all).toHaveLength(walls.length + slabs.length + stairs.length);
+    expect(all).toHaveLength(walls.length + slabs.length + roofs.length + stairs.length);
     expect(all.some((t) => t.category === 'wall')).toBe(true);
     expect(all.some((t) => t.category === 'slab')).toBe(true);
+    expect(all.some((t) => t.category === 'roof')).toBe(true);
     expect(all.some((t) => t.category === 'stair')).toBe(true);
   });
 

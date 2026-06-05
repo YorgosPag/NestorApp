@@ -83,7 +83,13 @@ export class MepManifoldPlacementGhost {
   private removeMesh(): void {
     if (!this.mesh) return;
     this.scene.remove(this.mesh);
-    this.mesh.geometry.dispose();
+    // Dispose every geometry in the subtree, not just the box: the mesh carries an
+    // edge-overlay child (all manifolds) and a grating-overlay child (ADR-408 Φ14
+    // drainage collectors). Materials are shared singletons — never disposed here.
+    this.mesh.traverse((obj) => {
+      const g = (obj as THREE.Mesh | THREE.LineSegments).geometry;
+      if (g) g.dispose();
+    });
     this.mesh = null;
   }
 

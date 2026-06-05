@@ -24,6 +24,7 @@ import type { RoofEntity } from '../bim/types/roof-types';
 import { isRoofEntity } from '../types/entities';
 import { useRoofPersistence } from '../hooks/data/useRoofPersistence';
 import { useBim3DEntitiesStore } from '../bim-3d/stores/Bim3DEntitiesStore';
+import { EditRoofTypeDialog } from '../ui/ribbon/components/EditRoofTypeDialog';
 
 type LevelManagerLike = Pick<
   ReturnType<typeof useLevels>,
@@ -74,5 +75,7 @@ export function RoofPersistenceHost({
     primarySelectedRoof,
   });
 
-  return null;
+  // ADR-417 §10 #3 — always-on «Edit Roof Type» dialog (self-renders null when
+  // closed; opened via `openEditRoofType` from the contextual ribbon widget).
+  return <EditRoofTypeDialog />;
 }

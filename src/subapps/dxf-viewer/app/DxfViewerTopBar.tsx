@@ -34,6 +34,7 @@ import { FloorplanSymbolPersistenceHost } from './FloorplanSymbolPersistenceHost
 import { ElectricalPanelPersistenceHost } from './ElectricalPanelPersistenceHost';
 import { MepManifoldPersistenceHost } from './MepManifoldPersistenceHost';
 import { MepRadiatorPersistenceHost } from './MepRadiatorPersistenceHost';
+import { MepBoilerPersistenceHost } from './MepBoilerPersistenceHost';
 import { MepSegmentPersistenceHost } from './MepSegmentPersistenceHost';
 import { MepFittingPersistenceHost } from './MepFittingPersistenceHost';
 import { MepSystemPersistenceHost } from './MepSystemPersistenceHost';
@@ -43,6 +44,7 @@ import { BeamPersistenceHost } from './BeamPersistenceHost';
 import { SlabOpeningPersistenceHost } from './SlabOpeningPersistenceHost';
 import { StairPersistenceHost } from './StairPersistenceHost';
 import { SlabOpeningStackHost } from './SlabOpeningStackHost';
+import { UserMaterialRegistryHost } from './UserMaterialRegistryHost';
 import { PsetEditorHost } from './PsetEditorHost';
 import { IfcExportHost } from './IfcExportHost';
 import { useFloorMetadata } from '../hooks/data/useFloorMetadata';
@@ -180,6 +182,13 @@ export function DxfViewerTopBar({
         projectId={levelManager.saveContext?.projectId ?? undefined}
         floorplanId={levelManager.fileRecordId ?? undefined}
       />
+      <MepBoilerPersistenceHost
+        primarySelectedId={primarySelectedId}
+        currentScene={currentScene}
+        levelManager={levelManager}
+        projectId={levelManager.saveContext?.projectId ?? undefined}
+        floorplanId={levelManager.fileRecordId ?? undefined}
+      />
       <MepSegmentPersistenceHost
         primarySelectedId={primarySelectedId}
         currentScene={currentScene}
@@ -236,6 +245,9 @@ export function DxfViewerTopBar({
         floorplanId={levelManager.fileRecordId ?? undefined}
         buildingId={buildingId}
         floorId={floorId}
+      />
+      <UserMaterialRegistryHost
+        projectId={levelManager.saveContext?.projectId ?? undefined}
       />
       <PsetEditorHost levelManager={levelManager} />
       <IfcExportHost />

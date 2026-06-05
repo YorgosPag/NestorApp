@@ -17,14 +17,21 @@
 
 import {
   resolveEffectiveParams,
+  resolveEffectiveRoofParams,
   resolveEffectiveSlabParams,
   resolveEffectiveWallParams,
 } from '../resolve-effective-params';
-import type { BimFamilyType, SlabTypeParams, WallTypeParams } from '../../types/bim-family-type';
+import type {
+  BimFamilyType,
+  RoofTypeParams,
+  SlabTypeParams,
+  WallTypeParams,
+} from '../../types/bim-family-type';
 import type { WallParams } from '../../types/wall-types';
 import type { WallDna } from '../../types/wall-dna-types';
 import type { SlabParams } from '../../types/slab-types';
 import type { SlabDna } from '../../types/slab-dna-types';
+import type { RoofParams } from '../../types/roof-types';
 
 // ---------------------------------------------------------------------------
 // Fixtures
@@ -280,6 +287,92 @@ describe('resolveEffectiveSlabParams', () => {
     expect(result.material).toBe('mat-tile'); // overridden
     expect(result.thickness).toBe(285); // from type
     expect(result.kind).toBe('floor'); // from type
+  });
+});
+
+// ---------------------------------------------------------------------------
+// resolveEffectiveRoofParams — roof analogue (type wins / fast-path / override)
+// ---------------------------------------------------------------------------
+
+const ROOF_TYPE_DNA = { totalThickness: 295 } as unknown as SlabDna;
+
+/** Instance-level RoofParams whose type-governed cache deliberately drifts. */
+function makeRoofInstanceParams(overrides: Partial<RoofParams> = {}): RoofParams {
+  return {
+    outline: { vertices: [{ x: 0, y: 0, z: 0 }, { x: 1000, y: 0, z: 0 }, { x: 0, y: 1000, z: 0 }] },
+    edges: [
+      { definesSlope: true, slope: 30, overhangMm: 0 },
+      { definesSlope: true, slope: 30, overhangMm: 0 },
+      { definesSlope: false, slope: 0, overhangMm: 0 },
+    ],
+    slopeUnit: 'deg', // instance-level — must survive
+    basePivotZ: 3000, // instance-level — must survive
+    thickness: 200, // drifted cache (type says 295)
+    material: 'mat-concrete', // drifted cache (type says 'mat-tile')
+    ...overrides,
+  };
+}
+
+/** Roof family type whose typeParams own thickness/dna/material (no kind). */
+function makeRoofType(typeParams: Partial<RoofTypeParams> = {}): BimFamilyType<'roof'> {
+  return {
+    id: 'bimfamtype_roof_1',
+    category: 'roof',
+    name: 'Tiled 295',
+    scope: 'company',
+    origin: 'user',
+    companyId: 'company_1',
+    ownerId: 'user_1',
+    typeParams: {
+      thickness: 295,
+      dna: ROOF_TYPE_DNA,
+      material: 'mat-tile',
+      ...typeParams,
+    },
+  };
+}
+
+describe('resolveEffectiveRoofParams', () => {
+  it('returns instance params UNCHANGED (same reference) when no typeId', () => {
+    const params = makeRoofInstanceParams();
+    expect(resolveEffectiveRoofParams({ params }, makeRoofType())).toBe(params);
+  });
+
+  it('returns instance params UNCHANGED when type is null', () => {
+    const params = makeRoofInstanceParams();
+    expect(
+      resolveEffectiveRoofParams({ params, typeId: 'bimfamtype_roof_1' }, null),
+    ).toBe(params);
+  });
+
+  it('overwrites type-governed fields from the type («type always wins»)', () => {
+    const params = makeRoofInstanceParams();
+    const type = makeRoofType();
+    const result = resolveEffectiveRoofParams({ params, typeId: type.id }, type);
+
+    expect(result.thickness).toBe(295);
+    expect(result.dna).toBe(ROOF_TYPE_DNA);
+    expect(result.material).toBe('mat-tile');
+    // instance-level fields preserved (footprint/slopes/datum)
+    expect(result.basePivotZ).toBe(3000);
+    expect(result.slopeUnit).toBe('deg');
+    expect(result.edges).toBe(params.edges);
+    // new object, original untouched
+    expect(result).not.toBe(params);
+    expect(params.thickness).toBe(200);
+  });
+
+  it('lets a per-param override win over BOTH type and instance', () => {
+    const params = makeRoofInstanceParams();
+    const type = makeRoofType();
+    const result = resolveEffectiveRoofParams(
+      { params, typeId: type.id, typeOverrides: { material: 'mat-slate' } },
+      type,
+    );
+
+    expect(result.material).toBe('mat-slate'); // overridden
+    expect(result.thickness).toBe(295); // from type
+    expect(result.dna).toBe(ROOF_TYPE_DNA); // from type
   });
 });
 

@@ -354,6 +354,19 @@ export type MepRadiatorGripKind =
   | 'mep-radiator-corner-se';
 
 /**
+ * ADR-408 Εύρος Β #2 — Heating boiler grip kind (parametric grip type). Routes
+ * commit through `applyMepBoilerGripDrag()` + `UpdateMepBoilerParamsCommand`.
+ * Full wall-parity mirror of the heating radiator (rectangular-only → no diameter).
+ */
+export type MepBoilerGripKind =
+  | 'mep-boiler-move'
+  | 'mep-boiler-rotation'
+  | 'mep-boiler-corner-ne'
+  | 'mep-boiler-corner-nw'
+  | 'mep-boiler-corner-sw'
+  | 'mep-boiler-corner-se';
+
+/**
  * ADR-410 — Furniture grip kind (parametric grip type).
  * Routes commit through `applyFurnitureGripDrag()` +
  * `UpdateFurnitureParamsCommand` instead of the standard `StretchEntityCommand`

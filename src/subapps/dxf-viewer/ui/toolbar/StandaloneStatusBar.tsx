@@ -4,7 +4,6 @@ import React from 'react';
 import type { ToolType } from './types';
 import { ToolbarStatusBar } from './ToolbarStatusBar';
 import { MobileToolbarLayout } from './MobileToolbarLayout';
-import { useCurrentZoom } from '../../systems/zoom/ZoomStore';
 import { useProSnapIntegration } from '../../hooks/common/useProSnapIntegration';
 import { useCursor } from '../../systems/cursor';
 import { useResponsiveLayout } from '@/components/contacts/dynamic/hooks/useResponsiveLayout';
@@ -24,7 +23,8 @@ export const StandaloneStatusBar: React.FC<StandaloneStatusBarProps> = ({
   commandCount,
   onSidebarToggle,
 }) => {
-  const currentZoom = useCurrentZoom();
+  // 🏢 ADR-418/ADR-040: zoom is read by the StatusBarViewScaleLeaf micro-leaf inside
+  // ToolbarStatusBar — this orchestrator no longer subscribes to zoom (no re-render per notch).
   const { snapEnabled } = useProSnapIntegration();
   const { settings } = useCursor();
   const { layoutMode } = useResponsiveLayout();
@@ -41,7 +41,6 @@ export const StandaloneStatusBar: React.FC<StandaloneStatusBarProps> = ({
         />
         <ToolbarStatusBar
           activeTool={activeTool}
-          currentZoom={currentZoom}
           snapEnabled={snapEnabled}
           compact
         />
@@ -52,7 +51,6 @@ export const StandaloneStatusBar: React.FC<StandaloneStatusBarProps> = ({
   return (
     <ToolbarStatusBar
       activeTool={activeTool}
-      currentZoom={currentZoom}
       snapEnabled={snapEnabled}
       commandCount={commandCount}
       showCoordinates={settings.behavior.coordinate_display}

@@ -260,6 +260,8 @@ export class MaterialLibraryService {
       brand: input.brand ?? null,
       brandModel: input.brandModel ?? null,
       notes: input.notes ?? null,
+      thumbnailUrl: input.thumbnailUrl ?? null,
+      pbrTextures: input.pbrTextures ?? null,
       builtin: false,
       companyId: this.config.companyId,
       projectId: input.scope === 'project' ? (this.config.projectId ?? null) : null,

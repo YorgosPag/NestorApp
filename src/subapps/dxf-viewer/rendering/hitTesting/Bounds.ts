@@ -140,6 +140,8 @@ export class BoundsCalculator {
       case 'roof':
       case 'mep-manifold':
       case 'mep-radiator':
+      // ADR-408 Εύρος Β #2 (mep-boiler).
+      case 'mep-boiler':
         return this.calculateBimEntityBounds(entity, tolerance);
       // ADR-359 Phase 11 follow-up — XLINE/RAY bounds extracted to sibling module.
       case 'xline':

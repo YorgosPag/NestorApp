@@ -37,11 +37,13 @@ import {
   isElectricalPanelEntity,
   isMepSegmentEntity,
   isMepRadiatorEntity,
+  isMepBoilerEntity,
 } from '../../types/entities';
 import type { MepFixtureEntity } from '../../bim/types/mep-fixture-types';
 import type { ElectricalPanelEntity } from '../../bim/types/electrical-panel-types';
 import type { MepSegmentEntity } from '../../bim/types/mep-segment-types';
 import type { MepRadiatorEntity } from '../../bim/types/mep-radiator-types';
+import type { MepBoilerEntity } from '../../bim/types/mep-boiler-types';
 import { useMepSystemStore } from '../../bim/mep-systems/mep-system-store';
 import {
   buildConnectorSystemIndex,
@@ -61,7 +63,7 @@ export interface UseMepConnectorReconciliationParams {
 
 /** Re-derive one connector host's `systemId` cache; same ref when unchanged. */
 function reconcileHost<
-  T extends MepFixtureEntity | ElectricalPanelEntity | MepSegmentEntity | MepRadiatorEntity,
+  T extends MepFixtureEntity | ElectricalPanelEntity | MepSegmentEntity | MepRadiatorEntity | MepBoilerEntity,
 >(
   entity: T,
   index: ReadonlyMap<string, string>,
@@ -112,6 +114,14 @@ export function useMepConnectorReconciliation(
       // network (one per connector); reconcile its per-connector systemId cache so
       // colour-by-system + circuit membership resolve, exactly like the fixture.
       if (isMepRadiatorEntity(seeded)) {
+        const next = reconcileHost(seeded, index);
+        if (next !== e) changed = true;
+        return next;
+      }
+      // ADR-408 Εύρος Β #2 — a boiler SOURCES a supply network + is a member of the
+      // return network (one per connector); reconcile its per-connector systemId
+      // cache exactly like the radiator/manifold.
+      if (isMepBoilerEntity(seeded)) {
         const next = reconcileHost(seeded, index);
         if (next !== e) changed = true;
         return next;

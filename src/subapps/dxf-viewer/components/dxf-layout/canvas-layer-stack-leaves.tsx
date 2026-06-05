@@ -26,6 +26,7 @@ import { MepFixtureGhostPreviewMount, type MepFixtureGhostPreviewMountProps } fr
 import { ElectricalPanelGhostPreviewMount, type ElectricalPanelGhostPreviewMountProps } from './canvas-layer-stack-electrical-panel-ghost';
 import { MepManifoldGhostPreviewMount, type MepManifoldGhostPreviewMountProps } from './canvas-layer-stack-mep-manifold-ghost';
 import { MepRadiatorGhostPreviewMount, type MepRadiatorGhostPreviewMountProps } from './canvas-layer-stack-mep-radiator-ghost';
+import { MepBoilerGhostPreviewMount, type MepBoilerGhostPreviewMountProps } from './canvas-layer-stack-mep-boiler-ghost';
 import { MepSegmentGhostPreviewMount, type MepSegmentGhostPreviewMountProps, type GhostSegmentSpec } from './canvas-layer-stack-mep-segment-ghost';
 import { SlabOpeningGhostPreviewMount, type SlabOpeningGhostPreviewMountProps } from './canvas-layer-stack-slab-opening-ghost';
 import { OpeningGhostPreviewMount, type OpeningGhostPreviewMountProps } from './canvas-layer-stack-opening-ghost';
@@ -307,6 +308,8 @@ interface PreviewCanvasMountsProps {
   mepManifoldGhost: Omit<MepManifoldGhostPreviewMountProps, 'transform' | 'getCanvas' | 'getViewportElement'>;
   /** ADR-408 Εύρος Β — heating radiator 2D placement ghost payload. */
   mepRadiatorGhost: Omit<MepRadiatorGhostPreviewMountProps, 'transform' | 'getCanvas' | 'getViewportElement'>;
+  /** ADR-408 Εύρος Β #2 — heating boiler 2D placement ghost payload. */
+  mepBoilerGhost: Omit<MepBoilerGhostPreviewMountProps, 'transform' | 'getCanvas' | 'getViewportElement'>;
   /** ADR-408 Φ8 — MEP segment (duct/pipe) 2D rubber-band ghost payload. */
   mepSegmentGhost: Omit<MepSegmentGhostPreviewMountProps, 'transform' | 'getCanvas' | 'getViewportElement'>;
   slabOpeningGhost: Omit<SlabOpeningGhostPreviewMountProps, 'transform' | 'getCanvas' | 'getViewportElement'>;
@@ -328,7 +331,7 @@ interface PreviewCanvasMountsProps {
 export const PreviewCanvasMounts = React.memo(function PreviewCanvasMounts(
   props: PreviewCanvasMountsProps,
 ) {
-  const { rotation, move, mirror, scale, stretch, columnGhost, mepFixtureGhost, electricalPanelGhost, mepManifoldGhost, mepRadiatorGhost, mepSegmentGhost, slabOpeningGhost, openingGhost, gripDragPreview, selectedEntityIds, levelManager, transform, getCanvas, getViewportElement } = props;
+  const { rotation, move, mirror, scale, stretch, columnGhost, mepFixtureGhost, electricalPanelGhost, mepManifoldGhost, mepRadiatorGhost, mepBoilerGhost, mepSegmentGhost, slabOpeningGhost, openingGhost, gripDragPreview, selectedEntityIds, levelManager, transform, getCanvas, getViewportElement } = props;
   return (
     <>
       <RotationPreviewMount
@@ -412,6 +415,12 @@ export const PreviewCanvasMounts = React.memo(function PreviewCanvasMounts(
       />
       <MepRadiatorGhostPreviewMount
         {...mepRadiatorGhost}
+        transform={transform}
+        getCanvas={getCanvas}
+        getViewportElement={getViewportElement}
+      />
+      <MepBoilerGhostPreviewMount
+        {...mepBoilerGhost}
         transform={transform}
         getCanvas={getCanvas}
         getViewportElement={getViewportElement}

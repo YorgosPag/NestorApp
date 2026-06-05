@@ -30,11 +30,14 @@ const BIM_ENTITY_TYPES = new Set<string>([
   'mep-manifold',
   // ADR-408 Εύρος Β — heating radiator (wall-mounted terminal).
   'mep-radiator',
+  // ADR-408 Εύρος Β #2 — heating boiler (wall-mounted heat source).
+  'mep-boiler',
 ]);
 
 type BimEntityType =
   | 'wall' | 'opening' | 'slab' | 'slab-opening' | 'column' | 'beam' | 'stair'
-  | 'mep-fixture' | 'electrical-panel' | 'railing' | 'mep-segment' | 'mep-manifold' | 'mep-radiator';
+  | 'mep-fixture' | 'electrical-panel' | 'railing' | 'mep-segment' | 'mep-manifold' | 'mep-radiator'
+  | 'mep-boiler';
 
 function emitBimRestoreIfApplicable(snapshot: SceneEntity): void {
   const type = (snapshot as { type?: string }).type;
