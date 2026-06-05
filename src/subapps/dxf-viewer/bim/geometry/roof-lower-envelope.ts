@@ -213,6 +213,18 @@ function isInteriorEdge(a: Vec2, b: Vec2, footprint: readonly Vec2[]): boolean {
   return true;
 }
 
+/** Διαγώνιος του bounding box του footprint (canvas) — κλίμακα για tolerances. */
+function footprintDiagonal(footprint: readonly Vec2[]): number {
+  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+  for (const v of footprint) {
+    if (v.x < minX) minX = v.x;
+    if (v.y < minY) minY = v.y;
+    if (v.x > maxX) maxX = v.x;
+    if (v.y > maxY) maxY = v.y;
+  }
+  return Math.hypot(maxX - minX, maxY - minY);
+}
+
 /** Canonical κλειδί ακμής (rounded + sorted endpoints) για dedupe. */
 function edgeKey(a: Vec2, b: Vec2): string {
   const k = (v: Vec2): string => `${Math.round(v.x * 100)},${Math.round(v.y * 100)}`;
@@ -273,12 +285,17 @@ export function solveLowerEnvelope(
     }
   }
 
+  // Ελάχιστο μήκος ridge (canvas) — κόβει εκφυλισμένα ~μηδενικά ακμοτεμάχια όπου
+  // ≥3 επίπεδα τέμνονται σε σημείο (π.χ. κορυφή πυραμίδας) που αλλιώς θα γίνονταν
+  // ψεύτικος μηδενικού μήκους κορφιάς (και degenerate cap).
+  const minRidgeLen = Math.max(1e-6, 1e-4 * footprintDiagonal(footprint2D));
   const seen = new Set<string>();
   const ridges: RoofRidgeLine[] = [];
   for (const poly of facePolys) {
     for (let i = 0; i < poly.length; i++) {
       const a = poly[i];
       const b = poly[(i + 1) % poly.length];
+      if (Math.hypot(b.x - a.x, b.y - a.y) < minRidgeLen) continue;
       if (!isInteriorEdge(a, b, footprint2D)) continue;
       const key = edgeKey(a, b);
       if (seen.has(key)) continue;
