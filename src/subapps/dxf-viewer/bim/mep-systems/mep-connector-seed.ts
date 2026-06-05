@@ -31,6 +31,7 @@ import {
   isElectricalPanelEntity,
   isMepSegmentEntity,
   isMepManifoldEntity,
+  isMepRadiatorEntity,
 } from '../../types/entities';
 import { getEntityConnectors } from './connector-access';
 import {
@@ -39,6 +40,7 @@ import {
   buildSegmentEndpointConnector,
 } from '../types/mep-connector-types';
 import { buildMepManifoldConnectors } from '../mep-manifolds/mep-manifold-geometry';
+import { buildRadiatorConnectors } from '../mep-radiators/mep-radiator-geometry';
 
 /**
  * Materialise the host type's default connector onto a legacy entity that lacks
@@ -60,6 +62,13 @@ export function seedDefaultConnectors(entity: Entity): Entity {
   // derived from its `outletCount` + diameters (SSoT `buildMepManifoldConnectors`).
   if (isMepManifoldEntity(entity)) {
     return { ...entity, params: { ...entity.params, connectors: buildMepManifoldConnectors(entity.params) } };
+  }
+  // A heating radiator (Εύρος Β) materialises its 2 hydronic connectors (supply
+  // inlet + return outlet) derived from `width` + `connectorDiameterMm` (SSoT
+  // `buildRadiatorConnectors`), so a load-time entity re-joins the supply/return
+  // networks even if its connectors were not persisted (Revit family-definition).
+  if (isMepRadiatorEntity(entity)) {
+    return { ...entity, params: { ...entity.params, connectors: buildRadiatorConnectors(entity.params) } };
   }
   // A linear duct/pipe segment carries TWO endpoint connectors (start + end) so
   // it can join a pipe/duct network (Φ9). Its connector domain mirrors the

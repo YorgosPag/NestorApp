@@ -419,6 +419,15 @@ export const HOME_DRAW_PANEL: RibbonPanelDef = {
               icon: 'bim-mep-manifold',
               commandKey: 'mep-drainage-collector',
             },
+            // ADR-408 Εύρος Β — heating radiator (καλοριφέρ). Point-based hydronic
+            // terminal: supply + return connectors; discipline = plumbing.
+            {
+              id: 'draw.bim.mepRadiator',
+              labelKey: 'ribbon.commands.bim.mepRadiator.label',
+              tooltipKey: 'ribbon.commands.bim.mepRadiator.tooltip',
+              icon: 'bim-mep-radiator',
+              commandKey: 'mep-radiator',
+            },
             // ADR-407 — path-based railing (guardrail). 2-click straight sketch;
             // discipline = architectural (ADR-405 discipline visibility).
             {
@@ -435,7 +444,7 @@ export const HOME_DRAW_PANEL: RibbonPanelDef = {
               id: 'draw.bim.roof',
               labelKey: 'ribbon.commands.bim.roof.label',
               tooltipKey: 'ribbon.commands.bim.roof.tooltip',
-              icon: 'bim-slab',
+              icon: 'bim-roof',
               commandKey: 'roof',
               shortcut: 'RF',
             },

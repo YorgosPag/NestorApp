@@ -352,6 +352,7 @@ export class EnterpriseIdService {
   generateMepSegmentId(): string { return this.generateId(P.MEP_SEGMENT).id; }
   generateMepFittingId(): string { return this.generateId(P.MEP_FITTING).id; }
   generateMepManifoldId(): string { return this.generateId(P.MEP_MANIFOLD).id; }
+  generateMepRadiatorId(): string { return this.generateId(P.MEP_RADIATOR).id; }
   generateRailingId(): string { return this.generateId(P.RAILING).id; }
   generateRoofId(): string { return this.generateId(P.ROOF).id; }
   generateFurnitureId(): string { return this.generateId(P.FURNITURE).id; }

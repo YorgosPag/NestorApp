@@ -10,7 +10,7 @@
  */
 
 import type { Point2D } from '../../rendering/types/Types';
-import type { StairGripKind, DimensionGripKind, WallGripKind, OpeningGripKind, SlabGripKind, SlabOpeningGripKind, BeamGripKind, ColumnGripKind, MepFixtureGripKind, ElectricalPanelGripKind, MepManifoldGripKind, FurnitureGripKind, FloorplanSymbolGripKind, XLineGripKind, RayGripKind } from '../useGripMovement';
+import type { StairGripKind, DimensionGripKind, WallGripKind, OpeningGripKind, SlabGripKind, SlabOpeningGripKind, RoofGripKind, BeamGripKind, ColumnGripKind, MepFixtureGripKind, ElectricalPanelGripKind, MepManifoldGripKind, MepRadiatorGripKind, FurnitureGripKind, FloorplanSymbolGripKind, XLineGripKind, RayGripKind } from '../useGripMovement';
 import type {
   DxfGripDragPreview,
   DxfGripInteractionState,
@@ -173,6 +173,12 @@ export interface UnifiedGripInfo {
    */
   readonly slabOpeningGripKind?: SlabOpeningGripKind;
   /**
+   * ADR-417 Φ1-part-2 #2 — parametric roof grip discriminator (forwarded from
+   * `GripInfo.roofGripKind`). Routes commit through `applyRoofGripDrag()` +
+   * `UpdateRoofParamsCommand` (per-vertex translate + edge-midpoint insertion).
+   */
+  readonly roofGripKind?: RoofGripKind;
+  /**
    * ADR-363 Phase 5.5a — parametric beam grip discriminator (forwarded from
    * `GripInfo.beamGripKind`). Routes commit through `applyBeamGripDrag()` +
    * `UpdateBeamParamsCommand` (start/end/midpoint translate + curve control
@@ -207,6 +213,13 @@ export interface UnifiedGripInfo {
    * (center translate + rotation + opposite-corner-anchored width/length resize).
    */
   readonly mepManifoldGripKind?: MepManifoldGripKind;
+  /**
+   * ADR-408 Εύρος Β — parametric heating radiator grip discriminator (forwarded
+   * from `GripInfo.mepRadiatorGripKind`). Routes commit through
+   * `applyMepRadiatorGripDrag()` + `UpdateMepRadiatorParamsCommand` (center
+   * translate + rotation + opposite-corner-anchored width/length resize).
+   */
+  readonly mepRadiatorGripKind?: MepRadiatorGripKind;
   /**
    * ADR-410 — parametric furniture grip discriminator (forwarded from
    * `GripInfo.furnitureGripKind`). Routes commit through

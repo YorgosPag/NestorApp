@@ -8,6 +8,7 @@
 
 import type { Entity } from '../../../types/entities';
 import { derivePipeJunctions } from '../mep-pipe-junctions';
+import { classifyJunction } from '../../mep-fittings/mep-fitting-classify';
 import {
   SEGMENT_START_CONNECTOR_ID,
   SEGMENT_END_CONNECTOR_ID,
@@ -56,7 +57,7 @@ describe('derivePipeJunctions', () => {
     expect(shared).toBeDefined();
     expect(shared!.position).toEqual({ x: 100, y: 0, z: 0 });
     // The two incidents are sorted (p1 end, then p2 start).
-    expect(shared!.incidents.map((i) => i.segmentId)).toEqual(['p1', 'p2']);
+    expect(shared!.incidents.map((i) => i.entityId)).toEqual(['p1', 'p2']);
     expect(shared!.incidents[0]!.connectorId).toBe(SEGMENT_END_CONNECTOR_ID);
     expect(shared!.incidents[1]!.connectorId).toBe(SEGMENT_START_CONNECTOR_ID);
   });
@@ -69,7 +70,7 @@ describe('derivePipeJunctions', () => {
     ]);
     const tee = junctions.find((j) => j.incidents.length === 3);
     expect(tee).toBeDefined();
-    expect(tee!.incidents.map((i) => i.segmentId)).toEqual(['p1', 'p2', 'p3']);
+    expect(tee!.incidents.map((i) => i.entityId)).toEqual(['p1', 'p2', 'p3']);
   });
 
   it('extracts a 4-incident node from a cross junction', () => {
@@ -194,8 +195,8 @@ describe('derivePipeJunctions', () => {
         seg('pA', [0, 0], [100, 0]),
       ]);
       expect(forward.map((j) => j.key)).toEqual(reversed.map((j) => j.key));
-      expect(forward.map((j) => j.incidents.map((i) => i.segmentId))).toEqual(
-        reversed.map((j) => j.incidents.map((i) => i.segmentId)),
+      expect(forward.map((j) => j.incidents.map((i) => i.entityId))).toEqual(
+        reversed.map((j) => j.incidents.map((i) => i.entityId)),
       );
     });
 
@@ -282,6 +283,138 @@ describe('derivePipeJunctions', () => {
       ]);
       const keys = junctions.map((j) => j.key);
       expect(new Set(keys).size).toBe(keys.length); // all unique
+    });
+  });
+
+  // ── ADR-408 Φ-B2b EXT: 3D (xyz) endpoint matching + z-aware junctionKey ──────
+  // Endpoints coincide only when they meet in xyz, not just in plan. Two pipes that
+  // cross in plan at DIFFERENT heights (one passes over the other, NOT connected)
+  // must stay separate nodes — no false elbow/cross + no spurious fitting.
+  describe('xyz-matching (3D junction)', () => {
+    it('does NOT merge two pipe ends at the same (x,y) but different elevation', () => {
+      // Both ends land on plan node (100,0): p1 at elevation 0, p2 at 1000mm.
+      // Δz = 1000mm ≫ 25mm tolerance → distinct nodes (a fly-over, not a join).
+      const junctions = derivePipeJunctions([
+        seg('p1', [0, 0], [100, 0], { elevation: 0 }),
+        seg('p2', [100, 0], [200, 0], { elevation: 1000 }),
+      ]);
+      // 4 endpoints, NONE coincident in 3D → 4 separate 1-incident junctions.
+      expect(junctions).toHaveLength(4);
+      expect(junctions.every((j) => j.incidents.length === 1)).toBe(true);
+    });
+
+    it('MERGES two pipe ends that coincide in BOTH plan and elevation', () => {
+      const junctions = derivePipeJunctions([
+        seg('p1', [0, 0], [100, 0], { elevation: 1000 }),
+        seg('p2', [100, 0], [200, 0], { elevation: 1000 }),
+      ]);
+      const shared = junctions.find((j) => j.incidents.length === 2);
+      expect(shared).toBeDefined();
+      expect(shared!.incidents.map((i) => i.entityId)).toEqual(['p1', 'p2']);
+    });
+
+    it('gives the two crossing-at-different-z nodes DISTINCT junctionKeys', () => {
+      const junctions = derivePipeJunctions([
+        seg('p1', [0, 0], [100, 0], { elevation: 0 }),
+        seg('p2', [100, 0], [200, 0], { elevation: 1000 }),
+      ]);
+      // The two ends that share plan node (100,0) but differ in z.
+      const atNode = junctions.filter(
+        (j) => Math.abs(j.position.x - 100) < 1 && Math.abs(j.position.y) < 1,
+      );
+      expect(atNode).toHaveLength(2);
+      expect(new Set(atNode.map((j) => j.key)).size).toBe(2); // distinct keys
+    });
+
+    it('back-compat: a horizontal node at z=0 keeps the legacy key (no z-suffix)', () => {
+      const junctions = derivePipeJunctions([seg('p1', [37, 0], [137, 0])], 1);
+      const startNode = junctions.find(
+        (j) => j.incidents[0]!.connectorId === SEGMENT_START_CONNECTOR_ID,
+      )!;
+      expect(startNode.key).toBe('37:0'); // unchanged — no `:qz` appended at z=0
+    });
+
+    it('appends a z-cell to the key for an elevated node', () => {
+      const junctions = derivePipeJunctions(
+        [seg('p1', [0, 0], [100, 0], { elevation: 1000 })],
+        1,
+      );
+      // z=1000mm, grid=1 unit (mm scene) → qz=1000 → key carries the z cell.
+      expect(junctions.every((j) => j.key.split(':').length === 3)).toBe(true);
+    });
+  });
+
+  // ── ADR-408 Φ-B2b EXT #2: point-host connectors → no spurious cap ────────────
+  // A pipe end landing on a manifold outlet joins the outlet's connector as a HOST
+  // incident, so the node classifies to null (the equipment is the fitting) instead
+  // of a dead-end cap.
+  describe('point-host connector incidents (no spurious cap)', () => {
+    /** A plumbing manifold with one pipe outlet connector at its origin. */
+    const manifold = (
+      id: string,
+      at: [number, number],
+      opts: { mountingElevationMm?: number; diameterMm?: number } = {},
+    ): Entity =>
+      ({
+        id,
+        type: 'mep-manifold',
+        params: {
+          position: { x: at[0], y: at[1], z: 0 },
+          rotation: 0,
+          mountingElevationMm: opts.mountingElevationMm ?? 0,
+          connectors: [
+            {
+              connectorId: 'm-out-0',
+              domain: 'pipe',
+              flow: 'out',
+              localPosition: { x: 0, y: 0, z: 0 },
+              pipe: { systemClassification: 'domestic-cold-water', diameterMm: opts.diameterMm ?? 50 },
+            },
+          ],
+        },
+      } as unknown as Entity);
+
+    it('a pipe end on a manifold outlet forms a 2-incident node carrying the host', () => {
+      const junctions = derivePipeJunctions([
+        seg('p1', [0, 0], [100, 0]),
+        manifold('mfld-1', [100, 0]),
+      ]);
+      const node = junctions.find((j) => j.incidents.some((i) => i.host));
+      expect(node).toBeDefined();
+      expect(node!.incidents).toHaveLength(2);
+      expect(node!.incidents.some((i) => i.entityId === 'p1' && !i.host)).toBe(true);
+      expect(node!.incidents.some((i) => i.entityId === 'mfld-1' && i.host)).toBe(true);
+    });
+
+    it('classifies the manifold node as null (no cap) but the free pipe end as a cap', () => {
+      const junctions = derivePipeJunctions([
+        seg('p1', [0, 0], [100, 0]),
+        manifold('mfld-1', [100, 0]),
+      ]);
+      const hostNode = junctions.find((j) => j.incidents.some((i) => i.host))!;
+      const freeEnd = junctions.find(
+        (j) => j.incidents.length === 1 && !j.incidents[0]!.host,
+      )!;
+      expect(classifyJunction(hostNode).kind).toBeNull();
+      expect(classifyJunction(freeEnd).kind).toBe('cap');
+    });
+
+    it('does NOT merge a manifold outlet sitting at a different elevation than the pipe end', () => {
+      // Outlet 1000mm above the (z=0) pipe end → Δz ≫ 25mm → separate nodes, so the
+      // pipe end stays a real cap (it does not actually meet the manifold in 3D).
+      const junctions = derivePipeJunctions([
+        seg('p1', [0, 0], [100, 0], { elevation: 0 }),
+        manifold('mfld-1', [100, 0], { mountingElevationMm: 1000 }),
+      ]);
+      const node = junctions.find(
+        (j) => Math.abs(j.position.x - 100) < 1 && Math.abs(j.position.y) < 1 && !j.incidents.some((i) => i.host),
+      )!;
+      expect(node.incidents).toHaveLength(1);
+      expect(classifyJunction(node).kind).toBe('cap');
+    });
+
+    it('ignores a manifold when there are no pipe segments at all', () => {
+      expect(derivePipeJunctions([manifold('mfld-1', [100, 0])])).toEqual([]);
     });
   });
 });

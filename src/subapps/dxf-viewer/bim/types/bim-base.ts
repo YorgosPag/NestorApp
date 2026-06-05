@@ -56,7 +56,9 @@ export type BimElementType =
   // ADR-415 — pure-vector 2D floorplan symbol (category-driven; WC/sanitary first).
   | 'floorplan-symbol'
   // ADR-417 — parametric pitched roof (footprint + per-edge slopes).
-  | 'roof';
+  | 'roof'
+  // ADR-408 Εύρος Β — point-based hydronic radiator (heating terminal).
+  | 'mep-radiator';
 
 /**
  * Union of all BIM sub-type discriminators (one per element type).

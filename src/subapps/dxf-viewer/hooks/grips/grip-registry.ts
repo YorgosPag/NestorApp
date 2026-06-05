@@ -50,6 +50,8 @@ function wrapDxfGrip(grip: GripInfo): UnifiedGripInfo {
     ...(grip.slabGripKind ? { slabGripKind: grip.slabGripKind } : {}),
     // ADR-363 Phase 3.7a — forward slab-opening parametric grip discriminator.
     ...(grip.slabOpeningGripKind ? { slabOpeningGripKind: grip.slabOpeningGripKind } : {}),
+    // ADR-417 Φ1-part-2 #2 — forward roof parametric grip discriminator.
+    ...(grip.roofGripKind ? { roofGripKind: grip.roofGripKind } : {}),
     // ADR-363 Phase 5.5a — forward beam parametric grip discriminator.
     ...(grip.beamGripKind ? { beamGripKind: grip.beamGripKind } : {}),
     // ADR-363 Phase 4.5 — forward column parametric grip discriminator.
@@ -60,6 +62,8 @@ function wrapDxfGrip(grip: GripInfo): UnifiedGripInfo {
     ...(grip.electricalPanelGripKind ? { electricalPanelGripKind: grip.electricalPanelGripKind } : {}),
     // ADR-408 Φ12 — forward MEP manifold parametric grip discriminator.
     ...(grip.mepManifoldGripKind ? { mepManifoldGripKind: grip.mepManifoldGripKind } : {}),
+    // ADR-408 Εύρος Β — forward heating radiator parametric grip discriminator.
+    ...(grip.mepRadiatorGripKind ? { mepRadiatorGripKind: grip.mepRadiatorGripKind } : {}),
     // ADR-410 — forward furniture parametric grip discriminator.
     ...(grip.furnitureGripKind ? { furnitureGripKind: grip.furnitureGripKind } : {}),
     // ADR-415 — forward floorplan-symbol parametric grip discriminator.

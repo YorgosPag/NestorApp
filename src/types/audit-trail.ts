@@ -37,6 +37,8 @@ export type AuditEntityType =
   | 'column'
   | 'beam'
   | 'stair'
+  // ADR-417 — parametric pitched roof (footprint ⊥ type).
+  | 'roof'
   | 'mep-fixture'
   | 'mep-system'
   | 'electrical-panel'

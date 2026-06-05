@@ -16,11 +16,13 @@ import type {
   OpeningGripKind,
   SlabGripKind,
   SlabOpeningGripKind,
+  RoofGripKind,
   BeamGripKind,
   ColumnGripKind,
   MepFixtureGripKind,
   ElectricalPanelGripKind,
   MepManifoldGripKind,
+  MepRadiatorGripKind,
   FurnitureGripKind,
   FloorplanSymbolGripKind,
   MepSegmentGripKind,
@@ -38,11 +40,13 @@ export type {
   OpeningGripKind,
   SlabGripKind,
   SlabOpeningGripKind,
+  RoofGripKind,
   BeamGripKind,
   ColumnGripKind,
   MepFixtureGripKind,
   ElectricalPanelGripKind,
   MepManifoldGripKind,
+  MepRadiatorGripKind,
   FurnitureGripKind,
   FloorplanSymbolGripKind,
   MepSegmentGripKind,
@@ -98,6 +102,13 @@ export interface GripInfo {
    */
   slabOpeningGripKind?: SlabOpeningGripKind;
   /**
+   * ADR-417 Φ1-part-2 #2 — parametric roof grip discriminator. Present only when
+   * the grip belongs to a `RoofEntity`; routes the commit through
+   * `applyRoofGripDrag()` + `UpdateRoofParamsCommand` (per-vertex translate +
+   * edge-midpoint insertion, `edges` kept in lockstep with `outline.vertices`).
+   */
+  roofGripKind?: RoofGripKind;
+  /**
    * ADR-363 Phase 5.5a — parametric beam grip discriminator. Present only when
    * the grip belongs to a `BeamEntity`; routes the commit through
    * `applyBeamGripDrag()` + `UpdateBeamParamsCommand` (start/end/midpoint
@@ -132,6 +143,13 @@ export interface GripInfo {
    * translate + rotation + opposite-corner-anchored width/length resize).
    */
   mepManifoldGripKind?: MepManifoldGripKind;
+  /**
+   * ADR-408 Εύρος Β #1 — parametric heating radiator grip discriminator. Present
+   * only when the grip belongs to a `MepRadiatorEntity`; routes the commit through
+   * `applyMepRadiatorGripDrag()` + `UpdateMepRadiatorParamsCommand` (center
+   * translate + rotation + opposite-corner-anchored width/length resize).
+   */
+  mepRadiatorGripKind?: MepRadiatorGripKind;
   /**
    * ADR-410 — parametric furniture grip discriminator. Present only when the
    * grip belongs to a `FurnitureEntity`; routes the commit through

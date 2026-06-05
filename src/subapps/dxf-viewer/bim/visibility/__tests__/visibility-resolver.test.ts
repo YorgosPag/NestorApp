@@ -176,7 +176,7 @@ describe('ADR-382 resolveIsEntityVisible', () => {
   });
 
   describe('per-category isolation', () => {
-    const categories = ['wall', 'column', 'slab', 'beam', 'stair', 'opening', 'slab-opening'] as const;
+    const categories = ['wall', 'column', 'slab', 'beam', 'stair', 'opening', 'slab-opening', 'roof'] as const;
     for (const cat of categories) {
       it(`hides ${cat} when its own V/G entry says hidden`, () => {
         const result = resolveIsEntityVisible(
@@ -197,6 +197,24 @@ describe('ADR-382 resolveIsEntityVisible', () => {
           { disciplineVisibility: { architectural: false } },
         ),
       ).toBe(false);
+    });
+
+    it('hides a roof (architectural) when architectural discipline = false (§10 #4)', () => {
+      expect(
+        resolveIsEntityVisible(
+          { category: 'roof' },
+          { disciplineVisibility: { architectural: false } },
+        ),
+      ).toBe(false);
+    });
+
+    it('does NOT hide a roof when only structural is hidden (roof is architectural, not slab)', () => {
+      expect(
+        resolveIsEntityVisible(
+          { category: 'roof' },
+          { disciplineVisibility: { structural: false } },
+        ),
+      ).toBe(true);
     });
 
     it('hides a column (structural) when structural discipline = false', () => {

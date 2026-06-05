@@ -72,6 +72,8 @@ export function buildDxfDragPreview(
     ...(activeGrip.slabGripKind        ? { slabGripKind:        activeGrip.slabGripKind,        anchorPos } : {}),
     ...(activeGrip.slabOpeningGripKind ? { slabOpeningGripKind: activeGrip.slabOpeningGripKind, anchorPos } : {}),
     ...(activeGrip.openingGripKind     ? { openingGripKind:     activeGrip.openingGripKind,     anchorPos } : {}),
+    // ADR-417 Φ1-part-2 #2 — roof grip kind + anchor for the live footprint ghost.
+    ...(activeGrip.roofGripKind        ? { roofGripKind:        activeGrip.roofGripKind,        anchorPos } : {}),
   };
 }
 

@@ -51,7 +51,7 @@ import { attachEdgesProjection } from './bim-three-edges';
 
 // ADR-406 / ADR-408 Φ3 — point-based converters re-exported from their own module
 // (file-size SSoT, N.7.1). Importers keep `from '.../BimToThreeConverter'`.
-export { fixtureToMesh, panelToMesh, manifoldToMesh } from './bim-three-point-converters';
+export { fixtureToMesh, panelToMesh, manifoldToMesh, radiatorToMesh } from './bim-three-point-converters';
 
 // BIM shape vertices (outerEdge, innerEdge, footprint, outline) are already in meters
 // (canvas world coordinates). Scalar params — slab thickness/elevation, beam depth/elevation,

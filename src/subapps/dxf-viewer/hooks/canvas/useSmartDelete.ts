@@ -45,6 +45,10 @@ import { findHostedOpenings, findHostedSlabOpenings } from '../../bim/cascade/bi
 import { removeVertexFromSlab } from '../../bim/slabs/slab-grips';
 import { UpdateSlabParamsCommand } from '../../core/commands/entity-commands/UpdateSlabParamsCommand';
 import type { SlabEntity } from '../../bim/types/slab-types';
+// ADR-417 Φ1-part-2 #2 — roof vertex removal (mirror slab).
+import { removeVertexFromRoof } from '../../bim/roofs/roof-grips';
+import { UpdateRoofParamsCommand } from '../../core/commands/entity-commands/UpdateRoofParamsCommand';
+import type { RoofEntity } from '../../bim/types/roof-types';
 import type { SelectedGrip, UnifiedGripInfo } from '../grips/unified-grip-types';
 import type { useOverlayStore } from '../../overlays/overlay-store';
 import type { UniversalSelectionHook } from '../../systems/selection/SelectionSystem';
@@ -122,6 +126,39 @@ export function useSmartDelete({
               hoveredDxfGrip.entityId,
               newParams,
               slab.params,
+              adapter,
+              false,
+            );
+            if (command.validate() === null) {
+              executeCommand(command);
+              return true;
+            }
+          }
+        }
+      }
+    }
+
+    // PRIORITY 0.5b: ADR-417 Φ1-part-2 #2 — Delete hovered roof footprint vertex.
+    // Mirror of the slab block above (roof is a DIRECT entity; removeVertexFromRoof
+    // filters BOTH outline.vertices AND the parallel edges array in lockstep).
+    if (hoveredDxfGrip?.roofGripKind?.startsWith('roof-vertex-') && hoveredDxfGrip.entityId && levelManager.currentLevelId) {
+      const idx = parseInt(hoveredDxfGrip.roofGripKind.slice('roof-vertex-'.length), 10);
+      if (Number.isFinite(idx)) {
+        const adapter = new LevelSceneManagerAdapter(
+          levelManager.getLevelScene,
+          levelManager.setLevelScene,
+          levelManager.currentLevelId,
+        );
+        const raw = adapter.getEntity(hoveredDxfGrip.entityId);
+        const candidate = raw as unknown as Partial<RoofEntity>;
+        if (candidate?.type === 'roof' && candidate.params) {
+          const roof = candidate as RoofEntity;
+          const newParams = removeVertexFromRoof(roof.params, idx);
+          if (newParams !== roof.params) {
+            const command = new UpdateRoofParamsCommand(
+              hoveredDxfGrip.entityId,
+              newParams,
+              roof.params,
               adapter,
               false,
             );
@@ -256,6 +293,10 @@ export function useSmartDelete({
       const manifoldIdsInBatch = idsToDelete.filter(
         (id) => adapter.getEntity(id)?.type === 'mep-manifold',
       );
+      // ADR-408 Εύρος Β — collect heating radiator IDs so we can trigger Firestore deleteDoc.
+      const radiatorIdsInBatch = idsToDelete.filter(
+        (id) => adapter.getEntity(id)?.type === 'mep-radiator',
+      );
       // ADR-417 — collect roof IDs so we can trigger Firestore deleteDoc.
       const roofIdsInBatch = idsToDelete.filter(
         (id) => adapter.getEntity(id)?.type === 'roof',
@@ -331,6 +372,10 @@ export function useSmartDelete({
       // ADR-408 Φ12 — trigger Firestore deleteDoc + prevent subscription re-add for each manifold.
       for (const manifoldId of manifoldIdsInBatch) {
         eventBus.emit('bim:mep-manifold-delete-requested', { manifoldId });
+      }
+      // ADR-408 Εύρος Β — trigger Firestore deleteDoc + prevent subscription re-add for each radiator.
+      for (const radiatorId of radiatorIdsInBatch) {
+        eventBus.emit('bim:mep-radiator-delete-requested', { radiatorId });
       }
       // ADR-417 — trigger Firestore deleteDoc + prevent subscription re-add for each roof.
       for (const roofId of roofIdsInBatch) {

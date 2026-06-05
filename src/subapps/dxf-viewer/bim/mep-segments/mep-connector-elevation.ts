@@ -30,6 +30,7 @@ import {
   isMepFixtureEntity,
   isElectricalPanelEntity,
   isMepManifoldEntity,
+  isMepRadiatorEntity,
 } from '../../types/entities';
 import { getEntityConnectors } from '../mep-systems/connector-access';
 import { connectorWorldPosition } from '../types/mep-connector-types';
@@ -49,10 +50,21 @@ function dist2(ax: number, ay: number, bx: number, by: number): number {
 /**
  * Mounting datum (mm) for a point host whose connectors share one elevation
  * (manifold / fixture). Both store it in `mountingElevationMm`; `position.z`
- * stays 0 and is NOT the datum.
+ * stays 0 and is NOT the datum. Returns `null` for hosts that are not
+ * pipe-connectable (e.g. an electrical panel).
+ *
+ * SSoT (ADR-408 Φ-B2b EXT #2): the SAME datum resolver feeds both this
+ * connector-mate snap and the junction host-endpoint collector
+ * (`collectHostConnectorEndpoints`), so a pipe end snaps to and coincides with a
+ * host connector at the identical elevation — no spurious cap.
  */
-function hostMountingElevationMm(entity: Entity): number | null {
+export function pointHostMountingElevationMm(entity: Entity): number | null {
   if (isMepManifoldEntity(entity) || isMepFixtureEntity(entity)) {
+    return entity.params.mountingElevationMm;
+  }
+  // ADR-408 Εύρος Β — a heating radiator is pipe-connectable; its supply/return
+  // ports sit at its `mountingElevationMm` so connected pipes inherit that height.
+  if (isMepRadiatorEntity(entity)) {
     return entity.params.mountingElevationMm;
   }
   // Electrical panel: pipes do not connect to it — no plumbing elevation datum.
@@ -82,13 +94,13 @@ export function resolveMepConnectorElevationMmAt(
   }
 
   // ── Point host (manifold / fixture): mounting datum + connector local z ─────
-  const datum = hostMountingElevationMm(entity);
+  const datum = pointHostMountingElevationMm(entity);
   if (datum === null) return null;
 
   // `datum !== null` ⟹ a manifold or fixture (see hostMountingElevationMm). Narrow
   // with the type guards rather than a broad `Extract` cast, so a future param
   // type added to the union that lacks `rotation` cannot silently match here.
-  if (!isMepManifoldEntity(entity) && !isMepFixtureEntity(entity)) return datum;
+  if (!isMepManifoldEntity(entity) && !isMepFixtureEntity(entity) && !isMepRadiatorEntity(entity)) return datum;
   const { position } = entity.params;
   const rotation = entity.params.rotation ?? 0;
   const connectors = getEntityConnectors(entity);

@@ -117,20 +117,32 @@ const BASE_SECTIONS: ReadonlyArray<GripContextSectionMeta> = [
 ];
 
 /**
- * ADR-363 Phase 3.8 — vertex-ops section items for slab grips.
- * `deleteCorner` shown on vertex grips, `addCorner` on edge-midpoint grips.
+ * ADR-363 Phase 3.8 + ADR-417 Φ1-part-2 #2 — vertex-ops section items for
+ * polygon-outline grips (slab / slab-opening / roof). `deleteCorner` shown on
+ * vertex grips, `addCorner` on edge-midpoint grips.
  */
 function buildVertexOpsSection(grip: UnifiedGripInfo): GripContextSectionMeta | null {
-  const kind = grip.slabGripKind ?? (grip as { slabOpeningGripKind?: string }).slabOpeningGripKind;
+  const kind =
+    grip.slabGripKind ??
+    (grip as { slabOpeningGripKind?: string }).slabOpeningGripKind ??
+    grip.roofGripKind;
   if (!kind) return null;
-  if (kind.startsWith('slab-vertex-') || kind.startsWith('slab-opening-vertex-')) {
+  if (
+    kind.startsWith('slab-vertex-') ||
+    kind.startsWith('slab-opening-vertex-') ||
+    kind.startsWith('roof-vertex-')
+  ) {
     return {
       id: 'vertex-ops',
       titleKey: 'gripContextMenu.section.vertexOps',
       items: [{ id: 'vertex-ops:deleteCorner', labelKey: 'gripContextMenu.deleteCorner' }],
     };
   }
-  if (kind.startsWith('slab-edge-midpoint-') || kind.startsWith('slab-opening-edge-midpoint-')) {
+  if (
+    kind.startsWith('slab-edge-midpoint-') ||
+    kind.startsWith('slab-opening-edge-midpoint-') ||
+    kind.startsWith('roof-edge-midpoint-')
+  ) {
     return {
       id: 'vertex-ops',
       titleKey: 'gripContextMenu.section.vertexOps',

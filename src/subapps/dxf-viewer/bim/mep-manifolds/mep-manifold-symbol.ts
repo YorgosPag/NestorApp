@@ -8,6 +8,10 @@
  * architectural convention for a distribution manifold, distinct from a panel's
  * breaker rows or a fixture's luminaire "X".
  *
+ * ADR-408 Φ14 — a `'drainage-collector'` kind (φρεάτιο) additionally emits a
+ * **grating** pattern (parallel bars inside the footprint), the Revit/CIBSE catch
+ * basin convention, so a drain reads as a φρεάτιο at a glance instead of a bar.
+ *
  * All coordinates are in world canvas units (same space as the footprint), so
  * the renderer just strokes them after applying its transform. Connector world
  * positions are derived separately by `connectorWorldPosition`; this module only
@@ -22,6 +26,7 @@ import type {
   MepManifoldParams,
 } from '../types/mep-manifold-types';
 import { clampOutletCount } from './mep-manifold-geometry';
+import { isDrainageCollectorKind } from '../types/mep-manifold-types';
 import { mmToSceneUnits } from '../../utils/scene-units';
 
 /** A polyline of world-space points (canvas units). */
@@ -32,7 +37,18 @@ export interface ManifoldSymbolGeometry {
   readonly outline: readonly Point3D[];
   /** Stub strokes — inlet (first) + one per outlet. */
   readonly strokes: readonly ManifoldStroke[];
+  /**
+   * ADR-408 Φ14 — grating bars for a drainage collector (φρεάτιο), drawn with a
+   * thinner line than the stubs. `undefined` for a water manifold.
+   */
+  readonly gratingStrokes?: readonly ManifoldStroke[];
 }
+
+/** Number of parallel grating bars drawn inside a drainage collector footprint. */
+const GRATING_BAR_COUNT = 6;
+
+/** Fractional inset of each grating bar from the short (−Y/+Y) edges. */
+const GRATING_INSET = 0.15;
 
 function lerp(a: Point3D, b: Point3D, t: number): Point3D {
   return { x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t, z: 0 };
@@ -41,6 +57,29 @@ function lerp(a: Point3D, b: Point3D, t: number): Point3D {
 function unit(dx: number, dy: number): { x: number; y: number } {
   const len = Math.hypot(dx, dy) || 1;
   return { x: dx / len, y: dy / len };
+}
+
+/**
+ * ADR-408 Φ14 — `GRATING_BAR_COUNT` parallel bars across the footprint (the
+ * φρεάτιο grating). Each bar runs the short dimension (bottom edge `v0→v1` to top
+ * edge `v3→v2`), distributed along the width, inset from the short edges so it
+ * stays inside the outline. Rotation-aware for free (the verts are already
+ * rotated into world space).
+ */
+function buildDrainageGratingStrokes(
+  v0: Point3D,
+  v1: Point3D,
+  v2: Point3D,
+  v3: Point3D,
+): ManifoldStroke[] {
+  const bars: ManifoldStroke[] = [];
+  for (let i = 0; i < GRATING_BAR_COUNT; i++) {
+    const frac = (i + 1) / (GRATING_BAR_COUNT + 1);
+    const bottom = lerp(v0, v1, frac); // point along the −Y edge (across width)
+    const top = lerp(v3, v2, frac); // matching point along the +Y edge
+    bars.push([lerp(bottom, top, GRATING_INSET), lerp(bottom, top, 1 - GRATING_INSET)]);
+  }
+  return bars;
 }
 
 /**
@@ -81,6 +120,12 @@ export function buildMepManifoldSymbol(
       root,
       { x: root.x + outletDir.x * stubLen, y: root.y + outletDir.y * stubLen, z: 0 },
     ]);
+  }
+
+  // ADR-408 Φ14 — a drainage collector (φρεάτιο) adds the grating pattern; the
+  // stubs above still mark the connector positions (N inlets + 1 outlet).
+  if (isDrainageCollectorKind(params.kind)) {
+    return { outline, strokes, gratingStrokes: buildDrainageGratingStrokes(v0, v1, v2, v3) };
   }
 
   return { outline, strokes };

@@ -17,6 +17,7 @@ import type {
   BeamGripKind,
   SlabGripKind,
   SlabOpeningGripKind,
+  RoofGripKind,
   MepFixtureGripKind,
   ElectricalPanelGripKind,
   MepManifoldGripKind,
@@ -68,6 +69,11 @@ export interface EntityPreviewTransform {
   readonly columnGripKind?: ColumnGripKind;
   readonly slabGripKind?: SlabGripKind;
   readonly slabOpeningGripKind?: SlabOpeningGripKind;
+  /**
+   * ADR-417 Φ1-part-2 #2 — parametric roof discriminator. Routes preview through
+   * `applyRoofGripDrag` (params-only); the ghost is the new footprint outline.
+   */
+  readonly roofGripKind?: RoofGripKind;
   /**
    * ADR-406 — parametric MEP fixture discriminator. Routes preview through
    * `applyMepFixtureGripDrag` + `computeMepFixtureGeometry`. ORTHO (F8) is read

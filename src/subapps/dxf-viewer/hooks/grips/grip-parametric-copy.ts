@@ -39,6 +39,10 @@ import type { MepManifoldEntity } from '../../bim/types/mep-manifold-types';
 import { applyMepManifoldGripDrag } from '../../bim/mep-manifolds/mep-manifold-grips';
 import { buildMepManifoldEntity } from '../drawing/mep-manifold-completion';
 import { addMepManifoldToScene } from '../../bim/mep-manifolds/add-mep-manifold-to-scene';
+import type { MepRadiatorEntity } from '../../bim/types/mep-radiator-types';
+import { applyMepRadiatorGripDrag } from '../../bim/mep-radiators/mep-radiator-grips';
+import { buildMepRadiatorEntity } from '../drawing/mep-radiator-completion';
+import { addMepRadiatorToScene } from '../../bim/mep-radiators/add-mep-radiator-to-scene';
 import type { FurnitureEntity } from '../../bim/types/furniture-types';
 import { applyFurnitureGripDrag } from '../../bim/furniture/furniture-grips';
 import { buildFurnitureEntity } from '../drawing/furniture-completion';
@@ -228,6 +232,34 @@ export function commitMepManifoldCopy(
 }
 
 /**
+ * ADR-408 Εύρος Β — Ctrl-COPY at the terminal click of a heating radiator MOVE
+ * hot-grip (AutoCAD MOVE→COPY). Mirror of `commitMepManifoldCopy`: builds a NEW
+ * `MepRadiatorEntity` whose params are the original shifted by `delta` (the same
+ * `mep-radiator-move` whole-entity translate the MOVE uses) and inserts it via the
+ * shared `addMepRadiatorToScene` SSoT — fresh enterprise ID (N.6, via
+ * `buildMepRadiatorEntity` → `createMepRadiator`), `drawing:entity-created`
+ * broadcast so persistence saves the copy. Original untouched; single copy.
+ */
+export function commitMepRadiatorCopy(
+  grip: UnifiedGripInfo,
+  delta: Point2D,
+  deps: DxfCommitDeps,
+): void {
+  if (!grip.entityId || grip.mepRadiatorGripKind !== 'mep-radiator-move') return;
+  const sceneManager = createSceneManagerAdapter(deps);
+  if (!sceneManager) return;
+  const raw = sceneManager.getEntity(grip.entityId);
+  if (!raw) return;
+  const candidate = raw as unknown as Partial<MepRadiatorEntity>;
+  if (candidate.type !== 'mep-radiator' || !candidate.params) return;
+  const radiator = candidate as MepRadiatorEntity;
+  const translated = applyMepRadiatorGripDrag('mep-radiator-move', { originalParams: radiator.params, delta });
+  const built = buildMepRadiatorEntity(translated, radiator.layerId);
+  if (!built.ok) return;
+  addMepRadiatorToScene(built.entity, deps);
+}
+
+/**
  * ADR-410 — Ctrl-COPY at the terminal click of a furniture MOVE hot-grip
  * (AutoCAD MOVE→COPY). Mirror of `commitMepFixtureCopy`: builds a NEW
  * `FurnitureEntity` whose params are the original shifted by `delta` (the same
@@ -317,6 +349,10 @@ export function commitHotGripCopy(
   }
   if (grip.mepManifoldGripKind === 'mep-manifold-move') {
     commitMepManifoldCopy(grip, delta, deps);
+    return true;
+  }
+  if (grip.mepRadiatorGripKind === 'mep-radiator-move') {
+    commitMepRadiatorCopy(grip, delta, deps);
     return true;
   }
   if (grip.furnitureGripKind === 'furniture-move') {

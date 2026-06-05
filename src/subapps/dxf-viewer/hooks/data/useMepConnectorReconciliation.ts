@@ -36,6 +36,7 @@ import {
   isMepFixtureEntity,
   isElectricalPanelEntity,
   isMepSegmentEntity,
+  isMepRadiatorEntity,
 } from '../../types/entities';
 import type { MepFixtureEntity } from '../../bim/types/mep-fixture-types';
 import type { ElectricalPanelEntity } from '../../bim/types/electrical-panel-types';
@@ -102,6 +103,14 @@ export function useMepConnectorReconciliation(
         return next;
       }
       if (isMepSegmentEntity(seeded)) {
+        const next = reconcileHost(seeded, index);
+        if (next !== e) changed = true;
+        return next;
+      }
+      // ADR-408 Εύρος Β — a heating radiator is a MEMBER of a supply + a return
+      // network (one per connector); reconcile its per-connector systemId cache so
+      // colour-by-system + circuit membership resolve, exactly like the fixture.
+      if (isMepRadiatorEntity(seeded)) {
         const next = reconcileHost(seeded, index);
         if (next !== e) changed = true;
         return next;

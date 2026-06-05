@@ -209,8 +209,17 @@ export const RibbonButtonIcon: React.FC<RibbonButtonIconProps> = ({ icon, size }
     case 'bim-light-fixture': return <Lightbulb width={sizePx[size]} height={sizePx[size]} className={className} />;
     case 'bim-electrical-panel': return <Server width={sizePx[size]} height={sizePx[size]} className={className} />;
     case 'bim-mep-manifold': return <Split width={sizePx[size]} height={sizePx[size]} className={className} />;
+    // ADR-408 Εύρος Β — heating radiator (καλοριφέρ): heating-themed thermometer glyph.
+    case 'bim-mep-radiator': return <Thermometer width={sizePx[size]} height={sizePx[size]} className={className} />;
     case 'bim-railing': return <Fence width={sizePx[size]} height={sizePx[size]} className={className} />;
     case 'bim-furniture': return <Armchair width={sizePx[size]} height={sizePx[size]} className={className} />;
+    // ADR-417 — parametric pitched roof (gable glyph: peak slopes + eave line).
+    case 'bim-roof': return inlineSvg(size, (
+      <>
+        <path d="M2 13 L12 4 L22 13" />
+        <line x1="5" y1="13" x2="19" y2="13" />
+      </>
+    ));
     // ADR-408 Φ8 — duct (rectangular section) + pipe (round section) launchers.
     case 'bim-duct': return <RectangleHorizontal width={sizePx[size]} height={sizePx[size]} className={className} />;
     case 'bim-pipe': return <Diameter width={sizePx[size]} height={sizePx[size]} className={className} />;

@@ -37,11 +37,13 @@ import type { MepFittingEntity } from '../../bim/types/mep-fitting-types';
 import type { FloorplanSymbolEntity } from '../../bim/types/floorplan-symbol-types';
 // ADR-408 Φ12 — plumbing manifold direct entity for DXF render pipeline.
 import type { MepManifoldEntity } from '../../bim/types/mep-manifold-types';
+// ADR-408 Εύρος Β — heating radiator direct entity for DXF render pipeline.
+import type { MepRadiatorEntity } from '../../bim/types/mep-radiator-types';
 
 // === DXF ENTITY TYPES ===
 export interface DxfEntity {
   id: string;
-  type: 'line' | 'circle' | 'arc' | 'polyline' | 'text' | 'angle-measurement' | 'stair' | 'dimension' | 'slab' | 'slab-opening' | 'opening' | 'wall' | 'column' | 'xline' | 'ray' | 'beam' | 'mep-fixture' | 'electrical-panel' | 'railing' | 'furniture' | 'mep-segment' | 'mep-fitting' | 'floorplan-symbol' | 'mep-manifold' | 'roof';
+  type: 'line' | 'circle' | 'arc' | 'polyline' | 'text' | 'angle-measurement' | 'stair' | 'dimension' | 'slab' | 'slab-opening' | 'opening' | 'wall' | 'column' | 'xline' | 'ray' | 'beam' | 'mep-fixture' | 'electrical-panel' | 'railing' | 'furniture' | 'mep-segment' | 'mep-fitting' | 'floorplan-symbol' | 'mep-manifold' | 'mep-radiator' | 'roof';
   /**
    * @deprecated ADR-358 Phase 9D-5b-ii — transitional name backref. Resolve via
    * `LayerStore.resolveEntityLayerName()`. Made optional to align with BaseEntity
@@ -330,6 +332,18 @@ export interface DxfMepManifold extends DxfEntity {
 }
 
 /**
+ * ADR-408 Εύρος Β — DxfMepRadiator direct entity (same pattern as DxfMepManifold).
+ * MepRadiatorRenderer reads geometry.footprint + kind + params at top level.
+ */
+export interface DxfMepRadiator extends DxfEntity {
+  type: 'mep-radiator';
+  kind: MepRadiatorEntity['kind'];
+  params: MepRadiatorEntity['params'];
+  geometry: MepRadiatorEntity['geometry'];
+  validation?: MepRadiatorEntity['validation'];
+}
+
+/**
  * ADR-417 — DxfRoof direct entity (same pattern as DxfSlab/DxfFurniture).
  * RoofRenderer reads geometry.faces + geometry.ridges + footprint at top level.
  */
@@ -353,7 +367,7 @@ export interface DxfRay extends DxfEntity {
   rayEntity: RayEntity;
 }
 
-export type DxfEntityUnion = DxfLine | DxfCircle | DxfPolyline | DxfArc | DxfText | DxfAngleMeasurement | DxfStair | DxfDimension | DxfSlab | DxfSlabOpening | DxfOpening | DxfWall | DxfColumn | DxfMepFixture | DxfElectricalPanel | DxfRailing | DxfFurniture | DxfMepSegment | DxfMepFitting | DxfFloorplanSymbol | DxfMepManifold | DxfRoof | DxfBeam | DxfXLine | DxfRay;
+export type DxfEntityUnion = DxfLine | DxfCircle | DxfPolyline | DxfArc | DxfText | DxfAngleMeasurement | DxfStair | DxfDimension | DxfSlab | DxfSlabOpening | DxfOpening | DxfWall | DxfColumn | DxfMepFixture | DxfElectricalPanel | DxfRailing | DxfFurniture | DxfMepSegment | DxfMepFitting | DxfFloorplanSymbol | DxfMepManifold | DxfMepRadiator | DxfRoof | DxfBeam | DxfXLine | DxfRay;
 
 // === DXF SCENE ===
 export interface DxfScene {

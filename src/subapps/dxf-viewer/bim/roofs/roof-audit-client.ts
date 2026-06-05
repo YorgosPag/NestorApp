@@ -4,9 +4,8 @@
  * ADR-417 — Fire-and-forget audit client για roof create / update / delete /
  * restore. Mirrors `railing-audit-client.ts` (ADR-407, ADR-195 entity audit).
  *
- * Τα `ROOF_TRACKED_FIELDS` ορίζονται τοπικά μέχρι ο orchestrator να τα προσθέσει
- * στο shared `audit-tracked-fields.ts` config (shared file — δεν επεξεργαζόμαστε
- * εδώ, ADR-417 Φ1 constraint).
+ * Τα `ROOF_TRACKED_FIELDS` ζουν πλέον στο shared SSoT `audit-tracked-fields.ts`
+ * (ADR-417 §10 #5 — μεταφορά από local). Συνεπές με τα υπόλοιπα 7 BIM entities.
  *
  * @see docs/centralized-systems/reference/adrs/ADR-417-bim-roof-element.md
  * @see docs/centralized-systems/reference/adrs/ADR-195-entity-audit-trail.md
@@ -14,7 +13,7 @@
 
 import { apiClient } from '@/lib/api/enterprise-api-client';
 import type { AuditAction, AuditFieldChange } from '@/types/audit-trail';
-import type { TrackedFieldDef } from '@/config/audit-tracked-fields';
+import { ROOF_TRACKED_FIELDS } from '@/config/audit-tracked-fields';
 import type { RoofEntity } from '../types/roof-types';
 import {
   buildBimCreationChanges,
@@ -23,20 +22,6 @@ import {
   ensureNonEmptyChanges,
   type BimAuditSnapshot,
 } from '../utils/bim-audit-helpers';
-
-// ============================================================================
-// LOCAL TRACKED FIELDS (ADR-417 Φ1 — pending merge into audit-tracked-fields)
-// ============================================================================
-
-/** Minimal tracked fields for roof until shared config is updated by orchestrator. */
-const ROOF_TRACKED_FIELDS: Record<string, TrackedFieldDef> = {
-  layerId: { kind: 'scalar', label: 'layerId' },
-  thickness: { kind: 'scalar', label: 'thickness' },
-  basePivotZ: { kind: 'scalar', label: 'basePivotZ' },
-  slopeUnit: { kind: 'scalar', label: 'slopeUnit' },
-  storeyId: { kind: 'scalar', label: 'storeyId' },
-  offsetFromStorey: { kind: 'scalar', label: 'offsetFromStorey' },
-};
 
 // ============================================================================
 // TYPES

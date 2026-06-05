@@ -230,6 +230,9 @@ export interface DrawingEventMap {
   // ADR-408 Φ12 — BIM MEP manifold (plumbing) params + delete events
   'bim:mep-manifold-params-updated': { manifoldId: string };
   'bim:mep-manifold-delete-requested': { manifoldId: string };
+  // ADR-408 Εύρος Β — BIM heating radiator params + delete events
+  'bim:mep-radiator-params-updated': { radiatorId: string };
+  'bim:mep-radiator-delete-requested': { radiatorId: string };
   // ADR-408 Φ8 — BIM MEP segment (duct/pipe) params + delete events
   'bim:mep-segment-params-updated': { segmentId: string };
   'bim:mep-segment-delete-requested': { segmentId: string };
@@ -272,6 +275,8 @@ export interface DrawingEventMap {
   'bim:place-electrical-panel-3d': { point: Point2D };
   // ADR-408 Φ12 — 3D plumbing manifold placement (mirror of bim:place-electrical-panel-3d).
   'bim:place-mep-manifold-3d': { point: Point2D };
+  // ADR-408 Εύρος Β — 3D heating radiator placement (mirror of bim:place-mep-manifold-3d).
+  'bim:place-mep-radiator-3d': { point: Point2D };
   // ADR-408 Φ8 — 3D MEP segment placement (2-click bridge; reserved for 3D tool).
   'bim:place-mep-segment-3d': { point: Point2D };
   // ADR-407 — 3D railing placement (mirror of bim:place-column-3d).
@@ -300,8 +305,8 @@ export interface DrawingEventMap {
   // via `payload.entityType` + `isXType(snapshot)`. Emitted by
   // DeleteEntityCommand.undo() and DeleteMultipleEntitiesCommand.undo().
   'bim:entity-restore-requested': {
-    // ADR-406 — 'mep-fixture' appended. ADR-407 — 'railing' appended. ADR-408 Φ3 — 'electrical-panel'. ADR-408 Φ8 — 'mep-segment'. ADR-410 — 'furniture'. ADR-408 Φ12 — 'mep-manifold'.
-    entityType: 'wall' | 'opening' | 'slab' | 'slab-opening' | 'column' | 'beam' | 'stair' | 'mep-fixture' | 'electrical-panel' | 'mep-manifold' | 'railing' | 'mep-segment' | 'furniture';
+    // ADR-406 — 'mep-fixture' appended. ADR-407 — 'railing' appended. ADR-408 Φ3 — 'electrical-panel'. ADR-408 Φ8 — 'mep-segment'. ADR-410 — 'furniture'. ADR-408 Φ12 — 'mep-manifold'. ADR-408 Εύρος Β — 'mep-radiator'.
+    entityType: 'wall' | 'opening' | 'slab' | 'slab-opening' | 'column' | 'beam' | 'stair' | 'mep-fixture' | 'electrical-panel' | 'mep-manifold' | 'mep-radiator' | 'railing' | 'mep-segment' | 'furniture';
     entitySnapshot: AnySceneEntity;
     source: 'undo-delete' | 'redo-restore';
   };

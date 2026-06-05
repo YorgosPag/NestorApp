@@ -42,7 +42,9 @@ export type IfcEntityType =
   // ADR-415 — sanitary plan symbols (WC/washbasin/…; IfcSanitaryTerminal family).
   | 'IfcSanitaryTerminal'
   // ADR-417 — parametric pitched roof container (IfcRoofTypeEnum on derived shape).
-  | 'IfcRoof';
+  | 'IfcRoof'
+  // ADR-408 Εύρος Β — hydronic heating terminal (radiator; IfcFlowTerminal family).
+  | 'IfcSpaceHeater';
 
 export const IFC_ENTITY_TYPE_VALUES: readonly IfcEntityType[] = [
   'IfcWall',
@@ -70,6 +72,8 @@ export const IFC_ENTITY_TYPE_VALUES: readonly IfcEntityType[] = [
   'IfcSanitaryTerminal',
   // ADR-417 — parametric pitched roof container.
   'IfcRoof',
+  // ADR-408 Εύρος Β — hydronic heating terminal (radiator).
+  'IfcSpaceHeater',
 ] as const;
 
 export type IfcPropertySetValue = string | number | boolean | null;
@@ -121,6 +125,8 @@ export const IfcEntityTypeSchema = z.enum([
   'IfcSanitaryTerminal',
   // ADR-417 — parametric pitched roof container.
   'IfcRoof',
+  // ADR-408 Εύρος Β — hydronic heating terminal (radiator).
+  'IfcSpaceHeater',
 ]);
 
 export const IfcPropertySetValueSchema = z.union([

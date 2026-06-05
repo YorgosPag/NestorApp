@@ -87,6 +87,8 @@ const MAT_DEFS: Record<string, PbrDef> = {
   // equipment — distinguishable from copper pipe 0xb87333 and duct 0xb0b4b8).
   // Matte-ish plastic/composite housing, low metalness.
   'elem-mep-manifold':   { color: 0x0891b2, roughness: 0.50, metalness: 0.20 },
+  // ADR-408 Εύρος Β — heating radiator: warm-red matte steel/aluminium panel.
+  'elem-mep-radiator':   { color: 0xdc2626, roughness: 0.60, metalness: 0.10 },
 };
 
 export type Stair3DComponent =

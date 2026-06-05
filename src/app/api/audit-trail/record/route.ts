@@ -32,7 +32,7 @@ const logger = createModuleLogger('AuditTrailRecord');
 // ============================================================================
 
 const VALID_ENTITY_TYPES: ReadonlySet<string> = new Set<AuditEntityType>([
-  'contact', 'building', 'property', 'project', 'parking', 'storage', 'wall', 'opening', 'slab', 'slab-opening', 'column', 'beam', 'stair', 'mep-fixture', 'mep-system', 'electrical-panel', 'mep-segment', 'mep-fitting', 'mep-manifold', 'bim_family_type',
+  'contact', 'building', 'property', 'project', 'parking', 'storage', 'wall', 'opening', 'slab', 'slab-opening', 'column', 'beam', 'stair', 'roof', 'mep-fixture', 'mep-system', 'electrical-panel', 'mep-segment', 'mep-fitting', 'mep-manifold', 'bim_family_type',
 ]);
 
 /**
@@ -67,6 +67,8 @@ const ENTITY_COLLECTION_MAP: Record<string, string> = {
   column: COLLECTIONS.FLOORPLAN_COLUMNS,
   beam: COLLECTIONS.FLOORPLAN_BEAMS,
   stair: COLLECTIONS.FLOORPLAN_STAIRS,
+  // ADR-417 — parametric pitched roof (top-level floorplan_roofs collection).
+  roof: COLLECTIONS.FLOORPLAN_ROOFS,
   // ADR-406 — was missing (fixture audit 400'd silently via fire-and-forget). Fixed alongside ADR-408.
   'mep-fixture': COLLECTIONS.FLOORPLAN_MEP_FIXTURES,
   // ADR-408 — logical MEP systems.

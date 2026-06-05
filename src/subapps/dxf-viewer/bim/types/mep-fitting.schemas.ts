@@ -39,12 +39,21 @@ const SceneUnitsSchema = z.enum(['mm', 'cm', 'm']);
 
 const MepFittingIncidentSchema = z
   .object({
-    segmentId: z.string().min(1),
+    // Canonical FK (ADR-408 Φ-B2b EXT #2). Both ids are optional + refined so
+    // pre-migration docs (segmentId only) AND new docs (entityId) both validate.
+    entityId: z.string().min(1).optional(),
+    segmentId: z.string().min(1).optional(),
     connectorId: z.string().min(1),
     directionUnit: Point3DSchema,
     diameterMm: z.number().positive(),
+    // Transient point-host marker — host nodes never persist (kind → null), so a
+    // persisted incident is normally `false`/absent; accepted for forward-compat.
+    host: z.boolean().optional(),
   })
-  .strict();
+  .strict()
+  .refine((i) => i.entityId !== undefined || i.segmentId !== undefined, {
+    message: 'incident requires `entityId` (or legacy `segmentId`)',
+  });
 
 export const MepFittingParamsSchema = z
   .object({

@@ -312,3 +312,53 @@ export function buildSegmentEndpointConnector(
     localPosition: { x: 0, y: 0, z: 0 },
   };
 }
+
+// ─── Heating radiator connectors (ADR-408 Εύρος Β #1) ─────────────────────────────
+
+/** Connector id for the supply inlet (προσαγωγή) of a heating radiator. */
+export const RADIATOR_SUPPLY_CONNECTOR_ID = 'rad-supply';
+/** Connector id for the return outlet (επιστροφή) of a heating radiator. */
+export const RADIATOR_RETURN_CONNECTOR_ID = 'rad-return';
+
+/**
+ * Supply inlet connector of a hydronic radiator (ADR-408 Εύρος Β, καλοριφέρ) — the
+ * hot-water feed. A radiator is a heating TERMINAL (not a source): hot water enters
+ * the supply inlet (`flow: 'in'`) and leaves the return outlet. `domain: 'pipe'`,
+ * classification FIXED to `hydronic-supply` (a radiator's hydraulic role is set by
+ * physics, not user choice — unlike a manifold which owns a configurable type).
+ *
+ * `localPosition` is host-local (scene units, pre-rotation) — the caller resolves it
+ * from the body geometry (see `buildRadiatorConnectors`).
+ */
+export function buildRadiatorSupplyConnector(
+  localPosition: Point3D,
+  diameterMm: number,
+): MepConnector {
+  return {
+    connectorId: RADIATOR_SUPPLY_CONNECTOR_ID,
+    domain: 'pipe',
+    flow: 'in',
+    localPosition,
+    pipe: { systemClassification: 'hydronic-supply', diameterMm },
+  };
+}
+
+/**
+ * Return outlet connector of a hydronic radiator (ADR-408 Εύρος Β). The cooled
+ * water leaves here (`flow: 'out'`), `domain: 'pipe'`, classification FIXED to
+ * `hydronic-return`. Together with {@link buildRadiatorSupplyConnector} the radiator
+ * becomes a member of BOTH a hydronic-supply and a hydronic-return network — one
+ * per connector (membership is per-(entity, connector), so no special handling).
+ */
+export function buildRadiatorReturnConnector(
+  localPosition: Point3D,
+  diameterMm: number,
+): MepConnector {
+  return {
+    connectorId: RADIATOR_RETURN_CONNECTOR_ID,
+    domain: 'pipe',
+    flow: 'out',
+    localPosition,
+    pipe: { systemClassification: 'hydronic-return', diameterMm },
+  };
+}

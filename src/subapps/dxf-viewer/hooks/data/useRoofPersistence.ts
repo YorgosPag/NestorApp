@@ -30,13 +30,8 @@ import {
 } from '../../bim/roofs/roof-firestore-service';
 import { recordRoofChange } from '../../bim/roofs/roof-audit-client';
 import { bimToBoqBridge } from '../../bim/services/BimToBoqBridge';
-import type { BimEntityType } from '../../bim/config/bim-to-atoe-mapping';
 import { useBimEntityMovedPersistEffect } from './useBimEntityMovedPersistEffect';
 import { useBimEntityRestoredPersistEffect } from './useBimEntityRestoredPersistEffect';
-// NOTE: BimRestoreEntityType will gain 'roof' when the orchestrator updates
-// useBimEntityRestoredPersistEffect.ts (shared file — ADR-417 Φ1 constraint).
-// Until then we cast via unknown to satisfy the compile-time union.
-type BimRestoreEntityTypeFwd = Parameters<typeof useBimEntityRestoredPersistEffect>[0];
 
 // ============================================================================
 // TYPES
@@ -256,13 +251,12 @@ export function useRoofPersistence(
         { prevParams: prevParams ?? undefined },
       );
       // ADR-417 — ΑΤΟΕ BOQ auto-feed: roof = grossArea (m²) κεκλιμένης επιφάνειας.
-      // 'roof' will be added to BimEntityType by the orchestrator (shared file).
       if (companyId && projectId && buildingId) {
         const boqGeom = entity.geometry
           ? { area: entity.geometry.grossAreaM2 }
           : undefined;
         void bimToBoqBridge.upsertBoqItemForBim(
-          'roof' as BimEntityType,
+          'roof',
           { id: entity.id, kind: entity.kind, geometry: boqGeom },
           { companyId, projectId, buildingId, floorId: floorId ?? undefined },
           isNew ? 'created' : 'updated',
@@ -390,9 +384,8 @@ export function useRoofPersistence(
   }, [deleteRoof]);
 
   useBimEntityMovedPersistEffect(isRoof, serviceRef, dirtyIdsRef, persist);
-  // 'roof' will be added to BimRestoreEntityType by the orchestrator.
   useBimEntityRestoredPersistEffect(
-    'roof' as BimRestoreEntityTypeFwd,
+    'roof',
     isRoof,
     serviceRef,
     pendingFirstSaveIdsRef,

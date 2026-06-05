@@ -252,6 +252,7 @@ export const ENTERPRISE_ID_PREFIXES = {
   MEP_SEGMENT: 'mepseg',       // floorplan_mep_segments collection — linear duct/pipe distribution run (ADR-408 Φ8)
   MEP_FITTING: 'mepfit',       // floorplan_mep_fittings collection — auto pipe fitting (junction element) (ADR-408 Φ11)
   MEP_MANIFOLD: 'mfld',        // floorplan_mep_manifolds collection — point-based plumbing manifold / water distribution source (ADR-408 Φ12)
+  MEP_RADIATOR: 'rad',         // floorplan_mep_radiators collection — point-based hydronic radiator / heating terminal (ADR-408 Εύρος Β)
   RAILING: 'ral',              // floorplan_railings collection — standalone path-based railing (ADR-407)
   ROOF: 'roof',                // floorplan_roofs collection — parametric pitched roof (footprint + per-edge slopes) (ADR-417)
   FURNITURE: 'furn',           // floorplan_furniture collection — mesh-based CC0 furniture (ADR-410, chair first)

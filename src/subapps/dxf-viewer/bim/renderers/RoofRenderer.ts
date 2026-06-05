@@ -15,9 +15,9 @@
  * ADR-040 micro-leaf compliance: pure renderer class με ZERO subscriptions
  * σε high-frequency stores. Called by canvas με entity resolved upstream.
  *
- * Visibility: minimal guard `entity.visible !== false` — αποφεύγει import
- * του `resolveIsEntityVisible` γιατί η κατηγορία 'roof' δεν ήταν ακόμα
- * registered στο V/G type system (Φ2: πλήρης V/G integration).
+ * Visibility (ADR-382 SSoT, §10 #4): own V/G category `'roof'` resolved via
+ * `resolveIsEntityVisible` (V/G + Layer + Floor + Building + discipline), 1:1 με
+ * SlabRenderer — plus a cheap per-element `roof.visible === false` short-circuit.
  *
  * @see docs/centralized-systems/reference/adrs/ADR-417-bim-roof-element.md §Φ1
  * @see docs/centralized-systems/reference/adrs/ADR-040-preview-canvas-performance.md
@@ -29,9 +29,13 @@ import type { Entity } from '../../types/entities';
 import { isRoofEntity } from '../../types/entities';
 import type { RoofEntity } from '../types/roof-types';
 import type { Point3D } from '../types/bim-base';
+import { getRoofGrips } from '../roofs/roof-grips';
 import { pointInPolygon } from '../geometry/shared/polygon-utils';
 import { RENDER_LINE_WIDTHS } from '../../config/text-rendering-config';
 import { HOVER_HIGHLIGHT } from '../../config/color-config';
+import { resolveIsEntityVisible } from '../visibility/visibility-resolver';
+import { useDrawingScaleStore } from '../../state/drawing-scale-store';
+import { getLayer } from '../../stores/LayerStore';
 
 // ─── Palette constants ────────────────────────────────────────────────────────
 
@@ -58,8 +62,19 @@ export class RoofRenderer extends BaseEntityRenderer {
     if (!isRoofEntity(entity)) return;
     const roof = entity as RoofEntity;
 
-    // Minimal visibility guard — V/G category integration deferred to Φ2.
+    // Per-element override short-circuit (Revit "hide element in view").
     if (roof.visible === false) return;
+
+    // ADR-382 — unified V/G visibility (own 'roof' category + Layer + discipline).
+    const _roofLayer = roof.layerId ? getLayer(roof.layerId) : null;
+    if (!resolveIsEntityVisible(
+      { category: 'roof', layerId: roof.layerId, discipline: roof.discipline },
+      {
+        objectStyles: useDrawingScaleStore.getState().objectStyles,
+        disciplineVisibility: useDrawingScaleStore.getState().disciplineVisibility,
+        layer: _roofLayer,
+      },
+    )) return;
 
     if (!roof.geometry || !roof.params) return;
     const footprintVerts = roof.geometry.footprint.vertices;
@@ -96,9 +111,21 @@ export class RoofRenderer extends BaseEntityRenderer {
     this.finalizeRender(entity, options);
   }
 
-  getGrips(_entity: EntityModel): GripInfo[] {
-    // Grips wired separately by orchestrator (ADR-417 Φ2+).
-    return [];
+  getGrips(entity: EntityModel): GripInfo[] {
+    // ADR-417 Φ1-part-2 #2 — parametric roof grips (per-vertex translate +
+    // edge-midpoint vertex insertion, Revit «Edit Footprint»). Commit routed
+    // through `applyRoofGripDrag()` + `UpdateRoofParamsCommand` by
+    // `commitRoofGripDrag` (grip-commit-adapter), with Shift driving rectilinear
+    // quantization. Mirror of `SlabRenderer.getGrips`.
+    if (!isRoofEntity(entity)) return [];
+    return getRoofGrips(entity as RoofEntity).map((g) => ({
+      id: `${g.entityId}-grip-${g.gripIndex}`,
+      position: g.position,
+      type: g.type === 'midpoint' ? ('midpoint' as const) : ('vertex' as const),
+      entityId: g.entityId,
+      isVisible: true,
+      gripIndex: g.gripIndex,
+    }));
   }
 
   hitTest(entity: EntityModel, point: Point2D, tolerance: number): boolean {

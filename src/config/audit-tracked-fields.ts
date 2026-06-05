@@ -825,6 +825,24 @@ const RAILING_TRACKED_FIELDS_RAW: Record<string, string> = {
 export const RAILING_TRACKED_FIELDS: Record<string, TrackedFieldDef> =
   mergeDefs(RAILING_TRACKED_FIELDS_RAW, {});
 
+// ADR-417 — parametric pitched roof (footprint ⊥ type). Coordinate-heavy
+// `outline`/`edges` are intentionally OUT (per-vertex/per-edge slope triples
+// produce noise every grip drag). `dna` is the layered build-up object — JSON
+// scalar, mirror wall/slab `dna`.
+const ROOF_TRACKED_FIELDS_RAW: Record<string, string> = {
+  layerId: 'layerId',
+  thickness: 'thickness',
+  basePivotZ: 'basePivotZ',
+  slopeUnit: 'slopeUnit',
+  material: 'material',
+  dna: 'dna',
+  storeyId: 'storeyId',
+  offsetFromStorey: 'offsetFromStorey',
+};
+
+export const ROOF_TRACKED_FIELDS: Record<string, TrackedFieldDef> =
+  mergeDefs(ROOF_TRACKED_FIELDS_RAW, {});
+
 const SLAB_TRACKED_FIELDS_RAW: Record<string, string> = {
   kind: 'kind',
   layerId: 'layerId',
@@ -1027,6 +1045,8 @@ export function getTrackedFieldsForEntityAuditType(
       return MEP_FITTING_TRACKED_FIELDS;
     case 'railing':
       return RAILING_TRACKED_FIELDS;
+    case 'roof':
+      return ROOF_TRACKED_FIELDS;
     case 'floorplan-symbol':
       return FLOORPLAN_SYMBOL_TRACKED_FIELDS;
     case 'slab':

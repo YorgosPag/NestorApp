@@ -12,7 +12,7 @@
 import type { Point2D } from '../rendering/types/Types';
 import type { DxfEntityUnion } from '../canvas-v2/dxf-canvas/dxf-types';
 import type { GripInfo, StairGripKind, WallGripKind } from './useGripMovement';
-import type { ColumnGripKind, BeamGripKind, SlabGripKind, SlabOpeningGripKind, OpeningGripKind, MepFixtureGripKind, ElectricalPanelGripKind, MepManifoldGripKind, FurnitureGripKind, FloorplanSymbolGripKind, MepSegmentGripKind } from './grip-types';
+import type { ColumnGripKind, BeamGripKind, SlabGripKind, SlabOpeningGripKind, RoofGripKind, OpeningGripKind, MepFixtureGripKind, ElectricalPanelGripKind, MepManifoldGripKind, MepRadiatorGripKind, FurnitureGripKind, FloorplanSymbolGripKind, MepSegmentGripKind } from './grip-types';
 import type { WallEntity } from '../bim/types/wall-types';
 import type { BeamEntity } from '../bim/types/beam-types';
 import type { ColumnEntity } from '../bim/types/column-types';
@@ -21,9 +21,11 @@ import type { SlabEntity } from '../bim/types/slab-types';
 import type { MepFixtureEntity } from '../bim/types/mep-fixture-types';
 import type { ElectricalPanelEntity } from '../bim/types/electrical-panel-types';
 import type { MepManifoldEntity } from '../bim/types/mep-manifold-types';
+import type { MepRadiatorEntity } from '../bim/types/mep-radiator-types';
 import type { FurnitureEntity } from '../bim/types/furniture-types';
 import type { FloorplanSymbolEntity } from '../bim/types/floorplan-symbol-types';
 import type { MepSegmentEntity } from '../bim/types/mep-segment-types';
+import type { RoofEntity } from '../bim/types/roof-types';
 import { calculateMidpoint } from '../rendering/entities/shared/geometry-utils';
 import { getStairGrips } from '../bim/stairs/stair-grips';
 import { getWallGrips } from '../bim/walls/wall-grips';
@@ -35,9 +37,11 @@ import { getOpeningGrips } from '../bim/walls/opening-grips';
 import { getMepFixtureGrips } from '../bim/mep-fixtures/mep-fixture-grips';
 import { getElectricalPanelGrips } from '../bim/electrical-panels/electrical-panel-grips';
 import { getMepManifoldGrips } from '../bim/mep-manifolds/mep-manifold-grips';
+import { getMepRadiatorGrips } from '../bim/mep-radiators/mep-radiator-grips';
 import { getFurnitureGrips } from '../bim/furniture/furniture-grips';
 import { getFloorplanSymbolGrips } from '../bim/floorplan-symbols/floorplan-symbol-grips';
 import { getMepSegmentGrips } from '../bim/mep-segments/mep-segment-grips';
+import { getRoofGrips } from '../bim/roofs/roof-grips';
 import { getDimensionGrips } from './dimensions/useDimensionGrips';
 import { getXLineGrips } from '../systems/xline/xline-grips';
 import { getRayGrips } from '../systems/ray/ray-grips';
@@ -104,6 +108,11 @@ export interface DxfGripDragPreview {
    */
   mepManifoldGripKind?: MepManifoldGripKind;
   /**
+   * ADR-408 Εύρος Β — parametric heating radiator grip discriminator. Routes the
+   * live ghost through `applyMepRadiatorGripDrag` + `computeMepRadiatorGeometry`.
+   */
+  mepRadiatorGripKind?: MepRadiatorGripKind;
+  /**
    * ADR-410 — parametric furniture grip discriminator. Routes the live ghost
    * through `applyFurnitureGripDrag` + `computeFurnitureGeometry`.
    */
@@ -118,6 +127,12 @@ export interface DxfGripDragPreview {
    * through `applyMepSegmentGripDrag` + `computeMepSegmentGeometry`.
    */
   mepSegmentGripKind?: MepSegmentGripKind;
+  /**
+   * ADR-417 Φ1-part-2 #2 — parametric roof grip discriminator. Routes the live
+   * ghost through `applyRoofGripDrag` (params-only; `draw-ghost-entity` paints
+   * the new footprint outline).
+   */
+  roofGripKind?: RoofGripKind;
   /**
    * ADR-363 Phase 1G — set when the active grip is a wall corner being moved via
    * the hot-grip (click-click) state. Consumed by `useGripGhostPreview` to draw
@@ -375,6 +390,13 @@ export function computeDxfEntityGrips(entity: DxfEntityUnion): GripInfo[] {
       break;
     }
 
+    case 'mep-radiator': {
+      // ADR-408 Εύρος Β — parametric heating radiator grips (move + rotation + 4
+      // corner resize, rectangular-only). 1:1 mirror of mep-manifold.
+      grips.push(...getMepRadiatorGrips(entity as unknown as MepRadiatorEntity));
+      break;
+    }
+
     case 'furniture': {
       // ADR-410 — parametric furniture grips (move + rotation + 4 corner
       // resize, rectangular-only). Carries params at top level (mirror mep-fixture).
@@ -393,6 +415,15 @@ export function computeDxfEntityGrips(entity: DxfEntityUnion): GripInfo[] {
       // ADR-408 Φ8 — parametric MEP segment grips (start / end / midpoint /
       // section-width / rotation). Carries params at top level (mirror beam).
       grips.push(...getMepSegmentGrips(entity as unknown as MepSegmentEntity));
+      break;
+    }
+
+    case 'roof': {
+      // ADR-417 Φ1-part-2 #2 — parametric roof grips (per-vertex translate +
+      // edge-midpoint insertion, Revit «Edit Footprint»). Roof is a DIRECT
+      // entity (params at top level, mirror beam/mep-segment — NOT wrapped like
+      // slab's `entity.slabEntity`).
+      grips.push(...getRoofGrips(entity as unknown as RoofEntity));
       break;
     }
   }

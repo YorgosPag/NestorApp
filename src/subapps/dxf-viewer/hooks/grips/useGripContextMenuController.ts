@@ -41,6 +41,10 @@ import { getGlobalCommandHistory } from '../../core/commands/CommandHistory';
 import { removeVertexFromSlab, applySlabGripDrag } from '../../bim/slabs/slab-grips';
 import { UpdateSlabParamsCommand } from '../../core/commands/entity-commands/UpdateSlabParamsCommand';
 import type { SlabEntity } from '../../bim/types/slab-types';
+// ADR-417 Φ1-part-2 #2 — roof vertex ops from context menu (mirror slab).
+import { removeVertexFromRoof, applyRoofGripDrag } from '../../bim/roofs/roof-grips';
+import { UpdateRoofParamsCommand } from '../../core/commands/entity-commands/UpdateRoofParamsCommand';
+import type { RoofEntity } from '../../bim/types/roof-types';
 import { LevelSceneManagerAdapter } from '../../systems/entity-creation/LevelSceneManagerAdapter';
 
 type LevelManagerLike = Pick<
@@ -155,12 +159,34 @@ export function useGripContextMenuController(
         }
       };
 
-      // ADR-363 Phase 3.8 — slab vertex operations dispatched through global history.
+      // ADR-363 Phase 3.8 + ADR-417 Φ1-part-2 #2 — polygon-outline vertex
+      // operations (slab / roof) dispatched through global history. Branches on
+      // the grip discriminator so the right Update*ParamsCommand recomputes
+      // geometry atomically (one shared dispatcher = SSoT, no per-entity wire).
       const onSlabVertexOp = (targetGrip: UnifiedGripInfo, op: 'delete-corner' | 'add-corner') => {
         const lm = depsRef.current.levelManager;
         if (!targetGrip.entityId || !lm.currentLevelId) return;
         const adapter = new LevelSceneManagerAdapter(lm.getLevelScene, lm.setLevelScene, lm.currentLevelId);
         const raw = adapter.getEntity(targetGrip.entityId);
+
+        // ADR-417 — roof branch (footprint vertex delete / edge-midpoint insert).
+        if (targetGrip.roofGripKind) {
+          const roofCandidate = raw as unknown as Partial<RoofEntity>;
+          if (roofCandidate?.type !== 'roof' || !roofCandidate.params) return;
+          const roof = roofCandidate as RoofEntity;
+          let newParams = roof.params;
+          if (op === 'delete-corner' && targetGrip.roofGripKind.startsWith('roof-vertex-')) {
+            const idx = parseInt(targetGrip.roofGripKind.slice('roof-vertex-'.length), 10);
+            if (Number.isFinite(idx)) newParams = removeVertexFromRoof(roof.params, idx);
+          } else if (op === 'add-corner' && targetGrip.roofGripKind.startsWith('roof-edge-midpoint-')) {
+            newParams = applyRoofGripDrag(targetGrip.roofGripKind, { originalParams: roof.params, delta: { x: 0, y: 0 } });
+          }
+          if (newParams === roof.params) return;
+          const cmd = new UpdateRoofParamsCommand(targetGrip.entityId, newParams, roof.params, adapter, false);
+          if (cmd.validate() === null) getGlobalCommandHistory().execute(cmd);
+          return;
+        }
+
         const candidate = raw as unknown as Partial<SlabEntity>;
         if (candidate?.type !== 'slab' || !candidate.params) return;
         const slab = candidate as SlabEntity;

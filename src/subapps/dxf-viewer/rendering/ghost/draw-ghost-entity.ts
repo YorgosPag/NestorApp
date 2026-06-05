@@ -236,6 +236,20 @@ export function drawGhostEntity(
       return;
     }
 
+    // ADR-417 Φ1-part-2 #2 — roof ghost: footprint polygon from raw RoofEntity.params.
+    // entity is a raw RoofEntity from scene.entities (DIRECT, not a wrapper);
+    // `applyRoofGripDrag` mutates `params.outline.vertices` so the live footprint
+    // follows the dragged vertex / inserted midpoint (mirror slab).
+    case 'roof': {
+      const roof = entity as unknown as {
+        params?: { outline?: { vertices: ReadonlyArray<{ x: number; y: number }> } };
+      };
+      const verts = roof.params?.outline?.vertices ?? [];
+      if (verts.length < 2) return;
+      drawPolygon(ctx, verts, toScreen);
+      return;
+    }
+
     // ADR-397 — column ghost: footprint polygon (scene-units, from ColumnGeometry).
     // Mirror beam/slab so the live move/rotation/resize ghost paints.
     case 'column': {
@@ -281,6 +295,19 @@ export function drawGhostEntity(
         geometry?: { footprint?: { vertices: ReadonlyArray<{ x: number; y: number }> } };
       };
       const verts = manifold.geometry?.footprint?.vertices ?? [];
+      if (verts.length < 2) return;
+      drawPolygon(ctx, verts, toScreen);
+      return;
+    }
+
+    // ADR-408 Εύρος Β — heating radiator ghost: footprint polygon (scene-units,
+    // from MepRadiatorGeometry). Mirror mep-manifold so the live
+    // move/rotation/corner-resize ghost paints.
+    case 'mep-radiator': {
+      const radiator = entity as unknown as {
+        geometry?: { footprint?: { vertices: ReadonlyArray<{ x: number; y: number }> } };
+      };
+      const verts = radiator.geometry?.footprint?.vertices ?? [];
       if (verts.length < 2) return;
       drawPolygon(ctx, verts, toScreen);
       return;

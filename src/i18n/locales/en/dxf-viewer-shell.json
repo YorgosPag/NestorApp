@@ -487,6 +487,9 @@
     "mepManifold": {
       "statusPosition": "Click to place plumbing manifold"
     },
+    "mepRadiator": {
+      "statusPosition": "Click to place radiator"
+    },
     "mepSegment": {
       "statusStart": "Pick run start",
       "statusEnd": "Pick run end"
@@ -1057,6 +1060,10 @@
         "mepDrainageCollector": {
           "label": "Drainage Collector",
           "tooltip": "Place a drainage collector (φρεάτιο) with a single click — N inlets + 1 sewer outlet (discipline: plumbing)"
+        },
+        "mepRadiator": {
+          "label": "Radiator",
+          "tooltip": "Place a heating radiator with a single click — supply inlet + return outlet (discipline: plumbing/heating)"
         },
         "railing": {
           "label": "Railing",
@@ -2029,7 +2036,17 @@
           "dimension": "Dimension",
           "hatch": "Hatch",
           "grip": "Grip",
-          "envelope": "Thermal Envelope"
+          "envelope": "Thermal Envelope",
+          "light-fixture": "Light Fixture",
+          "electrical-panel": "Electrical Panel",
+          "mep-manifold": "Manifold",
+          "railing": "Railing",
+          "mep-wire": "Circuit Wire",
+          "furniture": "Furniture",
+          "duct": "Duct",
+          "pipe": "Pipe",
+          "sanitary": "Sanitary Fixture",
+          "kitchen": "Kitchen Element"
         }
       },
       "subcategories": {
@@ -2617,6 +2634,16 @@
         "dimensionTooSmall": "Dimension is below the minimum allowed",
         "nonPositiveBodyHeight": "Body height must be greater than 0",
         "noOutlets": "At least one outlet is required"
+      }
+    }
+  },
+  "mepRadiator": {
+    "validation": {
+      "hardErrors": {
+        "nonPositiveWidth": "Width must be greater than 0",
+        "nonPositiveLength": "Depth must be greater than 0",
+        "dimensionTooSmall": "Dimension is below the minimum allowed",
+        "nonPositiveBodyHeight": "Body height must be greater than 0"
       }
     }
   },

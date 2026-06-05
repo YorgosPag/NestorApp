@@ -79,18 +79,42 @@ export type MepFittingIfcType = 'IfcPipeFitting' | 'IfcDuctFitting';
 // ─── Incident (one pipe end meeting at the node) ─────────────────────────────────
 
 /**
- * A single pipe end incident on the junction node. The geometry input from which
+ * A single end incident on the junction node. The geometry input from which
  * `kind` is classified and the fitting solid is built.
+ *
+ * An incident is normally a **pipe-segment** end, but it can also be a
+ * **point-host connector** (a manifold outlet / fixture port) where a pipe meets
+ * equipment (ADR-408 Φ-B2b EXT #2). A node that carries any host incident yields
+ * NO auto-fitting — the equipment IS the fitting (Revit) — so host incidents are
+ * purely transient classification input, never persisted.
  */
 export interface MepFittingIncident {
-  /** FK → the incident `mep-segment` entity id. */
-  readonly segmentId: string;
-  /** Which connector of the incident pipe meets here (`'seg-start'` | `'seg-end'`). */
+  /**
+   * Canonical FK → the incident entity: a pipe `mep-segment` OR the point-host
+   * (manifold / fixture) whose connector the pipe meets. Read via
+   * {@link incidentEntityId} (it falls back to the legacy `segmentId` on
+   * pre-Φ-B2b-EXT persisted documents).
+   */
+  readonly entityId: string;
+  /**
+   * @deprecated Legacy alias of {@link entityId} — pre-Φ-B2b-EXT persisted
+   * `mep-fitting` docs carried only this. Kept optional so old documents still
+   * validate; always read the FK via {@link incidentEntityId}.
+   */
+  readonly segmentId?: string;
+  /** Which connector of the incident entity meets here (`'seg-start'` | `'seg-end'` | a manifold outlet id …). */
   readonly connectorId: string;
-  /** Unit vector pointing AWAY from the node, along the pipe centreline. */
+  /** Unit vector pointing AWAY from the node, along the pipe centreline. Zero vector for a host incident. */
   readonly directionUnit: Point3D;
-  /** mm. Nominal diameter of the incident pipe. */
+  /** mm. Nominal diameter of the incident pipe (0 for a host incident — its geometry is never built). */
   readonly diameterMm: number;
+  /**
+   * True when this incident is a **point-host connector** (manifold outlet /
+   * fixture port), not a pipe end. A node carrying any host incident classifies
+   * to `kind: null` (no fitting — the equipment covers the end, Revit), so a host
+   * incident never reaches geometry/persistence.
+   */
+  readonly host?: boolean;
 }
 
 // ─── Parameters (derived, SSoT for geometry derivation) ──────────────────────────
@@ -185,4 +209,13 @@ export const DEFAULT_ELBOW_STYLE: ElbowStyle = 'radiused';
  */
 export function mepFittingIfcType(domain: MepFittingDomain): MepFittingIfcType {
   return domain === 'pipe' ? 'IfcPipeFitting' : 'IfcDuctFitting';
+}
+
+/**
+ * SSoT accessor for an incident's owning-entity FK (ADR-408 Φ-B2b EXT #2). Reads
+ * the canonical {@link MepFittingIncident.entityId}, falling back to the legacy
+ * `segmentId` so pre-migration persisted `mep-fitting` documents resolve too.
+ */
+export function incidentEntityId(incident: MepFittingIncident): string {
+  return incident.entityId ?? incident.segmentId ?? '';
 }

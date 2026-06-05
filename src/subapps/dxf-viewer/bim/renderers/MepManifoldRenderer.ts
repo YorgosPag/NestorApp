@@ -96,15 +96,16 @@ export class MepManifoldRenderer extends BaseEntityRenderer {
     // Manifold symbol strokes (inlet stub + outlet stubs).
     const symbol = buildMepManifoldSymbol(manifold.params, manifold.geometry);
     for (const stroke of symbol.strokes) {
-      if (stroke.length < 2) continue;
-      this.ctx.beginPath();
-      const start = this.worldToScreen({ x: stroke[0].x, y: stroke[0].y });
-      this.ctx.moveTo(start.x, start.y);
-      for (let i = 1; i < stroke.length; i++) {
-        const s = this.worldToScreen({ x: stroke[i].x, y: stroke[i].y });
-        this.ctx.lineTo(s.x, s.y);
+      this.drawStroke(stroke);
+    }
+
+    // ADR-408 Φ14 — drainage collector (φρεάτιο) grating: parallel bars inside the
+    // footprint, thinner than the stubs so the catch-basin reads at a glance.
+    if (symbol.gratingStrokes) {
+      this.ctx.lineWidth = RENDER_LINE_WIDTHS.THIN;
+      for (const stroke of symbol.gratingStrokes) {
+        this.drawStroke(stroke);
       }
-      this.ctx.stroke();
     }
 
     this.ctx.restore();
@@ -147,6 +148,19 @@ export class MepManifoldRenderer extends BaseEntityRenderer {
   }
 
   // ─── Internal helpers ──────────────────────────────────────────────────────
+
+  /** Stroke a world-space polyline (symbol stub / grating bar) at the current style. */
+  private drawStroke(stroke: ReadonlyArray<{ x: number; y: number }>): void {
+    if (stroke.length < 2) return;
+    this.ctx.beginPath();
+    const start = this.worldToScreen({ x: stroke[0].x, y: stroke[0].y });
+    this.ctx.moveTo(start.x, start.y);
+    for (let i = 1; i < stroke.length; i++) {
+      const s = this.worldToScreen({ x: stroke[i].x, y: stroke[i].y });
+      this.ctx.lineTo(s.x, s.y);
+    }
+    this.ctx.stroke();
+  }
 
   private drawPolygonPath(vertices: ReadonlyArray<{ x: number; y: number }>): void {
     if (vertices.length < 3) return;

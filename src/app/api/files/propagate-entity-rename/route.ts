@@ -54,6 +54,8 @@ const ENTITY_COLLECTION_MAP: Readonly<Record<AuditEntityType, string>> = {
   column: '',
   beam: '',
   stair: '',
+  // Roof (ADR-417) — no rename propagation at this stage
+  roof: '',
   // MEP fixtures (ADR-406) — no rename propagation at this stage
   'mep-fixture': '',
   // MEP systems (ADR-408) — no rename propagation at this stage

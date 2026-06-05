@@ -149,6 +149,24 @@ export type SlabOpeningGripKind =
   | `slab-opening-edge-midpoint-${number}`;
 
 /**
+ * ADR-417 Φ1-part-2 #2 — Roof grip kind (parametric grip type, Revit «Edit
+ * Footprint»). Routes commit through `applyRoofGripDrag()` +
+ * `UpdateRoofParamsCommand` instead of the standard `StretchEntityCommand`
+ * vertex path.
+ *
+ * Two grip families exposed by `RoofEntity` (`bim/roofs/roof-grips.ts`):
+ *   - `roof-vertex-N`        → translate footprint outline vertex N (XY only,
+ *                              z preserved; `edges` count unchanged).
+ *   - `roof-edge-midpoint-N` → insert new vertex at edge N midpoint + delta
+ *                              (splits edge `[N, N+1]` + splices a copy of
+ *                              `edges[N]` so `edges` stays in lockstep with
+ *                              `outline.vertices`).
+ */
+export type RoofGripKind =
+  | `roof-vertex-${number}`
+  | `roof-edge-midpoint-${number}`;
+
+/**
  * ADR-363 Phase 5.5a + 5.5b + 5.5c — Beam grip kind (parametric grip type).
  * Routes commit through `applyBeamGripDrag()` + `UpdateBeamParamsCommand`
  * instead of the standard `StretchEntityCommand` vertex path.
@@ -321,6 +339,19 @@ export type MepManifoldGripKind =
   | 'mep-manifold-corner-nw'
   | 'mep-manifold-corner-sw'
   | 'mep-manifold-corner-se';
+
+/**
+ * ADR-408 Εύρος Β #1 — Heating radiator grip kind (parametric grip type). Routes
+ * commit through `applyMepRadiatorGripDrag()` + `UpdateMepRadiatorParamsCommand`.
+ * Full wall-parity mirror of the plumbing manifold (rectangular-only → no diameter).
+ */
+export type MepRadiatorGripKind =
+  | 'mep-radiator-move'
+  | 'mep-radiator-rotation'
+  | 'mep-radiator-corner-ne'
+  | 'mep-radiator-corner-nw'
+  | 'mep-radiator-corner-sw'
+  | 'mep-radiator-corner-se';
 
 /**
  * ADR-410 — Furniture grip kind (parametric grip type).

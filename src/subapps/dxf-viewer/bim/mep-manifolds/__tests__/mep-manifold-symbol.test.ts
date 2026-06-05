@@ -45,4 +45,45 @@ describe('buildMepManifoldSymbol', () => {
     const p2 = params({ outletCount: 2 });
     expect(buildMepManifoldSymbol(p2, computeMepManifoldGeometry(p2)).strokes).toHaveLength(3);
   });
+
+  it('water manifold has no grating', () => {
+    const p = params();
+    expect(buildMepManifoldSymbol(p, computeMepManifoldGeometry(p)).gratingStrokes).toBeUndefined();
+  });
+});
+
+// ADR-408 Φ14 — drainage collector (φρεάτιο) adds a grating pattern (catch basin)
+// while keeping the connection stubs + footprint.
+describe('buildMepManifoldSymbol — drainage collector grating', () => {
+  it('emits 6 grating bars, each a 2-point polyline', () => {
+    const p = params({ kind: 'drainage-collector' });
+    const sym = buildMepManifoldSymbol(p, computeMepManifoldGeometry(p));
+    expect(sym.gratingStrokes).toHaveLength(6);
+    expect(sym.gratingStrokes!.every((s) => s.length === 2)).toBe(true);
+  });
+
+  it('keeps the footprint outline + connection stubs', () => {
+    const p = params({ kind: 'drainage-collector', outletCount: 3 });
+    const sym = buildMepManifoldSymbol(p, computeMepManifoldGeometry(p));
+    expect(sym.outline).toHaveLength(4);
+    expect(sym.strokes).toHaveLength(1 + 3);
+  });
+
+  it('grating bars stay inside the footprint bbox', () => {
+    const p = params({ kind: 'drainage-collector' });
+    const geom = computeMepManifoldGeometry(p);
+    const sym = buildMepManifoldSymbol(p, geom);
+    const xs = geom.footprint.vertices.map((v) => v.x);
+    const ys = geom.footprint.vertices.map((v) => v.y);
+    const [minX, maxX] = [Math.min(...xs), Math.max(...xs)];
+    const [minY, maxY] = [Math.min(...ys), Math.max(...ys)];
+    for (const bar of sym.gratingStrokes!) {
+      for (const pt of bar) {
+        expect(pt.x).toBeGreaterThanOrEqual(minX - 1e-6);
+        expect(pt.x).toBeLessThanOrEqual(maxX + 1e-6);
+        expect(pt.y).toBeGreaterThanOrEqual(minY - 1e-6);
+        expect(pt.y).toBeLessThanOrEqual(maxY + 1e-6);
+      }
+    }
+  });
 });

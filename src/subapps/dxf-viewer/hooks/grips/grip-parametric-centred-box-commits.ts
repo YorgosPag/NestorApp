@@ -23,6 +23,9 @@ import { applyElectricalPanelGripDrag } from '../../bim/electrical-panels/electr
 import { UpdateElectricalPanelParamsCommand } from '../../core/commands/entity-commands/UpdateElectricalPanelParamsCommand';
 import { applyMepManifoldGripDrag } from '../../bim/mep-manifolds/mep-manifold-grips';
 import { UpdateMepManifoldParamsCommand } from '../../core/commands/entity-commands/UpdateMepManifoldParamsCommand';
+import type { MepRadiatorEntity } from '../../bim/types/mep-radiator-types';
+import { applyMepRadiatorGripDrag } from '../../bim/mep-radiators/mep-radiator-grips';
+import { UpdateMepRadiatorParamsCommand } from '../../core/commands/entity-commands/UpdateMepRadiatorParamsCommand';
 import { applyFurnitureGripDrag } from '../../bim/furniture/furniture-grips';
 import { UpdateFurnitureParamsCommand } from '../../core/commands/entity-commands/UpdateFurnitureParamsCommand';
 import type { FloorplanSymbolEntity } from '../../bim/types/floorplan-symbol-types';
@@ -190,6 +193,53 @@ export function commitMepManifoldGripDrag(
   if (command.validate() !== null) return;
   deps.execute(command);
   EventBus.emit('bim:mep-manifold-params-updated', { manifoldId: grip.entityId });
+}
+
+/**
+ * ADR-408 Εύρος Β — Parametric heating radiator grip commit (centre translate +
+ * rotation + opposite-corner-anchored width/length resize). Bypasses stretch/move
+ * because `MepRadiatorEntity` is params-driven; `UpdateMepRadiatorParamsCommand`
+ * recomputes geometry + validation + re-seeds connectors atomically. Merge window
+ * enabled (isDragging=true) collapses a continuous drag into one undo entry
+ * (ADR-031). ORTHO (F8) read from `cadToggleState`. 1:1 mirror of
+ * `commitMepManifoldGripDrag`.
+ */
+export function commitMepRadiatorGripDrag(
+  grip: UnifiedGripInfo,
+  delta: Point2D,
+  deps: DxfCommitDeps,
+): void {
+  if (!grip.entityId || !grip.mepRadiatorGripKind) return;
+  const sceneManager = createSceneManagerAdapter(deps);
+  if (!sceneManager) return;
+  const raw = sceneManager.getEntity(grip.entityId);
+  if (!raw) return;
+  const candidate = raw as unknown as Partial<MepRadiatorEntity>;
+  if (candidate.type !== 'mep-radiator' || !candidate.params) return;
+  const originalParams = candidate.params;
+  const rotateCtx = BimRotateHotGripStore.getSnapshot();
+  const useRotatePivot =
+    grip.mepRadiatorGripKind === 'mep-radiator-rotation' && rotateCtx.pivot !== null && rotateCtx.anchor !== null;
+  const anchor: Point2D = useRotatePivot ? rotateCtx.anchor! : grip.position;
+  const currentPos: Point2D = { x: anchor.x + delta.x, y: anchor.y + delta.y };
+  const newParams = applyMepRadiatorGripDrag(grip.mepRadiatorGripKind, {
+    originalParams,
+    delta,
+    currentPos,
+    ortho: cadToggleState.isOrthoOn(),
+    ...(useRotatePivot ? { pivot: rotateCtx.pivot! } : {}),
+  });
+  if (newParams === originalParams) return;
+  const command = new UpdateMepRadiatorParamsCommand(
+    grip.entityId,
+    newParams,
+    originalParams,
+    sceneManager,
+    true,
+  );
+  if (command.validate() !== null) return;
+  deps.execute(command);
+  EventBus.emit('bim:mep-radiator-params-updated', { radiatorId: grip.entityId });
 }
 
 /**

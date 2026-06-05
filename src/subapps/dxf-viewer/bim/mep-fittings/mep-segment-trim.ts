@@ -28,6 +28,7 @@
 
 import type { Entity } from '../../types/entities';
 import type { MepFittingKind } from '../types/mep-fitting-types';
+import { incidentEntityId } from '../types/mep-fitting-types';
 import { SEGMENT_START_CONNECTOR_ID } from '../types/mep-connector-types';
 import { derivePipeJunctions } from '../mep-systems/mep-pipe-junctions';
 import type { PipeJunction } from '../mep-systems/mep-pipe-junctions';
@@ -71,8 +72,11 @@ export function resolveSegmentTrims(entities: readonly Entity[]): Map<string, Se
     if (trimMm <= 0) continue;
 
     for (const inc of junction.incidents) {
+      // A host incident is equipment, not a pipe — nothing to trim. (Host nodes
+      // already classify to null above; this guards the FK use defensively.)
+      if (inc.host) continue;
       const end = inc.connectorId === SEGMENT_START_CONNECTOR_ID ? 'start' : 'end';
-      set(inc.segmentId, end, trimMm);
+      set(incidentEntityId(inc), end, trimMm);
     }
   }
   return trims;

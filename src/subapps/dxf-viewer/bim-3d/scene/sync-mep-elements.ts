@@ -16,6 +16,7 @@ import type { Bim3DEntities } from '../stores/Bim3DEntitiesStore';
 import { mepSegmentToMesh } from '../converters/mep-segment-to-mesh';
 import { mepFittingToMesh } from '../converters/mep-fitting-to-mesh';
 import { resolveFittingSystemColor } from '../../bim/mep-systems/mep-system-color';
+import { incidentEntityId } from '../../bim/types/mep-fitting-types';
 import type { SyncContext } from './bim-scene-context';
 import type { BimCategory } from '../../config/bim-object-styles';
 import type { Discipline } from '../../bim/discipline/bim-discipline';
@@ -87,7 +88,7 @@ export function syncFittings(
     const r = resolveEntity(fitting, category);
     if (!r) continue;
     const systemColor = resolveFittingSystemColor(
-      fitting.params.incidents.map((inc) => inc.segmentId),
+      fitting.params.incidents.filter((inc) => !inc.host).map(incidentEntityId),
       ctx.systemColorIndex,
     );
     const mesh = mepFittingToMesh(

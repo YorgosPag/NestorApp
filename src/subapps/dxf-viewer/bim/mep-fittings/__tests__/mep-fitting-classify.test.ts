@@ -17,16 +17,25 @@ import type { MepFittingIncident } from '../../types/mep-fitting-types';
 import { DEFAULT_ELBOW_STYLE } from '../../types/mep-fitting-types';
 import { classifyJunction } from '../mep-fitting-classify';
 
-/** Build a single incident with a given direction + diameter. */
+/** Build a single pipe-segment incident with a given direction + diameter. */
 const incident = (
-  segmentId: string,
+  entityId: string,
   directionUnit: Point3D,
   diameterMm: number,
 ): MepFittingIncident => ({
-  segmentId,
+  entityId,
   connectorId: 'seg-start',
   directionUnit,
   diameterMm,
+});
+
+/** Build a point-host incident (manifold outlet / fixture port) — suppresses the cap. */
+const hostIncident = (entityId: string): MepFittingIncident => ({
+  entityId,
+  connectorId: 'm-out-0',
+  directionUnit: { x: 0, y: 0, z: 0 },
+  diameterMm: 0,
+  host: true,
 });
 
 /** Build a PipeJunction fixture from a list of incidents. */
@@ -57,6 +66,27 @@ describe('classifyJunction — full topology table', () => {
     expect(result.kind).toBe('coupling');
     expect(result.primaryDiameterMm).toBe(50);
     expect(result.secondaryDiameterMm).toBeUndefined();
+  });
+
+  it('1 pipe + a host incident → null (no spurious cap — the equipment is the fitting)', () => {
+    // A pipe end snapped to a manifold outlet: WITHOUT host suppression this is a
+    // lone pipe end → cap. The host incident must short-circuit to null (ADR-408
+    // Φ-B2b EXT #2) so no cap is drawn where the pipe meets the manifold.
+    const result = classifyJunction(
+      junction([incident('p1', RIGHT, 50), hostIncident('mfld-1')]),
+    );
+    expect(result.kind).toBeNull();
+  });
+
+  it('a lone host incident (manifold outlet with no pipe yet) → null', () => {
+    expect(classifyJunction(junction([hostIncident('mfld-1')])).kind).toBeNull();
+  });
+
+  it('a host incident suppresses even a multi-pipe node (equipment covers it)', () => {
+    const result = classifyJunction(
+      junction([incident('p1', RIGHT, 50), incident('p2', UP, 50), hostIncident('mfld-1')]),
+    );
+    expect(result.kind).toBeNull();
   });
 
   it('2 collinear, different Ø → reducer (primary = larger, secondary = smaller)', () => {

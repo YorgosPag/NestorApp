@@ -299,11 +299,13 @@ import {
   commitOpeningGripDrag,
   commitSlabGripDrag,
   commitSlabOpeningGripDrag,
+  commitRoofGripDrag,
   commitBeamGripDrag,
   commitColumnGripDrag,
   commitMepFixtureGripDrag,
   commitElectricalPanelGripDrag,
   commitMepManifoldGripDrag,
+  commitMepRadiatorGripDrag,
   commitFurnitureGripDrag,
   commitFloorplanSymbolGripDrag,
   commitXLineGripDrag,
@@ -375,6 +377,14 @@ export function commitDxfGripDragModeAware(
     commitSlabOpeningGripDrag(grip, delta, deps);
     return;
   }
+  // ADR-417 Φ1-part-2 #2 — roof parametric grip path (per-vertex translate +
+  // edge-midpoint insertion). Bypasses stretch because roofs are params-driven
+  // (footprint outline + per-edge slopes) and geometry (faces / ridges / areas /
+  // bbox) is recomputed atomically by UpdateRoofParamsCommand.
+  if (grip.roofGripKind) {
+    commitRoofGripDrag(grip, delta, deps);
+    return;
+  }
   // ADR-363 Phase 5.5a — beam parametric grip path (start/end/midpoint
   // translate + curve control move). Bypasses stretch because beams are
   // params-driven (axis endpoints + optional Bezier control) και geometry
@@ -414,6 +424,14 @@ export function commitDxfGripDragModeAware(
   // recomputes geometry.
   if (grip.mepManifoldGripKind) {
     commitMepManifoldGripDrag(grip, delta, deps);
+    return;
+  }
+  // ADR-408 Εύρος Β — heating radiator parametric grip path (center translate +
+  // rotation + opposite-corner-anchored width/length resize). Bypasses stretch
+  // because the radiator is params-driven; UpdateMepRadiatorParamsCommand
+  // recomputes geometry + re-seeds connectors.
+  if (grip.mepRadiatorGripKind) {
+    commitMepRadiatorGripDrag(grip, delta, deps);
     return;
   }
   // ADR-410 — furniture parametric grip path (center translate + rotation +

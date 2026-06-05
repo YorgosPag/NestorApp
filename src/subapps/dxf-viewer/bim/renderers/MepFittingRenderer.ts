@@ -31,6 +31,7 @@ import { BaseEntityRenderer } from '../../rendering/entities/BaseEntityRenderer'
 import type { EntityModel, GripInfo, RenderOptions, Point2D } from '../../rendering/types/Types';
 import type { Entity } from '../../types/entities';
 import type { MepFittingEntity, MepFittingDomain } from '../types/mep-fitting-types';
+import { incidentEntityId } from '../types/mep-fitting-types';
 import { pointInPolygon } from '../geometry/shared/polygon-utils';
 import { RENDER_LINE_WIDTHS } from '../../config/text-rendering-config';
 import { resolveIsEntityVisible } from '../visibility/visibility-resolver';
@@ -107,7 +108,7 @@ export class MepFittingRenderer extends BaseEntityRenderer {
     const systems = useMepSystemStore.getState().getSystems();
     const systemColor = colorBySystem && systems.length > 0
       ? resolveFittingSystemColor(
-          fitting.params.incidents.map((inc) => inc.segmentId),
+          fitting.params.incidents.filter((inc) => !inc.host).map(incidentEntityId),
           getEntitySystemColorIndexCached(systems),
         )
       : null;

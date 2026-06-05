@@ -34,6 +34,8 @@ export function toEntityPreviewTransform(dp: DxfGripDragPreview): EntityPreviewT
     ...(dp.columnGripKind      ? { columnGripKind:      dp.columnGripKind }       : {}),
     ...(dp.slabGripKind        ? { slabGripKind:        dp.slabGripKind }         : {}),
     ...(dp.slabOpeningGripKind ? { slabOpeningGripKind: dp.slabOpeningGripKind }  : {}),
+    // ADR-417 Φ1-part-2 #2 — roof parametric ghost (footprint vertex / insert).
+    ...(dp.roofGripKind        ? { roofGripKind:        dp.roofGripKind }         : {}),
     // ADR-406 — MEP fixture parametric ghost (move / rotation / corner resize).
     ...(dp.mepFixtureGripKind  ? { mepFixtureGripKind:  dp.mepFixtureGripKind }   : {}),
     // ADR-408 Φ3 — electrical panel parametric ghost (move / rotation / corner resize).

@@ -16,6 +16,7 @@ import type { WallEntity, WallKind } from '../../bim/types/wall-types';
 import type { OpeningEntity } from '../../bim/types/opening-types';
 import type { SlabEntity } from '../../bim/types/slab-types';
 import type { SlabOpeningEntity } from '../../bim/types/slab-opening-types';
+import type { RoofEntity } from '../../bim/types/roof-types';
 import type { BeamEntity } from '../../bim/types/beam-types';
 import type { ColumnEntity } from '../../bim/types/column-types';
 import { UpdateStairParamsCommand } from '../../core/commands/entity-commands/UpdateStairParamsCommand';
@@ -23,6 +24,7 @@ import { UpdateWallParamsCommand } from '../../core/commands/entity-commands/Upd
 import { UpdateOpeningParamsCommand } from '../../core/commands/entity-commands/UpdateOpeningParamsCommand';
 import { UpdateSlabParamsCommand } from '../../core/commands/entity-commands/UpdateSlabParamsCommand';
 import { UpdateSlabOpeningParamsCommand } from '../../core/commands/entity-commands/UpdateSlabOpeningParamsCommand';
+import { UpdateRoofParamsCommand } from '../../core/commands/entity-commands/UpdateRoofParamsCommand';
 import { UpdateBeamParamsCommand } from '../../core/commands/entity-commands/UpdateBeamParamsCommand';
 import { UpdateColumnParamsCommand } from '../../core/commands/entity-commands/UpdateColumnParamsCommand';
 import { applyStairGripDrag } from '../../bim/stairs/stair-grips';
@@ -31,6 +33,7 @@ import { BimRotateHotGripStore } from '../../bim/grips/bim-rotate-hotgrip-store'
 import { applyOpeningGripDrag } from '../../bim/walls/opening-grips';
 import { applySlabGripDrag } from '../../bim/slabs/slab-grips';
 import { applySlabOpeningGripDrag } from '../../bim/slab-openings/slab-opening-grips';
+import { applyRoofGripDrag } from '../../bim/roofs/roof-grips';
 import { applyBeamGripDrag } from '../../bim/beams/beam-grips';
 import { applyColumnGripDrag } from '../../bim/columns/column-grips';
 import { EventBus } from '../../systems/events/EventBus';
@@ -254,6 +257,51 @@ export function commitSlabGripDrag(
   if (command.validate() !== null) return;
   deps.execute(command);
   EventBus.emit('bim:slab-params-updated', { slabId: grip.entityId });
+}
+
+/**
+ * ADR-417 Φ1-part-2 #2 — Parametric roof grip commit (per-vertex translate +
+ * edge-midpoint insertion, Revit «Edit Footprint»). Mirrors `commitSlabGripDrag`
+ * semantics: routes through `applyRoofGripDrag()` + `UpdateRoofParamsCommand` so
+ * geometry (faces / ridges / areas / bbox) + validation recompute atomically and
+ * the merge window (ADR-031) collapses a continuous drag into one undo entry.
+ * Emits `bim:roof-params-updated` after dispatch so consumers (auto-save / BOQ
+ * feed) react. Shift drives rectilinear quantization via the `ShiftKeyTracker`
+ * (mirror slab Phase 3.6). The `edges` array is kept in lockstep with
+ * `outline.vertices` inside `applyRoofGripDrag` — `UpdateRoofParamsCommand`
+ * rejects any length mismatch.
+ */
+export function commitRoofGripDrag(
+  grip: UnifiedGripInfo,
+  delta: Point2D,
+  deps: DxfCommitDeps,
+): void {
+  if (!grip.entityId || !grip.roofGripKind) return;
+  const sceneManager = createSceneManagerAdapter(deps);
+  if (!sceneManager) return;
+  const raw = sceneManager.getEntity(grip.entityId);
+  if (!raw) return;
+  const candidate = raw as unknown as Partial<RoofEntity>;
+  if (candidate.type !== 'roof' || !candidate.params) return;
+  const roof = candidate as RoofEntity;
+  const originalParams = roof.params;
+  const rectilinear = ShiftKeyTracker.getSnapshot();
+  const newParams = applyRoofGripDrag(grip.roofGripKind, {
+    originalParams,
+    delta,
+    rectilinear,
+  });
+  if (newParams === originalParams) return;
+  const command = new UpdateRoofParamsCommand(
+    grip.entityId,
+    newParams,
+    originalParams,
+    sceneManager,
+    true,
+  );
+  if (command.validate() !== null) return;
+  deps.execute(command);
+  EventBus.emit('bim:roof-params-updated', { roofId: grip.entityId });
 }
 
 /**

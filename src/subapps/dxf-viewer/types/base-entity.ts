@@ -65,7 +65,9 @@ export type EntityType =
   // ADR-415 — pure-vector 2D floorplan symbol (category-driven; WC/sanitary first).
   | 'floorplan-symbol'
   // ADR-417 — parametric pitched roof (footprint + per-edge slopes; IfcRoof).
-  | 'roof';
+  | 'roof'
+  // ADR-408 Εύρος Β — point-based hydronic radiator (heating terminal, IfcSpaceHeater).
+  | 'mep-radiator';
 
 export interface BaseEntity {
   id: string;

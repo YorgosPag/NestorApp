@@ -142,6 +142,8 @@ function computeBounds(entity: Entity, forExtents: boolean): SpatialBounds {
     case 'electrical-panel':
     // ADR-408 Φ12 — plumbing manifold uses pre-computed geometry.bbox (same).
     case 'mep-manifold':
+    // ADR-408 Εύρος Β — heating radiator uses pre-computed geometry.bbox (same).
+    case 'mep-radiator':
     // ADR-410 — furniture uses pre-computed geometry.bbox (same).
     case 'furniture':
     // ADR-408 Φ8 — MEP segment uses pre-computed geometry.bbox (same).
@@ -201,5 +203,7 @@ export type BimEntityWithBounds =
   | 'floorplan-symbol'
   // ADR-408 Φ12 — plumbing manifold
   | 'mep-manifold'
+  // ADR-408 Εύρος Β — heating radiator
+  | 'mep-radiator'
   // ADR-417 — parametric pitched roof
   | 'roof';

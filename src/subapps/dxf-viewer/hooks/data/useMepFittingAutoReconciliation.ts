@@ -46,6 +46,7 @@ import type { MepFittingEntity, MepFittingDraft } from '../../bim/types/mep-fitt
 import { mepFittingIfcType } from '../../bim/types/mep-fitting-types';
 import { computeMepFittingGeometry } from '../../bim/geometry/mep-fitting-geometry';
 import { resolveDesiredFittings } from '../../bim/mep-fittings/mep-fitting-resolve';
+import { collectHostConnectorEndpoints } from '../../bim/mep-systems/mep-host-connector-endpoints';
 import { resolveSegmentTrims } from '../../bim/mep-fittings/mep-segment-trim';
 import { useMepSegmentTrimStore } from '../../bim/mep-fittings/mep-segment-trim-store';
 import { makeBimValidation } from '../../bim/types/bim-base';
@@ -518,7 +519,15 @@ function buildPipeTopologySignature(scene: SceneModel | null): string {
   for (const e of scene.entities) {
     if (!isPipeSegment(e)) continue;
     const p = (e as { params?: Record<string, unknown> }).params ?? {};
-    parts.push(`${e.id}:${JSON.stringify(p)}`);
+    parts.push(`seg:${e.id}:${JSON.stringify(p)}`);
+  }
+  // ADR-408 Φ-B2b EXT #2 (phase 1β): point-host pipe connectors (manifold outlets …)
+  // also drive the desired fitting set — a cap appears/disappears as a host MOVES or
+  // RE-ELEVATES even with no pipe edit. Hash the SAME endpoints the junction derive
+  // consumes (one SSoT collector) so reconcile fires iff a host connector actually
+  // shifts, not on every host param tweak.
+  for (const h of collectHostConnectorEndpoints(scene.entities)) {
+    parts.push(`host:${h.entityId}:${h.connectorId}:${h.point.x},${h.point.y},${h.zScene}:${h.diameterMm}`);
   }
   return parts.sort().join('|');
 }

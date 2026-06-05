@@ -47,6 +47,9 @@ import type { SlabEntity } from '../../bim/types/slab-types';
 // ADR-363 Phase 3.7a — parametric slab-opening drag preview.
 import { applySlabOpeningGripDrag } from '../../bim/slab-openings/slab-opening-grips';
 import type { SlabOpeningEntity } from '../../bim/types/slab-opening-types';
+// ADR-417 Φ1-part-2 #2 — parametric roof drag preview (footprint vertex / insert).
+import { applyRoofGripDrag } from '../../bim/roofs/roof-grips';
+import type { RoofEntity } from '../../bim/types/roof-types';
 import type { OpeningEntity } from '../../bim/types/opening-types';
 // ADR-406 — parametric MEP fixture drag preview (move / rotation / corner resize).
 import { applyMepFixtureGripDrag } from '../../bim/mep-fixtures/mep-fixture-grips';
@@ -90,7 +93,7 @@ export function applyEntityPreview(
   preview: EntityPreviewTransform | undefined,
 ): DxfEntityUnion {
   if (!preview || preview.entityId !== entity.id) return entity;
-  const { delta, gripIndex, movesEntity, edgeVertexIndices, stairGripKind, wallGripKind, beamGripKind, columnGripKind, slabGripKind, slabOpeningGripKind, mepFixtureGripKind, electricalPanelGripKind, mepManifoldGripKind, mepSegmentGripKind, furnitureGripKind, anchorPos, rotatePivot } = preview;
+  const { delta, gripIndex, movesEntity, edgeVertexIndices, stairGripKind, wallGripKind, beamGripKind, columnGripKind, slabGripKind, slabOpeningGripKind, roofGripKind, mepFixtureGripKind, electricalPanelGripKind, mepManifoldGripKind, mepSegmentGripKind, furnitureGripKind, anchorPos, rotatePivot } = preview;
   if (delta.x === 0 && delta.y === 0) return entity;
 
   // ── ADR-363 Phase 1C — parametric wall live preview ───────────────────────
@@ -262,6 +265,18 @@ export function applyEntityPreview(
     const so = entity as unknown as SlabOpeningEntity;
     const newParams = applySlabOpeningGripDrag(slabOpeningGripKind, { originalParams: so.params, delta });
     if (newParams === so.params) return entity;
+    return { ...(entity as object), params: newParams } as unknown as DxfEntityUnion;
+  }
+
+  // ── ADR-417 Φ1-part-2 #2 — parametric roof live preview ───────────────────
+  // entity IS the raw RoofEntity from scene.entities — access .params directly
+  // (roof is a DIRECT entity, mirror slab/beam). Geometry is NOT recomputed here:
+  // `draw-ghost-entity` paints the new footprint outline from params, so the
+  // ghost follows the dragged vertex / inserted midpoint without the slope math.
+  if (roofGripKind && entity.type === 'roof') {
+    const roof = entity as unknown as RoofEntity;
+    const newParams = applyRoofGripDrag(roofGripKind, { originalParams: roof.params, delta });
+    if (newParams === roof.params) return entity;
     return { ...(entity as object), params: newParams } as unknown as DxfEntityUnion;
   }
 

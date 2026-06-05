@@ -12,6 +12,7 @@ import * as THREE from 'three';
 import type { MepFixtureEntity } from '../../bim/types/mep-fixture-types';
 import type { ElectricalPanelEntity } from '../../bim/types/electrical-panel-types';
 import type { MepManifoldEntity } from '../../bim/types/mep-manifold-types';
+import type { MepRadiatorEntity } from '../../bim/types/mep-radiator-types';
 import { sceneUnitsToMeters } from '../../utils/scene-units';
 import { getElementMaterial3D, getSystemTintedMaterial3D } from '../materials/MaterialCatalog3D';
 import { buildShape, extrudeAndRotate, tagMesh } from './bim-three-shape-helpers';
@@ -125,5 +126,38 @@ export function manifoldToMesh(
   mesh.position.y = centerMm * MM_TO_M - bodyHeightM / 2 + buildingBaseElevationM;
   const tagged = tagMesh(mesh, manifold.id, 'mep-manifold', matId, levelId);
   attachEdgesProjection(tagged, 'mep-manifold');
+  return tagged;
+}
+
+/**
+ * ADR-408 Εύρος Β — point-based heating radiator → solid mesh. The footprint is
+ * extruded by the body height; the box is centred vertically on the mounting
+ * elevation (wall-mounted). Units-safe: identical `sceneUnitsToMeters` pattern as
+ * `manifoldToMesh`. A radiator is a network MEMBER but keeps its fixed warm-red
+ * heating-equipment material (not tinted by the supply/return circuit colours).
+ */
+export function radiatorToMesh(
+  radiator: MepRadiatorEntity,
+  floorElevationMm = 0,
+  levelId?: string,
+  buildingBaseElevationM = 0,
+): THREE.Mesh | null {
+  const verts = radiator.geometry.footprint.vertices;
+  if (verts.length < 3) return null;
+
+  const sceneToM = sceneUnitsToMeters(radiator.params.sceneUnits ?? 'mm');
+  const shape = buildShape(verts.map((v) => ({ x: v.x * sceneToM, y: v.y * sceneToM, z: 0 })));
+  if (!shape) return null;
+
+  const bodyHeightM = radiator.params.bodyHeightMm * MM_TO_M;
+  const geo = extrudeAndRotate(shape, bodyHeightM);
+  const matId = radiator.params.material ?? 'elem-mep-radiator';
+  const mesh = new THREE.Mesh(geo, getElementMaterial3D('mep-radiator'));
+  // Box centred vertically on the mounting elevation (wall-mounted): the extrusion
+  // grows UP from mesh.position.y, so the bottom sits at centre − bodyHeight/2.
+  const centerMm = floorElevationMm + radiator.params.mountingElevationMm;
+  mesh.position.y = centerMm * MM_TO_M - bodyHeightM / 2 + buildingBaseElevationM;
+  const tagged = tagMesh(mesh, radiator.id, 'mep-radiator', matId, levelId);
+  attachEdgesProjection(tagged, 'mep-radiator');
   return tagged;
 }

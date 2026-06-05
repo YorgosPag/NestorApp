@@ -6,6 +6,7 @@
  * from the incident count + the angle between the two directions (for the 2-incident
  * case) + the diameter spread:
  *
+ *   - any host incident                → null       (equipment is the fitting)
  *   - 1 incident                       → `cap`      (dead end)
  *   - 2 collinear, same Ø              → `coupling` (straight inline join)
  *   - 2 collinear, different Ø         → `reducer`
@@ -103,6 +104,14 @@ function classifyPair(incidents: readonly MepFittingIncident[]): FittingClassifi
 export function classifyJunction(junction: PipeJunction): FittingClassification {
   const { incidents } = junction;
   const primaryDiameterMm = maxDiameter(incidents);
+
+  // A pipe end that lands on a point host (manifold outlet / fixture port) carries
+  // a host incident — the equipment IS the fitting there, so no auto-fitting is
+  // placed (Revit). Short-circuit BEFORE the count switch so a 1-pipe-at-host node
+  // is NOT mistaken for a dead-end cap (ADR-408 Φ-B2b EXT #2).
+  if (incidents.some((inc) => inc.host)) {
+    return { kind: null, primaryDiameterMm };
+  }
 
   switch (incidents.length) {
     case 1:
