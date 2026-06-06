@@ -628,6 +628,41 @@ html[data-dxf-header-hidden="true"] header.sticky.top-0 {
   background: var(--ribbon-btn-hover);
 }
 
+/* ADR-419 §ribbon-hierarchy — Revit-style cascading submenu (hover/focus reveal). */
+.dxf-ribbon-submenu-parent {
+  position: relative;
+  display: block;
+}
+
+.dxf-ribbon-submenu-caret {
+  margin-left: auto;
+  padding-left: 12px;
+  font-size: 10px;
+  opacity: 0.7;
+}
+
+.dxf-ribbon-submenu {
+  position: absolute;
+  top: -4px;
+  left: 100%;
+  z-index: var(--ribbon-z-context-menu);
+  background: var(--ribbon-bg);
+  color: var(--ribbon-text);
+  border: 1px solid var(--ribbon-separator);
+  border-radius: var(--ribbon-radius);
+  box-shadow: 0 4px 12px rgb(0 0 0 / 0.25);
+  margin: 0;
+  padding: 4px 0;
+  min-width: 220px;
+  list-style: none;
+  display: none;
+}
+
+.dxf-ribbon-submenu-parent:hover > .dxf-ribbon-submenu,
+.dxf-ribbon-submenu-parent:focus-within > .dxf-ribbon-submenu {
+  display: block;
+}
+
 .dxf-ribbon-body[data-minimize="panel-buttons"] .dxf-ribbon-btn-label,
 .dxf-ribbon-body[data-minimize="panel-buttons"] .dxf-ribbon-btn-label-inline {
   display: none;

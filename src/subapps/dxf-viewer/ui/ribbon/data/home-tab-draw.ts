@@ -249,12 +249,15 @@ export const HOME_DRAW_PANEL: RibbonPanelDef = {
         },
       ],
     },
-    // ADR-363 Phase 4.5d → centralized into a single split button (Giorgio
-    // 2026-05-29). All seven BIM entities (wall/opening/slab/slabOpening/
-    // column/beam + stair) collapse into ONE "Δομικά Στοιχεία" launcher with a
-    // dropdown of variants, mirroring the Line/Circle/Arc split-button SSoT
-    // pattern. Top-half fires the last-used variant; chevron opens the list.
-    // Keyboard chords (W/OP/SL/SO/CL/BM/ST) remain valid in parallel.
+    // ADR-419 §ribbon-hierarchy — Revit-style 3-launcher split (Giorgio
+    // 2026-06-06). The flat 26-item BIM dropdown is reorganized into THREE
+    // category launchers in this row: «Δομικά Στοιχεία» (φέροντα: τοίχος/
+    // άνοιγμα/πλάκα/κολόνα/δοκάρι/σκάλα/κιγκλίδωμα), «Αρχιτεκτονικά» (στέγη/
+    // επικάλυψη δαπέδου) and «ΗΛΜ Εγκαταστάσεις» (ηλεκτρολογικά/ύδρευση/
+    // αποχέτευση/θέρμανση/αερισμός). Multi-variant families (wall/slab/column/
+    // beam + each MEP discipline) become cascading submenus (`subVariants`).
+    // Top-half fires the last-used LEAF variant; chevron opens the list.
+    // Keyboard chords (W/OP/SL/SO/CL/BM/ST/RF/FF/…) remain valid in parallel.
     {
       isInFlyout: false,
       buttons: [
@@ -269,39 +272,50 @@ export const HOME_DRAW_PANEL: RibbonPanelDef = {
             commandKey: 'wall',
           },
           variants: [
+            // ── Τοίχος (submenu) ──────────────────────────────────────────
             {
-              id: 'draw.bim.wall',
-              labelKey: 'ribbon.commands.bim.wall.label',
-              tooltipKey: 'ribbon.commands.bim.wall.tooltip',
+              id: 'draw.bim.wallGroup',
+              labelKey: 'ribbon.commands.bim.wallGroup.label',
+              tooltipKey: 'ribbon.commands.bim.wallGroup.tooltip',
               icon: 'bim-wall',
-              commandKey: 'wall',
-              shortcut: 'W',
+              commandKey: 'draw.bim.wallGroup',
+              subVariants: [
+                {
+                  id: 'draw.bim.wall',
+                  labelKey: 'ribbon.commands.bim.wall.label',
+                  tooltipKey: 'ribbon.commands.bim.wall.tooltip',
+                  icon: 'bim-wall',
+                  commandKey: 'wall',
+                  shortcut: 'W',
+                },
+                // ADR-363 Phase 1J — Wall on existing 2D entity (pick line/rectangle).
+                {
+                  id: 'draw.bim.wallOnEntity',
+                  labelKey: 'ribbon.commands.bim.wallOnEntity.label',
+                  tooltipKey: 'ribbon.commands.bim.wallOnEntity.tooltip',
+                  icon: 'bim-wall',
+                  commandKey: 'wall-on-entity',
+                },
+                // ADR-363 Phase 1K — Wall in region (pick 4 lines / click inside / box).
+                {
+                  id: 'draw.bim.wallInRegion',
+                  labelKey: 'ribbon.commands.bim.wallInRegion.label',
+                  tooltipKey: 'ribbon.commands.bim.wallInRegion.tooltip',
+                  icon: 'bim-wall',
+                  commandKey: 'wall-in-region',
+                },
+                // ADR-363 «Τοίχος από περίγραμμα» — box-select the faces of a structural
+                // element (rectangle / Γ / Τ / Π) → chain of leg walls (thickness from geometry).
+                {
+                  id: 'draw.bim.wallFromPerimeter',
+                  labelKey: 'ribbon.commands.bim.wallFromPerimeter.label',
+                  tooltipKey: 'ribbon.commands.bim.wallFromPerimeter.tooltip',
+                  icon: 'bim-wall',
+                  commandKey: 'wall-from-perimeter',
+                },
+              ],
             },
-            // ADR-363 Phase 1J — Wall on existing 2D entity (pick line/rectangle).
-            {
-              id: 'draw.bim.wallOnEntity',
-              labelKey: 'ribbon.commands.bim.wallOnEntity.label',
-              tooltipKey: 'ribbon.commands.bim.wallOnEntity.tooltip',
-              icon: 'bim-wall',
-              commandKey: 'wall-on-entity',
-            },
-            // ADR-363 Phase 1K — Wall in region (pick 4 lines / click inside / box).
-            {
-              id: 'draw.bim.wallInRegion',
-              labelKey: 'ribbon.commands.bim.wallInRegion.label',
-              tooltipKey: 'ribbon.commands.bim.wallInRegion.tooltip',
-              icon: 'bim-wall',
-              commandKey: 'wall-in-region',
-            },
-            // ADR-363 «Τοίχος από περίγραμμα» — box-select the faces of a structural
-            // element (rectangle / Γ / Τ / Π) → chain of leg walls (thickness from geometry).
-            {
-              id: 'draw.bim.wallFromPerimeter',
-              labelKey: 'ribbon.commands.bim.wallFromPerimeter.label',
-              tooltipKey: 'ribbon.commands.bim.wallFromPerimeter.tooltip',
-              icon: 'bim-wall',
-              commandKey: 'wall-from-perimeter',
-            },
+            // ── Άνοιγμα (leaf) ────────────────────────────────────────────
             {
               id: 'draw.bim.opening',
               labelKey: 'ribbon.commands.bim.opening.label',
@@ -310,70 +324,100 @@ export const HOME_DRAW_PANEL: RibbonPanelDef = {
               commandKey: 'opening',
               shortcut: 'OP',
             },
+            // ── Πλάκα (submenu) ───────────────────────────────────────────
             {
-              id: 'draw.bim.slab',
-              labelKey: 'ribbon.commands.bim.slab.label',
-              tooltipKey: 'ribbon.commands.bim.slab.tooltip',
+              id: 'draw.bim.slabGroup',
+              labelKey: 'ribbon.commands.bim.slabGroup.label',
+              tooltipKey: 'ribbon.commands.bim.slabGroup.tooltip',
               icon: 'bim-slab',
-              commandKey: 'slab',
-              shortcut: 'SL',
+              commandKey: 'draw.bim.slabGroup',
+              subVariants: [
+                {
+                  id: 'draw.bim.slab',
+                  labelKey: 'ribbon.commands.bim.slab.label',
+                  tooltipKey: 'ribbon.commands.bim.slab.tooltip',
+                  icon: 'bim-slab',
+                  commandKey: 'slab',
+                  shortcut: 'SL',
+                },
+                {
+                  id: 'draw.bim.slabOpening',
+                  labelKey: 'ribbon.commands.bim.slabOpening.label',
+                  tooltipKey: 'ribbon.commands.bim.slabOpening.tooltip',
+                  icon: 'bim-slab-opening',
+                  commandKey: 'slab-opening',
+                  shortcut: 'SO',
+                },
+              ],
             },
+            // ── Κολόνα / Τοιχίο (submenu) ─────────────────────────────────
             {
-              id: 'draw.bim.slabOpening',
-              labelKey: 'ribbon.commands.bim.slabOpening.label',
-              tooltipKey: 'ribbon.commands.bim.slabOpening.tooltip',
-              icon: 'bim-slab-opening',
-              commandKey: 'slab-opening',
-              shortcut: 'SO',
-            },
-            {
-              id: 'draw.bim.column',
-              labelKey: 'ribbon.commands.bim.column.label',
-              tooltipKey: 'ribbon.commands.bim.column.tooltip',
+              id: 'draw.bim.columnGroup',
+              labelKey: 'ribbon.commands.bim.columnGroup.label',
+              tooltipKey: 'ribbon.commands.bim.columnGroup.tooltip',
               icon: 'bim-column',
-              commandKey: 'column',
-              shortcut: 'CL',
+              commandKey: 'draw.bim.columnGroup',
+              subVariants: [
+                {
+                  id: 'draw.bim.column',
+                  labelKey: 'ribbon.commands.bim.column.label',
+                  tooltipKey: 'ribbon.commands.bim.column.tooltip',
+                  icon: 'bim-column',
+                  commandKey: 'column',
+                  shortcut: 'CL',
+                },
+                // ADR-363 Φάση 3 «Τοιχίο από περίγραμμα» — box-select the faces of a
+                // structural element (ορθογώνιο/Γ/Τ/Π/σύνθετο) → ΕΝΑ τοιχίο (ColumnEntity)
+                // ανά κλειστή περίμετρο (exact-polygon για μη-ορθογωνικά).
+                {
+                  id: 'draw.bim.columnFromPerimeter',
+                  labelKey: 'ribbon.commands.bim.columnFromPerimeter.label',
+                  tooltipKey: 'ribbon.commands.bim.columnFromPerimeter.tooltip',
+                  icon: 'bim-column',
+                  commandKey: 'column-from-perimeter',
+                },
+                // ADR-363 Φάση 3c «Κολώνα από περίγραμμα» — box-select παρειές → ΧΩΡΙΣ ένωση,
+                // κάθε περίγραμμα ξεχωριστό· αυτόματη ταξινόμηση κολώνα/τοιχίο από αναλογία
+                // πλευρών + ενημερωτικό confirm dialog (στατικά τίμιο, μη αλλοίωση).
+                {
+                  id: 'draw.bim.columnDiscreteFromPerimeter',
+                  labelKey: 'ribbon.commands.bim.columnDiscreteFromPerimeter.label',
+                  tooltipKey: 'ribbon.commands.bim.columnDiscreteFromPerimeter.tooltip',
+                  icon: 'bim-column',
+                  commandKey: 'column-discrete-from-perimeter',
+                },
+              ],
             },
-            // ADR-363 Φάση 3 «Τοιχίο από περίγραμμα» — box-select the faces of a
-            // structural element (ορθογώνιο/Γ/Τ/Π/σύνθετο) → ΕΝΑ τοιχίο (ColumnEntity)
-            // ανά κλειστή περίμετρο (exact-polygon για μη-ορθογωνικά).
+            // ── Δοκάρι (submenu) ──────────────────────────────────────────
             {
-              id: 'draw.bim.columnFromPerimeter',
-              labelKey: 'ribbon.commands.bim.columnFromPerimeter.label',
-              tooltipKey: 'ribbon.commands.bim.columnFromPerimeter.tooltip',
-              icon: 'bim-column',
-              commandKey: 'column-from-perimeter',
-            },
-            // ADR-363 Φάση 3c «Κολώνα από περίγραμμα» — box-select παρειές → ΧΩΡΙΣ ένωση,
-            // κάθε περίγραμμα ξεχωριστό· αυτόματη ταξινόμηση κολώνα/τοιχίο από αναλογία
-            // πλευρών + ενημερωτικό confirm dialog (στατικά τίμιο, μη αλλοίωση).
-            {
-              id: 'draw.bim.columnDiscreteFromPerimeter',
-              labelKey: 'ribbon.commands.bim.columnDiscreteFromPerimeter.label',
-              tooltipKey: 'ribbon.commands.bim.columnDiscreteFromPerimeter.tooltip',
-              icon: 'bim-column',
-              commandKey: 'column-discrete-from-perimeter',
-            },
-            {
-              id: 'draw.bim.beam',
-              labelKey: 'ribbon.commands.bim.beam.label',
-              tooltipKey: 'ribbon.commands.bim.beam.tooltip',
+              id: 'draw.bim.beamGroup',
+              labelKey: 'ribbon.commands.bim.beamGroup.label',
+              tooltipKey: 'ribbon.commands.bim.beamGroup.tooltip',
               icon: 'bim-beam',
-              commandKey: 'beam',
-              shortcut: 'BM',
+              commandKey: 'draw.bim.beamGroup',
+              subVariants: [
+                {
+                  id: 'draw.bim.beam',
+                  labelKey: 'ribbon.commands.bim.beam.label',
+                  tooltipKey: 'ribbon.commands.bim.beam.tooltip',
+                  icon: 'bim-beam',
+                  commandKey: 'beam',
+                  shortcut: 'BM',
+                },
+                // ADR-363 «Δοκάρι από τοίχο» — 1 κλικ σε υπάρχοντα τοίχο → δοκάρι στον
+                // άξονά του (πλάτος = πάχος τοίχου). Ο τοίχος auto-attach-άρει την κορυφή
+                // του στο κάτω μέρος του δοκαριού (ADR-401 D).
+                {
+                  id: 'draw.bim.beamFromWall',
+                  labelKey: 'ribbon.commands.bim.beamFromWall.label',
+                  tooltipKey: 'ribbon.commands.bim.beamFromWall.tooltip',
+                  icon: 'bim-beam',
+                  commandKey: 'beam-from-wall',
+                },
+              ],
             },
-            // ADR-363 «Δοκάρι από τοίχο» — 1 κλικ σε υπάρχοντα τοίχο → δοκάρι στον
-            // άξονά του (πλάτος = πάχος τοίχου). Ο τοίχος auto-attach-άρει την κορυφή
-            // του στο κάτω μέρος του δοκαριού (ADR-401 D).
-            {
-              id: 'draw.bim.beamFromWall',
-              labelKey: 'ribbon.commands.bim.beamFromWall.label',
-              tooltipKey: 'ribbon.commands.bim.beamFromWall.tooltip',
-              icon: 'bim-beam',
-              commandKey: 'beam-from-wall',
-            },
-            // ADR-358 Phase 5a: Stair tool (useStairTool orchestrator),
-            // folded into the BIM group (Giorgio 2026-05-29).
+            // ── Σκάλα (leaf) ──────────────────────────────────────────────
+            // ADR-358 Phase 5a: Stair tool (useStairTool orchestrator).
             {
               id: 'draw.stair',
               labelKey: 'ribbon.commands.stair',
@@ -381,64 +425,8 @@ export const HOME_DRAW_PANEL: RibbonPanelDef = {
               commandKey: 'stair',
               shortcut: 'ST',
             },
-            // ADR-406 — point-based MEP fixture (light fixture first). Single-click
-            // placement; discipline = electrical (ADR-405 discipline visibility).
-            {
-              id: 'draw.bim.mepFixture',
-              labelKey: 'ribbon.commands.bim.mepFixture.label',
-              tooltipKey: 'ribbon.commands.bim.mepFixture.tooltip',
-              icon: 'bim-light-fixture',
-              commandKey: 'mep-fixture',
-              shortcut: 'LF',
-            },
-            // ADR-408 Φ3 — point-based electrical panel (circuit source). Single-click
-            // placement; discipline = electrical (ADR-405 discipline visibility).
-            {
-              id: 'draw.bim.electricalPanel',
-              labelKey: 'ribbon.commands.bim.electricalPanel.label',
-              tooltipKey: 'ribbon.commands.bim.electricalPanel.tooltip',
-              icon: 'bim-electrical-panel',
-              commandKey: 'electrical-panel',
-              shortcut: 'EP',
-            },
-            // ADR-408 Φ12 — point-based plumbing manifold (1 inlet + N outlets).
-            // Single-click placement; discipline = plumbing (ADR-405 discipline visibility).
-            {
-              id: 'draw.bim.mepManifold',
-              labelKey: 'ribbon.commands.bim.mepManifold.label',
-              tooltipKey: 'ribbon.commands.bim.mepManifold.tooltip',
-              icon: 'bim-mep-manifold',
-              commandKey: 'mep-manifold',
-            },
-            // ADR-408 Φ14 — drainage collector (φρεάτιο). Same point-based manifold
-            // body, N inlets + 1 sewer outlet, brown (sanitary).
-            {
-              id: 'draw.bim.mepDrainageCollector',
-              labelKey: 'ribbon.commands.bim.mepDrainageCollector.label',
-              tooltipKey: 'ribbon.commands.bim.mepDrainageCollector.tooltip',
-              icon: 'bim-mep-manifold',
-              commandKey: 'mep-drainage-collector',
-            },
-            // ADR-408 Εύρος Β — heating radiator (καλοριφέρ). Point-based hydronic
-            // terminal: supply + return connectors; discipline = plumbing.
-            {
-              id: 'draw.bim.mepRadiator',
-              labelKey: 'ribbon.commands.bim.mepRadiator.label',
-              tooltipKey: 'ribbon.commands.bim.mepRadiator.tooltip',
-              icon: 'bim-mep-radiator',
-              commandKey: 'mep-radiator',
-            },
-            // ADR-408 Εύρος Β #2 — heating boiler (λέβητας). Point-based hydronic
-            // source: supply outlet + return inlet; discipline = plumbing/heating.
-            {
-              id: 'draw.bim.mepBoiler',
-              labelKey: 'ribbon.commands.bim.mepBoiler.label',
-              tooltipKey: 'ribbon.commands.bim.mepBoiler.tooltip',
-              icon: 'bim-mep-boiler',
-              commandKey: 'mep-boiler',
-            },
-            // ADR-407 — path-based railing (guardrail). 2-click straight sketch;
-            // discipline = architectural (ADR-405 discipline visibility).
+            // ── Κιγκλίδωμα (leaf) ─────────────────────────────────────────
+            // ADR-407 — path-based railing (guardrail). 2-click straight sketch.
             {
               id: 'draw.bim.railing',
               labelKey: 'ribbon.commands.bim.railing.label',
@@ -447,8 +435,23 @@ export const HOME_DRAW_PANEL: RibbonPanelDef = {
               commandKey: 'railing',
               shortcut: 'RL',
             },
-            // ADR-417 — parametric pitched roof (footprint polygon + per-edge
-            // slopes). Click-click footprint like slab; discipline = architectural.
+          ],
+        },
+        // ADR-419 §ribbon-hierarchy — «Αρχιτεκτονικά»: μη-φέροντα στοιχεία
+        // περιβλήματος (στέγη + επικάλυψη δαπέδου). Ξεχωριστός launcher από τα
+        // «Δομικά Στοιχεία» (Revit-style· τα δομικά είναι μόνο φέροντα).
+        {
+          type: 'split',
+          size: 'large',
+          command: {
+            id: 'draw.arch.group',
+            labelKey: 'ribbon.commands.bim.archGroup.label',
+            tooltipKey: 'ribbon.commands.bim.archGroup.tooltip',
+            icon: 'bim-roof',
+            commandKey: 'roof',
+          },
+          variants: [
+            // ADR-417 — parametric pitched roof (footprint polygon + per-edge slopes).
             {
               id: 'draw.bim.roof',
               labelKey: 'ribbon.commands.bim.roof.label',
@@ -458,7 +461,6 @@ export const HOME_DRAW_PANEL: RibbonPanelDef = {
               shortcut: 'RF',
             },
             // ADR-419 — floor finish covering (polygon per room, IfcCovering FLOORING).
-            // Click-click polygon like slab; discipline = architectural.
             {
               id: 'draw.bim.floorFinish',
               labelKey: 'ribbon.commands.bim.floorFinish.label',
@@ -467,46 +469,158 @@ export const HOME_DRAW_PANEL: RibbonPanelDef = {
               commandKey: 'floor-finish',
               shortcut: 'FF',
             },
-            // ADR-408 Φ8 — linear MEP duct run (2-click). Discipline = mechanical.
+          ],
+        },
+        // ADR-419 §ribbon-hierarchy — «ΗΛΜ Εγκαταστάσεις»: μηχανολογικά κατά
+        // πειθαρχία (ηλεκτρολογικά / ύδρευση / αποχέτευση / θέρμανση / αερισμός),
+        // καθένα ως cascading submenu. Ξεχωριστός launcher από τα δομικά.
+        {
+          type: 'split',
+          size: 'large',
+          command: {
+            id: 'draw.mep.group',
+            labelKey: 'ribbon.commands.bim.mepGroup.label',
+            tooltipKey: 'ribbon.commands.bim.mepGroup.tooltip',
+            icon: 'bim-pipe',
+            commandKey: 'mep-pipe',
+          },
+          variants: [
+            // ── Ηλεκτρολογικά (submenu) ───────────────────────────────────
             {
-              id: 'draw.bim.mepDuct',
-              labelKey: 'ribbon.commands.bim.mepDuct.label',
-              tooltipKey: 'ribbon.commands.bim.mepDuct.tooltip',
+              id: 'draw.bim.mepElectrical',
+              labelKey: 'ribbon.commands.bim.mepElectrical.label',
+              tooltipKey: 'ribbon.commands.bim.mepElectrical.tooltip',
+              icon: 'bim-electrical-panel',
+              commandKey: 'draw.bim.mepElectrical',
+              subVariants: [
+                // ADR-406 — point-based MEP fixture (light fixture first).
+                {
+                  id: 'draw.bim.mepFixture',
+                  labelKey: 'ribbon.commands.bim.mepFixture.label',
+                  tooltipKey: 'ribbon.commands.bim.mepFixture.tooltip',
+                  icon: 'bim-light-fixture',
+                  commandKey: 'mep-fixture',
+                  shortcut: 'LF',
+                },
+                // ADR-408 Φ3 — point-based electrical panel (circuit source).
+                {
+                  id: 'draw.bim.electricalPanel',
+                  labelKey: 'ribbon.commands.bim.electricalPanel.label',
+                  tooltipKey: 'ribbon.commands.bim.electricalPanel.tooltip',
+                  icon: 'bim-electrical-panel',
+                  commandKey: 'electrical-panel',
+                  shortcut: 'EP',
+                },
+              ],
+            },
+            // ── Ύδρευση (submenu) ─────────────────────────────────────────
+            {
+              id: 'draw.bim.mepWater',
+              labelKey: 'ribbon.commands.bim.mepWater.label',
+              tooltipKey: 'ribbon.commands.bim.mepWater.tooltip',
+              icon: 'bim-mep-manifold',
+              commandKey: 'draw.bim.mepWater',
+              subVariants: [
+                // ADR-408 Φ12 — point-based plumbing manifold (1 inlet + N outlets).
+                {
+                  id: 'draw.bim.mepManifold',
+                  labelKey: 'ribbon.commands.bim.mepManifold.label',
+                  tooltipKey: 'ribbon.commands.bim.mepManifold.tooltip',
+                  icon: 'bim-mep-manifold',
+                  commandKey: 'mep-manifold',
+                },
+                // ADR-408 Φ8 — linear MEP pipe run (2-click). Discipline = plumbing.
+                {
+                  id: 'draw.bim.mepPipe',
+                  labelKey: 'ribbon.commands.bim.mepPipe.label',
+                  tooltipKey: 'ribbon.commands.bim.mepPipe.tooltip',
+                  icon: 'bim-pipe',
+                  commandKey: 'mep-pipe',
+                  shortcut: 'PP',
+                },
+                // ADR-408 Φ10 — auto-derive pipe networks from physical connectivity.
+                // `action` makes the button fire onAction(...) (NOT a tool).
+                {
+                  id: 'draw.bim.mepPipeNetwork',
+                  labelKey: 'ribbon.commands.bim.mepPipeNetwork.label',
+                  tooltipKey: 'ribbon.commands.bim.mepPipeNetwork.tooltip',
+                  icon: 'bim-pipe',
+                  commandKey: 'mepCircuit.actions.deriveNetworks',
+                  action: 'mepCircuit.actions.deriveNetworks',
+                },
+              ],
+            },
+            // ── Αποχέτευση (submenu) ──────────────────────────────────────
+            {
+              id: 'draw.bim.mepDrainage',
+              labelKey: 'ribbon.commands.bim.mepDrainage.label',
+              tooltipKey: 'ribbon.commands.bim.mepDrainage.tooltip',
+              icon: 'bim-mep-manifold',
+              commandKey: 'draw.bim.mepDrainage',
+              subVariants: [
+                // ADR-408 Φ14 — drainage collector (φρεάτιο). N inlets + 1 sewer outlet.
+                {
+                  id: 'draw.bim.mepDrainageCollector',
+                  labelKey: 'ribbon.commands.bim.mepDrainageCollector.label',
+                  tooltipKey: 'ribbon.commands.bim.mepDrainageCollector.tooltip',
+                  icon: 'bim-mep-manifold',
+                  commandKey: 'mep-drainage-collector',
+                },
+                // ADR-408 Φ14 — sanitary drainage pipe (2-click), preset classification + fall.
+                {
+                  id: 'draw.bim.mepDrainPipe',
+                  labelKey: 'ribbon.commands.bim.mepDrainPipe.label',
+                  tooltipKey: 'ribbon.commands.bim.mepDrainPipe.tooltip',
+                  icon: 'bim-pipe',
+                  commandKey: 'mep-drain-pipe',
+                  shortcut: 'DP',
+                },
+              ],
+            },
+            // ── Θέρμανση (submenu) ────────────────────────────────────────
+            {
+              id: 'draw.bim.mepHeating',
+              labelKey: 'ribbon.commands.bim.mepHeating.label',
+              tooltipKey: 'ribbon.commands.bim.mepHeating.tooltip',
+              icon: 'bim-mep-radiator',
+              commandKey: 'draw.bim.mepHeating',
+              subVariants: [
+                // ADR-408 Εύρος Β — heating radiator (καλοριφέρ). Hydronic terminal.
+                {
+                  id: 'draw.bim.mepRadiator',
+                  labelKey: 'ribbon.commands.bim.mepRadiator.label',
+                  tooltipKey: 'ribbon.commands.bim.mepRadiator.tooltip',
+                  icon: 'bim-mep-radiator',
+                  commandKey: 'mep-radiator',
+                },
+                // ADR-408 Εύρος Β #2 — heating boiler (λέβητας). Hydronic source.
+                {
+                  id: 'draw.bim.mepBoiler',
+                  labelKey: 'ribbon.commands.bim.mepBoiler.label',
+                  tooltipKey: 'ribbon.commands.bim.mepBoiler.tooltip',
+                  icon: 'bim-mep-boiler',
+                  commandKey: 'mep-boiler',
+                },
+              ],
+            },
+            // ── Αερισμός / HVAC (submenu) ─────────────────────────────────
+            {
+              id: 'draw.bim.mepHvac',
+              labelKey: 'ribbon.commands.bim.mepHvac.label',
+              tooltipKey: 'ribbon.commands.bim.mepHvac.tooltip',
               icon: 'bim-duct',
-              commandKey: 'mep-duct',
-              shortcut: 'DU',
-            },
-            // ADR-408 Φ8 — linear MEP pipe run (2-click). Discipline = plumbing.
-            {
-              id: 'draw.bim.mepPipe',
-              labelKey: 'ribbon.commands.bim.mepPipe.label',
-              tooltipKey: 'ribbon.commands.bim.mepPipe.tooltip',
-              icon: 'bim-pipe',
-              commandKey: 'mep-pipe',
-              shortcut: 'PP',
-            },
-            // ADR-408 Φ14 — sanitary drainage pipe (2-click). Same mep-segment
-            // pipe, preset sanitary-drainage classification + fall → brown.
-            {
-              id: 'draw.bim.mepDrainPipe',
-              labelKey: 'ribbon.commands.bim.mepDrainPipe.label',
-              tooltipKey: 'ribbon.commands.bim.mepDrainPipe.tooltip',
-              icon: 'bim-pipe',
-              commandKey: 'mep-drain-pipe',
-              shortcut: 'DP',
-            },
-            // ADR-408 Φ10 — auto-derive pipe networks from physical connectivity.
-            // Action (NOT a tool): `action` makes the button fire `onAction(...)`
-            // → routed to the MEP circuit bridge via `isMepCircuitActionKey`.
-            // Without `action`, the small button would call `onToolChange` and
-            // treat the key as a (non-existent) tool → silent no-op.
-            {
-              id: 'draw.bim.mepPipeNetwork',
-              labelKey: 'ribbon.commands.bim.mepPipeNetwork.label',
-              tooltipKey: 'ribbon.commands.bim.mepPipeNetwork.tooltip',
-              icon: 'bim-pipe',
-              commandKey: 'mepCircuit.actions.deriveNetworks',
-              action: 'mepCircuit.actions.deriveNetworks',
+              commandKey: 'draw.bim.mepHvac',
+              subVariants: [
+                // ADR-408 Φ8 — linear MEP duct run (2-click). Discipline = mechanical.
+                {
+                  id: 'draw.bim.mepDuct',
+                  labelKey: 'ribbon.commands.bim.mepDuct.label',
+                  tooltipKey: 'ribbon.commands.bim.mepDuct.tooltip',
+                  icon: 'bim-duct',
+                  commandKey: 'mep-duct',
+                  shortcut: 'DU',
+                },
+              ],
             },
           ],
         },

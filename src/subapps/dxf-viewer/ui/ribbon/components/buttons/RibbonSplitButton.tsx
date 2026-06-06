@@ -11,7 +11,7 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 import type { RibbonButton, RibbonCommand } from '../../types/ribbon-types';
 import type { ToolType } from '../../../toolbar/types';
 import { useRibbonCommand } from '../../context/RibbonCommandContext';
-import { isAnyVariantActive } from '../../utils/ribbon-active-state';
+import { isAnyVariantActive, flattenLeafVariants } from '../../utils/ribbon-active-state';
 import { RibbonButtonIcon } from './RibbonButtonIcon';
 import { RibbonSplitDropdown } from './RibbonSplitDropdown';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
@@ -20,15 +20,18 @@ interface RibbonSplitButtonProps {
   button: RibbonButton;
 }
 
+// ADR-419 §ribbon-hierarchy — last-used + default resolve against LEAF
+// variants only (recurses into submenu headers' subVariants), so the top
+// button always fires a real tool, never a submenu header.
 function resolveActiveVariant(
-  variants: readonly RibbonCommand[],
+  leaves: readonly RibbonCommand[],
   lastUsedId: string | undefined,
 ): RibbonCommand {
   if (lastUsedId) {
-    const hit = variants.find((v) => v.id === lastUsedId);
+    const hit = leaves.find((v) => v.id === lastUsedId);
     if (hit) return hit;
   }
-  return variants[0];
+  return leaves[0];
 }
 
 const RibbonSplitButtonInner: React.FC<RibbonSplitButtonProps> = ({
@@ -40,9 +43,10 @@ const RibbonSplitButtonInner: React.FC<RibbonSplitButtonProps> = ({
   const wrapperRef = useRef<HTMLDivElement>(null);
 
   const variants = button.variants ?? [];
+  const leafVariants = useMemo(() => flattenLeafVariants(variants), [variants]);
   const active = useMemo(
-    () => resolveActiveVariant(variants, splitLastUsed[button.command.id]),
-    [variants, splitLastUsed, button.command.id],
+    () => resolveActiveVariant(leafVariants, splitLastUsed[button.command.id]),
+    [leafVariants, splitLastUsed, button.command.id],
   );
   const isActive = useMemo(
     () => isAnyVariantActive(variants, activeTool),

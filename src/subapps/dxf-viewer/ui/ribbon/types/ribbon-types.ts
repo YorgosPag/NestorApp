@@ -59,6 +59,14 @@ export interface RibbonCommand {
    * Applied as a CSS variable on the trigger element. Defaults to 140.
    */
   comboboxWidthPx?: number;
+  /**
+   * ADR-419 §ribbon-hierarchy (Revit-style cascading menu) — When present,
+   * this command is a SUBMENU HEADER (not a leaf tool). The split dropdown
+   * renders it as a hover-expandable item that opens `subVariants` to the
+   * right. Header commands never fire a tool / never become last-used; only
+   * leaf commands (no `subVariants`) dispatch via commandKey / action.
+   */
+  subVariants?: readonly RibbonCommand[];
 }
 
 export interface RibbonButton {

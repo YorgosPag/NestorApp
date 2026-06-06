@@ -1124,7 +1124,51 @@
         },
         "group": {
           "label": "Structural Elements",
-          "tooltip": "BIM structural elements (wall, opening, slab, slab opening, column, beam, stair, light fixture)"
+          "tooltip": "Load-bearing structural elements: wall, opening, slab, column/shear wall, beam, stair, railing"
+        },
+        "wallGroup": {
+          "label": "Wall",
+          "tooltip": "Wall: free, on 2D entity, in region, from perimeter"
+        },
+        "slabGroup": {
+          "label": "Slab",
+          "tooltip": "Slab and slab opening"
+        },
+        "columnGroup": {
+          "label": "Column / Shear Wall",
+          "tooltip": "Column, shear wall from perimeter, discrete columns from perimeter"
+        },
+        "beamGroup": {
+          "label": "Beam",
+          "tooltip": "Beam: free or from wall"
+        },
+        "archGroup": {
+          "label": "Architectural",
+          "tooltip": "Architectural envelope elements: roof and floor finish"
+        },
+        "mepGroup": {
+          "label": "MEP",
+          "tooltip": "Mechanical/Electrical/Plumbing: electrical, water supply, drainage, heating, ventilation"
+        },
+        "mepElectrical": {
+          "label": "Electrical",
+          "tooltip": "Electrical: light fixture/load and electrical panel"
+        },
+        "mepWater": {
+          "label": "Water Supply",
+          "tooltip": "Water supply: manifold, pipe, auto pipe networks"
+        },
+        "mepDrainage": {
+          "label": "Drainage",
+          "tooltip": "Drainage: collector and drainage pipe"
+        },
+        "mepHeating": {
+          "label": "Heating",
+          "tooltip": "Heating: radiator and boiler"
+        },
+        "mepHvac": {
+          "label": "Ventilation",
+          "tooltip": "Ventilation / HVAC: duct"
         },
         "objectsGroup": {
           "label": "Objects",

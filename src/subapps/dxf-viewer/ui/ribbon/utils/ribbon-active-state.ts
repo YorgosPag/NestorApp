@@ -25,14 +25,35 @@ export function isCommandActive(
 }
 
 /**
- * Split-button variant: active when ANY variant under the split maps to
+ * ADR-419 §ribbon-hierarchy — Recursively collect LEAF commands from a
+ * variant tree. A leaf is a command WITHOUT `subVariants` (submenu headers
+ * are skipped — they never fire a tool). SSoT used by both last-used
+ * resolution (RibbonSplitButton) and active-state highlighting.
+ */
+export function flattenLeafVariants(
+  variants: readonly RibbonCommand[],
+): RibbonCommand[] {
+  const leaves: RibbonCommand[] = [];
+  for (const v of variants) {
+    if (v.subVariants && v.subVariants.length > 0) {
+      leaves.push(...flattenLeafVariants(v.subVariants));
+    } else {
+      leaves.push(v);
+    }
+  }
+  return leaves;
+}
+
+/**
+ * Split-button variant: active when ANY leaf variant under the split maps to
  * the current tool — lets the user see "I'm in Line" even when the
  * visible default of the split is a sub-variant like line-parallel.
+ * Recurses into `subVariants` (ADR-419 cascading submenus).
  */
 export function isAnyVariantActive(
-  variants: readonly Pick<RibbonCommand, 'commandKey' | 'comingSoon' | 'action'>[],
+  variants: readonly RibbonCommand[],
   activeTool: ToolType | null,
 ): boolean {
   if (activeTool === null) return false;
-  return variants.some((v) => isCommandActive(v, activeTool));
+  return flattenLeafVariants(variants).some((v) => isCommandActive(v, activeTool));
 }
