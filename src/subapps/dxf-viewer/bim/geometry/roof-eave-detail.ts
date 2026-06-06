@@ -9,6 +9,9 @@
  *      προς τα έξω κατά `overhangMm` (per-edge, instance-level). Στις χαμηλές
  *      ακμές (eave, `definesSlope===true`) πέφτει· στα αετώματα (rake,
  *      `definesSlope===false`) εκτείνεται πλάγια ακολουθώντας το γειτονικό νερό.
+ *      Οι **γωνίες είναι mitered** (κοινό εξωτερικό σημείο = τομή των δύο
+ *      γειτονικών offset-γραμμών) → η προεξοχή συνεχίζει κατά μήκος του hip και
+ *      δεν αφήνει κενό (Revit-grade· στις τετράρριχτες όλες οι γωνίες γεμίζουν).
  *   2. **Fascia (μετωπίδα)** — κατακόρυφη σανίδα στο εξωτερικό άκρο που καλύπτει
  *      τη στοίβα στρώσεων (ύψος ≥ πάχος στέγης).
  *   3. **Soffit (υποκάτω επένδυση)** — οριζόντια ή κεκλιμένη πλάκα από τη
@@ -33,6 +36,7 @@
 import type { Point3D } from '../types/bim-base';
 import type {
   RoofEdgeSlope,
+  RoofRidgeLine,
   RoofSlopeUnit,
   RoofSoffitMode,
 } from '../types/roof-types';
@@ -82,6 +86,14 @@ export interface RoofEaveDetail {
 export interface RoofEaveDetailInput {
   readonly outline: readonly Point3D[];
   readonly edges: readonly RoofEdgeSlope[];
+  /**
+   * Κορφιάδες/hips (από `geometry.ridges`) — προαιρετικά. Όταν δίνονται, ένα
+   * footprint edge που **διασχίζει** κορφιά/hip (π.χ. το αέτωμα/rake δίρριχτης
+   * περνά κάτω από τον κορφιά → δύο νερά) **σπάει** σε υπο-ακμές στο σημείο
+   * διέλευσης, ώστε κάθε υπο-ακμή να ακολουθεί ΤΟ ΔΙΚΟ της νερό (αλλιώς ένα μόνο
+   * governing plane βγάζει την προεξοχή πάνω από τη στέγη στη μισή πλευρά).
+   */
+  readonly ridges?: readonly RoofRidgeLine[];
   readonly slopeUnit: RoofSlopeUnit;
   /** mm — στάθμη γείσου (eaves datum). */
   readonly basePivotZ: number;
@@ -130,6 +142,17 @@ function topZmm(plane: EavePlane | null, basePivotZ: number, s: number, p: Vec2)
   return basePivotZ + (plane.ratio * eaveDistance(plane, p)) / s;
 }
 
+/**
+ * Τομή δύο ευθειών (σημείο `p` + διεύθυνση `d`). Λύνει `p1 + t·d1 = p2 + u·d2`
+ * για `t` (cross-product). `null` όταν ~παράλληλες (καμία/άπειρες τομές).
+ */
+function lineIntersect(p1: Vec2, d1: Vec2, p2: Vec2, d2: Vec2): Vec2 | null {
+  const denom = d1.x * d2.y - d1.y * d2.x;
+  if (Math.abs(denom) < 1e-9) return null;
+  const t = ((p2.x - p1.x) * d2.y - (p2.y - p1.y) * d2.x) / denom;
+  return { x: p1.x + t * d1.x, y: p1.y + t * d1.y };
+}
+
 /** Quad κατασκευή με ρόλο + υλικό + hint (τυποποιεί το tuple). */
 function quad(
   role: RoofEaveQuadRole,
@@ -171,20 +194,21 @@ function buildEdgeFrame(
 
 /**
  * Quads ΜΙΑΣ ακμής. Πάντα μετωπίδα (καλύπτει τη στοίβα)· overhang strip + soffit
- * μόνο όταν υπάρχει προεξοχή. Επιστρέφει επίσης τα εξωτερικά plan-σημεία.
+ * μόνο όταν υπάρχει προεξοχή. Τα εξωτερικά plan-σημεία `O0`/`O1` είναι τα **κοινά
+ * mitered** σημεία των γωνιών (τομή γειτονικών offset-γραμμών) → οι strips
+ * γειτονικών ακμών μοιράζονται την ίδια ακμή στη γωνία (μηδέν κενό· συνεχίζει
+ * την κλίση κατά μήκος του hip). Επιστρέφει επίσης τα εξωτερικά plan-σημεία.
  */
 function buildEdgeQuads(
   frame: EdgeFrame,
   overhangMm: number,
+  O0: Vec2,
+  O1: Vec2,
   cfg: RoofEaveDetailInput,
 ): { quads: RoofEaveQuad[]; outer: RoofEaveEdgeOutline } {
   const { v0, v1, outward, plane } = frame;
   const { basePivotZ, s, thicknessMm } = cfg;
   const overhangCanvas = Math.max(0, overhangMm) * s;
-
-  // Plan-σημεία: εσωτερικά (footprint) + εξωτερικά (προεξοχή).
-  const O0: Vec2 = { x: v0.x + outward.x * overhangCanvas, y: v0.y + outward.y * overhangCanvas };
-  const O1: Vec2 = { x: v1.x + outward.x * overhangCanvas, y: v1.y + outward.y * overhangCanvas };
 
   const ziTop0 = topZmm(plane, basePivotZ, s, v0);
   const ziTop1 = topZmm(plane, basePivotZ, s, v1);
@@ -228,6 +252,75 @@ function buildEdgeQuads(
   return { quads, outer: { o0: pt(O0.x, O0.y, zoTop0), o1: pt(O1.x, O1.y, zoTop1) } };
 }
 
+// ─── Ridge-crossing split ───────────────────────────────────────────────────────
+
+/**
+ * Παράμετρος `t∈[0,1]` του `p` πάνω στο τμήμα `a→b`, ή `null` αν δεν κάθεται
+ * πάνω του (κάθετη απόσταση > `tol`). `lenRef` = κλίμακα για το tol.
+ */
+function paramOnSegment(a: Point3D, b: Point3D, p: Vec2, tol: number): number | null {
+  const dx = b.x - a.x;
+  const dy = b.y - a.y;
+  const lenSq = dx * dx + dy * dy;
+  if (lenSq < 1e-12) return null;
+  const t = ((p.x - a.x) * dx + (p.y - a.y) * dy) / lenSq;
+  const px = a.x + t * dx;
+  const py = a.y + t * dy;
+  const dist2 = (p.x - px) ** 2 + (p.y - py) ** 2;
+  if (dist2 > tol * tol) return null;
+  return t;
+}
+
+/**
+ * Σπάει footprint edges που **διασχίζουν** κορφιά/hip (τα endpoints τους πέφτουν
+ * ΑΥΣΤΗΡΑ μέσα στην ακμή) σε υπο-ακμές στο σημείο διέλευσης. Κάθε υπο-ακμή
+ * κληρονομεί το `RoofEdgeSlope` της μητρικής → ο per-edge `governingPlane`
+ * διαλέγει σωστά το νερό κάθε πλευράς (το αέτωμα/rake ακολουθεί την κλίση). Χωρίς
+ * ridges (ή κανένα crossing) → επιστρέφει τα αρχικά. Pure.
+ */
+function splitOutlineAtRidges(
+  verts: readonly Point3D[],
+  edges: readonly RoofEdgeSlope[],
+  ridges: readonly RoofRidgeLine[],
+): { verts: Point3D[]; edges: RoofEdgeSlope[] } {
+  if (ridges.length === 0) return { verts: verts.slice(), edges: edges.slice() };
+  const n = verts.length;
+  // Κλίμακα ανοχής από τη διαγώνιο του bbox (mirror roof-lower-envelope BOUNDARY_EPS).
+  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+  for (const v of verts) {
+    if (v.x < minX) minX = v.x; if (v.y < minY) minY = v.y;
+    if (v.x > maxX) maxX = v.x; if (v.y > maxY) maxY = v.y;
+  }
+  const tol = Math.max(1e-6, 1e-4 * Math.hypot(maxX - minX, maxY - minY));
+  const tTol = 1e-3;
+  const candidates: Vec2[] = [];
+  for (const r of ridges) {
+    candidates.push({ x: r.a.x, y: r.a.y }, { x: r.b.x, y: r.b.y });
+  }
+
+  const outVerts: Point3D[] = [];
+  const outEdges: RoofEdgeSlope[] = [];
+  for (let i = 0; i < n; i++) {
+    const a = verts[i];
+    const b = verts[(i + 1) % n];
+    outVerts.push(a);
+    outEdges.push(edges[i]);
+    const onEdge: number[] = [];
+    for (const c of candidates) {
+      const t = paramOnSegment(a, b, c, tol);
+      if (t === null || t <= tTol || t >= 1 - tTol) continue;
+      if (onEdge.some((u) => Math.abs(u - t) < tTol)) continue; // dedupe
+      onEdge.push(t);
+    }
+    onEdge.sort((x, y) => x - y);
+    for (const t of onEdge) {
+      outVerts.push({ x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t, z: 0 });
+      outEdges.push(edges[i]); // η υπο-ακμή κληρονομεί την κλίση/overhang της μητρικής
+    }
+  }
+  return { verts: outVerts, edges: outEdges };
+}
+
 // ─── Public API ───────────────────────────────────────────────────────────────
 
 /**
@@ -235,18 +328,56 @@ function buildEdgeQuads(
  * Pure / idempotent. Κενό όταν footprint < 3 κορυφές.
  */
 export function buildRoofEaveDetail(cfg: RoofEaveDetailInput): RoofEaveDetail {
-  const verts = cfg.outline;
-  if (verts.length < 3 || cfg.edges.length !== verts.length) {
+  const baseVerts = cfg.outline;
+  if (baseVerts.length < 3 || cfg.edges.length !== baseVerts.length) {
     return { quads: [], overhangEdges: [] };
   }
+  // Τα νερά (planes) ορίζονται από το ΑΡΧΙΚΟ footprint — το split στους κορφιάδες
+  // δεν αλλάζει κλίσεις, μόνο τεμαχίζει την περίμετρο ώστε κάθε υπο-ακμή να πέφτει
+  // σε ΕΝΑ νερό.
+  const { planes } = resolveEavePlanes(baseVerts, cfg.edges, cfg.slopeUnit);
+  const { verts, edges } = splitOutlineAtRidges(baseVerts, cfg.edges, cfg.ridges ?? []);
+  const n = verts.length;
   const sign = windingSign(verts);
-  const { planes } = resolveEavePlanes(verts, cfg.edges, cfg.slopeUnit);
+
+  // Ανά ακμή: frame + offset-γραμμή (παράλληλη της ακμής, μετατοπισμένη έξω κατά
+  // overhang). `offPt` = σημείο της γραμμής στο v0· `offDir` = διεύθυνση ακμής.
+  const frames: EdgeFrame[] = [];
+  const offPts: Vec2[] = [];
+  const offDirs: Vec2[] = [];
+  const ohCanvas: number[] = [];
+  for (let i = 0; i < n; i++) {
+    const frame = buildEdgeFrame(verts, i, sign, planes);
+    const oh = Math.max(0, edges[i].overhangMm) * cfg.s;
+    frames.push(frame);
+    ohCanvas.push(oh);
+    offPts.push({ x: frame.v0.x + frame.outward.x * oh, y: frame.v0.y + frame.outward.y * oh });
+    offDirs.push({ x: frame.v1.x - frame.v0.x, y: frame.v1.y - frame.v0.y });
+  }
+
+  // Mitered εξωτερικό σημείο ανά κορυφή `k` = τομή offset(k-1) ∩ offset(k). Έτσι
+  // οι γειτονικές strips μοιράζονται το ΙΔΙΟ σημείο → καμία τρύπα στη γωνία και η
+  // προεξοχή συνεχίζει κατά μήκος του hip. Fallback (~παράλληλες ακμές): κάθετο
+  // offset της τρέχουσας ακμής.
+  const miter: Vec2[] = [];
+  for (let k = 0; k < n; k++) {
+    const prev = (k - 1 + n) % n;
+    const m = lineIntersect(offPts[prev], offDirs[prev], offPts[k], offDirs[k]);
+    miter.push(
+      m ?? { x: frames[k].v0.x + frames[k].outward.x * ohCanvas[k], y: frames[k].v0.y + frames[k].outward.y * ohCanvas[k] },
+    );
+  }
 
   const quads: RoofEaveQuad[] = [];
   const overhangEdges: RoofEaveEdgeOutline[] = [];
-  for (let i = 0; i < verts.length; i++) {
-    const frame = buildEdgeFrame(verts, i, sign, planes);
-    const { quads: eq, outer } = buildEdgeQuads(frame, cfg.edges[i].overhangMm, cfg);
+  for (let i = 0; i < n; i++) {
+    const { quads: eq, outer } = buildEdgeQuads(
+      frames[i],
+      edges[i].overhangMm,
+      miter[i],
+      miter[(i + 1) % n],
+      cfg,
+    );
     quads.push(...eq);
     overhangEdges.push(outer);
   }

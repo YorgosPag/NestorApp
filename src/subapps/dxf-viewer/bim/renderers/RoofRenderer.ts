@@ -216,6 +216,7 @@ export class RoofRenderer extends BaseEntityRenderer {
     const detail = buildRoofEaveDetail({
       outline: roof.geometry.footprint.vertices,
       edges: roof.params.edges,
+      ridges: roof.geometry.ridges, // split rake/αέτωμα στον κορφιά → ακολουθεί την κλίση
       slopeUnit: roof.params.slopeUnit,
       basePivotZ: roof.params.basePivotZ,
       thicknessMm: roof.params.thickness,

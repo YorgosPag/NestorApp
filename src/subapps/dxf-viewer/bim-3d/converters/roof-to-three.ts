@@ -223,12 +223,16 @@ function addRidgeCaps(
   faces: readonly RoofFace[],
   ctx: RoofFaceMeshContext,
 ): void {
+  // Ο κορφιάς ακολουθεί το υλικό της κορυφαίας επιφάνειας της στέγης (Revit «η
+  // εμφάνιση = η εξωτερική κάλυψη») — ίδιο pattern με την προεξοχή/γείσο· fallback
+  // σε κεραμίδι μόνο αν δεν υπάρχει surface material.
+  const capMaterialId = ctx.monoMaterialId ?? RIDGE_CAP_MATERIAL_ID;
   for (const line of ridges) {
     if (line.kind !== 'ridge' && line.kind !== 'hip') continue;
     const cap = buildRoundedRidgeCap(line, findAdjacentFaces(line, faces), ctx.sceneToM, ctx.baseElevationM);
     if (!cap) continue;
-    const mesh = new THREE.Mesh(cap, getMaterial3D(RIDGE_CAP_MATERIAL_ID));
-    tagRoofMesh(mesh, ctx.roofId, RIDGE_CAP_MATERIAL_ID, ctx.levelId);
+    const mesh = new THREE.Mesh(cap, getMaterial3D(capMaterialId));
+    tagRoofMesh(mesh, ctx.roofId, capMaterialId, ctx.levelId);
     group.add(mesh);
   }
 }
@@ -245,6 +249,7 @@ function addEaveDetails(group: THREE.Group, roof: RoofEntity, ctx: RoofFaceMeshC
   const detail = buildRoofEaveDetail({
     outline: roof.geometry!.footprint.vertices,
     edges: roof.params.edges,
+    ridges: roof.geometry!.ridges, // split rake/αέτωμα στον κορφιά → ακολουθεί την κλίση
     slopeUnit: roof.params.slopeUnit,
     basePivotZ: roof.params.basePivotZ,
     thicknessMm: ctx.thicknessMm,
