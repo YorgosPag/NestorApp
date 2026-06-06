@@ -1521,6 +1521,7 @@
         "tileWidth": "Tile width",
         "tileSizeUnit": "cm",
         "tileRotate90": "Rotate texture 90°",
+        "tileRelief": "Relief",
         "editType": "Edit type…",
         "editTypeTitle": "Edit roof type",
         "editTypeDescription": "Changes apply to every roof of this type, on all floors.",

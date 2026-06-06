@@ -388,6 +388,28 @@ function EditRoofTypeDialogContent({ typeId }: { typeId: string }): React.ReactE
                 />
                 <span>{t('ribbon.commands.roofFamilyType.tileRotate90')}</span>
               </label>
+
+              {/* ADR-417 #6 — Ανάγλυφο κεραμιδιών (barrel tile displacement relief depth). */}
+              <label className="flex items-center gap-2 text-xs text-foreground">
+                <span className="w-24 shrink-0">{t('ribbon.commands.roofFamilyType.tileRelief')}</span>
+                <input
+                  type="number"
+                  min={0}
+                  max={80}
+                  step={1}
+                  value={draft.tileReliefMm ?? ''}
+                  placeholder="20"
+                  onChange={(e) => {
+                    const v = parseFloat(e.target.value);
+                    setDraft((d) => (d ? { ...d, tileReliefMm: Number.isFinite(v) && v >= 0 ? v : undefined } : d));
+                  }}
+                  aria-label={t('ribbon.commands.roofFamilyType.tileRelief')}
+                  className="w-24 rounded border border-border bg-background px-2 py-0.5 text-xs text-foreground"
+                />
+                <span className="text-muted-foreground">
+                  {t('ribbon.commands.roofFamilyType.thicknessUnit')}
+                </span>
+              </label>
             </fieldset>
           </div>
         </div>

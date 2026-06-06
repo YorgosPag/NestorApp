@@ -38,9 +38,11 @@ import {
 import type { SlabDnaLayer } from '../../bim/types/slab-dna-types';
 import { tileSizeMForMaterialId } from '../../bim/materials/bim-texture-registry';
 import { mmToSceneUnits, sceneUnitsToMeters } from '../../utils/scene-units';
-import { getElementMaterial3D, getMaterial3D } from '../materials/MaterialCatalog3D';
+import { getElementMaterial3D, getMaterial3D, getRoofTileMaterial3D } from '../materials/MaterialCatalog3D';
 import { setSlopeAlignedTileUvs, type SlopeTileUvOptions } from './bim-uv-helpers';
 import { toWorld } from './roof-world-transform';
+import { tessellateRoofTopCap } from './roof-tile-tessellation';
+import { useBimRenderSettingsStore } from '../../state/bim-render-settings-store';
 import { buildRoundedRidgeCap, findAdjacentFaces } from './roof-ridge-cap';
 import {
   buildRoofEaveDetail,
@@ -53,11 +55,13 @@ import { buildEaveQuadGeometry } from './roof-eave-detail-mesh';
 /** ADR-417 — clay ridge/hip caps («κορφιάδες») use the roof-tile material. */
 const RIDGE_CAP_MATERIAL_ID = 'mat-roof-tile';
 
-/** ADR-417 #5 — roof-level tile appearance (physical W×H + rotation). */
+/** ADR-417 #5+#6 — roof-level tile appearance (physical W×H + rotation + relief depth). */
 interface RoofTileAppearance {
   readonly tileLengthM?: number;
   readonly tileWidthM?: number;
   readonly tileRotate90?: boolean;
+  /** mm. Displacement relief depth (ADR-417 #6). 0 = flat (no tessellation). */
+  readonly tileReliefMm?: number;
 }
 
 /**
@@ -94,14 +98,17 @@ function packRingPositions(top: THREE.Vector3[], bot: THREE.Vector3[]): Float32A
  * Triangle index for the prism: top cap (+Y), bottom cap (−Y, reversed) +
  * perimeter side quads. Winding mirrors `column-piece-geometry.ts`. Caps are
  * triangulated in the (x, z) plan plane (world z = −North; CCW canvas stays CCW).
+ *
+ * @param skipTop  When true, omit the top cap triangles (used when the top cap is
+ *                 replaced by a tessellated displacement mesh — ADR-417 #6).
  */
-function buildPrismIndex(top: THREE.Vector3[]): number[] {
+function buildPrismIndex(top: THREE.Vector3[], skipTop = false): number[] {
   const n = top.length;
   const index: number[] = [];
   const contour2d = top.map((p) => new THREE.Vector2(p.x, p.z));
   for (const [a, b, c] of THREE.ShapeUtils.triangulateShape(contour2d, [])) {
     index.push(n + a, n + c, n + b); // bottom cap (reversed — faces down)
-    index.push(a, b, c);             // top cap (direct — faces up/outward)
+    if (!skipTop) index.push(a, b, c); // top cap (direct — faces up/outward)
   }
   for (let i = 0; i < n; i++) {
     const j = (i + 1) % n;
@@ -116,16 +123,26 @@ function buildPrismIndex(top: THREE.Vector3[]): number[] {
  * The perimeter (side quads) of each layer shows ITS material → the roof edge
  * reveals the layered stack (Revit «Fine» — full realism), exactly like the
  * per-DNA-layer wall sub-solids (ADR-413).
+ *
+ * `reliefMm` is set for the tessellated top-cap mesh (ADR-417 #6): the caller uses
+ * `getRoofTileMaterial3D(materialId, reliefMm)` to bind a displacement material.
  */
 interface RoofLayerSolid {
   readonly geo: THREE.BufferGeometry;
   readonly materialId: string;
+  /** When set, bind a displacement material with this relief depth (ADR-417 #6). */
+  readonly reliefMm?: number;
 }
 
 /**
  * Builds ONE prism for a face between two vertical DEPTHS below the top surface
  * (mm). `topDepthMm`/`botDepthMm` are measured down from each vertex's own slope
  * z, so the prism stays parallel to the slope. Null for a degenerate (<3) outline.
+ *
+ * @param skipTop  When true, emit only the bottom cap + perimeter sides — the top
+ *                 cap is omitted because it will be replaced by a tessellated
+ *                 displacement mesh (ADR-417 #6). UVs are skipped too (sides/bottom
+ *                 are hidden behind the eave detail and need no tile pattern).
  */
 function buildDepthPrism(
   face: RoofFace,
@@ -134,6 +151,7 @@ function buildDepthPrism(
   sceneToM: number,
   baseElevationM: number,
   tileOpts: SlopeTileUvOptions,
+  skipTop = false,
 ): THREE.BufferGeometry | null {
   if (face.outline.length < 3) return null;
   const top: THREE.Vector3[] = [];
@@ -147,12 +165,13 @@ function buildDepthPrism(
   }
   const geo = new THREE.BufferGeometry();
   geo.setAttribute('position', new THREE.BufferAttribute(packRingPositions(top, bot), 3));
-  geo.setIndex(buildPrismIndex(top));
+  geo.setIndex(buildPrismIndex(top, skipTop));
   // toNonIndexed → per-face flat normals (mirror of column-piece-geometry.ts).
   const flat = geo.toNonIndexed();
   flat.computeVertexNormals();
   // ADR-417 #5 — slope-aligned tile UVs: grooves run down-slope + physical sizing.
-  setSlopeAlignedTileUvs(flat, tileOpts);
+  // Skipped when skipTop=true: sides/bottom are hidden and need no tile pattern.
+  if (!skipTop) setSlopeAlignedTileUvs(flat, tileOpts);
   return flat;
 }
 
@@ -160,6 +179,11 @@ function buildDepthPrism(
  * Slice a face into its DNA layers (top→bottom), each a sub-prism with its own
  * material. The cumulative vertical depth walks down from the top surface; the
  * layer thicknesses sum to the roof thickness (`dna.totalThickness`).
+ *
+ * When `wantRelief=true` (ADR-417 #6), the top layer is split into two solids:
+ *   (a) tessellated top cap (dense grid, displacement-ready) — tagged with `reliefMm`
+ *   (b) sides+bottom prism (simple, no top cap)
+ * Lower layers are always simple prisms (sides not visible, no relief needed).
  */
 function buildFaceLayerSolids(
   face: RoofFace,
@@ -167,14 +191,26 @@ function buildFaceLayerSolids(
   sceneToM: number,
   baseElevationM: number,
   appearance: RoofTileAppearance,
+  wantRelief: boolean,
 ): RoofLayerSolid[] {
   const out: RoofLayerSolid[] = [];
   let topDepthMm = 0;
   for (const layer of layers) {
     const botDepthMm = topDepthMm + layer.thickness;
     const tileOpts = resolveRoofTileUvOpts(layer.materialId, appearance);
-    const geo = buildDepthPrism(face, topDepthMm, botDepthMm, sceneToM, baseElevationM, tileOpts);
-    if (geo) out.push({ geo, materialId: layer.materialId });
+    const isTopLayer = topDepthMm === 0;
+
+    if (wantRelief && isTopLayer) {
+      // Tessellated top cap: displacement map will push these vertices for barrel-tile relief.
+      const topCap = tessellateRoofTopCap(face, 0, sceneToM, baseElevationM, tileOpts);
+      if (topCap) out.push({ geo: topCap, materialId: layer.materialId, reliefMm: appearance.tileReliefMm });
+      // Sides + bottom only (top cap omitted — covered by tessellated mesh above).
+      const sidesPrism = buildDepthPrism(face, 0, botDepthMm, sceneToM, baseElevationM, tileOpts, true);
+      if (sidesPrism) out.push({ geo: sidesPrism, materialId: layer.materialId });
+    } else {
+      const geo = buildDepthPrism(face, topDepthMm, botDepthMm, sceneToM, baseElevationM, tileOpts);
+      if (geo) out.push({ geo, materialId: layer.materialId });
+    }
     topDepthMm = botDepthMm;
   }
   return out;
@@ -232,17 +268,42 @@ interface RoofFaceMeshContext {
  * each painted with its layer material (Revit «Fine» — the perimeter edge reveals
  * the layered stack, full realism). Without DNA → a single monolithic solid. All
  * meshes carry the roof id, so picking any layer selects the whole roof.
+ *
+ * ADR-417 #6 — when `realisticMaterials=true` AND `tileReliefMm > 0`, the top
+ * layer is split: tessellated cap (displacement material) + sides-only prism.
  */
 function addFaceMeshes(group: THREE.Group, face: RoofFace, ctx: RoofFaceMeshContext): void {
+  const reliefMm = ctx.tileAppearance.tileReliefMm ?? 0;
+  const wantRelief = reliefMm > 0 && useBimRenderSettingsStore.getState().realisticMaterials;
+
   if (ctx.layers) {
-    for (const ls of buildFaceLayerSolids(face, ctx.layers, ctx.sceneToM, ctx.baseElevationM, ctx.tileAppearance)) {
-      const mesh = new THREE.Mesh(ls.geo, getMaterial3D(ls.materialId));
+    for (const ls of buildFaceLayerSolids(face, ctx.layers, ctx.sceneToM, ctx.baseElevationM, ctx.tileAppearance, wantRelief)) {
+      const mat = ls.reliefMm != null
+        ? getRoofTileMaterial3D(ls.materialId, ls.reliefMm)
+        : getMaterial3D(ls.materialId);
+      const mesh = new THREE.Mesh(ls.geo, mat);
       tagRoofMesh(mesh, ctx.roofId, ls.materialId, ctx.levelId);
       group.add(mesh);
     }
     return;
   }
   const monoTileOpts = resolveRoofTileUvOpts(ctx.monoMaterialId ?? 'elem-roof', ctx.tileAppearance);
+  if (wantRelief && ctx.monoMaterialId) {
+    // Monolithic roof + relief: tessellated cap + sides-only prism.
+    const topCap = tessellateRoofTopCap(face, 0, ctx.sceneToM, ctx.baseElevationM, monoTileOpts);
+    if (topCap) {
+      const capMesh = new THREE.Mesh(topCap, getRoofTileMaterial3D(ctx.monoMaterialId, reliefMm));
+      tagRoofMesh(capMesh, ctx.roofId, ctx.monoMaterialId, ctx.levelId);
+      group.add(capMesh);
+    }
+    const sidesPrism = buildDepthPrism(face, 0, ctx.thicknessMm, ctx.sceneToM, ctx.baseElevationM, monoTileOpts, true);
+    if (sidesPrism) {
+      const sidesMesh = new THREE.Mesh(sidesPrism, getMaterial3D(ctx.monoMaterialId));
+      tagRoofMesh(sidesMesh, ctx.roofId, ctx.monoMaterialId, ctx.levelId);
+      group.add(sidesMesh);
+    }
+    return;
+  }
   const geo = buildDepthPrism(face, 0, ctx.thicknessMm, ctx.sceneToM, ctx.baseElevationM, monoTileOpts);
   if (!geo) return;
   const mat = ctx.monoMaterialId ? getMaterial3D(ctx.monoMaterialId) : getElementMaterial3D('roof');
@@ -353,6 +414,7 @@ export function roofToMesh(
       tileLengthM: roof.params.tileLengthM,
       tileWidthM: roof.params.tileWidthM,
       tileRotate90: roof.params.tileRotate90,
+      tileReliefMm: roof.params.tileReliefMm,
     },
   };
 
