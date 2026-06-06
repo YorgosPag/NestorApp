@@ -90,7 +90,7 @@ export function useRibbonFloorFinishBridge(
       executeCommand(
         new UpdateFloorFinishParamsCommand(ff.id, nextParams, ff.params, sm, false),
       );
-      EventBus.emit('bim:floor-finish-params-updated' as Parameters<typeof EventBus.emit>[0], { floorFinishId: ff.id });
+      EventBus.emit('bim:floor-finish-params-updated', { floorFinishId: ff.id });
     },
     [executeCommand, levelManager],
   );
@@ -145,7 +145,7 @@ export function useRibbonFloorFinishBridge(
         if (!ff) return;
         const confirmed = window.confirm(t('ribbon.commands.floorFinishEditor.deleteConfirm'));
         if (!confirmed) return;
-        EventBus.emit('bim:floor-finish-delete-requested' as Parameters<typeof EventBus.emit>[0], { id: ff.id });
+        EventBus.emit('bim:floor-finish-delete-requested', { id: ff.id });
         return;
       }
       if (action === FLOOR_FINISH_RIBBON_KEYS.actions.close) {

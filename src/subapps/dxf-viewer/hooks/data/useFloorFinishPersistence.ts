@@ -254,9 +254,8 @@ export function useFloorFinishPersistence(
 
   // Delete-requested listener.
   useEffect(() => {
-    const cleanup = EventBus.on('bim:floor-finish-delete-requested' as Parameters<typeof EventBus.on>[0], (payload: unknown) => {
-      const id = (payload as { id?: string })?.id;
-      if (id) void deleteFloorFinish(id);
+    const cleanup = EventBus.on('bim:floor-finish-delete-requested', (payload) => {
+      if (payload.id) void deleteFloorFinish(payload.id);
     });
     return cleanup;
   }, [deleteFloorFinish]);

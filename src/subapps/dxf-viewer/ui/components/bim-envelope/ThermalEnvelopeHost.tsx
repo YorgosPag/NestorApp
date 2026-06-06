@@ -194,7 +194,7 @@ export function ThermalEnvelopeHost(
       if (primaryId && currentLevelId) {
         const scene = getLevelScene(currentLevelId);
         const entity = scene?.entities.find((e) => e.id === primaryId);
-        setWallDna(isWallEntity(entity) ? (entity.params.dna ?? null) : null);
+        setWallDna(entity !== undefined && isWallEntity(entity) ? (entity.params.dna ?? null) : null);
       } else {
         setWallDna(null);
       }
