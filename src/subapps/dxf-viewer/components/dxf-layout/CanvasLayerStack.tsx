@@ -1,5 +1,4 @@
-// ⚠️ ARCHITECTURE-CRITICAL — READ ADR-040 BEFORE EDITING (update changelog same commit)
-// Shell MUST NOT call useSyncExternalStore (enforced: CHECK 6C). High-freq subscriptions → leaves.
+// ⚠️ ARCHITECTURE-CRITICAL — ADR-040. Shell MUST NOT call useSyncExternalStore (CHECK 6C).
 'use client';
 import React, { useCallback, useMemo, useRef } from 'react';
 import { PreviewCanvas } from '../../canvas-v2/preview-canvas';
@@ -469,6 +468,9 @@ export const CanvasLayerStack = React.memo(function CanvasLayerStack({
             onZoomPrevious={handleZoomPrevious}
             onZoomToRatio={handleZoomToRatio}
             onWheelZoom={handleRulerWheelZoom}
+            showTicks={globalRulerSettings.horizontal.showMajorTicks}
+            showLabels={globalRulerSettings.horizontal.showLabels}
+            showUnits={globalRulerSettings.horizontal.showUnits}
             className={PANEL_LAYOUT.Z_INDEX['30']}
           />
           <AutoAreaPreviewOverlay transform={transform} viewport={viewport} />

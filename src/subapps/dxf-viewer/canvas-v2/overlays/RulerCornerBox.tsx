@@ -75,6 +75,12 @@ interface RulerCornerBoxProps {
   onWheelZoom?: (delta: number) => void;
   /** Optional className for custom styling */
   className?: string;
+  /** When false, hides the OriginMarkerIcon (cross lines) */
+  showTicks?: boolean;
+  /** When false, hides the ZoomDisplayLeaf (1:N scale text) */
+  showLabels?: boolean;
+  /** When false, hides the ZoomDisplayLeaf (1:N scale text) */
+  showUnits?: boolean;
 }
 
 // ===== MICRO-LEAVES (ADR-040) =====
@@ -143,6 +149,9 @@ const RulerCornerBox = memo(function RulerCornerBox({
   onZoomToRatio,
   onWheelZoom,
   className,
+  showTicks,
+  showLabels,
+  showUnits,
 }: RulerCornerBoxProps) {
   const { t } = useTranslation('dxf-viewer-panels');
   // No useViewScale() here — zoom-reactive rendering pushed to ZoomDisplayLeaf + ZoomPresetButtons.
@@ -314,10 +323,14 @@ const RulerCornerBox = memo(function RulerCornerBox({
               tabIndex={0}
             >
               <div className={styles.content}>
-                <span className={styles.originMarker}>
-                  <OriginMarkerIcon color={textColor} />
-                </span>
-                <ZoomDisplayLeaf buttonRef={buttonRef} ariaLabelFn={ariaLabelFn} />
+                {showTicks !== false && (
+                  <span className={styles.originMarker}>
+                    <OriginMarkerIcon color={textColor} />
+                  </span>
+                )}
+                {showTicks !== false && showLabels !== false && showUnits !== false && (
+                  <ZoomDisplayLeaf buttonRef={buttonRef} ariaLabelFn={ariaLabelFn} />
+                )}
               </div>
               <span className={styles.srOnly}>
                 {t('rulerCornerBox.aria.srOnly')}

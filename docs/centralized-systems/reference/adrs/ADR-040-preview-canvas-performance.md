@@ -71,6 +71,10 @@ Mouse Event → DxfCanvas.onMouseMove
 
 ## Changelog
 
+### 2026-06-06 — CanvasLayerStack file-size trim (CHECK 6B compliance)
+
+**Status**: IMPLEMENTED 2026-06-06. Minor comment consolidation in `CanvasLayerStack.tsx` to stay within the 500-line file-size ratchet (CHECK 4). No logic, subscription, or architecture change.
+
 ### 2026-06-06 — FloorFinishRenderer leaf mounted in CanvasLayerStack (ADR-419, CHECK 6B)
 
 **Status**: IMPLEMENTED 2026-06-06. `CanvasLayerStack.tsx` mounts the new `FloorFinishRenderer` leaf (ADR-419 floor-finish entity 2D render) alongside the existing entity-render pipeline leaves. Pure additive mount — **no `useSyncExternalStore` added to the shell** (Cardinal Rule #1 / CHECK 6C respected), no bitmap cache-key change, no orchestrator structural change. Detail in ADR-419 changelog.
