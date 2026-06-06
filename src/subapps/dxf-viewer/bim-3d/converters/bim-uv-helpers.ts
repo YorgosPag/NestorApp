@@ -98,3 +98,65 @@ export function setBoxWorldUvs(geo: THREE.BufferGeometry): void {
   geo.setAttribute('uv', new THREE.BufferAttribute(uv, 2));
   geo.setAttribute('uv2', new THREE.BufferAttribute(Float32Array.from(uv), 2));
 }
+
+/** World up — the reference for resolving a face's up-slope vs across-slope axes. */
+const WORLD_UP = new THREE.Vector3(0, 1, 0);
+
+/** Texcoord scale + rotation for `setSlopeAlignedTileUvs` (ADR-417 #5). */
+export interface SlopeTileUvOptions {
+  /** Texcoord scale ACROSS the slope (along the ridge). 1 = 1 UV unit per metre. */
+  readonly scaleU: number;
+  /** Texcoord scale UP the slope (the water-flow direction). 1 = 1 metre. */
+  readonly scaleV: number;
+  /** Swap U↔V — Revit «texture rotation 90°» (tile grooves on the other image axis). */
+  readonly rotate90?: boolean;
+}
+
+/**
+ * ADR-417 #5 — SLOPE-ALIGNED world-meter UVs for pitched-roof tiles. Unlike
+ * `setBoxWorldUvs` (world-AXIS projection — tile grooves run along the ridge,
+ * never down-slope, and the normal-map tangent is mis-aligned → reads flat), this
+ * builds a per-vertex in-plane frame from the vertex normal: `across` = horizontal
+ * ⊥ to the slope (along the ridge), `up` = steepest ascent IN the face plane. The
+ * V axis therefore follows the water-flow direction on EVERY «νερό» (hip/gable/
+ * mono), so the grooves drain down-slope and the relief tangents are correct.
+ *
+ * `scaleU`/`scaleV` apply the tile's physical width/length (caller divides the
+ * material's base tile size by the desired tile size — see `roof-to-three.ts`), so
+ * one shared texture singleton still tiles physically. Near-horizontal faces (flat
+ * deck / degenerate) fall back to world (x,z), matching `setBoxWorldUvs`. Vertical
+ * side faces get a box-like (horizontal, vertical) frame — they sit behind the
+ * fascia/soffit so their tiling is not visually critical. Writes `uv` + `uv2`.
+ */
+export function setSlopeAlignedTileUvs(geo: THREE.BufferGeometry, opts: SlopeTileUvOptions): void {
+  const pos = geo.getAttribute('position');
+  const nor = geo.getAttribute('normal');
+  if (!pos || !nor) {
+    setPlanarWorldUvs(geo, {});
+    return;
+  }
+  const uv = new Float32Array(pos.count * 2);
+  const n = new THREE.Vector3();
+  const across = new THREE.Vector3();
+  const up = new THREE.Vector3();
+  const p = new THREE.Vector3();
+  for (let i = 0; i < pos.count; i++) {
+    n.set(nor.getX(i), nor.getY(i), nor.getZ(i));
+    across.crossVectors(WORLD_UP, n);
+    if (across.lengthSq() < 1e-10) {
+      across.set(1, 0, 0); // face ~horizontal → world (x,z), like setBoxWorldUvs top
+      up.set(0, 0, 1);
+    } else {
+      across.normalize();
+      up.crossVectors(n, across).normalize(); // up-slope, in the face plane
+    }
+    p.set(pos.getX(i), pos.getY(i), pos.getZ(i));
+    let u = p.dot(across) * opts.scaleU;
+    let v = p.dot(up) * opts.scaleV;
+    if (opts.rotate90) { const t = u; u = v; v = t; }
+    uv[i * 2] = u;
+    uv[i * 2 + 1] = v;
+  }
+  geo.setAttribute('uv', new THREE.BufferAttribute(uv, 2));
+  geo.setAttribute('uv2', new THREE.BufferAttribute(Float32Array.from(uv), 2));
+}

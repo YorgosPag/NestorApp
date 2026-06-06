@@ -51,9 +51,11 @@ import type { SlabDna } from '../../../bim/types/slab-dna-types';
 import type { RoofTypeParams } from '../../../bim/types/bim-family-type';
 import {
   DEFAULT_FASCIA_HEIGHT_MM,
+  DEFAULT_ROOF_TILE_SIZE_M,
   DEFAULT_SOFFIT_MODE,
   type RoofSoffitMode,
 } from '../../../bim/types/roof-types';
+import { tileSizeMForMaterialId } from '../../../bim/materials/bim-texture-registry';
 
 const PANEL_DIMENSIONS = { width: 1010, height: 620 } as const;
 const SSR_FALLBACK_POSITION = { x: 220, y: 80 } as const;
@@ -114,6 +116,17 @@ function EditRoofTypeDialogContent({ typeId }: { typeId: string }): React.ReactE
 
   if (!type || !draft) return null;
   const title = `${t('ribbon.commands.roofFamilyType.editTypeTitle')} · ${resolveTypeDisplayName(type, t)}`;
+
+  // ADR-417 #5 — tile appearance: physical W×H in cm (stored in m). Placeholder =
+  // the roof surface material's natural tile size (Revit «Sample Size»).
+  const roofSurfaceMaterialId = draft.dna?.layers?.[0]?.materialId ?? draft.material ?? 'elem-roof';
+  const baseTileCm = Math.round((tileSizeMForMaterialId(roofSurfaceMaterialId) ?? DEFAULT_ROOF_TILE_SIZE_M) * 100);
+  const tileLengthCm = draft.tileLengthM !== undefined ? Math.round(draft.tileLengthM * 100) : '';
+  const tileWidthCm = draft.tileWidthM !== undefined ? Math.round(draft.tileWidthM * 100) : '';
+  const cmToM = (raw: string): number | undefined => {
+    const cm = parseFloat(raw);
+    return Number.isFinite(cm) && cm > 0 ? cm / 100 : undefined;
+  };
 
   return (
     <FloatingPanel
@@ -316,6 +329,64 @@ function EditRoofTypeDialogContent({ typeId }: { typeId: string }): React.ReactE
                     </SelectItem>
                   </SelectContent>
                 </Select>
+              </label>
+            </fieldset>
+
+            {/* ADR-417 #5 — Εμφάνιση κεραμιδιού (tile appearance): φυσικές διαστάσεις + περιστροφή. */}
+            <fieldset className="mt-1 flex flex-col gap-3 border-t border-border pt-3">
+              <legend className="text-xs font-medium text-foreground">
+                {t('ribbon.commands.roofFamilyType.tileSection')}
+              </legend>
+
+              <label className="flex items-center gap-2 text-xs text-foreground">
+                <span className="w-24 shrink-0">{t('ribbon.commands.roofFamilyType.tileLength')}</span>
+                <input
+                  type="number"
+                  min={1}
+                  step={1}
+                  value={tileLengthCm}
+                  placeholder={String(baseTileCm)}
+                  onChange={(e) =>
+                    setDraft((d) => (d ? { ...d, tileLengthM: cmToM(e.target.value) } : d))
+                  }
+                  aria-label={t('ribbon.commands.roofFamilyType.tileLength')}
+                  className="w-24 rounded border border-border bg-background px-2 py-0.5 text-xs text-foreground"
+                />
+                <span className="text-muted-foreground">
+                  {t('ribbon.commands.roofFamilyType.tileSizeUnit')}
+                </span>
+              </label>
+
+              <label className="flex items-center gap-2 text-xs text-foreground">
+                <span className="w-24 shrink-0">{t('ribbon.commands.roofFamilyType.tileWidth')}</span>
+                <input
+                  type="number"
+                  min={1}
+                  step={1}
+                  value={tileWidthCm}
+                  placeholder={String(baseTileCm)}
+                  onChange={(e) =>
+                    setDraft((d) => (d ? { ...d, tileWidthM: cmToM(e.target.value) } : d))
+                  }
+                  aria-label={t('ribbon.commands.roofFamilyType.tileWidth')}
+                  className="w-24 rounded border border-border bg-background px-2 py-0.5 text-xs text-foreground"
+                />
+                <span className="text-muted-foreground">
+                  {t('ribbon.commands.roofFamilyType.tileSizeUnit')}
+                </span>
+              </label>
+
+              <label className="flex items-center gap-2 text-xs text-foreground">
+                <input
+                  type="checkbox"
+                  checked={draft.tileRotate90 ?? false}
+                  onChange={(e) =>
+                    setDraft((d) => (d ? { ...d, tileRotate90: e.target.checked || undefined } : d))
+                  }
+                  aria-label={t('ribbon.commands.roofFamilyType.tileRotate90')}
+                  className="h-3.5 w-3.5"
+                />
+                <span>{t('ribbon.commands.roofFamilyType.tileRotate90')}</span>
               </label>
             </fieldset>
           </div>

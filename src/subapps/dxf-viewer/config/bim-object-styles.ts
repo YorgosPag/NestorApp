@@ -53,7 +53,9 @@ export type BimCategory =
   // ADR-415 — pure-vector 2D sanitary plan symbol (WC/washbasin/…; plumbing).
   | 'sanitary'
   // ADR-415 — pure-vector 2D kitchen plan symbol (sink/stove/fridge/counter; casework).
-  | 'kitchen';
+  | 'kitchen'
+  // ADR-419 — per-room floor-finish covering (IfcCovering FLOORING, architectural).
+  | 'floor-finish';
 
 /**
  * Per-subcategory style overrides (ADR-377).

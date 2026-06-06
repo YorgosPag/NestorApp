@@ -16,6 +16,8 @@
  * @see docs/centralized-systems/reference/adrs/ADR-413-pbr-textures.md
  */
 
+import { resolveMaterialKey } from './material-catalog-defs';
+
 /** Our 8 BIM texture slugs (directory + registry keys). */
 export type PbrTextureSlug =
   | 'concrete'
@@ -99,4 +101,17 @@ export const MATERIAL_TEXTURE_MAP: Record<string, PbrTextureSlug> = {
 /** Look up the texture slug for a resolved MaterialCatalog3D key; null if unmapped. */
 export function textureSlugForKey(materialKey: string): PbrTextureSlug | null {
   return MATERIAL_TEXTURE_MAP[materialKey] ?? null;
+}
+
+/**
+ * ADR-417 #5 — the physical tile size (METERS) of a material's PBR texture set, or
+ * `null` when the material has no textured variant. Resolves the materialId via the
+ * SAME prefix path the 3D catalog uses (`resolveMaterialKey` → `textureSlugForKey`
+ * → `TEXTURE_SET_DEFS[slug].tileSizeM`). Pure (no React/three) so the roof converter
+ * can read the base tile size to derive slope-aligned UV scales for absolute
+ * (cm-accurate) tile dimensions without touching the shared texture singleton.
+ */
+export function tileSizeMForMaterialId(materialId: string): number | null {
+  const slug = textureSlugForKey(resolveMaterialKey(materialId));
+  return slug ? TEXTURE_SET_DEFS[slug].tileSizeM : null;
 }

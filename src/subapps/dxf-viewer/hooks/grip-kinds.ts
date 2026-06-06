@@ -167,6 +167,20 @@ export type RoofGripKind =
   | `roof-edge-midpoint-${number}`;
 
 /**
+ * ADR-419 — Floor finish grip kind (parametric grip type).
+ * Routes commit through `applyFloorFinishGripDrag()` +
+ * `UpdateFloorFinishParamsCommand` instead of the standard
+ * `StretchEntityCommand` vertex path.
+ *
+ * Two grip families exposed by `FloorFinishEntity`:
+ *   - `floor-finish-vertex-N`        → translate footprint outline vertex N.
+ *   - `floor-finish-edge-midpoint-N` → insert new vertex at edge N midpoint.
+ */
+export type FloorFinishGripKind =
+  | `floor-finish-vertex-${number}`
+  | `floor-finish-edge-midpoint-${number}`;
+
+/**
  * ADR-363 Phase 5.5a + 5.5b + 5.5c — Beam grip kind (parametric grip type).
  * Routes commit through `applyBeamGripDrag()` + `UpdateBeamParamsCommand`
  * instead of the standard `StretchEntityCommand` vertex path.

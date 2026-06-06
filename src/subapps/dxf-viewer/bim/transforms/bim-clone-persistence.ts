@@ -34,6 +34,7 @@ import {
   generateColumnId,
   generateBeamId,
   generateStairId,
+  generateFloorFinishId,
   generateIfcGuid,
 } from '@/services/enterprise-id-convenience';
 
@@ -45,7 +46,9 @@ export type BimPersistedType =
   | 'slab-opening'
   | 'column'
   | 'beam'
-  | 'stair';
+  | 'stair'
+  // ADR-419 — floor-finish persists via useFloorFinishPersistence.
+  | 'floor-finish';
 
 /** Per-type enterprise-id generator (N.6 — never `generateEntityId()` for BIM). */
 const BIM_ID_GENERATORS: Record<BimPersistedType, () => string> = {
@@ -56,6 +59,7 @@ const BIM_ID_GENERATORS: Record<BimPersistedType, () => string> = {
   column: generateColumnId,
   beam: generateBeamId,
   stair: generateStairId,
+  'floor-finish': generateFloorFinishId,
 };
 
 /** Minimal shape a clone helper needs — satisfied by SceneEntity / AnySceneEntity. */

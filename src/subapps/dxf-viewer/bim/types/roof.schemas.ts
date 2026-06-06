@@ -65,6 +65,10 @@ const RoofParamsBaseSchema = z
     soffitMaterial: z.string().min(1).optional(),
     fasciaHeightMm: z.number().positive().optional(),
     soffitMode: z.enum(['horizontal', 'sloped']).optional(),
+    // ─── Tile appearance (ADR-417 #5) — type-governed, flows via resolveEffectiveParams. ──
+    tileLengthM: z.number().positive().optional(),
+    tileWidthM: z.number().positive().optional(),
+    tileRotate90: z.boolean().optional(),
     sceneUnits: z.string().optional(),
     storeyId: z.string().min(1).optional(),
     offsetFromStorey: z.number().finite().optional(),

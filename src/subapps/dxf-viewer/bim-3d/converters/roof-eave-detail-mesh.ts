@@ -16,7 +16,7 @@
 import * as THREE from 'three';
 import type { RoofEaveQuad } from '../../bim/geometry/roof-eave-detail';
 import type { Point3D } from '../../bim/types/bim-base';
-import { setBoxWorldUvs } from './bim-uv-helpers';
+import { setBoxWorldUvs, setSlopeAlignedTileUvs, type SlopeTileUvOptions } from './bim-uv-helpers';
 import { MM_TO_M, toWorld } from './roof-world-transform';
 
 /** Διεύθυνση roof-coord → world (γραμμικό μέρος του `toWorld`, χωρίς μετάθεση). */
@@ -44,11 +44,16 @@ function triNormal(v: readonly THREE.Vector3[]): THREE.Vector3 {
  * Ένα quad γείσου → `BufferGeometry`. Δύο τρίγωνα (0-1-2, 0-2-3)· αν το κανονικό
  * δείχνει αντίθετα από το `normalHint`, αντιστρέφει το winding ώστε η όψη να
  * βλέπει σωστά (έξω/πάνω/κάτω). Null αν degenerate.
+ *
+ * ADR-417 #5 — όταν δοθεί `slopeTileOpts` (μόνο το overhang strip, που συνεχίζει το
+ * νερό) η UV είναι slope-aligned με τα ΙΔΙΑ tile dims της κύριας στέγης ⇒ τα
+ * κεραμίδια της προέκτασης συνεχίζουν αδιάλειπτα. Αλλιώς (fascia/soffit) box-UV.
  */
 export function buildEaveQuadGeometry(
   quad: RoofEaveQuad,
   sceneToM: number,
   baseY: number,
+  slopeTileOpts?: SlopeTileUvOptions,
 ): THREE.BufferGeometry | null {
   const w = quadWorldVertices(quad, sceneToM, baseY);
   if (w.length !== 4) return null;
@@ -69,6 +74,7 @@ export function buildEaveQuadGeometry(
   geo.setIndex([0, 1, 2, 0, 2, 3]);
   const flat = geo.toNonIndexed();
   flat.computeVertexNormals();
-  setBoxWorldUvs(flat);
+  if (slopeTileOpts) setSlopeAlignedTileUvs(flat, slopeTileOpts);
+  else setBoxWorldUvs(flat);
   return flat;
 }

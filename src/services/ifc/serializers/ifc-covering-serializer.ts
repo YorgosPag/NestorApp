@@ -33,6 +33,7 @@ import {
   isBeamEntity,
   isSlabEntity,
   isOpeningEntity,
+  isFloorFinishEntity,
   type AnySceneEntity,
 } from '@/subapps/dxf-viewer/types/entities';
 import {
@@ -44,6 +45,9 @@ import {
   getThermalConductivityLambda,
   getSpecificHeat,
 } from '@/subapps/dxf-viewer/bim/walls/wall-material-catalog';
+import {
+  getFloorFinishLambda,
+} from '@/subapps/dxf-viewer/bim/floor-finishes/floor-finish-material-catalog';
 import { computeEnvelopePerimeter } from '@/subapps/dxf-viewer/bim/geometry/envelope-perimeter';
 
 import {
@@ -224,6 +228,103 @@ function appendCoveringMaterial(
 
   if (includePsets) appendThermalPset(graph, materialID, layer.materialId);
 }
+
+// ─── Floor Finish coverings (ADR-419) ─────────────────────────────────────────
+
+/**
+ * Serialize `FloorFinishEntity` instances as `IfcCovering` `FLOORING`.
+ *
+ * Contrast with ETICS (INSULATION, semantic-only):
+ *   - `PredefinedType=FLOORING`
+ *   - `Pset_CoveringCommon`: Thickness (m) + ThermalTransmittance (U = λ/d)
+ *   - Contained directly in storey (no host element relationship needed)
+ *
+ * Geometry: semantic-only in this revision (placement/representation = $).
+ * Full extruded polygon geometry can be added in a subsequent slice.
+ */
+export function serializeFloorFinishCoverings(
+  graph: IfcGraph,
+  spatial: SpatialHierarchyOutput,
+  params: IfcExportParams,
+  ctx: SerializerContext,
+): void {
+  if (!params.scenes) return;
+  const includePsets = params.includePsets ?? true;
+
+  for (const [floorId, scene] of params.scenes) {
+    const storeyID = spatial.storeyIDs.get(floorId);
+    if (storeyID == null) continue;
+
+    for (const entity of scene.entities) {
+      if (!isFloorFinishEntity(entity)) continue;
+
+      const coveringID = graph.add('IFCCOVERING', [
+        lbl(generateIfcGuid()),
+        null,
+        lbl(entity.params.name ?? 'Floor Finish'),
+        null,
+        null,
+        null,
+        null,
+        null,
+        enumValue('FLOORING'),
+      ]);
+
+      if (includePsets) {
+        appendFloorFinishPset(graph, coveringID, entity.params.materialId, entity.params.thicknessMm);
+      }
+
+      pushElementForStorey(ctx, storeyID, coveringID);
+    }
+  }
+}
+
+function appendFloorFinishPset(
+  graph: IfcGraph,
+  coveringID: number,
+  materialId: string,
+  thicknessMm: number,
+): void {
+  const thicknessM = thicknessMm / 1000;
+  const thicknessPropID = graph.add('IFCPROPERTYSINGLEVALUE', [
+    lbl('Thickness'),
+    null,
+    typed('IfcLengthMeasure', real(thicknessM)),
+    null,
+  ]);
+
+  const propIDs: number[] = [thicknessPropID];
+
+  const lambda = getFloorFinishLambda(materialId);
+  if (lambda !== undefined && thicknessM > 0) {
+    const U = lambda / thicknessM;
+    propIDs.push(graph.add('IFCPROPERTYSINGLEVALUE', [
+      lbl('ThermalTransmittance'),
+      null,
+      typed('IfcThermalTransmittanceMeasure', real(U)),
+      null,
+    ]));
+  }
+
+  const psetID = graph.add('IFCPROPERTYSET', [
+    lbl(generateIfcGuid()),
+    null,
+    lbl('Pset_CoveringCommon'),
+    null,
+    propIDs.map((id) => ref(id)),
+  ]);
+
+  graph.add('IFCRELDEFINESBYPROPERTIES', [
+    lbl(generateIfcGuid()),
+    null,
+    null,
+    null,
+    [ref(coveringID)],
+    ref(psetID),
+  ]);
+}
+
+// ─── Material + thermal property set ────────────────────────────────────────
 
 /**
  * `Pset_MaterialThermal` via `IfcMaterialProperties` (IFC4 Name/Description/

@@ -49,6 +49,7 @@ import {
 import type { WallCategory } from '../../../bim/types/wall-types';
 import type { WallDna } from '../../../bim/types/wall-dna-types';
 import type { WallTypeParams } from '../../../bim/types/bim-family-type';
+import { computeWallTypeUValue } from '../../../bim/thermal/wall-assembly-thermal';
 
 const CATEGORY_VALUES: readonly WallCategory[] = [
   'exterior',
@@ -248,6 +249,18 @@ function EditWallTypeDialogContent({ typeId }: { typeId: string }): React.ReactE
               />
             )}
           </label>
+
+          {draft.dna && (() => {
+            const u = computeWallTypeUValue(draft.dna);
+            return (
+              <label className="flex items-center gap-2 text-xs text-foreground">
+                <span className="w-24 shrink-0">{t('ribbon.commands.bimFamilyType.paramUValue')}</span>
+                <span className="dxf-ribbon-wall-length-value font-semibold">
+                  {Number.isFinite(u) ? u.toFixed(2) : '—'} {t('ribbon.commands.bimFamilyType.uValueUnit')}
+                </span>
+              </label>
+            );
+          })()}
 
             <WallDnaEditor
               dna={draft.dna}

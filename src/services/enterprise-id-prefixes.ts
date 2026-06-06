@@ -256,6 +256,7 @@ export const ENTERPRISE_ID_PREFIXES = {
   MEP_BOILER: 'blr',           // floorplan_mep_boilers collection — point-based hydronic boiler / heating source (ADR-408 Εύρος Β #2)
   RAILING: 'ral',              // floorplan_railings collection — standalone path-based railing (ADR-407)
   ROOF: 'roof',                // floorplan_roofs collection — parametric pitched roof (footprint + per-edge slopes) (ADR-417)
+  FLOOR_FINISH: 'ffl',         // floorplan_floor_finishes collection — thin floor covering per room (ADR-419)
   FURNITURE: 'furn',           // floorplan_furniture collection — mesh-based CC0 furniture (ADR-410, chair first)
   FLOORPLAN_SYMBOL: 'fpsym',   // floorplan_symbols collection — pure-vector 2D floorplan symbol (ADR-415, WC/sanitary first)
   BIM_PRESET: 'bpst',          // bim_presets collection — element type presets (system/company/project/user scope)

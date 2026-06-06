@@ -59,8 +59,10 @@ export type BimElementType =
   | 'roof'
   // ADR-408 Εύρος Β — point-based hydronic radiator (heating terminal).
   | 'mep-radiator'
-  // ADR-408 Εύρος Β #2 — point-based hydronic boiler (heating source).
-  | 'mep-boiler';
+  // ADR-408 Eyros B #2 — point-based hydronic boiler (heating source).
+  | 'mep-boiler'
+  // ADR-419 — thin polygon floor covering per room (IfcCovering FLOORING).
+  | 'floor-finish';
 
 /**
  * Union of all BIM sub-type discriminators (one per element type).

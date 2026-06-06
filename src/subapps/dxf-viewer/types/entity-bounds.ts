@@ -154,6 +154,8 @@ function computeBounds(entity: Entity, forExtents: boolean): SpatialBounds {
     case 'floorplan-symbol':
     // ADR-417 — roof uses pre-computed geometry.bbox (same).
     case 'roof':
+    // ADR-419 — floor finish uses pre-computed geometry.bbox (same).
+    case 'floor-finish':
       if ('geometry' in entity && entity.geometry && entity.geometry.bbox) {
         const { min, max } = entity.geometry.bbox;
         return { minX: min.x, minY: min.y, maxX: max.x, maxY: max.y };

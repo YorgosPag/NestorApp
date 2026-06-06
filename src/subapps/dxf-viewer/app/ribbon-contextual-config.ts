@@ -24,6 +24,7 @@ import { CONTEXTUAL_MEP_MANIFOLD_TAB, MEP_MANIFOLD_CONTEXTUAL_TRIGGER } from '..
 import { CONTEXTUAL_DRAINAGE_COLLECTOR_TAB, DRAINAGE_COLLECTOR_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-drainage-collector-tab';
 import { CONTEXTUAL_MEP_RADIATOR_TAB, MEP_RADIATOR_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-mep-radiator-tab';
 import { CONTEXTUAL_MEP_BOILER_TAB, MEP_BOILER_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-mep-boiler-tab';
+import { CONTEXTUAL_FLOOR_FINISH_TAB, FLOOR_FINISH_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-floor-finish-tab';
 import { CONTEXTUAL_MEP_SEGMENT_TAB, MEP_SEGMENT_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-mep-segment-tab';
 import { CONTEXTUAL_FURNITURE_TAB, FURNITURE_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-furniture-tab';
 import { CONTEXTUAL_FLOORPLAN_SYMBOL_TAB, FLOORPLAN_SYMBOL_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-floorplan-symbol-tab';
@@ -67,6 +68,7 @@ export const RIBBON_CONTEXTUAL_TABS = [
   CONTEXTUAL_MEP_FIXTURE_LIBRARY_TAB,
   CONTEXTUAL_FURNITURE_TAB,
   CONTEXTUAL_FLOORPLAN_SYMBOL_TAB,
+  CONTEXTUAL_FLOOR_FINISH_TAB,
   ANIMATION_CONTEXTUAL_TAB,
 ] as const;
 
@@ -259,6 +261,8 @@ export function resolveContextualTrigger(entity: EntityLike): string | null {
   if (entity.type === 'mep-radiator') return MEP_RADIATOR_CONTEXTUAL_TRIGGER;
   // ADR-408 Εύρος Β #2 — λέβητας (hydronic boiler, source) → «Ιδιότητες Λέβητα».
   if (entity.type === 'mep-boiler') return MEP_BOILER_CONTEXTUAL_TRIGGER;
+  // ADR-419 — floor-finish (IfcCovering FLOORING) → «Ιδιότητες Επικάλυψης Δαπέδου».
+  if (entity.type === 'floor-finish') return FLOOR_FINISH_CONTEXTUAL_TRIGGER;
   // ADR-408 Φ8 — σωλήνας / αεραγωγός (MEP segment, one tab for both domains).
   if (entity.type === 'mep-segment') return MEP_SEGMENT_CONTEXTUAL_TRIGGER;
   if (entity.type === 'text' || entity.type === 'mtext') return TEXT_EDITOR_CONTEXTUAL_TRIGGER;

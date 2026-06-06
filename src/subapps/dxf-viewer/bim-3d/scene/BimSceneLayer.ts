@@ -20,6 +20,7 @@ import { syncWalls, syncColumns } from './bim-scene-attach-syncs';
 import { stairToMeshes } from '../converters/StairToThreeConverter';
 import { railingToMesh } from '../converters/railing-to-three';
 import { roofToMesh } from '../converters/roof-to-three';
+import { floorFinishToMesh } from '../converters/floor-finish-to-three';
 import { furnitureToObject3D } from '../converters/furniture-to-three';
 import { mepFixtureToObject3D } from '../converters/mep-fixture-to-mesh';
 import { syncCircuitWires } from './sync-circuit-wires';
@@ -151,6 +152,7 @@ export class BimSceneLayer {
     syncCircuitWires(this.group, entities, ctx, (entity, category) => this.resolveEntity(entity, category, ctx));
     this.syncRailings(entities, ctx);
     this.syncRoofs(entities, ctx);
+    this.syncFloorFinishes(entities, ctx);
     this.syncFurnitures(entities, ctx);
     const resolve = (e: { layerId?: string; discipline?: Discipline }, c: BimCategory) =>
       this.resolveEntity(e, c, ctx);
@@ -323,6 +325,19 @@ export class BimSceneLayer {
       const r = this.resolveEntity(roof, 'roof', ctx);
       if (!r) continue;
       const mesh = roofToMesh(roof, ctx.activeLevelId, r.baseElevation);
+      if (mesh) { mesh.userData['buildingId'] = r.buildingId; this.group.add(mesh); }
+    }
+  }
+
+  /**
+   * ADR-419 — floor-finish coverings (IfcCovering FLOORING). Thin polygon solid
+   * per room, sits at FFL. Own V/G category `'floor-finish'` (architectural).
+   */
+  private syncFloorFinishes(entities: Bim3DEntities, ctx: SyncContext): void {
+    for (const ff of entities.floorFinishes ?? []) {
+      const r = this.resolveEntity(ff, 'floor-finish', ctx);
+      if (!r) continue;
+      const mesh = floorFinishToMesh(ff, ctx.floorElevationMm, ctx.activeLevelId, r.baseElevation);
       if (mesh) { mesh.userData['buildingId'] = r.buildingId; this.group.add(mesh); }
     }
   }

@@ -13,6 +13,7 @@ import {
   isSlabEntity,
   isColumnEntity,
   isBeamEntity,
+  isFloorFinishEntity,
 } from '../../types/entities';
 import type { HitTestResult, SnapResult } from './hit-tester-types';
 import { pointToLineDistance, clamp, degToRad } from '../entities/shared/geometry-utils';
@@ -64,6 +65,8 @@ export function performDetailedHitTest(
     case 'wall': return hitTestWall(entity, point);
     case 'column': return hitTestColumn(entity, point);
     case 'beam': return hitTestBeam(entity, point);
+    // ADR-419 — floor-finish polygon containment (same as slab/slab-opening).
+    case 'floor-finish': return hitTestFloorFinish(entity, point);
     default: return { hitType: 'entity', hitPoint: point };
   }
 }
@@ -119,6 +122,13 @@ function hitTestSlabOpening(entity: Entity, point: Point2D): Partial<HitTestResu
 function hitTestSlab(entity: Entity, point: Point2D): Partial<HitTestResult> | null {
   if (!isSlabEntity(entity)) return null;
   const verts = entity.params?.outline?.vertices;
+  if (!verts || verts.length < 3) return null;
+  return isPointInPolygon(point, poly3to2(verts)) ? { hitType: 'entity', hitPoint: point } : null;
+}
+
+function hitTestFloorFinish(entity: Entity, point: Point2D): Partial<HitTestResult> | null {
+  if (!isFloorFinishEntity(entity)) return null;
+  const verts = entity.params?.footprint?.vertices;
   if (!verts || verts.length < 3) return null;
   return isPointInPolygon(point, poly3to2(verts)) ? { hitType: 'entity', hitPoint: point } : null;
 }

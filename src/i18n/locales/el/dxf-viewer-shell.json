@@ -798,6 +798,7 @@
       "analyze": "Ανάλυση",
       "furnitureProperties": "Ιδιότητες Επίπλου",
       "floorplanSymbolProperties": "Ιδιότητες Συμβόλου",
+      "floorFinishProperties": "Ιδιότητες Επικάλυψης Δαπέδου",
       "mepFixtureLibrary": "Βιβλιοθήκη Φωτιστικών"
     },
     "panels": {
@@ -892,6 +893,9 @@
       "mepBoilerGeometry": "Γεωμετρία",
       "mepBoilerThermal": "Θερμικά",
       "mepBoilerActions": "Ενέργειες",
+      "floorFinishMaterial": "Υλικό",
+      "floorFinishGeometry": "Γεωμετρία",
+      "floorFinishActions": "Ενέργειες",
       "mepSegmentSection": "Διατομή",
       "mepSegmentDimensions": "Διαστάσεις",
       "mepSegmentGeometry": "Γεωμετρία",
@@ -1439,7 +1443,9 @@
         "paramCategory": "Κατηγορία",
         "paramThickness": "Πάχος",
         "paramMaterial": "Υλικό",
+        "paramUValue": "U",
         "thicknessUnit": "mm",
+        "uValueUnit": "W/m²K",
         "materialNone": "—",
         "editType": "Επεξεργασία τύπου…",
         "editTypeTitle": "Επεξεργασία τύπου τοίχου",
@@ -1510,6 +1516,11 @@
         "paramSoffitMode": "Υποκάτω επένδυση",
         "soffitModeHorizontal": "Οριζόντιο",
         "soffitModeSloped": "Κεκλιμένο",
+        "tileSection": "Εμφάνιση κεραμιδιού",
+        "tileLength": "Μήκος κεραμιδιού",
+        "tileWidth": "Πλάτος κεραμιδιού",
+        "tileSizeUnit": "cm",
+        "tileRotate90": "Περιστροφή υφής 90°",
         "editType": "Επεξεργασία τύπου…",
         "editTypeTitle": "Επεξεργασία τύπου στέγης",
         "editTypeDescription": "Οι αλλαγές εφαρμόζονται σε όλες τις στέγες αυτού του τύπου, σε όλους τους ορόφους.",
@@ -1971,6 +1982,13 @@
         "close": "Κλείσιμο",
         "delete": "Διαγραφή",
         "deleteConfirm": "Διαγραφή λέβητα; Η ενέργεια δεν μπορεί να αναιρεθεί."
+      },
+      "floorFinishEditor": {
+        "material": "Υλικό",
+        "thickness": "Πάχος (mm)",
+        "close": "Κλείσιμο",
+        "delete": "Διαγραφή",
+        "deleteConfirm": "Διαγραφή επικάλυψης δαπέδου; Η ενέργεια δεν μπορεί να αναιρεθεί."
       },
       "mepSegmentEditor": {
         "width": "Πλάτος",
@@ -2882,6 +2900,18 @@
         "nonPositiveDimension": "Οι διαστάσεις πρέπει να είναι μεγαλύτερες από 0",
         "dimensionTooSmall": "Η διάσταση είναι κάτω από το ελάχιστο επιτρεπτό"
       }
+    }
+  },
+  "floorFinish": {
+    "materials": {
+      "woodOak": "Δρυς",
+      "woodPine": "Πεύκο",
+      "tileCeramic": "Κεραμικό πλακάκι",
+      "tileMarble": "Μάρμαρο",
+      "laminate": "Laminate",
+      "parquet": "Παρκέ",
+      "epoxy": "Εποξειδικό",
+      "carpet": "Μοκέτα"
     }
   }
 }

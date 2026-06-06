@@ -68,8 +68,10 @@ export type EntityType =
   | 'roof'
   // ADR-408 Εύρος Β — point-based hydronic radiator (heating terminal, IfcSpaceHeater).
   | 'mep-radiator'
-  // ADR-408 Εύρος Β #2 — point-based hydronic boiler (heating source, IfcBoiler).
-  | 'mep-boiler';
+  // ADR-408 Eyros B #2 — point-based hydronic boiler (heating source, IfcBoiler).
+  | 'mep-boiler'
+  // ADR-419 — thin polygon floor covering per room (IfcCovering FLOORING).
+  | 'floor-finish';
 
 export interface BaseEntity {
   id: string;

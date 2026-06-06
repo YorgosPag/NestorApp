@@ -32,12 +32,14 @@ import type { RoofEntity, RoofFace, RoofRidgeLine } from '../../bim/types/roof-t
 import {
   DEFAULT_EAVE_MATERIAL_ID,
   DEFAULT_FASCIA_HEIGHT_MM,
+  DEFAULT_ROOF_TILE_SIZE_M,
   DEFAULT_SOFFIT_MODE,
 } from '../../bim/types/roof-types';
 import type { SlabDnaLayer } from '../../bim/types/slab-dna-types';
+import { tileSizeMForMaterialId } from '../../bim/materials/bim-texture-registry';
 import { mmToSceneUnits, sceneUnitsToMeters } from '../../utils/scene-units';
 import { getElementMaterial3D, getMaterial3D } from '../materials/MaterialCatalog3D';
-import { setBoxWorldUvs } from './bim-uv-helpers';
+import { setSlopeAlignedTileUvs, type SlopeTileUvOptions } from './bim-uv-helpers';
 import { toWorld } from './roof-world-transform';
 import { buildRoundedRidgeCap, findAdjacentFaces } from './roof-ridge-cap';
 import {
@@ -50,6 +52,30 @@ import { buildEaveQuadGeometry } from './roof-eave-detail-mesh';
 
 /** ADR-417 — clay ridge/hip caps («κορφιάδες») use the roof-tile material. */
 const RIDGE_CAP_MATERIAL_ID = 'mat-roof-tile';
+
+/** ADR-417 #5 — roof-level tile appearance (physical W×H + rotation). */
+interface RoofTileAppearance {
+  readonly tileLengthM?: number;
+  readonly tileWidthM?: number;
+  readonly tileRotate90?: boolean;
+}
+
+/**
+ * ADR-417 #5 — slope-aligned UV scales for ONE material. The shared texture
+ * singleton tiles at `repeat = 1/baseTileSizeM`; scaling the world-meter UVs by
+ * `baseTileSizeM / desiredTileSizeM` makes the final texcoord span exactly one
+ * tile per `desiredTileSizeM` metres — so a 0.42 m × 0.33 m tile renders at that
+ * physical size without touching the texture pipeline (walls/floors unaffected).
+ * Undefined dims → square at the material's natural size (scale 1). Pure.
+ */
+function resolveRoofTileUvOpts(materialId: string, appearance: RoofTileAppearance): SlopeTileUvOptions {
+  const baseTileSizeM = tileSizeMForMaterialId(materialId) ?? DEFAULT_ROOF_TILE_SIZE_M;
+  return {
+    scaleU: baseTileSizeM / (appearance.tileWidthM ?? baseTileSizeM),
+    scaleV: baseTileSizeM / (appearance.tileLengthM ?? baseTileSizeM),
+    rotate90: appearance.tileRotate90,
+  };
+}
 
 // ─── Per-face solid ───────────────────────────────────────────────────────────
 
@@ -107,6 +133,7 @@ function buildDepthPrism(
   botDepthMm: number,
   sceneToM: number,
   baseElevationM: number,
+  tileOpts: SlopeTileUvOptions,
 ): THREE.BufferGeometry | null {
   if (face.outline.length < 3) return null;
   const top: THREE.Vector3[] = [];
@@ -124,8 +151,8 @@ function buildDepthPrism(
   // toNonIndexed → per-face flat normals (mirror of column-piece-geometry.ts).
   const flat = geo.toNonIndexed();
   flat.computeVertexNormals();
-  // ADR-413/417 — per-face world-meter UVs so the PBR sets tile physically + uv2.
-  setBoxWorldUvs(flat);
+  // ADR-417 #5 — slope-aligned tile UVs: grooves run down-slope + physical sizing.
+  setSlopeAlignedTileUvs(flat, tileOpts);
   return flat;
 }
 
@@ -139,12 +166,14 @@ function buildFaceLayerSolids(
   layers: readonly SlabDnaLayer[],
   sceneToM: number,
   baseElevationM: number,
+  appearance: RoofTileAppearance,
 ): RoofLayerSolid[] {
   const out: RoofLayerSolid[] = [];
   let topDepthMm = 0;
   for (const layer of layers) {
     const botDepthMm = topDepthMm + layer.thickness;
-    const geo = buildDepthPrism(face, topDepthMm, botDepthMm, sceneToM, baseElevationM);
+    const tileOpts = resolveRoofTileUvOpts(layer.materialId, appearance);
+    const geo = buildDepthPrism(face, topDepthMm, botDepthMm, sceneToM, baseElevationM, tileOpts);
     if (geo) out.push({ geo, materialId: layer.materialId });
     topDepthMm = botDepthMm;
   }
@@ -194,6 +223,8 @@ interface RoofFaceMeshContext {
   readonly sceneToM: number;
   readonly baseElevationM: number;
   readonly levelId?: string;
+  /** ADR-417 #5 — roof-level tile sizing/rotation (physical W×H). */
+  readonly tileAppearance: RoofTileAppearance;
 }
 
 /**
@@ -204,14 +235,15 @@ interface RoofFaceMeshContext {
  */
 function addFaceMeshes(group: THREE.Group, face: RoofFace, ctx: RoofFaceMeshContext): void {
   if (ctx.layers) {
-    for (const ls of buildFaceLayerSolids(face, ctx.layers, ctx.sceneToM, ctx.baseElevationM)) {
+    for (const ls of buildFaceLayerSolids(face, ctx.layers, ctx.sceneToM, ctx.baseElevationM, ctx.tileAppearance)) {
       const mesh = new THREE.Mesh(ls.geo, getMaterial3D(ls.materialId));
       tagRoofMesh(mesh, ctx.roofId, ls.materialId, ctx.levelId);
       group.add(mesh);
     }
     return;
   }
-  const geo = buildDepthPrism(face, 0, ctx.thicknessMm, ctx.sceneToM, ctx.baseElevationM);
+  const monoTileOpts = resolveRoofTileUvOpts(ctx.monoMaterialId ?? 'elem-roof', ctx.tileAppearance);
+  const geo = buildDepthPrism(face, 0, ctx.thicknessMm, ctx.sceneToM, ctx.baseElevationM, monoTileOpts);
   if (!geo) return;
   const mat = ctx.monoMaterialId ? getMaterial3D(ctx.monoMaterialId) : getElementMaterial3D('roof');
   const mesh = new THREE.Mesh(geo, mat);
@@ -273,8 +305,16 @@ function addEaveDetails(group: THREE.Group, roof: RoofEntity, ctx: RoofFaceMeshC
     fasciaMaterialId: roof.params.fasciaMaterial ?? DEFAULT_EAVE_MATERIAL_ID,
     soffitMaterialId: roof.params.soffitMaterial ?? DEFAULT_EAVE_MATERIAL_ID,
   });
+  // ADR-417 #5 — η προεξοχή (overhang) ΣΥΝΕΧΙΖΕΙ το νερό → ίδια slope-aligned tile
+  // UV με την κύρια στέγη (συνεχόμενα κεραμίδια). fascia/soffit μένουν box-UV.
+  const overhangTileOpts = resolveRoofTileUvOpts(ctx.monoMaterialId ?? RIDGE_CAP_MATERIAL_ID, ctx.tileAppearance);
   for (const q of detail.quads) {
-    const geo = buildEaveQuadGeometry(q, ctx.sceneToM, ctx.baseElevationM);
+    const geo = buildEaveQuadGeometry(
+      q,
+      ctx.sceneToM,
+      ctx.baseElevationM,
+      q.role === 'overhang' ? overhangTileOpts : undefined,
+    );
     if (!geo) continue;
     const mesh = new THREE.Mesh(geo, getMaterial3D(q.materialId));
     tagRoofMesh(mesh, ctx.roofId, q.materialId, ctx.levelId);
@@ -309,6 +349,11 @@ export function roofToMesh(
     sceneToM: sceneUnitsToMeters(roof.params.sceneUnits ?? 'mm'),
     baseElevationM: buildingBaseElevationM,
     levelId,
+    tileAppearance: {
+      tileLengthM: roof.params.tileLengthM,
+      tileWidthM: roof.params.tileWidthM,
+      tileRotate90: roof.params.tileRotate90,
+    },
   };
 
   // Όριο προέκτασης γείσου ανά footprint edge → επεκτείνει τους κορφιάδες/hips

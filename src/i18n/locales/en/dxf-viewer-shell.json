@@ -798,6 +798,7 @@
       "analyze": "Analyze",
       "furnitureProperties": "Furniture Properties",
       "floorplanSymbolProperties": "Symbol Properties",
+      "floorFinishProperties": "Floor Finish Properties",
       "mepFixtureLibrary": "Light Fixture Library"
     },
     "panels": {
@@ -892,6 +893,9 @@
       "mepBoilerGeometry": "Geometry",
       "mepBoilerThermal": "Thermal",
       "mepBoilerActions": "Actions",
+      "floorFinishMaterial": "Material",
+      "floorFinishGeometry": "Geometry",
+      "floorFinishActions": "Actions",
       "mepSegmentSection": "Section",
       "mepSegmentDimensions": "Dimensions",
       "mepSegmentGeometry": "Geometry",
@@ -1439,7 +1443,9 @@
         "paramCategory": "Category",
         "paramThickness": "Thickness",
         "paramMaterial": "Material",
+        "paramUValue": "U",
         "thicknessUnit": "mm",
+        "uValueUnit": "W/m²K",
         "materialNone": "—",
         "editType": "Edit type…",
         "editTypeTitle": "Edit wall type",
@@ -1510,6 +1516,11 @@
         "paramSoffitMode": "Soffit lining",
         "soffitModeHorizontal": "Horizontal",
         "soffitModeSloped": "Sloped",
+        "tileSection": "Tile appearance",
+        "tileLength": "Tile length",
+        "tileWidth": "Tile width",
+        "tileSizeUnit": "cm",
+        "tileRotate90": "Rotate texture 90°",
         "editType": "Edit type…",
         "editTypeTitle": "Edit roof type",
         "editTypeDescription": "Changes apply to every roof of this type, on all floors.",
@@ -1971,6 +1982,13 @@
         "close": "Close",
         "delete": "Delete",
         "deleteConfirm": "Delete boiler? This action cannot be undone."
+      },
+      "floorFinishEditor": {
+        "material": "Material",
+        "thickness": "Thickness (mm)",
+        "close": "Close",
+        "delete": "Delete",
+        "deleteConfirm": "Delete floor finish? This action cannot be undone."
       },
       "mepSegmentEditor": {
         "width": "Width",
@@ -2882,6 +2900,18 @@
         "nonPositiveDimension": "Dimensions must be greater than 0",
         "dimensionTooSmall": "Dimension is below the minimum allowed"
       }
+    }
+  },
+  "floorFinish": {
+    "materials": {
+      "woodOak": "Oak wood",
+      "woodPine": "Pine wood",
+      "tileCeramic": "Ceramic tile",
+      "tileMarble": "Marble tile",
+      "laminate": "Laminate",
+      "parquet": "Parquet",
+      "epoxy": "Epoxy",
+      "carpet": "Carpet"
     }
   }
 }

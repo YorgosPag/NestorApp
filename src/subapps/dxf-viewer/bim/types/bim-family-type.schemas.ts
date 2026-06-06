@@ -103,6 +103,10 @@ export const RoofTypeParamsSchema = z
     soffitMaterial: z.string().min(1).optional(),
     fasciaHeightMm: z.number().positive().optional(),
     soffitMode: z.enum(['horizontal', 'sloped']).optional(),
+    // ─── Tile appearance (ADR-417 #5) — physical W×H + 90° rotation. ──
+    tileLengthM: z.number().positive().optional(),
+    tileWidthM: z.number().positive().optional(),
+    tileRotate90: z.boolean().optional(),
   })
   .strict();
 

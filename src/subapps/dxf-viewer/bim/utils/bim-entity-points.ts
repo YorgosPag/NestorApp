@@ -21,6 +21,7 @@ import {
   isOpeningEntity,
   isWallEntity,
   isColumnEntity,
+  isFloorFinishEntity,
 } from '../../types/entities';
 import { getColumnAnchorWorldPoints } from '../columns/column-anchors';
 
@@ -69,6 +70,13 @@ export function getBimEntityKeyPoints2D(entity: Entity): Point2D[] {
 
   if (isColumnEntity(entity)) {
     return getColumnAnchorWorldPoints(entity).map(a => a.point);
+  }
+
+  // ADR-419 — floor-finish footprint vertices (closed polygon, like slab).
+  if (isFloorFinishEntity(entity)) {
+    const verts = entity.params.footprint?.vertices;
+    if (!verts) return [];
+    return verts.map(v => ({ x: v.x, y: v.y }));
   }
 
   return [];

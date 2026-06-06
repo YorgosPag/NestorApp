@@ -40,6 +40,7 @@ import { MepFittingPersistenceHost } from './MepFittingPersistenceHost';
 import { MepSystemPersistenceHost } from './MepSystemPersistenceHost';
 import { RailingPersistenceHost } from './RailingPersistenceHost';
 import { RoofPersistenceHost } from './RoofPersistenceHost';
+import { FloorFinishPersistenceHost } from './FloorFinishPersistenceHost';
 import { BeamPersistenceHost } from './BeamPersistenceHost';
 import { SlabOpeningPersistenceHost } from './SlabOpeningPersistenceHost';
 import { StairPersistenceHost } from './StairPersistenceHost';
@@ -220,6 +221,15 @@ export function DxfViewerTopBar({
         floorId={floorId}
       />
       <RoofPersistenceHost
+        primarySelectedId={primarySelectedId}
+        currentScene={currentScene}
+        levelManager={levelManager}
+        projectId={levelManager.saveContext?.projectId ?? undefined}
+        floorplanId={levelManager.fileRecordId ?? undefined}
+        buildingId={buildingId}
+        floorId={floorId}
+      />
+      <FloorFinishPersistenceHost
         primarySelectedId={primarySelectedId}
         currentScene={currentScene}
         levelManager={levelManager}

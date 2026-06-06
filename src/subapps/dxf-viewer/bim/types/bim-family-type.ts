@@ -150,6 +150,16 @@ export interface RoofTypeParams {
   readonly fasciaHeightMm?: number;
   /** Soffit geometry — 'horizontal' (Revit default) | 'sloped'. */
   readonly soffitMode?: RoofSoffitMode;
+  // ─── Tile appearance (ADR-417 #5 — Revit Material Appearance W×H + rotation) ──
+  // Physical dimensions of ONE roof tile, in METERS. Undefined → square at the
+  // material's natural tile size. The 3D UV is ALWAYS slope-aligned (water-flow
+  // direction) regardless of these — they only size/rotate the tile pattern.
+  /** m. Tile length DOWN the slope. */
+  readonly tileLengthM?: number;
+  /** m. Tile width ACROSS the slope (along the ridge). */
+  readonly tileWidthM?: number;
+  /** Rotate the tile texture 90° (swap U↔V). */
+  readonly tileRotate90?: boolean;
 }
 
 /**

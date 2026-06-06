@@ -32,6 +32,7 @@ import { useWallFamilyTypeController } from '../hooks/useWallFamilyTypeControlle
 import { isBuiltInType, resolveTypeDisplayName } from '../../../bim/family-types/family-type-ui-helpers';
 import { openEditWallType } from '../../../bim/family-types/edit-wall-type-store';
 import type { WallCategory } from '../../../bim/types/wall-types';
+import { computeWallTypeUValue } from '../../../bim/thermal/wall-assembly-thermal';
 
 const CATEGORY_VALUES: readonly WallCategory[] = [
   'exterior',
@@ -197,6 +198,20 @@ export function RibbonWallTypePropertiesWidget(): React.JSX.Element | null {
         </span>
         <span className="dxf-ribbon-wall-length-value">{materialLabel}</span>
       </span>
+
+      {wall.params.dna && (() => {
+        const u = computeWallTypeUValue(wall.params.dna);
+        return (
+          <span className="flex items-center gap-2 text-xs">
+            <span className="dxf-ribbon-combobox-label">
+              {t('ribbon.commands.bimFamilyType.paramUValue')}
+            </span>
+            <span className="dxf-ribbon-wall-length-value font-semibold">
+              {Number.isFinite(u) ? u.toFixed(2) : '—'} {t('ribbon.commands.bimFamilyType.uValueUnit')}
+            </span>
+          </span>
+        );
+      })()}
 
       {canWrite && (
         <span className="flex items-center gap-1">

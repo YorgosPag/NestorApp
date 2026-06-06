@@ -129,6 +129,17 @@ export interface RoofParams {
   readonly fasciaHeightMm?: number;
   /** Γεωμετρία soffit (οριζόντιο/κεκλιμένο). Default `DEFAULT_SOFFIT_MODE`. */
   readonly soffitMode?: RoofSoffitMode;
+  // ─── Εμφάνιση κεραμιδιού (tile appearance, ADR-417 #5) — type-governed ────────
+  // Φυσικές διαστάσεις ΕΝΟΣ κεραμιδιού (Revit Material Appearance W×H), σε ΜΕΤΡΑ.
+  // Undefined → τετράγωνο στο φυσικό μέγεθος του υλικού (`tileSizeMForMaterialId`).
+  // Η 3D UV είναι ΠΑΝΤΑ slope-aligned (αύλακες κατά την κλίση — διόρθωση bug),
+  // ανεξαρτήτως αυτών των πεδίων.
+  /** m. Μήκος κεραμιδιού ΚΑΤΑ ΤΗΝ ΚΛΙΣΗ (down-slope). */
+  readonly tileLengthM?: number;
+  /** m. Πλάτος κεραμιδιού ΚΑΤΑ ΤΟΝ ΚΟΡΦΙΑ (across-slope). */
+  readonly tileWidthM?: number;
+  /** Περιστροφή υφής 90° (swap U↔V) — αν οι αύλακες είναι στον άλλον άξονα. */
+  readonly tileRotate90?: boolean;
   /**
    * DXF canvas coordinate unit. Πάντα αποθηκευμένο ώστε η μηχανή να μετατρέπει
    * canvas-unit² → m² για BOQ. Default 'mm' (legacy docs).
@@ -248,3 +259,10 @@ export const DEFAULT_SOFFIT_MODE: RoofSoffitMode = 'horizontal';
 
 /** Default material ID μετωπίδας/soffit (ξύλινο γείσο). */
 export const DEFAULT_EAVE_MATERIAL_ID = 'mat-wood';
+
+/**
+ * Fallback φυσικό μέγεθος κεραμιδιού (m) όταν το υλικό στέγης δεν αντιστοιχεί σε
+ * texture set (= base tile του `roof-tiles` slug, ADR-417 #5). Χρησιμοποιείται ως
+ * baseTileSizeM στον converter + ως placeholder στο UI.
+ */
+export const DEFAULT_ROOF_TILE_SIZE_M = 1.0;

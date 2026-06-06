@@ -17,6 +17,7 @@ import type {
   SlabGripKind,
   SlabOpeningGripKind,
   RoofGripKind,
+  FloorFinishGripKind,
   BeamGripKind,
   ColumnGripKind,
   MepFixtureGripKind,
@@ -42,6 +43,7 @@ export type {
   SlabGripKind,
   SlabOpeningGripKind,
   RoofGripKind,
+  FloorFinishGripKind,
   BeamGripKind,
   ColumnGripKind,
   MepFixtureGripKind,
@@ -110,6 +112,13 @@ export interface GripInfo {
    * edge-midpoint insertion, `edges` kept in lockstep with `outline.vertices`).
    */
   roofGripKind?: RoofGripKind;
+  /**
+   * ADR-419 — floor finish polygon grip discriminator. Present only when the
+   * grip belongs to a `FloorFinishEntity`; routes the commit through
+   * `applyFloorFinishGripDrag()` + `UpdateFloorFinishParamsCommand`
+   * (per-vertex translate + edge-midpoint insertion).
+   */
+  floorFinishGripKind?: FloorFinishGripKind;
   /**
    * ADR-363 Phase 5.5a — parametric beam grip discriminator. Present only when
    * the grip belongs to a `BeamEntity`; routes the commit through

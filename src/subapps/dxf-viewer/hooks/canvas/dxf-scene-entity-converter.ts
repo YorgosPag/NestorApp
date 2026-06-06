@@ -13,7 +13,7 @@ import type { DxfEntityUnion, DxfTextStyle } from '../../canvas-v2/dxf-canvas/dx
 import type { DxfColor } from '../../text-engine/types';
 import type { Point2D } from '../../rendering/types/Types';
 import type { SceneModel, TextEntity } from '../../types/entities';
-import { isSlabEntity, isSlabOpeningEntity, isOpeningEntity, isWallEntity, isBeamEntity, isColumnEntity, isMepFixtureEntity, isElectricalPanelEntity, isRailingEntity, isFurnitureEntity, isMepSegmentEntity, isMepFittingEntity, isFloorplanSymbolEntity, isMepManifoldEntity, isMepRadiatorEntity, isMepBoilerEntity, isRoofEntity, isXLineEntity, isRayEntity } from '../../types/entities';
+import { isSlabEntity, isSlabOpeningEntity, isOpeningEntity, isWallEntity, isBeamEntity, isColumnEntity, isMepFixtureEntity, isElectricalPanelEntity, isRailingEntity, isFurnitureEntity, isMepSegmentEntity, isMepFittingEntity, isFloorplanSymbolEntity, isMepManifoldEntity, isMepRadiatorEntity, isMepBoilerEntity, isRoofEntity, isFloorFinishEntity, isXLineEntity, isRayEntity } from '../../types/entities';
 import type { XLineEntity, RayEntity } from '../../types/entities';
 import type { StairEntity } from '../../bim/types/stair-types';
 import type { SlabEntity } from '../../bim/types/slab-types';
@@ -38,6 +38,8 @@ import type { FurnitureEntity } from '../../bim/types/furniture-types';
 import type { FloorplanSymbolEntity } from '../../bim/types/floorplan-symbol-types';
 // ADR-417 — roof direct entity for DXF render pipeline.
 import type { RoofEntity } from '../../bim/types/roof-types';
+// ADR-419 — floor finish direct entity for DXF render pipeline.
+import type { FloorFinishEntity } from '../../bim/types/floor-finish-types';
 import type { MepSegmentEntity } from '../../bim/types/mep-segment-types';
 import type { MepFittingEntity } from '../../bim/types/mep-fitting-types';
 import type { DimensionEntity } from '../../types/dimension';
@@ -356,6 +358,15 @@ export function convertEntity(entity: SceneEntity, layers: SceneLayers, layersBy
       if (!isRoofEntity(entity)) return null;
       const rf = entity as RoofEntity;
       return { ...base, type: 'roof' as const, kind: rf.kind, params: rf.params, geometry: rf.geometry, validation: rf.validation } as DxfEntityUnion;
+    }
+    case 'floor-finish': {
+      // ADR-419 — direct entity (same pattern as slab/roof). FloorFinishRenderer
+      // reads geometry.bbox + params.footprint + params.materialId at top level.
+      // Without this case, freshly-committed floor-finishes are silently dropped
+      // here → invisible on 2D canvas.
+      if (!isFloorFinishEntity(entity)) return null;
+      const ff = entity as FloorFinishEntity;
+      return { ...base, type: 'floor-finish' as const, kind: ff.kind, params: ff.params, geometry: ff.geometry } as DxfEntityUnion;
     }
     case 'floorplan-symbol': {
       // ADR-415 — direct entity (same pattern as furniture/mep-fixture).
