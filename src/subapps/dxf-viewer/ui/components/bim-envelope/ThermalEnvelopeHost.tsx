@@ -65,8 +65,10 @@ import {
   type RegionOverrideTarget,
 } from '../../../bim/services/envelope-region-override.service';
 import { isWallEntity, isColumnEntity, isBeamEntity } from '../../../types/entities';
+import type { WallDna } from '../../../bim/types/wall-dna-types';
 import { useCommandHistory } from '../../../core/commands';
 import { LevelSceneManagerAdapter } from '../../../systems/entity-creation/LevelSceneManagerAdapter';
+import { useUniversalSelection } from '../../../systems/selection';
 import { useEnvelopeFloorSlabs } from '../../../hooks/data/useEnvelopeFloorSlabs';
 import { useBim3DEntitiesStore } from '../../../bim-3d/stores/Bim3DEntitiesStore';
 import type { SceneModel } from '../../../types/scene';
@@ -110,6 +112,12 @@ export function ThermalEnvelopeHost(
   const [draft, setDraft] = React.useState<ThermalEnvelopeSpec>(buildDefaultSpec);
   // ADR-396 v2 Φ6b — ανιχνευμένα όρια τρέχοντος ορόφου (per-region override panel).
   const [regions, setRegions] = React.useState<readonly RegionOverrideTarget[]>([]);
+  // ADR-396 P10 — DNA επιλεγμένου τοίχου κατά το άνοιγμα του dialog. Snapshot
+  // μόνο κατά το event-fire (imperative read) — ΔΕΝ παρακολουθεί αλλαγές επιλογής
+  // ενώ ο dialog είναι ανοιχτός. null → fallback στο REFERENCE_BARE_WALL_LAYERS.
+  const [wallDna, setWallDna] = React.useState<WallDna | null>(null);
+  // Getter για imperative read επιλογής (ADR-040: leaf — επιτρέπεται, ΟΧΙ high-freq).
+  const universalSelection = useUniversalSelection();
 
   // ADR-396 P8 — κλιματική ζώνη = ρύθμιση κτιρίου (OQ-7a). Resolve από το
   // building doc του τρέχοντος ορόφου· optimistic override μέχρι να γυρίσει
@@ -175,14 +183,24 @@ export function ThermalEnvelopeHost(
   }, [currentLevelId, getLevelScene, levels]);
 
   // EventBus listener — ribbon button → init draft από το spec του ορόφου +
-  // υπολογισμός ορίων (Φ6b) + open.
+  // υπολογισμός ορίων (Φ6b) + snapshot επιλεγμένου τοίχου (P10) + open.
   React.useEffect(() => {
     return EventBus.on('bim:thermal-envelope-requested', () => {
       setDraft(getEnvelopeSpec(currentLevelId) ?? buildDefaultSpec());
       recomputeRegions();
+      // ADR-396 P10 — imperative snapshot: αν είναι επιλεγμένος τοίχος, πάρε το DNA
+      // του για ακριβέστερο per-type U-value στον dialog. Μηδέν reactive subscription.
+      const primaryId = universalSelection.getPrimaryId();
+      if (primaryId && currentLevelId) {
+        const scene = getLevelScene(currentLevelId);
+        const entity = scene?.entities.find((e) => e.id === primaryId);
+        setWallDna(isWallEntity(entity) ? (entity.params.dna ?? null) : null);
+      } else {
+        setWallDna(null);
+      }
       setOpen(true);
     });
-  }, [currentLevelId, recomputeRegions]);
+  }, [currentLevelId, recomputeRegions, universalSelection, getLevelScene]);
 
   // P7 Part B — per-element apply + BOQ για έναν όροφο (idempotent).
   const applyPerElement = React.useCallback(
@@ -269,6 +287,7 @@ export function ThermalEnvelopeHost(
       onApplyAll={handleApplyAll}
       climateZone={climateZone}
       onClimateZoneChange={handleClimateZoneChange}
+      wallDna={wallDna}
       regions={regions}
       onRegionFunctionChange={handleRegionFunctionChange}
     />
