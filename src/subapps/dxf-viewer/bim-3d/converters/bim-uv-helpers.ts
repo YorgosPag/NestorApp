@@ -99,6 +99,48 @@ export function setBoxWorldUvs(geo: THREE.BufferGeometry): void {
   geo.setAttribute('uv2', new THREE.BufferAttribute(Float32Array.from(uv), 2));
 }
 
+// ─── Planar tile UVs (floors / horizontal surfaces) ──────────────────────────
+
+/**
+ * Texcoord scale + rotation for `setPlanarTileUvs` (ADR-419).
+ * Mirrors `SlopeTileUvOptions` for roof but projected on the XZ (horizontal) plane.
+ */
+export interface PlanarTileUvOptions {
+  /** Texcoord scale U (world X axis). 1 = 1 UV unit per metre. */
+  readonly scaleU: number;
+  /** Texcoord scale V (world −Z axis, so V increases northward). 1 = 1 m. */
+  readonly scaleV: number;
+  /** Swap U↔V — «texture rotation 90°» (e.g. wood grain along Y instead of X). */
+  readonly rotate90?: boolean;
+}
+
+/**
+ * ADR-419 — Planar world-meter UVs for horizontal BIM surfaces (floor finishes).
+ * Projects each vertex position onto the world XZ plane (U = world X, V = −world Z),
+ * then scales by `scaleU`/`scaleV` so one texture tile maps to the physical tile
+ * size. `rotate90` swaps U↔V — useful for wood plank direction. Writes `uv` + `uv2`.
+ *
+ * Replaces the unscaled `setPlanarWorldUvs` when the user has specified physical tile
+ * dimensions; otherwise the geometry's auto-UVs (already world-scale from ExtrudeGeometry)
+ * are used as-is via `ensureWorldUvs`.
+ */
+export function setPlanarTileUvs(geo: THREE.BufferGeometry, opts: PlanarTileUvOptions): void {
+  const pos = geo.getAttribute('position');
+  if (!pos) return;
+  const uv = new Float32Array(pos.count * 2);
+  for (let i = 0; i < pos.count; i++) {
+    let u = pos.getX(i) * opts.scaleU;
+    let v = -pos.getZ(i) * opts.scaleV;
+    if (opts.rotate90) { const t = u; u = v; v = t; }
+    uv[i * 2] = u;
+    uv[i * 2 + 1] = v;
+  }
+  geo.setAttribute('uv', new THREE.BufferAttribute(uv, 2));
+  geo.setAttribute('uv2', new THREE.BufferAttribute(Float32Array.from(uv), 2));
+}
+
+// ─── Slope-aligned tile UVs (roofs) ──────────────────────────────────────────
+
 /** World up — the reference for resolving a face's up-slope vs across-slope axes. */
 const WORLD_UP = new THREE.Vector3(0, 1, 0);
 

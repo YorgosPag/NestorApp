@@ -25,12 +25,16 @@ import type { FloorFinishEntity } from '../../bim/types/floor-finish-types';
 import { DEFAULT_FLOOR_FINISH_THICKNESS_MM } from '../../bim/types/floor-finish-types';
 import { getFloorFinishPbrSlug } from '../../bim/floor-finishes/floor-finish-material-catalog';
 import type { PbrTextureSlug } from '../../bim/materials/bim-texture-registry';
+import { tileSizeMForMaterialId } from '../../bim/materials/bim-texture-registry';
 import { sceneUnitsToMeters } from '../../utils/scene-units';
 import type { SceneUnits } from '../../utils/scene-units';
 import { getMaterial3D } from '../materials/MaterialCatalog3D';
 import { buildShape, extrudeAndRotate, tagMesh } from './bim-three-shape-helpers';
+import { setPlanarTileUvs } from './bim-uv-helpers';
 
 const MM_TO_M = 0.001;
+
+const DEFAULT_FLOOR_TILE_SIZE_M = 0.3;
 
 /** Maps a PBR texture slug to a DNA material prefix string for `getMaterial3D`. */
 const PBR_SLUG_TO_MAT_KEY: Partial<Record<PbrTextureSlug, string>> = {
@@ -44,11 +48,14 @@ const PBR_SLUG_TO_MAT_KEY: Partial<Record<PbrTextureSlug, string>> = {
   'roof-tiles': 'mat-finish',
 };
 
-/** Resolve the Three.js material for a FloorFinish entity's material ID. */
-function resolveFloorFinishMaterial3D(materialId: string): THREE.MeshStandardMaterial {
+/**
+ * Resolve the Three.js material + matKey for a FloorFinish entity's material ID.
+ * Returns both so the converter can also look up the base tile size via matKey.
+ */
+function resolveFloorFinishMaterial3D(materialId: string): { mat: THREE.MeshStandardMaterial; matKey: string } {
   const slug = getFloorFinishPbrSlug(materialId);
   const matKey = (slug && PBR_SLUG_TO_MAT_KEY[slug]) ?? 'mat-finish';
-  return getMaterial3D(matKey);
+  return { mat: getMaterial3D(matKey), matKey };
 }
 
 /**
@@ -68,7 +75,8 @@ export function floorFinishToMesh(
   levelId?: string,
   buildingBaseM = 0,
 ): THREE.Mesh | null {
-  const { footprint, materialId, thicknessMm, finishLevel, sceneUnits } = entity.params;
+  const { footprint, materialId, thicknessMm, finishLevel, sceneUnits,
+          tileLengthMm, tileWidthMm, tileRotate90 } = entity.params;
   if (!footprint || footprint.vertices.length < 3) return null;
 
   const units: SceneUnits = sceneUnits ?? 'm';
@@ -81,7 +89,21 @@ export function floorFinishToMesh(
   const thickness = (thicknessMm ?? DEFAULT_FLOOR_FINISH_THICKNESS_MM) * MM_TO_M;
   const geo = extrudeAndRotate(shape, thickness);
 
-  const mat = resolveFloorFinishMaterial3D(materialId);
+  const { mat, matKey } = resolveFloorFinishMaterial3D(materialId);
+
+  // ADR-419 §texture-appearance — apply physically-scaled planar UVs when tile
+  // dimensions are explicitly set. Otherwise ExtrudeGeometry auto-UVs (already
+  // world-scale) are used as-is, which looks fine for default 1× tiling.
+  if (tileLengthMm || tileWidthMm || tileRotate90) {
+    const baseM = tileSizeMForMaterialId(matKey) ?? DEFAULT_FLOOR_TILE_SIZE_M;
+    const lenM = (tileLengthMm ?? baseM * 1000) * MM_TO_M;
+    const widM = (tileWidthMm ?? baseM * 1000) * MM_TO_M;
+    setPlanarTileUvs(geo, {
+      scaleU: 1 / widM,
+      scaleV: 1 / lenM,
+      rotate90: tileRotate90,
+    });
+  }
   const mesh = new THREE.Mesh(geo, mat);
 
   const bottomMm = floorElevationMm + (finishLevel ?? 0);

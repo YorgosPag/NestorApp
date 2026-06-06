@@ -27,6 +27,18 @@ const MATERIAL_OPTIONS = listFloorFinishMaterials().map((def) => ({
   isLiteralLabel: false,
 }));
 
+const TILE_DIM_MM_OPTIONS = [
+  { value: '100',  labelKey: '100 mm', isLiteralLabel: true },
+  { value: '150',  labelKey: '150 mm', isLiteralLabel: true },
+  { value: '200',  labelKey: '200 mm', isLiteralLabel: true },
+  { value: '300',  labelKey: '300 mm', isLiteralLabel: true },
+  { value: '400',  labelKey: '400 mm', isLiteralLabel: true },
+  { value: '600',  labelKey: '600 mm', isLiteralLabel: true },
+  { value: '900',  labelKey: '900 mm', isLiteralLabel: true },
+  { value: '1000', labelKey: '1000 mm', isLiteralLabel: true },
+  { value: '1200', labelKey: '1200 mm', isLiteralLabel: true },
+] as const;
+
 const THICKNESS_MM_OPTIONS = [
   { value: '8',  labelKey: '8 mm',  isLiteralLabel: true },
   { value: '10', labelKey: '10 mm', isLiteralLabel: true },
@@ -85,6 +97,54 @@ export const CONTEXTUAL_FLOOR_FINISH_TAB: RibbonTab = {
                 commandKey: FLOOR_FINISH_RIBBON_KEYS.params.thicknessMm,
                 comboboxWidthPx: 100,
                 options: THICKNESS_MM_OPTIONS,
+              },
+            },
+          ],
+        },
+      ],
+    },
+    {
+      id: 'floor-finish-appearance',
+      labelKey: 'ribbon.panels.floorFinishAppearance',
+      rows: [
+        {
+          isInFlyout: false,
+          buttons: [
+            {
+              type: 'combobox',
+              size: 'small',
+              command: {
+                id: 'floorFinish.tileLengthMm',
+                labelKey: 'ribbon.commands.floorFinishEditor.tileLengthMm',
+                commandKey: FLOOR_FINISH_RIBBON_KEYS.params.tileLengthMm,
+                comboboxWidthPx: 100,
+                options: TILE_DIM_MM_OPTIONS,
+              },
+            },
+            {
+              type: 'combobox',
+              size: 'small',
+              command: {
+                id: 'floorFinish.tileWidthMm',
+                labelKey: 'ribbon.commands.floorFinishEditor.tileWidthMm',
+                commandKey: FLOOR_FINISH_RIBBON_KEYS.params.tileWidthMm,
+                comboboxWidthPx: 100,
+                options: TILE_DIM_MM_OPTIONS,
+              },
+            },
+          ],
+        },
+        {
+          isInFlyout: false,
+          buttons: [
+            {
+              type: 'toggle',
+              size: 'small',
+              command: {
+                id: 'floorFinish.tileRotate90',
+                labelKey: 'ribbon.commands.floorFinishEditor.tileRotate90',
+                icon: 'rotate',
+                commandKey: FLOOR_FINISH_RIBBON_KEYS.toggles.tileRotate90,
               },
             },
           ],

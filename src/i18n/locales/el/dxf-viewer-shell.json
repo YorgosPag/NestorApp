@@ -902,6 +902,7 @@
       "mepBoilerActions": "Ενέργειες",
       "floorFinishMaterial": "Υλικό",
       "floorFinishGeometry": "Γεωμετρία",
+      "floorFinishAppearance": "Εμφάνιση",
       "floorFinishActions": "Ενέργειες",
       "mepSegmentSection": "Διατομή",
       "mepSegmentDimensions": "Διαστάσεις",
@@ -1998,6 +1999,9 @@
       "floorFinishEditor": {
         "material": "Υλικό",
         "thickness": "Πάχος (mm)",
+        "tileLengthMm": "Μήκος πλακιδίου (mm)",
+        "tileWidthMm": "Πλάτος πλακιδίου (mm)",
+        "tileRotate90": "Περιστροφή 90°",
         "close": "Κλείσιμο",
         "delete": "Διαγραφή",
         "deleteConfirm": "Διαγραφή επικάλυψης δαπέδου; Η ενέργεια δεν μπορεί να αναιρεθεί."

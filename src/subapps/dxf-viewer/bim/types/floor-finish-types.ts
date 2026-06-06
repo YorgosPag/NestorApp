@@ -66,6 +66,15 @@ export interface FloorFinishParams {
   readonly name?: string;
   readonly sceneUnits?: SceneUnits;
   readonly floorId?: string;
+  // ─── Εμφάνιση υφής (ADR-419 §texture-appearance) ────────────────────────────
+  // Φυσικές διαστάσεις ενός πλακιδίου/σανίδας σε mm (Revit Material Appearance).
+  // Undefined → φυσικό μέγεθος υλικού (tileSizeMForMaterialId SSoT).
+  /** mm. Φυσικό μήκος πλακιδίου κατά τον άξονα U (world X). */
+  readonly tileLengthMm?: number;
+  /** mm. Φυσικό πλάτος πλακιδίου κατά τον άξονα V (world −Z). */
+  readonly tileWidthMm?: number;
+  /** Περιστροφή υφής 90° (swap U↔V) — κατεύθυνση σανίδας ξύλου / αύλακα πλακιδίου. */
+  readonly tileRotate90?: boolean;
 }
 
 // ─── Geometry cache ───────────────────────────────────────────────────────────

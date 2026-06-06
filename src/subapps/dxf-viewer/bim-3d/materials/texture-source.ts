@@ -32,7 +32,11 @@ export const BIM_TEXTURE_LIBRARY_ROOT = 'bim-texture-library';
 export const BIM_TEXTURE_PUBLIC_ROOT = '/textures';
 
 // ── Module-level switch (Giorgio requirement: flip without code changes) ─────
-let sourceMode: TextureSourceMode = 'public';
+// Default: 'storage' in production (textures live in Firebase Storage, not in the
+// Vercel bundle — *.jpg are .gitignored). Override with NEXT_PUBLIC_BIM_TEXTURE_SOURCE.
+const _envMode = process.env.NEXT_PUBLIC_BIM_TEXTURE_SOURCE as TextureSourceMode | undefined;
+let sourceMode: TextureSourceMode =
+  _envMode ?? (process.env.NODE_ENV === 'production' ? 'storage' : 'public');
 
 /** Switch the texture source mode for ALL subsequent resolutions. */
 export function setTextureSourceMode(mode: TextureSourceMode): void {

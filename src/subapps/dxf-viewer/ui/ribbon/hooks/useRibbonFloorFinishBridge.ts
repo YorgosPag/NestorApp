@@ -27,6 +27,7 @@ import {
   FLOOR_FINISH_RIBBON_KEYS,
   isFloorFinishRibbonNumberKey,
   isFloorFinishRibbonStringKey,
+  isFloorFinishRibbonToggleKey,
   isFloorFinishRibbonActionKey,
 } from './bridge/floor-finish-command-keys';
 import { EventBus } from '../../../systems/events/EventBus';
@@ -103,6 +104,12 @@ export function useRibbonFloorFinishBridge(
         return { value: ff.params.materialId, options: [] };
       }
       if (isFloorFinishRibbonNumberKey(commandKey)) {
+        if (commandKey === FLOOR_FINISH_RIBBON_KEYS.params.tileLengthMm) {
+          return { value: ff.params.tileLengthMm != null ? String(Math.round(ff.params.tileLengthMm)) : '', options: [] };
+        }
+        if (commandKey === FLOOR_FINISH_RIBBON_KEYS.params.tileWidthMm) {
+          return { value: ff.params.tileWidthMm != null ? String(Math.round(ff.params.tileWidthMm)) : '', options: [] };
+        }
         return { value: String(Math.round(ff.params.thicknessMm)), options: [] };
       }
       return null;
@@ -124,18 +131,38 @@ export function useRibbonFloorFinishBridge(
       if (isFloorFinishRibbonNumberKey(commandKey)) {
         const numeric = Number.parseFloat(value);
         if (Number.isNaN(numeric) || numeric <= 0) return;
-        const nextParams: FloorFinishParams = { ...ff.params, thicknessMm: numeric };
-        dispatchParams(ff, nextParams);
+        if (commandKey === FLOOR_FINISH_RIBBON_KEYS.params.tileLengthMm) {
+          dispatchParams(ff, { ...ff.params, tileLengthMm: numeric });
+          return;
+        }
+        if (commandKey === FLOOR_FINISH_RIBBON_KEYS.params.tileWidthMm) {
+          dispatchParams(ff, { ...ff.params, tileWidthMm: numeric });
+          return;
+        }
+        dispatchParams(ff, { ...ff.params, thicknessMm: numeric });
       }
     },
     [resolveFloorFinish, dispatchParams],
   );
 
-  const onToggle = useCallback((_key: string, _next: boolean): void => {
-    /* no-op — floor finish has no toggles */
-  }, []);
+  const onToggle = useCallback(
+    (commandKey: string, nextValue: boolean): void => {
+      if (!isFloorFinishRibbonToggleKey(commandKey)) return;
+      const ff = resolveFloorFinish();
+      if (!ff) return;
+      dispatchParams(ff, { ...ff.params, tileRotate90: nextValue || undefined });
+    },
+    [resolveFloorFinish, dispatchParams],
+  );
 
-  const getToggleState = useCallback((_key: string): RibbonToggleState => NULL_TOGGLE, []);
+  const getToggleState = useCallback(
+    (commandKey: string): RibbonToggleState => {
+      if (!isFloorFinishRibbonToggleKey(commandKey)) return NULL_TOGGLE;
+      const ff = resolveFloorFinish();
+      return ff?.params.tileRotate90 ?? false;
+    },
+    [resolveFloorFinish],
+  );
 
   const onAction = useCallback(
     (action: string): void => {

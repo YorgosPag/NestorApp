@@ -902,6 +902,7 @@
       "mepBoilerActions": "Actions",
       "floorFinishMaterial": "Material",
       "floorFinishGeometry": "Geometry",
+      "floorFinishAppearance": "Appearance",
       "floorFinishActions": "Actions",
       "mepSegmentSection": "Section",
       "mepSegmentDimensions": "Dimensions",
@@ -1998,6 +1999,9 @@
       "floorFinishEditor": {
         "material": "Material",
         "thickness": "Thickness (mm)",
+        "tileLengthMm": "Tile length (mm)",
+        "tileWidthMm": "Tile width (mm)",
+        "tileRotate90": "Rotate 90°",
         "close": "Close",
         "delete": "Delete",
         "deleteConfirm": "Delete floor finish? This action cannot be undone."
