@@ -28,12 +28,19 @@
 
 import * as THREE from 'three';
 import type { RoofEntity, RoofFace, RoofRidgeLine } from '../../bim/types/roof-types';
+import {
+  DEFAULT_EAVE_MATERIAL_ID,
+  DEFAULT_FASCIA_HEIGHT_MM,
+  DEFAULT_SOFFIT_MODE,
+} from '../../bim/types/roof-types';
 import type { SlabDnaLayer } from '../../bim/types/slab-dna-types';
-import { sceneUnitsToMeters } from '../../utils/scene-units';
+import { mmToSceneUnits, sceneUnitsToMeters } from '../../utils/scene-units';
 import { getElementMaterial3D, getMaterial3D } from '../materials/MaterialCatalog3D';
 import { setBoxWorldUvs } from './bim-uv-helpers';
 import { toWorld } from './roof-world-transform';
 import { buildRoundedRidgeCap, findAdjacentFaces } from './roof-ridge-cap';
+import { buildRoofEaveDetail } from '../../bim/geometry/roof-eave-detail';
+import { buildEaveQuadGeometry } from './roof-eave-detail-mesh';
 
 /** ADR-417 — clay ridge/hip caps («κορφιάδες») use the roof-tile material. */
 const RIDGE_CAP_MATERIAL_ID = 'mat-roof-tile';
@@ -226,6 +233,37 @@ function addRidgeCaps(
   }
 }
 
+/**
+ * ADR-417 Φ2b — Emit the eave detailing («γείσο») meshes around EVERY perimeter
+ * footprint edge: overhang strip + fascia board + soffit lining. Hides the cut
+ * DNA stack that otherwise reveals the layers around the roof edge (Revit «Fine»).
+ * The pure SSoT core (`buildRoofEaveDetail`) is shared with the 2D renderer. All
+ * meshes carry the roof id for picking.
+ */
+function addEaveDetails(group: THREE.Group, roof: RoofEntity, ctx: RoofFaceMeshContext): void {
+  const s = mmToSceneUnits(roof.params.sceneUnits ?? 'mm');
+  const detail = buildRoofEaveDetail({
+    outline: roof.geometry!.footprint.vertices,
+    edges: roof.params.edges,
+    slopeUnit: roof.params.slopeUnit,
+    basePivotZ: roof.params.basePivotZ,
+    thicknessMm: ctx.thicknessMm,
+    s,
+    fasciaHeightMm: roof.params.fasciaHeightMm ?? DEFAULT_FASCIA_HEIGHT_MM,
+    soffitMode: roof.params.soffitMode ?? DEFAULT_SOFFIT_MODE,
+    overhangMaterialId: ctx.monoMaterialId ?? RIDGE_CAP_MATERIAL_ID,
+    fasciaMaterialId: roof.params.fasciaMaterial ?? DEFAULT_EAVE_MATERIAL_ID,
+    soffitMaterialId: roof.params.soffitMaterial ?? DEFAULT_EAVE_MATERIAL_ID,
+  });
+  for (const q of detail.quads) {
+    const geo = buildEaveQuadGeometry(q, ctx.sceneToM, ctx.baseElevationM);
+    if (!geo) continue;
+    const mesh = new THREE.Mesh(geo, getMaterial3D(q.materialId));
+    tagRoofMesh(mesh, ctx.roofId, q.materialId, ctx.levelId);
+    group.add(mesh);
+  }
+}
+
 // ─── Public API ───────────────────────────────────────────────────────────────
 
 /**
@@ -258,6 +296,7 @@ export function roofToMesh(
   const group = new THREE.Group();
   for (const face of roof.geometry.faces) addFaceMeshes(group, face, ctx);
   addRidgeCaps(group, roof.geometry.ridges, roof.geometry.faces, ctx); // κορφιάδες on ridge + hip lines
+  addEaveDetails(group, roof, ctx); // γείσο: overhang + fascia + soffit (όλες οι περιμετρικές ακμές)
 
   if (group.children.length === 0) return null;
 

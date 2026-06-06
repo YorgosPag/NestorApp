@@ -31,6 +31,13 @@ import type { RoofEntity } from '../types/roof-types';
 import type { Point3D } from '../types/bim-base';
 import { getRoofGrips } from '../roofs/roof-grips';
 import { pointInPolygon } from '../geometry/shared/polygon-utils';
+import { buildRoofEaveDetail } from '../geometry/roof-eave-detail';
+import {
+  DEFAULT_EAVE_MATERIAL_ID,
+  DEFAULT_FASCIA_HEIGHT_MM,
+  DEFAULT_SOFFIT_MODE,
+} from '../types/roof-types';
+import { mmToSceneUnits } from '../../utils/scene-units';
 import { RENDER_LINE_WIDTHS } from '../../config/text-rendering-config';
 import { HOVER_HIGHLIGHT } from '../../config/color-config';
 import { resolveIsEntityVisible } from '../visibility/visibility-resolver';
@@ -53,6 +60,12 @@ const ROOF_RIDGE_LINE_WIDTH = 1.5;
 
 /** Dash array [on, off] για ridge lines. */
 const ROOF_RIDGE_DASH: readonly number[] = [6, 4];
+
+/** Stroke colour της προεξοχής γείσου (ίδια οικογένεια, λεπτό συμπαγές). */
+const ROOF_EAVE_STROKE = '#a04a2b';
+
+/** lineWidth (px) για το περίγραμμα προεξοχής γείσου. */
+const ROOF_EAVE_LINE_WIDTH = 1;
 
 // ─── Renderer ─────────────────────────────────────────────────────────────────
 
@@ -96,6 +109,10 @@ export class RoofRenderer extends BaseEntityRenderer {
 
     this.phaseManager.applyPhaseStyle(entity as Entity, phaseState);
     this.ctx.save();
+
+    // Eave overhang outline (γείσο) — projects beyond the footprint. Drawn first
+    // so the face fills read on top (Revit plan: overhang = outer thin line).
+    this.drawEaveOverhangs(roof);
 
     // Draw each roof face: fill + stroke outline.
     for (const face of roof.geometry.faces) {
@@ -186,6 +203,49 @@ export class RoofRenderer extends BaseEntityRenderer {
       this.ctx.stroke();
     }
 
+    this.ctx.restore();
+  }
+
+  /**
+   * ADR-417 Φ2b — draws the eave overhang projection (γείσο) as the outer ring
+   * formed by each perimeter edge's outer points. Consumes the SAME pure SSoT
+   * (`buildRoofEaveDetail`) as the 3D converter — one source of truth for 2D+3D.
+   * No-op when there is no overhang (flat δώμα with 0 overhang → empty ring).
+   */
+  private drawEaveOverhangs(roof: RoofEntity): void {
+    const detail = buildRoofEaveDetail({
+      outline: roof.geometry.footprint.vertices,
+      edges: roof.params.edges,
+      slopeUnit: roof.params.slopeUnit,
+      basePivotZ: roof.params.basePivotZ,
+      thicknessMm: roof.params.thickness,
+      s: mmToSceneUnits(roof.params.sceneUnits ?? 'mm'),
+      fasciaHeightMm: roof.params.fasciaHeightMm ?? DEFAULT_FASCIA_HEIGHT_MM,
+      soffitMode: roof.params.soffitMode ?? DEFAULT_SOFFIT_MODE,
+      overhangMaterialId: DEFAULT_EAVE_MATERIAL_ID,
+      fasciaMaterialId: DEFAULT_EAVE_MATERIAL_ID,
+      soffitMaterialId: DEFAULT_EAVE_MATERIAL_ID,
+    });
+    // Outer ring exists only when at least one edge has a real overhang.
+    const hasOverhang = roof.params.edges.some((e) => e.overhangMm > 0);
+    if (!hasOverhang || detail.overhangEdges.length === 0) return;
+
+    this.ctx.save();
+    this.ctx.strokeStyle = ROOF_EAVE_STROKE;
+    this.ctx.lineWidth = ROOF_EAVE_LINE_WIDTH;
+    this.ctx.setLineDash([]);
+    this.ctx.beginPath();
+    const ring = detail.overhangEdges;
+    const first = this.worldToScreen({ x: ring[0].o0.x, y: ring[0].o0.y });
+    this.ctx.moveTo(first.x, first.y);
+    for (const e of ring) {
+      const a = this.worldToScreen({ x: e.o0.x, y: e.o0.y });
+      const b = this.worldToScreen({ x: e.o1.x, y: e.o1.y });
+      this.ctx.lineTo(a.x, a.y);
+      this.ctx.lineTo(b.x, b.y);
+    }
+    this.ctx.closePath();
+    this.ctx.stroke();
     this.ctx.restore();
   }
 

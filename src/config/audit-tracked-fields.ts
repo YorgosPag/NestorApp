@@ -879,6 +879,12 @@ const ROOF_TRACKED_FIELDS_RAW: Record<string, string> = {
   dna: 'dna',
   storeyId: 'storeyId',
   offsetFromStorey: 'offsetFromStorey',
+  // ADR-417 Φ2b — eave detailing (type-level scalars). `overhangMm` lives per-edge
+  // inside `edges` (untracked, parity with `slope` — noise every grip drag).
+  fasciaMaterial: 'fasciaMaterial',
+  soffitMaterial: 'soffitMaterial',
+  fasciaHeightMm: 'fasciaHeightMm',
+  soffitMode: 'soffitMode',
 };
 
 export const ROOF_TRACKED_FIELDS: Record<string, TrackedFieldDef> =

@@ -23,12 +23,15 @@ export const ROOF_RIBBON_KEYS = {
     slope: 'roof.params.slope',
     /** mm — στάθμη γείσου (eaves datum / pivot line). */
     basePivotZ: 'roof.params.basePivotZ',
+    /** mm — οριζόντια προεξοχή γείσου (overhang) — εφαρμόζεται ενιαία σε όλες τις ακμές. */
+    overhangMm: 'roof.params.overhangMm',
   },
 } as const;
 
 export type RoofRibbonNumberCommandKey =
   | typeof ROOF_RIBBON_KEYS.params.slope
-  | typeof ROOF_RIBBON_KEYS.params.basePivotZ;
+  | typeof ROOF_RIBBON_KEYS.params.basePivotZ
+  | typeof ROOF_RIBBON_KEYS.params.overhangMm;
 
 export type RoofRibbonStringCommandKey =
   | typeof ROOF_RIBBON_KEYS.stringParams.shape
@@ -37,6 +40,7 @@ export type RoofRibbonStringCommandKey =
 export const ROOF_RIBBON_NUMBER_KEYS: readonly RoofRibbonNumberCommandKey[] = [
   ROOF_RIBBON_KEYS.params.slope,
   ROOF_RIBBON_KEYS.params.basePivotZ,
+  ROOF_RIBBON_KEYS.params.overhangMm,
 ];
 
 export const ROOF_RIBBON_STRING_KEYS: readonly RoofRibbonStringCommandKey[] = [

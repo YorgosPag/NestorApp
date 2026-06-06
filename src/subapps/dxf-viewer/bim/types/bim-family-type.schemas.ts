@@ -98,6 +98,11 @@ export const RoofTypeParamsSchema = z
     thickness: z.number().positive(),
     dna: z.unknown().optional(),
     material: z.string().min(1).optional(),
+    // ─── Eave detailing (ADR-417 Φ2b) — type-level fascia/soffit appearance ────
+    fasciaMaterial: z.string().min(1).optional(),
+    soffitMaterial: z.string().min(1).optional(),
+    fasciaHeightMm: z.number().positive().optional(),
+    soffitMode: z.enum(['horizontal', 'sloped']).optional(),
   })
   .strict();
 

@@ -48,6 +48,17 @@ const BASE_PIVOT_Z_MM_OPTIONS = [
   { value: '6000', labelKey: '6000', isLiteralLabel: true },
 ] as const;
 
+// mm — οριζόντια προεξοχή γείσου (overhang) presets — εφαρμόζεται ενιαία σε όλες
+// τις περιμετρικές ακμές (ADR-417 Φ2b). 0 = χωρίς προεξοχή (δώμα/παραπέτο).
+const OVERHANG_MM_OPTIONS = [
+  { value: '0',   labelKey: '0',   isLiteralLabel: true },
+  { value: '200', labelKey: '200', isLiteralLabel: true },
+  { value: '300', labelKey: '300', isLiteralLabel: true },
+  { value: '400', labelKey: '400', isLiteralLabel: true },
+  { value: '500', labelKey: '500', isLiteralLabel: true },
+  { value: '600', labelKey: '600', isLiteralLabel: true },
+] as const;
+
 // ─── Tab definition ──────────────────────────────────────────────────────────
 
 export const CONTEXTUAL_ROOF_TAB: RibbonTab = {
@@ -150,6 +161,17 @@ export const CONTEXTUAL_ROOF_TAB: RibbonTab = {
                 commandKey: ROOF_RIBBON_KEYS.params.basePivotZ,
                 comboboxWidthPx: 90,
                 options: BASE_PIVOT_Z_MM_OPTIONS,
+              },
+            },
+            {
+              type: 'combobox',
+              size: 'small',
+              command: {
+                id: 'roof.overhangMm',
+                labelKey: 'ribbon.commands.roofEditor.overhang',
+                commandKey: ROOF_RIBBON_KEYS.params.overhangMm,
+                comboboxWidthPx: 90,
+                options: OVERHANG_MM_OPTIONS,
               },
             },
           ],

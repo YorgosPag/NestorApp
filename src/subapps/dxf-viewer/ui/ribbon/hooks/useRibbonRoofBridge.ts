@@ -103,6 +103,11 @@ function clampShape(shape: RoofShape): 'flat' | 'mono-pitch' | 'gable' | 'hip' {
   return shape === 'mono-pitch' || shape === 'gable' || shape === 'hip' ? shape : 'flat';
 }
 
+/** Τρέχουσα προεξοχή γείσου = η μέγιστη ανάμεσα στις ακμές (0 = χωρίς γείσο). */
+function currentOverhang(params: RoofParams): number {
+  return params.edges.reduce((max, e) => Math.max(max, e.overhangMm), 0);
+}
+
 /** Τρέχουσα τιμή κλίσης = η 1η slope-defining ακμή· fallback = default (στη μονάδα). */
 function currentSlope(params: RoofParams): number {
   const edge = params.edges.find((e) => e.definesSlope);
@@ -164,6 +169,8 @@ export function useRibbonRoofBridge(
           };
         case ROOF_RIBBON_KEYS.params.basePivotZ:
           return { value: String(Math.round(roof.params.basePivotZ)), options: [] };
+        case ROOF_RIBBON_KEYS.params.overhangMm:
+          return { value: String(Math.round(currentOverhang(roof.params))), options: [] };
         default:
           return null;
       }
@@ -197,6 +204,15 @@ export function useRibbonRoofBridge(
           const basePivotZ = Number.parseFloat(value);
           if (Number.isNaN(basePivotZ)) return;
           dispatchParams(roof, { ...p, basePivotZ });
+          return;
+        }
+        case ROOF_RIBBON_KEYS.params.overhangMm: {
+          const overhangMm = Number.parseFloat(value);
+          if (Number.isNaN(overhangMm) || overhangMm < 0) return;
+          // Ενιαία προεξοχή σε όλες τις περιμετρικές ακμές (per-edge fine-tuning
+          // μέσω grips αργότερα). Καλύπτει το «full flexibility» από το contextual tab.
+          const edges = p.edges.map((e) => ({ ...e, overhangMm }));
+          dispatchParams(roof, { ...p, edges });
           return;
         }
         default:

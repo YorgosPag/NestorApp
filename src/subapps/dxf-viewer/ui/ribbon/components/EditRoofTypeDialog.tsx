@@ -49,6 +49,11 @@ import {
 } from '../../../bim/family-types/edit-roof-type-store';
 import type { SlabDna } from '../../../bim/types/slab-dna-types';
 import type { RoofTypeParams } from '../../../bim/types/bim-family-type';
+import {
+  DEFAULT_FASCIA_HEIGHT_MM,
+  DEFAULT_SOFFIT_MODE,
+  type RoofSoffitMode,
+} from '../../../bim/types/roof-types';
 
 const PANEL_DIMENSIONS = { width: 1010, height: 620 } as const;
 const SSR_FALLBACK_POSITION = { x: 220, y: 80 } as const;
@@ -206,6 +211,113 @@ function EditRoofTypeDialogContent({ typeId }: { typeId: string }): React.ReactE
               highlightLayerId={highlightLayerId}
               onHighlightLayer={setHighlightLayerId}
             />
+
+            {/* ADR-417 Φ2b — Eave detailing (γείσο): fascia/soffit appearance. */}
+            <fieldset className="mt-1 flex flex-col gap-3 border-t border-border pt-3">
+              <legend className="text-xs font-medium text-foreground">
+                {t('ribbon.commands.roofFamilyType.eaveSection')}
+              </legend>
+
+              <label className="flex items-center gap-2 text-xs text-foreground">
+                <span className="w-24 shrink-0">{t('ribbon.commands.roofFamilyType.paramFasciaMaterial')}</span>
+                <Select
+                  value={draft.fasciaMaterial ?? SELECT_CLEAR_VALUE}
+                  onValueChange={(v) =>
+                    setDraft((d) =>
+                      d ? { ...d, fasciaMaterial: v === SELECT_CLEAR_VALUE ? undefined : v } : d,
+                    )
+                  }
+                >
+                  <SelectTrigger size="sm" aria-label={t('ribbon.commands.roofFamilyType.paramFasciaMaterial')}>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent className="w-auto min-w-[9rem]">
+                    <SelectItem value={SELECT_CLEAR_VALUE}>
+                      {t('ribbon.commands.roofFamilyType.materialNone')}
+                    </SelectItem>
+                    {CONSTRUCTION_MATERIAL_IDS.map((id) => (
+                      <SelectItem key={id} value={id} className="whitespace-nowrap">
+                        <span className="flex items-center gap-2">
+                          <MaterialSwatch materialId={id} />
+                          <span>{t(constructionMaterialLabelKey(id))}</span>
+                        </span>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </label>
+
+              <label className="flex items-center gap-2 text-xs text-foreground">
+                <span className="w-24 shrink-0">{t('ribbon.commands.roofFamilyType.paramSoffitMaterial')}</span>
+                <Select
+                  value={draft.soffitMaterial ?? SELECT_CLEAR_VALUE}
+                  onValueChange={(v) =>
+                    setDraft((d) =>
+                      d ? { ...d, soffitMaterial: v === SELECT_CLEAR_VALUE ? undefined : v } : d,
+                    )
+                  }
+                >
+                  <SelectTrigger size="sm" aria-label={t('ribbon.commands.roofFamilyType.paramSoffitMaterial')}>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent className="w-auto min-w-[9rem]">
+                    <SelectItem value={SELECT_CLEAR_VALUE}>
+                      {t('ribbon.commands.roofFamilyType.materialNone')}
+                    </SelectItem>
+                    {CONSTRUCTION_MATERIAL_IDS.map((id) => (
+                      <SelectItem key={id} value={id} className="whitespace-nowrap">
+                        <span className="flex items-center gap-2">
+                          <MaterialSwatch materialId={id} />
+                          <span>{t(constructionMaterialLabelKey(id))}</span>
+                        </span>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </label>
+
+              <label className="flex items-center gap-2 text-xs text-foreground">
+                <span className="w-24 shrink-0">{t('ribbon.commands.roofFamilyType.paramFasciaHeight')}</span>
+                <input
+                  type="number"
+                  min={1}
+                  step={1}
+                  value={draft.fasciaHeightMm ?? DEFAULT_FASCIA_HEIGHT_MM}
+                  onChange={(e) =>
+                    setDraft((d) =>
+                      d ? { ...d, fasciaHeightMm: parseFloat(e.target.value) || undefined } : d,
+                    )
+                  }
+                  aria-label={t('ribbon.commands.roofFamilyType.paramFasciaHeight')}
+                  className="w-24 rounded border border-border bg-background px-2 py-0.5 text-xs text-foreground"
+                />
+                <span className="text-muted-foreground">
+                  {t('ribbon.commands.roofFamilyType.thicknessUnit')}
+                </span>
+              </label>
+
+              <label className="flex items-center gap-2 text-xs text-foreground">
+                <span className="w-24 shrink-0">{t('ribbon.commands.roofFamilyType.paramSoffitMode')}</span>
+                <Select
+                  value={draft.soffitMode ?? DEFAULT_SOFFIT_MODE}
+                  onValueChange={(v) =>
+                    setDraft((d) => (d ? { ...d, soffitMode: v as RoofSoffitMode } : d))
+                  }
+                >
+                  <SelectTrigger size="sm" aria-label={t('ribbon.commands.roofFamilyType.paramSoffitMode')}>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent className="w-auto min-w-[9rem]">
+                    <SelectItem value="horizontal">
+                      {t('ribbon.commands.roofFamilyType.soffitModeHorizontal')}
+                    </SelectItem>
+                    <SelectItem value="sloped">
+                      {t('ribbon.commands.roofFamilyType.soffitModeSloped')}
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+              </label>
+            </fieldset>
           </div>
         </div>
 

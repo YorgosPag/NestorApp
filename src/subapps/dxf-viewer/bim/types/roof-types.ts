@@ -54,6 +54,14 @@ export type RoofKind = 'roof';
 export type RoofSlopeUnit = 'deg' | 'percent';
 
 /**
+ * Γεωμετρία της υποκάτω επένδυσης γείσου (soffit) — ADR-417 Φ2b:
+ *   - 'horizontal' — οριζόντια πλάκα από τη μετωπίδα μέχρι τον τοίχο (Revit default·
+ *     κρύβει εντελώς το κενό κάτω από την προεξοχή).
+ *   - 'sloped'     — παράλληλη στην κλίση της στέγης (εφαπτόμενη στο κάτω επίπεδο).
+ */
+export type RoofSoffitMode = 'horizontal' | 'sloped';
+
+/**
  * Παραγόμενη ταξινόμηση μορφής στέγης (Revit / `IfcRoofTypeEnum`). Φ1 παράγει
  * flat / mono-pitch / gable· hip + complex είναι Φ2 (straight-skeleton) — η
  * μηχανή τα γυρίζει graceful flat fallback μέχρι τότε.
@@ -108,6 +116,19 @@ export interface RoofParams {
   readonly dna?: SlabDna;
   /** Material library ID (όταν δεν υπάρχει dna). */
   readonly material?: string;
+  // ─── Γείσο (eave detailing, ADR-417 Φ2b) — type-governed appearance ──────────
+  // Type-level πεδία (ζουν στο RoofType / `RoofTypeParams`, ρέουν εδώ μέσω
+  // `resolveEffectiveParams` «type wins»). Διαβάζονται από τον 3D converter +
+  // 2D renderer ώστε να κρύβεται η κομμένη στοίβα στρώσεων περιμετρικά. Η οριζόντια
+  // **προεξοχή** (overhang) ζει per-edge στο `edges[i].overhangMm` (instance-level).
+  /** Material library ID της μετωπίδας (fascia board). Default `mat-wood`. */
+  readonly fasciaMaterial?: string;
+  /** Material library ID της υποκάτω επένδυσης (soffit). Default `mat-wood`. */
+  readonly soffitMaterial?: string;
+  /** mm. Ύψος της κατακόρυφης μετωπίδας. Default `DEFAULT_FASCIA_HEIGHT_MM`. */
+  readonly fasciaHeightMm?: number;
+  /** Γεωμετρία soffit (οριζόντιο/κεκλιμένο). Default `DEFAULT_SOFFIT_MODE`. */
+  readonly soffitMode?: RoofSoffitMode;
   /**
    * DXF canvas coordinate unit. Πάντα αποθηκευμένο ώστε η μηχανή να μετατρέπει
    * canvas-unit² → m² για BOQ. Default 'mm' (legacy docs).
@@ -213,3 +234,17 @@ export const DEFAULT_ROOF_SLOPE_UNIT: RoofSlopeUnit = 'deg';
 
 /** Ελάχιστο πάχος στέγης (mm) — μονολιθικό fallback χωρίς dna. */
 export const DEFAULT_ROOF_THICKNESS_MM = 200;
+
+// ─── Γείσο (eave detailing, ADR-417 Φ2b) defaults ────────────────────────────
+
+/** Default οριζόντια προεξοχή γείσου (mm) — τυπική ελληνική κεραμοσκεπή ~40cm. */
+export const DEFAULT_EAVE_OVERHANG_MM = 400;
+
+/** Default ύψος μετωπίδας (mm) — ορατή σανίδα fascia. */
+export const DEFAULT_FASCIA_HEIGHT_MM = 200;
+
+/** Default γεωμετρία soffit. */
+export const DEFAULT_SOFFIT_MODE: RoofSoffitMode = 'horizontal';
+
+/** Default material ID μετωπίδας/soffit (ξύλινο γείσο). */
+export const DEFAULT_EAVE_MATERIAL_ID = 'mat-wood';

@@ -33,6 +33,7 @@ import type {
   RoofSlopeUnit,
 } from '../types/roof-types';
 import {
+  DEFAULT_EAVE_OVERHANG_MM,
   DEFAULT_ROOF_SLOPE_DEG,
   MIN_ROOF_POLYGON_VERTICES,
 } from '../types/roof-types';
@@ -187,8 +188,12 @@ export function applyRoofShapePreset(
   const edges = buildDefaultRoofEdges(outline);
   if (shape === 'flat' || n < MIN_ROOF_POLYGON_VERTICES) return edges;
 
+  // Πάσα κεκλιμένη μορφή παίρνει εξ ορισμού προεξοχή γείσου σε ΟΛΕΣ τις περιμετρικές
+  // ακμές (eaves + αετώματα) — έτσι το γείσο φαίνεται αμέσως (ADR-417 Φ2b). Η flat
+  // (δώμα) μένει 0 (παραπέτο). Per-edge editable αργότερα από το contextual tab.
+  const o = DEFAULT_EAVE_OVERHANG_MM;
   if (shape === 'hip') {
-    return verts.map(() => ({ definesSlope: true, slope, overhangMm: 0 }));
+    return verts.map(() => ({ definesSlope: true, slope, overhangMm: o }));
   }
 
   // Μακρύτερη ακμή = κύριο γείσο.
@@ -198,8 +203,8 @@ export function applyRoofShapePreset(
     const len = edgeLength(verts, i);
     if (len > maxLen) { maxLen = len; mainIdx = i; }
   }
-  edges[mainIdx] = { definesSlope: true, slope, overhangMm: 0 };
-  if (shape === 'mono-pitch') return edges;
+  edges[mainIdx] = { definesSlope: true, slope, overhangMm: o };
+  if (shape === 'mono-pitch') return edges.map((e) => ({ ...e, overhangMm: o }));
 
   // gable → η πιο αντικριστή ακμή (inward normals anti-parallel). Το dot είναι
   // winding-invariant (sign² = 1) — περνάμε το sign για συνέπεια με τη μηχανή.
@@ -214,9 +219,9 @@ export function applyRoofShapePreset(
     if (dot < minDot) { minDot = dot; oppIdx = i; }
   }
   if (oppIdx >= 0 && minDot <= GABLE_OPPOSITE_DOT) {
-    edges[oppIdx] = { definesSlope: true, slope, overhangMm: 0 };
+    edges[oppIdx] = { definesSlope: true, slope, overhangMm: o };
   }
-  return edges;
+  return edges.map((e) => ({ ...e, overhangMm: o }));
 }
 
 // ─── Validation ──────────────────────────────────────────────────────────────

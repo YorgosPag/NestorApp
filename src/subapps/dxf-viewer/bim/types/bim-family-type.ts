@@ -41,6 +41,9 @@ import type { WallCategory } from './wall-types';
 import type { WallDna } from './wall-dna-types';
 import type { SlabKind } from './slab-types';
 import type { SlabDna } from './slab-dna-types';
+// Type-only import (no runtime cycle) — RoofSoffitMode is defined in roof-types,
+// which in turn imports RoofTypeParams from here. TS resolves type-only cycles.
+import type { RoofSoffitMode } from './roof-types';
 import type { StairTopBinding, StairBaseBinding } from './bim-binding';
 import type {
   StairNosingSide,
@@ -130,6 +133,19 @@ export interface RoofTypeParams {
   readonly dna?: SlabDna;
   /** Material key for roof-level hatch. Ignored when `dna` is present. */
   readonly material?: string;
+  // ─── Eave detailing (ADR-417 Φ2b — Revit «Type»-level fascia/soffit) ─────────
+  // The horizontal overhang is per-instance (per footprint edge), but the fascia
+  // board + soffit lining materials/dimensions are a Roof Type appearance, exactly
+  // like the layered build-up. They flow onto the placed `RoofParams` via
+  // `resolveEffectiveParams` («type always wins»).
+  /** Material key for the fascia board (μετωπίδα). Default `mat-wood`. */
+  readonly fasciaMaterial?: string;
+  /** Material key for the soffit lining (υποκάτω επένδυση). Default `mat-wood`. */
+  readonly soffitMaterial?: string;
+  /** mm. Visible height of the vertical fascia board. Default 200. */
+  readonly fasciaHeightMm?: number;
+  /** Soffit geometry — 'horizontal' (Revit default) | 'sloped'. */
+  readonly soffitMode?: RoofSoffitMode;
 }
 
 /**

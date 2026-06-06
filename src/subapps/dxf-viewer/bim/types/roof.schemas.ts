@@ -59,6 +59,12 @@ const RoofParamsBaseSchema = z
     thickness: z.number().positive(),
     dna: SlabDnaSchema.optional(),
     material: z.string().min(1).optional(),
+    // ─── Eave detailing (ADR-417 Φ2b) — type-governed appearance (flows via
+    // resolveEffectiveParams «type wins»). Overhang lives per-edge in `edges`. ──
+    fasciaMaterial: z.string().min(1).optional(),
+    soffitMaterial: z.string().min(1).optional(),
+    fasciaHeightMm: z.number().positive().optional(),
+    soffitMode: z.enum(['horizontal', 'sloped']).optional(),
     sceneUnits: z.string().optional(),
     storeyId: z.string().min(1).optional(),
     offsetFromStorey: z.number().finite().optional(),
