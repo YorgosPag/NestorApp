@@ -48,9 +48,10 @@ export interface PbrTextureSetDef {
  * Every set ships albedo + normal + roughness + ao maps.
  */
 export const TEXTURE_SET_DEFS: Record<PbrTextureSlug, PbrTextureSetDef> = {
-  concrete: { slug: 'concrete', tileSizeM: 2.0, hasNormal: true, hasRoughness: true, hasAo: true, license: 'CC0', attribution: 'Poly Haven' },
-  brick:    { slug: 'brick',    tileSizeM: 1.0, hasNormal: true, hasRoughness: true, hasAo: true, license: 'CC0', attribution: 'Poly Haven' },
-  plaster:  { slug: 'plaster',  tileSizeM: 2.0, hasNormal: true, hasRoughness: true, hasAo: true, license: 'CC0', attribution: 'Poly Haven' },
+  // ao.jpg not downloaded locally (storage mode has them); hasAo: false avoids 404s in public mode.
+  concrete: { slug: 'concrete', tileSizeM: 2.0, hasNormal: true, hasRoughness: true, hasAo: false, license: 'CC0', attribution: 'Poly Haven' },
+  brick:    { slug: 'brick',    tileSizeM: 1.0, hasNormal: true, hasRoughness: true, hasAo: false, license: 'CC0', attribution: 'Poly Haven' },
+  plaster:  { slug: 'plaster',  tileSizeM: 2.0, hasNormal: true, hasRoughness: true, hasAo: false, license: 'CC0', attribution: 'Poly Haven' },
   wood:     { slug: 'wood',     tileSizeM: 1.5, hasNormal: true, hasRoughness: true, hasAo: true, license: 'CC0', attribution: 'Poly Haven' },
   tile:     { slug: 'tile',     tileSizeM: 0.6, hasNormal: true, hasRoughness: true, hasAo: true, license: 'CC0', attribution: 'Poly Haven' },
   stone:    { slug: 'stone',    tileSizeM: 1.5, hasNormal: true, hasRoughness: true, hasAo: true, license: 'CC0', attribution: 'Poly Haven' },

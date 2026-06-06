@@ -305,6 +305,10 @@ export function useSmartDelete({
       const roofIdsInBatch = idsToDelete.filter(
         (id) => adapter.getEntity(id)?.type === 'roof',
       );
+      // ADR-419 — collect floor-finish IDs so we can trigger Firestore deleteDoc.
+      const floorFinishIdsInBatch = idsToDelete.filter(
+        (id) => adapter.getEntity(id)?.type === 'floor-finish',
+      );
 
       const deleteCommand: ICommand = idsToDelete.length === 1
         ? new DeleteEntityCommand(idsToDelete[0], adapter)
@@ -388,6 +392,10 @@ export function useSmartDelete({
       // ADR-417 — trigger Firestore deleteDoc + prevent subscription re-add for each roof.
       for (const roofId of roofIdsInBatch) {
         eventBus.emit('bim:roof-delete-requested', { roofId });
+      }
+      // ADR-419 — trigger Firestore deleteDoc + prevent subscription re-add for each floor finish.
+      for (const floorFinishId of floorFinishIdsInBatch) {
+        eventBus.emit('bim:floor-finish-delete-requested', { id: floorFinishId });
       }
 
       return true;

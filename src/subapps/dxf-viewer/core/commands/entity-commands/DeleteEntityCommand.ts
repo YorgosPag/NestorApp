@@ -32,12 +32,16 @@ const BIM_ENTITY_TYPES = new Set<string>([
   'mep-radiator',
   // ADR-408 Εύρος Β #2 — heating boiler (wall-mounted heat source).
   'mep-boiler',
+  // ADR-417 — parametric pitched roof.
+  'roof',
+  // ADR-419 — floor-finish covering polygon.
+  'floor-finish',
 ]);
 
 type BimEntityType =
   | 'wall' | 'opening' | 'slab' | 'slab-opening' | 'column' | 'beam' | 'stair'
   | 'mep-fixture' | 'electrical-panel' | 'railing' | 'mep-segment' | 'mep-manifold' | 'mep-radiator'
-  | 'mep-boiler';
+  | 'mep-boiler' | 'roof' | 'floor-finish';
 
 function emitBimRestoreIfApplicable(snapshot: SceneEntity): void {
   const type = (snapshot as { type?: string }).type;

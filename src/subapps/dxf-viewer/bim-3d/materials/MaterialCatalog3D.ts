@@ -69,11 +69,17 @@ function getFlatMaterial(key: string): THREE.MeshStandardMaterial {
 function applyTextureSet(def: PbrMaterialDef, set: LoadedTextureSet): THREE.MeshStandardMaterial {
   const mat = buildMat(def);
   mat.map = set.map;
+  // PBR contract: when an albedo map is present the base color must be white so
+  // the texture shows its natural colour (no double-tinting). The def.color is the
+  // flat-mode colour; with a texture it would multiply and incorrectly darken.
+  mat.color.set(0xffffff);
   if (set.normalMap) mat.normalMap = set.normalMap;
   if (set.roughnessMap) mat.roughnessMap = set.roughnessMap;
   // aoMap needs uv2 — the geometry layer ensures one; three ignores it gracefully
   // when absent (ADR-413 contract).
-  if (set.aoMap) mat.aoMap = set.aoMap;
+  // aoMapIntensity < 1 because our gradient env has no bounce light; full
+  // intensity (1.0) creates pitch-black crevices without a real HDRI fill.
+  if (set.aoMap) { mat.aoMap = set.aoMap; mat.aoMapIntensity = 0.5; }
   mat.needsUpdate = true;
   return mat;
 }
