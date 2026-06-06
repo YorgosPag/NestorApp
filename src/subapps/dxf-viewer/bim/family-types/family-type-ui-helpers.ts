@@ -31,6 +31,7 @@ import {
   resolveEffectiveSlabParams,
   resolveEffectiveWallParams,
 } from './resolve-effective-params';
+import { AUTO_WALL_TYPE_NAME_KEY } from './auto-wall-type';
 import type { WallTypeAssignment } from '../../core/commands/entity-commands/AssignWallTypeCommand';
 import type { SlabTypeAssignment } from '../../core/commands/entity-commands/AssignSlabTypeCommand';
 import type { RoofTypeAssignment } from '../../core/commands/entity-commands/AssignRoofTypeCommand';
@@ -101,17 +102,19 @@ export function isAutoType(type: BimFamilyType): boolean {
 }
 
 /**
- * Display name for a type. Built-in + auto `name` is a stable i18n key (built-in
- * e.g. `'builtin.wall.exterior'`; auto `'auto.wall.generic'`), so it is
- * translated — auto names additionally interpolate the `thickness` («Generic
- * {thickness}mm»). User types carry a literal user-supplied name (verbatim).
+ * Display name for a type. Built-in `name` is a stable i18n key
+ * (e.g. `'builtin.wall.exterior'`) → translated. An auto type's name is the
+ * stable key `'auto.wall.generic'` UNTIL the user renames it: while it is the
+ * default key it is translated + interpolated with the `thickness` («Generic
+ * {thickness}mm»); once renamed it carries a literal name (Revit «rename the
+ * type, it stays the same type») → returned verbatim, exactly like a user type.
  */
 export function resolveTypeDisplayName(
   type: BimFamilyType,
   t: (key: string, opts?: Record<string, unknown>) => string,
 ): string {
   if (isBuiltInType(type)) return t(`${I18N_PREFIX}.${type.name}`);
-  if (isAutoType(type)) {
+  if (isAutoType(type) && type.name === AUTO_WALL_TYPE_NAME_KEY) {
     const thickness =
       type.category === 'wall'
         ? Math.round((type.typeParams as WallTypeParams).thickness)

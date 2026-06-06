@@ -1,6 +1,6 @@
 # ADR-412 — BIM Family Types (Revit-grade Type/Instance system)
 
-**Status:** 🟢 v0.9 — Φ1+Φ2+Φ3+Φ4+Φ5 + wall auto-typing + **auto-type-on-create (Revit «Generic Wall»)**. Every new wall (incl. region/manual arbitrary thickness) is born with a shared, persisted, directly-editable type (same thickness ⇒ same type). Φ6 (stair migration) remains. Pending commit + browser verify (Giorgio commits).
+**Status:** 🟢 v0.9 — Φ1+Φ2+Φ3+Φ4+Φ5 + wall auto-typing + **auto-type-on-create (Revit «Generic Wall»)** ✅ browser-verified 2026-06-06. Every new wall (incl. region/manual arbitrary thickness) is born with a shared, persisted, directly-editable type (same thickness ⇒ same type). Φ6 (stair migration) remains. Pending commit (Giorgio commits).
 **Date:** 2026-06-06
 **Author:** Claude (Opus 4.8)
 **Supersedes numbering note:** This is the "BIM Family Types" successor that ADR-377 §Related
@@ -301,7 +301,13 @@ New `.ssot-registry.json` Tier 3 module `bim-family-types`:
   `ribbon.commands.bimFamilyType.auto.wall.generic` (el+en, single-brace ICU per CHECK 3.9). **Tests:** NEW
   `auto-wall-type.test.ts` → family-types **118 PASS**. `buildWallEntity` unchanged (built-in path + its tests
   intact). Not in ADR-040 high-freq path. **Known limitation:** a wall drawn before the initial `listTypes` fetch
-  lands may mint a benign duplicate auto-type (non-destructive). **Next: 🔴 browser verify + commit.** | Claude (Opus 4.8)
+  lands may mint a benign duplicate auto-type (non-destructive). **✅ Core browser-verified 2026-06-06 (Giorgio «όλα λειτουργούν»).** **+Direct rename of
+generic types (2026-06-06, Giorgio «like Revit»):** auto types are now inline-renamable in the properties widget;
+the first rename turns the i18n-key `name` into the literal the user typed while KEEPING the signature grouping
+(`findAutoWallType` matches by `origin`+`category`+`thickness`, name-independent → all same-thickness walls stay on
+the renamed type — Revit «rename the type, it stays the same type»). `resolveTypeDisplayName` returns the literal
+once renamed, the interpolated «Generic {thickness}mm» while still the default key. Reuses `renameType`
+(service.updateType + optimistic). +2 tests → **120 PASS**. **Next: 🔴 verify rename + commit.** | Claude (Opus 4.8)
 - **v0.8 (2026-06-04)** — **Wall auto-typing — closes the ADR-414 gap «every wall shows the same layers»**
   (Giorgio-approved Plan Mode, recognition-first). **Root cause:** walls were created + persisted WITHOUT a
   `typeId`, so the «Edit Wall Type» panel (ADR-414) edited a type no instance referenced. The whole «type always

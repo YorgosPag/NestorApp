@@ -93,6 +93,11 @@ describe('findAutoWallType', () => {
     expect(findAutoWallType(types, 'partition', 187)).toBeNull();
     expect(findAutoWallType(types, 'exterior', 300)).toBeNull();
   });
+
+  it('still matches a RENAMED auto type by signature (rename keeps grouping)', () => {
+    const renamed: BimFamilyType<'wall'> = { ...auto, name: 'Τοίχος μπάνιου 187' };
+    expect(findAutoWallType([builtIn, renamed], 'exterior', 187)?.id).toBe('auto-1');
+  });
 });
 
 describe('isAutoType + resolveTypeDisplayName (auto)', () => {
@@ -102,11 +107,17 @@ describe('isAutoType + resolveTypeDisplayName (auto)', () => {
     expect(isAutoType(auto)).toBe(true);
   });
 
-  it('translates the auto name with the interpolated thickness', () => {
+  it('translates the auto name with the interpolated thickness (default key)', () => {
     const t = (key: string, opts?: Record<string, unknown>): string =>
       opts ? `${key}#${JSON.stringify(opts)}` : key;
     expect(resolveTypeDisplayName(auto, t)).toBe(
       `ribbon.commands.bimFamilyType.${AUTO_WALL_TYPE_NAME_KEY}#{"thickness":187}`,
     );
+  });
+
+  it('returns the literal name once a renamed auto type carries a custom name', () => {
+    const renamed: BimFamilyType<'wall'> = { ...auto, name: 'Τοίχος μπάνιου' };
+    const t = (key: string): string => `TRANSLATED:${key}`;
+    expect(resolveTypeDisplayName(renamed, t)).toBe('Τοίχος μπάνιου');
   });
 });
