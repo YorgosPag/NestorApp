@@ -15,7 +15,8 @@
 import * as THREE from 'three';
 import type { Bim3DEntities } from '../stores/Bim3DEntitiesStore';
 import type { FloorStackEntry } from './multi-floor-3d-source';
-import { wallToMesh, columnToMesh, beamToMesh, slabToMesh, fixtureToMesh, panelToMesh, manifoldToMesh, radiatorToMesh, boilerToMesh } from '../converters/BimToThreeConverter';
+import { beamToMesh, slabToMesh, fixtureToMesh, panelToMesh, manifoldToMesh, radiatorToMesh, boilerToMesh } from '../converters/BimToThreeConverter';
+import { syncWalls, syncColumns } from './bim-scene-attach-syncs';
 import { stairToMeshes } from '../converters/StairToThreeConverter';
 import { railingToMesh } from '../converters/railing-to-three';
 import { roofToMesh } from '../converters/roof-to-three';
@@ -23,19 +24,11 @@ import { furnitureToObject3D } from '../converters/furniture-to-three';
 import { mepFixtureToObject3D } from '../converters/mep-fixture-to-mesh';
 import { syncCircuitWires } from './sync-circuit-wires';
 import { syncMepSegments, syncFittings } from './sync-mep-elements';
-import { resolveWallTopProfile, resolveWallNominalTopZmm } from '../../bim/geometry/wall-top-profile';
-import { resolveWallBaseProfile } from '../../bim/geometry/wall-base-profile';
-import { makeWallTopContext, makeWallBaseContext, buildWallHostInputs, type HostFootprintInput } from '../../bim/geometry/wall-host-plan-builder';
-import { wallTopFaceCrossingBreakpoints, type WallTopClipContext } from '../converters/wall-top-clip';
+import { buildWallHostInputs, type HostFootprintInput } from '../../bim/geometry/wall-host-plan-builder';
 import { makeStairHostResolver } from '../../bim/geometry/stair-vertical-profile';
 import { resolveEffectiveStairParams } from '../../bim/geometry/stairs/stair-effective-params';
 import { computeStairGeometry } from '../../bim/geometry/stairs/StairGeometryService';
 import type { StairEntity } from '../../bim/types/stair-types';
-import {
-  resolveColumnTopProfile,
-  resolveColumnBaseProfile,
-  makeColumnHostResolver,
-} from '../../bim/geometry/column-vertical-profile';
 import { addEnvelopeToScene } from './bim-envelope-scene-builder';
 import type { SyncContext } from './bim-scene-context';
 import { resolveEntityBuilding } from '../../bim/utils/bim-floor-utils';
@@ -48,11 +41,11 @@ import { useDrawingScaleStore } from '../../state/drawing-scale-store';
 import { useMepSystemStore } from '../../bim/mep-systems/mep-system-store';
 import { buildEntitySystemColorIntIndex } from '../../bim/mep-systems/mep-system-color';
 import { getLayer } from '../../stores/LayerStore';
-import { filterHostedOpenings, filterHostedSlabOpenings } from './bim-scene-hosted-opening-filters';
+import { filterHostedSlabOpenings } from './bim-scene-hosted-opening-filters';
 import type { BimCategory } from '../../config/bim-object-styles';
 import type { SceneLayer } from '../../types/entities';
 
-interface EntityResolution {
+export interface EntityResolution {
   readonly layer: SceneLayer | null;
   readonly buildingId: string;
   readonly buildingMode: BuildingVisMode | undefined;
@@ -145,8 +138,8 @@ export class BimSceneLayer {
 
   /** Build the meshes for one floor's entities into the shared group. */
   private syncFloorEntities(entities: Bim3DEntities, ctx: SyncContext): void {
-    this.syncWalls(entities, ctx);
-    this.syncColumns(entities, ctx);
+    syncWalls(this.group, entities, ctx, (e, c, cx) => this.resolveEntity(e, c, cx));
+    syncColumns(this.group, entities, ctx, (e, c, cx) => this.resolveEntity(e, c, cx));
     this.syncBeams(entities, ctx);
     this.syncSlabs(entities, ctx);
     this.syncStairs(entities, ctx);
@@ -205,97 +198,6 @@ export class BimSceneLayer {
       return null;
     }
     return { layer, buildingId, buildingMode, baseElevation: resolved?.baseElevation ?? 0 };
-  }
-
-  private syncWalls(entities: Bim3DEntities, ctx: SyncContext): void {
-    // ADR-401 Phase B2/(γ) — host inputs (δοκάρια + πλάκες) για τη μεταβλητή κορυφή
-    // (top-attach) ΚΑΙ τον μεταβλητό πάτο (base-attach) των `attached` τοίχων.
-    // Footprints + wall axis στο ΙΔΙΟ plan space (`*.params`, mirror του
-    // `section-scene-sync`)· χτίζονται μόνο όταν υπάρχει τουλάχιστον ένας attached
-    // τοίχος (κορυφή Ή βάση· κοινό case = κανένας → μηδέν κόστος).
-    const hasAttached = entities.walls.some(
-      (w) => w.params?.topBinding === 'attached' || w.params?.baseBinding === 'attached',
-    );
-    const hostInputs = hasAttached
-      ? buildWallHostInputs(entities.beams, entities.slabs)
-      : [];
-
-    for (const wall of entities.walls) {
-      const r = this.resolveEntity(wall, 'wall', ctx);
-      if (!r) continue;
-      const openingsForWall = filterHostedOpenings(
-        entities.openings, 'wallId', wall.id, r.buildingMode, ctx,
-      );
-      const start = { x: wall.params.start.x, y: wall.params.start.y };
-      const end = { x: wall.params.end.x, y: wall.params.end.y };
-      const topBase = { floorElevationMm: ctx.floorElevationMm };
-      const profile = wall.params?.topBinding === 'attached'
-        ? resolveWallTopProfile(wall.params, makeWallTopContext(start, end, hostInputs, topBase))
-        : undefined;
-      // ADR-401 γωνιακή διασταύρωση — footprint clip: για **straight** attached τοίχο,
-      // ο 3D builder κόβει το αποτύπωμα κάθε κομματιού με τα host footprints σε επίπεδες
-      // περιοχές (κάτω-παρειά host / nominal) με κατακόρυφο σκαλοπάτι στην αληθινή ακμή
-      // του host → μηδέν τριγωνικά κενά. Curved/polyline → undefined (το extrude path
-      // δεν υποστηρίζει διαγώνια κορυφή — documented limitation, axis profile όπως πριν).
-      // ADR-401 face crossings: σπάμε τον τοίχο εκεί που τον τέμνουν οι ΠΑΡΕΙΕΣ
-      // (όχι ο άξονας) ώστε τα ακριανά κομμάτια να μένουν καθαρά ορθογώνια και τα
-      // transition κομμάτια καθαρά τρίγωνα μετά το clip (δες wall-top-clip §face).
-      const attachHosts = (wall.params?.topBinding === 'attached' && wall.kind === 'straight')
-        ? hostInputs.filter((h) => wall.params.attachTopToIds?.includes(h.hostId))
-        : null;
-      const topClip: WallTopClipContext | undefined = attachHosts
-        ? {
-            hosts: attachHosts,
-            nominalTopMm: resolveWallNominalTopZmm(wall.params, topBase),
-            breakpoints: wallTopFaceCrossingBreakpoints(wall.geometry, attachHosts),
-          }
-        : undefined;
-      // ADR-401 (γ) — base-attach: ο πάτος ακολουθεί την άνω-παρειά host(s).
-      const baseProfile = wall.params?.baseBinding === 'attached'
-        ? resolveWallBaseProfile(
-            wall.params,
-            makeWallBaseContext(start, end, hostInputs, { floorElevationMm: ctx.floorElevationMm }),
-          )
-        : undefined;
-      const mesh = wallToMesh(
-        wall, openingsForWall, ctx.floorElevationMm, ctx.activeLevelId, r.baseElevation, profile, baseProfile, topClip,
-      );
-      if (mesh) { mesh.userData['buildingId'] = r.buildingId; this.group.add(mesh); }
-    }
-  }
-
-  private syncColumns(entities: Bim3DEntities, ctx: SyncContext): void {
-    // ADR-401 Phase F.2 — host inputs (δοκάρια + πλάκες) για τη μεταβλητή/κεκλιμένη
-    // κορυφή (top-attach) ΚΑΙ βάση (base-attach) των `attached` κολωνών· χτίζονται
-    // μόνο όταν υπάρχει τουλάχιστον μία attached κολώνα (κοινό case = καμία → μηδέν
-    // κόστος). Mirror του `syncWalls`. Footprints στο ίδιο plan space.
-    const hasAttached = entities.columns.some(
-      (c) => c.params?.topBinding === 'attached' || c.params?.baseBinding === 'attached',
-    );
-    const resolveHostInput = hasAttached
-      ? makeColumnHostResolver(buildWallHostInputs(entities.beams, entities.slabs))
-      : undefined;
-
-    for (const column of entities.columns) {
-      const r = this.resolveEntity(column, 'column', ctx);
-      if (!r) continue;
-      // Profiles μόνο για attached κολώνες με geometry· αλλιώς undefined → fast path
-      // (byte-for-byte παλιά συμπεριφορά, μηδέν geometry access για μη-attached).
-      const topAttached = column.params?.topBinding === 'attached';
-      const baseAttached = column.params?.baseBinding === 'attached';
-      let topProfile, baseProfile;
-      const footVerts = column.geometry?.footprint?.vertices;
-      if ((topAttached || baseAttached) && footVerts && footVerts.length >= 3) {
-        const footprint = footVerts.map((v) => ({ x: v.x, y: v.y }));
-        const colCtx = { floorElevationMm: ctx.floorElevationMm, resolveHostInput };
-        topProfile = topAttached ? resolveColumnTopProfile(column.params, footprint, colCtx) : undefined;
-        baseProfile = baseAttached ? resolveColumnBaseProfile(column.params, footprint, colCtx) : undefined;
-      }
-      const mesh = columnToMesh(
-        column, ctx.floorElevationMm, ctx.activeLevelId, r.baseElevation, topProfile, baseProfile,
-      );
-      if (mesh) { mesh.userData['buildingId'] = r.buildingId; this.group.add(mesh); }
-    }
   }
 
   /** ADR-406 — point-based MEP fixtures (light fixtures first). */

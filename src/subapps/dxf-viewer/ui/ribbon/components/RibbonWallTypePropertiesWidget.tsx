@@ -19,6 +19,7 @@
  */
 
 import React, { useCallback, useEffect, useState } from 'react';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import {
   Select,
   SelectContent,
@@ -28,7 +29,7 @@ import {
 } from '@/components/ui/select';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useWallFamilyTypeController } from '../hooks/useWallFamilyTypeController';
-import { isAutoType, isBuiltInType, resolveTypeDisplayName } from '../../../bim/family-types/family-type-ui-helpers';
+import { isBuiltInType, resolveTypeDisplayName } from '../../../bim/family-types/family-type-ui-helpers';
 import { openEditWallType } from '../../../bim/family-types/edit-wall-type-store';
 import type { WallCategory } from '../../../bim/types/wall-types';
 
@@ -59,12 +60,15 @@ export function RibbonWallTypePropertiesWidget(): React.JSX.Element | null {
   useEffect(() => setDraft(typeName), [typeName]);
 
   const commitRename = useCallback(() => {
-    // Built-in + auto names are stable i18n keys → not inline-renamable.
-    if (!currentType || isBuiltInType(currentType) || isAutoType(currentType)) return;
+    // Built-ins are read-only; auto + user types are renamable (Revit «rename the
+    // type, it stays the same type» — auto keeps its signature grouping). Compare
+    // to the DISPLAYED name: an auto type's stored name is the i18n key, not the
+    // label, so the first rename turns the key into the literal the user typed.
+    if (!currentType || isBuiltInType(currentType)) return;
     const next = draft.trim();
-    if (!next || next === currentType.name) return;
+    if (!next || next === typeName) return;
     void ctrl.renameType(currentType.id, next);
-  }, [ctrl, currentType, draft]);
+  }, [ctrl, currentType, draft, typeName]);
 
   const onNameKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -103,10 +107,9 @@ export function RibbonWallTypePropertiesWidget(): React.JSX.Element | null {
 
   if (!wall || !currentType) return null;
 
+  // Built-ins are read-only; auto + user types are editable (rename / Edit Type /
+  // delete). An auto type renamed once becomes a literal-named, still-grouped type.
   const editable = !isBuiltInType(currentType) && canWrite;
-  // Auto («Generic») types are editable (delete/Edit Type) but their name is a
-  // stable i18n key, so the inline rename input is suppressed for them.
-  const nameEditable = editable && !isAutoType(currentType);
   const categoryOverridden = overriddenKeys.includes('category');
   const materialLabel = wall.params.material
     ? t(`ribbon.commands.wallEditor.material.${MATERIAL_KEY[wall.params.material] ?? 'rc'}`)
@@ -118,15 +121,20 @@ export function RibbonWallTypePropertiesWidget(): React.JSX.Element | null {
         <span className="dxf-ribbon-combobox-label">
           {t('ribbon.commands.bimFamilyType.properties')}
         </span>
-        {nameEditable ? (
-          <input
-            className="text-xs px-1 py-0.5 rounded border border-black/20 bg-transparent"
-            value={draft}
-            onChange={(e) => setDraft(e.target.value)}
-            onBlur={commitRename}
-            onKeyDown={onNameKeyDown}
-            aria-label={t('ribbon.commands.bimFamilyType.rename')}
-          />
+        {editable ? (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <input
+                className="text-xs px-1.5 py-0.5 rounded border border-border bg-muted/40 text-foreground min-w-[7rem] focus:outline-none focus:ring-1 focus:ring-ring"
+                value={draft}
+                onChange={(e) => setDraft(e.target.value)}
+                onBlur={commitRename}
+                onKeyDown={onNameKeyDown}
+                aria-label={t('ribbon.commands.bimFamilyType.rename')}
+              />
+            </TooltipTrigger>
+            <TooltipContent>{t('ribbon.commands.bimFamilyType.renameTooltip')}</TooltipContent>
+          </Tooltip>
         ) : (
           <span className="dxf-ribbon-wall-length-value">
             {isBuiltInType(currentType)
