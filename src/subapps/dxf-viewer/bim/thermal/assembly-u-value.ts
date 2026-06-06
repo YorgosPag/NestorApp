@@ -47,6 +47,26 @@ const DEFAULT_SURFACE_RESISTANCES: SurfaceResistances = {
 };
 
 /**
+ * Κατεύθυνση ροής θερμότητας — καθορίζει τα ISO 6946 Rsi/Rse.
+ * ADR-396 P10 SSOT (surface resistances ανά δομικό στοιχείο).
+ */
+export type SurfaceFlowDirection = 'wall' | 'roof' | 'floor';
+
+/**
+ * ISO 6946 επιφανειακές αντιστάσεις ανά κατεύθυνση ροής (m²K/W).
+ *   - wall  (οριζόντια): Rsi=0.13, Rse=0.04
+ *   - roof  (ανιούσα):   Rsi=0.10, Rse=0.04
+ *   - floor (κατιούσα):  Rsi=0.17, Rse=0.17
+ */
+export const SURFACE_RESISTANCES_BY_FLOW: Readonly<
+  Record<SurfaceFlowDirection, SurfaceResistances>
+> = {
+  wall:  { rsi: 0.13, rse: 0.04 },
+  roof:  { rsi: 0.10, rse: 0.04 },
+  floor: { rsi: 0.17, rse: 0.17 },
+} as const;
+
+/**
  * Συνολική θερμική αντίσταση `R_total` (m²K/W) της διάταξης. Degenerate
  * στρώσεις (μη-πεπερασμένο/μη-θετικό πάχος ή λ) αγνοούνται — δεν συνεισφέρουν.
  */

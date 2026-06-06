@@ -39,7 +39,12 @@ import { getElementMaterial3D, getMaterial3D } from '../materials/MaterialCatalo
 import { setBoxWorldUvs } from './bim-uv-helpers';
 import { toWorld } from './roof-world-transform';
 import { buildRoundedRidgeCap, findAdjacentFaces } from './roof-ridge-cap';
-import { buildRoofEaveDetail } from '../../bim/geometry/roof-eave-detail';
+import {
+  buildRoofEaveDetail,
+  extendRidgeToOverhang,
+  roofOverhangOffsetLines,
+  type RoofOverhangOffsetLine,
+} from '../../bim/geometry/roof-eave-detail';
 import { buildEaveQuadGeometry } from './roof-eave-detail-mesh';
 
 /** ADR-417 — clay ridge/hip caps («κορφιάδες») use the roof-tile material. */
@@ -222,6 +227,8 @@ function addRidgeCaps(
   ridges: readonly RoofRidgeLine[],
   faces: readonly RoofFace[],
   ctx: RoofFaceMeshContext,
+  footprint: readonly Point3D[],
+  offLines: readonly RoofOverhangOffsetLine[],
 ): void {
   // Ο κορφιάς ακολουθεί το υλικό της κορυφαίας επιφάνειας της στέγης (Revit «η
   // εμφάνιση = η εξωτερική κάλυψη») — ίδιο pattern με την προεξοχή/γείσο· fallback
@@ -229,7 +236,12 @@ function addRidgeCaps(
   const capMaterialId = ctx.monoMaterialId ?? RIDGE_CAP_MATERIAL_ID;
   for (const line of ridges) {
     if (line.kind !== 'ridge' && line.kind !== 'hip') continue;
-    const cap = buildRoundedRidgeCap(line, findAdjacentFaces(line, faces), ctx.sceneToM, ctx.baseElevationM);
+    // findAdjacentFaces με την ΑΡΧΙΚΗ γραμμή (ταιριάζει στις κορυφές των faces)·
+    // μετά επεκτείνουμε τα eave άκρα ώστε ο cap να καλύπτει ΚΑΙ την προέκταση
+    // (τα άπειρα επίπεδα των νερών κρατούν τον cap «καθισμένο» στις κλίσεις).
+    const adj = findAdjacentFaces(line, faces);
+    const extLine = offLines.length > 0 ? extendRidgeToOverhang(line, footprint, offLines) : line;
+    const cap = buildRoundedRidgeCap(extLine, adj, ctx.sceneToM, ctx.baseElevationM);
     if (!cap) continue;
     const mesh = new THREE.Mesh(cap, getMaterial3D(capMaterialId));
     tagRoofMesh(mesh, ctx.roofId, capMaterialId, ctx.levelId);
@@ -298,9 +310,18 @@ export function roofToMesh(
     levelId,
   };
 
+  // Όριο προέκτασης γείσου ανά footprint edge → επεκτείνει τους κορφιάδες/hips
+  // ώστε να καλύπτουν ΚΑΙ την προέκταση (#4).
+  const footprint = roof.geometry.footprint.vertices;
+  const offLines = roofOverhangOffsetLines(
+    footprint,
+    roof.params.edges,
+    mmToSceneUnits(roof.params.sceneUnits ?? 'mm'),
+  );
+
   const group = new THREE.Group();
   for (const face of roof.geometry.faces) addFaceMeshes(group, face, ctx);
-  addRidgeCaps(group, roof.geometry.ridges, roof.geometry.faces, ctx); // κορφιάδες on ridge + hip lines
+  addRidgeCaps(group, roof.geometry.ridges, roof.geometry.faces, ctx, footprint, offLines); // κορφιάδες on ridge + hip lines (+ προέκταση)
   addEaveDetails(group, roof, ctx); // γείσο: overhang + fascia + soffit (όλες οι περιμετρικές ακμές)
 
   if (group.children.length === 0) return null;

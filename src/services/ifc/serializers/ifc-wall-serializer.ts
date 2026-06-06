@@ -18,12 +18,17 @@
 
 import type { WallEntity, WallCategory } from '@/subapps/dxf-viewer/bim/types/wall-types';
 import { isWallEntity } from '@/subapps/dxf-viewer/types/entities';
+import { computeWallTypeUValue } from '@/subapps/dxf-viewer/bim/thermal/wall-assembly-thermal';
+import { generateIfcGuid } from '@/services/enterprise-id-convenience';
 
 import {
   IfcGraph,
   enumValue,
   lbl,
+  real,
   ref,
+  bool,
+  typed,
 } from '../ifc-entity-graph';
 import { MM_TO_M } from '../ifc-units';
 import type { SpatialHierarchyOutput } from '../ifc-spatial-hierarchy';
@@ -37,6 +42,11 @@ import {
   buildFloorLookup,
   readFloorElevationM,
 } from './serializer-helpers';
+import {
+  appendPropertySingleValue,
+  appendPropertySet,
+  appendRelDefinesByProperties,
+} from './serializer-psets';
 
 // ─── Public entry point ─────────────────────────────────────────────────────
 
@@ -52,12 +62,14 @@ export function serializeWalls(
     const storeyID = spatial.storeyIDs.get(floorId);
     if (storeyID == null) continue;
     const storeyZ = readFloorElevationM(floors.byId.get(floorId));
+    const includePsets = params.includePsets ?? true;
     for (const entity of scene.entities) {
       if (!isWallEntity(entity)) continue;
       writeWall(graph, entity, {
         storeyID,
         storeyZ,
         contextID: spatial.contextID,
+        includePsets,
         ctx,
       });
     }
@@ -70,6 +82,7 @@ interface WallWriteContext {
   readonly storeyID: number;
   readonly storeyZ: number;
   readonly contextID: number;
+  readonly includePsets: boolean;
   readonly ctx: SerializerContext;
 }
 
@@ -110,6 +123,9 @@ function writeWall(graph: IfcGraph, wall: WallEntity, w: WallWriteContext): void
 
   w.ctx.wallIDs.set(wall.id, wallID);
   pushElementForStorey(w.ctx, w.storeyID, wallID);
+
+  appendWallMaterial(graph, wallID, wall, geom.thicknessM);
+  if (w.includePsets) appendWallCommonPset(graph, wallID, wall);
 }
 
 // ─── Geometry projection (mm → m) ───────────────────────────────────────────

@@ -7,7 +7,12 @@
  * όλο το πάχος της στοίβας, (5) horizontal vs sloped soffit, (6) flat δώμα.
  */
 
-import { buildRoofEaveDetail, type RoofEaveDetailInput } from '../roof-eave-detail';
+import {
+  buildRoofEaveDetail,
+  extendRidgeToOverhang,
+  roofOverhangOffsetLines,
+  type RoofEaveDetailInput,
+} from '../roof-eave-detail';
 import { mmToSceneUnits } from '../../../utils/scene-units';
 import type { Point3D } from '../../types/bim-base';
 import type { RoofEdgeSlope, RoofRidgeLine, RoofSoffitMode } from '../../types/roof-types';
@@ -183,6 +188,45 @@ describe('buildRoofEaveDetail — rake split στον κορφιά (δίρριχ
     expect(atRidge.z ?? 0).toBeGreaterThan(BASE); // κορφιάς πάνω από στάθμη γείσου
     expect(atEave.z ?? 0).toBeLessThan(BASE); // γείσο πέφτει κάτω
     expect(atRidge.z ?? 0).toBeGreaterThan(atEave.z ?? 0); // κορυφή > άκρο
+  });
+});
+
+describe('extendRidgeToOverhang — κορφιάδες πάνω στην προέκταση (#4)', () => {
+  const SQUARE: Point3D[] = [
+    { x: 0, y: 0, z: 0 },
+    { x: 4000, y: 0, z: 0 },
+    { x: 4000, y: 4000, z: 0 },
+    { x: 0, y: 4000, z: 0 },
+  ];
+  const HIP = [edge(true, 400), edge(true, 400), edge(true, 400), edge(true, 400)];
+  const APEX_Z = BASE + 1000; // κορυφή πυραμίδας πάνω από στάθμη γείσου
+
+  it('επεκτείνει το eave άκρο hip στη γωνία προέκτασης (το εσωτερικό/κορφιάς μένει)', () => {
+    const off = roofOverhangOffsetLines(SQUARE, HIP, S);
+    const hip: RoofRidgeLine = {
+      a: { x: 2000, y: 2000, z: APEX_Z }, // απέξ (εσωτερικό)
+      b: { x: 0, y: 0, z: BASE }, // γωνία γείσου (eave)
+      kind: 'hip',
+    };
+    const ext = extendRidgeToOverhang(hip, SQUARE, off);
+    expect(ext.a.x).toBeCloseTo(2000, 3); // απέξ αμετάβλητο
+    expect(ext.a.y).toBeCloseTo(2000, 3);
+    expect(ext.b.x).toBeCloseTo(-400, 1); // επεκτάθηκε στη mitered γωνία προέκτασης
+    expect(ext.b.y).toBeCloseTo(-400, 1);
+    expect(ext.b.z ?? 0).toBeLessThan(BASE); // κατεβαίνει κατά μήκος του hip
+  });
+
+  it('χωρίς προέκταση (overhang 0) → ίδια γραμμή', () => {
+    const noOh = SQUARE.map(() => edge(true, 0));
+    const off = roofOverhangOffsetLines(SQUARE, noOh, S);
+    const hip: RoofRidgeLine = {
+      a: { x: 2000, y: 2000, z: APEX_Z },
+      b: { x: 0, y: 0, z: BASE },
+      kind: 'hip',
+    };
+    const ext = extendRidgeToOverhang(hip, SQUARE, off);
+    expect(ext.b.x).toBeCloseTo(0, 6);
+    expect(ext.b.y).toBeCloseTo(0, 6);
   });
 });
 

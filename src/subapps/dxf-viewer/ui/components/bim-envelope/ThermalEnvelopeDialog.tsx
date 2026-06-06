@@ -64,6 +64,10 @@ import {
 } from '../../../bim/thermal/kenak-thermal-config';
 import { computeAssemblyUValue } from '../../../bim/thermal/assembly-u-value';
 import { getThermalConductivityLambda } from '../../../bim/walls/wall-material-catalog';
+import {
+  computeWallTypeUValueWithEnvelope,
+} from '../../../bim/thermal/wall-assembly-thermal';
+import type { WallDna } from '../../../bim/types/wall-dna-types';
 
 export interface ThermalEnvelopeDialogProps {
   readonly open: boolean;
@@ -74,6 +78,12 @@ export interface ThermalEnvelopeDialogProps {
   readonly onApplyAll: () => void;
   /** Κλιματική ζώνη κτιρίου (ρύθμιση κτιρίου, ADR-396 P8 OQ-7a) — null αν αόριστη. */
   readonly climateZone: ClimateZone | null;
+  /**
+   * ADR-396 P10 — DNA του επιλεγμένου τύπου τοίχου. Όταν παρέχεται, το U
+   * υπολογίζεται από τα πραγματικά layers αντί του `REFERENCE_BARE_WALL_LAYERS`.
+   * null/undefined → fallback στον αντιπροσωπευτικό reference τοίχο.
+   */
+  readonly wallDna?: WallDna | null;
   readonly onClimateZoneChange: (zone: ClimateZone) => void;
   /**
    * ADR-396 v2 Φ6b — ανιχνευμένα όρια ορόφου (εξωτερικό/αίθριο/δωμάτιο) για
@@ -116,15 +126,20 @@ export function ThermalEnvelopeDialog(props: ThermalEnvelopeDialogProps): React.
     return (roleCounts.get(region.role) ?? 0) > 1 ? `${base} ${region.ordinal}` : base;
   };
 
-  // ADR-396 P8 — assembly U-value: τυπικός τοίχος (config) + ETICS μόνωση.
+  // ADR-396 P10 — assembly U-value: per-wall-type DNA (αν διαθέσιμο) + ETICS.
+  // Fallback: REFERENCE_BARE_WALL_LAYERS (ανά-όροφο dialog χωρίς επιλεγμένο τοίχο).
   const uValue = React.useMemo(() => {
+    const envelopeLayer = { thickness_m: value.thickness_m, materialId: value.materialId };
+    if (props.wallDna) {
+      return computeWallTypeUValueWithEnvelope(props.wallDna, envelopeLayer);
+    }
     const lambda = getThermalConductivityLambda(value.materialId);
     const layers =
       lambda !== undefined
         ? [...REFERENCE_BARE_WALL_LAYERS, { thickness_m: value.thickness_m, lambda }]
         : [...REFERENCE_BARE_WALL_LAYERS];
     return computeAssemblyUValue(layers);
-  }, [value.materialId, value.thickness_m]);
+  }, [props.wallDna, value.materialId, value.thickness_m]);
 
   const uAboveKenak = climateZone !== null && isAboveKenakUMax(uValue, climateZone);
 

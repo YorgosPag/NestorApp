@@ -321,6 +321,102 @@ function splitOutlineAtRidges(
   return { verts: outVerts, edges: outEdges };
 }
 
+// ─── Overhang offset lines + ridge extension (για κορφιάδες πάνω στην προέκταση) ──
+
+/** Offset-γραμμή footprint edge: σημείο `p` + διεύθυνση `d` (παράλληλη ακμής). */
+export interface RoofOverhangOffsetLine {
+  readonly p: Vec2;
+  readonly d: Vec2;
+}
+
+/**
+ * Η εξωτερική offset-γραμμή ανά footprint edge (παράλληλη, μετατοπισμένη έξω κατά
+ * `overhangMm`) — το όριο της προέκτασης του γείσου. SSoT για consumers εκτός του
+ * ίδιου του γείσου (π.χ. επέκταση κορφιάδων/hips πάνω στην προέκταση). Pure.
+ */
+export function roofOverhangOffsetLines(
+  verts: readonly Point3D[],
+  edges: readonly RoofEdgeSlope[],
+  s: number,
+): RoofOverhangOffsetLine[] {
+  const n = verts.length;
+  if (n < 3 || edges.length !== n) return [];
+  const sign = windingSign(verts);
+  const out: RoofOverhangOffsetLine[] = [];
+  for (let i = 0; i < n; i++) {
+    const v0 = verts[i];
+    const v1 = verts[(i + 1) % n];
+    const inward = inwardNormal(v0, v1, sign); // outward = -inward
+    const oh = Math.max(0, edges[i].overhangMm) * s;
+    out.push({
+      p: { x: v0.x - inward.x * oh, y: v0.y - inward.y * oh },
+      d: { x: v1.x - v0.x, y: v1.y - v0.y },
+    });
+  }
+  return out;
+}
+
+/** Απόσταση (xy) σημείου `p` από το τμήμα a→b. */
+function distPtSeg(p: Vec2, a: Point3D, b: Point3D): number {
+  const dx = b.x - a.x;
+  const dy = b.y - a.y;
+  const lenSq = dx * dx + dy * dy;
+  if (lenSq < 1e-12) return Math.hypot(p.x - a.x, p.y - a.y);
+  let t = ((p.x - a.x) * dx + (p.y - a.y) * dy) / lenSq;
+  t = Math.max(0, Math.min(1, t));
+  return Math.hypot(p.x - (a.x + t * dx), p.y - (a.y + t * dy));
+}
+
+/**
+ * Επεκτείνει τα **eave** άκρα μιας ridge/hip γραμμής (αυτά που κάθονται στην
+ * περίμετρο) έως το εξωτερικό όριο της προέκτασης, ώστε ο κορφιάς να συνεχίζει
+ * πάνω στο γείσο (Revit). Τα **εσωτερικά** άκρα (στον κορφιά, μέσα στο footprint)
+ * μένουν ως έχουν. Το νέο xy = πλησιέστερη **outward** τομή της προέκτασης της
+ * γραμμής με τις offset-γραμμές· το z = γραμμική προέκταση κατά μήκος της γραμμής
+ * (η ridge/hip είναι ευθεία σταθερής κλίσης). Pure / idempotent (χωρίς προέκταση
+ * → ίδια γραμμή).
+ */
+export function extendRidgeToOverhang(
+  ridge: RoofRidgeLine,
+  footprint: readonly Point3D[],
+  offLines: readonly RoofOverhangOffsetLine[],
+): RoofRidgeLine {
+  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+  for (const v of footprint) {
+    if (v.x < minX) minX = v.x; if (v.y < minY) minY = v.y;
+    if (v.x > maxX) maxX = v.x; if (v.y > maxY) maxY = v.y;
+  }
+  const eps = Math.max(1e-6, 1e-3 * Math.hypot(maxX - minX, maxY - minY));
+
+  const onBoundary = (p: Vec2): boolean => {
+    for (let i = 0; i < footprint.length; i++) {
+      if (distPtSeg(p, footprint[i], footprint[(i + 1) % footprint.length]) <= eps) return true;
+    }
+    return false;
+  };
+
+  const extend = (end: Point3D, other: Point3D): Point3D => {
+    if (!onBoundary(end)) return end; // εσωτερικό άκρο (κορφιάς) → καμία επέκταση
+    const d: Vec2 = { x: end.x - other.x, y: end.y - other.y };
+    const dd = d.x * d.x + d.y * d.y;
+    if (dd < 1e-12) return end;
+    let bestU = Infinity;
+    let bestX: Vec2 | null = null;
+    for (const L of offLines) {
+      const X = lineIntersect({ x: end.x, y: end.y }, d, L.p, L.d);
+      if (!X) continue;
+      const u = ((X.x - end.x) * d.x + (X.y - end.y) * d.y) / dd; // κατά μήκος, ΕΞΩ από το end
+      if (u <= 1e-6) continue; // μόνο outward (πέρα από την περίμετρο)
+      if (u < bestU) { bestU = u; bestX = X; }
+    }
+    if (!bestX) return end;
+    const tFull = 1 + bestU; // το end είναι στο param 1 (other→end)
+    return { x: bestX.x, y: bestX.y, z: (other.z ?? 0) + tFull * ((end.z ?? 0) - (other.z ?? 0)) };
+  };
+
+  return { ...ridge, a: extend(ridge.a, ridge.b), b: extend(ridge.b, ridge.a) };
+}
+
 // ─── Public API ───────────────────────────────────────────────────────────────
 
 /**
