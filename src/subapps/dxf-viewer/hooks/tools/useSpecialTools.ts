@@ -307,13 +307,18 @@ export function useSpecialTools(props: UseSpecialToolsProps): UseSpecialToolsRet
   // ADR-363 Φ3/3c — freehand + «από περίγραμμα» (outer/discrete) μοιράζονται ΕΝΑ
   // useColumnTool· το placement mode οδηγείται από το active tool id.
   const isColumnTool =
-    activeTool === 'column' || activeTool === 'column-from-perimeter' || activeTool === 'column-discrete-from-perimeter';
+    activeTool === 'column' ||
+    activeTool === 'column-from-perimeter' ||
+    activeTool === 'column-discrete-from-perimeter' ||
+    activeTool === 'column-in-region';
   useToolLifecycle(isColumnTool, columnTool.activate, columnTool.deactivate);
   useEffect(() => {
     if (activeTool === 'column') columnTool.setPlacementMode('freehand');
     else if (activeTool === 'column-from-perimeter') columnTool.setPlacementMode('outer-perimeter');
     else if (activeTool === 'column-discrete-from-perimeter')
       columnTool.setPlacementMode('discrete-perimeter');
+    // ADR-419 — «Κολώνα σε περιοχή (4 γραμμές)» (ΙΔΙΑ SSoT με wall-in-region).
+    else if (activeTool === 'column-in-region') columnTool.setPlacementMode('in-region');
   }, [activeTool, columnTool.setPlacementMode]);
   // ADR-406/407/408/410/415 — MEP + furnishing single/2-click placement tools
   // (mepFixture, furniture, floorplanSymbol, electricalPanel, mepManifold,

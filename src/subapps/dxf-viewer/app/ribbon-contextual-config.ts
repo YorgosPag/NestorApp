@@ -194,11 +194,13 @@ export function useActiveContextualTrigger({
     // ADR-417 — roof tool active → show the roof properties tab (shape/slope
     // defaults apply to the next drawn roof, mirror slab tool-active behaviour).
     if (activeTool === 'roof') return ROOF_CONTEXTUAL_TRIGGER;
-    // ADR-363 Φάση 3 / 3c — «Τοιχίο/Κολώνα από περίγραμμα» μοιράζονται το column contextual tab.
+    // ADR-363 Φάση 3 / 3c + ADR-419 — «Τοιχίο/Κολώνα από περίγραμμα» + «Κολώνα σε
+    // περιοχή» μοιράζονται το column contextual tab.
     if (
       activeTool === 'column' ||
       activeTool === 'column-from-perimeter' ||
-      activeTool === 'column-discrete-from-perimeter'
+      activeTool === 'column-discrete-from-perimeter' ||
+      activeTool === 'column-in-region'
     )
       return COLUMN_CONTEXTUAL_TRIGGER;
     // ADR-363 «Δοκάρι από τοίχο» μοιράζεται το beam contextual tab (depth/elevation/

@@ -134,6 +134,9 @@ export type ToolType =
   // ADR-363 Φάση 3c «Κολώνα από περίγραμμα»: box-select faces → ΧΩΡΙΣ ένωση, αυτόματη
   // ταξινόμηση κολώνα/τοιχίο ανά αναλογία πλευρών + ενημερωτικό confirm dialog
   | 'column-discrete-from-perimeter'
+  // ADR-419 «Κολώνα σε περιοχή»: pick 4 lines / click inside / box-select → ColumnEntity ανά
+  // εσώκλειστο ορθογώνιο (ΙΔΙΑ region-detection SSoT με το 'wall-in-region')
+  | 'column-in-region'
   // ADR-363 Phase 5: BIM Beam drawing tool (straight/curved/cantilever)
   | 'beam'
   // ADR-363 «Δοκάρι από τοίχο» — 1-click pick wall → beam on its axis

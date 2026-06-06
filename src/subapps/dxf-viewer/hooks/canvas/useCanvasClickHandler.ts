@@ -1,28 +1,5 @@
-/**
- * 🏢 ENTERPRISE: useCanvasClickHandler Hook
- *
- * @description Handles all canvas click logic with priority-based routing:
- * 1. Grip interaction (DXF entity grips)
- * 1.3. Rotation tool entity selection (awaiting-entity phase)
- * 1.5. Rotation tool click (base point or angle confirmation)
- * 1.6. Guide tool clicks (delegated to guide-click-handlers.ts)
- * 1.9. Angle entity measurement picking (delegated to entity-pick-handlers.ts)
- * 2. Circle TTT entity picking (delegated to entity-pick-handlers.ts)
- * 3. Line Perpendicular entity picking (delegated to entity-pick-handlers.ts)
- * 4. Line Parallel entity picking (delegated to entity-pick-handlers.ts)
- * 5. Overlay polygon drawing (draftPolygon)
- * 6. Unified drawing/measurement tools
- * 7. Move tool overlay body drag
- * 8. Empty canvas deselection
- *
- * EXTRACTED FROM: CanvasSection.tsx — ~260 lines of click routing logic
- * SPLIT: Types → canvas-click-types.ts, Guides → guide-click-handlers.ts,
- *        Entity picks → entity-pick-handlers.ts
- *
- * @see ADR-030: Universal Selection System
- * @see ADR-046: World Coordinate Click Pattern
- * @see ADR-147: Centralized Hit Tolerance
- */
+// Priority-based canvas click routing. Extracted from CanvasSection.tsx.
+// ADR-030 (selection) · ADR-046 (world coords) · ADR-147 (hit tolerance)
 'use client';
 import { useCallback } from 'react';
 import type { Point2D } from '../../rendering/types/Types';
@@ -278,6 +255,15 @@ export function useCanvasClickHandler(params: UseCanvasClickHandlerParams): UseC
     // Φάση 3 / 3c — 'column-from-perimeter' & 'column-discrete-from-perimeter' share
     // the same tool; click-inside a perimeter builds (RAW worldPoint — hit-tests
     // existing geometry, ORTHO/POLAR must NOT shift the pick).
+    // ADR-419 — «Κολώνα σε περιοχή (4 γραμμές)»: ΙΔΙΑ region-detection SSoT με το
+    // wall-in-region. RAW worldPoint (hit-tests existing 2D geometry, ORTHO/POLAR
+    // must NOT shift the pick). Accumulated line picks reflected ως selection
+    // highlight· commit clears them → selection clears.
+    if (activeTool === 'column-in-region' && columnTool?.isActive) {
+      columnTool.onCanvasClick(worldPoint);
+      universalSelection.replaceEntitySelection(columnTool.getRegionPickIds?.() ?? []);
+      return;
+    }
     if (
       (activeTool === 'column' ||
         activeTool === 'column-from-perimeter' ||

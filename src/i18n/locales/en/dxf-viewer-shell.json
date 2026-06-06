@@ -492,6 +492,7 @@
       "statusPosition": "Click to place column — Tab cycles anchor",
       "statusPerimeterPick": "Box-select the faces of a structural element (rectangle/L/T/U/composite) → ONE structural wall per perimeter",
       "statusDiscretePerimeterPick": "Box-select faces → each perimeter a separate column or structural wall (auto-classified from side ratios)",
+      "statusRegionPick": "Pick 4 lines forming a rectangle (or click inside the region / box-select) → one filling column",
       "errors": {
         "nonPositiveWidth": "Width must be greater than 0",
         "nonPositiveDepth": "Depth must be greater than 0",
@@ -1046,6 +1047,10 @@
         "wallFromPerimeter": {
           "label": "Wall from perimeter",
           "tooltip": "Box-select the faces of a structural element (rectangle/L/T/U) → a chain of leg walls, thickness derived from the geometry"
+        },
+        "columnInRegion": {
+          "label": "Column in region",
+          "tooltip": "Pick 4 lines forming a rectangle (or click inside the region / box-select) → one filling column (SAME workflow as «Wall in region»)"
         },
         "columnFromPerimeter": {
           "label": "Structural wall from perimeter",

@@ -189,7 +189,9 @@ export function useDxfCanvasRenderer(params: DxfCanvasRendererParams) {
           activeTool === 'wall-in-region' ||
           activeTool === 'wall-from-perimeter' ||
           activeTool === 'column-from-perimeter' ||
-          activeTool === 'column-discrete-from-perimeter';
+          activeTool === 'column-discrete-from-perimeter' ||
+          // ADR-419 — 'column-in-region' shows grips on the accumulated 4-line picks.
+          activeTool === 'column-in-region';
         for (const selId of curRenderOptions.selectedEntityIds) {
           const ent = curEntityMap.get(selId);
           if (ent) {

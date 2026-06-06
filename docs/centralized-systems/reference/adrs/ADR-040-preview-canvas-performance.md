@@ -71,6 +71,10 @@ Mouse Event → DxfCanvas.onMouseMove
 
 ## Changelog
 
+### 2026-06-06 — dxf-canvas-renderer floor-finish tool routing (ADR-419, CHECK 6B)
+
+**Status**: IMPLEMENTED 2026-06-06. `dxf-canvas-renderer.ts` gains a floor-finish tool routing path (ADR-419): when `floorFinishTool` is active, click events are forwarded to the floor-finish completion handler. Pure additive branch — **no new `useSyncExternalStore`**, no bitmap cache-key change, no micro-leaf structural change.
+
 ### 2026-06-06 — CanvasLayerStack file-size trim (CHECK 6B compliance)
 
 **Status**: IMPLEMENTED 2026-06-06. Minor comment consolidation in `CanvasLayerStack.tsx` to stay within the 500-line file-size ratchet (CHECK 4). No logic, subscription, or architecture change.

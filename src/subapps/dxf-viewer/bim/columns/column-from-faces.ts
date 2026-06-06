@@ -192,6 +192,32 @@ function buildPerimeterColumn(
   return result.ok ? result.entity : null;
 }
 
+/**
+ * ADR-419 §column-in-region — DetectedRectangle → ΠΑΡΑΜΕΤΡΙΚΟ ColumnEntity (SSoT
+ * adapter, mirror του `buildWallFillingRect`). Επαναχρησιμοποιεί ΑΚΡΙΒΩΣ τον ίδιο
+ * πυρήνα ταξινόμησης/τοποθέτησης (`rectColumnPlacement` → aspect kind, width=
+ * longSide, depth=shortSide, rotation=γωνία μεγάλης ακμής) + `completeColumnFromClick`.
+ * Το ορθογώνιο προκύπτει από την ΙΔΙΑ region-detection SSoT («4 γραμμές» /
+ * click-inside / box-select) που τροφοδοτεί και το «Τοίχος σε περιοχή». `null` αν
+ * ο validator απορρίψει το rect.
+ */
+export function buildColumnFillingRect(
+  rect: DetectedRectangle,
+  layerId: string,
+  sceneUnits: SceneUnits,
+): ColumnEntity | null {
+  const s = mmToSceneUnits(sceneUnits);
+  const placement = rectColumnPlacement(rect, s);
+  const result = completeColumnFromClick(
+    placement.center,
+    layerId,
+    placement.overrides.kind,
+    placement.overrides,
+    sceneUnits,
+  );
+  return result.ok ? result.entity : null;
+}
+
 // ─── Orchestrators ────────────────────────────────────────────────────────────
 
 /**

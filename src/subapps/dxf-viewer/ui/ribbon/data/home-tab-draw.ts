@@ -366,6 +366,15 @@ export const HOME_DRAW_PANEL: RibbonPanelDef = {
                   commandKey: 'column',
                   shortcut: 'CL',
                 },
+                // ADR-419 «Κολώνα σε περιοχή (4 γραμμές)» — pick 4 lines / click inside /
+                // box-select → ColumnEntity ανά εσώκλειστο ορθογώνιο (ΙΔΙΑ SSoT με τον τοίχο).
+                {
+                  id: 'draw.bim.columnInRegion',
+                  labelKey: 'ribbon.commands.bim.columnInRegion.label',
+                  tooltipKey: 'ribbon.commands.bim.columnInRegion.tooltip',
+                  icon: 'bim-column',
+                  commandKey: 'column-in-region',
+                },
                 // ADR-363 Φάση 3 «Τοιχίο από περίγραμμα» — box-select the faces of a
                 // structural element (ορθογώνιο/Γ/Τ/Π/σύνθετο) → ΕΝΑ τοιχίο (ColumnEntity)
                 // ανά κλειστή περίμετρο (exact-polygon για μη-ορθογωνικά).

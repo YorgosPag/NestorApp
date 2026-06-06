@@ -42,6 +42,9 @@ import {
 } from '../../bim/columns/column-anchor-ghosts';
 // ADR-363 Φάση 3/3c «από περίγραμμα» — box-select/click-inside commit helpers (split).
 import { useColumnPerimeterCommit } from './use-column-perimeter-commit';
+// ADR-419 «Κολώνα σε περιοχή (4 γραμμές)» — region-detection clicks (mirror του τοίχου).
+import { useColumnRegionClicks } from './use-column-region-clicks';
+import type { RegionLineSeg } from '../../bim/walls/wall-in-region';
 import { columnToolBridgeStore } from '../../ui/ribbon/hooks/bridge/column-tool-bridge-store';
 import { EventBus } from '../../systems/events/EventBus';
 
@@ -53,8 +56,15 @@ import { EventBus } from '../../systems/events/EventBus';
  *   - 'discrete-perimeter'— box-select παρειές → ΧΩΡΙΣ ένωση (κάθε περίγραμμα
  *                           ξεχωριστό)· αυτόματη ταξινόμηση κολώνα/τοιχίο ανά
  *                           αναλογία πλευρών + ενημερωτικό confirm (Φάση 3c).
+ *   - 'in-region'         — ADR-419 «Κολώνα σε περιοχή (4 γραμμές)»: 4 κλικ σε
+ *                           γραμμές / 1 κλικ μέσα / box-select → ΕΝΑ ColumnEntity
+ *                           ανά εσώκλειστο ορθογώνιο (ΙΔΙΑ SSoT με «Τοίχος σε περιοχή»).
  */
-export type ColumnPlacementMode = 'freehand' | 'outer-perimeter' | 'discrete-perimeter';
+export type ColumnPlacementMode =
+  | 'freehand'
+  | 'outer-perimeter'
+  | 'discrete-perimeter'
+  | 'in-region';
 
 // ─── State machine types ─────────────────────────────────────────────────────
 
@@ -70,6 +80,8 @@ export interface ColumnToolState {
   /** ADR-363 Φάση 3 — 'freehand' (single-click) ή 'outer-perimeter' (από περίγραμμα). */
   readonly placementMode: ColumnPlacementMode;
   readonly overrides: ColumnParamOverrides;
+  /** ADR-419 «Κολώνα σε περιοχή» — accumulated 4-line picks (mirror του τοίχου). */
+  readonly regionPicks: readonly RegionLineSeg[];
   readonly error: string | null;
 }
 
@@ -79,6 +91,7 @@ const INITIAL_STATE: ColumnToolState = {
   anchor: 'center',
   placementMode: 'freehand',
   overrides: {},
+  regionPicks: [],
   error: null,
 };
 
@@ -118,6 +131,8 @@ export interface UseColumnToolResult {
   reset(): void;
   /** Returns true αν το click commit-άρισε νέα column. */
   onCanvasClick(point: Readonly<Point2D>): boolean;
+  /** ADR-419 — deduped ids των accumulated in-region picks (selection highlight). */
+  getRegionPickIds(): string[];
   /** Dynamic Input field overrides (width / depth / height / rotation). */
   setParamOverrides(overrides: ColumnParamOverrides): void;
   /** Status text για status-bar / Dynamic Input prompt (i18n key). */
@@ -267,6 +282,17 @@ export function useColumnTool(options: UseColumnToolOptions = {}): UseColumnTool
     currentLevelId,
   });
 
+  // ── ADR-419 «Κολώνα σε περιοχή (4 γραμμές)» — region clicks + box-select ────
+  // ΙΔΙΑ region-detection SSoT με τον τοίχο· χτίζει ColumnEntity ανά ορθογώνιο.
+  const { onRegionClick, getRegionPickIds } = useColumnRegionClicks({
+    stateRef,
+    setState,
+    onColumnCreatedRef,
+    getSceneEntitiesRef,
+    getSceneUnitsRef,
+    currentLevelId,
+  });
+
   // ── click pipeline ───────────────────────────────────────────────────────
   const onCanvasClick = useCallback(
     (point: Readonly<Point2D>): boolean => {
@@ -280,10 +306,14 @@ export function useColumnTool(options: UseColumnToolOptions = {}): UseColumnTool
       if (s.placementMode === 'discrete-perimeter') {
         return onDiscretePerimeterClick(point);
       }
+      // ADR-419 — in-region: 4 κλικ σε γραμμές / 1 κλικ μέσα → ColumnEntity ανά ορθογώνιο.
+      if (s.placementMode === 'in-region') {
+        return onRegionClick(s, point);
+      }
       if (s.phase !== 'awaitingPosition') return false;
       return commitColumnFromState(s, point);
     },
-    [commitColumnFromState, onPerimeterClick, onDiscretePerimeterClick],
+    [commitColumnFromState, onPerimeterClick, onDiscretePerimeterClick, onRegionClick],
   );
 
   // ── ADR-403 — 3D placement bridge ─────────────────────────────────────────
@@ -308,6 +338,8 @@ export function useColumnTool(options: UseColumnToolOptions = {}): UseColumnTool
     // ADR-363 Φάση 3c — discrete-perimeter prompt (box-select· αυτόματη ταξινόμηση).
     if (s.placementMode === 'discrete-perimeter')
       return 'tools.column.statusDiscretePerimeterPick';
+    // ADR-419 — in-region prompt (4 γραμμές / κλικ μέσα / box-select).
+    if (s.placementMode === 'in-region') return 'tools.column.statusRegionPick';
     return s.phase === 'awaitingPosition' ? 'tools.column.statusPosition' : '';
   }, []);
 
@@ -315,8 +347,12 @@ export function useColumnTool(options: UseColumnToolOptions = {}): UseColumnTool
   const getGhostFootprints = useCallback(
     (cursorPos: Readonly<Point2D> | null): readonly AnchorGhost[] | null => {
       const s = stateRef.current;
-      // ADR-363 Φάση 3 / 3c — perimeter modes δεν έχουν anchor ghost (box-select picks).
-      if (s.placementMode === 'outer-perimeter' || s.placementMode === 'discrete-perimeter')
+      // ADR-363 Φ3/3c + ADR-419 — perimeter/in-region modes δεν έχουν anchor ghost (picks).
+      if (
+        s.placementMode === 'outer-perimeter' ||
+        s.placementMode === 'discrete-perimeter' ||
+        s.placementMode === 'in-region'
+      )
         return null;
       if (s.phase !== 'awaitingPosition' || cursorPos === null) return null;
       // ColumnGhostOverrides is structurally a subset of ColumnParamOverrides
@@ -404,6 +440,7 @@ export function useColumnTool(options: UseColumnToolOptions = {}): UseColumnTool
     deactivate,
     reset,
     onCanvasClick,
+    getRegionPickIds,
     setParamOverrides,
     getStatusText,
     getGhostFootprints,

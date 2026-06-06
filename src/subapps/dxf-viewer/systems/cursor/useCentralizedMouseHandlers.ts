@@ -194,7 +194,8 @@ export function useCentralizedMouseHandlers(props: CentralizedMouseHandlersProps
         activeTool === 'wall-in-region' ||
         activeTool === 'wall-from-perimeter' ||
         activeTool === 'column-from-perimeter' ||
-        activeTool === 'column-discrete-from-perimeter')
+        activeTool === 'column-discrete-from-perimeter' ||
+        activeTool === 'column-in-region')
     ) {
       lassoDownRef.current = { pos: screenPos, buttonHeld: true };
     }
