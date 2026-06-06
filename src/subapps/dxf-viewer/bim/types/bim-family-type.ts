@@ -160,6 +160,8 @@ export interface RoofTypeParams {
   readonly tileWidthM?: number;
   /** Rotate the tile texture 90° (swap U↔V). */
   readonly tileRotate90?: boolean;
+  /** mm. 3D displacement relief depth (barrel tile wave). 0 = flat. Default ~20. */
+  readonly tileReliefMm?: number;
 }
 
 /**

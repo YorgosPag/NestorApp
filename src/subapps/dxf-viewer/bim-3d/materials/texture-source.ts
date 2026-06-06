@@ -20,7 +20,7 @@ import { ref, getDownloadURL } from 'firebase/storage';
 import { storage } from '@/lib/firebase';
 
 /** PBR texture map channels. */
-export type TextureMap = 'albedo' | 'normal' | 'roughness' | 'ao';
+export type TextureMap = 'albedo' | 'normal' | 'roughness' | 'ao' | 'displacement';
 
 /** Where texture files are served from. */
 export type TextureSourceMode = 'public' | 'storage';

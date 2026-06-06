@@ -107,6 +107,7 @@ export const RoofTypeParamsSchema = z
     tileLengthM: z.number().positive().optional(),
     tileWidthM: z.number().positive().optional(),
     tileRotate90: z.boolean().optional(),
+    tileReliefMm: z.number().nonnegative().optional(),
   })
   .strict();
 

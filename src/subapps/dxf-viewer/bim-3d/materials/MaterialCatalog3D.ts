@@ -182,6 +182,45 @@ export function getMaterial3D(materialId: string): THREE.MeshStandardMaterial {
   return resolveTexturedMaterial(resolveMaterialKey(materialId));
 }
 
+// ── ADR-417 #6 — Roof tile displacement relief cache ─────────────────────────
+// Separate from CACHE because displacement variants are keyed by reliefMm, not
+// just materialKey. Only roof-tiles slug carries hasDisplacement=true.
+const RELIEF_CACHE = new Map<string, THREE.MeshStandardMaterial>();
+
+/**
+ * ADR-417 #6 — Resolve a MeshStandardMaterial WITH displacement map for roof
+ * tile geometry. Only applies when `realisticMaterials` is ON AND the slug has a
+ * loaded displacement map; otherwise falls back to the standard `getMaterial3D`.
+ *
+ * Cache key: `${key}::disp${reliefMm_rounded}` — one variant per relief depth.
+ * The displacement map is shared (singleton from bim-texture-cache); only the
+ * MeshStandardMaterial wrapper (with displacementScale/Bias) is per-variant.
+ *
+ * @param materialId  The DNA material id (e.g. 'mat-roof-tile')
+ * @param reliefMm    Displacement wave amplitude in mm (from RoofTypeParams.tileReliefMm)
+ */
+export function getRoofTileMaterial3D(materialId: string, reliefMm: number): THREE.MeshStandardMaterial {
+  if (!useBimRenderSettingsStore.getState().realisticMaterials) return getMaterial3D(materialId);
+  const key = resolveMaterialKey(materialId);
+  const slug = textureSlugForKey(key);
+  if (!slug) return getMaterial3D(materialId);
+  const set = getTextureSet(slug);
+  if (!set) { preloadTextureSet(slug); return getMaterial3D(materialId); }
+  if (!set.displacementMap) return getMaterial3D(materialId); // asset not uploaded yet — graceful flat
+
+  const reliefM = reliefMm / 1000;
+  const cacheKey = `${key}::disp${Math.round(reliefMm)}`;
+  let mat = RELIEF_CACHE.get(cacheKey);
+  if (!mat) {
+    mat = buildTexturedMaterial(key, set);
+    mat.displacementMap = set.displacementMap;
+    mat.displacementScale = reliefM;
+    mat.displacementBias = -reliefM / 2; // center the wave around the surface
+    RELIEF_CACHE.set(cacheKey, mat);
+  }
+  return mat;
+}
+
 /** Resolve MeshStandardMaterial for element types without DNA. */
 export function getElementMaterial3D(
   type: 'column' | 'beam' | 'slab' | 'roof' | 'envelope' | 'mep-fixture' | 'electrical-panel' | 'railing' | 'mep-wire' | 'furniture' | 'mep-duct' | 'mep-pipe' | 'mep-fitting' | 'mep-manifold' | 'mep-radiator' | 'mep-boiler' | Stair3DComponent,
@@ -230,4 +269,7 @@ export function disposeMaterialCatalog3D(): void {
   // the registry; here we only dispose the MeshStandardMaterial wrappers).
   for (const { mat } of USER_TEX_CACHE.values()) mat.dispose();
   USER_TEX_CACHE.clear();
+  // ADR-417 #6 — displacement relief variants.
+  for (const mat of RELIEF_CACHE.values()) mat.dispose();
+  RELIEF_CACHE.clear();
 }

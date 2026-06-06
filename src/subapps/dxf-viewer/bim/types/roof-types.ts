@@ -140,6 +140,8 @@ export interface RoofParams {
   readonly tileWidthM?: number;
   /** Περιστροφή υφής 90° (swap U↔V) — αν οι αύλακες είναι στον άλλον άξονα. */
   readonly tileRotate90?: boolean;
+  /** mm. 3D displacement relief — βάθος κυματισμού κεραμιδιού (barrel tile). 0 = επίπεδο. Default ~20. Type-governed, flows via resolveEffectiveParams. */
+  readonly tileReliefMm?: number;
   /**
    * DXF canvas coordinate unit. Πάντα αποθηκευμένο ώστε η μηχανή να μετατρέπει
    * canvas-unit² → m² για BOQ. Default 'mm' (legacy docs).

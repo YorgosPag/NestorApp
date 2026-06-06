@@ -36,6 +36,8 @@ export interface LoadedTextureSet {
   readonly normalMap?: THREE.Texture;
   readonly roughnessMap?: THREE.Texture;
   readonly aoMap?: THREE.Texture;
+  /** Height/displacement map (data channel, NoColorSpace). Only for slugs with hasDisplacement=true. */
+  readonly displacementMap?: THREE.Texture;
 }
 
 type CacheState = 'loading' | 'error';
@@ -73,11 +75,12 @@ export function preloadTextureSet(slug: string): void {
 
   const def = TEXTURE_SET_DEFS[slug];
   void (async (): Promise<void> => {
-    const [albedo, normal, roughness, ao] = await Promise.all([
+    const [albedo, normal, roughness, ao, displacement] = await Promise.all([
       loadMap(slug, 'albedo', def.tileSizeM),
       def.hasNormal ? loadMap(slug, 'normal', def.tileSizeM) : Promise.resolve(null),
       def.hasRoughness ? loadMap(slug, 'roughness', def.tileSizeM) : Promise.resolve(null),
       def.hasAo ? loadMap(slug, 'ao', def.tileSizeM) : Promise.resolve(null),
+      def.hasDisplacement ? loadMap(slug, 'displacement', def.tileSizeM) : Promise.resolve(null),
     ]);
     // Albedo is mandatory — without it there is no textured material.
     if (!albedo) {
@@ -89,6 +92,7 @@ export function preloadTextureSet(slug: string): void {
       normalMap: normal ?? undefined,
       roughnessMap: roughness ?? undefined,
       aoMap: ao ?? undefined,
+      displacementMap: displacement ?? undefined,
     });
     status.delete(slug);
     // One shared resync signal: flat material → textured variant on next sync.

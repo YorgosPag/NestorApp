@@ -37,6 +37,8 @@ export interface PbrTextureSetDef {
   readonly hasNormal: boolean;
   readonly hasRoughness: boolean;
   readonly hasAo: boolean;
+  /** True when this slug ships a displacement (height) map for 3D relief. */
+  readonly hasDisplacement?: boolean;
   readonly license: 'CC0' | 'CC-BY';
   readonly attribution?: string;
 }
@@ -55,7 +57,9 @@ export const TEXTURE_SET_DEFS: Record<PbrTextureSlug, PbrTextureSetDef> = {
   metal:    { slug: 'metal',    tileSizeM: 1.0, hasNormal: true, hasRoughness: true, hasAo: true, license: 'CC0', attribution: 'Poly Haven' },
   // ADR-417 — clay roof-tile set (Poly Haven «roof_tiles_14», CC0). One tile row
   // band ≈ 1 m of roof, so `repeat = 1/1` lays physically-sized κεραμίδια.
-  'roof-tiles': { slug: 'roof-tiles', tileSizeM: 1.0, hasNormal: true, hasRoughness: true, hasAo: true, license: 'CC0', attribution: 'Poly Haven' },
+  // hasDisplacement: Giorgio → κατέβασε roof_tiles_14_disp_2k.jpg →
+  //   public/textures/roof-tiles/displacement.jpg  (Poly Haven CC0, gratis)
+  'roof-tiles': { slug: 'roof-tiles', tileSizeM: 1.0, hasNormal: true, hasRoughness: true, hasAo: true, hasDisplacement: true, license: 'CC0', attribution: 'Poly Haven' },
 };
 
 /**

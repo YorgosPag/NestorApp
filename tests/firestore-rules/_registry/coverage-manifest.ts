@@ -1203,6 +1203,10 @@ export const FIRESTORE_RULES_PENDING: readonly string[] = [
   'bim_performance_telemetry',  // super-admin-only read + deny-all-client writes (server-only Admin SDK via /api/telemetry/bim-performance); full matrix later
   // — BIM 3D Animations (ADR-366 C.1, 2026-05-25) —
   'bim_animations',             // lines 3926-4034 — tenant-scoped CRUD; full matrix later
+  // — BIM MEP Boiler (ADR-408 Εύρος Β2, 2026-06-06) —
+  'floorplan_mep_boilers',      // lines 3999-4021 — tenant-scoped CRUD (heating boiler / λέβητας, mirror mep_manifolds); full matrix with the BIM batch
+  // — BIM Floor Finish (ADR-419, 2026-06-06) —
+  'floorplan_floor_finishes',   // lines 4100-4120 — tenant-scoped CRUD (per-room floor finish, mirror floorplan_walls); full matrix with the BIM batch
 ] as const;
 
 // ---------------------------------------------------------------------------

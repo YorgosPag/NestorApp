@@ -87,6 +87,9 @@ import { isWallRibbonKey, isWallRibbonStringKey, isWallRibbonToggleKey, isWallAc
 import { isOpeningRibbonKey, isOpeningRibbonStringKey, isOpeningActionKey, isOpeningTagStyleComboboxKey, isOpeningTagStyleToggleKey } from './bridge/opening-command-keys';
 import { isSlabRibbonKey, isSlabRibbonStringKey, isSlabActionKey } from './bridge/slab-command-keys';
 import { isRoofRibbonKey, isRoofRibbonStringKey, isRoofRibbonToggleKey, isRoofActionKey } from './bridge/roof-command-keys';
+import type { RibbonFloorFinishBridge } from './useRibbonFloorFinishBridge';
+import { isFloorFinishActionKey } from './useRibbonFloorFinishBridge';
+import { isFloorFinishRibbonNumberKey, isFloorFinishRibbonStringKey } from './bridge/floor-finish-command-keys';
 import { isColumnRibbonKey, isColumnRibbonStringKey, isColumnActionKey } from './bridge/column-command-keys';
 import { isBeamRibbonKey, isBeamRibbonStringKey, isBeamActionKey } from './bridge/beam-command-keys';
 import { isSlabOpeningRibbonStringKey, isSlabOpeningActionKey } from './bridge/slab-opening-command-keys';
@@ -95,57 +98,34 @@ import { isXlineRibbonKey } from './bridge/xline-command-keys';
 import type { RibbonXlineModeBridge } from './useRibbonXlineModeBridge';
 
 interface UseRibbonCommandsProps {
-  /** ADR-345 Fase 5.6 — current tool from useDxfViewerState. Drives Large /
-   * Small / Split button active visual state. */
   activeTool: ToolType | null;
   handleToolChange: (tool: ToolType) => void;
   handleRibbonComingSoon: (label: string) => void;
   wrappedHandleAction: (action: string, data?: RibbonActionPayload) => void;
-  /** ADR-345 Fase 5.7 — CommandHistory availability for tab-bar undo/redo. */
   canUndo: boolean;
   canRedo: boolean;
   textEditorBridge: RibbonTextEditorBridge;
-  /** ADR-353 Phase A — Array contextual tab bridge. */
   arrayBridge: RibbonArrayBridge;
-  /** ADR-358 Phase 7a — Stair contextual tab bridge. */
   stairBridge: RibbonStairBridge;
-  /** ADR-363 Phase 1B — Wall contextual tab bridge. */
   wallBridge: RibbonWallBridge;
-  /** ADR-363 Phase 2 — Opening contextual tab bridge. */
   openingBridge: RibbonOpeningBridge;
-  /** ADR-363 Phase 3 — Slab contextual tab bridge. */
   slabBridge: RibbonSlabBridge;
-  /** ADR-417 Φ1-part-2 — Roof (κεκλιμένη στέγη) contextual tab bridge. */
   roofBridge: RibbonRoofBridge;
-  /** ADR-363 Phase 4 — Column contextual tab bridge. */
+  floorFinishBridge: RibbonFloorFinishBridge;
   columnBridge: RibbonColumnBridge;
-  /** ADR-363 Phase 5 — Beam contextual tab bridge. */
   beamBridge: RibbonBeamBridge;
-  /** ADR-363 Phase 3.7 — Slab-opening contextual tab bridge. */
   slabOpeningBridge: RibbonSlabOpeningBridge;
-  /** ADR-408 Φ5 — MEP circuit contextual tab bridge (create-from-selection). */
   mepCircuitBridge: RibbonMepCircuitBridge;
-  /** ADR-408 Φ13 — MEP pipe-network contextual tab bridge (manifold + pipes). */
   mepPipeNetworkBridge: RibbonMepPipeNetworkBridge;
-  /** ADR-406 — MEP fixture (φωτιστικό) contextual tab bridge. */
   mepFixtureBridge: RibbonMepFixtureBridge;
-  /** ADR-408 Φ12 — MEP manifold (συλλέκτης) contextual properties tab bridge. */
   mepManifoldBridge: RibbonMepManifoldBridge;
-  /** ADR-408 Εύρος Β — MEP radiator (καλοριφέρ) contextual properties tab bridge. */
   mepRadiatorBridge: RibbonMepRadiatorBridge;
-  /** ADR-408 Εύρος Β #2 — MEP boiler (λέβητας) contextual properties tab bridge. */
   mepBoilerBridge: RibbonMepBoilerBridge;
-  /** ADR-408 Φ8 — MEP segment (σωλήνας/αεραγωγός) contextual properties tab bridge. */
   mepSegmentBridge: RibbonMepSegmentBridge;
-  /** ADR-410 — furniture library contextual tab bridge. */
   furnitureBridge: RibbonFurnitureBridge;
-  /** ADR-415 — floorplan-symbol library contextual tab bridge (tool-active picker). */
   floorplanSymbolBridge: RibbonFloorplanSymbolBridge;
-  /** ADR-411 — light-fixture library contextual tab bridge (tool-active picker). */
   mepFixtureLibraryBridge: RibbonMepFixtureLibraryBridge;
-  /** ADR-357 Phase 17 — Line tool Quick Style bridge. */
   lineToolBridge: RibbonLineToolBridge;
-  /** ADR-359 Phase 10.b — XLine mode bridge. */
   xlineModeBridge: RibbonXlineModeBridge;
 }
 
@@ -169,6 +149,7 @@ export function useRibbonCommands({
   openingBridge,
   slabBridge,
   roofBridge,
+  floorFinishBridge,
   columnBridge,
   beamBridge,
   slabOpeningBridge,
@@ -219,6 +200,10 @@ export function useRibbonCommands({
       }
       if (isRoofRibbonKey(key) || isRoofRibbonStringKey(key)) {
         roofBridge.onComboboxChange(key, value);
+        return;
+      }
+      if (isFloorFinishRibbonNumberKey(key) || isFloorFinishRibbonStringKey(key)) {
+        floorFinishBridge.onComboboxChange(key, value);
         return;
       }
       if (isColumnRibbonKey(key) || isColumnRibbonStringKey(key)) {
@@ -279,7 +264,7 @@ export function useRibbonCommands({
       }
       textEditorBridge.onComboboxChange(key, value);
     },
-    [stairBridge, wallBridge, openingBridge, slabBridge, roofBridge, columnBridge, beamBridge, slabOpeningBridge, mepFixtureBridge, mepManifoldBridge, mepRadiatorBridge, mepBoilerBridge, mepSegmentBridge, furnitureBridge, floorplanSymbolBridge, mepFixtureLibraryBridge, arrayBridge, lineToolBridge, xlineModeBridge, textEditorBridge],
+    [stairBridge, wallBridge, openingBridge, slabBridge, roofBridge, floorFinishBridge, columnBridge, beamBridge, slabOpeningBridge, mepFixtureBridge, mepManifoldBridge, mepRadiatorBridge, mepBoilerBridge, mepSegmentBridge, furnitureBridge, floorplanSymbolBridge, mepFixtureLibraryBridge, arrayBridge, lineToolBridge, xlineModeBridge, textEditorBridge],
   );
 
   const getComboboxState = React.useCallback(
@@ -292,6 +277,7 @@ export function useRibbonCommands({
       if (isOpeningRibbonKey(key) || isOpeningRibbonStringKey(key) || isOpeningTagStyleComboboxKey(key)) return openingBridge.getComboboxState(key);
       if (isSlabRibbonKey(key) || isSlabRibbonStringKey(key)) return slabBridge.getComboboxState(key);
       if (isRoofRibbonKey(key) || isRoofRibbonStringKey(key)) return roofBridge.getComboboxState(key);
+      if (isFloorFinishRibbonNumberKey(key) || isFloorFinishRibbonStringKey(key)) return floorFinishBridge.getComboboxState(key);
       if (isColumnRibbonKey(key) || isColumnRibbonStringKey(key)) return columnBridge.getComboboxState(key);
       if (isBeamRibbonKey(key) || isBeamRibbonStringKey(key)) return beamBridge.getComboboxState(key);
       if (isSlabOpeningRibbonStringKey(key)) return slabOpeningBridge.getComboboxState(key);
@@ -308,7 +294,7 @@ export function useRibbonCommands({
       if (isXlineRibbonKey(key)) return xlineModeBridge.getComboboxState(key);
       return textEditorBridge.getComboboxState(key);
     },
-    [snapStepUnits, stairBridge, wallBridge, openingBridge, slabBridge, roofBridge, columnBridge, beamBridge, slabOpeningBridge, mepFixtureBridge, mepManifoldBridge, mepRadiatorBridge, mepBoilerBridge, mepSegmentBridge, furnitureBridge, floorplanSymbolBridge, mepFixtureLibraryBridge, arrayBridge, lineToolBridge, xlineModeBridge, textEditorBridge],
+    [snapStepUnits, stairBridge, wallBridge, openingBridge, slabBridge, roofBridge, floorFinishBridge, columnBridge, beamBridge, slabOpeningBridge, mepFixtureBridge, mepManifoldBridge, mepRadiatorBridge, mepBoilerBridge, mepSegmentBridge, furnitureBridge, floorplanSymbolBridge, mepFixtureLibraryBridge, arrayBridge, lineToolBridge, xlineModeBridge, textEditorBridge],
   );
 
   const onToggle = React.useCallback(
@@ -403,6 +389,10 @@ export function useRibbonCommands({
         roofBridge.onAction(action);
         return;
       }
+      if (isFloorFinishActionKey(action)) {
+        floorFinishBridge.onAction(action);
+        return;
+      }
       if (isColumnActionKey(action)) {
         columnBridge.onAction(action);
         return;
@@ -453,7 +443,7 @@ export function useRibbonCommands({
       }
       wrappedHandleAction(action, data);
     },
-    [wallBridge, openingBridge, slabBridge, roofBridge, columnBridge, beamBridge, slabOpeningBridge, stairBridge, mepCircuitBridge, mepPipeNetworkBridge, mepFixtureBridge, mepManifoldBridge, mepRadiatorBridge, mepBoilerBridge, mepSegmentBridge, furnitureBridge, wrappedHandleAction],
+    [wallBridge, openingBridge, slabBridge, roofBridge, floorFinishBridge, columnBridge, beamBridge, slabOpeningBridge, stairBridge, mepCircuitBridge, mepPipeNetworkBridge, mepFixtureBridge, mepManifoldBridge, mepRadiatorBridge, mepBoilerBridge, mepSegmentBridge, furnitureBridge, wrappedHandleAction],
   );
 
   return React.useMemo(
