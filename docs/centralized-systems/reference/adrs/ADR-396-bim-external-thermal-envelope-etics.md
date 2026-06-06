@@ -84,7 +84,9 @@
                 │  command «Εφαρμογή Θερμοπρόσοψης» (auto-apply)
                 ▼
 ┌─ DATA (per-element exterior layer, industry-standard) ────┐
-│ wall.dna.layers[side=exterior]  (ΥΠΑΡΧΕΙ)                  │
+│ wall: Z1 από per-floor ThermalEnvelopeSpec (ΟΧΙ per-elem)  │
+│   → wall.dna.layers (structural: σοβάς+φέρων, ΟΧΙ ETICS)  │
+│   → U virtual-append ETICS κατά calc (P10, χωρίς mutation) │
 │ column.envelopeLayer  (ΝΕΟ — optional)                    │
 │ beam.envelopeLayer    (ΝΕΟ — optional)                    │
 │ slab.envelopeLayer    (ΝΕΟ — Z2/Z3 soffit/top)            │
