@@ -30,7 +30,7 @@ import { StairBaseBindingSchema, StairTopBindingSchema } from './bim-binding';
 
 export const BimFamilyTypeScopeSchema = z.enum(['user', 'company', 'project']);
 
-export const BimFamilyTypeOriginSchema = z.enum(['built-in', 'user']);
+export const BimFamilyTypeOriginSchema = z.enum(['built-in', 'user', 'auto']);
 
 // ─── Wall category (mirror wall-types.ts WallCategory) ───────────────────────
 

@@ -1,7 +1,7 @@
 # ADR-412 — BIM Family Types (Revit-grade Type/Instance system)
 
-**Status:** 🟢 v0.8 — Φ1+Φ2+Φ3+Φ4+Φ5 IMPLEMENTED + **wall auto-typing (ADR-414 link)**. Walls are now linked to their category's built-in type on create + on load (non-destructive). Φ6 (stair migration) remains. Pending commit + browser verify (Giorgio commits).
-**Date:** 2026-06-04
+**Status:** 🟢 v0.9 — Φ1+Φ2+Φ3+Φ4+Φ5 + wall auto-typing + **auto-type-on-create (Revit «Generic Wall»)**. Every new wall (incl. region/manual arbitrary thickness) is born with a shared, persisted, directly-editable type (same thickness ⇒ same type). Φ6 (stair migration) remains. Pending commit + browser verify (Giorgio commits).
+**Date:** 2026-06-06
 **Author:** Claude (Opus 4.8)
 **Supersedes numbering note:** This is the "BIM Family Types" successor that ADR-377 §Related
 mistakenly called "ADR-378". **ADR-378 is the Snap System Master** — the correct number for Family
@@ -277,6 +277,31 @@ New `.ssot-registry.json` Tier 3 module `bim-family-types`:
 
 ## 9. Changelog
 
+- **v0.9 (2026-06-06)** — **Auto-type-on-create (Revit «Generic Wall») — region/manual walls are no longer untyped**
+  (Giorgio-approved Plan Mode). **Root cause:** «Τοίχος σε περιοχή» + manual walls with an explicit thickness are
+  born with `dna=null` → `resolveAutoWallTypeId` returns `undefined` → no `typeId` → no «Edit Type», no mass
+  layer-edit. **Decision (Giorgio):** «like Revit, FULL ENTERPRISE + FULL SSOT» (Q1/Q2), **directly editable** (Q3),
+  **no load-migration of legacy walls** (Q5). **Architecture = persisted find-or-create with a SYNCHRONOUS
+  enterprise-id stamp at the `onWallCreated` convergence** (all six creation paths funnel through `addWallToScene`):
+  same nominal thickness ⇒ same shared type. When the thickness equals a category built-in default → reuse the
+  read-only **built-in** (cross-method grouping); else mint a `origin:'auto'`, persisted, **directly-editable**
+  «Generic - {thickness}» type. The store is read synchronously → find-or-create is idempotent within a draw batch
+  (1st wall inserts the type, 2nd reuses it) with **no flicker, no extra undo step, no new resolution/derive
+  plumbing** — Edit Type / reflow (`useWallTypeReresolution`) / BOQ refeed / delete / audit all reused as-is.
+  **NEW:** `bim/family-types/auto-wall-type.ts` (pure SSoT: `resolveAutoWallTypeSignature` / `findAutoWallType` /
+  `resolveAutoWallTypeIdForSignature` built-in-preference / `buildAutoWallType`) + host hook
+  `bim/family-types/useWallAutoTyping.ts §ensureAutoWallType(entity)` (mint via `generateBimFamilyTypeId` N.6 →
+  optimistic `setTypes` → fire-and-forget `service.createTypeWithId` + audit → resolve effective params + recompute
+  geometry, non-destructive) + `wall-dna-types.ts §buildGenericWallDna(category, thickness)` (single core layer,
+  inherits category core material). **CHANGED (additive):** `BimFamilyTypeOrigin`/`BimFamilyTypeOriginSchema` +=
+  `'auto'`; `bim-family-type-service.ts §createTypeWithId(type)` (persist with a pre-minted id, validated, sibling
+  of `restoreType`); `family-type-ui-helpers.ts §isAutoType` + `resolveTypeDisplayName` interpolates `{thickness}`
+  for auto names; `RibbonWallTypePropertiesWidget` (auto = editable + deletable, Edit Type direct, NO inline
+  rename — name is a stable key); `useSpecialTools` wraps `onWallCreated` with `ensureAutoWallType`. **i18n:**
+  `ribbon.commands.bimFamilyType.auto.wall.generic` (el+en, single-brace ICU per CHECK 3.9). **Tests:** NEW
+  `auto-wall-type.test.ts` → family-types **118 PASS**. `buildWallEntity` unchanged (built-in path + its tests
+  intact). Not in ADR-040 high-freq path. **Known limitation:** a wall drawn before the initial `listTypes` fetch
+  lands may mint a benign duplicate auto-type (non-destructive). **Next: 🔴 browser verify + commit.** | Claude (Opus 4.8)
 - **v0.8 (2026-06-04)** — **Wall auto-typing — closes the ADR-414 gap «every wall shows the same layers»**
   (Giorgio-approved Plan Mode, recognition-first). **Root cause:** walls were created + persisted WITHOUT a
   `typeId`, so the «Edit Wall Type» panel (ADR-414) edited a type no instance referenced. The whole «type always

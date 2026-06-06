@@ -37,6 +37,7 @@ import { useSpecialToolsSelectionTools, type SelectionToolsReturn } from './useS
 // ADR-408 — MEP + furnishing single/2-click placement tools extracted (N.7.1).
 import { useSpecialToolsPlacementTools, type PlacementToolsReturn } from './useSpecialTools-placement-tools';
 import { addWallToScene } from '../../bim/walls/add-wall-to-scene';
+import { useWallAutoTyping } from '../../bim/family-types/useWallAutoTyping';
 import { addColumnToScene } from '../../bim/columns/add-column-to-scene';
 // ADR-397 — slab / roof / beam draw delegate to the `appendEntityToScene` SSoT.
 // Column draw + Ctrl-copy go through `addColumnToScene` (same SSoT, 'column' tag).
@@ -165,6 +166,9 @@ export function useSpecialTools(props: UseSpecialToolsProps): UseSpecialToolsRet
   });
 
   useToolLifecycle(activeTool === 'stair', stairTool.activate, stairTool.deactivate);
+  // ADR-412 — auto-type-on-create (Revit «Generic Wall»): give every freshly
+  // drawn wall a shared family type before it lands in the scene (SSoT host).
+  const { ensureAutoWallType } = useWallAutoTyping();
   // ADR-363 Phase 1B — WALL TOOL
   /**
    * Wall drawing tool — 2-click placement (startPoint → endPoint) + commit.
@@ -191,7 +195,7 @@ export function useSpecialTools(props: UseSpecialToolsProps): UseSpecialToolsRet
     // ADR-363 Phase 1G.4 — append + trim + broadcast via the shared SSoT
     // (`addWallToScene`) so the DRAW path and the Ctrl-COPY hot-grip path use
     // ONE insertion routine (N.0.2 — no copy-paste of the persistence trigger).
-    onWallCreated: (wallEntity) => addWallToScene(wallEntity, levelManager),
+    onWallCreated: (wallEntity) => addWallToScene(ensureAutoWallType(wallEntity), levelManager),
   });
   // ADR-363 Phase 1J — both the freehand wall tool ('wall') and the on-entity
   // variant ('wall-on-entity') share ONE useWallTool instance; lifecycle covers

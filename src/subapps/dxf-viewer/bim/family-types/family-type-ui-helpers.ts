@@ -92,15 +92,33 @@ export function isBuiltInType(type: BimFamilyType): boolean {
 }
 
 /**
- * Display name for a type. Built-in `name` is a stable i18n key
- * (e.g. `'builtin.wall.exterior'`), so it is translated; user types carry a
- * literal user-supplied name and are returned verbatim.
+ * Auto-generated «Generic - {thickness}» type (ADR-412). Editable like a user
+ * type, but its `name` is a stable i18n key (interpolated with `thickness`), not
+ * a literal — so it is NOT inline-renamable in the properties widget.
+ */
+export function isAutoType(type: BimFamilyType): boolean {
+  return type.origin === 'auto';
+}
+
+/**
+ * Display name for a type. Built-in + auto `name` is a stable i18n key (built-in
+ * e.g. `'builtin.wall.exterior'`; auto `'auto.wall.generic'`), so it is
+ * translated — auto names additionally interpolate the `thickness` («Generic
+ * {thickness}mm»). User types carry a literal user-supplied name (verbatim).
  */
 export function resolveTypeDisplayName(
   type: BimFamilyType,
-  t: (key: string) => string,
+  t: (key: string, opts?: Record<string, unknown>) => string,
 ): string {
-  return isBuiltInType(type) ? t(`${I18N_PREFIX}.${type.name}`) : type.name;
+  if (isBuiltInType(type)) return t(`${I18N_PREFIX}.${type.name}`);
+  if (isAutoType(type)) {
+    const thickness =
+      type.category === 'wall'
+        ? Math.round((type.typeParams as WallTypeParams).thickness)
+        : undefined;
+    return t(`${I18N_PREFIX}.${type.name}`, thickness !== undefined ? { thickness } : undefined);
+  }
+  return type.name;
 }
 
 /** The type-governed param keys an instance currently overrides (badge source). */

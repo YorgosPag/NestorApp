@@ -76,8 +76,12 @@ export type BimFamilyTypeScope = 'user' | 'company' | 'project';
  * Provenance of a family type:
  *   - `'built-in'` — seeded/system type (read-only catalog default).
  *   - `'user'`     — created or duplicated by a user.
+ *   - `'auto'`     — auto-generated «Generic - {thickness}» type, minted on wall
+ *     creation when an arbitrary cross-section has no matching built-in (Revit
+ *     «Generic Wall» pattern). Persisted + directly editable (unlike built-ins);
+ *     `name` is the i18n key `auto.wall.generic`, interpolated with `thickness`.
  */
-export type BimFamilyTypeOrigin = 'built-in' | 'user';
+export type BimFamilyTypeOrigin = 'built-in' | 'user' | 'auto';
 
 // ─── Type-level param subsets (one per supported category) ───────────────────
 

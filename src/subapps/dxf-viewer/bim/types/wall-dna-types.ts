@@ -96,6 +96,28 @@ export function getDefaultDnaForCategory(category: WallCategory): WallDna {
   }
 }
 
+/**
+ * Single-layer «Generic» cross-section for an arbitrary thickness (Revit «Generic
+ * Wall» pattern) — SSoT for the auto-type-on-create flow (ADR-412). One `core`
+ * layer of the requested `thicknessMm`, inheriting the category default's core
+ * material so the generic wall renders with a sensible structural material. The
+ * layer `name` is internal storage data (mirrors the literal layer names above —
+ * not a user-facing i18n string), so it is left as a stable English label.
+ *
+ * @param category    Drives the inherited core material (concrete / brick / …).
+ * @param thicknessMm Total (and sole layer) thickness in mm.
+ * @see ./bim-family-type.ts §BimFamilyTypeOrigin 'auto'
+ * @see ../family-types/auto-wall-type.ts §buildAutoWallType
+ */
+export function buildGenericWallDna(category: WallCategory, thicknessMm: number): WallDna {
+  const def = getDefaultDnaForCategory(category);
+  const core = def.layers.find((l) => l.side === 'core') ?? def.layers[0];
+  const layers: readonly WallDnaLayer[] = [
+    { id: 'generic-core', name: 'Structure', thickness: thicknessMm, materialId: core.materialId, side: 'core' },
+  ];
+  return { layers, totalThickness: thicknessMm };
+}
+
 // Forward type import — declared in wall-types.ts; re-imported here for the
 // `getDefaultDnaForCategory()` signature. Circular-safe via `import type`.
 import type { WallCategory } from './wall-types';

@@ -1479,6 +1479,11 @@
             "residential": "Κατοικίας",
             "narrow": "Στενή"
           }
+        },
+        "auto": {
+          "wall": {
+            "generic": "Γενικός {thickness}χιλ."
+          }
         }
       },
       "roofFamilyType": {

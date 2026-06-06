@@ -351,6 +351,46 @@ export class BimFamilyTypeService {
   }
 
   /**
+   * ADR-412 — persists a freshly-minted type that ALREADY carries its enterprise
+   * id (unlike `saveType`, which mints a new one). The auto-type-on-create flow
+   * needs the id synchronously (to stamp the wall + insert into the store before
+   * the network round-trip), so it generates the id via the enterprise-id SSoT
+   * and hands the built type here for the fire-and-forget persist. Validates the
+   * `typeParams` + the full document, and stamps tenant/timestamp fields exactly
+   * like `saveType`.
+   *
+   * @see ./auto-wall-type.ts §buildAutoWallType
+   */
+  async createTypeWithId<C extends keyof BimTypeParamsByCategory>(
+    type: BimFamilyType<C>,
+  ): Promise<BimFamilyType<C>> {
+    validateTypeParams(type.category, type.typeParams);
+
+    const base: BimFamilyType<C> = {
+      ...type,
+      companyId: this.config.companyId,
+      ownerId: this.config.userId,
+      createdBy: this.config.userId,
+      createdAt: serverTimestamp() as BimFamilyType['createdAt'],
+      updatedBy: this.config.userId,
+      updatedAt: serverTimestamp() as BimFamilyType['updatedAt'],
+    };
+
+    // Firestore rejects `undefined`. projectId only persisted when scope=project.
+    const payload: BimFamilyType<C> =
+      type.scope === 'project' && this.config.projectId
+        ? { ...base, projectId: this.config.projectId }
+        : base;
+
+    validateDocument(payload as BimFamilyType);
+
+    await setDoc(this.docRef(type.id), payload);
+    this.invalidateCache();
+
+    return payload;
+  }
+
+  /**
    * Invalidates the in-memory 5-min cache. Called automatically on every
    * write (saveType / updateType / deleteType). Can also be called externally
    * when an external mutation is known to have occurred.

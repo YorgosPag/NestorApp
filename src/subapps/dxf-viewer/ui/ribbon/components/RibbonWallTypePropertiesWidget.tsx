@@ -28,7 +28,7 @@ import {
 } from '@/components/ui/select';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useWallFamilyTypeController } from '../hooks/useWallFamilyTypeController';
-import { isBuiltInType, resolveTypeDisplayName } from '../../../bim/family-types/family-type-ui-helpers';
+import { isAutoType, isBuiltInType, resolveTypeDisplayName } from '../../../bim/family-types/family-type-ui-helpers';
 import { openEditWallType } from '../../../bim/family-types/edit-wall-type-store';
 import type { WallCategory } from '../../../bim/types/wall-types';
 
@@ -59,7 +59,8 @@ export function RibbonWallTypePropertiesWidget(): React.JSX.Element | null {
   useEffect(() => setDraft(typeName), [typeName]);
 
   const commitRename = useCallback(() => {
-    if (!currentType || isBuiltInType(currentType)) return;
+    // Built-in + auto names are stable i18n keys → not inline-renamable.
+    if (!currentType || isBuiltInType(currentType) || isAutoType(currentType)) return;
     const next = draft.trim();
     if (!next || next === currentType.name) return;
     void ctrl.renameType(currentType.id, next);
@@ -103,6 +104,9 @@ export function RibbonWallTypePropertiesWidget(): React.JSX.Element | null {
   if (!wall || !currentType) return null;
 
   const editable = !isBuiltInType(currentType) && canWrite;
+  // Auto («Generic») types are editable (delete/Edit Type) but their name is a
+  // stable i18n key, so the inline rename input is suppressed for them.
+  const nameEditable = editable && !isAutoType(currentType);
   const categoryOverridden = overriddenKeys.includes('category');
   const materialLabel = wall.params.material
     ? t(`ribbon.commands.wallEditor.material.${MATERIAL_KEY[wall.params.material] ?? 'rc'}`)
@@ -114,7 +118,7 @@ export function RibbonWallTypePropertiesWidget(): React.JSX.Element | null {
         <span className="dxf-ribbon-combobox-label">
           {t('ribbon.commands.bimFamilyType.properties')}
         </span>
-        {editable ? (
+        {nameEditable ? (
           <input
             className="text-xs px-1 py-0.5 rounded border border-black/20 bg-transparent"
             value={draft}
@@ -125,7 +129,9 @@ export function RibbonWallTypePropertiesWidget(): React.JSX.Element | null {
           />
         ) : (
           <span className="dxf-ribbon-wall-length-value">
-            {typeName} · {t('ribbon.commands.bimFamilyType.builtinBadge')}
+            {isBuiltInType(currentType)
+              ? `${typeName} · ${t('ribbon.commands.bimFamilyType.builtinBadge')}`
+              : typeName}
           </span>
         )}
         {overriddenKeys.length > 0 && (

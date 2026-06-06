@@ -1479,6 +1479,11 @@
             "residential": "Residential",
             "narrow": "Narrow"
           }
+        },
+        "auto": {
+          "wall": {
+            "generic": "Generic {thickness}mm"
+          }
         }
       },
       "roofFamilyType": {
