@@ -27,6 +27,7 @@
  */
 
 import * as THREE from 'three';
+import type { Point3D } from '../../bim/types/bim-base';
 import type { RoofEntity, RoofFace, RoofRidgeLine } from '../../bim/types/roof-types';
 import {
   DEFAULT_EAVE_MATERIAL_ID,
