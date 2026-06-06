@@ -54,12 +54,12 @@ export function createSectionPanelSceneSync(): SectionPanelSceneSync {
   let renderer: SectionPanelRenderer | null = null;
 
   function buildEntitiesInput(): { entities: SectionEntitiesInput; walls: WallPlan[] } {
-    const { walls, columns, beams, slabs } = useBim3DEntitiesStore.getState();
-    // ADR-401 Phase B/(γ): host inputs (beams + slabs) → per-wall resolveHost
+    const { walls, columns, beams, slabs, roofs } = useBim3DEntitiesStore.getState();
+    // ADR-401 Phase B/(γ): host inputs (beams + slabs + roofs) → per-wall resolveHost
     // (κάτω-παρειά, top-attach) ΚΑΙ resolveHostTopside (άνω-παρειά, base-attach)
     // για σκαλωτή/κεκλιμένη κορυφή ΚΑΙ βάση σε `attached` τοίχους. Footprints +
     // wall axis στο ίδιο plan space (canvas units).
-    const hostInputs = buildWallHostInputs(beams, slabs);
+    const hostInputs = buildWallHostInputs(beams, slabs, roofs);
     // ADR-404 Phase 3 — section parity: το cut plane (mm πάνω από τη βάση ορόφου)
     // μετατοπίζει τα κεκλιμένα στοιχεία, ίδια προβολή με την 2Δ κάτοψη.
     const cutPlaneMm = useDrawingScaleStore.getState().viewRange.cutPlaneMm;

@@ -18,7 +18,7 @@
  */
 
 import type { Entity } from '../../types/entities';
-import { isWallEntity, isBeamEntity, isSlabEntity, isColumnEntity, isStairEntity } from '../../types/entities';
+import { isWallEntity, isBeamEntity, isSlabEntity, isColumnEntity, isStairEntity, isRoofEntity } from '../../types/entities';
 import type { WallAttachTarget } from '../../core/commands/entity-commands/AttachWallsTopCommand';
 import type { ColumnAttachTarget } from '../../core/commands/entity-commands/AttachColumnsCommand';
 import type { StairAttachTarget } from '../../core/commands/entity-commands/AttachStairsCommand';
@@ -75,7 +75,7 @@ export function resolveStructuralHostId(
   if (!hoveredId) return null;
   const e = entities.find((x) => x.id === hoveredId);
   if (!e) return null;
-  return isBeamEntity(e) || isSlabEntity(e) ? e.id : null;
+  return isBeamEntity(e) || isSlabEntity(e) || isRoofEntity(e) ? e.id : null;
 }
 
 /** Perpendicular distance from `p` to segment `a→b` (XY). */
@@ -99,6 +99,11 @@ export function findStructuralHostAtPoint(
   pointMm: Point2D,
   tolMm: number,
 ): string | null {
+  for (const e of entities) {
+    if (isRoofEntity(e) && pointInPolygon(pointMm, e.params.outline.vertices)) {
+      return e.id;
+    }
+  }
   for (const e of entities) {
     if (isSlabEntity(e) && pointInPolygon(pointMm, e.params.outline.vertices)) {
       return e.id;

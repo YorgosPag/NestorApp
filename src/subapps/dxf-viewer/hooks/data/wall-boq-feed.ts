@@ -8,7 +8,7 @@
  */
 
 import type { SceneModel } from '../../types/entities';
-import { isBeamEntity, isSlabEntity } from '../../types/entities';
+import { isBeamEntity, isSlabEntity, isRoofEntity } from '../../types/entities';
 import type { WallEntity } from '../../bim/types/wall-types';
 import type { OpeningEntity } from '../../bim/types/opening-types';
 import {
@@ -70,6 +70,7 @@ function resolveAttachedWallProfiles(
   const hostInputs = buildWallHostInputs(
     scene.entities.filter(isBeamEntity),
     scene.entities.filter(isSlabEntity),
+    scene.entities.filter(isRoofEntity),
   );
   const start = { x: entity.params.start.x, y: entity.params.start.y };
   const end = { x: entity.params.end.x, y: entity.params.end.y };

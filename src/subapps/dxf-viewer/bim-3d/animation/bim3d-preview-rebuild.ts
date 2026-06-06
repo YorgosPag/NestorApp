@@ -114,7 +114,7 @@ export function buildTiltPreviewObject(entityId: string, drag: TiltDragDeg): THR
     const preview = { ...wall, params: next, geometry: computeWallGeometry(next, wall.kind) };
     const openings = s.openings.filter((o) => o.params.wallId === wall.id);
     const { profile, baseProfile } = wallPreviewProfiles(preview, s);
-    const topClip = wallPreviewTopClip(preview, buildWallHostInputs(s.beams, s.slabs), 0);
+    const topClip = wallPreviewTopClip(preview, buildWallHostInputs(s.beams, s.slabs, s.roofs), 0);
     return wallToMesh(preview, openings, 0, levelId, baseElevationOf(wall, s), profile, baseProfile, topClip);
   }
   const column = s.columns.find((c) => c.id === entityId);
@@ -164,7 +164,7 @@ function wallPreviewProfiles(wall: Wall, s: Snapshot): { profile?: WallTopProfil
   const topAttached = wall.params?.topBinding === 'attached';
   const baseAttached = wall.params?.baseBinding === 'attached';
   if (!topAttached && !baseAttached) return {};
-  const hostInputs = buildWallHostInputs(s.beams, s.slabs);
+  const hostInputs = buildWallHostInputs(s.beams, s.slabs, s.roofs);
   const start = { x: wall.params.start.x, y: wall.params.start.y };
   const end = { x: wall.params.end.x, y: wall.params.end.y };
   return {
@@ -208,7 +208,7 @@ function columnPreviewProfiles(column: Column, s: Snapshot): { topProfile?: Colu
   const footVerts = column.geometry?.footprint?.vertices;
   if ((!topAttached && !baseAttached) || !footVerts || footVerts.length < 3) return {};
   const footprint = footVerts.map((v) => ({ x: v.x, y: v.y }));
-  const colCtx = { floorElevationMm: 0, resolveHostInput: makeColumnHostResolver(buildWallHostInputs(s.beams, s.slabs)) };
+  const colCtx = { floorElevationMm: 0, resolveHostInput: makeColumnHostResolver(buildWallHostInputs(s.beams, s.slabs, s.roofs)) };
   return {
     topProfile: topAttached ? resolveColumnTopProfile(column.params, footprint, colCtx) : undefined,
     baseProfile: baseAttached ? resolveColumnBaseProfile(column.params, footprint, colCtx) : undefined,
@@ -223,7 +223,7 @@ function rebuildWall(wall: Wall, drag: ResizeDragMm, s: Snapshot, levelId: strin
   const { profile, baseProfile } = wallPreviewProfiles(preview, s);
   // ADR-401 Κενό Β — pass the footprint clip so a resized attached wall previews
   // with its real angled-crossing top (ghost === commit), not just the axis profile.
-  const topClip = wallPreviewTopClip(preview, buildWallHostInputs(s.beams, s.slabs), 0);
+  const topClip = wallPreviewTopClip(preview, buildWallHostInputs(s.beams, s.slabs, s.roofs), 0);
   return wallToMesh(preview, openings, 0, levelId, baseElevationOf(wall, s), profile, baseProfile, topClip);
 }
 
@@ -251,7 +251,7 @@ export function buildDependentWallPreviewObject(
   if (!wall) return null;
   const levelId = s.activeLevelId ?? undefined;
   const d = worldToDxfPlan(liveTranslation); // world (m) → plan (mm) delta
-  const hostInputs = buildWallHostInputs(s.beams, s.slabs).map((h) =>
+  const hostInputs = buildWallHostInputs(s.beams, s.slabs, s.roofs).map((h) =>
     movedHostIds.has(h.hostId) ? shiftHost(h, d.x, d.y, d.z) : h,
   );
   const start = { x: wall.params.start.x, y: wall.params.start.y };

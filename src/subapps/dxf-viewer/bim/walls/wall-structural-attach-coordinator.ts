@@ -28,12 +28,13 @@
 
 import type { ISceneManager, SceneEntity } from '../../core/commands/interfaces';
 import type { Entity } from '../../types/entities';
-import { isBeamEntity, isSlabEntity, isWallEntity } from '../../types/entities';
+import { isBeamEntity, isSlabEntity, isWallEntity, isRoofEntity } from '../../types/entities';
 import { findAttachedWalls } from '../cascade/bim-cascade-resolver';
 import { EventBus } from '../../systems/events/EventBus';
 import {
   beamHostInput,
   slabHostInput,
+  roofHostInput,
   buildHostUndersidePlans,
   buildHostTopsidePlans,
   type HostFootprintInput,
@@ -118,6 +119,7 @@ export function findWallsToAutoAttachToHost(
   let hostInput: HostFootprintInput;
   if (isBeamEntity(host)) hostInput = beamHostInput(host);
   else if (isSlabEntity(host)) hostInput = slabHostInput(host);
+  else if (isRoofEntity(host)) hostInput = roofHostInput(host);
   else return [];
 
   const out: string[] = [];

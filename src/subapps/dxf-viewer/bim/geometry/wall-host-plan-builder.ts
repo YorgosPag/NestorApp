@@ -23,10 +23,13 @@
 
 import type { BeamEntity } from '../types/beam-types';
 import type { SlabEntity } from '../types/slab-types';
+import type { RoofEntity } from '../types/roof-types';
 import { isPointInPolygon } from '../../utils/geometry/GeometryUtils';
 import { computeBeamGeometry } from './beam-geometry';
 import { slabUndersideZmmAt, slabTopZmmAt } from './slab-slope';
 import { beamUndersideZmmAt, beamTopZmmAt, isBeamTilted } from './beam-slope';
+import { resolveEavePlanes, roofZmm } from './roof-lower-envelope';
+import { mmScaleFor } from '../../utils/scene-units';
 import type { HostUndersidePlan, HostTopsidePlan, WallVerticalContext } from './wall-top-profile';
 
 /** Ελάχιστο 2D σημείο (plan space). */
@@ -313,15 +316,46 @@ export function slabHostInput(slab: SlabEntity): HostFootprintInput {
 }
 
 /**
- * Όλοι οι structural hosts ενός ορόφου (δοκάρια + πλάκες) → `HostFootprintInput[]`,
- * έτοιμοι για `makeWallTopContext` / `makeResolveHost`. ΕΝΑΣ τόπος που συνθέτει το
- * `[...beams.map(beamHostInput), ...slabs.map(slabHostInput)]` — καταναλώνεται από
- * `BimSceneLayer.syncWalls`/`addEnvelopeShell`, `section-scene-sync`, `wall-boq-feed`
- * (Boy Scout N.0.2 — πρώην τετραπλό inline pattern).
+ * ADR-417 Φ4 — Roof → host input. Footprint = canvas-unit outline (mirror slabHostInput).
+ * Underside = roofZmm(planes, basePivotZ, s, pt) − thickness: κεκλιμένη κάτω-παρειά
+ * στέγης σε κάθε plan-point (SSoT roofZmm). Nominal flat fallback = basePivotZ − thickness
+ * (eaves datum − πάχος). Η στέγη υποστηρίζει ΜΟΝΟ top-attach (τοίχοι κολλούν από κάτω)
+ * → ΔΕΝ δίνει topsideZmm.
+ */
+export function roofHostInput(roof: RoofEntity): HostFootprintInput {
+  const s = mmScaleFor(roof.params);
+  const { planes } = resolveEavePlanes(
+    roof.params.outline.vertices,
+    roof.params.edges,
+    roof.params.slopeUnit,
+  );
+  const footprint = roof.params.outline.vertices.map((v) => ({ x: v.x, y: v.y }));
+  const basePivotZ = roof.params.basePivotZ;
+  const thickness = roof.params.thickness;
+  return {
+    hostId: roof.id,
+    hostType: 'roof',
+    footprint,
+    undersideZmm: basePivotZ - thickness,
+    undersideZmmAt: (pt) => roofZmm(planes, basePivotZ, s, pt) - thickness,
+  };
+}
+
+/**
+ * Όλοι οι structural hosts ενός ορόφου (δοκάρια + πλάκες + στέγες) → `HostFootprintInput[]`,
+ * έτοιμοι για `makeWallTopContext` / `makeResolveHost`. ΕΝΑΣ τόπος που συνθέτει το array —
+ * καταναλώνεται από `BimSceneLayer.syncWalls`/`addEnvelopeShell`, `section-scene-sync`,
+ * `wall-boq-feed` (Boy Scout N.0.2 — πρώην τετραπλό inline pattern).
+ * ADR-417 Φ4: `roofs` optional (backward-compat — existing callers ΔΕΝ αλλάζουν τύπο).
  */
 export function buildWallHostInputs(
   beams: readonly BeamEntity[],
   slabs: readonly SlabEntity[],
+  roofs: readonly RoofEntity[] = [],
 ): HostFootprintInput[] {
-  return [...beams.map(beamHostInput), ...slabs.map(slabHostInput)];
+  return [
+    ...beams.map(beamHostInput),
+    ...slabs.map(slabHostInput),
+    ...roofs.map(roofHostInput),
+  ];
 }

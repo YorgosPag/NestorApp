@@ -11,6 +11,7 @@ import {
   makeResolveHost,
   beamHostInput,
   slabHostInput,
+  roofHostInput,
   buildWallHostInputs,
   type HostFootprintInput,
   type Pt2,
@@ -23,6 +24,7 @@ import {
 } from '../wall-top-profile';
 import type { BeamEntity } from '../../types/beam-types';
 import type { SlabEntity } from '../../types/slab-types';
+import type { RoofEntity } from '../../types/roof-types';
 
 // ─── Fixtures ────────────────────────────────────────────────────────────────
 
@@ -372,5 +374,122 @@ describe('slabHostInput — tilted roof host (Phase E2)', () => {
     expect(evaluateWallTopAt(profile, 1)).toBeCloseTo(3200, 6);
     // monotonικά αύξον (κλίση) — μέσο ~2800
     expect(evaluateWallTopAt(profile, 0.5)).toBeCloseTo(2800, 6);
+  });
+});
+
+// ─── ADR-417 Φ4 — roofHostInput (ADR-417 parametric RoofEntity) ──────────────
+
+describe('roofHostInput — ADR-417 Φ4 (parametric RoofEntity)', () => {
+  /**
+   * Flat roof (no slope-defining edges): 5m×5m outline, basePivotZ=3000mm, thickness=200mm.
+   * Αναμένουμε: undersideZmm = 2800, undersideZmmAt = 2800 παντού.
+   */
+  const flatRoof = {
+    id: 'roof_flat', type: 'roof', kind: 'roof',
+    ifcType: 'IfcRoof',
+    params: {
+      outline: { vertices: [
+        { x: 0, y: 0, z: 3000 }, { x: 5000, y: 0, z: 3000 },
+        { x: 5000, y: 5000, z: 3000 }, { x: 0, y: 5000, z: 3000 },
+      ] },
+      edges: [
+        { definesSlope: false, slope: 0, overhangMm: 0 },
+        { definesSlope: false, slope: 0, overhangMm: 0 },
+        { definesSlope: false, slope: 0, overhangMm: 0 },
+        { definesSlope: false, slope: 0, overhangMm: 0 },
+      ],
+      slopeUnit: 'deg',
+      basePivotZ: 3000,
+      thickness: 200,
+      sceneUnits: 'mm',
+    },
+  } as unknown as RoofEntity;
+
+  /**
+   * Gable roof: 10m×5m footprint, γείσο στο +Y και −Y (definesSlope=true, 45°).
+   * Η κορυφή (ridge) ανεβαίνει 2500mm πάνω από basePivotZ=3000mm (ratio=1, half-width=2500mm).
+   * basePivotZ=3000, thickness=200, sceneUnits='mm'.
+   * Γείσο: eave midpoint (x=5000, y=0 ή y=5000) → z=3000, underside=2800.
+   * Κορφιάς midpoint (x=5000, y=2500) → z=3000+2500=5500, underside=5300.
+   */
+  const gableRoof = {
+    id: 'roof_gable', type: 'roof', kind: 'roof',
+    ifcType: 'IfcRoof',
+    params: {
+      outline: { vertices: [
+        { x: 0, y: 0, z: 3000 }, { x: 10000, y: 0, z: 3000 },
+        { x: 10000, y: 5000, z: 3000 }, { x: 0, y: 5000, z: 3000 },
+      ] },
+      edges: [
+        { definesSlope: true, slope: 45, overhangMm: 0 },   // +Y eave
+        { definesSlope: false, slope: 0, overhangMm: 0 },   // gable end
+        { definesSlope: true, slope: 45, overhangMm: 0 },   // −Y eave
+        { definesSlope: false, slope: 0, overhangMm: 0 },   // gable end
+      ],
+      slopeUnit: 'deg',
+      basePivotZ: 3000,
+      thickness: 200,
+      sceneUnits: 'mm',
+    },
+  } as unknown as RoofEntity;
+
+  it('flat roof → undersideZmm = basePivotZ − thickness', () => {
+    const input = roofHostInput(flatRoof);
+    expect(input.hostId).toBe('roof_flat');
+    expect(input.hostType).toBe('roof');
+    expect(input.undersideZmm).toBe(2800);
+    expect(typeof input.undersideZmmAt).toBe('function');
+  });
+
+  it('flat roof → undersideZmmAt παντού = basePivotZ − thickness (planes=[]))', () => {
+    const input = roofHostInput(flatRoof);
+    expect(input.undersideZmmAt!({ x: 0, y: 0 })).toBeCloseTo(2800, 6);
+    expect(input.undersideZmmAt!({ x: 2500, y: 2500 })).toBeCloseTo(2800, 6);
+    expect(input.undersideZmmAt!({ x: 5000, y: 5000 })).toBeCloseTo(2800, 6);
+  });
+
+  it('gable roof → eave edge (y=0) undersideZmmAt = 2800 (nominal)', () => {
+    const input = roofHostInput(gableRoof);
+    // Γείσο midpoint — απόσταση 0 από την ακμή → z=basePivotZ → underside=2800.
+    expect(input.undersideZmmAt!({ x: 5000, y: 0 })).toBeCloseTo(2800, 1);
+  });
+
+  it('gable roof → ridge midpoint (y=2500) undersideZmmAt = basePivotZ + 2500 − thickness', () => {
+    const input = roofHostInput(gableRoof);
+    // Κορφιάς: dist=2500mm από κάθε γείσο (ratio=tan45°=1) → rise=2500mm → z=5500→underside=5300.
+    expect(input.undersideZmmAt!({ x: 5000, y: 2500 })).toBeCloseTo(5300, 1);
+  });
+
+  it('gable roof → topsideZmm absent (top-only host)', () => {
+    const input = roofHostInput(gableRoof);
+    expect(input.topsideZmm).toBeUndefined();
+    expect(input.topsideZmmAt).toBeUndefined();
+  });
+
+  it('buildWallHostInputs με roofs → roofHostInput συμπεριλαμβάνεται', () => {
+    const beam = {
+      id: 'b1', type: 'beam', kind: 'straight',
+      params: { kind: 'straight', startPoint: { x: 0, y: 0 }, endPoint: { x: 4000, y: 0 }, width: 250, depth: 500, topElevation: 3000, zOffset: 0, sceneUnits: 'mm' },
+    } as unknown as BeamEntity;
+    const slab = {
+      id: 's1', type: 'slab', kind: 'floor',
+      params: { kind: 'floor', outline: { vertices: [{ x: 0, y: 0 }, { x: 5000, y: 0 }, { x: 5000, y: 5000 }, { x: 0, y: 5000 }] }, levelElevation: 3000, heightOffsetFromLevel: 0, thickness: 150, geometryType: 'box' },
+    } as unknown as SlabEntity;
+    const out = buildWallHostInputs([beam], [slab], [flatRoof]);
+    expect(out).toHaveLength(3);
+    expect(out[2].hostId).toBe('roof_flat');
+    expect(out[2].hostType).toBe('roof');
+  });
+
+  it('buildWallHostInputs χωρίς roofs → backward-compat (2 hosts)', () => {
+    const beam = {
+      id: 'b1', type: 'beam', kind: 'straight',
+      params: { kind: 'straight', startPoint: { x: 0, y: 0 }, endPoint: { x: 4000, y: 0 }, width: 250, depth: 500, topElevation: 3000, zOffset: 0, sceneUnits: 'mm' },
+    } as unknown as BeamEntity;
+    const slab = {
+      id: 's1', type: 'slab', kind: 'floor',
+      params: { kind: 'floor', outline: { vertices: [{ x: 0, y: 0 }, { x: 5000, y: 0 }, { x: 5000, y: 5000 }, { x: 0, y: 5000 }] }, levelElevation: 3000, heightOffsetFromLevel: 0, thickness: 150, geometryType: 'box' },
+    } as unknown as SlabEntity;
+    expect(buildWallHostInputs([beam], [slab])).toHaveLength(2);
   });
 });

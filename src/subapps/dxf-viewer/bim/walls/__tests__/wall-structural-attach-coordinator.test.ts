@@ -19,6 +19,7 @@ import type { ISceneManager } from '../../../core/commands/interfaces';
 import type { Entity } from '../../../types/entities';
 import type { BeamEntity } from '../../types/beam-types';
 import type { SlabEntity } from '../../types/slab-types';
+import type { RoofEntity } from '../../types/roof-types';
 
 interface FakeEntity {
   id: string;
@@ -203,6 +204,52 @@ describe('findWallsToAutoAttachToHost (Phase D)', () => {
     const line = { id: 'l1', type: 'line', start: { x: 0, y: 0 }, end: { x: 1, y: 1 } } as unknown as Entity;
     const wall = ceilingWall('w1', 0);
     expect(findWallsToAutoAttachToHost(line, [wall])).toEqual([]);
+  });
+});
+
+// ─── ADR-417 Φ4 — roof host auto-attach detection ────────────────────────────
+
+/** Flat RoofEntity 5m×5m footprint, basePivotZ=3000mm, thickness=200mm → underside=2800. */
+function roofAt(basePivotZ: number): RoofEntity {
+  return {
+    id: 'roof_1', type: 'roof', kind: 'roof',
+    ifcType: 'IfcRoof',
+    params: {
+      outline: { vertices: [
+        { x: 0, y: 0, z: basePivotZ }, { x: 5000, y: 0, z: basePivotZ },
+        { x: 5000, y: 5000, z: basePivotZ }, { x: 0, y: 5000, z: basePivotZ },
+      ] },
+      edges: [
+        { definesSlope: false, slope: 0, overhangMm: 0 },
+        { definesSlope: false, slope: 0, overhangMm: 0 },
+        { definesSlope: false, slope: 0, overhangMm: 0 },
+        { definesSlope: false, slope: 0, overhangMm: 0 },
+      ],
+      slopeUnit: 'deg',
+      basePivotZ,
+      thickness: 200,
+      sceneUnits: 'mm',
+    },
+  } as unknown as RoofEntity;
+}
+
+describe('findWallsToAutoAttachToHost — roof (ADR-417 Φ4)', () => {
+  it('attaches a storey-ceiling wall under a roof (plan overlap + roof above base)', () => {
+    const r = roofAt(3000); // underside = 2800 > base 0 ✓
+    const wall = ceilingWall('w1', 1000); // inside roof footprint
+    expect(findWallsToAutoAttachToHost(r as unknown as Entity, [wall])).toEqual(['w1']);
+  });
+
+  it('does NOT attach when wall is outside roof footprint (plan miss)', () => {
+    const r = roofAt(3000);
+    const wall = ceilingWall('w1', 8000); // y=8000 outside [0,5000]
+    expect(findWallsToAutoAttachToHost(r as unknown as Entity, [wall])).toEqual([]);
+  });
+
+  it('does NOT attach to a roof whose underside is at or below wall base (Z gate)', () => {
+    const r = roofAt(0); // underside = -200 <= base 0 → skip
+    const wall = ceilingWall('w1', 1000);
+    expect(findWallsToAutoAttachToHost(r as unknown as Entity, [wall])).toEqual([]);
   });
 });
 

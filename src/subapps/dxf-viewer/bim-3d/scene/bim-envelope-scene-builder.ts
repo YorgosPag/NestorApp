@@ -162,7 +162,7 @@ function buildEnvelopeWallTopRefs(
   const refs = new Map<string, WallTopRef>();
   const attached = entities.walls.filter((w) => w.params?.topBinding === 'attached');
   if (attached.length === 0) return refs;
-  const hostInputs = buildWallHostInputs(entities.beams, entities.slabs);
+  const hostInputs = buildWallHostInputs(entities.beams, entities.slabs, entities.roofs);
   for (const w of attached) {
     const start = { x: w.params.start.x, y: w.params.start.y };
     const end = { x: w.params.end.x, y: w.params.end.y };
@@ -188,7 +188,7 @@ function buildEnvelopeWallBaseRefs(
   const refs = new Map<string, WallBaseRef>();
   const attached = entities.walls.filter((w) => w.params?.baseBinding === 'attached');
   if (attached.length === 0) return refs;
-  const hostInputs = buildWallHostInputs(entities.beams, entities.slabs);
+  const hostInputs = buildWallHostInputs(entities.beams, entities.slabs, entities.roofs);
   for (const w of attached) {
     const start = { x: w.params.start.x, y: w.params.start.y };
     const end = { x: w.params.end.x, y: w.params.end.y };

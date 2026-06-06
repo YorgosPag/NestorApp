@@ -59,11 +59,40 @@ describe('resolveWallAttachTargets', () => {
   });
 });
 
+const roof = (id: string): Entity =>
+  ({
+    id,
+    type: 'roof',
+    params: {
+      outline: {
+        vertices: [
+          { x: 0, y: 0, z: 3000 },
+          { x: 4000, y: 0, z: 3000 },
+          { x: 4000, y: 3000, z: 3000 },
+          { x: 0, y: 3000, z: 3000 },
+        ],
+      },
+      edges: [
+        { definesSlope: false, slope: 0, overhangMm: 0 },
+        { definesSlope: false, slope: 0, overhangMm: 0 },
+        { definesSlope: false, slope: 0, overhangMm: 0 },
+        { definesSlope: false, slope: 0, overhangMm: 0 },
+      ],
+      slopeUnit: 'deg',
+      basePivotZ: 3000,
+      thickness: 200,
+      sceneUnits: 'mm',
+    },
+  } as unknown as Entity);
+
 describe('resolveStructuralHostId', () => {
-  const entities = [wall('w1'), beam('b1'), slab('s1')];
+  const entities = [wall('w1'), beam('b1'), slab('s1'), roof('r1')];
   it('returns id for beam/slab', () => {
     expect(resolveStructuralHostId(entities, 'b1')).toBe('b1');
     expect(resolveStructuralHostId(entities, 's1')).toBe('s1');
+  });
+  it('returns id for roof (ADR-417 Φ4)', () => {
+    expect(resolveStructuralHostId(entities, 'r1')).toBe('r1');
   });
   it('returns null for wall / null / missing', () => {
     expect(resolveStructuralHostId(entities, 'w1')).toBeNull();
@@ -82,5 +111,14 @@ describe('findStructuralHostAtPoint', () => {
   });
   it('returns null when point far from everything', () => {
     expect(findStructuralHostAtPoint([beam('b1')], { x: 2000, y: 5000 }, 10)).toBeNull();
+  });
+  it('returns roof id when point inside roof outline (ADR-417 Φ4)', () => {
+    expect(findStructuralHostAtPoint([roof('r1')], { x: 2000, y: 1500 }, 10)).toBe('r1');
+  });
+  it('roof takes priority over slab (checked first)', () => {
+    const roofEntity = roof('r1');
+    const slabEntity = slab('s1');
+    // both outlines overlap — roof checked first in new implementation
+    expect(findStructuralHostAtPoint([roofEntity, slabEntity], { x: 2000, y: 1500 }, 10)).toBe('r1');
   });
 });
