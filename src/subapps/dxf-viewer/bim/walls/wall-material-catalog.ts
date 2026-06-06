@@ -123,3 +123,64 @@ export function getThermalConductivityLambda(
   if (!materialId) return undefined;
   return WALL_MATERIAL_LAMBDA[materialId as WallMaterialPresetId];
 }
+
+// ============================================================================
+// SPECIFIC HEAT CAPACITY (cp) & DENSITY (ρ) — ADR-396 P10 SSoT
+// ============================================================================
+
+/**
+ * Ειδική θερμοχωρητικότητα cp (J/kgK) ανά preset υλικό.
+ * Τιμές: EN ISO 10456 / ΤΟΤΕΕ 20701-2. IFC4: `Pset_MaterialThermal.SpecificHeatCapacity`.
+ * Υλικά χωρίς θερμική σημασία (vapor barrier, tile κ.λπ.) παραλείπονται.
+ */
+export const WALL_MATERIAL_SPECIFIC_HEAT: Partial<Record<WallMaterialPresetId, number>> = {
+  'mat-concrete-c20':     840,
+  'mat-concrete-c25':     840,
+  'mat-concrete-c30':     840,
+  'mat-concrete-block':   840,
+  'mat-brick-masonry':    840,
+  'mat-stone-masonry':    840,
+  'mat-eps':             1500,
+  'mat-eps-graphite':    1500,
+  'mat-xps':             1500,
+  'mat-mineral-wool':    1030,
+  'mat-plaster-ext':     1000,
+  'mat-plaster-int':     1000,
+  'mat-plaster-thermal': 1000,
+  'mat-gypsum-board':    1090,
+  'mat-osb':             1700,
+};
+
+/**
+ * Πυκνότητα ρ (kg/m³) ανά preset υλικό.
+ * Τιμές: EN ISO 10456 / ΤΟΤΕΕ 20701-2. IFC4: `Pset_MaterialCommon.MassDensity`.
+ */
+export const WALL_MATERIAL_DENSITY: Partial<Record<WallMaterialPresetId, number>> = {
+  'mat-concrete-c20':     2300,
+  'mat-concrete-c25':     2400,
+  'mat-concrete-c30':     2500,
+  'mat-concrete-block':   1200,
+  'mat-brick-masonry':    1800,
+  'mat-stone-masonry':    2200,
+  'mat-eps':               15,
+  'mat-eps-graphite':      15,
+  'mat-xps':               30,
+  'mat-mineral-wool':      30,
+  'mat-plaster-ext':      1800,
+  'mat-plaster-int':      1200,
+  'mat-plaster-thermal':   400,
+  'mat-gypsum-board':      900,
+  'mat-osb':               650,
+};
+
+/** cp (J/kgK) ή `undefined` αν άγνωστο. */
+export function getSpecificHeat(materialId: string | undefined): number | undefined {
+  if (!materialId) return undefined;
+  return WALL_MATERIAL_SPECIFIC_HEAT[materialId as WallMaterialPresetId];
+}
+
+/** ρ (kg/m³) ή `undefined` αν άγνωστο. */
+export function getDensity(materialId: string | undefined): number | undefined {
+  if (!materialId) return undefined;
+  return WALL_MATERIAL_DENSITY[materialId as WallMaterialPresetId];
+}

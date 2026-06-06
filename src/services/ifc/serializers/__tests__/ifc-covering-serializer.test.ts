@@ -219,7 +219,8 @@ describe('ADR-396 P9 — serializeEnvelopeCoverings', () => {
     expect(count(graph, 'IFCMATERIALLAYERSET')).toBe(1);
     expect(count(graph, 'IFCRELASSOCIATESMATERIAL')).toBe(1);
     expect(count(graph, 'IFCMATERIALPROPERTIES')).toBe(1);
-    expect(count(graph, 'IFCPROPERTYSINGLEVALUE')).toBe(1);
+    // mat-eps-graphite has both λ (0.031) and cp (1500) → 2 properties
+    expect(count(graph, 'IFCPROPERTYSINGLEVALUE')).toBe(2);
 
     // Rel points at the wall's IFC id (RelatingBuildingElement = arg index 4).
     const rel = find(graph, 'IFCRELCOVERSBLDGELEMENTS');

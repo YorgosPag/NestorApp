@@ -182,3 +182,81 @@ function mapWallPredefinedType(category: WallCategory): string {
       return 'NOTDEFINED';
   }
 }
+
+// ─── Material layer set (from DNA) ──────────────────────────────────────────
+
+/**
+ * Εκπέμπει `IfcMaterialLayerSet` + `IfcMaterialLayerSetUsage` + `IfcRelAssociatesMaterial`
+ * για τον τοίχο. Revit-parity: στρώσεις από DNA, πάχος σε ΜΕΤΡΑ.
+ * Αν δεν υπάρχει DNA (bare structural wall), παραλείπεται (no-op).
+ */
+function appendWallMaterial(
+  graph: IfcGraph,
+  wallID: number,
+  wall: WallEntity,
+  thicknessM: number,
+): void {
+  const { dna } = wall.params;
+  if (!dna || dna.layers.length === 0) return;
+
+  const matLayerIDs = dna.layers.map((layer) => {
+    const materialID = graph.add('IFCMATERIAL', [lbl(layer.materialId), null, null]);
+    return graph.add('IFCMATERIALLAYER', [
+      ref(materialID),
+      real(layer.thickness * MM_TO_M),
+      null, null, null, null, null,
+    ]);
+  });
+
+  const layerSetID = graph.add('IFCMATERIALLAYERSET', [
+    matLayerIDs.map((id) => ref(id)),
+    lbl(wall.name ?? 'Wall Assembly'),
+    null,
+  ]);
+
+  const usageID = graph.add('IFCMATERIALLAYERSETUSAGE', [
+    ref(layerSetID),
+    enumValue('AXIS2'),
+    enumValue('POSITIVE'),
+    real(-thicknessM / 2),
+    null,
+  ]);
+
+  graph.add('IFCRELASSOCIATESMATERIAL', [
+    lbl(generateIfcGuid()),
+    null, null, null,
+    [ref(wallID)],
+    ref(usageID),
+  ]);
+}
+
+// ─── Pset_WallCommon ─────────────────────────────────────────────────────────
+
+/**
+ * Εκπέμπει `Pset_WallCommon` με `IsExternal`, `LoadBearing`,
+ * `ThermalTransmittance` (U από DNA — 0 αν δεν υπάρχει DNA).
+ * Πεδία/defaults SSoT: `pset-templates.ts` (ADR-369 §Q8.2).
+ */
+function appendWallCommonPset(
+  graph: IfcGraph,
+  wallID: number,
+  wall: WallEntity,
+): void {
+  const { category, dna } = wall.params;
+  const isExternal = category === 'exterior' || category === 'parapet';
+  const isLoadBearing = category !== 'partition' && category !== 'fence';
+  const uValue = dna ? computeWallTypeUValue(dna) : 0;
+
+  const propIDs = [
+    appendPropertySingleValue(graph, 'IsExternal', bool(isExternal)),
+    appendPropertySingleValue(graph, 'LoadBearing', bool(isLoadBearing)),
+    appendPropertySingleValue(
+      graph,
+      'ThermalTransmittance',
+      typed('IfcThermalTransmittanceMeasure', real(uValue)),
+    ),
+  ];
+
+  const psetID = appendPropertySet(graph, 'Pset_WallCommon', propIDs);
+  appendRelDefinesByProperties(graph, [wallID], psetID);
+}

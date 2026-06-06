@@ -40,7 +40,10 @@ import {
   getOpeningRevealInsulation,
 } from '@/subapps/dxf-viewer/bim/types/envelope-contribution';
 import type { EnvelopeLayer } from '@/subapps/dxf-viewer/bim/types/thermal-envelope-types';
-import { getThermalConductivityLambda } from '@/subapps/dxf-viewer/bim/walls/wall-material-catalog';
+import {
+  getThermalConductivityLambda,
+  getSpecificHeat,
+} from '@/subapps/dxf-viewer/bim/walls/wall-material-catalog';
 import { computeEnvelopePerimeter } from '@/subapps/dxf-viewer/bim/geometry/envelope-perimeter';
 
 import {
@@ -224,23 +227,36 @@ function appendCoveringMaterial(
 
 /**
  * `Pset_MaterialThermal` via `IfcMaterialProperties` (IFC4 Name/Description/
- * Properties/Material). λ από το P8 SSoT· custom/άγνωστο υλικό → skip (το
- * covering + material μένουν, χωρίς θερμική ιδιότητα).
+ * Properties/Material). λ + cp (αν γνωστά) από τον P8/P10 SSoT.
+ * custom/άγνωστο λ → skip (covering + material μένουν χωρίς θερμική ιδιότητα).
  */
 function appendThermalPset(graph: IfcGraph, materialID: number, materialId: string): void {
   const lambda = getThermalConductivityLambda(materialId);
   if (lambda === undefined) return;
 
-  const propID = graph.add('IFCPROPERTYSINGLEVALUE', [
+  const lambdaPropID = graph.add('IFCPROPERTYSINGLEVALUE', [
     lbl('ThermalConductivity'),
     null,
     typed('IfcThermalConductivityMeasure', real(lambda)),
     null,
   ]);
+
+  const propIDs: number[] = [lambdaPropID];
+
+  const cp = getSpecificHeat(materialId);
+  if (cp !== undefined) {
+    propIDs.push(graph.add('IFCPROPERTYSINGLEVALUE', [
+      lbl('SpecificHeatCapacity'),
+      null,
+      typed('IfcSpecificHeatCapacityMeasure', real(cp)),
+      null,
+    ]));
+  }
+
   graph.add('IFCMATERIALPROPERTIES', [
     lbl('Pset_MaterialThermal'),
     null,
-    [ref(propID)],
+    propIDs.map((id) => ref(id)),
     ref(materialID),
   ]);
 }
