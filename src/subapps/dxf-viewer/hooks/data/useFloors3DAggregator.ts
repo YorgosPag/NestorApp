@@ -35,7 +35,7 @@ import {
 } from '../../bim-3d/scene/multi-floor-3d-source';
 import {
   isWallEntity, isColumnEntity, isBeamEntity, isSlabEntity,
-  isSlabOpeningEntity, isOpeningEntity, isStairEntity, isMepFixtureEntity, isElectricalPanelEntity, isRailingEntity, isFurnitureEntity, isMepSegmentEntity, isMepFittingEntity, isMepManifoldEntity, isMepRadiatorEntity, isMepBoilerEntity, isRoofEntity,
+  isSlabOpeningEntity, isOpeningEntity, isStairEntity, isMepFixtureEntity, isElectricalPanelEntity, isRailingEntity, isFurnitureEntity, isMepSegmentEntity, isMepFittingEntity, isMepManifoldEntity, isMepRadiatorEntity, isMepBoilerEntity, isRoofEntity, isFloorFinishEntity,
 } from '../../types/entities';
 import type { SceneModel } from '../../types/scene';
 
@@ -62,6 +62,7 @@ function extractBim3DEntities(scene: SceneModel): Bim3DEntities {
     railings: e.filter(isRailingEntity),
     furnitures: e.filter(isFurnitureEntity),
     roofs: e.filter(isRoofEntity),
+    floorFinishes: e.filter(isFloorFinishEntity),
     mepSegments: e.filter(isMepSegmentEntity),
     mepFittings: e.filter(isMepFittingEntity),
     manifolds: e.filter(isMepManifoldEntity),
@@ -102,6 +103,7 @@ export function useFloors3DAggregator(active: boolean): void {
   const railings = useBim3DEntitiesStore((s) => s.railings);
   const furnitures = useBim3DEntitiesStore((s) => s.furnitures);
   const roofs = useBim3DEntitiesStore((s) => s.roofs);
+  const floorFinishes = useBim3DEntitiesStore((s) => s.floorFinishes);
   const mepSegments = useBim3DEntitiesStore((s) => s.mepSegments);
   const mepFittings = useBim3DEntitiesStore((s) => s.mepFittings);
   const manifolds = useBim3DEntitiesStore((s) => s.manifolds);
@@ -112,8 +114,8 @@ export function useFloors3DAggregator(active: boolean): void {
   const [loaded, setLoaded] = useState<ReadonlyMap<string, Bim3DEntities>>(new Map());
 
   const liveActive = useMemo<Bim3DEntities>(
-    () => ({ walls, columns, beams, slabs, slabOpenings, openings, stairs, fixtures, panels, railings, furnitures, roofs, mepSegments, mepFittings, manifolds, radiators, boilers }),
-    [walls, columns, beams, slabs, slabOpenings, openings, stairs, fixtures, panels, railings, furnitures, roofs, mepSegments, mepFittings, manifolds, radiators, boilers],
+    () => ({ walls, columns, beams, slabs, slabOpenings, openings, stairs, fixtures, panels, railings, furnitures, roofs, floorFinishes, mepSegments, mepFittings, manifolds, radiators, boilers }),
+    [walls, columns, beams, slabs, slabOpenings, openings, stairs, fixtures, panels, railings, furnitures, roofs, floorFinishes, mepSegments, mepFittings, manifolds, radiators, boilers],
   );
 
   // One target per building floor (first level wins for a floor with duplicates).

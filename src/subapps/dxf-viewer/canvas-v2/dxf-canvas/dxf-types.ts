@@ -31,6 +31,7 @@ import type { RailingEntity } from '../../bim/types/railing-types';
 import type { FurnitureEntity } from '../../bim/types/furniture-types';
 // ADR-417 — roof direct entity for DXF render pipeline.
 import type { RoofEntity } from '../../bim/types/roof-types';
+import type { FloorFinishEntity } from '../../bim/types/floor-finish-types';
 import type { MepSegmentEntity } from '../../bim/types/mep-segment-types';
 import type { MepFittingEntity } from '../../bim/types/mep-fitting-types';
 // ADR-415 — floorplan symbol direct entity for DXF render pipeline.
@@ -369,6 +370,17 @@ export interface DxfRoof extends DxfEntity {
   validation?: RoofEntity['validation'];
 }
 
+/**
+ * ADR-419 — DxfFloorFinish direct entity (same pattern as DxfSlab/DxfRoof).
+ * FloorFinishRenderer reads geometry.bbox + params.footprint + params.materialId at top level.
+ */
+export interface DxfFloorFinish extends DxfEntity {
+  type: 'floor-finish';
+  kind: FloorFinishEntity['kind'];
+  params: FloorFinishEntity['params'];
+  geometry: FloorFinishEntity['geometry'];
+}
+
 /** ADR-359 Phase 11 — XLine wrapper for grip computation pipeline. */
 export interface DxfXLine extends DxfEntity {
   type: 'xline';
@@ -381,7 +393,7 @@ export interface DxfRay extends DxfEntity {
   rayEntity: RayEntity;
 }
 
-export type DxfEntityUnion = DxfLine | DxfCircle | DxfPolyline | DxfArc | DxfText | DxfAngleMeasurement | DxfStair | DxfDimension | DxfSlab | DxfSlabOpening | DxfOpening | DxfWall | DxfColumn | DxfMepFixture | DxfElectricalPanel | DxfRailing | DxfFurniture | DxfMepSegment | DxfMepFitting | DxfFloorplanSymbol | DxfMepManifold | DxfMepRadiator | DxfMepBoiler | DxfRoof | DxfBeam | DxfXLine | DxfRay;
+export type DxfEntityUnion = DxfLine | DxfCircle | DxfPolyline | DxfArc | DxfText | DxfAngleMeasurement | DxfStair | DxfDimension | DxfSlab | DxfSlabOpening | DxfOpening | DxfWall | DxfColumn | DxfMepFixture | DxfElectricalPanel | DxfRailing | DxfFurniture | DxfMepSegment | DxfMepFitting | DxfFloorplanSymbol | DxfMepManifold | DxfMepRadiator | DxfMepBoiler | DxfRoof | DxfFloorFinish | DxfBeam | DxfXLine | DxfRay;
 
 // === DXF SCENE ===
 export interface DxfScene {

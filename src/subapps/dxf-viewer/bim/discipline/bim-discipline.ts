@@ -92,6 +92,8 @@ export const DISCIPLINE_BY_CATEGORY: Readonly<Record<BimCategory, DisciplineOrAn
   sanitary:        'plumbing',
   // ADR-415 — kitchen plan symbols (sink/stove/fridge/counter) ⊂ architectural (Revit Casework).
   kitchen:         'architectural',
+  // ADR-419 — floor-finish covering per room ⊂ architectural (Revit Floors / Covering).
+  'floor-finish':  'architectural',
 } as const;
 
 /**

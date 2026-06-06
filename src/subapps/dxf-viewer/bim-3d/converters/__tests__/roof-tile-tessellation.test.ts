@@ -33,15 +33,18 @@ const DEFAULT_TILE_OPTS = { scaleU: 1, scaleV: 1, rotate90: false };
 // ─── buildSlopePlane ──────────────────────────────────────────────────────────
 
 describe('buildSlopePlane', () => {
-  it('flat face → A=0, B=0, C=z0', () => {
+  it('flat face (non-collinear) → valid=true, A=0, B=0, C=z0', () => {
+    // det = dx1*dy2 - dx2*dy1 = 5*5 - 5*0 = 25 ≠ 0 → valid=true
+    // A = (dz1*dy2 - dz2*dy1)/det = 0, B = (dx1*dz2 - dx2*dz1)/det = 0, C = 100
     const face = makeFace([
       { x: 0, y: 0, z: 100 },
       { x: 5, y: 0, z: 100 },
       { x: 5, y: 5, z: 100 },
     ]);
     const p = buildSlopePlane(face.outline);
-    expect(p.valid).toBe(false); // collinear first 3? No — det≠0 but dz=0 → valid=true, A=B=0
-    // When all z equal, det≠0 → valid=true, A=B=0, C=z0
+    expect(p.valid).toBe(true);
+    expect(slopeZMm(2, 3, p)).toBeCloseTo(100, 1);
+    expect(slopeZMm(0, 0, p)).toBeCloseTo(100, 1);
   });
 
   it('sloped face → valid plane with non-zero A or B', () => {

@@ -124,6 +124,8 @@ export const SUBCATEGORY_TAXONOMY: Readonly<Record<BimCategory, ReadonlyArray<st
   // ADR-415 — floorplan symbols: no subcategory styling model (pure 2D symbol).
   sanitary:        [],
   kitchen:         [],
+  // ADR-419 — floor-finish: no subcategory model (solid/hatch fill, no edges).
+  'floor-finish':  [],
 };
 
 /**

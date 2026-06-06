@@ -47,7 +47,9 @@ type BimRestoreEntityType =
   // ADR-408 Εύρος Β #2 — heating boiler (wall-mounted heat source).
   | 'mep-boiler'
   // ADR-417 — parametric pitched roof.
-  | 'roof';
+  | 'roof'
+  // ADR-419 — per-room floor-finish covering.
+  | 'floor-finish';
 
 export function useBimEntityRestoredPersistEffect<T extends AnySceneEntity, S>(
   entityType: BimRestoreEntityType,

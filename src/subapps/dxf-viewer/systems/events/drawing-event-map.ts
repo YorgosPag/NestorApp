@@ -210,6 +210,9 @@ export interface DrawingEventMap {
   // ADR-417 Φ1-part-2 — BIM roof (κεκλιμένη στέγη) params + delete events
   'bim:roof-params-updated': { roofId: string };
   'bim:roof-delete-requested': { roofId: string };
+  // ADR-419 — BIM floor-finish covering (IfcCovering FLOORING) params + delete events
+  'bim:floor-finish-params-updated': { floorFinishId: string };
+  'bim:floor-finish-delete-requested': { id: string };
   // ADR-363 Phase 3.7 — BIM slab-opening params + delete events
   'bim:slab-opening-params-updated': { slabOpeningId: string };
   'bim:slab-opening-delete-requested': { slabOpeningId: string };

@@ -219,4 +219,6 @@ export const DEFAULT_OBJECT_STYLES: Readonly<Record<BimCategory, ObjectStyle>> =
   sanitary:       { projectionPen: 3, cutPen: 3 },
   // ADR-415 — στοιχείο κουζίνας: λεπτή γραμμή (casework plan symbol).
   kitchen:        { projectionPen: 3, cutPen: 3 },
+  // ADR-419 — επικάλυψη δαπέδου ανά δωμάτιο: λεπτή γραμμή (IfcCovering FLOORING, interior hatch).
+  'floor-finish': { projectionPen: 3, cutPen: 3 },
 } as const;
