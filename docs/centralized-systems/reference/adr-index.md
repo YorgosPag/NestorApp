@@ -396,6 +396,7 @@
 | **ADR-411** | BIM Mesh Library (entity-agnostic CC0 mesh assets) — γενίκευση furniture subsystem + φωτιστικά mesh opt-in | 🟢 VERTICAL SLICE DONE 2026-06-03 (1 CC0 κρεμαστό φωτιστικό end-to-end· furniture refactored onto SSoT· 90/90 tests, tsc 0· 🔴 verify+commit) | 2026-06-03 | Uncategorized | [📄](./adrs/ADR-411-bim-mesh-library.md) |
 | **ADR-415** | Βιβλιοθήκη 2D αποτυπωμάτων (floorplan symbol library) — pure-vector 2D σύμβολα επίπλων/sanitary/kitchen στον δισδιάστατο καμβά | 🟡 RESEARCH + DESIGN (PROPOSED) 2026-06-04 (έρευνα app+web licensing· plan 6 φάσεων· εκκρεμεί έγκριση Φ1) | 2026-06-04 | Uncategorized | [📄](./adrs/ADR-415-2d-floorplan-symbol-library.md) |
 | **ADR-418** | Real View Scale (1:N) SSoT — Revit-style κλίμακα προβολής αντί για pixel-% (DPI + scene-units aware· 1:1 actual size· presets· reload guard) | ✅ APPROVED | 2026-06-05 | Canvas & Rendering | [📄](./adrs/ADR-418-view-scale-ssot.md) |
+| **ADR-419** | Floor Finish Per Room (IfcCovering FLOORING) — λεπτό covering ανά δωμάτιο (10–50mm), 8 materials SSoT (wood/tile/marble/laminate/parquet/epoxy/carpet), 2D hatch + 3D PBR, Pset_CoveringCommon, enterprise-id ffl_ | ✅ APPROVED | 2026-06-06 | Entity Systems | [📄](./adrs/ADR-419-floor-finish-per-room.md) |
 | **ADR-UI-001** | Visual Primitive Ownership & Semantic Tokens | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-UI-001.md) |
 
 ---
@@ -776,6 +777,7 @@
 | **ADR-411** | BIM Mesh Library (entity-agnostic CC0 mesh assets) | 🟢 VERTICAL SLICE DONE | [View](./adrs/ADR-411-bim-mesh-library.md) |
 | **ADR-415** | Βιβλιοθήκη 2D αποτυπωμάτων (floorplan symbol library) | 🟡 RESEARCH + DESIGN | [View](./adrs/ADR-415-2d-floorplan-symbol-library.md) |
 | **ADR-418** | Real View Scale (1:N) SSoT — Revit-style κλίμακα προβολής | ✅ APPROVED | [View](./adrs/ADR-418-view-scale-ssot.md) |
+| **ADR-419** | Floor Finish Per Room (IfcCovering FLOORING) | ✅ APPROVED | [View](./adrs/ADR-419-floor-finish-per-room.md) |
 | **ADR-UI-001** | Visual Primitive Ownership & Semantic Tokens | ✅ APPROVED | [View](./adrs/ADR-UI-001.md) |
 
 ---
