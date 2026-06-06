@@ -242,6 +242,11 @@ export function convertDxfEntityToEntityModel(entity: DxfEntityUnion): EntityMod
       const geometry = rf.geometry ?? (rf.params ? computeRoofGeometry(rf.params) : undefined);
       return buildBimEntityModel('roof', { ...(entity as object), geometry } as typeof entity, baseModel);
     }
+    // ADR-419 — floor-finish is a direct entity (params + geometry at top level, like wall/beam/roof).
+    // Without this case the entity falls to `default` which omits geometry → BoundsCalculator cannot
+    // build the spatial index entry → hit-test never finds the entity → selection silently fails.
+    case 'floor-finish':
+      return buildBimEntityModel('floor-finish', entity, baseModel);
     // ADR-363 Phases 1B/5 — wall/beam are direct entities (no DXF wrapper).
     // `geometry.bbox` powers spatial broad-phase via BoundsCalculator.calculateBimEntityBounds.
     // SSoT: buildBimEntityModel in bim/utils/bim-entity-passthrough.ts.

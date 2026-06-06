@@ -193,23 +193,31 @@ function buildFaceLayerSolids(
   appearance: RoofTileAppearance,
   wantRelief: boolean,
 ): RoofLayerSolid[] {
+  // ADR-417 — the tile COVERING (mat-roof-tile) is the exterior surface regardless
+  // of what DNA layer[0] is (e.g. breather membrane). UV sizing and 3D material are
+  // always resolved from the tile material when any tile-appearance param is set.
+  const isTileMode = !!(appearance.tileReliefMm || appearance.tileLengthM || appearance.tileWidthM || appearance.tileRotate90);
   const out: RoofLayerSolid[] = [];
   let topDepthMm = 0;
   for (const layer of layers) {
     const botDepthMm = topDepthMm + layer.thickness;
-    const tileOpts = resolveRoofTileUvOpts(layer.materialId, appearance);
     const isTopLayer = topDepthMm === 0;
+    // UV sizing: always use the tile material id for correct physical tile dimensions.
+    const uvMaterialId = isTopLayer && isTileMode ? RIDGE_CAP_MATERIAL_ID : layer.materialId;
+    const tileOpts = resolveRoofTileUvOpts(uvMaterialId, appearance);
+    // Surface material: tile covering overrides DNA structural material for the top surface.
+    const surfaceMaterialId = isTopLayer && isTileMode ? RIDGE_CAP_MATERIAL_ID : layer.materialId;
 
     if (wantRelief && isTopLayer) {
       // Tessellated top cap: displacement map will push these vertices for barrel-tile relief.
       const topCap = tessellateRoofTopCap(face, 0, sceneToM, baseElevationM, tileOpts);
-      if (topCap) out.push({ geo: topCap, materialId: layer.materialId, reliefMm: appearance.tileReliefMm });
+      if (topCap) out.push({ geo: topCap, materialId: surfaceMaterialId, reliefMm: appearance.tileReliefMm });
       // Sides + bottom only (top cap omitted — covered by tessellated mesh above).
       const sidesPrism = buildDepthPrism(face, 0, botDepthMm, sceneToM, baseElevationM, tileOpts, true);
       if (sidesPrism) out.push({ geo: sidesPrism, materialId: layer.materialId });
     } else {
       const geo = buildDepthPrism(face, topDepthMm, botDepthMm, sceneToM, baseElevationM, tileOpts);
-      if (geo) out.push({ geo, materialId: layer.materialId });
+      if (geo) out.push({ geo, materialId: surfaceMaterialId });
     }
     topDepthMm = botDepthMm;
   }
@@ -324,10 +332,9 @@ function addRidgeCaps(
   footprint: readonly Point3D[],
   offLines: readonly RoofOverhangOffsetLine[],
 ): void {
-  // Ο κορφιάς ακολουθεί το υλικό της κορυφαίας επιφάνειας της στέγης (Revit «η
-  // εμφάνιση = η εξωτερική κάλυψη») — ίδιο pattern με την προεξοχή/γείσο· fallback
-  // σε κεραμίδι μόνο αν δεν υπάρχει surface material.
-  const capMaterialId = ctx.monoMaterialId ?? RIDGE_CAP_MATERIAL_ID;
+  // Ridge/hip caps always show the tile covering material in tile-mode (ADR-417).
+  const isTileMode = !!(ctx.tileAppearance.tileReliefMm || ctx.tileAppearance.tileLengthM || ctx.tileAppearance.tileWidthM || ctx.tileAppearance.tileRotate90);
+  const capMaterialId = isTileMode ? RIDGE_CAP_MATERIAL_ID : (ctx.monoMaterialId ?? RIDGE_CAP_MATERIAL_ID);
   for (const line of ridges) {
     if (line.kind !== 'ridge' && line.kind !== 'hip') continue;
     // findAdjacentFaces με την ΑΡΧΙΚΗ γραμμή (ταιριάζει στις κορυφές των faces)·
@@ -352,6 +359,10 @@ function addRidgeCaps(
  */
 function addEaveDetails(group: THREE.Group, roof: RoofEntity, ctx: RoofFaceMeshContext): void {
   const s = mmToSceneUnits(roof.params.sceneUnits ?? 'mm');
+  // ADR-417 — tile covering (mat-roof-tile) overrides DNA structural material for
+  // the overhang/eave surface, exactly as it does for the main face top cap.
+  const isTileMode = !!(ctx.tileAppearance.tileReliefMm || ctx.tileAppearance.tileLengthM || ctx.tileAppearance.tileWidthM || ctx.tileAppearance.tileRotate90);
+  const eaveSurfaceMaterialId = isTileMode ? RIDGE_CAP_MATERIAL_ID : (ctx.monoMaterialId ?? RIDGE_CAP_MATERIAL_ID);
   const detail = buildRoofEaveDetail({
     outline: roof.geometry!.footprint.vertices,
     edges: roof.params.edges,
@@ -362,13 +373,13 @@ function addEaveDetails(group: THREE.Group, roof: RoofEntity, ctx: RoofFaceMeshC
     s,
     fasciaHeightMm: roof.params.fasciaHeightMm ?? DEFAULT_FASCIA_HEIGHT_MM,
     soffitMode: roof.params.soffitMode ?? DEFAULT_SOFFIT_MODE,
-    overhangMaterialId: ctx.monoMaterialId ?? RIDGE_CAP_MATERIAL_ID,
+    overhangMaterialId: eaveSurfaceMaterialId,
     fasciaMaterialId: roof.params.fasciaMaterial ?? DEFAULT_EAVE_MATERIAL_ID,
     soffitMaterialId: roof.params.soffitMaterial ?? DEFAULT_EAVE_MATERIAL_ID,
   });
   // ADR-417 #5 — η προεξοχή (overhang) ΣΥΝΕΧΙΖΕΙ το νερό → ίδια slope-aligned tile
   // UV με την κύρια στέγη (συνεχόμενα κεραμίδια). fascia/soffit μένουν box-UV.
-  const overhangTileOpts = resolveRoofTileUvOpts(ctx.monoMaterialId ?? RIDGE_CAP_MATERIAL_ID, ctx.tileAppearance);
+  const overhangTileOpts = resolveRoofTileUvOpts(eaveSurfaceMaterialId, ctx.tileAppearance);
   for (const q of detail.quads) {
     const geo = buildEaveQuadGeometry(
       q,

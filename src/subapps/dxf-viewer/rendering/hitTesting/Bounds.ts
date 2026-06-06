@@ -138,6 +138,8 @@ export class BoundsCalculator {
       case 'mep-fitting':
       case 'floorplan-symbol':
       case 'roof':
+      // ADR-419 — floor-finish polygon covering; geometry.bbox computed by computeFloorFinishGeometry().
+      case 'floor-finish':
       case 'mep-manifold':
       case 'mep-radiator':
       // ADR-408 Εύρος Β #2 (mep-boiler).
@@ -495,5 +497,4 @@ export function createBoundingBox(minX: number, minY: number, maxX: number, maxY
   };
 }
 
-// 🏢 Re-exports for backward compatibility
 export { BoundsOperations, ViewportBounds } from './bounds-operations';

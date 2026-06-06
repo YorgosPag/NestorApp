@@ -230,6 +230,8 @@ export function calculateEntityBounds(entity: AnySceneEntity): { min: Point2D, m
     case 'mep-manifold':   // ADR-408 Φ12 — plumbing manifold point-based BIM, marquee select
     case 'mep-radiator':   // ADR-408 Εύρος Β — heating radiator point-based BIM, marquee select
     case 'mep-boiler':    // ADR-408 Εύρος Β #2 — heating boiler point-based BIM, marquee select
+    case 'floor-finish':  // ADR-419 — floor-finish polygon covering, marquee select
+    case 'roof':          // ADR-417 — parametric pitched roof, marquee select
       return calculateBimEntity2DBounds(entity as unknown as Entity);
     case 'text':
     case 'mtext': {

@@ -111,6 +111,11 @@ export function generatePreviewEntity(
   if (tool === 'roof') {
     return generateSlabPreview(tempPoints, cursorPoint);
   }
+  // ── ADR-419 — Floor Finish tool preview branch (closed footprint polygon,
+  //    same rubber-band outline as slab/roof). ───────────────────────────────
+  if (tool === 'floor-finish') {
+    return generateSlabPreview(tempPoints, cursorPoint);
+  }
   // ── ADR-363 Phase 5.5P — Beam tool preview branch ────────────────────────
   if (tool === 'beam') {
     return generateBeamPreview(tempPoints, cursorPoint, sceneUnits);

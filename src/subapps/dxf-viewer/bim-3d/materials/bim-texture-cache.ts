@@ -54,13 +54,19 @@ function isKnownSlug(slug: string): slug is PbrTextureSlug {
   return slug in TEXTURE_SET_DEFS;
 }
 
-/** Load + configure one map, or null if the source has no URL for it. */
+/** Load + configure one map, or null if the source has no URL for it or the file is missing. */
 async function loadMap(slug: PbrTextureSlug, map: TextureMap, tileSizeM: number): Promise<THREE.Texture | null> {
   const url = await resolveTextureUrl(slug, map);
   if (!url) return null;
-  const tex = await loader.loadAsync(url);
-  configurePbrTexture(tex, tileSizeM, map === 'albedo');
-  return tex;
+  try {
+    const tex = await loader.loadAsync(url);
+    configurePbrTexture(tex, tileSizeM, map === 'albedo');
+    return tex;
+  } catch {
+    // Optional map not available (404 / storage miss) — degrade gracefully.
+    // Only a missing albedo makes the whole set unusable; the check below handles that.
+    return null;
+  }
 }
 
 /**

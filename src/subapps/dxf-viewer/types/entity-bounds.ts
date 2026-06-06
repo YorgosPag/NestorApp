@@ -208,4 +208,6 @@ export type BimEntityWithBounds =
   // ADR-408 Εύρος Β — heating radiator
   | 'mep-radiator'
   // ADR-417 — parametric pitched roof
-  | 'roof';
+  | 'roof'
+  // ADR-419 — floor finish covering polygon
+  | 'floor-finish';

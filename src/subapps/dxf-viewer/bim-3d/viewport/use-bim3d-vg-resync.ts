@@ -69,12 +69,23 @@ export function useBim3DVgResync(
       resync();
     });
 
+    // (f) ADR-413 — realistic materials toggle: when the PBR master switch flips,
+    // rebuild so all BIM elements switch between flat and textured materials.
+    // Without this subscription the scene keeps its pre-toggle materials forever.
+    let prevRealistic = useBimRenderSettingsStore.getState().realisticMaterials;
+    const unsubRealistic = useBimRenderSettingsStore.subscribe((state) => {
+      if (state.realisticMaterials === prevRealistic) return;
+      prevRealistic = state.realisticMaterials;
+      resync();
+    });
+
     return () => {
       unsubVg();
       unsubEnvelope();
       unsubFloorSlabs();
       unsubSystems();
       unsubTextures();
+      unsubRealistic();
     };
   }, [managerRef, externalEntitiesMode, bimEntities]);
 }
