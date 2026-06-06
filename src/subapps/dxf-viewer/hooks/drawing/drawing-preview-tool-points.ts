@@ -16,6 +16,8 @@ import { wallPreviewStore } from '../../bim/walls/wall-preview-store';
 import { slabPreviewStore } from '../../bim/slabs/slab-preview-store';
 // ADR-417 — roof footprint preview SSoT.
 import { roofPreviewStore } from '../../bim/roofs/roof-preview-store';
+// ADR-419 — floor-finish footprint preview SSoT.
+import { floorFinishPreviewStore } from '../../bim/floor-finishes/floor-finish-preview-store';
 // ADR-363 Phase 5.5P — beam preview SSoT.
 import { beamPreviewStore } from '../../bim/beams/beam-preview-store';
 
@@ -51,6 +53,8 @@ export function resolveBimToolTempPoints(
   if (activeTool === 'slab') return slabPreviewStore.get().vertices;
   // ADR-417 — roof footprint vertices.
   if (activeTool === 'roof') return roofPreviewStore.get().vertices;
+  // ADR-419 — floor-finish footprint vertices.
+  if (activeTool === 'floor-finish') return floorFinishPreviewStore.get().vertices;
   if (activeTool === 'beam') {
     // ADR-363 Phase 5.5P — beam tempPoints from store.
     const bp = beamPreviewStore.get();

@@ -23,6 +23,7 @@ import { useWallTool } from '../drawing/useWallTool';
 import { useOpeningTool } from '../drawing/useOpeningTool';
 import { useSlabTool, SLAB_AUTO_CLOSE_TOLERANCE_DEFAULT } from '../drawing/useSlabTool';
 import { useRoofTool, ROOF_AUTO_CLOSE_TOLERANCE_DEFAULT } from '../drawing/useRoofTool';
+import { useFloorFinishTool, FLOOR_FINISH_AUTO_CLOSE_TOLERANCE_DEFAULT } from '../drawing/useFloorFinishTool';
 import { useColumnTool } from '../drawing/useColumnTool';
 import { useBeamTool } from '../drawing/useBeamTool';
 import { useSlabOpeningTool } from '../drawing/useSlabOpeningTool';
@@ -70,6 +71,7 @@ export interface UseSpecialToolsReturn extends SelectionToolsReturn, PlacementTo
   openingTool: ReturnType<typeof useOpeningTool>;
   slabTool: ReturnType<typeof useSlabTool>;
   roofTool: ReturnType<typeof useRoofTool>; // ADR-417
+  floorFinishTool: ReturnType<typeof useFloorFinishTool>; // ADR-419
   columnTool: ReturnType<typeof useColumnTool>;
   beamTool: ReturnType<typeof useBeamTool>;
   slabOpeningTool: ReturnType<typeof useSlabOpeningTool>;
@@ -259,6 +261,24 @@ export function useSpecialTools(props: UseSpecialToolsProps): UseSpecialToolsRet
     onRoofCreated: (roofEntity) => appendEntityToScene(levelManager, roofEntity, 'roof'),
   });
   useToolLifecycle(activeTool === 'roof', roofTool.activate, roofTool.deactivate);
+  // ADR-419 — FLOOR-FINISH TOOL: footprint polygon N-click + Enter (mirror roof). The
+  // created `FloorFinishEntity` is appended + broadcast so `FloorFinishPersistenceHost` saves it.
+  const floorFinishTool = useFloorFinishTool({
+    currentLevelId: levelManager.currentLevelId || '0',
+    getAutoCloseTolerance: () => {
+      const levelId = levelManager.currentLevelId;
+      const scene = levelId ? levelManager.getLevelScene(levelId) : null;
+      const units = scene ? resolveSceneUnits(scene) : 'mm';
+      return FLOOR_FINISH_AUTO_CLOSE_TOLERANCE_DEFAULT * mmToSceneUnits(units);
+    },
+    getSceneUnits: () => {
+      const levelId = levelManager.currentLevelId;
+      if (!levelId) return 'mm';
+      return resolveSceneUnits(levelManager.getLevelScene(levelId));
+    },
+    onFloorFinishCreated: (entity) => appendEntityToScene(levelManager, entity, 'floor-finish'),
+  });
+  useToolLifecycle(activeTool === 'floor-finish', floorFinishTool.activate, floorFinishTool.deactivate);
   // ADR-363 Phase 4 — COLUMN TOOL
   /**
    * Column drawing tool — single-click placement με 9-position anchor + Tab
@@ -369,6 +389,7 @@ export function useSpecialTools(props: UseSpecialToolsProps): UseSpecialToolsRet
     openingTool,
     slabTool,
     roofTool,
+    floorFinishTool,
     columnTool,
     mepFixtureTool,
     furnitureTool,

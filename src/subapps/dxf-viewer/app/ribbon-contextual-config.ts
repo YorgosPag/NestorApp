@@ -208,6 +208,8 @@ export function useActiveContextualTrigger({
     if (activeTool === 'furniture') return FURNITURE_CONTEXTUAL_TRIGGER;
     // ADR-415 — floorplan-symbol tool active → show the symbol library picker tab.
     if (activeTool === 'floorplan-symbol') return FLOORPLAN_SYMBOL_CONTEXTUAL_TRIGGER;
+    // ADR-419 — floor-finish tool active → show the floor-finish property tab.
+    if (activeTool === 'floor-finish') return FLOOR_FINISH_CONTEXTUAL_TRIGGER;
     // ADR-411 — MEP fixture tool active → show the light-fixture library picker
     // tab (choose CC0 mesh or parametric). Selecting a placed fixture instead
     // surfaces the property editor (resolveContextualTrigger, checked earlier).

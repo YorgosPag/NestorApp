@@ -481,6 +481,13 @@
         "zeroArea": "Zero area — check vertices"
       }
     },
+    "floorFinish": {
+      "statusFirstVertex": "Click for first floor-finish vertex",
+      "statusNextVertex": "Click for next vertex — Enter to close",
+      "errors": {
+        "tooFewVertices": "Floor finish requires at least 3 vertices"
+      }
+    },
     "column": {
       "statusPosition": "Click to place column — Tab cycles anchor",
       "statusPerimeterPick": "Box-select the faces of a structural element (rectangle/L/T/U/composite) → ONE structural wall per perimeter",
@@ -1109,6 +1116,10 @@
         "roof": {
           "label": "Roof",
           "tooltip": "Draw a pitched roof by footprint (click-click) — flat/mono-pitch/gable (shortcut RF)"
+        },
+        "floorFinish": {
+          "label": "Floor Finish",
+          "tooltip": "Draw a floor finish covering per room (click-click) — Revit IfcCovering style (shortcut FF)"
         },
         "group": {
           "label": "Structural Elements",
@@ -1840,13 +1851,13 @@
           "chimney": "Chimney"
         },
         "fireRating": {
+          "60": "60 minutes",
+          "90": "90 minutes",
+          "120": "120 minutes",
           "section": {
             "title": "Fire Rating"
           },
-          "none": "None",
-          "60": "60 minutes",
-          "90": "90 minutes",
-          "120": "120 minutes"
+          "none": "None"
         }
       },
       "columnEditor": {

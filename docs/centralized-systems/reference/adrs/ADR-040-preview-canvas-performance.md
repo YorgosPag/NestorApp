@@ -71,6 +71,10 @@ Mouse Event → DxfCanvas.onMouseMove
 
 ## Changelog
 
+### 2026-06-06 — Floor-finish drawing tool threaded through orchestrator (ADR-419, CHECK 6B)
+
+**Status**: IMPLEMENTED 2026-06-06. The new ADR-419 `floor-finish` placement tool is threaded through the orchestrator exactly like the existing `furniture`/`mep-fixture`/`railing` tools: `CanvasSection.tsx` destructures `floorFinishTool` from `useSpecialTools` and passes it into the click-handler bundle, and `canvas-click-types.ts` adds the `floorFinishTool` field to the handler-args type. Pure additive pass-through — **no `useSyncExternalStore` added to any orchestrator** (Cardinal Rule #1 / CHECK 6C respected), no bitmap cache-key change, no micro-leaf structural change. 2D floor-finish render is a `FloorFinishRenderer` leaf in the existing entity-render pipeline. Detail in ADR-419 changelog.
+
 ### 2026-06-05 — Grid moved to a dedicated BOTTOM-MOST canvas (cross-canvas z-order fix, CHECK 6B/6D)
 
 **Status**: IMPLEMENTED 2026-06-05 (Opus 4.8). **Symptom (Giorgio):** με φορτωμένη κάτοψη, ενεργοποιώντας το «Δυναμικό πλέγμα» το grid γεννά σωστά κύριες/δευτερεύουσες αλλά ζωγραφίζεται **πάνω** από την κάτοψη αντί για κάτω.

@@ -457,6 +457,16 @@ export const HOME_DRAW_PANEL: RibbonPanelDef = {
               commandKey: 'roof',
               shortcut: 'RF',
             },
+            // ADR-419 — floor finish covering (polygon per room, IfcCovering FLOORING).
+            // Click-click polygon like slab; discipline = architectural.
+            {
+              id: 'draw.bim.floorFinish',
+              labelKey: 'ribbon.commands.bim.floorFinish.label',
+              tooltipKey: 'ribbon.commands.bim.floorFinish.tooltip',
+              icon: 'bim-slab',
+              commandKey: 'floor-finish',
+              shortcut: 'FF',
+            },
             // ADR-408 Φ8 — linear MEP duct run (2-click). Discipline = mechanical.
             {
               id: 'draw.bim.mepDuct',
