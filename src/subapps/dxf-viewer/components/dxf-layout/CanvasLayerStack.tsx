@@ -1,13 +1,5 @@
-/**
- * ⚠️ ARCHITECTURE-CRITICAL — READ ADR-040 BEFORE EDITING (update changelog same commit)
- * docs/centralized-systems/reference/adrs/ADR-040-preview-canvas-performance.md
- *
- * Shell renders 9 canvas layers extracted from CanvasSection (~334 lines JSX).
- * ADR-040 micro-leaf pattern: high-freq subscriptions pushed into named leaves:
- * - SnapIndicatorSubscriber, DraftLayerSubscriber, DxfCanvasSubscriber
- * - RotationPreviewMount (ADR-188), MovePreviewMount (ADR-049)
- * Shell itself MUST NOT call useSyncExternalStore (enforced: CHECK 6C).
- */
+// ⚠️ ARCHITECTURE-CRITICAL — READ ADR-040 BEFORE EDITING (update changelog same commit)
+// Shell MUST NOT call useSyncExternalStore (enforced: CHECK 6C). High-freq subscriptions → leaves.
 'use client';
 import React, { useCallback, useMemo, useRef } from 'react';
 import { PreviewCanvas } from '../../canvas-v2/preview-canvas';
@@ -468,7 +460,7 @@ export const CanvasLayerStack = React.memo(function CanvasLayerStack({
           <RulerCornerBox
             rulerWidth={rulerSettings.width ?? RULERS_GRID_CONFIG.DEFAULT_RULER_WIDTH}
             rulerHeight={rulerSettings.height ?? RULERS_GRID_CONFIG.DEFAULT_RULER_HEIGHT}
-            backgroundColor={globalRulerSettings.horizontal.backgroundColor}
+            backgroundColor={globalRulerSettings.horizontal.showBackground !== false ? globalRulerSettings.horizontal.backgroundColor : 'transparent'}
             textColor={globalRulerSettings.horizontal.textColor}
             onZoomToFit={handleRulerZoomToFit}
             onZoomActualSize={handleZoomActualSize}
@@ -482,10 +474,8 @@ export const CanvasLayerStack = React.memo(function CanvasLayerStack({
           <AutoAreaPreviewOverlay transform={transform} viewport={viewport} />
           <PolygonCropPreviewSubscriber transform={transform} viewport={viewport} className={`absolute inset-0 w-full h-full pointer-events-none ${PANEL_LAYOUT.Z_INDEX['20']}`} />
           <LassoFreehandPreviewSubscriber transform={transform} viewport={viewport} className={`absolute inset-0 w-full h-full pointer-events-none ${PANEL_LAYOUT.Z_INDEX['20']}`} />
-          {/* ADR-374 — ZOOM Window rubber-band rect overlay (mount per ADR §"File Structure") */}
           <ZoomWindowSubscriber className={`absolute ${PANEL_LAYOUT.INSET['0']} w-full h-full ${PANEL_LAYOUT.POINTER_EVENTS.NONE} ${PANEL_LAYOUT.Z_INDEX['20']}`} />
           <CanvasNumericInputOverlay />
-          {/* ADR-357 Phase 2a — Dynamic Input overlay (length/angle live readout). */}
           <DynamicInputSubscriber
             activeTool={activeTool}
             viewport={viewport}
@@ -495,11 +485,8 @@ export const CanvasLayerStack = React.memo(function CanvasLayerStack({
           />
           <CanvasLayerStack3dLeaf />
           <Focus2DOverlayLeaf scene={dxfScene} transform={transform} viewport={viewport} />
-          {/* ADR-396 P4 — ETICS θερμοπρόσοψη: συνεχές offset περίγραμμα + insulation hatch band. */}
           <EnvelopeOverlay scene={dxfScene} transform={transform} viewport={viewport} currentLevelId={levelManager.currentLevelId} />
-          {/* ADR-408 Φ7 — home-run circuit wires (derived panel→fixtures annotation). */}
           <HomeRunWiresOverlay scene={dxfScene} transform={transform} viewport={viewport} currentLevelId={levelManager.currentLevelId} gripDragPreview={dxfGripInteraction.dragPreview} />
-          {/* ADR-366 §A.7.Q3 Phase 4.7 — cross-mode cursor modifier badge (fixed, single instance) */}
           <SelectionCursorIcon />
           <ViewMode3DToggleButton />
         </div>
