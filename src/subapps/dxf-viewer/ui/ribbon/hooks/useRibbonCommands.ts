@@ -55,6 +55,12 @@ import {
   isMepBoilerRibbonKey,
   isMepBoilerActionKey,
 } from './bridge/mep-boiler-command-keys';
+import type { RibbonMepUnderfloorBridge } from './useRibbonMepUnderfloorBridge';
+import { isMepUnderfloorPanelVisibilityKey } from './useRibbonMepUnderfloorBridge';
+import {
+  isMepUnderfloorRibbonKey,
+  isMepUnderfloorActionKey,
+} from './bridge/mep-underfloor-command-keys';
 import type { RibbonMepSegmentBridge } from './useRibbonMepSegmentBridge';
 import { isMepSegmentPanelVisibilityKey } from './useRibbonMepSegmentBridge';
 import {
@@ -121,6 +127,7 @@ interface UseRibbonCommandsProps {
   mepManifoldBridge: RibbonMepManifoldBridge;
   mepRadiatorBridge: RibbonMepRadiatorBridge;
   mepBoilerBridge: RibbonMepBoilerBridge;
+  mepUnderfloorBridge: RibbonMepUnderfloorBridge;
   mepSegmentBridge: RibbonMepSegmentBridge;
   furnitureBridge: RibbonFurnitureBridge;
   floorplanSymbolBridge: RibbonFloorplanSymbolBridge;
@@ -159,6 +166,7 @@ export function useRibbonCommands({
   mepManifoldBridge,
   mepRadiatorBridge,
   mepBoilerBridge,
+  mepUnderfloorBridge,
   mepSegmentBridge,
   furnitureBridge,
   floorplanSymbolBridge,
@@ -234,6 +242,10 @@ export function useRibbonCommands({
         mepBoilerBridge.onComboboxChange(key, value);
         return;
       }
+      if (isMepUnderfloorRibbonKey(key)) {
+        mepUnderfloorBridge.onComboboxChange(key, value);
+        return;
+      }
       if (isMepSegmentRibbonKey(key) || isMepSegmentRibbonStringKey(key)) {
         mepSegmentBridge.onComboboxChange(key, value);
         return;
@@ -264,7 +276,7 @@ export function useRibbonCommands({
       }
       textEditorBridge.onComboboxChange(key, value);
     },
-    [stairBridge, wallBridge, openingBridge, slabBridge, roofBridge, floorFinishBridge, columnBridge, beamBridge, slabOpeningBridge, mepFixtureBridge, mepManifoldBridge, mepRadiatorBridge, mepBoilerBridge, mepSegmentBridge, furnitureBridge, floorplanSymbolBridge, mepFixtureLibraryBridge, arrayBridge, lineToolBridge, xlineModeBridge, textEditorBridge],
+    [stairBridge, wallBridge, openingBridge, slabBridge, roofBridge, floorFinishBridge, columnBridge, beamBridge, slabOpeningBridge, mepFixtureBridge, mepManifoldBridge, mepRadiatorBridge, mepBoilerBridge, mepUnderfloorBridge, mepSegmentBridge, furnitureBridge, floorplanSymbolBridge, mepFixtureLibraryBridge, arrayBridge, lineToolBridge, xlineModeBridge, textEditorBridge],
   );
 
   const getComboboxState = React.useCallback(
@@ -285,6 +297,7 @@ export function useRibbonCommands({
       if (isMepManifoldRibbonKey(key) || isMepManifoldClassificationKey(key)) return mepManifoldBridge.getComboboxState(key);
       if (isMepRadiatorRibbonKey(key)) return mepRadiatorBridge.getComboboxState(key);
       if (isMepBoilerRibbonKey(key)) return mepBoilerBridge.getComboboxState(key);
+      if (isMepUnderfloorRibbonKey(key)) return mepUnderfloorBridge.getComboboxState(key);
       if (isMepSegmentRibbonKey(key) || isMepSegmentRibbonStringKey(key)) return mepSegmentBridge.getComboboxState(key);
       if (isFurnitureRibbonKey(key) || isFurnitureRibbonStringKey(key)) return furnitureBridge.getComboboxState(key);
       if (isFloorplanSymbolRibbonKey(key) || isFloorplanSymbolRibbonStringKey(key)) return floorplanSymbolBridge.getComboboxState(key);
@@ -361,12 +374,13 @@ export function useRibbonCommands({
       if (isMepFixturePanelVisibilityKey(visibilityKey)) return mepFixtureBridge.getPanelVisibility(visibilityKey);
       if (isMepManifoldPanelVisibilityKey(visibilityKey)) return mepManifoldBridge.getPanelVisibility(visibilityKey);
       if (isMepBoilerPanelVisibilityKey(visibilityKey)) return mepBoilerBridge.getPanelVisibility(visibilityKey);
+      if (isMepUnderfloorPanelVisibilityKey(visibilityKey)) return mepUnderfloorBridge.getPanelVisibility(visibilityKey);
       if (isMepSegmentPanelVisibilityKey(visibilityKey)) return mepSegmentBridge.getPanelVisibility(visibilityKey);
       if (isFurniturePanelVisibilityKey(visibilityKey)) return furnitureBridge.getPanelVisibility(visibilityKey);
       if (isFloorplanSymbolPanelVisibilityKey(visibilityKey)) return floorplanSymbolBridge.getPanelVisibility(visibilityKey);
       return true;
     },
-    [stairBridge, columnBridge, beamBridge, mepFixtureBridge, mepManifoldBridge, mepBoilerBridge, mepSegmentBridge, furnitureBridge, floorplanSymbolBridge],
+    [stairBridge, columnBridge, beamBridge, mepFixtureBridge, mepManifoldBridge, mepBoilerBridge, mepUnderfloorBridge, mepSegmentBridge, furnitureBridge, floorplanSymbolBridge],
   );
 
   // ADR-363 Phase 1E — Wall action keys (delete) handled by bridge before
@@ -429,6 +443,10 @@ export function useRibbonCommands({
         mepRadiatorBridge.onAction(action);
         return;
       }
+      if (isMepUnderfloorActionKey(action)) {
+        mepUnderfloorBridge.onAction(action);
+        return;
+      }
       if (isMepBoilerActionKey(action)) {
         mepBoilerBridge.onAction(action);
         return;
@@ -443,7 +461,7 @@ export function useRibbonCommands({
       }
       wrappedHandleAction(action, data);
     },
-    [wallBridge, openingBridge, slabBridge, roofBridge, floorFinishBridge, columnBridge, beamBridge, slabOpeningBridge, stairBridge, mepCircuitBridge, mepPipeNetworkBridge, mepFixtureBridge, mepManifoldBridge, mepRadiatorBridge, mepBoilerBridge, mepSegmentBridge, furnitureBridge, wrappedHandleAction],
+    [wallBridge, openingBridge, slabBridge, roofBridge, floorFinishBridge, columnBridge, beamBridge, slabOpeningBridge, stairBridge, mepCircuitBridge, mepPipeNetworkBridge, mepFixtureBridge, mepManifoldBridge, mepRadiatorBridge, mepBoilerBridge, mepUnderfloorBridge, mepSegmentBridge, furnitureBridge, wrappedHandleAction],
   );
 
   return React.useMemo(

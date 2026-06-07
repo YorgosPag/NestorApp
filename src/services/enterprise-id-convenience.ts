@@ -281,6 +281,7 @@ export const generateMepFittingId = () => enterpriseIdService.generateMepFitting
 export const generateMepManifoldId = () => enterpriseIdService.generateMepManifoldId();
 export const generateMepRadiatorId = () => enterpriseIdService.generateMepRadiatorId();
 export const generateMepBoilerId = () => enterpriseIdService.generateMepBoilerId();
+export const generateMepUnderfloorId = () => enterpriseIdService.generateMepUnderfloorId();
 export const generateRailingId = () => enterpriseIdService.generateRailingId();
 export const generateFurnitureId = () => enterpriseIdService.generateFurnitureId();
 export const generateFloorplanSymbolId = () => enterpriseIdService.generateFloorplanSymbolId();

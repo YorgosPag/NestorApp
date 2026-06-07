@@ -16,7 +16,8 @@ import type { Bim3DEntities } from '../stores/Bim3DEntitiesStore';
 import { mepSegmentToMesh } from '../converters/mep-segment-to-mesh';
 import { mepFittingToMesh } from '../converters/mep-fitting-to-mesh';
 import { resolveFittingSystemColor } from '../../bim/mep-systems/mep-system-color';
-import { incidentEntityId } from '../../bim/types/mep-fitting-types';
+import { incidentEntityId, resolveFittingBimCategory } from '../../bim/types/mep-fitting-types';
+import { resolveSegmentBimCategory } from '../../bim/types/mep-segment-types';
 import type { SyncContext } from './bim-scene-context';
 import type { BimCategory } from '../../config/bim-object-styles';
 import type { Discipline } from '../../bim/discipline/bim-discipline';
@@ -51,7 +52,8 @@ export function syncMepSegments(
   resolveEntity: ResolveMepElementEntity,
 ): void {
   for (const segment of entities.mepSegments ?? []) {
-    const category = segment.params.domain as BimCategory;
+    // ADR-408 Φ14 — a drainage pipe maps to its own 'drain-pipe' V/G category.
+    const category = resolveSegmentBimCategory(segment.params);
     const r = resolveEntity(segment, category);
     if (!r) continue;
     const mesh = mepSegmentToMesh(
@@ -65,9 +67,10 @@ export function syncMepSegments(
 /**
  * ADR-408 Φ11 — auto pipe fittings (elbow / tee / cross / coupling / reducer /
  * cap). Mirror of {@link syncMepSegments}: per-entity resolve → cascade
- * visibility → units-safe `mepFittingToMesh`. The BimCategory is the fitting's
- * `domain` ('pipe' | 'duct'), so a fitting follows the same discipline /
- * visibility gates as the pipes it joins.
+ * visibility → units-safe `mepFittingToMesh`. The BimCategory comes from
+ * `resolveFittingBimCategory` (ADR-408 Φ14: drainage → 'drain-pipe', else the
+ * `domain`), so a fitting follows the same discipline / visibility gates — and the
+ * same V/G toggle — as the pipes it joins.
  *
  * Colour-by-system (Φ11): a fitting is NOT a system member (it is auto-derived),
  * so it inherits the colour of the pipes it joins — resolved from its incident
@@ -84,7 +87,9 @@ export function syncFittings(
   resolveEntity: ResolveMepElementEntity,
 ): void {
   for (const fitting of entities.mepFittings ?? []) {
-    const category = fitting.params.domain as BimCategory;
+    // ADR-408 Φ14 — a drainage fitting maps to its own 'drain-pipe' V/G category
+    // (mirror of syncMepSegments), so it hides together with the drainage pipes.
+    const category = resolveFittingBimCategory(fitting.params);
     const r = resolveEntity(fitting, category);
     if (!r) continue;
     const systemColor = resolveFittingSystemColor(

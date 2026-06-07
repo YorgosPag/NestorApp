@@ -277,6 +277,13 @@ New `.ssot-registry.json` Tier 3 module `bim-family-types`:
 
 ## 9. Changelog
 
+- **v0.10 (2026-06-08)** — **Opening category added (ADR-421 SLICE C consumer)** — the generic framework gains a
+  5th category with **ZERO infrastructure fork**: `BimTypeParamsByCategory.opening` + `OpeningTypeParams`
+  (kind/width/height/frameWidth?/material?/glazingPanes?/fireRating?), `OpeningTypeParamsSchema` branch in the
+  discriminatedUnion + `schemaByCategory.opening`, `resolveEffectiveOpeningParams` wrapper, `getBuiltInOpeningTypes`
+  (1/kind = 17). The service/store/collection/enterprise-id/Firestore-rules are reused verbatim (category-blind).
+  NEW **generic** `UpdateFamilyTypeCommand` + `DeleteFamilyTypeCommand` extracted (category-agnostic) for opening;
+  wall migration to them is a pending-ratchet item. Full detail in **ADR-421 §changelog 2026-06-08**.
 - **v0.9 (2026-06-06)** — **Auto-type-on-create (Revit «Generic Wall») — region/manual walls are no longer untyped**
   (Giorgio-approved Plan Mode). **Root cause:** «Τοίχος σε περιοχή» + manual walls with an explicit thickness are
   born with `dna=null` → `resolveAutoWallTypeId` returns `undefined` → no `typeId` → no «Edit Type», no mass

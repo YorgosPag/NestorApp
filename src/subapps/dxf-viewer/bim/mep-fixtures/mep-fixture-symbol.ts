@@ -16,6 +16,7 @@
 
 import type { Point3D } from '../types/bim-base';
 import type { MepFixtureGeometry, MepFixtureParams } from '../types/mep-fixture-types';
+import { buildDrainageGratingStrokes } from '../mep-manifolds/mep-manifold-symbol';
 
 /** A polyline of world-space points (canvas units). */
 export type FixtureStroke = readonly Point3D[];
@@ -37,6 +38,10 @@ function footprintCenter(vertices: readonly Point3D[]): Point3D {
 
 /**
  * Build the fixture symbol geometry from params + computed geometry.
+ *   - floor drain (ADR-408 Φ14) → a square grating GRID: the drainage-collector
+ *     `buildDrainageGratingStrokes` SSoT applied along BOTH footprint axes, so the
+ *     drain reads as a σιφώνι (catch-basin grille) at a glance. Zero duplicated
+ *     grating geometry.
  *   - rectangular light fixture → "X" between the 4 footprint corners
  *     (rotation-aware automatically, since the footprint is already rotated).
  *   - circular light fixture → "X" of two diameters at ±45°.
@@ -46,6 +51,21 @@ export function buildFixtureSymbol(
   geometry: MepFixtureGeometry,
 ): FixtureSymbolGeometry {
   const outline = geometry.footprint.vertices;
+
+  // ADR-408 Φ14 — floor drain: the catch-basin grating grid. The 2D grating SSoT
+  // draws parallel bars across one axis (bottom edge v0→v1 to top edge v3→v2); a
+  // second call with the vertex order rotated (v0→v3 / v1→v2) lays the orthogonal
+  // bars, yielding the grid. Rotation-aware for free (the verts are world-rotated).
+  if (params.kind === 'floor-drain' && outline.length === 4) {
+    const [v0, v1, v2, v3] = outline;
+    return {
+      outline,
+      strokes: [
+        ...buildDrainageGratingStrokes(v0, v1, v2, v3),
+        ...buildDrainageGratingStrokes(v0, v3, v2, v1),
+      ],
+    };
+  }
 
   if (params.shape === 'rectangular' && outline.length === 4) {
     const [v0, v1, v2, v3] = outline;

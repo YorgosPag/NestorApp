@@ -19,6 +19,7 @@
 
 import type {
   BimFamilyType,
+  OpeningTypeParams,
   RoofTypeParams,
   SlabTypeParams,
   WallTypeParams,
@@ -26,7 +27,9 @@ import type {
 import type { WallParams } from '../types/wall-types';
 import type { SlabParams } from '../types/slab-types';
 import type { RoofParams } from '../types/roof-types';
+import type { OpeningParams } from '../types/opening-types';
 import {
+  resolveEffectiveOpeningParams,
   resolveEffectiveRoofParams,
   resolveEffectiveSlabParams,
   resolveEffectiveWallParams,
@@ -35,6 +38,7 @@ import { AUTO_WALL_TYPE_NAME_KEY } from './auto-wall-type';
 import type { WallTypeAssignment } from '../../core/commands/entity-commands/AssignWallTypeCommand';
 import type { SlabTypeAssignment } from '../../core/commands/entity-commands/AssignSlabTypeCommand';
 import type { RoofTypeAssignment } from '../../core/commands/entity-commands/AssignRoofTypeCommand';
+import type { OpeningTypeAssignment } from '../../core/commands/entity-commands/AssignOpeningTypeCommand';
 
 /** i18n namespace prefix for every family-type label (mirror the locale block). */
 const I18N_PREFIX = 'ribbon.commands.bimFamilyType';
@@ -306,5 +310,87 @@ export function resolveRoofTypeAssignment(
 export function normaliseRoofOverrides(
   overrides: Partial<RoofTypeParams>,
 ): Partial<RoofTypeParams> | undefined {
+  return Object.keys(overrides).length === 0 ? undefined : overrides;
+}
+
+// ─── Opening helpers (analogue of the slab helpers above, ADR-421 SLICE C) ───
+
+/**
+ * Type-governed opening params the per-instance override editor exposes.
+ * `kind` is deliberately NOT per-instance overridable — switching the family
+ * means switching the Type (Revit). `fireRating` is a type-only spec. SSoT for
+ * the override badges.
+ */
+export const OPENING_OVERRIDABLE_KEYS: readonly (keyof OpeningTypeParams)[] = [
+  'width',
+  'height',
+  'frameWidth',
+  'material',
+  'glazingPanes',
+] as const;
+
+/** Narrows a category-agnostic family type to an opening type (null otherwise). */
+export function asOpeningFamilyType(
+  type: BimFamilyType | null | undefined,
+): BimFamilyType<'opening'> | null {
+  return type && type.category === 'opening'
+    ? (type as BimFamilyType<'opening'>)
+    : null;
+}
+
+/** The opening-only slice of the loaded catalog, in catalog order. */
+export function listOpeningTypes(
+  types: readonly BimFamilyType[],
+): readonly BimFamilyType<'opening'>[] {
+  return types
+    .map(asOpeningFamilyType)
+    .filter((t): t is BimFamilyType<'opening'> => t !== null);
+}
+
+/** The type-governed param keys an opening instance overrides (badge source). */
+export function getOverriddenOpeningParamKeys(
+  typeOverrides: Partial<OpeningTypeParams> | undefined,
+): readonly (keyof OpeningTypeParams)[] {
+  if (!typeOverrides) return [];
+  return OPENING_OVERRIDABLE_KEYS.filter((k) => typeOverrides[k] !== undefined);
+}
+
+/**
+ * Builds the `next` + `previous` {@link OpeningTypeAssignment} pair an
+ * `AssignOpeningTypeCommand` needs. Mirror of {@link resolveWallTypeAssignment}.
+ * Resolves the next EFFECTIVE params from the desired type + overrides («type
+ * always wins»); clearing the type keeps the opening's current params unchanged
+ * (non-destructive detach). `operationType` is re-derived by the command.
+ */
+export function resolveOpeningTypeAssignment(
+  opening: {
+    params: OpeningParams;
+    typeId?: string;
+    typeOverrides?: Partial<OpeningTypeParams>;
+  },
+  nextTypeId: string | undefined,
+  nextTypeOverrides: Partial<OpeningTypeParams> | undefined,
+  getType: (id: string) => BimFamilyType | null,
+): { next: OpeningTypeAssignment; previous: OpeningTypeAssignment } {
+  const previous: OpeningTypeAssignment = {
+    typeId: opening.typeId,
+    typeOverrides: opening.typeOverrides,
+    params: opening.params,
+  };
+  const nextType = nextTypeId ? asOpeningFamilyType(getType(nextTypeId)) : null;
+  const nextParams = resolveEffectiveOpeningParams(
+    { params: opening.params, typeId: nextTypeId, typeOverrides: nextTypeOverrides },
+    nextType,
+  );
+  return {
+    next: { typeId: nextTypeId, typeOverrides: nextTypeOverrides, params: nextParams },
+    previous,
+  };
+}
+
+/** Normalises an opening `typeOverrides` patch — `undefined` when empty. */
+export function normaliseOpeningOverrides(
+  overrides: Partial<OpeningTypeParams>,
+): Partial<OpeningTypeParams> | undefined {
   return Object.keys(overrides).length === 0 ? undefined : overrides;
 }

@@ -22,6 +22,7 @@ import {
   isWallEntity,
   isColumnEntity,
   isFloorFinishEntity,
+  isMepUnderfloorEntity,
 } from '../../types/entities';
 import { getColumnAnchorWorldPoints } from '../columns/column-anchors';
 
@@ -74,6 +75,14 @@ export function getBimEntityKeyPoints2D(entity: Entity): Point2D[] {
 
   // ADR-419 — floor-finish footprint vertices (closed polygon, like slab).
   if (isFloorFinishEntity(entity)) {
+    const verts = entity.params.footprint?.vertices;
+    if (!verts) return [];
+    return verts.map(v => ({ x: v.x, y: v.y }));
+  }
+
+  // ADR-408 Εύρος Β #3 — underfloor heating loop footprint vertices (closed
+  // polygon, mirrors floor-finish).
+  if (isMepUnderfloorEntity(entity)) {
     const verts = entity.params.footprint?.vertices;
     if (!verts) return [];
     return verts.map(v => ({ x: v.x, y: v.y }));

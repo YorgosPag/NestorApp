@@ -63,11 +63,17 @@ export {
   commitMepFixtureGripDrag,
   commitElectricalPanelGripDrag,
   commitMepManifoldGripDrag,
+  commitMepManifoldOutletCountGrip,
   commitMepRadiatorGripDrag,
   commitMepBoilerGripDrag,
   commitFurnitureGripDrag,
   commitFloorplanSymbolGripDrag,
 } from './grip-parametric-centred-box-commits';
+
+// ADR-408 Εύρος Β #3 — polygon-footprint grip commits (underfloor) live in
+// grip-polygon-commits.ts (N.7.1 file-size split). Re-exported here so the
+// commit API stays one import.
+export { commitMepUnderfloorGripDrag } from './grip-polygon-commits';
 
 /**
  * ADR-358 Phase 5b — Parametric stair grip commit. Bypasses the standard

@@ -93,6 +93,8 @@ export interface UseCanvasClickHandlerParams {
   mepRadiatorTool?: MepRadiatorToolLike;
   /** ADR-408 Εύρος Β #2 — Heating boiler tool click pipeline. */
   mepBoilerTool?: MepBoilerToolLike;
+  /** ADR-408 Εύρος Β #3 — Underfloor heating loop tool click pipeline (footprint polygon; same shape as slab). */
+  mepUnderfloorTool?: SlabToolLike;
   /** ADR-408 Φ8 — MEP segment (duct/pipe) tool click pipeline. */
   mepSegmentTool?: MepSegmentToolLike;
   /** ADR-410 — Furniture tool click pipeline (single-click placement). */

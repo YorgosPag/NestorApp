@@ -18,20 +18,45 @@ import type { Point2D, ViewTransform } from '../../rendering/types/Types';
 import type { OpeningKind } from '../types/opening-types';
 import { CoordinateTransforms } from '../../rendering/core/CoordinateTransforms';
 
+// Mirror του OPENING_KIND_STROKE (opening-kind-style.ts) ώστε ghost == committed.
 const KIND_STROKE: Readonly<Record<OpeningKind, string>> = {
-  'door':         '#c97c2f',
-  'window':       '#2d72b8',
-  'sliding-door': '#7c5fa1',
-  'french-door':  '#b96b2c',
-  'fixed':        '#3d7a6f',
+  'door':                '#c97c2f',
+  'double-door':         '#a85b2a',
+  'sliding-door':        '#7c5fa1',
+  'double-sliding-door': '#6a4f96',
+  'pocket-door':         '#8a6fb0',
+  'bifold-door':         '#b07c3a',
+  'overhead-door':       '#8a6d4a',
+  'revolving-door':      '#9a5a7a',
+  'french-door':         '#b96b2c',
+  'window':              '#2d72b8',
+  'fixed':               '#3d7a6f',
+  'double-hung-window':  '#2f8fb0',
+  'sliding-window':      '#3a8fbf',
+  'awning-window':       '#2f9aa0',
+  'hopper-window':       '#3aa0a8',
+  'tilt-turn-window':    '#2f7fa8',
+  'bay-window':          '#2f7f9f',
 };
 
 const KIND_FILL: Readonly<Record<OpeningKind, string>> = {
-  'door':         'rgba(201,124,47,0.25)',
-  'window':       'rgba(45,114,184,0.25)',
-  'sliding-door': 'rgba(124,95,161,0.25)',
-  'french-door':  'rgba(185,107,44,0.25)',
-  'fixed':        'rgba(61,122,111,0.25)',
+  'door':                'rgba(201,124,47,0.25)',
+  'double-door':         'rgba(168,91,42,0.25)',
+  'sliding-door':        'rgba(124,95,161,0.25)',
+  'double-sliding-door': 'rgba(106,79,150,0.25)',
+  'pocket-door':         'rgba(138,111,176,0.25)',
+  'bifold-door':         'rgba(176,124,58,0.25)',
+  'overhead-door':       'rgba(138,109,74,0.25)',
+  'revolving-door':      'rgba(154,90,122,0.25)',
+  'french-door':         'rgba(185,107,44,0.25)',
+  'window':              'rgba(45,114,184,0.25)',
+  'fixed':               'rgba(61,122,111,0.25)',
+  'double-hung-window':  'rgba(47,143,176,0.25)',
+  'sliding-window':      'rgba(58,143,191,0.25)',
+  'awning-window':       'rgba(47,154,160,0.25)',
+  'hopper-window':       'rgba(58,160,168,0.25)',
+  'tilt-turn-window':    'rgba(47,127,168,0.25)',
+  'bay-window':          'rgba(47,127,159,0.25)',
 };
 
 const DASH_PATTERN = [6, 4] as const;

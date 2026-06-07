@@ -38,6 +38,7 @@ import type { SlabEntity } from '@/subapps/dxf-viewer/bim/types/slab-types';
 import type { BeamEntity } from '@/subapps/dxf-viewer/bim/types/beam-types';
 import type { ColumnEntity } from '@/subapps/dxf-viewer/bim/types/column-types';
 import type { OpeningEntity, OpeningKind } from '@/subapps/dxf-viewer/bim/types/opening-types';
+import { isWindowKind } from '@/subapps/dxf-viewer/bim/types/opening-types';
 import type { SceneModel, AnySceneEntity } from '@/subapps/dxf-viewer/types/scene';
 import type { FloorDocument } from '@/app/api/floors/floors.types';
 
@@ -64,8 +65,7 @@ function inferWallIfcType(kind: string): 'IfcWall' | 'IfcWallStandardCase' {
 }
 
 function inferOpeningIfcType(kind: OpeningKind): 'IfcDoor' | 'IfcWindow' {
-  if (kind === 'window' || kind === 'fixed') return 'IfcWindow';
-  return 'IfcDoor';
+  return isWindowKind(kind) ? 'IfcWindow' : 'IfcDoor';
 }
 
 // ─── Per-type patching ──────────────────────────────────────────────────────

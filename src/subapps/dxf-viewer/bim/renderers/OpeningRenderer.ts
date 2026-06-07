@@ -26,9 +26,8 @@ import { BaseEntityRenderer } from '../../rendering/entities/BaseEntityRenderer'
 import type { EntityModel, GripInfo, RenderOptions, Point2D } from '../../rendering/types/Types';
 import type { Entity } from '../../types/entities';
 import { isOpeningEntity } from '../../types/entities';
-import type { OpeningEntity } from '../types/opening-types';
-import { isHingedKind, isGlazedKind } from '../types/opening-types';
-import type { Point3D } from '../types/bim-base';
+import type { OpeningEntity, OpeningKind } from '../types/opening-types';
+import { isWindowKind, isSlidingKind } from '../types/opening-types';
 import { RENDER_LINE_WIDTHS } from '../../config/text-rendering-config';
 import { resolveSubcategoryStyle } from '../../config/bim-line-weight-resolver';
 import { resolveIsEntityVisible } from '../visibility/visibility-resolver';
@@ -41,8 +40,8 @@ import { isConcreteLineweight } from '../../config/lineweight-iso-catalog';
 import { getOpeningGrips } from '../walls/opening-grips';
 import { gripGlyphShape } from '../grips/grip-glyph-registry';
 import { isPointInPolygon } from '../../utils/geometry/GeometryUtils';
-import { HINGE_ARC_SUBDIVISIONS } from '../geometry/opening-geometry';
 import { OPENING_KIND_STROKE } from './opening-kind-style';
+import { drawOpeningPlanOverlay } from './opening-overlay-drawing';
 import {
   OpeningTagRenderer,
   computeTagCenter,
@@ -51,9 +50,6 @@ import {
 } from './OpeningTagRenderer';
 import { isOpeningTagLayerVisible } from '../../systems/layers/opening-tag-layer';
 
-const HINGE_DASH: readonly [number, number] = [4, 3];
-const SLIDING_DASH: readonly [number, number] = [10, 4];
-const GLAZING_INSET_RATIO = 0.25; // 25% of thickness inset for double-line glass
 /** ADR-375 — dashed outline for an opening projected as "<Beyond>" (not cut). */
 const BEYOND_DASH: readonly number[] = [6, 4];
 
@@ -226,132 +222,31 @@ export class OpeningRenderer extends BaseEntityRenderer {
     this.ctx.stroke();
   }
 
-  private drawKindOverlay(opening: OpeningEntity, baseLineWidth: number): void {
-    if (isHingedKind(opening.kind)) {
-      this.drawHingeArc(opening, baseLineWidth);
-      return;
-    }
-    if (opening.kind === 'sliding-door') {
-      this.drawSlidingIndicator(opening, baseLineWidth);
-      return;
-    }
-    if (isGlazedKind(opening.kind)) {
-      this.drawGlazing(opening, baseLineWidth);
-    }
-  }
-
   /**
-   * Dashed quarter-arc swing indicator + solid leaf line(s) for door / french-door.
-   *
-   * Industry-standard plan convention (AutoCAD/Revit): door = swing arc (dashed)
-   * + leaf line (solid). The leaf line represents the door panel σε 90°-open
-   * position — connects the hinge anchor (pivot) με την άκρη του arc.
-   *
-   * Geometry contract:
-   *   - `arc.points[0..HINGE_ARC_SUBDIVISIONS]`: first arc (closed → 90°-open)
-   *   - `arc.points[HINGE_ARC_SUBDIVISIONS]`: 90°-open tip του first leaf
-   *   - french-door only: `arc.points[HINGE_ARC_SUBDIVISIONS+1]`: 90°-open tip
-   *     του second leaf (first point of the reversed second-arc loop, sin=1).
+   * Kind-specific plan symbol overlay (swing arc / sliding rail / folding /
+   * overhead / revolving / glazing + operation marks / bay). Dispatched through
+   * the pure `opening-overlay-drawing` SSoT (ADR-421 §A5) — the renderer just
+   * supplies the canvas context + world→screen mapper.
    */
-  private drawHingeArc(opening: OpeningEntity, baseLineWidth: number): void {
-    const arc = opening.geometry.hingeArc;
-    const hinge = opening.geometry.hingeAnchor;
-    if (!arc || arc.points.length < 2 || !hinge) return;
-
-    this.ctx.save();
-    // Dashed swing arc.
-    this.ctx.setLineDash(HINGE_DASH as unknown as number[]);
-    this.ctx.lineWidth = baseLineWidth;
-    this.drawPolyline(arc.points);
-
-    // Solid leaf line(s) — door panel at 90°-open position.
-    this.ctx.setLineDash([]);
-    this.ctx.lineWidth = baseLineWidth;
-    this.drawLeafLine(hinge, arc.points[HINGE_ARC_SUBDIVISIONS]);
-
-    const hinge2 = opening.geometry.hingeAnchor2;
-    if (hinge2 && arc.points.length > HINGE_ARC_SUBDIVISIONS + 1) {
-      this.drawLeafLine(hinge2, arc.points[HINGE_ARC_SUBDIVISIONS + 1]);
-    }
-    this.ctx.restore();
-  }
-
-  private drawLeafLine(from: { x: number; y: number }, to: { x: number; y: number }): void {
-    const a = this.worldToScreen({ x: from.x, y: from.y });
-    const b = this.worldToScreen({ x: to.x, y: to.y });
-    this.ctx.beginPath();
-    this.ctx.moveTo(a.x, a.y);
-    this.ctx.lineTo(b.x, b.y);
-    this.ctx.stroke();
-  }
-
-  /** Sliding-door visual cue: long-dashed line down the middle. */
-  private drawSlidingIndicator(opening: OpeningEntity, baseLineWidth: number): void {
-    const verts = opening.geometry.outline.vertices;
-    if (verts.length < 4) return;
-    // Outline order is start-outer, end-outer, end-inner, start-inner.
-    // Midpoints of the two long edges form the slide track.
-    const mid = (a: Point3D, b: Point3D): Point3D => ({
-      x: (a.x + b.x) / 2, y: (a.y + b.y) / 2, z: 0,
+  private drawKindOverlay(opening: OpeningEntity, baseLineWidth: number): void {
+    drawOpeningPlanOverlay(opening, {
+      ctx: this.ctx,
+      toScreen: (p) => this.worldToScreen({ x: p.x, y: p.y }),
+      lineWidth: baseLineWidth,
     });
-    const trackStart = mid(verts[0], verts[3]);
-    const trackEnd = mid(verts[1], verts[2]);
-    this.ctx.save();
-    this.ctx.setLineDash(SLIDING_DASH as unknown as number[]);
-    this.ctx.lineWidth = baseLineWidth;
-    this.drawPolyline([trackStart, trackEnd]);
-    this.ctx.restore();
-  }
-
-  /** Glazed visual: inset double-line inside the outline. */
-  private drawGlazing(opening: OpeningEntity, baseLineWidth: number): void {
-    const verts = opening.geometry.outline.vertices;
-    if (verts.length < 4) return;
-    // Inset the outline by GLAZING_INSET_RATIO toward the centroid.
-    const cx = (verts[0].x + verts[1].x + verts[2].x + verts[3].x) / 4;
-    const cy = (verts[0].y + verts[1].y + verts[2].y + verts[3].y) / 4;
-    const inset: Point3D[] = verts.map((v) => ({
-      x: v.x + (cx - v.x) * GLAZING_INSET_RATIO,
-      y: v.y + (cy - v.y) * GLAZING_INSET_RATIO,
-      z: 0,
-    }));
-    this.ctx.save();
-    this.ctx.lineWidth = baseLineWidth;
-    this.ctx.beginPath();
-    const first = this.worldToScreen({ x: inset[0].x, y: inset[0].y });
-    this.ctx.moveTo(first.x, first.y);
-    for (let i = 1; i < inset.length; i++) {
-      const s = this.worldToScreen({ x: inset[i].x, y: inset[i].y });
-      this.ctx.lineTo(s.x, s.y);
-    }
-    this.ctx.closePath();
-    this.ctx.stroke();
-    this.ctx.restore();
-  }
-
-  private drawPolyline(points: ReadonlyArray<Point3D>): void {
-    if (points.length < 2) return;
-    this.ctx.beginPath();
-    const first = this.worldToScreen({ x: points[0].x, y: points[0].y });
-    this.ctx.moveTo(first.x, first.y);
-    for (let i = 1; i < points.length; i++) {
-      const s = this.worldToScreen({ x: points[i].x, y: points[i].y });
-      this.ctx.lineTo(s.x, s.y);
-    }
-    this.ctx.stroke();
   }
 }
 
 // ─── ADR-377 C.3 — subcategory key helpers ──────────────────────────────────
 
-function openingOutlineSubcat(kind: string): string {
-  if (kind === 'window' || kind === 'fixed') return 'window-opening';
+function openingOutlineSubcat(kind: OpeningKind | 'wall-cutout'): string {
   if (kind === 'wall-cutout') return 'wall-cutout-jambs';
-  return 'door-opening'; // door, french-door, sliding-door
+  return isWindowKind(kind) ? 'window-opening' : 'door-opening';
 }
 
-function openingOverlaySubcat(kind: string): string {
-  if (kind === 'window' || kind === 'fixed') return 'window-glass';
-  if (kind === 'sliding-door') return 'sliding-track';
-  return 'door-plan-swing'; // door, french-door
+function openingOverlaySubcat(kind: OpeningKind | 'wall-cutout'): string {
+  if (kind === 'wall-cutout') return 'door-plan-swing';
+  if (isWindowKind(kind)) return 'window-glass';
+  if (isSlidingKind(kind)) return 'sliding-track';
+  return 'door-plan-swing'; // hinged / folding / overhead / revolving doors
 }

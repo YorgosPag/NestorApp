@@ -71,6 +71,18 @@ Mouse Event → DxfCanvas.onMouseMove
 
 ## Changelog
 
+### 2026-06-07 — floor-drain kind-aware fixture renderer (ADR-408 Φ14, CHECK 6D)
+
+**Status**: IMPLEMENTED 2026-06-07. Το νέο `kind: 'floor-drain'` του `mep-fixture` (σιφώνι/στόμιο δαπέδου αποχέτευσης) κάνει τον `MepFixtureRenderer.ts` (2D entity renderer) kind-aware: (α) `category` από το νέο SSoT `resolveFixtureBimCategory` (floor-drain → `'drain-pipe'`, αλλιώς `'light-fixture'`) ώστε το σιφώνι να κρύβεται μαζί με την αποχέτευση στο toggle «Αποχέτευση»· (β) χρώμα precedence ίδιο με τον segment/fitting renderer (`systemColor ?? resolveSegmentClassificationColor('sanitary-drainage') ?? FIXTURE_STROKE`) → καφέ drainage· (γ) τα grating-grid strokes έρχονται από το `buildFixtureSymbol` SSoT. **Όλα read-time παράγωγα από το `fixture.params` — μηδέν νέο `useSyncExternalStore`, bitmap cache-key, ή micro-leaf αλλαγή** (Cardinal Rules / CHECK 6C respected). Co-staged για CHECK 6D (`MepFixtureRenderer.ts`). Λεπτομέρεια στο ADR-408 changelog.
+
+### 2026-06-07 — underfloor tool wiring pass-through (ADR-408 Εύρος Β #3, CHECK 6B)
+
+**Status**: IMPLEMENTED 2026-06-07. Η νέα AREA-based οντότητα `mep-underfloor` (ενδοδαπέδια θέρμανση) προσθέτει το `mepUnderfloorTool` στο `CanvasSection.tsx` — **μόνο** ως pass-through (destructure από `useSpecialTools` + προώθηση στο `useCanvasClickHandler`), ίδιο pattern με το προϋπάρχον `floorFinishTool`/`mepBoilerTool`. **Μηδέν νέο `useSyncExternalStore`, μηδέν high-frequency subscription, καμία αλλαγή σε bitmap cache-key ή micro-leaf δομή** (Cardinal Rules / CHECK 6C respected — η οντότητα είναι area-based χωρίς ghost-leaf). Co-staged για CHECK 6B (`CanvasSection.tsx`). Λεπτομέρεια στο ADR-408 changelog.
+
+### 2026-06-07 — drainage fitting V/G + colour inheritance (ADR-408 Φ14, CHECK 6D)
+
+**Status**: IMPLEMENTED 2026-06-07. Τα auto `mep-fitting` (γωνίες/ταυ/συστολές) κληρονομούν πλέον την `classification` των incident σωλήνων (Revit «a fitting follows the system of its connectors»). Ο `MepFittingRenderer.ts` (2D entity renderer) αλλάζει: (α) `category` μέσω νέου SSoT `resolveFittingBimCategory` (drainage → `'drain-pipe'`, αλλιώς `domain`) ώστε ένα drainage fitting να κρύβεται μαζί με τους σωλήνες αποχέτευσης από το toggle «Αποχέτευση»· (β) χρώμα με την ίδια precedence με τον segment renderer (`systemColor ?? resolveSegmentClassificationColor(classification) ?? DOMAIN_STROKE`) → καφέ drainage. **Καθαρά read-time παραγωγή από `fitting.params` — μηδέν αλλαγή σε `useSyncExternalStore`, bitmap cache-key, ή micro-leaf δομή** (Cardinal Rules / CHECK 6C respected). Co-staged για CHECK 6D (`MepFittingRenderer.ts`). Λεπτομέρεια στο ADR-408 changelog.
+
 ### 2026-06-07 — region tool-id predicate swap (ADR-419 region 3-way split, CHECK 6B/6D)
 
 **Status**: IMPLEMENTED 2026-06-07. Το «σε περιοχή» (κολώνα/τοίχος) έσπασε σε 3 διακριτές εντολές (`*-region-lines/inside/box`, πρώην `*-in-region` αφαιρέθηκαν — βλ. ADR-419 changelog v1.2). Τα scattered `activeTool === 'wall-in-region' || …` checks αντικαταστάθηκαν από κεντρικά predicates του νέου SSoT `systems/tools/region-tool-ids.ts` σε: `CanvasSection.tsx` (`entityPickingActive`), `dxf-canvas-renderer.ts` (`gripsAllowed`), `mouse-handler-up.ts`/`mouse-handler-move.ts`/`useCentralizedMouseHandlers.ts` (box-select pipeline gating). **Καθαρά predicate swap — μηδέν αλλαγή σε `useSyncExternalStore`, bitmap cache-key, ή micro-leaf δομή** (Cardinal Rules / CHECK 6C respected). Box-select pipeline ενεργό πλέον μόνο για τα `*-region-box` + perimeter/discrete tools. Co-staged για CHECK 6B (CanvasSection/dxf-canvas-renderer) + CHECK 6D (cursor/ files).

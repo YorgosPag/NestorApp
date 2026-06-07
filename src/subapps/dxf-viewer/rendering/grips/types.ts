@@ -44,7 +44,10 @@ export type GripShape =
   | 'diamond'  // Special case grips (future)
   // ADR-393 v2 — parametric handle icon glyphs (BIM stair move/rotation).
   | 'move'     // 4-way arrow (basePoint translate handle)
-  | 'rotation'; // curved arrow (direction rotate handle)
+  | 'rotation' // curved arrow (direction rotate handle)
+  // ADR-408 Φ12 — Revit "array control" ▲/▼ action glyphs (manifold outlet add/remove).
+  | 'triangle-up'    // filled ▲ (add outlet)
+  | 'triangle-down'; // filled ▼ (remove outlet)
 
 // ============================================================================
 // GRIP CONFIGURATION INTERFACES

@@ -354,6 +354,7 @@ export class EnterpriseIdService {
   generateMepManifoldId(): string { return this.generateId(P.MEP_MANIFOLD).id; }
   generateMepRadiatorId(): string { return this.generateId(P.MEP_RADIATOR).id; }
   generateMepBoilerId(): string { return this.generateId(P.MEP_BOILER).id; }
+  generateMepUnderfloorId(): string { return this.generateId(P.MEP_UNDERFLOOR).id; }
   generateRailingId(): string { return this.generateId(P.RAILING).id; }
   generateRoofId(): string { return this.generateId(P.ROOF).id; }
   generateFloorFinishId(): string { return this.generateId(P.FLOOR_FINISH).id; }

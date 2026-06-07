@@ -10,7 +10,7 @@
  */
 
 import { z } from 'zod';
-import { MepConnectorSchema } from './mep-connector.schemas';
+import { MepConnectorSchema, PlumbingSystemClassificationSchema } from './mep-connector.schemas';
 
 const Point3DSchema = z
   .object({
@@ -65,6 +65,9 @@ export const MepFittingParamsSchema = z
     incidents: z.array(MepFittingIncidentSchema),
     primaryDiameterMm: z.number().positive(),
     secondaryDiameterMm: z.number().positive().optional(),
+    // ADR-408 Φ14 — classification inherited from the incident pipes (drives V/G
+    // category + standalone colour). Mirror of MepSegmentParamsSchema.classification.
+    classification: PlumbingSystemClassificationSchema.optional(),
     elbowStyle: ElbowStyleSchema.optional(),
     sceneUnits: SceneUnitsSchema.optional(),
     storeyId: z.string().min(1).optional(),

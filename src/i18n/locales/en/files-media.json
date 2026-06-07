@@ -121,12 +121,16 @@
     },
     "wipePreview": {
       "title": "This floor already has content",
-      "summary": "Will be permanently deleted: {polygons} drawings, {backgrounds} backgrounds, {files} files."
+      "summary": "Will be permanently deleted: {polygons} drawings, {backgrounds} backgrounds, {files} files.",
+      "bimLine": "Plus: {bim} BIM elements, {boq} auto quantities."
     },
     "wipeDialog": {
       "title": "Replace floor floorplan",
       "description": "Importing '{fileName}' will permanently delete: {polygons} drawings, {backgrounds} backgrounds, {files} files. This cannot be undone. Continue?",
+      "bimWarning": "⚠️ This floor has {bim} BIM elements (walls, columns, openings, etc.) and {boq} auto quantities. Choose whether to keep them or delete them too.",
       "confirm": "Delete and import",
+      "keepBim": "Keep BIM",
+      "wipeBim": "Delete everything (BIM + quantities)",
       "cancel": "Cancel"
     },
     "drawingUnits": {

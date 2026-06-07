@@ -33,8 +33,13 @@ import type { Entity } from '../../types/entities';
 import type { ColumnEntity, ColumnKind } from '../types/column-types';
 import { SHEAR_WALL_MIN_ASPECT_RATIO } from '../types/column-types';
 import { mmToSceneUnits, type SceneUnits } from '../../utils/scene-units';
-import { perimeterFacesToRects, type ClosedPerimeter } from '../walls/perimeter-from-faces';
+import {
+  perimeterFacesToRects,
+  isPerimeterOversized,
+  type ClosedPerimeter,
+} from '../walls/perimeter-from-faces';
 import type { DetectedRectangle } from '../walls/wall-in-region';
+import { REGION_PERIMETER_LIMITS } from '../../config/tolerance-config';
 import {
   completeColumnFromClick,
   type ColumnParamOverrides,
@@ -197,6 +202,10 @@ function buildPerimeterColumn(
   s: number,
   sceneUnits: SceneUnits,
 ): ColumnEntity | null {
+  // ADR-419 Layer 4 (net) — size sanity guard: ένα περίγραμμα με «πάχος» πάνω από
+  // λογικό δομικό μέλος (π.χ. το εξωτερικό περίγραμμα του σχεδίου, 27×25m) ΔΕΝ
+  // είναι κολώνα/τοιχίο. Reject εδώ ώστε να καλύπτεται ΚΑΙ το box-select path.
+  if (isPerimeterOversized(perimeter, s)) return null;
   const placement =
     perimeter.shape === 'rectangle' && perimeter.rects.length > 0
       ? rectColumnPlacement(perimeter.rects[0], s)
@@ -226,6 +235,9 @@ export function buildColumnFillingRect(
   sceneUnits: SceneUnits,
 ): ColumnEntity | null {
   const s = mmToSceneUnits(sceneUnits);
+  // ADR-419 Layer 4 (net) — reject ορθογώνιο με «πάχος» (μικρή πλευρά) πάνω από
+  // λογικό δομικό μέλος (mirror buildWallFillingRect guard).
+  if (rect.shortSide / s > REGION_PERIMETER_LIMITS.MAX_MEMBER_THICKNESS_MM) return null;
   const placement = rectColumnPlacement(rect, s);
   const result = completeColumnFromClick(
     placement.center,

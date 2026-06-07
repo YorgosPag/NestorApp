@@ -30,11 +30,25 @@ export const OPENING_CONTEXTUAL_TRIGGER = 'opening-selected';
 // ─── Combobox options ────────────────────────────────────────────────────────
 
 const OPENING_KIND_OPTIONS = [
-  { value: 'door',         labelKey: 'ribbon.commands.openingEditor.kind.door',         isLiteralLabel: false },
-  { value: 'window',       labelKey: 'ribbon.commands.openingEditor.kind.window',       isLiteralLabel: false },
-  { value: 'sliding-door', labelKey: 'ribbon.commands.openingEditor.kind.slidingDoor',  isLiteralLabel: false },
-  { value: 'french-door',  labelKey: 'ribbon.commands.openingEditor.kind.frenchDoor',   isLiteralLabel: false },
-  { value: 'fixed',        labelKey: 'ribbon.commands.openingEditor.kind.fixed',        isLiteralLabel: false },
+  // ─── Doors ──────────────────────────────────────────────────────────────
+  { value: 'door',                labelKey: 'ribbon.commands.openingEditor.kind.door',               isLiteralLabel: false },
+  { value: 'double-door',         labelKey: 'ribbon.commands.openingEditor.kind.doubleDoor',         isLiteralLabel: false },
+  { value: 'sliding-door',        labelKey: 'ribbon.commands.openingEditor.kind.slidingDoor',        isLiteralLabel: false },
+  { value: 'double-sliding-door', labelKey: 'ribbon.commands.openingEditor.kind.doubleSlidingDoor',  isLiteralLabel: false },
+  { value: 'pocket-door',         labelKey: 'ribbon.commands.openingEditor.kind.pocketDoor',         isLiteralLabel: false },
+  { value: 'bifold-door',         labelKey: 'ribbon.commands.openingEditor.kind.bifoldDoor',         isLiteralLabel: false },
+  { value: 'overhead-door',       labelKey: 'ribbon.commands.openingEditor.kind.overheadDoor',       isLiteralLabel: false },
+  { value: 'revolving-door',      labelKey: 'ribbon.commands.openingEditor.kind.revolvingDoor',      isLiteralLabel: false },
+  { value: 'french-door',         labelKey: 'ribbon.commands.openingEditor.kind.frenchDoor',         isLiteralLabel: false },
+  // ─── Windows ────────────────────────────────────────────────────────────
+  { value: 'window',              labelKey: 'ribbon.commands.openingEditor.kind.window',             isLiteralLabel: false },
+  { value: 'fixed',               labelKey: 'ribbon.commands.openingEditor.kind.fixed',              isLiteralLabel: false },
+  { value: 'double-hung-window',  labelKey: 'ribbon.commands.openingEditor.kind.doubleHungWindow',   isLiteralLabel: false },
+  { value: 'sliding-window',      labelKey: 'ribbon.commands.openingEditor.kind.slidingWindow',      isLiteralLabel: false },
+  { value: 'awning-window',       labelKey: 'ribbon.commands.openingEditor.kind.awningWindow',       isLiteralLabel: false },
+  { value: 'hopper-window',       labelKey: 'ribbon.commands.openingEditor.kind.hopperWindow',       isLiteralLabel: false },
+  { value: 'tilt-turn-window',    labelKey: 'ribbon.commands.openingEditor.kind.tiltTurnWindow',     isLiteralLabel: false },
+  { value: 'bay-window',          labelKey: 'ribbon.commands.openingEditor.kind.bayWindow',          isLiteralLabel: false },
 ] as const;
 
 const HANDING_OPTIONS = [
@@ -182,6 +196,41 @@ export const CONTEXTUAL_OPENING_TAB: RibbonTab = {
                 commandKey: OPENING_RIBBON_KEYS.stringParams.openDirection,
                 comboboxWidthPx: 110,
                 options: OPEN_DIRECTION_OPTIONS,
+              },
+            },
+          ],
+        },
+      ],
+    },
+    {
+      // ADR-421 SLICE C — BIM Family Type: selector (Radix Select, ADR-001) +
+      // type properties / per-instance override editor. Selector assigns/detaches
+      // the opening's `typeId` (a Type can switch the family → 2D/3D/IFC follow);
+      // properties widget shows effective dims + renames/edits user types.
+      id: 'opening-family-type',
+      labelKey: 'ribbon.panels.openingFamilyType',
+      rows: [
+        {
+          isInFlyout: false,
+          buttons: [
+            {
+              type: 'widget',
+              size: 'small',
+              widgetId: 'opening-family-type',
+              command: {
+                id: 'opening.familyType',
+                labelKey: 'ribbon.commands.bimFamilyType.label',
+                commandKey: 'opening.familyType.select',
+              },
+            },
+            {
+              type: 'widget',
+              size: 'small',
+              widgetId: 'opening-type-properties',
+              command: {
+                id: 'opening.typeProperties',
+                labelKey: 'ribbon.commands.bimFamilyType.properties',
+                commandKey: 'opening.familyType.properties',
               },
             },
           ],

@@ -39,6 +39,7 @@ import {
   isMepManifoldEntity,
   isMepRadiatorEntity,
   isMepBoilerEntity,
+  isMepUnderfloorEntity,
 } from '../../types/entities';
 import { getEntityConnectors } from '../../bim/mep-systems/connector-access';
 import { connectorWorldPosition } from '../../bim/types/mep-connector-types';
@@ -121,6 +122,14 @@ function extractMepConnectorPoints(entity: EntityModel): Point2D[] {
       const w = connectorWorldPosition(c, position, rotation ?? 0);
       return { x: w.x, y: w.y };
     });
+  }
+  // ADR-408 Εύρος Β #3 — area-based underfloor loop: connectors store their world
+  // position directly (identity host transform), like the mep-segment opt-out.
+  if (isMepUnderfloorEntity(entity)) {
+    return getEntityConnectors(entity).map((c) => ({
+      x: c.localPosition.x,
+      y: c.localPosition.y,
+    }));
   }
   return [];
 }

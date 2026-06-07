@@ -60,4 +60,19 @@ describe('MepFixtureEntitySchema', () => {
     };
     expect(MepFixtureEntitySchema.safeParse(entity).success).toBe(false);
   });
+
+  // ADR-408 Φ14 — a floor drain validates with kind 'floor-drain' + the
+  // IfcSanitaryTerminal class. Without the schema enum widening this round-trip
+  // would be silently rejected at persistence (the #5 φρεάτιο lesson).
+  it('accepts a floor-drain entity (IfcSanitaryTerminal)', () => {
+    const entity = {
+      id: 'mepfix_drain',
+      type: 'mep-fixture',
+      kind: 'floor-drain',
+      params: { ...validParams, kind: 'floor-drain', width: 150, length: 150, bodyHeightMm: 100, mountingElevationMm: 0 },
+      ifcGuid: '0123456789ABCDEFabcdef',
+      ifcType: 'IfcSanitaryTerminal',
+    };
+    expect(MepFixtureEntitySchema.safeParse(entity).success).toBe(true);
+  });
 });

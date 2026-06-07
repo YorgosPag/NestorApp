@@ -166,6 +166,38 @@ export const ENTITY_LIMITS = {
   GAP_TOLERANCE: 0.5,
 } as const;
 
+// ===== REGION / PERIMETER DETECTION (ADR-363 / ADR-419) =====
+// 🏢 Defense-in-depth για το «Δομικά στοιχεία σε περιοχή / από περίγραμμα»
+// (κολώνες + τοίχοι). Κοινό SSoT — κατοπτρίζει το PIPE_JOIN_TOLERANCE_MM pattern
+// του ADR-408 (mm-based, scene-units-agnostic μέσω mmToSceneUnits στον caller).
+
+/**
+ * 🎯 REGION PERIMETER LIMITS
+ * Σταθερές για την ανίχνευση κλειστού περιγράμματος κάτω από το cursor όταν ο
+ * χρήστης σημαδεύει «περιοχή» για να γεμίσει με κολώνα/τοιχίο/τοίχο.
+ *
+ * - `LOOP_JOIN_TOLERANCE_MM` (Layer 2 — gap-tolerant closure): μικρά κενά στις
+ *   παρειές που σχεδιάστηκαν χωρίς snap κλείνουν αυτόματα (Revit auto-trim/extend).
+ *   Χρησιμοποιείται ως floor πάνω από το pixel-based `SNAP_DEFAULT/scale` ώστε να
+ *   μην εξαρτάται από το zoom. 50mm = γενναιόδωρο αλλά κάτω από το πάχος τοίχου
+ *   (>5cm) ώστε να ΜΗΝ ενώνει διακριτές παρειές.
+ * - `MAX_MEMBER_THICKNESS_MM` (Layer 4 — size sanity guard): το μέγιστο «πάχος»
+ *   (μικρή πλευρά) ενός υπαρκτού δομικού μέλους. Περίγραμμα με μικρή πλευρά πάνω
+ *   από αυτό ΔΕΝ είναι μέλος — είναι το εξωτερικό περίγραμμα του σχεδίου (το bug:
+ *   27.78×25.35m). Ελέγχεται ΜΟΝΟ η μικρή πλευρά → legit μακρύς τοίχος (10m × 0.2m)
+ *   δεν μπλοκάρεται (false-positive-free). Κολώνες/τοιχία < 3m πάντα περνούν.
+ *
+ * @example
+ * import { REGION_PERIMETER_LIMITS } from '../config/tolerance-config';
+ * const tolWorld = Math.max(snapPx / scale, REGION_PERIMETER_LIMITS.LOOP_JOIN_TOLERANCE_MM * mmToScene);
+ */
+export const REGION_PERIMETER_LIMITS = {
+  /** Layer 2 — gap-closure floor σε mm (mirror PIPE_JOIN_TOLERANCE_MM). */
+  LOOP_JOIN_TOLERANCE_MM: 50,
+  /** Layer 4 — μέγιστο πάχος (μικρή πλευρά) δομικού μέλους σε mm. */
+  MAX_MEMBER_THICKNESS_MM: 3000,
+} as const;
+
 // ===== JOIN / FORCE-CONNECT TOLERANCES =====
 // 🏢 ADR-186: Entity Join System — Force-Connect Tolerances (2026-02-17)
 

@@ -22,6 +22,13 @@ export type RibbonToggleState = boolean | null;        // null = mixed/indetermi
 export interface RibbonComboboxState {
   value: string | null;                                // null = mixed
   options: readonly RibbonComboboxOption[];
+  /**
+   * ADR-421 SLICE C follow-up (a) — when `true`, the combobox renders
+   * read-only (value still visible) because its value is governed elsewhere
+   * (e.g. a typed BIM family Type, Revit-style). Owning bridge decides; bridges
+   * that omit it keep the field fully editable (no breaking change).
+   */
+  disabled?: boolean;
 }
 
 export interface RibbonCommandsApi {

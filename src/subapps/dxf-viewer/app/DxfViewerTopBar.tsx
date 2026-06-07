@@ -35,6 +35,7 @@ import { ElectricalPanelPersistenceHost } from './ElectricalPanelPersistenceHost
 import { MepManifoldPersistenceHost } from './MepManifoldPersistenceHost';
 import { MepRadiatorPersistenceHost } from './MepRadiatorPersistenceHost';
 import { MepBoilerPersistenceHost } from './MepBoilerPersistenceHost';
+import { MepUnderfloorPersistenceHost } from './MepUnderfloorPersistenceHost';
 import { MepSegmentPersistenceHost } from './MepSegmentPersistenceHost';
 import { MepFittingPersistenceHost } from './MepFittingPersistenceHost';
 import { MepSystemPersistenceHost } from './MepSystemPersistenceHost';
@@ -191,6 +192,14 @@ export function DxfViewerTopBar({
         floorId={floorId}
       />
       <MepBoilerPersistenceHost
+        primarySelectedId={primarySelectedId}
+        currentScene={currentScene}
+        levelManager={levelManager}
+        projectId={levelManager.saveContext?.projectId ?? undefined}
+        floorplanId={levelManager.fileRecordId ?? undefined}
+        floorId={floorId}
+      />
+      <MepUnderfloorPersistenceHost
         primarySelectedId={primarySelectedId}
         currentScene={currentScene}
         levelManager={levelManager}

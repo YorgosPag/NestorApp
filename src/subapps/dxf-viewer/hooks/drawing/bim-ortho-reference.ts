@@ -37,13 +37,14 @@ import { stairPreviewStore } from '../../bim/stairs/stair-preview-store';
 import { beamPreviewStore } from '../../bim/beams/beam-preview-store';
 import { slabPreviewStore } from '../../bim/slabs/slab-preview-store';
 import { floorFinishPreviewStore } from '../../bim/floor-finishes/floor-finish-preview-store';
+import { mepUnderfloorPreviewStore } from '../../bim/mep-underfloor/mep-underfloor-preview-store';
 import { hardOrtho } from './drawing-handler-utils';
 import { applyPolar } from '../../systems/constraints/polar-utils';
 import { polarTrackingStore } from '../../systems/constraints/polar-tracking-store';
 import { cadToggleState } from '../../systems/constraints/cad-toggle-state';
 
 /** BIM tools whose FSM exposes a constraint anchor (last placed point). */
-const BIM_ORTHO_TOOLS = new Set<string>(['wall', 'stair', 'beam', 'slab', 'floor-finish']);
+const BIM_ORTHO_TOOLS = new Set<string>(['wall', 'stair', 'beam', 'slab', 'floor-finish', 'mep-underfloor']);
 
 /** True if `tool` is a BIM tool that participates in ortho/polar constraints. */
 export function isBimOrthoTool(tool: string): boolean {
@@ -84,6 +85,10 @@ export function getBimOrthoReference(tool: string): Point2D | null {
     }
     case 'floor-finish': {
       const s = floorFinishPreviewStore.get();
+      return s.vertices.length > 0 ? s.vertices[s.vertices.length - 1] : null;
+    }
+    case 'mep-underfloor': {
+      const s = mepUnderfloorPreviewStore.get();
       return s.vertices.length > 0 ? s.vertices[s.vertices.length - 1] : null;
     }
     default:

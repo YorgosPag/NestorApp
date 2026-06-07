@@ -52,9 +52,17 @@ export function computeMepSegmentGeometry(params: MepSegmentParams): MepSegmentG
   const outlineVertices = buildOutlineRect(axisVertices, planWidthMm, s);
   const outline: Polygon3D = { vertices: outlineVertices };
 
-  // BOQ rollups. Axis length canvas → m via (1/s)*MM_TO_M.
-  const lengthCanvas = computePolylineLengthMm(axisVertices);
-  const lengthM = lengthCanvas * (1 / s) * MM_TO_M;
+  // Per-endpoint elevations (ADR-408 Φ-A) — drive BOTH the true-3D BOQ length
+  // (below) and the bbox z-range (further down).
+  const elev = resolveSegmentEndpointElevationsMm(params);
+
+  // BOQ rollups — TRUE 3D length (ADR-408 Φ14 #2): a sloped run is longer than its
+  // plan projection. Unit-consistent: plan (canvas → mm) and vertical drop (already
+  // mm) combined in mm, then → m. surfaceArea/volume below multiply by lengthM, so
+  // they pick up the 3D length automatically.
+  const planMm = computePolylineLengthMm(axisVertices) * (1 / s);
+  const dzMm = elev.endMm - elev.startMm;
+  const lengthM = Math.hypot(planMm, dzMm) * MM_TO_M;
 
   const crossSectionAreaMm2 =
     section.diameterMm !== null
@@ -69,9 +77,8 @@ export function computeMepSegmentGeometry(params: MepSegmentParams): MepSegmentG
   const surfaceAreaM2 = perimeterMm * MM_TO_M * lengthM;
   const volume = crossSectionAreaM2 * lengthM;
 
-  // Per-endpoint elevations (ADR-408 Φ-A) — the run may slope, so the z range
-  // spans from the lower end to the higher end (± section half-height).
-  const elev = resolveSegmentEndpointElevationsMm(params);
+  // bbox z range spans the two endpoint elevations (± section half-height); reuses
+  // the `elev` resolved above.
   const bbox = computeBbox(axisVertices, outlineVertices, elev.startMm, elev.endMm, section.heightMm);
 
   return {

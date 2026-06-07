@@ -7,7 +7,7 @@
  * Auto-populated:
  *   - `id`      : enterprise MEP fixture ID (`generateMepFixtureId`, SOS N.6)
  *   - `ifcGuid` : 22-char IFC4 GlobalId, generated ONCE — never regenerate
- *   - `ifcType` : 'IfcLightFixture'
+ *   - `ifcType` : derived from `params.kind` (light → IfcLightFixture, drain → IfcSanitaryTerminal)
  *   - `validation` : empty `BimValidation` shell unless supplied
  *
  * @see docs/centralized-systems/reference/adrs/ADR-406-point-based-mep-fixture.md
@@ -18,10 +18,11 @@ import {
   generateIfcGuid,
 } from '@/services/enterprise-id-convenience';
 import { makeBimValidation } from '@/subapps/dxf-viewer/bim/types/bim-base';
-import type {
-  MepFixtureEntity,
-  MepFixtureGeometry,
-  MepFixtureParams,
+import {
+  resolveFixtureIfcType,
+  type MepFixtureEntity,
+  type MepFixtureGeometry,
+  type MepFixtureParams,
 } from '@/subapps/dxf-viewer/bim/types/mep-fixture-types';
 import type { BimValidation } from '@/subapps/dxf-viewer/bim/types/bim-base';
 import type { IfcPropertySet } from '@/subapps/dxf-viewer/bim/types/ifc-entity-mixin';
@@ -71,7 +72,7 @@ export function createMepFixture(input: CreateMepFixtureInput): MepFixtureEntity
     geometry: input.geometry,
     validation: input.validation ?? makeBimValidation(),
     ifcGuid: input.ifcGuid ?? generateIfcGuid(),
-    ifcType: 'IfcLightFixture',
+    ifcType: resolveFixtureIfcType(input.params.kind),
     ...(input.visible !== undefined && { visible: input.visible }),
     ...(input.pset !== undefined && { pset: input.pset }),
     ...(input.companyId !== undefined && { companyId: input.companyId }),

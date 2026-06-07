@@ -24,6 +24,7 @@
 
 import {
   deleteDoc,
+  deleteField,
   doc,
   serverTimestamp,
   setDoc,
@@ -43,6 +44,7 @@ import type {
   OpeningKind,
   OpeningParams,
 } from '../types/opening-types';
+import type { OpeningTypeParams } from '../types/bim-family-type';
 import type { BimValidation } from '../types/bim-base';
 
 // ============================================================================
@@ -66,6 +68,10 @@ export interface OpeningDoc {
   readonly buildingId?: string;
   readonly floorId?: string;
   readonly layerId?: string;
+  /** ADR-421 SLICE C — Family/Type link (FK → BimFamilyType.id). */
+  readonly typeId?: string;
+  /** ADR-421 SLICE C — per-instance overrides of type-level params. */
+  readonly typeOverrides?: Partial<OpeningTypeParams>;
   readonly createdAt: Timestamp;
   readonly createdBy: string;
   readonly updatedAt: Timestamp;
@@ -90,6 +96,9 @@ export interface OpeningSaveInput {
   readonly buildingId?: string;
   readonly floorId?: string;
   readonly layerId?: string;
+  /** ADR-421 SLICE C — Family/Type link. */
+  readonly typeId?: string;
+  readonly typeOverrides?: Partial<OpeningTypeParams>;
 }
 
 export interface OpeningUpdateInput {
@@ -98,6 +107,12 @@ export interface OpeningUpdateInput {
   readonly validation?: BimValidation;
   readonly geometry?: OpeningGeometry;
   readonly layerId?: string;
+  /**
+   * ADR-421 SLICE C — Family/Type link. `null` → `deleteField()` (detach to
+   * ad-hoc / clear all overrides); `undefined` → field untouched in the patch.
+   */
+  readonly typeId?: string | null;
+  readonly typeOverrides?: Partial<OpeningTypeParams> | null;
 }
 
 // ============================================================================
@@ -162,6 +177,9 @@ export class OpeningFirestoreService {
     if (input.buildingId !== undefined) base.buildingId = input.buildingId;
     // ADR-420 — floorId is owned by config scope (bimScopeWriteFields above), not input.
     if (input.layerId !== undefined) base.layerId = input.layerId;
+    // ADR-421 SLICE C — Family/Type link (omitted when ad-hoc/untyped).
+    if (input.typeId !== undefined) base.typeId = input.typeId;
+    if (input.typeOverrides !== undefined) base.typeOverrides = input.typeOverrides;
 
     await setDoc(ref, base);
     return base as unknown as OpeningDoc;
@@ -178,6 +196,12 @@ export class OpeningFirestoreService {
     if (patch.validation !== undefined) payload.validation = patch.validation;
     if (patch.geometry !== undefined) payload.geometry = patch.geometry;
     if (patch.layerId !== undefined) payload.layerId = patch.layerId;
+    // ADR-421 SLICE C — `null` clears the field (detach / reset overrides),
+    // `undefined` leaves it untouched; a value writes it.
+    if (patch.typeId === null) payload.typeId = deleteField();
+    else if (patch.typeId !== undefined) payload.typeId = patch.typeId;
+    if (patch.typeOverrides === null) payload.typeOverrides = deleteField();
+    else if (patch.typeOverrides !== undefined) payload.typeOverrides = patch.typeOverrides;
 
     await updateDoc(ref, payload);
   }
@@ -219,5 +243,9 @@ export function entityToSaveInput(entity: OpeningEntity): OpeningSaveInput {
     params: entity.params,
     validation: entity.validation,
     layerId: entity.layerId,
+    // ADR-421 SLICE C — carry the Family/Type link through first-save (omitted
+    // when undefined so Firestore never receives an `undefined`).
+    ...(entity.typeId !== undefined && { typeId: entity.typeId }),
+    ...(entity.typeOverrides !== undefined && { typeOverrides: entity.typeOverrides }),
   };
 }

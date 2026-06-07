@@ -412,3 +412,86 @@ export function buildBoilerReturnConnector(
     pipe: { systemClassification: 'hydronic-return', diameterMm },
   };
 }
+
+// ─── Underfloor heating loop connectors (ADR-408 Εύρος Β #3) ──────────────────────
+
+/** Connector id for the supply inlet (προσαγωγή) of an underfloor heating loop. */
+export const UNDERFLOOR_SUPPLY_CONNECTOR_ID = 'uf-supply';
+/** Connector id for the return outlet (επιστροφή) of an underfloor heating loop. */
+export const UNDERFLOOR_RETURN_CONNECTOR_ID = 'uf-return';
+
+/**
+ * Supply inlet connector of an underfloor (radiant floor) heating loop (ADR-408
+ * Εύρος Β #3, ενδοδαπέδια). Like the radiator the loop is a heating TERMINAL (not a
+ * source): hot water enters the supply inlet (`flow: 'in'`), threads the serpentine
+ * field and leaves the return outlet. `domain: 'pipe'`, classification FIXED to
+ * `hydronic-supply` (physics-set, not user choice).
+ *
+ * UNLIKE the point-based radiator/boiler the underfloor entity is area-based with NO
+ * host `position`/`rotation`; `localPosition` is therefore stored already in WORLD
+ * coordinates (the computed loop-entry point) and resolved with an IDENTITY host
+ * transform — the same opt-out the `mep-segment` connectors use.
+ */
+export function buildUnderfloorSupplyConnector(
+  localPosition: Point3D,
+  diameterMm: number,
+): MepConnector {
+  return {
+    connectorId: UNDERFLOOR_SUPPLY_CONNECTOR_ID,
+    domain: 'pipe',
+    flow: 'in',
+    localPosition,
+    pipe: { systemClassification: 'hydronic-supply', diameterMm },
+  };
+}
+
+/**
+ * Return outlet connector of an underfloor heating loop (ADR-408 Εύρος Β #3). The
+ * cooled water leaves here (`flow: 'out'`), `domain: 'pipe'`, classification FIXED to
+ * `hydronic-return`. Together with {@link buildUnderfloorSupplyConnector} the loop
+ * becomes a member of BOTH a hydronic-supply and a hydronic-return network — one per
+ * connector (membership is per-(entity, connector), so no special handling), exactly
+ * like the radiator. `localPosition` is in WORLD coords (identity host, see above).
+ */
+export function buildUnderfloorReturnConnector(
+  localPosition: Point3D,
+  diameterMm: number,
+): MepConnector {
+  return {
+    connectorId: UNDERFLOOR_RETURN_CONNECTOR_ID,
+    domain: 'pipe',
+    flow: 'out',
+    localPosition,
+    pipe: { systemClassification: 'hydronic-return', diameterMm },
+  };
+}
+
+// ─── Floor-drain connector (ADR-408 Φ14) ──────────────────────────────────────
+
+/** Connector id for the single sanitary-drainage outlet of a floor drain (σιφώνι). */
+export const FLOOR_DRAIN_CONNECTOR_ID = 'fd-drain';
+
+/**
+ * The single sanitary-drainage outlet connector of a floor drain (ADR-408 Φ14,
+ * σιφώνι/στόμιο δαπέδου). Mirror of {@link buildRadiatorSupplyConnector} but a
+ * floor drain is a gravity TERMINAL with exactly ONE port: floor water LEAVES the
+ * drain into the sewer pipe (`flow: 'out'`, no return — unlike a radiator's
+ * supply/return pair). `domain: 'pipe'`, classification FIXED to `sanitary-drainage`
+ * (a floor drain's hydraulic role is set by physics, not user choice), so a pipe
+ * snapped here joins the drainage network for free.
+ *
+ * `localPosition` is host-local (scene units, pre-rotation) — the caller resolves it
+ * from the body geometry (the drain centre, z=0 at floor level).
+ */
+export function buildFloorDrainConnector(
+  localPosition: Point3D,
+  diameterMm: number,
+): MepConnector {
+  return {
+    connectorId: FLOOR_DRAIN_CONNECTOR_ID,
+    domain: 'pipe',
+    flow: 'out',
+    localPosition,
+    pipe: { systemClassification: 'sanitary-drainage', diameterMm },
+  };
+}

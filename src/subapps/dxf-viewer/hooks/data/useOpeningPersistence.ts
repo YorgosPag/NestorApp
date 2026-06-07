@@ -46,6 +46,14 @@ import {
 } from '../../bim/services/opening-boq-sync';
 import { isOpening, isWall, openingDocToEntity } from '../../bim/walls/opening-doc-hydration';
 import { allocateMarkAndPatchScene, syncMarkToKindAndPatchScene } from '../../bim/walls/opening-mark-allocator';
+// ADR-421 SLICE C — Family/Type link persistence + re-resolution.
+import {
+  openingEntityDiffersFromDoc,
+  openingTypeLinkChanged,
+  openingUpdateLinkPatch,
+  type OpeningTypeLink,
+} from '../../bim/family-types/opening-type-resolution';
+import { useOpeningTypeReresolution } from './useOpeningTypeReresolution';
 
 // ============================================================================
 // TYPES
@@ -116,6 +124,9 @@ export function useOpeningPersistence(
   // ADR-390 — pending first save (drawn or restored via undo).
   const pendingFirstSaveIdsRef = useRef<Set<string>>(new Set());
   const lastSavedParamsRef = useRef<Map<string, OpeningEntity['params']>>(new Map());
+  // ADR-421 SLICE C — last-saved Family/Type link per opening, so a pure detach /
+  // override-only edit (params unchanged) still triggers the auto-save.
+  const lastSavedLinkRef = useRef<Map<string, OpeningTypeLink>>(new Map());
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const selectedOpeningRef = useRef<OpeningEntity | null>(null);
   selectedOpeningRef.current = primarySelectedOpening;
@@ -125,6 +136,10 @@ export function useOpeningPersistence(
   const currentFloorIdRef = useRef<string | null>(null);
   currentFloorIdRef.current =
     levelManager.levels.find((l) => l.id === levelManager.currentLevelId)?.floorId ?? null;
+
+  // ADR-421 SLICE C — re-resolve typed openings on a family-type catalog bump
+  // (type edit / late catalog load). Locally-dirty openings are skipped.
+  useOpeningTypeReresolution(levelManager, dirtyIdsRef);
 
   // Listen for explicit deletion — marks ID so subscription never re-adds it.
   useEffect(() => {
@@ -199,7 +214,10 @@ export function useOpeningPersistence(
             nextOpenings.push(existing);
             continue;
           }
-          if (!dequal(existing.params, doc.params)) {
+          // ADR-421 SLICE C — compare against the EFFECTIVE («type wins») state of
+          // the doc + its type-link, not the raw cached params, so a re-flowed
+          // entity is not spuriously re-hydrated by its own drift-tolerant cache.
+          if (openingEntityDiffersFromDoc(existing, doc)) {
             const entity = openingDocToEntity(doc, host);
             if (entity) {
               nextOpenings.push(entity);
@@ -218,6 +236,13 @@ export function useOpeningPersistence(
         for (const doc of docs) {
           if (!lastSavedParamsRef.current.has(doc.id)) {
             lastSavedParamsRef.current.set(doc.id, doc.params);
+          }
+          // ADR-421 SLICE C — track the persisted Family/Type link too.
+          if (!lastSavedLinkRef.current.has(doc.id)) {
+            lastSavedLinkRef.current.set(doc.id, {
+              typeId: doc.typeId,
+              typeOverrides: doc.typeOverrides,
+            });
           }
         }
 
@@ -270,8 +295,19 @@ export function useOpeningPersistence(
     try {
       await (isNew
         ? svc.saveOpening(entityToSaveInput(toSave))
-        : svc.updateOpening(toSave.id, { kind: toSave.params.kind, params: toSave.params, validation: toSave.validation, layerId: toSave.layerId }));
+        : svc.updateOpening(toSave.id, {
+            kind: toSave.params.kind,
+            params: toSave.params,
+            validation: toSave.validation,
+            layerId: toSave.layerId,
+            // ADR-421 SLICE C — persist the Family/Type link (null → deleteField).
+            ...openingUpdateLinkPatch(toSave),
+          }));
       lastSavedParamsRef.current.set(toSave.id, toSave.params);
+      lastSavedLinkRef.current.set(toSave.id, {
+        typeId: toSave.typeId,
+        typeOverrides: toSave.typeOverrides,
+      });
       dirtyIdsRef.current.delete(toSave.id);
       pendingFirstSaveIdsRef.current.delete(toSave.id);
       setSaveState('saved');
@@ -320,7 +356,10 @@ export function useOpeningPersistence(
     const pendingOpening = pendingFirstSaveIdsRef.current.has(opening.id);
     if (!known && !pendingOpening) return;
     const lastSaved = lastSavedParamsRef.current.get(opening.id);
-    if (lastSaved && dequal(lastSaved, opening.params)) return;
+    // ADR-421 SLICE C — also persist when only the Family/Type link changed
+    // (pure detach / override edit keeps params identical).
+    const linkChanged = openingTypeLinkChanged(lastSavedLinkRef.current.get(opening.id), opening);
+    if (lastSaved && dequal(lastSaved, opening.params) && !linkChanged) return;
 
     dirtyIdsRef.current.add(opening.id);
     if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
@@ -417,6 +456,7 @@ export function useOpeningPersistence(
 
     dirtyIdsRef.current.delete(openingId);
     lastSavedParamsRef.current.delete(openingId);
+    lastSavedLinkRef.current.delete(openingId);
     pendingFirstSaveIdsRef.current.delete(openingId);
   }, [levelManager, companyId, projectId, buildingId, floorplanId]);
 
@@ -429,6 +469,10 @@ export function useOpeningPersistence(
     try {
       await svc.saveOpening(entityToSaveInput(entity));
       lastSavedParamsRef.current.set(entity.id, entity.params);
+      lastSavedLinkRef.current.set(entity.id, {
+        typeId: entity.typeId,
+        typeOverrides: entity.typeOverrides,
+      });
       dirtyIdsRef.current.delete(entity.id);
       pendingFirstSaveIdsRef.current.delete(entity.id);
       setSaveState('saved');

@@ -26,7 +26,13 @@
 import { apiClient } from '@/lib/api/enterprise-api-client';
 import type { AuditAction, AuditFieldChange } from '@/types/audit-trail';
 import { BIM_FAMILY_TYPE_TRACKED_FIELDS } from '@/config/audit-tracked-fields';
-import type { BimFamilyType, SlabTypeParams, WallTypeParams, RoofTypeParams } from '../types/bim-family-type';
+import type {
+  BimFamilyType,
+  OpeningTypeParams,
+  RoofTypeParams,
+  SlabTypeParams,
+  WallTypeParams,
+} from '../types/bim-family-type';
 import {
   buildBimCreationChanges,
   buildBimDeletionChanges,
@@ -43,7 +49,11 @@ export type FamilyTypeAuditAction = 'created' | 'updated' | 'deleted';
  * reads whichever discriminator is present, else falls back to the family type's own
  * `category` (all feed the same `BimAuditSnapshot.kind`).
  */
-export type AnyFamilyTypeParams = WallTypeParams | SlabTypeParams | RoofTypeParams;
+export type AnyFamilyTypeParams =
+  | WallTypeParams
+  | SlabTypeParams
+  | RoofTypeParams
+  | OpeningTypeParams;
 
 /**
  * Minimum shape needed to audit a family type. `BimFamilyType<'wall'>` and

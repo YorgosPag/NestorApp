@@ -123,6 +123,37 @@ describe('computeMepSegmentGeometry — round pipe + unit parity', () => {
   });
 });
 
+describe('computeMepSegmentGeometry — true 3D length (ADR-408 Φ14 #2)', () => {
+  const planXY = (vs: readonly { x: number; y: number }[]) => vs.map((v) => ({ x: v.x, y: v.y }));
+
+  it('flat run: 3D length == plan length (2 m)', () => {
+    expect(computeMepSegmentGeometry(rectDuct()).length).toBeCloseTo(2, 5);
+  });
+
+  it('sloped run: length = hypot(plan, dz) — 2000 plan + 1500 drop ⇒ 2.5 m', () => {
+    const geo = computeMepSegmentGeometry(
+      rectDuct({ startPoint: { x: 0, y: 0, z: 2800 }, endPoint: { x: 2000, y: 0, z: 1300 } }),
+    );
+    expect(geo.length).toBeCloseTo(2.5, 5);
+  });
+
+  it('volume + surface area scale with the TRUE 3D length', () => {
+    const geo = computeMepSegmentGeometry(
+      rectDuct({ startPoint: { x: 0, y: 0, z: 2800 }, endPoint: { x: 2000, y: 0, z: 1300 } }),
+    );
+    expect(geo.volume).toBeCloseTo((400 * 200) * 1e-6 * 2.5, 8);
+    expect(geo.surfaceAreaM2).toBeCloseTo(rectPerimeterMm(400, 200) * 1e-3 * 2.5, 5);
+  });
+
+  it('outline stays a 2D plan footprint (not stretched by slope)', () => {
+    const flat = computeMepSegmentGeometry(rectDuct());
+    const sloped = computeMepSegmentGeometry(
+      rectDuct({ startPoint: { x: 0, y: 0, z: 2800 }, endPoint: { x: 2000, y: 0, z: 1300 } }),
+    );
+    expect(planXY(sloped.outline.vertices)).toEqual(planXY(flat.outline.vertices));
+  });
+});
+
 describe('validateMepSegmentParams', () => {
   it('accepts a normal duct', () => {
     expect(validateMepSegmentParams(rectDuct()).errors).toHaveLength(0);

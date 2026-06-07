@@ -72,6 +72,8 @@ function wrapDxfGrip(grip: GripInfo): UnifiedGripInfo {
     ...(grip.floorplanSymbolGripKind ? { floorplanSymbolGripKind: grip.floorplanSymbolGripKind } : {}),
     // ADR-419 — forward floor-finish parametric grip discriminator.
     ...(grip.floorFinishGripKind ? { floorFinishGripKind: grip.floorFinishGripKind } : {}),
+    // ADR-408 Εύρος Β #3 — forward underfloor heating loop parametric grip discriminator.
+    ...(grip.mepUnderfloorGripKind ? { mepUnderfloorGripKind: grip.mepUnderfloorGripKind } : {}),
     // ADR-359 Phase 11 — forward XLine grip discriminator.
     ...(grip.xlineGripKind ? { xlineGripKind: grip.xlineGripKind } : {}),
     // ADR-359 Phase 11 — forward Ray grip discriminator.

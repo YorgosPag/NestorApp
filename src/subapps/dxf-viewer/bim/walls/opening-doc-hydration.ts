@@ -10,6 +10,8 @@ import type { WallEntity } from '../types/wall-types';
 import { computeOpeningGeometry } from '../geometry/opening-geometry';
 import { validateOpeningParams } from '../validators/opening-validator';
 import { inferOpeningIfcType } from '@/services/factories/opening.factory';
+// ADR-421 SLICE C — «type always wins» resolution at hydrate time.
+import { resolveOpeningEffective } from '../family-types/opening-type-resolution';
 import type { OpeningDoc } from './opening-firestore-service';
 
 export function isOpening(entity: AnySceneEntity): entity is OpeningEntity {
@@ -30,22 +32,38 @@ export function openingDocToEntity(
   hostWall: WallEntity | null,
 ): OpeningEntity | null {
   if (!hostWall) return null;
-  const validation = doc.validation ?? validateOpeningParams(doc.params, hostWall).bimValidation;
-  // ADR-363 §5.4 — `params.kind` is the SINGLE source of truth for the opening
-  // type. The top-level `kind` (+ `ifcType`) are purely DERIVED mirrors. Legacy
-  // docs whose top-level `doc.kind` diverged from `params.kind` (e.g. a door
-  // re-typed to a window without updating the denormalized copy) self-heal here
-  // — the renderer + IFC export read the correct kind on the next hydrate.
-  const kind = doc.params.kind;
+  // ADR-421 SLICE C — resolve EFFECTIVE params («type always wins») before any
+  // derivation. Untyped/unresolved-type openings return their cached params
+  // unchanged (legacy fast-path = zero regression). For typed openings the
+  // type-governed fields (kind/width/height/frame/glazing) + re-derived
+  // operationType flow in, so a stale drift-cache doc self-heals on hydrate.
+  const params = resolveOpeningEffective(doc.params, {
+    typeId: doc.typeId,
+    typeOverrides: doc.typeOverrides,
+  });
+  const typeResolved = params !== doc.params;
+  const validation = (!typeResolved && doc.geometry ? doc.validation : undefined)
+    ?? validateOpeningParams(params, hostWall).bimValidation;
+  // ADR-363 §5.4 — `params.kind` is the SINGLE source of truth; top-level `kind`
+  // (+ `ifcType`) are DERIVED mirrors. Legacy docs whose top-level `doc.kind`
+  // diverged self-heal here.
+  const kind = params.kind;
   return {
     id: doc.id,
     type: 'opening',
     kind,
     layerId: doc.layerId ?? '0',
-    params: doc.params,
-    geometry: doc.geometry ?? computeOpeningGeometry(doc.params, hostWall, hostWall.params.sceneUnits ?? 'mm'),
+    params,
+    // Reuse the cached geometry only for untyped docs (params unchanged); typed
+    // openings recompute from the resolved (type-governed) params.
+    geometry:
+      !typeResolved && doc.geometry
+        ? doc.geometry
+        : computeOpeningGeometry(params, hostWall, hostWall.params.sceneUnits ?? 'mm'),
     validation,
     ifcType: inferOpeningIfcType(kind),
     visible: true,
+    ...(doc.typeId !== undefined && { typeId: doc.typeId }),
+    ...(doc.typeOverrides !== undefined && { typeOverrides: doc.typeOverrides }),
   } as OpeningEntity;
 }

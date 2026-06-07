@@ -48,9 +48,12 @@ export const GRIP_GLYPH_REGISTRY: Readonly<Record<string, GripShape>> = {
   // Electrical panels (ADR-408 Φ3) — corners render the default 'square' glyph.
   'electrical-panel-move': 'move',
   'electrical-panel-rotation': 'rotation',
-  // MEP manifolds (ADR-408 Φ12) — corners render the default 'square' glyph.
+  // MEP manifolds (ADR-408 Φ12) — corners render the default 'square' glyph;
+  // the outlet add/remove action grips render the Revit "array control" ▲/▼.
   'mep-manifold-move': 'move',
   'mep-manifold-rotation': 'rotation',
+  'mep-manifold-outlet-add': 'triangle-up',
+  'mep-manifold-outlet-remove': 'triangle-down',
   // Heating radiators (ADR-408 Εύρος Β) — corners render the default 'square' glyph.
   'mep-radiator-move': 'move',
   'mep-radiator-rotation': 'rotation',
@@ -67,10 +70,13 @@ export const GRIP_GLYPH_REGISTRY: Readonly<Record<string, GripShape>> = {
   // Floorplan symbols (ADR-415) — corners render the default 'square' glyph.
   'floorplan-symbol-move': 'move',
   'floorplan-symbol-rotation': 'rotation',
-  // Openings (ADR-363 Phase 2.5 — wall-hosted door/window) — full wall parity:
-  // move MOVE glyph, rotation (flip) ROTATION glyph· 4 corners render 'square'.
+  // Openings (ADR-363 Phase 2.5 + facing-flip — wall-hosted door/window):
+  // move MOVE glyph· rotation = Flip Hand· facing = Flip Facing (both ROTATION glyph,
+  // distinguished by position — rotation is on the swing side, facing on the opposite).
+  // 4 corners render 'square'.
   'opening-move': 'move',
   'opening-rotation': 'rotation',
+  'opening-facing': 'rotation',
 } as const;
 
 /**

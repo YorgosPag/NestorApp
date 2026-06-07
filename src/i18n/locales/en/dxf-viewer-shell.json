@@ -508,6 +508,13 @@
         "tooFewVertices": "Floor finish requires at least 3 vertices"
       }
     },
+    "mepUnderfloor": {
+      "statusFirstVertex": "Click for first heating-area vertex",
+      "statusNextVertex": "Click for next vertex — Enter to close",
+      "errors": {
+        "tooFewVertices": "Underfloor heating requires at least 3 vertices"
+      }
+    },
     "column": {
       "statusPosition": "Click to place column — Tab cycles anchor",
       "statusPerimeterPick": "Box-select the faces of a structural element (rectangle/L/T/U/composite) → ONE structural wall per perimeter",
@@ -526,6 +533,9 @@
     },
     "mepFixture": {
       "statusPosition": "Click to place light fixture"
+    },
+    "mepFloorDrain": {
+      "statusPosition": "Click to place floor drain"
     },
     "electricalPanel": {
       "statusPosition": "Click to place electrical panel"
@@ -816,10 +826,12 @@
       "mepCircuit": "Electrical Circuit",
       "mepPipeNetwork": "Pipe Network",
       "mepFixtureProperties": "Fixture Properties",
+      "mepFloorDrainProperties": "Floor Drain Properties",
       "mepManifoldProperties": "Manifold Properties",
       "mepDrainageCollectorProperties": "Catch Basin Properties",
       "mepRadiatorProperties": "Radiator Properties",
       "mepBoilerProperties": "Boiler Properties",
+      "mepUnderfloorProperties": "Underfloor Properties",
       "mepSegmentProperties": "Pipe / Duct Properties",
       "validationBadge": "Code violation",
       "dimension": "Dimension",
@@ -872,6 +884,7 @@
       "wallStructuralAttach": "Structural Attach",
       "openingMark": "Mark",
       "openingKind": "Type",
+      "openingFamilyType": "Family Type",
       "openingSize": "Size",
       "openingActions": "Actions",
       "openingRenumber": "Renumber",
@@ -912,6 +925,8 @@
       "mepFixtureRectParams": "Rectangular",
       "mepFixtureActions": "Actions",
       "mepFixtureCircuit": "Circuit",
+      "mepFloorDrainGeometry": "Geometry",
+      "mepFloorDrainActions": "Actions",
       "mepManifoldSystem": "System",
       "mepManifoldGeometry": "Geometry",
       "mepManifoldOutlets": "Outlets",
@@ -923,6 +938,9 @@
       "mepBoilerGeometry": "Geometry",
       "mepBoilerThermal": "Thermal",
       "mepBoilerActions": "Actions",
+      "mepUnderfloorGeometry": "Geometry",
+      "mepUnderfloorThermal": "Thermal",
+      "mepUnderfloorActions": "Actions",
       "floorFinishMaterial": "Material",
       "floorFinishGeometry": "Geometry",
       "floorFinishAppearance": "Appearance",
@@ -1149,6 +1167,10 @@
           "label": "Drainage Collector",
           "tooltip": "Place a drainage collector (φρεάτιο) with a single click — N inlets + 1 sewer outlet (discipline: plumbing)"
         },
+        "mepFloorDrain": {
+          "label": "Floor Drain",
+          "tooltip": "Place a floor drain (σιφώνι) with a single click — square grating, 1 sanitary-drainage outlet (discipline: plumbing)"
+        },
         "mepRadiator": {
           "label": "Radiator",
           "tooltip": "Place a heating radiator with a single click — supply inlet + return outlet (discipline: plumbing/heating)"
@@ -1156,6 +1178,10 @@
         "mepBoiler": {
           "label": "Boiler",
           "tooltip": "Heating boiler / burner (supply outlet + return inlet) — single-click placement (discipline: plumbing/heating)"
+        },
+        "mepUnderfloor": {
+          "label": "Underfloor",
+          "tooltip": "Underfloor radiant heating per area (click-click) — auto serpentine pipe loop (supply + return) inside the footprint (discipline: plumbing/heating)"
         },
         "railing": {
           "label": "Railing",
@@ -1563,6 +1589,15 @@
         "editTypeDescription": "Changes apply to every instance of this type, on all floors.",
         "editTypeBuiltinNotice": "Built-in type (read-only). Duplicate it to edit the layers.",
         "editTypeAffectsCount": "Changes apply to {count} walls of this type.",
+        "paramWidth": "Width",
+        "paramHeight": "Height",
+        "paramFrameWidth": "Frame width",
+        "paramGlazingPanes": "Glazing panes",
+        "paramFireRating": "Fire rating",
+        "editTypeOpeningTitle": "Edit opening type",
+        "editTypeOpeningDescription": "Changes apply to every opening of this type, on all floors.",
+        "editTypeOpeningBuiltinNotice": "Built-in type (read-only). Duplicate it to edit.",
+        "editTypeAffectsCountOpening": "Changes apply to {count} openings of this type.",
         "preview": {
           "title": "Preview",
           "emptyHint": "Load a preset or add layers to see the preview."
@@ -1595,6 +1630,25 @@
           "stair": {
             "residential": "Residential",
             "narrow": "Narrow"
+          },
+          "opening": {
+            "door": "Door",
+            "double-door": "Double door",
+            "sliding-door": "Sliding door",
+            "double-sliding-door": "Double sliding door",
+            "pocket-door": "Pocket door",
+            "bifold-door": "Bifold door",
+            "overhead-door": "Overhead door",
+            "revolving-door": "Revolving door",
+            "french-door": "French door",
+            "window": "Window",
+            "fixed": "Fixed",
+            "double-hung-window": "Double-hung window",
+            "sliding-window": "Sliding window",
+            "awning-window": "Awning window",
+            "hopper-window": "Hopper window",
+            "tilt-turn-window": "Tilt-turn window",
+            "bay-window": "Bay window"
           }
         },
         "auto": {
@@ -1716,10 +1770,22 @@
             "title": "Type"
           },
           "door": "Door",
-          "window": "Window",
+          "doubleDoor": "Double Door",
           "slidingDoor": "Sliding Door",
+          "doubleSlidingDoor": "Double Sliding Door",
+          "pocketDoor": "Pocket Door",
+          "bifoldDoor": "Bi-fold Door",
+          "overheadDoor": "Overhead Door",
+          "revolvingDoor": "Revolving Door",
           "frenchDoor": "French Door",
-          "fixed": "Fixed"
+          "window": "Window",
+          "fixed": "Fixed",
+          "doubleHungWindow": "Double-hung Window",
+          "slidingWindow": "Sliding Window",
+          "awningWindow": "Awning Window",
+          "hopperWindow": "Hopper Window",
+          "tiltTurnWindow": "Tilt & Turn Window",
+          "bayWindow": "Bay Window"
         },
         "handing": {
           "section": {
@@ -2073,7 +2139,15 @@
         "delete": "Delete",
         "deleteConfirm": "Delete catch basin? This action cannot be undone."
       },
-      "mepRadiatorEditor": {
+      "mepFloorDrainEditor": {
+        "width": "Width",
+        "length": "Length",
+        "bodyHeight": "Body depth",
+        "mountingElevation": "Mounting height",
+        "close": "Close",
+        "delete": "Delete",
+        "deleteConfirm": "Delete floor drain? This action cannot be undone."
+      },
         "width": "Width",
         "length": "Depth",
         "bodyHeight": "Body height",
@@ -2094,6 +2168,20 @@
         "close": "Close",
         "delete": "Delete",
         "deleteConfirm": "Delete boiler? This action cannot be undone."
+      },
+      "mepUnderfloorEditor": {
+        "pipeSpacing": "Pipe spacing (mm)",
+        "edgeClearance": "Wall clearance (mm)",
+        "patternType": "Pattern",
+        "patternBoustrophedon": "Serpentine (back-and-forth)",
+        "patternCounterflow": "Counterflow spiral",
+        "totalLength": "Pipe length (m)",
+        "screedOffset": "Screed elevation (mm)",
+        "connectorDiameter": "Connector diameter (mm)",
+        "thermalOutput": "Thermal output (W)",
+        "close": "Close",
+        "delete": "Delete",
+        "deleteConfirm": "Delete underfloor heating? This action cannot be undone."
       },
       "floorFinishEditor": {
         "material": "Material",
@@ -2293,6 +2381,7 @@
           "furniture": "Furniture",
           "duct": "Duct",
           "pipe": "Pipe",
+          "drain-pipe": "Drainage",
           "sanitary": "Sanitary Fixture",
           "kitchen": "Kitchen Element"
         }
@@ -2411,6 +2500,13 @@
         "show": "Show Wires",
         "tooltipHide": "Hide the MEP circuit wires from the view",
         "tooltipShow": "Show the MEP circuit wires"
+      },
+      "drainPipe": {
+        "label": "Drainage",
+        "hide": "Hide Drainage",
+        "show": "Show Drainage",
+        "tooltipHide": "Hide the sanitary drainage pipes from the view",
+        "tooltipShow": "Show the sanitary drainage pipes"
       },
       "colorBySystem": {
         "label": "Colour by System",

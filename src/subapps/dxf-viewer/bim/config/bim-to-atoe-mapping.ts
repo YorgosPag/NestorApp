@@ -56,11 +56,25 @@ const WALL_MAPPING: Readonly<Record<WallCategory, AtoeMappingEntry>> = {
 };
 
 const OPENING_MAPPING: Readonly<Record<OpeningKind, AtoeMappingEntry>> = {
-  'door':         { categoryCode: 'OIK-5.01', unit: 'pcs', titleEL: 'Κούφωμα πόρτας (BIM)' },
-  'window':       { categoryCode: 'OIK-5.02', unit: 'pcs', titleEL: 'Κούφωμα παραθύρου (BIM)' },
-  'sliding-door': { categoryCode: 'OIK-5.02', unit: 'pcs', titleEL: 'Κούφωμα συρόμενο (BIM)' },
-  'french-door':  { categoryCode: 'OIK-5.01', unit: 'pcs', titleEL: 'Κούφωμα γαλλικής πόρτας (BIM)' },
-  'fixed':        { categoryCode: 'OIK-5.02', unit: 'pcs', titleEL: 'Κούφωμα σταθερό (BIM)' },
+  // ─── Doors → OIK-5.01 ─────────────────────────────────────────────────────
+  'door':                { categoryCode: 'OIK-5.01', unit: 'pcs', titleEL: 'Κούφωμα πόρτας (BIM)' },
+  'double-door':         { categoryCode: 'OIK-5.01', unit: 'pcs', titleEL: 'Κούφωμα δίφυλλης πόρτας (BIM)' },
+  'sliding-door':        { categoryCode: 'OIK-5.01', unit: 'pcs', titleEL: 'Κούφωμα συρόμενης πόρτας (BIM)' },
+  'double-sliding-door': { categoryCode: 'OIK-5.01', unit: 'pcs', titleEL: 'Κούφωμα συρόμενης δίφυλλης πόρτας (BIM)' },
+  'pocket-door':         { categoryCode: 'OIK-5.01', unit: 'pcs', titleEL: 'Κούφωμα χωνευτής πόρτας (BIM)' },
+  'bifold-door':         { categoryCode: 'OIK-5.01', unit: 'pcs', titleEL: 'Κούφωμα πτυσσόμενης πόρτας (BIM)' },
+  'overhead-door':       { categoryCode: 'OIK-5.01', unit: 'pcs', titleEL: 'Κούφωμα γκαραζόπορτας (BIM)' },
+  'revolving-door':      { categoryCode: 'OIK-5.01', unit: 'pcs', titleEL: 'Κούφωμα περιστρεφόμενης πόρτας (BIM)' },
+  'french-door':         { categoryCode: 'OIK-5.01', unit: 'pcs', titleEL: 'Κούφωμα γαλλικής πόρτας (BIM)' },
+  // ─── Windows → OIK-5.02 ───────────────────────────────────────────────────
+  'window':              { categoryCode: 'OIK-5.02', unit: 'pcs', titleEL: 'Κούφωμα παραθύρου (BIM)' },
+  'fixed':               { categoryCode: 'OIK-5.02', unit: 'pcs', titleEL: 'Κούφωμα σταθερό (BIM)' },
+  'double-hung-window':  { categoryCode: 'OIK-5.02', unit: 'pcs', titleEL: 'Κούφωμα κατακόρυφα συρόμενο (BIM)' },
+  'sliding-window':      { categoryCode: 'OIK-5.02', unit: 'pcs', titleEL: 'Κούφωμα οριζόντια συρόμενο (BIM)' },
+  'awning-window':       { categoryCode: 'OIK-5.02', unit: 'pcs', titleEL: 'Κούφωμα ανακλινόμενο πάνω (BIM)' },
+  'hopper-window':       { categoryCode: 'OIK-5.02', unit: 'pcs', titleEL: 'Κούφωμα ανακλινόμενο κάτω (BIM)' },
+  'tilt-turn-window':    { categoryCode: 'OIK-5.02', unit: 'pcs', titleEL: 'Κούφωμα ανοιγο-ανακλινόμενο (BIM)' },
+  'bay-window':          { categoryCode: 'OIK-5.02', unit: 'pcs', titleEL: 'Κούφωμα προεξέχον (BIM)' },
 };
 
 const SLAB_MAPPING: Readonly<Record<SlabKind, AtoeMappingEntry>> = {

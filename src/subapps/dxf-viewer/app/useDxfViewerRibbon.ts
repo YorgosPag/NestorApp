@@ -91,7 +91,7 @@ export function useDxfViewerRibbon(params: DxfViewerRibbonParams): DxfViewerRibb
   });
 
   // ADR-358 Phase 7a / ADR-363 — BIM contextual bridges. ADR-408 Φ5 — MEP circuit.
-  const { stairBridge, wallBridge, openingBridge, slabBridge, roofBridge, columnBridge, beamBridge, slabOpeningBridge, mepCircuitBridge, mepPipeNetworkBridge, mepFixtureBridge, mepManifoldBridge, mepRadiatorBridge, mepBoilerBridge, mepSegmentBridge, furnitureBridge, floorplanSymbolBridge, mepFixtureLibraryBridge, floorFinishBridge } =
+  const { stairBridge, wallBridge, openingBridge, slabBridge, roofBridge, columnBridge, beamBridge, slabOpeningBridge, mepCircuitBridge, mepPipeNetworkBridge, mepFixtureBridge, mepManifoldBridge, mepRadiatorBridge, mepBoilerBridge, mepUnderfloorBridge, mepSegmentBridge, furnitureBridge, floorplanSymbolBridge, mepFixtureLibraryBridge, floorFinishBridge } =
     useDxfBimBridges({ levelManager, universalSelection });
   const lineToolBridge = useRibbonLineToolBridge();
   const xlineModeBridge = useRibbonXlineModeBridge();
@@ -101,7 +101,7 @@ export function useDxfViewerRibbon(params: DxfViewerRibbonParams): DxfViewerRibb
     wrappedHandleAction: arrayActionInterceptor,
     canUndo, canRedo,
     textEditorBridge, arrayBridge, stairBridge, wallBridge, openingBridge, slabBridge, roofBridge, floorFinishBridge, columnBridge, beamBridge,
-    slabOpeningBridge, mepCircuitBridge, mepPipeNetworkBridge, mepFixtureBridge, mepManifoldBridge, mepRadiatorBridge, mepBoilerBridge, mepSegmentBridge, furnitureBridge, floorplanSymbolBridge, mepFixtureLibraryBridge, lineToolBridge, xlineModeBridge,
+    slabOpeningBridge, mepCircuitBridge, mepPipeNetworkBridge, mepFixtureBridge, mepManifoldBridge, mepRadiatorBridge, mepBoilerBridge, mepUnderfloorBridge, mepSegmentBridge, furnitureBridge, floorplanSymbolBridge, mepFixtureLibraryBridge, lineToolBridge, xlineModeBridge,
   });
 
   return { ribbonCommands, ribbonContextualTabs, activeContextualTrigger };

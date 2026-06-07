@@ -28,6 +28,7 @@ import { ViewTemplatesPanel } from '../panels/ViewTemplatesPanel';
 import { VisibilityGraphicsPanel } from '../panels/VisibilityGraphicsPanel';
 import { HideBimToggle } from './HideBimToggle';
 import { MepWireToggle } from './MepWireToggle';
+import { DrainPipeToggle } from './DrainPipeToggle';
 import { ColorBySystemToggle } from './ColorBySystemToggle';
 import { RealisticMaterialsToggle } from './RealisticMaterialsToggle';
 import { DisciplineVisibilityToggle } from './DisciplineVisibilityToggle';
@@ -40,6 +41,8 @@ import { RibbonWallTypePropertiesWidget } from './RibbonWallTypePropertiesWidget
 import { RibbonSlabFamilyTypeWidget } from './RibbonSlabFamilyTypeWidget';
 import { RibbonRoofFamilyTypeWidget } from './RibbonRoofFamilyTypeWidget';
 import { RibbonRoofTypePropertiesWidget } from './RibbonRoofTypePropertiesWidget';
+import { RibbonOpeningFamilyTypeWidget } from './RibbonOpeningFamilyTypeWidget';
+import { RibbonOpeningTypePropertiesWidget } from './RibbonOpeningTypePropertiesWidget';
 import { RibbonMepCircuitPickerWidget } from './RibbonMepCircuitPickerWidget';
 import { RibbonMepFixtureCircuitWidget } from './RibbonMepFixtureCircuitWidget';
 import { RibbonMepCircuitNameWidget } from './RibbonMepCircuitNameWidget';
@@ -107,6 +110,9 @@ function renderButton(button: RibbonButton): React.ReactNode {
     if (button.widgetId === 'mep-wire-toggle') {
       return <MepWireToggle key="mep-wire-toggle-widget" />;
     }
+    if (button.widgetId === 'drain-pipe-toggle') {
+      return <DrainPipeToggle key="drain-pipe-toggle-widget" />;
+    }
     if (button.widgetId === 'color-by-system-toggle') {
       return <ColorBySystemToggle key="color-by-system-toggle-widget" />;
     }
@@ -151,6 +157,12 @@ function renderButton(button: RibbonButton): React.ReactNode {
     }
     if (button.widgetId === 'roof-type-properties') {
       return <RibbonRoofTypePropertiesWidget key="roof-type-properties-widget" />;
+    }
+    if (button.widgetId === 'opening-family-type') {
+      return <RibbonOpeningFamilyTypeWidget key="opening-family-type-widget" />;
+    }
+    if (button.widgetId === 'opening-type-properties') {
+      return <RibbonOpeningTypePropertiesWidget key="opening-type-properties-widget" />;
     }
     if (button.widgetId === 'multi-selection-common-properties') {
       return <MultiSelectionCommonPropertiesPanel key="multi-selection-common-widget" />;

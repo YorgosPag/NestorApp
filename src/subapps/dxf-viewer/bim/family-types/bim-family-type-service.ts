@@ -48,6 +48,7 @@ import {
   SlabTypeParamsSchema,
   StairTypeParamsSchema,
   RoofTypeParamsSchema,
+  OpeningTypeParamsSchema,
 } from '../types/bim-family-type.schemas';
 import type {
   BimFamilyType,
@@ -113,6 +114,7 @@ function validateTypeParams(
     slab: SlabTypeParamsSchema,
     stair: StairTypeParamsSchema,
     roof: RoofTypeParamsSchema,
+    opening: OpeningTypeParamsSchema,
   } as const;
 
   const schema = schemaByCategory[category];

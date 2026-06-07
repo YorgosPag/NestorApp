@@ -24,6 +24,10 @@ import {
   DEFAULT_FIXTURE_LENGTH_MM,
   DEFAULT_FIXTURE_MOUNTING_ELEVATION_MM,
   DEFAULT_FIXTURE_WIDTH_MM,
+  DEFAULT_FLOOR_DRAIN_BODY_HEIGHT_MM,
+  DEFAULT_FLOOR_DRAIN_CONNECTOR_DIAMETER_MM,
+  DEFAULT_FLOOR_DRAIN_SIZE_MM,
+  FLOOR_DRAIN_MOUNTING_ELEVATION_MM,
   type MepFixtureEntity,
   type MepFixtureKind,
   type MepFixtureParams,
@@ -33,7 +37,11 @@ import {
   computeMepFixtureGeometry,
   validateMepFixtureParams,
 } from '../../bim/mep-fixtures/mep-fixture-geometry';
-import { buildDefaultLightingConnector } from '../../bim/types/mep-connector-types';
+import {
+  buildDefaultLightingConnector,
+  buildFloorDrainConnector,
+} from '../../bim/types/mep-connector-types';
+import type { MepConnector } from '../../bim/types/mep-connector-types';
 import { createMepFixture } from '@/services/factories/mep-fixture.factory';
 import type { SceneUnits } from '../../utils/scene-units';
 
@@ -78,14 +86,30 @@ export function buildDefaultMepFixtureParams(
   sceneUnits: SceneUnits = 'mm',
 ): MepFixtureParams {
   const kind: MepFixtureKind = overrides.kind ?? 'light-fixture';
-  const shape: MepFixtureShape = overrides.shape ?? 'rectangular';
-  const width = overrides.width ?? (shape === 'circular' ? DEFAULT_FIXTURE_DIAMETER_MM : DEFAULT_FIXTURE_WIDTH_MM);
-  const length = overrides.length ?? DEFAULT_FIXTURE_LENGTH_MM;
-  const bodyHeightMm = overrides.bodyHeightMm ?? DEFAULT_FIXTURE_BODY_HEIGHT_MM;
-  const mountingElevationMm = overrides.mountingElevationMm ?? DEFAULT_FIXTURE_MOUNTING_ELEVATION_MM;
+  // ADR-408 Φ14 — a floor drain (σιφώνι) is a square floor-level plumbing terminal
+  // with its OWN defaults (150×150, 100mm basin, FFL=0) and a sanitary-drainage
+  // outlet connector, distinct from the ceiling-mounted electrical light fixture.
+  const isFloorDrain = kind === 'floor-drain';
+  const shape: MepFixtureShape = isFloorDrain ? 'rectangular' : (overrides.shape ?? 'rectangular');
+  const width = overrides.width ?? (
+    isFloorDrain ? DEFAULT_FLOOR_DRAIN_SIZE_MM
+      : shape === 'circular' ? DEFAULT_FIXTURE_DIAMETER_MM
+      : DEFAULT_FIXTURE_WIDTH_MM
+  );
+  const length = overrides.length ?? (isFloorDrain ? DEFAULT_FLOOR_DRAIN_SIZE_MM : DEFAULT_FIXTURE_LENGTH_MM);
+  const bodyHeightMm = overrides.bodyHeightMm ?? (isFloorDrain ? DEFAULT_FLOOR_DRAIN_BODY_HEIGHT_MM : DEFAULT_FIXTURE_BODY_HEIGHT_MM);
+  const mountingElevationMm = overrides.mountingElevationMm ?? (isFloorDrain ? FLOOR_DRAIN_MOUNTING_ELEVATION_MM : DEFAULT_FIXTURE_MOUNTING_ELEVATION_MM);
   const rotation = overrides.rotation ?? 0;
 
   const position: Point3D = { x: clickPoint.x, y: clickPoint.y, z: 0 };
+
+  // ADR-408 Φ14 — a floor drain carries a single sanitary-drainage outlet at its
+  // centre (z=0, floor level) so a snapped drain pipe joins the drainage network.
+  // ADR-408 Φ1 — a light fixture carries a default electrical lighting power-in
+  // connector so it can join a circuit (nothing reads it for logic until Systems exist).
+  const connectors: MepConnector[] = isFloorDrain
+    ? [buildFloorDrainConnector({ x: 0, y: 0, z: 0 }, DEFAULT_FLOOR_DRAIN_CONNECTOR_DIAMETER_MM)]
+    : [buildDefaultLightingConnector()];
 
   return {
     kind,
@@ -97,10 +121,7 @@ export function buildDefaultMepFixtureParams(
     bodyHeightMm,
     mountingElevationMm,
     sceneUnits,
-    // ADR-408 Φ1 — a light fixture is an electrical load: carry a default
-    // lighting power-in connector so it can join a circuit (nothing reads it
-    // for logic until Φ2+ Systems exist).
-    connectors: [buildDefaultLightingConnector()],
+    connectors,
     ...(overrides.material !== undefined ? { material: overrides.material } : {}),
     // ADR-411 — optional mesh representation (omitted ⇒ parametric, back-compat).
     ...(overrides.assetId ? { assetId: overrides.assetId } : {}),

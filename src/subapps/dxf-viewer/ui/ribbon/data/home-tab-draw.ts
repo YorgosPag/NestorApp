@@ -631,6 +631,14 @@ export const HOME_DRAW_PANEL: RibbonPanelDef = {
                   commandKey: 'mep-drain-pipe',
                   shortcut: 'DP',
                 },
+                // ADR-408 Φ14 — floor drain (σιφώνι/στόμιο δαπέδου). 1-click, mep-fixture.
+                {
+                  id: 'draw.bim.mepFloorDrain',
+                  labelKey: 'ribbon.commands.bim.mepFloorDrain.label',
+                  tooltipKey: 'ribbon.commands.bim.mepFloorDrain.tooltip',
+                  icon: 'bim-mep-manifold',
+                  commandKey: 'mep-floor-drain',
+                },
               ],
             },
             // ── Θέρμανση (submenu) ────────────────────────────────────────
@@ -656,6 +664,14 @@ export const HOME_DRAW_PANEL: RibbonPanelDef = {
                   tooltipKey: 'ribbon.commands.bim.mepBoiler.tooltip',
                   icon: 'bim-mep-boiler',
                   commandKey: 'mep-boiler',
+                },
+                // ADR-408 Εύρος Β #3 — underfloor radiant heating (ενδοδαπέδια). Area terminal.
+                {
+                  id: 'draw.bim.mepUnderfloor',
+                  labelKey: 'ribbon.commands.bim.mepUnderfloor.label',
+                  tooltipKey: 'ribbon.commands.bim.mepUnderfloor.tooltip',
+                  icon: 'bim-mep-radiator',
+                  commandKey: 'mep-underfloor',
                 },
               ],
             },

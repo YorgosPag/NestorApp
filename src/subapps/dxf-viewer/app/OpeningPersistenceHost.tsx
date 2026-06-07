@@ -23,6 +23,10 @@ import type { OpeningEntity } from '../bim/types/opening-types';
 import { isOpeningEntity } from '../types/entities';
 import { useOpeningPersistence } from '../hooks/data/useOpeningPersistence';
 import { useBim3DEntitiesStore } from '../bim-3d/stores/Bim3DEntitiesStore';
+// ADR-421 SLICE C — always-on «Edit Opening Type» dialog (mirror EditWallTypeDialog
+// in WallPersistenceHost). The family-type catalog loader + the entity-agnostic
+// delete dialog are already mounted by WallPersistenceHost → reused here.
+import { EditOpeningTypeDialog } from '../ui/ribbon/components/EditOpeningTypeDialog';
 
 type LevelManagerLike = Pick<
   ReturnType<typeof useLevels>,
@@ -78,5 +82,5 @@ export function OpeningPersistenceHost({
     primarySelectedOpening,
   });
 
-  return null;
+  return <EditOpeningTypeDialog />;
 }

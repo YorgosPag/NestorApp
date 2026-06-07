@@ -41,6 +41,7 @@ import type { WallCategory } from './wall-types';
 import type { WallDna } from './wall-dna-types';
 import type { SlabKind } from './slab-types';
 import type { SlabDna } from './slab-dna-types';
+import type { OpeningKind } from './opening-types';
 // Type-only import (no runtime cycle) — RoofSoffitMode is defined in roof-types,
 // which in turn imports RoofTypeParams from here. TS resolves type-only cycles.
 import type { RoofSoffitMode } from './roof-types';
@@ -237,6 +238,41 @@ export interface StairTypeParams {
   readonly attachBaseToIds?: readonly string[];
 }
 
+/**
+ * OPENING type-level parameters ONLY (ADR-421 SLICE C — Revit Door/Window Types).
+ * The opening analogue of {@link WallTypeParams}: a named Type owns the **family
+ * discriminator** (`kind`), the nominal **dimensions** (`width`/`height`) and the
+ * **appearance/construction** spec (frame width, finish material, glazing panes,
+ * fire rating). Changing any of these on the Type re-flows to every placed
+ * instance via `resolveEffectiveParams` («type always wins»).
+ *
+ * Excludes every per-placement param — those live on the `OpeningEntity`
+ * instance (`OpeningParams`): `wallId`, `offsetFromStart`, `sillHeight` (Revit
+ * «Sill Height» is instance), `handing`/`openDirection` (flip controls),
+ * `operationType` (derived from `kind`+`handing` at apply time), and the
+ * mark/tag/reveal fields (ADR-376 / ADR-396).
+ *
+ * `kind` is the opening analogue of wall `category`/slab `kind`: it selects the
+ * 2D plan symbol, the per-family 3D mesh and the IFC operation routing (all from
+ * ADR-421 SLICE B). Switching a typed opening to a different-family Type re-flows
+ * `kind` and re-derives geometry + `operationType` (Revit family swap).
+ */
+export interface OpeningTypeParams {
+  readonly kind: OpeningKind;
+  /** mm. Nominal opening width along the wall axis. */
+  readonly width: number;
+  /** mm. Nominal opening height (sill to head). */
+  readonly height: number;
+  /** mm. Frame (κάσα) width. Default 50 when omitted. */
+  readonly frameWidth?: number;
+  /** Material library key for the frame/finish. */
+  readonly material?: string;
+  /** Glazing panes — 1 single / 2 double / 3 triple. Glazed kinds only. */
+  readonly glazingPanes?: 1 | 2 | 3;
+  /** Fire-resistance rating spec for Revit-grade schedules (e.g. «EI30»). */
+  readonly fireRating?: string;
+}
+
 // ─── Category → type-param map ───────────────────────────────────────────────
 
 /**
@@ -248,6 +284,7 @@ export interface BimTypeParamsByCategory {
   readonly slab: SlabTypeParams;
   readonly stair: StairTypeParams;
   readonly roof: RoofTypeParams;
+  readonly opening: OpeningTypeParams;
 }
 
 // ─── Family type document (persisted, Firestore) ─────────────────────────────

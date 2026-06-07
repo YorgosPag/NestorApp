@@ -91,10 +91,22 @@ export function RenumberOpeningsHost(props: RenumberOpeningsHostProps): React.Re
 
   const kindPrefixes: Record<OpeningKind, string> = React.useMemo(() => ({
     door: t('dxf-viewer:opening.tag.prefix.door'),
+    'double-door': t('dxf-viewer:opening.tag.prefix.double-door'),
     'sliding-door': t('dxf-viewer:opening.tag.prefix.sliding-door'),
+    'double-sliding-door': t('dxf-viewer:opening.tag.prefix.double-sliding-door'),
+    'pocket-door': t('dxf-viewer:opening.tag.prefix.pocket-door'),
+    'bifold-door': t('dxf-viewer:opening.tag.prefix.bifold-door'),
+    'overhead-door': t('dxf-viewer:opening.tag.prefix.overhead-door'),
+    'revolving-door': t('dxf-viewer:opening.tag.prefix.revolving-door'),
     'french-door': t('dxf-viewer:opening.tag.prefix.french-door'),
     window: t('dxf-viewer:opening.tag.prefix.window'),
     fixed: t('dxf-viewer:opening.tag.prefix.fixed'),
+    'double-hung-window': t('dxf-viewer:opening.tag.prefix.double-hung-window'),
+    'sliding-window': t('dxf-viewer:opening.tag.prefix.sliding-window'),
+    'awning-window': t('dxf-viewer:opening.tag.prefix.awning-window'),
+    'hopper-window': t('dxf-viewer:opening.tag.prefix.hopper-window'),
+    'tilt-turn-window': t('dxf-viewer:opening.tag.prefix.tilt-turn-window'),
+    'bay-window': t('dxf-viewer:opening.tag.prefix.bay-window'),
   }), [t]);
   const basementPrefix = t('dxf-viewer:opening.tag.basementPrefix');
 

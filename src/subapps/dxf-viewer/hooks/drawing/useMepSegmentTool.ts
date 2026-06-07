@@ -37,6 +37,7 @@ import {
   type SceneUnits,
 } from './mep-segment-completion';
 import { EventBus } from '../../systems/events/EventBus';
+import { mepSegmentToolBridgeStore } from '../../ui/ribbon/hooks/bridge/mep-segment-tool-bridge-store';
 
 // ─── State machine types ─────────────────────────────────────────────────────
 
@@ -229,6 +230,29 @@ export function useMepSegmentTool(
       onCanvasClickRef.current(point);
     });
   }, []);
+
+  // ── ribbon/3D bridge publish (single-writer mirror, ADR-403/ADR-408 Φ8) ───
+  // Mirror of `useMepManifoldTool`. The 3D placement hook + ghost read the FSM
+  // state (which lives inside CanvasSection) without a cross-sibling lift-up. We
+  // ALSO mirror `phase` + `startPoint` so the 3D ghost can draw the rubber-band
+  // axis after the first click — the FSM stays the single source of truth.
+  const getSceneUnitsStable = useCallback((): SceneUnits => getSceneUnitsRef.current?.() ?? 'mm', []);
+  useEffect(() => {
+    mepSegmentToolBridgeStore.set({
+      isActive: state.phase !== 'idle',
+      domain: state.domain,
+      overrides: state.overrides,
+      phase: state.phase,
+      startPoint: state.startPoint,
+      startElevationMm: state.startElevationMm,
+      getSceneUnits: getSceneUnitsStable,
+    });
+    return () => {
+      if (mepSegmentToolBridgeStore.get()?.getSceneUnits === getSceneUnitsStable) {
+        mepSegmentToolBridgeStore.set(null);
+      }
+    };
+  }, [state, getSceneUnitsStable]);
 
   // ── status text (i18n keys) ───────────────────────────────────────────────
 

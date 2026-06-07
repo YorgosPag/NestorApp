@@ -166,8 +166,12 @@ export type ToolType =
   | 'mep-radiator'
   // ADR-408 Εύρος Β #2: point-based heating boiler drawing tool (λέβητας, hydronic source)
   | 'mep-boiler'
+  // ADR-408 Εύρος Β #3: area-based radiant floor heating loop drawing tool (ενδοδαπέδια)
+  | 'mep-underfloor'
   // ADR-408 Φ14: drainage collector (φρεάτιο) — point-based manifold, N inlets + 1 outlet
   | 'mep-drainage-collector'
+  // ADR-408 Φ14: floor drain (σιφώνι) — point-based mep-fixture kind, 1 sanitary-drainage outlet
+  | 'mep-floor-drain'
   // ADR-407: path-based railing drawing tool (2-click straight guardrail)
   | 'railing'
   // ADR-410: mesh-based CC0 furniture drawing tool (single-click placement)

@@ -32,6 +32,7 @@ import {
   isMepManifoldEntity,
   isMepRadiatorEntity,
   isMepBoilerEntity,
+  isMepUnderfloorEntity,
 } from '../../types/entities';
 import { getEntityConnectors } from '../mep-systems/connector-access';
 import { connectorWorldPosition } from '../types/mep-connector-types';
@@ -72,6 +73,13 @@ export function pointHostMountingElevationMm(entity: Entity): number | null {
   // ports sit at its `mountingElevationMm` so connected pipes inherit that height.
   if (isMepBoilerEntity(entity)) {
     return entity.params.mountingElevationMm;
+  }
+  // ADR-408 Εύρος Β #3 — an underfloor loop is pipe-connectable but has NO
+  // `position`/`mountingElevationMm` (identity host transform). Its supply/return
+  // ports sit in the screed at `FFL + screedOffsetMm`; the connector `localPosition`
+  // is already in world coords with z=0, so the screed offset IS the datum.
+  if (isMepUnderfloorEntity(entity)) {
+    return entity.params.screedOffsetMm ?? 0;
   }
   // Electrical panel: pipes do not connect to it — no plumbing elevation datum.
   if (isElectricalPanelEntity(entity)) return null;

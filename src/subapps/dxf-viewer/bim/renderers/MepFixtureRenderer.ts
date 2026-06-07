@@ -21,6 +21,8 @@ import type { EntityModel, GripInfo, RenderOptions, Point2D } from '../../render
 import type { Entity } from '../../types/entities';
 import { isMepFixtureEntity } from '../../types/entities';
 import type { MepFixtureEntity } from '../types/mep-fixture-types';
+import { resolveFixtureBimCategory } from '../types/mep-fixture-types';
+import { resolveSegmentClassificationColor } from '../mep-systems/mep-system-color';
 import { pointInPolygon } from '../geometry/shared/polygon-utils';
 import { buildFixtureSymbol } from '../mep-fixtures/mep-fixture-symbol';
 import { getMepFixtureGrips } from '../mep-fixtures/mep-fixture-grips';
@@ -53,10 +55,12 @@ export class MepFixtureRenderer extends BaseEntityRenderer {
     const fixture = entity as MepFixtureEntity;
 
     // ADR-382/405 — unified visibility check (V/G + Layer + Floor + Building +
-    // Discipline). 'light-fixture' → electrical via DISCIPLINE_BY_CATEGORY.
+    // Discipline). 'light-fixture' → electrical; ADR-408 Φ14 floor-drain → the
+    // 'drain-pipe' category (plumbing), so it hides with the «Αποχέτευση» toggle.
+    const category = resolveFixtureBimCategory(fixture.params);
     const layer = fixture.layerId ? getLayer(fixture.layerId) : null;
     if (!resolveIsEntityVisible(
-      { category: 'light-fixture', layerId: fixture.layerId, discipline: fixture.discipline },
+      { category, layerId: fixture.layerId, discipline: fixture.discipline },
       {
         objectStyles: useDrawingScaleStore.getState().objectStyles,
         disciplineVisibility: useDrawingScaleStore.getState().disciplineVisibility,
@@ -77,8 +81,15 @@ export class MepFixtureRenderer extends BaseEntityRenderer {
     const systemColor = colorBySystem && systems.length > 0
       ? resolveEntitySystemColor(fixture.id, getEntitySystemColorIndexCached(systems))
       : null;
-    const strokeColor = systemColor ?? FIXTURE_STROKE;
-    const fillColor = systemColor ? hexToRgba(systemColor, SYSTEM_FILL_ALPHA) : FIXTURE_FILL;
+    // ADR-408 Φ14 — a floor drain defaults to the sanitary-drainage brown (mirror
+    // of MepFittingRenderer/MepSegmentRenderer); a System membership still wins.
+    const drainColor = fixture.params.kind === 'floor-drain'
+      ? resolveSegmentClassificationColor('sanitary-drainage')
+      : null;
+    const defaultStroke = drainColor ?? FIXTURE_STROKE;
+    const defaultFill = drainColor ? hexToRgba(drainColor, SYSTEM_FILL_ALPHA) : FIXTURE_FILL;
+    const strokeColor = systemColor ?? defaultStroke;
+    const fillColor = systemColor ? hexToRgba(systemColor, SYSTEM_FILL_ALPHA) : defaultFill;
 
     const phaseState = this.phaseManager.determinePhase(entity as Entity, options);
 

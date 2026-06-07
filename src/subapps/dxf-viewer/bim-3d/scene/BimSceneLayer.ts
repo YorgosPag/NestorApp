@@ -21,8 +21,10 @@ import { stairToMeshes } from '../converters/StairToThreeConverter';
 import { railingToMesh } from '../converters/railing-to-three';
 import { roofToMesh } from '../converters/roof-to-three';
 import { floorFinishToMesh } from '../converters/floor-finish-to-three';
+import { underfloorToMesh } from '../converters/mep-underfloor-to-three';
 import { furnitureToObject3D } from '../converters/furniture-to-three';
 import { mepFixtureToObject3D } from '../converters/mep-fixture-to-mesh';
+import { resolveFixtureBimCategory } from '../../bim/types/mep-fixture-types';
 import { syncCircuitWires } from './sync-circuit-wires';
 import { syncMepSegments, syncFittings } from './sync-mep-elements';
 import { buildWallHostInputs, type HostFootprintInput } from '../../bim/geometry/wall-host-plan-builder';
@@ -153,6 +155,7 @@ export class BimSceneLayer {
     this.syncRailings(entities, ctx);
     this.syncRoofs(entities, ctx);
     this.syncFloorFinishes(entities, ctx);
+    this.syncUnderfloors(entities, ctx);
     this.syncFurnitures(entities, ctx);
     const resolve = (e: { layerId?: string; discipline?: Discipline }, c: BimCategory) =>
       this.resolveEntity(e, c, ctx);
@@ -207,7 +210,9 @@ export class BimSceneLayer {
     // Defensive: legacy floor-stack entries / snapshots predating ADR-406 carry
     // no `fixtures` array — never crash the whole floor sync over a missing slice.
     for (const fixture of entities.fixtures ?? []) {
-      const r = this.resolveEntity(fixture, 'light-fixture', ctx);
+      // ADR-408 Φ14 — a floor-drain fixture maps to the 'drain-pipe' V/G category
+      // (so it hides with «Αποχέτευση»); a light fixture stays 'light-fixture'.
+      const r = this.resolveEntity(fixture, resolveFixtureBimCategory(fixture.params), ctx);
       if (!r) continue;
       // ADR-411 — a fixture carrying an `assetId` renders as a real CC0 mesh
       // (top-anchored, hanging from the ceiling); otherwise the parametric
@@ -338,6 +343,19 @@ export class BimSceneLayer {
       const r = this.resolveEntity(ff, 'floor-finish', ctx);
       if (!r) continue;
       const mesh = floorFinishToMesh(ff, ctx.floorElevationMm, ctx.activeLevelId, r.baseElevation);
+      if (mesh) { mesh.userData['buildingId'] = r.buildingId; this.group.add(mesh); }
+    }
+  }
+
+  /**
+   * ADR-408 Εύρος Β #3 — underfloor radiant heating loops. Thin polygon band embedded
+   * in the screed at FFL + screedOffset. Own V/G category `'mep-underfloor'` (plumbing).
+   */
+  private syncUnderfloors(entities: Bim3DEntities, ctx: SyncContext): void {
+    for (const uf of entities.underfloors ?? []) {
+      const r = this.resolveEntity(uf, 'mep-underfloor', ctx);
+      if (!r) continue;
+      const mesh = underfloorToMesh(uf, ctx.floorElevationMm, ctx.activeLevelId, r.baseElevation);
       if (mesh) { mesh.userData['buildingId'] = r.buildingId; this.group.add(mesh); }
     }
   }

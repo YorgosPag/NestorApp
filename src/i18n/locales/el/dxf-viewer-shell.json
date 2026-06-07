@@ -508,6 +508,13 @@
         "tooFewVertices": "Η επικάλυψη δαπέδου χρειάζεται τουλάχιστον 3 κορυφές"
       }
     },
+    "mepUnderfloor": {
+      "statusFirstVertex": "Κλικ για πρώτη κορυφή θερμαινόμενης περιοχής",
+      "statusNextVertex": "Κλικ για επόμενη κορυφή — Enter για κλείσιμο",
+      "errors": {
+        "tooFewVertices": "Η ενδοδαπέδια θέρμανση χρειάζεται τουλάχιστον 3 κορυφές"
+      }
+    },
     "column": {
       "statusPosition": "Κλικ για τοποθέτηση κολώνας — Tab αλλάζει σημείο στήριξης",
       "statusPerimeterPick": "Επίλεξε με παράθυρο τις παρειές ενός δομικού στοιχείου (ορθογώνιο/Γ/Τ/Π/σύνθετο) → ΕΝΑ τοιχίο ανά περίμετρο",
@@ -526,6 +533,9 @@
     },
     "mepFixture": {
       "statusPosition": "Κλικ για τοποθέτηση φωτιστικού"
+    },
+    "mepFloorDrain": {
+      "statusPosition": "Κλικ για τοποθέτηση σιφωνιού δαπέδου"
     },
     "electricalPanel": {
       "statusPosition": "Κλικ για τοποθέτηση ηλεκτρικού πίνακα"
@@ -816,10 +826,12 @@
       "mepCircuit": "Ηλεκτρικό Κύκλωμα",
       "mepPipeNetwork": "Δίκτυο Σωληνώσεων",
       "mepFixtureProperties": "Ιδιότητες Φωτιστικού",
+      "mepFloorDrainProperties": "Ιδιότητες Σιφωνιού",
       "mepManifoldProperties": "Ιδιότητες Συλλέκτη",
       "mepDrainageCollectorProperties": "Ιδιότητες Φρεατίου",
       "mepRadiatorProperties": "Ιδιότητες Καλοριφέρ",
       "mepBoilerProperties": "Ιδιότητες Λέβητα",
+      "mepUnderfloorProperties": "Ιδιότητες Ενδοδαπέδιας",
       "mepSegmentProperties": "Ιδιότητες Σωλήνα/Αεραγωγού",
       "validationBadge": "Παραβίαση κανονισμών",
       "dimension": "Διάσταση",
@@ -872,6 +884,7 @@
       "wallStructuralAttach": "Σύνδεση δομικού",
       "openingMark": "Mark",
       "openingKind": "Τύπος",
+      "openingFamilyType": "Τύπος Οικογένειας",
       "openingSize": "Διαστάσεις",
       "openingActions": "Ενέργειες",
       "openingRenumber": "Επαναρίθμηση",
@@ -912,6 +925,8 @@
       "mepFixtureRectParams": "Ορθογώνιο",
       "mepFixtureActions": "Ενέργειες",
       "mepFixtureCircuit": "Κύκλωμα",
+      "mepFloorDrainGeometry": "Γεωμετρία",
+      "mepFloorDrainActions": "Ενέργειες",
       "mepManifoldSystem": "Σύστημα",
       "mepManifoldGeometry": "Γεωμετρία",
       "mepManifoldOutlets": "Έξοδοι",
@@ -923,6 +938,9 @@
       "mepBoilerGeometry": "Γεωμετρία",
       "mepBoilerThermal": "Θερμικά",
       "mepBoilerActions": "Ενέργειες",
+      "mepUnderfloorGeometry": "Γεωμετρία",
+      "mepUnderfloorThermal": "Θερμικά",
+      "mepUnderfloorActions": "Ενέργειες",
       "floorFinishMaterial": "Υλικό",
       "floorFinishGeometry": "Γεωμετρία",
       "floorFinishAppearance": "Εμφάνιση",
@@ -1149,6 +1167,10 @@
           "label": "Φρεάτιο Αποχέτευσης",
           "tooltip": "Φρεάτιο/συλλέκτης αποχέτευσης (N είσοδοι + 1 έξοδος προς υπόνομο) — τοποθέτηση με ένα κλικ (πειθαρχία: υδραυλικά)"
         },
+        "mepFloorDrain": {
+          "label": "Σιφώνι Δαπέδου",
+          "tooltip": "Σιφώνι/στόμιο δαπέδου αποχέτευσης (τετράγωνη σχάρα, 1 έξοδος προς τον σωλήνα) — τοποθέτηση με ένα κλικ (πειθαρχία: υδραυλικά)"
+        },
         "mepRadiator": {
           "label": "Καλοριφέρ",
           "tooltip": "Θερμαντικό σώμα/καλοριφέρ (είσοδος προσαγωγής + έξοδος επιστροφής) — τοποθέτηση με ένα κλικ (πειθαρχία: υδραυλικά/θέρμανση)"
@@ -1156,6 +1178,10 @@
         "mepBoiler": {
           "label": "Λέβητας",
           "tooltip": "Λέβητας/καυστήρας θέρμανσης (έξοδος προσαγωγής + είσοδος επιστροφής) — τοποθέτηση με ένα κλικ (πειθαρχία: υδραυλικά/θέρμανση)"
+        },
+        "mepUnderfloor": {
+          "label": "Ενδοδαπέδια",
+          "tooltip": "Ενδοδαπέδια θέρμανση ανά περιοχή (κλικ-κλικ) — αυτόματη σερπαντίνα σωλήνων (προσαγωγή + επιστροφή) εντός του περιγράμματος (πειθαρχία: υδραυλικά/θέρμανση)"
         },
         "railing": {
           "label": "Κιγκλίδωμα",
@@ -1563,6 +1589,15 @@
         "editTypeDescription": "Οι αλλαγές εφαρμόζονται σε όλα τα στοιχεία αυτού του τύπου, σε όλους τους ορόφους.",
         "editTypeBuiltinNotice": "Ενσωματωμένος τύπος (μόνο ανάγνωση). Κάντε Διπλασιασμό για να επεξεργαστείτε τις στρώσεις.",
         "editTypeAffectsCount": "Οι αλλαγές εφαρμόζονται σε {count} τοίχους αυτού του τύπου.",
+        "paramWidth": "Πλάτος",
+        "paramHeight": "Ύψος",
+        "paramFrameWidth": "Πλάτος κάσας",
+        "paramGlazingPanes": "Υαλοπίνακες",
+        "paramFireRating": "Πυραντίσταση",
+        "editTypeOpeningTitle": "Επεξεργασία τύπου κουφώματος",
+        "editTypeOpeningDescription": "Οι αλλαγές εφαρμόζονται σε όλα τα κουφώματα αυτού του τύπου, σε όλους τους ορόφους.",
+        "editTypeOpeningBuiltinNotice": "Ενσωματωμένος τύπος (μόνο ανάγνωση). Κάντε Διπλασιασμό για να τον επεξεργαστείτε.",
+        "editTypeAffectsCountOpening": "Οι αλλαγές εφαρμόζονται σε {count} κουφώματα αυτού του τύπου.",
         "preview": {
           "title": "Προεπισκόπηση",
           "emptyHint": "Φόρτωσε προεπιλογή ή πρόσθεσε στρώσεις για να δεις την προεπισκόπηση."
@@ -1595,6 +1630,25 @@
           "stair": {
             "residential": "Κατοικίας",
             "narrow": "Στενή"
+          },
+          "opening": {
+            "door": "Θύρα",
+            "double-door": "Δίφυλλη Θύρα",
+            "sliding-door": "Συρόμενη Θύρα",
+            "double-sliding-door": "Συρόμενη Δίφυλλη Θύρα",
+            "pocket-door": "Χωνευτή Θύρα",
+            "bifold-door": "Πτυσσόμενη Θύρα",
+            "overhead-door": "Γκαραζόπορτα",
+            "revolving-door": "Περιστρεφόμενη Θύρα",
+            "french-door": "Γαλλική Θύρα",
+            "window": "Παράθυρο",
+            "fixed": "Σταθερό",
+            "double-hung-window": "Κατακόρυφα Συρόμενο",
+            "sliding-window": "Οριζόντια Συρόμενο",
+            "awning-window": "Ανακλινόμενο Πάνω",
+            "hopper-window": "Ανακλινόμενο Κάτω",
+            "tilt-turn-window": "Ανοιγο-ανακλινόμενο",
+            "bay-window": "Προεξέχον Παράθυρο"
           }
         },
         "auto": {
@@ -1716,10 +1770,22 @@
             "title": "Τύπος"
           },
           "door": "Θύρα",
-          "window": "Παράθυρο",
+          "doubleDoor": "Δίφυλλη Θύρα",
           "slidingDoor": "Συρόμενη Θύρα",
+          "doubleSlidingDoor": "Συρόμενη Δίφυλλη Θύρα",
+          "pocketDoor": "Χωνευτή Θύρα",
+          "bifoldDoor": "Πτυσσόμενη Θύρα",
+          "overheadDoor": "Γκαραζόπορτα",
+          "revolvingDoor": "Περιστρεφόμενη Θύρα",
           "frenchDoor": "Γαλλική Θύρα",
-          "fixed": "Σταθερό"
+          "window": "Παράθυρο",
+          "fixed": "Σταθερό",
+          "doubleHungWindow": "Κατακόρυφα Συρόμενο",
+          "slidingWindow": "Οριζόντια Συρόμενο",
+          "awningWindow": "Ανακλινόμενο Πάνω",
+          "hopperWindow": "Ανακλινόμενο Κάτω",
+          "tiltTurnWindow": "Ανοιγο-ανακλινόμενο",
+          "bayWindow": "Προεξέχον Παράθυρο"
         },
         "handing": {
           "section": {
@@ -2073,6 +2139,15 @@
         "delete": "Διαγραφή",
         "deleteConfirm": "Διαγραφή φρεατίου; Η ενέργεια δεν μπορεί να αναιρεθεί."
       },
+      "mepFloorDrainEditor": {
+        "width": "Πλάτος",
+        "length": "Μήκος",
+        "bodyHeight": "Βάθος σώματος",
+        "mountingElevation": "Ύψος τοποθέτησης",
+        "close": "Κλείσιμο",
+        "delete": "Διαγραφή",
+        "deleteConfirm": "Διαγραφή σιφωνιού; Η ενέργεια δεν μπορεί να αναιρεθεί."
+      },
       "mepRadiatorEditor": {
         "width": "Πλάτος",
         "length": "Βάθος",
@@ -2094,6 +2169,20 @@
         "close": "Κλείσιμο",
         "delete": "Διαγραφή",
         "deleteConfirm": "Διαγραφή λέβητα; Η ενέργεια δεν μπορεί να αναιρεθεί."
+      },
+      "mepUnderfloorEditor": {
+        "pipeSpacing": "Βήμα σωλήνα (mm)",
+        "edgeClearance": "Απόσταση από τοίχο (mm)",
+        "patternType": "Μοτίβο",
+        "patternBoustrophedon": "Σερπαντίνα (μπρος-πίσω)",
+        "patternCounterflow": "Διπλή σπείρα (αντιρροή)",
+        "totalLength": "Μήκος σωλήνα (m)",
+        "screedOffset": "Ύψος στη γαρμπίλα (mm)",
+        "connectorDiameter": "Διάμετρος σύνδεσης (mm)",
+        "thermalOutput": "Θερμική ισχύς (W)",
+        "close": "Κλείσιμο",
+        "delete": "Διαγραφή",
+        "deleteConfirm": "Διαγραφή ενδοδαπέδιας θέρμανσης; Η ενέργεια δεν μπορεί να αναιρεθεί."
       },
       "floorFinishEditor": {
         "material": "Υλικό",
@@ -2293,6 +2382,7 @@
           "furniture": "Έπιπλο",
           "duct": "Αεραγωγός",
           "pipe": "Σωλήνας",
+          "drain-pipe": "Αποχέτευση",
           "sanitary": "Είδος Υγιεινής",
           "kitchen": "Στοιχείο Κουζίνας"
         }
@@ -2411,6 +2501,13 @@
         "show": "Εμφάνιση Καλωδίων",
         "tooltipHide": "Απόκρυψη των καλωδίων των κυκλωμάτων MEP από την προβολή",
         "tooltipShow": "Εμφάνιση των καλωδίων των κυκλωμάτων MEP"
+      },
+      "drainPipe": {
+        "label": "Αποχέτευση",
+        "hide": "Απόκρυψη Αποχέτευσης",
+        "show": "Εμφάνιση Αποχέτευσης",
+        "tooltipHide": "Απόκρυψη των σωλήνων αποχέτευσης από την προβολή",
+        "tooltipShow": "Εμφάνιση των σωλήνων αποχέτευσης"
       },
       "colorBySystem": {
         "label": "Χρώμα ανά Σύστημα",

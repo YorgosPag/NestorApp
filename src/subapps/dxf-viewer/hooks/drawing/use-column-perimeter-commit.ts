@@ -29,14 +29,20 @@ import {
   isWallColumnKind,
   type PerimeterColumnClassification,
 } from '../../bim/columns/column-from-faces';
-import { perimeterFacesToRects } from '../../bim/walls/perimeter-from-faces';
+import {
+  perimeterFacesToRects,
+  pickSmallestContainingPerimeter,
+  isPerimeterOversized,
+  perimeterExtentMm,
+  findOpenChainLineIdsNear,
+  type ClosedPerimeter,
+} from '../../bim/walls/perimeter-from-faces';
+import { resolveRegionLoopTolWorld } from '../../bim/walls/region-tolerance';
 import {
   requestColumnDiscreteIntentConfirm,
   requestColumnIsColumnWarn,
 } from '../../bim/columns/column-perimeter-confirm-store';
-import { isPointInPolygon } from '../../utils/geometry/GeometryUtils';
-import { getImmediateTransform } from '../../systems/cursor/ImmediateTransformStore';
-import { TOLERANCE_CONFIG } from '../../config/tolerance-config';
+import { mmToSceneUnits } from '../../utils/scene-units';
 import { EventBus } from '../../systems/events/EventBus';
 
 export interface ColumnPerimeterCommitParams {
@@ -60,11 +66,47 @@ export function useColumnPerimeterCommit(
   const { stateRef, onColumnCreatedRef, getSceneEntitiesRef, getSceneUnitsRef, currentLevelId } =
     params;
 
-  // Live scene-units-agnostic hit-test tolerance (world units), ίδιος κανόνας
-  // SNAP_DEFAULT/scale με το «Τοίχος από περίγραμμα».
-  const regionTol = useCallback(
-    (): number => TOLERANCE_CONFIG.SNAP_DEFAULT / getImmediateTransform().scale,
-    [],
+  // ADR-419 Layer 1+2+4+5 — κοινό click-inside resolver: ανιχνεύει το ΜΙΚΡΟΤΕΡΟ
+  // κλειστό περίγραμμα κάτω από το σημείο (gap-tolerant tol), και χειρίζεται τις
+  // απορρίψεις (oversized / lines-don't-connect) με warning + highlight. Επιστρέφει:
+  //   - 'ok'      → έγκυρο περίγραμμα προς δημιουργία.
+  //   - 'handled' → εμφανίστηκε warning (γιγάντιο/ανοιχτό loop)· ο caller σταματά.
+  //   - 'none'    → κενός χώρος (καμία γραμμή κοντά)· ο caller αφήνει το κλικ να περάσει.
+  const resolvePerimeterPick = useCallback(
+    (
+      point: Readonly<Point2D>,
+    ):
+      | { kind: 'ok'; perimeter: ClosedPerimeter; sceneUnits: SceneUnits }
+      | { kind: 'handled' }
+      | { kind: 'none' } => {
+      const entities = getSceneEntitiesRef.current?.() ?? [];
+      const sceneUnits = getSceneUnitsRef.current?.() ?? 'mm';
+      const tol = resolveRegionLoopTolWorld(sceneUnits);
+      const scale = mmToSceneUnits(sceneUnits);
+      const { perimeters } = perimeterFacesToRects(entities, tol);
+      const pick = pickSmallestContainingPerimeter(point, perimeters);
+      if (!pick) {
+        // Layer 5 — open-loop diagnostics: αν υπάρχουν γραμμές με ανοιχτό άκρο κοντά,
+        // οι παρειές δεν ενώνονται· αλλιώς κενός χώρος (no-op).
+        const openIds = findOpenChainLineIdsNear(point, entities, tol);
+        if (openIds.length === 0) return { kind: 'none' };
+        EventBus.emit('bim:region-perimeter-rejected', { reason: 'no-closed-loop' });
+        EventBus.emit('dxf.highlightByIds', { mode: 'select', ids: openIds });
+        return { kind: 'handled' };
+      }
+      // Layer 4 — γιγάντιο περίγραμμα (εξωτερικό του σχεδίου) → warning, όχι garbage.
+      if (isPerimeterOversized(pick, scale)) {
+        const { width, height } = perimeterExtentMm(pick, scale);
+        EventBus.emit('bim:region-perimeter-rejected', {
+          reason: 'oversized',
+          widthM: width / 1000,
+          depthM: height / 1000,
+        });
+        return { kind: 'handled' };
+      }
+      return { kind: 'ok', perimeter: pick, sceneUnits };
+    },
+    [getSceneEntitiesRef, getSceneUnitsRef],
   );
 
   // ── outer-perimeter (Φ3 «Τοιχίο από περίγραμμα», ΜΕ ένωση) ────────────────
@@ -82,11 +124,11 @@ export function useColumnPerimeterCommit(
 
   const onPerimeterClick = useCallback(
     (point: Readonly<Point2D>): boolean => {
-      const entities = getSceneEntitiesRef.current?.() ?? [];
-      const { perimeters } = perimeterFacesToRects(entities, regionTol());
-      const hit = perimeters.filter((p) => isPointInPolygon(point as Point2D, [...p.polygon]));
-      if (hit.length === 0) return false;
-      const sceneUnits = getSceneUnitsRef.current?.() ?? 'mm';
+      const outcome = resolvePerimeterPick(point);
+      if (outcome.kind === 'none') return false;
+      if (outcome.kind === 'handled') return true;
+      const hit = [outcome.perimeter];
+      const { sceneUnits } = outcome;
 
       // EC2 §9.6.1 guard: if the selected perimeter has aspect ≤ 4 it is a column,
       // not a shear wall. Warn the user before creating anything.
@@ -103,7 +145,7 @@ export function useColumnPerimeterCommit(
 
       return commitPerimeterColumns(buildColumnsFromPerimeters(hit, currentLevelId, sceneUnits));
     },
-    [regionTol, currentLevelId, commitPerimeterColumns, getSceneEntitiesRef, getSceneUnitsRef],
+    [resolvePerimeterPick, currentLevelId, commitPerimeterColumns],
   );
 
   // ── discrete-perimeter (Φ3c «Πολλαπλή δημιουργία», ΧΩΡΙΣ ένωση) ────────────
@@ -160,25 +202,15 @@ export function useColumnPerimeterCommit(
 
   const onDiscretePerimeterClick = useCallback(
     (point: Readonly<Point2D>): boolean => {
-      const entities = getSceneEntitiesRef.current?.() ?? [];
-      const { perimeters } = perimeterFacesToRects(entities, regionTol(), {
-        unionTouching: false,
-      });
-      const hit = perimeters.filter((p) => isPointInPolygon(point as Point2D, [...p.polygon]));
-      if (hit.length === 0) return false;
-      const sceneUnits = getSceneUnitsRef.current?.() ?? 'mm';
+      const outcome = resolvePerimeterPick(point);
+      if (outcome.kind === 'none') return false;
+      if (outcome.kind === 'handled') return true;
       void commitDiscretePerimeterColumns(
-        classifyColumnsFromPerimeters(hit, currentLevelId, sceneUnits),
+        classifyColumnsFromPerimeters([outcome.perimeter], currentLevelId, outcome.sceneUnits),
       );
       return true;
     },
-    [
-      regionTol,
-      currentLevelId,
-      commitDiscretePerimeterColumns,
-      getSceneEntitiesRef,
-      getSceneUnitsRef,
-    ],
+    [resolvePerimeterPick, currentLevelId, commitDiscretePerimeterColumns],
   );
 
   // Box-select listener (reuse κοινό 'bim:wall-region-box-select'). Inert εκτός
@@ -193,14 +225,15 @@ export function useColumnPerimeterCommit(
         const idSet = new Set(entityIds);
         const selected = (getSceneEntitiesRef.current?.() ?? []).filter((e) => idSet.has(e.id));
         const sceneUnits = getSceneUnitsRef.current?.() ?? 'mm';
+        const tol = resolveRegionLoopTolWorld(sceneUnits);
         if (s.placementMode === 'discrete-perimeter') {
           void commitDiscretePerimeterColumns(
-            classifyPerimeterFacesToColumns(selected, regionTol(), currentLevelId, sceneUnits),
+            classifyPerimeterFacesToColumns(selected, tol, currentLevelId, sceneUnits),
           );
         } else {
           // EC2 §9.6.1 guard: extract perimeters first so we can check aspect ratios
           // before committing. perimeterFacesToColumns does the same call internally.
-          const { perimeters } = perimeterFacesToRects(selected, regionTol(), {
+          const { perimeters } = perimeterFacesToRects(selected, tol, {
             unionTouching: true,
           });
           const firstRectangular = perimeters.find((p) => perimeterColumnKind(p) === 'rectangular');
@@ -217,7 +250,6 @@ export function useColumnPerimeterCommit(
         }
       }),
     [
-      regionTol,
       currentLevelId,
       commitPerimeterColumns,
       commitDiscretePerimeterColumns,

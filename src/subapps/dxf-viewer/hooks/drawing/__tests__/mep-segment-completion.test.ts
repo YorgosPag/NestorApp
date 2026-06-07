@@ -84,3 +84,38 @@ describe('buildDefaultMepSegmentParams — ADR-408 Φ14 drainage classification 
     expect(p.slopePercent).toBeUndefined();
   });
 });
+
+describe('buildDefaultMepSegmentParams — ADR-408 Φ14 #2 born-sloped creation', () => {
+  // A=(0,0) B=(1000,0); 'mm' scene ⇒ 1 canvas unit = 1 mm ⇒ plan run = 1000 mm.
+  it('free end + slope preset → born sloped (anchor start, end falls by planLen·%)', () => {
+    const p = buildDefaultMepSegmentParams(A, B, 'pipe', { slopePercent: 1.5 });
+    // default centreline 2800 anchors the start; end drops 1000·1.5/100 = 15 mm.
+    expect(p.startPoint.z).toBe(2800);
+    expect(p.endPoint.z).toBeCloseTo(2785, 6);
+    expect(p.centerlineElevationMm).toBeCloseTo(2792.5, 6);
+  });
+
+  it('start snapped (400) + free end + slope → anchored at the snap, end falls', () => {
+    const p = buildDefaultMepSegmentParams(A, B, 'pipe', { slopePercent: 2 }, 'mm', 400, null);
+    expect(p.startPoint.z).toBe(400);
+    expect(p.endPoint.z).toBeCloseTo(380, 6); // 400 − 1000·2/100
+  });
+
+  it('BOTH ends snapped to DISTINCT elevations → snaps WIN (slope NOT applied)', () => {
+    const p = buildDefaultMepSegmentParams(A, B, 'pipe', { slopePercent: 1.5 }, 'mm', 400, 2800);
+    expect(p.startPoint.z).toBe(400);
+    expect(p.endPoint.z).toBe(2800); // network geometry preserved, not overridden
+  });
+
+  it('slope 0 → flat (no fall)', () => {
+    const p = buildDefaultMepSegmentParams(A, B, 'pipe', { slopePercent: 0 });
+    expect(p.startPoint.z).toBe(2800);
+    expect(p.endPoint.z).toBe(2800);
+  });
+
+  it('duct ignores slope → flat (mechanical domain)', () => {
+    const p = buildDefaultMepSegmentParams(A, B, 'duct', { slopePercent: 2 });
+    expect(p.startPoint.z).toBe(2800);
+    expect(p.endPoint.z).toBe(2800);
+  });
+});

@@ -21,6 +21,7 @@ import { computeElectricalPanelGeometry } from '../bim/electrical-panels/electri
 import { computeMepManifoldGeometry } from '../bim/mep-manifolds/mep-manifold-geometry';
 import { computeMepRadiatorGeometry } from '../bim/mep-radiators/mep-radiator-geometry';
 import { computeMepBoilerGeometry } from '../bim/mep-boilers/mep-boiler-geometry';
+import { computeMepUnderfloorGeometry } from '../bim/mep-underfloor/mep-underfloor-geometry';
 import { computeMepSegmentGeometry } from '../bim/geometry/mep-segment-geometry';
 import { computeMepFittingGeometry } from '../bim/geometry/mep-fitting-geometry';
 import { computeFurnitureGeometry } from '../bim/furniture/furniture-geometry';
@@ -196,6 +197,15 @@ export function convertDxfEntityToEntityModel(entity: DxfEntityUnion): EntityMod
       const blr = entity as unknown as Partial<import('../bim/types/mep-boiler-types').MepBoilerEntity>;
       const geometry = blr.geometry ?? (blr.params ? computeMepBoilerGeometry(blr.params) : undefined);
       return buildBimEntityModel('mep-boiler', { ...(entity as object), geometry } as typeof entity, baseModel);
+    }
+    // ADR-408 Εύρος Β #3 — underfloor heating loop needs the same geometry-recompute fallback
+    // (mirror mep-boiler / floor-finish): a Firestore-loaded MepUnderfloorEntity may arrive before
+    // its geometry cache is hydrated; without `geometry.bbox` BoundsCalculator drops it from the
+    // spatial index → hover-highlight + click selection silently fail.
+    case 'mep-underfloor': {
+      const uf = entity as unknown as Partial<import('../bim/types/mep-underfloor-types').MepUnderfloorEntity>;
+      const geometry = uf.geometry ?? (uf.params ? computeMepUnderfloorGeometry(uf.params) : undefined);
+      return buildBimEntityModel('mep-underfloor', { ...(entity as object), geometry } as typeof entity, baseModel);
     }
     // ADR-408 Φ8 — MEP segment needs the same geometry-recompute fallback (mirror beam).
     case 'mep-segment': {

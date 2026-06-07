@@ -28,6 +28,7 @@ import type { MepRadiatorEntity } from '../../bim/types/mep-radiator-types';
 import type { MepBoilerEntity } from '../../bim/types/mep-boiler-types';
 import type { RoofEntity } from '../../bim/types/roof-types';
 import type { FloorFinishEntity } from '../../bim/types/floor-finish-types';
+import type { MepUnderfloorEntity } from '../../bim/types/mep-underfloor-types';
 import type { BuildingRef, FloorRef } from '../../bim/utils/bim-floor-utils';
 import { applyBuildingsPreset } from '../utils/building-visibility-state';
 import type { BuildingVisMode, BuildingPreset } from '../utils/building-visibility-state';
@@ -74,6 +75,8 @@ export interface Bim3DEntities {
   readonly radiators: readonly MepRadiatorEntity[];
   /** ADR-408 Εύρος Β — heating boiler / λέβητας (point-based hydronic source). */
   readonly boilers: readonly MepBoilerEntity[];
+  /** ADR-408 Εύρος Β #3 — underfloor radiant heating loops (area-based hydronic terminal). */
+  readonly underfloors: readonly MepUnderfloorEntity[];
 }
 
 /**
@@ -101,6 +104,7 @@ export const EMPTY_BIM_ENTITIES: Bim3DEntities = {
   manifolds: [],
   radiators: [],
   boilers: [],
+  underfloors: [],
 };
 
 interface Bim3DEntitiesStoreState extends Bim3DEntities {
@@ -157,6 +161,8 @@ interface Bim3DEntitiesStoreState extends Bim3DEntities {
   setRadiators: (radiators: readonly MepRadiatorEntity[]) => void;
   /** ADR-408 Εύρος Β — feed the heating boiler slice. */
   setBoilers: (boilers: readonly MepBoilerEntity[]) => void;
+  /** ADR-408 Εύρος Β #3 — feed the underfloor heating loops slice. */
+  setUnderfloors: (underfloors: readonly MepUnderfloorEntity[]) => void;
   /** ADR-411 — bump after any mesh glTF load resolves (triggers 3D resync). */
   bumpMeshAssetVersion: () => void;
   /** ADR-413 — bump after any PBR texture set load resolves (triggers 3D resync). */
@@ -190,6 +196,7 @@ export const useBim3DEntitiesStore = create<Bim3DEntitiesStoreState>()(
     manifolds: [],
     radiators: [],
     boilers: [],
+    underfloors: [],
     meshAssetVersion: 0,
     textureAssetVersion: 0,
     activeLevelId: null,
@@ -216,6 +223,7 @@ export const useBim3DEntitiesStore = create<Bim3DEntitiesStoreState>()(
     setManifolds: (manifolds) => set({ manifolds }),
     setRadiators: (radiators) => set({ radiators }),
     setBoilers: (boilers) => set({ boilers }),
+    setUnderfloors: (underfloors) => set({ underfloors }),
     bumpMeshAssetVersion: () => set((s) => ({ meshAssetVersion: s.meshAssetVersion + 1 })),
     bumpTextureAssetVersion: () => set((s) => ({ textureAssetVersion: s.textureAssetVersion + 1 })),
     setActiveLevelId: (activeLevelId) => set({ activeLevelId }),
@@ -259,5 +267,6 @@ export function selectBim3DEntities(state: Bim3DEntitiesStoreState): Bim3DEntiti
     manifolds: state.manifolds,
     radiators: state.radiators,
     boilers: state.boilers,
+    underfloors: state.underfloors,
   };
 }

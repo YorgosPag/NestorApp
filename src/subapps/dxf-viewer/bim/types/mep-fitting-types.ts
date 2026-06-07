@@ -46,6 +46,8 @@ import type {
 import type { SceneUnits } from '../../utils/scene-units';
 import type { IfcEntityMixin } from './ifc-entity-mixin';
 import type { MepConnectorHostParams } from './mep-component-types';
+import type { PlumbingSystemClassification } from './mep-connector-types';
+import type { BimCategory } from '../../config/bim-object-styles';
 
 // ─── Discriminators ────────────────────────────────────────────────────────────
 
@@ -138,6 +140,16 @@ export interface MepFittingParams extends MepConnectorHostParams {
   readonly primaryDiameterMm: number;
   /** mm. Reducer only — the smaller Ø. */
   readonly secondaryDiameterMm?: number;
+  /**
+   * Plumbing classification inherited from the incident pipes (ADR-408 Φ14). A
+   * mirror of {@link MepSegmentParams.classification}: a fitting is NOT a system
+   * member (it is auto-derived), so it inherits *what the pipes it joins convey* —
+   * Revit "a fitting follows the system of its connectors". Drives the V/G category
+   * ({@link resolveFittingBimCategory}: drainage → `'drain-pipe'`) + the standalone
+   * colour (drainage brown, …). Drainage wins in a mixed node — it is the only
+   * classification with its own V/G bucket. Absent ⇒ no inherited classification.
+   */
+  readonly classification?: PlumbingSystemClassification;
   /** Elbow only — bend style. Defaults to `'radiused'`. */
   readonly elbowStyle?: ElbowStyle;
   /**
@@ -218,4 +230,19 @@ export function mepFittingIfcType(domain: MepFittingDomain): MepFittingIfcType {
  */
 export function incidentEntityId(incident: MepFittingIncident): string {
   return incident.entityId ?? incident.segmentId ?? '';
+}
+
+/**
+ * SSoT for a fitting's `BimCategory` — the Visibility/Graphics bucket (ADR-408
+ * Φ14). Mirror of {@link resolveSegmentBimCategory}: a sanitary-drainage fitting
+ * gets its OWN category `'drain-pipe'` (so it toggles + hides together with the
+ * drainage pipes it joins) while staying `domain:'pipe'` everywhere else (IFC /
+ * schema unchanged — a drainage fitting IS a pipe fitting). Every other fitting
+ * maps 1:1 to its `domain`. Consumed by BOTH the 2D renderer and the 3D scene sync.
+ */
+export function resolveFittingBimCategory(params: MepFittingParams): BimCategory {
+  if (params.domain === 'pipe' && params.classification === 'sanitary-drainage') {
+    return 'drain-pipe';
+  }
+  return params.domain;
 }

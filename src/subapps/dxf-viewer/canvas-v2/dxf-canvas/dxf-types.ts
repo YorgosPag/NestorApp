@@ -42,11 +42,13 @@ import type { MepManifoldEntity } from '../../bim/types/mep-manifold-types';
 import type { MepRadiatorEntity } from '../../bim/types/mep-radiator-types';
 // ADR-408 Εύρος Β #2 — heating boiler direct entity for DXF render pipeline.
 import type { MepBoilerEntity } from '../../bim/types/mep-boiler-types';
+// ADR-408 Εύρος Β #3 — underfloor heating direct entity for DXF render pipeline.
+import type { MepUnderfloorEntity } from '../../bim/types/mep-underfloor-types';
 
 // === DXF ENTITY TYPES ===
 export interface DxfEntity {
   id: string;
-  type: 'line' | 'circle' | 'arc' | 'polyline' | 'text' | 'angle-measurement' | 'stair' | 'dimension' | 'slab' | 'slab-opening' | 'opening' | 'wall' | 'column' | 'xline' | 'ray' | 'beam' | 'mep-fixture' | 'electrical-panel' | 'railing' | 'furniture' | 'mep-segment' | 'mep-fitting' | 'floorplan-symbol' | 'mep-manifold' | 'mep-radiator' | 'mep-boiler' | 'roof' | 'floor-finish';
+  type: 'line' | 'circle' | 'arc' | 'polyline' | 'text' | 'angle-measurement' | 'stair' | 'dimension' | 'slab' | 'slab-opening' | 'opening' | 'wall' | 'column' | 'xline' | 'ray' | 'beam' | 'mep-fixture' | 'electrical-panel' | 'railing' | 'furniture' | 'mep-segment' | 'mep-fitting' | 'floorplan-symbol' | 'mep-manifold' | 'mep-radiator' | 'mep-boiler' | 'mep-underfloor' | 'roof' | 'floor-finish';
   /**
    * @deprecated ADR-358 Phase 9D-5b-ii — transitional name backref. Resolve via
    * `LayerStore.resolveEntityLayerName()`. Made optional to align with BaseEntity
@@ -359,6 +361,18 @@ export interface DxfMepBoiler extends DxfEntity {
 }
 
 /**
+ * ADR-408 Εύρος Β #3 — DxfMepUnderfloor direct entity (same pattern as DxfMepBoiler).
+ * MepUnderfloorRenderer reads geometry.loopPath + geometry.bbox + params.footprint at top level.
+ */
+export interface DxfMepUnderfloor extends DxfEntity {
+  type: 'mep-underfloor';
+  kind: MepUnderfloorEntity['kind'];
+  params: MepUnderfloorEntity['params'];
+  geometry: MepUnderfloorEntity['geometry'];
+  validation?: MepUnderfloorEntity['validation'];
+}
+
+/**
  * ADR-417 — DxfRoof direct entity (same pattern as DxfSlab/DxfFurniture).
  * RoofRenderer reads geometry.faces + geometry.ridges + footprint at top level.
  */
@@ -393,7 +407,7 @@ export interface DxfRay extends DxfEntity {
   rayEntity: RayEntity;
 }
 
-export type DxfEntityUnion = DxfLine | DxfCircle | DxfPolyline | DxfArc | DxfText | DxfAngleMeasurement | DxfStair | DxfDimension | DxfSlab | DxfSlabOpening | DxfOpening | DxfWall | DxfColumn | DxfMepFixture | DxfElectricalPanel | DxfRailing | DxfFurniture | DxfMepSegment | DxfMepFitting | DxfFloorplanSymbol | DxfMepManifold | DxfMepRadiator | DxfMepBoiler | DxfRoof | DxfFloorFinish | DxfBeam | DxfXLine | DxfRay;
+export type DxfEntityUnion = DxfLine | DxfCircle | DxfPolyline | DxfArc | DxfText | DxfAngleMeasurement | DxfStair | DxfDimension | DxfSlab | DxfSlabOpening | DxfOpening | DxfWall | DxfColumn | DxfMepFixture | DxfElectricalPanel | DxfRailing | DxfFurniture | DxfMepSegment | DxfMepFitting | DxfFloorplanSymbol | DxfMepManifold | DxfMepRadiator | DxfMepBoiler | DxfMepUnderfloor | DxfRoof | DxfFloorFinish | DxfBeam | DxfXLine | DxfRay;
 
 // === DXF SCENE ===
 export interface DxfScene {

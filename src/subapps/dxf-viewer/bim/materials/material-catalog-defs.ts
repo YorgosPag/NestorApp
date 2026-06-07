@@ -112,6 +112,9 @@ export const MATERIAL_DEFS: Record<string, PbrMaterialDef> = {
   // (same hue as radiator — both are heating-circuit elements). Slightly higher
   // metalness to distinguish the boiler body from the flat panel radiator.
   'elem-mep-boiler':     { color: 0xdc2626, roughness: 0.55, metalness: 0.15 },
+  // ADR-408 Εύρος Β #3 — underfloor radiant heating loop: warm-red embedded screed
+  // band (same heating-circuit hue), translucent so it reads as a thin layer in 3D.
+  'elem-mep-underfloor': { color: 0xdc2626, roughness: 0.70, metalness: 0.05, transparent: true, opacity: 0.55 },
 };
 
 /** Fallback key when a materialId matches no known prefix. */

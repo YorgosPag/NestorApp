@@ -355,6 +355,16 @@ export type {
 } from '../bim/types/mep-boiler-types';
 import type { MepBoilerEntity } from '../bim/types/mep-boiler-types';
 
+// ADR-408 Εύρος Β #3: underfloor heating concrete types live in bim/types/mep-underfloor-types.ts (SRP).
+export type {
+  MepUnderfloorKind,
+  MepUnderfloorPattern,
+  MepUnderfloorParams,
+  MepUnderfloorGeometry,
+  MepUnderfloorEntity,
+} from '../bim/types/mep-underfloor-types';
+import type { MepUnderfloorEntity } from '../bim/types/mep-underfloor-types';
+
 // ADR-407: standalone path-based railing concrete types live in bim/types/railing-types.ts (SRP).
 export type {
   RailingKind,
@@ -595,6 +605,8 @@ export type Entity = (
   | MepRadiatorEntity
   // ADR-408 Εύρος Β #2 — point-based hydronic boiler (heating source).
   | MepBoilerEntity
+  // ADR-408 Εύρος Β #3 — area-based radiant floor heating loop.
+  | MepUnderfloorEntity
   // ADR-407 — standalone path-based railing.
   | RailingEntity
   // ADR-410 — mesh-based CC0 furniture.
@@ -772,6 +784,10 @@ export const isMepRadiatorEntity = (entity: Entity): entity is MepRadiatorEntity
 export const isMepBoilerEntity = (entity: Entity): entity is MepBoilerEntity =>
   entity.type === 'mep-boiler';
 
+/** ADR-408 Εύρος Β #3 — area-based radiant floor heating loop. */
+export const isMepUnderfloorEntity = (entity: Entity): entity is MepUnderfloorEntity =>
+  entity.type === 'mep-underfloor';
+
 /** ADR-407 — standalone path-based railing. */
 export const isRailingEntity = (entity: Entity): entity is RailingEntity =>
   entity.type === 'railing';
@@ -801,10 +817,10 @@ export const isFloorFinishEntity = (entity: Entity): entity is FloorFinishEntity
   entity.type === 'floor-finish';
 
 /** True for any ADR-363/406/407/408/410/415/417/419 BIM parametric entity */
-export const isBimEntity = (entity: Entity): entity is WallEntity | OpeningEntity | SlabEntity | SlabOpeningEntity | ColumnEntity | BeamEntity | MepFixtureEntity | ElectricalPanelEntity | MepManifoldEntity | MepRadiatorEntity | MepBoilerEntity | RailingEntity | FurnitureEntity | MepSegmentEntity | MepFittingEntity | FloorplanSymbolEntity | RoofEntity | FloorFinishEntity =>
+export const isBimEntity = (entity: Entity): entity is WallEntity | OpeningEntity | SlabEntity | SlabOpeningEntity | ColumnEntity | BeamEntity | MepFixtureEntity | ElectricalPanelEntity | MepManifoldEntity | MepRadiatorEntity | MepBoilerEntity | MepUnderfloorEntity | RailingEntity | FurnitureEntity | MepSegmentEntity | MepFittingEntity | FloorplanSymbolEntity | RoofEntity | FloorFinishEntity =>
   entity.type === 'wall' || entity.type === 'opening' || entity.type === 'slab' ||
   entity.type === 'slab-opening' || entity.type === 'column' || entity.type === 'beam' ||
-  entity.type === 'mep-fixture' || entity.type === 'electrical-panel' || entity.type === 'mep-manifold' || entity.type === 'mep-radiator' || entity.type === 'mep-boiler' || entity.type === 'railing' ||
+  entity.type === 'mep-fixture' || entity.type === 'electrical-panel' || entity.type === 'mep-manifold' || entity.type === 'mep-radiator' || entity.type === 'mep-boiler' || entity.type === 'mep-underfloor' || entity.type === 'railing' ||
   entity.type === 'furniture' || entity.type === 'mep-segment' || entity.type === 'mep-fitting' ||
   entity.type === 'floorplan-symbol' || entity.type === 'roof' || entity.type === 'floor-finish';
 

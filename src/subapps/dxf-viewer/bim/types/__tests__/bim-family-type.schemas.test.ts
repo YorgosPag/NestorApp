@@ -26,6 +26,7 @@ import {
   BimFamilyTypeOriginSchema,
   WallTypeParamsSchema,
   StairTypeParamsSchema,
+  OpeningTypeParamsSchema,
 } from '../bim-family-type.schemas';
 
 // ─── Fixtures ────────────────────────────────────────────────────────────────
@@ -340,6 +341,72 @@ describe('BimFamilyTypeSchema — stair variant', () => {
 
   it('rejects instance-only field "direction" inside typeParams (strict stair schema)', () => {
     const doc = stairDoc({}, { direction: 90 });
+    expect(BimFamilyTypeSchema.safeParse(doc).success).toBe(false);
+  });
+});
+
+// ─── OpeningTypeParamsSchema — standalone (ADR-421 SLICE C) ──────────────────
+
+/** Minimal valid OpeningTypeParams. */
+function openingTypeParams(overrides: Record<string, unknown> = {}): Record<string, unknown> {
+  return { kind: 'door', width: 900, height: 2100, ...overrides };
+}
+
+function openingDoc(
+  baseOverrides: Record<string, unknown> = {},
+  paramsOverrides: Record<string, unknown> = {},
+): Record<string, unknown> {
+  return {
+    ...baseShape(baseOverrides),
+    category: 'opening',
+    typeParams: openingTypeParams(paramsOverrides),
+  };
+}
+
+describe('OpeningTypeParamsSchema', () => {
+  it('accepts minimal valid opening type params', () => {
+    expect(OpeningTypeParamsSchema.safeParse(openingTypeParams()).success).toBe(true);
+  });
+
+  it('accepts all optional fields', () => {
+    const params = openingTypeParams({
+      frameWidth: 60,
+      material: 'oak',
+      glazingPanes: 2,
+      fireRating: 'EI30',
+    });
+    expect(OpeningTypeParamsSchema.safeParse(params).success).toBe(true);
+  });
+
+  it('rejects an invalid kind enum value', () => {
+    expect(OpeningTypeParamsSchema.safeParse(openingTypeParams({ kind: 'portal' })).success).toBe(false);
+  });
+
+  it('rejects non-positive width/height', () => {
+    expect(OpeningTypeParamsSchema.safeParse(openingTypeParams({ width: 0 })).success).toBe(false);
+    expect(OpeningTypeParamsSchema.safeParse(openingTypeParams({ height: -5 })).success).toBe(false);
+  });
+
+  it('rejects an out-of-range glazingPanes value', () => {
+    expect(OpeningTypeParamsSchema.safeParse(openingTypeParams({ glazingPanes: 4 })).success).toBe(false);
+  });
+
+  it('rejects instance-only field "wallId" (strict schema)', () => {
+    expect(OpeningTypeParamsSchema.safeParse(openingTypeParams({ wallId: 'wall_1' })).success).toBe(false);
+  });
+
+  it('rejects instance-only field "sillHeight" (strict schema)', () => {
+    expect(OpeningTypeParamsSchema.safeParse(openingTypeParams({ sillHeight: 900 })).success).toBe(false);
+  });
+});
+
+describe('BimFamilyTypeSchema — opening variant', () => {
+  it('accepts a well-formed opening family type document', () => {
+    expect(BimFamilyTypeSchema.safeParse(openingDoc()).success).toBe(true);
+  });
+
+  it('rejects opening category with wall typeParams (wrong discriminator branch)', () => {
+    const doc = { ...baseShape(), category: 'opening', typeParams: wallTypeParams() };
     expect(BimFamilyTypeSchema.safeParse(doc).success).toBe(false);
   });
 });

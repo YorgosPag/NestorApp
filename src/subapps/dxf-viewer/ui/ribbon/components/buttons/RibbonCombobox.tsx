@@ -113,7 +113,7 @@ export const RibbonCombobox: React.FC<RibbonComboboxProps> = ({ command }) => {
       <Select
         value={value ?? undefined}
         onValueChange={handleValueChange}
-        disabled={command.comingSoon}
+        disabled={command.comingSoon || dynamicState?.disabled === true}
       >
         <SelectTrigger
           ref={triggerRef}

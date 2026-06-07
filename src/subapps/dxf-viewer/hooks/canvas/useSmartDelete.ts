@@ -309,6 +309,10 @@ export function useSmartDelete({
       const floorFinishIdsInBatch = idsToDelete.filter(
         (id) => adapter.getEntity(id)?.type === 'floor-finish',
       );
+      // ADR-408 Εύρος Β #3 — collect underfloor IDs so we can trigger Firestore deleteDoc.
+      const underfloorIdsInBatch = idsToDelete.filter(
+        (id) => adapter.getEntity(id)?.type === 'mep-underfloor',
+      );
 
       const deleteCommand: ICommand = idsToDelete.length === 1
         ? new DeleteEntityCommand(idsToDelete[0], adapter)
@@ -396,6 +400,10 @@ export function useSmartDelete({
       // ADR-419 — trigger Firestore deleteDoc + prevent subscription re-add for each floor finish.
       for (const floorFinishId of floorFinishIdsInBatch) {
         eventBus.emit('bim:floor-finish-delete-requested', { id: floorFinishId });
+      }
+      // ADR-408 Εύρος Β #3 — trigger Firestore deleteDoc + prevent subscription re-add for each underfloor.
+      for (const underfloorId of underfloorIdsInBatch) {
+        eventBus.emit('bim:mep-underfloor-delete-requested', { underfloorId });
       }
 
       return true;

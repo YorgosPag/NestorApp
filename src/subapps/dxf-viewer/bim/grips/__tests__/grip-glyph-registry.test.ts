@@ -35,9 +35,11 @@ describe('gripGlyphShape', () => {
 });
 
 describe('GRIP_GLYPH_REGISTRY (single source)', () => {
-  it('every entry is move or rotation only', () => {
+  it('every entry is a registered icon glyph (move / rotation / triangle action)', () => {
+    // ADR-408 Φ12 — the manifold outlet action grips add the Revit "array control"
+    // ▲/▼ triangle glyphs alongside the move/rotation handle glyphs.
     for (const shape of Object.values(GRIP_GLYPH_REGISTRY)) {
-      expect(['move', 'rotation']).toContain(shape);
+      expect(['move', 'rotation', 'triangle-up', 'triangle-down']).toContain(shape);
     }
   });
 
@@ -45,5 +47,10 @@ describe('GRIP_GLYPH_REGISTRY (single source)', () => {
     expect(GRIP_GLYPH_REGISTRY['wall-midpoint']).toBe('move');
     expect(GRIP_GLYPH_REGISTRY['column-rotation']).toBe('rotation');
     expect(GRIP_GLYPH_REGISTRY['stair-direction']).toBe('rotation');
+  });
+
+  it("ADR-408 Φ12 — manifold outlet add/remove → triangle ▲/▼ glyphs", () => {
+    expect(gripGlyphShape('mep-manifold-outlet-add')).toBe('triangle-up');
+    expect(gripGlyphShape('mep-manifold-outlet-remove')).toBe('triangle-down');
   });
 });

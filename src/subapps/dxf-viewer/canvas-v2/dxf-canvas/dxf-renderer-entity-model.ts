@@ -135,6 +135,9 @@ export function buildEntityModelFromDxf(
       return { ...base, type: 'mep-radiator', kind: entity.kind, params: entity.params, geometry: entity.geometry, validation: entity.validation } as unknown as Entity;
     case 'mep-boiler':
       return { ...base, type: 'mep-boiler', kind: entity.kind, params: entity.params, geometry: entity.geometry, validation: entity.validation } as unknown as Entity;
+    case 'mep-underfloor':
+      // ADR-408 Εύρος Β #3 — area-based underfloor loop (mirror mep-boiler passthrough).
+      return { ...base, type: 'mep-underfloor', kind: entity.kind, params: entity.params, geometry: entity.geometry, validation: entity.validation } as unknown as Entity;
     case 'xline':
       return { ...base, type: 'xline', basePoint: entity.xlineEntity.basePoint, direction: entity.xlineEntity.direction } as unknown as Entity;
     case 'ray':

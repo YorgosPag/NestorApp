@@ -21,16 +21,36 @@ import {
   IfcPropertySetSchema,
 } from './ifc-entity-mixin';
 import { RevealInsulationSchema } from './thermal-envelope.schemas';
+import { OPENING_OPERATION_VALUES } from './opening-operation-types';
 
 // ─── Enums (mirror opening-types.ts unions) ──────────────────────────────────
 
 export const OpeningKindSchema = z.enum([
+  // Doors (IfcDoor)
   'door',
-  'window',
+  'double-door',
   'sliding-door',
+  'double-sliding-door',
+  'pocket-door',
+  'bifold-door',
+  'overhead-door',
+  'revolving-door',
   'french-door',
+  // Windows (IfcWindow)
+  'window',
   'fixed',
+  'double-hung-window',
+  'sliding-window',
+  'awning-window',
+  'hopper-window',
+  'tilt-turn-window',
+  'bay-window',
 ]);
+
+/** ADR-421 §A1 — mirror του OpeningOperationType (IFC4 door ∪ window operation). */
+export const OpeningOperationTypeSchema = z.enum(
+  OPENING_OPERATION_VALUES as unknown as [string, ...string[]],
+);
 
 export const OpeningHandingSchema = z.enum(['left', 'right']);
 
@@ -62,12 +82,37 @@ export const OpeningParamsSchema = z
     openDirection: OpeningSwingSchema.optional(),
     material: z.string().min(1).optional(),
     glazingPanes: OpeningGlazingPanesSchema.optional(),
+    // ─── ADR-421 §A2 — explicit IFC operation (optional/non-breaking) ────────
+    operationType: OpeningOperationTypeSchema.optional(),
     // ─── ADR-396 P7 — ETICS reveal insulation strips (Z4) ────────────────────
     revealInsulation: RevealInsulationSchema.optional(),
   })
   .strict();
 
 export type OpeningParamsParsed = z.infer<typeof OpeningParamsSchema>;
+
+// ─── Type-level params schema (ADR-421 SLICE C — Revit Door/Window Types) ─────
+
+/**
+ * Mirrors `OpeningTypeParams` (bim-family-type.ts). The opening analogue of
+ * `WallTypeParamsSchema`. Lives here (not in `bim-family-type.schemas.ts`) so it
+ * can reuse `OpeningKindSchema`/`OpeningGlazingPanesSchema` AND back the
+ * `typeOverrides` branch of `OpeningEntitySchema` below WITHOUT a runtime import
+ * cycle — `bim-family-type.schemas.ts` imports this one-directionally.
+ */
+export const OpeningTypeParamsSchema = z
+  .object({
+    kind: OpeningKindSchema,
+    width: z.number().positive(),
+    height: z.number().positive(),
+    frameWidth: z.number().positive().optional(),
+    material: z.string().min(1).optional(),
+    glazingPanes: OpeningGlazingPanesSchema.optional(),
+    fireRating: z.string().min(1).optional(),
+  })
+  .strict();
+
+export type OpeningTypeParamsParsed = z.infer<typeof OpeningTypeParamsSchema>;
 
 // ─── Entity schema (factory output — focused) ───────────────────────────────
 
@@ -86,6 +131,9 @@ export const OpeningEntitySchema = z
     ifcGuid: IfcGuidSchema,
     ifcType: OpeningIfcTypeSchema,
     pset: IfcPropertySetSchema.optional(),
+    // ─── ADR-421 SLICE C — Family/Type link (ADR-412, optional/non-breaking) ──
+    typeId: z.string().min(1).optional(),
+    typeOverrides: OpeningTypeParamsSchema.partial().optional(),
   })
   .passthrough();
 

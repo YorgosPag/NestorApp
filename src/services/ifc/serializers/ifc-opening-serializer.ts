@@ -240,8 +240,8 @@ function mapPanelPredefinedType(kind: OpeningKind, ifcType: 'IfcDoor' | 'IfcWind
   if (ifcType === 'IfcWindow') {
     return 'WINDOW';
   }
-  // IfcDoor variants
-  if (kind === 'sliding-door') return 'DOOR';
-  if (kind === 'french-door') return 'DOOR';
+  // IfcDoor variants — IfcDoorTypeEnum PredefinedType. Sectional/roll-up garage
+  // doors map to GATE (Revit-grade); all other door families → DOOR.
+  if (kind === 'overhead-door') return 'GATE';
   return 'DOOR';
 }

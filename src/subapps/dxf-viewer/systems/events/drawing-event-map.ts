@@ -239,6 +239,9 @@ export interface DrawingEventMap {
   // ADR-408 Εύρος Β #2 — BIM heating boiler params + delete events
   'bim:mep-boiler-params-updated': { boilerId: string };
   'bim:mep-boiler-delete-requested': { boilerId: string };
+  // ADR-408 Εύρος Β #3 — BIM underfloor heating loop params + delete events
+  'bim:mep-underfloor-params-updated': { underfloorId: string };
+  'bim:mep-underfloor-delete-requested': { underfloorId: string };
   // ADR-408 Φ8 — BIM MEP segment (duct/pipe) params + delete events
   'bim:mep-segment-params-updated': { segmentId: string };
   'bim:mep-segment-delete-requested': { segmentId: string };
@@ -269,7 +272,7 @@ export interface DrawingEventMap {
   // re-feed side-effect, which needs project/building context only the
   // persistence host holds. Fires on command execute/undo. `category` reserved
   // for non-wall family types (host handler scopes to 'wall' + 'slab' + 'roof').
-  'bim:family-type-changed': { typeId: string; category: 'wall' | 'slab' | 'stair' | 'roof' };
+  'bim:family-type-changed': { typeId: string; category: 'wall' | 'slab' | 'stair' | 'roof' | 'opening' };
   // ADR-403 — 3D column placement: the 3D viewport projected a click onto the
   // active floor plane and converted it to the active scene units. The 2D
   // `useColumnTool` listens and runs its existing `onCanvasClick(point)` commit
@@ -314,7 +317,7 @@ export interface DrawingEventMap {
   // DeleteEntityCommand.undo() and DeleteMultipleEntitiesCommand.undo().
   'bim:entity-restore-requested': {
     // ADR-406 — 'mep-fixture' appended. ADR-407 — 'railing' appended. ADR-408 Φ3 — 'electrical-panel'. ADR-408 Φ8 — 'mep-segment'. ADR-410 — 'furniture'. ADR-408 Φ12 — 'mep-manifold'. ADR-408 Εύρος Β — 'mep-radiator'. ADR-408 Εύρος Β #2 — 'mep-boiler'.
-    entityType: 'wall' | 'opening' | 'slab' | 'slab-opening' | 'column' | 'beam' | 'stair' | 'mep-fixture' | 'electrical-panel' | 'mep-manifold' | 'mep-radiator' | 'mep-boiler' | 'railing' | 'mep-segment' | 'furniture' | 'floor-finish';
+    entityType: 'wall' | 'opening' | 'slab' | 'slab-opening' | 'column' | 'beam' | 'stair' | 'mep-fixture' | 'electrical-panel' | 'mep-manifold' | 'mep-radiator' | 'mep-boiler' | 'mep-underfloor' | 'railing' | 'mep-segment' | 'furniture' | 'floor-finish';
     entitySnapshot: AnySceneEntity;
     source: 'undo-delete' | 'redo-restore';
   };
@@ -370,6 +373,16 @@ export interface DrawingEventMap {
   // αναλογία πλευρών: `columns` = κολώνες (aspect<4), `walls` = τοιχία (aspect≥4 ή
   // σύνθετα), `ignored` = validator-rejected. UI: ενημερωτικό breakdown toast.
   'bim:columns-discrete-from-perimeter': { columns: number; walls: number; ignored: number };
+  // ADR-419 — region/perimeter pick απορρίφθηκε (Layer 4/5). `oversized` = το
+  // ανιχνευμένο περίγραμμα είναι το εξωτερικό περίγραμμα του σχεδίου (πολύ μεγάλο
+  // για δομικό μέλος)· `no-closed-loop` = δεν βρέθηκε κλειστό loop κοντά στο pick
+  // (οι γραμμές δεν ενώνονται). UI: non-blocking warning toast (+ optional highlight
+  // ασύνδετων άκρων μέσω dxf.highlightByIds). widthM/depthM = διαστάσεις σε μέτρα.
+  'bim:region-perimeter-rejected': {
+    reason: 'oversized' | 'no-closed-loop';
+    widthM?: number;
+    depthM?: number;
+  };
   // ADR-401 Phase F.3 — column attach mirrors of the wall events above. N columns
   // auto-attached their top/base to a just-created structural host. Undoable via
   // AttachColumnsCommand. UI surfaces a non-blocking info toast (Revit parity).

@@ -33,6 +33,7 @@ import {
   isOpeningRibbonKey,
   isOpeningRibbonStringKey,
   isOpeningTagStyleComboboxKey,
+  isOpeningTypeGovernedComboboxKey,
 } from './bridge/opening-command-keys';
 import { PSET_RIBBON_ACTION } from './bridge/pset-action-keys';
 import {
@@ -147,16 +148,21 @@ export function useRibbonOpeningBridge(
     (commandKey: string): RibbonComboboxState | null => {
       const opening = resolveOpening();
       if (!opening) return null;
+      // ADR-421 SLICE C follow-up (a) — a typed opening renders its
+      // type-governed comboboxes (kind/width/height) read-only (Revit-style),
+      // editable only via «Edit type». Untyped openings stay fully editable.
+      const disabled =
+        opening.typeId != null && isOpeningTypeGovernedComboboxKey(commandKey);
       if (isOpeningRibbonStringKey(commandKey)) {
         const field = STRING_KEY_TO_FIELD[commandKey];
         const raw = opening.params[field];
-        return raw == null ? null : { value: String(raw), options: [] };
+        return raw == null ? null : { value: String(raw), options: [], disabled };
       }
       if (isOpeningRibbonKey(commandKey)) {
         const field = NUMBER_KEY_TO_FIELD[commandKey];
         const raw = opening.params[field];
         if (typeof raw !== 'number') return null;
-        return { value: String(Math.round(raw)), options: [] };
+        return { value: String(Math.round(raw)), options: [], disabled };
       }
       // Tag style — per-project, read from service (sync getter).
       if (isOpeningTagStyleComboboxKey(commandKey)) {
@@ -193,6 +199,15 @@ export function useRibbonOpeningBridge(
 
       const opening = resolveOpening();
       if (!opening) return;
+
+      // ADR-421 SLICE C follow-up (a) — defense-in-depth: never let a
+      // type-governed edit reach UpdateOpeningParamsCommand on a typed opening.
+      // The next catalog re-resolution / reload would otherwise overwrite it
+      // («type wins»), silently dropping the user's edit. UI gating already
+      // disables these comboboxes; this guards against programmatic calls.
+      if (opening.typeId != null && isOpeningTypeGovernedComboboxKey(commandKey)) {
+        return;
+      }
 
       if (isOpeningRibbonStringKey(commandKey)) {
         const field = STRING_KEY_TO_FIELD[commandKey];

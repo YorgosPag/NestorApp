@@ -16,6 +16,7 @@
  */
 
 import {
+  resolveEffectiveOpeningParams,
   resolveEffectiveParams,
   resolveEffectiveRoofParams,
   resolveEffectiveSlabParams,
@@ -23,6 +24,7 @@ import {
 } from '../resolve-effective-params';
 import type {
   BimFamilyType,
+  OpeningTypeParams,
   RoofTypeParams,
   SlabTypeParams,
   WallTypeParams,
@@ -32,6 +34,7 @@ import type { WallDna } from '../../types/wall-dna-types';
 import type { SlabParams } from '../../types/slab-types';
 import type { SlabDna } from '../../types/slab-dna-types';
 import type { RoofParams } from '../../types/roof-types';
+import type { OpeningParams } from '../../types/opening-types';
 
 // ---------------------------------------------------------------------------
 // Fixtures
@@ -373,6 +376,94 @@ describe('resolveEffectiveRoofParams', () => {
     expect(result.material).toBe('mat-slate'); // overridden
     expect(result.thickness).toBe(295); // from type
     expect(result.dna).toBe(ROOF_TYPE_DNA); // from type
+  });
+});
+
+// ---------------------------------------------------------------------------
+// resolveEffectiveOpeningParams — opening analogue (ADR-421 SLICE C)
+// ---------------------------------------------------------------------------
+
+/** Instance-level OpeningParams whose type-governed cache deliberately drifts. */
+function makeOpeningInstanceParams(overrides: Partial<OpeningParams> = {}): OpeningParams {
+  return {
+    kind: 'window', // drifted cache (type says 'door')
+    wallId: 'wall_1', // instance-level — must survive
+    offsetFromStart: 500, // instance-level — must survive
+    width: 1200, // drifted cache (type says 900)
+    height: 1400, // drifted cache (type says 2100)
+    sillHeight: 900, // instance-level — must survive
+    frameWidth: 50, // drifted cache (type says 60)
+    ...overrides,
+  };
+}
+
+/** Opening family type whose typeParams own kind/width/height/frame/material. */
+function makeOpeningType(typeParams: Partial<OpeningTypeParams> = {}): BimFamilyType<'opening'> {
+  return {
+    id: 'bimfamtype_opening_1',
+    category: 'opening',
+    name: 'Door 900',
+    scope: 'company',
+    origin: 'user',
+    companyId: 'company_1',
+    ownerId: 'user_1',
+    typeParams: {
+      kind: 'door',
+      width: 900,
+      height: 2100,
+      frameWidth: 60,
+      material: 'oak',
+      ...typeParams,
+    },
+  };
+}
+
+describe('resolveEffectiveOpeningParams', () => {
+  it('returns instance params UNCHANGED (same reference) when no typeId', () => {
+    const params = makeOpeningInstanceParams();
+    expect(resolveEffectiveOpeningParams({ params }, makeOpeningType())).toBe(params);
+  });
+
+  it('returns instance params UNCHANGED when type is null', () => {
+    const params = makeOpeningInstanceParams();
+    expect(
+      resolveEffectiveOpeningParams({ params, typeId: 'bimfamtype_opening_1' }, null),
+    ).toBe(params);
+  });
+
+  it('overwrites type-governed fields from the type («type always wins»)', () => {
+    const params = makeOpeningInstanceParams();
+    const type = makeOpeningType();
+    const result = resolveEffectiveOpeningParams({ params, typeId: type.id }, type);
+
+    // type-governed (family swap: window cache → door type)
+    expect(result.kind).toBe('door');
+    expect(result.width).toBe(900);
+    expect(result.height).toBe(2100);
+    expect(result.frameWidth).toBe(60);
+    expect(result.material).toBe('oak');
+    // instance-level fields preserved
+    expect(result.wallId).toBe('wall_1');
+    expect(result.offsetFromStart).toBe(500);
+    expect(result.sillHeight).toBe(900);
+    // new object, original untouched
+    expect(result).not.toBe(params);
+    expect(params.width).toBe(1200);
+    expect(params.kind).toBe('window');
+  });
+
+  it('lets a per-param override win over BOTH type and instance', () => {
+    const params = makeOpeningInstanceParams();
+    const type = makeOpeningType();
+    const result = resolveEffectiveOpeningParams(
+      { params, typeId: type.id, typeOverrides: { width: 1000 } },
+      type,
+    );
+
+    expect(result.width).toBe(1000); // overridden
+    expect(result.height).toBe(2100); // from type
+    expect(result.kind).toBe('door'); // from type
+    expect(result.offsetFromStart).toBe(500); // from instance
   });
 });
 

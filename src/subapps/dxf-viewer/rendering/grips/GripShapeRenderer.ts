@@ -109,6 +109,15 @@ export class GripShapeRenderer {
         this.renderRotationGlyph(ctx, position, size, fillColor);
         break;
 
+      // ADR-408 Φ12 — Revit "array control" ▲/▼ (manifold outlet add/remove).
+      case 'triangle-up':
+        this.renderTriangleGlyph(ctx, position, size, fillColor, outlineColor, -1);
+        break;
+
+      case 'triangle-down':
+        this.renderTriangleGlyph(ctx, position, size, fillColor, outlineColor, 1);
+        break;
+
       default:
         // Fallback to square for unknown shapes
         renderSquareGrip(ctx, position, size, fillColor, outlineColor);
@@ -291,6 +300,37 @@ export class GripShapeRenderer {
     const ex = x + r * Math.cos(end);
     const ey = y + r * Math.sin(end);
     this.fillArrowHead(ctx, ex, ey, -Math.sin(end), Math.cos(end), head);
+    ctx.restore();
+  }
+
+  /**
+   * ADR-408 Φ12 — filled triangle glyph (Revit "array control" ▲/▼). `dir = -1`
+   * points up (add outlet), `dir = +1` points down (remove outlet). Fill is the
+   * temperature `color` (warms/heats on hover/drag); a thin outline keeps it
+   * legible over the manifold bar.
+   */
+  private renderTriangleGlyph(
+    ctx: CanvasRenderingContext2D,
+    position: Point2D,
+    size: number,
+    fillColor: string,
+    outlineColor: string,
+    dir: 1 | -1,
+  ): void {
+    const half = Math.max(3, size * 0.6);
+    const { x, y } = position;
+    ctx.save();
+    ctx.fillStyle = fillColor;
+    ctx.strokeStyle = outlineColor;
+    ctx.lineWidth = RENDER_LINE_WIDTHS.GRIP_OUTLINE;
+    ctx.lineJoin = 'round';
+    ctx.beginPath();
+    ctx.moveTo(x, y + dir * half);          // apex (up when dir = -1)
+    ctx.lineTo(x - half, y - dir * half);   // base corner
+    ctx.lineTo(x + half, y - dir * half);   // base corner
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
     ctx.restore();
   }
 

@@ -116,11 +116,15 @@ export const SUBCATEGORY_TAXONOMY: Readonly<Record<BimCategory, ReadonlyArray<st
   'mep-radiator':  [],
   // ADR-408 Εύρος Β #2 — λέβητας: no subcategory model yet.
   'mep-boiler':    [],
+  // ADR-408 Εύρος Β #3 — ενδοδαπέδια: no subcategory model (area hatch overlay, no separate edges).
+  'mep-underfloor': [],
   railing:         [],
   'mep-wire':      [],
   furniture:       [],
   duct:            [],
   pipe:            [],
+  // ADR-408 Φ14 — drainage pipe: no subcategory model (same as pipe).
+  'drain-pipe':    [],
   // ADR-415 — floorplan symbols: no subcategory styling model (pure 2D symbol).
   sanitary:        [],
   kitchen:         [],

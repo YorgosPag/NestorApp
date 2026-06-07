@@ -56,6 +56,16 @@ export interface FloorWipePreview {
   floorplanBackgroundCount: number;
   fileRecordCount: number;
   totalPolygons: number;
+  /** BIM entity docs across the 20 floor-scoped collections (ADR-420). */
+  bimEntityCount: number;
+  /** Auto-generated BOQ items linked to the floor. */
+  boqItemCount: number;
+}
+
+/** Options for {@link UseFloorplanSmartUploadReturn.uploadSmart}. */
+export interface SmartUploadOptions {
+  /** When true, the pre-flight wipe ALSO deletes the floor's BIM + auto-BOQ. */
+  wipeBim?: boolean;
 }
 
 export interface SmartUploadResult {
@@ -66,7 +76,7 @@ export interface SmartUploadResult {
 }
 
 export interface UseFloorplanSmartUploadReturn {
-  uploadSmart: (file: File) => Promise<SmartUploadResult>;
+  uploadSmart: (file: File, opts?: SmartUploadOptions) => Promise<SmartUploadResult>;
   isUploading: boolean;
   progress: number;
   error: string | null;
@@ -166,9 +176,12 @@ export function useFloorplanSmartUpload(
     [],
   );
 
-  const wipeFloor = useCallback(async (floorId: string): Promise<void> => {
-    await apiClient.post('/api/floorplans/wipe-floor', { floorId });
-  }, []);
+  const wipeFloor = useCallback(
+    async (floorId: string, wipeBim: boolean): Promise<void> => {
+      await apiClient.post('/api/floorplans/wipe-floor', { floorId, wipeBim });
+    },
+    [],
+  );
 
   const uploadRaster = useCallback(
     async (
@@ -195,7 +208,7 @@ export function useFloorplanSmartUpload(
   );
 
   const uploadSmart = useCallback(
-    async (file: File): Promise<SmartUploadResult> => {
+    async (file: File, opts?: SmartUploadOptions): Promise<SmartUploadResult> => {
       setRasterError(null);
       const format = detectFloorplanFormat(file);
 
@@ -210,7 +223,7 @@ export function useFloorplanSmartUpload(
       // ── Wipe pre-flight (only when we have a target floorId) ────────────
       if (floorId) {
         try {
-          await wipeFloor(floorId);
+          await wipeFloor(floorId, opts?.wipeBim ?? false);
         } catch (err) {
           const msg = getErrorMessage(err, 'Wipe failed');
           setRasterError(msg);

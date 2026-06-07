@@ -4,9 +4,11 @@
  * Single source of truth for the *vector* symbol of a manifold (συλλέκτης),
  * shared by the 2D renderer and the placement ghost. Pure + geometry-driven: it
  * reads the already-computed (rotated) footprint and emits the bar outline plus
- * one inlet stub (−X short end) and N outlet stubs along the +Y front edge — the
+ * one single stub (−X short end) and N branch stubs along the +Y front edge — the
  * architectural convention for a distribution manifold, distinct from a panel's
- * breaker rows or a fixture's luminaire "X".
+ * breaker rows or a fixture's luminaire "X". The connector ROLES of those stubs
+ * are kind-dependent (water: 1 inlet + N outlets; drainage φρεάτιο: 1 sewer
+ * outlet + N gravity inlets) — owned by `buildMepManifoldConnectors`, not here.
  *
  * ADR-408 Φ14 — a `'drainage-collector'` kind (φρεάτιο) additionally emits a
  * **grating** pattern (parallel bars inside the footprint), the Revit/CIBSE catch
@@ -125,23 +127,28 @@ export function buildMepManifoldSymbol(
   const stubLen = Math.max(params.length * s * 0.6, 40 * s);
   const strokes: ManifoldStroke[] = [];
 
-  // Inlet stub: from the midpoint of the −X edge (v0→v3), pointing outward −X.
-  const inletRoot = lerp(v0, v3, 0.5);
-  const inletDir = unit(v0.x - v1.x, v0.y - v1.y); // −X local (world-rotated)
+  // Single stub off the −X short edge (midpoint of v0→v3, pointing outward −X).
+  // Its connector ROLE is kind-dependent: water manifold = the inlet feed;
+  // drainage collector (φρεάτιο) = the sewer outlet. The symbol only marks the
+  // position; `buildMepManifoldConnectors` owns the in/out role per kind.
+  const singleStubRoot = lerp(v0, v3, 0.5);
+  const singleStubDir = unit(v0.x - v1.x, v0.y - v1.y); // −X local (world-rotated)
   strokes.push([
-    inletRoot,
-    { x: inletRoot.x + inletDir.x * stubLen, y: inletRoot.y + inletDir.y * stubLen, z: 0 },
+    singleStubRoot,
+    { x: singleStubRoot.x + singleStubDir.x * stubLen, y: singleStubRoot.y + singleStubDir.y * stubLen, z: 0 },
   ]);
 
-  // Outlet stubs: along the +Y front edge (v3→v2), pointing outward +Y.
-  const outletDir = unit(v3.x - v0.x, v3.y - v0.y); // +Y local (world-rotated)
+  // Branch stubs along the +Y front edge (v3→v2, pointing outward +Y). Roles are
+  // again kind-dependent: water manifold = the N outlets; drainage collector = the
+  // N gravity inlets. `outletCount` is the branch COUNT regardless of flow role.
+  const branchStubDir = unit(v3.x - v0.x, v3.y - v0.y); // +Y local (world-rotated)
   const count = clampOutletCount(params.outletCount);
   for (let i = 0; i < count; i++) {
     const frac = (i + 1) / (count + 1);
     const root = lerp(v3, v2, frac);
     strokes.push([
       root,
-      { x: root.x + outletDir.x * stubLen, y: root.y + outletDir.y * stubLen, z: 0 },
+      { x: root.x + branchStubDir.x * stubLen, y: root.y + branchStubDir.y * stubLen, z: 0 },
     ]);
   }
 

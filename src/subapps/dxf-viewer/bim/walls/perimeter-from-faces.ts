@@ -48,10 +48,13 @@ import {
   type RegionLineSeg,
 } from './wall-in-region';
 import { safeUnion } from '../geometry/shared/safe-polygon-boolean';
+import { isPointInPolygon } from '../../utils/geometry/GeometryUtils';
+import { REGION_PERIMETER_LIMITS } from '../../config/tolerance-config';
 import {
   EPS,
   dist,
   normalize,
+  polygonArea,
   classifyPerimeter,
   decomposeRectilinear,
   type PerimeterShape,
@@ -284,4 +287,124 @@ export function perimeterFacesToRects(
     if (rects.length === 0) ignoredCount++;
   }
   return { perimeters, rects: perimeters.flatMap((p) => [...p.rects]), ignoredCount };
+}
+
+// ─── ADR-419 region-pick SSoT (κοινό κολώνες + τοίχοι, μηδέν fork) ─────────────
+
+/**
+ * Layer 1 — «smallest-containing-loop selection» (Revit-grade): από όλα τα
+ * περιγράμματα που περιέχουν το `point`, κρατά αυτό με το **ελάχιστο εμβαδόν**
+ * (το πιο εσωτερικό φωλιασμένο loop), όχι όλα. `null` αν κανένα δεν περιέχει το
+ * σημείο. Mirror του auto-area `getAutoAreaHitResult` (`candidates.reduce` min-area).
+ *
+ * Γιατί: όταν το σημείο πέφτει ΚΑΙ μέσα στο μεγάλο εξωτερικό περίγραμμα του σχεδίου
+ * ΚΑΙ μέσα σε ένα μικρό δωμάτιο, το παλιό filter κρατούσε ΚΑΙ τα δύο → γιγάντια
+ * κολώνα. Το ελάχιστο εμβαδόν επιλέγει το σωστό (εσωτερικό) μέλος.
+ */
+export function pickSmallestContainingPerimeter(
+  point: Readonly<Point2D>,
+  perimeters: readonly ClosedPerimeter[],
+): ClosedPerimeter | null {
+  let best: ClosedPerimeter | null = null;
+  let bestArea = Number.POSITIVE_INFINITY;
+  for (const p of perimeters) {
+    if (!isPointInPolygon(point as Point2D, [...p.polygon])) continue;
+    const area = polygonArea(p.polygon);
+    if (area < bestArea) {
+      best = p;
+      bestArea = area;
+    }
+  }
+  return best;
+}
+
+/** Axis-aligned bbox min/max ενός πολυγώνου (world/scene units). */
+function bboxExtent(poly: readonly Point2D[]): { width: number; height: number } {
+  let minX = Number.POSITIVE_INFINITY;
+  let minY = Number.POSITIVE_INFINITY;
+  let maxX = Number.NEGATIVE_INFINITY;
+  let maxY = Number.NEGATIVE_INFINITY;
+  for (const p of poly) {
+    if (p.x < minX) minX = p.x;
+    if (p.x > maxX) maxX = p.x;
+    if (p.y < minY) minY = p.y;
+    if (p.y > maxY) maxY = p.y;
+  }
+  return { width: maxX - minX, height: maxY - minY };
+}
+
+/**
+ * Χαρακτηριστικό «πάχος» (μικρή πλευρά) ενός περιγράμματος σε mm (Layer 4). Για
+ * ορθογώνια/αποσυντιθέμενα σχήματα = το **παχύτερο σκέλος** (max `shortSide`):
+ * ένα πραγματικό Γ/Τ/Π τοιχίο έχει λεπτά σκέλη, ενώ το εξωτερικό περίγραμμα του
+ * σχεδίου αποσυντίθεται σε «σκέλη» τεράστιου πάχους. Για καθαρά composite (γωνίες
+ * ≠ 90°, χωρίς rects) fallback στη μικρή διάσταση του bbox.
+ *
+ * @param scale mmToSceneUnits(sceneUnits) — world units ανά mm.
+ */
+export function perimeterMemberThicknessMm(perimeter: ClosedPerimeter, scale: number): number {
+  const s = scale > 0 ? scale : 1;
+  if (perimeter.rects.length > 0) {
+    const maxShort = Math.max(...perimeter.rects.map((r) => r.shortSide));
+    return maxShort / s;
+  }
+  const { width, height } = bboxExtent(perimeter.polygon);
+  return Math.min(width, height) / s;
+}
+
+/**
+ * Διαστάσεις bbox ενός περιγράμματος σε mm (για toast/preview labels). `scale` =
+ * mmToSceneUnits(sceneUnits) — world units ανά mm.
+ */
+export function perimeterExtentMm(
+  perimeter: ClosedPerimeter,
+  scale: number,
+): { width: number; height: number } {
+  const s = scale > 0 ? scale : 1;
+  const { width, height } = bboxExtent(perimeter.polygon);
+  return { width: width / s, height: height / s };
+}
+
+/**
+ * Layer 4 — size sanity guard: `true` αν το περίγραμμα ξεπερνά το λογικό «πάχος»
+ * δομικού μέλους (`MAX_MEMBER_THICKNESS_MM`). Πιάνει το εξωτερικό περίγραμμα του
+ * σχεδίου που περνούσε για κολώνα (το bug). Ελέγχει ΜΟΝΟ τη μικρή πλευρά.
+ */
+export function isPerimeterOversized(
+  perimeter: ClosedPerimeter,
+  scale: number,
+  maxMm: number = REGION_PERIMETER_LIMITS.MAX_MEMBER_THICKNESS_MM,
+): boolean {
+  return perimeterMemberThicknessMm(perimeter, scale) > maxMm;
+}
+
+/**
+ * Layer 5 — open-loop diagnostics: ids των γραμμών κοντά στο `point` που έχουν
+ * **ανοιχτό άκρο** (κόμβος βαθμού 1 στον γράφο των segments) — αυτές «δεν
+ * ενώνονται» (Revit «these lines don't connect»). Reuse `extractLineSegments` +
+ * `buildSegmentGraph`. Επιστρέφει deduped ids για highlight μέσω `dxf.highlightByIds`.
+ */
+export function findOpenChainLineIdsNear(
+  point: Readonly<Point2D>,
+  entities: readonly Entity[],
+  tol: number,
+): string[] {
+  const segs = extractLineSegments(entities);
+  if (segs.length === 0) return [];
+  const { nodes, adj } = buildSegmentGraph(segs, tol);
+  // Ανοιχτά άκρα = κόμβοι βαθμού 1· κρατάμε όσα είναι κοντά στο pick (εντός 50×tol).
+  const reach = Math.max(tol * 50, tol);
+  const openNodes = new Set<number>();
+  for (let i = 0; i < nodes.length; i++) {
+    if (adj[i].length === 1 && dist(nodes[i], point as Point2D) <= reach) openNodes.add(i);
+  }
+  if (openNodes.size === 0) return [];
+  const ids = new Set<string>();
+  for (const s of segs) {
+    if (!s.id) continue;
+    const a = nodes.findIndex((n) => dist(n, s.start) <= tol);
+    const b = nodes.findIndex((n) => dist(n, s.end) <= tol);
+    if (openNodes.has(a) || openNodes.has(b)) ids.add(s.id);
+  }
+  return [...ids];
 }

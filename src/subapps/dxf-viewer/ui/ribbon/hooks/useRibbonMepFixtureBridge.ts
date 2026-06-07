@@ -203,9 +203,12 @@ export function useRibbonMepFixtureBridge(
       if (action !== MEP_FIXTURE_RIBBON_KEYS_ACTIONS.delete) return;
       const fixture = resolveFixture();
       if (!fixture) return;
-      const confirmed = window.confirm(
-        t('ribbon.commands.mepFixtureEditor.deleteConfirm'),
-      );
+      // ADR-408 Φ14 — a floor drain (σιφώνι) shows its own delete prompt; both kinds
+      // share this bridge + delete path (`bim:mep-fixture-delete-requested`).
+      const confirmKey = fixture.params.kind === 'floor-drain'
+        ? 'ribbon.commands.mepFloorDrainEditor.deleteConfirm'
+        : 'ribbon.commands.mepFixtureEditor.deleteConfirm';
+      const confirmed = window.confirm(t(confirmKey));
       if (!confirmed) return;
       EventBus.emit('bim:mep-fixture-delete-requested', { fixtureId: fixture.id });
     },

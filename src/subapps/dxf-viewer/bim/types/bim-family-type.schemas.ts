@@ -25,6 +25,10 @@
 import { z } from 'zod';
 
 import { StairBaseBindingSchema, StairTopBindingSchema } from './bim-binding';
+// ADR-421 SLICE C — opening type-param schema is owned by `opening.schemas.ts`
+// (reuses OpeningKindSchema + backs OpeningEntitySchema.typeOverrides without a
+// runtime import cycle). Imported here ONE-directionally for the union branch.
+import { OpeningTypeParamsSchema } from './opening.schemas';
 
 // ─── Scope & origin ──────────────────────────────────────────────────────────
 
@@ -112,6 +116,17 @@ export const RoofTypeParamsSchema = z
   .strict();
 
 export type RoofTypeParamsParsed = z.infer<typeof RoofTypeParamsSchema>;
+
+// ─── OpeningTypeParams (ADR-421 SLICE C) ─────────────────────────────────────
+
+/**
+ * Re-export of the opening type-param schema (owned by `opening.schemas.ts` to
+ * avoid a runtime import cycle, see import note at top). Re-exported here so the
+ * family-type service + tests import every category schema from one barrel,
+ * consistent with `WallTypeParamsSchema`/`SlabTypeParamsSchema`/etc.
+ */
+export { OpeningTypeParamsSchema } from './opening.schemas';
+export type { OpeningTypeParamsParsed } from './opening.schemas';
 
 // ─── Stair enum schemas (mirror stair-types.ts unions) ───────────────────────
 
@@ -272,6 +287,13 @@ export const BimFamilyTypeSchema = z.discriminatedUnion('category', [
       ...BimFamilyTypeBaseShape,
       category: z.literal('roof'),
       typeParams: RoofTypeParamsSchema,
+    })
+    .strict(),
+  z
+    .object({
+      ...BimFamilyTypeBaseShape,
+      category: z.literal('opening'),
+      typeParams: OpeningTypeParamsSchema,
     })
     .strict(),
 ]);

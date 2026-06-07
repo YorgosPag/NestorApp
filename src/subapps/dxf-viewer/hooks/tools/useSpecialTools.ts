@@ -24,6 +24,7 @@ import { useOpeningTool } from '../drawing/useOpeningTool';
 import { useSlabTool, SLAB_AUTO_CLOSE_TOLERANCE_DEFAULT } from '../drawing/useSlabTool';
 import { useRoofTool, ROOF_AUTO_CLOSE_TOLERANCE_DEFAULT } from '../drawing/useRoofTool';
 import { useFloorFinishTool, FLOOR_FINISH_AUTO_CLOSE_TOLERANCE_DEFAULT } from '../drawing/useFloorFinishTool';
+import { useMepUnderfloorTool, MEP_UNDERFLOOR_AUTO_CLOSE_TOLERANCE_DEFAULT } from '../drawing/useMepUnderfloorTool';
 import { useColumnTool } from '../drawing/useColumnTool';
 import { useBeamTool } from '../drawing/useBeamTool';
 import { useSlabOpeningTool } from '../drawing/useSlabOpeningTool';
@@ -79,6 +80,7 @@ export interface UseSpecialToolsReturn extends SelectionToolsReturn, PlacementTo
   slabTool: ReturnType<typeof useSlabTool>;
   roofTool: ReturnType<typeof useRoofTool>; // ADR-417
   floorFinishTool: ReturnType<typeof useFloorFinishTool>; // ADR-419
+  mepUnderfloorTool: ReturnType<typeof useMepUnderfloorTool>; // ADR-408 Εύρος Β #3
   columnTool: ReturnType<typeof useColumnTool>;
   beamTool: ReturnType<typeof useBeamTool>;
   slabOpeningTool: ReturnType<typeof useSlabOpeningTool>;
@@ -293,6 +295,25 @@ export function useSpecialTools(props: UseSpecialToolsProps): UseSpecialToolsRet
     onFloorFinishCreated: (entity) => appendEntityToScene(levelManager, entity, 'floor-finish'),
   });
   useToolLifecycle(activeTool === 'floor-finish', floorFinishTool.activate, floorFinishTool.deactivate);
+  // ADR-408 Εύρος Β #3 — UNDERFLOOR HEATING TOOL: heating-area polygon N-click + Enter
+  // (mirror floor-finish). The created `MepUnderfloorEntity` is appended + broadcast so
+  // `MepUnderfloorPersistenceHost` saves it.
+  const mepUnderfloorTool = useMepUnderfloorTool({
+    currentLevelId: levelManager.currentLevelId || '0',
+    getAutoCloseTolerance: () => {
+      const levelId = levelManager.currentLevelId;
+      const scene = levelId ? levelManager.getLevelScene(levelId) : null;
+      const units = scene ? resolveSceneUnits(scene) : 'mm';
+      return MEP_UNDERFLOOR_AUTO_CLOSE_TOLERANCE_DEFAULT * mmToSceneUnits(units);
+    },
+    getSceneUnits: () => {
+      const levelId = levelManager.currentLevelId;
+      if (!levelId) return 'mm';
+      return resolveSceneUnits(levelManager.getLevelScene(levelId));
+    },
+    onMepUnderfloorCreated: (entity) => appendEntityToScene(levelManager, entity, 'mep-underfloor'),
+  });
+  useToolLifecycle(activeTool === 'mep-underfloor', mepUnderfloorTool.activate, mepUnderfloorTool.deactivate);
   // ADR-363 Phase 4 — COLUMN TOOL
   /**
    * Column drawing tool — single-click placement με 9-position anchor + Tab
@@ -421,6 +442,7 @@ export function useSpecialTools(props: UseSpecialToolsProps): UseSpecialToolsRet
     slabTool,
     roofTool,
     floorFinishTool,
+    mepUnderfloorTool,
     columnTool,
     mepFixtureTool,
     furnitureTool,

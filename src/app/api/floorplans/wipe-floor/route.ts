@@ -21,6 +21,7 @@ import { withAuth } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { withHeavyRateLimit } from '@/lib/middleware/with-rate-limit';
 import { FloorplanFloorWipeService } from '@/services/floorplan-background/floorplan-floor-wipe.service';
+import { resolveUserDisplayName } from '@/services/entity-audit.service';
 import { createModuleLogger } from '@/lib/telemetry';
 import { getErrorMessage } from '@/lib/error-utils';
 
@@ -71,18 +72,30 @@ async function handlePost(
 ): Promise<NextResponse> {
   if (!ctx.companyId) return bad('companyId missing on auth context', 403);
 
-  let body: { floorId?: unknown };
+  let body: { floorId?: unknown; wipeBim?: unknown };
   try {
-    body = (await request.json()) as { floorId?: unknown };
+    body = (await request.json()) as { floorId?: unknown; wipeBim?: unknown };
   } catch (err) {
     return bad(`Invalid JSON body: ${getErrorMessage(err)}`);
   }
 
   const floorId = typeof body.floorId === 'string' ? body.floorId : '';
   if (!floorId) return bad('floorId is required');
+  const wipeBim = body.wipeBim === true;
 
   try {
-    const result = await FloorplanFloorWipeService.wipeAllForFloor(ctx.companyId, floorId);
+    // Pre-resolve the performer's display name ONCE so per-entity audit writes
+    // skip the /users/{uid} lookup (avoids N reads on large floors).
+    const performedByName = wipeBim
+      ? await resolveUserDisplayName(ctx.uid, ctx.email)
+      : null;
+    const result = await FloorplanFloorWipeService.wipeAllForFloor(
+      ctx.companyId,
+      floorId,
+      wipeBim
+        ? { wipeBim, audit: { performedBy: ctx.uid, performedByName } }
+        : {},
+    );
     return NextResponse.json({ result });
   } catch (err) {
     logger.error('Wipe failed', { floorId, error: getErrorMessage(err) });

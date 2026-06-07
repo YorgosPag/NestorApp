@@ -32,6 +32,9 @@
 ## Pre-commit Hook
 - [Disable slow pre-commit checks](feedback_disable_slow_precommit.md) — No tsc/prettier/madge/eslint in hook. Run on-demand only.
 
+## TSC Serialization (N.17 — ΑΠΑΡΑΒΑΤΟ)
+- [ΕΝΑΣ tsc τη φορά, ΠΟΤΕ παράλληλα](feedback_single_tsc_at_a_time.md) — Πριν από ΚΑΘΕ tsc → έλεγξε αν τρέχει ήδη άλλος (process check). Αν ναι → περίμενε ή σταμάτα τον. Ο υπολογιστής γονατίζει με 2+ ταυτόχρονα tsc. tsc ΜΟΝΟ όταν είναι απαραίτητο. CLAUDE.md N.17.
+
 ## Firestore Security
 - **CHECK 3.10**: Every `query()` + `where()` MUST include `where('companyId', '==', companyId)` — otherwise permission-denied
 - Baseline: `.firestore-companyid-baseline.json` (48 violations, 30 files, 2026-04-10)

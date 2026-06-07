@@ -15,7 +15,10 @@ import type { UnifiedGripInfo } from './unified-grip-types';
 import type { DxfCommitDeps } from './unified-grip-types';
 import type { MepFixtureEntity } from '../../bim/types/mep-fixture-types';
 import type { ElectricalPanelEntity } from '../../bim/types/electrical-panel-types';
-import type { MepManifoldEntity } from '../../bim/types/mep-manifold-types';
+import type { MepManifoldEntity, MepManifoldParams } from '../../bim/types/mep-manifold-types';
+import { buildManifoldParamUpdate } from '../../bim/mep-manifolds/mep-manifold-param-update';
+import { clampOutletCount } from '../../bim/mep-manifolds/mep-manifold-geometry';
+import type { Entity } from '../../types/entities';
 import type { FurnitureEntity } from '../../bim/types/furniture-types';
 import { applyMepFixtureGripDrag } from '../../bim/mep-fixtures/mep-fixture-grips';
 import { UpdateMepFixtureParamsCommand } from '../../core/commands/entity-commands/UpdateMepFixtureParamsCommand';
@@ -196,6 +199,50 @@ export function commitMepManifoldGripDrag(
   if (command.validate() !== null) return;
   deps.execute(command);
   EventBus.emit('bim:mep-manifold-params-updated', { manifoldId: grip.entityId });
+}
+
+/**
+ * ADR-408 Φ12 — MEP manifold outlet add/remove ACTION grip commit (Revit "array
+ * control" ▲/▼). Unlike the centred-box drag commits this is a single CLICK: it
+ * bumps `outletCount` ±1 (clamped [MIN, MAX]) and routes through the shared
+ * `buildManifoldParamUpdate` SSoT — the SAME builder the «Έξοδοι» tab uses — so
+ * connectors are re-seeded and any pipe snapped to an outlet follows in ONE undo.
+ * No drag math / delta: the grip IS the button, so the caller fires this BEFORE
+ * the zero-delta guard (mirror `opening-rotation`). A clamp-bound click is a
+ * no-op (the grip is also hidden at the bound, this is belt-and-suspenders).
+ */
+export function commitMepManifoldOutletCountGrip(
+  grip: UnifiedGripInfo,
+  deps: DxfCommitDeps,
+): void {
+  if (
+    !grip.entityId ||
+    (grip.mepManifoldGripKind !== 'mep-manifold-outlet-add' &&
+      grip.mepManifoldGripKind !== 'mep-manifold-outlet-remove')
+  ) {
+    return;
+  }
+  const sceneManager = createSceneManagerAdapter(deps);
+  if (!sceneManager) return;
+  const raw = sceneManager.getEntity(grip.entityId);
+  if (!raw) return;
+  const candidate = raw as unknown as Partial<MepManifoldEntity>;
+  if (candidate.type !== 'mep-manifold' || !candidate.params) return;
+  const manifold = candidate as MepManifoldEntity;
+  const originalParams = manifold.params;
+  const step = grip.mepManifoldGripKind === 'mep-manifold-outlet-add' ? 1 : -1;
+  const nextCount = clampOutletCount(originalParams.outletCount + step);
+  if (nextCount === clampOutletCount(originalParams.outletCount)) return; // clamp no-op
+  const nextParams: MepManifoldParams = { ...originalParams, outletCount: nextCount };
+  // `getEntities` is optional on ISceneManager; absent → no connected-pipe follow
+  // (safe fallback: just the manifold command, no compound).
+  const entities = (sceneManager.getEntities?.() ?? []) as unknown as readonly Entity[];
+  const { command, segmentIds } = buildManifoldParamUpdate(entities, manifold, nextParams, sceneManager);
+  deps.execute(command);
+  EventBus.emit('bim:mep-manifold-params-updated', { manifoldId: grip.entityId });
+  for (const segmentId of segmentIds) {
+    EventBus.emit('bim:mep-segment-params-updated', { segmentId });
+  }
 }
 
 /**

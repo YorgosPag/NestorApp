@@ -26,9 +26,12 @@ import type {
   OpeningKind,
   OpeningParams,
 } from '@/subapps/dxf-viewer/bim/types/opening-types';
+import type { OpeningTypeParams } from '@/subapps/dxf-viewer/bim/types/bim-family-type';
 import { makeBimValidation } from '@/subapps/dxf-viewer/bim/types/bim-base';
 import type { BimValidation } from '@/subapps/dxf-viewer/bim/types/bim-base';
 import type { IfcPropertySet } from '@/subapps/dxf-viewer/bim/types/ifc-entity-mixin';
+import { resolveOperationType } from '@/subapps/dxf-viewer/bim/types/opening-operation-types';
+import { isWindowKind } from '@/subapps/dxf-viewer/bim/types/opening-types';
 
 export interface CreateOpeningInput {
   /** Required: param block. */
@@ -47,6 +50,10 @@ export interface CreateOpeningInput {
   pset?: IfcPropertySet;
   /** Optional validation block. Default = empty BimValidation. */
   validation?: BimValidation;
+  /** ADR-421 SLICE C — optional Family/Type link (FK → BimFamilyType.id). */
+  typeId?: string;
+  /** ADR-421 SLICE C — optional per-instance overrides of type-level params. */
+  typeOverrides?: Partial<OpeningTypeParams>;
   /** Optional tenant fields — pass-through. */
   companyId?: string;
   projectId?: string;
@@ -58,13 +65,13 @@ export interface CreateOpeningInput {
 }
 
 /**
- * Maps OpeningKind to IFC4 class.
- * door/sliding-door/french-door → IfcDoor (all hinged/sliding door types).
- * window/fixed → IfcWindow (all glazing-only elements).
+ * Maps OpeningKind to IFC4 class via the `isWindowKind` SSoT
+ * (`opening-types.ts`). All window families (window/fixed/double-hung/sliding/
+ * awning/hopper/tilt-turn/bay) → IfcWindow· all door families (incl. glazed
+ * french-door) → IfcDoor.
  */
 export function inferOpeningIfcType(kind: OpeningKind): 'IfcDoor' | 'IfcWindow' {
-  if (kind === 'window' || kind === 'fixed') return 'IfcWindow';
-  return 'IfcDoor';
+  return isWindowKind(kind) ? 'IfcWindow' : 'IfcDoor';
 }
 
 /**
@@ -79,18 +86,27 @@ export function inferOpeningIfcType(kind: OpeningKind): 'IfcDoor' | 'IfcWindow' 
  * // → ifcType='IfcWindow'
  */
 export function createOpening(input: CreateOpeningInput): OpeningEntity {
+  // ADR-421 §A2 — auto-fill explicit IFC operation (idempotent· respects caller).
+  const params: OpeningParams = {
+    ...input.params,
+    operationType:
+      input.params.operationType ??
+      resolveOperationType(input.params.kind, input.params.handing),
+  };
   const entity: OpeningEntity = {
     id: input.id ?? generateOpeningId(),
     type: 'opening',
-    kind: input.params.kind,
+    kind: params.kind,
     layerId: input.layerId,
-    params: input.params,
+    params,
     geometry: input.geometry,
     validation: input.validation ?? makeBimValidation(),
     ifcGuid: input.ifcGuid ?? generateIfcGuid(),
     ifcType: inferOpeningIfcType(input.params.kind),
     ...(input.visible !== undefined && { visible: input.visible }),
     ...(input.pset !== undefined && { pset: input.pset }),
+    ...(input.typeId !== undefined && { typeId: input.typeId }),
+    ...(input.typeOverrides !== undefined && { typeOverrides: input.typeOverrides }),
     ...(input.companyId !== undefined && { companyId: input.companyId }),
     ...(input.projectId !== undefined && { projectId: input.projectId }),
     ...(input.buildingId !== undefined && { buildingId: input.buildingId }),

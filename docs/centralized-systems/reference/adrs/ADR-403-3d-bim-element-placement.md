@@ -91,6 +91,9 @@
 
 ### Deferred (ΟΧΙ τώρα)
 - Τοποθέτηση τοίχου/δοκαριού/πλάκας (διαφορετικό FSM — τοίχος 2 κλικ, πλάκα πολλά).
+  ℹ️ **Update 2026-06-07:** το **linear 2-click** πλέον υλοποιήθηκε για `mep-segment`
+  (σωλήνας/αεραγωγός) — βλ. Changelog· το ίδιο pattern (bridge με `phase`+`startPoint` +
+  rubber-band ghost) επεκτείνεται σε τοίχο/δοκάρι αργότερα.
 - Snap σε στοιχεία **άλλου** ορόφου (multi-floor «Όλοι»): μόνο ενεργού ορόφου (συνέπεια
   με την elevation του Phase 1).
 
@@ -135,6 +138,20 @@
 ---
 
 ## Changelog
+- **2026-06-07 (MEP segment — first LINEAR 2-click entity, Opus 4.8)** — 3Δ τοποθέτηση
+  σωλήνα/αεραγωγού (`mep-segment`, tools `mep-pipe`/`mep-duct`/`mep-drain-pipe`) με τη
+  **ΙΔΙΑ 2-click** χειρονομία όπως στην κάτοψη. Πρώτη **linear** οντότητα στο placement
+  framework (όλες οι προηγούμενες ήταν point-based). 3 νέα αρχεία:
+  `use-bim3d-mep-segment-placement.ts` (mirror manifold hook, gate σε 3 segment tool ids),
+  `MepSegmentPlacementGhost.ts` (rubber-band axis start→cursor, ορατό μόνο σε `awaitingEnd`),
+  `ui/ribbon/hooks/bridge/mep-segment-tool-bridge-store.ts` (read-only projection του FSM:
+  εκτός domain/overrides/units **και** `phase`+`startPoint`, ώστε το pure-Three ghost να ξέρει
+  πότε/από πού να σχεδιάσει). 2 modified: `useMepSegmentTool.ts` (single-writer bridge publish,
+  μηδέν αλλαγή στο FSM/commit), `BimViewport3D.tsx` (mount). Commit path 100% κοινό με 2Δ μέσω
+  του ήδη δηλωμένου `bim:place-mep-segment-3d` bridge (zero fork). v1: οριζόντιος σωλήνας στο
+  default centreline (free-point convention — τα clicks ΔΕΝ φέρουν z, η completion βάζει default).
+  Follow-up: connector-Z mate σε 3Δ + sloped runs. 24 νέα tests + 107 mep-segment regression PASS,
+  tsc 0 (δικά μου). Pending commit, 🔴 browser verify.
 - **2026-06-01 (Phase 2 — OSNAP, Opus 4.8)** — OSNAP στο 3Δ column placement. 2 νέα αρχεία
   (`placement-snap.ts` SSoT resolver + `PlacementSnapMarker.ts` 3Δ marker) + 1 modified hook
   (`use-bim3d-column-placement.ts` snap+marker wiring) + 2 νέοι SSoT helpers στο

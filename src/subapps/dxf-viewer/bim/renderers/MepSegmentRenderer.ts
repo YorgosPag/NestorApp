@@ -28,6 +28,13 @@ import { BaseEntityRenderer } from '../../rendering/entities/BaseEntityRenderer'
 import type { EntityModel, GripInfo, RenderOptions, Point2D } from '../../rendering/types/Types';
 import type { Entity } from '../../types/entities';
 import type { MepSegmentEntity, MepSegmentDomain } from '../types/mep-segment-types';
+import {
+  isSegmentInclined,
+  resolveSegmentEndpointElevationsMm,
+  derivePlanLengthMm,
+  deriveSlopePercent,
+  resolveSegmentBimCategory,
+} from '../types/mep-segment-types';
 import { pointInPolygon } from '../geometry/shared/polygon-utils';
 import { computeTrimmedSegmentGeometry } from '../geometry/mep-segment-geometry';
 import { useMepSegmentTrimStore } from '../mep-fittings/mep-segment-trim-store';
@@ -76,6 +83,13 @@ const OUTLINE_DASH: readonly [number, number] = [8, 4];
 /** Dash pattern for the axis centerline. */
 const AXIS_DASH: readonly [number, number] = [4, 3];
 
+/** Slope (fall) indicator — screen-space arrow length / arrowhead size (px). */
+const SLOPE_ARROW_LEN_PX = 16;
+const SLOPE_ARROWHEAD_PX = 5;
+/** Perpendicular offset (px) of the "X.X%" label from the axis midpoint. */
+const SLOPE_LABEL_OFFSET_PX = 9;
+const SLOPE_LABEL_FONT = '10px sans-serif';
+
 // ─── Type guard (local — main agent adds to entities.ts union) ───────────────────
 
 function isMepSegmentEntity(entity: EntityModel): entity is MepSegmentEntity {
@@ -95,7 +109,7 @@ export class MepSegmentRenderer extends BaseEntityRenderer {
     //   'pipe' → 'plumbing' discipline
     const layer = segment.layerId ? getLayer(segment.layerId) : null;
     if (!resolveIsEntityVisible(
-      { category: segment.params.domain, layerId: segment.layerId, discipline: segment.discipline },
+      { category: resolveSegmentBimCategory(segment.params), layerId: segment.layerId, discipline: segment.discipline },
       {
         objectStyles: useDrawingScaleStore.getState().objectStyles,
         disciplineVisibility: useDrawingScaleStore.getState().disciplineVisibility,
@@ -203,6 +217,18 @@ export class MepSegmentRenderer extends BaseEntityRenderer {
         this.ctx.lineTo(tick.b.x, tick.b.y);
         this.ctx.stroke();
       }
+
+      // 4c. ADR-408 Φ14 #2 — Revit-style slope (fall) indicator: a downhill arrow
+      //     + "X.X%" label at the run midpoint, only for an inclined pipe. Pure read
+      //     of the per-endpoint z SSoT; screen-space so it is zoom/scene independent.
+      if (isSegmentInclined(segment.params)) {
+        const elev = resolveSegmentEndpointElevationsMm(segment.params);
+        const slope = deriveSlopePercent(elev.startMm, elev.endMm, derivePlanLengthMm(segment.params));
+        // Downhill points toward the LOWER endpoint (start higher ⇒ toward end).
+        const downhillS = elev.startMm >= elev.endMm ? endS : startS;
+        const upstreamS = elev.startMm >= elev.endMm ? startS : endS;
+        this.drawSlopeIndicatorScreen(upstreamS, downhillS, Math.abs(slope), strokeColor);
+      }
     }
 
     this.ctx.restore();
@@ -252,6 +278,63 @@ export class MepSegmentRenderer extends BaseEntityRenderer {
       this.ctx.lineTo(s.x, s.y);
     }
     this.ctx.closePath();
+  }
+
+  /**
+   * ADR-408 Φ14 #2 — draw the slope (fall) indicator in SCREEN space: a midpoint
+   * arrow pointing from `upstreamS` toward `downhillS` (the lower end) plus a
+   * "X.X%" label offset perpendicular to the run. Fixed pixel size (zoom/scene
+   * independent), mirroring the pipe midpoint tick convention.
+   */
+  private drawSlopeIndicatorScreen(
+    upstreamS: Point2D,
+    downhillS: Point2D,
+    slopePercentAbs: number,
+    color: string,
+  ): void {
+    const dx = downhillS.x - upstreamS.x;
+    const dy = downhillS.y - upstreamS.y;
+    const len = Math.hypot(dx, dy);
+    if (len < 1e-3) return; // degenerate on screen — nothing to point along
+    const ux = dx / len;
+    const uy = dy / len;
+    const mid = { x: (upstreamS.x + downhillS.x) / 2, y: (upstreamS.y + downhillS.y) / 2 };
+    const tail = { x: mid.x - ux * (SLOPE_ARROW_LEN_PX / 2), y: mid.y - uy * (SLOPE_ARROW_LEN_PX / 2) };
+    const tip = { x: mid.x + ux * (SLOPE_ARROW_LEN_PX / 2), y: mid.y + uy * (SLOPE_ARROW_LEN_PX / 2) };
+
+    this.ctx.save();
+    this.ctx.setLineDash([]);
+    this.ctx.strokeStyle = color;
+    this.ctx.lineWidth = RENDER_LINE_WIDTHS.THIN;
+    // Shaft.
+    this.ctx.beginPath();
+    this.ctx.moveTo(tail.x, tail.y);
+    this.ctx.lineTo(tip.x, tip.y);
+    this.ctx.stroke();
+    // Arrowhead — two barbs at ±150° from the downhill direction.
+    const headAngle = (5 / 6) * Math.PI; // 150°
+    const cosA = Math.cos(headAngle);
+    const sinA = Math.sin(headAngle);
+    const b1x = ux * cosA - uy * sinA;
+    const b1y = ux * sinA + uy * cosA;
+    const b2x = ux * cosA + uy * sinA;
+    const b2y = -ux * sinA + uy * cosA;
+    this.ctx.beginPath();
+    this.ctx.moveTo(tip.x, tip.y);
+    this.ctx.lineTo(tip.x + b1x * SLOPE_ARROWHEAD_PX, tip.y + b1y * SLOPE_ARROWHEAD_PX);
+    this.ctx.moveTo(tip.x, tip.y);
+    this.ctx.lineTo(tip.x + b2x * SLOPE_ARROWHEAD_PX, tip.y + b2y * SLOPE_ARROWHEAD_PX);
+    this.ctx.stroke();
+    // Label "X.X%" offset perpendicular to the run.
+    const nx = -uy;
+    const ny = ux;
+    this.ctx.fillStyle = color;
+    this.ctx.font = SLOPE_LABEL_FONT;
+    this.ctx.textAlign = 'center';
+    this.ctx.textBaseline = 'middle';
+    const label = `${(Math.round(slopePercentAbs * 10) / 10)}%`;
+    this.ctx.fillText(label, mid.x + nx * SLOPE_LABEL_OFFSET_PX, mid.y + ny * SLOPE_LABEL_OFFSET_PX);
+    this.ctx.restore();
   }
 
   private drawPolyline(points: ReadonlyArray<{ x: number; y: number }>): void {

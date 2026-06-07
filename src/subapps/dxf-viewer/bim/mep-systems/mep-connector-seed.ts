@@ -33,6 +33,7 @@ import {
   isMepManifoldEntity,
   isMepRadiatorEntity,
   isMepBoilerEntity,
+  isMepUnderfloorEntity,
 } from '../../types/entities';
 import { getEntityConnectors } from './connector-access';
 import {
@@ -43,6 +44,7 @@ import {
 import { buildMepManifoldConnectors } from '../mep-manifolds/mep-manifold-geometry';
 import { buildRadiatorConnectors } from '../mep-radiators/mep-radiator-geometry';
 import { buildBoilerConnectors } from '../mep-boilers/mep-boiler-geometry';
+import { buildUnderfloorConnectors } from '../mep-underfloor/mep-underfloor-geometry';
 
 /**
  * Materialise the host type's default connector onto a legacy entity that lacks
@@ -78,6 +80,13 @@ export function seedDefaultConnectors(entity: Entity): Entity {
   // even if its connectors were not persisted (Revit family-definition).
   if (isMepBoilerEntity(entity)) {
     return { ...entity, params: { ...entity.params, connectors: buildBoilerConnectors(entity.params) } };
+  }
+  // ADR-408 Εύρος Β #3 — an underfloor loop materialises its 2 hydronic connectors
+  // (supply inlet + return outlet) at the computed loop-entry points (SSoT
+  // `buildUnderfloorConnectors`), so a load-time loop re-joins the supply/return
+  // networks even if its connectors were not persisted.
+  if (isMepUnderfloorEntity(entity)) {
+    return { ...entity, params: { ...entity.params, connectors: buildUnderfloorConnectors(entity.params) } };
   }
   // A linear duct/pipe segment carries TWO endpoint connectors (start + end) so
   // it can join a pipe/duct network (Φ9). Its connector domain mirrors the

@@ -95,7 +95,9 @@ export type DrawingTool =
   | 'xline'
   | 'ray'
   | 'slab-opening'
-  | 'roof';
+  | 'roof'
+  | 'floor-finish'
+  | 'mep-underfloor';
 
 export interface DrawingState {
   currentTool: DrawingTool;

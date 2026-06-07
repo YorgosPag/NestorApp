@@ -26,10 +26,22 @@ import type { OpeningKind, OpeningParams } from '../../types/opening-types';
 
 const KIND_PREFIXES: Record<OpeningKind, string> = {
   door: 'Θ',
+  'double-door': 'ΔΦ',
   'sliding-door': 'Σ',
+  'double-sliding-door': 'ΔΣ',
+  'pocket-door': 'ΧΘ',
+  'bifold-door': 'ΠΤ',
+  'overhead-door': 'ΓΚ',
+  'revolving-door': 'ΠΕ',
   'french-door': 'ΔΘ',
   window: 'Π',
   fixed: 'ΣΥ',
+  'double-hung-window': 'ΚΠ',
+  'sliding-window': 'ΣΠ',
+  'awning-window': 'ΑΠ',
+  'hopper-window': 'ΑΚ',
+  'tilt-turn-window': 'ΑΑ',
+  'bay-window': 'ΠΡ',
 };
 
 const BASE_ARGS: Omit<RenumberComputeArgs, 'scope'> = {

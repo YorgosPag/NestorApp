@@ -57,6 +57,7 @@ export function useCanvasClickHandler(params: UseCanvasClickHandlerParams): UseC
     mepManifoldTool,
     mepRadiatorTool,
     mepBoilerTool,
+    mepUnderfloorTool,
     mepSegmentTool,
     railingTool,
     slabOpeningTool,
@@ -252,6 +253,11 @@ export function useCanvasClickHandler(params: UseCanvasClickHandlerParams): UseC
       floorFinishTool.onCanvasClick(bimPoint);
       return;
     }
+    // PRIORITY 4.7d: ADR-408 Εύρος Β #3 — Underfloor tool N-click heating-area polygon (Enter to commit).
+    if (activeTool === 'mep-underfloor' && mepUnderfloorTool?.isActive) {
+      mepUnderfloorTool.onCanvasClick(bimPoint);
+      return;
+    }
     // PRIORITY 4.8: ADR-363 Phase 4 — Column tool single-click placement.
     // Φάση 3 / 3c — 'column-from-perimeter' & 'column-discrete-from-perimeter' share
     // the same tool; click-inside a perimeter builds (RAW worldPoint — hit-tests
@@ -289,7 +295,9 @@ export function useCanvasClickHandler(params: UseCanvasClickHandlerParams): UseC
     }
     // PRIORITY 4.92: ADR-406 — MEP fixture tool single-click placement (RAW
     // worldPoint; free-point placement, no existing-geometry hit-test).
-    if (activeTool === 'mep-fixture' && mepFixtureTool?.isActive) {
+    // ADR-408 Φ14 — the floor drain (σιφώνι) shares the fixture tool with the light
+    // fixture; both route here (the active tool id drives its kind preset).
+    if ((activeTool === 'mep-fixture' || activeTool === 'mep-floor-drain') && mepFixtureTool?.isActive) {
       mepFixtureTool.onCanvasClick(worldPoint);
       return;
     }
@@ -450,6 +458,7 @@ export function useCanvasClickHandler(params: UseCanvasClickHandlerParams): UseC
     mepManifoldTool,
     mepRadiatorTool,
     mepBoilerTool,
+    mepUnderfloorTool,
     mepSegmentTool,
     railingTool,
     slabOpeningTool,

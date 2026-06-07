@@ -405,11 +405,23 @@ export function getPreset(entityType: ScheduleEntityType): SchedulePreset {
 export function openingKindToScheduleType(kind: OpeningKind): 'door' | 'window' {
   switch (kind) {
     case 'door':
+    case 'double-door':
     case 'sliding-door':
+    case 'double-sliding-door':
+    case 'pocket-door':
+    case 'bifold-door':
+    case 'overhead-door':
+    case 'revolving-door':
     case 'french-door':
       return 'door';
     case 'window':
     case 'fixed':
+    case 'double-hung-window':
+    case 'sliding-window':
+    case 'awning-window':
+    case 'hopper-window':
+    case 'tilt-turn-window':
+    case 'bay-window':
       return 'window';
   }
 }

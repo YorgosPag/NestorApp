@@ -24,6 +24,7 @@ import { getAdminFirestore, type Firestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { createModuleLogger } from '@/lib/telemetry';
 import { getErrorMessage } from '@/lib/error-utils';
+import { deleteRefsInChunks } from './firestore-batch-delete';
 
 const logger = createModuleLogger('FloorplanCascadeDeleteService');
 
@@ -46,25 +47,6 @@ export interface FloorPolygonState {
 
 function getDb(): Firestore {
   return getAdminFirestore();
-}
-
-/**
- * Bulk delete a list of refs in 500-op batches (Firestore hard limit).
- */
-async function deleteRefsInChunks(
-  db: Firestore,
-  refs: FirebaseFirestore.DocumentReference[],
-): Promise<number> {
-  const CHUNK = 450;
-  let deleted = 0;
-  for (let i = 0; i < refs.length; i += CHUNK) {
-    const chunk = refs.slice(i, i + CHUNK);
-    const batch = db.batch();
-    for (const ref of chunk) batch.delete(ref);
-    await batch.commit();
-    deleted += chunk.length;
-  }
-  return deleted;
 }
 
 /**

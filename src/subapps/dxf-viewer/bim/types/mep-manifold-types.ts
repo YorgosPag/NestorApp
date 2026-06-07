@@ -57,6 +57,20 @@ export function isDrainageCollectorKind(kind: MepManifoldKind): boolean {
   return kind === 'drainage-collector';
 }
 
+/** IFC4 classes a manifold body maps to, by kind (ADR-408 Φ12/Φ14). */
+export type MepManifoldIfcType = 'IfcPipeFitting' | 'IfcFlowStorageDevice';
+
+/**
+ * SSoT for the IFC4 class of a manifold body by kind (ADR-408 Φ14). A water
+ * `'floor-manifold'` is a multi-branch junction fitting (`IfcPipeFitting`); a
+ * `'drainage-collector'` (φρεάτιο) is a sump/catch basin that temporarily holds
+ * gravity drainage before the sewer outlet, so it maps to `IfcFlowStorageDevice`.
+ * The single place the manifold IFC class is decided — consumed by the factory.
+ */
+export function resolveManifoldIfcType(kind: MepManifoldKind): MepManifoldIfcType {
+  return isDrainageCollectorKind(kind) ? 'IfcFlowStorageDevice' : 'IfcPipeFitting';
+}
+
 /**
  * Footprint shape of the manifold body. A manifold is a rectangular bar; the
  * single-value union keeps the geometry pipeline symmetric with the panel and
@@ -146,8 +160,12 @@ export interface MepManifoldEntity
   extends BimEntity<MepManifoldKind, MepManifoldParams, MepManifoldGeometry>,
     IfcEntityMixin {
   readonly type: 'mep-manifold';
-  /** IFC4 class — multi-branch pipe junction fitting (manifold). */
-  readonly ifcType: 'IfcPipeFitting';
+  /**
+   * IFC4 class — kind-dependent (ADR-408 Φ14, SSoT `resolveManifoldIfcType`):
+   * water `'floor-manifold'` → `IfcPipeFitting` (multi-branch junction); drainage
+   * `'drainage-collector'` (φρεάτιο) → `IfcFlowStorageDevice` (sump/catch basin).
+   */
+  readonly ifcType: MepManifoldIfcType;
 }
 
 // ─── Defaults & constants ──────────────────────────────────────────────────────

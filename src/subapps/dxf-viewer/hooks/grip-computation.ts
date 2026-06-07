@@ -12,7 +12,7 @@
 import type { Point2D } from '../rendering/types/Types';
 import type { DxfEntityUnion } from '../canvas-v2/dxf-canvas/dxf-types';
 import type { GripInfo, StairGripKind, WallGripKind } from './useGripMovement';
-import type { ColumnGripKind, BeamGripKind, SlabGripKind, SlabOpeningGripKind, RoofGripKind, OpeningGripKind, MepFixtureGripKind, ElectricalPanelGripKind, MepManifoldGripKind, MepRadiatorGripKind, MepBoilerGripKind, FurnitureGripKind, FloorplanSymbolGripKind, MepSegmentGripKind, FloorFinishGripKind } from './grip-types';
+import type { ColumnGripKind, BeamGripKind, SlabGripKind, SlabOpeningGripKind, RoofGripKind, OpeningGripKind, MepFixtureGripKind, ElectricalPanelGripKind, MepManifoldGripKind, MepRadiatorGripKind, MepBoilerGripKind, FurnitureGripKind, FloorplanSymbolGripKind, MepSegmentGripKind, FloorFinishGripKind, MepUnderfloorGripKind } from './grip-types';
 import type { WallEntity } from '../bim/types/wall-types';
 import type { BeamEntity } from '../bim/types/beam-types';
 import type { ColumnEntity } from '../bim/types/column-types';
@@ -28,6 +28,7 @@ import type { FloorplanSymbolEntity } from '../bim/types/floorplan-symbol-types'
 import type { MepSegmentEntity } from '../bim/types/mep-segment-types';
 import type { RoofEntity } from '../bim/types/roof-types';
 import type { FloorFinishEntity } from '../bim/types/floor-finish-types';
+import type { MepUnderfloorEntity } from '../bim/types/mep-underfloor-types';
 import { calculateMidpoint } from '../rendering/entities/shared/geometry-utils';
 import { getStairGrips } from '../bim/stairs/stair-grips';
 import { getWallGrips } from '../bim/walls/wall-grips';
@@ -46,6 +47,7 @@ import { getFloorplanSymbolGrips } from '../bim/floorplan-symbols/floorplan-symb
 import { getMepSegmentGrips } from '../bim/mep-segments/mep-segment-grips';
 import { getRoofGrips } from '../bim/roofs/roof-grips';
 import { getFloorFinishGrips } from '../bim/floor-finishes/floor-finish-grips';
+import { getMepUnderfloorGrips } from '../bim/mep-underfloor/mep-underfloor-grips';
 import { getDimensionGrips } from './dimensions/useDimensionGrips';
 import { getXLineGrips } from '../systems/xline/xline-grips';
 import { getRayGrips } from '../systems/ray/ray-grips';
@@ -147,6 +149,12 @@ export interface DxfGripDragPreview {
    * through `applyFloorFinishGripDrag` (params-only; footprint polygon redrawn).
    */
   floorFinishGripKind?: FloorFinishGripKind;
+  /**
+   * ADR-408 Εύρος Β #3 — parametric underfloor heating loop grip discriminator.
+   * Routes the live ghost through `applyMepUnderfloorGripDrag` (params-only;
+   * footprint polygon + serpentine path redrawn).
+   */
+  mepUnderfloorGripKind?: MepUnderfloorGripKind;
   /**
    * ADR-363 Phase 1G — set when the active grip is a wall corner being moved via
    * the hot-grip (click-click) state. Consumed by `useGripGhostPreview` to draw
@@ -453,6 +461,16 @@ export function computeDxfEntityGrips(entity: DxfEntityUnion): GripInfo[] {
       // edge-midpoint insertion, Revit «Edit Boundary»). Floor-finish is a
       // DIRECT entity (params.footprint polygon at top level, mirrors roof).
       grips.push(...getFloorFinishGrips(entity as unknown as FloorFinishEntity));
+      break;
+    }
+
+    case 'mep-underfloor': {
+      // ADR-408 Εύρος Β #3 — parametric underfloor heating loop grips (per-vertex
+      // translate + edge-midpoint insertion, Revit «Edit Boundary» parity). The
+      // underfloor entity is DIRECT (params.footprint polygon at top level, mirrors
+      // floor-finish). After each drag, buildUnderfloorConnectors re-derives the
+      // two hydronic connectors.
+      grips.push(...getMepUnderfloorGrips(entity as unknown as MepUnderfloorEntity));
       break;
     }
   }

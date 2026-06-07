@@ -434,10 +434,22 @@
     "tag": {
       "prefix": {
         "door": "Θ",
+        "double-door": "ΔΦ",
         "sliding-door": "Σ",
+        "double-sliding-door": "ΔΣ",
+        "pocket-door": "ΧΘ",
+        "bifold-door": "ΠΤ",
+        "overhead-door": "ΓΚ",
+        "revolving-door": "ΠΕ",
         "french-door": "ΔΘ",
         "window": "Π",
-        "fixed": "ΣΥ"
+        "fixed": "ΣΥ",
+        "double-hung-window": "ΚΠ",
+        "sliding-window": "ΣΠ",
+        "awning-window": "ΑΠ",
+        "hopper-window": "ΑΚ",
+        "tilt-turn-window": "ΑΑ",
+        "bay-window": "ΠΡ"
       },
       "basementPrefix": "Υ",
       "tagVisible": "Εμφάνιση Ταμπελάκι",

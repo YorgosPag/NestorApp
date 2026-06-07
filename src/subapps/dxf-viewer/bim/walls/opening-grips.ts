@@ -31,7 +31,7 @@
 import type { Point2D } from '../../rendering/types/Types';
 import type { GripInfo, OpeningGripKind } from '../../hooks/useGripMovement';
 import type { OpeningEntity, OpeningParams } from '../types/opening-types';
-import { DEFAULT_FRAME_WIDTH_MM, MIN_OPENING_WIDTH_MM } from '../types/opening-types';
+import { DEFAULT_FRAME_WIDTH_MM, MIN_OPENING_WIDTH_MM, isHingedKind } from '../types/opening-types';
 import type { WallEntity } from '../types/wall-types';
 import { projectPointToWallOffsetMm } from '../geometry/opening-geometry';
 import { rotateVector } from '../grips/grip-math';
@@ -131,6 +131,19 @@ export function getOpeningGrips(entity: Readonly<OpeningEntity>): GripInfo[] {
       openingGripKind: ROLE_TO_KIND[role],
     });
   });
+  // Revit-style «Flip Facing» grip — opposite side of wall from the hand-flip grip.
+  // Present only for hinged kinds (door / french-door) because `openDirection` is
+  // undefined for windows, sliding-doors, and fixed glazing.
+  if (isHingedKind(entity.params.kind)) {
+    grips.push({
+      entityId: entity.id,
+      gripIndex: grips.length,
+      type: 'vertex',
+      position: { x: center.x - perp.x * standoff, y: center.y - perp.y * standoff },
+      movesEntity: false,
+      openingGripKind: 'opening-facing',
+    });
+  }
   return grips;
 }
 
@@ -194,22 +207,29 @@ function resizeJamb(
 }
 
 /**
- * Flip the opening (Revit-style). Doors/french-doors flip `handing` (left↔right)
- * based on which side of the opening centre the cursor projects onto the wall axis
- * — deterministic (no flip-flop across a continuous drag commit). Openings without
- * a swing (window / fixed / sliding) have nothing to flip → no-op.
+ * Flip the opening handing (Revit «Flip Hand» — click-to-toggle). Doors/french-doors
+ * toggle `handing` left↔right on every click of the rotation glyph. Openings
+ * without a swing (window / fixed / sliding) have nothing to flip → no-op.
+ *
+ * Cursor position is intentionally NOT used: the rotation grip is offset
+ * perpendicularly from the wall, so its axial projection always lands at the
+ * opening centre — making cursor-side logic always resolve to 'right'. A pure
+ * toggle matches Revit behaviour and works correctly for a zero-delta click.
  */
-function flipOpening(
-  params: OpeningParams,
-  currentPos: Point2D,
-  hostWall: WallEntity,
-): OpeningParams {
+function flipOpening(params: OpeningParams): OpeningParams {
   if (!params.handing) return params;
-  const centerAxial = params.offsetFromStart + params.width / 2;
-  const cursorAxial = projectPointToWallOffsetMm(currentPos, hostWall);
-  const newHanding = cursorAxial >= centerAxial ? 'right' : 'left';
-  if (newHanding === params.handing) return params;
-  return { ...params, handing: newHanding };
+  return { ...params, handing: params.handing === 'left' ? 'right' : 'left' };
+}
+
+/**
+ * Flip the opening facing direction (Revit «Flip Facing» — click-to-toggle).
+ * Toggles `openDirection` inward↔outward — moves the swing arc to the opposite
+ * face of the host wall. Hinged kinds only (door / french-door); no-op when
+ * `openDirection` is undefined (window / sliding / fixed).
+ */
+function flipOpeningFacing(params: OpeningParams): OpeningParams {
+  if (!params.openDirection) return params;
+  return { ...params, openDirection: params.openDirection === 'inward' ? 'outward' : 'inward' };
 }
 
 /**
@@ -233,7 +253,9 @@ export function applyOpeningGripDrag(
     case 'opening-corner-sw':
       return resizeJamb(originalParams, currentPos, hostWall, 'start');
     case 'opening-rotation':
-      return flipOpening(originalParams, currentPos, hostWall);
+      return flipOpening(originalParams);
+    case 'opening-facing':
+      return flipOpeningFacing(originalParams);
     default:
       return originalParams;
   }

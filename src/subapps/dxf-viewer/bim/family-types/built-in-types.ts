@@ -39,12 +39,19 @@
 import { getDefaultDnaForCategory } from '../types/wall-dna-types';
 import { getDefaultSlabBuildupForKind } from '../types/slab-dna-types';
 import { getRoofBuildupForKey, ROOF_BUILDUP_KEYS, type RoofBuildupKey } from '../types/roof-buildup';
+import {
+  OPENING_KIND_DEFAULTS,
+  DEFAULT_FRAME_WIDTH_MM,
+  isGlazedKind,
+  type OpeningKind,
+} from '../types/opening-types';
 import type { WallCategory } from '../types/wall-types';
 import type { SlabKind } from '../types/slab-types';
 import type {
   BimFamilyType,
   BimFamilyTypeScope,
   BimTypeParamsByCategory,
+  OpeningTypeParams,
   RoofTypeParams,
   SlabTypeParams,
   StairTypeParams,
@@ -236,6 +243,83 @@ export function getBuiltInRoofTypes(
   return ROOF_BUILDUP_KEYS.map((key) => buildRoofType(key, companyId));
 }
 
+// ─── Opening built-ins (ADR-421 SLICE C) ─────────────────────────────────────
+
+/**
+ * All opening kinds in a fixed order — drives the one-built-in-per-kind catalog
+ * deterministically (opening analogue of {@link WALL_CATEGORIES}/{@link SLAB_KINDS}).
+ * Sourced from `OPENING_KIND_DEFAULTS` keys so it can never drift from the kind
+ * catalog (ADR-421 SLICE B). Doors first, then windows.
+ */
+const OPENING_KINDS: readonly OpeningKind[] = [
+  'door',
+  'double-door',
+  'sliding-door',
+  'double-sliding-door',
+  'pocket-door',
+  'bifold-door',
+  'overhead-door',
+  'revolving-door',
+  'french-door',
+  'window',
+  'fixed',
+  'double-hung-window',
+  'sliding-window',
+  'awning-window',
+  'hopper-window',
+  'tilt-turn-window',
+  'bay-window',
+] as const;
+
+/**
+ * The deterministic synthetic id of the built-in opening family type for a kind.
+ * SSoT for the id derivation — the catalog builder ({@link buildOpeningType}) AND
+ * the auto-type policy (`auto-opening-type.ts`, used at opening creation + load)
+ * both go through here so the string is declared exactly once (N.0.2).
+ */
+export function getBuiltInOpeningTypeId(kind: OpeningKind): string {
+  return `${BUILTIN_ID_PREFIX}-opening-${kind}`;
+}
+
+function buildOpeningType(
+  kind: OpeningKind,
+  companyId: string,
+): BimFamilyType<'opening'> {
+  const defaults = OPENING_KIND_DEFAULTS[kind];
+  const typeParams: OpeningTypeParams = {
+    kind,
+    width: defaults.width,
+    height: defaults.height,
+    frameWidth: DEFAULT_FRAME_WIDTH_MM,
+    // Glazed kinds (windows + french-door) default to double glazing.
+    ...(isGlazedKind(kind) && { glazingPanes: 2 as const }),
+  };
+  return {
+    id: getBuiltInOpeningTypeId(kind),
+    category: 'opening',
+    name: `builtin.opening.${kind}`,
+    scope: 'company',
+    origin: 'built-in',
+    typeParams,
+    companyId,
+    ownerId: 'system',
+  };
+}
+
+/**
+ * The factory opening family types — exactly one per {@link OpeningKind} (17).
+ * Each derives its nominal `width`/`height` from the `OPENING_KIND_DEFAULTS`
+ * SSoT, so the built-in can never drift from the kind default it is named after.
+ * Auto-type linkage (`auto-opening-type.ts`) attaches a freshly-drawn opening to
+ * the matching built-in when its dimensions equal the kind default (Revit
+ * «Generic» pattern); custom dimensions stay ad-hoc (legacy fast-path).
+ */
+export function getBuiltInOpeningTypes(
+  companyId: string,
+): readonly BimFamilyType<'opening'>[] {
+  return OPENING_KINDS.map((kind) => buildOpeningType(kind, companyId));
+}
+
 // ─── Stair built-ins ──────────────────────────────────────────────────────────
 
 interface StairBuiltInSeed {
@@ -325,6 +409,7 @@ export function getAllBuiltInTypes(
     ...getBuiltInWallTypes(companyId),
     ...getBuiltInSlabTypes(companyId),
     ...getBuiltInRoofTypes(companyId),
+    ...getBuiltInOpeningTypes(companyId),
     ...getBuiltInStairTypes(companyId),
   ];
 }

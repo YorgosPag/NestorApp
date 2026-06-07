@@ -10,7 +10,7 @@
  */
 
 import type { Point2D } from '../../rendering/types/Types';
-import type { StairGripKind, DimensionGripKind, WallGripKind, OpeningGripKind, SlabGripKind, SlabOpeningGripKind, RoofGripKind, FloorFinishGripKind, BeamGripKind, ColumnGripKind, MepFixtureGripKind, ElectricalPanelGripKind, MepManifoldGripKind, MepRadiatorGripKind, MepBoilerGripKind, FurnitureGripKind, FloorplanSymbolGripKind, XLineGripKind, RayGripKind } from '../useGripMovement';
+import type { StairGripKind, DimensionGripKind, WallGripKind, OpeningGripKind, SlabGripKind, SlabOpeningGripKind, RoofGripKind, FloorFinishGripKind, MepUnderfloorGripKind, BeamGripKind, ColumnGripKind, MepFixtureGripKind, ElectricalPanelGripKind, MepManifoldGripKind, MepRadiatorGripKind, MepBoilerGripKind, FurnitureGripKind, FloorplanSymbolGripKind, XLineGripKind, RayGripKind } from '../useGripMovement';
 import type {
   DxfGripDragPreview,
   DxfGripInteractionState,
@@ -247,6 +247,13 @@ export interface UnifiedGripInfo {
    * (per-vertex translate + edge-midpoint insertion, mirrors slab/roof).
    */
   readonly floorFinishGripKind?: FloorFinishGripKind;
+  /**
+   * ADR-408 Εύρος Β #3 — parametric underfloor heating loop grip discriminator
+   * (forwarded from `GripInfo.mepUnderfloorGripKind`). Routes commit through
+   * `applyMepUnderfloorGripDrag()` + `UpdateMepUnderfloorParamsCommand`
+   * (per-vertex translate + edge-midpoint insertion, mirrors floor-finish/slab).
+   */
+  readonly mepUnderfloorGripKind?: MepUnderfloorGripKind;
   /**
    * ADR-359 Phase 11 — XLine grip discriminator (forwarded from
    * `GripInfo.xlineGripKind`). Routes commit through `applyXLineGripDrag()` +

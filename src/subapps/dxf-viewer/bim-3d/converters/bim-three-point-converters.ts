@@ -83,6 +83,31 @@ export function fixtureToMesh(
   const verts = fixture.geometry.footprint.vertices;
   if (verts.length < 3) return null;
 
+  // ADR-408 Φ14 — a floor drain (σιφώνι) renders units-safe (mm-scene correct via
+  // sceneUnitsToMeters, like the φρεάτιο — NOT the light-fixture meter-scene path)
+  // as a brown recessed basin with the catch-basin grating on its TOP face (floor
+  // level). Reuses the 2D grating SSoT via buildDrainageGrating3D (zero duplication).
+  if (fixture.params.kind === 'floor-drain') {
+    const sceneToM = sceneUnitsToMeters(fixture.params.sceneUnits ?? 'mm');
+    const shape = buildShape(verts.map((v) => ({ x: v.x * sceneToM, y: v.y * sceneToM, z: 0 })));
+    if (!shape) return null;
+
+    const bodyHeightM = fixture.params.bodyHeightMm * MM_TO_M;
+    const geo = extrudeAndRotate(shape, bodyHeightM);
+    const matId = fixture.params.material ?? 'elem-mep-fixture';
+    const mesh = new THREE.Mesh(geo, getSystemTintedMaterial3D('mep-fixture', systemColor ?? DRAINAGE_TINT_HEX));
+    // Top face flush with the floor (mountingElevation = FFL = 0); basin recessed DOWN.
+    const topMm = floorElevationMm + fixture.params.mountingElevationMm;
+    mesh.position.y = topMm * MM_TO_M - bodyHeightM + buildingBaseElevationM;
+    const tagged = tagMesh(mesh, fixture.id, 'mep-fixture', matId, levelId);
+    attachEdgesProjection(tagged, 'light-fixture');
+    // Grating on the TOP face: the extrusion spans local y 0→bodyHeightM, so the top
+    // face is at mesh-local y = bodyHeightM (the child inherits mesh.position.y).
+    const grating = buildDrainageGrating3D(verts, sceneToM, bodyHeightM);
+    if (grating) tagged.add(grating);
+    return tagged;
+  }
+
   const shape = buildShape(verts);
   if (!shape) return null;
 

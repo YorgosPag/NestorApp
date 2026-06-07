@@ -28,11 +28,11 @@ const Point3DSchema = z
 
 // ─── Enums (mirror mep-fixture-types.ts unions) ──────────────────────────────
 
-export const MepFixtureKindSchema = z.enum(['light-fixture']);
+export const MepFixtureKindSchema = z.enum(['light-fixture', 'floor-drain']);
 
 export const MepFixtureShapeSchema = z.enum(['rectangular', 'circular']);
 
-export const MepFixtureIfcTypeSchema = z.literal('IfcLightFixture');
+export const MepFixtureIfcTypeSchema = z.enum(['IfcLightFixture', 'IfcSanitaryTerminal']);
 
 // ─── Params schema ──────────────────────────────────────────────────────────
 

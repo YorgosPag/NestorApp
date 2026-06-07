@@ -28,7 +28,10 @@ export const MepManifoldKindSchema = z.enum(['floor-manifold', 'drainage-collect
 
 export const MepManifoldShapeSchema = z.enum(['rectangular']);
 
-export const MepManifoldIfcTypeSchema = z.literal('IfcPipeFitting');
+// ADR-408 Φ14 — kind-dependent IFC class (SSoT `resolveManifoldIfcType`): a water
+// manifold is `IfcPipeFitting`, a drainage collector (φρεάτιο) is the sump/catch
+// basin `IfcFlowStorageDevice`. Both accepted at the persistence boundary.
+export const MepManifoldIfcTypeSchema = z.enum(['IfcPipeFitting', 'IfcFlowStorageDevice']);
 
 // ─── Params schema ────────────────────────────────────────────────────────────
 

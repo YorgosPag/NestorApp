@@ -34,6 +34,7 @@
 
 import type {
   BimFamilyType,
+  OpeningTypeParams,
   RoofTypeParams,
   SlabTypeParams,
   WallTypeParams,
@@ -41,6 +42,7 @@ import type {
 import type { WallParams } from '../types/wall-types';
 import type { SlabParams } from '../types/slab-types';
 import type { RoofParams } from '../types/roof-types';
+import type { OpeningParams } from '../types/opening-types';
 
 /**
  * Generic resolution core — «type always wins, overrides win last».
@@ -150,6 +152,43 @@ export function resolveEffectiveRoofParams(
   type: BimFamilyType<'roof'> | null | undefined,
 ): RoofParams {
   // Legacy fast-path: untyped roof OR unresolved type → unchanged params.
+  if (!instance.typeId || !type) return instance.params;
+  return resolveEffectiveParams(
+    instance.params,
+    type.typeParams,
+    instance.typeOverrides,
+  );
+}
+
+/**
+ * Opening convenience wrapper around {@link resolveEffectiveParams} (ADR-421
+ * SLICE C) — the opening analogue of {@link resolveEffectiveWallParams}.
+ *
+ * Returns the instance's own params unchanged when it has no `typeId` (legacy
+ * fast-path) or when its type cannot be resolved (`type == null`) — zero
+ * regression. Otherwise resolves the type-governed fields (`kind`/`width`/
+ * `height`/`frameWidth`/`material`/`glazingPanes`/`fireRating`) from the type
+ * (type wins), applies any `typeOverrides` last, and preserves all per-instance
+ * fields (`wallId`/`offsetFromStart`/`sillHeight`/`handing`/`openDirection`/
+ * `operationType`/mark/tag/reveal).
+ *
+ * NOTE: `operationType` depends on the (now type-governed) `kind` + the instance
+ * `handing`; callers that switch a typed opening's family MUST re-derive it via
+ * `resolveOperationType` after this merge (see `AssignOpeningTypeCommand`).
+ *
+ * @param instance Opening instance: cached `params`, optional `typeId`/`typeOverrides`.
+ * @param type     The resolved opening family type (or null/undefined if unresolved).
+ * @returns The effective `OpeningParams` for geometry/render.
+ */
+export function resolveEffectiveOpeningParams(
+  instance: {
+    params: OpeningParams;
+    typeId?: string;
+    typeOverrides?: Partial<OpeningTypeParams>;
+  },
+  type: BimFamilyType<'opening'> | null | undefined,
+): OpeningParams {
+  // Legacy fast-path: untyped opening OR unresolved type → unchanged params.
   if (!instance.typeId || !type) return instance.params;
   return resolveEffectiveParams(
     instance.params,

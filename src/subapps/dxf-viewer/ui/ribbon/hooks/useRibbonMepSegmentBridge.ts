@@ -32,6 +32,9 @@ import {
   resolveSegmentSection,
   resolveSegmentEndpointElevationsMm,
   deriveCenterlineElevationMm,
+  derivePlanLengthMm,
+  deriveSlopePercent,
+  applySlopePercentToEndpoints,
 } from '../../../bim/types/mep-segment-types';
 import { useCommandHistory, CompoundCommand } from '../../../core/commands';
 import { UpdateMepSegmentParamsCommand } from '../../../core/commands/entity-commands/UpdateMepSegmentParamsCommand';
@@ -171,7 +174,11 @@ export function useRibbonMepSegmentBridge(
         return { value: String(Math.round(section.diameterMm ?? section.widthMm)), options: [] };
       }
       if (commandKey === MEP_SEGMENT_RIBBON_KEYS.params.slopePercent) {
-        return { value: String(segment.params.slopePercent ?? 0), options: [] };
+        // ADR-408 Φ14 #2 — slope is DERIVED from the per-endpoint z (SSoT), never
+        // the stale stored scalar; so it always matches the actual geometry.
+        const e = resolveSegmentEndpointElevationsMm(segment.params);
+        const slope = deriveSlopePercent(e.startMm, e.endMm, derivePlanLengthMm(segment.params));
+        return { value: formatSlopePercentForCombobox(slope), options: [] };
       }
       const elev = resolveSegmentEndpointElevationsMm(segment.params);
       if (commandKey === MEP_SEGMENT_RIBBON_KEYS.params.centerlineElevation) {
@@ -216,6 +223,13 @@ export function useRibbonMepSegmentBridge(
       if (!isMepSegmentRibbonKey(commandKey)) return;
       const numeric = Number.parseFloat(value);
       if (Number.isNaN(numeric)) return;
+      // ADR-408 Φ14 #2 — a slope edit MOVES the end endpoint z (anchor start), then
+      // routes through elevation propagation so connected pipes follow (Φ-B2a). The
+      // per-endpoint z stays the single SSoT — never a naive scalar set.
+      if (commandKey === MEP_SEGMENT_RIBBON_KEYS.params.slopePercent) {
+        dispatchElevationEdit(segment, applySlopePercentToEndpoints(segment.params, numeric));
+        return;
+      }
       // Elevation edits touch the per-endpoint z's + the derived centreline cache
       // (Φ-A), not a single param field — handle them before the generic path.
       const elevParams = buildElevationParams(segment.params, commandKey, numeric);
@@ -286,8 +300,20 @@ const NUMBER_KEY_TO_FIELD: Readonly<Record<string, keyof MepSegmentParams>> = {
   [MEP_SEGMENT_RIBBON_KEYS.params.width]: 'width',
   [MEP_SEGMENT_RIBBON_KEYS.params.height]: 'height',
   [MEP_SEGMENT_RIBBON_KEYS.params.diameter]: 'diameter',
-  [MEP_SEGMENT_RIBBON_KEYS.params.slopePercent]: 'slopePercent',
+  // NOTE: slopePercent is NOT here — a slope edit moves the endpoint z (Φ14 #2),
+  // it is not a stored scalar field. Handled explicitly in onComboboxChange.
 };
+
+/**
+ * Format a derived slope % to match a `SLOPE_PERCENT_OPTIONS` string (ADR-408 Φ14
+ * #2): round to 1 decimal and drop a trailing `.0` so `1.5`→'1.5', `2.0`→'2',
+ * `0`→'0'. An off-list grade (from a manual elevation edit) renders as its rounded
+ * value (the strict-select combobox then shows no preset highlighted — acceptable).
+ */
+function formatSlopePercentForCombobox(slopePercent: number): string {
+  const rounded = Math.round(slopePercent * 10) / 10;
+  return String(rounded);
+}
 
 /**
  * Build next params for an elevation edit (Φ-A). The two endpoint z's are the

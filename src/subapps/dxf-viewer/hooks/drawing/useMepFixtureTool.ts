@@ -169,8 +169,11 @@ export function useMepFixtureTool(options: UseMepFixtureToolOptions = {}): UseMe
 
   const getStatusText = useCallback((): string => {
     const s = stateRef.current;
-    if (s.phase === 'idle') return '';
-    return s.phase === 'awaitingPosition' ? 'tools.mepFixture.statusPosition' : '';
+    if (s.phase !== 'awaitingPosition') return '';
+    // ADR-408 Φ14 — the floor drain (σιφώνι) shows its own placement prompt.
+    return s.overrides.kind === 'floor-drain'
+      ? 'tools.mepFloorDrain.statusPosition'
+      : 'tools.mepFixture.statusPosition';
   }, []);
 
   const getGhostFootprint = useCallback(
@@ -193,7 +196,9 @@ export function useMepFixtureTool(options: UseMepFixtureToolOptions = {}): UseMe
     const isActive = state.phase !== 'idle';
     mepFixtureToolBridgeStore.set({
       isActive,
-      kind: 'light-fixture',
+      // ADR-408 Φ14 — reflect the ACTIVE kind preset (light-fixture vs floor-drain)
+      // so the 2D/3D placement ghosts symbol + colour correctly.
+      kind: state.overrides.kind ?? 'light-fixture',
       shape: state.shape,
       assetId: state.assetId,
       overrides: state.overrides,

@@ -158,8 +158,11 @@ export function useBim3DMepFixturePlacement({ managerRef, canvasEl }: UseBim3DMe
     };
 
     const apply = (): void => {
+      // ADR-408 Φ14 — the floor drain (σιφώνι) shares the fixture FSM/bridge, so the
+      // same 3D placement pipeline arms for it (its kind preset drives symbol + datum).
+      const tool = toolStateStore.get().activeTool;
       const active =
-        toolStateStore.get().activeTool === 'mep-fixture' &&
+        (tool === 'mep-fixture' || tool === 'mep-floor-drain') &&
         selectIs3D(useViewMode3DStore.getState());
       if (active) setup();
       else teardown();

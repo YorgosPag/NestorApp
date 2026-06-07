@@ -27,14 +27,17 @@
  */
 
 import type { Entity } from '../../types/entities';
+import { isMepSegmentEntity } from '../../types/entities';
 import type { SceneUnits } from '../../utils/scene-units';
 import type {
   ElbowStyle,
   MepFittingDraft,
+  MepFittingIncident,
   MepFittingKind,
   MepFittingParams,
 } from '../types/mep-fitting-types';
-import { DEFAULT_ELBOW_STYLE, mepFittingIfcType } from '../types/mep-fitting-types';
+import { DEFAULT_ELBOW_STYLE, incidentEntityId, mepFittingIfcType } from '../types/mep-fitting-types';
+import type { PlumbingSystemClassification } from '../types/mep-connector-types';
 import { makeBimValidation } from '../types/bim-base';
 import { derivePipeJunctions } from '../mep-systems/mep-pipe-junctions';
 import type { PipeJunction } from '../mep-systems/mep-pipe-junctions';
@@ -50,12 +53,56 @@ export interface ResolveFittingsOptions {
   readonly defaultElbowStyle?: ElbowStyle;
 }
 
+/**
+ * ADR-408 Φ14 — index `pipe segment id → its plumbing classification`, the input
+ * for {@link resolveFittingClassification}. Pure: only `'pipe'` segments that carry
+ * a defined `classification` are indexed (ducts + unclassified pipes are absent, so
+ * their fittings inherit nothing). Built once per resolve.
+ */
+export function buildPipeClassificationIndex(
+  entities: readonly Entity[],
+): ReadonlyMap<string, PlumbingSystemClassification> {
+  const index = new Map<string, PlumbingSystemClassification>();
+  for (const e of entities) {
+    if (isMepSegmentEntity(e) && e.params.domain === 'pipe' && e.params.classification) {
+      index.set(e.id, e.params.classification);
+    }
+  }
+  return index;
+}
+
+/**
+ * ADR-408 Φ14 — the plumbing classification a fitting inherits from the pipes it
+ * joins (Revit: "a fitting follows the system of its connectors"). Pure SSoT, the
+ * point-based counterpart of how a segment carries its own `classification`.
+ *
+ * Looks up every NON-host incident pipe's classification from `index`. Drainage
+ * wins in a mixed node — it is the only classification with its own V/G bucket
+ * (`'drain-pipe'`), so a node touching any drainage run reads as drainage. Otherwise
+ * (generic Revit-true inheritance) it takes the first classification present — all
+ * non-drainage pipes meeting at one node share a system, so any of them is correct.
+ * Returns `undefined` when no incident pipe is classified (a plain water-only node).
+ */
+export function resolveFittingClassification(
+  incidents: readonly MepFittingIncident[],
+  index: ReadonlyMap<string, PlumbingSystemClassification>,
+): PlumbingSystemClassification | undefined {
+  const classes = incidents
+    .filter((i) => !i.host)
+    .map((i) => index.get(incidentEntityId(i)))
+    .filter((c): c is PlumbingSystemClassification => c !== undefined);
+  if (classes.length === 0) return undefined;
+  if (classes.includes('sanitary-drainage')) return 'sanitary-drainage';
+  return classes[0];
+}
+
 /** Build the params for one classified junction. */
 function buildParams(
   junction: PipeJunction,
   kind: MepFittingKind,
   classification: FittingClassification,
   opts: ResolveFittingsOptions,
+  inheritedClassification: PlumbingSystemClassification | undefined,
 ): MepFittingParams {
   const elbowStyle =
     kind === 'elbow'
@@ -78,15 +125,27 @@ function buildParams(
     classification.secondaryDiameterMm !== undefined
       ? { ...base, secondaryDiameterMm: classification.secondaryDiameterMm }
       : base;
-  return elbowStyle !== undefined ? { ...withSecondary, elbowStyle } : withSecondary;
+  const withElbow =
+    elbowStyle !== undefined ? { ...withSecondary, elbowStyle } : withSecondary;
+  // The inherited classification is NEVER part of the junctionKey (idempotency
+  // anchor) — only of the params, so re-classifying a pipe updates the persisted
+  // fitting in place (one-time, no create/delete churn).
+  return inheritedClassification !== undefined
+    ? { ...withElbow, classification: inheritedClassification }
+    : withElbow;
 }
 
 /** Build a draft from a classified junction. Returns null when the kind is null. */
-function toDraft(junction: PipeJunction, opts: ResolveFittingsOptions): MepFittingDraft | null {
+function toDraft(
+  junction: PipeJunction,
+  opts: ResolveFittingsOptions,
+  classByEntityId: ReadonlyMap<string, PlumbingSystemClassification>,
+): MepFittingDraft | null {
   const classification = classifyJunction(junction);
   if (classification.kind === null) return null;
 
-  const params = buildParams(junction, classification.kind, classification, opts);
+  const inheritedClassification = resolveFittingClassification(junction.incidents, classByEntityId);
+  const params = buildParams(junction, classification.kind, classification, opts, inheritedClassification);
   return {
     params,
     geometry: computeMepFittingGeometry(params),
@@ -113,8 +172,11 @@ export function resolveDesiredFittings(
     ...opts,
     sceneUnits: opts.sceneUnits ?? sceneUnitsFromSegments(entities),
   };
+  // ADR-408 Φ14 — index pipe classifications once, so each fitting inherits the
+  // classification of the pipes it joins (Revit "fitting follows its connectors").
+  const classByEntityId = buildPipeClassificationIndex(entities);
   return derivePipeJunctions(entities)
-    .map((junction) => toDraft(junction, effectiveOpts))
+    .map((junction) => toDraft(junction, effectiveOpts, classByEntityId))
     .filter((draft): draft is MepFittingDraft => draft !== null);
 }
 

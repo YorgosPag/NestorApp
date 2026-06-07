@@ -31,7 +31,7 @@ import { BaseEntityRenderer } from '../../rendering/entities/BaseEntityRenderer'
 import type { EntityModel, GripInfo, RenderOptions, Point2D } from '../../rendering/types/Types';
 import type { Entity } from '../../types/entities';
 import type { MepFittingEntity, MepFittingDomain } from '../types/mep-fitting-types';
-import { incidentEntityId } from '../types/mep-fitting-types';
+import { incidentEntityId, resolveFittingBimCategory } from '../types/mep-fitting-types';
 import { pointInPolygon } from '../geometry/shared/polygon-utils';
 import { RENDER_LINE_WIDTHS } from '../../config/text-rendering-config';
 import { resolveIsEntityVisible } from '../visibility/visibility-resolver';
@@ -42,6 +42,7 @@ import { useMepSystemStore } from '../mep-systems/mep-system-store';
 import {
   getEntitySystemColorIndexCached,
   resolveFittingSystemColor,
+  resolveSegmentClassificationColor,
   hexToRgba,
 } from '../mep-systems/mep-system-color';
 
@@ -83,11 +84,12 @@ export class MepFittingRenderer extends BaseEntityRenderer {
     const fitting = entity as MepFittingEntity;
 
     // ADR-382/405 — unified visibility check (V/G + Layer + Floor + Building +
-    // Discipline). BimCategory determined by domain (mirror segment renderer):
-    //   'pipe' → 'plumbing' discipline; 'duct' → 'mechanical' discipline.
+    // Discipline). BimCategory mirrors the segment renderer (ADR-408 Φ14): a
+    // drainage fitting maps to its own 'drain-pipe' bucket so it hides/toggles
+    // together with the drainage pipes it joins; every other fitting → its domain.
     const layer = fitting.layerId ? getLayer(fitting.layerId) : null;
     if (!resolveIsEntityVisible(
-      { category: fitting.params.domain, layerId: fitting.layerId, discipline: fitting.discipline },
+      { category: resolveFittingBimCategory(fitting.params), layerId: fitting.layerId, discipline: fitting.discipline },
       {
         objectStyles: useDrawingScaleStore.getState().objectStyles,
         disciplineVisibility: useDrawingScaleStore.getState().disciplineVisibility,
@@ -112,8 +114,12 @@ export class MepFittingRenderer extends BaseEntityRenderer {
           getEntitySystemColorIndexCached(systems),
         )
       : null;
-    const strokeColor = systemColor ?? DOMAIN_STROKE[domain];
-    const fillColor = systemColor ? hexToRgba(systemColor, SYSTEM_FILL_ALPHA) : DOMAIN_FILL[domain];
+    // Colour precedence mirrors the segment renderer (ADR-408 Φ14): a live System
+    // membership wins; else the inherited classification tint (drainage brown, …);
+    // else the per-domain default. So a drainage fitting reads brown like its pipes.
+    const baseColor = systemColor ?? resolveSegmentClassificationColor(fitting.params.classification);
+    const strokeColor = baseColor ?? DOMAIN_STROKE[domain];
+    const fillColor = baseColor ? hexToRgba(baseColor, SYSTEM_FILL_ALPHA) : DOMAIN_FILL[domain];
 
     const phaseState = this.phaseManager.determinePhase(entity as Entity, options);
 

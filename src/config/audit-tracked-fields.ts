@@ -823,6 +823,24 @@ const MEP_BOILER_TRACKED_FIELDS_RAW: Record<string, string> = {
 export const MEP_BOILER_TRACKED_FIELDS: Record<string, TrackedFieldDef> =
   mergeDefs(MEP_BOILER_TRACKED_FIELDS_RAW, {});
 
+// ADR-408 Εύρος Β #3 — underfloor radiant heating loop (area-based hydronic terminal).
+const MEP_UNDERFLOOR_TRACKED_FIELDS_RAW: Record<string, string> = {
+  kind: 'kind',
+  layerId: 'layerId',
+  pipeSpacingMm: 'pipeSpacingMm',
+  edgeClearanceMm: 'edgeClearanceMm',
+  patternType: 'patternType',
+  entrySide: 'entrySide',
+  screedOffsetMm: 'screedOffsetMm',
+  connectorDiameterMm: 'connectorDiameterMm',
+  thermalOutputW: 'thermalOutputW',
+  name: 'name',
+  floorId: 'floorId',
+};
+
+export const MEP_UNDERFLOOR_TRACKED_FIELDS: Record<string, TrackedFieldDef> =
+  mergeDefs(MEP_UNDERFLOOR_TRACKED_FIELDS_RAW, {});
+
 // ADR-408 Φ8 — unified linear MEP segment (duct + pipe).
 const MEP_SEGMENT_TRACKED_FIELDS_RAW: Record<string, string> = {
   domain: 'domain',
@@ -1035,6 +1053,13 @@ const BIM_FAMILY_TYPE_TRACKED_FIELDS_RAW: Record<string, string> = {
   thickness: 'thickness',
   material: 'material',
   dna: 'dna',
+  // ADR-421 SLICE C — opening family types carry nominal dimensions + glazing/
+  // fire-rating on the TYPE; track them so opening-type edits diff meaningfully.
+  width: 'width',
+  height: 'height',
+  frameWidth: 'frameWidth',
+  glazingPanes: 'glazingPanes',
+  fireRating: 'fireRating',
 };
 
 export const BIM_FAMILY_TYPE_TRACKED_FIELDS: Record<string, TrackedFieldDef> =
@@ -1090,6 +1115,8 @@ export function getTrackedFieldsForEntityAuditType(
       return MEP_RADIATOR_TRACKED_FIELDS;
     case 'mep-boiler':
       return MEP_BOILER_TRACKED_FIELDS;
+    case 'mep-underfloor':
+      return MEP_UNDERFLOOR_TRACKED_FIELDS;
     case 'mep-segment':
       return MEP_SEGMENT_TRACKED_FIELDS;
     case 'mep-fitting':

@@ -28,10 +28,14 @@ import {
   type MepSegmentParams,
   type MepSegmentSectionKind,
 } from '../../bim/types/mep-segment-types';
-import { deriveCenterlineElevationMm } from '../../bim/types/mep-segment-types';
+import {
+  deriveCenterlineElevationMm,
+  MIN_PLAN_LENGTH_FOR_SLOPE_MM,
+} from '../../bim/types/mep-segment-types';
 import { computeMepSegmentGeometry, validateMepSegmentParams } from '../../bim/geometry/mep-segment-geometry';
 import { createMepSegment } from '@/services/factories/mep-segment.factory';
 import type { SceneUnits } from '../../utils/scene-units';
+import { mmToSceneUnits } from '../../utils/scene-units';
 
 export type { SceneUnits };
 
@@ -92,7 +96,26 @@ export function buildDefaultMepSegmentParams(
   // default. So: start@manifold(400)+free end ⇒ flat @400; start@manifold(400)+
   // end@pipe(2800) ⇒ sloped riser. `centerlineElevationMm` stays the derived cache.
   const startZ = startElevationMm ?? endElevationMm ?? baseCenterMm;
-  const endZ = endElevationMm ?? startElevationMm ?? baseCenterMm;
+  let endZ = endElevationMm ?? startElevationMm ?? baseCenterMm;
+  // ADR-408 Φ14 #2 — born sloped. A drain pipe carries a slope preset (e.g. 1.5%);
+  // give it real fall at creation. Per-endpoint z is the SSoT, so:
+  //   - BOTH ends snapped to DISTINCT elevations ⇒ a real connected run (e.g. into a
+  //     φρεάτιο) — the network geometry wins; never override the snaps (slope is then
+  //     a derived consequence).
+  //   - otherwise (free end, or both at the same elevation) ⇒ project the slope:
+  //     anchor start, drop the end by planLen·slope/100.
+  const slopePct = overrides.slopePercent;
+  if (domain === 'pipe' && slopePct !== undefined && slopePct !== 0) {
+    const bothSnappedDistinct =
+      startElevationMm !== null && endElevationMm !== null && startElevationMm !== endElevationMm;
+    if (!bothSnappedDistinct) {
+      const s = mmToSceneUnits(sceneUnits);
+      const planLenMm = Math.hypot(endPoint.x - startPoint.x, endPoint.y - startPoint.y) / s;
+      if (planLenMm > MIN_PLAN_LENGTH_FOR_SLOPE_MM) {
+        endZ = startZ - (planLenMm * slopePct) / 100;
+      }
+    }
+  }
   const centerlineElevationMm = deriveCenterlineElevationMm(startZ, endZ);
   const start: Point3D = { x: startPoint.x, y: startPoint.y, z: startZ };
   const end: Point3D = { x: endPoint.x, y: endPoint.y, z: endZ };

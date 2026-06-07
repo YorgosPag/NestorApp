@@ -380,6 +380,8 @@ export const COLLECTIONS = {
   FLOORPLAN_MEP_RADIATORS: process.env.NEXT_PUBLIC_FLOORPLAN_MEP_RADIATORS_COLLECTION || 'floorplan_mep_radiators',
   /** ADR-408 Εύρος Β #2 — point-based heating boilers (hydronic sources). IDs via blr_* prefix. */
   FLOORPLAN_MEP_BOILERS: process.env.NEXT_PUBLIC_FLOORPLAN_MEP_BOILERS_COLLECTION || 'floorplan_mep_boilers',
+  /** ADR-408 Εύρος Β #3 — area-based radiant floor heating loops (hydronic terminals). IDs via uhf_* prefix. */
+  FLOORPLAN_MEP_UNDERFLOORS: process.env.NEXT_PUBLIC_FLOORPLAN_MEP_UNDERFLOORS_COLLECTION || 'floorplan_mep_underfloors',
   /** ADR-410 — mesh-based CC0 furniture (chair first). IDs via furn_* prefix. */
   FLOORPLAN_FURNITURE: process.env.NEXT_PUBLIC_FLOORPLAN_FURNITURE_COLLECTION || 'floorplan_furniture',
   /** ADR-415 — pure-vector 2D floorplan symbols (WC/sanitary first). IDs via fpsym_* prefix. */
@@ -440,6 +442,47 @@ export const COLLECTIONS = {
   /** Per-file AI enrichment cost records. Queried by super_admin cost dashboard. Admin SDK only — client access forbidden. */
   ISO19650_COST_LOG: 'iso19650_cost_log',
 } as const;
+
+// ============================================================================
+// FLOOR-SCOPED BIM COLLECTIONS (ADR-420)
+// ============================================================================
+
+/**
+ * The 20 floor-scoped BIM entity collections — every document carries a stable
+ * `floorId` (IfcBuildingStorey, ADR-420) and is created per-floor from a
+ * floorplan. Catalog / settings collections (`bim_presets`, `bim_materials`,
+ * `bim_settings`, `bim_family_types`, `stair_presets`) are company/project-
+ * scoped and intentionally EXCLUDED.
+ *
+ * Single source of truth for "iterate every per-floor BIM collection" —
+ * consumed by the floor-replace wipe (`bim-floor-wipe.service`) and kept in
+ * sync with `scripts/migrations/backfill-bim-floor-scope.mjs`.
+ */
+export const FLOOR_SCOPED_BIM_COLLECTIONS = [
+  COLLECTIONS.FLOORPLAN_WALLS,
+  COLLECTIONS.FLOORPLAN_OPENINGS,
+  COLLECTIONS.FLOORPLAN_SLABS,
+  COLLECTIONS.FLOORPLAN_SLAB_OPENINGS,
+  COLLECTIONS.FLOORPLAN_COLUMNS,
+  COLLECTIONS.FLOORPLAN_BEAMS,
+  COLLECTIONS.FLOORPLAN_STAIRS,
+  COLLECTIONS.FLOORPLAN_RAILINGS,
+  COLLECTIONS.FLOORPLAN_ROOFS,
+  COLLECTIONS.FLOORPLAN_FLOOR_FINISHES,
+  COLLECTIONS.FLOORPLAN_ELECTRICAL_PANELS,
+  COLLECTIONS.FLOORPLAN_FURNITURE,
+  COLLECTIONS.FLOORPLAN_SYMBOLS,
+  COLLECTIONS.FLOORPLAN_MEP_FIXTURES,
+  COLLECTIONS.FLOORPLAN_MEP_SYSTEMS,
+  COLLECTIONS.FLOORPLAN_MEP_SEGMENTS,
+  COLLECTIONS.FLOORPLAN_MEP_FITTINGS,
+  COLLECTIONS.FLOORPLAN_MEP_MANIFOLDS,
+  COLLECTIONS.FLOORPLAN_MEP_RADIATORS,
+  COLLECTIONS.FLOORPLAN_MEP_BOILERS,
+  COLLECTIONS.FLOORPLAN_MEP_UNDERFLOORS,
+] as const;
+
+export type FloorScopedBimCollection = (typeof FLOOR_SCOPED_BIM_COLLECTIONS)[number];
 
 // ============================================================================
 // SUBCOLLECTIONS

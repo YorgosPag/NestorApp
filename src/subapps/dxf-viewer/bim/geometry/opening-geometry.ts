@@ -22,7 +22,7 @@
 
 import type { Point3D, Polyline3D, Polygon3D, BoundingBox3D } from '../types/bim-base';
 import type { OpeningParams, OpeningGeometry, OpeningKind } from '../types/opening-types';
-import { isHingedKind } from '../types/opening-types';
+import { isHingedKind, isDoubleLeafKind } from '../types/opening-types';
 import type { WallEntity } from '../types/wall-types';
 import { getWallAxisVertices } from './wall-geometry';
 import { mmToSceneUnits, type SceneUnits } from '../../utils/scene-units';
@@ -35,6 +35,8 @@ const MM_TO_M = 1 / 1000;
  */
 export const HINGE_ARC_SUBDIVISIONS = 12;
 const HALF_PI = Math.PI / 2;
+/** Bay-window projection depth (κλάσμα πλάτους) για bbox culling — match 2D overlay. */
+const BAY_BBOX_PROJECTION_RATIO = 0.4;
 
 /**
  * Compute `OpeningGeometry` from `OpeningParams + hostWall`. SSoT για
@@ -96,11 +98,23 @@ export function computeOpeningGeometry(
   const hingeResult = isHingedKind(params.kind)
     ? buildHingeArc(params.kind, center, ux, uy, px, py, params, widthScene)
     : undefined;
-  // Expand bbox to encompass full visible geometry (outline + arc + leaf line) so
-  // the spatial pre-filter (BoundsCalculator.calculateBimEntityBounds) includes the
-  // entity when the cursor is over the swing arc or leaf line, not just the cutout.
-  const bboxPoints: readonly Point3D[] = hingeResult
-    ? ([...outline.vertices, ...hingeResult.arc.points] as Point3D[])
+  // Expand bbox to encompass full visible geometry (outline + arc + leaf line +
+  // bay projection) so the spatial pre-filter (BoundsCalculator) includes the
+  // entity when the cursor is over the swing arc / leaf line / projecting bay,
+  // not just the cutout.
+  const extraBboxPts: Point3D[] = [];
+  if (hingeResult) extraBboxPts.push(...hingeResult.arc.points);
+  if (params.kind === 'bay-window') {
+    // Bay projects past the +perp (exterior) face — mirror the 2D/3D ratio.
+    const proj = widthScene * BAY_BBOX_PROJECTION_RATIO;
+    const vtx = outline.vertices;
+    extraBboxPts.push(
+      { x: vtx[2].x + px * proj, y: vtx[2].y + py * proj, z: 0 },
+      { x: vtx[3].x + px * proj, y: vtx[3].y + py * proj, z: 0 },
+    );
+  }
+  const bboxPoints: readonly Point3D[] = extraBboxPts.length
+    ? ([...outline.vertices, ...extraBboxPts] as Point3D[])
     : outline.vertices;
   const bbox = computeBbox(bboxPoints, params.sillHeight, params.height);
 
@@ -378,9 +392,9 @@ function buildHingeArc(
     });
   }
 
-  // french-door = mirror arc on the opposite jamb (two leaves).
+  // double-leaf (french-door / double-door) = mirror arc on the opposite jamb.
   let hinge2: Point3D | undefined;
-  if (kind === 'french-door') {
+  if (isDoubleLeafKind(kind)) {
     hinge2 = {
       x: center.x + ux * (-handingSign * halfW),
       y: center.y + uy * (-handingSign * halfW),

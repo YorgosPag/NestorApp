@@ -126,3 +126,27 @@ export function isOpeningRibbonKey(commandKey: string): boolean {
 export function isOpeningRibbonStringKey(commandKey: string): boolean {
   return OPENING_STRING_KEY_SET.has(commandKey);
 }
+
+// ─── ADR-421 SLICE C follow-up (a): type-aware gating ────────────────────────
+
+/**
+ * Ribbon comboboxes whose value is owned by the assigned opening **Type**
+ * (Revit: type params render read-only on the instance — edit via «Edit type»).
+ * SSoT for {@link useRibbonOpeningBridge} gating.
+ *
+ * Membership follows the locked Revit split (ADR-421): the TYPE owns
+ * `kind` / `width` / `height` (mirrors the overridable subset
+ * `OPENING_OVERRIDABLE_KEYS` in `family-type-ui-helpers`, plus `kind` which is
+ * type-governed but switches the family rather than being overridable). The
+ * INSTANCE owns `sillHeight` / `handing` / `openDirection` / `mark`, so those
+ * stay fully editable on a typed opening (zero regression for untyped openings).
+ */
+export const OPENING_TYPE_GOVERNED_COMBOBOX_KEYS: ReadonlySet<string> = new Set<string>([
+  OPENING_RIBBON_KEYS.stringParams.kind,
+  OPENING_RIBBON_KEYS.params.width,
+  OPENING_RIBBON_KEYS.params.height,
+]);
+
+export function isOpeningTypeGovernedComboboxKey(commandKey: string): boolean {
+  return OPENING_TYPE_GOVERNED_COMBOBOX_KEYS.has(commandKey);
+}

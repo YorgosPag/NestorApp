@@ -7,7 +7,7 @@
  * Auto-populated:
  *   - `id`      : enterprise manifold ID (`generateMepManifoldId`, SOS N.6)
  *   - `ifcGuid` : 22-char IFC4 GlobalId, generated ONCE — never regenerate
- *   - `ifcType` : 'IfcPipeFitting'
+ *   - `ifcType` : kind-dependent — IfcPipeFitting (water) / IfcFlowStorageDevice (drainage, Φ14)
  *   - `validation` : empty `BimValidation` shell unless supplied
  *
  * @see docs/centralized-systems/reference/adrs/ADR-408-mep-connectors-and-systems.md
@@ -18,10 +18,11 @@ import {
   generateIfcGuid,
 } from '@/services/enterprise-id-convenience';
 import { makeBimValidation } from '@/subapps/dxf-viewer/bim/types/bim-base';
-import type {
-  MepManifoldEntity,
-  MepManifoldGeometry,
-  MepManifoldParams,
+import {
+  resolveManifoldIfcType,
+  type MepManifoldEntity,
+  type MepManifoldGeometry,
+  type MepManifoldParams,
 } from '@/subapps/dxf-viewer/bim/types/mep-manifold-types';
 import type { BimValidation } from '@/subapps/dxf-viewer/bim/types/bim-base';
 import type { IfcPropertySet } from '@/subapps/dxf-viewer/bim/types/ifc-entity-mixin';
@@ -66,7 +67,9 @@ export function createMepManifold(input: CreateMepManifoldInput): MepManifoldEnt
     geometry: input.geometry,
     validation: input.validation ?? makeBimValidation(),
     ifcGuid: input.ifcGuid ?? generateIfcGuid(),
-    ifcType: 'IfcPipeFitting',
+    // ADR-408 Φ14 — kind-dependent IFC class (SSoT resolveManifoldIfcType):
+    // water manifold → IfcPipeFitting, drainage collector → IfcFlowStorageDevice.
+    ifcType: resolveManifoldIfcType(input.params.kind),
     ...(input.visible !== undefined && { visible: input.visible }),
     ...(input.pset !== undefined && { pset: input.pset }),
     ...(input.companyId !== undefined && { companyId: input.companyId }),

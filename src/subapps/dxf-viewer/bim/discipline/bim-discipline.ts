@@ -82,12 +82,17 @@ export const DISCIPLINE_BY_CATEGORY: Readonly<Record<BimCategory, DisciplineOrAn
   duct:            'mechanical',
   // ADR-408 Φ8 — pipe run (first placeable `plumbing` category).
   pipe:            'plumbing',
+  // ADR-408 Φ14 — sanitary drainage pipe run ⊂ plumbing (hidden by the plumbing
+  // discipline toggle too; the dedicated «Αποχέτευση» toggle gives finer control).
+  'drain-pipe':    'plumbing',
   // ADR-408 Φ12 — plumbing manifold (συλλέκτης, water distribution source) ⊂ plumbing.
   'mep-manifold':  'plumbing',
   // ADR-408 Εύρος Β — heating radiator (καλοριφέρ, hydronic terminal) ⊂ plumbing.
   'mep-radiator':  'plumbing',
   // ADR-408 Εύρος Β #2 — heating boiler (λέβητας, hydronic source) ⊂ plumbing.
   'mep-boiler':    'plumbing',
+  // ADR-408 Εύρος Β #3 — underfloor heating loop (ενδοδαπέδια, hydronic terminal area) ⊂ plumbing.
+  'mep-underfloor': 'plumbing',
   // ADR-415 — sanitary plan symbols (WC/washbasin/…) ⊂ plumbing (Revit Plumbing Fixtures).
   sanitary:        'plumbing',
   // ADR-415 — kitchen plan symbols (sink/stove/fridge/counter) ⊂ architectural (Revit Casework).

@@ -116,6 +116,11 @@ export function generatePreviewEntity(
   if (tool === 'floor-finish') {
     return generateSlabPreview(tempPoints, cursorPoint);
   }
+  // ── ADR-408 Εύρος Β #3 — Underfloor heating tool preview branch (closed
+  //    footprint polygon, same rubber-band outline as slab/roof/floor-finish). ─
+  if (tool === 'mep-underfloor') {
+    return generateSlabPreview(tempPoints, cursorPoint);
+  }
   // ── ADR-363 Phase 5.5P — Beam tool preview branch ────────────────────────
   if (tool === 'beam') {
     return generateBeamPreview(tempPoints, cursorPoint, sceneUnits);

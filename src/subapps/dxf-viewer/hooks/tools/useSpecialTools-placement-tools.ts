@@ -77,7 +77,17 @@ export function useSpecialToolsPlacementTools(
       return lid ? resolveSceneUnits(levelManager.getLevelScene(lid)) : 'mm';
     },
   });
-  useToolLifecycle(activeTool === 'mep-fixture', mepFixtureTool.activate, mepFixtureTool.deactivate);
+  // 'mep-fixture' (electrical luminaire) and 'mep-floor-drain' (σιφώνι) share ONE
+  // fixture tool; the active tool id drives the `kind` preset (ADR-408 Φ14).
+  const isMepFixtureTool = activeTool === 'mep-fixture' || activeTool === 'mep-floor-drain';
+  useToolLifecycle(isMepFixtureTool, mepFixtureTool.activate, mepFixtureTool.deactivate);
+  useEffect(() => {
+    if (activeTool === 'mep-fixture') {
+      mepFixtureTool.setParamOverrides({ kind: 'light-fixture' });
+    } else if (activeTool === 'mep-floor-drain') {
+      mepFixtureTool.setParamOverrides({ kind: 'floor-drain' });
+    }
+  }, [activeTool, mepFixtureTool.setParamOverrides]);
 
   // ADR-410 — FURNITURE TOOL: single-click placement; entity appended+broadcast.
   const furnitureTool = useFurnitureTool({

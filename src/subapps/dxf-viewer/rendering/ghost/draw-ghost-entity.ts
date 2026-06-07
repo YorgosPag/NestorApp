@@ -326,6 +326,19 @@ export function drawGhostEntity(
       return;
     }
 
+    // ADR-408 Εύρος Β #3 — underfloor heating ghost: footprint polygon (world mm,
+    // from MepUnderfloorParams). Area-based entity — uses params.footprint.vertices
+    // directly (like floor-finish/slab), NOT geometry.footprint (which doesn't exist).
+    case 'mep-underfloor': {
+      const uf = entity as unknown as {
+        params?: { footprint?: { vertices: ReadonlyArray<{ x: number; y: number }> } };
+      };
+      const verts = uf.params?.footprint?.vertices ?? [];
+      if (verts.length < 2) return;
+      drawPolygon(ctx, verts, toScreen);
+      return;
+    }
+
     // ADR-410 — furniture ghost: footprint polygon (scene-units, from
     // FurnitureGeometry). Mirror mep-fixture/electrical-panel so the live
     // move/rotation/corner-resize ghost paints.

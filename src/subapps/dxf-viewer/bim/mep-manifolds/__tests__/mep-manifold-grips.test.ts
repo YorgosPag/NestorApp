@@ -7,6 +7,10 @@
 import { getMepManifoldGrips, applyMepManifoldGripDrag } from '../mep-manifold-grips';
 import { buildMepManifoldEntity, buildDefaultMepManifoldParams } from '../../../hooks/drawing/mep-manifold-completion';
 import type { MepManifoldEntity } from '../../types/mep-manifold-types';
+import {
+  MIN_MANIFOLD_OUTLET_COUNT,
+  MAX_MANIFOLD_OUTLET_COUNT,
+} from '../../types/mep-manifold-types';
 
 function manifold(): MepManifoldEntity {
   const res = buildMepManifoldEntity(buildDefaultMepManifoldParams({ x: 100, y: 100 }), '0');
@@ -14,13 +18,20 @@ function manifold(): MepManifoldEntity {
   return res.entity;
 }
 
+/** A manifold with an explicit `outletCount` (for clamp-bound action-grip tests). */
+function manifoldWith(outletCount: number): MepManifoldEntity {
+  const params = { ...buildDefaultMepManifoldParams({ x: 100, y: 100 }), outletCount };
+  const res = buildMepManifoldEntity(params, '0');
+  if (!res.ok) throw new Error('invalid');
+  return res.entity;
+}
+
 describe('getMepManifoldGrips', () => {
-  it('emits 6 grips (move, rotation, 4 corners) with manifold grip kinds', () => {
+  it('emits the 6 centred-box grips (move, rotation, 4 corners) first', () => {
     const grips = getMepManifoldGrips(manifold());
-    expect(grips).toHaveLength(6);
     expect(grips[0].mepManifoldGripKind).toBe('mep-manifold-move');
     expect(grips[1].mepManifoldGripKind).toBe('mep-manifold-rotation');
-    expect(grips.slice(2).map((g) => g.mepManifoldGripKind)).toEqual([
+    expect(grips.slice(2, 6).map((g) => g.mepManifoldGripKind)).toEqual([
       'mep-manifold-corner-ne',
       'mep-manifold-corner-nw',
       'mep-manifold-corner-sw',
@@ -32,6 +43,47 @@ describe('getMepManifoldGrips', () => {
     const grips = getMepManifoldGrips(manifold());
     expect(grips[0].position.x).toBeCloseTo(100, 6);
     expect(grips[0].position.y).toBeCloseTo(100, 6);
+  });
+});
+
+describe('getMepManifoldGrips — outlet action grips (Revit array control ▲/▼)', () => {
+  it('emits both add (▲) and remove (▼) action grips at a mid count', () => {
+    // default count = 4 → 6 box grips + 2 action grips.
+    const grips = getMepManifoldGrips(manifold());
+    expect(grips).toHaveLength(8);
+    const kinds = grips.map((g) => g.mepManifoldGripKind);
+    expect(kinds).toContain('mep-manifold-outlet-add');
+    expect(kinds).toContain('mep-manifold-outlet-remove');
+    const add = grips.find((g) => g.mepManifoldGripKind === 'mep-manifold-outlet-add')!;
+    const remove = grips.find((g) => g.mepManifoldGripKind === 'mep-manifold-outlet-remove')!;
+    expect(add.gripIndex).toBe(6);
+    expect(remove.gripIndex).toBe(7);
+    expect(add.movesEntity).toBe(false);
+    expect(remove.movesEntity).toBe(false);
+  });
+
+  it('action grips sit beyond the +X (width) short end of the bar (no rotation)', () => {
+    const grips = getMepManifoldGrips(manifold());
+    const add = grips.find((g) => g.mepManifoldGripKind === 'mep-manifold-outlet-add')!;
+    const remove = grips.find((g) => g.mepManifoldGripKind === 'mep-manifold-outlet-remove')!;
+    // Both stand off to +X of the centre (x = 100); add above, remove below.
+    expect(add.position.x).toBeGreaterThan(100);
+    expect(remove.position.x).toBeGreaterThan(100);
+    expect(add.position.y).toBeGreaterThan(remove.position.y);
+  });
+
+  it('hides the ▲ add grip at MAX outlet count (no no-op click)', () => {
+    const grips = getMepManifoldGrips(manifoldWith(MAX_MANIFOLD_OUTLET_COUNT));
+    const kinds = grips.map((g) => g.mepManifoldGripKind);
+    expect(kinds).not.toContain('mep-manifold-outlet-add');
+    expect(kinds).toContain('mep-manifold-outlet-remove');
+  });
+
+  it('hides the ▼ remove grip at MIN outlet count (no no-op click)', () => {
+    const grips = getMepManifoldGrips(manifoldWith(MIN_MANIFOLD_OUTLET_COUNT));
+    const kinds = grips.map((g) => g.mepManifoldGripKind);
+    expect(kinds).toContain('mep-manifold-outlet-add');
+    expect(kinds).not.toContain('mep-manifold-outlet-remove');
   });
 });
 

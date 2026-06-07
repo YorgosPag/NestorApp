@@ -72,7 +72,7 @@ export function resyncBimScene(
     { walls: s.walls, columns: s.columns, beams: s.beams, slabs: s.slabs,
       slabOpenings: s.slabOpenings, openings: s.openings, stairs: s.stairs,
       fixtures: s.fixtures, panels: s.panels, manifolds: s.manifolds, radiators: s.radiators, boilers: s.boilers, railings: s.railings,
-      furnitures: s.furnitures, roofs: s.roofs, floorFinishes: s.floorFinishes, mepSegments: s.mepSegments, mepFittings: s.mepFittings },
+      furnitures: s.furnitures, roofs: s.roofs, floorFinishes: s.floorFinishes, underfloors: s.underfloors, mepSegments: s.mepSegments, mepFittings: s.mepFittings },
     0,
     s.activeLevelId ?? undefined,
     s.floors,

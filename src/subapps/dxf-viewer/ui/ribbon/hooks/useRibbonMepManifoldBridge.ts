@@ -34,11 +34,8 @@ import {
   MIN_MANIFOLD_OUTLET_COUNT,
   isDrainageCollectorKind,
 } from '../../../bim/types/mep-manifold-types';
-import { buildMepManifoldConnectors } from '../../../bim/mep-manifolds/mep-manifold-geometry';
-import { useCommandHistory, CompoundCommand } from '../../../core/commands';
-import { UpdateMepManifoldParamsCommand } from '../../../core/commands/entity-commands/UpdateMepManifoldParamsCommand';
-import { UpdateMepSegmentParamsCommand } from '../../../core/commands/entity-commands/UpdateMepSegmentParamsCommand';
-import { resolveManifoldConnectedPipePatches } from '../../../bim/mep-segments/mep-elevation-propagation';
+import { useCommandHistory } from '../../../core/commands';
+import { buildManifoldParamUpdate } from '../../../bim/mep-manifolds/mep-manifold-param-update';
 import { LevelSceneManagerAdapter } from '../../../systems/entity-creation/LevelSceneManagerAdapter';
 import {
   MEP_MANIFOLD_RIBBON_KEYS,
@@ -111,50 +108,30 @@ export function useRibbonMepManifoldBridge(
   }, [levelManager, universalSelection]);
 
   /**
-   * Dispatch the params patch through `UpdateMepManifoldParamsCommand`. Connectors
-   * are re-seeded from the next params (idempotent SSoT) so outlet count / width /
-   * diameters keep the embedded connector set consistent.
+   * Dispatch the params patch through the shared `buildManifoldParamUpdate` SSoT
+   * (connector re-seed + Revit "host moves, connectors follow" pipe bundle). The
+   * SAME builder backs the on-canvas outlet add/remove grips, so the tab and the
+   * grips never drift (N.0.2). Caller owns execution + the segment-event emit.
    */
   const dispatchParams = useCallback(
     (manifold: MepManifoldEntity, nextParams: MepManifoldParams): void => {
       if (!levelManager.currentLevelId) return;
-      const withConnectors: MepManifoldParams = {
-        ...nextParams,
-        connectors: buildMepManifoldConnectors(nextParams),
-      };
       const sm = new LevelSceneManagerAdapter(
         levelManager.getLevelScene,
         levelManager.setLevelScene,
         levelManager.currentLevelId,
       );
-      const manifoldCmd = new UpdateMepManifoldParamsCommand(
-        manifold.id,
-        withConnectors,
-        manifold.params,
-        sm,
-        false,
-      );
-
-      // Revit "host moves, connectors follow": when the manifold's elevation
-      // changes, pipe ends snapped to its outlets follow. Bundle the manifold
-      // update + each connected-pipe update into ONE undo (ADR-408 Φ-B2a host side).
       const scene = levelManager.getLevelScene(levelManager.currentLevelId);
-      const pipePatches = resolveManifoldConnectedPipePatches(
+      const { command, segmentIds } = buildManifoldParamUpdate(
         scene?.entities ?? [],
-        manifold.id,
-        withConnectors,
+        manifold,
+        nextParams,
+        sm,
       );
-      if (pipePatches.length === 0) {
-        executeCommand(manifoldCmd);
-        return;
-      }
-      const pipeCmds = pipePatches.map(
-        (p) => new UpdateMepSegmentParamsCommand(p.segment.id, p.nextParams, p.segment.params, sm, false),
-      );
-      executeCommand(new CompoundCommand('Update manifold + connected pipes', [manifoldCmd, ...pipeCmds]));
+      executeCommand(command);
       // The segment command does not emit — persistence auto-saves on this event.
-      for (const p of pipePatches) {
-        EventBus.emit('bim:mep-segment-params-updated', { segmentId: p.segment.id });
+      for (const segmentId of segmentIds) {
+        EventBus.emit('bim:mep-segment-params-updated', { segmentId });
       }
     },
     [executeCommand, levelManager],

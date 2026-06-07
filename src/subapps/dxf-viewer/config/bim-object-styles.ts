@@ -40,6 +40,8 @@ export type BimCategory =
   | 'mep-radiator'
   // ADR-408 Εύρος Β #2 — heating boiler / λέβητας (hydronic source).
   | 'mep-boiler'
+  // ADR-408 Εύρος Β #3 — underfloor heating loop / ενδοδαπέδια θέρμανση (hydronic terminal, area).
+  | 'mep-underfloor'
   // ADR-407 — standalone path-based railing (architectural).
   | 'railing'
   // ADR-408 Φ7 — home-run circuit wires (derived electrical annotation overlay).
@@ -50,6 +52,9 @@ export type BimCategory =
   | 'duct'
   // ADR-408 Φ8 — linear MEP pipe run (plumbing discipline).
   | 'pipe'
+  // ADR-408 Φ14 — sanitary drainage pipe run (plumbing); derived from a pipe whose
+  // classification is 'sanitary-drainage', so it toggles independently of water pipes.
+  | 'drain-pipe'
   // ADR-415 — pure-vector 2D sanitary plan symbol (WC/washbasin/…; plumbing).
   | 'sanitary'
   // ADR-415 — pure-vector 2D kitchen plan symbol (sink/stove/fridge/counter; casework).
@@ -122,8 +127,8 @@ export interface ObjectStyle {
 export const BIM_CATEGORIES: readonly BimCategory[] = [
   'wall', 'column', 'beam', 'slab', 'opening', 'slab-opening',
   'stair', 'roof', 'ceiling', 'dimension', 'hatch', 'grip', 'envelope',
-  'light-fixture', 'electrical-panel', 'mep-manifold', 'mep-radiator', 'mep-boiler', 'railing', 'mep-wire', 'furniture',
-  'duct', 'pipe', 'sanitary', 'kitchen',
+  'light-fixture', 'electrical-panel', 'mep-manifold', 'mep-radiator', 'mep-boiler', 'mep-underfloor', 'railing', 'mep-wire', 'furniture',
+  'duct', 'pipe', 'drain-pipe', 'sanitary', 'kitchen',
 ] as const;
 
 /**
@@ -152,6 +157,8 @@ export const MODEL_BIM_CATEGORIES: readonly BimCategory[] = [
   'mep-radiator',
   // ADR-408 Εύρος Β #2 — heating boiler (λέβητας, hydronic source).
   'mep-boiler',
+  // ADR-408 Εύρος Β #3 — underfloor heating loop (ενδοδαπέδια, hydronic terminal area).
+  'mep-underfloor',
   // ADR-407 — standalone path-based railing.
   'railing',
   // ADR-408 Φ7 — home-run circuit wires (hidden by "Show only DXF" with the rest).
@@ -160,6 +167,8 @@ export const MODEL_BIM_CATEGORIES: readonly BimCategory[] = [
   'furniture',
   // ADR-408 Φ8 — linear MEP duct + pipe runs.
   'duct', 'pipe',
+  // ADR-408 Φ14 — sanitary drainage pipe run.
+  'drain-pipe',
   // ADR-415 — pure-vector 2D floorplan symbols (sanitary + kitchen).
   'sanitary', 'kitchen',
 ] as const;
@@ -204,6 +213,8 @@ export const DEFAULT_OBJECT_STYLES: Readonly<Record<BimCategory, ObjectStyle>> =
   'mep-radiator': { projectionPen: 4, cutPen: 5 },
   // ADR-408 Εύρος Β #2 — λέβητας: μεσαία γραμμή (heating source cabinet).
   'mep-boiler': { projectionPen: 4, cutPen: 5 },
+  // ADR-408 Εύρος Β #3 — ενδοδαπέδια θέρμανση: λεπτή γραμμή (area hatch overlay, interior plan).
+  'mep-underfloor': { projectionPen: 3, cutPen: 4 },
   // ADR-407 — κάγκελο: μεσαία γραμμή προβολής (metal members, plan symbol).
   railing:        { projectionPen: 4, cutPen: 5 },
   // ADR-408 Φ7 — καλώδιο κυκλώματος: λεπτή γραμμή annotation (το χρώμα έρχεται
@@ -215,6 +226,9 @@ export const DEFAULT_OBJECT_STYLES: Readonly<Record<BimCategory, ObjectStyle>> =
   duct:           { projectionPen: 4, cutPen: 5 },
   // ADR-408 Φ8 — σωλήνας: λεπτή γραμμή (plumbing pipe run, plan centerline).
   pipe:           { projectionPen: 3, cutPen: 4 },
+  // ADR-408 Φ14 — σωλήνας αποχέτευσης: ίδιο pen με τον σωλήνα (το καφέ χρώμα έρχεται
+  // από το classification, όχι από εδώ — η κατηγορία δίνει μόνο ξεχωριστό V/G).
+  'drain-pipe':   { projectionPen: 3, cutPen: 4 },
   // ADR-415 — είδος υγιεινής: λεπτή γραμμή (annotation-grade plan symbol).
   sanitary:       { projectionPen: 3, cutPen: 3 },
   // ADR-415 — στοιχείο κουζίνας: λεπτή γραμμή (casework plan symbol).

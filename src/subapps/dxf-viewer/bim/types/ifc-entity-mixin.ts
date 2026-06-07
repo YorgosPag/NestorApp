@@ -39,6 +39,8 @@ export type IfcEntityType =
   // ADR-408 Φ11 — auto pipe/duct fittings (IfcFlowFitting family).
   | 'IfcPipeFitting'
   | 'IfcDuctFitting'
+  // ADR-408 Φ14 — drainage collector / φρεάτιο (sump/catch basin; IfcFlowStorageDevice family).
+  | 'IfcFlowStorageDevice'
   // ADR-415 — sanitary plan symbols (WC/washbasin/…; IfcSanitaryTerminal family).
   | 'IfcSanitaryTerminal'
   // ADR-417 — parametric pitched roof container (IfcRoofTypeEnum on derived shape).
@@ -72,6 +74,8 @@ export const IFC_ENTITY_TYPE_VALUES: readonly IfcEntityType[] = [
   // ADR-408 Φ11 — auto pipe/duct fittings.
   'IfcPipeFitting',
   'IfcDuctFitting',
+  // ADR-408 Φ14 — drainage collector / φρεάτιο (sump/catch basin).
+  'IfcFlowStorageDevice',
   // ADR-415 — sanitary plan symbols.
   'IfcSanitaryTerminal',
   // ADR-417 — parametric pitched roof container.
@@ -129,6 +133,8 @@ export const IfcEntityTypeSchema = z.enum([
   // ADR-408 Φ11 — auto pipe/duct fittings.
   'IfcPipeFitting',
   'IfcDuctFitting',
+  // ADR-408 Φ14 — drainage collector / φρεάτιο (sump/catch basin).
+  'IfcFlowStorageDevice',
   // ADR-415 — sanitary plan symbols.
   'IfcSanitaryTerminal',
   // ADR-417 — parametric pitched roof container.

@@ -34,11 +34,25 @@ import {
 } from '../../../bim/services/opening-renumber-service';
 
 const ALL_KINDS: ReadonlyArray<OpeningKind> = [
+  // Doors
   'door',
+  'double-door',
   'sliding-door',
+  'double-sliding-door',
+  'pocket-door',
+  'bifold-door',
+  'overhead-door',
+  'revolving-door',
   'french-door',
+  // Windows
   'window',
   'fixed',
+  'double-hung-window',
+  'sliding-window',
+  'awning-window',
+  'hopper-window',
+  'tilt-turn-window',
+  'bay-window',
 ];
 
 export interface RenumberOpeningsDialogProps {
@@ -186,8 +200,7 @@ export function RenumberOpeningsDialog(props: RenumberOpeningsDialogProps): Reac
   );
 }
 
+/** Generic kebab-case → camelCase (SSoT· e.g. 'tilt-turn-window' → 'tiltTurnWindow'). */
 function toCamel(kind: OpeningKind): string {
-  if (kind === 'sliding-door') return 'slidingDoor';
-  if (kind === 'french-door') return 'frenchDoor';
-  return kind;
+  return kind.replace(/-([a-z])/g, (_, c: string) => c.toUpperCase());
 }

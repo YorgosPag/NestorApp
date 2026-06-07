@@ -434,10 +434,22 @@
     "tag": {
       "prefix": {
         "door": "D",
+        "double-door": "DD",
         "sliding-door": "SD",
+        "double-sliding-door": "DSD",
+        "pocket-door": "PKT",
+        "bifold-door": "BFD",
+        "overhead-door": "OHD",
+        "revolving-door": "RVD",
         "french-door": "FD",
         "window": "W",
-        "fixed": "FX"
+        "fixed": "FX",
+        "double-hung-window": "DHW",
+        "sliding-window": "SLW",
+        "awning-window": "AWN",
+        "hopper-window": "HOP",
+        "tilt-turn-window": "TT",
+        "bay-window": "BAY"
       },
       "basementPrefix": "B",
       "tagVisible": "Show Tag",

@@ -18,6 +18,7 @@ import type {
   SlabOpeningGripKind,
   RoofGripKind,
   FloorFinishGripKind,
+  MepUnderfloorGripKind,
   BeamGripKind,
   ColumnGripKind,
   MepFixtureGripKind,
@@ -44,6 +45,7 @@ export type {
   SlabOpeningGripKind,
   RoofGripKind,
   FloorFinishGripKind,
+  MepUnderfloorGripKind,
   BeamGripKind,
   ColumnGripKind,
   MepFixtureGripKind,
@@ -119,6 +121,15 @@ export interface GripInfo {
    * (per-vertex translate + edge-midpoint insertion).
    */
   floorFinishGripKind?: FloorFinishGripKind;
+  /**
+   * ADR-408 Εύρος Β #3 — underfloor heating loop polygon grip discriminator.
+   * Present only when the grip belongs to a `MepUnderfloorEntity`; routes the
+   * commit through `applyMepUnderfloorGripDrag()` +
+   * `UpdateMepUnderfloorParamsCommand` (per-vertex translate + edge-midpoint
+   * insertion, mirrors floor-finish / slab pattern). After each drag,
+   * `buildUnderfloorConnectors` re-derives the two hydronic connectors.
+   */
+  mepUnderfloorGripKind?: MepUnderfloorGripKind;
   /**
    * ADR-363 Phase 5.5a — parametric beam grip discriminator. Present only when
    * the grip belongs to a `BeamEntity`; routes the commit through

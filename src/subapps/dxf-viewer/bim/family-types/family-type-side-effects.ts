@@ -31,10 +31,11 @@
 
 import { createModuleLogger } from '@/lib/telemetry';
 import type { SceneModel } from '../../types/entities';
-import { isRoofEntity, isSlabEntity, isWallEntity } from '../../types/entities';
+import { isOpeningEntity, isRoofEntity, isSlabEntity, isWallEntity } from '../../types/entities';
 import type { WallEntity } from '../types/wall-types';
 import type { SlabEntity } from '../types/slab-types';
 import type { RoofEntity } from '../types/roof-types';
+import type { OpeningEntity } from '../types/opening-types';
 import { reresolveWallEntity } from '../../hooks/data/wall-persistence-helpers';
 import { reresolveSlabEntity } from '../../hooks/data/slab-persistence-helpers';
 import { reresolveRoofEntity } from '../../hooks/data/roof-persistence-helpers';
@@ -48,6 +49,22 @@ const logger = createModuleLogger('FamilyTypeSideEffects');
 export function findWallsByTypeId(scene: SceneModel | null, typeId: string): WallEntity[] {
   if (!scene) return [];
   return scene.entities.filter(isWallEntity).filter((w) => w.typeId === typeId);
+}
+
+/**
+ * All openings in a scene linked to a given family type. Pure (ADR-421 SLICE C).
+ *
+ * NOTE: opening BOQ uses signature-group aggregation (`opening-boq-sync`, keyed
+ * by kind+dimensions) rather than the per-entity `bimToBoqBridge` used for wall/
+ * slab/roof — so there is no `refeedOpeningBoqForTypeAcrossFloors` here. On a
+ * type edit, the ACTIVE-floor openings re-flow geometry via
+ * `useOpeningTypeReresolution`; their BOQ signature group refreshes on the next
+ * per-opening save. Cross-floor opening BOQ re-feed is a documented follow-up
+ * (needs `floorplanId` plumbing into the BOQ-refeed host).
+ */
+export function findOpeningsByTypeId(scene: SceneModel | null, typeId: string): OpeningEntity[] {
+  if (!scene) return [];
+  return scene.entities.filter(isOpeningEntity).filter((o) => o.typeId === typeId);
 }
 
 /** Minimal level shape needed to source each floor's scene + tag its BOQ rows. */

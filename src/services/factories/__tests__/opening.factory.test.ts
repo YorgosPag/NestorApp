@@ -71,6 +71,10 @@ describe('inferOpeningIfcType', () => {
     expect(inferOpeningIfcType('door')).toBe('IfcDoor');
   });
 
+  it("'double-door' → 'IfcDoor'", () => {
+    expect(inferOpeningIfcType('double-door')).toBe('IfcDoor');
+  });
+
   it("'sliding-door' → 'IfcDoor'", () => {
     expect(inferOpeningIfcType('sliding-door')).toBe('IfcDoor');
   });
@@ -86,13 +90,26 @@ describe('inferOpeningIfcType', () => {
   it("'fixed' → 'IfcWindow'", () => {
     expect(inferOpeningIfcType('fixed')).toBe('IfcWindow');
   });
+
+  // ─── ADR-421 SLICE B — fan-out families ────────────────────────────────────
+  it('SLICE B door families → IfcDoor', () => {
+    for (const kind of ['double-sliding-door', 'pocket-door', 'bifold-door', 'overhead-door', 'revolving-door'] as OpeningKind[]) {
+      expect(inferOpeningIfcType(kind)).toBe('IfcDoor');
+    }
+  });
+
+  it('SLICE B window families → IfcWindow', () => {
+    for (const kind of ['double-hung-window', 'sliding-window', 'awning-window', 'hopper-window', 'tilt-turn-window', 'bay-window'] as OpeningKind[]) {
+      expect(inferOpeningIfcType(kind)).toBe('IfcWindow');
+    }
+  });
 });
 
 describe('createOpening', () => {
   // ─── ifcType inference per kind ────────────────────────────────────────────
 
   describe('ifcType inference per kind', () => {
-    const doorKinds: OpeningKind[] = ['door', 'sliding-door', 'french-door'];
+    const doorKinds: OpeningKind[] = ['door', 'double-door', 'sliding-door', 'french-door'];
     const windowKinds: OpeningKind[] = ['window', 'fixed'];
 
     for (const kind of doorKinds) {
@@ -191,9 +208,41 @@ describe('createOpening', () => {
       expect(o.visible).toBeUndefined();
     });
 
-    it('params passed through unchanged', () => {
+    it('params passed through with auto-filled operationType (ADR-421 §A2)', () => {
       const o = createOpening(baseInput);
-      expect(o.params).toEqual(baseDoorParams);
+      expect(o.params).toEqual({ ...baseDoorParams, operationType: 'SINGLE_SWING_LEFT' });
+    });
+  });
+
+  // ─── ADR-421 §A2 — operationType auto-fill ─────────────────────────────────
+
+  describe('operationType auto-fill', () => {
+    it("door (no handing) → 'SINGLE_SWING_LEFT'", () => {
+      const o = createOpening(baseInput);
+      expect(o.params.operationType).toBe('SINGLE_SWING_LEFT');
+    });
+
+    it("door handing='right' → 'SINGLE_SWING_RIGHT'", () => {
+      const o = createOpening({ ...baseInput, params: { ...baseDoorParams, handing: 'right' } });
+      expect(o.params.operationType).toBe('SINGLE_SWING_RIGHT');
+    });
+
+    it("double-door → 'DOUBLE_DOOR_SINGLE_SWING'", () => {
+      const o = createOpening({ ...baseInput, params: { ...baseDoorParams, kind: 'double-door' } });
+      expect(o.params.operationType).toBe('DOUBLE_DOOR_SINGLE_SWING');
+    });
+
+    it("window → 'SIDEHUNGRIGHTHAND'", () => {
+      const o = createOpening({ ...baseInput, params: baseWindowParams });
+      expect(o.params.operationType).toBe('SIDEHUNGRIGHTHAND');
+    });
+
+    it('respects caller-provided operationType (idempotent)', () => {
+      const o = createOpening({
+        ...baseInput,
+        params: { ...baseDoorParams, operationType: 'DOUBLE_SWING_LEFT' },
+      });
+      expect(o.params.operationType).toBe('DOUBLE_SWING_LEFT');
     });
   });
 

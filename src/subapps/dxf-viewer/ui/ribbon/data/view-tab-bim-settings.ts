@@ -109,6 +109,19 @@ const MEP_WIRE_BUTTON: RibbonButton = {
   },
 };
 
+/** ADR-408 Φ14 — show/hide sanitary drainage pipe runs (own V/G category). */
+const DRAIN_PIPE_BUTTON: RibbonButton = {
+  type: 'widget',
+  size: 'small',
+  widgetId: 'drain-pipe-toggle',
+  command: {
+    id: 'view.drainPipe',
+    labelKey: 'ribbon.commands.drainPipe.label',
+    icon: '',
+    commandKey: 'drain-pipe-toggle',
+  },
+};
+
 /** ADR-408 Φ7 — colour-by-system master toggle (Revit "Color circuits by system"). */
 const COLOR_BY_SYSTEM_BUTTON: RibbonButton = {
   type: 'widget',
@@ -175,7 +188,7 @@ export const BIM_GRAPHICS_PANEL: RibbonPanelDef = {
     // Visibility/Graphics → DXF only → Disciplines.
     {
       isInFlyout: false,
-      buttons: [VISIBILITY_GRAPHICS_BUTTON, HIDE_BIM_BUTTON, MEP_WIRE_BUTTON, COLOR_BY_SYSTEM_BUTTON, REALISTIC_MATERIALS_BUTTON, DISCIPLINE_BUTTON],
+      buttons: [VISIBILITY_GRAPHICS_BUTTON, HIDE_BIM_BUTTON, MEP_WIRE_BUTTON, DRAIN_PIPE_BUTTON, COLOR_BY_SYSTEM_BUTTON, REALISTIC_MATERIALS_BUTTON, DISCIPLINE_BUTTON],
     },
   ],
 };

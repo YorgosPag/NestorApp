@@ -74,6 +74,14 @@ function signedArea(poly: readonly Point2D[]): number {
   return s / 2;
 }
 
+/**
+ * Εμβαδόν πολυγώνου (πάντα θετικό, ανεξάρτητο φοράς). SSoT για επιλογή
+ * «μικρότερου εμπεριέχοντος loop» (ADR-419 Layer 1) — reuse του `signedArea`.
+ */
+export function polygonArea(poly: readonly Point2D[]): number {
+  return Math.abs(signedArea(poly));
+}
+
 /** Επιστρέφει το πολύγωνο σε CCW φορά (θετικό signed area). */
 function toCCW(poly: readonly Point2D[]): Point2D[] {
   const p = poly.map((q) => ({ x: q.x, y: q.y }));

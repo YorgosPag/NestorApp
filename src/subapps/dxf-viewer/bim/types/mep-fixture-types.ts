@@ -32,15 +32,26 @@ import type {
 import type { SceneUnits } from '../../utils/scene-units';
 import type { IfcEntityMixin } from './ifc-entity-mixin';
 import type { MepConnectorHostParams } from './mep-component-types';
+import type { BimCategory } from '../../config/bim-object-styles';
 
 // ─── Sub-type discriminator (ADR-406) ────────────────────────────────────────
 
 /**
  * MEP fixture kind discriminator. The opening slice ships `'light-fixture'`;
- * future MEP families append here (e.g. `'air-terminal'`, `'sprinkler'`). Each
- * kind maps 1:1 to a `BimCategory` of the same string (see `fixtureCategory`).
+ * future MEP families append here without a new EntityType. ADR-408 Φ14 adds
+ * `'floor-drain'` (σιφώνι/στόμιο δαπέδου αποχέτευσης — Revit "Plumbing Fixture",
+ * IFC `IfcSanitaryTerminal`): a plumbing TERMINAL where floor water enters the
+ * sanitary-drainage network. Each kind maps to a `BimCategory` via
+ * {@link resolveFixtureBimCategory} (light → `'light-fixture'`, drain → `'drain-pipe'`).
  */
-export type MepFixtureKind = 'light-fixture';
+export type MepFixtureKind = 'light-fixture' | 'floor-drain';
+
+/**
+ * IFC4 class of a fixture, derived from {@link MepFixtureKind} via the SSoT
+ * {@link resolveFixtureIfcType}: a light fixture is `IfcLightFixture`; a floor
+ * drain is `IfcSanitaryTerminal` (Revit Plumbing Fixture).
+ */
+export type MepFixtureIfcType = 'IfcLightFixture' | 'IfcSanitaryTerminal';
 
 /**
  * 2D/3D footprint shape of the fixture body.
@@ -123,8 +134,32 @@ export interface MepFixtureEntity
   extends BimEntity<MepFixtureKind, MepFixtureParams, MepFixtureGeometry>,
     IfcEntityMixin {
   readonly type: 'mep-fixture';
-  /** IFC4 class — `IfcLightFixture` for the light-fixture kind. */
-  readonly ifcType: 'IfcLightFixture';
+  /** IFC4 class — derived from `kind` (light → IfcLightFixture, drain → IfcSanitaryTerminal). */
+  readonly ifcType: MepFixtureIfcType;
+}
+
+// ─── Kind-derived SSoT resolvers (ADR-408 Φ14) ───────────────────────────────
+
+/**
+ * SSoT — resolve the IFC4 class for a fixture kind. A light fixture is an
+ * `IfcLightFixture`; a floor drain is an `IfcSanitaryTerminal` (Revit Plumbing
+ * Fixture). Used by the factory + 3D/IFC serializers so the IFC class is never
+ * hard-coded per call-site.
+ */
+export function resolveFixtureIfcType(kind: MepFixtureKind): MepFixtureIfcType {
+  return kind === 'floor-drain' ? 'IfcSanitaryTerminal' : 'IfcLightFixture';
+}
+
+/**
+ * SSoT for a fixture's `BimCategory` — the Visibility/Graphics bucket (ADR-408
+ * Φ14). Mirror of `resolveSegmentBimCategory`/`resolveFittingBimCategory`: a
+ * `'floor-drain'` shares the `'drain-pipe'` category, so it toggles + hides
+ * together with the sanitary-drainage pipes it feeds (Revit "drainage" V/G) and
+ * paints brown. Every other kind maps to `'light-fixture'`. Consumed by BOTH the
+ * 2D renderer and the 3D scene sync.
+ */
+export function resolveFixtureBimCategory(params: MepFixtureParams): BimCategory {
+  return params.kind === 'floor-drain' ? 'drain-pipe' : 'light-fixture';
 }
 
 // ─── Defaults & constants ────────────────────────────────────────────────────
@@ -144,3 +179,17 @@ export const DEFAULT_FIXTURE_MOUNTING_ELEVATION_MM = 2700;
 
 /** Minimum fixture footprint dimension (mm) — below this is a placement error. */
 export const MIN_FIXTURE_DIMENSION_MM = 20;
+
+// ─── Floor-drain defaults (ADR-408 Φ14) ──────────────────────────────────────
+
+/** Default square floor-drain footprint side (mm) — typical 150×150 grating. */
+export const DEFAULT_FLOOR_DRAIN_SIZE_MM = 150;
+
+/** Default floor-drain body thickness (mm) — the recessed basin depth. */
+export const DEFAULT_FLOOR_DRAIN_BODY_HEIGHT_MM = 100;
+
+/** Floor-drain mounting elevation above FFL (mm) — flush with the floor (0). */
+export const FLOOR_DRAIN_MOUNTING_ELEVATION_MM = 0;
+
+/** Default sanitary-drainage outlet connector diameter (mm) for a floor drain. */
+export const DEFAULT_FLOOR_DRAIN_CONNECTOR_DIAMETER_MM = 50;

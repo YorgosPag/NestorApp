@@ -38,12 +38,14 @@ import {
   isMepSegmentEntity,
   isMepRadiatorEntity,
   isMepBoilerEntity,
+  isMepUnderfloorEntity,
 } from '../../types/entities';
 import type { MepFixtureEntity } from '../../bim/types/mep-fixture-types';
 import type { ElectricalPanelEntity } from '../../bim/types/electrical-panel-types';
 import type { MepSegmentEntity } from '../../bim/types/mep-segment-types';
 import type { MepRadiatorEntity } from '../../bim/types/mep-radiator-types';
 import type { MepBoilerEntity } from '../../bim/types/mep-boiler-types';
+import type { MepUnderfloorEntity } from '../../bim/types/mep-underfloor-types';
 import { useMepSystemStore } from '../../bim/mep-systems/mep-system-store';
 import {
   buildConnectorSystemIndex,
@@ -63,7 +65,7 @@ export interface UseMepConnectorReconciliationParams {
 
 /** Re-derive one connector host's `systemId` cache; same ref when unchanged. */
 function reconcileHost<
-  T extends MepFixtureEntity | ElectricalPanelEntity | MepSegmentEntity | MepRadiatorEntity | MepBoilerEntity,
+  T extends MepFixtureEntity | ElectricalPanelEntity | MepSegmentEntity | MepRadiatorEntity | MepBoilerEntity | MepUnderfloorEntity,
 >(
   entity: T,
   index: ReadonlyMap<string, string>,
@@ -122,6 +124,14 @@ export function useMepConnectorReconciliation(
       // return network (one per connector); reconcile its per-connector systemId
       // cache exactly like the radiator/manifold.
       if (isMepBoilerEntity(seeded)) {
+        const next = reconcileHost(seeded, index);
+        if (next !== e) changed = true;
+        return next;
+      }
+      // ADR-408 Εύρος Β #3 — an underfloor loop is a MEMBER of a supply + a return
+      // network (one per connector); reconcile its per-connector systemId cache
+      // exactly like the radiator/boiler.
+      if (isMepUnderfloorEntity(seeded)) {
         const next = reconcileHost(seeded, index);
         if (next !== e) changed = true;
         return next;

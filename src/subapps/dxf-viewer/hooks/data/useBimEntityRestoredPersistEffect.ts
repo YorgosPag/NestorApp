@@ -49,7 +49,9 @@ type BimRestoreEntityType =
   // ADR-417 — parametric pitched roof.
   | 'roof'
   // ADR-419 — per-room floor-finish covering.
-  | 'floor-finish';
+  | 'floor-finish'
+  // ADR-408 Εύρος Β #3 — area-based underfloor radiant heating loop.
+  | 'mep-underfloor';
 
 export function useBimEntityRestoredPersistEffect<T extends AnySceneEntity, S>(
   entityType: BimRestoreEntityType,

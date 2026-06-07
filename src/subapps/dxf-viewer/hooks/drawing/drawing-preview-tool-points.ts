@@ -18,6 +18,8 @@ import { slabPreviewStore } from '../../bim/slabs/slab-preview-store';
 import { roofPreviewStore } from '../../bim/roofs/roof-preview-store';
 // ADR-419 — floor-finish footprint preview SSoT.
 import { floorFinishPreviewStore } from '../../bim/floor-finishes/floor-finish-preview-store';
+// ADR-408 Εύρος Β #3 — underfloor heating footprint preview SSoT.
+import { mepUnderfloorPreviewStore } from '../../bim/mep-underfloor/mep-underfloor-preview-store';
 // ADR-363 Phase 5.5P — beam preview SSoT.
 import { beamPreviewStore } from '../../bim/beams/beam-preview-store';
 
@@ -55,6 +57,8 @@ export function resolveBimToolTempPoints(
   if (activeTool === 'roof') return roofPreviewStore.get().vertices;
   // ADR-419 — floor-finish footprint vertices.
   if (activeTool === 'floor-finish') return floorFinishPreviewStore.get().vertices;
+  // ADR-408 Εύρος Β #3 — underfloor heating footprint vertices.
+  if (activeTool === 'mep-underfloor') return mepUnderfloorPreviewStore.get().vertices;
   if (activeTool === 'beam') {
     // ADR-363 Phase 5.5P — beam tempPoints from store.
     const bp = beamPreviewStore.get();

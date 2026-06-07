@@ -30,6 +30,10 @@
 
 import type { Point2D } from '../../rendering/types/Types';
 import type { BoundingBox3D } from '../types/bim-base';
+// N.12 SSoT: parallel-hatch geometry promoted to polygon-utils (shared with the
+// ADR-408 radiant-floor serpentine generator). `BeamAxisOrientation` is structurally
+// `HatchDirection`; `BeamHatchLineSegment` is structurally `HatchLineSegment`.
+import { buildAxisAlignedHatch } from '../geometry/shared/polygon-utils';
 
 // ─── Material taxonomy ───────────────────────────────────────────────────────
 
@@ -193,83 +197,4 @@ function rotate(u: Readonly<BeamAxisOrientation>, angle: number): BeamAxisOrient
   const c = Math.cos(angle);
   const s = Math.sin(angle);
   return { ux: u.ux * c - u.uy * s, uy: u.ux * s + u.uy * c };
-}
-
-/**
- * Build parallel hatch segments orthogonal to a unit direction `u`. Spacing
- * μετριέται κάθετα στις γραμμές (orthogonal mm). Equivalent με `buildDiagonalHatch`
- * του column module αλλά γενικευμένο σε arbitrary direction (όχι μόνο ±45°).
- *
- * Algorithm: iterate κατά perpendicular offset `k = -uy·x + ux·y`, μετά clip
- * την ευθεία στο bbox rectangle.
- */
-function buildAxisAlignedHatch(
-  bbox: BoundingBox3D,
-  spacingMm: number,
-  u: Readonly<BeamAxisOrientation>,
-): readonly BeamHatchLineSegment[] {
-  // Perpendicular direction (CCW 90° from u): n = (-uy, ux).
-  // For each line: -uy·x + ux·y = k. Iterate k over bbox perpendicular extents.
-  const corners: ReadonlyArray<readonly [number, number]> = [
-    [bbox.min.x, bbox.min.y],
-    [bbox.max.x, bbox.min.y],
-    [bbox.max.x, bbox.max.y],
-    [bbox.min.x, bbox.max.y],
-  ];
-  let kMin = Number.POSITIVE_INFINITY;
-  let kMax = Number.NEGATIVE_INFINITY;
-  for (const [x, y] of corners) {
-    const k = -u.uy * x + u.ux * y;
-    if (k < kMin) kMin = k;
-    if (k > kMax) kMax = k;
-  }
-  const startK = Math.ceil(kMin / spacingMm) * spacingMm;
-  const out: BeamHatchLineSegment[] = [];
-  let steps = 0;
-  for (let k = startK; k <= kMax; k += spacingMm) {
-    const seg = clipLineToBbox(u, k, bbox);
-    if (seg) out.push(seg);
-    if (++steps > MAX_HATCH_STEPS) return out;
-  }
-  return out;
-}
-
-/**
- * Clip the infinite line `{ p : -uy·p.x + ux·p.y = k }` στο bbox. Παραμετροποίηση:
- * `p(t) = p0 + t · u` όπου p0 είναι οποιοδήποτε σημείο της ευθείας.
- */
-function clipLineToBbox(
-  u: Readonly<BeamAxisOrientation>,
-  k: number,
-  bbox: BoundingBox3D,
-): BeamHatchLineSegment | null {
-  // Find p0 on the line: closest point to origin → p0 = k · n  όπου n = (-uy, ux).
-  const p0x = -u.uy * k;
-  const p0y = u.ux * k;
-  // Intersect with bbox using slab method on t.
-  let tMin = Number.NEGATIVE_INFINITY;
-  let tMax = Number.POSITIVE_INFINITY;
-  // X slab.
-  if (Math.abs(u.ux) > DEGENERATE_EPS) {
-    const t1 = (bbox.min.x - p0x) / u.ux;
-    const t2 = (bbox.max.x - p0x) / u.ux;
-    tMin = Math.max(tMin, Math.min(t1, t2));
-    tMax = Math.min(tMax, Math.max(t1, t2));
-  } else if (p0x < bbox.min.x - DEGENERATE_EPS || p0x > bbox.max.x + DEGENERATE_EPS) {
-    return null;
-  }
-  // Y slab.
-  if (Math.abs(u.uy) > DEGENERATE_EPS) {
-    const t1 = (bbox.min.y - p0y) / u.uy;
-    const t2 = (bbox.max.y - p0y) / u.uy;
-    tMin = Math.max(tMin, Math.min(t1, t2));
-    tMax = Math.min(tMax, Math.max(t1, t2));
-  } else if (p0y < bbox.min.y - DEGENERATE_EPS || p0y > bbox.max.y + DEGENERATE_EPS) {
-    return null;
-  }
-  if (tMax - tMin <= DEGENERATE_EPS) return null;
-  return {
-    start: { x: p0x + tMin * u.ux, y: p0y + tMin * u.uy },
-    end:   { x: p0x + tMax * u.ux, y: p0y + tMax * u.uy },
-  };
 }

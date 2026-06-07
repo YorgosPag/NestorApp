@@ -41,9 +41,11 @@ import type {
   Polyline3D,
 } from './bim-base';
 import type { SceneUnits } from '../../utils/scene-units';
+import { mmToSceneUnits } from '../../utils/scene-units';
 import type { IfcEntityMixin } from './ifc-entity-mixin';
 import type { MepConnectorHostParams } from './mep-component-types';
 import type { PlumbingSystemClassification } from './mep-connector-types';
+import type { BimCategory } from '../../config/bim-object-styles';
 
 // ─── Discriminators ────────────────────────────────────────────────────────────
 
@@ -290,4 +292,75 @@ export function deriveCenterlineElevationMm(startMm: number, endMm: number): num
 export function isSegmentInclined(params: MepSegmentParams): boolean {
   const { startMm, endMm } = resolveSegmentEndpointElevationsMm(params);
   return Math.abs(startMm - endMm) > 1;
+}
+
+// ─── Slope (κλίση) — derived+invertible projection of per-endpoint z (Φ14 #2) ──
+
+/**
+ * Minimum plan run (mm) below which slope is undefined — a (near-)vertical riser
+ * or zero-length run has no meaningful % grade, so slope helpers no-op / return 0
+ * rather than divide by ~0.
+ */
+export const MIN_PLAN_LENGTH_FOR_SLOPE_MM = 1e-6;
+
+/**
+ * Plan (horizontal, XY) run length in **mm** — the denominator of the slope. The
+ * axis points are in canvas units, so convert via `mmToSceneUnits` (the same `s`
+ * the geometry SSoT uses). Vertical drop (z) is intentionally excluded: slope % is
+ * rise-over-PLAN-run (Revit "Slope"), not rise-over-3D-length.
+ */
+export function derivePlanLengthMm(params: MepSegmentParams): number {
+  const s = mmToSceneUnits(params.sceneUnits ?? 'mm');
+  const dx = params.endPoint.x - params.startPoint.x;
+  const dy = params.endPoint.y - params.startPoint.y;
+  return (Math.hypot(dx, dy) / s);
+}
+
+/**
+ * Derive the slope % from the two endpoint elevations + plan run (ADR-408 Φ14 #2).
+ * Sign convention: **positive = downhill toward `endPoint`** (drainage falls from
+ * start to end). A (near-)vertical / zero plan run → 0 (no meaningful grade).
+ */
+export function deriveSlopePercent(startMm: number, endMm: number, planLengthMm: number): number {
+  if (planLengthMm <= MIN_PLAN_LENGTH_FOR_SLOPE_MM) return 0;
+  return ((startMm - endMm) / planLengthMm) * 100;
+}
+
+/**
+ * Apply a slope % to a segment by moving the **end** endpoint z, anchoring the
+ * START (ADR-408 Φ14 #2 — the inverse of `deriveSlopePercent`). Keeps the
+ * per-endpoint z as the single SSoT: `endMm = startMm − planLen·slope/100`, with
+ * `centerlineElevationMm` re-derived. A (near-)vertical / zero plan run is a no-op
+ * (cannot project a grade onto a riser) so it never corrupts the z's.
+ */
+export function applySlopePercentToEndpoints(
+  params: MepSegmentParams,
+  slopePercent: number,
+): MepSegmentParams {
+  const planLen = derivePlanLengthMm(params);
+  if (planLen <= MIN_PLAN_LENGTH_FOR_SLOPE_MM) return params;
+  const { startMm } = resolveSegmentEndpointElevationsMm(params);
+  const endMm = startMm - (planLen * slopePercent) / 100;
+  return {
+    ...params,
+    startPoint: { ...params.startPoint, z: startMm },
+    endPoint: { ...params.endPoint, z: endMm },
+    centerlineElevationMm: deriveCenterlineElevationMm(startMm, endMm),
+  };
+}
+
+// ─── V/G category (ADR-408 Φ14) ──────────────────────────────────────────────
+
+/**
+ * SSoT for a segment's `BimCategory` — the Visibility/Graphics bucket. A sanitary
+ * drainage pipe gets its OWN category `'drain-pipe'` (so it toggles independently
+ * of water pipes) while staying `domain:'pipe'` everywhere else (IFC/schema/section
+ * unchanged — drainage IS a pipe). Every other run maps 1:1 to its `domain`.
+ * Consumed by BOTH the 2D renderer and the 3D scene sync.
+ */
+export function resolveSegmentBimCategory(params: MepSegmentParams): BimCategory {
+  if (params.domain === 'pipe' && params.classification === 'sanitary-drainage') {
+    return 'drain-pipe';
+  }
+  return params.domain;
 }

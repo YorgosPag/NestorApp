@@ -31,6 +31,7 @@ import {
   OPENING_KIND_DEFAULTS,
   OPENING_SNAP_INCREMENT_MM,
   isHingedKind,
+  isDoubleLeafKind,
 } from '../../bim/types/opening-types';
 import { useCursorWorldPosition } from '../../systems/cursor/useCursor';
 import { getImmediateSnap } from '../../systems/cursor/ImmediateSnapStore';
@@ -211,7 +212,7 @@ function buildGhostHingeArc(
     });
   }
 
-  if (kind === 'french-door') {
+  if (isDoubleLeafKind(kind)) {
     const hinge2X = center.x + ux * (-handingSign * halfWidthScene);
     const hinge2Y = center.y + uy * (-handingSign * halfWidthScene);
     const startVec2X = handingSign * ux;

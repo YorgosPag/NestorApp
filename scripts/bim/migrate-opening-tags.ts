@@ -51,19 +51,43 @@ const firestore = admin.firestore();
 // ────────────────────────────────────────────────────────────────────────────
 
 const PREFIXES_EL: Readonly<Record<OpeningKind, string>> = {
-  'door':         'Θ',
-  'sliding-door': 'Σ',
-  'french-door':  'ΔΘ',
-  'window':       'Π',
-  'fixed':        'ΣΥ',
+  'door':                'Θ',
+  'double-door':         'ΔΦ',
+  'sliding-door':        'Σ',
+  'double-sliding-door': 'ΔΣ',
+  'pocket-door':         'ΧΘ',
+  'bifold-door':         'ΠΤ',
+  'overhead-door':       'ΓΚ',
+  'revolving-door':      'ΠΕ',
+  'french-door':         'ΔΘ',
+  'window':              'Π',
+  'fixed':               'ΣΥ',
+  'double-hung-window':  'ΚΠ',
+  'sliding-window':      'ΣΠ',
+  'awning-window':       'ΑΠ',
+  'hopper-window':       'ΑΚ',
+  'tilt-turn-window':    'ΑΑ',
+  'bay-window':          'ΠΡ',
 };
 
 const PREFIXES_EN: Readonly<Record<OpeningKind, string>> = {
-  'door':         'D',
-  'sliding-door': 'SD',
-  'french-door':  'FD',
-  'window':       'W',
-  'fixed':        'FX',
+  'door':                'D',
+  'double-door':         'DD',
+  'sliding-door':        'SD',
+  'double-sliding-door': 'DSD',
+  'pocket-door':         'PKT',
+  'bifold-door':         'BFD',
+  'overhead-door':       'OHD',
+  'revolving-door':      'RVD',
+  'french-door':         'FD',
+  'window':              'W',
+  'fixed':               'FX',
+  'double-hung-window':  'DHW',
+  'sliding-window':      'SLW',
+  'awning-window':       'AWN',
+  'hopper-window':       'HOP',
+  'tilt-turn-window':    'TT',
+  'bay-window':          'BAY',
 };
 
 const BASEMENT_PREFIX_EL = 'Υ';
