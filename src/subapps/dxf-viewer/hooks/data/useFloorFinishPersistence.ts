@@ -29,6 +29,7 @@ import {
 } from '../../bim/floor-finishes/floor-finish-firestore-service';
 import { useBimEntityMovedPersistEffect } from './useBimEntityMovedPersistEffect';
 import { useBimEntityRestoredPersistEffect } from './useBimEntityRestoredPersistEffect';
+import { useBimFirestoreWriteGrace } from './useBimFirestoreWriteGrace';
 
 // ============================================================================
 // CONSTANTS
@@ -82,6 +83,7 @@ export function useFloorFinishPersistence(
 
   const serviceRef = useRef<FloorFinishFirestoreService | null>(null);
   const dirtyIdsRef = useRef<Set<string>>(new Set());
+  const { recordWrite, isWithinGrace } = useBimFirestoreWriteGrace();
   const lastSavedParamsRef = useRef<Map<string, FloorFinishEntity['params']>>(new Map());
   const pendingFirstSaveIdsRef = useRef<Set<string>>(new Set());
   const deletedIdsRef = useRef<Set<string>>(new Set());
@@ -140,6 +142,10 @@ export function useFloorFinishPersistence(
             continue;
           }
           if (dirty.has(d.id)) { nextEntities.push(existing); continue; }
+          // Grace-period guard (useBimFirestoreWriteGrace SSoT): suppress stale
+          // Firestore snapshots that arrive after a Firebase ca9 Watch-stream reset
+          // during the post-write window — same fix as walls/columns.
+          if (isWithinGrace(d.id)) { nextEntities.push(existing); continue; }
           if (!dequal(existing.params, d.params)) {
             nextEntities.push(floorFinishDocToEntity(d)); mutated = true;
           } else {
@@ -186,6 +192,7 @@ export function useFloorFinishPersistence(
         });
       }
       lastSavedParamsRef.current.set(entity.id, entity.params);
+      recordWrite(entity.id);
       dirtyIdsRef.current.delete(entity.id);
       pendingFirstSaveIdsRef.current.delete(entity.id);
       setSaveState('saved');
@@ -276,6 +283,7 @@ export function useFloorFinishPersistence(
       if (!svc) return;
       await svc.saveFloorFinish(floorFinishEntityToSaveInput(entity));
       lastSavedParamsRef.current.set(entity.id, entity.params);
+      recordWrite(entity.id);
       dirtyIdsRef.current.delete(entity.id);
       pendingFirstSaveIdsRef.current.delete(entity.id);
     },

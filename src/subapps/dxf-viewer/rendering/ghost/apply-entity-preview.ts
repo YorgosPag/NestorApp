@@ -22,58 +22,44 @@
 
 import type { Point2D } from '../types/Types';
 import type { DxfEntityUnion } from '../../canvas-v2/dxf-canvas/dxf-types';
-import { calculateDistance } from '../entities/shared/geometry-rendering-utils';
-// ADR-358 Phase 5d — parametric stair drag preview rebuilds full geometry
-// from new params; reuse the SSoT helpers so the ghost matches what the
-// commit adapter eventually persists.
 import { applyStairGripDrag } from '../../bim/stairs/stair-grips';
 import { computeStairGeometry } from '../../bim/geometry/stairs/StairGeometryService';
 import type { StairEntity } from '../../bim/types/stair-types';
-// ADR-363 Phase 1C — parametric wall drag preview (mirrors stair pattern).
 import { applyWallGripDrag } from '../../bim/walls/wall-grips';
 import { computeWallGeometry } from '../../bim/geometry/wall-geometry';
 import type { WallEntity } from '../../bim/types/wall-types';
-// ADR-363 Phase 5.5 — parametric beam drag preview.
 import { applyBeamGripDrag } from '../../bim/beams/beam-grips';
 import { computeBeamGeometry } from '../../bim/geometry/beam-geometry';
 import type { BeamEntity } from '../../bim/types/beam-types';
-// ADR-397 — parametric column drag preview (mirrors wall: move/rotation/resize).
 import { applyColumnGripDrag } from '../../bim/columns/column-grips';
 import { computeColumnGeometry } from '../../bim/geometry/column-geometry';
 import type { ColumnEntity } from '../../bim/types/column-types';
-// ADR-363 Phase 3.5 — parametric slab drag preview.
 import { applySlabGripDrag } from '../../bim/slabs/slab-grips';
 import type { SlabEntity } from '../../bim/types/slab-types';
-// ADR-363 Phase 3.7a — parametric slab-opening drag preview.
 import { applySlabOpeningGripDrag } from '../../bim/slab-openings/slab-opening-grips';
 import type { SlabOpeningEntity } from '../../bim/types/slab-opening-types';
-// ADR-417 Φ1-part-2 #2 — parametric roof drag preview (footprint vertex / insert).
 import { applyRoofGripDrag } from '../../bim/roofs/roof-grips';
 import type { RoofEntity } from '../../bim/types/roof-types';
-import type { OpeningEntity } from '../../bim/types/opening-types';
-// ADR-406 — parametric MEP fixture drag preview (move / rotation / corner resize).
+import { applyFloorFinishGripDrag } from '../../bim/floor-finishes/floor-finish-grips';
+import type { FloorFinishEntity } from '../../bim/types/floor-finish-types';
 import { applyMepFixtureGripDrag } from '../../bim/mep-fixtures/mep-fixture-grips';
 import { computeMepFixtureGeometry } from '../../bim/mep-fixtures/mep-fixture-geometry';
 import type { MepFixtureEntity } from '../../bim/types/mep-fixture-types';
-// ADR-408 Φ3 — parametric electrical panel drag preview (move / rotation / corner resize).
 import { applyElectricalPanelGripDrag } from '../../bim/electrical-panels/electrical-panel-grips';
 import { computeElectricalPanelGeometry } from '../../bim/electrical-panels/electrical-panel-geometry';
 import type { ElectricalPanelEntity } from '../../bim/types/electrical-panel-types';
-// ADR-408 Φ12 — parametric MEP manifold drag preview (move / rotation / corner resize).
 import { applyMepManifoldGripDrag } from '../../bim/mep-manifolds/mep-manifold-grips';
 import { computeMepManifoldGeometry } from '../../bim/mep-manifolds/mep-manifold-geometry';
 import type { MepManifoldEntity } from '../../bim/types/mep-manifold-types';
-// ADR-408 Φ8 — parametric MEP segment drag preview (start / end / midpoint / section / rotation).
 import { applyMepSegmentGripDrag } from '../../bim/mep-segments/mep-segment-grips';
 import { computeMepSegmentGeometry } from '../../bim/geometry/mep-segment-geometry';
 import type { MepSegmentEntity } from '../../bim/types/mep-segment-types';
-// ADR-410 — parametric furniture drag preview (move / rotation / corner resize).
 import { applyFurnitureGripDrag } from '../../bim/furniture/furniture-grips';
 import { computeFurnitureGeometry } from '../../bim/furniture/furniture-geometry';
 import type { FurnitureEntity } from '../../bim/types/furniture-types';
 import { cadToggleState } from '../../systems/constraints/cad-toggle-state';
 import type { EntityPreviewTransform } from './entity-preview-types';
-import { getCircleQuadrant, getArcPoint, unwrapStair } from './apply-entity-preview-helpers';
+import { unwrapStair, applyClassicEntityPreview } from './apply-entity-preview-helpers';
 
 export type { EntityPreviewTransform };
 
@@ -93,7 +79,7 @@ export function applyEntityPreview(
   preview: EntityPreviewTransform | undefined,
 ): DxfEntityUnion {
   if (!preview || preview.entityId !== entity.id) return entity;
-  const { delta, gripIndex, movesEntity, edgeVertexIndices, stairGripKind, wallGripKind, beamGripKind, columnGripKind, slabGripKind, slabOpeningGripKind, roofGripKind, mepFixtureGripKind, electricalPanelGripKind, mepManifoldGripKind, mepSegmentGripKind, furnitureGripKind, anchorPos, rotatePivot } = preview;
+  const { delta, gripIndex, movesEntity, edgeVertexIndices, stairGripKind, wallGripKind, beamGripKind, columnGripKind, slabGripKind, slabOpeningGripKind, roofGripKind, floorFinishGripKind, mepFixtureGripKind, electricalPanelGripKind, mepManifoldGripKind, mepSegmentGripKind, furnitureGripKind, anchorPos, rotatePivot } = preview;
   if (delta.x === 0 && delta.y === 0) return entity;
 
   // ── ADR-363 Phase 1C — parametric wall live preview ───────────────────────
@@ -280,6 +266,18 @@ export function applyEntityPreview(
     return { ...(entity as object), params: newParams } as unknown as DxfEntityUnion;
   }
 
+  // ── ADR-419 — parametric floor-finish live preview ─────────────────────────
+  // entity IS the raw FloorFinishEntity from scene.entities (DIRECT entity,
+  // mirrors roof). Geometry is NOT recomputed here — the ghost renderer paints
+  // the new footprint polygon from params, so the preview follows the dragged
+  // vertex / inserted edge-midpoint without the tile-pattern math.
+  if (floorFinishGripKind && entity.type === 'floor-finish') {
+    const finish = entity as unknown as FloorFinishEntity;
+    const newParams = applyFloorFinishGripDrag(floorFinishGripKind, { originalParams: finish.params, delta });
+    if (newParams === finish.params) return entity;
+    return { ...(entity as object), params: newParams } as unknown as DxfEntityUnion;
+  }
+
   // ── ADR-358 Phase 5d — parametric stair live preview ─────────────────────
   // Stair grips mutate `StairParams`; geometry is fully derived. Route
   // through the same SSoT pure helper the commit adapter uses, then re-derive
@@ -314,178 +312,8 @@ export function applyEntityPreview(
     } as unknown as DxfEntityUnion;
   }
 
-  const offsetPoint = (p: Point2D): Point2D => ({ x: p.x + delta.x, y: p.y + delta.y });
-
-  // ── Whole-entity translation (center grip / Move tool) ──────────────────
-  if (movesEntity) {
-    switch (entity.type) {
-      case 'line':
-        return { ...entity, start: offsetPoint(entity.start), end: offsetPoint(entity.end) };
-      case 'circle':
-        return { ...entity, center: offsetPoint(entity.center) };
-      case 'arc':
-        return { ...entity, center: offsetPoint(entity.center) };
-      case 'polyline':
-        return { ...entity, vertices: entity.vertices.map(offsetPoint) };
-      case 'text':
-        return { ...entity, position: offsetPoint(entity.position) };
-      case 'angle-measurement':
-        return {
-          ...entity,
-          vertex: offsetPoint(entity.vertex),
-          point1: offsetPoint(entity.point1),
-          point2: offsetPoint(entity.point2),
-        };
-      case 'wall': {
-        const wall = entity as unknown as WallEntity;
-        // Delegate to SSoT (mirrors beam's applyBeamGripDrag('beam-midpoint', ...) pattern).
-        // currentPos unused by moveMidpoint — pass delta as dummy to satisfy the interface.
-        const newParams = applyWallGripDrag('wall-midpoint', { originalParams: wall.params, delta, currentPos: delta });
-        if (newParams === wall.params) return entity;
-        const newGeometry = computeWallGeometry(newParams, wall.kind);
-        return { ...(entity as object), params: newParams, geometry: newGeometry } as unknown as DxfEntityUnion;
-      }
-      case 'beam': {
-        const beam = entity as unknown as BeamEntity;
-        const newParams = applyBeamGripDrag('beam-midpoint', { originalParams: beam.params, delta });
-        const newGeometry = computeBeamGeometry(newParams);
-        return { ...(entity as object), params: newParams, geometry: newGeometry } as unknown as DxfEntityUnion;
-      }
-      case 'column': {
-        // ADR-397 — toolbar Move-tool ghost (no columnGripKind): translate via
-        // the `column-center` SSoT, mirror wall/beam.
-        const col = entity as unknown as ColumnEntity;
-        const newParams = applyColumnGripDrag('column-center', { originalParams: col.params, delta });
-        const newGeometry = computeColumnGeometry(newParams);
-        return { ...(entity as object), params: newParams, geometry: newGeometry } as unknown as DxfEntityUnion;
-      }
-      case 'mep-fixture': {
-        // ADR-406 — toolbar Move-tool ghost (no mepFixtureGripKind): translate via
-        // the `mep-fixture-move` SSoT, mirror column/wall/beam.
-        const fix = entity as unknown as MepFixtureEntity;
-        const newParams = applyMepFixtureGripDrag('mep-fixture-move', { originalParams: fix.params, delta });
-        const newGeometry = computeMepFixtureGeometry(newParams);
-        return { ...(entity as object), params: newParams, geometry: newGeometry } as unknown as DxfEntityUnion;
-      }
-      case 'electrical-panel': {
-        // ADR-408 Φ3 — toolbar Move-tool ghost (no electricalPanelGripKind):
-        // translate via the `electrical-panel-move` SSoT, mirror mep-fixture.
-        const panel = entity as unknown as ElectricalPanelEntity;
-        const newParams = applyElectricalPanelGripDrag('electrical-panel-move', { originalParams: panel.params, delta });
-        const newGeometry = computeElectricalPanelGeometry(newParams);
-        return { ...(entity as object), params: newParams, geometry: newGeometry } as unknown as DxfEntityUnion;
-      }
-      case 'mep-manifold': {
-        // ADR-408 Φ12 — toolbar Move-tool ghost (no mepManifoldGripKind):
-        // translate via the `mep-manifold-move` SSoT, mirror electrical-panel.
-        const manifold = entity as unknown as MepManifoldEntity;
-        const newParams = applyMepManifoldGripDrag('mep-manifold-move', { originalParams: manifold.params, delta });
-        const newGeometry = computeMepManifoldGeometry(newParams);
-        return { ...(entity as object), params: newParams, geometry: newGeometry } as unknown as DxfEntityUnion;
-      }
-      case 'furniture': {
-        // ADR-410 — toolbar Move-tool ghost (no furnitureGripKind): translate via
-        // the `furniture-move` SSoT, mirror mep-fixture/electrical-panel.
-        const furn = entity as unknown as FurnitureEntity;
-        const newParams = applyFurnitureGripDrag('furniture-move', { originalParams: furn.params, delta });
-        const newGeometry = computeFurnitureGeometry(newParams);
-        return { ...(entity as object), params: newParams, geometry: newGeometry } as unknown as DxfEntityUnion;
-      }
-      case 'mep-segment': {
-        // ADR-408 Φ8 — toolbar Move-tool ghost (no mepSegmentGripKind):
-        // translate via the `mep-segment-midpoint` SSoT (moves both endpoints),
-        // mirror beam/electrical-panel.
-        const seg = entity as unknown as MepSegmentEntity;
-        const newParams = applyMepSegmentGripDrag('mep-segment-midpoint', { originalParams: seg.params, delta });
-        const newGeometry = computeMepSegmentGeometry(newParams);
-        return { ...(entity as object), params: newParams, geometry: newGeometry } as unknown as DxfEntityUnion;
-      }
-      case 'slab': {
-        const slab = entity as unknown as SlabEntity;
-        const vs = slab.params.outline.vertices;
-        const movedVerts = vs.map((v) => ({ ...v, x: v.x + delta.x, y: v.y + delta.y }));
-        const newParams = { ...slab.params, outline: { ...slab.params.outline, vertices: movedVerts } };
-        return { ...(entity as object), params: newParams } as unknown as DxfEntityUnion;
-      }
-      case 'slab-opening': {
-        const so = entity as unknown as SlabOpeningEntity;
-        const vs = so.params.outline.vertices;
-        const movedVerts = vs.map((v) => ({ ...v, x: v.x + delta.x, y: v.y + delta.y }));
-        const newParams = { ...so.params, outline: { ...so.params.outline, vertices: movedVerts } };
-        return { ...(entity as object), params: newParams } as unknown as DxfEntityUnion;
-      }
-      case 'opening': {
-        const opening = entity as unknown as OpeningEntity;
-        const outline = opening.geometry?.outline;
-        if (!outline) return entity;
-        const movedVerts = outline.vertices.map((v) => ({ ...v, x: v.x + delta.x, y: v.y + delta.y }));
-        return {
-          ...(entity as object),
-          geometry: { ...opening.geometry, outline: { ...outline, vertices: movedVerts } },
-        } as unknown as DxfEntityUnion;
-      }
-    }
-  }
-
-  // ── Edge stretch (two vertices move together) ───────────────────────────
-  if (edgeVertexIndices) {
-    const [v1, v2] = edgeVertexIndices;
-    if (entity.type === 'polyline') {
-      const vertices = [...entity.vertices];
-      if (v1 < vertices.length) vertices[v1] = offsetPoint(vertices[v1]);
-      if (v2 < vertices.length) vertices[v2] = offsetPoint(vertices[v2]);
-      return { ...entity, vertices };
-    }
-    if (entity.type === 'line') {
-      let result = { ...entity };
-      if (v1 === 0 || v2 === 0) result = { ...result, start: offsetPoint(entity.start) };
-      if (v1 === 1 || v2 === 1) result = { ...result, end: offsetPoint(entity.end) };
-      return result;
-    }
-  }
-
-  // ── Single-vertex stretch / quadrant / arc end ──────────────────────────
-  switch (entity.type) {
-    case 'line': {
-      if (gripIndex === 0) return { ...entity, start: offsetPoint(entity.start) };
-      if (gripIndex === 1) return { ...entity, end: offsetPoint(entity.end) };
-      return entity;
-    }
-    case 'polyline': {
-      if (gripIndex < entity.vertices.length) {
-        const vertices = [...entity.vertices];
-        vertices[gripIndex] = offsetPoint(vertices[gripIndex]);
-        return { ...entity, vertices };
-      }
-      return entity;
-    }
-    case 'circle': {
-      const newQuadrantPos = offsetPoint(getCircleQuadrant(entity, gripIndex));
-      return { ...entity, radius: calculateDistance(entity.center, newQuadrantPos) };
-    }
-    case 'arc': {
-      if (gripIndex === 1 || gripIndex === 2) {
-        const arcPoint = gripIndex === 1
-          ? getArcPoint(entity, entity.startAngle)
-          : getArcPoint(entity, entity.endAngle);
-        const newPos = offsetPoint(arcPoint);
-        const newRadius = calculateDistance(entity.center, newPos);
-        let angleDeg = Math.atan2(newPos.y - entity.center.y, newPos.x - entity.center.x) * (180 / Math.PI);
-        if (angleDeg < 0) angleDeg += 360;
-        if (gripIndex === 1) return { ...entity, startAngle: angleDeg, radius: newRadius };
-        return { ...entity, endAngle: angleDeg, radius: newRadius };
-      }
-      return entity;
-    }
-    case 'angle-measurement': {
-      if (gripIndex === 0) return { ...entity, vertex: offsetPoint(entity.vertex) };
-      if (gripIndex === 1) return { ...entity, point1: offsetPoint(entity.point1) };
-      if (gripIndex === 2) return { ...entity, point2: offsetPoint(entity.point2) };
-      return entity;
-    }
-    default:
-      return entity;
-  }
+  // Classic (non-parametric) path: whole-translation, edge-stretch, vertex-stretch.
+  return applyClassicEntityPreview(entity, delta, gripIndex, movesEntity, edgeVertexIndices);
 }
 
 /**

@@ -52,6 +52,13 @@
     "isColumnMessage": "The side ratio is {aspect}:1 (≤ 4). Per Eurocode 2 §9.6.1, this is a column, not a shear wall. Create as column?",
     "createAsColumn": "Column (rectangular)"
   },
+  "columnAdjacency": {
+    "title": "Adjacent columns → shear wall",
+    "message": "The new column touches existing columns and together they form a shear wall. Per Eurocode 8 §5.4.2.4 a shear wall has different reinforcement than columns. Merge them into one shear wall?",
+    "merge": "Merge into shear wall",
+    "keepSeparate": "Keep separate",
+    "merged": "The columns were merged into one shear wall."
+  },
   "mepCircuit": {
     "created": "Electrical circuit created — fixtures: {count}.",
     "failed": {

@@ -112,6 +112,14 @@ export function useDxfViewerNotifications(): void {
       }),
     );
 
+    // ADR-363 Post-Creation Adjacency Merge — N γειτονικές κολόνες συγχωνεύτηκαν σε
+    // ΕΝΑ composite τοιχίο (single-undo). Non-blocking success feedback.
+    unsubs.push(
+      EventBus.on('bim:columns-merged', () => {
+        toast.success(t('columnAdjacency.merged'));
+      }),
+    );
+
     // ADR-408 Φ5 — circuit creation feedback (create-from-selection ribbon).
     unsubs.push(
       EventBus.on('bim:mep-circuit-created', ({ memberCount }) => {

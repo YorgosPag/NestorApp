@@ -13,6 +13,7 @@ import type { UnifiedGripInfo } from './unified-grip-types';
 import type { DxfCommitDeps } from './unified-grip-types';
 import type { StairEntity } from '../../bim/types/stair-types';
 import type { WallEntity, WallKind } from '../../bim/types/wall-types';
+import type { FloorFinishEntity } from '../../bim/types/floor-finish-types';
 import type { OpeningEntity } from '../../bim/types/opening-types';
 import type { SlabEntity } from '../../bim/types/slab-types';
 import type { SlabOpeningEntity } from '../../bim/types/slab-opening-types';
@@ -36,6 +37,8 @@ import { applySlabOpeningGripDrag } from '../../bim/slab-openings/slab-opening-g
 import { applyRoofGripDrag } from '../../bim/roofs/roof-grips';
 import { applyBeamGripDrag } from '../../bim/beams/beam-grips';
 import { applyColumnGripDrag } from '../../bim/columns/column-grips';
+import { applyFloorFinishGripDrag } from '../../bim/floor-finishes/floor-finish-grips';
+import { UpdateFloorFinishParamsCommand } from '../../core/commands/entity-commands/UpdateFloorFinishParamsCommand';
 import { EventBus } from '../../systems/events/EventBus';
 import { ShiftKeyTracker } from '../../keyboard/ShiftKeyTracker';
 import { createSceneManagerAdapter } from './grip-commit-adapters';
@@ -403,15 +406,47 @@ export function commitBeamGripDrag(
 }
 
 /**
- * ADR-363 Phase 4.5 — Parametric column grip commit. Bypasses the standard
- * stretch / move strategies because `ColumnEntity` is parametric: geometry is
- * fully derived from `params`, so the grip drag transforms params (via
- * `applyColumnGripDrag`) και το command (`UpdateColumnParamsCommand`)
- * recomputes geometry + validation atomically. Merge window enabled
- * (isDragging=true) so a continuous drag collapses σε ένα undo entry
- * (ADR-031). Emits `bim:column-params-updated` after dispatch ώστε consumers
- * (auto-save / BOQ feed) να αντιδρούν.
+ * ADR-419 — Parametric floor-finish grip commit (per-vertex translate +
+ * edge-midpoint insertion). Mirrors `commitSlabGripDrag` / `commitRoofGripDrag`
+ * semantics: routes through `applyFloorFinishGripDrag()` +
+ * `UpdateFloorFinishParamsCommand` so geometry + validation recompute atomically
+ * and the merge window (ADR-031) collapses a continuous drag into one undo
+ * entry. Shift drives rectilinear constraint via `ShiftKeyTracker`.
  */
+export function commitFloorFinishGripDrag(
+  grip: UnifiedGripInfo,
+  delta: Point2D,
+  deps: DxfCommitDeps,
+): void {
+  if (!grip.entityId || !grip.floorFinishGripKind) return;
+  const sceneManager = createSceneManagerAdapter(deps);
+  if (!sceneManager) return;
+  const raw = sceneManager.getEntity(grip.entityId);
+  if (!raw) return;
+  const candidate = raw as unknown as Partial<FloorFinishEntity>;
+  if (candidate.type !== 'floor-finish' || !candidate.params) return;
+  const finish = candidate as FloorFinishEntity;
+  const originalParams = finish.params;
+  const rectilinear = ShiftKeyTracker.getSnapshot();
+  const newParams = applyFloorFinishGripDrag(grip.floorFinishGripKind, {
+    originalParams,
+    delta,
+    rectilinear,
+  });
+  if (newParams === originalParams) return;
+  const command = new UpdateFloorFinishParamsCommand(
+    grip.entityId,
+    newParams,
+    originalParams,
+    sceneManager,
+    true,
+  );
+  if (command.validate() !== null) return;
+  deps.execute(command);
+  EventBus.emit('bim:floor-finish-params-updated', { floorFinishId: grip.entityId });
+}
+
+/** ADR-363 Phase 4.5 — parametric column grip commit via UpdateColumnParamsCommand. */
 export function commitColumnGripDrag(
   grip: UnifiedGripInfo,
   delta: Point2D,
@@ -454,4 +489,3 @@ export function commitColumnGripDrag(
   deps.execute(command);
   EventBus.emit('bim:column-params-updated', { columnId: grip.entityId });
 }
-

@@ -168,3 +168,4 @@ src/services/ifc/serializers/
 | Date | Version | Change |
 |------|---------|--------|
 | 2026-06-06 | v1.0 | Initial implementation — Slices 1–10 complete. Types + catalog + enterprise-id + 2D renderer + grips + scene integration + hit testing + 3D converter + persistence + ribbon contextual tab + IFC serializer + 73 tests. |
+| 2026-06-07 | v1.1 | Grips wired into unified grip system (grip-registry + grip-parametric-commits + grip-commit-adapters + apply-entity-preview). DxfViewerContent: useColumnAdjacencyNotification hook added (column merge toast). |

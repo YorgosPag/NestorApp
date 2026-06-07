@@ -24,16 +24,22 @@
  *
  * @see docs/centralized-systems/reference/adrs/ADR-420-bim-floor-scope-ssot.md
  */
-import { initializeApp, cert } from 'firebase-admin/app';
+import { initializeApp, cert, applicationDefault } from 'firebase-admin/app';
 import { getFirestore } from 'firebase-admin/firestore';
-import { readFileSync } from 'fs';
+import { readFileSync, existsSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const serviceAccountPath = join(__dirname, '..', '..', 'pagonis-87766-firebase-adminsdk-fbsvc-469209d7a0.json');
-const serviceAccount = JSON.parse(readFileSync(serviceAccountPath, 'utf8'));
-initializeApp({ credential: cert(serviceAccount) });
+// Prefer the repo-root service account (same convention as scripts/check-*.mjs);
+// fall back to Application Default Credentials (e.g. firebase/gcloud auth) so the
+// migration also runs in CI / locally-authenticated environments.
+if (existsSync(serviceAccountPath)) {
+  initializeApp({ credential: cert(JSON.parse(readFileSync(serviceAccountPath, 'utf8'))) });
+} else {
+  initializeApp({ credential: applicationDefault(), projectId: 'pagonis-87766' });
+}
 const db = getFirestore();
 
 // CLI flags

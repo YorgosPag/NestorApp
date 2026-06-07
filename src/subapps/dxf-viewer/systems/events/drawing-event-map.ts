@@ -378,6 +378,10 @@ export interface DrawingEventMap {
   // ADR-401 Phase F.3 — manual attach/detach of column top/base (ribbon pick-host).
   'bim:columns-attached-manual': { side: 'top' | 'base'; columnIds: string[]; hostId: string };
   'bim:columns-detached': { side: 'top' | 'base'; columnIds: string[] };
+  // ADR-363 Post-Creation Adjacency Merge — N γειτονικές κολόνες που σχηματίζουν
+  // τοιχίο (Γ/Τ/Π) συγχωνεύτηκαν σε ΕΝΑ composite ColumnEntity (MergeColumnsCommand,
+  // single undo). UI surfaces a non-blocking success toast (Revit «merge» feedback).
+  'bim:columns-merged': { sourceIds: string[]; compositeId: string };
   // ADR-401 Phase G.3 — stair attach mirrors of the wall/column events above. N
   // stairs auto-attached their top/base to a just-created structural host (Revit
   // «Desired number of risers» re-step at render). Undoable via AttachStairsCommand.

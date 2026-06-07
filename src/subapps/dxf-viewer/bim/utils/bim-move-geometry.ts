@@ -52,6 +52,8 @@ import type { MepSegmentEntity, MepSegmentParams } from '../types/mep-segment-ty
 import type { ElectricalPanelEntity, ElectricalPanelParams } from '../types/electrical-panel-types';
 import type { MepManifoldEntity, MepManifoldParams } from '../types/mep-manifold-types';
 import type { FurnitureEntity, FurnitureParams } from '../types/furniture-types';
+import type { FloorFinishEntity, FloorFinishParams } from '../types/floor-finish-types';
+import { computeFloorFinishGeometry } from '../types/floor-finish-types';
 import type { Point3D, Polygon3D } from '../types/bim-base';
 import { computeWallGeometry } from '../geometry/wall-geometry';
 import { translateWallParams } from '../walls/wall-grip-transforms';
@@ -181,6 +183,16 @@ function moveFurniture(entity: FurnitureEntity, delta: Point2D): Partial<SceneEn
   return { params: newParams, geometry } as unknown as Partial<SceneEntity>;
 }
 
+// ADR-419 — polygon floor-finish: shift all footprint vertices (mirror slab outline).
+function moveFloorFinish(entity: FloorFinishEntity, delta: Point2D): Partial<SceneEntity> {
+  const newParams: FloorFinishParams = {
+    ...entity.params,
+    footprint: shiftPolygon3D(entity.params.footprint, delta),
+  };
+  const geometry = computeFloorFinishGeometry(newParams);
+  return { params: newParams, geometry } as unknown as Partial<SceneEntity>;
+}
+
 // ADR-408 Φ8 — linear MEP segment: shift both axis endpoints (mirror beam).
 function moveMepSegment(entity: MepSegmentEntity, delta: Point2D): Partial<SceneEntity> {
   const newParams: MepSegmentParams = {
@@ -233,6 +245,8 @@ export function calculateBimMovedGeometry(
       return moveMepManifold(entity, delta);
     case 'furniture':
       return moveFurniture(entity, delta);
+    case 'floor-finish':
+      return moveFloorFinish(entity, delta);
     case 'mep-segment':
       return moveMepSegment(entity, delta);
     default:

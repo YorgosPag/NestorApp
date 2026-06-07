@@ -244,21 +244,7 @@ export function createSceneManagerAdapter(deps: DxfCommitDeps): ISceneManager | 
     },
   };
 }
-/**
- * Commit a DXF grip drag through the unified `StretchEntityCommand` (ADR-349
- * Phase 1c-B3). Replaces the legacy fragmented `commitDxfGripDrag` (manual
- * edge mutation per entity type / `MoveVertexCommand` / `moveEntities`):
- *
- *   - vertex/edge grips → resolved to `VertexRef[]` via `gripToVertexRefs` and
- *     dispatched as `vertexMoves` (line / polyline / arc / rectangle)
- *   - whole-entity grips (`grip.movesEntity` — circle / ellipse / text / point /
- *     block) → dispatched as `anchorMoves` (rigid translation by anchor)
- *
- * The math (bulge-preserving arc, rectangle → polyline coercion, polyline /
- * line / spline per-vertex translation) lives in `stretch-entity-transform.ts`
- * and is shared with `useStretchPreview` so the ghost cannot diverge from the
- * commit result.
- */
+/** ADR-349 Phase 1c-B3 — commit via StretchEntityCommand (vertex refs or anchor moves). */
 export function commitDxfGripDragViaStretchCommand(
   grip: UnifiedGripInfo,
   delta: Point2D,
@@ -309,25 +295,12 @@ import {
   commitMepBoilerGripDrag,
   commitFurnitureGripDrag,
   commitFloorplanSymbolGripDrag,
+  commitFloorFinishGripDrag,
   commitXLineGripDrag,
   commitRayGripDrag,
   commitDimensionGripDrag,
 } from './grip-parametric-commits';
-/**
- * Mode-aware DXF grip commit (ADR-349 Phase 1c-A / 1c-B2 / 1c-B3).
- *
- * Routes the drag through the strategy selected by the spacebar cycle:
- *   - `stretch` (default) — Phase 1c-B3: routes through `StretchEntityCommand`
- *     via {@link commitDxfGripDragViaStretchCommand} (vertex refs for line /
- *     polyline / arc / rectangle, anchor for circle / ellipse / text / etc.)
- *   - `move` — translates the WHOLE entity regardless of grip type
- *   - `rotate` / `scale` / `mirror` — Phase 1c-B2: pre-seeds the target tool's
- *     first point in {@link GripHandoffStore} and switches `activeTool`
- *
- * ADR-358 Phase 5b — early-branches to {@link commitStairGripDrag} when the
- * grip carries a `stairGripKind`, bypassing stretch/move because stair grips
- * mutate parametric `StairParams` rather than vertex / anchor positions.
- */
+/** ADR-349 Phase 1c-A/B2/B3 — mode-aware DXF grip commit (stretch/move/rotate/scale/mirror). */
 export function commitDxfGripDragModeAware(
   grip: UnifiedGripInfo,
   delta: Point2D,
@@ -455,6 +428,14 @@ export function commitDxfGripDragModeAware(
   // symbol is params-driven; UpdateFloorplanSymbolParamsCommand recomputes geometry.
   if (grip.floorplanSymbolGripKind) {
     commitFloorplanSymbolGripDrag(grip, delta, deps);
+    return;
+  }
+  // ADR-419 — floor-finish parametric grip path (per-vertex translate +
+  // edge-midpoint insertion). Bypasses stretch because floor-finishes are
+  // params-driven (footprint polygon); UpdateFloorFinishParamsCommand recomputes
+  // geometry atomically. Mirrors slab/roof path.
+  if (grip.floorFinishGripKind) {
+    commitFloorFinishGripDrag(grip, delta, deps);
     return;
   }
   // ADR-359 Phase 11 — XLine grip path (basePoint translate or direction rotate).
