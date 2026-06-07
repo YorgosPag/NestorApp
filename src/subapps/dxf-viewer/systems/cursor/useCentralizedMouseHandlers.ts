@@ -18,6 +18,7 @@ import {
 import { canvasEventBus } from '../../rendering/canvas/core/CanvasEventSystem';
 import type { Entity } from '../../types/entities';
 import { isInDrawingMode } from '../tools/ToolStateManager';
+import { isRegionBoxSelectTool } from '../tools/region-tool-ids';
 import { clamp } from '../../rendering/entities/shared/geometry-utils';
 import { TOLERANCE_CONFIG } from '../../config/tolerance-config';
 import { TRANSFORM_SCALE_LIMITS, ZOOM_FACTORS } from '../../config/transform-config';
@@ -190,12 +191,7 @@ export function useCentralizedMouseHandlers(props: CentralizedMouseHandlersProps
     if (
       e.button === 0 &&
       !isGripDragging &&
-      ((activeTool === 'select' && !isToolInteractive) ||
-        activeTool === 'wall-in-region' ||
-        activeTool === 'wall-from-perimeter' ||
-        activeTool === 'column-from-perimeter' ||
-        activeTool === 'column-discrete-from-perimeter' ||
-        activeTool === 'column-in-region')
+      ((activeTool === 'select' && !isToolInteractive) || isRegionBoxSelectTool(activeTool))
     ) {
       lassoDownRef.current = { pos: screenPos, buttonHeld: true };
     }

@@ -11,6 +11,7 @@ import { createModuleLogger } from '@/lib/telemetry';
 import type { DxfRenderer } from './DxfRenderer';
 import type { DxfScene, DxfRenderOptions, DxfEntityUnion } from './dxf-types';
 import { DxfBitmapCache } from './dxf-bitmap-cache';
+import { isBimRegionOrPerimeterTool } from '../../systems/tools/region-tool-ids';
 import type { ViewTransform, Viewport, Point2D } from '../../rendering/types/Types';
 import type { GridRenderer } from '../../rendering/ui/grid/GridRenderer';
 import type { RulerRenderer } from '../../rendering/ui/ruler/RulerRenderer';
@@ -186,12 +187,8 @@ export function useDxfCanvasRenderer(params: DxfCanvasRendererParams) {
           activeTool === 'select' ||
           activeTool === 'layering' ||
           activeTool === 'wall-on-entity' ||
-          activeTool === 'wall-in-region' ||
-          activeTool === 'wall-from-perimeter' ||
-          activeTool === 'column-from-perimeter' ||
-          activeTool === 'column-discrete-from-perimeter' ||
-          // ADR-419 — 'column-in-region' shows grips on the accumulated 4-line picks.
-          activeTool === 'column-in-region';
+          // ADR-419 — region/perimeter εργαλεία δείχνουν grips στα accumulated 4-line picks.
+          isBimRegionOrPerimeterTool(activeTool);
         for (const selId of curRenderOptions.selectedEntityIds) {
           const ent = curEntityMap.get(selId);
           if (ent) {

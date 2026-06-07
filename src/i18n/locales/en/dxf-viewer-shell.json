@@ -40,6 +40,8 @@
     "nWalls_other": "{count} structural walls",
     "built_one": "Created {count} column from the perimeter.",
     "built_other": "Created {count} columns from the perimeter.",
+    "builtWalls_one": "Created {count} structural wall from the perimeter.",
+    "builtWalls_other": "Created {count} structural walls from the perimeter.",
     "builtMixed": "Created {columns} and {walls} from the perimeter.",
     "noneBuilt": "No valid perimeter found in the selection."
   },
@@ -48,6 +50,12 @@
     "message": "Based on the side ratios of the sections, {walls} and {columns} will be created. The ratios of some perimeters do not allow creating a column. Continue?",
     "create": "Create",
     "cancel": "Cancel",
+    "intentTitle": "Different elements detected",
+    "intentMessage": "{primary} will be created. {secondary} were also detected in the selection. Create them too?",
+    "intentMessageOnlySecondary": "No elements of the requested type were detected, but {secondary} were found. Create them?",
+    "createAll": "Yes, create all",
+    "onlyColumns": "No, columns only",
+    "onlyWalls": "No, structural walls only",
     "isColumnTitle": "This is a column",
     "isColumnMessage": "The side ratio is {aspect}:1 (≤ 4). Per Eurocode 2 §9.6.1, this is a column, not a shear wall. Create as column?",
     "createAsColumn": "Column (rectangular)"
@@ -470,7 +478,9 @@
       "statusPolyNext": "Pick next vertex (Enter to finish)",
       "statusPickEntity": "Pick a line or rectangle to place a wall",
       "statusPickSide": "Click a side: line → wall extends toward it; rectangle → inside = interior walls, outside = exterior",
-      "statusRegionPick": "Pick 4 lines that form a rectangle (or click inside the region)",
+      "statusRegionLinesPick": "Pick 4 lines that form a rectangle → one wall filling it",
+      "statusRegionInsidePick": "Click inside a closed rectangle → one wall filling it",
+      "statusRegionBoxPick": "Drag a box around rectangles → one wall per rectangle",
       "statusRegionMore": "Pick more lines until the rectangle closes (ESC to cancel)",
       "statusPerimeterPick": "Box-select the faces of a structural element (rectangle/L/T/U) → one wall per leg"
     },
@@ -502,7 +512,9 @@
       "statusPosition": "Click to place column — Tab cycles anchor",
       "statusPerimeterPick": "Box-select the faces of a structural element (rectangle/L/T/U/composite) → ONE structural wall per perimeter",
       "statusDiscretePerimeterPick": "Box-select faces → each perimeter a separate column or structural wall (auto-classified from side ratios)",
-      "statusRegionPick": "Pick 4 lines forming a rectangle (or click inside the region / box-select) → one filling column",
+      "statusRegionLinesPick": "Pick 4 lines that form a rectangle → one column filling it",
+      "statusRegionInsidePick": "Click inside a closed rectangle → one column filling it",
+      "statusRegionBoxPick": "Drag a box around rectangles → one column per rectangle",
       "errors": {
         "nonPositiveWidth": "Width must be greater than 0",
         "nonPositiveDepth": "Depth must be greater than 0",
@@ -1050,25 +1062,45 @@
           "label": "Wall on 2D entity",
           "tooltip": "Pick a line or rectangle and place wall(s) on it"
         },
-        "wallInRegion": {
-          "label": "Wall in region (4 lines)",
-          "tooltip": "Pick 4 lines that form a rectangle (or click inside the region) → one filling wall"
+        "wallRegionLines": {
+          "label": "Wall from 4 lines",
+          "tooltip": "Pick 4 lines that form a rectangle → one wall filling it"
+        },
+        "wallRegionInside": {
+          "label": "Wall inside region",
+          "tooltip": "Click inside a closed rectangle → one wall filling it"
+        },
+        "wallRegionBox": {
+          "label": "Walls by box",
+          "tooltip": "Drag a box around rectangles → one wall per rectangle"
         },
         "wallFromPerimeter": {
           "label": "Wall from perimeter",
           "tooltip": "Box-select the faces of a structural element (rectangle/L/T/U) → a chain of leg walls, thickness derived from the geometry"
         },
-        "columnInRegion": {
-          "label": "Column in region",
-          "tooltip": "Pick 4 lines forming a rectangle (or click inside the region / box-select) → one filling column (SAME workflow as «Wall in region»)"
+        "columnRegionLines": {
+          "label": "Column from 4 lines",
+          "tooltip": "Pick 4 lines that form a rectangle → one column filling it"
+        },
+        "columnRegionInside": {
+          "label": "Column inside region",
+          "tooltip": "Click inside a closed rectangle → one column filling it"
+        },
+        "columnRegionBox": {
+          "label": "Columns by box",
+          "tooltip": "Drag a box around rectangles → one column per rectangle"
         },
         "columnFromPerimeter": {
           "label": "Structural wall from perimeter",
           "tooltip": "Box-select the faces of a structural element (rectangle/L/T/U/composite) → ONE RC structural wall per closed perimeter, geometry taken from the drawing"
         },
         "columnDiscreteFromPerimeter": {
-          "label": "Column from perimeter",
-          "tooltip": "Box-select faces → each perimeter a separate element (NO union); auto-classified as column or structural wall from the side ratios, with an informative confirmation"
+          "label": "Bulk create columns",
+          "tooltip": "Box-select faces → creates the columns directly; if structural walls are also detected, asks whether to create them too (auto-classified from side ratios)"
+        },
+        "columnDiscreteFromPerimeterWalls": {
+          "label": "Bulk create structural walls",
+          "tooltip": "Box-select faces → creates the structural walls directly; if columns are also detected, asks whether to create them too (auto-classified from side ratios)"
         },
         "opening": {
           "label": "Opening",
@@ -1152,6 +1184,14 @@
         "columnGroup": {
           "label": "Column / Shear Wall",
           "tooltip": "Column, shear wall from perimeter, discrete columns from perimeter"
+        },
+        "columnsGroup": {
+          "label": "Columns",
+          "tooltip": "Column, from 4 lines, inside region, by box, bulk create"
+        },
+        "wallPiersGroup": {
+          "label": "Structural Walls",
+          "tooltip": "Structural wall from perimeter, bulk create structural walls"
         },
         "beamGroup": {
           "label": "Beam",

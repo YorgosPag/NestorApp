@@ -12,6 +12,7 @@ import {
 } from '../../rendering/core/CoordinateTransforms';
 import { canvasEventBus, CANVAS_EVENTS } from '../../rendering/canvas/core/CanvasEventSystem';
 import { isInDrawingMode } from '../tools/ToolStateManager';
+import { isRegionBoxSelectTool } from '../tools/region-tool-ids';
 import { isPointInPolygon } from '../../utils/geometry/GeometryUtils';
 import { setImmediatePosition } from './ImmediatePositionStore';
 import { setImmediateSnap, clearImmediateSnap, setFullSnapResult } from './ImmediateSnapStore';
@@ -389,11 +390,7 @@ export function useMouseMoveHandler({
     const regionDown = refs.lassoDownRef.current;
     if (
       regionDown.buttonHeld && regionDown.pos &&
-      (activeTool === 'wall-in-region' ||
-        activeTool === 'wall-from-perimeter' ||
-        activeTool === 'column-from-perimeter' ||
-        activeTool === 'column-discrete-from-perimeter' ||
-        activeTool === 'column-in-region') &&
+      isRegionBoxSelectTool(activeTool) &&
       !cursor.isSelecting
     ) {
       const rdx = screenPos.x - regionDown.pos.x;

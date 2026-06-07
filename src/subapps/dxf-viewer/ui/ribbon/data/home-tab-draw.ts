@@ -296,13 +296,28 @@ export const HOME_DRAW_PANEL: RibbonPanelDef = {
                   icon: 'bim-wall',
                   commandKey: 'wall-on-entity',
                 },
-                // ADR-363 Phase 1K — Wall in region (pick 4 lines / click inside / box).
+                // ADR-419 — «Τοίχος σε περιοχή» split σε 3 διακριτές εντολές
+                // (από 4 γραμμές / μέσα σε περιοχή / με πλαίσιο).
                 {
-                  id: 'draw.bim.wallInRegion',
-                  labelKey: 'ribbon.commands.bim.wallInRegion.label',
-                  tooltipKey: 'ribbon.commands.bim.wallInRegion.tooltip',
+                  id: 'draw.bim.wallRegionLines',
+                  labelKey: 'ribbon.commands.bim.wallRegionLines.label',
+                  tooltipKey: 'ribbon.commands.bim.wallRegionLines.tooltip',
                   icon: 'bim-wall',
-                  commandKey: 'wall-in-region',
+                  commandKey: 'wall-region-lines',
+                },
+                {
+                  id: 'draw.bim.wallRegionInside',
+                  labelKey: 'ribbon.commands.bim.wallRegionInside.label',
+                  tooltipKey: 'ribbon.commands.bim.wallRegionInside.tooltip',
+                  icon: 'bim-wall',
+                  commandKey: 'wall-region-inside',
+                },
+                {
+                  id: 'draw.bim.wallRegionBox',
+                  labelKey: 'ribbon.commands.bim.wallRegionBox.label',
+                  tooltipKey: 'ribbon.commands.bim.wallRegionBox.tooltip',
+                  icon: 'bim-wall',
+                  commandKey: 'wall-region-box',
                 },
                 // ADR-363 «Τοίχος από περίγραμμα» — box-select the faces of a structural
                 // element (rectangle / Γ / Τ / Π) → chain of leg walls (thickness from geometry).
@@ -350,13 +365,15 @@ export const HOME_DRAW_PANEL: RibbonPanelDef = {
                 },
               ],
             },
-            // ── Κολόνα / Τοιχίο (submenu) ─────────────────────────────────
+            // ── Κολώνες (submenu) ─────────────────────────────────────────
+            // ADR-419 — διαχωρισμός του πρώην ενιαίου «Κολόνα / Τοιχίο» σε δύο
+            // ξεχωριστά submenus (Giorgio 2026-06-07): εδώ μόνο κολώνες.
             {
-              id: 'draw.bim.columnGroup',
-              labelKey: 'ribbon.commands.bim.columnGroup.label',
-              tooltipKey: 'ribbon.commands.bim.columnGroup.tooltip',
+              id: 'draw.bim.columnsGroup',
+              labelKey: 'ribbon.commands.bim.columnsGroup.label',
+              tooltipKey: 'ribbon.commands.bim.columnsGroup.tooltip',
               icon: 'bim-column',
-              commandKey: 'draw.bim.columnGroup',
+              commandKey: 'draw.bim.columnsGroup',
               subVariants: [
                 {
                   id: 'draw.bim.column',
@@ -366,18 +383,49 @@ export const HOME_DRAW_PANEL: RibbonPanelDef = {
                   commandKey: 'column',
                   shortcut: 'CL',
                 },
-                // ADR-419 «Κολώνα σε περιοχή (4 γραμμές)» — pick 4 lines / click inside /
-                // box-select → ColumnEntity ανά εσώκλειστο ορθογώνιο (ΙΔΙΑ SSoT με τον τοίχο).
+                // ADR-419 «Κολώνα σε περιοχή» → 3 διακριτές εντολές.
                 {
-                  id: 'draw.bim.columnInRegion',
-                  labelKey: 'ribbon.commands.bim.columnInRegion.label',
-                  tooltipKey: 'ribbon.commands.bim.columnInRegion.tooltip',
+                  id: 'draw.bim.columnRegionLines',
+                  labelKey: 'ribbon.commands.bim.columnRegionLines.label',
+                  tooltipKey: 'ribbon.commands.bim.columnRegionLines.tooltip',
                   icon: 'bim-column',
-                  commandKey: 'column-in-region',
+                  commandKey: 'column-region-lines',
                 },
-                // ADR-363 Φάση 3 «Τοιχίο από περίγραμμα» — box-select the faces of a
-                // structural element (ορθογώνιο/Γ/Τ/Π/σύνθετο) → ΕΝΑ τοιχίο (ColumnEntity)
-                // ανά κλειστή περίμετρο (exact-polygon για μη-ορθογωνικά).
+                {
+                  id: 'draw.bim.columnRegionInside',
+                  labelKey: 'ribbon.commands.bim.columnRegionInside.label',
+                  tooltipKey: 'ribbon.commands.bim.columnRegionInside.tooltip',
+                  icon: 'bim-column',
+                  commandKey: 'column-region-inside',
+                },
+                {
+                  id: 'draw.bim.columnRegionBox',
+                  labelKey: 'ribbon.commands.bim.columnRegionBox.label',
+                  tooltipKey: 'ribbon.commands.bim.columnRegionBox.tooltip',
+                  icon: 'bim-column',
+                  commandKey: 'column-region-box',
+                },
+                // ADR-419 «Πολλαπλή δημιουργία κολωνών» — discrete-from-perimeter,
+                // intent=columns· φτιάχνει κατευθείαν τις κολώνες, ρωτά για τυχόν τοιχία.
+                {
+                  id: 'draw.bim.columnDiscreteFromPerimeter',
+                  labelKey: 'ribbon.commands.bim.columnDiscreteFromPerimeter.label',
+                  tooltipKey: 'ribbon.commands.bim.columnDiscreteFromPerimeter.tooltip',
+                  icon: 'bim-column',
+                  commandKey: 'column-discrete-from-perimeter',
+                },
+              ],
+            },
+            // ── Τοιχία (submenu) ──────────────────────────────────────────
+            // ADR-419 — το δεύτερο μισό του διαχωρισμού: μόνο τοιχία (φέροντα τοιχία Ο.Σ.).
+            {
+              id: 'draw.bim.wallPiersGroup',
+              labelKey: 'ribbon.commands.bim.wallPiersGroup.label',
+              tooltipKey: 'ribbon.commands.bim.wallPiersGroup.tooltip',
+              icon: 'bim-column',
+              commandKey: 'draw.bim.wallPiersGroup',
+              subVariants: [
+                // ADR-363 Φάση 3 «Τοιχίο από περίγραμμα» — ΕΝΑ τοιχίο ανά κλειστή περίμετρο.
                 {
                   id: 'draw.bim.columnFromPerimeter',
                   labelKey: 'ribbon.commands.bim.columnFromPerimeter.label',
@@ -385,15 +433,14 @@ export const HOME_DRAW_PANEL: RibbonPanelDef = {
                   icon: 'bim-column',
                   commandKey: 'column-from-perimeter',
                 },
-                // ADR-363 Φάση 3c «Κολώνα από περίγραμμα» — box-select παρειές → ΧΩΡΙΣ ένωση,
-                // κάθε περίγραμμα ξεχωριστό· αυτόματη ταξινόμηση κολώνα/τοιχίο από αναλογία
-                // πλευρών + ενημερωτικό confirm dialog (στατικά τίμιο, μη αλλοίωση).
+                // ADR-419 «Πολλαπλή δημιουργία τοιχίων» — discrete-from-perimeter,
+                // intent=walls· φτιάχνει κατευθείαν τα τοιχία, ρωτά για τυχόν κολώνες.
                 {
-                  id: 'draw.bim.columnDiscreteFromPerimeter',
-                  labelKey: 'ribbon.commands.bim.columnDiscreteFromPerimeter.label',
-                  tooltipKey: 'ribbon.commands.bim.columnDiscreteFromPerimeter.tooltip',
+                  id: 'draw.bim.columnDiscreteFromPerimeterWalls',
+                  labelKey: 'ribbon.commands.bim.columnDiscreteFromPerimeterWalls.label',
+                  tooltipKey: 'ribbon.commands.bim.columnDiscreteFromPerimeterWalls.tooltip',
                   icon: 'bim-column',
-                  commandKey: 'column-discrete-from-perimeter',
+                  commandKey: 'column-discrete-from-perimeter-walls',
                 },
               ],
             },

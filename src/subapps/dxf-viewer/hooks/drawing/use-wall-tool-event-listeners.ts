@@ -175,6 +175,8 @@ export function useWallToolRegionBoxSelectListener(ctx: WallToolRegionBoxSelectC
       EventBus.on('bim:wall-region-box-select', ({ entityIds }) => {
         const s = stateRef.current;
         if (s.placementMode !== 'in-region' || s.phase === 'idle') return;
+        // ADR-419 — box-select μόνο για την «με πλαίσιο» εντολή (wall-region-box).
+        if (s.regionMethod !== 'box') return;
         const idSet = new Set(entityIds);
         const segs = extractLineSegments(
           (getSceneEntities?.() ?? []).filter((e) => idSet.has(e.id)),

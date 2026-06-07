@@ -1,5 +1,6 @@
 import React from 'react';
 import type { SceneModel } from '../types/scene';
+import { isColumnRegionTool, isWallRegionTool } from '../systems/tools/region-tool-ids';
 import { CONTEXTUAL_TEXT_EDITOR_TAB, TEXT_EDITOR_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-text-editor-tab';
 import {
   CONTEXTUAL_ARRAY_RECT_TAB, CONTEXTUAL_ARRAY_POLAR_TAB, CONTEXTUAL_ARRAY_PATH_TAB,
@@ -185,7 +186,7 @@ export function useActiveContextualTrigger({
     // driven from the faces).
     if (
       activeTool === 'wall' ||
-      activeTool === 'wall-in-region' ||
+      isWallRegionTool(activeTool) ||
       activeTool === 'wall-from-perimeter'
     )
       return WALL_CONTEXTUAL_TRIGGER;
@@ -200,7 +201,8 @@ export function useActiveContextualTrigger({
       activeTool === 'column' ||
       activeTool === 'column-from-perimeter' ||
       activeTool === 'column-discrete-from-perimeter' ||
-      activeTool === 'column-in-region'
+      activeTool === 'column-discrete-from-perimeter-walls' ||
+      isColumnRegionTool(activeTool)
     )
       return COLUMN_CONTEXTUAL_TRIGGER;
     // ADR-363 «Δοκάρι από τοίχο» μοιράζεται το beam contextual tab (depth/elevation/

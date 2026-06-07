@@ -54,6 +54,7 @@ import {
   type UseWallToolOptions,
   type UseWallToolResult,
 } from './wall-tool-types';
+import type { RegionMethod } from '../../systems/tools/region-tool-ids';
 import { useWallCommit } from './use-wall-commit';
 // ADR-363 — in-region / perimeter click handlers extracted for N.7.1 (≤500 lines).
 import { useWallRegionClicks } from './use-wall-region-clicks';
@@ -132,6 +133,7 @@ export function useWallTool(options: UseWallToolOptions = {}): UseWallToolResult
       ...INITIAL_STATE,
       kind: prev.kind,
       placementMode: prev.placementMode,
+      regionMethod: prev.regionMethod,
       phase: 'awaitingStart',
     }));
   }, []);
@@ -141,6 +143,7 @@ export function useWallTool(options: UseWallToolOptions = {}): UseWallToolResult
       ...INITIAL_STATE,
       kind,
       placementMode: prev.placementMode,
+      regionMethod: prev.regionMethod,
       phase: prev.phase === 'idle' ? 'idle' : 'awaitingStart',
       overrides: prev.overrides,
     }));
@@ -155,10 +158,19 @@ export function useWallTool(options: UseWallToolOptions = {}): UseWallToolResult
         ...INITIAL_STATE,
         kind: prev.kind,
         overrides: prev.overrides,
+        regionMethod: prev.regionMethod,
         placementMode: mode,
         phase: prev.phase === 'idle' ? 'idle' : 'awaitingStart',
       };
     });
+  }, []);
+
+  // ADR-419 — set the in-region method ('lines' | 'inside' | 'box'). Driven by the
+  // active tool id (wall-region-lines/inside/box). Clears accumulated picks on change.
+  const setRegionMethod = useCallback((regionMethod: RegionMethod) => {
+    setState((prev) =>
+      prev.regionMethod === regionMethod ? prev : { ...prev, regionMethod, regionPicks: [] },
+    );
   }, []);
 
   // ADR-363 Phase 7B — keyboard W+n chord: set wall kind + (re-)activate the tool.
@@ -185,6 +197,7 @@ export function useWallTool(options: UseWallToolOptions = {}): UseWallToolResult
       ...INITIAL_STATE,
       kind: prev.kind,
       placementMode: prev.placementMode,
+      regionMethod: prev.regionMethod,
       overrides: prev.overrides,
       phase: prev.phase === 'idle' ? 'idle' : 'awaitingStart',
     }));
@@ -394,11 +407,13 @@ export function useWallTool(options: UseWallToolOptions = {}): UseWallToolResult
   // ── status text (i18n keys returned for caller-resolved translation) ─────
   const getStatusText = useCallback((): string => {
     const s = stateRef.current;
-    // ADR-363 Phase 1K — in-region prompts.
+    // ADR-419 — in-region prompts ανά τρόπο (4 γραμμές / κλικ μέσα / πλαίσιο).
     if (s.placementMode === 'in-region') {
+      if (s.regionMethod === 'inside') return 'tools.wall.statusRegionInsidePick';
+      if (s.regionMethod === 'box') return 'tools.wall.statusRegionBoxPick';
       return s.regionPicks.length > 0
         ? 'tools.wall.statusRegionMore'
-        : 'tools.wall.statusRegionPick';
+        : 'tools.wall.statusRegionLinesPick';
     }
     // ADR-363 «Τοίχος από περίγραμμα» — box-select prompt.
     if (s.placementMode === 'outer-perimeter') {
@@ -442,6 +457,7 @@ export function useWallTool(options: UseWallToolOptions = {}): UseWallToolResult
     activate,
     setKind,
     setPlacementMode,
+    setRegionMethod,
     deactivate,
     reset,
     backToAwaitingEnd,

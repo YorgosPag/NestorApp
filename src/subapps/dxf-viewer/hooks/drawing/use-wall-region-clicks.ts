@@ -67,14 +67,19 @@ export function useWallRegionClicks(args: UseWallRegionClicksArgs): UseWallRegio
     [],
   );
 
-  // Click while in-region: hit a line → accumulate (commit when 4 close a rect);
-  // miss → treat the click as "inside a region" and fill the enclosing rectangle.
+  // ADR-419 — click while in-region, gated ΑΥΣΤΗΡΑ ανά `regionMethod` (η μονή
+  // «έξυπνη» εντολή έγινε 3 διακριτές):
+  //   - 'box'    → ΟΧΙ commit με κλικ (μόνο μέσω drag-πλαισίου· βλ. listener).
+  //   - 'lines'  → ΜΟΝΟ pick γραμμών (commit όταν 4 κλείνουν ορθογώνιο)· κλικ στο κενό αγνοείται.
+  //   - 'inside' → ΜΟΝΟ fill του εσώκλειστου ορθογωνίου κάτω από τον κέρσορα.
   const onRegionClick = useCallback(
     (s: WallToolState, point: Readonly<Point2D>): boolean => {
+      if (s.regionMethod === 'box') return false;
       const segs = extractLineSegments(getSceneEntities?.() ?? []);
       const tol = regionTol();
-      const hit = pickSegmentAt(point, segs, tol);
-      if (hit) {
+      if (s.regionMethod === 'lines') {
+        const hit = pickSegmentAt(point, segs, tol);
+        if (!hit) return false; // «από 4 γραμμές» — κλικ εκτός γραμμής = no-op
         const picks = s.regionPicks.some((p) => sameSeg(p, hit))
           ? s.regionPicks
           : [...s.regionPicks, hit];
@@ -90,6 +95,7 @@ export function useWallRegionClicks(args: UseWallRegionClicksArgs): UseWallRegio
         setState(next);
         return true;
       }
+      // 'inside' — μόνο το εσώκλειστο ορθογώνιο (αγνοεί τα picks γραμμών).
       const rect = findEnclosingRectangle(segs, point, tol);
       if (rect) {
         const ok = commitInRegionRects(s, [rect]);
@@ -98,7 +104,7 @@ export function useWallRegionClicks(args: UseWallRegionClicksArgs): UseWallRegio
       }
       return false;
     },
-    [getSceneEntities, regionTol, commitInRegionRects],
+    [getSceneEntities, regionTol, commitInRegionRects, stateRef, setState],
   );
 
   // ADR-363 «Τοίχος από περίγραμμα» — click inside a closed perimeter under the

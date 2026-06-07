@@ -71,6 +71,10 @@ Mouse Event → DxfCanvas.onMouseMove
 
 ## Changelog
 
+### 2026-06-07 — region tool-id predicate swap (ADR-419 region 3-way split, CHECK 6B/6D)
+
+**Status**: IMPLEMENTED 2026-06-07. Το «σε περιοχή» (κολώνα/τοίχος) έσπασε σε 3 διακριτές εντολές (`*-region-lines/inside/box`, πρώην `*-in-region` αφαιρέθηκαν — βλ. ADR-419 changelog v1.2). Τα scattered `activeTool === 'wall-in-region' || …` checks αντικαταστάθηκαν από κεντρικά predicates του νέου SSoT `systems/tools/region-tool-ids.ts` σε: `CanvasSection.tsx` (`entityPickingActive`), `dxf-canvas-renderer.ts` (`gripsAllowed`), `mouse-handler-up.ts`/`mouse-handler-move.ts`/`useCentralizedMouseHandlers.ts` (box-select pipeline gating). **Καθαρά predicate swap — μηδέν αλλαγή σε `useSyncExternalStore`, bitmap cache-key, ή micro-leaf δομή** (Cardinal Rules / CHECK 6C respected). Box-select pipeline ενεργό πλέον μόνο για τα `*-region-box` + perimeter/discrete tools. Co-staged για CHECK 6B (CanvasSection/dxf-canvas-renderer) + CHECK 6D (cursor/ files).
+
 ### 2026-06-06 — dxf-canvas-renderer floor-finish tool routing (ADR-419, CHECK 6B)
 
 **Status**: IMPLEMENTED 2026-06-06. `dxf-canvas-renderer.ts` gains a floor-finish tool routing path (ADR-419): when `floorFinishTool` is active, click events are forwarded to the floor-finish completion handler. Pure additive branch — **no new `useSyncExternalStore`**, no bitmap cache-key change, no micro-leaf structural change.
@@ -2961,3 +2965,8 @@ Bugfix-only αλλαγή στο `EnvelopeOverlay.tsx`: μετά το `renderOpen
 **Root cause** — race ανάμεσα στο `requestIdleCallback` deferral και το effect cleanup: το re-init γίνεται defer (idle, 250ms) και το **per-run cleanup ακύρωνε** το pending idle σε **κάθε** re-run του effect. Ένα **benign no-op re-render** (ίδιο fingerprint → early-return· πυροδοτείται π.χ. από το Firestore `subscribeSegments` echo που ξαναχτίζει το scene object με **ίδιες** entities) κάνει το React να τρέξει το cleanup του προηγούμενου (genuine) effect → **ακυρώνει το pending `initialize()`** πριν προλάβει να εκτελεστεί. Άρα το νέο BIM entity δεν μπαίνει ποτέ στο spatial index. Το 2D canvas «έκρυβε» το bug γιατί ξανασχεδιάζει διαβάζοντας live το `getLevelScene` ref στο RAF, ανεξάρτητα από το React `scene` prop.
 
 **Fix** (`snapping/hooks/useGlobalSnapSceneSync.ts`): **αφαιρέθηκε** το per-run cleanup-cancel. Το superseding genuine αλλαγών το χειρίζεται ήδη το **cancel-before-schedule** μέσα στο effect body· το τελικό teardown μετακινήθηκε σε ξεχωριστό **unmount-only** effect (`useEffect(() => () => cancel(), [scheduler])`). Έτσι ένα benign skip-render δεν σκοτώνει πλέον το deferred init. Γενικό fix — αποκαθιστά το snap re-init για **όλα** τα BIM snap (όχι μόνο MEP). Διατηρεί πλήρως το perf design (idle deferral + fingerprint guard). ✅ browser-verified (ADR-408 Φ9 MEP connector snap κουμπώνει). 8/8 MepConnectorSnap tests PASS, tsc 0 νέα.
+
+## 2026-06-07: wall region-click drag-box + CanvasSection/dxf-canvas-renderer wiring
+
+- **`CanvasSection.tsx`** — wired drag-box region-click events (mousedown/move/up) through `useCentralizedMouseHandlers` for wall region 'box' method. No new `useSyncExternalStore` in orchestrator (CHECK 6C safe).
+- **`dxf-canvas-renderer.ts`** — minor update for region-tool integration. Bitmap cache key unchanged (rule 3 safe).

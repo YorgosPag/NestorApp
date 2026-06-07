@@ -31,6 +31,13 @@ import { buildSlabOpeningResolvers } from './useSpecialTools-slab-opening';
 import { useWallRetrimEffect } from './useSpecialTools-wall-retrim';
 import { buildOpeningResolvers } from './useSpecialTools-opening';
 import { useToolLifecycle } from './useToolLifecycle';
+// ADR-419 — region tool-id → method SSoT (split του «σε περιοχή» σε 3 εντολές).
+import {
+  isColumnRegionTool,
+  isWallRegionTool,
+  columnRegionMethod,
+  wallRegionMethod,
+} from '../../systems/tools/region-tool-ids';
 import { resolveSceneUnits, mmToSceneUnits } from '../../utils/scene-units';
 import { useFloorMetadata } from '../data/useFloorMetadata';
 import type { StairFloorLinkInput } from '../drawing/stair-completion';
@@ -208,15 +215,22 @@ export function useSpecialTools(props: UseSpecialToolsProps): UseSpecialToolsRet
   const isWallTool =
     activeTool === 'wall' ||
     activeTool === 'wall-on-entity' ||
-    activeTool === 'wall-in-region' ||
+    isWallRegionTool(activeTool) ||
     activeTool === 'wall-from-perimeter';
   useToolLifecycle(isWallTool, wallTool.activate, wallTool.deactivate);
   useEffect(() => {
     if (activeTool === 'wall') wallTool.setPlacementMode('freehand');
     else if (activeTool === 'wall-on-entity') wallTool.setPlacementMode('on-entity');
-    else if (activeTool === 'wall-in-region') wallTool.setPlacementMode('in-region');
     else if (activeTool === 'wall-from-perimeter') wallTool.setPlacementMode('outer-perimeter');
-  }, [activeTool, wallTool.setPlacementMode]);
+    else {
+      // ADR-419 — wall-region-lines/inside/box → in-region + αντίστοιχο method.
+      const method = wallRegionMethod(activeTool);
+      if (method) {
+        wallTool.setPlacementMode('in-region');
+        wallTool.setRegionMethod(method);
+      }
+    }
+  }, [activeTool, wallTool.setPlacementMode, wallTool.setRegionMethod]);
   // ADR-363 Phase 2 — OPENING TOOL (resolvers extracted: useSpecialTools-opening.ts)
   const openingTool = useOpeningTool(buildOpeningResolvers(levelManager));
   useToolLifecycle(activeTool === 'opening', openingTool.activate, openingTool.deactivate);
@@ -310,16 +324,28 @@ export function useSpecialTools(props: UseSpecialToolsProps): UseSpecialToolsRet
     activeTool === 'column' ||
     activeTool === 'column-from-perimeter' ||
     activeTool === 'column-discrete-from-perimeter' ||
-    activeTool === 'column-in-region';
+    activeTool === 'column-discrete-from-perimeter-walls' ||
+    isColumnRegionTool(activeTool);
   useToolLifecycle(isColumnTool, columnTool.activate, columnTool.deactivate);
   useEffect(() => {
     if (activeTool === 'column') columnTool.setPlacementMode('freehand');
     else if (activeTool === 'column-from-perimeter') columnTool.setPlacementMode('outer-perimeter');
-    else if (activeTool === 'column-discrete-from-perimeter')
+    // ADR-419 — «Πολλαπλή δημιουργία»: ίδιο discrete-perimeter mode, διαφορετικό intent.
+    else if (activeTool === 'column-discrete-from-perimeter') {
       columnTool.setPlacementMode('discrete-perimeter');
-    // ADR-419 — «Κολώνα σε περιοχή (4 γραμμές)» (ΙΔΙΑ SSoT με wall-in-region).
-    else if (activeTool === 'column-in-region') columnTool.setPlacementMode('in-region');
-  }, [activeTool, columnTool.setPlacementMode]);
+      columnTool.setDiscreteIntent('columns');
+    } else if (activeTool === 'column-discrete-from-perimeter-walls') {
+      columnTool.setPlacementMode('discrete-perimeter');
+      columnTool.setDiscreteIntent('walls');
+    } else {
+      // ADR-419 — column-region-lines/inside/box → in-region + αντίστοιχο method.
+      const method = columnRegionMethod(activeTool);
+      if (method) {
+        columnTool.setPlacementMode('in-region');
+        columnTool.setRegionMethod(method);
+      }
+    }
+  }, [activeTool, columnTool.setPlacementMode, columnTool.setRegionMethod, columnTool.setDiscreteIntent]);
   // ADR-406/407/408/410/415 — MEP + furnishing single/2-click placement tools
   // (mepFixture, furniture, floorplanSymbol, electricalPanel, mepManifold,
   // mepRadiator, mepBoiler, mepSegment, railing). Extracted to a sub-hook (N.7.1) — each

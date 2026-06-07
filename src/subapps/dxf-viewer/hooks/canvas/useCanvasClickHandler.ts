@@ -4,6 +4,7 @@
 import { useCallback } from 'react';
 import type { Point2D } from '../../rendering/types/Types';
 import { isInteractiveTool } from '../../systems/tools/ToolStateManager';
+import { isColumnRegionTool, isWallRegionTool } from '../../systems/tools/region-tool-ids';
 import { isPointInPolygon } from '../../utils/geometry/GeometryUtils';
 import { POLYGON_TOLERANCES } from '../../config/tolerance-config';
 import { dwarn } from '../../debug';
@@ -210,7 +211,7 @@ export function useCanvasClickHandler(params: UseCanvasClickHandlerParams): UseC
     // ORTHO/POLAR must NOT shift the pick). Accumulated line picks are reflected
     // as a selection highlight; a commit clears the picks → selection clears.
     if (
-      (activeTool === 'wall-in-region' || activeTool === 'wall-from-perimeter') &&
+      (isWallRegionTool(activeTool) || activeTool === 'wall-from-perimeter') &&
       wallTool?.isActive
     ) {
       wallTool.onCanvasClick(worldPoint);
@@ -259,7 +260,7 @@ export function useCanvasClickHandler(params: UseCanvasClickHandlerParams): UseC
     // wall-in-region. RAW worldPoint (hit-tests existing 2D geometry, ORTHO/POLAR
     // must NOT shift the pick). Accumulated line picks reflected ως selection
     // highlight· commit clears them → selection clears.
-    if (activeTool === 'column-in-region' && columnTool?.isActive) {
+    if (isColumnRegionTool(activeTool) && columnTool?.isActive) {
       columnTool.onCanvasClick(worldPoint);
       universalSelection.replaceEntitySelection(columnTool.getRegionPickIds?.() ?? []);
       return;
@@ -267,7 +268,8 @@ export function useCanvasClickHandler(params: UseCanvasClickHandlerParams): UseC
     if (
       (activeTool === 'column' ||
         activeTool === 'column-from-perimeter' ||
-        activeTool === 'column-discrete-from-perimeter') &&
+        activeTool === 'column-discrete-from-perimeter' ||
+        activeTool === 'column-discrete-from-perimeter-walls') &&
       columnTool?.isActive
     ) {
       columnTool.onCanvasClick(worldPoint);

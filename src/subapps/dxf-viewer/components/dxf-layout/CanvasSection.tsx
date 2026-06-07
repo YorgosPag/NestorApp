@@ -17,6 +17,7 @@ import { perfStart, perfEnd, PERF_LINE_PROFILE } from '../../debug/perf-line-pro
 // the orchestrator-leak cascade documented in Phase XXII.A.
 import { useCanvasRefs } from '../../contexts/CanvasContext';
 import { getImmediateTransform } from '../../systems/cursor/ImmediateTransformStore';
+import { isWallRegionTool } from '../../systems/tools/region-tool-ids';
 import { useOverlayStore } from '../../overlays/overlay-store';
 import { useLiveOverlaysForLevel } from '../../hooks/useLiveOverlaysForLevel';
 import { useLevels } from '../../systems/levels';
@@ -443,7 +444,7 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
         entityJoin={{ canJoin: entityJoinState.canJoin, joinResultLabel: entityJoinState.joinResultLabel, onJoin: () => entityJoinHook.joinEntities(selectedEntityIds), onDelete: () => handleSmartDelete() }}
         floorId={floorplanBg?.floorId ?? null}
         onMouseMove={props.onMouseMove}
-        entityPickingActive={angleEntityMeasurement.isActive || rotationTool.phase === 'awaiting-entity' || moveTool.phase === 'awaiting-entity' || mirrorTool.phase === 'awaiting-entity' || activeTool === 'wall-on-entity' || activeTool === 'wall-in-region' || activeTool === 'beam-from-wall' || wallAttachTool.isActive || activeTool === 'guide-arc-segments' || activeTool === 'guide-arc-distance' || activeTool === 'guide-arc-line-intersect' || activeTool === 'guide-circle-intersect' || activeTool === 'guide-line-midpoint' || activeTool === 'guide-circle-center'}
+        entityPickingActive={angleEntityMeasurement.isActive || rotationTool.phase === 'awaiting-entity' || moveTool.phase === 'awaiting-entity' || mirrorTool.phase === 'awaiting-entity' || activeTool === 'wall-on-entity' || isWallRegionTool(activeTool) || activeTool === 'beam-from-wall' || wallAttachTool.isActive || activeTool === 'guide-arc-segments' || activeTool === 'guide-arc-distance' || activeTool === 'guide-arc-line-intersect' || activeTool === 'guide-circle-intersect' || activeTool === 'guide-line-midpoint' || activeTool === 'guide-circle-center'}
         selectedGuideIds={guideWorkflows.selectedGuideIds} constructionPoints={cpState.points}
         guideWorkflowState={guideWorkflows.state}
         guideStateObj={guideState} cpStateObj={cpState}

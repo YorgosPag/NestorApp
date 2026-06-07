@@ -13,6 +13,7 @@ import {
 } from '../../rendering/core/CoordinateTransforms';
 import { canvasEventBus } from '../../rendering/canvas/core/CanvasEventSystem';
 import { isInDrawingMode } from '../tools/ToolStateManager';
+import { isRegionBoxSelectTool } from '../tools/region-tool-ids';
 import { UniversalMarqueeSelector } from '../selection/UniversalMarqueeSelection';
 import { EventBus } from '../events/EventBus';
 import { TOLERANCE_CONFIG } from '../../config/tolerance-config';
@@ -350,14 +351,7 @@ function processMarqueeSelection(
   // marquee → run window/crossing selection to collect entities → hand their ids to
   // the wall tool via EventBus (in-region detects enclosed rectangles; outer-perimeter
   // analyses the faces → leg walls). MUST NOT mutate selection (mirrors crop-window).
-  if (
-    (activeTool === 'wall-in-region' ||
-      activeTool === 'wall-from-perimeter' ||
-      activeTool === 'column-from-perimeter' ||
-      activeTool === 'column-discrete-from-perimeter' ||
-      activeTool === 'column-in-region') &&
-    marqueeSnap
-  ) {
+  if (isRegionBoxSelectTool(activeTool) && marqueeSnap) {
     const regionResult = UniversalMarqueeSelector.performSelection(
       cursor.selectionStart!,
       cursor.position!,

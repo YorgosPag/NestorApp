@@ -67,11 +67,14 @@ export function useDxfViewerNotifications(): void {
       EventBus.on('bim:columns-discrete-from-perimeter', ({ columns, walls }) => {
         if (columns === 0 && walls === 0) {
           toast.warning(t('perimeterColumnDiscrete.noneBuilt'));
-        } else if (walls > 0) {
+        } else if (columns > 0 && walls > 0) {
           // Plural-correct σύνθετο μήνυμα (i18next _one/_other ανά αριθμό).
           const columnsText = t('perimeterColumnDiscrete.nColumns', { count: columns });
           const wallsText = t('perimeterColumnDiscrete.nWalls', { count: walls });
           toast.info(t('perimeterColumnDiscrete.builtMixed', { columns: columnsText, walls: wallsText }));
+        } else if (walls > 0) {
+          // ADR-419 — δημιουργήθηκαν μόνο τοιχία (intent=walls ή «μόνο τα δικά μου»).
+          toast.success(t('perimeterColumnDiscrete.builtWalls', { count: walls }));
         } else {
           toast.success(t('perimeterColumnDiscrete.built', { count: columns }));
         }

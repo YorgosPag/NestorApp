@@ -13,38 +13,38 @@
  * @see ../../hooks/drawing/useColumnTool.ts / useWallTool.ts (regionMethod state)
  */
 
-import type { ToolType } from '../../ui/toolbar/types';
-
 /** Ποιον τρόπο επιλογής περιοχής δέχεται το εργαλείο. */
 export type RegionMethod = 'lines' | 'inside' | 'box';
 
-const COLUMN_REGION_METHODS: Readonly<Partial<Record<ToolType, RegionMethod>>> = {
+// Plain string keys (όχι exhaustive Record<ToolType>) ώστε τα predicates να
+// δέχονται και `string | undefined` activeTool refs χωρίς casts στα call sites.
+const COLUMN_REGION_METHODS: Readonly<Record<string, RegionMethod>> = {
   'column-region-lines': 'lines',
   'column-region-inside': 'inside',
   'column-region-box': 'box',
 };
 
-const WALL_REGION_METHODS: Readonly<Partial<Record<ToolType, RegionMethod>>> = {
+const WALL_REGION_METHODS: Readonly<Record<string, RegionMethod>> = {
   'wall-region-lines': 'lines',
   'wall-region-inside': 'inside',
   'wall-region-box': 'box',
 };
 
 /** «Κολώνα σε περιοχή» variant → method (ή null αν δεν είναι column-region tool). */
-export function columnRegionMethod(tool: ToolType | null | undefined): RegionMethod | null {
+export function columnRegionMethod(tool: string | null | undefined): RegionMethod | null {
   return tool ? COLUMN_REGION_METHODS[tool] ?? null : null;
 }
 
 /** «Τοίχος σε περιοχή» variant → method (ή null αν δεν είναι wall-region tool). */
-export function wallRegionMethod(tool: ToolType | null | undefined): RegionMethod | null {
+export function wallRegionMethod(tool: string | null | undefined): RegionMethod | null {
   return tool ? WALL_REGION_METHODS[tool] ?? null : null;
 }
 
-export function isColumnRegionTool(tool: ToolType | null | undefined): boolean {
+export function isColumnRegionTool(tool: string | null | undefined): boolean {
   return columnRegionMethod(tool) !== null;
 }
 
-export function isWallRegionTool(tool: ToolType | null | undefined): boolean {
+export function isWallRegionTool(tool: string | null | undefined): boolean {
   return wallRegionMethod(tool) !== null;
 }
 
@@ -54,7 +54,7 @@ export function isWallRegionTool(tool: ToolType | null | undefined): boolean {
  * «από περίγραμμα» (outer/discrete, κολώνα/τοιχίο). Τα «4 γραμμές»/«μέσα σε
  * περιοχή» δουλεύουν ΜΟΝΟ με κλικ → ΕΚΤΟΣ marquee.
  */
-export function isRegionBoxSelectTool(tool: ToolType | null | undefined): boolean {
+export function isRegionBoxSelectTool(tool: string | null | undefined): boolean {
   return (
     columnRegionMethod(tool) === 'box' ||
     wallRegionMethod(tool) === 'box' ||
@@ -69,7 +69,7 @@ export function isRegionBoxSelectTool(tool: ToolType | null | undefined): boolea
  * Όλα τα BIM region/perimeter εργαλεία (region 3-way + outer/discrete perimeter).
  * Χρήση για contextual-tab visibility, gripsAllowed, click routing.
  */
-export function isBimRegionOrPerimeterTool(tool: ToolType | null | undefined): boolean {
+export function isBimRegionOrPerimeterTool(tool: string | null | undefined): boolean {
   return (
     isColumnRegionTool(tool) ||
     isWallRegionTool(tool) ||

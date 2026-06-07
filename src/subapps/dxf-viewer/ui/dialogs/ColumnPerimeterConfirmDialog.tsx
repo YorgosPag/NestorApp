@@ -1,20 +1,16 @@
 'use client';
 
 /**
- * ADR-363 Φ3c «Κολώνα από περίγραμμα» — ενημερωτικό παράθυρο επιβεβαίωσης.
+ * ADR-363 Φ3c / ADR-419 «Πολλαπλή δημιουργία» — ενημερωτικό παράθυρο επιβεβαίωσης.
  *
- * Εμφανίζεται όταν το box-select εντοπίσει ≥1 περίγραμμα που στατικά είναι ΤΟΙΧΙΟ
- * (αναλογία πλευρών ≥ 4 ή μη-ορθογωνικό). Αναφέρει την ΑΥΤΟΜΑΤΗ ταξινόμηση («N
- * τοιχία + M κολώνες») — ΔΕΝ αναγκάζει ισοπέδωση (Giorgio: μη αλλοίωση στατικών).
- * Renders via createPortal (pattern mirror: WallCascadeDeleteDialog). Subscribes
- * στο column-perimeter-confirm-store — μηδέν props.
+ * Δύο modes (subscribes στο column-perimeter-confirm-store — μηδέν props):
+ *   - `intent-mixed` (ADR-419): η «Πολλαπλή δημιουργία κολωνών/τοιχίων» εντόπισε
+ *     στοιχεία «άλλου τύπου». 3 κουμπιά (όλα / μόνο τα δικά μου / άκυρο) όταν
+ *     υπάρχουν ≥1 «δικά μου»· 2 κουμπιά (όλα / άκυρο) όταν εντοπίστηκαν ΜΟΝΟ άλλου
+ *     τύπου. Σέβεται την πρόθεση + μη αλλοίωση στατικών (Giorgio).
+ *   - `is-column` (Φ3): «Τοιχίο από περίγραμμα» αλλά αναλογία ≤ 4 → κολόνα (EC2 §9.6.1).
  *
- * Δύο ενέργειες:
- *   - 'create' → δημιουργία όλων (τοιχία + κολώνες) με τους σωστούς τύπους.
- *   - 'cancel' → όλα ή τίποτα: κανένα στοιχείο δεν δημιουργείται.
- *
- * Το κουμπί δημιουργίας έχει autoFocus (η ασφαλής/αναμενόμενη ενέργεια εδώ είναι
- * μη καταστροφική — η δημιουργία είναι αναιρέσιμη).
+ * Renders via createPortal (pattern mirror: WallCascadeDeleteDialog).
  *
  * @see docs/centralized-systems/reference/adrs/ADR-363-bim-drawing-mode.md §6
  */
@@ -56,32 +52,66 @@ export const ColumnPerimeterConfirmDialog: React.FC = () => {
   if (!state.open || typeof document === 'undefined') return null;
 
   if (state.mode === 'is-column') {
-    return createPortal(
-      <IsColumnDialog state={state} t={t} />,
-      document.body,
-    );
+    return createPortal(<IsColumnDialog state={state} t={t} />, document.body);
   }
 
-  // has-walls mode: plural-correct noun phrases (i18next _one/_other)
-  const wallsText = t('perimeterColumnDiscrete.nWalls', { count: state.walls });
-  const columnsText = t('perimeterColumnDiscrete.nColumns', { count: state.columns });
+  return createPortal(<IntentMixedDialog state={state} t={t} />, document.body);
+};
 
-  return createPortal(
+type DialogT = ReturnType<typeof useTranslation>['t'];
+
+interface DialogProps {
+  state: ColumnPerimeterConfirmState;
+  t: DialogT;
+}
+
+// ── ADR-419 intent-mixed ──────────────────────────────────────────────────────
+
+const IntentMixedDialog: React.FC<DialogProps> = ({ state, t }) => {
+  const { intent, primaryCount, secondaryCount } = state;
+  // Plural-correct noun phrases (i18next _one/_other) ανά πρόθεση.
+  const primaryText =
+    intent === 'columns'
+      ? t('perimeterColumnDiscrete.nColumns', { count: primaryCount })
+      : t('perimeterColumnDiscrete.nWalls', { count: primaryCount });
+  const secondaryText =
+    intent === 'columns'
+      ? t('perimeterColumnDiscrete.nWalls', { count: secondaryCount })
+      : t('perimeterColumnDiscrete.nColumns', { count: secondaryCount });
+  const onlyPrimaryLabel =
+    intent === 'columns'
+      ? t('perimeterColumnConfirm.onlyColumns')
+      : t('perimeterColumnConfirm.onlyWalls');
+
+  const hasPrimary = primaryCount > 0;
+
+  return (
     <div className="dxf-modal-overlay" role="dialog" aria-modal="true">
       <div className="dxf-modal-card">
-        <h2 className="dxf-modal-title">{t('perimeterColumnConfirm.title')}</h2>
+        <h2 className="dxf-modal-title">{t('perimeterColumnConfirm.intentTitle')}</h2>
         <p className="dxf-modal-body">
-          {t('perimeterColumnConfirm.message', { walls: wallsText, columns: columnsText })}
+          {hasPrimary
+            ? t('perimeterColumnConfirm.intentMessage', { primary: primaryText, secondary: secondaryText })
+            : t('perimeterColumnConfirm.intentMessageOnlySecondary', { secondary: secondaryText })}
         </p>
         <div className="dxf-modal-actions">
           <button
             type="button"
             autoFocus
             className="dxf-modal-button dxf-modal-button-primary"
-            onClick={() => resolveColumnPerimeterConfirm('create')}
+            onClick={() => resolveColumnPerimeterConfirm('create-all')}
           >
-            {t('perimeterColumnConfirm.create')}
+            {t('perimeterColumnConfirm.createAll')}
           </button>
+          {hasPrimary && (
+            <button
+              type="button"
+              className="dxf-modal-button"
+              onClick={() => resolveColumnPerimeterConfirm('create-primary')}
+            >
+              {onlyPrimaryLabel}
+            </button>
+          )}
           <button
             type="button"
             className="dxf-modal-button"
@@ -91,17 +121,13 @@ export const ColumnPerimeterConfirmDialog: React.FC = () => {
           </button>
         </div>
       </div>
-    </div>,
-    document.body,
+    </div>
   );
 };
 
-interface IsColumnDialogProps {
-  state: ColumnPerimeterConfirmState;
-  t: ReturnType<typeof useTranslation>['t'];
-}
+// ── Φ3 is-column (αναλογία ≤ 4 → κολόνα) ───────────────────────────────────────
 
-const IsColumnDialog: React.FC<IsColumnDialogProps> = ({ state, t }) => (
+const IsColumnDialog: React.FC<DialogProps> = ({ state, t }) => (
   <div className="dxf-modal-overlay" role="dialog" aria-modal="true">
     <div className="dxf-modal-card">
       <h2 className="dxf-modal-title">{t('perimeterColumnConfirm.isColumnTitle')}</h2>
@@ -113,7 +139,7 @@ const IsColumnDialog: React.FC<IsColumnDialogProps> = ({ state, t }) => (
           type="button"
           autoFocus
           className="dxf-modal-button dxf-modal-button-primary"
-          onClick={() => resolveColumnPerimeterConfirm('create')}
+          onClick={() => resolveColumnPerimeterConfirm('create-all')}
         >
           {t('perimeterColumnConfirm.createAsColumn')}
         </button>
