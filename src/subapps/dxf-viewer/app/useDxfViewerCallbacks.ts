@@ -336,14 +336,16 @@ export function useDxfViewerCallbacks(params: DxfViewerCallbacksParams): DxfView
   }, [wrappedHandleTransformChange, showCopyableNotification]);
 
   // 🏢 ADR-240: Wrapper για handleFileImport with encoding + saveContext
-  const handleFileImportWithEncoding = React.useCallback(async (file: File, encoding?: string, saveContext?: DxfSaveContext) => {
+  const handleFileImportWithEncoding = React.useCallback(async (file: File, encoding?: string, saveContext?: DxfSaveContext, targetLevelId?: string) => {
     try {
-      // 🔺 USE EXISTING LEVEL instead of creating new one
-      const currentLevel = levelManager.currentLevelId;
+      // ADR-420 — the wizard resolves the level that OWNS the selected floor and
+      // passes it explicitly. Target THAT level (race-free) rather than whatever is
+      // currently active, so importing onto floor B never overwrites floor A.
+      const resolvedLevel = targetLevelId ?? levelManager.currentLevelId;
 
-      if (currentLevel) {
-        overlayStore.setCurrentLevel(currentLevel);
-        handleFileImport(file, undefined, saveContext);
+      if (resolvedLevel) {
+        overlayStore.setCurrentLevel(resolvedLevel);
+        handleFileImport(file, undefined, saveContext, resolvedLevel);
       } else {
         console.warn('⚠️ [Enhanced Import] No current level found, creating default level');
         const timestamp = nowISO().slice(0, 19).replace(/[-:]/g, '');
@@ -351,7 +353,7 @@ export function useDxfViewerCallbacks(params: DxfViewerCallbacksParams): DxfView
         const newLevelId = await levelManager.addLevel(newLevelName, true);
         if (newLevelId) {
           overlayStore.setCurrentLevel(newLevelId);
-          handleFileImport(file, undefined, saveContext);
+          handleFileImport(file, undefined, saveContext, newLevelId);
         } else {
           console.error('❌ [Enhanced Import] Failed to create new level');
           return;
@@ -359,7 +361,7 @@ export function useDxfViewerCallbacks(params: DxfViewerCallbacksParams): DxfView
       }
     } catch (error) {
       console.error('⛔ [Enhanced Import] Error in enhanced DXF import:', error);
-      handleFileImport(file, undefined, saveContext);
+      handleFileImport(file, undefined, saveContext, targetLevelId);
     }
   }, [levelManager, overlayStore, handleFileImport]);
 

@@ -25,12 +25,28 @@ const RECT: Point2D[] = [
   { x: 0, y: 800 },
 ];
 
-// Μακρόστενο 2000×300 (aspect 6.67 ≥ 4 → shear-wall).
+// Μακρόστενο 2000×300 (aspect 6.67 > 4 → shear-wall).
 const SHEAR: Point2D[] = [
   { x: 0, y: 0 },
   { x: 2000, y: 0 },
   { x: 2000, y: 300 },
   { x: 0, y: 300 },
+];
+
+// Ακριβώς 1000×250 (aspect 4.0 ≤ 4 → rectangular, EC2 §9.6.1 οριακή κολόνα).
+const RECT_4_EXACT: Point2D[] = [
+  { x: 0, y: 0 },
+  { x: 1000, y: 0 },
+  { x: 1000, y: 250 },
+  { x: 0, y: 250 },
+];
+
+// 1100×250 (aspect 4.4 > 4 → shear-wall).
+const SHEAR_ABOVE_4: Point2D[] = [
+  { x: 0, y: 0 },
+  { x: 1100, y: 0 },
+  { x: 1100, y: 250 },
+  { x: 0, y: 250 },
 ];
 
 // Γ (L) — 6 κορυφές, 1 reflex → composite.
@@ -114,12 +130,24 @@ describe('column-from-faces — ορθογώνιο → rectangular / shear-wall'
     expect(columns[0].params.depth).toBeCloseTo(800, 3);
   });
 
-  it('μακρόστενο (aspect ≥ 4) → shear-wall', () => {
+  it('μακρόστενο (aspect 6.67 > 4) → shear-wall', () => {
     const { columns } = buildColumnsFrom([lwPolyline('s', SHEAR)]);
     expect(columns).toHaveLength(1);
     expect(columns[0].params.kind).toBe('shear-wall');
     expect(columns[0].params.width).toBeCloseTo(2000, 3);
     expect(columns[0].params.depth).toBeCloseTo(300, 3);
+  });
+
+  it('EC2 §9.6.1 οριακό: aspect ακριβώς 4.0 → rectangular (κολόνα, ΟΧΙ τοιχίο)', () => {
+    const { columns } = buildColumnsFrom([lwPolyline('r4', RECT_4_EXACT)]);
+    expect(columns).toHaveLength(1);
+    expect(columns[0].params.kind).toBe('rectangular');
+  });
+
+  it('EC2 §9.6.1: aspect 4.4 > 4 → shear-wall', () => {
+    const { columns } = buildColumnsFrom([lwPolyline('s44', SHEAR_ABOVE_4)]);
+    expect(columns).toHaveLength(1);
+    expect(columns[0].params.kind).toBe('shear-wall');
   });
 });
 

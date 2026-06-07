@@ -24,6 +24,7 @@ import { AnnotationsSection } from './AnnotationsSection';
 import type { ToolType } from '../toolbar/types';
 import type { SceneModel } from '../../types/scene';
 import { useLevels } from '../../systems/levels';
+import { findOrCreateLevelForFloor } from '../../systems/levels/level-floor-resolution';
 import { useNotifications } from '../../../../providers/NotificationProvider';
 import { createOverlayHandlers } from '../../overlays/types';
 import { useUniversalSelection } from '../../systems/selection';
@@ -37,7 +38,7 @@ interface LevelPanelProps {
   currentTool?: ToolType;
   onToolChange?: (tool: ToolType) => void;
   scene?: SceneModel | null;
-  onSceneImported?: (file: File, encoding?: string, saveContext?: DxfSaveContext) => void;
+  onSceneImported?: (file: File, encoding?: string, saveContext?: DxfSaveContext, targetLevelId?: string) => void;
   expandedKeys?: Set<string>;
   onExpandChange?: React.Dispatch<React.SetStateAction<Set<string>>>;
   onLayerToggle?: (layerName: string, visible: boolean) => void;
@@ -413,7 +414,7 @@ export function LevelPanel({
         <FloorplanImportWizard
           isOpen={showImportWizard}
           onClose={() => setShowImportWizard(false)}
-          onComplete={(file, meta) => {
+          onComplete={async (file, meta) => {
             setShowImportWizard(false);
             const entityType = meta.entityType as DxfSaveContext['entityType'];
             const saveContext: DxfSaveContext = {
@@ -427,13 +428,29 @@ export function LevelPanel({
               entityLabel: meta.entityLabel,
               fileRecordId: meta.fileId,
             };
+            // ADR-420 — resolve the Level that OWNS the wizard-selected floor
+            // (find-or-create + switch). Root-cause fix: the import previously
+            // targeted whatever level was *active* (`currentLevelId`), so importing
+            // onto floor B while floor A's tab was active overwrote floor A. Now the
+            // selected `floorId` deterministically maps to its own level. Falls back
+            // to the active level for project/building-level imports (no floorId).
+            const targetLevelId = await findOrCreateLevelForFloor(
+              { levels, addLevel, linkLevelToFloor },
+              {
+                floorId: saveContext.floorId,
+                buildingId: meta.buildingId ?? saveContext.buildingId,
+                entityLabel: meta.entityLabel,
+                currentLevelId,
+              },
+            );
             // ADR-340 Phase 4 reborn FOLLOW-UP — context update is safe for any
             // payload (writes only floorId/buildingId/entityLabel, NOT sceneFileId).
             // Lets `useFloorplanBackgroundForLevel` resolve the real floor for raster.
-            if (currentLevelId) {
+            if (targetLevelId) {
+              setCurrentLevel(targetLevelId);
               const floorplanType = entityTypeToFloorplanType(meta.entityType);
               if (floorplanType) {
-                updateLevelContext(currentLevelId, {
+                updateLevelContext(targetLevelId, {
                   floorplanType,
                   entityLabel: meta.entityLabel,
                   projectId: meta.projectId,
@@ -449,7 +466,7 @@ export function LevelPanel({
             // it would push the raw bytes through the cadFiles processor and
             // wire `dxf_viewer_levels.sceneFileId` to a non-DXF file.
             if (meta.format && meta.format !== 'dxf') return;
-            onSceneImported(file, undefined, saveContext);
+            onSceneImported(file, undefined, saveContext, targetLevelId ?? undefined);
           }}
         />
       )}

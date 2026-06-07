@@ -92,8 +92,11 @@ export function useSceneState() {
   }, [currentLevelId, setLevelScene]);
 
   // File import handler
-  const handleFileImport = useCallback(async (file: File, fileRecordId?: string, saveContext?: DxfSaveContext) => {
-    let targetLevelId = currentLevelId;
+  const handleFileImport = useCallback(async (file: File, fileRecordId?: string, saveContext?: DxfSaveContext, targetLevelIdOverride?: string) => {
+    // ADR-420 — when the wizard resolves the level owning the selected floor it
+    // passes it explicitly; honour that over the (possibly stale) active level so
+    // the imported scene is written to the correct floor, never another one.
+    let targetLevelId = targetLevelIdOverride ?? currentLevelId;
     
     // If no level is selected, use the first available level or create one
     if (!targetLevelId) {

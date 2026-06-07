@@ -29,7 +29,7 @@ interface MobileSidebarDrawerProps {
   currentScene: SceneModel | null;
   activeTool: string;
   // ADR-309 Phase 2: Wizard button in LevelPanel
-  onSceneImported?: (file: File, encoding?: string, saveContext?: DxfSaveContext) => void;
+  onSceneImported?: (file: File, encoding?: string, saveContext?: DxfSaveContext, targetLevelId?: string) => void;
 }
 
 export const MobileSidebarDrawer: React.FC<MobileSidebarDrawerProps> = ({

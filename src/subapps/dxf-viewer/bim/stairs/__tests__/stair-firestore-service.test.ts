@@ -258,20 +258,36 @@ describe('StairFirestoreService.saveStair', () => {
     expect(payload).not.toHaveProperty('layer');
   });
 
-  it('persists optional fields when provided', async () => {
-    const svc = createStairFirestoreService(CONFIG);
+  it('persists optional fields when provided (floorId from config scope — ADR-420)', async () => {
+    // ADR-420 — floorId is the stable scope key, sourced from CONFIG (not save input).
+    const svc = createStairFirestoreService({ ...CONFIG, floorId: 'f1' });
     await svc.saveStair({
       kind: 'straight',
       params: MINIMAL_PARAMS,
       validation: MINIMAL_VALIDATION,
       buildingId: 'b1',
-      floorId: 'f1',
       layer: 'STAIRS',
     });
     const payload = mockSetDoc.mock.calls[0][1];
     expect(payload.buildingId).toBe('b1');
     expect(payload.floorId).toBe('f1');
     expect(payload.layer).toBe('STAIRS');
+  });
+
+  it('scopes the subscribe query by stable floorId when config has one — ADR-420', () => {
+    const svc = createStairFirestoreService({ ...CONFIG, floorId: 'f1' });
+    svc.subscribeStairs(jest.fn(), jest.fn());
+    const constraints = subscribeCalls[subscribeCalls.length - 1].options?.constraints;
+    const floorConstraint = constraints!.find(
+      (c) => (c as { field: string }).field === 'floorId',
+    );
+    expect(floorConstraint).toEqual(
+      expect.objectContaining({ field: 'floorId', value: 'f1' }),
+    );
+    // floorplanId is NOT the scope key when a floorId is bound.
+    expect(
+      constraints!.find((c) => (c as { field: string }).field === 'floorplanId'),
+    ).toBeUndefined();
   });
 
   it('strips nested undefined from params before setDoc (Firestore rejects undefined) — ADR-402', async () => {

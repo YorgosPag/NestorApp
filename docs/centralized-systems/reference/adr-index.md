@@ -397,6 +397,7 @@
 | **ADR-415** | Βιβλιοθήκη 2D αποτυπωμάτων (floorplan symbol library) — pure-vector 2D σύμβολα επίπλων/sanitary/kitchen στον δισδιάστατο καμβά | 🟡 RESEARCH + DESIGN (PROPOSED) 2026-06-04 (έρευνα app+web licensing· plan 6 φάσεων· εκκρεμεί έγκριση Φ1) | 2026-06-04 | Uncategorized | [📄](./adrs/ADR-415-2d-floorplan-symbol-library.md) |
 | **ADR-418** | Real View Scale (1:N) SSoT — Revit-style κλίμακα προβολής αντί για pixel-% (DPI + scene-units aware· 1:1 actual size· presets· reload guard) | ✅ APPROVED | 2026-06-05 | Canvas & Rendering | [📄](./adrs/ADR-418-view-scale-ssot.md) |
 | **ADR-419** | Floor Finish Per Room (IfcCovering FLOORING) — λεπτό covering ανά δωμάτιο (10–50mm), 8 materials SSoT (wood/tile/marble/laminate/parquet/epoxy/carpet), 2D hatch + 3D PBR, Pset_CoveringCommon, enterprise-id ffl_ | ✅ APPROVED | 2026-06-06 | Entity Systems | [📄](./adrs/ADR-419-floor-finish-per-room.md) |
+| **ADR-420** | BIM Floor-Scope SSoT — οι BIM οντότητες (20 collections) σκοπεύονται στο σταθερό `floorId` (IfcBuildingStorey) αντί για volatile `floorplanId` (=fileRecordId, αλλάζει σε κάθε re-import → orphaning). SSoT `bim-floor-scope`· rollout dual-write→backfill→flip· 40 indexes· wizard find-or-create level by floorId | ✅ APPROVED | 2026-06-07 | BIM Persistence | [📄](./adrs/ADR-420-bim-floor-scope-ssot.md) |
 | **ADR-UI-001** | Visual Primitive Ownership & Semantic Tokens | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-UI-001.md) |
 
 ---
@@ -778,6 +779,7 @@
 | **ADR-415** | Βιβλιοθήκη 2D αποτυπωμάτων (floorplan symbol library) | 🟡 RESEARCH + DESIGN | [View](./adrs/ADR-415-2d-floorplan-symbol-library.md) |
 | **ADR-418** | Real View Scale (1:N) SSoT — Revit-style κλίμακα προβολής | ✅ APPROVED | [View](./adrs/ADR-418-view-scale-ssot.md) |
 | **ADR-419** | Floor Finish Per Room (IfcCovering FLOORING) | ✅ APPROVED | [View](./adrs/ADR-419-floor-finish-per-room.md) |
+| **ADR-420** | BIM Floor-Scope SSoT (stable floorId, not volatile floorplanId) | ✅ APPROVED | [View](./adrs/ADR-420-bim-floor-scope-ssot.md) |
 | **ADR-UI-001** | Visual Primitive Ownership & Semantic Tokens | ✅ APPROVED | [View](./adrs/ADR-UI-001.md) |
 
 ---

@@ -102,14 +102,19 @@ interface ColumnPlacement {
 
 /**
  * Στατικά τίμιο kind ορθογωνίου από την αναλογία πλευρών (scale-invariant):
- * aspect > SHEAR_WALL_MIN_ASPECT_RATIO (4) → `shear-wall` (τοιχίο, Eurocode 8
- * §5.4.2.4 / EC2 §9.6.1: ΑΥΣΤΗΡΑ > 4), αλλιώς `rectangular` (κολώνα — συμπ.
- * aspect=4 που είναι οριακό αλλά κατά EC2 = κολόνα). SSoT — καλείται ΚΑΙ από
- * το placement ΚΑΙ από το `perimeterColumnKind` (μηδέν duplication).
+ * roundedAspect > SHEAR_WALL_MIN_ASPECT_RATIO (4) → `shear-wall` (τοιχίο).
+ * Eurocode 8 §5.4.2.4 / EC2 §9.6.1: ΑΥΣΤΗΡΑ > 4 = τοιχίο, ≤ 4 = κολόνα.
+ * Στρογγυλοποίηση σε 1dp πριν τη σύγκριση: ενδιάμεσοι γεωμετρικοί υπολογισμοί
+ * (union/clip) μπορούν να δώσουν 4.000…001 από αληθινό 4:1 ορθογώνιο.
  */
 function rectAspectKind(rect: DetectedRectangle): ColumnKind {
   const aspect = rect.shortSide > 0 ? rect.longSide / rect.shortSide : 0;
-  return aspect > SHEAR_WALL_MIN_ASPECT_RATIO ? 'shear-wall' : 'rectangular';
+  // Round to 1dp before comparison: intermediate geometry calculations (polygon
+  // union, clipping) can produce 4.0000000000004 from a true 4:1 rectangle,
+  // bypassing the EC2 §9.6.1 dialog. Rounding matches what perimeterAspectRatio
+  // displays and is the clinically correct boundary: "displayed as 4.0 → column".
+  const rounded = Math.round(aspect * 10) / 10;
+  return rounded > SHEAR_WALL_MIN_ASPECT_RATIO ? 'shear-wall' : 'rectangular';
 }
 
 /**
