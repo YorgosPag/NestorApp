@@ -9,12 +9,12 @@
  *
  * @see useDxfGripInteraction.ts — original DXF commit (commitGripDelta, createSceneManagerAdapter)
  * @see useCanvasMouse.ts — original overlay commit (handleContainerMouseUp)
+ * @see grip-scene-manager-adapter.ts — ISceneManager adapter (split for N.7.1 file-size compliance)
  */
 import type { Point2D } from '../../rendering/types/Types';
-import type { ISceneManager, SceneEntity, ICommand } from '../../core/commands/interfaces';
+import type { ICommand } from '../../core/commands/interfaces';
 import type { VertexMovement } from '../../core/commands';
-import { calculateDistance } from '../../rendering/entities/shared/geometry-rendering-utils';
-import type { AnySceneEntity, SceneModel } from '../../types/scene';
+import type { SceneModel } from '../../types/scene';
 import type { useOverlayStore } from '../../overlays/overlay-store';
 import type { UnifiedGripInfo } from './unified-grip-types';
 import { type GripMode } from '../../systems/grip/grip-mode-cycle';
@@ -26,224 +26,12 @@ import { GripCopyModeStore } from '../../systems/grip/GripCopyModeStore';
 import type { Entity } from '../../types/entities';
 export type { DxfCommitDeps, OverlayCommitDeps } from './unified-grip-types';
 import type { DxfCommitDeps, OverlayCommitDeps } from './unified-grip-types';
-// ============================================================================
-// TYPES
-// ============================================================================
+// ISceneManager adapter extracted to sibling module (N.7.1 file-size compliance)
+export { createSceneManagerAdapter } from './grip-scene-manager-adapter';
+import { createSceneManagerAdapter } from './grip-scene-manager-adapter';
 // ============================================================================
 // DXF GRIP COMMIT
 // ============================================================================
-/** Recalculate angle (degrees) between two arms meeting at a vertex */
-function computeAngleDegrees(vertex: Point2D, p1: Point2D, p2: Point2D): number {
-  const a1 = Math.atan2(p1.y - vertex.y, p1.x - vertex.x);
-  const a2 = Math.atan2(p2.y - vertex.y, p2.x - vertex.x);
-  let deg = Math.abs(a2 - a1) * (180 / Math.PI);
-  if (deg > 180) deg = 360 - deg;
-  return deg;
-}
-/**
- * Create ISceneManager adapter for MoveVertexCommand.
- * Extracted from useDxfGripInteraction.ts:378-551.
- */
-export function createSceneManagerAdapter(deps: DxfCommitDeps): ISceneManager | null {
-  const { currentLevelId, getLevelScene, setLevelScene } = deps;
-  if (!currentLevelId) return null;
-  return {
-    addEntity: (entity: SceneEntity) => {
-      const scene = getLevelScene(currentLevelId);
-      if (scene) {
-        setLevelScene(currentLevelId, {
-          ...scene,
-          entities: [...scene.entities, entity as unknown as AnySceneEntity],
-        });
-      }
-    },
-    removeEntity: (id: string) => {
-      const scene = getLevelScene(currentLevelId);
-      if (scene) {
-        setLevelScene(currentLevelId, {
-          ...scene,
-          entities: scene.entities.filter((e) => e.id !== id),
-        });
-      }
-    },
-    getEntity: (id: string) => {
-      const scene = getLevelScene(currentLevelId);
-      return scene?.entities?.find((e) => e.id === id) as SceneEntity | undefined;
-    },
-    getEntities: () => {
-      const scene = getLevelScene(currentLevelId);
-      return (scene?.entities ?? []) as unknown as readonly SceneEntity[];
-    },
-    updateEntity: (id: string, updates: Partial<SceneEntity>) => {
-      const scene = getLevelScene(currentLevelId);
-      if (scene) {
-        setLevelScene(currentLevelId, {
-          ...scene,
-          entities: scene.entities.map((e) =>
-            e.id === id ? ({ ...e, ...updates } as AnySceneEntity) : e
-          ),
-        });
-      }
-    },
-    updateVertex: (id: string, vertexIndex: number, position: Point2D) => {
-      const scene = getLevelScene(currentLevelId);
-      if (!scene) return;
-      setLevelScene(currentLevelId, {
-        ...scene,
-        entities: scene.entities.map((e) => {
-          if (e.id !== id) return e;
-          // Polyline/polygon: has vertices array
-          if ('vertices' in e && Array.isArray(e.vertices)) {
-            const vertices = [...e.vertices] as Point2D[];
-            if (vertexIndex >= 0 && vertexIndex < vertices.length) {
-              vertices[vertexIndex] = position;
-            }
-            return { ...e, vertices };
-          }
-          // Line: gripIndex 0→start, 1→end
-          if ('start' in e && 'end' in e && !('vertices' in e)) {
-            if (vertexIndex === 0) return { ...e, start: position };
-            if (vertexIndex === 1) return { ...e, end: position };
-            return e;
-          }
-          // Circle: gripIndex 1-4 = quadrant → update radius
-          if ('center' in e && 'radius' in e && !('startAngle' in e)) {
-            const center = e.center as Point2D;
-            return { ...e, radius: calculateDistance(center, position) };
-          }
-          // Arc: gripIndex 1→startAngle, 2→endAngle
-          if ('center' in e && 'radius' in e && 'startAngle' in e && 'endAngle' in e) {
-            const center = e.center as Point2D;
-            const newRadius = calculateDistance(center, position);
-            let angleDeg = Math.atan2(position.y - center.y, position.x - center.x) * (180 / Math.PI);
-            if (angleDeg < 0) angleDeg += 360;
-            if (vertexIndex === 1) return { ...e, startAngle: angleDeg, radius: newRadius };
-            if (vertexIndex === 2) return { ...e, endAngle: angleDeg, radius: newRadius };
-            return e;
-          }
-          // Rectangle: corners from corner1/corner2
-          if ('corner1' in e && 'corner2' in e) {
-            const c1 = e.corner1 as Point2D;
-            const c2 = e.corner2 as Point2D;
-            if (vertexIndex === 0) return { ...e, corner1: position };
-            if (vertexIndex === 1) return { ...e, corner1: { x: c1.x, y: position.y }, corner2: { x: position.x, y: c2.y } };
-            if (vertexIndex === 2) return { ...e, corner2: position };
-            if (vertexIndex === 3) return { ...e, corner1: { x: position.x, y: c1.y }, corner2: { x: c2.x, y: position.y } };
-            return e;
-          }
-          // Angle-measurement
-          if ('vertex' in e && 'point1' in e && 'point2' in e) {
-            const vertex = vertexIndex === 0 ? position : e.vertex as Point2D;
-            const point1 = vertexIndex === 1 ? position : e.point1 as Point2D;
-            const point2 = vertexIndex === 2 ? position : e.point2 as Point2D;
-            return {
-              ...e,
-              vertex, point1, point2,
-              angle: computeAngleDegrees(vertex, point1, point2),
-            };
-          }
-          return e;
-        }),
-      });
-    },
-    insertVertex: (_id: string, _insertIndex: number, _position: Point2D) => {
-      // Not needed for grip editing
-    },
-    removeVertex: (_id: string, _vertexIndex: number) => {
-      // Not needed for grip editing
-    },
-    getVertices: (id: string): Point2D[] | undefined => {
-      const scene = getLevelScene(currentLevelId);
-      const entity = scene?.entities?.find((e) => e.id === id);
-      if (!entity) return undefined;
-      if ('vertices' in entity && Array.isArray(entity.vertices)) {
-        return entity.vertices as Point2D[];
-      }
-      if ('start' in entity && 'end' in entity) {
-        return [entity.start as Point2D, entity.end as Point2D];
-      }
-      if ('center' in entity && 'radius' in entity && !('startAngle' in entity)) {
-        const c = entity.center as Point2D;
-        const r = entity.radius as number;
-        return [
-          c,
-          { x: c.x + r, y: c.y },
-          { x: c.x, y: c.y + r },
-          { x: c.x - r, y: c.y },
-          { x: c.x, y: c.y - r },
-        ];
-      }
-      if ('center' in entity && 'radius' in entity && 'startAngle' in entity && 'endAngle' in entity) {
-        const c = entity.center as Point2D;
-        const r = entity.radius as number;
-        const sa = ((entity.startAngle as number) * Math.PI) / 180;
-        const ea = ((entity.endAngle as number) * Math.PI) / 180;
-        const ma = (sa + ea) / 2;
-        return [
-          c,
-          { x: c.x + r * Math.cos(sa), y: c.y + r * Math.sin(sa) },
-          { x: c.x + r * Math.cos(ea), y: c.y + r * Math.sin(ea) },
-          { x: c.x + r * Math.cos(ma), y: c.y + r * Math.sin(ma) },
-        ];
-      }
-      if ('corner1' in entity && 'corner2' in entity) {
-        const c1 = entity.corner1 as Point2D;
-        const c2 = entity.corner2 as Point2D;
-        return [
-          c1,
-          { x: c2.x, y: c1.y },
-          c2,
-          { x: c1.x, y: c2.y },
-        ];
-      }
-      if ('vertex' in entity && 'point1' in entity && 'point2' in entity) {
-        return [
-          entity.vertex as Point2D,
-          entity.point1 as Point2D,
-          entity.point2 as Point2D,
-        ];
-      }
-      return undefined;
-    },
-    updateEntities: (updates: ReadonlyMap<string, Partial<SceneEntity>>) => {
-      const scene = getLevelScene(currentLevelId);
-      if (!scene) return;
-      setLevelScene(currentLevelId, {
-        ...scene,
-        entities: scene.entities.map((e) => {
-          const patch = updates.get(e.id);
-          return patch ? ({ ...e, ...patch } as AnySceneEntity) : e;
-        }),
-      });
-    },
-    getEntityIndex: (entityId: string): number => {
-      const scene = getLevelScene(currentLevelId);
-      if (!scene) return -1;
-      return scene.entities.findIndex((e) => e.id === entityId);
-    },
-    reorderEntity: (entityId: string, direction: 'front' | 'back') => {
-      const scene = getLevelScene(currentLevelId);
-      if (!scene) return;
-      const idx = scene.entities.findIndex((e) => e.id === entityId);
-      if (idx === -1) return;
-      const entities = [...scene.entities];
-      const [entity] = entities.splice(idx, 1);
-      if (direction === 'front') entities.push(entity);
-      else entities.unshift(entity);
-      setLevelScene(currentLevelId, { ...scene, entities });
-    },
-    moveEntityToIndex: (entityId: string, targetIndex: number) => {
-      const scene = getLevelScene(currentLevelId);
-      if (!scene) return;
-      const idx = scene.entities.findIndex((e) => e.id === entityId);
-      if (idx === -1) return;
-      const entities = [...scene.entities];
-      const [entity] = entities.splice(idx, 1);
-      entities.splice(targetIndex, 0, entity);
-      setLevelScene(currentLevelId, { ...scene, entities });
-    },
-  };
-}
 /** ADR-349 Phase 1c-B3 — commit via StretchEntityCommand (vertex refs or anchor moves). */
 export function commitDxfGripDragViaStretchCommand(
   grip: UnifiedGripInfo,
@@ -291,11 +79,13 @@ import {
   commitMepFixtureGripDrag,
   commitElectricalPanelGripDrag,
   commitMepManifoldGripDrag,
+  commitMepManifoldOutletCountGrip,
   commitMepRadiatorGripDrag,
   commitMepBoilerGripDrag,
   commitFurnitureGripDrag,
   commitFloorplanSymbolGripDrag,
   commitFloorFinishGripDrag,
+  commitMepUnderfloorGripDrag,
   commitXLineGripDrag,
   commitRayGripDrag,
   commitDimensionGripDrag,
@@ -307,6 +97,22 @@ export function commitDxfGripDragModeAware(
   deps: DxfCommitDeps,
   mode: GripMode,
 ): void {
+  // Opening flip actions (Revit-style «Flip Hand» + «Flip Facing») are click-to-toggle
+  // — they must fire even on zero delta (no drag), so they precede the zero-delta guard.
+  if (grip.openingGripKind === 'opening-rotation' || grip.openingGripKind === 'opening-facing') {
+    commitOpeningGripDrag(grip, delta, deps);
+    return;
+  }
+  // ADR-408 Φ12 — manifold outlet add/remove are single-click ACTION grips (Revit
+  // "array control" ▲/▼): they bump `outletCount` ±1 and must fire even on zero
+  // delta (no drag), so they also precede the zero-delta guard.
+  if (
+    grip.mepManifoldGripKind === 'mep-manifold-outlet-add' ||
+    grip.mepManifoldGripKind === 'mep-manifold-outlet-remove'
+  ) {
+    commitMepManifoldOutletCountGrip(grip, deps);
+    return;
+  }
   if (delta.x === 0 && delta.y === 0) return;
   if (!grip.entityId) return;
   // ADR-358 Phase 5b — stair parametric grip path (5 kinds, §5.12).
@@ -436,6 +242,15 @@ export function commitDxfGripDragModeAware(
   // geometry atomically. Mirrors slab/roof path.
   if (grip.floorFinishGripKind) {
     commitFloorFinishGripDrag(grip, delta, deps);
+    return;
+  }
+  // ADR-408 Εύρος Β #3 — underfloor heating loop parametric grip path (per-vertex
+  // translate + edge-midpoint insertion). Bypasses stretch because the entity is
+  // params-driven (footprint polygon + connector re-derivation);
+  // UpdateMepUnderfloorParamsCommand recomputes geometry + connectors atomically.
+  // Mirrors floor-finish path.
+  if (grip.mepUnderfloorGripKind) {
+    commitMepUnderfloorGripDrag(grip, delta, deps);
     return;
   }
   // ADR-359 Phase 11 — XLine grip path (basePoint translate or direction rotate).

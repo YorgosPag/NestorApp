@@ -4,7 +4,16 @@
  * string-literal unions referenced by `GripInfo` and consumed across the grip
  * subsystem. Re-exported from `grip-types.ts` for backward compatibility, so
  * existing `import { WallGripKind } from '../grip-types'` call-sites keep working.
+ *
+ * MEP heating / underfloor kinds live in the sibling module
+ * `grip-kinds-mep-heating.ts` and are re-exported below.
  */
+
+export type {
+  MepRadiatorGripKind,
+  MepBoilerGripKind,
+  MepUnderfloorGripKind,
+} from './grip-kinds-mep-heating';
 
 /** Grip type enumeration */
 export type GripType = 'vertex' | 'center' | 'edge' | 'corner' | 'midpoint';
@@ -107,19 +116,22 @@ export type WallGripKind =
   | `wall-vertex-${number}`;
 
 /**
- * ADR-363 Phase 2.5 — Opening grip kinds (parametric grip types).
+ * ADR-363 Phase 2.5 + facing-flip — Opening grip kinds (parametric grip types).
  * Routes commit through `applyOpeningGripDrag()` + `UpdateOpeningParamsCommand`
  * instead of the standard `StretchEntityCommand` vertex path.
  *
- * Full wall/furniture parity (centred-box layout) — every opening exposes 6 grips:
+ * Grips (Revit parity — two independent flip axes):
  *   - `opening-move`        → drag the whole opening along the host wall axis.
- *   - `opening-rotation`    → flip handing (Revit-style) — stays hosted on the wall.
+ *   - `opening-rotation`    → click-to-toggle handing (left↔right hinge side).
+ *   - `opening-facing`      → click-to-toggle openDirection (inward↔outward face).
+ *                             Hinged kinds only (door / french-door).
  *   - `opening-corner-{ne,nw,sw,se}` → resize WIDTH along the wall (opposite jamb
  *     pinned). E corners (ne/se) move the end jamb, W corners (nw/sw) the start jamb.
  */
 export type OpeningGripKind =
   | 'opening-move'
   | 'opening-rotation'
+  | 'opening-facing'
   | 'opening-corner-ne'
   | 'opening-corner-nw'
   | 'opening-corner-sw'
@@ -353,6 +365,11 @@ export type ElectricalPanelGripKind =
  * ADR-408 Φ12 — Plumbing manifold grip kind (parametric grip type). Routes
  * commit through `applyMepManifoldGripDrag()` + `UpdateMepManifoldParamsCommand`.
  * Full wall-parity mirror of the electrical panel (rectangular-only → no diameter).
+ *
+ * The `outlet-add` / `outlet-remove` kinds are the Revit "array control" ▲/▼:
+ * single-click ACTION grips (not drags) that bump `outletCount` ±1, routed through
+ * `commitMepManifoldOutletCountGrip` (fire before the zero-delta guard, like
+ * `opening-rotation`).
  */
 export type MepManifoldGripKind =
   | 'mep-manifold-move'
@@ -360,33 +377,9 @@ export type MepManifoldGripKind =
   | 'mep-manifold-corner-ne'
   | 'mep-manifold-corner-nw'
   | 'mep-manifold-corner-sw'
-  | 'mep-manifold-corner-se';
-
-/**
- * ADR-408 Εύρος Β #1 — Heating radiator grip kind (parametric grip type). Routes
- * commit through `applyMepRadiatorGripDrag()` + `UpdateMepRadiatorParamsCommand`.
- * Full wall-parity mirror of the plumbing manifold (rectangular-only → no diameter).
- */
-export type MepRadiatorGripKind =
-  | 'mep-radiator-move'
-  | 'mep-radiator-rotation'
-  | 'mep-radiator-corner-ne'
-  | 'mep-radiator-corner-nw'
-  | 'mep-radiator-corner-sw'
-  | 'mep-radiator-corner-se';
-
-/**
- * ADR-408 Εύρος Β #2 — Heating boiler grip kind (parametric grip type). Routes
- * commit through `applyMepBoilerGripDrag()` + `UpdateMepBoilerParamsCommand`.
- * Full wall-parity mirror of the heating radiator (rectangular-only → no diameter).
- */
-export type MepBoilerGripKind =
-  | 'mep-boiler-move'
-  | 'mep-boiler-rotation'
-  | 'mep-boiler-corner-ne'
-  | 'mep-boiler-corner-nw'
-  | 'mep-boiler-corner-sw'
-  | 'mep-boiler-corner-se';
+  | 'mep-manifold-corner-se'
+  | 'mep-manifold-outlet-add'
+  | 'mep-manifold-outlet-remove';
 
 /**
  * ADR-410 — Furniture grip kind (parametric grip type).

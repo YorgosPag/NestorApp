@@ -31,14 +31,7 @@ import { useBimEntityProxyAccessibility } from '../accessibility/use-bim-entity-
 import { useAnimationQueueProcessor } from '../animation/animation-queue-processor';
 import { useWaypointDragInteraction } from '../animation/use-waypoint-drag-interaction';
 import { useBim3DEditInteraction } from '../animation/use-bim3d-edit-interaction';
-import { useBim3DWireWaypointInteraction } from '../animation/use-bim3d-wire-waypoint-interaction-3d';
-import { useBim3DColumnPlacement } from '../placement/use-bim3d-column-placement';
-import { useBim3DMepFixturePlacement } from '../placement/use-bim3d-mep-fixture-placement';
-import { useBim3DFurniturePlacement } from '../placement/use-bim3d-furniture-placement';
-import { useBim3DElectricalPanelPlacement } from '../placement/use-bim3d-electrical-panel-placement';
-import { useBim3DMepManifoldPlacement } from '../placement/use-bim3d-mep-manifold-placement';
-import { useBim3DAttachPick } from './use-bim3d-attach-pick';
-import { useBim3DBeamFromWallPick } from './use-bim3d-beam-from-wall-pick';
+import { useBim3DPlacementAndPickHooks } from './use-bim3d-placement-and-pick-hooks';
 import { useNotifications } from '@/providers/NotificationProvider';
 import { useBim3DStoreSync } from './use-bim3d-store-sync';
 import { useBim3DVgResync } from './use-bim3d-vg-resync';
@@ -272,42 +265,10 @@ export function BimViewport3D({ projectId: projectIdProp, readOnly = false, bimE
   // openings cascade). Disabled when there is no levels context (ADR-371).
   useBim3DEditInteraction({ managerRef, canvasEl });
 
-  // ADR-403 — 3D column placement. Armed only while the column tool is active
-  // AND the viewport is in 3D: raycasts the active floor plane, shows a WYSIWYG
-  // ghost on pointer move, and on click routes the scene-units point through the
-  // existing 2D column FSM (`useColumnTool.onCanvasClick`) via the
-  // `bim:place-column-3d` EventBus bridge (zero duplication, full commit path).
-  useBim3DColumnPlacement({ managerRef, canvasEl });
-
-  // ADR-406 — 3D MEP fixture placement (mirror of column placement above).
-  useBim3DMepFixturePlacement({ managerRef, canvasEl });
-
-  // ADR-410 — 3D furniture placement (mirror of MEP fixture placement).
-  useBim3DFurniturePlacement({ managerRef, canvasEl });
-
-  // ADR-408 Φ3 — 3D electrical panel placement (mirror of MEP fixture placement).
-  useBim3DElectricalPanelPlacement({ managerRef, canvasEl });
-
-  // ADR-408 Φ12 — 3D plumbing manifold placement (mirror of electrical panel placement).
-  useBim3DMepManifoldPlacement({ managerRef, canvasEl });
-
-  // ADR-401 — 3D manual attach pick-host. Armed only while a `*-attach-top/-base`
-  // tool is active AND the viewport is in 3D: a click raycasts a structural host
-  // and emits `bim:attach-host-picked-3d`; the 2D `useWallAttachTool` commits the
-  // existing Attach{Walls|Columns|Stairs} command for the captured target(s).
-  useBim3DAttachPick({ managerRef, canvasEl });
-
-  // ADR-363 «Δοκάρι από τοίχο» — 3D from-wall pick. Armed only while the
-  // `beam-from-wall` tool is active AND the viewport is in 3D: pointer move shows
-  // a WYSIWYG beam ghost on the hovered wall's axis, and a click emits
-  // `bim:beam-from-wall-picked-3d`; the 2D `useBeamTool` builds the beam via its
-  // existing from-wall commit core (auto-attaches the wall top, ADR-401 D).
-  useBim3DBeamFromWallPick({ managerRef, canvasEl });
-
-  // ADR-408 Φ7 FU#3 — 3D wire waypoint editing. Armed in 3D + `select` tool:
-  // sphere handles on the active circuit's waypoints; drag a node / a segment to
-  // insert+move, right-click a node to delete — reusing the 2D plan-space SSoT.
-  useBim3DWireWaypointInteraction({ managerRef, canvasEl });
+  // ADR-403/406/410/408/401/363 — all 3D placement and pick hooks (aggregated,
+  // N.7.1): column, MEP fixtures, furniture, electrical panel, manifold, segment,
+  // radiator, boiler, attach-pick, beam-from-wall, wire waypoint editing.
+  useBim3DPlacementAndPickHooks({ managerRef, canvasEl });
 
   // Phase 9 / C.1.c — Animation render queue driver. Mounted once; subscribes
   // to RenderQueueStore and drives the MP4 encode pipeline when a job is queued.

@@ -20,20 +20,10 @@
  */
 
 import React, { useState, useCallback, useEffect, useRef } from 'react';
-import { CheckCircle2, AlertCircle, AlertTriangle, Loader2, Compass } from 'lucide-react';
+import { CheckCircle2, AlertCircle, Loader2, Compass } from 'lucide-react';
 import type { SceneUnits } from '@/subapps/dxf-viewer/utils/scene-units';
 import { Button } from '@/components/ui/button';
 import { DxfUnitsSelector } from './DxfUnitsSelector';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
 import { FileUploadZone } from '@/components/shared/files/FileUploadZone';
 import { CalibrateScaleDialog } from '@/components/shared/files/media/CalibrateScaleDialog';
 import { useBackgroundScale } from '@/hooks/useBackgroundScale';
@@ -42,6 +32,7 @@ import type {
   FloorWipePreview,
   FloorplanFormat,
   SmartUploadResult,
+  SmartUploadOptions,
 } from '../hooks/useFloorplanSmartUpload';
 import type { FloorplanUploadConfig } from '@/hooks/useFloorplanUpload';
 import { FileRecordService } from '@/services/file-record.service';
@@ -51,6 +42,12 @@ import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import type { FileRecord } from '@/types/file-record';
 import '@/lib/design-system';
+import {
+  PreviewBanner,
+  ExistingFileWarning,
+  ProgressBar,
+  WipeConfirmDialog,
+} from './StepUploadPanels';
 
 // =============================================================================
 // TYPES
@@ -69,6 +66,17 @@ interface StepUploadProps {
 // =============================================================================
 
 const MAX_SIZE_BYTES = 50 * 1024 * 1024; // 50MB
+
+/** Safe zero-state preview — used when the preview fetch fails so the upload
+ * flow never deadlocks waiting on a `null` preview (defaults to keep-BIM). */
+const ZERO_PREVIEW: FloorWipePreview = {
+  floorplanOverlayCount: 0,
+  floorplanBackgroundCount: 0,
+  fileRecordCount: 0,
+  totalPolygons: 0,
+  bimEntityCount: 0,
+  boqItemCount: 0,
+};
 
 // =============================================================================
 // COMPONENT
@@ -106,64 +114,89 @@ export function StepUpload({ config, onComplete }: StepUploadProps) {
   }, [calibrateImageSrc]);
 
   // ── Wipe preview (floor-level only) ──
+  // Depend on the STABLE `fetchPreview` callback, never the `smart` object —
+  // the hook returns a fresh object every render, so `[floorId, smart]` tore
+  // the effect down on every re-render and, combined with a boolean run-once
+  // guard, permanently deadlocked the spinner (2026-06-07 fix).
+  const { fetchPreview } = smart;
   const [preview, setPreview] = useState<FloorWipePreview | null>(null);
   const [previewLoading, setPreviewLoading] = useState(Boolean(floorId));
-  const previewRef = useRef(false);
+  // Tracks the floorId whose preview has RESOLVED. Set only on completion, so a
+  // mid-flight cancellation lets a fresh effect re-fetch instead of hanging.
+  const previewedFloorIdRef = useRef<string | null>(null);
 
   useEffect(() => {
-    if (!floorId || previewRef.current) return;
-    previewRef.current = true;
+    if (!floorId || previewedFloorIdRef.current === floorId) return;
     let cancelled = false;
+    setPreviewLoading(true);
     (async () => {
       try {
-        const p = await smart.fetchPreview(floorId);
-        if (!cancelled) setPreview(p);
+        const p = await fetchPreview(floorId);
+        if (cancelled) return;
+        setPreview(p);
+      } catch {
+        // Never deadlock the upload flow on a failed preview — fall back to a
+        // zero-state (treated as "nothing known to wipe", keep BIM by default).
+        if (cancelled) return;
+        setPreview(ZERO_PREVIEW);
       } finally {
-        if (!cancelled) setPreviewLoading(false);
+        if (!cancelled) {
+          previewedFloorIdRef.current = floorId;
+          setPreviewLoading(false);
+        }
       }
     })();
     return () => { cancelled = true; };
-  }, [floorId, smart]);
+  }, [floorId, fetchPreview]);
 
   // ── Existing-file check (non-floor only — legacy UX) ──
+  // Depend on stable config PRIMITIVES, never the `config` object (a fresh
+  // identity each render would tear the effect down and deadlock the spinner,
+  // same class as the preview race above). Guard by a value key, set on
+  // completion so a cancelled run can recover.
+  const { entityType, entityId, companyId, category, purpose, levelFloorId } = config;
   const [existingFile, setExistingFile] = useState<FileRecord | null>(null);
   const [checkingExisting, setCheckingExisting] = useState(!floorId);
-  const checkedRef = useRef(false);
+  const checkedKeyRef = useRef<string | null>(null);
 
   useEffect(() => {
-    if (floorId || checkedRef.current) return;
-    checkedRef.current = true;
+    if (floorId) return;
+    const key = `${entityType}:${entityId}:${levelFloorId ?? ''}`;
+    if (checkedKeyRef.current === key) return;
     let cancelled = false;
+    setCheckingExisting(true);
     (async () => {
       try {
         const files = await FileRecordService.getFilesByEntity(
-          config.entityType,
-          config.entityId,
-          {
-            companyId: config.companyId,
-            category: config.category,
-            purpose: config.purpose,
-            levelFloorId: config.levelFloorId,
-          },
+          entityType,
+          entityId,
+          { companyId, category, purpose, levelFloorId },
         );
-        if (!cancelled && files.length > 0) setExistingFile(files[0]);
+        if (cancelled) return;
+        if (files.length > 0) setExistingFile(files[0]);
       } finally {
-        if (!cancelled) setCheckingExisting(false);
+        if (!cancelled) {
+          checkedKeyRef.current = key;
+          setCheckingExisting(false);
+        }
       }
     })();
     return () => { cancelled = true; };
-  }, [floorId, config]);
+  }, [floorId, entityType, entityId, companyId, category, purpose, levelFloorId]);
 
   // ── Confirm dialog state ──
   const [pendingFile, setPendingFile] = useState<File | null>(null);
+  const hasBimContent =
+    preview !== null && (preview.bimEntityCount > 0 || preview.boqItemCount > 0);
   const wipeRequired = preview !== null && (
     preview.totalPolygons > 0 ||
     preview.floorplanBackgroundCount > 0 ||
-    preview.fileRecordCount > 0
+    preview.fileRecordCount > 0 ||
+    hasBimContent
   );
 
-  const performUpload = useCallback(async (file: File) => {
-    const result: SmartUploadResult = await smart.uploadSmart(file);
+  const performUpload = useCallback(async (file: File, opts?: SmartUploadOptions) => {
+    const result: SmartUploadResult = await smart.uploadSmart(file, opts);
     if (result.success) {
       // Trash legacy non-floor file if replacing (best-effort)
       if (!floorId && existingFile) {
@@ -186,18 +219,37 @@ export function StepUpload({ config, onComplete }: StepUploadProps) {
     if (files.length === 0) return;
     const file = files[0];
 
+    // Floor-level: NEVER upload until the preview has resolved. Otherwise a
+    // slow preview leaves `wipeRequired=false` and the confirm dialog is
+    // skipped → silent wipe (the 2026-06-07 race). Stash + continue via effect.
+    if (floorId && (previewLoading || preview === null)) {
+      setPendingFile(file);
+      return;
+    }
     if (floorId && wipeRequired) {
       setPendingFile(file);
       return;
     }
     await performUpload(file);
-  }, [floorId, wipeRequired, performUpload]);
+  }, [floorId, previewLoading, preview, wipeRequired, performUpload]);
 
-  const handleConfirmWipe = useCallback(async () => {
+  // Continue a file stashed while the preview was still loading: once resolved,
+  // auto-upload when there is nothing to wipe; otherwise the confirm dialog
+  // renders (it is gated on a non-null preview).
+  useEffect(() => {
+    if (!floorId || pendingFile === null || previewLoading || preview === null) return;
+    if (!wipeRequired) {
+      const file = pendingFile;
+      setPendingFile(null);
+      void performUpload(file);
+    }
+  }, [floorId, pendingFile, previewLoading, preview, wipeRequired, performUpload]);
+
+  const handleConfirm = useCallback(async (wipeBim: boolean) => {
     if (!pendingFile) return;
     const file = pendingFile;
     setPendingFile(null);
-    await performUpload(file);
+    await performUpload(file, { wipeBim });
   }, [pendingFile, performUpload]);
 
   const handleCancelWipe = useCallback(() => {
@@ -327,7 +379,8 @@ export function StepUpload({ config, onComplete }: StepUploadProps) {
         open={pendingFile !== null}
         preview={preview}
         fileName={pendingFile?.name ?? ''}
-        onConfirm={handleConfirmWipe}
+        hasBim={hasBimContent}
+        onConfirm={handleConfirm}
         onCancel={handleCancelWipe}
         t={t}
       />
@@ -335,119 +388,3 @@ export function StepUpload({ config, onComplete }: StepUploadProps) {
   );
 }
 
-// =============================================================================
-// SUBCOMPONENTS
-// =============================================================================
-
-interface TFn { (key: string, options?: Record<string, unknown>): string; }
-
-function PreviewBanner({ preview, t }: { preview: FloorWipePreview; t: TFn }) {
-  return (
-    <div className="flex items-start gap-2 rounded-md border border-border bg-[hsl(var(--bg-warning))]/40 px-3 py-2.5 text-sm">
-      <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-[hsl(var(--text-warning))]" />
-      <div className="space-y-0.5">
-        <p className="font-medium text-[hsl(var(--text-warning))]">
-          {t('floorplanImport.wipePreview.title')}
-        </p>
-        <p className="text-xs text-[hsl(var(--text-warning))]">
-          {t('floorplanImport.wipePreview.summary', {
-            polygons: preview.totalPolygons,
-            backgrounds: preview.floorplanBackgroundCount,
-            files: preview.fileRecordCount,
-          })}
-        </p>
-      </div>
-    </div>
-  );
-}
-
-function ExistingFileWarning({ file, t }: { file: FileRecord; t: TFn }) {
-  return (
-    <div className="flex items-start gap-2 rounded-md border border-border bg-[hsl(var(--bg-warning))]/40 px-3 py-2.5 text-sm">
-      <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-[hsl(var(--text-warning))]" />
-      <div className="space-y-0.5">
-        <p className="font-medium text-[hsl(var(--text-warning))]">
-          {t('floorplanImport.existingFloorplan.warning')}
-        </p>
-        <p className="text-xs text-[hsl(var(--text-warning))]">
-          {t('floorplanImport.existingFloorplan.details')}
-        </p>
-        {file.originalFilename && (
-          <p className="text-xs font-medium text-[hsl(var(--text-warning))]">
-            {t('floorplanImport.existingFloorplan.fileName', { fileName: file.originalFilename })}
-          </p>
-        )}
-      </div>
-    </div>
-  );
-}
-
-interface ProgressBarProps {
-  progress: number;
-  colors: ReturnType<typeof useSemanticColors>;
-  t: TFn;
-}
-
-function ProgressBar({ progress, colors, t }: ProgressBarProps) {
-  return (
-    <div className="space-y-2">
-      <div className="flex items-center justify-between text-xs">
-        <span className={colors.text.muted}>{t('floorplanImport.uploading')}</span>
-        <span className="font-medium">{progress}%</span>
-      </div>
-      <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
-        <div
-          className="h-full rounded-full bg-primary transition-all duration-300"
-          role="progressbar"
-          aria-valuenow={progress}
-          aria-valuemin={0}
-          aria-valuemax={100}
-          style={{ width: `${progress}%` }}
-        />
-      </div>
-    </div>
-  );
-}
-
-interface WipeConfirmDialogProps {
-  open: boolean;
-  preview: FloorWipePreview | null;
-  fileName: string;
-  onConfirm: () => void;
-  onCancel: () => void;
-  t: TFn;
-}
-
-function WipeConfirmDialog({
-  open, preview, fileName, onConfirm, onCancel, t,
-}: WipeConfirmDialogProps) {
-  if (!preview) return null;
-  const totalBackgrounds = preview.floorplanBackgroundCount;
-  return (
-    <AlertDialog open={open} onOpenChange={(o) => { if (!o) onCancel(); }}>
-      <AlertDialogContent>
-        <AlertDialogHeader>
-          <AlertDialogTitle>
-            {t('floorplanImport.wipeDialog.title')}
-          </AlertDialogTitle>
-          <AlertDialogDescription>
-            {t('floorplanImport.wipeDialog.description', {
-              fileName,
-              polygons: preview.totalPolygons,
-              backgrounds: totalBackgrounds,
-              files: preview.fileRecordCount,
-            })}
-          </AlertDialogDescription>
-        </AlertDialogHeader>
-        <AlertDialogFooter>
-          <AlertDialogCancel onClick={onCancel}>
-            {t('floorplanImport.wipeDialog.cancel')}
-          </AlertDialogCancel>
-          <AlertDialogAction onClick={onConfirm}>
-            {t('floorplanImport.wipeDialog.confirm')}
-          </AlertDialogAction>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
-  );
-}

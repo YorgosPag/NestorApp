@@ -3,69 +3,23 @@
  * ✅ ΦΑΣΗ 5: Core utilities για hit-testing και spatial queries
  */
 
-import type { EntityModel, Point2D } from '../types/Types';
-import type { DxfTextNode } from '../../text-engine/types';
+import type { EntityModel } from '../types/Types';
 // 🏢 ADR-107: Centralized Text Metrics Ratios
 // 🏢 ADR-142: Centralized Default Font Size
 import { TEXT_METRICS_RATIOS } from '../../config/text-rendering-config';
 import { resolveEntityText } from '../../utils/text-node-utils';
 import { calculateXLineBounds, calculateRayBounds } from './bounds-parametric-line';
-
-// 🏢 ENTERPRISE: Entity-specific type interfaces for safe type casting
-interface LineEntityProperties {
-  start: Point2D;
-  end: Point2D;
-}
-
-interface CircleEntityProperties {
-  center: Point2D;
-  radius: number;
-}
-
-interface PolylineEntityProperties {
-  vertices: Point2D[];
-  points?: Point2D[];
-}
-
-interface EllipseEntityProperties {
-  center: Point2D;
-  radiusX: number;
-  radiusY: number;
-}
-
-interface TextEntityProperties {
-  position: Point2D;
-  text: string;
-  textNode?: DxfTextNode;
-  fontSize?: number;
-  height?: number;      // 🏢 DXF text height (primary property from DXF parser)
-  rotation?: number;    // 🏢 DXF text rotation in degrees (for rotated AABB)
-}
-
-interface SplineEntityProperties {
-  controlPoints?: Point2D[];
-  vertices?: Point2D[];
-}
-
-interface PointEntityProperties {
-  position: Point2D;
-}
-
-interface AngleMeasurementEntityProperties {
-  vertex: Point2D;
-  point1: Point2D;
-  point2: Point2D;
-}
-
-// 🏢 ENTERPRISE: Type guard helpers
-type EntityWithLine = EntityModel & LineEntityProperties;
-type EntityWithCircle = EntityModel & CircleEntityProperties;
-type EntityWithPolyline = EntityModel & PolylineEntityProperties;
-type EntityWithEllipse = EntityModel & EllipseEntityProperties;
-type EntityWithText = EntityModel & TextEntityProperties;
-type EntityWithSpline = EntityModel & SplineEntityProperties;
-type EntityWithPoint = EntityModel & PointEntityProperties;
-type EntityWithAngleMeasurement = EntityModel & AngleMeasurementEntityProperties;
+import type {
+  EntityWithLine,
+  EntityWithCircle,
+  EntityWithPolyline,
+  EntityWithEllipse,
+  EntityWithText,
+  EntityWithSpline,
+  EntityWithPoint,
+  EntityWithAngleMeasurement,
+  PolylineEntityProperties,
+} from './bounds-entity-types';
 
 export interface BoundingBox {
   minX: number;
@@ -144,6 +98,8 @@ export class BoundsCalculator {
       case 'mep-radiator':
       // ADR-408 Εύρος Β #2 (mep-boiler).
       case 'mep-boiler':
+      // ADR-408 Εύρος Β #3 — underfloor heating loop; geometry.bbox from computeMepUnderfloorGeometry().
+      case 'mep-underfloor':
         return this.calculateBimEntityBounds(entity, tolerance);
       // ADR-359 Phase 11 follow-up — XLINE/RAY bounds extracted to sibling module.
       case 'xline':

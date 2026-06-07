@@ -15,14 +15,11 @@
 
 import * as THREE from 'three';
 import type { WallEntity } from '../../bim/types/wall-types';
-import type { ColumnEntity } from '../../bim/types/column-types';
-import type { BeamEntity } from '../../bim/types/beam-types';
-import type { SlabEntity } from '../../bim/types/slab-types';
-import type { SlabOpeningEntity } from '../../bim/types/slab-opening-types';
 import type { OpeningEntity } from '../../bim/types/opening-types';
 import type { Point3D } from '../../bim/types/bim-base';
-import { getMaterial3D, getElementMaterial3D } from '../materials/MaterialCatalog3D';
+import { getMaterial3D } from '../materials/MaterialCatalog3D';
 import { buildWallMeshWithOpenings } from './wall-opening-extrude';
+import { buildOpeningMesh, type OpeningMeshMaterials } from './opening-mesh';
 import { computeWallOpeningPieces, type WallTopLocalFn, type WallBaseLocalFn, type WallOpeningPiece } from './wall-opening-pieces';
 import { buildSlopedWallPieceGeometry, buildWallLoftBandGeometry } from './wall-piece-geometry';
 import { buildColumnPrismGeometry } from './column-piece-geometry';
@@ -36,22 +33,21 @@ import {
   type WallTopClipContext,
 } from './wall-top-clip';
 import { isWallTilted } from '../../bim/geometry/wall-tilt';
-import type { ColumnTopProfile, ColumnBaseProfile } from '../../bim/geometry/column-vertical-profile';
 import { evaluateWallTopAt, type WallTopProfile } from '../../bim/geometry/wall-top-profile';
 import { evaluateWallBaseAt, type WallBaseProfile } from '../../bim/geometry/wall-base-profile';
 // ADR-404 P1 — slope/tilt shear helpers (εξήχθησαν από εδώ για file-size, N.7.1).
-import { applyBeamSlope, applySlabSlope, applyColumnTilt, applyWallTilt } from './mesh-slope-shear';
+import { applyWallTilt } from './mesh-slope-shear';
 // File-private geometry primitives (N.7.1 file-size split, 2026-06-01).
-import { buildShape, extrudeAndRotate, tagMesh, buildWallShape, pushHoles } from './bim-three-shape-helpers';
-import { buildMultiLayerSlabSolid } from './slab-multilayer-solid-3d';
-import { isMultiLayerSlab } from '../../bim/types/slab-dna-types';
-import { buildSweptIBeamGeometry } from './beam-ishape-geometry';
+import { buildShape, extrudeAndRotate, tagMesh, buildWallShape } from './bim-three-shape-helpers';
 // Shared 3D edge overlay + point-based converters (N.7.1 file-size split, 2026-06-02).
 import { attachEdgesProjection } from './bim-three-edges';
 
 // ADR-406 / ADR-408 Φ3 — point-based converters re-exported from their own module
 // (file-size SSoT, N.7.1). Importers keep `from '.../BimToThreeConverter'`.
 export { fixtureToMesh, panelToMesh, manifoldToMesh, radiatorToMesh, boilerToMesh } from './bim-three-point-converters';
+// Structural element converters re-exported from their own module
+// (file-size SSoT, N.7.1, 2026-06-08). Importers keep `from '.../BimToThreeConverter'`.
+export { columnToMesh, beamToMesh, slabToMesh } from './bim-three-structural-converters';
 
 // BIM shape vertices (outerEdge, innerEdge, footprint, outline) are already in meters
 // (canvas world coordinates). Scalar params — slab thickness/elevation, beam depth/elevation,
@@ -249,6 +245,36 @@ export function buildStraightWallWithOpenings(
   return group;
 }
 
+// ── ADR-421 §A6 — opening 3D body attach ──────────────────────────────────────
+
+/**
+ * Build + attach the parametric 3D mesh of each hosted opening into the wall
+ * `group`. Materials resolved once (κάσα/φύλλο = ξύλο, υαλοστάσιο = γυαλί· τα
+ * glazed kinds επιλέγουν γυαλί στο `buildOpeningMesh`). No-op όταν δεν υπάρχουν
+ * openings (π.χ. το group προέκυψε λόγω wallTop/wallBase profile).
+ */
+function attachOpeningMeshes(
+  group: THREE.Object3D,
+  wall: WallEntity,
+  openings: readonly OpeningEntity[],
+  floorElevationMm: number,
+  buildingBaseElevationM: number,
+  levelId?: string,
+): void {
+  if (openings.length === 0) return;
+  const materials: OpeningMeshMaterials = {
+    frame: getMaterial3D('mat-wood'),
+    leaf: getMaterial3D('mat-wood'),
+    glass: getMaterial3D('mat-glass'),
+  };
+  for (const opening of openings) {
+    const mesh = buildOpeningMesh(opening, wall, materials, floorElevationMm, buildingBaseElevationM);
+    if (!mesh) continue;
+    if (levelId !== undefined) mesh.userData['levelId'] = levelId;
+    group.add(mesh);
+  }
+}
+
 // ── Public converters ─────────────────────────────────────────────────────────
 
 export function wallToMesh(
@@ -291,6 +317,9 @@ export function wallToMesh(
     if (group) {
       group.userData['matId'] = matId;
       if (levelId !== undefined) group.userData['levelId'] = levelId;
+      // ADR-421 §A6 — parametric 3D κουφώματος (κάσα + φύλλα + υαλοστάσιο) μέσα
+      // στο cutout. Attached ως children ώστε να ακολουθούν το wall group.
+      attachOpeningMeshes(group, wall, openings, floorElevationMm, buildingBaseElevationM, levelId);
       return group;
     }
     // Fall through to solid path if segmenting failed (defensive).
@@ -329,151 +358,3 @@ export function wallToMesh(
   return tagged;
 }
 
-export function columnToMesh(
-  column: ColumnEntity,
-  floorElevationMm = 0,
-  levelId?: string,
-  buildingBaseElevationM = 0,
-  topProfile?: ColumnTopProfile,
-  baseProfile?: ColumnBaseProfile,
-): THREE.Mesh | null {
-  const verts = column.geometry.footprint.vertices;
-  if (verts.length < 3) return null;
-
-  const matId = column.params.material ?? 'elem-column';
-
-  // ADR-401 Phase F.2 — attached κολώνα (κορυφή Ή/ΚΑΙ βάση): per-corner prism που
-  // σταματά στην παρειά κάθε host (στρεβλή/κεκλιμένη κορυφή & βάση). Ενεργό ΜΟΝΟ
-  // όταν τουλάχιστον μία γωνία πήρε top/base από host (`hasAttach`)· αλλιώς πέφτει
-  // στο ίσιο extrude fast-path παρακάτω (μηδέν regression — μη-attached κολώνα).
-  if (topProfile?.hasAttach || baseProfile?.hasAttach) {
-    const prism = buildAttachedColumnPrism(verts, floorElevationMm, topProfile, baseProfile);
-    if (prism) {
-      ensureWorldUvs(prism); // ADR-413 — custom prism has no uv → planar world UVs.
-      // ADR-404 — raking column στον attached prism path: το prism ζει σε floor-local
-      // Y με βάση στο FFL → baseHeightM=0 (ίδιο datum με τον flat path & το 2Δ). No-op flat.
-      applyColumnTilt(prism, column.params);
-      const mesh = new THREE.Mesh(prism, getElementMaterial3D('column'));
-      mesh.position.y = floorElevationMm * MM_TO_M + buildingBaseElevationM;
-      const tagged = tagMesh(mesh, column.id, 'column', matId, levelId);
-      attachEdgesProjection(tagged, 'column');
-      return tagged;
-    }
-    // Fall through to flat solid αν το prism εκφυλίζεται (defensive).
-  }
-
-  const shape = buildShape(verts);
-  if (!shape) return null;
-
-  const geo = extrudeAndRotate(shape, column.params.height * MM_TO_M);
-  ensureWorldUvs(geo); // ADR-413 — aoMap uv2 (ExtrudeGeometry auto-UVs in meters).
-  // ADR-404 — raking column: shear το X/Z βάσει ύψους (η κορυφή γέρνει). No-op flat.
-  applyColumnTilt(geo, column.params);
-  const mesh = new THREE.Mesh(geo, getElementMaterial3D('column'));
-  // ADR-402 — `baseOffset` lifts the whole column (vertical move). ONLY on this flat
-  // path: the attached-prism path bakes baseOffset into its profile z. baseOffset=0 → no change.
-  mesh.position.y = (floorElevationMm + column.params.baseOffset) * MM_TO_M + buildingBaseElevationM;
-  const tagged = tagMesh(mesh, column.id, 'column', matId, levelId);
-  attachEdgesProjection(tagged, 'column');
-  return tagged;
-}
-
-/**
- * ADR-401 Phase F.2 — μετατρέπει τα per-corner απόλυτα-mm προφίλ της attached
- * κολώνας σε floor-local μέτρα και χτίζει το prism. Top corners από το
- * `topProfile` (ή flat top σε `maxTopZmm` αν λείπει)· base corners από το
- * `baseProfile` (ή flat base σε `nominalBaseZmm`/`baseZmm`). `localZ = (zmm −
- * FFL_mm) · MM_TO_M` (ίδια σύμβαση με `makeWallTopLocalFn`).
- */
-function buildAttachedColumnPrism(
-  footprint: readonly Point3D[],
-  floorElevationMm: number,
-  topProfile?: ColumnTopProfile,
-  baseProfile?: ColumnBaseProfile,
-): THREE.BufferGeometry | null {
-  const n = footprint.length;
-  const toLocal = (zmm: number): number => (zmm - floorElevationMm) * MM_TO_M;
-  // Top: per-corner profile, ή flat στο nominal (maxTopZmm == minTopZmm σε flat top).
-  const topZmm = topProfile?.cornerTopZmm ?? new Array<number>(n).fill(baseProfile ? baseProfile.maxBaseZmm : 0);
-  // Base: per-corner profile, ή flat στο nominal base (από όποιο προφίλ υπάρχει).
-  const nominalBaseZmm = baseProfile?.nominalBaseZmm ?? topProfile?.baseZmm ?? 0;
-  const baseZmm = baseProfile?.cornerBaseZmm ?? new Array<number>(n).fill(nominalBaseZmm);
-  if (topZmm.length !== n || baseZmm.length !== n) return null;
-
-  const cornerTopLocalM = topZmm.map(toLocal);
-  const cornerBaseLocalM = baseZmm.map(toLocal);
-  return buildColumnPrismGeometry(
-    footprint.map((p) => ({ x: p.x, y: p.y })),
-    cornerBaseLocalM,
-    cornerTopLocalM,
-  );
-}
-
-export function beamToMesh(
-  beam: BeamEntity,
-  levelId?: string,
-  buildingBaseElevationM = 0,
-): THREE.Mesh | null {
-  const beamDepthM = beam.params.depth * MM_TO_M;
-
-  // ADR-363 Φ2 — μεταλλικό δοκάρι Ι/H: πραγματική διατομή σαρωμένη κατά τον άξονα
-  // (όχι κουτί). Curved/degenerate → null ⇒ fallback στο ίσιο box extrude παρακάτω.
-  let geo: THREE.BufferGeometry | null =
-    beam.params.sectionKind === 'I-shape' ? buildSweptIBeamGeometry(beam) : null;
-
-  if (!geo) {
-    const verts = beam.geometry.outline.vertices;
-    if (verts.length < 3) return null;
-    const shape = buildShape(verts);
-    if (!shape) return null;
-    geo = extrudeAndRotate(shape, beamDepthM);
-  }
-
-  ensureWorldUvs(geo); // ADR-413 — box-extrude auto-UVs OR planar for swept-I custom geo.
-  applyBeamSlope(geo, beam.params);
-  const matId = beam.params.material ?? 'elem-beam';
-  const mesh = new THREE.Mesh(geo, getElementMaterial3D('beam'));
-  // ADR-369 §2.2: topElevation = top of beam; extrusion goes from y=0 → y=depthM.
-  // beam hangs DOWN from (topElevation + zOffset) by depth.
-  const beamTopMm = beam.params.topElevation + (beam.params.zOffset ?? 0);
-  mesh.position.y = beamTopMm * MM_TO_M - beamDepthM + buildingBaseElevationM;
-  const tagged = tagMesh(mesh, beam.id, 'beam', matId, levelId);
-  attachEdgesProjection(tagged, 'beam');
-  return tagged;
-}
-
-export function slabToMesh(
-  slab: SlabEntity,
-  openings: readonly SlabOpeningEntity[] = [],
-  levelId?: string,
-  buildingBaseElevationM = 0,
-): THREE.Mesh | THREE.Group | null {
-  const verts = slab.params.outline.vertices;
-  if (verts.length < 3) return null;
-
-  // ADR-416 — composite Floor/Slab Type: a slab carrying a multi-layer DNA renders
-  // as a vertical stack of per-layer sub-solids (Revit Compound Structure / IFC
-  // IfcMaterialLayerSet). Single-layer / untyped slabs keep the legacy single
-  // extrude below (byte-for-byte — zero regression for the existing ~30 tests).
-  if (isMultiLayerSlab(slab.params.dna)) {
-    return buildMultiLayerSlabSolid(slab, openings, levelId, buildingBaseElevationM);
-  }
-
-  const shape = buildShape(verts);
-  if (!shape) return null;
-  pushHoles(shape, openings);
-
-  const thicknessM = slab.params.thickness * MM_TO_M;
-  const geo = extrudeAndRotate(shape, thicknessM);
-  ensureWorldUvs(geo); // ADR-413 — aoMap uv2 (ExtrudeGeometry auto-UVs in meters).
-  applySlabSlope(geo, slab.params);
-  const matId = slab.params.material ?? 'elem-slab';
-  const mesh = new THREE.Mesh(geo, getElementMaterial3D('slab'));
-  // ADR-369 §2.1: levelElevation = top face (FFL). Slab hangs DOWN by thickness.
-  // floor:0 → -0.20..0m, ceiling/roof:3000 → 2.80..3.00m, foundation:0 → -0.50..0m.
-  const slabTopMm = slab.params.levelElevation + (slab.params.heightOffsetFromLevel ?? 0);
-  mesh.position.y = (slabTopMm - slab.params.thickness) * MM_TO_M + buildingBaseElevationM;
-  const tagged = tagMesh(mesh, slab.id, 'slab', matId, levelId);
-  attachEdgesProjection(tagged, 'slab', 'common-edges');
-  return tagged;
-}

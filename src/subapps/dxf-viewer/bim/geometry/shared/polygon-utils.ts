@@ -404,3 +404,18 @@ export function polygonCentroid(vertices: readonly Point3D[]): { x: number; y: n
   }
   return { x: sumX / n, y: sumY / n };
 }
+
+// ─── Axis-aligned hatch (SSoT) ────────────────────────────────────────────────
+//
+// Moved to sibling module `polygon-hatch-utils.ts` (N.7.1 500-line cap).
+// Re-exported here so all existing importers keep working unchanged.
+
+export type {
+  HatchPoint2D,
+  HatchDirection,
+  HatchLineSegment,
+} from './polygon-hatch-utils';
+export {
+  buildAxisAlignedHatch,
+  clipLineToBbox,
+} from './polygon-hatch-utils';

@@ -32,12 +32,28 @@ import {
   getAdminStorage,
   type Firestore,
 } from '@/lib/firebaseAdmin';
-import { COLLECTIONS } from '@/config/firestore-collections';
 import { FILE_DOMAINS, FILE_CATEGORIES } from '@/config/domain-constants';
 import { buildStoragePath } from '@/services/upload/utils/storage-path';
 import { createModuleLogger } from '@/lib/telemetry';
 import { getErrorMessage } from '@/lib/error-utils';
 import { FloorplanCascadeDeleteService } from './floorplan-cascade-delete.service';
+import { deleteRefsInChunks, BATCH_DELETE_CHUNK } from './firestore-batch-delete';
+import {
+  wipeBimForFloor,
+  countBimForFloor,
+  type BimWipeAuditContext,
+} from './bim-floor-wipe.service';
+import {
+  listBackgrounds,
+  listDxfLevels,
+  loadFileRows,
+  listAllFloorFileRows,
+  loadFloorProjectId,
+  collectFileIds,
+  type BackgroundRow,
+  type DxfLevelRow,
+  type FileRow,
+} from './floor-wipe-queries';
 
 const logger = createModuleLogger('FloorplanFloorWipeService');
 
@@ -62,6 +78,10 @@ export interface WipeAllForFloorResult {
    * (orphans not tracked by FileRecord rows; e.g. derivations from earlier
    * wipes that had already lost their parent FileRecord). */
   categoryPathSweptCount: number;
+  /** BIM entities deleted (only when `wipeBim` requested; 0 otherwise). */
+  bimEntitiesDeleted: number;
+  /** Auto-BOQ items deleted (only when `wipeBim` requested; 0 otherwise). */
+  boqItemsDeleted: number;
 }
 
 export interface FloorWipePreview {
@@ -69,46 +89,35 @@ export interface FloorWipePreview {
   floorplanBackgroundCount: number;
   fileRecordCount: number;
   totalPolygons: number;
+  /** BIM entity docs across the 20 floor-scoped collections (ADR-420). */
+  bimEntityCount: number;
+  /** Auto-generated BOQ items linked to the floor. */
+  boqItemCount: number;
 }
 
-interface BackgroundRow {
-  ref: FirebaseFirestore.DocumentReference;
-  fileId: string;
+/** Options for {@link FloorplanFloorWipeService.wipeAllForFloor}. */
+export interface WipeAllForFloorOptions {
+  /**
+   * When true, ALSO hard-delete every BIM entity (walls/columns/openings/…) and
+   * their auto-BOQ for the floor. Default false: BIM survives a plain replace
+   * (ADR-420 — re-import keeps your model). The wizard sets this only when the
+   * user explicitly chooses "full replace".
+   */
+  wipeBim?: boolean;
+  /** Performer for the BIM-delete audit trail (best-effort). */
+  audit?: BimWipeAuditContext;
 }
 
-interface DxfLevelRow {
-  ref: FirebaseFirestore.DocumentReference;
-  sceneFileId: string | null;
-}
-
-interface FileRow {
-  ref: FirebaseFirestore.DocumentReference;
-  storagePath: string | null;
-}
+// Re-export row types so callers that previously imported them from here keep
+// working (backward-compatible public surface).
+export type { BackgroundRow, DxfLevelRow, FileRow };
 
 // ============================================================================
 // HELPERS
 // ============================================================================
 
-const CHUNK = 450;
-
 function getDb(): Firestore {
   return getAdminFirestore();
-}
-
-async function deleteRefsInChunks(
-  db: Firestore,
-  refs: FirebaseFirestore.DocumentReference[],
-): Promise<number> {
-  let deleted = 0;
-  for (let i = 0; i < refs.length; i += CHUNK) {
-    const chunk = refs.slice(i, i + CHUNK);
-    const batch = db.batch();
-    for (const ref of chunk) batch.delete(ref);
-    await batch.commit();
-    deleted += chunk.length;
-  }
-  return deleted;
 }
 
 /**
@@ -130,8 +139,8 @@ async function clearDxfLevelsInChunks(
 ): Promise<number> {
   const dirty = rows.filter((r) => r.sceneFileId !== null);
   let cleared = 0;
-  for (let i = 0; i < dirty.length; i += CHUNK) {
-    const chunk = dirty.slice(i, i + CHUNK);
+  for (let i = 0; i < dirty.length; i += BATCH_DELETE_CHUNK) {
+    const chunk = dirty.slice(i, i + BATCH_DELETE_CHUNK);
     const batch = db.batch();
     for (const row of chunk) {
       batch.update(row.ref, {
@@ -144,119 +153,6 @@ async function clearDxfLevelsInChunks(
     cleared += chunk.length;
   }
   return cleared;
-}
-
-async function listBackgrounds(
-  db: Firestore,
-  companyId: string,
-  floorId: string,
-): Promise<BackgroundRow[]> {
-  const snap = await db
-    .collection(COLLECTIONS.FLOORPLAN_BACKGROUNDS)
-    .where('companyId', '==', companyId)
-    .where('floorId', '==', floorId)
-    .get();
-  return snap.docs.map((d) => ({
-    ref: d.ref,
-    fileId: String((d.data() as { fileId?: string }).fileId ?? ''),
-  }));
-}
-
-async function listDxfLevels(
-  db: Firestore,
-  companyId: string,
-  floorId: string,
-): Promise<DxfLevelRow[]> {
-  const snap = await db
-    .collection(COLLECTIONS.DXF_VIEWER_LEVELS)
-    .where('companyId', '==', companyId)
-    .where('floorId', '==', floorId)
-    .get();
-  return snap.docs.map((d) => {
-    const data = d.data() as { sceneFileId?: string | null };
-    return {
-      ref: d.ref,
-      sceneFileId: typeof data.sceneFileId === 'string' && data.sceneFileId.length > 0
-        ? data.sceneFileId
-        : null,
-    };
-  });
-}
-
-async function loadFileRows(
-  db: Firestore,
-  companyId: string,
-  fileIds: string[],
-): Promise<FileRow[]> {
-  if (fileIds.length === 0) return [];
-  const rows = await Promise.all(
-    fileIds.map(async (id) => {
-      const snap = await db.collection(COLLECTIONS.FILES).doc(id).get();
-      if (!snap.exists) return null;
-      const data = snap.data() as { companyId?: string; storagePath?: string };
-      if (data.companyId !== companyId) {
-        logger.warn('Cross-tenant file skipped during wipe', { fileId: id });
-        return null;
-      }
-      return {
-        ref: snap.ref,
-        storagePath: typeof data.storagePath === 'string' ? data.storagePath : null,
-      } satisfies FileRow;
-    }),
-  );
-  return rows.filter((r): r is FileRow => r !== null);
-}
-
-/**
- * ADR-351: List every FileRecord whose entity is this floor, regardless of
- * whether it is referenced from a floorplan_backgrounds or dxf_viewer_levels
- * doc. Without this, FileRecords created but never linked (e.g. upload races,
- * partial wizard exits) are left orphan in Firestore — and surface later as
- * "ghost" floorplans with no Storage binary (incident 2026-05-15).
- */
-async function listAllFloorFileRows(
-  db: Firestore,
-  companyId: string,
-  floorId: string,
-): Promise<FileRow[]> {
-  const snap = await db
-    .collection(COLLECTIONS.FILES)
-    .where('companyId', '==', companyId)
-    .where('entityType', '==', 'floor')
-    .where('entityId', '==', floorId)
-    .get();
-  return snap.docs.map((d) => {
-    const data = d.data() as { storagePath?: string };
-    return {
-      ref: d.ref,
-      storagePath: typeof data.storagePath === 'string' ? data.storagePath : null,
-    } satisfies FileRow;
-  });
-}
-
-async function loadFloorProjectId(
-  db: Firestore,
-  companyId: string,
-  floorId: string,
-): Promise<string | null> {
-  try {
-    const snap = await db.collection(COLLECTIONS.FLOORS).doc(floorId).get();
-    if (!snap.exists) return null;
-    const data = snap.data() as { companyId?: string; projectId?: string };
-    if (data.companyId && data.companyId !== companyId) {
-      logger.warn('Cross-tenant floor doc skipped during wipe', { floorId });
-      return null;
-    }
-    return typeof data.projectId === 'string' && data.projectId.length > 0
-      ? data.projectId
-      : null;
-  } catch (err) {
-    logger.warn('Floor projectId lookup failed (non-blocking)', {
-      floorId,
-      error: getErrorMessage(err),
-    });
-    return null;
-  }
 }
 
 async function sweepFloorCategoryPath(
@@ -359,12 +255,14 @@ export class FloorplanFloorWipeService {
     floorId: string,
   ): Promise<FloorWipePreview> {
     const db = getDb();
-    const [polygonState, backgrounds, dxfLevels, allFloorFiles] = await Promise.all([
-      FloorplanCascadeDeleteService.getFloorPolygonState(companyId, floorId),
-      listBackgrounds(db, companyId, floorId),
-      listDxfLevels(db, companyId, floorId),
-      listAllFloorFileRows(db, companyId, floorId),
-    ]);
+    const [polygonState, backgrounds, dxfLevels, allFloorFiles, bimCounts] =
+      await Promise.all([
+        FloorplanCascadeDeleteService.getFloorPolygonState(companyId, floorId),
+        listBackgrounds(db, companyId, floorId),
+        listDxfLevels(db, companyId, floorId),
+        listAllFloorFileRows(db, companyId, floorId),
+        countBimForFloor(companyId, floorId),
+      ]);
 
     // ADR-351: union referenced + orphan FileRecord ids so the preview count
     // matches what executeWipe actually deletes (no surprise "ghost" leftovers).
@@ -376,6 +274,8 @@ export class FloorplanFloorWipeService {
       floorplanBackgroundCount: backgrounds.length,
       fileRecordCount: referencedIds.size,
       totalPolygons: polygonState.total,
+      bimEntityCount: bimCounts.bimEntityCount,
+      boqItemCount: bimCounts.boqItemCount,
     };
   }
 
@@ -386,9 +286,10 @@ export class FloorplanFloorWipeService {
   static async wipeAllForFloor(
     companyId: string,
     floorId: string,
+    opts: WipeAllForFloorOptions = {},
   ): Promise<WipeAllForFloorResult> {
     try {
-      const result = await executeWipe(companyId, floorId);
+      const result = await executeWipe(companyId, floorId, opts);
       logger.info('Floor wipe complete', { companyId, floorId, ...result });
       return result;
     } catch (err) {
@@ -405,6 +306,7 @@ export class FloorplanFloorWipeService {
 async function executeWipe(
   companyId: string,
   floorId: string,
+  opts: WipeAllForFloorOptions,
 ): Promise<WipeAllForFloorResult> {
   const db = getDb();
   const [backgrounds, dxfLevels, projectId] = await Promise.all([
@@ -412,6 +314,12 @@ async function executeWipe(
     listDxfLevels(db, companyId, floorId),
     loadFloorProjectId(db, companyId, floorId),
   ]);
+
+  // Opt-in BIM + auto-BOQ purge (full replace). Runs first so a failure aborts
+  // before we delete the file/scene the user may still want to keep.
+  const bim = opts.wipeBim
+    ? await wipeBimForFloor(companyId, floorId, opts.audit)
+    : { bimEntitiesDeleted: 0, boqItemsDeleted: 0 };
 
   const fileIds = collectFileIds(backgrounds, dxfLevels);
   const referencedFileRows = await loadFileRows(db, companyId, fileIds);
@@ -459,19 +367,7 @@ async function executeWipe(
     storageObjectsDeleted: storage.deleted + sweep.deleted,
     storageObjectsFailed: storage.failed + sweep.failed,
     categoryPathSweptCount: sweep.deleted,
+    bimEntitiesDeleted: bim.bimEntitiesDeleted,
+    boqItemsDeleted: bim.boqItemsDeleted,
   };
-}
-
-function collectFileIds(
-  backgrounds: BackgroundRow[],
-  dxfLevels: DxfLevelRow[],
-): string[] {
-  const ids = new Set<string>();
-  for (const b of backgrounds) {
-    if (b.fileId) ids.add(b.fileId);
-  }
-  for (const l of dxfLevels) {
-    if (l.sceneFileId) ids.add(l.sceneFileId);
-  }
-  return [...ids];
 }
