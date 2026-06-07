@@ -81,6 +81,20 @@ export function useDxfViewerNotifications(): void {
       }),
     );
 
+    // ADR-419 — region/perimeter pick απορρίφθηκε (Layer 4/5): γιγάντιο περίγραμμα
+    // (εξωτερικό του σχεδίου) ή ανοιχτές γραμμές που δεν ενώνονται. Non-blocking warn.
+    unsubs.push(
+      EventBus.on('bim:region-perimeter-rejected', ({ reason, widthM, depthM }) => {
+        if (reason === 'oversized' && widthM != null && depthM != null) {
+          toast.warning(
+            t('regionPerimeter.oversized', { width: widthM.toFixed(1), depth: depthM.toFixed(1) }),
+          );
+        } else {
+          toast.warning(t('regionPerimeter.noClosedLoop'));
+        }
+      }),
+    );
+
     // ADR-401 Phase E.1 — manual attach/detach from the contextual wall ribbon.
     unsubs.push(
       EventBus.on('bim:walls-attached-manual', () => {

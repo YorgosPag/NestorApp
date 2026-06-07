@@ -141,6 +141,25 @@ export function isWallColumnKind(kind: ColumnKind): boolean {
   return kind === 'shear-wall' || kind === 'composite' || kind === 'U-shape';
 }
 
+/** Πρόθεση χρήστη: «Κολώνα» ή «Τοιχίο» (ποιο εργαλείο/κουμπί πατήθηκε). */
+export type ColumnBuildIntent = 'columns' | 'walls';
+
+/**
+ * Χωρίζει έτοιμα columns σε `primary` (ταιριάζουν στην πρόθεση) + `secondary`
+ * (άλλου τύπου) — SSoT για το intent-aware confirm (κοινό σε «από περίγραμμα
+ * πολλαπλή» + «σε περιοχή»). Με `intent='columns'`: primary=σημειακές κολώνες,
+ * secondary=τοιχία (aspect>4 / σύνθετα). Μη αλλοίωση στατικών — ο τύπος ορίζεται
+ * από τη γεωμετρία, η πρόθεση μόνο ποιο ρωτάμε.
+ */
+export function splitColumnsByIntent(
+  columns: readonly ColumnEntity[],
+  intent: ColumnBuildIntent,
+): { primary: ColumnEntity[]; secondary: ColumnEntity[] } {
+  const walls = columns.filter((c) => isWallColumnKind(c.kind));
+  const cols = columns.filter((c) => !isWallColumnKind(c.kind));
+  return intent === 'columns' ? { primary: cols, secondary: walls } : { primary: walls, secondary: cols };
+}
+
 /**
  * Αναλογία πλευρών (longSide / shortSide) μιας κλειστής περιμέτρου.
  * Επιστρέφει 0 για μη-ορθογωνικά σχήματα (πάντα τοιχία, δεν χρειάζεται λόγος).

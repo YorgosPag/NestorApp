@@ -38,6 +38,8 @@ export interface MepRadiatorPersistenceHostProps {
   readonly floorplanId?: string;
   /** ADR-420 — stable building-storey id. Forwarded to hook → service. */
   readonly floorId?: string;
+  /** ADR-408 — building scope for the Η-Μ BOQ auto-feed. */
+  readonly buildingId?: string;
 }
 
 export function MepRadiatorPersistenceHost({
@@ -47,6 +49,7 @@ export function MepRadiatorPersistenceHost({
   projectId,
   floorplanId,
   floorId,
+  buildingId,
 }: MepRadiatorPersistenceHostProps): React.ReactElement | null {
   const { user } = useAuth();
 
@@ -67,6 +70,7 @@ export function MepRadiatorPersistenceHost({
     projectId,
     floorplanId,
     floorId,
+    buildingId,
     userId: user?.uid ?? null,
     levelManager,
     primarySelectedRadiator,

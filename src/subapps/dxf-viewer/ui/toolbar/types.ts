@@ -172,6 +172,12 @@ export type ToolType =
   | 'mep-drainage-collector'
   // ADR-408 Φ14: floor drain (σιφώνι) — point-based mep-fixture kind, 1 sanitary-drainage outlet
   | 'mep-floor-drain'
+  // ADR-408 Φ14: sanitary terminals (WC/washbasin/shower/bathtub/bidet) — point-based mep-fixture kinds, 1 sanitary-drainage outlet each
+  | 'mep-wc'
+  | 'mep-washbasin'
+  | 'mep-shower'
+  | 'mep-bathtub'
+  | 'mep-bidet'
   // ADR-407: path-based railing drawing tool (2-click straight guardrail)
   | 'railing'
   // ADR-410: mesh-based CC0 furniture drawing tool (single-click placement)

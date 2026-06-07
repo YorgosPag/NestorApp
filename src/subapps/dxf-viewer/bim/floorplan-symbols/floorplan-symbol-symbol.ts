@@ -9,12 +9,13 @@
  *
  * Δ1 (ADR-415): every symbol is authored by us from straight lines + sampled
  * arcs/ellipses — no third-party asset, no mesh. Inner shapes are expressed in
- * NORMALIZED footprint coordinates `(u, v) ∈ [0,1]²` and mapped to world space via
- * the footprint's own (rotated, scaled) basis — so there is ZERO trigonometry
- * here and every symbol follows rotation/scale automatically.
+ * NORMALIZED footprint coordinates `(u, v) ∈ [0,1]²` via the shared
+ * `symbol-vector-helpers` (rotation/scale-aware, zero trig).
  *
- * Convention: `u = 0` → left edge, `u = 1` → right edge; `v = 0` → front edge,
- * `v = 1` → back edge (`vertices[0]` corner is the front-left).
+ * ADR-408 Φ14: the five SANITARY drawers were lifted to the canonical
+ * `sanitary-symbol-spec.ts` SSoT (now shared with the connectable sanitary
+ * `mep-fixture`); this module imports them so there is ZERO duplicated geometry.
+ * Kitchen/furniture drawers remain local (no second consumer).
  *
  * @see docs/centralized-systems/reference/adrs/ADR-415-2d-floorplan-symbol-library.md
  */
@@ -25,9 +26,17 @@ import type {
   FloorplanSymbolKind,
   FloorplanSymbolParams,
 } from '../types/floorplan-symbol-types';
+import { SANITARY_DRAWERS } from '../sanitary/sanitary-symbol-spec';
+import {
+  ellipse,
+  line,
+  rect,
+  type FootprintBasis,
+  type SymbolStroke,
+} from './symbol-vector-helpers';
 
-/** A polyline of world-space points (canvas units). */
-export type SymbolStroke = readonly Point3D[];
+// Back-compat re-export: `SymbolStroke` now lives in the shared helpers module.
+export type { SymbolStroke };
 
 export interface FloorplanSymbolSymbolGeometry {
   /** Closed outline polygon (= the footprint). */
@@ -36,54 +45,11 @@ export interface FloorplanSymbolSymbolGeometry {
   readonly strokes: readonly SymbolStroke[];
 }
 
-// ─── Normalized-coordinate helpers (rotation + scale aware, zero trig) ─────────
-
-type FP = readonly Point3D[];
-
-/** Map normalized `(u, v) ∈ [0,1]²` to world space via the footprint basis. */
-function n(fp: FP, u: number, v: number): Point3D {
-  const [c0, c1, , c3] = fp; // c0=(-hw,-hd) c1=(hw,-hd) c2=(hw,hd) c3=(-hw,hd)
-  return {
-    x: c0.x + (c1.x - c0.x) * u + (c3.x - c0.x) * v,
-    y: c0.y + (c1.y - c0.y) * u + (c3.y - c0.y) * v,
-    z: 0,
-  };
-}
-
-/** Open polyline through a list of normalized points. */
-function poly(fp: FP, pts: ReadonlyArray<readonly [number, number]>): SymbolStroke {
-  return pts.map(([u, v]) => n(fp, u, v));
-}
-
-/** Closed rectangle (5 pts) in normalized coords. */
-function rect(fp: FP, u0: number, v0: number, u1: number, v1: number): SymbolStroke {
-  return [n(fp, u0, v0), n(fp, u1, v0), n(fp, u1, v1), n(fp, u0, v1), n(fp, u0, v0)];
-}
-
-/** Straight segment in normalized coords. */
-function line(fp: FP, u0: number, v0: number, u1: number, v1: number): SymbolStroke {
-  return [n(fp, u0, v0), n(fp, u1, v1)];
-}
-
-/** Sampled ellipse (closed) centred at `(cu, cv)`, half-extents `(ru, rv)`. */
-function ellipse(fp: FP, cu: number, cv: number, ru: number, rv: number, seg = 28): SymbolStroke {
-  const pts: Point3D[] = [];
-  for (let i = 0; i <= seg; i++) {
-    const a = (i / seg) * Math.PI * 2;
-    pts.push(n(fp, cu + ru * Math.cos(a), cv + rv * Math.sin(a)));
-  }
-  return pts;
-}
-
 // ─── Per-kind drawers (each pure: footprint → identifying strokes) ─────────────
 
-const DRAWERS: Readonly<Record<FloorplanSymbolKind, (fp: FP) => SymbolStroke[]>> = {
-  // ── Sanitary ──────────────────────────────────────────────────────────────
-  wc: (fp) => [rect(fp, 0.12, 0.8, 0.88, 1.0), ellipse(fp, 0.5, 0.42, 0.34, 0.36), ellipse(fp, 0.5, 0.42, 0.27, 0.29)],
-  washbasin: (fp) => [ellipse(fp, 0.5, 0.45, 0.4, 0.34), ellipse(fp, 0.5, 0.45, 0.03, 0.03), ellipse(fp, 0.5, 0.88, 0.05, 0.05)],
-  shower: (fp) => [line(fp, 0.02, 0.02, 0.98, 0.98), line(fp, 0.98, 0.02, 0.02, 0.98), ellipse(fp, 0.5, 0.5, 0.06, 0.06)],
-  bathtub: (fp) => [rect(fp, 0.08, 0.1, 0.92, 0.9), ellipse(fp, 0.5, 0.55, 0.34, 0.3), ellipse(fp, 0.5, 0.2, 0.04, 0.04)],
-  bidet: (fp) => [ellipse(fp, 0.5, 0.46, 0.36, 0.42), ellipse(fp, 0.5, 0.46, 0.2, 0.24), ellipse(fp, 0.5, 0.88, 0.04, 0.04)],
+const DRAWERS: Readonly<Record<FloorplanSymbolKind, (fp: FootprintBasis) => SymbolStroke[]>> = {
+  // ── Sanitary — canonical SSoT in sanitary-symbol-spec.ts (shared with mep-fixture) ──
+  ...SANITARY_DRAWERS,
   // ── Kitchen ─────────────────────────────────────────────────────────────────
   'kitchen-sink': (fp) => [rect(fp, 0.06, 0.15, 0.46, 0.85), rect(fp, 0.54, 0.15, 0.94, 0.85), ellipse(fp, 0.5, 0.94, 0.04, 0.04)],
   stove: (fp) => [ellipse(fp, 0.3, 0.7, 0.15, 0.15), ellipse(fp, 0.7, 0.7, 0.15, 0.15), ellipse(fp, 0.3, 0.3, 0.12, 0.12), ellipse(fp, 0.7, 0.3, 0.12, 0.12)],

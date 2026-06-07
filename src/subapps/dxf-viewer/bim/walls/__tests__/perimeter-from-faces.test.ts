@@ -14,6 +14,11 @@ import {
   decomposeRectilinear,
   extractClosedPolygons,
   perimeterFacesToRects,
+  pickSmallestContainingPerimeter,
+  isPerimeterOversized,
+  perimeterMemberThicknessMm,
+  perimeterExtentMm,
+  findOpenChainLineIdsNear,
 } from '../perimeter-from-faces';
 
 const TOL = 5;
@@ -277,5 +282,102 @@ describe('perimeter-from-faces — touching loose-line rectangles (ADR-363 Phase
 
   it('wall path (no unionTouching) stays conservative — touching loose rects not detected', () => {
     expect(perimeterFacesToRects(touchingLoose, TOL).perimeters).toHaveLength(0);
+  });
+});
+
+// ─── ADR-419 — region-pick SSoT (Layers 1/2/4/5) ──────────────────────────────
+
+// Εμφωλευμένα ορθογώνια: εξωτερικό 6000×6000, εσωτερικό 1000×1000 (κεντραρισμένο).
+const OUTER_6K: Point2D[] = [
+  { x: 0, y: 0 },
+  { x: 6000, y: 0 },
+  { x: 6000, y: 6000 },
+  { x: 0, y: 6000 },
+];
+const INNER_1K: Point2D[] = [
+  { x: 2500, y: 2500 },
+  { x: 3500, y: 2500 },
+  { x: 3500, y: 3500 },
+  { x: 2500, y: 3500 },
+];
+// Γιγάντιο (το bug): 27000×25000 (mm). Μικρή πλευρά 25000 >> 3000.
+const GIANT: Point2D[] = [
+  { x: 0, y: 0 },
+  { x: 27000, y: 0 },
+  { x: 27000, y: 25000 },
+  { x: 0, y: 25000 },
+];
+
+describe('perimeter-from-faces — pickSmallestContainingPerimeter (Layer 1)', () => {
+  const { perimeters } = perimeterFacesToRects(
+    [lwPolyline('outer', OUTER_6K, true), lwPolyline('inner', INNER_1K, true)],
+    TOL,
+  );
+
+  it('picks the INNERMOST (smallest-area) loop when point is inside both', () => {
+    const pick = pickSmallestContainingPerimeter({ x: 3000, y: 3000 }, perimeters);
+    expect(pick).not.toBeNull();
+    // Το εσωτερικό 1000×1000 (scale=1 → mm).
+    expect(perimeterExtentMm(pick!, 1).width).toBeCloseTo(1000, 0);
+  });
+
+  it('picks the outer loop when point is only inside the outer', () => {
+    const pick = pickSmallestContainingPerimeter({ x: 500, y: 500 }, perimeters);
+    expect(pick).not.toBeNull();
+    expect(perimeterExtentMm(pick!, 1).width).toBeCloseTo(6000, 0);
+  });
+
+  it('returns null when point is outside every loop', () => {
+    expect(pickSmallestContainingPerimeter({ x: 99999, y: 99999 }, perimeters)).toBeNull();
+  });
+});
+
+describe('perimeter-from-faces — size sanity guard (Layer 4)', () => {
+  const giant = perimeterFacesToRects([lwPolyline('g', GIANT, true)], TOL).perimeters[0];
+  const normalCol = perimeterFacesToRects([lwPolyline('c', INNER_1K, true)], TOL).perimeters[0];
+  const longThin = perimeterFacesToRects([lwPolyline('w', RECT, true)], TOL).perimeters[0]; // 5000×300
+
+  it('flags the drawing outer outline as oversized (the bug)', () => {
+    expect(isPerimeterOversized(giant, 1)).toBe(true);
+    expect(perimeterMemberThicknessMm(giant, 1)).toBeCloseTo(25000, 0);
+  });
+
+  it('accepts a normal column (1000×1000)', () => {
+    expect(isPerimeterOversized(normalCol, 1)).toBe(false);
+  });
+
+  it('accepts a long thin wall (5000×300) — only the SHORT side is checked', () => {
+    expect(isPerimeterOversized(longThin, 1)).toBe(false);
+    expect(perimeterMemberThicknessMm(longThin, 1)).toBeCloseTo(300, 0);
+  });
+});
+
+// Ορθογώνιο 2000×300 ως 4 loose lines ΜΕ κενό 30mm σε μία γωνία.
+const GAPPED_RECT_LINES: Entity[] = [
+  lineEntity('g0', { x: 0, y: 0 }, { x: 2000, y: 0 }),
+  lineEntity('g1', { x: 2000, y: 0 }, { x: 2000, y: 300 }),
+  lineEntity('g2', { x: 2000, y: 300 }, { x: 0, y: 300 }),
+  lineEntity('g3', { x: 0, y: 300 }, { x: 0, y: 30 }), // κενό 30 ανάμεσα (0,30)→(0,0)
+];
+
+describe('perimeter-from-faces — gap-tolerant closure (Layer 2)', () => {
+  it('does NOT close the loop with a tight tolerance (gap 30 > tol 5)', () => {
+    expect(perimeterFacesToRects(GAPPED_RECT_LINES, 5).perimeters).toHaveLength(0);
+  });
+
+  it('closes the loop with a gap-tolerant tolerance (tol 50 ≥ gap 30)', () => {
+    expect(perimeterFacesToRects(GAPPED_RECT_LINES, 50).perimeters).toHaveLength(1);
+  });
+});
+
+describe('perimeter-from-faces — open-loop diagnostics (Layer 5)', () => {
+  it('returns the line ids with open endpoints near the pick', () => {
+    const ids = findOpenChainLineIdsNear({ x: 0, y: 15 }, GAPPED_RECT_LINES, 5);
+    expect(ids.sort()).toEqual(['g0', 'g3']); // οι γραμμές της ασύνδετης γωνίας
+  });
+
+  it('returns nothing when there are no open endpoints near (clean closed rect)', () => {
+    const clean = looseRectLines('c', RECT_A_FOOT);
+    expect(findOpenChainLineIdsNear({ x: 1500, y: 150 }, clean, 5)).toHaveLength(0);
   });
 });

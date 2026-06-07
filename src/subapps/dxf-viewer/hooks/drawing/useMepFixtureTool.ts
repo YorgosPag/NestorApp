@@ -31,6 +31,7 @@ import {
   computeMepFixtureGeometry,
 } from '../../bim/mep-fixtures/mep-fixture-geometry';
 import type { MepFixtureEntity, MepFixtureShape } from '../../bim/types/mep-fixture-types';
+import { isSanitaryKind } from '../../bim/sanitary/sanitary-symbol-spec';
 import { mepFixtureToolBridgeStore } from '../../ui/ribbon/hooks/bridge/mep-fixture-tool-bridge-store';
 import { EventBus } from '../../systems/events/EventBus';
 
@@ -170,10 +171,11 @@ export function useMepFixtureTool(options: UseMepFixtureToolOptions = {}): UseMe
   const getStatusText = useCallback((): string => {
     const s = stateRef.current;
     if (s.phase !== 'awaitingPosition') return '';
-    // ADR-408 Φ14 — the floor drain (σιφώνι) shows its own placement prompt.
-    return s.overrides.kind === 'floor-drain'
-      ? 'tools.mepFloorDrain.statusPosition'
-      : 'tools.mepFixture.statusPosition';
+    // ADR-408 Φ14 — the floor drain (σιφώνι) + sanitary terminals show their own
+    // placement prompts; the light fixture keeps the default.
+    if (s.overrides.kind === 'floor-drain') return 'tools.mepFloorDrain.statusPosition';
+    if (s.overrides.kind && isSanitaryKind(s.overrides.kind)) return 'tools.mepSanitaryFixture.statusPosition';
+    return 'tools.mepFixture.statusPosition';
   }, []);
 
   const getGhostFootprint = useCallback(

@@ -26,6 +26,7 @@ import {
   type MepSegmentDoc,
 } from '../../bim/mep-segments/mep-segment-firestore-service';
 import { recordMepSegmentChange } from '../../bim/mep-segments/mep-segment-audit-client';
+import { bimToBoqBridge } from '../../bim/services/BimToBoqBridge';
 import { useBimEntityMovedPersistEffect } from './useBimEntityMovedPersistEffect';
 import { useBimEntityRestoredPersistEffect } from './useBimEntityRestoredPersistEffect';
 
@@ -47,6 +48,8 @@ export interface UseMepSegmentPersistenceParams {
   readonly floorplanId: string | null | undefined;
   /** ADR-420 — stable building-storey scope key (IfcBuildingStorey). */
   readonly floorId?: string | null;
+  /** ADR-408 — building scope for the Η-Μ BOQ auto-feed (BimToBoqBridge). */
+  readonly buildingId?: string | null;
   readonly userId: string | null;
   readonly levelManager: LevelManagerLike;
   readonly primarySelectedSegment: MepSegmentEntity | null;
@@ -102,6 +105,7 @@ export function useMepSegmentPersistence(
     projectId,
     floorplanId,
     floorId,
+    buildingId,
     userId,
     levelManager,
     primarySelectedSegment,
@@ -254,11 +258,26 @@ export function useMepSegmentPersistence(
         entity,
         { prevParams: prevParams ?? undefined },
       );
+      // ADR-408 — Η-Μ BOQ auto-feed: pipe/duct = running length (m), billed per
+      // plumbing classification (Revit System takeoff). length → geometry.lengthM.
+      if (companyId && projectId && buildingId) {
+        void bimToBoqBridge.upsertBoqItemForBim(
+          'mep-segment',
+          {
+            id: entity.id,
+            kind: entity.kind,
+            params: { classification: entity.params.classification },
+            geometry: { lengthM: entity.geometry.length },
+          },
+          { companyId, projectId, buildingId, floorId: floorId ?? undefined },
+          isNew ? 'created' : 'updated',
+        );
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'MEP_SEGMENT_SAVE_ERROR');
       setSaveState('error');
     }
-  }, []);
+  }, [companyId, projectId, buildingId, floorId]);
 
   // Auto-save debounce on bim:mep-segment-params-updated.
   useEffect(() => {
@@ -319,6 +338,8 @@ export function useMepSegmentPersistence(
           ? { id: deletedSegment.id, kind: deletedSegment.kind, layerId: deletedSegment.layerId, params: deletedSegment.params }
           : { id: segmentId, kind: 'duct' },
       );
+      // ADR-408 — remove the auto-fed Η-Μ BOQ row (skips user-detached rows).
+      if (companyId) void bimToBoqBridge.deleteBoqItemForBim(segmentId, companyId);
     } catch {
       // Non-fatal: deletion failure silent — user retries.
     }
@@ -332,7 +353,7 @@ export function useMepSegmentPersistence(
     lastSavedParamsRef.current.delete(segmentId);
     pendingFirstSaveIdsRef.current.delete(segmentId);
     deletedIdsRef.current.add(segmentId);
-  }, [levelManager]);
+  }, [levelManager, companyId]);
 
   // persistRestore: undo→Firestore re-create + audit 'restored'.
   const persistRestore = useCallback(async (entity: MepSegmentEntity) => {

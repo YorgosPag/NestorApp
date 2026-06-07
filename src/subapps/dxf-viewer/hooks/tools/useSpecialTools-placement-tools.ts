@@ -34,6 +34,7 @@ import { addMepRadiatorToScene } from '../../bim/mep-radiators/add-mep-radiator-
 import { addMepBoilerToScene } from '../../bim/mep-boilers/add-mep-boiler-to-scene';
 import { addMepSegmentToScene } from '../../bim/mep-segments/add-mep-segment-to-scene';
 import { DEFAULT_DRAINAGE_SLOPE_PERCENT } from '../../bim/types/mep-segment-types';
+import { sanitaryFixtureToolKind } from '../../bim/sanitary/sanitary-symbol-spec';
 import { addRailingToScene } from '../../bim/railings/add-railing-to-scene';
 import type { LevelsHookReturn } from '../../systems/levels';
 
@@ -77,17 +78,23 @@ export function useSpecialToolsPlacementTools(
       return lid ? resolveSceneUnits(levelManager.getLevelScene(lid)) : 'mm';
     },
   });
-  // 'mep-fixture' (electrical luminaire) and 'mep-floor-drain' (σιφώνι) share ONE
-  // fixture tool; the active tool id drives the `kind` preset (ADR-408 Φ14).
-  const isMepFixtureTool = activeTool === 'mep-fixture' || activeTool === 'mep-floor-drain';
+  // 'mep-fixture' (electrical luminaire), 'mep-floor-drain' (σιφώνι) AND the five
+  // sanitary terminals ('mep-wc'/'mep-washbasin'/… ADR-408 Φ14) share ONE fixture
+  // tool; the active tool id drives the `kind` preset (one tool id per kind, the
+  // manifold/segment/floor-drain convention).
+  const sanitaryKind = sanitaryFixtureToolKind(activeTool);
+  const isMepFixtureTool =
+    activeTool === 'mep-fixture' || activeTool === 'mep-floor-drain' || sanitaryKind !== null;
   useToolLifecycle(isMepFixtureTool, mepFixtureTool.activate, mepFixtureTool.deactivate);
   useEffect(() => {
     if (activeTool === 'mep-fixture') {
       mepFixtureTool.setParamOverrides({ kind: 'light-fixture' });
     } else if (activeTool === 'mep-floor-drain') {
       mepFixtureTool.setParamOverrides({ kind: 'floor-drain' });
+    } else if (sanitaryKind !== null) {
+      mepFixtureTool.setParamOverrides({ kind: sanitaryKind });
     }
-  }, [activeTool, mepFixtureTool.setParamOverrides]);
+  }, [activeTool, sanitaryKind, mepFixtureTool.setParamOverrides]);
 
   // ADR-410 — FURNITURE TOOL: single-click placement; entity appended+broadcast.
   const furnitureTool = useFurnitureTool({

@@ -10,7 +10,7 @@
 
 import type { Point2D } from '../../../rendering/types/Types';
 import type { Entity, LWPolylineEntity } from '../../../types/entities';
-import { perimeterFacesToColumns } from '../column-from-faces';
+import { perimeterFacesToColumns, splitColumnsByIntent } from '../column-from-faces';
 import { perimeterFacesToRects } from '../../walls/perimeter-from-faces';
 
 const TOL = 5;
@@ -262,5 +262,50 @@ describe('column-from-faces — μικτή επιλογή', () => {
     ]);
     expect(columns.length).toBeGreaterThanOrEqual(2);
     expect(columns.some((c) => c.params.kind === 'composite')).toBe(true);
+  });
+});
+
+// ─── ADR-419 Layer 4 (net) — size sanity guard στον builder ────────────────────
+// Το εξωτερικό περίγραμμα του σχεδίου (27×25m) ΔΕΝ είναι κολώνα/τοιχίο.
+const GIANT_OUTLINE: Point2D[] = [
+  { x: 0, y: 0 },
+  { x: 27000, y: 0 },
+  { x: 27000, y: 25000 },
+  { x: 0, y: 25000 },
+];
+
+describe('column-from-faces — size sanity guard (ADR-419 Layer 4)', () => {
+  it('απορρίπτει το γιγάντιο εξωτερικό περίγραμμα → 0 columns, ignored=1', () => {
+    const { columns, ignored } = buildColumnsFrom([lwPolyline('giant', GIANT_OUTLINE)]);
+    expect(columns).toHaveLength(0);
+    expect(ignored).toBe(1);
+  });
+
+  it('δεν επηρεάζει κανονικό μέλος (1000×800)', () => {
+    expect(buildColumnsFrom([lwPolyline('ok', RECT)]).columns).toHaveLength(1);
+  });
+});
+
+// ─── ADR-419 — splitColumnsByIntent (intent-aware confirm SSoT) ────────────────
+describe('column-from-faces — splitColumnsByIntent', () => {
+  // RECT 1000×800 (aspect 1.25 → κολώνα)· SHEAR 2000×300 (aspect 6.67 → τοιχίο).
+  // Χτίζονται ΧΩΡΙΣΤΑ (το union path θα αλλοίωνε τα kinds σε composite).
+  const columns = [
+    ...buildColumnsFrom([lwPolyline('c', RECT)]).columns,
+    ...buildColumnsFrom([lwPolyline('s', SHEAR)]).columns,
+  ];
+
+  it('intent=columns → primary=κολώνες, secondary=τοιχία (επίμηκες aspect>4)', () => {
+    const { primary, secondary } = splitColumnsByIntent(columns, 'columns');
+    expect(primary).toHaveLength(1);
+    expect(primary[0].params.kind).toBe('rectangular');
+    expect(secondary).toHaveLength(1);
+    expect(secondary[0].params.kind).toBe('shear-wall');
+  });
+
+  it('intent=walls → αντιστρέφει primary/secondary', () => {
+    const { primary, secondary } = splitColumnsByIntent(columns, 'walls');
+    expect(primary[0].params.kind).toBe('shear-wall');
+    expect(secondary[0].params.kind).toBe('rectangular');
   });
 });

@@ -29,6 +29,7 @@ import {
 } from '../../bim/mep-underfloor/mep-underfloor-firestore-service';
 import { recordMepUnderfloorChange } from '../../bim/mep-underfloor/mep-underfloor-audit-client';
 import { projectConnectorSystemIds } from '../../bim/mep-systems/mep-system-coordinator';
+import { bimToBoqBridge } from '../../bim/services/BimToBoqBridge';
 import { useBimEntityRestoredPersistEffect } from './useBimEntityRestoredPersistEffect';
 
 // ============================================================================
@@ -49,6 +50,8 @@ export interface UseMepUnderfloorPersistenceParams {
   readonly floorplanId: string | null | undefined;
   /** ADR-420 — stable building-storey id. Forwarded to service config. */
   readonly floorId?: string | null;
+  /** ADR-408 — building scope for the Η-Μ BOQ auto-feed (BimToBoqBridge). */
+  readonly buildingId?: string | null;
   readonly userId: string | null;
   readonly levelManager: LevelManagerLike;
   readonly primarySelectedUnderfloor: MepUnderfloorEntity | null;
@@ -103,6 +106,7 @@ export function useMepUnderfloorPersistence(
     projectId,
     floorplanId,
     floorId,
+    buildingId,
     userId,
     levelManager,
     primarySelectedUnderfloor,
@@ -257,11 +261,21 @@ export function useMepUnderfloorPersistence(
         entity,
         { prevParams: prevParams ?? undefined },
       );
+      // ADR-408 — Η-Μ BOQ auto-feed: underfloor loop = developed serpentine pipe
+      // length (m, ΗΛΜ-7.04). totalLengthM → BimEntityForBoq.geometry.lengthM.
+      if (companyId && projectId && buildingId) {
+        void bimToBoqBridge.upsertBoqItemForBim(
+          'mep-underfloor',
+          { id: entity.id, kind: entity.kind, geometry: { lengthM: entity.geometry.totalLengthM } },
+          { companyId, projectId, buildingId, floorId: floorId ?? undefined },
+          isNew ? 'created' : 'updated',
+        );
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'MEP_UNDERFLOOR_SAVE_ERROR');
       setSaveState('error');
     }
-  }, []);
+  }, [companyId, projectId, buildingId, floorId]);
 
   // Auto-save debounce on selected underfloor params change.
   useEffect(() => {
@@ -320,6 +334,8 @@ export function useMepUnderfloorPersistence(
           ? { id: deletedUnderfloor.id, kind: deletedUnderfloor.kind, layerId: deletedUnderfloor.layerId, params: deletedUnderfloor.params }
           : { id: underfloorId, kind: 'hydronic-loop' },
       );
+      // ADR-408 — remove the auto-fed Η-Μ BOQ row (skips user-detached rows).
+      if (companyId) void bimToBoqBridge.deleteBoqItemForBim(underfloorId, companyId);
     } catch {
       // Non-fatal: deletion failure silent — user retries.
     }
@@ -333,7 +349,7 @@ export function useMepUnderfloorPersistence(
     lastSavedParamsRef.current.delete(underfloorId);
     pendingFirstSaveIdsRef.current.delete(underfloorId);
     deletedIdsRef.current.add(underfloorId);
-  }, [levelManager]);
+  }, [levelManager, companyId]);
 
   // persistRestore: undo→Firestore re-create + audit 'restored'.
   const persistRestore = useCallback(async (entity: MepUnderfloorEntity) => {

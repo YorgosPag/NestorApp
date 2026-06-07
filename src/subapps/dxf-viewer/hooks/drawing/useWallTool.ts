@@ -256,6 +256,7 @@ export function useWallTool(options: UseWallToolOptions = {}): UseWallToolResult
     stateRef,
     setState,
     getSceneEntities,
+    getSceneUnits,
     commitInRegionRects,
     commitPerimeterFaces,
   });

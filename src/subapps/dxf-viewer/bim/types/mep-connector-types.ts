@@ -495,3 +495,33 @@ export function buildFloorDrainConnector(
     pipe: { systemClassification: 'sanitary-drainage', diameterMm },
   };
 }
+
+// ─── Sanitary fixture drain connector (ADR-408 Φ14) ────────────────────────────
+
+/** Connector id for the single sanitary-drainage outlet of a sanitary terminal. */
+export const SANITARY_DRAIN_CONNECTOR_ID = 'san-drain';
+
+/**
+ * The single sanitary-drainage outlet of a sanitary terminal (WC/washbasin/shower/
+ * bathtub/bidet — ADR-408 Φ14, Revit "Plumbing Fixture"). Identical hydraulic role
+ * to {@link buildFloorDrainConnector}: a gravity TERMINAL with exactly ONE port —
+ * waste water LEAVES the fixture into the drain pipe (`flow: 'out'`, no return).
+ * `domain: 'pipe'`, classification FIXED to `sanitary-drainage` (set by physics,
+ * not user choice), so a pipe snapped here joins the drainage network for free.
+ * `diameterMm` is the fixture's DN waste size (WC=100, basin/bidet=40, shower/tub=50).
+ *
+ * `localPosition` is host-local (scene units, pre-rotation) — the caller resolves it
+ * from the body geometry (the fixture centre, z=0 at floor level).
+ */
+export function buildSanitaryDrainConnector(
+  localPosition: Point3D,
+  diameterMm: number,
+): MepConnector {
+  return {
+    connectorId: SANITARY_DRAIN_CONNECTOR_ID,
+    domain: 'pipe',
+    flow: 'out',
+    localPosition,
+    pipe: { systemClassification: 'sanitary-drainage', diameterMm },
+  };
+}

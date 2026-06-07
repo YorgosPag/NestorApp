@@ -641,6 +641,54 @@ export const HOME_DRAW_PANEL: RibbonPanelDef = {
                 },
               ],
             },
+            // ── Είδη Υγιεινής (submenu) ───────────────────────────────────
+            // ADR-408 Φ14 — connectable Plumbing Fixtures (Revit): each is a 1-click
+            // mep-fixture kind with a single sanitary-drainage outlet → drains into
+            // the drainage network. One tool id per kind (manifold/segment convention).
+            {
+              id: 'draw.bim.mepSanitary',
+              labelKey: 'ribbon.commands.bim.mepSanitary.label',
+              tooltipKey: 'ribbon.commands.bim.mepSanitary.tooltip',
+              icon: 'bim-furniture',
+              commandKey: 'draw.bim.mepSanitary',
+              subVariants: [
+                {
+                  id: 'draw.bim.mepWc',
+                  labelKey: 'floorplanSymbol.catalog.wc',
+                  tooltipKey: 'ribbon.commands.bim.mepSanitary.tooltip',
+                  icon: 'bim-furniture',
+                  commandKey: 'mep-wc',
+                },
+                {
+                  id: 'draw.bim.mepWashbasin',
+                  labelKey: 'floorplanSymbol.catalog.washbasin',
+                  tooltipKey: 'ribbon.commands.bim.mepSanitary.tooltip',
+                  icon: 'bim-furniture',
+                  commandKey: 'mep-washbasin',
+                },
+                {
+                  id: 'draw.bim.mepShower',
+                  labelKey: 'floorplanSymbol.catalog.shower',
+                  tooltipKey: 'ribbon.commands.bim.mepSanitary.tooltip',
+                  icon: 'bim-furniture',
+                  commandKey: 'mep-shower',
+                },
+                {
+                  id: 'draw.bim.mepBathtub',
+                  labelKey: 'floorplanSymbol.catalog.bathtub',
+                  tooltipKey: 'ribbon.commands.bim.mepSanitary.tooltip',
+                  icon: 'bim-furniture',
+                  commandKey: 'mep-bathtub',
+                },
+                {
+                  id: 'draw.bim.mepBidet',
+                  labelKey: 'floorplanSymbol.catalog.bidet',
+                  tooltipKey: 'ribbon.commands.bim.mepSanitary.tooltip',
+                  icon: 'bim-furniture',
+                  commandKey: 'mep-bidet',
+                },
+              ],
+            },
             // ── Θέρμανση (submenu) ────────────────────────────────────────
             {
               id: 'draw.bim.mepHeating',

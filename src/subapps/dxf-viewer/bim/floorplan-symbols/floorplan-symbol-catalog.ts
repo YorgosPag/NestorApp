@@ -17,6 +17,7 @@ import type {
   FloorplanSymbolCategory,
   FloorplanSymbolKind,
 } from '../types/floorplan-symbol-types';
+import { SANITARY_SPEC } from '../sanitary/sanitary-symbol-spec';
 
 export interface FloorplanSymbolPreset {
   /** Catalog id — persisted in `FloorplanSymbolParams.assetId`. Stable, kebab. */
@@ -42,12 +43,14 @@ export interface FloorplanSymbolPreset {
 const OWN = 'parametric (own)';
 
 export const FLOORPLAN_SYMBOL_CATALOG: readonly FloorplanSymbolPreset[] = [
-  // ── Sanitary (είδη υγιεινής) ────────────────────────────────────────────────
-  { id: 'wc_standard_01', category: 'sanitary', kind: 'wc', labelKey: 'floorplanSymbol.catalog.wc', widthMm: 380, depthMm: 680, source: OWN },
-  { id: 'washbasin_01', category: 'sanitary', kind: 'washbasin', labelKey: 'floorplanSymbol.catalog.washbasin', widthMm: 600, depthMm: 460, source: OWN },
-  { id: 'shower_01', category: 'sanitary', kind: 'shower', labelKey: 'floorplanSymbol.catalog.shower', widthMm: 900, depthMm: 900, source: OWN },
-  { id: 'bathtub_01', category: 'sanitary', kind: 'bathtub', labelKey: 'floorplanSymbol.catalog.bathtub', widthMm: 1700, depthMm: 750, source: OWN },
-  { id: 'bidet_01', category: 'sanitary', kind: 'bidet', labelKey: 'floorplanSymbol.catalog.bidet', widthMm: 360, depthMm: 560, source: OWN },
+  // ── Sanitary (είδη υγιεινής) — dims/labels derived from the SANITARY_SPEC SSoT ──
+  // (ADR-408 Φ14: legacy 2D-only presets kept for back-compat rendering; new sanitary
+  //  placements are connectable mep-fixtures. Dimensions live once in SANITARY_SPEC.)
+  { id: 'wc_standard_01', category: 'sanitary', kind: 'wc', labelKey: SANITARY_SPEC.wc.labelKey, widthMm: SANITARY_SPEC.wc.widthMm, depthMm: SANITARY_SPEC.wc.depthMm, source: OWN },
+  { id: 'washbasin_01', category: 'sanitary', kind: 'washbasin', labelKey: SANITARY_SPEC.washbasin.labelKey, widthMm: SANITARY_SPEC.washbasin.widthMm, depthMm: SANITARY_SPEC.washbasin.depthMm, source: OWN },
+  { id: 'shower_01', category: 'sanitary', kind: 'shower', labelKey: SANITARY_SPEC.shower.labelKey, widthMm: SANITARY_SPEC.shower.widthMm, depthMm: SANITARY_SPEC.shower.depthMm, source: OWN },
+  { id: 'bathtub_01', category: 'sanitary', kind: 'bathtub', labelKey: SANITARY_SPEC.bathtub.labelKey, widthMm: SANITARY_SPEC.bathtub.widthMm, depthMm: SANITARY_SPEC.bathtub.depthMm, source: OWN },
+  { id: 'bidet_01', category: 'sanitary', kind: 'bidet', labelKey: SANITARY_SPEC.bidet.labelKey, widthMm: SANITARY_SPEC.bidet.widthMm, depthMm: SANITARY_SPEC.bidet.depthMm, source: OWN },
   // ── Kitchen (κουζίνα) ───────────────────────────────────────────────────────
   { id: 'kitchen_sink_01', category: 'kitchen', kind: 'kitchen-sink', labelKey: 'floorplanSymbol.catalog.kitchenSink', widthMm: 800, depthMm: 500, source: OWN },
   { id: 'stove_01', category: 'kitchen', kind: 'stove', labelKey: 'floorplanSymbol.catalog.stove', widthMm: 600, depthMm: 600, source: OWN },

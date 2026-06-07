@@ -18,15 +18,27 @@ import type { BeamKind } from '../types/beam-types';
 import type { RailingKind } from '../types/railing-types';
 import type { FurnitureKind } from '../types/furniture-types';
 import type { RoofKind } from '../types/roof-types';
+import type { MepRadiatorKind } from '../types/mep-radiator-types';
+import type { MepBoilerKind } from '../types/mep-boiler-types';
+import type { MepManifoldKind } from '../types/mep-manifold-types';
+import type { MepUnderfloorKind } from '../types/mep-underfloor-types';
+import type { PlumbingSystemClassification } from '../types/mep-connector-types';
 
 // ============================================================================
 // TYPES
 // ============================================================================
 
-export type BimEntityType = 'wall' | 'opening' | 'slab' | 'column' | 'beam' | 'stair' | 'railing' | 'furniture' | 'roof';
+export type BimEntityType =
+  | 'wall' | 'opening' | 'slab' | 'column' | 'beam' | 'stair' | 'railing' | 'furniture' | 'roof'
+  // ADR-408 — Η-Μ (Ηλεκτρομηχανολογικά) entities feeding the BOQ.
+  | 'mep-radiator' | 'mep-boiler' | 'mep-segment' | 'mep-underfloor' | 'mep-manifold';
 
 export interface AtoeMappingEntry {
-  /** Latin OIK-x.xx code — must match boq_categories or be a valid subcategory. */
+  /**
+   * ΑΤΟΕ/ΑΤΗΕ article code — `OIK-x.xx` (Οικοδομικά / structural) or `ΗΛΜ-x.xx`
+   * (Ηλεκτρομηχανολογικά / MEP, ADR-408). Must match `boq_categories` or be a
+   * valid subcategory.
+   */
   readonly categoryCode: string;
   readonly unit: BOQMeasurementUnit;
   /** Greek title stored in the auto-generated BOQ item. */
@@ -168,6 +180,71 @@ const ROOF_MAPPING: Readonly<Record<RoofKind, AtoeMappingEntry>> = {
   roof: { categoryCode: 'OIK-7.01', unit: 'm2', titleEL: 'Επικάλυψη στέγης (BIM)' },
 };
 
+// ============================================================================
+// MEP / Η-Μ MAPPING (ADR-408 — heating, plumbing, drainage, HVAC)
+// ============================================================================
+
+/**
+ * ⚠️ PLACEHOLDER ΗΛΜ ARTICLE CODES (ADR-408 BOQ auto-feed).
+ *
+ * Unlike the structural `OIK-x.xx` codes (Οικοδομικά), MEP elements belong to the
+ * Greek Η-Μ (Ηλεκτρομηχανολογικά / ΑΤΗΕ) article groups. The numbers below follow
+ * the official ΑΤΗΕ group structure so the architecture + per-System takeoff are
+ * complete TODAY (Revit Material/System Takeoff parity):
+ *   - `ΗΛΜ-5.xx` → ύδρευση (domestic water supply)
+ *   - `ΗΛΜ-6.xx` → αποχέτευση (sanitary drainage)
+ *   - `ΗΛΜ-7.xx` → θέρμανση (heating: terminals, sources, distribution)
+ *   - `ΗΛΜ-8.xx` → αερισμός / κλιματισμός (HVAC air distribution)
+ * Replace each `categoryCode` with the project's real ΑΤΗΕ article number in THIS
+ * one file when the priced master is available — nothing else changes.
+ */
+
+// Heating terminal — panel radiator (IfcSpaceHeater) → counted per piece.
+const MEP_RADIATOR_MAPPING: Readonly<Record<MepRadiatorKind, AtoeMappingEntry>> = {
+  'panel-radiator': { categoryCode: 'ΗΛΜ-7.01', unit: 'pcs', titleEL: 'Θερμαντικό σώμα — πάνελ (BIM)' },
+};
+
+// Heating source — wall-hung boiler (IfcBoiler) → counted per piece.
+const MEP_BOILER_MAPPING: Readonly<Record<MepBoilerKind, AtoeMappingEntry>> = {
+  'wall-boiler': { categoryCode: 'ΗΛΜ-7.02', unit: 'pcs', titleEL: 'Λέβητας επίτοιχος (BIM)' },
+};
+
+// Manifold body — `floor-manifold` (heating distribution) vs `drainage-collector`
+// (φρεάτιο). Different Η-Μ groups, so keyed by kind. Both counted per piece.
+const MEP_MANIFOLD_MAPPING: Readonly<Record<MepManifoldKind, AtoeMappingEntry>> = {
+  'floor-manifold':     { categoryCode: 'ΗΛΜ-7.03', unit: 'pcs', titleEL: 'Συλλέκτης θέρμανσης (BIM)' },
+  'drainage-collector': { categoryCode: 'ΗΛΜ-6.02', unit: 'pcs', titleEL: 'Φρεάτιο αποχέτευσης (BIM)' },
+};
+
+// Underfloor heating loop — measured as developed serpentine pipe LENGTH (m),
+// the Revit convention (geometry.totalLengthM → BimEntityForBoq.geometry.lengthM).
+const MEP_UNDERFLOOR_MAPPING: Readonly<Record<MepUnderfloorKind, AtoeMappingEntry>> = {
+  'hydronic-loop': { categoryCode: 'ΗΛΜ-7.04', unit: 'm', titleEL: 'Ενδοδαπέδια θέρμανση — σωλήνωση (BIM)' },
+};
+
+/**
+ * Linear distribution segment (pipe/duct) — Revit System-based takeoff: a pipe is
+ * billed PER plumbing classification (supply vs return vs cold/hot water vs drainage)
+ * so each System rolls up to its own ΗΛΜ line; a duct (no plumbing classification)
+ * rolls up to the HVAC group. Measured as running length (m). The `classification`
+ * — not `kind` — is the discriminator, so it is resolved OUTSIDE the kind-table
+ * (mirror of the beam `sectionKind === 'I-shape'` override) via
+ * {@link resolveMepSegmentMapping}.
+ */
+const MEP_SEGMENT_DUCT_MAPPING: AtoeMappingEntry = {
+  categoryCode: 'ΗΛΜ-8.01', unit: 'm', titleEL: 'Αεραγωγός (BIM)',
+};
+const MEP_SEGMENT_PIPE_GENERIC_MAPPING: AtoeMappingEntry = {
+  categoryCode: 'ΗΛΜ-5.00', unit: 'm', titleEL: 'Σωλήνας (BIM)',
+};
+const MEP_SEGMENT_PIPE_MAPPING: Readonly<Record<PlumbingSystemClassification, AtoeMappingEntry>> = {
+  'domestic-cold-water': { categoryCode: 'ΗΛΜ-5.01', unit: 'm', titleEL: 'Σωλήνας ύδρευσης κρύου νερού (BIM)' },
+  'domestic-hot-water':  { categoryCode: 'ΗΛΜ-5.02', unit: 'm', titleEL: 'Σωλήνας ύδρευσης ζεστού νερού (BIM)' },
+  'sanitary-drainage':   { categoryCode: 'ΗΛΜ-6.01', unit: 'm', titleEL: 'Σωλήνας αποχέτευσης (BIM)' },
+  'hydronic-supply':     { categoryCode: 'ΗΛΜ-7.10', unit: 'm', titleEL: 'Σωλήνας θέρμανσης προσαγωγής (BIM)' },
+  'hydronic-return':     { categoryCode: 'ΗΛΜ-7.11', unit: 'm', titleEL: 'Σωλήνας θέρμανσης επιστροφής (BIM)' },
+};
+
 /** Lookup map keyed by entity type for runtime dispatch. */
 export const BIM_TO_ATOE_MAPPING = {
   wall:    WALL_MAPPING,
@@ -178,6 +255,11 @@ export const BIM_TO_ATOE_MAPPING = {
   railing: RAILING_MAPPING,
   furniture: FURNITURE_MAPPING,
   roof:    ROOF_MAPPING,
+  // ADR-408 — Η-Μ point/area entities (segment resolved separately, per classification).
+  'mep-radiator':   MEP_RADIATOR_MAPPING,
+  'mep-boiler':     MEP_BOILER_MAPPING,
+  'mep-manifold':   MEP_MANIFOLD_MAPPING,
+  'mep-underfloor': MEP_UNDERFLOOR_MAPPING,
 } as const;
 
 // ============================================================================
@@ -191,6 +273,7 @@ export const BIM_TO_ATOE_MAPPING = {
  * @param kind        entity.kind (e.g. 'straight', 'door', 'floor')
  * @param category    entity.params.category — required for walls (WallCategory discriminator)
  * @param sectionKind entity.params.sectionKind — ADR-363 Φ2 beam steel discriminator
+ * @param classification entity.params.classification — ADR-408 MEP segment per-System discriminator
  * @returns AtoeMappingEntry or null when entityType/kind is unknown
  */
 export function resolveAtoeMapping(
@@ -198,6 +281,7 @@ export function resolveAtoeMapping(
   kind: string,
   category?: string,
   sectionKind?: string,
+  classification?: string,
 ): AtoeMappingEntry | null {
   if (entityType === 'wall') {
     const wallCategory = category as WallCategory | undefined;
@@ -211,12 +295,32 @@ export function resolveAtoeMapping(
     return BEAM_ISHAPE_MAPPING;
   }
 
+  // ADR-408 — MEP segment (pipe/duct): the plumbing `classification` (not `kind`)
+  // drives the Η-Μ line (Revit System takeoff), so it is resolved outside the table.
+  if (entityType === 'mep-segment') {
+    return resolveMepSegmentMapping(kind, classification);
+  }
+
   // Stair is multi-row (concrete/cladding/handrail) — resolved per component,
   // never per kind. Callers use `resolveStairComponentMapping` instead.
   if (entityType === 'stair') return null;
 
   const typeMap = BIM_TO_ATOE_MAPPING[entityType] as Readonly<Record<string, AtoeMappingEntry>>;
   return typeMap?.[kind] ?? null;
+}
+
+/**
+ * ADR-408 — resolve a linear MEP segment's Η-Μ mapping (Revit System-based takeoff).
+ * A duct maps to the HVAC group; a pipe maps PER plumbing classification, falling
+ * back to a generic pipe line when the run is not yet classified / system-bound.
+ */
+function resolveMepSegmentMapping(kind: string, classification?: string): AtoeMappingEntry | null {
+  if (kind === 'duct') return MEP_SEGMENT_DUCT_MAPPING;
+  if (kind !== 'pipe') return null;
+  const byClass = classification
+    ? (MEP_SEGMENT_PIPE_MAPPING as Readonly<Record<string, AtoeMappingEntry>>)[classification]
+    : undefined;
+  return byClass ?? MEP_SEGMENT_PIPE_GENERIC_MAPPING;
 }
 
 /** Resolve the ΑΤΟΕ mapping for a single stair BOQ component (ADR-395 §G1). */

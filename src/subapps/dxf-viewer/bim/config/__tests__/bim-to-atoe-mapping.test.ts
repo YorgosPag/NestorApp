@@ -43,9 +43,9 @@ describe('resolveAtoeMapping', () => {
       expect(result!.unit).toBe('pcs');
     });
 
-    it('maps sliding-door to OIK-5.02', () => {
+    it('maps sliding-door to OIK-5.01 (it is a door, not a window)', () => {
       const result = resolveAtoeMapping('opening', 'sliding-door');
-      expect(result!.categoryCode).toBe('OIK-5.02');
+      expect(result!.categoryCode).toBe('OIK-5.01');
     });
   });
 
@@ -189,6 +189,79 @@ describe('resolveAtoeMapping', () => {
     it('keeps RC mapping when sectionKind is rectangular', () => {
       const result = resolveAtoeMapping('beam', 'cantilever', undefined, 'rectangular');
       expect(result!.unit).toBe('m3');
+    });
+  });
+
+  // ADR-408 — Η-Μ (MEP) heating/plumbing/drainage entities → ΗΛΜ article groups.
+  describe('MEP / Η-Μ entities (ADR-408)', () => {
+    it('panel radiator → ΗΛΜ-7.01 pcs', () => {
+      const r = resolveAtoeMapping('mep-radiator', 'panel-radiator');
+      expect(r).not.toBeNull();
+      expect(r!.categoryCode).toBe('ΗΛΜ-7.01');
+      expect(r!.unit).toBe('pcs');
+    });
+
+    it('wall boiler → ΗΛΜ-7.02 pcs', () => {
+      const r = resolveAtoeMapping('mep-boiler', 'wall-boiler');
+      expect(r!.categoryCode).toBe('ΗΛΜ-7.02');
+      expect(r!.unit).toBe('pcs');
+    });
+
+    it('floor-manifold → ΗΛΜ-7.03 pcs (heating distribution)', () => {
+      const r = resolveAtoeMapping('mep-manifold', 'floor-manifold');
+      expect(r!.categoryCode).toBe('ΗΛΜ-7.03');
+      expect(r!.unit).toBe('pcs');
+    });
+
+    it('drainage-collector → ΗΛΜ-6.02 pcs (φρεάτιο)', () => {
+      const r = resolveAtoeMapping('mep-manifold', 'drainage-collector');
+      expect(r!.categoryCode).toBe('ΗΛΜ-6.02');
+      expect(r!.unit).toBe('pcs');
+    });
+
+    it('underfloor loop → ΗΛΜ-7.04 m (developed pipe length)', () => {
+      const r = resolveAtoeMapping('mep-underfloor', 'hydronic-loop');
+      expect(r!.categoryCode).toBe('ΗΛΜ-7.04');
+      expect(r!.unit).toBe('m');
+    });
+
+    describe('mep-segment (Revit System-based takeoff, per classification)', () => {
+      it('duct → ΗΛΜ-8.01 m (HVAC group, no classification)', () => {
+        const r = resolveAtoeMapping('mep-segment', 'duct');
+        expect(r!.categoryCode).toBe('ΗΛΜ-8.01');
+        expect(r!.unit).toBe('m');
+      });
+
+      it('pipe hydronic-supply → ΗΛΜ-7.10 m', () => {
+        const r = resolveAtoeMapping('mep-segment', 'pipe', undefined, undefined, 'hydronic-supply');
+        expect(r!.categoryCode).toBe('ΗΛΜ-7.10');
+        expect(r!.unit).toBe('m');
+      });
+
+      it('pipe hydronic-return → ΗΛΜ-7.11 m (separate System line)', () => {
+        const r = resolveAtoeMapping('mep-segment', 'pipe', undefined, undefined, 'hydronic-return');
+        expect(r!.categoryCode).toBe('ΗΛΜ-7.11');
+      });
+
+      it('pipe domestic-cold-water → ΗΛΜ-5.01 m', () => {
+        const r = resolveAtoeMapping('mep-segment', 'pipe', undefined, undefined, 'domestic-cold-water');
+        expect(r!.categoryCode).toBe('ΗΛΜ-5.01');
+      });
+
+      it('pipe sanitary-drainage → ΗΛΜ-6.01 m', () => {
+        const r = resolveAtoeMapping('mep-segment', 'pipe', undefined, undefined, 'sanitary-drainage');
+        expect(r!.categoryCode).toBe('ΗΛΜ-6.01');
+      });
+
+      it('pipe without classification → ΗΛΜ-5.00 generic m', () => {
+        const r = resolveAtoeMapping('mep-segment', 'pipe');
+        expect(r!.categoryCode).toBe('ΗΛΜ-5.00');
+        expect(r!.unit).toBe('m');
+      });
+
+      it('unknown segment kind → null', () => {
+        expect(resolveAtoeMapping('mep-segment', 'cable-tray')).toBeNull();
+      });
     });
   });
 

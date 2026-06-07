@@ -29,6 +29,7 @@ import {
 } from '../../bim/mep-boilers/mep-boiler-firestore-service';
 import { recordMepBoilerChange } from '../../bim/mep-boilers/mep-boiler-audit-client';
 import { projectConnectorSystemIds } from '../../bim/mep-systems/mep-system-coordinator';
+import { bimToBoqBridge } from '../../bim/services/BimToBoqBridge';
 import { useBimEntityMovedPersistEffect } from './useBimEntityMovedPersistEffect';
 import { useBimEntityRestoredPersistEffect } from './useBimEntityRestoredPersistEffect';
 
@@ -50,6 +51,8 @@ export interface UseMepBoilerPersistenceParams {
   readonly floorplanId: string | null | undefined;
   /** ADR-420 — stable building-storey id. Forwarded to service config. */
   readonly floorId?: string | null;
+  /** ADR-408 — building scope for the Η-Μ BOQ auto-feed (BimToBoqBridge). */
+  readonly buildingId?: string | null;
   readonly userId: string | null;
   readonly levelManager: LevelManagerLike;
   readonly primarySelectedBoiler: MepBoilerEntity | null;
@@ -104,6 +107,7 @@ export function useMepBoilerPersistence(
     projectId,
     floorplanId,
     floorId,
+    buildingId,
     userId,
     levelManager,
     primarySelectedBoiler,
@@ -258,11 +262,20 @@ export function useMepBoilerPersistence(
         entity,
         { prevParams: prevParams ?? undefined },
       );
+      // ADR-408 — Η-Μ BOQ auto-feed: heating boiler = 1 piece (ΗΛΜ-7.02).
+      if (companyId && projectId && buildingId) {
+        void bimToBoqBridge.upsertBoqItemForBim(
+          'mep-boiler',
+          { id: entity.id, kind: entity.kind },
+          { companyId, projectId, buildingId, floorId: floorId ?? undefined },
+          isNew ? 'created' : 'updated',
+        );
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'MEP_BOILER_SAVE_ERROR');
       setSaveState('error');
     }
-  }, []);
+  }, [companyId, projectId, buildingId, floorId]);
 
   // Auto-save debounce on selected boiler params change.
   useEffect(() => {
@@ -321,6 +334,8 @@ export function useMepBoilerPersistence(
           ? { id: deletedBoiler.id, kind: deletedBoiler.kind, layerId: deletedBoiler.layerId, params: deletedBoiler.params }
           : { id: boilerId, kind: 'wall-boiler' },
       );
+      // ADR-408 — remove the auto-fed Η-Μ BOQ row (skips user-detached rows).
+      if (companyId) void bimToBoqBridge.deleteBoqItemForBim(boilerId, companyId);
     } catch {
       // Non-fatal: deletion failure silent — user retries.
     }
@@ -334,7 +349,7 @@ export function useMepBoilerPersistence(
     lastSavedParamsRef.current.delete(boilerId);
     pendingFirstSaveIdsRef.current.delete(boilerId);
     deletedIdsRef.current.add(boilerId);
-  }, [levelManager]);
+  }, [levelManager, companyId]);
 
   // persistRestore: undo→Firestore re-create + audit 'restored'.
   const persistRestore = useCallback(async (entity: MepBoilerEntity) => {

@@ -185,6 +185,12 @@ export const TOOL_DEFINITIONS: Record<ToolType, ToolInfo> = {
   'mep-manifold': { id: 'mep-manifold', category: 'drawing', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: false }, // ADR-408 Φ12 — single-click point-based plumbing manifold (συλλέκτης, pipe-network source)
   'mep-drainage-collector': { id: 'mep-drainage-collector', category: 'drawing', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: false }, // ADR-408 Φ14 — single-click point-based drainage collector (φρεάτιο, N inlets + 1 outlet)
   'mep-floor-drain': { id: 'mep-floor-drain', category: 'drawing', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: false }, // ADR-408 Φ14 — single-click point-based floor drain (σιφώνι, mep-fixture kind, 1 sanitary-drainage outlet)
+  // ADR-408 Φ14 — single-click point-based sanitary terminals (WC/washbasin/shower/bathtub/bidet), mep-fixture kinds, each 1 sanitary-drainage outlet.
+  'mep-wc': { id: 'mep-wc', category: 'drawing', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: false },
+  'mep-washbasin': { id: 'mep-washbasin', category: 'drawing', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: false },
+  'mep-shower': { id: 'mep-shower', category: 'drawing', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: false },
+  'mep-bathtub': { id: 'mep-bathtub', category: 'drawing', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: false },
+  'mep-bidet': { id: 'mep-bidet', category: 'drawing', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: false },
   'mep-radiator': { id: 'mep-radiator', category: 'drawing', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: false }, // ADR-408 Εύρος Β — single-click point-based heating radiator (καλοριφέρ, supply + return terminal)
   'mep-boiler': { id: 'mep-boiler', category: 'drawing', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: false }, // ADR-408 Εύρος Β #2 — single-click point-based heating boiler (λέβητας, hydronic source)
   'mep-underfloor': { id: 'mep-underfloor', category: 'drawing', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: false }, // ADR-408 Εύρος Β #3 — polygon N-click + Enter area-based radiant floor heating loop (ενδοδαπέδια)

@@ -22,6 +22,7 @@ import type { Entity } from '../../types/entities';
 import { isMepFixtureEntity } from '../../types/entities';
 import type { MepFixtureEntity } from '../types/mep-fixture-types';
 import { resolveFixtureBimCategory } from '../types/mep-fixture-types';
+import { isSanitaryKind } from '../sanitary/sanitary-symbol-spec';
 import { resolveSegmentClassificationColor } from '../mep-systems/mep-system-color';
 import { pointInPolygon } from '../geometry/shared/polygon-utils';
 import { buildFixtureSymbol } from '../mep-fixtures/mep-fixture-symbol';
@@ -81,9 +82,12 @@ export class MepFixtureRenderer extends BaseEntityRenderer {
     const systemColor = colorBySystem && systems.length > 0
       ? resolveEntitySystemColor(fixture.id, getEntitySystemColorIndexCached(systems))
       : null;
-    // ADR-408 Φ14 — a floor drain defaults to the sanitary-drainage brown (mirror
-    // of MepFittingRenderer/MepSegmentRenderer); a System membership still wins.
-    const drainColor = fixture.params.kind === 'floor-drain'
+    // ADR-408 Φ14 — drainage terminals (floor drain + sanitary fixtures WC/basin/…)
+    // default to the sanitary-drainage brown (mirror of MepFitting/MepSegment
+    // renderers); a System membership still wins. Sanitary fixtures keep their OWN
+    // 'sanitary' V/G category (above): colour-by-system and visibility-category are
+    // independent in Revit, so they don't vanish with the «Αποχέτευση» pipe toggle.
+    const drainColor = fixture.params.kind === 'floor-drain' || isSanitaryKind(fixture.params.kind)
       ? resolveSegmentClassificationColor('sanitary-drainage')
       : null;
     const defaultStroke = drainColor ?? FIXTURE_STROKE;

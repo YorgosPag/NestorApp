@@ -20,6 +20,7 @@ import { getElementMaterial3D, getSystemTintedMaterial3D } from '../materials/Ma
 import { buildDrainageGratingStrokes } from '../../bim/mep-manifolds/mep-manifold-symbol';
 import { buildShape, extrudeAndRotate, tagMesh } from './bim-three-shape-helpers';
 import { attachEdgesProjection } from './bim-three-edges';
+import { isSanitaryKind } from '../../bim/sanitary/sanitary-symbol-spec';
 
 const MM_TO_M = 0.001;
 
@@ -105,6 +106,28 @@ export function fixtureToMesh(
     // face is at mesh-local y = bodyHeightM (the child inherits mesh.position.y).
     const grating = buildDrainageGrating3D(verts, sceneToM, bodyHeightM);
     if (grating) tagged.add(grating);
+    return tagged;
+  }
+
+  // ADR-408 Φ14 — a sanitary terminal (WC/washbasin/shower/bathtub/bidet) renders
+  // units-safe (like the φρεάτιο/panel) as a FLOOR-STANDING parametric box: bottom
+  // face at FFL (mountingElevation = 0), extruded UP by bodyHeight. Tinted with the
+  // sanitary-drainage brown by default (a System membership colour still wins). v1
+  // is a simple solid box — no CC0 fixture mesh exists yet.
+  if (isSanitaryKind(fixture.params.kind)) {
+    const sceneToM = sceneUnitsToMeters(fixture.params.sceneUnits ?? 'mm');
+    const shape = buildShape(verts.map((v) => ({ x: v.x * sceneToM, y: v.y * sceneToM, z: 0 })));
+    if (!shape) return null;
+
+    const bodyHeightM = fixture.params.bodyHeightMm * MM_TO_M;
+    const geo = extrudeAndRotate(shape, bodyHeightM);
+    const matId = fixture.params.material ?? 'elem-mep-fixture';
+    const mesh = new THREE.Mesh(geo, getSystemTintedMaterial3D('mep-fixture', systemColor ?? DRAINAGE_TINT_HEX));
+    // Floor-standing: bottom face at FFL; the extrusion (local y 0→bodyHeightM) grows UP.
+    const bottomMm = floorElevationMm + fixture.params.mountingElevationMm;
+    mesh.position.y = bottomMm * MM_TO_M + buildingBaseElevationM;
+    const tagged = tagMesh(mesh, fixture.id, 'mep-fixture', matId, levelId);
+    attachEdgesProjection(tagged, 'light-fixture');
     return tagged;
   }
 

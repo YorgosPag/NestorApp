@@ -28,7 +28,18 @@ const Point3DSchema = z
 
 // ─── Enums (mirror mep-fixture-types.ts unions) ──────────────────────────────
 
-export const MepFixtureKindSchema = z.enum(['light-fixture', 'floor-drain']);
+// Mirrors MepFixtureKind (mep-fixture-types.ts): light + floor-drain + the five
+// sanitary terminals (ADR-408 Φ14 SANITARY_KINDS). Without the sanitary literals
+// here a persisted WC/basin/… would silent-drop on validation.
+export const MepFixtureKindSchema = z.enum([
+  'light-fixture',
+  'floor-drain',
+  'wc',
+  'washbasin',
+  'shower',
+  'bathtub',
+  'bidet',
+]);
 
 export const MepFixtureShapeSchema = z.enum(['rectangular', 'circular']);
 

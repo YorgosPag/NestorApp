@@ -37,7 +37,6 @@ import {
   type WallParamOverrides,
 } from '../../hooks/drawing/wall-completion';
 import { mmToSceneUnits } from '../../utils/scene-units';
-import { REGION_PERIMETER_LIMITS } from '../../config/tolerance-config';
 
 // ─── Public types ──────────────────────────────────────────────────────────
 
@@ -260,10 +259,6 @@ export function buildWallFillingRect(
     shortSideWorld = abLen;
   }
   const thicknessMm = shortSideWorld / mmToSceneUnits(sceneUnits);
-  // ADR-419 Layer 4 (net) — reject ορθογώνιο με πάχος πάνω από λογικό δομικό μέλος
-  // (π.χ. το εξωτερικό περίγραμμα του σχεδίου). Ελέγχεται ΜΟΝΟ η μικρή πλευρά →
-  // legit μακρύς τοίχος (10m × 0.2m) περνά.
-  if (thicknessMm > REGION_PERIMETER_LIMITS.MAX_MEMBER_THICKNESS_MM) return null;
   const params = buildDefaultWallParams(
     axisStart,
     axisEnd,

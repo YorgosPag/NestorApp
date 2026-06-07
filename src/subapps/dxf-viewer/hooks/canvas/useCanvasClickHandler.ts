@@ -5,6 +5,7 @@ import { useCallback } from 'react';
 import type { Point2D } from '../../rendering/types/Types';
 import { isInteractiveTool } from '../../systems/tools/ToolStateManager';
 import { isColumnRegionTool, isWallRegionTool } from '../../systems/tools/region-tool-ids';
+import { sanitaryFixtureToolKind } from '../../bim/sanitary/sanitary-symbol-spec';
 import { isPointInPolygon } from '../../utils/geometry/GeometryUtils';
 import { POLYGON_TOLERANCES } from '../../config/tolerance-config';
 import { dwarn } from '../../debug';
@@ -295,9 +296,15 @@ export function useCanvasClickHandler(params: UseCanvasClickHandlerParams): UseC
     }
     // PRIORITY 4.92: ADR-406 — MEP fixture tool single-click placement (RAW
     // worldPoint; free-point placement, no existing-geometry hit-test).
-    // ADR-408 Φ14 — the floor drain (σιφώνι) shares the fixture tool with the light
-    // fixture; both route here (the active tool id drives its kind preset).
-    if ((activeTool === 'mep-fixture' || activeTool === 'mep-floor-drain') && mepFixtureTool?.isActive) {
+    // ADR-408 Φ14 — the floor drain (σιφώνι) AND the five sanitary terminals
+    // (mep-wc/…) share the fixture tool with the light fixture; all route here (the
+    // active tool id drives the kind preset).
+    if (
+      (activeTool === 'mep-fixture' ||
+        activeTool === 'mep-floor-drain' ||
+        sanitaryFixtureToolKind(activeTool) !== null) &&
+      mepFixtureTool?.isActive
+    ) {
       mepFixtureTool.onCanvasClick(worldPoint);
       return;
     }

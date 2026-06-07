@@ -278,7 +278,10 @@ class BimToBoqBridgeImpl {
     // ADR-363 Φ2 — beam steel discriminator (params index-typed → narrow to string).
     const rawSectionKind = entity.params?.['sectionKind'];
     const sectionKind = typeof rawSectionKind === 'string' ? rawSectionKind : undefined;
-    const mapping = resolveAtoeMapping(entityType, entity.kind, category, sectionKind);
+    // ADR-408 — MEP pipe plumbing classification (per-System BOQ takeoff discriminator).
+    const rawClassification = entity.params?.['classification'];
+    const classification = typeof rawClassification === 'string' ? rawClassification : undefined;
+    const mapping = resolveAtoeMapping(entityType, entity.kind, category, sectionKind, classification);
     if (!mapping) return;
 
     const deterministicId = parentBoqId(entity.id);

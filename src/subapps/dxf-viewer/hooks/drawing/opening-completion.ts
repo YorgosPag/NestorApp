@@ -35,6 +35,7 @@ import type { WallEntity } from '../../bim/types/wall-types';
 import { computeOpeningGeometry, projectPointToWallOffsetMm } from '../../bim/geometry/opening-geometry';
 import { validateOpeningParams } from '../../bim/validators/opening-validator';
 import { createOpening } from '@/services/factories/opening.factory';
+import { resolveAutoOpeningTypeId } from '../../bim/family-types/auto-opening-type';
 import type { SceneUnits } from '../../utils/scene-units';
 
 export type { SceneUnits };
@@ -132,7 +133,14 @@ export function buildOpeningEntity(
   }
   const geometry = computeOpeningGeometry(params, hostWall, sceneUnits);
   const entity = createOpening({ params, geometry, layerId, validation: validation.bimValidation, visible: true });
-  return { ok: true, entity };
+  // ADR-421 SLICE C follow-up — auto-type-on-create (Revit «Generic»): an opening
+  // whose nominal kind+width+height equal the kind default links to the read-only
+  // built-in opening type, so it gains «Edit Type» + «type always wins» for free.
+  // Custom-dimensioned openings stay ad-hoc (`undefined`) and flow through the
+  // legacy fast-path of `resolveEffectiveOpeningParams` (non-destructive, zero
+  // regression). Resolution + persistence already carry `typeId` — no extra wiring.
+  const typeId = resolveAutoOpeningTypeId(params);
+  return { ok: true, entity: typeId ? { ...entity, typeId } : entity };
 }
 
 // ─── Click-to-place completion helper ────────────────────────────────────────

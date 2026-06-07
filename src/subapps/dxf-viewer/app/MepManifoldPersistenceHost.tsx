@@ -38,6 +38,8 @@ export interface MepManifoldPersistenceHostProps {
   readonly floorplanId?: string;
   /** ADR-420 — stable building-storey scope key forwarded from DxfViewerTopBar. */
   readonly floorId?: string;
+  /** ADR-408 — building scope for the Η-Μ BOQ auto-feed. */
+  readonly buildingId?: string;
 }
 
 export function MepManifoldPersistenceHost({
@@ -47,6 +49,7 @@ export function MepManifoldPersistenceHost({
   projectId,
   floorplanId,
   floorId,
+  buildingId,
 }: MepManifoldPersistenceHostProps): React.ReactElement | null {
   const { user } = useAuth();
 
@@ -67,6 +70,7 @@ export function MepManifoldPersistenceHost({
     projectId,
     floorplanId,
     floorId,
+    buildingId,
     userId: user?.uid ?? null,
     levelManager,
     primarySelectedManifold,

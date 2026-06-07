@@ -12,6 +12,7 @@ import { validateOpeningParams } from '../validators/opening-validator';
 import { inferOpeningIfcType } from '@/services/factories/opening.factory';
 // ADR-421 SLICE C — «type always wins» resolution at hydrate time.
 import { resolveOpeningEffective } from '../family-types/opening-type-resolution';
+import { resolveAutoOpeningTypeId } from '../family-types/auto-opening-type';
 import type { OpeningDoc } from './opening-firestore-service';
 
 export function isOpening(entity: AnySceneEntity): entity is OpeningEntity {
@@ -32,13 +33,20 @@ export function openingDocToEntity(
   hostWall: WallEntity | null,
 ): OpeningEntity | null {
   if (!hostWall) return null;
+  // ADR-421 SLICE C follow-up — auto-type-on-load (Revit «Generic»): a legacy
+  // untyped opening whose nominal kind+width+height equal the kind default self-
+  // links to the read-only built-in opening type on hydrate (custom-dimensioned
+  // openings stay ad-hoc). Mirror of `wall-persistence-helpers.ts`
+  // (`doc.typeId ?? resolveAutoWallTypeId`). For a built-in match the effective
+  // params equal the cache → non-destructive (zero geometry change).
+  const typeId = doc.typeId ?? resolveAutoOpeningTypeId(doc.params);
   // ADR-421 SLICE C — resolve EFFECTIVE params («type always wins») before any
   // derivation. Untyped/unresolved-type openings return their cached params
   // unchanged (legacy fast-path = zero regression). For typed openings the
   // type-governed fields (kind/width/height/frame/glazing) + re-derived
   // operationType flow in, so a stale drift-cache doc self-heals on hydrate.
   const params = resolveOpeningEffective(doc.params, {
-    typeId: doc.typeId,
+    typeId,
     typeOverrides: doc.typeOverrides,
   });
   const typeResolved = params !== doc.params;
@@ -63,7 +71,9 @@ export function openingDocToEntity(
     validation,
     ifcType: inferOpeningIfcType(kind),
     visible: true,
-    ...(doc.typeId !== undefined && { typeId: doc.typeId }),
+    // `typeId` carries the auto-resolved built-in id for legacy untyped openings
+    // (self-heal migration), so they gain «Edit Type» + read-only type-gating.
+    ...(typeId !== undefined && { typeId }),
     ...(doc.typeOverrides !== undefined && { typeOverrides: doc.typeOverrides }),
   } as OpeningEntity;
 }

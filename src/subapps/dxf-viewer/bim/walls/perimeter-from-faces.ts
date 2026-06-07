@@ -35,6 +35,7 @@
 import type { Point2D } from '../../rendering/types/Types';
 import type { Entity } from '../../types/entities';
 import {
+  isLineEntity,
   isPolylineEntity,
   isLWPolylineEntity,
   isRectangleEntity,
@@ -384,6 +385,69 @@ export function isPerimeterOversized(
  * ενώνονται» (Revit «these lines don't connect»). Reuse `extractLineSegments` +
  * `buildSegmentGraph`. Επιστρέφει deduped ids για highlight μέσω `dxf.highlightByIds`.
  */
+// ─── Cached region-perimeter detection (SSoT, κοινό hover + click) ────────────
+// Η ανίχνευση `perimeterFacesToRects` είναι O(n²) (segment graph) — ΑΠΑΓΟΡΕΥΕΤΑΙ να
+// τρέχει σε κάθε mousemove ΚΑΙ σε κάθε κλικ δημιουργίας (~1.5s freeze σε μεγάλο
+// σχέδιο). Αυτό το cache (mirror auto-area `getCachedClosedFaces`) εγγυάται ότι η
+// O(n²) τρέχει ΜΙΑ φορά ανά (σύνολο γραμμών, tol): το ίδιο αποτέλεσμα μοιράζονται
+// hover preview + click-inside commit. 2-level:
+//   1) WeakMap<entities ref → tol → perimeters> — O(1) όσο ο πίνακας entities μένει ίδιος.
+//   2) Content fallback σε ref-miss (π.χ. μόλις δημιουργήθηκε κολώνα → νέος πίνακας
+//      αλλά ΙΔΙΕΣ γραμμές): φθηνή O(n) υπογραφή γραμμών· αν δεν άλλαξαν → reuse
+//      χωρίς recompute (μια κολώνα δεν είναι γραμμή → κανένα νέο loop).
+const _regionPerimeterCache = new WeakMap<
+  readonly Entity[],
+  Map<number, readonly ClosedPerimeter[]>
+>();
+let _lastLineSig = '';
+let _lastTolKey = Number.NaN;
+let _lastRegionPerimeters: readonly ClosedPerimeter[] = [];
+
+/** Φθηνή (O(n)) υπογραφή ΜΟΝΟ των γραμμών — αλλάζει μόνο όταν αλλάζουν οι παρειές. */
+function regionLineSignature(entities: readonly Entity[]): string {
+  let lines = 0;
+  let polys = 0;
+  let verts = 0;
+  for (const e of entities) {
+    if (isLineEntity(e)) lines++;
+    else if (isPolylineEntity(e) || isLWPolylineEntity(e)) {
+      polys++;
+      verts += e.vertices?.length ?? 0;
+    }
+  }
+  return `${lines}:${polys}:${verts}`;
+}
+
+/**
+ * Cached `perimeterFacesToRects(entities, tol).perimeters` (unionTouching=false) —
+ * SSoT για το «μικρότερο εμπεριέχον loop» path (hover preview + click-inside σε
+ * κολώνες/τοίχους). Αποφεύγει το O(n²) recompute σε κάθε move/click.
+ */
+export function getCachedRegionPerimeters(
+  entities: readonly Entity[],
+  tol: number,
+): readonly ClosedPerimeter[] {
+  const key = Math.round(tol * 1000); // αποφυγή cache-miss σε sub-pixel float drift
+  let byTol = _regionPerimeterCache.get(entities);
+  if (byTol) {
+    const cached = byTol.get(key);
+    if (cached) return cached; // fast path: ίδιος πίνακας entities (pan/hover/click)
+  } else {
+    byTol = new Map();
+    _regionPerimeterCache.set(entities, byTol);
+  }
+  const sig = regionLineSignature(entities);
+  const result =
+    sig === _lastLineSig && key === _lastTolKey
+      ? _lastRegionPerimeters
+      : perimeterFacesToRects(entities, tol).perimeters;
+  _lastLineSig = sig;
+  _lastTolKey = key;
+  _lastRegionPerimeters = result;
+  byTol.set(key, result);
+  return result;
+}
+
 export function findOpenChainLineIdsNear(
   point: Readonly<Point2D>,
   entities: readonly Entity[],

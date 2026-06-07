@@ -550,6 +550,101 @@ describe('bimToBoqBridge — per-floor stamping (ADR-395 Phase 1 / G7)', () => {
   });
 });
 
+describe('bimToBoqBridge — MEP / Η-Μ entities (ADR-408)', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockGetDoc.mockResolvedValue(makeSnap(false));
+    mockSetDoc.mockResolvedValue(undefined);
+    mockGetDocs.mockResolvedValue({ docs: [] });
+  });
+
+  it('radiator → single ΗΛΜ-7.01 pcs row, quantity 1', async () => {
+    await bimToBoqBridge.upsertBoqItemForBim(
+      'mep-radiator',
+      { id: 'rad-001', kind: 'panel-radiator' },
+      context,
+      'created',
+    );
+    expect(mockSetDoc).toHaveBeenCalledTimes(1);
+    const payload = mockSetDoc.mock.calls[0]![1] as Record<string, unknown>;
+    expect(payload.id).toBe('boq_bim_rad-001');
+    expect(payload.categoryCode).toBe('ΗΛΜ-7.01');
+    expect(payload.unit).toBe('pcs');
+    expect(payload.estimatedQuantity).toBe(1);
+    expect(payload.sourceEntityType).toBe('mep-radiator');
+  });
+
+  it('hydronic-supply pipe → ΗΛΜ-7.10 m, length from geometry.lengthM', async () => {
+    await bimToBoqBridge.upsertBoqItemForBim(
+      'mep-segment',
+      { id: 'seg-001', kind: 'pipe', params: { classification: 'hydronic-supply' }, geometry: { lengthM: 3.4 } },
+      context,
+      'created',
+    );
+    const payload = mockSetDoc.mock.calls[0]![1] as Record<string, unknown>;
+    expect(payload.categoryCode).toBe('ΗΛΜ-7.10');
+    expect(payload.unit).toBe('m');
+    expect(payload.estimatedQuantity).toBe(3.4);
+  });
+
+  it('hydronic-return pipe → separate ΗΛΜ-7.11 line (per-System takeoff)', async () => {
+    await bimToBoqBridge.upsertBoqItemForBim(
+      'mep-segment',
+      { id: 'seg-002', kind: 'pipe', params: { classification: 'hydronic-return' }, geometry: { lengthM: 3.4 } },
+      context,
+      'created',
+    );
+    const payload = mockSetDoc.mock.calls[0]![1] as Record<string, unknown>;
+    expect(payload.categoryCode).toBe('ΗΛΜ-7.11');
+  });
+
+  it('pipe without classification → generic ΗΛΜ-5.00 m', async () => {
+    await bimToBoqBridge.upsertBoqItemForBim(
+      'mep-segment',
+      { id: 'seg-003', kind: 'pipe', geometry: { lengthM: 2 } },
+      context,
+      'created',
+    );
+    const payload = mockSetDoc.mock.calls[0]![1] as Record<string, unknown>;
+    expect(payload.categoryCode).toBe('ΗΛΜ-5.00');
+    expect(payload.estimatedQuantity).toBe(2);
+  });
+
+  it('underfloor loop → ΗΛΜ-7.04 m', async () => {
+    await bimToBoqBridge.upsertBoqItemForBim(
+      'mep-underfloor',
+      { id: 'uf-001', kind: 'hydronic-loop', geometry: { lengthM: 88.5 } },
+      context,
+      'created',
+    );
+    const payload = mockSetDoc.mock.calls[0]![1] as Record<string, unknown>;
+    expect(payload.categoryCode).toBe('ΗΛΜ-7.04');
+    expect(payload.unit).toBe('m');
+    expect(payload.estimatedQuantity).toBe(88.5);
+  });
+
+  it('drainage-collector → ΗΛΜ-6.02 pcs (φρεάτιο, keyed by kind)', async () => {
+    await bimToBoqBridge.upsertBoqItemForBim(
+      'mep-manifold',
+      { id: 'man-001', kind: 'drainage-collector' },
+      context,
+      'created',
+    );
+    const payload = mockSetDoc.mock.calls[0]![1] as Record<string, unknown>;
+    expect(payload.categoryCode).toBe('ΗΛΜ-6.02');
+    expect(payload.unit).toBe('pcs');
+  });
+
+  it('delete radiator BOQ row when not detached', async () => {
+    mockGetDoc.mockResolvedValue(makeSnap(true, { detached: false }));
+    mockDeleteDoc.mockResolvedValue(undefined);
+
+    await bimToBoqBridge.deleteBoqItemForBim('rad-001', 'c1');
+
+    expect(mockDeleteDoc).toHaveBeenCalledTimes(1);
+  });
+});
+
 describe('bimToBoqBridge.getBoqItemBySourceEntity', () => {
   beforeEach(() => jest.clearAllMocks());
 

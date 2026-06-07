@@ -280,8 +280,8 @@ integration, ribbon, mark/schedule/BOQ}) είναι **πολλαπλά domains &
   - **Instance fields**: `OpeningEntity.typeId?`/`typeOverrides?` (+ schema + factory + `OpeningDoc`/`OpeningUpdateInput`
     με `null`→`deleteField()` + `entityToSaveInput`).
   - **Built-ins + auto-typing**: `getBuiltInOpeningTypes` (1/kind = 17, dims από `OPENING_KIND_DEFAULTS`)·
-    **NEW `auto-opening-type.ts` `resolveAutoOpeningTypeId`** (link σε built-in όταν dims==default· διαθέσιμο,
-    wiring at-create = follow-up).
+    **NEW `auto-opening-type.ts` `resolveAutoOpeningTypeId`** (link σε built-in όταν dims==default· ~~wiring
+    at-create = follow-up~~ ✅ **wired at create + load 2026-06-08**, βλ. changelog).
   - **Commands**: **NEW `AssignOpeningTypeCommand`** (effective params + computeOpeningGeometry + validate +
     re-derive operationType + kind/ifcType lock-step· ΧΩΡΙΣ cascade)· **NEW generic `UpdateFamilyTypeCommand` +
     `DeleteFamilyTypeCommand`** (category-agnostic· το opening τα καταναλώνει· wall→generics migration =
@@ -326,3 +326,18 @@ integration, ribbon, mark/schedule/BOQ}) είναι **πολλαπλά domains &
     `useRibbonOpeningBridge.ts`. **NEW test**: `useRibbonOpeningBridge.test.tsx` (7/7 PASS — gating + guard + zero-regression).
   - **CHECK 6D**: μόνο ribbon context/combobox/bridge → ΟΧΙ canvas/renderer → **χωρίς ADR-040 staging**. tsc 0 (scope).
   - 🔴 ΕΚΚΡΕΜΕΙ: browser-verify (typed opening → Kind/Width/Height greyed, value ορατό· untyped → editable) + commit (Giorgio).
+- **2026-06-08** — **SLICE C follow-up: AUTO-TYPE-ON-CREATE/LOAD** (Revit «Generic», Giorgio: «όπως η Revit, FULL
+  ENTERPRISE + FULL SSOT»). Το `resolveAutoOpeningTypeId` (ήδη pure, non-destructive) **wire-άρεται στα 2 lifecycle
+  points** ακριβώς όπως ο τοίχος (`wall-completion.ts` + `wall-persistence-helpers.ts`), ώστε **κανένα κούφωμα να
+  μην είναι type-less** (Revit never has a type-less door/window):
+  - **Creation** (`opening-completion.ts §buildOpeningEntity`): μετά το `createOpening`, ένα νέο κούφωμα με nominal
+    `kind`+`width`+`height` == kind default αποκτά τον read-only **built-in** τύπο (custom dims → μένει ad-hoc).
+  - **Load/hydration** (`opening-doc-hydration.ts §openingDocToEntity`): `const typeId = doc.typeId ?? resolveAuto
+    OpeningTypeId(doc.params)` → legacy untyped default-διάστασης κουφώματα **self-heal** σε typed στο άνοιγμα
+    (non-destructive: built-in match → effective == cached → μηδέν geometry change)· explicit `doc.typeId` υπερισχύει.
+  - **Συνέργεια με το gating**: μόλις ένα κούφωμα γίνει typed, τα Kind/Width/Height γίνονται φυσικά read-only (follow-up
+    (a)) → πλήρης Revit «place → auto-type → edit via Type» κύκλος. **Prerequisite επιβεβαιώθηκε**: τα opening built-ins
+    είναι ΗΔΗ seeded στο store (`getAllBuiltInTypes` περιλαμβάνει `getBuiltInOpeningTypes`) → ο built-in τύπος resolve-άρεται.
+  - **Files (MOD)**: `opening-completion.ts`, `opening-doc-hydration.ts`. **NEW test**: `auto-opening-type-wiring.test.ts`
+    (5/5 PASS — create/load default→built-in, custom→ad-hoc, explicit doc.typeId wins). **ΟΧΙ** IFC-import path (δικά του type semantics, εκτός scope).
+  - **CHECK 6D**: ΟΧΙ canvas/renderer → χωρίς ADR-040. tsc 0 (scope). 🔴 ΕΚΚΡΕΜΕΙ: browser-verify (σχεδίασε κούφωμα → «Edit Type» ενεργό· παλιό έργο → κουφώματα typed στο reload) + commit (Giorgio).

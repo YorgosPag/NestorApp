@@ -27,7 +27,9 @@ import {
   DEFAULT_FLOOR_DRAIN_BODY_HEIGHT_MM,
   DEFAULT_FLOOR_DRAIN_CONNECTOR_DIAMETER_MM,
   DEFAULT_FLOOR_DRAIN_SIZE_MM,
+  DEFAULT_SANITARY_BODY_HEIGHT_MM,
   FLOOR_DRAIN_MOUNTING_ELEVATION_MM,
+  SANITARY_MOUNTING_ELEVATION_MM,
   type MepFixtureEntity,
   type MepFixtureKind,
   type MepFixtureParams,
@@ -40,8 +42,10 @@ import {
 import {
   buildDefaultLightingConnector,
   buildFloorDrainConnector,
+  buildSanitaryDrainConnector,
 } from '../../bim/types/mep-connector-types';
 import type { MepConnector } from '../../bim/types/mep-connector-types';
+import { isSanitaryKind, SANITARY_SPEC } from '../../bim/sanitary/sanitary-symbol-spec';
 import { createMepFixture } from '@/services/factories/mep-fixture.factory';
 import type { SceneUnits } from '../../utils/scene-units';
 
@@ -74,11 +78,68 @@ export interface MepFixtureParamOverrides {
   readonly scaleOverride?: number;
 }
 
+// ─── Per-kind defaults (footprint + elevation + connector) ───────────────────
+
+interface FixtureKindDefaults {
+  readonly shape: MepFixtureShape;
+  readonly width: number;
+  readonly length: number;
+  readonly bodyHeightMm: number;
+  readonly mountingElevationMm: number;
+  readonly connectors: MepConnector[];
+}
+
+/**
+ * Resolve the per-kind default footprint / elevation / connector for a fixture.
+ *   - floor-drain (ADR-408 Φ14) → square floor-level basin (150×150, FFL=0) + a
+ *     single sanitary-drainage outlet so a snapped drain pipe joins the network.
+ *   - sanitary terminal (WC/basin/… ADR-408 Φ14) → authored footprint from the
+ *     {@link SANITARY_SPEC} SSoT, floor-standing (FFL=0) + a single drain outlet
+ *     sized by DN (WC=100, basin/bidet=40, shower/tub=50).
+ *   - light fixture (ADR-406/408 Φ1) → ceiling-relative luminaire + a default
+ *     lighting power-in connector (so it can join a circuit once Systems exist).
+ */
+function resolveFixtureKindDefaults(
+  kind: MepFixtureKind,
+  overrides: MepFixtureParamOverrides,
+): FixtureKindDefaults {
+  if (kind === 'floor-drain') {
+    return {
+      shape: 'rectangular',
+      width: overrides.width ?? DEFAULT_FLOOR_DRAIN_SIZE_MM,
+      length: overrides.length ?? DEFAULT_FLOOR_DRAIN_SIZE_MM,
+      bodyHeightMm: overrides.bodyHeightMm ?? DEFAULT_FLOOR_DRAIN_BODY_HEIGHT_MM,
+      mountingElevationMm: overrides.mountingElevationMm ?? FLOOR_DRAIN_MOUNTING_ELEVATION_MM,
+      connectors: [buildFloorDrainConnector({ x: 0, y: 0, z: 0 }, DEFAULT_FLOOR_DRAIN_CONNECTOR_DIAMETER_MM)],
+    };
+  }
+  if (isSanitaryKind(kind)) {
+    const spec = SANITARY_SPEC[kind];
+    return {
+      shape: 'rectangular',
+      width: overrides.width ?? spec.widthMm,
+      length: overrides.length ?? spec.depthMm,
+      bodyHeightMm: overrides.bodyHeightMm ?? DEFAULT_SANITARY_BODY_HEIGHT_MM,
+      mountingElevationMm: overrides.mountingElevationMm ?? SANITARY_MOUNTING_ELEVATION_MM,
+      connectors: [buildSanitaryDrainConnector({ x: 0, y: 0, z: 0 }, spec.drainDiameterMm)],
+    };
+  }
+  const shape: MepFixtureShape = overrides.shape ?? 'rectangular';
+  return {
+    shape,
+    width: overrides.width ?? (shape === 'circular' ? DEFAULT_FIXTURE_DIAMETER_MM : DEFAULT_FIXTURE_WIDTH_MM),
+    length: overrides.length ?? DEFAULT_FIXTURE_LENGTH_MM,
+    bodyHeightMm: overrides.bodyHeightMm ?? DEFAULT_FIXTURE_BODY_HEIGHT_MM,
+    mountingElevationMm: overrides.mountingElevationMm ?? DEFAULT_FIXTURE_MOUNTING_ELEVATION_MM,
+    connectors: [buildDefaultLightingConnector()],
+  };
+}
+
 // ─── Defaults factory ────────────────────────────────────────────────────────
 
 /**
- * Build `MepFixtureParams` from a clicked point + optional overrides.
- * Circular shape defaults `width` to the downlight diameter (length is ignored).
+ * Build `MepFixtureParams` from a clicked point + optional overrides. Per-kind
+ * footprint / elevation / connector come from {@link resolveFixtureKindDefaults}.
  */
 export function buildDefaultMepFixtureParams(
   clickPoint: Readonly<Point2D>,
@@ -86,42 +147,21 @@ export function buildDefaultMepFixtureParams(
   sceneUnits: SceneUnits = 'mm',
 ): MepFixtureParams {
   const kind: MepFixtureKind = overrides.kind ?? 'light-fixture';
-  // ADR-408 Φ14 — a floor drain (σιφώνι) is a square floor-level plumbing terminal
-  // with its OWN defaults (150×150, 100mm basin, FFL=0) and a sanitary-drainage
-  // outlet connector, distinct from the ceiling-mounted electrical light fixture.
-  const isFloorDrain = kind === 'floor-drain';
-  const shape: MepFixtureShape = isFloorDrain ? 'rectangular' : (overrides.shape ?? 'rectangular');
-  const width = overrides.width ?? (
-    isFloorDrain ? DEFAULT_FLOOR_DRAIN_SIZE_MM
-      : shape === 'circular' ? DEFAULT_FIXTURE_DIAMETER_MM
-      : DEFAULT_FIXTURE_WIDTH_MM
-  );
-  const length = overrides.length ?? (isFloorDrain ? DEFAULT_FLOOR_DRAIN_SIZE_MM : DEFAULT_FIXTURE_LENGTH_MM);
-  const bodyHeightMm = overrides.bodyHeightMm ?? (isFloorDrain ? DEFAULT_FLOOR_DRAIN_BODY_HEIGHT_MM : DEFAULT_FIXTURE_BODY_HEIGHT_MM);
-  const mountingElevationMm = overrides.mountingElevationMm ?? (isFloorDrain ? FLOOR_DRAIN_MOUNTING_ELEVATION_MM : DEFAULT_FIXTURE_MOUNTING_ELEVATION_MM);
+  const d = resolveFixtureKindDefaults(kind, overrides);
   const rotation = overrides.rotation ?? 0;
-
   const position: Point3D = { x: clickPoint.x, y: clickPoint.y, z: 0 };
-
-  // ADR-408 Φ14 — a floor drain carries a single sanitary-drainage outlet at its
-  // centre (z=0, floor level) so a snapped drain pipe joins the drainage network.
-  // ADR-408 Φ1 — a light fixture carries a default electrical lighting power-in
-  // connector so it can join a circuit (nothing reads it for logic until Systems exist).
-  const connectors: MepConnector[] = isFloorDrain
-    ? [buildFloorDrainConnector({ x: 0, y: 0, z: 0 }, DEFAULT_FLOOR_DRAIN_CONNECTOR_DIAMETER_MM)]
-    : [buildDefaultLightingConnector()];
 
   return {
     kind,
-    shape,
+    shape: d.shape,
     position,
     rotation,
-    width,
-    length,
-    bodyHeightMm,
-    mountingElevationMm,
+    width: d.width,
+    length: d.length,
+    bodyHeightMm: d.bodyHeightMm,
+    mountingElevationMm: d.mountingElevationMm,
     sceneUnits,
-    connectors,
+    connectors: d.connectors,
     ...(overrides.material !== undefined ? { material: overrides.material } : {}),
     // ADR-411 — optional mesh representation (omitted ⇒ parametric, back-compat).
     ...(overrides.assetId ? { assetId: overrides.assetId } : {}),

@@ -29,6 +29,7 @@ import {
 } from '../../bim/mep-radiators/mep-radiator-firestore-service';
 import { recordMepRadiatorChange } from '../../bim/mep-radiators/mep-radiator-audit-client';
 import { projectConnectorSystemIds } from '../../bim/mep-systems/mep-system-coordinator';
+import { bimToBoqBridge } from '../../bim/services/BimToBoqBridge';
 import { useBimEntityMovedPersistEffect } from './useBimEntityMovedPersistEffect';
 import { useBimEntityRestoredPersistEffect } from './useBimEntityRestoredPersistEffect';
 
@@ -50,6 +51,8 @@ export interface UseMepRadiatorPersistenceParams {
   readonly floorplanId: string | null | undefined;
   /** ADR-420 — stable building-storey id. Forwarded to service config. */
   readonly floorId?: string | null;
+  /** ADR-408 — building scope for the Η-Μ BOQ auto-feed (BimToBoqBridge). */
+  readonly buildingId?: string | null;
   readonly userId: string | null;
   readonly levelManager: LevelManagerLike;
   readonly primarySelectedRadiator: MepRadiatorEntity | null;
@@ -104,6 +107,7 @@ export function useMepRadiatorPersistence(
     projectId,
     floorplanId,
     floorId,
+    buildingId,
     userId,
     levelManager,
     primarySelectedRadiator,
@@ -258,11 +262,20 @@ export function useMepRadiatorPersistence(
         entity,
         { prevParams: prevParams ?? undefined },
       );
+      // ADR-408 — Η-Μ BOQ auto-feed: heating radiator = 1 piece (ΗΛΜ-7.01).
+      if (companyId && projectId && buildingId) {
+        void bimToBoqBridge.upsertBoqItemForBim(
+          'mep-radiator',
+          { id: entity.id, kind: entity.kind },
+          { companyId, projectId, buildingId, floorId: floorId ?? undefined },
+          isNew ? 'created' : 'updated',
+        );
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'MEP_RADIATOR_SAVE_ERROR');
       setSaveState('error');
     }
-  }, []);
+  }, [companyId, projectId, buildingId, floorId]);
 
   // Auto-save debounce on selected radiator params change.
   useEffect(() => {
@@ -321,6 +334,8 @@ export function useMepRadiatorPersistence(
           ? { id: deletedRadiator.id, kind: deletedRadiator.kind, layerId: deletedRadiator.layerId, params: deletedRadiator.params }
           : { id: radiatorId, kind: 'panel-radiator' },
       );
+      // ADR-408 — remove the auto-fed Η-Μ BOQ row (skips user-detached rows).
+      if (companyId) void bimToBoqBridge.deleteBoqItemForBim(radiatorId, companyId);
     } catch {
       // Non-fatal: deletion failure silent — user retries.
     }
@@ -334,7 +349,7 @@ export function useMepRadiatorPersistence(
     lastSavedParamsRef.current.delete(radiatorId);
     pendingFirstSaveIdsRef.current.delete(radiatorId);
     deletedIdsRef.current.add(radiatorId);
-  }, [levelManager]);
+  }, [levelManager, companyId]);
 
   // persistRestore: undo→Firestore re-create + audit 'restored'.
   const persistRestore = useCallback(async (entity: MepRadiatorEntity) => {

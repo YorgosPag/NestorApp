@@ -27,10 +27,12 @@ import {
   perimeterColumnKind,
   perimeterAspectRatio,
   isWallColumnKind,
+  splitColumnsByIntent,
   type PerimeterColumnClassification,
 } from '../../bim/columns/column-from-faces';
 import {
   perimeterFacesToRects,
+  getCachedRegionPerimeters,
   pickSmallestContainingPerimeter,
   isPerimeterOversized,
   perimeterExtentMm,
@@ -83,7 +85,9 @@ export function useColumnPerimeterCommit(
       const sceneUnits = getSceneUnitsRef.current?.() ?? 'mm';
       const tol = resolveRegionLoopTolWorld(sceneUnits);
       const scale = mmToSceneUnits(sceneUnits);
-      const { perimeters } = perimeterFacesToRects(entities, tol);
+      // Cached (SSoT) — μοιράζεται το αποτέλεσμα με το hover preview· μηδέν O(n²)
+      // recompute στο κλικ δημιουργίας (το ~1.5s freeze).
+      const perimeters = getCachedRegionPerimeters(entities, tol);
       const pick = pickSmallestContainingPerimeter(point, perimeters);
       if (!pick) {
         // Layer 5 — open-loop diagnostics: αν υπάρχουν γραμμές με ανοιχτό άκρο κοντά,
@@ -171,10 +175,7 @@ export function useColumnPerimeterCommit(
   const commitDiscretePerimeterColumns = useCallback(
     async (built: PerimeterColumnClassification): Promise<boolean> => {
       const intent = stateRef.current.discreteIntent;
-      const walls = built.columns.filter((c) => isWallColumnKind(c.kind));
-      const cols = built.columns.filter((c) => !isWallColumnKind(c.kind));
-      const primary = intent === 'columns' ? cols : walls;
-      const secondary = intent === 'columns' ? walls : cols;
+      const { primary, secondary } = splitColumnsByIntent(built.columns, intent);
 
       if (primary.length === 0 && secondary.length === 0) {
         EventBus.emit('bim:columns-discrete-from-perimeter', { columns: 0, walls: 0, ignored: built.ignored });

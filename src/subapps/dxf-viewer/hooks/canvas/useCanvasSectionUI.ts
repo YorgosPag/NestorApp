@@ -8,6 +8,7 @@ import type { DxfScene } from '../../canvas-v2/dxf-canvas/dxf-types';
 import type { Point2D } from '../../rendering/types/Types';
 import { useTextDoubleClickEditor } from '../../ui/text-toolbar/hooks/useTextDoubleClickEditor';
 import { useAutoAreaMouseMove } from './useAutoAreaMouseMove';
+import { useRegionPerimeterMouseMove } from './useRegionPerimeterMouseMove';
 import { QuickPropertiesMiniPanelStore } from '../../systems/properties/QuickPropertiesMiniPanelStore';
 import { PropertiesPaletteStore } from '../../systems/properties/PropertiesPaletteStore';
 
@@ -55,5 +56,7 @@ export function useCanvasSectionUI({
     textEditor.handleDoubleClick(e);
   }, [activeTool, getSelectedEntityIds, dxfScene, containerRef, textEditor]);
   const { handleMouseMoveWithAutoArea } = useAutoAreaMouseMove({ handleMouseMove, activeTool, levelManager, currentOverlays, transformScale });
-  return { textEditor, handleDoubleClick, handleMouseMoveWithAutoArea };
+  // ADR-419 Layer 3 — αλυσίδωση: region/perimeter hover preview πάνω από το auto-area.
+  const { handleMouseMoveWithRegionPreview } = useRegionPerimeterMouseMove({ handleMouseMove: handleMouseMoveWithAutoArea, activeTool, levelManager });
+  return { textEditor, handleDoubleClick, handleMouseMoveWithAutoArea: handleMouseMoveWithRegionPreview };
 }

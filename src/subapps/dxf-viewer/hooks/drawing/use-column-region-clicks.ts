@@ -37,9 +37,13 @@ import {
   type DetectedRectangle,
   type RegionLineSeg,
 } from '../../bim/walls/wall-in-region';
-import { buildColumnFillingRect } from '../../bim/columns/column-from-faces';
-import { getImmediateTransform } from '../../systems/cursor/ImmediateTransformStore';
-import { TOLERANCE_CONFIG } from '../../config/tolerance-config';
+import {
+  buildColumnFillingRect,
+  isWallColumnKind,
+  splitColumnsByIntent,
+} from '../../bim/columns/column-from-faces';
+import { requestColumnDiscreteIntentConfirm } from '../../bim/columns/column-perimeter-confirm-store';
+import { resolveRegionLoopTolWorld } from '../../bim/walls/region-tolerance';
 import { EventBus } from '../../systems/events/EventBus';
 import type { SceneUnits } from './column-completion';
 import type { ColumnToolState } from './useColumnTool';
@@ -75,28 +79,60 @@ export function useColumnRegionClicks(params: ColumnRegionClicksParams): ColumnR
   const { stateRef, setState, onColumnCreatedRef, getSceneEntitiesRef, getSceneUnitsRef, currentLevelId } =
     params;
 
-  // Live scene-units-agnostic merge / hit-test tolerance (world units), ίδιος
-  // κανόνας SNAP_DEFAULT/scale με το «Τοίχος σε περιοχή».
+  // ADR-419 Layer 2 — gap-tolerant region tolerance (world units), κοινό SSoT με
+  // το «από περίγραμμα» (κλείνει μικρά κενά στις παρειές, ανεξάρτητο zoom).
   const regionTol = useCallback(
-    (): number => TOLERANCE_CONFIG.SNAP_DEFAULT / getImmediateTransform().scale,
-    [],
+    (): number => resolveRegionLoopTolWorld(getSceneUnitsRef.current?.() ?? 'mm'),
+    [getSceneUnitsRef],
   );
 
-  // One filling column per detected rectangle; returns true αν χτίστηκε ≥1.
+  // Append έτοιμων columns + breakdown event (κολώνες/τοιχία) για ενημερωτικό toast.
+  const appendColumns = useCallback(
+    (entities: readonly ColumnEntity[]): void => {
+      let columns = 0;
+      let walls = 0;
+      for (const c of entities) {
+        onColumnCreatedRef.current?.(c);
+        if (isWallColumnKind(c.kind)) walls++;
+        else columns++;
+      }
+      EventBus.emit('bim:columns-discrete-from-perimeter', { columns, walls, ignored: 0 });
+    },
+    [onColumnCreatedRef],
+  );
+
+  // ADR-419 — ένα filling column ανά ορθογώνιο, ΜΕ στατικά τίμια ταξινόμηση: aspect>4
+  // → τοιχίο (shear-wall). Αφού ο χρήστης πάτησε «Κολώνα», αν εντοπιστεί τοιχίο
+  // δείχνουμε το ΙΔΙΟ intent-aware confirm με το «από περίγραμμα» (Giorgio: «να
+  // γίνεται τοιχίο / να ρωτάει» — όχι σιωπηλή κολώνα aspect>4). Καθαρή πρόθεση
+  // (μόνο κολώνες) → δημιουργία κατευθείαν. Returns true αν χειρίστηκε το κλικ.
   const commitInRegionRects = useCallback(
     (rects: readonly DetectedRectangle[]): boolean => {
       const sceneUnits = getSceneUnitsRef.current?.() ?? 'mm';
-      let built = 0;
+      const built: ColumnEntity[] = [];
       for (const rect of rects) {
         const entity = buildColumnFillingRect(rect, currentLevelId, sceneUnits);
-        if (entity) {
-          onColumnCreatedRef.current?.(entity);
-          built++;
-        }
+        if (entity) built.push(entity);
       }
-      return built > 0;
+      if (built.length === 0) return false;
+      const { primary, secondary } = splitColumnsByIntent(built, 'columns');
+      if (secondary.length === 0) {
+        appendColumns(primary);
+        return true;
+      }
+      void (async () => {
+        const action = await requestColumnDiscreteIntentConfirm({
+          intent: 'columns',
+          primaryCount: primary.length,
+          secondaryCount: secondary.length,
+        });
+        if (action === 'cancel') return;
+        const toCreate = action === 'create-all' ? [...primary, ...secondary] : primary;
+        if (toCreate.length > 0) appendColumns(toCreate);
+      })();
+      return true;
     },
-    [currentLevelId, onColumnCreatedRef, getSceneUnitsRef],
+    [currentLevelId, getSceneUnitsRef, appendColumns],
   );
 
   // ADR-419 — click while in-region, gated ΑΥΣΤΗΡΑ ανά `regionMethod` (η μονή

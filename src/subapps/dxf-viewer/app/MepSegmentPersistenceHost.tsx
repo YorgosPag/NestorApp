@@ -37,6 +37,8 @@ export interface MepSegmentPersistenceHostProps {
   readonly floorplanId?: string;
   /** ADR-420 — stable building-storey scope key forwarded from DxfViewerTopBar. */
   readonly floorId?: string;
+  /** ADR-408 — building scope for the Η-Μ BOQ auto-feed. */
+  readonly buildingId?: string;
 }
 
 export function MepSegmentPersistenceHost({
@@ -46,6 +48,7 @@ export function MepSegmentPersistenceHost({
   projectId,
   floorplanId,
   floorId,
+  buildingId,
 }: MepSegmentPersistenceHostProps): React.ReactElement | null {
   const { user } = useAuth();
 
@@ -66,6 +69,7 @@ export function MepSegmentPersistenceHost({
     projectId,
     floorplanId,
     floorId,
+    buildingId,
     userId: user?.uid ?? null,
     levelManager,
     primarySelectedSegment,

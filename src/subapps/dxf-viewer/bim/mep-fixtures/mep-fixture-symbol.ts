@@ -17,6 +17,7 @@
 import type { Point3D } from '../types/bim-base';
 import type { MepFixtureGeometry, MepFixtureParams } from '../types/mep-fixture-types';
 import { buildDrainageGratingStrokes } from '../mep-manifolds/mep-manifold-symbol';
+import { isSanitaryKind, SANITARY_DRAWERS } from '../sanitary/sanitary-symbol-spec';
 
 /** A polyline of world-space points (canvas units). */
 export type FixtureStroke = readonly Point3D[];
@@ -65,6 +66,13 @@ export function buildFixtureSymbol(
         ...buildDrainageGratingStrokes(v0, v3, v2, v1),
       ],
     };
+  }
+
+  // ADR-408 Φ14 — sanitary terminal (WC/washbasin/shower/bathtub/bidet): reuse the
+  // shared SANITARY_DRAWERS SSoT (same authored 2D vectors as the legacy floorplan
+  // symbol, rotation/scale-aware for free). Zero duplicated geometry.
+  if (isSanitaryKind(params.kind) && outline.length >= 4) {
+    return { outline, strokes: SANITARY_DRAWERS[params.kind](outline) };
   }
 
   if (params.shape === 'rectangular' && outline.length === 4) {

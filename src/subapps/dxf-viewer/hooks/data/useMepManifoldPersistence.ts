@@ -29,6 +29,7 @@ import {
 } from '../../bim/mep-manifolds/mep-manifold-firestore-service';
 import { recordMepManifoldChange } from '../../bim/mep-manifolds/mep-manifold-audit-client';
 import { projectConnectorSystemIds } from '../../bim/mep-systems/mep-system-coordinator';
+import { bimToBoqBridge } from '../../bim/services/BimToBoqBridge';
 import { useBimEntityMovedPersistEffect } from './useBimEntityMovedPersistEffect';
 import { useBimEntityRestoredPersistEffect } from './useBimEntityRestoredPersistEffect';
 
@@ -50,6 +51,8 @@ export interface UseMepManifoldPersistenceParams {
   readonly floorplanId: string | null | undefined;
   /** ADR-420 — stable building-storey scope key (IfcBuildingStorey). */
   readonly floorId?: string | null;
+  /** ADR-408 — building scope for the Η-Μ BOQ auto-feed (BimToBoqBridge). */
+  readonly buildingId?: string | null;
   readonly userId: string | null;
   readonly levelManager: LevelManagerLike;
   readonly primarySelectedManifold: MepManifoldEntity | null;
@@ -104,6 +107,7 @@ export function useMepManifoldPersistence(
     projectId,
     floorplanId,
     floorId,
+    buildingId,
     userId,
     levelManager,
     primarySelectedManifold,
@@ -258,11 +262,21 @@ export function useMepManifoldPersistence(
         entity,
         { prevParams: prevParams ?? undefined },
       );
+      // ADR-408 — Η-Μ BOQ auto-feed: manifold body = 1 piece (ΗΛΜ-7.03 συλλέκτης
+      // θέρμανσης / ΗΛΜ-6.02 φρεάτιο αποχέτευσης, keyed by kind).
+      if (companyId && projectId && buildingId) {
+        void bimToBoqBridge.upsertBoqItemForBim(
+          'mep-manifold',
+          { id: entity.id, kind: entity.kind },
+          { companyId, projectId, buildingId, floorId: floorId ?? undefined },
+          isNew ? 'created' : 'updated',
+        );
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'MEP_MANIFOLD_SAVE_ERROR');
       setSaveState('error');
     }
-  }, []);
+  }, [companyId, projectId, buildingId, floorId]);
 
   // Auto-save debounce on selected manifold params change.
   useEffect(() => {
@@ -321,6 +335,8 @@ export function useMepManifoldPersistence(
           ? { id: deletedManifold.id, kind: deletedManifold.kind, layerId: deletedManifold.layerId, params: deletedManifold.params }
           : { id: manifoldId, kind: 'floor-manifold' },
       );
+      // ADR-408 — remove the auto-fed Η-Μ BOQ row (skips user-detached rows).
+      if (companyId) void bimToBoqBridge.deleteBoqItemForBim(manifoldId, companyId);
     } catch {
       // Non-fatal: deletion failure silent — user retries.
     }
@@ -334,7 +350,7 @@ export function useMepManifoldPersistence(
     lastSavedParamsRef.current.delete(manifoldId);
     pendingFirstSaveIdsRef.current.delete(manifoldId);
     deletedIdsRef.current.add(manifoldId);
-  }, [levelManager]);
+  }, [levelManager, companyId]);
 
   // persistRestore: undo→Firestore re-create + audit 'restored'.
   const persistRestore = useCallback(async (entity: MepManifoldEntity) => {
