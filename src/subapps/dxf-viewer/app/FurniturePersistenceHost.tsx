@@ -36,6 +36,8 @@ export interface FurniturePersistenceHostProps {
   readonly levelManager: LevelManagerLike;
   readonly projectId?: string;
   readonly floorplanId?: string;
+  /** ADR-420 — stable building-storey scope key (IfcBuildingStorey). */
+  readonly floorId?: string;
 }
 
 export function FurniturePersistenceHost({
@@ -44,6 +46,7 @@ export function FurniturePersistenceHost({
   levelManager,
   projectId,
   floorplanId,
+  floorId,
 }: FurniturePersistenceHostProps): React.ReactElement | null {
   const { user } = useAuth();
 
@@ -63,6 +66,7 @@ export function FurniturePersistenceHost({
     companyId: user?.companyId ?? null,
     projectId,
     floorplanId,
+    floorId,
     userId: user?.uid ?? null,
     levelManager,
     primarySelectedFurniture,

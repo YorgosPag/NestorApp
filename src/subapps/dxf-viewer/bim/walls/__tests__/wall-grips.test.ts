@@ -14,7 +14,7 @@
  *       wall-vertex-N translates the N-th interior polyline vertex
  */
 
-import { applyWallGripDrag, getWallGrips, wallGripGlyphShape } from '../wall-grips';
+import { applyWallGripDrag, getWallGrips, translateWallParams, wallGripGlyphShape } from '../wall-grips';
 import { buildDefaultWallParams, buildWallEntity } from '../../../hooks/drawing/wall-completion';
 import type { WallEntity, WallParams } from '../../types/wall-types';
 
@@ -467,5 +467,88 @@ describe('wall-grips (Phase 1C)', () => {
       pivot: { x: 250, y: 0 }, // currentPos == pivot → zero-length vector
     });
     expect(next).toBe(entity.params);
+  });
+
+  // ─── translateWallParams SSoT ──────────────────────────────────────────────
+
+  it('32. translateWallParams — translates all world-coord fields atomically', () => {
+    const params: WallParams = {
+      ...buildDefaultWallParams({ x: 0, y: 0 }, { x: 1000, y: 0 }),
+      curveControl: { x: 500, y: 200, z: 0 },
+      polylineVertices: [
+        { x: 0, y: 0, z: 0 },
+        { x: 500, y: 0, z: 0 },
+        { x: 1000, y: 0, z: 0 },
+      ],
+      startMiter: { outer: { x: -5, y: 10 }, inner: { x: -5, y: -10 } },
+      endMiter: { outer: { x: 1005, y: 10 }, inner: { x: 1005, y: -10 } },
+    };
+    const delta = { x: 200, y: 300 };
+    const next = translateWallParams(params, delta);
+
+    expect(next.start).toEqual({ x: 200, y: 300, z: 0 });
+    expect(next.end).toEqual({ x: 1200, y: 300, z: 0 });
+    expect(next.curveControl).toEqual({ x: 700, y: 500, z: 0 });
+    expect(next.polylineVertices?.[1]).toEqual({ x: 700, y: 300, z: 0 });
+    expect(next.startMiter?.outer).toEqual({ x: 195, y: 310 });
+    expect(next.startMiter?.inner).toEqual({ x: 195, y: 290 });
+    expect(next.endMiter?.outer).toEqual({ x: 1205, y: 310 });
+    expect(next.endMiter?.inner).toEqual({ x: 1205, y: 290 });
+    // Non-geometric fields preserved
+    expect(next.thickness).toBe(params.thickness);
+    expect(next.height).toBe(params.height);
+  });
+
+  // ─── Miter cache handling (preview ghost correctness) ──────────────────────
+
+  it('33. wall-midpoint (via translateWallParams SSoT) — startMiter + endMiter translated', () => {
+    const entity = makeStraight();
+    const paramsWithMiter: typeof entity.params = {
+      ...entity.params,
+      startMiter: { outer: { x: -5, y: 10 }, inner: { x: -5, y: -10 } },
+      endMiter: { outer: { x: 1005, y: 10 }, inner: { x: 1005, y: -10 } },
+    };
+    const delta = { x: 200, y: 300 };
+    const next = applyWallGripDrag('wall-midpoint', {
+      originalParams: paramsWithMiter,
+      delta,
+      currentPos: { x: 700, y: 300 },
+    });
+    expect(next.startMiter?.outer).toEqual({ x: -5 + 200, y: 10 + 300 });
+    expect(next.startMiter?.inner).toEqual({ x: -5 + 200, y: -10 + 300 });
+    expect(next.endMiter?.outer).toEqual({ x: 1005 + 200, y: 10 + 300 });
+    expect(next.endMiter?.inner).toEqual({ x: 1005 + 200, y: -10 + 300 });
+  });
+
+  it('34. wall-start clears startMiter (junction broken), keeps endMiter', () => {
+    const entity = makeStraight();
+    const paramsWithMiter: typeof entity.params = {
+      ...entity.params,
+      startMiter: { outer: { x: -5, y: 10 }, inner: { x: -5, y: -10 } },
+      endMiter: { outer: { x: 1005, y: 10 }, inner: { x: 1005, y: -10 } },
+    };
+    const next = applyWallGripDrag('wall-start', {
+      originalParams: paramsWithMiter,
+      delta: { x: 50, y: 0 },
+      currentPos: { x: 50, y: 0 },
+    });
+    expect(next.startMiter).toBeUndefined();
+    expect(next.endMiter).toEqual(paramsWithMiter.endMiter);
+  });
+
+  it('35. wall-end clears endMiter (junction broken), keeps startMiter', () => {
+    const entity = makeStraight();
+    const paramsWithMiter: typeof entity.params = {
+      ...entity.params,
+      startMiter: { outer: { x: -5, y: 10 }, inner: { x: -5, y: -10 } },
+      endMiter: { outer: { x: 1005, y: 10 }, inner: { x: 1005, y: -10 } },
+    };
+    const next = applyWallGripDrag('wall-end', {
+      originalParams: paramsWithMiter,
+      delta: { x: -100, y: 0 },
+      currentPos: { x: 900, y: 0 },
+    });
+    expect(next.endMiter).toBeUndefined();
+    expect(next.startMiter).toEqual(paramsWithMiter.startMiter);
   });
 });

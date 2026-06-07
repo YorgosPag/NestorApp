@@ -58,6 +58,42 @@ function maxThicknessCeilingFor(currentThickness: number): number {
   return MAX_WALL_THICKNESS_MM;                // millimetres
 }
 
+// ─── Whole-wall translation SSoT ─────────────────────────────────────────────
+
+type WallMiter = NonNullable<WallParams['startMiter']>;
+
+function shiftPoint3D(p: Point3D, delta: Point2D): Point3D {
+  return p.z !== undefined
+    ? { x: p.x + delta.x, y: p.y + delta.y, z: p.z }
+    : { x: p.x + delta.x, y: p.y + delta.y };
+}
+
+function shiftMiter(m: WallMiter, delta: Point2D): WallMiter {
+  return {
+    outer: { x: m.outer.x + delta.x, y: m.outer.y + delta.y },
+    inner: { x: m.inner.x + delta.x, y: m.inner.y + delta.y },
+  };
+}
+
+/**
+ * SSoT — translate ALL world-coord fields of `WallParams` by a 2D delta.
+ *
+ * Covers: start · end · polylineVertices · curveControl · startMiter · endMiter.
+ * Used by both the grip-drag preview path (`moveMidpoint`) and the commit path
+ * (`bim-move-geometry.moveWall`) so the two can never diverge.
+ */
+export function translateWallParams(params: WallParams, delta: Point2D): WallParams {
+  return {
+    ...params,
+    start: shiftPoint3D(params.start, delta),
+    end: shiftPoint3D(params.end, delta),
+    polylineVertices: params.polylineVertices?.map((v) => shiftPoint3D(v, delta)),
+    curveControl: params.curveControl ? shiftPoint3D(params.curveControl, delta) : undefined,
+    startMiter: params.startMiter ? shiftMiter(params.startMiter, delta) : undefined,
+    endMiter: params.endMiter ? shiftMiter(params.endMiter, delta) : undefined,
+  };
+}
+
 // ─── Drag transforms ─────────────────────────────────────────────────────────
 
 export interface WallGripDragInput {
@@ -114,7 +150,9 @@ function moveStart(input: Readonly<WallGripDragInput>): WallParams {
     y: originalParams.start.y + delta.y,
     z: originalParams.start.z,
   };
-  return { ...originalParams, start: newStart };
+  // startMiter is an absolute world-coord junction point — moving the start
+  // endpoint breaks the junction, so clear it (recomputed on commit).
+  return { ...originalParams, start: newStart, startMiter: undefined };
 }
 
 function moveEnd(input: Readonly<WallGripDragInput>): WallParams {
@@ -124,22 +162,13 @@ function moveEnd(input: Readonly<WallGripDragInput>): WallParams {
     y: originalParams.end.y + delta.y,
     z: originalParams.end.z,
   };
-  return { ...originalParams, end: newEnd };
+  // endMiter is an absolute world-coord junction point — moving the end
+  // endpoint breaks the junction, so clear it (recomputed on commit).
+  return { ...originalParams, end: newEnd, endMiter: undefined };
 }
 
 function moveMidpoint(input: Readonly<WallGripDragInput>): WallParams {
-  const { originalParams, delta } = input;
-  const newStart: Point3D = {
-    x: originalParams.start.x + delta.x,
-    y: originalParams.start.y + delta.y,
-    z: originalParams.start.z,
-  };
-  const newEnd: Point3D = {
-    x: originalParams.end.x + delta.x,
-    y: originalParams.end.y + delta.y,
-    z: originalParams.end.z,
-  };
-  return { ...originalParams, start: newStart, end: newEnd };
+  return translateWallParams(input.originalParams, input.delta);
 }
 
 /**

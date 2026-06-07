@@ -35,6 +35,8 @@ export interface FloorplanSymbolPersistenceHostProps {
   readonly levelManager: LevelManagerLike;
   readonly projectId?: string;
   readonly floorplanId?: string;
+  /** ADR-420 — stable building-storey scope key (IfcBuildingStorey). */
+  readonly floorId?: string;
 }
 
 export function FloorplanSymbolPersistenceHost({
@@ -43,6 +45,7 @@ export function FloorplanSymbolPersistenceHost({
   levelManager,
   projectId,
   floorplanId,
+  floorId,
 }: FloorplanSymbolPersistenceHostProps): React.ReactElement | null {
   const { user } = useAuth();
 
@@ -57,6 +60,7 @@ export function FloorplanSymbolPersistenceHost({
     companyId: user?.companyId ?? null,
     projectId,
     floorplanId,
+    floorId,
     userId: user?.uid ?? null,
     levelManager,
     primarySelectedSymbol,

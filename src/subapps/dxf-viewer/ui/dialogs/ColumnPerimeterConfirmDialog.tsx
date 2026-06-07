@@ -28,6 +28,7 @@ import {
   subscribeColumnPerimeterConfirm,
   getColumnPerimeterConfirmState,
   resolveColumnPerimeterConfirm,
+  type ColumnPerimeterConfirmState,
 } from '../../bim/columns/column-perimeter-confirm-store';
 
 export const ColumnPerimeterConfirmDialog: React.FC = () => {
@@ -54,8 +55,14 @@ export const ColumnPerimeterConfirmDialog: React.FC = () => {
 
   if (!state.open || typeof document === 'undefined') return null;
 
-  // Plural-correct noun phrases (i18next _one/_other) → σωστή γραμματική («1 τοιχίο»
-  // / «2 τοιχία», «1 κολώνα» / «3 κολώνες») στο σύνθετο μήνυμα.
+  if (state.mode === 'is-column') {
+    return createPortal(
+      <IsColumnDialog state={state} t={t} />,
+      document.body,
+    );
+  }
+
+  // has-walls mode: plural-correct noun phrases (i18next _one/_other)
   const wallsText = t('perimeterColumnDiscrete.nWalls', { count: state.walls });
   const columnsText = t('perimeterColumnDiscrete.nColumns', { count: state.columns });
 
@@ -88,3 +95,36 @@ export const ColumnPerimeterConfirmDialog: React.FC = () => {
     document.body,
   );
 };
+
+interface IsColumnDialogProps {
+  state: ColumnPerimeterConfirmState;
+  t: ReturnType<typeof useTranslation>['t'];
+}
+
+const IsColumnDialog: React.FC<IsColumnDialogProps> = ({ state, t }) => (
+  <div className="dxf-modal-overlay" role="dialog" aria-modal="true">
+    <div className="dxf-modal-card">
+      <h2 className="dxf-modal-title">{t('perimeterColumnConfirm.isColumnTitle')}</h2>
+      <p className="dxf-modal-body">
+        {t('perimeterColumnConfirm.isColumnMessage', { aspect: state.aspect.toFixed(1) })}
+      </p>
+      <div className="dxf-modal-actions">
+        <button
+          type="button"
+          autoFocus
+          className="dxf-modal-button dxf-modal-button-primary"
+          onClick={() => resolveColumnPerimeterConfirm('create')}
+        >
+          {t('perimeterColumnConfirm.createAsColumn')}
+        </button>
+        <button
+          type="button"
+          className="dxf-modal-button"
+          onClick={() => resolveColumnPerimeterConfirm('cancel')}
+        >
+          {t('perimeterColumnConfirm.cancel')}
+        </button>
+      </div>
+    </div>
+  </div>
+);

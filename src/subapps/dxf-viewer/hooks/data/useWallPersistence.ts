@@ -40,6 +40,7 @@ import { recordWallChange } from '../../bim/walls/wall-audit-client';
 import { bimToBoqBridge } from '../../bim/services/BimToBoqBridge';
 import { useBimEntityMovedPersistEffect } from './useBimEntityMovedPersistEffect';
 import { useBimEntityRestoredPersistEffect } from './useBimEntityRestoredPersistEffect';
+import { useBimFirestoreWriteGrace } from './useBimFirestoreWriteGrace';
 import {
   docToEntity,
   isWall,
@@ -115,6 +116,7 @@ export function useWallPersistence(
   const serviceRef = useRef<WallFirestoreService | null>(null);
   const dirtyIdsRef = useRef<Set<string>>(new Set());
   const deletedIdsRef = useRef<Set<string>>(new Set());
+  const { recordWrite, isWithinGrace } = useBimFirestoreWriteGrace();
   // ADR-390 — pending first save (drawn or restored).
   const pendingFirstSaveIdsRef = useRef<Set<string>>(new Set());
   const lastSavedParamsRef = useRef<Map<string, WallEntity['params']>>(new Map());
@@ -136,9 +138,10 @@ export function useWallPersistence(
       companyId,
       projectId,
       floorplanId,
+      floorId: floorId ?? undefined,
       userId,
     });
-  }, [companyId, projectId, floorplanId, userId]);
+  }, [companyId, projectId, floorplanId, floorId, userId]);
 
   // Subscribe + diff-merge + selective skip of locally-dirty walls.
   useEffect(() => {
@@ -176,6 +179,15 @@ export function useWallPersistence(
             continue;
           }
           if (dirty.has(doc.id)) {
+            nextWalls.push(existing);
+            continue;
+          }
+          // Grace period (useBimFirestoreWriteGrace SSoT): ignore Firestore
+          // snapshots for WRITE_GRACE_MS after our last write. Firebase ca9
+          // assertion errors reset the Watch stream and deliver a stale pre-undo
+          // snapshot exactly when dirty has just been cleared — this guard keeps
+          // the scene stable during that window.
+          if (isWithinGrace(doc.id)) {
             nextWalls.push(existing);
             continue;
           }
@@ -271,6 +283,7 @@ export function useWallPersistence(
         typeId: entity.typeId,
         typeOverrides: entity.typeOverrides,
       });
+      recordWrite(entity.id);
       dirtyIdsRef.current.delete(entity.id);
       pendingFirstSaveIdsRef.current.delete(entity.id);
       setSaveState('saved');
@@ -394,6 +407,7 @@ export function useWallPersistence(
       await acquireLock(entity.id);
       await svc.saveWall(entityToSaveInput(entity));
       lastSavedParamsRef.current.set(entity.id, entity.params);
+      recordWrite(entity.id);
       dirtyIdsRef.current.delete(entity.id);
       pendingFirstSaveIdsRef.current.delete(entity.id);
       setSaveState('saved');

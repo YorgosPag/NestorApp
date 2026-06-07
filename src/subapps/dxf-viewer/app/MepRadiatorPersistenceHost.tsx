@@ -36,6 +36,8 @@ export interface MepRadiatorPersistenceHostProps {
   readonly levelManager: LevelManagerLike;
   readonly projectId?: string;
   readonly floorplanId?: string;
+  /** ADR-420 — stable building-storey id. Forwarded to hook → service. */
+  readonly floorId?: string;
 }
 
 export function MepRadiatorPersistenceHost({
@@ -44,6 +46,7 @@ export function MepRadiatorPersistenceHost({
   levelManager,
   projectId,
   floorplanId,
+  floorId,
 }: MepRadiatorPersistenceHostProps): React.ReactElement | null {
   const { user } = useAuth();
 
@@ -63,6 +66,7 @@ export function MepRadiatorPersistenceHost({
     companyId: user?.companyId ?? null,
     projectId,
     floorplanId,
+    floorId,
     userId: user?.uid ?? null,
     levelManager,
     primarySelectedRadiator,

@@ -47,7 +47,10 @@
     "title": "Section classification",
     "message": "Based on the side ratios of the sections, {walls} and {columns} will be created. The ratios of some perimeters do not allow creating a column. Continue?",
     "create": "Create",
-    "cancel": "Cancel"
+    "cancel": "Cancel",
+    "isColumnTitle": "This is a column",
+    "isColumnMessage": "The side ratio is {aspect}:1 (≤ 4). Per Eurocode 2 §9.6.1, this is a column, not a shear wall. Create as column?",
+    "createAsColumn": "Column (rectangular)"
   },
   "mepCircuit": {
     "created": "Electrical circuit created — fixtures: {count}.",

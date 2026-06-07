@@ -37,7 +37,6 @@ import {
   serverTimestamp,
   setDoc,
   updateDoc,
-  where,
   type FieldValue,
   type Unsubscribe,
 } from 'firebase/firestore';
@@ -47,6 +46,7 @@ import { COLLECTIONS } from '@/config/firestore-collections';
 import { generateStairId } from '@/services/enterprise-id.service';
 import { firestoreQueryService } from '@/services/firestore';
 import { stripUndefinedDeep } from '@/utils/firestore-sanitize';
+import { buildBimScopeConstraints, bimScopeWriteFields } from '../persistence/bim-floor-scope';
 import type {
   StairDoc,
   StairEntity,
@@ -62,6 +62,8 @@ export interface StairFirestoreServiceConfig {
   readonly companyId: string;
   readonly projectId: string;
   readonly floorplanId: string;
+  /** ADR-420 — stable building-storey scope key (IfcBuildingStorey). */
+  readonly floorId?: string;
   readonly userId: string;
 }
 
@@ -111,10 +113,8 @@ export class StairFirestoreService {
       (result) => onChange(result.documents),
       onError,
       {
-        constraints: [
-          where('projectId', '==', this.config.projectId),
-          where('floorplanId', '==', this.config.floorplanId),
-        ],
+        // ADR-420 — scoped by stable floorId (fallback floorplanId on floor-less canvas).
+        constraints: buildBimScopeConstraints(this.config),
       },
     );
   }
@@ -137,7 +137,8 @@ export class StairFirestoreService {
       id,
       companyId: this.config.companyId,
       projectId: this.config.projectId,
-      floorplanId: this.config.floorplanId,
+      // ADR-420 — floorplanId (provenance) + floorId (stable scope), from config SSoT.
+      ...bimScopeWriteFields(this.config),
       kind: input.kind,
       // Firestore rejects nested `undefined` — deep-strip the pure-data sub-objects
       // (serverTimestamp() sentinels stay untouched at top level). SSoT: firestore-sanitize.
@@ -152,7 +153,6 @@ export class StairFirestoreService {
     // Firestore rejects `undefined` — only include optional fields when set.
     if (input.geometry !== undefined) base.geometry = stripUndefinedDeep(input.geometry);
     if (input.buildingId !== undefined) base.buildingId = input.buildingId;
-    if (input.floorId !== undefined) base.floorId = input.floorId;
     if (input.layer !== undefined) base.layer = input.layer;
     if (input.levelId !== undefined) base.levelId = input.levelId;
 

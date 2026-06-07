@@ -221,4 +221,34 @@ describe('ADR-363 Phase 7A — calculateBimMovedGeometry', () => {
     expect(patch.params.start.z).toBe(0);
     expect(patch.params.end.z).toBe(0);
   });
+
+  it('wall: translates startMiter + endMiter by delta (no stray lines after commit)', () => {
+    const wall = makeWall();
+    const wallWithMiter = {
+      ...wall,
+      params: {
+        ...wall.params,
+        startMiter: { outer: { x: -5, y: 125 }, inner: { x: -5, y: -125 } },
+        endMiter: { outer: { x: 5005, y: 125 }, inner: { x: 5005, y: -125 } },
+      },
+    } as unknown as WallEntity;
+    const patch = calculateBimMovedGeometry(wallWithMiter as unknown as Entity, DELTA) as {
+      params: {
+        startMiter?: { outer: { x: number; y: number }; inner: { x: number; y: number } };
+        endMiter?: { outer: { x: number; y: number }; inner: { x: number; y: number } };
+      };
+    };
+    expect(patch.params.startMiter?.outer).toEqual({ x: -5 + 1000, y: 125 + 500 });
+    expect(patch.params.startMiter?.inner).toEqual({ x: -5 + 1000, y: -125 + 500 });
+    expect(patch.params.endMiter?.outer).toEqual({ x: 5005 + 1000, y: 125 + 500 });
+    expect(patch.params.endMiter?.inner).toEqual({ x: 5005 + 1000, y: -125 + 500 });
+  });
+
+  it('wall: startMiter/endMiter remain undefined when not set', () => {
+    const patch = calculateBimMovedGeometry(makeWall() as unknown as Entity, DELTA) as {
+      params: { startMiter?: unknown; endMiter?: unknown };
+    };
+    expect(patch.params.startMiter).toBeUndefined();
+    expect(patch.params.endMiter).toBeUndefined();
+  });
 });

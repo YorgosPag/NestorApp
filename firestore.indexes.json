@@ -3811,6 +3811,38 @@
       ]
     },
     {
+      "collectionGroup": "floorplan_stairs",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "companyId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "projectId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "floorId",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "floorplan_stairs",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "projectId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "floorId",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
       "collectionGroup": "dxf_layer_state_templates",
       "queryScope": "COLLECTION",
       "fields": [
@@ -3943,6 +3975,38 @@
       ]
     },
     {
+      "collectionGroup": "floorplan_walls",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "companyId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "projectId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "floorId",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "floorplan_walls",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "projectId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "floorId",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
       "collectionGroup": "floorplan_columns",
       "queryScope": "COLLECTION",
       "fields": [
@@ -4025,6 +4089,38 @@
       ]
     },
     {
+      "collectionGroup": "floorplan_openings",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "companyId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "projectId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "floorId",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "floorplan_openings",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "projectId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "floorId",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
       "collectionGroup": "floorplan_slabs",
       "queryScope": "COLLECTION",
       "fields": [
@@ -4088,6 +4184,38 @@
         },
         {
           "fieldPath": "projectId",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "floorplan_slabs",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "companyId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "projectId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "floorId",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "floorplan_slabs",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "projectId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "floorId",
           "order": "ASCENDING"
         }
       ]
@@ -4125,6 +4253,38 @@
       ]
     },
     {
+      "collectionGroup": "floorplan_roofs",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "companyId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "projectId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "floorId",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "floorplan_roofs",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "projectId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "floorId",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
       "collectionGroup": "floorplan_slab_openings",
       "queryScope": "COLLECTION",
       "fields": [
@@ -4193,6 +4353,38 @@
       ]
     },
     {
+      "collectionGroup": "floorplan_slab_openings",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "companyId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "projectId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "floorId",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "floorplan_slab_openings",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "projectId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "floorId",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
       "collectionGroup": "floorplan_columns",
       "queryScope": "COLLECTION",
       "fields": [
@@ -4261,6 +4453,38 @@
       ]
     },
     {
+      "collectionGroup": "floorplan_columns",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "companyId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "projectId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "floorId",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "floorplan_columns",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "projectId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "floorId",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
       "collectionGroup": "floorplan_beams",
       "queryScope": "COLLECTION",
       "fields": [
@@ -4324,6 +4548,38 @@
         },
         {
           "fieldPath": "projectId",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "floorplan_beams",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "companyId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "projectId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "floorId",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "floorplan_beams",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "projectId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "floorId",
           "order": "ASCENDING"
         }
       ]
@@ -4361,6 +4617,38 @@
       ]
     },
     {
+      "collectionGroup": "floorplan_mep_fixtures",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "companyId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "projectId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "floorId",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "floorplan_mep_fixtures",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "projectId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "floorId",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
       "collectionGroup": "floorplan_furniture",
       "queryScope": "COLLECTION",
       "fields": [
@@ -4388,6 +4676,38 @@
         },
         {
           "fieldPath": "floorplanId",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "floorplan_furniture",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "companyId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "projectId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "floorId",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "floorplan_furniture",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "projectId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "floorId",
           "order": "ASCENDING"
         }
       ]
@@ -4425,6 +4745,38 @@
       ]
     },
     {
+      "collectionGroup": "floorplan_symbols",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "companyId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "projectId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "floorId",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "floorplan_symbols",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "projectId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "floorId",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
       "collectionGroup": "floorplan_mep_systems",
       "queryScope": "COLLECTION",
       "fields": [
@@ -4452,6 +4804,38 @@
         },
         {
           "fieldPath": "floorplanId",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "floorplan_mep_systems",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "companyId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "projectId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "floorId",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "floorplan_mep_systems",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "projectId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "floorId",
           "order": "ASCENDING"
         }
       ]
@@ -4489,6 +4873,38 @@
       ]
     },
     {
+      "collectionGroup": "floorplan_railings",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "companyId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "projectId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "floorId",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "floorplan_railings",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "projectId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "floorId",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
       "collectionGroup": "floorplan_electrical_panels",
       "queryScope": "COLLECTION",
       "fields": [
@@ -4516,6 +4932,38 @@
         },
         {
           "fieldPath": "floorplanId",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "floorplan_electrical_panels",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "companyId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "projectId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "floorId",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "floorplan_electrical_panels",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "projectId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "floorId",
           "order": "ASCENDING"
         }
       ]
@@ -4553,6 +5001,38 @@
       ]
     },
     {
+      "collectionGroup": "floorplan_mep_manifolds",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "companyId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "projectId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "floorId",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "floorplan_mep_manifolds",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "projectId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "floorId",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
       "collectionGroup": "floorplan_mep_radiators",
       "queryScope": "COLLECTION",
       "fields": [
@@ -4580,6 +5060,38 @@
         },
         {
           "fieldPath": "floorplanId",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "floorplan_mep_radiators",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "companyId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "projectId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "floorId",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "floorplan_mep_radiators",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "projectId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "floorId",
           "order": "ASCENDING"
         }
       ]
@@ -4617,6 +5129,38 @@
       ]
     },
     {
+      "collectionGroup": "floorplan_mep_boilers",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "companyId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "projectId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "floorId",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "floorplan_mep_boilers",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "projectId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "floorId",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
       "collectionGroup": "floorplan_mep_segments",
       "queryScope": "COLLECTION",
       "fields": [
@@ -4649,6 +5193,38 @@
       ]
     },
     {
+      "collectionGroup": "floorplan_mep_segments",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "companyId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "projectId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "floorId",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "floorplan_mep_segments",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "projectId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "floorId",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
       "collectionGroup": "floorplan_mep_fittings",
       "queryScope": "COLLECTION",
       "fields": [
@@ -4676,6 +5252,38 @@
         },
         {
           "fieldPath": "floorplanId",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "floorplan_mep_fittings",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "companyId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "projectId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "floorId",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "floorplan_mep_fittings",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "projectId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "floorId",
           "order": "ASCENDING"
         }
       ]
@@ -5700,6 +6308,38 @@
         },
         {
           "fieldPath": "projectId",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "floorplan_floor_finishes",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "companyId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "projectId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "floorId",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "floorplan_floor_finishes",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "projectId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "floorId",
           "order": "ASCENDING"
         }
       ]

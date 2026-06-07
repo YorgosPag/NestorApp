@@ -24,10 +24,15 @@ import {
   buildColumnsFromPerimeters,
   classifyPerimeterFacesToColumns,
   classifyColumnsFromPerimeters,
+  perimeterColumnKind,
+  perimeterAspectRatio,
   type PerimeterColumnClassification,
 } from '../../bim/columns/column-from-faces';
 import { perimeterFacesToRects } from '../../bim/walls/perimeter-from-faces';
-import { requestColumnPerimeterConfirm } from '../../bim/columns/column-perimeter-confirm-store';
+import {
+  requestColumnPerimeterConfirm,
+  requestColumnIsColumnWarn,
+} from '../../bim/columns/column-perimeter-confirm-store';
 import { isPointInPolygon } from '../../utils/geometry/GeometryUtils';
 import { getImmediateTransform } from '../../systems/cursor/ImmediateTransformStore';
 import { TOLERANCE_CONFIG } from '../../config/tolerance-config';
@@ -81,6 +86,20 @@ export function useColumnPerimeterCommit(
       const hit = perimeters.filter((p) => isPointInPolygon(point as Point2D, [...p.polygon]));
       if (hit.length === 0) return false;
       const sceneUnits = getSceneUnitsRef.current?.() ?? 'mm';
+
+      // EC2 §9.6.1 guard: if the selected perimeter has aspect ≤ 4 it is a column,
+      // not a shear wall. Warn the user before creating anything.
+      const firstColumn = hit.find((p) => perimeterColumnKind(p) === 'rectangular');
+      if (firstColumn) {
+        const aspect = perimeterAspectRatio(firstColumn);
+        void (async () => {
+          const action = await requestColumnIsColumnWarn(aspect);
+          if (action === 'cancel') return;
+          commitPerimeterColumns(buildColumnsFromPerimeters(hit, currentLevelId, sceneUnits));
+        })();
+        return true;
+      }
+
       return commitPerimeterColumns(buildColumnsFromPerimeters(hit, currentLevelId, sceneUnits));
     },
     [regionTol, currentLevelId, commitPerimeterColumns, getSceneEntitiesRef, getSceneUnitsRef],
@@ -165,9 +184,22 @@ export function useColumnPerimeterCommit(
             classifyPerimeterFacesToColumns(selected, regionTol(), currentLevelId, sceneUnits),
           );
         } else {
-          commitPerimeterColumns(
-            perimeterFacesToColumns(selected, regionTol(), currentLevelId, sceneUnits),
-          );
+          // EC2 §9.6.1 guard: extract perimeters first so we can check aspect ratios
+          // before committing. perimeterFacesToColumns does the same call internally.
+          const { perimeters } = perimeterFacesToRects(selected, regionTol(), {
+            unionTouching: true,
+          });
+          const firstRectangular = perimeters.find((p) => perimeterColumnKind(p) === 'rectangular');
+          if (firstRectangular) {
+            const aspect = perimeterAspectRatio(firstRectangular);
+            void (async () => {
+              const action = await requestColumnIsColumnWarn(aspect);
+              if (action === 'cancel') return;
+              commitPerimeterColumns(buildColumnsFromPerimeters(perimeters, currentLevelId, sceneUnits));
+            })();
+          } else {
+            commitPerimeterColumns(buildColumnsFromPerimeters(perimeters, currentLevelId, sceneUnits));
+          }
         }
       }),
     [

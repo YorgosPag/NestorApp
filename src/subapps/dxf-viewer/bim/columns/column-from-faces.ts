@@ -102,20 +102,21 @@ interface ColumnPlacement {
 
 /**
  * Στατικά τίμιο kind ορθογωνίου από την αναλογία πλευρών (scale-invariant):
- * aspect ≥ SHEAR_WALL_MIN_ASPECT_RATIO (4) → `shear-wall` (τοιχίο, Eurocode 8
- * §5.4.2.4), αλλιώς `rectangular` (κολώνα). SSoT — καλείται ΚΑΙ από το placement
- * ΚΑΙ από το `perimeterColumnKind` (μηδέν duplication).
+ * aspect > SHEAR_WALL_MIN_ASPECT_RATIO (4) → `shear-wall` (τοιχίο, Eurocode 8
+ * §5.4.2.4 / EC2 §9.6.1: ΑΥΣΤΗΡΑ > 4), αλλιώς `rectangular` (κολώνα — συμπ.
+ * aspect=4 που είναι οριακό αλλά κατά EC2 = κολόνα). SSoT — καλείται ΚΑΙ από
+ * το placement ΚΑΙ από το `perimeterColumnKind` (μηδέν duplication).
  */
 function rectAspectKind(rect: DetectedRectangle): ColumnKind {
   const aspect = rect.shortSide > 0 ? rect.longSide / rect.shortSide : 0;
-  return aspect >= SHEAR_WALL_MIN_ASPECT_RATIO ? 'shear-wall' : 'rectangular';
+  return aspect > SHEAR_WALL_MIN_ASPECT_RATIO ? 'shear-wall' : 'rectangular';
 }
 
 /**
  * Στατικά τίμια ταξινόμηση kind μιας κλειστής περιμέτρου από ΜΟΝΟ τη γεωμετρία
  * της (SSoT, χωρίς build entity):
- *   - ορθογώνιο aspect < 4 → `rectangular` (κολώνα)
- *   - ορθογώνιο aspect ≥ 4 → `shear-wall` (τοιχίο)
+ *   - ορθογώνιο aspect ≤ 4 → `rectangular` (κολώνα — συμπ. ακριβώς 4, EC2 §9.6.1)
+ *   - ορθογώνιο aspect > 4 → `shear-wall` (τοιχίο)
  *   - U (Π) → `U-shape`· κάθε άλλο μη-ορθογωνικό (Γ/Τ/σύνθετο) → `composite` (τοιχίο)
  */
 export function perimeterColumnKind(perimeter: ClosedPerimeter): ColumnKind {
@@ -131,9 +132,22 @@ export function isWallColumnKind(kind: ColumnKind): boolean {
 }
 
 /**
+ * Αναλογία πλευρών (longSide / shortSide) μιας κλειστής περιμέτρου.
+ * Επιστρέφει 0 για μη-ορθογωνικά σχήματα (πάντα τοιχία, δεν χρειάζεται λόγος).
+ * Χρησιμοποιείται για ενημερωτικό dialog όταν η αναλογία ≤ SHEAR_WALL_MIN_ASPECT_RATIO.
+ */
+export function perimeterAspectRatio(perimeter: ClosedPerimeter): number {
+  if (perimeter.shape === 'rectangle' && perimeter.rects.length > 0) {
+    const rect = perimeter.rects[0];
+    return rect.shortSide > 0 ? Math.round((rect.longSide / rect.shortSide) * 10) / 10 : 0;
+  }
+  return 0;
+}
+
+/**
  * Ορθογώνιο → ΠΑΡΑΜΕΤΡΙΚΟ rectangular/shear-wall. `position` = κέντρο rect,
  * `width`=longSide (mm), `depth`=shortSide (mm), `rotation` = γωνία μεγάλης ακμής.
- * aspect ≥ SHEAR_WALL_MIN_ASPECT_RATIO (4) → `shear-wall` (Eurocode 8 §5.4.2.4).
+ * aspect > SHEAR_WALL_MIN_ASPECT_RATIO (4) → `shear-wall` (Eurocode 8 §5.4.2.4).
  */
 function rectColumnPlacement(rect: DetectedRectangle, s: number): ColumnPlacement {
   const c = rect.polygon;

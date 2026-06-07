@@ -21,7 +21,6 @@ import {
   serverTimestamp,
   setDoc,
   updateDoc,
-  where,
   type Timestamp,
   type Unsubscribe,
 } from 'firebase/firestore';
@@ -30,6 +29,7 @@ import { db } from '@/lib/firebase';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { generateRoofId } from '@/services/enterprise-id-convenience';
 import { firestoreQueryService } from '@/services/firestore';
+import { buildBimScopeConstraints, bimScopeWriteFields } from '../persistence/bim-floor-scope';
 import type {
   RoofEntity,
   RoofGeometry,
@@ -74,6 +74,8 @@ export interface RoofFirestoreServiceConfig {
   readonly companyId: string;
   readonly projectId: string;
   readonly floorplanId: string;
+  /** ADR-420 — stable building-storey scope key (IfcBuildingStorey). */
+  readonly floorId?: string;
   readonly userId: string;
 }
 
@@ -125,10 +127,8 @@ export class RoofFirestoreService {
       (result) => onChange(result.documents),
       onError,
       {
-        constraints: [
-          where('projectId', '==', this.config.projectId),
-          where('floorplanId', '==', this.config.floorplanId),
-        ],
+        // ADR-420 — scoped by stable floorId (fallback floorplanId on floor-less canvas).
+        constraints: buildBimScopeConstraints(this.config),
       },
     );
   }
@@ -145,7 +145,8 @@ export class RoofFirestoreService {
       id,
       companyId: this.config.companyId,
       projectId: this.config.projectId,
-      floorplanId: this.config.floorplanId,
+      // ADR-420 — floorplanId (provenance) + floorId (stable scope), from config SSoT.
+      ...bimScopeWriteFields(this.config),
       kind: input.kind,
       params: input.params,
       validation: input.validation,
@@ -160,7 +161,6 @@ export class RoofFirestoreService {
     // removes them (non-destructive — params kept; ADR-412 Q6).
     if (input.geometry !== undefined) base.geometry = input.geometry;
     if (input.buildingId !== undefined) base.buildingId = input.buildingId;
-    if (input.floorId !== undefined) base.floorId = input.floorId;
     if (input.layerId !== undefined) base.layerId = input.layerId;
     if (input.typeId !== undefined) base.typeId = input.typeId;
     if (input.typeOverrides !== undefined) base.typeOverrides = input.typeOverrides;

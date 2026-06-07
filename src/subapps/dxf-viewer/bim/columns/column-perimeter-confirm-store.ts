@@ -19,15 +19,31 @@
 
 export type ColumnPerimeterConfirmAction = 'create' | 'cancel';
 
+/**
+ * `has-walls` — υπάρχη διακριτή επιλογή που εντόπισε τοιχία (Φ3c discrete path).
+ * `is-column` — ο χρήστης ζήτησε «Τοιχίο από περίγραμμα» αλλά η αναλογία ≤ 4
+ *   → EC2 §9.6.1 = κολόνα. Ρωτάμε πριν δημιουργήσουμε.
+ */
+export type ColumnPerimeterConfirmMode = 'has-walls' | 'is-column';
+
 export interface ColumnPerimeterConfirmState {
   readonly open: boolean;
+  readonly mode: ColumnPerimeterConfirmMode;
   readonly walls: number;
   readonly columns: number;
+  /** Αναλογία πλευρών (is-column mode) — 0 σε has-walls mode. */
+  readonly aspect: number;
 }
 
 // ─── Module-level state ───────────────────────────────────────────────────────
 
-const CLOSED: ColumnPerimeterConfirmState = { open: false, walls: 0, columns: 0 };
+const CLOSED: ColumnPerimeterConfirmState = {
+  open: false,
+  mode: 'has-walls',
+  walls: 0,
+  columns: 0,
+  aspect: 0,
+};
 
 let _state: ColumnPerimeterConfirmState = CLOSED;
 let _pendingResolve: ((action: ColumnPerimeterConfirmAction) => void) | null = null;
@@ -49,7 +65,22 @@ export function requestColumnPerimeterConfirm(counts: {
 }): Promise<ColumnPerimeterConfirmAction> {
   return new Promise<ColumnPerimeterConfirmAction>((resolve) => {
     _pendingResolve = resolve;
-    _state = { open: true, walls: counts.walls, columns: counts.columns };
+    _state = { open: true, mode: 'has-walls', walls: counts.walls, columns: counts.columns, aspect: 0 };
+    _notify();
+  });
+}
+
+/**
+ * Ανοίγει το dialog «is-column» — ο χρήστης χρησιμοποίησε «Τοιχίο από περίγραμμα»
+ * αλλά η αναλογία πλευρών της διατομής είναι ≤ 4 (EC2 §9.6.1 = κολόνα). Ρωτάμε
+ * τι να δημιουργήσουμε πριν προχωρήσουμε.
+ * - 'create' → δημιουργία κολόνας (ορθογωνική, σωστή κλάση κατά κανόνα)
+ * - 'cancel' → ακύρωση
+ */
+export function requestColumnIsColumnWarn(aspect: number): Promise<ColumnPerimeterConfirmAction> {
+  return new Promise<ColumnPerimeterConfirmAction>((resolve) => {
+    _pendingResolve = resolve;
+    _state = { open: true, mode: 'is-column', walls: 0, columns: 0, aspect };
     _notify();
   });
 }

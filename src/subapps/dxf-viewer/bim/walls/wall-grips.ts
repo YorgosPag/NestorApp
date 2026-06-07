@@ -51,7 +51,7 @@ import { unitAxis, perpUnit, project2D } from './wall-grip-math';
 import { gripGlyphShape } from '../grips/grip-glyph-registry';
 
 // Public API re-exports (consumers import from this module).
-export { applyWallGripDrag } from './wall-grip-transforms';
+export { applyWallGripDrag, translateWallParams } from './wall-grip-transforms';
 export type { WallGripDragInput } from './wall-grip-transforms';
 
 /**

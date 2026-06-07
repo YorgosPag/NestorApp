@@ -73,6 +73,8 @@ export interface UseMepFittingAutoReconciliationParams {
   readonly companyId: string | null;
   readonly projectId: string | null | undefined;
   readonly floorplanId: string | null | undefined;
+  /** ADR-420 — stable building-storey scope key (IfcBuildingStorey). */
+  readonly floorId?: string | null;
   readonly userId: string | null;
   readonly levelManager: LevelManagerLike;
 }
@@ -128,7 +130,7 @@ function desiredSignature(drafts: readonly MepFittingDraft[]): Record<string, un
 export function useMepFittingAutoReconciliation(
   params: UseMepFittingAutoReconciliationParams,
 ): void {
-  const { companyId, projectId, floorplanId, userId, levelManager } = params;
+  const { companyId, projectId, floorplanId, floorId, userId, levelManager } = params;
 
   // ⚡ STABILITY (ADR-040 / render-loop fix 2026-06-04): `levelManager` is a NEW
   // object on every render (`useLevels` returns a fresh wrapper). Depending on it
@@ -167,9 +169,10 @@ export function useMepFittingAutoReconciliation(
       companyId,
       projectId,
       floorplanId,
+      floorId: floorId ?? undefined,
       userId,
     });
-  }, [companyId, projectId, floorplanId, userId]);
+  }, [companyId, projectId, floorplanId, floorId, userId]);
 
   // ── (a) Subscribe + diff-merge fitting docs into the active level scene ─────
   // Keyed on STABLE primitives only (scope + currentLevelId) — NOT the per-render
@@ -202,7 +205,7 @@ export function useMepFittingAutoReconciliation(
       },
     );
     return () => unsubscribe();
-  }, [currentLevelId, companyId, projectId, floorplanId, userId]);
+  }, [currentLevelId, companyId, projectId, floorplanId, floorId, userId]);
 
   // ── (b) Reconcile: topology → desired set → create / update / delete ───────
   // Reads `levelManager` via ref so its identity stays stable across renders —

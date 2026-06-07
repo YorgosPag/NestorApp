@@ -28,7 +28,6 @@ import {
   serverTimestamp,
   setDoc,
   updateDoc,
-  where,
   type Timestamp,
   type Unsubscribe,
 } from 'firebase/firestore';
@@ -37,6 +36,7 @@ import { db } from '@/lib/firebase';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { generateOpeningId } from '@/services/enterprise-id-convenience';
 import { firestoreQueryService } from '@/services/firestore';
+import { buildBimScopeConstraints, bimScopeWriteFields } from '../persistence/bim-floor-scope';
 import type {
   OpeningEntity,
   OpeningGeometry,
@@ -76,6 +76,8 @@ export interface OpeningFirestoreServiceConfig {
   readonly companyId: string;
   readonly projectId: string;
   readonly floorplanId: string;
+  /** ADR-420 — stable building-storey scope key. */
+  readonly floorId?: string;
   readonly userId: string;
 }
 
@@ -123,10 +125,8 @@ export class OpeningFirestoreService {
       (result) => onChange(result.documents),
       onError,
       {
-        constraints: [
-          where('projectId', '==', this.config.projectId),
-          where('floorplanId', '==', this.config.floorplanId),
-        ],
+        // ADR-420 — scoped by stable floorId (fallback floorplanId on floor-less canvas).
+        constraints: buildBimScopeConstraints(this.config),
       },
     );
   }
@@ -146,7 +146,8 @@ export class OpeningFirestoreService {
       id,
       companyId: this.config.companyId,
       projectId: this.config.projectId,
-      floorplanId: this.config.floorplanId,
+      // ADR-420 — floorplanId (provenance) + floorId (stable scope), from config SSoT.
+      ...bimScopeWriteFields(this.config),
       kind: input.kind,
       params: input.params,
       validation: input.validation,
@@ -159,7 +160,7 @@ export class OpeningFirestoreService {
     // Firestore rejects `undefined` — include optional fields only when set.
     if (input.geometry !== undefined) base.geometry = input.geometry;
     if (input.buildingId !== undefined) base.buildingId = input.buildingId;
-    if (input.floorId !== undefined) base.floorId = input.floorId;
+    // ADR-420 — floorId is owned by config scope (bimScopeWriteFields above), not input.
     if (input.layerId !== undefined) base.layerId = input.layerId;
 
     await setDoc(ref, base);
@@ -205,17 +206,18 @@ export function createOpeningFirestoreService(
  * fields (`geometry`) intentionally omitted — geometry recomputed client-side
  * από params + host wall on hydrate.
  */
-export function entityToSaveInput(entity: OpeningEntity, floorId?: string): OpeningSaveInput {
+export function entityToSaveInput(entity: OpeningEntity): OpeningSaveInput {
   return {
     id: entity.id,
     // ADR-363 §5.4 — persist `kind` DERIVED from `params.kind` (single source of
     // truth). Never read the top-level `entity.kind` here: a stale denormalized
     // copy (e.g. after a kind change that only patched `params`) would otherwise
     // diverge `doc.kind` from `doc.params.kind` and break the renderer overlay.
+    // ADR-420 — floorId removed from input: it is owned by OpeningFirestoreServiceConfig
+    // (via bimScopeWriteFields) and no longer passed per-entity.
     kind: entity.params.kind,
     params: entity.params,
     validation: entity.validation,
     layerId: entity.layerId,
-    ...(floorId !== undefined ? { floorId } : {}),
   };
 }

@@ -36,6 +36,8 @@ export interface ElectricalPanelPersistenceHostProps {
   readonly levelManager: LevelManagerLike;
   readonly projectId?: string;
   readonly floorplanId?: string;
+  /** ADR-420 — stable building-storey id. Forwarded to hook → service. */
+  readonly floorId?: string;
 }
 
 export function ElectricalPanelPersistenceHost({
@@ -44,6 +46,7 @@ export function ElectricalPanelPersistenceHost({
   levelManager,
   projectId,
   floorplanId,
+  floorId,
 }: ElectricalPanelPersistenceHostProps): React.ReactElement | null {
   const { user } = useAuth();
 
@@ -63,6 +66,7 @@ export function ElectricalPanelPersistenceHost({
     companyId: user?.companyId ?? null,
     projectId,
     floorplanId,
+    floorId,
     userId: user?.uid ?? null,
     levelManager,
     primarySelectedPanel,

@@ -93,6 +93,8 @@ export interface SlabToolLike {
 export interface ColumnToolLike {
   readonly isActive: boolean;
   onCanvasClick: (point: Point2D) => boolean;
+  /** ADR-419 — deduped ids των in-region picks (selection highlight, «Κολώνα σε περιοχή»). */
+  getRegionPickIds?: () => string[];
 }
 
 /** ADR-363 Phase 5 — Minimal beam tool interface for click routing. */

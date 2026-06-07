@@ -41,6 +41,7 @@ import { bimToBoqBridge } from '../../bim/services/BimToBoqBridge';
 import { columnBoqEntity } from './column-boq-feed';
 import { useBimEntityMovedPersistEffect } from './useBimEntityMovedPersistEffect';
 import { useBimEntityRestoredPersistEffect } from './useBimEntityRestoredPersistEffect';
+import { useBimFirestoreWriteGrace } from './useBimFirestoreWriteGrace';
 
 // ============================================================================
 // TYPES
@@ -131,6 +132,7 @@ export function useColumnPersistence(
   const serviceRef = useRef<ColumnFirestoreService | null>(null);
   const dirtyIdsRef = useRef<Set<string>>(new Set());
   const lastSavedParamsRef = useRef<Map<string, ColumnEntity['params']>>(new Map());
+  const { recordWrite, isWithinGrace } = useBimFirestoreWriteGrace();
   // ADR-390 — pending first save (drawn or restored) + tombstone tracking.
   const pendingFirstSaveIdsRef = useRef<Set<string>>(new Set());
   const deletedIdsRef = useRef<Set<string>>(new Set());
@@ -148,9 +150,10 @@ export function useColumnPersistence(
       companyId,
       projectId,
       floorplanId,
+      floorId: floorId ?? undefined,
       userId,
     });
-  }, [companyId, projectId, floorplanId, userId]);
+  }, [companyId, projectId, floorplanId, floorId, userId]);
 
   // Subscribe + diff-merge + selective skip locally-dirty columns.
   useEffect(() => {
@@ -191,6 +194,11 @@ export function useColumnPersistence(
             continue;
           }
           if (dirty.has(doc.id)) {
+            nextColumns.push(existing);
+            continue;
+          }
+          // Grace-period guard (useBimFirestoreWriteGrace SSoT).
+          if (isWithinGrace(doc.id)) {
             nextColumns.push(existing);
             continue;
           }
@@ -265,6 +273,7 @@ export function useColumnPersistence(
         });
       }
       lastSavedParamsRef.current.set(entity.id, entity.params);
+      recordWrite(entity.id);
       dirtyIdsRef.current.delete(entity.id);
       pendingFirstSaveIdsRef.current.delete(entity.id);
       setSaveState('saved');
@@ -375,6 +384,7 @@ export function useColumnPersistence(
     try {
       await svc.saveColumn(entityToSaveInput(entity));
       lastSavedParamsRef.current.set(entity.id, entity.params);
+      recordWrite(entity.id);
       dirtyIdsRef.current.delete(entity.id);
       pendingFirstSaveIdsRef.current.delete(entity.id);
       setSaveState('saved');

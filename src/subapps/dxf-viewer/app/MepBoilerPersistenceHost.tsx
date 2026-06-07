@@ -36,6 +36,8 @@ export interface MepBoilerPersistenceHostProps {
   readonly levelManager: LevelManagerLike;
   readonly projectId?: string;
   readonly floorplanId?: string;
+  /** ADR-420 — stable building-storey id. Forwarded to hook → service. */
+  readonly floorId?: string;
 }
 
 export function MepBoilerPersistenceHost({
@@ -44,6 +46,7 @@ export function MepBoilerPersistenceHost({
   levelManager,
   projectId,
   floorplanId,
+  floorId,
 }: MepBoilerPersistenceHostProps): React.ReactElement | null {
   const { user } = useAuth();
 
@@ -63,6 +66,7 @@ export function MepBoilerPersistenceHost({
     companyId: user?.companyId ?? null,
     projectId,
     floorplanId,
+    floorId,
     userId: user?.uid ?? null,
     levelManager,
     primarySelectedBoiler,

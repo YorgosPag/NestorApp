@@ -65,6 +65,8 @@ export interface UseOpeningPersistenceParams {
   readonly projectId: string | null | undefined;
   readonly floorplanId: string | null | undefined;
   readonly buildingId: string | null | undefined;
+  /** ADR-420 — stable building-storey scope key for Firestore query/write. */
+  readonly floorId?: string | null;
   readonly userId: string | null;
   readonly levelManager: LevelManagerLike;
   readonly primarySelectedOpening: OpeningEntity | null;
@@ -96,6 +98,7 @@ export function useOpeningPersistence(
     projectId,
     floorplanId,
     buildingId,
+    floorId,
     userId,
     levelManager,
     primarySelectedOpening,
@@ -141,9 +144,10 @@ export function useOpeningPersistence(
       companyId,
       projectId,
       floorplanId,
+      floorId: floorId ?? undefined,
       userId,
     });
-  }, [companyId, projectId, floorplanId, userId]);
+  }, [companyId, projectId, floorplanId, floorId, userId]);
 
   // Subscribe + diff-merge + selective skip locally-dirty openings.
   useEffect(() => {
@@ -265,7 +269,7 @@ export function useOpeningPersistence(
     setError(null);
     try {
       await (isNew
-        ? svc.saveOpening(entityToSaveInput(toSave, currentFloorIdRef.current ?? undefined))
+        ? svc.saveOpening(entityToSaveInput(toSave))
         : svc.updateOpening(toSave.id, { kind: toSave.params.kind, params: toSave.params, validation: toSave.validation, layerId: toSave.layerId }));
       lastSavedParamsRef.current.set(toSave.id, toSave.params);
       dirtyIdsRef.current.delete(toSave.id);
@@ -423,7 +427,7 @@ export function useOpeningPersistence(
     setSaveState('saving');
     setError(null);
     try {
-      await svc.saveOpening(entityToSaveInput(entity, currentFloorIdRef.current ?? undefined));
+      await svc.saveOpening(entityToSaveInput(entity));
       lastSavedParamsRef.current.set(entity.id, entity.params);
       dirtyIdsRef.current.delete(entity.id);
       pendingFirstSaveIdsRef.current.delete(entity.id);

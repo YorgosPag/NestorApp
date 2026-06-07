@@ -36,6 +36,8 @@ export interface OpeningPersistenceHostProps {
   readonly projectId?: string;
   readonly floorplanId?: string;
   readonly buildingId?: string;
+  /** ADR-420 — stable building-storey scope key forwarded to useOpeningPersistence. */
+  readonly floorId?: string;
 }
 
 export function OpeningPersistenceHost({
@@ -45,6 +47,7 @@ export function OpeningPersistenceHost({
   projectId,
   floorplanId,
   buildingId,
+  floorId,
 }: OpeningPersistenceHostProps): React.ReactElement | null {
   const { user } = useAuth();
 
@@ -69,6 +72,7 @@ export function OpeningPersistenceHost({
     projectId,
     floorplanId,
     buildingId,
+    floorId,
     userId: user?.uid ?? null,
     levelManager,
     primarySelectedOpening,

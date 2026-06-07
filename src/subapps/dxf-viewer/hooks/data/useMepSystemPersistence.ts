@@ -30,6 +30,8 @@ export interface UseMepSystemPersistenceParams {
   readonly companyId: string | null;
   readonly projectId: string | null | undefined;
   readonly floorplanId: string | null | undefined;
+  /** ADR-420 — stable building-storey id. Forwarded to service config. */
+  readonly floorId?: string | null;
   readonly userId: string | null;
 }
 
@@ -46,7 +48,7 @@ export interface UseMepSystemPersistenceResult {
 export function useMepSystemPersistence(
   params: UseMepSystemPersistenceParams,
 ): UseMepSystemPersistenceResult {
-  const { companyId, projectId, floorplanId, userId } = params;
+  const { companyId, projectId, floorplanId, floorId, userId } = params;
 
   const serviceRef = useRef<MepSystemFirestoreService | null>(null);
   const deletedIdsRef = useRef<Set<string>>(new Set());
@@ -57,8 +59,14 @@ export function useMepSystemPersistence(
       serviceRef.current = null;
       return;
     }
-    serviceRef.current = createMepSystemFirestoreService({ companyId, projectId, floorplanId, userId });
-  }, [companyId, projectId, floorplanId, userId]);
+    serviceRef.current = createMepSystemFirestoreService({
+      companyId,
+      projectId,
+      floorplanId,
+      floorId: floorId ?? undefined,
+      userId,
+    });
+  }, [companyId, projectId, floorplanId, floorId, userId]);
 
   // Subscribe → store. Drop locally-deleted ids (await server echo).
   useEffect(() => {
@@ -73,7 +81,7 @@ export function useMepSystemPersistence(
       () => { /* read errors are non-fatal for this slice */ },
     );
     return () => unsubscribe();
-  }, [companyId, projectId, floorplanId, userId]);
+  }, [companyId, projectId, floorplanId, floorId, userId]);
 
   const createSystem = useCallback(async (sysParams: MepSystemParams) => {
     const svc = serviceRef.current;

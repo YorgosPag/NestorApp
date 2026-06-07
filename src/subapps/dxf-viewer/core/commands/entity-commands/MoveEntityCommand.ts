@@ -87,16 +87,18 @@ export class MoveEntityCommand implements ICommand {
    */
   undo(): void {
     if (this.wasExecuted && this.entitySnapshot) {
-      // Restore original geometry from snapshot
       const entity = this.sceneManager.getEntity(this.entityId);
       if (entity) {
         const reversedUpdates = calculateMovedGeometry(entity, reverseDelta(this.delta));
-        this.sceneManager.updateEntity(this.entityId, reversedUpdates);
-        cascadeHostedOpeningsForWalls([this.entityId], this.sceneManager);
-        // Persist the reverted position (mirror execute + MoveMultiple.undo).
-        const revertedEntity = { ...entity, ...reversedUpdates } as SceneEntity;
+        // Emit FIRST so the persistence hook marks the entity dirty BEFORE the
+        // scene is updated. This closes the race window where a Firebase ca9-reset
+        // snapshot could arrive between updateEntity and the emit (dirty still
+        // false) and overwrite the reverted scene with stale moved data.
+        const revertedEntity = { ...this.entitySnapshot } as SceneEntity;
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         EventBus.emit('bim:entities-moved', { movedEntities: [revertedEntity] as any });
+        this.sceneManager.updateEntity(this.entityId, reversedUpdates);
+        cascadeHostedOpeningsForWalls([this.entityId], this.sceneManager);
       }
     }
   }
@@ -282,16 +284,21 @@ export class MoveMultipleEntitiesCommand implements ICommand {
     }
 
     if (updatesMap.size > 0) {
-      this.sceneManager.updateEntities(updatesMap);
-      cascadeHostedOpeningsForWalls(this.entityIds, this.sceneManager);
-      // After undo, entities are at their original (snapshot) positions.
+      // Build reverted entities from snapshots before touching the scene so the
+      // emit below can fire first. Snapshots carry the original (pre-move) params —
+      // correct for Firestore persistence regardless of scene state at emit time.
       const revertedEntities: SceneEntity[] = [];
       for (const entityId of this.entityIds) {
         const snapshot = this.entitySnapshots.get(entityId);
         if (snapshot) revertedEntities.push(snapshot);
       }
+      // Emit FIRST — marks dirty in all persistence hooks before any scene
+      // mutation. Closes the race where a Firebase ca9-reset Firestore snapshot
+      // (dirty=false) could overwrite the reverted scene with stale moved data.
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       EventBus.emit('bim:entities-moved', { movedEntities: revertedEntities as any });
+      this.sceneManager.updateEntities(updatesMap);
+      cascadeHostedOpeningsForWalls(this.entityIds, this.sceneManager);
     }
   }
 

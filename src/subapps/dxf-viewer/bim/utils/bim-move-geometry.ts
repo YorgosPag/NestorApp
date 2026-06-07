@@ -54,6 +54,7 @@ import type { MepManifoldEntity, MepManifoldParams } from '../types/mep-manifold
 import type { FurnitureEntity, FurnitureParams } from '../types/furniture-types';
 import type { Point3D, Polygon3D } from '../types/bim-base';
 import { computeWallGeometry } from '../geometry/wall-geometry';
+import { translateWallParams } from '../walls/wall-grip-transforms';
 import { computeSlabGeometry } from '../geometry/slab-geometry';
 import { computeSlabOpeningGeometry } from '../geometry/slab-opening-geometry';
 import { computeColumnGeometry } from '../geometry/column-geometry';
@@ -81,14 +82,8 @@ function shiftPolygon3D(poly: Polygon3D, delta: Point2D): Polygon3D {
 // ─── Per-kind move ──────────────────────────────────────────────────────────
 
 function moveWall(entity: WallEntity, delta: Point2D): Partial<SceneEntity> {
-  const newParams: WallParams = {
-    ...entity.params,
-    start: shiftPoint3D(entity.params.start, delta),
-    end: shiftPoint3D(entity.params.end, delta),
-    polylineVertices: entity.params.polylineVertices?.map((v) => shiftPoint3D(v, delta)),
-  };
-  const kind: WallKind = entity.kind;
-  const geometry = computeWallGeometry(newParams, kind);
+  const newParams: WallParams = translateWallParams(entity.params, delta);
+  const geometry = computeWallGeometry(newParams, entity.kind);
   return { params: newParams, geometry } as unknown as Partial<SceneEntity>;
 }
 

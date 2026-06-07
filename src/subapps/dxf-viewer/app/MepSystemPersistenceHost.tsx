@@ -27,6 +27,8 @@ type LevelManagerLike = Pick<
 export interface MepSystemPersistenceHostProps {
   readonly projectId?: string;
   readonly floorplanId?: string;
+  /** ADR-420 — stable building-storey id. Forwarded to hook → service. */
+  readonly floorId?: string;
   /** ADR-408 Φ5 — needed by the connector-reconciliation pass (scene-time cache). */
   readonly currentScene: SceneModel | null;
   readonly levelManager: LevelManagerLike;
@@ -37,6 +39,7 @@ export interface MepSystemPersistenceHostProps {
 export function MepSystemPersistenceHost({
   projectId,
   floorplanId,
+  floorId,
   currentScene,
   levelManager,
   primarySelectedId,
@@ -47,6 +50,7 @@ export function MepSystemPersistenceHost({
     companyId: user?.companyId ?? null,
     projectId,
     floorplanId,
+    floorId,
     userId: user?.uid ?? null,
   });
 

@@ -36,6 +36,8 @@ export interface MepManifoldPersistenceHostProps {
   readonly levelManager: LevelManagerLike;
   readonly projectId?: string;
   readonly floorplanId?: string;
+  /** ADR-420 — stable building-storey scope key forwarded from DxfViewerTopBar. */
+  readonly floorId?: string;
 }
 
 export function MepManifoldPersistenceHost({
@@ -44,6 +46,7 @@ export function MepManifoldPersistenceHost({
   levelManager,
   projectId,
   floorplanId,
+  floorId,
 }: MepManifoldPersistenceHostProps): React.ReactElement | null {
   const { user } = useAuth();
 
@@ -63,6 +66,7 @@ export function MepManifoldPersistenceHost({
     companyId: user?.companyId ?? null,
     projectId,
     floorplanId,
+    floorId,
     userId: user?.uid ?? null,
     levelManager,
     primarySelectedManifold,

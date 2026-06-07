@@ -36,6 +36,8 @@ export interface MepFixturePersistenceHostProps {
   readonly levelManager: LevelManagerLike;
   readonly projectId?: string;
   readonly floorplanId?: string;
+  /** ADR-420 — stable building-storey scope key forwarded from DxfViewerTopBar. */
+  readonly floorId?: string;
 }
 
 export function MepFixturePersistenceHost({
@@ -44,6 +46,7 @@ export function MepFixturePersistenceHost({
   levelManager,
   projectId,
   floorplanId,
+  floorId,
 }: MepFixturePersistenceHostProps): React.ReactElement | null {
   const { user } = useAuth();
 
@@ -63,6 +66,7 @@ export function MepFixturePersistenceHost({
     companyId: user?.companyId ?? null,
     projectId,
     floorplanId,
+    floorId,
     userId: user?.uid ?? null,
     levelManager,
     primarySelectedFixture,

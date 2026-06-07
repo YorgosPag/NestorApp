@@ -40,6 +40,8 @@ export interface MepFittingPersistenceHostProps {
   readonly levelManager: LevelManagerLike;
   readonly projectId?: string;
   readonly floorplanId?: string;
+  /** ADR-420 — stable building-storey scope key forwarded from DxfViewerTopBar. */
+  readonly floorId?: string;
 }
 
 export function MepFittingPersistenceHost({
@@ -47,6 +49,7 @@ export function MepFittingPersistenceHost({
   levelManager,
   projectId,
   floorplanId,
+  floorId,
 }: MepFittingPersistenceHostProps): React.ReactElement | null {
   const { user } = useAuth();
 
@@ -70,6 +73,7 @@ export function MepFittingPersistenceHost({
     companyId: user?.companyId ?? null,
     projectId,
     floorplanId,
+    floorId,
     userId: user?.uid ?? null,
     levelManager,
   });

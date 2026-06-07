@@ -74,7 +74,7 @@ export interface UseFloorFinishPersistenceResult {
 export function useFloorFinishPersistence(
   params: UseFloorFinishPersistenceParams,
 ): UseFloorFinishPersistenceResult {
-  const { companyId, projectId, floorplanId, userId, levelManager, primarySelected } = params;
+  const { companyId, projectId, floorplanId, floorId, userId, levelManager, primarySelected } = params;
 
   const [saveState, setSaveState] = useState<FloorFinishSaveState>('idle');
   const [lastSavedAt, setLastSavedAt] = useState<number | null>(null);
@@ -96,9 +96,13 @@ export function useFloorFinishPersistence(
       return;
     }
     serviceRef.current = createFloorFinishFirestoreService({
-      companyId, projectId, floorplanId, userId,
+      companyId,
+      projectId,
+      floorplanId,
+      floorId: floorId ?? undefined,
+      userId,
     });
-  }, [companyId, projectId, floorplanId, userId]);
+  }, [companyId, projectId, floorplanId, floorId, userId]);
 
   // Subscribe + diff-merge.
   useEffect(() => {

@@ -20,7 +20,6 @@ import {
   serverTimestamp,
   setDoc,
   updateDoc,
-  where,
   type Timestamp,
   type Unsubscribe,
 } from 'firebase/firestore';
@@ -29,6 +28,7 @@ import { db } from '@/lib/firebase';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { generateFloorplanSymbolId } from '@/services/enterprise-id-convenience';
 import { firestoreQueryService } from '@/services/firestore';
+import { buildBimScopeConstraints, bimScopeWriteFields } from '../persistence/bim-floor-scope';
 import type {
   FloorplanSymbolEntity,
   FloorplanSymbolGeometry,
@@ -70,6 +70,8 @@ export interface FloorplanSymbolFirestoreServiceConfig {
   readonly companyId: string;
   readonly projectId: string;
   readonly floorplanId: string;
+  /** ADR-420 — stable building-storey scope key (IfcBuildingStorey). */
+  readonly floorId?: string;
   readonly userId: string;
 }
 
@@ -113,10 +115,8 @@ export class FloorplanSymbolFirestoreService {
       (result) => onChange(result.documents),
       onError,
       {
-        constraints: [
-          where('projectId', '==', this.config.projectId),
-          where('floorplanId', '==', this.config.floorplanId),
-        ],
+        // ADR-420 — scoped by stable floorId (fallback floorplanId on floor-less canvas).
+        constraints: buildBimScopeConstraints(this.config),
       },
     );
   }
@@ -133,7 +133,8 @@ export class FloorplanSymbolFirestoreService {
       id,
       companyId: this.config.companyId,
       projectId: this.config.projectId,
-      floorplanId: this.config.floorplanId,
+      // ADR-420 — floorplanId (provenance) + floorId (stable scope), from config SSoT.
+      ...bimScopeWriteFields(this.config),
       category: input.category,
       kind: input.kind,
       params: input.params,
@@ -147,7 +148,6 @@ export class FloorplanSymbolFirestoreService {
     // Firestore rejects `undefined` — include optional fields only when set.
     if (input.geometry !== undefined) base.geometry = input.geometry;
     if (input.buildingId !== undefined) base.buildingId = input.buildingId;
-    if (input.floorId !== undefined) base.floorId = input.floorId;
     if (input.layerId !== undefined) base.layerId = input.layerId;
 
     await setDoc(ref, base);

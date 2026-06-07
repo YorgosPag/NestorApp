@@ -48,6 +48,8 @@ export interface UseMepManifoldPersistenceParams {
   readonly companyId: string | null;
   readonly projectId: string | null | undefined;
   readonly floorplanId: string | null | undefined;
+  /** ADR-420 — stable building-storey scope key (IfcBuildingStorey). */
+  readonly floorId?: string | null;
   readonly userId: string | null;
   readonly levelManager: LevelManagerLike;
   readonly primarySelectedManifold: MepManifoldEntity | null;
@@ -101,6 +103,7 @@ export function useMepManifoldPersistence(
     companyId,
     projectId,
     floorplanId,
+    floorId,
     userId,
     levelManager,
     primarySelectedManifold,
@@ -129,9 +132,10 @@ export function useMepManifoldPersistence(
       companyId,
       projectId,
       floorplanId,
+      floorId: floorId ?? undefined,
       userId,
     });
-  }, [companyId, projectId, floorplanId, userId]);
+  }, [companyId, projectId, floorplanId, floorId, userId]);
 
   // Subscribe + diff-merge + selective skip locally-dirty manifolds.
   useEffect(() => {
@@ -223,7 +227,7 @@ export function useMepManifoldPersistence(
     );
 
     return () => unsubscribe();
-  }, [levelManager, companyId, projectId, floorplanId, userId]);
+  }, [levelManager, companyId, projectId, floorplanId, floorId, userId]);
 
   // Immediate persist (used by both auto-save flush and explicit button).
   const persist = useCallback(async (entity: MepManifoldEntity) => {

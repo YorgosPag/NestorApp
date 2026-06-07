@@ -45,6 +45,7 @@ import { COLLECTIONS } from '@/config/firestore-collections';
 import { generateWallId } from '@/services/enterprise-id-convenience';
 import { firestoreQueryService } from '@/services/firestore';
 import { stripUndefinedDeep } from '@/utils/firestore-sanitize';
+import { buildBimScopeConstraints, bimScopeWriteFields } from '../persistence/bim-floor-scope';
 import type {
   WallEntity,
   WallGeometry,
@@ -90,6 +91,8 @@ export interface WallFirestoreServiceConfig {
   readonly companyId: string;
   readonly projectId: string;
   readonly floorplanId: string;
+  /** ADR-420 — stable building-storey scope key (IfcBuildingStorey). */
+  readonly floorId?: string;
   readonly userId: string;
 }
 
@@ -150,10 +153,8 @@ export class WallFirestoreService {
       (result) => onChange(result.documents),
       onError,
       {
-        constraints: [
-          where('projectId', '==', this.config.projectId),
-          where('floorplanId', '==', this.config.floorplanId),
-        ],
+        // ADR-420 — scoped by stable floorId (fallback floorplanId on floor-less canvas).
+        constraints: buildBimScopeConstraints(this.config),
       },
     );
   }
@@ -175,7 +176,8 @@ export class WallFirestoreService {
       id,
       companyId: this.config.companyId,
       projectId: this.config.projectId,
-      floorplanId: this.config.floorplanId,
+      // ADR-420 — floorplanId (provenance) + floorId (stable scope), from config SSoT.
+      ...bimScopeWriteFields(this.config),
       kind: input.kind,
       // Firestore rejects nested `undefined` (e.g. `params.polylineVertices` on a
       // straight wall) — deep-strip the pure-data sub-objects. serverTimestamp()
@@ -191,7 +193,7 @@ export class WallFirestoreService {
     // Firestore rejects `undefined` — only include optional fields when set.
     if (input.geometry !== undefined) base.geometry = stripUndefinedDeep(input.geometry);
     if (input.buildingId !== undefined) base.buildingId = input.buildingId;
-    if (input.floorId !== undefined) base.floorId = input.floorId;
+    // ADR-420 — floorId is owned by config scope (bimScopeWriteFields above), not input.
     if (input.layerId !== undefined) base.layerId = input.layerId;
     // ADR-412 — Family-type linkage (optional; omit when absent).
     if (input.typeId !== undefined) base.typeId = input.typeId;

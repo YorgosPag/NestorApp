@@ -387,8 +387,8 @@ export const MIN_SHEAR_WALL_THICKNESS_MM = 150;
 
 /**
  * Min aspect ratio (length / thickness) ώστε ένα rectangular kind να
- * χαρακτηριστεί shear wall. < 4 = standard column. ≥ 4 = wall behaviour
- * (Eurocode 8 §5.4.2.4 wall classification).
+ * χαρακτηριστεί shear wall. ≤ 4 = standard column. > 4 = wall behaviour
+ * (Eurocode 8 §5.4.2.4 / Eurocode 2 §9.6.1: ratio STRICTLY > 4 → τοιχίο).
  */
 export const SHEAR_WALL_MIN_ASPECT_RATIO = 4;
 

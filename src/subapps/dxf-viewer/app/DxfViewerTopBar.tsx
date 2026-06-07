@@ -113,6 +113,7 @@ export function DxfViewerTopBar({
         projectId={levelManager.saveContext?.projectId ?? undefined}
         floorplanId={levelManager.fileRecordId ?? undefined}
         buildingId={buildingId}
+        floorId={floorId}
       />
       <SlabPersistenceHost
         primarySelectedId={primarySelectedId}
@@ -147,6 +148,7 @@ export function DxfViewerTopBar({
         levelManager={levelManager}
         projectId={levelManager.saveContext?.projectId ?? undefined}
         floorplanId={levelManager.fileRecordId ?? undefined}
+        floorId={floorId}
       />
       <FurniturePersistenceHost
         primarySelectedId={primarySelectedId}
@@ -154,6 +156,7 @@ export function DxfViewerTopBar({
         levelManager={levelManager}
         projectId={levelManager.saveContext?.projectId ?? undefined}
         floorplanId={levelManager.fileRecordId ?? undefined}
+        floorId={floorId}
       />
       <FloorplanSymbolPersistenceHost
         primarySelectedId={primarySelectedId}
@@ -161,6 +164,7 @@ export function DxfViewerTopBar({
         levelManager={levelManager}
         projectId={levelManager.saveContext?.projectId ?? undefined}
         floorplanId={levelManager.fileRecordId ?? undefined}
+        floorId={floorId}
       />
       <ElectricalPanelPersistenceHost
         primarySelectedId={primarySelectedId}
@@ -168,6 +172,7 @@ export function DxfViewerTopBar({
         levelManager={levelManager}
         projectId={levelManager.saveContext?.projectId ?? undefined}
         floorplanId={levelManager.fileRecordId ?? undefined}
+        floorId={floorId}
       />
       <MepManifoldPersistenceHost
         primarySelectedId={primarySelectedId}
@@ -175,6 +180,7 @@ export function DxfViewerTopBar({
         levelManager={levelManager}
         projectId={levelManager.saveContext?.projectId ?? undefined}
         floorplanId={levelManager.fileRecordId ?? undefined}
+        floorId={floorId}
       />
       <MepRadiatorPersistenceHost
         primarySelectedId={primarySelectedId}
@@ -182,6 +188,7 @@ export function DxfViewerTopBar({
         levelManager={levelManager}
         projectId={levelManager.saveContext?.projectId ?? undefined}
         floorplanId={levelManager.fileRecordId ?? undefined}
+        floorId={floorId}
       />
       <MepBoilerPersistenceHost
         primarySelectedId={primarySelectedId}
@@ -189,6 +196,7 @@ export function DxfViewerTopBar({
         levelManager={levelManager}
         projectId={levelManager.saveContext?.projectId ?? undefined}
         floorplanId={levelManager.fileRecordId ?? undefined}
+        floorId={floorId}
       />
       <MepSegmentPersistenceHost
         primarySelectedId={primarySelectedId}
@@ -196,6 +204,7 @@ export function DxfViewerTopBar({
         levelManager={levelManager}
         projectId={levelManager.saveContext?.projectId ?? undefined}
         floorplanId={levelManager.fileRecordId ?? undefined}
+        floorId={floorId}
       />
       <MepFittingPersistenceHost
         primarySelectedId={primarySelectedId}
@@ -203,10 +212,12 @@ export function DxfViewerTopBar({
         levelManager={levelManager}
         projectId={levelManager.saveContext?.projectId ?? undefined}
         floorplanId={levelManager.fileRecordId ?? undefined}
+        floorId={floorId}
       />
       <MepSystemPersistenceHost
         projectId={levelManager.saveContext?.projectId ?? undefined}
         floorplanId={levelManager.fileRecordId ?? undefined}
+        floorId={floorId}
         currentScene={currentScene}
         levelManager={levelManager}
         primarySelectedId={primarySelectedId}
@@ -245,6 +256,7 @@ export function DxfViewerTopBar({
         projectId={levelManager.saveContext?.projectId ?? undefined}
         floorplanId={levelManager.fileRecordId ?? undefined}
         buildingId={buildingId}
+        floorId={floorId}
       />
       <SlabOpeningStackHost levelManager={levelManager} />
       <StairPersistenceHost
