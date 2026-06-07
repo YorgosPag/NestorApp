@@ -86,7 +86,7 @@ export interface DxfViewerCallbacksParams {
   currentScene: SceneModel | null;
   selectedEntityIds: string[];
   handleSceneChange: (scene: SceneModel) => void;
-  handleFileImport: (file: File, encoding?: string, saveContext?: DxfSaveContext) => void;
+  handleFileImport: (file: File, encoding?: string, saveContext?: DxfSaveContext, targetLevelId?: string) => void;
   levelManager: LevelsHookReturn;
   overlayStore: {
     overlays: Record<string, OverlayEntry>;
@@ -105,7 +105,7 @@ export interface DxfViewerCallbacksReturn {
   wrappedHandleAction: (action: string, data?: string | number | Record<string, unknown>) => void;
   wrappedHandleTransformChange: (transform: ViewTransform) => void;
   panToWorldOrigin: () => void;
-  handleFileImportWithEncoding: (file: File, encoding?: string, saveContext?: DxfSaveContext) => Promise<void>;
+  handleFileImportWithEncoding: (file: File, encoding?: string, saveContext?: DxfSaveContext, targetLevelId?: string) => Promise<void>;
   handleRegionClick: (regionId: string) => void;
   nudgeSelection: (dx: number, dy: number) => void;
   selectionIdSet: Set<string>;

@@ -44,7 +44,7 @@ interface UsePanelContentRendererParams {
   setExpandedKeys: React.Dispatch<React.SetStateAction<Set<string>>>;
   layerOperations: LayerOperationsCallbacks;
   // ADR-309 Phase 2: Wizard button in LevelPanel
-  onSceneImported?: (file: File, encoding?: string, saveContext?: DxfSaveContext) => void;
+  onSceneImported?: (file: File, encoding?: string, saveContext?: DxfSaveContext, targetLevelId?: string) => void;
   // ADR-358 Phase 8 sidebar dock — scope inputs for the Properties tab.
   projectId?: string;
   floorplanId?: string;

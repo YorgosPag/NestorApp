@@ -411,7 +411,7 @@ export interface EnhancedDXFToolbarPropsExtended {
   currentZoom?: number;
   commandCount?: number;
   className?: string;
-  onSceneImported?: (file: File, encoding?: string, saveContext?: DxfSaveContext) => void;
+  onSceneImported?: (file: File, encoding?: string, saveContext?: DxfSaveContext, targetLevelId?: string) => void;
   showCoordinates?: boolean;
 
   // 🏢 ADR-050: Overlay toolbar integration (optional for feature flag)
