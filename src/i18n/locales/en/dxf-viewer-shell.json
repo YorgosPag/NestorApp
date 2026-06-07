@@ -45,6 +45,10 @@
     "builtMixed": "Created {columns} and {walls} from the perimeter.",
     "noneBuilt": "No valid perimeter found in the selection."
   },
+  "regionPerimeter": {
+    "oversized": "The boundary is {width}×{depth} m — too large for a structural member. The drawing's outer outline was likely selected.",
+    "noClosedLoop": "No closed boundary found near the point — the lines may not connect."
+  },
   "perimeterColumnConfirm": {
     "title": "Section classification",
     "message": "Based on the side ratios of the sections, {walls} and {columns} will be created. The ratios of some perimeters do not allow creating a column. Continue?",
@@ -2148,6 +2152,7 @@
         "delete": "Delete",
         "deleteConfirm": "Delete floor drain? This action cannot be undone."
       },
+      "mepRadiatorEditor": {
         "width": "Width",
         "length": "Depth",
         "bodyHeight": "Body height",
