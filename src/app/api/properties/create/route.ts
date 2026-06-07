@@ -5,6 +5,7 @@ import { ApiError, apiSuccess, type ApiSuccessResponse } from '@/lib/api/ApiErro
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { createModuleLogger } from '@/lib/telemetry';
 import { createEntity } from '@/lib/firestore/entity-creation.service';
+import { normalizePropertyWritePayload } from '@/lib/firestore/property-write-normalizer';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import type { PropertyType } from '@/types/property';
@@ -162,6 +163,10 @@ export const POST = withStandardRateLimit(
         if (body.code?.trim()) {
           entitySpecificFields.code = body.code.trim();
         }
+
+        // 🏢 SSoT write-time invariants (status mirror, levelData seed,
+        // aggregation, legacy flat-area). Single authority shared with PATCH.
+        normalizePropertyWritePayload(entitySpecificFields, { mode: 'create' });
 
         logger.info('[Properties] Creating new property', {
           name: body.name,

@@ -49,10 +49,12 @@ export interface Property {
     floor: number;
 
     /**
-     * ⚠️ DEPRECATED: Sales status (commercial state)
-     * @deprecated Use operationalStatus for physical state
+     * ⚠️ DEPRECATED: Legacy sales status. Now a write-time MIRROR of the
+     * canonical `commercialStatus` (SSoT) — same value, same type.
+     * @deprecated Read `commercialStatus` for market state / `operationalStatus`
+     *             for physical state. Kept only for backward-compat readers.
      */
-    status: 'for-sale' | 'for-rent' | 'sold' | 'rented' | 'reserved';
+    status: CommercialStatus;
 
     /**
      * ✅ NEW: Operational status (physical state)

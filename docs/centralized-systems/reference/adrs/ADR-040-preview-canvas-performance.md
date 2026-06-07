@@ -2970,3 +2970,7 @@ Bugfix-only αλλαγή στο `EnvelopeOverlay.tsx`: μετά το `renderOpen
 
 - **`CanvasSection.tsx`** — wired drag-box region-click events (mousedown/move/up) through `useCentralizedMouseHandlers` for wall region 'box' method. No new `useSyncExternalStore` in orchestrator (CHECK 6C safe).
 - **`dxf-canvas-renderer.ts`** — minor update for region-tool integration. Bitmap cache key unchanged (rule 3 safe).
+
+## 2026-06-07: dxf-canvas-renderer — multi-floor DXF overlay layer registration (non-architectural, CHECK 6B stage)
+
+**Non-architectural** άγγιγμα του `dxf-canvas-renderer.ts` για το multi-floor DXF overlay (ADR-420). Προστέθηκε layer registration για το 3D multi-floor DXF overlay view — εντελώς render-side, δεν αλλάζει το bitmap cache key (rule 3 safe), καμία νέα `useSyncExternalStore` σε orchestrator (CHECK 6C safe). Το micro-leaf subscriber pattern παραμένει αμετάβλητο.

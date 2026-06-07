@@ -1,16 +1,6 @@
 /**
- * =============================================================================
- * NESTOR ENTERPRISE CLOUD FUNCTIONS
- * =============================================================================
- *
- * Firebase Cloud Functions for server-side operations that require:
- * - Admin SDK privileges (bypass security rules)
- * - Scheduled execution (cron jobs)
- * - Atomic operations across Storage + Firestore
- *
- * @module functions/index
- * @enterprise ADR-032 - Enterprise Trash System
- * @enterprise ADR-029 - Global Search v1
+ * Nestor Enterprise Cloud Functions — Admin SDK, scheduled, atomic ops.
+ * ADR-032 (Trash) · ADR-029 (Search)
  */
 
 // 🔍 SEARCH INDEX TRIGGERS (ADR-029) — single writer of search_documents per entity type.
@@ -30,6 +20,9 @@ export { materialPriceSyncOnPODelivery } from './procurement/material-price-sync
 // 🖼️ FLOORPLAN BACKGROUND (ADR-340 Phase 7, D4) — ref-count fileId on background
 // delete; if 0 references remain, delete files/{fileId} + Storage object.
 export { onDeleteFloorplanBackground } from './floorplan-background/onDeleteFloorplanBackground';
+
+// 🏢 FLOOR · UNITS COUNTER (ADR-236) — maintain floors.units on property write.
+export { onPropertyWriteFloorUnits } from './aggregation/floorUnitsAggregation';
 
 import * as functions from 'firebase-functions';
 import * as admin from 'firebase-admin';

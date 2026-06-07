@@ -255,6 +255,23 @@ Google contract: **αν A→B δημιουργεί N level cards, τότε B→A
 - Per-level finishes preservation σε flat (Phase 2 contract immutable)
 
 ## Changelog
+- **2026-06-07**: **Data-integrity hardening (Revit-grade, FULL SSOT).** Fixed 4 creation-time
+  bugs surfaced on a multi-level unit (`prop_98385d3c`):
+  (1) **levelData seed** — `useAutoLevelCreation` + the new server normalizer now seed a FULL
+  zeroed per-level schema for EVERY declared level (never empty `{}`). New SSoT helpers
+  `buildEmptyLevelData` / `buildSeededLevelData` in `multi-level.service.ts` (seed missing,
+  preserve content, drop orphan floorIds).
+  (2) **`floors.units` aggregation** — NEW Cloud Function `onPropertyWriteFloorUnits`
+  (`functions/src/aggregation/floorUnitsAggregation.ts`): idempotent full-recompute per building
+  on every property write; a unit is counted on EVERY floor it occupies (`levels[].floorId`);
+  soft-deleted units (ADR-281) excluded. Previously `floors.units` was read-only and stuck at 0.
+  (3) **legacy flat `area`** — derived from SSoT `areas.gross` at write time.
+  (4) **status SSoT** — legacy `status` is now a write-time mirror of `commercialStatus`
+  (default `unavailable`); see ADR-197/287. Search index reads `commercialStatus` (ADR-029).
+  New write-boundary authority `lib/firestore/property-write-normalizer.ts`
+  (`normalizePropertyWritePayload`) shared by CREATE + PATCH routes; replaced/removed the older
+  `applyLevelDataAggregation` PATCH helper. Aggregation only overrides totals when real per-level
+  content exists (no zero-clobber of unit-level totals at creation).
 - **2026-05-01**: BOQ becomes a multi-level consumer — ADR-329 §3.7 codifies the contract.
   `levels[]` (visibility on every floor a unit occupies) and `levelData[floorId].areas.gross`
   (partial-area cost allocation) are now consumed by the BOQ scope picker + cost engine.

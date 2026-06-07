@@ -47,6 +47,40 @@ export const COMMERCIAL_STATUSES = [
 /** Canonical TypeScript union — derived automatically from `COMMERCIAL_STATUSES`. */
 export type CommercialStatus = (typeof COMMERCIAL_STATUSES)[number];
 
+/**
+ * Default commercial disposition for a freshly-created unit.
+ *
+ * Revit / Yardi / SAP RE-FX pattern: a new unit is **not on the market** until
+ * a user explicitly lists it. NEVER default to `for-sale` or `reserved` — those
+ * are deliberate sales actions, not creation side-effects.
+ *
+ * @see ADR-197 — Sales Pages Implementation (single disposition field)
+ */
+export const DEFAULT_COMMERCIAL_STATUS: CommercialStatus = 'unavailable';
+
+/**
+ * SSoT mirror: derive the **legacy** `status` field value from the canonical
+ * `commercialStatus`.
+ *
+ * The legacy `status` field (`PropertyStatus`, `@deprecated` in `types/property.ts`)
+ * is kept ONLY for backward-compat with old readers (search index pre-migration,
+ * dashboards). Its value MUST always equal the canonical `commercialStatus` —
+ * never diverge. `CommercialStatus` is a structural subset of `PropertyStatus`
+ * (identical tokens), so the mirror is an identity map after normalization.
+ *
+ * Single writer rule: only property write paths (create route, PATCH route,
+ * mutation gateway) call this. UI code MUST NOT hardcode legacy `status` values.
+ *
+ * @param commercialStatus — canonical commercial status (or any normalizable input)
+ * @returns the canonical `CommercialStatus` token to mirror into legacy `status`,
+ *          falling back to {@link DEFAULT_COMMERCIAL_STATUS} when unresolvable.
+ */
+export function deriveLegacyStatusFromCommercial(
+  commercialStatus: unknown,
+): CommercialStatus {
+  return normalizeCommercialStatus(commercialStatus) ?? DEFAULT_COMMERCIAL_STATUS;
+}
+
 // =============================================================================
 // 2. RUNTIME TYPE GUARD
 // =============================================================================

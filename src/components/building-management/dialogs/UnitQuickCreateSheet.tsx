@@ -55,7 +55,8 @@ export function UnitQuickCreateSheet({
     id: '__new__',
     name: '',
     type: '',
-    status: 'reserved',
+    // SSoT default: a blank unit is `unavailable` (not on market), never reserved.
+    status: 'unavailable',
     operationalStatus: 'draft',
     floor: 0,
     area: 0,

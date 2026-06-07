@@ -24,6 +24,7 @@ import {
 } from '@/config/domain-constants';
 import {
   buildLevelsFromSelection,
+  buildSeededLevelData,
   deriveMultiLevelFields,
 } from '@/services/multi-level.service';
 import type { FloorOption } from '@/services/multi-level.service';
@@ -164,6 +165,9 @@ export function useAutoLevelCreation({
       isMultiLevel: derived.isMultiLevel,
       floor: derived.floor,
       floorId: derived.floorId,
+      // Seed a full per-level data schema for EVERY level (never empty `{}`) so
+      // the per-level UI renders inputs immediately and aggregation is stable.
+      levelData: buildSeededLevelData(derived.levels),
     });
 
     const levelsCount = levels.length;

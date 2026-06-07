@@ -1,11 +1,4 @@
-/**
- * Property PATCH / DELETE / GET endpoint
- *
- * @module api/properties/[id]
- * @permission properties:properties:update (PATCH), properties:properties:delete (DELETE), properties:properties:view (GET)
- * @rateLimit STANDARD (60 req/min)
- * @see ADR-184 (Building Spaces Tabs)
- */
+/** Property PATCH / DELETE / GET endpoint — ADR-184, ADR-249, ADR-247. Rate: STANDARD 60/min. */
 
 import { NextRequest, NextResponse } from 'next/server';
 import { withAuth, logAuditEvent } from '@/lib/auth';
@@ -34,10 +27,10 @@ import {
   deactivatePropertyContactLinks,
 } from './property-contact-links';
 import { validateCommercialTransaction } from './property-commercial-validation';
+import { normalizePropertyWritePayload } from '@/lib/firestore/property-write-normalizer';
 import {
   PropertyPatchSchema,
   applyMultiLevelDefaults,
-  applyLevelDataAggregation,
   buildUpdateData,
   detectCancellation,
   type PropertyMutationResult,
@@ -78,11 +71,13 @@ export const PATCH = withStandardRateLimit(
           body,
         );
 
-        // ADR-236: Multi-level floors — mutates body in-place
+        // ADR-236: Multi-level floors — mutates body in-place (validates primary,
+        // derives floor/floorId/isMultiLevel).
         applyMultiLevelDefaults(body);
 
-        // ADR-236 Phase 2: Per-level data aggregation — mutates body in-place
-        applyLevelDataAggregation(body, existing.levels as typeof body.levels);
+        // 🏢 SSoT write-time invariants — single authority shared with CREATE:
+        // status mirror, levelData seed, per-level aggregation, legacy flat-area.
+        normalizePropertyWritePayload(body, { mode: 'update', existing });
 
         // Hierarchy + buyer validation for reserve/sell operations
         const isCommercialTransaction =

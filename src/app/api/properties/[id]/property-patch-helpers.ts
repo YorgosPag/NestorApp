@@ -11,8 +11,6 @@
 
 import { z } from 'zod';
 import { ApiError } from '@/lib/api/ApiErrorHandler';
-import { aggregateLevelData } from '@/services/multi-level.service';
-import type { LevelData } from '@/types/property';
 
 // ============================================================================
 // SCHEMA + TYPES (re-exported so route.ts can import from here)
@@ -103,40 +101,6 @@ export function applyMultiLevelDefaults(body: PropertyPatchPayload): void {
   } else if (body.levels.length === 0) {
     body.isMultiLevel = false;
   }
-}
-
-// ============================================================================
-// applyLevelDataAggregation
-// ============================================================================
-
-/**
- * ADR-236 Phase 2: Validate per-level data keys against declared levels,
- * then auto-aggregate into top-level areas / layout / orientations.
- *
- * Mutates `body` in-place.
- * @throws {ApiError} if levelData contains floorIds not in declared levels
- */
-export function applyLevelDataAggregation(
-  body: PropertyPatchPayload,
-  existingLevelsFromDoc: PropertyLevelPayload[] | undefined,
-): void {
-  if (!body.levelData || typeof body.levelData !== 'object') return;
-
-  const ld = body.levelData as Record<string, LevelData>;
-  const activeLevels = (body.levels ?? existingLevelsFromDoc) as PropertyLevelPayload[] | undefined;
-
-  if (activeLevels && activeLevels.length >= 2) {
-    const validFloorIds = new Set(activeLevels.map((l) => l.floorId));
-    const invalidKeys = Object.keys(ld).filter((k) => !validFloorIds.has(k));
-    if (invalidKeys.length > 0) {
-      throw new ApiError(400, `levelData contains invalid floorIds: ${invalidKeys.join(', ')}`);
-    }
-  }
-
-  const aggregated = aggregateLevelData(ld);
-  body.areas = aggregated.areas;
-  body.layout = aggregated.layout;
-  body.orientations = aggregated.orientations;
 }
 
 // ============================================================================

@@ -28,7 +28,8 @@ export function buildCreationPayload(params: {
     name: formData.name || defaultName,
     code: formData.code || suggestedCode || '',
     type: formData.type || 'apartment',
-    status: 'reserved' as const,
+    // Legacy `status` is server-derived from commercialStatus (SSoT) — a new
+    // unit defaults to `unavailable`, never `reserved`.
     operationalStatus: 'draft' as const,
     floor: standalone ? 0 : formData.floor,
     area: formData.areaGross,

@@ -179,9 +179,9 @@ export function useDxfCanvasRenderer(params: DxfCanvasRendererParams) {
         // AutoCAD parity: grips are only visible in selection mode (no active command).
         // When a tool like Move is active, grips disappear — the tool has its own UX.
         const activeTool = refs.activeToolRef.current;
-        // ADR-363 Phase 1J/1K — 'wall-on-entity' shows grips on the picked source;
-        // 'wall-in-region' shows grips on the accumulated 4-line picks (Giorgio
-        // 2026-05-30) so the user sees exactly which lines are selected.
+        // ADR-363 Phase 1J / ADR-419 — 'wall-on-entity' shows grips on the picked
+        // source; the region/perimeter tools (wall/column *-region-* + *-from-perimeter)
+        // show grips on the accumulated 4-line picks so the user sees the selection.
         const gripsAllowed =
           !activeTool ||
           activeTool === 'select' ||

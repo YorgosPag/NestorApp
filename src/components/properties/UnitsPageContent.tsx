@@ -117,7 +117,8 @@ export function PropertiesManagementContent() {
       id: '__new__', // eslint-disable-line custom/no-hardcoded-strings
       name: '',
       type: '',
-      status: 'reserved',
+      // SSoT default: a blank unit is `unavailable` (not on market), never reserved.
+      status: 'unavailable',
       operationalStatus: 'draft',
       floor: 0,
       area: 0,

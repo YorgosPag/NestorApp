@@ -188,3 +188,60 @@ export function aggregateLevelData(levelData: Record<string, LevelData>): Aggreg
     orientations: Array.from(orientationSet),
   };
 }
+
+// =============================================================================
+// LEVEL DATA SEED (ADR-236 Phase 2 — Revit-grade per-level initialization)
+// =============================================================================
+
+/**
+ * Canonical empty per-level data schema.
+ *
+ * Revit pattern: a newly-created level card is a **fully-formed object with
+ * zeroed measurements**, never an empty `{}`. This guarantees:
+ *   - `aggregateLevelData` iterates real numeric fields (no `undefined` math)
+ *   - the per-level UI renders all inputs from creation (no "ghost" empty level)
+ *   - search / BOQ / reports read a stable shape
+ *
+ * Factory (not a shared const) so each level gets its own object instance —
+ * no accidental cross-level mutation aliasing.
+ */
+export function buildEmptyLevelData(): LevelData {
+  return {
+    areas: { gross: 0, net: 0, balcony: 0, terrace: 0, garden: 0 },
+    layout: { bedrooms: 0, bathrooms: 0, wc: 0 },
+    orientations: [],
+  };
+}
+
+/**
+ * Reconcile `levelData` against the declared `levels` array — the SSoT seed.
+ *
+ * Rules (idempotent, belt-and-suspenders):
+ *  - Every `level.floorId` MUST have an entry. Missing → seed {@link buildEmptyLevelData}.
+ *  - Existing non-empty entries are PRESERVED untouched (no data loss).
+ *  - Existing empty `{}` entries are replaced with the full empty schema.
+ *  - Orphan keys (floorId no longer in `levels`) are DROPPED (no stale data).
+ *
+ * Pure function — safe for client (auto level creation) and server (write
+ * normalizer) so both produce identical shapes.
+ *
+ * @param levels — declared PropertyLevel array
+ * @param existing — current per-level data map (may be partial / empty)
+ * @returns complete `Record<floorId, LevelData>` with one entry per level
+ */
+export function buildSeededLevelData(
+  levels: readonly PropertyLevel[],
+  existing?: Record<string, LevelData> | null,
+): Record<string, LevelData> {
+  const source = existing ?? {};
+  const seeded: Record<string, LevelData> = {};
+
+  for (const level of levels) {
+    const current = source[level.floorId];
+    const hasContent =
+      current && typeof current === 'object' && Object.keys(current).length > 0;
+    seeded[level.floorId] = hasContent ? current : buildEmptyLevelData();
+  }
+
+  return seeded;
+}

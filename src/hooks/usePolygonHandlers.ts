@@ -99,7 +99,8 @@ export function usePolygonHandlers({
         propertyData: {
           name: t('viewer.defaults.newPropertyName'),
           type: floorContext?.type ?? 'apartment',
-          status: floorContext?.status ?? 'reserved',
+          // Legacy `status` is server-derived from commercialStatus (SSoT) —
+          // a freshly drawn unit defaults to `unavailable`, never `reserved`.
           operationalStatus: floorContext?.operationalStatus ?? 'draft',
           // ADR-284 Batch 7: Hierarchy fields (Family A — DXF viewer is always in-building)
           projectId: resolvedProjectId,
@@ -192,7 +193,9 @@ export function usePolygonHandlers({
             name: sourceProperty.name,
           }),
           type: sourceProperty.type,
-          status: 'reserved',
+          // Legacy `status` is server-derived from commercialStatus (SSoT). A
+          // duplicate is a brand-new unit → defaults to `unavailable` (a copy
+          // must never inherit a sales state like reserved/sold).
           operationalStatus: 'draft',
           // ADR-284 Batch 7: Hierarchy fields (Family A)
           projectId: resolvedProjectId,
