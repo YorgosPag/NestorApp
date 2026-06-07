@@ -172,18 +172,64 @@ export function appendEntitySegments(buf: number[], entity: DxfEntityUnion): voi
 
 // ── DxfToThreeConverter ───────────────────────────────────────────────────────
 
+/** One floor's DXF underlay scene + its datum-relative elevation (mm). */
+export interface DxfOverlayFloorEntry {
+  readonly scene: DxfScene;
+  /** Datum-relative vertical offset, in millimetres (ADR-399 Phase B). */
+  readonly floorElevationMm: number;
+}
+
+const MM_TO_M = 0.001;
+
 export class DxfToThreeConverter {
   private readonly scene: THREE.Scene;
-  private group: THREE.Group | null = null;
+  private root: THREE.Group | null = null;
   private readonly activeMaterials: THREE.LineBasicMaterial[] = [];
 
   constructor(scene: THREE.Scene) {
     this.scene = scene;
   }
 
+  /** Single-floor overlay sitting on the floor plane (Y=0). */
   sync(dxfScene: DxfScene | null): void {
-    this.disposeGroup();
-    if (!dxfScene || dxfScene.entities.length === 0) return;
+    this.disposeRoot();
+    const group = dxfScene ? this.buildColorGroup(dxfScene) : null;
+    if (!group) return;
+
+    // Flat structure (named group holds the LineSegments directly) — unchanged
+    // from the pre-multi-floor layout so existing consumers / tests keep working.
+    group.name = 'dxf-wireframe';
+    this.root = group;
+    this.scene.add(group);
+  }
+
+  /**
+   * ADR-399 Phase B — stacked per-floor overlays. Each floor's DXF wireframe
+   * sits at its own datum-relative elevation so the «Όλοι οι όροφοι» 3D view
+   * shows every floor's plan aligned with the stacked BIM geometry (mirror of
+   * `BimSceneLayer.syncMultiFloor`).
+   */
+  syncMultiFloor(entries: readonly DxfOverlayFloorEntry[]): void {
+    this.disposeRoot();
+    const root = new THREE.Group();
+    root.name = 'dxf-wireframe-multifloor';
+    for (const entry of entries) {
+      const group = this.buildColorGroup(entry.scene);
+      if (!group) continue;
+      group.position.y = entry.floorElevationMm * MM_TO_M;
+      root.add(group);
+    }
+    if (root.children.length === 0) return;
+    this.root = root;
+    this.scene.add(root);
+  }
+
+  /**
+   * Build a colour-bucketed `THREE.Group` for one DXF scene (scaled to metres),
+   * or null when there is nothing to draw. Shared by `sync` + `syncMultiFloor`.
+   */
+  private buildColorGroup(dxfScene: DxfScene): THREE.Group | null {
+    if (dxfScene.entities.length === 0) return null;
 
     const layersById = dxfScene.layersById as Record<string, SceneLayer> | undefined;
     const colorBuckets = new Map<number, number[]>();
@@ -199,10 +245,10 @@ export class DxfToThreeConverter {
       appendEntitySegments(bucket, entity);
     }
 
-    if (colorBuckets.size === 0) return;
+    if (colorBuckets.size === 0) return null;
 
     const group = new THREE.Group();
-    group.name = 'dxf-wireframe';
+    group.name = 'dxf-wireframe-floor';
 
     for (const [color, positions] of colorBuckets) {
       if (positions.length === 0) continue;
@@ -213,38 +259,34 @@ export class DxfToThreeConverter {
       group.add(new THREE.LineSegments(geo, mat));
     }
 
-    if (group.children.length === 0) return;
+    if (group.children.length === 0) return null;
 
     // Scale the wireframe overlay from DXF world units → metres so it aligns
     // with BIM geometry. appendEntitySegments stores raw DXF coordinates;
     // the group-level transform converts them to the Three.js metre world.
     const unitScale = DXF_UNIT_TO_METRES[dxfScene.units ?? 'mm'] ?? 0.001;
     group.scale.set(unitScale, 1, unitScale);
-
-    this.group = group;
-    this.scene.add(group);
+    return group;
   }
 
   getBounds(): THREE.Box3 | null {
-    if (!this.group) return null;
-    const box = new THREE.Box3().setFromObject(this.group);
+    if (!this.root) return null;
+    const box = new THREE.Box3().setFromObject(this.root);
     return box.isEmpty() ? null : box;
   }
 
-  private disposeGroup(): void {
-    if (!this.group) return;
-    for (const child of this.group.children) {
-      if (child instanceof THREE.LineSegments) {
-        child.geometry.dispose();
-      }
-    }
+  private disposeRoot(): void {
+    if (!this.root) return;
+    this.root.traverse((obj) => {
+      if (obj instanceof THREE.LineSegments) obj.geometry.dispose();
+    });
     for (const mat of this.activeMaterials) mat.dispose();
     this.activeMaterials.length = 0;
-    this.scene.remove(this.group);
-    this.group = null;
+    this.scene.remove(this.root);
+    this.root = null;
   }
 
   dispose(): void {
-    this.disposeGroup();
+    this.disposeRoot();
   }
 }

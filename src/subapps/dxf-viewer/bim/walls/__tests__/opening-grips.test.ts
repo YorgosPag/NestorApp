@@ -1,16 +1,16 @@
 /**
- * ADR-363 Phase 2.5 — `opening-grips` pure handlers tests.
+ * ADR-363 Phase 2.5 — `opening-grips` pure handlers tests (full wall parity).
  *
  * Coverage:
- *   - `getOpeningGrips()` returns the single `opening-offset` grip positioned
- *     at the opening's world center (geometry.position).
+ *   - `getOpeningGrips()` emits 6 grips (move + rotation + 4 corners), centred-box
+ *     layout, with the correct `openingGripKind` per role.
  *   - `applyOpeningGripDrag()`:
- *       · projects the cursor onto host wall axis → new offsetFromStart
- *       · clamps to `[frameWidth, hostLength - width - frameWidth]`
- *       · refuses the move when the host is too short for opening + jambs
- *       · returns the original params unchanged when delta resolves to the
- *         current offset (idempotent identity)
- *       · ignores foreign grip kinds gracefully
+ *       · `opening-move` projects the cursor onto the host wall axis → offsetFromStart
+ *         (clamped· refuses when host too short· idempotent identity).
+ *       · `opening-corner-ne/se` resize the END jamb (width grows, offset pinned).
+ *       · `opening-corner-nw/sw` resize the START jamb (offset + width, end pinned).
+ *       · `opening-rotation` flips door handing by cursor side (deterministic).
+ *       · foreign / no-swing kinds → original params unchanged.
  */
 
 import { applyOpeningGripDrag, getOpeningGrips } from '../opening-grips';
@@ -34,15 +34,14 @@ function unwrapOpening(r: ReturnType<typeof buildOpeningEntity>): OpeningEntity 
   return r.entity;
 }
 
-describe('opening-grips (Phase 2.5)', () => {
-  // 4000mm horizontal wall along +X. (wall length = 4m).
+describe('opening-grips (Phase 2.5 — wall parity)', () => {
+  // 4000mm horizontal wall along +X (wall length = 4m).
   const wallStart = { x: 0, y: 0 };
   const wallEnd = { x: 4000, y: 0 };
 
   function makeHorizontalWall(): WallEntity {
     return unwrapWall(buildWallEntity(buildDefaultWallParams(wallStart, wallEnd), '0', 'straight'));
   }
-
   function makeDoor(host: WallEntity, clickX: number): OpeningEntity {
     const params = buildDefaultOpeningParams(host, { x: clickX, y: 0 }, { kind: 'door' });
     return unwrapOpening(buildOpeningEntity(params, host, '0'));
@@ -50,106 +49,168 @@ describe('opening-grips (Phase 2.5)', () => {
 
   // ─── getOpeningGrips ─────────────────────────────────────────────────────
 
-  it('1. door opening → single `opening-offset` grip', () => {
+  it('1. emits 6 grips: move + rotation + 4 corners', () => {
     const host = makeHorizontalWall();
-    const opening = makeDoor(host, 2000);
-    const grips = getOpeningGrips(opening);
-    expect(grips).toHaveLength(1);
-    expect(grips[0].openingGripKind).toBe('opening-offset');
+    const grips = getOpeningGrips(makeDoor(host, 2000));
+    expect(grips).toHaveLength(6);
+    expect(grips.map((g) => g.openingGripKind)).toEqual([
+      'opening-move',
+      'opening-rotation',
+      'opening-corner-ne',
+      'opening-corner-nw',
+      'opening-corner-sw',
+      'opening-corner-se',
+    ]);
     expect(grips[0].type).toBe('center');
     expect(grips[0].movesEntity).toBe(true);
+    expect(grips[1].movesEntity).toBe(false);
   });
 
-  it('2. grip position equals geometry.position (world center on wall axis)', () => {
+  it('2. move grip sits at geometry.position (opening world centre)', () => {
     const host = makeHorizontalWall();
     const opening = makeDoor(host, 2000);
-    const grips = getOpeningGrips(opening);
-    expect(grips[0].position.x).toBeCloseTo(opening.geometry.position.x, 3);
-    expect(grips[0].position.y).toBeCloseTo(opening.geometry.position.y, 3);
+    const move = getOpeningGrips(opening)[0];
+    expect(move.position.x).toBeCloseTo(opening.geometry.position.x, 3);
+    expect(move.position.y).toBeCloseTo(opening.geometry.position.y, 3);
   });
 
-  // ─── applyOpeningGripDrag ────────────────────────────────────────────────
-
-  it('3. drag along axis updates offsetFromStart toward cursor projection', () => {
+  it('3. the 4 corners coincide with the cutout outline vertices', () => {
     const host = makeHorizontalWall();
     const opening = makeDoor(host, 2000);
-    const before = opening.params.offsetFromStart;
-    const next = applyOpeningGripDrag('opening-offset', {
+    const corners = getOpeningGrips(opening).slice(2);
+    const outline = opening.geometry.outline.vertices;
+    // Every corner grip must match some outline vertex (set equality up to ε).
+    for (const c of corners) {
+      const hit = outline.some(
+        (v) => Math.abs(v.x - c.position.x) < 1e-6 && Math.abs(v.y - c.position.y) < 1e-6,
+      );
+      expect(hit).toBe(true);
+    }
+  });
+
+  // ─── move (along wall) ───────────────────────────────────────────────────
+
+  it('4. opening-move projects cursor → offsetFromStart, clamps, idempotent', () => {
+    const host = makeHorizontalWall();
+    const opening = makeDoor(host, 2000);
+    const moved = applyOpeningGripDrag('opening-move', {
       originalParams: opening.params,
-      currentPos: { x: 3000, y: 50 }, // off-axis y ignored after projection
+      currentPos: { x: 3000, y: 50 },
       hostWall: host,
     });
-    // Projected offset = 3000, candidate left = 3000 - width/2.
-    const expected = 3000 - opening.params.width / 2;
-    expect(next.offsetFromStart).toBeCloseTo(expected, 0);
-    expect(next.offsetFromStart).not.toBe(before);
-  });
-
-  it('4. clamp at min: cursor before host start → offset = frameWidth', () => {
-    const host = makeHorizontalWall();
-    const opening = makeDoor(host, 2000);
-    const next = applyOpeningGripDrag('opening-offset', {
-      originalParams: opening.params,
-      currentPos: { x: -500, y: 0 },
-      hostWall: host,
-    });
-    expect(next.offsetFromStart).toBe(opening.params.frameWidth);
-  });
-
-  it('5. clamp at max: cursor past host end → offset = hostLength - width - frameWidth', () => {
-    const host = makeHorizontalWall();
-    const opening = makeDoor(host, 2000);
-    const hostLengthMm = host.geometry.length * 1000;
-    const frameWidth = opening.params.frameWidth ?? 50;
-    const expectedMax = hostLengthMm - opening.params.width - frameWidth;
-    const next = applyOpeningGripDrag('opening-offset', {
-      originalParams: opening.params,
-      currentPos: { x: 99999, y: 0 },
-      hostWall: host,
-    });
-    expect(next.offsetFromStart).toBeCloseTo(expectedMax, 0);
-  });
-
-  it('6. refuses when host too short for opening + both jambs', () => {
-    // 800mm wall + 900mm door = cannot fit even ignoring jambs.
-    const shortHost = unwrapWall(buildWallEntity(
-      buildDefaultWallParams({ x: 0, y: 0 }, { x: 800, y: 0 }),
-      '0',
-      'straight',
-    ));
-    // We can't buildDefaultOpeningParams (validator would reject); fabricate
-    // an opening with params pointing at shortHost — the drag handler must
-    // hand back originalParams unchanged.
-    const longHost = makeHorizontalWall();
-    const opening = makeDoor(longHost, 2000);
-    const originalParams = { ...opening.params, wallId: shortHost.id };
-    const next = applyOpeningGripDrag('opening-offset', {
-      originalParams,
-      currentPos: { x: 400, y: 0 },
-      hostWall: shortHost,
-    });
-    expect(next).toBe(originalParams); // referential identity, no change
-  });
-
-  it('7. idempotent when cursor projects to current center', () => {
-    const host = makeHorizontalWall();
-    const opening = makeDoor(host, 2000);
+    expect(moved.offsetFromStart).toBeCloseTo(3000 - opening.params.width / 2, 0);
+    // Idempotent when cursor projects to the current centre.
     const center = opening.geometry.position;
-    const next = applyOpeningGripDrag('opening-offset', {
+    const same = applyOpeningGripDrag('opening-move', {
       originalParams: opening.params,
       currentPos: { x: center.x, y: center.y },
       hostWall: host,
     });
+    expect(same).toBe(opening.params);
+  });
+
+  // ─── corner resize ───────────────────────────────────────────────────────
+
+  it('5. end corner (ne/se) grows width, start jamb (offset) pinned', () => {
+    const host = makeHorizontalWall();
+    const opening = makeDoor(host, 2000);
+    const { offsetFromStart, width } = opening.params;
+    const next = applyOpeningGripDrag('opening-corner-ne', {
+      originalParams: opening.params,
+      currentPos: { x: offsetFromStart + width + 300, y: 0 },
+      hostWall: host,
+    });
+    expect(next.offsetFromStart).toBe(offsetFromStart); // start jamb pinned
+    expect(next.width).toBeCloseTo(width + 300, 0);
+  });
+
+  it('6. start corner (nw/sw) moves start jamb, end jamb pinned', () => {
+    const host = makeHorizontalWall();
+    const opening = makeDoor(host, 2000);
+    const { offsetFromStart, width } = opening.params;
+    const endAxial = offsetFromStart + width;
+    const next = applyOpeningGripDrag('opening-corner-sw', {
+      originalParams: opening.params,
+      currentPos: { x: offsetFromStart - 200, y: 0 },
+      hostWall: host,
+    });
+    expect(next.offsetFromStart).toBeCloseTo(offsetFromStart - 200, 0);
+    expect(next.offsetFromStart + next.width).toBeCloseTo(endAxial, 0); // end jamb pinned
+  });
+
+  it('7. corner resize clamps width to MIN_OPENING_WIDTH_MM', () => {
+    const host = makeHorizontalWall();
+    const opening = makeDoor(host, 2000);
+    const { offsetFromStart } = opening.params;
+    // Drag the end jamb far back past the start jamb → clamps to min width.
+    const next = applyOpeningGripDrag('opening-corner-se', {
+      originalParams: opening.params,
+      currentPos: { x: offsetFromStart - 1000, y: 0 },
+      hostWall: host,
+    });
+    expect(next.width).toBeGreaterThan(0);
+    expect(next.offsetFromStart).toBe(offsetFromStart);
+  });
+
+  // ─── rotation = flip handing ─────────────────────────────────────────────
+
+  it('8. rotation flips door handing by cursor side (deterministic)', () => {
+    const host = makeHorizontalWall();
+    const opening = makeDoor(host, 2000);
+    const leftDoor = { ...opening.params, handing: 'left' as const };
+    const centerAxial = leftDoor.offsetFromStart + leftDoor.width / 2;
+    // Cursor on the end side (axial > centre) → 'right'.
+    const flipped = applyOpeningGripDrag('opening-rotation', {
+      originalParams: leftDoor,
+      currentPos: { x: centerAxial + 500, y: 300 },
+      hostWall: host,
+    });
+    expect(flipped.handing).toBe('right');
+    // Same side as current handing → no-op (referential identity).
+    const same = applyOpeningGripDrag('opening-rotation', {
+      originalParams: leftDoor,
+      currentPos: { x: centerAxial - 500, y: 300 },
+      hostWall: host,
+    });
+    expect(same).toBe(leftDoor);
+  });
+
+  it('9. rotation is a no-op for openings without a swing (no handing)', () => {
+    const host = makeHorizontalWall();
+    const opening = makeDoor(host, 2000);
+    const noSwing = { ...opening.params, handing: undefined };
+    const next = applyOpeningGripDrag('opening-rotation', {
+      originalParams: noSwing,
+      currentPos: { x: 3000, y: 300 },
+      hostWall: host,
+    });
+    expect(next).toBe(noSwing);
+  });
+
+  // ─── guards ──────────────────────────────────────────────────────────────
+
+  it('10. unknown grip kind → no-op returns originalParams', () => {
+    const host = makeHorizontalWall();
+    const opening = makeDoor(host, 2000);
+    const next = applyOpeningGripDrag('foreign-grip' as 'opening-move', {
+      originalParams: opening.params,
+      currentPos: { x: 0, y: 0 },
+      hostWall: host,
+    });
     expect(next).toBe(opening.params);
   });
 
-  it('8. unknown grip kind → no-op returns originalParams', () => {
-    const host = makeHorizontalWall();
-    const opening = makeDoor(host, 2000);
-    const next = applyOpeningGripDrag(
-      'foreign-grip' as 'opening-offset',
-      { originalParams: opening.params, currentPos: { x: 0, y: 0 }, hostWall: host },
+  it('11. move refuses when host too short for opening + jambs', () => {
+    const shortHost = unwrapWall(
+      buildWallEntity(buildDefaultWallParams({ x: 0, y: 0 }, { x: 800, y: 0 }), '0', 'straight'),
     );
-    expect(next).toBe(opening.params);
+    const opening = makeDoor(makeHorizontalWall(), 2000);
+    const originalParams = { ...opening.params, wallId: shortHost.id };
+    const next = applyOpeningGripDrag('opening-move', {
+      originalParams,
+      currentPos: { x: 400, y: 0 },
+      hostWall: shortHost,
+    });
+    expect(next).toBe(originalParams);
   });
 });

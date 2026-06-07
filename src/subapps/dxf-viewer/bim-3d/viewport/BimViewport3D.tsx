@@ -11,7 +11,6 @@ import { useViewMode3DStore, selectIs3D } from '../stores/ViewMode3DStore';
 import type { ReducedMotionOverride } from '../accessibility/use-reduced-motion';
 import { LIGHT_PRESETS } from '../lighting/lighting-presets';
 import { useBim3DEntitiesStore, type Bim3DEntities } from '../stores/Bim3DEntitiesStore';
-import { useDxfOverlay3DStore } from '../stores/DxfOverlay3DStore';
 import { useQuickProperties3DStore } from '../stores/QuickProperties3DStore';
 import { useSelection3DStore } from '../stores/Selection3DStore';
 import { clearSceneBboxGetter, setSceneBboxGetter } from '../stores/SceneBboxProvider';
@@ -45,6 +44,7 @@ import { useBim3DStoreSync } from './use-bim3d-store-sync';
 import { useBim3DVgResync } from './use-bim3d-vg-resync';
 import { useBim3DMultiFloorSync } from './use-bim3d-multifloor-sync';
 import { resyncBimScene } from '../scene/bim3d-resync';
+import { resyncDxfOverlay } from '../scene/dxf-overlay-resync';
 import { useBim3DPointerHandlers } from './use-bim3d-pointer-handlers';
 import { useBim3DRenderControls } from './use-bim3d-render-controls';
 import { UnifiedFrameScheduler, RENDER_PRIORITIES } from '../../rendering/core/UnifiedFrameScheduler';
@@ -165,7 +165,8 @@ export function BimViewport3D({ projectId: projectIdProp, readOnly = false, bimE
     // stacked building). External prop overrides global store when provided (ADR-371).
     const initialFloorModes = useViewMode3DStore.getState().floorVisibilityModes;
     resyncBimScene(managerRef.current, { externalEntitiesMode, bimEntities });
-    managerRef.current.syncDxfOverlay(useDxfOverlay3DStore.getState().dxfScene);
+    // ADR-399 Phase B — scope-aware (single active overlay OR stacked per-floor plans).
+    resyncDxfOverlay(managerRef.current);
 
     // ADR-382 Phase C — post-hoc apply preserves ghost styling + defense-in-depth
     // for floor-mode toggles between rebuilds. Hide is handled pre-mesh in sync().

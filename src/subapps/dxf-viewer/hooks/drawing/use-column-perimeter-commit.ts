@@ -26,11 +26,12 @@ import {
   classifyColumnsFromPerimeters,
   perimeterColumnKind,
   perimeterAspectRatio,
+  isWallColumnKind,
   type PerimeterColumnClassification,
 } from '../../bim/columns/column-from-faces';
 import { perimeterFacesToRects } from '../../bim/walls/perimeter-from-faces';
 import {
-  requestColumnPerimeterConfirm,
+  requestColumnDiscreteIntentConfirm,
   requestColumnIsColumnWarn,
 } from '../../bim/columns/column-perimeter-confirm-store';
 import { isPointInPolygon } from '../../utils/geometry/GeometryUtils';
@@ -105,43 +106,56 @@ export function useColumnPerimeterCommit(
     [regionTol, currentLevelId, commitPerimeterColumns, getSceneEntitiesRef, getSceneUnitsRef],
   );
 
-  // ── discrete-perimeter (Φ3c «Κολώνα από περίγραμμα», ΧΩΡΙΣ ένωση) ──────────
-  // Append per-entity μέσω onColumnCreated (ίδια granularity) + breakdown event.
-  const appendDiscreteColumns = useCallback(
-    (built: PerimeterColumnClassification): void => {
-      for (const column of built.columns) onColumnCreatedRef.current?.(column);
-      EventBus.emit('bim:columns-discrete-from-perimeter', {
-        columns: built.columnCount,
-        walls: built.wallCount,
-        ignored: built.ignored,
-      });
+  // ── discrete-perimeter (Φ3c «Πολλαπλή δημιουργία», ΧΩΡΙΣ ένωση) ────────────
+  // Append έτοιμων entities + breakdown event (created counts).
+  const appendColumns = useCallback(
+    (entities: readonly ColumnEntity[], ignored: number): void => {
+      let columns = 0;
+      let walls = 0;
+      for (const column of entities) {
+        onColumnCreatedRef.current?.(column);
+        if (isWallColumnKind(column.kind)) walls++;
+        else columns++;
+      }
+      EventBus.emit('bim:columns-discrete-from-perimeter', { columns, walls, ignored });
     },
     [onColumnCreatedRef],
   );
 
-  // Όταν εντοπιστεί ≥1 τοιχίο → ενημερωτικό confirm (Giorgio: ΠΟΤΕ αυθαίρετη
-  // ισοπέδωση)· [Άκυρο] = όλα ή τίποτα. Όλα κολώνες → δημιουργία κατευθείαν.
+  // ADR-419 — intent-aware «Πολλαπλή δημιουργία»: δημιουργεί κατευθείαν ό,τι
+  // ταιριάζει στην πρόθεση (κολώνες ή τοιχία) και ρωτά με dialog για τα υπόλοιπα
+  // (μη αλλοίωση στατικών — στενόμακρο σχήμα μένει τοιχίο ακόμη κι αν πατήθηκε
+  // «κολώνες»). `discreteIntent` οδηγείται από το active tool id.
   const commitDiscretePerimeterColumns = useCallback(
     async (built: PerimeterColumnClassification): Promise<boolean> => {
-      if (built.columns.length === 0) {
-        EventBus.emit('bim:columns-discrete-from-perimeter', {
-          columns: 0,
-          walls: 0,
-          ignored: built.ignored,
-        });
+      const intent = stateRef.current.discreteIntent;
+      const walls = built.columns.filter((c) => isWallColumnKind(c.kind));
+      const cols = built.columns.filter((c) => !isWallColumnKind(c.kind));
+      const primary = intent === 'columns' ? cols : walls;
+      const secondary = intent === 'columns' ? walls : cols;
+
+      if (primary.length === 0 && secondary.length === 0) {
+        EventBus.emit('bim:columns-discrete-from-perimeter', { columns: 0, walls: 0, ignored: built.ignored });
         return false;
       }
-      if (built.wallCount > 0) {
-        const action = await requestColumnPerimeterConfirm({
-          walls: built.wallCount,
-          columns: built.columnCount,
-        });
-        if (action === 'cancel') return false; // όλα ή τίποτα
+      // Καθαρή πρόθεση (μόνο primary) → δημιουργία κατευθείαν, χωρίς dialog.
+      if (secondary.length === 0) {
+        appendColumns(primary, built.ignored);
+        return true;
       }
-      appendDiscreteColumns(built);
+      // Εντοπίστηκαν και «άλλου τύπου» στοιχεία → intent-aware confirm (3/2 κουμπιά).
+      const action = await requestColumnDiscreteIntentConfirm({
+        intent,
+        primaryCount: primary.length,
+        secondaryCount: secondary.length,
+      });
+      if (action === 'cancel') return false;
+      const toCreate = action === 'create-all' ? [...primary, ...secondary] : primary;
+      if (toCreate.length === 0) return false;
+      appendColumns(toCreate, built.ignored);
       return true;
     },
-    [appendDiscreteColumns],
+    [stateRef, appendColumns],
   );
 
   const onDiscretePerimeterClick = useCallback(

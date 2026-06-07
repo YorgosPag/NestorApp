@@ -107,15 +107,23 @@ export type WallGripKind =
   | `wall-vertex-${number}`;
 
 /**
- * ADR-363 Phase 2.5 — Opening grip kind (parametric grip type).
+ * ADR-363 Phase 2.5 — Opening grip kinds (parametric grip types).
  * Routes commit through `applyOpeningGripDrag()` + `UpdateOpeningParamsCommand`
  * instead of the standard `StretchEntityCommand` vertex path.
  *
- * Single grip exposed by `OpeningEntity` (`bim/walls/opening-grips.ts`):
- *   - `opening-offset` → drag along host wall axis, clamped to host length
- *     minus frame width on both sides.
+ * Full wall/furniture parity (centred-box layout) — every opening exposes 6 grips:
+ *   - `opening-move`        → drag the whole opening along the host wall axis.
+ *   - `opening-rotation`    → flip handing (Revit-style) — stays hosted on the wall.
+ *   - `opening-corner-{ne,nw,sw,se}` → resize WIDTH along the wall (opposite jamb
+ *     pinned). E corners (ne/se) move the end jamb, W corners (nw/sw) the start jamb.
  */
-export type OpeningGripKind = 'opening-offset';
+export type OpeningGripKind =
+  | 'opening-move'
+  | 'opening-rotation'
+  | 'opening-corner-ne'
+  | 'opening-corner-nw'
+  | 'opening-corner-sw'
+  | 'opening-corner-se';
 
 /**
  * ADR-363 Phase 3.5 + 3.6 — Slab grip kind (parametric grip type).

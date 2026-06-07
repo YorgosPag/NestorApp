@@ -45,10 +45,19 @@ import type { FloorVisMode } from '../../utils/floor-visibility-state';
 const mockDrawingState = useDrawingScaleStore.getState as jest.Mock;
 const FAKE_MESH = (): THREE.Mesh => new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1));
 
-/** A floor with exactly one wall (other categories empty) for precise counting. */
+/**
+ * A floor with exactly one wall (other categories empty) for precise counting.
+ * The wall carries minimal straight-segment `params` (start/end) so the
+ * post-ADR-401 `syncWalls` host-profile resolution runs without crashing; with
+ * no `topBinding/baseBinding === 'attached'` the profile args stay undefined.
+ */
 function wallFloor(wallId: string): Bim3DEntities {
   return {
-    walls: [{ id: wallId } as unknown as Bim3DEntities['walls'][number]],
+    walls: [{
+      id: wallId,
+      kind: 'straight',
+      params: { start: { x: 0, y: 0 }, end: { x: 1, y: 0 } },
+    } as unknown as Bim3DEntities['walls'][number]],
     columns: [], beams: [], slabs: [], slabOpenings: [], openings: [], stairs: [],
     fixtures: [], panels: [], railings: [],
   };
@@ -87,17 +96,17 @@ describe('BimSceneLayer.syncMultiFloor — ADR-399 Phase B', () => {
 
   it('passes each floor its own floorElevationMm + levelId to the converter', () => {
     new BimSceneLayer(new THREE.Scene()).syncMultiFloor(stack);
-    // wallToMesh(wall, openings, floorElevationMm, activeLevelId, baseElevation, profile?)
-    // ADR-401 B2: 6ο όρισμα = WallTopProfile (undefined για μη-attached τοίχους).
-    expect(wallToMesh).toHaveBeenNthCalledWith(1, expect.objectContaining({ id: 'w1' }), expect.anything(), 0, 'L1', expect.anything(), undefined);
-    expect(wallToMesh).toHaveBeenNthCalledWith(2, expect.objectContaining({ id: 'w2' }), expect.anything(), 3000, 'L2', expect.anything(), undefined);
+    // wallToMesh(wall, openings, floorElevationMm, activeLevelId, baseElevation, profile?, baseProfile?, topClip?)
+    // ADR-401: args 6-8 = WallTopProfile/WallBaseProfile/WallTopClip (all undefined for non-attached walls).
+    expect(wallToMesh).toHaveBeenNthCalledWith(1, expect.objectContaining({ id: 'w1' }), expect.anything(), 0, 'L1', expect.anything(), undefined, undefined, undefined);
+    expect(wallToMesh).toHaveBeenNthCalledWith(2, expect.objectContaining({ id: 'w2' }), expect.anything(), 3000, 'L2', expect.anything(), undefined, undefined, undefined);
   });
 
   it('skips a floor whose visibility mode is hide (pre-mesh gate)', () => {
     const floorModes = new Map<string, FloorVisMode>([['L2', 'hide']]);
     new BimSceneLayer(new THREE.Scene()).syncMultiFloor(stack, [], [], null, new Map(), floorModes);
     expect(wallToMesh).toHaveBeenCalledTimes(1);
-    expect(wallToMesh).toHaveBeenCalledWith(expect.objectContaining({ id: 'w1' }), expect.anything(), 0, 'L1', expect.anything(), undefined);
+    expect(wallToMesh).toHaveBeenCalledWith(expect.objectContaining({ id: 'w1' }), expect.anything(), 0, 'L1', expect.anything(), undefined, undefined, undefined);
   });
 
   it('does not accumulate meshes across rebuilds (single clearGroup)', () => {

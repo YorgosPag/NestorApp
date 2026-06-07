@@ -45,6 +45,7 @@ import { useColumnPerimeterCommit } from './use-column-perimeter-commit';
 // ADR-419 «Κολώνα σε περιοχή (4 γραμμές)» — region-detection clicks (mirror του τοίχου).
 import { useColumnRegionClicks } from './use-column-region-clicks';
 import type { RegionLineSeg } from '../../bim/walls/wall-in-region';
+import type { RegionMethod } from '../../systems/tools/region-tool-ids';
 import { columnToolBridgeStore } from '../../ui/ribbon/hooks/bridge/column-tool-bridge-store';
 import { EventBus } from '../../systems/events/EventBus';
 
@@ -79,6 +80,18 @@ export interface ColumnToolState {
   readonly anchor: ColumnAnchor;
   /** ADR-363 Φάση 3 — 'freehand' (single-click) ή 'outer-perimeter' (από περίγραμμα). */
   readonly placementMode: ColumnPlacementMode;
+  /**
+   * ADR-419 — όταν `placementMode === 'in-region'`, ποιον τρόπο δέχεται το εργαλείο:
+   * 'lines' (4 γραμμές) / 'inside' (κλικ μέσα) / 'box' (πλαίσιο). Οδηγείται από το
+   * active tool id (column-region-lines/inside/box). Αδιάφορο στα άλλα modes.
+   */
+  readonly regionMethod: RegionMethod;
+  /**
+   * ADR-419 — όταν `placementMode === 'discrete-perimeter'`, η πρόθεση του χρήστη:
+   * 'columns' («Πολλαπλή δημιουργία κολωνών») ή 'walls' («…τοιχίων»). Καθορίζει τι
+   * δημιουργείται κατευθείαν vs τι ζητά επιβεβαίωση (intent-aware confirm).
+   */
+  readonly discreteIntent: 'columns' | 'walls';
   readonly overrides: ColumnParamOverrides;
   /** ADR-419 «Κολώνα σε περιοχή» — accumulated 4-line picks (mirror του τοίχου). */
   readonly regionPicks: readonly RegionLineSeg[];
@@ -90,6 +103,8 @@ const INITIAL_STATE: ColumnToolState = {
   kind: 'rectangular',
   anchor: 'center',
   placementMode: 'freehand',
+  regionMethod: 'lines',
+  discreteIntent: 'columns',
   overrides: {},
   regionPicks: [],
   error: null,
@@ -123,6 +138,10 @@ export interface UseColumnToolResult {
    * active tool id ('column' → freehand, 'column-from-perimeter' → outer-perimeter).
    */
   setPlacementMode(mode: ColumnPlacementMode): void;
+  /** ADR-419 — in-region method ('lines' | 'inside' | 'box'), driven by tool id. */
+  setRegionMethod(method: RegionMethod): void;
+  /** ADR-419 — discrete-from-perimeter intent ('columns' | 'walls'), driven by tool id. */
+  setDiscreteIntent(intent: 'columns' | 'walls'): void;
   /** Explicit anchor selector (used από ribbon combobox). */
   setAnchor(anchor: ColumnAnchor): void;
   /** Tab cycles through 9-state ring (ANCHOR_CYCLE_ORDER). */
@@ -173,6 +192,8 @@ export function useColumnTool(options: UseColumnToolOptions = {}): UseColumnTool
       kind: prev.kind,
       anchor: prev.anchor,
       placementMode: prev.placementMode,
+      regionMethod: prev.regionMethod,
+      discreteIntent: prev.discreteIntent,
       overrides: prev.overrides,
       phase: 'awaitingPosition',
     }));
@@ -184,6 +205,8 @@ export function useColumnTool(options: UseColumnToolOptions = {}): UseColumnTool
       kind,
       anchor: prev.anchor,
       placementMode: prev.placementMode,
+      regionMethod: prev.regionMethod,
+      discreteIntent: prev.discreteIntent,
       overrides: prev.overrides,
       phase: prev.phase === 'idle' ? 'idle' : 'awaitingPosition',
     }));
@@ -199,10 +222,26 @@ export function useColumnTool(options: UseColumnToolOptions = {}): UseColumnTool
         kind: prev.kind,
         anchor: prev.anchor,
         overrides: prev.overrides,
+        regionMethod: prev.regionMethod,
+        discreteIntent: prev.discreteIntent,
         placementMode: mode,
         phase: prev.phase === 'idle' ? 'idle' : 'awaitingPosition',
       };
     });
+  }, []);
+
+  // ADR-419 — set the in-region method ('lines' | 'inside' | 'box'). Driven by the
+  // active tool id (column-region-lines/inside/box). Clears accumulated picks on change.
+  const setRegionMethod = useCallback((regionMethod: RegionMethod) => {
+    setState((prev) =>
+      prev.regionMethod === regionMethod ? prev : { ...prev, regionMethod, regionPicks: [] },
+    );
+  }, []);
+
+  // ADR-419 — set the discrete-from-perimeter intent ('columns' | 'walls'). Driven by
+  // the active tool id (column-discrete-from-perimeter vs …-walls).
+  const setDiscreteIntent = useCallback((discreteIntent: 'columns' | 'walls') => {
+    setState((prev) => (prev.discreteIntent === discreteIntent ? prev : { ...prev, discreteIntent }));
   }, []);
 
   const setAnchor = useCallback((anchor: ColumnAnchor) => {
@@ -228,6 +267,8 @@ export function useColumnTool(options: UseColumnToolOptions = {}): UseColumnTool
       kind: prev.kind,
       anchor: prev.anchor,
       placementMode: prev.placementMode,
+      regionMethod: prev.regionMethod,
+      discreteIntent: prev.discreteIntent,
       overrides: prev.overrides,
       phase: prev.phase === 'idle' ? 'idle' : 'awaitingPosition',
     }));
@@ -263,6 +304,8 @@ export function useColumnTool(options: UseColumnToolOptions = {}): UseColumnTool
         kind: s.kind,
         anchor: s.anchor,
         placementMode: s.placementMode,
+        regionMethod: s.regionMethod,
+        discreteIntent: s.discreteIntent,
         overrides: s.overrides,
         phase: 'awaitingPosition',
       });
@@ -338,8 +381,12 @@ export function useColumnTool(options: UseColumnToolOptions = {}): UseColumnTool
     // ADR-363 Φάση 3c — discrete-perimeter prompt (box-select· αυτόματη ταξινόμηση).
     if (s.placementMode === 'discrete-perimeter')
       return 'tools.column.statusDiscretePerimeterPick';
-    // ADR-419 — in-region prompt (4 γραμμές / κλικ μέσα / box-select).
-    if (s.placementMode === 'in-region') return 'tools.column.statusRegionPick';
+    // ADR-419 — in-region prompt ανά τρόπο (4 γραμμές / κλικ μέσα / πλαίσιο).
+    if (s.placementMode === 'in-region') {
+      if (s.regionMethod === 'inside') return 'tools.column.statusRegionInsidePick';
+      if (s.regionMethod === 'box') return 'tools.column.statusRegionBoxPick';
+      return 'tools.column.statusRegionLinesPick';
+    }
     return s.phase === 'awaitingPosition' ? 'tools.column.statusPosition' : '';
   }, []);
 
@@ -435,6 +482,8 @@ export function useColumnTool(options: UseColumnToolOptions = {}): UseColumnTool
     activate,
     setKind,
     setPlacementMode,
+    setRegionMethod,
+    setDiscreteIntent,
     setAnchor,
     cycleAnchor,
     deactivate,

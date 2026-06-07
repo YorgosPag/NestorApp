@@ -9,14 +9,18 @@ import { LIGHT_PRESETS } from '../lighting/lighting-presets';
 import { getHdriPreset } from '../lighting/hdri-environment';
 import { subscribeLayerStore, getLayerStoreSnapshot } from '../../stores/LayerStore';
 import { resyncBimScene } from '../scene/bim3d-resync';
+import { resyncDxfOverlay } from '../scene/dxf-overlay-resync';
 import type { ThreeJsSceneManager } from '../scene/ThreeJsSceneManager';
 
 // ADR-366 store→manager subscription sync. Wires low-frequency store updates
 // into the active ThreeJsSceneManager instance. Mounted once by BimViewport3D.
 export function useBim3DStoreSync(managerRef: RefObject<ThreeJsSceneManager | null>) {
+  // ADR-399 Phase B — scope-aware: 'single' → active-floor overlay at Y=0;
+  // 'all' → stacked per-floor overlay (active floor's live edits re-enter the
+  // multi-floor rebuild here too). resyncDxfOverlay reads the current scope.
   useEffect(() => {
-    return useDxfOverlay3DStore.subscribe((s) => {
-      managerRef.current?.syncDxfOverlay(s.dxfScene);
+    return useDxfOverlay3DStore.subscribe(() => {
+      resyncDxfOverlay(managerRef.current);
     });
   }, [managerRef]);
 

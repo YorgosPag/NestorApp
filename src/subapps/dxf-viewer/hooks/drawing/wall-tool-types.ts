@@ -12,6 +12,7 @@ import type { WallEntity, WallKind } from '../../bim/types/wall-types';
 import type { Entity } from '../../types/entities';
 import type { WallSource } from '../../bim/walls/wall-from-entity';
 import type { RegionLineSeg } from '../../bim/walls/wall-in-region';
+import type { RegionMethod } from '../../systems/tools/region-tool-ids';
 import type { SceneUnits, WallParamOverrides } from './wall-completion';
 
 // ─── State machine types ─────────────────────────────────────────────────────
@@ -44,6 +45,12 @@ export interface WallToolState {
   readonly phase: WallToolPhase;
   readonly kind: WallKind;
   readonly placementMode: WallPlacementMode;
+  /**
+   * ADR-419 — όταν `placementMode === 'in-region'`, ποιον τρόπο δέχεται το εργαλείο:
+   * 'lines' (4 γραμμές) / 'inside' (κλικ μέσα) / 'box' (πλαίσιο). Οδηγείται από το
+   * active tool id (wall-region-lines/inside/box). Αδιάφορο στα άλλα modes.
+   */
+  readonly regionMethod: RegionMethod;
   readonly startPoint: Point2D | null;
   readonly endPoint: Point2D | null;
   readonly polylineVertices: readonly Point2D[];
@@ -59,6 +66,7 @@ export const INITIAL_STATE: WallToolState = {
   phase: 'idle',
   kind: 'straight',
   placementMode: 'freehand',
+  regionMethod: 'lines',
   startPoint: null,
   endPoint: null,
   polylineVertices: [],
@@ -100,6 +108,8 @@ export interface UseWallToolResult {
    * tool id (`wall` → freehand, `wall-on-entity` → on-entity).
    */
   setPlacementMode(mode: WallPlacementMode): void;
+  /** ADR-419 — in-region method ('lines' | 'inside' | 'box'), driven by tool id. */
+  setRegionMethod(method: RegionMethod): void;
   deactivate(): void;
   reset(): void;
   /**

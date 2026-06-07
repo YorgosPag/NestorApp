@@ -108,8 +108,11 @@ export type ToolType =
   | 'wall'
   // ADR-363 Phase 1J: BIM Wall on existing 2D entity (pick line/rectangle → wall(s))
   | 'wall-on-entity'
-  // ADR-363 Phase 1K: BIM Wall in region (pick 4 lines / click inside / box → one filling wall)
-  | 'wall-in-region'
+  // ADR-419: BIM Wall in region — 3 διακριτές εντολές (split του πρώην 'wall-in-region'):
+  // «από 4 γραμμές» / «μέσα σε περιοχή» / «με πλαίσιο». ΙΔΙΑ region-detection SSoT.
+  | 'wall-region-lines'
+  | 'wall-region-inside'
+  | 'wall-region-box'
   // ADR-363 «Τοίχος από περίγραμμα»: box-select the faces of a structural element → leg walls
   | 'wall-from-perimeter'
   // ADR-363 Phase 5.6: BIM Wall Split tool (Revit Split Element pattern)
@@ -134,9 +137,15 @@ export type ToolType =
   // ADR-363 Φάση 3c «Κολώνα από περίγραμμα»: box-select faces → ΧΩΡΙΣ ένωση, αυτόματη
   // ταξινόμηση κολώνα/τοιχίο ανά αναλογία πλευρών + ενημερωτικό confirm dialog
   | 'column-discrete-from-perimeter'
-  // ADR-419 «Κολώνα σε περιοχή»: pick 4 lines / click inside / box-select → ColumnEntity ανά
-  // εσώκλειστο ορθογώνιο (ΙΔΙΑ region-detection SSoT με το 'wall-in-region')
-  | 'column-in-region'
+  // ADR-419 «Κολώνα σε περιοχή»: 3 διακριτές εντολές (split του πρώην 'column-in-region'):
+  // «από 4 γραμμές» / «μέσα σε περιοχή» / «με πλαίσιο» → ColumnEntity ανά εσώκλειστο
+  // ορθογώνιο (ΙΔΙΑ region-detection SSoT με τα 'wall-region-*')
+  | 'column-region-lines'
+  | 'column-region-inside'
+  | 'column-region-box'
+  // ADR-419 «Πολλαπλή δημιουργία τοιχίων» — discrete-from-perimeter με intent=walls
+  // (καθρέφτης του 'column-discrete-from-perimeter' intent=columns· ίδια εντολή/SSoT)
+  | 'column-discrete-from-perimeter-walls'
   // ADR-363 Phase 5: BIM Beam drawing tool (straight/curved/cantilever)
   | 'beam'
   // ADR-363 «Δοκάρι από τοίχο» — 1-click pick wall → beam on its axis

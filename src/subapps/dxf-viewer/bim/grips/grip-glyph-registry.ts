@@ -67,6 +67,10 @@ export const GRIP_GLYPH_REGISTRY: Readonly<Record<string, GripShape>> = {
   // Floorplan symbols (ADR-415) — corners render the default 'square' glyph.
   'floorplan-symbol-move': 'move',
   'floorplan-symbol-rotation': 'rotation',
+  // Openings (ADR-363 Phase 2.5 — wall-hosted door/window) — full wall parity:
+  // move MOVE glyph, rotation (flip) ROTATION glyph· 4 corners render 'square'.
+  'opening-move': 'move',
+  'opening-rotation': 'rotation',
 } as const;
 
 /**

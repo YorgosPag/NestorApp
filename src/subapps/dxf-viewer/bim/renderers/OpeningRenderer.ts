@@ -39,6 +39,7 @@ import { HOVER_HIGHLIGHT } from '../../config/color-config';
 import { getLayer } from '../../stores/LayerStore';
 import { isConcreteLineweight } from '../../config/lineweight-iso-catalog';
 import { getOpeningGrips } from '../walls/opening-grips';
+import { gripGlyphShape } from '../grips/grip-glyph-registry';
 import { isPointInPolygon } from '../../utils/geometry/GeometryUtils';
 import { HINGE_ARC_SUBDIVISIONS } from '../geometry/opening-geometry';
 import { OPENING_KIND_STROKE } from './opening-kind-style';
@@ -150,17 +151,20 @@ export class OpeningRenderer extends BaseEntityRenderer {
   }
 
   getGrips(entity: EntityModel): GripInfo[] {
-    // ADR-363 Phase 2.5 — drag-along-wall grip (single `opening-offset` kind).
-    // Commit routed through `applyOpeningGripDrag()` + `UpdateOpeningParamsCommand`
-    // by `commitOpeningGripDrag` (grip-commit-adapter).
+    // ADR-363 Phase 2.5 — full wall-parity grips: move (centre) + rotation (flip)
+    // + 4 corner width-resize. Mirror of `FurnitureRenderer.getGrips`: move/rotation
+    // handles get their icon glyph from the shared `gripGlyphShape` registry SSoT,
+    // corners stay square. Commit routed through `applyOpeningGripDrag()` +
+    // `UpdateOpeningParamsCommand` by `commitOpeningGripDrag`.
     if (!isOpeningEntity(entity)) return [];
     return getOpeningGrips(entity as OpeningEntity).map((g) => ({
       id: `${g.entityId}-grip-${g.gripIndex}`,
       position: g.position,
-      type: 'center' as const,
+      type: g.type === 'center' ? ('center' as const) : ('vertex' as const),
       entityId: g.entityId,
       isVisible: true,
       gripIndex: g.gripIndex,
+      shape: gripGlyphShape(g.openingGripKind),
     }));
   }
 

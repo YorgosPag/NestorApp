@@ -94,6 +94,26 @@ describe('useFloors3DAggregator — ADR-399 Phase B', () => {
     expect(mockLoadFileV2).not.toHaveBeenCalled();
   });
 
+  it('anchors to the lowest floor when no ground floor (number 0) exists', async () => {
+    // Revit-grade datum: building whose lowest storey is «1ος» (number 1) at 3 m
+    // and no Ισόγειο → datum = 3 m → «1ος» renders at 0, «2ος» at +3000 mm
+    // (instead of floating at 3000/6000). Matches the single-floor «sit on 0» view.
+    mockUseFloorsByBuilding.mockReturnValue({
+      floors: [
+        { id: 'f1', number: 1, name: 'First', buildingId: 'b1', elevation: 3 },
+        { id: 'f2', number: 2, name: 'Second', buildingId: 'b1', elevation: 6 },
+      ],
+      loading: false,
+    });
+    const getLevelScene = jest.fn((id: string) => (id === 'L2' ? wallScene('w2') : null));
+    mockUseLevelsOptional.mockReturnValue(ctx(getLevelScene));
+
+    renderHook(() => useFloors3DAggregator(true));
+
+    await waitFor(() => expect(getMultiFloorStack()).toHaveLength(2));
+    expect(getMultiFloorStack().map((s) => s.floorElevationMm)).toEqual([0, 3000]);
+  });
+
   it('fetches unvisited file-linked floors via loadFileV2', async () => {
     const getLevelScene = jest.fn(() => null); // nothing in memory
     mockUseLevelsOptional.mockReturnValue(ctx(getLevelScene));

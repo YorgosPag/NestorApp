@@ -308,6 +308,55 @@ describe('DxfToThreeConverter', () => {
   });
 });
 
+// ── syncMultiFloor (ADR-399 Phase B — stacked per-floor overlay) ──────────────
+
+describe('DxfToThreeConverter.syncMultiFloor', () => {
+  let scene: THREE.Scene;
+  let converter: DxfToThreeConverter;
+
+  const findRoot = () =>
+    scene.children.find((c: { name: string }) => c.name === 'dxf-wireframe-multifloor') as
+      | { children: { position: { y: number } }[] }
+      | undefined;
+
+  beforeEach(() => {
+    scene = new THREE.Scene();
+    converter = new DxfToThreeConverter(scene);
+  });
+  afterEach(() => converter.dispose());
+
+  it('builds one positioned floor group per entry at floorElevationMm × 0.001', () => {
+    converter.syncMultiFloor([
+      { scene: makeScene([makeLine({ color: '#ff0000' })]), floorElevationMm: 0 },
+      { scene: makeScene([makeLine({ color: '#00ff00' })]), floorElevationMm: 3000 },
+    ]);
+    const root = findRoot();
+    expect(root).toBeDefined();
+    expect(root!.children.length).toBe(2);
+    expect(root!.children.map((g) => g.position.y)).toEqual([0, 3]);
+  });
+
+  it('skips floors whose scene has no drawable entities', () => {
+    converter.syncMultiFloor([
+      { scene: makeScene([makeLine({ color: '#ff0000' })]), floorElevationMm: 0 },
+      { scene: makeScene([]), floorElevationMm: 3000 },
+    ]);
+    expect(findRoot()!.children.length).toBe(1);
+  });
+
+  it('empty entries → no group added', () => {
+    converter.syncMultiFloor([]);
+    expect(findRoot()).toBeUndefined();
+  });
+
+  it('switching single → multi-floor disposes the prior overlay', () => {
+    converter.sync(makeScene([makeLine({ color: '#ffffff' })]));
+    converter.syncMultiFloor([{ scene: makeScene([makeLine({ color: '#ff0000' })]), floorElevationMm: 0 }]);
+    expect(scene.children.find((c: { name: string }) => c.name === 'dxf-wireframe')).toBeUndefined();
+    expect(findRoot()).toBeDefined();
+  });
+});
+
 // ── getBounds() ───────────────────────────────────────────────────────────────
 
 describe('getBounds', () => {

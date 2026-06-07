@@ -18,8 +18,11 @@ import { useEffect, useSyncExternalStore, type RefObject } from 'react';
 import { useViewMode3DStore } from '../stores/ViewMode3DStore';
 import type { Bim3DEntities } from '../stores/Bim3DEntitiesStore';
 import { resyncBimScene } from '../scene/bim3d-resync';
+import { resyncDxfOverlay } from '../scene/dxf-overlay-resync';
 import { subscribeMultiFloorStack } from '../scene/multi-floor-3d-source';
+import { subscribeMultiFloorDxfStack } from '../scene/multi-floor-dxf-source';
 import { useFloors3DAggregator } from '../../hooks/data/useFloors3DAggregator';
+import { useFloors3DDxfOverlay } from '../../hooks/data/useFloors3DDxfOverlay';
 import type { ThreeJsSceneManager } from '../scene/ThreeJsSceneManager';
 
 export function useBim3DMultiFloorSync(
@@ -34,15 +37,17 @@ export function useBim3DMultiFloorSync(
   );
   const active = scope === 'all' && !externalEntitiesMode;
 
-  // Producer — fills / clears the multi-floor source SSoT.
+  // Producers — fill / clear the multi-floor source SSoTs (BIM entities + DXF plans).
   useFloors3DAggregator(active);
+  useFloors3DDxfOverlay(active);
 
-  // Rebuild on scope flips (single ↔ all).
+  // Rebuild on scope flips (single ↔ all) — both the BIM stack and the DXF overlay.
   useEffect(() => {
     resyncBimScene(managerRef.current, { externalEntitiesMode, bimEntities });
+    resyncDxfOverlay(managerRef.current);
   }, [scope, externalEntitiesMode, bimEntities, managerRef]);
 
-  // Rebuild when the stack changes (async loads / active-floor edits) while 'all'.
+  // Rebuild when the BIM stack changes (async loads / active-floor edits) while 'all'.
   useEffect(() => {
     return subscribeMultiFloorStack(() => {
       if (useViewMode3DStore.getState().floor3DScope === 'all') {
@@ -50,4 +55,13 @@ export function useBim3DMultiFloorSync(
       }
     });
   }, [externalEntitiesMode, bimEntities, managerRef]);
+
+  // Rebuild the DXF overlay when its stack changes (async snapshot loads) while 'all'.
+  useEffect(() => {
+    return subscribeMultiFloorDxfStack(() => {
+      if (useViewMode3DStore.getState().floor3DScope === 'all') {
+        resyncDxfOverlay(managerRef.current);
+      }
+    });
+  }, [managerRef]);
 }

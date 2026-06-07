@@ -20,7 +20,7 @@ import type { KeyboardFocusManagerApi } from '../accessibility/KeyboardFocusMana
 import type { EnvmapGenerator } from '../lighting/envmap-generator';
 import type { PathTracerRenderer } from '../render/PathTracerRenderer';
 import type { SectionSceneController } from './section-scene-controller';
-import type { DxfToThreeConverter } from '../converters/DxfToThreeConverter';
+import type { DxfToThreeConverter, DxfOverlayFloorEntry } from '../converters/DxfToThreeConverter';
 import type { ViewportCamera } from '../viewport/viewport-types';
 import type { DxfScene } from '../../canvas-v2/dxf-canvas/dxf-types';
 import { raycastWorldPointOrPlane } from '../systems/raycaster/BimEntityRaycaster';
@@ -123,6 +123,29 @@ export function syncDxfOverlayIntoScene(
   onFitApplied: () => void,
 ): void {
   deps.dxfConverter.sync(dxfScene);
+  deps.pathTracerRenderer.invalidateScene();
+  applyDxfOverlayFraming({
+    viewport: deps.viewport,
+    bounds: deps.dxfConverter.getBounds(),
+    fitDone,
+    onFitApplied,
+  });
+  deps.sectionController.ensureInit();
+  deps.sectionController.applyState();
+}
+
+/**
+ * ADR-399 Phase B — stacked per-floor DXF overlay («Όλοι οι όροφοι»). Mirror of
+ * {@link syncDxfOverlayIntoScene} but feeds the converter every floor's plan at
+ * its datum-relative elevation; first-frame framing covers the whole stack.
+ */
+export function syncDxfOverlayMultiFloorIntoScene(
+  deps: SyncDxfOverlayDeps,
+  entries: readonly DxfOverlayFloorEntry[],
+  fitDone: boolean,
+  onFitApplied: () => void,
+): void {
+  deps.dxfConverter.syncMultiFloor(entries);
   deps.pathTracerRenderer.invalidateScene();
   applyDxfOverlayFraming({
     viewport: deps.viewport,

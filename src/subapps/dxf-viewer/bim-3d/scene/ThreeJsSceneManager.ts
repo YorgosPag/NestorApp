@@ -1,14 +1,4 @@
-/**
- * ThreeJsSceneManager — Three.js lifecycle management for BIM 3D viewport.
- *
- * Phase 0: placeholder scene (wireframe cube + axes + ambient light).
- * Phase 1: replaces OrbitControls placeholder with GenArc ViewportCamera
- *          (tumble, perspective/ortho, ViewCube, POI indicator, animated transitions).
- * Phase 2+: BIM entity rendering replaces placeholder scene.
- *
- * Pure class — no React imports. Owned exclusively by BimViewport3D.
- * Caller is responsible for dispose() on component unmount.
- */
+/** ThreeJsSceneManager — Three.js lifecycle (BIM 3D viewport). Pure class, no React. Caller calls dispose() on unmount. */
 
 import * as THREE from 'three';
 import { createPoi } from '../viewport/viewport-poi';
@@ -62,11 +52,13 @@ import {
   syncBimEntitiesIntoScene,
   syncMultiFloorBimEntitiesIntoScene,
   syncDxfOverlayIntoScene,
+  syncDxfOverlayMultiFloorIntoScene,
   setBimOrbitPivot,
   applyBimSelection,
   loadHdriIntoStore,
 } from './scene-manager-actions';
 import type { FloorStackEntry } from './multi-floor-3d-source';
+import type { DxfOverlayFloorEntry } from '../converters/DxfToThreeConverter';
 
 const INITIAL_CAMERA_POSITION = new THREE.Vector3(15, 10, 15);
 const INITIAL_CAMERA_TARGET = new THREE.Vector3(0, 0, 0);
@@ -130,19 +122,11 @@ export class ThreeJsSceneManager {
       initialPosition: INITIAL_CAMERA_POSITION,
       initialTarget: INITIAL_CAMERA_TARGET,
       onInteractionStart: () => { this.isInteracting = true; this.poi.onNavigationActive(); this.markSceneDirty(); },
-      // ADR-040 Phase XXIII — onInteractionEnd keeps scene dirty for one more tick so
-      // OrbitControls damping inertia (`dampingFactor=0.25`) completes the slide
-      // before scheduler skips. controls.change → onRenderNeeded re-marks during damping.
-      onInteractionEnd: () => { this.isInteracting = false; this.markSceneDirty(); },
+      onInteractionEnd: () => { this.isInteracting = false; this.markSceneDirty(); }, // ADR-040 XXIII: keeps dirty for damping inertia
       onRenderNeeded: () => this.markSceneDirty(),
       getReducedMotionOverride: () => this.reducedMotionOverride,
-      // ADR-366 §A.6.Q5 — tumble forwards static Alt+click here (reliable in
-      // perspective; React onClick fallback covers ortho). this.viewport is
-      // assigned by the time this fires (click is always post-construction).
-      onAltClick: (clientX, clientY) => { this.setOrbitPivotAt(clientX, clientY); },
-      // Alt+left press → re-centre orbit pivot on the cursor BEFORE the drag, so
-      // the rotation orbits around the clicked point (Giorgio's request).
-      onAltPress: (clientX, clientY) => { this.setOrbitPivotAt(clientX, clientY); },
+      onAltClick: (clientX, clientY) => { this.setOrbitPivotAt(clientX, clientY); }, // ADR-366 §A.6.Q5
+      onAltPress: (clientX, clientY) => { this.setOrbitPivotAt(clientX, clientY); }, // re-centre pivot before drag
     });
     const subs = createSceneRenderingSubsystems({
       renderer: this.renderer, scene: this.scene, sun: this.sun, bimLayer: this.bimLayer,
@@ -382,6 +366,17 @@ export class ThreeJsSceneManager {
       { dxfConverter: this.dxfConverter, pathTracerRenderer: this.pathTracerRenderer,
         sectionController: this.sectionController, viewport: this.viewport },
       dxfScene, this.initialCameraFitDone, () => { this.initialCameraFitDone = true; },
+    );
+    this.markSceneDirty();
+  }
+
+  /** ADR-399 Phase B — stacked per-floor DXF overlay («Όλοι οι όροφοι»). */
+  syncDxfOverlayMultiFloor(entries: readonly DxfOverlayFloorEntry[]): void {
+    if (this.disposed) return;
+    syncDxfOverlayMultiFloorIntoScene(
+      { dxfConverter: this.dxfConverter, pathTracerRenderer: this.pathTracerRenderer,
+        sectionController: this.sectionController, viewport: this.viewport },
+      entries, this.initialCameraFitDone, () => { this.initialCameraFitDone = true; },
     );
     this.markSceneDirty();
   }

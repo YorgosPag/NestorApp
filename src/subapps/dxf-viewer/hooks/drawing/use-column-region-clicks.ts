@@ -99,14 +99,19 @@ export function useColumnRegionClicks(params: ColumnRegionClicksParams): ColumnR
     [currentLevelId, onColumnCreatedRef, getSceneUnitsRef],
   );
 
-  // Click while in-region: hit a line → accumulate (commit when 4 close a rect);
-  // miss → treat the click as "inside a region" and fill the enclosing rectangle.
+  // ADR-419 — click while in-region, gated ΑΥΣΤΗΡΑ ανά `regionMethod` (η μονή
+  // «έξυπνη» εντολή έγινε 3 διακριτές):
+  //   - 'box'    → ΟΧΙ commit με κλικ (μόνο μέσω drag-πλαισίου· βλ. listener).
+  //   - 'lines'  → ΜΟΝΟ pick γραμμών (commit όταν 4 κλείνουν ορθογώνιο)· κλικ στο κενό αγνοείται.
+  //   - 'inside' → ΜΟΝΟ fill του εσώκλειστου ορθογωνίου κάτω από τον κέρσορα.
   const onRegionClick = useCallback(
     (s: ColumnToolState, point: Readonly<Point2D>): boolean => {
+      if (s.regionMethod === 'box') return false;
       const segs = extractLineSegments(getSceneEntitiesRef.current?.() ?? []);
       const tol = regionTol();
-      const hit = pickSegmentAt(point, segs, tol);
-      if (hit) {
+      if (s.regionMethod === 'lines') {
+        const hit = pickSegmentAt(point, segs, tol);
+        if (!hit) return false; // «από 4 γραμμές» — κλικ εκτός γραμμής = no-op
         const picks = s.regionPicks.some((p) => sameSeg(p, hit))
           ? s.regionPicks
           : [...s.regionPicks, hit];
@@ -123,6 +128,7 @@ export function useColumnRegionClicks(params: ColumnRegionClicksParams): ColumnR
         setState(next);
         return true;
       }
+      // 'inside' — μόνο το εσώκλειστο ορθογώνιο (αγνοεί τα picks γραμμών).
       const rect = findEnclosingRectangle(segs, point, tol);
       if (rect) {
         const ok = commitInRegionRects([rect]);
@@ -148,6 +154,8 @@ export function useColumnRegionClicks(params: ColumnRegionClicksParams): ColumnR
       EventBus.on('bim:wall-region-box-select', ({ entityIds }) => {
         const s = stateRef.current;
         if (s.placementMode !== 'in-region' || s.phase === 'idle') return;
+        // ADR-419 — box-select μόνο για την «με πλαίσιο» εντολή (column-region-box).
+        if (s.regionMethod !== 'box') return;
         const idSet = new Set(entityIds);
         const segs = extractLineSegments(
           (getSceneEntitiesRef.current?.() ?? []).filter((e) => idSet.has(e.id)),

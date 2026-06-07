@@ -34,6 +34,10 @@ import {
   type FloorStackEntry,
 } from '../../bim-3d/scene/multi-floor-3d-source';
 import {
+  resolveBuildingDatumElevationM,
+  resolveFloorDatumRelativeElevationMm,
+} from '../../bim-3d/scene/floor-stack-elevation';
+import {
   isWallEntity, isColumnEntity, isBeamEntity, isSlabEntity,
   isSlabOpeningEntity, isOpeningEntity, isStairEntity, isMepFixtureEntity, isElectricalPanelEntity, isRailingEntity, isFurnitureEntity, isMepSegmentEntity, isMepFittingEntity, isMepManifoldEntity, isMepRadiatorEntity, isMepBoilerEntity, isRoofEntity, isFloorFinishEntity,
 } from '../../types/entities';
@@ -121,6 +125,11 @@ export function useFloors3DAggregator(active: boolean): void {
   // One target per building floor (first level wins for a floor with duplicates).
   const targets = useMemo<TargetFloor[]>(() => {
     if (!active || !levels || !buildingId) return [];
+    // 🏢 Revit-grade datum: stack relative to the building's ground floor (or the
+    // lowest storey when no ground floor exists) so the model rests on the ground
+    // (world 0) instead of floating at the lowest storey's raw elevation. The
+    // building-base offset is applied downstream by the per-entity converters.
+    const datumM = resolveBuildingDatumElevationM(buildingFloors);
     const elevByFloorId = new Map(buildingFloors.map((f) => [f.id, f.elevation ?? 0] as const));
     const seen = new Set<string>();
     const out: TargetFloor[] = [];
@@ -132,7 +141,7 @@ export function useFloors3DAggregator(active: boolean): void {
         levelId: lvl.id,
         floorId: lvl.floorId,
         sceneFileId: lvl.sceneFileId ?? null,
-        floorElevationMm: elevationM * 1000,
+        floorElevationMm: resolveFloorDatumRelativeElevationMm(elevationM, datumM),
       });
     }
     return out;
