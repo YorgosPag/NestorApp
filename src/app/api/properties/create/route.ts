@@ -6,6 +6,7 @@ import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { createModuleLogger } from '@/lib/telemetry';
 import { createEntity } from '@/lib/firestore/entity-creation.service';
 import { normalizePropertyWritePayload } from '@/lib/firestore/property-write-normalizer';
+import { deriveMultiLevelFields } from '@/services/multi-level.service';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import type { PropertyType } from '@/types/property';
@@ -134,7 +135,9 @@ export const POST = withStandardRateLimit(
           throw error;
         }
 
-        // 🏢 ADR-236: Validate multi-level floors (entity-specific business logic)
+        // 🏢 ADR-236: Validate multi-level floors (entity-specific business logic).
+        // Field derivation (floor/floorId/isMultiLevel) reuses the SSoT helper
+        // `deriveMultiLevelFields` — no duplicated primary-resolution math.
         if (body.isMultiLevel && Array.isArray(body.levels)) {
           if (body.levels.length < 2) {
             throw new ApiError(400, 'Multi-level properties require at least 2 floors', POLICY_ERROR_CODES.MULTILEVEL_MIN_FLOORS);
@@ -143,11 +146,10 @@ export const POST = withStandardRateLimit(
           if (primaryCount !== 1) {
             throw new ApiError(400, 'Exactly one floor must be marked as primary', POLICY_ERROR_CODES.MULTILEVEL_SINGLE_PRIMARY);
           }
-          const primary = body.levels.find(l => l.isPrimary);
-          if (primary) {
-            body.floor = primary.floorNumber;
-            body.floorId = primary.floorId;
-          }
+          const derived = deriveMultiLevelFields(body.levels);
+          body.floor = derived.floor;
+          body.floorId = derived.floorId;
+          body.isMultiLevel = derived.isMultiLevel;
         }
 
         // Entity-specific fields (exclude common fields handled by createEntity)

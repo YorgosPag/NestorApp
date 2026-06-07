@@ -11,6 +11,7 @@
 
 import { z } from 'zod';
 import { ApiError } from '@/lib/api/ApiErrorHandler';
+import { deriveMultiLevelFields } from '@/services/multi-level.service';
 
 // ============================================================================
 // SCHEMA + TYPES (re-exported so route.ts can import from here)
@@ -92,12 +93,11 @@ export function applyMultiLevelDefaults(body: PropertyPatchPayload): void {
     if (primaryCount !== 1) {
       throw new ApiError(400, 'Exactly one floor must be marked as primary');
     }
-    const primary = body.levels.find((l) => l.isPrimary);
-    if (primary) {
-      body.floor = primary.floorNumber;
-      body.floorId = primary.floorId;
-      body.isMultiLevel = true;
-    }
+    // Derivation reuses the SSoT helper — no duplicated primary-resolution math.
+    const derived = deriveMultiLevelFields(body.levels);
+    body.floor = derived.floor;
+    body.floorId = derived.floorId;
+    body.isMultiLevel = derived.isMultiLevel;
   } else if (body.levels.length === 0) {
     body.isMultiLevel = false;
   }
