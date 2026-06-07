@@ -17,6 +17,7 @@
 import {
   computeOpeningGeometry,
   projectPointToWallOffset,
+  projectPointToWallOffsetMm,
   structuralRevealHeightRangeMm,
 } from '../opening-geometry';
 import { computeWallGeometry } from '../wall-geometry';
@@ -213,6 +214,25 @@ describe('projectPointToWallOffset', () => {
   it('returns the axis-projected scalar for a valid in-bounds point', () => {
     const wall = makeWall();
     expect(projectPointToWallOffset({ x: 2500, y: 200 }, wall)).toBeCloseTo(2500, EDGE_TOL);
+  });
+});
+
+describe('projectPointToWallOffsetMm (SSoT scene-units → mm)', () => {
+  it('mm scene → same scalar as the raw scene-unit projection', () => {
+    const wall = makeWall(); // sceneUnits undefined → 'mm' → factor 1
+    expect(projectPointToWallOffsetMm({ x: 2500, y: 0 }, wall)).toBeCloseTo(2500, EDGE_TOL);
+  });
+
+  it('metres scene → converts scene-units to mm (the drag/creation bug guard)', () => {
+    // 5m wall whose coords are in METRES (sceneUnits='m'): a point at 2.5m must
+    // resolve to 2500mm, not 2.5 (which would clamp every opening to a boundary).
+    const wall = makeWall({
+      start: { x: 0, y: 0, z: 0 },
+      end: { x: 5, y: 0, z: 0 },
+      sceneUnits: 'm',
+    } as Partial<WallParams>);
+    expect(projectPointToWallOffsetMm({ x: 2.5, y: 0 }, wall)).toBeCloseTo(2500, 0);
+    expect(projectPointToWallOffset({ x: 2.5, y: 0 }, wall)).toBeCloseTo(2.5, EDGE_TOL); // raw = scene-units
   });
 });
 

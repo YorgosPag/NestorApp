@@ -33,7 +33,7 @@ import type { GripInfo, OpeningGripKind } from '../../hooks/useGripMovement';
 import type { OpeningEntity, OpeningParams } from '../types/opening-types';
 import { DEFAULT_FRAME_WIDTH_MM, MIN_OPENING_WIDTH_MM } from '../types/opening-types';
 import type { WallEntity } from '../types/wall-types';
-import { projectPointToWallOffset } from '../geometry/opening-geometry';
+import { projectPointToWallOffsetMm } from '../geometry/opening-geometry';
 import { rotateVector } from '../grips/grip-math';
 import { ROTATION_HANDLE_OFFSET_MM, type CentredBoxGripRole } from '../grips/centred-box-grips';
 
@@ -161,8 +161,7 @@ function moveAlongWall(
   const maxOffset = hostLengthMm - params.width - frameWidth;
   if (maxOffset < minOffset) return params; // host too short for opening + jambs
 
-  const axisOffset = projectPointToWallOffset(currentPos, hostWall);
-  const clamped = clamp(axisOffset - params.width / 2, minOffset, maxOffset);
+  const clamped = clamp(projectPointToWallOffsetMm(currentPos, hostWall) - params.width / 2, minOffset, maxOffset);
   if (clamped === params.offsetFromStart) return params;
   return { ...params, offsetFromStart: clamped };
 }
@@ -176,7 +175,7 @@ function resizeJamb(
 ): OpeningParams {
   const hostLengthMm = hostWall.geometry.length * 1000;
   const frameWidth = params.frameWidth ?? DEFAULT_FRAME_WIDTH_MM;
-  const cursorAxial = projectPointToWallOffset(currentPos, hostWall);
+  const cursorAxial = projectPointToWallOffsetMm(currentPos, hostWall);
 
   if (jamb === 'end') {
     // Start jamb pinned at offsetFromStart; the end jamb tracks the cursor.
@@ -207,7 +206,7 @@ function flipOpening(
 ): OpeningParams {
   if (!params.handing) return params;
   const centerAxial = params.offsetFromStart + params.width / 2;
-  const cursorAxial = projectPointToWallOffset(currentPos, hostWall);
+  const cursorAxial = projectPointToWallOffsetMm(currentPos, hostWall);
   const newHanding = cursorAxial >= centerAxial ? 'right' : 'left';
   if (newHanding === params.handing) return params;
   return { ...params, handing: newHanding };

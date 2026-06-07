@@ -214,11 +214,41 @@ export function buildEmptyLevelData(): LevelData {
 }
 
 /**
+ * Normalize a partial level entry to the canonical full schema.
+ *
+ * User-entered level data can arrive partial (e.g. the primary level omits
+ * `areas.garden` when the user never touched that field), which leaves the
+ * persisted `levelData` shape inconsistent between levels. This fills every
+ * missing `areas` / `layout` sub-key with its zeroed default while:
+ *   - PRESERVING any provided numeric values (overlay wins),
+ *   - PRESERVING extra fields untouched (`finishes`, future additions),
+ *   - never dropping data.
+ *
+ * Idempotent: normalizing an already-full entry returns the same shape.
+ */
+function normalizeLevelData(current: LevelData): LevelData {
+  const empty = buildEmptyLevelData();
+  return {
+    ...current,
+    areas: {
+      ...empty.areas,
+      ...(current.areas ?? {}),
+      // `gross` is required on `areas`; the spread of the optional `current.areas`
+      // would otherwise widen it to `number | undefined`. Pin it explicitly.
+      gross: current.areas?.gross ?? empty.areas.gross,
+    },
+    layout: { ...empty.layout, ...(current.layout ?? {}) },
+    orientations: current.orientations ?? empty.orientations,
+  };
+}
+
+/**
  * Reconcile `levelData` against the declared `levels` array — the SSoT seed.
  *
  * Rules (idempotent, belt-and-suspenders):
  *  - Every `level.floorId` MUST have an entry. Missing → seed {@link buildEmptyLevelData}.
- *  - Existing non-empty entries are PRESERVED untouched (no data loss).
+ *  - Existing non-empty entries are NORMALIZED to the full schema (partial
+ *    user input gets missing sub-keys filled) while preserving all values.
  *  - Existing empty `{}` entries are replaced with the full empty schema.
  *  - Orphan keys (floorId no longer in `levels`) are DROPPED (no stale data).
  *
@@ -240,7 +270,9 @@ export function buildSeededLevelData(
     const current = source[level.floorId];
     const hasContent =
       current && typeof current === 'object' && Object.keys(current).length > 0;
-    seeded[level.floorId] = hasContent ? current : buildEmptyLevelData();
+    seeded[level.floorId] = hasContent
+      ? normalizeLevelData(current)
+      : buildEmptyLevelData();
   }
 
   return seeded;

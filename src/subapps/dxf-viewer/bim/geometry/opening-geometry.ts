@@ -404,11 +404,16 @@ function buildHingeArc(
 }
 
 /**
- * Project an arbitrary point onto the host wall axis, returning the
- * `offsetFromStart` (mm) clamped to `[0, arcLength]`. Supports straight,
- * curved, and polyline walls via the tessellated axis from `getWallAxisVertices`.
+ * Project an arbitrary point onto the host wall axis, returning the offset
+ * clamped to `[0, arcLength]`, **in the scene's world units** (the wall axis
+ * vertices come from `params.start/end` which are world coords — m / cm / mm).
+ * Supports straight, curved, and polyline walls via the tessellated axis from
+ * `getWallAxisVertices`.
  *
- * Used by the opening tool to convert a canvas click into a host-relative offset.
+ * ⚠️ The result is SCENE-UNITS, NOT mm. `OpeningParams.offsetFromStart` / `width`
+ * are always mm — callers that compare against those MUST use
+ * {@link projectPointToWallOffsetMm} (the unit-normalised SSoT), never this raw
+ * scalar (mixing the two silently breaks every non-mm scene, e.g. metres).
  */
 export function projectPointToWallOffset(
   point: { readonly x: number; readonly y: number },
@@ -416,4 +421,20 @@ export function projectPointToWallOffset(
 ): number {
   const axisVertices = getWallAxisVertices(hostWall.params, hostWall.kind);
   return projectPointToPolylineOffset(point, axisVertices);
+}
+
+/**
+ * Project an arbitrary point onto the host wall axis, returning the offset **in
+ * mm** (the `OpeningParams.offsetFromStart` contract). SSoT for "world point →
+ * host-relative mm offset": divides the scene-unit projection by the wall's
+ * mm→scene factor (`mmToSceneUnits(hostWall.params.sceneUnits)`). Consumed by the
+ * opening creation tool (`buildDefaultOpeningParams`) AND the opening grip drag
+ * (`opening-grips`) so both share one conversion — no duplicated `/ mmFactor`.
+ */
+export function projectPointToWallOffsetMm(
+  point: { readonly x: number; readonly y: number },
+  hostWall: WallEntity,
+): number {
+  const mmFactor = mmToSceneUnits(hostWall.params.sceneUnits ?? 'mm');
+  return projectPointToWallOffset(point, hostWall) / (mmFactor || 1);
 }

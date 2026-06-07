@@ -32,10 +32,10 @@ import {
   isHingedKind,
 } from '../../bim/types/opening-types';
 import type { WallEntity } from '../../bim/types/wall-types';
-import { computeOpeningGeometry, projectPointToWallOffset } from '../../bim/geometry/opening-geometry';
+import { computeOpeningGeometry, projectPointToWallOffsetMm } from '../../bim/geometry/opening-geometry';
 import { validateOpeningParams } from '../../bim/validators/opening-validator';
 import { createOpening } from '@/services/factories/opening.factory';
-import { mmToSceneUnits, type SceneUnits } from '../../utils/scene-units';
+import type { SceneUnits } from '../../utils/scene-units';
 
 export type { SceneUnits };
 
@@ -83,13 +83,10 @@ export function buildDefaultOpeningParams(
   const height = overrides.height ?? defaults.height;
   const sillHeight = overrides.sillHeight ?? defaults.sillHeight;
 
-  // ADR-370 — projectPointToWallOffset walks scene-unit axisVertices, so the
-  // returned offset shares the scene's unit (m / mm / cm). Normalise to mm so
-  // `offsetFromStart` matches the OpeningParams documented contract (always mm).
-  const mmFactor = mmToSceneUnits(sceneUnits);
-  const projectedOffsetScene = projectPointToWallOffset(clickPoint, hostWall);
-  const projectedOffsetMm = projectedOffsetScene / (mmFactor || 1);
-  const centeredOffset = projectedOffsetMm - width / 2;
+  // ADR-370 — host-relative offset in mm (`offsetFromStart` contract). The SSoT
+  // `projectPointToWallOffsetMm` normalises the scene-unit projection → mm, so
+  // creation and grip-drag share ONE conversion (no duplicated `/ mmFactor`).
+  const centeredOffset = projectPointToWallOffsetMm(clickPoint, hostWall) - width / 2;
   const snappedOffset = snapToIncrement(centeredOffset, OPENING_SNAP_INCREMENT_MM);
   const wallLengthMm = hostWall.geometry.length * 1000;
   const clampedOffset = clampOffset(snappedOffset, width, wallLengthMm);

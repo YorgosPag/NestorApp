@@ -255,6 +255,13 @@ Google contract: **αν A→B δημιουργεί N level cards, τότε B→A
 - Per-level finishes preservation σε flat (Phase 2 contract immutable)
 
 ## Changelog
+- **2026-06-07** (Round 2 follow-up): **`levelData` partial-schema normalize.** Verification of a
+  multi-level unit (`prop_1399cca9`) showed the primary level persisted `areas` WITHOUT the
+  `garden` key (user never touched it), while seeded secondary levels carried the full schema —
+  an inconsistent shape across levels. `buildSeededLevelData` now **normalizes** every non-empty
+  entry (new `normalizeLevelData` helper in `multi-level.service.ts`): fills missing `areas`/`layout`
+  sub-keys with zeroed defaults while preserving provided values AND extra fields (`finishes`).
+  Previously non-empty entries were passed through untouched (same reference). Idempotent; 9/9 tests.
 - **2026-06-07**: **Data-integrity hardening (Revit-grade, FULL SSOT).** Fixed 4 creation-time
   bugs surfaced on a multi-level unit (`prop_98385d3c`):
   (1) **levelData seed** — `useAutoLevelCreation` + the new server normalizer now seed a FULL

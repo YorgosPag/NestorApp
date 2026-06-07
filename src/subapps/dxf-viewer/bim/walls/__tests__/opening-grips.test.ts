@@ -200,6 +200,32 @@ describe('opening-grips (Phase 2.5 — wall parity)', () => {
     expect(next).toBe(opening.params);
   });
 
+  it('12. METRES scene — move & resize convert scene-units→mm (regression)', () => {
+    // 4m wall in a metres scene. Cursor positions are in metres (scene units).
+    const host = unwrapWall(
+      buildWallEntity(buildDefaultWallParams({ x: 0, y: 0 }, { x: 4, y: 0 }, undefined, 'm'), '0', 'straight', 'm'),
+    );
+    const opening = unwrapOpening(
+      buildOpeningEntity(buildDefaultOpeningParams(host, { x: 2, y: 0 }, { kind: 'door' }, 'm'), host, '0', 'm'),
+    );
+    // Move: cursor at 3m → offsetFromStart ≈ 3000mm − width/2 (NOT clamped to a boundary).
+    const moved = applyOpeningGripDrag('opening-move', {
+      originalParams: opening.params,
+      currentPos: { x: 3, y: 0 },
+      hostWall: host,
+    });
+    expect(moved.offsetFromStart).toBeCloseTo(3000 - opening.params.width / 2, 0);
+    expect(moved.offsetFromStart).not.toBe(opening.params.offsetFromStart);
+    // End-corner resize: cursor at 3m → end jamb at 3000mm → width = 3000 − offset.
+    const resized = applyOpeningGripDrag('opening-corner-ne', {
+      originalParams: opening.params,
+      currentPos: { x: 3, y: 0 },
+      hostWall: host,
+    });
+    expect(resized.width).toBeCloseTo(3000 - opening.params.offsetFromStart, 0);
+    expect(resized.width).not.toBe(opening.params.width);
+  });
+
   it('11. move refuses when host too short for opening + jambs', () => {
     const shortHost = unwrapWall(
       buildWallEntity(buildDefaultWallParams({ x: 0, y: 0 }, { x: 800, y: 0 }), '0', 'straight'),
