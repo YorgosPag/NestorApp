@@ -12,7 +12,8 @@ import { GridUnderlayCanvas } from './GridUnderlayCanvas';
 import { COORDINATE_LAYOUT } from '../../rendering/core/CoordinateTransforms';
 import { PANEL_LAYOUT } from '../../config/panel-tokens';
 import { RULERS_GRID_CONFIG } from '../../systems/rulers-grid/config';
-import { UI_COLORS, PREVIEW_DEFAULTS } from '../../config/color-config';
+import { PREVIEW_DEFAULTS } from '../../config/color-config';
+import { buildDxfRulerSettings } from './canvas-layer-stack-ruler-settings';
 import { canvasUI } from '@/styles/design-tokens/canvas';
 import { createCombinedBounds } from '../../systems/zoom/utils/bounds';
 import { isInDrawingMode } from '../../systems/tools/ToolStateManager';
@@ -33,6 +34,7 @@ import {
 import { PolygonCropPreviewSubscriber } from './LassoCropPreviewSubscriber'; import { LassoFreehandPreviewSubscriber } from './LassoFreehandPreviewSubscriber';
 import { ZoomWindowSubscriber } from './leaves/ZoomWindowSubscriber';
 import { AutoAreaResultPanel } from './AutoAreaResultPanel'; import { AutoAreaPreviewOverlay } from './AutoAreaPreviewOverlay';
+import { RegionPerimeterPreviewOverlay } from './RegionPerimeterPreviewOverlay';
 import { CanvasNumericInputOverlay } from '../../systems/canvas-numeric-input/CanvasNumericInputOverlay'; import { DynamicInputSubscriber } from './DynamicInputSubscriber'; import { CanvasLayerStack3dLeaf } from './canvas-layer-stack-3d-leaf';
 import { ViewMode3DToggleButton } from '../../bim-3d/viewport/ViewMode3DToggleButton'; import { Focus2DOverlayLeaf } from './Focus2DOverlayLeaf'; import { SelectionCursorIcon } from '../../accessibility/SelectionCursorIcon';
 import { useDxfOverlay3DSync } from './useDxfOverlay3DSync'; import { useLevelId3DSync } from './useLevelId3DSync';
@@ -182,34 +184,10 @@ export const CanvasLayerStack = React.memo(function CanvasLayerStack({
           },
         }
       : null;
-  const dxfRulerSettings = useMemo(() => ({
-    enabled:
-      (globalRulerSettings?.horizontal?.enabled && globalRulerSettings?.vertical?.enabled) ?? true,
-    visible: true,
-    opacity: 1.0,
-    unit: globalRulerSettings.units as 'mm' | 'cm' | 'm',
-    color: globalRulerSettings.horizontal.color,
-    backgroundColor: globalRulerSettings.horizontal.backgroundColor,
-    fontSize: globalRulerSettings.horizontal.fontSize,
-    textColor: globalRulerSettings.horizontal.textColor,
-    height: globalRulerSettings.horizontal.height ?? RULERS_GRID_CONFIG.DEFAULT_RULER_HEIGHT,
-    width: globalRulerSettings.vertical.width ?? RULERS_GRID_CONFIG.DEFAULT_RULER_WIDTH,
-    showLabels: globalRulerSettings.horizontal.showLabels,
-    showUnits: globalRulerSettings.horizontal.showUnits,
-    showBackground: globalRulerSettings.horizontal.showBackground,
-    showMajorTicks: globalRulerSettings.horizontal.showMajorTicks,
-    showMinorTicks: true,
-    majorTickColor: globalRulerSettings.horizontal.color,
-    minorTickColor: UI_COLORS.BUTTON_SECONDARY,
-    majorTickLength: 10,
-    minorTickLength: 5,
-    tickInterval: gridSettings.size * gridMajorInterval,
-    unitsFontSize: 10,
-    unitsColor: globalRulerSettings.horizontal.textColor,
-    labelPrecision: 1,
-    borderColor: globalRulerSettings.horizontal.borderColor,
-    borderWidth: globalRulerSettings.horizontal.borderWidth,
-  }), [globalRulerSettings, gridSettings.size, gridMajorInterval]);
+  const dxfRulerSettings = useMemo(
+    () => buildDxfRulerSettings(globalRulerSettings, gridSettings.size * gridMajorInterval),
+    [globalRulerSettings, gridSettings.size, gridMajorInterval],
+  );
   // --- Stable references for downstream memos (avoid fresh-spread per render) ---
   const gridSettingsDisabled = useMemo(
     () => ({ ...gridSettings, enabled: false }),
@@ -474,6 +452,7 @@ export const CanvasLayerStack = React.memo(function CanvasLayerStack({
             className={PANEL_LAYOUT.Z_INDEX['30']}
           />
           <AutoAreaPreviewOverlay transform={transform} viewport={viewport} />
+          <RegionPerimeterPreviewOverlay transform={transform} viewport={viewport} />
           <PolygonCropPreviewSubscriber transform={transform} viewport={viewport} className={`absolute inset-0 w-full h-full pointer-events-none ${PANEL_LAYOUT.Z_INDEX['20']}`} />
           <LassoFreehandPreviewSubscriber transform={transform} viewport={viewport} className={`absolute inset-0 w-full h-full pointer-events-none ${PANEL_LAYOUT.Z_INDEX['20']}`} />
           <ZoomWindowSubscriber className={`absolute ${PANEL_LAYOUT.INSET['0']} w-full h-full ${PANEL_LAYOUT.POINTER_EVENTS.NONE} ${PANEL_LAYOUT.Z_INDEX['20']}`} />

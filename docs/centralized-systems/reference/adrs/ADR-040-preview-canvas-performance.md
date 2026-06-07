@@ -122,6 +122,10 @@ Mouse Event → DxfCanvas.onMouseMove
 - `components/dxf-layout/CanvasSection.tsx` — passes the radiator tool through to the leaf, no `useSyncExternalStore` added (Phase XXII.A live-transform reads preserved).
 - `hooks/canvas/canvas-click-types.ts` — `mepRadiatorTool?` param + `MepRadiatorToolLike` interface added (types-only, zero control-flow/subscription change → CHECK 6B/6C satisfied). CHECK 6B satisfied by staging this ADR with the edits. See ADR-408 §Εύρος Β.
 
+### 2026-06-08 — File-size split: `CanvasLayerStack` ruler-settings builder (N.7.1, CHECK 6B)
+
+**Status**: IMPLEMENTED 2026-06-08 (Opus 4.8). `CanvasLayerStack.tsx` crossed the 500-line limit (501) after the ADR-408 MEP ghost-preview batch. Split by extracting the pure `dxfRulerSettings` mapping (global ruler settings → DxfCanvas ruler config) into a new stateless helper `components/dxf-layout/canvas-layer-stack-ruler-settings.ts` (`buildDxfRulerSettings`). **Zero control-flow / subscription change** — the shell still calls it inside the same `useMemo` with the same deps, so all Cardinal Rules + CHECK 6B/6C remain satisfied (478 lines now). `UI_COLORS` import dropped from the shell (only consumer moved to the helper).
+
 ### 2026-06-04 — TEMP render-trace diagnostics on `DxfViewerContent` (hover-lag)
 
 **Status**: TEMPORARY — to be removed after diagnosis. Adds two `useRenderTrace(...)` calls in `app/DxfViewerContent.tsx` (orchestrator + `.detail` prop-diff) to identify which subscription drives the idle render loop on hover. Diagnostic-only, no subscription/Cardinal-Rule change; the `🔴 TEMP DEBUG` markers flag both call sites for removal. Co-staged to satisfy CHECK 6D.
