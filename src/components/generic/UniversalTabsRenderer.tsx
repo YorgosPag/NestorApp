@@ -155,6 +155,8 @@ export interface BuildingTabGlobalProps {
   onBuildingCreated?: (buildingId: string) => void;
   /** Reports active (non-deleted) units count back to BuildingTabs for the warning dot */
   onActiveUnitsCountChange?: (count: number) => void;
+  /** BUG #5 deep-link — floor id to highlight on the Floors tab. */
+  focusFloorId?: string | null;
 }
 
 export interface BuildingTabComponentProps extends TabComponentProps, Partial<BuildingTabAdditionalData>, Partial<BuildingTabGlobalProps> {

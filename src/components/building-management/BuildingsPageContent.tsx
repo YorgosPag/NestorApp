@@ -73,6 +73,7 @@ export function BuildingsPageContent() {
     filteredBuildings: baseFilteredBuildings,
     filters,
     setFilters,
+    focusFloorId,
   } = useBuildingsPageState(buildingsData);
 
   // Mobile-only filter toggle state
@@ -392,6 +393,7 @@ export function BuildingsPageContent() {
                   isCreateMode={showTrash ? false : isCreateMode}
                   onBuildingCreated={showTrash ? undefined : handleBuildingCreated}
                   onCancelCreate={showTrash ? undefined : handleCancelCreate}
+                  focusFloorId={showTrash ? undefined : focusFloorId}
                 />
               </section>
 
@@ -444,6 +446,7 @@ export function BuildingsPageContent() {
                     onBuildingCreated={showTrash ? undefined : handleBuildingCreated}
                     onCancelCreate={showTrash ? undefined : handleCancelCreate}
                     isTrashMode={showTrash}
+                    focusFloorId={showTrash ? undefined : focusFloorId}
                   />
                 )}
               </MobileDetailsSlideIn>

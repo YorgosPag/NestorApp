@@ -28,9 +28,11 @@ interface BuildingTabsProps {
     onBuildingCreated?: (buildingId: string) => void;
     /** Notifies parent when the active tab changes (used to hide tab-irrelevant header actions). */
     onActiveTabChange?: (tabId: string) => void;
+    /** BUG #5 deep-link — when set, opens the Floors tab and highlights this floor. */
+    focusFloorId?: string | null;
 }
 
-export function BuildingTabs({ building, isEditing, onEditingChange, saveRef, isCreateMode, onBuildingCreated, onActiveTabChange }: BuildingTabsProps) {
+export function BuildingTabs({ building, isEditing, onEditingChange, saveRef, isCreateMode, onBuildingCreated, onActiveTabChange, focusFloorId }: BuildingTabsProps) {
     // Load building floorplans from Firestore
     const {
         buildingFloorplan,
@@ -82,14 +84,15 @@ export function BuildingTabs({ building, isEditing, onEditingChange, saveRef, is
         isCreateMode,
         onBuildingCreated,
         onActiveUnitsCountChange: handleActiveUnitsCountChange,
-    }), [building.id, isEditing, onEditingChange, saveRef, isCreateMode, onBuildingCreated, handleActiveUnitsCountChange]);
+        focusFloorId,
+    }), [building.id, isEditing, onEditingChange, saveRef, isCreateMode, onBuildingCreated, handleActiveUnitsCountChange, focusFloorId]);
 
     return (
         <UniversalTabsRenderer<Building, BuildingTabComponentProps, BuildingTabAdditionalData, BuildingTabGlobalProps>
             tabs={STABLE_BUILDING_TABS}
             data={building}
             componentMapping={BUILDING_COMPONENT_MAPPING}
-            defaultTab="general"
+            defaultTab={focusFloorId ? 'floors' : 'general'}
             theme="default"
             translationNamespace="building"
             additionalData={additionalData}

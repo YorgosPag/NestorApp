@@ -35,6 +35,8 @@ interface BuildingDetailsProps {
   onCancelCreate?: () => void;
   /** Trash mode — hides edit/new/delete controls (items in trash are read-only) */
   isTrashMode?: boolean;
+  /** BUG #5 deep-link — floor id to open on the Floors tab and highlight. */
+  focusFloorId?: string | null;
 }
 
 export const BuildingDetails = React.memo(function BuildingDetails({
@@ -48,13 +50,15 @@ export const BuildingDetails = React.memo(function BuildingDetails({
   onBuildingCreated,
   onCancelCreate,
   isTrashMode = false,
+  focusFloorId,
 }: BuildingDetailsProps) {
   // [ENTERPRISE] Centralized messages system
   const emptyStateMessages = useEmptyStateMessages();
   const { user } = useAuth();
 
   // Active tab — used to hide header actions irrelevant to certain tabs.
-  const [activeTab, setActiveTab] = useState('general');
+  // A `?floor=` deep-link (BUG #5) opens the Floors tab directly.
+  const [activeTab, setActiveTab] = useState(focusFloorId ? 'floors' : 'general');
 
   // Inline editing state — use lifted state if available, otherwise local
   const [localIsEditing, setLocalIsEditing] = useState(false);
@@ -142,6 +146,7 @@ export const BuildingDetails = React.memo(function BuildingDetails({
             isCreateMode={isCreateMode}
             onBuildingCreated={onBuildingCreated}
             onActiveTabChange={setActiveTab}
+            focusFloorId={focusFloorId}
           />
         }
         onCreateAction={onNewBuilding}
@@ -165,8 +170,10 @@ export const BuildingDetails = React.memo(function BuildingDetails({
     </>
   );
 }, (prev, next) => {
-  // [PERF] Re-render when building changes (including entity links), edit state, or create mode
+  // [PERF] Re-render when building changes (including entity links), edit state,
+  // create mode, or the deep-link focus floor (BUG #5 — drives the Floors tab).
   return prev.building === next.building
     && prev.isEditing === next.isEditing
-    && prev.isCreateMode === next.isCreateMode;
+    && prev.isCreateMode === next.isCreateMode
+    && prev.focusFloorId === next.focusFloorId;
 });

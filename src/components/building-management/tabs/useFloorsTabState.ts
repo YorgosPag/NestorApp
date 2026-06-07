@@ -62,7 +62,7 @@ const floorsCache = createStaleCache<FloorRecord[]>('building-floors');
 // HOOK
 // ============================================================================
 
-export function useFloorsTabState(buildingId: string, projectId?: string) {
+export function useFloorsTabState(buildingId: string, projectId?: string, focusFloorId?: string | null) {
   const { t } = useTranslation(['building', 'building-address', 'building-filters', 'building-storage', 'building-tabs', 'building-timeline']);
   const { success, error: notifyError } = useNotifications();
   const { confirm, dialogProps } = useConfirmDialog();
@@ -434,8 +434,47 @@ export function useFloorsTabState(buildingId: string, projectId?: string) {
     return `${prefix}${elevation.toFixed(2)} ${t('tabs.floors.elevationUnit')}`;
   };
 
+  // =========================================================================
+  // BUG #5 — Deep-link focus: scroll the searched floor into view + highlight
+  // (Revit "double-click a Level in the Project Browser" pattern).
+  // =========================================================================
+  const floorRowRefs = useRef<Map<string, HTMLElement>>(new Map());
+  const registerFloorRowRef = useCallback((floorId: string, el: HTMLElement | null) => {
+    if (el) floorRowRefs.current.set(floorId, el);
+    else floorRowRefs.current.delete(floorId);
+  }, []);
+
+  const [highlightedFloorId, setHighlightedFloorId] = useState<string | null>(null);
+  // Tracks the id we already focused so a floors refetch doesn't re-scroll.
+  const lastFocusedRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (!focusFloorId || loading) return;
+    if (lastFocusedRef.current === focusFloorId) return;
+    // Wait until the target floor exists in the loaded list (right building).
+    if (!floors.some((f) => f.id === focusFloorId)) return;
+
+    lastFocusedRef.current = focusFloorId;
+    setHighlightedFloorId(focusFloorId);
+
+    // Scroll on the next frame, after the row has rendered.
+    const raf = requestAnimationFrame(() => {
+      floorRowRefs.current
+        .get(focusFloorId)
+        ?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    });
+    // Fade the highlight after a short pulse.
+    const timer = setTimeout(() => setHighlightedFloorId(null), 2600);
+
+    return () => {
+      cancelAnimationFrame(raf);
+      clearTimeout(timer);
+    };
+  }, [focusFloorId, loading, floors]);
+
   return {
     floors, loading, error, expandedFloorId, toggleFloorExpand,
+    registerFloorRowRef, highlightedFloorId,
     // ADR-284 Batch 7 SSoT: create state extracted to FloorInlineCreateForm component
     showCreateForm, setShowCreateForm,
     editingId, editNumber, handleEditNumberChange, editName, handleEditNameChange,

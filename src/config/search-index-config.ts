@@ -81,7 +81,11 @@ export const SEARCH_INDEX_CONFIG: SearchIndexConfigMap = {
     statusField: 'status',
     audience: SEARCH_AUDIENCE.INTERNAL,
     requiredPermission: 'buildings:buildings:view' satisfies PermissionId,
-    routeTemplate: '/buildings/{buildingId}',
+    // Deep-link to the parent building + focus the floor (Revit "double-click a
+    // Level" pattern). Direct query form — NOT `/buildings/{buildingId}` — so the
+    // `?floor=` survives: the `/buildings/[id]` route redirects to the query form
+    // and would otherwise drop it. Resolved by buildSearchResultHref / buildHref.
+    routeTemplate: '/buildings?buildingId={buildingId}&floor={id}',
   },
 
   // =========================================================================
@@ -307,15 +311,27 @@ export function determineAudience(
 /**
  * Build navigation href from template and entity ID.
  *
+ * Resolves `{id}` from the entity ID and any other `{field}` placeholder from
+ * the source document (e.g. FLOOR's `{buildingId}`). Mirrors the Cloud Functions
+ * `buildHref` (functions/src/search/indexBuilder.ts) so both indexing paths
+ * produce identical hrefs.
+ *
  * @param config - Index configuration
  * @param entityId - Entity ID
+ * @param data - Source document (optional) — supplies non-`{id}` placeholders
  * @returns Resolved href string
  */
 export function buildSearchResultHref(
   config: SearchIndexConfig,
-  entityId: string
+  entityId: string,
+  data?: Record<string, unknown>,
 ): string {
-  return config.routeTemplate.replace('{id}', entityId);
+  return config.routeTemplate
+    .replace('{id}', entityId)
+    .replace(/\{(\w+)\}/g, (_, field) => {
+      const value = data?.[field];
+      return typeof value === 'string' && value ? value : entityId;
+    });
 }
 
 /**

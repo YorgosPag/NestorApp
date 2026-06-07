@@ -109,7 +109,8 @@ export const SEARCH_INDEX_CONFIG: Record<SearchEntityType, SearchIndexConfig> = 
     statusField: 'status',
     audience: SEARCH_AUDIENCE.INTERNAL,
     requiredPermission: 'buildings:buildings:view',
-    routeTemplate: '/buildings/{buildingId}',
+    // Deep-link to parent building + focus floor (query form preserves ?floor=).
+    routeTemplate: '/buildings?buildingId={buildingId}&floor={id}',
   },
   [SEARCH_ENTITY_TYPES.PROPERTY]: {
     collection: COLLECTIONS.PROPERTIES,

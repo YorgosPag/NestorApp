@@ -89,7 +89,7 @@ export async function indexEntityForSearch(params: IndexEntityParams): Promise<v
       audience,
       requiredPermission: config.requiredPermission,
       links: {
-        href: buildSearchResultHref(config, entityId),
+        href: buildSearchResultHref(config, entityId, entityData),
         routeParams: { id: entityId },
       },
       createdAt: FieldValue.serverTimestamp(),

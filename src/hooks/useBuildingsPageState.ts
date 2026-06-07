@@ -90,6 +90,9 @@ export function useBuildingsPageState(initialBuildings: Building[]) {
     loggerName: 'useBuildingsPageState',
     defaultFilters: defaultBuildingFilters,
     filterFn: stableFilterFn,
+    // BUG #5 deep-link: floor search results carry `?floor=<floorId>` so the
+    // building page can focus the matching floor (see FloorsTabContent).
+    extraUrlParams: ['floor'],
   };
 
   const {
@@ -102,6 +105,7 @@ export function useBuildingsPageState(initialBuildings: Building[]) {
     filteredItems,
     filters,
     setFilters,
+    extraParams,
   } = useEntityPageState(initialBuildings, config);
 
   return {
@@ -114,5 +118,7 @@ export function useBuildingsPageState(initialBuildings: Building[]) {
     filteredBuildings: filteredItems,
     filters,
     setFilters,
+    /** Floor id to focus from a `?floor=` deep-link (BUG #5). */
+    focusFloorId: extraParams.floor,
   };
 }

@@ -234,8 +234,9 @@ function normalizeLevelData(current: LevelData): LevelData {
       ...empty.areas,
       ...(current.areas ?? {}),
       // `gross` is required on `areas`; the spread of the optional `current.areas`
-      // would otherwise widen it to `number | undefined`. Pin it explicitly.
-      gross: current.areas?.gross ?? empty.areas.gross,
+      // would otherwise widen it to `number | undefined`. Pin it explicitly to
+      // the user value or the canonical zero default.
+      gross: current.areas?.gross ?? 0,
     },
     layout: { ...empty.layout, ...(current.layout ?? {}) },
     orientations: current.orientations ?? empty.orientations,

@@ -207,6 +207,8 @@ function FloorsTabContentAdapter(props: BuildingTabComponentProps) {
 
   const componentProps: React.ComponentProps<typeof FloorsTabContent> = {
     building: building as React.ComponentProps<typeof FloorsTabContent>['building'],
+    // BUG #5 deep-link — forwarded from BuildingTabs globalProps.
+    focusFloorId: props.focusFloorId,
   };
 
   return React.createElement(FloorsTabContent, componentProps);

@@ -94,17 +94,20 @@ function FloorStairsList({ stairs, loading }: FloorStairsListProps) {
 
 interface FloorsTabContentProps {
   building: Building;
+  /** BUG #5 deep-link — floor id to scroll into view and highlight on open. */
+  focusFloorId?: string | null;
 }
 
 const COLUMN_COUNT = 7;
 
-export function FloorsTabContent({ building }: FloorsTabContentProps) {
+export function FloorsTabContent({ building, focusFloorId }: FloorsTabContentProps) {
   const { t } = useTranslation(['building', 'building-address', 'building-filters', 'building-storage', 'building-tabs', 'building-timeline']);
   const colors = useSemanticColors();
   const iconSizes = useIconSizes();
 
   const {
     floors, loading, error, expandedFloorId, toggleFloorExpand,
+    registerFloorRowRef, highlightedFloorId,
     showCreateForm, setShowCreateForm,
     editingId, editNumber, handleEditNumberChange, editName, handleEditNameChange,
     editElevation, handleEditElevationChange, editHeight, handleEditHeightChange, saving,
@@ -114,7 +117,7 @@ export function FloorsTabContent({ building }: FloorsTabContentProps) {
     floorGaps,
     expandedFloorStairs, loadingStairs,
     dialogProps, BlockedDialog,
-  } = useFloorsTabState(building.id, building.projectId);
+  } = useFloorsTabState(building.id, building.projectId, focusFloorId);
 
   const existingFloorNumbers = useMemo(
     () => new Set(floors.map((f) => f.number)) as ReadonlySet<number>,
@@ -196,10 +199,21 @@ export function FloorsTabContent({ building }: FloorsTabContentProps) {
               {floors.map((floor) => {
                 const isExpanded = expandedFloorId === floor.id;
                 const isEditing = editingId === floor.id;
+                const isHighlighted = highlightedFloorId === floor.id;
 
                 return (
                   <Fragment key={floor.id}>
-                    <tr className={`border-b border-border/50 hover:bg-muted/20 ${isExpanded ? 'bg-muted/10' : ''}`}>
+                    <tr
+                      ref={(el) => registerFloorRowRef(floor.id, el)}
+                      className={cn(
+                        'border-b border-border/50 transition-colors duration-700',
+                        isHighlighted
+                          ? 'bg-[hsl(var(--bg-info)/0.18)]'
+                          : isExpanded
+                            ? 'bg-muted/10'
+                            : 'hover:bg-muted/20',
+                      )}
+                    >
                       <td className="px-2 py-2">
                         <TooltipProvider delayDuration={300}>
                           <Tooltip>
