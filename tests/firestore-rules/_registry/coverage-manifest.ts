@@ -1209,6 +1209,8 @@ export const FIRESTORE_RULES_PENDING: readonly string[] = [
   'floorplan_mep_underfloors',  // area-based underfloor radiant heating loops (ενδοδαπέδια, mirror mep_boilers); full matrix with the BIM batch
   // — BIM Floor Finish (ADR-419, 2026-06-06) —
   'floorplan_floor_finishes',   // lines 4100-4120 — tenant-scoped CRUD (per-room floor finish, mirror floorplan_walls); full matrix with the BIM batch
+  // — BIM Thermal Spaces (ADR-422, 2026-06-08) —
+  'floorplan_thermal_spaces',   // analytical thermal spaces per room (IfcSpace, mirror floorplan_floor_finishes); full matrix with the BIM batch
 ] as const;
 
 // ---------------------------------------------------------------------------

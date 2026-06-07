@@ -35,8 +35,7 @@ import {
 } from '../../bim/columns/column-corner-snap';
 import type { ColumnGripKind } from '../../hooks/useGripMovement';
 import { columnToolBridgeStore } from '../../ui/ribbon/hooks/bridge/column-tool-bridge-store';
-import { ExtendedSnapType } from '../../snapping/extended-types';
-import { resolveMepConnectorElevationMmAt } from '../../bim/mep-segments/mep-connector-elevation';
+import { resolveSnapConnectorElevationMm } from '../../bim/mep-segments/mep-snap-connector-elevation';
 import { LassoStore, computeLassoMode } from './LassoStore';
 import { ZoomWindowStore } from '../zoom-window/ZoomWindowStore';
 
@@ -219,17 +218,18 @@ export function useMouseUpHandler({ props, cursor, refs, snap }: MouseUpHandlerD
           const snapResult = findSnapPoint(worldPoint.x, worldPoint.y);
           if (snapResult && snapResult.found && snapResult.snappedPoint) {
             worldPoint = snapResult.snappedPoint;
-            // ADR-408 Φ-B1 — recover the connector's 3D elevation from the snapped
-            // host so the segment tool can mate the endpoint in xyz. The snap only
-            // carries plan (x,y); z is resolved per host type (segment per-endpoint,
+            // ADR-408 Φ-B1 (SSoT) — recover the connector's 3D elevation from the
+            // snapped host so the segment tool can mate the endpoint in xyz. Shared
+            // resolver (2D + 3D); z is resolved per host type (segment per-endpoint,
             // manifold/fixture mounting datum). Harmless to non-segment tools.
-            const cand = snapResult.snapPoint;
-            if (cand && cand.type === ExtendedSnapType.BIM_MEP_CONNECTOR && cand.entityId && scene) {
-              const host = scene.entities?.find((en) => en.id === cand.entityId) as Entity | undefined;
-              if (host) {
-                const zMm = resolveMepConnectorElevationMmAt(host, worldPoint.x, worldPoint.y);
-                if (zMm !== null) connectorZmm = zMm;
-              }
+            if (scene) {
+              const zMm = resolveSnapConnectorElevationMm(
+                snapResult.snapPoint,
+                worldPoint.x,
+                worldPoint.y,
+                (id) => scene.entities?.find((en) => en.id === id) as Entity | undefined,
+              );
+              if (zMm !== null) connectorZmm = zMm;
             }
           }
         }

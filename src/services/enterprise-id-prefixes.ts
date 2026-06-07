@@ -258,6 +258,7 @@ export const ENTERPRISE_ID_PREFIXES = {
   RAILING: 'ral',              // floorplan_railings collection — standalone path-based railing (ADR-407)
   ROOF: 'roof',                // floorplan_roofs collection — parametric pitched roof (footprint + per-edge slopes) (ADR-417)
   FLOOR_FINISH: 'ffl',         // floorplan_floor_finishes collection — thin floor covering per room (ADR-419)
+  THERMAL_SPACE: 'tsp',        // floorplan_thermal_spaces collection — analytical thermal space / θερμικός χώρος (IfcSpace) (ADR-422)
   FURNITURE: 'furn',           // floorplan_furniture collection — mesh-based CC0 furniture (ADR-410, chair first)
   FLOORPLAN_SYMBOL: 'fpsym',   // floorplan_symbols collection — pure-vector 2D floorplan symbol (ADR-415, WC/sanitary first)
   BIM_PRESET: 'bpst',          // bim_presets collection — element type presets (system/company/project/user scope)

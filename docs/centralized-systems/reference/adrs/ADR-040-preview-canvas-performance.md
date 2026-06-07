@@ -71,6 +71,10 @@ Mouse Event → DxfCanvas.onMouseMove
 
 ## Changelog
 
+### 2026-06-08 — thermal-space + MEP-riser tool wiring pass-through (ADR-422 / ADR-408 Φ15, CHECK 6B)
+
+**Status**: IMPLEMENTED 2026-06-08. Δύο νέες οντότητες προσθέτουν tools στο `CanvasSection.tsx` ως **pass-through μόνο**: (α) `thermalSpaceTool` (ADR-422 — analytical thermal space, click-in-region «Place Space») και (β) `mepRiserTool` (ADR-408 Φ15 — κατακόρυφη στήλη αποχέτευσης, 1-click). Και τα δύο: destructure από `useSpecialTools` + προώθηση στο `useCanvasClickHandler`, με αντίστοιχα optional πεδία στο `canvas-click-types.ts` (`UseCanvasClickHandlerParams`), ίδιο pattern με το προϋπάρχον `floorFinishTool`/`mepUnderfloorTool`. **Μηδέν νέο `useSyncExternalStore`, μηδέν high-frequency subscription, καμία αλλαγή σε bitmap cache-key ή micro-leaf δομή** (Cardinal Rules / CHECK 6C respected). Co-staged για CHECK 6B (`CanvasSection.tsx`, `canvas-click-types.ts`). Λεπτομέρεια στα ADR-422 / ADR-408 changelogs.
+
 ### 2026-06-07 — floor-drain kind-aware fixture renderer (ADR-408 Φ14, CHECK 6D)
 
 **Status**: IMPLEMENTED 2026-06-07. Το νέο `kind: 'floor-drain'` του `mep-fixture` (σιφώνι/στόμιο δαπέδου αποχέτευσης) κάνει τον `MepFixtureRenderer.ts` (2D entity renderer) kind-aware: (α) `category` από το νέο SSoT `resolveFixtureBimCategory` (floor-drain → `'drain-pipe'`, αλλιώς `'light-fixture'`) ώστε το σιφώνι να κρύβεται μαζί με την αποχέτευση στο toggle «Αποχέτευση»· (β) χρώμα precedence ίδιο με τον segment/fitting renderer (`systemColor ?? resolveSegmentClassificationColor('sanitary-drainage') ?? FIXTURE_STROKE`) → καφέ drainage· (γ) τα grating-grid strokes έρχονται από το `buildFixtureSymbol` SSoT. **Όλα read-time παράγωγα από το `fixture.params` — μηδέν νέο `useSyncExternalStore`, bitmap cache-key, ή micro-leaf αλλαγή** (Cardinal Rules / CHECK 6C respected). Co-staged για CHECK 6D (`MepFixtureRenderer.ts`). Λεπτομέρεια στο ADR-408 changelog.

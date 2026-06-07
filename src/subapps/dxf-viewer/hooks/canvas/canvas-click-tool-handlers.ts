@@ -12,7 +12,7 @@
 'use client';
 import type { Point2D } from '../../rendering/types/Types';
 import { isPointInPolygon } from '../../utils/geometry/GeometryUtils';
-import { TOLERANCE_CONFIG } from '../../config/tolerance-config';
+import { TOLERANCE_CONFIG, POLYGON_TOLERANCES } from '../../config/tolerance-config';
 import { setAutoAreaState } from '../../systems/auto-area/AutoAreaResultStore';
 import { collectAreaCandidates, collectHoleAreas } from '../../systems/auto-area/auto-area-hit';
 import { CoordinateTransforms } from '../../rendering/core/CoordinateTransforms';
@@ -91,4 +91,40 @@ export function handleAutoAreaClick(worldPoint: Point2D, p: UseCanvasClickHandle
     screenY: screen.y,
   });
   dlog('handleAutoAreaClick', `area=${best.area.toFixed(2)} netArea=${(best.area - holesArea).toFixed(2)} holes=${holes.length} source=${best.source}`);
+}
+
+// ============================================================================
+// OVERLAY POLYGON DRAW (PRIORITY 5)
+// ============================================================================
+/**
+ * Overlay polygon drawing — accumulates click-to-add points, auto-closing
+ * (and saving) when the user clicks near the first point with ≥3 points.
+ * Always consumes the click while `overlayMode === 'draw'` (returns once the
+ * caller has matched that mode).
+ *
+ * 🚀 PERF (2026-05-09): `isNearFirstPoint` is computed inline at click time
+ * (was a reactive prop forcing CanvasSection to re-render on mousemove).
+ * ADR-040 XXII.A: live SSoT transform read at click time.
+ */
+export function handleOverlayDrawClick(worldPoint: Point2D, p: UseCanvasClickHandlerParams): void {
+  if (p.isSavingPolygon) return;
+  const { draftPolygon } = p;
+  const isNearFirst = (() => {
+    if (draftPolygon.length < 3) return false;
+    const [fx, fy] = draftPolygon[0];
+    const dx = worldPoint.x - fx;
+    const dy = worldPoint.y - fy;
+    const distance = Math.sqrt(dx * dx + dy * dy);
+    return distance < (POLYGON_TOLERANCES.CLOSE_DETECTION / getImmediateTransform().scale);
+  })();
+  if (isNearFirst && draftPolygon.length >= 3) {
+    p.setIsSavingPolygon(true);
+    p.finishDrawingWithPolygonRef.current(draftPolygon).then(success => {
+      p.setIsSavingPolygon(false);
+      if (success) p.setDraftPolygon([]);
+    });
+    return;
+  }
+  const worldPointArray: [number, number] = [worldPoint.x, worldPoint.y];
+  p.setDraftPolygon(prev => [...prev, worldPointArray]);
 }

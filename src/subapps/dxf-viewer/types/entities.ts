@@ -416,6 +416,15 @@ export type {
 } from '../bim/types/floor-finish-types';
 import type { FloorFinishEntity } from '../bim/types/floor-finish-types';
 
+// ADR-422 — analytical thermal space / θερμικός χώρος (IfcSpace).
+export type {
+  ThermalSpaceUseType,
+  ThermalSpaceParams,
+  ThermalSpaceGeometry,
+  ThermalSpaceEntity,
+} from '../bim/types/thermal-space-types';
+import type { ThermalSpaceEntity } from '../bim/types/thermal-space-types';
+
 // ADR-408 Φ8: unified linear MEP segment (duct + pipe) types live in bim/types/mep-segment-types.ts (SRP).
 export type {
   MepSegmentDomain,
@@ -621,6 +630,8 @@ export type Entity = (
   | RoofEntity
   // ADR-419 — thin polygon floor covering per room (IfcCovering FLOORING).
   | FloorFinishEntity
+  // ADR-422 — analytical thermal space (IfcSpace).
+  | ThermalSpaceEntity
 ) & Pick<BaseEntity,
   // Required identifiers — needed everywhere (ADR-363 fix: BIM entities now in union)
   'id' | 'name' | 'layerId' |
@@ -816,13 +827,17 @@ export const isRoofEntity = (entity: Entity): entity is RoofEntity =>
 export const isFloorFinishEntity = (entity: Entity): entity is FloorFinishEntity =>
   entity.type === 'floor-finish';
 
-/** True for any ADR-363/406/407/408/410/415/417/419 BIM parametric entity */
-export const isBimEntity = (entity: Entity): entity is WallEntity | OpeningEntity | SlabEntity | SlabOpeningEntity | ColumnEntity | BeamEntity | MepFixtureEntity | ElectricalPanelEntity | MepManifoldEntity | MepRadiatorEntity | MepBoilerEntity | MepUnderfloorEntity | RailingEntity | FurnitureEntity | MepSegmentEntity | MepFittingEntity | FloorplanSymbolEntity | RoofEntity | FloorFinishEntity =>
+/** ADR-422 — analytical thermal space (IfcSpace). */
+export const isThermalSpaceEntity = (entity: Entity): entity is ThermalSpaceEntity =>
+  entity.type === 'thermal-space';
+
+/** True for any ADR-363/406/407/408/410/415/417/419/422 BIM parametric entity */
+export const isBimEntity = (entity: Entity): entity is WallEntity | OpeningEntity | SlabEntity | SlabOpeningEntity | ColumnEntity | BeamEntity | MepFixtureEntity | ElectricalPanelEntity | MepManifoldEntity | MepRadiatorEntity | MepBoilerEntity | MepUnderfloorEntity | RailingEntity | FurnitureEntity | MepSegmentEntity | MepFittingEntity | FloorplanSymbolEntity | RoofEntity | FloorFinishEntity | ThermalSpaceEntity =>
   entity.type === 'wall' || entity.type === 'opening' || entity.type === 'slab' ||
   entity.type === 'slab-opening' || entity.type === 'column' || entity.type === 'beam' ||
   entity.type === 'mep-fixture' || entity.type === 'electrical-panel' || entity.type === 'mep-manifold' || entity.type === 'mep-radiator' || entity.type === 'mep-boiler' || entity.type === 'mep-underfloor' || entity.type === 'railing' ||
   entity.type === 'furniture' || entity.type === 'mep-segment' || entity.type === 'mep-fitting' ||
-  entity.type === 'floorplan-symbol' || entity.type === 'roof' || entity.type === 'floor-finish';
+  entity.type === 'floorplan-symbol' || entity.type === 'roof' || entity.type === 'floor-finish' || entity.type === 'thermal-space';
 
 // ✅ ENTERPRISE MIGRATION: generateEntityId moved to systems/entity-creation/utils.ts
 // Re-export from centralized location for backward compatibility

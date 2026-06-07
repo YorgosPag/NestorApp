@@ -139,3 +139,33 @@ describe('ColumnRenderer — section-profile subcategory wiring (Phase C.2)', ()
     expect(mock.calls.some(c => c.fn === 'stroke')).toBe(true);
   });
 });
+
+// ── ADR-375 C.9 — προκαθορισμένο χρώμα γραμμής ανά kind (κολώνα vs τοιχίο) ─────
+
+function makeRectColumn(kind: 'rectangular' | 'shear-wall'): ColumnEntity {
+  return {
+    ...makeSteelLColumn(),
+    kind,
+    params: { position: { x: 0, y: 0 }, baseOffset: 0, height: 3000, width: 1200, depth: 200, material: 'concrete' },
+    geometry: {
+      footprint: { vertices: [{ x: -600, y: -100 }, { x: 600, y: -100 }, { x: 600, y: 100 }, { x: -600, y: 100 }] },
+      bbox: { min: { x: -600, y: -100 }, max: { x: 600, y: 100 } },
+    },
+  } as unknown as ColumnEntity;
+}
+
+describe('ColumnRenderer — ADR-375 C.9 default line color', () => {
+  beforeEach(() => mockGetState.mockReturnValue(makeStoreState()));
+
+  it('κανονική κολώνα → outline strokeStyle = parent #5b6478', () => {
+    const { renderer, mock } = makeRenderer();
+    renderer.render(makeRectColumn('rectangular') as unknown as EntityModel, {});
+    expect(strokeStyleCalls(mock.calls)).toContain('#5b6478');
+  });
+
+  it('τοιχίο (shear-wall) → outline strokeStyle = #2f3a4a (subcategory)', () => {
+    const { renderer, mock } = makeRenderer();
+    renderer.render(makeRectColumn('shear-wall') as unknown as EntityModel, {});
+    expect(strokeStyleCalls(mock.calls)).toContain('#2f3a4a');
+  });
+});

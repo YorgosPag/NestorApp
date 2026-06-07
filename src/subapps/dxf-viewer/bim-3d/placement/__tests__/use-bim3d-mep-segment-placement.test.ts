@@ -3,10 +3,11 @@
  *
  * Mirror of `use-bim3d-mep-fixture-placement.test.ts`, adapted for the 2-click
  * LINEAR segment tool. Verifies the activation gate (segment tool + 3D), the
- * work-plane raycast → EventBus bridge on click (NO z — free-point convention),
- * that the raycast plane is the CENTRELINE work-plane (floor + centreline) so the
- * ghost coincides with the cursor, the centreline override, and the orbit-drag
- * guard.
+ * work-plane raycast → EventBus bridge on click (each click carries its endpoint
+ * elevation `z`: the centreline offset for a free point, or a snapped connector's
+ * true z — Φ-B1 connector-mate / Revit per-click elevation), that the raycast plane
+ * is the CENTRELINE work-plane (floor + centreline), the centreline override, and
+ * the orbit-drag guard.
  */
 
 import { renderHook } from '@testing-library/react';
@@ -80,14 +81,21 @@ jest.mock('../world-to-scene-point', () => ({
 jest.mock('../placement-snap', () => ({
   resolvePlacementSnap: jest.fn(() => null),
 }));
+const mockConnectorZ: { value: number | null } = { value: null };
+jest.mock('../../../bim/mep-segments/mep-snap-connector-elevation', () => ({
+  resolveSnapConnectorElevationMm: () => mockConnectorZ.value,
+}));
 jest.mock('../../viewport/coordinate-transforms', () => ({
   dxfPlanToWorld: jest.fn(() => ({ x: 0, y: 0, z: 0 })),
 }));
 
 import { raycastFloorPoint } from '../raycast-floor-point';
+import { resolvePlacementSnap } from '../placement-snap';
+import { DEFAULT_SEGMENT_CENTERLINE_ELEVATION_MM as DEFAULT_CL } from '../../../bim/types/mep-segment-types';
 import { useBim3DMepSegmentPlacement } from '../use-bim3d-mep-segment-placement';
 
 const mockRaycast = raycastFloorPoint as jest.MockedFunction<typeof raycastFloorPoint>;
+const mockSnap = resolvePlacementSnap as jest.MockedFunction<typeof resolvePlacementSnap>;
 
 function makeParams(canvas: HTMLCanvasElement) {
   const manager = { scene: {}, getCamera: () => ({}), markSceneDirty: jest.fn() };
@@ -105,6 +113,9 @@ describe('useBim3DMepSegmentPlacement', () => {
     mockViewListeners.clear();
     mockEmit.mockClear();
     mockRaycast.mockClear();
+    mockSnap.mockReset();
+    mockSnap.mockReturnValue(null);
+    mockConnectorZ.value = null;
     delete mockOverrides.centerlineElevationMm;
   });
 
@@ -128,13 +139,40 @@ describe('useBim3DMepSegmentPlacement', () => {
     expect(types).not.toEqual(expect.arrayContaining(['click']));
   });
 
-  it('click emits bim:place-mep-segment-3d with the raw point (no z) when OSNAP misses', () => {
+  it('free-point click emits z = centreline default (OSNAP miss)', () => {
     const canvas = document.createElement('canvas');
     mockState.activeTool = 'mep-pipe';
     mockState.is3D = true;
     renderHook(() => useBim3DMepSegmentPlacement(makeParams(canvas)));
     canvas.dispatchEvent(new MouseEvent('click', { clientX: 5, clientY: 5 }));
-    expect(mockEmit).toHaveBeenCalledWith('bim:place-mep-segment-3d', { point: { x: 1, y: 2 } });
+    expect(mockEmit).toHaveBeenCalledWith('bim:place-mep-segment-3d', { point: { x: 1, y: 2, z: DEFAULT_CL } });
+  });
+
+  it('free-point click emits z = the centreline override (Revit per-click elevation)', () => {
+    const canvas = document.createElement('canvas');
+    mockState.activeTool = 'mep-pipe';
+    mockState.is3D = true;
+    mockOverrides.centerlineElevationMm = 250;
+    renderHook(() => useBim3DMepSegmentPlacement(makeParams(canvas)));
+    canvas.dispatchEvent(new MouseEvent('click', { clientX: 5, clientY: 5 }));
+    expect(mockEmit).toHaveBeenCalledWith('bim:place-mep-segment-3d', { point: { x: 1, y: 2, z: 250 } });
+  });
+
+  it('connector snap emits z = the connector elevation (Φ-B1 connector-mate)', () => {
+    const canvas = document.createElement('canvas');
+    mockState.activeTool = 'mep-pipe';
+    mockState.is3D = true;
+    mockOverrides.centerlineElevationMm = 250; // overridden by the connector z below
+    mockSnap.mockReturnValue({
+      snappedMm: { x: 1, y: 2 },
+      markerMm: { x: 1, y: 2 },
+      snapEntityId: 'host-1',
+      snapType: 'bim_mep_connector' as never,
+    });
+    mockConnectorZ.value = 2800; // resolved by the (mocked) connector-elevation SSoT
+    renderHook(() => useBim3DMepSegmentPlacement(makeParams(canvas)));
+    canvas.dispatchEvent(new MouseEvent('click', { clientX: 5, clientY: 5 }));
+    expect(mockEmit).toHaveBeenCalledWith('bim:place-mep-segment-3d', { point: { x: 1, y: 2, z: 2800 } });
   });
 
   it('raycasts the CENTRELINE work-plane (floor + default centreline)', () => {

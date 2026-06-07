@@ -22,6 +22,7 @@ import { useMepManifoldTool } from '../drawing/useMepManifoldTool';
 import { useMepRadiatorTool } from '../drawing/useMepRadiatorTool';
 import { useMepBoilerTool } from '../drawing/useMepBoilerTool';
 import { useMepSegmentTool } from '../drawing/useMepSegmentTool';
+import { useMepRiserTool } from '../drawing/useMepRiserTool';
 import { useRailingTool } from '../drawing/useRailingTool';
 import { useToolLifecycle } from './useToolLifecycle';
 import { resolveSceneUnits } from '../../utils/scene-units';
@@ -54,6 +55,7 @@ export interface PlacementToolsReturn {
   mepRadiatorTool: ReturnType<typeof useMepRadiatorTool>; // ADR-408 Εύρος Β
   mepBoilerTool: ReturnType<typeof useMepBoilerTool>; // ADR-408 Εύρος Β #2
   mepSegmentTool: ReturnType<typeof useMepSegmentTool>; // ADR-408 Φ8
+  mepRiserTool: ReturnType<typeof useMepRiserTool>; // ADR-408 Φ15
   railingTool: ReturnType<typeof useRailingTool>; // ADR-407
 }
 
@@ -220,6 +222,18 @@ export function useSpecialToolsPlacementTools(
   });
   useToolLifecycle(activeTool === 'railing', railingTool.activate, railingTool.deactivate);
 
+  // ADR-408 Φ15 — RISER TOOL (κατακόρυφη στήλη αποχέτευσης): single-click vertical
+  // drain stack (a vertical mep-segment, base = datum). Entity appended+broadcast.
+  const mepRiserTool = useMepRiserTool({
+    currentLevelId: levelManager.currentLevelId || '0',
+    onRiserCreated: (riserEntity) => addMepSegmentToScene(riserEntity, levelManager),
+    getSceneUnits: () => {
+      const lid = levelManager.currentLevelId;
+      return lid ? resolveSceneUnits(levelManager.getLevelScene(lid)) : 'mm';
+    },
+  });
+  useToolLifecycle(activeTool === 'mep-drain-riser', mepRiserTool.activate, mepRiserTool.deactivate);
+
   return {
     mepFixtureTool,
     furnitureTool,
@@ -229,6 +243,7 @@ export function useSpecialToolsPlacementTools(
     mepRadiatorTool,
     mepBoilerTool,
     mepSegmentTool,
+    mepRiserTool,
     railingTool,
   };
 }

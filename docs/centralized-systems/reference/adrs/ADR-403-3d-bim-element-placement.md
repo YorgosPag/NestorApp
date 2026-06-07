@@ -138,6 +138,16 @@
 ---
 
 ## Changelog
+- **2026-06-08 (MEP segment EXT — connector-Z mate + Revit per-click elevation, Opus 4.8)** —
+  Ο linear 2-click σωλήνας έγινε **Revit-grade σε 3D**: κάθε κλικ φέρει πλέον το υψόμετρό του
+  (`point.z`, mm floor-relative). Πηγή ανά κλικ: `connectorZ(snap) ?? centerlineOffset@clickTime`.
+  → **connector-Z mate** («Connect To»): snap σε MEP connector → το άκρο κληρονομεί το πραγματικό z
+  του host· → **κλίση/risers**: αλλαγή του centreline offset ανάμεσα στα δύο clicks ⇒ κεκλιμένος
+  σωλήνας (διαφορετικό start/end z, Φ-A per-endpoint). Το placement framework πλέον υποστηρίζει
+  **per-click elevation** για linear entities (πρώτη χρήση). **Νέο SSoT helper**
+  `resolveSnapConnectorElevationMm` (bim/mep-segments), κοινός 2D (`mouse-handler-up`) + 3D (Boy-Scout
+  κατάργηση 2D duplication). `placement-snap.ts` επιφανειακό `snapEntityId`/`snapType` (geometry-only).
+  Το completion/FSM (Φ-A) ήταν ήδη η SSoT — **μηδέν fork**· ΕΚΤΟΣ ADR-040· 33+138 tests, tsc 0.
 - **2026-06-07 (MEP segment — first LINEAR 2-click entity, Opus 4.8)** — 3Δ τοποθέτηση
   σωλήνα/αεραγωγού (`mep-segment`, tools `mep-pipe`/`mep-duct`/`mep-drain-pipe`) με τη
   **ΙΔΙΑ 2-click** χειρονομία όπως στην κάτοψη. Πρώτη **linear** οντότητα στο placement

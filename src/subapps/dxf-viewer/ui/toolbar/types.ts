@@ -189,6 +189,8 @@ export type ToolType =
   | 'mep-pipe'
   // ADR-408 Φ14: sanitary drainage pipe (mep-segment domain 'pipe' preset sanitary-drainage + slope)
   | 'mep-drain-pipe'
+  // ADR-408 Φ15: vertical drain stack / riser (κατακόρυφη στήλη — vertical mep-segment)
+  | 'mep-drain-riser'
   // ADR-359 Phase 1: Auxiliary geometry tools (infinite/semi-infinite construction lines)
   | 'xline'             // Infinite line through basePoint in direction (AutoCAD XLINE)
   | 'ray'               // Semi-infinite line from basePoint in direction (AutoCAD RAY)

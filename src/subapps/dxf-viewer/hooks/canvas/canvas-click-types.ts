@@ -95,8 +95,12 @@ export interface UseCanvasClickHandlerParams {
   mepBoilerTool?: MepBoilerToolLike;
   /** ADR-408 Εύρος Β #3 — Underfloor heating loop tool click pipeline (footprint polygon; same shape as slab). */
   mepUnderfloorTool?: SlabToolLike;
+  /** ADR-422 — Thermal-space tool click pipeline (Revit «Place Space» click-in-region). */
+  thermalSpaceTool?: SlabToolLike;
   /** ADR-408 Φ8 — MEP segment (duct/pipe) tool click pipeline. */
   mepSegmentTool?: MepSegmentToolLike;
+  /** ADR-408 Φ15 — MEP riser (vertical drain stack) tool click pipeline (1-click). */
+  mepRiserTool?: { readonly isActive: boolean; onCanvasClick(point: Readonly<Point2D>): boolean };
   /** ADR-410 — Furniture tool click pipeline (single-click placement). */
   furnitureTool?: FurnitureToolLike;
   /** ADR-415 — Floorplan-symbol tool click pipeline (single-click placement). */

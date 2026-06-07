@@ -136,8 +136,10 @@ describe('resolveSubcategoryStyle — color override', () => {
     expect(result.color).toBe('#00ff00');
   });
 
-  it('returns null color when no override (default/canvas token)', () => {
-    const result = resolveSubcategoryStyle(BASE_CTX);
+  it('returns null color when no override (category without a C.9 line color)', () => {
+    // ADR-375 C.9: wall/column/slab/opening πλέον έχουν default χρώμα· χρησιμοποιούμε
+    // `beam` (άχρωμη κατηγορία) για να ελεγχθεί το canvas-token fallback (null).
+    const result = resolveSubcategoryStyle({ ...BASE_CTX, category: 'beam' });
     expect(result.color).toBeNull();
   });
 
@@ -270,6 +272,9 @@ describe('bim-render-settings-store V/G setters', () => {
     });
     const state = useBimRenderSettingsStore.getState();
     expect(state.objectStyles.wall.visible).toBeUndefined();
-    expect(state.objectStyles.slab.cutColor).toBeUndefined();
+    // ADR-375 C.9: reset επαναφέρει τα defaults — το user override #ff0000 φεύγει·
+    // το slab επιστρέφει στο default line color (#6e6358), όχι σε undefined.
+    expect(state.objectStyles.slab.cutColor).not.toBe('#ff0000');
+    expect(state.objectStyles.slab.cutColor).toBe('#6e6358');
   });
 });

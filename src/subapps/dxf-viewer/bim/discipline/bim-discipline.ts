@@ -99,6 +99,8 @@ export const DISCIPLINE_BY_CATEGORY: Readonly<Record<BimCategory, DisciplineOrAn
   kitchen:         'architectural',
   // ADR-419 — floor-finish covering per room ⊂ architectural (Revit Floors / Covering).
   'floor-finish':  'architectural',
+  // ADR-422 — thermal space (IfcSpace analytical) ⊂ architectural (Revit Spaces).
+  'thermal-space': 'architectural',
 } as const;
 
 /**

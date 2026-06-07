@@ -64,7 +64,9 @@ export type BimElementType =
   // ADR-408 Eyros B #3 — area-based radiant floor heating loop.
   | 'mep-underfloor'
   // ADR-419 — thin polygon floor covering per room (IfcCovering FLOORING).
-  | 'floor-finish';
+  | 'floor-finish'
+  // ADR-422 — analytical thermal space / θερμικός χώρος (IfcSpace).
+  | 'thermal-space';
 
 /**
  * Union of all BIM sub-type discriminators (one per element type).

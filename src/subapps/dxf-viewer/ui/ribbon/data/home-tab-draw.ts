@@ -525,6 +525,15 @@ export const HOME_DRAW_PANEL: RibbonPanelDef = {
               commandKey: 'floor-finish',
               shortcut: 'FF',
             },
+            // ADR-422 — thermal space (analytical IfcSpace, click-in-region «Place Space»).
+            {
+              id: 'draw.bim.thermalSpace',
+              labelKey: 'ribbon.commands.bim.thermalSpace.label',
+              tooltipKey: 'ribbon.commands.bim.thermalSpace.tooltip',
+              icon: 'bim-slab',
+              commandKey: 'thermal-space',
+              shortcut: 'TS',
+            },
           ],
         },
         // ADR-419 §ribbon-hierarchy — «ΗΛΜ Εγκαταστάσεις»: μηχανολογικά κατά
@@ -638,6 +647,14 @@ export const HOME_DRAW_PANEL: RibbonPanelDef = {
                   tooltipKey: 'ribbon.commands.bim.mepFloorDrain.tooltip',
                   icon: 'bim-mep-manifold',
                   commandKey: 'mep-floor-drain',
+                },
+                // ADR-408 Φ15 — vertical drain stack / riser (κατακόρυφη στήλη). 1-click.
+                {
+                  id: 'draw.bim.mepDrainRiser',
+                  labelKey: 'ribbon.commands.bim.mepDrainRiser.label',
+                  tooltipKey: 'ribbon.commands.bim.mepDrainRiser.tooltip',
+                  icon: 'bim-pipe',
+                  commandKey: 'mep-drain-riser',
                 },
               ],
             },

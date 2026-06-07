@@ -64,8 +64,17 @@ export class MepSegmentPlacementGhost {
    * @param floorElevationMm Active floor elevation (mm); used as the building
    *                         datum so the ghost world Y matches the work-plane the
    *                         cursor was raycast against (WYSIWYG).
+   * @param endElevationMm   Cursor-end elevation (mm, floor-relative): a snapped
+   *                         connector's z (Φ-B1) or the current centreline offset
+   *                         (Revit per-click elevation). `null`/omitted ⇒ the
+   *                         completion defaults the end to the centreline (flat).
    */
-  update(cursorScenePoint: Readonly<Point2D>, floorElevationMm: number, levelId: string | undefined): void {
+  update(
+    cursorScenePoint: Readonly<Point2D>,
+    floorElevationMm: number,
+    levelId: string | undefined,
+    endElevationMm: number | null = null,
+  ): void {
     if (this.disposed) return;
     const handle = mepSegmentToolBridgeStore.get();
     if (!handle || handle.phase !== 'awaitingEnd' || handle.startPoint === null) {
@@ -79,10 +88,11 @@ export class MepSegmentPlacementGhost {
       handle.domain,
       handle.overrides,
       handle.getSceneUnits(),
-      // Free-point ends: the completion defaults both to the centreline override/
-      // default (floor-relative), exactly like the 2D free-point gesture.
+      // Per-endpoint elevation (Φ-A): start from the FSM (connector z or null), end
+      // from the live cursor resolution (connector z or centreline offset). A
+      // different start/end ⇒ the rubber-band previews the real slope/riser.
       handle.startElevationMm,
-      null,
+      endElevationMm,
     );
     if (!result.ok) {
       this.setVisible(false);

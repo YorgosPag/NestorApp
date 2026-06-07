@@ -39,7 +39,6 @@ import type { ColumnEntity, ColumnKind } from '../types/column-types';
 import { pointInPolygon } from '../geometry/shared/polygon-utils';
 import { RENDER_LINE_WIDTHS } from '../../config/text-rendering-config';
 import { resolveSubcategoryStyle } from '../../config/bim-line-weight-resolver';
-import { BIM_CATEGORY_LINE_COLORS } from '../../config/bim-object-styles';
 import { resolveIsEntityVisible } from '../visibility/visibility-resolver';
 import { resolveCutState } from '../../config/bim-view-range';
 import { resolveVgFillTint } from '../utils/bim-vg-fill-tint';
@@ -181,8 +180,8 @@ export class ColumnRenderer extends BaseEntityRenderer {
     if (_tiltShift) {
       this.ctx.restore();
       // ADR-375 C.9 — η όψη κλίσης ακολουθεί το resolved outline χρώμα (SSoT)·
-      // fallback στο default κατηγορίας μόνο αν ο χρήστης μηδένισε το V/G color.
-      drawCutPlaneTiltProjection(this.ctx, verts, _tiltShift, (p) => this.worldToScreen(p), _colColor ?? BIM_CATEGORY_LINE_COLORS.column);
+      // fallback στην per-kind παλέτα μόνο αν ο χρήστης μηδένισε το V/G color.
+      drawCutPlaneTiltProjection(this.ctx, verts, _tiltShift, (p) => this.worldToScreen(p), _colColor ?? KIND_STROKE[column.kind]);
     }
 
     this.finalizeRender(entity, options);

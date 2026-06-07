@@ -25,6 +25,7 @@ import { buildSweptIBeamGeometry } from './beam-ishape-geometry';
 import { buildMultiLayerSlabSolid } from './slab-multilayer-solid-3d';
 import { isMultiLayerSlab } from '../../bim/types/slab-dna-types';
 import { attachEdgesProjection } from './bim-three-edges';
+import { isWallColumnKind } from '../../bim/columns/column-from-faces';
 import type { ColumnTopProfile, ColumnBaseProfile } from '../../bim/geometry/column-vertical-profile';
 
 const MM_TO_M = 0.001;
@@ -58,7 +59,7 @@ export function columnToMesh(
       const mesh = new THREE.Mesh(prism, getElementMaterial3D('column'));
       mesh.position.y = floorElevationMm * MM_TO_M + buildingBaseElevationM;
       const tagged = tagMesh(mesh, column.id, 'column', matId, levelId);
-      attachEdgesProjection(tagged, 'column');
+      attachEdgesProjection(tagged, 'column', isWallColumnKind(column.kind) ? 'shear-wall' : undefined);
       return tagged;
     }
     // Fall through to flat solid αν το prism εκφυλίζεται (defensive).

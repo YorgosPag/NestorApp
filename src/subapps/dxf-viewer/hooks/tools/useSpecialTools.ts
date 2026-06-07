@@ -25,6 +25,7 @@ import { useSlabTool, SLAB_AUTO_CLOSE_TOLERANCE_DEFAULT } from '../drawing/useSl
 import { useRoofTool, ROOF_AUTO_CLOSE_TOLERANCE_DEFAULT } from '../drawing/useRoofTool';
 import { useFloorFinishTool, FLOOR_FINISH_AUTO_CLOSE_TOLERANCE_DEFAULT } from '../drawing/useFloorFinishTool';
 import { useMepUnderfloorTool, MEP_UNDERFLOOR_AUTO_CLOSE_TOLERANCE_DEFAULT } from '../drawing/useMepUnderfloorTool';
+import { useThermalSpaceTool } from '../drawing/useThermalSpaceTool';
 import { useColumnTool } from '../drawing/useColumnTool';
 import { useBeamTool } from '../drawing/useBeamTool';
 import { useSlabOpeningTool } from '../drawing/useSlabOpeningTool';
@@ -81,6 +82,7 @@ export interface UseSpecialToolsReturn extends SelectionToolsReturn, PlacementTo
   roofTool: ReturnType<typeof useRoofTool>; // ADR-417
   floorFinishTool: ReturnType<typeof useFloorFinishTool>; // ADR-419
   mepUnderfloorTool: ReturnType<typeof useMepUnderfloorTool>; // ADR-408 Εύρος Β #3
+  thermalSpaceTool: ReturnType<typeof useThermalSpaceTool>; // ADR-422
   columnTool: ReturnType<typeof useColumnTool>;
   beamTool: ReturnType<typeof useBeamTool>;
   slabOpeningTool: ReturnType<typeof useSlabOpeningTool>;
@@ -314,6 +316,24 @@ export function useSpecialTools(props: UseSpecialToolsProps): UseSpecialToolsRet
     onMepUnderfloorCreated: (entity) => appendEntityToScene(levelManager, entity, 'mep-underfloor'),
   });
   useToolLifecycle(activeTool === 'mep-underfloor', mepUnderfloorTool.activate, mepUnderfloorTool.deactivate);
+  // ADR-422 — THERMAL-SPACE TOOL: Revit «Place Space» click-in-region (single click
+  // inside a room → footprint auto-derived from the enclosing wall loop). The created
+  // `ThermalSpaceEntity` is appended + broadcast so `ThermalSpacePersistenceHost` saves it.
+  const thermalSpaceTool = useThermalSpaceTool({
+    currentLevelId: levelManager.currentLevelId || '0',
+    getSceneEntities: () => {
+      const levelId = levelManager.currentLevelId;
+      if (!levelId) return [];
+      return levelManager.getLevelScene(levelId)?.entities ?? [];
+    },
+    getSceneUnits: () => {
+      const levelId = levelManager.currentLevelId;
+      if (!levelId) return 'mm';
+      return resolveSceneUnits(levelManager.getLevelScene(levelId));
+    },
+    onThermalSpaceCreated: (entity) => appendEntityToScene(levelManager, entity, 'thermal-space'),
+  });
+  useToolLifecycle(activeTool === 'thermal-space', thermalSpaceTool.activate, thermalSpaceTool.deactivate);
   // ADR-363 Phase 4 — COLUMN TOOL
   /**
    * Column drawing tool — single-click placement με 9-position anchor + Tab
@@ -381,6 +401,7 @@ export function useSpecialTools(props: UseSpecialToolsProps): UseSpecialToolsRet
     mepRadiatorTool,
     mepBoilerTool,
     mepSegmentTool,
+    mepRiserTool,
     railingTool,
   } = useSpecialToolsPlacementTools({ activeTool, levelManager });
 
@@ -443,6 +464,7 @@ export function useSpecialTools(props: UseSpecialToolsProps): UseSpecialToolsRet
     roofTool,
     floorFinishTool,
     mepUnderfloorTool,
+    thermalSpaceTool,
     columnTool,
     mepFixtureTool,
     furnitureTool,
@@ -452,6 +474,7 @@ export function useSpecialTools(props: UseSpecialToolsProps): UseSpecialToolsRet
     mepRadiatorTool,
     mepBoilerTool,
     mepSegmentTool,
+    mepRiserTool,
     railingTool,
     beamTool,
     slabOpeningTool,

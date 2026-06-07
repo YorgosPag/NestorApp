@@ -213,6 +213,9 @@ export interface DrawingEventMap {
   // ADR-419 — BIM floor-finish covering (IfcCovering FLOORING) params + delete events
   'bim:floor-finish-params-updated': { floorFinishId: string };
   'bim:floor-finish-delete-requested': { id: string };
+  // ADR-422 — BIM thermal space (IfcSpace) params + delete events
+  'bim:thermal-space-params-updated': { thermalSpaceId: string };
+  'bim:thermal-space-delete-requested': { id: string };
   // ADR-363 Phase 3.7 — BIM slab-opening params + delete events
   'bim:slab-opening-params-updated': { slabOpeningId: string };
   'bim:slab-opening-delete-requested': { slabOpeningId: string };
@@ -289,7 +292,10 @@ export interface DrawingEventMap {
   // ADR-408 Εύρος Β #2 — 3D heating boiler placement (mirror of bim:place-mep-radiator-3d).
   'bim:place-mep-boiler-3d': { point: Point2D };
   // ADR-408 Φ8 — 3D MEP segment placement (2-click bridge; reserved for 3D tool).
-  'bim:place-mep-segment-3d': { point: Point2D };
+  // The point carries an optional `z` (mm, floor-relative): the endpoint elevation
+  // resolved at click time — a snapped connector's z (Φ-B1 connector-mate) or the
+  // current centreline offset (Revit-style per-click elevation → sloped runs/risers).
+  'bim:place-mep-segment-3d': { point: Point2D & { z?: number } };
   // ADR-407 — 3D railing placement (mirror of bim:place-column-3d).
   'bim:place-railing-3d': { point: Point2D };
   // ADR-410 — 3D furniture placement (mirror of bim:place-column-3d).

@@ -134,6 +134,8 @@ export const SUBCATEGORY_TAXONOMY: Readonly<Record<BimCategory, ReadonlyArray<st
   kitchen:         [],
   // ADR-419 — floor-finish: no subcategory model (solid/hatch fill, no edges).
   'floor-finish':  [],
+  // ADR-422 — thermal-space: no subcategory model (analytical fill + tag overlay).
+  'thermal-space': [],
 };
 
 /**

@@ -97,7 +97,8 @@ export type DrawingTool =
   | 'slab-opening'
   | 'roof'
   | 'floor-finish'
-  | 'mep-underfloor';
+  | 'mep-underfloor'
+  | 'thermal-space';
 
 export interface DrawingState {
   currentTool: DrawingTool;

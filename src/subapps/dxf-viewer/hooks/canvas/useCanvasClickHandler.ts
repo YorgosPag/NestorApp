@@ -7,7 +7,6 @@ import { isInteractiveTool } from '../../systems/tools/ToolStateManager';
 import { isColumnRegionTool, isWallRegionTool } from '../../systems/tools/region-tool-ids';
 import { sanitaryFixtureToolKind } from '../../bim/sanitary/sanitary-symbol-spec';
 import { isPointInPolygon } from '../../utils/geometry/GeometryUtils';
-import { POLYGON_TOLERANCES } from '../../config/tolerance-config';
 import { dwarn } from '../../debug';
 import { PolygonCropStore } from '../../systems/lasso/LassoCropStore';
 // ADR-040 Phase XXII.A — transform reads from SSoT (orchestrator-decoupling).
@@ -34,7 +33,7 @@ import {
   handleLineParallelPick,
 } from './entity-pick-handlers';
 import type { EntityPickContext } from './entity-pick-handlers';
-import { handleRotationEntitySelection, handleAutoAreaClick } from './canvas-click-tool-handlers';
+import { handleRotationEntitySelection, handleAutoAreaClick, handleOverlayDrawClick } from './canvas-click-tool-handlers';
 // ============================================================================
 // HOOK
 // ============================================================================
@@ -59,7 +58,9 @@ export function useCanvasClickHandler(params: UseCanvasClickHandlerParams): UseC
     mepRadiatorTool,
     mepBoilerTool,
     mepUnderfloorTool,
+    thermalSpaceTool,
     mepSegmentTool,
+    mepRiserTool,
     railingTool,
     slabOpeningTool,
     openingTool,
@@ -78,8 +79,6 @@ export function useCanvasClickHandler(params: UseCanvasClickHandlerParams): UseC
     arrayPathIsActive = false, handleArrayPathClick,
     handleArrayPathEntityRepick,
     levelManager,
-    draftPolygon, setDraftPolygon, isSavingPolygon, setIsSavingPolygon,
-    finishDrawingWithPolygonRef,
     drawingHandlersRef, entitySelectedOnMouseDownRef,
     universalSelection,
     hoveredVertexInfo, hoveredEdgeInfo, selectedGrip,
@@ -259,6 +258,11 @@ export function useCanvasClickHandler(params: UseCanvasClickHandlerParams): UseC
       mepUnderfloorTool.onCanvasClick(bimPoint);
       return;
     }
+    // PRIORITY 4.7e: ADR-422 — Thermal-space tool single click-in-region (Revit «Place Space»).
+    if (activeTool === 'thermal-space' && thermalSpaceTool?.isActive) {
+      thermalSpaceTool.onCanvasClick(bimPoint);
+      return;
+    }
     // PRIORITY 4.8: ADR-363 Phase 4 — Column tool single-click placement.
     // Φάση 3 / 3c — 'column-from-perimeter' & 'column-discrete-from-perimeter' share
     // the same tool; click-inside a perimeter builds (RAW worldPoint — hit-tests
@@ -306,6 +310,12 @@ export function useCanvasClickHandler(params: UseCanvasClickHandlerParams): UseC
       mepFixtureTool?.isActive
     ) {
       mepFixtureTool.onCanvasClick(worldPoint);
+      return;
+    }
+    // PRIORITY 4.92-bis: ADR-408 Φ15 — MEP riser (vertical drain stack) single-click
+    // placement (RAW worldPoint; free-point, no existing-geometry hit-test).
+    if (activeTool === 'mep-drain-riser' && mepRiserTool?.isActive) {
+      mepRiserTool.onCanvasClick(worldPoint);
       return;
     }
     // PRIORITY 4.92a: ADR-410 — Furniture tool single-click placement (RAW
@@ -381,31 +391,9 @@ export function useCanvasClickHandler(params: UseCanvasClickHandlerParams): UseC
       openingTool.onCanvasClick(worldPoint);
       return;
     }
-    // PRIORITY 5: Overlay polygon drawing
+    // PRIORITY 5: Overlay polygon drawing (extracted — canvas-click-tool-handlers).
     if (overlayMode === 'draw') {
-      if (isSavingPolygon) return;
-      // Auto-close: click near first point with 3+ points → save.
-      // 🚀 PERF (2026-05-09): isNearFirstPoint computed inline at click time
-      // (was a reactive prop forcing CanvasSection to re-render on mousemove).
-      const isNearFirst = (() => {
-        if (draftPolygon.length < 3) return false;
-        const [fx, fy] = draftPolygon[0];
-        const dx = worldPoint.x - fx;
-        const dy = worldPoint.y - fy;
-        const distance = Math.sqrt(dx * dx + dy * dy);
-        // ADR-040 XXII.A: live SSoT read.
-        return distance < (POLYGON_TOLERANCES.CLOSE_DETECTION / getImmediateTransform().scale);
-      })();
-      if (isNearFirst && draftPolygon.length >= 3) {
-        setIsSavingPolygon(true);
-        finishDrawingWithPolygonRef.current(draftPolygon).then(success => {
-          setIsSavingPolygon(false);
-          if (success) setDraftPolygon([]);
-        });
-        return;
-      }
-      const worldPointArray: [number, number] = [worldPoint.x, worldPoint.y];
-      setDraftPolygon(prev => [...prev, worldPointArray]);
+      handleOverlayDrawClick(worldPoint, params);
       return;
     }
     // PRIORITY 5.5: ADR-344 Phase 6.E/6.F — text / mtext creation tool
@@ -466,7 +454,9 @@ export function useCanvasClickHandler(params: UseCanvasClickHandlerParams): UseC
     mepRadiatorTool,
     mepBoilerTool,
     mepUnderfloorTool,
+    thermalSpaceTool,
     mepSegmentTool,
+    mepRiserTool,
     railingTool,
     slabOpeningTool,
     openingTool,
@@ -482,14 +472,12 @@ export function useCanvasClickHandler(params: UseCanvasClickHandlerParams): UseC
     arrayPathIsActive, handleArrayPathClick,
     handleArrayPathEntityRepick,
     levelManager,
-    draftPolygon, isSavingPolygon,
-    finishDrawingWithPolygonRef, drawingHandlersRef, entitySelectedOnMouseDownRef,
+    drawingHandlersRef, entitySelectedOnMouseDownRef,
     universalSelection,
     hoveredVertexInfo, hoveredEdgeInfo, selectedGrip,
     setSelectedGrips, justFinishedDragRef,
     draggingOverlayBody,
     currentOverlays, handleOverlayClick,
-    setDraftPolygon, setIsSavingPolygon,
     params,
   ]);
   return { handleCanvasClick };

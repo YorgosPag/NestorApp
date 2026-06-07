@@ -310,6 +310,12 @@ export const RISER_MAX_PLAN_MM = 50;
  */
 export const RISER_MIN_RISE_MM = 100;
 
+/** Default riser span height (mm) when none is chosen — one storey (3 m). */
+export const DEFAULT_RISER_HEIGHT_MM = 3000;
+
+/** Default riser pipe diameter (mm) — DN100 soil stack. */
+export const DEFAULT_RISER_DIAMETER_MM = 100;
+
 /**
  * Is this segment a VERTICAL riser (κατακόρυφη στήλη)? Pure + geometry-driven
  * (Revit-true: a vertical pipe is still a Pipe — the plan SYMBOL derives from it

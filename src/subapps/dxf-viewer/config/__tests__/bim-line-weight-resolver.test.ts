@@ -115,8 +115,10 @@ describe('resolveSubcategoryStyle — parent fallback (no subcategory key)', () 
     expect(resolveSubcategoryStyle({ category: 'slab', cutState: 'cut', scaleDenominator: 100 }).linePattern).toBe('solid');
   });
 
-  it('default color is null when no subcategory provided', () => {
-    expect(resolveSubcategoryStyle({ category: 'column', cutState: 'projection', scaleDenominator: 100 }).color).toBeNull();
+  it('default color is null for a category without a C.9 line color', () => {
+    // ADR-375 C.9: wall/column/slab/opening πλέον έχουν parent χρώμα· το `beam`
+    // (όπως annotation categories) μένει άχρωμο → πέφτει σε canvas token (null).
+    expect(resolveSubcategoryStyle({ category: 'beam', cutState: 'projection', scaleDenominator: 100 }).color).toBeNull();
   });
 });
 
@@ -220,8 +222,8 @@ describe('resolveSubcategoryStyle — beyond state', () => {
     expect(resolveSubcategoryStyle({ category: 'column', cutState: 'beyond', scaleDenominator: 100 }).linePattern).toBe('solid');
   });
 
-  it('beyond state returns null color', () => {
-    expect(resolveSubcategoryStyle({ category: 'slab', cutState: 'beyond', scaleDenominator: 100 }).color).toBeNull();
+  it('beyond state returns null color for a category without a C.9 line color', () => {
+    expect(resolveSubcategoryStyle({ category: 'beam', cutState: 'beyond', scaleDenominator: 100 }).color).toBeNull();
   });
 });
 
@@ -240,8 +242,8 @@ describe('resolveSubcategoryStyle — missing / unknown subcategoryKey', () => {
     expect(resolveSubcategoryStyle({ category: 'stair', cutState: 'projection', scaleDenominator: 100, subcategoryKey: 'nonexistent' }).linePattern).toBe('solid');
   });
 
-  it('unknown subcategoryKey → color null', () => {
-    expect(resolveSubcategoryStyle({ category: 'opening', cutState: 'cut', scaleDenominator: 100, subcategoryKey: 'nonexistent' }).color).toBeNull();
+  it('unknown subcategoryKey → color null (category without a C.9 line color)', () => {
+    expect(resolveSubcategoryStyle({ category: 'beam', cutState: 'cut', scaleDenominator: 100, subcategoryKey: 'nonexistent' }).color).toBeNull();
   });
 
   it('parent has no subcategories map → falls back to parent pen (no crash)', () => {
@@ -276,5 +278,46 @@ describe('resolveLineWeightPx wrapper — regression (ADR-377 Phase B)', () => {
     const px96  = resolveLineWeightPx({ category: 'column', cutState: 'cut', scaleDenominator: 100, dpi: 96 });
     const px144 = resolveLineWeightPx({ category: 'column', cutState: 'cut', scaleDenominator: 100, dpi: 144 });
     expect(px144).toBeCloseTo(px96 * 1.5, 5);
+  });
+});
+
+describe('ADR-375 C.9 — defaults χρώματος μέσω resolveSubcategoryStyle (μηδέν override)', () => {
+  const base = { scaleDenominator: 100, dpi: 96 } as const;
+
+  it('εξωτ. τοίχος (common-edges) → parent χρώμα #2b2f36', () => {
+    const s = resolveSubcategoryStyle({ category: 'wall', subcategoryKey: 'common-edges', cutState: 'cut', ...base });
+    expect(s.color).toBe('#2b2f36');
+  });
+
+  it('εσωτ. τοίχος (interior) → #6b7280 (subcategory wins)', () => {
+    const s = resolveSubcategoryStyle({ category: 'wall', subcategoryKey: 'interior', cutState: 'cut', ...base });
+    expect(s.color).toBe('#6b7280');
+  });
+
+  it('κανονική κολώνα (common-edges) → parent #5b6478', () => {
+    const s = resolveSubcategoryStyle({ category: 'column', subcategoryKey: 'common-edges', cutState: 'cut', ...base });
+    expect(s.color).toBe('#5b6478');
+  });
+
+  it('τοιχίο (shear-wall) → #2f3a4a', () => {
+    const s = resolveSubcategoryStyle({ category: 'column', subcategoryKey: 'shear-wall', cutState: 'cut', ...base });
+    expect(s.color).toBe('#2f3a4a');
+  });
+
+  it('πλάκα (common-edges) → parent #6e6358', () => {
+    const s = resolveSubcategoryStyle({ category: 'slab', subcategoryKey: 'common-edges', cutState: 'cut', ...base });
+    expect(s.color).toBe('#6e6358');
+  });
+
+  it('πόρτα (door-opening) → #c97c2f · παράθυρο (window-opening) → #2d72b8', () => {
+    const door = resolveSubcategoryStyle({ category: 'opening', subcategoryKey: 'door-opening', cutState: 'cut', ...base });
+    const win = resolveSubcategoryStyle({ category: 'opening', subcategoryKey: 'window-opening', cutState: 'cut', ...base });
+    expect(door.color).toBe('#c97c2f');
+    expect(win.color).toBe('#2d72b8');
+  });
+
+  it('projection cutState δίνει το ίδιο χρώμα με cut (κοινό line color)', () => {
+    const proj = resolveSubcategoryStyle({ category: 'wall', subcategoryKey: 'interior', cutState: 'projection', ...base });
+    expect(proj.color).toBe('#6b7280');
   });
 });

@@ -366,6 +366,8 @@ export const COLLECTIONS = {
   FLOORPLAN_ROOFS: process.env.NEXT_PUBLIC_FLOORPLAN_ROOFS_COLLECTION || 'floorplan_roofs',
   /** ADR-419 — thin floor coverings per room (IfcCovering FLOORING). IDs via ffl_* prefix. */
   FLOORPLAN_FLOOR_FINISHES: process.env.NEXT_PUBLIC_FLOORPLAN_FLOOR_FINISHES_COLLECTION || 'floorplan_floor_finishes',
+  /** ADR-422 — analytical thermal spaces per room (IfcSpace). IDs via tsp_* prefix. */
+  FLOORPLAN_THERMAL_SPACES: process.env.NEXT_PUBLIC_FLOORPLAN_THERMAL_SPACES_COLLECTION || 'floorplan_thermal_spaces',
   /** ADR-408 — logical MEP systems (electrical circuits first; geometry-less). IDs via mepsys_* prefix. */
   FLOORPLAN_MEP_SYSTEMS: process.env.NEXT_PUBLIC_FLOORPLAN_MEP_SYSTEMS_COLLECTION || 'floorplan_mep_systems',
   /** ADR-408 Φ3 — point-based electrical panels (circuit sources). IDs via elecpnl_* prefix. */
@@ -480,6 +482,7 @@ export const FLOOR_SCOPED_BIM_COLLECTIONS = [
   COLLECTIONS.FLOORPLAN_MEP_RADIATORS,
   COLLECTIONS.FLOORPLAN_MEP_BOILERS,
   COLLECTIONS.FLOORPLAN_MEP_UNDERFLOORS,
+  COLLECTIONS.FLOORPLAN_THERMAL_SPACES,
 ] as const;
 
 export type FloorScopedBimCollection = (typeof FLOOR_SCOPED_BIM_COLLECTIONS)[number];

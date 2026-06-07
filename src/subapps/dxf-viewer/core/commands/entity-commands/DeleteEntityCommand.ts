@@ -38,12 +38,14 @@ const BIM_ENTITY_TYPES = new Set<string>([
   'roof',
   // ADR-419 — floor-finish covering polygon.
   'floor-finish',
+  // ADR-422 — thermal space (IfcSpace).
+  'thermal-space',
 ]);
 
 type BimEntityType =
   | 'wall' | 'opening' | 'slab' | 'slab-opening' | 'column' | 'beam' | 'stair'
   | 'mep-fixture' | 'electrical-panel' | 'railing' | 'mep-segment' | 'mep-manifold' | 'mep-radiator'
-  | 'mep-boiler' | 'mep-underfloor' | 'roof' | 'floor-finish';
+  | 'mep-boiler' | 'mep-underfloor' | 'roof' | 'floor-finish' | 'thermal-space';
 
 function emitBimRestoreIfApplicable(snapshot: SceneEntity): void {
   const type = (snapshot as { type?: string }).type;

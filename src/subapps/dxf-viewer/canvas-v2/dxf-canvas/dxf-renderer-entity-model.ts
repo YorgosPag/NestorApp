@@ -123,6 +123,10 @@ export function buildEntityModelFromDxf(
       // ADR-419 — direct entity (same pattern as roof/slab). FloorFinishRenderer
       // reads geometry.bbox + params.footprint + params.materialId at top level.
       return { ...base, type: 'floor-finish', kind: entity.kind, params: entity.params, geometry: entity.geometry } as unknown as Entity;
+    case 'thermal-space':
+      // ADR-422 — direct entity (same pattern as floor-finish). ThermalSpaceRenderer
+      // reads geometry.bbox + params.footprint + params.useType at top level.
+      return { ...base, type: 'thermal-space', kind: entity.kind, params: entity.params, geometry: entity.geometry } as unknown as Entity;
     case 'mep-segment':
       return { ...base, type: 'mep-segment', kind: entity.kind, params: entity.params, geometry: entity.geometry, validation: entity.validation } as unknown as Entity;
     case 'mep-fitting':

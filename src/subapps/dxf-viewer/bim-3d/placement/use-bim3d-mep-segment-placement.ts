@@ -15,10 +15,12 @@
  * each click the screen point is projected onto the centreline work-plane,
  * converted to scene units, and handed to `useMepSegmentTool.onCanvasClick` via
  * the `bim:place-mep-segment-3d` EventBus bridge — reusing the whole commit path
- * (1st click → awaitingEnd, 2nd click → commit). The points carry NO `z`, so the
- * completion defaults both ends to the centreline (a horizontal run), exactly
- * like the 2D free-point gesture. Connector-Z mate in 3D is a documented
- * follow-up.
+ * (1st click → awaitingEnd, 2nd click → commit). Each click carries its endpoint
+ * elevation `z` (mm, floor-relative): a snapped MEP connector's true z (Φ-B1
+ * connector-mate, Revit "Connect To") or the current centreline offset at click
+ * time. Differing start/end elevations ⇒ a sloped run / riser (Φ-A per-endpoint z);
+ * equal ⇒ a horizontal run. The completion (`completeMepSegmentFromTwoClicks`) is
+ * the SSoT for both — unchanged.
  *
  * Ghost: the rubber-band axis (start → cursor) is drawn by
  * `MepSegmentPlacementGhost`, which reads the same FSM phase from the bridge.
@@ -44,8 +46,29 @@ import { raycastFloorPoint, resolveActiveFloorElevationMm } from './raycast-floo
 import { worldToPlanMm, planMmToScenePoint } from './world-to-scene-point';
 import { resolvePlacementSnap } from './placement-snap';
 import { acquirePlacementCursor, releasePlacementCursor } from './placement-cursor';
+import { resolveSnapConnectorElevationMm } from '../../bim/mep-segments/mep-snap-connector-elevation';
+import type { Entity } from '../../types/entities';
 
 const ORBIT_DRAG_PX = 5;
+
+/**
+ * Look up a pipe-connectable MEP host by id from the live 3D entity store, for
+ * connector-Z mate (ADR-408 Φ-B1). Event-time read (no subscription) — ADR-040.
+ * Mirrors the 2D path's `scene.entities.find`, scoped to the connectable hosts the
+ * elevation resolver understands (segment / manifold / radiator / boiler / fixture
+ * / underfloor; a panel is not pipe-connectable and resolves to null downstream).
+ */
+function findMepConnectorHostById(id: string): Entity | undefined {
+  const s = useBim3DEntitiesStore.getState();
+  return (
+    s.mepSegments.find((e) => e.id === id) ??
+    s.manifolds.find((e) => e.id === id) ??
+    s.radiators.find((e) => e.id === id) ??
+    s.boilers.find((e) => e.id === id) ??
+    s.fixtures.find((e) => e.id === id) ??
+    s.underfloors.find((e) => e.id === id)
+  ) as Entity | undefined;
+}
 
 export interface UseBim3DMepSegmentPlacementParams {
   readonly managerRef: MutableRefObject<ThreeJsSceneManager | null>;
@@ -82,14 +105,33 @@ export function useBim3DMepSegmentPlacement(
       clientX: number,
       clientY: number,
       planeElevMm: number,
-    ): { planMm: { x: number; y: number }; markerMm: { x: number; y: number } | null } | null => {
+    ): {
+      planMm: { x: number; y: number };
+      markerMm: { x: number; y: number } | null;
+      // mm, floor-relative — the elevation the endpoint inherits from a snapped MEP
+      // connector (Φ-B1). null ⇒ no connector snap; caller uses the centreline offset.
+      connectorElevationMm: number | null;
+    } | null => {
       const world = raycastFloorPoint(manager.getCamera(), canvasEl, clientX, clientY, planeElevMm);
       if (!world) return null;
       const rawMm = worldToPlanMm(world);
       const snap = resolvePlacementSnap(rawMm);
-      return snap
-        ? { planMm: snap.snappedMm, markerMm: snap.markerMm }
-        : { planMm: rawMm, markerMm: null };
+      const planMm = snap ? snap.snappedMm : rawMm;
+      const markerMm = snap ? snap.markerMm : null;
+      // Connector-Z mate: the nearest-connector pick compares against the host's
+      // plan position in SCENE units (the entity's `startPoint`/connector space),
+      // so resolve in scene units — NOT plan mm. z stays mm (Φ-A endpoint elevation).
+      let connectorElevationMm: number | null = null;
+      if (snap && snap.snapType !== undefined) {
+        const scenePt = planMmToScenePoint(planMm, unitsNow());
+        connectorElevationMm = resolveSnapConnectorElevationMm(
+          { type: snap.snapType, entityId: snap.snapEntityId },
+          scenePt.x,
+          scenePt.y,
+          findMepConnectorHostById,
+        );
+      }
+      return { planMm, markerMm, connectorElevationMm };
     };
 
     const onMove = (e: PointerEvent): void => {
@@ -103,12 +145,18 @@ export function useBim3DMepSegmentPlacement(
         return;
       }
       const levelId = useBim3DEntitiesStore.getState().activeLevelId ?? undefined;
+      // Cursor-end elevation: a snapped connector's z (Φ-B1) or the current centreline
+      // offset (Revit per-click elevation). Feeds the ghost so a riser/slope previews.
+      const endElevMm = hit.connectorElevationMm ?? centerlineMmNow();
       // The ghost decides its own visibility by FSM phase (rubber-band only in
       // awaitingEnd). Pass the floor elevation as the building datum so the ghost
       // lands back on the work-plane the cursor was raycast against.
-      ghost.update(planMmToScenePoint(hit.planMm, unitsNow()), floorElev, levelId);
-      if (hit.markerMm) snapMarker.show(dxfPlanToWorld(hit.markerMm.x, hit.markerMm.y, planeElev), manager.getCamera());
-      else snapMarker.hide();
+      ghost.update(planMmToScenePoint(hit.planMm, unitsNow()), floorElev, levelId, endElevMm);
+      // Marker sits at the elevation the click will inherit: a snapped connector's
+      // real z, else the centreline plane — so the marker tracks a riser endpoint.
+      if (hit.markerMm) {
+        snapMarker.show(dxfPlanToWorld(hit.markerMm.x, hit.markerMm.y, floorElev + endElevMm), manager.getCamera());
+      } else snapMarker.hide();
       manager.markSceneDirty();
     };
 
@@ -132,10 +180,13 @@ export function useBim3DMepSegmentPlacement(
       if (!hit) return;
       e.preventDefault();
       e.stopPropagation();
-      // No `z`: free-point ends default to the centreline in the completion (the
-      // 2D free-point convention). The FSM advances awaitingStart → awaitingEnd →
-      // commit across two clicks.
-      EventBus.emit('bim:place-mep-segment-3d', { point: planMmToScenePoint(hit.planMm, unitsNow()) });
+      // Each click carries its endpoint elevation (mm, floor-relative): a snapped
+      // connector's z (Φ-B1 connector-mate) or the current centreline offset (Revit
+      // per-click elevation). Differing start/end ⇒ a sloped run/riser; equal ⇒ flat.
+      // The FSM advances awaitingStart → awaitingEnd → commit across two clicks.
+      const scenePt = planMmToScenePoint(hit.planMm, unitsNow());
+      const z = hit.connectorElevationMm ?? centerlineMmNow();
+      EventBus.emit('bim:place-mep-segment-3d', { point: { ...scenePt, z } });
     };
 
     const setup = (): void => {

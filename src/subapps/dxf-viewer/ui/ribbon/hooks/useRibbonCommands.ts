@@ -32,60 +32,29 @@ import type { RibbonMepPipeNetworkBridge } from './useRibbonMepPipeNetworkBridge
 import { isMepPipeNetworkActionKey } from './bridge/mep-pipe-network-command-keys';
 import type { RibbonMepFixtureBridge } from './useRibbonMepFixtureBridge';
 import { isMepFixturePanelVisibilityKey } from './useRibbonMepFixtureBridge';
-import {
-  isMepFixtureRibbonKey,
-  isMepFixtureRibbonStringKey,
-  isMepFixtureActionKey,
-} from './bridge/mep-fixture-command-keys';
+import { isMepFixtureRibbonKey, isMepFixtureRibbonStringKey, isMepFixtureActionKey } from './bridge/mep-fixture-command-keys';
 import type { RibbonMepManifoldBridge } from './useRibbonMepManifoldBridge';
 import { isMepManifoldPanelVisibilityKey } from './useRibbonMepManifoldBridge';
-import {
-  isMepManifoldRibbonKey,
-  isMepManifoldActionKey,
-  isMepManifoldClassificationKey,
-} from './bridge/mep-manifold-command-keys';
+import { isMepManifoldRibbonKey, isMepManifoldActionKey, isMepManifoldClassificationKey } from './bridge/mep-manifold-command-keys';
 import type { RibbonMepRadiatorBridge } from './useRibbonMepRadiatorBridge';
-import {
-  isMepRadiatorRibbonKey,
-  isMepRadiatorActionKey,
-} from './bridge/mep-radiator-command-keys';
+import { isMepRadiatorRibbonKey, isMepRadiatorActionKey } from './bridge/mep-radiator-command-keys';
 import type { RibbonMepBoilerBridge } from './useRibbonMepBoilerBridge';
 import { isMepBoilerPanelVisibilityKey } from './useRibbonMepBoilerBridge';
-import {
-  isMepBoilerRibbonKey,
-  isMepBoilerActionKey,
-} from './bridge/mep-boiler-command-keys';
+import { isMepBoilerRibbonKey, isMepBoilerActionKey } from './bridge/mep-boiler-command-keys';
 import type { RibbonMepUnderfloorBridge } from './useRibbonMepUnderfloorBridge';
 import { isMepUnderfloorPanelVisibilityKey } from './useRibbonMepUnderfloorBridge';
-import {
-  isMepUnderfloorRibbonKey,
-  isMepUnderfloorActionKey,
-} from './bridge/mep-underfloor-command-keys';
+import { isMepUnderfloorRibbonKey, isMepUnderfloorActionKey } from './bridge/mep-underfloor-command-keys';
 import type { RibbonMepSegmentBridge } from './useRibbonMepSegmentBridge';
 import { isMepSegmentPanelVisibilityKey } from './useRibbonMepSegmentBridge';
-import {
-  isMepSegmentRibbonKey,
-  isMepSegmentRibbonStringKey,
-  isMepSegmentActionKey,
-} from './bridge/mep-segment-command-keys';
+import { isMepSegmentRibbonKey, isMepSegmentRibbonStringKey, isMepSegmentActionKey } from './bridge/mep-segment-command-keys';
 import type { RibbonFurnitureBridge } from './useRibbonFurnitureBridge';
 import { isFurniturePanelVisibilityKey } from './useRibbonFurnitureBridge';
-import {
-  isFurnitureRibbonKey,
-  isFurnitureRibbonStringKey,
-  isFurnitureActionKey,
-} from './bridge/furniture-command-keys';
+import { isFurnitureRibbonKey, isFurnitureRibbonStringKey, isFurnitureActionKey } from './bridge/furniture-command-keys';
 import type { RibbonFloorplanSymbolBridge } from './useRibbonFloorplanSymbolBridge';
 import { isFloorplanSymbolPanelVisibilityKey } from './useRibbonFloorplanSymbolBridge';
-import {
-  isFloorplanSymbolRibbonKey,
-  isFloorplanSymbolRibbonStringKey,
-} from './bridge/floorplan-symbol-command-keys';
+import { isFloorplanSymbolRibbonKey, isFloorplanSymbolRibbonStringKey } from './bridge/floorplan-symbol-command-keys';
 import type { RibbonMepFixtureLibraryBridge } from './useRibbonMepFixtureLibraryBridge';
-import {
-  isMepFixtureLibraryKey,
-  isMepFixtureLibraryStringKey,
-} from './bridge/mep-fixture-library-command-keys';
+import { isMepFixtureLibraryKey, isMepFixtureLibraryStringKey } from './bridge/mep-fixture-library-command-keys';
 import type { RibbonLineToolBridge } from './useRibbonLineToolBridge';
 import { isArrayRibbonKey, isArrayRibbonStringKey, isArrayRibbonToggleKey } from './bridge/array-command-keys';
 import { isStairRibbonKey, isStairRibbonStringKey, isStairActionKey } from './bridge/stair-command-keys';
@@ -96,6 +65,9 @@ import { isRoofRibbonKey, isRoofRibbonStringKey, isRoofRibbonToggleKey, isRoofAc
 import type { RibbonFloorFinishBridge } from './useRibbonFloorFinishBridge';
 import { isFloorFinishActionKey } from './useRibbonFloorFinishBridge';
 import { isFloorFinishRibbonNumberKey, isFloorFinishRibbonStringKey } from './bridge/floor-finish-command-keys';
+import type { RibbonThermalSpaceBridge } from './useRibbonThermalSpaceBridge';
+import { isThermalSpaceActionKey } from './useRibbonThermalSpaceBridge';
+import { isThermalSpaceRibbonNumberKey, isThermalSpaceRibbonStringKey } from './bridge/thermal-space-command-keys';
 import { isColumnRibbonKey, isColumnRibbonStringKey, isColumnActionKey } from './bridge/column-command-keys';
 import { isBeamRibbonKey, isBeamRibbonStringKey, isBeamActionKey } from './bridge/beam-command-keys';
 import { isSlabOpeningRibbonStringKey, isSlabOpeningActionKey } from './bridge/slab-opening-command-keys';
@@ -118,6 +90,7 @@ interface UseRibbonCommandsProps {
   slabBridge: RibbonSlabBridge;
   roofBridge: RibbonRoofBridge;
   floorFinishBridge: RibbonFloorFinishBridge;
+  thermalSpaceBridge: RibbonThermalSpaceBridge;
   columnBridge: RibbonColumnBridge;
   beamBridge: RibbonBeamBridge;
   slabOpeningBridge: RibbonSlabOpeningBridge;
@@ -157,6 +130,7 @@ export function useRibbonCommands({
   slabBridge,
   roofBridge,
   floorFinishBridge,
+  thermalSpaceBridge,
   columnBridge,
   beamBridge,
   slabOpeningBridge,
@@ -212,6 +186,10 @@ export function useRibbonCommands({
       }
       if (isFloorFinishRibbonNumberKey(key) || isFloorFinishRibbonStringKey(key)) {
         floorFinishBridge.onComboboxChange(key, value);
+        return;
+      }
+      if (isThermalSpaceRibbonNumberKey(key) || isThermalSpaceRibbonStringKey(key)) {
+        thermalSpaceBridge.onComboboxChange(key, value);
         return;
       }
       if (isColumnRibbonKey(key) || isColumnRibbonStringKey(key)) {
@@ -276,7 +254,7 @@ export function useRibbonCommands({
       }
       textEditorBridge.onComboboxChange(key, value);
     },
-    [stairBridge, wallBridge, openingBridge, slabBridge, roofBridge, floorFinishBridge, columnBridge, beamBridge, slabOpeningBridge, mepFixtureBridge, mepManifoldBridge, mepRadiatorBridge, mepBoilerBridge, mepUnderfloorBridge, mepSegmentBridge, furnitureBridge, floorplanSymbolBridge, mepFixtureLibraryBridge, arrayBridge, lineToolBridge, xlineModeBridge, textEditorBridge],
+    [stairBridge, wallBridge, openingBridge, slabBridge, roofBridge, floorFinishBridge, thermalSpaceBridge, columnBridge, beamBridge, slabOpeningBridge, mepFixtureBridge, mepManifoldBridge, mepRadiatorBridge, mepBoilerBridge, mepUnderfloorBridge, mepSegmentBridge, furnitureBridge, floorplanSymbolBridge, mepFixtureLibraryBridge, arrayBridge, lineToolBridge, xlineModeBridge, textEditorBridge],
   );
 
   const getComboboxState = React.useCallback(
@@ -290,6 +268,7 @@ export function useRibbonCommands({
       if (isSlabRibbonKey(key) || isSlabRibbonStringKey(key)) return slabBridge.getComboboxState(key);
       if (isRoofRibbonKey(key) || isRoofRibbonStringKey(key)) return roofBridge.getComboboxState(key);
       if (isFloorFinishRibbonNumberKey(key) || isFloorFinishRibbonStringKey(key)) return floorFinishBridge.getComboboxState(key);
+      if (isThermalSpaceRibbonNumberKey(key) || isThermalSpaceRibbonStringKey(key)) return thermalSpaceBridge.getComboboxState(key);
       if (isColumnRibbonKey(key) || isColumnRibbonStringKey(key)) return columnBridge.getComboboxState(key);
       if (isBeamRibbonKey(key) || isBeamRibbonStringKey(key)) return beamBridge.getComboboxState(key);
       if (isSlabOpeningRibbonStringKey(key)) return slabOpeningBridge.getComboboxState(key);
@@ -307,7 +286,7 @@ export function useRibbonCommands({
       if (isXlineRibbonKey(key)) return xlineModeBridge.getComboboxState(key);
       return textEditorBridge.getComboboxState(key);
     },
-    [snapStepUnits, stairBridge, wallBridge, openingBridge, slabBridge, roofBridge, floorFinishBridge, columnBridge, beamBridge, slabOpeningBridge, mepFixtureBridge, mepManifoldBridge, mepRadiatorBridge, mepBoilerBridge, mepSegmentBridge, furnitureBridge, floorplanSymbolBridge, mepFixtureLibraryBridge, arrayBridge, lineToolBridge, xlineModeBridge, textEditorBridge],
+    [snapStepUnits, stairBridge, wallBridge, openingBridge, slabBridge, roofBridge, floorFinishBridge, thermalSpaceBridge, columnBridge, beamBridge, slabOpeningBridge, mepFixtureBridge, mepManifoldBridge, mepRadiatorBridge, mepBoilerBridge, mepSegmentBridge, furnitureBridge, floorplanSymbolBridge, mepFixtureLibraryBridge, arrayBridge, lineToolBridge, xlineModeBridge, textEditorBridge],
   );
 
   const onToggle = React.useCallback(
@@ -407,6 +386,10 @@ export function useRibbonCommands({
         floorFinishBridge.onAction(action);
         return;
       }
+      if (isThermalSpaceActionKey(action)) {
+        thermalSpaceBridge.onAction(action);
+        return;
+      }
       if (isColumnActionKey(action)) {
         columnBridge.onAction(action);
         return;
@@ -461,7 +444,7 @@ export function useRibbonCommands({
       }
       wrappedHandleAction(action, data);
     },
-    [wallBridge, openingBridge, slabBridge, roofBridge, floorFinishBridge, columnBridge, beamBridge, slabOpeningBridge, stairBridge, mepCircuitBridge, mepPipeNetworkBridge, mepFixtureBridge, mepManifoldBridge, mepRadiatorBridge, mepBoilerBridge, mepUnderfloorBridge, mepSegmentBridge, furnitureBridge, wrappedHandleAction],
+    [wallBridge, openingBridge, slabBridge, roofBridge, floorFinishBridge, thermalSpaceBridge, columnBridge, beamBridge, slabOpeningBridge, stairBridge, mepCircuitBridge, mepPipeNetworkBridge, mepFixtureBridge, mepManifoldBridge, mepRadiatorBridge, mepBoilerBridge, mepUnderfloorBridge, mepSegmentBridge, furnitureBridge, wrappedHandleAction],
   );
 
   return React.useMemo(

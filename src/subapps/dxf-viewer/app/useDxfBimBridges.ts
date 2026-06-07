@@ -23,6 +23,7 @@ import { useRibbonFurnitureBridge } from '../ui/ribbon/hooks/useRibbonFurnitureB
 import { useRibbonFloorplanSymbolBridge } from '../ui/ribbon/hooks/useRibbonFloorplanSymbolBridge';
 import { useRibbonMepFixtureLibraryBridge } from '../ui/ribbon/hooks/useRibbonMepFixtureLibraryBridge';
 import { useRibbonFloorFinishBridge } from '../ui/ribbon/hooks/useRibbonFloorFinishBridge';
+import { useRibbonThermalSpaceBridge } from '../ui/ribbon/hooks/useRibbonThermalSpaceBridge';
 import { useBimMaterialCycler } from '../hooks/useBimMaterialCycler';
 
 export type UseDxfBimBridgesProps =
@@ -76,7 +77,9 @@ export function useDxfBimBridges(p: UseDxfBimBridgesProps) {
   const mepFixtureLibraryBridge = useRibbonMepFixtureLibraryBridge();
   // ADR-419 — floor finish (IfcCovering FLOORING) contextual properties bridge.
   const floorFinishBridge = useRibbonFloorFinishBridge(p);
+  // ADR-422 — thermal space (IfcSpace) contextual properties bridge.
+  const thermalSpaceBridge = useRibbonThermalSpaceBridge(p);
   // ADR-363 Phase 4.5e+ — Tab/Shift+Tab material cycling for selected BIM entities.
   useBimMaterialCycler(p);
-  return { stairBridge, wallBridge, openingBridge, slabBridge, roofBridge, columnBridge, beamBridge, slabOpeningBridge, mepCircuitBridge, mepPipeNetworkBridge, mepFixtureBridge, mepManifoldBridge, mepRadiatorBridge, mepBoilerBridge, mepUnderfloorBridge, mepSegmentBridge, furnitureBridge, floorplanSymbolBridge, mepFixtureLibraryBridge, floorFinishBridge };
+  return { stairBridge, wallBridge, openingBridge, slabBridge, roofBridge, columnBridge, beamBridge, slabOpeningBridge, mepCircuitBridge, mepPipeNetworkBridge, mepFixtureBridge, mepManifoldBridge, mepRadiatorBridge, mepBoilerBridge, mepUnderfloorBridge, mepSegmentBridge, furnitureBridge, floorplanSymbolBridge, mepFixtureLibraryBridge, floorFinishBridge, thermalSpaceBridge };
 }

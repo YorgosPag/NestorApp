@@ -164,3 +164,28 @@ describe('WallRenderer — cut-pattern subcategory wiring (Phase C.1)', () => {
     expect(strokeStyleCalls(mock.calls)).toContain('#AABB00');
   });
 });
+
+// ── ADR-375 C.9 — προκαθορισμένο χρώμα γραμμής ανά function (εξωτ. vs εσωτ.) ───
+
+function makeInteriorWall(): WallEntity {
+  const w = makeWall();
+  (w as unknown as { kind: string }).kind = 'interior';
+  (w.params as unknown as { category: string }).category = 'interior';
+  return w;
+}
+
+describe('WallRenderer — ADR-375 C.9 default line color', () => {
+  beforeEach(() => mockGetState.mockReturnValue(makeStoreState()));
+
+  it('εξωτ. τοίχος → footprint strokeStyle = parent #2b2f36', () => {
+    const { renderer, mock } = makeRenderer();
+    renderer.render(makeWall() as unknown as EntityModel, {});
+    expect(strokeStyleCalls(mock.calls)).toContain('#2b2f36');
+  });
+
+  it('εσωτ. τοίχος → footprint strokeStyle = #6b7280 (subcategory interior)', () => {
+    const { renderer, mock } = makeRenderer();
+    renderer.render(makeInteriorWall() as unknown as EntityModel, {});
+    expect(strokeStyleCalls(mock.calls)).toContain('#6b7280');
+  });
+});

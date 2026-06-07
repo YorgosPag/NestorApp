@@ -19,6 +19,7 @@
  */
 
 import type { Point2D } from '../../rendering/types/Types';
+import type { ExtendedSnapType } from '../../snapping/extended-types';
 import { getGlobalSnapEngine } from '../../snapping/global-snap-engine';
 
 /** Snap-corrected placement point + the snap target (for the 3D marker), mm. */
@@ -27,17 +28,30 @@ export interface PlacementSnapResolution {
   readonly snappedMm: Point2D;
   /** The snap target that was hit, mm — drawn as the 3D snap marker. */
   readonly markerMm: Point2D;
+  /**
+   * ADR-408 Φ-B1 — the snapped host entity id, surfaced so a placement caller can
+   * recover the connector's 3D elevation (connector-Z mate). `undefined` when the
+   * snap target carries no host (e.g. a grid intersection).
+   */
+  readonly snapEntityId?: string;
+  /** ADR-408 Φ-B1 — the snap candidate type (e.g. `BIM_MEP_CONNECTOR`). */
+  readonly snapType?: ExtendedSnapType;
 }
 
 /**
  * The slice of `ProSnapEngineV2` placement needs — structurally typed so the
- * unit tests can inject a fake (mirrors the `SnapQueryEngine` pattern).
+ * unit tests can inject a fake (mirrors the `SnapQueryEngine` pattern). The
+ * candidate carries `entityId`/`type` so callers can mate connector elevations
+ * (ADR-408 Φ-B1); the real engine's `SnapCandidate` already provides both.
  */
 export interface PlacementSnapEngine {
   findSnapPoint(
     cursorPoint: Point2D,
     excludeEntityId?: string,
-  ): { found: boolean; snapPoint: { point: Point2D } | null };
+  ): {
+    found: boolean;
+    snapPoint: { point: Point2D; entityId?: string; type?: ExtendedSnapType } | null;
+  };
   getSettings(): { enabled: boolean };
 }
 
@@ -59,5 +73,10 @@ export function resolvePlacementSnap(
   if (!engine.getSettings().enabled) return null;
   const r = engine.findSnapPoint({ x: planMm.x, y: planMm.y });
   if (!r.found || !r.snapPoint) return null;
-  return { snappedMm: r.snapPoint.point, markerMm: r.snapPoint.point };
+  return {
+    snappedMm: r.snapPoint.point,
+    markerMm: r.snapPoint.point,
+    snapEntityId: r.snapPoint.entityId,
+    snapType: r.snapPoint.type,
+  };
 }

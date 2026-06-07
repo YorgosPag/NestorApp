@@ -30,6 +30,7 @@ import { CONTEXTUAL_MEP_RADIATOR_TAB, MEP_RADIATOR_CONTEXTUAL_TRIGGER } from '..
 import { CONTEXTUAL_MEP_BOILER_TAB, MEP_BOILER_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-mep-boiler-tab';
 import { CONTEXTUAL_MEP_UNDERFLOOR_TAB, MEP_UNDERFLOOR_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-mep-underfloor-tab';
 import { CONTEXTUAL_FLOOR_FINISH_TAB, FLOOR_FINISH_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-floor-finish-tab';
+import { CONTEXTUAL_THERMAL_SPACE_TAB, THERMAL_SPACE_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-thermal-space-tab';
 import { CONTEXTUAL_MEP_SEGMENT_TAB, MEP_SEGMENT_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-mep-segment-tab';
 import { CONTEXTUAL_FURNITURE_TAB, FURNITURE_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-furniture-tab';
 import { CONTEXTUAL_FLOORPLAN_SYMBOL_TAB, FLOORPLAN_SYMBOL_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-floorplan-symbol-tab';
@@ -77,6 +78,7 @@ export const RIBBON_CONTEXTUAL_TABS = [
   CONTEXTUAL_FURNITURE_TAB,
   CONTEXTUAL_FLOORPLAN_SYMBOL_TAB,
   CONTEXTUAL_FLOOR_FINISH_TAB,
+  CONTEXTUAL_THERMAL_SPACE_TAB,
   ANIMATION_CONTEXTUAL_TAB,
 ] as const;
 
@@ -234,6 +236,8 @@ export function useActiveContextualTrigger({
     if (activeTool === 'floorplan-symbol') return FLOORPLAN_SYMBOL_CONTEXTUAL_TRIGGER;
     // ADR-419 — floor-finish tool active → show the floor-finish property tab.
     if (activeTool === 'floor-finish') return FLOOR_FINISH_CONTEXTUAL_TRIGGER;
+    // ADR-422 — thermal-space tool active → show the thermal-space property tab.
+    if (activeTool === 'thermal-space') return THERMAL_SPACE_CONTEXTUAL_TRIGGER;
     // ADR-411 — MEP fixture tool active → show the light-fixture library picker
     // tab (choose CC0 mesh or parametric). Selecting a placed fixture instead
     // surfaces the property editor (resolveContextualTrigger, checked earlier).
@@ -300,6 +304,8 @@ export function resolveContextualTrigger(entity: EntityLike): string | null {
   if (entity.type === 'mep-underfloor') return MEP_UNDERFLOOR_CONTEXTUAL_TRIGGER;
   // ADR-419 — floor-finish (IfcCovering FLOORING) → «Ιδιότητες Επικάλυψης Δαπέδου».
   if (entity.type === 'floor-finish') return FLOOR_FINISH_CONTEXTUAL_TRIGGER;
+  // ADR-422 — thermal-space (IfcSpace) → «Ιδιότητες Θερμικού Χώρου».
+  if (entity.type === 'thermal-space') return THERMAL_SPACE_CONTEXTUAL_TRIGGER;
   // ADR-408 Φ8 — σωλήνας / αεραγωγός (MEP segment, one tab for both domains).
   if (entity.type === 'mep-segment') return MEP_SEGMENT_CONTEXTUAL_TRIGGER;
   if (entity.type === 'text' || entity.type === 'mtext') return TEXT_EDITOR_CONTEXTUAL_TRIGGER;

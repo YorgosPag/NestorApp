@@ -89,7 +89,9 @@ export type BimCategory =
   // ADR-415 — pure-vector 2D kitchen plan symbol (sink/stove/fridge/counter; casework).
   | 'kitchen'
   // ADR-419 — per-room floor-finish covering (IfcCovering FLOORING, architectural).
-  | 'floor-finish';
+  | 'floor-finish'
+  // ADR-422 — analytical thermal space / θερμικός χώρος (IfcSpace, architectural overlay).
+  | 'thermal-space';
 
 /**
  * Per-subcategory style overrides (ADR-377).
@@ -308,4 +310,6 @@ export const DEFAULT_OBJECT_STYLES: Readonly<Record<BimCategory, ObjectStyle>> =
   kitchen:        { projectionPen: 3, cutPen: 3 },
   // ADR-419 — επικάλυψη δαπέδου ανά δωμάτιο: λεπτή γραμμή (IfcCovering FLOORING, interior hatch).
   'floor-finish': { projectionPen: 3, cutPen: 3 },
+  // ADR-422 — θερμικός χώρος: λεπτή γραμμή (IfcSpace analytical overlay, interior tag).
+  'thermal-space': { projectionPen: 3, cutPen: 3 },
 } as const;

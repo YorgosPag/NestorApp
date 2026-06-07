@@ -540,6 +540,9 @@
     "mepSanitaryFixture": {
       "statusPosition": "Click to place sanitary fixture"
     },
+    "mepRiser": {
+      "statusPosition": "Click to place a vertical drain stack"
+    },
     "electricalPanel": {
       "statusPosition": "Click to place electrical panel"
     },
@@ -1176,6 +1179,10 @@
         "mepFloorDrain": {
           "label": "Floor Drain",
           "tooltip": "Place a floor drain (σιφώνι) with a single click — square grating, 1 sanitary-drainage outlet (discipline: plumbing)"
+        },
+        "mepDrainRiser": {
+          "label": "Vertical Stack",
+          "tooltip": "Place a vertical drain stack (soil stack) spanning floors with a single click (discipline: plumbing)"
         },
         "mepSanitary": {
           "label": "Sanitary Fixtures",
@@ -2436,6 +2443,7 @@
         },
         "keys": {
           "common-edges": "Common Edges",
+          "interior": "Interior Wall",
           "cut-pattern": "Cut Pattern",
           "surface-pattern": "Surface Pattern",
           "hidden-lines": "Hidden Lines",
@@ -2446,6 +2454,7 @@
           "stick-symbols": "Stick Symbols",
           "reference-lines": "Reference Lines",
           "section-profile": "Section Profile",
+          "shear-wall": "Shear Wall",
           "rigid-links": "Rigid Links",
           "door-panel": "Door Panel",
           "door-frame": "Door Frame",

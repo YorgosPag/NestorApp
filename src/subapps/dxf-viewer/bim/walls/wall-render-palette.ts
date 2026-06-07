@@ -25,9 +25,10 @@ export const WALL_CATEGORY_FILL: Readonly<Record<WallCategory, string>> = {
 /**
  * Whether a wall function reads as "interior" for line-colour purposes.
  * interior + partition (διαχωριστικός) → εσωτερικός γκρι τόνος· exterior/parapet/
- * fence → εξωτερικός βαρύς τόνος (parent χρώμα).
+ * fence → εξωτερικός βαρύς τόνος (parent χρώμα). Local helper του
+ * `wallFootprintSubcategory` (όχι exported — αποφυγή dead-code ratchet).
  */
-export function isInteriorWallCategory(category: WallCategory): boolean {
+function isInteriorWallCategory(category: WallCategory): boolean {
   return category === 'interior' || category === 'partition';
 }
 

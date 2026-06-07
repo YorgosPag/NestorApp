@@ -47,6 +47,8 @@ export function calculateBimEntity2DBounds(entity: Entity): { min: Point2D; max:
     case 'roof':
     // ADR-419 — floor-finish covering polygon projects geometry.bbox to 2D (same).
     case 'floor-finish':
+    // ADR-422 — thermal space (IfcSpace) footprint bbox projects to 2D (same).
+    case 'thermal-space':
     // ADR-408 Φ12 — plumbing manifold projects geometry.bbox to 2D (same).
     case 'mep-manifold':
     // ADR-408 Εύρος Β — heating radiator projects geometry.bbox to 2D (same).

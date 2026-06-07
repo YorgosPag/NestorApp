@@ -1,0 +1,67 @@
+/**
+ * ADR-422 L0 — Thermal-space contextual ribbon command-key registry.
+ *
+ * Centralizes the `commandKey` strings shared between the ribbon data declaration
+ * (`contextual-thermal-space-tab.ts`) and the bridge
+ * (`useRibbonThermalSpaceBridge`). Mirrors `floor-finish-command-keys.ts`.
+ *
+ * @see docs/centralized-systems/reference/adrs/ADR-422-bim-heating-mechanical-study.md
+ */
+
+export const THERMAL_SPACE_RIBBON_KEYS = {
+  stringParams: {
+    /** Use-type selector (ThermalSpaceUseType). */
+    useType: 'thermalSpace.params.useType',
+  },
+  params: {
+    /** °C — design indoor temperature override (Ti). */
+    setpointTempC: 'thermalSpace.params.setpointTempC',
+    /** 1/h — air changes per hour override (n). */
+    airChangesPerHour: 'thermalSpace.params.airChangesPerHour',
+    /** mm — clear ceiling height (volume = area × height). */
+    ceilingHeightMm: 'thermalSpace.params.ceilingHeightMm',
+  },
+  actions: {
+    /** Close selection (return to Select tool). */
+    close: 'thermalSpace.action.close',
+    /** Delete entity. */
+    delete: 'thermalSpace.action.delete',
+  },
+} as const;
+
+export type ThermalSpaceRibbonNumberCommandKey =
+  | typeof THERMAL_SPACE_RIBBON_KEYS.params.setpointTempC
+  | typeof THERMAL_SPACE_RIBBON_KEYS.params.airChangesPerHour
+  | typeof THERMAL_SPACE_RIBBON_KEYS.params.ceilingHeightMm;
+
+export type ThermalSpaceRibbonStringCommandKey =
+  | typeof THERMAL_SPACE_RIBBON_KEYS.stringParams.useType;
+
+export type ThermalSpaceRibbonActionKey =
+  | typeof THERMAL_SPACE_RIBBON_KEYS.actions.close
+  | typeof THERMAL_SPACE_RIBBON_KEYS.actions.delete;
+
+const NUMBER_KEY_SET: ReadonlySet<string> = new Set<string>([
+  THERMAL_SPACE_RIBBON_KEYS.params.setpointTempC,
+  THERMAL_SPACE_RIBBON_KEYS.params.airChangesPerHour,
+  THERMAL_SPACE_RIBBON_KEYS.params.ceilingHeightMm,
+]);
+const STRING_KEY_SET: ReadonlySet<string> = new Set<string>([
+  THERMAL_SPACE_RIBBON_KEYS.stringParams.useType,
+]);
+const ACTION_KEY_SET: ReadonlySet<string> = new Set<string>([
+  THERMAL_SPACE_RIBBON_KEYS.actions.close,
+  THERMAL_SPACE_RIBBON_KEYS.actions.delete,
+]);
+
+export function isThermalSpaceRibbonNumberKey(commandKey: string): commandKey is ThermalSpaceRibbonNumberCommandKey {
+  return NUMBER_KEY_SET.has(commandKey);
+}
+
+export function isThermalSpaceRibbonStringKey(commandKey: string): commandKey is ThermalSpaceRibbonStringCommandKey {
+  return STRING_KEY_SET.has(commandKey);
+}
+
+export function isThermalSpaceRibbonActionKey(commandKey: string): commandKey is ThermalSpaceRibbonActionKey {
+  return ACTION_KEY_SET.has(commandKey);
+}

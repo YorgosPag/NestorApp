@@ -11,8 +11,12 @@
 
 import { resolvePlacementSnap, type PlacementSnapEngine } from '../placement-snap';
 import type { Point2D } from '../../../rendering/types/Types';
+import { ExtendedSnapType } from '../../../snapping/extended-types';
 
-type FindResult = { found: boolean; snapPoint: { point: Point2D } | null };
+type FindResult = {
+  found: boolean;
+  snapPoint: { point: Point2D; entityId?: string; type?: ExtendedSnapType } | null;
+};
 
 function makeEngine(enabled: boolean, result: FindResult): {
   engine: PlacementSnapEngine;
@@ -41,6 +45,21 @@ describe('resolvePlacementSnap', () => {
     const { engine } = makeEngine(true, { found: true, snapPoint: { point: target } });
     const r = resolvePlacementSnap({ x: 4180, y: -1490 }, engine);
     expect(r).toEqual({ snappedMm: target, markerMm: target });
+  });
+
+  it('surfaces the snap candidate entityId + type (ADR-408 Φ-B1 connector-mate)', () => {
+    const target = { x: 100, y: 200 };
+    const { engine } = makeEngine(true, {
+      found: true,
+      snapPoint: { point: target, entityId: 'mfld-1', type: ExtendedSnapType.BIM_MEP_CONNECTOR },
+    });
+    const r = resolvePlacementSnap({ x: 90, y: 210 }, engine);
+    expect(r).toEqual({
+      snappedMm: target,
+      markerMm: target,
+      snapEntityId: 'mfld-1',
+      snapType: ExtendedSnapType.BIM_MEP_CONNECTOR,
+    });
   });
 
   it('returns null when OSNAP is on but no feature is within tolerance', () => {

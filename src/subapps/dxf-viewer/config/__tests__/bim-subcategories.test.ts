@@ -10,27 +10,29 @@ import {
 } from '../bim-subcategories';
 
 describe('SUBCATEGORY_TAXONOMY total count', () => {
-  it('contains exactly 47 subcategory keys across all categories', () => {
+  it('contains exactly 50 subcategory keys across all categories', () => {
     const total = Object.values(SUBCATEGORY_TAXONOMY).reduce(
       (sum, keys) => sum + keys.length,
       0,
     );
-    expect(total).toBe(47);
+    expect(total).toBe(50);
   });
 });
 
 describe('SUBCATEGORY_TAXONOMY per-category counts', () => {
-  it('wall has 6 subcategories', () => {
-    expect(SUBCATEGORY_TAXONOMY.wall.length).toBe(6);
+  it('wall has 7 subcategories (incl. ADR-375 C.9 interior ⭐)', () => {
+    expect(SUBCATEGORY_TAXONOMY.wall.length).toBe(7);
+    expect(SUBCATEGORY_TAXONOMY.wall).toContain('interior');
   });
 
   it('slab has 5 subcategories', () => {
     expect(SUBCATEGORY_TAXONOMY.slab.length).toBe(5);
   });
 
-  it('column has 4 subcategories (3 standard + section-profile ⭐)', () => {
-    expect(SUBCATEGORY_TAXONOMY.column.length).toBe(4);
+  it('column has 6 subcategories (incl. common-edges + shear-wall ⭐ + section-profile ⭐)', () => {
+    expect(SUBCATEGORY_TAXONOMY.column.length).toBe(6);
     expect(SUBCATEGORY_TAXONOMY.column).toContain('section-profile');
+    expect(SUBCATEGORY_TAXONOMY.column).toContain('shear-wall');
   });
 
   it('beam has 4 subcategories (3 standard + section-profile ⭐)', () => {
@@ -85,8 +87,13 @@ describe('SUBCATEGORY_TAXONOMY key correctness', () => {
 });
 
 describe('WIRED_SUBCATEGORIES', () => {
-  it('contains exactly 23 wired keys', () => {
-    expect(WIRED_SUBCATEGORIES.size).toBe(23);
+  it('contains exactly 26 wired keys', () => {
+    expect(WIRED_SUBCATEGORIES.size).toBe(26);
+  });
+
+  it('ADR-375 C.9 line-color keys are wired (wall:interior + column:shear-wall)', () => {
+    expect(WIRED_SUBCATEGORIES.has('wall:interior')).toBe(true);
+    expect(WIRED_SUBCATEGORIES.has('column:shear-wall')).toBe(true);
   });
 
   it('wall wired keys: common-edges and cut-pattern', () => {
@@ -144,8 +151,9 @@ describe('getAllSubcategoryKeysForCategory', () => {
   it('returns wall keys in taxonomy order', () => {
     const keys = getAllSubcategoryKeysForCategory('wall');
     expect(keys[0]).toBe('common-edges');
-    expect(keys[1]).toBe('cut-pattern');
-    expect(keys.length).toBe(6);
+    expect(keys[1]).toBe('interior');
+    expect(keys[2]).toBe('cut-pattern');
+    expect(keys.length).toBe(7);
   });
 
   it('returns stair keys including ⭐ extras at the end', () => {

@@ -41,6 +41,7 @@ import { applyWallTilt } from './mesh-slope-shear';
 import { buildShape, extrudeAndRotate, tagMesh, buildWallShape } from './bim-three-shape-helpers';
 // Shared 3D edge overlay + point-based converters (N.7.1 file-size split, 2026-06-02).
 import { attachEdgesProjection } from './bim-three-edges';
+import { wallFootprintSubcategory } from '../../bim/walls/wall-render-palette';
 
 // ADR-406 / ADR-408 Φ3 — point-based converters re-exported from their own module
 // (file-size SSoT, N.7.1). Importers keep `from '.../BimToThreeConverter'`.
@@ -175,7 +176,8 @@ export function buildStraightWallWithOpenings(
     if (layerId !== undefined) mesh.userData['layerId'] = layerId;
     mesh.castShadow = true;
     mesh.receiveShadow = true;
-    attachEdgesProjection(mesh, 'wall', 'common-edges');
+    // ADR-375 C.9 — 3D ακμές ακολουθούν το ίδιο function subcat με το 2D (εσωτ./εξωτ.).
+    attachEdgesProjection(mesh, 'wall', wallFootprintSubcategory(wall.params.category));
     group.add(mesh);
   };
 
@@ -354,7 +356,8 @@ export function wallToMesh(
   // geometry z, so adding it here too would double-count. baseOffset=0 → no change.
   mesh.position.y = (floorElevationMm + wall.params.baseOffset) * MM_TO_M + buildingBaseElevationM;
   const tagged = tagMesh(mesh, wall.id, 'wall', matId, levelId);
-  attachEdgesProjection(tagged, 'wall', 'common-edges');
+  // ADR-375 C.9 — 3D ακμές ακολουθούν το ίδιο function subcat με το 2D (εσωτ./εξωτ.).
+  attachEdgesProjection(tagged, 'wall', wallFootprintSubcategory(wall.params.category));
   return tagged;
 }
 
