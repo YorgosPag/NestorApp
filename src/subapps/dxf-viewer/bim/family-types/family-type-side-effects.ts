@@ -56,11 +56,11 @@ export function findWallsByTypeId(scene: SceneModel | null, typeId: string): Wal
  *
  * NOTE: opening BOQ uses signature-group aggregation (`opening-boq-sync`, keyed
  * by kind+dimensions) rather than the per-entity `bimToBoqBridge` used for wall/
- * slab/roof — so there is no `refeedOpeningBoqForTypeAcrossFloors` here. On a
- * type edit, the ACTIVE-floor openings re-flow geometry via
- * `useOpeningTypeReresolution`; their BOQ signature group refreshes on the next
- * per-opening save. Cross-floor opening BOQ re-feed is a documented follow-up
- * (needs `floorplanId` plumbing into the BOQ-refeed host).
+ * slab/roof, AND openings live only in `FLOORPLAN_OPENINGS` (not in the scene
+ * file). So the cross-floor opening BOQ re-feed is a PURE-Firestore fan-out kept
+ * in its own module `opening-boq-side-effects.ts`
+ * (`refeedOpeningBoqForTypeAcrossFloors`), not here. This helper stays for the
+ * scene-based consumers (ribbon controller delete/count).
  */
 export function findOpeningsByTypeId(scene: SceneModel | null, typeId: string): OpeningEntity[] {
   if (!scene) return [];

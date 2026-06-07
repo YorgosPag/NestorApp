@@ -277,6 +277,17 @@ New `.ssot-registry.json` Tier 3 module `bim-family-types`:
 
 ## 9. Changelog
 
+- **v0.11 (2026-06-08)** — **Opening cross-floor BOQ re-feed (ADR-421 SLICE C follow-up (b))** — the all-floors BOQ
+  re-feed (Φ5) now covers the **opening** category, completing project-wide type-edit propagation for all 5 categories.
+  Unlike wall/slab/roof (per-entity `bimToBoqBridge`, walls live in the `loadFileV2` scene), openings live **only** in
+  `FLOORPLAN_OPENINGS` and use signature-group aggregation — so the opening fan-out is **pure-Firestore** and
+  **effective-aware** (no doc re-persist): the type is the SSoT, each persisted doc is resolved «type wins» before
+  grouping, the affected signature groups (OLD from the stale drift-cache + NEW effective) are recomputed, and geometry
+  self-heals lazily on load. NEW `bim/family-types/opening-boq-side-effects.ts` (`refeedOpeningBoqForTypeAcrossFloors`)
+  + `opening-boq-sync.refeedOpeningBoqForTypeOnFloorplan` + grouper pure helpers
+  (`buildEffectiveSignatureMembers`/`collectAffectedSignatures`)· `useFamilyTypeBoqRefeed` gains an `opening` branch.
+  No new Firestore index (reuses `companyId+projectId+floorplanId`), zero opening/audit writes. Full detail in
+  **ADR-421 §changelog 2026-06-08**.
 - **v0.10 (2026-06-08)** — **Opening category added (ADR-421 SLICE C consumer)** — the generic framework gains a
   5th category with **ZERO infrastructure fork**: `BimTypeParamsByCategory.opening` + `OpeningTypeParams`
   (kind/width/height/frameWidth?/material?/glazingPanes?/fireRating?), `OpeningTypeParamsSchema` branch in the

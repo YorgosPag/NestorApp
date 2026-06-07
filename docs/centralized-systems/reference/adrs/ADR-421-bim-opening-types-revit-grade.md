@@ -303,8 +303,8 @@ integration, ribbon, mark/schedule/BOQ}) είναι **πολλαπλά domains &
   - **Tests**: resolveEffectiveOpeningParams + auto-opening-type/built-ins + OpeningTypeParamsSchema/discriminator +
     opening-type-resolution helpers.
   - **CHECK 6D**: ΔΕΝ αγγίχθηκαν canvas-drawing/renderer αρχεία (μόνο ribbon/commands/types/persistence) → χωρίς ADR-040.
-  - 🟡 **Documented follow-ups**: ~~(1) type-aware gating των legacy kind/size comboboxes σε typed openings (bridge)~~ ✅ **DONE 2026-06-08** (βλ. επόμενο entry)·
-    (2) cross-floor opening BOQ re-feed (signature-group, θέλει floorplanId plumbing)· (3) wall→generic command migration.
+  - 🟡 **Documented follow-ups**: ~~(1) type-aware gating των legacy kind/size comboboxes σε typed openings (bridge)~~ ✅ **DONE 2026-06-08**·
+    ~~(2) cross-floor opening BOQ re-feed (signature-group, θέλει floorplanId plumbing)~~ ✅ **DONE 2026-06-08** (βλ. entries παρακάτω)· (3) wall→generic command migration.
   - 🔴 ΕΚΚΡΕΜΕΙ: browser-verify (assign/edit/duplicate/delete/override + reload) + commit (Giorgio· κοινό tree).
 - **2026-06-08** — **SLICE C follow-up (a): TYPE-AWARE GATING** (Revit-true, Approach B). Σε **typed** κούφωμα
   (`opening.typeId` set) τα ribbon comboboxes **Kind / Width / Height** γίνονται **read-only** — η τιμή
@@ -341,3 +341,35 @@ integration, ribbon, mark/schedule/BOQ}) είναι **πολλαπλά domains &
   - **Files (MOD)**: `opening-completion.ts`, `opening-doc-hydration.ts`. **NEW test**: `auto-opening-type-wiring.test.ts`
     (5/5 PASS — create/load default→built-in, custom→ad-hoc, explicit doc.typeId wins). **ΟΧΙ** IFC-import path (δικά του type semantics, εκτός scope).
   - **CHECK 6D**: ΟΧΙ canvas/renderer → χωρίς ADR-040. tsc 0 (scope). 🔴 ΕΚΚΡΕΜΕΙ: browser-verify (σχεδίασε κούφωμα → «Edit Type» ενεργό· παλιό έργο → κουφώματα typed στο reload) + commit (Giorgio).
+- **2026-06-08** — **SLICE C follow-up (b): CROSS-FLOOR OPENING BOQ RE-FEED** (Revit-grade, Giorgio: «όπως η Revit,
+  FULL ENTERPRISE + FULL SSOT»). Edit Τύπου κουφώματος → το signature-group BOQ των κουφωμάτων αυτού του τύπου
+  **σε ΟΛΟΥΣ τους ορόφους** του κτιρίου ενημερώνεται project-wide (wall/slab/roof το είχαν ήδη μέσω
+  `refeed*BoqForTypeAcrossFloors`· το opening έλειπε γιατί το BOQ του είναι signature-group aggregation που διαβάζει
+  Firestore, όχι per-entity).
+  - **Απόφαση: BOQ-only effective-aware recompute — ΧΩΡΙΣ doc re-persist.** Ο Τύπος = single source of truth· το
+    BOQ = derived view που recompute-άρεται από **effective** («type wins») state· τα instance docs ΔΕΝ
+    ξαναγράφονται (geometry self-heals lazily στο load μέσω `openingDocToEntity` — όπως τα Revit schedules είναι live
+    views πάνω στο model μέσω του type relationship). Το Approach A (eager re-persist params+geometry σε όλους τους
+    ορόφους) απορρίφθηκε ως **anti-SSOT denormalization** + περιττά writes + audit-write burden (CHECK 3.17).
+  - **Recognition (code = source of truth) διόρθωσε το handoff**: (1) τα openings ζουν **ΜΟΝΟ** στο
+    `FLOORPLAN_OPENINGS` (όχι στο `loadFileV2` scene όπως wall/slab) → ο fan-out είναι **καθαρά-Firestore**· (2) το
+    `kind` είναι type-governed → type edit door→window **σπάει** το naive `recomputeSignatureGroup` (`WHERE kind ==
+    sig.kind`, ενώ τα stale docs έχουν το OLD kind)· (3) re-persist params-only **θα ΕΣΠΑΖΕ** το load-time geometry
+    self-heal (`typeResolved=false` → stale geometry)· (4) το stale `doc.params` = **OLD signature δωρεάν**
+    (drift-cache = παλιό effective)· (5) composite index `companyId+projectId+floorplanId` **υπάρχει** → κανένα νέο index.
+  - **Files**: NEW pure helpers `buildEffectiveSignatureMembers` + `collectAffectedSignatures` (+`OpeningDocRow`/
+    `OpeningEffectiveResolver`) στο `opening-boq-grouper.ts` (resolve injected → το grouper μένει pure, χωρίς store)·
+    `opening-boq-sync.ts` refactor split `writeSignatureGroup` (ένα write primitive — detach-guard + delete-when-empty
+    + createdAt preservation, μοιραζόμενο από active-floor per-sig path & cross-floor) + NEW `fetchAllOpeningsForFloorplan`
+    (no-`kind` query, CHECK 3.10 companyId present) + NEW export `refeedOpeningBoqForTypeOnFloorplan` (effective-aware:
+    old sig shrink + new sig grow + σωστό cross-type counting)· NEW pure-Firestore fan-out module
+    `bim/family-types/opening-boq-side-effects.ts` `refeedOpeningBoqForTypeAcrossFloors` (floorplanId = level.sceneFileId,
+    injectable recompute, per-floor failure isolated)· `useFamilyTypeBoqRefeed.ts` host `opening` branch (καλύπτει
+    active+non-active ομοιόμορφα· idempotent με το active-floor auto-save· διορθώνει και το active-floor non-selected gap).
+  - **Tests**: `opening-boq-grouper.test.ts` +effective helpers (kind-change door→window, override-no-op collapse,
+    cross-type sharing, OLD-from-stale, dedup) + NEW `opening-boq-side-effects.test.ts` (fan-out injected spy:
+    per-floor recompute με σωστό floorplanId+floorId, skip χωρίς sceneFileId, incomplete-context no-op, per-floor
+    failure isolation). 49/49 PASS (+ family-type-side-effects regression). tsc 0 (scope).
+  - **ΜΗΔΕΝ writes** σε opening/audit collections (μόνο BOQ rows). **CHECK 6D**: host = 1 EventBus listener, μηδέν
+    high-freq subs → **χωρίς ADR-040 staging**. 🔴 ΕΚΚΡΕΜΕΙ: browser-verify (κτίριο με κουφώματα ίδιου τύπου σε ≥2
+    ορόφους → Edit Type πλάτος/kind → BOQ κάθε ορόφου ενημερωμένο ΧΩΡΙΣ άνοιγμα non-active ορόφου) + commit (Giorgio· κοινό tree).

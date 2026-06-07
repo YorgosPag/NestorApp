@@ -6,16 +6,21 @@
  */
 
 import {
+  buildEffectiveSignatureMembers,
   buildOpeningGroupPayload,
+  collectAffectedSignatures,
   compactMarkRange,
   computeOpeningSignature,
   groupBySignature,
   signatureGroupBoqId,
   signatureKey,
   type GrouperOpeningRow,
+  type OpeningDocRow,
+  type OpeningEffectiveResolver,
   type OpeningGroupBuildContext,
 } from '../opening-boq-grouper';
 import type { OpeningKind, OpeningParams } from '../../types/opening-types';
+import type { OpeningTypeParams } from '../../types/bim-family-type';
 import type { AtoeMappingEntry } from '../../config/bim-to-atoe-mapping';
 
 // ────────────────────────────────────────────────────────────────────────────
@@ -386,5 +391,134 @@ describe('buildOpeningGroupPayload', () => {
       existingCreatedAt: null,
     });
     expect('description' in built.payload ? built.payload.description : undefined).toBeNull();
+  });
+});
+
+// ────────────────────────────────────────────────────────────────────────────
+// Effective-aware grouping (ADR-421 SLICE C — cross-floor BOQ re-feed)
+// ────────────────────────────────────────────────────────────────────────────
+
+function docRow(args: {
+  id: string;
+  kind: OpeningKind;
+  width?: number;
+  height?: number;
+  sillHeight?: number;
+  openDirection?: 'inward' | 'outward';
+  mark?: string;
+  typeId?: string;
+  typeOverrides?: Partial<OpeningTypeParams>;
+  createdAt?: number;
+}): OpeningDocRow {
+  return {
+    id: args.id,
+    params: params({
+      kind: args.kind,
+      width: args.width,
+      height: args.height,
+      sillHeight: args.sillHeight,
+      openDirection: args.openDirection,
+      mark: args.mark,
+    }),
+    typeId: args.typeId,
+    typeOverrides: args.typeOverrides,
+    createdAtMillis: args.createdAt ?? 0,
+  };
+}
+
+/**
+ * Fake «type wins» resolver mirroring `resolveEffectiveParams` against a catalog
+ * snapshot — keeps these tests pure (no family-type store). Untyped/unknown-type
+ * → cached unchanged (legacy fast-path). Order: cached → typeParams → overrides.
+ */
+function makeResolver(catalog: Record<string, Partial<OpeningTypeParams>>): OpeningEffectiveResolver {
+  return (cached, link) => {
+    if (!link.typeId) return cached;
+    const typeParams = catalog[link.typeId];
+    if (!typeParams) return cached;
+    return { ...cached, ...typeParams, ...(link.typeOverrides ?? {}) } as OpeningParams;
+  };
+}
+
+describe('buildEffectiveSignatureMembers (ADR-421 SLICE C)', () => {
+  it('groups by EFFECTIVE («type wins») signature, not the stale doc params', () => {
+    // Stale door doc (drift-cache says door/900) linked to a window/1200 type.
+    const rows = [docRow({ id: 'o1', kind: 'door', width: 900, height: 2100, sillHeight: 0, typeId: 'T-win' })];
+    const resolve = makeResolver({ 'T-win': { kind: 'window', width: 1200, height: 1400, sillHeight: 900 } });
+    const map = buildEffectiveSignatureMembers(rows, resolve);
+    expect([...map.keys()]).toEqual(['window_1200_1400_900_na']);
+    const bucket = map.get('window_1200_1400_900_na')!;
+    expect(bucket.members.map((m) => m.id)).toEqual(['o1']);
+    expect(bucket.members[0]!.params.width).toBe(1200);
+    expect(bucket.members[0]!.kind).toBe('window');
+  });
+
+  it('cross-type sharing — an untyped opening and a typed one resolve to the same group', () => {
+    const rows = [
+      docRow({ id: 'untyped', kind: 'window', width: 1200, height: 1400, sillHeight: 900 }),
+      docRow({ id: 'typed', kind: 'door', width: 800, height: 2000, sillHeight: 0, typeId: 'T-win' }),
+    ];
+    const resolve = makeResolver({ 'T-win': { kind: 'window', width: 1200, height: 1400, sillHeight: 900 } });
+    const map = buildEffectiveSignatureMembers(rows, resolve);
+    expect(map.size).toBe(1);
+    expect(map.get('window_1200_1400_900_na')!.members.map((m) => m.id).sort()).toEqual(['typed', 'untyped']);
+  });
+
+  it('per-instance override wins over the type', () => {
+    const rows = [docRow({ id: 'o1', kind: 'window', width: 1000, height: 1400, sillHeight: 900, typeId: 'T', typeOverrides: { width: 1100 } })];
+    const resolve = makeResolver({ T: { kind: 'window', width: 1000, height: 1400, sillHeight: 900 } });
+    const map = buildEffectiveSignatureMembers(rows, resolve);
+    expect([...map.keys()]).toEqual(['window_1100_1400_900_na']);
+  });
+
+  it('members sorted by createdAt ascending', () => {
+    const rows = [
+      docRow({ id: 'late', kind: 'window', createdAt: 300 }),
+      docRow({ id: 'early', kind: 'window', createdAt: 100 }),
+      docRow({ id: 'mid', kind: 'window', createdAt: 200 }),
+    ];
+    const map = buildEffectiveSignatureMembers(rows, makeResolver({}));
+    expect(map.get('window_1200_1400_900_na')!.members.map((m) => m.id)).toEqual(['early', 'mid', 'late']);
+  });
+});
+
+describe('collectAffectedSignatures (ADR-421 SLICE C)', () => {
+  it('dimension edit — union of OLD (stale) and NEW (effective) signatures', () => {
+    // doc still holds the old 900 dims; the live type now says 1000.
+    const rows = [docRow({ id: 'o1', kind: 'door', width: 900, height: 2100, sillHeight: 0, typeId: 'T' })];
+    const resolve = makeResolver({ T: { kind: 'door', width: 1000, height: 2100, sillHeight: 0 } });
+    const affected = collectAffectedSignatures(rows, 'T', resolve).map(signatureKey).sort();
+    expect(affected).toEqual(['door_1000_2100_0_na', 'door_900_2100_0_na']);
+  });
+
+  it('kind edit (door→window) — both the old door sig and the new window sig are affected', () => {
+    const rows = [docRow({ id: 'o1', kind: 'door', width: 900, height: 2100, sillHeight: 0, typeId: 'T' })];
+    const resolve = makeResolver({ T: { kind: 'window', width: 900, height: 2100, sillHeight: 0 } });
+    const affected = collectAffectedSignatures(rows, 'T', resolve).map(signatureKey).sort();
+    expect(affected).toEqual(['door_900_2100_0_na', 'window_900_2100_0_na']);
+  });
+
+  it('ignores openings NOT linked to the edited type', () => {
+    const rows = [
+      docRow({ id: 'mine', kind: 'door', width: 900, height: 2100, sillHeight: 0, typeId: 'T' }),
+      docRow({ id: 'other', kind: 'window', width: 1500, height: 1400, sillHeight: 900, typeId: 'OTHER' }),
+      docRow({ id: 'untyped', kind: 'window', width: 600, height: 600, sillHeight: 1200 }),
+    ];
+    const resolve = makeResolver({ T: { kind: 'door', width: 1000, height: 2100, sillHeight: 0 } });
+    const affected = collectAffectedSignatures(rows, 'T', resolve).map(signatureKey).sort();
+    expect(affected).toEqual(['door_1000_2100_0_na', 'door_900_2100_0_na']);
+  });
+
+  it('overridden instance whose effective dims do not move → single collapsed signature', () => {
+    // doc.params already cache the override (1100); type 900→1000 leaves it at 1100.
+    const rows = [docRow({ id: 'o1', kind: 'door', width: 1100, height: 2100, sillHeight: 0, typeId: 'T', typeOverrides: { width: 1100 } })];
+    const resolve = makeResolver({ T: { kind: 'door', width: 1000, height: 2100, sillHeight: 0 } });
+    const affected = collectAffectedSignatures(rows, 'T', resolve).map(signatureKey);
+    expect(affected).toEqual(['door_1100_2100_0_na']);
+  });
+
+  it('no openings of the type → no affected signatures', () => {
+    const rows = [docRow({ id: 'other', kind: 'window', typeId: 'OTHER' })];
+    expect(collectAffectedSignatures(rows, 'T', makeResolver({}))).toEqual([]);
   });
 });

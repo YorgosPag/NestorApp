@@ -30,6 +30,7 @@ import {
   refeedRoofBoqForTypeAcrossFloors,
   refeedSlabBoqForTypeAcrossFloors,
 } from '../../bim/family-types/family-type-side-effects';
+import { refeedOpeningBoqForTypeAcrossFloors } from '../../bim/family-types/opening-boq-side-effects';
 
 export interface FamilyTypeBoqRefeedContext {
   readonly companyId: string | null;
@@ -47,22 +48,29 @@ export function useFamilyTypeBoqRefeed(ctx: FamilyTypeBoqRefeedContext): void {
 
   useEffect(() => {
     return EventBus.on('bim:family-type-changed', ({ typeId, category }) => {
-      if (category !== 'wall' && category !== 'slab' && category !== 'roof') return;
+      if (category !== 'wall' && category !== 'slab' && category !== 'roof' && category !== 'opening') return;
       const snap = latest.current;
       const { companyId, projectId, buildingId } = snap.ctx;
       if (!companyId || !projectId || !buildingId) return;
+      const buildingLevels = snap.levels.filter((l) => l.buildingId === buildingId);
+      const boqContextBase = { companyId, projectId, buildingId };
       const shared = {
         typeId,
-        levels: snap.levels.filter((l) => l.buildingId === buildingId),
+        levels: buildingLevels,
         activeLevelId: snap.currentLevelId,
         getLevelScene: snap.getLevelScene,
         loadFileV2: (fileId: string) => DxfFirestoreService.loadFileV2(fileId),
-        boqContextBase: { companyId, projectId, buildingId },
+        boqContextBase,
       };
       if (category === 'slab') {
         void refeedSlabBoqForTypeAcrossFloors(shared);
       } else if (category === 'roof') {
         void refeedRoofBoqForTypeAcrossFloors(shared);
+      } else if (category === 'opening') {
+        // ADR-421 SLICE C — openings live only in FLOORPLAN_OPENINGS, so a PURE
+        // Firestore signature-group re-feed (no scene / loadFileV2). floorplanId
+        // = level.sceneFileId, resolved per floor inside the fan-out.
+        void refeedOpeningBoqForTypeAcrossFloors({ typeId, levels: buildingLevels, boqContextBase });
       } else {
         void refeedBoqForTypeAcrossFloors(shared);
       }

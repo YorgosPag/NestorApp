@@ -1,8 +1,9 @@
 /**
  * ADR-377 — BIM Subcategories Taxonomy
  *
- * 47 built-in subcategory keys across 7 structural categories
- * (42 Revit-default + 5 extras ⭐).
+ * 50 built-in subcategory keys across 7 structural categories
+ * (42 Revit-default + 8 extras ⭐ — incl. ADR-375 C.9 line-color keys
+ *  wall:interior + column:shear-wall).
  *
  * WIRED  = renderer already emits per-subcategory calls → user style control active.
  * STUB   = key defined in SSoT; user can pre-configure style; renderer not yet wired.
@@ -10,14 +11,15 @@
  * Stubs are intentional placeholders — geometry or cut-state pass not yet implemented.
  * They are labeled 🔒 in the key type comments below.
  *
- * Total: 23 wired, 24 stubs.
+ * Total: 26 wired, 24 stubs.
  */
 import type { BimCategory } from './bim-object-styles';
 
 // ── Per-category subcategory key types ────────────────────────────────────
 
 export type WallSubcategoryKey =
-  | 'common-edges'     // ✅ drawFootprint()
+  | 'common-edges'     // ✅ drawFootprint() — εξωτ. τοίχος (πέφτει σε parent χρώμα)
+  | 'interior'         // ⭐✅ drawFootprint() — εσωτ./διαχωριστικός τοίχος (ADR-375 C.9 line color)
   | 'cut-pattern'      // ✅ drawMaterialHatch() hatch SSoT
   | 'surface-pattern'  // 🔒 no geometry — decorative surface pattern (ADR-378 or future ADR)
   | 'hidden-lines'     // 🔒 system-wide stub — needs cut-state driven dashed pass
@@ -32,6 +34,8 @@ export type SlabSubcategoryKey =
   | 'hidden-lines';   // 🔒 system-wide stub
 
 export type ColumnSubcategoryKey =
+  | 'common-edges'     // ✅ drawFootprint() — κανονική κολώνα (πέφτει σε parent χρώμα)
+  | 'shear-wall'       // ⭐✅ drawFootprint() — τοιχίο Ω.Σ. shear-wall/composite/U-shape (ADR-375 C.9)
   | 'hidden-lines'     // 🔒 system-wide stub
   | 'stick-symbols'    // 🔒 schematic single-line representation TBD
   | 'reference-lines'  // 🔒 TBD
@@ -86,9 +90,9 @@ export type StairSubcategoryKey =
  * styling applies.
  */
 export const SUBCATEGORY_TAXONOMY: Readonly<Record<BimCategory, ReadonlyArray<string>>> = {
-  wall:  ['common-edges', 'cut-pattern', 'surface-pattern', 'hidden-lines', 'sweeps', 'reveals'],
+  wall:  ['common-edges', 'interior', 'cut-pattern', 'surface-pattern', 'hidden-lines', 'sweeps', 'reveals'],
   slab:  ['common-edges', 'slab-edges', 'interior-edges', 'cut-pattern', 'hidden-lines'],
-  column: ['hidden-lines', 'stick-symbols', 'reference-lines', 'section-profile'],
+  column: ['common-edges', 'shear-wall', 'hidden-lines', 'stick-symbols', 'reference-lines', 'section-profile'],
   beam:   ['hidden-lines', 'stick-symbols', 'rigid-links', 'section-profile'],
   opening: [
     'door-panel', 'door-frame', 'door-glass', 'door-opening', 'door-plan-swing',
@@ -133,17 +137,20 @@ export const SUBCATEGORY_TAXONOMY: Readonly<Record<BimCategory, ReadonlyArray<st
 };
 
 /**
- * 23 wired subcategory keys in 'category:key' format.
+ * 26 wired subcategory keys in 'category:key' format.
  * Wired = the renderer already passes subcategoryKey to resolveSubcategoryStyle().
  * Stub keys not in this set fall back to parent ObjectStyle at render time (Phase C).
  */
 export const WIRED_SUBCATEGORIES: ReadonlySet<string> = new Set<string>([
-  // Wall (2)
+  // Wall (3)
   'wall:common-edges',
+  'wall:interior',
   'wall:cut-pattern',
   // Slab (1)
   'slab:common-edges',
-  // Column (1)
+  // Column (3)
+  'column:common-edges',
+  'column:shear-wall',
   'column:section-profile',
   // Beam (2)
   'beam:hidden-lines',

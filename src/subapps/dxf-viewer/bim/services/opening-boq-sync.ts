@@ -20,12 +20,17 @@ import { COLLECTIONS } from '@/config/firestore-collections';
 import { createModuleLogger } from '@/lib/telemetry';
 import { resolveAtoeMapping } from '../config/bim-to-atoe-mapping';
 import type { OpeningKind, OpeningParams } from '../types/opening-types';
+import type { OpeningTypeParams } from '../types/bim-family-type';
+import { resolveOpeningEffective } from '../family-types/opening-type-resolution';
 import {
+  buildEffectiveSignatureMembers,
   buildOpeningGroupPayload,
+  collectAffectedSignatures,
   computeOpeningSignature,
   signatureGroupBoqId,
   signatureKey,
   type GrouperOpeningRow,
+  type OpeningDocRow,
   type OpeningSignature,
 } from './opening-boq-grouper';
 
@@ -98,6 +103,34 @@ export async function deleteOpeningFromGroup(
   await recomputeSignatureGroup(context, sig);
 }
 
+/**
+ * ADR-421 SLICE C — re-feed the BOQ signature groups of every opening of `typeId`
+ * on ONE floorplan, after a family-type edit. Effective-aware (Revit-grade): the
+ * type is the source of truth, so each persisted doc is resolved «type wins»
+ * BEFORE grouping — a non-active floor's stale drift-cache therefore reports the
+ * NEW dimensions/kind without the doc itself being re-persisted (its geometry
+ * self-heals on next load via `openingDocToEntity`).
+ *
+ * Only the affected groups are touched: the OLD signature (from the stale
+ * `doc.params`) shrinks/deletes and the NEW signature (effective) grows.
+ * Cross-type quantity stays correct because membership is counted from EVERY
+ * floorplan opening resolved to its own type. Idempotent.
+ */
+export async function refeedOpeningBoqForTypeOnFloorplan(
+  context: OpeningBoqContext,
+  typeId: string,
+): Promise<void> {
+  if (!isContextValid(context)) return;
+  const rows = await fetchAllOpeningsForFloorplan(context);
+  const effective = buildEffectiveSignatureMembers(rows, resolveOpeningEffective);
+  const affected = collectAffectedSignatures(rows, typeId, resolveOpeningEffective);
+  await Promise.all(
+    affected.map((sig) =>
+      writeSignatureGroup(context, sig, effective.get(signatureKey(sig))?.members ?? []),
+    ),
+  );
+}
+
 // ────────────────────────────────────────────────────────────────────────────
 // INTERNAL
 // ────────────────────────────────────────────────────────────────────────────
@@ -110,7 +143,21 @@ async function recomputeSignatureGroup(
   context: OpeningBoqContext,
   signature: OpeningSignature,
 ): Promise<void> {
-  const members = await fetchOpeningsForSignature(context, signature);
+  await writeSignatureGroup(context, signature, await fetchOpeningsForSignature(context, signature));
+}
+
+/**
+ * Write (upsert / delete) the BOQ row for ONE signature group from a pre-resolved
+ * member list. The single write primitive shared by the per-signature active-floor
+ * path ({@link recomputeSignatureGroup}) and the effective-aware cross-floor path
+ * ({@link refeedOpeningBoqForTypeOnFloorplan}) — SSoT for detach guard,
+ * delete-when-empty and createdAt preservation.
+ */
+async function writeSignatureGroup(
+  context: OpeningBoqContext,
+  signature: OpeningSignature,
+  members: readonly GrouperOpeningRow[],
+): Promise<void> {
   const groupId = signatureGroupBoqId(context.floorplanId, signature);
 
   // Detach guard: εάν user έχει αποσυνδέσει manually αυτό το BOQ row, μένει
@@ -199,4 +246,50 @@ async function fetchOpeningsForSignature(
     });
   });
   return matches;
+}
+
+/**
+ * ADR-421 SLICE C — fetch ALL persisted openings of a floorplan (no `kind`
+ * filter, unlike {@link fetchOpeningsForSignature}) so the caller can resolve
+ * each doc «type wins» before grouping. A type edit can change the governed
+ * `kind`, so filtering by the stale persisted `kind` would miss re-kinded docs.
+ * Equality-only query served by the existing companyId+projectId+floorplanId
+ * composite index — CHECK 3.10 satisfied (companyId present).
+ */
+async function fetchAllOpeningsForFloorplan(
+  context: OpeningBoqContext,
+): Promise<OpeningDocRow[]> {
+  const q = query(
+    collection(db, COLLECTIONS.FLOORPLAN_OPENINGS),
+    where('companyId', '==', context.companyId),
+    where('projectId', '==', context.projectId),
+    where('floorplanId', '==', context.floorplanId),
+  );
+
+  let snap;
+  try {
+    snap = await getDocs(q);
+  } catch (err) {
+    logger.error('OpeningBoqSync: floorplan opening fetch failed', { err });
+    return [];
+  }
+
+  const rows: OpeningDocRow[] = [];
+  snap.forEach((d) => {
+    const data = d.data() as {
+      params?: OpeningParams;
+      typeId?: string;
+      typeOverrides?: Partial<OpeningTypeParams>;
+      createdAt?: { toMillis?: () => number };
+    };
+    if (!data.params) return;
+    rows.push({
+      id: d.id,
+      params: data.params,
+      typeId: data.typeId,
+      typeOverrides: data.typeOverrides,
+      createdAtMillis: typeof data.createdAt?.toMillis === 'function' ? data.createdAt.toMillis() : 0,
+    });
+  });
+  return rows;
 }

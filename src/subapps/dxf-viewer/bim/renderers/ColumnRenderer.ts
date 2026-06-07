@@ -39,6 +39,7 @@ import type { ColumnEntity, ColumnKind } from '../types/column-types';
 import { pointInPolygon } from '../geometry/shared/polygon-utils';
 import { RENDER_LINE_WIDTHS } from '../../config/text-rendering-config';
 import { resolveSubcategoryStyle } from '../../config/bim-line-weight-resolver';
+import { BIM_CATEGORY_LINE_COLORS } from '../../config/bim-object-styles';
 import { resolveIsEntityVisible } from '../visibility/visibility-resolver';
 import { resolveCutState } from '../../config/bim-view-range';
 import { resolveVgFillTint } from '../utils/bim-vg-fill-tint';
@@ -73,6 +74,7 @@ import {
   COLUMN_LABEL_MIN_FOOTPRINT_PX,
 } from '../columns/column-dim-labels';
 import { KIND_STROKE, KIND_FILL } from '../columns/column-render-palette';
+import { isWallColumnKind } from '../columns/column-from-faces';
 import { columnCutPlaneShiftCanvas } from '../geometry/cut-plane-tilt';
 import { drawCutPlaneTiltProjection, cutPlaneShiftScreenDelta } from './cut-plane-tilt-projection';
 
@@ -145,13 +147,15 @@ export class ColumnRenderer extends BaseEntityRenderer {
     // Phase 4.5c.2/4.5c.3 — per-material hatch (all kinds, incl. circular).
     this.drawMaterialHatch(column);
 
-    this.ctx.strokeStyle = KIND_STROKE[column.kind];
     const _colLayerOverride = _colLayer ? {
       lineweightMm: isConcreteLineweight(_colLayer.lineweight) ? _colLayer.lineweight : undefined,
       color: _colLayer.color ?? undefined,
     } : undefined;
+    // ADR-375 C.9 — τοιχίο Ω.Σ. (shear-wall/composite/U-shape) → subcategory
+    // `shear-wall` (σκούρο μπλε-RC)· κανονική κολώνα → `common-edges` (parent slate).
+    const _colSubcat = isWallColumnKind(column.kind) ? 'shear-wall' : 'common-edges';
     const { lineWidthPx: _colLwPx, color: _colColor } = resolveSubcategoryStyle({
-      category: 'column', subcategoryKey: 'common-edges',
+      category: 'column', subcategoryKey: _colSubcat,
       cutState: _colCutState, scaleDenominator: useDrawingScaleStore.getState().drawingScale,
       dpi: 96, objectStyles: _colStyles,
       elementOverride: column.styleOverride, layerOverride: _colLayerOverride,
@@ -176,7 +180,9 @@ export class ColumnRenderer extends BaseEntityRenderer {
     // ADR-404 Phase 3 — κλείσιμο translate (cut σώμα)· βάση λεπτή + connecting lines.
     if (_tiltShift) {
       this.ctx.restore();
-      drawCutPlaneTiltProjection(this.ctx, verts, _tiltShift, (p) => this.worldToScreen(p), KIND_STROKE[column.kind]);
+      // ADR-375 C.9 — η όψη κλίσης ακολουθεί το resolved outline χρώμα (SSoT)·
+      // fallback στο default κατηγορίας μόνο αν ο χρήστης μηδένισε το V/G color.
+      drawCutPlaneTiltProjection(this.ctx, verts, _tiltShift, (p) => this.worldToScreen(p), _colColor ?? BIM_CATEGORY_LINE_COLORS.column);
     }
 
     this.finalizeRender(entity, options);

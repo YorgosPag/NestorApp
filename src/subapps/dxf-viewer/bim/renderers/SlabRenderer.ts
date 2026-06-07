@@ -34,7 +34,7 @@ import { BaseEntityRenderer } from '../../rendering/entities/BaseEntityRenderer'
 import type { EntityModel, GripInfo, RenderOptions, Point2D } from '../../rendering/types/Types';
 import type { Entity } from '../../types/entities';
 import { isSlabEntity } from '../../types/entities';
-import type { SlabEntity, SlabKind, SlabReinforcement } from '../types/slab-types';
+import type { SlabEntity, SlabReinforcement } from '../types/slab-types';
 import type { SlabOpeningEntity } from '../types/slab-opening-types';
 import { pointInPolygon } from '../geometry/shared/polygon-utils';
 import { RENDER_LINE_WIDTHS } from '../../config/text-rendering-config';
@@ -48,24 +48,7 @@ import { HOVER_HIGHLIGHT } from '../../config/color-config';
 import { getSlabGrips } from '../slabs/slab-grips';
 import { getLayer } from '../../stores/LayerStore';
 import { isConcreteLineweight } from '../../config/lineweight-iso-catalog';
-
-/** Stroke colour per kind. */
-const KIND_STROKE: Readonly<Record<SlabKind, string>> = {
-  'floor':      '#6e6358',
-  'ceiling':    '#5f7286',
-  'roof':       '#a04a2b',
-  'ground':     '#3d5a3a',
-  'foundation': '#3a3a40',
-};
-
-/** Translucent fill (rgba) per kind. ~20% opacity. */
-const KIND_FILL: Readonly<Record<SlabKind, string>> = {
-  'floor':      'rgba(178, 162, 144, 0.20)',
-  'ceiling':    'rgba(140, 158, 178, 0.20)',
-  'roof':       'rgba(192, 92, 56, 0.20)',
-  'ground':     'rgba(94, 130, 88, 0.20)',
-  'foundation': 'rgba(88, 88, 96, 0.22)',
-};
+import { KIND_STROKE, KIND_FILL } from '../slabs/slab-render-palette';
 
 /**
  * Hatch line stroke (light gray, low-opacity) — non-intrusive against the

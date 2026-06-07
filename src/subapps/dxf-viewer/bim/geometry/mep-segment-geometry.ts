@@ -140,7 +140,13 @@ export function validateMepSegmentParams(params: MepSegmentParams): MepSegmentVa
   const errors: string[] = [];
   const section = resolveSegmentSection(params);
   const s = mmToSceneUnits(params.sceneUnits ?? 'mm');
-  const lengthMm = computePolylineLengthMm([params.startPoint, params.endPoint]) * (1 / s);
+  // ADR-408 Φ15 — measure the TRUE 3D length (plan run + vertical drop), so a
+  // VERTICAL riser (κατακόρυφη στήλη: coincident XY, large Δz) is NOT rejected as
+  // "too short". Mirrors `computeMepSegmentGeometry`'s 3D length. Boy-Scout: also
+  // correct for any steep run (a near-vertical pipe was previously under-measured).
+  const planMm = computePolylineLengthMm([params.startPoint, params.endPoint]) * (1 / s);
+  const elev = resolveSegmentEndpointElevationsMm(params);
+  const lengthMm = Math.hypot(planMm, elev.endMm - elev.startMm);
 
   if (lengthMm < MIN_SEGMENT_LENGTH_MM) {
     errors.push('mepSegment.tooShort');
@@ -159,6 +165,19 @@ function buildOutlineRect(axis: readonly Point3D[], widthMm: number, s: number):
     return [...axis];
   }
   const half = (widthMm * s) / 2;
+  // ADR-408 Φ15 — a VERTICAL riser has coincident-XY endpoints: the mitre normals
+  // are undefined (offsetPolyline would emit NaN → NaN bbox). Its plan footprint is
+  // the pipe seen END-ON: a small square of the section width centred on the point.
+  const a = axis[0];
+  const b = axis[n - 1];
+  if (Math.hypot(b.x - a.x, b.y - a.y) < 1e-6) {
+    return [
+      { x: a.x - half, y: a.y - half, z: 0 },
+      { x: a.x + half, y: a.y - half, z: 0 },
+      { x: a.x + half, y: a.y + half, z: 0 },
+      { x: a.x - half, y: a.y + half, z: 0 },
+    ];
+  }
   const plus = offsetPolyline(axis, half, 1);
   const minus = offsetPolyline(axis, half, -1);
   const polygon: Point3D[] = [...plus];

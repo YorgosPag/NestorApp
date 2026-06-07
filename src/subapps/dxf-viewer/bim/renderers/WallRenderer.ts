@@ -24,7 +24,8 @@ import type { EntityModel, GripInfo, RenderOptions } from '../../rendering/types
 import type { Point2D } from '../../rendering/types/Types';
 import type { Entity } from '../../types/entities';
 import { isWallEntity } from '../../types/entities';
-import type { WallCategory, WallEntity } from '../types/wall-types';
+import type { WallEntity } from '../types/wall-types';
+import { WALL_CATEGORY_FILL, wallFootprintSubcategory } from '../walls/wall-render-palette';
 import type { OpeningEntity } from '../types/opening-types';
 import type { Point3D } from '../types/bim-base';
 import { RENDER_LINE_WIDTHS } from '../../config/text-rendering-config';
@@ -48,16 +49,6 @@ import {
 } from '../walls/wall-hatch-patterns';
 import { wallCutPlaneShiftCanvas } from '../geometry/cut-plane-tilt';
 import { drawCutPlaneTiltProjection, cutPlaneShiftScreenDelta } from './cut-plane-tilt-projection';
-
-/** Translucent fill colour per category (CAD industry convention). */
-const CATEGORY_FILL: Readonly<Record<WallCategory, string>> = {
-  exterior:  'rgba(120, 144, 156, 0.18)', // concrete slate
-  interior:  'rgba(205, 158, 110, 0.16)', // brick warm
-  partition: 'rgba(205, 158, 110, 0.10)', // brick lighter
-  parapet:   'rgba(120, 144, 156, 0.22)', // concrete deeper
-  fence:     'rgba(141, 110, 99, 0.18)',  // stone brown
-};
-
 
 const AXIS_DASH: readonly [number, number] = [6, 4];
 
@@ -233,14 +224,16 @@ export class WallRenderer extends BaseEntityRenderer {
       { zBottomMm: wall.params.baseOffset ?? 0, zTopMm: (wall.params.baseOffset ?? 0) + wall.params.height, category: 'wall' },
       useDrawingScaleStore.getState().viewRange,
     );
+    // ADR-375 C.9 — εσωτ./διαχωριστικός τοίχος → subcategory `interior` (γκρι line color)·
+    // εξωτ./parapet/fence → `common-edges` (κενό color → parent = εξωτ. βαρύ χρώμα).
     const { lineWidthPx: _edgePx, linePattern: _edgePattern, color: _edgeColor } = resolveSubcategoryStyle({
-      category: 'wall', subcategoryKey: 'common-edges',
+      category: 'wall', subcategoryKey: wallFootprintSubcategory(cat),
       cutState: _cutState, scaleDenominator: useDrawingScaleStore.getState().drawingScale,
       dpi: 96, objectStyles: _styles,
       elementOverride: wall.styleOverride, layerOverride,
     });
     // ADR-375 v2.12 — V/G category color tints the body fill (SSoT helper).
-    this.ctx.fillStyle = resolveVgFillTint('wall', _cutState, _styles) ?? CATEGORY_FILL[cat];
+    this.ctx.fillStyle = resolveVgFillTint('wall', _cutState, _styles) ?? WALL_CATEGORY_FILL[cat];
     this.ctx.lineWidth = _edgePx;
     this.ctx.setLineDash(linePatternToDashArray(_edgePattern) as number[]);
 

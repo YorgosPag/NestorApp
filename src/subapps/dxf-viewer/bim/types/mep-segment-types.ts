@@ -294,6 +294,44 @@ export function isSegmentInclined(params: MepSegmentParams): boolean {
   return Math.abs(startMm - endMm) > 1;
 }
 
+// ─── Vertical riser detection (ADR-408 Φ15 — γεωμετρία οδηγεί το 2D σύμβολο) ─────
+
+/**
+ * Max plan (XY) run, in mm, for a segment to read as a VERTICAL riser (στήλη
+ * αποχέτευσης). A true soil stack has (near-)zero plan run; above this it is a
+ * sloped/horizontal pipe. Generous enough to absorb snapping jitter, tight enough
+ * to exclude a real sloped branch.
+ */
+export const RISER_MAX_PLAN_MM = 50;
+
+/**
+ * Min rise (|Δz|), in mm, for a (near-)vertical segment to count as a riser — below
+ * this a coincident-XY pair is a degenerate stub, not a stack.
+ */
+export const RISER_MIN_RISE_MM = 100;
+
+/**
+ * Is this segment a VERTICAL riser (κατακόρυφη στήλη)? Pure + geometry-driven
+ * (Revit-true: a vertical pipe is still a Pipe — the plan SYMBOL derives from it
+ * being ~perpendicular to the plan view, NOT a stored kind/type). True ⟺ a
+ * (near-)zero plan run AND a real rise. Consumed by the 2D renderer + the
+ * cross-floor «riser through» overlay.
+ */
+export function isSegmentVertical(params: MepSegmentParams): boolean {
+  if (derivePlanLengthMm(params) >= RISER_MAX_PLAN_MM) return false;
+  const { startMm, endMm } = resolveSegmentEndpointElevationsMm(params);
+  return Math.abs(endMm - startMm) > RISER_MIN_RISE_MM;
+}
+
+/**
+ * Symbol direction of a riser — `'up'` when the end is higher than the start, else
+ * `'down'`. Drives the plan symbol's up/down arrow (Revit «pipe up / pipe down»).
+ */
+export function riserDirection(params: MepSegmentParams): 'up' | 'down' {
+  const { startMm, endMm } = resolveSegmentEndpointElevationsMm(params);
+  return endMm >= startMm ? 'up' : 'down';
+}
+
 // ─── Slope (κλίση) — derived+invertible projection of per-endpoint z (Φ14 #2) ──
 
 /**

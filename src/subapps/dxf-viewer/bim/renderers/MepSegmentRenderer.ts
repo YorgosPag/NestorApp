@@ -30,11 +30,14 @@ import type { Entity } from '../../types/entities';
 import type { MepSegmentEntity, MepSegmentDomain } from '../types/mep-segment-types';
 import {
   isSegmentInclined,
+  isSegmentVertical,
+  riserDirection,
   resolveSegmentEndpointElevationsMm,
   derivePlanLengthMm,
   deriveSlopePercent,
   resolveSegmentBimCategory,
 } from '../types/mep-segment-types';
+import { buildRiserSymbol, RISER_SYMBOL_RADIUS_PX } from '../mep-segments/mep-riser-symbol';
 import { pointInPolygon } from '../geometry/shared/polygon-utils';
 import { computeTrimmedSegmentGeometry } from '../geometry/mep-segment-geometry';
 import { useMepSegmentTrimStore } from '../mep-fittings/mep-segment-trim-store';
@@ -119,6 +122,14 @@ export class MepSegmentRenderer extends BaseEntityRenderer {
 
     if (!segment.geometry || !segment.params) return;
 
+    // ADR-408 Φ15 — a VERTICAL riser (κατακόρυφη στήλη) has a (near-)zero plan run,
+    // so its footprint is degenerate (would bail at the verts<3 guard below). Draw
+    // the Revit «pipe up/down» plan SYMBOL at its XY instead, then return.
+    if (isSegmentVertical(segment.params)) {
+      this.renderRiser(segment, options);
+      return;
+    }
+
     // ADR-408 Φ11 — trim the run so it stops at any fitting on its ends (Revit
     // "pipe meets the fitting face"). Render-time, scene-derived (trim store),
     // zero persistence/mutation. Untrimmed segments use the cached geometry.
@@ -137,16 +148,7 @@ export class MepSegmentRenderer extends BaseEntityRenderer {
     // the per-domain default. Gated by the per-view `colorBySystem` master toggle
     // (Φ7): OFF ⇒ every segment keeps its domain default. The segment id is the
     // colour-index key (network members carry `entityId === segment.id`).
-    const colorBySystem = useDrawingScaleStore.getState().colorBySystem;
-    const systems = useMepSystemStore.getState().getSystems();
-    const systemColor = colorBySystem && systems.length > 0
-      ? resolveEntitySystemColor(segment.id, getEntitySystemColorIndexCached(systems))
-      : null;
-    // ADR-408 Φ14 — System colour wins; else the instance classification hint
-    // (drainage = brown) colours a standalone pipe; else the per-domain default.
-    const baseColor = systemColor ?? resolveSegmentClassificationColor(segment.params.classification);
-    const strokeColor = baseColor ?? DOMAIN_STROKE[domain];
-    const fillColor = baseColor ? hexToRgba(baseColor, SEGMENT_SYSTEM_FILL_ALPHA) : DOMAIN_FILL[domain];
+    const { strokeColor, fillColor } = this.resolveSegmentColors(segment);
 
     const phaseState = this.phaseManager.determinePhase(entity as Entity, options);
 
@@ -251,6 +253,16 @@ export class MepSegmentRenderer extends BaseEntityRenderer {
   hitTest(entity: EntityModel, point: Point2D, tolerance: number): boolean {
     if (!isMepSegmentEntity(entity)) return false;
     const segment = entity as MepSegmentEntity;
+    // ADR-408 Φ15 — a vertical riser is a point glyph (degenerate footprint): pick
+    // by distance to its XY within a forgiving radius (pick tolerance ×3, since the
+    // screen glyph is larger than the pipe's plan footprint).
+    if (isSegmentVertical(segment.params)) {
+      const p = segment.params.startPoint;
+      const r = tolerance * 3;
+      const dx = point.x - p.x;
+      const dy = point.y - p.y;
+      return dx * dx + dy * dy <= r * r;
+    }
     const bb = segment.geometry?.bbox;
     if (!bb) return false;
     // Bbox quick-reject with tolerance (mirror BeamRenderer).
@@ -267,6 +279,69 @@ export class MepSegmentRenderer extends BaseEntityRenderer {
   }
 
   // ─── Internal helpers ────────────────────────────────────────────────────────
+
+  /**
+   * Resolve the segment's stroke + fill colour (ADR-408 Φ9/Φ10/Φ14 SSoT): a System
+   * colour wins (when colour-by-system is on), else the instance classification hint
+   * (drainage = brown), else the per-domain default. Shared by the footprint path
+   * and the vertical-riser glyph (Φ15).
+   */
+  private resolveSegmentColors(segment: MepSegmentEntity): { strokeColor: string; fillColor: string } {
+    const colorBySystem = useDrawingScaleStore.getState().colorBySystem;
+    const systems = useMepSystemStore.getState().getSystems();
+    const systemColor = colorBySystem && systems.length > 0
+      ? resolveEntitySystemColor(segment.id, getEntitySystemColorIndexCached(systems))
+      : null;
+    const baseColor = systemColor ?? resolveSegmentClassificationColor(segment.params.classification);
+    const domain = segment.params.domain;
+    return {
+      strokeColor: baseColor ?? DOMAIN_STROKE[domain],
+      fillColor: baseColor ? hexToRgba(baseColor, SEGMENT_SYSTEM_FILL_ALPHA) : DOMAIN_FILL[domain],
+    };
+  }
+
+  /**
+   * ADR-408 Φ15 — render a vertical riser (κατακόρυφη στήλη) as the Revit «pipe
+   * up/down» plan glyph (circle + inner cross + directional arrow) at its XY, in
+   * SCREEN space (constant size). Replaces the degenerate zero-length footprint.
+   */
+  private renderRiser(segment: MepSegmentEntity, options: RenderOptions): void {
+    const { strokeColor } = this.resolveSegmentColors(segment);
+    const centre = this.worldToScreen({ x: segment.params.startPoint.x, y: segment.params.startPoint.y });
+    const symbol = buildRiserSymbol(centre, RISER_SYMBOL_RADIUS_PX, riserDirection(segment.params));
+
+    const phaseState = this.phaseManager.determinePhase(segment as Entity, options);
+    this.ctx.save();
+    this.ctx.setLineDash([]);
+
+    // Hover halo — a thicker translucent ring (mirror the footprint glow).
+    if (phaseState.phase === 'highlighted') {
+      this.ctx.strokeStyle = HOVER_HIGHLIGHT.ENTITY.glowColor;
+      this.ctx.lineWidth = RENDER_LINE_WIDTHS.NORMAL + HOVER_HIGHLIGHT.ENTITY.glowExtraWidth;
+      this.ctx.globalAlpha = HOVER_HIGHLIGHT.ENTITY.glowOpacity;
+      this.ctx.beginPath();
+      this.ctx.arc(symbol.cx, symbol.cy, symbol.r + 2, 0, Math.PI * 2);
+      this.ctx.stroke();
+      this.ctx.globalAlpha = 1;
+    }
+
+    this.phaseManager.applyPhaseStyle(segment as Entity, phaseState);
+    this.ctx.strokeStyle = strokeColor;
+    this.ctx.lineWidth = RENDER_LINE_WIDTHS.NORMAL;
+    // Circle.
+    this.ctx.beginPath();
+    this.ctx.arc(symbol.cx, symbol.cy, symbol.r, 0, Math.PI * 2);
+    this.ctx.stroke();
+    // Inner cross + direction arrow.
+    for (const [a, b] of symbol.strokes) {
+      this.ctx.beginPath();
+      this.ctx.moveTo(a.x, a.y);
+      this.ctx.lineTo(b.x, b.y);
+      this.ctx.stroke();
+    }
+    this.ctx.restore();
+    this.finalizeRender(segment, options);
+  }
 
   private drawPolygonPath(vertices: ReadonlyArray<{ x: number; y: number }>): void {
     if (vertices.length < 3) return;

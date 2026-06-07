@@ -21,6 +21,7 @@ import type { BOQItem } from '@/types/boq';
 import { nowISO } from '@/lib/date-local';
 import { stripUndefinedDeep } from '@/utils/firestore-sanitize';
 import type { OpeningKind, OpeningParams } from '../types/opening-types';
+import type { OpeningTypeParams } from '../types/bim-family-type';
 import type { AtoeMappingEntry } from '../config/bim-to-atoe-mapping';
 
 // ────────────────────────────────────────────────────────────────────────────
@@ -48,6 +49,31 @@ export interface GrouperOpeningRow {
   /** `createdAt.toMillis()` for stable chronological sort within a group. */
   readonly createdAtMillis: number;
 }
+
+/**
+ * Raw persisted-opening row (ADR-421 SLICE C cross-floor BOQ re-feed). Unlike
+ * {@link GrouperOpeningRow} it carries the Family/Type link so the effective
+ * («type wins») params can be resolved BEFORE signature grouping — the only way
+ * a non-active floor's stale drift-cache doc reports the new type's dimensions.
+ */
+export interface OpeningDocRow {
+  readonly id: string;
+  /** Cached (drift-tolerant) params straight from the doc — NOT yet effective. */
+  readonly params: OpeningParams;
+  readonly typeId?: string;
+  readonly typeOverrides?: Partial<OpeningTypeParams>;
+  readonly createdAtMillis: number;
+}
+
+/**
+ * Effective-param resolver injected into the pure helpers below so this module
+ * stays free of the family-type store (which `resolveOpeningEffective` reads).
+ * Signature matches `resolveOpeningEffective(cached, link)`.
+ */
+export type OpeningEffectiveResolver = (
+  cached: OpeningParams,
+  link: { typeId?: string; typeOverrides?: Partial<OpeningTypeParams> },
+) => OpeningParams;
 
 export interface OpeningGroupBuildContext {
   readonly companyId: string;
@@ -218,6 +244,63 @@ export function groupBySignature(
     bucket.rows.sort((a, b) => a.createdAtMillis - b.createdAtMillis);
   }
   return buckets;
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+// EFFECTIVE-AWARE GROUPING (ADR-421 SLICE C — cross-floor BOQ re-feed)
+// ────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Bucket raw opening docs by their EFFECTIVE («type wins») signature. Members
+ * carry the resolved params (so mark-range/payload + cross-type quantity are
+ * correct even when a non-active floor's doc still holds the old drift-cache).
+ * Pure — the type→effective resolution is injected.
+ */
+export function buildEffectiveSignatureMembers(
+  rows: readonly OpeningDocRow[],
+  resolve: OpeningEffectiveResolver,
+): Map<string, { signature: OpeningSignature; members: GrouperOpeningRow[] }> {
+  const buckets = new Map<string, { signature: OpeningSignature; members: GrouperOpeningRow[] }>();
+  for (const row of rows) {
+    const eff = resolve(row.params, { typeId: row.typeId, typeOverrides: row.typeOverrides });
+    const sig = computeOpeningSignature(eff);
+    const key = signatureKey(sig);
+    let bucket = buckets.get(key);
+    if (!bucket) {
+      bucket = { signature: sig, members: [] };
+      buckets.set(key, bucket);
+    }
+    bucket.members.push({ id: row.id, kind: sig.kind, params: eff, createdAtMillis: row.createdAtMillis });
+  }
+  for (const bucket of buckets.values()) {
+    bucket.members.sort((a, b) => a.createdAtMillis - b.createdAtMillis);
+  }
+  return buckets;
+}
+
+/**
+ * The signature groups a family-type edit can affect, for the rows of `typeId`:
+ * the OLD signature (from the stale drift-cache `doc.params` — free, no prev-type
+ * snapshot needed) plus the NEW signature (from the effective params resolved
+ * against the already-updated live type). Deduped by {@link signatureKey}.
+ * Overridden instances whose effective dims don't move collapse to one entry.
+ */
+export function collectAffectedSignatures(
+  rows: readonly OpeningDocRow[],
+  typeId: string,
+  resolve: OpeningEffectiveResolver,
+): OpeningSignature[] {
+  const affected = new Map<string, OpeningSignature>();
+  for (const row of rows) {
+    if (row.typeId !== typeId) continue;
+    const oldSig = computeOpeningSignature(row.params);
+    affected.set(signatureKey(oldSig), oldSig);
+    const newSig = computeOpeningSignature(
+      resolve(row.params, { typeId, typeOverrides: row.typeOverrides }),
+    );
+    affected.set(signatureKey(newSig), newSig);
+  }
+  return [...affected.values()];
 }
 
 // ────────────────────────────────────────────────────────────────────────────

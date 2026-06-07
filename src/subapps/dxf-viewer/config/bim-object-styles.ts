@@ -12,6 +12,35 @@ import type { PenIndex } from './bim-pen-table';
 import type { LinePatternKey } from './bim-line-patterns';
 
 /**
+ * ADR-375 Phase C.9 — Revit-grade προκαθορισμένα ΧΡΩΜΑΤΑ γραμμής ανά κατηγορία.
+ *
+ * Κλειδωμένη παλέτα (Giorgio 2026-06-08, «Εξευγενισμένη της εφαρμογής»). Κοινό
+ * projection/cut χρώμα ανά κατηγορία (όπως η μία στήλη «Line Color» των Revit
+ * Object Styles). Η Revit default είναι κυρίως μαύρο + ιεραρχία πάχους — αυτή η
+ * παλέτα είναι θεμιτή house-style επέκταση που δίνει διακριτή χρωματική ταυτότητα.
+ *
+ * SSoT: τα `projectionColor`/`cutColor` στο `DEFAULT_OBJECT_STYLES` οδηγούν ΚΑΙ το
+ * 2D outline (resolveSubcategoryStyle) ΚΑΙ τα 3D edge overlays (resolve3DEdgeStyle)
+ * — μηδέν hardcoded χρώμα στους renderers.
+ */
+export const BIM_CATEGORY_LINE_COLORS = {
+  /** Εξωτερικός τοίχος — σχεδόν μαύρο, βαρύ (parent `wall`). */
+  wallExterior: '#2b2f36',
+  /** Εσωτερικός τοίχος — γκρι μεσαίο (subcategory `wall:interior`). */
+  wallInterior: '#6b7280',
+  /** Κολώνα — slate (parent `column`). */
+  column: '#5b6478',
+  /** Τοιχίο Ω.Σ. — σκούρο μπλε-RC (subcategory `column:shear-wall`). */
+  shearWall: '#2f3a4a',
+  /** Πλάκα — taupe (parent `slab`). */
+  slab: '#6e6358',
+  /** Πόρτα — πορτοκαλί ξύλου (opening door-* subcategories). */
+  door: '#c97c2f',
+  /** Παράθυρο — μπλε τζαμιού (opening window-* subcategories). */
+  window: '#2d72b8',
+} as const;
+
+/**
  * Discriminated entity categories matching our BIM renderers.
  * Each maps to projection + cut pen indices (Revit Object Styles).
  */
@@ -180,14 +209,58 @@ export const MODEL_BIM_CATEGORIES: readonly BimCategory[] = [
 export const STRUCTURAL_BIM_CATEGORIES = MODEL_BIM_CATEGORIES;
 
 export const DEFAULT_OBJECT_STYLES: Readonly<Record<BimCategory, ObjectStyle>> = {
-  wall:           { projectionPen: 5,  cutPen: 7  },
-  column:         { projectionPen: 5,  cutPen: 9  },
+  // ADR-375 C.9 — εξωτ. τοίχος = parent χρώμα (σκούρο/βαρύ)· εσωτ. τοίχος = subcategory `interior` (γκρι).
+  wall: {
+    projectionPen: 5, cutPen: 7,
+    projectionColor: BIM_CATEGORY_LINE_COLORS.wallExterior,
+    cutColor: BIM_CATEGORY_LINE_COLORS.wallExterior,
+    subcategories: {
+      interior: {
+        projectionColor: BIM_CATEGORY_LINE_COLORS.wallInterior,
+        cutColor: BIM_CATEGORY_LINE_COLORS.wallInterior,
+      },
+    },
+  },
+  // ADR-375 C.9 — κολώνα = parent (slate)· τοιχίο Ω.Σ. = subcategory `shear-wall` (σκούρο μπλε-RC).
+  column: {
+    projectionPen: 5, cutPen: 9,
+    projectionColor: BIM_CATEGORY_LINE_COLORS.column,
+    cutColor: BIM_CATEGORY_LINE_COLORS.column,
+    subcategories: {
+      'shear-wall': {
+        projectionColor: BIM_CATEGORY_LINE_COLORS.shearWall,
+        cutColor: BIM_CATEGORY_LINE_COLORS.shearWall,
+      },
+    },
+  },
   beam: {
     projectionPen: 4, cutPen: 6,
     subcategories: { 'hidden-lines': { linePattern: 'dashed' } },
   },
-  slab:           { projectionPen: 5,  cutPen: 7  },
-  opening:        { projectionPen: 3,  cutPen: 4  },
+  // ADR-375 C.9 — πλάκα = taupe (μονόχρωμο· οι ανά-kind αποχρώσεις ζουν στο fill SSoT).
+  slab: {
+    projectionPen: 5, cutPen: 7,
+    projectionColor: BIM_CATEGORY_LINE_COLORS.slab,
+    cutColor: BIM_CATEGORY_LINE_COLORS.slab,
+  },
+  // ADR-375 C.9 — κούφωμα: πόρτα πορτοκαλί / παράθυρο μπλε ανά subcategory (ο
+  // OpeningRenderer περνά ήδη per-kind subcat). Parent = ουδέτερο fallback (door tone).
+  opening: {
+    projectionPen: 3, cutPen: 4,
+    projectionColor: BIM_CATEGORY_LINE_COLORS.door,
+    cutColor: BIM_CATEGORY_LINE_COLORS.door,
+    subcategories: {
+      'door-opening':      { projectionColor: BIM_CATEGORY_LINE_COLORS.door,   cutColor: BIM_CATEGORY_LINE_COLORS.door },
+      'door-frame':        { projectionColor: BIM_CATEGORY_LINE_COLORS.door,   cutColor: BIM_CATEGORY_LINE_COLORS.door },
+      'door-glass':        { projectionColor: BIM_CATEGORY_LINE_COLORS.door,   cutColor: BIM_CATEGORY_LINE_COLORS.door },
+      'door-plan-swing':   { projectionColor: BIM_CATEGORY_LINE_COLORS.door,   cutColor: BIM_CATEGORY_LINE_COLORS.door },
+      'wall-cutout-jambs': { projectionColor: BIM_CATEGORY_LINE_COLORS.door,   cutColor: BIM_CATEGORY_LINE_COLORS.door },
+      'sliding-track':     { projectionColor: BIM_CATEGORY_LINE_COLORS.door,   cutColor: BIM_CATEGORY_LINE_COLORS.door },
+      'window-opening':    { projectionColor: BIM_CATEGORY_LINE_COLORS.window, cutColor: BIM_CATEGORY_LINE_COLORS.window },
+      'window-frame':      { projectionColor: BIM_CATEGORY_LINE_COLORS.window, cutColor: BIM_CATEGORY_LINE_COLORS.window },
+      'window-glass':      { projectionColor: BIM_CATEGORY_LINE_COLORS.window, cutColor: BIM_CATEGORY_LINE_COLORS.window },
+    },
+  },
   'slab-opening': { projectionPen: 3,  cutPen: 4  },
   stair: {
     projectionPen: 3, cutPen: 5,

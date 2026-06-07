@@ -1,0 +1,43 @@
+/**
+ * Wall 2Δ render palette + function helpers (ADR-375 C.9).
+ *
+ * Εξήχθη από τον `WallRenderer` (inline `CATEGORY_FILL`) ώστε ο renderer να μην
+ * κρατά hardcoded χρώματα (FULL SSOT, μηδέν hardcoded χρώμα σε renderer).
+ *
+ * Διαχωρισμός ευθυνών:
+ *   - **Line color** (outline) → Object Styles SSoT (`DEFAULT_OBJECT_STYLES.wall`),
+ *     resolver-driven (parent = εξωτ. τοίχος, subcategory `interior` = εσωτ. τοίχος).
+ *   - **Fill tint** (translucent γέμισμα, 2D-only) → εδώ (`WALL_CATEGORY_FILL`).
+ *
+ * @see config/bim-object-styles.ts (BIM_CATEGORY_LINE_COLORS)
+ */
+import type { WallCategory } from '../types/wall-types';
+
+/** Translucent fill colour per category (CAD industry convention). 2D-only. */
+export const WALL_CATEGORY_FILL: Readonly<Record<WallCategory, string>> = {
+  exterior:  'rgba(120, 144, 156, 0.18)', // concrete slate
+  interior:  'rgba(205, 158, 110, 0.16)', // brick warm
+  partition: 'rgba(205, 158, 110, 0.10)', // brick lighter
+  parapet:   'rgba(120, 144, 156, 0.22)', // concrete deeper
+  fence:     'rgba(141, 110, 99, 0.18)',  // stone brown
+};
+
+/**
+ * Whether a wall function reads as "interior" for line-colour purposes.
+ * interior + partition (διαχωριστικός) → εσωτερικός γκρι τόνος· exterior/parapet/
+ * fence → εξωτερικός βαρύς τόνος (parent χρώμα).
+ */
+export function isInteriorWallCategory(category: WallCategory): boolean {
+  return category === 'interior' || category === 'partition';
+}
+
+/**
+ * Object Styles subcategory key για το footprint outline pass ανά function.
+ * Εσωτ./διαχωριστικός → `'interior'` (subcategory line color)· αλλιώς
+ * `'common-edges'` (κενό color → πέφτει σε parent = εξωτ. χρώμα).
+ *
+ * SSoT: το μοιράζονται 2D `WallRenderer` ΚΑΙ 3D `attachEdgesProjection`.
+ */
+export function wallFootprintSubcategory(category: WallCategory): 'interior' | 'common-edges' {
+  return isInteriorWallCategory(category) ? 'interior' : 'common-edges';
+}
