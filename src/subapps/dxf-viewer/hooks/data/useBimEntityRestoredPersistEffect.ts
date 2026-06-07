@@ -51,7 +51,9 @@ type BimRestoreEntityType =
   // ADR-419 — per-room floor-finish covering.
   | 'floor-finish'
   // ADR-408 Εύρος Β #3 — area-based underfloor radiant heating loop.
-  | 'mep-underfloor';
+  | 'mep-underfloor'
+  // ADR-422 — analytical thermal space (IfcSpace).
+  | 'thermal-space';
 
 export function useBimEntityRestoredPersistEffect<T extends AnySceneEntity, S>(
   entityType: BimRestoreEntityType,

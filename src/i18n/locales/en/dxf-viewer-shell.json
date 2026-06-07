@@ -508,6 +508,9 @@
         "tooFewVertices": "Floor finish requires at least 3 vertices"
       }
     },
+    "thermalSpace": {
+      "statusPlace": "Click inside a room to place a thermal space"
+    },
     "mepUnderfloor": {
       "statusFirstVertex": "Click for first heating-area vertex",
       "statusNextVertex": "Click for next vertex — Enter to close",
@@ -848,6 +851,7 @@
       "furnitureProperties": "Furniture Properties",
       "floorplanSymbolProperties": "Symbol Properties",
       "floorFinishProperties": "Floor Finish Properties",
+      "thermalSpaceProperties": "Thermal Space Properties",
       "mepFixtureLibrary": "Light Fixture Library"
     },
     "panels": {
@@ -954,6 +958,9 @@
       "floorFinishGeometry": "Geometry",
       "floorFinishAppearance": "Appearance",
       "floorFinishActions": "Actions",
+      "thermalSpaceProperties": "Properties",
+      "thermalSpaceGeometry": "Geometry",
+      "thermalSpaceActions": "Actions",
       "mepSegmentSection": "Section",
       "mepSegmentDimensions": "Dimensions",
       "mepSegmentGeometry": "Geometry",
@@ -1211,6 +1218,10 @@
         "floorFinish": {
           "label": "Floor Finish",
           "tooltip": "Draw a floor finish covering per room (click-click) — Revit IfcCovering style (shortcut FF)"
+        },
+        "thermalSpace": {
+          "label": "Thermal Space",
+          "tooltip": "Place a thermal space (click inside a room) — Revit IfcSpace analytical space for the heating study (shortcut TS)"
         },
         "group": {
           "label": "Structural Elements",
@@ -2221,6 +2232,15 @@
         "delete": "Delete",
         "deleteConfirm": "Delete floor finish? This action cannot be undone."
       },
+      "thermalSpaceEditor": {
+        "useType": "Use",
+        "setpointTempC": "Temperature (°C)",
+        "airChangesPerHour": "Air changes (1/h)",
+        "ceilingHeightMm": "Height (mm)",
+        "close": "Close",
+        "delete": "Delete",
+        "deleteConfirm": "Delete thermal space? This action cannot be undone."
+      },
       "mepSegmentEditor": {
         "width": "Width",
         "height": "Height",
@@ -3153,6 +3173,18 @@
       "parquet": "Parquet",
       "epoxy": "Epoxy",
       "carpet": "Carpet"
+    }
+  },
+  "thermalSpace": {
+    "useTypes": {
+      "bedroom": "Bedroom",
+      "living-room": "Living room",
+      "kitchen": "Kitchen",
+      "bathroom": "Bathroom",
+      "wc": "WC",
+      "hallway": "Hallway / Stairwell",
+      "office": "Office",
+      "generic": "Generic"
     }
   }
 }

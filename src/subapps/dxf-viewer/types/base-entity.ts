@@ -73,7 +73,9 @@ export type EntityType =
   // ADR-408 Eyros B #3 — area-based radiant floor heating loop (IfcSpaceHeater).
   | 'mep-underfloor'
   // ADR-419 — thin polygon floor covering per room (IfcCovering FLOORING).
-  | 'floor-finish';
+  | 'floor-finish'
+  // ADR-422 — analytical thermal space / θερμικός χώρος (IfcSpace).
+  | 'thermal-space';
 
 export interface BaseEntity {
   id: string;

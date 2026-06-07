@@ -323,7 +323,7 @@ export interface DrawingEventMap {
   // DeleteEntityCommand.undo() and DeleteMultipleEntitiesCommand.undo().
   'bim:entity-restore-requested': {
     // ADR-406 — 'mep-fixture' appended. ADR-407 — 'railing' appended. ADR-408 Φ3 — 'electrical-panel'. ADR-408 Φ8 — 'mep-segment'. ADR-410 — 'furniture'. ADR-408 Φ12 — 'mep-manifold'. ADR-408 Εύρος Β — 'mep-radiator'. ADR-408 Εύρος Β #2 — 'mep-boiler'.
-    entityType: 'wall' | 'opening' | 'slab' | 'slab-opening' | 'column' | 'beam' | 'stair' | 'mep-fixture' | 'electrical-panel' | 'mep-manifold' | 'mep-radiator' | 'mep-boiler' | 'mep-underfloor' | 'railing' | 'mep-segment' | 'furniture' | 'floor-finish';
+    entityType: 'wall' | 'opening' | 'slab' | 'slab-opening' | 'column' | 'beam' | 'stair' | 'mep-fixture' | 'electrical-panel' | 'mep-manifold' | 'mep-radiator' | 'mep-boiler' | 'mep-underfloor' | 'railing' | 'mep-segment' | 'furniture' | 'floor-finish' | 'roof' | 'thermal-space';
     entitySnapshot: AnySceneEntity;
     source: 'undo-delete' | 'redo-restore';
   };

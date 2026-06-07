@@ -50,7 +50,9 @@ export type IfcEntityType =
   // ADR-408 Eyros B #2 — hydronic heat source (boiler; Mechanical Equipment family).
   | 'IfcBoiler'
   // ADR-419 — thin floor covering per room (IfcCovering FLOORING).
-  | 'IfcCovering';
+  | 'IfcCovering'
+  // ADR-422 — analytical thermal space / θερμικός χώρος (HVAC analytical space).
+  | 'IfcSpace';
 
 export const IFC_ENTITY_TYPE_VALUES: readonly IfcEntityType[] = [
   'IfcWall',
@@ -86,6 +88,8 @@ export const IFC_ENTITY_TYPE_VALUES: readonly IfcEntityType[] = [
   'IfcBoiler',
   // ADR-419 — thin floor covering per room.
   'IfcCovering',
+  // ADR-422 — analytical thermal space (IfcSpace).
+  'IfcSpace',
 ] as const;
 
 export type IfcPropertySetValue = string | number | boolean | null;

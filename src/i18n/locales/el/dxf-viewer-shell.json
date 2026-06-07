@@ -508,6 +508,9 @@
         "tooFewVertices": "Η επικάλυψη δαπέδου χρειάζεται τουλάχιστον 3 κορυφές"
       }
     },
+    "thermalSpace": {
+      "statusPlace": "Κλικ μέσα σε δωμάτιο για δημιουργία θερμικού χώρου"
+    },
     "mepUnderfloor": {
       "statusFirstVertex": "Κλικ για πρώτη κορυφή θερμαινόμενης περιοχής",
       "statusNextVertex": "Κλικ για επόμενη κορυφή — Enter για κλείσιμο",
@@ -848,6 +851,7 @@
       "furnitureProperties": "Ιδιότητες Επίπλου",
       "floorplanSymbolProperties": "Ιδιότητες Συμβόλου",
       "floorFinishProperties": "Ιδιότητες Επικάλυψης Δαπέδου",
+      "thermalSpaceProperties": "Ιδιότητες Θερμικού Χώρου",
       "mepFixtureLibrary": "Βιβλιοθήκη Φωτιστικών"
     },
     "panels": {
@@ -954,6 +958,9 @@
       "floorFinishGeometry": "Γεωμετρία",
       "floorFinishAppearance": "Εμφάνιση",
       "floorFinishActions": "Ενέργειες",
+      "thermalSpaceProperties": "Ιδιότητες",
+      "thermalSpaceGeometry": "Γεωμετρία",
+      "thermalSpaceActions": "Ενέργειες",
       "mepSegmentSection": "Διατομή",
       "mepSegmentDimensions": "Διαστάσεις",
       "mepSegmentGeometry": "Γεωμετρία",
@@ -1211,6 +1218,10 @@
         "floorFinish": {
           "label": "Επικάλυψη Δαπέδου",
           "tooltip": "Σχεδίαση επικάλυψης δαπέδου ανά δωμάτιο (κλικ-κλικ) — τεχνολογία Revit «IfcCovering» (συντόμευση FF)"
+        },
+        "thermalSpace": {
+          "label": "Θερμικός Χώρος",
+          "tooltip": "Δημιουργία θερμικού χώρου (κλικ μέσα σε δωμάτιο) — αναλυτικός χώρος Revit «IfcSpace» για μελέτη θέρμανσης (συντόμευση TS)"
         },
         "group": {
           "label": "Δομικά Στοιχεία",
@@ -2221,6 +2232,15 @@
         "delete": "Διαγραφή",
         "deleteConfirm": "Διαγραφή επικάλυψης δαπέδου; Η ενέργεια δεν μπορεί να αναιρεθεί."
       },
+      "thermalSpaceEditor": {
+        "useType": "Χρήση",
+        "setpointTempC": "Θερμοκρασία (°C)",
+        "airChangesPerHour": "Εναλλαγές αέρα (1/h)",
+        "ceilingHeightMm": "Ύψος (mm)",
+        "close": "Κλείσιμο",
+        "delete": "Διαγραφή",
+        "deleteConfirm": "Διαγραφή θερμικού χώρου; Η ενέργεια δεν μπορεί να αναιρεθεί."
+      },
       "mepSegmentEditor": {
         "width": "Πλάτος",
         "height": "Ύψος",
@@ -3153,6 +3173,18 @@
       "parquet": "Παρκέ",
       "epoxy": "Εποξειδικό",
       "carpet": "Μοκέτα"
+    }
+  },
+  "thermalSpace": {
+    "useTypes": {
+      "bedroom": "Υπνοδωμάτιο",
+      "living-room": "Καθιστικό",
+      "kitchen": "Κουζίνα",
+      "bathroom": "Λουτρό",
+      "wc": "WC",
+      "hallway": "Διάδρομος / Κλιμακοστάσιο",
+      "office": "Γραφείο",
+      "generic": "Γενική χρήση"
     }
   }
 }
