@@ -42,6 +42,9 @@ export const ENTITY_DISPLAY_ORDER: SearchEntityType[] = [
   SEARCH_ENTITY_TYPES.PROJECT,
   SEARCH_ENTITY_TYPES.CONTACT,
   SEARCH_ENTITY_TYPES.BUILDING,
+  // Building → Floor → Unit (IFC hierarchy). Without FLOOR here, floor results
+  // are counted in totalResults but never rendered (BUG #5 — invisible rows).
+  SEARCH_ENTITY_TYPES.FLOOR,
   SEARCH_ENTITY_TYPES.PROPERTY,
   SEARCH_ENTITY_TYPES.FILE,
   SEARCH_ENTITY_TYPES.PARKING,

@@ -463,6 +463,7 @@
     "entityTypes": {
       "project": "Έργο",
       "building": "Κτίριο",
+      "floor": "Όροφος",
       "property": "Ακίνητο",
       "contact": "Επαφή",
       "file": "Αρχείο",

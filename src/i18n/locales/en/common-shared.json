@@ -463,6 +463,7 @@
     "entityTypes": {
       "project": "Project",
       "building": "Building",
+      "floor": "Floor",
       "property": "Property",
       "contact": "Contact",
       "file": "File",
