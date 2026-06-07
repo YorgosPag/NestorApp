@@ -66,8 +66,13 @@ export const FLOORPLAN_SYMBOL_CATALOG: readonly FloorplanSymbolPreset[] = [
   { id: 'desk_01', category: 'furniture', kind: 'desk', labelKey: 'floorplanSymbol.catalog.desk', widthMm: 1200, depthMm: 600, source: OWN },
 ] as const;
 
-/** Default asset id picked by the placement tool when none is chosen. */
-export const DEFAULT_FLOORPLAN_SYMBOL_ASSET_ID = 'wc_standard_01';
+/**
+ * Default asset id picked by the placement tool when none is chosen. ADR-408 Φ14
+ * (A1): the sanitary symbols migrated to connectable `mep-fixture` kinds, so the
+ * 2D-only floorplan-symbol tool defaults to a kitchen symbol (the sanitary presets
+ * remain in the catalog only for back-compat rendering of legacy data).
+ */
+export const DEFAULT_FLOORPLAN_SYMBOL_ASSET_ID = 'kitchen_sink_01';
 
 /** Resolve a catalog preset by id. Returns `undefined` for an unknown asset. */
 export function resolveFloorplanSymbolPreset(

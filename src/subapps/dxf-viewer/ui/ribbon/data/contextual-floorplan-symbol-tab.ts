@@ -15,12 +15,19 @@ import { FLOORPLAN_SYMBOL_CATALOG } from '../../../bim/floorplan-symbols/floorpl
 
 export const FLOORPLAN_SYMBOL_CONTEXTUAL_TRIGGER = 'floorplan-symbol-tool-active';
 
-/** Catalog options GENERATED from the SSoT (never hand-listed). */
-const CATALOG_OPTIONS = FLOORPLAN_SYMBOL_CATALOG.map((p) => ({
-  value: p.id,
-  labelKey: p.labelKey,
-  isLiteralLabel: false,
-}));
+/**
+ * Catalog options GENERATED from the SSoT (never hand-listed). ADR-408 Φ14 (A1):
+ * the sanitary symbols (WC/washbasin/…) migrated to connectable `mep-fixture`
+ * kinds (ribbon «Είδη Υγιεινής»), so they are filtered OUT of this 2D-only picker —
+ * one canonical sanitary representation (Revit). Kitchen/furniture remain.
+ */
+const CATALOG_OPTIONS = FLOORPLAN_SYMBOL_CATALOG
+  .filter((p) => p.category !== 'sanitary')
+  .map((p) => ({
+    value: p.id,
+    labelKey: p.labelKey,
+    isLiteralLabel: false,
+  }));
 
 const ROTATION_DEG_OPTIONS = [
   { value: '0', labelKey: '0', isLiteralLabel: true },

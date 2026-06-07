@@ -34,14 +34,10 @@
     "noneBuilt": "Δεν βρέθηκε έγκυρο περίγραμμα τοιχίου στην επιλογή."
   },
   "perimeterColumnDiscrete": {
-    "nColumns_one": "{count} κολώνα",
-    "nColumns_other": "{count} κολώνες",
-    "nWalls_one": "{count} τοιχίο",
-    "nWalls_other": "{count} τοιχία",
-    "built_one": "Δημιουργήθηκε {count} κολώνα από το περίγραμμα.",
-    "built_other": "Δημιουργήθηκαν {count} κολώνες από το περίγραμμα.",
-    "builtWalls_one": "Δημιουργήθηκε {count} τοιχίο από το περίγραμμα.",
-    "builtWalls_other": "Δημιουργήθηκαν {count} τοιχία από το περίγραμμα.",
+    "nColumns": "{count, plural, one {# κολώνα} other {# κολώνες}}",
+    "nWalls": "{count, plural, one {# τοιχίο} other {# τοιχία}}",
+    "built": "{count, plural, one {Δημιουργήθηκε # κολώνα από το περίγραμμα.} other {Δημιουργήθηκαν # κολώνες από το περίγραμμα.}}",
+    "builtWalls": "{count, plural, one {Δημιουργήθηκε # τοιχίο από το περίγραμμα.} other {Δημιουργήθηκαν # τοιχία από το περίγραμμα.}}",
     "builtMixed": "Δημιουργήθηκαν {columns} και {walls} από το περίγραμμα.",
     "noneBuilt": "Δεν βρέθηκε έγκυρο περίγραμμα στην επιλογή."
   },
@@ -541,6 +537,9 @@
     "mepFloorDrain": {
       "statusPosition": "Κλικ για τοποθέτηση σιφωνιού δαπέδου"
     },
+    "mepSanitaryFixture": {
+      "statusPosition": "Κλικ για τοποθέτηση είδους υγιεινής"
+    },
     "electricalPanel": {
       "statusPosition": "Κλικ για τοποθέτηση ηλεκτρικού πίνακα"
     },
@@ -831,6 +830,7 @@
       "mepPipeNetwork": "Δίκτυο Σωληνώσεων",
       "mepFixtureProperties": "Ιδιότητες Φωτιστικού",
       "mepFloorDrainProperties": "Ιδιότητες Σιφωνιού",
+      "mepSanitaryFixtureProperties": "Ιδιότητες Είδους Υγιεινής",
       "mepManifoldProperties": "Ιδιότητες Συλλέκτη",
       "mepDrainageCollectorProperties": "Ιδιότητες Φρεατίου",
       "mepRadiatorProperties": "Ιδιότητες Καλοριφέρ",
@@ -931,6 +931,8 @@
       "mepFixtureCircuit": "Κύκλωμα",
       "mepFloorDrainGeometry": "Γεωμετρία",
       "mepFloorDrainActions": "Ενέργειες",
+      "mepSanitaryFixtureGeometry": "Γεωμετρία",
+      "mepSanitaryFixtureActions": "Ενέργειες",
       "mepManifoldSystem": "Σύστημα",
       "mepManifoldGeometry": "Γεωμετρία",
       "mepManifoldOutlets": "Έξοδοι",
@@ -1174,6 +1176,10 @@
         "mepFloorDrain": {
           "label": "Σιφώνι Δαπέδου",
           "tooltip": "Σιφώνι/στόμιο δαπέδου αποχέτευσης (τετράγωνη σχάρα, 1 έξοδος προς τον σωλήνα) — τοποθέτηση με ένα κλικ (πειθαρχία: υδραυλικά)"
+        },
+        "mepSanitary": {
+          "label": "Είδη Υγιεινής",
+          "tooltip": "Είδη υγιεινής (WC/νιπτήρας/ντουζιέρα/μπανιέρα/μπιντές) — κάθε ένα συνδέεται στο δίκτυο αποχέτευσης με 1 έξοδο. Τοποθέτηση με ένα κλικ (πειθαρχία: υδραυλικά)"
         },
         "mepRadiator": {
           "label": "Καλοριφέρ",
@@ -2151,6 +2157,16 @@
         "close": "Κλείσιμο",
         "delete": "Διαγραφή",
         "deleteConfirm": "Διαγραφή σιφωνιού; Η ενέργεια δεν μπορεί να αναιρεθεί."
+      },
+      "mepSanitaryFixtureEditor": {
+        "width": "Πλάτος",
+        "length": "Μήκος",
+        "rotation": "Περιστροφή",
+        "bodyHeight": "Ύψος σώματος",
+        "mountingElevation": "Ύψος τοποθέτησης",
+        "close": "Κλείσιμο",
+        "delete": "Διαγραφή",
+        "deleteConfirm": "Διαγραφή είδους υγιεινής; Η ενέργεια δεν μπορεί να αναιρεθεί."
       },
       "mepRadiatorEditor": {
         "width": "Πλάτος",

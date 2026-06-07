@@ -36,14 +36,6 @@ function mapNorm(fp: FootprintBasis, u: number, v: number): Point3D {
   };
 }
 
-/** Open polyline through a list of normalized points. */
-export function poly(
-  fp: FootprintBasis,
-  pts: ReadonlyArray<readonly [number, number]>,
-): SymbolStroke {
-  return pts.map(([u, v]) => mapNorm(fp, u, v));
-}
-
 /** Closed rectangle (5 pts) in normalized coords. */
 export function rect(fp: FootprintBasis, u0: number, v0: number, u1: number, v1: number): SymbolStroke {
   return [mapNorm(fp, u0, v0), mapNorm(fp, u1, v0), mapNorm(fp, u1, v1), mapNorm(fp, u0, v1), mapNorm(fp, u0, v0)];

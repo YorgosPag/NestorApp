@@ -27,6 +27,7 @@ import type {
   MepFixtureParams,
   MepFixtureShape,
 } from '../../../bim/types/mep-fixture-types';
+import { isSanitaryKind } from '../../../bim/sanitary/sanitary-symbol-spec';
 import { useCommandHistory } from '../../../core/commands';
 import { UpdateMepFixtureParamsCommand } from '../../../core/commands/entity-commands/UpdateMepFixtureParamsCommand';
 import { LevelSceneManagerAdapter } from '../../../systems/entity-creation/LevelSceneManagerAdapter';
@@ -203,11 +204,13 @@ export function useRibbonMepFixtureBridge(
       if (action !== MEP_FIXTURE_RIBBON_KEYS_ACTIONS.delete) return;
       const fixture = resolveFixture();
       if (!fixture) return;
-      // ADR-408 Φ14 — a floor drain (σιφώνι) shows its own delete prompt; both kinds
-      // share this bridge + delete path (`bim:mep-fixture-delete-requested`).
+      // ADR-408 Φ14 — floor drain + sanitary terminals show their own delete prompt;
+      // all kinds share this bridge + delete path (`bim:mep-fixture-delete-requested`).
       const confirmKey = fixture.params.kind === 'floor-drain'
         ? 'ribbon.commands.mepFloorDrainEditor.deleteConfirm'
-        : 'ribbon.commands.mepFixtureEditor.deleteConfirm';
+        : isSanitaryKind(fixture.params.kind)
+          ? 'ribbon.commands.mepSanitaryFixtureEditor.deleteConfirm'
+          : 'ribbon.commands.mepFixtureEditor.deleteConfirm';
       const confirmed = window.confirm(t(confirmKey));
       if (!confirmed) return;
       EventBus.emit('bim:mep-fixture-delete-requested', { fixtureId: fixture.id });

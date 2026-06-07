@@ -34,14 +34,10 @@
     "noneBuilt": "No valid structural-wall perimeter found in the selection."
   },
   "perimeterColumnDiscrete": {
-    "nColumns_one": "{count} column",
-    "nColumns_other": "{count} columns",
-    "nWalls_one": "{count} structural wall",
-    "nWalls_other": "{count} structural walls",
-    "built_one": "Created {count} column from the perimeter.",
-    "built_other": "Created {count} columns from the perimeter.",
-    "builtWalls_one": "Created {count} structural wall from the perimeter.",
-    "builtWalls_other": "Created {count} structural walls from the perimeter.",
+    "nColumns": "{count, plural, one {# column} other {# columns}}",
+    "nWalls": "{count, plural, one {# structural wall} other {# structural walls}}",
+    "built": "{count, plural, one {Created # column from the perimeter.} other {Created # columns from the perimeter.}}",
+    "builtWalls": "{count, plural, one {Created # structural wall from the perimeter.} other {Created # structural walls from the perimeter.}}",
     "builtMixed": "Created {columns} and {walls} from the perimeter.",
     "noneBuilt": "No valid perimeter found in the selection."
   },
@@ -541,6 +537,9 @@
     "mepFloorDrain": {
       "statusPosition": "Click to place floor drain"
     },
+    "mepSanitaryFixture": {
+      "statusPosition": "Click to place sanitary fixture"
+    },
     "electricalPanel": {
       "statusPosition": "Click to place electrical panel"
     },
@@ -831,6 +830,7 @@
       "mepPipeNetwork": "Pipe Network",
       "mepFixtureProperties": "Fixture Properties",
       "mepFloorDrainProperties": "Floor Drain Properties",
+      "mepSanitaryFixtureProperties": "Sanitary Fixture Properties",
       "mepManifoldProperties": "Manifold Properties",
       "mepDrainageCollectorProperties": "Catch Basin Properties",
       "mepRadiatorProperties": "Radiator Properties",
@@ -931,6 +931,8 @@
       "mepFixtureCircuit": "Circuit",
       "mepFloorDrainGeometry": "Geometry",
       "mepFloorDrainActions": "Actions",
+      "mepSanitaryFixtureGeometry": "Geometry",
+      "mepSanitaryFixtureActions": "Actions",
       "mepManifoldSystem": "System",
       "mepManifoldGeometry": "Geometry",
       "mepManifoldOutlets": "Outlets",
@@ -1174,6 +1176,10 @@
         "mepFloorDrain": {
           "label": "Floor Drain",
           "tooltip": "Place a floor drain (σιφώνι) with a single click — square grating, 1 sanitary-drainage outlet (discipline: plumbing)"
+        },
+        "mepSanitary": {
+          "label": "Sanitary Fixtures",
+          "tooltip": "Sanitary fixtures (WC/washbasin/shower/bathtub/bidet) — each connects to the drainage network via 1 outlet. Single-click placement (discipline: plumbing)"
         },
         "mepRadiator": {
           "label": "Radiator",
@@ -2151,6 +2157,16 @@
         "close": "Close",
         "delete": "Delete",
         "deleteConfirm": "Delete floor drain? This action cannot be undone."
+      },
+      "mepSanitaryFixtureEditor": {
+        "width": "Width",
+        "length": "Length",
+        "rotation": "Rotation",
+        "bodyHeight": "Body height",
+        "mountingElevation": "Mounting height",
+        "close": "Close",
+        "delete": "Delete",
+        "deleteConfirm": "Delete sanitary fixture? This action cannot be undone."
       },
       "mepRadiatorEditor": {
         "width": "Width",
