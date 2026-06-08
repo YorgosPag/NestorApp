@@ -1189,6 +1189,16 @@ Companion changes (same Phase 9E-1): `SceneModel.layersById?: Record<LayerId, Sc
 
 **Phase XX probe disposition**: instrumentation (`useRenderTrace` + `installSetStateTracer` + `traceSet` wrapper) stays deployed until Giorgio confirms idle steady state, then cleanup commit removes it.
 
+> **✅ 2026-06-08 — Phase XX probe cleanup DONE.** Removed both debug files
+> (`debug/useRenderTrace.ts` + `debug/render-loop-trace.ts`) and all 4 `useRenderTrace`
+> call sites (`DxfViewerContent`, `RibbonRoot`, `RibbonLargeButton`, `useDxfViewerState`).
+> The `traceSet`/`installSetStateTracer` probes were already gone. Reason: the unconditional
+> `[RENDER] …` logs flooded the console (esp. with MEP pipes on canvas, where the auto-design
+> reconcilers drive a render storm) and the diagnosis they served is concluded. The render
+> storm's Firestore symptom (`ca9` listener churn) is fixed separately in ADR-367 §2.4
+> (persistence-hook subscription stabilization). No Cardinal-Rule / subscription change here —
+> pure instrumentation removal.
+
 **Lezione**: client-side writes to server-only Firestore collections produce a self-reinforcing reject-loop that is **invisible to the React render-trace** until you wrap setters in stack-capturing decorators or read the Firestore stack frames (`__PRIVATE_syncEngineRejectFailedWrite`). When a "render loop" stack trace points at a Firestore subscription, the next question is always *"what is writing to this collection, and is the write being denied?"* — not *"which downstream consumer is unstable?"*.
 
 ---

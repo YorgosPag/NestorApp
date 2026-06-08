@@ -201,7 +201,7 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
   const { draftPolygon, setDraftPolygon, draftPolygonRef, isSavingPolygon, setIsSavingPolygon, finishDrawingWithPolygonRef, finishDrawing } = usePolygonCompletion({
     levelManager, overlayStore, eventBus, currentStatus, currentKind, activeTool, overlayMode,
   });
-  const { circleTTT, linePerpendicular, lineParallel, angleEntityMeasurement, stairTool, wallTool, slabTool, roofTool, floorFinishTool, columnTool, mepFixtureTool, furnitureTool, floorplanSymbolTool, electricalPanelTool, mepManifoldTool, mepRadiatorTool, mepBoilerTool, mepUnderfloorTool, thermalSpaceTool, mepSegmentTool, mepRiserTool, railingTool, beamTool, slabOpeningTool, openingTool } = useSpecialTools({ activeTool, levelManager });
+  const { circleTTT, linePerpendicular, lineParallel, angleEntityMeasurement, stairTool, wallTool, slabTool, roofTool, floorFinishTool, columnTool, mepFixtureTool, furnitureTool, floorplanSymbolTool, electricalPanelTool, mepManifoldTool, mepRadiatorTool, mepBoilerTool, mepWaterHeaterTool, mepUnderfloorTool, thermalSpaceTool, mepSegmentTool, mepRiserTool, railingTool, beamTool, slabOpeningTool, openingTool } = useSpecialTools({ activeTool, levelManager });
   // === Cursor + touch gestures ===
   const { updatePosition, setActive } = useCursorActions();
   const { layoutMode: canvasLayoutMode } = useResponsiveLayoutForCanvas();
@@ -323,6 +323,7 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
     mepManifoldTool,
     mepRadiatorTool,
     mepBoilerTool,
+    mepWaterHeaterTool,
     mepUnderfloorTool,
     thermalSpaceTool,
     mepSegmentTool,
@@ -462,6 +463,7 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
         mepManifoldGhostPreview={{ isAwaitingPosition: mepManifoldTool.isAwaitingPosition, getGhostFootprint: mepManifoldTool.getGhostFootprint }}
         mepRadiatorGhostPreview={{ isAwaitingPosition: mepRadiatorTool.isAwaitingPosition, getGhostFootprint: mepRadiatorTool.getGhostFootprint }}
         mepBoilerGhostPreview={{ isAwaitingPosition: mepBoilerTool.isAwaitingPosition, getGhostFootprint: mepBoilerTool.getGhostFootprint }}
+        mepWaterHeaterGhostPreview={{ isAwaitingPosition: mepWaterHeaterTool.isAwaitingPosition, getGhostFootprint: mepWaterHeaterTool.getGhostFootprint }}
         mepSegmentGhostPreview={{ isAwaitingEnd: mepSegmentTool.isAwaitingEnd, getGhostSegment: () => { const st = mepSegmentTool.state; if (!st.startPoint) return null; const lvl = levelManager.currentLevelId; const units = resolveSceneUnits(lvl ? levelManager.getLevelScene(lvl) : null); const widthMm = st.domain === 'pipe' ? (st.overrides.diameter ?? DEFAULT_PIPE_DIAMETER_MM) : (st.overrides.width ?? DEFAULT_DUCT_WIDTH_MM); return { startPoint: st.startPoint, sectionWidthCanvas: widthMm * mmToSceneUnits(units), domain: st.domain }; } }}
         slabOpeningGhostPreview={{ isAwaitingPosition: slabOpeningTool.isAwaitingPosition, kind: slabOpeningTool.state.kind, overrides: slabOpeningTool.state.overrides, hoveredEdgeMidpointGrip: unified.hoveredGrip?.slabOpeningGripKind?.startsWith('slab-opening-edge-midpoint-') ? unified.hoveredGrip : null, getSceneUnits: () => { const lvl = levelManager.currentLevelId; return resolveSceneUnits(lvl ? levelManager.getLevelScene(lvl) : null); } }}
         openingGhostPreview={{ isAwaitingPosition: openingTool.isAwaitingPosition, kind: openingTool.state.kind, overrides: openingTool.state.overrides, getHostWall: () => { const id = openingTool.state.hostWallId; const lvl = levelManager.currentLevelId; if (!id || !lvl) return null; const scene = levelManager.getLevelScene(lvl); if (!scene) return null; const e = scene.entities.find((x) => x.id === id); return e && isWallEntity(e) ? (e as WallEntity) : null; }, getSceneUnits: () => { const lvl = levelManager.currentLevelId; return resolveSceneUnits(lvl ? levelManager.getLevelScene(lvl) : null); } }}

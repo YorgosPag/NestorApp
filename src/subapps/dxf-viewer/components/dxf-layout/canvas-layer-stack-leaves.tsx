@@ -27,7 +27,9 @@ import { ElectricalPanelGhostPreviewMount, type ElectricalPanelGhostPreviewMount
 import { MepManifoldGhostPreviewMount, type MepManifoldGhostPreviewMountProps } from './canvas-layer-stack-mep-manifold-ghost';
 import { MepRadiatorGhostPreviewMount, type MepRadiatorGhostPreviewMountProps } from './canvas-layer-stack-mep-radiator-ghost';
 import { MepBoilerGhostPreviewMount, type MepBoilerGhostPreviewMountProps } from './canvas-layer-stack-mep-boiler-ghost';
+import { MepWaterHeaterGhostPreviewMount, type MepWaterHeaterGhostPreviewMountProps } from './canvas-layer-stack-mep-water-heater-ghost';
 import { MepSegmentGhostPreviewMount, type MepSegmentGhostPreviewMountProps, type GhostSegmentSpec } from './canvas-layer-stack-mep-segment-ghost';
+import { WaterProposalGhostPreviewMount } from './canvas-layer-stack-water-proposal-ghost';
 import { SlabOpeningGhostPreviewMount, type SlabOpeningGhostPreviewMountProps } from './canvas-layer-stack-slab-opening-ghost';
 import { OpeningGhostPreviewMount, type OpeningGhostPreviewMountProps } from './canvas-layer-stack-opening-ghost';
 import { OpeningTagDragMount } from './canvas-layer-stack-opening-tag-drag';
@@ -310,6 +312,8 @@ interface PreviewCanvasMountsProps {
   mepRadiatorGhost: Omit<MepRadiatorGhostPreviewMountProps, 'transform' | 'getCanvas' | 'getViewportElement'>;
   /** ADR-408 Εύρος Β #2 — heating boiler 2D placement ghost payload. */
   mepBoilerGhost: Omit<MepBoilerGhostPreviewMountProps, 'transform' | 'getCanvas' | 'getViewportElement'>;
+  /** ADR-408 DHW — domestic water heater 2D placement ghost payload. */
+  mepWaterHeaterGhost: Omit<MepWaterHeaterGhostPreviewMountProps, 'transform' | 'getCanvas' | 'getViewportElement'>;
   /** ADR-408 Φ8 — MEP segment (duct/pipe) 2D rubber-band ghost payload. */
   mepSegmentGhost: Omit<MepSegmentGhostPreviewMountProps, 'transform' | 'getCanvas' | 'getViewportElement'>;
   slabOpeningGhost: Omit<SlabOpeningGhostPreviewMountProps, 'transform' | 'getCanvas' | 'getViewportElement'>;
@@ -331,7 +335,7 @@ interface PreviewCanvasMountsProps {
 export const PreviewCanvasMounts = React.memo(function PreviewCanvasMounts(
   props: PreviewCanvasMountsProps,
 ) {
-  const { rotation, move, mirror, scale, stretch, columnGhost, mepFixtureGhost, electricalPanelGhost, mepManifoldGhost, mepRadiatorGhost, mepBoilerGhost, mepSegmentGhost, slabOpeningGhost, openingGhost, gripDragPreview, selectedEntityIds, levelManager, transform, getCanvas, getViewportElement } = props;
+  const { rotation, move, mirror, scale, stretch, columnGhost, mepFixtureGhost, electricalPanelGhost, mepManifoldGhost, mepRadiatorGhost, mepBoilerGhost, mepWaterHeaterGhost, mepSegmentGhost, slabOpeningGhost, openingGhost, gripDragPreview, selectedEntityIds, levelManager, transform, getCanvas, getViewportElement } = props;
   return (
     <>
       <RotationPreviewMount
@@ -425,12 +429,20 @@ export const PreviewCanvasMounts = React.memo(function PreviewCanvasMounts(
         getCanvas={getCanvas}
         getViewportElement={getViewportElement}
       />
+      <MepWaterHeaterGhostPreviewMount
+        {...mepWaterHeaterGhost}
+        transform={transform}
+        getCanvas={getCanvas}
+        getViewportElement={getViewportElement}
+      />
       <MepSegmentGhostPreviewMount
         {...mepSegmentGhost}
         transform={transform}
         getCanvas={getCanvas}
         getViewportElement={getViewportElement}
       />
+      {/* ADR-426 Slice 2 — water auto-design proposal ghost (low-freq store, inert while idle). */}
+      <WaterProposalGhostPreviewMount transform={transform} getCanvas={getCanvas} getViewportElement={getViewportElement} />
       <SlabOpeningGhostPreviewMount {...slabOpeningGhost} transform={transform} getCanvas={getCanvas} getViewportElement={getViewportElement} />
       <OpeningGhostPreviewMount {...openingGhost} transform={transform} getCanvas={getCanvas} getViewportElement={getViewportElement} />
       <GripDimAnnotationMount dragPreview={gripDragPreview} levelManager={levelManager} transform={transform} getCanvas={getCanvas} getViewportElement={getViewportElement} />

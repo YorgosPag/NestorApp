@@ -56,6 +56,7 @@ const EXEMPT_RE = new RegExp([
   /-definitions\./,
   /-schema/,
   /-constants/,
+  /-types\.tsx?$/,
   /enterprise-id\.service\.ts/,
 ].map(r => r.source).join('|'));
 

@@ -139,6 +139,10 @@ export function buildEntityModelFromDxf(
       return { ...base, type: 'mep-radiator', kind: entity.kind, params: entity.params, geometry: entity.geometry, validation: entity.validation } as unknown as Entity;
     case 'mep-boiler':
       return { ...base, type: 'mep-boiler', kind: entity.kind, params: entity.params, geometry: entity.geometry, validation: entity.validation } as unknown as Entity;
+    case 'mep-water-heater':
+      // ADR-408 DHW — direct entity (same pattern as mep-boiler). MepWaterHeaterRenderer
+      // reads geometry.footprint + kind + params at top level.
+      return { ...base, type: 'mep-water-heater', kind: entity.kind, params: entity.params, geometry: entity.geometry, validation: entity.validation } as unknown as Entity;
     case 'mep-underfloor':
       // ADR-408 Εύρος Β #3 — area-based underfloor loop (mirror mep-boiler passthrough).
       return { ...base, type: 'mep-underfloor', kind: entity.kind, params: entity.params, geometry: entity.geometry, validation: entity.validation } as unknown as Entity;
