@@ -81,6 +81,14 @@ export class Bim3DEditLivePreview {
   /** Ids of the connected pipe segments to rebuild per frame (snapped to a dragged MEP entity). */
   private pipeSegmentIds: string[] = [];
 
+  // ── ADR-408 Φ-D/Φ-E — live fitting follow (caps/elbows/tees move with the drag) ──
+  /** Original meshes (fitting GROUPS, tagged `entityId`) of the incident fittings, hidden during the edit. */
+  private fittingHidden: THREE.Object3D[] = [];
+  /** The swapped-in fitting preview meshes (removed + disposed each frame / on cancel). */
+  private fittingObjects: THREE.Object3D[] = [];
+  /** Ids of the incident fitting entities to rebuild per frame (cap/elbow/tee at a moved junction). */
+  private fittingIds: string[] = [];
+
   /** True while a preview is in effect (capture done, not yet committed/reset). */
   get isActive(): boolean {
     return (
@@ -92,8 +100,15 @@ export class Bim3DEditLivePreview {
       this.wireSystemIds.length > 0 ||
       this.wireObjects.length > 0 ||
       this.pipeSegmentIds.length > 0 ||
-      this.pipeObjects.length > 0
+      this.pipeObjects.length > 0 ||
+      this.fittingIds.length > 0 ||
+      this.fittingObjects.length > 0
     );
+  }
+
+  /** Incident fitting ids captured for this drag (empty when nothing follows). */
+  get incidentFittingIds(): readonly string[] {
+    return this.fittingIds;
   }
 
   /** Affected circuit ids captured for this drag (empty when no dragged host is wired). */
@@ -265,6 +280,40 @@ export class Bim3DEditLivePreview {
   }
 
   /**
+   * ADR-408 Φ-D/Φ-E — begin a live follow of the FITTINGS (caps/elbows/tees) incident
+   * to a dragged segment + its followers. Called AFTER `captureTransform`/`captureResize`
+   * (so it does NOT reset): records the fitting GROUPS (direct children tagged with
+   * `entityId`) to hide + restore. Fresh meshes are supplied per-frame to `applyFittings`.
+   */
+  captureFittings(group: THREE.Object3D, fittingIds: readonly string[]): void {
+    this.parent = group;
+    this.fittingIds = [...fittingIds];
+    const idSet = new Set(fittingIds);
+    for (const child of group.children) {
+      const id = child.userData['entityId'] as string | undefined;
+      if (id !== undefined && idSet.has(id)) this.fittingHidden.push(child);
+    }
+  }
+
+  /**
+   * Swap in the freshly rebuilt fitting meshes for this frame: hide the originals,
+   * remove + dispose the previous frame's fittings, parent the new ones.
+   */
+  applyFittings(rebuilt: readonly THREE.Object3D[]): void {
+    if (!this.parent) return;
+    for (const o of this.fittingHidden) o.visible = false;
+    for (const o of this.fittingObjects) {
+      this.parent.remove(o);
+      disposeObject(o);
+    }
+    this.fittingObjects = [];
+    for (const o of rebuilt) {
+      this.fittingObjects.push(o);
+      this.parent.add(o);
+    }
+  }
+
+  /**
    * Begin a resize preview: remember (and prepare to hide) the original direct
    * children that render `entityId` under `group`. The fresh geometry is supplied
    * per-frame to `applyResize` by the caller (built via the converter SSoT).
@@ -335,6 +384,12 @@ export class Bim3DEditLivePreview {
       this.parent?.remove(o);
       disposeObject(o);
     }
+    // ADR-408 Φ-D/Φ-E — un-hide the incident fittings and drop their rebuilt preview meshes.
+    for (const o of this.fittingHidden) o.visible = true;
+    for (const o of this.fittingObjects) {
+      this.parent?.remove(o);
+      disposeObject(o);
+    }
     this.clearState();
   }
 
@@ -353,6 +408,9 @@ export class Bim3DEditLivePreview {
     this.pipeHidden = [];
     this.pipeObjects = [];
     this.pipeSegmentIds = [];
+    this.fittingHidden = [];
+    this.fittingObjects = [];
+    this.fittingIds = [];
   }
 }
 

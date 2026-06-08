@@ -27,7 +27,7 @@
 
 import * as THREE from 'three';
 import type { Entity } from '../../types/entities';
-import { isMepSegmentEntity } from '../../types/entities';
+import { isMepSegmentEntity, isMepFittingEntity } from '../../types/entities';
 import { isMepConnectorHost } from '../../bim/mep-systems/connector-access';
 import type { MepSegmentEntity, MepSegmentParams } from '../../bim/types/mep-segment-types';
 import {
@@ -44,6 +44,10 @@ import { computeMepSegmentEndpointMove } from '../gizmo/bim3d-endpoint-move';
 import type { GizmoEndpoint } from '../gizmo/gizmo-types';
 import type { Point2D } from '../../rendering/types/Types';
 import { mepSegmentToMesh } from '../converters/mep-segment-to-mesh';
+import { mepFittingToMesh } from '../converters/mep-fitting-to-mesh';
+import { resolveDesiredFittings } from '../../bim/mep-fittings/mep-fitting-resolve';
+import { incidentEntityId } from '../../bim/types/mep-fitting-types';
+import { createMepFitting } from '@/services/factories/mep-fitting.factory';
 import { worldToDxfPlan } from '../viewport/coordinate-transforms';
 import { mmToSceneUnits, type SceneUnits } from '../../utils/scene-units';
 import { resolveEntityBuilding } from '../../bim/utils/bim-floor-utils';
@@ -170,6 +174,93 @@ export function buildPipeFollowPreviewObjects(
       const mesh = mepSegmentToMesh(follower, 0, undefined, baseElevationM);
       if (mesh) meshes.push(mesh);
     }
+  }
+  return meshes;
+}
+
+// ─── ADR-408 Φ-D/Φ-E — live FITTING follow (caps/elbows/tees move with the drag) ──
+//
+// The pipe-end CAP (and any elbow/tee at a junction the drag moves) is a separate
+// `mep-fitting` entity produced by the reconciler — without this it stayed stale and
+// only jumped on release. Mirror of the pipe follow: per frame, run the SAME pure
+// reconciler (`resolveDesiredFittings`) on a TRANSIENT entity list where the dragged
+// MEP entity + its follower pipes carry their LIVE next-params, then rebuild the
+// fittings incident to the affected segments via the converter SSoT — so the ghost
+// === the committed reconciliation. Caps/elbows/tees all follow uniformly.
+
+/** Segment ids whose incident fittings are affected by dragging `draggedIds` (dragged segments + followers). */
+function affectedFittingSegmentIds(draggedIds: ReadonlySet<string>, entities: readonly Entity[]): Set<string> {
+  const affected = new Set<string>();
+  for (const id of draggedIds) {
+    const e = entities.find((x) => x.id === id);
+    if (e && isMepSegmentEntity(e)) affected.add(id);
+  }
+  for (const fid of connectedPipeSegmentIds(draggedIds, entities)) affected.add(fid);
+  return affected;
+}
+
+/**
+ * Ids of the existing `mep-fitting` entities incident to a segment the drag moves —
+ * the meshes to HIDE during the drag (the live rebuild replaces them). Empty = none.
+ */
+export function incidentFittingIds(draggedIds: ReadonlySet<string>, entities: readonly Entity[]): string[] {
+  const affected = affectedFittingSegmentIds(draggedIds, entities);
+  if (affected.size === 0) return [];
+  const out: string[] = [];
+  for (const e of entities) {
+    if (isMepFittingEntity(e) && e.params.incidents.some((i) => affected.has(incidentEntityId(i)))) {
+      out.push(e.id);
+    }
+  }
+  return out;
+}
+
+/**
+ * Rebuild the fitting meshes (caps/elbows/tees) incident to the dragged segment(s) +
+ * followers, with everything at its live `xform` pose. Returns fresh fitting objects
+ * (tagged `entityId`, ready to swap in), or `[]` when nothing follows. NOTE: runs the
+ * full reconciler per frame (mirrors the pipe-follow resolver cost) — acceptable for a
+ * single-entity drag; revisit if profiling shows it on very large networks.
+ */
+export function buildFittingFollowPreviewObjects(
+  draggedIds: ReadonlySet<string>,
+  xform: PipeDragXform,
+  entities: readonly Entity[],
+): THREE.Object3D[] {
+  const overrides = new Map<string, unknown>();
+  const affected = new Set<string>();
+  for (const id of draggedIds) {
+    const e = entities.find((x) => x.id === id);
+    if (!e || !isMepConnectorHost(e)) continue;
+    const next = liveNextParams(e, xform, entityMmScale(e));
+    if (next) overrides.set(e.id, next); // host connector / segment endpoint moves the junction node
+    if (next && isMepSegmentEntity(e)) affected.add(e.id);
+    for (const p of followerPatches(e, next ?? e.params, entities)) {
+      if (draggedIds.has(p.segment.id)) continue;
+      overrides.set(p.segment.id, p.nextParams);
+      affected.add(p.segment.id);
+    }
+  }
+  if (affected.size === 0) return [];
+
+  const transient = entities.map((e) => (overrides.has(e.id) ? ({ ...e, params: overrides.get(e.id) } as Entity) : e));
+  const anySeg = entities.find((e) => affected.has(e.id) && isMepSegmentEntity(e)) as MepSegmentEntity | undefined;
+  const sceneUnits: SceneUnits = anySeg?.params.sceneUnits ?? 'mm';
+  const s = useBim3DEntitiesStore.getState();
+  const baseElevationM = anySeg ? (resolveEntityBuilding(anySeg, s.floors, s.buildings)?.baseElevation ?? 0) : 0;
+
+  const meshes: THREE.Object3D[] = [];
+  for (const draft of resolveDesiredFittings(transient, { sceneUnits })) {
+    if (!draft.params.incidents.some((i) => affected.has(incidentEntityId(i)))) continue;
+    const entity = createMepFitting({
+      params: draft.params,
+      geometry: draft.geometry,
+      validation: draft.validation,
+      layerId: '0',
+      visible: true,
+    });
+    const mesh = mepFittingToMesh(entity, 0, undefined, baseElevationM);
+    if (mesh) meshes.push(mesh);
   }
   return meshes;
 }

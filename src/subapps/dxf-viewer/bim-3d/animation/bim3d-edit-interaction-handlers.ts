@@ -35,16 +35,20 @@ import type { BridgeOutcome } from '../gizmo/bim-gizmo-drag-bridge';
 import type { ThreeJsSceneManager } from '../scene/ThreeJsSceneManager';
 import type { LevelsHookReturn } from '../../systems/levels/useLevels';
 import { Bim3DEditLivePreview } from './bim3d-edit-live-preview';
+// ADR-402 — live-preview application + scene-lookup leaves (extracted, file-size N.7.1).
 import {
-  buildResizePreviewObject,
-  buildTiltPreviewObject,
-  buildEndpointMovePreviewObject,
-  buildDependentWallPreviewObject,
-} from './bim3d-preview-rebuild';
+  applyLivePreview,
+  sceneEntitiesForEdit,
+  resolveEntityLevelId,
+} from './bim3d-edit-live-preview-apply';
 // ADR-408 Φ7 P2 — host move → live circuit-wire re-route (mirror of the ADR-401 wall path).
-import { affectedWireSystemIds, buildCircuitWirePreviewObjects } from './bim3d-wire-preview-rebuild';
+import { affectedWireSystemIds } from './bim3d-wire-preview-rebuild';
 // ADR-408 Φ-C — host/pipe move/rotate/vertical → live connected-pipe stretch.
-import { connectedPipeSegmentIds, buildPipeFollowPreviewObjects } from './bim3d-pipe-follow-preview-rebuild';
+// ADR-408 Φ-D/Φ-E — + live fitting (cap/elbow/tee) follow at moved junctions.
+import {
+  connectedPipeSegmentIds,
+  incidentFittingIds,
+} from './bim3d-pipe-follow-preview-rebuild';
 // ADR-401 — host move → attached wall re-clip: find the dependent walls (reverse SSoT).
 import { findAttachedWalls } from '../../bim/cascade/bim-cascade-resolver';
 import { useBim3DEntitiesStore } from '../stores/Bim3DEntitiesStore';
@@ -135,6 +139,7 @@ export function onEditPointerDown(ctx: EditInteractionCtx, e: PointerEvent): voi
     // the segment; captureConnectedPipes (capturePipes) APPENDS the followers.
     if (ids[0]) ctx.preview.captureResize(ctx.manager.bimLayer.group, ids[0]);
     captureConnectedPipes(ctx, ids);
+    captureIncidentFittings(ctx, ids);
   } else {
     ctx.preview.captureTransform(ctx.manager.bimLayer.group, new Set(ids));
     // ADR-401 — a MOVE of a structural host (beam/slab) must re-clip its attached
@@ -146,6 +151,8 @@ export function onEditPointerDown(ctx: EditInteractionCtx, e: PointerEvent): voi
     captureCircuitWires(ctx, ids);
     // ADR-408 Φ-C — a fixture/manifold/pipe drags its connected pipe ends live (stretch).
     captureConnectedPipes(ctx, ids);
+    // ADR-408 Φ-D/Φ-E — and the caps/elbows/tees at the moved junctions follow live.
+    captureIncidentFittings(ctx, ids);
   }
   e.preventDefault();
   e.stopPropagation();
@@ -180,16 +187,6 @@ function captureCircuitWires(ctx: EditInteractionCtx, ids: readonly string[]): v
   }
 }
 
-/** The full entity list of the edited entities' floor (for the connected-pipe resolver). */
-function sceneEntitiesForEdit(ctx: EditInteractionCtx): readonly Entity[] {
-  const levels = ctx.getLevels();
-  const ids = useBim3DEditStore.getState().editEntityIds;
-  if (!levels || ids.length === 0) return [];
-  const levelId = resolveEntityLevelId(levels, ids[0]) ?? levels.currentLevelId;
-  if (!levelId) return [];
-  return levels.getLevelScene(levelId)?.entities ?? [];
-}
-
 /**
  * ADR-408 Φ-C — capture the pipe segments connected to the dragged MEP entities so
  * their ends STRETCH live (host/pipe move/rotate/vertical → snapped ends follow).
@@ -199,6 +196,18 @@ function captureConnectedPipes(ctx: EditInteractionCtx, ids: readonly string[]):
   const segmentIds = connectedPipeSegmentIds(new Set(ids), sceneEntitiesForEdit(ctx));
   if (segmentIds.length > 0) {
     ctx.preview.capturePipes(ctx.manager.bimLayer.group, segmentIds);
+  }
+}
+
+/**
+ * ADR-408 Φ-D/Φ-E — capture the fittings (caps/elbows/tees) incident to the dragged
+ * segment(s) + followers so they FOLLOW live (the cap on a pipe end re-places in real
+ * time, not on release). No incident fitting → no-op.
+ */
+function captureIncidentFittings(ctx: EditInteractionCtx, ids: readonly string[]): void {
+  const fittingIds = incidentFittingIds(new Set(ids), sceneEntitiesForEdit(ctx));
+  if (fittingIds.length > 0) {
+    ctx.preview.captureFittings(ctx.manager.bimLayer.group, fittingIds);
   }
 }
 
@@ -299,119 +308,6 @@ export function onEditPointerCancel(ctx: EditInteractionCtx): void {
   ctx.manager.markSceneDirty();
 }
 
-/**
- * Drive the live "entity follows the cursor" preview from the controller's live
- * drag snapshot (ADR-402): rigid mesh transform for move/rotate, per-frame geometry
- * rebuild (converter SSoT) for resize. Runs every changed pointermove frame.
- */
-function applyLivePreview(ctx: EditInteractionCtx): void {
-  const live = ctx.controller.getLivePreview();
-  if (!live) return;
-  if (live.kind === 'move') {
-    // Mirror the command's keyboard axis lock so the preview matches the commit:
-    // 'X' keeps world-X (DXF x) → drop world-Z; 'Z' keeps world-Z (DXF y) → drop
-    // world-X. The vertical (world-Y) component is untouched (axis-Y elevation move).
-    const lock = useBim3DEditStore.getState().axisLock;
-    const t = live.translation.clone();
-    if (lock === 'X') t.z = 0;
-    else if (lock === 'Z') t.x = 0;
-    ctx.preview.applyMove(t);
-    // ADR-401 — re-clip the captured attached walls with the hosts at the preview
-    // position (host footprint shifted by `t`). Same converter SSoT as the commit
-    // re-sync (ghost === commit). No dependents → the array is empty (fast path).
-    const depWallIds = ctx.preview.dependentWallIds;
-    if (depWallIds.length > 0) {
-      const hostIds = ctx.preview.movedHostIds;
-      ctx.preview.applyDependents(
-        depWallIds.map((wid) => buildDependentWallPreviewObject(wid, hostIds, t)),
-      );
-    }
-    // ADR-408 Φ7 P2 — re-route the captured circuit conduits with the dragged
-    // fixtures/panels at the preview position (`t`). Same routing + converter SSoT
-    // as the commit re-sync (ghost === commit). No wired host → array is empty.
-    if (ctx.preview.circuitWireSystemIds.length > 0) {
-      const draggedIds = new Set(useBim3DEditStore.getState().editEntityIds);
-      ctx.preview.applyWires(buildCircuitWirePreviewObjects(draggedIds, { kind: 'move', translation: t }));
-    }
-    // ADR-408 Φ-C — stretch the captured connected pipes with the dragged MEP entity
-    // at the preview position (`t` carries plan + vertical). Same resolver SSoT as commit.
-    if (ctx.preview.connectedPipeSegmentIds.length > 0) {
-      ctx.preview.applyPipes(
-        buildPipeFollowPreviewObjects(
-          new Set(useBim3DEditStore.getState().editEntityIds),
-          { kind: 'move', translation: t },
-          sceneEntitiesForEdit(ctx),
-        ),
-      );
-    }
-    return;
-  }
-  if (live.kind === 'rotate') {
-    ctx.preview.applyRotate(live.pivot, live.angleRad);
-    // ADR-408 Φ7 P2b — re-route the captured conduits with the dragged hosts orbited
-    // about the gizmo pivot (world +Y ↔ DXF-plan CCW, 1:1). Same routing SSoT as move.
-    if (ctx.preview.circuitWireSystemIds.length > 0) {
-      const draggedIds = new Set(useBim3DEditStore.getState().editEntityIds);
-      ctx.preview.applyWires(
-        buildCircuitWirePreviewObjects(draggedIds, { kind: 'rotate', pivot: live.pivot, angleRad: live.angleRad }),
-      );
-    }
-    // ADR-408 Φ-C — stretch the captured connected pipes as the dragged MEP entity orbits.
-    if (ctx.preview.connectedPipeSegmentIds.length > 0) {
-      ctx.preview.applyPipes(
-        buildPipeFollowPreviewObjects(
-          new Set(useBim3DEditStore.getState().editEntityIds),
-          { kind: 'rotate', pivot: live.pivot, angleRad: live.angleRad },
-          sceneEntitiesForEdit(ctx),
-        ),
-      );
-    }
-    return;
-  }
-  if (live.kind === 'endpoint-move') {
-    // ADR-408 Φ-D — rebuild the dragged segment via the converter SSoT (node move),
-    // swapped in through the same hide-and-replace path as resize; its connected pipes
-    // STRETCH live via the same resolver SSoT as the commit (ghost === commit).
-    const epId = useBim3DEditStore.getState().editEntityIds[0];
-    if (!epId) return;
-    ctx.preview.applyResize(
-      buildEndpointMovePreviewObject(epId, live.endpoint, live.outcome.deltaMm, live.outcome.deltaUpMm),
-    );
-    if (ctx.preview.connectedPipeSegmentIds.length > 0) {
-      ctx.preview.applyPipes(
-        buildPipeFollowPreviewObjects(
-          new Set(useBim3DEditStore.getState().editEntityIds),
-          { kind: 'endpoint', endpoint: live.endpoint, deltaMm: live.outcome.deltaMm, deltaUpMm: live.outcome.deltaUpMm },
-          sceneEntitiesForEdit(ctx),
-        ),
-      );
-    }
-    return;
-  }
-  if (live.kind === 'tilt') {
-    // ADR-404 — tilt rebuilds the single entity via the converter SSoT (shear),
-    // swapped in through the same hide-and-replace path as resize. Skip a roll ring
-    // (X/Z axis = no-op for the type) → `buildTiltPreviewObject` returns null.
-    if (live.axis === 'y') return; // defensive: Y ring is plan rotate, not tilt
-    const tiltId = useBim3DEditStore.getState().editEntityIds[0];
-    if (!tiltId) return;
-    ctx.preview.applyResize(buildTiltPreviewObject(tiltId, { axis: live.axis, angleDeg: live.angleDeg }));
-    return;
-  }
-  // resize — rebuild the single dragged entity's geometry via the converter SSoT.
-  const id = useBim3DEditStore.getState().editEntityIds[0];
-  if (!id) return;
-  ctx.preview.applyResize(
-    buildResizePreviewObject(id, {
-      axis: live.outcome.axis,
-      mode: live.outcome.mode,
-      deltaMm: live.outcome.deltaMm,
-      deltaUpMm: live.outcome.deltaUpMm,
-      cursorMm: live.outcome.cursorMm,
-    }),
-  );
-}
-
 /** Wheel zoom changes camera distance → refresh the screen-constant gizmo scale. */
 export function onEditWheel(ctx: EditInteractionCtx): void {
   if (!ctx.overlay.visible || ctx.controller.isDragging()) return;
@@ -472,13 +368,4 @@ function findBimEntityWorldBox(group: THREE.Object3D, bimId: string): THREE.Box3
     else box = b;
   });
   return box;
-}
-
-/** Which level's scene contains `entityId` (multi-floor edge case). */
-function resolveEntityLevelId(levels: LevelsHookReturn, entityId: string): string | null {
-  for (const lvl of levels.levels) {
-    const scene = levels.getLevelScene(lvl.id);
-    if (scene?.entities?.some((e) => e.id === entityId)) return lvl.id;
-  }
-  return null;
 }
