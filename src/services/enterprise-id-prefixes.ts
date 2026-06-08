@@ -254,6 +254,7 @@ export const ENTERPRISE_ID_PREFIXES = {
   MEP_MANIFOLD: 'mfld',        // floorplan_mep_manifolds collection — point-based plumbing manifold / water distribution source (ADR-408 Φ12)
   MEP_RADIATOR: 'rad',         // floorplan_mep_radiators collection — point-based hydronic radiator / heating terminal (ADR-408 Εύρος Β)
   MEP_BOILER: 'blr',           // floorplan_mep_boilers collection — point-based hydronic boiler / heating source (ADR-408 Εύρος Β #2)
+  MEP_WATER_HEATER: 'wht',     // floorplan_mep_water_heaters collection — point-based domestic hot water heater / DHW source (ADR-408 DHW)
   MEP_UNDERFLOOR: 'uhf',       // floorplan_mep_underfloors collection — area-based radiant floor heating loop (ADR-408 Εύρος Β #3)
   RAILING: 'ral',              // floorplan_railings collection — standalone path-based railing (ADR-407)
   ROOF: 'roof',                // floorplan_roofs collection — parametric pitched roof (footprint + per-edge slopes) (ADR-417)

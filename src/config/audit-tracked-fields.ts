@@ -823,6 +823,30 @@ const MEP_BOILER_TRACKED_FIELDS_RAW: Record<string, string> = {
 export const MEP_BOILER_TRACKED_FIELDS: Record<string, TrackedFieldDef> =
   mergeDefs(MEP_BOILER_TRACKED_FIELDS_RAW, {});
 
+// ADR-408 — DHW water heater (αντλία θερμότητας / ηλεκτρικός/αερίου θερμοσίφωνας) audited fields.
+// Mirrors MEP_BOILER_TRACKED_FIELDS + adds `tankCapacityL` (nominal storage volume in litres).
+const MEP_WATER_HEATER_TRACKED_FIELDS_RAW: Record<string, string> = {
+  kind: 'kind',
+  layerId: 'layerId',
+  shape: 'shape',
+  width: 'width',
+  length: 'length',
+  bodyHeightMm: 'bodyHeightMm',
+  mountingElevationMm: 'mountingElevationMm',
+  connectorDiameterMm: 'connectorDiameterMm',
+  thermalOutputW: 'thermalOutputW',
+  rotation: 'rotation',
+  material: 'material',
+  storeyId: 'storeyId',
+  hostId: 'hostId',
+  systemClassification: 'systemClassification',
+  // Water-heater-specific: nominal storage capacity in litres (absent on boiler).
+  tankCapacityL: 'tankCapacityL',
+};
+
+export const MEP_WATER_HEATER_TRACKED_FIELDS: Record<string, TrackedFieldDef> =
+  mergeDefs(MEP_WATER_HEATER_TRACKED_FIELDS_RAW, {});
+
 // ADR-408 Εύρος Β #3 — underfloor radiant heating loop (area-based hydronic terminal).
 const MEP_UNDERFLOOR_TRACKED_FIELDS_RAW: Record<string, string> = {
   kind: 'kind',
@@ -1115,6 +1139,8 @@ export function getTrackedFieldsForEntityAuditType(
       return MEP_RADIATOR_TRACKED_FIELDS;
     case 'mep-boiler':
       return MEP_BOILER_TRACKED_FIELDS;
+    case 'mep-water-heater':
+      return MEP_WATER_HEATER_TRACKED_FIELDS;
     case 'mep-underfloor':
       return MEP_UNDERFLOOR_TRACKED_FIELDS;
     case 'mep-segment':

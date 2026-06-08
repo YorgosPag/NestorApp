@@ -42,7 +42,9 @@ export class EnterpriseIdService {
   constructor(config: Partial<IdGenerationConfig> = {}) {
     this.config = {
       maxRetries: 3,
-      enableLogging: process.env.NODE_ENV === 'development',
+      // Opt-in only — see enterprise-id-singleton.ts. Default off to keep the dev
+      // console clean (was firing console.debug on every id generation).
+      enableLogging: process.env.NEXT_PUBLIC_DEBUG_ENTERPRISE_ID === 'true',
       enableCache: true,
       cacheSize: 1000,
       ...config,
@@ -354,6 +356,7 @@ export class EnterpriseIdService {
   generateMepManifoldId(): string { return this.generateId(P.MEP_MANIFOLD).id; }
   generateMepRadiatorId(): string { return this.generateId(P.MEP_RADIATOR).id; }
   generateMepBoilerId(): string { return this.generateId(P.MEP_BOILER).id; }
+  generateMepWaterHeaterId(): string { return this.generateId(P.MEP_WATER_HEATER).id; }
   generateMepUnderfloorId(): string { return this.generateId(P.MEP_UNDERFLOOR).id; }
   generateRailingId(): string { return this.generateId(P.RAILING).id; }
   generateRoofId(): string { return this.generateId(P.ROOF).id; }

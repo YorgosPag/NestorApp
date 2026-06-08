@@ -382,6 +382,8 @@ export const COLLECTIONS = {
   FLOORPLAN_MEP_RADIATORS: process.env.NEXT_PUBLIC_FLOORPLAN_MEP_RADIATORS_COLLECTION || 'floorplan_mep_radiators',
   /** ADR-408 Εύρος Β #2 — point-based heating boilers (hydronic sources). IDs via blr_* prefix. */
   FLOORPLAN_MEP_BOILERS: process.env.NEXT_PUBLIC_FLOORPLAN_MEP_BOILERS_COLLECTION || 'floorplan_mep_boilers',
+  /** ADR-408 / water-heater — point-based domestic hot-water heaters (IfcWaterHeater). IDs via wh_* prefix. */
+  FLOORPLAN_MEP_WATER_HEATERS: process.env.NEXT_PUBLIC_FLOORPLAN_MEP_WATER_HEATERS_COLLECTION || 'floorplan_mep_water_heaters',
   /** ADR-408 Εύρος Β #3 — area-based radiant floor heating loops (hydronic terminals). IDs via uhf_* prefix. */
   FLOORPLAN_MEP_UNDERFLOORS: process.env.NEXT_PUBLIC_FLOORPLAN_MEP_UNDERFLOORS_COLLECTION || 'floorplan_mep_underfloors',
   /** ADR-410 — mesh-based CC0 furniture (chair first). IDs via furn_* prefix. */
@@ -481,6 +483,7 @@ export const FLOOR_SCOPED_BIM_COLLECTIONS = [
   COLLECTIONS.FLOORPLAN_MEP_MANIFOLDS,
   COLLECTIONS.FLOORPLAN_MEP_RADIATORS,
   COLLECTIONS.FLOORPLAN_MEP_BOILERS,
+  COLLECTIONS.FLOORPLAN_MEP_WATER_HEATERS,
   COLLECTIONS.FLOORPLAN_MEP_UNDERFLOORS,
   COLLECTIONS.FLOORPLAN_THERMAL_SPACES,
 ] as const;

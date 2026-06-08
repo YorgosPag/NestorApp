@@ -4020,6 +4020,32 @@ service cloud.firestore {
                         || isCompanyAdminOfCompany(resource.data.companyId));
     }
 
+    // ADR-408 / water-heater — point-based domestic hot-water heaters (IfcWaterHeater,
+    // DHW source). Mirror of floorplan_mep_boilers (company-scoped, owner/admin writes).
+    match /floorplan_mep_water_heaters/{waterHeaterId} {
+      allow read: if isAuthenticated()
+                  && (isSuperAdminOnly() || belongsToCompany(resource.data.companyId));
+      allow create: if isAuthenticated()
+                    && (isSuperAdminOnly()
+                        || (request.resource.data.companyId == getUserCompanyId()
+                            && request.resource.data.createdBy == request.auth.uid
+                            && request.resource.data.keys().hasAll(['companyId', 'projectId', 'floorplanId', 'kind', 'params'])));
+      allow update: if isAuthenticated()
+                    && (isSuperAdminOnly()
+                        || ((resource.data.createdBy == request.auth.uid || isCompanyAdminOfCompany(resource.data.companyId))
+                            && request.resource.data.companyId == resource.data.companyId
+                            && request.resource.data.projectId == resource.data.projectId
+                            && request.resource.data.floorplanId == resource.data.floorplanId
+                            && request.resource.data.createdBy == resource.data.createdBy
+                            && request.resource.data.createdAt == resource.data.createdAt
+                            && (!request.resource.data.keys().hasAny(['editingBy'])
+                                || request.resource.data.editingBy.userId == request.auth.uid)));
+      allow delete: if isAuthenticated()
+                    && (isSuperAdminOnly()
+                        || resource.data.createdBy == request.auth.uid
+                        || isCompanyAdminOfCompany(resource.data.companyId));
+    }
+
     // ADR-408 Εύρος Β #3 — area-based underfloor radiant heating loops (ενδοδαπέδια,
     // hydronic terminal). Mirror of floorplan_mep_boilers (company-scoped, owner/admin writes).
     match /floorplan_mep_underfloors/{underfloorId} {

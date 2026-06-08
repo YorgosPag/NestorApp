@@ -23,7 +23,9 @@
 import { EnterpriseIdService } from './enterprise-id-class';
 
 export const enterpriseIdService = new EnterpriseIdService({
-  enableLogging: process.env.NODE_ENV === 'development',
+  // Opt-in only — logging EVERY id generation floods the dev console (dozens per
+  // session). Set NEXT_PUBLIC_DEBUG_ENTERPRISE_ID=true to re-enable when debugging ids.
+  enableLogging: process.env.NEXT_PUBLIC_DEBUG_ENTERPRISE_ID === 'true',
   enableCache: true,
   maxRetries: 5,
 });
