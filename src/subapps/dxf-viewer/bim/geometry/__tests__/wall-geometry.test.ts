@@ -97,6 +97,33 @@ describe('computeWallGeometry — straight kind', () => {
   });
 });
 
+// ─── ADR-363 Phase 1L — axis-bevel rendering is unit-aware (metres scene) ──────
+
+describe('computeWallGeometry — axis-bevel clamp is scene-unit aware', () => {
+  it('applies an endBevel on a SUB-METRE wall in a metres-scene drawing', () => {
+    // Live region-fill overshoot bug: a 0.625 m wall (sceneUnits=m) with a correctly
+    // computed endBevel of 0.125 (= 125 mm) rendered UNCHANGED because the clamp used a
+    // hardcoded "1" — in metres that means 1 METRE, so `seg − 1 = −0.375 < 0` dropped the
+    // bevel. The end axis vertex must now move from x=0.625 back to x=0.5.
+    const g = computeWallGeometry(makeParams({
+      start: { x: 0, y: 0, z: 0 },
+      end: { x: 0.625, y: 0, z: 0 },
+      sceneUnits: 'm',
+      endBevel: 0.125,
+    }));
+    expect(g.axisPolyline.points[1].x).toBeCloseTo(0.5, 6); // shortened by the bevel
+  });
+
+  it('still applies an endBevel on a metre-scale (mm) wall (no regression)', () => {
+    const g = computeWallGeometry(makeParams({
+      start: { x: 0, y: 0, z: 0 },
+      end: { x: 3000, y: 0, z: 0 },
+      endBevel: 100, // mm-scene: 100 mm
+    }));
+    expect(g.axisPolyline.points[1].x).toBeCloseTo(2900, 6);
+  });
+});
+
 // ─── ADR-395 G6 — net area (openings subtraction) ────────────────────────────
 
 describe('computeWallGeometry — net area (ADR-395 G6)', () => {

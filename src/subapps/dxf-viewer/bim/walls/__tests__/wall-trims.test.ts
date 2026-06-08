@@ -499,6 +499,75 @@ describe('computeWallTrims — multi-wall junction resolution', () => {
     expect(trimBranch.startBevel).toBeCloseTo(150, 0);
     expect(trimBranch.startMiter).toBeUndefined();
   });
+
+  it('35. region-fill overshoot: collinear pair SEPARATED by a crossing wall → the penetrating stem butts at the FACE (not centreline)', () => {
+    // Live bug (head of a "U"/inverted "Π"): two collinear vertical legs (top + bottom)
+    // straddle a crossing horizontal whose ENDPOINT sits at the junction (≈uNearStart →
+    // corner cluster, NOT an interior T like test 33). Phase 1K auto-join pushed the
+    // LAST-drawn vertical's end to the horizontal's CENTRELINE. resolveMultiWayCorner
+    // used to pick the two collinear verticals as the "primary through-pair" and leave
+    // BOTH untrimmed → the top vertical overshot. mm-scaled from the captured console.
+    const vTop   = makeWall({ x: 7076, y: 4350 }, { x: 7076, y: 3725 }, 250, 'vTop'); // end AT hCross centreline
+    const vBot   = makeWall({ x: 7076, y: 3600 }, { x: 7076, y: 500 },  250, 'vBot'); // start AT hCross lower face
+    const hCross = makeWall({ x: 7201, y: 3725 }, { x: 6351, y: 3725 }, 250, 'hCross'); // half=125, faces y=3600/3850
+
+    const trims = computeWallTrims([vTop, vBot, hCross]);
+
+    // The top vertical penetrates hCross by half (125) → bevelled back to the y=3850 face.
+    expect(trims.get(vTop.id)?.endBevel).toBeCloseTo(125, 0);
+    expect(trims.get(vTop.id)?.endMiter).toBeUndefined();
+    // The bottom vertical already ends on hCross's lower face → no trim.
+    expect(trims.get(vBot.id)?.startBevel ?? 0).toBeCloseTo(0, 0);
+    // The crossing wall's endpoint sits exactly on the verticals' face → not over-trimmed.
+    expect(trims.get(hCross.id)?.startBevel ?? 0).toBeCloseTo(0, 0);
+    expect(trims.get(hCross.id)?.startMiter).toBeUndefined();
+  });
+
+  it('36. REGRESSION: a GENUINE through-wall (collinear COINCIDENT) + branch is still left straight inside a 3-way cluster', () => {
+    // Guards the test-35 fix from over-triggering: when the collinear pair's endpoints
+    // COINCIDE it is a real continuous wall (Revit through-wall) and must stay untrimmed,
+    // exactly like test 27. Only the branch butts.
+    const runA   = makeWall({ x: 0, y: 0 },    { x: 3000, y: 0 }, 300, 'RA');
+    const runB   = makeWall({ x: 3000, y: 0 }, { x: 6000, y: 0 }, 300, 'RB');
+    const branch = makeWall({ x: 3000, y: 0 }, { x: 3000, y: 3000 }, 100, 'BR');
+
+    const trims = computeWallTrims([runA, runB, branch]);
+
+    expect(trims.get(runA.id)).toBeUndefined();
+    expect(trims.get(runB.id)).toBeUndefined();
+    expect(trims.get(branch.id)?.startBevel).toBeCloseTo(150, 0);
+    expect(trims.get(branch.id)?.startMiter).toBeUndefined();
+  });
+
+  it('37. asymmetric U-head: a thin NON-primary leg already ON the thick wall’s face gets NO over-cut (no gap)', () => {
+    // Live follow-up bug (Giorgio): the 25cm leg butts correctly, but the 10cm leg
+    // stopped 12.5cm (= the 25cm wall’s HALF) BEFORE the face. The non-primary butt
+    // loop bevelled it by a FIXED throughHalf (125) even though its end already sat on
+    // the face → pulled it half-a-thickness behind → gap. Penetration must give 0 here.
+    const hCross   = makeWall({ x: 7201, y: 3725 }, { x: 6351, y: 3725 }, 250, 'hCross'); // half=125, faces y=3600/3850
+    const thickLeg = makeWall({ x: 7076, y: 3600 }, { x: 7076, y: 500 },  250, 'thickLeg'); // start ON lower face
+    const thinLeg  = makeWall({ x: 7076, y: 4350 }, { x: 7076, y: 3850 }, 100, 'thinLeg');  // end ON upper face (10cm)
+
+    const trims = computeWallTrims([hCross, thickLeg, thinLeg]);
+
+    // The thin leg already ends on hCross's upper face → penetration 0 → no cut, no gap.
+    expect(trims.get(thinLeg.id)?.endBevel ?? 0).toBeCloseTo(0, 0);
+    // The thick leg already ends on the lower face → no cut either.
+    expect(trims.get(thickLeg.id)?.startBevel ?? 0).toBeCloseTo(0, 0);
+  });
+
+  it('38. asymmetric U-head: a thin NON-primary leg auto-joined to the thick wall’s CENTRELINE is pulled back to the face', () => {
+    // Counterpart of 37: when Phase 1K extended the thin leg to hCross's centreline
+    // (y=3725) it must be bevelled by exactly the penetration (125) → back to the face.
+    const hCross   = makeWall({ x: 7201, y: 3725 }, { x: 6351, y: 3725 }, 250, 'hCross');
+    const thickLeg = makeWall({ x: 7076, y: 3600 }, { x: 7076, y: 500 },  250, 'thickLeg');
+    const thinLeg  = makeWall({ x: 7076, y: 4350 }, { x: 7076, y: 3725 }, 100, 'thinLeg'); // end AT centreline (overshoot)
+
+    const trims = computeWallTrims([hCross, thickLeg, thinLeg]);
+
+    expect(trims.get(thinLeg.id)?.endBevel).toBeCloseTo(125, 0); // pulled exactly to the face
+    expect(trims.get(thinLeg.id)?.endMiter).toBeUndefined();
+  });
 });
 
 // ─── Phase 1L: «Disallow Join» auto square-off (edge-only column corner) ───────

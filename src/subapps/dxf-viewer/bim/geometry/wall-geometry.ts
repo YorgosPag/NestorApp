@@ -91,7 +91,7 @@ export function computeWallGeometry(
   const s = mmToSceneUnits(params.sceneUnits ?? 'mm');
 
   const rawVertices = pickAxisVertices(params, kind);
-  const vertices = applyAxisBevels(rawVertices, params.startBevel ?? 0, params.endBevel ?? 0);
+  const vertices = applyAxisBevels(rawVertices, params.startBevel ?? 0, params.endBevel ?? 0, s);
   const axisPolyline: Polyline3D = { points: vertices, closed: false };
 
   const halfThicknessCanvas = (params.thickness / 2) * s;
@@ -262,16 +262,22 @@ function pickAxisVertices(params: WallParams, kind: WallKind): readonly Point3D[
 }
 
 /**
- * Shorten the axis polyline at each end by the corresponding bevel amount (mm).
+ * Shorten the axis polyline at each end by the corresponding bevel amount (canvas
+ * world units — SAME space as `pts`, produced by `computeWallTrims`).
  * Start bevel: moves the first point toward the second along the opening segment.
  * End bevel:   moves the last point toward the second-to-last.
- * Bevel > segment length is silently clamped to keep at least 1mm of axis.
+ * Bevel > segment length is silently clamped to keep at least 1mm of axis. The
+ * "1mm minimum" MUST be expressed in scene units (`minAxis = mmToSceneUnits`), NOT
+ * a hardcoded "1": in a metres-scene drawing "1" means 1 METRE, so `seg − 1` went
+ * negative for every sub-metre wall and the computed bevel was silently dropped →
+ * region-fill stems kept overshooting to the neighbour centreline. ADR-363 Phase 1L.
  * Phase 1D-B: applied after vertex selection so all kinds benefit.
  */
 function applyAxisBevels(
   pts: readonly Point3D[],
   startBevelMm: number,
   endBevelMm: number,
+  minAxis: number,
 ): readonly Point3D[] {
   if (pts.length < 2 || (startBevelMm <= 0 && endBevelMm <= 0)) return pts;
   const result = [...pts];
@@ -281,7 +287,7 @@ function applyAxisBevels(
     const dx = pts[1].x - pts[0].x;
     const dy = pts[1].y - pts[0].y;
     const seg = Math.hypot(dx, dy);
-    const clamped = Math.min(startBevelMm, seg - 1);
+    const clamped = Math.min(startBevelMm, seg - minAxis);
     if (clamped > 0) {
       const t = clamped / seg;
       result[0] = { x: pts[0].x + dx * t, y: pts[0].y + dy * t, z: pts[0].z ?? 0 };
@@ -292,7 +298,7 @@ function applyAxisBevels(
     const dx = pts[n - 2].x - pts[n - 1].x;
     const dy = pts[n - 2].y - pts[n - 1].y;
     const seg = Math.hypot(dx, dy);
-    const clamped = Math.min(endBevelMm, seg - 1);
+    const clamped = Math.min(endBevelMm, seg - minAxis);
     if (clamped > 0) {
       const t = clamped / seg;
       result[n - 1] = { x: pts[n - 1].x + dx * t, y: pts[n - 1].y + dy * t, z: pts[n - 1].z ?? 0 };
@@ -395,7 +401,8 @@ function computeBbox(
  */
 export function getWallAxisVertices(params: WallParams, kind: WallKind): readonly Point3D[] {
   const raw = pickAxisVertices(params, kind);
-  return applyAxisBevels(raw, params.startBevel ?? 0, params.endBevel ?? 0);
+  const s = mmToSceneUnits(params.sceneUnits ?? 'mm');
+  return applyAxisBevels(raw, params.startBevel ?? 0, params.endBevel ?? 0, s);
 }
 
 /** Polyline length in mm (sum of segment lengths). Exported for coordinators. */
