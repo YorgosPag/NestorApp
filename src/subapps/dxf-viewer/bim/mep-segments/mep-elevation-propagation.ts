@@ -21,6 +21,18 @@
  * resolver (`resolveMepConnectorElevationMmAt`), which knows each host stores its
  * datum differently (`mountingElevationMm`, NOT `position.z`).
  *
+ * **Tee / body taps (Φ-B2a EXT):** the original pass matched only endpoint-to-
+ * endpoint joins (incl. 3-way nodes where every pipe has an *endpoint* there). A
+ * branch that taps the *middle* of a through-main was left behind. Two symmetric
+ * rules now close that gap, treating the through-main as the anchor (Revit: a
+ * branch hangs off the main, it never tears it):
+ *   - editing the BRANCH end that taps a main's body ⇒ it snaps to the main's
+ *     interpolated elevation at the tap (anchor, like a manifold outlet), and
+ *   - editing the MAIN ⇒ every branch endpoint sitting on its body follows to the
+ *     main's new interpolated elevation at that tap.
+ * Interpolation is linear along the main, so it is exact for flat *and* sloped
+ * mains. Endpoint joins keep priority over body taps for the same endpoint.
+ *
  * Junction matching here stays planar (xy). After propagation the coincident
  * endpoints share one `z`, so the existing planar fitting reconciliation averages
  * to that `z` and the coupling re-attaches — no 3D-junction change needed yet
@@ -35,6 +47,7 @@
  * @see docs/centralized-systems/reference/adrs/ADR-408-mep-connectors-and-systems.md §Φ-B2
  */
 
+import type { Point2D } from '../../rendering/types/Types';
 import type { Entity } from '../../types/entities';
 import {
   isMepSegmentEntity,
@@ -51,6 +64,10 @@ import { connectorWorldPosition } from '../types/mep-connector-types';
 import { getEntityConnectors } from '../mep-systems/connector-access';
 import { resolvePipeJoinTolerance } from '../mep-systems/mep-pipe-network-derive';
 import { resolveMepConnectorElevationMmAt } from './mep-connector-elevation';
+import { getNearestPointOnLine } from '../../rendering/entities/shared/geometry-utils';
+
+/** Degenerate-segment guard (squared length below this ⇒ a point, not a run). */
+const MIN_SEGMENT_LEN2 = 1e-9;
 
 /** One segment whose params must change so the network node moves together. */
 export interface SegmentElevationPatch {
@@ -98,6 +115,57 @@ function resolveAnchorElevationAt(
   return null;
 }
 
+/**
+ * If plan point `p` lies on the BODY of segment `a→b` (perpendicular distance
+ * within `tol`, foot strictly between the endpoints), return the foot's parameter
+ * `t ∈ (0,1)`; else `null`. The endpoint zones (foot within `tol` of `a` or `b`)
+ * are EXCLUDED — those are end-to-end / 3-way joins already handled by coincidence
+ * matching. This is the "tee on the main's body" detector (ADR-408 Φ-B2a EXT).
+ */
+function projectOnSegmentBodyParam(
+  p: Point2D,
+  a: Point2D,
+  b: Point2D,
+  tol2: number,
+): number | null {
+  const lenSq = dist2(a.x, a.y, b.x, b.y);
+  if (lenSq < MIN_SEGMENT_LEN2) return null;
+  const foot = getNearestPointOnLine(p, a, b, true);
+  if (dist2(p.x, p.y, foot.x, foot.y) > tol2) return null; // not on the line
+  // Foot near either endpoint ⇒ endpoint join, not a body tee.
+  if (dist2(foot.x, foot.y, a.x, a.y) <= tol2 || dist2(foot.x, foot.y, b.x, b.y) <= tol2) {
+    return null;
+  }
+  return ((foot.x - a.x) * (b.x - a.x) + (foot.y - a.y) * (b.y - a.y)) / lenSq;
+}
+
+/** Linear elevation (mm) at parameter `t` along a segment's start→end z's. */
+function interpolateSegmentZMm(params: MepSegmentParams, t: number): number {
+  const elev = resolveSegmentEndpointElevationsMm(params);
+  return elev.startMm + t * (elev.endMm - elev.startMm);
+}
+
+/**
+ * Through-pipe anchor (mm) at plan node `(x,y)`: if the node lies on the BODY of
+ * some OTHER pipe segment, that main is the anchor — a branch tapping it inherits
+ * the main's interpolated elevation at the tap (Revit: the branch hangs off the
+ * main, never tears it). `null` when no main passes through the node.
+ */
+function resolveThroughPipeAnchorAt(
+  entities: readonly Entity[],
+  editedId: string,
+  x: number,
+  y: number,
+  tol2: number,
+): number | null {
+  for (const e of entities) {
+    if (e.id === editedId || !isMepSegmentEntity(e) || e.params.domain !== 'pipe') continue;
+    const t = projectOnSegmentBodyParam({ x, y }, e.params.startPoint, e.params.endPoint, tol2);
+    if (t !== null) return interpolateSegmentZMm(e.params, t);
+  }
+  return null;
+}
+
 /** Return params with the two endpoint z's set + the derived centreline cache. */
 function withEndpointZ(
   params: MepSegmentParams,
@@ -112,8 +180,27 @@ function withEndpointZ(
   };
 }
 
+/**
+ * Anchor elevation (mm) at a changed node, by precedence:
+ *   1. manifold / fixture outlet — the source always wins,
+ *   2. a through-pipe whose BODY the node taps — the main the branch hangs off,
+ *   3. `null` — no anchor, the raw edited value stands.
+ */
+function resolveNodeAnchorMm(
+  entities: readonly Entity[],
+  editedId: string,
+  x: number,
+  y: number,
+  tol2: number,
+): number | null {
+  const host = resolveAnchorElevationAt(entities, x, y, tol2);
+  if (host !== null) return host;
+  return resolveThroughPipeAnchorAt(entities, editedId, x, y, tol2);
+}
+
 /** Build the changed-node list for the edited segment (anchor-corrected z). */
 function collectChangedNodes(
+  editedId: string,
   prevParams: MepSegmentParams,
   nextParams: MepSegmentParams,
   entities: readonly Entity[],
@@ -124,12 +211,12 @@ function collectChangedNodes(
   const nodes: ChangedNode[] = [];
   if (next.startMm !== prev.startMm) {
     const p = nextParams.startPoint;
-    const anchorZ = resolveAnchorElevationAt(entities, p.x, p.y, tol2);
+    const anchorZ = resolveNodeAnchorMm(entities, editedId, p.x, p.y, tol2);
     nodes.push({ which: 'start', x: p.x, y: p.y, zMm: anchorZ ?? next.startMm });
   }
   if (next.endMm !== prev.endMm) {
     const p = nextParams.endPoint;
-    const anchorZ = resolveAnchorElevationAt(entities, p.x, p.y, tol2);
+    const anchorZ = resolveNodeAnchorMm(entities, editedId, p.x, p.y, tol2);
     nodes.push({ which: 'end', x: p.x, y: p.y, zMm: anchorZ ?? next.endMm });
   }
   return nodes;
@@ -150,28 +237,42 @@ function applyResolvedNodes(
   return withEndpointZ(params, startZ, endZ);
 }
 
-/** Patch another segment's endpoints that coincide with a changed node, or null. */
-function patchCoincidentEndpoints(
+/**
+ * Patch another segment whose endpoint either (a) COINCIDES with a changed node
+ * (end-to-end / 3-way join — existing behaviour) or (b) TAPS THE BODY of the just
+ * edited segment (a tee on the edited main → it follows the main's interpolated
+ * elevation at the tap, ADR-408 Φ-B2a EXT). Coincidence wins over body for the same
+ * endpoint. Returns the new params, or `null` when nothing on this segment moves.
+ */
+function patchOtherSegment(
   seg: MepSegmentEntity,
   nodes: readonly ChangedNode[],
+  editedNewParams: MepSegmentParams,
   tol2: number,
 ): MepSegmentParams | null {
   const elev = resolveSegmentEndpointElevationsMm(seg.params);
-  let startZ = elev.startMm;
-  let endZ = elev.endMm;
-  let touched = false;
-  const { startPoint, endPoint } = seg.params;
-  for (const node of nodes) {
-    if (dist2(node.x, node.y, startPoint.x, startPoint.y) <= tol2 && startZ !== node.zMm) {
-      startZ = node.zMm;
-      touched = true;
+  const a = editedNewParams.startPoint;
+  const b = editedNewParams.endPoint;
+
+  /** Resolved new z for one endpoint, or `null` when it does not move. */
+  const resolveEndpointZ = (p: Point2D, currentZ: number): number | null => {
+    for (const node of nodes) {
+      if (dist2(node.x, node.y, p.x, p.y) <= tol2) {
+        return node.zMm !== currentZ ? node.zMm : null; // endpoint join claims it
+      }
     }
-    if (dist2(node.x, node.y, endPoint.x, endPoint.y) <= tol2 && endZ !== node.zMm) {
-      endZ = node.zMm;
-      touched = true;
+    const t = projectOnSegmentBodyParam(p, a, b, tol2);
+    if (t !== null) {
+      const z = interpolateSegmentZMm(editedNewParams, t);
+      return z !== currentZ ? z : null;
     }
-  }
-  return touched ? withEndpointZ(seg.params, startZ, endZ) : null;
+    return null;
+  };
+
+  const nextStart = resolveEndpointZ(seg.params.startPoint, elev.startMm);
+  const nextEnd = resolveEndpointZ(seg.params.endPoint, elev.endMm);
+  if (nextStart === null && nextEnd === null) return null;
+  return withEndpointZ(seg.params, nextStart ?? elev.startMm, nextEnd ?? elev.endMm);
 }
 
 /**
@@ -192,18 +293,18 @@ export function resolveConnectedElevationPatches(
   // in a metre scene, which would propagate elevation to far-apart endpoints.
   const tol = tolerance ?? resolvePipeJoinTolerance(entities);
   const tol2 = tol * tol;
-  const changed = collectChangedNodes(edited.params, editedNext, entities, tol2);
+  const changed = collectChangedNodes(edited.id, edited.params, editedNext, entities, tol2);
   if (changed.length === 0) {
     return [{ segment: edited, nextParams: editedNext }];
   }
 
-  const patches: SegmentElevationPatch[] = [
-    { segment: edited, nextParams: applyResolvedNodes(editedNext, changed) },
-  ];
+  // The edited segment's final geometry — the main whose body branches may tap.
+  const editedNewParams = applyResolvedNodes(editedNext, changed);
+  const patches: SegmentElevationPatch[] = [{ segment: edited, nextParams: editedNewParams }];
   for (const other of entities) {
     if (other.id === edited.id || !isMepSegmentEntity(other)) continue;
     if (other.params.domain !== 'pipe') continue;
-    const patched = patchCoincidentEndpoints(other, changed, tol2);
+    const patched = patchOtherSegment(other, changed, editedNewParams, tol2);
     if (patched) patches.push({ segment: other, nextParams: patched });
   }
   return patches;

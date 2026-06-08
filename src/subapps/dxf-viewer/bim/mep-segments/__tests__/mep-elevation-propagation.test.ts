@@ -139,6 +139,35 @@ describe('resolveConnectedElevationPatches', () => {
     expect(elev(patches.find((p) => p.segment.id === 'c')!).startMm).toBe(0);
   });
 
+  it('tee on a body: editing the MAIN drags a branch tapping its middle (interpolated)', () => {
+    // Main flat at 2800 along x; branch taps its MIDDLE at (1000,0).
+    const main = pipe('m', { x: 0, y: 0 }, { x: 2000, y: 0 }, 2800, 2800);
+    const branch = pipe('b', { x: 1000, y: 0 }, { x: 1000, y: 1000 }, 2800, 2800);
+    // Drop the main's end 2800 → 0: the main is now sloped, tap sits at t=0.5.
+    const next = editEndpoint(main, 'end', 0);
+
+    const patches = resolveConnectedElevationPatches([main, branch], main, next);
+
+    expect(patches).toHaveLength(2);
+    const pb = patches.find((p) => p.segment.id === 'b')!;
+    // Interpolated main z at the tap = 2800 + 0.5·(0 − 2800) = 1400.
+    expect(elev(pb).startMm).toBe(1400);
+    expect(elev(pb).endMm).toBe(2800); // the far (fixture) end is untouched
+  });
+
+  it('tee on a body: editing the BRANCH tap-end snaps it back to the main (anchor)', () => {
+    // Main flat at 2800; branch taps its middle at (1000,0), same elevation.
+    const main = pipe('m', { x: 0, y: 0 }, { x: 2000, y: 0 }, 2800, 2800);
+    const branch = pipe('b', { x: 1000, y: 0 }, { x: 1000, y: 1000 }, 2800, 2800);
+    // User tries to drop the branch's tap end to 0 — the main is the anchor.
+    const next = editEndpoint(branch, 'start', 0);
+
+    const patches = resolveConnectedElevationPatches([main, branch], branch, next);
+
+    expect(patches).toHaveLength(1); // only the branch; the main never tears
+    expect(elev(patches[0]!).startMm).toBe(2800); // clamped back to the main
+  });
+
   it('does not propagate for a duct segment', () => {
     const duct = {
       ...pipe('d', { x: 0, y: 0 }, { x: 1000, y: 0 }, 400, 400),

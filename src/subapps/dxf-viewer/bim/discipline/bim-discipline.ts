@@ -91,6 +91,8 @@ export const DISCIPLINE_BY_CATEGORY: Readonly<Record<BimCategory, DisciplineOrAn
   'mep-radiator':  'plumbing',
   // ADR-408 Εύρος Β #2 — heating boiler (λέβητας, hydronic source) ⊂ plumbing.
   'mep-boiler':    'plumbing',
+  // ADR-408 DHW — domestic hot water heater (θερμοσίφωνας, DHW source) ⊂ plumbing.
+  'mep-water-heater': 'plumbing',
   // ADR-408 Εύρος Β #3 — underfloor heating loop (ενδοδαπέδια, hydronic terminal area) ⊂ plumbing.
   'mep-underfloor': 'plumbing',
   // ADR-415 — sanitary plan symbols (WC/washbasin/…) ⊂ plumbing (Revit Plumbing Fixtures).

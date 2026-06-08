@@ -32,6 +32,7 @@ import {
   isMepManifoldEntity,
   isMepRadiatorEntity,
   isMepBoilerEntity,
+  isMepWaterHeaterEntity,
   isMepUnderfloorEntity,
 } from '../../types/entities';
 import { getEntityConnectors } from '../mep-systems/connector-access';
@@ -74,6 +75,11 @@ export function pointHostMountingElevationMm(entity: Entity): number | null {
   if (isMepBoilerEntity(entity)) {
     return entity.params.mountingElevationMm;
   }
+  // ADR-408 DHW — a domestic hot-water heater is pipe-connectable; its cold inlet
+  // + hot outlet sit at its `mountingElevationMm` so connected pipes inherit that height.
+  if (isMepWaterHeaterEntity(entity)) {
+    return entity.params.mountingElevationMm;
+  }
   // ADR-408 Εύρος Β #3 — an underfloor loop is pipe-connectable but has NO
   // `position`/`mountingElevationMm` (identity host transform). Its supply/return
   // ports sit in the screed at `FFL + screedOffsetMm`; the connector `localPosition`
@@ -114,7 +120,7 @@ export function resolveMepConnectorElevationMmAt(
   // `datum !== null` ⟹ a manifold or fixture (see hostMountingElevationMm). Narrow
   // with the type guards rather than a broad `Extract` cast, so a future param
   // type added to the union that lacks `rotation` cannot silently match here.
-  if (!isMepManifoldEntity(entity) && !isMepFixtureEntity(entity) && !isMepRadiatorEntity(entity) && !isMepBoilerEntity(entity)) return datum;
+  if (!isMepManifoldEntity(entity) && !isMepFixtureEntity(entity) && !isMepRadiatorEntity(entity) && !isMepBoilerEntity(entity) && !isMepWaterHeaterEntity(entity)) return datum;
   const { position } = entity.params;
   const rotation = entity.params.rotation ?? 0;
   const connectors = getEntityConnectors(entity);

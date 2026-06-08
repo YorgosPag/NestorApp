@@ -58,8 +58,16 @@ export interface MepSegmentGhostRenderInput {
    * conversion, or a default from the tool's current params).
    */
   readonly sectionWidthCanvas: number;
-  /** MEP domain — selects the palette colour (duct = blue, pipe = teal). */
+  /** MEP domain — selects the default palette colour (duct = blue, pipe = teal). */
   readonly domain: MepSegmentDomain;
+  /**
+   * ADR-426 Slice 2 — optional palette override. The water auto-design proposal
+   * ghost reuses this renderer but paints cold vs hot runs in distinct colours
+   * (teal / warm-red); when present these win over the domain default. Leaving
+   * them undefined preserves the manual-tool behaviour unchanged.
+   */
+  readonly strokeOverride?: string;
+  readonly fillOverride?: string;
   readonly transform: ViewTransform;
   readonly viewport: { readonly width: number; readonly height: number };
 }
@@ -72,8 +80,8 @@ export class MepSegmentGhostRenderer {
   render(input: Readonly<MepSegmentGhostRenderInput>): void {
     const { startPoint, cursor, sectionWidthCanvas, domain, transform, viewport } = input;
 
-    const stroke = domain === 'duct' ? DUCT_STROKE : PIPE_STROKE;
-    const fill   = domain === 'duct' ? DUCT_FILL   : PIPE_FILL;
+    const stroke = input.strokeOverride ?? (domain === 'duct' ? DUCT_STROKE : PIPE_STROKE);
+    const fill   = input.fillOverride   ?? (domain === 'duct' ? DUCT_FILL   : PIPE_FILL);
 
     // Build the rubber-band offset rectangle: four corners of (start→cursor) ±half-width.
     const outline = buildOutlineRect(startPoint, cursor, sectionWidthCanvas);

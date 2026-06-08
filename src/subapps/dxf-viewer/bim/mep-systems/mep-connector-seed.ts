@@ -33,6 +33,7 @@ import {
   isMepManifoldEntity,
   isMepRadiatorEntity,
   isMepBoilerEntity,
+  isMepWaterHeaterEntity,
   isMepUnderfloorEntity,
 } from '../../types/entities';
 import { getEntityConnectors } from './connector-access';
@@ -48,6 +49,7 @@ import { buildSanitaryFixtureConnectors } from '../mep-fixtures/sanitary-fixture
 import { buildMepManifoldConnectors } from '../mep-manifolds/mep-manifold-geometry';
 import { buildRadiatorConnectors } from '../mep-radiators/mep-radiator-geometry';
 import { buildBoilerConnectors } from '../mep-boilers/mep-boiler-geometry';
+import { buildWaterHeaterConnectors } from '../mep-water-heaters/mep-water-heater-geometry';
 import { buildUnderfloorConnectors } from '../mep-underfloor/mep-underfloor-geometry';
 
 /**
@@ -97,6 +99,14 @@ export function seedDefaultConnectors(entity: Entity): Entity {
   // even if its connectors were not persisted (Revit family-definition).
   if (isMepBoilerEntity(entity)) {
     return { ...entity, params: { ...entity.params, connectors: buildBoilerConnectors(entity.params) } };
+  }
+  // ADR-408 DHW — a domestic hot-water heater materialises its 2 connectors (cold
+  // inlet `domestic-cold-water` + hot outlet `domestic-hot-water`) derived from
+  // `width` + `connectorDiameterMm` (SSoT `buildWaterHeaterConnectors`), so a
+  // load-time water heater re-sources the DHW network even if its connectors were
+  // not persisted (Revit family-definition).
+  if (isMepWaterHeaterEntity(entity)) {
+    return { ...entity, params: { ...entity.params, connectors: buildWaterHeaterConnectors(entity.params) } };
   }
   // ADR-408 Εύρος Β #3 — an underfloor loop materialises its 2 hydronic connectors
   // (supply inlet + return outlet) at the computed loop-entry points (SSoT
