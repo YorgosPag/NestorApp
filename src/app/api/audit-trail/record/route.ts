@@ -79,6 +79,10 @@ const ENTITY_COLLECTION_MAP: Record<string, string> = {
   'mep-segment': COLLECTIONS.FLOORPLAN_MEP_SEGMENTS,
   // ADR-408 Φ12 — point-based plumbing manifolds.
   'mep-manifold': COLLECTIONS.FLOORPLAN_MEP_MANIFOLDS,
+  // ADR-408 Φ11 — auto-derived pipe fittings. Was in VALID_ENTITY_TYPES but missing
+  // here → every fitting audit POST 400'd ("No collection mapping"), spamming the
+  // console in bursts whenever pipes were drawn (auto-reconciler creates fittings).
+  'mep-fitting': COLLECTIONS.FLOORPLAN_MEP_FITTINGS,
   // ADR-412 Φ5 — BIM family types (subcollection — see SUBCOLLECTION_ENTITY_TYPES).
   bim_family_type: COLLECTIONS.BIM_FAMILY_TYPES,
 };

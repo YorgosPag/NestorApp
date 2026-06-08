@@ -558,6 +558,9 @@
     "mepBoiler": {
       "statusPosition": "Κλικ για τοποθέτηση λέβητα"
     },
+    "mepWaterHeater": {
+      "statusPosition": "Κλικ για τοποθέτηση θερμοσίφωνα"
+    },
     "mepSegment": {
       "statusStart": "Επίλεξε αρχή διαδρομής",
       "statusEnd": "Επίλεξε τέλος διαδρομής"
@@ -843,6 +846,7 @@
       "mepDrainageCollectorProperties": "Ιδιότητες Φρεατίου",
       "mepRadiatorProperties": "Ιδιότητες Καλοριφέρ",
       "mepBoilerProperties": "Ιδιότητες Λέβητα",
+      "mepWaterHeaterProperties": "Ιδιότητες Θερμοσίφωνα",
       "mepUnderfloorProperties": "Ιδιότητες Ενδοδαπέδιας",
       "mepSegmentProperties": "Ιδιότητες Σωλήνα/Αεραγωγού",
       "validationBadge": "Παραβίαση κανονισμών",
@@ -957,7 +961,11 @@
       "mepRadiatorActions": "Ενέργειες",
       "mepBoilerGeometry": "Γεωμετρία",
       "mepBoilerThermal": "Θερμικά",
+      "mepBoilerSizing": "Διαστασιολόγηση",
       "mepBoilerActions": "Ενέργειες",
+      "mepWaterHeaterGeometry": "Γεωμετρία",
+      "mepWaterHeaterThermal": "Θερμικά",
+      "mepWaterHeaterActions": "Ενέργειες",
       "mepUnderfloorGeometry": "Γεωμετρία",
       "mepUnderfloorThermal": "Θερμικά",
       "mepUnderfloorActions": "Ενέργειες",
@@ -967,6 +975,7 @@
       "floorFinishActions": "Ενέργειες",
       "thermalSpaceProperties": "Ιδιότητες",
       "thermalSpaceGeometry": "Γεωμετρία",
+      "thermalSpaceHeatLoad": "Θερμικό Φορτίο",
       "thermalSpaceActions": "Ενέργειες",
       "mepSegmentSection": "Διατομή",
       "mepSegmentDimensions": "Διαστάσεις",
@@ -1217,6 +1226,10 @@
           "label": "Λέβητας",
           "tooltip": "Λέβητας/καυστήρας θέρμανσης (έξοδος προσαγωγής + είσοδος επιστροφής) — τοποθέτηση με ένα κλικ (πειθαρχία: υδραυλικά/θέρμανση)"
         },
+        "mepWaterHeater": {
+          "label": "Θερμοσίφωνας",
+          "tooltip": "Τοποθέτηση θερμοσίφωνα (πηγή ζεστού νερού χρήσης / ΖΝΧ) — τοποθέτηση με ένα κλικ (πειθαρχία: υδραυλικά/ύδρευση)"
+        },
         "mepUnderfloor": {
           "label": "Ενδοδαπέδια",
           "tooltip": "Ενδοδαπέδια θέρμανση ανά περιοχή (κλικ-κλικ) — αυτόματη σερπαντίνα σωλήνων (προσαγωγή + επιστροφή) εντός του περιγράμματος (πειθαρχία: υδραυλικά/θέρμανση)"
@@ -1320,6 +1333,22 @@
         "mepPipeNetwork": {
           "label": "Δίκτυα σωλήνων",
           "tooltip": "Αυτόματη δημιουργία δικτύων σωλήνων από τη φυσική συνδεσιμότητα (συνδεδεμένοι σωλήνες → ένα δίκτυο)"
+        },
+        "waterAutoSupply": {
+          "label": "Αυτόματη Ύδρευση",
+          "tooltip": "Αυτόματος σχεδιασμός δικτύου ύδρευσης (κρύο/ζεστό): Δημιουργία → έλεγχος → αποδοχή"
+        },
+        "waterAutoGenerate": {
+          "label": "Δημιουργία",
+          "tooltip": "Αναγνώριση ορόφου + αυτόματος σχεδιασμός δικτύων ύδρευσης (προεπισκόπηση)"
+        },
+        "waterAutoAccept": {
+          "label": "Αποδοχή",
+          "tooltip": "Μετατροπή της πρότασης σε πραγματικούς σωλήνες + δίκτυα"
+        },
+        "waterAutoReject": {
+          "label": "Απόρριψη",
+          "tooltip": "Απόρριψη της πρότασης ύδρευσης"
         }
       },
       "select": "Επιλογή",
@@ -2223,9 +2252,30 @@
         "mountingElevation": "Ύψος τοποθέτησης",
         "connectorDiameter": "Διάμετρος σύνδεσης",
         "thermalOutput": "Θερμική ισχύς (W)",
+        "requiredOutput": "Απαιτούμενη (kW)",
+        "installedOutput": "Εγκατεστημένη (kW)",
+        "adequacy": "Επάρκεια",
+        "sizingStatus": {
+          "ok": "Επαρκής",
+          "undersized": "Υποδιαστασιολόγηση",
+          "oversized": "Υπερδιαστασιολόγηση",
+          "unknown": "—"
+        },
         "close": "Κλείσιμο",
         "delete": "Διαγραφή",
         "deleteConfirm": "Διαγραφή λέβητα; Η ενέργεια δεν μπορεί να αναιρεθεί."
+      },
+      "mepWaterHeaterEditor": {
+        "width": "Πλάτος",
+        "length": "Βάθος",
+        "bodyHeight": "Ύψος σώματος",
+        "mountingElevation": "Ύψος τοποθέτησης",
+        "connectorDiameter": "Διάμετρος σύνδεσης",
+        "thermalOutput": "Θερμική ισχύς (W)",
+        "tankCapacityL": "Χωρητικότητα δεξαμενής (L)",
+        "close": "Κλείσιμο",
+        "delete": "Διαγραφή",
+        "deleteConfirm": "Διαγραφή θερμοσίφωνα; Η ενέργεια δεν μπορεί να αναιρεθεί."
       },
       "mepUnderfloorEditor": {
         "pipeSpacing": "Βήμα σωλήνα (mm)",
@@ -2259,7 +2309,9 @@
         "ceilingHeightMm": "Ύψος (mm)",
         "close": "Κλείσιμο",
         "delete": "Διαγραφή",
-        "deleteConfirm": "Διαγραφή θερμικού χώρου; Η ενέργεια δεν μπορεί να αναιρεθεί."
+        "deleteConfirm": "Διαγραφή θερμικού χώρου; Η ενέργεια δεν μπορεί να αναιρεθεί.",
+        "heatLoadTotalW": "Φορτίο Φ",
+        "heatLoadSpecific": "Ειδικό φορτίο"
       },
       "mepSegmentEditor": {
         "width": "Πλάτος",
@@ -2585,6 +2637,13 @@
         "tooltipEnable": "Χρωματισμός φωτιστικών, πινάκων και καλωδίων ανά κύκλωμα (σύστημα)",
         "tooltipDisable": "Απενεργοποίηση χρωματισμού ανά σύστημα — χρήση προεπιλεγμένου χρώματος"
       },
+      "heatLoad": {
+        "label": "Θερμικό Φορτίο",
+        "enable": "Εμφάνιση",
+        "disable": "Απόκρυψη",
+        "tooltipEnable": "Εμφάνιση αναλυτικού θερμικού φορτίου ανά χώρο (heat-map + Φ σε W)",
+        "tooltipDisable": "Απόκρυψη αναλυτικού θερμικού φορτίου"
+      },
       "realisticMaterials": {
         "label": "Ρεαλιστικά Υλικά",
         "enable": "Ενεργοποίηση Υλικών",
@@ -2770,6 +2829,13 @@
       "mepRiser": {
         "toFloor": "Έως όροφο",
         "diameter": "Διάμετρος"
+      },
+      "waterSupply": {
+        "networkName": "Ύδρευση {service} {n}",
+        "service": {
+          "cold": "κρύο νερό",
+          "hot": "ζεστό νερό"
+        }
       }
     },
     "tooltips": {
@@ -3096,6 +3162,16 @@
       }
     }
   },
+  "mepWaterHeater": {
+    "validation": {
+      "hardErrors": {
+        "nonPositiveWidth": "Το πλάτος πρέπει να είναι θετικό",
+        "nonPositiveLength": "Το βάθος πρέπει να είναι θετικό",
+        "dimensionTooSmall": "Η διάσταση είναι μικρότερη από το ελάχιστο επιτρεπτό",
+        "nonPositiveBodyHeight": "Το ύψος θερμοσίφωνα πρέπει να είναι θετικό"
+      }
+    }
+  },
   "railing": {
     "validation": {
       "hardErrors": {
@@ -3231,5 +3307,14 @@
       "office": "Γραφείο",
       "generic": "Γενική χρήση"
     }
+  },
+  "waterSupply": {
+    "generated": "Δημιουργήθηκε πρόταση ύδρευσης — δίκτυα: {count}.",
+    "generatedWithWarnings": "Δημιουργήθηκε πρόταση ύδρευσης — δίκτυα: {count} (προειδοποιήσεις: {warnings}).",
+    "empty": {
+      "no-fixtures": "Δεν αναγνωρίστηκαν είδη υγιεινής για ύδρευση σε αυτόν τον όροφο.",
+      "no-source": "Δεν βρέθηκε πηγή ύδρευσης (συλλέκτης/λέβητας) — το δίκτυο παραλείφθηκε."
+    },
+    "committed": "Το δίκτυο ύδρευσης δημιουργήθηκε — δίκτυα: {count}, σωλήνες: {segments}."
   }
 }

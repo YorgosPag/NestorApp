@@ -558,6 +558,9 @@
     "mepBoiler": {
       "statusPosition": "Click to place boiler"
     },
+    "mepWaterHeater": {
+      "statusPosition": "Click to place water heater"
+    },
     "mepSegment": {
       "statusStart": "Pick run start",
       "statusEnd": "Pick run end"
@@ -843,6 +846,7 @@
       "mepDrainageCollectorProperties": "Catch Basin Properties",
       "mepRadiatorProperties": "Radiator Properties",
       "mepBoilerProperties": "Boiler Properties",
+      "mepWaterHeaterProperties": "Water Heater Properties",
       "mepUnderfloorProperties": "Underfloor Properties",
       "mepSegmentProperties": "Pipe / Duct Properties",
       "validationBadge": "Code violation",
@@ -957,7 +961,11 @@
       "mepRadiatorActions": "Actions",
       "mepBoilerGeometry": "Geometry",
       "mepBoilerThermal": "Thermal",
+      "mepBoilerSizing": "Sizing",
       "mepBoilerActions": "Actions",
+      "mepWaterHeaterGeometry": "Geometry",
+      "mepWaterHeaterThermal": "Thermal",
+      "mepWaterHeaterActions": "Actions",
       "mepUnderfloorGeometry": "Geometry",
       "mepUnderfloorThermal": "Thermal",
       "mepUnderfloorActions": "Actions",
@@ -967,6 +975,7 @@
       "floorFinishActions": "Actions",
       "thermalSpaceProperties": "Properties",
       "thermalSpaceGeometry": "Geometry",
+      "thermalSpaceHeatLoad": "Heat Load",
       "thermalSpaceActions": "Actions",
       "mepSegmentSection": "Section",
       "mepSegmentDimensions": "Dimensions",
@@ -1217,6 +1226,10 @@
           "label": "Boiler",
           "tooltip": "Heating boiler / burner (supply outlet + return inlet) — single-click placement (discipline: plumbing/heating)"
         },
+        "mepWaterHeater": {
+          "label": "Water Heater",
+          "tooltip": "Domestic hot water heater (DHW source) — single-click placement (discipline: plumbing/water supply)"
+        },
         "mepUnderfloor": {
           "label": "Underfloor",
           "tooltip": "Underfloor radiant heating per area (click-click) — auto serpentine pipe loop (supply + return) inside the footprint (discipline: plumbing/heating)"
@@ -1320,6 +1333,22 @@
         "mepPipeNetwork": {
           "label": "Pipe networks",
           "tooltip": "Auto-derive pipe networks from physical connectivity (connected pipes → one network)"
+        },
+        "waterAutoSupply": {
+          "label": "Auto Water Supply",
+          "tooltip": "Auto-design the domestic water network (cold/hot): Generate → review → accept"
+        },
+        "waterAutoGenerate": {
+          "label": "Generate",
+          "tooltip": "Recognize the storey + auto-design the water networks (preview)"
+        },
+        "waterAutoAccept": {
+          "label": "Accept",
+          "tooltip": "Commit the proposal to real pipes + systems"
+        },
+        "waterAutoReject": {
+          "label": "Reject",
+          "tooltip": "Discard the water-supply proposal"
         }
       },
       "select": "Select",
@@ -2223,9 +2252,30 @@
         "mountingElevation": "Mounting height",
         "connectorDiameter": "Connector diameter",
         "thermalOutput": "Thermal output (W)",
+        "requiredOutput": "Required (kW)",
+        "installedOutput": "Installed (kW)",
+        "adequacy": "Adequacy",
+        "sizingStatus": {
+          "ok": "Adequate",
+          "undersized": "Undersized",
+          "oversized": "Oversized",
+          "unknown": "—"
+        },
         "close": "Close",
         "delete": "Delete",
         "deleteConfirm": "Delete boiler? This action cannot be undone."
+      },
+      "mepWaterHeaterEditor": {
+        "width": "Width",
+        "length": "Depth",
+        "bodyHeight": "Body height",
+        "mountingElevation": "Mounting height",
+        "connectorDiameter": "Connector diameter",
+        "thermalOutput": "Thermal output (W)",
+        "tankCapacityL": "Tank capacity (L)",
+        "close": "Close",
+        "delete": "Delete",
+        "deleteConfirm": "Delete water heater? This action cannot be undone."
       },
       "mepUnderfloorEditor": {
         "pipeSpacing": "Pipe spacing (mm)",
@@ -2259,7 +2309,9 @@
         "ceilingHeightMm": "Height (mm)",
         "close": "Close",
         "delete": "Delete",
-        "deleteConfirm": "Delete thermal space? This action cannot be undone."
+        "deleteConfirm": "Delete thermal space? This action cannot be undone.",
+        "heatLoadTotalW": "Load Φ",
+        "heatLoadSpecific": "Specific load"
       },
       "mepSegmentEditor": {
         "width": "Width",
@@ -2585,6 +2637,13 @@
         "tooltipEnable": "Colour fixtures, panels and wires by their circuit (system)",
         "tooltipDisable": "Turn off colour-by-system — use the default colour"
       },
+      "heatLoad": {
+        "label": "Heat Load",
+        "enable": "Show",
+        "disable": "Hide",
+        "tooltipEnable": "Show analytical heat load per space (heat-map + Φ in W)",
+        "tooltipDisable": "Hide analytical heat load"
+      },
       "realisticMaterials": {
         "label": "Realistic Materials",
         "enable": "Enable Materials",
@@ -2770,6 +2829,13 @@
       "mepRiser": {
         "toFloor": "To floor",
         "diameter": "Diameter"
+      },
+      "waterSupply": {
+        "networkName": "{service} water {n}",
+        "service": {
+          "cold": "cold",
+          "hot": "hot"
+        }
       }
     },
     "tooltips": {
@@ -3096,6 +3162,16 @@
       }
     }
   },
+  "mepWaterHeater": {
+    "validation": {
+      "hardErrors": {
+        "nonPositiveWidth": "Width must be greater than 0",
+        "nonPositiveLength": "Depth must be greater than 0",
+        "dimensionTooSmall": "Dimension is below the minimum allowed",
+        "nonPositiveBodyHeight": "Water heater height must be greater than 0"
+      }
+    }
+  },
   "railing": {
     "validation": {
       "hardErrors": {
@@ -3231,5 +3307,14 @@
       "office": "Office",
       "generic": "Generic"
     }
+  },
+  "waterSupply": {
+    "generated": "Water-supply proposal created — networks: {count}.",
+    "generatedWithWarnings": "Water-supply proposal created — networks: {count} (warnings: {warnings}).",
+    "empty": {
+      "no-fixtures": "No sanitary fixtures recognized for water supply on this storey.",
+      "no-source": "No water-supply source (manifold/boiler) found — network skipped."
+    },
+    "committed": "Water-supply network created — networks: {count}, pipes: {segments}."
   }
 }
