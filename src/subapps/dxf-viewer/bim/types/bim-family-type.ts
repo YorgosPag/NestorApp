@@ -271,6 +271,13 @@ export interface OpeningTypeParams {
   readonly glazingPanes?: 1 | 2 | 3;
   /** Fire-resistance rating spec for Revit-grade schedules (e.g. «EI30»). */
   readonly fireRating?: string;
+  /**
+   * ADR-422 L1 — **Type default** συντελεστή θερμοπερατότητας `Ug` (W/m²K) για
+   * τον υπολογισμό θερμικού φορτίου. Absent ⇒ resolve από υαλοπίνακες/τύπο μέσω
+   * `resolveOpeningUValue` (`glazing-u-catalog`). Per-instance override:
+   * `OpeningParams.ugWperM2K`. Revit «type default, instance override».
+   */
+  readonly ugWperM2K?: number;
 }
 
 // ─── Category → type-param map ───────────────────────────────────────────────

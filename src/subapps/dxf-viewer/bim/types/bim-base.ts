@@ -61,6 +61,8 @@ export type BimElementType =
   | 'mep-radiator'
   // ADR-408 Eyros B #2 — point-based hydronic boiler (heating source).
   | 'mep-boiler'
+  // ADR-408 DHW — point-based domestic hot water heater (DHW source).
+  | 'mep-water-heater'
   // ADR-408 Eyros B #3 — area-based radiant floor heating loop.
   | 'mep-underfloor'
   // ADR-419 — thin polygon floor covering per room (IfcCovering FLOORING).

@@ -413,6 +413,56 @@ export function buildBoilerReturnConnector(
   };
 }
 
+// ─── Domestic hot water heater connectors (ADR-408 DHW / θερμοσίφωνας) ────────────
+
+/** Connector id for the cold-water inlet (τροφοδοσία κρύου) of a DHW water heater. */
+export const WATER_HEATER_COLD_CONNECTOR_ID = 'wh-cold';
+/** Connector id for the hot-water outlet (έξοδος ζεστού) of a DHW water heater. */
+export const WATER_HEATER_HOT_CONNECTOR_ID = 'wh-hot';
+
+/**
+ * Cold-water inlet connector of a domestic hot water heater (ADR-408 DHW, θερμοσίφωνας).
+ * Mains cold water ENTERS the heater here (`flow: 'in'`), `domain: 'pipe'`,
+ * classification FIXED to `domestic-cold-water` — making the heater a MEMBER of the
+ * cold-water network (its hydraulic role is set by physics — cold in / hot out).
+ *
+ * `localPosition` is host-local (scene units, pre-rotation) — the caller resolves it
+ * from the body geometry (see `buildWaterHeaterConnectors`).
+ */
+export function buildWaterHeaterColdInletConnector(
+  localPosition: Point3D,
+  diameterMm: number,
+): MepConnector {
+  return {
+    connectorId: WATER_HEATER_COLD_CONNECTOR_ID,
+    domain: 'pipe',
+    flow: 'in',
+    localPosition,
+    pipe: { systemClassification: 'domestic-cold-water', diameterMm },
+  };
+}
+
+/**
+ * Hot-water outlet connector of a domestic hot water heater (ADR-408 DHW). Heated water
+ * LEAVES the heater here (`flow: 'out'`), `domain: 'pipe'`, classification FIXED to
+ * `domestic-hot-water`. Together with {@link buildWaterHeaterColdInletConnector} the
+ * heater SOURCES the domestic-hot-water network (hot outlet) and is a member of the
+ * cold-water network (cold inlet) — membership is per-(entity, connector). This hot
+ * outlet is the missing SOURCE that finally feeds the fixtures' hot-water inlets.
+ */
+export function buildWaterHeaterHotOutletConnector(
+  localPosition: Point3D,
+  diameterMm: number,
+): MepConnector {
+  return {
+    connectorId: WATER_HEATER_HOT_CONNECTOR_ID,
+    domain: 'pipe',
+    flow: 'out',
+    localPosition,
+    pipe: { systemClassification: 'domestic-hot-water', diameterMm },
+  };
+}
+
 // ─── Underfloor heating loop connectors (ADR-408 Εύρος Β #3) ──────────────────────
 
 /** Connector id for the supply inlet (προσαγωγή) of an underfloor heating loop. */

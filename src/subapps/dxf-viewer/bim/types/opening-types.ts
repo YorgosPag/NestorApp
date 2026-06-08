@@ -109,6 +109,12 @@ export interface OpeningParams {
   /** Glazing panes — 1 single / 2 double / 3 triple. Window / french-door / fixed. */
   readonly glazingPanes?: 1 | 2 | 3;
   /**
+   * ADR-422 L1 — **Instance override** συντελεστή θερμοπερατότητας `Ug` (W/m²K)
+   * για τον υπολογισμό θερμικού φορτίου. Absent ⇒ resolve από τον τύπο/υαλοπίνακες
+   * μέσω `resolveOpeningUValue` (`glazing-u-catalog`). Revit «instance override».
+   */
+  readonly ugWperM2K?: number;
+  /**
    * ADR-421 §A2 — Ρητός μηχανισμός λειτουργίας (IFC operation). Optional/non-breaking:
    * legacy openings → resolve από `kind` (+`handing`) μέσω `resolveOperationType()`
    * (SSoT `opening-operation-types.ts`). Auto-filled στο factory. Καθορίζει το IFC

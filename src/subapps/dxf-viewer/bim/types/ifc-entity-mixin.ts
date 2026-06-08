@@ -51,6 +51,8 @@ export type IfcEntityType =
   | 'IfcSpaceHeater'
   // ADR-408 Eyros B #2 — hydronic heat source (boiler; Mechanical Equipment family).
   | 'IfcBoiler'
+  // ADR-408 DHW — domestic hot water heater / θερμοσίφωνας (packaged plumbing equipment).
+  | 'IfcUnitaryEquipment'
   // ADR-419 — thin floor covering per room (IfcCovering FLOORING).
   | 'IfcCovering'
   // ADR-422 — analytical thermal space / θερμικός χώρος (HVAC analytical space).
@@ -90,6 +92,8 @@ export const IFC_ENTITY_TYPE_VALUES: readonly IfcEntityType[] = [
   'IfcSpaceHeater',
   // ADR-408 Εύρος Β #2 — hydronic heat source (boiler).
   'IfcBoiler',
+  // ADR-408 DHW — domestic hot water heater / θερμοσίφωνας.
+  'IfcUnitaryEquipment',
   // ADR-419 — thin floor covering per room.
   'IfcCovering',
   // ADR-422 — analytical thermal space (IfcSpace).
@@ -153,8 +157,12 @@ export const IfcEntityTypeSchema = z.enum([
   'IfcSpaceHeater',
   // ADR-408 Εύρος Β #2 — hydronic heat source (boiler).
   'IfcBoiler',
+  // ADR-408 DHW — domestic hot water heater / θερμοσίφωνας.
+  'IfcUnitaryEquipment',
   // ADR-419 — thin floor covering per room.
   'IfcCovering',
+  // ADR-422 — analytical thermal space (IfcSpace).
+  'IfcSpace',
 ]);
 
 export const IfcPropertySetValueSchema = z.union([

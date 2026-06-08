@@ -128,6 +128,16 @@ export function useWallPersistence(
   const selectedWallRef = useRef<WallEntity | null>(null);
   selectedWallRef.current = primarySelectedWall;
 
+  // ⚡ STABILITY (ca9 fix 2026-06-08): key the Firestore subscription off stable
+  // scope primitives + `currentLevelId`, NOT the per-render `levelManager` object,
+  // so onSnapshot does not unsubscribe/re-subscribe on every render. With pipes on
+  // canvas the reconcilers re-render in bursts, so the wall subscription target was
+  // removed before the server ack → `INTERNAL ASSERTION FAILED ca9 {ve:-1}` (the
+  // original report's stack started in THIS hook's cleanup). Mirror of the fitting hook.
+  const levelManagerRef = useRef(levelManager);
+  levelManagerRef.current = levelManager;
+  const currentLevelId = levelManager.currentLevelId;
+
   // Instantiate service when auth + scope ready.
   useEffect(() => {
     if (!companyId || !projectId || !floorplanId || !userId) {
@@ -146,12 +156,13 @@ export function useWallPersistence(
   // Subscribe + diff-merge + selective skip of locally-dirty walls.
   useEffect(() => {
     const svc = serviceRef.current;
-    const levelId = levelManager.currentLevelId;
+    const levelId = currentLevelId;
     if (!svc || !levelId) return;
 
     const unsubscribe = svc.subscribeWalls(
       (docs) => {
-        const scene = levelManager.getLevelScene(levelId);
+        const lm = levelManagerRef.current;
+        const scene = lm.getLevelScene(levelId);
         if (!scene) return;
 
         const docsById = new Map<string, WallDoc>();
@@ -234,7 +245,7 @@ export function useWallPersistence(
         }
 
         if (mutated) {
-          levelManager.setLevelScene(levelId, {
+          lm.setLevelScene(levelId, {
             ...scene,
             entities: [...nonWalls, ...nextWalls],
           });
@@ -247,7 +258,7 @@ export function useWallPersistence(
     );
 
     return () => unsubscribe();
-  }, [levelManager, companyId, projectId, floorplanId, userId]);
+  }, [currentLevelId, companyId, projectId, floorplanId, userId]);
 
   // ADR-412 «type always wins» — re-resolve typed walls on catalog change.
   useWallTypeReresolution(levelManager, dirtyIdsRef);
