@@ -615,6 +615,42 @@ export const HOME_DRAW_PANEL: RibbonPanelDef = {
                 },
               ],
             },
+            // ── Αυτόματη Ύδρευση (submenu, ADR-426 Slice 2) ───────────────
+            // Revit "Generate → review → accept": all three are `action`
+            // buttons (fire onAction, not a draw tool).
+            {
+              id: 'draw.bim.waterAutoSupply',
+              labelKey: 'ribbon.commands.bim.waterAutoSupply.label',
+              tooltipKey: 'ribbon.commands.bim.waterAutoSupply.tooltip',
+              icon: 'bim-pipe',
+              commandKey: 'draw.bim.waterAutoSupply',
+              subVariants: [
+                {
+                  id: 'draw.bim.waterAutoGenerate',
+                  labelKey: 'ribbon.commands.bim.waterAutoGenerate.label',
+                  tooltipKey: 'ribbon.commands.bim.waterAutoGenerate.tooltip',
+                  icon: 'bim-pipe',
+                  commandKey: 'waterSupply.actions.generate',
+                  action: 'waterSupply.actions.generate',
+                },
+                {
+                  id: 'draw.bim.waterAutoAccept',
+                  labelKey: 'ribbon.commands.bim.waterAutoAccept.label',
+                  tooltipKey: 'ribbon.commands.bim.waterAutoAccept.tooltip',
+                  icon: 'bim-pipe',
+                  commandKey: 'waterSupply.actions.accept',
+                  action: 'waterSupply.actions.accept',
+                },
+                {
+                  id: 'draw.bim.waterAutoReject',
+                  labelKey: 'ribbon.commands.bim.waterAutoReject.label',
+                  tooltipKey: 'ribbon.commands.bim.waterAutoReject.tooltip',
+                  icon: 'bim-pipe',
+                  commandKey: 'waterSupply.actions.reject',
+                  action: 'waterSupply.actions.reject',
+                },
+              ],
+            },
             // ── Αποχέτευση (submenu) ──────────────────────────────────────
             {
               id: 'draw.bim.mepDrainage',
@@ -750,6 +786,14 @@ export const HOME_DRAW_PANEL: RibbonPanelDef = {
                   tooltipKey: 'ribbon.commands.bim.mepBoiler.tooltip',
                   icon: 'bim-mep-boiler',
                   commandKey: 'mep-boiler',
+                },
+                // ADR-408 DHW — domestic hot water heater (θερμοσίφωνας). DHW source.
+                {
+                  id: 'draw.bim.mepWaterHeater',
+                  labelKey: 'ribbon.commands.bim.mepWaterHeater.label',
+                  tooltipKey: 'ribbon.commands.bim.mepWaterHeater.tooltip',
+                  icon: 'bim-mep-water-heater',
+                  commandKey: 'mep-water-heater',
                 },
                 // ADR-408 Εύρος Β #3 — underfloor radiant heating (ενδοδαπέδια). Area terminal.
                 {

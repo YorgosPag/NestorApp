@@ -20,6 +20,7 @@ import type { FurnitureKind } from '../types/furniture-types';
 import type { RoofKind } from '../types/roof-types';
 import type { MepRadiatorKind } from '../types/mep-radiator-types';
 import type { MepBoilerKind } from '../types/mep-boiler-types';
+import type { MepWaterHeaterKind } from '../types/mep-water-heater-types';
 import type { MepManifoldKind } from '../types/mep-manifold-types';
 import type { MepUnderfloorKind } from '../types/mep-underfloor-types';
 import type { PlumbingSystemClassification } from '../types/mep-connector-types';
@@ -31,7 +32,7 @@ import type { PlumbingSystemClassification } from '../types/mep-connector-types'
 export type BimEntityType =
   | 'wall' | 'opening' | 'slab' | 'column' | 'beam' | 'stair' | 'railing' | 'furniture' | 'roof'
   // ADR-408 — Η-Μ (Ηλεκτρομηχανολογικά) entities feeding the BOQ.
-  | 'mep-radiator' | 'mep-boiler' | 'mep-segment' | 'mep-underfloor' | 'mep-manifold';
+  | 'mep-radiator' | 'mep-boiler' | 'mep-water-heater' | 'mep-segment' | 'mep-underfloor' | 'mep-manifold';
 
 export interface AtoeMappingEntry {
   /**
@@ -209,6 +210,11 @@ const MEP_BOILER_MAPPING: Readonly<Record<MepBoilerKind, AtoeMappingEntry>> = {
   'wall-boiler': { categoryCode: 'ΗΛΜ-7.02', unit: 'pcs', titleEL: 'Λέβητας επίτοιχος (BIM)' },
 };
 
+// DHW source — electric water heater (IfcUnitaryEquipment) → counted per piece.
+const MEP_WATER_HEATER_MAPPING: Readonly<Record<MepWaterHeaterKind, AtoeMappingEntry>> = {
+  'electric-water-heater': { categoryCode: 'ΗΛΜ-5.03', unit: 'pcs', titleEL: 'Θερμοσίφωνας ηλεκτρικός (BIM)' },
+};
+
 // Manifold body — `floor-manifold` (heating distribution) vs `drainage-collector`
 // (φρεάτιο). Different Η-Μ groups, so keyed by kind. Both counted per piece.
 const MEP_MANIFOLD_MAPPING: Readonly<Record<MepManifoldKind, AtoeMappingEntry>> = {
@@ -256,10 +262,11 @@ export const BIM_TO_ATOE_MAPPING = {
   furniture: FURNITURE_MAPPING,
   roof:    ROOF_MAPPING,
   // ADR-408 — Η-Μ point/area entities (segment resolved separately, per classification).
-  'mep-radiator':   MEP_RADIATOR_MAPPING,
-  'mep-boiler':     MEP_BOILER_MAPPING,
-  'mep-manifold':   MEP_MANIFOLD_MAPPING,
-  'mep-underfloor': MEP_UNDERFLOOR_MAPPING,
+  'mep-radiator':     MEP_RADIATOR_MAPPING,
+  'mep-boiler':       MEP_BOILER_MAPPING,
+  'mep-water-heater': MEP_WATER_HEATER_MAPPING,
+  'mep-manifold':     MEP_MANIFOLD_MAPPING,
+  'mep-underfloor':   MEP_UNDERFLOOR_MAPPING,
 } as const;
 
 // ============================================================================

@@ -30,6 +30,7 @@ import { HideBimToggle } from './HideBimToggle';
 import { MepWireToggle } from './MepWireToggle';
 import { DrainPipeToggle } from './DrainPipeToggle';
 import { ColorBySystemToggle } from './ColorBySystemToggle';
+import { ShowHeatLoadToggle } from './ShowHeatLoadToggle';
 import { RealisticMaterialsToggle } from './RealisticMaterialsToggle';
 import { DisciplineVisibilityToggle } from './DisciplineVisibilityToggle';
 import { RibbonInsertTokenWidget } from './RibbonInsertTokenWidget';
@@ -115,6 +116,9 @@ function renderButton(button: RibbonButton): React.ReactNode {
     }
     if (button.widgetId === 'color-by-system-toggle') {
       return <ColorBySystemToggle key="color-by-system-toggle-widget" />;
+    }
+    if (button.widgetId === 'show-heat-load-toggle') {
+      return <ShowHeatLoadToggle key="show-heat-load-toggle-widget" />;
     }
     if (button.widgetId === 'realistic-materials-toggle') {
       return <RealisticMaterialsToggle key="realistic-materials-toggle-widget" />;

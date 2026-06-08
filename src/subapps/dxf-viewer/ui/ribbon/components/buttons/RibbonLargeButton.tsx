@@ -13,7 +13,6 @@ import { useRibbonCommand } from '../../context/RibbonCommandContext';
 import { isCommandActive } from '../../utils/ribbon-active-state';
 import { RibbonButtonIcon } from './RibbonButtonIcon';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-import { useRenderTrace } from '../../../../debug/useRenderTrace'; // 🔴 TEMP DEBUG — remove after hover-lag diagnosis
 
 interface RibbonLargeButtonProps {
   command: RibbonCommand;
@@ -24,8 +23,6 @@ export const RibbonLargeButton: React.FC<RibbonLargeButtonProps> = ({
 }) => {
   const { t } = useTranslation('dxf-viewer-shell');
   const ribbonCtx = useRibbonCommand();
-  // 🔴 TEMP DEBUG — `ribbonCtx` ref change = RibbonCommandContext provider value changed.
-  useRenderTrace(`RibbonLargeButton:${command.id}`, { command, ribbonCtx });
   const { onToolChange, onComingSoon, onAction, activeTool } = ribbonCtx;
 
   const label = t(command.labelKey);

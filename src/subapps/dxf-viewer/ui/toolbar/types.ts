@@ -166,6 +166,8 @@ export type ToolType =
   | 'mep-radiator'
   // ADR-408 Εύρος Β #2: point-based heating boiler drawing tool (λέβητας, hydronic source)
   | 'mep-boiler'
+  // ADR-408: point-based domestic water heater drawing tool (θερμοσίφωνας, DHW source)
+  | 'mep-water-heater'
   // ADR-408 Εύρος Β #3: area-based radiant floor heating loop drawing tool (ενδοδαπέδια)
   | 'mep-underfloor'
   // ADR-408 Φ14: drainage collector (φρεάτιο) — point-based manifold, N inlets + 1 outlet
