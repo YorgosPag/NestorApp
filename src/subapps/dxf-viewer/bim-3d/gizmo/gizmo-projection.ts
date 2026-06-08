@@ -112,13 +112,17 @@ export function projectConstrained(
     return projectOntoPlane(rayOrigin, rayDir, gizmoOrigin, planeNormal) ?? gizmoOrigin.clone();
   }
 
-  // ADR-408 Φ-D 'endpoint' — free move of ONE node in the camera-facing (screen)
-  // plane through the endpoint: yields BOTH plan (κάτοψη) and elevation (υψόμετρο)
-  // in one drag (Revit / SketchUp "move in view plane"). Top view → pure plan; a
-  // side/front view → elevation. The downstream bridge splits the world delta into
-  // a DXF-plan delta + a vertical (world-Y) mm delta.
+  // ADR-408 Φ-D/Φ1 'endpoint' — move ONE node in a plane through the endpoint.
+  //   `'free-3d'` (σωλήνες): the CAMERA-FACING plane → yields BOTH plan (κάτοψη) and
+  //     elevation (υψόμετρο) in one drag (Revit / SketchUp "move in view plane"). Top
+  //     view → pure plan; a side/front view → elevation.
+  //   `'horizontal'` (τοίχος/δοκός): the GROUND plane (normal world-Y) → καθαρά plan,
+  //     το Y μένει σταθερό (το μήκος είναι plan dimension· το ύψος = ξεχωριστή λαβή/Τύπος).
+  // The downstream bridge splits the world delta into a DXF-plan delta + a vertical
+  // (world-Y) mm delta — which is ≈0 for the horizontal mode by construction.
   if (constraint.kind === 'endpoint') {
-    return projectOntoPlane(rayOrigin, rayDir, gizmoOrigin, cameraDir) ?? gizmoOrigin.clone();
+    const planeNormal = constraint.mode === 'horizontal' ? AXIS_DIRS.y : cameraDir;
+    return projectOntoPlane(rayOrigin, rayDir, gizmoOrigin, planeNormal) ?? gizmoOrigin.clone();
   }
 
   // 'free' — project onto ground plane (xz), keep current Y

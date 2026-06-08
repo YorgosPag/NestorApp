@@ -21,7 +21,7 @@
 import * as THREE from 'three';
 import { createGizmoMeshes, type GizmoMeshSet } from './gizmo-geometry';
 import type { GizmoHitTestSet } from './gizmo-hit-test';
-import type { GizmoHandleId, GizmoEndpoint } from './gizmo-types';
+import type { GizmoHandleId, GizmoEndpoint, GizmoEndpointMode } from './gizmo-types';
 import {
   AXIS_COLORS, PLANE_COLORS, RESIZE_IDLE_COLORS, GIZMO_COLOR_CENTER, GIZMO_COLOR_HOVER,
   GIZMO_ENDPOINT_COLOR,
@@ -106,13 +106,18 @@ const TILT_HANDLES_BY_TYPE: Readonly<Record<string, readonly GizmoHandleId[]>> =
 };
 
 /**
- * ADR-408 Φ-D — per-endpoint shape handles shown per entity type. A linear MEP
- * segment exposes a draggable square at each axis end (drag ONE end → the pipe
- * stretches from there, the other end stays). Single-select only (the hook passes
- * `editBimType = null` for a multi-selection → no endpoint handles, mirror resize).
+ * ADR-408 Φ-D/Φ1 — per-endpoint shape handles shown per entity type. A linear element
+ * exposes a draggable handle at each axis end (drag ONE end → it stretches from there,
+ * the other end stays). Single-select only (the hook passes `editBimType = null` for a
+ * multi-selection → no endpoint handles, mirror resize).
+ *   - `mep-segment` → Revit pipe shape handles (free-3D drag: κάτοψη + υψόμετρο).
+ *   - `wall` / `beam` → Revit LENGTH shape handles (horizontal drag: το μήκος είναι plan
+ *     dimension· το ύψος είναι ξεχωριστή λαβή/Τύπος).
  */
 const ENDPOINT_HANDLES_BY_TYPE: Readonly<Record<string, readonly GizmoHandleId[]>> = {
   'mep-segment': ['endpoint-start', 'endpoint-end'],
+  wall: ['endpoint-start', 'endpoint-end'],
+  beam: ['endpoint-start', 'endpoint-end'],
 };
 
 /** Active handle id set for a selected entity: base move/rotate + 3D move + resize + tilt + endpoint. */
@@ -146,6 +151,12 @@ export class BimGizmoOverlay {
    * screen-constant size.
    */
   private endpointWorld: { start: THREE.Vector3; end: THREE.Vector3 } | null = null;
+  /**
+   * ADR-408 Φ1 — projection mode of the active endpoint handles (`'free-3d'` for the
+   * MEP pipe, `'horizontal'` for wall/beam length). The controller reads it at drag
+   * start to build the right endpoint constraint. Defaults to `'free-3d'` (σωλήνας).
+   */
+  private endpointMode: GizmoEndpointMode = 'free-3d';
   /** Cached visual + hitbox of each endpoint handle (repositioned together). */
   private readonly endpointParts: ReadonlyMap<GizmoEndpoint, { visual: THREE.Object3D; hitbox: THREE.Object3D }>;
 
@@ -237,14 +248,25 @@ export class BimGizmoOverlay {
   }
 
   /**
-   * ADR-408 Φ-D — set (or clear) the world positions of the two endpoint handles
-   * for a linear-segment selection. Pass `null` to clear (non-segment / multi-select).
+   * ADR-408 Φ-D/Φ1 — set (or clear) the world positions of the two endpoint handles
+   * for a linear selection, plus their drag projection `mode` (`'free-3d'` σωλήνας vs
+   * `'horizontal'` τοίχος/δοκός). Pass `null` to clear (non-linear / multi-select).
    */
-  setEndpointHandles(start: THREE.Vector3 | null, end: THREE.Vector3 | null): void {
+  setEndpointHandles(
+    start: THREE.Vector3 | null,
+    end: THREE.Vector3 | null,
+    mode: GizmoEndpointMode = 'free-3d',
+  ): void {
     if (this.disposed) return;
     this.endpointWorld = start && end ? { start: start.clone(), end: end.clone() } : null;
+    this.endpointMode = mode;
     this.refreshEndpointOffsets();
     this.meshSet.root.updateMatrixWorld(true);
+  }
+
+  /** ADR-408 Φ1 — projection mode of the active endpoint handles (controller reads at drag start). */
+  getEndpointMode(): GizmoEndpointMode {
+    return this.endpointMode;
   }
 
   /**

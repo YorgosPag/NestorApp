@@ -88,11 +88,17 @@ export class BimGizmoController {
     if (!this.overlay.visible) return false;
     const hit = this.castGizmo(camera, dom, x, y);
     if (!hit) return false;
-    const constraint = handleToConstraint(parseHandleId(hit.handleId));
+    let constraint = handleToConstraint(parseHandleId(hit.handleId));
     camera.getWorldDirection(this.cameraDir);
+    // ADR-408 Φ1 — the handle id carries no projection mode; stamp the overlay's
+    // per-selection endpoint mode (`'free-3d'` σωλήνας / `'horizontal'` τοίχος-δοκός)
+    // onto the constraint so the bridge projects on the right plane.
+    if (constraint.kind === 'endpoint') {
+      constraint = { ...constraint, mode: this.overlay.getEndpointMode() };
+    }
     // ADR-408 Φ-D — an endpoint drag anchors on the ENDPOINT world (not the gizmo
-    // centre): the camera-facing projection plane passes through the dragged end and
-    // the live translation is measured from there, so the handle tracks the cursor 1:1.
+    // centre): the projection plane passes through the dragged end and the live
+    // translation is measured from there, so the handle tracks the cursor 1:1.
     const endpointWorld = constraint.kind === 'endpoint' ? this.overlay.getEndpointWorld(constraint.endpoint) : null;
     this.startAnchor.copy(endpointWorld ?? this.overlay.getPosition());
     return this.bridge.start(

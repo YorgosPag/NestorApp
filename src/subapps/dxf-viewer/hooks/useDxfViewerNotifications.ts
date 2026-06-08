@@ -242,6 +242,27 @@ export function useDxfViewerNotifications(): void {
       }),
     );
 
+    // ADR-428 Slice 2 — heating (hydronic) auto-design feedback (Generate → review → accept).
+    unsubs.push(
+      EventBus.on('bim:heating-generated', ({ networkCount, warningCount }) => {
+        toast.info(
+          warningCount > 0
+            ? t('heating.generatedWithWarnings', { count: networkCount, warnings: warningCount })
+            : t('heating.generated', { count: networkCount }),
+        );
+      }),
+    );
+    unsubs.push(
+      EventBus.on('bim:heating-empty', ({ reason }) => {
+        toast.warning(t(`heating.empty.${reason}`));
+      }),
+    );
+    unsubs.push(
+      EventBus.on('bim:heating-committed', ({ networkCount, segmentCount }) => {
+        toast.success(t('heating.committed', { count: networkCount, segments: segmentCount }));
+      }),
+    );
+
     // ADR-401 Phase G.3 — stair attach mirrors (reuse the generic messages).
     unsubs.push(
       EventBus.on('bim:stairs-auto-attached', () => {

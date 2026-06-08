@@ -687,6 +687,42 @@ export const HOME_DRAW_PANEL: RibbonPanelDef = {
                 },
               ],
             },
+            // ── Αυτόματη Θέρμανση (submenu, ADR-428 Slice 2) ──────────────
+            // Revit "Generate → review → accept": all three are `action`
+            // buttons (fire onAction, not a draw tool).
+            {
+              id: 'draw.bim.heatingAuto',
+              labelKey: 'ribbon.commands.bim.heatingAuto.label',
+              tooltipKey: 'ribbon.commands.bim.heatingAuto.tooltip',
+              icon: 'bim-pipe',
+              commandKey: 'draw.bim.heatingAuto',
+              subVariants: [
+                {
+                  id: 'draw.bim.heatingAutoGenerate',
+                  labelKey: 'ribbon.commands.bim.heatingAutoGenerate.label',
+                  tooltipKey: 'ribbon.commands.bim.heatingAutoGenerate.tooltip',
+                  icon: 'bim-pipe',
+                  commandKey: 'heatingAuto.actions.generate',
+                  action: 'heatingAuto.actions.generate',
+                },
+                {
+                  id: 'draw.bim.heatingAutoAccept',
+                  labelKey: 'ribbon.commands.bim.heatingAutoAccept.label',
+                  tooltipKey: 'ribbon.commands.bim.heatingAutoAccept.tooltip',
+                  icon: 'bim-pipe',
+                  commandKey: 'heatingAuto.actions.accept',
+                  action: 'heatingAuto.actions.accept',
+                },
+                {
+                  id: 'draw.bim.heatingAutoReject',
+                  labelKey: 'ribbon.commands.bim.heatingAutoReject.label',
+                  tooltipKey: 'ribbon.commands.bim.heatingAutoReject.tooltip',
+                  icon: 'bim-pipe',
+                  commandKey: 'heatingAuto.actions.reject',
+                  action: 'heatingAuto.actions.reject',
+                },
+              ],
+            },
             // ── Αποχέτευση (submenu) ──────────────────────────────────────
             {
               id: 'draw.bim.mepDrainage',

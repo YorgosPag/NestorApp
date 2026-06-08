@@ -278,6 +278,10 @@ export interface DrawingEventMap {
   'bim:drainage-generated': { networkCount: number; warningCount: number };
   'bim:drainage-empty': { reason: 'no-fixtures' | 'no-collector' };
   'bim:drainage-committed': { networkCount: number; segmentCount: number };
+  // ADR-428 Slice 2 — heating (hydronic) auto-design (Generate → review → accept) feedback.
+  'bim:heating-generated': { networkCount: number; warningCount: number };
+  'bim:heating-empty': { reason: 'no-terminals' | 'no-source' };
+  'bim:heating-committed': { networkCount: number; segmentCount: number };
   // ADR-407 — BIM railing params + delete events
   'bim:railing-params-updated': { railingId: string };
   'bim:railing-delete-requested': { railingId: string };

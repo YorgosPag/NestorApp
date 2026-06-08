@@ -20,6 +20,7 @@ import { isMepCircuitActionKey } from './bridge/mep-circuit-command-keys';
 import { isMepPipeNetworkActionKey } from './bridge/mep-pipe-network-command-keys';
 import { isWaterSupplyActionKey } from './bridge/water-auto-supply-command-keys';
 import { isDrainageAutoActionKey } from './bridge/drainage-auto-command-keys';
+import { isHeatingAutoActionKey } from './bridge/heating-auto-command-keys';
 import { isMepFixturePanelVisibilityKey } from './useRibbonMepFixtureBridge';
 import { isMepFixtureRibbonKey, isMepFixtureRibbonStringKey, isMepFixtureActionKey } from './bridge/mep-fixture-command-keys';
 import { isMepManifoldPanelVisibilityKey } from './useRibbonMepManifoldBridge';

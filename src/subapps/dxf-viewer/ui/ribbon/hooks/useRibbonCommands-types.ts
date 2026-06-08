@@ -25,6 +25,7 @@ import type { RibbonMepCircuitBridge } from './useRibbonMepCircuitBridge';
 import type { RibbonMepPipeNetworkBridge } from './useRibbonMepPipeNetworkBridge';
 import type { RibbonWaterAutoSupplyBridge } from './useRibbonWaterAutoSupplyBridge';
 import type { RibbonDrainageAutoBridge } from './useRibbonDrainageAutoBridge';
+import type { RibbonHeatingAutoBridge } from './useRibbonHeatingAutoBridge';
 import type { RibbonMepFixtureBridge } from './useRibbonMepFixtureBridge';
 import type { RibbonMepManifoldBridge } from './useRibbonMepManifoldBridge';
 import type { RibbonMepRadiatorBridge } from './useRibbonMepRadiatorBridge';
@@ -64,6 +65,7 @@ export interface UseRibbonCommandsProps {
   mepPipeNetworkBridge: RibbonMepPipeNetworkBridge;
   waterAutoSupplyBridge: RibbonWaterAutoSupplyBridge;
   drainageAutoBridge: RibbonDrainageAutoBridge;
+  heatingAutoBridge: RibbonHeatingAutoBridge;
   mepFixtureBridge: RibbonMepFixtureBridge;
   mepManifoldBridge: RibbonMepManifoldBridge;
   mepRadiatorBridge: RibbonMepRadiatorBridge;
