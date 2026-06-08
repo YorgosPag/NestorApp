@@ -31,6 +31,14 @@ export const MEP_BOILER_RIBBON_KEYS = {
     thermalOutput: 'mepBoiler.params.thermalOutput',
   },
   /**
+   * String (non-numeric) combobox params — model catalog picker.
+   *   - `modelId`: Type Catalog picker (ADR-408). Picking populates geometry+thermal
+   *     from the catalog; «Παραμετρικό» (clear) reverts to hand-authored dims.
+   */
+  stringParams: {
+    modelId: 'mepBoiler.params.modelId',
+  },
+  /**
    * ADR-422 L2 — read-only sizing readouts (Revit «Heating Loads → Equipment»).
    * Computed (not editable): απαιτούμενη ισχύς από το θερμικό φορτίο των χώρων που
    * εξυπηρετεί ο λέβητας vs εγκατεστημένη `thermalOutputW` + δείκτης επάρκειας.
@@ -123,4 +131,23 @@ const MEP_BOILER_READOUT_KEY_SET: ReadonlySet<string> = new Set<string>([
 /** Read-only sizing readouts — served by the bridge as `disabled` combobox state. */
 export function isMepBoilerReadoutKey(commandKey: string): commandKey is MepBoilerRibbonReadoutKey {
   return MEP_BOILER_READOUT_KEY_SET.has(commandKey);
+}
+
+// ─── String param key guards (model catalog picker) ──────────────────────────
+
+/** The single string commandKey used by the boiler model picker. */
+export type MepBoilerRibbonStringCommandKey =
+  typeof MEP_BOILER_RIBBON_KEYS.stringParams.modelId;
+
+export const MEP_BOILER_STRING_KEY_SET: ReadonlySet<string> = new Set<string>([
+  MEP_BOILER_RIBBON_KEYS.stringParams.modelId,
+]);
+
+/**
+ * Returns `true` when `commandKey` is the boiler model-catalog string picker
+ * (not a numeric param, not a readout, not an action).
+ * Mirror of `isMepRadiatorRibbonStringKey` (ADR-408 Εύρος Β).
+ */
+export function isMepBoilerRibbonStringKey(commandKey: string): boolean {
+  return MEP_BOILER_STRING_KEY_SET.has(commandKey);
 }

@@ -29,6 +29,13 @@ import type {
   MepBoilerEntity,
   MepBoilerParams,
 } from '../../../bim/types/mep-boiler-types';
+import {
+  listBoilerModels,
+  resolveBoilerModel,
+  applyBoilerModelToParams,
+  clearBoilerModel,
+} from '../../../bim/mep-boilers/boiler-model-catalog';
+import { SELECT_CLEAR_VALUE, isSelectClearValue } from '@/config/domain-constants';
 import { useCommandHistory } from '../../../core/commands';
 import { UpdateMepBoilerParamsCommand } from '../../../core/commands/entity-commands/UpdateMepBoilerParamsCommand';
 import { LevelSceneManagerAdapter } from '../../../systems/entity-creation/LevelSceneManagerAdapter';
@@ -38,6 +45,7 @@ import {
   MEP_BOILER_RIBBON_VISIBILITY_KEYS,
   isMepBoilerRibbonKey,
   isMepBoilerReadoutKey,
+  isMepBoilerRibbonStringKey,
   isMepBoilerVisibilityKey,
 } from './bridge/mep-boiler-command-keys';
 import { EventBus } from '../../../systems/events/EventBus';

@@ -30,6 +30,11 @@ import {
 } from '../hooks/bridge/mep-boiler-command-keys';
 import { MEP_PIPE_NETWORK_RIBBON_ACTIONS } from '../hooks/bridge/mep-pipe-network-command-keys';
 
+// NOTE: the model combobox declares `options: []` here — the bridge
+// (useRibbonMepBoilerBridge.getComboboxState) returns the dynamic options list
+// from BOILER_MODEL_CATALOG at runtime, exactly like the sanitary-fixture assetId
+// picker (ADR-411 pattern: bridge supplies options, tab declares empty array).
+
 export const MEP_BOILER_CONTEXTUAL_TRIGGER = 'mep-boiler-selected';
 
 // ─── Combobox options (mm presets) ───────────────────────────────────────────
@@ -89,6 +94,33 @@ export const CONTEXTUAL_MEP_BOILER_TAB: RibbonTab = {
   isContextual: true,
   contextualTrigger: MEP_BOILER_CONTEXTUAL_TRIGGER,
   panels: [
+    // Revit convention: "Type" (model catalog) panel comes FIRST so the user
+    // picks a family type before editing individual parameters.
+    {
+      id: 'mep-boiler-model',
+      labelKey: 'ribbon.panels.mepBoilerModel',
+      rows: [
+        {
+          isInFlyout: false,
+          buttons: [
+            {
+              type: 'combobox',
+              size: 'small',
+              command: {
+                id: 'mepBoiler.modelId',
+                labelKey: 'ribbon.commands.mepBoilerEditor.modelId',
+                commandKey: MEP_BOILER_RIBBON_KEYS.stringParams.modelId,
+                comboboxWidthPx: 220,
+                // Options are supplied dynamically by the bridge at runtime
+                // (BOILER_MODEL_CATALOG → getComboboxState). Declaring [] here
+                // mirrors the sanitary-fixture assetId picker pattern (ADR-411).
+                options: [],
+              },
+            },
+          ],
+        },
+      ],
+    },
     {
       id: 'mep-boiler-geometry',
       labelKey: 'ribbon.panels.mepBoilerGeometry',

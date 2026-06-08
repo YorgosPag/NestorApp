@@ -26,6 +26,11 @@ import type { ColumnParams } from '../../bim/types/column-types';
 import type { BeamParams } from '../../bim/types/beam-types';
 import type { SlabParams } from '../../bim/types/slab-types';
 import type { StairParams, StairEntity } from '../../bim/types/stair-types';
+import type { MepSegmentParams } from '../../bim/types/mep-segment-types';
+import {
+  resolveSegmentEndpointElevationsMm,
+  deriveCenterlineElevationMm,
+} from '../../bim/types/mep-segment-types';
 import { mmToEntityUnitFactor } from '../utils/bim3d-edit-math';
 
 /** Wall vertical move → `baseOffset += Δ` (whole wall shifts; top follows). */

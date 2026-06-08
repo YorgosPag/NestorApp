@@ -42,6 +42,7 @@ import type { SceneUnits } from '../../utils/scene-units';
 import type { IfcEntityMixin } from './ifc-entity-mixin';
 import type { MepConnectorHostParams } from './mep-component-types';
 import type { PlumbingSystemClassification } from './mep-connector-types';
+import type { BoilerFuelType } from '../mep-boilers/boiler-model-catalog';
 
 // ─── Sub-type discriminator (ADR-408 Εύρος Β #2) ──────────────────────────────
 
@@ -109,6 +110,19 @@ export interface MepBoilerParams extends MepConnectorHostParams {
    * sub-step is non-breaking.
    */
   readonly hostId?: string;
+  /**
+   * Boiler Model Catalog id (ADR-408 Type Catalog). When set, the boiler's
+   * geometry + thermalOutputW are driven by the catalog entry. Absent ⇒ fully
+   * parametric (the user controls each dimension individually).
+   * Persisted as a stable kebab-case string (e.g. `'gas-condensing-24'`).
+   */
+  readonly modelId?: string;
+  /**
+   * Heating fuel / energy source discriminator. Populated automatically when
+   * picking a model from the Type Catalog; cleared when resetting to parametric.
+   * Matches `BoilerFuelType` from `boiler-model-catalog`.
+   */
+  readonly fuelType?: BoilerFuelType;
 }
 
 // ─── Geometry cache (derivable from params; SSoT = params) ────────────────────

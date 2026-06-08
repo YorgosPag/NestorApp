@@ -354,6 +354,61 @@ describe('ADR-363 Phase 7.2 — calculateBimRotatedGeometry', () => {
     expect(patch.params.rotation).toBeCloseTo(75, 4); // 30 + 45
   });
 
+  // ── ADR-408 Φ-C (3D gizmo) — MEP rotate persistence (was a no-op → revert) ──
+  it('mep-segment: rotates startPoint + endPoint around pivot by 90° (CCW), z preserved', () => {
+    const seg = {
+      id: 'seg_1',
+      type: 'mep-segment',
+      kind: 'pipe',
+      params: {
+        domain: 'pipe',
+        sectionKind: 'round',
+        startPoint: { x: 1000, y: 0, z: 400 },
+        endPoint: { x: 3000, y: 0, z: 400 },
+        diameter: 50,
+        centerlineElevationMm: 400,
+      },
+    } as unknown as Entity;
+    const patch = calculateBimRotatedGeometry(seg, ORIGIN, 90) as {
+      params: { startPoint: { x: number; y: number; z?: number }; endPoint: { x: number; y: number } };
+    };
+    expect(patch.params.startPoint.x).toBeCloseTo(0, 4);
+    expect(patch.params.startPoint.y).toBeCloseTo(1000, 4);
+    expect(patch.params.startPoint.z).toBe(400); // planar rotation preserves z
+    expect(patch.params.endPoint.x).toBeCloseTo(0, 4);
+    expect(patch.params.endPoint.y).toBeCloseTo(3000, 4);
+  });
+
+  it('mep-manifold (point host): rotates position around pivot AND accumulates rotation', () => {
+    const manifold = {
+      id: 'mfld_1',
+      type: 'mep-manifold',
+      kind: 'floor-manifold',
+      params: {
+        position: { x: 1000, y: 0, z: 0 },
+        rotation: 0,
+        shape: 'rectangular',
+        width: 400,
+        length: 80,
+        bodyHeightMm: 60,
+        mountingElevationMm: 400,
+        outletCount: 1,
+        inletDiameterMm: 25,
+        outletDiameterMm: 16,
+        sceneUnits: 'mm',
+        connectors: [
+          { connectorId: 'm-out-0', domain: 'pipe', flow: 'out', localPosition: { x: 40, y: 0, z: 0 } },
+        ],
+      },
+    } as unknown as Entity;
+    const patch = calculateBimRotatedGeometry(manifold, ORIGIN, 90) as {
+      params: { position: { x: number; y: number }; rotation: number };
+    };
+    expect(patch.params.position.x).toBeCloseTo(0, 4);
+    expect(patch.params.position.y).toBeCloseTo(1000, 4);
+    expect(patch.params.rotation).toBeCloseTo(90, 4);
+  });
+
   it('returns null for non-BIM types', () => {
     const line = { type: 'line' } as unknown as Entity;
     expect(calculateBimRotatedGeometry(line, ORIGIN, 90)).toBeNull();

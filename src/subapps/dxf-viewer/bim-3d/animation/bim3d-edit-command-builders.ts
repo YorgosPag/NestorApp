@@ -18,6 +18,7 @@
 
 import type { Point2D } from '../../rendering/types/Types';
 import type { Entity } from '../../types/entities';
+import type { SceneEntity } from '../../core/commands/interfaces';
 import { isMepSegmentEntity } from '../../types/entities';
 import type { MepSegmentParams } from '../../bim/types/mep-segment-types';
 import { mmToEntityUnitFactor } from '../utils/bim3d-edit-math';

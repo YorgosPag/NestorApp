@@ -61,6 +61,10 @@ export const MepBoilerParamsSchema = z
     storeyId: z.string().min(1).optional(),
     material: z.string().min(1).optional(),
     hostId: z.string().min(1).optional(),
+    // ADR-408 Type Catalog — persisted catalog model id (kebab). Optional/additive.
+    modelId: z.string().min(1).optional(),
+    // Heating fuel / energy source discriminator (populated by catalog picker).
+    fuelType: z.enum(['gas', 'oil', 'electric', 'heat-pump']).optional(),
     // ADR-408 Φ1 — embedded MEP connectors (host-local). Optional/additive.
     connectors: z.array(MepConnectorSchema).optional(),
   })
