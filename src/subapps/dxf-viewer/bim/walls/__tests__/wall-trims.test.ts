@@ -602,7 +602,7 @@ describe('computeWallTrims — Phase 1L «Disallow Join» (edge-only corner)', (
     const mk = (s: { x: number; y: number }, e: { x: number; y: number }, id: string): WallEntity => {
       const base = makeWall({ x: 0, y: 0 }, { x: 3000, y: 0 }, 250, id);
       const params: WallParams = { ...base.params, start: { x: s.x, y: s.y, z: 0 }, end: { x: e.x, y: e.y, z: 0 }, sceneUnits: 'm' };
-      return { ...base, params };
+      return { ...base, id, params };
     };
     // 0.85m horizontal + 0.85m vertical meeting at a coincident corner (0.85,0).
     const wallA = mk({ x: 0, y: 0 }, { x: 0.85, y: 0 }, 'mA');
