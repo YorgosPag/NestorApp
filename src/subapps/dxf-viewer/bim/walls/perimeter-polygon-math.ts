@@ -82,6 +82,42 @@ export function polygonArea(poly: readonly Point2D[]): number {
   return Math.abs(signedArea(poly));
 }
 
+/** Αριθμητικός μέσος κορυφών — fallback για εκφυλισμένο πολύγωνο (μηδενικό εμβαδόν). */
+function vertexMean(poly: readonly Point2D[]): Point2D {
+  const n = poly.length || 1;
+  let x = 0;
+  let y = 0;
+  for (const p of poly) {
+    x += p.x;
+    y += p.y;
+  }
+  return { x: x / n, y: y / n };
+}
+
+/**
+ * Area-weighted centroid (κέντρο μάζας) ενός απλού πολυγώνου — SSoT (ADR-423
+ * Stage 0 χώροι· διακριτό από το vertex-mean heuristic του auto-area hole-test).
+ * Πέφτει σε `vertexMean` για <3 κορυφές ή εκφυλισμένο (≈μηδενικό) εμβαδόν.
+ */
+export function polygonCentroid(poly: readonly Point2D[]): Point2D {
+  const n = poly.length;
+  if (n < 3) return vertexMean(poly);
+  let cx = 0;
+  let cy = 0;
+  let a2 = 0;
+  for (let i = 0; i < n; i++) {
+    const p = poly[i];
+    const q = poly[(i + 1) % n];
+    const cross = p.x * q.y - q.x * p.y;
+    a2 += cross;
+    cx += (p.x + q.x) * cross;
+    cy += (p.y + q.y) * cross;
+  }
+  if (Math.abs(a2) < EPS) return vertexMean(poly);
+  const f = 1 / (3 * a2);
+  return { x: cx * f, y: cy * f };
+}
+
 /** Επιστρέφει το πολύγωνο σε CCW φορά (θετικό signed area). */
 function toCCW(poly: readonly Point2D[]): Point2D[] {
   const p = poly.map((q) => ({ x: q.x, y: q.y }));

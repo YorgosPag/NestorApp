@@ -40,6 +40,8 @@ A bare DXF is *lines*; both MEP auto-design and building auto-modeling need a *m
 
 ADR-423's Stage 0 and this ADR's recognition are **the same layer**. Therefore: **when Stage 0 is designed (the next ADR-423 step), its contract MUST be discipline-agnostic / authoring-agnostic** — not MEP-only — so building auto-modeling consumes it without a fork. This is a binding constraint on the Stage 0 child-ADR.
 
+> **🟢 Status (2026-06-08): the shared Stage 0 layer is BUILT — child ADR-425** (`systems/recognition/`). The constraint is honoured: the kernel (`RecognizedSpace`/`RecognizedElement`/`Recognizer`/`recognizeScene`/`RecognitionRegistry`) imports **no** MEP/structural concrete types; element categories `structural-wall`/`structural-column`/`structural-beam`/`structural-slab`/`opening` are **already reserved** in the kernel union. ADR-424's element recognizers register into the same registry (no fork) when they land — they read the same `RecognizedSpace`s (room → slab/boundary) and emit `RecognizedElement` subtypes.
+
 ---
 
 ## 4. The pipeline (analog of ADR-423, authoring side)
@@ -61,6 +63,7 @@ ADR-423's Stage 0 and this ADR's recognition are **the same layer**. Therefore: 
 | Interactive auto-creation: columns/walls "σε περιοχή" from perimeters | ✅ | ADR-419, `auto-area`, `column-from-faces`, `perimeter-from-faces`, `column-adjacency-detector` |
 | Family/Types + auto-typing on create/load | ✅ | ADR-412/414/421 |
 | Region/perimeter detection (smallest-loop, gap-tol) | ✅ | ADR-419 |
+| **Shared Stage 0 Recognition layer (spaces + typed elements, authoring-agnostic)** | 🟢 | **ADR-425 (`systems/recognition/`) — structural categories reserved** |
 | 3D mesh + BIM→BOQ for existing elements | ✅ | ADR-413 etc. |
 | **Full-plan auto-modeling (recognize whole DXF → generate all structure)** | ❌ | **NEW — shared Recognition + element generation** |
 | **Foundation entity family** (footing/footing-beam/foundation-beam/raft/pile) | ❌ | **NEW — structural entities** |

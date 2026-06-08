@@ -501,3 +501,108 @@ describe('computeWallTrims — multi-wall junction resolution', () => {
   });
 });
 
+// ─── Phase 1L: «Disallow Join» auto square-off (edge-only column corner) ───────
+
+describe('computeWallTrims — Phase 1L «Disallow Join» (edge-only corner)', () => {
+  it('28. edge-only face-butt corner (column gap) → NO trim, both walls stay square', () => {
+    // Reported bug (screenshot 170820/171048): region-fill produced two walls that
+    // touch ONLY through one edge — the horizontal C ends on the vertical A's FACE
+    // (and A ends on C's face), with the corner square reserved for a column. They
+    // sit ~one half-thickness apart, so the old 200mm-threshold corner classifier
+    // wrongly mitred them → an elongated triangular cap punched through A. They must
+    // now be left rectangular (square-off).
+    //   C horizontal: ends at A's LEFT face (x = 3000 − 100 = 2900)
+    //   A vertical:   ends at C's TOP face  (y = 0    + 100 = 100)
+    //   endpoint gap = hypot(100,100) ≈ 141mm  >  0.5·min(half)=50mm → square-off
+    const wallC = makeWall({ x: 0, y: 0 },       { x: 2900, y: 0 },   200, 'C');
+    const wallA = makeWall({ x: 3000, y: 3000 }, { x: 3000, y: 100 }, 200, 'A');
+
+    const trims = computeWallTrims([wallC, wallA]);
+
+    // Neither wall is trimmed — the corner stays open for a column.
+    expect(trims.size).toBe(0);
+    expect(trims.has(wallC.id)).toBe(false);
+    expect(trims.has(wallA.id)).toBe(false);
+  });
+
+  it('29. CONTRAST: a near-coincident corner (30mm snapping slop) STILL mitres', () => {
+    // The guard must not over-trigger: a genuine L-corner whose endpoints are only
+    // slightly apart (30mm < 0.5·half = 50mm) is still treated as a join → miter.
+    const wallA = makeWall({ x: 0, y: 0 },       { x: 3000, y: 0 },  200, 'A');
+    const wallB = makeWall({ x: 3000, y: 3000 }, { x: 3000, y: 30 }, 200, 'B');
+
+    const trims = computeWallTrims([wallA, wallB]);
+
+    expect(trims.get(wallA.id)?.endMiter).toBeDefined();
+    expect(trims.get(wallB.id)?.endMiter).toBeDefined();
+  });
+
+  it('31. overshoot bug (171848): auto-join pushed wall end to neighbour CENTRELINE → bevel back to FACE', () => {
+    // Reported regression (screenshot 172521): wall 1 (vertical) created first; wall 2
+    // region-filled to its left. Phase 1K auto-join extended wall 2's end to wall 1's
+    // CENTRELINE (x=3000) because wall 1's body spans wall 2's level. The pair is
+    // classified as a corner (wall 1 ends near wall 2), endpoints OFFSET (gap=150) →
+    // square-off. Plain "no patch" left wall 2 overshooting to the centre; the
+    // penetration bevel must pull it back to wall 1's near face (x=2900).
+    const wall1 = makeWall({ x: 3000, y: 3000 }, { x: 3000, y: -150 }, 200, '1'); // spans y=0, ends just below
+    const wall2 = makeWall({ x: 0, y: 0 },       { x: 3000, y: 0 },    200, '2'); // end AT wall1 centreline
+
+    const trims = computeWallTrims([wall1, wall2]);
+
+    // wall 2 penetrates wall1 by half1 (100) → bevelled back to the face. No miter.
+    const t2 = trims.get(wall2.id)!;
+    expect(t2.endMiter).toBeUndefined();
+    expect(t2.endBevel).toBeCloseTo(100, 0);
+    // wall 1 passes THROUGH wall 2 (ends below it) → not trimmed.
+    expect(trims.get(wall1.id)?.endBevel ?? 0).toBeCloseTo(0, 0);
+    expect(trims.get(wall1.id)?.endMiter).toBeUndefined();
+  });
+
+  it('32. T-junction, stem ends on neighbour FACE (region-fill, no auto-join) → NO over-bevel (no gap)', () => {
+    // Phase 1L generalises the T-bevel to penetration-based: a stem whose end sits
+    // exactly on the continuing wall's FACE penetrates 0 → no bevel. (The old fixed
+    // `halfA/sinA` bevel pulled it BEHIND the face → a gap.) Stem at centreline still
+    // bevels by halfA — covered by test 6.
+    const horizontal = makeWall({ x: 0, y: 0 },    { x: 6000, y: 0 },   200, 'H'); // half=100, top face y=100
+    const stem       = makeWall({ x: 3000, y: 2000 }, { x: 3000, y: 100 }, 200, 'S'); // ends AT top face
+
+    const trims = computeWallTrims([horizontal, stem]);
+
+    // Stem already on the face → no trim, no gap. Horizontal continues untouched.
+    expect(trims.get(stem.id)?.endBevel ?? 0).toBeCloseTo(0, 0);
+    expect(trims.has(horizontal.id)).toBe(false);
+  });
+
+  it('33. crossing wall + two collinear fill walls auto-joined to its centreline → each butts at its FACE', () => {
+    // The 173625 bug: a through wall (horizontal) crossed by two collinear fill walls
+    // (top + bottom). Phase 1K auto-join pushed BOTH fill ends to the through wall's
+    // CENTRELINE. Each fill↔through pair is a T-junction; the penetration-bevel must
+    // pull each fill back to the through wall's near face (half=150) → no overshoot.
+    const through = makeWall({ x: -2000, y: 0 }, { x: 2000, y: 0 }, 300, 'TH'); // half=150, faces y=±150
+    const topFill = makeWall({ x: 0, y: 0 }, { x: 0, y: 2000 },  100, 'TF');    // start auto-joined to centreline
+    const botFill = makeWall({ x: 0, y: 0 }, { x: 0, y: -2000 }, 100, 'BF');    // start auto-joined to centreline
+
+    const trims = computeWallTrims([through, topFill, botFill]);
+
+    // Each fill's junction end bevelled by the through half (150) → back to its face.
+    expect(trims.get(topFill.id)?.startBevel).toBeCloseTo(150, 0);
+    expect(trims.get(botFill.id)?.startBevel).toBeCloseTo(150, 0);
+    expect(trims.get(topFill.id)?.startMiter).toBeUndefined();
+    expect(trims.get(botFill.id)?.startMiter).toBeUndefined();
+    // The through wall continues — not trimmed.
+    expect(trims.has(through.id)).toBe(false);
+  });
+
+  it('30. REGRESSION: exact-coincident L-corner (gap 0) is unaffected by the guard', () => {
+    // Identical to test 3's config — both walls END at (3000,0). gap = 0 → miter.
+    const wallA = makeWall({ x: 0, y: 0 }, { x: 3000, y: 0 }, 200, 'A');
+    const wallB = makeWall({ x: 3000, y: 3000 }, { x: 3000, y: 0 }, 200, 'B');
+
+    const trims = computeWallTrims([wallA, wallB]);
+
+    expect(trims.get(wallA.id)?.endMiter).toBeDefined();
+    expect(trims.get(wallB.id)?.endMiter).toBeDefined();
+    expect(trims.get(wallA.id)?.endBevel).toBeUndefined();
+  });
+});
+

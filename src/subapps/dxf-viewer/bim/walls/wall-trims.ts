@@ -53,6 +53,22 @@ const JOIN_THRESHOLD_MM = 200;
 /** Angle below which axes are treated as parallel → no trim. */
 const MIN_ANGLE_RAD = Math.PI / 12; // 15°
 
+/**
+ * ADR-363 Phase 1L — «Disallow Join» (auto square-off). A corner is a GENUINE
+ * join only when the two walls' corner endpoints COINCIDE. Region-fill walls that
+ * merely butt face-to-face (one wall's endpoint sits on the neighbour's FACE, not
+ * its centreline) sit ~one half-thickness apart — that gap is reserved for a
+ * column, so they must stay rectangular (no miter). `extendFillingWallToNeighbors`
+ * (Phase 1K) already snaps the walls that SHOULD join to coincident centrelines,
+ * so this guard simply respects that decision instead of forcing a miter on every
+ * pair that merely lands within `JOIN_THRESHOLD_MM` of the axis intersection.
+ *
+ * Threshold = fraction of the SMALLER half-thickness:
+ *   - coincident corner ⇒ endpoint gap ≈ 0 ≪ threshold → miter (unchanged)
+ *   - face-to-face butt  ⇒ gap ≈ hypot(halfA, halfB) ≫ threshold → square-off
+ */
+const JOIN_COINCIDENCE_FRACTION = 0.5;
+
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 /**
@@ -276,12 +292,17 @@ function classifyPair(
     cornerRels.push({ aKey, bKey });
   } else if (tInterior && (uNearStart || uNearEnd)) {
     // ── T-junction: A continues; trim only B's stem endpoint ─────────────────
-    const bevelB = Math.min(halfA / sinA, MAX_BEVEL_FRACTION * lenB);
-    accumBevel(acc, b.id, uNearStart ? 'start' : 'end', bevelB);
+    // Phase 1L: trim B back to A's near FACE by the amount it PENETRATES past it
+    // (region-fill stem already on the face → 0; auto-joined to A's centreline →
+    // halfA). Generalises the old fixed `halfA/sinA` (which assumed the centreline).
+    const bEndX = uNearStart ? b1x : b2x, bEndY = uNearStart ? b1y : b2y;
+    const bevelB = penetrationBevel(bEndX, bEndY, a1x, a1y, dax / lenA, day / lenA, halfA, sinA, lenB);
+    if (bevelB > 0) accumBevel(acc, b.id, uNearStart ? 'start' : 'end', bevelB);
   } else if (uInterior && (tNearStart || tNearEnd)) {
     // ── T-junction: B continues; trim only A's stem endpoint ─────────────────
-    const bevelA = Math.min(halfB / sinA, MAX_BEVEL_FRACTION * lenA);
-    accumBevel(acc, a.id, tNearStart ? 'start' : 'end', bevelA);
+    const aEndX = tNearStart ? a1x : a2x, aEndY = tNearStart ? a1y : a2y;
+    const bevelA = penetrationBevel(aEndX, aEndY, b1x, b1y, dbx / lenB, dby / lenB, halfB, sinA, lenA);
+    if (bevelA > 0) accumBevel(acc, a.id, tNearStart ? 'start' : 'end', bevelA);
   }
   // Cross (both interior): skip Phase 1D-B/C.
 }
@@ -356,6 +377,20 @@ function resolveCornerClusters(
 function resolveTwoWayCorner(a: EndpointRec, b: EndpointRec, acc: Map<string, MutablePatch>): void {
   const sinA = sinAngleBetween(a.ux, a.uy, b.ux, b.uy);
   if (sinA < Math.sin(MIN_ANGLE_RAD)) return; // collinear continuation → no trim
+
+  // ADR-363 Phase 1L «Disallow Join»: only mitre when the two corner endpoints
+  // COINCIDE. Walls that butt face-to-face (region-fill column corner) sit ~one
+  // half-thickness apart — they must NOT mitre (a miter would stretch a triangular
+  // cap through the neighbour). Instead each wall is squared off at the other's
+  // near face: any wall PENETRATING past that face (e.g. Phase 1K auto-join pushed
+  // its endpoint to the neighbour's centreline) is bevelled back; a wall already
+  // at/short of the face is left untouched (no gap). The corner stays open for a column.
+  const endpointGap = Math.hypot(a.px - b.px, a.py - b.py);
+  if (endpointGap > JOIN_COINCIDENCE_FRACTION * Math.min(a.half, b.half)) {
+    squareOffCorner(a, b, sinA, acc);
+    return;
+  }
+
   const miter = cornerMiter(
     { x: a.px, y: a.py }, a.ux, a.uy, a.halfSigned, a.len,
     { x: b.px, y: b.py }, b.ux, b.uy, b.halfSigned, b.len,
@@ -369,6 +404,48 @@ function resolveTwoWayCorner(a: EndpointRec, b: EndpointRec, acc: Map<string, Mu
     accumBevel(acc, a.wallId, a.which, Math.min(b.half / sinA, MAX_BEVEL_FRACTION * a.len));
     accumBevel(acc, b.wallId, b.which, Math.min(a.half / sinA, MAX_BEVEL_FRACTION * b.len));
   }
+}
+
+/**
+ * Perpendicular distance from point (px,py) to the infinite axis line through
+ * (qx,qy) with unit direction (ux,uy). |(P−Q) × û|.
+ */
+function perpDistanceToAxis(px: number, py: number, qx: number, qy: number, ux: number, uy: number): number {
+  return Math.abs((px - qx) * uy - (py - qy) * ux);
+}
+
+/**
+ * ADR-363 Phase 1L — SSoT for "trim a stem ending at (ex,ey) back to the near
+ * FACE of a continuing wall (axis through (qx,qy) dir (ux,uy), half-thickness
+ * `half`), by ONLY how far the stem currently penetrates past that face":
+ *   penetration⊥ = half − ⊥dist(endpoint → axis);  bevel = penetration⊥ / sin(angle)
+ * Returns 0 when the stem ends at/short of the face (penetration ≤ 0) → no gap is
+ * ever introduced. Clamped to MAX_BEVEL_FRACTION·stemLen. Shared by the T-junction
+ * branches and `squareOffCorner` so face-alignment is identical for both.
+ */
+function penetrationBevel(
+  ex: number, ey: number,
+  qx: number, qy: number, ux: number, uy: number,
+  half: number, sinAngle: number, stemLen: number,
+): number {
+  const pen = half - perpDistanceToAxis(ex, ey, qx, qy, ux, uy);
+  if (pen <= 1e-6) return 0;
+  return Math.min(pen / sinAngle, MAX_BEVEL_FRACTION * stemLen);
+}
+
+/**
+ * ADR-363 Phase 1L — square off an edge-only corner (no miter). Each wall is
+ * trimmed back to the OTHER's near face only by the amount it currently
+ * PENETRATES past it (`penetrationBevel`). A wall already at/short of the face
+ * gets no bevel, so a face-aligned region-fill butt is left exactly square (no
+ * gap), while a wall whose endpoint was auto-joined to the neighbour's centreline
+ * (Phase 1K) is pulled back precisely to the face.
+ */
+function squareOffCorner(a: EndpointRec, b: EndpointRec, sinA: number, acc: Map<string, MutablePatch>): void {
+  const bevA = penetrationBevel(a.px, a.py, b.px, b.py, b.ux, b.uy, b.half, sinA, a.len);
+  const bevB = penetrationBevel(b.px, b.py, a.px, a.py, a.ux, a.uy, a.half, sinA, b.len);
+  if (bevA > 0) accumBevel(acc, a.wallId, a.which, bevA);
+  if (bevB > 0) accumBevel(acc, b.wallId, b.which, bevB);
 }
 
 /**

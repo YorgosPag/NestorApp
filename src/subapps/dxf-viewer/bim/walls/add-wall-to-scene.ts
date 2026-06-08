@@ -46,6 +46,25 @@ export function addWallToScene(wallEntity: WallEntity, accessor: WallSceneAccess
   const entitiesWithNew = [...(scene.entities || []), wallEntity];
   const allWalls = entitiesWithNew.filter(isWallEntity);
   const trims = computeWallTrims(allWalls);
+
+  // TEMP DEBUG (ADR-363 Phase 1L diagnosis) — enable in console with
+  // `window.__WALL_TRIM_DEBUG = true`, then draw a wall. Logs every wall's
+  // endpoints/thickness and the trim patch the solver produced. Remove after fix.
+  if (typeof globalThis !== 'undefined' && (globalThis as { __WALL_TRIM_DEBUG?: boolean }).__WALL_TRIM_DEBUG) {
+    // eslint-disable-next-line no-console
+    console.log('[WALL-TRIM] new=' + wallEntity.id.slice(-6), allWalls.map((w) => {
+      const p = trims.get(w.id);
+      return {
+        id: w.id.slice(-6),
+        s: `${Math.round(w.params.start.x)},${Math.round(w.params.start.y)}`,
+        e: `${Math.round(w.params.end.x)},${Math.round(w.params.end.y)}`,
+        th: w.params.thickness,
+        startBevel: p?.startBevel, endBevel: p?.endBevel,
+        startMiter: p?.startMiter ? 'Y' : undefined, endMiter: p?.endMiter ? 'Y' : undefined,
+      };
+    }));
+  }
+
   const patchedEntities = applyTrimPatches(entitiesWithNew, trims);
   accessor.setLevelScene(levelId, { ...scene, entities: patchedEntities });
   // Broadcast with the trim-patched entity so persistence saves correct params.
