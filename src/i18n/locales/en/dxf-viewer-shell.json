@@ -1352,6 +1352,22 @@
         "waterAutoReject": {
           "label": "Reject",
           "tooltip": "Discard the water-supply proposal"
+        },
+        "drainageAuto": {
+          "label": "Auto Drainage",
+          "tooltip": "Auto-design the gravity drainage network (sloped): Generate → review → accept"
+        },
+        "drainageAutoGenerate": {
+          "label": "Generate",
+          "tooltip": "Recognize the storey + auto-design the drainage network (preview)"
+        },
+        "drainageAutoAccept": {
+          "label": "Accept",
+          "tooltip": "Commit the proposal to real drain pipes + system"
+        },
+        "drainageAutoReject": {
+          "label": "Reject",
+          "tooltip": "Discard the drainage proposal"
         }
       },
       "select": "Select",
@@ -2672,6 +2688,11 @@
         "tooltipEnable": "Show circuit pressure drop (ΔP) + required balancing-valve kv preset per radiator; highlight the worst (index) circuit + required pump head",
         "tooltipDisable": "Hide hydraulic balancing"
       },
+      "thermalStudy": {
+        "label": "Heating Study",
+        "export": "Export PDF",
+        "tooltip": "Export the multi-section heating mechanical study (summary + loads + radiators + pipes + balancing) as a PDF for the active floor"
+      },
       "realisticMaterials": {
         "label": "Realistic Materials",
         "enable": "Enable Materials",
@@ -2864,6 +2885,9 @@
           "cold": "cold",
           "hot": "hot"
         }
+      },
+      "drainage": {
+        "networkName": "Drainage {n}"
       }
     },
     "tooltips": {
@@ -3336,6 +3360,47 @@
       "generic": "Generic"
     }
   },
+  "thermalStudyReport": {
+    "title": "Heating Mechanical Study",
+    "regulations": "TOTEE 20701-1 · KENAK · EN 12831 / EN 442",
+    "filename": "thermal-study",
+    "sections": {
+      "summary": "Summary",
+      "loads": "Heat Loads per Space",
+      "radiators": "Radiator Sizing",
+      "pipes": "Pipe Sizing",
+      "balancing": "Hydraulic Balancing"
+    },
+    "columns": {
+      "space": "Space",
+      "loadW": "Φ (W)",
+      "specific": "Specific (W/m²)",
+      "transmission": "Transmission (W)",
+      "ventilation": "Ventilation (W)",
+      "regime": "Regime",
+      "deltaT": "ΔΤ (K)",
+      "requiredNominal": "Required @ΔΤ50 (W)",
+      "catalogue": "Catalogue (W)",
+      "adequate": "Adequacy",
+      "seq": "No.",
+      "dn": "DN (mm)",
+      "massFlow": "Flow (kg/s)",
+      "velocity": "Velocity (m/s)",
+      "friction": "Friction R (Pa/m)",
+      "circuitDrop": "ΔP (kPa)",
+      "isIndex": "Index",
+      "surplus": "Surplus (kPa)",
+      "kv": "kv"
+    },
+    "summary": {
+      "floorLoad": "Floor Φ (W)",
+      "requiredPower": "Required radiator power (W)",
+      "indexDrop": "Index ΔP (kPa)",
+      "pumpHead": "Pump head (kPa)",
+      "circuits": "Circuits",
+      "totalFlow": "Total flow (kg/s)"
+    }
+  },
   "waterSupply": {
     "generated": "Water-supply proposal created — networks: {count}.",
     "generatedWithWarnings": "Water-supply proposal created — networks: {count} (warnings: {warnings}).",
@@ -3344,5 +3409,14 @@
       "no-source": "No water-supply source (manifold/boiler) found — network skipped."
     },
     "committed": "Water-supply network created — networks: {count}, pipes: {segments}."
+  },
+  "drainage": {
+    "generated": "Drainage proposal created — networks: {count}.",
+    "generatedWithWarnings": "Drainage proposal created — networks: {count} (warnings: {warnings}).",
+    "empty": {
+      "no-fixtures": "No sanitary fixtures recognized for drainage on this storey.",
+      "no-collector": "No drainage collector (φρεάτιο) found — network skipped."
+    },
+    "committed": "Drainage network created — networks: {count}, pipes: {segments}."
   }
 }

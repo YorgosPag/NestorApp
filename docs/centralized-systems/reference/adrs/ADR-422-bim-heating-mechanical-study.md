@@ -180,3 +180,23 @@
 - **Next:** L3 Apply command (όταν ελευθερωθεί το shared `useRibbonCommands.ts`)· L5 Report PDF (μηχανολογική μελέτη printout).
 
 > **ΜΗΝ** ενημερωθεί το `adr-index.md` σε αυτό το slice (shared working tree).
+
+### L5 — Μηχανολογική Μελέτη Θέρμανσης: Printout / PDF Report (2026-06-09, Opus, Plan Mode)
+
+**ΣΥΓΚΕΝΤΡΩΝΕΙ (δεν ξαναϋπολογίζει) τα 4 read-models L1→L4 σε ΕΝΑ εκτυπώσιμο πολυσέλιδο PDF report** — Revit «Schedules/Reports» / 4M-FineHEAT printout μελέτης. Header έργου/ορόφου + κανονισμοί (ΤΟΤΕΕ 20701-1 · ΚΕΝΑΚ · EN 12831 / EN 442) + **σύνοψη** (ΣΦ ορόφου, απαιτ. ισχύς σωμάτων, index ΔP, μανομετρικό, κυκλώματα, συν. παροχή) + **4 πίνακες** (φορτία χώρων / διαστασιολόγηση σωμάτων / διαστασιολόγηση σωληνώσεων / υδραυλική εξισορρόπηση). Όλα **derived** (μηδέν persist), per-active-floor. FULL SSOT — κατανάλωση των read-models + reuse του PDF/schedule stack. jest **4/4**. **ΕΚΤΟΣ ADR-040** (καθαρός data/PDF, μηδέν canvas).
+
+- **Αποφάσεις (Revit-grade, locked):**
+  - **multi-section PDF = ΝΕΟ standalone exporter** `thermal-study-pdf-exporter.ts` (κλώνος του multi-section pattern του `opening-schedule-pdf-exporter.ts`)· reuse `registerGreekFont`/`triggerExportDownload`/`formatCellForDisplay`/`nowISO`/`autoTable`· **ΟΧΙ edit** του shared `pdf-exporter.ts` (isolation από schedule/BOQ agents).
+  - **analytical, ΟΧΙ entity schedule** — νέος ελαφρύς `ReportSection`/`ReportColumn`/`ThermalStudyReport` (reuse `ScheduleCellValue`/`ScheduleColumnValueType`/`ScheduleColumnAlign`)· **ΔΕΝ** επεκτείνεται το shared `ScheduleEntityType` union (αποφυγή σύγκρουσης).
+  - **pure builder + thin hook** — `buildThermalStudyReport(4 read-models + lookups)` pure (i18n keys, μηδέν t())· `useThermalStudyReport` συνθέτει τα 4 hooks + builder (mirror `useHydraulicBalancing`).
+  - **arm-on-demand (Google-level, μηδέν idle cost)** — τα read-models τρέχουν ΜΟΝΟ on-click (`armed`→`active`→render→effect download→disarm)· race-free μέσω `busyRef`.
+  - **scope = per-active-floor v1** (mirror overlays L1-L4 via `getLevelScene`)· multi-floor = future.
+  - **UI = αυτόνομο widget, ΑΠΟΦΥΓΗ `useRibbonCommands.ts`** (boiler agent) — `ExportThermalStudyButton.tsx` (mirror `ShowBalancingToggle`) + `view-tab-bim-settings.ts` (`THERMAL_STUDY_BUTTON`) + `RibbonPanel.tsx` dispatch.
+  - **μονάδες**: πιέσεις Pa→kPa στον builder· units στα headers· Φ/DN ακέραια (`count`)· v/R/kPa/kg/s 2-δεκ. (`number`).
+- **Νέα pure SSoT:** `bim/thermal/report/thermal-study-report-types.ts` · `bim/thermal/report/thermal-study-report.ts` (builder) · `bim/thermal/report/thermal-study-pdf-exporter.ts` (multi-section exporter) · `hooks/data/useThermalStudyReport.ts` (reactive read-model).
+- **UI:** `ui/ribbon/components/ExportThermalStudyButton.tsx` + `view-tab-bim-settings.ts` (`THERMAL_STUDY_BUTTON`) + `RibbonPanel.tsx` dispatch · i18n el+en (`ribbon.commands.thermalStudy.*` + `thermalStudyReport.*`).
+- **Tests:** `thermal-study-report` (σύνθεση sections, σύνοψη totals, index circuit, kv null, spaceLabel name→use-type fallback, empty floor isEmpty) = **4/4 PASS**.
+- **ΜΑΘΗΜΑ:** το report layer = καθαρός read-model consumer (μηδέν re-compute)· arm-on-demand κρατά τα 4 read-models εκτός idle· pure builder με i18n keys κρατά την i18n SSoT στο React layer + τον exporter μεταφραστή-αγνωστικό· reuse του multi-section opening-exporter pattern αποφεύγει fork του font/download SSoT.
+- **🔴 PENDING (ξεχωριστό slice, ΟΧΙ L5):** L3 Apply command (περιμένει να ελευθερωθεί το shared `useRibbonCommands.ts` από τον boiler agent).
+
+> **ΜΗΝ** ενημερωθεί το `adr-index.md` σε αυτό το slice (shared working tree).

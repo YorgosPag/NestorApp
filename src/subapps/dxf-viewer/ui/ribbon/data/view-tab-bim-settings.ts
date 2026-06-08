@@ -187,6 +187,19 @@ const BALANCING_BUTTON: RibbonButton = {
   },
 };
 
+/** ADR-422 L5 — μηχανολογική μελέτη θέρμανσης PDF export (Revit "Reports/Schedules"). */
+const THERMAL_STUDY_BUTTON: RibbonButton = {
+  type: 'widget',
+  size: 'small',
+  widgetId: 'export-thermal-study',
+  command: {
+    id: 'view.thermalStudy',
+    labelKey: 'ribbon.commands.thermalStudy.label',
+    icon: '',
+    commandKey: 'export-thermal-study',
+  },
+};
+
 /** ADR-405 §4 — discipline visibility multi-toggle (Revit "View Discipline"). */
 const DISCIPLINE_BUTTON: RibbonButton = {
   type: 'widget',
@@ -227,7 +240,7 @@ export const BIM_GRAPHICS_PANEL: RibbonPanelDef = {
     // Visibility/Graphics → DXF only → Disciplines.
     {
       isInFlyout: false,
-      buttons: [VISIBILITY_GRAPHICS_BUTTON, HIDE_BIM_BUTTON, MEP_WIRE_BUTTON, DRAIN_PIPE_BUTTON, COLOR_BY_SYSTEM_BUTTON, REALISTIC_MATERIALS_BUTTON, HEAT_LOAD_BUTTON, PIPE_SIZING_BUTTON, BALANCING_BUTTON, DISCIPLINE_BUTTON],
+      buttons: [VISIBILITY_GRAPHICS_BUTTON, HIDE_BIM_BUTTON, MEP_WIRE_BUTTON, DRAIN_PIPE_BUTTON, COLOR_BY_SYSTEM_BUTTON, REALISTIC_MATERIALS_BUTTON, HEAT_LOAD_BUTTON, PIPE_SIZING_BUTTON, BALANCING_BUTTON, THERMAL_STUDY_BUTTON, DISCIPLINE_BUTTON],
     },
   ],
 };

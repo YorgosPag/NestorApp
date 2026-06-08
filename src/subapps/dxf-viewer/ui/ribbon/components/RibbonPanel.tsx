@@ -33,6 +33,7 @@ import { ColorBySystemToggle } from './ColorBySystemToggle';
 import { ShowHeatLoadToggle } from './ShowHeatLoadToggle';
 import { ShowPipeSizingToggle } from './ShowPipeSizingToggle';
 import { ShowBalancingToggle } from './ShowBalancingToggle';
+import { ExportThermalStudyButton } from './ExportThermalStudyButton';
 import { RealisticMaterialsToggle } from './RealisticMaterialsToggle';
 import { DisciplineVisibilityToggle } from './DisciplineVisibilityToggle';
 import { RibbonInsertTokenWidget } from './RibbonInsertTokenWidget';
@@ -127,6 +128,9 @@ function renderButton(button: RibbonButton): React.ReactNode {
     }
     if (button.widgetId === 'show-balancing-toggle') {
       return <ShowBalancingToggle key="show-balancing-toggle-widget" />;
+    }
+    if (button.widgetId === 'export-thermal-study') {
+      return <ExportThermalStudyButton key="export-thermal-study-widget" />;
     }
     if (button.widgetId === 'realistic-materials-toggle') {
       return <RealisticMaterialsToggle key="realistic-materials-toggle-widget" />;
