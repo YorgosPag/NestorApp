@@ -38,6 +38,7 @@ import {
   isMepSegmentEntity,
   isMepRadiatorEntity,
   isMepBoilerEntity,
+  isMepWaterHeaterEntity,
   isMepUnderfloorEntity,
 } from '../../types/entities';
 import type { MepFixtureEntity } from '../../bim/types/mep-fixture-types';
@@ -45,6 +46,7 @@ import type { ElectricalPanelEntity } from '../../bim/types/electrical-panel-typ
 import type { MepSegmentEntity } from '../../bim/types/mep-segment-types';
 import type { MepRadiatorEntity } from '../../bim/types/mep-radiator-types';
 import type { MepBoilerEntity } from '../../bim/types/mep-boiler-types';
+import type { MepWaterHeaterEntity } from '../../bim/types/mep-water-heater-types';
 import type { MepUnderfloorEntity } from '../../bim/types/mep-underfloor-types';
 import { useMepSystemStore } from '../../bim/mep-systems/mep-system-store';
 import {
@@ -65,7 +67,7 @@ export interface UseMepConnectorReconciliationParams {
 
 /** Re-derive one connector host's `systemId` cache; same ref when unchanged. */
 function reconcileHost<
-  T extends MepFixtureEntity | ElectricalPanelEntity | MepSegmentEntity | MepRadiatorEntity | MepBoilerEntity | MepUnderfloorEntity,
+  T extends MepFixtureEntity | ElectricalPanelEntity | MepSegmentEntity | MepRadiatorEntity | MepBoilerEntity | MepWaterHeaterEntity | MepUnderfloorEntity,
 >(
   entity: T,
   index: ReadonlyMap<string, string>,
@@ -124,6 +126,14 @@ export function useMepConnectorReconciliation(
       // return network (one per connector); reconcile its per-connector systemId
       // cache exactly like the radiator/manifold.
       if (isMepBoilerEntity(seeded)) {
+        const next = reconcileHost(seeded, index);
+        if (next !== e) changed = true;
+        return next;
+      }
+      // ADR-408 DHW — a water heater SOURCES the domestic-hot-water network + is a
+      // member of the domestic-cold-water network (one per connector); reconcile its
+      // per-connector systemId cache exactly like the boiler.
+      if (isMepWaterHeaterEntity(seeded)) {
         const next = reconcileHost(seeded, index);
         if (next !== e) changed = true;
         return next;

@@ -122,6 +122,14 @@ export function useElectricalPanelPersistence(
   const selectedPanelRef = useRef<ElectricalPanelEntity | null>(null);
   selectedPanelRef.current = primarySelectedPanel;
 
+  // ⚡ STABILITY (ca9 fix 2026-06-08): key the Firestore subscription off stable
+  // scope primitives + `currentLevelId`, NOT the per-render `levelManager` object,
+  // so onSnapshot does not unsubscribe/re-subscribe on every render (target removed
+  // before ack → `INTERNAL ASSERTION FAILED ca9 {ve:-1}`). Mirror of the fitting hook.
+  const levelManagerRef = useRef(levelManager);
+  levelManagerRef.current = levelManager;
+  const currentLevelId = levelManager.currentLevelId;
+
   // Instantiate service when auth + scope ready.
   useEffect(() => {
     if (!companyId || !projectId || !floorplanId || !userId) {
@@ -140,12 +148,13 @@ export function useElectricalPanelPersistence(
   // Subscribe + diff-merge + selective skip locally-dirty panels.
   useEffect(() => {
     const svc = serviceRef.current;
-    const levelId = levelManager.currentLevelId;
+    const levelId = currentLevelId;
     if (!svc || !levelId) return;
 
     const unsubscribe = svc.subscribePanels(
       (docs) => {
-        const scene = levelManager.getLevelScene(levelId);
+        const lm = levelManagerRef.current;
+        const scene = lm.getLevelScene(levelId);
         if (!scene) return;
 
         const docsById = new Map<string, ElectricalPanelDoc>();
@@ -214,7 +223,7 @@ export function useElectricalPanelPersistence(
         }
 
         if (mutated) {
-          levelManager.setLevelScene(levelId, {
+          lm.setLevelScene(levelId, {
             ...scene,
             entities: [...nonPanels, ...nextPanels],
           });
@@ -227,7 +236,7 @@ export function useElectricalPanelPersistence(
     );
 
     return () => unsubscribe();
-  }, [levelManager, companyId, projectId, floorplanId, floorId, userId]);
+  }, [currentLevelId, companyId, projectId, floorplanId, floorId, userId]);
 
   // Immediate persist (used by both auto-save flush and explicit button).
   const persist = useCallback(async (entity: ElectricalPanelEntity) => {

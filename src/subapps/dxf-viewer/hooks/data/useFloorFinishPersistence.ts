@@ -91,6 +91,14 @@ export function useFloorFinishPersistence(
   const selectedRef = useRef<FloorFinishEntity | null>(null);
   selectedRef.current = primarySelected;
 
+  // ⚡ STABILITY (ca9 fix 2026-06-08): key the Firestore subscription off stable
+  // scope primitives + `currentLevelId`, NOT the per-render `levelManager` object,
+  // so onSnapshot does not unsubscribe/re-subscribe on every render (target removed
+  // before ack → `INTERNAL ASSERTION FAILED ca9 {ve:-1}`). Mirror of the fitting hook.
+  const levelManagerRef = useRef(levelManager);
+  levelManagerRef.current = levelManager;
+  const currentLevelId = levelManager.currentLevelId;
+
   // Instantiate service when auth + scope ready.
   useEffect(() => {
     if (!companyId || !projectId || !floorplanId || !userId) {
@@ -107,14 +115,18 @@ export function useFloorFinishPersistence(
   }, [companyId, projectId, floorplanId, floorId, userId]);
 
   // Subscribe + diff-merge.
+  // Keyed on STABLE primitives only (scope + currentLevelId) — NOT the per-render
+  // `levelManager` object — so onSnapshot subscribes once per real scope/level
+  // change (ca9 churn fix).
   useEffect(() => {
     const svc = serviceRef.current;
-    const levelId = levelManager.currentLevelId;
+    const levelId = currentLevelId;
     if (!svc || !levelId) return;
 
     const unsubscribe = svc.subscribeFloorFinishes(
       (docs: readonly FloorFinishDoc[]) => {
-        const scene = levelManager.getLevelScene(levelId);
+        const lm = levelManagerRef.current;
+        const scene = lm.getLevelScene(levelId);
         if (!scene) return;
 
         const docsById = new Map<string, FloorFinishDoc>();
@@ -160,7 +172,7 @@ export function useFloorFinishPersistence(
         }
 
         if (mutated) {
-          levelManager.setLevelScene(levelId, { ...scene, entities: [...others, ...nextEntities] });
+          lm.setLevelScene(levelId, { ...scene, entities: [...others, ...nextEntities] });
         }
 
         for (const d of docs) {
@@ -172,7 +184,7 @@ export function useFloorFinishPersistence(
       (err: Error) => { setError(err.message); setSaveState('error'); },
     );
     return () => unsubscribe();
-  }, [levelManager, companyId, projectId, floorplanId, userId]);
+  }, [currentLevelId, companyId, projectId, floorplanId, userId]);
 
   // Immediate persist.
   const persist = useCallback(async (entity: FloorFinishEntity) => {

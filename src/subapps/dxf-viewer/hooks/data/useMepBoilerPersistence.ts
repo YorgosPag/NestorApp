@@ -126,6 +126,14 @@ export function useMepBoilerPersistence(
   const selectedBoilerRef = useRef<MepBoilerEntity | null>(null);
   selectedBoilerRef.current = primarySelectedBoiler;
 
+  // ⚡ STABILITY (ca9 fix 2026-06-08): key the Firestore subscription off stable
+  // scope primitives + `currentLevelId`, NOT the per-render `levelManager` object,
+  // so onSnapshot does not unsubscribe/re-subscribe on every render (target removed
+  // before ack → `INTERNAL ASSERTION FAILED ca9 {ve:-1}`). Mirror of the fitting hook.
+  const levelManagerRef = useRef(levelManager);
+  levelManagerRef.current = levelManager;
+  const currentLevelId = levelManager.currentLevelId;
+
   // Instantiate service when auth + scope ready.
   useEffect(() => {
     if (!companyId || !projectId || !floorplanId || !userId) {
@@ -142,14 +150,18 @@ export function useMepBoilerPersistence(
   }, [companyId, projectId, floorplanId, floorId, userId]);
 
   // Subscribe + diff-merge + selective skip locally-dirty boilers.
+  // Keyed on STABLE primitives only (scope + currentLevelId) — NOT the per-render
+  // `levelManager` object — so onSnapshot subscribes once per real scope/level
+  // change (ca9 churn fix).
   useEffect(() => {
     const svc = serviceRef.current;
-    const levelId = levelManager.currentLevelId;
+    const levelId = currentLevelId;
     if (!svc || !levelId) return;
 
     const unsubscribe = svc.subscribeBoilers(
       (docs) => {
-        const scene = levelManager.getLevelScene(levelId);
+        const lm = levelManagerRef.current;
+        const scene = lm.getLevelScene(levelId);
         if (!scene) return;
 
         const docsById = new Map<string, MepBoilerDoc>();
@@ -218,7 +230,7 @@ export function useMepBoilerPersistence(
         }
 
         if (mutated) {
-          levelManager.setLevelScene(levelId, {
+          lm.setLevelScene(levelId, {
             ...scene,
             entities: [...nonBoilers, ...nextBoilers],
           });
@@ -231,7 +243,7 @@ export function useMepBoilerPersistence(
     );
 
     return () => unsubscribe();
-  }, [levelManager, companyId, projectId, floorplanId, floorId, userId]);
+  }, [currentLevelId, companyId, projectId, floorplanId, floorId, userId]);
 
   // Immediate persist (used by both auto-save flush and explicit button).
   const persist = useCallback(async (entity: MepBoilerEntity) => {

@@ -46,6 +46,8 @@ type BimRestoreEntityType =
   | 'mep-radiator'
   // ADR-408 Εύρος Β #2 — heating boiler (wall-mounted heat source).
   | 'mep-boiler'
+  // ADR-408 — DHW water heater (θερμοσίφωνας / αντλία θερμότητας ΖΝΧ).
+  | 'mep-water-heater'
   // ADR-417 — parametric pitched roof.
   | 'roof'
   // ADR-419 — per-room floor-finish covering.
