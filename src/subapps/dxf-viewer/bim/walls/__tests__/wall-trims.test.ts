@@ -593,6 +593,28 @@ describe('computeWallTrims — Phase 1L «Disallow Join» (edge-only corner)', (
     expect(trims.has(through.id)).toBe(false);
   });
 
+  it('34. METRES-SCALE: sub-1-metre walls (sceneUnits=m) are still classified & trimmed', () => {
+    // Regression (live overshoot bug): the degenerate-wall guard used a hardcoded
+    // "1" that means 1 METRE in a metres-scene scene, so EVERY sub-metre wall was
+    // skipped before classification → no junction trim → region-fill walls overshot.
+    // Build valid mm walls, then override params to a metres-scale junction
+    // (computeWallTrims reads only params.start/end/thickness/sceneUnits/flip).
+    const mk = (s: { x: number; y: number }, e: { x: number; y: number }, id: string): WallEntity => {
+      const base = makeWall({ x: 0, y: 0 }, { x: 3000, y: 0 }, 250, id);
+      const params: WallParams = { ...base.params, start: { x: s.x, y: s.y, z: 0 }, end: { x: e.x, y: e.y, z: 0 }, sceneUnits: 'm' };
+      return { ...base, params };
+    };
+    // 0.85m horizontal + 0.85m vertical meeting at a coincident corner (0.85,0).
+    const wallA = mk({ x: 0, y: 0 }, { x: 0.85, y: 0 }, 'mA');
+    const wallB = mk({ x: 0.85, y: 0 }, { x: 0.85, y: 0.85 }, 'mB');
+
+    const trims = computeWallTrims([wallA, wallB]);
+
+    // Coincident corner → both mitred. Pre-fix they were SKIPPED (len 0.85 < 1) → empty.
+    expect(trims.get('mA')?.endMiter).toBeDefined();
+    expect(trims.get('mB')?.startMiter).toBeDefined();
+  });
+
   it('30. REGRESSION: exact-coincident L-corner (gap 0) is unaffected by the guard', () => {
     // Identical to test 3's config — both walls END at (3000,0). gap = 0 → miter.
     const wallA = makeWall({ x: 0, y: 0 }, { x: 3000, y: 0 }, 200, 'A');

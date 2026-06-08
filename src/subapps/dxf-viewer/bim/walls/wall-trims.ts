@@ -236,7 +236,14 @@ function classifyPair(
 
   const lenA = Math.hypot(a2x - a1x, a2y - a1y);
   const lenB = Math.hypot(b2x - b1x, b2y - b1y);
-  if (lenA < 1 || lenB < 1) return;
+  // Canvas world unit scalars (mm → scene units). Computed up-front because the
+  // degenerate-wall guard below must use a 1mm minimum EXPRESSED IN SCENE UNITS,
+  // not a hardcoded "1". In a metres-scene drawing "1" means 1 METRE, which wrongly
+  // skipped every sub-metre wall → those walls never got junction-trimmed and
+  // overshot into their neighbours (the region-fill overshoot bug). ADR-363 Phase 1L.
+  const sA = mmToSceneUnits(a.params.sceneUnits ?? 'mm');
+  const sB = mmToSceneUnits(b.params.sceneUnits ?? 'mm');
+  if (lenA < sA || lenB < sB) return;
 
   const isect = lineLineIntersect(a1x, a1y, a2x, a2y, b1x, b1y, b2x, b2y);
   if (!isect) return;
@@ -248,9 +255,6 @@ function classifyPair(
   const sinA = sinAngleBetween(dax, day, dbx, dby);
   if (sinA < Math.sin(MIN_ANGLE_RAD)) return;
 
-  // Canvas world unit scalars
-  const sA = mmToSceneUnits(a.params.sceneUnits ?? 'mm');
-  const sB = mmToSceneUnits(b.params.sceneUnits ?? 'mm');
   const halfA = (a.params.thickness / 2) * sA;
   const halfB = (b.params.thickness / 2) * sB;
   const joinThreshold = JOIN_THRESHOLD_MM * sA; // uniform scale assumed
