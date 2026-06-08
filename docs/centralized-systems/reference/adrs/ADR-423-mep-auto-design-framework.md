@@ -176,9 +176,10 @@ Adding gas, for example, becomes one registry entry + one terminal recognizer �
 | 2D floorplan symbols + library | ✅ | ADR-415 |
 | 3D mesh + MEP→BOQ | ✅ | ADR-408 |
 | **Stage 0 Recognition** | 🟢 | **ADR-425 — pilot built (`systems/recognition/`)** |
-| **Stage 3 Auto-routing (pathfinding)** | ❌ | **NEW** |
-| **Stage 4 Auto-sizing** | ❌ | **NEW** |
-| **Discipline registry** | ❌ | **NEW (small)** |
+| **Stage 1 Demand (Loading Units)** | 🟢 | **ADR-426 — water pilot (EN806 LU, `systems/mep-design/water/`)** |
+| **Stage 3 Auto-routing (pathfinding)** | 🟡 | **ADR-426 — deterministic Manhattan trunk-branch (v1, not yet wall-aware)** |
+| **Stage 4 Auto-sizing** | 🟡 | **ADR-426 — ΣLU→DN (DIN1988-3); validated hydraulics later** |
+| **Discipline registry** | 🟡 | **ADR-426 — water descriptor seed (full registry when 2nd discipline lands)** |
 
 We own almost every brick of every network. We are missing the **brain**: Recognition + Routing + Sizing + the Registry that binds them.
 
@@ -258,6 +259,7 @@ Multi-agent web research (109 agents, 26 sources, 25 claims adversarially verifi
 ---
 
 ## Changelog
+- **2026-06-08 (Opus 4.8) — Water-supply pilot Slice 1 IMPLEMENTED (child ADR-426).** Headless 4-stage engine (`systems/mep-design/water/`) over the Stage 0 model: EN806 Loading-Units demand + deterministic Manhattan **trunk-branch router** (cumulative-LU → diminishing diameters) + DIN1988-3 ΣLU→DN sizing → `WaterNetworkProposal` (transient). Pluggable demand/sizing standards via a discipline descriptor (the §4 registry seed). Confirmed by code sweep that demand/sizing/routing did not exist before. 8 tests green. Slice 2 (preview+commit, touches ADR-040) next. Updated §3 Stage 1/3/4 + §5 reuse map. See **ADR-426**.
 - **2026-06-08 (Opus 4.8) — Stage 0 pilot IMPLEMENTED (child ADR-425).** Built the agnostic recognition layer (`systems/recognition/`): kernel (spaces/elements/recognizer/engine/registry) + sanitary terminal recognizer + MEP source recognizer + sanitary space classifier, reusing the ADR-419 region engine and ADR-408 Φ14 connectable fixtures. Authoring-agnostic (binding ADR-424 §3). `polygonCentroid` SSoT added to polygon-math (Boy-Scout). 16 tests green. Transient read-model (no persistence). Outside ADR-040. Updated §3 Stage 0 + §5 reuse map. See **ADR-425** for the full design.
 - **2026-06-08 (Opus 4.8) — competitive gap analysis.** Deep web research (109-agent harness, MagiCAD/ElectroBIM/ElumTools benchmarked, 23/25 claims confirmed 3-0). Added **§10 gap analysis** and extended the pipeline (§3): enriched **Stage 1** (diversity factor K + editable LU/DU DB + DHWR), **Stage 4** (validated hydraulic engine: Colebrook/CIBSE pressure-drop, fan/pump head, insulation selection), and added three new layers — **Stage 6 Calculation/Validation/Compliance** (calc reports, balancing, design-criteria validation, voltage-drop, schedules), **Stage 7 Documentation Deliverables** (auto riser/single-line schematics with bidirectional sync, panel/switchboard schedules, cable-tray fill, tags), **Stage 8 Downstream Interoperability** (gbXML energy export, photometric/lux). Added a cross-cutting **Coordination** note (clash detection + penetrations/sleeves). Honesty caveats preserved (vendor sources; clash/hangers/sleeves/NPSH unverified this cycle). No code.
 - **2026-06-08 (Opus 4.8) — alignment session.** Folded in the discussion decisions: (a) **§2.1 full discipline taxonomy** — 8 discipline groups / ~30 system classifications, with the previously-missing **strong-current / weak-current** electrical split (sockets, switches, motors, appliance feeds, earthing vs data/wifi/fiber/TV/audio/CCTV/intercom/security/BMS); (b) **§2.2 current-state inventory** grounded in a code sweep (4 functional disciplines, HVAC primitive-only, gas/fire/weak-current absent) with SSOT extension-point confirmation; (c) **§6 confirmed implementation order** (Water→Drainage→Heating→Electrical STRONG→HVAC→Electrical WEAK→Fire→Gas); (d) **§8 open questions RESOLVED** (tiered recognition, suggest+batch-preview routing, full Loading-Units demand from day one, re-route deferred to Phase 2, full taxonomy committed now). Decisions taken by Giorgio (Revit-grade, full enterprise + SSOT). Still no code.
