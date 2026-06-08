@@ -39,7 +39,7 @@ export interface RecognizedTerminal extends RecognizedElement {
 }
 
 /** The kind of MEP source (network origin / equipment). */
-export type MepSourceKind = 'meter' | 'manifold' | 'boiler' | 'panel' | 'ahu';
+export type MepSourceKind = 'meter' | 'manifold' | 'boiler' | 'water-heater' | 'panel' | 'ahu';
 
 /** A recognized MEP source — a network origin (manifold/boiler/panel/meter/AHU). */
 export interface RecognizedSource extends RecognizedElement {

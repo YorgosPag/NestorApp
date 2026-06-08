@@ -15,6 +15,7 @@ import type { Entity } from '../../../types/entities';
 import {
   isMepManifoldEntity,
   isMepBoilerEntity,
+  isMepWaterHeaterEntity,
   isElectricalPanelEntity,
 } from '../../../types/entities';
 import type { Point3D } from '../../../bim/types/bim-base';
@@ -28,6 +29,7 @@ import type { MepSourceKind, RecognizedSource } from './mep-recognized-types';
 function sourceKindOf(entity: Entity): MepSourceKind | null {
   if (isMepManifoldEntity(entity)) return 'manifold';
   if (isMepBoilerEntity(entity)) return 'boiler';
+  if (isMepWaterHeaterEntity(entity)) return 'water-heater';
   if (isElectricalPanelEntity(entity)) return 'panel';
   return null;
 }
@@ -36,6 +38,7 @@ function sourceKindOf(entity: Entity): MepSourceKind | null {
 function sourcePosition(entity: Entity): Point3D | null {
   if (isMepManifoldEntity(entity)) return entity.params.position;
   if (isMepBoilerEntity(entity)) return entity.params.position;
+  if (isMepWaterHeaterEntity(entity)) return entity.params.position;
   if (isElectricalPanelEntity(entity)) return entity.params.position;
   return null;
 }
