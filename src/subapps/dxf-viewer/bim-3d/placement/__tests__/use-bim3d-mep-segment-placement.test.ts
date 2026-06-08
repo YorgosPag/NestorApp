@@ -196,6 +196,21 @@ describe('useBim3DMepSegmentPlacement', () => {
     expect(lastCall[4]).toBe(250);
   });
 
+  it('ADR-408 Φ8 #2b — changing the elevation override between clicks authors a riser', () => {
+    const canvas = document.createElement('canvas');
+    mockState.activeTool = 'mep-pipe';
+    mockState.is3D = true;
+    renderHook(() => useBim3DMepSegmentPlacement(makeParams(canvas)));
+    // Click 1 at elevation 0 (base of the riser).
+    mockOverrides.centerlineElevationMm = 0;
+    canvas.dispatchEvent(new MouseEvent('click', { clientX: 5, clientY: 5 }));
+    // Click 2 at elevation 3000 (top) — the user raised the draw-time field.
+    mockOverrides.centerlineElevationMm = 3000;
+    canvas.dispatchEvent(new MouseEvent('click', { clientX: 5, clientY: 5 }));
+    expect(mockEmit).toHaveBeenNthCalledWith(1, 'bim:place-mep-segment-3d', { point: { x: 1, y: 2, z: 0 } });
+    expect(mockEmit).toHaveBeenNthCalledWith(2, 'bim:place-mep-segment-3d', { point: { x: 1, y: 2, z: 3000 } });
+  });
+
   it('orbit drag (moved > threshold) does NOT place a segment', () => {
     const canvas = document.createElement('canvas');
     mockState.activeTool = 'mep-pipe';

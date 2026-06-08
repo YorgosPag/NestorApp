@@ -112,6 +112,12 @@ export const MATERIAL_DEFS: Record<string, PbrMaterialDef> = {
   // (same hue as radiator — both are heating-circuit elements). Slightly higher
   // metalness to distinguish the boiler body from the flat panel radiator.
   'elem-mep-boiler':     { color: 0xdc2626, roughness: 0.55, metalness: 0.15 },
+  // ADR-408 Εύρος Β #3 — underfloor radiant heating PIPE (the serpentine tubes swept
+  // along `geometry.loopPath`): solid warm-red PEX/multilayer pipe (same heating-circuit
+  // hue as radiator/boiler), slight sheen. MUST precede `elem-mep-underfloor` — the
+  // `resolveMaterialKey` prefix match is first-wins, and `elem-mep-underfloor-pipe`
+  // startsWith `elem-mep-underfloor`, so the more-specific pipe key has to come first.
+  'elem-mep-underfloor-pipe': { color: 0xdc2626, roughness: 0.45, metalness: 0.10 },
   // ADR-408 Εύρος Β #3 — underfloor radiant heating loop: warm-red embedded screed
   // band (same heating-circuit hue), translucent so it reads as a thin layer in 3D.
   'elem-mep-underfloor': { color: 0xdc2626, roughness: 0.70, metalness: 0.05, transparent: true, opacity: 0.55 },

@@ -93,19 +93,27 @@ export const MEP_SEGMENT_RIBBON_VISIBILITY_KEYS = {
   roundSection: 'mepSegment.visibility.roundSection',
   /** ADR-408 Φ14 — classification + slope panel, visible iff `domain === 'pipe'`. */
   pipeDomain: 'mepSegment.visibility.pipeDomain',
+  /**
+   * ADR-408 Φ8 #2b — panel visible ONLY when a segment is selected (post-placement
+   * editing), NOT during draw-time. Hides per-endpoint start/end + actions while the
+   * tool is active (draw-time shows just the single "elevation" Offset field).
+   */
+  selectionOnly: 'mepSegment.visibility.selectionOnly',
 } as const;
 
 export type MepSegmentRibbonVisibilityKey =
   | typeof MEP_SEGMENT_RIBBON_VISIBILITY_KEYS.domainAllowsSectionChoice
   | typeof MEP_SEGMENT_RIBBON_VISIBILITY_KEYS.rectangularSection
   | typeof MEP_SEGMENT_RIBBON_VISIBILITY_KEYS.roundSection
-  | typeof MEP_SEGMENT_RIBBON_VISIBILITY_KEYS.pipeDomain;
+  | typeof MEP_SEGMENT_RIBBON_VISIBILITY_KEYS.pipeDomain
+  | typeof MEP_SEGMENT_RIBBON_VISIBILITY_KEYS.selectionOnly;
 
 const MEP_SEGMENT_VISIBILITY_KEY_SET: ReadonlySet<string> = new Set<string>([
   MEP_SEGMENT_RIBBON_VISIBILITY_KEYS.domainAllowsSectionChoice,
   MEP_SEGMENT_RIBBON_VISIBILITY_KEYS.rectangularSection,
   MEP_SEGMENT_RIBBON_VISIBILITY_KEYS.roundSection,
   MEP_SEGMENT_RIBBON_VISIBILITY_KEYS.pipeDomain,
+  MEP_SEGMENT_RIBBON_VISIBILITY_KEYS.selectionOnly,
 ]);
 
 export function isMepSegmentVisibilityKey(

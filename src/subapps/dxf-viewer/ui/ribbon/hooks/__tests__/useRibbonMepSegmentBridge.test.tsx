@@ -24,6 +24,8 @@ import {
 import { UpdateMepSegmentParamsCommand } from '../../../../core/commands/entity-commands/UpdateMepSegmentParamsCommand';
 import { EventBus } from '../../../../systems/events/EventBus';
 import { resetGlobalCommandHistory } from '../../../../core/commands';
+import { mepSegmentToolBridgeStore } from '../bridge/mep-segment-tool-bridge-store';
+import type { MepSegmentToolBridgeHandle } from '../bridge/mep-segment-tool-bridge-store';
 
 jest.mock(
   '../../../../core/commands/entity-commands/UpdateMepSegmentParamsCommand',
@@ -251,6 +253,96 @@ describe('useRibbonMepSegmentBridge — getPanelVisibility', () => {
     expect(result.current.getPanelVisibility('column.visibility.polygonParams')).toBe(true);
     expect(isMepSegmentPanelVisibilityKey(MEP_SEGMENT_RIBBON_VISIBILITY_KEYS.roundSection)).toBe(true);
     expect(isMepSegmentPanelVisibilityKey('column.visibility.polygonParams')).toBe(false);
+  });
+});
+
+describe('useRibbonMepSegmentBridge — draw-time elevation (ADR-408 Φ8 #2b)', () => {
+  function setDrawTimeHandle(centerlineElevationMm: number | undefined): jest.Mock {
+    const setParamOverrides = jest.fn();
+    const handle: MepSegmentToolBridgeHandle = {
+      isActive: true,
+      domain: 'pipe',
+      overrides: centerlineElevationMm === undefined ? {} : { centerlineElevationMm },
+      phase: 'awaitingStart',
+      startPoint: null,
+      startElevationMm: null,
+      getSceneUnits: () => 'mm',
+      setParamOverrides,
+    };
+    mepSegmentToolBridgeStore.set(handle);
+    return setParamOverrides;
+  }
+
+  afterEach(() => mepSegmentToolBridgeStore.set(null));
+
+  it('reads the live centreline override (no selection, tool active)', () => {
+    setDrawTimeHandle(2800);
+    const { result } = renderHook(() =>
+      useRibbonMepSegmentBridge({
+        levelManager: makeLevelManager(null),
+        universalSelection: makeSelection(null),
+      }),
+    );
+    expect(result.current.getComboboxState(MEP_SEGMENT_RIBBON_KEYS.params.centerlineElevation)?.value).toBe('2800');
+  });
+
+  it('falls back to the default elevation when no override is set yet', () => {
+    setDrawTimeHandle(undefined);
+    const { result } = renderHook(() =>
+      useRibbonMepSegmentBridge({
+        levelManager: makeLevelManager(null),
+        universalSelection: makeSelection(null),
+      }),
+    );
+    // No override yet ⇒ the bridge surfaces the segment default (a finite mm value).
+    const value = result.current.getComboboxState(MEP_SEGMENT_RIBBON_KEYS.params.centerlineElevation)?.value;
+    expect(Number.isNaN(Number(value))).toBe(false);
+  });
+
+  it('writes the centreline override on the live tool (riser authoring)', () => {
+    const setParamOverrides = setDrawTimeHandle(0);
+    const { result } = renderHook(() =>
+      useRibbonMepSegmentBridge({
+        levelManager: makeLevelManager(null),
+        universalSelection: makeSelection(null),
+      }),
+    );
+    act(() => result.current.onComboboxChange(MEP_SEGMENT_RIBBON_KEYS.params.centerlineElevation, '3000'));
+    expect(setParamOverrides).toHaveBeenCalledWith({ centerlineElevationMm: 3000 });
+    // No entity command is dispatched in draw-time mode (no segment exists yet).
+    expect((UpdateMepSegmentParamsCommand as jest.Mock).mock.calls.length).toBe(0);
+  });
+
+  it('ignores NaN draw-time input', () => {
+    const setParamOverrides = setDrawTimeHandle(0);
+    const { result } = renderHook(() =>
+      useRibbonMepSegmentBridge({
+        levelManager: makeLevelManager(null),
+        universalSelection: makeSelection(null),
+      }),
+    );
+    act(() => result.current.onComboboxChange(MEP_SEGMENT_RIBBON_KEYS.params.centerlineElevation, 'abc'));
+    expect(setParamOverrides).not.toHaveBeenCalled();
+  });
+
+  it('selection-only panels are hidden during draw-time, shown on selection', () => {
+    setDrawTimeHandle(0);
+    const drawTime = renderHook(() =>
+      useRibbonMepSegmentBridge({
+        levelManager: makeLevelManager(null),
+        universalSelection: makeSelection(null),
+      }),
+    );
+    expect(drawTime.result.current.getPanelVisibility(MEP_SEGMENT_RIBBON_VISIBILITY_KEYS.selectionOnly)).toBe(false);
+
+    mepSegmentToolBridgeStore.set(null);
+    const selected = renderHook(() =>
+      useRibbonMepSegmentBridge({
+        levelManager: makeLevelManager(rectDuct),
+        universalSelection: makeSelection('seg-duct-1'),
+      }),
+    );
+    expect(selected.result.current.getPanelVisibility(MEP_SEGMENT_RIBBON_VISIBILITY_KEYS.selectionOnly)).toBe(true);
   });
 });
 

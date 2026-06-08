@@ -35,7 +35,9 @@ import {
   derivePlanLengthMm,
   deriveSlopePercent,
   applySlopePercentToEndpoints,
+  DEFAULT_SEGMENT_CENTERLINE_ELEVATION_MM,
 } from '../../../bim/types/mep-segment-types';
+import { mepSegmentToolBridgeStore } from './bridge/mep-segment-tool-bridge-store';
 import { useCommandHistory, CompoundCommand } from '../../../core/commands';
 import { UpdateMepSegmentParamsCommand } from '../../../core/commands/entity-commands/UpdateMepSegmentParamsCommand';
 import { resolveConnectedElevationPatches } from '../../../bim/mep-segments/mep-elevation-propagation';
@@ -89,6 +91,11 @@ export function useRibbonMepSegmentBridge(
   const { levelManager, universalSelection } = props;
   const { execute: executeCommand } = useCommandHistory();
   const { t } = useTranslation('dxf-viewer-shell');
+
+  // ADR-408 Φ8 #2b — reactive read of the live segment tool (draw-time). Lets the
+  // dual-mode bridge read/write the draw-time centreline override when no segment is
+  // selected. Ribbon-level subscription (not a canvas micro-leaf) — ΕΚΤΟΣ ADR-040.
+  const toolHandle = mepSegmentToolBridgeStore.use();
 
   const resolveSegment = useCallback((): MepSegmentEntity | null => {
     const id = universalSelection.getPrimaryId();
@@ -153,7 +160,19 @@ export function useRibbonMepSegmentBridge(
   const getComboboxState = useCallback(
     (commandKey: string): RibbonComboboxState | null => {
       const segment = resolveSegment();
-      if (!segment) return null;
+      if (!segment) {
+        // ADR-408 Φ8 #2b — draw-time: show the live centreline elevation override
+        // (Revit Options Bar "Offset"). The 3D placement hook reads this per click,
+        // so changing it between the 2 clicks authors a riser/slope.
+        if (
+          toolHandle?.isActive &&
+          commandKey === MEP_SEGMENT_RIBBON_KEYS.params.centerlineElevation
+        ) {
+          const mm = toolHandle.overrides.centerlineElevationMm ?? DEFAULT_SEGMENT_CENTERLINE_ELEVATION_MM;
+          return { value: String(Math.round(mm)), options: [] };
+        }
+        return null;
+      }
       if (commandKey === MEP_SEGMENT_RIBBON_KEYS.stringParams.sectionKind) {
         return { value: effectiveSectionKind(segment.params), options: [] };
       }
@@ -193,13 +212,24 @@ export function useRibbonMepSegmentBridge(
       }
       return null;
     },
-    [resolveSegment],
+    [resolveSegment, toolHandle],
   );
 
   const onComboboxChange = useCallback(
     (commandKey: string, value: string): void => {
       const segment = resolveSegment();
-      if (!segment) return;
+      if (!segment) {
+        // ADR-408 Φ8 #2b — draw-time: write the centreline elevation override on the
+        // live tool. The 3D placement hook reads it per click → riser/slope when the
+        // value differs between the two clicks. Sync read (no subscription needed).
+        if (commandKey === MEP_SEGMENT_RIBBON_KEYS.params.centerlineElevation) {
+          const numeric = Number.parseFloat(value);
+          if (!Number.isNaN(numeric)) {
+            mepSegmentToolBridgeStore.get()?.setParamOverrides({ centerlineElevationMm: numeric });
+          }
+        }
+        return;
+      }
       if (commandKey === MEP_SEGMENT_RIBBON_KEYS.stringParams.sectionKind) {
         // A pipe is always round — ignore an attempt to make it rectangular.
         if (segment.params.domain === 'pipe') return;
@@ -271,6 +301,9 @@ export function useRibbonMepSegmentBridge(
       if (!isMepSegmentVisibilityKey(visibilityKey)) return true;
       const segment = resolveSegment();
       if (!segment) return false;
+      // ADR-408 Φ8 #2b — selection-only panels (per-endpoint start/end, actions) are
+      // shown whenever a segment is selected (hidden during draw-time via !segment).
+      if (visibilityKey === MEP_SEGMENT_RIBBON_VISIBILITY_KEYS.selectionOnly) return true;
       const effective = effectiveSectionKind(segment.params);
       if (visibilityKey === MEP_SEGMENT_RIBBON_VISIBILITY_KEYS.domainAllowsSectionChoice) {
         return segment.params.domain === 'duct';

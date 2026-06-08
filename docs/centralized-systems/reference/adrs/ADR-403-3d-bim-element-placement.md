@@ -138,6 +138,16 @@
 ---
 
 ## Changelog
+- **2026-06-08 (MEP segment EXT #2b — pure-freehand riser / draw-time "Offset", Opus 4.8, Plan Mode)** —
+  Ο linear 2-click σωλήνας/αεραγωγός αποκτά **freehand riser authoring** χωρίς connector snap: draw-time
+  πεδίο «Ύψος άξονα» (Revit Options Bar "Offset") που ο χρήστης αλλάζει **μεταξύ** των 2 clicks. Επειδή ο
+  3D placement hook διαβάζει ήδη `z = connectorZ(snap) ?? overrides.centerlineElevationMm` **per click**,
+  διαφορετική τιμή στα 2 clicks → riser/κεκλιμένος **χωρίς καμία αλλαγή** σε hook/ghost/completion. Η
+  υλοποίηση είναι **draw-time ribbon plumbing** (πρότυπο column tool, «ΕΝΑ tab, dual-mode»): το
+  `mep-segment-tool-bridge-store` εκθέτει `setParamOverrides`, ο `useRibbonMepSegmentBridge` αποκτά
+  draw-time branch (όταν δεν υπάρχει selection), και το `useActiveContextualTrigger` δείχνει το segment tab
+  όσο το εργαλείο είναι ενεργό. **ΜΑΘΗΜΑ:** για 3D linear placement, όταν το z-pipeline είναι per-click, η
+  ρητή authoring υψομέτρου = ΜΟΝΟ ένα live draw-time override (dual-mode bridge)· το FSM/completion μένει SSoT.
 - **2026-06-08 (MEP segment EXT — connector-Z mate + Revit per-click elevation, Opus 4.8)** —
   Ο linear 2-click σωλήνας έγινε **Revit-grade σε 3D**: κάθε κλικ φέρει πλέον το υψόμετρό του
   (`point.z`, mm floor-relative). Πηγή ανά κλικ: `connectorZ(snap) ?? centerlineOffset@clickTime`.

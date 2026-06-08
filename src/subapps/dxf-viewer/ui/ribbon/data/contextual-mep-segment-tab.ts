@@ -72,6 +72,7 @@ const CENTERLINE_ELEVATION_MM_OPTIONS = [
   { value: '0',    labelKey: '0',    isLiteralLabel: true },
   { value: '1000', labelKey: '1000', isLiteralLabel: true },
   { value: '2800', labelKey: '2800', isLiteralLabel: true },
+  { value: '3000', labelKey: '3000', isLiteralLabel: true },
   { value: '3200', labelKey: '3200', isLiteralLabel: true },
 ] as const;
 
@@ -186,6 +187,10 @@ export const CONTEXTUAL_MEP_SEGMENT_TAB: RibbonTab = {
       ],
     },
     {
+      // ADR-408 Φ8 #2b — dual-mode "Elevation" (Revit Options Bar "Offset").
+      // ALWAYS visible: during draw-time it writes the centreline override live
+      // (changed between the 2 clicks ⇒ riser/slope); on selection it edits the
+      // created segment's centreline (whole-run lift). No visibilityKey → both modes.
       id: 'mep-segment-geometry',
       labelKey: 'ribbon.panels.mepSegmentGeometry',
       rows: [
@@ -203,8 +208,22 @@ export const CONTEXTUAL_MEP_SEGMENT_TAB: RibbonTab = {
                 options: CENTERLINE_ELEVATION_MM_OPTIONS,
               },
             },
+          ],
+        },
+      ],
+    },
+    {
+      // Φ-A — per-endpoint elevation (riser/slope, Revit "Offset" per end). Only
+      // meaningful AFTER the segment exists, so this panel is selection-only (hidden
+      // during draw-time — there is no entity to edit yet).
+      id: 'mep-segment-endpoints',
+      labelKey: 'ribbon.panels.mepSegmentGeometry',
+      visibilityKey: MEP_SEGMENT_RIBBON_VISIBILITY_KEYS.selectionOnly,
+      rows: [
+        {
+          isInFlyout: false,
+          buttons: [
             {
-              // Φ-A — per-endpoint elevation (riser/slope, Revit "Offset" per end).
               type: 'combobox',
               size: 'small',
               command: {
@@ -266,8 +285,10 @@ export const CONTEXTUAL_MEP_SEGMENT_TAB: RibbonTab = {
       ],
     },
     {
+      // Close/Delete act on a created segment — selection-only (hidden during draw).
       id: 'mep-segment-actions',
       labelKey: 'ribbon.panels.mepSegmentActions',
+      visibilityKey: MEP_SEGMENT_RIBBON_VISIBILITY_KEYS.selectionOnly,
       rows: [
         {
           isInFlyout: false,

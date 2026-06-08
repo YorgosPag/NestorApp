@@ -246,13 +246,16 @@ export function useMepSegmentTool(
       startPoint: state.startPoint,
       startElevationMm: state.startElevationMm,
       getSceneUnits: getSceneUnitsStable,
+      // ADR-408 Φ8 #2b — let the draw-time ribbon write the centreline elevation
+      // override live (changed between the 2 clicks ⇒ riser/slope).
+      setParamOverrides,
     });
     return () => {
       if (mepSegmentToolBridgeStore.get()?.getSceneUnits === getSceneUnitsStable) {
         mepSegmentToolBridgeStore.set(null);
       }
     };
-  }, [state, getSceneUnitsStable]);
+  }, [state, getSceneUnitsStable, setParamOverrides]);
 
   // ── status text (i18n keys) ───────────────────────────────────────────────
 

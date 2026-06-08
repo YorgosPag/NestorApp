@@ -43,6 +43,12 @@ export interface MepSegmentToolBridgeHandle {
   readonly startElevationMm: number | null;
   /** Active scene units, so the 3D ghost builds with correct mm→scene conversion. */
   getSceneUnits(): SceneUnits;
+  /**
+   * ADR-408 Φ8 #2b — write a draw-time param override on the live tool (e.g. the
+   * centreline elevation, changed BETWEEN the two clicks to author a riser/slope).
+   * Mirror of `mep-manifold-tool-bridge-store` / `mep-radiator-tool-bridge-store`.
+   */
+  setParamOverrides(overrides: MepSegmentParamOverrides): void;
 }
 
 type Listener = () => void;

@@ -21,7 +21,7 @@ import { stairToMeshes } from '../converters/StairToThreeConverter';
 import { railingToMesh } from '../converters/railing-to-three';
 import { roofToMesh } from '../converters/roof-to-three';
 import { floorFinishToMesh } from '../converters/floor-finish-to-three';
-import { underfloorToMesh } from '../converters/mep-underfloor-to-three';
+import { underfloorToObject3D } from '../converters/mep-underfloor-to-three';
 import { furnitureToObject3D } from '../converters/furniture-to-three';
 import { mepFixtureToObject3D } from '../converters/mep-fixture-to-mesh';
 import { resolveFixtureBimCategory } from '../../bim/types/mep-fixture-types';
@@ -348,15 +348,16 @@ export class BimSceneLayer {
   }
 
   /**
-   * ADR-408 Εύρος Β #3 — underfloor radiant heating loops. Thin polygon band embedded
-   * in the screed at FFL + screedOffset. Own V/G category `'mep-underfloor'` (plumbing).
+   * ADR-408 Εύρος Β #3 — underfloor radiant heating loops. A `THREE.Group` of the
+   * REAL serpentine pipes (swept tubes along `geometry.loopPath`) + a faint screed
+   * band, at FFL + screedOffset. Own V/G category `'mep-underfloor'` (plumbing).
    */
   private syncUnderfloors(entities: Bim3DEntities, ctx: SyncContext): void {
     for (const uf of entities.underfloors ?? []) {
       const r = this.resolveEntity(uf, 'mep-underfloor', ctx);
       if (!r) continue;
-      const mesh = underfloorToMesh(uf, ctx.floorElevationMm, ctx.activeLevelId, r.baseElevation);
-      if (mesh) { mesh.userData['buildingId'] = r.buildingId; this.group.add(mesh); }
+      const obj = underfloorToObject3D(uf, ctx.floorElevationMm, ctx.activeLevelId, r.baseElevation);
+      if (obj) { obj.userData['buildingId'] = r.buildingId; this.group.add(obj); }
     }
   }
 

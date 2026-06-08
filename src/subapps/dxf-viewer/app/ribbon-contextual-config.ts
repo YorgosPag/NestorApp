@@ -247,6 +247,15 @@ export function useActiveContextualTrigger({
     // ADR-408 Φ15 — MEP riser tool active → show the «Κατακόρυφη Στήλη» tab
     // (base/top span via «Έως όροφο» + diameter) before the placement click.
     if (activeTool === 'mep-drain-riser') return MEP_RISER_CONTEXTUAL_TRIGGER;
+    // ADR-408 Φ8 #2b — general pipe/duct tool active → show the segment tab so the
+    // draw-time «Ύψος άξονα» (Revit Options Bar "Offset") field is available. Changing
+    // it between the 2 clicks authors a freehand riser/slope (no connector snap needed).
+    if (
+      activeTool === 'mep-pipe' ||
+      activeTool === 'mep-duct' ||
+      activeTool === 'mep-drain-pipe'
+    )
+      return MEP_SEGMENT_CONTEXTUAL_TRIGGER;
     if (activeTool === 'slab-opening') return SLAB_OPENING_CONTEXTUAL_TRIGGER;
     // ADR-359 Phase 10.b: xline active → show mode selection panel.
     if (activeTool === 'xline') return XLINE_MODE_CONTEXTUAL_TRIGGER;
