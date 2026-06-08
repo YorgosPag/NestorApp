@@ -63,10 +63,6 @@ export function useLevelSceneLoader({
   useEffect(() => {
     if (!currentLevelId) return;
 
-    // Check if scene is already in memory (fast path — instant render)
-    const existingScene = sceneManager.getLevelScene(currentLevelId);
-    if (existingScene && existingScene.entities.length > 0) return;
-
     // Find the level to check for sceneFileId
     const level = levels.find(l => l.id === currentLevelId);
     const sceneFileId = level?.sceneFileId;
@@ -86,12 +82,36 @@ export function useLevelSceneLoader({
       sceneManager.setCurrentFileName?.(null);
     };
 
+    // 🛡️ ROOT-CAUSE FIX (incident 2026-06-08 — repeated cross-floor data loss):
+    // Re-point the auto-save target at the CURRENT level's file on EVERY level change,
+    // BEFORE the fast-path / already-loaded early-returns below. Previously the target
+    // (`fileRecordId` / `currentFileName`) was set ONLY inside the fresh-load path, so
+    // switching to an already-in-memory level left the target STUCK on the PREVIOUS
+    // level's file → subsequent edits auto-saved into the wrong floor's DXF, and that
+    // floor's level got re-linked to it (two levels ending up sharing one sceneFileId —
+    // observed on this project: revision climbing while the scene blob went empty).
+    // The fast path fires only for same-floor levels that loaded with entities;
+    // cross-floor / empty levels fall through to the full load path where
+    // `isCrossFloorSceneLink` still guards. File-less levels clear the target so they
+    // never write a DXF scene (BIM persists independently via floorId).
+    if (sceneFileId) {
+      sceneManager.setFileRecordId?.(sceneFileId);
+      sceneManager.setCurrentFileName?.(level?.sceneFileName ?? null);
+    } else {
+      resetDxfAutoSaveTarget();
+    }
+
+    // Check if scene is already in memory (fast path — instant render). The auto-save
+    // target was already re-pointed above, so this early return no longer leaks the
+    // previous level's save target.
+    const existingScene = sceneManager.getLevelScene(currentLevelId);
+    if (existingScene && existingScene.entities.length > 0) return;
+
     if (!sceneFileId) {
-      // No DXF linked to this level yet — create empty scene
+      // No DXF linked to this level yet — create empty scene (target already reset above)
       if (!existingScene) {
         sceneManager.setLevelScene(currentLevelId, createEmptyScene());
       }
-      resetDxfAutoSaveTarget();
       return;
     }
 

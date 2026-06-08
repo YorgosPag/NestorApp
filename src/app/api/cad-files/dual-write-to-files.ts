@@ -100,10 +100,16 @@ export async function writeToFilesCollection(params: DualWriteParams): Promise<v
   } = params;
 
   try {
-    // 🏢 ADR-293: canonicalScenePath is REQUIRED — no legacy dxf-scenes/ fallback
+    // 🏢 ADR-293: canonicalScenePath is REQUIRED — no legacy dxf-scenes/ fallback.
+    // 🛡️ ROOT-CAUSE FIX (incident 2026-06-08 — phantom sceneFileId): THROW, do NOT
+    // silently return. A silent return let the upsert resolve 200 OK → autoSaveV2
+    // reported success → onSceneSaved fired → the level was linked to a fileId whose
+    // `files` doc was never written → on reload loadFromStorageImpl returned null →
+    // empty canvas. Throwing makes the save fail loudly so the level is never linked
+    // to a non-existent FileRecord.
     if (!context?.canonicalScenePath) {
-      logger.error('canonicalScenePath missing in dual-write — skipping FileRecord creation (ADR-293)', { fileId });
-      return;
+      logger.error('canonicalScenePath missing in dual-write — refusing FileRecord write (ADR-293)', { fileId });
+      throw new Error('canonicalScenePath missing — cannot write FileRecord (ADR-293)');
     }
     const scenePath = context.canonicalScenePath;
 

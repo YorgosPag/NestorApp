@@ -52,25 +52,34 @@ describe('buildUnderfloorLoopPoints', () => {
 });
 
 describe('buildUnderfloorTubeGeometry', () => {
-  it('returns null for fewer than two points', () => {
+  it('returns null for fewer than two distinct points', () => {
     expect(buildUnderfloorTubeGeometry([new THREE.Vector3()], 0.008)).toBeNull();
+    // two coincident points collapse to one distinct point → null.
+    expect(buildUnderfloorTubeGeometry([new THREE.Vector3(1, 0, 0), new THREE.Vector3(1, 0, 0)], 0.008)).toBeNull();
   });
 
-  it('sweeps a TubeGeometry from the loop points', () => {
+  it('builds one ring per polyline vertex (WYSIWYG with the input path)', () => {
     const pts = buildUnderfloorLoopPoints(LOOP, 1, 0);
     const geo = buildUnderfloorTubeGeometry(pts, 0.008);
-    expect(geo).toBeInstanceOf(THREE.TubeGeometry);
-    expect(geo!.getAttribute('position').count).toBeGreaterThan(0);
+    expect(geo).toBeInstanceOf(THREE.BufferGeometry);
+    // 6 radial segments × N rings (LOOP has 4 distinct points).
+    expect(geo!.getAttribute('position').count).toBe(6 * pts.length);
+    expect(geo!.getIndex()!.count).toBeGreaterThan(0);
   });
 });
 
+/** The serpentine pipe mesh inside the group (tagged with the pipe material key). */
+function findPipeMesh(obj: THREE.Object3D): THREE.Mesh | undefined {
+  return obj.children.find(
+    (c) => c instanceof THREE.Mesh && c.userData['matId'] === 'elem-mep-underfloor-pipe',
+  ) as THREE.Mesh | undefined;
+}
+
 describe('underfloorToObject3D', () => {
-  it('returns a Group containing the serpentine TubeGeometry pipe mesh', () => {
+  it('returns a Group containing the serpentine pipe mesh', () => {
     const obj = underfloorToObject3D(makeEntity(LOOP), 0, 'lvl', 0);
     expect(obj).toBeInstanceOf(THREE.Group);
-    const tubeMesh = obj!.children.find(
-      (c) => c instanceof THREE.Mesh && (c as THREE.Mesh).geometry instanceof THREE.TubeGeometry,
-    ) as THREE.Mesh | undefined;
+    const tubeMesh = findPipeMesh(obj!);
     expect(tubeMesh).toBeDefined();
     expect(tubeMesh!.userData['bimId']).toBe('uf1');
   });
@@ -78,9 +87,7 @@ describe('underfloorToObject3D', () => {
   it('places the pipes at the screed elevation (FFL + screedOffset + base)', () => {
     // floorElevationMm=1000, screedOffsetMm=50, base=5m → ≈ 6.05 m + radius.
     const obj = underfloorToObject3D(makeEntity(LOOP), 1000, undefined, 5)!;
-    const tubeMesh = obj.children.find(
-      (c) => c instanceof THREE.Mesh && (c as THREE.Mesh).geometry instanceof THREE.TubeGeometry,
-    ) as THREE.Mesh;
+    const tubeMesh = findPipeMesh(obj)!;
     tubeMesh.geometry.computeBoundingBox();
     const center = tubeMesh.geometry.boundingBox!.getCenter(new THREE.Vector3());
     expect(center.y).toBeCloseTo(6.05 + 0.008, 2); // centreline = screed + pipe radius
@@ -91,26 +98,20 @@ describe('underfloorToObject3D', () => {
     const objMm = underfloorToObject3D(makeEntity(mmLoop, 'mm'), 0, undefined, 0)!;
     const objM = underfloorToObject3D(makeEntity(LOOP, 'm'), 0, undefined, 0)!;
     const sizeOf = (o: THREE.Object3D) => {
-      const tube = o.children.find(
-        (c) => c instanceof THREE.Mesh && (c as THREE.Mesh).geometry instanceof THREE.TubeGeometry,
-      ) as THREE.Mesh;
+      const tube = findPipeMesh(o)!;
       tube.geometry.computeBoundingBox();
       return tube.geometry.boundingBox!.getSize(new THREE.Vector3());
     };
     expect(sizeOf(objMm).x).toBeCloseTo(sizeOf(objM).x, 3);
-    // ~4 m run; the centripetal Catmull-Rom rounds the U-turns so the bbox bulges
-    // slightly past the raw 4 m extent (real pipe bends) — bound it loosely.
-    expect(sizeOf(objMm).x).toBeGreaterThan(3.9);
-    expect(sizeOf(objMm).x).toBeLessThan(4.5);
+    // ~4 m run; rounded bends cut the corners INWARD so the extent stays ≈ 4 m (+ tube radius).
+    expect(sizeOf(objMm).x).toBeGreaterThan(3.5);
+    expect(sizeOf(objMm).x).toBeLessThan(4.3);
   });
 
-  it('returns the band only (no tube) when the loop is degenerate', () => {
+  it('returns the band only (no pipe) when the loop is degenerate', () => {
     const obj = underfloorToObject3D(makeEntity([{ x: 0, y: 0, z: 0 }]), 0, undefined, 0);
     expect(obj).toBeInstanceOf(THREE.Group);
-    const hasTube = obj!.children.some(
-      (c) => c instanceof THREE.Mesh && (c as THREE.Mesh).geometry instanceof THREE.TubeGeometry,
-    );
-    expect(hasTube).toBe(false);
+    expect(findPipeMesh(obj!)).toBeUndefined();
     expect(obj!.children.length).toBe(1); // band mesh only
   });
 });

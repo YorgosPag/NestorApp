@@ -28,6 +28,7 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { resolveMeshUrl, meshAssetKey } from './bim-mesh-url-resolver';
+import { recentreMeshFootprint } from './mesh-footprint-recentre';
 import { useBim3DEntitiesStore } from '../../stores/Bim3DEntitiesStore';
 import {
   computeTopSilhouette,
@@ -63,14 +64,20 @@ function preload(category: string, assetId: string): void {
   void resolveMeshUrl(category, assetId)
     .then((url) => loader.loadAsync(url))
     .then((gltf) => {
-      templates.set(key, gltf.scene);
+      // Recentre the footprint (X/Z) on the local origin so the mesh sits on its
+      // insertion point regardless of where the artist placed the glTF origin.
+      // The SAME recentred template feeds the 3D placement (getInstance clone) AND
+      // the 2D silhouette below → the two views can never desync (ADR-411 2D
+      // polish, issue #2).
+      const template = recentreMeshFootprint(gltf.scene);
+      templates.set(key, template);
       // Derive the 2D plan silhouette + interior edges from the actual mesh
       // (per-asset representative footprint). Computed once; failures fall back
       // to the authored rectangle in the renderer.
       try {
-        const sil = computeTopSilhouette(gltf.scene);
+        const sil = computeTopSilhouette(template);
         if (sil.length >= 3) silhouettes.set(key, sil);
-        const eg = computeTopEdges(gltf.scene);
+        const eg = computeTopEdges(template);
         if (eg.length > 0) edges.set(key, eg);
       } catch {
         /* non-fatal — renderer falls back to the catalog rectangle */

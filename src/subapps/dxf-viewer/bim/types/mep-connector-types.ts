@@ -525,3 +525,52 @@ export function buildSanitaryDrainConnector(
     pipe: { systemClassification: 'sanitary-drainage', diameterMm },
   };
 }
+
+// ─── Sanitary fixture water-supply connectors (ADR-408 — plumbing fixture connect) ──
+
+/** Connector id for the cold-water supply inlet of a sanitary terminal. */
+export const SANITARY_COLD_CONNECTOR_ID = 'san-cold';
+/** Connector id for the hot-water supply inlet of a sanitary terminal. */
+export const SANITARY_HOT_CONNECTOR_ID = 'san-hot';
+
+/**
+ * Cold-water supply inlet of a sanitary terminal (Revit "Plumbing Fixture" — Domestic
+ * Cold Water connector). A fixture is a water TERMINAL (load): cold water ENTERS here
+ * (`flow: 'in'`), `domain: 'pipe'`, classification FIXED to `domestic-cold-water` (set
+ * by physics, not user choice). A water pipe snapped here joins the cold-water network
+ * for free.
+ *
+ * `localPosition` is host-local (scene units, pre-rotation) — the caller offsets it from
+ * the fixture body so cold/hot/drain do not coincide (see `buildSanitaryFixtureConnectors`).
+ */
+export function buildSanitaryColdWaterConnector(
+  localPosition: Point3D,
+  diameterMm: number,
+): MepConnector {
+  return {
+    connectorId: SANITARY_COLD_CONNECTOR_ID,
+    domain: 'pipe',
+    flow: 'in',
+    localPosition,
+    pipe: { systemClassification: 'domestic-cold-water', diameterMm },
+  };
+}
+
+/**
+ * Hot-water supply inlet of a sanitary terminal (Domestic Hot Water connector). Same
+ * hydraulic role as {@link buildSanitaryColdWaterConnector} but classification FIXED to
+ * `domestic-hot-water` — only seeded for kinds that take hot water (basin/shower/bath/
+ * bidet; a WC is cold-only).
+ */
+export function buildSanitaryHotWaterConnector(
+  localPosition: Point3D,
+  diameterMm: number,
+): MepConnector {
+  return {
+    connectorId: SANITARY_HOT_CONNECTOR_ID,
+    domain: 'pipe',
+    flow: 'in',
+    localPosition,
+    pipe: { systemClassification: 'domestic-hot-water', diameterMm },
+  };
+}

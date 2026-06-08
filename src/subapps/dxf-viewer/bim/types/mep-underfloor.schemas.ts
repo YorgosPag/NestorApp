@@ -34,6 +34,7 @@ export const MepUnderfloorKindSchema = z.enum(['hydronic-loop']);
 export const MepUnderfloorPatternSchema = z.enum([
   'boustrophedon',
   'counterflow-spiral',
+  'spiral',
 ]);
 
 export const MepUnderfloorIfcTypeSchema = z.literal('IfcSpaceHeater');

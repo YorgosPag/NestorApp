@@ -30,6 +30,9 @@ export interface DxfViewerUiState {
   setFormattedTestReport: React.Dispatch<React.SetStateAction<string>>;
   testsModalOpen: boolean;
   setTestsModalOpen: React.Dispatch<React.SetStateAction<boolean>>;
+  // Third-party asset credits / licences (ADR-409 §B-θετικό.2)
+  creditsModalOpen: boolean;
+  setCreditsModalOpen: React.Dispatch<React.SetStateAction<boolean>>;
   // PDF + AI panels
   pdfPanelOpen: boolean;
   setPdfPanelOpen: React.Dispatch<React.SetStateAction<boolean>>;
@@ -59,6 +62,7 @@ export function useDxfViewerUiState(): DxfViewerUiState {
   const [testReport, setTestReport] = React.useState<UnifiedTestReport | null>(null);
   const [formattedTestReport, setFormattedTestReport] = React.useState<string>('');
   const [testsModalOpen, setTestsModalOpen] = React.useState(false);
+  const [creditsModalOpen, setCreditsModalOpen] = React.useState(false);
   const [pdfPanelOpen, setPdfPanelOpen] = React.useState(false);
   const [aiChatOpen, setAiChatOpen] = React.useState(false);
   const [showEnhancedImport, setShowEnhancedImport] = React.useState(false);
@@ -73,6 +77,7 @@ export function useDxfViewerUiState(): DxfViewerUiState {
     testReport, setTestReport,
     formattedTestReport, setFormattedTestReport,
     testsModalOpen, setTestsModalOpen,
+    creditsModalOpen, setCreditsModalOpen,
     pdfPanelOpen, setPdfPanelOpen,
     aiChatOpen, setAiChatOpen,
     showEnhancedImport, setShowEnhancedImport,

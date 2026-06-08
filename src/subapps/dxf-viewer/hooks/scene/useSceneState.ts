@@ -17,6 +17,9 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { PANEL_LAYOUT } from '../../config/panel-tokens';
 // ✅ ENTERPRISE: Centralized copy-to-clipboard hook
 import { useCopyToClipboard } from '@/hooks/useCopyToClipboard';
+// 🔒 TENANT SCOPING + replace cleanup (ADR-399)
+import { useAuth } from '@/auth/hooks/useAuth';
+import { FileRecordService } from '@/services/file-record.service';
 // 🏢 ADR-118: Centralized Zero Point Pattern
 import { EMPTY_BOUNDS } from '../../config/geometry-constants';
 // 🏢 ADR-358 Phase 9D-3: id-first reader SSoT + DXF default-layer constant
@@ -32,6 +35,7 @@ export function useSceneState() {
   // ✅ ENTERPRISE: 2 separate copy instances for error notification actions
   const { copy: copyErrorMessage } = useCopyToClipboard();
   const { copy: copyImportError } = useCopyToClipboard();
+  const { user } = useAuth();
   // Levels and scene management
   const levelsSystem = useLevels();
   const { currentLevelId, getLevelScene, setLevelScene, addLevel, levels, setCurrentLevel } = levelsSystem;
@@ -150,6 +154,33 @@ export function useSceneState() {
       if (scene) {
 
         setLevelScene(targetLevelId, scene);
+        // 🛡️ ROOT-CAUSE FIX (incident 2026-06-08 — "hard refresh → χάνεται το σχέδιο"):
+        // Link the level to the canonical wizard FileRecord id DETERMINISTICALLY, NOW —
+        // instead of relying on the 2s debounced auto-save round-trip. The auto-save
+        // re-resolves the id (injectedRef ?? cache ?? findExistingFileRecord ?? generateFileId)
+        // and, because useLevelSceneLoader.resetDxfAutoSaveTarget() clears the injected id for
+        // a still-file-less level, it could mint a PHANTOM id that has no `files` doc → on
+        // reload loadFromStorageImpl(getById('FILES', id)) returns null → empty canvas.
+        // linkSceneToLevel is idempotent (skips if already linked to this id), so the later
+        // onSceneSaved callback is a harmless no-op. Skipped when no canonical id (non-wizard
+        // drag-drop import has no FileRecord). Raster (non-dxf) never reaches here.
+        if (resolvedFileRecordId && levelsSystem.linkSceneToLevel) {
+          // 🧹 REPLACE CLEANUP (ADR-399): trash the level's PREVIOUS scene file when
+          // it's being replaced by a different one. Floor-level imports already
+          // hard-delete the old file via the wizard pre-flight floor-wipe (which
+          // also nulls sceneFileId, so prevFileId is null here → no-op). This path
+          // closes the gap for FILE-LESS levels (e.g. the default "Επίπεδο 1",
+          // floorId=null) that never run the floor-wipe → otherwise each replace
+          // orphans the old FileRecord + Storage blob. moveToTrash is soft +
+          // recoverable; the cron purge (/api/files/purge) removes Storage later.
+          const prevFileId = levels.find((l) => l.id === targetLevelId)?.sceneFileId;
+          if (prevFileId && prevFileId !== resolvedFileRecordId && user?.uid) {
+            void FileRecordService.moveToTrash(prevFileId, user.uid).catch(() => {
+              /* non-blocking: already deleted by floor-wipe, or permission no-op */
+            });
+          }
+          void levelsSystem.linkSceneToLevel(targetLevelId, resolvedFileRecordId, file.name);
+        }
         // Scene rendering is handled by Canvas V2 system
         setTimeout(() => EventBus.emit('canvas-fit-to-view', { source: 'auto' }), PANEL_LAYOUT.TIMING.FIT_TO_VIEW_DELAY);
       } else {
@@ -181,7 +212,7 @@ export function useSceneState() {
         }]
       });
     }
-  }, [currentLevelId, importDxfFile, setLevelScene, addLevel, levels, setCurrentLevel, levelsSystem, copyErrorMessage, copyImportError, notifications, importError, t]);
+  }, [currentLevelId, importDxfFile, setLevelScene, addLevel, levels, setCurrentLevel, levelsSystem, user, copyErrorMessage, copyImportError, notifications, importError, t]);
 
   return {
     currentScene,

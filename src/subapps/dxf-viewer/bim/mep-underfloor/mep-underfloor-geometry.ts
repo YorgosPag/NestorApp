@@ -87,19 +87,41 @@ export function computeMepUnderfloorGeometry(
   const inset = insetClosedPolygon(ring, clearance);
   if (!inset || inset.length < MIN_UNDERFLOOR_VERTICES) return degenerate;
 
-  const rows = buildClippedRows(inset, Math.max(MIN_UNDERFLOOR_SPACING_MM, params.pipeSpacingMm) * s);
-  const field = params.patternType === 'counterflow-spiral'
-    ? stitchCounterflow(rows)
-    : stitchSnake(rows);
+  const spacingScene = Math.max(MIN_UNDERFLOOR_SPACING_MM, params.pipeSpacingMm) * s;
+  const field = buildPatternField(inset, spacingScene, params.patternType, entry.supply);
 
   const loopPath = [entry.supply, ...field, entry.ret];
+  // BOQ length is measured along the ACTUAL filleted centreline (the rounded bends
+  // shorten the developed run vs. the sharp-corner polyline) — Revit material-takeoff
+  // parity. The persisted `loopPath` stays the lean corner polyline (SSoT topology);
+  // the bends are re-derived on demand by the 2D/3D renderers via the shared helper.
+  const filleted = buildFilletedUnderfloorPath(loopPath, resolveUnderfloorBendRadiusScene(params));
   return {
     bbox,
     areaM2,
-    totalLengthM: pathLengthMm(loopPath) * sceneToM,
+    totalLengthM: pathLengthMm(filleted) * sceneToM,
     loopPath,
     ...entryConnectors(entry),
   };
+}
+
+/**
+ * Dispatch to the requested serpentine layout. `'spiral'` (Archimedean snail) falls
+ * back to the simple snake when the inset is too small / concave to spiral (empty
+ * field) — never throws, mirroring the degenerate-room contract.
+ */
+function buildPatternField(
+  inset: readonly Point3D[],
+  spacingScene: number,
+  pattern: MepUnderfloorParams['patternType'],
+  entry: Point3D,
+): Point3D[] {
+  if (pattern === 'spiral') {
+    const spiral = buildSpiralField(inset, spacingScene, entry);
+    if (spiral.length > 0) return spiral;
+  }
+  const rows = buildClippedRows(inset, spacingScene);
+  return pattern === 'counterflow-spiral' ? stitchCounterflow(rows) : stitchSnake(rows);
 }
 
 // ─── Entry / connectors ───────────────────────────────────────────────────────
@@ -201,6 +223,141 @@ function stitchCounterflow(rows: readonly ClippedRow[]): Point3D[] {
   const evens = rows.filter((r) => r.line % 2 === 0);
   const odds = rows.filter((r) => r.line % 2 === 1).reverse();
   return [...stitchSnake(evens), ...stitchSnake(odds)];
+}
+
+// ─── Spiral / snail field ──────────────────────────────────────────────────────
+
+/** Hard cap on concentric rings — runaway-loop backstop for tiny spacing. */
+const MAX_SPIRAL_RINGS = 200;
+
+/**
+ * Archimedean snail field: concentric rings (the inset polygon repeatedly contracted
+ * by `spacingScene`) traversed in COUNTERFLOW order — even rings inward (outer→inner),
+ * odd rings back outward (inner→outer) — so adjacent physical pipes carry supply next
+ * to return (even floor temperature). Each ring is opened at the vertex nearest the
+ * running cursor, leaving a short radial gap that links it to the next ring (the
+ * characteristic spiral transition). Returns `[]` when the inset cannot be ringed
+ * (caller falls back to the snake).
+ */
+function buildSpiralField(inset: readonly Point3D[], spacingScene: number, entry: Point3D): Point3D[] {
+  if (spacingScene <= 0) return [];
+  const rings: Point3D[][] = [];
+  let poly = stripClosingDuplicate(inset) as Point3D[];
+  let guard = 0;
+  while (poly.length >= MIN_UNDERFLOOR_VERTICES && guard < MAX_SPIRAL_RINGS) {
+    rings.push(poly);
+    const next = insetClosedPolygon(poly, spacingScene);
+    if (!next || next.length < MIN_UNDERFLOOR_VERTICES) break;
+    poly = stripClosingDuplicate(next) as Point3D[];
+    guard += 1;
+  }
+  if (rings.length === 0) return [];
+
+  // Counterflow interleave: inward on even rings, outward on the odd rings between them.
+  const inward = rings.filter((_, i) => i % 2 === 0);
+  const outward = rings.filter((_, i) => i % 2 === 1).reverse();
+  const ordered = [...inward, ...outward];
+
+  const path: Point3D[] = [];
+  let cursor = entry;
+  for (const ring of ordered) {
+    const seq = reorderRingFromNearest(ring, cursor);
+    path.push(...seq);
+    cursor = seq[seq.length - 1] ?? cursor;
+  }
+  return path;
+}
+
+/** Rotate a ring's vertices so it starts at the vertex nearest `point` (one pass, no
+ * wrap-back) — keeps the inter-ring jump short. */
+function reorderRingFromNearest(ring: readonly Point3D[], point: Point3D): Point3D[] {
+  const n = ring.length;
+  let best = 0;
+  let bestD = Infinity;
+  for (let i = 0; i < n; i++) {
+    const d = (ring[i].x - point.x) ** 2 + (ring[i].y - point.y) ** 2;
+    if (d < bestD) { bestD = d; best = i; }
+  }
+  const out: Point3D[] = [];
+  for (let j = 0; j < n; j++) out.push(ring[(best + j) % n]);
+  return out;
+}
+
+// ─── Bend radius + arc filleting (Revit-grade rounded pipe bends) ───────────────
+
+/**
+ * Pipe-bend radius for the underfloor loop, in SCENE units. Real PEX/multilayer pipe
+ * cannot kink — its minimum bend radius is ~5× the outer diameter — and at a 180° row
+ * reversal the rounding cannot exceed half the row pitch or neighbouring rows overlap.
+ * So `r = min(5·diameter, spacing/2)`, derived (no extra user param). SSoT shared by
+ * the geometry length, the 2D renderer and the 3D tube so all three agree.
+ */
+export function resolveUnderfloorBendRadiusScene(params: MepUnderfloorParams): number {
+  const s = mmScaleFor(params);
+  const rMm = Math.min(5 * params.connectorDiameterMm, params.pipeSpacingMm / 2);
+  return Math.max(0, rMm) * s;
+}
+
+/**
+ * Round every interior corner of a polyline with a tangent circular arc of radius
+ * `radius` (clamped per-corner to half the shorter adjacent segment so short U-turn
+ * links stay valid). Endpoints are preserved. Pure + units-agnostic — the radius must
+ * be in the SAME space as the path coordinates. Used on demand by the 2D renderer and
+ * the 3D tube so the drawn pipe shows real bends instead of sharp mitres (Revit/4M).
+ */
+export function buildFilletedUnderfloorPath(path: readonly Point3D[], radius: number): Point3D[] {
+  if (path.length < 3 || radius <= 0) return [...path];
+  const out: Point3D[] = [path[0]];
+  for (let i = 1; i < path.length - 1; i++) {
+    const prev = path[i - 1];
+    const cur = path[i];
+    const next = path[i + 1];
+    const v1x = prev.x - cur.x, v1y = prev.y - cur.y;
+    const v2x = next.x - cur.x, v2y = next.y - cur.y;
+    const len1 = Math.hypot(v1x, v1y);
+    const len2 = Math.hypot(v2x, v2y);
+    if (len1 < 1e-9 || len2 < 1e-9) { out.push(cur); continue; }
+    const u1x = v1x / len1, u1y = v1y / len1;
+    const u2x = v2x / len2, u2y = v2y / len2;
+    // Half-angle between the two edges at the corner.
+    const cosHalf = Math.min(1, Math.max(-1, (u1x * u2x + u1y * u2y)));
+    const half = Math.acos(cosHalf) / 2;
+    if (half < 1e-3 || half > Math.PI / 2 - 1e-3) { out.push(cur); continue; } // straight/needle
+    const tan = Math.tan(half);
+    let t = radius / tan;                       // tangent distance from corner
+    t = Math.min(t, len1 * 0.5, len2 * 0.5);    // don't overrun either edge
+    const r = t * tan;                          // effective radius after clamp
+    if (t < 1e-6 || r < 1e-6) { out.push(cur); continue; }
+    const p1 = { x: cur.x + u1x * t, y: cur.y + u1y * t, z: 0 };
+    const p2 = { x: cur.x + u2x * t, y: cur.y + u2y * t, z: 0 };
+    // Arc centre along the inner bisector at distance r / sin(half).
+    let bx = u1x + u2x, by = u1y + u2y;
+    const bl = Math.hypot(bx, by);
+    if (bl < 1e-9) { out.push(cur); continue; }
+    bx /= bl; by /= bl;
+    const cx = cur.x + bx * (r / Math.sin(half));
+    const cy = cur.y + by * (r / Math.sin(half));
+    out.push(...sampleArc(cx, cy, p1, p2));
+  }
+  out.push(path[path.length - 1]);
+  return out;
+}
+
+/** Sample the minor arc centre→p1..p2 (inclusive) into a short point list. */
+function sampleArc(cx: number, cy: number, p1: Point3D, p2: Point3D): Point3D[] {
+  const a1 = Math.atan2(p1.y - cy, p1.x - cx);
+  const a2 = Math.atan2(p2.y - cy, p2.x - cx);
+  let delta = a2 - a1;
+  while (delta > Math.PI) delta -= 2 * Math.PI;
+  while (delta < -Math.PI) delta += 2 * Math.PI;
+  const r = Math.hypot(p1.x - cx, p1.y - cy);
+  const steps = Math.min(12, Math.max(2, Math.ceil(Math.abs(delta) / (Math.PI / 8))));
+  const pts: Point3D[] = [];
+  for (let k = 0; k <= steps; k++) {
+    const a = a1 + (delta * k) / steps;
+    pts.push({ x: cx + r * Math.cos(a), y: cy + r * Math.sin(a), z: 0 });
+  }
+  return pts;
 }
 
 // ─── Math helpers ─────────────────────────────────────────────────────────────

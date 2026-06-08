@@ -172,7 +172,7 @@ export const DxfViewerContent = React.memo<DxfViewerAppProps>((props) => {
   } = useDxfViewerCallbacks({
     notifications, copyToClipboard, handleAction,
     togglePerfMonitor, perfMonitorEnabled, fullscreen,
-    setTestsModalOpen: ui.setTestsModalOpen, setPdfPanelOpen: ui.setPdfPanelOpen, setAiChatOpen: ui.setAiChatOpen,
+    setTestsModalOpen: ui.setTestsModalOpen, setCreditsModalOpen: ui.setCreditsModalOpen, setPdfPanelOpen: ui.setPdfPanelOpen, setAiChatOpen: ui.setAiChatOpen,
     setShowEnhancedImport: ui.setShowEnhancedImport, setShowImportWizard: ui.setShowImportWizard, setShowLegacyImport: ui.setShowLegacyImport,
     setCanvasTransform,
     currentScene, selectedEntityIds, handleSceneChange,

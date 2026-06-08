@@ -54,10 +54,14 @@ export type MepUnderfloorKind = 'hydronic-loop';
  * Serpentine layout pattern of the pipe field.
  *   - `'boustrophedon'` — back-and-forth parallel rows (ox-plough) + a perimeter
  *     return leg back to entry. Simplest, single-direction flow.
- *   - `'counterflow-spiral'` — bifilar interleave: supply and return run parallel
- *     everywhere (even floor temperature, Revit-realistic).
+ *   - `'counterflow-spiral'` — bifilar interleave of the parallel rows: supply and
+ *     return alternate every row (even floor temperature, Revit-realistic).
+ *   - `'spiral'` — true Archimedean snail/spiral: the pipe spirals from the
+ *     perimeter INWARD on concentric rings (pitch `2·spacing`) then returns OUTWARD
+ *     interleaved between them, so supply and return run side-by-side throughout
+ *     (the most common residential counterflow snail — gentle bends, even temp).
  */
-export type MepUnderfloorPattern = 'boustrophedon' | 'counterflow-spiral';
+export type MepUnderfloorPattern = 'boustrophedon' | 'counterflow-spiral' | 'spiral';
 
 // ─── Parameters (user-editable SSoT) ──────────────────────────────────────────
 

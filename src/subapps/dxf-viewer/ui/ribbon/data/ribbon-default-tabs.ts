@@ -21,6 +21,7 @@ import { HOME_GUIDES_PANEL } from './home-tab-guides';
 import { HOME_AI_PANEL } from './home-tab-ai';
 import { SETTINGS_CURSOR_PANEL } from './settings-tab-cursor';
 import { SETTINGS_DEVELOPER_PANEL } from './settings-tab-developer';
+import { SETTINGS_CREDITS_PANEL } from './settings-tab-credits';
 import { INSERT_TAB } from './insert-tab';
 import { ANALYZE_TAB } from './analyze-tab';
 
@@ -77,6 +78,7 @@ export const DEFAULT_RIBBON_TABS: readonly RibbonTab[] = [
     panels: [
       SETTINGS_CURSOR_PANEL,
       SETTINGS_DEVELOPER_PANEL,
+      SETTINGS_CREDITS_PANEL,
     ],
   },
 ] as const;

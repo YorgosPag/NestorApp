@@ -13,6 +13,11 @@ export const MEP_FIXTURE_RIBBON_KEYS = {
   stringParams: {
     /** Footprint shape selector (rectangular / circular). */
     shape: 'mepFixture.params.shape',
+    /**
+     * ADR-411 — 3D representation selector. Empty value = parametric box; a
+     * catalog asset id = realistic glTF mesh override (`bim-mesh-library/<cat>/`).
+     */
+    assetId: 'mepFixture.params.assetId',
   },
   params: {
     /** mm — footprint width (διάμετρος αν circular). */
@@ -36,7 +41,8 @@ export type MepFixtureRibbonNumberCommandKey =
   | typeof MEP_FIXTURE_RIBBON_KEYS.params.mountingElevation;
 
 export type MepFixtureRibbonStringCommandKey =
-  | typeof MEP_FIXTURE_RIBBON_KEYS.stringParams.shape;
+  | typeof MEP_FIXTURE_RIBBON_KEYS.stringParams.shape
+  | typeof MEP_FIXTURE_RIBBON_KEYS.stringParams.assetId;
 
 export const MEP_FIXTURE_RIBBON_NUMBER_KEYS: readonly MepFixtureRibbonNumberCommandKey[] = [
   MEP_FIXTURE_RIBBON_KEYS.params.width,
@@ -48,6 +54,7 @@ export const MEP_FIXTURE_RIBBON_NUMBER_KEYS: readonly MepFixtureRibbonNumberComm
 
 export const MEP_FIXTURE_RIBBON_STRING_KEYS: readonly MepFixtureRibbonStringCommandKey[] = [
   MEP_FIXTURE_RIBBON_KEYS.stringParams.shape,
+  MEP_FIXTURE_RIBBON_KEYS.stringParams.assetId,
 ];
 
 export const MEP_FIXTURE_RIBBON_KEYS_ACTIONS = {

@@ -164,8 +164,19 @@ export function useAutoSaveSceneManager(): AutoSaveSceneManagerState {
     // called in the same synchronous block before any await).
     const fileName = currentFileNameRef.current;
 
+    // 🛡️ DATA-INTEGRITY GUARD (incident 2026-06-08): NEVER auto-save an empty scene.
+    // A failed/aborted scene load sets an empty scene (useLevelSceneLoader "Scene not
+    // found" → createEmptyScene). Once the loading guard releases on the next frame, a
+    // later setLevelScene would debounce-write that empty scene over the REAL file in
+    // Storage and destroy it (observed: file_0df264da climbed to revision 96 @ 95 bytes
+    // / 0 entities). An empty scene is never worth persisting, so skipping the write is
+    // FAIL-SAFE — it can only prevent a destructive overwrite, never cause a bad save.
+    // A scene the user genuinely emptied simply isn't auto-persisted (rare edge case,
+    // far less harmful than silently wiping a populated floorplan).
+    const isEmptyScene = scene.entities.length === 0;
+
     // Trigger auto-save if enabled and we have a filename and not loading from Firestore
-    if (autoSaveEnabled && fileName && !isLoadingFromFirestoreRef.current) {
+    if (autoSaveEnabled && fileName && !isLoadingFromFirestoreRef.current && !isEmptyScene) {
       // Clear existing timeout
       if (saveTimeoutRef.current) {
         clearTimeout(saveTimeoutRef.current);

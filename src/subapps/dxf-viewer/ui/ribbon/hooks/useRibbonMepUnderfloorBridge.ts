@@ -84,6 +84,7 @@ const NUMBER_KEY_TO_FIELD: Readonly<Record<string, keyof MepUnderfloorParams>> =
 const PATTERN_VALUES: ReadonlySet<string> = new Set<string>([
   'boustrophedon',
   'counterflow-spiral',
+  'spiral',
 ]);
 
 export function useRibbonMepUnderfloorBridge(

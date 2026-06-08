@@ -53,6 +53,7 @@ const EDGE_CLEARANCE_MM_OPTIONS = [
 const PATTERN_TYPE_OPTIONS = [
   { value: 'boustrophedon', labelKey: 'ribbon.commands.mepUnderfloorEditor.patternBoustrophedon' },
   { value: 'counterflow-spiral', labelKey: 'ribbon.commands.mepUnderfloorEditor.patternCounterflow' },
+  { value: 'spiral', labelKey: 'ribbon.commands.mepUnderfloorEditor.patternSpiral' },
 ] as const;
 
 // Screed offset (mm) — pipe centreline elevation above FFL.

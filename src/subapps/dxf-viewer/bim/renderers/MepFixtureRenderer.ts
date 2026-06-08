@@ -21,7 +21,7 @@ import type { EntityModel, GripInfo, RenderOptions, Point2D } from '../../render
 import type { Entity } from '../../types/entities';
 import { isMepFixtureEntity } from '../../types/entities';
 import type { MepFixtureEntity } from '../types/mep-fixture-types';
-import { resolveFixtureBimCategory } from '../types/mep-fixture-types';
+import { resolveFixtureBimCategory, resolveFixtureMeshCategory } from '../types/mep-fixture-types';
 import { isSanitaryKind } from '../sanitary/sanitary-symbol-spec';
 import { resolveSegmentClassificationColor } from '../mep-systems/mep-system-color';
 import { pointInPolygon } from '../geometry/shared/polygon-utils';
@@ -47,8 +47,6 @@ const FIXTURE_STROKE = '#d97706';
 const FIXTURE_FILL = 'rgba(251, 191, 36, 0.18)';
 /** Translucent fill alpha for the colour-by-system (ADR-408 Φ5) override. */
 const SYSTEM_FILL_ALPHA = 0.18;
-/** BIM category → Storage library folder for light-fixture meshes (ADR-411). */
-const LIGHT_FIXTURE_MESH_CATEGORY = 'light-fixture';
 
 export class MepFixtureRenderer extends BaseEntityRenderer {
   render(entity: EntityModel, options: RenderOptions = {}): void {
@@ -112,17 +110,26 @@ export class MepFixtureRenderer extends BaseEntityRenderer {
     this.ctx.save();
     this.ctx.setLineDash([]);
 
-    // ADR-411 — a fixture carrying an `assetId` paints the per-asset top-view
-    // silhouette + interior detail lines (shared SSoT); the colour-by-system
-    // stroke/fill still tints it. Falls back to the parametric family-symbol
-    // until the glTF (and its silhouette) has loaded, or when no asset is set.
+    // ADR-411 — a fixture carrying an `assetId` paints the per-asset top-view of
+    // the real mesh: the outer silhouette PLUS the interior feature edges (the
+    // full plan detail — door / faucet / tray), aligned + correctly sized via the
+    // footprint (#1) and recentred-origin (#2) fixes. The colour-by-system
+    // stroke/fill still tints it. Falls back to the parametric family-symbol until
+    // the glTF (and its silhouette) has loaded, or when no asset is set.
     const assetId = fixture.params.assetId;
-    const meshDrew = assetId
+    const meshCategory = resolveFixtureMeshCategory(fixture.params.kind);
+    const silhouette = assetId ? bimMeshCache.getSilhouette(meshCategory, assetId) : null;
+    // Proactive load (belt-and-suspenders): if the asset is set but its silhouette
+    // is not cached yet — e.g. the 3D viewport never mounted to trigger the load —
+    // kick off the glTF preload so the real top-view appears in 2D too. Idempotent,
+    // fire-and-forget; the cache repaints the canvas on completion (ADR-411).
+    if (assetId && !silhouette) bimMeshCache.preload(meshCategory, assetId);
+    const meshDrew = assetId && silhouette
       ? drawMeshSilhouette({
           ctx: this.ctx,
           worldToScreen: (p) => this.worldToScreen(p),
-          silhouette: bimMeshCache.getSilhouette(LIGHT_FIXTURE_MESH_CATEGORY, assetId),
-          edges: bimMeshCache.getTopEdges(LIGHT_FIXTURE_MESH_CATEGORY, assetId),
+          silhouette,
+          edges: bimMeshCache.getTopEdges(meshCategory, assetId),
           transform: {
             position: fixture.params.position,
             rotationDeg: fixture.params.rotation,

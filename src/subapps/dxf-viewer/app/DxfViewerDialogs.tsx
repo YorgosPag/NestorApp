@@ -27,7 +27,7 @@ import { buildDxfImportSaveContext } from './dxf-import-save-context';
 import type { DxfViewerCallbacksReturn } from './useDxfViewerCallbacks';
 import type { DxfViewerUiState } from './useDxfViewerUiState';
 import {
-  TestsModal, FloorplanBackgroundPanel, ReplaceConfirmDialog, CalibrationDialog,
+  TestsModal, CreditsDialog, FloorplanBackgroundPanel, ReplaceConfirmDialog, CalibrationDialog,
   DxfImportModal, SimpleProjectDialog, FloorplanImportWizard, ConstructionLayerScaffoldDialog,
   DxfFindReplaceHost, DxfSymbolPickerHost, RenumberOpeningsHost, OpeningTagStyleHost,
   OpeningSchedulePdfHost, ThermalEnvelopeHost, AdminLayerManagerDialogHost, DxfAiChatPanel,
@@ -73,6 +73,12 @@ export function DxfViewerDialogs(props: DxfViewerDialogsProps): React.JSX.Elemen
           isOpen={ui.testsModalOpen}
           onClose={() => ui.setTestsModalOpen(false)}
           showCopyableNotification={showCopyableNotification}
+        />
+      </React.Suspense>
+      <React.Suspense fallback={hiddenFallback}>
+        <CreditsDialog
+          isOpen={ui.creditsModalOpen}
+          onClose={() => ui.setCreditsModalOpen(false)}
         />
       </React.Suspense>
       <React.Suspense fallback={hiddenFallback}>

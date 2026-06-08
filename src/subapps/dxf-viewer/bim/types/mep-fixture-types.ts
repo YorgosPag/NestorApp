@@ -173,6 +173,16 @@ export function resolveFixtureBimCategory(params: MepFixtureParams): BimCategory
   return 'light-fixture';
 }
 
+/**
+ * SSoT for a fixture's mesh-library Storage category (`bim-mesh-library/<category>/`).
+ * Sanitary terminals → `'sanitary'`, every other kind → `'light-fixture'`. Consumed
+ * by BOTH the 3D converter (mesh load) and the 2D renderer (silhouette lookup), so
+ * they never disagree on where an asset's glTF + derived silhouette live.
+ */
+export function resolveFixtureMeshCategory(kind: MepFixtureKind): string {
+  return isSanitaryKind(kind) ? 'sanitary' : 'light-fixture';
+}
+
 // ─── Defaults & constants ────────────────────────────────────────────────────
 
 /** Default rectangular fixture footprint (mm). 600×600 recessed panel — industry standard. */

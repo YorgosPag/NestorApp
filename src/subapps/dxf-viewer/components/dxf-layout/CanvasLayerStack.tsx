@@ -43,6 +43,7 @@ import { EnvelopeOverlay } from './EnvelopeOverlay';
 import { HomeRunWiresOverlay } from './HomeRunWiresOverlay';
 // ADR-399 Phase D — 2D «Όλοι οι όροφοι» read-only underlay (other floors, faded, behind active).
 import { FloorUnderlayOverlay } from './FloorUnderlayOverlay';
+import { RiserThroughOverlay } from './RiserThroughOverlay';
 export type { CanvasLayerStackProps } from './canvas-layer-stack-types';
 const EMPTY_SNAP_RESULTS: readonly never[] = Object.freeze([]);
 export const CanvasLayerStack = React.memo(function CanvasLayerStack({
@@ -453,6 +454,10 @@ export const CanvasLayerStack = React.memo(function CanvasLayerStack({
           />
           <AutoAreaPreviewOverlay transform={transform} viewport={viewport} />
           <RegionPerimeterPreviewOverlay transform={transform} viewport={viewport} />
+          {/* ADR-408 Φ15 Task B — cross-floor «riser through» glyphs (derived from
+              other floors' vertical risers crossing the active FFL). Read-only,
+              pointer-events-none. Self-gated to mode==='2d'. STAGE ADR-040. */}
+          <RiserThroughOverlay transform={transform} viewport={viewport} />
           <PolygonCropPreviewSubscriber transform={transform} viewport={viewport} className={`absolute inset-0 w-full h-full pointer-events-none ${PANEL_LAYOUT.Z_INDEX['20']}`} />
           <LassoFreehandPreviewSubscriber transform={transform} viewport={viewport} className={`absolute inset-0 w-full h-full pointer-events-none ${PANEL_LAYOUT.Z_INDEX['20']}`} />
           <ZoomWindowSubscriber className={`absolute ${PANEL_LAYOUT.INSET['0']} w-full h-full ${PANEL_LAYOUT.POINTER_EVENTS.NONE} ${PANEL_LAYOUT.Z_INDEX['20']}`} />

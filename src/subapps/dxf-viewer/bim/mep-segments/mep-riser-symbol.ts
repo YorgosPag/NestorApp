@@ -68,3 +68,32 @@ export function buildRiserSymbol(
 
   return { cx, cy, r, strokes: [...cross, ...arrow] };
 }
+
+/**
+ * Draw a built {@link RiserSymbol} onto a 2D context: the circle (`ctx.arc`) plus
+ * every inner-cross / arrow stroke. Single source of truth for the riser glyph
+ * draw, shared by the owning-floor renderer (`MepSegmentRenderer.renderRiser`) and
+ * the cross-floor «riser through» overlay (ADR-408 Φ15 Task B) → identical pixels,
+ * zero drift. The caller owns `save`/`restore`, line dash and any phase/hover
+ * styling; this sets only `strokeStyle` + `lineWidth` and strokes.
+ */
+export function drawRiserSymbol(
+  ctx: CanvasRenderingContext2D,
+  symbol: RiserSymbol,
+  strokeColor: string,
+  lineWidth: number,
+): void {
+  ctx.strokeStyle = strokeColor;
+  ctx.lineWidth = lineWidth;
+  // Circle.
+  ctx.beginPath();
+  ctx.arc(symbol.cx, symbol.cy, symbol.r, 0, Math.PI * 2);
+  ctx.stroke();
+  // Inner cross + direction arrow.
+  for (const [a, b] of symbol.strokes) {
+    ctx.beginPath();
+    ctx.moveTo(a.x, a.y);
+    ctx.lineTo(b.x, b.y);
+    ctx.stroke();
+  }
+}

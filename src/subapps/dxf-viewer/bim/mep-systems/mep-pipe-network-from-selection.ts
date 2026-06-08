@@ -30,8 +30,9 @@
  */
 
 import type { Entity } from '../../types/entities';
-import { isMepSegmentEntity } from '../../types/entities';
+import { isMepSegmentEntity, isMepFixtureEntity } from '../../types/entities';
 import type { MepSegmentEntity } from '../types/mep-segment-types';
+import type { MepFixtureEntity } from '../types/mep-fixture-types';
 import type { MepSystemEntity, MepSystemMember } from '../types/mep-system-types';
 import {
   SEGMENT_START_CONNECTOR_ID,
@@ -77,6 +78,23 @@ export function pipeSegmentMembers(segment: MepSegmentEntity): MepSystemMember[]
   ];
 }
 
+/**
+ * The fixture connectors that belong to a network of the given hydraulic
+ * classification (Revit: a Plumbing Fixture's Cold connector is on the Cold system,
+ * its Hot on the Hot system, its Drain on the Sanitary system — membership is
+ * per-(entity, connector)). A sanitary terminal therefore joins a water-supply
+ * network through its matching cold/hot inlet only. Empty when the fixture has no
+ * connector of that classification.
+ */
+export function fixtureMembersForClassification(
+  fixture: MepFixtureEntity,
+  classification: PlumbingSystemClassification,
+): MepSystemMember[] {
+  return (fixture.params.connectors ?? [])
+    .filter((c) => c.domain === 'pipe' && c.pipe?.systemClassification === classification)
+    .map((c) => ({ entityId: fixture.id, connectorId: c.connectorId }));
+}
+
 /** Selected segments that carry water (pipe domain) — duct segments are ignored. */
 function selectedPipeSegments(selected: readonly Entity[]): MepSegmentEntity[] {
   return selected.filter(isMepSegmentEntity).filter((s) => s.params.domain === 'pipe');
@@ -96,18 +114,30 @@ export function resolvePipeNetworkFromSelection(
   if (sources.length === 0) return { ok: false, reason: 'no-source' };
   if (sources.length > 1) return { ok: false, reason: 'multiple-sources' };
 
-  const members: MepSystemMember[] = selectedPipeSegments(selected).flatMap(pipeSegmentMembers);
+  const source = sources[0]!;
+  // Inherit the source's hydraulic classification (ύδρευση/θέρμανση); a boiler
+  // defaults to hydronic-supply, a pre-heating manifold carries none ⇒
+  // domestic-cold-water (back-compat).
+  const systemClassification: PlumbingSystemClassification =
+    source.params.systemClassification ?? 'domestic-cold-water';
+
+  // Members = both endpoints of each selected pipe + the matching water connector of
+  // each selected sanitary fixture (Revit Plumbing Fixture joins the supply network
+  // through its cold/hot inlet of the network's classification).
+  const members: MepSystemMember[] = [
+    ...selectedPipeSegments(selected).flatMap(pipeSegmentMembers),
+    ...selected
+      .filter(isMepFixtureEntity)
+      .flatMap((f) => fixtureMembersForClassification(f, systemClassification)),
+  ];
   if (members.length === 0) return { ok: false, reason: 'no-members' };
 
   return {
     ok: true,
     draft: {
-      sourceEntityId: sources[0]!.id,
-      sourceConnectorId: findPipeNetworkSourceConnectorId(sources[0]!),
-      // Inherit the source's hydraulic classification (ύδρευση/θέρμανση); a boiler
-      // defaults to hydronic-supply, a pre-heating manifold carries none ⇒
-      // domestic-cold-water (back-compat).
-      systemClassification: sources[0]!.params.systemClassification ?? 'domestic-cold-water',
+      sourceEntityId: source.id,
+      sourceConnectorId: findPipeNetworkSourceConnectorId(source),
+      systemClassification,
       members,
       reassignRemovals: computeReassignRemovals(members, existingSystems),
     },

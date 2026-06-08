@@ -77,6 +77,7 @@ export interface DxfViewerCallbacksParams {
   perfMonitorEnabled: boolean;
   fullscreen: { toggle: () => void };
   setTestsModalOpen: React.Dispatch<React.SetStateAction<boolean>>;
+  setCreditsModalOpen: React.Dispatch<React.SetStateAction<boolean>>;
   setPdfPanelOpen: React.Dispatch<React.SetStateAction<boolean>>;
   setAiChatOpen: React.Dispatch<React.SetStateAction<boolean>>;
   setShowEnhancedImport: React.Dispatch<React.SetStateAction<boolean>>;
@@ -121,7 +122,7 @@ export function useDxfViewerCallbacks(params: DxfViewerCallbacksParams): DxfView
   const {
     notifications, copyToClipboard, handleAction,
     togglePerfMonitor, perfMonitorEnabled, fullscreen,
-    setTestsModalOpen, setPdfPanelOpen, setAiChatOpen,
+    setTestsModalOpen, setCreditsModalOpen, setPdfPanelOpen, setAiChatOpen,
     setShowEnhancedImport, setShowImportWizard, setShowLegacyImport,
     setCanvasTransform,
     currentScene, selectedEntityIds, handleSceneChange,
@@ -153,6 +154,11 @@ export function useDxfViewerCallbacks(params: DxfViewerCallbacksParams): DxfView
   const wrappedHandleAction = React.useCallback((action: string, data?: string | number | Record<string, unknown>) => {
     if (action === 'run-tests') {
       setTestsModalOpen(true);
+      return;
+    }
+    // ADR-409 §B-θετικό.2 — open the third-party asset credits / licences screen.
+    if (action === 'open-credits') {
+      setCreditsModalOpen(true);
       return;
     }
     // 🏢 ENTERPRISE: Performance Monitor Toggle (Bentley/Autodesk pattern)
@@ -279,7 +285,7 @@ export function useDxfViewerCallbacks(params: DxfViewerCallbacksParams): DxfView
     // Pass all other actions to original handleAction
     handleAction(action, data);
   }, [handleAction, togglePerfMonitor, perfMonitorEnabled, notifications, fullscreen,
-      setTestsModalOpen, setPdfPanelOpen, setAiChatOpen,
+      setTestsModalOpen, setCreditsModalOpen, setPdfPanelOpen, setAiChatOpen,
       setShowEnhancedImport, setShowImportWizard, setShowLegacyImport,
       levelManager.saveContext, params.selectedEntityIds, user, t]);
 

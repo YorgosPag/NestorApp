@@ -25,7 +25,11 @@ import type { EntityModel, GripInfo, RenderOptions, Point2D } from '../../render
 import type { Entity } from '../../types/entities';
 import { isMepUnderfloorEntity } from '../../types/entities';
 import type { MepUnderfloorEntity } from '../types/mep-underfloor-types';
-import { computeMepUnderfloorGeometry } from '../mep-underfloor/mep-underfloor-geometry';
+import {
+  computeMepUnderfloorGeometry,
+  buildFilletedUnderfloorPath,
+  resolveUnderfloorBendRadiusScene,
+} from '../mep-underfloor/mep-underfloor-geometry';
 import { pointInPolygon } from '../geometry/shared/polygon-utils';
 import { getMepUnderfloorGrips } from '../mep-underfloor/mep-underfloor-grips';
 import { RENDER_LINE_WIDTHS } from '../../config/text-rendering-config';
@@ -97,10 +101,12 @@ export class MepUnderfloorRenderer extends BaseEntityRenderer {
     this.drawPolygonPath(verts);
     this.ctx.stroke();
 
-    // 3. Serpentine pipe loopPath — continuous polyline at 2px solid.
+    // 3. Serpentine pipe loopPath — continuous polyline at 2px solid, with the same
+    //    rounded pipe bends (arc fillets) the 3D tube uses, so 2D and 3D match (the
+    //    persisted loopPath is the lean corner polyline; the bends are re-derived here).
     this.ctx.setLineDash([]);
     if (geometry.loopPath.length >= 2) {
-      this.drawLoopPath(geometry.loopPath);
+      this.drawLoopPath(buildFilletedUnderfloorPath(geometry.loopPath, resolveUnderfloorBendRadiusScene(uf.params)));
     }
 
     // 4. Supply ◇ and return ◇ connector diamonds at the entry edge.

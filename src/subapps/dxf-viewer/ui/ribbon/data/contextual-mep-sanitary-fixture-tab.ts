@@ -25,6 +25,7 @@ import {
   MEP_FIXTURE_RIBBON_KEYS,
   MEP_FIXTURE_RIBBON_KEYS_ACTIONS,
 } from '../hooks/bridge/mep-fixture-command-keys';
+import { SELECT_CLEAR_VALUE } from '@/config/domain-constants';
 
 export const MEP_SANITARY_FIXTURE_CONTEXTUAL_TRIGGER = 'mep-sanitary-fixture-selected';
 
@@ -71,6 +72,21 @@ const MOUNTING_ELEVATION_MM_OPTIONS = [
   { value: '0', labelKey: '0', isLiteralLabel: true },
   { value: '100', labelKey: '100', isLiteralLabel: true },
   { value: '200', labelKey: '200', isLiteralLabel: true },
+] as const;
+
+// ADR-411 — 3D representation: parametric box (default) vs a realistic glTF mesh
+// override. The kind-specific mesh list is supplied DYNAMICALLY per selected fixture
+// by `useRibbonMepFixtureBridge.getComboboxState` (Revit-correct: a WC offers only WC
+// models, never shower models). This static list is only the kind-blind fallback
+// rendered when no fixture is selected — hence parametric-only. The bridge always
+// returns ≥1 option for a selected sanitary fixture, so it wins (RibbonCombobox prefers
+// non-empty dynamic options).
+const THREE_D_VIEW_OPTIONS = [
+  {
+    value: SELECT_CLEAR_VALUE,
+    labelKey: 'ribbon.commands.mepSanitaryFixtureEditor.threeDViewParametric',
+    isLiteralLabel: false,
+  },
 ] as const;
 
 // ─── Tab definition ──────────────────────────────────────────────────────────
@@ -141,6 +157,28 @@ export const CONTEXTUAL_MEP_SANITARY_FIXTURE_TAB: RibbonTab = {
                 commandKey: MEP_FIXTURE_RIBBON_KEYS.params.mountingElevation,
                 comboboxWidthPx: 90,
                 options: MOUNTING_ELEVATION_MM_OPTIONS,
+              },
+            },
+          ],
+        },
+      ],
+    },
+    {
+      id: 'mep-sanitary-fixture-3d-view',
+      labelKey: 'ribbon.panels.mepSanitaryFixture3dView',
+      rows: [
+        {
+          isInFlyout: false,
+          buttons: [
+            {
+              type: 'combobox',
+              size: 'small',
+              command: {
+                id: 'mepSanitaryFixture.threeDView',
+                labelKey: 'ribbon.commands.mepSanitaryFixtureEditor.threeDView',
+                commandKey: MEP_FIXTURE_RIBBON_KEYS.stringParams.assetId,
+                comboboxWidthPx: 150,
+                options: THREE_D_VIEW_OPTIONS,
               },
             },
           ],

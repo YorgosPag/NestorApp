@@ -9,7 +9,9 @@
 
 import {
   buildUnderfloorConnectors,
+  buildFilletedUnderfloorPath,
   computeMepUnderfloorGeometry,
+  resolveUnderfloorBendRadiusScene,
   validateMepUnderfloorParams,
 } from '../mep-underfloor-geometry';
 import type {
@@ -46,14 +48,14 @@ describe('computeMepUnderfloorGeometry', () => {
     expect(computeMepUnderfloorGeometry(params()).areaM2).toBeCloseTo(20, 6);
   });
 
-  it.each<MepUnderfloorPattern>(['boustrophedon', 'counterflow-spiral'])(
+  it.each<MepUnderfloorPattern>(['boustrophedon', 'counterflow-spiral', 'spiral'])(
     'produces a positive pipe length (%s)',
     (patternType) => {
       expect(computeMepUnderfloorGeometry(params({ patternType })).totalLengthM).toBeGreaterThan(0);
     },
   );
 
-  it.each<MepUnderfloorPattern>(['boustrophedon', 'counterflow-spiral'])(
+  it.each<MepUnderfloorPattern>(['boustrophedon', 'counterflow-spiral', 'spiral'])(
     'pipe length grows as spacing tightens (%s)',
     (patternType) => {
       const tight = computeMepUnderfloorGeometry(params({ patternType, pipeSpacingMm: 100 })).totalLengthM;
@@ -62,7 +64,7 @@ describe('computeMepUnderfloorGeometry', () => {
     },
   );
 
-  it.each<MepUnderfloorPattern>(['boustrophedon', 'counterflow-spiral'])(
+  it.each<MepUnderfloorPattern>(['boustrophedon', 'counterflow-spiral', 'spiral'])(
     'keeps every loop vertex inside the footprint (%s)',
     (patternType) => {
       const geo = computeMepUnderfloorGeometry(params({ patternType }));
@@ -117,6 +119,48 @@ describe('computeMepUnderfloorGeometry', () => {
   it('handles a CW footprint by normalising winding', () => {
     const cw = [...RECT].reverse();
     expect(computeMepUnderfloorGeometry(params({ footprint: { vertices: cw } })).totalLengthM).toBeGreaterThan(0);
+  });
+
+  it('spiral pattern produces a multi-point concentric loopPath inside the footprint', () => {
+    const geo = computeMepUnderfloorGeometry(params({ patternType: 'spiral' }));
+    expect(geo.loopPath.length).toBeGreaterThan(8); // several concentric rings
+    for (const v of geo.loopPath) expect(pointInPolygon(v, RECT)).toBe(true);
+  });
+});
+
+describe('resolveUnderfloorBendRadiusScene', () => {
+  it('is min(5×diameter, spacing/2) in scene units (mm scene → ×1)', () => {
+    // diameter 16 → 5×16=80; spacing 150 → 75 ⇒ min = 75.
+    expect(resolveUnderfloorBendRadiusScene(params())).toBeCloseTo(75, 6);
+    // tight spacing 100 → spacing/2=50 < 80 ⇒ 50.
+    expect(resolveUnderfloorBendRadiusScene(params({ pipeSpacingMm: 100 }))).toBeCloseTo(50, 6);
+  });
+
+  it('scales mm→scene for a metres scene (÷1000)', () => {
+    expect(resolveUnderfloorBendRadiusScene(params({ sceneUnits: 'm' }))).toBeCloseTo(0.075, 9);
+  });
+});
+
+describe('buildFilletedUnderfloorPath', () => {
+  it('leaves a collinear path unchanged (no corners to round)', () => {
+    const line: Point3D[] = [{ x: 0, y: 0, z: 0 }, { x: 10, y: 0, z: 0 }, { x: 20, y: 0, z: 0 }];
+    expect(buildFilletedUnderfloorPath(line, 2)).toHaveLength(3);
+  });
+
+  it('rounds a right-angle corner — inserts arc samples and preserves endpoints', () => {
+    const corner: Point3D[] = [{ x: 0, y: 0, z: 0 }, { x: 10, y: 0, z: 0 }, { x: 10, y: 10, z: 0 }];
+    const out = buildFilletedUnderfloorPath(corner, 2);
+    expect(out.length).toBeGreaterThan(3); // corner replaced by an arc
+    expect(out[0]).toEqual({ x: 0, y: 0, z: 0 });
+    expect(out[out.length - 1]).toEqual({ x: 10, y: 10, z: 0 });
+    // the sharp vertex (10,0) is gone — no point sits exactly on it.
+    expect(out.some((p) => p.x === 10 && p.y === 0)).toBe(false);
+  });
+
+  it('returns a copy unchanged for radius 0 or < 3 points', () => {
+    const p: Point3D[] = [{ x: 0, y: 0, z: 0 }, { x: 5, y: 5, z: 0 }, { x: 10, y: 0, z: 0 }];
+    expect(buildFilletedUnderfloorPath(p, 0)).toHaveLength(3);
+    expect(buildFilletedUnderfloorPath(p.slice(0, 2), 2)).toHaveLength(2);
   });
 });
 

@@ -37,7 +37,7 @@ import {
   deriveSlopePercent,
   resolveSegmentBimCategory,
 } from '../types/mep-segment-types';
-import { buildRiserSymbol, RISER_SYMBOL_RADIUS_PX } from '../mep-segments/mep-riser-symbol';
+import { buildRiserSymbol, drawRiserSymbol, RISER_SYMBOL_RADIUS_PX } from '../mep-segments/mep-riser-symbol';
 import { pointInPolygon } from '../geometry/shared/polygon-utils';
 import { computeTrimmedSegmentGeometry } from '../geometry/mep-segment-geometry';
 import { useMepSegmentTrimStore } from '../mep-fittings/mep-segment-trim-store';
@@ -326,19 +326,8 @@ export class MepSegmentRenderer extends BaseEntityRenderer {
     }
 
     this.phaseManager.applyPhaseStyle(segment as Entity, phaseState);
-    this.ctx.strokeStyle = strokeColor;
-    this.ctx.lineWidth = RENDER_LINE_WIDTHS.NORMAL;
-    // Circle.
-    this.ctx.beginPath();
-    this.ctx.arc(symbol.cx, symbol.cy, symbol.r, 0, Math.PI * 2);
-    this.ctx.stroke();
-    // Inner cross + direction arrow.
-    for (const [a, b] of symbol.strokes) {
-      this.ctx.beginPath();
-      this.ctx.moveTo(a.x, a.y);
-      this.ctx.lineTo(b.x, b.y);
-      this.ctx.stroke();
-    }
+    // Glyph draw SSoT — identical to the cross-floor «riser through» overlay (Φ15 B).
+    drawRiserSymbol(this.ctx, symbol, strokeColor, RENDER_LINE_WIDTHS.NORMAL);
     this.ctx.restore();
     this.finalizeRender(segment, options);
   }

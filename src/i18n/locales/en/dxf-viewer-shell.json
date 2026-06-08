@@ -642,6 +642,7 @@
     "export": "Export",
     "runTests": "Run Tests",
     "togglePerf": "Performance Monitor",
+    "openCredits": "Credits & Licences",
     "pdfBackground": "PDF Background",
     "aiAssistant": "AI Drawing",
     "guideAnalysis": "Guide Analysis",
@@ -940,6 +941,7 @@
       "mepFloorDrainGeometry": "Geometry",
       "mepFloorDrainActions": "Actions",
       "mepSanitaryFixtureGeometry": "Geometry",
+      "mepSanitaryFixture3dView": "3D View",
       "mepSanitaryFixtureActions": "Actions",
       "mepManifoldSystem": "System",
       "mepManifoldGeometry": "Geometry",
@@ -982,6 +984,7 @@
       "exportPanel": "Export",
       "cursor": "Cursor",
       "developer": "Developer",
+      "credits": "Credits",
       "ai": "AI",
       "window": "Window",
       "drawingScale": "Drawing Scale",
@@ -2184,6 +2187,8 @@
         "rotation": "Rotation",
         "bodyHeight": "Body height",
         "mountingElevation": "Mounting height",
+        "threeDView": "3D View",
+        "threeDViewParametric": "Parametric",
         "close": "Close",
         "delete": "Delete",
         "deleteConfirm": "Delete sanitary fixture? This action cannot be undone."
@@ -2216,6 +2221,7 @@
         "patternType": "Pattern",
         "patternBoustrophedon": "Serpentine (back-and-forth)",
         "patternCounterflow": "Counterflow spiral",
+        "patternSpiral": "Spiral (snail)",
         "totalLength": "Pipe length (m)",
         "screedOffset": "Screed elevation (mm)",
         "connectorDiameter": "Connector diameter (mm)",
@@ -3003,9 +3009,25 @@
       }
     }
   },
+  "credits": {
+    "title": "Third-party Credits & Licences",
+    "intro": "Third-party assets (3D models, textures, environments) used by the app.",
+    "ccByHeading": "CC-BY — creator attribution required",
+    "ccByNotice": "The assets below are distributed under the Creative Commons Attribution (CC-BY) licence. Crediting the creator is mandatory.",
+    "cc0Heading": "CC0 — public domain (no obligation)",
+    "colAsset": "Asset",
+    "colAuthor": "Author",
+    "colSource": "Source",
+    "colCount": "Count",
+    "assetCount": "{count, plural, one {# asset} other {# assets}}"
+  },
   "mepFixture": {
     "catalog": {
-      "pendantLamp01": "Pendant Lamp"
+      "pendantLamp01": "Pendant Lamp",
+      "showerRealistic01": "Realistic Shower Cabin (3D)",
+      "showerTray01": "Square Shower Tray 125×125 (3D)",
+      "showerTray02": "Slim Shower Tray 90×90 (3D)",
+      "wcRealistic01": "Realistic WC Pan (3D)"
     },
     "validation": {
       "hardErrors": {

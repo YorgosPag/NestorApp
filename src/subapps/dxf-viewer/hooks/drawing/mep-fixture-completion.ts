@@ -42,9 +42,9 @@ import {
 import {
   buildDefaultLightingConnector,
   buildFloorDrainConnector,
-  buildSanitaryDrainConnector,
 } from '../../bim/types/mep-connector-types';
 import type { MepConnector } from '../../bim/types/mep-connector-types';
+import { buildSanitaryFixtureConnectors } from '../../bim/mep-fixtures/sanitary-fixture-connectors';
 import { isSanitaryKind, SANITARY_SPEC } from '../../bim/sanitary/sanitary-symbol-spec';
 import { createMepFixture } from '@/services/factories/mep-fixture.factory';
 import type { SceneUnits } from '../../utils/scene-units';
@@ -102,6 +102,7 @@ interface FixtureKindDefaults {
 function resolveFixtureKindDefaults(
   kind: MepFixtureKind,
   overrides: MepFixtureParamOverrides,
+  sceneUnits: SceneUnits,
 ): FixtureKindDefaults {
   if (kind === 'floor-drain') {
     return {
@@ -121,7 +122,8 @@ function resolveFixtureKindDefaults(
       length: overrides.length ?? spec.depthMm,
       bodyHeightMm: overrides.bodyHeightMm ?? DEFAULT_SANITARY_BODY_HEIGHT_MM,
       mountingElevationMm: overrides.mountingElevationMm ?? SANITARY_MOUNTING_ELEVATION_MM,
-      connectors: [buildSanitaryDrainConnector({ x: 0, y: 0, z: 0 }, spec.drainDiameterMm)],
+      // Revit Plumbing Fixture: drain outlet + domestic water-supply inlets (SSoT).
+      connectors: buildSanitaryFixtureConnectors(kind, sceneUnits),
     };
   }
   const shape: MepFixtureShape = overrides.shape ?? 'rectangular';
@@ -147,7 +149,7 @@ export function buildDefaultMepFixtureParams(
   sceneUnits: SceneUnits = 'mm',
 ): MepFixtureParams {
   const kind: MepFixtureKind = overrides.kind ?? 'light-fixture';
-  const d = resolveFixtureKindDefaults(kind, overrides);
+  const d = resolveFixtureKindDefaults(kind, overrides, sceneUnits);
   const rotation = overrides.rotation ?? 0;
   const position: Point3D = { x: clickPoint.x, y: clickPoint.y, z: 0 };
 

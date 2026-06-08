@@ -61,6 +61,18 @@ export function sanitaryFixtureToolKind(toolId: string): SanitaryKind | null {
 
 // ─── Authored spec (dimensions, drain diameter, label) — SSoT ────────────────
 
+/**
+ * Water-supply requirement of a sanitary terminal (Revit "Plumbing Fixture"
+ * Domestic Cold/Hot Water connectors). `cold` is always true (every fixture takes
+ * cold water); `hot` is true for fixtures that mix hot water (a WC is cold-only).
+ * `diameterMm` is the DN of the supply stub-out (typically Ø15, a bath Ø20).
+ */
+export interface SanitaryWaterSupplySpec {
+  readonly cold: boolean;
+  readonly hot: boolean;
+  readonly diameterMm: number;
+}
+
 export interface SanitaryFixtureSpec {
   /** mm. Authored footprint width (X before rotation). */
   readonly widthMm: number;
@@ -68,6 +80,8 @@ export interface SanitaryFixtureSpec {
   readonly depthMm: number;
   /** mm. Default sanitary-drainage outlet diameter (WC=100, basin/bidet=40, shower/tub=50). */
   readonly drainDiameterMm: number;
+  /** Domestic water-supply connectors this fixture needs (ADR-408 plumbing-fixture connect). */
+  readonly supply: SanitaryWaterSupplySpec;
   /** i18n label key (namespace dxf-viewer-shell) — reuses the shared symbol catalog labels. */
   readonly labelKey: string;
 }
@@ -75,14 +89,15 @@ export interface SanitaryFixtureSpec {
 /**
  * Canonical sanitary fixture spec. Footprint dims are typical real-world plan
  * sizes (mm). Drain Ø follows DN convention: a WC soil outlet is DN100, a basin
- * waste DN40, a shower/bath waste DN50.
+ * waste DN40, a shower/bath waste DN50. Water supply: a WC takes cold only (cistern
+ * fill); basin/shower/bath/bidet mix cold + hot (Ø15, bath Ø20).
  */
 export const SANITARY_SPEC: Readonly<Record<SanitaryKind, SanitaryFixtureSpec>> = {
-  wc: { widthMm: 380, depthMm: 680, drainDiameterMm: 100, labelKey: 'floorplanSymbol.catalog.wc' },
-  washbasin: { widthMm: 600, depthMm: 460, drainDiameterMm: 40, labelKey: 'floorplanSymbol.catalog.washbasin' },
-  shower: { widthMm: 900, depthMm: 900, drainDiameterMm: 50, labelKey: 'floorplanSymbol.catalog.shower' },
-  bathtub: { widthMm: 1700, depthMm: 750, drainDiameterMm: 50, labelKey: 'floorplanSymbol.catalog.bathtub' },
-  bidet: { widthMm: 360, depthMm: 560, drainDiameterMm: 40, labelKey: 'floorplanSymbol.catalog.bidet' },
+  wc: { widthMm: 380, depthMm: 680, drainDiameterMm: 100, supply: { cold: true, hot: false, diameterMm: 15 }, labelKey: 'floorplanSymbol.catalog.wc' },
+  washbasin: { widthMm: 600, depthMm: 460, drainDiameterMm: 40, supply: { cold: true, hot: true, diameterMm: 15 }, labelKey: 'floorplanSymbol.catalog.washbasin' },
+  shower: { widthMm: 900, depthMm: 900, drainDiameterMm: 50, supply: { cold: true, hot: true, diameterMm: 15 }, labelKey: 'floorplanSymbol.catalog.shower' },
+  bathtub: { widthMm: 1700, depthMm: 750, drainDiameterMm: 50, supply: { cold: true, hot: true, diameterMm: 20 }, labelKey: 'floorplanSymbol.catalog.bathtub' },
+  bidet: { widthMm: 360, depthMm: 560, drainDiameterMm: 40, supply: { cold: true, hot: true, diameterMm: 15 }, labelKey: 'floorplanSymbol.catalog.bidet' },
 };
 
 // ─── Pure 2D drawers (footprint → identifying strokes) — SSoT ────────────────

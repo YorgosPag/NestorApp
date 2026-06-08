@@ -28,6 +28,11 @@ import type {
   MepFixtureShape,
 } from '../../../bim/types/mep-fixture-types';
 import { isSanitaryKind } from '../../../bim/sanitary/sanitary-symbol-spec';
+import {
+  resolveSanitaryFixtureAsset,
+  sanitaryMeshPresetsForKind,
+} from '../../../bim/mep-fixtures/sanitary-fixture-mesh-catalog';
+import { SELECT_CLEAR_VALUE, isSelectClearValue } from '@/config/domain-constants';
 import { useCommandHistory } from '../../../core/commands';
 import { UpdateMepFixtureParamsCommand } from '../../../core/commands/entity-commands/UpdateMepFixtureParamsCommand';
 import { LevelSceneManagerAdapter } from '../../../systems/entity-creation/LevelSceneManagerAdapter';
@@ -135,6 +140,31 @@ export function useRibbonMepFixtureBridge(
       if (commandKey === MEP_FIXTURE_RIBBON_KEYS.stringParams.shape) {
         return { value: fixture.params.shape, options: [] };
       }
+      if (commandKey === MEP_FIXTURE_RIBBON_KEYS.stringParams.assetId) {
+        // ADR-411 — 3D representation picker. Clear sentinel = parametric box; a
+        // catalog id = realistic glTF mesh. Revit-correct: the dropdown lists ONLY
+        // the meshes of THIS fixture's sanitary kind (a WC must not offer shower
+        // models), via the `sanitaryMeshPresetsForKind` SSoT. Labels resolve through
+        // t() in the renderer (isLiteralLabel:false) → no hardcoded strings (N.11).
+        const meshPresets = isSanitaryKind(fixture.params.kind)
+          ? sanitaryMeshPresetsForKind(fixture.params.kind)
+          : [];
+        return {
+          value: fixture.params.assetId ?? SELECT_CLEAR_VALUE,
+          options: [
+            {
+              value: SELECT_CLEAR_VALUE,
+              labelKey: 'ribbon.commands.mepSanitaryFixtureEditor.threeDViewParametric',
+              isLiteralLabel: false,
+            },
+            ...meshPresets.map((p) => ({
+              value: p.id,
+              labelKey: p.labelKey,
+              isLiteralLabel: false,
+            })),
+          ],
+        };
+      }
       if (isMepFixtureRibbonKey(commandKey)) {
         const field = NUMBER_KEY_TO_FIELD[commandKey];
         const raw = fixture.params[field];
@@ -156,6 +186,32 @@ export function useRibbonMepFixtureBridge(
           shape: value as MepFixtureShape,
         };
         dispatchParams(fixture, nextParams);
+        return;
+      }
+      if (commandKey === MEP_FIXTURE_RIBBON_KEYS.stringParams.assetId) {
+        // ADR-411 — the clear sentinel resets the mesh override (parametric box).
+        // A mesh preset only applies to a fixture of the SAME sanitary kind
+        // (Revit-correct: a shower mesh must not land on a WC).
+        const nextAssetId = isSelectClearValue(value) ? undefined : value;
+        if (!nextAssetId) {
+          // Clearing the mesh keeps the current footprint (least-surprise — the
+          // user can still resize the parametric box manually).
+          dispatchParams(fixture, { ...fixture.params, assetId: undefined });
+          return;
+        }
+        const preset = resolveSanitaryFixtureAsset(nextAssetId);
+        if (!preset || preset.kind !== fixture.params.kind) return;
+        // Adopt the mesh's authored footprint (Revit "Type" sizing): the 2D symbol,
+        // selection box, grips and the drain connector all recompute to the mesh's
+        // real plan extent — keeping the 2D footprint aligned with the 3D cabin and
+        // the recentred mesh origin (ADR-411 2D polish, issue #1).
+        dispatchParams(fixture, {
+          ...fixture.params,
+          assetId: nextAssetId,
+          shape: 'rectangular',
+          width: preset.widthMm,
+          length: preset.depthMm,
+        });
         return;
       }
       if (isMepFixtureRibbonKey(commandKey)) {
