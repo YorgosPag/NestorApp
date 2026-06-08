@@ -26,6 +26,7 @@ import {
   buildBoilerReturnConnector,
   buildBoilerDhwHotOutletConnector,
   buildBoilerDhwColdInletConnector,
+  buildBoilerDhwRecircInletConnector,
 } from '../types/mep-connector-types';
 import { polygonArea, polygonBbox } from '../geometry/shared/polygon-utils';
 import { mmToSceneUnits } from '../../utils/scene-units';
@@ -103,9 +104,13 @@ function transformFootprint(
  * `{+hw,+hl}` (`flow:'out'`, sources the `domestic-hot-water` network) and a cold inlet
  * at `{-hw,+hl}` (`flow:'in'`, member of the `domestic-cold-water` network: the combi
  * takes cold water and heats it, NOT hot "from nowhere"). All four corners are distinct.
- * The DHW connectors use the dedicated `dhwConnectorDiameterMm` (typical DN15, smaller
- * than the DN22 hydronic tails), falling back to `connectorDiameterMm`.
- * `connectorWorldPosition` applies the host rotation/translation for free.
+ * When the combi additionally has `dhwRecirculation` a FIFTH connector is appended at the
+ * −X/−Y (back-left) corner — a recirculation return inlet (`flow:'in'`, REUSING
+ * `domestic-hot-water`) so the cooled DHW re-joins the SAME network and is re-heated
+ * (Revit "Domestic Hot Water + Recirculation"). The DHW connectors use the dedicated
+ * `dhwConnectorDiameterMm` (typical DN15, smaller than the DN22 hydronic tails), falling
+ * back to `connectorDiameterMm`. `connectorWorldPosition` applies the host rotation/
+ * translation for free.
  */
 export function buildBoilerConnectors(params: MepBoilerParams): MepConnector[] {
   const s = mmToSceneUnits(params.sceneUnits ?? 'mm');
@@ -126,6 +131,13 @@ export function buildBoilerConnectors(params: MepBoilerParams): MepConnector[] {
       buildBoilerDhwHotOutletConnector(dhwHot, dhwDiameter),
       buildBoilerDhwColdInletConnector(dhwCold, dhwDiameter),
     );
+    if (params.dhwRecirculation) {
+      // Recirculation return inlet at the −X/−Y (back-left) corner — distinct from all
+      // four other ports. The cooled DHW returns here; reuses `domestic-hot-water` so it
+      // re-joins the SAME DHW network the hot outlet sources (gated by producesDhw).
+      const dhwRecirc: Point3D = { x: -hw, y: -hl, z: 0 };
+      connectors.push(buildBoilerDhwRecircInletConnector(dhwRecirc, dhwDiameter));
+    }
   }
   return connectors;
 }
