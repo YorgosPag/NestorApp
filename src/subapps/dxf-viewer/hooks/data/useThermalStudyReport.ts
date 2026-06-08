@@ -39,7 +39,14 @@ export function useThermalStudyReport(
 
   return useMemo<ThermalStudyReport>(
     () =>
-      buildThermalStudyReport({ spaceLoads, radiatorSizing, pipeSizing, balancing, lookups }),
+      buildThermalStudyReport({
+        spaceLoads,
+        radiatorSizing,
+        pipeSizing,
+        balancing,
+        climateZone: spaceLoads?.climateZone ?? null,
+        lookups,
+      }),
     [spaceLoads, radiatorSizing, pipeSizing, balancing, lookups],
   );
 }

@@ -19,12 +19,15 @@ import {
   deriveSpaceHeatLoads,
   type SpaceHeatLoadDeriveResult,
 } from '../../bim/thermal/heat-load/derive-space-heat-loads';
+import type { ClimateZone } from '../../bim/thermal/kenak-thermal-config';
 import type { ThermalSpaceEntity } from '../../bim/types/thermal-space-types';
 import type { SceneModel } from '../../types/scene';
 
 export interface SpaceHeatLoads extends SpaceHeatLoadDeriveResult {
   /** Οι χώροι του ορόφου (για centroid/footprint κατά το draw). */
   readonly spaces: readonly ThermalSpaceEntity[];
+  /** Κλιματική ζώνη ορόφου (για ΚΕΝΑΚ έλεγχο κελύφους L6). */
+  readonly climateZone: ClimateZone;
 }
 
 export function useSpaceHeatLoads(
@@ -34,6 +37,10 @@ export function useSpaceHeatLoads(
   const inputs = useHeatLoadInputs(scene, active);
   return useMemo<SpaceHeatLoads | null>(() => {
     if (!inputs) return null;
-    return { ...deriveSpaceHeatLoads(inputs.spaces, inputs), spaces: inputs.spaces };
+    return {
+      ...deriveSpaceHeatLoads(inputs.spaces, inputs),
+      spaces: inputs.spaces,
+      climateZone: inputs.climateZone,
+    };
   }, [inputs]);
 }

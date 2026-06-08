@@ -2,8 +2,9 @@
  * ADR-428 — Heating (Hydronic) Auto-Design: public barrel.
  *
  * Slice 1 (headless): Demand → Source/Sink → Routing ×2 → Sizing → `HeatingNetworkProposal`
- * (supply + return), consuming the Stage 0 `RecognitionModel`. Slice 2 will add the
- * preview/commit layer (ghost + ribbon + atomic CompoundCommand).
+ * (supply + return), consuming the Stage 0 `RecognitionModel`. Slice 2 adds the
+ * preview/commit layer (low-freq proposal store + pure commit builder + ghost + ribbon
+ * + atomic CompoundCommand).
  *
  * @see docs/centralized-systems/reference/adrs/ADR-428-heating-auto-design.md
  */
@@ -34,3 +35,15 @@ export {
   resolveHeatingReturnSink,
   type HeatingEndpoint,
 } from './heating-source-resolve';
+
+// ── Slice 2 — preview + commit ──────────────────────────────────────────────
+export {
+  heatingProposalStore,
+  useHeatingProposal,
+  type HeatingProposalReview,
+} from './heating-proposal-store';
+export {
+  buildHeatingCommit,
+  type HeatingCommitPlan,
+  type ResolveHeatingSystemName,
+} from './commit/build-heating-commit';

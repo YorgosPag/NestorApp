@@ -21,6 +21,9 @@ import type {
 } from '../../../hooks/data/useRadiatorSizing';
 import type { PipeSizingMap } from '../sizing/pipe-network-sizing';
 import type { HydraulicBalancingResult } from '../balancing/circuit-balancing';
+import type { ClimateZone } from '../kenak-thermal-config';
+import { deriveEnvelopeCompliance } from '../heat-load/derive-envelope-compliance';
+import type { HeatLoadBoundaryKind } from '../heat-load/heat-load-types';
 import type { ThermalSpaceEntity } from '../../types/thermal-space-types';
 import type {
   ReportColumn,
@@ -42,14 +45,18 @@ export interface ThermalStudyLookups {
   readonly floorLabel: string;
   /** name override → use-type label → fallback. Pure, παρέχεται από το widget. */
   readonly spaceLabel: (space: ThermalSpaceEntity) => string;
+  /** Μεταφρασμένη ετικέτα τύπου δομικού στοιχείου (L6 ΚΕΝΑΚ· τοίχος/κούφωμα/…). */
+  readonly boundaryKindLabel: (kind: HeatLoadBoundaryKind) => string;
 }
 
-/** Όρισμα του builder — τα 4 resolved read-models + lookups. */
+/** Όρισμα του builder — τα 4 resolved read-models + lookups + ζώνη (L6). */
 export interface ThermalStudyReportInput {
   readonly spaceLoads: SpaceHeatLoads | null;
   readonly radiatorSizing: RadiatorSizingMap;
   readonly pipeSizing: PipeSizingMap;
   readonly balancing: HydraulicBalancingResult;
+  /** Κλιματική ζώνη — για τον ΚΕΝΑΚ έλεγχο κελύφους (L6). `null` ⇒ παράλειψη. */
+  readonly climateZone: ClimateZone | null;
   readonly lookups: ThermalStudyLookups;
 }
 
@@ -225,6 +232,45 @@ function buildBalancingSection(
   return { titleKey: `${K.sections}.balancing`, columns, rows };
 }
 
+// ─── L6 — Έλεγχος συμμόρφωσης κελύφους ΚΕΝΑΚ ───────────────────────────────────
+
+function complianceRow(
+  row: { spaceId: string; kind: HeatLoadBoundaryKind; uValue: number; uMax: number; compliant: boolean },
+  input: ThermalStudyReportInput,
+  spaceLabelById: ReadonlyMap<string, string>,
+): ReportRow {
+  return {
+    space: spaceLabelById.get(row.spaceId) ?? row.spaceId,
+    element: input.lookups.boundaryKindLabel(row.kind),
+    uValue: row.uValue,
+    uMax: row.uMax,
+    compliant: row.compliant ? MARK_OK : MARK_FAIL,
+  };
+}
+
+function buildComplianceSection(
+  input: ThermalStudyReportInput,
+  spaceLabelById: ReadonlyMap<string, string>,
+): ReportSection {
+  const columns: ReportColumn[] = [
+    col('space', 'space', 'text', 'left'),
+    col('element', 'element', 'text', 'left'),
+    col('uValue', 'uValue', 'number', 'right'),
+    col('uMax', 'uMax', 'number', 'right'),
+    col('compliant', 'compliant', 'text', 'center'),
+  ];
+  const { spaceLoads, climateZone } = input;
+  if (!spaceLoads || !climateZone) {
+    return { titleKey: `${K.sections}.compliance`, columns, rows: [] };
+  }
+  const { rows } = deriveEnvelopeCompliance(spaceLoads.results, climateZone);
+  return {
+    titleKey: `${K.sections}.compliance`,
+    columns,
+    rows: rows.map((r) => complianceRow(r, input, spaceLabelById)),
+  };
+}
+
 // ─── Public builder ────────────────────────────────────────────────────────────
 
 /** spaceId → label, από τους χώρους του ορόφου (για L2/L4 lookup). */
@@ -248,6 +294,7 @@ export function buildThermalStudyReport(input: ThermalStudyReportInput): Thermal
   const radiators = buildRadiatorsSection(input, spaceLabelById);
   const pipes = buildPipesSection(input);
   const balancing = buildBalancingSection(input, spaceLabelById);
+  const compliance = buildComplianceSection(input, spaceLabelById);
 
   const isEmpty =
     loads.rows.length === 0 &&
@@ -257,7 +304,7 @@ export function buildThermalStudyReport(input: ThermalStudyReportInput): Thermal
 
   return {
     header: { buildingLabel: input.lookups.buildingLabel, floorLabel: input.lookups.floorLabel },
-    sections: [summary, loads, radiators, pipes, balancing],
+    sections: [summary, loads, radiators, pipes, balancing, compliance],
     isEmpty,
   };
 }

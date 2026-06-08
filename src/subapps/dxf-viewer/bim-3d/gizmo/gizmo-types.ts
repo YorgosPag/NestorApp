@@ -16,6 +16,14 @@ export type GizmoPlane = 'xy' | 'xz' | 'yz';
 /** Which end of a linear element an endpoint handle drives (ADR-408 Φ-D). */
 export type GizmoEndpoint = 'start' | 'end';
 
+/**
+ * How an endpoint handle drag projects (ADR-408 Φ-D/Φ1). `'free-3d'` = camera-facing
+ * plane (κάτοψη + υψόμετρο σε ένα drag — σωλήνες, Revit "move in view plane");
+ * `'horizontal'` = ground plane (καθαρά plan — τοίχος/δοκός, το μήκος είναι plan
+ * dimension, το ύψος είναι ξεχωριστή λαβή/Τύπος).
+ */
+export type GizmoEndpointMode = 'free-3d' | 'horizontal';
+
 /** Discriminated union describing which gizmo handle is active. */
 export type GizmoHandle =
   | { readonly kind: 'axis';   readonly axis: GizmoAxis }
@@ -49,8 +57,9 @@ export type GizmoDragConstraint =
   | { readonly kind: 'free' }
   | { readonly kind: 'rotate'; readonly axis: GizmoAxis }
   | { readonly kind: 'resize'; readonly axis: GizmoAxis; readonly mode: GizmoResizeMode }
-  // ADR-408 Φ-D — constrained translation of ONE endpoint (camera-facing plane drag).
-  | { readonly kind: 'endpoint'; readonly endpoint: GizmoEndpoint };
+  // ADR-408 Φ-D/Φ1 — constrained translation of ONE endpoint. `mode` picks the drag
+  // plane: `'free-3d'` (camera-facing, σωλήνες) vs `'horizontal'` (ground, τοίχος/δοκός).
+  | { readonly kind: 'endpoint'; readonly endpoint: GizmoEndpoint; readonly mode: GizmoEndpointMode };
 
 /** Map from GizmoHandleId to the parsed GizmoHandle union. */
 export function parseHandleId(id: GizmoHandleId): GizmoHandle {
@@ -71,6 +80,8 @@ export function handleToConstraint(handle: GizmoHandle): GizmoDragConstraint {
     case 'center':   return { kind: 'free' };
     case 'rotate':   return { kind: 'rotate', axis: handle.axis };
     case 'resize':   return { kind: 'resize', axis: handle.axis, mode: handle.mode };
-    case 'endpoint': return { kind: 'endpoint', endpoint: handle.endpoint };
+    // ADR-408 Φ1 — the handle id carries no projection mode; default to free-3d and
+    // let the controller override it from the overlay's per-selection endpoint mode.
+    case 'endpoint': return { kind: 'endpoint', endpoint: handle.endpoint, mode: 'free-3d' };
   }
 }

@@ -71,6 +71,10 @@ Mouse Event → DxfCanvas.onMouseMove
 
 ## Changelog
 
+### 2026-06-09 — Boiler placement ghost WYSIWYG: `getGhostSymbol` pass-through (ADR-408, CHECK 6B/6D)
+
+**Status**: IMPLEMENTED 2026-06-09. Το 2D placement ghost του λέβητα (`MepBoilerGhostRenderer` / `useMepBoilerGhostPreview`) δείχνει πλέον ΟΛΟ το σύμβολο (connector stubs + flue vent + divider/flame glyph) ώστε το preview να είναι byte-for-byte WYSIWYG με το committed entity. **Καμία αρχιτεκτονική αλλαγή**: ο `CanvasSection` orchestrator απλώς προωθεί έναν επιπλέον **pure getter** `getGhostSymbol` μέσα στο ήδη υπάρχον `mepBoilerGhostPreview` payload (όπως ο `getGhostFootprint`) — **μηδέν νέο `useSyncExternalStore`** (CHECK 6C respected), μηδέν high-frequency subscription, καμία αλλαγή σε bitmap cache-key. Ο ghost παραμένει self-gated leaf που subscribes ΜΟΝΟ στο cursor stream όσο `isAwaitingPosition`. Το σύμβολο χτίζεται από το ΙΔΙΟ `buildMepBoilerSymbol` SSoT που χρησιμοποιεί ο placed renderer (μηδέν νέα γεωμετρία). Co-staged για CHECK 6B/6D (`CanvasSection.tsx`, `canvas-layer-stack-mep-boiler-ghost.tsx`, `MepBoilerGhostRenderer.ts`). Λεπτομέρεια στο ADR-408.
+
 ### 2026-06-09 — `DrainageProposalGhost` micro-leaf mounted in `canvas-layer-stack-leaves` (ADR-427 Slice 2, CHECK 6B)
 
 **Status**: IMPLEMENTED 2026-06-09. Νέο read-only ghost preview leaf `canvas-layer-stack-drainage-proposal-ghost.tsx` (mount μέσω `canvas-layer-stack-leaves.tsx`) για το ADR-427 Slice 2 (drainage auto-design proposal). Ίδιο pattern με τα υπάρχοντα MEP segment ghost previews: subscribes ΜΟΝΟ μέσα στο leaf (`drainage-proposal-store` low-frequency proposal store), `pointer-events-none`, self-gated. **Μηδέν νέο `useSyncExternalStore` στον shell** (CHECK 6C respected), μηδέν high-frequency subscription, καμία αλλαγή σε bitmap cache-key. Co-staged για CHECK 6B (`canvas-layer-stack-leaves.tsx`). Λεπτομέρεια στο ADR-427.

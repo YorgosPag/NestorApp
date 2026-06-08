@@ -268,6 +268,9 @@ export interface CanvasLayerStackProps {
     getGhostFootprint: (
       cursorPos: Readonly<Point2D> | null,
     ) => readonly import('../../bim/types/bim-base').Point3D[] | null;
+    getGhostSymbol: (
+      cursorPos: Readonly<Point2D> | null,
+    ) => import('../../bim/mep-boilers/mep-boiler-symbol').BoilerSymbolGeometry | null;
   };
   // === ADR-408 DHW: domestic water heater 2D placement ghost preview payload ===
   mepWaterHeaterGhostPreview: {

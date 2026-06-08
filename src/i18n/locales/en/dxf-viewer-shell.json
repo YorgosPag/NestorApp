@@ -1369,6 +1369,22 @@
         "drainageAutoReject": {
           "label": "Reject",
           "tooltip": "Discard the drainage proposal"
+        },
+        "heatingAuto": {
+          "label": "Auto Heating",
+          "tooltip": "Auto-design the heating network (two-pipe, supply/return): Generate → review → accept"
+        },
+        "heatingAutoGenerate": {
+          "label": "Generate",
+          "tooltip": "Recognize the storey + auto-design the heating networks (preview)"
+        },
+        "heatingAutoAccept": {
+          "label": "Accept",
+          "tooltip": "Commit the proposal to real heating pipes + systems"
+        },
+        "heatingAutoReject": {
+          "label": "Reject",
+          "tooltip": "Discard the heating proposal"
         }
       },
       "select": "Select",
@@ -2892,6 +2908,10 @@
       },
       "drainage": {
         "networkName": "Drainage {n}"
+      },
+      "heating": {
+        "supplyName": "Heating Supply",
+        "returnName": "Heating Return"
       }
     },
     "tooltips": {
@@ -3436,5 +3456,14 @@
       "no-collector": "No drainage collector (φρεάτιο) found — network skipped."
     },
     "committed": "Drainage network created — networks: {count}, pipes: {segments}."
+  },
+  "heating": {
+    "generated": "Heating proposal created — networks: {count}.",
+    "generatedWithWarnings": "Heating proposal created — networks: {count} (warnings: {warnings}).",
+    "empty": {
+      "no-terminals": "No heating terminals recognized on this storey.",
+      "no-source": "No boiler (supply/return) found — network skipped."
+    },
+    "committed": "Heating network created — networks: {count}, pipes: {segments}."
   }
 }

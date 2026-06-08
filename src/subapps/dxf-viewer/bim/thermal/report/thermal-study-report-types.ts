@@ -46,10 +46,10 @@ export interface ThermalStudyHeader {
   readonly floorLabel: string;
 }
 
-/** Πλήρες report: header + σύνοψη + 4 πίνακες (ΟΛΑ ως sections). */
+/** Πλήρες report: header + σύνοψη + 5 πίνακες (ΟΛΑ ως sections). */
 export interface ThermalStudyReport {
   readonly header: ThermalStudyHeader;
-  /** [σύνοψη, φορτία, σώματα, σωληνώσεις, εξισορρόπηση]. */
+  /** [σύνοψη, φορτία, σώματα, σωληνώσεις, εξισορρόπηση, ΚΕΝΑΚ-κέλυφος]. */
   readonly sections: readonly ReportSection[];
   /** true ⇒ δεν υπάρχει μοντέλο θέρμανσης στον όροφο (όλοι οι πίνακες κενοί). */
   readonly isEmpty: boolean;

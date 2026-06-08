@@ -20,12 +20,15 @@ import type { Point3D } from '../../bim/types/bim-base';
 import { useCursorWorldPosition } from '../../systems/cursor/useCursor';
 import { getImmediateSnap } from '../../systems/cursor/ImmediateSnapStore';
 import { MepBoilerGhostRenderer } from '../../bim/mep-boilers/MepBoilerGhostRenderer';
+import type { BoilerSymbolGeometry } from '../../bim/mep-boilers/mep-boiler-symbol';
 
 export interface UseMepBoilerGhostPreviewProps {
   readonly isAwaitingPosition: boolean;
   readonly transform: ViewTransform;
   /** Footprint projection getter — from `useMepBoilerTool().getGhostFootprint`. */
   getGhostFootprint(cursorPos: Readonly<Point2D> | null): readonly Point3D[] | null;
+  /** Full-symbol projection getter — from `useMepBoilerTool().getGhostSymbol` (WYSIWYG). */
+  getGhostSymbol(cursorPos: Readonly<Point2D> | null): BoilerSymbolGeometry | null;
   getCanvas(): HTMLCanvasElement | null;
   /** Viewport element for size; falls back to `getCanvas`. */
   getViewportElement?(): HTMLElement | null;
@@ -34,7 +37,7 @@ export interface UseMepBoilerGhostPreviewProps {
 export function useMepBoilerGhostPreview(
   props: Readonly<UseMepBoilerGhostPreviewProps>,
 ): void {
-  const { isAwaitingPosition, transform, getGhostFootprint, getCanvas, getViewportElement } = props;
+  const { isAwaitingPosition, transform, getGhostFootprint, getGhostSymbol, getCanvas, getViewportElement } = props;
   // SSoT gate (ADR-040): subscribe to the 60fps cursor stream only while awaiting a position.
   const cursorWorld = useCursorWorldPosition(isAwaitingPosition);
   const rafRef = useRef<number>(0);
@@ -70,6 +73,9 @@ export function useMepBoilerGhostPreview(
       snapState?.found === true && snapState.point != null ? snapState.point : cursorWorld;
     const footprint = getGhostFootprint(effectiveCursor);
     if (!footprint || footprint.length < 3) return;
+    // Full symbol (connector stubs + flue vent + glyph) — same SSoT as the placed
+    // renderer, so the preview is byte-for-byte WYSIWYG.
+    const symbol = getGhostSymbol(effectiveCursor);
 
     const viewportElement = getViewportElement?.() ?? canvas;
     const rect = viewportElement.getBoundingClientRect();
@@ -79,10 +85,11 @@ export function useMepBoilerGhostPreview(
     renderer.render({
       footprint: footprint.map((v) => ({ x: v.x, y: v.y })),
       cursor: effectiveCursor,
+      symbol,
       transform,
       viewport,
     });
-  }, [isAwaitingPosition, transform, getGhostFootprint, getCanvas, getViewportElement, cursorWorld]);
+  }, [isAwaitingPosition, transform, getGhostFootprint, getGhostSymbol, getCanvas, getViewportElement, cursorWorld]);
 
   // Clear stale ghost on transition out of awaitingPosition.
   useEffect(() => {

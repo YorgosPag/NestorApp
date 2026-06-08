@@ -58,15 +58,17 @@ const FALLBACK_CLIMATE_ZONE: ClimateZone = 'B';
 export interface HeatLoadInputsBundle extends SpaceHeatLoadDeriveInputs {
   readonly spaces: readonly ThermalSpaceEntity[];
   readonly sceneUnits: SceneUnits;
+  /** Κλιματική ζώνη ορόφου (ΤΟΤΕΕ· για ΚΕΝΑΚ έλεγχο κελύφους L6). */
+  readonly climateZone: ClimateZone;
 }
 
-function resolveOutdoorTempC(
+/** Κλιματική ζώνη του κτιρίου (fallback Β όταν δεν έχει οριστεί). SSoT για Te + U_max. */
+function resolveClimateZone(
   buildings: ReadonlyArray<{ id: string; climateZone?: 'A' | 'B' | 'C' | 'D' }>,
   buildingId: string | null,
-): number {
+): ClimateZone {
   const z = buildings.find((b) => b.id === buildingId)?.climateZone;
-  const zone: ClimateZone = z === 'A' || z === 'B' || z === 'C' || z === 'D' ? z : FALLBACK_CLIMATE_ZONE;
-  return getDesignOutdoorTempC(zone);
+  return z === 'A' || z === 'B' || z === 'C' || z === 'D' ? z : FALLBACK_CLIMATE_ZONE;
 }
 
 /** Θέση ορόφου: floors ταξινομημένα αύξοντα (basement→up) → lowest/highest/middle. */
@@ -118,14 +120,16 @@ export function useHeatLoadInputs(
     const walls = entities.filter(isWallEntity);
     const openings = entities.filter(isOpeningEntity);
     const sceneUnits = resolveSceneUnits(scene);
+    const climateZone = resolveClimateZone(buildings, buildingId);
 
     return {
       spaces,
       walls,
       openings,
       sceneUnits,
+      climateZone,
       exteriorWallIds: resolveExteriorWallIds(walls, sceneUnits),
-      outdoorTempC: resolveOutdoorTempC(buildings, buildingId),
+      outdoorTempC: getDesignOutdoorTempC(climateZone),
       storeyPosition: resolveStoreyPosition(floors, activeFloorId),
       tol: HEAT_LOAD_MATCH_TOL_M / sceneUnitsToMeters(sceneUnits),
     };

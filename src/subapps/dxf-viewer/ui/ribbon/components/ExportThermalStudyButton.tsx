@@ -46,6 +46,7 @@ export const ExportThermalStudyButton: React.FC = () => {
       floorLabel: currentLevel?.name ?? '',
       spaceLabel: (space: ThermalSpaceEntity) =>
         space.params.name?.trim() || t(`thermalSpace.useTypes.${space.params.useType}`),
+      boundaryKindLabel: (kind) => t(`thermalStudyReport.elementKinds.${kind}`),
     }),
     [currentLevel?.name, t],
   );
