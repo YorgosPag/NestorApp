@@ -19,7 +19,7 @@
 
 import * as THREE from 'three';
 import type { Point2D } from '../../rendering/types/Types';
-import type { GizmoAxis, GizmoDragConstraint, GizmoResizeMode } from './gizmo-types';
+import type { GizmoAxis, GizmoDragConstraint, GizmoResizeMode, GizmoEndpoint } from './gizmo-types';
 import { projectConstrained } from './gizmo-projection';
 import { worldDeltaToDxfDelta, worldUpDeltaToMm } from '../utils/bim3d-edit-math';
 import { worldToDxfPlan, dxfPlanToWorld } from '../viewport/coordinate-transforms';
@@ -48,6 +48,19 @@ export type BridgeOutcome =
       readonly deltaMm: Point2D;
       /** Vertical (world-Y) slide delta (mm) — used for axis-Y resize (height/depth/thickness). */
       readonly deltaUpMm: number;
+      readonly cursorMm: Point2D;
+    }
+  // ADR-408 Φ-D — endpoint move: ONE end of a linear segment slides in the camera
+  // plane, so it carries BOTH a horizontal DXF-plan delta AND a vertical (world-Y)
+  // mm delta. Downstream (`bim3d-endpoint-move`) relocates that end + re-derives z.
+  | {
+      readonly kind: 'endpoint-move';
+      readonly endpoint: GizmoEndpoint;
+      /** Horizontal DXF-plan delta (mm) of the dragged end. */
+      readonly deltaMm: Point2D;
+      /** Vertical (world-Y) delta (mm) of the dragged end. */
+      readonly deltaUpMm: number;
+      /** Absolute cursor on the plan (mm) — for "Connect To" snap symmetry. */
       readonly cursorMm: Point2D;
     }
   | { readonly kind: 'none' };
@@ -227,6 +240,22 @@ export class BimGizmoDragBridge {
         kind: 'resize',
         axis: this.constraint.axis,
         mode: this.constraint.mode,
+        deltaMm,
+        deltaUpMm,
+        cursorMm: { x: c.x, y: c.y },
+      };
+    }
+    // ADR-408 Φ-D — endpoint move: a camera-plane slide of ONE end → carries both a
+    // horizontal DXF-plan delta and a vertical mm delta (mirror of the resize guard,
+    // since a pure-elevation drag has deltaMm 0,0). The anchor IS the endpoint world.
+    if (this.constraint.kind === 'endpoint') {
+      const deltaMm = worldDeltaToDxfDelta(this.anchorWorld, end);
+      const deltaUpMm = worldUpDeltaToMm(this.anchorWorld, end);
+      if (deltaMm.x === 0 && deltaMm.y === 0 && deltaUpMm === 0) return { kind: 'none' };
+      const c = worldToDxfPlan(end);
+      return {
+        kind: 'endpoint-move',
+        endpoint: this.constraint.endpoint,
         deltaMm,
         deltaUpMm,
         cursorMm: { x: c.x, y: c.y },

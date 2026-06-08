@@ -17,13 +17,14 @@
 import * as THREE from 'three';
 import { setNdcFromClient } from '../animation/waypoint-drag-controller';
 import { parseHandleId, handleToConstraint, type GizmoDragConstraint } from './gizmo-types';
-import type { GizmoAxis } from './gizmo-types';
+import type { GizmoAxis, GizmoEndpoint } from './gizmo-types';
 import { testGizmoHit } from './gizmo-hit-test';
 import { BimGizmoDragBridge, type BridgeOutcome } from './bim-gizmo-drag-bridge';
 import type { SnapFn } from './bim3d-snap-bridge';
 import type { BimGizmoOverlay } from './bim-gizmo-overlay';
 
 type ResizeOutcome = Extract<BridgeOutcome, { kind: 'resize' }>;
+type EndpointOutcome = Extract<BridgeOutcome, { kind: 'endpoint-move' }>;
 
 /**
  * Live snapshot of the in-progress drag, for the entity follow preview (ADR-402).
@@ -36,7 +37,10 @@ export type GizmoLivePreview =
   | { readonly kind: 'resize'; readonly outcome: ResizeOutcome }
   // ADR-404 Phase 2 — tilt (X/Z rings). Like resize, the handler rebuilds the single
   // entity's geometry via the converter SSoT (shear ≠ rigid rotate). `angleDeg` is snapped.
-  | { readonly kind: 'tilt'; readonly axis: GizmoAxis; readonly angleDeg: number };
+  | { readonly kind: 'tilt'; readonly axis: GizmoAxis; readonly angleDeg: number }
+  // ADR-408 Φ-D — endpoint move: the handler rebuilds the dragged segment's geometry
+  // via the converter SSoT (a node move ≠ rigid transform) + stretches its followers.
+  | { readonly kind: 'endpoint-move'; readonly endpoint: GizmoEndpoint; readonly outcome: EndpointOutcome };
 
 export class BimGizmoController {
   private readonly overlay: BimGizmoOverlay;
@@ -86,7 +90,11 @@ export class BimGizmoController {
     if (!hit) return false;
     const constraint = handleToConstraint(parseHandleId(hit.handleId));
     camera.getWorldDirection(this.cameraDir);
-    this.startAnchor.copy(this.overlay.getPosition());
+    // ADR-408 Φ-D — an endpoint drag anchors on the ENDPOINT world (not the gizmo
+    // centre): the camera-facing projection plane passes through the dragged end and
+    // the live translation is measured from there, so the handle tracks the cursor 1:1.
+    const endpointWorld = constraint.kind === 'endpoint' ? this.overlay.getEndpointWorld(constraint.endpoint) : null;
+    this.startAnchor.copy(endpointWorld ?? this.overlay.getPosition());
     return this.bridge.start(
       constraint, this.startAnchor,
       this.raycaster.ray.origin, this.raycaster.ray.direction, this.cameraDir,
@@ -100,11 +108,16 @@ export class BimGizmoController {
     this.raycaster.setFromCamera(this.ndc, camera);
     camera.getWorldDirection(this.cameraDir);
     const changed = this.bridge.update(this.raycaster.ray.origin, this.raycaster.ray.direction, this.cameraDir);
-    // Move constraints make the gizmo follow the cursor; rotate + resize keep the
-    // origin anchored to the entity centre (ADR-402 Phase B resize stays put).
-    const kind = this.bridge.getActiveConstraint()?.kind;
-    if (changed && kind !== 'rotate' && kind !== 'resize') {
+    // Move constraints make the gizmo follow the cursor; rotate + resize + endpoint
+    // keep the gizmo CENTRE anchored to the entity (ADR-402 Phase B resize stays put).
+    const constraint = this.bridge.getActiveConstraint();
+    const kind = constraint?.kind;
+    if (changed && kind !== 'rotate' && kind !== 'resize' && kind !== 'endpoint') {
       this.overlay.updatePosition(this.startAnchor.clone().add(this.bridge.getLiveTranslation()));
+    }
+    // ADR-408 Φ-D — the dragged endpoint HANDLE follows the cursor (the centre stays).
+    if (changed && constraint?.kind === 'endpoint') {
+      this.overlay.setDraggedEndpoint(constraint.endpoint, this.startAnchor.clone().add(this.bridge.getLiveTranslation()));
     }
     // ADR-402 Phase B — surface the live snap target as a 3D marker (square frame).
     if (changed) {
@@ -135,6 +148,13 @@ export class BimGizmoController {
     if (kind === 'resize') {
       const outcome = this.bridge.getOutcome();
       return outcome.kind === 'resize' ? { kind: 'resize', outcome } : null;
+    }
+    // ADR-408 Φ-D — endpoint move: rebuild the dragged segment via the converter SSoT.
+    if (kind === 'endpoint') {
+      const outcome = this.bridge.getOutcome();
+      return outcome.kind === 'endpoint-move'
+        ? { kind: 'endpoint-move', endpoint: outcome.endpoint, outcome }
+        : null;
     }
     // axis / plane / free → a rigid translation in world space.
     return { kind: 'move', translation: this.bridge.getLiveTranslation() };

@@ -70,6 +70,7 @@ import {
   computeMepHostVerticalMove,
   computeMepSegmentVerticalMove,
 } from '../gizmo/bim3d-vertical-move';
+import { computeMepSegmentEndpointMove } from '../gizmo/bim3d-endpoint-move';
 import type { BridgeOutcome } from '../gizmo/bim-gizmo-drag-bridge';
 import type { LevelsHookReturn } from '../../systems/levels/useLevels';
 
@@ -95,6 +96,7 @@ export type EditCommand =
 export type SceneManager = NonNullable<ReturnType<typeof createSceneManagerAdapter>>;
 type ResizeOutcome = Extract<BridgeOutcome, { kind: 'resize' }>;
 type TiltOutcome = Extract<BridgeOutcome, { kind: 'tilt' }>;
+type EndpointMoveOutcome = Extract<BridgeOutcome, { kind: 'endpoint-move' }>;
 
 /** Inputs shared by every command builder for the active edit target. */
 export interface CommandBuildCtx {

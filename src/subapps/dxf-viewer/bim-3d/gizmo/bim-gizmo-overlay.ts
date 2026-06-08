@@ -21,7 +21,7 @@
 import * as THREE from 'three';
 import { createGizmoMeshes, type GizmoMeshSet } from './gizmo-geometry';
 import type { GizmoHitTestSet } from './gizmo-hit-test';
-import type { GizmoHandleId } from './gizmo-types';
+import type { GizmoHandleId, GizmoEndpoint } from './gizmo-types';
 import {
   AXIS_COLORS, PLANE_COLORS, RESIZE_IDLE_COLORS, GIZMO_COLOR_CENTER, GIZMO_COLOR_HOVER,
   GIZMO_SCREEN_SCALE, GIZMO_RENDER_ORDER,
@@ -79,13 +79,25 @@ const TILT_HANDLES_BY_TYPE: Readonly<Record<string, readonly GizmoHandleId[]>> =
   slab: ['rotate-x', 'rotate-z'],
 };
 
-/** Active handle id set for a selected entity: base move/rotate + any resize + tilt handles. */
+/**
+ * ADR-408 Φ-D — per-endpoint shape handles shown per entity type. A linear MEP
+ * segment exposes a draggable square at each axis end (drag ONE end → the pipe
+ * stretches from there, the other end stays). Single-select only (the hook passes
+ * `editBimType = null` for a multi-selection → no endpoint handles, mirror resize).
+ */
+const ENDPOINT_HANDLES_BY_TYPE: Readonly<Record<string, readonly GizmoHandleId[]>> = {
+  'mep-segment': ['endpoint-start', 'endpoint-end'],
+};
+
+/** Active handle id set for a selected entity: base move/rotate + any resize + tilt + endpoint. */
 export function activeHandlesFor(bimType: string | null): ReadonlySet<GizmoHandleId> {
   const ids = new Set<GizmoHandleId>(BASE_HANDLES);
   const resize = (bimType && RESIZE_HANDLES_BY_TYPE[bimType]) || [];
   for (const id of resize) ids.add(id);
   const tilt = (bimType && TILT_HANDLES_BY_TYPE[bimType]) || [];
   for (const id of tilt) ids.add(id);
+  const endpoints = (bimType && ENDPOINT_HANDLES_BY_TYPE[bimType]) || [];
+  for (const id of endpoints) ids.add(id);
   return ids;
 }
 
@@ -98,12 +110,23 @@ export class BimGizmoOverlay {
   private disposed = false;
   /** ADR-402 Phase B — drag snap marker (square frame, depth-test off → always visible). */
   private readonly snapMarker: THREE.LineSegments;
+  /**
+   * ADR-408 Φ-D — world positions of the two endpoint handles (null = not a linear
+   * segment selection). The handles live in root-local space but must sit on the
+   * ABSOLUTE pipe ends, so we re-derive their local offset (`(world − anchor) /
+   * rootScale`) on every position/scale refresh — keeping them world-locked at a
+   * screen-constant size.
+   */
+  private endpointWorld: { start: THREE.Vector3; end: THREE.Vector3 } | null = null;
+  /** Cached visual + hitbox of each endpoint handle (repositioned together). */
+  private readonly endpointParts: ReadonlyMap<GizmoEndpoint, { visual: THREE.Object3D; hitbox: THREE.Object3D }>;
 
   constructor(scene: THREE.Scene) {
     this.scene = scene;
     this.meshSet = createGizmoMeshes();
     this.meshSet.root.renderOrder = GIZMO_RENDER_ORDER;
     this.meshSet.root.visible = false;
+    this.endpointParts = this.resolveEndpointParts();
 
     // Start with the move/rotate base; the hook reconfigures per selected type.
     this.applyActiveHandles(new Set(BASE_HANDLES));
@@ -111,6 +134,21 @@ export class BimGizmoOverlay {
 
     this.snapMarker = createSnapMarker();
     this.scene.add(this.snapMarker);
+  }
+
+  /** Cache the visual + hitbox object of each endpoint handle (built once). */
+  private resolveEndpointParts(): Map<GizmoEndpoint, { visual: THREE.Object3D; hitbox: THREE.Object3D }> {
+    const parts = new Map<GizmoEndpoint, { visual: THREE.Object3D; hitbox: THREE.Object3D }>();
+    for (const endpoint of ['start', 'end'] as const) {
+      const id: GizmoHandleId = `endpoint-${endpoint}`;
+      const visual = this.meshSet.visuals.get(id);
+      let hitbox: THREE.Mesh | undefined;
+      for (const hb of this.meshSet.hitboxes) {
+        if (this.meshSet.hitboxToId.get(hb) === id) { hitbox = hb; break; }
+      }
+      if (visual && hitbox) parts.set(endpoint, { visual, hitbox });
+    }
+    return parts;
   }
 
   get visible(): boolean {
@@ -166,11 +204,57 @@ export class BimGizmoOverlay {
     if (this.disposed) return;
     this.position.copy(world);
     this.meshSet.root.position.copy(world);
+    this.refreshEndpointOffsets();
     this.meshSet.root.updateMatrixWorld(true);
+  }
+
+  /**
+   * ADR-408 Φ-D — set (or clear) the world positions of the two endpoint handles
+   * for a linear-segment selection. Pass `null` to clear (non-segment / multi-select).
+   */
+  setEndpointHandles(start: THREE.Vector3 | null, end: THREE.Vector3 | null): void {
+    if (this.disposed) return;
+    this.endpointWorld = start && end ? { start: start.clone(), end: end.clone() } : null;
+    this.refreshEndpointOffsets();
+    this.meshSet.root.updateMatrixWorld(true);
+  }
+
+  /**
+   * ADR-408 Φ-D — live-follow ONE endpoint handle to a new world position during a
+   * drag (the dragged end follows the cursor; the fixed end stays). No-op when the
+   * endpoint set has been cleared.
+   */
+  setDraggedEndpoint(endpoint: GizmoEndpoint, world: THREE.Vector3): void {
+    if (this.disposed || !this.endpointWorld) return;
+    this.endpointWorld[endpoint].copy(world);
+    this.refreshEndpointOffsets();
+    this.meshSet.root.updateMatrixWorld(true);
+  }
+
+  /**
+   * Reposition the endpoint handle children to `(world − anchor) / rootScale` so
+   * they render on the ABSOLUTE pipe ends regardless of the screen-constant root
+   * scale. Visual + hitbox move together. No-op when no endpoint set is active.
+   */
+  private refreshEndpointOffsets(): void {
+    if (!this.endpointWorld) return;
+    const s = this.meshSet.root.scale.x || 1;
+    for (const endpoint of ['start', 'end'] as const) {
+      const part = this.endpointParts.get(endpoint);
+      if (!part) continue;
+      const local = this.endpointWorld[endpoint].clone().sub(this.position).divideScalar(s);
+      part.visual.position.copy(local);
+      part.hitbox.position.copy(local);
+    }
   }
 
   getPosition(): THREE.Vector3 {
     return this.position.clone();
+  }
+
+  /** ADR-408 Φ-D — world position of an endpoint handle, or null when not a segment selection. */
+  getEndpointWorld(endpoint: GizmoEndpoint): THREE.Vector3 | null {
+    return this.endpointWorld ? this.endpointWorld[endpoint].clone() : null;
   }
 
   /** Screen-constant scale so the gizmo keeps a fixed pixel size during zoom/orbit. */
@@ -182,6 +266,7 @@ export class BimGizmoOverlay {
       s = dist * Math.tan(THREE.MathUtils.degToRad(camera.fov) / 2) * GIZMO_SCREEN_SCALE;
     }
     this.meshSet.root.scale.setScalar(Math.max(s, 1e-3));
+    this.refreshEndpointOffsets();
     this.meshSet.root.updateMatrixWorld(true);
   }
 
@@ -262,6 +347,8 @@ function createSnapMarker(): THREE.LineSegments {
 /** Idle colour for a handle id (restored when hover leaves). */
 function defaultColorOf(id: GizmoHandleId): number {
   if (id === 'center') return GIZMO_COLOR_CENTER;
+  // ADR-408 Φ-D — endpoint squares share the resize-X idle colour (Revit blue-ish grip).
+  if (id.startsWith('endpoint-')) return RESIZE_IDLE_COLORS['x'] ?? GIZMO_COLOR_CENTER;
   if (id.startsWith('resize-m-')) return RESIZE_IDLE_COLORS[id.slice(9)] ?? GIZMO_COLOR_CENTER;
   if (id.startsWith('resize-')) return RESIZE_IDLE_COLORS[id.slice(7)] ?? GIZMO_COLOR_CENTER;
   if (id.startsWith('rotate-')) return AXIS_COLORS[id.slice(7)] ?? GIZMO_COLOR_CENTER;

@@ -39,6 +39,8 @@ export interface GizmoHitResult {
 const HANDLE_PRIORITY: Readonly<Record<GizmoHandleId, number>> = {
   'resize-x': 4, 'resize-y': 4, 'resize-z': 4,
   'resize-m-x': 4, 'resize-m-y': 4, 'resize-m-z': 4,
+  // ADR-408 Φ-D — endpoint shape handles win over plane/axis like resize squares.
+  'endpoint-start': 4, 'endpoint-end': 4,
   'rotate-x':  5,
   'rotate-y':  5,
   'rotate-z':  5,

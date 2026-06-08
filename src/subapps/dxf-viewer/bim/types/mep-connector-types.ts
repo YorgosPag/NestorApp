@@ -370,7 +370,9 @@ export const BOILER_SUPPLY_CONNECTOR_ID = 'boiler-supply';
 /** Connector id for the return inlet (επιστροφή) of a heating boiler. */
 export const BOILER_RETURN_CONNECTOR_ID = 'boiler-return';
 /** Connector id for the DHW hot-water outlet of a COMBI heating boiler (παραγωγή ΖΝΧ). */
-export const BOILER_DHW_CONNECTOR_ID = 'boiler-dhw';
+export const BOILER_DHW_HOT_CONNECTOR_ID = 'boiler-dhw-hot';
+/** Connector id for the DHW cold-water inlet of a COMBI heating boiler (τροφοδοσία ΖΝΧ). */
+export const BOILER_DHW_COLD_CONNECTOR_ID = 'boiler-dhw-cold';
 
 /**
  * Supply outlet connector of a hydronic boiler (ADR-408 Εύρος Β #2, λέβητας) — the
@@ -421,8 +423,10 @@ export function buildBoilerReturnConnector(
  * hydronic supply/return pair it carries a SECOND `flow:'out'` outlet — heated tap
  * water LEAVES here, `domain:'pipe'`, classification FIXED to `domestic-hot-water`.
  * This is what makes the combi boiler the SOURCE of a DHW network (exactly like the
- * water heater's hot outlet, {@link buildWaterHeaterHotOutletConnector}). Only seeded
- * when `MepBoilerParams.producesDhw` is set (a plain boiler heats space only).
+ * water heater's hot outlet, {@link buildWaterHeaterHotOutletConnector}). Paired with
+ * {@link buildBoilerDhwColdInletConnector}: the combi takes cold water IN and puts hot
+ * water OUT — the full Revit water path, NOT hot "from nowhere". Only seeded when
+ * `MepBoilerParams.producesDhw` is set (a plain boiler heats space only).
  *
  * Because the boiler now has TWO out-connectors of DISTINCT classification, the
  * pipe-network resolver must pick the source connector BY classification — see
@@ -432,16 +436,40 @@ export function buildBoilerReturnConnector(
  * from the body geometry, OFFSET so it never coincides with the supply outlet
  * (see `buildBoilerConnectors`).
  */
-export function buildBoilerDhwConnector(
+export function buildBoilerDhwHotOutletConnector(
   localPosition: Point3D,
   diameterMm: number,
 ): MepConnector {
   return {
-    connectorId: BOILER_DHW_CONNECTOR_ID,
+    connectorId: BOILER_DHW_HOT_CONNECTOR_ID,
     domain: 'pipe',
     flow: 'out',
     localPosition,
     pipe: { systemClassification: 'domestic-hot-water', diameterMm },
+  };
+}
+
+/**
+ * DHW cold-water inlet connector of a COMBI heating boiler (ADR-408 Εύρος Β — combi).
+ * Mains cold water ENTERS the combi here (`flow:'in'`), `domain:'pipe'`, classification
+ * FIXED to `domestic-cold-water` — making the combi a MEMBER of the cold-water network.
+ * Paired with {@link buildBoilerDhwHotOutletConnector} it completes the DHW water path
+ * (cold in → heated → hot out), exactly like the water heater's cold inlet
+ * ({@link buildWaterHeaterColdInletConnector}). Only seeded when `producesDhw` is set.
+ *
+ * `localPosition` is host-local (scene units, pre-rotation) — the caller offsets it so
+ * cold/hot/supply/return do not coincide (see `buildBoilerConnectors`).
+ */
+export function buildBoilerDhwColdInletConnector(
+  localPosition: Point3D,
+  diameterMm: number,
+): MepConnector {
+  return {
+    connectorId: BOILER_DHW_COLD_CONNECTOR_ID,
+    domain: 'pipe',
+    flow: 'in',
+    localPosition,
+    pipe: { systemClassification: 'domestic-cold-water', diameterMm },
   };
 }
 
