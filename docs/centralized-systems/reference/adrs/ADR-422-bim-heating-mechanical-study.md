@@ -78,3 +78,31 @@
 - **ΕΚΤΟΣ ADR-040** (κανένα high-freq store· renderer micro-leaf-compliant).
 
 > **ΜΗΝ** ενημερωθεί το `adr-index.md` σε αυτό το slice (shared working tree).
+
+### L1 — Heat-Load Engine + Analytical UI (2026-06-08, Opus, Plan Mode)
+
+**Υπολογισμός θερμικού φορτίου Φ ανά χώρο (EN 12831 / ΤΟΤΕΕ 20701-1) + Revit «Heating Loads» analytical view. FULL SSOT — μηδέν fork.**
+
+- **Pure engine (full unit-tested):**
+  - `bim/thermal/heat-load/heat-load-engine.ts` — `computeSpaceHeatLoad` → Φ = Σ U·A·b·ΔΤ + 0.34·n·V·ΔΤ + breakdown.
+  - `bim/thermal/heat-load/heat-load-types.ts` — resolved contracts (`SpaceHeatLoadInput`/`Result`/`HeatLoadBoundary`).
+  - `bim/thermal/heat-load/heat-load-config.ts` — `BOUNDARY_TEMPERATURE_FACTOR` (b) + `AIR_VENTILATION_FACTOR` (0.34) + default U.
+  - `bim/thermal/heat-load/space-boundary-resolver.ts` — scene → boundaries (εξωτ./adjacent από envelope shell + storey position).
+  - `bim/thermal/heat-load/wall-footprint-match.ts` — όριο χώρου → όψεις τοίχων (per-room share κοινών τοίχων).
+  - `bim/thermal/heat-load/derive-space-heat-loads.ts` — orchestration: `computeOneSpaceHeatLoad` + `deriveSpaceHeatLoads` (Map + εύρος W/m² + άθροισμα).
+  - `bim/thermal/heat-load/heat-load-color.ts` — heat-map κλίμακα (μπλε→κόκκινο, σχετική στο εύρος ορόφου).
+  - `bim/thermal/glazing-u-catalog.ts` — per-opening `Ug` (μονό/διπλό/τριπλό + instance override).
+  - `kenak-thermal-config.ts` (MOD) — `KENAK_DESIGN_OUTDOOR_TEMP_C` (Te ανά ζώνη Α/Β/Γ/Δ) + `getDesignOutdoorTempC`.
+- **Wiring (React):**
+  - `hooks/data/useHeatLoadInputs.ts` — SSoT συλλογής active-floor inputs (spaces/walls/openings + exterior walls spec-free `computeEnvelopePerimeter` + Te από `Building.climateZone` + storeyPosition από `useFloorsByBuilding`). Κοινό overlay **και** tab.
+  - `hooks/data/useSpaceHeatLoads.ts` — reactive wrapper (memo στα inputs, ΟΧΙ στο transform).
+- **Analytical UI:**
+  - `components/dxf-layout/HeatLoadOverlay.tsx` — ADR-040 leaf· heat-map fill + «Φ … W»/«… W/m²» label ανά χώρο· gated `showHeatLoad && mode==='2d'`. **STAGE ADR-040** (mount στο `CanvasLayerStack`, CHECK 6B/6D).
+  - `ui/ribbon/components/ShowHeatLoadToggle.tsx` + view-tab widget `show-heat-load-toggle` + `RibbonPanel` case (default OFF).
+  - `bim-render-settings-types.ts` + `bim-render-settings-store.ts` (MOD) — `showHeatLoad` per-view flag (Firestore-persisted, default false).
+  - Per-space readout: panel «Θερμικό Φορτίο» στο `contextual-thermal-space-tab.ts` (2 disabled comboboxes Φ/W·W/m²) + `thermal-space-command-keys.ts` (readout keys) + `useRibbonThermalSpaceBridge.ts` (compute via `useSpaceHeatLoads`).
+  - i18n el+en (`ribbon.commands.heatLoad.*`, `panels.thermalSpaceHeatLoad`, `thermalSpaceEditor.heatLoad*`).
+- **Tests:** engine (11) + color (8) + derive (6 — storey branches + aggregation) = **25/25 PASS**.
+- **Αναβλήθηκαν:** θερμογέφυρες/reheat· columns-bridge στο exterior-wall detection· full wall-matching geometry test (in-browser verify). → L2 radiator sizing.
+
+> **ΜΗΝ** ενημερωθεί το `adr-index.md` σε αυτό το slice (shared working tree).
