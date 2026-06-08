@@ -57,6 +57,8 @@ export const MepBoilerParamsSchema = z
     systemClassification: SystemClassificationSchema.optional(),
     // COMBI flag — when set, the boiler also sources a domestic-hot-water network.
     producesDhw: z.boolean().optional(),
+    // DHW RECIRCULATION flag — combi-gated; seeds a recirc return inlet on the DHW network.
+    dhwRecirculation: z.boolean().optional(),
     // COMBI DHW connector diameter (hot outlet + cold inlet); falls back to connectorDiameterMm.
     dhwConnectorDiameterMm: z.number().positive().optional(),
     // Optional catalogue thermal output (W) — drives future sizing.

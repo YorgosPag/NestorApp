@@ -100,6 +100,16 @@ export interface MepBoilerParams extends MepConnectorHostParams {
    */
   readonly producesDhw?: boolean;
   /**
+   * DHW RECIRCULATION flag (ADR-408 Εύρος Β — combi + recirculation, Revit "Domestic Hot
+   * Water + Recirculation"). When `true` AND the boiler is a combi (`producesDhw`),
+   * `buildBoilerConnectors` seeds a FIFTH connector — a recirculation return inlet
+   * (`flow:'in'`, reusing the `domestic-hot-water` classification) — so the cooled DHW
+   * returns to the boiler and is re-heated, closing the recirculation loop. Gated by
+   * `producesDhw` (a plain boiler / non-combi has no recirc even if this is set).
+   * Additive/optional — pre-recirc combis unchanged.
+   */
+  readonly dhwRecirculation?: boolean;
+  /**
    * mm — nominal DHW connector diameter for a combi boiler (hot outlet + cold inlet).
    * Typically smaller than the hydronic tails (DN15 vs DN22). Absent ⇒ falls back to
    * `connectorDiameterMm`. Only relevant when `producesDhw` is set.

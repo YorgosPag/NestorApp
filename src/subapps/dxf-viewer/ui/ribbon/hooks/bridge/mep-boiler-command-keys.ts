@@ -45,9 +45,12 @@ export const MEP_BOILER_RIBBON_KEYS = {
    *   - `producesDhw`: COMBI flag (ADR-408 Εύρος Β — combi). ON → the boiler also produces
    *     domestic hot water (DHW hot outlet + cold inlet connectors seeded → sources a DHW
    *     network + member of the cold network). Mirror του roof `slopeUnitPercent` toggle.
+   *   - `dhwRecirculation`: RECIRCULATION flag (ADR-408 Εύρος Β — combi + recirc). Combi-gated:
+   *     ON (with combi) → a recirc return inlet is seeded on the same DHW network (re-heat loop).
    */
   toggles: {
     producesDhw: 'mepBoiler.params.producesDhw',
+    dhwRecirculation: 'mepBoiler.params.dhwRecirculation',
   },
   /**
    * ADR-422 L2 — read-only sizing readouts (Revit «Heating Loads → Equipment»).
@@ -86,10 +89,12 @@ export const MEP_BOILER_RIBBON_NUMBER_KEYS: readonly MepBoilerRibbonNumberComman
 // ─── Toggle keys (Revit Yes/No params) ───────────────────────────────────────
 
 export type MepBoilerRibbonToggleCommandKey =
-  typeof MEP_BOILER_RIBBON_KEYS.toggles.producesDhw;
+  | typeof MEP_BOILER_RIBBON_KEYS.toggles.producesDhw
+  | typeof MEP_BOILER_RIBBON_KEYS.toggles.dhwRecirculation;
 
 export const MEP_BOILER_RIBBON_TOGGLE_KEYS: readonly MepBoilerRibbonToggleCommandKey[] = [
   MEP_BOILER_RIBBON_KEYS.toggles.producesDhw,
+  MEP_BOILER_RIBBON_KEYS.toggles.dhwRecirculation,
 ];
 
 const MEP_BOILER_TOGGLE_KEY_SET: ReadonlySet<string> = new Set<string>(
