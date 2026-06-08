@@ -852,7 +852,8 @@
       "floorplanSymbolProperties": "Symbol Properties",
       "floorFinishProperties": "Floor Finish Properties",
       "thermalSpaceProperties": "Thermal Space Properties",
-      "mepFixtureLibrary": "Light Fixture Library"
+      "mepFixtureLibrary": "Light Fixture Library",
+      "mepRiser": "Vertical Stack"
     },
     "panels": {
       "draw": "Draw",
@@ -1011,7 +1012,8 @@
       "floorplanSymbolCatalog": "Symbol",
       "floorplanSymbolGeometry": "Geometry",
       "mepFixtureLibrary": "Library",
-      "mepFixtureLibraryPlacement": "Placement"
+      "mepFixtureLibraryPlacement": "Placement",
+      "mepRiser": "Stack"
     },
     "minimizeStates": {
       "full": "Full Ribbon",
@@ -2746,6 +2748,10 @@
         "parametric": "Parametric (no model)",
         "rotation": "Rotation",
         "scale": "Scale"
+      },
+      "mepRiser": {
+        "toFloor": "To floor",
+        "diameter": "Diameter"
       }
     },
     "tooltips": {
