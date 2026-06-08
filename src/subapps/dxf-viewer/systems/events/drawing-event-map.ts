@@ -274,6 +274,10 @@ export interface DrawingEventMap {
   'bim:water-supply-generated': { networkCount: number; warningCount: number };
   'bim:water-supply-empty': { reason: 'no-fixtures' | 'no-source' };
   'bim:water-supply-committed': { networkCount: number; segmentCount: number };
+  // ADR-427 Slice 2 — sanitary-drainage auto-design (Generate → review → accept) feedback.
+  'bim:drainage-generated': { networkCount: number; warningCount: number };
+  'bim:drainage-empty': { reason: 'no-fixtures' | 'no-collector' };
+  'bim:drainage-committed': { networkCount: number; segmentCount: number };
   // ADR-407 — BIM railing params + delete events
   'bim:railing-params-updated': { railingId: string };
   'bim:railing-delete-requested': { railingId: string };

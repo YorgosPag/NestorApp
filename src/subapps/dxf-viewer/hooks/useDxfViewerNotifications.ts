@@ -221,6 +221,27 @@ export function useDxfViewerNotifications(): void {
       }),
     );
 
+    // ADR-427 Slice 2 — sanitary-drainage auto-design feedback (Generate → review → accept).
+    unsubs.push(
+      EventBus.on('bim:drainage-generated', ({ networkCount, warningCount }) => {
+        toast.info(
+          warningCount > 0
+            ? t('drainage.generatedWithWarnings', { count: networkCount, warnings: warningCount })
+            : t('drainage.generated', { count: networkCount }),
+        );
+      }),
+    );
+    unsubs.push(
+      EventBus.on('bim:drainage-empty', ({ reason }) => {
+        toast.warning(t(`drainage.empty.${reason}`));
+      }),
+    );
+    unsubs.push(
+      EventBus.on('bim:drainage-committed', ({ networkCount, segmentCount }) => {
+        toast.success(t('drainage.committed', { count: networkCount, segments: segmentCount }));
+      }),
+    );
+
     // ADR-401 Phase G.3 — stair attach mirrors (reuse the generic messages).
     unsubs.push(
       EventBus.on('bim:stairs-auto-attached', () => {

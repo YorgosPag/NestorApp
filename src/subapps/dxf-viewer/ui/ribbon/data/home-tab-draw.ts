@@ -651,6 +651,42 @@ export const HOME_DRAW_PANEL: RibbonPanelDef = {
                 },
               ],
             },
+            // ── Αυτόματη Αποχέτευση (submenu, ADR-427 Slice 2) ────────────
+            // Revit "Generate → review → accept": all three are `action`
+            // buttons (fire onAction, not a draw tool).
+            {
+              id: 'draw.bim.drainageAuto',
+              labelKey: 'ribbon.commands.bim.drainageAuto.label',
+              tooltipKey: 'ribbon.commands.bim.drainageAuto.tooltip',
+              icon: 'bim-pipe',
+              commandKey: 'draw.bim.drainageAuto',
+              subVariants: [
+                {
+                  id: 'draw.bim.drainageAutoGenerate',
+                  labelKey: 'ribbon.commands.bim.drainageAutoGenerate.label',
+                  tooltipKey: 'ribbon.commands.bim.drainageAutoGenerate.tooltip',
+                  icon: 'bim-pipe',
+                  commandKey: 'drainageAuto.actions.generate',
+                  action: 'drainageAuto.actions.generate',
+                },
+                {
+                  id: 'draw.bim.drainageAutoAccept',
+                  labelKey: 'ribbon.commands.bim.drainageAutoAccept.label',
+                  tooltipKey: 'ribbon.commands.bim.drainageAutoAccept.tooltip',
+                  icon: 'bim-pipe',
+                  commandKey: 'drainageAuto.actions.accept',
+                  action: 'drainageAuto.actions.accept',
+                },
+                {
+                  id: 'draw.bim.drainageAutoReject',
+                  labelKey: 'ribbon.commands.bim.drainageAutoReject.label',
+                  tooltipKey: 'ribbon.commands.bim.drainageAutoReject.tooltip',
+                  icon: 'bim-pipe',
+                  commandKey: 'drainageAuto.actions.reject',
+                  action: 'drainageAuto.actions.reject',
+                },
+              ],
+            },
             // ── Αποχέτευση (submenu) ──────────────────────────────────────
             {
               id: 'draw.bim.mepDrainage',
