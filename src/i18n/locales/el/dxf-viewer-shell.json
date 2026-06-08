@@ -2259,6 +2259,7 @@
         "modelCustom": "Παραμετρικό",
         "producesDhw": "Παραγωγή ΖΝΧ (Combi)",
         "dhwConnectorDiameter": "Διάμετρος ΖΝΧ",
+        "dhwRecirculation": "Ανακυκλοφορία ΖΝΧ",
         "width": "Πλάτος",
         "length": "Βάθος",
         "bodyHeight": "Ύψος σώματος",

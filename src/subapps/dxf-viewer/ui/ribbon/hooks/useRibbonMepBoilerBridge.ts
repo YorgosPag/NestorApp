@@ -89,6 +89,12 @@ export interface RibbonMepBoilerBridge {
   readonly getPanelVisibility: (visibilityKey: string) => boolean;
 }
 
+/** commandKey → boolean toggle `MepBoilerParams` field (combi flag + recirculation). */
+const TOGGLE_KEY_TO_FIELD: Readonly<Record<string, keyof MepBoilerParams>> = {
+  [MEP_BOILER_RIBBON_KEYS.toggles.producesDhw]: 'producesDhw',
+  [MEP_BOILER_RIBBON_KEYS.toggles.dhwRecirculation]: 'dhwRecirculation',
+};
+
 /** commandKey → numeric `MepBoilerParams` field. */
 const NUMBER_KEY_TO_FIELD: Readonly<Record<string, keyof MepBoilerParams>> = {
   [MEP_BOILER_RIBBON_KEYS.params.width]: 'width',
@@ -249,15 +255,17 @@ export function useRibbonMepBoilerBridge(
     [resolveBoiler, dispatchParams],
   );
 
-  // ADR-408 Εύρος Β (combi) — «Παραγωγή ΖΝΧ» Revit Yes/No toggle. ON → producesDhw=true
-  // → the command re-seeds connectors (applyPatch → buildBoilerConnectors adds the DHW
-  // hot outlet + cold inlet). Mirror του `useRibbonWallBridge` flip toggle.
+  // ADR-408 Εύρος Β (combi) — Revit Yes/No toggles routed by commandKey:
+  //   - «Παραγωγή ΖΝΧ» (producesDhw): ON → DHW hot outlet + cold inlet connectors.
+  //   - «Ανακυκλοφορία ΖΝΧ» (dhwRecirculation): ON (combi-gated) → recirc return inlet.
+  // The command re-seeds connectors (applyPatch → buildBoilerConnectors) for both.
   const onToggle = useCallback(
     (commandKey: string, nextValue: boolean): void => {
       if (!isMepBoilerToggleKey(commandKey)) return;
       const boiler = resolveBoiler();
       if (!boiler) return;
-      dispatchParams(boiler, { ...boiler.params, producesDhw: nextValue });
+      const field = TOGGLE_KEY_TO_FIELD[commandKey];
+      dispatchParams(boiler, { ...boiler.params, [field]: nextValue });
     },
     [resolveBoiler, dispatchParams],
   );
@@ -267,7 +275,8 @@ export function useRibbonMepBoilerBridge(
       if (!isMepBoilerToggleKey(commandKey)) return false;
       const boiler = resolveBoiler();
       if (!boiler) return false;
-      return boiler.params.producesDhw === true;
+      const field = TOGGLE_KEY_TO_FIELD[commandKey];
+      return boiler.params[field] === true;
     },
     [resolveBoiler],
   );

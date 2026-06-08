@@ -162,6 +162,18 @@ export const CONTEXTUAL_MEP_BOILER_TAB: RibbonTab = {
                 options: DHW_CONNECTOR_DIAMETER_MM_OPTIONS,
               },
             },
+            {
+              // ADR-408 Εύρος Β (combi + recirculation) — «Ανακυκλοφορία ΖΝΧ» Revit Yes/No
+              // toggle. ON → recirc return inlet seeded on the same DHW network (re-heat loop,
+              // Revit "Domestic Hot Water + Recirculation"). Combi-only panel (visibilityKey combi).
+              type: 'toggle',
+              size: 'small',
+              command: {
+                id: 'mepBoiler.dhwRecirculation',
+                labelKey: 'ribbon.commands.mepBoilerEditor.dhwRecirculation',
+                commandKey: MEP_BOILER_RIBBON_KEYS.toggles.dhwRecirculation,
+              },
+            },
           ],
         },
       ],
