@@ -14,7 +14,7 @@ import { isMepManifoldEntity, isMepBoilerEntity, isMepWaterHeaterEntity } from '
 import type { PlumbingSystemClassification } from '../../../bim/types/mep-connector-types';
 import { getEntityConnectors } from '../../../bim/mep-systems/connector-access';
 import { resolveMepConnectorElevationMmAt } from '../../../bim/mep-segments/mep-connector-elevation';
-import { resolveConnectorWorldPoint } from './connector-resolve';
+import { resolveConnectorWorldPoint } from '../shared/connector-resolve';
 
 /** A resolved routing origin for one service. */
 export interface WaterSource {

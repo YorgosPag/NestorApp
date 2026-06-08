@@ -46,6 +46,7 @@ import {
   isMepBoilerRibbonKey,
   isMepBoilerReadoutKey,
   isMepBoilerRibbonStringKey,
+  isMepBoilerToggleKey,
   isMepBoilerVisibilityKey,
 } from './bridge/mep-boiler-command-keys';
 import { EventBus } from '../../../systems/events/EventBus';
@@ -60,7 +61,7 @@ import {
   resolveSourceServedSpaces,
   sumServedHeatLoadW,
 } from '../../../bim/thermal/resolve-source-served-spaces';
-import type { RibbonComboboxState } from '../context/RibbonCommandContext';
+import type { RibbonComboboxState, RibbonToggleState } from '../context/RibbonCommandContext';
 import type { useLevels } from '../../../systems/levels';
 import type { useUniversalSelection } from '../../../systems/selection';
 
@@ -82,6 +83,8 @@ export interface UseRibbonMepBoilerBridgeProps {
 export interface RibbonMepBoilerBridge {
   readonly onComboboxChange: (commandKey: string, value: string) => void;
   readonly getComboboxState: (commandKey: string) => RibbonComboboxState | null;
+  readonly onToggle: (commandKey: string, nextValue: boolean) => void;
+  readonly getToggleState: (commandKey: string) => RibbonToggleState;
   readonly onAction: (action: string) => void;
   readonly getPanelVisibility: (visibilityKey: string) => boolean;
 }
@@ -94,6 +97,7 @@ const NUMBER_KEY_TO_FIELD: Readonly<Record<string, keyof MepBoilerParams>> = {
   [MEP_BOILER_RIBBON_KEYS.params.mountingElevation]: 'mountingElevationMm',
   [MEP_BOILER_RIBBON_KEYS.params.connectorDiameter]: 'connectorDiameterMm',
   [MEP_BOILER_RIBBON_KEYS.params.thermalOutput]: 'thermalOutputW',
+  [MEP_BOILER_RIBBON_KEYS.params.dhwConnectorDiameter]: 'dhwConnectorDiameterMm',
 };
 
 export function useRibbonMepBoilerBridge(
@@ -182,20 +186,6 @@ export function useRibbonMepBoilerBridge(
         const kW = (w / 1000).toLocaleString('el-GR', { maximumFractionDigits: 1 });
         return { value: `${kW} kW`, options: [], disabled: true };
       }
-      // ADR-408 Εύρος Β (combi) — «Παραγωγή ΖΝΧ» Yes/No selector. Resolved before the
-      // model-picker branch (both are string keys). Mirror of the wall `flip` Yes/No
-      // combobox; «Ναι» → producesDhw=true → a third DHW out connector is seeded.
-      if (commandKey === MEP_BOILER_RIBBON_KEYS.stringParams.producesDhw) {
-        const boiler = resolveBoiler();
-        if (!boiler) return null;
-        return {
-          value: boiler.params.producesDhw ? 'true' : 'false',
-          options: [
-            { value: 'false', labelKey: 'ribbon.commands.mepBoilerEditor.producesDhwNo', isLiteralLabel: false },
-            { value: 'true', labelKey: 'ribbon.commands.mepBoilerEditor.producesDhwYes', isLiteralLabel: false },
-          ],
-        };
-      }
       // ADR-408 Type Catalog — model picker (string commandKey branch).
       // Returns dynamic options from BOILER_MODEL_CATALOG + the clear («Παραμετρικό»)
       // sentinel. Pattern mirrors the fixture assetId branch (ADR-411).
@@ -232,15 +222,6 @@ export function useRibbonMepBoilerBridge(
 
   const onComboboxChange = useCallback(
     (commandKey: string, value: string): void => {
-      // ADR-408 Εύρος Β (combi) — «Παραγωγή ΖΝΧ» Yes/No selector (string; before the
-      // model-picker + numeric guards). Toggling re-seeds connectors via the command
-      // (applyPatch → buildBoilerConnectors reads producesDhw → adds/removes DHW outlet).
-      if (commandKey === MEP_BOILER_RIBBON_KEYS.stringParams.producesDhw) {
-        const boiler = resolveBoiler();
-        if (!boiler) return;
-        dispatchParams(boiler, { ...boiler.params, producesDhw: value === 'true' });
-        return;
-      }
       // ADR-408 Type Catalog — model picker branch (string; must run before the
       // numeric guard which would otherwise discard it).
       if (isMepBoilerRibbonStringKey(commandKey)) {
@@ -266,6 +247,29 @@ export function useRibbonMepBoilerBridge(
       dispatchParams(boiler, nextParams);
     },
     [resolveBoiler, dispatchParams],
+  );
+
+  // ADR-408 Εύρος Β (combi) — «Παραγωγή ΖΝΧ» Revit Yes/No toggle. ON → producesDhw=true
+  // → the command re-seeds connectors (applyPatch → buildBoilerConnectors adds the DHW
+  // hot outlet + cold inlet). Mirror του `useRibbonWallBridge` flip toggle.
+  const onToggle = useCallback(
+    (commandKey: string, nextValue: boolean): void => {
+      if (!isMepBoilerToggleKey(commandKey)) return;
+      const boiler = resolveBoiler();
+      if (!boiler) return;
+      dispatchParams(boiler, { ...boiler.params, producesDhw: nextValue });
+    },
+    [resolveBoiler, dispatchParams],
+  );
+
+  const getToggleState = useCallback(
+    (commandKey: string): RibbonToggleState => {
+      if (!isMepBoilerToggleKey(commandKey)) return false;
+      const boiler = resolveBoiler();
+      if (!boiler) return false;
+      return boiler.params.producesDhw === true;
+    },
+    [resolveBoiler],
   );
 
   const onAction = useCallback(

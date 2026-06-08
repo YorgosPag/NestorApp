@@ -26,7 +26,7 @@ import {
 } from './water-supply-discipline';
 import { buildWaterDemandModel } from './water-demand';
 import { resolveWaterSource, type WaterSource } from './water-source-resolve';
-import { routeOrthogonalTrunkBranch, type RouteTarget } from './orthogonal-router';
+import { routeOrthogonalTrunkBranch, type RouteTarget } from '../routing/orthogonal-router';
 
 /** Build one service's proposed network (route + size). */
 function buildNetwork(

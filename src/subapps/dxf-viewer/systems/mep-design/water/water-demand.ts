@@ -20,7 +20,7 @@ import {
   type WaterService,
 } from './water-design-types';
 import { loadingUnitsFor, type DemandStandard } from './water-loading-units';
-import { resolveConnectorWorldPoint } from './connector-resolve';
+import { resolveConnectorWorldPoint } from '../shared/connector-resolve';
 
 /** Service for a supply classification, or `null` (drainage / electrical / etc.). */
 function serviceForClassification(c: MepSystemClassification): WaterService | null {

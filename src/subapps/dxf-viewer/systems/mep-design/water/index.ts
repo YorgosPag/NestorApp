@@ -42,8 +42,8 @@ export {
   routeOrthogonalTrunkBranch,
   type RouteTarget,
   type RoutedSegment,
-} from './orthogonal-router';
-export { resolveConnectorWorldPoint } from './connector-resolve';
+} from '../routing/orthogonal-router';
+export { resolveConnectorWorldPoint } from '../shared/connector-resolve';
 
 // ── Slice 2 — preview + commit layer ──────────────────────────────────────────
 export {

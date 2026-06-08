@@ -14,7 +14,7 @@ import { sanitaryTerminalRecognizer } from '../../../recognition/recognizers/san
 import { buildWaterDemandModel } from '../water-demand';
 import { EN806_DEMAND_STANDARD } from '../water-loading-units';
 import { DIN1988_SIZING_STANDARD } from '../water-sizing';
-import { routeOrthogonalTrunkBranch, type RouteTarget } from '../orthogonal-router';
+import { routeOrthogonalTrunkBranch, type RouteTarget } from '../../routing/orthogonal-router';
 import { designWaterSupply } from '../design-water-supply';
 
 // ─── Scene builders ───────────────────────────────────────────────────────────
