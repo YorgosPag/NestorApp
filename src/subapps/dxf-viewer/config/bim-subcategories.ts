@@ -120,6 +120,8 @@ export const SUBCATEGORY_TAXONOMY: Readonly<Record<BimCategory, ReadonlyArray<st
   'mep-radiator':  [],
   // ADR-408 Εύρος Β #2 — λέβητας: no subcategory model yet.
   'mep-boiler':    [],
+  // ADR-408 DHW — θερμοσίφωνας: no subcategory model yet.
+  'mep-water-heater': [],
   // ADR-408 Εύρος Β #3 — ενδοδαπέδια: no subcategory model (area hatch overlay, no separate edges).
   'mep-underfloor': [],
   railing:         [],

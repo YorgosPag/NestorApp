@@ -27,6 +27,12 @@ export const THERMAL_SPACE_RIBBON_KEYS = {
     /** Delete entity. */
     delete: 'thermalSpace.action.delete',
   },
+  readouts: {
+    /** W — total heat load Φ (read-only, ADR-422 L1). */
+    heatLoadTotalW: 'thermalSpace.readout.heatLoadTotalW',
+    /** W/m² — specific heat load (read-only, ADR-422 L1). */
+    heatLoadSpecific: 'thermalSpace.readout.heatLoadSpecific',
+  },
 } as const;
 
 export type ThermalSpaceRibbonNumberCommandKey =
@@ -41,6 +47,10 @@ export type ThermalSpaceRibbonActionKey =
   | typeof THERMAL_SPACE_RIBBON_KEYS.actions.close
   | typeof THERMAL_SPACE_RIBBON_KEYS.actions.delete;
 
+export type ThermalSpaceRibbonReadoutKey =
+  | typeof THERMAL_SPACE_RIBBON_KEYS.readouts.heatLoadTotalW
+  | typeof THERMAL_SPACE_RIBBON_KEYS.readouts.heatLoadSpecific;
+
 const NUMBER_KEY_SET: ReadonlySet<string> = new Set<string>([
   THERMAL_SPACE_RIBBON_KEYS.params.setpointTempC,
   THERMAL_SPACE_RIBBON_KEYS.params.airChangesPerHour,
@@ -53,6 +63,10 @@ const ACTION_KEY_SET: ReadonlySet<string> = new Set<string>([
   THERMAL_SPACE_RIBBON_KEYS.actions.close,
   THERMAL_SPACE_RIBBON_KEYS.actions.delete,
 ]);
+const READOUT_KEY_SET: ReadonlySet<string> = new Set<string>([
+  THERMAL_SPACE_RIBBON_KEYS.readouts.heatLoadTotalW,
+  THERMAL_SPACE_RIBBON_KEYS.readouts.heatLoadSpecific,
+]);
 
 export function isThermalSpaceRibbonNumberKey(commandKey: string): commandKey is ThermalSpaceRibbonNumberCommandKey {
   return NUMBER_KEY_SET.has(commandKey);
@@ -64,4 +78,8 @@ export function isThermalSpaceRibbonStringKey(commandKey: string): commandKey is
 
 export function isThermalSpaceRibbonActionKey(commandKey: string): commandKey is ThermalSpaceRibbonActionKey {
   return ACTION_KEY_SET.has(commandKey);
+}
+
+export function isThermalSpaceRibbonReadoutKey(commandKey: string): commandKey is ThermalSpaceRibbonReadoutKey {
+  return READOUT_KEY_SET.has(commandKey);
 }

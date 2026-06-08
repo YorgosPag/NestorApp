@@ -49,6 +49,13 @@ export interface BimRenderSettings {
    * roughness/ao maps). `false` ⇒ flat colour materials. Persisted per-view.
    */
   realisticMaterials?: boolean;
+  /**
+   * ADR-422 L1 — analytical heat-load overlay master toggle (Revit "Heating
+   * Loads" view). Absent ⇒ `false` (opt-in: the analytical heat-map is off by
+   * default so it does not clutter the normal drawing). `true` ⇒ each thermal
+   * space is painted with a cold→hot heat-map + Φ (W) / W/m² label. Per-view.
+   */
+  showHeatLoad?: boolean;
 }
 
 export interface ResolvedBimSettings {
@@ -58,6 +65,7 @@ export interface ResolvedBimSettings {
   disciplineVisibility: Partial<Record<Discipline, boolean>>;
   colorBySystem: boolean;
   realisticMaterials: boolean;
+  showHeatLoad: boolean;
 }
 
 // ── Resolver ───────────────────────────────────────────────────────────────
@@ -77,5 +85,7 @@ export function resolveBimSettings(s?: BimRenderSettings | null): ResolvedBimSet
     colorBySystem: s?.colorBySystem ?? true,
     // ADR-413 — absent ⇒ true (realistic PBR materials on, the visible default).
     realisticMaterials: s?.realisticMaterials ?? true,
+    // ADR-422 L1 — absent ⇒ false (analytical heat-load overlay off by default).
+    showHeatLoad: s?.showHeatLoad ?? false,
   };
 }

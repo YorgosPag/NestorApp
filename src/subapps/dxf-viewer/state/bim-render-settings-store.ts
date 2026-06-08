@@ -128,6 +128,13 @@ interface BimRenderSettingsState extends ResolvedBimSettings {
    * single debounced write (idempotent).
    */
   setRealisticMaterials: (realisticMaterials: boolean) => void;
+  /**
+   * ADR-422 L1 — toggle the analytical heat-load overlay (Revit "Heating
+   * Loads" view). `true` ⇒ thermal spaces paint with a cold→hot heat-map + Φ
+   * (W) / W/m² labels; `false` ⇒ normal drawing. Single state update + single
+   * debounced write (idempotent).
+   */
+  setShowHeatLoad: (showHeatLoad: boolean) => void;
   /** Override projection or cut color for a category (null = canvas token). */
   setObjectStyleVgColor: (
     category: BimCategory,
@@ -179,6 +186,7 @@ export const useBimRenderSettingsStore = create<BimRenderSettingsState>((set, ge
       disciplineVisibility: state.disciplineVisibility,
       colorBySystem: state.colorBySystem,
       realisticMaterials: state.realisticMaterials,
+      showHeatLoad: state.showHeatLoad,
     };
   }
 
@@ -205,6 +213,7 @@ export const useBimRenderSettingsStore = create<BimRenderSettingsState>((set, ge
         disciplineVisibility: resolved.disciplineVisibility,
         colorBySystem: resolved.colorBySystem,
         realisticMaterials: resolved.realisticMaterials,
+        showHeatLoad: resolved.showHeatLoad,
         lastLocalMutationAt: 0,
         bimVisibilitySnapshot: null,
       });
@@ -309,6 +318,14 @@ export const useBimRenderSettingsStore = create<BimRenderSettingsState>((set, ge
         debounceWrite(state.currentLevelId, buildRaw({ ...get(), realisticMaterials }));
     },
 
+    setShowHeatLoad(showHeatLoad) {
+      const state = get();
+      if (state.showHeatLoad === showHeatLoad) return; // idempotent — no-op write
+      set({ showHeatLoad, lastLocalMutationAt: Date.now() });
+      if (state.currentLevelId)
+        debounceWrite(state.currentLevelId, buildRaw({ ...get(), showHeatLoad }));
+    },
+
     setObjectStyleVgColor(category, key, color) {
       const state = get();
       const prev = state.objectStyles[category];
@@ -393,6 +410,7 @@ function commitObjectStyles(
       disciplineVisibility: get().disciplineVisibility,
       colorBySystem: get().colorBySystem,
       realisticMaterials: get().realisticMaterials,
+      showHeatLoad: get().showHeatLoad,
     });
   }
 }

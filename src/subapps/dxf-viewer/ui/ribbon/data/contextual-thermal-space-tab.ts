@@ -130,6 +130,40 @@ export const CONTEXTUAL_THERMAL_SPACE_TAB: RibbonTab = {
       ],
     },
     {
+      id: 'thermal-space-heat-load',
+      labelKey: 'ribbon.panels.thermalSpaceHeatLoad',
+      rows: [
+        {
+          isInFlyout: false,
+          buttons: [
+            {
+              // Read-only readout (ADR-422 L1) — bridge returns disabled state.
+              type: 'combobox',
+              size: 'small',
+              command: {
+                id: 'thermalSpace.heatLoadTotalW',
+                labelKey: 'ribbon.commands.thermalSpaceEditor.heatLoadTotalW',
+                commandKey: THERMAL_SPACE_RIBBON_KEYS.readouts.heatLoadTotalW,
+                comboboxWidthPx: 110,
+                options: [],
+              },
+            },
+            {
+              type: 'combobox',
+              size: 'small',
+              command: {
+                id: 'thermalSpace.heatLoadSpecific',
+                labelKey: 'ribbon.commands.thermalSpaceEditor.heatLoadSpecific',
+                commandKey: THERMAL_SPACE_RIBBON_KEYS.readouts.heatLoadSpecific,
+                comboboxWidthPx: 110,
+                options: [],
+              },
+            },
+          ],
+        },
+      ],
+    },
+    {
       id: 'thermal-space-actions',
       labelKey: 'ribbon.panels.thermalSpaceActions',
       rows: [

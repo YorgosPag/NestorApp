@@ -69,6 +69,8 @@ export type BimCategory =
   | 'mep-radiator'
   // ADR-408 Εύρος Β #2 — heating boiler / λέβητας (hydronic source).
   | 'mep-boiler'
+  // ADR-408 DHW — domestic hot water heater / θερμοσίφωνας (DHW source, plumbing).
+  | 'mep-water-heater'
   // ADR-408 Εύρος Β #3 — underfloor heating loop / ενδοδαπέδια θέρμανση (hydronic terminal, area).
   | 'mep-underfloor'
   // ADR-407 — standalone path-based railing (architectural).
@@ -158,7 +160,7 @@ export interface ObjectStyle {
 export const BIM_CATEGORIES: readonly BimCategory[] = [
   'wall', 'column', 'beam', 'slab', 'opening', 'slab-opening',
   'stair', 'roof', 'ceiling', 'dimension', 'hatch', 'grip', 'envelope',
-  'light-fixture', 'electrical-panel', 'mep-manifold', 'mep-radiator', 'mep-boiler', 'mep-underfloor', 'railing', 'mep-wire', 'furniture',
+  'light-fixture', 'electrical-panel', 'mep-manifold', 'mep-radiator', 'mep-boiler', 'mep-water-heater', 'mep-underfloor', 'railing', 'mep-wire', 'furniture',
   'duct', 'pipe', 'drain-pipe', 'sanitary', 'kitchen',
 ] as const;
 
@@ -188,6 +190,8 @@ export const MODEL_BIM_CATEGORIES: readonly BimCategory[] = [
   'mep-radiator',
   // ADR-408 Εύρος Β #2 — heating boiler (λέβητας, hydronic source).
   'mep-boiler',
+  // ADR-408 DHW — domestic hot water heater (θερμοσίφωνας, DHW source).
+  'mep-water-heater',
   // ADR-408 Εύρος Β #3 — underfloor heating loop (ενδοδαπέδια, hydronic terminal area).
   'mep-underfloor',
   // ADR-407 — standalone path-based railing.
@@ -288,6 +292,8 @@ export const DEFAULT_OBJECT_STYLES: Readonly<Record<BimCategory, ObjectStyle>> =
   'mep-radiator': { projectionPen: 4, cutPen: 5 },
   // ADR-408 Εύρος Β #2 — λέβητας: μεσαία γραμμή (heating source cabinet).
   'mep-boiler': { projectionPen: 4, cutPen: 5 },
+  // ADR-408 DHW — θερμοσίφωνας: μεσαία γραμμή (plumbing equipment cabinet, mirrors boiler).
+  'mep-water-heater': { projectionPen: 4, cutPen: 5 },
   // ADR-408 Εύρος Β #3 — ενδοδαπέδια θέρμανση: λεπτή γραμμή (area hatch overlay, interior plan).
   'mep-underfloor': { projectionPen: 3, cutPen: 4 },
   // ADR-407 — κάγκελο: μεσαία γραμμή προβολής (metal members, plan symbol).

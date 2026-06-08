@@ -38,7 +38,9 @@ import {
   isThermalSpaceRibbonNumberKey,
   isThermalSpaceRibbonStringKey,
   isThermalSpaceRibbonActionKey,
+  isThermalSpaceRibbonReadoutKey,
 } from './bridge/thermal-space-command-keys';
+import { useSpaceHeatLoads } from '../../../hooks/data/useSpaceHeatLoads';
 import { EventBus } from '../../../systems/events/EventBus';
 import type { RibbonComboboxState } from '../context/RibbonCommandContext';
 import type { useLevels } from '../../../systems/levels';
@@ -82,6 +84,15 @@ export function useRibbonThermalSpaceBridge(
     return e;
   }, [levelManager, universalSelection]);
 
+  // ADR-422 L1 — heat-load readout for the selected space. Computed only when a
+  // thermal space is selected (the contextual tab is active). Reuses the same
+  // SSoT input-gathering as the analytical overlay.
+  const selectedSpace = resolveThermalSpace();
+  const scene = levelManager.currentLevelId
+    ? levelManager.getLevelScene(levelManager.currentLevelId)
+    : null;
+  const heatLoads = useSpaceHeatLoads(scene, !!selectedSpace);
+
   const dispatchParams = useCallback(
     (ts: ThermalSpaceEntity, nextParams: ThermalSpaceParams): void => {
       if (!levelManager.currentLevelId) return;
@@ -102,6 +113,15 @@ export function useRibbonThermalSpaceBridge(
     (commandKey: string): RibbonComboboxState | null => {
       const ts = resolveThermalSpace();
       if (!ts) return null;
+      if (isThermalSpaceRibbonReadoutKey(commandKey)) {
+        const result = heatLoads?.results.get(ts.id) ?? null;
+        if (!result) return { value: '—', options: [], disabled: true };
+        const value =
+          commandKey === THERMAL_SPACE_RIBBON_KEYS.readouts.heatLoadTotalW
+            ? `${Math.round(result.totalW).toLocaleString('el-GR')} W`
+            : `${Math.round(result.specificLoadWperM2).toLocaleString('el-GR')} W/m²`;
+        return { value, options: [], disabled: true };
+      }
       if (isThermalSpaceRibbonStringKey(commandKey)) {
         return { value: ts.params.useType, options: [] };
       }
@@ -116,7 +136,7 @@ export function useRibbonThermalSpaceBridge(
       }
       return null;
     },
-    [resolveThermalSpace],
+    [resolveThermalSpace, heatLoads],
   );
 
   const onComboboxChange = useCallback(

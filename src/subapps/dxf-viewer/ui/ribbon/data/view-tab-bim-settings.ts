@@ -148,6 +148,19 @@ const REALISTIC_MATERIALS_BUTTON: RibbonButton = {
   },
 };
 
+/** ADR-422 L1 — analytical heat-load overlay master toggle (Revit "Heating Loads"). */
+const HEAT_LOAD_BUTTON: RibbonButton = {
+  type: 'widget',
+  size: 'small',
+  widgetId: 'show-heat-load-toggle',
+  command: {
+    id: 'view.heatLoad',
+    labelKey: 'ribbon.commands.heatLoad.label',
+    icon: '',
+    commandKey: 'show-heat-load-toggle',
+  },
+};
+
 /** ADR-405 §4 — discipline visibility multi-toggle (Revit "View Discipline"). */
 const DISCIPLINE_BUTTON: RibbonButton = {
   type: 'widget',
@@ -188,7 +201,7 @@ export const BIM_GRAPHICS_PANEL: RibbonPanelDef = {
     // Visibility/Graphics → DXF only → Disciplines.
     {
       isInFlyout: false,
-      buttons: [VISIBILITY_GRAPHICS_BUTTON, HIDE_BIM_BUTTON, MEP_WIRE_BUTTON, DRAIN_PIPE_BUTTON, COLOR_BY_SYSTEM_BUTTON, REALISTIC_MATERIALS_BUTTON, DISCIPLINE_BUTTON],
+      buttons: [VISIBILITY_GRAPHICS_BUTTON, HIDE_BIM_BUTTON, MEP_WIRE_BUTTON, DRAIN_PIPE_BUTTON, COLOR_BY_SYSTEM_BUTTON, REALISTIC_MATERIALS_BUTTON, HEAT_LOAD_BUTTON, DISCIPLINE_BUTTON],
     },
   ],
 };
