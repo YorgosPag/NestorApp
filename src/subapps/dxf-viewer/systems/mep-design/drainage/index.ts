@@ -41,3 +41,15 @@ export {
   type RoutedSizedRun,
   type SlopedRun,
 } from './slope-assignment';
+
+// ── Slice 2 — preview + commit layer ──────────────────────────────────────────
+export {
+  drainageProposalStore,
+  useDrainageProposal,
+  type DrainageProposalReview,
+} from './drainage-proposal-store';
+export {
+  buildDrainageCommit,
+  type DrainageCommitPlan,
+  type ResolveDrainageSystemName,
+} from './commit/build-drainage-commit';

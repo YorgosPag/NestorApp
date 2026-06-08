@@ -30,6 +30,7 @@ import { MepBoilerGhostPreviewMount, type MepBoilerGhostPreviewMountProps } from
 import { MepWaterHeaterGhostPreviewMount, type MepWaterHeaterGhostPreviewMountProps } from './canvas-layer-stack-mep-water-heater-ghost';
 import { MepSegmentGhostPreviewMount, type MepSegmentGhostPreviewMountProps, type GhostSegmentSpec } from './canvas-layer-stack-mep-segment-ghost';
 import { WaterProposalGhostPreviewMount } from './canvas-layer-stack-water-proposal-ghost';
+import { DrainageProposalGhostPreviewMount } from './canvas-layer-stack-drainage-proposal-ghost';
 import { SlabOpeningGhostPreviewMount, type SlabOpeningGhostPreviewMountProps } from './canvas-layer-stack-slab-opening-ghost';
 import { OpeningGhostPreviewMount, type OpeningGhostPreviewMountProps } from './canvas-layer-stack-opening-ghost';
 import { OpeningTagDragMount } from './canvas-layer-stack-opening-tag-drag';
@@ -443,6 +444,8 @@ export const PreviewCanvasMounts = React.memo(function PreviewCanvasMounts(
       />
       {/* ADR-426 Slice 2 — water auto-design proposal ghost (low-freq store, inert while idle). */}
       <WaterProposalGhostPreviewMount transform={transform} getCanvas={getCanvas} getViewportElement={getViewportElement} />
+      {/* ADR-427 Slice 2 — drainage auto-design proposal ghost (low-freq store, inert while idle). */}
+      <DrainageProposalGhostPreviewMount transform={transform} getCanvas={getCanvas} getViewportElement={getViewportElement} />
       <SlabOpeningGhostPreviewMount {...slabOpeningGhost} transform={transform} getCanvas={getCanvas} getViewportElement={getViewportElement} />
       <OpeningGhostPreviewMount {...openingGhost} transform={transform} getCanvas={getCanvas} getViewportElement={getViewportElement} />
       <GripDimAnnotationMount dragPreview={gripDragPreview} levelManager={levelManager} transform={transform} getCanvas={getCanvas} getViewportElement={getViewportElement} />

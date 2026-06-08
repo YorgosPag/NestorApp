@@ -71,6 +71,10 @@ Mouse Event → DxfCanvas.onMouseMove
 
 ## Changelog
 
+### 2026-06-09 — `DrainageProposalGhost` micro-leaf mounted in `canvas-layer-stack-leaves` (ADR-427 Slice 2, CHECK 6B)
+
+**Status**: IMPLEMENTED 2026-06-09. Νέο read-only ghost preview leaf `canvas-layer-stack-drainage-proposal-ghost.tsx` (mount μέσω `canvas-layer-stack-leaves.tsx`) για το ADR-427 Slice 2 (drainage auto-design proposal). Ίδιο pattern με τα υπάρχοντα MEP segment ghost previews: subscribes ΜΟΝΟ μέσα στο leaf (`drainage-proposal-store` low-frequency proposal store), `pointer-events-none`, self-gated. **Μηδέν νέο `useSyncExternalStore` στον shell** (CHECK 6C respected), μηδέν high-frequency subscription, καμία αλλαγή σε bitmap cache-key. Co-staged για CHECK 6B (`canvas-layer-stack-leaves.tsx`). Λεπτομέρεια στο ADR-427.
+
 ### 2026-06-09 — Read-only 2D overlay group εξαγωγή σε leaf (`CanvasLayerStack2DOverlays`, N.7.1 / CHECK 6B)
 
 **Status**: IMPLEMENTED 2026-06-09. Μετά την προσθήκη του `HydraulicBalancingOverlay` (ADR-422 L4) ο shell `CanvasLayerStack.tsx` έφτασε τις **500 γραμμές** (όριο N.7.1 → CHECK 4 block). Τα 6 read-only, `pointer-events-none` 2D overlays που δέχονται **μόνο** `transform`/`viewport` (`AutoAreaPreviewOverlay`, `RegionPerimeterPreviewOverlay`, `RiserThroughOverlay`, `HeatLoadOverlay`, `PipeSizingOverlay`, `HydraulicBalancingOverlay`) εξάχθηκαν σε νέο thin leaf **`canvas-layer-stack-2d-overlays-leaf.tsx`** (`CanvasLayerStack2DOverlays`). **Καμία αρχιτεκτονική αλλαγή**: το νέο component είναι καθαρό pass-through — δεν προσθέτει `useSyncExternalStore` (κάθε child self-subscribes/self-gates όπως πριν), η σειρά render διατηρείται (z-order αμετάβλητο), το data flow `TransformBridge → Shell → leaf` μένει ίδιο (CHECK 6C respected). Shell πλέον 482 γραμμές. Co-staged για CHECK 6B/6D.
