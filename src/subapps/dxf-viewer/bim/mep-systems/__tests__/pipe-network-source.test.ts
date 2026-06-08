@@ -18,16 +18,20 @@ import {
 import {
   BOILER_SUPPLY_CONNECTOR_ID,
   BOILER_RETURN_CONNECTOR_ID,
-  BOILER_DHW_CONNECTOR_ID,
+  BOILER_DHW_HOT_CONNECTOR_ID,
+  BOILER_DHW_COLD_CONNECTOR_ID,
 } from '../../types/mep-connector-types';
 
-/** A boiler entity with supply (+ optional DHW) out connectors. */
+/** A boiler entity with supply/return (+ optional combi DHW hot-out + cold-in) connectors. */
 function boiler(producesDhw: boolean): PipeNetworkSourceEntity {
   const connectors = [
     { connectorId: BOILER_SUPPLY_CONNECTOR_ID, domain: 'pipe', flow: 'out', localPosition: { x: 225, y: 0, z: 0 }, pipe: { systemClassification: 'hydronic-supply', diameterMm: 22 } },
     { connectorId: BOILER_RETURN_CONNECTOR_ID, domain: 'pipe', flow: 'in', localPosition: { x: -225, y: 0, z: 0 }, pipe: { systemClassification: 'hydronic-return', diameterMm: 22 } },
     ...(producesDhw
-      ? [{ connectorId: BOILER_DHW_CONNECTOR_ID, domain: 'pipe', flow: 'out', localPosition: { x: 225, y: 175, z: 0 }, pipe: { systemClassification: 'domestic-hot-water', diameterMm: 22 } }]
+      ? [
+          { connectorId: BOILER_DHW_HOT_CONNECTOR_ID, domain: 'pipe', flow: 'out', localPosition: { x: 225, y: 175, z: 0 }, pipe: { systemClassification: 'domestic-hot-water', diameterMm: 15 } },
+          { connectorId: BOILER_DHW_COLD_CONNECTOR_ID, domain: 'pipe', flow: 'in', localPosition: { x: -225, y: 175, z: 0 }, pipe: { systemClassification: 'domestic-cold-water', diameterMm: 15 } },
+        ]
       : []),
   ];
   return {
@@ -69,9 +73,9 @@ describe('findPipeNetworkSourceConnectorId', () => {
     );
   });
 
-  it('classification-aware: domestic-hot-water → boiler-dhw (the combi DHW outlet)', () => {
+  it('classification-aware: domestic-hot-water → boiler-dhw-hot (the combi DHW outlet)', () => {
     expect(findPipeNetworkSourceConnectorId(boiler(true), 'domestic-hot-water')).toBe(
-      BOILER_DHW_CONNECTOR_ID,
+      BOILER_DHW_HOT_CONNECTOR_ID,
     );
   });
 

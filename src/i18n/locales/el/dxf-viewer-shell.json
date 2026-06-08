@@ -961,6 +961,7 @@
       "mepRadiatorSizing": "Διαστασιολόγηση",
       "mepRadiatorActions": "Ενέργειες",
       "mepBoilerModel": "Μοντέλο",
+      "mepBoilerDhw": "ΖΝΧ",
       "mepBoilerGeometry": "Γεωμετρία",
       "mepBoilerThermal": "Θερμικά",
       "mepBoilerSizing": "Διαστασιολόγηση",
@@ -2257,8 +2258,7 @@
         "modelId": "Μοντέλο",
         "modelCustom": "Παραμετρικό",
         "producesDhw": "Παραγωγή ΖΝΧ (Combi)",
-        "producesDhwYes": "Ναι",
-        "producesDhwNo": "Όχι",
+        "dhwConnectorDiameter": "Διάμετρος ΖΝΧ",
         "width": "Πλάτος",
         "length": "Βάθος",
         "bodyHeight": "Ύψος σώματος",
@@ -2663,6 +2663,13 @@
         "disable": "Απόκρυψη",
         "tooltipEnable": "Εμφάνιση προτεινόμενης διαμέτρου (DN) + ταχύτητας ανά σωλήνα θέρμανσης (velocity + friction)",
         "tooltipDisable": "Απόκρυψη διαστασιολόγησης σωληνώσεων"
+      },
+      "balancing": {
+        "label": "Υδραυλική Εξισορρόπηση",
+        "enable": "Εμφάνιση",
+        "disable": "Απόκρυψη",
+        "tooltipEnable": "Εμφάνιση πτώσης πίεσης κυκλώματος (ΔP) + απαιτούμενης προρρύθμισης kv balancing valve ανά καλοριφέρ· highlight δυσμενέστερου κυκλώματος (index) + μανομετρικού κυκλοφορητή",
+        "tooltipDisable": "Απόκρυψη υδραυλικής εξισορρόπησης"
       },
       "realisticMaterials": {
         "label": "Ρεαλιστικά Υλικά",

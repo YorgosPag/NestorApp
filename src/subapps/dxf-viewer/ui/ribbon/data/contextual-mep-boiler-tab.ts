@@ -77,6 +77,13 @@ const CONNECTOR_DIAMETER_MM_OPTIONS = [
   { value: '28', labelKey: '28', isLiteralLabel: true },
 ] as const;
 
+// COMBI DHW connector diameter (mm) — tap-water tails, smaller than hydronic (DN15 default).
+const DHW_CONNECTOR_DIAMETER_MM_OPTIONS = [
+  { value: '15', labelKey: '15', isLiteralLabel: true },
+  { value: '18', labelKey: '18', isLiteralLabel: true },
+  { value: '22', labelKey: '22', isLiteralLabel: true },
+] as const;
+
 // Nominal catalogue thermal output (W) — typical residential/commercial boiler range.
 const THERMAL_OUTPUT_W_OPTIONS = [
   { value: '6000',  labelKey: '6000',  isLiteralLabel: true },
@@ -118,16 +125,41 @@ export const CONTEXTUAL_MEP_BOILER_TAB: RibbonTab = {
               },
             },
             {
-              // ADR-408 Εύρος Β (combi) — «Παραγωγή ΖΝΧ» Yes/No. Options supplied by
-              // the bridge at runtime (mirror wall `flip`). «Ναι» → DHW out connector.
-              type: 'combobox',
+              // ADR-408 Εύρος Β (combi) — «Παραγωγή ΖΝΧ» Revit Yes/No toggle. ON →
+              // producesDhw=true → DHW hot outlet + cold inlet connectors seeded (combi
+              // takes cold water, makes hot). Mirror του roof `slopeUnitPercent` toggle.
+              type: 'toggle',
               size: 'small',
               command: {
                 id: 'mepBoiler.producesDhw',
                 labelKey: 'ribbon.commands.mepBoilerEditor.producesDhw',
-                commandKey: MEP_BOILER_RIBBON_KEYS.stringParams.producesDhw,
-                comboboxWidthPx: 110,
-                options: [],
+                commandKey: MEP_BOILER_RIBBON_KEYS.toggles.producesDhw,
+              },
+            },
+          ],
+        },
+      ],
+    },
+    // ADR-408 Εύρος Β (combi) — «ΖΝΧ» panel: εμφανίζεται μόνο όταν ο λέβητας είναι combi
+    // (visibilityKey `combi` → bridge.getPanelVisibility → producesDhw). DHW connector
+    // diameter (hot outlet + cold inlet· typical DN15, smaller than the hydronic tails).
+    {
+      id: 'mep-boiler-dhw',
+      labelKey: 'ribbon.panels.mepBoilerDhw',
+      visibilityKey: MEP_BOILER_RIBBON_VISIBILITY_KEYS.combi,
+      rows: [
+        {
+          isInFlyout: false,
+          buttons: [
+            {
+              type: 'combobox',
+              size: 'small',
+              command: {
+                id: 'mepBoiler.dhwConnectorDiameter',
+                labelKey: 'ribbon.commands.mepBoilerEditor.dhwConnectorDiameter',
+                commandKey: MEP_BOILER_RIBBON_KEYS.params.dhwConnectorDiameter,
+                comboboxWidthPx: 90,
+                options: DHW_CONNECTOR_DIAMETER_MM_OPTIONS,
               },
             },
           ],

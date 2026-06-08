@@ -174,6 +174,19 @@ const PIPE_SIZING_BUTTON: RibbonButton = {
   },
 };
 
+/** ADR-422 L4 — hydraulic-balancing overlay master toggle (Revit "System Inspector"). */
+const BALANCING_BUTTON: RibbonButton = {
+  type: 'widget',
+  size: 'small',
+  widgetId: 'show-balancing-toggle',
+  command: {
+    id: 'view.balancing',
+    labelKey: 'ribbon.commands.balancing.label',
+    icon: '',
+    commandKey: 'show-balancing-toggle',
+  },
+};
+
 /** ADR-405 §4 — discipline visibility multi-toggle (Revit "View Discipline"). */
 const DISCIPLINE_BUTTON: RibbonButton = {
   type: 'widget',
@@ -214,7 +227,7 @@ export const BIM_GRAPHICS_PANEL: RibbonPanelDef = {
     // Visibility/Graphics → DXF only → Disciplines.
     {
       isInFlyout: false,
-      buttons: [VISIBILITY_GRAPHICS_BUTTON, HIDE_BIM_BUTTON, MEP_WIRE_BUTTON, DRAIN_PIPE_BUTTON, COLOR_BY_SYSTEM_BUTTON, REALISTIC_MATERIALS_BUTTON, HEAT_LOAD_BUTTON, PIPE_SIZING_BUTTON, DISCIPLINE_BUTTON],
+      buttons: [VISIBILITY_GRAPHICS_BUTTON, HIDE_BIM_BUTTON, MEP_WIRE_BUTTON, DRAIN_PIPE_BUTTON, COLOR_BY_SYSTEM_BUTTON, REALISTIC_MATERIALS_BUTTON, HEAT_LOAD_BUTTON, PIPE_SIZING_BUTTON, BALANCING_BUTTON, DISCIPLINE_BUTTON],
     },
   ],
 };

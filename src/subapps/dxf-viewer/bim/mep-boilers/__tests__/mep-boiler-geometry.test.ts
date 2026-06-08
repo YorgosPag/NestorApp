@@ -116,36 +116,49 @@ describe('buildBoilerConnectors', () => {
     expect(xs[1]).toBeCloseTo(300, 6);
   });
 
-  // ─── COMBI boiler — DHW hot outlet (ADR-408 Εύρος Β combi) ──────────────────────
+  // ─── COMBI boiler — DHW cold inlet + hot outlet (ADR-408 Εύρος Β combi) ──────────
 
-  it('omits the DHW connector when producesDhw is absent/false (2 connectors)', () => {
+  it('omits the DHW connectors when producesDhw is absent/false (2 connectors)', () => {
     expect(buildBoilerConnectors(params())).toHaveLength(2);
     expect(buildBoilerConnectors(params({ producesDhw: false }))).toHaveLength(2);
-    expect(
-      buildBoilerConnectors(params()).some((c) => c.connectorId === 'boiler-dhw'),
-    ).toBe(false);
+    const ids = buildBoilerConnectors(params()).map((c) => c.connectorId);
+    expect(ids).not.toContain('boiler-dhw-hot');
+    expect(ids).not.toContain('boiler-dhw-cold');
   });
 
-  it('appends a DHW hot outlet when producesDhw (3 connectors, combi)', () => {
+  it('appends BOTH DHW connectors when producesDhw (4 connectors, combi water path)', () => {
     const connectors = buildBoilerConnectors(params({ producesDhw: true }));
-    expect(connectors).toHaveLength(3);
-    const dhw = connectors.find((c) => c.connectorId === 'boiler-dhw')!;
-    expect(dhw.domain).toBe('pipe');
-    expect(dhw.flow).toBe('out');
-    expect(dhw.pipe?.systemClassification).toBe('domestic-hot-water');
-    expect(dhw.pipe?.diameterMm).toBe(22);
+    expect(connectors).toHaveLength(4);
+    const hot = connectors.find((c) => c.connectorId === 'boiler-dhw-hot')!;
+    const cold = connectors.find((c) => c.connectorId === 'boiler-dhw-cold')!;
+    // hot outlet → sources the DHW network.
+    expect(hot.flow).toBe('out');
+    expect(hot.pipe?.systemClassification).toBe('domestic-hot-water');
+    // cold inlet → member of the cold-water network (combi takes cold, makes hot).
+    expect(cold.flow).toBe('in');
+    expect(cold.pipe?.systemClassification).toBe('domestic-cold-water');
   });
 
-  it('places the DHW outlet at +X / +Y, distinct from the supply outlet', () => {
+  it('places DHW hot at +X/+Y and cold at −X/+Y, all four corners distinct', () => {
     const connectors = buildBoilerConnectors(params({ producesDhw: true }));
-    const supply = connectors.find((c) => c.connectorId === 'boiler-supply')!;
-    const dhw = connectors.find((c) => c.connectorId === 'boiler-dhw')!;
-    // width 450 → +half-width 225 ; length 350 → +half-length 175 (mm-scene s=1).
-    expect(dhw.localPosition.x).toBeCloseTo(225, 6);
-    expect(dhw.localPosition.y).toBeCloseTo(175, 6);
-    // never coincides with the supply outlet {x:225, y:0}.
-    const dx = dhw.localPosition.x - supply.localPosition.x;
-    const dy = dhw.localPosition.y - supply.localPosition.y;
-    expect(dx * dx + dy * dy).toBeGreaterThan(0);
+    const hot = connectors.find((c) => c.connectorId === 'boiler-dhw-hot')!;
+    const cold = connectors.find((c) => c.connectorId === 'boiler-dhw-cold')!;
+    // width 450 → ±225 ; length 350 → +175 (mm-scene s=1).
+    expect(hot.localPosition.x).toBeCloseTo(225, 6);
+    expect(hot.localPosition.y).toBeCloseTo(175, 6);
+    expect(cold.localPosition.x).toBeCloseTo(-225, 6);
+    expect(cold.localPosition.y).toBeCloseTo(175, 6);
+    // all four connector positions are distinct.
+    const keys = new Set(connectors.map((c) => `${c.localPosition.x},${c.localPosition.y}`));
+    expect(keys.size).toBe(4);
+  });
+
+  it('uses the dedicated DHW diameter when set, else falls back to connectorDiameterMm', () => {
+    const overridden = buildBoilerConnectors(params({ producesDhw: true, dhwConnectorDiameterMm: 15 }));
+    expect(overridden.find((c) => c.connectorId === 'boiler-dhw-hot')!.pipe?.diameterMm).toBe(15);
+    expect(overridden.find((c) => c.connectorId === 'boiler-dhw-cold')!.pipe?.diameterMm).toBe(15);
+    // fallback: no dhwConnectorDiameterMm → uses the hydronic connectorDiameterMm (22).
+    const fallback = buildBoilerConnectors(params({ producesDhw: true }));
+    expect(fallback.find((c) => c.connectorId === 'boiler-dhw-hot')!.pipe?.diameterMm).toBe(22);
   });
 });
