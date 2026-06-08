@@ -233,6 +233,22 @@ export function createGizmoMeshes(): GizmoMeshSet {
     root.add(visual, hitbox);
   }
 
+  // --- Endpoint shape handles (ADR-408 Φ-D — start/end of a linear MEP segment) -
+  // Reuse the resize square glyph (matches the 2D endpoint square). They start at
+  // the root origin; the overlay repositions them to `(endpointWorld − anchor) /
+  // rootScale` every position/scale refresh (`setEndpointHandles`), so they sit on
+  // the pipe ends at a screen-constant size. Only the centre hitbox is registered
+  // (no symmetric corner-pick — an endpoint is a single draggable node).
+  for (const endpoint of ['start', 'end'] as const) {
+    const { visual, hitbox } = buildResizeHandle(RESIZE_IDLE_COLORS['x']);
+    const id: GizmoHandleId = `endpoint-${endpoint}`;
+    visual.name = `gizmo-${id}`;
+    visuals.set(id, visual);
+    hitboxToId.set(hitbox, id);
+    hitboxes.push(hitbox);
+    root.add(visual, hitbox);
+  }
+
   // --- Center pyramid (orange, on diagonal between axes) --------------------
 
   const centerGroup = buildCenterHandle(GIZMO_COLOR_CENTER);

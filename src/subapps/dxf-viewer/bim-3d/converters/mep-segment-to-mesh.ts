@@ -39,6 +39,33 @@ import { tagMesh } from './bim-three-shape-helpers';
 const MM_TO_M = 0.001;
 
 /**
+ * SSoT for a segment's two axis endpoints in Three.js world space (m, Y-up),
+ * UNTRIMMED (the raw 2-click axis ends — where the Revit shape handles sit). Plan
+ * X,Y are scaled canvas→metres; the per-endpoint elevation (mm) gives the world Y
+ * (the run may slope/rise). plan Y (north) → world −Z. Consumed BOTH by the swept
+ * mesh below AND by the 3D gizmo endpoint handles (ADR-408 Φ-D), so the handle sits
+ * exactly on the pipe end in every scene unit / building datum.
+ */
+export function segmentAxisEndpointsWorld(
+  params: MepSegmentEntity['params'],
+  buildingBaseElevationM = 0,
+): { startW: THREE.Vector3; endW: THREE.Vector3 } {
+  const sceneToM = sceneUnitsToMeters(params.sceneUnits ?? 'mm');
+  const elev = resolveSegmentEndpointElevationsMm(params);
+  const startW = new THREE.Vector3(
+    params.startPoint.x * sceneToM,
+    elev.startMm * MM_TO_M + buildingBaseElevationM,
+    -(params.startPoint.y * sceneToM),
+  );
+  const endW = new THREE.Vector3(
+    params.endPoint.x * sceneToM,
+    elev.endMm * MM_TO_M + buildingBaseElevationM,
+    -(params.endPoint.y * sceneToM),
+  );
+  return { startW, endW };
+}
+
+/**
  * Build a rect cross-section profile (w × h, centred on origin) as a closed
  * CCW polygon in the section-frame (x = width u, y = height v), scaled to
  * metres. Returns at least 4 points.
@@ -83,23 +110,8 @@ export function mepSegmentToMesh(
   buildingBaseElevationM = 0,
   systemColor?: number,
 ): THREE.Mesh | null {
-  const { startPoint, endPoint } = segment.params;
-
-  // ── True 3D endpoints (ADR-408 Φ-A) ────────────────────────────────────────
-  // Plan X,Y are scaled canvas→metres; the per-endpoint elevation (mm) gives the
-  // world Y of each end (the run may slope/rise). plan Y (north) → world −Z.
-  const sceneToM = sceneUnitsToMeters(segment.params.sceneUnits ?? 'mm');
-  const elev = resolveSegmentEndpointElevationsMm(segment.params);
-  const startW = new THREE.Vector3(
-    startPoint.x * sceneToM,
-    elev.startMm * MM_TO_M + buildingBaseElevationM,
-    -(startPoint.y * sceneToM),
-  );
-  const endW = new THREE.Vector3(
-    endPoint.x * sceneToM,
-    elev.endMm * MM_TO_M + buildingBaseElevationM,
-    -(endPoint.y * sceneToM),
-  );
+  // ── True 3D endpoints (ADR-408 Φ-A) — shared SSoT with the gizmo handles (Φ-D). ──
+  const { startW, endW } = segmentAxisEndpointsWorld(segment.params, buildingBaseElevationM);
 
   // ADR-408 Φ11 — shorten the run at any fitting on its ends (metres), so the 3D
   // pipe butts against the elbow/tee body instead of poking through it. Trim is a

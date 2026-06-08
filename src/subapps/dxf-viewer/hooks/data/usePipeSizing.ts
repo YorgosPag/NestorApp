@@ -16,12 +16,11 @@
 
 import { useMemo } from 'react';
 import { useRadiatorSizing } from './useRadiatorSizing';
-import { computePipeMassFlow } from '../../bim/thermal/sizing/pipe-sizing';
 import {
   sizePipeNetwork,
   type PipeSizingMap,
-  type TerminalFlowContribution,
 } from '../../bim/thermal/sizing/pipe-network-sizing';
+import { buildTerminalContributions } from '../../bim/thermal/sizing/terminal-contributions';
 import { VELOCITY_FRICTION_STANDARD } from '../../bim/thermal/sizing/velocity-friction-standard';
 import type { SceneModel } from '../../types/scene';
 
@@ -37,12 +36,7 @@ export function usePipeSizing(
     if (!active || !scene) return EMPTY_SIZING;
 
     // shareW + regime ανά σώμα → μαζική παροχή (kg/s) με το ΔΤ του regime του.
-    const terminals = new Map<string, TerminalFlowContribution>();
-    for (const result of radiatorSizing.values()) {
-      const deltaTK = result.regime.supplyC - result.regime.returnC;
-      const massFlowKgS = computePipeMassFlow({ loadW: result.shareW, deltaTK });
-      terminals.set(result.radiatorId, { massFlowKgS, loadW: result.shareW });
-    }
+    const terminals = buildTerminalContributions(radiatorSizing);
     if (terminals.size === 0) return EMPTY_SIZING;
 
     return sizePipeNetwork({

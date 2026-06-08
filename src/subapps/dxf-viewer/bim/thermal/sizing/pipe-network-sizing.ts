@@ -4,11 +4,9 @@
  * Παίρνει ένα **υπάρχον** δίκτυο θέρμανσης (σωλήνες + πηγές + παροχές τερματικών) και
  * διαστασιολογεί τη διάμετρο κάθε τμήματος. Αλγόριθμος (Revit «Pipe Sizing»):
  *
- *   1. Γράφος: κόμβοι = κοινά άκρα σωλήνων (quantized within join-tolerance),
- *      ακμές = τα `mep-segment`. (Reuse της λογικής `derivePipeNetworks` —
- *      ίδια union-find τοπολογία, αλλά κρατάμε τη δομή κόμβων/ακμών.)
- *   2. Ρίζα ανά component = ο κόμβος πιο κοντά σε connector πηγής (λέβητας/συλλέκτης).
- *      Επειδή τα τερματικά ΔΕΝ είναι segments, ο κλάδος προσαγωγής και ο κλάδος
+ *   1. Γράφος κόμβων/ακμών + components + ρίζες ανά πηγή — από το κοινό
+ *      `./pipe-network-graph` (SSoT τοπολογίας, μοιραζόμενο με το L4 balancing).
+ *   2. Επειδή τα τερματικά ΔΕΝ είναι segments, ο κλάδος προσαγωγής και ο κλάδος
  *      επιστροφής βγαίνουν ΞΕΧΩΡΙΣΤΑ ΔΕΝΤΡΑ → απλό post-order subtree sum (όχι loop).
  *   3. Κάθε τερματικό προσδίδει τη μαζική παροχή του (kg/s) στον κόμβο του· ο κορμός
  *      κουβαλά το άθροισμα των κατάντη → μεγάλο DN· ο κλάδος ένα σώμα → μικρό DN.
@@ -17,23 +15,28 @@
  * ΜΟΝΑΔΕΣ: endpoints/connector θέσεις σε **scene units** (το tol είναι scene-aware)·
  * παροχές kg/s, φορτία W, διάμετροι mm. Pure/idempotent, full unit-testable.
  *
- * @see ./pipe-sizing · ./velocity-friction-standard · ../../mep-systems/mep-pipe-network-derive
+ * @see ./pipe-network-graph (κοινός γράφος) · ./pipe-sizing · ./velocity-friction-standard
  * @see docs/centralized-systems/reference/adrs/ADR-422-bim-heating-mechanical-study.md §3 (L3)
  */
 
 import type { Entity } from '../../../types/entities';
 import { isMepSegmentEntity, isMepRadiatorEntity } from '../../../types/entities';
 import { isPipeNetworkSourceEntity } from '../../mep-systems/pipe-network-source';
-import {
-  getEntityConnectors,
-  getConnectorHostPlanTransform,
-} from '../../mep-systems/connector-access';
-import { connectorWorldPosition } from '../../types/mep-connector-types';
 import { resolvePipeJoinTolerance } from '../../mep-systems/mep-pipe-network-derive';
-import type { MepSegmentEntity } from '../../types/mep-segment-types';
 import { compareStrings } from '@/lib/array-utils';
 import { computePipeVolumeFlow } from './pipe-sizing';
 import type { PipeSizingStandard } from './velocity-friction-standard';
+import {
+  buildGraph,
+  buildAdjacency,
+  computeComponents,
+  resolveComponentRoots,
+  bfsTree,
+  connectorWorldPoints,
+  findNearestNode,
+  type AdjEntry,
+  type GraphPoint,
+} from './pipe-network-graph';
 
 /** Παροχή + φορτίο ενός τερματικού (από τον L2 read-model). */
 export interface TerminalFlowContribution {
@@ -77,91 +80,11 @@ export interface SizePipeNetworkInput {
   readonly tolerance?: number;
 }
 
-interface Pt {
-  x: number;
-  y: number;
-}
-interface SegEdge {
-  readonly segId: string;
-  readonly a: number;
-  readonly b: number;
-}
-
-// ─── Γράφος (κόμβοι + ακμές) ───────────────────────────────────────────────────
-
-/** Βρες/δημιούργησε κόμβο για σημείο εντός tol (linear nearest). */
-function findOrCreateNode(nodes: Pt[], p: Pt, tol2: number): number {
-  for (let i = 0; i < nodes.length; i++) {
-    const dx = nodes[i]!.x - p.x;
-    const dy = nodes[i]!.y - p.y;
-    if (dx * dx + dy * dy <= tol2) return i;
-  }
-  nodes.push({ x: p.x, y: p.y });
-  return nodes.length - 1;
-}
-
-/** Κοντινότερος υπάρχων κόμβος εντός maxDist, αλλιώς -1. */
-function findNearestNode(nodes: readonly Pt[], p: Pt, maxDist2: number): number {
-  let best = -1;
-  let bestD = maxDist2;
-  for (let i = 0; i < nodes.length; i++) {
-    const dx = nodes[i]!.x - p.x;
-    const dy = nodes[i]!.y - p.y;
-    const d = dx * dx + dy * dy;
-    if (d <= bestD) {
-      bestD = d;
-      best = i;
-    }
-  }
-  return best;
-}
-
-/** Χτίσε κόμβους + ακμές από τα pipe segments (ταξινομημένα κατά id). */
-function buildGraph(segments: readonly MepSegmentEntity[], tol: number): {
-  nodes: Pt[];
-  edges: SegEdge[];
-} {
-  const tol2 = tol * tol;
-  const nodes: Pt[] = [];
-  const edges: SegEdge[] = [];
-  for (const seg of segments) {
-    const a = findOrCreateNode(nodes, seg.params.startPoint, tol2);
-    const b = findOrCreateNode(nodes, seg.params.endPoint, tol2);
-    edges.push({ segId: seg.id, a, b });
-  }
-  return { nodes, edges };
-}
-
-/** Adjacency: node → [{segId, to}]. */
-function buildAdjacency(
-  nodeCount: number,
-  edges: readonly SegEdge[],
-): Array<Array<{ segId: string; to: number }>> {
-  const adj: Array<Array<{ segId: string; to: number }>> = Array.from(
-    { length: nodeCount },
-    () => [],
-  );
-  for (const e of edges) {
-    if (e.a === e.b) continue; // degenerate self-loop
-    adj[e.a]!.push({ segId: e.segId, to: e.b });
-    adj[e.b]!.push({ segId: e.segId, to: e.a });
-  }
-  return adj;
-}
-
 // ─── Τερματικά → κόμβοι (μαζική παροχή ανά κόμβο) ────────────────────────────────
-
-/** World θέσεις των connectors ενός host (radiator/source). */
-function connectorWorldPoints(entity: Entity): Pt[] {
-  const t = getConnectorHostPlanTransform(entity);
-  return getEntityConnectors(entity).map((c) =>
-    connectorWorldPosition(c, t.position, t.rotation),
-  );
-}
 
 /** Προσδίδει την παροχή/φορτίο κάθε τερματικού στον κόμβο του (dedupe ανά component). */
 function attachTerminals(
-  nodes: readonly Pt[],
+  nodes: readonly GraphPoint[],
   componentOf: readonly number[],
   radiators: readonly Entity[],
   terminals: ReadonlyMap<string, TerminalFlowContribution>,
@@ -186,51 +109,6 @@ function attachTerminals(
   return { kg, w };
 }
 
-// ─── Components + ρίζες ─────────────────────────────────────────────────────────
-
-/** Union-find σε κόμβους μέσω ακμών → componentOf[node] (root index). */
-function computeComponents(nodeCount: number, edges: readonly SegEdge[]): number[] {
-  const parent = Array.from({ length: nodeCount }, (_, i) => i);
-  const find = (i: number): number => {
-    let r = i;
-    while (parent[r] !== r) r = parent[r]!;
-    while (parent[i] !== r) {
-      const n = parent[i]!;
-      parent[i] = r;
-      i = n;
-    }
-    return r;
-  };
-  for (const e of edges) parent[find(e.a)] = find(e.b);
-  return parent.map((_, i) => find(i));
-}
-
-/**
- * Ρίζα ανά component: ο κόμβος πιο κοντά σε connector πηγής (εντός του component).
- * Fallback (component χωρίς πηγή): ο κόμβος με το μικρότερο index (ντετερμινιστικό).
- */
-function resolveComponentRoots(
-  nodes: readonly Pt[],
-  componentOf: readonly number[],
-  sources: readonly Entity[],
-  maxDist2: number,
-): Map<number, number> {
-  const roots = new Map<number, number>();
-  for (const src of sources) {
-    for (const p of connectorWorldPoints(src)) {
-      const node = findNearestNode(nodes, p, maxDist2);
-      if (node < 0) continue;
-      const comp = componentOf[node]!;
-      if (!roots.has(comp)) roots.set(comp, node);
-    }
-  }
-  for (let i = 0; i < nodes.length; i++) {
-    const comp = componentOf[i]!;
-    if (!roots.has(comp)) roots.set(comp, i);
-  }
-  return roots;
-}
-
 // ─── Subtree walk ────────────────────────────────────────────────────────────
 
 interface WalkAcc {
@@ -239,38 +117,9 @@ interface WalkAcc {
   readonly loopSegs: Set<string>;
 }
 
-/** BFS από τη ρίζα: σειρά επίσκεψης + parent + tree-edge segId ανά κόμβο. */
-function bfsTree(
-  root: number,
-  adj: ReadonlyArray<ReadonlyArray<{ segId: string; to: number }>>,
-): { order: number[]; parent: number[]; edgeSeg: string[]; loopSegs: Set<string> } {
-  const parent = new Array<number>(adj.length).fill(-1);
-  const edgeSeg = new Array<string>(adj.length).fill('');
-  const visited = new Array<boolean>(adj.length).fill(false);
-  const loopSegs = new Set<string>();
-  const order: number[] = [];
-  const queue = [root];
-  visited[root] = true;
-  while (queue.length > 0) {
-    const node = queue.shift()!;
-    order.push(node);
-    for (const { segId, to } of adj[node]!) {
-      if (!visited[to]) {
-        visited[to] = true;
-        parent[to] = node;
-        edgeSeg[to] = segId;
-        queue.push(to);
-      } else if (segId !== edgeSeg[node]) {
-        loopSegs.add(segId); // back-edge (ring closure) — v1 flag
-      }
-    }
-  }
-  return { order, parent, edgeSeg, loopSegs };
-}
-
 /** Post-order accumulation: subtree παροχή ανά tree-edge segment. */
 function accumulateSubtree(
-  tree: { order: number[]; parent: number[]; edgeSeg: string[] },
+  tree: { order: readonly number[]; parent: readonly number[]; edgeSeg: readonly string[] },
   nodeKg: readonly number[],
   nodeW: readonly number[],
   acc: WalkAcc,
@@ -291,7 +140,7 @@ function accumulateSubtree(
 /** Διαστασιολόγησε ένα component (δέντρο) ξεκινώντας από τη ρίζα. */
 function walkComponent(
   root: number,
-  adj: ReadonlyArray<ReadonlyArray<{ segId: string; to: number }>>,
+  adj: ReadonlyArray<ReadonlyArray<AdjEntry>>,
   nodeKg: readonly number[],
   nodeW: readonly number[],
   acc: WalkAcc,
