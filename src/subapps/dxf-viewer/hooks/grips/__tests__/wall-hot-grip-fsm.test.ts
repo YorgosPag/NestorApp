@@ -206,6 +206,33 @@ describe('ADR-408 Φ3 — electrical panel hot-grip kinds (full wall parity)', (
   });
 });
 
+describe('ADR-408 Φ8 — MEP segment hot-grip kinds (axis-based beam parity)', () => {
+  it("mep-segment-midpoint → 'move', mep-segment-rotation → 'rotate'", () => {
+    expect(hotGripOpForKind('mep-segment-midpoint')).toBe('move');
+    expect(hotGripOpForKind('mep-segment-rotation')).toBe('rotate');
+  });
+
+  it('mep-segment start/end/section stay press-drag (null op)', () => {
+    for (const k of ['mep-segment-start', 'mep-segment-end', 'mep-segment-section']) {
+      expect(hotGripOpForKind(k)).toBeNull();
+      expect(isWallHotGripKind(k)).toBe(false);
+    }
+  });
+
+  it('mep-segment midpoint/rotation enter hot-grip on mousedown', () => {
+    expect(resolveHotGripMouseDown('idle', 'mep-segment-midpoint')).toBe('enter');
+    expect(resolveHotGripMouseDown('warm', 'mep-segment-rotation')).toBe('enter');
+  });
+
+  // Regression: hotGripKindOf MUST surface mepSegmentGripKind, else the segment
+  // rotation/move never arms the 6-/3-click FSM and falls back to a wrong-anchor
+  // press-drag that reverts on release.
+  it('hotGripKindOf reads the mepSegmentGripKind discriminator', () => {
+    const seg = { mepSegmentGripKind: 'mep-segment-rotation' } as unknown as UnifiedGripInfo;
+    expect(hotGripKindOf(seg)).toBe('mep-segment-rotation');
+  });
+});
+
 describe('resolveHotGripMouseDown', () => {
   const NON_HOT: UnifiedGripPhase[] = ['idle', 'hovering', 'warm', 'dragging'];
 
