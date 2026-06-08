@@ -117,6 +117,19 @@ export const CONTEXTUAL_MEP_BOILER_TAB: RibbonTab = {
                 options: [],
               },
             },
+            {
+              // ADR-408 Εύρος Β (combi) — «Παραγωγή ΖΝΧ» Yes/No. Options supplied by
+              // the bridge at runtime (mirror wall `flip`). «Ναι» → DHW out connector.
+              type: 'combobox',
+              size: 'small',
+              command: {
+                id: 'mepBoiler.producesDhw',
+                labelKey: 'ribbon.commands.mepBoilerEditor.producesDhw',
+                commandKey: MEP_BOILER_RIBBON_KEYS.stringParams.producesDhw,
+                comboboxWidthPx: 110,
+                options: [],
+              },
+            },
           ],
         },
       ],

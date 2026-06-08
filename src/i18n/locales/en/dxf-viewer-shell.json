@@ -2256,6 +2256,9 @@
       "mepBoilerEditor": {
         "modelId": "Model",
         "modelCustom": "Custom",
+        "producesDhw": "DHW (Combi)",
+        "producesDhwYes": "Yes",
+        "producesDhwNo": "No",
         "width": "Width",
         "length": "Depth",
         "bodyHeight": "Body height",

@@ -37,6 +37,12 @@ export const MEP_BOILER_RIBBON_KEYS = {
    */
   stringParams: {
     modelId: 'mepBoiler.params.modelId',
+    /**
+     * COMBI toggle (ADR-408 Εύρος Β — combi). Yes/No combobox: when «Ναι», the boiler
+     * also produces domestic hot water (a third `domestic-hot-water` out connector is
+     * seeded → it can source a DHW network). Mirrors the wall `flip` Yes/No combobox.
+     */
+    producesDhw: 'mepBoiler.params.producesDhw',
   },
   /**
    * ADR-422 L2 — read-only sizing readouts (Revit «Heating Loads → Equipment»).
@@ -135,18 +141,20 @@ export function isMepBoilerReadoutKey(commandKey: string): commandKey is MepBoil
 
 // ─── String param key guards (model catalog picker) ──────────────────────────
 
-/** The single string commandKey used by the boiler model picker. */
+/** The string commandKeys: model-catalog picker + combi Yes/No selector. */
 export type MepBoilerRibbonStringCommandKey =
-  typeof MEP_BOILER_RIBBON_KEYS.stringParams.modelId;
+  | typeof MEP_BOILER_RIBBON_KEYS.stringParams.modelId
+  | typeof MEP_BOILER_RIBBON_KEYS.stringParams.producesDhw;
 
 export const MEP_BOILER_STRING_KEY_SET: ReadonlySet<string> = new Set<string>([
   MEP_BOILER_RIBBON_KEYS.stringParams.modelId,
+  MEP_BOILER_RIBBON_KEYS.stringParams.producesDhw,
 ]);
 
 /**
- * Returns `true` when `commandKey` is the boiler model-catalog string picker
- * (not a numeric param, not a readout, not an action).
- * Mirror of `isMepRadiatorRibbonStringKey` (ADR-408 Εύρος Β).
+ * Returns `true` when `commandKey` is a boiler string (combobox) param — the
+ * model-catalog picker OR the combi Yes/No selector (not a numeric param, not a
+ * readout, not an action). Mirror of `isMepRadiatorRibbonStringKey` (ADR-408 Εύρος Β).
  */
 export function isMepBoilerRibbonStringKey(commandKey: string): boolean {
   return MEP_BOILER_STRING_KEY_SET.has(commandKey);

@@ -182,6 +182,20 @@ export function useRibbonMepBoilerBridge(
         const kW = (w / 1000).toLocaleString('el-GR', { maximumFractionDigits: 1 });
         return { value: `${kW} kW`, options: [], disabled: true };
       }
+      // ADR-408 Εύρος Β (combi) — «Παραγωγή ΖΝΧ» Yes/No selector. Resolved before the
+      // model-picker branch (both are string keys). Mirror of the wall `flip` Yes/No
+      // combobox; «Ναι» → producesDhw=true → a third DHW out connector is seeded.
+      if (commandKey === MEP_BOILER_RIBBON_KEYS.stringParams.producesDhw) {
+        const boiler = resolveBoiler();
+        if (!boiler) return null;
+        return {
+          value: boiler.params.producesDhw ? 'true' : 'false',
+          options: [
+            { value: 'false', labelKey: 'ribbon.commands.mepBoilerEditor.producesDhwNo', isLiteralLabel: false },
+            { value: 'true', labelKey: 'ribbon.commands.mepBoilerEditor.producesDhwYes', isLiteralLabel: false },
+          ],
+        };
+      }
       // ADR-408 Type Catalog — model picker (string commandKey branch).
       // Returns dynamic options from BOILER_MODEL_CATALOG + the clear («Παραμετρικό»)
       // sentinel. Pattern mirrors the fixture assetId branch (ADR-411).
@@ -218,6 +232,15 @@ export function useRibbonMepBoilerBridge(
 
   const onComboboxChange = useCallback(
     (commandKey: string, value: string): void => {
+      // ADR-408 Εύρος Β (combi) — «Παραγωγή ΖΝΧ» Yes/No selector (string; before the
+      // model-picker + numeric guards). Toggling re-seeds connectors via the command
+      // (applyPatch → buildBoilerConnectors reads producesDhw → adds/removes DHW outlet).
+      if (commandKey === MEP_BOILER_RIBBON_KEYS.stringParams.producesDhw) {
+        const boiler = resolveBoiler();
+        if (!boiler) return;
+        dispatchParams(boiler, { ...boiler.params, producesDhw: value === 'true' });
+        return;
+      }
       // ADR-408 Type Catalog — model picker branch (string; must run before the
       // numeric guard which would otherwise discard it).
       if (isMepBoilerRibbonStringKey(commandKey)) {

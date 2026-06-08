@@ -37,9 +37,17 @@ import type { MepSystemEntity, MepSystemMember } from '../types/mep-system-types
 import {
   SEGMENT_START_CONNECTOR_ID,
   SEGMENT_END_CONNECTOR_ID,
+  connectorWorldPosition,
 } from '../types/mep-connector-types';
 import type { PlumbingSystemClassification } from '../types/mep-connector-types';
-import { isPipeNetworkSourceEntity, findPipeNetworkSourceConnectorId } from './pipe-network-source';
+import {
+  isPipeNetworkSourceEntity,
+  findPipeNetworkSourceConnectorId,
+  sourceOutConnectorClassifications,
+  type PipeNetworkSourceEntity,
+} from './pipe-network-source';
+import { getEntityConnectors } from './connector-access';
+import { resolvePipeJoinTolerance } from './mep-pipe-network-derive';
 import {
   computeReassignRemovals,
   memberKey,
@@ -101,6 +109,39 @@ function selectedPipeSegments(selected: readonly Entity[]): MepSegmentEntity[] {
 }
 
 /**
+ * For a COMBI source (≥2 distinct outgoing classifications) infer WHICH network the
+ * user intends FROM GEOMETRY: the classification of the source out-connector that a
+ * selected pipe endpoint physically touches (Revit — "the pipe is wired to a connector
+ * and the network inherits that connector's System Classification"). A combi boiler
+ * sources both `hydronic-supply` and `domestic-hot-water`; the connector the pipe is
+ * snapped to tells us which one. Returns `null` when no selected pipe touches any
+ * outgoing connector yet (caller falls back to the source's owned classification).
+ */
+function inferTargetClassificationByGeometry(
+  source: PipeNetworkSourceEntity,
+  pipes: readonly MepSegmentEntity[],
+  tolerance: number,
+): PlumbingSystemClassification | null {
+  const outs = getEntityConnectors(source).filter(
+    (c) => c.flow === 'out' && c.pipe?.systemClassification,
+  );
+  if (outs.length === 0 || pipes.length === 0) return null;
+  const tol2 = tolerance * tolerance;
+  const { position, rotation } = source.params;
+  for (const c of outs) {
+    const w = connectorWorldPosition(c, position, rotation);
+    for (const p of pipes) {
+      for (const end of [p.params.startPoint, p.params.endPoint]) {
+        const dx = end.x - w.x;
+        const dy = end.y - w.y;
+        if (dx * dx + dy * dy <= tol2) return c.pipe!.systemClassification!;
+      }
+    }
+  }
+  return null;
+}
+
+/**
  * Resolve a pipe network from the selected entities. Requires **exactly one**
  * pipe-network source — a manifold (συλλέκτης) OR a boiler (λέβητας), via the SSoT
  * `isPipeNetworkSourceEntity` guard — and **≥1 pipe segment** (members). Returns the
@@ -115,17 +156,30 @@ export function resolvePipeNetworkFromSelection(
   if (sources.length > 1) return { ok: false, reason: 'multiple-sources' };
 
   const source = sources[0]!;
-  // Inherit the source's hydraulic classification (ύδρευση/θέρμανση); a boiler
-  // defaults to hydronic-supply, a pre-heating manifold carries none ⇒
-  // domestic-cold-water (back-compat).
-  const systemClassification: PlumbingSystemClassification =
+  const pipes = selectedPipeSegments(selected);
+
+  // Determine the target hydraulic classification (ύδρευση/θέρμανση):
+  //   - Single-outlet source (manifold / water heater / plain boiler): inherit the
+  //     source's owned classification — a boiler defaults to hydronic-supply, a
+  //     pre-heating manifold carries none ⇒ domestic-cold-water (back-compat, unchanged).
+  //   - COMBI source (≥2 distinct outgoing classifications, e.g. a combi boiler that
+  //     sources BOTH hydronic-supply AND domestic-hot-water): infer WHICH network the
+  //     user means from geometry — the classification of the outgoing connector a
+  //     selected pipe is wired to (Revit). Fall back to the owned classification when no
+  //     pipe touches an outlet yet.
+  const ownedClassification: PlumbingSystemClassification =
     source.params.systemClassification ?? 'domestic-cold-water';
+  const systemClassification: PlumbingSystemClassification =
+    sourceOutConnectorClassifications(source).size > 1
+      ? inferTargetClassificationByGeometry(source, pipes, resolvePipeJoinTolerance(selected))
+        ?? ownedClassification
+      : ownedClassification;
 
   // Members = both endpoints of each selected pipe + the matching water connector of
   // each selected sanitary fixture (Revit Plumbing Fixture joins the supply network
   // through its cold/hot inlet of the network's classification).
   const members: MepSystemMember[] = [
-    ...selectedPipeSegments(selected).flatMap(pipeSegmentMembers),
+    ...pipes.flatMap(pipeSegmentMembers),
     ...selected
       .filter(isMepFixtureEntity)
       .flatMap((f) => fixtureMembersForClassification(f, systemClassification)),
@@ -136,7 +190,7 @@ export function resolvePipeNetworkFromSelection(
     ok: true,
     draft: {
       sourceEntityId: source.id,
-      sourceConnectorId: findPipeNetworkSourceConnectorId(source),
+      sourceConnectorId: findPipeNetworkSourceConnectorId(source, systemClassification),
       systemClassification,
       members,
       reassignRemovals: computeReassignRemovals(members, existingSystems),

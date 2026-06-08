@@ -2256,6 +2256,9 @@
       "mepBoilerEditor": {
         "modelId": "Μοντέλο",
         "modelCustom": "Παραμετρικό",
+        "producesDhw": "Παραγωγή ΖΝΧ (Combi)",
+        "producesDhwYes": "Ναι",
+        "producesDhwNo": "Όχι",
         "width": "Πλάτος",
         "length": "Βάθος",
         "bodyHeight": "Ύψος σώματος",
