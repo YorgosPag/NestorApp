@@ -57,13 +57,15 @@ export type PipeDragXform =
 
 /** mm → scene/canvas units for an entity's drawing (mm→1, cm→0.1, m→0.001). */
 function entityMmScale(entity: Entity): number {
-  const units = (entity.params as { sceneUnits?: SceneUnits }).sceneUnits ?? 'mm';
+  const units = (entity as { params?: { sceneUnits?: SceneUnits } }).params?.sceneUnits ?? 'mm';
   return mmToSceneUnits(units);
 }
 
 /** Extract `params` from a rotate/move geometry patch, or null. */
-function paramsOf(patch: { params?: unknown } | null): unknown | null {
-  return patch && 'params' in patch ? (patch.params ?? null) : null;
+function paramsOf(patch: unknown): unknown | null {
+  return patch && typeof patch === 'object' && 'params' in patch
+    ? ((patch as { params?: unknown }).params ?? null)
+    : null;
 }
 
 /**
@@ -84,8 +86,8 @@ function liveNextParams(entity: Entity, xform: PipeDragXform, mmScale: number): 
   const dzMm = d.z; // elevation stays mm
   if (planDx * planDx + planDy * planDy < PLAN_EPS2 && dzMm !== 0) {
     if (isMepSegmentEntity(entity)) return computeMepSegmentVerticalMove(entity.params, dzMm);
-    const params = entity.params as { mountingElevationMm?: number };
-    return typeof params.mountingElevationMm === 'number'
+    const params = (entity as { params?: { mountingElevationMm?: number } }).params;
+    return params && typeof params.mountingElevationMm === 'number'
       ? computeMepHostVerticalMove(params as { mountingElevationMm: number }, dzMm)
       : null;
   }

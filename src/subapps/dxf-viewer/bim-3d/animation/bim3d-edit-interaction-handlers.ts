@@ -42,6 +42,8 @@ import {
 } from './bim3d-preview-rebuild';
 // ADR-408 Φ7 P2 — host move → live circuit-wire re-route (mirror of the ADR-401 wall path).
 import { affectedWireSystemIds, buildCircuitWirePreviewObjects } from './bim3d-wire-preview-rebuild';
+// ADR-408 Φ-C — host/pipe move/rotate/vertical → live connected-pipe stretch.
+import { connectedPipeSegmentIds, buildPipeFollowPreviewObjects } from './bim3d-pipe-follow-preview-rebuild';
 // ADR-401 — host move → attached wall re-clip: find the dependent walls (reverse SSoT).
 import { findAttachedWalls } from '../../bim/cascade/bim-cascade-resolver';
 import { useBim3DEntitiesStore } from '../stores/Bim3DEntitiesStore';
@@ -105,6 +107,8 @@ export function onEditPointerDown(ctx: EditInteractionCtx, e: PointerEvent): voi
     // ADR-408 Φ7 P2/P2b — a wired fixture/panel re-routes its circuit conduit live on
     // BOTH move and plan-rotate (the resolver applies either gizmo transform per frame).
     captureCircuitWires(ctx, ids);
+    // ADR-408 Φ-C — a fixture/manifold/pipe drags its connected pipe ends live (stretch).
+    captureConnectedPipes(ctx, ids);
   }
   e.preventDefault();
   e.stopPropagation();
@@ -136,6 +140,28 @@ function captureCircuitWires(ctx: EditInteractionCtx, ids: readonly string[]): v
   const systemIds = affectedWireSystemIds(new Set(ids));
   if (systemIds.length > 0) {
     ctx.preview.captureWires(ctx.manager.bimLayer.group, systemIds);
+  }
+}
+
+/** The full entity list of the edited entities' floor (for the connected-pipe resolver). */
+function sceneEntitiesForEdit(ctx: EditInteractionCtx): readonly Entity[] {
+  const levels = ctx.getLevels();
+  const ids = useBim3DEditStore.getState().editEntityIds;
+  if (!levels || ids.length === 0) return [];
+  const levelId = resolveEntityLevelId(levels, ids[0]) ?? levels.currentLevelId;
+  if (!levelId) return [];
+  return levels.getLevelScene(levelId)?.entities ?? [];
+}
+
+/**
+ * ADR-408 Φ-C — capture the pipe segments connected to the dragged MEP entities so
+ * their ends STRETCH live (host/pipe move/rotate/vertical → snapped ends follow).
+ * No connected pipe → no-op (fast path: the drag stays a plain rigid mesh transform).
+ */
+function captureConnectedPipes(ctx: EditInteractionCtx, ids: readonly string[]): void {
+  const segmentIds = connectedPipeSegmentIds(new Set(ids), sceneEntitiesForEdit(ctx));
+  if (segmentIds.length > 0) {
+    ctx.preview.capturePipes(ctx.manager.bimLayer.group, segmentIds);
   }
 }
 
@@ -267,6 +293,17 @@ function applyLivePreview(ctx: EditInteractionCtx): void {
       const draggedIds = new Set(useBim3DEditStore.getState().editEntityIds);
       ctx.preview.applyWires(buildCircuitWirePreviewObjects(draggedIds, { kind: 'move', translation: t }));
     }
+    // ADR-408 Φ-C — stretch the captured connected pipes with the dragged MEP entity
+    // at the preview position (`t` carries plan + vertical). Same resolver SSoT as commit.
+    if (ctx.preview.connectedPipeSegmentIds.length > 0) {
+      ctx.preview.applyPipes(
+        buildPipeFollowPreviewObjects(
+          new Set(useBim3DEditStore.getState().editEntityIds),
+          { kind: 'move', translation: t },
+          sceneEntitiesForEdit(ctx),
+        ),
+      );
+    }
     return;
   }
   if (live.kind === 'rotate') {
@@ -277,6 +314,16 @@ function applyLivePreview(ctx: EditInteractionCtx): void {
       const draggedIds = new Set(useBim3DEditStore.getState().editEntityIds);
       ctx.preview.applyWires(
         buildCircuitWirePreviewObjects(draggedIds, { kind: 'rotate', pivot: live.pivot, angleRad: live.angleRad }),
+      );
+    }
+    // ADR-408 Φ-C — stretch the captured connected pipes as the dragged MEP entity orbits.
+    if (ctx.preview.connectedPipeSegmentIds.length > 0) {
+      ctx.preview.applyPipes(
+        buildPipeFollowPreviewObjects(
+          new Set(useBim3DEditStore.getState().editEntityIds),
+          { kind: 'rotate', pivot: live.pivot, angleRad: live.angleRad },
+          sceneEntitiesForEdit(ctx),
+        ),
       );
     }
     return;
