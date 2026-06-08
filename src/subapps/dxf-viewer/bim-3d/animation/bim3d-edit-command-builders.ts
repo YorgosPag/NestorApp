@@ -26,6 +26,11 @@ import { createSceneManagerAdapter } from '../../hooks/grips/grip-commit-adapter
 import { MoveEntityCommand, MoveMultipleEntitiesCommand } from '../../core/commands/entity-commands/MoveEntityCommand';
 import { RotateEntityCommand } from '../../core/commands/entity-commands/RotateEntityCommand';
 import { UpdateMepSegmentParamsCommand } from '../../core/commands/entity-commands/UpdateMepSegmentParamsCommand';
+import { UpdateMepFixtureParamsCommand } from '../../core/commands/entity-commands/UpdateMepFixtureParamsCommand';
+import { UpdateMepManifoldParamsCommand } from '../../core/commands/entity-commands/UpdateMepManifoldParamsCommand';
+import { UpdateMepRadiatorParamsCommand } from '../../core/commands/entity-commands/UpdateMepRadiatorParamsCommand';
+import { UpdateMepBoilerParamsCommand } from '../../core/commands/entity-commands/UpdateMepBoilerParamsCommand';
+import { UpdateMepWaterHeaterParamsCommand } from '../../core/commands/entity-commands/UpdateMepWaterHeaterParamsCommand';
 import { calculateBimRotatedGeometry } from '../../bim/transforms/bim-rotate-geometry';
 import { calculateBimMovedGeometry } from '../../bim/utils/bim-move-geometry';
 import { isMepConnectorHost } from '../../bim/mep-systems/connector-access';
@@ -62,6 +67,8 @@ import {
   computeBeamVerticalMove,
   computeSlabVerticalMove,
   computeStairVerticalMove,
+  computeMepHostVerticalMove,
+  computeMepSegmentVerticalMove,
 } from '../gizmo/bim3d-vertical-move';
 import type { BridgeOutcome } from '../gizmo/bim-gizmo-drag-bridge';
 import type { LevelsHookReturn } from '../../systems/levels/useLevels';
@@ -76,6 +83,13 @@ export type EditCommand =
   | UpdateBeamParamsCommand
   | UpdateSlabParamsCommand
   | UpdateStairParamsCommand
+  // ADR-408 Φ-C — MEP rotate / vertical-move route through per-type Update commands.
+  | UpdateMepSegmentParamsCommand
+  | UpdateMepFixtureParamsCommand
+  | UpdateMepManifoldParamsCommand
+  | UpdateMepRadiatorParamsCommand
+  | UpdateMepBoilerParamsCommand
+  | UpdateMepWaterHeaterParamsCommand
   // ADR-402 — multi-select vertical move batches per-entity elevation edits.
   | CompoundCommand;
 export type SceneManager = NonNullable<ReturnType<typeof createSceneManagerAdapter>>;
@@ -282,17 +296,25 @@ function buildResizeCommand(outcome: ResizeOutcome, c: CommandBuildCtx): EditCom
 function buildVerticalMoveCommand(deltaUpMm: number, c: CommandBuildCtx): EditCommand | null {
   const scene = c.levels.getLevelScene(c.levelId);
   if (!scene) return null;
+  const entities = scene.entities;
+  let base: EditCommand | null;
   if (c.entityIds.length <= 1) {
-    const entity = scene.entities.find((e) => e.id === c.entityId);
-    return entity ? verticalCommandForEntity(entity, deltaUpMm, c.sm) : null;
+    const entity = entities.find((e) => e.id === c.entityId);
+    base = entity ? verticalCommandForEntity(entity, deltaUpMm, c.sm) : null;
+  } else {
+    const commands: EditCommand[] = [];
+    for (const id of c.entityIds) {
+      const entity = entities.find((e) => e.id === id);
+      const cmd = entity ? verticalCommandForEntity(entity, deltaUpMm, c.sm) : null;
+      if (cmd) commands.push(cmd);
+    }
+    base = commands.length > 0 ? new CompoundCommand(`Vertical Move (${commands.length})`, commands) : null;
   }
-  const commands: EditCommand[] = [];
-  for (const id of c.entityIds) {
-    const entity = scene.entities.find((e) => e.id === id);
-    const cmd = entity ? verticalCommandForEntity(entity, deltaUpMm, c.sm) : null;
-    if (cmd) commands.push(cmd);
-  }
-  return commands.length > 0 ? new CompoundCommand(`Vertical Move (${commands.length})`, commands) : null;
+  if (!base) return null;
+  // ADR-408 Φ-C — pipes snapped to a vertically-moved MEP entity follow its Z in one undo.
+  return withConnectedPipeFollow(base, c.entityIds, entities, c.sm, (e) =>
+    mepVerticalNextParams(e, deltaUpMm),
+  );
 }
 
 /** One element → its per-type elevation `Update*ParamsCommand` (null = no-op / unsupported type). */
@@ -318,6 +340,55 @@ function verticalCommandForEntity(entity: Entity, deltaUpMm: number, sm: SceneMa
   if (entity.type === 'stair') {
     const next = computeStairVerticalMove(entity, deltaUpMm);
     return next ? new UpdateStairParamsCommand(entity.id, next, entity.params, sm, false) : null;
+  }
+  // ADR-408 Φ-C (3D gizmo) — MEP entities (point hosts + pipe) shift their elevation.
+  return mepVerticalCommand(entity, deltaUpMm, sm);
+}
+
+/**
+ * ADR-408 Φ-C — vertical (axis-Y) move command for an MEP entity. Point hosts bump
+ * `mountingElevationMm`; a pipe shifts both endpoint z's. Each routes through its own
+ * `Update*ParamsCommand` (geometry recomputed atomically). `null` = non-MEP / no-op.
+ */
+function mepVerticalCommand(entity: Entity, deltaUpMm: number, sm: SceneManager): EditCommand | null {
+  if (entity.type === 'mep-segment') {
+    const next = computeMepSegmentVerticalMove(entity.params, deltaUpMm);
+    return next ? new UpdateMepSegmentParamsCommand(entity.id, next, entity.params, sm, false) : null;
+  }
+  if (entity.type === 'mep-fixture') {
+    const next = computeMepHostVerticalMove(entity.params, deltaUpMm);
+    return next ? new UpdateMepFixtureParamsCommand(entity.id, next, entity.params, sm, false) : null;
+  }
+  if (entity.type === 'mep-manifold') {
+    const next = computeMepHostVerticalMove(entity.params, deltaUpMm);
+    return next ? new UpdateMepManifoldParamsCommand(entity.id, next, entity.params, sm, false) : null;
+  }
+  if (entity.type === 'mep-radiator') {
+    const next = computeMepHostVerticalMove(entity.params, deltaUpMm);
+    return next ? new UpdateMepRadiatorParamsCommand(entity.id, next, entity.params, sm, false) : null;
+  }
+  if (entity.type === 'mep-boiler') {
+    const next = computeMepHostVerticalMove(entity.params, deltaUpMm);
+    return next ? new UpdateMepBoilerParamsCommand(entity.id, next, entity.params, sm, false) : null;
+  }
+  if (entity.type === 'mep-water-heater') {
+    const next = computeMepHostVerticalMove(entity.params, deltaUpMm);
+    return next ? new UpdateMepWaterHeaterParamsCommand(entity.id, next, entity.params, sm, false) : null;
+  }
+  return null;
+}
+
+/** Next params for an MEP entity's vertical move (for the connectivity follow). */
+function mepVerticalNextParams(entity: Entity, deltaUpMm: number): unknown | null {
+  if (entity.type === 'mep-segment') return computeMepSegmentVerticalMove(entity.params, deltaUpMm);
+  if (
+    entity.type === 'mep-fixture' ||
+    entity.type === 'mep-manifold' ||
+    entity.type === 'mep-radiator' ||
+    entity.type === 'mep-boiler' ||
+    entity.type === 'mep-water-heater'
+  ) {
+    return computeMepHostVerticalMove(entity.params, deltaUpMm);
   }
   return null;
 }

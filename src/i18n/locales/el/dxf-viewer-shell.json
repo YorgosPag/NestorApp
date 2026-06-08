@@ -960,6 +960,7 @@
       "mepRadiatorThermal": "Θερμικά",
       "mepRadiatorSizing": "Διαστασιολόγηση",
       "mepRadiatorActions": "Ενέργειες",
+      "mepBoilerModel": "Μοντέλο",
       "mepBoilerGeometry": "Γεωμετρία",
       "mepBoilerThermal": "Θερμικά",
       "mepBoilerSizing": "Διαστασιολόγηση",
@@ -2253,6 +2254,8 @@
         "deleteConfirm": "Διαγραφή καλοριφέρ; Η ενέργεια δεν μπορεί να αναιρεθεί."
       },
       "mepBoilerEditor": {
+        "modelId": "Μοντέλο",
+        "modelCustom": "Παραμετρικό",
         "width": "Πλάτος",
         "length": "Βάθος",
         "bodyHeight": "Ύψος σώματος",

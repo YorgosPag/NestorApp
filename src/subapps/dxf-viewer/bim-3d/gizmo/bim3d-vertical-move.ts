@@ -70,3 +70,38 @@ export function computeStairVerticalMove(entity: StairEntity, deltaUpMm: number)
     basePoint: { ...params.basePoint, z: params.basePoint.z + deltaUnits },
   };
 }
+
+/**
+ * ADR-408 Φ-C (3D gizmo) — point-based MEP host (fixture / manifold / radiator /
+ * boiler / water-heater) vertical move → `mountingElevationMm += Δ` (raw mm). The
+ * whole body + its connectors shift up; connected pipes follow via the connectivity
+ * resolver. Generic over the host params (all carry `mountingElevationMm`).
+ */
+export function computeMepHostVerticalMove<P extends { mountingElevationMm: number }>(
+  params: P,
+  deltaUpMm: number,
+): P | null {
+  if (deltaUpMm === 0) return null;
+  return { ...params, mountingElevationMm: params.mountingElevationMm + deltaUpMm };
+}
+
+/**
+ * ADR-408 Φ-C (3D gizmo) — MEP segment (pipe) vertical move → both endpoint z's
+ * shift by Δ (raw mm; the per-endpoint elevation SSoT is in mm), `centerlineElevationMm`
+ * re-derived. A sloped run keeps its slope (both ends move equally).
+ */
+export function computeMepSegmentVerticalMove(
+  params: MepSegmentParams,
+  deltaUpMm: number,
+): MepSegmentParams | null {
+  if (deltaUpMm === 0) return null;
+  const elev = resolveSegmentEndpointElevationsMm(params);
+  const startZ = elev.startMm + deltaUpMm;
+  const endZ = elev.endMm + deltaUpMm;
+  return {
+    ...params,
+    startPoint: { ...params.startPoint, z: startZ },
+    endPoint: { ...params.endPoint, z: endZ },
+    centerlineElevationMm: deriveCenterlineElevationMm(startZ, endZ),
+  };
+}

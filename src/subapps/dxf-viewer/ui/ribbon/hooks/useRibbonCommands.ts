@@ -25,7 +25,7 @@ import { isMepManifoldPanelVisibilityKey } from './useRibbonMepManifoldBridge';
 import { isMepManifoldRibbonKey, isMepManifoldActionKey, isMepManifoldClassificationKey } from './bridge/mep-manifold-command-keys';
 import { isMepRadiatorRibbonKey, isMepRadiatorRibbonStringKey, isMepRadiatorRibbonReadoutKey, isMepRadiatorActionKey } from './bridge/mep-radiator-command-keys';
 import { isMepBoilerPanelVisibilityKey } from './useRibbonMepBoilerBridge';
-import { isMepBoilerRibbonKey, isMepBoilerReadoutKey, isMepBoilerActionKey } from './bridge/mep-boiler-command-keys';
+import { isMepBoilerRibbonKey, isMepBoilerRibbonStringKey, isMepBoilerReadoutKey, isMepBoilerActionKey } from './bridge/mep-boiler-command-keys';
 import { isMepWaterHeaterPanelVisibilityKey } from './useRibbonMepWaterHeaterBridge';
 import { isMepWaterHeaterRibbonKey, isMepWaterHeaterActionKey } from './bridge/mep-water-heater-command-keys';
 import { isMepUnderfloorPanelVisibilityKey } from './useRibbonMepUnderfloorBridge';
@@ -166,7 +166,7 @@ export function useRibbonCommands({
         mepRadiatorBridge.onComboboxChange(key, value);
         return;
       }
-      if (isMepBoilerRibbonKey(key)) {
+      if (isMepBoilerRibbonKey(key) || isMepBoilerRibbonStringKey(key)) {
         mepBoilerBridge.onComboboxChange(key, value);
         return;
       }
@@ -233,7 +233,7 @@ export function useRibbonCommands({
       if (isMepFixtureRibbonKey(key) || isMepFixtureRibbonStringKey(key)) return mepFixtureBridge.getComboboxState(key);
       if (isMepManifoldRibbonKey(key) || isMepManifoldClassificationKey(key)) return mepManifoldBridge.getComboboxState(key);
       if (isMepRadiatorRibbonKey(key) || isMepRadiatorRibbonStringKey(key) || isMepRadiatorRibbonReadoutKey(key)) return mepRadiatorBridge.getComboboxState(key);
-      if (isMepBoilerRibbonKey(key) || isMepBoilerReadoutKey(key)) return mepBoilerBridge.getComboboxState(key);
+      if (isMepBoilerRibbonKey(key) || isMepBoilerRibbonStringKey(key) || isMepBoilerReadoutKey(key)) return mepBoilerBridge.getComboboxState(key);
       if (isMepWaterHeaterRibbonKey(key)) return mepWaterHeaterBridge.getComboboxState(key);
       if (isMepUnderfloorRibbonKey(key)) return mepUnderfloorBridge.getComboboxState(key);
       if (isMepSegmentRibbonKey(key) || isMepSegmentRibbonStringKey(key)) return mepSegmentBridge.getComboboxState(key);

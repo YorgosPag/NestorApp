@@ -21,6 +21,8 @@ import {
 import { UpdateMepBoilerParamsCommand } from '../../../../core/commands/entity-commands/UpdateMepBoilerParamsCommand';
 import { EventBus } from '../../../../systems/events/EventBus';
 import { resetGlobalCommandHistory } from '../../../../core/commands';
+import { SELECT_CLEAR_VALUE } from '@/config/domain-constants';
+import { resolveBoilerModel } from '../../../../bim/mep-boilers/boiler-model-catalog';
 
 // Απομόνωση του command — αποφυγή geometry/validation υπολογισμών.
 jest.mock(
@@ -236,6 +238,145 @@ describe('useRibbonMepBoilerBridge — onComboboxChange', () => {
       }),
     );
     act(() => result.current.onComboboxChange('mepRadiator.params.width', '600'));
+    expect((UpdateMepBoilerParamsCommand as jest.Mock).mock.calls.length).toBe(0);
+  });
+});
+
+// ─── Model picker (Type Catalog) ─────────────────────────────────────────────
+
+describe('useRibbonMepBoilerBridge — model catalog picker', () => {
+  const MODEL_KEY = MEP_BOILER_RIBBON_KEYS.stringParams.modelId;
+
+  it('getComboboxState returns the current modelId when one is set', () => {
+    const boilerWithModel = {
+      ...boiler,
+      params: { ...boiler.params, modelId: 'gas-condensing-24' },
+    };
+    const { result } = renderHook(() =>
+      useRibbonMepBoilerBridge({
+        levelManager: makeLevelManager(boilerWithModel),
+        universalSelection: makeSelection('boiler-1'),
+      }),
+    );
+    const state = result.current.getComboboxState(MODEL_KEY);
+    expect(state?.value).toBe('gas-condensing-24');
+  });
+
+  it('getComboboxState returns the clear sentinel when no model is set', () => {
+    const { result } = renderHook(() =>
+      useRibbonMepBoilerBridge({
+        levelManager: makeLevelManager(boiler),
+        universalSelection: makeSelection('boiler-1'),
+      }),
+    );
+    const state = result.current.getComboboxState(MODEL_KEY);
+    expect(state?.value).toBe(SELECT_CLEAR_VALUE);
+  });
+
+  it('getComboboxState returns a non-empty options list with the clear option first', () => {
+    const { result } = renderHook(() =>
+      useRibbonMepBoilerBridge({
+        levelManager: makeLevelManager(boiler),
+        universalSelection: makeSelection('boiler-1'),
+      }),
+    );
+    const state = result.current.getComboboxState(MODEL_KEY);
+    expect(state?.options.length).toBeGreaterThan(1);
+    expect(state?.options[0].value).toBe(SELECT_CLEAR_VALUE);
+  });
+
+  it('getComboboxState returns null when no entity is selected', () => {
+    const { result } = renderHook(() =>
+      useRibbonMepBoilerBridge({
+        levelManager: makeLevelManager(null),
+        universalSelection: makeSelection(null),
+      }),
+    );
+    expect(result.current.getComboboxState(MODEL_KEY)).toBeNull();
+  });
+
+  it('picking a catalog id dispatches UpdateMepBoilerParamsCommand with correct thermalOutputW', () => {
+    const preset = resolveBoilerModel('gas-condensing-24')!;
+    const { result } = renderHook(() =>
+      useRibbonMepBoilerBridge({
+        levelManager: makeLevelManager(boiler),
+        universalSelection: makeSelection('boiler-1'),
+      }),
+    );
+    act(() => result.current.onComboboxChange(MODEL_KEY, 'gas-condensing-24'));
+    const next = (UpdateMepBoilerParamsCommand as jest.Mock).mock.calls[0]?.[1];
+    expect(next.thermalOutputW).toBe(preset.thermalOutputW);
+  });
+
+  it('picking a catalog id writes the correct dimensions', () => {
+    const preset = resolveBoilerModel('gas-condensing-24')!;
+    const { result } = renderHook(() =>
+      useRibbonMepBoilerBridge({
+        levelManager: makeLevelManager(boiler),
+        universalSelection: makeSelection('boiler-1'),
+      }),
+    );
+    act(() => result.current.onComboboxChange(MODEL_KEY, 'gas-condensing-24'));
+    const next = (UpdateMepBoilerParamsCommand as jest.Mock).mock.calls[0]?.[1];
+    expect(next.width).toBe(preset.widthMm);
+    expect(next.length).toBe(preset.depthMm);
+    expect(next.bodyHeightMm).toBe(preset.bodyHeightMm);
+    expect(next.connectorDiameterMm).toBe(preset.connectorDiameterMm);
+    expect(next.modelId).toBe('gas-condensing-24');
+  });
+
+  it('picking a catalog id sets fuelType', () => {
+    const { result } = renderHook(() =>
+      useRibbonMepBoilerBridge({
+        levelManager: makeLevelManager(boiler),
+        universalSelection: makeSelection('boiler-1'),
+      }),
+    );
+    act(() => result.current.onComboboxChange(MODEL_KEY, 'gas-condensing-24'));
+    const next = (UpdateMepBoilerParamsCommand as jest.Mock).mock.calls[0]?.[1];
+    expect(next.fuelType).toBe('gas');
+  });
+
+  it('picking the clear sentinel dispatches params with modelId undefined', () => {
+    const boilerWithModel = {
+      ...boiler,
+      params: { ...boiler.params, modelId: 'gas-condensing-24', fuelType: 'gas' as const },
+    };
+    const { result } = renderHook(() =>
+      useRibbonMepBoilerBridge({
+        levelManager: makeLevelManager(boilerWithModel),
+        universalSelection: makeSelection('boiler-1'),
+      }),
+    );
+    act(() => result.current.onComboboxChange(MODEL_KEY, SELECT_CLEAR_VALUE));
+    const next = (UpdateMepBoilerParamsCommand as jest.Mock).mock.calls[0]?.[1];
+    expect(next.modelId).toBeUndefined();
+  });
+
+  it('picking the clear sentinel dispatches params with fuelType undefined', () => {
+    const boilerWithModel = {
+      ...boiler,
+      params: { ...boiler.params, modelId: 'oil-floor-30', fuelType: 'oil' as const },
+    };
+    const { result } = renderHook(() =>
+      useRibbonMepBoilerBridge({
+        levelManager: makeLevelManager(boilerWithModel),
+        universalSelection: makeSelection('boiler-1'),
+      }),
+    );
+    act(() => result.current.onComboboxChange(MODEL_KEY, SELECT_CLEAR_VALUE));
+    const next = (UpdateMepBoilerParamsCommand as jest.Mock).mock.calls[0]?.[1];
+    expect(next.fuelType).toBeUndefined();
+  });
+
+  it('picking an unknown id dispatches nothing', () => {
+    const { result } = renderHook(() =>
+      useRibbonMepBoilerBridge({
+        levelManager: makeLevelManager(boiler),
+        universalSelection: makeSelection('boiler-1'),
+      }),
+    );
+    act(() => result.current.onComboboxChange(MODEL_KEY, 'non-existent-model'));
     expect((UpdateMepBoilerParamsCommand as jest.Mock).mock.calls.length).toBe(0);
   });
 });

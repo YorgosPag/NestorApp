@@ -182,6 +182,28 @@ export function useRibbonMepBoilerBridge(
         const kW = (w / 1000).toLocaleString('el-GR', { maximumFractionDigits: 1 });
         return { value: `${kW} kW`, options: [], disabled: true };
       }
+      // ADR-408 Type Catalog — model picker (string commandKey branch).
+      // Returns dynamic options from BOILER_MODEL_CATALOG + the clear («Παραμετρικό»)
+      // sentinel. Pattern mirrors the fixture assetId branch (ADR-411).
+      if (isMepBoilerRibbonStringKey(commandKey)) {
+        const boiler = resolveBoiler();
+        if (!boiler) return null;
+        return {
+          value: boiler.params.modelId ?? SELECT_CLEAR_VALUE,
+          options: [
+            {
+              value: SELECT_CLEAR_VALUE,
+              labelKey: 'ribbon.commands.mepBoilerEditor.modelCustom',
+              isLiteralLabel: false,
+            },
+            ...listBoilerModels().map((m) => ({
+              value: m.id,
+              labelKey: m.labelKey,
+              isLiteralLabel: true,
+            })),
+          ],
+        };
+      }
       if (!isMepBoilerRibbonKey(commandKey)) return null;
       const boiler = resolveBoiler();
       if (!boiler) return null;
@@ -196,6 +218,21 @@ export function useRibbonMepBoilerBridge(
 
   const onComboboxChange = useCallback(
     (commandKey: string, value: string): void => {
+      // ADR-408 Type Catalog — model picker branch (string; must run before the
+      // numeric guard which would otherwise discard it).
+      if (isMepBoilerRibbonStringKey(commandKey)) {
+        const boiler = resolveBoiler();
+        if (!boiler) return;
+        if (isSelectClearValue(value)) {
+          dispatchParams(boiler, clearBoilerModel(boiler.params));
+        } else {
+          const m = resolveBoilerModel(value);
+          if (m) {
+            dispatchParams(boiler, applyBoilerModelToParams(boiler.params, m));
+          }
+        }
+        return;
+      }
       if (!isMepBoilerRibbonKey(commandKey)) return;
       const boiler = resolveBoiler();
       if (!boiler) return;

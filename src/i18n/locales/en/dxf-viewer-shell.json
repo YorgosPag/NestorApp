@@ -960,6 +960,7 @@
       "mepRadiatorThermal": "Thermal",
       "mepRadiatorSizing": "Sizing",
       "mepRadiatorActions": "Actions",
+      "mepBoilerModel": "Model",
       "mepBoilerGeometry": "Geometry",
       "mepBoilerThermal": "Thermal",
       "mepBoilerSizing": "Sizing",
@@ -2253,6 +2254,8 @@
         "deleteConfirm": "Delete radiator? This action cannot be undone."
       },
       "mepBoilerEditor": {
+        "modelId": "Model",
+        "modelCustom": "Custom",
         "width": "Width",
         "length": "Depth",
         "bodyHeight": "Body height",
