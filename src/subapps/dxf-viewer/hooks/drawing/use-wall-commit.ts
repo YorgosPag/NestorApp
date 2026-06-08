@@ -222,6 +222,12 @@ export function useWallCommit(ctx: WallCommitContext): WallCommitApi {
         const raw = buildWallFillingRect(rect, s.overrides, sceneUnits, currentLevelId);
         if (!raw) continue;
         const entity = extendFillingWallToNeighbors(raw, [...sceneWalls, ...batch], sceneUnits);
+        // TEMP DEBUG (ADR-363 Phase 1L) — region-fill path marker. Remove after fix.
+        // eslint-disable-next-line no-console
+        console.log('[WALL-TRIM] buildFillingWalls onWallCreated=' + (onWallCreated ? 'Y' : 'N')
+          + ' raw=' + `${Math.round(raw.params.start.x)},${Math.round(raw.params.start.y)}→${Math.round(raw.params.end.x)},${Math.round(raw.params.end.y)}`
+          + ' joined=' + `${Math.round(entity.params.start.x)},${Math.round(entity.params.start.y)}→${Math.round(entity.params.end.x)},${Math.round(entity.params.end.y)}`
+          + ' sceneWalls=' + sceneWalls.length);
         batch.push(entity);
         onWallCreated?.(entity);
         built++;

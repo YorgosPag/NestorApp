@@ -38,6 +38,9 @@ export interface WallSceneAccessor {
  * No-op when there is no active level / scene.
  */
 export function addWallToScene(wallEntity: WallEntity, accessor: WallSceneAccessor): void {
+  // TEMP DEBUG (ADR-363 Phase 1L) — unconditional entry marker (BROWSER console).
+  // eslint-disable-next-line no-console
+  console.log('[WALL-TRIM] addWallToScene ENTER new=' + wallEntity.id.slice(-6));
   const levelId = accessor.currentLevelId;
   if (!levelId) return;
   const scene = accessor.getLevelScene(levelId);
@@ -47,22 +50,28 @@ export function addWallToScene(wallEntity: WallEntity, accessor: WallSceneAccess
   const allWalls = entitiesWithNew.filter(isWallEntity);
   const trims = computeWallTrims(allWalls);
 
-  // TEMP DEBUG (ADR-363 Phase 1L diagnosis) — enable in console with
-  // `window.__WALL_TRIM_DEBUG = true`, then draw a wall. Logs every wall's
-  // endpoints/thickness and the trim patch the solver produced. Remove after fix.
-  if (typeof globalThis !== 'undefined' && (globalThis as { __WALL_TRIM_DEBUG?: boolean }).__WALL_TRIM_DEBUG) {
-    // eslint-disable-next-line no-console
-    console.log('[WALL-TRIM] new=' + wallEntity.id.slice(-6), allWalls.map((w) => {
+  // TEMP DEBUG (ADR-363 Phase 1L diagnosis) — unconditional, 3-decimal precision.
+  // Logs ONLY the new wall + walls within ~0.6 units of it (the junction cluster),
+  // with length + sceneUnits, so sub-unit overshoot (~half-thickness) is visible.
+  {
+    const nw = wallEntity as WallEntity;
+    const nx = (nw.params.start.x + nw.params.end.x) / 2;
+    const ny = (nw.params.start.y + nw.params.end.y) / 2;
+    const near = allWalls.filter((w) => {
+      const mx = (w.params.start.x + w.params.end.x) / 2;
+      const my = (w.params.start.y + w.params.end.y) / 2;
+      return Math.hypot(mx - nx, my - ny) < 4 || w.id === nw.id;
+    });
+    const f = (n: number): string => n.toFixed(3);
+    const fb = (n: number | undefined): string => (n === undefined ? '-' : n.toFixed(3));
+    // Build ONE flat string per wall so the console can't collapse sB/eB/sM/eM.
+    const lines = near.map((w) => {
       const p = trims.get(w.id);
-      return {
-        id: w.id.slice(-6),
-        s: `${Math.round(w.params.start.x)},${Math.round(w.params.start.y)}`,
-        e: `${Math.round(w.params.end.x)},${Math.round(w.params.end.y)}`,
-        th: w.params.thickness,
-        startBevel: p?.startBevel, endBevel: p?.endBevel,
-        startMiter: p?.startMiter ? 'Y' : undefined, endMiter: p?.endMiter ? 'Y' : undefined,
-      };
-    }));
+      const len = Math.hypot(w.params.end.x - w.params.start.x, w.params.end.y - w.params.start.y);
+      return `${w.id.slice(-6)} (${f(w.params.start.x)},${f(w.params.start.y)})→(${f(w.params.end.x)},${f(w.params.end.y)}) len=${f(len)} th=${w.params.thickness} sB=${fb(p?.startBevel)} eB=${fb(p?.endBevel)} sM=${p?.startMiter ? 'Y' : '-'} eM=${p?.endMiter ? 'Y' : '-'}`;
+    });
+    // eslint-disable-next-line no-console
+    console.log('[WALL-TRIM] computed new=' + nw.id.slice(-6) + ' units=' + (nw.params.sceneUnits ?? 'mm') + '\n' + lines.join('\n'));
   }
 
   const patchedEntities = applyTrimPatches(entitiesWithNew, trims);
