@@ -38,6 +38,26 @@ export const KENAK_MAX_U_WALL: Record<ClimateZone, number> = {
 };
 
 /**
+ * ΤΟΤΕΕ 20701-3 — **θερμοκρασία σχεδιασμού εξωτερικού αέρα χειμώνα** `Te` (°C)
+ * ανά κλιματική ζώνη. Είναι το `Te` του ΔΤ = Ti − Te στον υπολογισμό θερμικού
+ * φορτίου (ADR-422 L1, D3· EN 12831).
+ *
+ * ⚠️ Αντιπροσωπευτικές τιμές ανά ΖΩΝΗ (documented defaults — η ΤΟΤΕΕ 20701-3
+ * δίνει `Te` ανά συγκεκριμένη πόλη/υψόμετρο· εδώ κρατάμε μία τυπική τιμή ζώνης,
+ * εύκολα editable). Πιο κρύα ζώνη → χαμηλότερο `Te`:
+ *   - A (νότια/νησιά, ηπιότερη): +3 °C
+ *   - B: 0 °C
+ *   - C: −5 °C
+ *   - D (ορεινή/βόρεια, ψυχρότερη): −10 °C
+ */
+export const KENAK_DESIGN_OUTDOOR_TEMP_C: Record<ClimateZone, number> = {
+  A: 3,
+  B: 0,
+  C: -5,
+  D: -10,
+};
+
+/**
  * Αντιπροσωπευτικός «τυπικός τοίχος» (χωρίς τη θερμοπρόσοψη) για τον
  * υπολογισμό του assembly U στο panel: εξωτ. σοβάς + οπτοπλινθοδομή + εσωτ.
  * σοβάς. λ από `wall-material-catalog`. Documented default — εύκολα editable.
@@ -65,6 +85,14 @@ export const CLIMATE_ZONE_OPTIONS: readonly ClimateZoneOption[] = [
 /** Επιστρέφει το ΚΕΝΑΚ ανώτατο U (W/m²K) εξωτ. τοίχου της ζώνης. */
 export function getKenakMaxUWall(zone: ClimateZone): number {
   return KENAK_MAX_U_WALL[zone];
+}
+
+/**
+ * Θερμοκρασία σχεδιασμού εξωτερικού αέρα `Te` (°C) της ζώνης (ΤΟΤΕΕ 20701-3).
+ * Το `Te` του ΔΤ = Ti − Te στον υπολογισμό θερμικού φορτίου (ADR-422 L1).
+ */
+export function getDesignOutdoorTempC(zone: ClimateZone): number {
+  return KENAK_DESIGN_OUTDOOR_TEMP_C[zone];
 }
 
 /**
