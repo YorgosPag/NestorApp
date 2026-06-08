@@ -45,7 +45,7 @@ import { wallFootprintSubcategory } from '../../bim/walls/wall-render-palette';
 
 // ADR-406 / ADR-408 Φ3 — point-based converters re-exported from their own module
 // (file-size SSoT, N.7.1). Importers keep `from '.../BimToThreeConverter'`.
-export { fixtureToMesh, panelToMesh, manifoldToMesh, radiatorToMesh, boilerToMesh } from './bim-three-point-converters';
+export { fixtureToMesh, panelToMesh, manifoldToMesh, radiatorToMesh, boilerToMesh, waterHeaterToMesh } from './bim-three-point-converters';
 // Structural element converters re-exported from their own module
 // (file-size SSoT, N.7.1, 2026-06-08). Importers keep `from '.../BimToThreeConverter'`.
 export { columnToMesh, beamToMesh, slabToMesh } from './bim-three-structural-converters';

@@ -14,6 +14,7 @@ import type { ElectricalPanelEntity } from '../../bim/types/electrical-panel-typ
 import type { MepManifoldEntity } from '../../bim/types/mep-manifold-types';
 import type { MepRadiatorEntity } from '../../bim/types/mep-radiator-types';
 import type { MepBoilerEntity } from '../../bim/types/mep-boiler-types';
+import type { MepWaterHeaterEntity } from '../../bim/types/mep-water-heater-types';
 import type { Point3D } from '../../bim/types/bim-base';
 import { sceneUnitsToMeters } from '../../utils/scene-units';
 import { getElementMaterial3D, getSystemTintedMaterial3D } from '../materials/MaterialCatalog3D';
@@ -295,5 +296,38 @@ export function boilerToMesh(
   mesh.position.y = centerMm * MM_TO_M - bodyHeightM / 2 + buildingBaseElevationM;
   const tagged = tagMesh(mesh, boiler.id, 'mep-boiler', matId, levelId);
   attachEdgesProjection(tagged, 'mep-boiler');
+  return tagged;
+}
+
+/**
+ * ADR-408 DHW — point-based domestic hot water heater (θερμοσίφωνας) → solid mesh.
+ * The footprint is extruded by the body height; the box is centred vertically on the
+ * mounting elevation (wall/floor-mounted). Units-safe: identical `sceneUnitsToMeters`
+ * pattern as `boilerToMesh`. A water heater is a DHW-supply source and keeps its fixed
+ * domestic-blue material (colour: 0x2563eb — DHW blue, distinct from heating red).
+ */
+export function waterHeaterToMesh(
+  waterHeater: MepWaterHeaterEntity,
+  floorElevationMm = 0,
+  levelId?: string,
+  buildingBaseElevationM = 0,
+): THREE.Mesh | null {
+  const verts = waterHeater.geometry.footprint.vertices;
+  if (verts.length < 3) return null;
+
+  const sceneToM = sceneUnitsToMeters(waterHeater.params.sceneUnits ?? 'mm');
+  const shape = buildShape(verts.map((v) => ({ x: v.x * sceneToM, y: v.y * sceneToM, z: 0 })));
+  if (!shape) return null;
+
+  const bodyHeightM = waterHeater.params.bodyHeightMm * MM_TO_M;
+  const geo = extrudeAndRotate(shape, bodyHeightM);
+  const matId = waterHeater.params.material ?? 'elem-mep-water-heater';
+  const mesh = new THREE.Mesh(geo, getElementMaterial3D('mep-water-heater'));
+  // Box centred vertically on the mounting elevation: the extrusion
+  // grows UP from mesh.position.y, so the bottom sits at centre − bodyHeight/2.
+  const centerMm = floorElevationMm + waterHeater.params.mountingElevationMm;
+  mesh.position.y = centerMm * MM_TO_M - bodyHeightM / 2 + buildingBaseElevationM;
+  const tagged = tagMesh(mesh, waterHeater.id, 'mep-water-heater', matId, levelId);
+  attachEdgesProjection(tagged, 'mep-water-heater');
   return tagged;
 }

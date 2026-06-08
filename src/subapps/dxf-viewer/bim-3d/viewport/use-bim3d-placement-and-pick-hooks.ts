@@ -23,6 +23,7 @@ import { useBim3DMepManifoldPlacement } from '../placement/use-bim3d-mep-manifol
 import { useBim3DMepSegmentPlacement } from '../placement/use-bim3d-mep-segment-placement';
 import { useBim3DMepRadiatorPlacement } from '../placement/use-bim3d-mep-radiator-placement';
 import { useBim3DMepBoilerPlacement } from '../placement/use-bim3d-mep-boiler-placement';
+import { useBim3DMepWaterHeaterPlacement } from '../placement/use-bim3d-mep-water-heater-placement';
 import { useBim3DAttachPick } from './use-bim3d-attach-pick';
 import { useBim3DBeamFromWallPick } from './use-bim3d-beam-from-wall-pick';
 import { useBim3DWireWaypointInteraction } from '../animation/use-bim3d-wire-waypoint-interaction-3d';
@@ -69,6 +70,9 @@ export function useBim3DPlacementAndPickHooks({
 
   // ADR-408 Εύρος Β #2 — 3D heating boiler placement (point-based mirror of manifold).
   useBim3DMepBoilerPlacement({ managerRef, canvasEl });
+
+  // ADR-408 DHW — 3D domestic hot water heater placement (point-based mirror of boiler).
+  useBim3DMepWaterHeaterPlacement({ managerRef, canvasEl });
 
   // ADR-401 — 3D manual attach pick-host. Armed only while a `*-attach-top/-base`
   // tool is active AND the viewport is in 3D: a click raycasts a structural host

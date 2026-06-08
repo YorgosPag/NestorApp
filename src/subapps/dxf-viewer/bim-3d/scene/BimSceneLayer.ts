@@ -15,7 +15,7 @@
 import * as THREE from 'three';
 import type { Bim3DEntities } from '../stores/Bim3DEntitiesStore';
 import type { FloorStackEntry } from './multi-floor-3d-source';
-import { beamToMesh, slabToMesh, fixtureToMesh, panelToMesh, manifoldToMesh, radiatorToMesh, boilerToMesh } from '../converters/BimToThreeConverter';
+import { beamToMesh, slabToMesh, fixtureToMesh, panelToMesh, manifoldToMesh, radiatorToMesh, boilerToMesh, waterHeaterToMesh } from '../converters/BimToThreeConverter';
 import { syncWalls, syncColumns } from './bim-scene-attach-syncs';
 import { stairToMeshes } from '../converters/StairToThreeConverter';
 import { railingToMesh } from '../converters/railing-to-three';
@@ -151,6 +151,7 @@ export class BimSceneLayer {
     this.syncManifolds(entities, ctx);
     this.syncRadiators(entities, ctx);
     this.syncBoilers(entities, ctx);
+    this.syncWaterHeaters(entities, ctx);
     syncCircuitWires(this.group, entities, ctx, (entity, category) => this.resolveEntity(entity, category, ctx));
     this.syncRailings(entities, ctx);
     this.syncRoofs(entities, ctx);
@@ -271,6 +272,16 @@ export class BimSceneLayer {
       const r = this.resolveEntity(boiler, 'mep-boiler', ctx);
       if (!r) continue;
       const mesh = boilerToMesh(boiler, ctx.floorElevationMm, ctx.activeLevelId, r.baseElevation);
+      if (mesh) { mesh.userData['buildingId'] = r.buildingId; this.group.add(mesh); }
+    }
+  }
+
+  /** ADR-408 DHW — point-based domestic hot water heaters (DHW source); fixed domestic-blue material, `?? []` guards legacy floor-stack entries. */
+  private syncWaterHeaters(entities: Bim3DEntities, ctx: SyncContext): void {
+    for (const wh of entities.waterHeaters ?? []) {
+      const r = this.resolveEntity(wh, 'mep-water-heater', ctx);
+      if (!r) continue;
+      const mesh = waterHeaterToMesh(wh, ctx.floorElevationMm, ctx.activeLevelId, r.baseElevation);
       if (mesh) { mesh.userData['buildingId'] = r.buildingId; this.group.add(mesh); }
     }
   }

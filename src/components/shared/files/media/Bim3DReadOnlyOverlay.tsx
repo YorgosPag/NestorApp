@@ -47,6 +47,9 @@ export function Bim3DReadOnlyOverlay({ bimSnapshot, projectId, onClose }: Bim3DR
       // ADR-408 Εύρος Β — same as above: read-only preview does not load
       // floorplan_mep_boilers yet (deferred). Empty keeps the bundle valid.
       boilers: [],
+      // ADR-408 DHW — same as above: read-only preview does not load
+      // floorplan_mep_water_heaters yet (deferred). Empty keeps the bundle valid.
+      waterHeaters: [],
       // ADR-410 — same as above: read-only preview does not load
       // floorplan_furniture yet (deferred). Empty keeps the bundle valid.
       furnitures: [],

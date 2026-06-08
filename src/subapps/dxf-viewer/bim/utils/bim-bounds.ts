@@ -55,6 +55,8 @@ export function calculateBimEntity2DBounds(entity: Entity): { min: Point2D; max:
     case 'mep-radiator':
     // ADR-408 Εύρος Β #2 — heating boiler projects geometry.bbox to 2D (same).
     case 'mep-boiler':
+    // ADR-408 DHW — domestic hot water heater projects geometry.bbox to 2D (same).
+    case 'mep-water-heater':
     // ADR-408 Εύρος Β #3 — underfloor heating loop: footprint bbox projects to 2D (area entity,
     // same fallthrough as floor-finish — the footprint polygon bbox is the geometry.bbox SSoT).
     case 'mep-underfloor': {

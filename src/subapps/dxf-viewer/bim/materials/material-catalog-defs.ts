@@ -112,6 +112,10 @@ export const MATERIAL_DEFS: Record<string, PbrMaterialDef> = {
   // (same hue as radiator — both are heating-circuit elements). Slightly higher
   // metalness to distinguish the boiler body from the flat panel radiator.
   'elem-mep-boiler':     { color: 0xdc2626, roughness: 0.55, metalness: 0.15 },
+  // ADR-408 DHW — domestic hot water heater (θερμοσίφωνας): DHW-supply blue
+  // (0x2563eb — Tailwind blue-600, domestic water palette, distinct from heating red).
+  // Matte plastic/enamel cabinet, low metalness (same family as the plumbing manifold).
+  'elem-mep-water-heater': { color: 0x2563eb, roughness: 0.55, metalness: 0.15 },
   // ADR-408 Εύρος Β #3 — underfloor radiant heating PIPE (the serpentine tubes swept
   // along `geometry.loopPath`): solid warm-red PEX/multilayer pipe (same heating-circuit
   // hue as radiator/boiler), slight sheen. MUST precede `elem-mep-underfloor` — the
