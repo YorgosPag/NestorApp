@@ -211,7 +211,31 @@ export function buildEditCommand(outcome: BridgeOutcome, c: CommandBuildCtx): Ed
   if (outcome.kind === 'resize') return c.entityIds.length === 1 ? buildResizeCommand(outcome, c) : null;
   // ADR-404 Phase 2 — tilt (X/Z rings) is single-entity only (mirror resize).
   if (outcome.kind === 'tilt') return c.entityIds.length === 1 ? buildTiltCommand(outcome, c) : null;
+  // ADR-408 Φ-D — endpoint move (linear MEP segment) is single-entity only.
+  if (outcome.kind === 'endpoint-move') return c.entityIds.length === 1 ? buildEndpointMoveCommand(outcome, c) : null;
   return null;
+}
+
+/**
+ * ADR-408 Φ-D — endpoint move → `UpdateMepSegmentParamsCommand` via the endpoint-move
+ * SSoT (`bim3d-endpoint-move`), wrapped in `withConnectedPipeFollow` so the pipes
+ * snapped to the moved end FOLLOW in the same undo. The DXF-mm plan delta is scaled
+ * into the segment's native canvas units (`mmToEntityUnitFactor`, mirror move/rotate);
+ * `deltaUpMm` stays raw mm (the per-endpoint z SSoT is mm). `null` = no-op / not a segment.
+ */
+function buildEndpointMoveCommand(outcome: EndpointMoveOutcome, c: CommandBuildCtx): EditCommand | null {
+  const entitiesAll = c.levels.getLevelScene(c.levelId)?.entities ?? [];
+  const entity = entitiesAll.find((e) => e.id === c.entityId);
+  if (!entity || entity.type !== 'mep-segment') return null;
+  const f = mmToEntityUnitFactor(entity);
+  const deltaCanvas = f === 1 ? outcome.deltaMm : { x: outcome.deltaMm.x * f, y: outcome.deltaMm.y * f };
+  const next = computeMepSegmentEndpointMove(entity.params, outcome.endpoint, deltaCanvas, outcome.deltaUpMm);
+  if (!next) return null;
+  const base = new UpdateMepSegmentParamsCommand(c.entityId, next, entity.params, c.sm, false);
+  // The dragged segment is the only edited host; its connected pipes follow the moved end.
+  return withConnectedPipeFollow(base, [c.entityId], entitiesAll, c.sm, (e) =>
+    e.id === c.entityId ? next : null,
+  );
 }
 
 /**

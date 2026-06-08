@@ -40,6 +40,9 @@ import {
   computeMepHostVerticalMove,
   computeMepSegmentVerticalMove,
 } from '../gizmo/bim3d-vertical-move';
+import { computeMepSegmentEndpointMove } from '../gizmo/bim3d-endpoint-move';
+import type { GizmoEndpoint } from '../gizmo/gizmo-types';
+import type { Point2D } from '../../rendering/types/Types';
 import { mepSegmentToMesh } from '../converters/mep-segment-to-mesh';
 import { worldToDxfPlan } from '../viewport/coordinate-transforms';
 import { mmToSceneUnits, type SceneUnits } from '../../utils/scene-units';
@@ -53,7 +56,10 @@ const PLAN_EPS2 = 1e-9;
 /** The live gizmo transform applied to the dragged entity this frame. */
 export type PipeDragXform =
   | { readonly kind: 'move'; readonly translation: THREE.Vector3 }
-  | { readonly kind: 'rotate'; readonly pivot: THREE.Vector3; readonly angleRad: number };
+  | { readonly kind: 'rotate'; readonly pivot: THREE.Vector3; readonly angleRad: number }
+  // ADR-408 Φ-D — the dragged entity is a segment whose ONE endpoint moved (plan mm
+  // + elevation mm). Only the neighbour coincident with that end follows.
+  | { readonly kind: 'endpoint'; readonly endpoint: GizmoEndpoint; readonly deltaMm: Point2D; readonly deltaUpMm: number };
 
 /** mm → scene/canvas units for an entity's drawing (mm→1, cm→0.1, m→0.001). */
 function entityMmScale(entity: Entity): number {
@@ -79,6 +85,12 @@ function liveNextParams(entity: Entity, xform: PipeDragXform, mmScale: number): 
     const p = worldToDxfPlan(xform.pivot);
     const pivot = { x: p.x * mmScale, y: p.y * mmScale };
     return paramsOf(calculateBimRotatedGeometry(entity, pivot, xform.angleRad * RAD_TO_DEG));
+  }
+  if (xform.kind === 'endpoint') {
+    // The dragged entity is always a segment whose one endpoint moved (Φ-D).
+    if (!isMepSegmentEntity(entity)) return null;
+    const deltaCanvas = { x: xform.deltaMm.x * mmScale, y: xform.deltaMm.y * mmScale };
+    return computeMepSegmentEndpointMove(entity.params, xform.endpoint, deltaCanvas, xform.deltaUpMm);
   }
   const d = worldToDxfPlan(xform.translation); // world (m) → mm
   const planDx = d.x * mmScale;

@@ -42,6 +42,12 @@ import {
   type TiltDragDeg,
 } from '../gizmo/bim3d-tilt-bridge';
 import { wallToMesh, columnToMesh, beamToMesh, slabToMesh } from '../converters/BimToThreeConverter';
+// ADR-408 Φ-D — endpoint-move preview of the dragged MEP segment (converter SSoT).
+import { mepSegmentToMesh } from '../converters/mep-segment-to-mesh';
+import { computeMepSegmentEndpointMove } from '../gizmo/bim3d-endpoint-move';
+import { mmToEntityUnitFactor } from '../utils/bim3d-edit-math';
+import type { GizmoEndpoint } from '../gizmo/gizmo-types';
+import type { Point2D } from '../../rendering/types/Types';
 // ADR-401 — wall-top footprint clip (γωνιακή διασταύρωση): the live preview MUST
 // pass the 8th `topClip` arg so attached walls preview with the same 5/7-piece
 // footprint clip + face-crossing breakpoints the commit path (`syncWalls`) builds.
@@ -141,6 +147,33 @@ export function buildTiltPreviewObject(entityId: string, drag: TiltDragDeg): THR
     return slabToMesh(preview, openings, levelId, baseElevationOf(slab, s));
   }
   return null;
+}
+
+/**
+ * ADR-408 Φ-D — build the live endpoint-move preview of the DRAGGED MEP segment, or
+ * null (no-op / not found / multi-floor). Mirrors `buildResizePreviewObject`: apply
+ * the endpoint-move patch (`bim3d-endpoint-move`) → rebuild through the SAME converter
+ * (`mepSegmentToMesh`) the commit re-sync uses, so the ghost === the committed pipe.
+ * The plan delta (DXF mm) is scaled into the segment's native canvas units; `deltaUpMm`
+ * stays mm. Followers are rebuilt separately via `buildPipeFollowPreviewObjects`.
+ */
+export function buildEndpointMovePreviewObject(
+  entityId: string,
+  endpoint: GizmoEndpoint,
+  deltaMm: Point2D,
+  deltaUpMm: number,
+): THREE.Object3D | null {
+  if (useViewMode3DStore.getState().floor3DScope === 'all') return null;
+  const s = useBim3DEntitiesStore.getState();
+  const segment = s.mepSegments.find((seg) => seg.id === entityId);
+  if (!segment) return null;
+  const f = mmToEntityUnitFactor(segment);
+  const deltaCanvas = f === 1 ? deltaMm : { x: deltaMm.x * f, y: deltaMm.y * f };
+  const next = computeMepSegmentEndpointMove(segment.params, endpoint, deltaCanvas, deltaUpMm);
+  if (!next) return null;
+  const baseElevationM = resolveEntityBuilding(segment, s.floors, s.buildings)?.baseElevation ?? 0;
+  const levelId = s.activeLevelId ?? undefined;
+  return mepSegmentToMesh({ ...segment, params: next }, 0, levelId, baseElevationM);
 }
 
 type Snapshot = ReturnType<typeof useBim3DEntitiesStore.getState>;

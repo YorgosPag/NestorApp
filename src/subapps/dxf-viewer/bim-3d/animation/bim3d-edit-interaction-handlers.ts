@@ -38,6 +38,7 @@ import { Bim3DEditLivePreview } from './bim3d-edit-live-preview';
 import {
   buildResizePreviewObject,
   buildTiltPreviewObject,
+  buildEndpointMovePreviewObject,
   buildDependentWallPreviewObject,
 } from './bim3d-preview-rebuild';
 // ADR-408 Φ7 P2 — host move → live circuit-wire re-route (mirror of the ADR-401 wall path).
@@ -47,6 +48,9 @@ import { connectedPipeSegmentIds, buildPipeFollowPreviewObjects } from './bim3d-
 // ADR-401 — host move → attached wall re-clip: find the dependent walls (reverse SSoT).
 import { findAttachedWalls } from '../../bim/cascade/bim-cascade-resolver';
 import { useBim3DEntitiesStore } from '../stores/Bim3DEntitiesStore';
+// ADR-408 Φ-D — endpoint shape handles: world positions of a segment's two axis ends.
+import { segmentAxisEndpointsWorld } from '../converters/mep-segment-to-mesh';
+import { resolveEntityBuilding } from '../../bim/utils/bim-floor-utils';
 // ADR-404 — drag outcome → view-agnostic command (extracted for file size, N.7.1).
 import { buildEditCommand } from './bim3d-edit-command-builders';
 
@@ -81,6 +85,33 @@ export function computeEditAnchor(ctx: EditInteractionCtx, entityIds: readonly s
   return true;
 }
 
+/**
+ * ADR-408 Φ-D — position the per-endpoint shape handles for a single-select MEP
+ * segment (Revit shape handles at each axis end). Cleared (null) for any other
+ * selection. The endpoint world positions reuse the converter SSoT
+ * (`segmentAxisEndpointsWorld`) so the handles sit exactly on the rendered pipe ends.
+ * Called after `computeEditAnchor` + `setActiveHandles` (and on auto-resync re-anchor).
+ */
+export function refreshSegmentEndpointHandles(
+  ctx: EditInteractionCtx,
+  entityIds: readonly string[],
+  bimType: string | null,
+): void {
+  if (bimType !== 'mep-segment' || entityIds.length !== 1) {
+    ctx.overlay.setEndpointHandles(null, null);
+    return;
+  }
+  const s = useBim3DEntitiesStore.getState();
+  const segment = s.mepSegments.find((seg) => seg.id === entityIds[0]);
+  if (!segment) {
+    ctx.overlay.setEndpointHandles(null, null);
+    return;
+  }
+  const baseElevationM = resolveEntityBuilding(segment, s.floors, s.buildings)?.baseElevation ?? 0;
+  const { startW, endW } = segmentAxisEndpointsWorld(segment.params, baseElevationM);
+  ctx.overlay.setEndpointHandles(startW, endW);
+}
+
 export function onEditPointerDown(ctx: EditInteractionCtx, e: PointerEvent): void {
   if (e.button !== 0 || !ctx.overlay.visible) return;
   const started = ctx.controller.beginDrag(ctx.manager.getCamera(), ctx.canvasEl, e.clientX, e.clientY);
@@ -98,6 +129,12 @@ export function onEditPointerDown(ctx: EditInteractionCtx, e: PointerEvent): voi
   const isTilt = constraint?.kind === 'rotate' && constraint.axis !== 'y';
   if (constraint?.kind === 'resize' || isTilt) {
     if (ids[0]) ctx.preview.captureResize(ctx.manager.bimLayer.group, ids[0]);
+  } else if (constraint?.kind === 'endpoint') {
+    // ADR-408 Φ-D — the dragged segment rebuilds its geometry (node move ≠ rigid
+    // transform) AND its connected pipes stretch. captureResize resets then records
+    // the segment; captureConnectedPipes (capturePipes) APPENDS the followers.
+    if (ids[0]) ctx.preview.captureResize(ctx.manager.bimLayer.group, ids[0]);
+    captureConnectedPipes(ctx, ids);
   } else {
     ctx.preview.captureTransform(ctx.manager.bimLayer.group, new Set(ids));
     // ADR-401 — a MOVE of a structural host (beam/slab) must re-clip its attached
@@ -183,8 +220,11 @@ function buildDragSnapFn(ctx: EditInteractionCtx): SnapFn | null {
   if (!engine.getSettings().enabled) return null;
   const targets = resolveEditEntities(ctx);
   if (targets.length === 0) return null;
-  // Resize is single-entity only (multi-select hides resize handles).
-  if (constraint.kind === 'resize') return makeResizeSnapFn(engine, targets[0].entityId);
+  // Resize + endpoint are single-entity only (multi-select hides those handles). Both
+  // snap the ONE dragged control point to scene features ("Connect To", ADR-408 Φ-D).
+  if (constraint.kind === 'resize' || constraint.kind === 'endpoint') {
+    return makeResizeSnapFn(engine, targets[0].entityId);
+  }
   // move (axis / plane / free): characteristic points of EVERY selected element as
   // plan-mm offsets from the group anchor (ADR-402 Phase C — snap from all, nearest-wins).
   const anchorPlan = worldToDxfPlan(ctx.overlay.getPosition());
@@ -322,6 +362,26 @@ function applyLivePreview(ctx: EditInteractionCtx): void {
         buildPipeFollowPreviewObjects(
           new Set(useBim3DEditStore.getState().editEntityIds),
           { kind: 'rotate', pivot: live.pivot, angleRad: live.angleRad },
+          sceneEntitiesForEdit(ctx),
+        ),
+      );
+    }
+    return;
+  }
+  if (live.kind === 'endpoint-move') {
+    // ADR-408 Φ-D — rebuild the dragged segment via the converter SSoT (node move),
+    // swapped in through the same hide-and-replace path as resize; its connected pipes
+    // STRETCH live via the same resolver SSoT as the commit (ghost === commit).
+    const epId = useBim3DEditStore.getState().editEntityIds[0];
+    if (!epId) return;
+    ctx.preview.applyResize(
+      buildEndpointMovePreviewObject(epId, live.endpoint, live.outcome.deltaMm, live.outcome.deltaUpMm),
+    );
+    if (ctx.preview.connectedPipeSegmentIds.length > 0) {
+      ctx.preview.applyPipes(
+        buildPipeFollowPreviewObjects(
+          new Set(useBim3DEditStore.getState().editEntityIds),
+          { kind: 'endpoint', endpoint: live.endpoint, deltaMm: live.outcome.deltaMm, deltaUpMm: live.outcome.deltaUpMm },
           sceneEntitiesForEdit(ctx),
         ),
       );

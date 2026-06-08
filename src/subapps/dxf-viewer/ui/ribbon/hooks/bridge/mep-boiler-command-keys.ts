@@ -29,6 +29,8 @@ export const MEP_BOILER_RIBBON_KEYS = {
     connectorDiameter: 'mepBoiler.params.connectorDiameter',
     /** W — nominal catalogue thermal output (optional; absent ⇒ unspecified). */
     thermalOutput: 'mepBoiler.params.thermalOutput',
+    /** mm — COMBI DHW connector diameter (hot outlet + cold inlet). Combi-only panel. */
+    dhwConnectorDiameter: 'mepBoiler.params.dhwConnectorDiameter',
   },
   /**
    * String (non-numeric) combobox params — model catalog picker.
@@ -37,11 +39,14 @@ export const MEP_BOILER_RIBBON_KEYS = {
    */
   stringParams: {
     modelId: 'mepBoiler.params.modelId',
-    /**
-     * COMBI toggle (ADR-408 Εύρος Β — combi). Yes/No combobox: when «Ναι», the boiler
-     * also produces domestic hot water (a third `domestic-hot-water` out connector is
-     * seeded → it can source a DHW network). Mirrors the wall `flip` Yes/No combobox.
-     */
+  },
+  /**
+   * Boolean toggle params (Revit Yes/No parameter → ribbon toggle button).
+   *   - `producesDhw`: COMBI flag (ADR-408 Εύρος Β — combi). ON → the boiler also produces
+   *     domestic hot water (DHW hot outlet + cold inlet connectors seeded → sources a DHW
+   *     network + member of the cold network). Mirror του roof `slopeUnitPercent` toggle.
+   */
+  toggles: {
     producesDhw: 'mepBoiler.params.producesDhw',
   },
   /**
@@ -65,7 +70,8 @@ export type MepBoilerRibbonNumberCommandKey =
   | typeof MEP_BOILER_RIBBON_KEYS.params.bodyHeight
   | typeof MEP_BOILER_RIBBON_KEYS.params.mountingElevation
   | typeof MEP_BOILER_RIBBON_KEYS.params.connectorDiameter
-  | typeof MEP_BOILER_RIBBON_KEYS.params.thermalOutput;
+  | typeof MEP_BOILER_RIBBON_KEYS.params.thermalOutput
+  | typeof MEP_BOILER_RIBBON_KEYS.params.dhwConnectorDiameter;
 
 export const MEP_BOILER_RIBBON_NUMBER_KEYS: readonly MepBoilerRibbonNumberCommandKey[] = [
   MEP_BOILER_RIBBON_KEYS.params.width,
@@ -74,7 +80,26 @@ export const MEP_BOILER_RIBBON_NUMBER_KEYS: readonly MepBoilerRibbonNumberComman
   MEP_BOILER_RIBBON_KEYS.params.mountingElevation,
   MEP_BOILER_RIBBON_KEYS.params.connectorDiameter,
   MEP_BOILER_RIBBON_KEYS.params.thermalOutput,
+  MEP_BOILER_RIBBON_KEYS.params.dhwConnectorDiameter,
 ];
+
+// ─── Toggle keys (Revit Yes/No params) ───────────────────────────────────────
+
+export type MepBoilerRibbonToggleCommandKey =
+  typeof MEP_BOILER_RIBBON_KEYS.toggles.producesDhw;
+
+export const MEP_BOILER_RIBBON_TOGGLE_KEYS: readonly MepBoilerRibbonToggleCommandKey[] = [
+  MEP_BOILER_RIBBON_KEYS.toggles.producesDhw,
+];
+
+const MEP_BOILER_TOGGLE_KEY_SET: ReadonlySet<string> = new Set<string>(
+  MEP_BOILER_RIBBON_TOGGLE_KEYS,
+);
+
+/** Returns `true` when `commandKey` is a boiler boolean-toggle param (combi flag). */
+export function isMepBoilerToggleKey(commandKey: string): boolean {
+  return MEP_BOILER_TOGGLE_KEY_SET.has(commandKey);
+}
 
 export const MEP_BOILER_RIBBON_KEYS_ACTIONS = {
   close: 'mepBoiler.actions.close',
@@ -96,13 +121,17 @@ export function isMepBoilerActionKey(action: string): boolean {
  */
 export const MEP_BOILER_RIBBON_VISIBILITY_KEYS = {
   hasNetwork: 'mepBoiler.visibility.hasNetwork',
+  /** The «ΖΝΧ» panel (DHW diameter) shows only when the boiler is a combi (`producesDhw`). */
+  combi: 'mepBoiler.visibility.combi',
 } as const;
 
 export type MepBoilerRibbonVisibilityKey =
-  typeof MEP_BOILER_RIBBON_VISIBILITY_KEYS.hasNetwork;
+  | typeof MEP_BOILER_RIBBON_VISIBILITY_KEYS.hasNetwork
+  | typeof MEP_BOILER_RIBBON_VISIBILITY_KEYS.combi;
 
 const MEP_BOILER_VISIBILITY_KEY_SET: ReadonlySet<string> = new Set<string>([
   MEP_BOILER_RIBBON_VISIBILITY_KEYS.hasNetwork,
+  MEP_BOILER_RIBBON_VISIBILITY_KEYS.combi,
 ]);
 
 export function isMepBoilerVisibilityKey(
@@ -141,20 +170,18 @@ export function isMepBoilerReadoutKey(commandKey: string): commandKey is MepBoil
 
 // ─── String param key guards (model catalog picker) ──────────────────────────
 
-/** The string commandKeys: model-catalog picker + combi Yes/No selector. */
+/** The single string commandKey used by the boiler model picker. */
 export type MepBoilerRibbonStringCommandKey =
-  | typeof MEP_BOILER_RIBBON_KEYS.stringParams.modelId
-  | typeof MEP_BOILER_RIBBON_KEYS.stringParams.producesDhw;
+  typeof MEP_BOILER_RIBBON_KEYS.stringParams.modelId;
 
 export const MEP_BOILER_STRING_KEY_SET: ReadonlySet<string> = new Set<string>([
   MEP_BOILER_RIBBON_KEYS.stringParams.modelId,
-  MEP_BOILER_RIBBON_KEYS.stringParams.producesDhw,
 ]);
 
 /**
- * Returns `true` when `commandKey` is a boiler string (combobox) param — the
- * model-catalog picker OR the combi Yes/No selector (not a numeric param, not a
- * readout, not an action). Mirror of `isMepRadiatorRibbonStringKey` (ADR-408 Εύρος Β).
+ * Returns `true` when `commandKey` is the boiler model-catalog string picker
+ * (not a numeric param, not a toggle, not a readout, not an action).
+ * Mirror of `isMepRadiatorRibbonStringKey` (ADR-408 Εύρος Β).
  */
 export function isMepBoilerRibbonStringKey(commandKey: string): boolean {
   return MEP_BOILER_STRING_KEY_SET.has(commandKey);

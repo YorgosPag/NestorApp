@@ -24,7 +24,8 @@ import type { MepConnector } from '../types/mep-connector-types';
 import {
   buildBoilerSupplyConnector,
   buildBoilerReturnConnector,
-  buildBoilerDhwConnector,
+  buildBoilerDhwHotOutletConnector,
+  buildBoilerDhwColdInletConnector,
 } from '../types/mep-connector-types';
 import { polygonArea, polygonBbox } from '../geometry/shared/polygon-utils';
 import { mmToSceneUnits } from '../../utils/scene-units';
@@ -97,11 +98,14 @@ function transformFootprint(
  *
  * The supply outlet sits at the +X end (`flow:'out'` → sources the supply network)
  * and the return inlet at the −X end (`flow:'in'`), both on the body centreline
- * (host-local, scene units, pre-rotation). When `producesDhw` (combi boiler) a THIRD
- * connector — the DHW hot outlet — is appended at the +X end but OFFSET in +Y (to the
- * front-right corner) so it never coincides with the supply outlet, making the boiler
- * the SOURCE of a `domestic-hot-water` network. `connectorWorldPosition` applies the
- * host rotation/translation for free.
+ * (host-local, scene units, pre-rotation). When `producesDhw` (combi boiler) TWO more
+ * connectors complete the DHW water path at the +Y (front) corners — a hot outlet at
+ * `{+hw,+hl}` (`flow:'out'`, sources the `domestic-hot-water` network) and a cold inlet
+ * at `{-hw,+hl}` (`flow:'in'`, member of the `domestic-cold-water` network: the combi
+ * takes cold water and heats it, NOT hot "from nowhere"). All four corners are distinct.
+ * The DHW connectors use the dedicated `dhwConnectorDiameterMm` (typical DN15, smaller
+ * than the DN22 hydronic tails), falling back to `connectorDiameterMm`.
+ * `connectorWorldPosition` applies the host rotation/translation for free.
  */
 export function buildBoilerConnectors(params: MepBoilerParams): MepConnector[] {
   const s = mmToSceneUnits(params.sceneUnits ?? 'mm');
@@ -114,9 +118,14 @@ export function buildBoilerConnectors(params: MepBoilerParams): MepConnector[] {
     buildBoilerReturnConnector(ret, params.connectorDiameterMm),
   ];
   if (params.producesDhw) {
-    // DHW hot outlet at the +X / +Y front-right corner — distinct from supply {x:hw,y:0}.
-    const dhw: Point3D = { x: hw, y: hl, z: 0 };
-    connectors.push(buildBoilerDhwConnector(dhw, params.connectorDiameterMm));
+    const dhwDiameter = params.dhwConnectorDiameterMm ?? params.connectorDiameterMm;
+    // DHW hot outlet at +X/+Y, cold inlet at −X/+Y — distinct from supply/return on y=0.
+    const dhwHot: Point3D = { x: hw, y: hl, z: 0 };
+    const dhwCold: Point3D = { x: -hw, y: hl, z: 0 };
+    connectors.push(
+      buildBoilerDhwHotOutletConnector(dhwHot, dhwDiameter),
+      buildBoilerDhwColdInletConnector(dhwCold, dhwDiameter),
+    );
   }
   return connectors;
 }

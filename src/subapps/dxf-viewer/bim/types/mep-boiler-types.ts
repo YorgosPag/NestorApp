@@ -92,12 +92,19 @@ export interface MepBoilerParams extends MepConnectorHostParams {
   readonly systemClassification?: PlumbingSystemClassification;
   /**
    * COMBI boiler flag (ADR-408 Εύρος Β — combi). When `true` the boiler also produces
-   * domestic hot water: `buildBoilerConnectors` seeds a THIRD `flow:'out'` connector
-   * (`domestic-hot-water`) alongside the hydronic supply/return pair, making the boiler
-   * the SOURCE of a DHW network too (like the water heater's hot outlet). Absent/false ⇒
+   * domestic hot water: `buildBoilerConnectors` seeds TWO more connectors alongside the
+   * hydronic supply/return pair — a DHW hot outlet (`domestic-hot-water`, sources the DHW
+   * network) AND a DHW cold inlet (`domestic-cold-water`, member of the cold network) — so
+   * the combi takes cold water and heats it, exactly like the water heater. Absent/false ⇒
    * space-heating only (2 connectors). Additive/optional — pre-combi boilers unchanged.
    */
   readonly producesDhw?: boolean;
+  /**
+   * mm — nominal DHW connector diameter for a combi boiler (hot outlet + cold inlet).
+   * Typically smaller than the hydronic tails (DN15 vs DN22). Absent ⇒ falls back to
+   * `connectorDiameterMm`. Only relevant when `producesDhw` is set.
+   */
+  readonly dhwConnectorDiameterMm?: number;
   /**
    * W — optional catalogue thermal output (nominal heat output). Drives future
    * sizing/load-balancing; absent ⇒ not yet specified.
@@ -183,6 +190,9 @@ export const DEFAULT_BOILER_MOUNTING_ELEVATION_MM = 1200;
 
 /** Default supply/return connector diameter (mm) — typical 22mm hydronic flow/return. */
 export const DEFAULT_BOILER_CONNECTOR_DIAMETER_MM = 22;
+
+/** Default DHW connector diameter (mm) for a combi boiler — typical 15mm tap-water tail. */
+export const DEFAULT_BOILER_DHW_CONNECTOR_DIAMETER_MM = 15;
 
 /**
  * Default classification the boiler sources — the hydronic supply flow. A network
