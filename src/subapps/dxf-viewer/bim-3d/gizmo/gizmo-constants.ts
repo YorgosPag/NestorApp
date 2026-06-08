@@ -100,6 +100,20 @@ export const SNAP_MARKER_SCREEN_SCALE = 0.13;
 /** Render order — above geometry, below the gizmo handles so it never hides them. */
 export const SNAP_MARKER_RENDER_ORDER = 1999;
 
+// -- Endpoint shape handle (ADR-408 Φ-D — drag ONE end of a linear MEP segment) -
+/**
+ * Endpoint handle colour — a clear teal "control point", distinct from the axis
+ * reds/greens/blues and the orange centre, so a pipe-end grab reads unambiguously.
+ */
+export const GIZMO_ENDPOINT_COLOR = 0x16b8c0;
+/** Endpoint visual = a small camera-facing RING (torus). Hollow centre keeps the pipe-end
+ *  cap visible (a solid disc hid it). Outer ring radius, before screen-constant scaling. */
+export const ENDPOINT_RING_RADIUS = 0.045;
+/** Ring tube (thickness) — thin so it reads as a hollow ring, not a disc. */
+export const ENDPOINT_RING_TUBE = 0.011;
+/** Invisible endpoint hitbox side length (covers the thin ring for easy clicking). */
+export const ENDPOINT_HITBOX_SIZE = 0.12;
+
 // -- Rendering -----------------------------------------------------------------
 export const GIZMO_RENDER_ORDER = 2000;
 

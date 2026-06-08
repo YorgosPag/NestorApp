@@ -61,6 +61,8 @@ export const MepBoilerParamsSchema = z
     dhwRecirculation: z.boolean().optional(),
     // COMBI DHW connector diameter (hot outlet + cold inlet); falls back to connectorDiameterMm.
     dhwConnectorDiameterMm: z.number().positive().optional(),
+    // Combustion flue (καπναγωγός) diameter — gas/oil only; falls back to DEFAULT_BOILER_FLUE_DIAMETER_MM.
+    flueDiameterMm: z.number().positive().optional(),
     // Optional catalogue thermal output (W) — drives future sizing.
     thermalOutputW: z.number().positive().optional(),
     sceneUnits: z.string().optional(),

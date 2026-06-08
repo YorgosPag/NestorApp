@@ -16,6 +16,7 @@ import {
   RETICLE_RADIUS, RETICLE_CROSS_INNER, RETICLE_CROSS_OUTER,
   RETICLE_COLOR, RETICLE_SEGMENTS,
   GIZMO_RENDER_ORDER,
+  ENDPOINT_RING_RADIUS, ENDPOINT_RING_TUBE, ENDPOINT_HITBOX_SIZE,
 } from './gizmo-constants';
 import {
   makeMaterial, applyRenderOrder, makeLineMat,
@@ -218,6 +219,32 @@ export function buildResizeHandle(color: number): ResizeResult {
       mirror: mirrorCornerHitboxes,
     },
   };
+}
+
+// ---------------------------------------------------------------------------
+// Endpoint shape handle (ADR-408 Φ-D) -- a single small camera-facing RING (torus)
+// at a pipe end. Deliberately minimal (NOT the busy resize square/cross/brackets):
+// a thin hollow ring reads as "drag this end" while its open centre keeps the pipe-
+// end CAP visible (a solid disc/sphere hid it). The overlay billboards the ring to
+// the camera each frame so it stays a full circle from any orbit angle. Returns
+// {visual torus, larger invisible box hitbox}. Torus lies in its local XY plane
+// (normal +Z) — the billboard aligns that normal with the view direction.
+// ---------------------------------------------------------------------------
+
+export function buildEndpointHandle(color: number): { visual: THREE.Mesh; hitbox: THREE.Mesh } {
+  const visual = new THREE.Mesh(
+    new THREE.TorusGeometry(ENDPOINT_RING_RADIUS, ENDPOINT_RING_TUBE, 10, 28),
+    makeMaterial(color),
+  );
+  applyRenderOrder(visual);
+
+  const hitbox = new THREE.Mesh(
+    new THREE.BoxGeometry(ENDPOINT_HITBOX_SIZE, ENDPOINT_HITBOX_SIZE, ENDPOINT_HITBOX_SIZE),
+    makeMaterial(0x000000, { visible: false }),
+  );
+  applyRenderOrder(hitbox);
+
+  return { visual, hitbox };
 }
 
 // ---------------------------------------------------------------------------

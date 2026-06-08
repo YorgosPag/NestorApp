@@ -31,6 +31,8 @@ export const MEP_BOILER_RIBBON_KEYS = {
     thermalOutput: 'mepBoiler.params.thermalOutput',
     /** mm — COMBI DHW connector diameter (hot outlet + cold inlet). Combi-only panel. */
     dhwConnectorDiameter: 'mepBoiler.params.dhwConnectorDiameter',
+    /** mm — combustion flue (καπναγωγός) diameter. Gas/oil-only panel («Καπναγωγός»). */
+    flueDiameter: 'mepBoiler.params.flueDiameter',
   },
   /**
    * String (non-numeric) combobox params — model catalog picker.
@@ -74,7 +76,8 @@ export type MepBoilerRibbonNumberCommandKey =
   | typeof MEP_BOILER_RIBBON_KEYS.params.mountingElevation
   | typeof MEP_BOILER_RIBBON_KEYS.params.connectorDiameter
   | typeof MEP_BOILER_RIBBON_KEYS.params.thermalOutput
-  | typeof MEP_BOILER_RIBBON_KEYS.params.dhwConnectorDiameter;
+  | typeof MEP_BOILER_RIBBON_KEYS.params.dhwConnectorDiameter
+  | typeof MEP_BOILER_RIBBON_KEYS.params.flueDiameter;
 
 export const MEP_BOILER_RIBBON_NUMBER_KEYS: readonly MepBoilerRibbonNumberCommandKey[] = [
   MEP_BOILER_RIBBON_KEYS.params.width,
@@ -84,6 +87,7 @@ export const MEP_BOILER_RIBBON_NUMBER_KEYS: readonly MepBoilerRibbonNumberComman
   MEP_BOILER_RIBBON_KEYS.params.connectorDiameter,
   MEP_BOILER_RIBBON_KEYS.params.thermalOutput,
   MEP_BOILER_RIBBON_KEYS.params.dhwConnectorDiameter,
+  MEP_BOILER_RIBBON_KEYS.params.flueDiameter,
 ];
 
 // ─── Toggle keys (Revit Yes/No params) ───────────────────────────────────────
@@ -128,15 +132,19 @@ export const MEP_BOILER_RIBBON_VISIBILITY_KEYS = {
   hasNetwork: 'mepBoiler.visibility.hasNetwork',
   /** The «ΖΝΧ» panel (DHW diameter) shows only when the boiler is a combi (`producesDhw`). */
   combi: 'mepBoiler.visibility.combi',
+  /** The «Καπναγωγός» panel (flue diameter) shows only for a combustion boiler (`fuelType` gas/oil). */
+  combustion: 'mepBoiler.visibility.combustion',
 } as const;
 
 export type MepBoilerRibbonVisibilityKey =
   | typeof MEP_BOILER_RIBBON_VISIBILITY_KEYS.hasNetwork
-  | typeof MEP_BOILER_RIBBON_VISIBILITY_KEYS.combi;
+  | typeof MEP_BOILER_RIBBON_VISIBILITY_KEYS.combi
+  | typeof MEP_BOILER_RIBBON_VISIBILITY_KEYS.combustion;
 
 const MEP_BOILER_VISIBILITY_KEY_SET: ReadonlySet<string> = new Set<string>([
   MEP_BOILER_RIBBON_VISIBILITY_KEYS.hasNetwork,
   MEP_BOILER_RIBBON_VISIBILITY_KEYS.combi,
+  MEP_BOILER_RIBBON_VISIBILITY_KEYS.combustion,
 ]);
 
 export function isMepBoilerVisibilityKey(

@@ -19,7 +19,7 @@ import type {
   MepBoilerGeometry,
   MepBoilerParams,
 } from '../types/mep-boiler-types';
-import { MIN_BOILER_DIMENSION_MM } from '../types/mep-boiler-types';
+import { MIN_BOILER_DIMENSION_MM, DEFAULT_BOILER_FLUE_DIAMETER_MM } from '../types/mep-boiler-types';
 import type { MepConnector } from '../types/mep-connector-types';
 import {
   buildBoilerSupplyConnector,
@@ -27,6 +27,7 @@ import {
   buildBoilerDhwHotOutletConnector,
   buildBoilerDhwColdInletConnector,
   buildBoilerDhwRecircInletConnector,
+  buildBoilerFlueConnector,
 } from '../types/mep-connector-types';
 import { polygonArea, polygonBbox } from '../geometry/shared/polygon-utils';
 import { mmToSceneUnits } from '../../utils/scene-units';
@@ -109,8 +110,11 @@ function transformFootprint(
  * `domestic-hot-water`) so the cooled DHW re-joins the SAME network and is re-heated
  * (Revit "Domestic Hot Water + Recirculation"). The DHW connectors use the dedicated
  * `dhwConnectorDiameterMm` (typical DN15, smaller than the DN22 hydronic tails), falling
- * back to `connectorDiameterMm`. `connectorWorldPosition` applies the host rotation/
- * translation for free.
+ * back to `connectorDiameterMm`. INDEPENDENTLY of the DHW gate, when `fuelType` is a
+ * combustion source (`gas`/`oil`) a `duct`-domain flue connector (καπναγωγός) is appended
+ * at the back-centre `{0,-hl}` (`flow:'out'`, classification `exhaust`, diameter
+ * `flueDiameterMm ?? DEFAULT_BOILER_FLUE_DIAMETER_MM`) — an electric boiler / heat-pump
+ * has none. `connectorWorldPosition` applies the host rotation/translation for free.
  */
 export function buildBoilerConnectors(params: MepBoilerParams): MepConnector[] {
   const s = mmToSceneUnits(params.sceneUnits ?? 'mm');
@@ -138,6 +142,15 @@ export function buildBoilerConnectors(params: MepBoilerParams): MepConnector[] {
       const dhwRecirc: Point3D = { x: -hw, y: -hl, z: 0 };
       connectors.push(buildBoilerDhwRecircInletConnector(dhwRecirc, dhwDiameter));
     }
+  }
+  // Combustion flue (καπναγωγός) — a gas/oil boiler exhausts flue gases through a duct
+  // connector. Gated by `fuelType` (combustion sources only), INDEPENDENT of the combi/DHW
+  // gate: a plain gas boiler with no DHW still vents. Placed at the back-centre `{0,-hl}`,
+  // free of the supply/return (y=0) and the four DHW corners. Founds the `duct` domain.
+  if (params.fuelType === 'gas' || params.fuelType === 'oil') {
+    const flue: Point3D = { x: 0, y: -hl, z: 0 };
+    const flueDiameter = params.flueDiameterMm ?? DEFAULT_BOILER_FLUE_DIAMETER_MM;
+    connectors.push(buildBoilerFlueConnector(flue, flueDiameter));
   }
   return connectors;
 }

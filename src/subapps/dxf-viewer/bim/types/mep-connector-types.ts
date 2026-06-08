@@ -75,6 +75,16 @@ export type MepSystemClassification =
 /** Conveyed fluid for a plumbing connector/segment (drives later sizing/analysis). */
 export type PipeFluid = 'water' | 'hot-water' | 'wastewater' | 'glycol' | 'other';
 
+/**
+ * Revit duct "System Classification" (ADR-408 — duct domain foundation). The
+ * air/gas sub-type a duct connector — and the duct network it joins — carries.
+ * Disjoint value space from {@link ElectricalSystemClassification} and
+ * {@link PlumbingSystemClassification}; kept apart by the System's `systemType`
+ * discriminant. The opening member is `exhaust` (combustion flue / καπναγωγός);
+ * future HVAC slices append `supply-air` / `return-air` without a type change.
+ */
+export type DuctSystemClassification = 'exhaust';
+
 // ─── Domain-specific params ───────────────────────────────────────────────────
 
 /** Electrical-domain connector params (Revit Electrical Connector). */
@@ -107,6 +117,18 @@ export interface MepPipeConnectorParams {
   readonly flowLps?: number;
 }
 
+/**
+ * Duct-domain connector params (Revit Duct/Vent Connector), present when
+ * `MepConnector.domain === 'duct'` (ADR-408 — duct domain foundation). The opening
+ * use is the boiler flue (καπναγωγός) carrying combustion exhaust; the params mirror
+ * the minimal pipe payload — a classification + a nominal diameter.
+ */
+export interface MepDuctConnectorParams {
+  readonly systemClassification: DuctSystemClassification;
+  /** mm — nominal duct/flue diameter (typical flue DN80/100/130). */
+  readonly diameterMm?: number;
+}
+
 // ─── Connector ────────────────────────────────────────────────────────────────
 
 /**
@@ -127,6 +149,8 @@ export interface MepConnector {
   readonly electrical?: MepElectricalConnectorParams;
   /** Domain-specific payload — present when `domain === 'pipe'` (ADR-408 Φ9). */
   readonly pipe?: MepPipeConnectorParams;
+  /** Domain-specific payload — present when `domain === 'duct'` (ADR-408 duct foundation). */
+  readonly duct?: MepDuctConnectorParams;
   /**
    * Derived back-reference to the owning System — NOT truth (see file header).
    * Reconciled System→connector; absent = unassigned.
@@ -375,6 +399,8 @@ export const BOILER_DHW_HOT_CONNECTOR_ID = 'boiler-dhw-hot';
 export const BOILER_DHW_COLD_CONNECTOR_ID = 'boiler-dhw-cold';
 /** Connector id for the DHW recirculation return inlet of a COMBI boiler (ανακυκλοφορία ΖΝΧ). */
 export const BOILER_DHW_RECIRC_CONNECTOR_ID = 'boiler-dhw-recirc';
+/** Connector id for the combustion flue/vent outlet of a gas/oil boiler (καπναγωγός). */
+export const BOILER_FLUE_CONNECTOR_ID = 'boiler-flue';
 
 /**
  * Supply outlet connector of a hydronic boiler (ADR-408 Εύρος Β #2, λέβητας) — the
@@ -498,6 +524,37 @@ export function buildBoilerDhwRecircInletConnector(
     flow: 'in',
     localPosition,
     pipe: { systemClassification: 'domestic-hot-water', diameterMm },
+  };
+}
+
+/**
+ * Combustion flue/vent outlet connector of a gas/oil heating boiler (ADR-408 — duct
+ * domain foundation, Revit "Mechanical Equipment → Flue/Vent connector", καπναγωγός).
+ * A combustion boiler burns fuel and exhausts the flue gases here: the exhaust LEAVES
+ * the boiler (`flow:'out'`), `domain:'duct'` (NOT pipe — this is a gas duct, not a water
+ * line), classification FIXED to `exhaust`. `localDirection` points up (z+) toward the
+ * chimney, the natural Revit flue orientation. This is the FIRST `duct`-domain connector
+ * — it founds the duct domain (mirror of how the pipe slice founded the pipe domain).
+ *
+ * Only seeded when the boiler's `fuelType` is a combustion source (`gas`/`oil`); an
+ * electric boiler / heat-pump has no combustion and therefore no flue (gated in
+ * `buildBoilerConnectors`). Independent of the combi/DHW gate — a plain gas boiler with
+ * no DHW still vents.
+ *
+ * `localPosition` is host-local (scene units, pre-rotation) — the caller places it at the
+ * back-centre, distinct from the supply/return/DHW ports (see `buildBoilerConnectors`).
+ */
+export function buildBoilerFlueConnector(
+  localPosition: Point3D,
+  diameterMm: number,
+): MepConnector {
+  return {
+    connectorId: BOILER_FLUE_CONNECTOR_ID,
+    domain: 'duct',
+    flow: 'out',
+    localPosition,
+    localDirection: { x: 0, y: 0, z: 1 },
+    duct: { systemClassification: 'exhaust', diameterMm },
   };
 }
 

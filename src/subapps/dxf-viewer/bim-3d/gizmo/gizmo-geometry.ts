@@ -13,6 +13,7 @@ import {
   PLANE_OFFSET,
   GIZMO_COLOR_CENTER, AXIS_COLORS, PLANE_COLORS,
   RESIZE_IDLE_COLORS, RESIZE_HANDLE_OFFSET,
+  GIZMO_ENDPOINT_COLOR,
   PYRAMID_OFFSET,
   NEG_AXIS_LENGTH, NEG_AXIS_OPACITY,
   GIZMO_RENDER_ORDER,
@@ -24,6 +25,7 @@ import {
 } from './gizmo-builders';
 import {
   buildResizeHandle,
+  buildEndpointHandle,
   buildCenterHandle,
   buildOriginReticle,
 } from './gizmo-handle-builders';
@@ -234,13 +236,13 @@ export function createGizmoMeshes(): GizmoMeshSet {
   }
 
   // --- Endpoint shape handles (ADR-408 Φ-D — start/end of a linear MEP segment) -
-  // Reuse the resize square glyph (matches the 2D endpoint square). They start at
+  // A single clean teal "grab dot" (sphere) per end — NOT the busy resize glyph
+  // (Giorgio: the resize square+cross+brackets read as confusing). They start at
   // the root origin; the overlay repositions them to `(endpointWorld − anchor) /
   // rootScale` every position/scale refresh (`setEndpointHandles`), so they sit on
-  // the pipe ends at a screen-constant size. Only the centre hitbox is registered
-  // (no symmetric corner-pick — an endpoint is a single draggable node).
+  // the pipe ends at a screen-constant size.
   for (const endpoint of ['start', 'end'] as const) {
-    const { visual, hitbox } = buildResizeHandle(RESIZE_IDLE_COLORS['x']);
+    const { visual, hitbox } = buildEndpointHandle(GIZMO_ENDPOINT_COLOR);
     const id: GizmoHandleId = `endpoint-${endpoint}`;
     visual.name = `gizmo-${id}`;
     visuals.set(id, visual);

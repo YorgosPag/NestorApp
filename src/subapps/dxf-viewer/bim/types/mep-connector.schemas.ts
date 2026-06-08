@@ -42,6 +42,9 @@ export const PlumbingSystemClassificationSchema = z.enum([
 /** ADR-408 Φ9 — conveyed fluid. */
 export const PipeFluidSchema = z.enum(['water', 'hot-water', 'wastewater', 'glycol', 'other']);
 
+/** ADR-408 (duct domain foundation) — duct system classification (opening: flue exhaust). */
+export const DuctSystemClassificationSchema = z.enum(['exhaust']);
+
 export const MepElectricalConnectorParamsSchema = z
   .object({
     systemClassification: ElectricalSystemClassificationSchema,
@@ -63,6 +66,14 @@ export const MepPipeConnectorParamsSchema = z
   })
   .strict();
 
+/** ADR-408 (duct domain foundation) — duct connector params (present when domain === 'duct'). */
+export const MepDuctConnectorParamsSchema = z
+  .object({
+    systemClassification: DuctSystemClassificationSchema,
+    diameterMm: z.number().positive().optional(),
+  })
+  .strict();
+
 export const MepConnectorSchema = z
   .object({
     connectorId: z.string().min(1),
@@ -72,6 +83,7 @@ export const MepConnectorSchema = z
     localDirection: Point3DSchema.optional(),
     electrical: MepElectricalConnectorParamsSchema.optional(),
     pipe: MepPipeConnectorParamsSchema.optional(),
+    duct: MepDuctConnectorParamsSchema.optional(),
     systemId: z.string().min(1).optional(),
   })
   .strict();

@@ -24,6 +24,7 @@ import type { GizmoHitTestSet } from './gizmo-hit-test';
 import type { GizmoHandleId, GizmoEndpoint } from './gizmo-types';
 import {
   AXIS_COLORS, PLANE_COLORS, RESIZE_IDLE_COLORS, GIZMO_COLOR_CENTER, GIZMO_COLOR_HOVER,
+  GIZMO_ENDPOINT_COLOR,
   GIZMO_SCREEN_SCALE, GIZMO_RENDER_ORDER,
   SNAP_MARKER_COLOR, SNAP_MARKER_RADIUS, SNAP_MARKER_SCREEN_SCALE, SNAP_MARKER_RENDER_ORDER,
 } from './gizmo-constants';
@@ -35,10 +36,34 @@ import {
  * `axis-x`/`axis-z` are the horizontal (plan) move arrows; `plane-xz` the plan
  * drag; `rotate-y` the plan rotation.
  */
+/**
+ * Move/rotate handles active for EVERY selected entity (the planar baseline).
+ * ADR-402/408 Φ-E — Revit DOF model: structural + non-MEP elements move in PLAN
+ * only (2-axis): the two horizontal arrows (`axis-x`/`axis-z`), the horizontal plane
+ * drag (`plane-xz`) and the plan rotation ring (`rotate-y`). Their vertical position
+ * is a constraint/offset edited via the contextual tab — NOT a free 3D drag — so the
+ * vertical move arrow (`axis-y`) and the vertical plane handles are NOT in the base.
+ * (`center` orange free-move pyramid hidden per Giorgio.)
+ */
 const BASE_HANDLES: readonly GizmoHandleId[] = [
-  // 'center' (orange free-move pyramid) hidden per Giorgio — to test behaviour without it.
-  'axis-x', 'axis-y', 'axis-z', 'plane-xz', 'rotate-y',
+  'axis-x', 'axis-z', 'plane-xz', 'rotate-y',
 ];
+
+/**
+ * ADR-408 Φ-E — handles that turn a selection into a FULL 3D move: the vertical move
+ * arrow (`axis-y`) + the two vertical plane drags (`plane-xy`, `plane-yz`). Added only
+ * for the `FREE_3D_MOVE_TYPES` below.
+ */
+const FREE_3D_MOVE_HANDLES: readonly GizmoHandleId[] = ['axis-y', 'plane-xy', 'plane-yz'];
+
+/**
+ * ADR-408 Φ-E — entity types that move freely in ALL THREE axes (Revit: ducts/pipes +
+ * mechanical equipment placed at an arbitrary elevation). Everything else is planar
+ * (2-axis). Multi-select (`editBimType = null`) → planar (mirror resize/tilt).
+ */
+const FREE_3D_MOVE_TYPES: ReadonlySet<string> = new Set([
+  'mep-segment', 'mep-fixture', 'mep-manifold', 'mep-radiator', 'mep-boiler', 'mep-water-heater',
+]);
 
 /**
  * ADR-402 Phase B — extra resize handles shown per entity type (world-axis
@@ -90,9 +115,11 @@ const ENDPOINT_HANDLES_BY_TYPE: Readonly<Record<string, readonly GizmoHandleId[]
   'mep-segment': ['endpoint-start', 'endpoint-end'],
 };
 
-/** Active handle id set for a selected entity: base move/rotate + any resize + tilt + endpoint. */
+/** Active handle id set for a selected entity: base move/rotate + 3D move + resize + tilt + endpoint. */
 export function activeHandlesFor(bimType: string | null): ReadonlySet<GizmoHandleId> {
   const ids = new Set<GizmoHandleId>(BASE_HANDLES);
+  // ADR-408 Φ-E — full 3D move (vertical arrow + vertical planes) only for free-3D types.
+  if (bimType && FREE_3D_MOVE_TYPES.has(bimType)) for (const id of FREE_3D_MOVE_HANDLES) ids.add(id);
   const resize = (bimType && RESIZE_HANDLES_BY_TYPE[bimType]) || [];
   for (const id of resize) ids.add(id);
   const tilt = (bimType && TILT_HANDLES_BY_TYPE[bimType]) || [];
@@ -268,7 +295,18 @@ export class BimGizmoOverlay {
     }
     this.meshSet.root.scale.setScalar(Math.max(s, 1e-3));
     this.refreshEndpointOffsets();
+    this.billboardEndpointRings(camera);
     this.meshSet.root.updateMatrixWorld(true);
+  }
+
+  /**
+   * ADR-408 Φ-D — orient the endpoint ring(s) to face the camera so they stay a full
+   * circle from any orbit angle (a fixed-plane ring would vanish edge-on). The root
+   * carries no rotation (only position + uniform scale), so copying the camera's world
+   * quaternion onto each ring child aligns the torus normal (+Z) with the view direction.
+   */
+  private billboardEndpointRings(camera: THREE.Camera): void {
+    for (const part of this.endpointParts.values()) part.visual.quaternion.copy(camera.quaternion);
   }
 
   /**
@@ -348,8 +386,8 @@ function createSnapMarker(): THREE.LineSegments {
 /** Idle colour for a handle id (restored when hover leaves). */
 function defaultColorOf(id: GizmoHandleId): number {
   if (id === 'center') return GIZMO_COLOR_CENTER;
-  // ADR-408 Φ-D — endpoint squares share the resize-X idle colour (Revit blue-ish grip).
-  if (id.startsWith('endpoint-')) return RESIZE_IDLE_COLORS['x'] ?? GIZMO_COLOR_CENTER;
+  // ADR-408 Φ-D — endpoint grab dot: clear teal (distinct from axes/centre).
+  if (id.startsWith('endpoint-')) return GIZMO_ENDPOINT_COLOR;
   if (id.startsWith('resize-m-')) return RESIZE_IDLE_COLORS[id.slice(9)] ?? GIZMO_COLOR_CENTER;
   if (id.startsWith('resize-')) return RESIZE_IDLE_COLORS[id.slice(7)] ?? GIZMO_COLOR_CENTER;
   if (id.startsWith('rotate-')) return AXIS_COLORS[id.slice(7)] ?? GIZMO_COLOR_CENTER;

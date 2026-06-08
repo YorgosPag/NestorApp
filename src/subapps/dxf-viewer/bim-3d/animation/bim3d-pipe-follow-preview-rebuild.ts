@@ -103,7 +103,15 @@ function liveNextParams(entity: Entity, xform: PipeDragXform, mmScale: number): 
       ? computeMepHostVerticalMove(params as { mountingElevationMm: number }, dzMm)
       : null;
   }
-  return paramsOf(calculateBimMovedGeometry(entity, { x: planDx, y: planDy }));
+  const moved = paramsOf(calculateBimMovedGeometry(entity, { x: planDx, y: planDy }));
+  if (dzMm === 0 || !moved) return moved;
+  // ADR-408 Φ-E — combined plan + vertical (vertical plane handle, plane-xy/yz): shift
+  // the moved params' elevation too, so the follower preview matches the commit.
+  if (isMepSegmentEntity(entity)) return computeMepSegmentVerticalMove(moved as MepSegmentParams, dzMm) ?? moved;
+  const mp = moved as { mountingElevationMm?: number };
+  return typeof mp.mountingElevationMm === 'number'
+    ? computeMepHostVerticalMove(mp as { mountingElevationMm: number }, dzMm)
+    : moved;
 }
 
 /** Follower patches for one dragged MEP entity under the given next params. */

@@ -198,4 +198,52 @@ describe('buildBoilerConnectors', () => {
     const fallback = buildBoilerConnectors(params({ producesDhw: true, dhwRecirculation: true }));
     expect(fallback.find((c) => c.connectorId === 'boiler-dhw-recirc')!.pipe?.diameterMm).toBe(22);
   });
+
+  // ─── Combustion flue (καπναγωγός) — duct connector (ADR-408 duct foundation) ─────
+
+  it('appends a flue duct connector for a gas boiler (back-centre, flow:out, exhaust)', () => {
+    const connectors = buildBoilerConnectors(params({ fuelType: 'gas' }));
+    expect(connectors).toHaveLength(3); // supply + return + flue (no DHW)
+    const flue = connectors.find((c) => c.connectorId === 'boiler-flue')!;
+    expect(flue.domain).toBe('duct');
+    expect(flue.flow).toBe('out');
+    expect(flue.duct?.systemClassification).toBe('exhaust');
+    // back-centre {0, -hl}: length 350 → -175 (mm-scene s=1).
+    expect(flue.localPosition.x).toBeCloseTo(0, 6);
+    expect(flue.localPosition.y).toBeCloseTo(-175, 6);
+    // points up toward the chimney.
+    expect(flue.localDirection).toEqual({ x: 0, y: 0, z: 1 });
+  });
+
+  it('appends a flue for an oil boiler too', () => {
+    const ids = buildBoilerConnectors(params({ fuelType: 'oil' })).map((c) => c.connectorId);
+    expect(ids).toContain('boiler-flue');
+  });
+
+  it('omits the flue for electric / heat-pump / unspecified fuel (no combustion)', () => {
+    expect(buildBoilerConnectors(params({ fuelType: 'electric' })).map((c) => c.connectorId)).not.toContain('boiler-flue');
+    expect(buildBoilerConnectors(params({ fuelType: 'heat-pump' })).map((c) => c.connectorId)).not.toContain('boiler-flue');
+    expect(buildBoilerConnectors(params()).map((c) => c.connectorId)).not.toContain('boiler-flue');
+  });
+
+  it('flue diameter defaults to DN100, overridden by flueDiameterMm', () => {
+    const def = buildBoilerConnectors(params({ fuelType: 'gas' }));
+    expect(def.find((c) => c.connectorId === 'boiler-flue')!.duct?.diameterMm).toBe(100);
+    const overridden = buildBoilerConnectors(params({ fuelType: 'gas', flueDiameterMm: 130 }));
+    expect(overridden.find((c) => c.connectorId === 'boiler-flue')!.duct?.diameterMm).toBe(130);
+  });
+
+  it('coexists with a combi + recirc gas boiler — 6 distinct connectors', () => {
+    const connectors = buildBoilerConnectors(
+      params({ fuelType: 'gas', producesDhw: true, dhwRecirculation: true }),
+    );
+    expect(connectors).toHaveLength(6); // supply, return, dhwHot, dhwCold, recirc, flue
+    const ids = connectors.map((c) => c.connectorId).sort();
+    expect(ids).toEqual(
+      ['boiler-dhw-cold', 'boiler-dhw-hot', 'boiler-dhw-recirc', 'boiler-flue', 'boiler-return', 'boiler-supply'].sort(),
+    );
+    // all six local positions are distinct.
+    const keys = new Set(connectors.map((c) => `${c.localPosition.x},${c.localPosition.y}`));
+    expect(keys.size).toBe(6);
+  });
 });

@@ -21,6 +21,11 @@ import type { Entity } from '../../types/entities';
 import type { SceneEntity } from '../../core/commands/interfaces';
 import { isMepSegmentEntity } from '../../types/entities';
 import type { MepSegmentParams } from '../../bim/types/mep-segment-types';
+import type { MepFixtureParams } from '../../bim/types/mep-fixture-types';
+import type { MepManifoldParams } from '../../bim/types/mep-manifold-types';
+import type { MepRadiatorParams } from '../../bim/types/mep-radiator-types';
+import type { MepBoilerParams } from '../../bim/types/mep-boiler-types';
+import type { MepWaterHeaterParams } from '../../bim/types/mep-water-heater-types';
 import { mmToEntityUnitFactor } from '../utils/bim3d-edit-math';
 import { createSceneManagerAdapter } from '../../hooks/grips/grip-commit-adapters';
 import { MoveEntityCommand, MoveMultipleEntitiesCommand } from '../../core/commands/entity-commands/MoveEntityCommand';
@@ -166,11 +171,23 @@ function withConnectedPipeFollow(
 /** Map a drag outcome to its view-agnostic command (null = no-op / unsupported type). */
 export function buildEditCommand(outcome: BridgeOutcome, c: CommandBuildCtx): EditCommand | null {
   if (outcome.kind === 'move') {
-    // ADR-402 — the axis-Y arrow yields a purely vertical drag (deltaDxf ≈ 0,
-    // deltaUpMm ≠ 0): route it to the per-type elevation edit. The horizontal
-    // arrows / plane / free drag keep deltaUpMm 0 → fall through to the plan move.
-    if (outcome.deltaUpMm !== 0) return buildVerticalMoveCommand(outcome.deltaUpMm, c);
-    const masked = maskByAxisLock(outcome.deltaDxf, c.edit.axisLock);
+    const masked0 = maskByAxisLock(outcome.deltaDxf, c.edit.axisLock);
+    const hasHoriz = masked0.x !== 0 || masked0.y !== 0;
+    const hasVert = outcome.deltaUpMm !== 0;
+    // ADR-402 — the axis-Y arrow yields a PURELY vertical drag (deltaDxf ≈ 0): route
+    // it to the per-type elevation edit (handles multi-select too).
+    if (hasVert && !hasHoriz) return buildVerticalMoveCommand(outcome.deltaUpMm, c);
+    // ADR-408 Φ-E — a vertical plane handle (plane-xy / plane-yz) on a free-3D MEP
+    // entity yields a COMBINED horizontal + vertical drag. The XY translate and the
+    // Z shift BOTH rewrite the same entity's params, so they CANNOT be two commands
+    // (the second would clobber the first). Build ONE Update*ParamsCommand with the
+    // combined next params instead (single-select only — multi has no vertical planes).
+    if (hasVert && hasHoriz && c.entityIds.length === 1) {
+      const combined = buildMepCombinedMoveCommand(masked0, outcome.deltaUpMm, c);
+      if (combined) return combined;
+      // Not an MEP host (shouldn't happen for a free-3D type) → fall through to plan-only.
+    }
+    const masked = masked0; // plan-only (deltaUpMm 0, or a non-MEP combined drag fallback)
     // ADR-402/404: convert the mm gizmo delta into the entity's native CANVAS units
     // (1 for an mm drawing, 0.001 for a meter scene, the inferred factor for stairs)
     // so the shared move SSoT relocates the entity by the right distance. Without
@@ -402,6 +419,46 @@ function mepVerticalCommand(entity: Entity, deltaUpMm: number, sm: SceneManager)
     return next ? new UpdateMepWaterHeaterParamsCommand(entity.id, next, entity.params, sm, false) : null;
   }
   return null;
+}
+
+/**
+ * ADR-408 Φ-E — combined horizontal + vertical move of a SINGLE free-3D MEP entity
+ * (vertical plane handle drag). Builds ONE `Update*ParamsCommand` carrying the entity
+ * translated in plan AND shifted in elevation (the two cannot be separate commands —
+ * they rewrite the same params), wrapped in `withConnectedPipeFollow` so the snapped
+ * pipes follow the combined final pose in one undo. `null` = not an MEP host.
+ */
+function buildMepCombinedMoveCommand(maskedDxf: Point2D, deltaUpMm: number, c: CommandBuildCtx): EditCommand | null {
+  const entitiesAll = c.levels.getLevelScene(c.levelId)?.entities ?? [];
+  const entity = entitiesAll.find((e) => e.id === c.entityId);
+  if (!entity) return null;
+  const f = mmToEntityUnitFactor(entity);
+  const deltaCanvas = f === 1 ? maskedDxf : { x: maskedDxf.x * f, y: maskedDxf.y * f };
+  const next = mepCombinedNextParams(entity, deltaCanvas, deltaUpMm);
+  if (!next) return null;
+  const base = mepUpdateCommandFromNext(entity, next, c.sm);
+  if (!base) return null;
+  return withConnectedPipeFollow(base, [c.entityId], entitiesAll, c.sm, () => next);
+}
+
+/** Final params of an MEP entity after a plan translate (`deltaCanvas`) THEN an elevation shift. */
+function mepCombinedNextParams(entity: Entity, deltaCanvas: Point2D, deltaUpMm: number): unknown | null {
+  const moved = nextParamsFromPatch(calculateBimMovedGeometry(entity, deltaCanvas));
+  if (!moved) return null;
+  return mepVerticalNextParams({ ...entity, params: moved } as Entity, deltaUpMm) ?? moved;
+}
+
+/** Per-type `Update*ParamsCommand` for an MEP entity from explicit next params (prev = current). */
+function mepUpdateCommandFromNext(entity: Entity, next: unknown, sm: SceneManager): EditCommand | null {
+  switch (entity.type) {
+    case 'mep-segment':      return new UpdateMepSegmentParamsCommand(entity.id, next as MepSegmentParams, entity.params, sm, false);
+    case 'mep-fixture':      return new UpdateMepFixtureParamsCommand(entity.id, next as MepFixtureParams, entity.params, sm, false);
+    case 'mep-manifold':     return new UpdateMepManifoldParamsCommand(entity.id, next as MepManifoldParams, entity.params, sm, false);
+    case 'mep-radiator':     return new UpdateMepRadiatorParamsCommand(entity.id, next as MepRadiatorParams, entity.params, sm, false);
+    case 'mep-boiler':       return new UpdateMepBoilerParamsCommand(entity.id, next as MepBoilerParams, entity.params, sm, false);
+    case 'mep-water-heater': return new UpdateMepWaterHeaterParamsCommand(entity.id, next as MepWaterHeaterParams, entity.params, sm, false);
+    default: return null;
+  }
 }
 
 /** Next params for an MEP entity's vertical move (for the connectivity follow). */

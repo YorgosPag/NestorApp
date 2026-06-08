@@ -116,6 +116,13 @@ export interface MepBoilerParams extends MepConnectorHostParams {
    */
   readonly dhwConnectorDiameterMm?: number;
   /**
+   * mm — nominal combustion flue (καπναγωγός) diameter for a gas/oil boiler. Drives
+   * the `boiler-flue` duct connector (`buildBoilerConnectors`, ADR-408 duct foundation).
+   * Absent ⇒ falls back to {@link DEFAULT_BOILER_FLUE_DIAMETER_MM}. Only relevant when
+   * `fuelType` is a combustion source (gas/oil); ignored for electric/heat-pump.
+   */
+  readonly flueDiameterMm?: number;
+  /**
    * W — optional catalogue thermal output (nominal heat output). Drives future
    * sizing/load-balancing; absent ⇒ not yet specified.
    */
@@ -203,6 +210,12 @@ export const DEFAULT_BOILER_CONNECTOR_DIAMETER_MM = 22;
 
 /** Default DHW connector diameter (mm) for a combi boiler — typical 15mm tap-water tail. */
 export const DEFAULT_BOILER_DHW_CONNECTOR_DIAMETER_MM = 15;
+
+/**
+ * Default combustion flue (καπναγωγός) diameter (mm) for a gas/oil boiler — typical
+ * DN100 wall-hung condensing flue (range DN80–130). Used when `flueDiameterMm` is absent.
+ */
+export const DEFAULT_BOILER_FLUE_DIAMETER_MM = 100;
 
 /**
  * Default classification the boiler sources — the hydronic supply flow. A network

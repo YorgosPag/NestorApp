@@ -84,6 +84,13 @@ const DHW_CONNECTOR_DIAMETER_MM_OPTIONS = [
   { value: '22', labelKey: '22', isLiteralLabel: true },
 ] as const;
 
+// Combustion flue (καπναγωγός) diameter (mm) — typical condensing flue sizes DN80/100/130.
+const FLUE_DIAMETER_MM_OPTIONS = [
+  { value: '80',  labelKey: '80',  isLiteralLabel: true },
+  { value: '100', labelKey: '100', isLiteralLabel: true },
+  { value: '130', labelKey: '130', isLiteralLabel: true },
+] as const;
+
 // Nominal catalogue thermal output (W) — typical residential/commercial boiler range.
 const THERMAL_OUTPUT_W_OPTIONS = [
   { value: '6000',  labelKey: '6000',  isLiteralLabel: true },
@@ -172,6 +179,32 @@ export const CONTEXTUAL_MEP_BOILER_TAB: RibbonTab = {
                 id: 'mepBoiler.dhwRecirculation',
                 labelKey: 'ribbon.commands.mepBoilerEditor.dhwRecirculation',
                 commandKey: MEP_BOILER_RIBBON_KEYS.toggles.dhwRecirculation,
+              },
+            },
+          ],
+        },
+      ],
+    },
+    // ADR-408 (duct domain foundation) — «Καπναγωγός» panel: εμφανίζεται μόνο για λέβητα
+    // καύσης (visibilityKey `combustion` → bridge.getPanelVisibility → fuelType gas/oil).
+    // Flue (καπναγωγός) connector diameter (typical condensing flue DN80/100/130).
+    {
+      id: 'mep-boiler-flue',
+      labelKey: 'ribbon.panels.mepBoilerFlue',
+      visibilityKey: MEP_BOILER_RIBBON_VISIBILITY_KEYS.combustion,
+      rows: [
+        {
+          isInFlyout: false,
+          buttons: [
+            {
+              type: 'combobox',
+              size: 'small',
+              command: {
+                id: 'mepBoiler.flueDiameter',
+                labelKey: 'ribbon.commands.mepBoilerEditor.flueDiameter',
+                commandKey: MEP_BOILER_RIBBON_KEYS.params.flueDiameter,
+                comboboxWidthPx: 90,
+                options: FLUE_DIAMETER_MM_OPTIONS,
               },
             },
           ],

@@ -104,6 +104,7 @@ const NUMBER_KEY_TO_FIELD: Readonly<Record<string, keyof MepBoilerParams>> = {
   [MEP_BOILER_RIBBON_KEYS.params.connectorDiameter]: 'connectorDiameterMm',
   [MEP_BOILER_RIBBON_KEYS.params.thermalOutput]: 'thermalOutputW',
   [MEP_BOILER_RIBBON_KEYS.params.dhwConnectorDiameter]: 'dhwConnectorDiameterMm',
+  [MEP_BOILER_RIBBON_KEYS.params.flueDiameter]: 'flueDiameterMm',
 };
 
 export function useRibbonMepBoilerBridge(
@@ -313,6 +314,12 @@ export function useRibbonMepBoilerBridge(
         // ADR-408 Εύρος Β (combi) — «ΖΝΧ» panel (DHW diameter) εμφανίζεται μόνο όταν ο
         // λέβητας είναι combi (Revit "params appear by type"). Mirror Revit Yes/No gate.
         return boiler.params.producesDhw === true;
+      }
+      if (visibilityKey === MEP_BOILER_RIBBON_VISIBILITY_KEYS.combustion) {
+        // ADR-408 (duct foundation) — «Καπναγωγός» panel (flue diameter) εμφανίζεται μόνο
+        // για λέβητα καύσης (αερίου/πετρελαίου)· ηλεκτρικός/αντλία θερμότητας → χωρίς
+        // καπναγωγό. Mirror του combi gate, αλλά οδηγείται από `fuelType` (Type Catalog).
+        return boiler.params.fuelType === 'gas' || boiler.params.fuelType === 'oil';
       }
       return false;
     },

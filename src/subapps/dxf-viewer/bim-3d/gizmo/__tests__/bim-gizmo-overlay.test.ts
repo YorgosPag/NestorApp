@@ -125,20 +125,41 @@ describe('activeHandlesFor — per-type resize handles (ADR-402 Phase B, Revit)'
   });
 });
 
-describe('activeHandlesFor — vertical MOVE arrow (ADR-402 axis-Y)', () => {
-  it.each(['column', 'wall', 'beam', 'slab', 'stair'])(
-    'exposes the axis-Y (vertical) move arrow for %s — drag up/down changes elevation',
+describe('activeHandlesFor — Revit DOF: 2-axis (planar) vs 3-axis (free) move (ADR-408 Φ-E)', () => {
+  it.each(['wall', 'column', 'beam', 'slab', 'stair', 'furniture'])(
+    'planar entity %s moves in PLAN only — horizontal arrows + horizontal plane, NO vertical move arrow / planes',
     (bimType) => {
       const ids = activeHandlesFor(bimType);
-      expect(ids.has('axis-y')).toBe(true);
-      // the two horizontal move arrows stay too.
       expect(ids.has('axis-x')).toBe(true);
       expect(ids.has('axis-z')).toBe(true);
+      expect(ids.has('plane-xz')).toBe(true);
+      // 2-axis: no free vertical move (elevation is a constraint/offset via the tab).
+      expect(ids.has('axis-y')).toBe(false);
+      expect(ids.has('plane-xy')).toBe(false);
+      expect(ids.has('plane-yz')).toBe(false);
     },
   );
 
-  it('the vertical move arrow is a BASE handle — present even with no resize (null selection)', () => {
-    expect(activeHandlesFor(null).has('axis-y')).toBe(true);
+  it.each([
+    'mep-segment', 'mep-fixture', 'mep-manifold', 'mep-radiator', 'mep-boiler', 'mep-water-heater',
+  ])('free-3D entity %s moves in ALL three axes — vertical arrow + all three plane handles', (bimType) => {
+    const ids = activeHandlesFor(bimType);
+    expect(ids.has('axis-x')).toBe(true);
+    expect(ids.has('axis-y')).toBe(true);
+    expect(ids.has('axis-z')).toBe(true);
+    expect(ids.has('plane-xz')).toBe(true);
+    expect(ids.has('plane-xy')).toBe(true);
+    expect(ids.has('plane-yz')).toBe(true);
+  });
+
+  it('a multi-selection (editBimType null) is planar — no vertical move arrow / planes', () => {
+    const ids = activeHandlesFor(null);
+    expect(ids.has('axis-y')).toBe(false);
+    expect(ids.has('plane-xy')).toBe(false);
+    expect(ids.has('plane-yz')).toBe(false);
+    // horizontal plan move stays.
+    expect(ids.has('axis-x')).toBe(true);
+    expect(ids.has('plane-xz')).toBe(true);
   });
 });
 
