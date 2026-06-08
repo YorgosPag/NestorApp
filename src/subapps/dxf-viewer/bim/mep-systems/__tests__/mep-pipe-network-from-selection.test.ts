@@ -16,7 +16,8 @@ import {
   SEGMENT_END_CONNECTOR_ID,
   BOILER_SUPPLY_CONNECTOR_ID,
   BOILER_RETURN_CONNECTOR_ID,
-  BOILER_DHW_CONNECTOR_ID,
+  BOILER_DHW_HOT_CONNECTOR_ID,
+  BOILER_DHW_COLD_CONNECTOR_ID,
 } from '../../types/mep-connector-types';
 
 const OUT0 = `${MANIFOLD_OUTLET_CONNECTOR_ID_PREFIX}0`;
@@ -39,7 +40,8 @@ function combiBoiler(id: string): Entity {
       connectors: [
         { connectorId: BOILER_SUPPLY_CONNECTOR_ID, domain: 'pipe', flow: 'out', localPosition: { x: 225, y: 0, z: 0 }, pipe: { systemClassification: 'hydronic-supply', diameterMm: 22 } },
         { connectorId: BOILER_RETURN_CONNECTOR_ID, domain: 'pipe', flow: 'in', localPosition: { x: -225, y: 0, z: 0 }, pipe: { systemClassification: 'hydronic-return', diameterMm: 22 } },
-        { connectorId: BOILER_DHW_CONNECTOR_ID, domain: 'pipe', flow: 'out', localPosition: { x: 225, y: 175, z: 0 }, pipe: { systemClassification: 'domestic-hot-water', diameterMm: 22 } },
+        { connectorId: BOILER_DHW_HOT_CONNECTOR_ID, domain: 'pipe', flow: 'out', localPosition: { x: 225, y: 175, z: 0 }, pipe: { systemClassification: 'domestic-hot-water', diameterMm: 15 } },
+        { connectorId: BOILER_DHW_COLD_CONNECTOR_ID, domain: 'pipe', flow: 'in', localPosition: { x: -225, y: 175, z: 0 }, pipe: { systemClassification: 'domestic-cold-water', diameterMm: 15 } },
       ],
     },
   } as unknown as Entity;
@@ -181,7 +183,7 @@ describe('resolvePipeNetworkFromSelection', () => {
     expect(res.ok).toBe(true);
     if (!res.ok) return;
     expect(res.draft.systemClassification).toBe('domestic-hot-water');
-    expect(res.draft.sourceConnectorId).toBe(BOILER_DHW_CONNECTOR_ID);
+    expect(res.draft.sourceConnectorId).toBe(BOILER_DHW_HOT_CONNECTOR_ID);
   });
 
   it('combi boiler + pipe wired to the supply outlet → hydronic-supply network', () => {
