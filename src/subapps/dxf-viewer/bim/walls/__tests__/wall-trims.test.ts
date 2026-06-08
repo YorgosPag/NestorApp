@@ -446,3 +446,58 @@ describe('wall-geometry miter integration (Phase 1D-C)', () => {
   });
 });
 
+// ─── Multi-wall (3+) junctions — Revit "primary pair mitres, rest butt" ───────
+
+describe('computeWallTrims — multi-wall junction resolution', () => {
+  it('25. REGRESSION: a thin partition joining a clean 2-wall corner does NOT change the thick walls’ miter', () => {
+    // Two THICK exterior walls form an L-corner at (0,0) — both start there.
+    const thickA = makeWall({ x: 0, y: 0 }, { x: 3000, y: 0 }, 300, 'TA');
+    const thickB = makeWall({ x: 0, y: 0 }, { x: 0, y: 3000 }, 300, 'TB');
+    // Baseline: the 2-wall corner mitres cleanly.
+    const before = computeWallTrims([thickA, thickB]);
+    const beforeA = before.get(thickA.id)!.startMiter;
+    const beforeB = before.get(thickB.id)!.startMiter;
+    expect(beforeA).toBeDefined();
+    expect(beforeB).toBeDefined();
+
+    // Add a THIN interior partition whose end lands at the SAME corner (3-way junction).
+    const thin = makeWall({ x: 0, y: 0 }, { x: 2000, y: 2000 }, 100, 'THIN');
+    const after = computeWallTrims([thickA, thickB, thin]);
+
+    // The thick pair keeps the IDENTICAL miter (was overwritten by the thin wall before the fix).
+    expect(after.get(thickA.id)!.startMiter).toEqual(beforeA);
+    expect(after.get(thickB.id)!.startMiter).toEqual(beforeB);
+    // The thin partition BUTTS (bevel), it does NOT miter (no overwrite).
+    const trimThin = after.get(thin.id)!;
+    expect(trimThin.startBevel).toBeDefined();
+    expect(trimThin.startBevel).toBeGreaterThan(0);
+    expect(trimThin.startMiter).toBeUndefined();
+  });
+
+  it('26. unequal-thickness 2-wall corner → clean geometric miter (not bevel)', () => {
+    const thick = makeWall({ x: 0, y: 0 }, { x: 3000, y: 0 }, 300, 'UA');
+    const thin = makeWall({ x: 0, y: 0 }, { x: 0, y: 3000 }, 100, 'UB');
+    const trims = computeWallTrims([thick, thin]);
+    expect(trims.get(thick.id)!.startMiter).toBeDefined();
+    expect(trims.get(thin.id)!.startMiter).toBeDefined();
+    expect(trims.get(thick.id)!.startBevel).toBeUndefined();
+    expect(trims.get(thin.id)!.startBevel).toBeUndefined();
+  });
+
+  it('27. collinear through-wall + branch: the through pair is left straight, the branch butts', () => {
+    // A + B are a single straight run split at (3000,0); C is a thin branch there.
+    const runA = makeWall({ x: 0, y: 0 }, { x: 3000, y: 0 }, 300, 'RA');
+    const runB = makeWall({ x: 3000, y: 0 }, { x: 6000, y: 0 }, 300, 'RB');
+    const branch = makeWall({ x: 3000, y: 0 }, { x: 3000, y: 3000 }, 100, 'BR');
+    const trims = computeWallTrims([runA, runB, branch]);
+
+    // The collinear primary pair continues straight → no trim on either.
+    expect(trims.get(runA.id)).toBeUndefined();
+    expect(trims.get(runB.id)).toBeUndefined();
+    // The branch butts into the through line (bevel ≈ through half-thickness = 150).
+    const trimBranch = trims.get(branch.id)!;
+    expect(trimBranch.startBevel).toBeCloseTo(150, 0);
+    expect(trimBranch.startMiter).toBeUndefined();
+  });
+});
+

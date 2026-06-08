@@ -91,8 +91,15 @@ export const MEP_SEGMENT_RIBBON_VISIBILITY_KEYS = {
   domainAllowsSectionChoice: 'mepSegment.visibility.domainAllowsSectionChoice',
   rectangularSection: 'mepSegment.visibility.rectangularSection',
   roundSection: 'mepSegment.visibility.roundSection',
-  /** ADR-408 Φ14 — classification + slope panel, visible iff `domain === 'pipe'`. */
+  /** ADR-408 Φ14 — slope panel, visible iff a selected segment has `domain === 'pipe'`. */
   pipeDomain: 'mepSegment.visibility.pipeDomain',
+  /**
+   * ADR-408 Φ14 (draw-time System Type) — classification ("Σύστημα") panel, visible
+   * BOTH while the pipe/drain-pipe tool is active (draw-time, Revit Type Selector)
+   * AND when a pipe segment is selected. Distinct from `pipeDomain` (selection-only,
+   * slope) because the slope is derived from endpoints and is meaningless pre-draw.
+   */
+  pipeClassification: 'mepSegment.visibility.pipeClassification',
   /**
    * ADR-408 Φ8 #2b — panel visible ONLY when a segment is selected (post-placement
    * editing), NOT during draw-time. Hides per-endpoint start/end + actions while the
@@ -106,6 +113,7 @@ export type MepSegmentRibbonVisibilityKey =
   | typeof MEP_SEGMENT_RIBBON_VISIBILITY_KEYS.rectangularSection
   | typeof MEP_SEGMENT_RIBBON_VISIBILITY_KEYS.roundSection
   | typeof MEP_SEGMENT_RIBBON_VISIBILITY_KEYS.pipeDomain
+  | typeof MEP_SEGMENT_RIBBON_VISIBILITY_KEYS.pipeClassification
   | typeof MEP_SEGMENT_RIBBON_VISIBILITY_KEYS.selectionOnly;
 
 const MEP_SEGMENT_VISIBILITY_KEY_SET: ReadonlySet<string> = new Set<string>([
@@ -113,6 +121,7 @@ const MEP_SEGMENT_VISIBILITY_KEY_SET: ReadonlySet<string> = new Set<string>([
   MEP_SEGMENT_RIBBON_VISIBILITY_KEYS.rectangularSection,
   MEP_SEGMENT_RIBBON_VISIBILITY_KEYS.roundSection,
   MEP_SEGMENT_RIBBON_VISIBILITY_KEYS.pipeDomain,
+  MEP_SEGMENT_RIBBON_VISIBILITY_KEYS.pipeClassification,
   MEP_SEGMENT_RIBBON_VISIBILITY_KEYS.selectionOnly,
 ]);
 

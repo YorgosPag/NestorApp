@@ -13,34 +13,24 @@ import type { UnifiedGripInfo } from './unified-grip-types';
 import type { DxfCommitDeps } from './unified-grip-types';
 import type { StairEntity } from '../../bim/types/stair-types';
 import type { WallEntity, WallKind } from '../../bim/types/wall-types';
-import type { FloorFinishEntity } from '../../bim/types/floor-finish-types';
 import type { OpeningEntity } from '../../bim/types/opening-types';
-import type { SlabEntity } from '../../bim/types/slab-types';
-import type { SlabOpeningEntity } from '../../bim/types/slab-opening-types';
-import type { RoofEntity } from '../../bim/types/roof-types';
 import type { BeamEntity } from '../../bim/types/beam-types';
 import type { ColumnEntity } from '../../bim/types/column-types';
+import type { MepSegmentEntity } from '../../bim/types/mep-segment-types';
 import { UpdateStairParamsCommand } from '../../core/commands/entity-commands/UpdateStairParamsCommand';
 import { UpdateWallParamsCommand } from '../../core/commands/entity-commands/UpdateWallParamsCommand';
 import { UpdateOpeningParamsCommand } from '../../core/commands/entity-commands/UpdateOpeningParamsCommand';
-import { UpdateSlabParamsCommand } from '../../core/commands/entity-commands/UpdateSlabParamsCommand';
-import { UpdateSlabOpeningParamsCommand } from '../../core/commands/entity-commands/UpdateSlabOpeningParamsCommand';
-import { UpdateRoofParamsCommand } from '../../core/commands/entity-commands/UpdateRoofParamsCommand';
 import { UpdateBeamParamsCommand } from '../../core/commands/entity-commands/UpdateBeamParamsCommand';
 import { UpdateColumnParamsCommand } from '../../core/commands/entity-commands/UpdateColumnParamsCommand';
+import { UpdateMepSegmentParamsCommand } from '../../core/commands/entity-commands/UpdateMepSegmentParamsCommand';
 import { applyStairGripDrag } from '../../bim/stairs/stair-grips';
 import { applyWallGripDrag } from '../../bim/walls/wall-grips';
 import { BimRotateHotGripStore } from '../../bim/grips/bim-rotate-hotgrip-store';
 import { applyOpeningGripDrag } from '../../bim/walls/opening-grips';
-import { applySlabGripDrag } from '../../bim/slabs/slab-grips';
-import { applySlabOpeningGripDrag } from '../../bim/slab-openings/slab-opening-grips';
-import { applyRoofGripDrag } from '../../bim/roofs/roof-grips';
 import { applyBeamGripDrag } from '../../bim/beams/beam-grips';
 import { applyColumnGripDrag } from '../../bim/columns/column-grips';
-import { applyFloorFinishGripDrag } from '../../bim/floor-finishes/floor-finish-grips';
-import { UpdateFloorFinishParamsCommand } from '../../core/commands/entity-commands/UpdateFloorFinishParamsCommand';
+import { applyMepSegmentGripDrag } from '../../bim/mep-segments/mep-segment-grips';
 import { EventBus } from '../../systems/events/EventBus';
-import { ShiftKeyTracker } from '../../keyboard/ShiftKeyTracker';
 import { createSceneManagerAdapter } from './grip-commit-adapters';
 
 // ADR-397 — MOVE→COPY hot-grip handlers live in grip-parametric-copy.ts
@@ -74,6 +64,16 @@ export {
 // grip-polygon-commits.ts (N.7.1 file-size split). Re-exported here so the
 // commit API stays one import.
 export { commitMepUnderfloorGripDrag } from './grip-polygon-commits';
+
+// ADR-363 / ADR-417 / ADR-419 — polygon-footprint vertex grip commits (slab /
+// roof / slab-opening / floor-finish) live in grip-parametric-footprint-commits.ts
+// (N.7.1 file-size split). Re-exported here so the commit API stays one import.
+export {
+  commitSlabGripDrag,
+  commitRoofGripDrag,
+  commitSlabOpeningGripDrag,
+  commitFloorFinishGripDrag,
+} from './grip-parametric-footprint-commits';
 
 /**
  * ADR-358 Phase 5b — Parametric stair grip commit. Bypasses the standard
@@ -226,139 +226,6 @@ export function commitOpeningGripDrag(
 }
 
 /**
- * ADR-363 Phase 3.5 — Parametric slab grip commit (per-vertex translate).
- * Mirrors `commitWallGripDrag` / `commitOpeningGripDrag` semantics: routes
- * through `applySlabGripDrag()` + `UpdateSlabParamsCommand` so geometry +
- * validation recompute atomically and the merge window (ADR-031) collapses a
- * continuous drag into one undo entry. Emits `bim:slab-params-updated` after
- * dispatch so consumers (auto-save / BOQ feed) can react.
- */
-export function commitSlabGripDrag(
-  grip: UnifiedGripInfo,
-  delta: Point2D,
-  deps: DxfCommitDeps,
-): void {
-  if (!grip.entityId || !grip.slabGripKind) return;
-  const sceneManager = createSceneManagerAdapter(deps);
-  if (!sceneManager) return;
-  const raw = sceneManager.getEntity(grip.entityId);
-  if (!raw) return;
-  const candidate = raw as unknown as Partial<SlabEntity>;
-  if (candidate.type !== 'slab' || !candidate.params) return;
-  const slab = candidate as SlabEntity;
-  const originalParams = slab.params;
-  // ADR-363 Phase 3.6 — Shift quantizes the drag to the dominant world axis
-  // (rectilinear constraint). Read from the keyboard tracker so the modifier
-  // can travel from `keydown` → commit without plumbing through 4 handler
-  // layers (mouse-handler-up loses the native event by design).
-  const rectilinear = ShiftKeyTracker.getSnapshot();
-  const newParams = applySlabGripDrag(grip.slabGripKind, {
-    originalParams,
-    delta,
-    rectilinear,
-  });
-  if (newParams === originalParams) return;
-  const command = new UpdateSlabParamsCommand(
-    grip.entityId,
-    newParams,
-    originalParams,
-    sceneManager,
-    true,
-  );
-  if (command.validate() !== null) return;
-  deps.execute(command);
-  EventBus.emit('bim:slab-params-updated', { slabId: grip.entityId });
-}
-
-/**
- * ADR-417 Φ1-part-2 #2 — Parametric roof grip commit (per-vertex translate +
- * edge-midpoint insertion, Revit «Edit Footprint»). Mirrors `commitSlabGripDrag`
- * semantics: routes through `applyRoofGripDrag()` + `UpdateRoofParamsCommand` so
- * geometry (faces / ridges / areas / bbox) + validation recompute atomically and
- * the merge window (ADR-031) collapses a continuous drag into one undo entry.
- * Emits `bim:roof-params-updated` after dispatch so consumers (auto-save / BOQ
- * feed) react. Shift drives rectilinear quantization via the `ShiftKeyTracker`
- * (mirror slab Phase 3.6). The `edges` array is kept in lockstep with
- * `outline.vertices` inside `applyRoofGripDrag` — `UpdateRoofParamsCommand`
- * rejects any length mismatch.
- */
-export function commitRoofGripDrag(
-  grip: UnifiedGripInfo,
-  delta: Point2D,
-  deps: DxfCommitDeps,
-): void {
-  if (!grip.entityId || !grip.roofGripKind) return;
-  const sceneManager = createSceneManagerAdapter(deps);
-  if (!sceneManager) return;
-  const raw = sceneManager.getEntity(grip.entityId);
-  if (!raw) return;
-  const candidate = raw as unknown as Partial<RoofEntity>;
-  if (candidate.type !== 'roof' || !candidate.params) return;
-  const roof = candidate as RoofEntity;
-  const originalParams = roof.params;
-  const rectilinear = ShiftKeyTracker.getSnapshot();
-  const newParams = applyRoofGripDrag(grip.roofGripKind, {
-    originalParams,
-    delta,
-    rectilinear,
-  });
-  if (newParams === originalParams) return;
-  const command = new UpdateRoofParamsCommand(
-    grip.entityId,
-    newParams,
-    originalParams,
-    sceneManager,
-    true,
-  );
-  if (command.validate() !== null) return;
-  deps.execute(command);
-  EventBus.emit('bim:roof-params-updated', { roofId: grip.entityId });
-}
-
-/**
- * ADR-363 Phase 3.7a — Parametric slab-opening grip commit (per-vertex
- * translate + edge-midpoint vertex insertion). Mirrors `commitSlabGripDrag`
- * semantics: routes through `applySlabOpeningGripDrag()` +
- * `UpdateSlabOpeningParamsCommand` so geometry + validation recompute
- * atomically και merge window (ADR-031) collapses συνεχόμενο drag σε ένα undo
- * entry. Emits `bim:slab-opening-params-updated` after dispatch ώστε consumers
- * (auto-save / BOQ feed) να αντιδρούν. Shift διαβάζεται από τον
- * `ShiftKeyTracker` (rectilinear constraint, mirror Phase 3.6).
- */
-export function commitSlabOpeningGripDrag(
-  grip: UnifiedGripInfo,
-  delta: Point2D,
-  deps: DxfCommitDeps,
-): void {
-  if (!grip.entityId || !grip.slabOpeningGripKind) return;
-  const sceneManager = createSceneManagerAdapter(deps);
-  if (!sceneManager) return;
-  const raw = sceneManager.getEntity(grip.entityId);
-  if (!raw) return;
-  const candidate = raw as unknown as Partial<SlabOpeningEntity>;
-  if (candidate.type !== 'slab-opening' || !candidate.params) return;
-  const opening = candidate as SlabOpeningEntity;
-  const originalParams = opening.params;
-  const rectilinear = ShiftKeyTracker.getSnapshot();
-  const newParams = applySlabOpeningGripDrag(grip.slabOpeningGripKind, {
-    originalParams,
-    delta,
-    rectilinear,
-  });
-  if (newParams === originalParams) return;
-  const command = new UpdateSlabOpeningParamsCommand(
-    grip.entityId,
-    newParams,
-    originalParams,
-    sceneManager,
-    true,
-  );
-  if (command.validate() !== null) return;
-  deps.execute(command);
-  EventBus.emit('bim:slab-opening-params-updated', { slabOpeningId: grip.entityId });
-}
-
-/**
  * ADR-363 Phase 5.5a — Parametric beam grip commit. Bypasses the standard
  * stretch / move strategies because `BeamEntity` is parametric: geometry is
  * fully derived from `params`, so the grip drag transforms params (via
@@ -412,35 +279,48 @@ export function commitBeamGripDrag(
 }
 
 /**
- * ADR-419 — Parametric floor-finish grip commit (per-vertex translate +
- * edge-midpoint insertion). Mirrors `commitSlabGripDrag` / `commitRoofGripDrag`
- * semantics: routes through `applyFloorFinishGripDrag()` +
- * `UpdateFloorFinishParamsCommand` so geometry + validation recompute atomically
- * and the merge window (ADR-031) collapses a continuous drag into one undo
- * entry. Shift drives rectilinear constraint via `ShiftKeyTracker`.
+ * ADR-408 Φ8/Φ15 — MEP segment parametric grip commit (start/end/midpoint
+ * translate + section resize + rotation). 1:1 mirror of `commitBeamGripDrag`:
+ * routes through `applyMepSegmentGripDrag()` + `UpdateMepSegmentParamsCommand`
+ * (geometry recomputed atomically), NOT the generic StretchEntityCommand/move —
+ * a segment is params-driven (axis endpoints). A vertical riser exposes only the
+ * whole-entity `mep-segment-midpoint` move, so a plan drag translates the stack
+ * (both endpoints) keeping the Z-span. Emits `bim:mep-segment-params-updated`
+ * after dispatch so consumers (auto-save / fittings / 3D sync) react. Merge
+ * window enabled (isDragging=true) collapses a continuous drag into one undo.
  */
-export function commitFloorFinishGripDrag(
+export function commitMepSegmentGripDrag(
   grip: UnifiedGripInfo,
   delta: Point2D,
   deps: DxfCommitDeps,
 ): void {
-  if (!grip.entityId || !grip.floorFinishGripKind) return;
+  if (!grip.entityId || !grip.mepSegmentGripKind) return;
   const sceneManager = createSceneManagerAdapter(deps);
   if (!sceneManager) return;
   const raw = sceneManager.getEntity(grip.entityId);
   if (!raw) return;
-  const candidate = raw as unknown as Partial<FloorFinishEntity>;
-  if (candidate.type !== 'floor-finish' || !candidate.params) return;
-  const finish = candidate as FloorFinishEntity;
-  const originalParams = finish.params;
-  const rectilinear = ShiftKeyTracker.getSnapshot();
-  const newParams = applyFloorFinishGripDrag(grip.floorFinishGripKind, {
+  const candidate = raw as unknown as Partial<MepSegmentEntity>;
+  if (candidate.type !== 'mep-segment' || !candidate.params) return;
+  const segment = candidate as MepSegmentEntity;
+  const originalParams = segment.params;
+  // `mep-segment-rotation` 6-click hot-grip rotates around a picked centre — the
+  // hook publishes {pivot, anchor} in BimRotateHotGripStore (mirror beam). All
+  // other segment grips use the grip position as anchor.
+  const rotateCtx = BimRotateHotGripStore.getSnapshot();
+  const useRotatePivot =
+    grip.mepSegmentGripKind === 'mep-segment-rotation' &&
+    rotateCtx.pivot !== null &&
+    rotateCtx.anchor !== null;
+  const anchor: Point2D = useRotatePivot ? rotateCtx.anchor! : grip.position;
+  const currentPos: Point2D = { x: anchor.x + delta.x, y: anchor.y + delta.y };
+  const newParams = applyMepSegmentGripDrag(grip.mepSegmentGripKind, {
     originalParams,
     delta,
-    rectilinear,
+    currentPos,
+    ...(useRotatePivot ? { pivot: rotateCtx.pivot! } : {}),
   });
   if (newParams === originalParams) return;
-  const command = new UpdateFloorFinishParamsCommand(
+  const command = new UpdateMepSegmentParamsCommand(
     grip.entityId,
     newParams,
     originalParams,
@@ -449,7 +329,7 @@ export function commitFloorFinishGripDrag(
   );
   if (command.validate() !== null) return;
   deps.execute(command);
-  EventBus.emit('bim:floor-finish-params-updated', { floorFinishId: grip.entityId });
+  EventBus.emit('bim:mep-segment-params-updated', { segmentId: grip.entityId });
 }
 
 /** ADR-363 Phase 4.5 — parametric column grip commit via UpdateColumnParamsCommand. */

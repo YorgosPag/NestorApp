@@ -43,7 +43,7 @@ import {
   buildFloorDrainConnector,
 } from '../types/mep-connector-types';
 import { DEFAULT_FLOOR_DRAIN_CONNECTOR_DIAMETER_MM } from '../types/mep-fixture-types';
-import { isSanitaryKind } from '../sanitary/sanitary-symbol-spec';
+import { isPlumbingFixtureKind } from '../mep-fixtures/plumbing-fixture-spec';
 import { buildSanitaryFixtureConnectors } from '../mep-fixtures/sanitary-fixture-connectors';
 import { buildMepManifoldConnectors } from '../mep-manifolds/mep-manifold-geometry';
 import { buildRadiatorConnectors } from '../mep-radiators/mep-radiator-geometry';
@@ -60,15 +60,16 @@ export function seedDefaultConnectors(entity: Entity): Entity {
   // there too, and the guards below then leave it untouched). Same ref.
   if (getEntityConnectors(entity).length > 0) return entity;
 
-  // A point-based fixture re-materialises its kind's connector set: a sanitary
-  // terminal (WC/basin/…) gets its drain outlet + domestic water-supply inlets
-  // (SSoT `buildSanitaryFixtureConnectors`), a floor drain its single outlet, and a
-  // light fixture its lighting power-in. Kind-aware so a legacy sanitary fixture
-  // re-joins the water network on load (Revit family-definition; was lighting-only).
+  // A point-based fixture re-materialises its kind's connector set: a plumbing
+  // fixture (sanitary terminal WC/basin/… OR appliance washing-machine/… — ADR-408
+  // Δρόμος B) gets its drain outlet + domestic water-supply inlets (SSoT
+  // `buildSanitaryFixtureConnectors`), a floor drain its single outlet, and a light
+  // fixture its lighting power-in. Kind-aware so a legacy plumbing fixture re-joins
+  // the water network on load (Revit family-definition; was lighting-only).
   if (isMepFixtureEntity(entity)) {
     const { kind } = entity.params;
     const sceneUnits = entity.params.sceneUnits ?? 'mm';
-    const connectors = isSanitaryKind(kind)
+    const connectors = isPlumbingFixtureKind(kind)
       ? buildSanitaryFixtureConnectors(kind, sceneUnits)
       : kind === 'floor-drain'
         ? [buildFloorDrainConnector({ x: 0, y: 0, z: 0 }, DEFAULT_FLOOR_DRAIN_CONNECTOR_DIAMETER_MM)]

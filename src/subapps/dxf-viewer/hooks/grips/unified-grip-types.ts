@@ -10,7 +10,7 @@
  */
 
 import type { Point2D } from '../../rendering/types/Types';
-import type { StairGripKind, DimensionGripKind, WallGripKind, OpeningGripKind, SlabGripKind, SlabOpeningGripKind, RoofGripKind, FloorFinishGripKind, MepUnderfloorGripKind, BeamGripKind, ColumnGripKind, MepFixtureGripKind, ElectricalPanelGripKind, MepManifoldGripKind, MepRadiatorGripKind, MepBoilerGripKind, FurnitureGripKind, FloorplanSymbolGripKind, XLineGripKind, RayGripKind } from '../useGripMovement';
+import type { StairGripKind, DimensionGripKind, WallGripKind, OpeningGripKind, SlabGripKind, SlabOpeningGripKind, RoofGripKind, FloorFinishGripKind, MepUnderfloorGripKind, BeamGripKind, ColumnGripKind, MepFixtureGripKind, ElectricalPanelGripKind, MepManifoldGripKind, MepRadiatorGripKind, MepBoilerGripKind, MepSegmentGripKind, FurnitureGripKind, FloorplanSymbolGripKind, XLineGripKind, RayGripKind } from '../useGripMovement';
 import type {
   DxfGripDragPreview,
   DxfGripInteractionState,
@@ -227,6 +227,15 @@ export interface UnifiedGripInfo {
    * translate + rotation + opposite-corner-anchored width/length resize).
    */
   readonly mepBoilerGripKind?: MepBoilerGripKind;
+  /**
+   * ADR-408 Φ8/Φ15 — parametric MEP segment grip discriminator (forwarded from
+   * `GripInfo.mepSegmentGripKind`). Routes commit through
+   * `applyMepSegmentGripDrag()` + `UpdateMepSegmentParamsCommand` (start/end/
+   * midpoint translate + section resize + rotation; a vertical riser exposes only
+   * the whole-entity midpoint move). Bypasses Stretch because segments are
+   * params-driven (axis endpoints) — geometry recomputed atomically.
+   */
+  readonly mepSegmentGripKind?: MepSegmentGripKind;
   /**
    * ADR-410 — parametric furniture grip discriminator (forwarded from
    * `GripInfo.furnitureGripKind`). Routes commit through

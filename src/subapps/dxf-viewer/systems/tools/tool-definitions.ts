@@ -191,6 +191,8 @@ export const TOOL_DEFINITIONS: Record<ToolType, ToolInfo> = {
   'mep-shower': { id: 'mep-shower', category: 'drawing', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: false },
   'mep-bathtub': { id: 'mep-bathtub', category: 'drawing', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: false },
   'mep-bidet': { id: 'mep-bidet', category: 'drawing', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: false },
+  // ADR-408 Δρόμος B — single-click point-based appliances (washing machine, …), mep-fixture kinds, cold inlet + 1 sanitary-drainage outlet each.
+  'mep-washing-machine': { id: 'mep-washing-machine', category: 'drawing', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: false },
   // ADR-408 Φ15 — single-click vertical drain stack (κατακόρυφη στήλη, vertical mep-segment).
   'mep-drain-riser': { id: 'mep-drain-riser', category: 'drawing', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: false },
   'mep-radiator': { id: 'mep-radiator', category: 'drawing', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: false }, // ADR-408 Εύρος Β — single-click point-based heating radiator (καλοριφέρ, supply + return terminal)

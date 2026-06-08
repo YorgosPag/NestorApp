@@ -20,7 +20,9 @@ import type { MepFixtureEntity } from '../../bim/types/mep-fixture-types';
 import { resolveFixtureMeshCategory } from '../../bim/types/mep-fixture-types';
 import { resolveLightFixtureAsset } from '../../bim/mep-fixtures/light-fixture-catalog';
 import { resolveSanitaryFixtureAsset } from '../../bim/mep-fixtures/sanitary-fixture-mesh-catalog';
+import { resolveApplianceFixtureAsset } from '../../bim/mep-fixtures/appliance-fixture-mesh-catalog';
 import { isSanitaryKind } from '../../bim/sanitary/sanitary-symbol-spec';
+import { isApplianceKind } from '../../bim/appliances/appliance-symbol-spec';
 import { meshToObject3D, type MeshPlacement } from './mesh-to-object3d';
 
 /** Per-kind mesh routing: Storage folder, placeholder height, vertical anchor. */
@@ -40,6 +42,16 @@ function resolveFixtureMeshRouting(
   assetId: string,
 ): FixtureMeshRouting {
   const category = resolveFixtureMeshCategory(fixture.params.kind);
+  // ADR-408 Δρόμος B — an appliance (washing-machine/…) is floor-standing, mesh in
+  // the `appliance` catalog; same base anchor as a sanitary terminal.
+  if (isApplianceKind(fixture.params.kind)) {
+    const preset = resolveApplianceFixtureAsset(assetId);
+    return {
+      category,
+      heightMm: preset?.heightMm ?? fixture.params.bodyHeightMm,
+      verticalAnchor: 'base',
+    };
+  }
   if (isSanitaryKind(fixture.params.kind)) {
     const preset = resolveSanitaryFixtureAsset(assetId);
     return {

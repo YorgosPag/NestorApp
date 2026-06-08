@@ -35,7 +35,7 @@ import { addMepRadiatorToScene } from '../../bim/mep-radiators/add-mep-radiator-
 import { addMepBoilerToScene } from '../../bim/mep-boilers/add-mep-boiler-to-scene';
 import { addMepSegmentToScene } from '../../bim/mep-segments/add-mep-segment-to-scene';
 import { DEFAULT_DRAINAGE_SLOPE_PERCENT } from '../../bim/types/mep-segment-types';
-import { sanitaryFixtureToolKind } from '../../bim/sanitary/sanitary-symbol-spec';
+import { plumbingFixtureToolKind } from '../../bim/mep-fixtures/plumbing-fixture-spec';
 import { addRailingToScene } from '../../bim/railings/add-railing-to-scene';
 import type { LevelsHookReturn } from '../../systems/levels';
 
@@ -80,23 +80,24 @@ export function useSpecialToolsPlacementTools(
       return lid ? resolveSceneUnits(levelManager.getLevelScene(lid)) : 'mm';
     },
   });
-  // 'mep-fixture' (electrical luminaire), 'mep-floor-drain' (σιφώνι) AND the five
-  // sanitary terminals ('mep-wc'/'mep-washbasin'/… ADR-408 Φ14) share ONE fixture
-  // tool; the active tool id drives the `kind` preset (one tool id per kind, the
-  // manifold/segment/floor-drain convention).
-  const sanitaryKind = sanitaryFixtureToolKind(activeTool);
+  // 'mep-fixture' (electrical luminaire), 'mep-floor-drain' (σιφώνι), the five
+  // sanitary terminals ('mep-wc'/'mep-washbasin'/… ADR-408 Φ14) AND the appliances
+  // ('mep-washing-machine'/… ADR-408 Δρόμος B) share ONE fixture tool; the active
+  // tool id drives the `kind` preset (one tool id per kind, the manifold/segment/
+  // floor-drain convention).
+  const plumbingKind = plumbingFixtureToolKind(activeTool);
   const isMepFixtureTool =
-    activeTool === 'mep-fixture' || activeTool === 'mep-floor-drain' || sanitaryKind !== null;
+    activeTool === 'mep-fixture' || activeTool === 'mep-floor-drain' || plumbingKind !== null;
   useToolLifecycle(isMepFixtureTool, mepFixtureTool.activate, mepFixtureTool.deactivate);
   useEffect(() => {
     if (activeTool === 'mep-fixture') {
       mepFixtureTool.setParamOverrides({ kind: 'light-fixture' });
     } else if (activeTool === 'mep-floor-drain') {
       mepFixtureTool.setParamOverrides({ kind: 'floor-drain' });
-    } else if (sanitaryKind !== null) {
-      mepFixtureTool.setParamOverrides({ kind: sanitaryKind });
+    } else if (plumbingKind !== null) {
+      mepFixtureTool.setParamOverrides({ kind: plumbingKind });
     }
-  }, [activeTool, sanitaryKind, mepFixtureTool.setParamOverrides]);
+  }, [activeTool, plumbingKind, mepFixtureTool.setParamOverrides]);
 
   // ADR-410 — FURNITURE TOOL: single-click placement; entity appended+broadcast.
   const furnitureTool = useFurnitureTool({
@@ -201,7 +202,10 @@ export function useSpecialToolsPlacementTools(
       mepSegmentTool.setParamOverrides({ classification: undefined, slopePercent: undefined });
     } else if (activeTool === 'mep-pipe') {
       mepSegmentTool.setDomain('pipe');
-      mepSegmentTool.setParamOverrides({ classification: undefined, slopePercent: undefined });
+      // ADR-408 Φ14 (draw-time System Type) — a generic pipe is NEVER unclassified
+      // (Revit: a System Type always exists). Default to cold water (blue); the user
+      // re-picks the system draw-time via the "Σύστημα" ribbon combobox before drawing.
+      mepSegmentTool.setParamOverrides({ classification: 'domestic-cold-water', slopePercent: undefined });
     } else if (activeTool === 'mep-drain-pipe') {
       mepSegmentTool.setDomain('pipe');
       mepSegmentTool.setParamOverrides({

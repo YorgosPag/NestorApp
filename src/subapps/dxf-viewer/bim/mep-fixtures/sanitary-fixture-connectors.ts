@@ -26,7 +26,10 @@ import {
   buildSanitaryColdWaterConnector,
   buildSanitaryHotWaterConnector,
 } from '../types/mep-connector-types';
-import { SANITARY_SPEC, type SanitaryKind } from '../sanitary/sanitary-symbol-spec';
+import {
+  resolvePlumbingFixtureSpec,
+  type PlumbingFixtureKind,
+} from './plumbing-fixture-spec';
 import { mmToSceneUnits, type SceneUnits } from '../../utils/scene-units';
 
 /** Back-edge offset of the supply stubs as a fraction of the footprint depth. */
@@ -35,16 +38,17 @@ const SUPPLY_BACK_DEPTH_FRACTION = 0.4;
 const SUPPLY_SIDE_WIDTH_FRACTION = 0.25;
 
 /**
- * Build the full connector set of a sanitary fixture from its kind + the active
- * scene units. Always emits the sanitary-drainage outlet; adds a cold-water inlet
- * (and a hot-water inlet for kinds that take hot water) per {@link SANITARY_SPEC}.
- * Pure.
+ * Build the full connector set of a plumbing fixture from its kind + the active
+ * scene units. Serves BOTH families (sanitary terminal ∪ appliance — ADR-408 Δρόμος
+ * B) via the unifying {@link resolvePlumbingFixtureSpec} SSoT: always emits the
+ * sanitary-drainage outlet; adds a cold-water inlet (and a hot-water inlet for kinds
+ * that take hot water — an appliance/WC is cold-only). Pure.
  */
 export function buildSanitaryFixtureConnectors(
-  kind: SanitaryKind,
+  kind: PlumbingFixtureKind,
   sceneUnits: SceneUnits,
 ): MepConnector[] {
-  const spec = SANITARY_SPEC[kind];
+  const spec = resolvePlumbingFixtureSpec(kind);
   const s = mmToSceneUnits(sceneUnits);
   const backY = spec.depthMm * SUPPLY_BACK_DEPTH_FRACTION * s;
   const sideX = spec.widthMm * SUPPLY_SIDE_WIDTH_FRACTION * s;

@@ -28,10 +28,11 @@ import type {
   MepFixtureShape,
 } from '../../../bim/types/mep-fixture-types';
 import { isSanitaryKind } from '../../../bim/sanitary/sanitary-symbol-spec';
+import { isApplianceKind } from '../../../bim/appliances/appliance-symbol-spec';
 import {
-  resolveSanitaryFixtureAsset,
-  sanitaryMeshPresetsForKind,
-} from '../../../bim/mep-fixtures/sanitary-fixture-mesh-catalog';
+  fixtureMeshPresetsForKind,
+  resolveFixtureMeshPreset,
+} from '../../../bim/mep-fixtures/plumbing-fixture-spec';
 import { SELECT_CLEAR_VALUE, isSelectClearValue } from '@/config/domain-constants';
 import { useCommandHistory } from '../../../core/commands';
 import { UpdateMepFixtureParamsCommand } from '../../../core/commands/entity-commands/UpdateMepFixtureParamsCommand';
@@ -141,14 +142,13 @@ export function useRibbonMepFixtureBridge(
         return { value: fixture.params.shape, options: [] };
       }
       if (commandKey === MEP_FIXTURE_RIBBON_KEYS.stringParams.assetId) {
-        // ADR-411 — 3D representation picker. Clear sentinel = parametric box; a
-        // catalog id = realistic glTF mesh. Revit-correct: the dropdown lists ONLY
-        // the meshes of THIS fixture's sanitary kind (a WC must not offer shower
-        // models), via the `sanitaryMeshPresetsForKind` SSoT. Labels resolve through
+        // ADR-411 / ADR-408 Δρόμος B — 3D representation picker. Clear sentinel =
+        // parametric box; a catalog id = realistic glTF mesh. Revit-correct: the
+        // dropdown lists ONLY the meshes of THIS fixture's kind (a WC must not offer
+        // shower models; a washing machine offers only appliance meshes), via the
+        // `fixtureMeshPresetsForKind` family-dispatching SSoT. Labels resolve through
         // t() in the renderer (isLiteralLabel:false) → no hardcoded strings (N.11).
-        const meshPresets = isSanitaryKind(fixture.params.kind)
-          ? sanitaryMeshPresetsForKind(fixture.params.kind)
-          : [];
+        const meshPresets = fixtureMeshPresetsForKind(fixture.params.kind);
         return {
           value: fixture.params.assetId ?? SELECT_CLEAR_VALUE,
           options: [
@@ -190,8 +190,9 @@ export function useRibbonMepFixtureBridge(
       }
       if (commandKey === MEP_FIXTURE_RIBBON_KEYS.stringParams.assetId) {
         // ADR-411 — the clear sentinel resets the mesh override (parametric box).
-        // A mesh preset only applies to a fixture of the SAME sanitary kind
-        // (Revit-correct: a shower mesh must not land on a WC).
+        // A mesh preset only applies to a fixture of the SAME kind (Revit-correct: a
+        // shower mesh must not land on a WC, a washing-machine mesh not on a basin) —
+        // resolved across BOTH family catalogs via `resolveFixtureMeshPreset`.
         const nextAssetId = isSelectClearValue(value) ? undefined : value;
         if (!nextAssetId) {
           // Clearing the mesh keeps the current footprint (least-surprise — the
@@ -199,7 +200,7 @@ export function useRibbonMepFixtureBridge(
           dispatchParams(fixture, { ...fixture.params, assetId: undefined });
           return;
         }
-        const preset = resolveSanitaryFixtureAsset(nextAssetId);
+        const preset = resolveFixtureMeshPreset(nextAssetId);
         if (!preset || preset.kind !== fixture.params.kind) return;
         // Adopt the mesh's authored footprint (Revit "Type" sizing): the 2D symbol,
         // selection box, grips and the drain connector all recompute to the mesh's
@@ -260,13 +261,16 @@ export function useRibbonMepFixtureBridge(
       if (action !== MEP_FIXTURE_RIBBON_KEYS_ACTIONS.delete) return;
       const fixture = resolveFixture();
       if (!fixture) return;
-      // ADR-408 Φ14 — floor drain + sanitary terminals show their own delete prompt;
-      // all kinds share this bridge + delete path (`bim:mep-fixture-delete-requested`).
+      // ADR-408 Φ14 / Δρόμος B — floor drain + sanitary terminals + appliances each
+      // show their own delete prompt; all kinds share this bridge + delete path
+      // (`bim:mep-fixture-delete-requested`).
       const confirmKey = fixture.params.kind === 'floor-drain'
         ? 'ribbon.commands.mepFloorDrainEditor.deleteConfirm'
-        : isSanitaryKind(fixture.params.kind)
-          ? 'ribbon.commands.mepSanitaryFixtureEditor.deleteConfirm'
-          : 'ribbon.commands.mepFixtureEditor.deleteConfirm';
+        : isApplianceKind(fixture.params.kind)
+          ? 'ribbon.commands.mepApplianceFixtureEditor.deleteConfirm'
+          : isSanitaryKind(fixture.params.kind)
+            ? 'ribbon.commands.mepSanitaryFixtureEditor.deleteConfirm'
+            : 'ribbon.commands.mepFixtureEditor.deleteConfirm';
       const confirmed = window.confirm(t(confirmKey));
       if (!confirmed) return;
       EventBus.emit('bim:mep-fixture-delete-requested', { fixtureId: fixture.id });

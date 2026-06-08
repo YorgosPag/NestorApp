@@ -45,7 +45,10 @@ import {
 } from '../../bim/types/mep-connector-types';
 import type { MepConnector } from '../../bim/types/mep-connector-types';
 import { buildSanitaryFixtureConnectors } from '../../bim/mep-fixtures/sanitary-fixture-connectors';
-import { isSanitaryKind, SANITARY_SPEC } from '../../bim/sanitary/sanitary-symbol-spec';
+import {
+  isPlumbingFixtureKind,
+  resolvePlumbingFixtureSpec,
+} from '../../bim/mep-fixtures/plumbing-fixture-spec';
 import { createMepFixture } from '@/services/factories/mep-fixture.factory';
 import type { SceneUnits } from '../../utils/scene-units';
 
@@ -93,9 +96,10 @@ interface FixtureKindDefaults {
  * Resolve the per-kind default footprint / elevation / connector for a fixture.
  *   - floor-drain (ADR-408 Φ14) → square floor-level basin (150×150, FFL=0) + a
  *     single sanitary-drainage outlet so a snapped drain pipe joins the network.
- *   - sanitary terminal (WC/basin/… ADR-408 Φ14) → authored footprint from the
- *     {@link SANITARY_SPEC} SSoT, floor-standing (FFL=0) + a single drain outlet
- *     sized by DN (WC=100, basin/bidet=40, shower/tub=50).
+ *   - plumbing fixture (sanitary terminal WC/basin/… ADR-408 Φ14 OR appliance
+ *     washing-machine/… ADR-408 Δρόμος B) → authored footprint from the
+ *     {@link resolvePlumbingFixtureSpec} SSoT, floor-standing (FFL=0) + a drain
+ *     outlet sized by DN + the domestic water-supply inlet(s) it needs.
  *   - light fixture (ADR-406/408 Φ1) → ceiling-relative luminaire + a default
  *     lighting power-in connector (so it can join a circuit once Systems exist).
  */
@@ -114,15 +118,16 @@ function resolveFixtureKindDefaults(
       connectors: [buildFloorDrainConnector({ x: 0, y: 0, z: 0 }, DEFAULT_FLOOR_DRAIN_CONNECTOR_DIAMETER_MM)],
     };
   }
-  if (isSanitaryKind(kind)) {
-    const spec = SANITARY_SPEC[kind];
+  if (isPlumbingFixtureKind(kind)) {
+    const spec = resolvePlumbingFixtureSpec(kind);
     return {
       shape: 'rectangular',
       width: overrides.width ?? spec.widthMm,
       length: overrides.length ?? spec.depthMm,
       bodyHeightMm: overrides.bodyHeightMm ?? DEFAULT_SANITARY_BODY_HEIGHT_MM,
       mountingElevationMm: overrides.mountingElevationMm ?? SANITARY_MOUNTING_ELEVATION_MM,
-      // Revit Plumbing Fixture: drain outlet + domestic water-supply inlets (SSoT).
+      // Revit plumbing fixture (sanitary terminal OR appliance — ADR-408 Δρόμος B):
+      // drain outlet + domestic water-supply inlets (SSoT).
       connectors: buildSanitaryFixtureConnectors(kind, sceneUnits),
     };
   }

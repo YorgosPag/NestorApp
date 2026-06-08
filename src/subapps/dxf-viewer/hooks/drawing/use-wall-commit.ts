@@ -14,8 +14,11 @@ import { useCallback, type Dispatch, type SetStateAction } from 'react';
 import type { Point2D } from '../../rendering/types/Types';
 import type { Point3D } from '../../bim/types/bim-base';
 import type { WallEntity } from '../../bim/types/wall-types';
+import type { Entity } from '../../types/entities';
+import { isWallEntity } from '../../types/entities';
 import { buildWallForLine, buildWallsForClosed } from '../../bim/walls/wall-from-entity';
 import { buildWallFillingRect, type DetectedRectangle } from '../../bim/walls/wall-in-region';
+import { extendFillingWallToNeighbors } from '../../bim/walls/wall-region-autojoin';
 import type { PerimeterFacesResult } from '../../bim/walls/perimeter-from-faces';
 import { EventBus } from '../../systems/events/EventBus';
 import { buildDefaultWallParams, buildWallEntity, type SceneUnits } from './wall-completion';
@@ -25,6 +28,11 @@ export interface WallCommitContext {
   readonly currentLevelId: string;
   readonly onWallCreated?: (entity: WallEntity) => void;
   readonly getSceneUnits?: () => SceneUnits;
+  /**
+   * Live scene entities — used by the region/perimeter fill paths to auto-join a
+   * filling wall to its neighbours (Revit "Allow Join"). Omit ⇒ no auto-join.
+   */
+  readonly getSceneEntities?: () => readonly Entity[];
   readonly setState: Dispatch<SetStateAction<WallToolState>>;
 }
 
@@ -58,12 +66,35 @@ export interface WallCommitApi {
 }
 
 /**
+ * ADR-363 / ADR-419 — continuous-chain tail after a SUCCESSFUL commit: reset the
+ * in-progress geometry but PRESERVE every user-selected mode selector so the next
+ * click keeps the SAME tool configuration. The preserved set is the SSoT for "what
+ * survives a commit": `kind`, `placementMode`, `regionMethod`, `overrides`.
+ *
+ * Dropping `regionMethod` here was the «in-region "κλικ μέσα" δουλεύει μία φορά,
+ * μετά αγνοεί τα κλικ μέχρι hard-refresh» regression: ADR-419 added `regionMethod`
+ * to the state machine but the per-commit reset still spread only the pre-ADR-419
+ * fields, so the method silently fell back to the INITIAL_STATE default ('lines')
+ * and the 'inside'/'box' methods stopped matching on the second click.
+ */
+function continueChain(s: WallToolState): WallToolState {
+  return {
+    ...INITIAL_STATE,
+    kind: s.kind,
+    placementMode: s.placementMode,
+    regionMethod: s.regionMethod,
+    overrides: s.overrides,
+    phase: 'awaitingStart',
+  };
+}
+
+/**
  * Memoized commit builders for the wall tool. Each function mirrors the
  * inlined `useCallback` it replaced, including its dependency array, so the
  * tool's React identity/perf profile is unchanged.
  */
 export function useWallCommit(ctx: WallCommitContext): WallCommitApi {
-  const { currentLevelId, onWallCreated, getSceneUnits, setState } = ctx;
+  const { currentLevelId, onWallCreated, getSceneUnits, getSceneEntities, setState } = ctx;
 
   // ── commit (straight) ────────────────────────────────────────────────────
   const commitStraightFromState = useCallback(
@@ -87,12 +118,7 @@ export function useWallCommit(ctx: WallCommitContext): WallCommitApi {
         return false;
       }
       onWallCreated?.(result.entity);
-      setState({
-        ...INITIAL_STATE,
-        kind: s.kind,
-        overrides: s.overrides,
-        phase: 'awaitingStart',
-      });
+      setState(continueChain(s));
       return true;
     },
     [currentLevelId, onWallCreated, getSceneUnits, setState],
@@ -112,12 +138,7 @@ export function useWallCommit(ctx: WallCommitContext): WallCommitApi {
         return false;
       }
       onWallCreated?.(result.entity);
-      setState({
-        ...INITIAL_STATE,
-        kind: s.kind,
-        overrides: s.overrides,
-        phase: 'awaitingStart',
-      });
+      setState(continueChain(s));
       return true;
     },
     [currentLevelId, onWallCreated, getSceneUnits, setState],
@@ -140,12 +161,7 @@ export function useWallCommit(ctx: WallCommitContext): WallCommitApi {
         return false;
       }
       onWallCreated?.(result.entity);
-      setState({
-        ...INITIAL_STATE,
-        kind: s.kind,
-        overrides: s.overrides,
-        phase: 'awaitingStart',
-      });
+      setState(continueChain(s));
       return true;
     },
     [currentLevelId, onWallCreated, getSceneUnits, setState],
@@ -182,13 +198,7 @@ export function useWallCommit(ctx: WallCommitContext): WallCommitApi {
         );
         for (const w of walls) onWallCreated?.(w);
       }
-      setState({
-        ...INITIAL_STATE,
-        kind: s.kind,
-        placementMode: s.placementMode,
-        overrides: s.overrides,
-        phase: 'awaitingStart',
-      });
+      setState(continueChain(s));
       return true;
     },
     [currentLevelId, onWallCreated, getSceneUnits, setState],
@@ -201,17 +211,24 @@ export function useWallCommit(ctx: WallCommitContext): WallCommitApi {
   const buildFillingWalls = useCallback(
     (s: WallToolState, rects: readonly DetectedRectangle[]): number => {
       const sceneUnits = getSceneUnits?.() ?? 'mm';
+      // ADR-363 Phase 1K — Revit "Allow Join": extend each filling wall's endpoints
+      // to coincident neighbour centrelines so they connect cleanly instead of
+      // butting at the bounding line (= the neighbour's face) and being trimmed back.
+      // Neighbours = existing scene walls + siblings already built in THIS batch.
+      const sceneWalls = (getSceneEntities?.() ?? []).filter(isWallEntity);
+      const batch: WallEntity[] = [];
       let built = 0;
       for (const rect of rects) {
-        const entity = buildWallFillingRect(rect, s.overrides, sceneUnits, currentLevelId);
-        if (entity) {
-          onWallCreated?.(entity);
-          built++;
-        }
+        const raw = buildWallFillingRect(rect, s.overrides, sceneUnits, currentLevelId);
+        if (!raw) continue;
+        const entity = extendFillingWallToNeighbors(raw, [...sceneWalls, ...batch], sceneUnits);
+        batch.push(entity);
+        onWallCreated?.(entity);
+        built++;
       }
       return built;
     },
-    [currentLevelId, onWallCreated, getSceneUnits],
+    [currentLevelId, onWallCreated, getSceneUnits, getSceneEntities],
   );
 
   // ── commit (in-region, ADR-363 Phase 1K) ─────────────────────────────────
@@ -223,13 +240,7 @@ export function useWallCommit(ctx: WallCommitContext): WallCommitApi {
         setState({ ...s, regionPicks: [], error: 'wall.validation.hardErrors.thicknessExceedsMax' });
         return false;
       }
-      setState({
-        ...INITIAL_STATE,
-        kind: s.kind,
-        placementMode: s.placementMode,
-        overrides: s.overrides,
-        phase: 'awaitingStart',
-      });
+      setState(continueChain(s));
       return true;
     },
     [buildFillingWalls, setState],
@@ -247,13 +258,7 @@ export function useWallCommit(ctx: WallCommitContext): WallCommitApi {
         setState({ ...s, regionPicks: [], error: null });
         return false;
       }
-      setState({
-        ...INITIAL_STATE,
-        kind: s.kind,
-        placementMode: s.placementMode,
-        overrides: s.overrides,
-        phase: 'awaitingStart',
-      });
+      setState(continueChain(s));
       return true;
     },
     [buildFillingWalls, setState],

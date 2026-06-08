@@ -178,6 +178,8 @@ export type ToolType =
   | 'mep-shower'
   | 'mep-bathtub'
   | 'mep-bidet'
+  // ADR-408 Δρόμος B: connectable appliances (washing machine, …) — point-based mep-fixture kinds, cold inlet + 1 sanitary-drainage outlet each
+  | 'mep-washing-machine'
   // ADR-407: path-based railing drawing tool (2-click straight guardrail)
   | 'railing'
   // ADR-410: mesh-based CC0 furniture drawing tool (single-click placement)

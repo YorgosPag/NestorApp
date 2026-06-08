@@ -7,7 +7,7 @@
  * attribution (legal obligation); CC0 assets are grouped per source for provenance.
  *
  * The provenance SSoT stays in each domain registry — this module only READS:
- *   - `FURNITURE_CATALOG` / `SANITARY_MESH_CATALOG` → free-form `source` strings
+ *   - `FURNITURE_CATALOG` / `SANITARY_MESH_CATALOG` / `APPLIANCE_MESH_CATALOG` → free-form `source` strings
  *     (`"<Title> by <Author> (CC-BY) — <url>"` or `"Poly Haven (CC0)"`).
  *   - `TEXTURE_SET_DEFS`  → structured `license` + `attribution`.
  *   - `HDRI_PRESETS`      → Poly Haven CC0 environment maps.
@@ -19,6 +19,7 @@
 
 import { FURNITURE_CATALOG } from '../furniture/furniture-catalog';
 import { SANITARY_MESH_CATALOG } from '../mep-fixtures/sanitary-fixture-mesh-catalog';
+import { APPLIANCE_MESH_CATALOG } from '../mep-fixtures/appliance-fixture-mesh-catalog';
 import { TEXTURE_SET_DEFS } from '../materials/bim-texture-registry';
 import { HDRI_PRESETS } from '../../bim-3d/lighting/hdri-environment';
 
@@ -67,6 +68,7 @@ function collectSourceStrings(): readonly string[] {
   return [
     ...FURNITURE_CATALOG.map((p) => p.source),
     ...SANITARY_MESH_CATALOG.map((p) => p.source),
+    ...APPLIANCE_MESH_CATALOG.map((p) => p.source),
     ...Object.values(TEXTURE_SET_DEFS).map(
       (d) => `${d.attribution ?? 'Unknown'} (${d.license})`,
     ),

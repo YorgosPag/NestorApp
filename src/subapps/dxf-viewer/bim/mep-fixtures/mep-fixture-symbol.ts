@@ -17,7 +17,10 @@
 import type { Point3D } from '../types/bim-base';
 import type { MepFixtureGeometry, MepFixtureParams } from '../types/mep-fixture-types';
 import { buildDrainageGratingStrokes } from '../mep-manifolds/mep-manifold-symbol';
-import { isSanitaryKind, SANITARY_DRAWERS } from '../sanitary/sanitary-symbol-spec';
+import {
+  isPlumbingFixtureKind,
+  resolvePlumbingFixtureDrawer,
+} from './plumbing-fixture-spec';
 
 /** A polyline of world-space points (canvas units). */
 export type FixtureStroke = readonly Point3D[];
@@ -68,11 +71,12 @@ export function buildFixtureSymbol(
     };
   }
 
-  // ADR-408 Φ14 — sanitary terminal (WC/washbasin/shower/bathtub/bidet): reuse the
-  // shared SANITARY_DRAWERS SSoT (same authored 2D vectors as the legacy floorplan
-  // symbol, rotation/scale-aware for free). Zero duplicated geometry.
-  if (isSanitaryKind(params.kind) && outline.length >= 4) {
-    return { outline, strokes: SANITARY_DRAWERS[params.kind](outline) };
+  // ADR-408 Φ14 / Δρόμος B — plumbing fixture (sanitary terminal WC/basin/… OR
+  // appliance washing-machine/…): reuse the shared per-family drawer SSoT
+  // (`resolvePlumbingFixtureDrawer`), rotation/scale-aware for free. Zero duplicated
+  // geometry.
+  if (isPlumbingFixtureKind(params.kind) && outline.length >= 4) {
+    return { outline, strokes: resolvePlumbingFixtureDrawer(params.kind)(outline) };
   }
 
   if (params.shape === 'rectangular' && outline.length === 4) {

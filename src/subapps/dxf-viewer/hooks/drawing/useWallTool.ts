@@ -249,7 +249,7 @@ export function useWallTool(options: UseWallToolOptions = {}): UseWallToolResult
     commitOnEntity,
     commitInRegionRects,
     commitPerimeterFaces,
-  } = useWallCommit({ currentLevelId, onWallCreated, getSceneUnits, setState });
+  } = useWallCommit({ currentLevelId, onWallCreated, getSceneUnits, getSceneEntities, setState });
 
   // ── in-region / perimeter click handlers (extracted for N.7.1) ───────────
   const { regionTol, onRegionClick, onPerimeterClick, getRegionPickIds } = useWallRegionClicks({

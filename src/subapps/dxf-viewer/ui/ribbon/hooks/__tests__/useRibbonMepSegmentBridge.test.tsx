@@ -346,6 +346,106 @@ describe('useRibbonMepSegmentBridge — draw-time elevation (ADR-408 Φ8 #2b)', 
   });
 });
 
+describe('useRibbonMepSegmentBridge — draw-time System Type (ADR-408 Φ14)', () => {
+  function setClassificationHandle(args: {
+    classification?: string;
+    domain?: 'pipe' | 'duct';
+  }): jest.Mock {
+    const setParamOverrides = jest.fn();
+    const handle: MepSegmentToolBridgeHandle = {
+      isActive: true,
+      domain: args.domain ?? 'pipe',
+      overrides: args.classification === undefined ? {} : { classification: args.classification as never },
+      phase: 'awaitingStart',
+      startPoint: null,
+      startElevationMm: null,
+      getSceneUnits: () => 'mm',
+      setParamOverrides,
+    };
+    mepSegmentToolBridgeStore.set(handle);
+    return setParamOverrides;
+  }
+
+  afterEach(() => mepSegmentToolBridgeStore.set(null));
+
+  it('reads the live classification override (no selection, pipe tool active)', () => {
+    setClassificationHandle({ classification: 'domestic-cold-water' });
+    const { result } = renderHook(() =>
+      useRibbonMepSegmentBridge({
+        levelManager: makeLevelManager(null),
+        universalSelection: makeSelection(null),
+      }),
+    );
+    expect(result.current.getComboboxState(MEP_SEGMENT_RIBBON_KEYS.stringParams.classification)?.value).toBe(
+      'domestic-cold-water',
+    );
+  });
+
+  it('surfaces an empty value when no classification override is set yet', () => {
+    setClassificationHandle({});
+    const { result } = renderHook(() =>
+      useRibbonMepSegmentBridge({
+        levelManager: makeLevelManager(null),
+        universalSelection: makeSelection(null),
+      }),
+    );
+    expect(result.current.getComboboxState(MEP_SEGMENT_RIBBON_KEYS.stringParams.classification)?.value).toBe('');
+  });
+
+  it('writes the classification override on the live tool (Revit Type Selector)', () => {
+    const setParamOverrides = setClassificationHandle({ classification: 'domestic-cold-water' });
+    const { result } = renderHook(() =>
+      useRibbonMepSegmentBridge({
+        levelManager: makeLevelManager(null),
+        universalSelection: makeSelection(null),
+      }),
+    );
+    act(() =>
+      result.current.onComboboxChange(MEP_SEGMENT_RIBBON_KEYS.stringParams.classification, 'domestic-hot-water'),
+    );
+    expect(setParamOverrides).toHaveBeenCalledWith({ classification: 'domestic-hot-water' });
+    // Draw-time: no entity exists yet ⇒ no UpdateMepSegmentParamsCommand dispatched.
+    expect((UpdateMepSegmentParamsCommand as jest.Mock).mock.calls.length).toBe(0);
+  });
+
+  it('shows the "Σύστημα" panel draw-time for a pipe tool, hides it for a duct tool', () => {
+    setClassificationHandle({ domain: 'pipe' });
+    const pipe = renderHook(() =>
+      useRibbonMepSegmentBridge({
+        levelManager: makeLevelManager(null),
+        universalSelection: makeSelection(null),
+      }),
+    );
+    expect(
+      pipe.result.current.getPanelVisibility(MEP_SEGMENT_RIBBON_VISIBILITY_KEYS.pipeClassification),
+    ).toBe(true);
+
+    setClassificationHandle({ domain: 'duct' });
+    const duct = renderHook(() =>
+      useRibbonMepSegmentBridge({
+        levelManager: makeLevelManager(null),
+        universalSelection: makeSelection(null),
+      }),
+    );
+    expect(
+      duct.result.current.getPanelVisibility(MEP_SEGMENT_RIBBON_VISIBILITY_KEYS.pipeClassification),
+    ).toBe(false);
+  });
+
+  it('shows the "Σύστημα" panel for a selected pipe (selection mode)', () => {
+    mepSegmentToolBridgeStore.set(null);
+    const selected = renderHook(() =>
+      useRibbonMepSegmentBridge({
+        levelManager: makeLevelManager(roundPipe),
+        universalSelection: makeSelection('seg-pipe-1'),
+      }),
+    );
+    expect(
+      selected.result.current.getPanelVisibility(MEP_SEGMENT_RIBBON_VISIBILITY_KEYS.pipeClassification),
+    ).toBe(true);
+  });
+});
+
 describe('useRibbonMepSegmentBridge — onAction', () => {
   it('emits bim:mep-segment-delete-requested when confirmed', () => {
     const confirmSpy = jest.spyOn(window, 'confirm').mockReturnValue(true);

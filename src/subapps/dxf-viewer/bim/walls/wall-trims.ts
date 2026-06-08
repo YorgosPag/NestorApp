@@ -33,6 +33,17 @@ import type { WallEntity, WallParams } from '../types/wall-types';
 import type { AnySceneEntity } from '../../types/entities';
 import { computeWallGeometry } from '../geometry/wall-geometry';
 import { mmToSceneUnits } from '../../utils/scene-units';
+import {
+  lineLineIntersect,
+  sinAngleBetween,
+  cornerMiter,
+  MAX_BEVEL_FRACTION,
+  type MiterPt,
+} from './wall-trims-geometry';
+
+// `MiterPt` lives in the geometry module (N.7.1 split) — re-exported so existing
+// `WallTrimPatch` consumers keep a single import surface.
+export type { MiterPt } from './wall-trims-geometry';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -42,16 +53,7 @@ const JOIN_THRESHOLD_MM = 200;
 /** Angle below which axes are treated as parallel → no trim. */
 const MIN_ANGLE_RAD = Math.PI / 12; // 15°
 
-/** Maximum bevel / miter-extension as fraction of axis length; prevents inversion. */
-const MAX_BEVEL_FRACTION = 0.40;
-
 // ─── Types ────────────────────────────────────────────────────────────────────
-
-/** 2-point miter corner: outer face intersection and inner face intersection. */
-export interface MiterPt {
-  readonly outer: { readonly x: number; readonly y: number };
-  readonly inner: { readonly x: number; readonly y: number };
-}
 
 /**
  * Per-wall trim patch returned by `computeWallTrims`.
@@ -91,11 +93,21 @@ type MutablePatch = {
 export function computeWallTrims(walls: readonly WallEntity[]): Map<string, WallTrimPatch> {
   const acc = new Map<string, MutablePatch>();
 
+  // Pass 1 (pairwise): T-junctions resolve immediately (bevel the stem); corner
+  // pairs are NOT mitred yet — they are recorded so a multi-wall junction (3+ ends
+  // at one point) can be resolved holistically in pass 2. Resolving corners
+  // pairwise with "last wins" was the bug: a thin partition joining a clean 2-wall
+  // corner overwrote the good miter, producing triangular caps + penetration.
+  const endpointRecs = new Map<string, EndpointRec>();
+  const cornerRels: Array<{ aKey: string; bKey: string }> = [];
   for (let i = 0; i < walls.length; i++) {
     for (let j = i + 1; j < walls.length; j++) {
-      processPair(walls[i], walls[j], acc);
+      classifyPair(walls[i], walls[j], acc, endpointRecs, cornerRels);
     }
   }
+
+  // Pass 2: cluster coincident corner endpoints and resolve each junction once.
+  resolveCornerClusters(endpointRecs, cornerRels, acc);
 
   const result = new Map<string, WallTrimPatch>();
   for (const [id, patch] of acc) {
@@ -144,175 +156,60 @@ export function applyTrimPatches(
 
 // ─── Internal helpers ─────────────────────────────────────────────────────────
 
-/**
- * Parametric intersection of two infinite 2D lines.
- * Returns { t, u } such that:
- *   A(t) = a1 + t*(a2-a1) = B(u) = b1 + u*(b2-b1)
- * Returns null when lines are parallel (cross product ≈ 0).
- */
-function lineLineIntersect(
-  a1x: number, a1y: number,
-  a2x: number, a2y: number,
-  b1x: number, b1y: number,
-  b2x: number, b2y: number,
-): { t: number; u: number } | null {
-  const dax = a2x - a1x;
-  const day = a2y - a1y;
-  const dbx = b2x - b1x;
-  const dby = b2y - b1y;
-
-  const cross = dax * dby - day * dbx;
-  if (Math.abs(cross) < 1e-9) return null;
-
-  const wx = b1x - a1x;
-  const wy = b1y - a1y;
-
-  return {
-    t: (wx * dby - wy * dbx) / cross,
-    u: (wx * day - wy * dax) / cross,
-  };
-}
-
-/** |sin| of angle between two direction vectors (always in [0, 1]). */
-function sinAngleBetween(dax: number, day: number, dbx: number, dby: number): number {
-  const lenA = Math.hypot(dax, day);
-  const lenB = Math.hypot(dbx, dby);
-  if (lenA < 1e-9 || lenB < 1e-9) return 0;
-  return Math.abs(dax * dby - day * dbx) / (lenA * lenB);
-}
-
-function accumMax(map: Map<string, number>, id: string, value: number): void {
-  const prev = map.get(id);
-  if (prev === undefined || value > prev) map.set(id, value);
-}
-
 function setPatchField(acc: Map<string, MutablePatch>, id: string, field: keyof MutablePatch, value: number | MiterPt): void {
   const prev = acc.get(id) ?? {};
   acc.set(id, { ...prev, [field]: value });
 }
 
 /**
- * Compute geometric miter points for a corner junction between two walls.
- *
- * Each wall's `outer` edge is the +sign (CCW-perpendicular) side of its own axis.
- * Whether wall A's outer side faces the SAME physical side as wall B's outer side
- * depends on how the two walls meet at the corner:
- *
- *   - "Consistent traversal" (A.end ↔ B.start, or A.start ↔ B.end): the walls form
- *     a continuous path through the corner. A's outer and B's outer face the same
- *     side → pair A_outer with B_outer. Both walls share an identical MiterPt.
- *
- *   - "Inconsistent" (A.end ↔ B.end, or A.start ↔ B.start): the walls meet
- *     head-to-head / tail-to-tail. A's outer faces the concave side while B's outer
- *     faces the convex side (or vice-versa) → pair A_outer with B_INNER. Wall B then
- *     receives a SWAPPED MiterPt so its own outer/inner endpoints land on the right
- *     physical corners. Pairing outer-with-outer here would produce a phantom vertex
- *     outside the wall outline (the triangular-gap / wrong-corner bug).
- *
- * `swap` (computed by the caller from the start/end parity XOR the walls' flip
- * difference) selects the inconsistent pairing.
- *
- * Returns null if either edge pair is parallel (shouldn't happen when sinAngle
- * already passed MIN_ANGLE check) or if the miter extension exceeds
- * MAX_BEVEL_FRACTION for either wall (fall back to axis-bevel in that case).
- *
- * @param aPt  - Corner axis point of wall A (its start or end, canvas units)
- * @param aUx  - A's axis unit vector x (from a.params.start → a.params.end)
- * @param aUy  - A's axis unit vector y
- * @param aHalfSigned - halfThickness * sign, canvas units  (sign = flip ? -1 : 1)
- * @param aLen - Full axis length of A (canvas units) — for overflow guard
- * @param bPt  - Corner axis point of wall B
- * @param bUx, bUy, bHalfSigned, bLen — same for wall B
- * @param swap - true → inconsistent corner (pair A_outer with B_inner, swap B's MiterPt)
- * @returns `{ miterA, miterB }` — per-wall miter points (identical when !swap,
- *          mirror-swapped when swap) — or null when the miter is degenerate/overflows.
+ * One wall endpoint participating in a corner junction (canvas world units).
+ * `ux/uy` is the axis unit vector (start→end) regardless of which end this is;
+ * `which` says whether the junction sits at the wall's start or end.
  */
-function cornerMiter(
-  aPt: { x: number; y: number },
-  aUx: number, aUy: number,
-  aHalfSigned: number,
-  aLen: number,
-  bPt: { x: number; y: number },
-  bUx: number, bUy: number,
-  bHalfSigned: number,
-  bLen: number,
-  swap: boolean,
-): { miterA: MiterPt; miterB: MiterPt } | null {
-  // Outer and inner edge start points at the corner, perpendicular offset:
-  //   CCW 90° of (ux, uy) = (-uy, ux) scaled by halfSigned.
-  const aOuterX = aPt.x + (-aUy) * aHalfSigned;
-  const aOuterY = aPt.y + ( aUx) * aHalfSigned;
-  const aInnerX = aPt.x - (-aUy) * aHalfSigned;
-  const aInnerY = aPt.y - ( aUx) * aHalfSigned;
+interface EndpointRec {
+  readonly wallId: string;
+  readonly which: 'start' | 'end';
+  readonly px: number;
+  readonly py: number;
+  readonly ux: number;
+  readonly uy: number;
+  /** Signed half-thickness (sign = flip ? -1 : 1), canvas units. */
+  readonly halfSigned: number;
+  /** Unsigned half-thickness, canvas units. */
+  readonly half: number;
+  readonly len: number;
+  readonly flip: boolean;
+}
 
-  const bOuterX = bPt.x + (-bUy) * bHalfSigned;
-  const bOuterY = bPt.y + ( bUx) * bHalfSigned;
-  const bInnerX = bPt.x - (-bUy) * bHalfSigned;
-  const bInnerY = bPt.y - ( bUx) * bHalfSigned;
+function endpointKey(wallId: string, which: 'start' | 'end'): string {
+  return `${wallId}:${which}`;
+}
 
-  // Select which of B's edges pairs with A's outer/inner. Consistent corner →
-  // outer↔outer, inner↔inner. Inconsistent corner (swap) → outer↔inner.
-  const bForOuterX = swap ? bInnerX : bOuterX;
-  const bForOuterY = swap ? bInnerY : bOuterY;
-  const bForInnerX = swap ? bOuterX : bInnerX;
-  const bForInnerY = swap ? bOuterY : bInnerY;
-
-  // A_outer ∩ (B's outer-side edge) — both parallel to their axis, so pass a
-  // second point 1 unit along the axis direction.
-  const outerIsect = lineLineIntersect(
-    aOuterX, aOuterY, aOuterX + aUx, aOuterY + aUy,
-    bForOuterX, bForOuterY, bForOuterX + bUx, bForOuterY + bUy,
-  );
-  if (!outerIsect) return null;
-
-  // A_inner ∩ (B's inner-side edge).
-  const innerIsect = lineLineIntersect(
-    aInnerX, aInnerY, aInnerX + aUx, aInnerY + aUy,
-    bForInnerX, bForInnerY, bForInnerX + bUx, bForInnerY + bUy,
-  );
-  if (!innerIsect) return null;
-
-  // Overflow guard: if the miter would extend more than MAX_BEVEL_FRACTION of
-  // either wall, the wall is too short/thick for a clean miter — caller falls back
-  // to axis-bevel. |t| is the extension along A's axis from its corner endpoint;
-  // |u| is the same for B.
-  const maxExtA = MAX_BEVEL_FRACTION * aLen;
-  const maxExtB = MAX_BEVEL_FRACTION * bLen;
-  if (
-    Math.abs(outerIsect.t) > maxExtA || Math.abs(innerIsect.t) > maxExtA ||
-    Math.abs(outerIsect.u) > maxExtB || Math.abs(innerIsect.u) > maxExtB
-  ) {
-    return null;
-  }
-
-  // A's corners lie on A's own outer/inner edge lines (parametrised by t along A).
-  const outerA = {
-    x: aOuterX + outerIsect.t * aUx,
-    y: aOuterY + outerIsect.t * aUy,
-  };
-  const innerA = {
-    x: aInnerX + innerIsect.t * aUx,
-    y: aInnerY + innerIsect.t * aUy,
-  };
-
-  const miterA: MiterPt = { outer: outerA, inner: innerA };
-  // Inconsistent corner → B's outer edge is the one paired with A's inner, so B's
-  // own MiterPt is the mirror of A's. Consistent corner → identical.
-  const miterB: MiterPt = swap
-    ? { outer: innerA, inner: outerA }
-    : { outer: outerA, inner: innerA };
-
-  return { miterA, miterB };
+/** Accumulate a bevel patch for one wall endpoint (max with any existing). */
+function accumBevel(
+  acc: Map<string, MutablePatch>,
+  wallId: string,
+  which: 'start' | 'end',
+  value: number,
+): void {
+  const prev = acc.get(wallId) ?? {};
+  const field = which === 'start' ? 'startBevel' : 'endBevel';
+  acc.set(wallId, { ...prev, [field]: Math.max(prev[field] ?? 0, value) });
 }
 
 /**
- * Classify and accumulate trim patches for one wall pair (A, B).
- * Only handles `kind === 'straight'` walls.
+ * Classify one wall pair (A, B). T-junctions (one endpoint hits the other's
+ * interior) bevel the stem immediately. Corner junctions (both endpoints meet)
+ * are NOT mitred here — they are recorded so `resolveCornerClusters` can resolve
+ * the whole junction (which may involve 3+ walls) consistently.
+ * Only `kind === 'straight'` walls are processed.
  */
-function processPair(
+function classifyPair(
   a: WallEntity,
   b: WallEntity,
   acc: Map<string, MutablePatch>,
+  endpointRecs: Map<string, EndpointRec>,
+  cornerRels: Array<{ aKey: string; bKey: string }>,
 ): void {
   if (a.kind !== 'straight' || b.kind !== 'straight') return;
 
@@ -353,76 +250,160 @@ function processPair(
   const uInterior  = u > epsB && u < 1 - epsB;
 
   if ((tNearStart || tNearEnd) && (uNearStart || uNearEnd)) {
-    // ── Corner junction: try geometric miter ──────────────────────────────────
-    const aPt = tNearStart
-      ? { x: a1x, y: a1y }
-      : { x: a2x, y: a2y };
-    const bPt = uNearStart
-      ? { x: b1x, y: b1y }
-      : { x: b2x, y: b2y };
-
-    // Axis unit vectors (start→end normalized)
-    const aUx = dax / lenA, aUy = day / lenA;
-    const bUx = dbx / lenB, bUy = dby / lenB;
-
-    // Signed half-thickness: CCW perpendicular direction is determined by flip.
-    const aHalfSigned = (a.params.flip ? -1 : 1) * halfA;
-    const bHalfSigned = (b.params.flip ? -1 : 1) * halfB;
-
-    // Corner orientation. When both endpoints are the same type (start+start or
-    // end+end) the walls meet head-to-head / tail-to-tail, so A's outer side and
-    // B's outer side face opposite physical sides → swap. Each wall's `flip`
-    // inverts which physical side its outer edge is on, so an odd number of flips
-    // toggles the swap back. (XOR of the two booleans.)
-    const baseSwap = tNearStart === uNearStart;
-    const flipsDiffer = (!!a.params.flip) !== (!!b.params.flip);
-    const swap = baseSwap !== flipsDiffer;
-
-    const miter = cornerMiter(
-      aPt, aUx, aUy, aHalfSigned, lenA,
-      bPt, bUx, bUy, bHalfSigned, lenB,
-      swap,
-    );
-
-    if (miter) {
-      // Geometric miter available — store each wall's own (possibly swapped) MiterPt.
-      setPatchField(acc, a.id, tNearStart ? 'startMiter' : 'endMiter', miter.miterA);
-      setPatchField(acc, b.id, uNearStart ? 'startMiter' : 'endMiter', miter.miterB);
-    } else {
-      // Miter overflows wall bounds → fall back to axis-bevel (Phase 1D-B logic).
-      const bevelA = Math.min(halfB / sinA, MAX_BEVEL_FRACTION * lenA);
-      const bevelB = Math.min(halfA / sinA, MAX_BEVEL_FRACTION * lenB);
-      const patchA = acc.get(a.id) ?? {};
-      const patchB = acc.get(b.id) ?? {};
-      if (tNearStart) {
-        acc.set(a.id, { ...patchA, startBevel: Math.max(patchA.startBevel ?? 0, bevelA) });
-      } else {
-        acc.set(a.id, { ...patchA, endBevel: Math.max(patchA.endBevel ?? 0, bevelA) });
-      }
-      if (uNearStart) {
-        acc.set(b.id, { ...patchB, startBevel: Math.max(patchB.startBevel ?? 0, bevelB) });
-      } else {
-        acc.set(b.id, { ...patchB, endBevel: Math.max(patchB.endBevel ?? 0, bevelB) });
-      }
+    // ── Corner junction: record both endpoints; resolve in pass 2 ─────────────
+    const aWhich: 'start' | 'end' = tNearStart ? 'start' : 'end';
+    const bWhich: 'start' | 'end' = uNearStart ? 'start' : 'end';
+    const aKey = endpointKey(a.id, aWhich);
+    const bKey = endpointKey(b.id, bWhich);
+    if (!endpointRecs.has(aKey)) {
+      endpointRecs.set(aKey, {
+        wallId: a.id, which: aWhich,
+        px: tNearStart ? a1x : a2x, py: tNearStart ? a1y : a2y,
+        ux: dax / lenA, uy: day / lenA,
+        halfSigned: (a.params.flip ? -1 : 1) * halfA, half: halfA, len: lenA,
+        flip: !!a.params.flip,
+      });
     }
+    if (!endpointRecs.has(bKey)) {
+      endpointRecs.set(bKey, {
+        wallId: b.id, which: bWhich,
+        px: uNearStart ? b1x : b2x, py: uNearStart ? b1y : b2y,
+        ux: dbx / lenB, uy: dby / lenB,
+        halfSigned: (b.params.flip ? -1 : 1) * halfB, half: halfB, len: lenB,
+        flip: !!b.params.flip,
+      });
+    }
+    cornerRels.push({ aKey, bKey });
   } else if (tInterior && (uNearStart || uNearEnd)) {
     // ── T-junction: A continues; trim only B's stem endpoint ─────────────────
     const bevelB = Math.min(halfA / sinA, MAX_BEVEL_FRACTION * lenB);
-    const patchB = acc.get(b.id) ?? {};
-    if (uNearStart) {
-      acc.set(b.id, { ...patchB, startBevel: Math.max(patchB.startBevel ?? 0, bevelB) });
-    } else {
-      acc.set(b.id, { ...patchB, endBevel: Math.max(patchB.endBevel ?? 0, bevelB) });
-    }
+    accumBevel(acc, b.id, uNearStart ? 'start' : 'end', bevelB);
   } else if (uInterior && (tNearStart || tNearEnd)) {
     // ── T-junction: B continues; trim only A's stem endpoint ─────────────────
     const bevelA = Math.min(halfB / sinA, MAX_BEVEL_FRACTION * lenA);
-    const patchA = acc.get(a.id) ?? {};
-    if (tNearStart) {
-      acc.set(a.id, { ...patchA, startBevel: Math.max(patchA.startBevel ?? 0, bevelA) });
-    } else {
-      acc.set(a.id, { ...patchA, endBevel: Math.max(patchA.endBevel ?? 0, bevelA) });
-    }
+    accumBevel(acc, a.id, tNearStart ? 'start' : 'end', bevelA);
   }
   // Cross (both interior): skip Phase 1D-B/C.
+}
+
+/**
+ * `swap` flag for `cornerMiter` (see its doc): inconsistent corners (start+start
+ * or end+end) need the outer↔inner pairing, toggled back by an odd flip count.
+ */
+function cornerSwap(a: EndpointRec, b: EndpointRec): boolean {
+  const baseSwap = (a.which === 'start') === (b.which === 'start');
+  const flipsDiffer = a.flip !== b.flip;
+  return baseSwap !== flipsDiffer;
+}
+
+/** Direction the wall body extends AWAY from the junction (unit). */
+function outwardDir(e: EndpointRec): { x: number; y: number } {
+  return e.which === 'start' ? { x: e.ux, y: e.uy } : { x: -e.ux, y: -e.uy };
+}
+
+/**
+ * Pass 2 — group coincident corner endpoints into junctions and resolve each
+ * once. 2-end junctions are a plain corner (geometric miter, unchanged). 3+-end
+ * junctions are Revit-style: the two "primary" walls (thickest, tie-broken by
+ * collinearity) join each other; every other wall BUTTS (bevels) against them —
+ * so a thin partition can no longer overwrite a thick wall's miter.
+ */
+function resolveCornerClusters(
+  endpointRecs: Map<string, EndpointRec>,
+  cornerRels: ReadonlyArray<{ aKey: string; bKey: string }>,
+  acc: Map<string, MutablePatch>,
+): void {
+  // Union-find over endpoint keys connected by corner relations.
+  const parent = new Map<string, string>();
+  for (const key of endpointRecs.keys()) parent.set(key, key);
+  const find = (k: string): string => {
+    let root = k;
+    while (parent.get(root) !== root) root = parent.get(root)!;
+    while (parent.get(k) !== root) {
+      const next = parent.get(k)!;
+      parent.set(k, root);
+      k = next;
+    }
+    return root;
+  };
+  for (const { aKey, bKey } of cornerRels) {
+    const ra = find(aKey), rb = find(bKey);
+    if (ra !== rb) parent.set(ra, rb);
+  }
+
+  const clusters = new Map<string, EndpointRec[]>();
+  for (const [key, rec] of endpointRecs) {
+    const root = find(key);
+    const group = clusters.get(root);
+    if (group) group.push(rec);
+    else clusters.set(root, [rec]);
+  }
+
+  for (const group of clusters.values()) {
+    if (group.length === 2) {
+      resolveTwoWayCorner(group[0]!, group[1]!, acc);
+    } else if (group.length >= 3) {
+      resolveMultiWayCorner(group, acc);
+    }
+    // length 1: an endpoint whose only corner partner was deduped away — no trim.
+  }
+}
+
+/**
+ * Two walls meeting at a corner: geometric miter, falling back to mutual
+ * axis-bevel when the miter overflows. Byte-for-byte the pre-refactor behaviour.
+ */
+function resolveTwoWayCorner(a: EndpointRec, b: EndpointRec, acc: Map<string, MutablePatch>): void {
+  const sinA = sinAngleBetween(a.ux, a.uy, b.ux, b.uy);
+  if (sinA < Math.sin(MIN_ANGLE_RAD)) return; // collinear continuation → no trim
+  const miter = cornerMiter(
+    { x: a.px, y: a.py }, a.ux, a.uy, a.halfSigned, a.len,
+    { x: b.px, y: b.py }, b.ux, b.uy, b.halfSigned, b.len,
+    cornerSwap(a, b),
+  );
+  if (miter) {
+    setPatchField(acc, a.wallId, a.which === 'start' ? 'startMiter' : 'endMiter', miter.miterA);
+    setPatchField(acc, b.wallId, b.which === 'start' ? 'startMiter' : 'endMiter', miter.miterB);
+  } else {
+    // Miter overflows wall bounds → fall back to axis-bevel (Phase 1D-B logic).
+    accumBevel(acc, a.wallId, a.which, Math.min(b.half / sinA, MAX_BEVEL_FRACTION * a.len));
+    accumBevel(acc, b.wallId, b.which, Math.min(a.half / sinA, MAX_BEVEL_FRACTION * b.len));
+  }
+}
+
+/**
+ * 3+ walls meeting at one point (Revit multi-wall join). Pick the two PRIMARY
+ * walls — greatest combined thickness, tie-broken by collinearity (most
+ * anti-parallel bodies = a straight through-wall) — and join them with each
+ * other (miter, or nothing when they continue straight). Every other wall butts
+ * against the through line (bevel by the primary half-thickness / sin angle), so
+ * a thin partition never overwrites the primary walls' clean corner.
+ */
+function resolveMultiWayCorner(group: readonly EndpointRec[], acc: Map<string, MutablePatch>): void {
+  // Select the primary pair: max (half_i + half_j), tie-break by most anti-parallel.
+  let pi = 0, pj = 1, bestThick = -Infinity, bestDot = Infinity;
+  for (let i = 0; i < group.length; i++) {
+    for (let j = i + 1; j < group.length; j++) {
+      const oi = outwardDir(group[i]!), oj = outwardDir(group[j]!);
+      const dot = oi.x * oj.x + oi.y * oj.y; // −1 = perfectly opposite (through)
+      const thick = group[i]!.half + group[j]!.half;
+      if (thick > bestThick + 1e-9 || (Math.abs(thick - bestThick) <= 1e-9 && dot < bestDot)) {
+        bestThick = thick; bestDot = dot; pi = i; pj = j;
+      }
+    }
+  }
+  const p = group[pi]!, q = group[pj]!;
+
+  // Primary pair join each other exactly like a 2-way corner (miter or straight).
+  resolveTwoWayCorner(p, q, acc);
+
+  // The through line runs along the primary axis; every other wall butts into it.
+  const throughHalf = Math.max(p.half, q.half);
+  const minSin = Math.sin(MIN_ANGLE_RAD);
+  for (let i = 0; i < group.length; i++) {
+    if (i === pi || i === pj) continue;
+    const r = group[i]!;
+    const sinR = Math.max(sinAngleBetween(r.ux, r.uy, p.ux, p.uy), minSin);
+    accumBevel(acc, r.wallId, r.which, Math.min(throughHalf / sinR, MAX_BEVEL_FRACTION * r.len));
+  }
 }

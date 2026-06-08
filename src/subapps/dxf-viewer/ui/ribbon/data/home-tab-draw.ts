@@ -706,6 +706,27 @@ export const HOME_DRAW_PANEL: RibbonPanelDef = {
                 },
               ],
             },
+            // ── Συσκευές (submenu) ────────────────────────────────────────
+            // ADR-408 Δρόμος B — connectable appliances (Revit IfcElectricAppliance):
+            // a DISTINCT family from «Είδη Υγιεινής». Each is a 1-click mep-fixture
+            // kind with a cold-water inlet + a sanitary-drainage outlet → joins both
+            // the water-supply and drainage networks. One tool id per kind.
+            {
+              id: 'draw.bim.mepAppliance',
+              labelKey: 'ribbon.commands.bim.mepAppliance.label',
+              tooltipKey: 'ribbon.commands.bim.mepAppliance.tooltip',
+              icon: 'bim-furniture',
+              commandKey: 'draw.bim.mepAppliance',
+              subVariants: [
+                {
+                  id: 'draw.bim.mepWashingMachine',
+                  labelKey: 'mepFixture.appliance.washingMachine',
+                  tooltipKey: 'ribbon.commands.bim.mepAppliance.tooltip',
+                  icon: 'bim-furniture',
+                  commandKey: 'mep-washing-machine',
+                },
+              ],
+            },
             // ── Θέρμανση (submenu) ────────────────────────────────────────
             {
               id: 'draw.bim.mepHeating',

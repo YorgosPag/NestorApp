@@ -43,6 +43,8 @@ export type IfcEntityType =
   | 'IfcFlowStorageDevice'
   // ADR-415 — sanitary plan symbols (WC/washbasin/…; IfcSanitaryTerminal family).
   | 'IfcSanitaryTerminal'
+  // ADR-408 Δρόμος B — connectable household appliance (washing machine; Electrical Appliance family).
+  | 'IfcElectricAppliance'
   // ADR-417 — parametric pitched roof container (IfcRoofTypeEnum on derived shape).
   | 'IfcRoof'
   // ADR-408 Εύρος Β — hydronic heating terminal (radiator; IfcFlowTerminal family).
@@ -80,6 +82,8 @@ export const IFC_ENTITY_TYPE_VALUES: readonly IfcEntityType[] = [
   'IfcFlowStorageDevice',
   // ADR-415 — sanitary plan symbols.
   'IfcSanitaryTerminal',
+  // ADR-408 Δρόμος B — connectable household appliance (washing machine).
+  'IfcElectricAppliance',
   // ADR-417 — parametric pitched roof container.
   'IfcRoof',
   // ADR-408 Εύρος Β — hydronic heating terminal (radiator).
@@ -141,6 +145,8 @@ export const IfcEntityTypeSchema = z.enum([
   'IfcFlowStorageDevice',
   // ADR-415 — sanitary plan symbols.
   'IfcSanitaryTerminal',
+  // ADR-408 Δρόμος B — connectable household appliance (washing machine).
+  'IfcElectricAppliance',
   // ADR-417 — parametric pitched roof container.
   'IfcRoof',
   // ADR-408 Εύρος Β — hydronic heating terminal (radiator).

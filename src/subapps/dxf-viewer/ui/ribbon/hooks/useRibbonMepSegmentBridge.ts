@@ -171,6 +171,15 @@ export function useRibbonMepSegmentBridge(
           const mm = toolHandle.overrides.centerlineElevationMm ?? DEFAULT_SEGMENT_CENTERLINE_ELEVATION_MM;
           return { value: String(Math.round(mm)), options: [] };
         }
+        // ADR-408 Φ14 (draw-time System Type) — surface the live classification
+        // override (Revit Type Selector). The completion hook passes it into the new
+        // pipe's params, so the committed run comes out in the system colour.
+        if (
+          toolHandle?.isActive &&
+          commandKey === MEP_SEGMENT_RIBBON_KEYS.stringParams.classification
+        ) {
+          return { value: toolHandle.overrides.classification ?? '', options: [] };
+        }
         return null;
       }
       if (commandKey === MEP_SEGMENT_RIBBON_KEYS.stringParams.sectionKind) {
@@ -227,6 +236,13 @@ export function useRibbonMepSegmentBridge(
           if (!Number.isNaN(numeric)) {
             mepSegmentToolBridgeStore.get()?.setParamOverrides({ centerlineElevationMm: numeric });
           }
+        }
+        // ADR-408 Φ14 (draw-time System Type) — write the classification override on
+        // the live tool. The next pipe inherits it (completion → params → colour).
+        if (commandKey === MEP_SEGMENT_RIBBON_KEYS.stringParams.classification) {
+          mepSegmentToolBridgeStore.get()?.setParamOverrides({
+            classification: value as PlumbingSystemClassification,
+          });
         }
         return;
       }
@@ -299,6 +315,14 @@ export function useRibbonMepSegmentBridge(
   const getPanelVisibility = useCallback(
     (visibilityKey: string): boolean => {
       if (!isMepSegmentVisibilityKey(visibilityKey)) return true;
+      // ADR-408 Φ14 (draw-time System Type) — the "Σύστημα" panel must show BEFORE a
+      // segment exists (Revit Type Selector), so it is resolved ahead of the
+      // `!segment` early-return: visible while the pipe/drain-pipe tool is active
+      // (domain === 'pipe' ⇒ excludes the duct tool) OR a pipe is selected.
+      if (visibilityKey === MEP_SEGMENT_RIBBON_VISIBILITY_KEYS.pipeClassification) {
+        if (toolHandle?.isActive) return toolHandle.domain === 'pipe';
+        return resolveSegment()?.params.domain === 'pipe';
+      }
       const segment = resolveSegment();
       if (!segment) return false;
       // ADR-408 Φ8 #2b — selection-only panels (per-endpoint start/end, actions) are
@@ -319,7 +343,7 @@ export function useRibbonMepSegmentBridge(
       }
       return false;
     },
-    [resolveSegment],
+    [resolveSegment, toolHandle],
   );
 
   return useMemo(

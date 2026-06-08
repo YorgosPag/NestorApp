@@ -23,7 +23,7 @@
 import type { Point2D } from '../../rendering/types/Types';
 import type { GripInfo, MepSegmentGripKind } from '../../hooks/grip-types';
 import type { MepSegmentEntity, MepSegmentParams } from '../types/mep-segment-types';
-import { resolveSegmentSection, MIN_SEGMENT_DIMENSION_MM } from '../types/mep-segment-types';
+import { resolveSegmentSection, MIN_SEGMENT_DIMENSION_MM, isSegmentVertical } from '../types/mep-segment-types';
 import { project2D, perpUnit, unitVector, rotateAxisPointsAboutPivot } from '../grips/grip-math';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -65,6 +65,26 @@ export function segmentSectionHandlePosition(params: MepSegmentParams): Point2D 
  */
 export function getMepSegmentGrips(entity: Readonly<MepSegmentEntity>): GripInfo[] {
   const { params } = entity;
+
+  // ADR-408 Φ15 — a VERTICAL riser (κατακόρυφη στήλη) projects to a SINGLE plan
+  // point: its start/end share X,Y (they differ only in Z). Emitting the usual
+  // start/end/midpoint grips would stack all three on that one pixel, and a
+  // start/end drag would pull a single endpoint off-axis — destroying the riser
+  // (it stops being vertical → the plan symbol disappears). In plan a riser is a
+  // point object (Revit): expose ONE move grip that translates the whole stack,
+  // keeping the Z-span intact (`moveMidpoint` shifts both endpoints by the same
+  // ΔX,ΔY). Section/rotation grips are meaningless on a zero-length plan axis.
+  if (isSegmentVertical(params)) {
+    return [{
+      entityId: entity.id,
+      gripIndex: 0,
+      type: 'center',
+      position: project2D(params.startPoint),
+      movesEntity: true,
+      mepSegmentGripKind: 'mep-segment-midpoint',
+    }];
+  }
+
   const grips: GripInfo[] = [];
 
   const start = project2D(params.startPoint);

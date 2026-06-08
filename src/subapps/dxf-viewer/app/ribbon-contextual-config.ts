@@ -23,7 +23,9 @@ import { CONTEXTUAL_MEP_PIPE_NETWORK_TAB, MEP_PIPE_NETWORK_CONTEXTUAL_TRIGGER } 
 import { CONTEXTUAL_MEP_FIXTURE_TAB, MEP_FIXTURE_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-mep-fixture-tab';
 import { CONTEXTUAL_MEP_FLOOR_DRAIN_TAB, MEP_FLOOR_DRAIN_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-mep-floor-drain-tab';
 import { CONTEXTUAL_MEP_SANITARY_FIXTURE_TAB, MEP_SANITARY_FIXTURE_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-mep-sanitary-fixture-tab';
+import { CONTEXTUAL_MEP_APPLIANCE_FIXTURE_TAB, MEP_APPLIANCE_FIXTURE_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-mep-appliance-fixture-tab';
 import { isSanitaryKind } from '../bim/sanitary/sanitary-symbol-spec';
+import { isApplianceKind } from '../bim/appliances/appliance-symbol-spec';
 import { CONTEXTUAL_MEP_MANIFOLD_TAB, MEP_MANIFOLD_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-mep-manifold-tab';
 import { CONTEXTUAL_DRAINAGE_COLLECTOR_TAB, DRAINAGE_COLLECTOR_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-drainage-collector-tab';
 import { CONTEXTUAL_MEP_RADIATOR_TAB, MEP_RADIATOR_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-mep-radiator-tab';
@@ -69,6 +71,7 @@ export const RIBBON_CONTEXTUAL_TABS = [
   CONTEXTUAL_MEP_FIXTURE_TAB,
   CONTEXTUAL_MEP_FLOOR_DRAIN_TAB,
   CONTEXTUAL_MEP_SANITARY_FIXTURE_TAB,
+  CONTEXTUAL_MEP_APPLIANCE_FIXTURE_TAB,
   CONTEXTUAL_MEP_MANIFOLD_TAB,
   CONTEXTUAL_DRAINAGE_COLLECTOR_TAB,
   CONTEXTUAL_MEP_RADIATOR_TAB,
@@ -297,6 +300,9 @@ export function resolveContextualTrigger(entity: EntityLike): string | null {
   if (entity.type === 'mep-fixture') {
     const fixtureKind = readFixtureKind(entity.params);
     if (fixtureKind === 'floor-drain') return MEP_FLOOR_DRAIN_CONTEXTUAL_TRIGGER;
+    // ADR-408 Δρόμος B — an appliance (washing machine, …) surfaces «Ιδιότητες
+    // Συσκευής» (checked BEFORE sanitary: distinct family, same kind-agnostic bridge).
+    if (fixtureKind && isApplianceKind(fixtureKind)) return MEP_APPLIANCE_FIXTURE_CONTEXTUAL_TRIGGER;
     // ADR-408 Φ14 — a sanitary terminal (WC/basin/…) surfaces «Ιδιότητες Είδους
     // Υγιεινής»; same kind-agnostic bridge, richer geometry presets + rotation.
     if (fixtureKind && isSanitaryKind(fixtureKind)) return MEP_SANITARY_FIXTURE_CONTEXTUAL_TRIGGER;

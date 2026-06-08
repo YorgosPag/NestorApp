@@ -82,6 +82,7 @@ import {
   commitMepManifoldOutletCountGrip,
   commitMepRadiatorGripDrag,
   commitMepBoilerGripDrag,
+  commitMepSegmentGripDrag,
   commitFurnitureGripDrag,
   commitFloorplanSymbolGripDrag,
   commitFloorFinishGripDrag,
@@ -220,6 +221,14 @@ export function commitDxfGripDragModeAware(
   // recomputes geometry + re-seeds connectors.
   if (grip.mepBoilerGripKind) {
     commitMepBoilerGripDrag(grip, delta, deps);
+    return;
+  }
+  // ADR-408 Φ8/Φ15 — MEP segment parametric grip path (start/end/midpoint
+  // translate + section resize + rotation; vertical riser = whole-entity move).
+  // Bypasses stretch/move because segments are params-driven (axis endpoints);
+  // UpdateMepSegmentParamsCommand recomputes geometry atomically.
+  if (grip.mepSegmentGripKind) {
+    commitMepSegmentGripDrag(grip, delta, deps);
     return;
   }
   // ADR-410 — furniture parametric grip path (center translate + rotation +

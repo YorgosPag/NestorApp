@@ -250,10 +250,15 @@ export const CONTEXTUAL_MEP_SEGMENT_TAB: RibbonTab = {
       ],
     },
     {
-      // ADR-408 Φ14 — plumbing classification + slope; visible iff domain === 'pipe'.
-      id: 'mep-segment-plumbing',
-      labelKey: 'ribbon.panels.mepSegmentPlumbing',
-      visibilityKey: MEP_SEGMENT_RIBBON_VISIBILITY_KEYS.pipeDomain,
+      // ADR-408 Φ14 (draw-time System Type, Revit Type Selector) — plumbing
+      // classification ("Σύστημα"). Visible BOTH during draw-time (pipe/drain-pipe
+      // tool active, BEFORE the first click) AND on a selected pipe. Picking a
+      // system makes the next pipe come out in its colour (blue/red/brown) — no
+      // more "all pipes look the same". Slope lives in its own selection-only panel
+      // (slope is derived from endpoints — meaningless before the pipe exists).
+      id: 'mep-segment-classification',
+      labelKey: 'ribbon.panels.mepSegmentClassification',
+      visibilityKey: MEP_SEGMENT_RIBBON_VISIBILITY_KEYS.pipeClassification,
       rows: [
         {
           isInFlyout: false,
@@ -269,6 +274,21 @@ export const CONTEXTUAL_MEP_SEGMENT_TAB: RibbonTab = {
                 options: CLASSIFICATION_OPTIONS,
               },
             },
+          ],
+        },
+      ],
+    },
+    {
+      // ADR-408 Φ14 — gravity fall (slope). Selection-only (`pipeDomain` requires a
+      // selected segment): a slope is derived from the per-endpoint z, so it only
+      // makes sense to edit AFTER the run exists — never draw-time.
+      id: 'mep-segment-plumbing',
+      labelKey: 'ribbon.panels.mepSegmentPlumbing',
+      visibilityKey: MEP_SEGMENT_RIBBON_VISIBILITY_KEYS.pipeDomain,
+      rows: [
+        {
+          isInFlyout: false,
+          buttons: [
             {
               type: 'combobox',
               size: 'small',

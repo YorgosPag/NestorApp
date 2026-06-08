@@ -34,6 +34,7 @@ import type { IfcEntityMixin } from './ifc-entity-mixin';
 import type { MepConnectorHostParams } from './mep-component-types';
 import type { BimCategory } from '../../config/bim-object-styles';
 import { isSanitaryKind, type SanitaryKind } from '../sanitary/sanitary-symbol-spec';
+import { isApplianceKind, type ApplianceKind } from '../appliances/appliance-symbol-spec';
 
 // ─── Sub-type discriminator (ADR-406) ────────────────────────────────────────
 
@@ -45,16 +46,20 @@ import { isSanitaryKind, type SanitaryKind } from '../sanitary/sanitary-symbol-s
  * SSoT) — all Revit "Plumbing Fixtures" (IFC `IfcSanitaryTerminal`) that drain into
  * the sanitary-drainage network via a single drain connector. Each kind maps to a
  * `BimCategory` via {@link resolveFixtureBimCategory} (light → `'light-fixture'`,
- * floor-drain → `'drain-pipe'`, sanitary terminal → `'sanitary'`).
+ * floor-drain → `'drain-pipe'`, sanitary terminal → `'sanitary'`). ADR-408 Δρόμος B
+ * adds the {@link ApplianceKind} family (washing machine, … — Revit
+ * `IfcElectricAppliance`): connectable like a sanitary terminal (cold inlet + drain
+ * outlet) but a DISTINCT family category («Συσκευές», not «Είδη Υγιεινής»).
  */
-export type MepFixtureKind = 'light-fixture' | 'floor-drain' | SanitaryKind;
+export type MepFixtureKind = 'light-fixture' | 'floor-drain' | SanitaryKind | ApplianceKind;
 
 /**
  * IFC4 class of a fixture, derived from {@link MepFixtureKind} via the SSoT
  * {@link resolveFixtureIfcType}: a light fixture is `IfcLightFixture`; a floor
- * drain is `IfcSanitaryTerminal` (Revit Plumbing Fixture).
+ * drain / sanitary terminal is `IfcSanitaryTerminal` (Revit Plumbing Fixture); an
+ * appliance is `IfcElectricAppliance`.
  */
-export type MepFixtureIfcType = 'IfcLightFixture' | 'IfcSanitaryTerminal';
+export type MepFixtureIfcType = 'IfcLightFixture' | 'IfcSanitaryTerminal' | 'IfcElectricAppliance';
 
 /**
  * 2D/3D footprint shape of the fixture body.
@@ -150,9 +155,12 @@ export interface MepFixtureEntity
  * hard-coded per call-site.
  */
 export function resolveFixtureIfcType(kind: MepFixtureKind): MepFixtureIfcType {
-  // Every plumbing terminal (floor drain + WC/basin/shower/tub/bidet) is an
-  // IfcSanitaryTerminal (differentiated by IFC PredefinedType, not a new class);
-  // a light fixture is an IfcLightFixture.
+  // An appliance (washing machine, …) is an IfcElectricAppliance — a distinct IFC
+  // class from the plumbing terminals (Revit "Plumbing Fixtures vs Specialty
+  // Equipment"). Every plumbing terminal (floor drain + WC/basin/shower/tub/bidet)
+  // is an IfcSanitaryTerminal (differentiated by IFC PredefinedType, not a new
+  // class); a light fixture is an IfcLightFixture.
+  if (isApplianceKind(kind)) return 'IfcElectricAppliance';
   return kind === 'floor-drain' || isSanitaryKind(kind) ? 'IfcSanitaryTerminal' : 'IfcLightFixture';
 }
 
@@ -169,7 +177,9 @@ export function resolveFixtureIfcType(kind: MepFixtureKind): MepFixtureIfcType {
  */
 export function resolveFixtureBimCategory(params: MepFixtureParams): BimCategory {
   if (params.kind === 'floor-drain') return 'drain-pipe';
-  if (isSanitaryKind(params.kind)) return 'sanitary';
+  // ADR-408 Δρόμος B — an appliance reuses the `'sanitary'` V/G bucket (it groups
+  // with the plumbing fixtures it sits among; avoids a new-BimCategory cascade).
+  if (isApplianceKind(params.kind) || isSanitaryKind(params.kind)) return 'sanitary';
   return 'light-fixture';
 }
 
@@ -180,6 +190,9 @@ export function resolveFixtureBimCategory(params: MepFixtureParams): BimCategory
  * they never disagree on where an asset's glTF + derived silhouette live.
  */
 export function resolveFixtureMeshCategory(kind: MepFixtureKind): string {
+  // ADR-408 Δρόμος B — appliance meshes live in their own `bim-mesh-library/appliance/`
+  // folder (distinct catalog), sanitary in `sanitary/`, everything else lighting.
+  if (isApplianceKind(kind)) return 'appliance';
   return isSanitaryKind(kind) ? 'sanitary' : 'light-fixture';
 }
 

@@ -363,4 +363,35 @@ describe('useWallTool', () => {
     act(() => { result.current.onCanvasClick({ x: 2500, y: 0 }); });
     expect(result.current.getStatusText()).toBe('tools.wall.statusPickSide');
   });
+
+  // ─── ADR-419 — in-region «κλικ μέσα» continuous chain (regression) ──────
+  // 4 LINE entities closing a thin (5000 × 250) wall-footprint rectangle: clicking
+  // inside fills ONE wall. The bug: the commit reset dropped `regionMethod`, so the
+  // 2nd click fell back to the 'lines' method and was ignored until a hard refresh.
+  const regionRectLines = [
+    { id: 'rr-b', type: 'line', layerId: '0', start: { x: 0, y: 0 }, end: { x: 5000, y: 0 } },
+    { id: 'rr-r', type: 'line', layerId: '0', start: { x: 5000, y: 0 }, end: { x: 5000, y: 250 } },
+    { id: 'rr-t', type: 'line', layerId: '0', start: { x: 5000, y: 250 }, end: { x: 0, y: 250 } },
+    { id: 'rr-l', type: 'line', layerId: '0', start: { x: 0, y: 250 }, end: { x: 0, y: 0 } },
+  ] as unknown as import('../../../types/entities').Entity[];
+
+  it('in-region "inside": commit preserves regionMethod → every click fills a wall (ADR-419)', () => {
+    const onWallCreated = jest.fn();
+    const { result } = renderHook(() =>
+      useWallTool({ onWallCreated, getSceneEntities: () => regionRectLines }),
+    );
+    act(() => result.current.setPlacementMode('in-region'));
+    act(() => result.current.setRegionMethod('inside'));
+    act(() => result.current.activate());
+    // 1st click inside the rectangle → fills ONE wall.
+    act(() => { result.current.onCanvasClick({ x: 2500, y: 125 }); });
+    expect(onWallCreated).toHaveBeenCalledTimes(1);
+    // Continuous chain: the method MUST survive the commit (the bug reset it to 'lines').
+    expect(result.current.state.regionMethod).toBe('inside');
+    expect(result.current.state.placementMode).toBe('in-region');
+    expect(result.current.state.phase).toBe('awaitingStart');
+    // 2nd click inside the SAME region → another wall (was a silent no-op before the fix).
+    act(() => { result.current.onCanvasClick({ x: 2500, y: 125 }); });
+    expect(onWallCreated).toHaveBeenCalledTimes(2);
+  });
 });
