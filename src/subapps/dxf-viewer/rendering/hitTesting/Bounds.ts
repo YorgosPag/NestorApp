@@ -98,6 +98,8 @@ export class BoundsCalculator {
       case 'mep-radiator':
       // ADR-408 Εύρος Β #2 (mep-boiler).
       case 'mep-boiler':
+      // ADR-408 DHW — domestic hot water heater; geometry.bbox from computeMepWaterHeaterGeometry().
+      case 'mep-water-heater':
       // ADR-408 Εύρος Β #3 — underfloor heating loop; geometry.bbox from computeMepUnderfloorGeometry().
       case 'mep-underfloor':
         return this.calculateBimEntityBounds(entity, tolerance);

@@ -55,6 +55,8 @@ import { MepManifoldRenderer } from '../../bim/renderers/MepManifoldRenderer';
 import { MepRadiatorRenderer } from '../../bim/renderers/MepRadiatorRenderer';
 // ADR-408 Εύρος Β #2 — heating boiler leaf (point-based wall-mounted hydronic source).
 import { MepBoilerRenderer } from '../../bim/renderers/MepBoilerRenderer';
+// ADR-408 DHW — domestic hot water heater leaf (point-based wall-mounted DHW source).
+import { MepWaterHeaterRenderer } from '../../bim/renderers/MepWaterHeaterRenderer';
 // ADR-408 Εύρος Β #3 — underfloor heating leaf (area-based radiant floor loop).
 import { MepUnderfloorRenderer } from '../../bim/renderers/MepUnderfloorRenderer';
 // ADR-362 Phase C1 — persistent dimension leaf (consumes DimGeometry discriminated union).
@@ -133,6 +135,8 @@ export class EntityRendererComposite {
     const mepRadiatorRenderer = new MepRadiatorRenderer(this.ctx);
     // ADR-408 Εύρος Β #2 — heating boiler renderer (point-based wall-mounted hydronic source).
     const mepBoilerRenderer = new MepBoilerRenderer(this.ctx);
+    // ADR-408 DHW — domestic hot water heater renderer (point-based wall-mounted DHW source).
+    const mepWaterHeaterRenderer = new MepWaterHeaterRenderer(this.ctx);
     // ADR-408 Εύρος Β #3 — underfloor heating renderer (area-based radiant floor loop).
     const mepUnderfloorRenderer = new MepUnderfloorRenderer(this.ctx);
     // ADR-362 Phase C1 — dimension renderer (10 variants via DimGeometry union).
@@ -174,6 +178,7 @@ export class EntityRendererComposite {
     this.renderers.set('mep-manifold', mepManifoldRenderer);
     this.renderers.set('mep-radiator', mepRadiatorRenderer);
     this.renderers.set('mep-boiler', mepBoilerRenderer);
+    this.renderers.set('mep-water-heater', mepWaterHeaterRenderer);
     this.renderers.set('mep-underfloor', mepUnderfloorRenderer);
     this.renderers.set('dimension', dimensionRenderer);
     this.renderers.set('xline', xlineRenderer);

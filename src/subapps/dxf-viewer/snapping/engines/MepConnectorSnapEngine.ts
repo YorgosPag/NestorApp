@@ -39,6 +39,7 @@ import {
   isMepManifoldEntity,
   isMepRadiatorEntity,
   isMepBoilerEntity,
+  isMepWaterHeaterEntity,
   isMepUnderfloorEntity,
 } from '../../types/entities';
 import { getEntityConnectors } from '../../bim/mep-systems/connector-access';
@@ -111,7 +112,8 @@ function extractMepConnectorPoints(entity: EntityModel): Point2D[] {
     isElectricalPanelEntity(entity) ||
     isMepManifoldEntity(entity) ||
     isMepRadiatorEntity(entity) ||
-    isMepBoilerEntity(entity)
+    isMepBoilerEntity(entity) ||
+    isMepWaterHeaterEntity(entity)
   ) {
     const { position, rotation } = entity.params;
     const connectors = getEntityConnectors(entity);

@@ -326,6 +326,19 @@ export function drawGhostEntity(
       return;
     }
 
+    // ADR-408 DHW — domestic hot water heater ghost: footprint polygon (scene-units,
+    // from MepWaterHeaterGeometry). Mirror mep-boiler so the live
+    // move/rotation/corner-resize ghost paints.
+    case 'mep-water-heater': {
+      const wh = entity as unknown as {
+        geometry?: { footprint?: { vertices: ReadonlyArray<{ x: number; y: number }> } };
+      };
+      const verts = wh.geometry?.footprint?.vertices ?? [];
+      if (verts.length < 2) return;
+      drawPolygon(ctx, verts, toScreen);
+      return;
+    }
+
     // ADR-408 Εύρος Β #3 — underfloor heating ghost: footprint polygon (world mm,
     // from MepUnderfloorParams). Area-based entity — uses params.footprint.vertices
     // directly (like floor-finish/slab), NOT geometry.footprint (which doesn't exist).

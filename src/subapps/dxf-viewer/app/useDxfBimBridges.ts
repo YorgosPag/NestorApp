@@ -17,8 +17,10 @@ import { useRibbonMepFixtureBridge, type UseRibbonMepFixtureBridgeProps } from '
 import { useRibbonMepManifoldBridge, type UseRibbonMepManifoldBridgeProps } from '../ui/ribbon/hooks/useRibbonMepManifoldBridge';
 import { useRibbonMepRadiatorBridge, type UseRibbonMepRadiatorBridgeProps } from '../ui/ribbon/hooks/useRibbonMepRadiatorBridge';
 import { useRibbonMepBoilerBridge, type UseRibbonMepBoilerBridgeProps } from '../ui/ribbon/hooks/useRibbonMepBoilerBridge';
+import { useRibbonMepWaterHeaterBridge, type UseRibbonMepWaterHeaterBridgeProps } from '../ui/ribbon/hooks/useRibbonMepWaterHeaterBridge';
 import { useRibbonMepUnderfloorBridge, type UseRibbonMepUnderfloorBridgeProps } from '../ui/ribbon/hooks/useRibbonMepUnderfloorBridge';
 import { useRibbonMepSegmentBridge, type UseRibbonMepSegmentBridgeProps } from '../ui/ribbon/hooks/useRibbonMepSegmentBridge';
+import { useRibbonWaterAutoSupplyBridge, type UseRibbonWaterAutoSupplyBridgeProps } from '../ui/ribbon/hooks/useRibbonWaterAutoSupplyBridge';
 import { useRibbonFurnitureBridge } from '../ui/ribbon/hooks/useRibbonFurnitureBridge';
 import { useRibbonFloorplanSymbolBridge } from '../ui/ribbon/hooks/useRibbonFloorplanSymbolBridge';
 import { useRibbonMepFixtureLibraryBridge } from '../ui/ribbon/hooks/useRibbonMepFixtureLibraryBridge';
@@ -41,8 +43,10 @@ export type UseDxfBimBridgesProps =
   & UseRibbonMepManifoldBridgeProps
   & UseRibbonMepRadiatorBridgeProps
   & UseRibbonMepBoilerBridgeProps
+  & UseRibbonMepWaterHeaterBridgeProps
   & UseRibbonMepUnderfloorBridgeProps
-  & UseRibbonMepSegmentBridgeProps;
+  & UseRibbonMepSegmentBridgeProps
+  & UseRibbonWaterAutoSupplyBridgeProps;
 
 export function useDxfBimBridges(p: UseDxfBimBridgesProps) {
   const stairBridge = useRibbonStairBridge(p);
@@ -66,10 +70,14 @@ export function useDxfBimBridges(p: UseDxfBimBridgesProps) {
   const mepRadiatorBridge = useRibbonMepRadiatorBridge(p);
   // ADR-408 Εύρος Β #2 — MEP boiler (λέβητας) contextual properties bridge.
   const mepBoilerBridge = useRibbonMepBoilerBridge(p);
+  // ADR-408 DHW — MEP water heater (θερμοσίφωνας) contextual properties bridge.
+  const mepWaterHeaterBridge = useRibbonMepWaterHeaterBridge(p);
   // ADR-408 Εύρος Β #3 — MEP underfloor (ενδοδαπέδια) contextual properties bridge.
   const mepUnderfloorBridge = useRibbonMepUnderfloorBridge(p);
   // ADR-408 Φ8 — MEP segment (σωλήνας/αεραγωγός) contextual properties bridge.
   const mepSegmentBridge = useRibbonMepSegmentBridge(p);
+  // ADR-426 Slice 2 — water-supply auto-design (Generate → review → accept).
+  const waterAutoSupplyBridge = useRibbonWaterAutoSupplyBridge(p);
   // ADR-410 — furniture library contextual bridge (tool-active picker).
   const furnitureBridge = useRibbonFurnitureBridge();
   // ADR-415 — floorplan-symbol library contextual bridge (tool-active picker).
@@ -84,5 +92,5 @@ export function useDxfBimBridges(p: UseDxfBimBridgesProps) {
   const thermalSpaceBridge = useRibbonThermalSpaceBridge(p);
   // ADR-363 Phase 4.5e+ — Tab/Shift+Tab material cycling for selected BIM entities.
   useBimMaterialCycler(p);
-  return { stairBridge, wallBridge, openingBridge, slabBridge, roofBridge, columnBridge, beamBridge, slabOpeningBridge, mepCircuitBridge, mepPipeNetworkBridge, mepFixtureBridge, mepManifoldBridge, mepRadiatorBridge, mepBoilerBridge, mepUnderfloorBridge, mepSegmentBridge, furnitureBridge, floorplanSymbolBridge, mepFixtureLibraryBridge, mepRiserBridge, floorFinishBridge, thermalSpaceBridge };
+  return { stairBridge, wallBridge, openingBridge, slabBridge, roofBridge, columnBridge, beamBridge, slabOpeningBridge, mepCircuitBridge, mepPipeNetworkBridge, mepFixtureBridge, mepManifoldBridge, mepRadiatorBridge, mepBoilerBridge, mepWaterHeaterBridge, mepUnderfloorBridge, mepSegmentBridge, waterAutoSupplyBridge, furnitureBridge, floorplanSymbolBridge, mepFixtureLibraryBridge, mepRiserBridge, floorFinishBridge, thermalSpaceBridge };
 }

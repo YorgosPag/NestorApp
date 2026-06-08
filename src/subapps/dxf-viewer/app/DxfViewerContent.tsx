@@ -57,9 +57,7 @@ import { use3DSelectionUniversalBridge } from '../bim-3d/systems/selection/use-3
 import { useDxfViewerUiState } from './useDxfViewerUiState';
 import { useDxfViewerRibbon } from './useDxfViewerRibbon';
 import { DxfViewerDialogs } from './DxfViewerDialogs';
-import { useRenderTrace } from '../debug/useRenderTrace'; // 🔴 TEMP DEBUG — remove after hover-lag diagnosis
 export const DxfViewerContent = React.memo<DxfViewerAppProps>((props) => {
-  useRenderTrace('DxfViewerContent'); // 🔴 TEMP DEBUG — does the orchestrator re-render on hover?
   // ADR-345 — mark the document root while the DXF viewer route is mounted
   // so route-scoped CSS (e.g. hiding the global header border-bottom) only
   // applies here. Cleanup restores the previous value when leaving the route.
@@ -250,14 +248,6 @@ export const DxfViewerContent = React.memo<DxfViewerAppProps>((props) => {
     levelManager, universalSelection, activeTool,
     handleToolChange, handleRibbonComingSoon, wrappedHandleAction,
     canUndo, canRedo, primarySelectedId, selectedEntityIds, currentScene,
-  });
-  // 🔴 TEMP DEBUG — which subscription drives the idle render loop? Whatever shows
-  // in Δprops every render is the culprit.
-  useRenderTrace('DxfViewerContent.detail', {
-    props, colors, ui, fullscreen, colorMenu, perfMonitorEnabled,
-    snapEnabled, showGrid, canUndo, canRedo, drawingState, gripSettings,
-    notifications, eventBus, copyToClipboard, fullscreenIsFs: fullscreen.isFullscreen,
-    layoutMode, activeTool, currentScene, state,
   });
   return (
       <div className="flex flex-col h-full min-h-0">

@@ -30,6 +30,7 @@ import { CONTEXTUAL_MEP_MANIFOLD_TAB, MEP_MANIFOLD_CONTEXTUAL_TRIGGER } from '..
 import { CONTEXTUAL_DRAINAGE_COLLECTOR_TAB, DRAINAGE_COLLECTOR_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-drainage-collector-tab';
 import { CONTEXTUAL_MEP_RADIATOR_TAB, MEP_RADIATOR_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-mep-radiator-tab';
 import { CONTEXTUAL_MEP_BOILER_TAB, MEP_BOILER_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-mep-boiler-tab';
+import { CONTEXTUAL_MEP_WATER_HEATER_TAB, MEP_WATER_HEATER_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-mep-water-heater-tab';
 import { CONTEXTUAL_MEP_UNDERFLOOR_TAB, MEP_UNDERFLOOR_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-mep-underfloor-tab';
 import { CONTEXTUAL_FLOOR_FINISH_TAB, FLOOR_FINISH_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-floor-finish-tab';
 import { CONTEXTUAL_THERMAL_SPACE_TAB, THERMAL_SPACE_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-thermal-space-tab';
@@ -76,6 +77,7 @@ export const RIBBON_CONTEXTUAL_TABS = [
   CONTEXTUAL_DRAINAGE_COLLECTOR_TAB,
   CONTEXTUAL_MEP_RADIATOR_TAB,
   CONTEXTUAL_MEP_BOILER_TAB,
+  CONTEXTUAL_MEP_WATER_HEATER_TAB,
   CONTEXTUAL_MEP_UNDERFLOOR_TAB,
   CONTEXTUAL_MEP_SEGMENT_TAB,
   CONTEXTUAL_MEP_FIXTURE_LIBRARY_TAB,
@@ -320,6 +322,8 @@ export function resolveContextualTrigger(entity: EntityLike): string | null {
   if (entity.type === 'mep-radiator') return MEP_RADIATOR_CONTEXTUAL_TRIGGER;
   // ADR-408 Εύρος Β #2 — λέβητας (hydronic boiler, source) → «Ιδιότητες Λέβητα».
   if (entity.type === 'mep-boiler') return MEP_BOILER_CONTEXTUAL_TRIGGER;
+  // ADR-408 DHW — θερμοσίφωνας (domestic hot water heater, DHW source) → «Ιδιότητες Θερμοσίφωνα».
+  if (entity.type === 'mep-water-heater') return MEP_WATER_HEATER_CONTEXTUAL_TRIGGER;
   // ADR-408 Εύρος Β #3 — ενδοδαπέδια (hydronic area terminal) → «Ιδιότητες Ενδοδαπέδιας».
   if (entity.type === 'mep-underfloor') return MEP_UNDERFLOOR_CONTEXTUAL_TRIGGER;
   // ADR-419 — floor-finish (IfcCovering FLOORING) → «Ιδιότητες Επικάλυψης Δαπέδου».

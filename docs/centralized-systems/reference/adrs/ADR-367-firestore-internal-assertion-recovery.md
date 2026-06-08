@@ -23,7 +23,12 @@ Root cause is a long-standing firebase-js-sdk bug (see issue tracker on `firebas
 
 Once the assertion fires, the Firestore SDK becomes unstable for the rest of the page lifetime: subsequent snapshots stop firing silently. The UI does not crash (the error is caught by the browser's global error handler) but the app becomes invisibly broken for the user.
 
-Our subscription pipeline (`firestoreQueryService` with ADR-361 dedupe, `useLevelsFirestoreSync` with `currentLevelIdRef`) is correct — this is purely an SDK-internal bug.
+Our subscription pipeline (`firestoreQueryService` with ADR-361 dedupe, `useLevelsFirestoreSync` with `currentLevelIdRef`) is correct at the query layer — the b815/ca9 multi-tab path is purely an SDK-internal bug.
+
+> **2026-06-08 update (code = truth, N.0.1):** the same `ca9 {ve:-1}` assertion was
+> later reproduced *deterministically* when MEP pipe networks are on the canvas — a
+> SECOND, client-side trigger distinct from the multi-tab lease race. Root cause:
+> **subscription listener churn**. See §2.4.
 
 ### Discovery
 
@@ -54,6 +59,36 @@ Add `src/lib/firestore-recovery.ts` exporting `installFirestoreRecoveryListener(
 ### 2.3 Wire-in
 
 `src/components/GlobalErrorSetup.tsx` (already mounted at root via `ConditionalAppShell`) dynamically imports and invokes `installFirestoreRecoveryListener()` alongside the existing `ErrorTracker` init. No new provider, no SSR impact.
+
+### 2.4 Root fix #2 — Subscription listener-churn stabilization (2026-06-08)
+
+**Symptom:** with MEP pipe segments on the canvas, the console floods with
+`INTERNAL ASSERTION FAILED (ID: ca9) CONTEXT: {"ve":-1}` (and the secondary `b815`).
+The reported stack originated in `useWallPersistence` cleanup →
+`firestore-query.service.ts:313 innerUnsub()`.
+
+**Root cause (distinct from the multi-tab race of §2.1):** the BIM persistence hooks
+in `src/subapps/dxf-viewer/hooks/data/` keyed their `onSnapshot` subscription effect
+on the **`levelManager` object** (`useLevels` return). That object is a fresh `useMemo`
+that changes identity across renders. When pipes exist, the auto-design reconcilers
+(`useMepFittingAutoReconciliation`, `useMepConnectorReconciliation`) call `setLevelScene`
+in bursts → render storms → each subscription effect unsubscribes + re-subscribes on
+nearly every render. A watch **target removed before the server acknowledges it**
+(`{ve:-1}` = target version −1) is the textbook `ca9` trigger.
+
+**Fix (proven pattern):** key each subscription effect off **stable scope primitives +
+`currentLevelId`**, reading `levelManager` through a `levelManagerRef` (zero behavior
+change). This is the exact pattern already applied to `useMepFittingAutoReconciliation`
+(2026-06-04 render-loop fix) — now propagated to **all 20 persistence hooks** that still
+held the unstable dependency (`useWallPersistence`, `useMepSegmentPersistence`,
+`useMepManifoldPersistence`, `useMepFixturePersistence`, `useElectricalPanelPersistence`,
++ column/beam/opening/slab/roof/floor-finish/furniture/symbol/railing/slab-opening/
+thermal-space/radiator/boiler/water-heater/underfloor).
+
+This is a **proactive root fix** at the source of the churn — the §2.1 single-tab cache
+and the §2.2 recovery listener remain as the safety net for any residual SDK-internal
+path. ADR-040 micro-leaf files are untouched (persistence hooks are not on the CHECK
+6B/6D list). Related: ADR-408 (MEP auto-design — the reconcilers that amplify the churn).
 
 ## 3. Trade-offs
 
@@ -120,3 +155,4 @@ Add `src/lib/firestore-recovery.ts` exporting `installFirestoreRecoveryListener(
 ## 8. Changelog
 
 - **2026-05-20** — Initial decision: single-tab manager + recovery listener. Triggered by Sentry event `a4374d38b9374d089437a899341626a6` at `/dxf/viewer` on commit `e660b1de`.
+- **2026-06-08** — Added §2.4 **Root fix #2 (subscription listener-churn stabilization)**. A second, deterministic `ca9 {ve:-1}` trigger was found: BIM persistence hooks re-subscribed `onSnapshot` on every render because their effect depended on the unstable `levelManager` object — amplified into a render storm by the MEP pipe auto-design reconcilers. Stabilized all 20 persistence hooks to key off `currentLevelId` + scope primitives via a `levelManagerRef` (mirror of the `useMepFittingAutoReconciliation` render-loop fix). No behavior change; §2.1/§2.2 remain as the SDK-internal safety net.
