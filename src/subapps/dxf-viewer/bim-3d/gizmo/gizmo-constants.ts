@@ -7,7 +7,8 @@
 
 // -- Axis Colors (reference HTML: warmer red, brighter green, purple-blue) ----
 export const GIZMO_COLOR_X = 0xe52d2d;
-export const GIZMO_COLOR_Y = 0x2de52d;
+// Vertical (Y) axis — darker green per Giorgio (was lime 0x2de52d).
+export const GIZMO_COLOR_Y = 0x1f8a1f;
 export const GIZMO_COLOR_Z = 0x2d2de5;
 export const GIZMO_COLOR_HOVER = 0xc8a020;
 
