@@ -14,9 +14,45 @@ import {
   MANIFOLD_OUTLET_CONNECTOR_ID_PREFIX,
   SEGMENT_START_CONNECTOR_ID,
   SEGMENT_END_CONNECTOR_ID,
+  BOILER_SUPPLY_CONNECTOR_ID,
+  BOILER_RETURN_CONNECTOR_ID,
+  BOILER_DHW_CONNECTOR_ID,
 } from '../../types/mep-connector-types';
 
 const OUT0 = `${MANIFOLD_OUTLET_CONNECTOR_ID_PREFIX}0`;
+
+/**
+ * A COMBI boiler at the origin (rotation 0) with supply (+X), return (−X) and an
+ * optional DHW outlet (+X/+Y). World connector positions (rotation 0): supply {225,0},
+ * dhw {225,175}.
+ */
+function combiBoiler(id: string): Entity {
+  return {
+    type: 'mep-boiler',
+    id,
+    params: {
+      kind: 'wall-boiler',
+      position: { x: 0, y: 0, z: 0 },
+      rotation: 0,
+      systemClassification: 'hydronic-supply',
+      producesDhw: true,
+      connectors: [
+        { connectorId: BOILER_SUPPLY_CONNECTOR_ID, domain: 'pipe', flow: 'out', localPosition: { x: 225, y: 0, z: 0 }, pipe: { systemClassification: 'hydronic-supply', diameterMm: 22 } },
+        { connectorId: BOILER_RETURN_CONNECTOR_ID, domain: 'pipe', flow: 'in', localPosition: { x: -225, y: 0, z: 0 }, pipe: { systemClassification: 'hydronic-return', diameterMm: 22 } },
+        { connectorId: BOILER_DHW_CONNECTOR_ID, domain: 'pipe', flow: 'out', localPosition: { x: 225, y: 175, z: 0 }, pipe: { systemClassification: 'domestic-hot-water', diameterMm: 22 } },
+      ],
+    },
+  } as unknown as Entity;
+}
+
+/** A pipe segment with explicit endpoints (mm scene), for geometric connector matching. */
+function pipeAt(id: string, start: { x: number; y: number }, end: { x: number; y: number }): Entity {
+  return {
+    type: 'mep-segment',
+    id,
+    params: { domain: 'pipe', sceneUnits: 'mm', startPoint: { ...start, z: 0 }, endPoint: { ...end, z: 0 } },
+  } as unknown as Entity;
+}
 
 function manifold(id: string, withConnectors = true, classification?: string): Entity {
   const connectors = withConnectors
@@ -132,6 +168,43 @@ describe('resolvePipeNetworkFromSelection', () => {
   it('fails with no-members when only duct segments accompany the manifold', () => {
     const res = resolvePipeNetworkFromSelection([manifold('m1'), duct('d1')], []);
     expect(res).toEqual({ ok: false, reason: 'no-members' });
+  });
+
+  // ─── COMBI boiler: classification inferred from the touched out-connector ────────
+
+  it('combi boiler + pipe wired to the DHW outlet → domestic-hot-water network', () => {
+    // pipe start coincides with the boiler DHW connector world pos {225,175}.
+    const res = resolvePipeNetworkFromSelection(
+      [combiBoiler('b1'), pipeAt('p1', { x: 225, y: 175 }, { x: 1000, y: 175 })],
+      [],
+    );
+    expect(res.ok).toBe(true);
+    if (!res.ok) return;
+    expect(res.draft.systemClassification).toBe('domestic-hot-water');
+    expect(res.draft.sourceConnectorId).toBe(BOILER_DHW_CONNECTOR_ID);
+  });
+
+  it('combi boiler + pipe wired to the supply outlet → hydronic-supply network', () => {
+    // pipe start coincides with the boiler supply connector world pos {225,0}.
+    const res = resolvePipeNetworkFromSelection(
+      [combiBoiler('b1'), pipeAt('p1', { x: 225, y: 0 }, { x: 1000, y: 0 })],
+      [],
+    );
+    expect(res.ok).toBe(true);
+    if (!res.ok) return;
+    expect(res.draft.systemClassification).toBe('hydronic-supply');
+    expect(res.draft.sourceConnectorId).toBe(BOILER_SUPPLY_CONNECTOR_ID);
+  });
+
+  it('combi boiler + pipe touching neither outlet → falls back to owned (hydronic-supply)', () => {
+    const res = resolvePipeNetworkFromSelection(
+      [combiBoiler('b1'), pipeAt('p1', { x: 5000, y: 5000 }, { x: 6000, y: 6000 })],
+      [],
+    );
+    expect(res.ok).toBe(true);
+    if (!res.ok) return;
+    expect(res.draft.systemClassification).toBe('hydronic-supply');
+    expect(res.draft.sourceConnectorId).toBe(BOILER_SUPPLY_CONNECTOR_ID);
   });
 
   it('moves a pipe wired elsewhere (reassign removal from the old network)', () => {

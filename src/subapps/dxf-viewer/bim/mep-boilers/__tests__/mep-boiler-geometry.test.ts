@@ -108,8 +108,44 @@ describe('buildBoilerConnectors', () => {
 
   it('scales connector x-offsets with width', () => {
     const connectors = buildBoilerConnectors(params({ width: 600 }));
-    const xs = connectors.map((c) => c.localPosition.x).sort((a, b) => a - b);
+    const xs = connectors
+      .filter((c) => c.connectorId !== 'boiler-dhw')
+      .map((c) => c.localPosition.x)
+      .sort((a, b) => a - b);
     expect(xs[0]).toBeCloseTo(-300, 6);
     expect(xs[1]).toBeCloseTo(300, 6);
+  });
+
+  // ─── COMBI boiler — DHW hot outlet (ADR-408 Εύρος Β combi) ──────────────────────
+
+  it('omits the DHW connector when producesDhw is absent/false (2 connectors)', () => {
+    expect(buildBoilerConnectors(params())).toHaveLength(2);
+    expect(buildBoilerConnectors(params({ producesDhw: false }))).toHaveLength(2);
+    expect(
+      buildBoilerConnectors(params()).some((c) => c.connectorId === 'boiler-dhw'),
+    ).toBe(false);
+  });
+
+  it('appends a DHW hot outlet when producesDhw (3 connectors, combi)', () => {
+    const connectors = buildBoilerConnectors(params({ producesDhw: true }));
+    expect(connectors).toHaveLength(3);
+    const dhw = connectors.find((c) => c.connectorId === 'boiler-dhw')!;
+    expect(dhw.domain).toBe('pipe');
+    expect(dhw.flow).toBe('out');
+    expect(dhw.pipe?.systemClassification).toBe('domestic-hot-water');
+    expect(dhw.pipe?.diameterMm).toBe(22);
+  });
+
+  it('places the DHW outlet at +X / +Y, distinct from the supply outlet', () => {
+    const connectors = buildBoilerConnectors(params({ producesDhw: true }));
+    const supply = connectors.find((c) => c.connectorId === 'boiler-supply')!;
+    const dhw = connectors.find((c) => c.connectorId === 'boiler-dhw')!;
+    // width 450 → +half-width 225 ; length 350 → +half-length 175 (mm-scene s=1).
+    expect(dhw.localPosition.x).toBeCloseTo(225, 6);
+    expect(dhw.localPosition.y).toBeCloseTo(175, 6);
+    // never coincides with the supply outlet {x:225, y:0}.
+    const dx = dhw.localPosition.x - supply.localPosition.x;
+    const dy = dhw.localPosition.y - supply.localPosition.y;
+    expect(dx * dx + dy * dy).toBeGreaterThan(0);
   });
 });
