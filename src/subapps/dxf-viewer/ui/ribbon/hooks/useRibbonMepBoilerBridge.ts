@@ -300,14 +300,19 @@ export function useRibbonMepBoilerBridge(
         const systems = useMepSystemStore.getState().getSystems();
         return resolveManagedSystems([boiler], systems).length > 0;
       }
+      if (visibilityKey === MEP_BOILER_RIBBON_VISIBILITY_KEYS.combi) {
+        // ADR-408 Εύρος Β (combi) — «ΖΝΧ» panel (DHW diameter) εμφανίζεται μόνο όταν ο
+        // λέβητας είναι combi (Revit "params appear by type"). Mirror Revit Yes/No gate.
+        return boiler.params.producesDhw === true;
+      }
       return false;
     },
     [resolveBoiler],
   );
 
   return useMemo(
-    () => ({ onComboboxChange, getComboboxState, onAction, getPanelVisibility }),
-    [onComboboxChange, getComboboxState, onAction, getPanelVisibility],
+    () => ({ onComboboxChange, getComboboxState, onToggle, getToggleState, onAction, getPanelVisibility }),
+    [onComboboxChange, getComboboxState, onToggle, getToggleState, onAction, getPanelVisibility],
   );
 }
 

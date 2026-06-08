@@ -25,7 +25,7 @@ import { isMepManifoldPanelVisibilityKey } from './useRibbonMepManifoldBridge';
 import { isMepManifoldRibbonKey, isMepManifoldActionKey, isMepManifoldClassificationKey } from './bridge/mep-manifold-command-keys';
 import { isMepRadiatorRibbonKey, isMepRadiatorRibbonStringKey, isMepRadiatorRibbonReadoutKey, isMepRadiatorActionKey } from './bridge/mep-radiator-command-keys';
 import { isMepBoilerPanelVisibilityKey } from './useRibbonMepBoilerBridge';
-import { isMepBoilerRibbonKey, isMepBoilerRibbonStringKey, isMepBoilerReadoutKey, isMepBoilerActionKey } from './bridge/mep-boiler-command-keys';
+import { isMepBoilerRibbonKey, isMepBoilerRibbonStringKey, isMepBoilerReadoutKey, isMepBoilerToggleKey, isMepBoilerActionKey } from './bridge/mep-boiler-command-keys';
 import { isMepWaterHeaterPanelVisibilityKey } from './useRibbonMepWaterHeaterBridge';
 import { isMepWaterHeaterRibbonKey, isMepWaterHeaterActionKey } from './bridge/mep-water-heater-command-keys';
 import { isMepUnderfloorPanelVisibilityKey } from './useRibbonMepUnderfloorBridge';
@@ -267,9 +267,13 @@ export function useRibbonCommands({
         roofBridge.onToggle(key, next);
         return;
       }
+      if (isMepBoilerToggleKey(key)) {
+        mepBoilerBridge.onToggle(key, next);
+        return;
+      }
       textEditorBridge.onToggle(key, next);
     },
-    [wallBridge, arrayBridge, openingBridge, roofBridge, textEditorBridge],
+    [wallBridge, arrayBridge, openingBridge, roofBridge, mepBoilerBridge, textEditorBridge],
   );
 
   const getToggleState = React.useCallback(
@@ -279,9 +283,10 @@ export function useRibbonCommands({
       if (isArrayRibbonToggleKey(key)) return arrayBridge.getToggleState(key);
       if (isOpeningTagStyleToggleKey(key)) return openingBridge.getToggleState(key);
       if (isRoofRibbonToggleKey(key)) return roofBridge.getToggleState(key);
+      if (isMepBoilerToggleKey(key)) return mepBoilerBridge.getToggleState(key);
       return textEditorBridge.getToggleState(key);
     },
-    [snapEnabled, wallBridge, arrayBridge, openingBridge, roofBridge, textEditorBridge],
+    [snapEnabled, wallBridge, arrayBridge, openingBridge, roofBridge, mepBoilerBridge, textEditorBridge],
   );
 
   // ADR-358 Phase 7b1 — Stair bridge owns badge keys; ADR-363 Phase 1B adds
