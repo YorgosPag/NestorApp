@@ -21,6 +21,7 @@ import { useRibbonMepWaterHeaterBridge, type UseRibbonMepWaterHeaterBridgeProps 
 import { useRibbonMepUnderfloorBridge, type UseRibbonMepUnderfloorBridgeProps } from '../ui/ribbon/hooks/useRibbonMepUnderfloorBridge';
 import { useRibbonMepSegmentBridge, type UseRibbonMepSegmentBridgeProps } from '../ui/ribbon/hooks/useRibbonMepSegmentBridge';
 import { useRibbonWaterAutoSupplyBridge, type UseRibbonWaterAutoSupplyBridgeProps } from '../ui/ribbon/hooks/useRibbonWaterAutoSupplyBridge';
+import { useRibbonDrainageAutoBridge, type UseRibbonDrainageAutoBridgeProps } from '../ui/ribbon/hooks/useRibbonDrainageAutoBridge';
 import { useRibbonFurnitureBridge } from '../ui/ribbon/hooks/useRibbonFurnitureBridge';
 import { useRibbonFloorplanSymbolBridge } from '../ui/ribbon/hooks/useRibbonFloorplanSymbolBridge';
 import { useRibbonMepFixtureLibraryBridge } from '../ui/ribbon/hooks/useRibbonMepFixtureLibraryBridge';
@@ -46,7 +47,8 @@ export type UseDxfBimBridgesProps =
   & UseRibbonMepWaterHeaterBridgeProps
   & UseRibbonMepUnderfloorBridgeProps
   & UseRibbonMepSegmentBridgeProps
-  & UseRibbonWaterAutoSupplyBridgeProps;
+  & UseRibbonWaterAutoSupplyBridgeProps
+  & UseRibbonDrainageAutoBridgeProps;
 
 export function useDxfBimBridges(p: UseDxfBimBridgesProps) {
   const stairBridge = useRibbonStairBridge(p);
@@ -78,6 +80,8 @@ export function useDxfBimBridges(p: UseDxfBimBridgesProps) {
   const mepSegmentBridge = useRibbonMepSegmentBridge(p);
   // ADR-426 Slice 2 — water-supply auto-design (Generate → review → accept).
   const waterAutoSupplyBridge = useRibbonWaterAutoSupplyBridge(p);
+  // ADR-427 Slice 2 — sanitary-drainage auto-design (Generate → review → accept).
+  const drainageAutoBridge = useRibbonDrainageAutoBridge(p);
   // ADR-410 — furniture library contextual bridge (tool-active picker).
   const furnitureBridge = useRibbonFurnitureBridge();
   // ADR-415 — floorplan-symbol library contextual bridge (tool-active picker).
@@ -92,5 +96,5 @@ export function useDxfBimBridges(p: UseDxfBimBridgesProps) {
   const thermalSpaceBridge = useRibbonThermalSpaceBridge(p);
   // ADR-363 Phase 4.5e+ — Tab/Shift+Tab material cycling for selected BIM entities.
   useBimMaterialCycler(p);
-  return { stairBridge, wallBridge, openingBridge, slabBridge, roofBridge, columnBridge, beamBridge, slabOpeningBridge, mepCircuitBridge, mepPipeNetworkBridge, mepFixtureBridge, mepManifoldBridge, mepRadiatorBridge, mepBoilerBridge, mepWaterHeaterBridge, mepUnderfloorBridge, mepSegmentBridge, waterAutoSupplyBridge, furnitureBridge, floorplanSymbolBridge, mepFixtureLibraryBridge, mepRiserBridge, floorFinishBridge, thermalSpaceBridge };
+  return { stairBridge, wallBridge, openingBridge, slabBridge, roofBridge, columnBridge, beamBridge, slabOpeningBridge, mepCircuitBridge, mepPipeNetworkBridge, mepFixtureBridge, mepManifoldBridge, mepRadiatorBridge, mepBoilerBridge, mepWaterHeaterBridge, mepUnderfloorBridge, mepSegmentBridge, waterAutoSupplyBridge, drainageAutoBridge, furnitureBridge, floorplanSymbolBridge, mepFixtureLibraryBridge, mepRiserBridge, floorFinishBridge, thermalSpaceBridge };
 }
