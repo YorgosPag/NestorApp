@@ -18,10 +18,21 @@
 
 import type { Point2D } from '../../rendering/types/Types';
 import type { Entity } from '../../types/entities';
+import { isMepSegmentEntity } from '../../types/entities';
+import type { MepSegmentParams } from '../../bim/types/mep-segment-types';
 import { mmToEntityUnitFactor } from '../utils/bim3d-edit-math';
 import { createSceneManagerAdapter } from '../../hooks/grips/grip-commit-adapters';
 import { MoveEntityCommand, MoveMultipleEntitiesCommand } from '../../core/commands/entity-commands/MoveEntityCommand';
 import { RotateEntityCommand } from '../../core/commands/entity-commands/RotateEntityCommand';
+import { UpdateMepSegmentParamsCommand } from '../../core/commands/entity-commands/UpdateMepSegmentParamsCommand';
+import { calculateBimRotatedGeometry } from '../../bim/transforms/bim-rotate-geometry';
+import { calculateBimMovedGeometry } from '../../bim/utils/bim-move-geometry';
+import { isMepConnectorHost } from '../../bim/mep-systems/connector-access';
+import {
+  resolveHostMoveConnectedPipePatches,
+  resolveSegmentMoveConnectedPipePatches,
+  type SegmentEndpointMovePatch,
+} from '../../bim/mep-segments/mep-move-propagation';
 import { UpdateColumnParamsCommand } from '../../core/commands/entity-commands/UpdateColumnParamsCommand';
 import { UpdateWallParamsCommand } from '../../core/commands/entity-commands/UpdateWallParamsCommand';
 import { UpdateBeamParamsCommand } from '../../core/commands/entity-commands/UpdateBeamParamsCommand';
@@ -81,6 +92,60 @@ export interface CommandBuildCtx {
   readonly levelId: string;
 }
 
+// ─── ADR-408 Φ-C — connectivity-preserving follow for 3D move/rotate ──────────
+
+/** Pipe-follow patches for one edited MEP entity (host drags its connectors' pipes; a pipe drags its coincident neighbours). Non-MEP → none. */
+function pipeFollowPatchesForEntity(
+  entity: Entity,
+  nextParams: unknown,
+  entities: readonly Entity[],
+): readonly SegmentEndpointMovePatch[] {
+  if (isMepSegmentEntity(entity)) {
+    return resolveSegmentMoveConnectedPipePatches(entities, entity, nextParams as MepSegmentParams);
+  }
+  return resolveHostMoveConnectedPipePatches(entities, entity, { ...entity, params: nextParams } as Entity);
+}
+
+/** Extract `params` from a rotate/move geometry patch, or null. */
+function nextParamsFromPatch(patch: Partial<SceneEntity> | null): unknown | null {
+  if (patch && typeof patch === 'object' && 'params' in patch) {
+    return (patch as { params?: unknown }).params ?? null;
+  }
+  return null;
+}
+
+/**
+ * Wrap a base move/rotate command so every pipe snapped to an edited MEP entity
+ * FOLLOWS it in the SAME undo (Revit "connected ends move with the element").
+ * `computeNextParams` re-derives the edited entity's next params (the rotate/move
+ * SSoT) so the resolver maps OLD→NEW connector/endpoint world poses. Pipes that are
+ * themselves edited are skipped (no double patch). Returns the base bare when none follow.
+ */
+function withConnectedPipeFollow(
+  base: EditCommand,
+  editedIds: readonly string[],
+  entities: readonly Entity[],
+  sm: SceneManager,
+  computeNextParams: (entity: Entity) => unknown | null,
+): EditCommand {
+  const edited = new Set(editedIds);
+  const seen = new Set<string>();
+  const pipeCmds: UpdateMepSegmentParamsCommand[] = [];
+  for (const id of editedIds) {
+    const entity = entities.find((e) => e.id === id);
+    if (!entity || !isMepConnectorHost(entity)) continue;
+    const nextParams = computeNextParams(entity);
+    if (!nextParams) continue;
+    for (const p of pipeFollowPatchesForEntity(entity, nextParams, entities)) {
+      if (edited.has(p.segment.id) || seen.has(p.segment.id)) continue;
+      seen.add(p.segment.id);
+      pipeCmds.push(new UpdateMepSegmentParamsCommand(p.segment.id, p.nextParams, p.segment.params, sm, false));
+    }
+  }
+  if (pipeCmds.length === 0) return base;
+  return new CompoundCommand('Edit + connected pipes', [base, ...pipeCmds]);
+}
+
 /** Map a drag outcome to its view-agnostic command (null = no-op / unsupported type). */
 export function buildEditCommand(outcome: BridgeOutcome, c: CommandBuildCtx): EditCommand | null {
   if (outcome.kind === 'move') {
@@ -95,13 +160,18 @@ export function buildEditCommand(outcome: BridgeOutcome, c: CommandBuildCtx): Ed
     // this a non-mm drawing flings the element 1000× off-screen (the "vanish" bug).
     // One delta serves the whole batch — every element in a drawing shares its units
     // (a mixed-unit multi-select stays the documented limitation).
-    const primary = c.levels.getLevelScene(c.levelId)?.entities?.find((e) => e.id === c.entityId);
+    const entitiesAll = c.levels.getLevelScene(c.levelId)?.entities ?? [];
+    const primary = entitiesAll.find((e) => e.id === c.entityId);
     const f = primary ? mmToEntityUnitFactor(primary) : 1;
     const delta = f === 1 ? masked : { x: masked.x * f, y: masked.y * f };
-    if (c.entityIds.length > 1) {
-      return new MoveMultipleEntitiesCommand([...c.entityIds], delta, c.sm, false);
-    }
-    return new MoveEntityCommand(c.entityId, delta, c.sm, false);
+    const moveBase: EditCommand =
+      c.entityIds.length > 1
+        ? new MoveMultipleEntitiesCommand([...c.entityIds], delta, c.sm, false)
+        : new MoveEntityCommand(c.entityId, delta, c.sm, false);
+    // ADR-408 Φ-C — pipes snapped to an edited MEP entity follow it in one undo.
+    return withConnectedPipeFollow(moveBase, c.entityIds, entitiesAll, c.sm, (e) =>
+      nextParamsFromPatch(calculateBimMovedGeometry(e, delta)),
+    );
   }
   if (outcome.kind === 'rotate') {
     // ADR-402/404: the pivot is mm (worldToDxfPlan); scale it into the entity's
@@ -110,10 +180,15 @@ export function buildEditCommand(outcome: BridgeOutcome, c: CommandBuildCtx): Ed
     // is flung off-screen on a non-mm drawing (the "vanish" bug). The primary's
     // factor applies to the whole batch (every element shares the drawing units).
     let pivot = outcome.pivotDxf;
-    const entity = c.levels.getLevelScene(c.levelId)?.entities?.find((e) => e.id === c.entityId);
+    const entitiesAll = c.levels.getLevelScene(c.levelId)?.entities ?? [];
+    const entity = entitiesAll.find((e) => e.id === c.entityId);
     const f = entity ? mmToEntityUnitFactor(entity) : 1;
     if (f !== 1) pivot = { x: pivot.x * f, y: pivot.y * f };
-    return new RotateEntityCommand([...c.entityIds], pivot, outcome.angleDeg, c.sm, false);
+    const rotateBase = new RotateEntityCommand([...c.entityIds], pivot, outcome.angleDeg, c.sm, false);
+    // ADR-408 Φ-C — pipes snapped to an edited MEP entity follow the rotation in one undo.
+    return withConnectedPipeFollow(rotateBase, c.entityIds, entitiesAll, c.sm, (e) =>
+      nextParamsFromPatch(calculateBimRotatedGeometry(e, pivot, outcome.angleDeg)),
+    );
   }
   // Resize is single-entity only (multi-select hides the resize handles).
   if (outcome.kind === 'resize') return c.entityIds.length === 1 ? buildResizeCommand(outcome, c) : null;

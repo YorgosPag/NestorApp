@@ -119,3 +119,25 @@
 - **Next:** L2 radiator sizing (per-terminal output vs per-space Φ)· θερμοσίφωνας DHW sizing (reuse `computeHeatingEquipmentSizing`).
 
 > **ΜΗΝ** ενημερωθεί το `adr-index.md` σε αυτό το slice (shared working tree).
+
+### L2 — Radiator Sizing: Απαιτούμενη Ονομαστική Ισχύς Σώματος (2026-06-08, Opus, Plan Mode)
+
+**Το canonical L2 του roadmap (per-terminal).** Παίρνει το Φ_room του L1 και διαστασιολογεί το **θερμαντικό σώμα** κάθε χώρου κατά **EN 442** — Revit «Heating Loads → equipment sizing» / 4M-FineHEAT. Read-only readout στο contextual tab του καλοριφέρ: **Απαιτούμενη ονομαστική ισχύς** @ΔΤ50K + **παράγοντας διόρθωσης** + **επάρκεια** vs κατάλογο. Διακριτό από το boiler equipment-sizing entry παραπάνω (εκεί = source adequacy· εδώ = per-terminal nominal-output correction). FULL SSOT, **ΕΚΤΟΣ ADR-040** (pure engine + ribbon readout, μηδέν canvas). jest **16/16**.
+
+- **Πυρήνας (D4):** `ΔΤ_actual = (Tsupply+Treturn)/2 − Ti` (**AMTD**, σύμβαση EN 442)· `correctionFactor = (50/ΔΤ_actual)^n` (`n=1.30` panel)· `requiredNominalW = Φ_share · factor`. Worked: 75/65/20 & 80/60/20 → factor 1.0· 70/55/20 → ≈1.23· 45/35/20 → ≈3.29.
+- **Αποφάσεις (Revit-grade, locked):**
+  - **ΔΤ regime storage** = **per-radiator optional override** `MepRadiatorParams.systemRegimePreset` + config default. *Γιατί:* τα MepSystems εδώ είναι derived/transient (`mep-pipe-network-derive`), όχι persisted με editable params → το καλοριφέρ (persisted SSoT element) είναι το σωστό σημείο· Revit per-element override· μηδέν νέο persistence/command/store/rules (τα rules ελέγχουν μόνο την ύπαρξη του `params` key). *Future:* building/System-Type-level default.
+  - **default regime** = `75/65` (ουδέτερο: AMTD@Ti20=50 → factor 1.0). Presets 80/60·75/65·70/55·45/35.
+  - **assignment** = `pointInPolygon` (`position` ∈ `footprint`)· N σώματα/χώρο → ισοκατανομή Φ_room/N.
+  - **sized result** = **TRANSIENT read-model** (mirror L1)· `requiredNominalW`/factor/adequacy **derived, ΠΟΤΕ persisted** (≠ `thermalOutputW` κατάλογος).
+- **Νέα pure SSoT:**
+  - `bim/thermal/sizing/radiator-sizing-config.ts` — `DELTA_T_NOMINAL_K=50`, `DEFAULT_RADIATOR_EXPONENT=1.30`, `SYSTEM_REGIME_PRESETS` + `resolveSystemRegime`.
+  - `bim/thermal/sizing/radiator-sizing.ts` — `computeRequiredRadiatorOutput` (EN 442, guard ΔΤ≤0).
+  - `bim/thermal/sizing/space-radiator-assignment.ts` — `assignRadiatorsToSpaces` (reuse `pointInPolygon`).
+  - `hooks/data/useRadiatorSizing.ts` — reactive read-model (reuse `useSpaceHeatLoads` + assignment + engine).
+- **UI wiring (mirror L1 space readout):** `mep-radiator-command-keys.ts` (+`stringParams.systemRegime`/`readouts`/guards) · `contextual-mep-radiator-tab.ts` (νέο panel «Διαστασιολόγηση»: regime selector + 3 disabled readouts) · `useRibbonMepRadiatorBridge.ts` (`useRadiatorSizing` + regime write + readout branch) · `mep-radiator-types.ts` (+`systemRegimePreset?`) · i18n el+en.
+- **Tests:** `radiator-sizing` (10) + `space-radiator-assignment` (6) = **16/16 PASS**.
+- **ΜΑΘΗΜΑ:** regime ζει στο persisted terminal όταν το System είναι transient· per-terminal sizing = Φ_room/N ισοκατανομή· derived output ΠΟΤΕ persisted (re-derive @load, mirror L1).
+- **Next:** L3 pipe sizing (m=Φ/(c·ΔΤ)→DN).
+
+> **ΜΗΝ** ενημερωθεί το `adr-index.md` σε αυτό το slice (shared working tree).

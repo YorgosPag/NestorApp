@@ -57,7 +57,8 @@ import type {
 } from '../types/column-types';
 import type { BeamEntity, BeamParams } from '../types/beam-types';
 import type { StairEntity, StairParams } from '../types/stair-types';
-import type { Polygon3D as BimPolygon3D } from '../types/bim-base';
+import type { MepSegmentEntity, MepSegmentParams } from '../types/mep-segment-types';
+import type { Polygon3D as BimPolygon3D, Point3D as BimPoint3D } from '../types/bim-base';
 import type { Point3D as RenderPoint3D } from '../../rendering/types/Types';
 import { computeWallGeometry } from '../geometry/wall-geometry';
 import { computeSlabGeometry } from '../geometry/slab-geometry';
@@ -65,6 +66,13 @@ import { computeSlabOpeningGeometry } from '../geometry/slab-opening-geometry';
 import { computeColumnGeometry } from '../geometry/column-geometry';
 import { computeBeamGeometry } from '../geometry/beam-geometry';
 import { computeStairGeometry } from '../geometry/stairs/StairGeometryService';
+import { computeMepSegmentGeometry } from '../geometry/mep-segment-geometry';
+import { computeMepFixtureGeometry } from '../mep-fixtures/mep-fixture-geometry';
+import { computeElectricalPanelGeometry } from '../electrical-panels/electrical-panel-geometry';
+import { computeMepManifoldGeometry } from '../mep-manifolds/mep-manifold-geometry';
+import { computeMepRadiatorGeometry } from '../mep-radiators/mep-radiator-geometry';
+import { computeMepBoilerGeometry } from '../mep-boilers/mep-boiler-geometry';
+import { computeMepWaterHeaterGeometry } from '../mep-water-heaters/mep-water-heater-geometry';
 import { rotatePoint } from '../../utils/rotation-math';
 import { normalizeAngleDeg } from '../../rendering/entities/shared/geometry-utils';
 
@@ -206,6 +214,48 @@ function rotateStair(
   return { params: newParams, geometry } as unknown as Partial<SceneEntity>;
 }
 
+/**
+ * ADR-408 Φ-C (3D gizmo) — rotate a linear MEP segment. Mirror of `rotateBeam`:
+ * both axis endpoints rotate around the pivot; the per-endpoint z is preserved
+ * (rotation is planar). Without this the 3D rotate gizmo produced a no-op patch
+ * and the pipe snapped back to its un-rotated params on the next scene re-sync.
+ */
+function rotateMepSegment(
+  entity: MepSegmentEntity,
+  pivot: Point2D,
+  angleDeg: number,
+): Partial<SceneEntity> {
+  const newParams: MepSegmentParams = {
+    ...entity.params,
+    startPoint: rotatePoint3D(entity.params.startPoint, pivot, angleDeg),
+    endPoint: rotatePoint3D(entity.params.endPoint, pivot, angleDeg),
+  };
+  const geometry = computeMepSegmentGeometry(newParams);
+  return { params: newParams, geometry } as unknown as Partial<SceneEntity>;
+}
+
+/**
+ * ADR-408 Φ-C (3D gizmo) — rotate a point-based MEP host (fixture / electrical
+ * panel / manifold / radiator / boiler / water-heater). Mirror of `rotateColumn`
+ * minus tilt: `position` rotates around the pivot, `rotation` accumulates by
+ * `+angleDeg`. Connectors are host-local (`localPosition`) so they follow the new
+ * transform for free — only the geometry cache is recomputed. Generic over the
+ * host's `compute*Geometry`, so a new connector host opts in with one switch row.
+ */
+function rotateMepPointHost<P extends { position: BimPoint3D; rotation?: number }>(
+  params: P,
+  pivot: Point2D,
+  angleDeg: number,
+  computeGeometry: (p: P) => unknown,
+): Partial<SceneEntity> {
+  const newParams = {
+    ...params,
+    position: rotatePoint3D(params.position, pivot, angleDeg),
+    rotation: normalizeAngleDeg((params.rotation ?? 0) + angleDeg),
+  } as P;
+  return { params: newParams, geometry: computeGeometry(newParams) } as unknown as Partial<SceneEntity>;
+}
+
 // ─── Top-level dispatcher ───────────────────────────────────────────────────
 
 /**
@@ -241,6 +291,22 @@ export function calculateBimRotatedGeometry(
       return rotateBeam(entity, pivot, angleDeg);
     case 'stair':
       return rotateStair(entity, pivot, angleDeg);
+    // ADR-408 Φ-C (3D gizmo) — MEP entities. Segment rotates its two endpoints;
+    // the point hosts rotate position + accumulate `rotation` (connectors follow).
+    case 'mep-segment':
+      return rotateMepSegment(entity, pivot, angleDeg);
+    case 'mep-fixture':
+      return rotateMepPointHost(entity.params, pivot, angleDeg, computeMepFixtureGeometry);
+    case 'electrical-panel':
+      return rotateMepPointHost(entity.params, pivot, angleDeg, computeElectricalPanelGeometry);
+    case 'mep-manifold':
+      return rotateMepPointHost(entity.params, pivot, angleDeg, computeMepManifoldGeometry);
+    case 'mep-radiator':
+      return rotateMepPointHost(entity.params, pivot, angleDeg, computeMepRadiatorGeometry);
+    case 'mep-boiler':
+      return rotateMepPointHost(entity.params, pivot, angleDeg, computeMepBoilerGeometry);
+    case 'mep-water-heater':
+      return rotateMepPointHost(entity.params, pivot, angleDeg, computeMepWaterHeaterGeometry);
     default:
       return null;
   }
