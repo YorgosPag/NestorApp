@@ -35,6 +35,7 @@ import { CONTEXTUAL_MEP_SEGMENT_TAB, MEP_SEGMENT_CONTEXTUAL_TRIGGER } from '../u
 import { CONTEXTUAL_FURNITURE_TAB, FURNITURE_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-furniture-tab';
 import { CONTEXTUAL_FLOORPLAN_SYMBOL_TAB, FLOORPLAN_SYMBOL_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-floorplan-symbol-tab';
 import { CONTEXTUAL_MEP_FIXTURE_LIBRARY_TAB, MEP_FIXTURE_LIBRARY_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-mep-fixture-library-tab';
+import { CONTEXTUAL_MEP_RISER_TAB, MEP_RISER_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-mep-riser-tab';
 import { ANIMATION_CONTEXTUAL_TAB, ANIMATION_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-animation-tab';
 import { selectAnimationToolActive, useAnimationStore } from '../bim-3d/animation/AnimationStore';
 import { useMepSystemStore } from '../bim/mep-systems/mep-system-store';
@@ -75,6 +76,7 @@ export const RIBBON_CONTEXTUAL_TABS = [
   CONTEXTUAL_MEP_UNDERFLOOR_TAB,
   CONTEXTUAL_MEP_SEGMENT_TAB,
   CONTEXTUAL_MEP_FIXTURE_LIBRARY_TAB,
+  CONTEXTUAL_MEP_RISER_TAB,
   CONTEXTUAL_FURNITURE_TAB,
   CONTEXTUAL_FLOORPLAN_SYMBOL_TAB,
   CONTEXTUAL_FLOOR_FINISH_TAB,
@@ -242,6 +244,9 @@ export function useActiveContextualTrigger({
     // tab (choose CC0 mesh or parametric). Selecting a placed fixture instead
     // surfaces the property editor (resolveContextualTrigger, checked earlier).
     if (activeTool === 'mep-fixture') return MEP_FIXTURE_LIBRARY_CONTEXTUAL_TRIGGER;
+    // ADR-408 Φ15 — MEP riser tool active → show the «Κατακόρυφη Στήλη» tab
+    // (base/top span via «Έως όροφο» + diameter) before the placement click.
+    if (activeTool === 'mep-drain-riser') return MEP_RISER_CONTEXTUAL_TRIGGER;
     if (activeTool === 'slab-opening') return SLAB_OPENING_CONTEXTUAL_TRIGGER;
     // ADR-359 Phase 10.b: xline active → show mode selection panel.
     if (activeTool === 'xline') return XLINE_MODE_CONTEXTUAL_TRIGGER;

@@ -96,6 +96,24 @@ describe('computeMepUnderfloorGeometry', () => {
     expect(geo.loopPath.length).toBeLessThanOrEqual(2);
   });
 
+  // ADR-422 unit-fix — a metres-unit scene (footprint in m, mm-scalars converted via
+  // sceneUnits) must still produce a serpentine field. Pre-fix this collapsed to the
+  // degenerate guard (minSpan≈16 ≤ 2·100) → no coils, just a flat colour.
+  it('produces a serpentine field for a metres-unit scene (16m × 16m ≈ 256 m²)', () => {
+    const metresRoom: Point3D[] = [
+      { x: 0, y: 0, z: 0 },
+      { x: 16, y: 0, z: 0 },
+      { x: 16, y: 16, z: 0 },
+      { x: 0, y: 16, z: 0 },
+    ];
+    const geo = computeMepUnderfloorGeometry(
+      params({ footprint: { vertices: metresRoom }, sceneUnits: 'm' }),
+    );
+    expect(geo.areaM2).toBeCloseTo(256, 3); // 16 × 16 m²
+    expect(geo.totalLengthM).toBeGreaterThan(0); // serpentine generated, not degenerate
+    expect(geo.loopPath.length).toBeGreaterThan(2);
+  });
+
   it('handles a CW footprint by normalising winding', () => {
     const cw = [...RECT].reverse();
     expect(computeMepUnderfloorGeometry(params({ footprint: { vertices: cw } })).totalLengthM).toBeGreaterThan(0);

@@ -24,6 +24,7 @@ import type {
   MepUnderfloorParams,
 } from '../types/mep-underfloor-types';
 import { MIN_UNDERFLOOR_SPACING_MM, MIN_UNDERFLOOR_VERTICES } from '../types/mep-underfloor-types';
+import { mmScaleFor } from '../../utils/scene-units';
 import type { MepConnector } from '../types/mep-connector-types';
 import {
   buildUnderfloorSupplyConnector,
@@ -65,20 +66,28 @@ export function computeMepUnderfloorGeometry(
   if (!isPolygonCCW(ring)) ring = [...ring].reverse();
 
   const bbox = polygonBbox(ring);
-  const areaM2 = polygonArea(ring) * MM_TO_M * MM_TO_M;
+  // ADR-422 unit-fix — the footprint is in SCENE UNITS (`params.sceneUnits`), while the
+  // scalar params (edgeClearanceMm / pipeSpacingMm) are mm. They MUST be converted to
+  // scene units before any geometric comparison, and scene-unit outputs back to metres.
+  // Without this, a non-mm scene (e.g. metres) collapses every room to the degenerate
+  // guard (minSpan≈12 ≤ 2·clearance) → no serpentine field, just a flat colour. For an
+  // 'mm' scene the factor is 1 (no behavioural change — same class as the Φ11 tol fix).
+  const s = mmScaleFor(params);            // mm → scene units
+  const sceneToM = MM_TO_M / s;            // scene units → metres
+  const areaM2 = polygonArea(ring) * sceneToM * sceneToM;
   const entry = resolveEntryPoints(ring, params);
   const degenerate = { bbox, areaM2, totalLengthM: 0, loopPath: [entry.supply, entry.ret], ...entryConnectors(entry) };
 
   // Physical guard: a room narrower than 2× the wall clearance leaves no heating
   // field (over-inset would otherwise fold into an inverted polygon).
-  const clearance = Math.max(0, params.edgeClearanceMm);
+  const clearance = Math.max(0, params.edgeClearanceMm) * s;
   const minSpan = Math.min(bbox.max.x - bbox.min.x, bbox.max.y - bbox.min.y);
   if (minSpan <= 2 * clearance) return degenerate;
 
   const inset = insetClosedPolygon(ring, clearance);
   if (!inset || inset.length < MIN_UNDERFLOOR_VERTICES) return degenerate;
 
-  const rows = buildClippedRows(inset, Math.max(MIN_UNDERFLOOR_SPACING_MM, params.pipeSpacingMm));
+  const rows = buildClippedRows(inset, Math.max(MIN_UNDERFLOOR_SPACING_MM, params.pipeSpacingMm) * s);
   const field = params.patternType === 'counterflow-spiral'
     ? stitchCounterflow(rows)
     : stitchSnake(rows);
@@ -87,7 +96,7 @@ export function computeMepUnderfloorGeometry(
   return {
     bbox,
     areaM2,
-    totalLengthM: pathLengthMm(loopPath) * MM_TO_M,
+    totalLengthM: pathLengthMm(loopPath) * sceneToM,
     loopPath,
     ...entryConnectors(entry),
   };
@@ -108,7 +117,7 @@ function resolveEntryPoints(ring: readonly Point3D[], params: MepUnderfloorParam
   const dx = b.x - a.x;
   const dy = b.y - a.y;
   const len = Math.hypot(dx, dy) || 1;
-  const off = Math.max(MIN_UNDERFLOOR_SPACING_MM, params.pipeSpacingMm) / 4;
+  const off = (Math.max(MIN_UNDERFLOOR_SPACING_MM, params.pipeSpacingMm) / 4) * mmScaleFor(params);
   const ux = dx / len;
   const uy = dy / len;
   return {

@@ -39,6 +39,24 @@ describe('computeThermalSpaceGeometry', () => {
     expect(g.volume).toBeCloseTo(10, 6); // 4 × 2.5
   });
 
+  it('converts a metres-unit scene footprint correctly (4m×4m = 16 m²)', () => {
+    const g = computeThermalSpaceGeometry({
+      footprint: {
+        vertices: [
+          { x: 0, y: 0, z: 0 },
+          { x: 4, y: 0, z: 0 },
+          { x: 4, y: 4, z: 0 },
+          { x: 0, y: 4, z: 0 },
+        ],
+      },
+      ceilingHeightMm: 3000,
+      sceneUnits: 'm',
+    });
+    expect(g.area).toBeCloseTo(16, 6); // 4 × 4 m²
+    expect(g.perimeter).toBeCloseTo(16, 6); // 4 × 4 m
+    expect(g.volume).toBeCloseTo(48, 6); // 16 × 3 m
+  });
+
   it('returns zeroed geometry for a degenerate (<3 vertices) footprint', () => {
     const g = computeThermalSpaceGeometry({
       footprint: { vertices: [{ x: 0, y: 0, z: 0 }, { x: 1, y: 1, z: 0 }] },

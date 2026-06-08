@@ -35,15 +35,18 @@ export type MepRiserToolPhase = 'idle' | 'awaitingPosition';
 
 export interface MepRiserToolState {
   readonly phase: MepRiserToolPhase;
-  /** mm — total vertical span of the stack (base = building datum z=0). */
-  readonly heightMm: number;
+  /** mm — datum-relative elevation of the stack base («Από όροφο», default datum 0). */
+  readonly baseElevationMm: number;
+  /** mm — datum-relative elevation of the stack top («Έως όροφο»). */
+  readonly topElevationMm: number;
   /** mm — pipe diameter (DN). */
   readonly diameterMm: number;
 }
 
 const INITIAL_STATE: MepRiserToolState = {
   phase: 'idle',
-  heightMm: DEFAULT_RISER_HEIGHT_MM,
+  baseElevationMm: 0,
+  topElevationMm: DEFAULT_RISER_HEIGHT_MM,
   diameterMm: DEFAULT_RISER_DIAMETER_MM,
 };
 
@@ -58,7 +61,7 @@ export interface UseMepRiserToolOptions {
 export interface UseMepRiserToolResult {
   readonly state: MepRiserToolState;
   activate(): void;
-  setHeight(heightMm: number): void;
+  setSpan(baseMm: number, topMm: number): void;
   setDiameter(diameterMm: number): void;
   deactivate(): void;
   reset(): void;
@@ -92,8 +95,8 @@ export function useMepRiserTool(options: UseMepRiserToolOptions = {}): UseMepRis
     setState((prev) => ({ ...prev, phase: prev.phase === 'idle' ? 'idle' : 'awaitingPosition' }));
   }, []);
 
-  const setHeight = useCallback((heightMm: number) => {
-    setState((prev) => ({ ...prev, heightMm }));
+  const setSpan = useCallback((baseMm: number, topMm: number) => {
+    setState((prev) => ({ ...prev, baseElevationMm: baseMm, topElevationMm: topMm }));
   }, []);
 
   const setDiameter = useCallback((diameterMm: number) => {
@@ -107,8 +110,9 @@ export function useMepRiserTool(options: UseMepRiserToolOptions = {}): UseMepRis
       const sceneUnits = getSceneUnitsRef.current?.() ?? 'mm';
       const xy: Point2D = { x: point.x, y: point.y };
       // Collapse the 2-click into one XY + distinct base/top elevations → a vertical
-      // riser. base = building datum (0), top = heightMm. The builder treats the two
-      // distinct snapped elevations as a connected run (no slope projection).
+      // riser. base/top = datum-relative mm chosen via the «Από/Έως όροφο» tab. The
+      // builder treats the two distinct snapped elevations as a connected run (no
+      // slope projection).
       const result = completeMepSegmentFromTwoClicks(
         xy,
         xy,
@@ -116,8 +120,8 @@ export function useMepRiserTool(options: UseMepRiserToolOptions = {}): UseMepRis
         'pipe',
         { classification: 'sanitary-drainage', diameter: s.diameterMm },
         sceneUnits,
-        0,
-        s.heightMm,
+        s.baseElevationMm,
+        s.topElevationMm,
       );
       if (!result.ok) return false;
       onCreatedRef.current?.(result.entity);
@@ -134,22 +138,23 @@ export function useMepRiserTool(options: UseMepRiserToolOptions = {}): UseMepRis
   useEffect(() => {
     mepRiserToolBridgeStore.set({
       isActive: state.phase !== 'idle',
-      heightMm: state.heightMm,
+      baseElevationMm: state.baseElevationMm,
+      topElevationMm: state.topElevationMm,
       diameterMm: state.diameterMm,
-      setHeight,
+      setSpanMm: setSpan,
       setDiameter,
     });
     return () => {
-      if (mepRiserToolBridgeStore.get()?.setHeight === setHeight) {
+      if (mepRiserToolBridgeStore.get()?.setSpanMm === setSpan) {
         mepRiserToolBridgeStore.set(null);
       }
     };
-  }, [state, setHeight, setDiameter]);
+  }, [state, setSpan, setDiameter]);
 
   return {
     state,
     activate,
-    setHeight,
+    setSpan,
     setDiameter,
     deactivate,
     reset,

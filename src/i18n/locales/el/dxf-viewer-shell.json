@@ -852,7 +852,8 @@
       "floorplanSymbolProperties": "Ιδιότητες Συμβόλου",
       "floorFinishProperties": "Ιδιότητες Επικάλυψης Δαπέδου",
       "thermalSpaceProperties": "Ιδιότητες Θερμικού Χώρου",
-      "mepFixtureLibrary": "Βιβλιοθήκη Φωτιστικών"
+      "mepFixtureLibrary": "Βιβλιοθήκη Φωτιστικών",
+      "mepRiser": "Κατακόρυφη Στήλη"
     },
     "panels": {
       "draw": "Σχεδίαση",
@@ -1011,7 +1012,8 @@
       "floorplanSymbolCatalog": "Σύμβολο",
       "floorplanSymbolGeometry": "Γεωμετρία",
       "mepFixtureLibrary": "Βιβλιοθήκη",
-      "mepFixtureLibraryPlacement": "Τοποθέτηση"
+      "mepFixtureLibraryPlacement": "Τοποθέτηση",
+      "mepRiser": "Στήλη"
     },
     "minimizeStates": {
       "full": "Πλήρης Προβολή",
@@ -2746,6 +2748,10 @@
         "parametric": "Παραμετρικό (χωρίς μοντέλο)",
         "rotation": "Περιστροφή",
         "scale": "Κλίμακα"
+      },
+      "mepRiser": {
+        "toFloor": "Έως όροφο",
+        "diameter": "Διάμετρος"
       }
     },
     "tooltips": {

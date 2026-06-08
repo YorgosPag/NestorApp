@@ -14,11 +14,14 @@ import { useSyncExternalStore } from 'react';
 /** Snapshot of the riser tool's user-editable placement state. */
 export interface MepRiserToolBridgeHandle {
   readonly isActive: boolean;
-  /** mm — total vertical span of the stack (base = building datum). */
-  readonly heightMm: number;
+  /** mm — datum-relative elevation of the stack base («Από όροφο»). */
+  readonly baseElevationMm: number;
+  /** mm — datum-relative elevation of the stack top («Έως όροφο»). */
+  readonly topElevationMm: number;
   /** mm — pipe diameter (DN). */
   readonly diameterMm: number;
-  setHeight(heightMm: number): void;
+  /** Set both ends of the span at once (Revit base/top constraint). */
+  setSpanMm(baseMm: number, topMm: number): void;
   setDiameter(diameterMm: number): void;
 }
 

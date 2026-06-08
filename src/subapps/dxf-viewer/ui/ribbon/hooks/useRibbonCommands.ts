@@ -55,6 +55,8 @@ import { isFloorplanSymbolPanelVisibilityKey } from './useRibbonFloorplanSymbolB
 import { isFloorplanSymbolRibbonKey, isFloorplanSymbolRibbonStringKey } from './bridge/floorplan-symbol-command-keys';
 import type { RibbonMepFixtureLibraryBridge } from './useRibbonMepFixtureLibraryBridge';
 import { isMepFixtureLibraryKey, isMepFixtureLibraryStringKey } from './bridge/mep-fixture-library-command-keys';
+import type { RibbonMepRiserBridge } from './useRibbonMepRiserBridge';
+import { isMepRiserKey, isMepRiserStringKey } from './bridge/mep-riser-command-keys';
 import type { RibbonLineToolBridge } from './useRibbonLineToolBridge';
 import { isArrayRibbonKey, isArrayRibbonStringKey, isArrayRibbonToggleKey } from './bridge/array-command-keys';
 import { isStairRibbonKey, isStairRibbonStringKey, isStairActionKey } from './bridge/stair-command-keys';
@@ -105,6 +107,7 @@ interface UseRibbonCommandsProps {
   furnitureBridge: RibbonFurnitureBridge;
   floorplanSymbolBridge: RibbonFloorplanSymbolBridge;
   mepFixtureLibraryBridge: RibbonMepFixtureLibraryBridge;
+  mepRiserBridge: RibbonMepRiserBridge;
   lineToolBridge: RibbonLineToolBridge;
   xlineModeBridge: RibbonXlineModeBridge;
 }
@@ -145,6 +148,7 @@ export function useRibbonCommands({
   furnitureBridge,
   floorplanSymbolBridge,
   mepFixtureLibraryBridge,
+  mepRiserBridge,
   lineToolBridge,
   xlineModeBridge,
 }: UseRibbonCommandsProps): RibbonCommandsApi {
@@ -240,6 +244,10 @@ export function useRibbonCommands({
         mepFixtureLibraryBridge.onComboboxChange(key, value);
         return;
       }
+      if (isMepRiserKey(key) || isMepRiserStringKey(key)) {
+        mepRiserBridge.onComboboxChange(key, value);
+        return;
+      }
       if (isArrayRibbonKey(key) || isArrayRibbonStringKey(key)) {
         arrayBridge.onComboboxChange(key, value);
         return;
@@ -254,7 +262,7 @@ export function useRibbonCommands({
       }
       textEditorBridge.onComboboxChange(key, value);
     },
-    [stairBridge, wallBridge, openingBridge, slabBridge, roofBridge, floorFinishBridge, thermalSpaceBridge, columnBridge, beamBridge, slabOpeningBridge, mepFixtureBridge, mepManifoldBridge, mepRadiatorBridge, mepBoilerBridge, mepUnderfloorBridge, mepSegmentBridge, furnitureBridge, floorplanSymbolBridge, mepFixtureLibraryBridge, arrayBridge, lineToolBridge, xlineModeBridge, textEditorBridge],
+    [stairBridge, wallBridge, openingBridge, slabBridge, roofBridge, floorFinishBridge, thermalSpaceBridge, columnBridge, beamBridge, slabOpeningBridge, mepFixtureBridge, mepManifoldBridge, mepRadiatorBridge, mepBoilerBridge, mepUnderfloorBridge, mepSegmentBridge, furnitureBridge, floorplanSymbolBridge, mepFixtureLibraryBridge, mepRiserBridge, arrayBridge, lineToolBridge, xlineModeBridge, textEditorBridge],
   );
 
   const getComboboxState = React.useCallback(
@@ -281,12 +289,13 @@ export function useRibbonCommands({
       if (isFurnitureRibbonKey(key) || isFurnitureRibbonStringKey(key)) return furnitureBridge.getComboboxState(key);
       if (isFloorplanSymbolRibbonKey(key) || isFloorplanSymbolRibbonStringKey(key)) return floorplanSymbolBridge.getComboboxState(key);
       if (isMepFixtureLibraryKey(key) || isMepFixtureLibraryStringKey(key)) return mepFixtureLibraryBridge.getComboboxState(key);
+      if (isMepRiserKey(key) || isMepRiserStringKey(key)) return mepRiserBridge.getComboboxState(key);
       if (isArrayRibbonKey(key) || isArrayRibbonStringKey(key)) return arrayBridge.getComboboxState(key);
       if (isLineToolRibbonKey(key)) return lineToolBridge.getComboboxState(key);
       if (isXlineRibbonKey(key)) return xlineModeBridge.getComboboxState(key);
       return textEditorBridge.getComboboxState(key);
     },
-    [snapStepUnits, stairBridge, wallBridge, openingBridge, slabBridge, roofBridge, floorFinishBridge, thermalSpaceBridge, columnBridge, beamBridge, slabOpeningBridge, mepFixtureBridge, mepManifoldBridge, mepRadiatorBridge, mepBoilerBridge, mepSegmentBridge, furnitureBridge, floorplanSymbolBridge, mepFixtureLibraryBridge, arrayBridge, lineToolBridge, xlineModeBridge, textEditorBridge],
+    [snapStepUnits, stairBridge, wallBridge, openingBridge, slabBridge, roofBridge, floorFinishBridge, thermalSpaceBridge, columnBridge, beamBridge, slabOpeningBridge, mepFixtureBridge, mepManifoldBridge, mepRadiatorBridge, mepBoilerBridge, mepSegmentBridge, furnitureBridge, floorplanSymbolBridge, mepFixtureLibraryBridge, mepRiserBridge, arrayBridge, lineToolBridge, xlineModeBridge, textEditorBridge],
   );
 
   const onToggle = React.useCallback(

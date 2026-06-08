@@ -29,6 +29,7 @@
 
 import type { BimEntity, BoundingBox3D, Polygon3D } from './bim-base';
 import type { SceneUnits } from '../../utils/scene-units';
+import { mmScaleFor } from '../../utils/scene-units';
 import type { IfcEntityMixin } from './ifc-entity-mixin';
 import { polygonArea, polygonPerimeter, polygonBbox } from '../geometry/shared/polygon-utils';
 
@@ -136,7 +137,7 @@ const MM_TO_M = 0.001;
  * factory — consumers ΠΟΤΕ απευθείας (SSoT = params). Idempotent.
  */
 export function computeThermalSpaceGeometry(
-  params: Pick<ThermalSpaceParams, 'footprint' | 'ceilingHeightMm'>,
+  params: Pick<ThermalSpaceParams, 'footprint' | 'ceilingHeightMm' | 'sceneUnits'>,
 ): ThermalSpaceGeometry {
   const verts = params.footprint.vertices;
   if (verts.length < MIN_THERMAL_SPACE_VERTICES) {
@@ -149,8 +150,13 @@ export function computeThermalSpaceGeometry(
   }
 
   const bbox = polygonBbox(verts);
-  const areaM2 = polygonArea(verts) * MM_TO_M * MM_TO_M;
-  const perimeterM = polygonPerimeter(verts) * MM_TO_M;
+  // ADR-422 unit-fix — the footprint is in SCENE UNITS (`params.sceneUnits`); convert
+  // scene-unit area/perimeter to metres via the sceneUnits SSoT. `ceilingHeightMm` is a
+  // mm scalar, so height→m is always ×MM_TO_M. For an 'mm' scene the factor is 1 (no
+  // change — same fix as mep-underfloor / Φ11).
+  const sceneToM = MM_TO_M / mmScaleFor(params);
+  const areaM2 = polygonArea(verts) * sceneToM * sceneToM;
+  const perimeterM = polygonPerimeter(verts) * sceneToM;
   const heightM = Math.max(0, params.ceilingHeightMm) * MM_TO_M;
 
   return {
