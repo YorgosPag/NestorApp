@@ -369,6 +369,8 @@ export function buildRadiatorReturnConnector(
 export const BOILER_SUPPLY_CONNECTOR_ID = 'boiler-supply';
 /** Connector id for the return inlet (επιστροφή) of a heating boiler. */
 export const BOILER_RETURN_CONNECTOR_ID = 'boiler-return';
+/** Connector id for the DHW hot-water outlet of a COMBI heating boiler (παραγωγή ΖΝΧ). */
+export const BOILER_DHW_CONNECTOR_ID = 'boiler-dhw';
 
 /**
  * Supply outlet connector of a hydronic boiler (ADR-408 Εύρος Β #2, λέβητας) — the
@@ -410,6 +412,36 @@ export function buildBoilerReturnConnector(
     flow: 'in',
     localPosition,
     pipe: { systemClassification: 'hydronic-return', diameterMm },
+  };
+}
+
+/**
+ * DHW hot-water outlet connector of a COMBI heating boiler (ADR-408 Εύρος Β — combi).
+ * A combi boiler heats space AND produces domestic hot water: in addition to its
+ * hydronic supply/return pair it carries a SECOND `flow:'out'` outlet — heated tap
+ * water LEAVES here, `domain:'pipe'`, classification FIXED to `domestic-hot-water`.
+ * This is what makes the combi boiler the SOURCE of a DHW network (exactly like the
+ * water heater's hot outlet, {@link buildWaterHeaterHotOutletConnector}). Only seeded
+ * when `MepBoilerParams.producesDhw` is set (a plain boiler heats space only).
+ *
+ * Because the boiler now has TWO out-connectors of DISTINCT classification, the
+ * pipe-network resolver must pick the source connector BY classification — see
+ * `findPipeNetworkSourceConnectorId(source, classification)` in `pipe-network-source.ts`.
+ *
+ * `localPosition` is host-local (scene units, pre-rotation) — the caller resolves it
+ * from the body geometry, OFFSET so it never coincides with the supply outlet
+ * (see `buildBoilerConnectors`).
+ */
+export function buildBoilerDhwConnector(
+  localPosition: Point3D,
+  diameterMm: number,
+): MepConnector {
+  return {
+    connectorId: BOILER_DHW_CONNECTOR_ID,
+    domain: 'pipe',
+    flow: 'out',
+    localPosition,
+    pipe: { systemClassification: 'domestic-hot-water', diameterMm },
   };
 }
 

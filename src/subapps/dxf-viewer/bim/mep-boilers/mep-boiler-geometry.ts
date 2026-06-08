@@ -24,6 +24,7 @@ import type { MepConnector } from '../types/mep-connector-types';
 import {
   buildBoilerSupplyConnector,
   buildBoilerReturnConnector,
+  buildBoilerDhwConnector,
 } from '../types/mep-connector-types';
 import { polygonArea, polygonBbox } from '../geometry/shared/polygon-utils';
 import { mmToSceneUnits } from '../../utils/scene-units';
@@ -89,24 +90,35 @@ function transformFootprint(
 // ─── Connector layout (pure SSoT) ──────────────────────────────────────────────
 
 /**
- * Build the boiler's two embedded connectors (supply outlet + return inlet),
- * derived from `params`. SSoT consumed by both the completion builder (creation)
- * and `seedDefaultConnectors` (load-time re-materialisation).
+ * Build the boiler's embedded connectors (supply outlet + return inlet, plus an
+ * optional DHW hot outlet for a combi boiler), derived from `params`. SSoT consumed
+ * by both the completion builder (creation) and `seedDefaultConnectors` (load-time
+ * re-materialisation), so a `producesDhw` toggle / reload re-derives the right set.
  *
  * The supply outlet sits at the +X end (`flow:'out'` → sources the supply network)
  * and the return inlet at the −X end (`flow:'in'`), both on the body centreline
- * (host-local, scene units, pre-rotation). `connectorWorldPosition` applies the host
- * rotation/translation for free.
+ * (host-local, scene units, pre-rotation). When `producesDhw` (combi boiler) a THIRD
+ * connector — the DHW hot outlet — is appended at the +X end but OFFSET in +Y (to the
+ * front-right corner) so it never coincides with the supply outlet, making the boiler
+ * the SOURCE of a `domestic-hot-water` network. `connectorWorldPosition` applies the
+ * host rotation/translation for free.
  */
 export function buildBoilerConnectors(params: MepBoilerParams): MepConnector[] {
   const s = mmToSceneUnits(params.sceneUnits ?? 'mm');
   const hw = (params.width * s) / 2;
+  const hl = (params.length * s) / 2;
   const supply: Point3D = { x: hw, y: 0, z: 0 };
   const ret: Point3D = { x: -hw, y: 0, z: 0 };
-  return [
+  const connectors: MepConnector[] = [
     buildBoilerSupplyConnector(supply, params.connectorDiameterMm),
     buildBoilerReturnConnector(ret, params.connectorDiameterMm),
   ];
+  if (params.producesDhw) {
+    // DHW hot outlet at the +X / +Y front-right corner — distinct from supply {x:hw,y:0}.
+    const dhw: Point3D = { x: hw, y: hl, z: 0 };
+    connectors.push(buildBoilerDhwConnector(dhw, params.connectorDiameterMm));
+  }
+  return connectors;
 }
 
 // ─── Validation ─────────────────────────────────────────────────────────────────

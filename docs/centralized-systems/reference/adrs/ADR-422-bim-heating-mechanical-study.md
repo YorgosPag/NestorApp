@@ -141,3 +141,23 @@
 - **Next:** L3 pipe sizing (m=Φ/(c·ΔΤ)→DN).
 
 > **ΜΗΝ** ενημερωθεί το `adr-index.md` σε αυτό το slice (shared working tree).
+
+### L3 — Pipe Sizing: Διαστασιολόγηση Σωληνώσεων (velocity + friction / D5) (2026-06-09, Opus, Plan Mode)
+
+**Παίρνει ΥΠΑΡΧΟΝ δίκτυο θέρμανσης (σωλήνες + καλοριφέρ + πηγή) και προτείνει DN ανά τμήμα** — Revit «Pipe Sizing» / 4M-FineHEAT. Η αθροιστική παροχή κατάντη → επιλογή διαμέτρου ώστε `v ≤ v_max ∧ R ≤ R_max`· **οι διάμετροι μικραίνουν προς τα τερματικά**. FULL SSOT — καταναλώνει τοπολογία (`derivePipeNetworks`), per-terminal φορτίο (`useRadiatorSizing` L2), regime (`resolveSystemRegime` L2). **L3a (engine) ΕΚΤΟΣ ADR-040· L3b overlay ΕΝΤΟΣ** (mount στο `CanvasLayerStack`, STAGE ADR-040). jest **19/19**, tsc 0.
+
+- **Πυρήνας (D5):** `ṁ = Φ/(c·ΔΤ)` (kg/s) → `Q = ṁ/ρ` (m³/s) → `v = Q/A`, `R = f·ρ·v²/(2·d)` (Darcy–Weisbach, f=Blasius `0.316/Re^0.25` / laminar `64/Re`). c=4187, ρ=977.8, μ=4.04e-4 @~70°C (config SSoT).
+- **Αποφάσεις (Revit-grade, locked):**
+  - **conserved quantity = ΜΑΖΙΚΗ ΠΑΡΟΧΗ (kg/s), όχι W** — φυσικά σωστό (διατήρηση μάζας στους κόμβους) ΚΑΙ χειρίζεται μικτά per-radiator regimes χωρίς network-regime resolver (κάθε σώμα συνεισφέρει `ṁ_i = Φ_share_i/(c·ΔΤ_i)`).
+  - **ΔΤ_pipe = `supplyC − returnC`** (regime), ΟΧΙ το AMTD/«50/ΔΤ» του L2 (διαφορετικό concept: L2=ισχύς σώματος, L3=παροχή).
+  - **network walk = ΔΕΝΤΡΟ** — τα τερματικά ΔΕΝ είναι segments, ώστε ο κλάδος προσαγωγής και ο κλάδος επιστροφής βγαίνουν ΞΕΧΩΡΙΣΤΑ δέντρα (γέφυρα μόνο μέσω σώματος) → post-order subtree sum, χωρίς loop solver (back-edge → flag + v1 fallback).
+  - **ρίζα = κόμβος κοντά σε connector πηγής** (boiler/manifold)· fallback ντετερμινιστικός (μικρότερος node index).
+  - **DN ladder κρατά εξωτ.+εσωτ. διάμετρο** — `params.diameter` = ΕΞΩΤΕΡΙΚΗ (γράφεται στο apply)· v/R από ΕΣΩΤΕΡΙΚΗ.
+  - **πρόταση = derived (overlay)· apply = explicit command** (μηδέν σιωπηλό persist). Pluggable `PipeSizingStandard` (mirror `water-sizing.ts`).
+- **Νέα pure SSoT:** `bim/thermal/sizing/pipe-sizing-config.ts` (c/ρ/μ/ladder/όρια) · `pipe-sizing.ts` (mass/volume flow + velocity + friction) · `velocity-friction-standard.ts` (`diameterForFlow` με v/R guards + saturated) · `pipe-network-sizing.ts` (`sizePipeNetwork` graph+root+subtree walk) · `hooks/data/usePipeSizing.ts` (reactive read-model, reuse `useRadiatorSizing`).
+- **UI (L3b — visualization):** `state/pipe-sizing-view-store.ts` (transient flag, ΟΧΙ persisted — analysis mode) · `components/dxf-layout/PipeSizingOverlay.tsx` (badge DN+ταχύτητα ανά σωλήνα, mirror `HeatLoadOverlay`, STAGE ADR-040) · `ui/ribbon/components/ShowPipeSizingToggle.tsx` + `view-tab-bim-settings.ts` (`PIPE_SIZING_BUTTON`) + `RibbonPanel.tsx` dispatch · i18n el+en (`ribbon.commands.pipeSizing.*`).
+- **Tests:** `pipe-sizing` (engine+standard) + `pipe-network-sizing` (δέντρο walk: κορμός=Σκλάδων, source re-root, monotonic DN, empty) = **19/19 PASS**.
+- **ΜΑΘΗΜΑ:** σε δίκτυο όπου τα τερματικά δεν είναι segments, η topology βγάζει supply/return ΞΕΧΩΡΙΣΤΑ δέντρα → ο walk είναι απλό subtree-sum (όχι loop solver)· conserve mass (kg/s) όχι ισχύ (W) για να αθροίζονται σωστά μικτά ΔΤ.
+- **🔴 PENDING (επόμενο slice):** **Apply command** — ribbon action «Εφαρμογή Διαστασιολόγησης» → `CompoundCommand` από `UpdateMepSegmentParamsCommand` (γράφει `diameter=outerMm`, ένα undo). Mirror `useRibbonWaterAutoSupplyBridge`. **Αναβλήθηκε για αποφυγή concurrent edit στο shared `useRibbonCommands.ts`** (ο παράλληλος boiler agent το επεξεργάζεται).
+
+> **ΜΗΝ** ενημερωθεί το `adr-index.md` σε αυτό το slice (shared working tree).

@@ -27,6 +27,7 @@ import type { MepManifoldEntity } from '../types/mep-manifold-types';
 import type { MepBoilerEntity } from '../types/mep-boiler-types';
 import type { MepWaterHeaterEntity } from '../types/mep-water-heater-types';
 import { MANIFOLD_OUTLET_CONNECTOR_ID_PREFIX } from '../types/mep-connector-types';
+import type { PlumbingSystemClassification } from '../types/mep-connector-types';
 import { getEntityConnectors } from './connector-access';
 
 /** Any entity that can source a plumbing pipe network (Revit "source equipment"). */
@@ -45,20 +46,51 @@ export function isPipeNetworkSourceEntity(entity: Entity): entity is PipeNetwork
 const DEFAULT_SOURCE_CONNECTOR_ID = `${MANIFOLD_OUTLET_CONNECTOR_ID_PREFIX}0`;
 
 /**
- * The source's outgoing connector id: its first `flow:'out'` connector (the manifold
- * outlet, the boiler supply-out, or the water-heater hot-outlet `domestic-hot-water`),
- * else any connector, else the canonical fallback. A source placed before the connector
- * seed carries none — it is still a valid source, so we fall back rather than refuse.
+ * The distinct hydraulic classifications of a source's OUTGOING (`flow:'out'`) pipe
+ * connectors. A plain manifold / water heater / boiler has exactly ONE outgoing
+ * classification; a COMBI boiler (`producesDhw`) has TWO (`hydronic-supply` +
+ * `domestic-hot-water`). The from-selection resolver uses the cardinality to decide
+ * whether it must disambiguate the source connector BY classification.
+ */
+export function sourceOutConnectorClassifications(
+  source: PipeNetworkSourceEntity,
+): Set<PlumbingSystemClassification> {
+  const out = new Set<PlumbingSystemClassification>();
+  for (const c of getEntityConnectors(source)) {
+    if (c.flow === 'out' && c.pipe?.systemClassification) out.add(c.pipe.systemClassification);
+  }
+  return out;
+}
+
+/**
+ * The source's outgoing connector id: its `flow:'out'` connector (the manifold outlet,
+ * the boiler supply-out, or the water-heater hot-outlet `domestic-hot-water`), else any
+ * connector, else the canonical fallback. A source placed before the connector seed
+ * carries none — it is still a valid source, so we fall back rather than refuse.
+ *
+ * `classification` (optional) — when given, prefer the `flow:'out'` connector of THAT
+ * classification. This is REQUIRED for a COMBI boiler, which carries two distinct
+ * outgoing connectors (`hydronic-supply` + `domestic-hot-water`): the plain "first out"
+ * pick would source the wrong network for one of them (Revit: the pipe takes the System
+ * Classification of the connector it is wired to). Omitted / no match ⇒ the legacy
+ * behaviour (first out → first → fallback), so single-outlet sources are unaffected.
  *
  * For a `mep-water-heater` the SOURCE connector is its HOT OUTLET (`domestic-hot-water`,
  * `flow:'out'`, +X end) — NOT the cold inlet. `buildWaterHeaterConnectors` places the
  * cold inlet first (`flow:'in'`) and the hot outlet second (`flow:'out'`), so the
  * `flow === 'out'` search picks the correct connector automatically.
  */
-export function findPipeNetworkSourceConnectorId(source: PipeNetworkSourceEntity): string {
+export function findPipeNetworkSourceConnectorId(
+  source: PipeNetworkSourceEntity,
+  classification?: PlumbingSystemClassification,
+): string {
   const conns = getEntityConnectors(source);
   return (
-    conns.find((c) => c.flow === 'out')?.connectorId
+    (classification
+      ? conns.find((c) => c.flow === 'out' && c.pipe?.systemClassification === classification)
+          ?.connectorId
+      : undefined)
+    ?? conns.find((c) => c.flow === 'out')?.connectorId
     ?? conns[0]?.connectorId
     ?? DEFAULT_SOURCE_CONNECTOR_ID
   );

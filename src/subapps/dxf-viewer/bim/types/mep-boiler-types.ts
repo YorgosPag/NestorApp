@@ -91,6 +91,14 @@ export interface MepBoilerParams extends MepConnectorHostParams {
    */
   readonly systemClassification?: PlumbingSystemClassification;
   /**
+   * COMBI boiler flag (ADR-408 Εύρος Β — combi). When `true` the boiler also produces
+   * domestic hot water: `buildBoilerConnectors` seeds a THIRD `flow:'out'` connector
+   * (`domestic-hot-water`) alongside the hydronic supply/return pair, making the boiler
+   * the SOURCE of a DHW network too (like the water heater's hot outlet). Absent/false ⇒
+   * space-heating only (2 connectors). Additive/optional — pre-combi boilers unchanged.
+   */
+  readonly producesDhw?: boolean;
+  /**
    * W — optional catalogue thermal output (nominal heat output). Drives future
    * sizing/load-balancing; absent ⇒ not yet specified.
    */

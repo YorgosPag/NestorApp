@@ -55,6 +55,8 @@ export const MepBoilerParamsSchema = z
     connectorDiameterMm: z.number().positive(),
     // The hydronic classification the boiler sources (network inherits it).
     systemClassification: SystemClassificationSchema.optional(),
+    // COMBI flag — when set, the boiler also sources a domestic-hot-water network.
+    producesDhw: z.boolean().optional(),
     // Optional catalogue thermal output (W) — drives future sizing.
     thermalOutputW: z.number().positive().optional(),
     sceneUnits: z.string().optional(),
