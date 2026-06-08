@@ -45,6 +45,7 @@ import { HomeRunWiresOverlay } from './HomeRunWiresOverlay';
 import { FloorUnderlayOverlay } from './FloorUnderlayOverlay';
 import { RiserThroughOverlay } from './RiserThroughOverlay';
 import { HeatLoadOverlay } from './HeatLoadOverlay';
+import { PipeSizingOverlay } from './PipeSizingOverlay';
 export type { CanvasLayerStackProps } from './canvas-layer-stack-types';
 const EMPTY_SNAP_RESULTS: readonly never[] = Object.freeze([]);
 export const CanvasLayerStack = React.memo(function CanvasLayerStack({
@@ -464,6 +465,10 @@ export const CanvasLayerStack = React.memo(function CanvasLayerStack({
               space. Read-only, pointer-events-none. Self-gated to
               showHeatLoad && mode==='2d'. STAGE ADR-040. */}
           <HeatLoadOverlay transform={transform} viewport={viewport} />
+          {/* ADR-422 L3 — pipe-sizing badges (προτεινόμενη DN + ταχύτητα) ανά
+              σωλήνα θέρμανσης. Read-only, pointer-events-none. Self-gated to
+              showPipeSizing && mode==='2d'. STAGE ADR-040. */}
+          <PipeSizingOverlay transform={transform} viewport={viewport} />
           <PolygonCropPreviewSubscriber transform={transform} viewport={viewport} className={`absolute inset-0 w-full h-full pointer-events-none ${PANEL_LAYOUT.Z_INDEX['20']}`} />
           <LassoFreehandPreviewSubscriber transform={transform} viewport={viewport} className={`absolute inset-0 w-full h-full pointer-events-none ${PANEL_LAYOUT.Z_INDEX['20']}`} />
           <ZoomWindowSubscriber className={`absolute ${PANEL_LAYOUT.INSET['0']} w-full h-full ${PANEL_LAYOUT.POINTER_EVENTS.NONE} ${PANEL_LAYOUT.Z_INDEX['20']}`} />

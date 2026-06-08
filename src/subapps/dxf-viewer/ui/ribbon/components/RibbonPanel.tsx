@@ -31,6 +31,7 @@ import { MepWireToggle } from './MepWireToggle';
 import { DrainPipeToggle } from './DrainPipeToggle';
 import { ColorBySystemToggle } from './ColorBySystemToggle';
 import { ShowHeatLoadToggle } from './ShowHeatLoadToggle';
+import { ShowPipeSizingToggle } from './ShowPipeSizingToggle';
 import { RealisticMaterialsToggle } from './RealisticMaterialsToggle';
 import { DisciplineVisibilityToggle } from './DisciplineVisibilityToggle';
 import { RibbonInsertTokenWidget } from './RibbonInsertTokenWidget';
@@ -119,6 +120,9 @@ function renderButton(button: RibbonButton): React.ReactNode {
     }
     if (button.widgetId === 'show-heat-load-toggle') {
       return <ShowHeatLoadToggle key="show-heat-load-toggle-widget" />;
+    }
+    if (button.widgetId === 'show-pipe-sizing-toggle') {
+      return <ShowPipeSizingToggle key="show-pipe-sizing-toggle-widget" />;
     }
     if (button.widgetId === 'realistic-materials-toggle') {
       return <RealisticMaterialsToggle key="realistic-materials-toggle-widget" />;

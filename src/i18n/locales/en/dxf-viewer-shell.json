@@ -2654,6 +2654,13 @@
         "tooltipEnable": "Show analytical heat load per space (heat-map + Φ in W)",
         "tooltipDisable": "Hide analytical heat load"
       },
+      "pipeSizing": {
+        "label": "Pipe Sizing",
+        "enable": "Show",
+        "disable": "Hide",
+        "tooltipEnable": "Show proposed diameter (DN) + velocity per heating pipe (velocity + friction)",
+        "tooltipDisable": "Hide pipe sizing"
+      },
       "realisticMaterials": {
         "label": "Realistic Materials",
         "enable": "Enable Materials",
