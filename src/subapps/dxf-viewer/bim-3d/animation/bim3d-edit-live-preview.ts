@@ -73,6 +73,14 @@ export class Bim3DEditLivePreview {
   /** Ids of the circuits to rebuild per frame (a dragged host is their source/member). */
   private wireSystemIds: string[] = [];
 
+  // ── ADR-408 Φ-C — live connected-pipe follow (host/pipe move → pipe ends stretch) ──
+  /** Original meshes of the connected pipe segments, hidden during the edit (restored on cancel). */
+  private pipeHidden: THREE.Object3D[] = [];
+  /** The swapped-in pipe-follow preview meshes (removed + disposed each frame / on cancel). */
+  private pipeObjects: THREE.Object3D[] = [];
+  /** Ids of the connected pipe segments to rebuild per frame (snapped to a dragged MEP entity). */
+  private pipeSegmentIds: string[] = [];
+
   /** True while a preview is in effect (capture done, not yet committed/reset). */
   get isActive(): boolean {
     return (
@@ -82,13 +90,20 @@ export class Bim3DEditLivePreview {
       this.dependentHidden.length > 0 ||
       this.dependentObjects.length > 0 ||
       this.wireSystemIds.length > 0 ||
-      this.wireObjects.length > 0
+      this.wireObjects.length > 0 ||
+      this.pipeSegmentIds.length > 0 ||
+      this.pipeObjects.length > 0
     );
   }
 
   /** Affected circuit ids captured for this drag (empty when no dragged host is wired). */
   get circuitWireSystemIds(): readonly string[] {
     return this.wireSystemIds;
+  }
+
+  /** Connected pipe-segment ids captured for this drag (empty when nothing connects). */
+  get connectedPipeSegmentIds(): readonly string[] {
+    return this.pipeSegmentIds;
   }
 
   /** Attached dependent wall ids captured for this drag (empty when none / not a host move). */
@@ -215,6 +230,41 @@ export class Bim3DEditLivePreview {
   }
 
   /**
+   * ADR-408 Φ-C — begin a live follow of the pipe segments connected to a dragged
+   * MEP entity (host move/rotate/vertical → snapped pipe ends stretch). Called AFTER
+   * `captureTransform` (so it does NOT reset): records the connected pipe meshes
+   * (`segmentIds`, direct children tagged with `bimId`) to hide + restore. Fresh
+   * meshes are supplied per-frame to `applyPipes` (built via the converter SSoT).
+   */
+  capturePipes(group: THREE.Object3D, segmentIds: readonly string[]): void {
+    this.parent = group;
+    this.pipeSegmentIds = [...segmentIds];
+    const idSet = new Set(segmentIds);
+    for (const child of group.children) {
+      const id = child.userData['bimId'] as string | undefined;
+      if (id !== undefined && idSet.has(id)) this.pipeHidden.push(child);
+    }
+  }
+
+  /**
+   * Swap in the freshly rebuilt connected-pipe meshes for this frame: hide the
+   * originals, remove + dispose the previous frame's pipes, parent the new ones.
+   */
+  applyPipes(rebuilt: readonly THREE.Object3D[]): void {
+    if (!this.parent) return;
+    for (const o of this.pipeHidden) o.visible = false;
+    for (const o of this.pipeObjects) {
+      this.parent.remove(o);
+      disposeObject(o);
+    }
+    this.pipeObjects = [];
+    for (const o of rebuilt) {
+      this.pipeObjects.push(o);
+      this.parent.add(o);
+    }
+  }
+
+  /**
    * Begin a resize preview: remember (and prepare to hide) the original direct
    * children that render `entityId` under `group`. The fresh geometry is supplied
    * per-frame to `applyResize` by the caller (built via the converter SSoT).
@@ -279,6 +329,12 @@ export class Bim3DEditLivePreview {
       this.parent?.remove(o);
       disposeObject(o);
     }
+    // ADR-408 Φ-C — un-hide the connected pipes and drop their stretched preview meshes.
+    for (const o of this.pipeHidden) o.visible = true;
+    for (const o of this.pipeObjects) {
+      this.parent?.remove(o);
+      disposeObject(o);
+    }
     this.clearState();
   }
 
@@ -294,6 +350,9 @@ export class Bim3DEditLivePreview {
     this.wireHidden = [];
     this.wireObjects = [];
     this.wireSystemIds = [];
+    this.pipeHidden = [];
+    this.pipeObjects = [];
+    this.pipeSegmentIds = [];
   }
 }
 
