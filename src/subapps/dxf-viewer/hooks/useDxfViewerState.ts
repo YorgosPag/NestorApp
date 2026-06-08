@@ -5,7 +5,7 @@
 
 'use client';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useCanvasOperations } from './interfaces/useCanvasOperations';
 import type { ToolType } from '../ui/toolbar/types';
 import type { DrawingTool } from './drawing/useUnifiedDrawing';
@@ -80,12 +80,16 @@ export function useDxfViewerState() {
 
   // 🎯 CENTRALIZED SNAP SYSTEM
   const { snapEnabled, setSnapEnabled } = useSnapContext();
+  // Render-storm fix 2026-06-08: read snapEnabled via ref inside the EventBus
+  // listener so the subscription effect does NOT re-register on every snap toggle.
+  const snapEnabledRef = useRef(snapEnabled);
+  snapEnabledRef.current = snapEnabled;
 
   // 📐 ADR-189: Auto-enable snap when first guide is created + sync GuidePanel toggle
   useEffect(() => {
     const unsubGuideAdded = EventBus.on('grid:guide-added', () => {
       // Auto-enable snap when a guide is created — user expects immediate snapping
-      if (!snapEnabled) {
+      if (!snapEnabledRef.current) {
         setSnapEnabled(true);
       }
     });
@@ -97,7 +101,7 @@ export function useDxfViewerState() {
       unsubGuideAdded();
       unsubSnapToggled();
     };
-  }, [snapEnabled, setSnapEnabled]);
+  }, [setSnapEnabled]);
 
   const [autoCrop, setAutoCrop] = useState(false);
   const [findReplaceOpen, setFindReplaceOpen] = useState(false);
@@ -208,7 +212,20 @@ export function useDxfViewerState() {
   // Canvas actions through new API
   // 🏢 ENTERPRISE (2026-01-26): Undo/Redo connected to Command History - ADR-032
   // 🏢 ENTERPRISE (2026-01-27): Added getTransform/setTransform for direct scale setting - ADR-043
-  const canvasActions = {
+  const undoAction = useCallback(() => {
+    if (canUndo) {
+      undo();
+    }
+  }, [canUndo, undo]);
+  const redoAction = useCallback(() => {
+    if (canRedo) {
+      redo();
+    }
+  }, [canRedo, redo]);
+  // Render-storm fix 2026-06-08: memoize so the object identity is stable across
+  // renders — it feeds handleToolChange/handleAction deps (was a fresh literal
+  // every render → recreated those callbacks → cascaded re-renders downstream).
+  const canvasActions = useMemo(() => ({
     zoomIn: canvasOps.zoomIn,
     zoomOut: canvasOps.zoomOut,
     zoomToScale: canvasOps.zoomToScale,
@@ -216,20 +233,22 @@ export function useDxfViewerState() {
     resetToOrigin: canvasOps.resetToOrigin,
     getTransform: canvasOps.getTransform,
     setTransform: canvasOps.setTransform,
-    undo: useCallback(() => {
-      if (canUndo) {
-        undo();
-      }
-    }, [canUndo, undo]),
-    redo: useCallback(() => {
-      if (canRedo) {
-        redo();
-      }
-    }, [canRedo, redo])
-  };
+    undo: undoAction,
+    redo: redoAction,
+  }), [
+    canvasOps.zoomIn, canvasOps.zoomOut, canvasOps.zoomToScale, canvasOps.fitToView,
+    canvasOps.resetToOrigin, canvasOps.getTransform, canvasOps.setTransform,
+    undoAction, redoAction,
+  ]);
 
   // Enhanced tool change handler
+  // Render-storm fix 2026-06-08: read unstable inputs (toolbarState/canvasActions/
+  // drawingHandlers are fresh objects each render) via a latest-ref so this callback
+  // stays stable across renders — same pattern as sceneStateRef above.
+  const toolChangeDepsRef = useRef({ toolbarState, canvasActions, drawingHandlers });
+  toolChangeDepsRef.current = { toolbarState, canvasActions, drawingHandlers };
   const handleToolChange = useCallback((tool: ToolType) => {
+    const { toolbarState, canvasActions, drawingHandlers } = toolChangeDepsRef.current;
 
     // Crop-window: just activate the tool — canvas sees it as marquee selection mode
     // (not in isInDrawingMode set), so mouse drag shows the selection box visual.
@@ -296,10 +315,24 @@ export function useDxfViewerState() {
       onZoomAction,
       drawingHandlers.cancelAllOperations // ✅ CANCEL: Stop any ongoing drawing/measurement
     );
-  }, [toolbarState, canvasActions, drawingHandlers, setActiveTool]);
+  }, [setActiveTool]);
 
   // Enhanced action handler
+  // Render-storm fix 2026-06-08: same latest-ref stabilization as handleToolChange —
+  // keeps onAction/handleAction stable so consumers don't re-render on scene churn.
+  const actionDepsRef = useRef({
+    toolbarState, canvasActions, snapEnabled, setSnapEnabled,
+    handleToolChange, rulersGridContext, gridVisible, autoCrop,
+  });
+  actionDepsRef.current = {
+    toolbarState, canvasActions, snapEnabled, setSnapEnabled,
+    handleToolChange, rulersGridContext, gridVisible, autoCrop,
+  };
   const handleAction = useCallback((action: string, data?: number | string | Record<string, unknown>) => {
+    const {
+      toolbarState, canvasActions, snapEnabled, setSnapEnabled,
+      handleToolChange, rulersGridContext, gridVisible, autoCrop,
+    } = actionDepsRef.current;
     switch (action) {
       case 'grid':
         // 🏢 FIX: Toggle via RulersGridContext (same source as settings panel)
@@ -389,7 +422,7 @@ export function useDxfViewerState() {
       default:
         console.warn('Unknown action:', action);
     }
-  }, [toolbarState, canvasActions, snapEnabled, setSnapEnabled, handleToolChange, rulersGridContext, gridVisible, autoCrop]);
+  }, []);
 
   return {
     ...sceneState,

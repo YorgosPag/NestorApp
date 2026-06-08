@@ -30,6 +30,7 @@ import { applyOpeningGripDrag } from '../../bim/walls/opening-grips';
 import { applyBeamGripDrag } from '../../bim/beams/beam-grips';
 import { applyColumnGripDrag } from '../../bim/columns/column-grips';
 import { applyMepSegmentGripDrag } from '../../bim/mep-segments/mep-segment-grips';
+import { executeSegmentMoveWithConnectedPipes } from '../../bim/mep-segments/build-connectivity-host-update';
 import { EventBus } from '../../systems/events/EventBus';
 import { createSceneManagerAdapter } from './grip-commit-adapters';
 
@@ -54,12 +55,18 @@ export {
   commitElectricalPanelGripDrag,
   commitMepManifoldGripDrag,
   commitMepManifoldOutletCountGrip,
-  commitMepRadiatorGripDrag,
-  commitMepBoilerGripDrag,
-  commitMepWaterHeaterGripDrag,
   commitFurnitureGripDrag,
   commitFloorplanSymbolGripDrag,
 } from './grip-parametric-centred-box-commits';
+
+// ADR-408 Εύρος Β / DHW / Φ-C — heating + DHW point-host centred-box grip commits
+// (radiator / boiler / water-heater) live in grip-parametric-heating-host-commits.ts
+// (N.7.1 file-size split). Re-exported here so the commit API stays one import.
+export {
+  commitMepRadiatorGripDrag,
+  commitMepBoilerGripDrag,
+  commitMepWaterHeaterGripDrag,
+} from './grip-parametric-heating-host-commits';
 
 // ADR-408 Εύρος Β #3 — polygon-footprint grip commits (underfloor) live in
 // grip-polygon-commits.ts (N.7.1 file-size split). Re-exported here so the
@@ -321,16 +328,23 @@ export function commitMepSegmentGripDrag(
     ...(useRotatePivot ? { pivot: rotateCtx.pivot! } : {}),
   });
   if (newParams === originalParams) return;
-  const command = new UpdateMepSegmentParamsCommand(
+  const segmentCommand = new UpdateMepSegmentParamsCommand(
     grip.entityId,
     newParams,
     originalParams,
     sceneManager,
     true,
   );
-  if (command.validate() !== null) return;
-  deps.execute(command);
-  EventBus.emit('bim:mep-segment-params-updated', { segmentId: grip.entityId });
+  if (segmentCommand.validate() !== null) return;
+  // ADR-408 Φ-C — connectivity-preserving move: coincident endpoints of neighbouring
+  // pipes follow this dragged run (XY + Z) in one undo (Revit "drag pipe drags joins").
+  executeSegmentMoveWithConnectedPipes({
+    prevSegment: segment,
+    nextParams: newParams,
+    segmentCommand,
+    sceneManager,
+    execute: deps.execute,
+  });
 }
 
 /** ADR-363 Phase 4.5 — parametric column grip commit via UpdateColumnParamsCommand. */

@@ -24,7 +24,7 @@
 
 import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { isMepBoilerEntity } from '../../../types/entities';
+import { isMepBoilerEntity, isThermalSpaceEntity } from '../../../types/entities';
 import type {
   MepBoilerEntity,
   MepBoilerParams,
@@ -37,11 +37,21 @@ import {
   MEP_BOILER_RIBBON_KEYS_ACTIONS,
   MEP_BOILER_RIBBON_VISIBILITY_KEYS,
   isMepBoilerRibbonKey,
+  isMepBoilerReadoutKey,
   isMepBoilerVisibilityKey,
 } from './bridge/mep-boiler-command-keys';
 import { EventBus } from '../../../systems/events/EventBus';
 import { useMepSystemStore } from '../../../bim/mep-systems/mep-system-store';
 import { resolveManagedSystems } from '../../../bim/mep-systems/mep-circuit-editor';
+import { useSpaceHeatLoads } from '../../../hooks/data/useSpaceHeatLoads';
+import {
+  computeHeatingEquipmentSizing,
+  type HeatingEquipmentSizingStatus,
+} from '../../../bim/thermal/heating-equipment-sizing';
+import {
+  resolveSourceServedSpaces,
+  sumServedHeatLoadW,
+} from '../../../bim/thermal/resolve-source-served-spaces';
 import type { RibbonComboboxState } from '../context/RibbonCommandContext';
 import type { useLevels } from '../../../systems/levels';
 import type { useUniversalSelection } from '../../../systems/selection';
@@ -95,6 +105,33 @@ export function useRibbonMepBoilerBridge(
     return e;
   }, [levelManager, universalSelection]);
 
+  // ADR-422 L2 — sizing readout (Revit «Heating Loads → Equipment»). Computed only
+  // when a boiler is selected (the contextual tab is active). Required output =
+  // ΣΦ of the spaces served by the boiler's hydronic network × pickup factor, with
+  // a floor-total fallback when the boiler sources no network yet. Reuses the same
+  // SSoT heat-load inputs as the analytical overlay (low-freq, ADR-040-safe).
+  const selectedBoiler = resolveBoiler();
+  const scene = levelManager.currentLevelId
+    ? levelManager.getLevelScene(levelManager.currentLevelId)
+    : null;
+  const heatLoads = useSpaceHeatLoads(scene, !!selectedBoiler);
+
+  const sizing = useMemo(() => {
+    if (!selectedBoiler) return null;
+    const systems = useMepSystemStore.getState().getSystems();
+    const sceneEntities = scene?.entities ?? [];
+    const spaces = sceneEntities.filter(isThermalSpaceEntity);
+    const served = resolveSourceServedSpaces(selectedBoiler, systems, sceneEntities, spaces);
+    const requiredLoadW =
+      served.length > 0 && heatLoads
+        ? sumServedHeatLoadW(served, heatLoads)
+        : heatLoads?.totalW ?? 0;
+    return computeHeatingEquipmentSizing({
+      requiredLoadW,
+      installedW: selectedBoiler.params.thermalOutputW,
+    });
+  }, [selectedBoiler, scene, heatLoads]);
+
   /**
    * Dispatch the params patch through `UpdateMepBoilerParamsCommand`. The command
    * re-seeds the two connectors from `width` itself (supply/return ports at body
@@ -117,6 +154,26 @@ export function useRibbonMepBoilerBridge(
 
   const getComboboxState = useCallback(
     (commandKey: string): RibbonComboboxState | null => {
+      // ADR-422 L2 — read-only sizing readouts (disabled combobox). Resolved before
+      // the editable-key guard so they don't fall through to the params path.
+      if (isMepBoilerReadoutKey(commandKey)) {
+        if (!sizing) return { value: '—', options: [], disabled: true };
+        if (commandKey === MEP_BOILER_RIBBON_KEYS.readouts.adequacyStatus) {
+          const status: HeatingEquipmentSizingStatus = sizing.status;
+          return {
+            value: t(`ribbon.commands.mepBoilerEditor.sizingStatus.${status}`),
+            options: [],
+            disabled: true,
+          };
+        }
+        const w =
+          commandKey === MEP_BOILER_RIBBON_KEYS.readouts.requiredOutputW
+            ? sizing.requiredWithMarginW
+            : sizing.installedW;
+        if (w == null) return { value: '—', options: [], disabled: true };
+        const kW = (w / 1000).toLocaleString('el-GR', { maximumFractionDigits: 1 });
+        return { value: `${kW} kW`, options: [], disabled: true };
+      }
       if (!isMepBoilerRibbonKey(commandKey)) return null;
       const boiler = resolveBoiler();
       if (!boiler) return null;
@@ -126,7 +183,7 @@ export function useRibbonMepBoilerBridge(
       if (typeof raw !== 'number') return null;
       return { value: String(Math.round(raw)), options: [] };
     },
-    [resolveBoiler],
+    [resolveBoiler, sizing, t],
   );
 
   const onComboboxChange = useCallback(

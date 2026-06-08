@@ -39,7 +39,14 @@ import {
   MEP_RADIATOR_RIBBON_KEYS,
   MEP_RADIATOR_RIBBON_KEYS_ACTIONS,
   isMepRadiatorRibbonKey,
+  isMepRadiatorRibbonStringKey,
+  isMepRadiatorRibbonReadoutKey,
 } from './bridge/mep-radiator-command-keys';
+import { useRadiatorSizing } from '../../../hooks/data/useRadiatorSizing';
+import {
+  DEFAULT_SYSTEM_REGIME_PRESET_ID,
+  type SystemRegimePresetId,
+} from '../../../bim/thermal/sizing/radiator-sizing-config';
 import { EventBus } from '../../../systems/events/EventBus';
 import type { RibbonComboboxState } from '../context/RibbonCommandContext';
 import type { useLevels } from '../../../systems/levels';
@@ -93,6 +100,14 @@ export function useRibbonMepRadiatorBridge(
     return e;
   }, [levelManager, universalSelection]);
 
+  // ADR-422 L2 — sizing read-model for the selected radiator. Computed only when a
+  // radiator is selected (contextual tab active). Reuses the L1 heat-load SSoT.
+  const selectedRadiator = resolveRadiator();
+  const scene = levelManager.currentLevelId
+    ? levelManager.getLevelScene(levelManager.currentLevelId)
+    : null;
+  const sizing = useRadiatorSizing(scene, !!selectedRadiator);
+
   /**
    * Dispatch the params patch through `UpdateMepRadiatorParamsCommand`. The
    * command re-seeds the two connectors from `width` itself, so the bridge does
@@ -115,23 +130,62 @@ export function useRibbonMepRadiatorBridge(
 
   const getComboboxState = useCallback(
     (commandKey: string): RibbonComboboxState | null => {
-      if (!isMepRadiatorRibbonKey(commandKey)) return null;
       const radiator = resolveRadiator();
       if (!radiator) return null;
+
+      // ADR-422 L2 — ΔΤ regime selector (editable). Effective value (default if unset).
+      if (isMepRadiatorRibbonStringKey(commandKey)) {
+        return {
+          value: radiator.params.systemRegimePreset ?? DEFAULT_SYSTEM_REGIME_PRESET_ID,
+          options: [],
+        };
+      }
+
+      // ADR-422 L2 — derived sizing readouts (read-only).
+      if (isMepRadiatorRibbonReadoutKey(commandKey)) {
+        const r = sizing.get(radiator.id);
+        if (!r) return { value: '—', options: [], disabled: true };
+        if (commandKey === MEP_RADIATOR_RIBBON_KEYS.readouts.requiredOutputW) {
+          return { value: `${Math.round(r.requiredNominalW).toLocaleString('el-GR')} W`, options: [], disabled: true };
+        }
+        if (commandKey === MEP_RADIATOR_RIBBON_KEYS.readouts.correctionFactor) {
+          return { value: `×${r.correctionFactor.toFixed(2)}`, options: [], disabled: true };
+        }
+        const label =
+          r.adequate === null
+            ? '—'
+            : t(r.adequate
+                ? 'ribbon.commands.mepRadiatorEditor.adequate'
+                : 'ribbon.commands.mepRadiatorEditor.inadequate');
+        return { value: label, options: [], disabled: true };
+      }
+
+      if (!isMepRadiatorRibbonKey(commandKey)) return null;
       const field = NUMBER_KEY_TO_FIELD[commandKey];
       const raw = radiator.params[field];
       // `thermalOutputW` is optional — absent ⇒ blank combobox (unspecified).
       if (typeof raw !== 'number') return null;
       return { value: String(Math.round(raw)), options: [] };
     },
-    [resolveRadiator],
+    [resolveRadiator, sizing, t],
   );
 
   const onComboboxChange = useCallback(
     (commandKey: string, value: string): void => {
-      if (!isMepRadiatorRibbonKey(commandKey)) return;
       const radiator = resolveRadiator();
       if (!radiator) return;
+
+      // ADR-422 L2 — regime write (per-radiator override, undoable via command).
+      if (isMepRadiatorRibbonStringKey(commandKey)) {
+        const nextParams: MepRadiatorParams = {
+          ...radiator.params,
+          systemRegimePreset: value as SystemRegimePresetId,
+        };
+        dispatchParams(radiator, nextParams);
+        return;
+      }
+
+      if (!isMepRadiatorRibbonKey(commandKey)) return;
       const numeric = Number.parseFloat(value);
       if (Number.isNaN(numeric)) return;
       const field = NUMBER_KEY_TO_FIELD[commandKey];

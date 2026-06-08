@@ -30,6 +30,19 @@ export const MEP_BOILER_RIBBON_KEYS = {
     /** W — nominal catalogue thermal output (optional; absent ⇒ unspecified). */
     thermalOutput: 'mepBoiler.params.thermalOutput',
   },
+  /**
+   * ADR-422 L2 — read-only sizing readouts (Revit «Heating Loads → Equipment»).
+   * Computed (not editable): απαιτούμενη ισχύς από το θερμικό φορτίο των χώρων που
+   * εξυπηρετεί ο λέβητας vs εγκατεστημένη `thermalOutputW` + δείκτης επάρκειας.
+   */
+  readouts: {
+    /** kW — required output = ΣΦ served spaces × pickup factor. */
+    requiredOutputW: 'mepBoiler.readout.requiredOutputW',
+    /** kW — installed output (= thermalOutputW). */
+    installedOutputW: 'mepBoiler.readout.installedOutputW',
+    /** adequacy status label (ok / undersized / oversized / unknown). */
+    adequacyStatus: 'mepBoiler.readout.adequacyStatus',
+  },
 } as const;
 
 export type MepBoilerRibbonNumberCommandKey =
@@ -92,4 +105,22 @@ const MEP_BOILER_NUMBER_KEY_SET: ReadonlySet<string> = new Set<string>(
 
 export function isMepBoilerRibbonKey(commandKey: string): boolean {
   return MEP_BOILER_NUMBER_KEY_SET.has(commandKey);
+}
+
+// ─── Read-only sizing readout keys (ADR-422 L2) ──────────────────────────────
+
+export type MepBoilerRibbonReadoutKey =
+  | typeof MEP_BOILER_RIBBON_KEYS.readouts.requiredOutputW
+  | typeof MEP_BOILER_RIBBON_KEYS.readouts.installedOutputW
+  | typeof MEP_BOILER_RIBBON_KEYS.readouts.adequacyStatus;
+
+const MEP_BOILER_READOUT_KEY_SET: ReadonlySet<string> = new Set<string>([
+  MEP_BOILER_RIBBON_KEYS.readouts.requiredOutputW,
+  MEP_BOILER_RIBBON_KEYS.readouts.installedOutputW,
+  MEP_BOILER_RIBBON_KEYS.readouts.adequacyStatus,
+]);
+
+/** Read-only sizing readouts — served by the bridge as `disabled` combobox state. */
+export function isMepBoilerReadoutKey(commandKey: string): commandKey is MepBoilerRibbonReadoutKey {
+  return MEP_BOILER_READOUT_KEY_SET.has(commandKey);
 }

@@ -39,6 +39,7 @@ import type {
 import type { SceneUnits } from '../../utils/scene-units';
 import type { IfcEntityMixin } from './ifc-entity-mixin';
 import type { MepConnectorHostParams } from './mep-component-types';
+import type { SystemRegimePresetId } from '../thermal/sizing/radiator-sizing-config';
 
 // ─── Sub-type discriminator (ADR-408 Εύρος Β) ─────────────────────────────────
 
@@ -85,6 +86,13 @@ export interface MepRadiatorParams extends MepConnectorHostParams {
    * future sizing/load-balancing; absent ⇒ not yet specified.
    */
   readonly thermalOutputW?: number;
+  /**
+   * ADR-422 L2 — optional per-radiator ΔΤ regime override (Revit "System Type
+   * temperatures", per-element override). Drives the EN 442 sizing correction
+   * factor. Absent ⇒ the config-SSoT default regime (`75-65`, neutral). This is an
+   * INPUT (user choice) — the resulting required output is derived, never persisted.
+   */
+  readonly systemRegimePreset?: SystemRegimePresetId;
   /**
    * DXF canvas coordinate unit. Stored so `computeMepRadiatorGeometry` can convert
    * mm scalars → canvas units for the 2D footprint. Defaults to `'mm'`.

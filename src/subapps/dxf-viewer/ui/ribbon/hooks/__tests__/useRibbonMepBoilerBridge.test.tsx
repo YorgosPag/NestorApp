@@ -36,6 +36,17 @@ jest.mock(
   }),
 );
 
+// ADR-422 L2 — the sizing readout reads heat-loads + systems at the hook body.
+// Mock both so the existing param tests stay context-free, and so the readout
+// tests can drive the computed required/installed/status values deterministically.
+let mockHeatLoads: { results: Map<string, { totalW: number }>; totalW: number } | null = null;
+jest.mock('../../../../hooks/data/useSpaceHeatLoads', () => ({
+  useSpaceHeatLoads: () => mockHeatLoads,
+}));
+jest.mock('../../../../bim/mep-systems/mep-system-store', () => ({
+  useMepSystemStore: { getState: () => ({ getSystems: () => [] }) },
+}));
+
 // Fixture: επίτοιχος λέβητας (wall-boiler), width 450, connectorDiameterMm 22.
 // thermalOutputW απουσιάζει ηθελημένα (optional field).
 const boiler = {
@@ -82,6 +93,70 @@ function makeSelection(id: string | null) {
 beforeEach(() => {
   resetGlobalCommandHistory();
   (UpdateMepBoilerParamsCommand as jest.Mock).mockClear();
+  mockHeatLoads = null;
+});
+
+// Λέβητας με εγκατεστημένη ισχύ (για τα sizing readouts).
+const boilerWithOutput = {
+  ...boiler,
+  params: { ...boiler.params, thermalOutputW: 24000 },
+};
+
+describe('useRibbonMepBoilerBridge — sizing readouts (ADR-422 L2)', () => {
+  it('requiredOutput readout returns a disabled kW value (floor-total fallback × pickup)', () => {
+    mockHeatLoads = { results: new Map(), totalW: 10000 };
+    const { result } = renderHook(() =>
+      useRibbonMepBoilerBridge({
+        levelManager: makeLevelManager(boiler),
+        universalSelection: makeSelection('boiler-1'),
+      }),
+    );
+    const state = result.current.getComboboxState(MEP_BOILER_RIBBON_KEYS.readouts.requiredOutputW);
+    // 10000 W × 1.15 pickup = 11500 W → 11.5 kW.
+    expect(state?.disabled).toBe(true);
+    expect(state?.value).toMatch(/kW$/);
+    expect(state?.value).toContain('11');
+  });
+
+  it('installedOutput readout shows the installed kW (24 kW) when thermalOutputW set', () => {
+    mockHeatLoads = { results: new Map(), totalW: 10000 };
+    const { result } = renderHook(() =>
+      useRibbonMepBoilerBridge({
+        levelManager: makeLevelManager(boilerWithOutput),
+        universalSelection: makeSelection('boiler-1'),
+      }),
+    );
+    const state = result.current.getComboboxState(MEP_BOILER_RIBBON_KEYS.readouts.installedOutputW);
+    expect(state?.disabled).toBe(true);
+    expect(state?.value).toBe('24 kW');
+  });
+
+  it('installedOutput readout shows «—» when thermalOutputW is unspecified', () => {
+    mockHeatLoads = { results: new Map(), totalW: 10000 };
+    const { result } = renderHook(() =>
+      useRibbonMepBoilerBridge({
+        levelManager: makeLevelManager(boiler),
+        universalSelection: makeSelection('boiler-1'),
+      }),
+    );
+    const state = result.current.getComboboxState(MEP_BOILER_RIBBON_KEYS.readouts.installedOutputW);
+    expect(state?.value).toBe('—');
+    expect(state?.disabled).toBe(true);
+  });
+
+  it('adequacyStatus readout returns a disabled status label (oversized when installed ≫ required)', () => {
+    mockHeatLoads = { results: new Map(), totalW: 10000 };
+    const { result } = renderHook(() =>
+      useRibbonMepBoilerBridge({
+        levelManager: makeLevelManager(boilerWithOutput),
+        universalSelection: makeSelection('boiler-1'),
+      }),
+    );
+    // required = 11500, oversize threshold = 17250; installed 24000 > 17250 → oversized.
+    const state = result.current.getComboboxState(MEP_BOILER_RIBBON_KEYS.readouts.adequacyStatus);
+    expect(state?.disabled).toBe(true);
+    expect(state?.value).toContain('oversized');
+  });
 });
 
 describe('useRibbonMepBoilerBridge — getComboboxState', () => {

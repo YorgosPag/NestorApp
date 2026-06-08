@@ -94,7 +94,7 @@ export function applyClassicEntityPreview(
   delta: Point2D,
   gripIndex: number,
   movesEntity: boolean | undefined,
-  edgeVertexIndices: [number, number] | undefined,
+  edgeVertexIndices: readonly [number, number] | undefined,
 ): DxfEntityUnion {
   const off = (p: Point2D) => offsetPoint(p, delta);
 

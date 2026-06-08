@@ -105,4 +105,17 @@
 - **Tests:** engine (11) + color (8) + derive (6 — storey branches + aggregation) = **25/25 PASS**.
 - **Αναβλήθηκαν:** θερμογέφυρες/reheat· columns-bridge στο exterior-wall detection· full wall-matching geometry test (in-browser verify). → L2 radiator sizing.
 
+### L2 — Equipment Sizing: Διαστασιολόγηση Λέβητα έναντι Φορτίου (2026-06-08, Opus, Plan Mode + 1 subagent)
+
+**Ο λέβητας (`mep-boiler`) συνδέεται με το heat-load engine — Revit «Heating Loads → Equipment».** Read-only readout στο contextual tab: **Απαιτούμενη ισχύς** (από ΣΦ των χώρων που εξυπηρετεί × pickup) vs **Εγκατεστημένη** (`thermalOutputW`) + **δείκτης επάρκειας**. FULL SSOT, ΕΚΤΟΣ ADR-040 (ribbon-level, low-freq). jest **66/66** (27 pure + 15 bridge [+4 readout] + heat-load regression· tsc: βλ. session note· 🔴 browser verify + commit).
+
+- **Αρχιτεκτονική (Revit-true):** ο λέβητας διαστασιολογείται έναντι του **δικτύου που εξυπηρετεί** (network-aware), όχι όλου του ορόφου. Walk: `resolveManagedSystems([boiler])` → member entityIds → τερματικοί (καλοριφέρ position / ενδοδαπέδια centroid) → `pointInPolygon` στα space footprints → ΣΦ αυτών. **Fallback floor-total** όταν δεν υπάρχει δίκτυο (μόλις τοποθετήθηκε). Pickup factor 1.15.
+- **Νέα pure SSoT (generic, reuse για θερμοσίφωνα/αντλία θερμότητας):**
+  - `bim/thermal/heating-equipment-sizing.ts` — `computeHeatingEquipmentSizing` → `{ requiredWithMarginW, installedW, status: ok|undersized|oversized|unknown, ratio }`· `DEFAULT_PICKUP_FACTOR=1.15`, `OVERSIZE_RATIO=1.5`.
+  - `bim/thermal/resolve-source-served-spaces.ts` — `resolveSourceServedSpaces` (source→δίκτυο→τερματικοί→χώροι) + `sumServedHeatLoadW`. Reuse `resolveManagedSystems` + `pointInPolygon` + `polygonCentroid` (ADR-425).
+- **UI wiring (mirror του L1 space readout):** `mep-boiler-command-keys.ts` (+`readouts`/`isMepBoilerReadoutKey`) · `contextual-mep-boiler-tab.ts` (νέο panel «Διαστασιολόγηση», 3 disabled comboboxes) · `useRibbonMepBoilerBridge.ts` (`useSpaceHeatLoads` + sizing `useMemo` + readout branch· status label `ribbon.commands.mepBoilerEditor.sizingStatus.*`) · `useRibbonCommands.ts` (route readouts στον boiler bridge) · i18n el+en.
+- **Tests:** `heating-equipment-sizing` (17) + `resolve-source-served-spaces` (10) + EXT `useRibbonMepBoilerBridge` (+4 readout) = **66/66 PASS**.
+- **ΜΑΘΗΜΑ:** equipment sizing = network-aware served load (όχι floor-blanket)· το read-only readout pattern (disabled combobox μέσω bridge) γενικεύεται από το L1 space readout· status labels υπό υπαρκτό i18n path (`ribbon.commands.mepBoilerEditor.*`, ΟΧΙ ανύπαρκτο root `mepBoiler.*`).
+- **Next:** L2 radiator sizing (per-terminal output vs per-space Φ)· θερμοσίφωνας DHW sizing (reuse `computeHeatingEquipmentSizing`).
+
 > **ΜΗΝ** ενημερωθεί το `adr-index.md` σε αυτό το slice (shared working tree).

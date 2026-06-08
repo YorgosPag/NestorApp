@@ -64,6 +64,8 @@ export function buildDxfDragPreview(
     ...(activeGrip.electricalPanelGripKind ? { electricalPanelGripKind: activeGrip.electricalPanelGripKind, anchorPos } : {}),
     // ADR-408 Φ12 — MEP manifold grip kind + anchor for the live corner/move/rotate ghost.
     ...(activeGrip.mepManifoldGripKind ? { mepManifoldGripKind: activeGrip.mepManifoldGripKind, anchorPos } : {}),
+    // ADR-408 Φ8 — MEP segment grip kind + anchor for the live midpoint-move / drag ghost.
+    ...(activeGrip.mepSegmentGripKind ? { mepSegmentGripKind: activeGrip.mepSegmentGripKind, anchorPos } : {}),
     // ADR-410 — furniture grip kind + anchor for the live corner/move/rotate ghost.
     ...(activeGrip.furnitureGripKind ? { furnitureGripKind: activeGrip.furnitureGripKind, anchorPos } : {}),
     // ADR-415 — floorplan-symbol grip kind + anchor for the live ghost.
@@ -115,6 +117,8 @@ export function buildRotateReferencePreview(
     ...(activeGrip.electricalPanelGripKind ? { electricalPanelGripKind: activeGrip.electricalPanelGripKind } : {}),
     // ADR-408 Φ12 — MEP manifold 6-click rotate live ghost.
     ...(activeGrip.mepManifoldGripKind ? { mepManifoldGripKind: activeGrip.mepManifoldGripKind } : {}),
+    // ADR-408 Φ8 — MEP segment 6-click rotate live ghost.
+    ...(activeGrip.mepSegmentGripKind ? { mepSegmentGripKind: activeGrip.mepSegmentGripKind } : {}),
     // ADR-410 — furniture 6-click rotate live ghost.
     ...(activeGrip.furnitureGripKind ? { furnitureGripKind: activeGrip.furnitureGripKind } : {}),
     // ADR-415 — floorplan-symbol 6-click rotate live ghost.

@@ -177,6 +177,53 @@ export const CONTEXTUAL_MEP_BOILER_TAB: RibbonTab = {
         },
       ],
     },
+    // ADR-422 L2 — sizing readout (Revit «Heating Loads → Equipment»). Read-only
+    // comboboxes (`options: []` → bridge returns `disabled` state): απαιτούμενη
+    // ισχύς (ΣΦ χώρων που εξυπηρετεί × pickup) vs εγκατεστημένη + δείκτης επάρκειας.
+    {
+      id: 'mep-boiler-sizing',
+      labelKey: 'ribbon.panels.mepBoilerSizing',
+      rows: [
+        {
+          isInFlyout: false,
+          buttons: [
+            {
+              type: 'combobox',
+              size: 'small',
+              command: {
+                id: 'mepBoiler.requiredOutput',
+                labelKey: 'ribbon.commands.mepBoilerEditor.requiredOutput',
+                commandKey: MEP_BOILER_RIBBON_KEYS.readouts.requiredOutputW,
+                comboboxWidthPx: 110,
+                options: [],
+              },
+            },
+            {
+              type: 'combobox',
+              size: 'small',
+              command: {
+                id: 'mepBoiler.installedOutput',
+                labelKey: 'ribbon.commands.mepBoilerEditor.installedOutput',
+                commandKey: MEP_BOILER_RIBBON_KEYS.readouts.installedOutputW,
+                comboboxWidthPx: 110,
+                options: [],
+              },
+            },
+            {
+              type: 'combobox',
+              size: 'small',
+              command: {
+                id: 'mepBoiler.adequacy',
+                labelKey: 'ribbon.commands.mepBoilerEditor.adequacy',
+                commandKey: MEP_BOILER_RIBBON_KEYS.readouts.adequacyStatus,
+                comboboxWidthPx: 140,
+                options: [],
+              },
+            },
+          ],
+        },
+      ],
+    },
     // ADR-408 Εύρος Β — fold-in panel: διαχείριση υδρονικού δικτύου που πηγάζει
     // από τον λέβητα (Revit "System Properties" from the equipment). Self-hides
     // όταν δεν υπάρχει δίκτυο. Reuse των domain-agnostic mep-circuit-* widgets +

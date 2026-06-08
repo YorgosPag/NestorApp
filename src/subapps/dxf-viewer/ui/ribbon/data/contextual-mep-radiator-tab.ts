@@ -26,6 +26,14 @@ import {
   MEP_RADIATOR_RIBBON_KEYS,
   MEP_RADIATOR_RIBBON_KEYS_ACTIONS,
 } from '../hooks/bridge/mep-radiator-command-keys';
+import { SYSTEM_REGIME_PRESETS } from '../../../bim/thermal/sizing/radiator-sizing-config';
+
+// ADR-422 L2 — ΔΤ regime options derived from the config SSoT (id → «80/60» label).
+const SYSTEM_REGIME_OPTIONS = SYSTEM_REGIME_PRESETS.map((p) => ({
+  value: p.id,
+  labelKey: p.label,
+  isLiteralLabel: true,
+}));
 
 export const MEP_RADIATOR_CONTEXTUAL_TRIGGER = 'mep-radiator-selected';
 
@@ -175,6 +183,63 @@ export const CONTEXTUAL_MEP_RADIATOR_TAB: RibbonTab = {
                 commandKey: MEP_RADIATOR_RIBBON_KEYS.params.thermalOutput,
                 comboboxWidthPx: 90,
                 options: THERMAL_OUTPUT_W_OPTIONS,
+              },
+            },
+          ],
+        },
+      ],
+    },
+    {
+      // ADR-422 L2 — radiator sizing (EN 442): regime selector + derived readouts.
+      id: 'mep-radiator-sizing',
+      labelKey: 'ribbon.panels.mepRadiatorSizing',
+      rows: [
+        {
+          isInFlyout: false,
+          buttons: [
+            {
+              type: 'combobox',
+              size: 'small',
+              command: {
+                id: 'mepRadiator.systemRegime',
+                labelKey: 'ribbon.commands.mepRadiatorEditor.systemRegime',
+                commandKey: MEP_RADIATOR_RIBBON_KEYS.stringParams.systemRegime,
+                comboboxWidthPx: 90,
+                options: SYSTEM_REGIME_OPTIONS,
+              },
+            },
+            {
+              // Read-only readout (ADR-422 L2) — bridge returns disabled state.
+              type: 'combobox',
+              size: 'small',
+              command: {
+                id: 'mepRadiator.requiredOutputW',
+                labelKey: 'ribbon.commands.mepRadiatorEditor.requiredOutput',
+                commandKey: MEP_RADIATOR_RIBBON_KEYS.readouts.requiredOutputW,
+                comboboxWidthPx: 110,
+                options: [],
+              },
+            },
+            {
+              type: 'combobox',
+              size: 'small',
+              command: {
+                id: 'mepRadiator.correctionFactor',
+                labelKey: 'ribbon.commands.mepRadiatorEditor.correctionFactor',
+                commandKey: MEP_RADIATOR_RIBBON_KEYS.readouts.correctionFactor,
+                comboboxWidthPx: 90,
+                options: [],
+              },
+            },
+            {
+              type: 'combobox',
+              size: 'small',
+              command: {
+                id: 'mepRadiator.adequacy',
+                labelKey: 'ribbon.commands.mepRadiatorEditor.adequacy',
+                commandKey: MEP_RADIATOR_RIBBON_KEYS.readouts.adequacy,
+                comboboxWidthPx: 100,
+                options: [],
               },
             },
           ],

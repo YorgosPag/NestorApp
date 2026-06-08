@@ -190,8 +190,14 @@ export interface BOQItem {
    * Τύπος BIM entity πηγής. `'envelope'` (ADR-396 P7 Part B) = συγκεντρωτική
    * γραμμή θερμοπρόσοψης ανά ζώνη+όροφο (δεν αντιστοιχεί σε ένα entity — id
    * `boq_env_<floorId>_<zone>`). sourceType παραμένει `'bim-auto'`.
+   * ADR-408 — Η-Μ (Ηλεκτρομηχανολογικά) entities τροφοδοτούν επίσης BOQ
+   * (βλ. `bim-to-atoe-mapping.ts` BimEntityType), οπότε ο τύπος πηγής μπορεί
+   * να είναι MEP (σωλήνας/συλλέκτης/καλοριφέρ/λέβητας/θερμοσίφωνας/ενδοδαπέδια).
    */
-  sourceEntityType?: 'wall' | 'opening' | 'slab' | 'column' | 'beam' | 'stair' | 'envelope' | 'railing' | 'furniture' | 'roof' | null;
+  sourceEntityType?:
+    | 'wall' | 'opening' | 'slab' | 'column' | 'beam' | 'stair' | 'envelope' | 'railing' | 'furniture' | 'roof'
+    | 'mep-segment' | 'mep-manifold' | 'mep-radiator' | 'mep-boiler' | 'mep-water-heater' | 'mep-underfloor'
+    | null;
 
   /** Αν true: ο χρήστης το αποσύνδεσε από BIM — δεν ενημερώνεται αυτόματα πλέον. */
   detached?: boolean | null;

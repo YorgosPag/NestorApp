@@ -28,6 +28,18 @@ export const MEP_RADIATOR_RIBBON_KEYS = {
     /** W — nominal catalogue thermal output (optional; absent ⇒ unspecified). */
     thermalOutput: 'mepRadiator.params.thermalOutput',
   },
+  stringParams: {
+    /** ADR-422 L2 — ΔΤ regime preset id (system supply/return temperatures). */
+    systemRegime: 'mepRadiator.params.systemRegime',
+  },
+  readouts: {
+    /** W — required nominal output @ΔΤ50K (read-only, ADR-422 L2). */
+    requiredOutputW: 'mepRadiator.readout.requiredOutputW',
+    /** EN 442 correction factor ×N.NN (read-only, ADR-422 L2). */
+    correctionFactor: 'mepRadiator.readout.correctionFactor',
+    /** Adequacy vs catalogue (read-only, ADR-422 L2). */
+    adequacy: 'mepRadiator.readout.adequacy',
+  },
 } as const;
 
 export type MepRadiatorRibbonNumberCommandKey =
@@ -68,4 +80,18 @@ const MEP_RADIATOR_NUMBER_KEY_SET: ReadonlySet<string> = new Set<string>(
 
 export function isMepRadiatorRibbonKey(commandKey: string): boolean {
   return MEP_RADIATOR_NUMBER_KEY_SET.has(commandKey);
+}
+
+// ─── ADR-422 L2 — string (regime) + readout (sizing) key guards ───────────────
+
+export function isMepRadiatorRibbonStringKey(commandKey: string): boolean {
+  return commandKey === MEP_RADIATOR_RIBBON_KEYS.stringParams.systemRegime;
+}
+
+const MEP_RADIATOR_READOUT_KEY_SET: ReadonlySet<string> = new Set<string>(
+  Object.values(MEP_RADIATOR_RIBBON_KEYS.readouts),
+);
+
+export function isMepRadiatorRibbonReadoutKey(commandKey: string): boolean {
+  return MEP_RADIATOR_READOUT_KEY_SET.has(commandKey);
 }
