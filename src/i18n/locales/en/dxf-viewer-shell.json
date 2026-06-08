@@ -3405,7 +3405,8 @@
       "loads": "Heat Loads per Space",
       "radiators": "Radiator Sizing",
       "pipes": "Pipe Sizing",
-      "balancing": "Hydraulic Balancing"
+      "balancing": "Hydraulic Balancing",
+      "compliance": "KENAK Envelope Compliance Check"
     },
     "columns": {
       "space": "Space",
@@ -3428,7 +3429,19 @@
       "circuitDrop": "ΔP (kPa)",
       "isIndex": "Index",
       "surplus": "Surplus (kPa)",
-      "kv": "kv"
+      "kv": "kv",
+      "element": "Element",
+      "uValue": "U (W/m²K)",
+      "uMax": "U_max (W/m²K)",
+      "compliant": "Compliance"
+    },
+    "elementKinds": {
+      "wall": "Wall",
+      "window": "Window",
+      "door": "Door",
+      "floor": "Floor",
+      "roof": "Roof",
+      "ceiling": "Ceiling"
     },
     "summary": {
       "floorLoad": "Floor Φ (W)",

@@ -2,9 +2,10 @@
  * ADR-422 L5 — tests για τον thermal-study report builder (pure).
  * jest globals (describe/it/expect) — ΟΧΙ vitest import.
  *
- * Επιβεβαιώνει: σύνθεση 4 read-models σε σύνοψη + 4 πίνακες, σύνοψη totals (ΣΦ /
+ * Επιβεβαιώνει: σύνθεση 4 read-models σε σύνοψη + 5 πίνακες, σύνοψη totals (ΣΦ /
  * απαιτ. ισχύς / index ΔP / μανομετρικό / κυκλώματα / συν. παροχή), index circuit
- * στη σύνοψη, μετατροπή Pa→kPa, spaceLabel resolution, και άδειο δίκτυο (isEmpty).
+ * στη σύνοψη, μετατροπή Pa→kPa, spaceLabel resolution, ΚΕΝΑΚ έλεγχος κελύφους L6
+ * (✓/✗ + gating εξωτ. κελύφους), και άδειο δίκτυο (isEmpty).
  */
 
 import { createThermalSpace } from '@/services/factories/thermal-space.factory';
@@ -124,12 +125,13 @@ const LOOKUPS: ThermalStudyLookups = {
   buildingLabel: 'Κτίριο Α',
   floorLabel: 'Ισόγειο',
   spaceLabel: (space) => space.params.name?.trim() || space.params.useType,
+  boundaryKindLabel: (kind) => kind,
 };
 
 // ─── Tests ───────────────────────────────────────────────────────────────────
 
 describe('buildThermalStudyReport', () => {
-  it('builds summary + 4 data sections with worked rows', () => {
+  it('builds summary + 5 data sections with worked rows', () => {
     const spaces = [makeSpace('sp-1', 'Σαλόνι'), makeSpace('sp-2', undefined)];
     const spaceLoads = makeSpaceLoads(spaces);
     const radiatorSizing: RadiatorSizingMap = new Map([
@@ -155,12 +157,13 @@ describe('buildThermalStudyReport', () => {
       radiatorSizing,
       pipeSizing,
       balancing,
+      climateZone: null,
       lookups: LOOKUPS,
     });
 
     expect(report.isEmpty).toBe(false);
     expect(report.header).toEqual({ buildingLabel: 'Κτίριο Α', floorLabel: 'Ισόγειο' });
-    expect(report.sections).toHaveLength(5);
+    expect(report.sections).toHaveLength(6);
 
     const [summary, loads, radiators, pipes, balancingSection] = report.sections;
     expect(loads.rows).toHaveLength(2);
@@ -186,6 +189,7 @@ describe('buildThermalStudyReport', () => {
       radiatorSizing: new Map(),
       pipeSizing: new Map(),
       balancing: { terminals: new Map(), indexTerminalId: null, pumpHeadPa: 0, segmentDropPa: new Map() },
+      climateZone: null,
       lookups: LOOKUPS,
     });
     const loads = report.sections[1];
@@ -208,6 +212,7 @@ describe('buildThermalStudyReport', () => {
       radiatorSizing: new Map([['rad-1', radiator('rad-1', 'sp-1', 1000)]]),
       pipeSizing: new Map(),
       balancing,
+      climateZone: null,
       lookups: LOOKUPS,
     });
     const balancingSection = report.sections[4];
@@ -216,16 +221,74 @@ describe('buildThermalStudyReport', () => {
     expect(balancingSection.rows.find((r) => r.isIndex === '')?.kv).toBe(1.5);
   });
 
+  it('builds the L6 KENAK envelope-compliance section (✓/✗ + external-only gating)', () => {
+    const spaces = [makeSpace('sp-1', 'Σαλόνι')];
+    const base = makeSpaceLoads(spaces);
+    // boundaries: εξωτ. τοίχος U=0.6 (>0.45 ζώνη Β ⇒ ✗) · εξωτ. κούφωμα U=2.5
+    // (≤2.6 ⇒ ✓) · γειτονικός τοίχος (adjacent-heated ⇒ εκτός ΚΕΝΑΚ, skip).
+    const withBoundaries: SpaceHeatLoads = {
+      ...base,
+      results: new Map([
+        [
+          'sp-1',
+          {
+            ...base.results.get('sp-1')!,
+            boundaries: [
+              { kind: 'wall', condition: 'external-air', uValue: 0.6, area: 12, factor: 1, lossW: 0, thermalBridgeW: 0 },
+              { kind: 'window', condition: 'external-air', uValue: 2.5, area: 2, factor: 1, lossW: 0, thermalBridgeW: 0 },
+              { kind: 'wall', condition: 'adjacent-heated', uValue: 1.0, area: 8, factor: 0.5, lossW: 0, thermalBridgeW: 0 },
+            ],
+          },
+        ],
+      ]),
+    };
+
+    const report = buildThermalStudyReport({
+      spaceLoads: withBoundaries,
+      radiatorSizing: new Map(),
+      pipeSizing: new Map(),
+      balancing: { terminals: new Map(), indexTerminalId: null, pumpHeadPa: 0, segmentDropPa: new Map() },
+      climateZone: 'B',
+      lookups: LOOKUPS,
+    });
+
+    const compliance = report.sections[5];
+    expect(compliance.titleKey).toBe('thermalStudyReport.sections.compliance');
+    // Μόνο τα 2 εξωτ. στοιχεία ελέγχονται (ο γειτονικός τοίχος gated out).
+    expect(compliance.rows).toHaveLength(2);
+    const wallRow = compliance.rows.find((r) => r.element === 'wall');
+    const windowRow = compliance.rows.find((r) => r.element === 'window');
+    expect(wallRow?.uMax).toBe(0.45);
+    expect(wallRow?.compliant).toBe('✗');
+    expect(windowRow?.uMax).toBe(2.6);
+    expect(windowRow?.compliant).toBe('✓');
+  });
+
+  it('omits compliance rows when no climate zone is known', () => {
+    const report = buildThermalStudyReport({
+      spaceLoads: makeSpaceLoads([makeSpace('sp-1', 'Σαλόνι')]),
+      radiatorSizing: new Map(),
+      pipeSizing: new Map(),
+      balancing: { terminals: new Map(), indexTerminalId: null, pumpHeadPa: 0, segmentDropPa: new Map() },
+      climateZone: null,
+      lookups: LOOKUPS,
+    });
+    const compliance = report.sections[5];
+    expect(compliance.titleKey).toBe('thermalStudyReport.sections.compliance');
+    expect(compliance.rows).toHaveLength(0);
+  });
+
   it('returns isEmpty for a floor with no heating model', () => {
     const report = buildThermalStudyReport({
       spaceLoads: null,
       radiatorSizing: new Map(),
       pipeSizing: new Map(),
       balancing: { terminals: new Map(), indexTerminalId: null, pumpHeadPa: 0, segmentDropPa: new Map() },
+      climateZone: null,
       lookups: LOOKUPS,
     });
     expect(report.isEmpty).toBe(true);
-    expect(report.sections).toHaveLength(5);
+    expect(report.sections).toHaveLength(6);
     expect(report.sections[0].rows).toHaveLength(1); // σύνοψη πάντα παρούσα
     expect(report.sections[1].rows).toHaveLength(0);
     expect(report.sections[0].rows[0].floorLoad).toBe(0);
