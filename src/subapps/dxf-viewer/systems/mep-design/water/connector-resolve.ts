@@ -17,6 +17,7 @@ import {
   isMepFixtureEntity,
   isMepManifoldEntity,
   isMepBoilerEntity,
+  isMepWaterHeaterEntity,
 } from '../../../types/entities';
 import { connectorWorldPosition } from '../../../bim/types/mep-connector-types';
 import { getEntityConnectors } from '../../../bim/mep-systems/connector-access';
@@ -26,6 +27,7 @@ function hostTransform(entity: Entity): { position: Point3D; rotation: number } 
   if (isMepFixtureEntity(entity)) return entity.params;
   if (isMepManifoldEntity(entity)) return entity.params;
   if (isMepBoilerEntity(entity)) return entity.params;
+  if (isMepWaterHeaterEntity(entity)) return entity.params;
   return null;
 }
 

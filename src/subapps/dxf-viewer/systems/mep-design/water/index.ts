@@ -44,3 +44,15 @@ export {
   type RoutedSegment,
 } from './orthogonal-router';
 export { resolveConnectorWorldPoint } from './connector-resolve';
+
+// ── Slice 2 — preview + commit layer ──────────────────────────────────────────
+export {
+  waterProposalStore,
+  useWaterProposal,
+  type WaterProposalReview,
+} from './water-proposal-store';
+export {
+  buildWaterSupplyCommit,
+  type WaterSupplyCommitPlan,
+  type ResolveSystemName,
+} from './commit/build-water-supply-commit';

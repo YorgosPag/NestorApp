@@ -12,7 +12,7 @@
 import type { Entity } from '../../../types/entities';
 import type { RecognitionModel } from '../../recognition/recognition-types';
 import { isRecognizedTerminal } from '../../recognition/recognizers/mep-recognized-types';
-import type { PlumbingSystemClassification } from '../../../bim/types/mep-connector-types';
+import type { MepSystemClassification } from '../../../bim/types/mep-connector-types';
 import {
   WATER_SERVICE_CLASSIFICATION,
   type FixtureDemand,
@@ -22,8 +22,8 @@ import {
 import { loadingUnitsFor, type DemandStandard } from './water-loading-units';
 import { resolveConnectorWorldPoint } from './connector-resolve';
 
-/** Service for a supply classification, or `null` (e.g. drainage). */
-function serviceForClassification(c: PlumbingSystemClassification): WaterService | null {
+/** Service for a supply classification, or `null` (drainage / electrical / etc.). */
+function serviceForClassification(c: MepSystemClassification): WaterService | null {
   if (c === WATER_SERVICE_CLASSIFICATION.cold) return 'cold';
   if (c === WATER_SERVICE_CLASSIFICATION.hot) return 'hot';
   return null;

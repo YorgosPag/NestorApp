@@ -57,8 +57,13 @@ function buildNetwork(
     sourceEntityId: source.entityId,
     sourceConnectorId: source.connectorId,
     sourcePoint: source.point,
+    sourceElevationMm: source.elevationMm,
     segments,
     servedTerminalIds: [...new Set(demands.map((d) => d.terminalId))],
+    // Each demand already carries the host fixture's supply connector (ADR-426
+    // Stage 1). Those tuples ARE the fixture membership of this network — Slice 2
+    // commits them directly, no scene re-scan.
+    servedConnectors: demands.map((d) => ({ entityId: d.entityId, connectorId: d.connectorId })),
     totalLU: demands.reduce((s, d) => s + d.loadingUnits, 0),
   };
 }

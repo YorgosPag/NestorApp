@@ -12,6 +12,7 @@
 
 import type { Point2D } from '../../../rendering/types/Types';
 import type { PlumbingSystemClassification } from '../../../bim/types/mep-connector-types';
+import type { MepSystemMember } from '../../../bim/types/mep-system-types';
 
 /** The two domestic-water services the pilot routes. */
 export type WaterService = 'cold' | 'hot';
@@ -66,8 +67,23 @@ export interface ProposedNetwork {
   readonly sourceEntityId: string;
   readonly sourceConnectorId: string;
   readonly sourcePoint: Point2D;
+  /**
+   * The source outlet's world elevation (mm) — the flat datum the whole network is
+   * built at (ADR-426 Slice 2). Slice 2 passes this as each segment's start/end
+   * elevation so the run sits at the manifold/boiler height (Revit "Connect To"),
+   * not at the default ceiling centreline.
+   */
+  readonly sourceElevationMm: number;
   readonly segments: readonly ProposedSegment[];
   readonly servedTerminalIds: readonly string[];
+  /**
+   * The fixture supply-connector members this network feeds — the `(entityId,
+   * connectorId)` tuples of every served terminal's cold/hot inlet. Slice 2 turns
+   * these directly into `MepSystem` members (Revit: a fixture's Cold connector is
+   * on the Cold system), alongside the emitted segments' endpoint members. Carried
+   * on the proposal so the commit layer needs no re-derivation from the scene.
+   */
+  readonly servedConnectors: readonly MepSystemMember[];
   readonly totalLU: number;
 }
 
