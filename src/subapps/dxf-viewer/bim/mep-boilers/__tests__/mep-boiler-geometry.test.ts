@@ -161,4 +161,41 @@ describe('buildBoilerConnectors', () => {
     const fallback = buildBoilerConnectors(params({ producesDhw: true }));
     expect(fallback.find((c) => c.connectorId === 'boiler-dhw-hot')!.pipe?.diameterMm).toBe(22);
   });
+
+  // ─── DHW recirculation — 5th connector (ADR-408 Εύρος Β combi + recirculation) ───
+
+  it('appends a recirc return inlet when combi + dhwRecirculation (5 connectors)', () => {
+    const connectors = buildBoilerConnectors(params({ producesDhw: true, dhwRecirculation: true }));
+    expect(connectors).toHaveLength(5);
+    const recirc = connectors.find((c) => c.connectorId === 'boiler-dhw-recirc')!;
+    // recirc return inlet → member of the SAME DHW network (reuses domestic-hot-water).
+    expect(recirc.flow).toBe('in');
+    expect(recirc.pipe?.systemClassification).toBe('domestic-hot-water');
+    // placed at the −X/−Y (back-left) corner — distinct from all four other ports.
+    expect(recirc.localPosition.x).toBeCloseTo(-225, 6);
+    expect(recirc.localPosition.y).toBeCloseTo(-175, 6);
+    const keys = new Set(connectors.map((c) => `${c.localPosition.x},${c.localPosition.y}`));
+    expect(keys.size).toBe(5);
+  });
+
+  it('gates recirc behind producesDhw — no recirc on a non-combi boiler even if flag set', () => {
+    const connectors = buildBoilerConnectors(params({ producesDhw: false, dhwRecirculation: true }));
+    expect(connectors).toHaveLength(2);
+    expect(connectors.map((c) => c.connectorId)).not.toContain('boiler-dhw-recirc');
+  });
+
+  it('combi without dhwRecirculation keeps 4 connectors (no recirc)', () => {
+    const connectors = buildBoilerConnectors(params({ producesDhw: true }));
+    expect(connectors).toHaveLength(4);
+    expect(connectors.map((c) => c.connectorId)).not.toContain('boiler-dhw-recirc');
+  });
+
+  it('recirc uses the dedicated DHW diameter when set, else falls back to connectorDiameterMm', () => {
+    const overridden = buildBoilerConnectors(
+      params({ producesDhw: true, dhwRecirculation: true, dhwConnectorDiameterMm: 15 }),
+    );
+    expect(overridden.find((c) => c.connectorId === 'boiler-dhw-recirc')!.pipe?.diameterMm).toBe(15);
+    const fallback = buildBoilerConnectors(params({ producesDhw: true, dhwRecirculation: true }));
+    expect(fallback.find((c) => c.connectorId === 'boiler-dhw-recirc')!.pipe?.diameterMm).toBe(22);
+  });
 });

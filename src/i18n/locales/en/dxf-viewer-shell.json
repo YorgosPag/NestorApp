@@ -2259,6 +2259,7 @@
         "modelCustom": "Custom",
         "producesDhw": "DHW (Combi)",
         "dhwConnectorDiameter": "DHW diameter",
+        "dhwRecirculation": "DHW Recirculation",
         "width": "Width",
         "length": "Depth",
         "bodyHeight": "Body height",
