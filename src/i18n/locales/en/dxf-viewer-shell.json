@@ -2338,6 +2338,8 @@
         "useType": "Use",
         "setpointTempC": "Temperature (°C)",
         "airChangesPerHour": "Air changes (1/h)",
+        "thermalBridgeLevel": "Thermal bridges",
+        "reheatMode": "Heating operation",
         "ceilingHeightMm": "Height (mm)",
         "close": "Close",
         "delete": "Delete",
@@ -3360,6 +3362,18 @@
       "hallway": "Hallway / Stairwell",
       "office": "Office",
       "generic": "Generic"
+    },
+    "thermalBridge": {
+      "none": "No thermal bridges",
+      "low": "Low (ΔU 0.05)",
+      "medium": "Medium (ΔU 0.10)",
+      "high": "High (ΔU 0.15)"
+    },
+    "reheat": {
+      "continuous": "Continuous",
+      "night-setback": "Night setback",
+      "intermittent": "Intermittent",
+      "boost": "Fast reheat"
     }
   },
   "thermalStudyReport": {
@@ -3378,7 +3392,9 @@
       "loadW": "Φ (W)",
       "specific": "Specific (W/m²)",
       "transmission": "Transmission (W)",
+      "thermalBridge": "Th. bridge (W)",
       "ventilation": "Ventilation (W)",
+      "reheat": "Reheat (W)",
       "regime": "Regime",
       "deltaT": "ΔΤ (K)",
       "requiredNominal": "Required @ΔΤ50 (W)",

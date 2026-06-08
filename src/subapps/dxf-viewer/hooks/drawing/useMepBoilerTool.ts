@@ -28,7 +28,8 @@ import {
   type SceneUnits,
 } from './mep-boiler-completion';
 import { computeMepBoilerGeometry } from '../../bim/mep-boilers/mep-boiler-geometry';
-import type { MepBoilerEntity } from '../../bim/types/mep-boiler-types';
+import { buildMepBoilerSymbol, type BoilerSymbolGeometry } from '../../bim/mep-boilers/mep-boiler-symbol';
+import type { MepBoilerEntity, MepBoilerParams } from '../../bim/types/mep-boiler-types';
 import { mepBoilerToolBridgeStore } from '../../ui/ribbon/hooks/bridge/mep-boiler-tool-bridge-store';
 import { EventBus } from '../../systems/events/EventBus';
 
@@ -70,6 +71,13 @@ export interface UseMepBoilerToolResult {
    * awaiting a position. Pure projection — no state mutation (ADR-040).
    */
   getGhostFootprint(cursorPos: Readonly<Point2D> | null): readonly Point3D[] | null;
+  /**
+   * Full 2D symbol preview at `cursorPos` (connector stubs + flue vent + divider/
+   * flame glyph), or null when not awaiting a position. Built from the SAME
+   * `buildMepBoilerSymbol` SSoT the placed renderer uses, so the placement ghost is
+   * byte-for-byte WYSIWYG. Pure projection — no state mutation (ADR-040).
+   */
+  getGhostSymbol(cursorPos: Readonly<Point2D> | null): BoilerSymbolGeometry | null;
   readonly isActive: boolean;
   readonly isAwaitingPosition: boolean;
 }
@@ -149,15 +157,35 @@ export function useMepBoilerTool(
     return s.phase === 'awaitingPosition' ? 'tools.mepBoiler.statusPosition' : '';
   }, []);
 
-  const getGhostFootprint = useCallback(
-    (cursorPos: Readonly<Point2D> | null): readonly Point3D[] | null => {
+  // Shared ghost params builder (SSoT): both the footprint and the full-symbol ghost
+  // getters resolve params identically, so the placement preview never drifts from
+  // the committed entity. Returns null unless awaiting a position with a valid cursor.
+  const resolveGhostParams = useCallback(
+    (cursorPos: Readonly<Point2D> | null): MepBoilerParams | null => {
       const s = stateRef.current;
       if (s.phase !== 'awaitingPosition' || cursorPos === null) return null;
       const sceneUnits = getSceneUnitsRef.current?.() ?? 'mm';
-      const params = buildDefaultMepBoilerParams(cursorPos, s.overrides, sceneUnits);
-      return computeMepBoilerGeometry(params).footprint.vertices;
+      return buildDefaultMepBoilerParams(cursorPos, s.overrides, sceneUnits);
     },
     [],
+  );
+
+  const getGhostFootprint = useCallback(
+    (cursorPos: Readonly<Point2D> | null): readonly Point3D[] | null => {
+      const params = resolveGhostParams(cursorPos);
+      if (!params) return null;
+      return computeMepBoilerGeometry(params).footprint.vertices;
+    },
+    [resolveGhostParams],
+  );
+
+  const getGhostSymbol = useCallback(
+    (cursorPos: Readonly<Point2D> | null): BoilerSymbolGeometry | null => {
+      const params = resolveGhostParams(cursorPos);
+      if (!params) return null;
+      return buildMepBoilerSymbol(params, computeMepBoilerGeometry(params));
+    },
+    [resolveGhostParams],
   );
 
   // Publish handle to the ribbon/3D bridge (single-writer, mirror radiator).
@@ -186,6 +214,7 @@ export function useMepBoilerTool(
     onCanvasClick,
     getStatusText,
     getGhostFootprint,
+    getGhostSymbol,
     isActive: state.phase !== 'idle',
     isAwaitingPosition: state.phase === 'awaitingPosition',
   };

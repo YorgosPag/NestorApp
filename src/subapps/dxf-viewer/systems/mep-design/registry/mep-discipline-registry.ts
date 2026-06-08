@@ -80,9 +80,9 @@ export const MEP_DISCIPLINE_REGISTRY: Readonly<Record<MepDisciplineId, MepDiscip
     labelKey: 'ribbon.mepDesign.discipline.heating',
     flowModel: 'closed-loop',
     classifications: ['hydronic-supply', 'hydronic-return'],
-    demandStandardId: null,
-    sizingStandardId: null,
-    status: 'reserved',
+    demandStandardId: 'EN12831/70-50(ΔΤ20K)',
+    sizingStandardId: 'velocity(v≤1.0m/s)',
+    status: 'active',
   },
   'electrical-strong': {
     disciplineId: 'electrical-strong',

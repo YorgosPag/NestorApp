@@ -52,7 +52,7 @@ export type FloorFinishHatchType = 'wood' | 'tile' | 'dot' | 'solid';
  *
  *   - `footprint` — closed polygon (CCW), world coords mm. Min 3 vertices.
  *   - `materialId` — built-in catalog ID (π.χ. 'floor-wood-oak').
- *   - `thicknessMm` — mm, default DEFAULT_FLOOR_FINISH_THICKNESS_MM.
+ *   - `thicknessMm` — mm, default DEFAULT_FLOOR_FINISH_LAYER_THICKNESS_MM.
  *   - `finishLevel` — mm offset above slab top surface (default 0 = on slab FFL).
  *   - `name?` — user label (π.χ. «Υπνοδωμάτιο - Δρυς»).
  *   - `sceneUnits` — canvas coordinate unit. Defaults to 'mm' (legacy compat).
@@ -107,7 +107,7 @@ export interface FloorFinishEntity
 // ─── Defaults & constants ─────────────────────────────────────────────────────
 
 /** Default finish thickness (mm). Typical hardwood / laminate. */
-export const DEFAULT_FLOOR_FINISH_THICKNESS_MM = 15;
+export const DEFAULT_FLOOR_FINISH_LAYER_THICKNESS_MM = 15;
 
 /** Default finish level offset above slab (mm). 0 = flush with FFL. */
 export const DEFAULT_FLOOR_FINISH_LEVEL_MM = 0;

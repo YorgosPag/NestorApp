@@ -15,6 +15,10 @@
 import type { RibbonTab } from '../types/ribbon-types';
 import { THERMAL_SPACE_RIBBON_KEYS } from '../hooks/bridge/thermal-space-command-keys';
 import { listThermalSpaceUseTypes } from '../../../bim/thermal/thermal-space-use-catalog';
+import {
+  REHEAT_MODES,
+  THERMAL_BRIDGE_LEVELS,
+} from '../../../bim/thermal/heat-load/heat-load-config';
 
 export const THERMAL_SPACE_CONTEXTUAL_TRIGGER = 'thermal-space-selected';
 
@@ -44,6 +48,20 @@ const ACH_OPTIONS = [
   { value: '1.5',  labelKey: '1.5 /h',  isLiteralLabel: true },
   { value: '2',    labelKey: '2.0 /h',  isLiteralLabel: true },
 ] as const;
+
+/** Thermal-bridge level options (ADR-422 L1.5) — from the config SSoT. */
+const THERMAL_BRIDGE_OPTIONS = THERMAL_BRIDGE_LEVELS.map((level) => ({
+  value: level,
+  labelKey: `thermalSpace.thermalBridge.${level}`,
+  isLiteralLabel: false,
+}));
+
+/** Heating-operation / reheat-mode options (ADR-422 L1.5) — from the config SSoT. */
+const REHEAT_MODE_OPTIONS = REHEAT_MODES.map((mode) => ({
+  value: mode,
+  labelKey: `thermalSpace.reheat.${mode}`,
+  isLiteralLabel: false,
+}));
 
 /** Clear ceiling height presets (mm). */
 const CEILING_HEIGHT_MM_OPTIONS = [
@@ -101,6 +119,28 @@ export const CONTEXTUAL_THERMAL_SPACE_TAB: RibbonTab = {
                 commandKey: THERMAL_SPACE_RIBBON_KEYS.params.airChangesPerHour,
                 comboboxWidthPx: 100,
                 options: ACH_OPTIONS,
+              },
+            },
+            {
+              type: 'combobox',
+              size: 'small',
+              command: {
+                id: 'thermalSpace.thermalBridgeLevel',
+                labelKey: 'ribbon.commands.thermalSpaceEditor.thermalBridgeLevel',
+                commandKey: THERMAL_SPACE_RIBBON_KEYS.stringParams.thermalBridgeLevel,
+                comboboxWidthPx: 150,
+                options: THERMAL_BRIDGE_OPTIONS,
+              },
+            },
+            {
+              type: 'combobox',
+              size: 'small',
+              command: {
+                id: 'thermalSpace.reheatMode',
+                labelKey: 'ribbon.commands.thermalSpaceEditor.reheatMode',
+                commandKey: THERMAL_SPACE_RIBBON_KEYS.stringParams.reheatMode,
+                comboboxWidthPx: 160,
+                options: REHEAT_MODE_OPTIONS,
               },
             },
           ],

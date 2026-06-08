@@ -85,9 +85,14 @@ export class MepBoilerRenderer extends BaseEntityRenderer {
     this.drawPolygonPath(verts);
     this.ctx.stroke();
 
-    // Boiler symbol — supply/return connector stubs + divider + flame glyph.
+    // Boiler symbol — connector-driven pipe stubs + flue vent glyph + divider/flame glyph.
     const symbol = buildMepBoilerSymbol(boiler.params, boiler.geometry);
     for (const stroke of symbol.strokes) {
+      this.drawStroke(stroke);
+    }
+    // Combustion flue (καπναγωγός) vent glyph — same warm-red stroke, NORMAL weight so the
+    // exhaust duct reads as a connector (its chevron arrowhead distinguishes it from pipes).
+    for (const stroke of symbol.ventStrokes) {
       this.drawStroke(stroke);
     }
     this.ctx.lineWidth = RENDER_LINE_WIDTHS.THIN;

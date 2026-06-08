@@ -30,6 +30,12 @@ import {
   resolveThermalSpaceSetpointC,
   resolveThermalSpaceAch,
 } from '../../../bim/thermal/thermal-space-use-catalog';
+import {
+  DEFAULT_REHEAT_MODE,
+  DEFAULT_THERMAL_BRIDGE_LEVEL,
+  type ReheatMode,
+  type ThermalBridgeLevel,
+} from '../../../bim/thermal/heat-load/heat-load-config';
 import { useCommandHistory } from '../../../core/commands';
 import { UpdateThermalSpaceParamsCommand } from '../../../core/commands/entity-commands/UpdateThermalSpaceParamsCommand';
 import { LevelSceneManagerAdapter } from '../../../systems/entity-creation/LevelSceneManagerAdapter';
@@ -123,6 +129,12 @@ export function useRibbonThermalSpaceBridge(
         return { value, options: [], disabled: true };
       }
       if (isThermalSpaceRibbonStringKey(commandKey)) {
+        if (commandKey === THERMAL_SPACE_RIBBON_KEYS.stringParams.thermalBridgeLevel) {
+          return { value: ts.params.thermalBridgeLevel ?? DEFAULT_THERMAL_BRIDGE_LEVEL, options: [] };
+        }
+        if (commandKey === THERMAL_SPACE_RIBBON_KEYS.stringParams.reheatMode) {
+          return { value: ts.params.reheatMode ?? DEFAULT_REHEAT_MODE, options: [] };
+        }
         return { value: ts.params.useType, options: [] };
       }
       if (isThermalSpaceRibbonNumberKey(commandKey)) {
@@ -145,6 +157,14 @@ export function useRibbonThermalSpaceBridge(
       if (!ts) return;
 
       if (isThermalSpaceRibbonStringKey(commandKey)) {
+        if (commandKey === THERMAL_SPACE_RIBBON_KEYS.stringParams.thermalBridgeLevel) {
+          dispatchParams(ts, { ...ts.params, thermalBridgeLevel: value as ThermalBridgeLevel });
+          return;
+        }
+        if (commandKey === THERMAL_SPACE_RIBBON_KEYS.stringParams.reheatMode) {
+          dispatchParams(ts, { ...ts.params, reheatMode: value as ReheatMode });
+          return;
+        }
         const nextParams: ThermalSpaceParams = { ...ts.params, useType: value as ThermalSpaceUseType };
         dispatchParams(ts, nextParams);
         return;

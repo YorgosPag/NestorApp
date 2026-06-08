@@ -72,6 +72,86 @@ describe('computeSpaceHeatLoad — ΤΟΤΕΕ worked example', () => {
   });
 });
 
+describe('computeSpaceHeatLoad — L1.5 θερμογέφυρες (ΔU_TB)', () => {
+  // ΔΤ=25. Τοίχος 0.4·10 + ΔU_TB 0.10 → (0.4+0.10)·10·1·25 = 125· TB μέρος 0.10·10·1·25 = 25.
+  // Παράθυρο 2.8·2·1·25 = 140 (ΔΕΝ παίρνει TB — αδιαφανή μόνο). Δάπεδο ground 0.5·20·0.5·25 = 125
+  //   + ΔU_TB 0.10·20·0.5·25 = 25 → 150. Σύνολο TB = 25 (wall) + 25 (floor) = 50.
+  const boundaries: HeatLoadBoundary[] = [
+    { kind: 'wall', condition: 'external-air', uValue: 0.4, area: 10 },
+    { kind: 'window', condition: 'external-air', uValue: 2.8, area: 2 },
+    { kind: 'floor', condition: 'ground', uValue: 0.5, area: 20 },
+  ];
+
+  it('U_corr = U + ΔU_TB σε αδιαφανή στοιχεία προς έξω/έδαφος', () => {
+    const res = computeSpaceHeatLoad(input({ boundaries, thermalBridgeSurchargeWperM2K: 0.1 }));
+    const wall = res.boundaries.find((b) => b.kind === 'wall')!;
+    const floor = res.boundaries.find((b) => b.kind === 'floor')!;
+    expect(wall.lossW).toBeCloseTo(125, 5);
+    expect(wall.thermalBridgeW).toBeCloseTo(25, 5);
+    expect(floor.lossW).toBeCloseTo(150, 5);
+    expect(floor.thermalBridgeW).toBeCloseTo(25, 5);
+  });
+
+  it('παράθυρα/πόρτες ΔΕΝ παίρνουν θερμογέφυρα (frame TB ήδη στο U_w)', () => {
+    const res = computeSpaceHeatLoad(input({ boundaries, thermalBridgeSurchargeWperM2K: 0.1 }));
+    const win = res.boundaries.find((b) => b.kind === 'window')!;
+    expect(win.lossW).toBeCloseTo(140, 5);
+    expect(win.thermalBridgeW).toBe(0);
+  });
+
+  it('adjacent-heated / unheated ΔΕΝ παίρνουν θερμογέφυρα (μόνο external/ground)', () => {
+    const res = computeSpaceHeatLoad(
+      input({
+        boundaries: [
+          { kind: 'wall', condition: 'adjacent-heated', uValue: 1.5, area: 12 },
+          { kind: 'wall', condition: 'unheated', uValue: 1.0, area: 8 },
+        ],
+        thermalBridgeSurchargeWperM2K: 0.15,
+      }),
+    );
+    expect(res.thermalBridgeW).toBe(0);
+  });
+
+  it('αθροιστικό thermalBridgeW στο result (υποσύνολο του transmissionW)', () => {
+    const res = computeSpaceHeatLoad(input({ boundaries, thermalBridgeSurchargeWperM2K: 0.1 }));
+    expect(res.thermalBridgeW).toBeCloseTo(50, 5);
+    expect(res.thermalBridgeW).toBeLessThan(res.transmissionW);
+  });
+});
+
+describe('computeSpaceHeatLoad — L1.5 επανέναρξη (Φ_RH)', () => {
+  it('Φ_RH = A_floor · f_RH προστίθεται στο totalW', () => {
+    // floorArea=20, f_RH=11 → reheatW=220. Χωρίς boundaries: total = vent + reheat.
+    const res = computeSpaceHeatLoad(input({ floorArea: 20, reheatFactorWperM2: 11 }));
+    expect(res.reheatW).toBeCloseTo(220, 5);
+    expect(res.totalW).toBeCloseTo(res.transmissionW + res.ventilationW + 220, 5);
+  });
+
+  it('μηδενικό εμβαδό δαπέδου → reheatW 0 (όχι NaN)', () => {
+    const res = computeSpaceHeatLoad(input({ floorArea: 0, reheatFactorWperM2: 22 }));
+    expect(res.reheatW).toBe(0);
+  });
+});
+
+describe('computeSpaceHeatLoad — L1.5 zero-regression', () => {
+  const boundaries: HeatLoadBoundary[] = [
+    { kind: 'wall', condition: 'external-air', uValue: 0.4, area: 10 },
+    { kind: 'floor', condition: 'ground', uValue: 0.5, area: 20 },
+  ];
+
+  it('απουσία πεδίων TB/reheat ⇒ ίδιο με ΔU_TB=0 + f_RH=0', () => {
+    const bare = computeSpaceHeatLoad(input({ boundaries }));
+    const zeroed = computeSpaceHeatLoad(
+      input({ boundaries, thermalBridgeSurchargeWperM2K: 0, reheatFactorWperM2: 0 }),
+    );
+    expect(bare.totalW).toBeCloseTo(zeroed.totalW, 9);
+    expect(bare.thermalBridgeW).toBe(0);
+    expect(bare.reheatW).toBe(0);
+    expect(zeroed.thermalBridgeW).toBe(0);
+    expect(zeroed.reheatW).toBe(0);
+  });
+});
+
 describe('computeSpaceHeatLoad — edge cases', () => {
   const boundaries: HeatLoadBoundary[] = [
     { kind: 'wall', condition: 'external-air', uValue: 0.4, area: 10 },

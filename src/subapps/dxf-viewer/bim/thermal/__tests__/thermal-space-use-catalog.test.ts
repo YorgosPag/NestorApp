@@ -8,8 +8,14 @@ import {
   getThermalSpaceUseDefaults,
   resolveThermalSpaceSetpointC,
   resolveThermalSpaceAch,
+  resolveThermalSpaceThermalBridgeSurcharge,
+  resolveThermalSpaceReheatFactor,
   THERMAL_SPACE_USE_DEFAULTS,
 } from '../thermal-space-use-catalog';
+import {
+  THERMAL_BRIDGE_SURCHARGE_PRESETS,
+  REHEAT_FACTOR_PRESETS,
+} from '../heat-load/heat-load-config';
 import { THERMAL_SPACE_USE_TYPES } from '../../types/thermal-space-types';
 
 describe('thermal-space-use-catalog', () => {
@@ -47,5 +53,31 @@ describe('thermal-space-use-catalog', () => {
     expect(
       resolveThermalSpaceSetpointC({ useType: 'office', setpointTempC: undefined }),
     ).toBe(THERMAL_SPACE_USE_DEFAULTS.office.setpointTempC);
+  });
+
+  // ─── L1.5 — θερμογέφυρες + reheat resolvers ───────────────────────────────────
+
+  it('θερμογέφυρες: default (απουσία override) → none = 0 (zero-regression)', () => {
+    expect(resolveThermalSpaceThermalBridgeSurcharge({})).toBe(0);
+    expect(resolveThermalSpaceThermalBridgeSurcharge({ thermalBridgeLevel: undefined })).toBe(0);
+  });
+
+  it('θερμογέφυρες: override → preset ΔU_TB από το config', () => {
+    expect(resolveThermalSpaceThermalBridgeSurcharge({ thermalBridgeLevel: 'medium' })).toBe(
+      THERMAL_BRIDGE_SURCHARGE_PRESETS.medium,
+    );
+    expect(resolveThermalSpaceThermalBridgeSurcharge({ thermalBridgeLevel: 'high' })).toBe(0.15);
+  });
+
+  it('reheat: default (απουσία override) → continuous = 0 (zero-regression)', () => {
+    expect(resolveThermalSpaceReheatFactor({})).toBe(0);
+    expect(resolveThermalSpaceReheatFactor({ reheatMode: undefined })).toBe(0);
+  });
+
+  it('reheat: override → preset f_RH από το config', () => {
+    expect(resolveThermalSpaceReheatFactor({ reheatMode: 'night-setback' })).toBe(
+      REHEAT_FACTOR_PRESETS['night-setback'],
+    );
+    expect(resolveThermalSpaceReheatFactor({ reheatMode: 'intermittent' })).toBe(22);
   });
 });

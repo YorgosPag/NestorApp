@@ -23,6 +23,8 @@ import { computeThermalSpaceGeometry } from '../../types/thermal-space-types';
 import {
   resolveThermalSpaceSetpointC,
   resolveThermalSpaceAch,
+  resolveThermalSpaceThermalBridgeSurcharge,
+  resolveThermalSpaceReheatFactor,
 } from '../thermal-space-use-catalog';
 import { resolveSpaceBoundaries, type StoreyPosition } from './space-boundary-resolver';
 import { computeSpaceHeatLoad } from './heat-load-engine';
@@ -76,6 +78,8 @@ export function computeOneSpaceHeatLoad(
     volume: geometry.volume,
     floorArea: geometry.area,
     boundaries,
+    thermalBridgeSurchargeWperM2K: resolveThermalSpaceThermalBridgeSurcharge(space.params),
+    reheatFactorWperM2: resolveThermalSpaceReheatFactor(space.params),
   });
 }
 

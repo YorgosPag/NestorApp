@@ -32,6 +32,7 @@ import type { SceneUnits } from '../../utils/scene-units';
 import { mmScaleFor } from '../../utils/scene-units';
 import type { IfcEntityMixin } from './ifc-entity-mixin';
 import { polygonArea, polygonPerimeter, polygonBbox } from '../geometry/shared/polygon-utils';
+import type { ReheatMode, ThermalBridgeLevel } from '../thermal/heat-load/heat-load-config';
 
 // ─── Χρήση χώρου (ΤΟΤΕΕ 20701-1) ────────────────────────────────────────────────
 
@@ -72,6 +73,8 @@ export const THERMAL_SPACE_USE_TYPES: readonly ThermalSpaceUseType[] = [
  *   - `setpointTempC?` — **override** θερμοκρασίας σχεδιασμού χειμώνα (°C). Absent ⇒
  *     default χρήσης από το catalog.
  *   - `airChangesPerHour?` — **override** εναλλαγών αέρα (1/h). Absent ⇒ default χρήσης.
+ *   - `thermalBridgeLevel?` — **override** θερμογεφυρών (L1.5). Absent ⇒ `none`.
+ *   - `reheatMode?` — **override** λειτουργίας/reheat (L1.5). Absent ⇒ `continuous`.
  *   - `ceilingHeightMm` — mm, καθαρό ύψος χώρου (για όγκο = εμβαδό × ύψος).
  *   - `name?` — user label (π.χ. «Υπνοδωμάτιο 1»).
  *   - `sceneUnits` — canvas coordinate unit. Defaults to 'mm' (legacy compat).
@@ -82,6 +85,10 @@ export interface ThermalSpaceParams {
   readonly useType: ThermalSpaceUseType;
   readonly setpointTempC?: number;
   readonly airChangesPerHour?: number;
+  /** **override** επιπέδου θερμογεφυρών (L1.5). Absent ⇒ `none` (ΔU_TB=0). */
+  readonly thermalBridgeLevel?: ThermalBridgeLevel;
+  /** **override** λειτουργίας θέρμανσης/reheat (L1.5). Absent ⇒ `continuous` (f_RH=0). */
+  readonly reheatMode?: ReheatMode;
   readonly ceilingHeightMm: number;
   readonly name?: string;
   readonly sceneUnits?: SceneUnits;

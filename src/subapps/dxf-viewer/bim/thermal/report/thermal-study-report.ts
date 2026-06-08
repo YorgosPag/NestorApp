@@ -110,7 +110,9 @@ function buildLoadsSection(input: ThermalStudyReportInput): ReportSection {
     col('loadW', 'loadW', 'count', 'right'),
     col('specific', 'specific', 'number', 'right'),
     col('transmission', 'transmission', 'count', 'right'),
+    col('thermalBridge', 'thermalBridge', 'count', 'right'),
     col('ventilation', 'ventilation', 'count', 'right'),
+    col('reheat', 'reheat', 'count', 'right'),
   ];
   const rows: ReportRow[] = [];
   if (spaceLoads) {
@@ -123,7 +125,9 @@ function buildLoadsSection(input: ThermalStudyReportInput): ReportSection {
         loadW: Math.round(r.totalW),
         specific: r.specificLoadWperM2,
         transmission: Math.round(r.transmissionW),
+        thermalBridge: Math.round(r.thermalBridgeW),
         ventilation: Math.round(r.ventilationW),
+        reheat: Math.round(r.reheatW),
       });
     }
   }

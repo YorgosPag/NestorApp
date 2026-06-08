@@ -233,9 +233,10 @@ export function buildFittingFollowPreviewObjects(
     const e = entities.find((x) => x.id === id);
     if (!e || !isMepConnectorHost(e)) continue;
     const next = liveNextParams(e, xform, entityMmScale(e));
-    if (next) overrides.set(e.id, next); // host connector / segment endpoint moves the junction node
-    if (next && isMepSegmentEntity(e)) affected.add(e.id);
-    for (const p of followerPatches(e, next ?? e.params, entities)) {
+    if (!next) continue;
+    overrides.set(e.id, next); // host connector / segment endpoint moves the junction node
+    if (isMepSegmentEntity(e)) affected.add(e.id);
+    for (const p of followerPatches(e, next, entities)) {
       if (draggedIds.has(p.segment.id)) continue;
       overrides.set(p.segment.id, p.nextParams);
       affected.add(p.segment.id);

@@ -21,7 +21,7 @@
 import type { Point2D } from '../../rendering/types/Types';
 import type { Point3D } from '../../bim/types/bim-base';
 import {
-  DEFAULT_FLOOR_FINISH_THICKNESS_MM,
+  DEFAULT_FLOOR_FINISH_LAYER_THICKNESS_MM,
   DEFAULT_FLOOR_FINISH_LEVEL_MM,
   DEFAULT_FLOOR_FINISH_MATERIAL_ID,
   MIN_FLOOR_FINISH_VERTICES,
@@ -60,7 +60,7 @@ export interface FloorFinishParamOverrides {
  *
  * Algorithm:
  *   1. Resolve materialId (override → DEFAULT_FLOOR_FINISH_MATERIAL_ID).
- *   2. Resolve thicknessMm (override → DEFAULT_FLOOR_FINISH_THICKNESS_MM).
+ *   2. Resolve thicknessMm (override → DEFAULT_FLOOR_FINISH_LAYER_THICKNESS_MM).
  *   3. Resolve finishLevel (override → DEFAULT_FLOOR_FINISH_LEVEL_MM).
  *   4. Lift 2D vertices σε Point3D (z=0) για footprint.
  *
@@ -72,7 +72,7 @@ export function buildDefaultFloorFinishParams(
   sceneUnits: SceneUnits = 'mm',
 ): FloorFinishParams {
   const materialId = overrides.materialId ?? DEFAULT_FLOOR_FINISH_MATERIAL_ID;
-  const thicknessMm = overrides.thicknessMm ?? DEFAULT_FLOOR_FINISH_THICKNESS_MM;
+  const thicknessMm = overrides.thicknessMm ?? DEFAULT_FLOOR_FINISH_LAYER_THICKNESS_MM;
   const finishLevel = overrides.finishLevel ?? DEFAULT_FLOOR_FINISH_LEVEL_MM;
 
   const lifted: Point3D[] = vertices.map((v) => ({ x: v.x, y: v.y, z: 0 }));

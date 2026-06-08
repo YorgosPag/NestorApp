@@ -59,6 +59,8 @@ function makeSpaceLoads(spaces: ThermalSpaceEntity[]): SpaceHeatLoads {
         deltaTC: 20,
         transmissionW: 600 + i * 100,
         ventilationW: 200,
+        thermalBridgeW: 0,
+        reheatW: 0,
         totalW: 800 + i * 100,
         specificLoadWperM2: 50 + i,
         boundaries: [],

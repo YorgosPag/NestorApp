@@ -2338,6 +2338,8 @@
         "useType": "Χρήση",
         "setpointTempC": "Θερμοκρασία (°C)",
         "airChangesPerHour": "Εναλλαγές αέρα (1/h)",
+        "thermalBridgeLevel": "Θερμογέφυρες",
+        "reheatMode": "Λειτουργία θέρμανσης",
         "ceilingHeightMm": "Ύψος (mm)",
         "close": "Κλείσιμο",
         "delete": "Διαγραφή",
@@ -3360,6 +3362,18 @@
       "hallway": "Διάδρομος / Κλιμακοστάσιο",
       "office": "Γραφείο",
       "generic": "Γενική χρήση"
+    },
+    "thermalBridge": {
+      "none": "Χωρίς θερμογέφυρες",
+      "low": "Χαμηλές (ΔU 0.05)",
+      "medium": "Μέτριες (ΔU 0.10)",
+      "high": "Υψηλές (ΔU 0.15)"
+    },
+    "reheat": {
+      "continuous": "Συνεχής",
+      "night-setback": "Νυχτερινή υποβάθμιση",
+      "intermittent": "Διακοπτόμενη",
+      "boost": "Γρήγορη επανέναρξη"
     }
   },
   "thermalStudyReport": {
@@ -3378,7 +3392,9 @@
       "loadW": "Φ (W)",
       "specific": "Ειδικό (W/m²)",
       "transmission": "Αγωγής (W)",
+      "thermalBridge": "Θερμογέφ. (W)",
       "ventilation": "Αερισμού (W)",
+      "reheat": "Επανέναρξης (W)",
       "regime": "Καθεστώς",
       "deltaT": "ΔΤ (K)",
       "requiredNominal": "Απαιτ. @ΔΤ50 (W)",

@@ -250,7 +250,7 @@ describe('Stage 0 — engine + SSoT registry', () => {
     expect(registry.has(MEP_RECOGNITION_ID)).toBe(false);
     registerMepRecognition(registry);
     expect(registry.has(MEP_RECOGNITION_ID)).toBe(true);
-    expect(registry.recognizers()).toHaveLength(2); // sanitary terminal + source
+    expect(registry.recognizers()).toHaveLength(3); // sanitary terminal + heating terminal + source
     expect(registry.classifiers()).toHaveLength(1);
 
     const model = recognizeSceneFromRegistry(

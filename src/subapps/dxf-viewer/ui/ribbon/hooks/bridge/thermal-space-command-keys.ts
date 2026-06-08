@@ -12,6 +12,10 @@ export const THERMAL_SPACE_RIBBON_KEYS = {
   stringParams: {
     /** Use-type selector (ThermalSpaceUseType). */
     useType: 'thermalSpace.params.useType',
+    /** Thermal-bridge level override (ThermalBridgeLevel, ADR-422 L1.5). */
+    thermalBridgeLevel: 'thermalSpace.params.thermalBridgeLevel',
+    /** Heating-operation / reheat mode override (ReheatMode, ADR-422 L1.5). */
+    reheatMode: 'thermalSpace.params.reheatMode',
   },
   params: {
     /** °C — design indoor temperature override (Ti). */
@@ -41,7 +45,9 @@ export type ThermalSpaceRibbonNumberCommandKey =
   | typeof THERMAL_SPACE_RIBBON_KEYS.params.ceilingHeightMm;
 
 export type ThermalSpaceRibbonStringCommandKey =
-  | typeof THERMAL_SPACE_RIBBON_KEYS.stringParams.useType;
+  | typeof THERMAL_SPACE_RIBBON_KEYS.stringParams.useType
+  | typeof THERMAL_SPACE_RIBBON_KEYS.stringParams.thermalBridgeLevel
+  | typeof THERMAL_SPACE_RIBBON_KEYS.stringParams.reheatMode;
 
 export type ThermalSpaceRibbonActionKey =
   | typeof THERMAL_SPACE_RIBBON_KEYS.actions.close
@@ -58,6 +64,8 @@ const NUMBER_KEY_SET: ReadonlySet<string> = new Set<string>([
 ]);
 const STRING_KEY_SET: ReadonlySet<string> = new Set<string>([
   THERMAL_SPACE_RIBBON_KEYS.stringParams.useType,
+  THERMAL_SPACE_RIBBON_KEYS.stringParams.thermalBridgeLevel,
+  THERMAL_SPACE_RIBBON_KEYS.stringParams.reheatMode,
 ]);
 const ACTION_KEY_SET: ReadonlySet<string> = new Set<string>([
   THERMAL_SPACE_RIBBON_KEYS.actions.close,

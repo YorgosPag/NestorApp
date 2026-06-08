@@ -69,9 +69,20 @@ export interface SpaceHeatLoadInput {
   readonly airChangesPerHour: number;
   /** m³ — όγκος χώρου (για απώλειες αερισμού). */
   readonly volume: number;
-  /** m² — εμβαδό δαπέδου (για ειδικό φορτίο W/m²). */
+  /** m² — εμβαδό δαπέδου (για ειδικό φορτίο W/m² + φορτίο επανέναρξης Φ_RH). */
   readonly floorArea: number;
   readonly boundaries: readonly HeatLoadBoundary[];
+  /**
+   * W/m²K — προσαύξηση θερμογεφυρών `ΔU_TB` (απλοποιημένη μέθοδος EN 12831-1
+   * §6.3.2: `U_corr = U + ΔU_TB`). Εφαρμόζεται μόνο σε αδιαφανή στοιχεία
+   * περιβλήματος προς εξωτ. αέρα/έδαφος. Absent/0 ⇒ καμία προσαύξηση (default).
+   */
+  readonly thermalBridgeSurchargeWperM2K?: number;
+  /**
+   * W/m² — συντελεστής επανέναρξης `f_RH` (EN 12831: `Φ_RH = A_floor · f_RH`).
+   * Absent/0 ⇒ συνεχής λειτουργία, μηδέν επιπλέον φορτίο (default).
+   */
+  readonly reheatFactorWperM2?: number;
 }
 
 /** Απώλεια αγωγής μιας οριακής επιφάνειας (breakdown). */
@@ -82,8 +93,13 @@ export interface BoundaryHeatLoss {
   readonly area: number;
   /** Μειωτικός συντελεστής `b` που εφαρμόστηκε. */
   readonly factor: number;
-  /** W — U·A·b·ΔΤ. */
+  /** W — U_corr·A·b·ΔΤ (περιλαμβάνει τυχόν προσαύξηση θερμογέφυρας). */
   readonly lossW: number;
+  /**
+   * W — μέρος του `lossW` που οφείλεται στη θερμογέφυρα `ΔU_TB·A·b·ΔΤ`
+   * (πληροφοριακό υποσύνολο· 0 αν το στοιχείο δεν λαμβάνει προσαύξηση).
+   */
+  readonly thermalBridgeW: number;
   readonly refId?: string;
 }
 
@@ -92,11 +108,18 @@ export interface SpaceHeatLoadResult {
   readonly spaceId: string;
   /** °C — ΔΤ βάσης (Ti − Te). */
   readonly deltaTC: number;
-  /** W — απώλειες αγωγής Σ U·A·b·ΔΤ. */
+  /** W — απώλειες αγωγής Σ U_corr·A·b·ΔΤ (περιλαμβάνει θερμογέφυρες). */
   readonly transmissionW: number;
   /** W — απώλειες αερισμού 0.34·n·V·ΔΤ. */
   readonly ventilationW: number;
-  /** W — συνολικό θερμικό φορτίο `Φ`. */
+  /**
+   * W — μέρος του `transmissionW` που οφείλεται στις θερμογέφυρες
+   * (Σ ΔU_TB·A·b·ΔΤ). Πληροφοριακό υποσύνολο — ΟΧΙ ξανα-προστίθεται στο `totalW`.
+   */
+  readonly thermalBridgeW: number;
+  /** W — φορτίο επανέναρξης Φ_RH = A_floor · f_RH (0 για συνεχή λειτουργία). */
+  readonly reheatW: number;
+  /** W — συνολικό θερμικό φορτίο `Φ` = transmission + ventilation + reheat. */
   readonly totalW: number;
   /** W/m² — ειδικό θερμικό φορτίο (Φ / εμβαδό δαπέδου). */
   readonly specificLoadWperM2: number;

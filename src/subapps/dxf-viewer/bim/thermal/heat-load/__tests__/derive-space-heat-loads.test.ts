@@ -92,6 +92,34 @@ describe('computeOneSpaceHeatLoad — storeyPosition branches', () => {
   });
 });
 
+describe('computeOneSpaceHeatLoad — L1.5 per-space overrides', () => {
+  it('default (χωρίς override) ⇒ TB/reheat 0, ίδιο totalW με L1', () => {
+    const r = computeOneSpaceHeatLoad(makeSpace('a'), makeInputs('only'));
+    expect(r.thermalBridgeW).toBe(0);
+    expect(r.reheatW).toBe(0);
+    expect(r.totalW).toBeCloseTo(FLOOR_GROUND_W + ROOF_EXT_W + VENT_W, 5);
+  });
+
+  it("thermalBridgeLevel='medium' → +ΔU_TB σε δάπεδο+στέγη", () => {
+    // floor ground: 0.10·20·0.5·25=25· roof ext: 0.10·20·1·25=50 → TB=75.
+    const r = computeOneSpaceHeatLoad(
+      makeSpace('a', { thermalBridgeLevel: 'medium' }),
+      makeInputs('only'),
+    );
+    expect(r.thermalBridgeW).toBeCloseTo(75, 5);
+    expect(r.transmissionW).toBeCloseTo(FLOOR_GROUND_W + ROOF_EXT_W + 75, 5);
+  });
+
+  it("reheatMode='night-setback' → Φ_RH = A·f_RH = 20·11 = 220", () => {
+    const r = computeOneSpaceHeatLoad(
+      makeSpace('a', { reheatMode: 'night-setback' }),
+      makeInputs('only'),
+    );
+    expect(r.reheatW).toBeCloseTo(220, 5);
+    expect(r.totalW).toBeCloseTo(FLOOR_GROUND_W + ROOF_EXT_W + VENT_W + 220, 5);
+  });
+});
+
 describe('deriveSpaceHeatLoads — aggregation + range', () => {
   it('Map ανά spaceId + άθροισμα totalW', () => {
     const spaces = [makeSpace('a'), makeSpace('b')];

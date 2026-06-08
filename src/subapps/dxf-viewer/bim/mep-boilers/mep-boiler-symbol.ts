@@ -1,11 +1,19 @@
 /**
  * Heating boiler 2D symbol SSoT (ADR-408 Εύρος Β #2).
  *
- * Single source of truth for the *vector* symbol of a boiler (λέβητας), shared
- * by the 2D renderer and the placement ghost. Pure + geometry-driven: it reads the
- * already-computed (rotated) footprint and emits the cabinet outline plus a
- * distinctive boiler glyph (horizontal divider + upward-triangle flame/burner mark)
- * and two connector stubs (supply outlet +X end, return inlet −X end).
+ * Single source of truth for the *vector* symbol of a boiler (λέβητας), consumed by
+ * the 2D renderer. Pure + geometry-driven: it reads the already-computed (rotated)
+ * footprint and emits the cabinet outline, a distinctive boiler glyph (horizontal
+ * divider + upward-triangle flame/burner mark), and one stub PER embedded connector.
+ *
+ * Connector stubs are CONNECTOR-DRIVEN (FULL SSOT): instead of hardcoding supply/return,
+ * the symbol loops over `buildBoilerConnectors(params)` — the SAME source of truth that
+ * seeds the boiler's real connectors — and resolves each one's world position via
+ * `connectorWorldPosition` (rotation-aware, the shared SSoT). So EVERY connector (the
+ * hydronic supply/return pair, the combi DHW hot/cold/recirc ports, the gas/oil flue,
+ * and any future port) is automatically drawn in plan at its true position — zero drift.
+ * The combustion flue (`domain:'duct'`) gets a DISTINCT vent glyph (stub + chevron arrow)
+ * so the exhaust duct reads differently from the water pipes.
  *
  * Glyph design:
  *   - A horizontal divider line across the body ~40% from the bottom — visually
@@ -25,6 +33,8 @@ import type {
   MepBoilerGeometry,
   MepBoilerParams,
 } from '../types/mep-boiler-types';
+import { connectorWorldPosition } from '../types/mep-connector-types';
+import { buildBoilerConnectors } from './mep-boiler-geometry';
 import { mmToSceneUnits } from '../../utils/scene-units';
 
 /** A polyline of world-space points (canvas units). */
@@ -33,8 +43,18 @@ export type BoilerStroke = readonly Point3D[];
 export interface BoilerSymbolGeometry {
   /** Closed outline polygon (= the footprint). */
   readonly outline: readonly Point3D[];
-  /** Connector stub strokes — supply outlet (first, +X) + return inlet (second, −X). */
+  /**
+   * Connector stub strokes — one straight stub per WATER/PIPE connector
+   * (`domain:'pipe'`), connector-driven from `buildBoilerConnectors`. Order follows
+   * `buildBoilerConnectors`: supply outlet, return inlet, then any combi DHW ports.
+   */
   readonly strokes: readonly BoilerStroke[];
+  /**
+   * Vent/duct connector glyph strokes — one stub + chevron arrowhead per
+   * `domain:'duct'` connector (the gas/oil combustion flue / καπναγωγός). Kept
+   * separate from `strokes` so the renderer can give the exhaust duct a distinct read.
+   */
+  readonly ventStrokes: readonly BoilerStroke[];
   /**
    * Boiler glyph strokes — drawn with a thin line.
    *   [0] horizontal divider across the body
@@ -51,6 +71,15 @@ const FLAME_HALF_WIDTH_FRAC = 0.14;
 
 /** Fractional height of the flame triangle apex above the divider. */
 const FLAME_HEIGHT_FRAC = 0.22;
+
+/** Chevron arrowhead leg length as a fraction of the stub length (flue vent glyph). */
+const VENT_ARROW_LEN_FRAC = 0.32;
+
+/** Chevron arrowhead half-width as a fraction of the stub length (flue vent glyph). */
+const VENT_ARROW_HALF_FRAC = 0.2;
+
+/** Below this magnitude the outward direction is treated as degenerate (skip the stub). */
+const MIN_OUTWARD_LEN = 1e-6;
 
 function lerp(a: Point3D, b: Point3D, t: number): Point3D {
   return { x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t, z: 0 };
@@ -134,12 +163,49 @@ function buildFlameStrokes(v0: Point3D, v1: Point3D, v2: Point3D, v3: Point3D): 
 }
 
 /**
+ * Build the distinct vent glyph for a `domain:'duct'` connector (the combustion flue /
+ * καπναγωγός): a straight stub from `root` along `outward`, capped with a chevron «^»
+ * arrowhead at the tip pointing outward (exhaust flow). This reads differently from the
+ * plain pipe stubs so the gas duct is unmistakable in plan. Pure + rotation-aware (the
+ * `outward` direction is already world-rotated). Returns [stub, leftLeg, rightLeg].
+ */
+function buildFlueVentStroke(
+  root: Point3D,
+  outward: { x: number; y: number },
+  stubLen: number,
+): BoilerStroke[] {
+  const tip: Point3D = { x: root.x + outward.x * stubLen, y: root.y + outward.y * stubLen, z: 0 };
+  // Perpendicular to the outward direction (for the chevron half-width).
+  const perp = { x: -outward.y, y: outward.x };
+  const arrowLen = stubLen * VENT_ARROW_LEN_FRAC;
+  const arrowHalf = stubLen * VENT_ARROW_HALF_FRAC;
+  // Back-of-arrow centre, then split ± perpendicular to form the chevron legs.
+  const backX = tip.x - outward.x * arrowLen;
+  const backY = tip.y - outward.y * arrowLen;
+  const legLeft:  Point3D = { x: backX + perp.x * arrowHalf, y: backY + perp.y * arrowHalf, z: 0 };
+  const legRight: Point3D = { x: backX - perp.x * arrowHalf, y: backY - perp.y * arrowHalf, z: 0 };
+  return [
+    [root, tip],      // stub
+    [legLeft, tip],   // chevron left leg
+    [legRight, tip],  // chevron right leg
+  ];
+}
+
+/**
  * Build the boiler symbol geometry from params + computed geometry. Rectangular
- * cabinet → a divider + flame glyph plus a supply stub off the +X end and a
- * return stub off the −X end, all rotation-aware because the footprint is rotated.
+ * cabinet → a divider + flame glyph plus ONE stub per embedded connector, all
+ * rotation-aware because both the footprint and the connectors are resolved into world.
  *
- * NOTE: supply is at +X end (flow:'out' → sources hydronic supply) and return is
- * at −X end (flow:'in') — REVERSED vs the radiator (which has supply at −X end).
+ * Connector stubs are derived from `buildBoilerConnectors(params)` — the SSoT that seeds
+ * the boiler's real connectors — so the plan symbol always matches the actual ports:
+ *   - `domain:'pipe'` (supply outlet +X, return inlet −X, and any combi DHW hot/cold/recirc
+ *     corners) → a straight stub from the connector's world position pointing outward (the
+ *     normalised connector offset). Supply/return reproduce EXACTLY their prior geometry
+ *     (supply at +X edge midpoint, return at −X edge midpoint) — regression-free.
+ *   - `domain:'duct'` (the gas/oil combustion flue) → a distinct vent glyph (stub + chevron).
+ *
+ * NOTE: supply is at the +X end (flow:'out' → sources hydronic supply) and return at the
+ * −X end (flow:'in') — REVERSED vs the radiator (which has supply at −X end).
  */
 export function buildMepBoilerSymbol(
   params: MepBoilerParams,
@@ -147,7 +213,7 @@ export function buildMepBoilerSymbol(
 ): BoilerSymbolGeometry {
   const outline = geometry.footprint.vertices;
   if (outline.length !== 4) {
-    return { outline, strokes: [], glyphStrokes: [] };
+    return { outline, strokes: [], ventStrokes: [], glyphStrokes: [] };
   }
 
   // v0=(-hw,-hl) v1=(hw,-hl) v2=(hw,hl) v3=(-hw,hl) — rotated to world.
@@ -155,23 +221,27 @@ export function buildMepBoilerSymbol(
   const s = mmToSceneUnits(params.sceneUnits ?? 'mm');
   const stubLen = Math.max(params.length * s * 0.8, 60 * s);
 
-  // Supply stub (flow:'out'): from the midpoint of the +X edge (v1→v2), pointing outward +X.
-  const supplyRoot = lerp(v1, v2, 0.5);
-  const supplyDir  = unit(v1.x - v0.x, v1.y - v0.y); // +X local (world-rotated)
-
-  // Return stub (flow:'in'): from the midpoint of the −X edge (v0→v3), pointing outward −X.
-  const returnRoot = lerp(v0, v3, 0.5);
-  const returnDir  = unit(v0.x - v1.x, v0.y - v1.y); // −X local (world-rotated)
-
-  const strokes: BoilerStroke[] = [
-    [supplyRoot, { x: supplyRoot.x + supplyDir.x * stubLen, y: supplyRoot.y + supplyDir.y * stubLen, z: 0 }],
-    [returnRoot, { x: returnRoot.x + returnDir.x * stubLen, y: returnRoot.y + returnDir.y * stubLen, z: 0 }],
-  ];
+  // Connector-driven stubs (FULL SSOT): one stub per real connector, at its true world
+  // position. `connectorWorldPosition` = hostPosition + R·localPosition, so the outward
+  // direction is `normalize(worldPos − hostPosition)` = R·(normalised local offset).
+  const strokes: BoilerStroke[] = [];
+  const ventStrokes: BoilerStroke[] = [];
+  for (const connector of buildBoilerConnectors(params)) {
+    const root = connectorWorldPosition(connector, params.position, params.rotation);
+    const len = Math.hypot(root.x - params.position.x, root.y - params.position.y);
+    if (len < MIN_OUTWARD_LEN) continue; // connector at the origin — no meaningful stub direction
+    const outward = { x: (root.x - params.position.x) / len, y: (root.y - params.position.y) / len };
+    if (connector.domain === 'duct') {
+      ventStrokes.push(...buildFlueVentStroke(root, outward, stubLen));
+    } else {
+      strokes.push([root, { x: root.x + outward.x * stubLen, y: root.y + outward.y * stubLen, z: 0 }]);
+    }
+  }
 
   const glyphStrokes: BoilerStroke[] = [
     buildDividerStroke(v0, v1, v2, v3),
     ...buildFlameStrokes(v0, v1, v2, v3),
   ];
 
-  return { outline, strokes, glyphStrokes };
+  return { outline, strokes, ventStrokes, glyphStrokes };
 }

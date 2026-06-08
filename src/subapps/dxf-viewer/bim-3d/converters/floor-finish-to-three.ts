@@ -22,7 +22,7 @@
 
 import * as THREE from 'three';
 import type { FloorFinishEntity } from '../../bim/types/floor-finish-types';
-import { DEFAULT_FLOOR_FINISH_THICKNESS_MM } from '../../bim/types/floor-finish-types';
+import { DEFAULT_FLOOR_FINISH_LAYER_THICKNESS_MM } from '../../bim/types/floor-finish-types';
 import { getFloorFinishPbrSlug } from '../../bim/floor-finishes/floor-finish-material-catalog';
 import type { PbrTextureSlug } from '../../bim/materials/bim-texture-registry';
 import { tileSizeMForMaterialId } from '../../bim/materials/bim-texture-registry';
@@ -86,7 +86,7 @@ export function floorFinishToMesh(
   const shape = buildShape(scaledVerts);
   if (!shape) return null;
 
-  const thickness = (thicknessMm ?? DEFAULT_FLOOR_FINISH_THICKNESS_MM) * MM_TO_M;
+  const thickness = (thicknessMm ?? DEFAULT_FLOOR_FINISH_LAYER_THICKNESS_MM) * MM_TO_M;
   const geo = extrudeAndRotate(shape, thickness);
 
   const { mat, matKey } = resolveFloorFinishMaterial3D(materialId);

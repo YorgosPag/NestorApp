@@ -210,6 +210,8 @@ function makeHeatLoads(
         deltaTC: 30,
         transmissionW: w * 0.8,
         ventilationW: w * 0.2,
+        thermalBridgeW: 0,
+        reheatW: 0,
         totalW: w,
         specificLoadWperM2: w / 20,
         boundaries: [],

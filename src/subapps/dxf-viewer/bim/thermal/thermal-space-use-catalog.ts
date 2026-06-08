@@ -26,6 +26,12 @@ import type {
   ThermalSpaceUseType,
 } from '../types/thermal-space-types';
 import { THERMAL_SPACE_USE_TYPES } from '../types/thermal-space-types';
+import {
+  DEFAULT_REHEAT_MODE,
+  DEFAULT_THERMAL_BRIDGE_LEVEL,
+  getReheatFactor,
+  getThermalBridgeSurcharge,
+} from './heat-load/heat-load-config';
 
 /** Default παράμετροι σχεδιασμού μιας χρήσης χώρου (ΤΟΤΕΕ 20701-1). */
 export interface ThermalSpaceUseDefaults {
@@ -127,4 +133,24 @@ export function resolveThermalSpaceAch(
   return (
     params.airChangesPerHour ?? THERMAL_SPACE_USE_DEFAULTS[params.useType].airChangesPerHour
   );
+}
+
+/**
+ * Effective προσαύξηση θερμογεφυρών `ΔU_TB` (W/m²K): per-space override ?? `none`
+ * (0). ADR-422 L1.5 — pure SSoT, default 0 ⇒ zero-regression.
+ */
+export function resolveThermalSpaceThermalBridgeSurcharge(
+  params: Pick<ThermalSpaceParams, 'thermalBridgeLevel'>,
+): number {
+  return getThermalBridgeSurcharge(params.thermalBridgeLevel ?? DEFAULT_THERMAL_BRIDGE_LEVEL);
+}
+
+/**
+ * Effective συντελεστής επανέναρξης `f_RH` (W/m²): per-space override ?? `continuous`
+ * (0). ADR-422 L1.5 — pure SSoT, default 0 ⇒ zero-regression.
+ */
+export function resolveThermalSpaceReheatFactor(
+  params: Pick<ThermalSpaceParams, 'reheatMode'>,
+): number {
+  return getReheatFactor(params.reheatMode ?? DEFAULT_REHEAT_MODE);
 }

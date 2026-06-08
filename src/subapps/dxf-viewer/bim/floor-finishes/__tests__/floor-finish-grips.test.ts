@@ -8,7 +8,7 @@ import {
   applyFloorFinishGripDrag,
 } from '../floor-finish-grips';
 import type { FloorFinishEntity } from '../../types/floor-finish-types';
-import { DEFAULT_FLOOR_FINISH_THICKNESS_MM, DEFAULT_FLOOR_FINISH_MATERIAL_ID } from '../../types/floor-finish-types';
+import { DEFAULT_FLOOR_FINISH_LAYER_THICKNESS_MM, DEFAULT_FLOOR_FINISH_MATERIAL_ID } from '../../types/floor-finish-types';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -28,7 +28,7 @@ function makeSquareEntity(side = 1000): FloorFinishEntity {
         ],
       },
       materialId: DEFAULT_FLOOR_FINISH_MATERIAL_ID,
-      thicknessMm: DEFAULT_FLOOR_FINISH_THICKNESS_MM,
+      thicknessMm: DEFAULT_FLOOR_FINISH_LAYER_THICKNESS_MM,
       finishLevel: 0,
     },
     geometry: {

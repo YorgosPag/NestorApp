@@ -21,7 +21,7 @@ import { serializeFloorFinishCoverings } from '../ifc-covering-serializer';
 import type { SceneModel } from '@/subapps/dxf-viewer/types/scene';
 import type { FloorFinishEntity } from '@/subapps/dxf-viewer/bim/types/floor-finish-types';
 import {
-  DEFAULT_FLOOR_FINISH_THICKNESS_MM,
+  DEFAULT_FLOOR_FINISH_LAYER_THICKNESS_MM,
   DEFAULT_FLOOR_FINISH_MATERIAL_ID,
 } from '@/subapps/dxf-viewer/bim/types/floor-finish-types';
 
@@ -53,7 +53,7 @@ function makeFloorFinishEntity(overrides: Partial<FloorFinishEntity['params']> =
         ],
       },
       materialId: DEFAULT_FLOOR_FINISH_MATERIAL_ID,
-      thicknessMm: DEFAULT_FLOOR_FINISH_THICKNESS_MM,
+      thicknessMm: DEFAULT_FLOOR_FINISH_LAYER_THICKNESS_MM,
       finishLevel: 0,
       ...overrides,
     },
@@ -162,7 +162,7 @@ describe('serializeFloorFinishCoverings()', () => {
       expect(nominalValue).toBeDefined();
       // typed value: { kind: 'typed', typeName: 'IFCLENGTHMEASURE', inner: { kind: 'real', value } }
       const inner = (nominalValue as { inner: { value: number } }).inner;
-      expect(inner.value).toBeCloseTo(DEFAULT_FLOOR_FINISH_THICKNESS_MM / 1000, 6);
+      expect(inner.value).toBeCloseTo(DEFAULT_FLOOR_FINISH_LAYER_THICKNESS_MM / 1000, 6);
     });
 
     it('Pset_CoveringCommon contains ThermalTransmittance property for known material', () => {

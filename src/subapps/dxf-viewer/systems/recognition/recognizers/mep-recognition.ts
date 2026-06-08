@@ -3,9 +3,9 @@
  *
  * Explicit registration (no import side-effects): the app bootstrap calls
  * `registerMepRecognition()` once, and from then on `recognizeSceneFromRegistry`
- * sees the sanitary terminal recognizer, the MEP source recognizer, and the
- * sanitary space classifier. Adding the next discipline (drainage, electrical) =
- * another registration here or its own wiring file — never an engine edit.
+ * sees the sanitary + heating terminal recognizers, the MEP source recognizer, and
+ * the sanitary space classifier. Adding the next discipline (electrical) = another
+ * recognizer in this array or its own wiring file — never an engine edit.
  *
  * @see ../recognition-registry.ts
  */
@@ -18,6 +18,7 @@ import {
   sanitaryTerminalRecognizer,
   sanitarySpaceClassifier,
 } from './sanitary-terminal-recognizer';
+import { heatingTerminalRecognizer } from './heating-terminal-recognizer';
 import { mepSourceRecognizer } from './mep-source-recognizer';
 
 /** Registration id for the MEP (sanitary pilot) recognition contribution. */
@@ -32,7 +33,7 @@ export function registerMepRecognition(
 ): void {
   registry.register({
     id: MEP_RECOGNITION_ID,
-    recognizers: [sanitaryTerminalRecognizer, mepSourceRecognizer],
+    recognizers: [sanitaryTerminalRecognizer, heatingTerminalRecognizer, mepSourceRecognizer],
     classifier: sanitarySpaceClassifier,
   });
 }
