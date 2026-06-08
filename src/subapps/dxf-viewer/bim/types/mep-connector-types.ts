@@ -373,6 +373,8 @@ export const BOILER_RETURN_CONNECTOR_ID = 'boiler-return';
 export const BOILER_DHW_HOT_CONNECTOR_ID = 'boiler-dhw-hot';
 /** Connector id for the DHW cold-water inlet of a COMBI heating boiler (τροφοδοσία ΖΝΧ). */
 export const BOILER_DHW_COLD_CONNECTOR_ID = 'boiler-dhw-cold';
+/** Connector id for the DHW recirculation return inlet of a COMBI boiler (ανακυκλοφορία ΖΝΧ). */
+export const BOILER_DHW_RECIRC_CONNECTOR_ID = 'boiler-dhw-recirc';
 
 /**
  * Supply outlet connector of a hydronic boiler (ADR-408 Εύρος Β #2, λέβητας) — the
@@ -470,6 +472,32 @@ export function buildBoilerDhwColdInletConnector(
     flow: 'in',
     localPosition,
     pipe: { systemClassification: 'domestic-cold-water', diameterMm },
+  };
+}
+
+/**
+ * DHW recirculation return inlet connector of a COMBI heating boiler (ADR-408 Εύρος Β —
+ * combi + recirculation, Revit "Domestic Hot Water + Recirculation"). In larger/multi-storey
+ * buildings the domestic hot water is kept circulating so it reaches the taps without waiting
+ * (recirculation loop): the cooled hot water RETURNS into the boiler here (`flow:'in'`) and is
+ * re-heated. `domain:'pipe'`, classification REUSED as `domestic-hot-water` (NOT a new union
+ * member) — the recirc inlet is therefore a MEMBER of the SAME DHW network the hot outlet
+ * ({@link buildBoilerDhwHotOutletConnector}) sources, closing the loop. Only seeded when the
+ * boiler is a combi AND `MepBoilerParams.dhwRecirculation` is set (a plain combi has no recirc).
+ *
+ * `localPosition` is host-local (scene units, pre-rotation) — the caller offsets it so it never
+ * coincides with the supply/return/hot/cold ports (see `buildBoilerConnectors`).
+ */
+export function buildBoilerDhwRecircInletConnector(
+  localPosition: Point3D,
+  diameterMm: number,
+): MepConnector {
+  return {
+    connectorId: BOILER_DHW_RECIRC_CONNECTOR_ID,
+    domain: 'pipe',
+    flow: 'in',
+    localPosition,
+    pipe: { systemClassification: 'domestic-hot-water', diameterMm },
   };
 }
 

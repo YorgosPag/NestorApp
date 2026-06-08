@@ -36,7 +36,8 @@ import {
  * drag; `rotate-y` the plan rotation.
  */
 const BASE_HANDLES: readonly GizmoHandleId[] = [
-  'axis-x', 'axis-y', 'axis-z', 'plane-xz', 'center', 'rotate-y',
+  // 'center' (orange free-move pyramid) hidden per Giorgio — to test behaviour without it.
+  'axis-x', 'axis-y', 'axis-z', 'plane-xz', 'rotate-y',
 ];
 
 /**
