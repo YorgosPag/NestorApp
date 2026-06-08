@@ -71,6 +71,10 @@ Mouse Event → DxfCanvas.onMouseMove
 
 ## Changelog
 
+### 2026-06-08 — DHW water-heater tool wiring pass-through (ADR-408 DHW, CHECK 6B)
+
+**Status**: IMPLEMENTED 2026-06-08. Η νέα point-based οντότητα `mep-water-heater` (θερμοσίφωνας / πηγή ζεστού νερού χρήσης) προσθέτει το `mepWaterHeaterTool` στο click pipeline ως **pass-through μόνο**: destructure από `useSpecialTools` + προώθηση στο `useCanvasClickHandler`, με αντίστοιχο optional πεδίο στο `canvas-click-types.ts` (`UseCanvasClickHandlerParams`), ίδιο pattern με το προϋπάρχον `mepBoilerTool`. **Μηδέν νέο `useSyncExternalStore`, μηδέν high-frequency subscription, καμία αλλαγή σε bitmap cache-key ή micro-leaf δομή** (Cardinal Rules / CHECK 6C respected). Co-staged για CHECK 6B (`canvas-click-types.ts`). Λεπτομέρεια στο ADR-408 changelog.
+
 ### 2026-06-08 — thermal-space + MEP-riser tool wiring pass-through (ADR-422 / ADR-408 Φ15, CHECK 6B)
 
 **Status**: IMPLEMENTED 2026-06-08. Δύο νέες οντότητες προσθέτουν tools στο `CanvasSection.tsx` ως **pass-through μόνο**: (α) `thermalSpaceTool` (ADR-422 — analytical thermal space, click-in-region «Place Space») και (β) `mepRiserTool` (ADR-408 Φ15 — κατακόρυφη στήλη αποχέτευσης, 1-click). Και τα δύο: destructure από `useSpecialTools` + προώθηση στο `useCanvasClickHandler`, με αντίστοιχα optional πεδία στο `canvas-click-types.ts` (`UseCanvasClickHandlerParams`), ίδιο pattern με το προϋπάρχον `floorFinishTool`/`mepUnderfloorTool`. **Μηδέν νέο `useSyncExternalStore`, μηδέν high-frequency subscription, καμία αλλαγή σε bitmap cache-key ή micro-leaf δομή** (Cardinal Rules / CHECK 6C respected). Co-staged για CHECK 6B (`CanvasSection.tsx`, `canvas-click-types.ts`). Λεπτομέρεια στα ADR-422 / ADR-408 changelogs.

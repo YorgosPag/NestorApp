@@ -200,6 +200,27 @@ export function useDxfViewerNotifications(): void {
       }),
     );
 
+    // ADR-426 Slice 2 — water-supply auto-design feedback (Generate → review → accept).
+    unsubs.push(
+      EventBus.on('bim:water-supply-generated', ({ networkCount, warningCount }) => {
+        toast.info(
+          warningCount > 0
+            ? t('waterSupply.generatedWithWarnings', { count: networkCount, warnings: warningCount })
+            : t('waterSupply.generated', { count: networkCount }),
+        );
+      }),
+    );
+    unsubs.push(
+      EventBus.on('bim:water-supply-empty', ({ reason }) => {
+        toast.warning(t(`waterSupply.empty.${reason}`));
+      }),
+    );
+    unsubs.push(
+      EventBus.on('bim:water-supply-committed', ({ networkCount, segmentCount }) => {
+        toast.success(t('waterSupply.committed', { count: networkCount, segments: segmentCount }));
+      }),
+    );
+
     // ADR-401 Phase G.3 — stair attach mirrors (reuse the generic messages).
     unsubs.push(
       EventBus.on('bim:stairs-auto-attached', () => {

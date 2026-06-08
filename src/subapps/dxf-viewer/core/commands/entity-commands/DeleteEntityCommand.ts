@@ -32,6 +32,8 @@ const BIM_ENTITY_TYPES = new Set<string>([
   'mep-radiator',
   // ADR-408 Εύρος Β #2 — heating boiler (wall-mounted heat source).
   'mep-boiler',
+  // ADR-408 — DHW water heater (θερμοσίφωνας / αντλία θερμότητας ΖΝΧ).
+  'mep-water-heater',
   // ADR-408 Εύρος Β #3 — area-based radiant floor heating loop.
   'mep-underfloor',
   // ADR-417 — parametric pitched roof.
@@ -45,7 +47,7 @@ const BIM_ENTITY_TYPES = new Set<string>([
 type BimEntityType =
   | 'wall' | 'opening' | 'slab' | 'slab-opening' | 'column' | 'beam' | 'stair'
   | 'mep-fixture' | 'electrical-panel' | 'railing' | 'mep-segment' | 'mep-manifold' | 'mep-radiator'
-  | 'mep-boiler' | 'mep-underfloor' | 'roof' | 'floor-finish' | 'thermal-space';
+  | 'mep-boiler' | 'mep-water-heater' | 'mep-underfloor' | 'roof' | 'floor-finish' | 'thermal-space';
 
 function emitBimRestoreIfApplicable(snapshot: SceneEntity): void {
   const type = (snapshot as { type?: string }).type;

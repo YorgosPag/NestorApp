@@ -301,6 +301,10 @@ export function useSmartDelete({
       const boilerIdsInBatch = idsToDelete.filter(
         (id) => adapter.getEntity(id)?.type === 'mep-boiler',
       );
+      // ADR-408 — collect DHW water heater IDs so we can trigger Firestore deleteDoc.
+      const waterHeaterIdsInBatch = idsToDelete.filter(
+        (id) => adapter.getEntity(id)?.type === 'mep-water-heater',
+      );
       // ADR-417 — collect roof IDs so we can trigger Firestore deleteDoc.
       const roofIdsInBatch = idsToDelete.filter(
         (id) => adapter.getEntity(id)?.type === 'roof',
@@ -392,6 +396,10 @@ export function useSmartDelete({
       // ADR-408 Εύρος Β #2 — trigger Firestore deleteDoc + prevent subscription re-add for each boiler.
       for (const boilerId of boilerIdsInBatch) {
         eventBus.emit('bim:mep-boiler-delete-requested', { boilerId });
+      }
+      // ADR-408 — trigger Firestore deleteDoc + prevent subscription re-add for each water heater.
+      for (const waterHeaterId of waterHeaterIdsInBatch) {
+        eventBus.emit('bim:mep-water-heater-delete-requested', { waterHeaterId });
       }
       // ADR-417 — trigger Firestore deleteDoc + prevent subscription re-add for each roof.
       for (const roofId of roofIdsInBatch) {

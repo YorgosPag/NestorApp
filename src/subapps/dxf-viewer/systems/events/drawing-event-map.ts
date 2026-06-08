@@ -242,6 +242,10 @@ export interface DrawingEventMap {
   // ADR-408 Εύρος Β #2 — BIM heating boiler params + delete events
   'bim:mep-boiler-params-updated': { boilerId: string };
   'bim:mep-boiler-delete-requested': { boilerId: string };
+  // ADR-408 — BIM DHW water heater (θερμοσίφωνας / ΖΝΧ) params + delete + 3D placement events
+  'bim:mep-water-heater-params-updated': { waterHeaterId: string };
+  'bim:mep-water-heater-delete-requested': { waterHeaterId: string };
+  'bim:place-mep-water-heater-3d': { point: Point2D };
   // ADR-408 Εύρος Β #3 — BIM underfloor heating loop params + delete events
   'bim:mep-underfloor-params-updated': { underfloorId: string };
   'bim:mep-underfloor-delete-requested': { underfloorId: string };
@@ -266,6 +270,10 @@ export interface DrawingEventMap {
   'bim:mep-network-members-added': { memberCount: number };
   'bim:mep-network-members-removed': { memberCount: number };
   'bim:mep-network-edit-failed': { reason: 'noActiveNetwork' | 'addFailed' | 'removeFailed' };
+  // ADR-426 Slice 2 — water-supply auto-design (Generate → review → accept) feedback.
+  'bim:water-supply-generated': { networkCount: number; warningCount: number };
+  'bim:water-supply-empty': { reason: 'no-fixtures' | 'no-source' };
+  'bim:water-supply-committed': { networkCount: number; segmentCount: number };
   // ADR-407 — BIM railing params + delete events
   'bim:railing-params-updated': { railingId: string };
   'bim:railing-delete-requested': { railingId: string };
@@ -322,8 +330,8 @@ export interface DrawingEventMap {
   // via `payload.entityType` + `isXType(snapshot)`. Emitted by
   // DeleteEntityCommand.undo() and DeleteMultipleEntitiesCommand.undo().
   'bim:entity-restore-requested': {
-    // ADR-406 — 'mep-fixture' appended. ADR-407 — 'railing' appended. ADR-408 Φ3 — 'electrical-panel'. ADR-408 Φ8 — 'mep-segment'. ADR-410 — 'furniture'. ADR-408 Φ12 — 'mep-manifold'. ADR-408 Εύρος Β — 'mep-radiator'. ADR-408 Εύρος Β #2 — 'mep-boiler'.
-    entityType: 'wall' | 'opening' | 'slab' | 'slab-opening' | 'column' | 'beam' | 'stair' | 'mep-fixture' | 'electrical-panel' | 'mep-manifold' | 'mep-radiator' | 'mep-boiler' | 'mep-underfloor' | 'railing' | 'mep-segment' | 'furniture' | 'floor-finish' | 'roof' | 'thermal-space';
+    // ADR-406 — 'mep-fixture' appended. ADR-407 — 'railing' appended. ADR-408 Φ3 — 'electrical-panel'. ADR-408 Φ8 — 'mep-segment'. ADR-410 — 'furniture'. ADR-408 Φ12 — 'mep-manifold'. ADR-408 Εύρος Β — 'mep-radiator'. ADR-408 Εύρος Β #2 — 'mep-boiler'. ADR-408 — 'mep-water-heater'.
+    entityType: 'wall' | 'opening' | 'slab' | 'slab-opening' | 'column' | 'beam' | 'stair' | 'mep-fixture' | 'electrical-panel' | 'mep-manifold' | 'mep-radiator' | 'mep-boiler' | 'mep-water-heater' | 'mep-underfloor' | 'railing' | 'mep-segment' | 'furniture' | 'floor-finish' | 'roof' | 'thermal-space';
     entitySnapshot: AnySceneEntity;
     source: 'undo-delete' | 'redo-restore';
   };

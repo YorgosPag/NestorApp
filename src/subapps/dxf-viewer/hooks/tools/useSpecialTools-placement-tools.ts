@@ -21,6 +21,7 @@ import { useElectricalPanelTool } from '../drawing/useElectricalPanelTool';
 import { useMepManifoldTool } from '../drawing/useMepManifoldTool';
 import { useMepRadiatorTool } from '../drawing/useMepRadiatorTool';
 import { useMepBoilerTool } from '../drawing/useMepBoilerTool';
+import { useMepWaterHeaterTool } from '../drawing/useMepWaterHeaterTool';
 import { useMepSegmentTool } from '../drawing/useMepSegmentTool';
 import { useMepRiserTool } from '../drawing/useMepRiserTool';
 import { useRailingTool } from '../drawing/useRailingTool';
@@ -33,6 +34,7 @@ import { addElectricalPanelToScene } from '../../bim/electrical-panels/add-elect
 import { addMepManifoldToScene } from '../../bim/mep-manifolds/add-mep-manifold-to-scene';
 import { addMepRadiatorToScene } from '../../bim/mep-radiators/add-mep-radiator-to-scene';
 import { addMepBoilerToScene } from '../../bim/mep-boilers/add-mep-boiler-to-scene';
+import { addMepWaterHeaterToScene } from '../../bim/mep-water-heaters/add-mep-water-heater-to-scene';
 import { addMepSegmentToScene } from '../../bim/mep-segments/add-mep-segment-to-scene';
 import { DEFAULT_DRAINAGE_SLOPE_PERCENT } from '../../bim/types/mep-segment-types';
 import { plumbingFixtureToolKind } from '../../bim/mep-fixtures/plumbing-fixture-spec';
@@ -54,6 +56,7 @@ export interface PlacementToolsReturn {
   mepManifoldTool: ReturnType<typeof useMepManifoldTool>; // ADR-408 Φ12
   mepRadiatorTool: ReturnType<typeof useMepRadiatorTool>; // ADR-408 Εύρος Β
   mepBoilerTool: ReturnType<typeof useMepBoilerTool>; // ADR-408 Εύρος Β #2
+  mepWaterHeaterTool: ReturnType<typeof useMepWaterHeaterTool>; // ADR-408 DHW
   mepSegmentTool: ReturnType<typeof useMepSegmentTool>; // ADR-408 Φ8
   mepRiserTool: ReturnType<typeof useMepRiserTool>; // ADR-408 Φ15
   railingTool: ReturnType<typeof useRailingTool>; // ADR-407
@@ -176,6 +179,17 @@ export function useSpecialToolsPlacementTools(
   });
   useToolLifecycle(activeTool === 'mep-boiler', mepBoilerTool.activate, mepBoilerTool.deactivate);
 
+  // ADR-408 DHW — WATER HEATER TOOL: single-click placement; entity appended+broadcast.
+  const mepWaterHeaterTool = useMepWaterHeaterTool({
+    currentLevelId: levelManager.currentLevelId || '0',
+    onMepWaterHeaterCreated: (waterHeaterEntity) => addMepWaterHeaterToScene(waterHeaterEntity, levelManager),
+    getSceneUnits: () => {
+      const lid = levelManager.currentLevelId;
+      return lid ? resolveSceneUnits(levelManager.getLevelScene(lid)) : 'mm';
+    },
+  });
+  useToolLifecycle(activeTool === 'mep-water-heater', mepWaterHeaterTool.activate, mepWaterHeaterTool.deactivate);
+
   // ADR-408 Φ8 — MEP SEGMENT TOOL (duct + pipe): 2-click linear placement.
   const mepSegmentTool = useMepSegmentTool({
     currentLevelId: levelManager.currentLevelId || '0',
@@ -246,6 +260,7 @@ export function useSpecialToolsPlacementTools(
     mepManifoldTool,
     mepRadiatorTool,
     mepBoilerTool,
+    mepWaterHeaterTool,
     mepSegmentTool,
     mepRiserTool,
     railingTool,

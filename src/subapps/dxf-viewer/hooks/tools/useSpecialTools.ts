@@ -74,7 +74,7 @@ export interface UseSpecialToolsReturn extends SelectionToolsReturn, PlacementTo
   // angleEntityMeasurement (extracted to useSpecialTools-selection-tools.ts).
   // PlacementToolsReturn provides: mepFixtureTool, furnitureTool,
   // floorplanSymbolTool, electricalPanelTool, mepManifoldTool, mepRadiatorTool,
-  // mepBoilerTool, mepSegmentTool, railingTool (extracted to useSpecialTools-placement-tools.ts).
+  // mepBoilerTool, mepWaterHeaterTool, mepSegmentTool, railingTool (extracted to useSpecialTools-placement-tools.ts).
   stairTool: ReturnType<typeof useStairTool>;
   wallTool: ReturnType<typeof useWallTool>;
   openingTool: ReturnType<typeof useOpeningTool>;
@@ -400,6 +400,7 @@ export function useSpecialTools(props: UseSpecialToolsProps): UseSpecialToolsRet
     mepManifoldTool,
     mepRadiatorTool,
     mepBoilerTool,
+    mepWaterHeaterTool,
     mepSegmentTool,
     mepRiserTool,
     railingTool,
@@ -473,6 +474,7 @@ export function useSpecialTools(props: UseSpecialToolsProps): UseSpecialToolsRet
     mepManifoldTool,
     mepRadiatorTool,
     mepBoilerTool,
+    mepWaterHeaterTool,
     mepSegmentTool,
     mepRiserTool,
     railingTool,

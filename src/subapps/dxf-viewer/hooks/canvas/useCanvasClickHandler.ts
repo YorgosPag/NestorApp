@@ -57,6 +57,7 @@ export function useCanvasClickHandler(params: UseCanvasClickHandlerParams): UseC
     mepManifoldTool,
     mepRadiatorTool,
     mepBoilerTool,
+    mepWaterHeaterTool,
     mepUnderfloorTool,
     thermalSpaceTool,
     mepSegmentTool,
@@ -355,6 +356,12 @@ export function useCanvasClickHandler(params: UseCanvasClickHandlerParams): UseC
     // (RAW worldPoint; free-point placement, no existing-geometry hit-test).
     if (activeTool === 'mep-boiler' && mepBoilerTool?.isActive) {
       mepBoilerTool.onCanvasClick(worldPoint);
+      return;
+    }
+    // PRIORITY 4.92b'''': ADR-408 DHW — domestic water heater tool single-click placement
+    // (RAW worldPoint; free-point placement, no existing-geometry hit-test).
+    if (activeTool === 'mep-water-heater' && mepWaterHeaterTool?.isActive) {
+      mepWaterHeaterTool.onCanvasClick(worldPoint);
       return;
     }
     // PRIORITY 4.92c: ADR-408 Φ8 — duct/pipe MEP segment 2-click run. Uses the

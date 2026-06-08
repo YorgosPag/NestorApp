@@ -32,7 +32,6 @@ import { useOverlayStore } from '../overlays/overlay-store';
 import { useLevels } from '../systems/levels';
 import { PolygonCropStore } from '../systems/lasso/LassoCropStore';
 import { LassoFreehandStore } from '../systems/lasso/LassoFreehandStore';
-import { useRenderTrace } from '../debug/useRenderTrace'; // 🔴 TEMP DEBUG — remove after hover-lag diagnosis
 // 🏢 ADR-418: real view-scale (1:N) → pixel-scale conversion SSoT
 import { ratioToScale } from '../utils/view-scale';
 import { resolveSceneUnits } from '../utils/scene-units';
@@ -164,14 +163,6 @@ export function useDxfViewerState() {
       setActiveTool('select');
     });
   }, [setActiveTool]);
-
-  // 🔴 TEMP DEBUG — which sub-hook of useDxfViewerState drives the idle loop?
-  useRenderTrace('useDxfViewerState.detail', {
-    canvasOps, toolbarState, sceneState, overlayStore, rulersGridContext,
-    drawingHandlers, gripSettings, snapEnabled, gridVisible, activeTool,
-    canUndo, canRedo,
-    'sceneState.currentScene': sceneState.currentScene,
-  });
 
   // Shared clip-by-polygon handler — used by both polygon-crop and lasso-crop
   const _clipByPolygon = useCallback((polygon: Array<[number, number]>) => {

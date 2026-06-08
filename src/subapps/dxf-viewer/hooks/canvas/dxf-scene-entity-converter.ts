@@ -13,7 +13,7 @@ import type { DxfEntityUnion, DxfTextStyle } from '../../canvas-v2/dxf-canvas/dx
 import type { DxfColor } from '../../text-engine/types';
 import type { Point2D } from '../../rendering/types/Types';
 import type { SceneModel, TextEntity } from '../../types/entities';
-import { isSlabEntity, isSlabOpeningEntity, isOpeningEntity, isWallEntity, isBeamEntity, isColumnEntity, isMepFixtureEntity, isElectricalPanelEntity, isRailingEntity, isFurnitureEntity, isMepSegmentEntity, isMepFittingEntity, isFloorplanSymbolEntity, isMepManifoldEntity, isMepRadiatorEntity, isMepBoilerEntity, isMepUnderfloorEntity, isRoofEntity, isFloorFinishEntity, isThermalSpaceEntity, isXLineEntity, isRayEntity } from '../../types/entities';
+import { isSlabEntity, isSlabOpeningEntity, isOpeningEntity, isWallEntity, isBeamEntity, isColumnEntity, isMepFixtureEntity, isElectricalPanelEntity, isRailingEntity, isFurnitureEntity, isMepSegmentEntity, isMepFittingEntity, isFloorplanSymbolEntity, isMepManifoldEntity, isMepRadiatorEntity, isMepBoilerEntity, isMepWaterHeaterEntity, isMepUnderfloorEntity, isRoofEntity, isFloorFinishEntity, isThermalSpaceEntity, isXLineEntity, isRayEntity } from '../../types/entities';
 import type { XLineEntity, RayEntity } from '../../types/entities';
 import type { StairEntity } from '../../bim/types/stair-types';
 import type { SlabEntity } from '../../bim/types/slab-types';
@@ -32,6 +32,8 @@ import type { MepManifoldEntity } from '../../bim/types/mep-manifold-types';
 import type { MepRadiatorEntity } from '../../bim/types/mep-radiator-types';
 // ADR-408 Εύρος Β #2 — heating boiler direct entity for DXF render pipeline.
 import type { MepBoilerEntity } from '../../bim/types/mep-boiler-types';
+// ADR-408 DHW — domestic hot water heater direct entity for DXF render pipeline.
+import type { MepWaterHeaterEntity } from '../../bim/types/mep-water-heater-types';
 // ADR-408 Εύρος Β #3 — underfloor heating direct entity for DXF render pipeline.
 import type { MepUnderfloorEntity } from '../../bim/types/mep-underfloor-types';
 // ADR-407 — railing direct entity for DXF render pipeline.
@@ -432,6 +434,15 @@ export function convertEntity(entity: SceneEntity, layers: SceneLayers, layersBy
       if (!isMepBoilerEntity(entity)) return null;
       const blr = entity as MepBoilerEntity;
       return { ...base, type: 'mep-boiler' as const, kind: blr.kind, params: blr.params, geometry: blr.geometry, validation: blr.validation } as DxfEntityUnion;
+    }
+    case 'mep-water-heater': {
+      // ADR-408 DHW — domestic hot water heater (same pattern as mep-boiler).
+      // MepWaterHeaterRenderer reads geometry.footprint + kind + params at top level.
+      // Without this case, freshly-committed water heaters are silently dropped here →
+      // invisible on 2D canvas (visible only in 3D which reads params directly).
+      if (!isMepWaterHeaterEntity(entity)) return null;
+      const wh = entity as MepWaterHeaterEntity;
+      return { ...base, type: 'mep-water-heater' as const, kind: wh.kind, params: wh.params, geometry: wh.geometry, validation: wh.validation } as DxfEntityUnion;
     }
     case 'mep-underfloor': {
       // ADR-408 Εύρος Β #3 — underfloor heating loop (area-based, same pattern as floor-finish).
