@@ -125,6 +125,14 @@ export function useMepUnderfloorPersistence(
   const selectedUnderfloorRef = useRef<MepUnderfloorEntity | null>(null);
   selectedUnderfloorRef.current = primarySelectedUnderfloor;
 
+  // ⚡ STABILITY (ca9 fix 2026-06-08): key the Firestore subscription off stable
+  // scope primitives + `currentLevelId`, NOT the per-render `levelManager` object,
+  // so onSnapshot does not unsubscribe/re-subscribe on every render (target removed
+  // before ack → `INTERNAL ASSERTION FAILED ca9 {ve:-1}`). Mirror of the fitting hook.
+  const levelManagerRef = useRef(levelManager);
+  levelManagerRef.current = levelManager;
+  const currentLevelId = levelManager.currentLevelId;
+
   // Instantiate service when auth + scope ready.
   useEffect(() => {
     if (!companyId || !projectId || !floorplanId || !userId) {
@@ -141,14 +149,18 @@ export function useMepUnderfloorPersistence(
   }, [companyId, projectId, floorplanId, floorId, userId]);
 
   // Subscribe + diff-merge + selective skip locally-dirty underfloors.
+  // Keyed on STABLE primitives only (scope + currentLevelId) — NOT the per-render
+  // `levelManager` object — so onSnapshot subscribes once per real scope/level
+  // change (ca9 churn fix).
   useEffect(() => {
     const svc = serviceRef.current;
-    const levelId = levelManager.currentLevelId;
+    const levelId = currentLevelId;
     if (!svc || !levelId) return;
 
     const unsubscribe = svc.subscribeUnderfloors(
       (docs) => {
-        const scene = levelManager.getLevelScene(levelId);
+        const lm = levelManagerRef.current;
+        const scene = lm.getLevelScene(levelId);
         if (!scene) return;
 
         const docsById = new Map<string, MepUnderfloorDoc>();
@@ -217,7 +229,7 @@ export function useMepUnderfloorPersistence(
         }
 
         if (mutated) {
-          levelManager.setLevelScene(levelId, {
+          lm.setLevelScene(levelId, {
             ...scene,
             entities: [...nonUnderfloors, ...nextUnderfloors],
           });
@@ -230,7 +242,7 @@ export function useMepUnderfloorPersistence(
     );
 
     return () => unsubscribe();
-  }, [levelManager, companyId, projectId, floorplanId, floorId, userId]);
+  }, [currentLevelId, companyId, projectId, floorplanId, floorId, userId]);
 
   // Immediate persist (used by both auto-save flush and explicit button).
   const persist = useCallback(async (entity: MepUnderfloorEntity) => {

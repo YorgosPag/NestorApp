@@ -124,6 +124,18 @@ export function useMepSegmentPersistence(
   const selectedSegmentRef = useRef<MepSegmentEntity | null>(null);
   selectedSegmentRef.current = primarySelectedSegment;
 
+  // ⚡ STABILITY (ca9 fix 2026-06-08): `levelManager` is a NEW object on most
+  // renders (`useLevels` returns a fresh memo). Depending on it in the Firestore
+  // subscription effect made onSnapshot unsubscribe + re-subscribe on every render
+  // — and with pipes on canvas the reconcilers re-render in bursts, so a watch
+  // target was removed before the server acknowledged it → SDK assertion
+  // `INTERNAL ASSERTION FAILED (ID: ca9) {ve:-1}`. Read it via a ref and key the
+  // subscription off STABLE scope primitives + `currentLevelId` only (mirror of
+  // useMepFittingAutoReconciliation's render-loop fix).
+  const levelManagerRef = useRef(levelManager);
+  levelManagerRef.current = levelManager;
+  const currentLevelId = levelManager.currentLevelId;
+
   // Instantiate service when auth + scope ready.
   useEffect(() => {
     if (!companyId || !projectId || !floorplanId || !userId) {
@@ -140,14 +152,18 @@ export function useMepSegmentPersistence(
   }, [companyId, projectId, floorplanId, floorId, userId]);
 
   // Subscribe + diff-merge + selective skip locally-dirty segments.
+  // Keyed on STABLE primitives only (scope + currentLevelId) — NOT the per-render
+  // `levelManager` object — so onSnapshot subscribes once per real scope/level
+  // change (ca9 churn fix).
   useEffect(() => {
     const svc = serviceRef.current;
-    const levelId = levelManager.currentLevelId;
+    const levelId = currentLevelId;
     if (!svc || !levelId) return;
 
     const unsubscribe = svc.subscribeSegments(
       (docs) => {
-        const scene = levelManager.getLevelScene(levelId);
+        const lm = levelManagerRef.current;
+        const scene = lm.getLevelScene(levelId);
         if (!scene) return;
 
         const docsById = new Map<string, MepSegmentDoc>();
@@ -214,7 +230,7 @@ export function useMepSegmentPersistence(
         }
 
         if (mutated) {
-          levelManager.setLevelScene(levelId, {
+          lm.setLevelScene(levelId, {
             ...scene,
             entities: [...nonSegments, ...nextSegments],
           });
@@ -227,7 +243,7 @@ export function useMepSegmentPersistence(
     );
 
     return () => unsubscribe();
-  }, [levelManager, companyId, projectId, floorplanId, floorId, userId]);
+  }, [currentLevelId, companyId, projectId, floorplanId, floorId, userId]);
 
   // Immediate persist (used by auto-save flush and explicit button).
   const persist = useCallback(async (entity: MepSegmentEntity) => {
