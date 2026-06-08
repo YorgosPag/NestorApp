@@ -82,6 +82,7 @@ import {
   commitMepManifoldOutletCountGrip,
   commitMepRadiatorGripDrag,
   commitMepBoilerGripDrag,
+  commitMepWaterHeaterGripDrag,
   commitMepSegmentGripDrag,
   commitFurnitureGripDrag,
   commitFloorplanSymbolGripDrag,
@@ -221,6 +222,14 @@ export function commitDxfGripDragModeAware(
   // recomputes geometry + re-seeds connectors.
   if (grip.mepBoilerGripKind) {
     commitMepBoilerGripDrag(grip, delta, deps);
+    return;
+  }
+  // ADR-408 DHW — domestic hot water heater parametric grip path (center translate +
+  // rotation + opposite-corner-anchored width/length resize). Bypasses stretch
+  // because the water heater is params-driven; UpdateMepWaterHeaterParamsCommand
+  // recomputes geometry + re-seeds connectors.
+  if (grip.mepWaterHeaterGripKind) {
+    commitMepWaterHeaterGripDrag(grip, delta, deps);
     return;
   }
   // ADR-408 Φ8/Φ15 — MEP segment parametric grip path (start/end/midpoint

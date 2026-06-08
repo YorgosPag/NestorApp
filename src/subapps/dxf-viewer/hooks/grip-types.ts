@@ -26,6 +26,7 @@ import type {
   MepManifoldGripKind,
   MepRadiatorGripKind,
   MepBoilerGripKind,
+  MepWaterHeaterGripKind,
   FurnitureGripKind,
   FloorplanSymbolGripKind,
   MepSegmentGripKind,
@@ -53,6 +54,7 @@ export type {
   MepManifoldGripKind,
   MepRadiatorGripKind,
   MepBoilerGripKind,
+  MepWaterHeaterGripKind,
   FurnitureGripKind,
   FloorplanSymbolGripKind,
   MepSegmentGripKind,
@@ -179,6 +181,13 @@ export interface GripInfo {
    * translate + rotation + opposite-corner-anchored width/length resize).
    */
   mepBoilerGripKind?: MepBoilerGripKind;
+  /**
+   * ADR-408 DHW — parametric domestic hot water heater grip discriminator. Present
+   * only when the grip belongs to a `MepWaterHeaterEntity`; routes the commit through
+   * `applyMepWaterHeaterGripDrag()` + `UpdateMepWaterHeaterParamsCommand` (center
+   * translate + rotation + opposite-corner-anchored width/length resize).
+   */
+  mepWaterHeaterGripKind?: MepWaterHeaterGripKind;
   /**
    * ADR-410 — parametric furniture grip discriminator. Present only when the
    * grip belongs to a `FurnitureEntity`; routes the commit through

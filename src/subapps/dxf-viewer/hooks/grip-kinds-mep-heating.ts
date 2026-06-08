@@ -1,11 +1,12 @@
 /**
- * MEP heating + underfloor grip-kind discriminator unions — extracted from
+ * MEP heating + underfloor + DHW grip-kind discriminator unions — extracted from
  * `grip-kinds.ts` (SRP / Google file-size standard N.7.1).
  *
- * Contains the ADR-408 Εύρος Β grip kinds:
- *   - `MepRadiatorGripKind`  — heating radiator (terminal unit)
- *   - `MepBoilerGripKind`    — heating boiler (heat source)
- *   - `MepUnderfloorGripKind` — underfloor heating loop (area entity)
+ * Contains the ADR-408 Εύρος Β + DHW grip kinds:
+ *   - `MepRadiatorGripKind`    — heating radiator (terminal unit)
+ *   - `MepBoilerGripKind`      — heating boiler (heat source)
+ *   - `MepUnderfloorGripKind`  — underfloor heating loop (area entity)
+ *   - `MepWaterHeaterGripKind` — domestic hot water heater (DHW source)
  *
  * Re-exported from `grip-kinds.ts` for backward compatibility.
  */
@@ -35,6 +36,19 @@ export type MepBoilerGripKind =
   | 'mep-boiler-corner-nw'
   | 'mep-boiler-corner-sw'
   | 'mep-boiler-corner-se';
+
+/**
+ * ADR-408 DHW — Domestic hot water heater grip kind (parametric grip type). Routes
+ * commit through `applyMepWaterHeaterGripDrag()` + `UpdateMepWaterHeaterParamsCommand`.
+ * Full wall-parity mirror of the heating boiler (rectangular-only → no diameter).
+ */
+export type MepWaterHeaterGripKind =
+  | 'mep-water-heater-move'
+  | 'mep-water-heater-rotation'
+  | 'mep-water-heater-corner-ne'
+  | 'mep-water-heater-corner-nw'
+  | 'mep-water-heater-corner-sw'
+  | 'mep-water-heater-corner-se';
 
 /**
  * ADR-408 Εύρος Β #3 — Underfloor heating loop grip kind (parametric grip type).

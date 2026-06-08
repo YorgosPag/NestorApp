@@ -12,6 +12,7 @@
 export type {
   MepRadiatorGripKind,
   MepBoilerGripKind,
+  MepWaterHeaterGripKind,
   MepUnderfloorGripKind,
 } from './grip-kinds-mep-heating';
 

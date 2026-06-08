@@ -56,6 +56,7 @@ export {
   commitMepManifoldOutletCountGrip,
   commitMepRadiatorGripDrag,
   commitMepBoilerGripDrag,
+  commitMepWaterHeaterGripDrag,
   commitFurnitureGripDrag,
   commitFloorplanSymbolGripDrag,
 } from './grip-parametric-centred-box-commits';

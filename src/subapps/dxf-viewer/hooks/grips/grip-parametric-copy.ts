@@ -47,6 +47,10 @@ import type { MepBoilerEntity } from '../../bim/types/mep-boiler-types';
 import { applyMepBoilerGripDrag } from '../../bim/mep-boilers/mep-boiler-grips';
 import { buildMepBoilerEntity } from '../drawing/mep-boiler-completion';
 import { addMepBoilerToScene } from '../../bim/mep-boilers/add-mep-boiler-to-scene';
+import type { MepWaterHeaterEntity } from '../../bim/types/mep-water-heater-types';
+import { applyMepWaterHeaterGripDrag } from '../../bim/mep-water-heaters/mep-water-heater-grips';
+import { buildMepWaterHeaterEntity } from '../drawing/mep-water-heater-completion';
+import { addMepWaterHeaterToScene } from '../../bim/mep-water-heaters/add-mep-water-heater-to-scene';
 import type { FurnitureEntity } from '../../bim/types/furniture-types';
 import { applyFurnitureGripDrag } from '../../bim/furniture/furniture-grips';
 import { buildFurnitureEntity } from '../drawing/furniture-completion';
@@ -292,6 +296,34 @@ export function commitMepBoilerCopy(
 }
 
 /**
+ * ADR-408 DHW — Ctrl-COPY at the terminal click of a domestic hot water heater
+ * MOVE hot-grip (AutoCAD MOVE→COPY). Mirror of `commitMepBoilerCopy`: builds a NEW
+ * `MepWaterHeaterEntity` whose params are the original shifted by `delta` (the same
+ * `mep-water-heater-move` whole-entity translate the MOVE uses) and inserts it via
+ * the shared `addMepWaterHeaterToScene` SSoT — fresh enterprise ID (N.6, via
+ * `buildMepWaterHeaterEntity` → `createMepWaterHeater`), `drawing:entity-created`
+ * broadcast so persistence saves the copy. Original untouched; single copy.
+ */
+export function commitMepWaterHeaterCopy(
+  grip: UnifiedGripInfo,
+  delta: Point2D,
+  deps: DxfCommitDeps,
+): void {
+  if (!grip.entityId || grip.mepWaterHeaterGripKind !== 'mep-water-heater-move') return;
+  const sceneManager = createSceneManagerAdapter(deps);
+  if (!sceneManager) return;
+  const raw = sceneManager.getEntity(grip.entityId);
+  if (!raw) return;
+  const candidate = raw as unknown as Partial<MepWaterHeaterEntity>;
+  if (candidate.type !== 'mep-water-heater' || !candidate.params) return;
+  const waterHeater = candidate as MepWaterHeaterEntity;
+  const translated = applyMepWaterHeaterGripDrag('mep-water-heater-move', { originalParams: waterHeater.params, delta });
+  const built = buildMepWaterHeaterEntity(translated, waterHeater.layerId);
+  if (!built.ok) return;
+  addMepWaterHeaterToScene(built.entity, deps);
+}
+
+/**
  * ADR-410 — Ctrl-COPY at the terminal click of a furniture MOVE hot-grip
  * (AutoCAD MOVE→COPY). Mirror of `commitMepFixtureCopy`: builds a NEW
  * `FurnitureEntity` whose params are the original shifted by `delta` (the same
@@ -389,6 +421,10 @@ export function commitHotGripCopy(
   }
   if (grip.mepBoilerGripKind === 'mep-boiler-move') {
     commitMepBoilerCopy(grip, delta, deps);
+    return true;
+  }
+  if (grip.mepWaterHeaterGripKind === 'mep-water-heater-move') {
+    commitMepWaterHeaterCopy(grip, delta, deps);
     return true;
   }
   if (grip.furnitureGripKind === 'furniture-move') {

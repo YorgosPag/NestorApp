@@ -32,6 +32,9 @@ import { UpdateMepRadiatorParamsCommand } from '../../core/commands/entity-comma
 import type { MepBoilerEntity } from '../../bim/types/mep-boiler-types';
 import { applyMepBoilerGripDrag } from '../../bim/mep-boilers/mep-boiler-grips';
 import { UpdateMepBoilerParamsCommand } from '../../core/commands/entity-commands/UpdateMepBoilerParamsCommand';
+import type { MepWaterHeaterEntity } from '../../bim/types/mep-water-heater-types';
+import { applyMepWaterHeaterGripDrag } from '../../bim/mep-water-heaters/mep-water-heater-grips';
+import { UpdateMepWaterHeaterParamsCommand } from '../../core/commands/entity-commands/UpdateMepWaterHeaterParamsCommand';
 import { applyFurnitureGripDrag } from '../../bim/furniture/furniture-grips';
 import { UpdateFurnitureParamsCommand } from '../../core/commands/entity-commands/UpdateFurnitureParamsCommand';
 import type { FloorplanSymbolEntity } from '../../bim/types/floorplan-symbol-types';
@@ -337,6 +340,53 @@ export function commitMepBoilerGripDrag(
   if (command.validate() !== null) return;
   deps.execute(command);
   EventBus.emit('bim:mep-boiler-params-updated', { boilerId: grip.entityId });
+}
+
+/**
+ * ADR-408 DHW — Parametric domestic hot water heater grip commit (centre translate +
+ * rotation + opposite-corner-anchored width/length resize). Bypasses stretch/move
+ * because `MepWaterHeaterEntity` is params-driven; `UpdateMepWaterHeaterParamsCommand`
+ * recomputes geometry + validation + re-seeds connectors atomically. Merge window
+ * enabled (isDragging=true) collapses a continuous drag into one undo entry
+ * (ADR-031). ORTHO (F8) read from `cadToggleState`. 1:1 mirror of
+ * `commitMepBoilerGripDrag`.
+ */
+export function commitMepWaterHeaterGripDrag(
+  grip: UnifiedGripInfo,
+  delta: Point2D,
+  deps: DxfCommitDeps,
+): void {
+  if (!grip.entityId || !grip.mepWaterHeaterGripKind) return;
+  const sceneManager = createSceneManagerAdapter(deps);
+  if (!sceneManager) return;
+  const raw = sceneManager.getEntity(grip.entityId);
+  if (!raw) return;
+  const candidate = raw as unknown as Partial<MepWaterHeaterEntity>;
+  if (candidate.type !== 'mep-water-heater' || !candidate.params) return;
+  const originalParams = candidate.params;
+  const rotateCtx = BimRotateHotGripStore.getSnapshot();
+  const useRotatePivot =
+    grip.mepWaterHeaterGripKind === 'mep-water-heater-rotation' && rotateCtx.pivot !== null && rotateCtx.anchor !== null;
+  const anchor: Point2D = useRotatePivot ? rotateCtx.anchor! : grip.position;
+  const currentPos: Point2D = { x: anchor.x + delta.x, y: anchor.y + delta.y };
+  const newParams = applyMepWaterHeaterGripDrag(grip.mepWaterHeaterGripKind, {
+    originalParams,
+    delta,
+    currentPos,
+    ortho: cadToggleState.isOrthoOn(),
+    ...(useRotatePivot ? { pivot: rotateCtx.pivot! } : {}),
+  });
+  if (newParams === originalParams) return;
+  const command = new UpdateMepWaterHeaterParamsCommand(
+    grip.entityId,
+    newParams,
+    originalParams,
+    sceneManager,
+    true,
+  );
+  if (command.validate() !== null) return;
+  deps.execute(command);
+  EventBus.emit('bim:mep-water-heater-params-updated', { waterHeaterId: grip.entityId });
 }
 
 /**

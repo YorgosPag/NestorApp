@@ -10,7 +10,7 @@
  */
 
 import type { Point2D } from '../../rendering/types/Types';
-import type { StairGripKind, DimensionGripKind, WallGripKind, OpeningGripKind, SlabGripKind, SlabOpeningGripKind, RoofGripKind, FloorFinishGripKind, MepUnderfloorGripKind, BeamGripKind, ColumnGripKind, MepFixtureGripKind, ElectricalPanelGripKind, MepManifoldGripKind, MepRadiatorGripKind, MepBoilerGripKind, MepSegmentGripKind, FurnitureGripKind, FloorplanSymbolGripKind, XLineGripKind, RayGripKind } from '../useGripMovement';
+import type { StairGripKind, DimensionGripKind, WallGripKind, OpeningGripKind, SlabGripKind, SlabOpeningGripKind, RoofGripKind, FloorFinishGripKind, MepUnderfloorGripKind, BeamGripKind, ColumnGripKind, MepFixtureGripKind, ElectricalPanelGripKind, MepManifoldGripKind, MepRadiatorGripKind, MepBoilerGripKind, MepWaterHeaterGripKind, MepSegmentGripKind, FurnitureGripKind, FloorplanSymbolGripKind, XLineGripKind, RayGripKind } from '../useGripMovement';
 import type {
   DxfGripDragPreview,
   DxfGripInteractionState,
@@ -227,6 +227,13 @@ export interface UnifiedGripInfo {
    * translate + rotation + opposite-corner-anchored width/length resize).
    */
   readonly mepBoilerGripKind?: MepBoilerGripKind;
+  /**
+   * ADR-408 DHW — parametric domestic hot water heater grip discriminator (forwarded
+   * from `GripInfo.mepWaterHeaterGripKind`). Routes commit through
+   * `applyMepWaterHeaterGripDrag()` + `UpdateMepWaterHeaterParamsCommand` (center
+   * translate + rotation + opposite-corner-anchored width/length resize).
+   */
+  readonly mepWaterHeaterGripKind?: MepWaterHeaterGripKind;
   /**
    * ADR-408 Φ8/Φ15 — parametric MEP segment grip discriminator (forwarded from
    * `GripInfo.mepSegmentGripKind`). Routes commit through

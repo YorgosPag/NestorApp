@@ -11,8 +11,7 @@
 
 import type { Point2D } from '../rendering/types/Types';
 import type { DxfEntityUnion } from '../canvas-v2/dxf-canvas/dxf-types';
-import type { GripInfo, StairGripKind, WallGripKind } from './useGripMovement';
-import type { ColumnGripKind, BeamGripKind, SlabGripKind, SlabOpeningGripKind, RoofGripKind, OpeningGripKind, MepFixtureGripKind, ElectricalPanelGripKind, MepManifoldGripKind, MepRadiatorGripKind, MepBoilerGripKind, FurnitureGripKind, FloorplanSymbolGripKind, MepSegmentGripKind, FloorFinishGripKind, MepUnderfloorGripKind } from './grip-types';
+import type { GripInfo } from './useGripMovement';
 import type { WallEntity } from '../bim/types/wall-types';
 import type { BeamEntity } from '../bim/types/beam-types';
 import type { ColumnEntity } from '../bim/types/column-types';
@@ -23,6 +22,7 @@ import type { ElectricalPanelEntity } from '../bim/types/electrical-panel-types'
 import type { MepManifoldEntity } from '../bim/types/mep-manifold-types';
 import type { MepRadiatorEntity } from '../bim/types/mep-radiator-types';
 import type { MepBoilerEntity } from '../bim/types/mep-boiler-types';
+import type { MepWaterHeaterEntity } from '../bim/types/mep-water-heater-types';
 import type { FurnitureEntity } from '../bim/types/furniture-types';
 import type { FloorplanSymbolEntity } from '../bim/types/floorplan-symbol-types';
 import type { MepSegmentEntity } from '../bim/types/mep-segment-types';
@@ -42,6 +42,7 @@ import { getElectricalPanelGrips } from '../bim/electrical-panels/electrical-pan
 import { getMepManifoldGrips } from '../bim/mep-manifolds/mep-manifold-grips';
 import { getMepRadiatorGrips } from '../bim/mep-radiators/mep-radiator-grips';
 import { getMepBoilerGrips } from '../bim/mep-boilers/mep-boiler-grips';
+import { getMepWaterHeaterGrips } from '../bim/mep-water-heaters/mep-water-heater-grips';
 import { getFurnitureGrips } from '../bim/furniture/furniture-grips';
 import { getFloorplanSymbolGrips } from '../bim/floorplan-symbols/floorplan-symbol-grips';
 import { getMepSegmentGrips } from '../bim/mep-segments/mep-segment-grips';
@@ -53,151 +54,16 @@ import { getXLineGrips } from '../systems/xline/xline-grips';
 import { getRayGrips } from '../systems/ray/ray-grips';
 
 // ============================================================================
-// TYPES (still used by grips/ modules and CanvasLayerStack)
+// TYPES — extracted to grip-computation-types.ts (re-exported for compat)
 // ============================================================================
 
-/** Interaction phase of the grip state machine */
-export type GripPhase = 'idle' | 'hovering' | 'warm' | 'dragging';
-
-/** Unique grip identifier for rendering pipeline */
-export interface GripIdentifier {
-  entityId: string;
-  gripIndex: number;
-}
-
-/** Drag preview data for live rendering */
-export interface DxfGripDragPreview {
-  entityId: string;
-  gripIndex: number;
-  delta: Point2D;
-  movesEntity: boolean;
-  edgeVertexIndices?: [number, number];
-  /**
-   * ADR-358 Phase 5d — parametric stair drag-preview discriminator. Set when
-   * the active grip is a `stair-*` kind; consumed by `applyEntityPreview` to
-   * route through `applyStairGripDrag` + `computeStairGeometry` for the live
-   * ghost. `anchorPos` carries the grip world position captured at mouseDown
-   * so the preview can reconstruct `currentPos = anchorPos + delta` (the same
-   * value the commit path uses).
-   */
-  stairGripKind?: StairGripKind;
-  anchorPos?: Point2D;
-  /**
-   * ADR-363 Phase 1C — parametric wall grip discriminator. Routes live preview
-   * through `applyWallGripDrag` + `computeWallGeometry` (mirrors stair pattern).
-   */
-  wallGripKind?: WallGripKind;
-  /**
-   * ADR-363 Phase 4.5c.5 — parametric column/beam grip discriminators. Set
-   * when the active grip is a dimensional column or beam grip; consumed by
-   * `useGripDimAnnotation` to render a live "w=350mm" label on the preview
-   * canvas. Non-dimensional grips (center, rotation, start/end) are omitted.
-   */
-  columnGripKind?: ColumnGripKind;
-  beamGripKind?: BeamGripKind;
-  slabGripKind?: SlabGripKind;
-  slabOpeningGripKind?: SlabOpeningGripKind;
-  openingGripKind?: OpeningGripKind;
-  /**
-   * ADR-406 — parametric MEP fixture grip discriminator. Routes the live ghost
-   * through `applyMepFixtureGripDrag` + `computeMepFixtureGeometry`.
-   */
-  mepFixtureGripKind?: MepFixtureGripKind;
-  /**
-   * ADR-408 Φ3 — parametric electrical panel grip discriminator. Routes the live
-   * ghost through `applyElectricalPanelGripDrag` + `computeElectricalPanelGeometry`.
-   */
-  electricalPanelGripKind?: ElectricalPanelGripKind;
-  /**
-   * ADR-408 Φ12 — parametric MEP manifold grip discriminator. Routes the live
-   * ghost through `applyMepManifoldGripDrag` + `computeMepManifoldGeometry`.
-   */
-  mepManifoldGripKind?: MepManifoldGripKind;
-  /**
-   * ADR-408 Εύρος Β — parametric heating radiator grip discriminator. Routes the
-   * live ghost through `applyMepRadiatorGripDrag` + `computeMepRadiatorGeometry`.
-   */
-  mepRadiatorGripKind?: MepRadiatorGripKind;
-  /**
-   * ADR-408 Εύρος Β #2 — parametric heating boiler grip discriminator. Routes the
-   * live ghost through `applyMepBoilerGripDrag` + `computeMepBoilerGeometry`.
-   */
-  mepBoilerGripKind?: MepBoilerGripKind;
-  /**
-   * ADR-410 — parametric furniture grip discriminator. Routes the live ghost
-   * through `applyFurnitureGripDrag` + `computeFurnitureGeometry`.
-   */
-  furnitureGripKind?: FurnitureGripKind;
-  /**
-   * ADR-415 — parametric floorplan-symbol grip discriminator. Routes the live ghost
-   * through `applyFloorplanSymbolGripDrag` + `computeFloorplanSymbolGeometry`.
-   */
-  floorplanSymbolGripKind?: FloorplanSymbolGripKind;
-  /**
-   * ADR-408 Φ8 — parametric MEP segment grip discriminator. Routes the live ghost
-   * through `applyMepSegmentGripDrag` + `computeMepSegmentGeometry`.
-   */
-  mepSegmentGripKind?: MepSegmentGripKind;
-  /**
-   * ADR-417 Φ1-part-2 #2 — parametric roof grip discriminator. Routes the live
-   * ghost through `applyRoofGripDrag` (params-only; `draw-ghost-entity` paints
-   * the new footprint outline).
-   */
-  roofGripKind?: RoofGripKind;
-  /**
-   * ADR-419 — parametric floor-finish grip discriminator. Routes the live ghost
-   * through `applyFloorFinishGripDrag` (params-only; footprint polygon redrawn).
-   */
-  floorFinishGripKind?: FloorFinishGripKind;
-  /**
-   * ADR-408 Εύρος Β #3 — parametric underfloor heating loop grip discriminator.
-   * Routes the live ghost through `applyMepUnderfloorGripDrag` (params-only;
-   * footprint polygon + serpentine path redrawn).
-   */
-  mepUnderfloorGripKind?: MepUnderfloorGripKind;
-  /**
-   * ADR-363 Phase 1G — set when the active grip is a wall corner being moved via
-   * the hot-grip (click-click) state. Consumed by `useGripGhostPreview` to draw
-   * the dashed rubber-band leader from `anchorPos` → cursor (anchorPos + delta).
-   */
-  hotGrip?: boolean;
-  /**
-   * ADR-363 Phase 1G — rotation centre for the `wall-rotation` hot-grip. When set
-   * the live ghost rotates around it (passed to `applyWallGripDrag` as `pivot`).
-   */
-  rotatePivot?: Point2D;
-  /**
-   * ADR-363 Phase 1G.3 — rotate-reference (6-click) guide segments, drawn dashed
-   * by `useGripGhostPreview` (display-only; NOT consumed by `applyEntityPreview`).
-   * `rotateRefLine` = the existing/reference direction the user traced (2 clicks);
-   * `rotateAlignLine` = the target/alignment direction being traced live. The wall
-   * spins by `angle(align) − angle(ref)` around `rotatePivot`.
-   */
-  rotateRefLine?: { from: Point2D; to: Point2D };
-  rotateAlignLine?: { from: Point2D; to: Point2D };
-}
-
-/** Grip interaction state for rendering pipeline */
-export interface DxfGripInteractionState {
-  hoveredGrip?: GripIdentifier;
-  activeGrip?: GripIdentifier;
-}
-
-/** Return type of useDxfGripInteraction */
-export interface UseDxfGripInteractionReturn {
-  gripInteractionState: DxfGripInteractionState;
-  isDraggingGrip: boolean;
-  /** @deprecated Use isDraggingGrip */
-  isFollowingGrip: boolean;
-  handleGripMouseMove: (worldPos: Point2D, screenPos: Point2D) => boolean;
-  handleGripMouseDown: (worldPos: Point2D) => boolean;
-  handleGripMouseUp: (worldPos: Point2D) => boolean;
-  /** @deprecated No-op in drag-release model */
-  handleGripClick: (worldPos: Point2D) => boolean;
-  handleGripEscape: () => boolean;
-  handleGripRightClick: () => boolean;
-  dragPreview: DxfGripDragPreview | null;
-}
+export type {
+  GripPhase,
+  GripIdentifier,
+  DxfGripDragPreview,
+  DxfGripInteractionState,
+  UseDxfGripInteractionReturn,
+} from './grip-computation-types';
 
 // ============================================================================
 // PURE: Compute grips from DXF entity geometry
@@ -423,6 +289,13 @@ export function computeDxfEntityGrips(entity: DxfEntityUnion): GripInfo[] {
       // ADR-408 Εύρος Β #2 — parametric heating boiler grips (move + rotation + 4
       // corner resize, rectangular-only). 1:1 mirror of mep-radiator.
       grips.push(...getMepBoilerGrips(entity as unknown as MepBoilerEntity));
+      break;
+    }
+
+    case 'mep-water-heater': {
+      // ADR-408 DHW — parametric domestic hot water heater grips (move + rotation + 4
+      // corner resize, rectangular-only). 1:1 mirror of mep-boiler.
+      grips.push(...getMepWaterHeaterGrips(entity as unknown as MepWaterHeaterEntity));
       break;
     }
 
