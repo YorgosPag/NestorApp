@@ -18,8 +18,8 @@
 
 import type { Point2D } from '../../rendering/types/Types';
 
-/** Fixed screen radius (px) of the riser circle glyph. */
-export const RISER_SYMBOL_RADIUS_PX = 9;
+/** Fixed screen radius (px) of the riser circle glyph (Revit-grade visible annotation). */
+export const RISER_SYMBOL_RADIUS_PX = 12;
 
 /** A line stroke of the glyph (screen-space). */
 export type RiserSymbolStroke = readonly [Point2D, Point2D];
