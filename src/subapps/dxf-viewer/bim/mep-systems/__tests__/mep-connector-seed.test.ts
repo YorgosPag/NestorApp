@@ -25,6 +25,13 @@ const legacyPanel = (id = 'pnl1'): Entity =>
 const legacySegment = (domain: 'duct' | 'pipe' = 'pipe', id = 'seg1'): Entity =>
   ({ type: 'mep-segment', id, params: { domain } } as unknown as Entity);
 
+const legacySanitary = (kind = 'washbasin', id = 'wb1'): Entity =>
+  ({ type: 'mep-fixture', id, params: { kind, sceneUnits: 'mm' } } as unknown as Entity);
+
+const classesOf = (seeded: Entity): Array<string | undefined> =>
+  (seeded as { params: { connectors: Array<{ pipe?: { systemClassification: string } }> } })
+    .params.connectors.map((c) => c.pipe?.systemClassification);
+
 describe('seedDefaultConnectors', () => {
   it('seeds a legacy fixture with the default lighting power-in connector', () => {
     const seeded = seedDefaultConnectors(legacyFixture());
@@ -33,6 +40,19 @@ describe('seedDefaultConnectors', () => {
     expect(connectors[0].connectorId).toBe(FIXTURE_POWER_CONNECTOR_ID);
     expect(connectors[0].flow).toBe('in');
     expect(connectors[0].domain).toBe('electrical');
+  });
+
+  it('self-heals a legacy sanitary fixture with drain + cold + hot connectors', () => {
+    const classes = classesOf(seedDefaultConnectors(legacySanitary('washbasin')));
+    expect(classes).toContain('sanitary-drainage');
+    expect(classes).toContain('domestic-cold-water');
+    expect(classes).toContain('domestic-hot-water'); // a washbasin mixes hot water
+  });
+
+  it('self-heals a legacy WC cold-only (no hot connector)', () => {
+    const classes = classesOf(seedDefaultConnectors(legacySanitary('wc', 'wc1')));
+    expect(classes).toContain('domestic-cold-water');
+    expect(classes).not.toContain('domestic-hot-water');
   });
 
   it('seeds a legacy electrical panel with the default power-out connector', () => {

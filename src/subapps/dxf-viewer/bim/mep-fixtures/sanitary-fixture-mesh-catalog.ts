@@ -105,6 +105,22 @@ export const SANITARY_MESH_CATALOG: readonly SanitaryFixtureMeshPreset[] = [
     mountingElevationMm: 0,
     source: 'Curved Modern WC CC Open by attilakozma (CC-BY) — sketchfab.com/3d-models/curved-modern-wc-cc-open-de07cccdb657428cadc06f6bb96a551d',
   },
+  {
+    id: 'wc_realistic_02',
+    kind: 'wc',
+    labelKey: 'mepFixture.catalog.wcRealistic02',
+    // Measured from the real glTF world bbox (close-coupled floor-standing WC with
+    // cistern, real-world meters): X=410, Y(up)=893, Z=729 mm — a standard WC plan
+    // footprint (410 wide × 729 deep). 5 sub-meshes (bowl/cistern/lid) = ONE fixture
+    // (the "Collection" name notwithstanding). Origin near-centred X/Z; `min.y ≈ 0`
+    // sits it on the floor (base anchor). NOTE: ~150k faces (heavier than the ~50k
+    // soft budget) — a premium model; acceptable for a single fixture.
+    widthMm: 410,
+    depthMm: 729,
+    heightMm: 893,
+    mountingElevationMm: 0,
+    source: 'Homested VorMax Collection by Livspace (CC-BY) — sketchfab.com/3d-models/homested-vormax-collection-f20c8df073a24fd588e9102198986b4f',
+  },
 ] as const;
 
 /** Resolve a catalog preset by id. Returns `undefined` for an unknown asset. */

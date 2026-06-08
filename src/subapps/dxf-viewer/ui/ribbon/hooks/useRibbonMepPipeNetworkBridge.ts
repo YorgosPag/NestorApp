@@ -27,7 +27,6 @@
 import { useCallback, useMemo } from 'react';
 
 import type { Entity } from '../../../types/entities';
-import { isMepSegmentEntity } from '../../../types/entities';
 import { useCommandHistory, CompoundCommand, type ICommand } from '../../../core/commands';
 import { CreateMepSystemCommand } from '../../../core/commands/entity-commands/CreateMepSystemCommand';
 import { UpdateMepSystemParamsCommand } from '../../../core/commands/entity-commands/UpdateMepSystemParamsCommand';
@@ -117,8 +116,11 @@ export function useRibbonMepPipeNetworkBridge(
       return;
     }
     const systems = useMepSystemStore.getState().getSystems();
-    const segments = resolveSelectedEntities().filter(isMepSegmentEntity);
-    const plan = buildAddPipeMembersUpdate(active, segments, systems);
+    // Pass all selected entities — buildAddPipeMembersUpdate admits both pipe segments
+    // and sanitary fixtures (the latter join via their cold/hot connector of the
+    // network's classification).
+    const candidates = resolveSelectedEntities();
+    const plan = buildAddPipeMembersUpdate(active, candidates, systems);
     if (!plan) {
       EventBus.emit('bim:mep-network-edit-failed', { reason: 'addFailed' });
       return;

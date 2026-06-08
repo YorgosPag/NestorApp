@@ -156,16 +156,24 @@ export function resolvePipeNetworkFromSelection(
  */
 export function buildAddPipeMembersUpdate(
   activeNetwork: MepSystemEntity,
-  segmentsToAdd: readonly Entity[],
+  entitiesToAdd: readonly Entity[],
   allSystems: readonly MepSystemEntity[],
 ): { readonly update: MepSystemParamsUpdate; readonly reassignRemovals: readonly MepMemberRemoval[]; readonly addedCount: number } | null {
   const existing = new Set(
     activeNetwork.params.members.map((m) => memberKey(m.entityId, m.connectorId)),
   );
+  // A fixture joins through its connector of THIS network's classification (cold/hot);
+  // a pipe contributes both endpoints regardless (it is wholly in one network).
+  const classification = activeNetwork.params.systemClassification as PlumbingSystemClassification;
   const newMembers: MepSystemMember[] = [];
-  for (const segment of segmentsToAdd) {
-    if (!isMepSegmentEntity(segment) || segment.params.domain !== 'pipe') continue;
-    for (const member of pipeSegmentMembers(segment)) {
+  for (const entity of entitiesToAdd) {
+    const candidateMembers: readonly MepSystemMember[] =
+      isMepSegmentEntity(entity) && entity.params.domain === 'pipe'
+        ? pipeSegmentMembers(entity)
+        : isMepFixtureEntity(entity)
+          ? fixtureMembersForClassification(entity, classification)
+          : [];
+    for (const member of candidateMembers) {
       if (existing.has(memberKey(member.entityId, member.connectorId))) continue;
       existing.add(memberKey(member.entityId, member.connectorId));
       newMembers.push(member);

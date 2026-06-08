@@ -3027,7 +3027,8 @@
       "showerRealistic01": "Realistic Shower Cabin (3D)",
       "showerTray01": "Square Shower Tray 125×125 (3D)",
       "showerTray02": "Slim Shower Tray 90×90 (3D)",
-      "wcRealistic01": "Realistic WC Pan (3D)"
+      "wcRealistic01": "Realistic WC Pan (3D)",
+      "wcRealistic02": "VorMax WC Pan (3D)"
     },
     "validation": {
       "hardErrors": {

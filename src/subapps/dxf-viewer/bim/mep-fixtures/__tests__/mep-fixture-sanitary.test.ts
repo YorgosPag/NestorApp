@@ -72,7 +72,7 @@ describe('ADR-408 Φ14 — sanitary fixture kinds', () => {
 
   describe('buildDefaultMepFixtureParams — sanitary kinds', () => {
     for (const kind of SANITARY_KINDS) {
-      it(`'${kind}' uses the SANITARY_SPEC footprint + a DN drain outlet, floor-standing`, () => {
+      it(`'${kind}' uses the SANITARY_SPEC footprint + drain + water-supply connectors, floor-standing`, () => {
         const params = buildDefaultMepFixtureParams({ x: 5, y: 7 }, { kind });
         const spec = SANITARY_SPEC[kind];
         expect(params.kind).toBe(kind);
@@ -81,12 +81,19 @@ describe('ADR-408 Φ14 — sanitary fixture kinds', () => {
         expect(params.length).toBe(spec.depthMm);
         expect(params.mountingElevationMm).toBe(0); // floor-standing (FFL)
         expect(params.position).toEqual({ x: 5, y: 7, z: 0 });
-        // exactly one sanitary-drainage outlet sized by the spec's DN
-        expect(params.connectors).toHaveLength(1);
-        const c = params.connectors![0]!;
-        expect(c.flow).toBe('out');
-        expect(c.pipe?.systemClassification).toBe('sanitary-drainage');
-        expect(c.pipe?.diameterMm).toBe(spec.drainDiameterMm);
+        const connectors = params.connectors ?? [];
+        // gravity drain outlet (always), sized by the spec's DN
+        const drain = connectors.find((c) => c.pipe?.systemClassification === 'sanitary-drainage');
+        expect(drain?.flow).toBe('out');
+        expect(drain?.pipe?.diameterMm).toBe(spec.drainDiameterMm);
+        // cold-water supply inlet (always)
+        const cold = connectors.find((c) => c.pipe?.systemClassification === 'domestic-cold-water');
+        expect(cold?.flow).toBe('in');
+        // hot-water supply inlet iff the kind mixes hot water (a WC is cold-only)
+        const hot = connectors.find((c) => c.pipe?.systemClassification === 'domestic-hot-water');
+        expect(hot !== undefined).toBe(spec.supply.hot);
+        // total = drain + cold + (hot ? 1 : 0)
+        expect(connectors).toHaveLength(2 + (spec.supply.hot ? 1 : 0));
       });
     }
 

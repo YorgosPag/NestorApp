@@ -40,6 +40,22 @@ function duct(id: string): Entity {
   return { type: 'mep-segment', id, params: { domain: 'duct' } } as unknown as Entity;
 }
 
+/** A sanitary fixture (washbasin) with drain + cold + hot water connectors. */
+function sanitaryFixture(id: string): Entity {
+  return {
+    type: 'mep-fixture',
+    id,
+    params: {
+      kind: 'washbasin',
+      connectors: [
+        { connectorId: 'san-drain', domain: 'pipe', flow: 'out', localPosition: { x: 0, y: 0, z: 0 }, pipe: { systemClassification: 'sanitary-drainage', diameterMm: 40 } },
+        { connectorId: 'san-cold', domain: 'pipe', flow: 'in', localPosition: { x: -1, y: 1, z: 0 }, pipe: { systemClassification: 'domestic-cold-water', diameterMm: 15 } },
+        { connectorId: 'san-hot', domain: 'pipe', flow: 'in', localPosition: { x: 1, y: 1, z: 0 }, pipe: { systemClassification: 'domestic-hot-water', diameterMm: 15 } },
+      ],
+    },
+  } as unknown as Entity;
+}
+
 function net(id: string, members: Array<[string, string]>, source = 'mfldX'): MepSystemEntity {
   const params: MepSystemParams = {
     systemType: 'pipe-network',
@@ -93,6 +109,16 @@ describe('resolvePipeNetworkFromSelection', () => {
     if (res.ok) expect(res.draft.systemClassification).toBe('domestic-cold-water');
   });
 
+  it('admits a sanitary fixture as a member via its matching-classification connector', () => {
+    // manifold defaults to domestic-cold-water → only the fixture's cold inlet joins.
+    const res = resolvePipeNetworkFromSelection([manifold('m1'), pipe('p1'), sanitaryFixture('wb1')], []);
+    expect(res.ok).toBe(true);
+    if (!res.ok) return;
+    expect(res.draft.members).toContainEqual({ entityId: 'wb1', connectorId: 'san-cold' });
+    expect(res.draft.members).not.toContainEqual({ entityId: 'wb1', connectorId: 'san-hot' });
+    expect(res.draft.members).not.toContainEqual({ entityId: 'wb1', connectorId: 'san-drain' });
+  });
+
   it('fails with no-source when no manifold is selected', () => {
     const res = resolvePipeNetworkFromSelection([pipe('p1')], []);
     expect(res).toEqual({ ok: false, reason: 'no-source' });
@@ -144,5 +170,13 @@ describe('buildAddPipeMembersUpdate', () => {
   it('ignores duct segments in the add selection', () => {
     const active = net('A', [], 'mfld1');
     expect(buildAddPipeMembersUpdate(active, [duct('d1')], [active])).toBeNull();
+  });
+
+  it('adds a sanitary fixture to a cold-water network via its cold connector only', () => {
+    const active = net('A', [], 'mfld1'); // classification domestic-cold-water
+    const plan = buildAddPipeMembersUpdate(active, [sanitaryFixture('wb1')], [active]);
+    expect(plan).not.toBeNull();
+    expect(plan!.addedCount).toBe(1);
+    expect(plan!.update.nextParams.members).toEqual([{ entityId: 'wb1', connectorId: 'san-cold' }]);
   });
 });
