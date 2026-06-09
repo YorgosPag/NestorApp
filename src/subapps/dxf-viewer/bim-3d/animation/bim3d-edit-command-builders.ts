@@ -19,8 +19,12 @@
 import type { Point2D } from '../../rendering/types/Types';
 import type { Entity } from '../../types/entities';
 import type { SceneEntity } from '../../core/commands/interfaces';
-import { isMepSegmentEntity } from '../../types/entities';
+import { isMepSegmentEntity, isWallEntity } from '../../types/entities';
 import type { MepSegmentParams } from '../../bim/types/mep-segment-types';
+import type { OpeningEntity } from '../../bim/types/opening-types';
+import type { WallEntity } from '../../bim/types/wall-types';
+import { resolveOpeningAltMove, openingRehostToleranceWorld } from '../../bim/walls/opening-grips';
+import { UpdateOpeningParamsCommand } from '../../core/commands/entity-commands/UpdateOpeningParamsCommand';
 import { mmToEntityUnitFactor } from '../utils/bim3d-edit-math';
 import { createSceneManagerAdapter } from '../../hooks/grips/grip-commit-adapters';
 import { MoveEntityCommand, MoveMultipleEntitiesCommand } from '../../core/commands/entity-commands/MoveEntityCommand';
@@ -98,6 +102,8 @@ export type EditCommand =
   | UpdateMepRadiatorParamsCommand
   | UpdateMepBoilerParamsCommand
   | UpdateMepWaterHeaterParamsCommand
+  // ADR-363 Φ1G.5 Slice 2 — a hosted opening move re-hosts/slides (Update, not Move).
+  | UpdateOpeningParamsCommand
   // ADR-402 — multi-select vertical move batches per-entity elevation edits.
   | CompoundCommand;
 export type SceneManager = NonNullable<ReturnType<typeof createSceneManagerAdapter>>;
@@ -200,6 +206,14 @@ export function buildEditCommand(outcome: BridgeOutcome, c: CommandBuildCtx): Ed
     const primary = entitiesAll.find((e) => e.id === c.entityId);
     const f = primary ? mmToEntityUnitFactor(primary) : 1;
     const delta = f === 1 ? masked : { x: masked.x * f, y: masked.y * f };
+    // ADR-363 Φ1G.5 Slice 2 — a hosted opening cannot free-translate: in 3D it
+    // slides along its wall, or RE-HOSTS to another wall (Revit «Pick New Host»),
+    // through the SAME SSoT as the 2D grip path (`resolveOpeningAltMove`). The
+    // re-sync rebuilds the wall meshes with the hole on the resolved host (auto
+    // rotation + thickness). Single-select only (it rewrites one opening's params).
+    if (c.entityIds.length === 1 && primary?.type === 'opening') {
+      return buildOpeningRehostMoveCommand(primary as OpeningEntity, delta, entitiesAll, c.sm);
+    }
     const moveBase: EditCommand =
       c.entityIds.length > 1
         ? new MoveMultipleEntitiesCommand([...c.entityIds], delta, c.sm, false)
@@ -233,6 +247,37 @@ export function buildEditCommand(outcome: BridgeOutcome, c: CommandBuildCtx): Ed
   // ADR-408 Φ-D — endpoint move (linear MEP segment) is single-entity only.
   if (outcome.kind === 'endpoint-move') return c.entityIds.length === 1 ? buildEndpointMoveCommand(outcome, c) : null;
   return null;
+}
+
+/**
+ * ADR-363 Φ1G.5 Slice 2 — 3D move of a hosted opening → slide along its wall or
+ * RE-HOST onto another wall, via the SSoT shared with the 2D grip path
+ * (`resolveOpeningAltMove`). The opening's current world centre is the base point;
+ * `delta` (already in native canvas units) translates it. The resolved params land
+ * through `UpdateOpeningParamsCommand`, which recomputes geometry against the
+ * resolved host (auto rotation + thickness). `null` = no-op / missing host.
+ */
+function buildOpeningRehostMoveCommand(
+  opening: OpeningEntity,
+  delta: Point2D,
+  entities: readonly Entity[],
+  sm: SceneManager,
+): EditCommand | null {
+  const currentHost = entities.find(
+    (e): e is WallEntity => e.id === opening.params.wallId && e.type === 'wall',
+  );
+  if (!currentHost) return null;
+  const center: Point2D = { x: opening.geometry.position.x, y: opening.geometry.position.y };
+  const resolved = resolveOpeningAltMove({
+    originalParams: opening.params,
+    basePoint: center,
+    currentPos: { x: center.x + delta.x, y: center.y + delta.y },
+    currentHost,
+    candidateWalls: entities.filter(isWallEntity),
+    rehostToleranceWorld: openingRehostToleranceWorld(currentHost),
+  });
+  if (!resolved) return null;
+  return new UpdateOpeningParamsCommand(opening.id, resolved.params, opening.params, sm, false);
 }
 
 /**

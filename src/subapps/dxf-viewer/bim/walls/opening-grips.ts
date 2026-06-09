@@ -92,6 +92,7 @@ function halfExtents(
  * cache / outline isn't populated yet (e.g. opening hydrated before its host wall).
  */
 export function getOpeningGrips(entity: Readonly<OpeningEntity>): GripInfo[] {
+  if (!entity) return []; // defensive: 3D edit/snap may pass an unresolved entity
   const g = entity.geometry;
   const verts = g?.outline?.vertices;
   if (!g || !verts || verts.length < 4) return [];

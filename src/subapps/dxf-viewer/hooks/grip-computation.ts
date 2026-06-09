@@ -17,6 +17,7 @@ import type { BeamEntity } from '../bim/types/beam-types';
 import type { ColumnEntity } from '../bim/types/column-types';
 import type { StairEntity } from '../bim/types/stair-types';
 import type { SlabEntity } from '../bim/types/slab-types';
+import type { OpeningEntity } from '../bim/types/opening-types';
 import type { MepFixtureEntity } from '../bim/types/mep-fixture-types';
 import type { ElectricalPanelEntity } from '../bim/types/electrical-panel-types';
 import type { MepManifoldEntity } from '../bim/types/mep-manifold-types';
@@ -253,7 +254,12 @@ export function computeDxfEntityGrips(entity: DxfEntityUnion): GripInfo[] {
     }
 
     case 'opening': {
-      grips.push(...getOpeningGrips(entity.openingEntity));
+      // ADR-402: accept BOTH shapes (mirror 'slab') — the 3D edit/snap path passes
+      // the domain `OpeningEntity` directly, the 2D canvas passes the `DxfOpening`
+      // wrapper (`.openingEntity`). Without the fallback, a 3D opening edit passed
+      // `undefined` to getOpeningGrips → crash on `entity.geometry`.
+      const opening = entity.openingEntity ?? (entity as unknown as OpeningEntity);
+      grips.push(...getOpeningGrips(opening));
       break;
     }
 
