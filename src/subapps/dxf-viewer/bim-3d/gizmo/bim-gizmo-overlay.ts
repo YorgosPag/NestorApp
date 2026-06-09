@@ -66,27 +66,28 @@ const FREE_3D_MOVE_TYPES: ReadonlySet<string> = new Set([
 ]);
 
 /**
- * ADR-402 Phase B — extra resize handles shown per entity type (world-axis
- * aligned; the per-type grip math projects onto the entity's local frame, so both
- * plan handles are offered and the perpendicular one drives the dimension). The
- * mapping per type (Revit-standard, see `bim3d-resize-bridge`):
- *   - column → X width, Z depth, Y-top height + Y-base offset (ADR-401 F.3 — same
- *              top/base octahedra as the wall)
- *   - wall   → X/Z thickness, Y-top height + Y-base offset (ADR-401 E.3 — the top
- *              octahedron edits HEIGHT, the base octahedron below it edits the base
- *              offset; length stays an endpoint-grip edit)
- *   - beam   → X/Z width,     Y depth  (length stays an endpoint-grip edit)
- *   - slab   → Y thickness only (footprint is edited per-vertex in 2D)
+ * ADR-402 Phase B / ADR-408 Φ1 — extra resize handles shown per entity type. The
+ * mapping is Revit-FAITHFUL: a shape handle edits ONLY a "stretch" (length/height);
+ * cross-section thickness/width/depth is NEVER a drag — it is a Type parameter
+ * (contextual ribbon). So the structural plan-section handles (`resize-x`/`resize-z`
+ * = wall/column thickness, beam width) and the slab thickness handle were REMOVED
+ * (ADR-408 Φ1, «πιστή αντιγραφή Revit»):
+ *   - column → Y-top height + Y-base offset ONLY (ADR-401 F.3 top/base octahedra).
+ *              Width/depth (X/Z) → Type. Length n/a (a column is a point in plan).
+ *   - wall   → Y-top height + Y-base offset ONLY (ADR-401 E.3). Thickness (X/Z) →
+ *              Type. LENGTH → the endpoint shape handles (`ENDPOINT_HANDLES_BY_TYPE`).
+ *   - beam   → NO resize handle. LENGTH → endpoint handles; width/depth → Type;
+ *              top elevation → the vertical move arrow.
+ *   - slab   → NO resize handle. Thickness → Type; footprint → 2D per-vertex sketch.
  */
 const RESIZE_HANDLES_BY_TYPE: Readonly<Record<string, readonly GizmoHandleId[]>> = {
   // `resize-m-y` = the second (base) vertical grip below the centroid (top + base).
-  column: ['resize-x', 'resize-z', 'resize-y', 'resize-m-y'],
-  wall: ['resize-x', 'resize-z', 'resize-y', 'resize-m-y'],
-  beam: ['resize-x', 'resize-z', 'resize-y'],
-  slab: ['resize-y'],
+  column: ['resize-y', 'resize-m-y'],
+  wall: ['resize-y', 'resize-m-y'],
   // ADR-402 Sub-Phase 1 — stair: plan handles (perp → width, axial → run/stepCount).
   // ADR-401 Phase G.3 — + vertical top/base octahedra: dragging re-steps to the new
   // height (Revit «Desired number of risers») and detaches the side if attached.
+  // Unchanged by ADR-408 Φ1 (a stair's incline IS its parametric run, not a section).
   stair: ['resize-x', 'resize-z', 'resize-y', 'resize-m-y'],
 };
 

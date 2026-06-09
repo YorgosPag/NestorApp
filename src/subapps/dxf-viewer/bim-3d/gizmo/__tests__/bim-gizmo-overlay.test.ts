@@ -20,16 +20,34 @@ function findByName(scene: THREE.Scene, name: string): THREE.Object3D | null {
 }
 
 describe('BimGizmoOverlay — active-handle visibility', () => {
-  it('shows the resize-x / resize-z visuals for a column selection', () => {
+  // Shared-visual regression lock (`resize-x`/`resize-m-x` map to ONE octahedron):
+  // exercised through STAIR, the only type that still exposes the plan resize handles
+  // after the Revit-faithful ADR-408 Φ1 cleanup (structural section → Type, no drag).
+  it('shows the resize-x / resize-z visuals for a stair selection', () => {
     const scene = new THREE.Scene();
     const overlay = new BimGizmoOverlay(scene);
 
-    overlay.setActiveHandles(activeHandlesFor('column'));
+    overlay.setActiveHandles(activeHandlesFor('stair'));
 
     expect(findByName(scene, 'gizmo-resize-x')?.visible).toBe(true);
     expect(findByName(scene, 'gizmo-resize-z')?.visible).toBe(true);
     // Base move handle stays visible too.
     expect(findByName(scene, 'gizmo-arrow-x')?.visible).toBe(true);
+
+    overlay.dispose();
+  });
+
+  // ADR-408 Φ1 — a column shows ONLY the vertical (height) octahedra; its X/Z section
+  // (width/depth) is a Type parameter, never a drag.
+  it('shows resize-y but HIDES resize-x / resize-z for a column selection (Revit: section = Type)', () => {
+    const scene = new THREE.Scene();
+    const overlay = new BimGizmoOverlay(scene);
+
+    overlay.setActiveHandles(activeHandlesFor('column'));
+
+    expect(findByName(scene, 'gizmo-resize-y')?.visible).toBe(true);
+    expect(findByName(scene, 'gizmo-resize-x')?.visible).toBe(false);
+    expect(findByName(scene, 'gizmo-resize-z')?.visible).toBe(false);
 
     overlay.dispose();
   });
@@ -73,11 +91,11 @@ describe('BimGizmoOverlay — active-handle visibility', () => {
     overlay.dispose();
   });
 
-  it('exposes the resize-x / resize-z hitboxes for a column (hittable)', () => {
+  it('exposes the resize-x / resize-z hitboxes for a stair (hittable)', () => {
     const scene = new THREE.Scene();
     const overlay = new BimGizmoOverlay(scene);
 
-    overlay.setActiveHandles(activeHandlesFor('column'));
+    overlay.setActiveHandles(activeHandlesFor('stair'));
     const ids = new Set(
       overlay.hitTestView.hitboxes.map((hb) => overlay.hitTestView.hitboxToId.get(hb)),
     );
@@ -89,32 +107,43 @@ describe('BimGizmoOverlay — active-handle visibility', () => {
   });
 });
 
-describe('activeHandlesFor — per-type resize handles (ADR-402 Phase B, Revit)', () => {
-  it.each(['column', 'wall', 'beam'])(
-    'exposes plan + vertical resize handles for %s',
+describe('activeHandlesFor — per-type resize handles (ADR-408 Φ1, Revit-faithful)', () => {
+  // Revit: a section (thickness/width/depth) is NEVER a drag — only a Type parameter.
+  // So wall/column keep only the vertical HEIGHT octahedra (top + base); the X/Z
+  // plan-section handles were removed.
+  it.each(['column', 'wall'])(
+    'exposes ONLY the vertical height handles (resize-y + resize-m-y) for %s — section is Type',
     (bimType) => {
       const ids = activeHandlesFor(bimType);
-      expect(ids.has('resize-x')).toBe(true);
-      expect(ids.has('resize-z')).toBe(true);
       expect(ids.has('resize-y')).toBe(true);
+      expect(ids.has('resize-m-y')).toBe(true);
+      expect(ids.has('resize-x')).toBe(false);
+      expect(ids.has('resize-z')).toBe(false);
     },
   );
 
-  it('slab exposes only the vertical (thickness) resize handle — footprint is 2D per-vertex', () => {
-    const ids = activeHandlesFor('slab');
-    expect(ids.has('resize-y')).toBe(true);
+  it('beam exposes NO resize handles — length is an endpoint handle, section + elevation are Type/move', () => {
+    const ids = activeHandlesFor('beam');
     expect(ids.has('resize-x')).toBe(false);
     expect(ids.has('resize-z')).toBe(false);
+    expect(ids.has('resize-y')).toBe(false);
+    expect(ids.has('resize-m-y')).toBe(false);
   });
 
-  it('wall + column expose a SECOND (base) vertical grip resize-m-y (ADR-401 E.3/F.3 top/base faces)', () => {
-    expect(activeHandlesFor('wall').has('resize-m-y')).toBe(true);
-    expect(activeHandlesFor('column').has('resize-m-y')).toBe(true);
+  it('slab exposes NO resize handles — thickness is Type, footprint is 2D per-vertex', () => {
+    const ids = activeHandlesFor('slab');
+    expect(ids.has('resize-y')).toBe(false);
+    expect(ids.has('resize-x')).toBe(false);
+    expect(ids.has('resize-z')).toBe(false);
+    expect(ids.has('resize-m-y')).toBe(false);
   });
 
-  it('beam/slab have a single vertical handle (no base grip)', () => {
-    expect(activeHandlesFor('beam').has('resize-m-y')).toBe(false);
-    expect(activeHandlesFor('slab').has('resize-m-y')).toBe(false);
+  it('stair KEEPS its plan + vertical resize handles (incline is parametric run, not a section)', () => {
+    const ids = activeHandlesFor('stair');
+    expect(ids.has('resize-x')).toBe(true);
+    expect(ids.has('resize-z')).toBe(true);
+    expect(ids.has('resize-y')).toBe(true);
+    expect(ids.has('resize-m-y')).toBe(true);
   });
 
   it('a base-only / unknown selection exposes no resize handles', () => {
@@ -122,6 +151,31 @@ describe('activeHandlesFor — per-type resize handles (ADR-402 Phase B, Revit)'
     expect(ids.has('resize-x')).toBe(false);
     expect(ids.has('resize-z')).toBe(false);
     expect(ids.has('resize-y')).toBe(false);
+  });
+});
+
+describe('activeHandlesFor — endpoint LENGTH shape handles (ADR-408 Φ-D/Φ1, Revit)', () => {
+  // A linear element exposes a draggable handle at each axis end (Revit shape handle):
+  // mep-segment (free-3D pipe) + wall/beam (horizontal length). Point/area elements do not.
+  it.each(['mep-segment', 'wall', 'beam'])('linear element %s exposes both endpoint handles', (bimType) => {
+    const ids = activeHandlesFor(bimType);
+    expect(ids.has('endpoint-start')).toBe(true);
+    expect(ids.has('endpoint-end')).toBe(true);
+  });
+
+  it.each(['column', 'slab', 'stair', 'mep-fixture'])(
+    'non-linear element %s exposes NO endpoint handles',
+    (bimType) => {
+      const ids = activeHandlesFor(bimType);
+      expect(ids.has('endpoint-start')).toBe(false);
+      expect(ids.has('endpoint-end')).toBe(false);
+    },
+  );
+
+  it('a multi-selection (editBimType null) exposes no endpoint handles — single-select only', () => {
+    const ids = activeHandlesFor(null);
+    expect(ids.has('endpoint-start')).toBe(false);
+    expect(ids.has('endpoint-end')).toBe(false);
   });
 });
 

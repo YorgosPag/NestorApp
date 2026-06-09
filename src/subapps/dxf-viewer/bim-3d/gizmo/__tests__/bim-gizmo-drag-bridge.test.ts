@@ -206,9 +206,12 @@ describe('endpoint handle → constraint (ADR-408 Φ-D)', () => {
   it('parses endpoint-start / endpoint-end ids and derives the endpoint constraint', () => {
     expect(parseHandleId('endpoint-start')).toEqual({ kind: 'endpoint', endpoint: 'start' });
     expect(parseHandleId('endpoint-end')).toEqual({ kind: 'endpoint', endpoint: 'end' });
+    // ADR-408 Φ1 — the handle id carries no projection mode; the constraint defaults
+    // to 'free-3d' (the controller overrides it from the overlay's per-selection mode).
     expect(handleToConstraint({ kind: 'endpoint', endpoint: 'start' })).toEqual({
       kind: 'endpoint',
       endpoint: 'start',
+      mode: 'free-3d',
     });
   });
 });
@@ -219,7 +222,7 @@ describe('BimGizmoDragBridge — endpoint move (ADR-408 Φ-D)', () => {
     const s = vertRay(1, 2);
     // The anchor IS the endpoint world (the controller passes it); the camera-facing
     // plane is horizontal under a top-down camera, so the drag reads as pure plan.
-    expect(b.start({ kind: 'endpoint', endpoint: 'start' }, anchor, s.o, s.d, camDir)).toBe(true);
+    expect(b.start({ kind: 'endpoint', endpoint: 'start', mode: 'free-3d' }, anchor, s.o, s.d, camDir)).toBe(true);
     b.update(vertRay(4, 6).o, down, camDir); // world delta (+3, _, +4)
     const out = b.getOutcome();
     expect(out.kind).toBe('endpoint-move');
@@ -235,7 +238,7 @@ describe('BimGizmoDragBridge — endpoint move (ADR-408 Φ-D)', () => {
     const b = new BimGizmoDragBridge();
     const o0 = new THREE.Vector3(0, 0, 5);
     const dir = new THREE.Vector3(0, 0, -1);
-    expect(b.start({ kind: 'endpoint', endpoint: 'end' }, anchor, o0, dir, camHoriz)).toBe(true);
+    expect(b.start({ kind: 'endpoint', endpoint: 'end', mode: 'free-3d' }, anchor, o0, dir, camHoriz)).toBe(true);
     b.update(new THREE.Vector3(0, 5, 5), dir, camHoriz); // +5m world-up
     const out = b.getOutcome();
     expect(out.kind).toBe('endpoint-move');
@@ -249,7 +252,7 @@ describe('BimGizmoDragBridge — endpoint move (ADR-408 Φ-D)', () => {
   it('no movement → none', () => {
     const b = new BimGizmoDragBridge();
     const s = vertRay(2, 2);
-    b.start({ kind: 'endpoint', endpoint: 'start' }, anchor, s.o, s.d, camDir);
+    b.start({ kind: 'endpoint', endpoint: 'start', mode: 'free-3d' }, anchor, s.o, s.d, camDir);
     b.update(s.o, s.d, camDir);
     expect(b.getOutcome().kind).toBe('none');
   });
@@ -257,7 +260,7 @@ describe('BimGizmoDragBridge — endpoint move (ADR-408 Φ-D)', () => {
   it('snaps the dragged end plan ("Connect To") and keeps the elevation', () => {
     const b = new BimGizmoDragBridge();
     const s = vertRay(0, 0);
-    b.start({ kind: 'endpoint', endpoint: 'start' }, anchor, s.o, s.d, camDir);
+    b.start({ kind: 'endpoint', endpoint: 'start', mode: 'free-3d' }, anchor, s.o, s.d, camDir);
     b.setSnapFn(() => ({ snappedMm: { x: 5000, y: -7000 }, markerMm: { x: 5000, y: -7000 } }));
     b.update(vertRay(4, 6).o, down, camDir);
     const out = b.getOutcome();

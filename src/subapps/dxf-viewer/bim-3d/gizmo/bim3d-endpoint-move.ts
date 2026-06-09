@@ -29,6 +29,10 @@ import {
   deriveCenterlineElevationMm,
 } from '../../bim/types/mep-segment-types';
 import { applyMepSegmentGripDrag } from '../../bim/mep-segments/mep-segment-grips';
+import type { WallParams } from '../../bim/types/wall-types';
+import type { BeamParams } from '../../bim/types/beam-types';
+import { applyWallGripDrag } from '../../bim/walls/wall-grips';
+import { applyBeamGripDrag } from '../../bim/beams/beam-grips';
 import type { GizmoEndpoint } from './gizmo-types';
 
 /**
@@ -62,4 +66,46 @@ export function computeMepSegmentEndpointMove(
     endPoint: { ...planMoved.endPoint, z: endZ },
     centerlineElevationMm: deriveCenterlineElevationMm(startZ, endZ),
   };
+}
+
+/**
+ * ADR-408 Φ1 — move ONE end of a WALL by a plan delta (canvas units). The other
+ * end stays fixed → the wall re-aims / lengthens from the dragged end (Revit length
+ * shape-handle). Pure plan edit (no z — the wall height is a separate handle/Type),
+ * delegating to the 2D wall grip SSoT (`wall-start`/`wall-end` → `moveStart`/`moveEnd`).
+ * Returns `null` for a zero-delta no-op. The dragged endpoint's miter is cleared by
+ * the grip SSoT (recomputed at commit by `computeWallGeometry`).
+ */
+export function computeWallEndpointMove(
+  params: WallParams,
+  endpoint: GizmoEndpoint,
+  deltaCanvas: Point2D,
+): WallParams | null {
+  if (deltaCanvas.x === 0 && deltaCanvas.y === 0) return null;
+  const anchor = endpoint === 'start' ? params.start : params.end;
+  return applyWallGripDrag(endpoint === 'start' ? 'wall-start' : 'wall-end', {
+    originalParams: params,
+    delta: deltaCanvas,
+    // `currentPos` is unused by moveStart/moveEnd; pass the new endpoint for type-completeness.
+    currentPos: { x: anchor.x + deltaCanvas.x, y: anchor.y + deltaCanvas.y },
+  });
+}
+
+/**
+ * ADR-408 Φ1 — move ONE end of a BEAM by a plan delta (canvas units). Mirror of the
+ * wall path: the other end stays fixed → the beam re-aims / lengthens from the dragged
+ * end (Revit length shape-handle). Delegates to the 2D beam grip SSoT
+ * (`beam-start`/`beam-end` → `moveStart`/`moveEnd`). Pure plan edit (the beam top
+ * elevation / depth are separate edits). Returns `null` for a zero-delta no-op.
+ */
+export function computeBeamEndpointMove(
+  params: BeamParams,
+  endpoint: GizmoEndpoint,
+  deltaCanvas: Point2D,
+): BeamParams | null {
+  if (deltaCanvas.x === 0 && deltaCanvas.y === 0) return null;
+  return applyBeamGripDrag(endpoint === 'start' ? 'beam-start' : 'beam-end', {
+    originalParams: params,
+    delta: deltaCanvas,
+  });
 }

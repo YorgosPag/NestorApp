@@ -70,4 +70,36 @@ describe('gizmo-projection', () => {
     expect(p.y).toBeCloseTo(0, 6);
     expect(p.z).toBeCloseTo(2, 6);
   });
+
+  // ADR-408 Φ1 — a wall/beam length handle is `'horizontal'`: it drags on the GROUND
+  // plane through the endpoint, so the world Y stays the anchor's elevation (the run is
+  // a plan dimension; the height is a separate handle/Type). A vertical down-ray hits the
+  // y = anchor.y plane at the cursor XZ.
+  it("projectConstrained endpoint 'horizontal' — keeps Y at the anchor (plan-only length edit)", () => {
+    const anchor = new THREE.Vector3(0, 5, 0);
+    const p = projectConstrained(
+      new THREE.Vector3(8, 12, 3), down,
+      anchor, { kind: 'endpoint', endpoint: 'start', mode: 'horizontal' }, camDir,
+    );
+    expect(p.x).toBeCloseTo(8, 6);
+    expect(p.y).toBeCloseTo(5, 6); // unchanged → no elevation drift on a wall/beam end-drag
+    expect(p.z).toBeCloseTo(3, 6);
+  });
+
+  // ADR-408 Φ-D — a pipe end is `'free-3d'`: it drags on the CAMERA-FACING plane, so a
+  // single drag yields BOTH plan + elevation. The result equals the camera-plane projection
+  // (Y is NOT pinned to the anchor, unlike the horizontal wall/beam mode).
+  it("projectConstrained endpoint 'free-3d' — projects onto the camera-facing plane (plan + elevation)", () => {
+    const anchor = new THREE.Vector3(0, 5, 0);
+    const ray = new THREE.Vector3(8, 12, 3);
+    const p = projectConstrained(
+      ray, down, anchor, { kind: 'endpoint', endpoint: 'start', mode: 'free-3d' }, camDir,
+    );
+    const expected = projectOntoPlane(ray, down, anchor, camDir)!;
+    expect(p.x).toBeCloseTo(expected.x, 6);
+    expect(p.y).toBeCloseTo(expected.y, 6);
+    expect(p.z).toBeCloseTo(expected.z, 6);
+    // The camera-facing plane tilts away from horizontal → Y leaves the anchor elevation.
+    expect(Math.abs(p.y - anchor.y)).toBeGreaterThan(1e-3);
+  });
 });

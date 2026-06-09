@@ -6,11 +6,17 @@
  * horizontal run's z (never drops the fixed end to 0), and no-ops a zero drag.
  */
 
-import { computeMepSegmentEndpointMove } from '../bim3d-endpoint-move';
+import {
+  computeMepSegmentEndpointMove,
+  computeWallEndpointMove,
+  computeBeamEndpointMove,
+} from '../bim3d-endpoint-move';
 import {
   resolveSegmentEndpointElevationsMm,
   type MepSegmentParams,
 } from '../../../bim/types/mep-segment-types';
+import type { WallParams } from '../../../bim/types/wall-types';
+import type { BeamParams } from '../../../bim/types/beam-types';
 
 // 'mm' scene ⇒ 1 canvas unit = 1 mm. A=(0,0)→B=(1000,0).
 function pipe(startZ = 2800, endZ = 2800): MepSegmentParams {
@@ -93,5 +99,77 @@ describe('computeMepSegmentEndpointMove — legacy z normalisation', () => {
 describe('computeMepSegmentEndpointMove — no-op', () => {
   it('zero plan + zero vertical → null (no empty undo step)', () => {
     expect(computeMepSegmentEndpointMove(pipe(), 'start', { x: 0, y: 0 }, 0)).toBeNull();
+  });
+});
+
+// ─── ADR-408 Φ1 — wall/beam LENGTH shape handles (horizontal, plan-only) ──────
+
+function wall(): WallParams {
+  return {
+    category: 'interior',
+    start: { x: 0, y: 0, z: 0 },
+    end: { x: 4000, y: 0, z: 0 },
+    height: 3000,
+    thickness: 200,
+    flip: false,
+    baseBinding: 'storey-floor',
+    topBinding: 'storey-ceiling',
+    baseOffset: 0,
+    topOffset: 0,
+    sceneUnits: 'mm',
+  };
+}
+
+describe('computeWallEndpointMove — Revit length shape-handle', () => {
+  it('moves only the dragged end in plan; the other end + thickness/height stay fixed', () => {
+    const next = computeWallEndpointMove(wall(), 'end', { x: 500, y: -300 })!;
+    expect(next).not.toBeNull();
+    expect(next.end.x).toBe(4500);
+    expect(next.end.y).toBe(-300);
+    // Start untouched; section/height untouched (those are Type, not a drag).
+    expect(next.start.x).toBe(0);
+    expect(next.start.y).toBe(0);
+    expect(next.thickness).toBe(200);
+    expect(next.height).toBe(3000);
+  });
+
+  it('drags the start end and clears its miter (recomputed at commit)', () => {
+    const next = computeWallEndpointMove(wall(), 'start', { x: -200, y: 100 })!;
+    expect(next.start.x).toBe(-200);
+    expect(next.start.y).toBe(100);
+    expect(next.startMiter).toBeUndefined();
+    expect(next.end.x).toBe(4000); // far end fixed
+  });
+
+  it('zero plan delta → null (no empty undo step)', () => {
+    expect(computeWallEndpointMove(wall(), 'start', { x: 0, y: 0 })).toBeNull();
+  });
+});
+
+function beam(): BeamParams {
+  return {
+    kind: 'straight',
+    startPoint: { x: 0, y: 0, z: 0 },
+    endPoint: { x: 5000, y: 0, z: 0 },
+    width: 250,
+    depth: 500,
+    topElevation: 3000,
+    sceneUnits: 'mm',
+  };
+}
+
+describe('computeBeamEndpointMove — Revit length shape-handle', () => {
+  it('moves only the dragged end in plan; the other end + width/depth stay fixed', () => {
+    const next = computeBeamEndpointMove(beam(), 'end', { x: 1000, y: 200 })!;
+    expect(next).not.toBeNull();
+    expect(next.endPoint.x).toBe(6000);
+    expect(next.endPoint.y).toBe(200);
+    expect(next.startPoint.x).toBe(0);
+    expect(next.width).toBe(250);
+    expect(next.depth).toBe(500);
+  });
+
+  it('zero plan delta → null (no empty undo step)', () => {
+    expect(computeBeamEndpointMove(beam(), 'end', { x: 0, y: 0 })).toBeNull();
   });
 });
