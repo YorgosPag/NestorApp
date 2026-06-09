@@ -375,6 +375,13 @@ export interface OpeningAltMoveInput {
   readonly candidateWalls: readonly WallEntity[];
   /** World-unit distance under which the cursor re-hosts onto another wall. */
   readonly rehostToleranceWorld: number;
+  /**
+   * Explicit re-host target wall (overrides the `nearestWallTo` proximity scan).
+   * Used by the 3D path, where the wall UNDER THE CURSOR at release (raycast) is a
+   * far more reliable target than the proximity of the gizmo-constrained end point.
+   * When set, it IS the host (slide if it equals the current wall, else re-host).
+   */
+  readonly forcedHost?: WallEntity;
 }
 
 export interface OpeningAltMoveResult {
@@ -399,9 +406,8 @@ export interface OpeningAltMoveResult {
 export function resolveOpeningAltMove(
   input: Readonly<OpeningAltMoveInput>,
 ): OpeningAltMoveResult | null {
-  const { originalParams, basePoint, currentPos, currentHost, candidateWalls, rehostToleranceWorld } = input;
-  const nearest = nearestWallTo(currentPos, candidateWalls, rehostToleranceWorld);
-  const host = nearest ?? currentHost;
+  const { originalParams, basePoint, currentPos, currentHost, candidateWalls, rehostToleranceWorld, forcedHost } = input;
+  const host = forcedHost ?? nearestWallTo(currentPos, candidateWalls, rehostToleranceWorld) ?? currentHost;
 
   // ── Same wall → base-point slide ──────────────────────────────────────────
   if (host.id === originalParams.wallId) {

@@ -15,7 +15,7 @@
  *       · foreign / no-swing kinds → original params unchanged.
  */
 
-import { applyOpeningGripDrag, applyOpeningAltSlide, getOpeningGrips } from '../opening-grips';
+import { applyOpeningGripDrag, applyOpeningAltSlide, resolveOpeningAltMove, getOpeningGrips } from '../opening-grips';
 import { DEFAULT_FRAME_WIDTH_MM } from '../../types/opening-types';
 import {
   buildDefaultOpeningParams,
@@ -350,5 +350,63 @@ describe('applyOpeningAltSlide (Alt move along host wall)', () => {
     });
     const frame = opening.params.frameWidth ?? DEFAULT_FRAME_WIDTH_MM;
     expect(next.offsetFromStart).toBeCloseTo(4000 - opening.params.width - frame, 0);
+  });
+});
+
+// ─── Φ1G.5 Slice 2b/2c — resolveOpeningAltMove (slide / re-host «Pick New Host») ──
+describe('resolveOpeningAltMove', () => {
+  const makeHWall = (): WallEntity =>
+    unwrapWall(buildWallEntity(buildDefaultWallParams({ x: 0, y: 0 }, { x: 4000, y: 0 }), '0', 'straight'));
+  const makeVWall = (): WallEntity =>
+    unwrapWall(buildWallEntity(buildDefaultWallParams({ x: 2000, y: 0 }, { x: 2000, y: 4000 }), '0', 'straight'));
+  const makeDoor = (host: WallEntity): OpeningEntity =>
+    unwrapOpening(buildOpeningEntity(buildDefaultOpeningParams(host, { x: 1000, y: 0 }, { kind: 'door' }), host, '0'));
+
+  it('same wall (nearest) → slides along it, wallId unchanged', () => {
+    const h = makeHWall();
+    const o = makeDoor(h);
+    const r = resolveOpeningAltMove({
+      originalParams: o.params,
+      basePoint: { x: o.geometry.position.x, y: o.geometry.position.y },
+      currentPos: { x: o.geometry.position.x + 500, y: 0 },
+      currentHost: h,
+      candidateWalls: [h],
+      rehostToleranceWorld: 600,
+    })!;
+    expect(r.host.id).toBe(h.id);
+    expect(r.params.wallId).toBe(h.id);
+    expect(r.params.offsetFromStart).toBeCloseTo(o.params.offsetFromStart + 500, 0);
+  });
+
+  it('cursor near ANOTHER wall → re-hosts (wallId changes to that wall)', () => {
+    const h = makeHWall();
+    const v = makeVWall();
+    const o = makeDoor(h);
+    const r = resolveOpeningAltMove({
+      originalParams: o.params,
+      basePoint: { x: o.geometry.position.x, y: o.geometry.position.y },
+      currentPos: { x: 2000, y: 1500 }, // on the vertical wall's axis
+      currentHost: h,
+      candidateWalls: [h, v],
+      rehostToleranceWorld: 600,
+    })!;
+    expect(r.host.id).toBe(v.id);
+    expect(r.params.wallId).toBe(v.id);
+  });
+
+  it('forcedHost overrides the proximity scan (3D cursor-picked wall)', () => {
+    const h = makeHWall();
+    const v = makeVWall();
+    const o = makeDoor(h);
+    const r = resolveOpeningAltMove({
+      originalParams: o.params,
+      basePoint: { x: o.geometry.position.x, y: o.geometry.position.y },
+      currentPos: { x: 1200, y: 0 }, // still near the horizontal wall…
+      currentHost: h,
+      candidateWalls: [h, v],
+      rehostToleranceWorld: 600,
+      forcedHost: v, // …but the cursor-picked wall wins → re-host to v
+    })!;
+    expect(r.params.wallId).toBe(v.id);
   });
 });
