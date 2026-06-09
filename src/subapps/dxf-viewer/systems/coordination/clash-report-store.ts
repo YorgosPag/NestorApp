@@ -16,7 +16,7 @@
  * Transient by design — never persisted (read-only coordination output).
  *
  * @see ./detect-clashes.ts (producer)
- * @see ../../bim/mep-segments/../../hooks/tools/useClashOverlayPreview.ts (consumer)
+ * @see ../../components/dxf-layout/canvas-layer-stack-clash-overlay.tsx (2D consumer)
  */
 
 import { useSyncExternalStore } from 'react';

@@ -2,8 +2,8 @@
  * ADR-435 — Clash severity → colour, SSoT (Slice 1b, Boy-Scout N.0.2).
  *
  * ONE palette shared by every clash surface so they can never drift:
- *   - 2D overlay leaf   (`hooks/tools/useClashOverlayPreview.ts`)
- *   - 3D scene markers  (`bim-3d/coordination/ClashMarkerOverlay.ts`)
+ *   - the shared ⊙ glyph (`components/dxf-layout/clash-markers/ClashMarkerGlyph.tsx`),
+ *     used by BOTH the 2D and the 3D camera-projected overlay
  *   - DOM report panel  (`components/dxf-layout/ClashReportPanel.tsx`)
  *
  * Navisworks-style triage: structural penetration = high (red), MEP↔MEP = medium

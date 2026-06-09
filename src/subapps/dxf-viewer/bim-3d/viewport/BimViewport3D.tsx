@@ -32,7 +32,7 @@ import { useAnimationQueueProcessor } from '../animation/animation-queue-process
 import { useWaypointDragInteraction } from '../animation/use-waypoint-drag-interaction';
 import { useBim3DEditInteraction } from '../animation/use-bim3d-edit-interaction';
 import { useBim3DPlacementAndPickHooks } from './use-bim3d-placement-and-pick-hooks';
-import { useBim3DClashMarkers } from './use-bim3d-clash-markers';
+import { ClashMarkers3DOverlay } from '../coordination/ClashMarkers3DOverlay';
 import { useNotifications } from '@/providers/NotificationProvider';
 import { useBim3DStoreSync } from './use-bim3d-store-sync';
 import { useBim3DVgResync } from './use-bim3d-vg-resync';
@@ -271,11 +271,6 @@ export function BimViewport3D({ projectId: projectIdProp, readOnly = false, bimE
   // radiator, boiler, attach-pick, beam-from-wall, wire waypoint editing.
   useBim3DPlacementAndPickHooks({ managerRef, canvasEl });
 
-  // ADR-435 Slice 1b — 3D clash markers + "zoom to clash" camera focus. Owns a
-  // scene overlay driven by the low-freq clash-report store; screen-constant via a
-  // HIGH-priority UnifiedFrameScheduler subsystem (zero extra renders).
-  useBim3DClashMarkers({ managerRef, canvasEl });
-
   // Phase 9 / C.1.c — Animation render queue driver. Mounted once; subscribes
   // to RenderQueueStore and drives the MP4 encode pipeline when a job is queued.
   const notifications = useNotifications();
@@ -380,6 +375,10 @@ export function BimViewport3D({ projectId: projectIdProp, readOnly = false, bimE
 
       {/* BIM entity card panel (ADR-366 B.2.Q4) — micro-leaf, absolute right-side panel */}
       <BimEntityCardPanel />
+
+      {/* ADR-435 Slice 1b — 3D clash markers (DOM ⊙ projected via camera; same glyph as 2D). */}
+      <ClashMarkers3DOverlay managerRef={managerRef} />
+
 
       {/* ADR-366 §A.3 Q3 Phase 7.0B — 2D Live Section Panel (bottom strip, toggle from Section tab) */}
       <Section2DPanel />

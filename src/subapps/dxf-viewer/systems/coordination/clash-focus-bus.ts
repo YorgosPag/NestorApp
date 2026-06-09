@@ -13,7 +13,7 @@
  * duplicated. Click-driven only ⇒ ADR-040-safe (no per-frame traffic).
  *
  * @see ./clash-types.ts (Vec3)
- * @see ../../bim-3d/viewport/use-bim3d-clash-markers.ts (3D subscriber)
+ * @see ../../bim-3d/coordination/ClashMarkers3DOverlay.tsx (3D subscriber)
  * @see ../../components/dxf-layout/ClashReportPanel.tsx (producer)
  */
 

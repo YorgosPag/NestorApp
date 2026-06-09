@@ -9,7 +9,7 @@
  *   worldX = point.x,  worldY = point.z,  worldZ = −point.y
  *
  * Kept as a 3-number tuple (not a THREE.Vector3) so it is trivially unit-testable
- * without importing three. `ClashMarkerOverlay` lifts it into a Vector3.
+ * without importing three. `ClashMarkers3DOverlay` lifts it into a Vector3.
  *
  * NOTE (v1 limitation): the engine elevation is floor-relative — building-base
  * stacking (multi-building) is not added here, matching the active-floor (base 0)
