@@ -29,7 +29,7 @@ import { resolveOpeningUValue } from '../glazing-u-catalog';
 import { isWindowKind } from '../../types/opening-types';
 import { sceneUnitsToMeters, type SceneUnits } from '../../../utils/scene-units';
 import type { Point3D } from '../../types/bim-base';
-import { nearestEdgeOutwardAzimuthDeg } from '../../geometry/shared/polygon-utils';
+import { nearestEdgeOutwardAzimuthDeg } from '../../geometry/shared/polygon-azimuth-utils';
 import {
   DEFAULT_FLOOR_U_WPER_M2K,
   DEFAULT_ROOF_U_WPER_M2K,

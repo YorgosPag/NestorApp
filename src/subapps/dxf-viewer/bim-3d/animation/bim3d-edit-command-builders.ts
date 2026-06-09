@@ -50,21 +50,7 @@ import { UpdateSlabParamsCommand } from '../../core/commands/entity-commands/Upd
 import { UpdateStairParamsCommand } from '../../core/commands/entity-commands/UpdateStairParamsCommand';
 import { CompoundCommand } from '../../core/commands/CompoundCommand';
 import { useBim3DEditStore } from '../stores/Bim3DEditStore';
-import {
-  computeColumnResizeParams,
-  computeWallResizeParams,
-  computeBeamResizeParams,
-  computeSlabResizeParams,
-  computeStairResizeParams,
-  type ResizeDragMm,
-} from '../gizmo/bim3d-resize-bridge';
-import {
-  computeColumnTiltParams,
-  computeWallTiltParams,
-  computeBeamTiltParams,
-  computeSlabTiltParams,
-  type TiltDragDeg,
-} from '../gizmo/bim3d-tilt-bridge';
+import { buildResizeCommand, buildTiltCommand } from './bim3d-edit-shape-commands';
 import {
   computeWallVerticalMove,
   computeColumnVerticalMove,
@@ -107,8 +93,6 @@ export type EditCommand =
   // ADR-402 — multi-select vertical move batches per-entity elevation edits.
   | CompoundCommand;
 export type SceneManager = NonNullable<ReturnType<typeof createSceneManagerAdapter>>;
-type ResizeOutcome = Extract<BridgeOutcome, { kind: 'resize' }>;
-type TiltOutcome = Extract<BridgeOutcome, { kind: 'tilt' }>;
 type EndpointMoveOutcome = Extract<BridgeOutcome, { kind: 'endpoint-move' }>;
 
 /** Inputs shared by every command builder for the active edit target. */
@@ -120,6 +104,13 @@ export interface CommandBuildCtx {
   readonly sm: SceneManager;
   readonly levels: LevelsHookReturn;
   readonly levelId: string;
+  /**
+   * ADR-363 Φ1G.5 Slice 2c — the wall UNDER THE CURSOR at release (3D raycast),
+   * the reliable re-host target for a dragged opening (the gizmo-constrained end
+   * point's proximity is unreliable across perpendicular walls). Undefined → the
+   * resolver falls back to its nearest-wall proximity scan.
+   */
+  readonly pickedWall?: WallEntity;
 }
 
 // ─── ADR-408 Φ-C — connectivity-preserving follow for 3D move/rotate ──────────
@@ -212,7 +203,7 @@ export function buildEditCommand(outcome: BridgeOutcome, c: CommandBuildCtx): Ed
     // re-sync rebuilds the wall meshes with the hole on the resolved host (auto
     // rotation + thickness). Single-select only (it rewrites one opening's params).
     if (c.entityIds.length === 1 && primary?.type === 'opening') {
-      return buildOpeningRehostMoveCommand(primary as OpeningEntity, delta, entitiesAll, c.sm);
+      return buildOpeningRehostMoveCommand(primary as OpeningEntity, delta, entitiesAll, c.sm, c.pickedWall);
     }
     const moveBase: EditCommand =
       c.entityIds.length > 1
@@ -262,6 +253,7 @@ function buildOpeningRehostMoveCommand(
   delta: Point2D,
   entities: readonly Entity[],
   sm: SceneManager,
+  pickedWall?: WallEntity,
 ): EditCommand | null {
   const currentHost = entities.find(
     (e): e is WallEntity => e.id === opening.params.wallId && e.type === 'wall',
@@ -275,6 +267,8 @@ function buildOpeningRehostMoveCommand(
     currentHost,
     candidateWalls: entities.filter(isWallEntity),
     rehostToleranceWorld: openingRehostToleranceWorld(currentHost),
+    // 3D: the wall under the cursor at release is the reliable re-host target.
+    ...(pickedWall ? { forcedHost: pickedWall } : {}),
   });
   if (!resolved) return null;
   return new UpdateOpeningParamsCommand(opening.id, resolved.params, opening.params, sm, false);
@@ -314,80 +308,6 @@ function buildEndpointMoveCommand(outcome: EndpointMoveOutcome, c: CommandBuildC
   if (entity.type === 'beam') {
     const next = computeBeamEndpointMove(entity.params, outcome.endpoint, deltaCanvas);
     return next ? new UpdateBeamParamsCommand(c.entityId, next, entity.params, c.sm, false) : null;
-  }
-  return null;
-}
-
-/**
- * Tilt → per-type `Update*ParamsCommand`, bridging to the tilt SSoT
- * (`bim3d-tilt-bridge`, ADR-404 Phase 2). Reuses the SAME view-agnostic commands as
- * resize (column/wall `tilt`, beam `topElevationEnd`, slab `slope`+`geometryType`) —
- * NO new command. `null` = no-op / roll ring / unsupported type (stair has no tilt).
- */
-function buildTiltCommand(outcome: TiltOutcome, c: CommandBuildCtx): EditCommand | null {
-  const entity = c.levels.getLevelScene(c.levelId)?.entities?.find((e) => e.id === c.entityId);
-  if (!entity) return null;
-  const drag: TiltDragDeg = { axis: outcome.axis, angleDeg: outcome.angleDeg };
-  if (entity.type === 'column') {
-    const next = computeColumnTiltParams(entity.params, drag);
-    return next ? new UpdateColumnParamsCommand(c.entityId, next, entity.params, c.sm, false) : null;
-  }
-  if (entity.type === 'wall') {
-    const next = computeWallTiltParams(entity.params, drag);
-    return next
-      ? new UpdateWallParamsCommand(c.entityId, next, entity.params, c.sm, false, entity.kind ?? 'straight')
-      : null;
-  }
-  if (entity.type === 'beam') {
-    const next = computeBeamTiltParams(entity.params, drag);
-    return next ? new UpdateBeamParamsCommand(c.entityId, next, entity.params, c.sm, false) : null;
-  }
-  if (entity.type === 'slab') {
-    const next = computeSlabTiltParams(entity.params, drag);
-    return next ? new UpdateSlabParamsCommand(c.entityId, next, entity.params, c.sm, false) : null;
-  }
-  return null;
-}
-
-/**
- * Resize → per-type `Update*ParamsCommand`, bridging to the resize SSoT
- * (`bim3d-resize-bridge`, ADR-402 Phase B). Plan axes (X/Z) delegate to the 2D
- * grip-drag SSoT; axis-Y patches the element's vertical field. column/wall/beam/
- * slab ship in Phase B; stair (plan width / run, ADR-402 Sub-Phase 1) reuses the
- * 2D stair grip SSoT. `null` = no-op drag / unsupported axis for the type.
- */
-function buildResizeCommand(outcome: ResizeOutcome, c: CommandBuildCtx): EditCommand | null {
-  const entity = c.levels.getLevelScene(c.levelId)?.entities?.find((e) => e.id === c.entityId);
-  if (!entity) return null;
-  const drag: ResizeDragMm = {
-    axis: outcome.axis,
-    mode: outcome.mode,
-    deltaMm: outcome.deltaMm,
-    deltaUpMm: outcome.deltaUpMm,
-    cursorMm: outcome.cursorMm,
-  };
-  if (entity.type === 'column') {
-    const next = computeColumnResizeParams(entity.params, drag);
-    return next ? new UpdateColumnParamsCommand(c.entityId, next, entity.params, c.sm, false) : null;
-  }
-  if (entity.type === 'wall') {
-    const next = computeWallResizeParams(entity.params, drag);
-    return next
-      ? new UpdateWallParamsCommand(c.entityId, next, entity.params, c.sm, false, entity.kind ?? 'straight')
-      : null;
-  }
-  if (entity.type === 'beam') {
-    const next = computeBeamResizeParams(entity.params, drag);
-    return next ? new UpdateBeamParamsCommand(c.entityId, next, entity.params, c.sm, false) : null;
-  }
-  if (entity.type === 'slab') {
-    const next = computeSlabResizeParams(entity.params, drag);
-    return next ? new UpdateSlabParamsCommand(c.entityId, next, entity.params, c.sm, false) : null;
-  }
-  if (entity.type === 'stair') {
-    // ADR-402 Sub-Phase 1 — stair needs the full entity (geometry is the anchor SSoT).
-    const next = computeStairResizeParams(entity, drag);
-    return next ? new UpdateStairParamsCommand(c.entityId, next, entity.params, c.sm, false) : null;
   }
   return null;
 }
