@@ -1,6 +1,6 @@
 # ADR-429 — MEP Routing Brain (wall-aware A* router + parallel supply/return pairing)
 
-> **Status:** 🟢 **Slice 3A (A\* wall-aware router) IMPLEMENTED** — 2026-06-09 (Opus 4.8). 🔵 Slice 3B (parallel supply/return pairing) PLANNED (approach decided). Child slice of **ADR-423** (MEP Auto-Design framework). The **routing upgrade all three disciplines share** — water (ADR-426), drainage (ADR-427), heating (ADR-428).
+> **Status:** 🟢 **Slice 3A (A\* wall-aware router) + Slice 3B (parallel supply/return pairing) IMPLEMENTED** — 2026-06-09 (Opus 4.8). Child slice of **ADR-423** (MEP Auto-Design framework). The **routing upgrade all three disciplines share** — water (ADR-426), drainage (ADR-427), heating (ADR-428).
 > **Scope (Slice 3A):** make MEP runs detour **around walls** instead of crossing them diagonally / through them, by swapping the bare Manhattan router for a wall-aware A\* — **without touching the `RoutedSegment` contract**, so all three orchestrators inherit it for free. Headless geometry → **ΕΚΤΟΣ ADR-040**.
 > **Decision driver (Giorgio, 2026-06-09):** *«FULL ENTERPRISE + FULL SSOT, όπως οι μεγάλοι παίχτες / Revit / MagiCAD / 4M FINE»*.
 
@@ -73,9 +73,18 @@ A lightweight **Hanan grid**: candidate x/y lines = the two run endpoints' coord
 
 ---
 
-## 5. Slice 3B — parallel supply/return pairing (PLANNED, approach decided)
+## 5. Slice 3B — parallel supply/return pairing (IMPLEMENTED — 2026-06-09)
 
-Today `design-heating.ts` routes supply + return **independently**, so the two trunks overlap. Revit/MagiCAD run them **parallel at a fixed offset**. **Approach:** post-process the routed **return** network — offset its trunk perpendicular to the spine by a **DN-aware** distance (`maxTrunkDN + PAIRING_CLEARANCE_SCENE = 30`), add a short stub from the boiler return root to the offset trunk, and re-tap each terminal's return connector from the offset trunk (reusing `offsetPolyline`, ADR-358). Gated to the no-detour case (walls present ⇒ keep the independent wall-aware return), preserving roles/classification/flow-conservation so the existing heating tests stay green. Tracked as the next sub-slice (the delicate geometry — branch-less targets, two arms, cumulative-flow remap — warrants its own gate, per the approved plan).
+Before 3B, `design-heating.ts` routed supply + return **independently**, so the two trunks overlapped (in the integration test the rad-supply / rad-return runs landed on the SAME geometry). Revit/MagiCAD/4M-FINE run them **parallel at a fixed offset**. **Implementation:** a pure `heating/pair-supply-return.ts` builds the **return** network as a constant **lateral offset of the already-routed supply spine** — no 2nd router pass; the return *inherits* the supply geometry, guaranteeing parallelism:
+1. **Reconstruct arms** — chain the supply `role:'trunk'` segments head-to-tail from `sourcePoint` outward into ≤2 arms (left/right of the root).
+2. **DN-aware offset** — `offsetMm = maxTrunkDN + PAIRING_CLEARANCE_SCENE (30)`, applied via `offsetPolyline` (ADR-358, `join:'miter'`). `+offset` = left of travel, so the right arm offsets +y and the left arm −y (consistent twin runs). z is dropped back to Point2D (the loop is flat; Slice 2 re-stamps z = sourceElevationMm at commit).
+3. **Offset trunks** copy each run's `cumulativeFlowLps` + `diameterMm` from the supply counterpart by vertex index (orthogonal 90° corners ⇒ miter keeps vertex count).
+4. **Root stub** bridges the boiler return inlet → each offset arm's start (carries the arm total).
+5. **Re-tap branches** — every terminal's return connector drops from the nearest point on the offset trunk (`getNearestPointOnLine`, ADR-065) → its `returnPoint`. This also fixes "branch-less targets" (a target that fell on the supply spine previously had no branch).
+
+**Gate (`design-heating.ts`):** pairing runs only when the supply network exists, there are **no wall obstacles** (no-detour), and the supply has ≥1 trunk; otherwise the return keeps its independent wall-aware route. All invariants preserved (`hydronic-return` classification incl. the stub, `totalFlowLps` = supply's, trunk DN ≥ branch DN). 76/76 mep-design tests green (68 prior + 8 new). NEW `heating/pair-supply-return.ts` + `__tests__/pair-supply-return.test.ts`; MOD `heating/design-heating.ts`, `heating/index.ts`. ΕΚΤΟΣ ADR-040 (headless).
+
+**Known limitation:** uniform offset + A\* detour don't compose cleanly in v1 → with walls the return stays independent (wall-aware). Combining them (offset path that follows the detour) is deferred.
 
 **Deferred after 3B:** water cold/hot pairing (extend 3B to the other disciplines); global (cross-run) A\* / jump-point search if per-run detours prove insufficient.
 
@@ -92,4 +101,5 @@ Today `design-heating.ts` routes supply + return **independently**, so the two t
 ---
 
 ## Changelog
+- **2026-06-09 (Opus 4.8)** — Slice 3B implemented: parallel supply/return pairing for heating. New pure `heating/pair-supply-return.ts` (`buildPairedReturnNetwork`) builds the return as a DN-aware lateral offset of the supply spine (`offsetPolyline` ADR-358 + `getNearestPointOnLine` ADR-065 re-tap), gated to the no-walls case. MOD `design-heating.ts` (gate) + `heating/index.ts`. 76/76 mep-design tests green (68 + 8 new). ΕΚΤΟΣ ADR-040 (headless). tsc deferred (N.17 — shared tree). §5 flipped PLANNED→IMPLEMENTED.
 - **2026-06-09 (Opus 4.8)** — Slice 3A implemented: wall-aware A\* router swapped into all three disciplines (delegate-on-no-walls). New `routing/{routing-constants,wall-obstacles,astar-grid,route-wall-aware}.ts` + 20 tests. 68/68 mep-design tests green. Slice 3B (pairing) approach locked, deferred to its own gate. ΕΚΤΟΣ ADR-040 (headless). tsc deferred (N.17 — shared tree, could not verify no concurrent tsc).
