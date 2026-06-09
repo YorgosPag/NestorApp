@@ -99,27 +99,40 @@ read from `useMepSystemStore`.
   `home-tab-draw.ts` + wiring through `useDxfBimBridges` / `useDxfViewerRibbon` /
   `useRibbonCommands(-types)`. i18n `ribbon.commands.bim.clashDetection*` (el + en).
 
-## 5b. UI (Slice 1b) — 3D markers + DOM report panel (Navisworks Clash Detective)
+## 5b. UI (Slice 1b) — unified ⊙ markers + DOM report panel (Navisworks Clash Detective)
+
+Browser-verified end-to-end 2026-06-10 (Giorgio). The 2D and 3D markers share ONE glyph (Giorgio's
+SSoT requirement: "use the 2D code in 3D") — there is no second shape definition.
 
 - **Severity colour SSoT** — `systems/coordination/clash-severity-color.ts` (`CLASH_SEVERITY_COLOR`
-  + `clashSeverityColorInt`). Boy-Scout: extracted from `useClashOverlayPreview.ts` so 2D overlay,
-  3D markers and the panel share ONE palette.
-- **3D markers** — `bim-3d/coordination/ClashMarkerOverlay.ts` (one octahedron per clash, severity
-  colour, `depthTest:false` + high `renderOrder` so buried clashes stay visible) + pure mapping
-  `clash-marker-math.ts` (`clashPointToWorld` = plan-metres `(x, z, −y)`, same axes as
-  `segmentAxisEndpointsWorld`). Driven by `bim-3d/viewport/use-bim3d-clash-markers.ts`: subscribes
-  the low-freq report store; markers are sized **screen-constant** by a HIGH-priority
-  `UnifiedFrameScheduler` subsystem that runs before `bim-3d-scene` and ONLY on already-dirty
-  frames (zero extra renders, mirror of the gizmo overlay). Mounted in `BimViewport3D` — **STAGE
-  ADR-040** (scene host). v1 limitation: floor-relative elevation (no multi-building base offset).
-- **DOM report panel** — `components/dxf-layout/ClashReportPanel.tsx` (sibling of
-  `AutoAreaResultPanel`, mounted in `CanvasLayerStack`): subscribes `useClashReport`, lists each
-  clash (`aKind ↔ bKind`, type chip, severity dot, penetration/gap mm) + severity breakdown +
-  scanned/tested footer. Clear → `clashReportStore.reset()`.
+  + `clashSeverityColorInt`). Boy-Scout: extracted so every clash surface shares ONE palette.
+- **Shared glyph + layer** — `components/dxf-layout/clash-markers/ClashMarkerGlyph.tsx` (the SVG ⊙ =
+  ring + crosshair; dashed ring = clearance; severity colour) and `ClashMarkerLayer.tsx` (renders one
+  glyph per clash ONCE, then positions them **imperatively** via refs + CSS `translate` on a caller-
+  supplied `project` + `subscribe`). Used by BOTH overlays → byte-identical, and zero-lag (positions
+  bypass React, like the canvases — ADR-040). Only the projection differs:
+  - **2D** — `canvas-layer-stack-clash-overlay.tsx`: clash point (metres) → canvas units
+    (÷`sceneUnitsToMeters`) → screen via `CoordinateTransforms.worldToScreen` reading the **immediate**
+    transform; reproject driven by a LOW-priority `UnifiedFrameScheduler` subsystem (`clash-markers-2d`,
+    gated on the transform sig) so it is frame-synced with the 2D canvases → zero-lag pan/zoom. Persists
+    when idle (DOM, not the wiped shared preview canvas). **Hidden while the 3D view is active.**
+  - **3D** — `bim-3d/coordination/ClashMarkers3DOverlay.tsx` (mounted in `BimViewport3D`): clash point →
+    world (`clash-marker-math.clashPointToWorld` = plan-metres `(x, z, −y)`, same axes as
+    `segmentAxisEndpointsWorld`) → screen via `camera.project()` (CSS2D pattern). Reproject driven by a
+    LOW-priority scheduler subsystem (`bim-3d-clash-markers`) that runs AFTER `bim-3d-scene` (camera
+    already updated this frame → zero-lag) and ONLY when the camera changed (no idle spin). **No Three.js
+    objects** — screen-space, always visible, screen-constant. v1 limitation: floor-relative elevation.
+- **DOM report panel** — `components/dxf-layout/ClashReportPanel.tsx`: a **draggable** floating card
+  via the centralized `FloatingPanel` SSoT (`@/components/ui/floating`), default-positioned clear of
+  the top-right 3D toggle / ViewCube. Subscribes `useClashReport`; lists each clash (`aKind ↔ bKind`,
+  type chip, severity dot, penetration/gap mm) + severity breakdown + scanned/tested footer; Close →
+  `clashReportStore.reset()`. Mounted in `CanvasLayerStack`. Row `key` is index-suffixed (a `Clash.id`
+  can repeat — see §6 dedup).
 - **Click → zoom to clash** — `systems/coordination/clash-focus-bus.ts` (pure pub/sub). The panel
-  decides by active view: 3D → `requestClashFocus` → `use-bim3d-clash-markers` → `viewport.frameBounds`;
-  2D → reuses the existing `canvas-fit-to-view-selected` EventBus SSoT (same path as the Z key).
-  No new 2D plumbing, no manager bloat.
+  decides by active view: 3D → `requestClashFocus` → `ClashMarkers3DOverlay` → `viewport.frameBounds`
+  (±0.6 m box); 2D → reuses the `canvas-fit-to-view-selected` EventBus SSoT, with the focus box sized
+  in **metres** (×`toCanvas`) so it is scale-correct for mm OR metre units (a fixed canvas-unit pad
+  zoomed a metre-unit drawing out to nothing).
 
 ## 6. Tests
 
@@ -140,9 +153,27 @@ offset for 3D markers (v1 = floor-relative) · element highlight on clash select
 - **2026-06-10 (Opus 4.8)** — ADR created. Slice 0 engine (`systems/coordination/`, 17 tests
   green) + Slice 1 UI (store + 2D overlay leaf + ribbon Detect/Clear + i18n el/en). 3D markers
   and DOM report panel deferred to Slice 1b. Browser-verify + commit pending.
-- **2026-06-10 (Opus 4.8)** — Slice 1b done: severity-colour SSoT (Boy-Scout), 3D
-  `ClashMarkerOverlay` (screen-constant via HIGH-priority scheduler subsystem, zero extra renders)
-  + `use-bim3d-clash-markers` driver mounted in `BimViewport3D`, DOM `ClashReportPanel` (mounted in
-  `CanvasLayerStack`), and click-to-zoom (3D `frameBounds` via `clash-focus-bus` / 2D
-  `canvas-fit-to-view-selected` SSoT). +5 marker-math +3 severity-colour jest (25 coordination
-  total). Coordination Phase 1 complete. Browser-verify + commit pending.
+- **2026-06-10 (Opus 4.8)** — Slice 1b first cut: severity-colour SSoT (Boy-Scout), 3D
+  `ClashMarkerOverlay` (Three.js), `ClashReportPanel`, click-to-zoom. (Superseded below.)
+- **2026-06-10 (Opus 4.8) — Slice 1b BROWSER-VERIFIED + unified (Giorgio, live session).** Driven by
+  Giorgio's testing, the markers were unified to **one ⊙ glyph for 2D and 3D** (his SSoT requirement)
+  and several issues found + fixed:
+  1. **Unified glyph** — extracted `ClashMarkerGlyph` (SVG ⊙) + `ClashMarkerLayer` (imperative,
+     zero-lag positioning). The Three.js `ClashMarkerOverlay` + `use-bim3d-clash-markers` were
+     **removed**; 3D now renders the SAME DOM ⊙ projected via `camera.project()` (CSS2D), so 2D and 3D
+     are byte-identical.
+  2. **2D persistence** — the markers were on the shared transient preview canvas (wiped every frame →
+     vanished when idle). Moved to DOM. Latent in every ghost overlay; clash was the first persistent one.
+  3. **Zero-lag** — both overlays reproject via a LOW-priority `UnifiedFrameScheduler` subsystem
+     (frame-synced with the canvas / after the 3D render), not React, so they track pan/zoom/orbit with
+     no lag. 2D hidden in 3D (no double set).
+  4. **Panel** — now a draggable `FloatingPanel` (SSoT) so it never covers the 3D toggle / ViewCube;
+     row `key` index-suffixed (duplicate `Clash.id`).
+  5. **Engine fixes** — `detectClashes` now **dedups entities by id** at intake (the level scene can
+     contain the same id twice → inflated counts + duplicate `Clash.id`); 2D click-to-zoom focus box is
+     in **metres** (scale-correct).
+  - **Known issues (deferred):** segment↔fitting false positives (a fitting on its own run isn't
+     filtered when the pipes aren't yet in a shared `MepSystem` — pair-filter needs connectivity, not
+     just shared-system); upstream duplicate-entity data in the level scene (worth a separate look).
+  - 24 coordination jest green (marker-math + severity + detection). Coordination Phase 1 complete.
+    Commit pending (Giorgio).
