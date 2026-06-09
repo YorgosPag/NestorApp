@@ -21,9 +21,9 @@ import type {
 } from '../types/mep-boiler-types';
 import {
   MIN_BOILER_DIMENSION_MM,
-  DEFAULT_BOILER_FLUE_DIAMETER_MM,
-  DEFAULT_BOILER_FUEL_DIAMETER_MM,
   DEFAULT_BOILER_CONDENSATE_DIAMETER_MM,
+  defaultBoilerFlueDiameterMm,
+  defaultBoilerFuelDiameterMm,
 } from '../types/mep-boiler-types';
 import type { MepConnector, FuelSystemClassification } from '../types/mep-connector-types';
 import {
@@ -161,10 +161,11 @@ export function buildBoilerCondensateConnector(
  * back to `connectorDiameterMm`. INDEPENDENTLY of the DHW gate, when `fuelType` is a
  * combustion source (`gas`/`oil`) a `duct`-domain flue connector (καπναγωγός) is appended
  * at the back-centre `{0,-hl}` (`flow:'out'`, classification `exhaust`, diameter
- * `flueDiameterMm ?? DEFAULT_BOILER_FLUE_DIAMETER_MM`) AND a `fuel`-domain fuel supply
- * inlet (τροφοδοσία καυσίμου) at the front-centre `{0,+hl}` (`flow:'in'`, classification
- * `fuel-gas`/`fuel-oil` from `fuelType`, diameter `fuelConnectorDiameterMm ??
- * DEFAULT_BOILER_FUEL_DIAMETER_MM`) — an electric boiler / heat-pump has neither.
+ * `flueDiameterMm ?? defaultBoilerFlueDiameterMm(fuelType)` — type-driven per fuel: gas DN100,
+ * oil DN130) AND a `fuel`-domain fuel supply inlet (τροφοδοσία καυσίμου) at the front-centre
+ * `{0,+hl}` (`flow:'in'`, classification `fuel-gas`/`fuel-oil` from `fuelType`, diameter
+ * `fuelConnectorDiameterMm ?? defaultBoilerFuelDiameterMm(fuelType)` — gas DN20, oil DN15) —
+ * an electric boiler / heat-pump has neither.
  * INDEPENDENTLY of every gate above, when `condensing` is set a `pipe`-domain condensate
  * drain (αποχέτευση συμπυκνωμάτων) is appended at the back-right `{+hw,-hl}` (`flow:'out'`,
  * REUSING the `sanitary-drainage` classification, diameter `condensateConnectorDiameterMm
@@ -205,7 +206,7 @@ export function buildBoilerConnectors(params: MepBoilerParams): MepConnector[] {
   // free of the supply/return (y=0) and the four DHW corners. Founds the `duct` domain.
   if (params.fuelType === 'gas' || params.fuelType === 'oil') {
     const flue: Point3D = { x: 0, y: -hl, z: 0 };
-    const flueDiameter = params.flueDiameterMm ?? DEFAULT_BOILER_FLUE_DIAMETER_MM;
+    const flueDiameter = params.flueDiameterMm ?? defaultBoilerFlueDiameterMm(params.fuelType);
     connectors.push(buildBoilerFlueConnector(flue, flueDiameter));
     // Combustion fuel SUPPLY inlet (τροφοδοσία καυσίμου) — the gas/oil line FEEDS the
     // boiler. Same combustion gate as the flue (gas/oil only; electric/heat-pump take
@@ -213,7 +214,7 @@ export function buildBoilerConnectors(params: MepBoilerParams): MepConnector[] {
     // the supply/return (y=0), the four DHW corners, and the back-centre flue `{0,-hl}`.
     // `domain:'fuel'` (founds the fuel domain). Classification = the supplied medium.
     const fuel: Point3D = { x: 0, y: hl, z: 0 };
-    const fuelDiameter = params.fuelConnectorDiameterMm ?? DEFAULT_BOILER_FUEL_DIAMETER_MM;
+    const fuelDiameter = params.fuelConnectorDiameterMm ?? defaultBoilerFuelDiameterMm(params.fuelType);
     const fuelClassification: FuelSystemClassification =
       params.fuelType === 'oil' ? 'fuel-oil' : 'fuel-gas';
     connectors.push(buildBoilerFuelConnector(fuel, fuelDiameter, fuelClassification));

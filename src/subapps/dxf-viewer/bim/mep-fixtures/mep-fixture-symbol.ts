@@ -25,6 +25,10 @@ import { isSocketKind, socketDrawer } from './socket-symbol-spec';
 import { isDataOutletKind, dataOutletDrawer } from './data-outlet-symbol-spec';
 import { isAirTerminalKind, airTerminalDrawer } from './air-terminal-symbol-spec';
 import { isAhuKind, ahuDrawer } from './ahu-symbol-spec';
+import { isSprinklerKind, sprinklerDrawer } from './sprinkler-symbol-spec';
+import { isFireRiserKind, fireRiserDrawer } from './fire-riser-symbol-spec';
+import { isGasMeterKind, gasMeterDrawer } from './gas-meter-symbol-spec';
+import { isGasCookerKind, gasCookerDrawer } from './gas-cooker-symbol-spec';
 
 /** A polyline of world-space points (canvas units). */
 export type FixtureStroke = readonly Point3D[];
@@ -102,6 +106,25 @@ export function buildFixtureSymbol(
   }
   if (isAhuKind(params.kind) && outline.length >= 4) {
     return { outline, strokes: ahuDrawer(outline) };
+  }
+
+  // ADR-433 — Fire protection: a sprinkler head draws the round head + deflector cross;
+  // a fire riser draws the riser-pipe circle + fire-cross + control-valve bow-tie. Both
+  // rotation/scale-aware via the shared normalized-coord helpers.
+  if (isSprinklerKind(params.kind) && outline.length >= 4) {
+    return { outline, strokes: sprinklerDrawer(outline) };
+  }
+  if (isFireRiserKind(params.kind) && outline.length >= 4) {
+    return { outline, strokes: fireRiserDrawer(outline) };
+  }
+
+  // ADR-434 — Gas: a gas meter draws the dial + gauge-needle metering glyph; a gas cooker
+  // draws the four-burner hob glyph. Both rotation/scale-aware via the shared helpers.
+  if (isGasMeterKind(params.kind) && outline.length >= 4) {
+    return { outline, strokes: gasMeterDrawer(outline) };
+  }
+  if (isGasCookerKind(params.kind) && outline.length >= 4) {
+    return { outline, strokes: gasCookerDrawer(outline) };
   }
 
   if (params.shape === 'rectangular' && outline.length === 4) {

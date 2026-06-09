@@ -106,6 +106,7 @@ describe('classificationDefaultColor (ADR-408 Φ9/Φ10)', () => {
     expect(classificationDefaultColor('sanitary-drainage')).toBe('#b45309'); // brown
     expect(classificationDefaultColor('hydronic-supply')).toBe('#dc2626'); // red
     expect(classificationDefaultColor('hydronic-return')).toBe('#2563eb'); // blue
+    expect(classificationDefaultColor('fire-sprinkler')).toBe('#b91c1c'); // deep fire-red (ADR-433)
   });
 
   it('returns a palette colour (so colour-by-system stays consistent)', () => {
@@ -119,6 +120,7 @@ describe('resolveSegmentClassificationColor (ADR-408 Φ14 — standalone pipe co
     expect(resolveSegmentClassificationColor('sanitary-drainage')).toBe('#b45309');
     expect(resolveSegmentClassificationColor('domestic-cold-water')).toBe('#2563eb');
     expect(resolveSegmentClassificationColor('domestic-hot-water')).toBe('#dc2626');
+    expect(resolveSegmentClassificationColor('fire-sprinkler')).toBe('#b91c1c'); // ADR-433 fire-red
   });
 
   it('returns null when unclassified (renderer falls back to the domain default)', () => {
@@ -142,6 +144,11 @@ describe('resolveSegmentClassificationColor (ADR-408 Φ14 — standalone pipe co
       ductClassificationDefaultColor('supply-air'),
     );
   });
+
+  it('resolves fuel classifications (ADR-434) via the same SSoT', () => {
+    expect(resolveSegmentClassificationColor('fuel-gas')).toBe('#eab308'); // yellow (gas)
+    expect(resolveSegmentClassificationColor('fuel-oil')).toBe('#92400e'); // brown (oil)
+  });
 });
 
 describe('ductClassificationDefaultColor (ADR-432 — HVAC air convention)', () => {
@@ -161,6 +168,7 @@ describe('isDefaultClassificationColor (ADR-408 Φ14 — re-seed only convention
     expect(isDefaultClassificationColor('#b45309')).toBe(true); // drainage brown
     expect(isDefaultClassificationColor('#2563eb')).toBe(true); // cold/return blue
     expect(isDefaultClassificationColor('#dc2626')).toBe(true); // hot/supply red
+    expect(isDefaultClassificationColor('#b91c1c')).toBe(true); // fire-sprinkler red (ADR-433)
   });
 
   it('preserves a custom (non-convention) colour', () => {

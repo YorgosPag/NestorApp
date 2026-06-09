@@ -67,6 +67,13 @@ export interface BoilerModelPreset {
   readonly labelKey: string;
   /** W — nominal catalogue thermal output (heat input at rated conditions). */
   readonly thermalOutputW: number;
+  /**
+   * W — MINIMUM modulating output (Revit «Turndown Ratio», IFC part-load family). Set on
+   * MODULATING presets (modern gas condensing modulate to ~25–30% of nominal → ~4:1 turndown);
+   * OMITTED for fixed-output / on-off presets (traditional oil, direct-electric). Drives the
+   * turndown ratio (`resolveTurndownRatio`) on the plan tag. Optional/additive.
+   */
+  readonly minThermalOutputW?: number;
   /** mm — cabinet width along the wall (local X; the dimension where both connectors sit). */
   readonly widthMm: number;
   /** mm — cabinet depth front-to-back (local Y). Maps to `MepBoilerParams.length`. */
@@ -109,6 +116,7 @@ export const BOILER_MODEL_CATALOG: readonly BoilerModelPreset[] = [
     id: 'gas-condensing-24',
     labelKey: 'Επίτοιχος αερίου συμπύκνωσης 24 kW',
     thermalOutputW: 24000,
+    minThermalOutputW: 6000,
     widthMm: 450,
     depthMm: 350,
     bodyHeightMm: 700,
@@ -121,6 +129,7 @@ export const BOILER_MODEL_CATALOG: readonly BoilerModelPreset[] = [
     id: 'gas-condensing-35',
     labelKey: 'Επίτοιχος αερίου συμπύκνωσης 35 kW',
     thermalOutputW: 35000,
+    minThermalOutputW: 9000,
     widthMm: 450,
     depthMm: 350,
     bodyHeightMm: 750,
@@ -133,6 +142,7 @@ export const BOILER_MODEL_CATALOG: readonly BoilerModelPreset[] = [
     id: 'gas-system-28',
     labelKey: 'Αερίου 28 kW',
     thermalOutputW: 28000,
+    minThermalOutputW: 7000,
     widthMm: 450,
     depthMm: 350,
     bodyHeightMm: 700,
@@ -219,6 +229,7 @@ export function resolveBoilerModel(modelId: string): BoilerModelPreset | undefin
  *   preset.bodyHeightMm    → params.bodyHeightMm
  *   preset.connectorDiameterMm → params.connectorDiameterMm
  *   preset.thermalOutputW  → params.thermalOutputW
+ *   preset.minThermalOutputW → params.minThermalOutputW (modulating presets only)
  *   preset.fuelType        → params.fuelType
  *   preset.seasonalEfficiencyPercent → params.seasonalEfficiencyPercent
  *   preset.id              → params.modelId
@@ -232,6 +243,8 @@ export function applyBoilerModelToParams(
     modelId: model.id,
     fuelType: model.fuelType,
     thermalOutputW: model.thermalOutputW,
+    // Modulating presets carry a minimum; on/off presets clear it (undefined ⇒ no turndown).
+    minThermalOutputW: model.minThermalOutputW,
     width: model.widthMm,
     length: model.depthMm,
     bodyHeightMm: model.bodyHeightMm,
@@ -247,14 +260,15 @@ export function applyBoilerModelToParams(
  * (clear sentinel) in the Model picker.
  */
 export function clearBoilerModel(params: MepBoilerParams): MepBoilerParams {
-  // Omit modelId, fuelType, the seasonal efficiency and the condensing flag — all are
-  // Type-Catalog properties (≠ thermalOutputW/geometry which the user may keep and
-  // re-size). Back to a purely parametric boiler.
+  // Omit modelId, fuelType, the seasonal efficiency, the condensing flag and the minimum
+  // modulating output — all are Type-Catalog properties (≠ thermalOutputW/geometry which the
+  // user may keep and re-size). Back to a purely parametric boiler.
   const {
     modelId: _modelId,
     fuelType: _fuelType,
     seasonalEfficiencyPercent: _seasonalEfficiencyPercent,
     condensing: _condensing,
+    minThermalOutputW: _minThermalOutputW,
     ...rest
   } = params;
   return rest as MepBoilerParams;
