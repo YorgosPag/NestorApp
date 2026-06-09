@@ -23,6 +23,7 @@ import type { MepSystemEntity } from '../types/mep-system-types';
 import type {
   PlumbingSystemClassification,
   DuctSystemClassification,
+  FuelSystemClassification,
 } from '../types/mep-connector-types';
 
 /**
@@ -81,6 +82,8 @@ export function classificationDefaultColor(
       return '#dc2626'; // red (heating flow)
     case 'hydronic-return':
       return '#2563eb'; // blue (heating return)
+    case 'fire-sprinkler':
+      return '#b91c1c'; // deep fire-red (ADR-433 — distinct from hot-water #dc2626)
   }
 }
 
@@ -103,6 +106,23 @@ export function ductClassificationDefaultColor(
   }
 }
 
+/**
+ * Industry-convention colour for a fuel classification (ADR-434). Mirror of
+ * {@link ductClassificationDefaultColor} for the combustion-fuel domain: `fuel-gas`
+ * yellow (the universal gas-pipe convention), `fuel-oil` brown. Exhaustive over
+ * {@link FuelSystemClassification}.
+ */
+export function fuelClassificationDefaultColor(
+  classification: FuelSystemClassification,
+): string {
+  switch (classification) {
+    case 'fuel-gas':
+      return '#eab308'; // yellow (gas)
+    case 'fuel-oil':
+      return '#92400e'; // brown (oil)
+  }
+}
+
 /** The 3 duct classifications, for the disjoint pipe-vs-duct dispatch below. */
 const ALL_DUCT_CLASSIFICATIONS: readonly DuctSystemClassification[] = [
   'exhaust',
@@ -112,9 +132,19 @@ const ALL_DUCT_CLASSIFICATIONS: readonly DuctSystemClassification[] = [
 
 /** True when `c` is a duct classification (disjoint value space from plumbing). */
 function isDuctClassification(
-  c: PlumbingSystemClassification | DuctSystemClassification,
+  c: PlumbingSystemClassification | DuctSystemClassification | FuelSystemClassification,
 ): c is DuctSystemClassification {
   return (ALL_DUCT_CLASSIFICATIONS as readonly string[]).includes(c);
+}
+
+/** The 2 fuel classifications, for the disjoint fuel dispatch below. */
+const ALL_FUEL_CLASSIFICATIONS: readonly FuelSystemClassification[] = ['fuel-gas', 'fuel-oil'];
+
+/** True when `c` is a fuel classification (disjoint value space from plumbing/duct). */
+function isFuelClassification(
+  c: PlumbingSystemClassification | DuctSystemClassification | FuelSystemClassification,
+): c is FuelSystemClassification {
+  return (ALL_FUEL_CLASSIFICATIONS as readonly string[]).includes(c);
 }
 
 /**
@@ -127,21 +157,27 @@ function isDuctClassification(
  * callers resolve system colour first.
  */
 export function resolveSegmentClassificationColor(
-  classification: PlumbingSystemClassification | DuctSystemClassification | undefined,
+  classification:
+    | PlumbingSystemClassification
+    | DuctSystemClassification
+    | FuelSystemClassification
+    | undefined,
 ): string | null {
   if (!classification) return null;
+  if (isFuelClassification(classification)) return fuelClassificationDefaultColor(classification);
   return isDuctClassification(classification)
     ? ductClassificationDefaultColor(classification)
     : classificationDefaultColor(classification);
 }
 
-/** The 5 hydraulic classifications, for exhaustive default-colour checks. */
+/** The 6 hydraulic classifications, for exhaustive default-colour checks. */
 const ALL_PLUMBING_CLASSIFICATIONS: readonly PlumbingSystemClassification[] = [
   'domestic-cold-water',
   'domestic-hot-water',
   'sanitary-drainage',
   'hydronic-supply',
   'hydronic-return',
+  'fire-sprinkler',
 ];
 
 /**

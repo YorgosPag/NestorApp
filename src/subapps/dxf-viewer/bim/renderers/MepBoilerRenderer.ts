@@ -40,6 +40,12 @@ import { getLayer } from '../../stores/LayerStore';
 const BOILER_STROKE = '#dc2626';
 const BOILER_FILL = 'rgba(220, 38, 38, 0.16)';
 
+// ─── Service-clearance envelope (Revit Mechanical Equipment «Clearances») ──────
+/** Dash pattern (screen-px on/off) for the dashed «keep-clear» maintenance zone. */
+const CLEARANCE_DASH: readonly number[] = [6, 4];
+/** Translucency of the clearance envelope — an annotation, subordinate to the body. */
+const CLEARANCE_ALPHA = 0.5;
+
 // ─── Plan-tag styling (Revit «Mechanical Equipment Tag») ─────────────────────
 // Fixed-pixel / zoom-invariant, mirroring `MepSegmentRenderer.drawSlopeIndicatorScreen`.
 /** Below this zoom scale the tag is hidden to reduce clutter (mirrors `OPENING_TAG_MIN_ZOOM`). */
@@ -133,6 +139,10 @@ export class MepBoilerRenderer extends BaseEntityRenderer {
 
     this.ctx.restore();
 
+    // Service-clearance envelope (Revit «Clearances») — dashed keep-clear maintenance zone
+    // offset outward from the footprint. Drawn only when the boiler toggles it on.
+    if (symbol.clearanceOutline) this.drawClearance(symbol.clearanceOutline);
+
     // Plan tag (Revit «Mechanical Equipment Tag») — leader + boxed model/power/fuel/flue.
     this.drawTag(boiler);
 
@@ -164,6 +174,23 @@ export class MepBoilerRenderer extends BaseEntityRenderer {
   }
 
   // ─── Internal helpers ──────────────────────────────────────────────────────
+
+  /**
+   * Draw the dashed service-clearance envelope (Revit «Clearances») — a translucent dashed
+   * «keep-clear» rectangle offset outward from the footprint. Annotation only (own save/
+   * restore so the dash + alpha never leak into other passes).
+   */
+  private drawClearance(outline: ReadonlyArray<{ x: number; y: number }>): void {
+    if (outline.length < 3) return;
+    this.ctx.save();
+    this.ctx.setLineDash(CLEARANCE_DASH as number[]);
+    this.ctx.globalAlpha = CLEARANCE_ALPHA;
+    this.ctx.strokeStyle = BOILER_STROKE;
+    this.ctx.lineWidth = RENDER_LINE_WIDTHS.THIN;
+    this.drawPolygonPath(outline);
+    this.ctx.stroke();
+    this.ctx.restore();
+  }
 
   /** Stroke a world-space polyline (symbol stub / glyph) at the current style. */
   private drawStroke(stroke: ReadonlyArray<{ x: number; y: number }>): void {

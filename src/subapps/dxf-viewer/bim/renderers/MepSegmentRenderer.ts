@@ -62,10 +62,12 @@ import {
  * Stroke colour per domain.
  *   - duct  → steel/slate (mechanical runs, HVAC blue-grey convention)
  *   - pipe  → copper/amber (plumbing runs, warm-orange convention)
+ *   - fuel  → yellow (gas convention, ADR-434 — distinct from pipe amber)
  */
 const DOMAIN_STROKE: Readonly<Record<MepSegmentDomain, string>> = {
   'duct': '#64748b',
   'pipe': '#b45309',
+  'fuel': '#eab308',
 };
 
 /**
@@ -75,6 +77,7 @@ const DOMAIN_STROKE: Readonly<Record<MepSegmentDomain, string>> = {
 const DOMAIN_FILL: Readonly<Record<MepSegmentDomain, string>> = {
   'duct': 'rgba(100, 116, 139, 0.15)',
   'pipe': 'rgba(180, 83, 9, 0.15)',
+  'fuel': 'rgba(234, 179, 8, 0.15)',
 };
 
 /** Translucent fill alpha for the colour-by-system (ADR-408 Φ9/Φ10) override. */

@@ -169,3 +169,50 @@ describe('resolveSpaceBoundaries — ηλιακή απορρόφηση εξωτ.
     expect(ceiling?.solarAbsorptance).toBeUndefined();
   });
 });
+
+// L1.6 — EN ISO 13370 ground coupling: το δάπεδο επί εδάφους με εκτεθειμένη περίμετρο
+// παίρνει effective U_g (όχι default 0.5) + override `b`=1.0· χωρίς εξωτ. τοίχους → flat.
+describe('resolveSpaceBoundaries — EN ISO 13370 ground coupling (L1.6)', () => {
+  // 4×4 m (mm): 4 εξωτ. τοίχοι → P≈16 m, A=16 m² → B′≈2.0 → U_g≈0.355 W/m²K.
+  const south = makeWall({ x: 0, y: 0 }, { x: 4000, y: 0 }, 'w-s');
+  const east = makeWall({ x: 4000, y: 0 }, { x: 4000, y: 4000 }, 'w-e');
+  const north = makeWall({ x: 4000, y: 4000 }, { x: 0, y: 4000 }, 'w-n');
+  const west = makeWall({ x: 0, y: 4000 }, { x: 0, y: 0 }, 'w-w');
+  const allWalls = [south, east, north, west];
+
+  it("'only' με 4 εξωτ. τοίχους → δάπεδο ground με U_g (≈0.355) + groundTemperatureFactor=1.0", () => {
+    const boundaries = resolveSpaceBoundaries(makeSpace(), makeCtx(allWalls, [], 'only'));
+    const floor = boundaries.find((b) => b.kind === 'floor');
+    expect(floor?.condition).toBe('ground');
+    expect(floor?.groundTemperatureFactor).toBe(1.0);
+    // U_g εξαρτάται ελαφρώς από το length-weighted πάχος τοίχου (d_t) — εύρος γύρω από 0.355.
+    expect(floor?.uValue).toBeGreaterThan(0.34);
+    expect(floor?.uValue).toBeLessThan(0.38);
+    // ΟΧΙ πια το flat default 0.5.
+    expect(floor?.uValue).toBeLessThan(0.5);
+  });
+
+  it("'lowest' με 4 εξωτ. τοίχους → ground coupling εφαρμόζεται (lowest=επί εδάφους)", () => {
+    const boundaries = resolveSpaceBoundaries(makeSpace(), makeCtx(allWalls, [], 'lowest'));
+    const floor = boundaries.find((b) => b.kind === 'floor');
+    expect(floor?.condition).toBe('ground');
+    expect(floor?.groundTemperatureFactor).toBe(1.0);
+  });
+
+  it('χωρίς εξωτ. τοίχους (P=0) → fallback flat: uValue=0.5, χωρίς override (zero-regression)', () => {
+    const ctx: SpaceBoundaryContext = { ...makeCtx(allWalls, [], 'only'), exteriorWallIds: new Set() };
+    const boundaries = resolveSpaceBoundaries(makeSpace(), ctx);
+    const floor = boundaries.find((b) => b.kind === 'floor');
+    expect(floor?.condition).toBe('ground');
+    expect(floor?.uValue).toBeCloseTo(0.5, 6);
+    expect(floor?.groundTemperatureFactor).toBeUndefined();
+  });
+
+  it("'middle' (ενδιάμεσος όροφος) → δάπεδο adjacent-heated, χωρίς ground coupling", () => {
+    const boundaries = resolveSpaceBoundaries(makeSpace(), makeCtx(allWalls, [], 'middle'));
+    const floor = boundaries.find((b) => b.kind === 'floor');
+    expect(floor?.condition).toBe('adjacent-heated');
+    expect(floor?.groundTemperatureFactor).toBeUndefined();
+    expect(floor?.uValue).toBeCloseTo(0.5, 6);
+  });
+});

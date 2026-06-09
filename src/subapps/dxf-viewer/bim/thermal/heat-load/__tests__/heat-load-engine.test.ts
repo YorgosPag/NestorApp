@@ -119,6 +119,46 @@ describe('computeSpaceHeatLoad — L1.5 θερμογέφυρες (ΔU_TB)', () =
   });
 });
 
+describe('computeSpaceHeatLoad — L1.6 EN ISO 13370 ground coupling override', () => {
+  // Δάπεδο επί εδάφους με 13370 σύζευξη: uValue=U_g (effective 0.355), b override=1.0.
+  // ΔΤ=25, A=20 → lossW = 0.355·20·1·25 = 177.5 (πλήρες ΔΤ, ΟΧΙ flat 0.5).
+  const groundFloor: HeatLoadBoundary = {
+    kind: 'floor',
+    condition: 'ground',
+    uValue: 0.355,
+    area: 20,
+    groundTemperatureFactor: 1.0,
+  };
+
+  it('εφαρμόζει το override b=1.0 (πλήρες ΔΤ) με το effective U_g', () => {
+    const res = computeSpaceHeatLoad(input({ boundaries: [groundFloor] }));
+    const floor = res.boundaries.find((b) => b.kind === 'floor')!;
+    expect(floor.factor).toBe(1.0);
+    expect(floor.lossW).toBeCloseTo(0.355 * 20 * 1 * 25, 5); // 177.5
+    expect(floor.groundTemperatureFactor).toBe(1.0); // propagated για traceability
+  });
+
+  it('ΔΕΝ παίρνει blanket ΔU_TB (το U_g περιλαμβάνει ήδη τον edge — αποφυγή διπλομέτρησης)', () => {
+    const res = computeSpaceHeatLoad(
+      input({ boundaries: [groundFloor], thermalBridgeSurchargeWperM2K: 0.15 }),
+    );
+    const floor = res.boundaries.find((b) => b.kind === 'floor')!;
+    expect(floor.thermalBridgeW).toBe(0);
+    expect(floor.lossW).toBeCloseTo(177.5, 5); // αμετάβλητο παρά το surcharge
+  });
+
+  it('fallback ground floor (χωρίς override) διατηρεί flat b + ΔU_TB (zero-regression)', () => {
+    const flatFloor: HeatLoadBoundary = { kind: 'floor', condition: 'ground', uValue: 0.5, area: 20 };
+    const res = computeSpaceHeatLoad(
+      input({ boundaries: [flatFloor], thermalBridgeSurchargeWperM2K: 0.1 }),
+    );
+    const floor = res.boundaries.find((b) => b.kind === 'floor')!;
+    expect(floor.factor).toBe(0.5);
+    expect(floor.thermalBridgeW).toBeCloseTo(0.1 * 20 * 0.5 * 25, 5); // 25
+    expect(floor.groundTemperatureFactor).toBeUndefined();
+  });
+});
+
 describe('computeSpaceHeatLoad — L1.5 επανέναρξη (Φ_RH)', () => {
   it('Φ_RH = A_floor · f_RH προστίθεται στο totalW', () => {
     // floorArea=20, f_RH=11 → reheatW=220. Χωρίς boundaries: total = vent + reheat.
