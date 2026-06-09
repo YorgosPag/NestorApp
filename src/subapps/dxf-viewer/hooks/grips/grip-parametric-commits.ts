@@ -26,7 +26,8 @@ import { UpdateMepSegmentParamsCommand } from '../../core/commands/entity-comman
 import { applyStairGripDrag } from '../../bim/stairs/stair-grips';
 import { applyWallGripDrag } from '../../bim/walls/wall-grips';
 import { BimRotateHotGripStore } from '../../bim/grips/bim-rotate-hotgrip-store';
-import { applyOpeningGripDrag, applyOpeningAltSlide } from '../../bim/walls/opening-grips';
+import { applyOpeningGripDrag, resolveOpeningAltMove, openingRehostToleranceWorld } from '../../bim/walls/opening-grips';
+import { isWallEntity, type Entity } from '../../types/entities';
 import { applyBeamGripDrag } from '../../bim/beams/beam-grips';
 import { applyColumnGripDrag } from '../../bim/columns/column-grips';
 import { applyMepSegmentGripDrag } from '../../bim/mep-segments/mep-segment-grips';
@@ -237,12 +238,13 @@ export function commitOpeningGripDrag(
  * ADR-363 Φ1G.5 Slice 2 — Alt-drag «move-from-characteristic-point» commit for a
  * hosted opening. Mirrors `commitOpeningGripDrag` (same host resolution +
  * `UpdateOpeningParamsCommand` + merge-window) but routes through
- * `applyOpeningAltSlide`, which slides the WHOLE opening ALONG the host wall by
- * the projected delta (base point = the grabbed grip). Used by the Alt-armed
- * branch of `commitDxfGripDragModeAware` so an opening moves the same way (Alt +
- * drag from a characteristic point) as a free entity — just constrained to its wall.
+ * `resolveOpeningAltMove`, the SSoT shared with the live ghost: cursor near the
+ * current wall → slide along it; cursor near ANOTHER wall → RE-HOST (Revit «Pick
+ * New Host», `wallId` changes). Geometry recomputes against the resolved host
+ * inside `UpdateOpeningParamsCommand` (re-resolves `params.wallId`), so the
+ * auto-rotation + auto-thickness on the new wall come for free.
  */
-export function commitOpeningAltSlide(
+export function commitOpeningAltMove(
   grip: UnifiedGripInfo,
   delta: Point2D,
   deps: DxfCommitDeps,
@@ -259,18 +261,21 @@ export function commitOpeningAltSlide(
   if (!hostRaw) return;
   const hostCandidate = hostRaw as unknown as Partial<WallEntity>;
   if (hostCandidate.type !== 'wall' || !hostCandidate.params || !hostCandidate.geometry) return;
-  const hostWall = hostCandidate as WallEntity;
+  const currentHost = hostCandidate as WallEntity;
+  const candidateWalls = ((sceneManager.getEntities?.() ?? []) as unknown as Entity[]).filter(isWallEntity);
   const originalParams = opening.params;
-  const newParams = applyOpeningAltSlide({
+  const resolved = resolveOpeningAltMove({
     originalParams,
     basePoint: grip.position,
     currentPos: { x: grip.position.x + delta.x, y: grip.position.y + delta.y },
-    hostWall,
+    currentHost,
+    candidateWalls,
+    rehostToleranceWorld: openingRehostToleranceWorld(currentHost),
   });
-  if (newParams === originalParams) return;
+  if (!resolved) return;
   const command = new UpdateOpeningParamsCommand(
     grip.entityId,
-    newParams,
+    resolved.params,
     originalParams,
     sceneManager,
     true,

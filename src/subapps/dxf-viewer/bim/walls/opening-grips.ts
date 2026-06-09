@@ -39,6 +39,8 @@ import type { WallEntity } from '../types/wall-types';
 import { projectPointToWallOffsetMm } from '../geometry/opening-geometry';
 import { rotateVector } from '../grips/grip-math';
 import { ROTATION_HANDLE_OFFSET_MM, type CentredBoxGripRole } from '../grips/centred-box-grips';
+import { pointToLineDistance } from '../../rendering/entities/shared/geometry-utils';
+import { mmToSceneUnits } from '../../utils/scene-units';
 
 const RAD_TO_DEG = 180 / Math.PI;
 
@@ -325,4 +327,98 @@ export interface OpeningAltSlideInput {
 export function applyOpeningAltSlide(input: Readonly<OpeningAltSlideInput>): OpeningParams {
   const { originalParams, basePoint, currentPos, hostWall } = input;
   return slideAlongWallByDelta(originalParams, basePoint, currentPos, hostWall);
+}
+
+// ─── Re-host «Pick New Host» (ADR-363 Φ1G.5 Slice 2) ─────────────────────────
+
+/**
+ * mm — how close the cursor must come to ANOTHER wall's axis for the Alt-drag to
+ * re-host the opening onto it (Revit «Pick New Host»). Below this → stays on the
+ * current wall and slides. Converted to world units per scene via the host's units.
+ */
+export const OPENING_REHOST_SNAP_TOLERANCE_MM = 600;
+
+/** World-unit re-host snap tolerance for a given host wall (scene-unit aware). */
+export function openingRehostToleranceWorld(host: WallEntity): number {
+  return OPENING_REHOST_SNAP_TOLERANCE_MM * mmToSceneUnits(host.params.sceneUnits ?? 'mm');
+}
+
+/** Nearest wall to `point` by axis distance, within `tolerance` (world units). null if none. */
+function nearestWallTo(
+  point: Point2D,
+  walls: readonly WallEntity[],
+  tolerance: number,
+): WallEntity | null {
+  let best: WallEntity | null = null;
+  let bestDist = tolerance;
+  for (const w of walls) {
+    const d = pointToLineDistance(
+      point,
+      { x: w.params.start.x, y: w.params.start.y },
+      { x: w.params.end.x, y: w.params.end.y },
+    );
+    if (d <= bestDist) { bestDist = d; best = w; }
+  }
+  return best;
+}
+
+export interface OpeningAltMoveInput {
+  readonly originalParams: OpeningParams;
+  /** The grabbed characteristic point (grip world position) = move base point. */
+  readonly basePoint: Point2D;
+  /** Current world cursor position (= basePoint + drag delta). */
+  readonly currentPos: Point2D;
+  /** The opening's current host wall (`params.wallId`). */
+  readonly currentHost: WallEntity;
+  /** All walls on the level — candidate re-host targets. */
+  readonly candidateWalls: readonly WallEntity[];
+  /** World-unit distance under which the cursor re-hosts onto another wall. */
+  readonly rehostToleranceWorld: number;
+}
+
+export interface OpeningAltMoveResult {
+  /** New params (wallId + offsetFromStart). Spread over the original on commit. */
+  readonly params: OpeningParams;
+  /** The wall the new geometry must be computed against (current or new host). */
+  readonly host: WallEntity;
+}
+
+/**
+ * ADR-363 Φ1G.5 Slice 2 — resolve an Alt-drag «move-from-characteristic-point» of
+ * a hosted opening, the SINGLE SSoT shared by the live ghost AND the commit:
+ *   · cursor nearest the CURRENT host → slide along it (base-point delta).
+ *   · cursor nearest a DIFFERENT wall (within tolerance) → RE-HOST (Revit «Pick
+ *     New Host»): change `wallId` + drop at the cursor projection. Auto-rotation
+ *     and auto-thickness follow for free because the opening's geometry is derived
+ *     from its host wall (`computeOpeningGeometry`).
+ * Returns `null` for a no-op (identity slide / degenerate target wall) so the
+ * caller short-circuits. NEVER recomputes geometry here (the caller does, against
+ * `result.host`) — keeps the geometry SSoT in one place.
+ */
+export function resolveOpeningAltMove(
+  input: Readonly<OpeningAltMoveInput>,
+): OpeningAltMoveResult | null {
+  const { originalParams, basePoint, currentPos, currentHost, candidateWalls, rehostToleranceWorld } = input;
+  const nearest = nearestWallTo(currentPos, candidateWalls, rehostToleranceWorld);
+  const host = nearest ?? currentHost;
+
+  // ── Same wall → base-point slide ──────────────────────────────────────────
+  if (host.id === originalParams.wallId) {
+    const slid = slideAlongWallByDelta(originalParams, basePoint, currentPos, host);
+    if (slid === originalParams) return null;
+    return { params: slid, host };
+  }
+
+  // ── Different wall → RE-HOST (drop at the cursor projection, centre-on-cursor) ─
+  const hostLengthMm = host.geometry.length * 1000;
+  const frameWidth = originalParams.frameWidth ?? DEFAULT_FRAME_WIDTH_MM;
+  const minOffset = frameWidth;
+  const maxOffset = hostLengthMm - originalParams.width - frameWidth;
+  if (maxOffset < minOffset) return null; // new wall too short for opening + jambs
+  const offset = clamp(
+    projectPointToWallOffsetMm(currentPos, host) - originalParams.width / 2,
+    minOffset,
+    maxOffset,
+  );
+  return { params: { ...originalParams, wallId: host.id, offsetFromStart: offset }, host };
 }

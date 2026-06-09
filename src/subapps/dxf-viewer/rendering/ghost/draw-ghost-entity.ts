@@ -20,6 +20,8 @@
 
 import type { Point2D, ViewTransform, Viewport } from '../types/Types';
 import type { DxfEntityUnion } from '../../canvas-v2/dxf-canvas/dxf-types';
+import type { OpeningEntity } from '../../bim/types/opening-types';
+import { drawOpeningPlanOverlay } from '../../bim/renderers/opening-overlay-drawing';
 import { CoordinateTransforms } from '../core/CoordinateTransforms';
 
 function drawPolygon(
@@ -378,13 +380,16 @@ export function drawGhostEntity(
     }
 
     // ADR-363 Phase 2.5 — opening ghost: cutout rectangle outline from raw OpeningEntity.geometry.
+    // ADR-363 Φ1G.5 Slice 2 — also draw the kind-specific plan symbol (door swing
+    // arc + leaf line, window glazing, …) via the renderer SSoT so the move ghost
+    // shows WHERE the door ends, not just the cutout. Derived purely from the
+    // (recomputed) geometry/outline, so it tracks the slide / re-host preview.
     case 'opening': {
-      const opening = entity as unknown as {
-        geometry?: { outline?: { vertices: ReadonlyArray<{ x: number; y: number }> } };
-      };
+      const opening = entity as unknown as OpeningEntity;
       const verts = opening.geometry?.outline?.vertices ?? [];
       if (verts.length < 2) return;
       drawPolygon(ctx, verts, toScreen);
+      drawOpeningPlanOverlay(opening, { ctx, toScreen, lineWidth: ctx.lineWidth || 1 });
       return;
     }
 

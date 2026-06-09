@@ -22,6 +22,7 @@
 import { useCallback, useRef, useEffect } from 'react';
 import type { ViewTransform } from '../../rendering/types/Types';
 import type { AnySceneEntity } from '../../types/entities';
+import type { WallEntity } from '../../bim/types/wall-types';
 import type { DxfEntityUnion } from '../../canvas-v2/dxf-canvas/dxf-types';
 import type { useLevels } from '../../systems/levels';
 import type { DxfGripDragPreview } from '../grip-computation';
@@ -128,7 +129,16 @@ export function useGripGhostPreview(props: UseGripGhostPreviewProps): void {
     // ghost and the live home-run wire derive the SAME previewed entity.
     const preview = toEntityPreviewTransform(dragPreview);
 
-    const transformed = applyEntityPreview(entity as unknown as DxfEntityUnion, preview);
+    // ADR-363 Φ1G.5 Slice 2 — for a hosted-opening Alt-move ghost, supply the
+    // level's walls so the preview can slide / re-host the opening and recompute
+    // its full door symbol (swing arc + leaf) against the resolved host wall.
+    let previewCtx: { walls: readonly WallEntity[] } | undefined;
+    if (entity.type === 'opening' && levelManager.currentLevelId) {
+      const sceneEntities = levelManager.getLevelScene(levelManager.currentLevelId)?.entities ?? [];
+      previewCtx = { walls: sceneEntities.filter((e) => e.type === 'wall') as unknown as readonly WallEntity[] };
+    }
+
+    const transformed = applyEntityPreview(entity as unknown as DxfEntityUnion, preview, previewCtx);
 
     // ADR-363 Phase 1G.3 — rotate-reference (6-click) guide segments. Drawn for
     // the reference + alignment lines regardless of ghost delta (they exist even

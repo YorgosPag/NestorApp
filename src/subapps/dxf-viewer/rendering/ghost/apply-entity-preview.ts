@@ -61,11 +61,23 @@ import { applyFurnitureGripDrag } from '../../bim/furniture/furniture-grips';
 import { computeFurnitureGeometry } from '../../bim/furniture/furniture-geometry';
 import type { FurnitureEntity } from '../../bim/types/furniture-types';
 import type { OpeningEntity } from '../../bim/types/opening-types';
+import { resolveOpeningAltMove, openingRehostToleranceWorld } from '../../bim/walls/opening-grips';
+import { computeOpeningGeometry } from '../../bim/geometry/opening-geometry';
 import { cadToggleState } from '../../systems/constraints/cad-toggle-state';
 import type { EntityPreviewTransform } from './entity-preview-types';
 import { unwrapStair, applyClassicEntityPreview } from './apply-entity-preview-helpers';
 
 export type { EntityPreviewTransform };
+
+/**
+ * Optional scene context for previews that need neighbours. Currently only the
+ * hosted-opening Alt-move ghost uses it (`walls` → resolve slide / re-host +
+ * recompute the full door symbol). Omitted by callers that preview self-contained
+ * entities; the opening ghost then falls back to an outline-only axis slide.
+ */
+export interface ApplyEntityPreviewContext {
+  readonly walls?: readonly WallEntity[];
+}
 
 // ── Public API ───────────────────────────────────────────────────────────────
 
@@ -81,6 +93,7 @@ export type { EntityPreviewTransform };
 export function applyEntityPreview(
   entity: DxfEntityUnion,
   preview: EntityPreviewTransform | undefined,
+  ctx?: ApplyEntityPreviewContext,
 ): DxfEntityUnion {
   if (!preview || preview.entityId !== entity.id) return entity;
   const { delta, gripIndex, movesEntity, edgeVertexIndices, stairGripKind, wallGripKind, beamGripKind, columnGripKind, slabGripKind, slabOpeningGripKind, roofGripKind, floorFinishGripKind, mepFixtureGripKind, electricalPanelGripKind, mepManifoldGripKind, mepSegmentGripKind, furnitureGripKind, anchorPos, rotatePivot } = preview;
@@ -316,16 +329,40 @@ export function applyEntityPreview(
     } as unknown as DxfEntityUnion;
   }
 
-  // ── ADR-363 Φ1G.5 Slice 2 — hosted-opening Alt-slide ghost (constrained) ──
-  // A hosted opening can only slide ALONG its wall, so the free whole-entity
-  // translate (classic opening case) would fly the ghost off the wall during the
-  // drag. Constrain `delta` to the wall axis — which the opening already encodes
-  // in `geometry.rotation` (radians) — and reuse the classic opening translate
-  // with that projected vector, so the live ghost slides on the wall like the
-  // commit (`applyOpeningAltSlide` → offsetFromStart). Self-contained: the ghost
-  // needs no host-wall lookup (the axis is on the opening itself).
+  // ── ADR-363 Φ1G.5 Slice 2 — hosted-opening Alt-move ghost (slide / re-host) ──
+  // A hosted opening slides along its wall — or RE-HOSTS to another wall (Revit
+  // «Pick New Host»). With the scene `walls` (ctx) + the grabbed base point
+  // (`anchorPos`), resolve the move through the SAME SSoT as the commit
+  // (`resolveOpeningAltMove`) and recompute the FULL geometry against the resolved
+  // host (`computeOpeningGeometry`) — so the ghost shows the door symbol (swing
+  // arc + leaf) on the new wall, auto-rotated + auto-thickness, matching the commit.
   if (movesEntity && entity.type === 'opening') {
-    const rot = (entity as unknown as OpeningEntity).geometry?.rotation;
+    const opening = entity as unknown as OpeningEntity;
+    const walls = ctx?.walls;
+    if (walls && walls.length > 0 && anchorPos) {
+      const currentHost = walls.find((w) => w.id === opening.params.wallId);
+      if (currentHost) {
+        const resolved = resolveOpeningAltMove({
+          originalParams: opening.params,
+          basePoint: anchorPos,
+          currentPos: { x: anchorPos.x + delta.x, y: anchorPos.y + delta.y },
+          currentHost,
+          candidateWalls: walls,
+          rehostToleranceWorld: openingRehostToleranceWorld(currentHost),
+        });
+        if (!resolved) return entity;
+        const geometry = computeOpeningGeometry(
+          resolved.params,
+          resolved.host,
+          resolved.host.params.sceneUnits ?? 'mm',
+        );
+        return { ...(entity as object), params: resolved.params, geometry } as unknown as DxfEntityUnion;
+      }
+    }
+    // Fallback (no scene walls supplied): outline-only slide constrained to the
+    // opening's own axis (geometry.rotation, radians) so the ghost never flies
+    // off the wall even without a host-wall lookup.
+    const rot = opening.geometry?.rotation;
     if (rot === undefined) return entity;
     const axis: Point2D = { x: Math.cos(rot), y: Math.sin(rot) };
     const along = delta.x * axis.x + delta.y * axis.y;

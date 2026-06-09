@@ -73,7 +73,7 @@ import {
   commitStairGripDrag,
   commitWallGripDrag,
   commitOpeningGripDrag,
-  commitOpeningAltSlide,
+  commitOpeningAltMove,
   commitSlabGripDrag,
   commitSlabOpeningGripDrag,
   commitRoofGripDrag,
@@ -165,7 +165,7 @@ export function commitDxfGripDragModeAware(
     // wall axis — so Alt+drag from any opening grip moves it the same gesture as a
     // free entity, just constrained to its wall. (Flip grips return earlier.)
     if (grip.openingGripKind) {
-      commitOpeningAltSlide(grip, delta, deps);
+      commitOpeningAltMove(grip, delta, deps);
       return;
     }
     const copy = GripCopyModeStore.getSnapshot().enabled || CtrlKeyTracker.getSnapshot();

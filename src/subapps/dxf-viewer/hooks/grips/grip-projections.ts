@@ -42,7 +42,10 @@ export function buildDxfDragPreview(
   // the WHOLE entity by `delta` (via the move SSoT) instead of running a corner /
   // thickness / resize parametric ghost. The grabbed grip is the base point.
   if (altMove) {
-    return { entityId: activeGrip.entityId!, gripIndex: activeGrip.gripIndex, delta, movesEntity: true };
+    // `anchorPos` (the grabbed grip = base point) lets the ghost resolve a hosted
+    // opening's slide / re-host against the host wall (ADR-363 Φ1G.5 Slice 2);
+    // free entities ignore it.
+    return { entityId: activeGrip.entityId!, gripIndex: activeGrip.gripIndex, delta, movesEntity: true, anchorPos };
   }
   return {
     entityId: activeGrip.entityId!,
