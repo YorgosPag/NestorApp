@@ -9,7 +9,7 @@
  */
 
 import * as THREE from 'three';
-import { BimGizmoOverlay, activeHandlesFor } from '../bim-gizmo-overlay';
+import { BimGizmoOverlay, activeHandlesFor, isPlanarMoveType } from '../bim-gizmo-overlay';
 
 function findByName(scene: THREE.Scene, name: string): THREE.Object3D | null {
   let found: THREE.Object3D | null = null;
@@ -252,6 +252,65 @@ describe('activeHandlesFor — Revit DOF: 2-axis (planar) vs 3-axis (free) move 
     // horizontal plan move stays.
     expect(ids.has('axis-x')).toBe(true);
     expect(ids.has('plane-xz')).toBe(true);
+  });
+});
+
+describe('BimGizmoOverlay — collapse to move handles during a drag (ADR-363 Φ1G.5 Slice 2h)', () => {
+  it('hides the resize/shape handles while keeping the move arrows, then restores them', () => {
+    const scene = new THREE.Scene();
+    const overlay = new BimGizmoOverlay(scene);
+    overlay.setActiveHandles(activeHandlesFor('wall')); // wall: resize-y + arrows + endpoint rings
+
+    expect(findByName(scene, 'gizmo-resize-y')?.visible).toBe(true);
+
+    overlay.collapseToMoveHandles();
+    expect(findByName(scene, 'gizmo-resize-y')?.visible).toBe(false); // clutter hidden
+    expect(findByName(scene, 'gizmo-arrow-x')?.visible).toBe(true); // move arrow stays
+
+    overlay.restoreConfiguredHandles();
+    expect(findByName(scene, 'gizmo-resize-y')?.visible).toBe(true); // back after release
+
+    overlay.dispose();
+  });
+
+  // ADR-363 Φ1G.5 Slice 2i — the snap marker is no longer hidden during a collapsed move;
+  // it is shown SMALL (Revit face-snap square) so the user SEES where the face landed.
+  it('shows the snap-marker SMALL while collapsed (Slice 2i), full-size on restore', () => {
+    const scene = new THREE.Scene();
+    const overlay = new BimGizmoOverlay(scene);
+    const camera = new THREE.PerspectiveCamera(50, 1, 0.1, 100);
+    camera.position.set(0, 0, 5);
+    camera.updateMatrixWorld(true);
+    overlay.setActiveHandles(activeHandlesFor('wall'));
+    const at = new THREE.Vector3(9, 0, 9);
+    const snapCube = scene.children.find((o): o is THREE.LineSegments => o instanceof THREE.LineSegments)!;
+
+    overlay.collapseToMoveHandles();
+    overlay.showSnapMarker(at, camera); // a snap during the drag
+    expect(snapCube.visible).toBe(true); // visible (small) — Slice 2i feedback
+    const movedScale = snapCube.scale.x;
+
+    overlay.restoreConfiguredHandles();
+    overlay.showSnapMarker(at, camera);
+    expect(snapCube.visible).toBe(true); // normal OSNAP marker once the drag ends
+    const restoredScale = snapCube.scale.x;
+
+    // The collapsed-move glyph is meaningfully smaller than the full-size OSNAP marker.
+    expect(movedScale).toBeLessThan(restoredScale);
+
+    overlay.dispose();
+  });
+});
+
+describe('isPlanarMoveType — planar (collapsible) vs free-3D selection (ADR-363 Φ1G.5 Slice 2h)', () => {
+  it.each(['wall', 'column', 'beam', 'slab', 'stair', 'furniture'])('%s is planar (collapsible)', (t) => {
+    expect(isPlanarMoveType(t)).toBe(true);
+  });
+  it.each(['mep-segment', 'mep-fixture', 'mep-radiator', 'mep-boiler'])('%s is free-3D (NOT collapsible)', (t) => {
+    expect(isPlanarMoveType(t)).toBe(false);
+  });
+  it('a multi-selection (null) is not collapsible', () => {
+    expect(isPlanarMoveType(null)).toBe(false);
   });
 });
 

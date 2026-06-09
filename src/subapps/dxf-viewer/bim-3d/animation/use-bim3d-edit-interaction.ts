@@ -20,10 +20,17 @@
  */
 
 import { useEffect, useRef, type MutableRefObject } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useLevelsOptional } from '../../systems/levels/useLevels';
 import { BimGizmoOverlay, activeHandlesFor } from '../gizmo/bim-gizmo-overlay';
 import { BimGizmoController } from '../gizmo/bim-gizmo-controller';
 import { Bim3DEditLivePreview } from './bim3d-edit-live-preview';
+import { TempWallMoveDimOverlay } from '../placement/TempWallMoveDimOverlay';
+import { TempAlignmentLineOverlay } from '../placement/TempAlignmentLineOverlay';
+import { TempSnapLabelOverlay } from '../placement/TempSnapLabelOverlay';
+// ADR-363 Φ1G.5 Slice 2i — snap description/type → i18n label key (SSoT shared with 2D indicator).
+import { resolveSnapLabelKey } from '../../snapping/snap-description-keys';
+import type { ExtendedSnapType } from '../../snapping/extended-types';
 import {
   useBim3DEditStore,
   selectEditToolActive,
@@ -52,6 +59,11 @@ export function useBim3DEditInteraction({ managerRef, canvasEl }: UseBim3DEditIn
   const levels = useLevelsOptional();
   const levelsRef = useRef(levels);
   levelsRef.current = levels;
+  // ADR-363 Φ1G.5 Slice 2i — `t` via ref so it stays current without re-running the
+  // listener effect on every language change (mirror of `levelsRef`).
+  const { t } = useTranslation('dxf-viewer-shell');
+  const tRef = useRef(t);
+  tRef.current = t;
 
   useEffect(() => {
     const manager = managerRef.current;
@@ -60,8 +72,18 @@ export function useBim3DEditInteraction({ managerRef, canvasEl }: UseBim3DEditIn
     const overlay = new BimGizmoOverlay(manager.scene);
     const controller = new BimGizmoController(overlay);
     const preview = new Bim3DEditLivePreview();
+    // ADR-363 Φ1G.5 Slice 2h — transient temp-dimensions overlay for a dragged wall.
+    const wallMoveDim = new TempWallMoveDimOverlay(manager.scene);
+    // ADR-363 Φ1G.5 Slice 2i — transient dashed alignment line + snap-type label for face magnetism.
+    const alignmentLine = new TempAlignmentLineOverlay(manager.scene);
+    const snapLabel = new TempSnapLabelOverlay(manager.scene);
+    const resolveSnapLabel = (type?: string, description?: string): string => {
+      if (!type && !description) return '';
+      return tRef.current(resolveSnapLabelKey((type ?? '') as ExtendedSnapType, description));
+    };
     const ctx: EditInteractionCtx = {
-      manager, canvasEl, overlay, controller, preview,
+      manager, canvasEl, overlay, controller, preview, wallMoveDim, alignmentLine,
+      snapLabel, resolveSnapLabel,
       getLevels: () => levelsRef.current,
     };
     let activeAbort: AbortController | null = null;
@@ -69,6 +91,9 @@ export function useBim3DEditInteraction({ managerRef, canvasEl }: UseBim3DEditIn
     const teardownListeners = (): void => {
       activeAbort?.abort();
       activeAbort = null;
+      wallMoveDim.hide(); // ADR-363 Φ1G.5 Slice 2h — drop transient dims when listeners go.
+      alignmentLine.hide(); // ADR-363 Φ1G.5 Slice 2i — drop the alignment line too.
+      snapLabel.hide(); // …and the snap-type label.
       if (controller.isDragging()) {
         controller.cancelDrag();
         preview.reset(); // ADR-402 — abort mid-drag: restore the live-preview meshes.
@@ -170,6 +195,9 @@ export function useBim3DEditInteraction({ managerRef, canvasEl }: UseBim3DEditIn
       unsubEntities();
       teardownListeners();
       overlay.dispose();
+      wallMoveDim.dispose();
+      alignmentLine.dispose();
+      snapLabel.dispose();
     };
   }, [canvasEl, managerRef]);
 }

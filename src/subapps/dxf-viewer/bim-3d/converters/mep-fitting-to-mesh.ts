@@ -324,7 +324,8 @@ export function mepFittingToMesh(
   // fitting look), tinted by the system colour when its pipes are assigned. This is
   // identical resolution to `mepSegmentToMesh`, so the fitting and its pipes read as
   // one element instead of two different shades.
-  const domainMatType = params.domain === 'pipe' ? 'mep-pipe' : 'mep-duct';
+  // Only a duct uses the duct material; pipe + fuel (ADR-434) share the pipe material.
+  const domainMatType = params.domain === 'duct' ? 'mep-duct' : 'mep-pipe';
   const material = systemColor !== undefined
     ? getSystemTintedMaterial3D(domainMatType, systemColor)
     : getElementMaterial3D(domainMatType);

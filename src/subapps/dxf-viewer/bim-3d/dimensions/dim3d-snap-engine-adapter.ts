@@ -119,36 +119,55 @@ function resolveHostEntityId(obj: Object3D): string | undefined {
   return undefined;
 }
 
+/** Safety cap — beyond this a mesh is scanned via its bbox, not every vertex. */
+const MAX_VERTEX_SCAN = 4000;
+
 /**
- * Approximate nearest vertex from a hit point. Uses the object's bounding box
- * corners as fast candidates — extending to full BufferGeometry vertex scan is
- * O(n) and reserved for the future C.3 refinement pass.
+ * Nearest geometry VERTEX to the world-space hit point, in WORLD space.
+ *
+ * ADR-363 Φ1G.5 Slice 2i-fix (Giorgio: "το gizmo δεν εμφανίζεται ακριβώς στην κορυφή"):
+ * the previous implementation took the geometry's LOCAL bounding-box corners and returned
+ * them WITHOUT applying the mesh's world matrix — so (a) the point was in the wrong space,
+ * and (b) a diagonal / non-axis-aligned wall's AABB corners are NOT its real corners, so a
+ * Ctrl+click base point never landed on the true junction vertex. Scanning the actual mesh
+ * vertices (transformed to world) returns the EXACT clicked corner for any orientation.
+ * Dense meshes fall back to world-transformed bbox corners (bounded cost).
  */
 function nearestEndpoint(point: Vector3, obj: Object3D): Vector3 | null {
   if (!(obj instanceof Mesh)) return null;
   const geometry = obj.geometry as BufferGeometry;
+  obj.updateWorldMatrix(true, false);
+  const pos = geometry.getAttribute('position');
+  if (!pos || pos.count === 0 || pos.count > MAX_VERTEX_SCAN) {
+    return nearestBboxCornerWorld(point, obj, geometry);
+  }
+  let best: Vector3 | null = null;
+  let bestDist = Infinity;
+  const v = new Vector3();
+  for (let i = 0; i < pos.count; i++) {
+    v.fromBufferAttribute(pos, i).applyMatrix4(obj.matrixWorld);
+    const d = v.distanceTo(point);
+    if (d < bestDist) { bestDist = d; best = v.clone(); }
+  }
+  return best;
+}
+
+/** Fallback for dense meshes: the 8 local bbox corners transformed to world space. */
+function nearestBboxCornerWorld(point: Vector3, obj: Mesh, geometry: BufferGeometry): Vector3 | null {
   if (!geometry.boundingBox) geometry.computeBoundingBox();
   const bbox = geometry.boundingBox;
   if (!bbox) return null;
   const { min, max } = bbox;
-  const corners: Vector3[] = [
-    new Vector3(min.x, min.y, min.z),
-    new Vector3(max.x, min.y, min.z),
-    new Vector3(min.x, max.y, min.z),
-    new Vector3(max.x, max.y, min.z),
-    new Vector3(min.x, min.y, max.z),
-    new Vector3(max.x, min.y, max.z),
-    new Vector3(min.x, max.y, max.z),
-    new Vector3(max.x, max.y, max.z),
-  ];
-  let best = corners[0];
-  let bestDist = best.distanceTo(point);
-  for (let i = 1; i < corners.length; i++) {
-    const d = corners[i].distanceTo(point);
-    if (d < bestDist) {
-      best = corners[i];
-      bestDist = d;
-    }
+  let best: Vector3 | null = null;
+  let bestDist = Infinity;
+  for (let i = 0; i < 8; i++) {
+    const world = new Vector3(
+      i & 1 ? max.x : min.x,
+      i & 2 ? max.y : min.y,
+      i & 4 ? max.z : min.z,
+    ).applyMatrix4(obj.matrixWorld);
+    const d = world.distanceTo(point);
+    if (d < bestDist) { bestDist = d; best = world; }
   }
   return best;
 }

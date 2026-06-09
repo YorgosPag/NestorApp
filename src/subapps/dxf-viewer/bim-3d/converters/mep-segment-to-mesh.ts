@@ -184,7 +184,10 @@ export function mepSegmentToMesh(
   // classification hint tints the PBR (drainage = brown) so a standalone drainage
   // run reads correctly in 3D; else the per-domain default. ONE colour SSoT shared
   // with the 2D renderer (`resolveSegmentClassificationColor`).
-  const domainMatType = segment.params.domain === 'pipe' ? 'mep-pipe' : 'mep-duct';
+  // Only a duct uses the duct material; a pipe AND a fuel line (gas/oil — physically a
+  // small-bore pipe, ADR-434) use the pipe material. A system-joined fuel run is tinted
+  // yellow by its fuel-network colour above; this only sets the standalone default.
+  const domainMatType = segment.params.domain === 'duct' ? 'mep-duct' : 'mep-pipe';
   const classHex = resolveSegmentClassificationColor(segment.params.classification);
   const classInt = classHex ? hexToThreeInt(classHex) : null;
   const tintInt = systemColor ?? classInt ?? undefined;

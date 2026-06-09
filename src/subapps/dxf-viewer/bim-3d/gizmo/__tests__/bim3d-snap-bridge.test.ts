@@ -70,6 +70,78 @@ describe('makeMoveSnapFn — AutoCAD-style multi-grab', () => {
   });
 });
 
+describe('makeMoveSnapFn — Slice 2i alignment reference passthrough', () => {
+  /** Fake engine that also surfaces a `referenceSegment` (a wall face line) on its hit. */
+  function fakeFaceEngine(target: Point2D, segment: { start: Point2D; end: Point2D }): SnapQueryEngine {
+    return {
+      getSettings: () => ({ enabled: true }),
+      findSnapPoint: () => ({ found: true, snapPoint: { point: target, referenceSegment: segment } }),
+    };
+  }
+
+  it('carries the winning probe\'s referenceSegment up as alignmentRef', () => {
+    const segment = { start: { x: 0, y: 100 }, end: { x: 1000, y: 100 } };
+    const engine = fakeFaceEngine({ x: 500, y: 100 }, segment);
+    const snap = makeMoveSnapFn(engine, [{ x: 0, y: 0 }]);
+    const res = snap({ x: 500, y: 130 });
+    expect(res?.alignmentRef).toEqual({ a: segment.start, b: segment.end });
+  });
+
+  it('omits alignmentRef for a discrete point snap (no referenceSegment)', () => {
+    const engine = fakeEngine([{ x: 80, y: 0 }]);
+    const res = makeMoveSnapFn(engine, [{ x: 0, y: 0 }])({ x: 100, y: 0 });
+    expect(res?.alignmentRef).toBeUndefined();
+  });
+
+  it('carries the winning probe\'s description + type for the snap-type label', () => {
+    const engine: SnapQueryEngine = {
+      getSettings: () => ({ enabled: true }),
+      findSnapPoint: () => ({
+        found: true,
+        snapPoint: { point: { x: 500, y: 100 }, description: 'bim-wall-face', type: 'bim_wall_face' },
+      }),
+    };
+    const res = makeMoveSnapFn(engine, [{ x: 0, y: 0 }])({ x: 500, y: 130 });
+    expect(res?.snapDescription).toBe('bim-wall-face');
+    expect(res?.snapType).toBe('bim_wall_face');
+  });
+});
+
+describe('makeMoveSnapFn — Slice 2j priority ranking (grid must not shadow faces)', () => {
+  // Probe A (offset 0) hits an omnipresent GRID point ~5mm away (priority 12).
+  // Probe B (offset +1000) hits a WALL FACE 30mm away (priority 9.5).
+  // Pure-distance would pick grid (nearer); priority ranking must pick the face.
+  const engine: SnapQueryEngine = {
+    getSettings: () => ({ enabled: true }),
+    findSnapPoint: (cursor: Point2D) =>
+      cursor.x < 500
+        ? { found: true, snapPoint: { point: { x: 5, y: 0 }, type: 'grid', priority: 12 } }
+        : {
+            found: true,
+            snapPoint: {
+              point: { x: 1030, y: 0 }, type: 'bim_wall_face', priority: 9.5,
+              referenceSegment: { start: { x: 0, y: 0 }, end: { x: 1000, y: 0 } },
+            },
+          },
+  };
+
+  it('a high-priority wall face beats a geometrically nearer grid snap', () => {
+    const res = makeMoveSnapFn(engine, [{ x: 0, y: 0 }, { x: 1000, y: 0 }])({ x: 0, y: 0 });
+    expect(res?.snapType).toBe('bim_wall_face');
+    expect(res?.markerMm.x).toBeCloseTo(1030, 6);
+    expect(res?.snappedMm.x).toBeCloseTo(30, 6); // 1030 − 1000 offset
+  });
+
+  it('falls back to the grid snap when no higher-priority snap is in range', () => {
+    const gridOnly: SnapQueryEngine = {
+      getSettings: () => ({ enabled: true }),
+      findSnapPoint: () => ({ found: true, snapPoint: { point: { x: 5, y: 0 }, type: 'grid', priority: 12 } }),
+    };
+    const res = makeMoveSnapFn(gridOnly, [{ x: 0, y: 0 }])({ x: 0, y: 0 });
+    expect(res?.snapType).toBe('grid');
+  });
+});
+
 describe('makeResizeSnapFn — dragged handle snaps directly', () => {
   it('snaps the handle to the nearest feature (snapped == marker)', () => {
     const engine = fakeEngine([{ x: 520, y: 0 }]);

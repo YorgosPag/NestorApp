@@ -193,7 +193,9 @@ function createTextSprite(text: string): Sprite {
   return sprite;
 }
 
-function createLabelTexture(text: string): CanvasTexture {
+// ADR-363 Φ1G.5 Slice 2i — exported for reuse by the gizmo snap-type label overlay
+// (TempSnapLabelOverlay): one text-texture renderer (outline + overdraw) = SSoT.
+export function createLabelTexture(text: string): CanvasTexture {
   const canvas = document.createElement('canvas');
   canvas.width = 512;
   canvas.height = 128;
