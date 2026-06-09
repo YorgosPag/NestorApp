@@ -10,6 +10,7 @@ import {
   resolveThermalSpaceAch,
   resolveThermalSpaceThermalBridgeSurcharge,
   resolveThermalSpaceReheatFactor,
+  resolveSolarShadingLevel,
   THERMAL_SPACE_USE_DEFAULTS,
 } from '../thermal-space-use-catalog';
 import {
@@ -79,5 +80,18 @@ describe('thermal-space-use-catalog', () => {
       REHEAT_FACTOR_PRESETS['night-setback'],
     );
     expect(resolveThermalSpaceReheatFactor({ reheatMode: 'intermittent' })).toBe(22);
+  });
+
+  // ─── L7.3 — σκίαση εξωτ. εμποδίων resolver ─────────────────────────────────────
+
+  it('σκίαση: default (απουσία override) → none (zero-regression)', () => {
+    expect(resolveSolarShadingLevel({})).toBe('none');
+    expect(resolveSolarShadingLevel({ solarShadingLevel: undefined })).toBe('none');
+  });
+
+  it('σκίαση: override → pass-through του επιπέδου', () => {
+    expect(resolveSolarShadingLevel({ solarShadingLevel: 'light' })).toBe('light');
+    expect(resolveSolarShadingLevel({ solarShadingLevel: 'moderate' })).toBe('moderate');
+    expect(resolveSolarShadingLevel({ solarShadingLevel: 'heavy' })).toBe('heavy');
   });
 });

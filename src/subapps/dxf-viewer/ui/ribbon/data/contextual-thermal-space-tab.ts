@@ -19,6 +19,7 @@ import {
   REHEAT_MODES,
   THERMAL_BRIDGE_LEVELS,
 } from '../../../bim/thermal/heat-load/heat-load-config';
+import { SOLAR_SHADING_LEVELS } from '../../../bim/thermal/heat-load/annual-gains-config';
 
 export const THERMAL_SPACE_CONTEXTUAL_TRIGGER = 'thermal-space-selected';
 
@@ -60,6 +61,13 @@ const THERMAL_BRIDGE_OPTIONS = THERMAL_BRIDGE_LEVELS.map((level) => ({
 const REHEAT_MODE_OPTIONS = REHEAT_MODES.map((mode) => ({
   value: mode,
   labelKey: `thermalSpace.reheat.${mode}`,
+  isLiteralLabel: false,
+}));
+
+/** Solar-shading (obstruction) level options (ADR-422 L7.3) — from the config SSoT. */
+const SOLAR_SHADING_OPTIONS = SOLAR_SHADING_LEVELS.map((level) => ({
+  value: level,
+  labelKey: `thermalSpace.solarShading.${level}`,
   isLiteralLabel: false,
 }));
 
@@ -141,6 +149,17 @@ export const CONTEXTUAL_THERMAL_SPACE_TAB: RibbonTab = {
                 commandKey: THERMAL_SPACE_RIBBON_KEYS.stringParams.reheatMode,
                 comboboxWidthPx: 160,
                 options: REHEAT_MODE_OPTIONS,
+              },
+            },
+            {
+              type: 'combobox',
+              size: 'small',
+              command: {
+                id: 'thermalSpace.solarShadingLevel',
+                labelKey: 'ribbon.commands.thermalSpaceEditor.solarShadingLevel',
+                commandKey: THERMAL_SPACE_RIBBON_KEYS.stringParams.solarShadingLevel,
+                comboboxWidthPx: 160,
+                options: SOLAR_SHADING_OPTIONS,
               },
             },
           ],

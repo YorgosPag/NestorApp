@@ -32,6 +32,10 @@ import {
   getReheatFactor,
   getThermalBridgeSurcharge,
 } from './heat-load/heat-load-config';
+import {
+  DEFAULT_SOLAR_SHADING_LEVEL,
+  type SolarShadingLevel,
+} from './heat-load/annual-gains-config';
 
 /** Default παράμετροι σχεδιασμού μιας χρήσης χώρου (ΤΟΤΕΕ 20701-1). */
 export interface ThermalSpaceUseDefaults {
@@ -153,4 +157,15 @@ export function resolveThermalSpaceReheatFactor(
   params: Pick<ThermalSpaceParams, 'reheatMode'>,
 ): number {
   return getReheatFactor(params.reheatMode ?? DEFAULT_REHEAT_MODE);
+}
+
+/**
+ * Effective επίπεδο σκίασης εξωτ. εμποδίων: per-space override ?? `none`. ADR-422
+ * L7.3 — pure SSoT· default `none` ⇒ obstruction 1.0 ⇒ zero-regression. Επιστρέφει
+ * το **επίπεδο** (ο πολλαπλασιαστής προκύπτει με `getSolarShadingObstructionFactor`).
+ */
+export function resolveSolarShadingLevel(
+  params: Pick<ThermalSpaceParams, 'solarShadingLevel'>,
+): SolarShadingLevel {
+  return params.solarShadingLevel ?? DEFAULT_SOLAR_SHADING_LEVEL;
 }

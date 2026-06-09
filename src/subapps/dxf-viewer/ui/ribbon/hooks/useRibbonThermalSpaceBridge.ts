@@ -36,6 +36,10 @@ import {
   type ReheatMode,
   type ThermalBridgeLevel,
 } from '../../../bim/thermal/heat-load/heat-load-config';
+import {
+  DEFAULT_SOLAR_SHADING_LEVEL,
+  type SolarShadingLevel,
+} from '../../../bim/thermal/heat-load/annual-gains-config';
 import { useCommandHistory } from '../../../core/commands';
 import { UpdateThermalSpaceParamsCommand } from '../../../core/commands/entity-commands/UpdateThermalSpaceParamsCommand';
 import { LevelSceneManagerAdapter } from '../../../systems/entity-creation/LevelSceneManagerAdapter';
@@ -135,6 +139,9 @@ export function useRibbonThermalSpaceBridge(
         if (commandKey === THERMAL_SPACE_RIBBON_KEYS.stringParams.reheatMode) {
           return { value: ts.params.reheatMode ?? DEFAULT_REHEAT_MODE, options: [] };
         }
+        if (commandKey === THERMAL_SPACE_RIBBON_KEYS.stringParams.solarShadingLevel) {
+          return { value: ts.params.solarShadingLevel ?? DEFAULT_SOLAR_SHADING_LEVEL, options: [] };
+        }
         return { value: ts.params.useType, options: [] };
       }
       if (isThermalSpaceRibbonNumberKey(commandKey)) {
@@ -163,6 +170,10 @@ export function useRibbonThermalSpaceBridge(
         }
         if (commandKey === THERMAL_SPACE_RIBBON_KEYS.stringParams.reheatMode) {
           dispatchParams(ts, { ...ts.params, reheatMode: value as ReheatMode });
+          return;
+        }
+        if (commandKey === THERMAL_SPACE_RIBBON_KEYS.stringParams.solarShadingLevel) {
+          dispatchParams(ts, { ...ts.params, solarShadingLevel: value as SolarShadingLevel });
           return;
         }
         const nextParams: ThermalSpaceParams = { ...ts.params, useType: value as ThermalSpaceUseType };
