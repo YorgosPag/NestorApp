@@ -32,8 +32,11 @@ import { useViewMode3DStore, selectIs3D } from '../../bim-3d/stores/ViewMode3DSt
 import { sceneUnitsToMeters, type SceneUnits } from '../../utils/scene-units';
 import { EventBus } from '../../systems/events';
 
-/** Half-size (canvas units) of the box fitted around a clash in the 2D view. */
-const CLASH_2D_FOCUS_PAD_UNITS = 400;
+/** Half-size (METRES) of the box fitted around a clash in the 2D view — converted to
+ *  canvas units per scene at click time, so it is scale-correct for mm OR metre units
+ *  (a fixed canvas-unit pad zooms a metre-unit drawing out to nothing). Matches the 3D
+ *  focus extent (`CLASH_FOCUS_HALF_EXTENT_M`). */
+const CLASH_2D_FOCUS_PAD_M = 0.6;
 const SEVERITY_ORDER: readonly ClashSeverity[] = ['high', 'medium', 'low'];
 /** Panel size — width drives the bounds clamp; height is the max for the scroll list. */
 const CLASH_PANEL_DIMENSIONS = { width: 288, height: 420 };
@@ -139,7 +142,7 @@ function focusClash(clash: Clash, sceneUnits: SceneUnits): void {
   const toCanvas = 1 / sceneUnitsToMeters(sceneUnits);
   const cx = clash.point.x * toCanvas;
   const cy = clash.point.y * toCanvas;
-  const pad = CLASH_2D_FOCUS_PAD_UNITS;
+  const pad = CLASH_2D_FOCUS_PAD_M * toCanvas; // metres → canvas units (scale-correct)
   EventBus.emit('canvas-fit-to-view-selected', {
     bounds: { min: { x: cx - pad, y: cy - pad }, max: { x: cx + pad, y: cy + pad } },
   });
