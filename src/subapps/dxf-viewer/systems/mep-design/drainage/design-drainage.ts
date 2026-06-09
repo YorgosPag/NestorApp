@@ -30,6 +30,8 @@ import { buildDrainageDemandModel } from './drainage-demand';
 import { resolveDrainageOutfall, type DrainageOutfall } from './outfall-resolve';
 import { routeGravityNetwork } from './gravity-router';
 import type { RouteTarget } from '../routing/orthogonal-router';
+import { wallObstacles } from '../routing/wall-obstacles';
+import type { Rect2D } from '../routing/routing-constants';
 
 /** Build the proposed gravity network for one collector (route + size + slope). */
 function buildNetwork(
@@ -37,6 +39,7 @@ function buildNetwork(
   discharges: readonly FixtureDischarge[],
   discipline: SanitaryDrainageDiscipline,
   sceneUnits: SceneUnits,
+  obstacles: readonly Rect2D[],
 ): ProposedDrainageNetwork {
   const targets: RouteTarget[] = discharges.map((d) => ({
     point: d.point,
@@ -49,6 +52,7 @@ function buildNetwork(
     targets,
     discipline.sizingStandard,
     sceneUnits,
+    obstacles,
   );
   return {
     classification: DRAINAGE_CLASSIFICATION,
@@ -89,6 +93,8 @@ export function designDrainage(
     );
     return { networks: [], warnings, storeyId: model.storeyId };
   }
-  const network = buildNetwork(outfall, discharges, discipline, sceneUnits);
+  // ADR-429 — wall obstacles for the wall-aware router (no walls ⇒ Manhattan-identical).
+  const obstacles = wallObstacles(entities);
+  const network = buildNetwork(outfall, discharges, discipline, sceneUnits, obstacles);
   return { networks: [network], warnings, storeyId: model.storeyId };
 }

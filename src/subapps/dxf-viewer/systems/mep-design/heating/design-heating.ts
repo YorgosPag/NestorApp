@@ -33,7 +33,10 @@ import {
   resolveHeatingReturnSink,
   type HeatingEndpoint,
 } from './heating-source-resolve';
-import { routeOrthogonalTrunkBranch, type RouteTarget } from '../routing/orthogonal-router';
+import { type RouteTarget } from '../routing/orthogonal-router';
+import { routeWallAware } from '../routing/route-wall-aware';
+import { wallObstacles } from '../routing/wall-obstacles';
+import type { Rect2D } from '../routing/routing-constants';
 
 /** Pick the connector (id, point) a demand exposes to the network of `role`. */
 function terminalEndpoint(
@@ -50,6 +53,7 @@ function buildNetwork(
   root: HeatingEndpoint,
   demands: readonly TerminalHeatDemand[],
   discipline: HeatingDiscipline,
+  obstacles: readonly Rect2D[],
 ): ProposedHeatingNetwork {
   const { role } = root;
   const classification = HEATING_ROLE_CLASSIFICATION[role];
@@ -58,7 +62,7 @@ function buildNetwork(
     point: terminalEndpoint(d, role).point,
     loadingUnits: d.flowLps,
   }));
-  const segments: ProposedHeatingSegment[] = routeOrthogonalTrunkBranch(root.point, targets).map(
+  const segments: ProposedHeatingSegment[] = routeWallAware(root.point, targets, obstacles).map(
     (r) => ({
       start: r.start,
       end: r.end,
@@ -103,10 +107,13 @@ export function designHeating(
   if (demands.length === 0) {
     return { networks: [], warnings, storeyId: model.storeyId };
   }
+  // ADR-429 — extract wall obstacles once; both supply + return networks detour around them
+  // (no walls ⇒ identical to the prior Manhattan ×2 output).
+  const obstacles = wallObstacles(entities);
   const networks: ProposedHeatingNetwork[] = [];
   const supplySource = resolveHeatingSupplySource(entities);
   if (supplySource) {
-    networks.push(buildNetwork(supplySource, demands, discipline));
+    networks.push(buildNetwork(supplySource, demands, discipline, obstacles));
   } else {
     warnings.push(
       `no ${HEATING_ROLE_CLASSIFICATION.supply} source recognized — supply network skipped (${demands.length} terminals)`,
@@ -114,7 +121,7 @@ export function designHeating(
   }
   const returnSink = resolveHeatingReturnSink(entities);
   if (returnSink) {
-    networks.push(buildNetwork(returnSink, demands, discipline));
+    networks.push(buildNetwork(returnSink, demands, discipline, obstacles));
   } else {
     warnings.push(
       `no ${HEATING_ROLE_CLASSIFICATION.return} sink recognized — return network skipped (${demands.length} terminals)`,

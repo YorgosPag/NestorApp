@@ -26,7 +26,10 @@ import {
 } from './water-supply-discipline';
 import { buildWaterDemandModel } from './water-demand';
 import { resolveWaterSource, type WaterSource } from './water-source-resolve';
-import { routeOrthogonalTrunkBranch, type RouteTarget } from '../routing/orthogonal-router';
+import { type RouteTarget } from '../routing/orthogonal-router';
+import { routeWallAware } from '../routing/route-wall-aware';
+import { wallObstacles } from '../routing/wall-obstacles';
+import type { Rect2D } from '../routing/routing-constants';
 
 /** Build one service's proposed network (route + size). */
 function buildNetwork(
@@ -34,13 +37,14 @@ function buildNetwork(
   source: WaterSource,
   demands: readonly FixtureDemand[],
   discipline: WaterSupplyDiscipline,
+  obstacles: readonly Rect2D[],
 ): ProposedNetwork {
   const classification = WATER_SERVICE_CLASSIFICATION[service];
   const targets: RouteTarget[] = demands.map((d) => ({
     point: d.point,
     loadingUnits: d.loadingUnits,
   }));
-  const segments: ProposedSegment[] = routeOrthogonalTrunkBranch(source.point, targets).map(
+  const segments: ProposedSegment[] = routeWallAware(source.point, targets, obstacles).map(
     (r) => ({
       start: r.start,
       end: r.end,
@@ -78,6 +82,9 @@ export function designWaterSupply(
   discipline: WaterSupplyDiscipline = WATER_SUPPLY_DISCIPLINE,
 ): WaterNetworkProposal {
   const demandModel = buildWaterDemandModel(model, entities, discipline.demandStandard);
+  // ADR-429 — extract wall obstacles once; the router detours runs around them (no walls ⇒
+  // identical to the prior Manhattan output).
+  const obstacles = wallObstacles(entities);
   const networks: ProposedNetwork[] = [];
   const warnings: string[] = [];
   for (const service of discipline.services) {
@@ -93,7 +100,7 @@ export function designWaterSupply(
       );
       continue;
     }
-    networks.push(buildNetwork(service, source, demands, discipline));
+    networks.push(buildNetwork(service, source, demands, discipline, obstacles));
   }
   return { networks, warnings, storeyId: model.storeyId };
 }
