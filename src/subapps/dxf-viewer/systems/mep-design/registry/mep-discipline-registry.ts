@@ -119,19 +119,24 @@ export const MEP_DISCIPLINE_REGISTRY: Readonly<Record<MepDisciplineId, MepDiscip
     disciplineId: 'fire-protection',
     labelKey: 'ribbon.mepDesign.discipline.fireProtection',
     flowModel: 'pressurised',
-    classifications: [],
-    demandStandardId: null,
-    sizingStandardId: null,
-    status: 'reserved',
+    // Pressurised-pipe discipline: it routes the `fire-sprinkler` plumbing classification
+    // (the wet pipe carries it on the segment, unlike the HVAC duct) — ADR-433.
+    classifications: ['fire-sprinkler'],
+    demandStandardId: 'NFPA13/light-hazard(80lpm-per-head)',
+    sizingStandardId: 'velocity-limited(v≤6m/s,wet)',
+    status: 'active',
   },
   gas: {
     disciplineId: 'gas',
     labelKey: 'ribbon.mepDesign.discipline.gas',
     flowModel: 'pressurised',
+    // Fuel discipline: it routes the fuel-gas supply on its OWN `'fuel'` domain (the gas pipe
+    // carries no classification on the segment, like the HVAC duct — the fuel-network System
+    // owns it), so `classifications` (typed to plumbing) stays empty (ADR-434).
     classifications: [],
-    demandStandardId: null,
-    sizingStandardId: null,
-    status: 'reserved',
+    demandStandardId: 'constant/appliance-flow(m3h)',
+    sizingStandardId: 'DVGW-G600/EN1775/velocity-limited(v≤6m/s)',
+    status: 'active',
   },
 };
 

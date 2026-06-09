@@ -84,6 +84,7 @@ const CLASSIFICATION_OPTIONS = [
   { value: 'sanitary-drainage',   labelKey: 'ribbon.commands.mepClassification.sanitary-drainage',  isLiteralLabel: false },
   { value: 'hydronic-supply',     labelKey: 'ribbon.commands.mepClassification.hydronic-supply',     isLiteralLabel: false },
   { value: 'hydronic-return',     labelKey: 'ribbon.commands.mepClassification.hydronic-return',     isLiteralLabel: false },
+  { value: 'fire-sprinkler',      labelKey: 'ribbon.commands.mepClassification.fire-sprinkler',      isLiteralLabel: false }, // ADR-433
 ] as const;
 
 // ADR-408 Φ14 — gravity fall (%) of a drainage run.

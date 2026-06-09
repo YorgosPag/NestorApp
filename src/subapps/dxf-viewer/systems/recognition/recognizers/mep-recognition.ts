@@ -21,6 +21,8 @@ import {
 import { heatingTerminalRecognizer } from './heating-terminal-recognizer';
 import { electricalTerminalRecognizer } from './electrical-terminal-recognizer';
 import { airTerminalRecognizer } from './air-terminal-recognizer';
+import { sprinklerRecognizer } from './sprinkler-recognizer';
+import { gasRecognizer } from './gas-recognizer';
 import { mepSourceRecognizer } from './mep-source-recognizer';
 
 /** Registration id for the MEP (sanitary pilot) recognition contribution. */
@@ -40,6 +42,8 @@ export function registerMepRecognition(
       heatingTerminalRecognizer,
       electricalTerminalRecognizer,
       airTerminalRecognizer,
+      sprinklerRecognizer,
+      gasRecognizer,
       mepSourceRecognizer,
     ],
     classifier: sanitarySpaceClassifier,

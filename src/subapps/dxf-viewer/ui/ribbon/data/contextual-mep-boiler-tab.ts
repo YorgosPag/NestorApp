@@ -28,6 +28,11 @@ import {
   MEP_BOILER_RIBBON_KEYS_ACTIONS,
   MEP_BOILER_RIBBON_VISIBILITY_KEYS,
 } from '../hooks/bridge/mep-boiler-command-keys';
+import {
+  BOILER_RELIEF_PRESSURES_BAR,
+  BOILER_EXPANSION_VESSEL_VOLUMES_L,
+  BOILER_SYSTEM_PRESSURES_BAR,
+} from '../../../bim/types/mep-boiler-types';
 import { MEP_PIPE_NETWORK_RIBBON_ACTIONS } from '../hooks/bridge/mep-pipe-network-command-keys';
 
 // NOTE: the model combobox declares `options: []` here — the bridge
@@ -105,6 +110,16 @@ const CONDENSATE_DIAMETER_MM_OPTIONS = [
   { value: '32', labelKey: '32', isLiteralLabel: true },
 ] as const;
 
+// Service-clearance distance (mm) — Revit Mechanical Equipment «Clearances». Uniform
+// keep-clear envelope offset outward from the footprint for maintenance access.
+const SERVICE_CLEARANCE_MM_OPTIONS = [
+  { value: '300', labelKey: '300', isLiteralLabel: true },
+  { value: '400', labelKey: '400', isLiteralLabel: true },
+  { value: '500', labelKey: '500', isLiteralLabel: true },
+  { value: '600', labelKey: '600', isLiteralLabel: true },
+  { value: '800', labelKey: '800', isLiteralLabel: true },
+] as const;
+
 // Seasonal appliance efficiency (%) — Revit «Nominal Efficiency». Editable; the heat-pump
 // catalogue value (~156%) lands above the list but the bridge still surfaces it as the
 // current value (editable combobox). Drives the read-only ErP class readout.
@@ -116,6 +131,34 @@ const EFFICIENCY_PERCENT_OPTIONS = [
   { value: '98', labelKey: '98', isLiteralLabel: true },
 ] as const;
 
+// Safety relief valve set pressure (bar) — Revit «Safety Relief Valve» set pressure. Derived
+// from the SSoT standard valve ratings (BOILER_RELIEF_PRESSURES_BAR) so the picker and the
+// param defaults never drift. String values (fractional ratings → string combobox, not numeric).
+const RELIEF_PRESSURE_BAR_OPTIONS = BOILER_RELIEF_PRESSURES_BAR.map((p) => ({
+  value: String(p),
+  labelKey: String(p),
+  isLiteralLabel: true,
+}));
+
+// Expansion-vessel volume (L) — Revit Mechanical Equipment accessory. Derived from the SSoT
+// standard vessel ratings (BOILER_EXPANSION_VESSEL_VOLUMES_L) so picker + param defaults never
+// drift. Integer values → plain numeric combobox (no rounding hazard, unlike the relief pressure).
+const EXPANSION_VESSEL_VOLUME_L_OPTIONS = BOILER_EXPANSION_VESSEL_VOLUMES_L.map((v) => ({
+  value: String(v),
+  labelKey: String(v),
+  isLiteralLabel: true,
+}));
+
+// Pressure-gauge system (cold fill) pressure (bar) — Revit accessory (IFC IfcSensor PRESSURE).
+// Derived from the SSoT standard fill pressures (BOILER_SYSTEM_PRESSURES_BAR) so picker + param
+// defaults never drift. String values (fractional → string combobox, not numeric — same as relief
+// pressure; DISTINCT property = the system fill pressure, not the valve set pressure).
+const SYSTEM_PRESSURE_BAR_OPTIONS = BOILER_SYSTEM_PRESSURES_BAR.map((p) => ({
+  value: String(p),
+  labelKey: String(p),
+  isLiteralLabel: true,
+}));
+
 // Nominal catalogue thermal output (W) — typical residential/commercial boiler range.
 const THERMAL_OUTPUT_W_OPTIONS = [
   { value: '6000',  labelKey: '6000',  isLiteralLabel: true },
@@ -123,6 +166,15 @@ const THERMAL_OUTPUT_W_OPTIONS = [
   { value: '18000', labelKey: '18000', isLiteralLabel: true },
   { value: '24000', labelKey: '24000', isLiteralLabel: true },
   { value: '35000', labelKey: '35000', isLiteralLabel: true },
+] as const;
+
+// Minimum modulating output (W) — Revit «Turndown Ratio». Integer W → plain numeric combobox
+// (no rounding hazard). The nominal/maximum is `thermalOutput`; min < max → a turndown ratio.
+const MIN_THERMAL_OUTPUT_W_OPTIONS = [
+  { value: '3000',  labelKey: '3000',  isLiteralLabel: true },
+  { value: '6000',  labelKey: '6000',  isLiteralLabel: true },
+  { value: '9000',  labelKey: '9000',  isLiteralLabel: true },
+  { value: '12000', labelKey: '12000', isLiteralLabel: true },
 ] as const;
 
 // ─── Tab definition ──────────────────────────────────────────────────────────
@@ -301,6 +353,18 @@ export const CONTEXTUAL_MEP_BOILER_TAB: RibbonTab = {
                 options: CONDENSATE_DIAMETER_MM_OPTIONS,
               },
             },
+            {
+              // ADR-408 Εύρος Β (condensate neutraliser) — «Εξουδετερωτής» Revit Yes/No toggle.
+              // ON → an in-line cartridge box is drawn on the condensate drain (de-acidifies
+              // the condensate before the sewer). Condensing-only panel.
+              type: 'toggle',
+              size: 'small',
+              command: {
+                id: 'mepBoiler.condensateNeutraliser',
+                labelKey: 'ribbon.commands.mepBoilerEditor.condensateNeutraliser',
+                commandKey: MEP_BOILER_RIBBON_KEYS.toggles.condensateNeutraliser,
+              },
+            },
           ],
         },
       ],
@@ -386,6 +450,128 @@ export const CONTEXTUAL_MEP_BOILER_TAB: RibbonTab = {
         },
       ],
     },
+    // ADR-408 Εύρος Β — «Καθαρός χώρος» panel (Revit Mechanical Equipment «Clearances»).
+    // Always visible (clearance applies to every boiler): a Yes/No toggle to show the dashed
+    // keep-clear envelope + the uniform clearance distance. Visualisation only — no connector.
+    {
+      id: 'mep-boiler-clearance',
+      labelKey: 'ribbon.panels.mepBoilerClearance',
+      rows: [
+        {
+          isInFlyout: false,
+          buttons: [
+            {
+              type: 'toggle',
+              size: 'small',
+              command: {
+                id: 'mepBoiler.showServiceClearance',
+                labelKey: 'ribbon.commands.mepBoilerEditor.showServiceClearance',
+                commandKey: MEP_BOILER_RIBBON_KEYS.toggles.showServiceClearance,
+              },
+            },
+            {
+              type: 'combobox',
+              size: 'small',
+              command: {
+                id: 'mepBoiler.serviceClearance',
+                labelKey: 'ribbon.commands.mepBoilerEditor.serviceClearance',
+                commandKey: MEP_BOILER_RIBBON_KEYS.params.serviceClearance,
+                comboboxWidthPx: 90,
+                options: SERVICE_CLEARANCE_MM_OPTIONS,
+              },
+            },
+          ],
+        },
+      ],
+    },
+    // ADR-408 Εύρος Β — «Ασφάλεια» panel (Revit «Safety Relief Valve»). Always visible (every
+    // boiler must carry a code-mandatory relief valve): a Yes/No toggle to draw the relief-valve
+    // body glyph + the set-pressure picker. Visualisation only — no connector (the perimeter is full).
+    {
+      id: 'mep-boiler-safety',
+      labelKey: 'ribbon.panels.mepBoilerSafety',
+      rows: [
+        {
+          isInFlyout: false,
+          buttons: [
+            {
+              type: 'toggle',
+              size: 'small',
+              command: {
+                id: 'mepBoiler.safetyReliefValve',
+                labelKey: 'ribbon.commands.mepBoilerEditor.safetyReliefValve',
+                commandKey: MEP_BOILER_RIBBON_KEYS.toggles.safetyReliefValve,
+              },
+            },
+            {
+              // ADR-408 — relief-valve SET PRESSURE picker. Options are supplied dynamically by
+              // the bridge (BOILER_RELIEF_PRESSURES_BAR → getComboboxState); a static enum routed
+              // by `isMepBoilerReliefPressureKey`. Declared here for the static fallback too.
+              type: 'combobox',
+              size: 'small',
+              command: {
+                id: 'mepBoiler.reliefValvePressure',
+                labelKey: 'ribbon.commands.mepBoilerEditor.reliefValvePressure',
+                commandKey: MEP_BOILER_RIBBON_KEYS.stringParams.reliefValvePressure,
+                comboboxWidthPx: 90,
+                options: RELIEF_PRESSURE_BAR_OPTIONS,
+              },
+            },
+            {
+              // ADR-408 Εύρος Β — EXPANSION VESSEL (Revit accessory, IFC IfcTank EXPANSION) Yes/No
+              // toggle. ON → the plan symbol draws a diaphragm-vessel body glyph (sealed-system
+              // partner of the relief valve). Visualisation only — no connector.
+              type: 'toggle',
+              size: 'small',
+              command: {
+                id: 'mepBoiler.expansionVessel',
+                labelKey: 'ribbon.commands.mepBoilerEditor.expansionVessel',
+                commandKey: MEP_BOILER_RIBBON_KEYS.toggles.expansionVessel,
+              },
+            },
+            {
+              // ADR-408 — expansion-vessel VOLUME picker (integer litres → plain numeric combobox).
+              type: 'combobox',
+              size: 'small',
+              command: {
+                id: 'mepBoiler.expansionVesselVolume',
+                labelKey: 'ribbon.commands.mepBoilerEditor.expansionVesselVolume',
+                commandKey: MEP_BOILER_RIBBON_KEYS.params.expansionVesselVolume,
+                comboboxWidthPx: 90,
+                options: EXPANSION_VESSEL_VOLUME_L_OPTIONS,
+              },
+            },
+            {
+              // ADR-408 Εύρος Β — PRESSURE GAUGE (Revit accessory, IFC IfcSensor PRESSURE) Yes/No
+              // toggle. ON → the plan symbol draws a dial-gauge body glyph (third sealed-system
+              // instrument: relief valve + expansion vessel + gauge). Visualisation only — no connector.
+              type: 'toggle',
+              size: 'small',
+              command: {
+                id: 'mepBoiler.pressureGauge',
+                labelKey: 'ribbon.commands.mepBoilerEditor.pressureGauge',
+                commandKey: MEP_BOILER_RIBBON_KEYS.toggles.pressureGauge,
+              },
+            },
+            {
+              // ADR-408 — system (cold fill) PRESSURE picker. Options are supplied dynamically by
+              // the bridge (BOILER_SYSTEM_PRESSURES_BAR → getComboboxState); a static enum routed
+              // by `isMepBoilerSystemPressureKey` (fractional → string combobox, not numeric).
+              // DISTINCT from the relief-valve set-pressure picker above (system fill vs valve lift).
+              type: 'combobox',
+              size: 'small',
+              command: {
+                id: 'mepBoiler.systemPressure',
+                labelKey: 'ribbon.commands.mepBoilerEditor.systemPressure',
+                commandKey: MEP_BOILER_RIBBON_KEYS.stringParams.systemPressure,
+                comboboxWidthPx: 90,
+                options: SYSTEM_PRESSURE_BAR_OPTIONS,
+              },
+            },
+          ],
+        },
+      ],
+    },
     {
       id: 'mep-boiler-thermal',
       labelKey: 'ribbon.panels.mepBoilerThermal',
@@ -413,6 +599,20 @@ export const CONTEXTUAL_MEP_BOILER_TAB: RibbonTab = {
                 commandKey: MEP_BOILER_RIBBON_KEYS.params.thermalOutput,
                 comboboxWidthPx: 90,
                 options: THERMAL_OUTPUT_W_OPTIONS,
+              },
+            },
+            {
+              // ADR-408 — minimum modulating output (Revit «Turndown Ratio»). Editable W; the
+              // nominal/maximum is `thermalOutput` above, and min < max yields the turndown
+              // ratio shown on the plan tag. Plain numeric combobox (integer W).
+              type: 'combobox',
+              size: 'small',
+              command: {
+                id: 'mepBoiler.minThermalOutput',
+                labelKey: 'ribbon.commands.mepBoilerEditor.minThermalOutput',
+                commandKey: MEP_BOILER_RIBBON_KEYS.params.minThermalOutput,
+                comboboxWidthPx: 90,
+                options: MIN_THERMAL_OUTPUT_W_OPTIONS,
               },
             },
             {

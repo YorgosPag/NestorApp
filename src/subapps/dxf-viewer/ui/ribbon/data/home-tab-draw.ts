@@ -621,6 +621,42 @@ export const HOME_DRAW_PANEL: RibbonPanelDef = {
                   commandKey: 'mep-ahu',
                   shortcut: 'AH',
                 },
+                // ADR-433 — point-based fire sprinkler head (καταιονητήρας).
+                {
+                  id: 'draw.bim.mepSprinkler',
+                  labelKey: 'ribbon.commands.bim.mepSprinkler.label',
+                  tooltipKey: 'ribbon.commands.bim.mepSprinkler.tooltip',
+                  icon: 'bim-pipe',
+                  commandKey: 'mep-sprinkler',
+                  shortcut: 'SK',
+                },
+                // ADR-433 — point-based fire riser (στήλη πυρόσβεσης, fire-sprinkler source).
+                {
+                  id: 'draw.bim.mepFireRiser',
+                  labelKey: 'ribbon.commands.bim.mepFireRiser.label',
+                  tooltipKey: 'ribbon.commands.bim.mepFireRiser.tooltip',
+                  icon: 'bim-pipe',
+                  commandKey: 'mep-fire-riser',
+                  shortcut: 'FR',
+                },
+                // ADR-434 — point-based gas meter (μετρητής αερίου, fuel-gas source).
+                {
+                  id: 'draw.bim.mepGasMeter',
+                  labelKey: 'ribbon.commands.bim.mepGasMeter.label',
+                  tooltipKey: 'ribbon.commands.bim.mepGasMeter.tooltip',
+                  icon: 'bim-pipe',
+                  commandKey: 'mep-gas-meter',
+                  shortcut: 'GM',
+                },
+                // ADR-434 — point-based gas cooker (εστία αερίου, fuel-gas terminal).
+                {
+                  id: 'draw.bim.mepGasCooker',
+                  labelKey: 'ribbon.commands.bim.mepGasCooker.label',
+                  tooltipKey: 'ribbon.commands.bim.mepGasCooker.tooltip',
+                  icon: 'bim-pipe',
+                  commandKey: 'mep-gas-cooker',
+                  shortcut: 'GC',
+                },
               ],
             },
             // ── Αυτόματος Ηλεκτρολογικός (submenu, ADR-430 Slice 2) ────────
@@ -871,6 +907,106 @@ export const HOME_DRAW_PANEL: RibbonPanelDef = {
                   icon: 'bim-duct',
                   commandKey: 'hvacAuto.actions.reject',
                   action: 'hvacAuto.actions.reject',
+                },
+              ],
+            },
+            // ── Αυτόματη Πυρόσβεση (submenu, ADR-433 Slice 2) ──────────────
+            // Revit "Generate → review → accept": all three are `action`
+            // buttons (fire onAction, not a draw tool).
+            {
+              id: 'draw.bim.fireAuto',
+              labelKey: 'ribbon.commands.bim.fireAuto.label',
+              tooltipKey: 'ribbon.commands.bim.fireAuto.tooltip',
+              icon: 'bim-pipe',
+              commandKey: 'draw.bim.fireAuto',
+              subVariants: [
+                {
+                  id: 'draw.bim.fireAutoGenerate',
+                  labelKey: 'ribbon.commands.bim.fireAutoGenerate.label',
+                  tooltipKey: 'ribbon.commands.bim.fireAutoGenerate.tooltip',
+                  icon: 'bim-pipe',
+                  commandKey: 'fireAuto.actions.generate',
+                  action: 'fireAuto.actions.generate',
+                },
+                {
+                  id: 'draw.bim.fireAutoAccept',
+                  labelKey: 'ribbon.commands.bim.fireAutoAccept.label',
+                  tooltipKey: 'ribbon.commands.bim.fireAutoAccept.tooltip',
+                  icon: 'bim-pipe',
+                  commandKey: 'fireAuto.actions.accept',
+                  action: 'fireAuto.actions.accept',
+                },
+                {
+                  id: 'draw.bim.fireAutoReject',
+                  labelKey: 'ribbon.commands.bim.fireAutoReject.label',
+                  tooltipKey: 'ribbon.commands.bim.fireAutoReject.tooltip',
+                  icon: 'bim-pipe',
+                  commandKey: 'fireAuto.actions.reject',
+                  action: 'fireAuto.actions.reject',
+                },
+              ],
+            },
+            // ── Αυτόματο Αέριο (submenu, ADR-434 Slice 2) ──────────────────
+            // Revit "Generate → review → accept": all three are `action`
+            // buttons (gas onAction, not a draw tool).
+            {
+              id: 'draw.bim.gasAuto',
+              labelKey: 'ribbon.commands.bim.gasAuto.label',
+              tooltipKey: 'ribbon.commands.bim.gasAuto.tooltip',
+              icon: 'bim-pipe',
+              commandKey: 'draw.bim.gasAuto',
+              subVariants: [
+                {
+                  id: 'draw.bim.gasAutoGenerate',
+                  labelKey: 'ribbon.commands.bim.gasAutoGenerate.label',
+                  tooltipKey: 'ribbon.commands.bim.gasAutoGenerate.tooltip',
+                  icon: 'bim-pipe',
+                  commandKey: 'gasAuto.actions.generate',
+                  action: 'gasAuto.actions.generate',
+                },
+                {
+                  id: 'draw.bim.gasAutoAccept',
+                  labelKey: 'ribbon.commands.bim.gasAutoAccept.label',
+                  tooltipKey: 'ribbon.commands.bim.gasAutoAccept.tooltip',
+                  icon: 'bim-pipe',
+                  commandKey: 'gasAuto.actions.accept',
+                  action: 'gasAuto.actions.accept',
+                },
+                {
+                  id: 'draw.bim.gasAutoReject',
+                  labelKey: 'ribbon.commands.bim.gasAutoReject.label',
+                  tooltipKey: 'ribbon.commands.bim.gasAutoReject.tooltip',
+                  icon: 'bim-pipe',
+                  commandKey: 'gasAuto.actions.reject',
+                  action: 'gasAuto.actions.reject',
+                },
+              ],
+            },
+            // ── Έλεγχος Συγκρούσεων (Coordination / Clash, ADR-435 Slice 1) ──
+            // Revit/Navisworks "Run → review": read-only `action` buttons
+            // (clash detect/clear, not a draw tool — no accept/commit).
+            {
+              id: 'draw.bim.clashDetection',
+              labelKey: 'ribbon.commands.bim.clashDetection.label',
+              tooltipKey: 'ribbon.commands.bim.clashDetection.tooltip',
+              icon: 'bim-pipe',
+              commandKey: 'draw.bim.clashDetection',
+              subVariants: [
+                {
+                  id: 'draw.bim.clashDetectionDetect',
+                  labelKey: 'ribbon.commands.bim.clashDetectionDetect.label',
+                  tooltipKey: 'ribbon.commands.bim.clashDetectionDetect.tooltip',
+                  icon: 'bim-pipe',
+                  commandKey: 'clashDetection.actions.detect',
+                  action: 'clashDetection.actions.detect',
+                },
+                {
+                  id: 'draw.bim.clashDetectionClear',
+                  labelKey: 'ribbon.commands.bim.clashDetectionClear.label',
+                  tooltipKey: 'ribbon.commands.bim.clashDetectionClear.tooltip',
+                  icon: 'bim-pipe',
+                  commandKey: 'clashDetection.actions.clear',
+                  action: 'clashDetection.actions.clear',
                 },
               ],
             },
