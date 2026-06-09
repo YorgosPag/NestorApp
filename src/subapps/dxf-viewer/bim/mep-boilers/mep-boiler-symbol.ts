@@ -55,6 +55,7 @@ import {
   buildCondensateTrapStroke,
   buildCondensateNeutraliserStroke,
 } from './mep-boiler-symbol-glyphs';
+import type { BoilerStroke } from './mep-boiler-symbol-glyphs';
 
 export type { BoilerStroke } from './mep-boiler-symbol-glyphs';
 
