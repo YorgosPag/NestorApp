@@ -143,15 +143,12 @@ export function getBeamGrips(entity: Readonly<BeamEntity>): GripInfo[] {
     beamGripKind: 'beam-end',
   });
 
-  // 2 — axis midpoint translate (moves both endpoints + curveControl)
-  grips.push({
-    entityId: entity.id,
-    gripIndex: 2,
-    type: 'center',
-    position: mid,
-    movesEntity: true,
-    beamGripKind: 'beam-midpoint',
-  });
+  // 2 — axis midpoint translate (MOVE). ADR-363 Φ1G.5 Slice 2: no longer emitted
+  // — Alt+drag from any remaining grip (start / end / width / depth / rotation)
+  // translates the whole beam (declutter). gripIndex 2 left unused (no reindex —
+  // the width/depth/rotation indices below are computed from a hardcoded base of
+  // 3, independent of this gap). The `beam-midpoint` transform (`moveMidpoint`) +
+  // hot-grip move path are retained but unreachable.
 
   // 3 — curve control (curved kind only). Seed στο midpoint όταν undefined.
   let widthGripIndex = 3;

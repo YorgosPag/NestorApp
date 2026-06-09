@@ -22,9 +22,11 @@ const base: CentredBoxParams = {
 };
 
 describe('getCentredBoxGrips', () => {
-  it('emits 6 role-tagged grips in stable order', () => {
+  // ADR-363 Φ1G.5 Slice 2 — the central MOVE grip (gripIndex 0) is no longer
+  // emitted (declutter; Alt+drag moves the whole entity). The `'move'` role +
+  // `moveCentre` transform are retained (see applyCentredBoxGripDrag below).
+  it('emits 5 role-tagged grips in stable order (no central move grip)', () => {
     expect(getCentredBoxGrips(base).map((g) => g.role)).toEqual([
-      'move',
       'rotation',
       'corner-ne',
       'corner-nw',
@@ -33,9 +35,9 @@ describe('getCentredBoxGrips', () => {
     ]);
   });
 
-  it('places move at centre, corners at ±half-extents, rotation beyond +Y (rotation 0)', () => {
+  it('places corners at ±half-extents, rotation beyond +Y (rotation 0); no move grip', () => {
     const byRole = Object.fromEntries(getCentredBoxGrips(base).map((g) => [g.role, g.position]));
-    expect(byRole['move']).toEqual({ x: 1000, y: 2000 });
+    expect(byRole['move']).toBeUndefined();
     expect(byRole['rotation']).toEqual({ x: 1000, y: 2500 }); // length/2 (300) + offset 200
     expect(byRole['corner-ne']).toEqual({ x: 1300, y: 2300 });
     expect(byRole['corner-nw']).toEqual({ x: 700, y: 2300 });
@@ -43,10 +45,9 @@ describe('getCentredBoxGrips', () => {
     expect(byRole['corner-se']).toEqual({ x: 1300, y: 1700 });
   });
 
-  it('tags move as movesEntity, others not', () => {
+  it('tags no grip as movesEntity (move grip removed)', () => {
     const grips = getCentredBoxGrips(base);
-    expect(grips[0].movesEntity).toBe(true);
-    expect(grips.slice(1).every((g) => !g.movesEntity)).toBe(true);
+    expect(grips.every((g) => !g.movesEntity)).toBe(true);
   });
 });
 

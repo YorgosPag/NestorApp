@@ -31,10 +31,10 @@ function entityWith(overrides: Partial<ElectricalPanelParams> = {}): ElectricalP
 }
 
 describe('getElectricalPanelGrips', () => {
-  it('emits 6 grips for a rectangular panel in stable order', () => {
+  // ADR-363 Φ1G.5 Slice 2: move grip removed from emission → 5 grips, rotation first.
+  it('emits 5 grips for a rectangular panel in stable order', () => {
     const grips = getElectricalPanelGrips(entityWith());
     expect(grips.map((g) => g.electricalPanelGripKind)).toEqual([
-      'electrical-panel-move',
       'electrical-panel-rotation',
       'electrical-panel-corner-ne',
       'electrical-panel-corner-nw',
@@ -43,18 +43,19 @@ describe('getElectricalPanelGrips', () => {
     ]);
   });
 
-  it('places the move grip at the centre and corners at ±half-extents (rotation 0)', () => {
+  // ADR-363 Φ1G.5 Slice 2: move grip no longer emitted — assert only corners.
+  it('places corners at ±half-extents (rotation 0)', () => {
     const grips = getElectricalPanelGrips(entityWith());
     const byKind = Object.fromEntries(grips.map((g) => [g.electricalPanelGripKind, g.position]));
-    expect(byKind['electrical-panel-move']).toEqual({ x: 1000, y: 2000 });
     expect(byKind['electrical-panel-corner-ne']).toEqual({ x: 1300, y: 2300 });
     expect(byKind['electrical-panel-corner-nw']).toEqual({ x: 700, y: 2300 });
     expect(byKind['electrical-panel-corner-sw']).toEqual({ x: 700, y: 1700 });
     expect(byKind['electrical-panel-corner-se']).toEqual({ x: 1300, y: 1700 });
   });
 
+  // ADR-363 Φ1G.5 Slice 2: rotation is now array index 0 (move grip removed); gripIndex field stays 1.
   it('places the rotation handle beyond the +Y edge (length/2 + offset)', () => {
-    const [, rotation] = getElectricalPanelGrips(entityWith());
+    const [rotation] = getElectricalPanelGrips(entityWith());
     // length/2 (300) + ROTATION_HANDLE_OFFSET_MM (200) = 500 above centre.
     expect(rotation.position).toEqual({ x: 1000, y: 2500 });
   });

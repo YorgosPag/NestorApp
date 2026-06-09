@@ -1,7 +1,8 @@
 /**
  * ADR-408 Φ12 — Plumbing manifold grip adapter (thin over the centred-box SSoT).
- * Pins the 6-grip emission (move + rotation + 4 corners) and that the move drag
+ * Pins the 5-grip emission (rotation + 4 corners) and that the move drag
  * translates `position`, mirroring the electrical-panel adapter.
+ * ADR-363 Φ1G.5 Slice 2: move grip no longer emitted by getCentredBoxGrips.
  */
 
 import { getMepManifoldGrips, applyMepManifoldGripDrag } from '../mep-manifold-grips';
@@ -27,35 +28,32 @@ function manifoldWith(outletCount: number): MepManifoldEntity {
 }
 
 describe('getMepManifoldGrips', () => {
-  it('emits the 6 centred-box grips (move, rotation, 4 corners) first', () => {
+  // ADR-363 Φ1G.5 Slice 2: move grip removed → 5 box grips (rotation + 4 corners).
+  it('emits the 5 centred-box grips (rotation, 4 corners) first', () => {
     const grips = getMepManifoldGrips(manifold());
-    expect(grips[0].mepManifoldGripKind).toBe('mep-manifold-move');
-    expect(grips[1].mepManifoldGripKind).toBe('mep-manifold-rotation');
-    expect(grips.slice(2, 6).map((g) => g.mepManifoldGripKind)).toEqual([
+    // Array index 0 is now rotation (gripIndex 1 — unchanged field value).
+    expect(grips[0].mepManifoldGripKind).toBe('mep-manifold-rotation');
+    expect(grips.slice(1, 5).map((g) => g.mepManifoldGripKind)).toEqual([
       'mep-manifold-corner-ne',
       'mep-manifold-corner-nw',
       'mep-manifold-corner-sw',
       'mep-manifold-corner-se',
     ]);
   });
-
-  it('move grip sits on the centre (position)', () => {
-    const grips = getMepManifoldGrips(manifold());
-    expect(grips[0].position.x).toBeCloseTo(100, 6);
-    expect(grips[0].position.y).toBeCloseTo(100, 6);
-  });
 });
 
 describe('getMepManifoldGrips — outlet action grips (Revit array control ▲/▼)', () => {
   it('emits both add (▲) and remove (▼) action grips at a mid count', () => {
-    // default count = 4 → 6 box grips + 2 action grips.
+    // ADR-363 Φ1G.5 Slice 2: move grip removed → 5 box grips + 2 action grips = 7 total.
     const grips = getMepManifoldGrips(manifold());
-    expect(grips).toHaveLength(8);
+    expect(grips).toHaveLength(7);
     const kinds = grips.map((g) => g.mepManifoldGripKind);
+    expect(kinds).not.toContain('mep-manifold-move');
     expect(kinds).toContain('mep-manifold-outlet-add');
     expect(kinds).toContain('mep-manifold-outlet-remove');
     const add = grips.find((g) => g.mepManifoldGripKind === 'mep-manifold-outlet-add')!;
     const remove = grips.find((g) => g.mepManifoldGripKind === 'mep-manifold-outlet-remove')!;
+    // gripIndex field values are unchanged (action grips still assigned indices 6 & 7).
     expect(add.gripIndex).toBe(6);
     expect(remove.gripIndex).toBe(7);
     expect(add.movesEntity).toBe(false);

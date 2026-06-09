@@ -3,10 +3,10 @@
  *
  * Verifies:
  *   - `getBeamGrips` emits the correct count + ordering per kind
- *     (straight/cantilever → 5 grips, curved → 6 grips, including the Phase 5.5b
- *     width handle + Phase 5.5c depth handle).
- *   - Grip positions correspond to params.startPoint / endPoint / midpoint /
- *     curveControl, width-handle (+perpendicular × width/2) and depth-handle
+ *     (straight/cantilever → 5 grips, curved → 6 grips — ADR-363 Φ1G.5 Slice 2:
+ *     beam-midpoint grip removed; Phase 5.5b width + Phase 5.5c depth remain).
+ *   - Grip positions correspond to params.startPoint / endPoint /
+ *     curveControl (curved kind), width-handle (+perpendicular × width/2) and depth-handle
  *     (-perpendicular × (width/2 + DEPTH_GRIP_OFFSET_MM)) in scene-unit (mm) space.
  *   - `applyBeamGripDrag` translates the right endpoint(s) per kind, seeds the
  *     curve control point when previously undefined, preserves foreign params
@@ -76,81 +76,85 @@ function makeCurvedWithoutControl(): BeamEntity {
 describe('beam-grips (Phase 5.5a)', () => {
   // ─── getBeamGrips ──────────────────────────────────────────────────────────
 
-  it('1. straight beam emits 6 grips (start / end / midpoint / width / depth / rotation)', () => {
+  it('1. straight beam emits 5 grips (start / end / width / depth / rotation)', () => {
+    // ADR-363 Φ1G.5 Slice 2: beam-midpoint no longer emitted — count drops 6→5
     const beam = makeStraight();
     const grips = getBeamGrips(beam);
-    expect(grips).toHaveLength(6);
+    expect(grips).toHaveLength(5); // ADR-363 Φ1G.5 Slice 2
     expect(grips.map((g) => g.beamGripKind)).toEqual([
       'beam-start',
       'beam-end',
-      'beam-midpoint',
       'beam-width',
       'beam-depth',
       'beam-rotation',
-    ]);
+    ]); // ADR-363 Φ1G.5 Slice 2: 'beam-midpoint' removed
   });
 
-  it('2. cantilever beam emits 6 grips (same layout as straight)', () => {
+  it('2. cantilever beam emits 5 grips (same layout as straight)', () => {
+    // ADR-363 Φ1G.5 Slice 2: beam-midpoint no longer emitted — count drops 6→5
     const beam = makeCantilever();
     const grips = getBeamGrips(beam);
-    expect(grips).toHaveLength(6);
+    expect(grips).toHaveLength(5); // ADR-363 Φ1G.5 Slice 2
     expect(grips.map((g) => g.beamGripKind)).toEqual([
       'beam-start',
       'beam-end',
-      'beam-midpoint',
       'beam-width',
       'beam-depth',
       'beam-rotation',
-    ]);
+    ]); // ADR-363 Φ1G.5 Slice 2: 'beam-midpoint' removed
   });
 
-  it('3. curved beam emits 7 grips (start / end / midpoint / curve / width / depth / rotation)', () => {
+  it('3. curved beam emits 6 grips (start / end / curve / width / depth / rotation)', () => {
+    // ADR-363 Φ1G.5 Slice 2: beam-midpoint no longer emitted — count drops 7→6
     const beam = makeCurvedWithControl();
     const grips = getBeamGrips(beam);
-    expect(grips).toHaveLength(7);
+    expect(grips).toHaveLength(6); // ADR-363 Φ1G.5 Slice 2
     expect(grips.map((g) => g.beamGripKind)).toEqual([
       'beam-start',
       'beam-end',
-      'beam-midpoint',
       'beam-curve',
       'beam-width',
       'beam-depth',
       'beam-rotation',
-    ]);
+    ]); // ADR-363 Φ1G.5 Slice 2: 'beam-midpoint' removed
   });
 
-  it('4. grip positions match params.startPoint / endPoint / midpoint / curveControl', () => {
+  it('4. grip positions match params.startPoint / endPoint / curveControl', () => {
+    // ADR-363 Φ1G.5 Slice 2: grips[2] is now beam-curve (was beam-midpoint).
+    // grips[3] is now beam-width. Indices shifted down by 1 after the midpoint removal.
     const beam = makeCurvedWithControl();
     const grips = getBeamGrips(beam);
     expect(grips[0].position).toEqual({ x: 0, y: 0 });
     expect(grips[1].position).toEqual({ x: 4000, y: 0 });
-    expect(grips[2].position).toEqual({ x: 2000, y: 0 });
-    expect(grips[3].position).toEqual({ x: 2000, y: 800 });
+    // ADR-363 Φ1G.5 Slice 2: grips[2] = beam-curve (was grips[3])
+    expect(grips[2].beamGripKind).toBe('beam-curve');
+    expect(grips[2].position).toEqual({ x: 2000, y: 800 });
   });
 
   it('5. curved beam without curveControl seeds curve grip at axis midpoint', () => {
+    // ADR-363 Φ1G.5 Slice 2: beam-midpoint removed → 7→6 grips; indices shift down by 1.
+    // New array: start(0) / end(1) / curve(2) / width(3) / depth(4) / rotation(5).
     const beam = makeCurvedWithoutControl();
     const grips = getBeamGrips(beam);
-    // start + end + midpoint + curve + width + depth + rotation (Phase 5.5b/5.5c
-    // added the width/depth handles, Phase 5.5d the rotation handle).
-    expect(grips).toHaveLength(7);
-    expect(grips[3].beamGripKind).toBe('beam-curve');
+    // start + end + curve + width + depth + rotation (Phase 5.5b/5.5c/5.5d)
+    expect(grips).toHaveLength(6); // ADR-363 Φ1G.5 Slice 2
+    // ADR-363 Φ1G.5 Slice 2: grips[2] = beam-curve (was grips[3])
+    expect(grips[2].beamGripKind).toBe('beam-curve');
     // Axis midpoint of (0,0)→(4000,0) is (2000,0).
-    expect(grips[3].position).toEqual({ x: 2000, y: 0 });
-    expect(grips[4].beamGripKind).toBe('beam-width');
-    expect(grips[5].beamGripKind).toBe('beam-depth');
-    expect(grips[6].beamGripKind).toBe('beam-rotation');
+    expect(grips[2].position).toEqual({ x: 2000, y: 0 });
+    expect(grips[3].beamGripKind).toBe('beam-width'); // ADR-363 Φ1G.5 Slice 2: was grips[4]
+    expect(grips[4].beamGripKind).toBe('beam-depth'); // ADR-363 Φ1G.5 Slice 2: was grips[5]
+    expect(grips[5].beamGripKind).toBe('beam-rotation'); // ADR-363 Φ1G.5 Slice 2: was grips[6]
   });
 
-  it('6. midpoint grip carries movesEntity=true, others false (incl. width + depth)', () => {
+  it('6. beam-midpoint is NOT emitted; all remaining grips have movesEntity=false', () => {
+    // ADR-363 Φ1G.5 Slice 2: beam-midpoint grip removed — no grip has movesEntity=true.
     const beam = makeCurvedWithControl();
     const grips = getBeamGrips(beam);
-    expect(grips[0].movesEntity).toBe(false);
-    expect(grips[1].movesEntity).toBe(false);
-    expect(grips[2].movesEntity).toBe(true);
-    expect(grips[3].movesEntity).toBe(false);
-    expect(grips[4].movesEntity).toBe(false);
-    expect(grips[5].movesEntity).toBe(false);
+    // Confirm beam-midpoint is absent entirely
+    expect(grips.some((g) => g.beamGripKind === 'beam-midpoint')).toBe(false); // ADR-363 Φ1G.5 Slice 2
+    // All remaining grips must have movesEntity=false
+    expect(grips.every((g) => g.movesEntity === false)).toBe(true); // ADR-363 Φ1G.5 Slice 2
   });
 
   // ─── applyBeamGripDrag ─────────────────────────────────────────────────────

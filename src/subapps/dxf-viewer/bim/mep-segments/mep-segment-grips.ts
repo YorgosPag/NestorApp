@@ -89,7 +89,6 @@ export function getMepSegmentGrips(entity: Readonly<MepSegmentEntity>): GripInfo
 
   const start = project2D(params.startPoint);
   const end = project2D(params.endPoint);
-  const mid = axisMidpoint2D(params);
 
   // 0 — axis start endpoint
   grips.push({
@@ -111,15 +110,13 @@ export function getMepSegmentGrips(entity: Readonly<MepSegmentEntity>): GripInfo
     mepSegmentGripKind: 'mep-segment-end',
   });
 
-  // 2 — axis midpoint (moves both endpoints — whole-entity translate)
-  grips.push({
-    entityId: entity.id,
-    gripIndex: 2,
-    type: 'center',
-    position: mid,
-    movesEntity: true,
-    mepSegmentGripKind: 'mep-segment-midpoint',
-  });
+  // 2 — axis midpoint (whole-entity translate / MOVE). ADR-363 Φ1G.5 Slice 2: no
+  // longer emitted on a HORIZONTAL segment — Alt+drag from start / end / section /
+  // rotation moves the whole segment (declutter). gripIndex 2 left unused (the
+  // section/rotation indices below depend on `sectionPos`, not on this gap).
+  // NOTE: the VERTICAL riser branch above KEEPS its move grip — it is the riser's
+  // ONLY affordance (a plan point object), and Alt+drag itself needs a grip to
+  // grab. The `mep-segment-midpoint` transform (`moveMidpoint`) stays (riser + hot-grip).
 
   // 3 — section-width dimension handle (skip on degenerate axis)
   const sectionPos = segmentSectionHandlePosition(params);

@@ -123,7 +123,10 @@ export function getWallGrips(entity: Readonly<WallEntity>): GripInfo[] {
     wallGripKind: 'wall-end',
   });
 
-  // 2 — axis midpoint translate (moves both endpoints)
+  // 2 — axis midpoint translate (moves both endpoints). ADR-363 Φ1G.5 Slice 2:
+  // still PUSHED (the polyline branch below keys subsequent gripIndex off
+  // `grips.length`, so removing the push would shift/collide those) but FILTERED
+  // OUT of the returned set at the end — see the `wall-midpoint` filter on return.
   grips.push({
     entityId: entity.id,
     gripIndex: 2,
@@ -263,7 +266,14 @@ export function getWallGrips(entity: Readonly<WallEntity>): GripInfo[] {
     }
   }
 
-  return suppressRedundantStraightGrips(grips, kind);
+  // ADR-363 Φ1G.5 Slice 2 — drop the central MOVE marker (`wall-midpoint`,
+  // 4-way arrow) from EVERY wall kind: it is redundant now that Alt+drag from any
+  // characteristic point translates the whole wall (declutter, Giorgio request).
+  // Filtered here (not un-pushed) so the gripIndex math above stays intact; the
+  // `wall-midpoint` transform + hot-grip move path are retained (just unreachable).
+  return suppressRedundantStraightGrips(grips, kind).filter(
+    (g) => g.wallGripKind !== 'wall-midpoint',
+  );
 }
 
 /**

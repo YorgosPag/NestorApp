@@ -8,9 +8,13 @@
  * entity-agnostic grip ROLES (`'move'` / `'rotation'` / `'corner-*'`) to/from the
  * fixture grip-kind strings (`'mep-fixture-move'`, …).
  *
- * Rectangular (6 grips): 0 → move, 1 → rotation, 2-5 → corners (ne, nw, sw, se).
- * Circular   (2 grips):  0 → move, 1 → `mep-fixture-diameter` (symmetric 2× resize,
+ * Rectangular (5 grips): 1 → rotation, 2-5 → corners (ne, nw, sw, se).
+ * Circular   (1 grip):   1 → `mep-fixture-diameter` (symmetric 2× resize,
  *                        centre fixed) — the only non-box affordance.
+ *
+ * ADR-363 Φ1G.5 Slice 2 — the central MOVE grip (gripIndex 0) is no longer
+ * emitted on either shape (Alt+drag moves the whole fixture); gripIndex 0 is
+ * left unused (no reindex).
  *
  * SSoT: all box geometry + rotation math live in the shared box SSoT + `grip-math`
  * (ADR-188 canonical `rotatePoint`) — NO re-implemented cos/sin here.
@@ -55,25 +59,20 @@ const KIND_TO_ROLE: Readonly<Partial<Record<MepFixtureGripKind, CentredBoxGripRo
 
 /**
  * Compute parametric grip positions for a `MepFixtureEntity`. Stable order:
- *   rectangular (6 grips): 0 → move, 1 → rotation, 2-5 → corners (ne, nw, sw, se)
- *   circular   (2 grips):  0 → move, 1 → diameter
+ *   rectangular (5 grips): 1 → rotation, 2-5 → corners (ne, nw, sw, se)
+ *   circular   (1 grip):   1 → diameter
+ * ADR-363 Φ1G.5 Slice 2 — the central MOVE grip (gripIndex 0) is suppressed on
+ * both shapes; the entity is moved via Alt+drag from any remaining grip.
  */
 export function getMepFixtureGrips(entity: Readonly<MepFixtureEntity>): GripInfo[] {
   const { params } = entity;
 
   if (params.shape === 'circular') {
-    // Fixture-specific: a circle has no rotation / corners — only move + a single
+    // Fixture-specific: a circle has no rotation / corners — only the single
     // diameter handle on the world +X radius (rotation ignored, mirror column).
+    // The move grip is dropped (Slice 2); gripIndex 1 kept stable (no reindex).
     const s = mmScaleFor(params);
     return [
-      {
-        entityId: entity.id,
-        gripIndex: 0,
-        type: 'center',
-        position: { x: params.position.x, y: params.position.y },
-        movesEntity: true,
-        mepFixtureGripKind: 'mep-fixture-move',
-      },
       {
         entityId: entity.id,
         gripIndex: 1,

@@ -2,9 +2,10 @@
  * ADR-363 Phase 2b — polygon-backed U-shape/composite editing grip tests.
  *
  * Verifies:
- *   - `getColumnGrips` emission: manual παραμετρικό Π → 6 grips (base 4 +
- *     leg/base thickness)· polygon-backed U/composite → center + rotation +
- *     ΜΙΑ per-vertex λαβή ανά κορυφή (ΟΧΙ width/depth).
+ *   - `getColumnGrips` emission: manual παραμετρικό Π → 5 grips (rotation +
+ *     width + depth + leg/base thickness)· polygon-backed U/composite →
+ *     rotation + ΜΙΑ per-vertex λαβή ανά κορυφή (ΟΧΙ center/width/depth).
+ *     ADR-363 Φ1G.5 Slice 2: `column-center` NO LONGER emitted.
  *   - `applyColumnGripDrag`:
  *       · `column-leg-thickness` / `column-base-thickness` patch ushape.
  *       · `column-poly-vertex-${i}` σέρνει ΜΟΝΟ την κορυφή i (οι υπόλοιπες
@@ -67,10 +68,10 @@ function makeUparametric(): ColumnEntity {
 }
 
 describe('column-grips Phase 2b — emission', () => {
-  it('manual παραμετρικό Π → 6 grips (base 4 + leg + base thickness)', () => {
+  // ADR-363 Φ1G.5 Slice 2: column-center removed → 5 grips (rotation + width + depth + leg + base)
+  it('manual παραμετρικό Π → 5 grips (rotation + width + depth + leg + base thickness)', () => {
     const grips = getColumnGrips(makeUparametric());
     expect(grips.map((g) => g.columnGripKind)).toEqual([
-      'column-center',
       'column-rotation',
       'column-width',
       'column-depth',
@@ -79,10 +80,10 @@ describe('column-grips Phase 2b — emission', () => {
     ]);
   });
 
-  it('polygon-backed composite → center + rotation + ΜΙΑ λαβή/κορυφή (ΟΧΙ width/depth)', () => {
+  // ADR-363 Φ1G.5 Slice 2: column-center removed → rotation + ΜΙΑ λαβή/κορυφή (ΟΧΙ center/width/depth)
+  it('polygon-backed composite → rotation + ΜΙΑ λαβή/κορυφή (ΟΧΙ center/width/depth)', () => {
     const grips = getColumnGrips(makeComposite());
     expect(grips.map((g) => g.columnGripKind)).toEqual([
-      'column-center',
       'column-rotation',
       'column-poly-vertex-0',
       'column-poly-vertex-1',
@@ -100,6 +101,7 @@ describe('column-grips Phase 2b — emission', () => {
     expect(kinds).toContain('column-poly-vertex-0');
     expect(kinds).not.toContain('column-width');
     expect(kinds).not.toContain('column-depth');
+    expect(kinds).not.toContain('column-center'); // ADR-363 Φ1G.5 Slice 2
   });
 
   it('per-vertex handle position = vertex world (anchor center, rotation 0)', () => {

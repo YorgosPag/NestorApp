@@ -2,10 +2,10 @@
  * ADR-358 Phase 5b + ADR-393 — `stair-grips` pure handlers tests.
  *
  * Coverage:
- *   - `getStairGrips()` grip layout per variant (ADR-393 v2: straight = 6 grips
- *     = move + rotation + 4 corners, width/length/mid-front suppressed; Phase 2:
- *     l-shape/u-shape/gamma = move + rotation + 4 flight-based corners + landing
- *     grips, width/length also suppressed; curved = move + rotation + width +
+ *   - `getStairGrips()` grip layout per variant (ADR-393 v2: straight = 5 grips
+ *     = rotation + 4 corners, move/stair-base suppressed per ADR-363 Φ1G.5 Slice 2;
+ *     Phase 2: l-shape/u-shape/gamma = rotation + 4 flight-based corners + landing
+ *     grips, width/length also suppressed; curved = rotation + width +
  *     length; legacy `stair-split` removed per ADR-393 Q4).
  *   - ADR-393 v2 Phase 2 multi-flight corner transforms (perp→width, axial
  *     start→flightSplit[0], axial end→flightSplit[last] on the LAST flight's
@@ -14,6 +14,8 @@
  *   - `applyStairGripDrag()` transforms for the ADR-358 base grips AND the
  *     ADR-393 corner / mid-front / per-flight / landing transforms (kept even
  *     where the grip is no longer emitted — corners reuse them).
+ *   - NOTE: stair-base is computed internally but FILTERED from output
+ *     per ADR-363 Φ1G.5 Slice 2 (central move marker removed from DXF canvas).
  */
 
 import {
@@ -112,11 +114,11 @@ describe('stair-grips (ADR-358 Phase 5b + ADR-393)', () => {
 
   // ─── getStairGrips: layout (ADR-358 base) ─────────────────────────────────
 
-  it('1. straight stair → 6 grips (move + rotation + 4 corners; ADR-393 v2)', () => {
+  // ADR-363 Φ1G.5 Slice 2: stair-base filtered out → 5 grips (rotation + 4 corners)
+  it('1. straight stair → 5 grips (rotation + 4 corners; ADR-393 v2, stair-base removed)', () => {
     const grips = getStairGrips(makeStraight());
-    expect(grips).toHaveLength(6);
+    expect(grips).toHaveLength(5);
     expect(grips.map((g) => g.stairGripKind)).toEqual([
-      'stair-base',
       'stair-direction',
       'stair-corner-start-left',
       'stair-corner-start-right',
@@ -125,19 +127,22 @@ describe('stair-grips (ADR-358 Phase 5b + ADR-393)', () => {
     ]);
   });
 
-  it('2. basePoint MOVE grip at walkline arc-midpoint (totalRun/2), not basePoint', () => {
+  // ADR-363 Φ1G.5 Slice 2: stair-base is NOT present in the returned array.
+  // The transform (applyStairGripDrag 'stair-base') is retained — see test 10.
+  it('2. stair-base is absent from getStairGrips output (ADR-363 Φ1G.5 Slice 2)', () => {
     const grips = getStairGrips(makeStraight());
-    expect(grips[0].stairGripKind).toBe('stair-base');
-    // tread=280, stepCount=12 → totalRun=3080 → midpoint x=1540, y=0
-    expect(grips[0].position.x).toBeCloseTo(1540, 4);
-    expect(grips[0].position.y).toBeCloseTo(0, 6);
+    const kinds = grips.map((g) => g.stairGripKind);
+    expect(kinds).not.toContain('stair-base');
+    // First returned grip is now stair-direction (array index 0, gripIndex field still 1)
+    expect(grips[0].stairGripKind).toBe('stair-direction');
   });
 
+  // ADR-363 Φ1G.5 Slice 2: stair-direction shifts to array index 0 (was 1); gripIndex field = 1 (unchanged)
   it('3. direction ROTATION grip at front-centre (base − 100mm·u, −u side)', () => {
     const grips = getStairGrips(makeStraight());
-    expect(grips[1].stairGripKind).toBe('stair-direction');
-    expect(grips[1].position.x).toBeCloseTo(-100, 6);
-    expect(grips[1].position.y).toBeCloseTo(0, 6);
+    expect(grips[0].stairGripKind).toBe('stair-direction'); // array index 0 (was 1)
+    expect(grips[0].position.x).toBeCloseTo(-100, 6);
+    expect(grips[0].position.y).toBeCloseTo(0, 6);
   });
 
   // ─── getStairGrips: ADR-393 Phase A1 corners (straight) ───────────────────
@@ -159,15 +164,16 @@ describe('stair-grips (ADR-358 Phase 5b + ADR-393)', () => {
     expect(kinds).not.toContain('stair-start-side');
   });
 
+  // ADR-363 Φ1G.5 Slice 2: stair-base absent from output → removed byKind['stair-base'] assertion
   it('5b. metre-scene: handle offsets stay scene-scaled (not 1000× off-screen)', () => {
     // Rule: BIM grip positions must be scene-unit-correct. In a metre scene the
     // 100 mm direction offset must resolve to 0.1 m, NOT 100 m.
     const params = buildDefaultStairParams(basePoint, 0, {}, 'm');
     const grips = getStairGrips(buildStairEntity(params, '0'));
     const byKind = Object.fromEntries(grips.map((g) => [g.stairGripKind, g.position]));
-    // width=1.2 → half=0.6 ; tread=0.28 → totalRun=3.08 → walkline mid=1.54
+    // width=1.2 → half=0.6 ; tread=0.28 → totalRun=3.08
     expect(byKind['stair-direction'].x).toBeCloseTo(-0.1, 6); // front-centre, −u side
-    expect(byKind['stair-base'].x).toBeCloseTo(1.54, 6);       // walkline arc-midpoint
+    // stair-base is filtered from output per ADR-363 Φ1G.5 Slice 2 — use applyStairGripDrag for transform
     expect(byKind['stair-corner-start-left']).toEqual({ x: 0, y: 0.6 });
     expect(byKind['stair-corner-end-left'].x).toBeCloseTo(3.08, 6);
     // Regression guard: the old mm-constant bug placed these at ±100 (metres).

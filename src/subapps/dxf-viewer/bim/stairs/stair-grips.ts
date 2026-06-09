@@ -87,6 +87,10 @@ export function getStairGrips(entity: Readonly<StairEntity>): GripInfo[] {
   // arc-midpoint (centre of the climbing path) instead of the front edge so it
   // reads as "grab here to move the whole stair". Drag is delta-based, so the
   // display position does not affect the transform.
+  // ADR-363 Φ1G.5 Slice 2: still PUSHED (the ADR-393 grips below key gripIndex off
+  // `grips.length`, so un-pushing would shift/collide them with the direction grip
+  // at hardcoded gripIndex 1) but FILTERED OUT of the returned set at the end — see
+  // the `stair-base` filter on return. Alt+drag from any remaining grip moves the stair.
   const moveAnchor: Point2D = polylineArcMidpoint(geometry.walkline) ?? {
     x: base.x + (params.totalRun / 2) * u.x,
     y: base.y + (params.totalRun / 2) * u.y,
@@ -135,7 +139,12 @@ export function getStairGrips(entity: Readonly<StairEntity>): GripInfo[] {
     pushAxisWidthLength(grips, entity, base, u, p);
   }
 
-  return grips;
+  // ADR-363 Φ1G.5 Slice 2 — drop the central MOVE marker (`stair-base`, 4-way
+  // arrow at the walkline midpoint): redundant now that Alt+drag from any grip
+  // translates the whole stair (declutter). Filtered here (not un-pushed) so the
+  // `grips.length`-based indices above stay intact; the `stair-base` transform +
+  // hot-grip move path are retained (just unreachable). gripIndex 0 left unused.
+  return grips.filter((g) => g.stairGripKind !== 'stair-base');
 }
 
 // ─── ADR-358 Phase 5b — axis width + length handles (non-straight variants) ──

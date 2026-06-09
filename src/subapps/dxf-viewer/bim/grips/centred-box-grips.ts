@@ -159,14 +159,20 @@ export function centredBoxRotationHandleWorld(params: CentredBoxParams): Point2D
 // ─── Grip emission ───────────────────────────────────────────────────────────
 
 /**
- * Compute the 6 role-tagged grips of a centred rotatable box. Stable order:
- * 0 → move, 1 → rotation, 2-5 → corners (ne, nw, sw, se).
+ * Compute the role-tagged grips of a centred rotatable box. Stable order:
+ * 1 → rotation, 2-5 → corners (ne, nw, sw, se).
+ *
+ * ADR-363 Φ1G.5 Slice 2 (2026-06-09) — the gripIndex-0 MOVE grip (4-way arrow at
+ * the centre) is NO LONGER emitted: it is redundant now that Alt+drag from any
+ * characteristic point translates the whole entity (declutter, Giorgio request).
+ * gripIndex 0 is left intentionally unused — NO reindex, so the rotation handle
+ * stays at 1 and the corners at 2-5 (downstream keys on role/kind, not index).
+ * The `'move'` role + `moveCentre` transform in `applyCentredBoxGripDrag` are
+ * RETAINED (drag-math SSoT / dead hot-grip move path) but never produced here.
  */
 export function getCentredBoxGrips(params: CentredBoxParams): CentredBoxGrip[] {
   const grips: CentredBoxGrip[] = [];
-  const c = centre(params);
 
-  grips.push({ gripIndex: 0, role: 'move', type: 'center', position: c, movesEntity: true });
   grips.push({
     gripIndex: 1,
     role: 'rotation',

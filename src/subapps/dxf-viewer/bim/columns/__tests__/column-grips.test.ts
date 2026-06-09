@@ -3,8 +3,9 @@
  *
  * Verifies:
  *   - `getColumnGrips` emits the correct count + ordering per kind
- *     (rectangular → 4 grips, L-shape / T-shape → 6 grips Phase 4.5b,
- *     circular → 2 grips).
+ *     (rectangular → 3 grips, L-shape / T-shape → 5 grips Phase 4.5b,
+ *     circular → 1 grip, polygon → 2 grips, shear-wall → 3 grips, I-shape → 5 grips).
+ *     ADR-363 Φ1G.5 Slice 2: column-center grip no longer emitted.
  *   - Grip positions correspond to centroid / rotation handle / far-edge
  *     midpoints / variant edge midpoints σε mm world space.
  *   - `applyColumnGripDrag` patches the right field per kind, clamps
@@ -74,13 +75,14 @@ function makeOfKind(kind: ColumnKind, overrides: Partial<ColumnParams> = {}): Co
 }
 
 describe('column-grips — getColumnGrips (Phase 4.5)', () => {
-  it('1. rectangular → 4 grips, stable order (center, rotation, width, depth)', () => {
+  it('1. rectangular → 3 grips, stable order (rotation, width, depth) — ADR-363 Φ1G.5 Slice 2', () => {
+    // ADR-363 Φ1G.5 Slice 2: column-center grip no longer emitted; count drops by 1
     const grips = getColumnGrips(makeRect());
-    expect(grips).toHaveLength(4);
-    expect(grips[0].columnGripKind).toBe('column-center');
-    expect(grips[1].columnGripKind).toBe('column-rotation');
-    expect(grips[2].columnGripKind).toBe('column-width');
-    expect(grips[3].columnGripKind).toBe('column-depth');
+    expect(grips).toHaveLength(3);
+    expect(grips.map((g) => g.columnGripKind)).not.toContain('column-center');
+    expect(grips[0].columnGripKind).toBe('column-rotation');
+    expect(grips[1].columnGripKind).toBe('column-width');
+    expect(grips[2].columnGripKind).toBe('column-depth');
   });
 
   it('ADR-397 — grip handles stay on the column body in a metre-unit scene (mm→scene scaled)', () => {
@@ -96,16 +98,16 @@ describe('column-grips — getColumnGrips (Phase 4.5)', () => {
       anchor: 'center',
     });
     const grips = getColumnGrips(col);
-    // centroid (anchor=center) == position.
-    expect(grips[0].position).toEqual({ x: 10, y: 8 });
+    // ADR-363 Φ1G.5 Slice 2: center grip removed; array shifted down by 1.
     // rotation handle: y + (600/2 + 200)*0.001 = 8 + 0.5 = 8.5 (on body, not 508).
-    expect(grips[1].position.x).toBeCloseTo(10, 6);
-    expect(grips[1].position.y).toBeCloseTo(8.5, 6);
+    expect(grips[0].columnGripKind).toBe('column-rotation');
+    expect(grips[0].position.x).toBeCloseTo(10, 6);
+    expect(grips[0].position.y).toBeCloseTo(8.5, 6);
     // width handle: x + (400/2)*0.001 = 10.2 (not 210).
-    expect(grips[2].position.x).toBeCloseTo(10.2, 6);
-    expect(grips[2].position.y).toBeCloseTo(8, 6);
+    expect(grips[1].position.x).toBeCloseTo(10.2, 6);
+    expect(grips[1].position.y).toBeCloseTo(8, 6);
     // depth handle: y + (600/2)*0.001 = 8.3 (not 308).
-    expect(grips[3].position.y).toBeCloseTo(8.3, 6);
+    expect(grips[2].position.y).toBeCloseTo(8.3, 6);
   });
 
   it('ADR-397 — width resize tracks cursor 1:1 in a metre scene (scene delta ÷ s → mm)', () => {
@@ -125,18 +127,19 @@ describe('column-grips — getColumnGrips (Phase 4.5)', () => {
     expect(next.width).toBeCloseTo(600, 3);
   });
 
-  it('2. circular → 2 grips (center, width=radius)', () => {
+  it('2. circular → 1 grip (width=radius only) — ADR-363 Φ1G.5 Slice 2', () => {
+    // ADR-363 Φ1G.5 Slice 2: column-center removed; circular now returns exactly ONE grip
     const grips = getColumnGrips(makeCircular());
-    expect(grips).toHaveLength(2);
-    expect(grips[0].columnGripKind).toBe('column-center');
-    expect(grips[1].columnGripKind).toBe('column-width');
+    expect(grips).toHaveLength(1);
+    expect(grips.map((g) => g.columnGripKind)).not.toContain('column-center');
+    expect(grips[0].columnGripKind).toBe('column-width');
   });
 
-  it('3. L-shape → 6 grips (Phase 4.5b adds arm-length + arm-width)', () => {
+  it('3. L-shape → 5 grips (Phase 4.5b adds arm-length + arm-width) — ADR-363 Φ1G.5 Slice 2', () => {
+    // ADR-363 Φ1G.5 Slice 2: column-center removed; count drops from 6 to 5
     const grips = getColumnGrips(makeLshape());
-    expect(grips).toHaveLength(6);
+    expect(grips).toHaveLength(5);
     expect(grips.map((g) => g.columnGripKind)).toEqual([
-      'column-center',
       'column-rotation',
       'column-width',
       'column-depth',
@@ -145,11 +148,11 @@ describe('column-grips — getColumnGrips (Phase 4.5)', () => {
     ]);
   });
 
-  it('4. T-shape → 6 grips (Phase 4.5b adds flange-length + web-thickness)', () => {
+  it('4. T-shape → 5 grips (Phase 4.5b adds flange-length + web-thickness) — ADR-363 Φ1G.5 Slice 2', () => {
+    // ADR-363 Φ1G.5 Slice 2: column-center removed; count drops from 6 to 5
     const grips = getColumnGrips(makeTshape());
-    expect(grips).toHaveLength(6);
+    expect(grips).toHaveLength(5);
     expect(grips.map((g) => g.columnGripKind)).toEqual([
-      'column-center',
       'column-rotation',
       'column-width',
       'column-depth',
@@ -158,25 +161,29 @@ describe('column-grips — getColumnGrips (Phase 4.5)', () => {
     ]);
   });
 
-  it('5. center grip position = position (anchor=center, rotation=0)', () => {
+  it('5. column-center grip is NOT emitted — ADR-363 Φ1G.5 Slice 2', () => {
+    // ADR-363 Φ1G.5 Slice 2: center grip no longer pushed; assert absence
     const grips = getColumnGrips(makeRect());
-    expect(grips[0].position.x).toBeCloseTo(0, 6);
-    expect(grips[0].position.y).toBeCloseTo(0, 6);
-    expect(grips[0].movesEntity).toBe(true);
+    expect(grips.map((g) => g.columnGripKind)).not.toContain('column-center');
+    expect(grips.some((g) => g.movesEntity === true)).toBe(false);
   });
 
   it('6. width grip on rectangular sits at +width/2 along X (anchor=center, rotation=0)', () => {
     const col = makeRect();
     const grips = getColumnGrips(col);
-    expect(grips[2].position.x).toBeCloseTo(col.params.width / 2, 6);
-    expect(grips[2].position.y).toBeCloseTo(0, 6);
+    // ADR-363 Φ1G.5 Slice 2: center removed → width grip shifted from array[2] to array[1]
+    expect(grips[1].columnGripKind).toBe('column-width');
+    expect(grips[1].position.x).toBeCloseTo(col.params.width / 2, 6);
+    expect(grips[1].position.y).toBeCloseTo(0, 6);
   });
 
   it('7. depth grip on rectangular sits at +depth/2 along Y (anchor=center, rotation=0)', () => {
     const col = makeRect();
     const grips = getColumnGrips(col);
-    expect(grips[3].position.x).toBeCloseTo(0, 6);
-    expect(grips[3].position.y).toBeCloseTo(col.params.depth / 2, 6);
+    // ADR-363 Φ1G.5 Slice 2: center removed → depth grip shifted from array[3] to array[2]
+    expect(grips[2].columnGripKind).toBe('column-depth');
+    expect(grips[2].position.x).toBeCloseTo(0, 6);
+    expect(grips[2].position.y).toBeCloseTo(col.params.depth / 2, 6);
   });
 });
 
@@ -556,22 +563,22 @@ describe('column-grips — applyColumnGripDrag T-shape variants (Phase 4.5b)', (
 // ─── Phase 4.5b — non-regression of unaffected kinds ─────────────────────────
 
 describe('column-grips — Phase 4.5b non-regression (rectangular + circular)', () => {
-  it('41. rectangular column STILL emits 4 grips (no variant grips)', () => {
+  it('41. rectangular column STILL emits 3 grips (no center, no variant grips) — ADR-363 Φ1G.5 Slice 2', () => {
+    // ADR-363 Φ1G.5 Slice 2: column-center removed; count drops from 4 to 3
     const grips = getColumnGrips(makeRect());
-    expect(grips).toHaveLength(4);
+    expect(grips).toHaveLength(3);
     expect(grips.map((g) => g.columnGripKind)).toEqual([
-      'column-center',
       'column-rotation',
       'column-width',
       'column-depth',
     ]);
   });
 
-  it('42. circular column STILL emits 2 grips (no variant grips)', () => {
+  it('42. circular column STILL emits 1 grip (no center, no variant grips) — ADR-363 Φ1G.5 Slice 2', () => {
+    // ADR-363 Φ1G.5 Slice 2: column-center removed; circular returns exactly 1 grip
     const grips = getColumnGrips(makeCircular());
-    expect(grips).toHaveLength(2);
+    expect(grips).toHaveLength(1);
     expect(grips.map((g) => g.columnGripKind)).toEqual([
-      'column-center',
       'column-width',
     ]);
   });
@@ -610,11 +617,11 @@ describe('column-grips — materialize helpers (Phase 4.5b)', () => {
 // ─── ADR-363 Phase 8C — polygon / shear-wall / I-shape grips ────────────────
 
 describe('column-grips — Phase 8C: polygon kind', () => {
-  it('46. polygon → 3 grips (center + rotation + width). NO depth grip', () => {
+  it('46. polygon → 2 grips (rotation + width). NO center, NO depth grip — ADR-363 Φ1G.5 Slice 2', () => {
+    // ADR-363 Φ1G.5 Slice 2: column-center removed; count drops from 3 to 2
     const grips = getColumnGrips(makeOfKind('polygon'));
-    expect(grips).toHaveLength(3);
+    expect(grips).toHaveLength(2);
     expect(grips.map((g) => g.columnGripKind)).toEqual([
-      'column-center',
       'column-rotation',
       'column-width',
     ]);
@@ -649,11 +656,11 @@ describe('column-grips — Phase 8C: polygon kind', () => {
 });
 
 describe('column-grips — Phase 8C: shear-wall kind', () => {
-  it('50. shear-wall → 4 grips (rect parity: center, rotation, width, depth)', () => {
+  it('50. shear-wall → 3 grips (rect parity: rotation, width, depth) — ADR-363 Φ1G.5 Slice 2', () => {
+    // ADR-363 Φ1G.5 Slice 2: column-center removed; count drops from 4 to 3
     const grips = getColumnGrips(makeOfKind('shear-wall', { width: 2000, depth: 200 }));
-    expect(grips).toHaveLength(4);
+    expect(grips).toHaveLength(3);
     expect(grips.map((g) => g.columnGripKind)).toEqual([
-      'column-center',
       'column-rotation',
       'column-width',
       'column-depth',
@@ -677,11 +684,11 @@ describe('column-grips — Phase 8C: I-shape kind', () => {
     return makeOfKind('I-shape', { width: 200, depth: 300, ...overrides });
   }
 
-  it('52. I-shape → 6 grips (base 4 + i-flange-thickness + i-web-thickness)', () => {
+  it('52. I-shape → 5 grips (base 3 + i-flange-thickness + i-web-thickness) — ADR-363 Φ1G.5 Slice 2', () => {
+    // ADR-363 Φ1G.5 Slice 2: column-center removed; count drops from 6 to 5
     const grips = getColumnGrips(makeIshape());
-    expect(grips).toHaveLength(6);
+    expect(grips).toHaveLength(5);
     expect(grips.map((g) => g.columnGripKind)).toEqual([
-      'column-center',
       'column-rotation',
       'column-width',
       'column-depth',

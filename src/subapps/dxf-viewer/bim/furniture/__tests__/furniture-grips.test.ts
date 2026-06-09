@@ -33,10 +33,10 @@ function entityWith(overrides: Partial<FurnitureParams> = {}): FurnitureEntity {
 }
 
 describe('getFurnitureGrips', () => {
-  it('emits 6 grips for a rectangular furniture in stable order', () => {
+  // ADR-363 Φ1G.5 Slice 2 — move grip no longer emitted; 6→5 grips, rotation at array index 0.
+  it('emits 5 grips for a rectangular furniture in stable order', () => {
     const grips = getFurnitureGrips(entityWith());
     expect(grips.map((g) => g.furnitureGripKind)).toEqual([
-      'furniture-move',
       'furniture-rotation',
       'furniture-corner-ne',
       'furniture-corner-nw',
@@ -45,10 +45,10 @@ describe('getFurnitureGrips', () => {
     ]);
   });
 
-  it('places the move grip at the centre and corners at ±half-extents (rotation 0)', () => {
+  // ADR-363 Φ1G.5 Slice 2 — furniture-move grip removed; assert only corners (byKind lookup unaffected by array shift).
+  it('places corners at ±half-extents (rotation 0)', () => {
     const grips = getFurnitureGrips(entityWith());
     const byKind = Object.fromEntries(grips.map((g) => [g.furnitureGripKind, g.position]));
-    expect(byKind['furniture-move']).toEqual({ x: 1000, y: 2000 });
     expect(byKind['furniture-corner-ne']).toEqual({ x: 1300, y: 2300 });
     expect(byKind['furniture-corner-nw']).toEqual({ x: 700, y: 2300 });
     expect(byKind['furniture-corner-sw']).toEqual({ x: 700, y: 1700 });
@@ -56,7 +56,8 @@ describe('getFurnitureGrips', () => {
   });
 
   it('places the rotation handle beyond the +Y edge (depth/2 + offset)', () => {
-    const [, rotation] = getFurnitureGrips(entityWith());
+    // ADR-363 Φ1G.5 Slice 2 — move grip gone; rotation is now array index 0 (gripIndex still 1).
+    const [rotation] = getFurnitureGrips(entityWith());
     // depth/2 (300) + ROTATION_HANDLE_OFFSET_MM (200) = 500 above centre.
     expect(rotation.position).toEqual({ x: 1000, y: 2500 });
   });

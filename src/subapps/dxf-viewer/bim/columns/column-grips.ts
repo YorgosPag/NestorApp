@@ -62,7 +62,6 @@ import { rotatePoint } from '../../utils/rotation-math';
 import { sweptAngleDegAboutPivot } from '../grips/grip-math';
 import {
   RAD_TO_DEG,
-  computeCentroidWorld,
   depthHandleWorld,
   farEdgeSignX,
   farEdgeSignY,
@@ -98,7 +97,11 @@ import {
 // ─── Grip emission (ADR-363 §6 Phase 4.5 + 4.5b) ─────────────────────────────
 
 /**
- * Compute parametric grip positions για ένα `ColumnEntity`. Stable order:
+ * Compute parametric grip positions για ένα `ColumnEntity`. Stable order.
+ *
+ * ADR-363 Φ1G.5 Slice 2: the `0 → center` MOVE grip listed below is NO LONGER
+ * emitted (declutter — Alt+drag moves the column); every layout drops it and
+ * leaves gripIndex 0 unused. The remaining indices are unchanged (no reindex).
  *
  *   rectangular / shear-wall (4 grips):
  *     0 → center, 1 → rotation, 2 → width, 3 → depth
@@ -127,16 +130,12 @@ import {
 export function getColumnGrips(entity: Readonly<ColumnEntity>): GripInfo[] {
   const { params } = entity;
   const grips: GripInfo[] = [];
-  const centroid = computeCentroidWorld(params);
 
-  grips.push({
-    entityId: entity.id,
-    gripIndex: 0,
-    type: 'center',
-    position: centroid,
-    movesEntity: true,
-    columnGripKind: 'column-center',
-  });
+  // ADR-363 Φ1G.5 Slice 2 — the central MOVE grip (`column-center`, gripIndex 0)
+  // is no longer emitted: Alt+drag from any remaining grip (rotation / width /
+  // depth / variant; circular keeps its width handle) moves the whole column
+  // (declutter). gripIndex 0 is left unused — NO reindex. The `column-center`
+  // transform (`moveCenter`) + hot-grip move path are retained but unreachable.
 
   if (params.kind === 'circular') {
     grips.push({

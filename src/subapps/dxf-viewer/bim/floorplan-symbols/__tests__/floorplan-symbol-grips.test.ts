@@ -31,10 +31,10 @@ function entityWith(overrides: Partial<FloorplanSymbolParams> = {}): FloorplanSy
 }
 
 describe('getFloorplanSymbolGrips', () => {
-  it('emits 6 grips in stable order (move, rotation, 4 corners)', () => {
+  // ADR-363 Φ1G.5 Slice 2: move grip no longer emitted → 5 grips (rotation + 4 corners)
+  it('emits 5 grips in stable order (rotation, 4 corners)', () => {
     const grips = getFloorplanSymbolGrips(entityWith());
     expect(grips.map((g) => g.floorplanSymbolGripKind)).toEqual([
-      'floorplan-symbol-move',
       'floorplan-symbol-rotation',
       'floorplan-symbol-corner-ne',
       'floorplan-symbol-corner-nw',
@@ -43,10 +43,11 @@ describe('getFloorplanSymbolGrips', () => {
     ]);
   });
 
-  it('places the move grip at the centre and corners at ±half-extents (rotation 0)', () => {
+  // ADR-363 Φ1G.5 Slice 2: move grip gone — byKind lookup still works for remaining grips
+  it('places corners at ±half-extents (rotation 0)', () => {
     const grips = getFloorplanSymbolGrips(entityWith());
     const byKind = Object.fromEntries(grips.map((g) => [g.floorplanSymbolGripKind, g.position]));
-    expect(byKind['floorplan-symbol-move']).toEqual({ x: 1000, y: 2000 });
+    expect(byKind['floorplan-symbol-move']).toBeUndefined();
     expect(byKind['floorplan-symbol-corner-ne']).toEqual({ x: 1300, y: 2300 });
     expect(byKind['floorplan-symbol-corner-nw']).toEqual({ x: 700, y: 2300 });
     expect(byKind['floorplan-symbol-corner-sw']).toEqual({ x: 700, y: 1700 });

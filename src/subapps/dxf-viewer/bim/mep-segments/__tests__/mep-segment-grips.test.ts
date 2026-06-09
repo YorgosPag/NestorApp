@@ -42,14 +42,18 @@ describe('getMepSegmentGrips — vertical riser (ADR-408 Φ15)', () => {
     expect(grips[0].position).toEqual({ x: 100, y: 200 });
   });
 
-  it('a horizontal run keeps the full parametric grip set', () => {
+  // ADR-363 Φ1G.5 Slice 2 — central move grip removed from horizontal segments
+  it('a horizontal run has start/end/section/rotation but NO midpoint grip', () => {
     const run = segment({ x: 0, y: 0, z: 0 }, { x: 1000, y: 0, z: 0 });
     const grips = getMepSegmentGrips(run);
 
-    expect(grips.length).toBeGreaterThan(1);
+    // start(0) + end(1) + section(3) + rotation(4) = 4 grips; midpoint removed
+    expect(grips).toHaveLength(4);
     const kinds = grips.map((g) => g.mepSegmentGripKind);
     expect(kinds).toContain('mep-segment-start');
     expect(kinds).toContain('mep-segment-end');
-    expect(kinds).toContain('mep-segment-midpoint');
+    expect(kinds).not.toContain('mep-segment-midpoint');
+    expect(kinds).toContain('mep-segment-section');
+    expect(kinds).toContain('mep-segment-rotation');
   });
 });
