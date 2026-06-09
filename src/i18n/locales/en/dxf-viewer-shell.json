@@ -2313,6 +2313,20 @@
         "delete": "Delete",
         "deleteConfirm": "Delete boiler? This action cannot be undone."
       },
+      "mepBoilerTag": {
+        "power": "Power",
+        "fuel": "Fuel",
+        "flue": "Flue",
+        "modelFallback": "Boiler",
+        "kWUnit": "kW",
+        "dnPrefix": "DN",
+        "fuelTypes": {
+          "gas": "Gas",
+          "oil": "Oil",
+          "electric": "Electric",
+          "heat-pump": "Heat pump"
+        }
+      },
       "mepWaterHeaterEditor": {
         "width": "Width",
         "length": "Depth",
@@ -3406,7 +3420,8 @@
       "radiators": "Radiator Sizing",
       "pipes": "Pipe Sizing",
       "balancing": "Hydraulic Balancing",
-      "compliance": "KENAK Envelope Compliance Check"
+      "compliance": "KENAK Envelope Compliance Check",
+      "annualEnergy": "Annual Heating Energy Demand (indicative)"
     },
     "columns": {
       "space": "Space",
@@ -3433,7 +3448,11 @@
       "element": "Element",
       "uValue": "U (W/m²K)",
       "uMax": "U_max (W/m²K)",
-      "compliant": "Compliance"
+      "compliant": "Compliance",
+      "lossCoeff": "Loss coeff. H (W/K)",
+      "floorArea": "Area (m²)",
+      "annualDemand": "Annual demand (kWh)",
+      "specificDemand": "Specific (kWh/m²·yr)"
     },
     "elementKinds": {
       "wall": "Wall",
@@ -3449,7 +3468,10 @@
       "indexDrop": "Index ΔP (kPa)",
       "pumpHead": "Pump head (kPa)",
       "circuits": "Circuits",
-      "totalFlow": "Total flow (kg/s)"
+      "totalFlow": "Total flow (kg/s)",
+      "annualEnergy": "Annual demand (kWh)",
+      "specificDemand": "Specific (kWh/m²·yr)",
+      "energyClass": "Indicative class"
     }
   },
   "waterSupply": {

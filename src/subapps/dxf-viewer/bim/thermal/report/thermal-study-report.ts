@@ -23,6 +23,11 @@ import type { PipeSizingMap } from '../sizing/pipe-network-sizing';
 import type { HydraulicBalancingResult } from '../balancing/circuit-balancing';
 import type { ClimateZone } from '../kenak-thermal-config';
 import { deriveEnvelopeCompliance } from '../heat-load/derive-envelope-compliance';
+import {
+  deriveAnnualHeating,
+  type AnnualEnergyRow,
+  type AnnualHeatingResult,
+} from '../heat-load/derive-annual-energy';
 import type { HeatLoadBoundaryKind } from '../heat-load/heat-load-types';
 import type { ThermalSpaceEntity } from '../../types/thermal-space-types';
 import type {
@@ -88,6 +93,7 @@ function buildSummarySection(input: ThermalStudyReportInput): ReportSection {
   const indexTb = balancing.indexTerminalId
     ? balancing.terminals.get(balancing.indexTerminalId)
     : null;
+  const annual = resolveAnnualHeating(input);
 
   const columns: ReportColumn[] = [
     { key: 'floorLoad', i18nKey: `${K.summary}.floorLoad`, valueType: 'count', align: 'right' },
@@ -96,6 +102,9 @@ function buildSummarySection(input: ThermalStudyReportInput): ReportSection {
     { key: 'pumpHead', i18nKey: `${K.summary}.pumpHead`, valueType: 'number', align: 'right' },
     { key: 'circuits', i18nKey: `${K.summary}.circuits`, valueType: 'count', align: 'right' },
     { key: 'totalFlow', i18nKey: `${K.summary}.totalFlow`, valueType: 'number', align: 'right' },
+    { key: 'annualEnergy', i18nKey: `${K.summary}.annualEnergy`, valueType: 'count', align: 'right' },
+    { key: 'specificDemand', i18nKey: `${K.summary}.specificDemand`, valueType: 'number', align: 'right' },
+    { key: 'energyClass', i18nKey: `${K.summary}.energyClass`, valueType: 'text', align: 'center' },
   ];
   const row: ReportRow = {
     floorLoad: Math.round(floorLoadW),
@@ -104,6 +113,9 @@ function buildSummarySection(input: ThermalStudyReportInput): ReportSection {
     pumpHead: balancing.pumpHeadPa / PA_PER_KPA,
     circuits: balancing.terminals.size,
     totalFlow: totalFlowKgS,
+    annualEnergy: annual ? Math.round(annual.totalAnnualKWh) : 0,
+    specificDemand: annual ? annual.specificDemandKWhM2 : null,
+    energyClass: annual ? annual.energyClass : MARK_NONE,
   };
   return { titleKey: `${K.sections}.summary`, columns, rows: [row] };
 }
@@ -271,6 +283,53 @@ function buildComplianceSection(
   };
 }
 
+// ─── L7 — Ετήσια ενεργειακή ζήτηση θέρμανσης (ενδεικτική) ──────────────────────
+
+/**
+ * Υπολογίζει το ετήσιο read-model (μέθοδος βαθμοημερών) όταν υπάρχουν φορτία + ζώνη·
+ * `null` αλλιώς. Shared από σύνοψη (KPIs) + πίνακα L7 (μία πηγή αλήθειας ανά report).
+ */
+function resolveAnnualHeating(input: ThermalStudyReportInput): AnnualHeatingResult | null {
+  const { spaceLoads, climateZone } = input;
+  if (!spaceLoads || !climateZone) return null;
+  return deriveAnnualHeating(spaceLoads.results, spaceLoads.spaces, climateZone);
+}
+
+function annualEnergyRow(
+  row: AnnualEnergyRow,
+  spaceLabelById: ReadonlyMap<string, string>,
+): ReportRow {
+  return {
+    space: spaceLabelById.get(row.spaceId) ?? row.spaceId,
+    lossCoeff: row.lossCoefficientWperK,
+    floorArea: row.floorAreaM2,
+    annualDemand: Math.round(row.annualDemandKWh),
+    specificDemand: row.specificDemandKWhM2,
+  };
+}
+
+function buildAnnualEnergySection(
+  input: ThermalStudyReportInput,
+  spaceLabelById: ReadonlyMap<string, string>,
+): ReportSection {
+  const columns: ReportColumn[] = [
+    col('space', 'space', 'text', 'left'),
+    col('lossCoeff', 'lossCoeff', 'number', 'right'),
+    col('floorArea', 'floorArea', 'area-m2', 'right'),
+    col('annualDemand', 'annualDemand', 'count', 'right'),
+    col('specificDemand', 'specificDemand', 'number', 'right'),
+  ];
+  const annual = resolveAnnualHeating(input);
+  if (!annual) {
+    return { titleKey: `${K.sections}.annualEnergy`, columns, rows: [] };
+  }
+  return {
+    titleKey: `${K.sections}.annualEnergy`,
+    columns,
+    rows: annual.rows.map((r) => annualEnergyRow(r, spaceLabelById)),
+  };
+}
+
 // ─── Public builder ────────────────────────────────────────────────────────────
 
 /** spaceId → label, από τους χώρους του ορόφου (για L2/L4 lookup). */
@@ -295,6 +354,7 @@ export function buildThermalStudyReport(input: ThermalStudyReportInput): Thermal
   const pipes = buildPipesSection(input);
   const balancing = buildBalancingSection(input, spaceLabelById);
   const compliance = buildComplianceSection(input, spaceLabelById);
+  const annualEnergy = buildAnnualEnergySection(input, spaceLabelById);
 
   const isEmpty =
     loads.rows.length === 0 &&
@@ -304,7 +364,7 @@ export function buildThermalStudyReport(input: ThermalStudyReportInput): Thermal
 
   return {
     header: { buildingLabel: input.lookups.buildingLabel, floorLabel: input.lookups.floorLabel },
-    sections: [summary, loads, radiators, pipes, balancing, compliance],
+    sections: [summary, loads, radiators, pipes, balancing, compliance, annualEnergy],
     isEmpty,
   };
 }

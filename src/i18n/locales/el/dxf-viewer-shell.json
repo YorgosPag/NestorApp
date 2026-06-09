@@ -2313,6 +2313,20 @@
         "delete": "Διαγραφή",
         "deleteConfirm": "Διαγραφή λέβητα; Η ενέργεια δεν μπορεί να αναιρεθεί."
       },
+      "mepBoilerTag": {
+        "power": "Ισχύς",
+        "fuel": "Καύσιμο",
+        "flue": "Καπναγωγός",
+        "modelFallback": "Λέβητας",
+        "kWUnit": "kW",
+        "dnPrefix": "DN",
+        "fuelTypes": {
+          "gas": "Αέριο",
+          "oil": "Πετρέλαιο",
+          "electric": "Ηλεκτρικός",
+          "heat-pump": "Αντλία θερμότητας"
+        }
+      },
       "mepWaterHeaterEditor": {
         "width": "Πλάτος",
         "length": "Βάθος",
@@ -3406,7 +3420,8 @@
       "radiators": "Διαστασιολόγηση Θερμαντικών Σωμάτων",
       "pipes": "Διαστασιολόγηση Σωληνώσεων",
       "balancing": "Υδραυλική Εξισορρόπηση",
-      "compliance": "Έλεγχος Συμμόρφωσης Κελύφους ΚΕΝΑΚ"
+      "compliance": "Έλεγχος Συμμόρφωσης Κελύφους ΚΕΝΑΚ",
+      "annualEnergy": "Ετήσια Ενεργειακή Ζήτηση Θέρμανσης (ενδεικτική)"
     },
     "columns": {
       "space": "Χώρος",
@@ -3433,7 +3448,11 @@
       "element": "Στοιχείο",
       "uValue": "U (W/m²K)",
       "uMax": "U_max (W/m²K)",
-      "compliant": "Συμμόρφωση"
+      "compliant": "Συμμόρφωση",
+      "lossCoeff": "Συντ. Απωλειών H (W/K)",
+      "floorArea": "Εμβαδό (m²)",
+      "annualDemand": "Ετήσια Ζήτηση (kWh)",
+      "specificDemand": "Ειδική (kWh/m²·έτος)"
     },
     "elementKinds": {
       "wall": "Τοίχος",
@@ -3449,7 +3468,10 @@
       "indexDrop": "Index ΔP (kPa)",
       "pumpHead": "Μανομετρικό (kPa)",
       "circuits": "Κυκλώματα",
-      "totalFlow": "Συν. παροχή (kg/s)"
+      "totalFlow": "Συν. παροχή (kg/s)",
+      "annualEnergy": "Ετήσια ζήτηση (kWh)",
+      "specificDemand": "Ειδική (kWh/m²·έτος)",
+      "energyClass": "Ενδεικτική κατηγορία"
     }
   },
   "waterSupply": {

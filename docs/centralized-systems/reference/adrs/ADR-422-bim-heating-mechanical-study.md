@@ -218,3 +218,22 @@
 - **🔴 PENDING:** tsc full background (δεν έτρεξε — N.17 slot, πιθανόν boiler agent tsc) · browser-verify + commit (Giorgio).
 
 > **ΜΗΝ** ενημερωθεί το `adr-index.md` σε αυτό το slice (shared working tree).
+
+### L6 — Έλεγχος Συμμόρφωσης Κελύφους ΚΕΝΑΚ (U-compliance) (2026-06-09, Opus)
+
+**Η μελέτη γίνεται κανονιστικά πλήρης:** μετά τον υπολογισμό φορτίου, έλεγχος **μέγιστου συντελεστή θερμοπερατότητας `U`** κάθε στοιχείου εξωτ. κελύφους έναντι των ορίων ΚΕΝΑΚ / ΤΟΤΕΕ 20701-1 ανά κλιματική ζώνη (Revit Energy / 4M-FineHEAT-KENAK parity). **Advisory/soft** (mirror του ETICS `isAboveKenakUMax` — ΔΕΝ μπλοκάρει), **derived** (μηδέν persist), νέα 6η section «Έλεγχος Συμμόρφωσης Κελύφους ΚΕΝΑΚ» στο L5 report. **ΕΚΤΟΣ ADR-040** (καθαρή αριθμητική + data + report· μηδέν canvas).
+
+- **Αποφάσεις (Revit-grade, locked):**
+  - **D-A — όρια `U_max` ανά στοιχείο × ζώνη** σε config (reuse `KENAK_MAX_U_WALL` ADR-396· νέα `KENAK_MAX_U_ROOF`/`KENAK_MAX_U_FLOOR_GROUND`/`KENAK_MAX_U_OPENING` ΤΟΤΕΕ 20701-1 Πίν. 3.3α, documented editable defaults). Μηδέν inline literal στον engine.
+  - **D-B — νέο αρχείο** `bim/thermal/heat-load/kenak-envelope-limits.ts` (όχι fork του ADR-396 `kenak-thermal-config`) — κρατά το L6 SSoT μαζεμένο + isolation· reuse `ClimateZone` + `KENAK_MAX_U_WALL`.
+  - **D-C — `getKenakMaxU(kind, condition, zone)` κωδικοποιεί ΚΑΙ τον πίνακα ΚΑΙ το gate:** μόνο `external-air` (wall/window/door/roof) + `ground` (floor) ελέγχονται· `adjacent-heated`/`unheated` → `null` (skip). Έλεγχος στο **βασικό `U`** (το `ΔU_TB` θερμογέφυρας αφορά μόνο το φορτίο, όχι το κανονιστικό `U_max`).
+  - **D-D — pure read-model** `deriveEnvelopeCompliance(results, zone)` = **aggregator** (mirror L5· διαβάζει τα ήδη-υπολογισμένα `SpaceHeatLoadResult.boundaries`, μηδέν re-resolve geometry) → per-element `{ kind, condition, uValue, uMax, compliant, refId }` + σύνοψη `checkedCount`/`compliantCount`.
+  - **D-E — UI = νέα section στο L5 report** (χώρος/στοιχείο/`U`/`U_max`/συμμόρφωση ✓✗)· `climateZone: null` ⇒ section με 0 γραμμές (graceful). ΟΧΙ shared ribbon/overlay (isolation από boiler agent).
+- **Νέα pure SSoT:** `bim/thermal/heat-load/kenak-envelope-limits.ts` (config + `getKenakMaxU` + `isAboveKenakBoundaryUMax`) · `bim/thermal/heat-load/derive-envelope-compliance.ts` (read-model).
+- **MOD:** `bim/thermal/report/thermal-study-report.ts` (+`buildComplianceSection`/`complianceRow`, 6η section) + `thermal-study-report-types.ts` (doc) · `hooks/data/useThermalStudyReport.ts` (περνά `climateZone` από `spaceLoads`) · `ExportThermalStudyButton.tsx` (`boundaryKindLabel` lookup) · i18n el+en (`thermalStudyReport.sections.compliance` + `columns.element/uValue/uMax/compliant` + `elementKinds.*`).
+- **Tests:** `kenak-envelope-limits` (mapping/gating/stricter-cold-zones/soft predicate) · `derive-envelope-compliance` (✓/✗ vs zone, gating, multi-space sort, empty) · `thermal-study-report` (6η section ✓/✗ + external-only gating + null-zone omit) = **15/15 PASS**.
+- **ΜΑΘΗΜΑ:** το compliance layer = καθαρός consumer των boundaries (μηδέν re-resolve)· μία `getKenakMaxU` που επιστρέφει `number|null` κωδικοποιεί ταυτόχρονα τον πίνακα ορίων ΚΑΙ το gate εξωτ. κελύφους — αποφεύγει διπλό branching σε config + engine.
+- **🔴 PENDING:** tsc full background (N.17 slot) · browser-verify + commit (Giorgio).
+- **⚠️ Crash-recovery note:** το L6 code έγινε commit (`12c9b0c1`) με **ημιτελές `en` locale** (κράσαρε Bun mid-edit) + **σπασμένο report test** (5→6 sections) + **χωρίς dedicated engine tests** — ολοκληρώθηκαν follow-up (en locale 11 keys, report test, 2 νέα test files, +N.15 docs).
+
+> **ΜΗΝ** ενημερωθεί το `adr-index.md` σε αυτό το slice (shared working tree).
