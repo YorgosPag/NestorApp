@@ -257,3 +257,24 @@
 - **🔴 PENDING:** tsc full background (N.17 slot) · browser-verify + commit (Giorgio).
 
 > **ΜΗΝ** ενημερωθεί το `adr-index.md` σε αυτό το slice (shared working tree).
+
+### L7.1 — Καθαρή Ετήσια Ζήτηση με Συντελεστή Αξιοποίησης Κερδών (gain utilisation) (2026-06-09, Opus, Plan Mode)
+
+**Το L7 δίνει τη ΜΕΙΚΤΗ ζήτηση (gross losses) αμελώντας τα ωφέλιμα κέρδη → υπερεκτιμά.** Οι «μεγάλοι παίχτες» (Revit Energy / 4M-FineHEAT-KENAK) υπολογίζουν **καθαρή** ζήτηση αφαιρώντας τα **αξιοποιήσιμα** κέρδη (εσωτερικά + ηλιακά) μέσω **συντελεστή αξιοποίησης `η_gn`** (EN ISO 13790 §12.2.1.1, simplified seasonal). Το L7.1 προσθέτει αυτό το στρώμα ως **καθαρά additive** επέκταση του υπάρχοντος aggregator + report — **μηδέν persist**, **advisory**, **ΕΚΤΟΣ ADR-040**.
+- **Φυσική (ανά χώρο, πάνω στα ήδη-υπολογισμένα L7):** `Q_loss` = η μεικτή του L7 (αμετάβλητη — zero-regression)· `Q_int = q_int(use) · A · hours_season / 1000` [kWh]· `Q_sol = Σ_win A_win · g · F_F · F_sh · I_season(zone)` [kWh] (window area από τα ήδη-resolved `result.boundaries` όπου `window` & `external-air` — **μηδέν re-resolve**)· `γ = (Q_int+Q_sol)/Q_loss`· `η_gn = (1−γ^a0)/(1−γ^(a0+1))` (a0=1 ⇒ `1/(1+γ)`· γ=1 ⇒ 0.5· γ≤0 ⇒ 1· clamp [0,1])· **καθαρή** `Q_net = max(0, Q_loss − η·(Q_int+Q_sol))`· `q_net = ΣQ_net/ΣA → κατηγορία`.
+- **Αποφάσεις (Revit-grade, locked):**
+  - **D-A — μέθοδος = EN ISO 13790 simplified seasonal gain utilisation.** Πηγή απωλειών = τα L7/L1 (μηδέν re-resolve geometry). Καθαρά αριθμητική.
+  - **D-B — νέο config** `bim/thermal/heat-load/annual-gains-config.ts` (ΞΕΧΩΡΙΣΤΟ SRP από το `annual-energy-config`· mirror isolation L6/L7): `INTERNAL_GAIN_W_PER_M2` (ανά `ThermalSpaceUseType`· bedroom 4/living-room 6/kitchen 6/bathroom 4/wc 2/hallway 2/office 6/generic 4 W/m²)· `HEATING_SEASON_HOURS` (A 2880/B 3600/C 4320/D 5040 h = ημέρες×24)· `SEASONAL_SOLAR_IRRADIATION_KWHM2` (κατακόρυφη, orientation-agnostic v1· A 350/B 300/C 250/D 200)· `GLAZING_SOLAR_FACTOR_G` 0.6 / `FRAME_FACTOR` 0.7 / `SHADING_FACTOR` 0.9 / `UTILISATION_NUMERIC_PARAM` a0=1· getters + pure `computeGainUtilisation(γ)`. Reuse `ClimateZone`/`ThermalSpaceUseType`· μηδέν inline literal στον engine.
+  - **D-C — επέκταση του pure aggregator** `derive-annual-energy.ts` (ΟΧΙ νέο αρχείο): `AnnualEnergyRow` += `{ grossDemandKWh, internalGainKWh, solarGainKWh, utilisation, netDemandKWh }`· **`annualDemandKWh` = net** (downstream class/KPIs = καθαρή)· `AnnualHeatingResult` += `{ totalGrossKWh, totalInternalGainKWh, totalSolarGainKWh }`· `totalAnnualKWh` & `specificDemandKWhM2` & `energyClass` = καθαρά. `utilisation` ∈ [0,1] (×100 για % στο report).
+  - **D-D — UI = επέκταση 7ης section + σύνοψη** (ΟΧΙ νέα section/widget): πίνακας +στήλες «Μεικτή/Κέρδη/Αξιοπ.(%)»· η `annualDemand` → **καθαρή** (relabel)· σύνοψη +KPI «Μεικτή ζήτηση»· `annualEnergy` KPI = καθαρή.
+  - **D-E — κατηγορία = καθαρή ζήτηση** (πιο ρεαλιστική)· τα bands του `annual-energy-config` μένουν ίδια (indicative). `climateZone: null` ⇒ 0 γραμμές (graceful, ως τώρα).
+  - **D-F — μονάδες:** Q [kWh] `count` (ακέραιο)· utilisation % `number` (2-δεκ). **Καμία νέα `ScheduleColumnValueType`** (FULL SSOT).
+- **Νέα pure SSoT:** `bim/thermal/heat-load/annual-gains-config.ts` (config + getters + `computeGainUtilisation`).
+- **MOD:** `derive-annual-energy.ts` (+gross/κέρδη/utilisation/net + totals· headline=net) · `report/thermal-study-report.ts` (+3 στήλες πίνακα + grossEnergy KPI) · i18n el+en (`columns.{grossDemand,gains,utilisation}` + relabel `annualDemand`→«Καθαρή»· `summary.grossEnergy` + relabel `annualEnergy`→«Καθαρή»).
+- **ΖΕΡΟ αλλαγή:** `annual-energy-config.ts` (bands/HDD), `useThermalStudyReport.ts`, `useRibbonCommands.ts`, οποιοδήποτε boiler/heating/MEP/recognition αρχείο (shared-tree isolation).
+- **Worked example (sanity, ζώνη Β):** χώρος 4×4 m, H=40 W/K → μεικτή 1248 kWh· living-room q_int=6 → `Q_int=6·16·3600/1000=345.6`· `γ=0.277`· `η=0.783`· **καθαρή `Q_net=1248−0.783·345.6=977 kWh`**· `q_net=61.1 → κατηγορία Β+` (η μεικτή έδινε 78 → Β).
+- **Tests:** `annual-gains-config` (getters ανά use/zone· `computeGainUtilisation` γ=0→1, γ=1→0.5, φθίνουσα, clamp, μεγάλο γ→μικρό η) · `derive-annual-energy` (worked μεικτή+καθαρή· κέρδη>0· net<gross· ηλιακά από εξωτ. υαλοπίνακες + filter τοίχου/εσωτ.· guards gross=0⇒net=0· totals) · `thermal-study-report` (νέες στήλες + grossEnergy KPI + καθαρή class) = **27/27 PASS** (3 suites).
+- **ΜΑΘΗΜΑ:** η αξιοποίηση κερδών = καθαρά additive layer πάνω στο L7 — η μεικτή μένει ορατή ως breakdown (Revit pattern)· τα ηλιακά κέρδη βγαίνουν δωρεάν από τα ήδη-resolved boundaries (window+external-air), μηδέν re-resolve.
+- **🔴 PENDING:** tsc full background (N.17 slot) · browser-verify + commit (Giorgio). **L7.2** (orientation-aware ηλιακά) & **L8** (επίσημη ΚΕΝΑΚ primary-energy — BLOCKED boiler agent) = future.
+
+> **ΜΗΝ** ενημερωθεί το `adr-index.md` σε αυτό το slice (shared working tree).
