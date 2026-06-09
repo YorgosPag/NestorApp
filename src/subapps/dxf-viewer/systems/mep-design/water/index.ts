@@ -34,6 +34,7 @@ export {
   type SizingStandard,
 } from './water-sizing';
 export { buildWaterDemandModel } from './water-demand';
+export { buildOffsetHotNetwork } from './pair-cold-hot';
 export {
   resolveWaterSource,
   type WaterSource,

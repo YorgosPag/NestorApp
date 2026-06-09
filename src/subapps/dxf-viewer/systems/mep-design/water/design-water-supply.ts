@@ -25,6 +25,7 @@ import {
   type WaterSupplyDiscipline,
 } from './water-supply-discipline';
 import { buildWaterDemandModel } from './water-demand';
+import { buildOffsetHotNetwork } from './pair-cold-hot';
 import { resolveWaterSource, type WaterSource } from './water-source-resolve';
 import { type RouteTarget } from '../routing/orthogonal-router';
 import { routeWallAware } from '../routing/route-wall-aware';
@@ -100,7 +101,12 @@ export function designWaterSupply(
       );
       continue;
     }
-    networks.push(buildNetwork(service, source, demands, discipline, obstacles));
+    const net = buildNetwork(service, source, demands, discipline, obstacles);
+    // ADR-426 cold/hot pairing: cold is the reference (stays); the hot spine runs as a constant
+    // lateral offset so the two parallel pipes never overlap (Revit-grade). Wall-aware (Slice 3C):
+    // the offset twin is locally A*-detoured by the core wherever it would land on a wall.
+    const canPair = service === 'hot' && net.segments.some((s) => s.role === 'trunk');
+    networks.push(canPair ? buildOffsetHotNetwork(net, demands, discipline, obstacles) : net);
   }
   return { networks, warnings, storeyId: model.storeyId };
 }
