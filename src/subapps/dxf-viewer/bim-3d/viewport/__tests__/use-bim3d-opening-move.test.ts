@@ -17,8 +17,9 @@ const mockSel = { ids: [] as string[], type: null as string | null };
 const mockState = { is3D: false };
 const mockSelListeners = new Set<() => void>();
 const mockViewListeners = new Set<() => void>();
-const mockShowFor = jest.fn();
-const mockGhostHide = jest.fn();
+const mockWallUpdate = jest.fn();
+const mockWallCommit = jest.fn();
+const mockWallCancel = jest.fn();
 const mockDimUpdate = jest.fn();
 const mockDimHide = jest.fn();
 const mockExecute = jest.fn();
@@ -45,12 +46,16 @@ jest.mock('../../stores/Bim3DEntitiesStore', () => ({
   useBim3DEntitiesStore: { getState: () => ({ openings: mockOpenings, walls: mockWalls, floors: [], buildings: [] }) },
 }));
 jest.mock('../../systems/raycaster/BimEntityRaycaster', () => ({ raycastWorldPoint: () => mockPoint }));
-jest.mock('../../placement/OpeningMoveGhost', () => ({
-  OpeningMoveGhost: class {
-    showFor(...a: unknown[]): void { mockShowFor(...a); }
-    hide(): void { mockGhostHide(); }
+jest.mock('../../placement/OpeningHostWallPreview', () => ({
+  OpeningHostWallPreview: class {
+    update(...a: unknown[]): void { mockWallUpdate(...a); }
+    commit(): void { mockWallCommit(); }
+    cancel(): void { mockWallCancel(); }
     dispose(): void {}
   },
+}));
+jest.mock('../../animation/bim3d-preview-rebuild', () => ({
+  buildOpeningHostWallPreview: () => ({}),
 }));
 jest.mock('../../placement/TempOpeningDimOverlay', () => ({
   TempOpeningDimOverlay: class {
@@ -110,7 +115,7 @@ describe('useBim3DOpeningMove', () => {
   beforeEach(() => {
     mockSel.ids = []; mockSel.type = null; mockState.is3D = false;
     mockSelListeners.clear(); mockViewListeners.clear();
-    mockShowFor.mockClear(); mockGhostHide.mockClear(); mockExecute.mockClear();
+    mockWallUpdate.mockClear(); mockWallCommit.mockClear(); mockWallCancel.mockClear(); mockExecute.mockClear();
     mockDimUpdate.mockClear(); mockDimHide.mockClear();
     mockHit = null; mockPoint = null; mockResolved = null; mockOpenings = []; mockWalls = [];
   });
@@ -131,7 +136,7 @@ describe('useBim3DOpeningMove', () => {
     expect(types).toEqual(expect.arrayContaining(['pointerdown', 'pointermove', 'pointerup', 'click']));
   });
 
-  it('drag on the opening shows the ghost then commits on release', () => {
+  it('drag on the opening rebuilds the host wall live then commits on release', () => {
     const canvas = document.createElement('canvas');
     selectOpening();
     mockHit = { bimId: 'op-1', bimType: 'opening' }; // press lands on the opening
@@ -141,9 +146,10 @@ describe('useBim3DOpeningMove', () => {
     mockHit = { bimId: 'wall-1', bimType: 'wall' }; // cursor over a wall
     mockResolved = { params: { wallId: 'wall-1', offsetFromStart: 300 }, host: { id: 'wall-1' } };
     canvas.dispatchEvent(new MouseEvent('pointermove', { clientX: 40, clientY: 0 }));
-    expect(mockShowFor).toHaveBeenCalled();
+    expect(mockWallUpdate).toHaveBeenCalled(); // the moving hole follows the drag
     expect(mockDimUpdate).toHaveBeenCalled(); // temporary dimensions follow the drag
     canvas.dispatchEvent(new MouseEvent('pointerup', { clientX: 40, clientY: 0 }));
+    expect(mockWallCommit).toHaveBeenCalled(); // commit keeps the originals hidden for the re-sync
     expect(mockExecute).toHaveBeenCalledTimes(1);
     expect(mockExecute.mock.calls[0][0]).toBeInstanceOf(UpdateOpeningParamsCommand);
     expect(mockDimHide).toHaveBeenCalled(); // dimensions vanish on release
@@ -159,7 +165,7 @@ describe('useBim3DOpeningMove', () => {
     mockResolved = { params: { wallId: 'wall-1' }, host: { id: 'wall-1' } };
     canvas.dispatchEvent(new MouseEvent('pointermove', { clientX: 40, clientY: 0 }));
     canvas.dispatchEvent(new MouseEvent('pointerup', { clientX: 40, clientY: 0 }));
-    expect(mockShowFor).not.toHaveBeenCalled();
+    expect(mockWallUpdate).not.toHaveBeenCalled();
     expect(mockExecute).not.toHaveBeenCalled();
   });
 

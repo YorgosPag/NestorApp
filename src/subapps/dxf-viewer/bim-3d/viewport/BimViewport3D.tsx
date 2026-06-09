@@ -32,6 +32,7 @@ import { useAnimationQueueProcessor } from '../animation/animation-queue-process
 import { useWaypointDragInteraction } from '../animation/use-waypoint-drag-interaction';
 import { useBim3DEditInteraction } from '../animation/use-bim3d-edit-interaction';
 import { useBim3DPlacementAndPickHooks } from './use-bim3d-placement-and-pick-hooks';
+import { useBim3DClashMarkers } from './use-bim3d-clash-markers';
 import { useNotifications } from '@/providers/NotificationProvider';
 import { useBim3DStoreSync } from './use-bim3d-store-sync';
 import { useBim3DVgResync } from './use-bim3d-vg-resync';
@@ -269,6 +270,11 @@ export function BimViewport3D({ projectId: projectIdProp, readOnly = false, bimE
   // N.7.1): column, MEP fixtures, furniture, electrical panel, manifold, segment,
   // radiator, boiler, attach-pick, beam-from-wall, wire waypoint editing.
   useBim3DPlacementAndPickHooks({ managerRef, canvasEl });
+
+  // ADR-435 Slice 1b — 3D clash markers + "zoom to clash" camera focus. Owns a
+  // scene overlay driven by the low-freq clash-report store; screen-constant via a
+  // HIGH-priority UnifiedFrameScheduler subsystem (zero extra renders).
+  useBim3DClashMarkers({ managerRef, canvasEl });
 
   // Phase 9 / C.1.c — Animation render queue driver. Mounted once; subscribes
   // to RenderQueueStore and drives the MP4 encode pipeline when a job is queued.

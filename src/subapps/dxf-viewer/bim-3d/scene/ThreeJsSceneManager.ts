@@ -14,7 +14,7 @@ import type { LightPreset } from '../lighting/lighting-presets';
 import { useEnvironmentStore } from '../stores/EnvironmentStore';
 import { SectionSceneController } from './section-scene-controller';
 import { DxfToThreeConverter } from '../converters/DxfToThreeConverter';
-import { raycastBimGroup, type RaycastHit } from '../systems/raycaster/BimEntityRaycaster';
+import { raycastBimGroup, raycastWorldPoint, type RaycastHit } from '../systems/raycaster/BimEntityRaycaster';
 import { BimSelectionHighlighter } from '../systems/selection/BimSelectionHighlighter';
 import { useSelection3DStore } from '../stores/Selection3DStore';
 import { applyFloorVisibility } from '../utils/applyFloorVisibility';
@@ -127,6 +127,9 @@ export class ThreeJsSceneManager {
       getReducedMotionOverride: () => this.reducedMotionOverride,
       onAltClick: (clientX, clientY) => { this.setOrbitPivotAt(clientX, clientY); }, // ADR-366 §A.6.Q5
       onAltPress: (clientX, clientY) => { this.setOrbitPivotAt(clientX, clientY); }, // re-centre pivot before drag
+      // ADR-363 Φ1G.5 — geometry hit under the cursor for the Revit surface-anchored wheel zoom.
+      resolveSurfacePoint: (clientX, clientY) =>
+        raycastWorldPoint(this.bimLayer.group, this.viewport.camera, this.renderer.domElement, clientX, clientY),
     });
     const subs = createSceneRenderingSubsystems({
       renderer: this.renderer, scene: this.scene, sun: this.sun, bimLayer: this.bimLayer,

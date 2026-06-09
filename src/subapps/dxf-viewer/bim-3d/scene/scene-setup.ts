@@ -31,6 +31,8 @@ export interface InitViewportCameraDeps {
   readonly onAltClick: (clientX: number, clientY: number) => void;
   /** Alt+left pointer-down → orbit-pivot pick so the drag orbits around the cursor point. */
   readonly onAltPress: (clientX: number, clientY: number) => void;
+  /** ADR-363 Φ1G.5 — geometry point under the cursor for the Revit surface-anchored wheel zoom. */
+  readonly resolveSurfacePoint: (clientX: number, clientY: number) => THREE.Vector3 | null;
 }
 
 export function initViewportCamera(deps: InitViewportCameraDeps): ViewportCamera {
@@ -43,6 +45,7 @@ export function initViewportCamera(deps: InitViewportCameraDeps): ViewportCamera
     getReducedMotion: () => checkReducedMotion(deps.getReducedMotionOverride()),
     onAltClick: deps.onAltClick,
     onAltPress: deps.onAltPress,
+    resolveSurfacePoint: deps.resolveSurfacePoint,
   });
 }
 

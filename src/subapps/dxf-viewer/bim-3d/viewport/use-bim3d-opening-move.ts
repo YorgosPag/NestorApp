@@ -1,21 +1,23 @@
 'use client';
 
 /**
- * ADR-363 Φ1G.5 Slice 2d — useBim3DOpeningMove: the DEDICATED 3D drag for a hosted
+ * ADR-363 Φ1G.5 Slice 2d/2g — useBim3DOpeningMove: the DEDICATED 3D drag for a hosted
  * opening (door/window), replacing the generic gizmo (which a hosted «hole» cannot
  * use — its grab-mesh-slide preview spawns a confusing floating cube and never moves
  * the void live). Revit-style host-aware move:
  *
  *   press ON the selected opening → drag → the cursor is raycast onto the walls →
- *   a translucent ghost of the opening previews exactly where it will land (correct
- *   rotation + thickness on the wall under the cursor, recomputed per frame) →
+ *   the host wall is rebuilt live so the HOLE + the solid opening body follow the cursor
+ *   (Slice 2g — correct rotation + thickness on the wall under the cursor, per frame) →
  *   release = slide along the same wall, or RE-HOST onto another wall (Pick New Host).
  *
  * Combines the two existing 3D-bridge patterns (like `useBim3DBeamFromWallPick`):
  *   - AbortController-gated DOM listeners on the renderer canvas, armed only while a
  *     single opening is selected AND the viewport is in 3D (ADR-040: no
  *     `useSyncExternalStore`, store reads at event time).
- *   - a translucent WYSIWYG ghost (`OpeningMoveGhost`) following the cursor.
+ *   - a live wall-hole preview (`OpeningHostWallPreview` + `buildOpeningHostWallPreview`):
+ *     the host wall(s) are rebuilt through the `wallToMesh` SSoT with the dragged opening,
+ *     hiding the originals — so the moving hole === the committed result.
  *
  * The move resolution is the SINGLE SSoT shared with the 2D grip + gizmo commit
  * (`resolveOpeningAltMove` + `forcedHost`); the release dispatches the SAME
@@ -38,7 +40,8 @@ import { resolveEntityBuilding } from '../../bim/utils/bim-floor-utils';
 import { resolveActiveFloorElevationMm } from '../placement/raycast-floor-point';
 import { worldToDxfPlan } from './coordinate-transforms';
 import { raycastWorldPoint } from '../systems/raycaster/BimEntityRaycaster';
-import { OpeningMoveGhost } from '../placement/OpeningMoveGhost';
+import { OpeningHostWallPreview, type OpeningHostWallRebuild } from '../placement/OpeningHostWallPreview';
+import { buildOpeningHostWallPreview } from '../animation/bim3d-preview-rebuild';
 import { TempOpeningDimOverlay } from '../placement/TempOpeningDimOverlay';
 import { getSiblingOpeningsOnWall } from '../../bim/walls/opening-siblings';
 import { resolveEntityLevelId } from '../animation/bim3d-edit-live-preview-apply';
@@ -91,11 +94,11 @@ function captureDrag(opening: OpeningEntity, downX: number, downY: number): Open
   };
 }
 
-/** Set the visibility of every body mesh tagged with `bimId` (hide the original while dragging). */
-function setOpeningBodyVisible(manager: ThreeJsSceneManager, bimId: string, visible: boolean): void {
-  manager.bimLayer.group.traverse((obj) => {
-    if ((obj.userData['bimId'] as string | undefined) === bimId) obj.visible = visible;
-  });
+/** The bimIds the host-wall preview must hide: the wall itself + every opening body on it. */
+function hideIdsForWall(wallId: string, openings: readonly OpeningEntity[]): Set<string> {
+  const ids = new Set<string>([wallId]);
+  for (const o of openings) if (o.params.wallId === wallId) ids.add(o.id);
+  return ids;
 }
 
 /** Build the scene-manager adapter for the opening's level (mirror of the gizmo dispatch path). */
@@ -122,11 +125,27 @@ export function useBim3DOpeningMove({ managerRef, canvasEl }: UseBim3DOpeningMov
     const manager = managerRef.current;
     if (!canvasEl || !manager) return;
 
-    const ghost = new OpeningMoveGhost(manager.scene);
+    const wallPreview = new OpeningHostWallPreview(manager.bimLayer.group);
     const dimOverlay = new TempOpeningDimOverlay(manager.scene);
     let abort: AbortController | null = null;
     let drag: OpeningDrag | null = null;
     let justDragged = false;
+    /** Last `host:offset(mm)` rendered — skips redundant wall rebuilds on idle frames. */
+    let lastPreviewKey: string | null = null;
+
+    /** Rebuild + show the host wall(s) with the dragged opening: new host (with the moved
+     *  opening), plus the old host WITHOUT it on a re-host (its hole closes live). */
+    const showWallPreview = (d: OpeningDrag, host: WallEntity, params: OpeningParams): void => {
+      const allOpenings = useBim3DEntitiesStore.getState().openings;
+      const rebuilds: OpeningHostWallRebuild[] = [];
+      const newObj = buildOpeningHostWallPreview(host.id, d.opening.id, params);
+      if (newObj) rebuilds.push({ hideIds: hideIdsForWall(host.id, allOpenings), object: newObj });
+      if (host.id !== d.host.id) {
+        const oldObj = buildOpeningHostWallPreview(d.host.id, d.opening.id, null);
+        if (oldObj) rebuilds.push({ hideIds: hideIdsForWall(d.host.id, allOpenings), object: oldObj });
+      }
+      wallPreview.update(rebuilds);
+    };
 
     /** The single selected opening, or null (not a single opening selection). */
     const selectedOpening = (): OpeningEntity | null => {
@@ -143,7 +162,6 @@ export function useBim3DOpeningMove({ managerRef, canvasEl }: UseBim3DOpeningMov
       if (hit?.bimId !== opening.id) return; // press must land ON the opening to start a move
       drag = captureDrag(opening, e.clientX, e.clientY);
       if (!drag) return;
-      setOpeningBodyVisible(manager, opening.id, false); // hide the original body while the ghost previews
       manager.viewport.setControlsEnabled(false);
       (e.target as Element | null)?.setPointerCapture?.(e.pointerId);
       e.preventDefault();
@@ -155,7 +173,7 @@ export function useBim3DOpeningMove({ managerRef, canvasEl }: UseBim3DOpeningMov
       // World-space point ON the wall under the cursor (the pure raycaster SSoT, called
       // with the manager's public group/camera/canvas — no extra ThreeJsSceneManager API).
       const point = raycastWorldPoint(manager.bimLayer.group, manager.getCamera(), manager.getRendererCanvas(), e.clientX, e.clientY);
-      if (!point) { ghost.hide(); dimOverlay.hide(); manager.markSceneDirty(); return; }
+      if (!point) { wallPreview.cancel(); dimOverlay.hide(); lastPreviewKey = null; manager.markSceneDirty(); return; }
       const f = mmToSceneUnits(drag.host.params.sceneUnits ?? 'mm');
       const dxf = worldToDxfPlan(point);
       const currentPos = { x: dxf.x * f, y: dxf.y * f };
@@ -173,12 +191,18 @@ export function useBim3DOpeningMove({ managerRef, canvasEl }: UseBim3DOpeningMov
       drag.resolvedParams = resolved?.params ?? null;
       drag.resolvedHost = resolved?.host ?? null;
       if (resolved) {
-        ghost.showFor(drag.opening, resolved.params, resolved.host, drag.floorElevationMm, drag.buildingBaseElevationM);
+        // Throttle: rebuild the wall(s) only when the resolved host/offset actually changed.
+        const key = `${resolved.host.id}:${Math.round(resolved.params.offsetFromStart)}`;
+        if (key !== lastPreviewKey) {
+          lastPreviewKey = key;
+          showWallPreview(drag, resolved.host, resolved.params);
+        }
         const siblings = getSiblingOpeningsOnWall(resolved.host.id, useBim3DEntitiesStore.getState().openings, drag.opening.id);
         dimOverlay.update(resolved.params, resolved.host, siblings, drag.floorElevationMm, drag.buildingBaseElevationM, manager.getCamera(), manager.getRendererCanvas(), drag.walls);
       } else {
-        ghost.hide();
+        wallPreview.cancel();
         dimOverlay.hide();
+        lastPreviewKey = null;
       }
       e.preventDefault();
       e.stopPropagation();
@@ -189,8 +213,9 @@ export function useBim3DOpeningMove({ managerRef, canvasEl }: UseBim3DOpeningMov
       if (!drag) return;
       const moved = Math.hypot(e.clientX - drag.downX, e.clientY - drag.downY);
       const current = drag;
-      endDrag(e);
-      if (moved <= DRAG_THRESHOLD_PX || !current.resolvedParams) return; // a click, or a no-op move
+      const isCommit = moved > DRAG_THRESHOLD_PX && !!current.resolvedParams;
+      endDrag(e, isCommit);
+      if (!isCommit) return; // a click, or a no-op move
       justDragged = true; // swallow the trailing selection click
       commitMove(current);
     };
@@ -204,25 +229,27 @@ export function useBim3DOpeningMove({ managerRef, canvasEl }: UseBim3DOpeningMov
       getGlobalCommandHistory().execute(cmd);
     };
 
-    /** Common drag cleanup: ghost off, original body restored, controls back, capture released. */
-    const endDrag = (e: PointerEvent): void => {
+    /** Common drag cleanup. `isCommit` → keep originals hidden (the re-sync replaces the
+     *  walls → no old-hole flash); otherwise restore them. Controls back, capture released. */
+    const endDrag = (e: PointerEvent, isCommit: boolean): void => {
       e.preventDefault();
       e.stopPropagation();
       canvasEl.releasePointerCapture?.(e.pointerId);
-      if (drag) setOpeningBodyVisible(manager, drag.opening.id, true);
+      if (isCommit) wallPreview.commit();
+      else wallPreview.cancel();
       drag = null;
-      ghost.hide();
       dimOverlay.hide();
+      lastPreviewKey = null;
       manager.viewport.setControlsEnabled(true);
       manager.markSceneDirty();
     };
 
     const onCancel = (): void => {
       if (!drag) return;
-      setOpeningBodyVisible(manager, drag.opening.id, true);
+      wallPreview.cancel();
       drag = null;
-      ghost.hide();
       dimOverlay.hide();
+      lastPreviewKey = null;
       manager.viewport.setControlsEnabled(true);
       manager.markSceneDirty();
     };
@@ -248,11 +275,11 @@ export function useBim3DOpeningMove({ managerRef, canvasEl }: UseBim3DOpeningMov
     };
 
     const teardown = (): void => {
-      if (drag) onCancel(); // armed mid-drag → restore the original body, no command
+      if (drag) onCancel(); // armed mid-drag → restore the original walls, no command
       abort?.abort();
       abort = null;
       justDragged = false;
-      ghost.hide();
+      wallPreview.cancel();
       dimOverlay.hide();
       manager.markSceneDirty();
     };
@@ -273,7 +300,7 @@ export function useBim3DOpeningMove({ managerRef, canvasEl }: UseBim3DOpeningMov
       unsubSelection();
       unsubView();
       teardown();
-      ghost.dispose();
+      wallPreview.dispose();
       dimOverlay.dispose();
     };
   }, [canvasEl, managerRef]);

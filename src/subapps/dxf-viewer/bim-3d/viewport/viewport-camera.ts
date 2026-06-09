@@ -19,7 +19,9 @@ import {
   DEFAULT_PAN_SPEED, DEFAULT_ROTATE_SPEED, DEFAULT_ZOOM_SPEED,
   SPEED_MODIFIER_FAST, SPEED_MODIFIER_PRECISE,
   TUMBLE_BASE_SPEED,
+  ZOOM_SURFACE_MARGIN, ZOOM_WHEEL_BASE, ZOOM_WHEEL_SENSITIVITY,
 } from './viewport-constants';
+import { computeSurfaceDolly, wheelZoomFactor } from './viewport-zoom-surface';
 import { getAnimationDuration } from '../accessibility/reduced-motion-config';
 
 export interface ViewportCameraOptions {
@@ -34,6 +36,12 @@ export interface ViewportCameraOptions {
   readonly onAltClick?: (clientX: number, clientY: number) => void;
   /** Alt+left pointer-down → re-centre orbit pivot on the cursor point (forwarded to tumble). */
   readonly onAltPress?: (clientX: number, clientY: number) => void;
+  /**
+   * ADR-363 Φ1G.5 — resolve the world point of the geometry under the cursor (SSoT
+   * `raycastWorldPoint`), used by the Revit surface-anchored wheel zoom. Returns null on a
+   * miss → the wheel falls back to the default OrbitControls dolly. Optional / back-compat.
+   */
+  readonly resolveSurfacePoint?: (clientX: number, clientY: number) => THREE.Vector3 | null;
 }
 
 const _snapDir = new THREE.Vector3();
@@ -77,6 +85,30 @@ export function createViewportCamera(
   controls.addEventListener('change', onRenderNeeded);
   controls.addEventListener('start', onInteractionStart);
   controls.addEventListener('end', onInteractionEnd);
+
+  /**
+   * ADR-363 Φ1G.5 — Revit surface-anchored wheel zoom. Runs in the CAPTURE phase so it
+   * pre-empts OrbitControls' own (bubble-phase) wheel listener: on a geometry hit we dolly
+   * the camera ourselves (step ∝ distance-to-surface, clamped → never crosses the face) and
+   * `stopImmediatePropagation` so OrbitControls does NOT also dolly. On a miss / ortho /
+   * disabled nav we do nothing → OrbitControls' default `zoomToCursor` dolly runs as before.
+   */
+  function onSurfaceWheel(e: WheelEvent): void {
+    if (currentMode !== 'perspective' || !controls.enabled || !controls.enableZoom) return;
+    const hit = options.resolveSurfacePoint?.(e.clientX, e.clientY);
+    if (!hit) return;
+    e.preventDefault();
+    e.stopImmediatePropagation();
+    animation.cancel();
+    const factor = wheelZoomFactor(e.deltaY, ZOOM_WHEEL_BASE, ZOOM_WHEEL_SENSITIVITY, controls.zoomSpeed);
+    activeCamera.position.copy(
+      computeSurfaceDolly(activeCamera.position, hit, factor, ZOOM_SURFACE_MARGIN, PERSP_MAX_DISTANCE),
+    );
+    controls.target.copy(hit);   // Revit: pivot on what the cursor points at
+    controls.update();           // resync OrbitControls' spherical from the new pose
+    onRenderNeeded();
+  }
+  domElement.addEventListener('wheel', onSurfaceWheel, { capture: true, passive: false });
 
   const tumble = createTumbleRotation({
     getCamera: () => activeCamera,
@@ -407,6 +439,7 @@ export function createViewportCamera(
     controls.removeEventListener('change', onRenderNeeded);
     controls.removeEventListener('start', onInteractionStart);
     controls.removeEventListener('end', onInteractionEnd);
+    domElement.removeEventListener('wheel', onSurfaceWheel, { capture: true });
     animation.dispose();
     tumble.dispose();
     controls.dispose();
