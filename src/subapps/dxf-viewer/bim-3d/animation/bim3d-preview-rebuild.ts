@@ -44,8 +44,13 @@ import {
 import { wallToMesh, columnToMesh, beamToMesh, slabToMesh } from '../converters/BimToThreeConverter';
 // ADR-408 Φ-D — endpoint-move preview of the dragged MEP segment (converter SSoT).
 import { mepSegmentToMesh } from '../converters/mep-segment-to-mesh';
-import { computeMepSegmentEndpointMove } from '../gizmo/bim3d-endpoint-move';
+import {
+  computeMepSegmentEndpointMove,
+  computeWallEndpointMove,
+  computeBeamEndpointMove,
+} from '../gizmo/bim3d-endpoint-move';
 import { mmToEntityUnitFactor } from '../utils/bim3d-edit-math';
+import type { Entity } from '../../types/entities';
 import type { GizmoEndpoint } from '../gizmo/gizmo-types';
 import type { Point2D } from '../../rendering/types/Types';
 // ADR-401 — wall-top footprint clip (γωνιακή διασταύρωση): the live preview MUST
@@ -150,12 +155,13 @@ export function buildTiltPreviewObject(entityId: string, drag: TiltDragDeg): THR
 }
 
 /**
- * ADR-408 Φ-D — build the live endpoint-move preview of the DRAGGED MEP segment, or
- * null (no-op / not found / multi-floor). Mirrors `buildResizePreviewObject`: apply
+ * ADR-408 Φ-D/Φ1 — build the live endpoint-move preview of the DRAGGED linear element,
+ * or null (no-op / not found / multi-floor). Mirrors `buildResizePreviewObject`: apply
  * the endpoint-move patch (`bim3d-endpoint-move`) → rebuild through the SAME converter
- * (`mepSegmentToMesh`) the commit re-sync uses, so the ghost === the committed pipe.
- * The plan delta (DXF mm) is scaled into the segment's native canvas units; `deltaUpMm`
- * stays mm. Followers are rebuilt separately via `buildPipeFollowPreviewObjects`.
+ * the commit re-sync uses, so the ghost === the committed result. Three disciplines:
+ * `mep-segment` (free-3D pipe, `deltaUpMm` used), `wall` / `beam` (horizontal length,
+ * `deltaUpMm` ignored). The plan delta (DXF mm) is scaled into the entity's native
+ * canvas units. Pipe followers are rebuilt separately via `buildPipeFollowPreviewObjects`.
  */
 export function buildEndpointMovePreviewObject(
   entityId: string,
@@ -165,15 +171,57 @@ export function buildEndpointMovePreviewObject(
 ): THREE.Object3D | null {
   if (useViewMode3DStore.getState().floor3DScope === 'all') return null;
   const s = useBim3DEntitiesStore.getState();
-  const segment = s.mepSegments.find((seg) => seg.id === entityId);
-  if (!segment) return null;
-  const f = mmToEntityUnitFactor(segment);
-  const deltaCanvas = f === 1 ? deltaMm : { x: deltaMm.x * f, y: deltaMm.y * f };
-  const next = computeMepSegmentEndpointMove(segment.params, endpoint, deltaCanvas, deltaUpMm);
-  if (!next) return null;
-  const baseElevationM = resolveEntityBuilding(segment, s.floors, s.buildings)?.baseElevation ?? 0;
   const levelId = s.activeLevelId ?? undefined;
-  return mepSegmentToMesh({ ...segment, params: next }, 0, levelId, baseElevationM);
+  const segment = s.mepSegments.find((seg) => seg.id === entityId);
+  if (segment) {
+    const deltaCanvas = scaleDeltaToEntity(segment, deltaMm);
+    const next = computeMepSegmentEndpointMove(segment.params, endpoint, deltaCanvas, deltaUpMm);
+    if (!next) return null;
+    const baseElevationM = resolveEntityBuilding(segment, s.floors, s.buildings)?.baseElevation ?? 0;
+    return mepSegmentToMesh({ ...segment, params: next }, 0, levelId, baseElevationM);
+  }
+  const wall = s.walls.find((w) => w.id === entityId);
+  if (wall) return rebuildWallEndpoint(wall, endpoint, scaleDeltaToEntity(wall, deltaMm), s, levelId);
+  const beam = s.beams.find((b) => b.id === entityId);
+  if (beam) return rebuildBeamEndpoint(beam, endpoint, scaleDeltaToEntity(beam, deltaMm), s, levelId);
+  return null;
+}
+
+/** DXF-mm gizmo delta → the entity's native canvas units (mirror move/rotate/resize). */
+function scaleDeltaToEntity(entity: Entity, deltaMm: Point2D): Point2D {
+  const f = mmToEntityUnitFactor(entity);
+  return f === 1 ? deltaMm : { x: deltaMm.x * f, y: deltaMm.y * f };
+}
+
+/** ADR-408 Φ1 — live length-handle preview of a wall (ghost === committed `syncWalls`). */
+function rebuildWallEndpoint(
+  wall: Wall,
+  endpoint: GizmoEndpoint,
+  deltaCanvas: Point2D,
+  s: Snapshot,
+  levelId: string | undefined,
+): THREE.Object3D | null {
+  const next = computeWallEndpointMove(wall.params, endpoint, deltaCanvas);
+  if (!next) return null;
+  const preview = { ...wall, params: next, geometry: computeWallGeometry(next, wall.kind) };
+  const openings = s.openings.filter((o) => o.params.wallId === wall.id);
+  const { profile, baseProfile } = wallPreviewProfiles(preview, s);
+  const topClip = wallPreviewTopClip(preview, buildWallHostInputs(s.beams, s.slabs, s.roofs), 0);
+  return wallToMesh(preview, openings, 0, levelId, baseElevationOf(wall, s), profile, baseProfile, topClip);
+}
+
+/** ADR-408 Φ1 — live length-handle preview of a beam (ghost === committed `syncBeams`). */
+function rebuildBeamEndpoint(
+  beam: Beam,
+  endpoint: GizmoEndpoint,
+  deltaCanvas: Point2D,
+  s: Snapshot,
+  levelId: string | undefined,
+): THREE.Object3D | null {
+  const next = computeBeamEndpointMove(beam.params, endpoint, deltaCanvas);
+  if (!next) return null;
+  const preview = { ...beam, params: next, geometry: computeBeamGeometry(next) };
+  return beamToMesh(preview, levelId, baseElevationOf(beam, s));
 }
 
 type Snapshot = ReturnType<typeof useBim3DEntitiesStore.getState>;

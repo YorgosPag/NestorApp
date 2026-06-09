@@ -10,6 +10,7 @@
  */
 
 export { designHeating } from './design-heating';
+export { buildPairedReturnNetwork } from './pair-supply-return';
 export type {
   HeatingNetworkRole,
   TerminalHeatDemand,

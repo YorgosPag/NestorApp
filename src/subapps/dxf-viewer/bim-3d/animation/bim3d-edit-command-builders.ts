@@ -21,11 +21,6 @@ import type { Entity } from '../../types/entities';
 import type { SceneEntity } from '../../core/commands/interfaces';
 import { isMepSegmentEntity } from '../../types/entities';
 import type { MepSegmentParams } from '../../bim/types/mep-segment-types';
-import type { MepFixtureParams } from '../../bim/types/mep-fixture-types';
-import type { MepManifoldParams } from '../../bim/types/mep-manifold-types';
-import type { MepRadiatorParams } from '../../bim/types/mep-radiator-types';
-import type { MepBoilerParams } from '../../bim/types/mep-boiler-types';
-import type { MepWaterHeaterParams } from '../../bim/types/mep-water-heater-types';
 import { mmToEntityUnitFactor } from '../utils/bim3d-edit-math';
 import { createSceneManagerAdapter } from '../../hooks/grips/grip-commit-adapters';
 import { MoveEntityCommand, MoveMultipleEntitiesCommand } from '../../core/commands/entity-commands/MoveEntityCommand';
@@ -72,10 +67,17 @@ import {
   computeBeamVerticalMove,
   computeSlabVerticalMove,
   computeStairVerticalMove,
-  computeMepHostVerticalMove,
-  computeMepSegmentVerticalMove,
 } from '../gizmo/bim3d-vertical-move';
-import { computeMepSegmentEndpointMove } from '../gizmo/bim3d-endpoint-move';
+import {
+  mepVerticalCommand,
+  mepUpdateCommandFromNext,
+  mepVerticalNextParams,
+} from './bim3d-edit-mep-commands';
+import {
+  computeMepSegmentEndpointMove,
+  computeWallEndpointMove,
+  computeBeamEndpointMove,
+} from '../gizmo/bim3d-endpoint-move';
 import type { BridgeOutcome } from '../gizmo/bim-gizmo-drag-bridge';
 import type { LevelsHookReturn } from '../../systems/levels/useLevels';
 
@@ -234,25 +236,41 @@ export function buildEditCommand(outcome: BridgeOutcome, c: CommandBuildCtx): Ed
 }
 
 /**
- * ADR-408 Φ-D — endpoint move → `UpdateMepSegmentParamsCommand` via the endpoint-move
- * SSoT (`bim3d-endpoint-move`), wrapped in `withConnectedPipeFollow` so the pipes
- * snapped to the moved end FOLLOW in the same undo. The DXF-mm plan delta is scaled
- * into the segment's native canvas units (`mmToEntityUnitFactor`, mirror move/rotate);
- * `deltaUpMm` stays raw mm (the per-endpoint z SSoT is mm). `null` = no-op / not a segment.
+ * ADR-408 Φ-D/Φ1 — endpoint move → per-type `Update*ParamsCommand` via the endpoint-move
+ * SSoT (`bim3d-endpoint-move`). Three disciplines, one builder:
+ *   - `mep-segment` → free-3D pipe end (plan + elevation), wrapped in
+ *     `withConnectedPipeFollow` so snapped pipes FOLLOW in the same undo.
+ *   - `wall` / `beam` → horizontal LENGTH edit (plan only; `deltaUpMm` is ≈0 by the
+ *     ground-plane projection and the height is a separate handle/Type).
+ * The DXF-mm plan delta is scaled into the entity's native canvas units
+ * (`mmToEntityUnitFactor`, mirror move/rotate). `null` = no-op / unsupported type.
  */
 function buildEndpointMoveCommand(outcome: EndpointMoveOutcome, c: CommandBuildCtx): EditCommand | null {
   const entitiesAll = c.levels.getLevelScene(c.levelId)?.entities ?? [];
   const entity = entitiesAll.find((e) => e.id === c.entityId);
-  if (!entity || entity.type !== 'mep-segment') return null;
+  if (!entity) return null;
   const f = mmToEntityUnitFactor(entity);
   const deltaCanvas = f === 1 ? outcome.deltaMm : { x: outcome.deltaMm.x * f, y: outcome.deltaMm.y * f };
-  const next = computeMepSegmentEndpointMove(entity.params, outcome.endpoint, deltaCanvas, outcome.deltaUpMm);
-  if (!next) return null;
-  const base = new UpdateMepSegmentParamsCommand(c.entityId, next, entity.params, c.sm, false);
-  // The dragged segment is the only edited host; its connected pipes follow the moved end.
-  return withConnectedPipeFollow(base, [c.entityId], entitiesAll, c.sm, (e) =>
-    e.id === c.entityId ? next : null,
-  );
+  if (entity.type === 'mep-segment') {
+    const next = computeMepSegmentEndpointMove(entity.params, outcome.endpoint, deltaCanvas, outcome.deltaUpMm);
+    if (!next) return null;
+    const base = new UpdateMepSegmentParamsCommand(c.entityId, next, entity.params, c.sm, false);
+    // The dragged segment is the only edited host; its connected pipes follow the moved end.
+    return withConnectedPipeFollow(base, [c.entityId], entitiesAll, c.sm, (e) =>
+      e.id === c.entityId ? next : null,
+    );
+  }
+  if (entity.type === 'wall') {
+    const next = computeWallEndpointMove(entity.params, outcome.endpoint, deltaCanvas);
+    return next
+      ? new UpdateWallParamsCommand(c.entityId, next, entity.params, c.sm, false, entity.kind ?? 'straight')
+      : null;
+  }
+  if (entity.type === 'beam') {
+    const next = computeBeamEndpointMove(entity.params, outcome.endpoint, deltaCanvas);
+    return next ? new UpdateBeamParamsCommand(c.entityId, next, entity.params, c.sm, false) : null;
+  }
+  return null;
 }
 
 /**
@@ -389,39 +407,6 @@ function verticalCommandForEntity(entity: Entity, deltaUpMm: number, sm: SceneMa
 }
 
 /**
- * ADR-408 Φ-C — vertical (axis-Y) move command for an MEP entity. Point hosts bump
- * `mountingElevationMm`; a pipe shifts both endpoint z's. Each routes through its own
- * `Update*ParamsCommand` (geometry recomputed atomically). `null` = non-MEP / no-op.
- */
-function mepVerticalCommand(entity: Entity, deltaUpMm: number, sm: SceneManager): EditCommand | null {
-  if (entity.type === 'mep-segment') {
-    const next = computeMepSegmentVerticalMove(entity.params, deltaUpMm);
-    return next ? new UpdateMepSegmentParamsCommand(entity.id, next, entity.params, sm, false) : null;
-  }
-  if (entity.type === 'mep-fixture') {
-    const next = computeMepHostVerticalMove(entity.params, deltaUpMm);
-    return next ? new UpdateMepFixtureParamsCommand(entity.id, next, entity.params, sm, false) : null;
-  }
-  if (entity.type === 'mep-manifold') {
-    const next = computeMepHostVerticalMove(entity.params, deltaUpMm);
-    return next ? new UpdateMepManifoldParamsCommand(entity.id, next, entity.params, sm, false) : null;
-  }
-  if (entity.type === 'mep-radiator') {
-    const next = computeMepHostVerticalMove(entity.params, deltaUpMm);
-    return next ? new UpdateMepRadiatorParamsCommand(entity.id, next, entity.params, sm, false) : null;
-  }
-  if (entity.type === 'mep-boiler') {
-    const next = computeMepHostVerticalMove(entity.params, deltaUpMm);
-    return next ? new UpdateMepBoilerParamsCommand(entity.id, next, entity.params, sm, false) : null;
-  }
-  if (entity.type === 'mep-water-heater') {
-    const next = computeMepHostVerticalMove(entity.params, deltaUpMm);
-    return next ? new UpdateMepWaterHeaterParamsCommand(entity.id, next, entity.params, sm, false) : null;
-  }
-  return null;
-}
-
-/**
  * ADR-408 Φ-E — combined horizontal + vertical move of a SINGLE free-3D MEP entity
  * (vertical plane handle drag). Builds ONE `Update*ParamsCommand` carrying the entity
  * translated in plan AND shifted in elevation (the two cannot be separate commands —
@@ -446,34 +431,6 @@ function mepCombinedNextParams(entity: Entity, deltaCanvas: Point2D, deltaUpMm: 
   const moved = nextParamsFromPatch(calculateBimMovedGeometry(entity, deltaCanvas));
   if (!moved) return null;
   return mepVerticalNextParams({ ...entity, params: moved } as Entity, deltaUpMm) ?? moved;
-}
-
-/** Per-type `Update*ParamsCommand` for an MEP entity from explicit next params (prev = current). */
-function mepUpdateCommandFromNext(entity: Entity, next: unknown, sm: SceneManager): EditCommand | null {
-  switch (entity.type) {
-    case 'mep-segment':      return new UpdateMepSegmentParamsCommand(entity.id, next as MepSegmentParams, entity.params, sm, false);
-    case 'mep-fixture':      return new UpdateMepFixtureParamsCommand(entity.id, next as MepFixtureParams, entity.params, sm, false);
-    case 'mep-manifold':     return new UpdateMepManifoldParamsCommand(entity.id, next as MepManifoldParams, entity.params, sm, false);
-    case 'mep-radiator':     return new UpdateMepRadiatorParamsCommand(entity.id, next as MepRadiatorParams, entity.params, sm, false);
-    case 'mep-boiler':       return new UpdateMepBoilerParamsCommand(entity.id, next as MepBoilerParams, entity.params, sm, false);
-    case 'mep-water-heater': return new UpdateMepWaterHeaterParamsCommand(entity.id, next as MepWaterHeaterParams, entity.params, sm, false);
-    default: return null;
-  }
-}
-
-/** Next params for an MEP entity's vertical move (for the connectivity follow). */
-function mepVerticalNextParams(entity: Entity, deltaUpMm: number): unknown | null {
-  if (entity.type === 'mep-segment') return computeMepSegmentVerticalMove(entity.params, deltaUpMm);
-  if (
-    entity.type === 'mep-fixture' ||
-    entity.type === 'mep-manifold' ||
-    entity.type === 'mep-radiator' ||
-    entity.type === 'mep-boiler' ||
-    entity.type === 'mep-water-heater'
-  ) {
-    return computeMepHostVerticalMove(entity.params, deltaUpMm);
-  }
-  return null;
 }
 
 /**

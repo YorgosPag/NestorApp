@@ -34,7 +34,7 @@ import { useBim3DEntitiesStore } from '../stores/Bim3DEntitiesStore';
 import type { ThreeJsSceneManager } from '../scene/ThreeJsSceneManager';
 import {
   computeEditAnchor,
-  refreshSegmentEndpointHandles,
+  refreshLinearEndpointHandles,
   onEditPointerDown,
   onEditPointerMove,
   onEditPointerUp,
@@ -98,8 +98,8 @@ export function useBim3DEditInteraction({ managerRef, canvasEl }: UseBim3DEditIn
         const ok = computeEditAnchor(ctx, st.editEntityIds);
         // Multi-select: editBimType is null → only move + rotate handles (no resize).
         overlay.setActiveHandles(activeHandlesFor(st.editBimType));
-        // ADR-408 Φ-D — single-select segment: place the endpoint shape handles.
-        refreshSegmentEndpointHandles(ctx, st.editEntityIds, st.editBimType);
+        // ADR-408 Φ-D/Φ1 — single-select linear element: place the endpoint shape handles.
+        refreshLinearEndpointHandles(ctx, st.editEntityIds, st.editBimType);
         overlay.setVisible(ok);
         if (ok) setupListeners();
         else teardownListeners();
@@ -140,8 +140,8 @@ export function useBim3DEditInteraction({ managerRef, canvasEl }: UseBim3DEditIn
       const st = useBim3DEditStore.getState();
       if (!st.editToolActive || st.editEntityIds.length === 0) return;
       overlay.setVisible(computeEditAnchor(ctx, st.editEntityIds));
-      // ADR-408 Φ-D — keep the endpoint handles on the pipe ends after a resync.
-      refreshSegmentEndpointHandles(ctx, st.editEntityIds, st.editBimType);
+      // ADR-408 Φ-D/Φ1 — keep the endpoint handles on the element ends after a resync.
+      refreshLinearEndpointHandles(ctx, st.editEntityIds, st.editBimType);
       manager.markSceneDirty();
     });
 

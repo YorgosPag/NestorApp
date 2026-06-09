@@ -54,6 +54,8 @@ import { findAttachedWalls } from '../../bim/cascade/bim-cascade-resolver';
 import { useBim3DEntitiesStore } from '../stores/Bim3DEntitiesStore';
 // ADR-408 Φ-D — endpoint shape handles: world positions of a segment's two axis ends.
 import { segmentAxisEndpointsWorld } from '../converters/mep-segment-to-mesh';
+// ADR-408 Φ1 — structural length handles (wall/beam): horizontal endpoint world SSoT.
+import { linearEndpointHandleWorld } from '../gizmo/linear-endpoint-world';
 import { resolveEntityBuilding } from '../../bim/utils/bim-floor-utils';
 // ADR-404 — drag outcome → view-agnostic command (extracted for file size, N.7.1).
 import { buildEditCommand } from './bim3d-edit-command-builders';
@@ -90,30 +92,60 @@ export function computeEditAnchor(ctx: EditInteractionCtx, entityIds: readonly s
 }
 
 /**
- * ADR-408 Φ-D — position the per-endpoint shape handles for a single-select MEP
- * segment (Revit shape handles at each axis end). Cleared (null) for any other
- * selection. The endpoint world positions reuse the converter SSoT
- * (`segmentAxisEndpointsWorld`) so the handles sit exactly on the rendered pipe ends.
- * Called after `computeEditAnchor` + `setActiveHandles` (and on auto-resync re-anchor).
+ * ADR-408 Φ-D/Φ1 — position the per-endpoint shape handles for a single-select
+ * LINEAR element (Revit shape handles at each axis end). Cleared (null) for any
+ * other selection. Two disciplines, one entry point:
+ *   - `mep-segment` → free-3D pipe handles via `segmentAxisEndpointsWorld` (per-end
+ *     elevation, the run may slope) — drag = κάτοψη + υψόμετρο.
+ *   - `wall` / `beam` → horizontal LENGTH handles via `linearEndpointHandleWorld`
+ *     (both ends share the gizmo-anchor Y; the height is a separate handle/Type).
+ * Called after `computeEditAnchor` + `setActiveHandles` (and on auto-resync re-anchor),
+ * so `ctx.overlay.getPosition()` already holds the world box centre.
  */
-export function refreshSegmentEndpointHandles(
+export function refreshLinearEndpointHandles(
   ctx: EditInteractionCtx,
   entityIds: readonly string[],
   bimType: string | null,
 ): void {
-  if (bimType !== 'mep-segment' || entityIds.length !== 1) {
+  if (entityIds.length !== 1) {
     ctx.overlay.setEndpointHandles(null, null);
     return;
   }
+  if (bimType === 'mep-segment') return refreshSegmentEndpointHandles(ctx, entityIds[0]);
+  if (bimType === 'wall' || bimType === 'beam') return refreshStructuralEndpointHandles(ctx, entityIds[0], bimType);
+  ctx.overlay.setEndpointHandles(null, null);
+}
+
+/** MEP pipe end handles (free-3D, per-endpoint elevation — the run may slope). */
+function refreshSegmentEndpointHandles(ctx: EditInteractionCtx, id: string): void {
   const s = useBim3DEntitiesStore.getState();
-  const segment = s.mepSegments.find((seg) => seg.id === entityIds[0]);
+  const segment = s.mepSegments.find((seg) => seg.id === id);
   if (!segment) {
     ctx.overlay.setEndpointHandles(null, null);
     return;
   }
   const baseElevationM = resolveEntityBuilding(segment, s.floors, s.buildings)?.baseElevation ?? 0;
   const { startW, endW } = segmentAxisEndpointsWorld(segment.params, baseElevationM);
-  ctx.overlay.setEndpointHandles(startW, endW);
+  ctx.overlay.setEndpointHandles(startW, endW, 'free-3d');
+}
+
+/** Wall/beam LENGTH handles (horizontal; both ends at the gizmo-anchor Y). */
+function refreshStructuralEndpointHandles(ctx: EditInteractionCtx, id: string, bimType: 'wall' | 'beam'): void {
+  const s = useBim3DEntitiesStore.getState();
+  const worldY = ctx.overlay.getPosition().y;
+  const wall = bimType === 'wall' ? s.walls.find((w) => w.id === id) : undefined;
+  if (wall) {
+    const { startW, endW } = linearEndpointHandleWorld(wall.params.start, wall.params.end, wall.params.sceneUnits, worldY);
+    ctx.overlay.setEndpointHandles(startW, endW, 'horizontal');
+    return;
+  }
+  const beam = bimType === 'beam' ? s.beams.find((b) => b.id === id) : undefined;
+  if (beam) {
+    const { startW, endW } = linearEndpointHandleWorld(beam.params.startPoint, beam.params.endPoint, beam.params.sceneUnits, worldY);
+    ctx.overlay.setEndpointHandles(startW, endW, 'horizontal');
+    return;
+  }
+  ctx.overlay.setEndpointHandles(null, null);
 }
 
 export function onEditPointerDown(ctx: EditInteractionCtx, e: PointerEvent): void {

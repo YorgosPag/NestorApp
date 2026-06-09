@@ -33,6 +33,7 @@ import {
   resolveHeatingReturnSink,
   type HeatingEndpoint,
 } from './heating-source-resolve';
+import { buildPairedReturnNetwork } from './pair-supply-return';
 import { type RouteTarget } from '../routing/orthogonal-router';
 import { routeWallAware } from '../routing/route-wall-aware';
 import { wallObstacles } from '../routing/wall-obstacles';
@@ -112,8 +113,10 @@ export function designHeating(
   const obstacles = wallObstacles(entities);
   const networks: ProposedHeatingNetwork[] = [];
   const supplySource = resolveHeatingSupplySource(entities);
+  let supply: ProposedHeatingNetwork | null = null;
   if (supplySource) {
-    networks.push(buildNetwork(supplySource, demands, discipline, obstacles));
+    supply = buildNetwork(supplySource, demands, discipline, obstacles);
+    networks.push(supply);
   } else {
     warnings.push(
       `no ${HEATING_ROLE_CLASSIFICATION.supply} source recognized — supply network skipped (${demands.length} terminals)`,
@@ -121,7 +124,15 @@ export function designHeating(
   }
   const returnSink = resolveHeatingReturnSink(entities);
   if (returnSink) {
-    networks.push(buildNetwork(returnSink, demands, discipline, obstacles));
+    // ADR-429 Slice 3B — pair the return as a parallel offset of the supply spine when there
+    // are no walls to detour around; with obstacles, keep the independent wall-aware route.
+    const canPair =
+      supply != null && obstacles.length === 0 && supply.segments.some((s) => s.role === 'trunk');
+    networks.push(
+      canPair
+        ? buildPairedReturnNetwork(supply!, returnSink, demands, discipline)
+        : buildNetwork(returnSink, demands, discipline, obstacles),
+    );
   } else {
     warnings.push(
       `no ${HEATING_ROLE_CLASSIFICATION.return} sink recognized — return network skipped (${demands.length} terminals)`,
