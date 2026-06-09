@@ -163,7 +163,7 @@ describe('buildThermalStudyReport', () => {
 
     expect(report.isEmpty).toBe(false);
     expect(report.header).toEqual({ buildingLabel: 'Κτίριο Α', floorLabel: 'Ισόγειο' });
-    expect(report.sections).toHaveLength(6);
+    expect(report.sections).toHaveLength(7);
 
     const [summary, loads, radiators, pipes, balancingSection] = report.sections;
     expect(loads.rows).toHaveLength(2);
@@ -278,6 +278,49 @@ describe('buildThermalStudyReport', () => {
     expect(compliance.rows).toHaveLength(0);
   });
 
+  it('builds the L7 annual-energy section + summary KPIs (degree-day)', () => {
+    // χώρος 4×4 m (A=16 m²), H=(600+200)/20=40 W/K, ζώνη Β (HDD 1300)
+    // → Q=40·1300·24/1000=1248 kWh/έτος · q=1248/16=78 → ενδεικτική κατηγορία Β.
+    const report = buildThermalStudyReport({
+      spaceLoads: makeSpaceLoads([makeSpace('sp-1', 'Σαλόνι')]),
+      radiatorSizing: new Map(),
+      pipeSizing: new Map(),
+      balancing: { terminals: new Map(), indexTerminalId: null, pumpHeadPa: 0, segmentDropPa: new Map() },
+      climateZone: 'B',
+      lookups: LOOKUPS,
+    });
+
+    const annual = report.sections[6];
+    expect(annual.titleKey).toBe('thermalStudyReport.sections.annualEnergy');
+    expect(annual.rows).toHaveLength(1);
+    const row = annual.rows[0];
+    expect(row.lossCoeff).toBeCloseTo(40);
+    expect(row.floorArea).toBeCloseTo(16);
+    expect(row.annualDemand).toBe(1248);
+    expect(row.specificDemand).toBeCloseTo(78);
+
+    const kpi = report.sections[0].rows[0];
+    expect(kpi.annualEnergy).toBe(1248);
+    expect(kpi.specificDemand).toBeCloseTo(78);
+    expect(kpi.energyClass).toBe('B');
+  });
+
+  it('omits annual-energy rows + class when no climate zone is known', () => {
+    const report = buildThermalStudyReport({
+      spaceLoads: makeSpaceLoads([makeSpace('sp-1', 'Σαλόνι')]),
+      radiatorSizing: new Map(),
+      pipeSizing: new Map(),
+      balancing: { terminals: new Map(), indexTerminalId: null, pumpHeadPa: 0, segmentDropPa: new Map() },
+      climateZone: null,
+      lookups: LOOKUPS,
+    });
+    const annual = report.sections[6];
+    expect(annual.titleKey).toBe('thermalStudyReport.sections.annualEnergy');
+    expect(annual.rows).toHaveLength(0);
+    expect(report.sections[0].rows[0].energyClass).toBe('—');
+    expect(report.sections[0].rows[0].annualEnergy).toBe(0);
+  });
+
   it('returns isEmpty for a floor with no heating model', () => {
     const report = buildThermalStudyReport({
       spaceLoads: null,
@@ -288,7 +331,7 @@ describe('buildThermalStudyReport', () => {
       lookups: LOOKUPS,
     });
     expect(report.isEmpty).toBe(true);
-    expect(report.sections).toHaveLength(6);
+    expect(report.sections).toHaveLength(7);
     expect(report.sections[0].rows).toHaveLength(1); // σύνοψη πάντα παρούσα
     expect(report.sections[1].rows).toHaveLength(0);
     expect(report.sections[0].rows[0].floorLoad).toBe(0);
