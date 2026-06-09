@@ -106,4 +106,60 @@ describe('buildBoilerTagLines', () => {
     );
     expect(lines.some((l) => l.startsWith('terminationLabel'))).toBe(false);
   });
+
+  it('shows the fuel-supply Ø line for combustion fuels (default DN20)', () => {
+    const lines = buildBoilerTagLines(params({ fuelType: 'gas' }), fakeT);
+    expect(lines).toContain('fuelSupply: Ø dnPrefix20');
+  });
+
+  it('uses an explicit fuelConnectorDiameterMm when present', () => {
+    const lines = buildBoilerTagLines(params({ fuelType: 'gas', fuelConnectorDiameterMm: 25 }), fakeT);
+    expect(lines).toContain('fuelSupply: Ø dnPrefix25');
+  });
+
+  it('omits the fuel-supply line for non-combustion boilers', () => {
+    const lines = buildBoilerTagLines(params({ fuelType: 'heat-pump' }), fakeT);
+    expect(lines.some((l) => l.startsWith('fuelSupply'))).toBe(false);
+  });
+
+  // ─── Efficiency + ErP class (any fuel, NOT combustion-gated) ──────────────────
+
+  it('shows the efficiency line + ErP class for a gas boiler (94% → A)', () => {
+    const lines = buildBoilerTagLines(params({ fuelType: 'gas', seasonalEfficiencyPercent: 94 }), fakeT);
+    expect(lines).toContain('efficiency: 94%');
+    expect(lines).toContain('erp: A');
+  });
+
+  it('rounds the efficiency to a whole percent', () => {
+    const lines = buildBoilerTagLines(params({ fuelType: 'oil', seasonalEfficiencyPercent: 88.6 }), fakeT);
+    expect(lines).toContain('efficiency: 89%');
+  });
+
+  it('shows efficiency + ErP for an electric boiler too (D via primary-energy factor)', () => {
+    const lines = buildBoilerTagLines(
+      params({ fuelType: 'electric', seasonalEfficiencyPercent: 99 }),
+      fakeT,
+    );
+    expect(lines).toContain('efficiency: 99%');
+    expect(lines).toContain('erp: D');
+  });
+
+  it('shows A+++ for a high-η_s heat-pump', () => {
+    const lines = buildBoilerTagLines(
+      params({ fuelType: 'heat-pump', seasonalEfficiencyPercent: 156 }),
+      fakeT,
+    );
+    expect(lines).toContain('erp: A+++');
+  });
+
+  it('omits the efficiency + ErP lines when seasonalEfficiencyPercent is absent or zero', () => {
+    expect(
+      buildBoilerTagLines(params({ fuelType: 'gas' }), fakeT).some((l) => l.startsWith('efficiency')),
+    ).toBe(false);
+    expect(
+      buildBoilerTagLines(params({ seasonalEfficiencyPercent: 0 }), fakeT).some((l) =>
+        l.startsWith('erp'),
+      ),
+    ).toBe(false);
+  });
 });

@@ -124,6 +124,14 @@ export interface MepBoilerParams extends MepConnectorHostParams {
    */
   readonly flueDiameterMm?: number;
   /**
+   * mm — nominal combustion FUEL SUPPLY (τροφοδοσία καυσίμου) diameter for a gas/oil
+   * boiler. Drives the `boiler-fuel` fuel-domain connector (`buildBoilerConnectors`,
+   * ADR-408 fuel foundation). Absent ⇒ falls back to {@link DEFAULT_BOILER_FUEL_DIAMETER_MM}.
+   * Only relevant when `fuelType` is a combustion source (gas/oil); ignored for
+   * electric/heat-pump. Additive/optional — pre-fuel-inlet boilers unchanged.
+   */
+  readonly fuelConnectorDiameterMm?: number;
+  /**
    * Combustion flue VENT TERMINAL type (Revit «Vent Terminal», καμινάδα) — how the flue
    * discharges to atmosphere (roof cowl / through-wall / concentric). Drives the distinct
    * terminal-cap glyph on the plan symbol + the tag line. Absent ⇒ {@link
@@ -137,6 +145,14 @@ export interface MepBoilerParams extends MepConnectorHostParams {
    * sizing/load-balancing; absent ⇒ not yet specified.
    */
   readonly thermalOutputW?: number;
+  /**
+   * % — seasonal APPLIANCE efficiency (Revit «Nominal Efficiency», IFC
+   * `Pset_BoilerTypeCommon.NominalEfficiency`). Populated by the Type Catalog; drives
+   * the EU ErP energy class (`resolveErpClass`, primary-energy adjusted) shown on the
+   * plan tag + the «Θερμικά» readout, and unblocks ADR-422 L8 ΚΕΝΑΚ primary-energy
+   * (`Q_primary = Q_net / η`). Absent ⇒ unspecified. Additive/optional.
+   */
+  readonly seasonalEfficiencyPercent?: number;
   /**
    * DXF canvas coordinate unit. Stored so `computeMepBoilerGeometry` can convert
    * mm scalars → canvas units for the 2D footprint. Defaults to `'mm'`.
@@ -226,6 +242,14 @@ export const DEFAULT_BOILER_DHW_CONNECTOR_DIAMETER_MM = 15;
  * DN100 wall-hung condensing flue (range DN80–130). Used when `flueDiameterMm` is absent.
  */
 export const DEFAULT_BOILER_FLUE_DIAMETER_MM = 100;
+
+/**
+ * Default combustion FUEL SUPPLY (τροφοδοσία καυσίμου) diameter (mm) for a gas/oil
+ * boiler — typical DN20 gas connection (3/4" BSP). Used when `fuelConnectorDiameterMm`
+ * is absent (oil lines are typically smaller, DN15, but DN20 is a safe shared default
+ * the user can override per boiler).
+ */
+export const DEFAULT_BOILER_FUEL_DIAMETER_MM = 20;
 
 /**
  * Default classification the boiler sources — the hydronic supply flow. A network

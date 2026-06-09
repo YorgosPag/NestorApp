@@ -33,10 +33,14 @@ import type { Point3D } from './bim-base';
 // ─── Domain + flow ───────────────────────────────────────────────────────────
 
 /**
- * Revit "Connector Domain". The opening slice ships `electrical`; `duct`/`pipe`
- * are reserved so HVAC/plumbing connectors extend without a type change.
+ * Revit "Connector Domain". `electrical`, `pipe` and `duct` ship as full domains;
+ * `fuel` carves out combustion-fuel conveyance (gas/oil supply lines) as its OWN
+ * domain — mirror of how `duct` was carved out for the boiler flue exhaust. Fuel is
+ * deliberately NOT folded into `pipe`: a gas/oil supply line is not water plumbing,
+ * so it gets a disjoint classification family ({@link FuelSystemClassification}) and
+ * is invisible to every water/pipe consumer (which equality-check `domain === 'pipe'`).
  */
-export type MepConnectorDomain = 'electrical' | 'duct' | 'pipe';
+export type MepConnectorDomain = 'electrical' | 'duct' | 'pipe' | 'fuel';
 
 /** Revit flow direction on a connector. */
 export type MepFlowDirection = 'in' | 'out' | 'bidirectional';
@@ -85,6 +89,20 @@ export type PipeFluid = 'water' | 'hot-water' | 'wastewater' | 'glycol' | 'other
  */
 export type DuctSystemClassification = 'exhaust';
 
+/**
+ * Revit-style "System Classification" for the {@link MepConnectorDomain} `fuel` domain
+ * (ADR-408 — fuel domain foundation). The combustion-fuel sub-type a fuel connector — and
+ * the fuel supply line it joins — carries. Disjoint value space from the electrical /
+ * plumbing / duct classifications; kept apart by the connector's own `domain` discriminant.
+ *
+ *   - `fuel-gas` — φυσικό αέριο / υγραέριο (gas supply to a gas boiler).
+ *   - `fuel-oil` — πετρέλαιο θέρμανσης (oil supply to an oil boiler).
+ *
+ * Mirrors the boiler's `BoilerFuelType` (`gas`/`oil`) but is a SEPARATE concept: that
+ * is the equipment's energy source, this is the conveyed-medium system classification.
+ */
+export type FuelSystemClassification = 'fuel-gas' | 'fuel-oil';
+
 // ─── Domain-specific params ───────────────────────────────────────────────────
 
 /** Electrical-domain connector params (Revit Electrical Connector). */
@@ -129,6 +147,18 @@ export interface MepDuctConnectorParams {
   readonly diameterMm?: number;
 }
 
+/**
+ * Fuel-domain connector params (combustion-fuel supply line), present when
+ * `MepConnector.domain === 'fuel'` (ADR-408 — fuel domain foundation). The opening
+ * use is the gas/oil boiler fuel inlet (τροφοδοσία καυσίμου); the params mirror the
+ * minimal pipe/duct payload — a classification + a nominal diameter.
+ */
+export interface MepFuelConnectorParams {
+  readonly systemClassification: FuelSystemClassification;
+  /** mm — nominal fuel-line diameter (typical gas DN15/20/25, oil DN15). */
+  readonly diameterMm?: number;
+}
+
 // ─── Connector ────────────────────────────────────────────────────────────────
 
 /**
@@ -151,6 +181,8 @@ export interface MepConnector {
   readonly pipe?: MepPipeConnectorParams;
   /** Domain-specific payload — present when `domain === 'duct'` (ADR-408 duct foundation). */
   readonly duct?: MepDuctConnectorParams;
+  /** Domain-specific payload — present when `domain === 'fuel'` (ADR-408 fuel foundation). */
+  readonly fuel?: MepFuelConnectorParams;
   /**
    * Derived back-reference to the owning System — NOT truth (see file header).
    * Reconciled System→connector; absent = unassigned.
@@ -401,6 +433,8 @@ export const BOILER_DHW_COLD_CONNECTOR_ID = 'boiler-dhw-cold';
 export const BOILER_DHW_RECIRC_CONNECTOR_ID = 'boiler-dhw-recirc';
 /** Connector id for the combustion flue/vent outlet of a gas/oil boiler (καπναγωγός). */
 export const BOILER_FLUE_CONNECTOR_ID = 'boiler-flue';
+/** Connector id for the combustion fuel supply inlet of a gas/oil boiler (τροφοδοσία καυσίμου). */
+export const BOILER_FUEL_CONNECTOR_ID = 'boiler-fuel';
 
 /**
  * Supply outlet connector of a hydronic boiler (ADR-408 Εύρος Β #2, λέβητας) — the
@@ -555,6 +589,39 @@ export function buildBoilerFlueConnector(
     localPosition,
     localDirection: { x: 0, y: 0, z: 1 },
     duct: { systemClassification: 'exhaust', diameterMm },
+  };
+}
+
+/**
+ * Combustion fuel SUPPLY inlet connector of a gas/oil heating boiler (ADR-408 — fuel
+ * domain foundation, Revit "Mechanical Equipment → fuel connector", τροφοδοσία καυσίμου).
+ * A combustion boiler is FED its fuel here: the gas/oil ENTERS the boiler (`flow:'in'`),
+ * `domain:'fuel'` (NOT pipe — fuel is not water plumbing; this founds the fuel domain,
+ * mirror of how the flue founded the duct domain). The classification is the supplied
+ * medium (`'fuel-gas'`/`'fuel-oil'`), set by the boiler's fuel type — this makes the
+ * boiler a MEMBER of the fuel supply line, the mirror of the flue exhaust outlet.
+ *
+ * Only seeded when the boiler's `fuelType` is a combustion source (`gas`/`oil`); an
+ * electric boiler / heat-pump takes electricity, not a piped fuel line, so it has no
+ * fuel inlet (gated in `buildBoilerConnectors`). Independent of the combi/DHW and flue
+ * gates — a plain gas boiler with no DHW still has both a fuel inlet and a flue outlet.
+ *
+ * `localPosition` is host-local (scene units, pre-rotation) — the caller places it at the
+ * front-centre, distinct from the supply/return/DHW ports and the back-centre flue (see
+ * `buildBoilerConnectors`). `classification` is passed in (gas vs oil) so this builder
+ * stays free of any boiler-catalog import.
+ */
+export function buildBoilerFuelConnector(
+  localPosition: Point3D,
+  diameterMm: number,
+  classification: FuelSystemClassification,
+): MepConnector {
+  return {
+    connectorId: BOILER_FUEL_CONNECTOR_ID,
+    domain: 'fuel',
+    flow: 'in',
+    localPosition,
+    fuel: { systemClassification: classification, diameterMm },
   };
 }
 
