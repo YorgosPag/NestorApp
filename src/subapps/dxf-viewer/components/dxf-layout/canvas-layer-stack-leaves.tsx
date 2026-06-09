@@ -34,6 +34,9 @@ import { DrainageProposalGhostPreviewMount } from './canvas-layer-stack-drainage
 import { HeatingProposalGhostPreviewMount } from './canvas-layer-stack-heating-proposal-ghost';
 import { ElectricalProposalGhostPreviewMount } from './canvas-layer-stack-electrical-proposal-ghost';
 import { HvacProposalGhostPreviewMount } from './canvas-layer-stack-hvac-proposal-ghost';
+import { FireProposalGhostPreviewMount } from './canvas-layer-stack-fire-proposal-ghost';
+import { GasProposalGhostPreviewMount } from './canvas-layer-stack-gas-proposal-ghost';
+import { ClashOverlayMount } from './canvas-layer-stack-clash-overlay';
 import { SlabOpeningGhostPreviewMount, type SlabOpeningGhostPreviewMountProps } from './canvas-layer-stack-slab-opening-ghost';
 import { OpeningGhostPreviewMount, type OpeningGhostPreviewMountProps } from './canvas-layer-stack-opening-ghost';
 import { OpeningTagDragMount } from './canvas-layer-stack-opening-tag-drag';
@@ -455,6 +458,12 @@ export const PreviewCanvasMounts = React.memo(function PreviewCanvasMounts(
       <ElectricalProposalGhostPreviewMount transform={transform} getCanvas={getCanvas} getViewportElement={getViewportElement} />
       {/* ADR-432 Slice 2 — HVAC (ventilation) auto-design proposal ghost (low-freq store, inert while idle). */}
       <HvacProposalGhostPreviewMount transform={transform} getCanvas={getCanvas} getViewportElement={getViewportElement} />
+      {/* ADR-433 Slice 2 — fire-protection (sprinkler) auto-design proposal ghost (low-freq store, inert while idle). */}
+      <FireProposalGhostPreviewMount transform={transform} getCanvas={getCanvas} getViewportElement={getViewportElement} />
+      {/* ADR-434 Slice 2 — gas (φυσικό αέριο) auto-design proposal ghost (low-freq store, inert while idle). */}
+      <GasProposalGhostPreviewMount transform={transform} getCanvas={getCanvas} getViewportElement={getViewportElement} />
+      {/* ADR-435 Slice 1 — clash-detection report overlay (low-freq store, inert while idle). */}
+      <ClashOverlayMount transform={transform} getCanvas={getCanvas} getViewportElement={getViewportElement} />
       <SlabOpeningGhostPreviewMount {...slabOpeningGhost} transform={transform} getCanvas={getCanvas} getViewportElement={getViewportElement} />
       <OpeningGhostPreviewMount {...openingGhost} transform={transform} getCanvas={getCanvas} getViewportElement={getViewportElement} />
       <GripDimAnnotationMount dragPreview={gripDragPreview} levelManager={levelManager} transform={transform} getCanvas={getCanvas} getViewportElement={getViewportElement} />

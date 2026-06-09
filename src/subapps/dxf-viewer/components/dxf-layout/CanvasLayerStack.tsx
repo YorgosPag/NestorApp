@@ -34,6 +34,7 @@ import {
 import { PolygonCropPreviewSubscriber } from './LassoCropPreviewSubscriber'; import { LassoFreehandPreviewSubscriber } from './LassoFreehandPreviewSubscriber';
 import { ZoomWindowSubscriber } from './leaves/ZoomWindowSubscriber';
 import { AutoAreaResultPanel } from './AutoAreaResultPanel'; import { AutoAreaPreviewOverlay } from './AutoAreaPreviewOverlay';
+import { ClashReportPanel } from './ClashReportPanel';
 import { RegionPerimeterPreviewOverlay } from './RegionPerimeterPreviewOverlay';
 import { CanvasNumericInputOverlay } from '../../systems/canvas-numeric-input/CanvasNumericInputOverlay'; import { DynamicInputSubscriber } from './DynamicInputSubscriber'; import { CanvasLayerStack3dLeaf } from './canvas-layer-stack-3d-leaf';
 import { ViewMode3DToggleButton } from '../../bim-3d/viewport/ViewMode3DToggleButton'; import { Focus2DOverlayLeaf } from './Focus2DOverlayLeaf'; import { SelectionCursorIcon } from '../../accessibility/SelectionCursorIcon';
@@ -477,6 +478,8 @@ export const CanvasLayerStack = React.memo(function CanvasLayerStack({
         </div>
       </div>
       <AutoAreaResultPanel />
+      {/* ADR-435 Slice 1b — Clash Detective results card (self-contained leaf). */}
+      <ClashReportPanel />
     </>
   );
 });
