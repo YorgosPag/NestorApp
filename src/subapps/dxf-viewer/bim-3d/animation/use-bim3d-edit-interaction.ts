@@ -94,6 +94,16 @@ export function useBim3DEditInteraction({ managerRef, canvasEl }: UseBim3DEditIn
         useBim3DEditStore.getState().deactivate(); // ADR-371 read-only — editing disabled
         return;
       }
+      // ADR-363 Φ1G.5 Slice 2d — a hosted opening (door/window) does NOT use the generic
+      // gizmo: its grab-mesh-slide preview spawns a confusing floating cube and never
+      // moves the wall void live. The dedicated `useBim3DOpeningMove` drag (live ghost +
+      // host-aware re-host) owns it instead. Suppress the gizmo for a single opening.
+      if (active && st.editBimType === 'opening' && st.editEntityIds.length === 1) {
+        overlay.setVisible(false);
+        teardownListeners();
+        manager.markSceneDirty();
+        return;
+      }
       if (active) {
         const ok = computeEditAnchor(ctx, st.editEntityIds);
         // Multi-select: editBimType is null → only move + rotate handles (no resize).
@@ -139,6 +149,14 @@ export function useBim3DEditInteraction({ managerRef, canvasEl }: UseBim3DEditIn
       if (controller.isDragging()) return;
       const st = useBim3DEditStore.getState();
       if (!st.editToolActive || st.editEntityIds.length === 0) return;
+      // ADR-363 Φ1G.5 Slice 2d — keep the gizmo suppressed for a single hosted opening
+      // across a re-sync (the dedicated drag owns it); otherwise the commit's resync
+      // would re-show the confusing cube.
+      if (st.editBimType === 'opening' && st.editEntityIds.length === 1) {
+        overlay.setVisible(false);
+        manager.markSceneDirty();
+        return;
+      }
       overlay.setVisible(computeEditAnchor(ctx, st.editEntityIds));
       // ADR-408 Φ-D/Φ1 — keep the endpoint handles on the element ends after a resync.
       refreshLinearEndpointHandles(ctx, st.editEntityIds, st.editBimType);

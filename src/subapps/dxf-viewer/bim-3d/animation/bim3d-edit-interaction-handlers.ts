@@ -21,6 +21,7 @@
 import * as THREE from 'three';
 import type { DxfEntityUnion } from '../../canvas-v2/dxf-canvas/dxf-types';
 import type { Entity } from '../../types/entities';
+import type { WallEntity } from '../../bim/types/wall-types';
 import { computeDxfEntityGrips } from '../../hooks/grip-computation';
 import { getGlobalSnapEngine } from '../../snapping/global-snap-engine';
 import { worldToDxfPlan } from '../viewport/coordinate-transforms';
@@ -371,7 +372,10 @@ export function onEditPointerUp(ctx: EditInteractionCtx, e: PointerEvent): void 
   e.stopPropagation();
   ctx.canvasEl.releasePointerCapture?.(e.pointerId);
   ctx.controller.updateDrag(ctx.manager.getCamera(), ctx.canvasEl, e.clientX, e.clientY);
-  const committed = dispatchOutcome(ctx, ctx.controller.endDrag());
+  // ADR-363 Φ1G.5 Slice 2c — the wall under the cursor at release is the reliable
+  // re-host target for a dragged opening (used only by the opening move builder).
+  const pickedWall = resolveWallUnderCursor(ctx, e.clientX, e.clientY);
+  const committed = dispatchOutcome(ctx, ctx.controller.endDrag(), pickedWall);
   // ADR-402 — committed: the preview already shows the final pose, so just drop the
   // refs and let the command's re-sync replace the meshes (no jump). No command
   // (no-op drag): restore the originals, since no re-sync is coming.
@@ -397,6 +401,17 @@ export function onEditWheel(ctx: EditInteractionCtx): void {
 }
 
 /**
+ * ADR-363 Φ1G.5 Slice 2c — the `WallEntity` under the cursor (3D raycast), or
+ * undefined when the cursor is over a non-wall / empty. The reliable re-host
+ * target for a dragged opening (vs the gizmo-constrained end point's proximity).
+ */
+function resolveWallUnderCursor(ctx: EditInteractionCtx, clientX: number, clientY: number): WallEntity | undefined {
+  const hit = ctx.manager.raycastBimEntities(clientX, clientY);
+  if (!hit || hit.bimType !== 'wall') return undefined;
+  return useBim3DEntitiesStore.getState().walls.find((w) => w.id === hit.bimId);
+}
+
+/**
  * Dispatch ONE view-agnostic command from the drag outcome (one undo step).
  * Returns true when a command actually executed (the caller keeps the live preview
  * and lets the re-sync replace the meshes; false → it restores the originals).
@@ -404,7 +419,7 @@ export function onEditWheel(ctx: EditInteractionCtx): void {
  * resolves the primary element's level (same-floor multi is the common case —
  * cross-floor multi falls back to the active level, see ADR-402 limitations).
  */
-function dispatchOutcome(ctx: EditInteractionCtx, outcome: BridgeOutcome): boolean {
+function dispatchOutcome(ctx: EditInteractionCtx, outcome: BridgeOutcome, pickedWall?: WallEntity): boolean {
   if (outcome.kind === 'none') return false;
   const edit = useBim3DEditStore.getState();
   const levels = ctx.getLevels();
@@ -415,7 +430,7 @@ function dispatchOutcome(ctx: EditInteractionCtx, outcome: BridgeOutcome): boole
   if (!levelId) return false;
   const sm = createSceneManagerAdapter(buildDeps(levels, levelId));
   if (!sm) return false;
-  const cmd = buildEditCommand(outcome, { entityIds, entityId, edit, sm, levels, levelId });
+  const cmd = buildEditCommand(outcome, { entityIds, entityId, edit, sm, levels, levelId, pickedWall });
   if (!cmd) return false;
   // `validate` is optional on ICommand (CompoundCommand has none — it validates each
   // child at execute time and rolls back on failure). Only block on a real error.

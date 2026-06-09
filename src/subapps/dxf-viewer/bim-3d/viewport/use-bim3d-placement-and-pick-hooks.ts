@@ -26,6 +26,7 @@ import { useBim3DMepBoilerPlacement } from '../placement/use-bim3d-mep-boiler-pl
 import { useBim3DMepWaterHeaterPlacement } from '../placement/use-bim3d-mep-water-heater-placement';
 import { useBim3DAttachPick } from './use-bim3d-attach-pick';
 import { useBim3DBeamFromWallPick } from './use-bim3d-beam-from-wall-pick';
+import { useBim3DOpeningMove } from './use-bim3d-opening-move';
 import { useBim3DWireWaypointInteraction } from '../animation/use-bim3d-wire-waypoint-interaction-3d';
 
 interface UseBim3DPlacementAndPickHooksParams {
@@ -86,6 +87,13 @@ export function useBim3DPlacementAndPickHooks({
   // `bim:beam-from-wall-picked-3d`; the 2D `useBeamTool` builds the beam via its
   // existing from-wall commit core (auto-attaches the wall top, ADR-401 D).
   useBim3DBeamFromWallPick({ managerRef, canvasEl });
+
+  // ADR-363 Φ1G.5 Slice 2d — dedicated 3D opening (door/window) move. Armed in 3D
+  // while a single opening is selected (NO generic gizmo — a hosted void cannot use
+  // grab-mesh-slide). Press on the opening → drag → a translucent ghost previews it on
+  // the wall under the cursor (auto rotation/thickness) → release slides or re-hosts via
+  // the SAME `resolveOpeningAltMove` SSoT + `UpdateOpeningParamsCommand` as the 2D grip.
+  useBim3DOpeningMove({ managerRef, canvasEl });
 
   // ADR-408 Φ7 FU#3 — 3D wire waypoint editing. Armed in 3D + `select` tool:
   // sphere handles on the active circuit's waypoints; drag a node / a segment to
