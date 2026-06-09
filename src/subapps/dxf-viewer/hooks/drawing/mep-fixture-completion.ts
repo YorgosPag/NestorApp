@@ -46,6 +46,10 @@ import {
   buildFloorDrainConnector,
   buildAirTerminalSupplyConnector,
   buildAhuSupplyAirConnector,
+  buildSprinklerSupplyConnector,
+  buildFireRiserSupplyConnector,
+  buildGasMeterOutletConnector,
+  buildGasCookerSupplyConnector,
 } from '../../bim/types/mep-connector-types';
 import type { MepConnector } from '../../bim/types/mep-connector-types';
 import { buildSanitaryFixtureConnectors } from '../../bim/mep-fixtures/sanitary-fixture-connectors';
@@ -76,6 +80,36 @@ import {
   AHU_MOUNTING_ELEVATION_MM,
   DEFAULT_AHU_DUCT_DIAMETER_MM,
 } from '../../bim/mep-fixtures/ahu-symbol-spec';
+import {
+  isSprinklerKind,
+  DEFAULT_SPRINKLER_SIZE_MM,
+  DEFAULT_SPRINKLER_BODY_HEIGHT_MM,
+  SPRINKLER_MOUNTING_ELEVATION_MM,
+  DEFAULT_SPRINKLER_PIPE_DIAMETER_MM,
+} from '../../bim/mep-fixtures/sprinkler-symbol-spec';
+import {
+  isFireRiserKind,
+  DEFAULT_FIRE_RISER_WIDTH_MM,
+  DEFAULT_FIRE_RISER_LENGTH_MM,
+  DEFAULT_FIRE_RISER_BODY_HEIGHT_MM,
+  FIRE_RISER_MOUNTING_ELEVATION_MM,
+  DEFAULT_FIRE_RISER_PIPE_DIAMETER_MM,
+} from '../../bim/mep-fixtures/fire-riser-symbol-spec';
+import {
+  isGasMeterKind,
+  DEFAULT_GAS_METER_WIDTH_MM,
+  DEFAULT_GAS_METER_LENGTH_MM,
+  DEFAULT_GAS_METER_BODY_HEIGHT_MM,
+  GAS_METER_MOUNTING_ELEVATION_MM,
+  DEFAULT_GAS_METER_FUEL_DIAMETER_MM,
+} from '../../bim/mep-fixtures/gas-meter-symbol-spec';
+import {
+  isGasCookerKind,
+  DEFAULT_GAS_COOKER_SIZE_MM,
+  DEFAULT_GAS_COOKER_BODY_HEIGHT_MM,
+  GAS_COOKER_MOUNTING_ELEVATION_MM,
+  DEFAULT_GAS_COOKER_FUEL_DIAMETER_MM,
+} from '../../bim/mep-fixtures/gas-cooker-symbol-spec';
 import {
   isPlumbingFixtureKind,
   resolvePlumbingFixtureSpec,
@@ -212,6 +246,56 @@ function resolveFixtureKindDefaults(
       bodyHeightMm: overrides.bodyHeightMm ?? DEFAULT_AHU_BODY_HEIGHT_MM,
       mountingElevationMm: overrides.mountingElevationMm ?? AHU_MOUNTING_ELEVATION_MM,
       connectors: [buildAhuSupplyAirConnector({ x: 0, y: 0, z: 0 }, DEFAULT_AHU_DUCT_DIAMETER_MM)],
+    };
+  }
+  // ADR-433 — a sprinkler head (καταιονητήρας) is a ceiling-mounted fire terminal: a round
+  // head at ceiling height + a single fire-sprinkler pipe INLET, so the fire engine routes
+  // the wet-pipe network to it.
+  if (isSprinklerKind(kind)) {
+    return {
+      shape: 'circular',
+      width: overrides.width ?? DEFAULT_SPRINKLER_SIZE_MM,
+      length: overrides.length ?? DEFAULT_SPRINKLER_SIZE_MM,
+      bodyHeightMm: overrides.bodyHeightMm ?? DEFAULT_SPRINKLER_BODY_HEIGHT_MM,
+      mountingElevationMm: overrides.mountingElevationMm ?? SPRINKLER_MOUNTING_ELEVATION_MM,
+      connectors: [buildSprinklerSupplyConnector({ x: 0, y: 0, z: 0 }, DEFAULT_SPRINKLER_PIPE_DIAMETER_MM)],
+    };
+  }
+  // ADR-433 — a fire riser (στήλη πυρόσβεσης) is the wet-pipe SOURCE: a riser/valve assembly
+  // at ceiling-plenum height + a single fire-sprinkler pipe OUTLET, so the fire engine roots
+  // the wet-pipe network at it.
+  if (isFireRiserKind(kind)) {
+    return {
+      shape: 'rectangular',
+      width: overrides.width ?? DEFAULT_FIRE_RISER_WIDTH_MM,
+      length: overrides.length ?? DEFAULT_FIRE_RISER_LENGTH_MM,
+      bodyHeightMm: overrides.bodyHeightMm ?? DEFAULT_FIRE_RISER_BODY_HEIGHT_MM,
+      mountingElevationMm: overrides.mountingElevationMm ?? FIRE_RISER_MOUNTING_ELEVATION_MM,
+      connectors: [buildFireRiserSupplyConnector({ x: 0, y: 0, z: 0 }, DEFAULT_FIRE_RISER_PIPE_DIAMETER_MM)],
+    };
+  }
+  // ADR-434 — a gas meter (μετρητής αερίου) is the fuel-gas SOURCE: a wall-mounted unit + a single
+  // fuel-gas OUTLET, so the gas engine roots the fuel network at it.
+  if (isGasMeterKind(kind)) {
+    return {
+      shape: 'rectangular',
+      width: overrides.width ?? DEFAULT_GAS_METER_WIDTH_MM,
+      length: overrides.length ?? DEFAULT_GAS_METER_LENGTH_MM,
+      bodyHeightMm: overrides.bodyHeightMm ?? DEFAULT_GAS_METER_BODY_HEIGHT_MM,
+      mountingElevationMm: overrides.mountingElevationMm ?? GAS_METER_MOUNTING_ELEVATION_MM,
+      connectors: [buildGasMeterOutletConnector({ x: 0, y: 0, z: 0 }, DEFAULT_GAS_METER_FUEL_DIAMETER_MM)],
+    };
+  }
+  // ADR-434 — a gas cooker (εστία αερίου) is a gas TERMINAL: a counter-height hob + a single
+  // fuel-gas INLET, so the gas engine routes the fuel network to it (alongside the gas boiler).
+  if (isGasCookerKind(kind)) {
+    return {
+      shape: 'rectangular',
+      width: overrides.width ?? DEFAULT_GAS_COOKER_SIZE_MM,
+      length: overrides.length ?? DEFAULT_GAS_COOKER_SIZE_MM,
+      bodyHeightMm: overrides.bodyHeightMm ?? DEFAULT_GAS_COOKER_BODY_HEIGHT_MM,
+      mountingElevationMm: overrides.mountingElevationMm ?? GAS_COOKER_MOUNTING_ELEVATION_MM,
+      connectors: [buildGasCookerSupplyConnector({ x: 0, y: 0, z: 0 }, DEFAULT_GAS_COOKER_FUEL_DIAMETER_MM)],
     };
   }
   const shape: MepFixtureShape = overrides.shape ?? 'rectangular';

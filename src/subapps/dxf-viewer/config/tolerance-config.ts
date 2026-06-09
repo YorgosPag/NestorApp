@@ -462,6 +462,12 @@ export const SNAP_ENGINE_PRIORITIES = {
   BIM_COLUMN_CENTER: -1,
   /** ADR-408 Φ9: MEP connector attach point — above column centre & endpoint, below BIM face corners */
   BIM_MEP_CONNECTOR:  -1.5,
+  /** ADR-363 Φ1G.5 Slice 2i: BIM wall FACE line — face-to-face magnetism. A *linear* snap, so it
+   *  yields to ALL discrete construction points (corners, endpoints, MEP connectors, column centres)
+   *  but beats the generic NEAREST/axis projection (10) — you snap to the visible face edge, not the
+   *  hidden centreline. Kept low-priority on purpose: zero regression to other tools (the wall-move
+   *  flush still works because that path picks by distance across multi-grab probes). */
+  BIM_WALL_FACE:      9.5,
   /** ADR-370: BIM face corner snaps — highest structural precision, supersedes BIM_COLUMN_CENTER */
   BIM_WALL_CORNER:    -2,
   BIM_BEAM_CORNER:    -2,

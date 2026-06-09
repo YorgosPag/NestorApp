@@ -129,6 +129,8 @@ export const SUBCATEGORY_TAXONOMY: Readonly<Record<BimCategory, ReadonlyArray<st
   furniture:       [],
   duct:            [],
   pipe:            [],
+  // ADR-434 — fuel/gas pipe: no subcategory model (same as pipe).
+  fuel:            [],
   // ADR-408 Φ14 — drainage pipe: no subcategory model (same as pipe).
   'drain-pipe':    [],
   // ADR-415 — floorplan symbols: no subcategory styling model (pure 2D symbol).

@@ -93,7 +93,9 @@ export type BimCategory =
   // ADR-419 — per-room floor-finish covering (IfcCovering FLOORING, architectural).
   | 'floor-finish'
   // ADR-422 — analytical thermal space / θερμικός χώρος (IfcSpace, architectural overlay).
-  | 'thermal-space';
+  | 'thermal-space'
+  // ADR-434 — gas/oil fuel supply run (μηχανολογικό· own V/G discipline, yellow gas convention).
+  | 'fuel';
 
 /**
  * Per-subcategory style overrides (ADR-377).
@@ -161,7 +163,7 @@ export const BIM_CATEGORIES: readonly BimCategory[] = [
   'wall', 'column', 'beam', 'slab', 'opening', 'slab-opening',
   'stair', 'roof', 'ceiling', 'dimension', 'hatch', 'grip', 'envelope',
   'light-fixture', 'electrical-panel', 'mep-manifold', 'mep-radiator', 'mep-boiler', 'mep-water-heater', 'mep-underfloor', 'railing', 'mep-wire', 'furniture',
-  'duct', 'pipe', 'drain-pipe', 'sanitary', 'kitchen',
+  'duct', 'pipe', 'fuel', 'drain-pipe', 'sanitary', 'kitchen',
 ] as const;
 
 /**
@@ -202,6 +204,8 @@ export const MODEL_BIM_CATEGORIES: readonly BimCategory[] = [
   'furniture',
   // ADR-408 Φ8 — linear MEP duct + pipe runs.
   'duct', 'pipe',
+  // ADR-434 — gas/oil fuel supply run.
+  'fuel',
   // ADR-408 Φ14 — sanitary drainage pipe run.
   'drain-pipe',
   // ADR-415 — pure-vector 2D floorplan symbols (sanitary + kitchen).
@@ -307,6 +311,9 @@ export const DEFAULT_OBJECT_STYLES: Readonly<Record<BimCategory, ObjectStyle>> =
   duct:           { projectionPen: 4, cutPen: 5 },
   // ADR-408 Φ8 — σωλήνας: λεπτή γραμμή (plumbing pipe run, plan centerline).
   pipe:           { projectionPen: 3, cutPen: 4 },
+  // ADR-434 — σωλήνας αερίου/καυσίμου: ίδιο pen με τον σωλήνα (το κίτρινο έρχεται από το
+  // classification/domain, όχι από εδώ — η κατηγορία δίνει μόνο ξεχωριστό V/G).
+  fuel:           { projectionPen: 3, cutPen: 4 },
   // ADR-408 Φ14 — σωλήνας αποχέτευσης: ίδιο pen με τον σωλήνα (το καφέ χρώμα έρχεται
   // από το classification, όχι από εδώ — η κατηγορία δίνει μόνο ξεχωριστό V/G).
   'drain-pipe':   { projectionPen: 3, cutPen: 4 },
