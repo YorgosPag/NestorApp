@@ -20,7 +20,7 @@ const Point3DSchema = z
   })
   .strict();
 
-export const MepSegmentDomainSchema = z.enum(['duct', 'pipe']);
+export const MepSegmentDomainSchema = z.enum(['duct', 'pipe', 'fuel']);
 
 export const MepSegmentSectionKindSchema = z.enum(['rectangular', 'round']);
 

@@ -51,10 +51,14 @@ import type { BimCategory } from '../../config/bim-object-styles';
 
 /**
  * MEP distribution domain. `'duct'` = mechanical/HVAC air distribution;
- * `'pipe'` = plumbing/hydronic fluid distribution. Drives discipline, BimCategory,
- * IFC class and BOQ code. Doubles as the entity `kind` discriminator.
+ * `'pipe'` = plumbing/hydronic fluid distribution; `'fuel'` = combustion-fuel
+ * conveyance (gas/oil supply lines, ADR-434 — disjoint from `'pipe'` exactly as the
+ * `fuel` connector domain is, so a gas line never reads as water plumbing). Drives
+ * discipline, BimCategory, IFC class and BOQ code. Doubles as the entity `kind`
+ * discriminator. A `'fuel'` run is physically a pipe (round section, IfcPipeSegment)
+ * but its OWN V/G category (`'fuel'`) and yellow colour set it apart.
  */
-export type MepSegmentDomain = 'duct' | 'pipe';
+export type MepSegmentDomain = 'duct' | 'pipe' | 'fuel';
 
 /** Alias: the segment's `kind` IS its domain. */
 export type MepSegmentKind = MepSegmentDomain;
@@ -215,9 +219,11 @@ export function resolveSegmentSection(params: MepSegmentParams): {
   readonly diameterMm: number | null;
 } {
   if (params.sectionKind === 'round') {
+    // Only a duct defaults to the larger round-duct Ø; a pipe AND a fuel line (gas/oil,
+    // physically a small-bore pipe) default to the pipe Ø.
     const d =
       params.diameter ??
-      (params.domain === 'pipe' ? DEFAULT_PIPE_DIAMETER_MM : DEFAULT_ROUND_DUCT_DIAMETER_MM);
+      (params.domain === 'duct' ? DEFAULT_ROUND_DUCT_DIAMETER_MM : DEFAULT_PIPE_DIAMETER_MM);
     return { widthMm: d, heightMm: d, diameterMm: d };
   }
   return {

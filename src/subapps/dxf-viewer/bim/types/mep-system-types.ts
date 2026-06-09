@@ -30,6 +30,7 @@ import type {
   ElectricalSystemClassification,
   PlumbingSystemClassification,
   DuctSystemClassification,
+  FuelSystemClassification,
   PipeFluid,
 } from './mep-connector-types';
 import type { WireStyle } from '../mep-systems/mep-wire-routing';
@@ -42,7 +43,11 @@ import type { WireWaypointMap } from '../mep-systems/mep-wire-waypoints';
  * {@link MepSystemParams} so electrical-only fields (wireStyle, conductors, …) never
  * appear on a pipe/duct network and the air classification never appears on a pipe one.
  */
-export type MepSystemType = 'electrical-circuit' | 'pipe-network' | 'duct-network';
+export type MepSystemType =
+  | 'electrical-circuit'
+  | 'pipe-network'
+  | 'duct-network'
+  | 'fuel-network';
 
 /** One member of a System: a specific connector on a specific component. */
 export interface MepSystemMember {
@@ -124,13 +129,28 @@ export interface MepDuctSystemParams extends MepSystemParamsBase {
 }
 
 /**
+ * Fuel-network params (ADR-434 — gas/oil supply: τροφοδοσία αερίου). Mirror of
+ * {@link MepDuctSystemParams} for the combustion-fuel domain: the network groups gas/oil
+ * supply runs from the meter source to the appliances. Like the duct network (and unlike a
+ * pipe network) the `'fuel'` segment carries NO classification — the System owns the
+ * `fuel-gas` / `fuel-oil` classification.
+ */
+export interface MepFuelSystemParams extends MepSystemParamsBase {
+  readonly systemType: 'fuel-network';
+  readonly systemClassification: FuelSystemClassification;
+  /** mm — nominal network fuel-line diameter (optional, feeds sizing). */
+  readonly diameterMm?: number;
+}
+
+/**
  * User-editable SSoT params for a MEP system — a **discriminated union** on
  * `systemType`. Narrow before touching domain-specific fields.
  */
 export type MepSystemParams =
   | MepElectricalSystemParams
   | MepPipeSystemParams
-  | MepDuctSystemParams;
+  | MepDuctSystemParams
+  | MepFuelSystemParams;
 
 /** Narrow to the electrical-circuit arm (Revit circuit). */
 export function isElectricalSystemParams(
@@ -151,6 +171,13 @@ export function isDuctSystemParams(
   params: MepSystemParams,
 ): params is MepDuctSystemParams {
   return params.systemType === 'duct-network';
+}
+
+/** Narrow to the fuel-network arm (ADR-434 — gas/oil supply). */
+export function isFuelSystemParams(
+  params: MepSystemParams,
+): params is MepFuelSystemParams {
+  return params.systemType === 'fuel-network';
 }
 
 /**
@@ -250,6 +277,32 @@ export function buildDefaultDuctNetworkParams(
 ): MepDuctSystemParams {
   return {
     systemType: 'duct-network',
+    name,
+    systemClassification,
+    sourceEntityId,
+    sourceConnectorId,
+    members,
+    ...(color ? { color } : {}),
+  };
+}
+
+/**
+ * Default fuel-network params (ADR-434 — gas/oil). Mirror of {@link buildDefaultDuctNetworkParams}
+ * for the fuel domain: the caller passes the gas-meter outlet connector as source and the fuel
+ * classification (`fuel-gas` / `fuel-oil`) the network carries. Members filled by the caller (the
+ * gas commit: every emitted fuel segment's two endpoint connectors + the served gas appliances'
+ * fuel inlets).
+ */
+export function buildDefaultFuelNetworkParams(
+  name: string,
+  systemClassification: FuelSystemClassification,
+  sourceEntityId: string,
+  sourceConnectorId: string,
+  members: readonly MepSystemMember[] = [],
+  color?: string,
+): MepFuelSystemParams {
+  return {
+    systemType: 'fuel-network',
     name,
     systemClassification,
     sourceEntityId,

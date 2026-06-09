@@ -48,6 +48,12 @@ export const MepFixtureKindSchema = z.enum([
   // ADR-432 — HVAC supply-air terminal (στόμιο/diffuser) + air handling unit (ΚΚΜ/AHU).
   'air-terminal',
   'ahu',
+  // ADR-433 — Fire protection sprinkler head (καταιονητήρας) + fire riser (στήλη πυρόσβεσης).
+  'sprinkler',
+  'fire-riser',
+  // ADR-434 — Gas meter (μετρητής αερίου) source + gas cooker (εστία αερίου) terminal.
+  'gas-meter',
+  'gas-cooker',
 ]);
 
 export const MepFixtureShapeSchema = z.enum(['rectangular', 'circular']);
@@ -60,6 +66,12 @@ export const MepFixtureIfcTypeSchema = z.enum([
   // ADR-432 — HVAC: supply diffuser + air handling unit.
   'IfcAirTerminal',
   'IfcUnitaryEquipment',
+  // ADR-433 — Fire protection: sprinkler head + fire riser (control-valve assembly source).
+  'IfcFireSuppressionTerminal',
+  'IfcFlowController',
+  // ADR-434 — Gas: gas meter (IfcFlowMeter source) + gas cooker / hob (IfcBurner appliance).
+  'IfcFlowMeter',
+  'IfcBurner',
 ]);
 
 // ─── Params schema ──────────────────────────────────────────────────────────

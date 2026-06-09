@@ -25,21 +25,8 @@ import {
   getNodeDotRadius
 } from '../../rendering/ui/snap/snap-icon-config';
 
-// ADR-363 Phase A + 5.5i + ADR-370: BIM description → i18n key mapping.
-const BIM_DESCRIPTION_KEY: Record<string, string> = {
-  'bim-wall':           'snapModes.labels.bim.wallAxis',
-  'bim-slab':           'snapModes.labels.bim.slabEdge',
-  'bim-opening':        'snapModes.labels.bim.openingJamb',
-  'bim-column':         'snapModes.labels.bim.columnAxis',
-  // ADR-370: BIM face-corner snap labels
-  'bim-wall-corner':    'snapModes.labels.bim.wallCorner',
-  'bim-beam-corner':    'snapModes.labels.bim.beamCorner',
-  'bim-slab-corner':    'snapModes.labels.bim.slabCorner',
-  'bim-column-corner':  'snapModes.labels.bim.columnCorner',
-  'bim-opening-corner': 'snapModes.labels.bim.openingCorner',
-  // ADR-408 Φ9: MEP connector attach point
-  'bim-mep-connector':  'snapModes.labels.bim.mepConnector',
-};
+// ADR-363 Phase A + 5.5i + ADR-370 + Slice 2i: BIM description → i18n key (SSoT).
+import { BIM_SNAP_DESCRIPTION_KEY as BIM_DESCRIPTION_KEY } from '../../snapping/snap-description-keys';
 
 interface SnapResult {
   point: Point2D;

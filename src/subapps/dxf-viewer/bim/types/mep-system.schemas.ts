@@ -13,6 +13,7 @@ import {
   ElectricalSystemClassificationSchema,
   PlumbingSystemClassificationSchema,
   DuctSystemClassificationSchema,
+  FuelSystemClassificationSchema,
   PipeFluidSchema,
 } from './mep-connector.schemas';
 
@@ -20,6 +21,7 @@ export const MepSystemTypeSchema = z.enum([
   'electrical-circuit',
   'pipe-network',
   'duct-network',
+  'fuel-network',
 ]);
 
 export const MepSystemMemberSchema = z
@@ -93,11 +95,26 @@ export const MepDuctSystemParamsSchema = z
   })
   .strict();
 
-/** Discriminated union on `systemType` (ADR-408 Φ2 + Φ9 + ADR-432 duct). */
+/** ADR-434 — fuel-network arm (gas/oil supply: τροφοδοσία αερίου). */
+export const MepFuelSystemParamsSchema = z
+  .object({
+    systemType: z.literal('fuel-network'),
+    name: z.string().min(1),
+    systemClassification: FuelSystemClassificationSchema,
+    sourceEntityId: z.string().min(1),
+    sourceConnectorId: z.string().min(1),
+    members: z.array(MepSystemMemberSchema),
+    color: SystemColorSchema,
+    diameterMm: z.number().positive().optional(),
+  })
+  .strict();
+
+/** Discriminated union on `systemType` (ADR-408 Φ2 + Φ9 + ADR-432 duct + ADR-434 fuel). */
 export const MepSystemParamsSchema = z.discriminatedUnion('systemType', [
   MepElectricalSystemParamsSchema,
   MepPipeSystemParamsSchema,
   MepDuctSystemParamsSchema,
+  MepFuelSystemParamsSchema,
 ]);
 
 export type MepSystemParamsParsed = z.infer<typeof MepSystemParamsSchema>;
