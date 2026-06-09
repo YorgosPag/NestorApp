@@ -26,6 +26,9 @@ import { useRibbonHeatingAutoBridge, type UseRibbonHeatingAutoBridgeProps } from
 import { useRibbonElectricalAutoBridge, type UseRibbonElectricalAutoBridgeProps } from '../ui/ribbon/hooks/useRibbonElectricalAutoBridge';
 import { useRibbonElectricalWeakAutoBridge } from '../ui/ribbon/hooks/useRibbonElectricalWeakAutoBridge';
 import { useRibbonHvacAutoBridge } from '../ui/ribbon/hooks/useRibbonHvacAutoBridge';
+import { useRibbonFireAutoBridge } from '../ui/ribbon/hooks/useRibbonFireAutoBridge';
+import { useRibbonGasAutoBridge } from '../ui/ribbon/hooks/useRibbonGasAutoBridge';
+import { useRibbonClashDetectionBridge } from '../ui/ribbon/hooks/useRibbonClashDetectionBridge';
 import { useRibbonFurnitureBridge } from '../ui/ribbon/hooks/useRibbonFurnitureBridge';
 import { useRibbonFloorplanSymbolBridge } from '../ui/ribbon/hooks/useRibbonFloorplanSymbolBridge';
 import { useRibbonMepFixtureLibraryBridge } from '../ui/ribbon/hooks/useRibbonMepFixtureLibraryBridge';
@@ -95,6 +98,12 @@ export function useDxfBimBridges(p: UseDxfBimBridgesProps) {
   const electricalWeakAutoBridge = useRibbonElectricalWeakAutoBridge(p);
   // ADR-432 Slice 2 — HVAC (αερισμός) auto-design (Generate → review → accept).
   const hvacAutoBridge = useRibbonHvacAutoBridge(p);
+  // ADR-433 Slice 2 — fire-protection (πυρόσβεση) auto-design (Generate → review → accept).
+  const fireAutoBridge = useRibbonFireAutoBridge(p);
+  // ADR-434 Slice 2 — gas (φυσικό αέριο) auto-design (Generate → review → accept). 8/8 disciplines.
+  const gasAutoBridge = useRibbonGasAutoBridge(p);
+  // ADR-435 Slice 1 — clash detection (Coordination, read-only Detect → review → Clear).
+  const clashDetectionBridge = useRibbonClashDetectionBridge(p);
   // ADR-410 — furniture library contextual bridge (tool-active picker).
   const furnitureBridge = useRibbonFurnitureBridge();
   // ADR-415 — floorplan-symbol library contextual bridge (tool-active picker).
@@ -109,5 +118,5 @@ export function useDxfBimBridges(p: UseDxfBimBridgesProps) {
   const thermalSpaceBridge = useRibbonThermalSpaceBridge(p);
   // ADR-363 Phase 4.5e+ — Tab/Shift+Tab material cycling for selected BIM entities.
   useBimMaterialCycler(p);
-  return { stairBridge, wallBridge, openingBridge, slabBridge, roofBridge, columnBridge, beamBridge, slabOpeningBridge, mepCircuitBridge, mepPipeNetworkBridge, mepFixtureBridge, mepManifoldBridge, mepRadiatorBridge, mepBoilerBridge, mepWaterHeaterBridge, mepUnderfloorBridge, mepSegmentBridge, waterAutoSupplyBridge, drainageAutoBridge, heatingAutoBridge, electricalAutoBridge, electricalWeakAutoBridge, hvacAutoBridge, furnitureBridge, floorplanSymbolBridge, mepFixtureLibraryBridge, mepRiserBridge, floorFinishBridge, thermalSpaceBridge };
+  return { stairBridge, wallBridge, openingBridge, slabBridge, roofBridge, columnBridge, beamBridge, slabOpeningBridge, mepCircuitBridge, mepPipeNetworkBridge, mepFixtureBridge, mepManifoldBridge, mepRadiatorBridge, mepBoilerBridge, mepWaterHeaterBridge, mepUnderfloorBridge, mepSegmentBridge, waterAutoSupplyBridge, drainageAutoBridge, heatingAutoBridge, electricalAutoBridge, electricalWeakAutoBridge, hvacAutoBridge, fireAutoBridge, gasAutoBridge, clashDetectionBridge, furnitureBridge, floorplanSymbolBridge, mepFixtureLibraryBridge, mepRiserBridge, floorFinishBridge, thermalSpaceBridge };
 }

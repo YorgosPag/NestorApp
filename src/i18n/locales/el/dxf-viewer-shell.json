@@ -555,6 +555,18 @@
     "mepAhu": {
       "statusPosition": "Κλικ για τοποθέτηση Κεντρικής Κλιματιστικής Μονάδας (ΚΚΜ)"
     },
+    "mepSprinkler": {
+      "statusPosition": "Κλικ για τοποθέτηση κεφαλής καταιονητήρα πυρόσβεσης"
+    },
+    "mepFireRiser": {
+      "statusPosition": "Κλικ για τοποθέτηση στήλης πυρόσβεσης"
+    },
+    "mepGasMeter": {
+      "statusPosition": "Κλικ για τοποθέτηση μετρητή αερίου"
+    },
+    "mepGasCooker": {
+      "statusPosition": "Κλικ για τοποθέτηση εστίας αερίου"
+    },
     "commsRack": {
       "statusPosition": "Κλικ για τοποθέτηση rack ασθενών"
     },
@@ -765,6 +777,7 @@
         "openingJamb": "Επί παραστάτη ανοίγματος",
         "columnAxis": "Επί άξονα κολώνας",
         "wallCorner": "Γωνία τοίχου",
+        "wallFace": "Παρειά τοίχου",
         "beamCorner": "Γωνία δοκαριού",
         "slabCorner": "Γωνία πλάκας",
         "columnCorner": "Γωνία κολώνας",
@@ -832,6 +845,36 @@
     "dismiss": "Κλείσιμο",
     "sourceDxf": "Πολυγραμμή DXF",
     "sourceOverlay": "Επικάλυψη"
+  },
+  "clashReport": {
+    "title": "Συγκρούσεις",
+    "dismiss": "Καθαρισμός αναφοράς",
+    "none": "Καμία σύγκρουση — όλα καθαρά.",
+    "stats": "{scanned} στοιχεία · {tested} ζεύγη σε έλεγχο",
+    "focusHint": "Εστίαση στη σύγκρουση",
+    "severity": {
+      "high": "υψηλές",
+      "medium": "μέτριες",
+      "low": "χαμηλές"
+    },
+    "type": {
+      "hard": "Σκληρή",
+      "clearance": "Απόσταση"
+    },
+    "separationHard": "διείσδυση {mm} mm",
+    "separationClearance": "κενό {mm} mm",
+    "kind": {
+      "mep-segment": "Αγωγός",
+      "mep-fitting": "Εξάρτημα",
+      "beam": "Δοκός",
+      "column": "Υποστύλωμα",
+      "wall": "Τοίχος",
+      "slab": "Πλάκα",
+      "mep-fixture": "Υποδοχέας ΗΜ",
+      "mep-radiator": "Θερμαντικό σώμα",
+      "mep-boiler": "Λέβητας",
+      "mep-water-heater": "Θερμοσίφωνας"
+    }
   },
   "ribbon": {
     "tabs": {
@@ -980,6 +1023,8 @@
       "mepBoilerFlue": "Καπναγωγός",
       "mepBoilerFuel": "Καύσιμο",
       "mepBoilerCondensate": "Συμπύκνωση",
+      "mepBoilerClearance": "Καθαρός χώρος",
+      "mepBoilerSafety": "Ασφάλεια",
       "mepBoilerGeometry": "Γεωμετρία",
       "mepBoilerThermal": "Θερμικά",
       "mepBoilerSizing": "Διαστασιολόγηση",
@@ -1231,6 +1276,22 @@
           "label": "ΚΚΜ",
           "tooltip": "Τοποθέτηση Κεντρικής Κλιματιστικής Μονάδας (ΚΚΜ) με ένα κλικ — η πηγή του δικτύου προσαγωγής αέρα (πειθαρχία: μηχανολογικά) (πλήκτρο AH)"
         },
+        "mepSprinkler": {
+          "label": "Καταιονητήρας",
+          "tooltip": "Τοποθέτηση κεφαλής καταιονητήρα (sprinkler) με ένα κλικ — τερματικό πυρόσβεσης (πειθαρχία: πυρόσβεση) (πλήκτρο SK)"
+        },
+        "mepFireRiser": {
+          "label": "Στήλη Πυρόσβεσης",
+          "tooltip": "Τοποθέτηση στήλης πυρόσβεσης (wet riser) με ένα κλικ — η πηγή του δικτύου καταιονισμού (πειθαρχία: πυρόσβεση) (πλήκτρο FR)"
+        },
+        "mepGasMeter": {
+          "label": "Μετρητής Αερίου",
+          "tooltip": "Τοποθέτηση μετρητή αερίου με ένα κλικ — η πηγή του δικτύου τροφοδοσίας αερίου (πειθαρχία: μηχανολογικά) (πλήκτρο GM)"
+        },
+        "mepGasCooker": {
+          "label": "Εστία Αερίου",
+          "tooltip": "Τοποθέτηση εστίας αερίου (κουζίνα) με ένα κλικ — τερματικό αερίου (πειθαρχία: μηχανολογικά) (πλήκτρο GC)"
+        },
         "commsRack": {
           "label": "Rack Ασθενών",
           "tooltip": "Τοποθέτηση rack / patch-panel με ένα κλικ — η πηγή δομημένης καλωδίωσης (πειθαρχία: ασθενή) (πλήκτρο CR)"
@@ -1470,6 +1531,50 @@
         "hvacAutoReject": {
           "label": "Απόρριψη",
           "tooltip": "Απόρριψη της πρότασης αερισμού"
+        },
+        "fireAuto": {
+          "label": "Αυτόματη Πυρόσβεση",
+          "tooltip": "Αυτόματος σχεδιασμός δικτύου πυρόσβεσης (σωλήνες καταιονισμού, NFPA 13 / EN 12845): Δημιουργία → έλεγχος → αποδοχή"
+        },
+        "fireAutoGenerate": {
+          "label": "Δημιουργία",
+          "tooltip": "Αναγνώριση ορόφου + αυτόματος σχεδιασμός δικτύου σωλήνων καταιονισμού (προεπισκόπηση)"
+        },
+        "fireAutoAccept": {
+          "label": "Αποδοχή",
+          "tooltip": "Μετατροπή της πρότασης σε πραγματικούς σωλήνες + δίκτυο πυρόσβεσης"
+        },
+        "fireAutoReject": {
+          "label": "Απόρριψη",
+          "tooltip": "Απόρριψη της πρότασης πυρόσβεσης"
+        },
+        "gasAuto": {
+          "label": "Αυτόματο Αέριο",
+          "tooltip": "Αυτόματος σχεδιασμός δικτύου φυσικού αερίου (σωλήνες τροφοδοσίας, DVGW G600 / EN 1775): Δημιουργία → έλεγχος → αποδοχή"
+        },
+        "gasAutoGenerate": {
+          "label": "Δημιουργία",
+          "tooltip": "Αναγνώριση ορόφου + αυτόματος σχεδιασμός δικτύου σωλήνων αερίου (προεπισκόπηση)"
+        },
+        "gasAutoAccept": {
+          "label": "Αποδοχή",
+          "tooltip": "Μετατροπή της πρότασης σε πραγματικούς σωλήνες + δίκτυο αερίου"
+        },
+        "gasAutoReject": {
+          "label": "Απόρριψη",
+          "tooltip": "Απόρριψη της πρότασης αερίου"
+        },
+        "clashDetection": {
+          "label": "Έλεγχος Συγκρούσεων",
+          "tooltip": "Ανίχνευση συγκρούσεων δικτύων ΗΜ ↔ ΗΜ ↔ δομικών στοιχείων (Coordination, ADR-435): Έλεγχος → επισκόπηση"
+        },
+        "clashDetectionDetect": {
+          "label": "Έλεγχος",
+          "tooltip": "Σάρωση ορόφου για συγκρούσεις (σκληρές + παραβιάσεις απόστασης) → δείκτες στην κάτοψη"
+        },
+        "clashDetectionClear": {
+          "label": "Καθαρισμός",
+          "tooltip": "Καθαρισμός της αναφοράς συγκρούσεων (καμία αλλαγή στη σκηνή)"
         }
       },
       "select": "Επιλογή",
@@ -2390,12 +2495,22 @@
         "fuelDiameter": "Διάμετρος καυσίμου",
         "condensing": "Συμπύκνωση",
         "condensateDiameter": "Διάμετρος συμπυκνωμάτων",
+        "condensateNeutraliser": "Εξουδετερωτής",
+        "showServiceClearance": "Καθαρός χώρος",
+        "serviceClearance": "Απόσταση (mm)",
+        "safetyReliefValve": "Ασφαλιστική βαλβίδα",
+        "reliefValvePressure": "Πίεση (bar)",
+        "expansionVessel": "Δοχείο διαστολής",
+        "expansionVesselVolume": "Όγκος (L)",
+        "pressureGauge": "Μανόμετρο",
+        "systemPressure": "Πίεση δικτύου (bar)",
         "width": "Πλάτος",
         "length": "Βάθος",
         "bodyHeight": "Ύψος σώματος",
         "mountingElevation": "Ύψος τοποθέτησης",
         "connectorDiameter": "Διάμετρος σύνδεσης",
         "thermalOutput": "Θερμική ισχύς (W)",
+        "minThermalOutput": "Ελάχιστη ισχύς (W)",
         "efficiency": "Απόδοση (%)",
         "erpClass": "ErP",
         "requiredOutput": "Απαιτούμενη (kW)",
@@ -2419,6 +2534,13 @@
         "flue": "Καπναγωγός",
         "terminationLabel": "Τερματικό",
         "fuelSupply": "Παροχή",
+        "condensate": "Συμπύκνωμα",
+        "clearance": "Καθαρός χώρος",
+        "neutraliser": "Εξουδετερωτής",
+        "reliefValve": "Ασφαλιστικό",
+        "expansionVessel": "Δοχείο",
+        "pressureGauge": "Πίεση",
+        "modulation": "Διαμόρφωση",
         "modelFallback": "Λέβητας",
         "kWUnit": "kW",
         "dnPrefix": "DN",
@@ -2854,7 +2976,8 @@
         "domestic-hot-water": "Ζεστό νερό",
         "sanitary-drainage": "Αποχέτευση",
         "hydronic-supply": "Θέρμανση (προσαγωγή)",
-        "hydronic-return": "Θέρμανση (επιστροφή)"
+        "hydronic-return": "Θέρμανση (επιστροφή)",
+        "fire-sprinkler": "Πυρόσβεση (καταιονισμός)"
       },
       "mepConductors": {
         "label": "Αγωγοί",
@@ -3047,6 +3170,18 @@
         "networkName": "Αερισμός {service} {n}",
         "service": {
           "supply": "προσαγωγής"
+        }
+      },
+      "fire": {
+        "networkName": "Πυρόσβεση {service} {n}",
+        "service": {
+          "sprinkler": "καταιονισμού"
+        }
+      },
+      "gas": {
+        "networkName": "Αέριο {service} {n}",
+        "service": {
+          "gas": "τροφοδοσίας"
         }
       }
     },
@@ -3659,5 +3794,23 @@
       "no-source": "Δεν βρέθηκε ΚΚΜ (πηγή προσαγωγής αέρα) — το δίκτυο παραλείφθηκε."
     },
     "committed": "Το δίκτυο αερισμού δημιουργήθηκε — δίκτυα: {count}, αεραγωγοί: {segments}."
+  },
+  "fire": {
+    "generated": "Δημιουργήθηκε πρόταση πυρόσβεσης — δίκτυα: {count}.",
+    "generatedWithWarnings": "Δημιουργήθηκε πρόταση πυρόσβεσης — δίκτυα: {count} (προειδοποιήσεις: {warnings}).",
+    "empty": {
+      "no-terminals": "Δεν αναγνωρίστηκαν κεφαλές καταιονητήρων σε αυτόν τον όροφο.",
+      "no-source": "Δεν βρέθηκε στήλη πυρόσβεσης (πηγή) — το δίκτυο παραλείφθηκε."
+    },
+    "committed": "Το δίκτυο πυρόσβεσης δημιουργήθηκε — δίκτυα: {count}, σωλήνες: {segments}."
+  },
+  "gas": {
+    "generated": "Δημιουργήθηκε πρόταση αερίου — δίκτυα: {count}.",
+    "generatedWithWarnings": "Δημιουργήθηκε πρόταση αερίου — δίκτυα: {count} (προειδοποιήσεις: {warnings}).",
+    "empty": {
+      "no-terminals": "Δεν αναγνωρίστηκαν συσκευές αερίου σε αυτόν τον όροφο.",
+      "no-source": "Δεν βρέθηκε μετρητής αερίου (πηγή) — το δίκτυο παραλείφθηκε."
+    },
+    "committed": "Το δίκτυο αερίου δημιουργήθηκε — δίκτυα: {count}, σωλήνες: {segments}."
   }
 }

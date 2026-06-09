@@ -60,6 +60,9 @@ import { wallTopFaceCrossingBreakpoints, type WallTopClipContext } from '../conv
 import { worldToDxfPlan } from '../viewport/coordinate-transforms';
 import { stairToMeshes } from '../converters/StairToThreeConverter';
 import { computeWallGeometry } from '../../bim/geometry/wall-geometry';
+// ADR-363 Φ1G.5 Slice 2g — live moving wall hole (rebuild the host wall with the dragged opening).
+import { computeOpeningGeometry } from '../../bim/geometry/opening-geometry';
+import type { OpeningParams } from '../../bim/types/opening-types';
 import { computeColumnGeometry } from '../../bim/geometry/column-geometry';
 import { computeBeamGeometry } from '../../bim/geometry/beam-geometry';
 import { computeStairGeometry } from '../../bim/geometry/stairs/StairGeometryService';
@@ -185,6 +188,39 @@ export function buildEndpointMovePreviewObject(
   const beam = s.beams.find((b) => b.id === entityId);
   if (beam) return rebuildBeamEndpoint(beam, endpoint, scaleDeltaToEntity(beam, deltaMm), s, levelId);
   return null;
+}
+
+/**
+ * ADR-363 Φ1G.5 Slice 2g — live preview of an opening's HOST WALL while the opening is
+ * dragged (Revit moving hole). Rebuilds the wall through the SAME `wallToMesh` SSoT the
+ * commit re-sync uses: the wall mesh shows the hole at the dragged offset AND
+ * `attachOpeningMeshes` re-attaches the SOLID opening body (κάσα/φύλλο/υαλοστάσιο) there
+ * too — so ghost === commit, with no separate body build. `movedParams === null` rebuilds
+ * the wall WITHOUT the opening (the OLD host on a re-host: the hole closes live). Returns
+ * null on the multi-floor scope or an unknown wall (→ caller falls back / skips).
+ */
+export function buildOpeningHostWallPreview(
+  wallId: string,
+  movedOpeningId: string,
+  movedParams: OpeningParams | null,
+): THREE.Object3D | null {
+  if (useViewMode3DStore.getState().floor3DScope === 'all') return null;
+  const s = useBim3DEntitiesStore.getState();
+  const wall = s.walls.find((w) => w.id === wallId);
+  if (!wall) return null;
+  const levelId = s.activeLevelId ?? undefined;
+  const others = s.openings.filter((o) => o.params.wallId === wallId && o.id !== movedOpeningId);
+  let openings = others;
+  if (movedParams) {
+    const base = s.openings.find((o) => o.id === movedOpeningId);
+    if (base) {
+      const units = wall.params.sceneUnits ?? 'mm';
+      openings = [...others, { ...base, params: movedParams, geometry: computeOpeningGeometry(movedParams, wall, units) }];
+    }
+  }
+  const { profile, baseProfile } = wallPreviewProfiles(wall, s);
+  const topClip = wallPreviewTopClip(wall, buildWallHostInputs(s.beams, s.slabs, s.roofs), 0);
+  return wallToMesh(wall, openings, 0, levelId, baseElevationOf(wall, s), profile, baseProfile, topClip);
 }
 
 /** DXF-mm gizmo delta → the entity's native canvas units (mirror move/rotate/resize). */

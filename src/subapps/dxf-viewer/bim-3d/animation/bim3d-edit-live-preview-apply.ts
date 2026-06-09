@@ -15,9 +15,11 @@
  * `EditInteractionCtx` TYPE from there (type-only → no runtime cycle).
  */
 
+import * as THREE from 'three';
 import type { Entity } from '../../types/entities';
 import type { LevelsHookReturn } from '../../systems/levels/useLevels';
 import { useBim3DEditStore } from '../stores/Bim3DEditStore';
+import { useBim3DEntitiesStore } from '../stores/Bim3DEntitiesStore';
 import {
   buildResizePreviewObject,
   buildTiltPreviewObject,
@@ -108,6 +110,14 @@ export function applyLivePreview(ctx: EditInteractionCtx): void {
         ),
       );
     }
+    // ADR-363 Φ1G.5 Slice 2h — a single dragged WALL shows Revit temporary dimensions:
+    // its perpendicular clearance to the nearest parallel reference wall on each side.
+    updateWallMoveDims(ctx, t);
+    // ADR-363 Φ1G.5 Slice 2i — and a dashed alignment line along the reference face when a
+    // face snap is active (the "feel" of the magnetism), plus the snap-type label
+    // ("Παρειά τοίχου" / "Γωνία τοίχου"). Both driven by the live snap result.
+    updateAlignmentLine(ctx);
+    updateSnapLabel(ctx);
     return;
   }
   if (live.kind === 'rotate') {
@@ -194,4 +204,58 @@ export function applyLivePreview(ctx: EditInteractionCtx): void {
       cursorMm: live.outcome.cursorMm,
     }),
   );
+}
+
+/**
+ * ADR-363 Φ1G.5 Slice 2h — drive the transient wall-move temp dimensions. Only a SINGLE
+ * wall selection qualifies (the gizmo move of one wall); any other selection hides the
+ * overlay. The dragged wall's live position = its stored axis + the gizmo translation `t`
+ * (the overlay applies it); the elevation is the gizmo-anchor height (wall mid-height).
+ */
+function updateWallMoveDims(ctx: EditInteractionCtx, t: THREE.Vector3): void {
+  const edit = useBim3DEditStore.getState();
+  if (edit.editEntityIds.length !== 1 || edit.editBimType !== 'wall') {
+    ctx.wallMoveDim.hide();
+    return;
+  }
+  const walls = useBim3DEntitiesStore.getState().walls;
+  const wall = walls.find((w) => w.id === edit.editEntityIds[0]);
+  if (!wall) {
+    ctx.wallMoveDim.hide();
+    return;
+  }
+  const worldY = ctx.overlay.getPosition().y;
+  ctx.wallMoveDim.update(wall, walls, { x: t.x, y: t.y, z: t.z }, worldY, ctx.manager.getCamera(), ctx.manager.getRendererCanvas());
+}
+
+/**
+ * ADR-363 Φ1G.5 Slice 2i — draw / hide the Revit dashed alignment line along the wall
+ * face the active snap projected onto. The reference comes from the ONE snap engine
+ * (`WallFaceSnapEngine` → bridge `alignmentRef`); this only renders it. No active face
+ * snap → hide (a corner/endpoint/free drag shows no line, matching Revit).
+ */
+function updateAlignmentLine(ctx: EditInteractionCtx): void {
+  const ref = ctx.controller.getActiveAlignmentWorld();
+  if (!ref) {
+    ctx.alignmentLine.hide();
+    return;
+  }
+  ctx.alignmentLine.update(ref.a, ref.b);
+}
+
+/**
+ * ADR-363 Φ1G.5 Slice 2i — show the Revit snap-type label ("Παρειά τοίχου" / "Γωνία τοίχου")
+ * next to the snap marker while a wall is dragged, so the user reads WHICH snap fired. The
+ * description/type come from the live snap result; the React hook localised them via the
+ * `snap-description-keys` SSoT (`ctx.resolveSnapLabel`). No active snap → hide.
+ */
+function updateSnapLabel(ctx: EditInteractionCtx): void {
+  const label = ctx.controller.getActiveSnapLabel();
+  const world = ctx.controller.getActiveSnapWorld();
+  if (!label || !world) {
+    ctx.snapLabel.hide();
+    return;
+  }
+  const text = ctx.resolveSnapLabel(label.type, label.description);
+  ctx.snapLabel.update(text, world, ctx.manager.getCamera(), ctx.manager.getRendererCanvas());
 }

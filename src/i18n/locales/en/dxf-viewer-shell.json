@@ -555,6 +555,18 @@
     "mepAhu": {
       "statusPosition": "Click to place an air handling unit (AHU)"
     },
+    "mepSprinkler": {
+      "statusPosition": "Click to place a fire sprinkler head"
+    },
+    "mepFireRiser": {
+      "statusPosition": "Click to place a fire riser"
+    },
+    "mepGasMeter": {
+      "statusPosition": "Click to place a gas meter"
+    },
+    "mepGasCooker": {
+      "statusPosition": "Click to place a gas cooker"
+    },
     "commsRack": {
       "statusPosition": "Click to place a comms rack"
     },
@@ -765,6 +777,7 @@
         "openingJamb": "On opening jamb",
         "columnAxis": "On column axis",
         "wallCorner": "Wall corner",
+        "wallFace": "Wall face",
         "beamCorner": "Beam corner",
         "slabCorner": "Slab corner",
         "columnCorner": "Column corner",
@@ -832,6 +845,36 @@
     "dismiss": "Dismiss",
     "sourceDxf": "DXF Polyline",
     "sourceOverlay": "Overlay"
+  },
+  "clashReport": {
+    "title": "Clashes",
+    "dismiss": "Clear report",
+    "none": "No clashes — all clear.",
+    "stats": "{scanned} elements · {tested} pairs tested",
+    "focusHint": "Zoom to clash",
+    "severity": {
+      "high": "high",
+      "medium": "medium",
+      "low": "low"
+    },
+    "type": {
+      "hard": "Hard",
+      "clearance": "Clearance"
+    },
+    "separationHard": "{mm} mm penetration",
+    "separationClearance": "{mm} mm gap",
+    "kind": {
+      "mep-segment": "Pipe/Duct",
+      "mep-fitting": "Fitting",
+      "beam": "Beam",
+      "column": "Column",
+      "wall": "Wall",
+      "slab": "Slab",
+      "mep-fixture": "MEP fixture",
+      "mep-radiator": "Radiator",
+      "mep-boiler": "Boiler",
+      "mep-water-heater": "Water heater"
+    }
   },
   "ribbon": {
     "tabs": {
@@ -980,6 +1023,8 @@
       "mepBoilerFlue": "Flue",
       "mepBoilerFuel": "Fuel",
       "mepBoilerCondensate": "Condensate",
+      "mepBoilerClearance": "Clearance",
+      "mepBoilerSafety": "Safety",
       "mepBoilerGeometry": "Geometry",
       "mepBoilerThermal": "Thermal",
       "mepBoilerSizing": "Sizing",
@@ -1231,6 +1276,22 @@
           "label": "AHU",
           "tooltip": "Place an air handling unit (AHU) with a single click — the supply-air network source (discipline: mechanical) (shortcut AH)"
         },
+        "mepSprinkler": {
+          "label": "Sprinkler",
+          "tooltip": "Place a fire sprinkler head with a single click — fire-protection terminal (discipline: fire protection) (shortcut SK)"
+        },
+        "mepFireRiser": {
+          "label": "Fire riser",
+          "tooltip": "Place a fire riser (wet riser) with a single click — the sprinkler network source (discipline: fire protection) (shortcut FR)"
+        },
+        "mepGasMeter": {
+          "label": "Gas meter",
+          "tooltip": "Place a gas meter with a single click — the gas supply network source (discipline: mechanical) (shortcut GM)"
+        },
+        "mepGasCooker": {
+          "label": "Gas cooker",
+          "tooltip": "Place a gas cooker (hob) with a single click — a gas terminal (discipline: mechanical) (shortcut GC)"
+        },
         "commsRack": {
           "label": "Comms rack",
           "tooltip": "Place a rack / patch-panel with a single click — the structured-cabling source (discipline: weak-current) (shortcut CR)"
@@ -1470,6 +1531,50 @@
         "hvacAutoReject": {
           "label": "Reject",
           "tooltip": "Discard the ventilation proposal"
+        },
+        "fireAuto": {
+          "label": "Auto Fire Protection",
+          "tooltip": "Auto-design the fire-protection network (sprinkler wet pipes, NFPA 13 / EN 12845): Generate → review → accept"
+        },
+        "fireAutoGenerate": {
+          "label": "Generate",
+          "tooltip": "Recognize the storey + auto-design the sprinkler wet-pipe network (preview)"
+        },
+        "fireAutoAccept": {
+          "label": "Accept",
+          "tooltip": "Turn the proposal into real pipes + a fire-protection network"
+        },
+        "fireAutoReject": {
+          "label": "Reject",
+          "tooltip": "Discard the fire-protection proposal"
+        },
+        "gasAuto": {
+          "label": "Auto Gas",
+          "tooltip": "Auto-design the natural-gas supply network (supply pipes, DVGW G600 / EN 1775): Generate → review → accept"
+        },
+        "gasAutoGenerate": {
+          "label": "Generate",
+          "tooltip": "Recognize the storey + auto-design the gas supply pipe network (preview)"
+        },
+        "gasAutoAccept": {
+          "label": "Accept",
+          "tooltip": "Turn the proposal into real pipes + a gas network"
+        },
+        "gasAutoReject": {
+          "label": "Reject",
+          "tooltip": "Discard the gas proposal"
+        },
+        "clashDetection": {
+          "label": "Clash Detection",
+          "tooltip": "Detect MEP ↔ MEP ↔ structural network clashes (Coordination, ADR-435): Detect → review"
+        },
+        "clashDetectionDetect": {
+          "label": "Detect",
+          "tooltip": "Scan the storey for clashes (hard + clearance violations) → plan markers"
+        },
+        "clashDetectionClear": {
+          "label": "Clear",
+          "tooltip": "Clear the clash report (no scene change)"
         }
       },
       "select": "Select",
@@ -2390,12 +2495,22 @@
         "fuelDiameter": "Fuel supply diameter",
         "condensing": "Condensing",
         "condensateDiameter": "Condensate drain diameter",
+        "condensateNeutraliser": "Neutraliser",
+        "showServiceClearance": "Clearance zone",
+        "serviceClearance": "Distance (mm)",
+        "safetyReliefValve": "Relief valve",
+        "reliefValvePressure": "Pressure (bar)",
+        "expansionVessel": "Expansion vessel",
+        "expansionVesselVolume": "Volume (L)",
+        "pressureGauge": "Pressure gauge",
+        "systemPressure": "System pressure (bar)",
         "width": "Width",
         "length": "Depth",
         "bodyHeight": "Body height",
         "mountingElevation": "Mounting height",
         "connectorDiameter": "Connector diameter",
         "thermalOutput": "Thermal output (W)",
+        "minThermalOutput": "Min output (W)",
         "efficiency": "Efficiency (%)",
         "erpClass": "ErP",
         "requiredOutput": "Required (kW)",
@@ -2419,6 +2534,13 @@
         "flue": "Flue",
         "terminationLabel": "Terminal",
         "fuelSupply": "Supply",
+        "condensate": "Condensate",
+        "clearance": "Clearance",
+        "neutraliser": "Neutraliser",
+        "reliefValve": "Relief valve",
+        "expansionVessel": "Vessel",
+        "pressureGauge": "Pressure",
+        "modulation": "Modulation",
         "modelFallback": "Boiler",
         "kWUnit": "kW",
         "dnPrefix": "DN",
@@ -2854,7 +2976,8 @@
         "domestic-hot-water": "Hot Water",
         "sanitary-drainage": "Drainage",
         "hydronic-supply": "Heating Supply",
-        "hydronic-return": "Heating Return"
+        "hydronic-return": "Heating Return",
+        "fire-sprinkler": "Fire Protection (sprinkler)"
       },
       "mepConductors": {
         "label": "Conductors",
@@ -3047,6 +3170,18 @@
         "networkName": "{service} air {n}",
         "service": {
           "supply": "Supply"
+        }
+      },
+      "fire": {
+        "networkName": "Fire {service} {n}",
+        "service": {
+          "sprinkler": "sprinkler"
+        }
+      },
+      "gas": {
+        "networkName": "Gas {service} {n}",
+        "service": {
+          "gas": "supply"
         }
       }
     },
@@ -3659,5 +3794,23 @@
       "no-source": "No AHU (supply-air source) found — network skipped."
     },
     "committed": "Ventilation network created — networks: {count}, ducts: {segments}."
+  },
+  "fire": {
+    "generated": "Fire-protection proposal created — networks: {count}.",
+    "generatedWithWarnings": "Fire-protection proposal created — networks: {count} (warnings: {warnings}).",
+    "empty": {
+      "no-terminals": "No sprinkler heads recognized on this storey.",
+      "no-source": "No fire riser (source) found — network skipped."
+    },
+    "committed": "Fire-protection network created — networks: {count}, pipes: {segments}."
+  },
+  "gas": {
+    "generated": "Gas proposal created — networks: {count}.",
+    "generatedWithWarnings": "Gas proposal created — networks: {count} (warnings: {warnings}).",
+    "empty": {
+      "no-terminals": "No gas appliances recognized on this storey.",
+      "no-source": "No gas meter (source) found — network skipped."
+    },
+    "committed": "Gas network created — networks: {count}, pipes: {segments}."
   }
 }
