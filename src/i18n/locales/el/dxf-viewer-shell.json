@@ -2294,6 +2294,12 @@
         "dhwConnectorDiameter": "Διάμετρος ΖΝΧ",
         "dhwRecirculation": "Ανακυκλοφορία ΖΝΧ",
         "flueDiameter": "Διάμετρος καπναγωγού",
+        "flueTermination": "Τερματικό καπναγωγού",
+        "flueTerminationTypes": {
+          "roof-cowl": "Κατακόρυφος (καμινάδα)",
+          "wall-horizontal": "Οριζόντιος επίτοιχος",
+          "balanced-concentric": "Ομοαξονικός"
+        },
         "width": "Πλάτος",
         "length": "Βάθος",
         "bodyHeight": "Ύψος σώματος",
@@ -2317,6 +2323,7 @@
         "power": "Ισχύς",
         "fuel": "Καύσιμο",
         "flue": "Καπναγωγός",
+        "terminationLabel": "Τερματικό",
         "modelFallback": "Λέβητας",
         "kWUnit": "kW",
         "dnPrefix": "DN",
@@ -2325,6 +2332,11 @@
           "oil": "Πετρέλαιο",
           "electric": "Ηλεκτρικός",
           "heat-pump": "Αντλία θερμότητας"
+        },
+        "terminationTypes": {
+          "roof-cowl": "Κατακόρυφος",
+          "wall-horizontal": "Επίτοιχος",
+          "balanced-concentric": "Ομοαξονικός"
         }
       },
       "mepWaterHeaterEditor": {
@@ -3451,7 +3463,10 @@
       "compliant": "Συμμόρφωση",
       "lossCoeff": "Συντ. Απωλειών H (W/K)",
       "floorArea": "Εμβαδό (m²)",
-      "annualDemand": "Ετήσια Ζήτηση (kWh)",
+      "grossDemand": "Μεικτή Ζήτηση (kWh)",
+      "gains": "Κέρδη (kWh)",
+      "utilisation": "Αξιοπ. Κερδών (%)",
+      "annualDemand": "Καθαρή Ζήτηση (kWh)",
       "specificDemand": "Ειδική (kWh/m²·έτος)"
     },
     "elementKinds": {
@@ -3469,7 +3484,8 @@
       "pumpHead": "Μανομετρικό (kPa)",
       "circuits": "Κυκλώματα",
       "totalFlow": "Συν. παροχή (kg/s)",
-      "annualEnergy": "Ετήσια ζήτηση (kWh)",
+      "grossEnergy": "Μεικτή ζήτηση (kWh)",
+      "annualEnergy": "Καθαρή ζήτηση (kWh)",
       "specificDemand": "Ειδική (kWh/m²·έτος)",
       "energyClass": "Ενδεικτική κατηγορία"
     }

@@ -46,9 +46,15 @@ import {
   isMepBoilerRibbonKey,
   isMepBoilerReadoutKey,
   isMepBoilerRibbonStringKey,
+  isMepBoilerFlueTerminationKey,
   isMepBoilerToggleKey,
   isMepBoilerVisibilityKey,
 } from './bridge/mep-boiler-command-keys';
+import {
+  FLUE_TERMINATION_TYPES,
+  DEFAULT_FLUE_TERMINATION,
+  isFlueTerminationType,
+} from '../../../bim/mep-boilers/boiler-flue-terminal';
 import { EventBus } from '../../../systems/events/EventBus';
 import { useMepSystemStore } from '../../../bim/mep-systems/mep-system-store';
 import { resolveManagedSystems } from '../../../bim/mep-systems/mep-circuit-editor';
@@ -193,6 +199,21 @@ export function useRibbonMepBoilerBridge(
         const kW = (w / 1000).toLocaleString('el-GR', { maximumFractionDigits: 1 });
         return { value: `${kW} kW`, options: [], disabled: true };
       }
+      // ADR-408 Vent Terminal — flue-termination picker (static enum). Checked BEFORE the
+      // model-catalog branch (both pass `isMepBoilerRibbonStringKey`). Supplies the 3 type
+      // options + the current value, defaulting to the roof cowl when unset.
+      if (isMepBoilerFlueTerminationKey(commandKey)) {
+        const boiler = resolveBoiler();
+        if (!boiler) return null;
+        return {
+          value: boiler.params.flueTermination ?? DEFAULT_FLUE_TERMINATION,
+          options: FLUE_TERMINATION_TYPES.map((type) => ({
+            value: type,
+            labelKey: `ribbon.commands.mepBoilerEditor.flueTerminationTypes.${type}`,
+            isLiteralLabel: false,
+          })),
+        };
+      }
       // ADR-408 Type Catalog — model picker (string commandKey branch).
       // Returns dynamic options from BOILER_MODEL_CATALOG + the clear («Παραμετρικό»)
       // sentinel. Pattern mirrors the fixture assetId branch (ADR-411).
@@ -229,6 +250,15 @@ export function useRibbonMepBoilerBridge(
 
   const onComboboxChange = useCallback(
     (commandKey: string, value: string): void => {
+      // ADR-408 Vent Terminal — flue-termination change (static enum). Checked before the
+      // model-catalog branch; persists `flueTermination` via the same params command.
+      if (isMepBoilerFlueTerminationKey(commandKey)) {
+        const boiler = resolveBoiler();
+        if (!boiler) return;
+        if (!isFlueTerminationType(value)) return;
+        dispatchParams(boiler, { ...boiler.params, flueTermination: value });
+        return;
+      }
       // ADR-408 Type Catalog — model picker branch (string; must run before the
       // numeric guard which would otherwise discard it).
       if (isMepBoilerRibbonStringKey(commandKey)) {

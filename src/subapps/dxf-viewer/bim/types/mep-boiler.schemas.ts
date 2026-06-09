@@ -63,6 +63,8 @@ export const MepBoilerParamsSchema = z
     dhwConnectorDiameterMm: z.number().positive().optional(),
     // Combustion flue (καπναγωγός) diameter — gas/oil only; falls back to DEFAULT_BOILER_FLUE_DIAMETER_MM.
     flueDiameterMm: z.number().positive().optional(),
+    // Combustion flue VENT TERMINAL type (Revit «Vent Terminal») — gas/oil only; falls back to DEFAULT_FLUE_TERMINATION.
+    flueTermination: z.enum(['roof-cowl', 'wall-horizontal', 'balanced-concentric']).optional(),
     // Optional catalogue thermal output (W) — drives future sizing.
     thermalOutputW: z.number().positive().optional(),
     sceneUnits: z.string().optional(),

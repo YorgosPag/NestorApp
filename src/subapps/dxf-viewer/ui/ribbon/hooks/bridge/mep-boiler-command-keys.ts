@@ -41,6 +41,13 @@ export const MEP_BOILER_RIBBON_KEYS = {
    */
   stringParams: {
     modelId: 'mepBoiler.params.modelId',
+    /**
+     * `flueTermination`: combustion-flue VENT TERMINAL picker (Revit «Vent Terminal»,
+     * καμινάδα). A static enum (roof cowl / through-wall / concentric), NOT a catalog —
+     * routed by `isMepBoilerFlueTerminationKey`, distinct from the dynamic model picker.
+     * Lives in the «Καπναγωγός» panel (combustion-only).
+     */
+    flueTermination: 'mepBoiler.params.flueTermination',
   },
   /**
    * Boolean toggle params (Revit Yes/No parameter → ribbon toggle button).
@@ -183,19 +190,31 @@ export function isMepBoilerReadoutKey(commandKey: string): commandKey is MepBoil
 
 // ─── String param key guards (model catalog picker) ──────────────────────────
 
-/** The single string commandKey used by the boiler model picker. */
+/** String (non-numeric) commandKeys: the model-catalog picker + the flue-terminal picker. */
 export type MepBoilerRibbonStringCommandKey =
-  typeof MEP_BOILER_RIBBON_KEYS.stringParams.modelId;
+  | typeof MEP_BOILER_RIBBON_KEYS.stringParams.modelId
+  | typeof MEP_BOILER_RIBBON_KEYS.stringParams.flueTermination;
 
 export const MEP_BOILER_STRING_KEY_SET: ReadonlySet<string> = new Set<string>([
   MEP_BOILER_RIBBON_KEYS.stringParams.modelId,
+  MEP_BOILER_RIBBON_KEYS.stringParams.flueTermination,
 ]);
 
 /**
- * Returns `true` when `commandKey` is the boiler model-catalog string picker
- * (not a numeric param, not a toggle, not a readout, not an action).
- * Mirror of `isMepRadiatorRibbonStringKey` (ADR-408 Εύρος Β).
+ * Returns `true` when `commandKey` is a boiler string-combobox param (model picker OR
+ * flue-terminal picker) — not numeric, not a toggle, not a readout, not an action. The
+ * composer routes ALL of these to the boiler bridge; the bridge then splits by specific
+ * key. Mirror of `isMepRadiatorRibbonStringKey` (ADR-408 Εύρος Β).
  */
 export function isMepBoilerRibbonStringKey(commandKey: string): boolean {
   return MEP_BOILER_STRING_KEY_SET.has(commandKey);
+}
+
+/**
+ * Returns `true` for the flue VENT TERMINAL picker specifically (a static enum, NOT the
+ * dynamic model catalog). The bridge checks this BEFORE the model-picker logic so the
+ * two string comboboxes don't cross-talk.
+ */
+export function isMepBoilerFlueTerminationKey(commandKey: string): boolean {
+  return commandKey === MEP_BOILER_RIBBON_KEYS.stringParams.flueTermination;
 }

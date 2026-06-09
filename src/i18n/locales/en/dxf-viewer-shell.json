@@ -2294,6 +2294,12 @@
         "dhwConnectorDiameter": "DHW diameter",
         "dhwRecirculation": "DHW Recirculation",
         "flueDiameter": "Flue diameter",
+        "flueTermination": "Flue terminal",
+        "flueTerminationTypes": {
+          "roof-cowl": "Vertical (roof cowl)",
+          "wall-horizontal": "Through-wall",
+          "balanced-concentric": "Concentric"
+        },
         "width": "Width",
         "length": "Depth",
         "bodyHeight": "Body height",
@@ -2317,6 +2323,7 @@
         "power": "Power",
         "fuel": "Fuel",
         "flue": "Flue",
+        "terminationLabel": "Terminal",
         "modelFallback": "Boiler",
         "kWUnit": "kW",
         "dnPrefix": "DN",
@@ -2325,6 +2332,11 @@
           "oil": "Oil",
           "electric": "Electric",
           "heat-pump": "Heat pump"
+        },
+        "terminationTypes": {
+          "roof-cowl": "Vertical",
+          "wall-horizontal": "Wall",
+          "balanced-concentric": "Concentric"
         }
       },
       "mepWaterHeaterEditor": {
@@ -3451,7 +3463,10 @@
       "compliant": "Compliance",
       "lossCoeff": "Loss coeff. H (W/K)",
       "floorArea": "Area (m²)",
-      "annualDemand": "Annual demand (kWh)",
+      "grossDemand": "Gross demand (kWh)",
+      "gains": "Gains (kWh)",
+      "utilisation": "Gain util. (%)",
+      "annualDemand": "Net demand (kWh)",
       "specificDemand": "Specific (kWh/m²·yr)"
     },
     "elementKinds": {
@@ -3469,7 +3484,8 @@
       "pumpHead": "Pump head (kPa)",
       "circuits": "Circuits",
       "totalFlow": "Total flow (kg/s)",
-      "annualEnergy": "Annual demand (kWh)",
+      "grossEnergy": "Gross demand (kWh)",
+      "annualEnergy": "Net demand (kWh)",
       "specificDemand": "Specific (kWh/m²·yr)",
       "energyClass": "Indicative class"
     }

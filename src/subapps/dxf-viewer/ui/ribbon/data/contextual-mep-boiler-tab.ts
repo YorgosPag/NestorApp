@@ -207,6 +207,20 @@ export const CONTEXTUAL_MEP_BOILER_TAB: RibbonTab = {
                 options: FLUE_DIAMETER_MM_OPTIONS,
               },
             },
+            {
+              // ADR-408 Vent Terminal (καμινάδα) — flue termination type picker. Options
+              // are supplied dynamically by the bridge (FLUE_TERMINATION_TYPES →
+              // getComboboxState), mirroring the model-picker pattern (declare [] here).
+              type: 'combobox',
+              size: 'small',
+              command: {
+                id: 'mepBoiler.flueTermination',
+                labelKey: 'ribbon.commands.mepBoilerEditor.flueTermination',
+                commandKey: MEP_BOILER_RIBBON_KEYS.stringParams.flueTermination,
+                comboboxWidthPx: 160,
+                options: [],
+              },
+            },
           ],
         },
       ],
