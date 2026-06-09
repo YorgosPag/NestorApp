@@ -78,12 +78,14 @@ describe('buildMepBoilerSymbol — combi DHW ports', () => {
 });
 
 describe('buildMepBoilerSymbol — combustion flue vent glyph', () => {
-  it('a gas boiler emits a distinct vent glyph (stub + 2 chevron legs)', () => {
-    expect(symbol({ fuelType: 'gas' }).ventStrokes).toHaveLength(3);
+  // ventStrokes = chevron (stub + 2 legs = 3) + vent terminal cap. Default terminal is the
+  // roof cowl (open hood box = 4 strokes), so a default gas/oil boiler emits 3 + 4 = 7.
+  it('a gas boiler emits chevron (3) + default roof-cowl terminal (4) = 7 strokes', () => {
+    expect(symbol({ fuelType: 'gas' }).ventStrokes).toHaveLength(7);
   });
 
-  it('an oil boiler also vents', () => {
-    expect(symbol({ fuelType: 'oil' }).ventStrokes).toHaveLength(3);
+  it('an oil boiler also vents (3 + 4 = 7)', () => {
+    expect(symbol({ fuelType: 'oil' }).ventStrokes).toHaveLength(7);
   });
 
   it('an electric boiler has no flue (no combustion)', () => {
@@ -101,6 +103,28 @@ describe('buildMepBoilerSymbol — combustion flue vent glyph', () => {
     expect(stub[0].y).toBeCloseTo(-175, 6);
     expect(stub[1].x).toBeCloseTo(0, 6);
     expect(stub[1].y).toBeCloseTo(-175 - STUB_LEN, 6);
+  });
+});
+
+describe('buildMepBoilerSymbol — vent terminal type (καμινάδα)', () => {
+  it('a through-wall terminal yields chevron (3) + wall glyph (3) = 6 strokes', () => {
+    const sym = symbol({ fuelType: 'gas', flueTermination: 'wall-horizontal' });
+    expect(sym.ventStrokes).toHaveLength(6);
+  });
+
+  it('a concentric terminal yields chevron (3) + 2 diamonds = 5 strokes', () => {
+    const sym = symbol({ fuelType: 'oil', flueTermination: 'balanced-concentric' });
+    expect(sym.ventStrokes).toHaveLength(5);
+  });
+
+  it('explicit roof-cowl matches the default (7 strokes)', () => {
+    expect(symbol({ fuelType: 'gas', flueTermination: 'roof-cowl' }).ventStrokes).toHaveLength(7);
+  });
+
+  it('a non-combustion boiler ignores flueTermination (no flue at all)', () => {
+    expect(
+      symbol({ fuelType: 'electric', flueTermination: 'balanced-concentric' }).ventStrokes,
+    ).toHaveLength(0);
   });
 });
 

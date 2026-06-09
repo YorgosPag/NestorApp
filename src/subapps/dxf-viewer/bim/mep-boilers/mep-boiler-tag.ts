@@ -21,6 +21,7 @@ import { i18n } from '@/i18n';
 import type { MepBoilerParams } from '../types/mep-boiler-types';
 import { DEFAULT_BOILER_FLUE_DIAMETER_MM } from '../types/mep-boiler-types';
 import { resolveBoilerModel, type BoilerFuelType } from './boiler-model-catalog';
+import { DEFAULT_FLUE_TERMINATION } from './boiler-flue-terminal';
 
 /** i18n key prefix for every boiler-tag string (namespace `dxf-viewer-shell`). */
 const TAG_KEY_PREFIX = 'ribbon.commands.mepBoilerTag.';
@@ -53,6 +54,7 @@ export type BoilerTagTranslator = (shortKey: string) => string;
  *   2. Power — `thermalOutputW` rounded to whole kW (omitted when absent).
  *   3. Fuel  — `fuelType` resolved to a localized name (omitted when absent).
  *   4. Flue  — `flueDiameterMm` as `Ø DNxxx`, ONLY for combustion fuels (gas/oil).
+ *   5. Terminal — the flue vent-terminal type (καμινάδα), ONLY for combustion fuels.
  *
  * @param params Boiler params (SSoT).
  * @param t      Short-key translator (see {@link BoilerTagTranslator}).
@@ -82,6 +84,10 @@ export function buildBoilerTagLines(
   if (params.fuelType && COMBUSTION_FUELS.has(params.fuelType)) {
     const dn = params.flueDiameterMm ?? DEFAULT_BOILER_FLUE_DIAMETER_MM;
     lines.push(`${t('flue')}: ${DIAMETER_GLYPH} ${t('dnPrefix')}${dn}`);
+
+    // 5 — Vent terminal type (καμινάδα), combustion fuels only.
+    const termination = params.flueTermination ?? DEFAULT_FLUE_TERMINATION;
+    lines.push(`${t('terminationLabel')}: ${t(`terminationTypes.${termination}`)}`);
   }
 
   return lines;

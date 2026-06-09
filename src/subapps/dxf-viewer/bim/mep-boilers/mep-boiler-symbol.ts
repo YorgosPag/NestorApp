@@ -35,6 +35,7 @@ import type {
 } from '../types/mep-boiler-types';
 import { connectorWorldPosition } from '../types/mep-connector-types';
 import { buildBoilerConnectors } from './mep-boiler-geometry';
+import { buildFlueTerminalGlyph, DEFAULT_FLUE_TERMINATION } from './boiler-flue-terminal';
 import { mmToSceneUnits } from '../../utils/scene-units';
 
 /** A polyline of world-space points (canvas units). */
@@ -50,9 +51,10 @@ export interface BoilerSymbolGeometry {
    */
   readonly strokes: readonly BoilerStroke[];
   /**
-   * Vent/duct connector glyph strokes — one stub + chevron arrowhead per
-   * `domain:'duct'` connector (the gas/oil combustion flue / καπναγωγός). Kept
-   * separate from `strokes` so the renderer can give the exhaust duct a distinct read.
+   * Vent/duct connector glyph strokes — per `domain:'duct'` connector (the gas/oil
+   * combustion flue / καπναγωγός): a stub + chevron arrowhead, PLUS the vent-terminal
+   * cap glyph at the chevron tip (καμινάδα, per `flueTermination`). Kept separate from
+   * `strokes` so the renderer can give the exhaust duct a distinct read.
    */
   readonly ventStrokes: readonly BoilerStroke[];
   /**
@@ -233,6 +235,11 @@ export function buildMepBoilerSymbol(
     const outward = { x: (root.x - params.position.x) / len, y: (root.y - params.position.y) / len };
     if (connector.domain === 'duct') {
       ventStrokes.push(...buildFlueVentStroke(root, outward, stubLen));
+      // VENT TERMINAL (καμινάδα) — cap the chevron tip with the termination-type glyph.
+      const tip: Point3D = { x: root.x + outward.x * stubLen, y: root.y + outward.y * stubLen, z: 0 };
+      ventStrokes.push(
+        ...buildFlueTerminalGlyph(tip, outward, stubLen, params.flueTermination ?? DEFAULT_FLUE_TERMINATION),
+      );
     } else {
       strokes.push([root, { x: root.x + outward.x * stubLen, y: root.y + outward.y * stubLen, z: 0 }]);
     }

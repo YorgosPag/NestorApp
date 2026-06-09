@@ -88,4 +88,22 @@ describe('buildBoilerTagLines', () => {
     const lines = buildBoilerTagLines(params({ thermalOutputW: 24000 }), fakeT);
     expect(lines.some((l) => l.startsWith('fuel'))).toBe(false);
   });
+
+  it('shows the vent-terminal line for combustion fuels (default roof cowl)', () => {
+    const lines = buildBoilerTagLines(params({ fuelType: 'gas' }), fakeT);
+    expect(lines).toContain('terminationLabel: terminationTypes.roof-cowl');
+  });
+
+  it('reflects an explicit flueTermination type', () => {
+    const lines = buildBoilerTagLines(params({ fuelType: 'oil', flueTermination: 'wall-horizontal' }), fakeT);
+    expect(lines).toContain('terminationLabel: terminationTypes.wall-horizontal');
+  });
+
+  it('omits the terminal line for non-combustion boilers', () => {
+    const lines = buildBoilerTagLines(
+      params({ fuelType: 'electric', flueTermination: 'balanced-concentric' }),
+      fakeT,
+    );
+    expect(lines.some((l) => l.startsWith('terminationLabel'))).toBe(false);
+  });
 });

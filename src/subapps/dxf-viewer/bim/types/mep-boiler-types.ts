@@ -43,6 +43,7 @@ import type { IfcEntityMixin } from './ifc-entity-mixin';
 import type { MepConnectorHostParams } from './mep-component-types';
 import type { PlumbingSystemClassification } from './mep-connector-types';
 import type { BoilerFuelType } from '../mep-boilers/boiler-model-catalog';
+import type { FlueTerminationType } from '../mep-boilers/boiler-flue-terminal';
 
 // ─── Sub-type discriminator (ADR-408 Εύρος Β #2) ──────────────────────────────
 
@@ -122,6 +123,15 @@ export interface MepBoilerParams extends MepConnectorHostParams {
    * `fuelType` is a combustion source (gas/oil); ignored for electric/heat-pump.
    */
   readonly flueDiameterMm?: number;
+  /**
+   * Combustion flue VENT TERMINAL type (Revit «Vent Terminal», καμινάδα) — how the flue
+   * discharges to atmosphere (roof cowl / through-wall / concentric). Drives the distinct
+   * terminal-cap glyph on the plan symbol + the tag line. Absent ⇒ {@link
+   * DEFAULT_FLUE_TERMINATION} (roof cowl). Only relevant when `fuelType` is a combustion
+   * source (gas/oil); ignored for electric/heat-pump. Additive/optional — pre-terminal
+   * boilers unchanged.
+   */
+  readonly flueTermination?: FlueTerminationType;
   /**
    * W — optional catalogue thermal output (nominal heat output). Drives future
    * sizing/load-balancing; absent ⇒ not yet specified.
