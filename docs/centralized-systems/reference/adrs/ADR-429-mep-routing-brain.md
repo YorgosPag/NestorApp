@@ -1,0 +1,95 @@
+# ADR-429 — MEP Routing Brain (wall-aware A* router + parallel supply/return pairing)
+
+> **Status:** 🟢 **Slice 3A (A\* wall-aware router) IMPLEMENTED** — 2026-06-09 (Opus 4.8). 🔵 Slice 3B (parallel supply/return pairing) PLANNED (approach decided). Child slice of **ADR-423** (MEP Auto-Design framework). The **routing upgrade all three disciplines share** — water (ADR-426), drainage (ADR-427), heating (ADR-428).
+> **Scope (Slice 3A):** make MEP runs detour **around walls** instead of crossing them diagonally / through them, by swapping the bare Manhattan router for a wall-aware A\* — **without touching the `RoutedSegment` contract**, so all three orchestrators inherit it for free. Headless geometry → **ΕΚΤΟΣ ADR-040**.
+> **Decision driver (Giorgio, 2026-06-09):** *«FULL ENTERPRISE + FULL SSOT, όπως οι μεγάλοι παίχτες / Revit / MagiCAD / 4M FINE»*.
+
+---
+
+## 1. Context
+
+ADR-426 §A introduced the shared `routeOrthogonalTrunkBranch` (deterministic Manhattan trunk-branch) as the **single router every discipline reuses**, and its own header declared it a **swap point**: *"NOT yet wall-obstacle-aware — architected to grow into A\* (a later slice swaps this function, the orchestrator/contract unchanged)."* All three functional disciplines route through it today (water directly, drainage via `gravity-router`, heating ×2 for supply+return), so a single wall-aware upgrade benefits all three at once. What was missing is the **brain**: an A\* pathfinder + a wall→obstacle extractor + the swap entry point.
+
+Walls are **not** taken from `RecognitionModel` (`'structural-wall'` is reserved-but-unpopulated there, ADR-424) — they come from the `entities` array every orchestrator already receives, via `isWallEntity` + the cached `geometry.bbox`.
+
+---
+
+## 2. Decision — per-run A\* detour over the reused Manhattan decomposition
+
+The wall-aware router does **NOT** re-derive the trunk-branch brain (spine axis, arm split, tap points, cumulative loading + min-Ø). It keeps the decomposition as the **single source of truth** and only refines geometry:
+
+```
+routeWallAware(root, targets, obstacles)
+  1. runs = routeOrthogonalTrunkBranch(root, targets)        ← reused VERBATIM (decomposition + fallback)
+  2. for each run:
+       run crosses a wall?  →  replace with A* detour = collinear RoutedSegments
+                                carrying the parent run's metadata VERBATIM
+       run clears walls?    →  keep byte-identical
+  3. no obstacles  OR  A* finds no path  →  keep the run straight (Manhattan)
+```
+
+**Why this is FULL SSoT + zero-regression:**
+- The decomposition is reused 100% (one literal call) — no duplicated spine/arm logic.
+- The `RoutedSegment` contract (`start/end/role/cumulativeLU/cumulativeMinDiameterMm`) is **unchanged** ⇒ the three orchestrators' post-processing (sizing, slope, commit) is untouched.
+- **Root-outward ordering** (relied on by drainage slope assignment) survives: a detour is traversed `start→end`, so every emitted sub-run's `start` stays upstream of its `end`.
+- No walls in a scene ⇒ output **identical** to Manhattan ⇒ the 48 pre-existing mep-design tests are untouched (verified: 68/68 green, 48 prior + 20 new).
+
+### The A\* pathfinder (`astar-grid.ts`)
+A lightweight **Hanan grid**: candidate x/y lines = the two run endpoints' coords + every inflated-obstacle edge inside a local window + uniform `cell` steps. Because both endpoints and all wall faces are grid lines, the search threads gaps a fixed uniform grid would miss, while staying small (a few dozen lines/axis). **4-way** moves (orthogonal — Revit MEP convention, no diagonals); binary-heap A\* with Manhattan heuristic; edges blocked only by **interior** wall crossings (a run hugging a wall face = free). The wall hosting either endpoint is excluded for that run (you don't route around the wall your own fixture sits on). Returns `null` (→ straight fallback) on no-path or when a perf guard trips. Pure + deterministic.
+
+---
+
+## 3. Decisions taken (Revit-grade, LOCKED — pluggable via `opts` / SSoT consts in `routing-constants.ts`)
+
+| Decision | v1 choice | Rationale |
+|---|---|---|
+| **Grid resolution** | `ASTAR_CELL_SCENE = 150` (scene units; Nestor mm convention) | fine enough for a doorway, coarse enough to stay fast; Hanan lines add the precision |
+| **Inflation margin** | wall `bbox` (already thickness-aware) **+ `WALL_CLEARANCE_SCENE = 75`** | pure stand-off so the pipe centreline never grazes the face |
+| **4-way vs 8-way** | **4-way orthogonal** | Revit MEP routes orthogonally — clean horizontals/verticals |
+| **Fallback** | walls = 0 **or** A\* no-path/budget → **straight run (Manhattan)** | zero-regression guarantee |
+| **Local window** | run bbox + `ASTAR_LOCAL_MARGIN_SCENE = 1500` | room for the detour to bulge past a wall end |
+| **Perf guards** | `ASTAR_MAX_CELLS = 40000`, `ASTAR_MAX_ITERATIONS = 20000` → fallback | bounds worst-case cost on pathological geometry |
+| **Units** | router is **unit-agnostic** (works in input coord space) | mm-named consts assume the Nestor mm scene convention; `opts` override hook |
+
+---
+
+## 4. Files (Slice 3A)
+
+**New (`systems/mep-design/routing/`):**
+| File | Role |
+|---|---|
+| `routing-constants.ts` | SSoT consts + `Rect2D` (mirrors `core/spatial` `SpatialBounds` shape) |
+| `wall-obstacles.ts` | `wallObstacles(entities, clearance)` → inflated `Rect2D[]`; + `pointInRect` / `segmentHitsRect` / `segmentHitsObstacles` (axis-aligned, boundary = free) |
+| `astar-grid.ts` | `findOrthogonalPath(start, end, obstacles, opts)` — Hanan-grid 4-way A\* (binary heap), or `null` |
+| `route-wall-aware.ts` | `routeWallAware(root, targets, obstacles, opts?)` — the SSoT swap entry, same contract as Manhattan |
+| `__tests__/{wall-obstacles,astar-grid,route-wall-aware}.test.ts` | 20 unit tests (incl. zero-regression equality vs Manhattan) |
+
+**Modified (additive swap, ≤2 lines of logic each):**
+- `water/design-water-supply.ts` — `wallObstacles(entities)` once → `routeWallAware`.
+- `drainage/gravity-router.ts` (+ `design-drainage.ts`) — thread `obstacles` → `routeWallAware`.
+- `heating/design-heating.ts` — `wallObstacles(entities)` once, passed to both `buildNetwork` (supply + return).
+
+**Reused (SSoT, not rewritten):** `routing/orthogonal-router.ts` (decomposition + fallback), `types/entities.ts` (`isWallEntity`, `WallEntity.geometry.bbox`), `core/spatial` `SpatialBounds` shape.
+
+---
+
+## 5. Slice 3B — parallel supply/return pairing (PLANNED, approach decided)
+
+Today `design-heating.ts` routes supply + return **independently**, so the two trunks overlap. Revit/MagiCAD run them **parallel at a fixed offset**. **Approach:** post-process the routed **return** network — offset its trunk perpendicular to the spine by a **DN-aware** distance (`maxTrunkDN + PAIRING_CLEARANCE_SCENE = 30`), add a short stub from the boiler return root to the offset trunk, and re-tap each terminal's return connector from the offset trunk (reusing `offsetPolyline`, ADR-358). Gated to the no-detour case (walls present ⇒ keep the independent wall-aware return), preserving roles/classification/flow-conservation so the existing heating tests stay green. Tracked as the next sub-slice (the delicate geometry — branch-less targets, two arms, cumulative-flow remap — warrants its own gate, per the approved plan).
+
+**Deferred after 3B:** water cold/hot pairing (extend 3B to the other disciplines); global (cross-run) A\* / jump-point search if per-run detours prove insufficient.
+
+---
+
+## 6. Consequences
+
+- ✅ One router, three disciplines: water/drainage/heating all detour around walls with no per-discipline code.
+- ✅ Zero-regression: delegate-on-no-walls keeps the Manhattan path byte-identical; 68/68 tests green.
+- ✅ Contract intact: sizing/slope/commit layers untouched.
+- ⚠️ Per-run (not global) A\*: each run detours independently — sufficient for "go around walls" v1; a globally-optimal path may differ. Documented limitation.
+- ⚠️ Units assume the mm scene convention for the default consts (override via `opts`).
+
+---
+
+## Changelog
+- **2026-06-09 (Opus 4.8)** — Slice 3A implemented: wall-aware A\* router swapped into all three disciplines (delegate-on-no-walls). New `routing/{routing-constants,wall-obstacles,astar-grid,route-wall-aware}.ts` + 20 tests. 68/68 mep-design tests green. Slice 3B (pairing) approach locked, deferred to its own gate. ΕΚΤΟΣ ADR-040 (headless). tsc deferred (N.17 — shared tree, could not verify no concurrent tsc).
