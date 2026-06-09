@@ -55,6 +55,7 @@ import {
   DEFAULT_FLUE_TERMINATION,
   isFlueTerminationType,
 } from '../../../bim/mep-boilers/boiler-flue-terminal';
+import { resolveErpClass } from '../../../bim/mep-boilers/boiler-efficiency';
 import { EventBus } from '../../../systems/events/EventBus';
 import { useMepSystemStore } from '../../../bim/mep-systems/mep-system-store';
 import { resolveManagedSystems } from '../../../bim/mep-systems/mep-circuit-editor';
@@ -111,6 +112,8 @@ const NUMBER_KEY_TO_FIELD: Readonly<Record<string, keyof MepBoilerParams>> = {
   [MEP_BOILER_RIBBON_KEYS.params.thermalOutput]: 'thermalOutputW',
   [MEP_BOILER_RIBBON_KEYS.params.dhwConnectorDiameter]: 'dhwConnectorDiameterMm',
   [MEP_BOILER_RIBBON_KEYS.params.flueDiameter]: 'flueDiameterMm',
+  [MEP_BOILER_RIBBON_KEYS.params.fuelDiameter]: 'fuelConnectorDiameterMm',
+  [MEP_BOILER_RIBBON_KEYS.params.efficiency]: 'seasonalEfficiencyPercent',
 };
 
 export function useRibbonMepBoilerBridge(
@@ -182,6 +185,20 @@ export function useRibbonMepBoilerBridge(
       // ADR-422 L2 — read-only sizing readouts (disabled combobox). Resolved before
       // the editable-key guard so they don't fall through to the params path.
       if (isMepBoilerReadoutKey(commandKey)) {
+        // ErP energy class — independent of sizing (depends on efficiency + fuelType),
+        // so it is resolved BEFORE the sizing guard. Disabled (read-only) combobox.
+        if (commandKey === MEP_BOILER_RIBBON_KEYS.readouts.erpClass) {
+          const boiler = resolveBoiler();
+          const eff = boiler?.params.seasonalEfficiencyPercent;
+          if (!boiler || typeof eff !== 'number') {
+            return { value: '—', options: [], disabled: true };
+          }
+          return {
+            value: resolveErpClass(eff, boiler.params.fuelType),
+            options: [],
+            disabled: true,
+          };
+        }
         if (!sizing) return { value: '—', options: [], disabled: true };
         if (commandKey === MEP_BOILER_RIBBON_KEYS.readouts.adequacyStatus) {
           const status: HeatingEquipmentSizingStatus = sizing.status;

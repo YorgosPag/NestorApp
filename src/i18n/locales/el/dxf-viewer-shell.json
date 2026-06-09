@@ -963,6 +963,7 @@
       "mepBoilerModel": "Μοντέλο",
       "mepBoilerDhw": "ΖΝΧ",
       "mepBoilerFlue": "Καπναγωγός",
+      "mepBoilerFuel": "Καύσιμο",
       "mepBoilerGeometry": "Γεωμετρία",
       "mepBoilerThermal": "Θερμικά",
       "mepBoilerSizing": "Διαστασιολόγηση",
@@ -2300,12 +2301,15 @@
           "wall-horizontal": "Οριζόντιος επίτοιχος",
           "balanced-concentric": "Ομοαξονικός"
         },
+        "fuelDiameter": "Διάμετρος καυσίμου",
         "width": "Πλάτος",
         "length": "Βάθος",
         "bodyHeight": "Ύψος σώματος",
         "mountingElevation": "Ύψος τοποθέτησης",
         "connectorDiameter": "Διάμετρος σύνδεσης",
         "thermalOutput": "Θερμική ισχύς (W)",
+        "efficiency": "Απόδοση (%)",
+        "erpClass": "ErP",
         "requiredOutput": "Απαιτούμενη (kW)",
         "installedOutput": "Εγκατεστημένη (kW)",
         "adequacy": "Επάρκεια",
@@ -2321,9 +2325,12 @@
       },
       "mepBoilerTag": {
         "power": "Ισχύς",
+        "efficiency": "Απόδοση",
+        "erp": "ErP",
         "fuel": "Καύσιμο",
         "flue": "Καπναγωγός",
         "terminationLabel": "Τερματικό",
+        "fuelSupply": "Παροχή",
         "modelFallback": "Λέβητας",
         "kWUnit": "kW",
         "dnPrefix": "DN",
@@ -2382,6 +2389,7 @@
         "airChangesPerHour": "Εναλλαγές αέρα (1/h)",
         "thermalBridgeLevel": "Θερμογέφυρες",
         "reheatMode": "Λειτουργία θέρμανσης",
+        "solarShadingLevel": "Σκίαση",
         "ceilingHeightMm": "Ύψος (mm)",
         "close": "Κλείσιμο",
         "delete": "Διαγραφή",
@@ -3420,6 +3428,12 @@
       "night-setback": "Νυχτερινή υποβάθμιση",
       "intermittent": "Διακοπτόμενη",
       "boost": "Γρήγορη επανέναρξη"
+    },
+    "solarShading": {
+      "none": "Χωρίς σκίαση",
+      "light": "Ελαφριά (×0.90)",
+      "moderate": "Μέτρια (×0.70)",
+      "heavy": "Έντονη (×0.50)"
     }
   },
   "thermalStudyReport": {

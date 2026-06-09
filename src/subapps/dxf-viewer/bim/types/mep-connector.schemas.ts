@@ -19,7 +19,7 @@ const Point3DSchema = z
   })
   .strict();
 
-export const MepConnectorDomainSchema = z.enum(['electrical', 'duct', 'pipe']);
+export const MepConnectorDomainSchema = z.enum(['electrical', 'duct', 'pipe', 'fuel']);
 
 export const MepFlowDirectionSchema = z.enum(['in', 'out', 'bidirectional']);
 
@@ -44,6 +44,9 @@ export const PipeFluidSchema = z.enum(['water', 'hot-water', 'wastewater', 'glyc
 
 /** ADR-408 (duct domain foundation) — duct system classification (opening: flue exhaust). */
 export const DuctSystemClassificationSchema = z.enum(['exhaust']);
+
+/** ADR-408 (fuel domain foundation) — fuel system classification (gas/oil supply). */
+export const FuelSystemClassificationSchema = z.enum(['fuel-gas', 'fuel-oil']);
 
 export const MepElectricalConnectorParamsSchema = z
   .object({
@@ -74,6 +77,14 @@ export const MepDuctConnectorParamsSchema = z
   })
   .strict();
 
+/** ADR-408 (fuel domain foundation) — fuel connector params (present when domain === 'fuel'). */
+export const MepFuelConnectorParamsSchema = z
+  .object({
+    systemClassification: FuelSystemClassificationSchema,
+    diameterMm: z.number().positive().optional(),
+  })
+  .strict();
+
 export const MepConnectorSchema = z
   .object({
     connectorId: z.string().min(1),
@@ -84,6 +95,7 @@ export const MepConnectorSchema = z
     electrical: MepElectricalConnectorParamsSchema.optional(),
     pipe: MepPipeConnectorParamsSchema.optional(),
     duct: MepDuctConnectorParamsSchema.optional(),
+    fuel: MepFuelConnectorParamsSchema.optional(),
     systemId: z.string().min(1).optional(),
   })
   .strict();

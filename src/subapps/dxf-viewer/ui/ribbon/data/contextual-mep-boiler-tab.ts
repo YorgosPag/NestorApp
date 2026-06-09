@@ -91,6 +91,24 @@ const FLUE_DIAMETER_MM_OPTIONS = [
   { value: '130', labelKey: '130', isLiteralLabel: true },
 ] as const;
 
+// Combustion fuel supply (τροφοδοσία καυσίμου) diameter (mm) — typical gas/oil line DN15/20/25.
+const FUEL_DIAMETER_MM_OPTIONS = [
+  { value: '15', labelKey: '15', isLiteralLabel: true },
+  { value: '20', labelKey: '20', isLiteralLabel: true },
+  { value: '25', labelKey: '25', isLiteralLabel: true },
+] as const;
+
+// Seasonal appliance efficiency (%) — Revit «Nominal Efficiency». Editable; the heat-pump
+// catalogue value (~156%) lands above the list but the bridge still surfaces it as the
+// current value (editable combobox). Drives the read-only ErP class readout.
+const EFFICIENCY_PERCENT_OPTIONS = [
+  { value: '80', labelKey: '80', isLiteralLabel: true },
+  { value: '85', labelKey: '85', isLiteralLabel: true },
+  { value: '90', labelKey: '90', isLiteralLabel: true },
+  { value: '94', labelKey: '94', isLiteralLabel: true },
+  { value: '98', labelKey: '98', isLiteralLabel: true },
+] as const;
+
 // Nominal catalogue thermal output (W) — typical residential/commercial boiler range.
 const THERMAL_OUTPUT_W_OPTIONS = [
   { value: '6000',  labelKey: '6000',  isLiteralLabel: true },
@@ -225,6 +243,32 @@ export const CONTEXTUAL_MEP_BOILER_TAB: RibbonTab = {
         },
       ],
     },
+    // ADR-408 (fuel domain foundation) — «Καύσιμο» panel: εμφανίζεται μόνο για λέβητα
+    // καύσης (visibilityKey `combustion`, reused — ίδιο gate gas/oil με τον καπναγωγό).
+    // Fuel supply (τροφοδοσία καυσίμου) connector diameter (typical gas/oil line DN15/20/25).
+    {
+      id: 'mep-boiler-fuel',
+      labelKey: 'ribbon.panels.mepBoilerFuel',
+      visibilityKey: MEP_BOILER_RIBBON_VISIBILITY_KEYS.combustion,
+      rows: [
+        {
+          isInFlyout: false,
+          buttons: [
+            {
+              type: 'combobox',
+              size: 'small',
+              command: {
+                id: 'mepBoiler.fuelDiameter',
+                labelKey: 'ribbon.commands.mepBoilerEditor.fuelDiameter',
+                commandKey: MEP_BOILER_RIBBON_KEYS.params.fuelDiameter,
+                comboboxWidthPx: 90,
+                options: FUEL_DIAMETER_MM_OPTIONS,
+              },
+            },
+          ],
+        },
+      ],
+    },
     {
       id: 'mep-boiler-geometry',
       labelKey: 'ribbon.panels.mepBoilerGeometry',
@@ -307,6 +351,32 @@ export const CONTEXTUAL_MEP_BOILER_TAB: RibbonTab = {
                 commandKey: MEP_BOILER_RIBBON_KEYS.params.thermalOutput,
                 comboboxWidthPx: 90,
                 options: THERMAL_OUTPUT_W_OPTIONS,
+              },
+            },
+            {
+              // ADR-408 — seasonal appliance efficiency (Revit «Nominal Efficiency»).
+              // Editable %; drives the ErP class readout below.
+              type: 'combobox',
+              size: 'small',
+              command: {
+                id: 'mepBoiler.efficiency',
+                labelKey: 'ribbon.commands.mepBoilerEditor.efficiency',
+                commandKey: MEP_BOILER_RIBBON_KEYS.params.efficiency,
+                comboboxWidthPx: 90,
+                options: EFFICIENCY_PERCENT_OPTIONS,
+              },
+            },
+            {
+              // ADR-408 — EU ErP energy class readout (read-only; bridge returns
+              // `disabled` state). Derived from efficiency + fuelType (resolveErpClass).
+              type: 'combobox',
+              size: 'small',
+              command: {
+                id: 'mepBoiler.erpClass',
+                labelKey: 'ribbon.commands.mepBoilerEditor.erpClass',
+                commandKey: MEP_BOILER_RIBBON_KEYS.readouts.erpClass,
+                comboboxWidthPx: 80,
+                options: [],
               },
             },
           ],

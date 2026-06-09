@@ -29,10 +29,14 @@ export const MEP_BOILER_RIBBON_KEYS = {
     connectorDiameter: 'mepBoiler.params.connectorDiameter',
     /** W — nominal catalogue thermal output (optional; absent ⇒ unspecified). */
     thermalOutput: 'mepBoiler.params.thermalOutput',
+    /** % — seasonal appliance efficiency (Revit «Nominal Efficiency»). Drives ErP class. */
+    efficiency: 'mepBoiler.params.efficiency',
     /** mm — COMBI DHW connector diameter (hot outlet + cold inlet). Combi-only panel. */
     dhwConnectorDiameter: 'mepBoiler.params.dhwConnectorDiameter',
     /** mm — combustion flue (καπναγωγός) diameter. Gas/oil-only panel («Καπναγωγός»). */
     flueDiameter: 'mepBoiler.params.flueDiameter',
+    /** mm — combustion fuel supply (τροφοδοσία καυσίμου) diameter. Gas/oil-only panel («Καύσιμο»). */
+    fuelDiameter: 'mepBoiler.params.fuelDiameter',
   },
   /**
    * String (non-numeric) combobox params — model catalog picker.
@@ -73,6 +77,8 @@ export const MEP_BOILER_RIBBON_KEYS = {
     installedOutputW: 'mepBoiler.readout.installedOutputW',
     /** adequacy status label (ok / undersized / oversized / unknown). */
     adequacyStatus: 'mepBoiler.readout.adequacyStatus',
+    /** EU ErP energy class (A+++…G) — derived from seasonalEfficiencyPercent + fuelType. */
+    erpClass: 'mepBoiler.readout.erpClass',
   },
 } as const;
 
@@ -84,7 +90,9 @@ export type MepBoilerRibbonNumberCommandKey =
   | typeof MEP_BOILER_RIBBON_KEYS.params.connectorDiameter
   | typeof MEP_BOILER_RIBBON_KEYS.params.thermalOutput
   | typeof MEP_BOILER_RIBBON_KEYS.params.dhwConnectorDiameter
-  | typeof MEP_BOILER_RIBBON_KEYS.params.flueDiameter;
+  | typeof MEP_BOILER_RIBBON_KEYS.params.flueDiameter
+  | typeof MEP_BOILER_RIBBON_KEYS.params.fuelDiameter
+  | typeof MEP_BOILER_RIBBON_KEYS.params.efficiency;
 
 export const MEP_BOILER_RIBBON_NUMBER_KEYS: readonly MepBoilerRibbonNumberCommandKey[] = [
   MEP_BOILER_RIBBON_KEYS.params.width,
@@ -95,6 +103,8 @@ export const MEP_BOILER_RIBBON_NUMBER_KEYS: readonly MepBoilerRibbonNumberComman
   MEP_BOILER_RIBBON_KEYS.params.thermalOutput,
   MEP_BOILER_RIBBON_KEYS.params.dhwConnectorDiameter,
   MEP_BOILER_RIBBON_KEYS.params.flueDiameter,
+  MEP_BOILER_RIBBON_KEYS.params.fuelDiameter,
+  MEP_BOILER_RIBBON_KEYS.params.efficiency,
 ];
 
 // ─── Toggle keys (Revit Yes/No params) ───────────────────────────────────────
@@ -175,12 +185,14 @@ export function isMepBoilerRibbonKey(commandKey: string): boolean {
 export type MepBoilerRibbonReadoutKey =
   | typeof MEP_BOILER_RIBBON_KEYS.readouts.requiredOutputW
   | typeof MEP_BOILER_RIBBON_KEYS.readouts.installedOutputW
-  | typeof MEP_BOILER_RIBBON_KEYS.readouts.adequacyStatus;
+  | typeof MEP_BOILER_RIBBON_KEYS.readouts.adequacyStatus
+  | typeof MEP_BOILER_RIBBON_KEYS.readouts.erpClass;
 
 const MEP_BOILER_READOUT_KEY_SET: ReadonlySet<string> = new Set<string>([
   MEP_BOILER_RIBBON_KEYS.readouts.requiredOutputW,
   MEP_BOILER_RIBBON_KEYS.readouts.installedOutputW,
   MEP_BOILER_RIBBON_KEYS.readouts.adequacyStatus,
+  MEP_BOILER_RIBBON_KEYS.readouts.erpClass,
 ]);
 
 /** Read-only sizing readouts — served by the bridge as `disabled` combobox state. */

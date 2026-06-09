@@ -963,6 +963,7 @@
       "mepBoilerModel": "Model",
       "mepBoilerDhw": "DHW",
       "mepBoilerFlue": "Flue",
+      "mepBoilerFuel": "Fuel",
       "mepBoilerGeometry": "Geometry",
       "mepBoilerThermal": "Thermal",
       "mepBoilerSizing": "Sizing",
@@ -2300,12 +2301,15 @@
           "wall-horizontal": "Through-wall",
           "balanced-concentric": "Concentric"
         },
+        "fuelDiameter": "Fuel supply diameter",
         "width": "Width",
         "length": "Depth",
         "bodyHeight": "Body height",
         "mountingElevation": "Mounting height",
         "connectorDiameter": "Connector diameter",
         "thermalOutput": "Thermal output (W)",
+        "efficiency": "Efficiency (%)",
+        "erpClass": "ErP",
         "requiredOutput": "Required (kW)",
         "installedOutput": "Installed (kW)",
         "adequacy": "Adequacy",
@@ -2321,9 +2325,12 @@
       },
       "mepBoilerTag": {
         "power": "Power",
+        "efficiency": "Efficiency",
+        "erp": "ErP",
         "fuel": "Fuel",
         "flue": "Flue",
         "terminationLabel": "Terminal",
+        "fuelSupply": "Supply",
         "modelFallback": "Boiler",
         "kWUnit": "kW",
         "dnPrefix": "DN",
@@ -2382,6 +2389,7 @@
         "airChangesPerHour": "Air changes (1/h)",
         "thermalBridgeLevel": "Thermal bridges",
         "reheatMode": "Heating operation",
+        "solarShadingLevel": "Solar shading",
         "ceilingHeightMm": "Height (mm)",
         "close": "Close",
         "delete": "Delete",
@@ -3420,6 +3428,12 @@
       "night-setback": "Night setback",
       "intermittent": "Intermittent",
       "boost": "Fast reheat"
+    },
+    "solarShading": {
+      "none": "No shading",
+      "light": "Light (×0.90)",
+      "moderate": "Moderate (×0.70)",
+      "heavy": "Heavy (×0.50)"
     }
   },
   "thermalStudyReport": {
