@@ -249,6 +249,7 @@ const MEP_SEGMENT_PIPE_MAPPING: Readonly<Record<PlumbingSystemClassification, At
   'sanitary-drainage':   { categoryCode: 'ΗΛΜ-6.01', unit: 'm', titleEL: 'Σωλήνας αποχέτευσης (BIM)' },
   'hydronic-supply':     { categoryCode: 'ΗΛΜ-7.10', unit: 'm', titleEL: 'Σωλήνας θέρμανσης προσαγωγής (BIM)' },
   'hydronic-return':     { categoryCode: 'ΗΛΜ-7.11', unit: 'm', titleEL: 'Σωλήνας θέρμανσης επιστροφής (BIM)' },
+  'fire-sprinkler':      { categoryCode: 'ΗΛΜ-19.01', unit: 'm', titleEL: 'Σωλήνας πυρόσβεσης καταιονισμού (BIM)' }, // ADR-433
 };
 
 /** Lookup map keyed by entity type for runtime dispatch. */

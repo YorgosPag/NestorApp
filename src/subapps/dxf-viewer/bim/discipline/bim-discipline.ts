@@ -82,6 +82,8 @@ export const DISCIPLINE_BY_CATEGORY: Readonly<Record<BimCategory, DisciplineOrAn
   duct:            'mechanical',
   // ADR-408 Φ8 — pipe run (first placeable `plumbing` category).
   pipe:            'plumbing',
+  // ADR-434 — gas/oil fuel supply run ⊂ mechanical (Revit groups gas piping with mechanical).
+  fuel:            'mechanical',
   // ADR-408 Φ14 — sanitary drainage pipe run ⊂ plumbing (hidden by the plumbing
   // discipline toggle too; the dedicated «Αποχέτευση» toggle gives finer control).
   'drain-pipe':    'plumbing',

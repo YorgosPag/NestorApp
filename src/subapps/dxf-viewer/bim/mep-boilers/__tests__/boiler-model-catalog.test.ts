@@ -156,6 +156,17 @@ describe('applyBoilerModelToParams', () => {
     expect(next.condensing).toBe(true);
   });
 
+  it('writes minThermalOutputW for a modulating preset (gas condensing 24 → 6000)', () => {
+    const next = applyBoilerModelToParams(BASE_PARAMS, model!);
+    expect(next.minThermalOutputW).toBe(6000);
+  });
+
+  it('clears minThermalOutputW for an on/off preset (oil floor → undefined)', () => {
+    const oil = resolveBoilerModel('oil-floor-30');
+    const next = applyBoilerModelToParams(BASE_PARAMS, oil!);
+    expect(next.minThermalOutputW).toBeUndefined();
+  });
+
   it('is pure — does not mutate the original params', () => {
     const before = { ...BASE_PARAMS };
     applyBoilerModelToParams(BASE_PARAMS, model!);
@@ -203,6 +214,15 @@ describe('clearBoilerModel', () => {
   it('sets condensing to undefined (a Type-Catalog property)', () => {
     const cleared = clearBoilerModel(withModel);
     expect(cleared.condensing).toBeUndefined();
+  });
+
+  it('sets minThermalOutputW to undefined (a Type-Catalog property)', () => {
+    const withModulating = applyBoilerModelToParams(
+      BASE_PARAMS,
+      resolveBoilerModel('gas-condensing-24')!,
+    );
+    expect(withModulating.minThermalOutputW).toBe(6000);
+    expect(clearBoilerModel(withModulating).minThermalOutputW).toBeUndefined();
   });
 
   it('preserves all other params (width, thermalOutputW, position, etc.)', () => {

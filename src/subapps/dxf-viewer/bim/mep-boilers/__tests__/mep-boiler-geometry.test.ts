@@ -14,6 +14,10 @@ import {
   validateMepBoilerParams,
 } from '../mep-boiler-geometry';
 import type { MepBoilerParams } from '../../types/mep-boiler-types';
+import {
+  defaultBoilerFlueDiameterMm,
+  defaultBoilerFuelDiameterMm,
+} from '../../types/mep-boiler-types';
 
 function params(overrides: Partial<MepBoilerParams> = {}): MepBoilerParams {
   return {
@@ -226,11 +230,19 @@ describe('buildBoilerConnectors', () => {
     expect(buildBoilerConnectors(params()).map((c) => c.connectorId)).not.toContain('boiler-flue');
   });
 
-  it('flue diameter defaults to DN100, overridden by flueDiameterMm', () => {
+  it('flue diameter defaults to the gas baseline DN100, overridden by flueDiameterMm', () => {
     const def = buildBoilerConnectors(params({ fuelType: 'gas' }));
     expect(def.find((c) => c.connectorId === 'boiler-flue')!.duct?.diameterMm).toBe(100);
-    const overridden = buildBoilerConnectors(params({ fuelType: 'gas', flueDiameterMm: 130 }));
-    expect(overridden.find((c) => c.connectorId === 'boiler-flue')!.duct?.diameterMm).toBe(130);
+    const overridden = buildBoilerConnectors(params({ fuelType: 'gas', flueDiameterMm: 150 }));
+    expect(overridden.find((c) => c.connectorId === 'boiler-flue')!.duct?.diameterMm).toBe(150);
+  });
+
+  it('oil boiler flue defaults to the larger DN130 (type-driven per fuel)', () => {
+    const def = buildBoilerConnectors(params({ fuelType: 'oil' }));
+    expect(def.find((c) => c.connectorId === 'boiler-flue')!.duct?.diameterMm).toBe(130);
+    // explicit override still wins over the per-fuel default.
+    const overridden = buildBoilerConnectors(params({ fuelType: 'oil', flueDiameterMm: 100 }));
+    expect(overridden.find((c) => c.connectorId === 'boiler-flue')!.duct?.diameterMm).toBe(100);
   });
 
   it('coexists with a combi + recirc gas boiler — 7 distinct connectors', () => {
@@ -277,11 +289,29 @@ describe('buildBoilerConnectors', () => {
     expect(buildBoilerConnectors(params()).map((c) => c.connectorId)).not.toContain('boiler-fuel');
   });
 
-  it('fuel diameter defaults to DN20, overridden by fuelConnectorDiameterMm', () => {
+  it('fuel diameter defaults to the gas baseline DN20, overridden by fuelConnectorDiameterMm', () => {
     const def = buildBoilerConnectors(params({ fuelType: 'gas' }));
     expect(def.find((c) => c.connectorId === 'boiler-fuel')!.fuel?.diameterMm).toBe(20);
     const overridden = buildBoilerConnectors(params({ fuelType: 'gas', fuelConnectorDiameterMm: 25 }));
     expect(overridden.find((c) => c.connectorId === 'boiler-fuel')!.fuel?.diameterMm).toBe(25);
+  });
+
+  it('oil boiler fuel inlet defaults to the narrower DN15 (type-driven per fuel)', () => {
+    const def = buildBoilerConnectors(params({ fuelType: 'oil' }));
+    expect(def.find((c) => c.connectorId === 'boiler-fuel')!.fuel?.diameterMm).toBe(15);
+    // explicit override still wins over the per-fuel default.
+    const overridden = buildBoilerConnectors(params({ fuelType: 'oil', fuelConnectorDiameterMm: 20 }));
+    expect(overridden.find((c) => c.connectorId === 'boiler-fuel')!.fuel?.diameterMm).toBe(20);
+  });
+
+  it('per-fuel diameter resolvers (SSoT) map fuelType → type-driven default', () => {
+    expect(defaultBoilerFlueDiameterMm('gas')).toBe(100);
+    expect(defaultBoilerFlueDiameterMm('oil')).toBe(130);
+    expect(defaultBoilerFuelDiameterMm('gas')).toBe(20);
+    expect(defaultBoilerFuelDiameterMm('oil')).toBe(15);
+    // non-oil combustion / undefined → the gas baseline (resolvers only reached under the gate).
+    expect(defaultBoilerFlueDiameterMm(undefined)).toBe(100);
+    expect(defaultBoilerFuelDiameterMm(undefined)).toBe(20);
   });
 
   it('fuel inlet is independent of the combi/DHW gate (plain gas boiler still has it)', () => {

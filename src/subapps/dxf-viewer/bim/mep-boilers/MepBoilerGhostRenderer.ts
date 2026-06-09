@@ -26,6 +26,9 @@ const GHOST_LINE_WIDTH = 2;
 /** Thinner weight for the divider/flame glyph — mirrors the placed renderer's THIN. */
 const GHOST_GLYPH_LINE_WIDTH = 1.25;
 const ANCHOR_MARKER_SIZE_PX = 5;
+/** Dashed service-clearance envelope (Revit «Clearances») — mirror of the placed renderer. */
+const CLEARANCE_DASH: readonly number[] = [6, 4];
+const CLEARANCE_ALPHA = 0.5;
 
 export interface MepBoilerGhostRenderInput {
   /** Footprint vertices in world/scene units (from `getGhostFootprint`). */
@@ -88,6 +91,14 @@ export class MepBoilerGhostRenderer {
     for (const stroke of symbol.fuelStrokes) this.traceStroke(stroke, transform, viewport);
     ctx.lineWidth = GHOST_GLYPH_LINE_WIDTH;
     for (const stroke of symbol.glyphStrokes) this.traceStroke(stroke, transform, viewport);
+    // Service-clearance envelope (Revit «Clearances») — dashed keep-clear zone (WYSIWYG).
+    if (symbol.clearanceOutline && symbol.clearanceOutline.length >= 3) {
+      ctx.setLineDash(CLEARANCE_DASH as number[]);
+      ctx.globalAlpha = CLEARANCE_ALPHA;
+      ctx.strokeStyle = BOILER_STROKE;
+      this.tracePath(symbol.clearanceOutline, transform, viewport);
+      ctx.stroke();
+    }
     ctx.restore();
   }
 

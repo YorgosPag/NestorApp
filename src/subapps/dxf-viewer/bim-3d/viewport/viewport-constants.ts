@@ -42,8 +42,19 @@ export const ORTHO_CAMERA_UP: Readonly<Record<string, readonly [number, number, 
   right:  [0, 1,  0],
 } as const;
 
-export const PERSP_MIN_DISTANCE = 1.0;
+// ADR-363 Φ1G.5 — lowered from 1.0 m so the surface-anchored zoom clamp (ZOOM_SURFACE_MARGIN),
+// not this orbit-target floor, governs how close you may hug a wall face for detail inspection.
+export const PERSP_MIN_DISTANCE = 0.12;
 export const PERSP_MAX_DISTANCE = 500;
+
+// ADR-363 Φ1G.5 — Revit-grade surface-anchored wheel zoom (viewport-zoom-surface.ts).
+/** Closest the camera may approach the surface under the cursor (metres ≈ 120 mm). Prevents
+ *  punch-through: you can hug a face but never enter the solid. Above CAMERA_NEAR (0.1). */
+export const ZOOM_SURFACE_MARGIN = 0.12;
+/** Geometric base per wheel step (mirrors OrbitControls' 0.95 feel). */
+export const ZOOM_WHEEL_BASE = 0.95;
+/** Wheel-delta → exponent sensitivity (tuned so one mouse notch ≈ 5–8 % distance change). */
+export const ZOOM_WHEEL_SENSITIVITY = 0.01;
 export const ORTHO_MIN_ZOOM = 0.01;
 export const ORTHO_MAX_ZOOM = 100;
 

@@ -88,6 +88,86 @@ describe('buildMepBoilerSymbol — per-stub System Classification (Revit color-c
     expect(condensate.classification).toBe('sanitary-drainage');
   });
 
+  it('draws the condensate drain as a multi-stroke P-trap (σιφώνι), not a plain stub', () => {
+    // The condensate connector is a sanitary-drainage pipe → it gets a distinct trap glyph
+    // (inlet stub + «∪» water-seal), unlike supply/return which stay single plain stubs.
+    const drain = symbol({ fuelType: 'electric', condensing: true }).strokes.filter(
+      (s) => s.classification === 'sanitary-drainage',
+    );
+    expect(drain.length).toBeGreaterThanOrEqual(2); // stub + U-bend
+    for (const s of drain) expect(s.classification).toBe('sanitary-drainage');
+    // The U-bend is a multi-point polyline (not a 2-point stub) → reads as a trap.
+    expect(drain.some((s) => s.line.length > 2)).toBe(true);
+  });
+
+  it('omits the condensate trap entirely on a non-condensing boiler', () => {
+    const drain = symbol({ fuelType: 'gas', condensing: false }).strokes.filter(
+      (s) => s.classification === 'sanitary-drainage',
+    );
+    expect(drain).toHaveLength(0);
+  });
+
+  it('keeps supply/return as single plain 2-point stubs (regression-free)', () => {
+    const [supply, ret] = symbol({ fuelType: 'electric', condensing: true }).strokes;
+    expect(supply.line).toHaveLength(2);
+    expect(ret.line).toHaveLength(2);
+  });
+
+  it('builds the condensate trap rotation-aware (90°)', () => {
+    const drain = symbol({ fuelType: 'electric', condensing: true, rotation: 90 }).strokes.filter(
+      (s) => s.classification === 'sanitary-drainage',
+    );
+    expect(drain.length).toBeGreaterThanOrEqual(2);
+    for (const s of drain) {
+      for (const p of s.line) {
+        expect(Number.isFinite(p.x)).toBe(true);
+        expect(Number.isFinite(p.y)).toBe(true);
+      }
+    }
+  });
+
+  it('appends a neutraliser cartridge box on the condensate drain when fitted', () => {
+    // stub + U-bend trap + neutraliser rect = 3 sanitary-drainage strokes (vs 2 without).
+    const drain = symbol({
+      fuelType: 'electric',
+      condensing: true,
+      condensateNeutraliser: true,
+    }).strokes.filter((s) => s.classification === 'sanitary-drainage');
+    expect(drain).toHaveLength(3);
+    for (const s of drain) expect(s.classification).toBe('sanitary-drainage');
+    // The cartridge is a closed rectangle (5 points, first === last).
+    const rect = drain.find((s) => s.line.length === 5 && s.line[0].x === s.line[4].x && s.line[0].y === s.line[4].y);
+    expect(rect).toBeDefined();
+  });
+
+  it('omits the neutraliser when the toggle is off (only stub + trap)', () => {
+    const drain = symbol({ fuelType: 'electric', condensing: true }).strokes.filter(
+      (s) => s.classification === 'sanitary-drainage',
+    );
+    expect(drain).toHaveLength(2); // stub + U-bend only
+  });
+
+  it('omits the neutraliser on a non-condensing boiler even if the flag is set', () => {
+    const drain = symbol({ fuelType: 'gas', condensateNeutraliser: true }).strokes.filter(
+      (s) => s.classification === 'sanitary-drainage',
+    );
+    expect(drain).toHaveLength(0); // no condensate connector → no drain strokes at all
+  });
+
+  it('builds the neutraliser cartridge rotation-aware (90°, finite)', () => {
+    const drain = symbol({
+      fuelType: 'electric',
+      condensing: true,
+      condensateNeutraliser: true,
+      rotation: 90,
+    }).strokes.filter((s) => s.classification === 'sanitary-drainage');
+    expect(drain).toHaveLength(3);
+    for (const s of drain) for (const p of s.line) {
+      expect(Number.isFinite(p.x)).toBe(true);
+      expect(Number.isFinite(p.y)).toBe(true);
+    }
+  });
+
   it('tags every flue vent stroke exhaust (duct classification)', () => {
     const vent = symbol({ fuelType: 'gas' }).ventStrokes;
     expect(vent.length).toBeGreaterThan(0);
@@ -230,5 +310,148 @@ describe('buildMepBoilerSymbol — rotation', () => {
     expect(stub[0].y).toBeCloseTo(0, 6);
     expect(stub[1].x).toBeCloseTo(-175 - STUB_LEN, 6);
     expect(stub[1].y).toBeCloseTo(0, 6);
+  });
+});
+
+describe('buildMepBoilerSymbol — service-clearance envelope (Revit «Clearances»)', () => {
+  // footprint half-extents: half-width 225 (x), half-length 175 (y). Default clearance 500.
+  const HL = 175;
+  it('omits the clearance outline by default (toggle off)', () => {
+    expect(symbol().clearanceOutline).toBeUndefined();
+  });
+
+  it('emits a closed 4-vertex envelope when showServiceClearance is set', () => {
+    const outline = symbol({ showServiceClearance: true }).clearanceOutline;
+    expect(outline).toBeDefined();
+    expect(outline).toHaveLength(4);
+  });
+
+  it('offsets the footprint uniformly outward by the default 500mm on every side', () => {
+    const o = symbol({ showServiceClearance: true }).clearanceOutline!;
+    // corners: (−725,−675) (725,−675) (725,675) (−725,675)
+    expect(o[0].x).toBeCloseTo(-(HW + 500), 6);
+    expect(o[0].y).toBeCloseTo(-(HL + 500), 6);
+    expect(o[2].x).toBeCloseTo(HW + 500, 6);
+    expect(o[2].y).toBeCloseTo(HL + 500, 6);
+  });
+
+  it('every clearance corner lies farther from the centroid than the matching footprint corner', () => {
+    const sym = symbol({ showServiceClearance: true });
+    const foot = sym.outline;
+    const clr = sym.clearanceOutline!;
+    for (let i = 0; i < 4; i++) {
+      expect(Math.hypot(clr[i].x, clr[i].y)).toBeGreaterThan(Math.hypot(foot[i].x, foot[i].y));
+    }
+  });
+
+  it('honours an explicit serviceClearanceMm override', () => {
+    const o = symbol({ showServiceClearance: true, serviceClearanceMm: 300 }).clearanceOutline!;
+    expect(o[2].x).toBeCloseTo(HW + 300, 6);
+    expect(o[2].y).toBeCloseTo(HL + 300, 6);
+  });
+
+  it('builds the clearance envelope rotation-aware (90°, finite)', () => {
+    const o = symbol({ showServiceClearance: true, rotation: 90 }).clearanceOutline!;
+    expect(o).toHaveLength(4);
+    for (const p of o) {
+      expect(Number.isFinite(p.x)).toBe(true);
+      expect(Number.isFinite(p.y)).toBe(true);
+    }
+  });
+});
+
+describe('buildMepBoilerSymbol — safety relief valve glyph (Revit «Safety Relief Valve»)', () => {
+  it('draws no relief-valve glyph by default (exactly 4 base glyph strokes: divider + flame)', () => {
+    expect(symbol().glyphStrokes).toHaveLength(4);
+  });
+
+  it('appends the 5-stroke relief-valve glyph when safetyReliefValve is set (4 base + 5 = 9)', () => {
+    expect(symbol({ safetyReliefValve: true }).glyphStrokes).toHaveLength(9);
+  });
+
+  it('keeps every glyph stroke a finite-point polyline (rotation 90°)', () => {
+    const sym = symbol({ safetyReliefValve: true, rotation: 90 });
+    expect(sym.glyphStrokes).toHaveLength(9);
+    for (const stroke of sym.glyphStrokes) {
+      expect(stroke.length).toBeGreaterThanOrEqual(2);
+      for (const p of stroke) {
+        expect(Number.isFinite(p.x)).toBe(true);
+        expect(Number.isFinite(p.y)).toBe(true);
+      }
+    }
+  });
+
+  it('does not touch the connector stubs / clearance (visual-only body glyph)', () => {
+    const sym = symbol({ safetyReliefValve: true });
+    expect(sym.strokes).toHaveLength(2); // plain supply + return, unchanged
+    expect(sym.clearanceOutline).toBeUndefined();
+  });
+});
+
+describe('buildMepBoilerSymbol — expansion vessel glyph (Revit accessory, IFC IfcTank EXPANSION)', () => {
+  it('draws no vessel glyph by default (exactly 4 base glyph strokes: divider + flame)', () => {
+    expect(symbol().glyphStrokes).toHaveLength(4);
+  });
+
+  it('appends the 3-stroke vessel glyph when expansionVessel is set (4 base + 3 = 7)', () => {
+    expect(symbol({ expansionVessel: true }).glyphStrokes).toHaveLength(7);
+  });
+
+  it('stacks with the relief valve (4 base + 5 valve + 3 vessel = 12)', () => {
+    expect(
+      symbol({ safetyReliefValve: true, expansionVessel: true }).glyphStrokes,
+    ).toHaveLength(12);
+  });
+
+  it('keeps every glyph stroke a finite-point polyline (rotation 90°)', () => {
+    const sym = symbol({ expansionVessel: true, rotation: 90 });
+    expect(sym.glyphStrokes).toHaveLength(7);
+    for (const stroke of sym.glyphStrokes) {
+      expect(stroke.length).toBeGreaterThanOrEqual(2);
+      for (const p of stroke) {
+        expect(Number.isFinite(p.x)).toBe(true);
+        expect(Number.isFinite(p.y)).toBe(true);
+      }
+    }
+  });
+
+  it('does not touch the connector stubs / clearance (visual-only body glyph)', () => {
+    const sym = symbol({ expansionVessel: true });
+    expect(sym.strokes).toHaveLength(2); // plain supply + return, unchanged
+    expect(sym.clearanceOutline).toBeUndefined();
+  });
+});
+
+describe('buildMepBoilerSymbol — pressure gauge glyph (Revit accessory, IFC IfcSensor PRESSURE)', () => {
+  it('draws no gauge glyph by default (exactly 4 base glyph strokes: divider + flame)', () => {
+    expect(symbol().glyphStrokes).toHaveLength(4);
+  });
+
+  it('appends the 3-stroke gauge glyph when pressureGauge is set (4 base + 3 = 7)', () => {
+    expect(symbol({ pressureGauge: true }).glyphStrokes).toHaveLength(7);
+  });
+
+  it('stacks with the full sealed-system trio (4 base + 5 valve + 3 vessel + 3 gauge = 15)', () => {
+    expect(
+      symbol({ safetyReliefValve: true, expansionVessel: true, pressureGauge: true }).glyphStrokes,
+    ).toHaveLength(15);
+  });
+
+  it('keeps every glyph stroke a finite-point polyline (rotation 90°)', () => {
+    const sym = symbol({ pressureGauge: true, rotation: 90 });
+    expect(sym.glyphStrokes).toHaveLength(7);
+    for (const stroke of sym.glyphStrokes) {
+      expect(stroke.length).toBeGreaterThanOrEqual(2);
+      for (const p of stroke) {
+        expect(Number.isFinite(p.x)).toBe(true);
+        expect(Number.isFinite(p.y)).toBe(true);
+      }
+    }
+  });
+
+  it('does not touch the connector stubs / clearance (visual-only body glyph)', () => {
+    const sym = symbol({ pressureGauge: true });
+    expect(sym.strokes).toHaveLength(2); // plain supply + return, unchanged
+    expect(sym.clearanceOutline).toBeUndefined();
   });
 });
