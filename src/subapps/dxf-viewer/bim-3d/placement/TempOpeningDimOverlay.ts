@@ -4,7 +4,7 @@
  * TempOpeningDimOverlay — Revit-style temporary/listening dimensions for a hosted
  * opening as it is dragged (ADR-363 Φ1G.5 Slice 2f).
  *
- * Scene-side leaf object (the OpeningMoveGhost / BeamFromWallGhost pattern): added
+ * Scene-side leaf object (the BeamFromWallGhost / ColumnPlacementGhost pattern): added
  * to the live scene in the constructor, follows the dragged opening via `update`,
  * hidden when the drag pauses/misses, removed on `dispose`. Pure Three.js — no React,
  * no store subscription (the `useBim3DOpeningMove` hook drives it).

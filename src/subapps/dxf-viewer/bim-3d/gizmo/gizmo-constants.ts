@@ -97,8 +97,25 @@ export const SNAP_MARKER_COLOR = 0x00e5ff;
 export const SNAP_MARKER_RADIUS = 0.06;
 /** Screen-constant multiplier: markerScale = cameraDistance * tan(fov/2) * this. */
 export const SNAP_MARKER_SCREEN_SCALE = 0.13;
+/**
+ * ADR-363 Φ1G.5 Slice 2i — smaller screen scale for the snap marker during a collapsed
+ * planar MOVE (wall/column/slab drag). The full 0.13 cube read as a giant cyan box
+ * (Giorgio); a small square (~⅓) is the Revit "face snap" glyph. Replaces the old
+ * full suppression (`suppressSnapMarker`) so the user SEES where the face landed.
+ */
+export const SNAP_MARKER_MOVE_SCREEN_SCALE = 0.045;
 /** Render order — above geometry, below the gizmo handles so it never hides them. */
 export const SNAP_MARKER_RENDER_ORDER = 1999;
+
+// -- Alignment line (ADR-363 Φ1G.5 Slice 2i — Revit dashed face-alignment line) ---
+/** Dashed alignment line colour — Revit reference blue (distinct from the cyan snap glyph). */
+export const ALIGNMENT_LINE_COLOR = 0x4a90d9;
+/** Dash size in world metres (screen feel is fine at architectural scale; no black outline). */
+export const ALIGNMENT_LINE_DASH = 0.12;
+/** Gap size in world metres between dashes. */
+export const ALIGNMENT_LINE_GAP = 0.08;
+/** Render order — above geometry, below the snap glyph + gizmo handles. */
+export const ALIGNMENT_LINE_RENDER_ORDER = 1998;
 
 // -- Endpoint shape handle (ADR-408 Φ-D — drag ONE end of a linear MEP segment) -
 /**

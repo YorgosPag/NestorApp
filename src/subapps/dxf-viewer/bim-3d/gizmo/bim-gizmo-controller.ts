@@ -73,6 +73,27 @@ export class BimGizmoController {
     return this.bridge.getActiveConstraint();
   }
 
+  /**
+   * ADR-363 Φ1G.5 Slice 2i — world endpoints of the linear reference (wall face line)
+   * the active snap landed on this frame, or null. Drives the dashed alignment line.
+   */
+  getActiveAlignmentWorld(): { a: THREE.Vector3; b: THREE.Vector3 } | null {
+    return this.bridge.getActiveAlignmentWorld();
+  }
+
+  /**
+   * ADR-363 Φ1G.5 Slice 2i — the active snap candidate's description/type (for the
+   * snap-type label), or null. Paired with `getActiveSnapWorld()` for the label position.
+   */
+  getActiveSnapLabel(): { description?: string; type?: string } | null {
+    return this.bridge.getActiveSnapLabel();
+  }
+
+  /** ADR-363 Φ1G.5 Slice 2i — world position of the active snap target (label anchor), or null. */
+  getActiveSnapWorld(): THREE.Vector3 | null {
+    return this.bridge.getActiveSnapWorld();
+  }
+
   /** Hover highlight under the cursor. Returns true when the hovered handle changed. */
   updateHover(camera: THREE.Camera, dom: HTMLElement, x: number, y: number): boolean {
     if (!this.overlay.visible || this.bridge.isDragging()) return false;

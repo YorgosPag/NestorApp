@@ -24,7 +24,7 @@ import type { GizmoHitTestSet } from './gizmo-hit-test';
 import type { GizmoHandleId, GizmoEndpoint, GizmoEndpointMode } from './gizmo-types';
 import {
   GIZMO_COLOR_HOVER, GIZMO_SCREEN_SCALE, GIZMO_RENDER_ORDER,
-  SNAP_MARKER_RADIUS, SNAP_MARKER_SCREEN_SCALE,
+  SNAP_MARKER_RADIUS, SNAP_MARKER_SCREEN_SCALE, SNAP_MARKER_MOVE_SCREEN_SCALE,
   BASE_POINT_MARKER_RADIUS, BASE_POINT_MARKER_SCREEN_SCALE,
 } from './gizmo-constants';
 import {
@@ -137,6 +137,17 @@ export function activeHandlesFor(bimType: string | null): ReadonlySet<GizmoHandl
   return ids;
 }
 
+/**
+ * ADR-363 Φ1G.5 Slice 2h — a PLANAR (non-free-3D) single selection whose move handles
+ * are all in `BASE_HANDLES`. Such a drag can safely collapse the gizmo to the move
+ * arrows (hiding resize/endpoint/tilt clutter, Revit-style) without ever hiding the
+ * handle being dragged. Free-3D MEP types keep their handles (their active handle may
+ * be `axis-y`/`plane-xy`/`plane-yz`, which are NOT in the base).
+ */
+export function isPlanarMoveType(bimType: string | null): boolean {
+  return bimType !== null && !FREE_3D_MOVE_TYPES.has(bimType);
+}
+
 export class BimGizmoOverlay {
   private readonly scene: THREE.Scene;
   private readonly meshSet: GizmoMeshSet;
@@ -168,6 +179,24 @@ export class BimGizmoOverlay {
   private endpointMode: GizmoEndpointMode = 'free-3d';
   /** Cached visual + hitbox of each endpoint handle (repositioned together). */
   private readonly endpointParts: ReadonlyMap<GizmoEndpoint, { visual: THREE.Object3D; hitbox: THREE.Object3D }>;
+  /**
+   * ADR-363 Φ1G.5 Slice 2h — the full handle set configured for the current selection
+   * (set in `setActiveHandles`). `collapseToMoveHandles` temporarily narrows to the move
+   * arrows during a drag; `restoreConfiguredHandles` re-applies this on release.
+   */
+  private configuredHandles: ReadonlySet<GizmoHandleId> = new Set(BASE_HANDLES);
+  /**
+   * ADR-363 Φ1G.5 Slice 2h-fix — hide the cyan snap-marker «cube» while collapsed to
+   * move handles (a planar wall/structural move drag). Giorgio: even shrunk it reads as
+   * a distracting box at the gizmo origin. The έλξη still works (the wall snaps); the
+   * proper Revit feedback (dashed alignment lines, Slice 2i) replaces the glyph. Reset
+   * on release.
+   *
+   * ADR-363 Φ1G.5 Slice 2i — the marker is no longer hidden during a planar move; it is
+   * shown SMALL (Revit face-snap square). `snapMarkerScaleOverride` carries the reduced
+   * screen scale for the collapsed move drag (null = full size).
+   */
+  private snapMarkerScaleOverride: number | null = null;
 
   constructor(scene: THREE.Scene) {
     this.scene = scene;
@@ -223,11 +252,14 @@ export class BimGizmoOverlay {
    */
   showSnapMarker(world: THREE.Vector3, camera: THREE.Camera): void {
     if (this.disposed) return;
+    // ADR-363 Φ1G.5 Slice 2i — during a collapsed planar move the marker is shown SMALL
+    // (Revit face-snap square), not hidden: the user must SEE where the face landed.
+    const screenScale = this.snapMarkerScaleOverride ?? SNAP_MARKER_SCREEN_SCALE;
     this.snapMarker.position.copy(world);
     let s = SNAP_MARKER_RADIUS;
     if (camera instanceof THREE.PerspectiveCamera) {
       const dist = camera.position.distanceTo(world);
-      s = dist * Math.tan(THREE.MathUtils.degToRad(camera.fov) / 2) * SNAP_MARKER_SCREEN_SCALE;
+      s = dist * Math.tan(THREE.MathUtils.degToRad(camera.fov) / 2) * screenScale;
     }
     this.snapMarker.scale.setScalar(Math.max(s, 1e-3));
     this.snapMarker.visible = true;
@@ -262,7 +294,30 @@ export class BimGizmoOverlay {
   setActiveHandles(ids: ReadonlySet<GizmoHandleId>): void {
     if (this.disposed) return;
     if (this.hovered && !ids.has(this.hovered)) this.setHoverHandle(null);
+    this.configuredHandles = ids;
     this.applyActiveHandles(ids);
+  }
+
+  /**
+   * ADR-363 Φ1G.5 Slice 2h — during a PLANAR move/rotate drag show ONLY the move arrows
+   * + plan-rotate ring (Revit): hide the resize/endpoint/tilt shape handles so they do
+   * not clutter or lag while the wall follows the cursor. The active handle is always in
+   * `BASE_HANDLES` for a planar type, so it never disappears. Restore with
+   * `restoreConfiguredHandles` on release.
+   */
+  collapseToMoveHandles(): void {
+    if (this.disposed) return;
+    this.applyActiveHandles(new Set(BASE_HANDLES));
+    // ADR-363 Φ1G.5 Slice 2i — small Revit face-snap glyph for the move drag (was: full hide).
+    this.snapMarkerScaleOverride = SNAP_MARKER_MOVE_SCREEN_SCALE;
+    this.hideSnapMarker(); // clear any stale marker; the next snap re-shows it small.
+  }
+
+  /** ADR-363 Φ1G.5 Slice 2h — re-apply the selection's full handle set after a drag. */
+  restoreConfiguredHandles(): void {
+    if (this.disposed) return;
+    this.snapMarkerScaleOverride = null;
+    this.applyActiveHandles(this.configuredHandles);
   }
 
   /** Move the gizmo to a world-space anchor (entity bbox centre). */

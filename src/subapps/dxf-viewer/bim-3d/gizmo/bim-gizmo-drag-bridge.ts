@@ -91,6 +91,18 @@ export class BimGizmoDragBridge {
   private snapFn: SnapFn | null = null;
   /** World position of the active snap target this frame (for the 3D marker), or null. */
   private activeSnapWorld: THREE.Vector3 | null = null;
+  /**
+   * ADR-363 Φ1G.5 Slice 2i — world endpoints of the linear reference (wall face line)
+   * the active snap projected onto this frame, for the Revit dashed alignment line.
+   * Null when the snap was a discrete point (corner / endpoint) or nothing snapped.
+   */
+  private activeAlignmentWorld: { a: THREE.Vector3; b: THREE.Vector3 } | null = null;
+  /**
+   * ADR-363 Φ1G.5 Slice 2i — the active snap candidate's `description`/`type` this frame
+   * (e.g. 'bim-wall-face' / 'bim_wall_face'), for the Revit snap-type label. Null when
+   * nothing snapped.
+   */
+  private activeSnapLabel: { description?: string; type?: string } | null = null;
 
   isDragging(): boolean {
     return this.constraint !== null;
@@ -117,6 +129,24 @@ export class BimGizmoDragBridge {
   /** World position of the snap target hit this frame, or null when nothing snapped. */
   getActiveSnapWorld(): THREE.Vector3 | null {
     return this.activeSnapWorld ? this.activeSnapWorld.clone() : null;
+  }
+
+  /**
+   * ADR-363 Φ1G.5 Slice 2i — world endpoints of the linear reference (wall face line)
+   * the active snap landed on this frame, or null. Drives the dashed alignment line.
+   */
+  getActiveAlignmentWorld(): { a: THREE.Vector3; b: THREE.Vector3 } | null {
+    return this.activeAlignmentWorld
+      ? { a: this.activeAlignmentWorld.a.clone(), b: this.activeAlignmentWorld.b.clone() }
+      : null;
+  }
+
+  /**
+   * ADR-363 Φ1G.5 Slice 2i — the active snap candidate's description/type this frame (for
+   * the snap-type label), or null when nothing snapped.
+   */
+  getActiveSnapLabel(): { description?: string; type?: string } | null {
+    return this.activeSnapLabel ? { ...this.activeSnapLabel } : null;
   }
 
   /** World-space translation since drag start (live gizmo follow for move; zero for rotate). */
@@ -156,6 +186,8 @@ export class BimGizmoDragBridge {
     this.liveTranslation.set(0, 0, 0);
     this.rawTranslation.set(0, 0, 0);
     this.activeSnapWorld = null;
+    this.activeAlignmentWorld = null;
+    this.activeSnapLabel = null;
     this.rotationRad = 0;
 
     if (constraint.kind === 'rotate') {
@@ -196,6 +228,8 @@ export class BimGizmoDragBridge {
    */
   private applySnap(): void {
     this.activeSnapWorld = null;
+    this.activeAlignmentWorld = null;
+    this.activeSnapLabel = null;
     if (!this.snapFn || !this.constraint) return;
     if (this.constraint.kind === 'rotate') return;
     if (this.constraint.kind === 'resize' && this.constraint.axis === 'y') return;
@@ -210,6 +244,17 @@ export class BimGizmoDragBridge {
     const corrected = dxfPlanToWorld(res.snappedMm.x, res.snappedMm.y, endPlan.z);
     this.liveTranslation.copy(corrected).sub(this.anchorWorld);
     this.activeSnapWorld = dxfPlanToWorld(res.markerMm.x, res.markerMm.y, endPlan.z);
+    if (res.snapDescription || res.snapType) {
+      this.activeSnapLabel = { description: res.snapDescription, type: res.snapType };
+    }
+    // ADR-363 Φ1G.5 Slice 2i — the dashed alignment line runs along the reference face
+    // at the element's elevation (endPlan.z), mirroring the marker's z.
+    if (res.alignmentRef) {
+      this.activeAlignmentWorld = {
+        a: dxfPlanToWorld(res.alignmentRef.a.x, res.alignmentRef.a.y, endPlan.z),
+        b: dxfPlanToWorld(res.alignmentRef.b.x, res.alignmentRef.b.y, endPlan.z),
+      };
+    }
   }
 
   /** Command-ready outcome to dispatch on pointer-up. */
@@ -273,12 +318,16 @@ export class BimGizmoDragBridge {
     this.constraint = null;
     this.snapFn = null;
     this.activeSnapWorld = null;
+    this.activeAlignmentWorld = null;
+    this.activeSnapLabel = null;
   }
 
   cancel(): void {
     this.constraint = null;
     this.snapFn = null;
     this.activeSnapWorld = null;
+    this.activeAlignmentWorld = null;
+    this.activeSnapLabel = null;
     this.liveTranslation.set(0, 0, 0);
     this.rawTranslation.set(0, 0, 0);
     this.rotationRad = 0;

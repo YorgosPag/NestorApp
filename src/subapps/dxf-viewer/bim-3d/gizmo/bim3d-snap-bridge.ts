@@ -25,12 +25,31 @@
 
 import type { Point2D } from '../../rendering/types/Types';
 
+/** A linear reference (wall face / axis / grid line) the snap projected onto, mm. */
+export interface SnapAlignmentRef {
+  readonly a: Point2D;
+  readonly b: Point2D;
+}
+
 /** Snap-corrected primary control point + the snap target (for the marker). */
 export interface SnapResolution {
   /** Corrected primary control point (gizmo anchor for move / handle for resize), mm. */
   readonly snappedMm: Point2D;
   /** The snap target in the scene that was hit, mm — drawn as the 3D snap marker. */
   readonly markerMm: Point2D;
+  /**
+   * ADR-363 Φ1G.5 Slice 2i — the linear reference the winning snap projected onto
+   * (a wall face line, mm), for the Revit dashed alignment line. Absent for discrete
+   * point snaps (endpoint / corner). Additive / back-compat.
+   */
+  readonly alignmentRef?: SnapAlignmentRef;
+  /**
+   * ADR-363 Φ1G.5 Slice 2i — the winning snap candidate's raw `description` (e.g.
+   * 'bim-wall-face') + `type`, surfaced so the gizmo can show the Revit snap-type label
+   * ("Παρειά τοίχου" / "Γωνία τοίχου"). Both optional / back-compat.
+   */
+  readonly snapDescription?: string;
+  readonly snapType?: string;
 }
 
 /**
@@ -45,9 +64,32 @@ export interface SnapQueryEngine {
   findSnapPoint(
     cursorPoint: Point2D,
     excludeEntityId?: string,
-  ): { found: boolean; snapPoint: { point: Point2D } | null };
+  ): {
+    found: boolean;
+    // ADR-363 Φ1G.5 Slice 2i — `referenceSegment` (the linear reference the snap hit) +
+    // `description`/`type` (for the snap-type label) are optional + ignored by point snaps,
+    // so existing fakes/tests stay valid.
+    snapPoint: {
+      point: Point2D;
+      referenceSegment?: { start: Point2D; end: Point2D };
+      description?: string;
+      type?: string;
+      // ADR-363 Φ1G.5 Slice 2j — the candidate's snap priority (lower = stronger; corners −2,
+      // wall-face 9.5, grid 12/13). Used to rank multi-grab probes so a high-priority face/corner
+      // beats the omnipresent low-priority grid even when grid is geometrically nearer. Optional
+      // → legacy fakes/tests (no priority) fall back to distance-only ranking.
+      priority?: number;
+    } | null;
+  };
   getSettings(): { enabled: boolean };
 }
+
+/**
+ * ADR-363 Φ1G.5 Slice 2j — priority used when a snap candidate omits one (legacy fakes /
+ * tests). A neutral constant so every candidate ranks equal → ranking degrades to pure
+ * distance, preserving the pre-2j behaviour for callers that don't surface priority.
+ */
+const DEFAULT_SNAP_PRIORITY = 0;
 
 const sqDist = (a: Point2D, b: Point2D): number => {
   const dx = a.x - b.x;
@@ -74,18 +116,40 @@ export function makeMoveSnapFn(
   const offsets = charOffsetsMm.length > 0 ? charOffsetsMm : [{ x: 0, y: 0 }];
   return (anchorMm: Point2D): SnapResolution | null => {
     if (!engine.getSettings().enabled) return null;
-    let best: { offset: Point2D; target: Point2D; d: number } | null = null;
+    let best: {
+      offset: Point2D; target: Point2D; d: number; prio: number;
+      ref?: SnapAlignmentRef; description?: string; type?: string;
+    } | null = null;
     for (const offset of offsets) {
       const probe = { x: anchorMm.x + offset.x, y: anchorMm.y + offset.y };
       const r = engine.findSnapPoint(probe, excludeEntityId);
       if (!r.found || !r.snapPoint) continue;
       const d = sqDist(probe, r.snapPoint.point);
-      if (!best || d < best.d) best = { offset, target: r.snapPoint.point, d };
+      // ADR-363 Φ1G.5 Slice 2j — rank by PRIORITY first, then distance. The grid snap is
+      // omnipresent so there is always a grid point ~0mm from *some* probe; ranking by raw
+      // distance let it shadow every wall face/corner (Giorgio: the label only ever showed
+      // "Πλέγμα"). Lower priority wins (corners −2 < wall-face 9.5 < grid 12/13), so a
+      // geometry snap beats grid whenever one is in range; grid stays a fallback.
+      const prio = r.snapPoint.priority ?? DEFAULT_SNAP_PRIORITY;
+      // Slice 2i — surface the winning probe's linear reference (face line) for the dashed
+      // alignment line, + its description/type for the snap-type label.
+      const seg = r.snapPoint.referenceSegment;
+      if (!best || prio < best.prio || (prio === best.prio && d < best.d)) {
+        best = {
+          offset, target: r.snapPoint.point, d, prio,
+          ref: seg ? { a: seg.start, b: seg.end } : undefined,
+          description: r.snapPoint.description,
+          type: r.snapPoint.type,
+        };
+      }
     }
     if (!best) return null;
     return {
       snappedMm: { x: best.target.x - best.offset.x, y: best.target.y - best.offset.y },
       markerMm: best.target,
+      ...(best.ref ? { alignmentRef: best.ref } : {}),
+      ...(best.description ? { snapDescription: best.description } : {}),
+      ...(best.type ? { snapType: best.type } : {}),
     };
   };
 }
