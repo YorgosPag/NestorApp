@@ -28,6 +28,8 @@ import { computeWallTypeUValue } from '../wall-assembly-thermal';
 import { resolveOpeningUValue } from '../glazing-u-catalog';
 import { isWindowKind } from '../../types/opening-types';
 import { sceneUnitsToMeters, type SceneUnits } from '../../../utils/scene-units';
+import type { Point3D } from '../../types/bim-base';
+import { nearestEdgeOutwardAzimuthDeg } from '../../geometry/shared/polygon-utils';
 import {
   DEFAULT_FLOOR_U_WPER_M2K,
   DEFAULT_ROOF_U_WPER_M2K,
@@ -98,11 +100,12 @@ function openingsOnSpaceWall(
   });
 }
 
-/** Boundaries ενός τοίχου: το παράθυρο/πόρτα + ο καθαρός τοίχος. */
+/** Boundaries ενός τοίχου: το παράθυρο/πόρτα + ο καθαρός τοίχος. `polygon` = το
+ * footprint του χώρου (Point3D, CCW) — πηγή του προσανατολισμού των κουφωμάτων. */
 function resolveWallBoundaries(
   wall: WallEntity,
   matchedLenScene: number,
-  footprint: readonly Vec2[],
+  polygon: readonly Point3D[],
   heightM: number,
   sceneToM: number,
   ctx: SpaceBoundaryContext,
@@ -115,17 +118,22 @@ function resolveWallBoundaries(
   let openingsAreaM2 = 0;
   if (isExterior) {
     const resolveEff = ctx.resolveOpeningEffective;
-    for (const op of openingsOnSpaceWall(wall.id, footprint, ctx)) {
+    for (const op of openingsOnSpaceWall(wall.id, polygon, ctx)) {
       const area = op.geometry?.area ?? 0;
       if (area <= 0) continue;
       openingsAreaM2 += area;
       const params = resolveEff ? resolveEff(op) : op.params;
+      const pos = op.geometry?.position;
+      const azimuthDeg = pos
+        ? nearestEdgeOutwardAzimuthDeg(polygon, pos) ?? undefined
+        : undefined;
       out.push({
         kind: isWindowKind(params.kind) ? 'window' : 'door',
         condition: 'external-air',
         uValue: resolveOpeningUValue(params),
         area,
         refId: op.id,
+        azimuthDeg,
       });
     }
   }
@@ -183,7 +191,7 @@ export function resolveSpaceBoundaries(
     const lenScene = matched.get(wall.id);
     if (lenScene === undefined || lenScene <= 0) continue;
     boundaries.push(
-      ...resolveWallBoundaries(wall, lenScene, footprint, heightM, sceneToM, ctx),
+      ...resolveWallBoundaries(wall, lenScene, verts, heightM, sceneToM, ctx),
     );
   }
 

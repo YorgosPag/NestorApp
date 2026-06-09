@@ -74,12 +74,100 @@ export const SEASONAL_SOLAR_IRRADIATION_KWHM2: Record<ClimateZone, number> = {
   D: 200,
 };
 
+/**
+ * Προσανατολισμός κατακόρυφης επιφάνειας — 8 σημεία πυξίδας (Revit Energy / ΤΟΤΕΕ
+ * 20701-1 parity). 0°=Βορράς, **clockwise**. ADR-422 L7.2.
+ */
+export type SolarOrientation = 'N' | 'NE' | 'E' | 'SE' | 'S' | 'SW' | 'W' | 'NW';
+
+/** Οι 8 προσανατολισμοί σε σειρά πυξίδας (Β στις 0°, clockwise) — index 0..7. */
+export const SOLAR_ORIENTATIONS: readonly SolarOrientation[] = [
+  'N',
+  'NE',
+  'E',
+  'SE',
+  'S',
+  'SW',
+  'W',
+  'NW',
+];
+
+/**
+ * Εποχιακή ηλιακή ακτινοβολία **κατακόρυφης** επιφάνειας ανά κλιματική ζώνη **και
+ * προσανατολισμό** (kWh/m²·περίοδο θέρμανσης) — ΤΟΤΕΕ 20701-1 / EN ISO 13790
+ * §11.3.2, documented defaults. Φυσική περιόδου θέρμανσης (χαμηλός χειμερινός
+ * ήλιος → κάθετη πρόσπτωση στη νότια κατακόρυφη):
+ *   - **Ν μέγιστο**, **Β ελάχιστο** (μόνο διάχυτη), Α/Δ ενδιάμεσα, ΝΑ/ΝΔ κοντά στο Ν.
+ *
+ * **Βαθμονόμηση:** ο μέσος όρος των 8 προσανατολισμών κάθε ζώνης ≈ η orientation-
+ * agnostic `SEASONAL_SOLAR_IRRADIATION_KWHM2[zone]` του L7.1 (σχετικοί συντελεστές
+ * Β/ΒΑ/Α/ΝΑ/Ν 0.40/0.55/0.95/1.45/1.70 με μέσο 1.00) → ισοκατανεμημένοι προσανατολισμοί
+ * δίνουν ≈ το παλιό αποτέλεσμα (zero-scale-shock). Editable defaults.
+ */
+export const SEASONAL_SOLAR_IRRADIATION_BY_ORIENTATION: Record<
+  ClimateZone,
+  Record<SolarOrientation, number>
+> = {
+  A: { N: 140, NE: 193, E: 333, SE: 508, S: 595, SW: 508, W: 333, NW: 193 },
+  B: { N: 120, NE: 165, E: 285, SE: 435, S: 510, SW: 435, W: 285, NW: 165 },
+  C: { N: 100, NE: 138, E: 238, SE: 363, S: 425, SW: 363, W: 238, NW: 138 },
+  D: { N: 80, NE: 110, E: 190, SE: 290, S: 340, SW: 290, W: 190, NW: 110 },
+};
+
+/** Πλάτος τομέα ανά προσανατολισμό (8 × 45° = 360°). */
+const ORIENTATION_SECTOR_DEG = 360 / 8;
+
 /** g-value υαλοπίνακα (ολικός συντελεστής ηλιακής διαπερατότητας) — διπλός ~0.6. */
 export const GLAZING_SOLAR_FACTOR_G = 0.6;
 /** Συντελεστής πλαισίου `F_F` — ποσοστό υαλοπίνακα στο άνοιγμα (~0.7). */
 export const FRAME_FACTOR = 0.7;
 /** Συντελεστής σκίασης `F_sh` — μέση εξωτ./ορίζοντα σκίαση (~0.9). */
 export const SHADING_FACTOR = 0.9;
+
+// ─── L7.3 — Συντελεστής σκίασης από εξωτερικά εμπόδια (obstruction) ────────────
+
+/**
+ * Επίπεδο σκίασης υαλοπίνακα από **εξωτερικά εμπόδια** (γειτονικά κτίρια / πρόβολοι
+ * / πλευρικά πτερύγια) — ο discriminator του πρόσθετου συντελεστή σκίασης
+ * `F_sh,obstruction` της EN ISO 13790 §11.4.3 (`F_sh,gl = F_hor·F_ov·F_fin`) /
+ * ΤΟΤΕΕ 20701-1 (πίνακες σκίασης ορίζοντα/προβόλων/πλευρικών). **Ξεχωριστό** από τη
+ * βασική `SHADING_FACTOR` (γενική γωνία πρόσπτωσης/ορίζοντα) — πολλαπλασιάζεται μαζί
+ * της. Default χώρου `none` (obstruction 1.0 ⇒ zero-regression vs L7.2).
+ */
+export type SolarShadingLevel = 'none' | 'light' | 'moderate' | 'heavy';
+
+/**
+ * Συντελεστής σκίασης εξωτερικών εμποδίων `F_sh,obstruction` ∈ (0,1] ανά επίπεδο —
+ * EN ISO 13790 §11.4.3 / ΤΟΤΕΕ 20701-1 αντιπροσωπευτικές defaults (φθίνον με την
+ * ένταση εμποδίων· editable). Μειώνει τα ηλιακά κέρδη του υαλοπίνακα:
+ *   - `none`     → 1.00  (ελεύθερος ορίζοντας — default, zero-regression)
+ *   - `light`    → 0.90  (μερική σκίαση / ρηχός πρόβολος / μακρινά εμπόδια)
+ *   - `moderate` → 0.70  (γειτονικό κτίριο / βαθύς πρόβολος / πλευρικά πτερύγια)
+ *   - `heavy`    → 0.50  (ψηλό γειτονικό κτίριο / βαθιά εσοχή — έντονη σκίαση)
+ * SSoT — ο engine διαβάζει ΜΟΝΟ από εδώ (ποτέ inline literal).
+ */
+export const SOLAR_SHADING_OBSTRUCTION_FACTOR: Readonly<Record<SolarShadingLevel, number>> = {
+  none: 1.0,
+  light: 0.9,
+  moderate: 0.7,
+  heavy: 0.5,
+};
+
+/** Σειρά εμφάνισης επιπέδων σκίασης (για dropdown options). */
+export const SOLAR_SHADING_LEVELS: readonly SolarShadingLevel[] = [
+  'none',
+  'light',
+  'moderate',
+  'heavy',
+] as const;
+
+/** Default επίπεδο σκίασης χώρου — `none` (obstruction 1.0, zero-regression). */
+export const DEFAULT_SOLAR_SHADING_LEVEL: SolarShadingLevel = 'none';
+
+/** Συντελεστής σκίασης εμποδίων ενός επιπέδου (πάντα ορισμένο — exhaustive Record). */
+export function getSolarShadingObstructionFactor(level: SolarShadingLevel): number {
+  return SOLAR_SHADING_OBSTRUCTION_FACTOR[level];
+}
 
 /**
  * Αριθμητική παράμετρος `a0` του συντελεστή αξιοποίησης (EN ISO 13790 §12.2.1.1).
@@ -98,9 +186,34 @@ export function getHeatingSeasonHours(zone: ClimateZone): number {
   return HEATING_SEASON_HOURS[zone];
 }
 
-/** Εποχιακή ηλιακή ακτινοβολία κατακόρυφης επιφάνειας (kWh/m²·περίοδο) της ζώνης. */
-export function getSeasonalSolarIrradiation(zone: ClimateZone): number {
-  return SEASONAL_SOLAR_IRRADIATION_KWHM2[zone];
+/**
+ * Αντιστοιχίζει αζιμούθιο (deg, 0°=Βορράς, clockwise) σε έναν από τους 8
+ * προσανατολισμούς — τομείς των 45° **με κέντρο** κάθε σημείο πυξίδας: [337.5,22.5)→N,
+ * [22.5,67.5)→NE, … wrap-safe (κανονικοποιεί αρνητικά/≥360). Pure, idempotent.
+ */
+export function azimuthToOrientation(azimuthDeg: number): SolarOrientation {
+  const normalized = ((azimuthDeg % 360) + 360) % 360;
+  const shifted = (normalized + ORIENTATION_SECTOR_DEG / 2) % 360;
+  const index = Math.floor(shifted / ORIENTATION_SECTOR_DEG) % SOLAR_ORIENTATIONS.length;
+  return SOLAR_ORIENTATIONS[index];
+}
+
+/**
+ * Εποχιακή ηλιακή ακτινοβολία κατακόρυφης επιφάνειας (kWh/m²·περίοδο) της ζώνης.
+ * Χωρίς `orientation` → **orientation-agnostic** μέση τιμή (L7.1, backward-compatible)·
+ * με `orientation` → η τιμή ανά προσανατολισμό (L7.2).
+ */
+export function getSeasonalSolarIrradiation(zone: ClimateZone): number;
+export function getSeasonalSolarIrradiation(
+  zone: ClimateZone,
+  orientation: SolarOrientation,
+): number;
+export function getSeasonalSolarIrradiation(
+  zone: ClimateZone,
+  orientation?: SolarOrientation,
+): number {
+  if (orientation === undefined) return SEASONAL_SOLAR_IRRADIATION_KWHM2[zone];
+  return SEASONAL_SOLAR_IRRADIATION_BY_ORIENTATION[zone][orientation];
 }
 
 /**

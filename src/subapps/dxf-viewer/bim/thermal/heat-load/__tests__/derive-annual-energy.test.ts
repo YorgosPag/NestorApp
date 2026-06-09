@@ -17,13 +17,18 @@ import {
   computeThermalSpaceGeometry,
   type ThermalSpaceEntity,
   type ThermalSpaceGeometry,
+  type ThermalSpaceParams,
 } from '../../../types/thermal-space-types';
 import { deriveAnnualHeating } from '../derive-annual-energy';
 import type { BoundaryHeatLoss, SpaceHeatLoadResult } from '../heat-load-types';
 
 // ─── Fixtures ──────────────────────────────────────────────────────────────────
 
-function makeSpace(id: string, geometry?: ThermalSpaceGeometry): ThermalSpaceEntity {
+function makeSpace(
+  id: string,
+  geometry?: ThermalSpaceGeometry,
+  paramsOver: Partial<Pick<ThermalSpaceParams, 'solarShadingLevel'>> = {},
+): ThermalSpaceEntity {
   const params = {
     footprint: {
       vertices: [
@@ -36,6 +41,7 @@ function makeSpace(id: string, geometry?: ThermalSpaceGeometry): ThermalSpaceEnt
     useType: 'living-room' as const,
     ceilingHeightMm: 3000,
     sceneUnits: 'm' as const,
+    ...paramsOver,
   };
   return createThermalSpace({
     id,
@@ -132,6 +138,34 @@ describe('deriveAnnualHeating', () => {
     expect(result.rows[0].netDemandKWh).toBeCloseTo(855.58); // 1248 − η(γ=0.4587)·572.4
   });
 
+  it('L7.2 — νότιος υαλοπίνακας κερδίζει περισσότερο από βόρειο (ίδιο εμβαδό)', () => {
+    // GLAZING_OPTICAL = 0.6·0.7·0.9 = 0.378· ζώνη Β: I_S=510, I_N=120.
+    const south = makeResult('sp-1', { boundaries: [boundary({ area: 2, azimuthDeg: 180 })] });
+    const north = makeResult('sp-2', { boundaries: [boundary({ area: 2, azimuthDeg: 0 })] });
+    const rs = deriveAnnualHeating(resultsOf(south), [makeSpace('sp-1')], 'B').rows[0];
+    const rn = deriveAnnualHeating(resultsOf(north), [makeSpace('sp-2')], 'B').rows[0];
+    expect(rs.solarGainKWh).toBeCloseTo(385.56); // 2·0.378·510
+    expect(rn.solarGainKWh).toBeCloseTo(90.72); // 2·0.378·120
+    expect(rs.solarGainKWh).toBeGreaterThan(rn.solarGainKWh);
+  });
+
+  it('L7.2 — fallback χωρίς azimuthDeg == orientation-agnostic μέση (zero-regression L7.1)', () => {
+    const noAzimuth = makeResult('sp-1', { boundaries: [boundary({ area: 2 })] });
+    const result = deriveAnnualHeating(resultsOf(noAzimuth), [makeSpace('sp-1')], 'B');
+    expect(result.rows[0].solarGainKWh).toBeCloseTo(226.8); // 2·0.378·300 (μέση)
+  });
+
+  it('L7.2 — αθροίζει per-window διαφορετικούς προσανατολισμούς', () => {
+    const mixed = makeResult('sp-1', {
+      boundaries: [
+        boundary({ area: 2, azimuthDeg: 180 }), // νότιος → 385.56
+        boundary({ area: 2, azimuthDeg: 0 }), // βόρειος → 90.72
+      ],
+    });
+    const result = deriveAnnualHeating(resultsOf(mixed), [makeSpace('sp-1')], 'B');
+    expect(result.rows[0].solarGainKWh).toBeCloseTo(476.28); // 385.56 + 90.72
+  });
+
   it('μετράει μόνο τους εξωτ. υαλοπίνακες στα ηλιακά κέρδη (φιλτράρει τοίχο/εσωτ.)', () => {
     const mixed = makeResult('sp-1', {
       boundaries: [
@@ -142,6 +176,40 @@ describe('deriveAnnualHeating', () => {
     });
     const result = deriveAnnualHeating(resultsOf(mixed), [makeSpace('sp-1')], 'B');
     expect(result.rows[0].solarGainKWh).toBeCloseTo(226.8); // μόνο τα 2 m² εξωτ. υαλοπίνακα
+  });
+
+  // ─── L7.3 — σκίαση εξωτ. εμποδίων (per-space obstruction factor) ───────────────
+
+  it('L7.3 — απουσία solarShadingLevel == L7.2 (obstruction 1.0, zero-regression)', () => {
+    const south = makeResult('sp-1', { boundaries: [boundary({ area: 2, azimuthDeg: 180 })] });
+    const result = deriveAnnualHeating(resultsOf(south), [makeSpace('sp-1')], 'B');
+    expect(result.rows[0].solarGainKWh).toBeCloseTo(385.56); // 2·0.378·510 (αμετάβλητο)
+  });
+
+  it('L7.3 — heavy σκίαση μειώνει τα ηλιακά κέρδη κατά τον λόγο obstruction (0.5)', () => {
+    const south = makeResult('sp-1', { boundaries: [boundary({ area: 2, azimuthDeg: 180 })] });
+    const shaded = makeSpace('sp-1', undefined, { solarShadingLevel: 'heavy' });
+    const result = deriveAnnualHeating(resultsOf(south), [shaded], 'B');
+    expect(result.rows[0].solarGainKWh).toBeCloseTo(192.78); // 385.56 · 0.5
+  });
+
+  it('L7.3 — moderate σκίαση εφαρμόζει τον ενδιάμεσο πολλαπλασιαστή (0.7)', () => {
+    const south = makeResult('sp-1', { boundaries: [boundary({ area: 2, azimuthDeg: 180 })] });
+    const shaded = makeSpace('sp-1', undefined, { solarShadingLevel: 'moderate' });
+    const result = deriveAnnualHeating(resultsOf(south), [shaded], 'B');
+    expect(result.rows[0].solarGainKWh).toBeCloseTo(269.892); // 385.56 · 0.7
+  });
+
+  it('L7.3 — περισσότερη σκίαση → λιγότερα κέρδη → μεγαλύτερη καθαρή ζήτηση', () => {
+    const south = makeResult('sp-1', { boundaries: [boundary({ area: 2, azimuthDeg: 180 })] });
+    const free = deriveAnnualHeating(resultsOf(south), [makeSpace('sp-1')], 'B').rows[0];
+    const heavy = deriveAnnualHeating(
+      resultsOf(south),
+      [makeSpace('sp-1', undefined, { solarShadingLevel: 'heavy' })],
+      'B',
+    ).rows[0];
+    expect(heavy.solarGainKWh).toBeLessThan(free.solarGainKWh);
+    expect(heavy.netDemandKWh).toBeGreaterThan(free.netDemandKWh);
   });
 
   it('ΕΞΑΙΡΕΙ το reheat από τον συντελεστή απωλειών (συνεχής vs επανέναρξη)', () => {

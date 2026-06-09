@@ -62,6 +62,7 @@ function computeBoundaryLoss(
     lossW,
     thermalBridgeW,
     refId: boundary.refId,
+    azimuthDeg: boundary.azimuthDeg, // L7.2: propagate orientation (μη-υπολογιστικό)
   };
 }
 

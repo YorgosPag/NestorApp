@@ -56,6 +56,12 @@ export interface HeatLoadBoundary {
   readonly area: number;
   /** Προαιρετικό entity id πηγής (π.χ. wall/opening id) για traceability. */
   readonly refId?: string;
+  /**
+   * Αζιμούθιο εξωτερικού normal (deg, 0°=Βορράς, clockwise, [0,360)) — μόνο για
+   * εξωτ. κουφώματα προς `external-air` (ADR-422 L7.2 orientation-aware ηλιακά
+   * κέρδη). Absent ⇒ orientation-agnostic μέση ακτινοβολία (zero-regression).
+   */
+  readonly azimuthDeg?: number;
 }
 
 /** Resolved input για τον υπολογισμό φορτίου ενός χώρου. */
@@ -101,6 +107,12 @@ export interface BoundaryHeatLoss {
    */
   readonly thermalBridgeW: number;
   readonly refId?: string;
+  /**
+   * Αζιμούθιο εξωτερικού normal (deg, 0°=Βορράς, clockwise) — propagated από το
+   * `HeatLoadBoundary` για orientation-aware ηλιακά κέρδη (ADR-422 L7.2). Absent ⇒
+   * μέση ακτινοβολία. ΔΕΝ επηρεάζει τον υπολογισμό φορτίου (μόνο τα ηλιακά κέρδη).
+   */
+  readonly azimuthDeg?: number;
 }
 
 /** Αποτέλεσμα υπολογισμού φορτίου ενός χώρου (`Φ` + breakdown). */

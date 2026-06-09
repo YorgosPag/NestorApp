@@ -36,11 +36,14 @@ import {
   FRAME_FACTOR,
   GLAZING_SOLAR_FACTOR_G,
   SHADING_FACTOR,
+  azimuthToOrientation,
   computeGainUtilisation,
   getHeatingSeasonHours,
   getInternalGainWperM2,
   getSeasonalSolarIrradiation,
+  getSolarShadingObstructionFactor,
 } from './annual-gains-config';
+import { resolveSolarShadingLevel } from '../thermal-space-use-catalog';
 import type { SpaceHeatLoadResult } from './heat-load-types';
 
 const HOURS_PER_DAY = 24;
@@ -107,23 +110,33 @@ function internalGainKWh(
   return (getInternalGainWperM2(use) * floorAreaM2 * getHeatingSeasonHours(zone)) / W_TO_KW;
 }
 
+/** Σταθερό γινόμενο οπτικών συντελεστών υαλοπίνακα (g · F_F · F_sh). */
+const GLAZING_OPTICAL_FACTOR = GLAZING_SOLAR_FACTOR_G * FRAME_FACTOR * SHADING_FACTOR;
+
 /**
- * kWh/περίοδο — ηλιακά κέρδη από τους **εξωτερικούς υαλοπίνακες** (`window` &
- * `external-air`) του breakdown επί τους οπτικούς συντελεστές × εποχιακή ακτινοβολία.
- * Window area από τα ήδη-resolved boundaries — μηδέν re-resolve geometry.
+ * kWh/περίοδο — ηλιακά κέρδη **ανά** εξωτ. υαλοπίνακα (`window` & `external-air`):
+ * `A · g · F_F · F_sh · obstruction · I_season(zone, orientation)` (ADR-422 L7.2/L7.3).
+ * Η ακτινοβολία εξαρτάται από τον προσανατολισμό του υαλοπίνακα (από το `azimuthDeg`
+ * του τοίχου-ξενιστή)· **απουσία `azimuthDeg` ⇒ orientation-agnostic μέση τιμή**
+ * (zero-regression L7.1). Ο `obstruction` (L7.3) είναι ο per-space συντελεστής σκίασης
+ * εξωτ. εμποδίων (default 1.0 ⇒ zero-regression). Area/azimuth από τα ήδη-resolved
+ * boundaries — μηδέν re-resolve geometry.
  */
-function solarGainKWh(result: SpaceHeatLoadResult, zone: ClimateZone): number {
-  let glazingAreaM2 = 0;
+function solarGainKWh(
+  result: SpaceHeatLoadResult,
+  zone: ClimateZone,
+  obstruction: number,
+): number {
+  let total = 0;
   for (const b of result.boundaries) {
-    if (b.kind === 'window' && b.condition === 'external-air') glazingAreaM2 += b.area;
+    if (b.kind !== 'window' || b.condition !== 'external-air') continue;
+    const irradiation =
+      b.azimuthDeg != null
+        ? getSeasonalSolarIrradiation(zone, azimuthToOrientation(b.azimuthDeg))
+        : getSeasonalSolarIrradiation(zone);
+    total += b.area * GLAZING_OPTICAL_FACTOR * obstruction * irradiation;
   }
-  return (
-    glazingAreaM2 *
-    GLAZING_SOLAR_FACTOR_G *
-    FRAME_FACTOR *
-    SHADING_FACTOR *
-    getSeasonalSolarIrradiation(zone)
-  );
+  return total;
 }
 
 /** Χτίζει μία γραμμή (μεικτή → κέρδη → αξιοποίηση → καθαρή). `floorAreaM2 > 0` guarded. */
@@ -137,7 +150,10 @@ function buildAnnualRow(
   const lossCoefficientWperK = lossCoefficient(result);
   const grossDemandKWh = (lossCoefficientWperK * hdd * HOURS_PER_DAY) / W_TO_KW;
   const internal = internalGainKWh(space.params.useType, floorAreaM2, zone);
-  const solar = solarGainKWh(result, zone);
+  const shadingObstruction = getSolarShadingObstructionFactor(
+    resolveSolarShadingLevel(space.params),
+  );
+  const solar = solarGainKWh(result, zone, shadingObstruction);
   const gains = internal + solar;
   const ratio = grossDemandKWh > 0 ? gains / grossDemandKWh : 0;
   const utilisation = computeGainUtilisation(ratio);
