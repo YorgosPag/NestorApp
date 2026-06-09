@@ -51,6 +51,39 @@ export function resolveOpeningDimReferences(
   const endJambOffsetMm = startJambOffsetMm + resolvedParams.width;
   const wallLengthMm = host.geometry.length * 1000;
 
+  const refs = nearestSiblingRefs(startJambOffsetMm, endJambOffsetMm, wallLengthMm, siblings);
+  let { prevRefOffsetMm, nextRefOffsetMm } = refs;
+
+  // Junction-aware: a wall-END reference is inset to the transverse wall's near face
+  // (the reference is still the wall end — now at the face, not the centreline).
+  if (refs.prevIsWallEnd) {
+    const inset = resolveJunctionFaceInsetMm(host, 'start', candidateWalls);
+    if (inset !== null) prevRefOffsetMm = inset;
+  }
+  if (refs.nextIsWallEnd) {
+    const inset = resolveJunctionFaceInsetMm(host, 'end', candidateWalls);
+    if (inset !== null) nextRefOffsetMm = wallLengthMm - inset;
+  }
+
+  return {
+    startJambOffsetMm,
+    endJambOffsetMm,
+    prevRefOffsetMm,
+    nextRefOffsetMm,
+    leftDistMm: Math.max(0, startJambOffsetMm - prevRefOffsetMm),
+    rightDistMm: Math.max(0, nextRefOffsetMm - endJambOffsetMm),
+    prevIsWallEnd: refs.prevIsWallEnd,
+    nextIsWallEnd: refs.nextIsWallEnd,
+  };
+}
+
+/** The nearest reference on each side from siblings only (wall end when none). */
+function nearestSiblingRefs(
+  startJambOffsetMm: number,
+  endJambOffsetMm: number,
+  wallLengthMm: number,
+  siblings: readonly OpeningEntity[],
+): { prevRefOffsetMm: number; prevIsWallEnd: boolean; nextRefOffsetMm: number; nextIsWallEnd: boolean } {
   let prevRefOffsetMm = 0; // wall start
   let prevIsWallEnd = true;
   let nextRefOffsetMm = wallLengthMm; // wall end
@@ -70,26 +103,5 @@ export function resolveOpeningDimReferences(
       nextIsWallEnd = false;
     }
   }
-
-  // Junction-aware: a wall-END reference is inset to the transverse wall's near face
-  // (the reference is still the wall end — now at the face, not the centreline).
-  if (prevIsWallEnd) {
-    const inset = resolveJunctionFaceInsetMm(host, 'start', candidateWalls);
-    if (inset !== null) prevRefOffsetMm = inset;
-  }
-  if (nextIsWallEnd) {
-    const inset = resolveJunctionFaceInsetMm(host, 'end', candidateWalls);
-    if (inset !== null) nextRefOffsetMm = wallLengthMm - inset;
-  }
-
-  return {
-    startJambOffsetMm,
-    endJambOffsetMm,
-    prevRefOffsetMm,
-    nextRefOffsetMm,
-    leftDistMm: Math.max(0, startJambOffsetMm - prevRefOffsetMm),
-    rightDistMm: Math.max(0, nextRefOffsetMm - endJambOffsetMm),
-    prevIsWallEnd,
-    nextIsWallEnd,
-  };
+  return { prevRefOffsetMm, prevIsWallEnd, nextRefOffsetMm, nextIsWallEnd };
 }
