@@ -30,6 +30,12 @@ import type {
   MepBoilerParams,
 } from '../../../bim/types/mep-boiler-types';
 import {
+  BOILER_RELIEF_PRESSURES_BAR,
+  DEFAULT_BOILER_RELIEF_PRESSURE_BAR,
+  BOILER_SYSTEM_PRESSURES_BAR,
+  DEFAULT_BOILER_SYSTEM_PRESSURE_BAR,
+} from '../../../bim/types/mep-boiler-types';
+import {
   listBoilerModels,
   resolveBoilerModel,
   applyBoilerModelToParams,
@@ -50,9 +56,15 @@ import {
   isMepBoilerRibbonStringKey,
   isMepBoilerFlueTerminationKey,
   isMepBoilerFuelTypeKey,
+  isMepBoilerReliefPressureKey,
+  isMepBoilerSystemPressureKey,
   isMepBoilerToggleKey,
   isMepBoilerVisibilityKey,
 } from './bridge/mep-boiler-command-keys';
+import {
+  TOGGLE_KEY_TO_FIELD,
+  NUMBER_KEY_TO_FIELD,
+} from './bridge/mep-boiler-param-maps';
 import {
   FLUE_TERMINATION_TYPES,
   DEFAULT_FLUE_TERMINATION,
@@ -98,28 +110,6 @@ export interface RibbonMepBoilerBridge {
   readonly onAction: (action: string) => void;
   readonly getPanelVisibility: (visibilityKey: string) => boolean;
 }
-
-/** commandKey → boolean toggle `MepBoilerParams` field (combi flag + recirculation). */
-const TOGGLE_KEY_TO_FIELD: Readonly<Record<string, keyof MepBoilerParams>> = {
-  [MEP_BOILER_RIBBON_KEYS.toggles.producesDhw]: 'producesDhw',
-  [MEP_BOILER_RIBBON_KEYS.toggles.dhwRecirculation]: 'dhwRecirculation',
-  [MEP_BOILER_RIBBON_KEYS.toggles.condensing]: 'condensing',
-};
-
-/** commandKey → numeric `MepBoilerParams` field. */
-const NUMBER_KEY_TO_FIELD: Readonly<Record<string, keyof MepBoilerParams>> = {
-  [MEP_BOILER_RIBBON_KEYS.params.width]: 'width',
-  [MEP_BOILER_RIBBON_KEYS.params.length]: 'length',
-  [MEP_BOILER_RIBBON_KEYS.params.bodyHeight]: 'bodyHeightMm',
-  [MEP_BOILER_RIBBON_KEYS.params.mountingElevation]: 'mountingElevationMm',
-  [MEP_BOILER_RIBBON_KEYS.params.connectorDiameter]: 'connectorDiameterMm',
-  [MEP_BOILER_RIBBON_KEYS.params.thermalOutput]: 'thermalOutputW',
-  [MEP_BOILER_RIBBON_KEYS.params.dhwConnectorDiameter]: 'dhwConnectorDiameterMm',
-  [MEP_BOILER_RIBBON_KEYS.params.flueDiameter]: 'flueDiameterMm',
-  [MEP_BOILER_RIBBON_KEYS.params.fuelDiameter]: 'fuelConnectorDiameterMm',
-  [MEP_BOILER_RIBBON_KEYS.params.condensateDiameter]: 'condensateConnectorDiameterMm',
-  [MEP_BOILER_RIBBON_KEYS.params.efficiency]: 'seasonalEfficiencyPercent',
-};
 
 export function useRibbonMepBoilerBridge(
   props: UseRibbonMepBoilerBridgeProps,
@@ -221,6 +211,40 @@ export function useRibbonMepBoilerBridge(
         const kW = (w / 1000).toLocaleString('el-GR', { maximumFractionDigits: 1 });
         return { value: `${kW} kW`, options: [], disabled: true };
       }
+      // ADR-408 — SAFETY RELIEF VALVE set-pressure picker (static enum of standard valve
+      // ratings). Checked BEFORE the model-catalog branch (passes `isMepBoilerRibbonStringKey`).
+      // A string combobox — the set-pressures are fractional (1.5/2.5 bar) so the generic numeric
+      // path (which rounds) is unsuitable. Value/options stringify the standard bar ratings.
+      if (isMepBoilerReliefPressureKey(commandKey)) {
+        const boiler = resolveBoiler();
+        if (!boiler) return null;
+        const bar = boiler.params.reliefValvePressureBar ?? DEFAULT_BOILER_RELIEF_PRESSURE_BAR;
+        return {
+          value: String(bar),
+          options: BOILER_RELIEF_PRESSURES_BAR.map((p) => ({
+            value: String(p),
+            labelKey: String(p),
+            isLiteralLabel: true,
+          })),
+        };
+      }
+      // ADR-408 — PRESSURE GAUGE system (cold fill) pressure picker (static enum of standard fill
+      // pressures). Checked BEFORE the model-catalog branch (passes `isMepBoilerRibbonStringKey`).
+      // A string combobox — the fill pressures are fractional (1.2/1.5 bar) so the generic numeric
+      // path (which rounds) is unsuitable. DISTINCT from the relief-valve set-pressure branch above.
+      if (isMepBoilerSystemPressureKey(commandKey)) {
+        const boiler = resolveBoiler();
+        if (!boiler) return null;
+        const bar = boiler.params.systemPressureBar ?? DEFAULT_BOILER_SYSTEM_PRESSURE_BAR;
+        return {
+          value: String(bar),
+          options: BOILER_SYSTEM_PRESSURES_BAR.map((p) => ({
+            value: String(p),
+            labelKey: String(p),
+            isLiteralLabel: true,
+          })),
+        };
+      }
       // ADR-408 — standalone HEATING FUEL picker (static enum, Revit editable instance
       // parameter). Checked BEFORE the model-catalog branch (both pass
       // `isMepBoilerRibbonStringKey`). Supplies the 4 fuel options + an «Απροσδιόριστο»
@@ -296,6 +320,27 @@ export function useRibbonMepBoilerBridge(
 
   const onComboboxChange = useCallback(
     (commandKey: string, value: string): void => {
+      // ADR-408 — SAFETY RELIEF VALVE set-pressure change (static enum). Checked before the
+      // model-catalog branch; parses the standard bar rating and persists `reliefValvePressureBar`.
+      if (isMepBoilerReliefPressureKey(commandKey)) {
+        const boiler = resolveBoiler();
+        if (!boiler) return;
+        const bar = Number.parseFloat(value);
+        if (!Number.isFinite(bar) || bar <= 0) return;
+        dispatchParams(boiler, { ...boiler.params, reliefValvePressureBar: bar });
+        return;
+      }
+      // ADR-408 — PRESSURE GAUGE system (cold fill) pressure change (static enum). Checked before
+      // the model-catalog branch; parses the standard bar value and persists `systemPressureBar`.
+      // DISTINCT from the relief-valve set-pressure branch above (system fill vs valve lift).
+      if (isMepBoilerSystemPressureKey(commandKey)) {
+        const boiler = resolveBoiler();
+        if (!boiler) return;
+        const bar = Number.parseFloat(value);
+        if (!Number.isFinite(bar) || bar <= 0) return;
+        dispatchParams(boiler, { ...boiler.params, systemPressureBar: bar });
+        return;
+      }
       // ADR-408 — standalone HEATING FUEL change (static enum, Revit instance param). Checked
       // before the model-catalog branch. The «Απροσδιόριστο» sentinel removes `fuelType`
       // (parametric boiler with no fuel); otherwise persist the validated fuel. The command

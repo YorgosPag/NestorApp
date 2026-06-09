@@ -1,6 +1,6 @@
 import React from 'react';
 import { useAnimationStore } from '../../../bim-3d/animation/AnimationStore';
-import { SNAP_STEP_PRESETS } from '../../../bim-3d/animation/snap-quantizer';
+import { SNAP_STEP_COMBOBOX_OPTIONS } from './useRibbonCommands-snap-options';
 import type {
   RibbonCommandsApi,
   RibbonActionPayload,
@@ -24,6 +24,9 @@ import { isHeatingAutoActionKey } from './bridge/heating-auto-command-keys';
 import { isElectricalAutoActionKey } from './bridge/electrical-auto-command-keys';
 import { isElectricalWeakAutoActionKey } from './bridge/electrical-weak-auto-command-keys';
 import { isHvacAutoActionKey } from './bridge/hvac-auto-command-keys';
+import { isFireAutoActionKey } from './bridge/fire-auto-command-keys';
+import { isGasAutoActionKey } from './bridge/gas-auto-command-keys';
+import { isClashDetectionActionKey } from './bridge/clash-detection-command-keys';
 import { isMepFixturePanelVisibilityKey } from './useRibbonMepFixtureBridge';
 import { isMepFixtureRibbonKey, isMepFixtureRibbonStringKey, isMepFixtureActionKey } from './bridge/mep-fixture-command-keys';
 import { isMepManifoldPanelVisibilityKey } from './useRibbonMepManifoldBridge';
@@ -61,12 +64,6 @@ import { isXlineRibbonKey } from './bridge/xline-command-keys';
 
 export type { UseRibbonCommandsProps };
 
-/** Combobox options for the animation snap step (mirrors SNAP_STEP_PRESETS). */
-const SNAP_STEP_COMBOBOX_OPTIONS = SNAP_STEP_PRESETS.map((v) => ({
-  value: String(v),
-  labelKey: `animation.snapStepOptions.${v % 1 === 0 ? String(Math.round(v)) : String(v)}`,
-}));
-
 export function useRibbonCommands({
   activeTool,
   handleToolChange,
@@ -94,6 +91,9 @@ export function useRibbonCommands({
   electricalAutoBridge,
   electricalWeakAutoBridge,
   hvacAutoBridge,
+  fireAutoBridge,
+  gasAutoBridge,
+  clashDetectionBridge,
   mepFixtureBridge,
   mepManifoldBridge,
   mepRadiatorBridge,
@@ -414,6 +414,18 @@ export function useRibbonCommands({
         hvacAutoBridge.onAction(action);
         return;
       }
+      if (isFireAutoActionKey(action)) {
+        fireAutoBridge.onAction(action);
+        return;
+      }
+      if (isGasAutoActionKey(action)) {
+        gasAutoBridge.onAction(action);
+        return;
+      }
+      if (isClashDetectionActionKey(action)) {
+        clashDetectionBridge.onAction(action);
+        return;
+      }
       if (isMepFixtureActionKey(action)) {
         mepFixtureBridge.onAction(action);
         return;
@@ -448,7 +460,7 @@ export function useRibbonCommands({
       }
       wrappedHandleAction(action, data);
     },
-    [wallBridge, openingBridge, slabBridge, roofBridge, floorFinishBridge, thermalSpaceBridge, columnBridge, beamBridge, slabOpeningBridge, stairBridge, mepCircuitBridge, mepPipeNetworkBridge, waterAutoSupplyBridge, drainageAutoBridge, heatingAutoBridge, electricalAutoBridge, electricalWeakAutoBridge, hvacAutoBridge, mepFixtureBridge, mepManifoldBridge, mepRadiatorBridge, mepBoilerBridge, mepWaterHeaterBridge, mepUnderfloorBridge, mepSegmentBridge, furnitureBridge, wrappedHandleAction],
+    [wallBridge, openingBridge, slabBridge, roofBridge, floorFinishBridge, thermalSpaceBridge, columnBridge, beamBridge, slabOpeningBridge, stairBridge, mepCircuitBridge, mepPipeNetworkBridge, waterAutoSupplyBridge, drainageAutoBridge, heatingAutoBridge, electricalAutoBridge, electricalWeakAutoBridge, hvacAutoBridge, fireAutoBridge, gasAutoBridge, clashDetectionBridge, mepFixtureBridge, mepManifoldBridge, mepRadiatorBridge, mepBoilerBridge, mepWaterHeaterBridge, mepUnderfloorBridge, mepSegmentBridge, furnitureBridge, wrappedHandleAction],
   );
 
   return React.useMemo(

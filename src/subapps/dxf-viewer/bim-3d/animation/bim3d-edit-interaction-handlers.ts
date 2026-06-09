@@ -24,13 +24,14 @@ import type { Entity } from '../../types/entities';
 import type { WallEntity } from '../../bim/types/wall-types';
 import { computeDxfEntityGrips } from '../../hooks/grip-computation';
 import { getGlobalSnapEngine } from '../../snapping/global-snap-engine';
-import { worldToDxfPlan } from '../viewport/coordinate-transforms';
+import { worldToDxfPlan, dxfPlanToWorld, getPixelWorldSize, worldToScreen as worldToScreen3D } from '../viewport/coordinate-transforms';
 import { makeMoveSnapFn, makeResizeSnapFn, type SnapFn } from '../gizmo/bim3d-snap-bridge';
 import { createSceneManagerAdapter } from '../../hooks/grips/grip-commit-adapters';
-import type { DxfCommitDeps } from '../../hooks/grips/unified-grip-types';
 import { getGlobalCommandHistory } from '../../core/commands';
 import { useBim3DEditStore } from '../stores/Bim3DEditStore';
 import type { BimGizmoOverlay } from '../gizmo/bim-gizmo-overlay';
+// ADR-363 Φ1G.5 Slice 2h — planar move/rotate drag → collapse gizmo to move arrows.
+import { isPlanarMoveType } from '../gizmo/bim-gizmo-overlay';
 import type { BimGizmoController } from '../gizmo/bim-gizmo-controller';
 import type { BridgeOutcome } from '../gizmo/bim-gizmo-drag-bridge';
 import type { ThreeJsSceneManager } from '../scene/ThreeJsSceneManager';
@@ -42,17 +43,16 @@ import {
   sceneEntitiesForEdit,
   resolveEntityLevelId,
 } from './bim3d-edit-live-preview-apply';
-// ADR-408 Φ7 P2 — host move → live circuit-wire re-route (mirror of the ADR-401 wall path).
-import { affectedWireSystemIds } from './bim3d-wire-preview-rebuild';
-// ADR-408 Φ-C — host/pipe move/rotate/vertical → live connected-pipe stretch.
-// ADR-408 Φ-D/Φ-E — + live fitting (cap/elbow/tee) follow at moved junctions.
-import {
-  connectedPipeSegmentIds,
-  incidentFittingIds,
-} from './bim3d-pipe-follow-preview-rebuild';
-// ADR-401 — host move → attached wall re-clip: find the dependent walls (reverse SSoT).
-import { findAttachedWalls } from '../../bim/cascade/bim-cascade-resolver';
 import { useBim3DEntitiesStore } from '../stores/Bim3DEntitiesStore';
+// Capture helpers + buildDeps + findBimEntityWorldBox (extracted for file-size N.7.1).
+import {
+  captureMoveDependents,
+  captureCircuitWires,
+  captureConnectedPipes,
+  captureIncidentFittings,
+  buildDeps,
+  findBimEntityWorldBox,
+} from './bim3d-edit-interaction-helpers';
 // ADR-408 Φ-D — endpoint shape handles: world positions of a segment's two axis ends.
 import { segmentAxisEndpointsWorld } from '../converters/mep-segment-to-mesh';
 // ADR-408 Φ1 — structural length handles (wall/beam): horizontal endpoint world SSoT.
@@ -62,6 +62,13 @@ import { resolveEntityBuilding } from '../../bim/utils/bim-floor-utils';
 import { buildEditCommand } from './bim3d-edit-command-builders';
 // ADR-408 — Ctrl+click relocatable base point / rotation centre (snap-pick SSoT).
 import { pickEntityBasePoint } from './bim3d-base-point';
+// ADR-363 Φ1G.5 Slice 2h — Revit temporary dimensions while a wall is dragged.
+import type { TempWallMoveDimOverlay } from '../placement/TempWallMoveDimOverlay';
+// ADR-363 Φ1G.5 Slice 2i — Revit dashed alignment line + snap-type label + wall FACE offsets.
+import type { TempAlignmentLineOverlay } from '../placement/TempAlignmentLineOverlay';
+import type { TempSnapLabelOverlay } from '../placement/TempSnapLabelOverlay';
+import { isWallEntity } from '../../types/entities';
+import { getWallCornerWorldPoints } from '../../bim/walls/wall-corner-anchors';
 
 export interface EditInteractionCtx {
   readonly manager: ThreeJsSceneManager;
@@ -70,6 +77,14 @@ export interface EditInteractionCtx {
   readonly controller: BimGizmoController;
   /** Live "entity follows the cursor" preview during a drag (ADR-402). */
   readonly preview: Bim3DEditLivePreview;
+  /** ADR-363 Φ1G.5 Slice 2h — transient temp-dimensions overlay for a dragged wall. */
+  readonly wallMoveDim: TempWallMoveDimOverlay;
+  /** ADR-363 Φ1G.5 Slice 2i — transient dashed alignment line for face magnetism. */
+  readonly alignmentLine: TempAlignmentLineOverlay;
+  /** ADR-363 Φ1G.5 Slice 2i — transient snap-type label ("Παρειά τοίχου" / "Γωνία τοίχου"). */
+  readonly snapLabel: TempSnapLabelOverlay;
+  /** ADR-363 Φ1G.5 Slice 2i — localise a snap type+description into a label (React `t` SSoT). */
+  readonly resolveSnapLabel: (type?: string, description?: string) => string;
   /** Latest levels context (null = read-only, ADR-371). */
   readonly getLevels: () => LevelsHookReturn | null;
 }
@@ -204,6 +219,11 @@ export function onEditPointerDown(ctx: EditInteractionCtx, e: PointerEvent): voi
     captureConnectedPipes(ctx, ids);
     // ADR-408 Φ-D/Φ-E — and the caps/elbows/tees at the moved junctions follow live.
     captureIncidentFittings(ctx, ids);
+    // ADR-363 Φ1G.5 Slice 2h — Revit: a PLANAR move/rotate drag shows only the move
+    // arrows (+ the temporary dimensions); hide the resize/endpoint/tilt shape handles
+    // so they neither clutter nor lag while the entity follows the cursor. Restored on
+    // release. Free-3D MEP keeps its handles (the active one may not be in BASE_HANDLES).
+    if (isPlanarMoveType(useBim3DEditStore.getState().editBimType)) ctx.overlay.collapseToMoveHandles();
   }
   e.preventDefault();
   e.stopPropagation();
@@ -234,57 +254,6 @@ function trySetBasePoint(ctx: EditInteractionCtx, e: PointerEvent): void {
 }
 
 /**
- * ADR-401 — capture the attached walls that must re-clip live while the dragged
- * structural hosts (beam/slab) move. `findAttachedWalls` is the reverse-lookup
- * SSoT (host→attached-wall); only top-attached walls qualify (MVP scope). No
- * dependents → no-op (fast path: a plain move stays a rigid mesh transform).
- */
-function captureMoveDependents(ctx: EditInteractionCtx, ids: readonly string[]): void {
-  const hostIds = new Set(ids);
-  const dependentWallIds = findAttachedWalls(hostIds, useBim3DEntitiesStore.getState().walls);
-  if (dependentWallIds.length > 0) {
-    ctx.preview.captureDependents(ctx.manager.bimLayer.group, dependentWallIds, hostIds);
-  }
-}
-
-/**
- * ADR-408 Φ7 P2/P2b — capture the home-run conduits to re-route live while the
- * dragged fixtures/panels (`ids`) move OR plan-rotate. `affectedWireSystemIds` is
- * the membership SSoT (dragged host = circuit source/member). No affected circuit
- * → no-op (fast path: the drag stays a plain rigid mesh transform).
- */
-function captureCircuitWires(ctx: EditInteractionCtx, ids: readonly string[]): void {
-  const systemIds = affectedWireSystemIds(new Set(ids));
-  if (systemIds.length > 0) {
-    ctx.preview.captureWires(ctx.manager.bimLayer.group, systemIds);
-  }
-}
-
-/**
- * ADR-408 Φ-C — capture the pipe segments connected to the dragged MEP entities so
- * their ends STRETCH live (host/pipe move/rotate/vertical → snapped ends follow).
- * No connected pipe → no-op (fast path: the drag stays a plain rigid mesh transform).
- */
-function captureConnectedPipes(ctx: EditInteractionCtx, ids: readonly string[]): void {
-  const segmentIds = connectedPipeSegmentIds(new Set(ids), sceneEntitiesForEdit(ctx));
-  if (segmentIds.length > 0) {
-    ctx.preview.capturePipes(ctx.manager.bimLayer.group, segmentIds);
-  }
-}
-
-/**
- * ADR-408 Φ-D/Φ-E — capture the fittings (caps/elbows/tees) incident to the dragged
- * segment(s) + followers so they FOLLOW live (the cap on a pipe end re-places in real
- * time, not on release). No incident fitting → no-op.
- */
-function captureIncidentFittings(ctx: EditInteractionCtx, ids: readonly string[]): void {
-  const fittingIds = incidentFittingIds(new Set(ids), sceneEntitiesForEdit(ctx));
-  if (fittingIds.length > 0) {
-    ctx.preview.captureFittings(ctx.manager.bimLayer.group, fittingIds);
-  }
-}
-
-/**
  * Build the drag snap callback (ADR-402 Phase B). Reuses the ONE snap engine
  * (`getGlobalSnapEngine`) — no new snap logic. Move reuses the element's
  * characteristic points (grips, the 2D SSoT) as plan-mm offsets from the gizmo
@@ -300,6 +269,11 @@ function buildDragSnapFn(ctx: EditInteractionCtx): SnapFn | null {
   if (constraint.kind === 'axis' && constraint.axis === 'y') return null;
   const engine = getGlobalSnapEngine();
   if (!engine.getSettings().enabled) return null;
+  // ADR-363 Φ1G.5 Slice 2i-fix — the snap engine's pixel→world tolerance comes from its
+  // viewport's `worldPerPixelAt`, which is owned by the 2D canvas. In 3D nobody set it →
+  // it fell back to ~1 mm/px → tolerance ~10 mm → the wall never "stuck" (Giorgio). Sync a
+  // 3D-camera-derived viewport at drag start so the magnet pull scales with the 3D zoom.
+  syncSnapEngineViewportFor3D(ctx, engine);
   const targets = resolveEditEntities(ctx);
   if (targets.length === 0) return null;
   // Resize + endpoint are single-entity only (multi-select hides those handles). Both
@@ -325,7 +299,36 @@ function buildDragSnapFn(ctx: EditInteractionCtx): SnapFn | null {
       y: g.position.y - anchorPlan.y,
     })),
   );
-  return makeMoveSnapFn(engine, offsets, targets[0].entityId);
+  // ADR-363 Φ1G.5 Slice 2i — also probe with the dragged wall's FACE corners so a face
+  // (not just an axis grip) can grab a static wall's face line → flush face-to-face
+  // magnetism (Revit). The grips alone only snapped axis points (corners/endpoints).
+  const faceOffsets = targets.flatMap((t) =>
+    isWallEntity(t.entity)
+      ? getWallCornerWorldPoints(t.entity).map((c) => ({ x: c.point.x - anchorPlan.x, y: c.point.y - anchorPlan.y }))
+      : [],
+  );
+  return makeMoveSnapFn(engine, [...offsets, ...faceOffsets], targets[0].entityId);
+}
+
+/**
+ * ADR-363 Φ1G.5 Slice 2i-fix — give the shared snap engine a 3D-derived viewport so its
+ * pixel tolerance (`worldRadiusForType = px × worldPerPixel`) scales with the 3D camera zoom
+ * instead of the stale 2D value (the root cause of "δεν κολλάει"). 1 Three world metre =
+ * 1000 DXF-plan mm. Self-healing: the 2D snap path re-sets the viewport on its next mouse move.
+ */
+function syncSnapEngineViewportFor3D(ctx: EditInteractionCtx, engine: ReturnType<typeof getGlobalSnapEngine>): void {
+  const camera = ctx.manager.getCamera();
+  const canvas = ctx.manager.getRendererCanvas();
+  const anchorWorld = ctx.overlay.getPosition();
+  const dist = camera.position.distanceTo(anchorWorld);
+  const mmPerPx = getPixelWorldSize(dist, camera, canvas) * 1000; // metres/px → DXF mm/px
+  if (!(mmPerPx > 0)) return;
+  const elevMm = worldToDxfPlan(anchorWorld).z;
+  engine.setViewport({
+    scale: 1 / mmPerPx,
+    worldPerPixelAt: () => mmPerPx,
+    worldToScreen: (p) => worldToScreen3D(dxfPlanToWorld(p.x, p.y, elevMm), camera, canvas) ?? { x: 0, y: 0 },
+  });
 }
 
 /**
@@ -381,6 +384,10 @@ export function onEditPointerUp(ctx: EditInteractionCtx, e: PointerEvent): void 
   // (no-op drag): restore the originals, since no re-sync is coming.
   if (committed) ctx.preview.commit();
   else ctx.preview.reset();
+  ctx.wallMoveDim.hide(); // ADR-363 Φ1G.5 Slice 2h — transient dims vanish on release.
+  ctx.alignmentLine.hide(); // ADR-363 Φ1G.5 Slice 2i — dashed alignment line vanishes too.
+  ctx.snapLabel.hide(); // …and the snap-type label.
+  ctx.overlay.restoreConfiguredHandles(); // …and the shape handles come back.
   ctx.manager.viewport.setControlsEnabled(true);
   ctx.manager.markSceneDirty();
 }
@@ -389,6 +396,10 @@ export function onEditPointerCancel(ctx: EditInteractionCtx): void {
   if (!ctx.controller.isDragging()) return;
   ctx.controller.cancelDrag();
   ctx.preview.reset(); // Esc / cancel → entity snaps back, no command (ADR-402).
+  ctx.wallMoveDim.hide(); // ADR-363 Φ1G.5 Slice 2h — transient dims vanish on cancel.
+  ctx.alignmentLine.hide(); // ADR-363 Φ1G.5 Slice 2i — dashed alignment line vanishes too.
+  ctx.snapLabel.hide(); // …and the snap-type label.
+  ctx.overlay.restoreConfiguredHandles(); // …and the shape handles come back.
   ctx.manager.viewport.setControlsEnabled(true);
   ctx.manager.markSceneDirty();
 }
@@ -444,28 +455,3 @@ function dispatchOutcome(ctx: EditInteractionCtx, outcome: BridgeOutcome, picked
   return true;
 }
 
-/** Adapter deps for the target level — the adapter only reads currentLevelId/get/set. */
-function buildDeps(levels: LevelsHookReturn, levelId: string): DxfCommitDeps {
-  return {
-    currentLevelId: levelId,
-    getLevelScene: levels.getLevelScene,
-    setLevelScene: levels.setLevelScene,
-    execute: () => {},
-    moveEntities: () => {},
-    onToolChange: () => {},
-  };
-}
-
-/** Union world-space bounding box over every mesh tagged with `bimId`. */
-function findBimEntityWorldBox(group: THREE.Object3D, bimId: string): THREE.Box3 | null {
-  let box: THREE.Box3 | null = null;
-  group.traverse((obj) => {
-    if (!(obj instanceof THREE.Mesh)) return;
-    if ((obj.userData['bimId'] as string | undefined) !== bimId) return;
-    const b = new THREE.Box3().setFromObject(obj);
-    if (b.isEmpty()) return;
-    if (box) box.union(b);
-    else box = b;
-  });
-  return box;
-}

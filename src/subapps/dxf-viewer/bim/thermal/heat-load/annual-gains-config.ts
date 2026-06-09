@@ -27,6 +27,33 @@
 
 import type { ClimateZone } from '../kenak-thermal-config';
 import type { ThermalSpaceUseType } from '../../types/thermal-space-types';
+import type { HeatLoadBoundaryKind } from './heat-load-types';
+import type { SolarOrientation } from './annual-gains-shading-tables';
+import { SOLAR_ORIENTATIONS } from './annual-gains-shading-tables';
+
+// Shading tables — surgical split (≤500 γραμμές/αρχείο): L7.3 Slice B/C/D
+// SolarOrientation + SOLAR_ORIENTATIONS ορίζονται στο shading-tables και re-export-άρονται εδώ.
+export type {
+  SolarOrientation,
+  OverhangShadingBand,
+  HorizonShadingLevel,
+  FinShadingLevel,
+} from './annual-gains-shading-tables';
+export {
+  SOLAR_ORIENTATIONS,
+  OVERHANG_SHADING_FACTOR,
+  getOverhangShadingFactor,
+  HORIZON_SHADING_FACTOR,
+  HORIZON_SHADING_LEVELS,
+  DEFAULT_HORIZON_SHADING_LEVEL,
+  getHorizonShadingFactor,
+  FIN_SHADING_FACTOR,
+  FIN_SHADING_LEVELS,
+  DEFAULT_FIN_SHADING_LEVEL,
+  getFinShadingFactor,
+  FIN_GEOMETRY_SHADING_FACTOR,
+  getFinGeometryShadingFactor,
+} from './annual-gains-shading-tables';
 
 /**
  * Εσωτερικά θερμικά κέρδη ανά **χρήση** χώρου (W/m², ΤΟΤΕΕ 20701-1 — τυπικές τιμές
@@ -93,24 +120,6 @@ export const SEASONAL_SOLAR_IRRADIATION_HORIZONTAL_KWHM2: Record<ClimateZone, nu
   C: 300,
   D: 240,
 };
-
-/**
- * Προσανατολισμός κατακόρυφης επιφάνειας — 8 σημεία πυξίδας (Revit Energy / ΤΟΤΕΕ
- * 20701-1 parity). 0°=Βορράς, **clockwise**. ADR-422 L7.2.
- */
-export type SolarOrientation = 'N' | 'NE' | 'E' | 'SE' | 'S' | 'SW' | 'W' | 'NW';
-
-/** Οι 8 προσανατολισμοί σε σειρά πυξίδας (Β στις 0°, clockwise) — index 0..7. */
-export const SOLAR_ORIENTATIONS: readonly SolarOrientation[] = [
-  'N',
-  'NE',
-  'E',
-  'SE',
-  'S',
-  'SW',
-  'W',
-  'NW',
-];
 
 /**
  * Εποχιακή ηλιακή ακτινοβολία **κατακόρυφης** επιφάνειας ανά κλιματική ζώνη **και
@@ -239,70 +248,82 @@ export function getSolarAbsorptance(level: SurfaceColorLevel): number {
 
 // ─── L7.3 Slice B — Συντελεστής σκίασης οριζόντιου προβόλου (F_ov) ─────────────
 
-/** Σημείο πίνακα προβόλου: γωνία προβόλου (deg) → συντελεστής σκίασης `F_ov`. */
-export interface OverhangShadingBand {
-  /** Γωνία προβόλου `β = atan(d_ov/h_top)` σε μοίρες (αύξουσα σειρά). */
-  readonly angle: number;
-  /** Συντελεστής σκίασης `F_ov` ∈ (0,1] στη γωνία αυτή. */
-  readonly factor: number;
-}
+// ─── L7.9 — Δυναμικός `a0` με θερμική μάζα (gain utilisation / time constant) ────
 
 /**
- * Συντελεστής σκίασης **οριζόντιου προβόλου** `F_ov` ∈ (0,1] ανά **προσανατολισμό**
- * και **γωνία προβόλου** `β` — EN ISO 13790 §11.4.4 / ΤΟΤΕΕ 20701-1 (πίνακες
- * σκίασης προβόλων), αντιπροσωπευτικές documented defaults (editable). Φυσική:
- *   - **Νότιος = μεγαλύτερη μείωση** — ο χαμηλός χειμερινός νότιος ήλιος κόβεται
- *     εύκολα από οριζόντιο πρόβολο.
- *   - **Βόρειος ≈ 1.0** — μόνο διάχυτη ακτινοβολία, ο πρόβολος ελάχιστα την κόβει.
- *   - Α/Δ ενδιάμεσα· ΝΑ/ΝΔ κοντά στον Ν· ΒΑ/ΒΔ κοντά στον Β.
- * `β=0` (κανένας πρόβολος) ⇒ `1.0` παντού ⇒ zero-regression. Γραμμική interpolation
- * μεταξύ γωνιών (βλ. `getOverhangShadingFactor`). SSoT — ο resolver διαβάζει ΜΟΝΟ από εδώ.
+ * Κατηγορία **θερμικής αδράνειας / μάζας** του χώρου (κατασκευαστική κλάση) — ο
+ * discriminator της εσωτερικής θερμοχωρητικότητας `C_m` της EN ISO 13790 §12.3.1.2
+ * (5 τυπικές κλάσεις) / ΤΟΤΕΕ 20701-1. Βαρύτερη κατασκευή (μπετόν/τοιχοποιία) →
+ * μεγαλύτερη `C_m` → μεγαλύτερη σταθερά χρόνου `τ` → μεγαλύτερο `a0` → **αξιοποιεί
+ * περισσότερα** κέρδη (η μάζα τα αποθηκεύει & αποδίδει αργότερα). Per-space override
+ * (Revit construction class). **Absent ⇒ `a0_ref` (=1.0) ⇒ simplified ⇒
+ * zero-regression** (δεν μοντελοποιείται μάζα). Mirror του `SolarShadingLevel` (L7.3).
  */
-export const OVERHANG_SHADING_FACTOR: Readonly<
-  Record<SolarOrientation, readonly OverhangShadingBand[]>
-> = {
-  S:  [{ angle: 0, factor: 1.0 }, { angle: 30, factor: 0.88 }, { angle: 45, factor: 0.72 }, { angle: 60, factor: 0.55 }],
-  SE: [{ angle: 0, factor: 1.0 }, { angle: 30, factor: 0.90 }, { angle: 45, factor: 0.76 }, { angle: 60, factor: 0.60 }],
-  SW: [{ angle: 0, factor: 1.0 }, { angle: 30, factor: 0.90 }, { angle: 45, factor: 0.76 }, { angle: 60, factor: 0.60 }],
-  E:  [{ angle: 0, factor: 1.0 }, { angle: 30, factor: 0.93 }, { angle: 45, factor: 0.83 }, { angle: 60, factor: 0.70 }],
-  W:  [{ angle: 0, factor: 1.0 }, { angle: 30, factor: 0.93 }, { angle: 45, factor: 0.83 }, { angle: 60, factor: 0.70 }],
-  NE: [{ angle: 0, factor: 1.0 }, { angle: 30, factor: 0.97 }, { angle: 45, factor: 0.92 }, { angle: 60, factor: 0.85 }],
-  NW: [{ angle: 0, factor: 1.0 }, { angle: 30, factor: 0.97 }, { angle: 45, factor: 0.92 }, { angle: 60, factor: 0.85 }],
-  N:  [{ angle: 0, factor: 1.0 }, { angle: 30, factor: 0.99 }, { angle: 45, factor: 0.97 }, { angle: 60, factor: 0.94 }],
+export type ThermalMassLevel = 'very-light' | 'light' | 'medium' | 'heavy' | 'very-heavy';
+
+/**
+ * Εσωτερική θερμοχωρητικότητα `C_m` ανά **m² δαπέδου** (J/K·m²) ανά κλάση μάζας —
+ * EN ISO 13790 §12.3.1 Πίν. 12 documented defaults (αύξον με τη βαρύτητα κατασκευής·
+ * editable): ελαφρά μεταλλική/γυψοσανίδα → βαριά μπετόν/τοιχοποιία. Πολλαπλασιάζεται
+ * επί το εμβαδό δαπέδου → `C_m [J/K]`. SSoT — ο engine διαβάζει ΜΟΝΟ από εδώ.
+ */
+export const THERMAL_MASS_CAPACITY_J_PER_K_M2: Readonly<Record<ThermalMassLevel, number>> = {
+  'very-light': 80000,
+  light: 110000,
+  medium: 165000,
+  heavy: 260000,
+  'very-heavy': 370000,
 };
 
-/** Κάτω όριο του `F_ov` (αποφυγή μηδενικού/αρνητικού — διατηρεί `∈ (0,1]`). */
-const PROJECTION_FACTOR_FLOOR = 0.01;
+/** Σειρά εμφάνισης κλάσεων μάζας (για μελλοντικό dropdown «Θερμική Αδράνεια»). */
+export const THERMAL_MASS_LEVELS: readonly ThermalMassLevel[] = [
+  'very-light',
+  'light',
+  'medium',
+  'heavy',
+  'very-heavy',
+] as const;
 
-/**
- * Συντελεστής σκίασης οριζόντιου προβόλου `F_ov` για γωνία προβόλου `β` (deg) και
- * προσανατολισμό — **γραμμική interpolation** στις γωνίες του `OVERHANG_SHADING_FACTOR`.
- * `β ≤ 0` ⇒ `1.0` (κανένας πρόβολος, zero-regression)· `β` πέρα από την τελευταία
- * γωνία ⇒ ο τελευταίος συντελεστής (clamp). Αποτέλεσμα clamped `∈ (0,1]`. Pure.
- */
-export function getOverhangShadingFactor(angleDeg: number, orientation: SolarOrientation): number {
-  const bands = OVERHANG_SHADING_FACTOR[orientation];
-  if (!(angleDeg > 0)) return 1;
-  let result = bands[bands.length - 1].factor;
-  for (let i = 0; i < bands.length - 1; i++) {
-    const lo = bands[i];
-    const hi = bands[i + 1];
-    if (angleDeg <= hi.angle) {
-      const span = hi.angle - lo.angle;
-      const tt = span > 0 ? (angleDeg - lo.angle) / span : 0;
-      result = lo.factor + tt * (hi.factor - lo.factor);
-      break;
-    }
-  }
-  return Math.min(1, Math.max(PROJECTION_FACTOR_FLOOR, result));
+/** Εσωτερική θερμοχωρητικότητα `C_m` (J/K·m²) μιας κλάσης (πάντα ορισμένο — exhaustive). */
+export function getThermalMassCapacity(level: ThermalMassLevel): number {
+  return THERMAL_MASS_CAPACITY_J_PER_K_M2[level];
 }
 
 /**
- * Αριθμητική παράμετρος `a0` του συντελεστή αξιοποίησης (EN ISO 13790 §12.2.1.1).
- * Για simplified seasonal χωρίς δυναμική σταθερά χρόνου `a0 = 1` (documented· δίνει
- * `η = 1/(1+γ)`, με `η(γ=1)=0.5`). Editable αν εισαχθεί θερμοχωρητικότητα στο μέλλον.
+ * Αριθμητική παράμετρος αναφοράς `a0,ref` του συντελεστή αξιοποίησης (EN ISO 13790
+ * §12.2.1.1, **monthly reference pair** `a_H,0=1.0`). Στο `τ=0` (απουσία μάζας)
+ * αναπαράγει ΑΚΡΙΒΩΣ το simplified `η = 1/(1+γ)` (zero-regression baseline). Η θερμική
+ * μάζα **προσθέτει** πάνω της (`a0 = a0,ref + τ/τ0`).
  */
-export const UTILISATION_NUMERIC_PARAM = 1.0;
+export const UTILISATION_REFERENCE_PARAM_A0 = 1.0;
+
+/**
+ * Σταθερά χρόνου αναφοράς `τ0` (h) του συντελεστή αξιοποίησης (EN ISO 13790 §12.2.1.1,
+ * **monthly reference pair** `τ_H,0=15 h` — συνεπής με `a0,ref=1.0`). Κανονικοποιεί τη
+ * σταθερά χρόνου του κτιρίου: `a0 = a0,ref + τ/τ0`.
+ */
+export const UTILISATION_REFERENCE_TIME_CONSTANT_H = 15;
+
+/**
+ * Σταθερά χρόνου κτιρίου `τ = C_m / H` (h) — EN ISO 13790 §12.2.1.1. `C_m` σε J/K, `H`
+ * (συντ. απωλειών) σε W/K· το `3600` μετατρέπει W·h→J ώστε `τ` σε ώρες. Μεγάλη μάζα ή
+ * μικρές απώλειες → μεγάλη `τ` (το κτίριο «κρατά» τη θερμότητα). Guard `H ≤ 0 ⇒ 0`
+ * (μηδέν απώλειες → fallback στο reference `a0`, ΟΧΙ άπειρο). Pure, idempotent.
+ */
+export function computeTimeConstantHours(cmJPerK: number, hWperK: number): number {
+  if (!(hWperK > 0)) return 0;
+  return cmJPerK / (hWperK * 3600);
+}
+
+/**
+ * Αριθμητική παράμετρος `a0 = a0,ref + τ/τ0` (EN ISO 13790 §12.2.1.1) από τη σταθερά
+ * χρόνου `τ` (h). Clamp `a0 ≥ a0,ref` (μη-αρνητικό `τ`). `τ=0` ⇒ `a0,ref` (simplified
+ * baseline). Pure, idempotent. Τροφοδοτεί το `computeGainUtilisation(γ, a0)`.
+ */
+export function computeNumericParam(tauHours: number): number {
+  const a0 = UTILISATION_REFERENCE_PARAM_A0 + Math.max(0, tauHours) / UTILISATION_REFERENCE_TIME_CONSTANT_H;
+  return Math.max(UTILISATION_REFERENCE_PARAM_A0, a0);
+}
 
 /** Εσωτερικά κέρδη (W/m²) της χρήσης. */
 export function getInternalGainWperM2(use: ThermalSpaceUseType): number {
@@ -353,18 +374,69 @@ export function getHorizontalSolarIrradiation(zone: ClimateZone): number {
   return SEASONAL_SOLAR_IRRADIATION_HORIZONTAL_KWHM2[zone];
 }
 
+// ─── L7.8 — Sky-radiation correction αδιαφανών εξωτ. στοιχείων (long-wave loss) ─
+
 /**
- * Συντελεστής αξιοποίησης κερδών `η_gn` (EN ISO 13790 §12.2.1.1, simplified seasonal)
- * συναρτήσει του λόγου κερδών/απωλειών `γ = (Q_int + Q_sol) / Q_loss`:
+ * Εξωτερικός συντελεστής ακτινοβολίας `h_r` (W/m²K) — EN ISO 13790 §11.3.5 / EN ISO
+ * 6946. Ο ρυθμός ανταλλαγής long-wave ακτινοβολίας μεταξύ της εξωτ. επιφάνειας και
+ * του περιβάλλοντος/ουρανού: `h_r = 4·ε·σ·T_m³` → για τυπική εκπεμπτικότητα `ε≈0.9`
+ * αδιαφανούς δομικού στοιχείου σε εύκρατο κλίμα ≈ 4.5–5.1 W/m²K. Documented default
+ * **5.0** (editable). Συντελεστής της στιγμιαίας ροής `Φ_r = R_se·U_c·A_c·h_r·Δθ_er`.
+ */
+export const EXTERNAL_RADIATIVE_COEFFICIENT_H_R = 5;
+
+/**
+ * Μέση διαφορά θερμοκρασίας εξωτ. αέρα ↔ **φαινόμενης θερμοκρασίας ουρανού** `Δθ_er`
+ * (K) — EN ISO 13790 §11.3.5. Ο (ψυχρός) ουρανός είναι κατά μέσο όρο `Δθ_er` πιο
+ * κρύος από τον εξωτ. αέρα, οπότε κάθε εξωτ. αδιαφανές στοιχείο εκπέμπει καθαρά
+ * προς τον ουρανό. ISO τιμές: ~9 K τροπικά, ~11 K υποπολικά → εύκρατη Ελλάδα ~10–11 K.
+ * Documented default **11 K** (μέσης περιόδου θέρμανσης — όχι peak· editable).
+ */
+export const SKY_TEMP_DIFFERENCE_DELTA_THETA_ER = 11;
+
+/**
+ * Συντελεστής θέασης ουρανού `F_r` (form factor προς ουρανό) ανά **τύπο** στοιχείου —
+ * EN ISO 13790 §11.3.5. **Γεωμετρική** ιδιότητα προσανατολισμού (όχι user choice):
+ * οριζόντια **στέγη** βλέπει ΟΛΟ τον ουρανό → `1.0`· κατακόρυφος **τοίχος** βλέπει τον
+ * **μισό** ημισφαίριο ουρανού (το άλλο μισό = έδαφος) → `0.5`· κατακόρυφο **παράθυρο**
+ * (L7.8-B) επίσης `0.5` — ίδια γεωμετρία θέασης με τον τοίχο (το γυαλί είναι το πιο
+ * ακτινοβόλο στοιχείο, υψηλό `U`). Τα υπόλοιπα kinds (`door`/`floor`/`ceiling`) → `0`
+ * (`getSkyViewFactor`). Πλήρης θέαση (χωρίς partial sky-view από γειτονικά κτίρια) =
+ * v1· tilt/μερική θέαση/per-glazing emissivity (low-e) = future.
+ */
+export const SKY_VIEW_FACTOR_BY_KIND: Partial<Record<HeatLoadBoundaryKind, number>> = {
+  roof: 1.0,
+  wall: 0.5,
+  window: 0.5,
+};
+
+/**
+ * Συντελεστής θέασης ουρανού `F_r` του τύπου στοιχείου (στέγη 1.0 / τοίχος 0.5 /
+ * παράθυρο 0.5)· οποιοδήποτε άλλο kind (door/floor/ceiling) → `0` (δεν συμμετέχει στο
+ * sky-radiation balance v1). Pure, idempotent. SSoT — ο aggregator διαβάζει ΜΟΝΟ από εδώ.
+ */
+export function getSkyViewFactor(kind: HeatLoadBoundaryKind): number {
+  return SKY_VIEW_FACTOR_BY_KIND[kind] ?? 0;
+}
+
+/**
+ * Συντελεστής αξιοποίησης κερδών `η_gn` (EN ISO 13790 §12.2.1.1) συναρτήσει του λόγου
+ * κερδών/απωλειών `γ = (Q_int + Q_sol) / Q_loss` και της αριθμητικής παραμέτρου `a0`:
  *   - `γ ≤ 0` ⇒ `η = 1` (μηδέν κέρδη ή μηδενικές απώλειες → πλήρως αξιοποιήσιμα / no-op),
  *   - `γ = 1` ⇒ `η = a0 / (a0 + 1)`,
  *   - αλλιώς ⇒ `η = (1 − γ^a0) / (1 − γ^(a0+1))`.
  * Φθίνουσα στο `γ` (όσο περισσότερα κέρδη σε σχέση με απώλειες, τόσο μικρότερο ποσοστό
- * αξιοποιείται). Clamp `η ∈ [0, 1]`. Pure, idempotent, full unit-testable.
+ * αξιοποιείται)· **αύξουσα στο `a0`** (μεγαλύτερη θερμική μάζα → περισσότερη αξιοποίηση,
+ * L7.9). Το `a0` είναι προαιρετικό — **absent ⇒ `UTILISATION_REFERENCE_PARAM_A0` (=1.0)
+ * ⇒ simplified `η = 1/(1+γ)`** (zero-regression· οι υπάρχοντες callers αμετάβλητοι). Με
+ * δηλωμένη θερμική μάζα ο caller περνά δυναμικό `a0 = a0,ref + τ/τ0`. Clamp `η ∈ [0, 1]`.
+ * Pure, idempotent, full unit-testable.
  */
-export function computeGainUtilisation(gainLossRatio: number): number {
+export function computeGainUtilisation(
+  gainLossRatio: number,
+  a0: number = UTILISATION_REFERENCE_PARAM_A0,
+): number {
   if (!(gainLossRatio > 0)) return 1;
-  const a0 = UTILISATION_NUMERIC_PARAM;
   const eta =
     gainLossRatio === 1
       ? a0 / (a0 + 1)
