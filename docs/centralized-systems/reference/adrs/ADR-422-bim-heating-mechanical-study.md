@@ -1,6 +1,6 @@
 # ADR-422 — BIM Μηχανολογική Μελέτη Θέρμανσης (ΤΟΤΕΕ/ΚΕΝΑΚ)
 
-**Status:** 🟡 IN PROGRESS — L0→L7 IMPLEMENTED (L7 ετήσια ενεργειακή ζήτηση degree-day, 24/24 tests· pending browser-verify + commit)
+**Status:** 🟡 IN PROGRESS — L0→L7.1 IMPLEMENTED (L7.1 καθαρή ζήτηση με αξιοποίηση κερδών EN ISO 13790, 27/27 tests· pending browser-verify + commit)
 **Date:** 2026-06-08
 **Owner:** Giorgio (YorgosPag)
 **Πρότυπο (κλειδωμένο):** Ελληνικό **ΤΟΤΕΕ/ΚΕΝΑΚ** — ΤΟΤΕΕ 20701-1 (υπολογισμοί / θερμοκρασίες σχεδιασμού), ΤΟΤΕΕ 20701-3 (κλιματικά δεδομένα), με βάση **EN 12831**.

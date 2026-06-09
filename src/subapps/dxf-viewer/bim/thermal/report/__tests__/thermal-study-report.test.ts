@@ -278,9 +278,10 @@ describe('buildThermalStudyReport', () => {
     expect(compliance.rows).toHaveLength(0);
   });
 
-  it('builds the L7 annual-energy section + summary KPIs (degree-day)', () => {
-    // χώρος 4×4 m (A=16 m²), H=(600+200)/20=40 W/K, ζώνη Β (HDD 1300)
-    // → Q=40·1300·24/1000=1248 kWh/έτος · q=1248/16=78 → ενδεικτική κατηγορία Β.
+  it('builds the L7/L7.1 annual-energy section + summary KPIs (μεικτή/καθαρή με κέρδη)', () => {
+    // χώρος 4×4 m (A=16 m²), H=(600+200)/20=40 W/K, ζώνη Β (HDD 1300, hours 3600)
+    // → μεικτή 1248 kWh · Q_int=6·16·3600/1000=345.6 · γ=0.2769 · η=0.7831
+    // → καθαρή 977 kWh · q_net=61.1 → ενδεικτική κατηγορία Β+.
     const report = buildThermalStudyReport({
       spaceLoads: makeSpaceLoads([makeSpace('sp-1', 'Σαλόνι')]),
       radiatorSizing: new Map(),
@@ -296,13 +297,17 @@ describe('buildThermalStudyReport', () => {
     const row = annual.rows[0];
     expect(row.lossCoeff).toBeCloseTo(40);
     expect(row.floorArea).toBeCloseTo(16);
-    expect(row.annualDemand).toBe(1248);
-    expect(row.specificDemand).toBeCloseTo(78);
+    expect(row.grossDemand).toBe(1248); // μεικτή (L7, zero-regression)
+    expect(row.gains).toBe(346); // round(345.6 εσωτ. + 0 ηλιακά)
+    expect(row.utilisation).toBeCloseTo(78.31); // η ×100 (%)
+    expect(row.annualDemand).toBe(977); // καθαρή (headline)
+    expect(row.specificDemand).toBeCloseTo(61.08);
 
     const kpi = report.sections[0].rows[0];
-    expect(kpi.annualEnergy).toBe(1248);
-    expect(kpi.specificDemand).toBeCloseTo(78);
-    expect(kpi.energyClass).toBe('B');
+    expect(kpi.grossEnergy).toBe(1248); // μεικτή KPI
+    expect(kpi.annualEnergy).toBe(977); // καθαρή KPI
+    expect(kpi.specificDemand).toBeCloseTo(61.08);
+    expect(kpi.energyClass).toBe('B+');
   });
 
   it('omits annual-energy rows + class when no climate zone is known', () => {
@@ -319,6 +324,7 @@ describe('buildThermalStudyReport', () => {
     expect(annual.rows).toHaveLength(0);
     expect(report.sections[0].rows[0].energyClass).toBe('—');
     expect(report.sections[0].rows[0].annualEnergy).toBe(0);
+    expect(report.sections[0].rows[0].grossEnergy).toBe(0);
   });
 
   it('returns isEmpty for a floor with no heating model', () => {
