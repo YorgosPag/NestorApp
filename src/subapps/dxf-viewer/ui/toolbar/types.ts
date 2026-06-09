@@ -166,6 +166,14 @@ export type ToolType =
   | 'mep-air-terminal'
   // ADR-432: point-based air handling unit (ΚΚΜ/AHU) — mep-fixture kind, supply-air duct outlet = network source
   | 'mep-ahu'
+  // ADR-433: point-based fire sprinkler head (καταιονητήρας) — mep-fixture kind, fire-sprinkler pipe inlet
+  | 'mep-sprinkler'
+  // ADR-433: point-based fire riser (στήλη πυρόσβεσης) — mep-fixture kind, fire-sprinkler pipe outlet = network source
+  | 'mep-fire-riser'
+  // ADR-434: point-based gas meter (μετρητής αερίου) — mep-fixture kind, fuel-gas outlet = network source
+  | 'mep-gas-meter'
+  // ADR-434: point-based gas cooker (εστία αερίου) — mep-fixture kind, fuel-gas inlet terminal
+  | 'mep-gas-cooker'
   // ADR-431: point-based comms-rack (rack/patch-panel) — electrical-panel kind, weak-current source
   | 'mep-comms-rack'
   // ADR-408 Φ3: point-based electrical panel drawing tool (circuit source)
