@@ -45,9 +45,11 @@ export interface BoilerSymbolGeometry {
   /** Closed outline polygon (= the footprint). */
   readonly outline: readonly Point3D[];
   /**
-   * Connector stub strokes — one straight stub per WATER/PIPE connector
-   * (`domain:'pipe'`), connector-driven from `buildBoilerConnectors`. Order follows
-   * `buildBoilerConnectors`: supply outlet, return inlet, then any combi DHW ports.
+   * Connector stub strokes — one straight stub per NON-duct connector: the water/pipe
+   * ports (`domain:'pipe'`) AND the combustion fuel supply inlet (`domain:'fuel'`, which
+   * reads as a plain stub — distinct duct/vent glyphs live in `ventStrokes`). Connector-
+   * driven from `buildBoilerConnectors`; order follows it: supply outlet, return inlet,
+   * any combi DHW ports, then the gas/oil fuel inlet.
    */
   readonly strokes: readonly BoilerStroke[];
   /**

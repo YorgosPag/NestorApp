@@ -203,7 +203,7 @@ describe('buildBoilerConnectors', () => {
 
   it('appends a flue duct connector for a gas boiler (back-centre, flow:out, exhaust)', () => {
     const connectors = buildBoilerConnectors(params({ fuelType: 'gas' }));
-    expect(connectors).toHaveLength(3); // supply + return + flue (no DHW)
+    expect(connectors).toHaveLength(4); // supply + return + flue + fuel inlet (no DHW)
     const flue = connectors.find((c) => c.connectorId === 'boiler-flue')!;
     expect(flue.domain).toBe('duct');
     expect(flue.flow).toBe('out');
@@ -233,17 +233,60 @@ describe('buildBoilerConnectors', () => {
     expect(overridden.find((c) => c.connectorId === 'boiler-flue')!.duct?.diameterMm).toBe(130);
   });
 
-  it('coexists with a combi + recirc gas boiler — 6 distinct connectors', () => {
+  it('coexists with a combi + recirc gas boiler — 7 distinct connectors', () => {
     const connectors = buildBoilerConnectors(
       params({ fuelType: 'gas', producesDhw: true, dhwRecirculation: true }),
     );
-    expect(connectors).toHaveLength(6); // supply, return, dhwHot, dhwCold, recirc, flue
+    expect(connectors).toHaveLength(7); // supply, return, dhwHot, dhwCold, recirc, flue, fuel
     const ids = connectors.map((c) => c.connectorId).sort();
     expect(ids).toEqual(
-      ['boiler-dhw-cold', 'boiler-dhw-hot', 'boiler-dhw-recirc', 'boiler-flue', 'boiler-return', 'boiler-supply'].sort(),
+      ['boiler-dhw-cold', 'boiler-dhw-hot', 'boiler-dhw-recirc', 'boiler-flue', 'boiler-fuel', 'boiler-return', 'boiler-supply'].sort(),
     );
-    // all six local positions are distinct.
+    // all seven local positions are distinct.
     const keys = new Set(connectors.map((c) => `${c.localPosition.x},${c.localPosition.y}`));
-    expect(keys.size).toBe(6);
+    expect(keys.size).toBe(7);
+  });
+
+  // ─── Combustion fuel supply (τροφοδοσία καυσίμου) — fuel connector (ADR-408 fuel foundation) ─
+
+  it('appends a fuel inlet for a gas boiler (front-centre, flow:in, fuel-gas)', () => {
+    const fuel = buildBoilerConnectors(params({ fuelType: 'gas' })).find(
+      (c) => c.connectorId === 'boiler-fuel',
+    )!;
+    expect(fuel.domain).toBe('fuel');
+    expect(fuel.flow).toBe('in'); // fuel FEEDS the boiler
+    expect(fuel.fuel?.systemClassification).toBe('fuel-gas');
+    // front-centre {0, +hl}: length 350 → +175 (mm-scene s=1).
+    expect(fuel.localPosition.x).toBeCloseTo(0, 6);
+    expect(fuel.localPosition.y).toBeCloseTo(175, 6);
+    // carries no pipe/duct payload — it is a distinct fuel-domain connector.
+    expect(fuel.pipe).toBeUndefined();
+    expect(fuel.duct).toBeUndefined();
+  });
+
+  it('uses fuel-oil classification for an oil boiler', () => {
+    const fuel = buildBoilerConnectors(params({ fuelType: 'oil' })).find(
+      (c) => c.connectorId === 'boiler-fuel',
+    )!;
+    expect(fuel.fuel?.systemClassification).toBe('fuel-oil');
+  });
+
+  it('omits the fuel inlet for electric / heat-pump / unspecified fuel (no combustion)', () => {
+    expect(buildBoilerConnectors(params({ fuelType: 'electric' })).map((c) => c.connectorId)).not.toContain('boiler-fuel');
+    expect(buildBoilerConnectors(params({ fuelType: 'heat-pump' })).map((c) => c.connectorId)).not.toContain('boiler-fuel');
+    expect(buildBoilerConnectors(params()).map((c) => c.connectorId)).not.toContain('boiler-fuel');
+  });
+
+  it('fuel diameter defaults to DN20, overridden by fuelConnectorDiameterMm', () => {
+    const def = buildBoilerConnectors(params({ fuelType: 'gas' }));
+    expect(def.find((c) => c.connectorId === 'boiler-fuel')!.fuel?.diameterMm).toBe(20);
+    const overridden = buildBoilerConnectors(params({ fuelType: 'gas', fuelConnectorDiameterMm: 25 }));
+    expect(overridden.find((c) => c.connectorId === 'boiler-fuel')!.fuel?.diameterMm).toBe(25);
+  });
+
+  it('fuel inlet is independent of the combi/DHW gate (plain gas boiler still has it)', () => {
+    const ids = buildBoilerConnectors(params({ fuelType: 'gas', producesDhw: false })).map((c) => c.connectorId);
+    expect(ids).toContain('boiler-fuel');
+    expect(ids).toContain('boiler-flue');
   });
 });

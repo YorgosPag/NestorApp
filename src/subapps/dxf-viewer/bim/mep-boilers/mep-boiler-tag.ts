@@ -19,9 +19,10 @@
 
 import { i18n } from '@/i18n';
 import type { MepBoilerParams } from '../types/mep-boiler-types';
-import { DEFAULT_BOILER_FLUE_DIAMETER_MM } from '../types/mep-boiler-types';
+import { DEFAULT_BOILER_FLUE_DIAMETER_MM, DEFAULT_BOILER_FUEL_DIAMETER_MM } from '../types/mep-boiler-types';
 import { resolveBoilerModel, type BoilerFuelType } from './boiler-model-catalog';
 import { DEFAULT_FLUE_TERMINATION } from './boiler-flue-terminal';
+import { resolveErpClass } from './boiler-efficiency';
 
 /** i18n key prefix for every boiler-tag string (namespace `dxf-viewer-shell`). */
 const TAG_KEY_PREFIX = 'ribbon.commands.mepBoilerTag.';
@@ -31,6 +32,9 @@ const TAG_NS = 'dxf-viewer-shell';
 
 /** Diameter glyph prefix for the flue line — non-translatable annotation symbol. */
 const DIAMETER_GLYPH = 'Ø';
+
+/** Percent glyph for the efficiency line — non-translatable annotation symbol. */
+const PERCENT_GLYPH = '%';
 
 /**
  * Combustion fuel sources — only these have a flue (καπναγωγός). Electric /
@@ -52,9 +56,12 @@ export type BoilerTagTranslator = (shortKey: string) => string;
  * Lines are emitted only when the corresponding param is present:
  *   1. Model — catalogue product label, or the generic fallback when parametric.
  *   2. Power — `thermalOutputW` rounded to whole kW (omitted when absent).
- *   3. Fuel  — `fuelType` resolved to a localized name (omitted when absent).
- *   4. Flue  — `flueDiameterMm` as `Ø DNxxx`, ONLY for combustion fuels (gas/oil).
- *   5. Terminal — the flue vent-terminal type (καμινάδα), ONLY for combustion fuels.
+ *   3. Efficiency — `seasonalEfficiencyPercent` as `NN%` (any fuel; omitted when absent).
+ *   4. ErP   — EU energy class (`resolveErpClass`); paired with efficiency, any fuel.
+ *   5. Fuel  — `fuelType` resolved to a localized name (omitted when absent).
+ *   6. Flue  — `flueDiameterMm` as `Ø DNxxx`, ONLY for combustion fuels (gas/oil).
+ *   7. Terminal — the flue vent-terminal type (καμινάδα), ONLY for combustion fuels.
+ *   8. Fuel supply — `fuelConnectorDiameterMm` as `Ø DNxx`, ONLY for combustion fuels.
  *
  * @param params Boiler params (SSoT).
  * @param t      Short-key translator (see {@link BoilerTagTranslator}).
@@ -75,19 +82,31 @@ export function buildBoilerTagLines(
     lines.push(`${t('power')}: ${kW} ${t('kWUnit')}`);
   }
 
-  // 3 — Fuel type (localized enum).
+  // 3+4 — Seasonal efficiency + EU ErP class (any fuel, incl. electric/heat-pump).
+  if (typeof params.seasonalEfficiencyPercent === 'number' && params.seasonalEfficiencyPercent > 0) {
+    const pct = Math.round(params.seasonalEfficiencyPercent);
+    lines.push(`${t('efficiency')}: ${pct}${PERCENT_GLYPH}`);
+    const erp = resolveErpClass(params.seasonalEfficiencyPercent, params.fuelType);
+    lines.push(`${t('erp')}: ${erp}`);
+  }
+
+  // 5 — Fuel type (localized enum).
   if (params.fuelType) {
     lines.push(`${t('fuel')}: ${t(`fuelTypes.${params.fuelType}`)}`);
   }
 
-  // 4 — Flue diameter (combustion fuels only).
+  // 6 — Flue diameter (combustion fuels only).
   if (params.fuelType && COMBUSTION_FUELS.has(params.fuelType)) {
     const dn = params.flueDiameterMm ?? DEFAULT_BOILER_FLUE_DIAMETER_MM;
     lines.push(`${t('flue')}: ${DIAMETER_GLYPH} ${t('dnPrefix')}${dn}`);
 
-    // 5 — Vent terminal type (καμινάδα), combustion fuels only.
+    // 7 — Vent terminal type (καμινάδα), combustion fuels only.
     const termination = params.flueTermination ?? DEFAULT_FLUE_TERMINATION;
     lines.push(`${t('terminationLabel')}: ${t(`terminationTypes.${termination}`)}`);
+
+    // 8 — Fuel supply diameter (τροφοδοσία καυσίμου), combustion fuels only.
+    const fuelDn = params.fuelConnectorDiameterMm ?? DEFAULT_BOILER_FUEL_DIAMETER_MM;
+    lines.push(`${t('fuelSupply')}: ${DIAMETER_GLYPH} ${t('dnPrefix')}${fuelDn}`);
   }
 
   return lines;

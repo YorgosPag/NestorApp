@@ -65,6 +65,12 @@ describe('listBoilerModels', () => {
       expect(m.connectorDiameterMm).toBeGreaterThan(0);
     });
   });
+
+  it('all entries have a positive seasonal efficiency', () => {
+    listBoilerModels().forEach((m) => {
+      expect(m.seasonalEfficiencyPercent).toBeGreaterThan(0);
+    });
+  });
 });
 
 // ─── resolveBoilerModel ───────────────────────────────────────────────────────
@@ -129,6 +135,11 @@ describe('applyBoilerModelToParams', () => {
     expect(next.fuelType).toBe('gas');
   });
 
+  it('writes seasonalEfficiencyPercent from the preset', () => {
+    const next = applyBoilerModelToParams(BASE_PARAMS, model!);
+    expect(next.seasonalEfficiencyPercent).toBe(model!.seasonalEfficiencyPercent);
+  });
+
   it('is pure — does not mutate the original params', () => {
     const before = { ...BASE_PARAMS };
     applyBoilerModelToParams(BASE_PARAMS, model!);
@@ -166,6 +177,11 @@ describe('clearBoilerModel', () => {
   it('sets fuelType to undefined', () => {
     const cleared = clearBoilerModel(withModel);
     expect(cleared.fuelType).toBeUndefined();
+  });
+
+  it('sets seasonalEfficiencyPercent to undefined (a Type-Catalog property)', () => {
+    const cleared = clearBoilerModel(withModel);
+    expect(cleared.seasonalEfficiencyPercent).toBeUndefined();
   });
 
   it('preserves all other params (width, thermalOutputW, position, etc.)', () => {

@@ -55,6 +55,13 @@ export interface BoilerModelPreset {
   readonly connectorDiameterMm: number;
   /** Heating fuel / energy source. */
   readonly fuelType: BoilerFuelType;
+  /**
+   * % — seasonal APPLIANCE efficiency (Revit «Nominal Efficiency», IFC
+   * `Pset_BoilerTypeCommon.NominalEfficiency`). Drives the ErP energy class via
+   * `resolveErpClass` (primary-energy adjusted). Realistic ranges: condensing gas
+   * ≈90–96, oil ≈85–90, direct electric ≈99, heat-pump ≈120–160 (SCOP-derived η_s).
+   */
+  readonly seasonalEfficiencyPercent: number;
 }
 
 // ─── Catalog data ─────────────────────────────────────────────────────────────
@@ -77,6 +84,7 @@ export const BOILER_MODEL_CATALOG: readonly BoilerModelPreset[] = [
     bodyHeightMm: 700,
     connectorDiameterMm: 22,
     fuelType: 'gas',
+    seasonalEfficiencyPercent: 94,
   },
   {
     id: 'gas-condensing-35',
@@ -87,6 +95,7 @@ export const BOILER_MODEL_CATALOG: readonly BoilerModelPreset[] = [
     bodyHeightMm: 750,
     connectorDiameterMm: 22,
     fuelType: 'gas',
+    seasonalEfficiencyPercent: 93,
   },
   {
     id: 'gas-system-28',
@@ -97,6 +106,7 @@ export const BOILER_MODEL_CATALOG: readonly BoilerModelPreset[] = [
     bodyHeightMm: 700,
     connectorDiameterMm: 22,
     fuelType: 'gas',
+    seasonalEfficiencyPercent: 91,
   },
   {
     id: 'oil-floor-30',
@@ -107,6 +117,7 @@ export const BOILER_MODEL_CATALOG: readonly BoilerModelPreset[] = [
     bodyHeightMm: 1200,
     connectorDiameterMm: 28,
     fuelType: 'oil',
+    seasonalEfficiencyPercent: 89,
   },
   {
     id: 'oil-floor-45',
@@ -117,6 +128,7 @@ export const BOILER_MODEL_CATALOG: readonly BoilerModelPreset[] = [
     bodyHeightMm: 1300,
     connectorDiameterMm: 28,
     fuelType: 'oil',
+    seasonalEfficiencyPercent: 88,
   },
   {
     id: 'heatpump-12',
@@ -127,6 +139,7 @@ export const BOILER_MODEL_CATALOG: readonly BoilerModelPreset[] = [
     bodyHeightMm: 800,
     connectorDiameterMm: 28,
     fuelType: 'heat-pump',
+    seasonalEfficiencyPercent: 156,
   },
   {
     id: 'electric-9',
@@ -137,6 +150,7 @@ export const BOILER_MODEL_CATALOG: readonly BoilerModelPreset[] = [
     bodyHeightMm: 700,
     connectorDiameterMm: 22,
     fuelType: 'electric',
+    seasonalEfficiencyPercent: 99,
   },
 ] as const;
 
@@ -169,6 +183,7 @@ export function resolveBoilerModel(modelId: string): BoilerModelPreset | undefin
  *   preset.connectorDiameterMm → params.connectorDiameterMm
  *   preset.thermalOutputW  → params.thermalOutputW
  *   preset.fuelType        → params.fuelType
+ *   preset.seasonalEfficiencyPercent → params.seasonalEfficiencyPercent
  *   preset.id              → params.modelId
  */
 export function applyBoilerModelToParams(
@@ -184,6 +199,7 @@ export function applyBoilerModelToParams(
     length: model.depthMm,
     bodyHeightMm: model.bodyHeightMm,
     connectorDiameterMm: model.connectorDiameterMm,
+    seasonalEfficiencyPercent: model.seasonalEfficiencyPercent,
   };
 }
 
@@ -193,7 +209,14 @@ export function applyBoilerModelToParams(
  * (clear sentinel) in the Model picker.
  */
 export function clearBoilerModel(params: MepBoilerParams): MepBoilerParams {
-  // Omit modelId and fuelType — back to a purely parametric boiler.
-  const { modelId: _modelId, fuelType: _fuelType, ...rest } = params;
+  // Omit modelId, fuelType and the seasonal efficiency — all are Type-Catalog
+  // properties (≠ thermalOutputW/geometry which the user may keep and re-size).
+  // Back to a purely parametric boiler.
+  const {
+    modelId: _modelId,
+    fuelType: _fuelType,
+    seasonalEfficiencyPercent: _seasonalEfficiencyPercent,
+    ...rest
+  } = params;
   return rest as MepBoilerParams;
 }

@@ -67,13 +67,35 @@ describe('buildMepBoilerSymbol — connector-driven stubs', () => {
 });
 
 describe('buildMepBoilerSymbol — combi DHW ports', () => {
-  it('a gas combi with recirculation draws 5 pipe stubs (supply/return + hot/cold/recirc)', () => {
+  it('a gas combi with recirculation draws 6 stubs (supply/return + hot/cold/recirc + fuel)', () => {
+    // The gas fuel inlet (domain:'fuel') also reads as a plain stub in `strokes`.
     const sym = symbol({ producesDhw: true, dhwRecirculation: true, fuelType: 'gas' });
-    expect(sym.strokes).toHaveLength(5);
+    expect(sym.strokes).toHaveLength(6);
   });
 
-  it('a non-recirc combi draws 4 pipe stubs (supply/return + hot/cold)', () => {
+  it('a non-recirc electric combi draws 4 pipe stubs (supply/return + hot/cold, no fuel)', () => {
     expect(symbol({ producesDhw: true, fuelType: 'electric' }).strokes).toHaveLength(4);
+  });
+});
+
+describe('buildMepBoilerSymbol — combustion fuel supply stub', () => {
+  it('a plain gas boiler draws 3 stubs (supply/return + fuel) and the flue vent', () => {
+    const sym = symbol({ fuelType: 'gas' });
+    expect(sym.strokes).toHaveLength(3); // supply, return, fuel inlet
+    expect(sym.ventStrokes).toHaveLength(7); // flue chevron + roof-cowl terminal
+  });
+
+  it('the fuel stub roots at the front-centre (+Y), pointing +Y', () => {
+    // fuel at host-local {0,+hl}; supply[0]/return[1], fuel appended last → strokes[2].
+    const fuel = symbol({ fuelType: 'gas' }).strokes[2];
+    expect(fuel[0].x).toBeCloseTo(0, 6);
+    expect(fuel[0].y).toBeCloseTo(175, 6);
+    expect(fuel[1].x).toBeCloseTo(0, 6);
+    expect(fuel[1].y).toBeCloseTo(175 + STUB_LEN, 6);
+  });
+
+  it('an electric boiler has no fuel stub (only supply/return)', () => {
+    expect(symbol({ fuelType: 'electric' }).strokes).toHaveLength(2);
   });
 });
 
