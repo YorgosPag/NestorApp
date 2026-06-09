@@ -41,6 +41,13 @@ export const MepFixtureKindSchema = z.enum([
   'bathtub',
   'bidet',
   'washing-machine',
+  // ADR-430 — electrical socket (πρίζα / power outlet).
+  'socket',
+  // ADR-431 — structured-cabling data outlet (πρίζα δικτύου / RJ45).
+  'data-outlet',
+  // ADR-432 — HVAC supply-air terminal (στόμιο/diffuser) + air handling unit (ΚΚΜ/AHU).
+  'air-terminal',
+  'ahu',
 ]);
 
 export const MepFixtureShapeSchema = z.enum(['rectangular', 'circular']);
@@ -49,6 +56,10 @@ export const MepFixtureIfcTypeSchema = z.enum([
   'IfcLightFixture',
   'IfcSanitaryTerminal',
   'IfcElectricAppliance',
+  'IfcOutlet',
+  // ADR-432 — HVAC: supply diffuser + air handling unit.
+  'IfcAirTerminal',
+  'IfcUnitaryEquipment',
 ]);
 
 // ─── Params schema ──────────────────────────────────────────────────────────

@@ -85,7 +85,7 @@ const WORLD_UP: Vec3 = { x: 0, y: 1, z: 0 };
 // Per-mode layout builders
 // ──────────────────────────────────────────────────────────────────────────────
 
-interface LayoutOptions {
+export interface LayoutOptions {
   /** Distance from measured segment to dim line (m world). */
   readonly dimLineOffset: number;
   /** Distance from dim line to text anchor (m world). */

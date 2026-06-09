@@ -24,6 +24,7 @@ import type { MepBoilerEntity } from '../types/mep-boiler-types';
 import { pointInPolygon } from '../geometry/shared/polygon-utils';
 import { buildMepBoilerSymbol } from '../mep-boilers/mep-boiler-symbol';
 import { resolveBoilerTagLines } from '../mep-boilers/mep-boiler-tag';
+import { resolveSegmentClassificationColor } from '../mep-systems/mep-system-color';
 import { RENDER_LINE_WIDTHS } from '../../config/text-rendering-config';
 import { resolveIsEntityVisible } from '../visibility/visibility-resolver';
 import { useDrawingScaleStore } from '../../state/drawing-scale-store';
@@ -103,14 +104,26 @@ export class MepBoilerRenderer extends BaseEntityRenderer {
     this.drawPolygonPath(verts);
     this.ctx.stroke();
 
-    // Boiler symbol — connector-driven pipe stubs + flue vent glyph + divider/flame glyph.
+    // Boiler symbol — connector-driven pipe stubs + flue vent + fuel-cock glyph + divider/flame.
+    // Each connector stub is coloured by its System Classification (Revit color-coded MEP plan)
+    // via the `resolveSegmentClassificationColor` SSoT — supply red, return blue, DHW hot red /
+    // cold blue, drainage brown, flue exhaust grey. The body (outline/glyph) and the fuel-cock
+    // keep the warm-red boiler identity (the fuel domain is not covered by the colour SSoT).
     const symbol = buildMepBoilerSymbol(boiler.params, boiler.geometry);
-    for (const stroke of symbol.strokes) {
-      this.drawStroke(stroke);
+    for (const { line, classification } of symbol.strokes) {
+      this.ctx.strokeStyle = resolveSegmentClassificationColor(classification) ?? BOILER_STROKE;
+      this.drawStroke(line);
     }
-    // Combustion flue (καπναγωγός) vent glyph — same warm-red stroke, NORMAL weight so the
-    // exhaust duct reads as a connector (its chevron arrowhead distinguishes it from pipes).
-    for (const stroke of symbol.ventStrokes) {
+    // Combustion flue (καπναγωγός) vent glyph — coloured exhaust grey via the classification
+    // SSoT; its chevron arrowhead also distinguishes it from the pipe stubs.
+    for (const { line, classification } of symbol.ventStrokes) {
+      this.ctx.strokeStyle = resolveSegmentClassificationColor(classification) ?? BOILER_STROKE;
+      this.drawStroke(line);
+    }
+    // Fuel inlet (τροφοδοσία καυσίμου) gas-cock glyph — warm-red default (fuel domain not in the
+    // colour SSoT); its bow-tie isolation valve distinguishes the piped fuel line from pipes/flue.
+    this.ctx.strokeStyle = BOILER_STROKE;
+    for (const stroke of symbol.fuelStrokes) {
       this.drawStroke(stroke);
     }
     this.ctx.lineWidth = RENDER_LINE_WIDTHS.THIN;

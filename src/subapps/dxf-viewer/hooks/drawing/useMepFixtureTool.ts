@@ -32,6 +32,10 @@ import {
 } from '../../bim/mep-fixtures/mep-fixture-geometry';
 import type { MepFixtureEntity, MepFixtureShape } from '../../bim/types/mep-fixture-types';
 import { isSanitaryKind } from '../../bim/sanitary/sanitary-symbol-spec';
+import { isSocketKind } from '../../bim/mep-fixtures/socket-symbol-spec';
+import { isDataOutletKind } from '../../bim/mep-fixtures/data-outlet-symbol-spec';
+import { isAirTerminalKind } from '../../bim/mep-fixtures/air-terminal-symbol-spec';
+import { isAhuKind } from '../../bim/mep-fixtures/ahu-symbol-spec';
 import { mepFixtureToolBridgeStore } from '../../ui/ribbon/hooks/bridge/mep-fixture-tool-bridge-store';
 import { EventBus } from '../../systems/events/EventBus';
 
@@ -175,6 +179,13 @@ export function useMepFixtureTool(options: UseMepFixtureToolOptions = {}): UseMe
     // placement prompts; the light fixture keeps the default.
     if (s.overrides.kind === 'floor-drain') return 'tools.mepFloorDrain.statusPosition';
     if (s.overrides.kind && isSanitaryKind(s.overrides.kind)) return 'tools.mepSanitaryFixture.statusPosition';
+    // ADR-430 — the socket (πρίζα) shows its own placement prompt.
+    if (s.overrides.kind && isSocketKind(s.overrides.kind)) return 'tools.mepSocket.statusPosition';
+    // ADR-431 — the data outlet (πρίζα δικτύου) shows its own placement prompt.
+    if (s.overrides.kind && isDataOutletKind(s.overrides.kind)) return 'tools.mepDataOutlet.statusPosition';
+    // ADR-432 — the air terminal (στόμιο) + AHU (ΚΚΜ) show their own placement prompts.
+    if (s.overrides.kind && isAirTerminalKind(s.overrides.kind)) return 'tools.mepAirTerminal.statusPosition';
+    if (s.overrides.kind && isAhuKind(s.overrides.kind)) return 'tools.mepAhu.statusPosition';
     return 'tools.mepFixture.statusPosition';
   }, []);
 

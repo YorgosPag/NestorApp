@@ -35,6 +35,10 @@ import type { MepConnectorHostParams } from './mep-component-types';
 import type { BimCategory } from '../../config/bim-object-styles';
 import { isSanitaryKind, type SanitaryKind } from '../sanitary/sanitary-symbol-spec';
 import { isApplianceKind, type ApplianceKind } from '../appliances/appliance-symbol-spec';
+import { isSocketKind, type SocketKind } from '../mep-fixtures/socket-symbol-spec';
+import { isDataOutletKind, type DataOutletKind } from '../mep-fixtures/data-outlet-symbol-spec';
+import { isAirTerminalKind, type AirTerminalKind } from '../mep-fixtures/air-terminal-symbol-spec';
+import { isAhuKind, type AhuKind } from '../mep-fixtures/ahu-symbol-spec';
 
 // ─── Sub-type discriminator (ADR-406) ────────────────────────────────────────
 
@@ -51,7 +55,17 @@ import { isApplianceKind, type ApplianceKind } from '../appliances/appliance-sym
  * `IfcElectricAppliance`): connectable like a sanitary terminal (cold inlet + drain
  * outlet) but a DISTINCT family category («Συσκευές», not «Είδη Υγιεινής»).
  */
-export type MepFixtureKind = 'light-fixture' | 'floor-drain' | SanitaryKind | ApplianceKind;
+export type MepFixtureKind =
+  | 'light-fixture'
+  | 'floor-drain'
+  | SanitaryKind
+  | ApplianceKind
+  | SocketKind
+  | DataOutletKind
+  // ADR-432 — HVAC: the supply-air terminal (στόμιο/diffuser) + the air handling
+  // unit (ΚΚΜ/AHU) source, both carrying a `'duct'`-domain connector.
+  | AirTerminalKind
+  | AhuKind;
 
 /**
  * IFC4 class of a fixture, derived from {@link MepFixtureKind} via the SSoT
@@ -59,7 +73,15 @@ export type MepFixtureKind = 'light-fixture' | 'floor-drain' | SanitaryKind | Ap
  * drain / sanitary terminal is `IfcSanitaryTerminal` (Revit Plumbing Fixture); an
  * appliance is `IfcElectricAppliance`.
  */
-export type MepFixtureIfcType = 'IfcLightFixture' | 'IfcSanitaryTerminal' | 'IfcElectricAppliance';
+export type MepFixtureIfcType =
+  | 'IfcLightFixture'
+  | 'IfcSanitaryTerminal'
+  | 'IfcElectricAppliance'
+  | 'IfcOutlet'
+  // ADR-432 — HVAC: a supply diffuser is an IfcAirTerminal; an AHU is an
+  // IfcUnitaryEquipment (Revit Mechanical Equipment).
+  | 'IfcAirTerminal'
+  | 'IfcUnitaryEquipment';
 
 /**
  * 2D/3D footprint shape of the fixture body.
@@ -161,6 +183,14 @@ export function resolveFixtureIfcType(kind: MepFixtureKind): MepFixtureIfcType {
   // is an IfcSanitaryTerminal (differentiated by IFC PredefinedType, not a new
   // class); a light fixture is an IfcLightFixture.
   if (isApplianceKind(kind)) return 'IfcElectricAppliance';
+  // ADR-430 — a socket (πρίζα) is an IfcOutlet (Revit electrical receptacle), distinct
+  // from the luminaire's IfcLightFixture. ADR-431 — a data outlet (RJ45) is likewise an
+  // IfcOutlet (IFC PredefinedType DATAOUTLET), a weak-current communication device.
+  if (isSocketKind(kind) || isDataOutletKind(kind)) return 'IfcOutlet';
+  // ADR-432 — HVAC: a supply diffuser is an IfcAirTerminal; an AHU (ΚΚΜ) is an
+  // IfcUnitaryEquipment (Revit Mechanical Equipment).
+  if (isAirTerminalKind(kind)) return 'IfcAirTerminal';
+  if (isAhuKind(kind)) return 'IfcUnitaryEquipment';
   return kind === 'floor-drain' || isSanitaryKind(kind) ? 'IfcSanitaryTerminal' : 'IfcLightFixture';
 }
 
@@ -180,6 +210,9 @@ export function resolveFixtureBimCategory(params: MepFixtureParams): BimCategory
   // ADR-408 Δρόμος B — an appliance reuses the `'sanitary'` V/G bucket (it groups
   // with the plumbing fixtures it sits among; avoids a new-BimCategory cascade).
   if (isApplianceKind(params.kind) || isSanitaryKind(params.kind)) return 'sanitary';
+  // ADR-432 — HVAC air terminal + AHU share the `'duct'` V/G bucket, so they toggle +
+  // hide together with the supply-air ducts they connect to (Revit "Mechanical" V/G).
+  if (isAirTerminalKind(params.kind) || isAhuKind(params.kind)) return 'duct';
   return 'light-fixture';
 }
 

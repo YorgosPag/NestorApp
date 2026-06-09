@@ -309,7 +309,7 @@ function annualEnergyRow(
     lossCoeff: row.lossCoefficientWperK,
     floorArea: row.floorAreaM2,
     grossDemand: Math.round(row.grossDemandKWh),
-    gains: Math.round(row.internalGainKWh + row.solarGainKWh),
+    gains: Math.round(row.internalGainKWh + row.solarGainKWh + row.opaqueSolarGainKWh),
     utilisation: row.utilisation * UTILISATION_PERCENT,
     annualDemand: Math.round(row.annualDemandKWh),
     specificDemand: row.specificDemandKWhM2,

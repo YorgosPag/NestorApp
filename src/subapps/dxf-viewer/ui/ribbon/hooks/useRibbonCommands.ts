@@ -21,6 +21,9 @@ import { isMepPipeNetworkActionKey } from './bridge/mep-pipe-network-command-key
 import { isWaterSupplyActionKey } from './bridge/water-auto-supply-command-keys';
 import { isDrainageAutoActionKey } from './bridge/drainage-auto-command-keys';
 import { isHeatingAutoActionKey } from './bridge/heating-auto-command-keys';
+import { isElectricalAutoActionKey } from './bridge/electrical-auto-command-keys';
+import { isElectricalWeakAutoActionKey } from './bridge/electrical-weak-auto-command-keys';
+import { isHvacAutoActionKey } from './bridge/hvac-auto-command-keys';
 import { isMepFixturePanelVisibilityKey } from './useRibbonMepFixtureBridge';
 import { isMepFixtureRibbonKey, isMepFixtureRibbonStringKey, isMepFixtureActionKey } from './bridge/mep-fixture-command-keys';
 import { isMepManifoldPanelVisibilityKey } from './useRibbonMepManifoldBridge';
@@ -88,6 +91,9 @@ export function useRibbonCommands({
   waterAutoSupplyBridge,
   drainageAutoBridge,
   heatingAutoBridge,
+  electricalAutoBridge,
+  electricalWeakAutoBridge,
+  hvacAutoBridge,
   mepFixtureBridge,
   mepManifoldBridge,
   mepRadiatorBridge,
@@ -396,6 +402,18 @@ export function useRibbonCommands({
         heatingAutoBridge.onAction(action);
         return;
       }
+      if (isElectricalAutoActionKey(action)) {
+        electricalAutoBridge.onAction(action);
+        return;
+      }
+      if (isElectricalWeakAutoActionKey(action)) {
+        electricalWeakAutoBridge.onAction(action);
+        return;
+      }
+      if (isHvacAutoActionKey(action)) {
+        hvacAutoBridge.onAction(action);
+        return;
+      }
       if (isMepFixtureActionKey(action)) {
         mepFixtureBridge.onAction(action);
         return;
@@ -430,7 +448,7 @@ export function useRibbonCommands({
       }
       wrappedHandleAction(action, data);
     },
-    [wallBridge, openingBridge, slabBridge, roofBridge, floorFinishBridge, thermalSpaceBridge, columnBridge, beamBridge, slabOpeningBridge, stairBridge, mepCircuitBridge, mepPipeNetworkBridge, waterAutoSupplyBridge, drainageAutoBridge, heatingAutoBridge, mepFixtureBridge, mepManifoldBridge, mepRadiatorBridge, mepBoilerBridge, mepWaterHeaterBridge, mepUnderfloorBridge, mepSegmentBridge, furnitureBridge, wrappedHandleAction],
+    [wallBridge, openingBridge, slabBridge, roofBridge, floorFinishBridge, thermalSpaceBridge, columnBridge, beamBridge, slabOpeningBridge, stairBridge, mepCircuitBridge, mepPipeNetworkBridge, waterAutoSupplyBridge, drainageAutoBridge, heatingAutoBridge, electricalAutoBridge, electricalWeakAutoBridge, hvacAutoBridge, mepFixtureBridge, mepManifoldBridge, mepRadiatorBridge, mepBoilerBridge, mepWaterHeaterBridge, mepUnderfloorBridge, mepSegmentBridge, furnitureBridge, wrappedHandleAction],
   );
 
   return React.useMemo(

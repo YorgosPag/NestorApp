@@ -12,8 +12,9 @@
  * `connectorWorldPosition` (rotation-aware, the shared SSoT). So EVERY connector (the
  * hydronic supply/return pair, the combi DHW hot/cold/recirc ports, the gas/oil flue,
  * and any future port) is automatically drawn in plan at its true position — zero drift.
- * The combustion flue (`domain:'duct'`) gets a DISTINCT vent glyph (stub + chevron arrow)
- * so the exhaust duct reads differently from the water pipes.
+ * Each connector DOMAIN gets its own unmistakable read: pipes draw plain stubs, the
+ * combustion flue (`domain:'duct'`) a vent glyph (stub + chevron + terminal cap), and the
+ * fuel inlet (`domain:'fuel'`) a gas-cock isolation-valve glyph (stub + bow-tie + lever).
  *
  * Glyph design:
  *   - A horizontal divider line across the body ~40% from the bottom — visually
@@ -34,6 +35,10 @@ import type {
   MepBoilerParams,
 } from '../types/mep-boiler-types';
 import { connectorWorldPosition } from '../types/mep-connector-types';
+import type {
+  PlumbingSystemClassification,
+  DuctSystemClassification,
+} from '../types/mep-connector-types';
 import { buildBoilerConnectors } from './mep-boiler-geometry';
 import { buildFlueTerminalGlyph, DEFAULT_FLUE_TERMINATION } from './boiler-flue-terminal';
 import { mmToSceneUnits } from '../../utils/scene-units';
@@ -41,24 +46,49 @@ import { mmToSceneUnits } from '../../utils/scene-units';
 /** A polyline of world-space points (canvas units). */
 export type BoilerStroke = readonly Point3D[];
 
+/**
+ * A connector stub polyline tagged with its System Classification (Revit color-coded MEP
+ * plan). The symbol stays pure geometry + classification data — it carries NO colours; the
+ * renderer resolves the colour from the classification via the `resolveSegmentClassificationColor`
+ * SSoT (`mep-system-color.ts`). `classification` is `undefined` when the SSoT does not cover
+ * the connector's domain (e.g. the `fuel` domain) — the renderer then falls back to its
+ * default boiler stroke. Covers the plumbing classifications (supply/return, DHW hot/cold,
+ * drainage) and the duct `exhaust` classification (the flue).
+ */
+export interface ClassifiedBoilerStroke {
+  readonly line: BoilerStroke;
+  readonly classification?: PlumbingSystemClassification | DuctSystemClassification;
+}
+
 export interface BoilerSymbolGeometry {
   /** Closed outline polygon (= the footprint). */
   readonly outline: readonly Point3D[];
   /**
-   * Connector stub strokes — one straight stub per NON-duct connector: the water/pipe
-   * ports (`domain:'pipe'`) AND the combustion fuel supply inlet (`domain:'fuel'`, which
-   * reads as a plain stub — distinct duct/vent glyphs live in `ventStrokes`). Connector-
-   * driven from `buildBoilerConnectors`; order follows it: supply outlet, return inlet,
-   * any combi DHW ports, then the gas/oil fuel inlet.
+   * Connector stub strokes — one straight stub per PIPE connector: the water/pipe ports
+   * (`domain:'pipe'`) only (the hydronic supply/return pair + any combi DHW hot/cold/recirc
+   * ports). The combustion flue (`domain:'duct'`) and the fuel inlet (`domain:'fuel'`) get
+   * their own distinct glyphs in `ventStrokes` / `fuelStrokes`. Connector-driven from
+   * `buildBoilerConnectors`; order follows it: supply outlet, return inlet, any combi DHW ports.
+   * Each stub carries its plumbing System Classification so the renderer colours it per Revit
+   * convention (supply red, return blue, DHW hot red / cold blue, drainage brown).
    */
-  readonly strokes: readonly BoilerStroke[];
+  readonly strokes: readonly ClassifiedBoilerStroke[];
   /**
    * Vent/duct connector glyph strokes — per `domain:'duct'` connector (the gas/oil
    * combustion flue / καπναγωγός): a stub + chevron arrowhead, PLUS the vent-terminal
    * cap glyph at the chevron tip (καμινάδα, per `flueTermination`). Kept separate from
-   * `strokes` so the renderer can give the exhaust duct a distinct read.
+   * `strokes` so the renderer can give the exhaust duct a distinct read. Each glyph stroke
+   * carries the duct classification (`exhaust`) so the renderer colours the flue grey.
    */
-  readonly ventStrokes: readonly BoilerStroke[];
+  readonly ventStrokes: readonly ClassifiedBoilerStroke[];
+  /**
+   * Fuel-supply connector glyph strokes — per `domain:'fuel'` connector (the gas/oil
+   * combustion fuel inlet / τροφοδοσία καυσίμου): a stub capped with a gas-cock isolation
+   * valve glyph (bow-tie «▷◁» plug valve + a short operating lever). Kept separate from
+   * `strokes` so the piped fuel line reads distinctly from the water pipes and the exhaust
+   * duct — every connector domain has its own unmistakable symbol in plan (Revit-grade).
+   */
+  readonly fuelStrokes: readonly BoilerStroke[];
   /**
    * Boiler glyph strokes — drawn with a thin line.
    *   [0] horizontal divider across the body
@@ -81,6 +111,18 @@ const VENT_ARROW_LEN_FRAC = 0.32;
 
 /** Chevron arrowhead half-width as a fraction of the stub length (flue vent glyph). */
 const VENT_ARROW_HALF_FRAC = 0.2;
+
+/** Half-length of the gas-cock bow-tie along the flow axis, as a fraction of the stub. */
+const COCK_VALVE_LEN_FRAC = 0.22;
+
+/** Half-width of the gas-cock bow-tie base (perpendicular to flow), as a fraction of the stub. */
+const COCK_VALVE_HALF_FRAC = 0.16;
+
+/** Length of the gas-cock operating lever (perpendicular to flow), as a fraction of the stub. */
+const COCK_HANDLE_LEN_FRAC = 0.22;
+
+/** Half-width of the gas-cock lever crossbar (along flow), as a fraction of the stub. */
+const COCK_HANDLE_BAR_FRAC = 0.12;
 
 /** Below this magnitude the outward direction is treated as degenerate (skip the stub). */
 const MIN_OUTWARD_LEN = 1e-6;
@@ -196,6 +238,66 @@ function buildFlueVentStroke(
 }
 
 /**
+ * Build the distinct gas-cock glyph for a `domain:'fuel'` connector (the gas/oil combustion
+ * fuel inlet / τροφοδοσία καυσίμου): a straight stub from `root` along `outward`, capped at
+ * the tip with a manual isolation-valve symbol — the classic bow-tie «▷◁» (two triangles
+ * meeting apex-to-apex = a plug/cock valve) plus a short operating lever projecting sideways
+ * (the cock handle). This reads unmistakably as a hand-operated fuel shutoff, distinct from
+ * the plain water stubs and the flue chevron. Pure + rotation-aware (the `outward` direction
+ * is already world-rotated). Returns [stub, leftTriangle, rightTriangle, leverStem, leverBar].
+ */
+function buildFuelCockStroke(
+  root: Point3D,
+  outward: { x: number; y: number },
+  stubLen: number,
+): BoilerStroke[] {
+  const tip: Point3D = { x: root.x + outward.x * stubLen, y: root.y + outward.y * stubLen, z: 0 };
+  // Perpendicular to the outward direction (the bow-tie's lateral / lever axis).
+  const perp = { x: -outward.y, y: outward.x };
+  const valveHalfLen = stubLen * COCK_VALVE_LEN_FRAC;   // along flow
+  const valveHalf = stubLen * COCK_VALVE_HALF_FRAC;     // perpendicular (base half-width)
+  const handleLen = stubLen * COCK_HANDLE_LEN_FRAC;     // lever stem (perpendicular)
+  const barHalf = stubLen * COCK_HANDLE_BAR_FRAC;       // lever crossbar half (along flow)
+
+  // Bow-tie centred on the tip: apexes meet at `tip`, bases splay ± along the flow axis.
+  const apex = tip;
+  // Inner base (toward the boiler), split ± perpendicular.
+  const inBaseTop: Point3D = pointAt(apex, outward, perp, -valveHalfLen, valveHalf);
+  const inBaseBot: Point3D = pointAt(apex, outward, perp, -valveHalfLen, -valveHalf);
+  // Outer base (away from the boiler), split ± perpendicular.
+  const outBaseTop: Point3D = pointAt(apex, outward, perp, valveHalfLen, valveHalf);
+  const outBaseBot: Point3D = pointAt(apex, outward, perp, valveHalfLen, -valveHalf);
+
+  // Operating lever: a stem from the valve centre out along +perp, ending in a small crossbar.
+  const stemEnd: Point3D = pointAt(apex, outward, perp, 0, handleLen);
+  const barLeft: Point3D = pointAt(stemEnd, outward, perp, barHalf, 0);
+  const barRight: Point3D = pointAt(stemEnd, outward, perp, -barHalf, 0);
+
+  return [
+    [root, tip],                              // stub
+    [apex, inBaseTop, inBaseBot, apex],       // inner triangle (closed)
+    [apex, outBaseTop, outBaseBot, apex],     // outer triangle (closed)
+    [apex, stemEnd],                          // lever stem
+    [barLeft, barRight],                      // lever crossbar (cock handle)
+  ];
+}
+
+/** Point at `alongOut` (flow axis) + `alongPerp` (perpendicular) from `origin`. */
+function pointAt(
+  origin: Point3D,
+  outward: { x: number; y: number },
+  perp: { x: number; y: number },
+  alongOut: number,
+  alongPerp: number,
+): Point3D {
+  return {
+    x: origin.x + outward.x * alongOut + perp.x * alongPerp,
+    y: origin.y + outward.y * alongOut + perp.y * alongPerp,
+    z: 0,
+  };
+}
+
+/**
  * Build the boiler symbol geometry from params + computed geometry. Rectangular
  * cabinet → a divider + flame glyph plus ONE stub per embedded connector, all
  * rotation-aware because both the footprint and the connectors are resolved into world.
@@ -217,7 +319,7 @@ export function buildMepBoilerSymbol(
 ): BoilerSymbolGeometry {
   const outline = geometry.footprint.vertices;
   if (outline.length !== 4) {
-    return { outline, strokes: [], ventStrokes: [], glyphStrokes: [] };
+    return { outline, strokes: [], ventStrokes: [], fuelStrokes: [], glyphStrokes: [] };
   }
 
   // v0=(-hw,-hl) v1=(hw,-hl) v2=(hw,hl) v3=(-hw,hl) — rotated to world.
@@ -228,22 +330,41 @@ export function buildMepBoilerSymbol(
   // Connector-driven stubs (FULL SSOT): one stub per real connector, at its true world
   // position. `connectorWorldPosition` = hostPosition + R·localPosition, so the outward
   // direction is `normalize(worldPos − hostPosition)` = R·(normalised local offset).
-  const strokes: BoilerStroke[] = [];
-  const ventStrokes: BoilerStroke[] = [];
+  const strokes: ClassifiedBoilerStroke[] = [];
+  const ventStrokes: ClassifiedBoilerStroke[] = [];
+  const fuelStrokes: BoilerStroke[] = [];
   for (const connector of buildBoilerConnectors(params)) {
     const root = connectorWorldPosition(connector, params.position, params.rotation);
     const len = Math.hypot(root.x - params.position.x, root.y - params.position.y);
     if (len < MIN_OUTWARD_LEN) continue; // connector at the origin — no meaningful stub direction
     const outward = { x: (root.x - params.position.x) / len, y: (root.y - params.position.y) / len };
     if (connector.domain === 'duct') {
-      ventStrokes.push(...buildFlueVentStroke(root, outward, stubLen));
+      // Flue (καπναγωγός) — tag every chevron/terminal stroke with the duct classification
+      // (`exhaust`) so the renderer colours the whole vent glyph grey via the colour SSoT.
+      const ductClass = connector.duct?.systemClassification;
+      ventStrokes.push(
+        ...buildFlueVentStroke(root, outward, stubLen).map((line) => ({ line, classification: ductClass })),
+      );
       // VENT TERMINAL (καμινάδα) — cap the chevron tip with the termination-type glyph.
       const tip: Point3D = { x: root.x + outward.x * stubLen, y: root.y + outward.y * stubLen, z: 0 };
       ventStrokes.push(
-        ...buildFlueTerminalGlyph(tip, outward, stubLen, params.flueTermination ?? DEFAULT_FLUE_TERMINATION),
+        ...buildFlueTerminalGlyph(tip, outward, stubLen, params.flueTermination ?? DEFAULT_FLUE_TERMINATION).map(
+          (line) => ({ line, classification: ductClass }),
+        ),
       );
+    } else if (connector.domain === 'fuel') {
+      // FUEL INLET (τροφοδοσία καυσίμου) — a distinct gas-cock isolation-valve glyph so the
+      // piped fuel line reads differently from the water stubs and the exhaust duct. The fuel
+      // domain is NOT covered by the colour SSoT, so the gas-cock keeps the default boiler
+      // stroke (it is already shape-distinct) — left untagged in `fuelStrokes`.
+      fuelStrokes.push(...buildFuelCockStroke(root, outward, stubLen));
     } else {
-      strokes.push([root, { x: root.x + outward.x * stubLen, y: root.y + outward.y * stubLen, z: 0 }]);
+      // Pipe stub — tag with the connector's plumbing classification (supply/return, DHW
+      // hot/cold, drainage) so the renderer colours it per Revit convention.
+      strokes.push({
+        line: [root, { x: root.x + outward.x * stubLen, y: root.y + outward.y * stubLen, z: 0 }],
+        classification: connector.pipe?.systemClassification,
+      });
     }
   }
 
@@ -252,5 +373,5 @@ export function buildMepBoilerSymbol(
     ...buildFlameStrokes(v0, v1, v2, v3),
   ];
 
-  return { outline, strokes, ventStrokes, glyphStrokes };
+  return { outline, strokes, ventStrokes, fuelStrokes, glyphStrokes };
 }

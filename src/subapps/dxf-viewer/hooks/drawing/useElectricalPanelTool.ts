@@ -146,7 +146,11 @@ export function useElectricalPanelTool(
   const getStatusText = useCallback((): string => {
     const s = stateRef.current;
     if (s.phase === 'idle') return '';
-    return s.phase === 'awaitingPosition' ? 'tools.electricalPanel.statusPosition' : '';
+    if (s.phase !== 'awaitingPosition') return '';
+    // ADR-431 — the comms-rack shows its own placement prompt.
+    return s.overrides.kind === 'comms-rack'
+      ? 'tools.commsRack.statusPosition'
+      : 'tools.electricalPanel.statusPosition';
   }, []);
 
   const getGhostFootprint = useCallback(
@@ -165,7 +169,9 @@ export function useElectricalPanelTool(
     const isActive = state.phase !== 'idle';
     electricalPanelToolBridgeStore.set({
       isActive,
-      kind: 'distribution-board',
+      // ADR-431 — reflect the active kind so the contextual ribbon tab knows whether
+      // it is editing a distribution board or a comms-rack.
+      kind: state.overrides.kind ?? 'distribution-board',
       overrides: state.overrides,
       setParamOverrides,
       getSceneUnits: () => getSceneUnitsRef.current?.() ?? 'mm',

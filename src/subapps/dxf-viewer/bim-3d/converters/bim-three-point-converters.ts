@@ -22,6 +22,8 @@ import { buildDrainageGratingStrokes } from '../../bim/mep-manifolds/mep-manifol
 import { buildShape, extrudeAndRotate, tagMesh } from './bim-three-shape-helpers';
 import { attachEdgesProjection } from './bim-three-edges';
 import { isSanitaryKind } from '../../bim/sanitary/sanitary-symbol-spec';
+import { isSocketKind } from '../../bim/mep-fixtures/socket-symbol-spec';
+import { isDataOutletKind } from '../../bim/mep-fixtures/data-outlet-symbol-spec';
 
 const MM_TO_M = 0.001;
 
@@ -130,6 +132,31 @@ export function fixtureToMesh(
     const tagged = tagMesh(mesh, fixture.id, 'mep-fixture', matId, levelId);
     attachEdgesProjection(tagged, 'light-fixture');
     return tagged;
+  }
+
+  // ADR-430/431 — a socket (πρίζα) and a data outlet (RJ45) render units-safe (like
+  // the sanitary box, NOT the light-fixture meter-scene path) as a small WALL-MOUNTED
+  // box: bottom face at the mounting elevation (~300mm above FFL), extruded UP by
+  // bodyHeight. Identical wall-box geometry — only the 2D glyph + connector differ.
+  // Tinted by a System membership colour when wired to a circuit/channel.
+  if (isSocketKind(fixture.params.kind) || isDataOutletKind(fixture.params.kind)) {
+    const sceneToM = sceneUnitsToMeters(fixture.params.sceneUnits ?? 'mm');
+    const socketShape = buildShape(verts.map((v) => ({ x: v.x * sceneToM, y: v.y * sceneToM, z: 0 })));
+    if (!socketShape) return null;
+
+    const socketBodyM = fixture.params.bodyHeightMm * MM_TO_M;
+    const socketGeo = extrudeAndRotate(socketShape, socketBodyM);
+    const socketMatId = fixture.params.material ?? 'elem-mep-fixture';
+    const socketMat =
+      systemColor !== undefined
+        ? getSystemTintedMaterial3D('mep-fixture', systemColor)
+        : getElementMaterial3D('mep-fixture');
+    const socketMesh = new THREE.Mesh(socketGeo, socketMat);
+    const bottomMm = floorElevationMm + fixture.params.mountingElevationMm;
+    socketMesh.position.y = bottomMm * MM_TO_M + buildingBaseElevationM;
+    const socketTagged = tagMesh(socketMesh, fixture.id, 'mep-fixture', socketMatId, levelId);
+    attachEdgesProjection(socketTagged, 'light-fixture');
+    return socketTagged;
   }
 
   const shape = buildShape(verts);

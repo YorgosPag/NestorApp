@@ -62,6 +62,36 @@ export interface HeatLoadBoundary {
    * κέρδη). Absent ⇒ orientation-agnostic μέση ακτινοβολία (zero-regression).
    */
   readonly azimuthDeg?: number;
+  /**
+   * Συντελεστής σκίασης οριζόντιου προβόλου `F_ov` ∈ (0,1] — geometry-derived
+   * per-window (ADR-422 L7.3 Slice B, EN ISO 13790 §11.4.4). Μόνο για εξωτ.
+   * κουφώματα κάτω από ανιχνεύσιμο πρόβολο· πολλαπλασιάζεται με το manual
+   * `obstruction` του χώρου στα ηλιακά κέρδη. **Absent ⇒ 1.0 (zero-regression).**
+   */
+  readonly overhangShadingFactor?: number;
+  /**
+   * Ολικός συντελεστής ηλιακής διαπερατότητας υαλοπίνακα `g` (SHGC, αδιάστατο) —
+   * per-window από τον αριθμό υαλοπινάκων (ADR-422 L7.4, EN 410 / ΤΟΤΕΕ 20701-1).
+   * Μόνο για εξωτ. παράθυρα· οδηγεί τα ηλιακά κέρδη (`A·g·F_F·F_sh·…`). **Absent ⇒
+   * `GLAZING_SOLAR_FACTOR_G` (0.60, διπλό) ⇒ zero-regression.**
+   */
+  readonly solarFactorG?: number;
+  /**
+   * Γεωμετρικός συντελεστής πλαισίου `F_F = A_glass/A_opening` ∈ (0,1] — per-window
+   * από `(W−2f)(H−2f)/(W·H)` (ADR-422 L7.5, EN ISO 13790 §11.3.2). Μόνο για εξωτ.
+   * παράθυρα **με ρητό `frameWidth`**· οδηγεί τα ηλιακά κέρδη (`A·g·F_F·F_sh·…`).
+   * **Absent ⇒ `FRAME_FACTOR` (0.70) ⇒ zero-regression** (absent-anchor: το
+   * γεωμετρικό default frameWidth δεν δίνει 0.70, άρα υπολογίζεται ΜΟΝΟ όταν ρητό).
+   */
+  readonly frameFactorF?: number;
+  /**
+   * Ηλιακή απορροφητικότητα `α_S` ∈ (0,1) της εξωτ. αδιαφανούς επιφάνειας (από την
+   * per-space απόχρωση, ADR-422 L7.6, EN ISO 13790 §11.3.4). Μόνο για εξωτ. **τοίχους**
+   * προς `external-air`· οδηγεί τα ηλιακά κέρδη αδιαφανών στοιχείων (`A·α·R_se·U·…`).
+   * **Absent ⇒ `getSolarAbsorptance('medium')` (0.60) ⇒ default** (ο τοίχος πάντα
+   * απορροφά κάτι· zero-regression έρχεται από το window-only φιλτράρισμα του aggregator).
+   */
+  readonly solarAbsorptance?: number;
 }
 
 /** Resolved input για τον υπολογισμό φορτίου ενός χώρου. */
@@ -113,6 +143,30 @@ export interface BoundaryHeatLoss {
    * μέση ακτινοβολία. ΔΕΝ επηρεάζει τον υπολογισμό φορτίου (μόνο τα ηλιακά κέρδη).
    */
   readonly azimuthDeg?: number;
+  /**
+   * Συντελεστής σκίασης οριζόντιου προβόλου `F_ov` ∈ (0,1] — propagated από το
+   * `HeatLoadBoundary` (ADR-422 L7.3 Slice B). Absent ⇒ 1.0. ΔΕΝ επηρεάζει το
+   * φορτίο — μόνο τα ηλιακά κέρδη (`derive-annual-energy`).
+   */
+  readonly overhangShadingFactor?: number;
+  /**
+   * Συντελεστής ηλιακής διαπερατότητας υαλοπίνακα `g` (SHGC) — propagated από το
+   * `HeatLoadBoundary` (ADR-422 L7.4). Absent ⇒ `GLAZING_SOLAR_FACTOR_G` (0.60).
+   * ΔΕΝ επηρεάζει το φορτίο — μόνο τα ηλιακά κέρδη (`derive-annual-energy`).
+   */
+  readonly solarFactorG?: number;
+  /**
+   * Γεωμετρικός συντελεστής πλαισίου `F_F` ∈ (0,1] — propagated από το
+   * `HeatLoadBoundary` (ADR-422 L7.5). Absent ⇒ `FRAME_FACTOR` (0.70). ΔΕΝ
+   * επηρεάζει το φορτίο — μόνο τα ηλιακά κέρδη (`derive-annual-energy`).
+   */
+  readonly frameFactorF?: number;
+  /**
+   * Ηλιακή απορροφητικότητα `α_S` αδιαφανούς εξωτ. τοίχου — propagated από το
+   * `HeatLoadBoundary` (ADR-422 L7.6). Absent ⇒ `getSolarAbsorptance('medium')`
+   * (0.60). ΔΕΝ επηρεάζει το φορτίο — μόνο τα ηλιακά κέρδη (`derive-annual-energy`).
+   */
+  readonly solarAbsorptance?: number;
 }
 
 /** Αποτέλεσμα υπολογισμού φορτίου ενός χώρου (`Φ` + breakdown). */

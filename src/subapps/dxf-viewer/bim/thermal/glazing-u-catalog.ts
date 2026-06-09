@@ -42,9 +42,36 @@ export const DEFAULT_GLAZING_PANES: GlazingPanes = 2;
 /** Default `U` (W/m²K) αδιαφανούς πόρτας (μονωμένο φύλλο· αντιπροσωπευτικό). */
 export const DEFAULT_DOOR_U_WPER_M2K = 3.0;
 
+/**
+ * ADR-422 L7.4 — Ολικός συντελεστής ηλιακής διαπερατότητας υαλοπίνακα `g` (SHGC /
+ * solar heat gain coefficient, αδιάστατος) ανά αριθμό υαλοπινάκων (EN 410 / ΤΟΤΕΕ
+ * 20701-1 τυπικές τιμές). SSoT — editable defaults. Όσο περισσότεροι υαλοπίνακες +
+ * επιστρώσεις low-E, τόσο λιγότερη ηλιακή ακτινοβολία περνά (μικρότερο `g`):
+ *   - 1 (μονό):  0.80  (καθαρός μονός υαλοπίνακας — υψηλό solar gain)
+ *   - 2 (διπλό): 0.60  (**zero-regression anchor** = η σημερινή `GLAZING_SOLAR_FACTOR_G`)
+ *   - 3 (τριπλό/low-E): 0.50  (χαμηλό solar gain — σύγχρονο ενεργειακό κούφωμα)
+ *
+ * **ΚΡΙΣΙΜΟ:** το `2 → 0.60` ΠΡΕΠΕΙ να μένει σταθερό — ο default (`DEFAULT_GLAZING_PANES=2`)
+ * δίνει g=0.60 = η σημερινή σταθερά ⇒ absent/double παράθυρα ⇒ ίδιο αποτέλεσμα by construction.
+ */
+export const GLAZING_SOLAR_FACTOR_BY_PANES: Readonly<Record<GlazingPanes, number>> = {
+  1: 0.8,
+  2: 0.6,
+  3: 0.5,
+};
+
 /** `Ug` (W/m²K) από αριθμό υαλοπινάκων (πάντα ορισμένο). */
 export function getGlazingUValue(panes: GlazingPanes = DEFAULT_GLAZING_PANES): number {
   return GLAZING_U_BY_PANES[panes];
+}
+
+/**
+ * `g`-value (SHGC, αδιάστατο) από αριθμό υαλοπινάκων (πάντα ορισμένο). ADR-422 L7.4 —
+ * mirror του `getGlazingUValue`: ο aggregator ηλιακών κερδών (`derive-annual-energy`)
+ * διαβάζει ΜΟΝΟ από εδώ. Absent `panes` ⇒ `DEFAULT_GLAZING_PANES` (διπλό) ⇒ g=0.60.
+ */
+export function getGlazingSolarFactor(panes: GlazingPanes = DEFAULT_GLAZING_PANES): number {
+  return GLAZING_SOLAR_FACTOR_BY_PANES[panes];
 }
 
 /**

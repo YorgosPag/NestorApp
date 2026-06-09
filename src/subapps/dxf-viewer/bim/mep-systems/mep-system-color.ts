@@ -20,7 +20,10 @@
  */
 
 import type { MepSystemEntity } from '../types/mep-system-types';
-import type { PlumbingSystemClassification } from '../types/mep-connector-types';
+import type {
+  PlumbingSystemClassification,
+  DuctSystemClassification,
+} from '../types/mep-connector-types';
 
 /**
  * Curated, high-contrast palette for electrical circuits (distinct hues, readable
@@ -82,17 +85,54 @@ export function classificationDefaultColor(
 }
 
 /**
- * ADR-408 Φ14 — the display colour a STANDALONE pipe segment carries from its own
- * instance `classification` hint (cold = blue, hot = red, drainage = brown), or
- * `null` when unclassified (the renderer then falls back to its domain default).
- * The SINGLE source shared by the 2D renderer and the 3D converter so both colour
- * a drainage run identically. A System membership ALWAYS wins over this (the System
- * owns the classification once joined) — callers resolve system colour first.
+ * Industry-convention colour for a duct classification (ADR-408 + ADR-432). Mirror of
+ * {@link classificationDefaultColor} for the air domain: `exhaust` grey (flue gas),
+ * `supply-air` light blue, `return-air` teal (Revit/HVAC convention — supply cool, return
+ * warmer). Exhaustive over {@link DuctSystemClassification}.
+ */
+export function ductClassificationDefaultColor(
+  classification: DuctSystemClassification,
+): string {
+  switch (classification) {
+    case 'exhaust':
+      return '#6b7280'; // grey (flue gas)
+    case 'supply-air':
+      return '#38bdf8'; // light blue (supply air)
+    case 'return-air':
+      return '#0d9488'; // teal (return air)
+  }
+}
+
+/** The 3 duct classifications, for the disjoint pipe-vs-duct dispatch below. */
+const ALL_DUCT_CLASSIFICATIONS: readonly DuctSystemClassification[] = [
+  'exhaust',
+  'supply-air',
+  'return-air',
+];
+
+/** True when `c` is a duct classification (disjoint value space from plumbing). */
+function isDuctClassification(
+  c: PlumbingSystemClassification | DuctSystemClassification,
+): c is DuctSystemClassification {
+  return (ALL_DUCT_CLASSIFICATIONS as readonly string[]).includes(c);
+}
+
+/**
+ * ADR-408 Φ14 + ADR-432 — the display colour a STANDALONE pipe/duct segment carries from
+ * its own instance `classification` hint (cold = blue, hot = red, drainage = brown,
+ * supply-air = light blue, return-air = teal), or `null` when unclassified (the renderer
+ * then falls back to its domain default). The SINGLE source shared by the 2D renderer, the
+ * 3D converter AND the HVAC proposal ghost so all colour a run identically. A System
+ * membership ALWAYS wins over this (the System owns the classification once joined) —
+ * callers resolve system colour first.
  */
 export function resolveSegmentClassificationColor(
-  classification: PlumbingSystemClassification | undefined,
+  classification: PlumbingSystemClassification | DuctSystemClassification | undefined,
 ): string | null {
-  return classification ? classificationDefaultColor(classification) : null;
+  if (!classification) return null;
+  return isDuctClassification(classification)
+    ? ductClassificationDefaultColor(classification)
+    : classificationDefaultColor(classification);
 }
 
 /** The 5 hydraulic classifications, for exhaustive default-colour checks. */

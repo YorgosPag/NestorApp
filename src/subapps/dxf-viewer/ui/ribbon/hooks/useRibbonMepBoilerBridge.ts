@@ -34,6 +34,8 @@ import {
   resolveBoilerModel,
   applyBoilerModelToParams,
   clearBoilerModel,
+  BOILER_FUEL_TYPES,
+  isBoilerFuelType,
 } from '../../../bim/mep-boilers/boiler-model-catalog';
 import { SELECT_CLEAR_VALUE, isSelectClearValue } from '@/config/domain-constants';
 import { useCommandHistory } from '../../../core/commands';
@@ -47,6 +49,7 @@ import {
   isMepBoilerReadoutKey,
   isMepBoilerRibbonStringKey,
   isMepBoilerFlueTerminationKey,
+  isMepBoilerFuelTypeKey,
   isMepBoilerToggleKey,
   isMepBoilerVisibilityKey,
 } from './bridge/mep-boiler-command-keys';
@@ -100,6 +103,7 @@ export interface RibbonMepBoilerBridge {
 const TOGGLE_KEY_TO_FIELD: Readonly<Record<string, keyof MepBoilerParams>> = {
   [MEP_BOILER_RIBBON_KEYS.toggles.producesDhw]: 'producesDhw',
   [MEP_BOILER_RIBBON_KEYS.toggles.dhwRecirculation]: 'dhwRecirculation',
+  [MEP_BOILER_RIBBON_KEYS.toggles.condensing]: 'condensing',
 };
 
 /** commandKey → numeric `MepBoilerParams` field. */
@@ -113,6 +117,7 @@ const NUMBER_KEY_TO_FIELD: Readonly<Record<string, keyof MepBoilerParams>> = {
   [MEP_BOILER_RIBBON_KEYS.params.dhwConnectorDiameter]: 'dhwConnectorDiameterMm',
   [MEP_BOILER_RIBBON_KEYS.params.flueDiameter]: 'flueDiameterMm',
   [MEP_BOILER_RIBBON_KEYS.params.fuelDiameter]: 'fuelConnectorDiameterMm',
+  [MEP_BOILER_RIBBON_KEYS.params.condensateDiameter]: 'condensateConnectorDiameterMm',
   [MEP_BOILER_RIBBON_KEYS.params.efficiency]: 'seasonalEfficiencyPercent',
 };
 
@@ -216,6 +221,30 @@ export function useRibbonMepBoilerBridge(
         const kW = (w / 1000).toLocaleString('el-GR', { maximumFractionDigits: 1 });
         return { value: `${kW} kW`, options: [], disabled: true };
       }
+      // ADR-408 — standalone HEATING FUEL picker (static enum, Revit editable instance
+      // parameter). Checked BEFORE the model-catalog branch (both pass
+      // `isMepBoilerRibbonStringKey`). Supplies the 4 fuel options + an «Απροσδιόριστο»
+      // (clear) sentinel so a parametric boiler can have no fuel; reuses the tag fuel
+      // labels (SSoT). Value falls back to the clear sentinel when unset.
+      if (isMepBoilerFuelTypeKey(commandKey)) {
+        const boiler = resolveBoiler();
+        if (!boiler) return null;
+        return {
+          value: boiler.params.fuelType ?? SELECT_CLEAR_VALUE,
+          options: [
+            {
+              value: SELECT_CLEAR_VALUE,
+              labelKey: 'ribbon.commands.mepBoilerEditor.fuelTypeUnset',
+              isLiteralLabel: false,
+            },
+            ...BOILER_FUEL_TYPES.map((fuel) => ({
+              value: fuel,
+              labelKey: `ribbon.commands.mepBoilerTag.fuelTypes.${fuel}`,
+              isLiteralLabel: false,
+            })),
+          ],
+        };
+      }
       // ADR-408 Vent Terminal — flue-termination picker (static enum). Checked BEFORE the
       // model-catalog branch (both pass `isMepBoilerRibbonStringKey`). Supplies the 3 type
       // options + the current value, defaulting to the roof cowl when unset.
@@ -267,6 +296,22 @@ export function useRibbonMepBoilerBridge(
 
   const onComboboxChange = useCallback(
     (commandKey: string, value: string): void => {
+      // ADR-408 — standalone HEATING FUEL change (static enum, Revit instance param). Checked
+      // before the model-catalog branch. The «Απροσδιόριστο» sentinel removes `fuelType`
+      // (parametric boiler with no fuel); otherwise persist the validated fuel. The command
+      // re-seeds connectors (flue/fuel appear or vanish) and the combustion panels open or
+      // close for free. Does NOT touch `modelId` (Revit instance override ≠ family default).
+      if (isMepBoilerFuelTypeKey(commandKey)) {
+        const boiler = resolveBoiler();
+        if (!boiler) return;
+        if (isSelectClearValue(value)) {
+          const { fuelType: _fuelType, ...rest } = boiler.params;
+          dispatchParams(boiler, rest as MepBoilerParams);
+        } else if (isBoilerFuelType(value)) {
+          dispatchParams(boiler, { ...boiler.params, fuelType: value });
+        }
+        return;
+      }
       // ADR-408 Vent Terminal — flue-termination change (static enum). Checked before the
       // model-catalog branch; persists `flueTermination` via the same params command.
       if (isMepBoilerFlueTerminationKey(commandKey)) {
@@ -367,6 +412,12 @@ export function useRibbonMepBoilerBridge(
         // για λέβητα καύσης (αερίου/πετρελαίου)· ηλεκτρικός/αντλία θερμότητας → χωρίς
         // καπναγωγό. Mirror του combi gate, αλλά οδηγείται από `fuelType` (Type Catalog).
         return boiler.params.fuelType === 'gas' || boiler.params.fuelType === 'oil';
+      }
+      if (visibilityKey === MEP_BOILER_RIBBON_VISIBILITY_KEYS.condensing) {
+        // ADR-408 Εύρος Β (condensate drain) — «Συμπύκνωση» panel (condensate diameter)
+        // εμφανίζεται μόνο όταν ο λέβητας είναι συμπύκνωσης (`condensing`). Revit-grade
+        // explicit flag (≠ inferred από efficiency)· mirror του combi gate.
+        return boiler.params.condensing === true;
       }
       return false;
     },

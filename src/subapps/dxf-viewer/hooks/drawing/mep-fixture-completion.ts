@@ -41,10 +41,41 @@ import {
 } from '../../bim/mep-fixtures/mep-fixture-geometry';
 import {
   buildDefaultLightingConnector,
+  buildDefaultPowerConnector,
+  buildDefaultDataConnector,
   buildFloorDrainConnector,
+  buildAirTerminalSupplyConnector,
+  buildAhuSupplyAirConnector,
 } from '../../bim/types/mep-connector-types';
 import type { MepConnector } from '../../bim/types/mep-connector-types';
 import { buildSanitaryFixtureConnectors } from '../../bim/mep-fixtures/sanitary-fixture-connectors';
+import {
+  isSocketKind,
+  DEFAULT_SOCKET_SIZE_MM,
+  DEFAULT_SOCKET_BODY_HEIGHT_MM,
+  SOCKET_MOUNTING_ELEVATION_MM,
+} from '../../bim/mep-fixtures/socket-symbol-spec';
+import {
+  isDataOutletKind,
+  DEFAULT_DATA_OUTLET_SIZE_MM,
+  DEFAULT_DATA_OUTLET_BODY_HEIGHT_MM,
+  DATA_OUTLET_MOUNTING_ELEVATION_MM,
+} from '../../bim/mep-fixtures/data-outlet-symbol-spec';
+import {
+  isAirTerminalKind,
+  DEFAULT_AIR_TERMINAL_SIZE_MM,
+  DEFAULT_AIR_TERMINAL_BODY_HEIGHT_MM,
+  AIR_TERMINAL_MOUNTING_ELEVATION_MM,
+  DEFAULT_AIR_TERMINAL_DUCT_DIAMETER_MM,
+} from '../../bim/mep-fixtures/air-terminal-symbol-spec';
+import {
+  isAhuKind,
+  DEFAULT_AHU_WIDTH_MM,
+  DEFAULT_AHU_LENGTH_MM,
+  DEFAULT_AHU_BODY_HEIGHT_MM,
+  AHU_MOUNTING_ELEVATION_MM,
+  DEFAULT_AHU_DUCT_DIAMETER_MM,
+} from '../../bim/mep-fixtures/ahu-symbol-spec';
 import {
   isPlumbingFixtureKind,
   resolvePlumbingFixtureSpec,
@@ -129,6 +160,58 @@ function resolveFixtureKindDefaults(
       // Revit plumbing fixture (sanitary terminal OR appliance — ADR-408 Δρόμος B):
       // drain outlet + domestic water-supply inlets (SSoT).
       connectors: buildSanitaryFixtureConnectors(kind, sceneUnits),
+    };
+  }
+  // ADR-430 — a socket (πρίζα) is a wall-mounted electrical receptacle: a small
+  // square box at ~300mm above FFL + a single `'power'` connector (general outlet),
+  // so it joins a 16A socket circuit (not a 10A lighting circuit like a luminaire).
+  if (isSocketKind(kind)) {
+    return {
+      shape: 'rectangular',
+      width: overrides.width ?? DEFAULT_SOCKET_SIZE_MM,
+      length: overrides.length ?? DEFAULT_SOCKET_SIZE_MM,
+      bodyHeightMm: overrides.bodyHeightMm ?? DEFAULT_SOCKET_BODY_HEIGHT_MM,
+      mountingElevationMm: overrides.mountingElevationMm ?? SOCKET_MOUNTING_ELEVATION_MM,
+      connectors: [buildDefaultPowerConnector()],
+    };
+  }
+  // ADR-431 — a data outlet (πρίζα δικτύου / RJ45) is a wall-mounted weak-current
+  // receptacle: a small square box at ~300mm above FFL + a single `'data'` connector,
+  // so it joins a structured-cabling channel (not a power circuit like a socket).
+  if (isDataOutletKind(kind)) {
+    return {
+      shape: 'rectangular',
+      width: overrides.width ?? DEFAULT_DATA_OUTLET_SIZE_MM,
+      length: overrides.length ?? DEFAULT_DATA_OUTLET_SIZE_MM,
+      bodyHeightMm: overrides.bodyHeightMm ?? DEFAULT_DATA_OUTLET_BODY_HEIGHT_MM,
+      mountingElevationMm: overrides.mountingElevationMm ?? DATA_OUTLET_MOUNTING_ELEVATION_MM,
+      connectors: [buildDefaultDataConnector()],
+    };
+  }
+  // ADR-432 — an air terminal (στόμιο/diffuser) is a ceiling-mounted supply diffuser:
+  // a square box at ceiling height + a single supply-air duct INLET, so the HVAC engine
+  // routes the supply duct network to it.
+  if (isAirTerminalKind(kind)) {
+    return {
+      shape: 'rectangular',
+      width: overrides.width ?? DEFAULT_AIR_TERMINAL_SIZE_MM,
+      length: overrides.length ?? DEFAULT_AIR_TERMINAL_SIZE_MM,
+      bodyHeightMm: overrides.bodyHeightMm ?? DEFAULT_AIR_TERMINAL_BODY_HEIGHT_MM,
+      mountingElevationMm: overrides.mountingElevationMm ?? AIR_TERMINAL_MOUNTING_ELEVATION_MM,
+      connectors: [buildAirTerminalSupplyConnector({ x: 0, y: 0, z: 0 }, DEFAULT_AIR_TERMINAL_DUCT_DIAMETER_MM)],
+    };
+  }
+  // ADR-432 — an AHU (ΚΚΜ) is the supply-air SOURCE: a plant unit at ceiling-plenum
+  // height + a single supply-air duct OUTLET, so the HVAC engine roots the supply duct
+  // network at it.
+  if (isAhuKind(kind)) {
+    return {
+      shape: 'rectangular',
+      width: overrides.width ?? DEFAULT_AHU_WIDTH_MM,
+      length: overrides.length ?? DEFAULT_AHU_LENGTH_MM,
+      bodyHeightMm: overrides.bodyHeightMm ?? DEFAULT_AHU_BODY_HEIGHT_MM,
+      mountingElevationMm: overrides.mountingElevationMm ?? AHU_MOUNTING_ELEVATION_MM,
+      connectors: [buildAhuSupplyAirConnector({ x: 0, y: 0, z: 0 }, DEFAULT_AHU_DUCT_DIAMETER_MM)],
     };
   }
   const shape: MepFixtureShape = overrides.shape ?? 'rectangular';

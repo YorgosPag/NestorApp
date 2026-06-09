@@ -39,11 +39,16 @@ import type { MepConnectorHostParams } from './mep-component-types';
 
 /**
  * Electrical panel kind discriminator. The opening slice ships
- * `'distribution-board'` (a panelboard / consumer unit); future electrical
- * equipment families append here (e.g. `'switchboard'`, `'transformer'`) without
- * a new EntityType. Maps 1:1 to the `'electrical-panel'` BimCategory.
+ * `'distribution-board'` (a panelboard / consumer unit); ADR-431 adds
+ * `'comms-rack'` (a structured-cabling rack / patch-panel — Revit "Communication
+ * Equipment"), the weak-current circuit SOURCE. Both are Revit "Electrical
+ * Equipment" sub-typed by kind, so the comms-rack reuses the entire panel pipeline
+ * (geometry / symbol / renderer / ghost / tool) without a new EntityType; only its
+ * out-connector classification (`'data'` vs `'power'`) and 2D glyph differ. Future
+ * families (e.g. `'switchboard'`, `'transformer'`) append here. Maps 1:1 to the
+ * `'electrical-panel'` BimCategory.
  */
-export type ElectricalPanelKind = 'distribution-board';
+export type ElectricalPanelKind = 'distribution-board' | 'comms-rack';
 
 /**
  * Footprint shape of the panel body. A panelboard is always rectangular (the

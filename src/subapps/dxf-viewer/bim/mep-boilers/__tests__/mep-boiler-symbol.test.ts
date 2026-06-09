@@ -39,26 +39,27 @@ const HW = 225;
 const STUB_LEN = 280;
 
 describe('buildMepBoilerSymbol — connector-driven stubs', () => {
-  it('a plain boiler (no DHW, no fuel) draws exactly 2 pipe stubs and no vent', () => {
+  it('a plain boiler (no DHW, no fuel) draws exactly 2 pipe stubs, no vent, no fuel glyph', () => {
     const sym = symbol();
     expect(sym.strokes).toHaveLength(2);
     expect(sym.ventStrokes).toHaveLength(0);
+    expect(sym.fuelStrokes).toHaveLength(0);
   });
 
   it('supply stub is regression-free: rooted at the +X edge midpoint, pointing +X', () => {
     const [supply] = symbol().strokes;
-    expect(supply[0].x).toBeCloseTo(HW, 6);
-    expect(supply[0].y).toBeCloseTo(0, 6);
-    expect(supply[1].x).toBeCloseTo(HW + STUB_LEN, 6);
-    expect(supply[1].y).toBeCloseTo(0, 6);
+    expect(supply.line[0].x).toBeCloseTo(HW, 6);
+    expect(supply.line[0].y).toBeCloseTo(0, 6);
+    expect(supply.line[1].x).toBeCloseTo(HW + STUB_LEN, 6);
+    expect(supply.line[1].y).toBeCloseTo(0, 6);
   });
 
   it('return stub is regression-free: rooted at the −X edge midpoint, pointing −X', () => {
     const ret = symbol().strokes[1];
-    expect(ret[0].x).toBeCloseTo(-HW, 6);
-    expect(ret[0].y).toBeCloseTo(0, 6);
-    expect(ret[1].x).toBeCloseTo(-(HW + STUB_LEN), 6);
-    expect(ret[1].y).toBeCloseTo(0, 6);
+    expect(ret.line[0].x).toBeCloseTo(-HW, 6);
+    expect(ret.line[0].y).toBeCloseTo(0, 6);
+    expect(ret.line[1].x).toBeCloseTo(-(HW + STUB_LEN), 6);
+    expect(ret.line[1].y).toBeCloseTo(0, 6);
   });
 
   it('keeps the divider + flame glyph (4 glyph strokes)', () => {
@@ -66,36 +67,98 @@ describe('buildMepBoilerSymbol — connector-driven stubs', () => {
   });
 });
 
-describe('buildMepBoilerSymbol — combi DHW ports', () => {
-  it('a gas combi with recirculation draws 6 stubs (supply/return + hot/cold/recirc + fuel)', () => {
-    // The gas fuel inlet (domain:'fuel') also reads as a plain stub in `strokes`.
-    const sym = symbol({ producesDhw: true, dhwRecirculation: true, fuelType: 'gas' });
-    expect(sym.strokes).toHaveLength(6);
+describe('buildMepBoilerSymbol — per-stub System Classification (Revit color-coded MEP plan)', () => {
+  it('tags the supply stub hydronic-supply and the return stub hydronic-return', () => {
+    const [supply, ret] = symbol().strokes;
+    expect(supply.classification).toBe('hydronic-supply');
+    expect(ret.classification).toBe('hydronic-return');
   });
 
-  it('a non-recirc electric combi draws 4 pipe stubs (supply/return + hot/cold, no fuel)', () => {
-    expect(symbol({ producesDhw: true, fuelType: 'electric' }).strokes).toHaveLength(4);
+  it('tags the combi DHW hot outlet domestic-hot-water and cold inlet domestic-cold-water', () => {
+    // order: supply, return, DHW hot (+X/+Y), DHW cold (−X/+Y).
+    const [, , hot, cold] = symbol({ producesDhw: true, fuelType: 'electric' }).strokes;
+    expect(hot.classification).toBe('domestic-hot-water');
+    expect(cold.classification).toBe('domestic-cold-water');
+  });
+
+  it('tags the condensate drain stub sanitary-drainage', () => {
+    // A condensing electric-free gas boiler: supply, return, …, condensate is the last pipe stub.
+    const strokes = symbol({ fuelType: 'electric', condensing: true }).strokes;
+    const condensate = strokes[strokes.length - 1];
+    expect(condensate.classification).toBe('sanitary-drainage');
+  });
+
+  it('tags every flue vent stroke exhaust (duct classification)', () => {
+    const vent = symbol({ fuelType: 'gas' }).ventStrokes;
+    expect(vent.length).toBeGreaterThan(0);
+    for (const v of vent) expect(v.classification).toBe('exhaust');
+  });
+
+  it('leaves the fuel-cock glyph and the body glyph untagged (default boiler stroke)', () => {
+    const sym = symbol({ fuelType: 'gas' });
+    // fuelStrokes are plain BoilerStroke polylines (no classification wrapper).
+    for (const stroke of sym.fuelStrokes) expect(Array.isArray(stroke)).toBe(true);
+    for (const stroke of sym.glyphStrokes) expect(Array.isArray(stroke)).toBe(true);
   });
 });
 
-describe('buildMepBoilerSymbol — combustion fuel supply stub', () => {
-  it('a plain gas boiler draws 3 stubs (supply/return + fuel) and the flue vent', () => {
+describe('buildMepBoilerSymbol — combi DHW ports', () => {
+  it('a gas combi with recirculation draws 5 pipe stubs (supply/return + hot/cold/recirc) + fuel glyph', () => {
+    // The gas fuel inlet (domain:'fuel') gets its OWN gas-cock glyph in `fuelStrokes`, NOT `strokes`.
+    const sym = symbol({ producesDhw: true, dhwRecirculation: true, fuelType: 'gas' });
+    expect(sym.strokes).toHaveLength(5);
+    expect(sym.fuelStrokes).toHaveLength(5); // stub + 2 bow-tie triangles + lever stem + crossbar
+  });
+
+  it('a non-recirc electric combi draws 4 pipe stubs (supply/return + hot/cold) and no fuel glyph', () => {
+    const sym = symbol({ producesDhw: true, fuelType: 'electric' });
+    expect(sym.strokes).toHaveLength(4);
+    expect(sym.fuelStrokes).toHaveLength(0);
+  });
+});
+
+describe('buildMepBoilerSymbol — combustion fuel supply glyph (gas-cock)', () => {
+  it('a plain gas boiler draws 2 pipe stubs + a 5-stroke fuel-cock glyph + the flue vent', () => {
     const sym = symbol({ fuelType: 'gas' });
-    expect(sym.strokes).toHaveLength(3); // supply, return, fuel inlet
+    expect(sym.strokes).toHaveLength(2); // supply, return only — fuel is no longer a plain stub
+    expect(sym.fuelStrokes).toHaveLength(5); // stub + 2 bow-tie triangles + lever stem + crossbar
     expect(sym.ventStrokes).toHaveLength(7); // flue chevron + roof-cowl terminal
   });
 
-  it('the fuel stub roots at the front-centre (+Y), pointing +Y', () => {
-    // fuel at host-local {0,+hl}; supply[0]/return[1], fuel appended last → strokes[2].
-    const fuel = symbol({ fuelType: 'gas' }).strokes[2];
-    expect(fuel[0].x).toBeCloseTo(0, 6);
-    expect(fuel[0].y).toBeCloseTo(175, 6);
-    expect(fuel[1].x).toBeCloseTo(0, 6);
-    expect(fuel[1].y).toBeCloseTo(175 + STUB_LEN, 6);
+  it('the fuel-cock stub roots at the front-centre (+Y), pointing +Y', () => {
+    // fuel at host-local {0,+hl}; the gas-cock glyph's first stroke is the stub [root, tip].
+    const [stub] = symbol({ fuelType: 'gas' }).fuelStrokes;
+    expect(stub[0].x).toBeCloseTo(0, 6);
+    expect(stub[0].y).toBeCloseTo(175, 6);
+    expect(stub[1].x).toBeCloseTo(0, 6);
+    expect(stub[1].y).toBeCloseTo(175 + STUB_LEN, 6);
   });
 
-  it('an electric boiler has no fuel stub (only supply/return)', () => {
-    expect(symbol({ fuelType: 'electric' }).strokes).toHaveLength(2);
+  it('the bow-tie triangles are closed (first === last point) and meet at the stub tip', () => {
+    const [, innerTri, outerTri] = symbol({ fuelType: 'gas' }).fuelStrokes;
+    // Closed triangles: 4 points, first === last.
+    expect(innerTri).toHaveLength(4);
+    expect(outerTri).toHaveLength(4);
+    expect(innerTri[0]).toEqual(innerTri[3]);
+    expect(outerTri[0]).toEqual(outerTri[3]);
+    // Both apexes meet at the same point (the stub tip = {0, 175 + STUB_LEN}).
+    expect(innerTri[0].x).toBeCloseTo(0, 6);
+    expect(innerTri[0].y).toBeCloseTo(175 + STUB_LEN, 6);
+    expect(outerTri[0]).toEqual(innerTri[0]);
+  });
+
+  it('an oil boiler also gets the fuel-cock glyph (5 strokes)', () => {
+    expect(symbol({ fuelType: 'oil' }).fuelStrokes).toHaveLength(5);
+  });
+
+  it('an electric boiler has no fuel glyph (only supply/return stubs)', () => {
+    const sym = symbol({ fuelType: 'electric' });
+    expect(sym.strokes).toHaveLength(2);
+    expect(sym.fuelStrokes).toHaveLength(0);
+  });
+
+  it('a heat-pump boiler has no fuel glyph', () => {
+    expect(symbol({ fuelType: 'heat-pump' }).fuelStrokes).toHaveLength(0);
   });
 });
 
@@ -121,10 +184,10 @@ describe('buildMepBoilerSymbol — combustion flue vent glyph', () => {
   it('the flue vent stub roots at the back-centre (−Y), pointing −Y', () => {
     // length 350 → half-length 175; flue at host-local {0,-hl}.
     const [stub] = symbol({ fuelType: 'gas' }).ventStrokes;
-    expect(stub[0].x).toBeCloseTo(0, 6);
-    expect(stub[0].y).toBeCloseTo(-175, 6);
-    expect(stub[1].x).toBeCloseTo(0, 6);
-    expect(stub[1].y).toBeCloseTo(-175 - STUB_LEN, 6);
+    expect(stub.line[0].x).toBeCloseTo(0, 6);
+    expect(stub.line[0].y).toBeCloseTo(-175, 6);
+    expect(stub.line[1].x).toBeCloseTo(0, 6);
+    expect(stub.line[1].y).toBeCloseTo(-175 - STUB_LEN, 6);
   });
 });
 
@@ -154,9 +217,18 @@ describe('buildMepBoilerSymbol — rotation', () => {
   it('rotates the supply stub with the host (90° CCW → supply points +Y)', () => {
     const [supply] = symbol({ rotation: 90 }).strokes;
     // supply local {225,0} rotated 90° CCW → {0,225}, outward {0,1}.
-    expect(supply[0].x).toBeCloseTo(0, 6);
-    expect(supply[0].y).toBeCloseTo(HW, 6);
-    expect(supply[1].x).toBeCloseTo(0, 6);
-    expect(supply[1].y).toBeCloseTo(HW + STUB_LEN, 6);
+    expect(supply.line[0].x).toBeCloseTo(0, 6);
+    expect(supply.line[0].y).toBeCloseTo(HW, 6);
+    expect(supply.line[1].x).toBeCloseTo(0, 6);
+    expect(supply.line[1].y).toBeCloseTo(HW + STUB_LEN, 6);
+  });
+
+  it('rotates the fuel-cock stub with the host (90° CCW → fuel front-centre points −X)', () => {
+    // fuel local {0,175} rotated 90° CCW → {−175,0}, outward {−1,0}.
+    const [stub] = symbol({ fuelType: 'gas', rotation: 90 }).fuelStrokes;
+    expect(stub[0].x).toBeCloseTo(-175, 6);
+    expect(stub[0].y).toBeCloseTo(0, 6);
+    expect(stub[1].x).toBeCloseTo(-175 - STUB_LEN, 6);
+    expect(stub[1].y).toBeCloseTo(0, 6);
   });
 });

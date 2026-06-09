@@ -74,7 +74,8 @@ export type PlumbingSystemClassification =
  */
 export type MepSystemClassification =
   | ElectricalSystemClassification
-  | PlumbingSystemClassification;
+  | PlumbingSystemClassification
+  | DuctSystemClassification;
 
 /** Conveyed fluid for a plumbing connector/segment (drives later sizing/analysis). */
 export type PipeFluid = 'water' | 'hot-water' | 'wastewater' | 'glycol' | 'other';
@@ -85,9 +86,15 @@ export type PipeFluid = 'water' | 'hot-water' | 'wastewater' | 'glycol' | 'other
  * Disjoint value space from {@link ElectricalSystemClassification} and
  * {@link PlumbingSystemClassification}; kept apart by the System's `systemType`
  * discriminant. The opening member is `exhaust` (combustion flue / καπναγωγός);
- * future HVAC slices append `supply-air` / `return-air` without a type change.
+ * the HVAC discipline (ADR-432) appends `supply-air` / `return-air` — exactly the
+ * extension this comment foretold (no type change elsewhere: the duct domain was
+ * built classification-agnostic).
+ *
+ *   - `exhaust`     — combustion flue exhaust (καπναγωγός λέβητα, ADR-408).
+ *   - `supply-air`  — προσαγωγή αέρα (AHU → στόμια, HVAC supply network, ADR-432).
+ *   - `return-air`  — επιστροφή αέρα (στόμια → AHU, HVAC return network, ADR-432).
  */
-export type DuctSystemClassification = 'exhaust';
+export type DuctSystemClassification = 'exhaust' | 'supply-air' | 'return-air';
 
 /**
  * Revit-style "System Classification" for the {@link MepConnectorDomain} `fuel` domain
@@ -239,6 +246,42 @@ export function buildDefaultLightingConnector(): MepConnector {
   };
 }
 
+/**
+ * Default general-power-in connector at the host origin (ADR-430) — what a freshly
+ * drawn socket (πρίζα / power outlet) carries so it can join a 16A socket circuit.
+ * Identical shape to {@link buildDefaultLightingConnector} but classified `'power'`
+ * (a general receptacle) instead of `'lighting'`, so the electrical-strong
+ * auto-design groups it onto a socket circuit, not a lighting circuit. `flow:'in'`
+ * (a socket is a load). Reuses {@link FIXTURE_POWER_CONNECTOR_ID} (host-local id).
+ */
+export function buildDefaultPowerConnector(): MepConnector {
+  return {
+    connectorId: FIXTURE_POWER_CONNECTOR_ID,
+    domain: 'electrical',
+    flow: 'in',
+    localPosition: { x: 0, y: 0, z: 0 },
+    electrical: { systemClassification: 'power' },
+  };
+}
+
+/**
+ * Default data-in connector at the host origin (ADR-431) — what a freshly drawn data
+ * outlet (πρίζα δικτύου / RJ45) carries so it can join a structured-cabling channel.
+ * Identical shape to {@link buildDefaultPowerConnector} but classified `'data'` (a
+ * weak-current RJ45 keystone) instead of `'power'`, so the electrical-weak auto-design
+ * homes it on a comms-rack channel, not a power circuit. `flow:'in'` (an outlet is a
+ * leaf of the structured-cabling star). Reuses {@link FIXTURE_POWER_CONNECTOR_ID}.
+ */
+export function buildDefaultDataConnector(): MepConnector {
+  return {
+    connectorId: FIXTURE_POWER_CONNECTOR_ID,
+    domain: 'electrical',
+    flow: 'in',
+    localPosition: { x: 0, y: 0, z: 0 },
+    electrical: { systemClassification: 'data' },
+  };
+}
+
 /** Connector id used for the single power-out connector of an electrical panel. */
 export const PANEL_OUT_CONNECTOR_ID = 'c1';
 
@@ -254,6 +297,24 @@ export function buildDefaultPanelOutgoingConnector(): MepConnector {
     flow: 'out',
     localPosition: { x: 0, y: 0, z: 0 },
     electrical: { systemClassification: 'power' },
+  };
+}
+
+/**
+ * Default data-out connector at the host origin (ADR-431) — what a freshly drawn
+ * comms-rack (rack / patch-panel) carries so it can be the SOURCE of a structured-
+ * cabling channel. Identical shape to {@link buildDefaultPanelOutgoingConnector} but
+ * classified `'data'` (weak current) instead of `'power'`, so the electrical-weak
+ * source resolver homes data channels on the rack — not the power panel. `flow:'out'`
+ * (the rack feeds the outlets). Reuses {@link PANEL_OUT_CONNECTOR_ID} (host-local id).
+ */
+export function buildDefaultCommsRackOutgoingConnector(): MepConnector {
+  return {
+    connectorId: PANEL_OUT_CONNECTOR_ID,
+    domain: 'electrical',
+    flow: 'out',
+    localPosition: { x: 0, y: 0, z: 0 },
+    electrical: { systemClassification: 'data' },
   };
 }
 
@@ -834,5 +895,64 @@ export function buildSanitaryHotWaterConnector(
     flow: 'in',
     localPosition,
     pipe: { systemClassification: 'domestic-hot-water', diameterMm },
+  };
+}
+
+// ─── HVAC air-terminal + AHU connectors (ADR-432 — duct-network domain) ───────────
+
+/** Connector id for the single supply-air duct connector of an air terminal (στόμιο). */
+export const AIR_TERMINAL_SUPPLY_CONNECTOR_ID = 'at-supply';
+/** Connector id for the supply-air duct OUTLET of an air handling unit (ΚΚΜ). */
+export const AHU_SUPPLY_CONNECTOR_ID = 'ahu-supply';
+
+/**
+ * Supply-air duct connector of an air terminal (ADR-432, στόμιο προσαγωγής / supply
+ * diffuser — Revit "Air Terminal"). An air terminal is an HVAC TERMINAL (it delivers
+ * conditioned air to the room): supply air ENTERS the terminal from the duct network
+ * (`flow: 'in'`) and is blown into the space — exactly the hydraulic role of the
+ * radiator supply inlet ({@link buildRadiatorSupplyConnector}), but `domain: 'duct'`
+ * (air, not water). Classification FIXED to `supply-air` (set by physics — a supply
+ * diffuser delivers supply air, not user choice). A duct snapped here joins the
+ * supply-air network for free. The return-air grille (a follow-up slice) mirrors this
+ * with `flow: 'out'` + `return-air`.
+ *
+ * `localPosition` is host-local (scene units, pre-rotation) — the caller resolves it
+ * from the terminal body geometry (see the air-terminal connector seed).
+ */
+export function buildAirTerminalSupplyConnector(
+  localPosition: Point3D,
+  diameterMm: number,
+): MepConnector {
+  return {
+    connectorId: AIR_TERMINAL_SUPPLY_CONNECTOR_ID,
+    domain: 'duct',
+    flow: 'in',
+    localPosition,
+    duct: { systemClassification: 'supply-air', diameterMm },
+  };
+}
+
+/**
+ * Supply-air duct OUTLET connector of an air handling unit (ADR-432, ΚΚΜ / AHU —
+ * Revit "Mechanical Equipment → duct connector"). An AHU is the HVAC SOURCE (opposite
+ * of an air terminal): conditioned supply air LEAVES the unit here (`flow: 'out'`), so
+ * this connector SOURCES the supply-air network — exactly the role of the boiler supply
+ * outlet ({@link buildBoilerSupplyConnector}) but `domain: 'duct'`. Classification FIXED
+ * to `supply-air`. The return-air inlet (a follow-up slice) mirrors this with
+ * `flow: 'in'` + `return-air`, just as the boiler return inlet mirrors its supply outlet.
+ *
+ * `localPosition` is host-local (scene units, pre-rotation) — the caller resolves it
+ * from the AHU body geometry (see the AHU connector seed).
+ */
+export function buildAhuSupplyAirConnector(
+  localPosition: Point3D,
+  diameterMm: number,
+): MepConnector {
+  return {
+    connectorId: AHU_SUPPLY_CONNECTOR_ID,
+    domain: 'duct',
+    flow: 'out',
+    localPosition,
+    duct: { systemClassification: 'supply-air', diameterMm },
   };
 }

@@ -24,7 +24,7 @@ const Point3DSchema = z
 
 // ─── Enums (mirror electrical-panel-types.ts unions) ──────────────────────────
 
-export const ElectricalPanelKindSchema = z.enum(['distribution-board']);
+export const ElectricalPanelKindSchema = z.enum(['distribution-board', 'comms-rack']);
 
 export const ElectricalPanelShapeSchema = z.enum(['rectangular']);
 

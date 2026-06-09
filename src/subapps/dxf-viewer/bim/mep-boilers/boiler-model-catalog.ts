@@ -30,6 +30,28 @@ import type { MepBoilerParams } from '../types/mep-boiler-types';
  */
 export type BoilerFuelType = 'gas' | 'oil' | 'electric' | 'heat-pump';
 
+/**
+ * Runtime SSoT of the four `BoilerFuelType` members — the single source for the
+ * standalone «Τύπος Καυσίμου» instance-param picker options, the `isBoilerFuelType`
+ * runtime validation guard, and any future enumeration. Ordered combustion-first
+ * (gas/oil → open the «Καπναγωγός»/«Καύσιμο» panels) then non-combustion.
+ */
+export const BOILER_FUEL_TYPES: readonly BoilerFuelType[] = [
+  'gas',
+  'oil',
+  'electric',
+  'heat-pump',
+] as const;
+
+/**
+ * Runtime type guard for an arbitrary string against `BoilerFuelType`. Used by the
+ * ribbon bridge to validate a picked combobox value before persisting it (≠ the
+ * compile-time `BoilerFuelType` union which cannot validate runtime input).
+ */
+export function isBoilerFuelType(value: string): value is BoilerFuelType {
+  return (BOILER_FUEL_TYPES as readonly string[]).includes(value);
+}
+
 // ─── Preset interface ─────────────────────────────────────────────────────────
 
 export interface BoilerModelPreset {
@@ -62,6 +84,14 @@ export interface BoilerModelPreset {
    * ≈90–96, oil ≈85–90, direct electric ≈99, heat-pump ≈120–160 (SCOP-derived η_s).
    */
   readonly seasonalEfficiencyPercent: number;
+  /**
+   * Whether the model is a CONDENSING appliance (Revit «Condensing» Yes/No) — extracts
+   * latent flue-gas heat and therefore produces acidic condensate that must drain to the
+   * sanitary system. `true` for the gas condensing presets; `false` for traditional
+   * floor-standing oil, heat-pumps and direct-electric (no combustion condensate). Drives
+   * `MepBoilerParams.condensing` (→ the `boiler-condensate` drain connector).
+   */
+  readonly condensing: boolean;
 }
 
 // ─── Catalog data ─────────────────────────────────────────────────────────────
@@ -85,6 +115,7 @@ export const BOILER_MODEL_CATALOG: readonly BoilerModelPreset[] = [
     connectorDiameterMm: 22,
     fuelType: 'gas',
     seasonalEfficiencyPercent: 94,
+    condensing: true,
   },
   {
     id: 'gas-condensing-35',
@@ -96,6 +127,7 @@ export const BOILER_MODEL_CATALOG: readonly BoilerModelPreset[] = [
     connectorDiameterMm: 22,
     fuelType: 'gas',
     seasonalEfficiencyPercent: 93,
+    condensing: true,
   },
   {
     id: 'gas-system-28',
@@ -107,6 +139,7 @@ export const BOILER_MODEL_CATALOG: readonly BoilerModelPreset[] = [
     connectorDiameterMm: 22,
     fuelType: 'gas',
     seasonalEfficiencyPercent: 91,
+    condensing: true,
   },
   {
     id: 'oil-floor-30',
@@ -118,6 +151,7 @@ export const BOILER_MODEL_CATALOG: readonly BoilerModelPreset[] = [
     connectorDiameterMm: 28,
     fuelType: 'oil',
     seasonalEfficiencyPercent: 89,
+    condensing: false,
   },
   {
     id: 'oil-floor-45',
@@ -129,6 +163,7 @@ export const BOILER_MODEL_CATALOG: readonly BoilerModelPreset[] = [
     connectorDiameterMm: 28,
     fuelType: 'oil',
     seasonalEfficiencyPercent: 88,
+    condensing: false,
   },
   {
     id: 'heatpump-12',
@@ -140,6 +175,7 @@ export const BOILER_MODEL_CATALOG: readonly BoilerModelPreset[] = [
     connectorDiameterMm: 28,
     fuelType: 'heat-pump',
     seasonalEfficiencyPercent: 156,
+    condensing: false,
   },
   {
     id: 'electric-9',
@@ -151,6 +187,7 @@ export const BOILER_MODEL_CATALOG: readonly BoilerModelPreset[] = [
     connectorDiameterMm: 22,
     fuelType: 'electric',
     seasonalEfficiencyPercent: 99,
+    condensing: false,
   },
 ] as const;
 
@@ -200,6 +237,7 @@ export function applyBoilerModelToParams(
     bodyHeightMm: model.bodyHeightMm,
     connectorDiameterMm: model.connectorDiameterMm,
     seasonalEfficiencyPercent: model.seasonalEfficiencyPercent,
+    condensing: model.condensing,
   };
 }
 
@@ -209,13 +247,14 @@ export function applyBoilerModelToParams(
  * (clear sentinel) in the Model picker.
  */
 export function clearBoilerModel(params: MepBoilerParams): MepBoilerParams {
-  // Omit modelId, fuelType and the seasonal efficiency — all are Type-Catalog
-  // properties (≠ thermalOutputW/geometry which the user may keep and re-size).
-  // Back to a purely parametric boiler.
+  // Omit modelId, fuelType, the seasonal efficiency and the condensing flag — all are
+  // Type-Catalog properties (≠ thermalOutputW/geometry which the user may keep and
+  // re-size). Back to a purely parametric boiler.
   const {
     modelId: _modelId,
     fuelType: _fuelType,
     seasonalEfficiencyPercent: _seasonalEfficiencyPercent,
+    condensing: _condensing,
     ...rest
   } = params;
   return rest as MepBoilerParams;

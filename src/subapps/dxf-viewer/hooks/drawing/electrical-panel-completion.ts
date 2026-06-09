@@ -32,7 +32,10 @@ import {
   computeElectricalPanelGeometry,
   validateElectricalPanelParams,
 } from '../../bim/electrical-panels/electrical-panel-geometry';
-import { buildDefaultPanelOutgoingConnector } from '../../bim/types/mep-connector-types';
+import {
+  buildDefaultPanelOutgoingConnector,
+  buildDefaultCommsRackOutgoingConnector,
+} from '../../bim/types/mep-connector-types';
 import { createElectricalPanel } from '@/services/factories/electrical-panel.factory';
 import type { SceneUnits } from '../../utils/scene-units';
 
@@ -90,9 +93,15 @@ export function buildDefaultElectricalPanelParams(
     bodyHeightMm,
     mountingElevationMm,
     sceneUnits,
-    // ADR-408 — a panel is a circuit SOURCE: carry a default power-out connector
-    // so a MepSystem can reference it as sourceEntityId/sourceConnectorId.
-    connectors: [buildDefaultPanelOutgoingConnector()],
+    // ADR-408/431 — a panel is a circuit SOURCE: carry a default out connector so a
+    // MepSystem can reference it as sourceEntityId/sourceConnectorId. A comms-rack
+    // sources weak-current channels → `'data'` out connector; a distribution-board
+    // sources power circuits → `'power'` out connector (kind-aware).
+    connectors: [
+      kind === 'comms-rack'
+        ? buildDefaultCommsRackOutgoingConnector()
+        : buildDefaultPanelOutgoingConnector(),
+    ],
     ...(overrides.material !== undefined ? { material: overrides.material } : {}),
   };
 }

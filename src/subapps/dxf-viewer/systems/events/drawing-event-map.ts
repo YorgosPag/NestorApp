@@ -282,6 +282,18 @@ export interface DrawingEventMap {
   'bim:heating-generated': { networkCount: number; warningCount: number };
   'bim:heating-empty': { reason: 'no-terminals' | 'no-source' };
   'bim:heating-committed': { networkCount: number; segmentCount: number };
+  // ADR-430 Slice 2 — electrical-strong auto-design (Generate → review → accept) feedback.
+  'bim:electrical-generated': { circuitCount: number; skipped: number; warningCount: number };
+  'bim:electrical-empty': { reason: 'no-terminals' | 'no-source' };
+  'bim:electrical-committed': { circuitCount: number };
+  // ADR-431 Slice 2 — electrical-weak (ασθενή) auto-design feedback.
+  'bim:electrical-weak-generated': { channelCount: number; skipped: number; warningCount: number };
+  'bim:electrical-weak-empty': { reason: 'no-terminals' | 'no-source' };
+  'bim:electrical-weak-committed': { channelCount: number };
+  // ADR-432 Slice 2 — HVAC (αερισμός) auto-design feedback (Generate → review → accept).
+  'bim:hvac-generated': { networkCount: number; warningCount: number };
+  'bim:hvac-empty': { reason: 'no-terminals' | 'no-source' };
+  'bim:hvac-committed': { networkCount: number; segmentCount: number };
   // ADR-407 — BIM railing params + delete events
   'bim:railing-params-updated': { railingId: string };
   'bim:railing-delete-requested': { railingId: string };

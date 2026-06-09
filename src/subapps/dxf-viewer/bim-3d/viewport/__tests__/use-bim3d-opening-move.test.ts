@@ -19,12 +19,11 @@ const mockSelListeners = new Set<() => void>();
 const mockViewListeners = new Set<() => void>();
 const mockShowFor = jest.fn();
 const mockGhostHide = jest.fn();
-const mockMarkerShow = jest.fn();
-const mockMarkerHide = jest.fn();
+const mockDimUpdate = jest.fn();
+const mockDimHide = jest.fn();
 const mockExecute = jest.fn();
 let mockHit: Hit | null = null;
 let mockPoint: { x: number; y: number; z: number } | null = null;
-let mockSnap: { snappedMm: { x: number; y: number }; markerMm: { x: number; y: number } } | null = null;
 let mockResolved: { params: Record<string, unknown>; host: { id: string } } | null = null;
 let mockOpenings: { id: string; params: { wallId: string }; geometry: { position: { x: number; y: number } } }[] = [];
 let mockWalls: { id: string; type: string; params: { sceneUnits: string } }[] = [];
@@ -46,19 +45,17 @@ jest.mock('../../stores/Bim3DEntitiesStore', () => ({
   useBim3DEntitiesStore: { getState: () => ({ openings: mockOpenings, walls: mockWalls, floors: [], buildings: [] }) },
 }));
 jest.mock('../../systems/raycaster/BimEntityRaycaster', () => ({ raycastWorldPoint: () => mockPoint }));
-jest.mock('../../../snapping/global-snap-engine', () => ({ getGlobalSnapEngine: () => ({}) }));
-jest.mock('../../gizmo/bim3d-snap-bridge', () => ({ makeResizeSnapFn: () => () => mockSnap }));
-jest.mock('../../placement/PlacementSnapMarker', () => ({
-  PlacementSnapMarker: class {
-    show(...a: unknown[]): void { mockMarkerShow(...a); }
-    hide(): void { mockMarkerHide(); }
-    dispose(): void {}
-  },
-}));
 jest.mock('../../placement/OpeningMoveGhost', () => ({
   OpeningMoveGhost: class {
     showFor(...a: unknown[]): void { mockShowFor(...a); }
     hide(): void { mockGhostHide(); }
+    dispose(): void {}
+  },
+}));
+jest.mock('../../placement/TempOpeningDimOverlay', () => ({
+  TempOpeningDimOverlay: class {
+    update(...a: unknown[]): void { mockDimUpdate(...a); }
+    hide(): void { mockDimHide(); }
     dispose(): void {}
   },
 }));
@@ -114,8 +111,8 @@ describe('useBim3DOpeningMove', () => {
     mockSel.ids = []; mockSel.type = null; mockState.is3D = false;
     mockSelListeners.clear(); mockViewListeners.clear();
     mockShowFor.mockClear(); mockGhostHide.mockClear(); mockExecute.mockClear();
-    mockMarkerShow.mockClear(); mockMarkerHide.mockClear();
-    mockHit = null; mockPoint = null; mockResolved = null; mockSnap = null; mockOpenings = []; mockWalls = [];
+    mockDimUpdate.mockClear(); mockDimHide.mockClear();
+    mockHit = null; mockPoint = null; mockResolved = null; mockOpenings = []; mockWalls = [];
   });
 
   it('does NOT wire pointerdown when no opening is selected', () => {
@@ -145,26 +142,11 @@ describe('useBim3DOpeningMove', () => {
     mockResolved = { params: { wallId: 'wall-1', offsetFromStart: 300 }, host: { id: 'wall-1' } };
     canvas.dispatchEvent(new MouseEvent('pointermove', { clientX: 40, clientY: 0 }));
     expect(mockShowFor).toHaveBeenCalled();
+    expect(mockDimUpdate).toHaveBeenCalled(); // temporary dimensions follow the drag
     canvas.dispatchEvent(new MouseEvent('pointerup', { clientX: 40, clientY: 0 }));
     expect(mockExecute).toHaveBeenCalledTimes(1);
     expect(mockExecute.mock.calls[0][0]).toBeInstanceOf(UpdateOpeningParamsCommand);
-  });
-
-  it('snap during drag shows the marker; no snap hides it (shared engine)', () => {
-    const canvas = document.createElement('canvas');
-    selectOpening();
-    mockHit = { bimId: 'op-1', bimType: 'opening' };
-    renderHook(() => useBim3DOpeningMove(makeParams(canvas)));
-    press(canvas, 0, 0);
-    mockPoint = { x: 0.2, y: 1, z: -0.05 };
-    mockHit = { bimId: 'wall-1', bimType: 'wall' };
-    mockResolved = { params: { wallId: 'wall-1', offsetFromStart: 250 }, host: { id: 'wall-1' } };
-    mockSnap = { snappedMm: { x: 250, y: 0 }, markerMm: { x: 250, y: 0 } };
-    canvas.dispatchEvent(new MouseEvent('pointermove', { clientX: 40, clientY: 0 }));
-    expect(mockMarkerShow).toHaveBeenCalled();
-    mockSnap = null;
-    canvas.dispatchEvent(new MouseEvent('pointermove', { clientX: 41, clientY: 0 }));
-    expect(mockMarkerHide).toHaveBeenCalled();
+    expect(mockDimHide).toHaveBeenCalled(); // dimensions vanish on release
   });
 
   it('press NOT on the opening does not start a drag (no commit)', () => {

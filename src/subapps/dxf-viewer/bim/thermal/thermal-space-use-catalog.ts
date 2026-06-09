@@ -34,7 +34,9 @@ import {
 } from './heat-load/heat-load-config';
 import {
   DEFAULT_SOLAR_SHADING_LEVEL,
+  DEFAULT_SURFACE_COLOR_LEVEL,
   type SolarShadingLevel,
+  type SurfaceColorLevel,
 } from './heat-load/annual-gains-config';
 
 /** Default παράμετροι σχεδιασμού μιας χρήσης χώρου (ΤΟΤΕΕ 20701-1). */
@@ -168,4 +170,27 @@ export function resolveSolarShadingLevel(
   params: Pick<ThermalSpaceParams, 'solarShadingLevel'>,
 ): SolarShadingLevel {
   return params.solarShadingLevel ?? DEFAULT_SOLAR_SHADING_LEVEL;
+}
+
+/**
+ * Effective απόχρωση εξωτ. τοίχων (ηλιακή απορρόφηση): per-space override ?? `medium`.
+ * ADR-422 L7.6 — pure SSoT· default `medium` ⇒ α_S=0.6 (τυπικός σοβάς). Επιστρέφει το
+ * **επίπεδο** (η απορροφητικότητα προκύπτει με `getSolarAbsorptance`).
+ */
+export function resolveWallSolarAbsorptanceLevel(
+  params: Pick<ThermalSpaceParams, 'wallSolarAbsorptanceLevel'>,
+): SurfaceColorLevel {
+  return params.wallSolarAbsorptanceLevel ?? DEFAULT_SURFACE_COLOR_LEVEL;
+}
+
+/**
+ * Effective απόχρωση στέγης/οριζόντιων αδιαφανών (ηλιακή απορρόφηση): per-space override
+ * ?? `medium`. ADR-422 L7.7 — pure SSoT· default `medium` ⇒ α_S=0.6. Ξεχωριστό από τους
+ * τοίχους (Revit per-element absorptance· οι στέγες συχνά σκούρες — ο μελετητής αλλάζει
+ * σε `dark`). Επιστρέφει το **επίπεδο** (η απορροφητικότητα προκύπτει με `getSolarAbsorptance`).
+ */
+export function resolveRoofSolarAbsorptanceLevel(
+  params: Pick<ThermalSpaceParams, 'roofSolarAbsorptanceLevel'>,
+): SurfaceColorLevel {
+  return params.roofSolarAbsorptanceLevel ?? DEFAULT_SURFACE_COLOR_LEVEL;
 }

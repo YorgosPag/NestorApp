@@ -29,6 +29,7 @@ import {
 import { resolveSpaceBoundaries, type StoreyPosition } from './space-boundary-resolver';
 import { computeSpaceHeatLoad } from './heat-load-engine';
 import type { SpaceHeatLoadResult } from './heat-load-types';
+import type { OverhangOutline } from './solar-overhang-geometry';
 
 /** Active-floor context που χρειάζεται το engine (δίνεται από `useHeatLoadInputs`). */
 export interface SpaceHeatLoadDeriveInputs {
@@ -44,6 +45,12 @@ export interface SpaceHeatLoadDeriveInputs {
   readonly outdoorTempC: number;
   /** Ανοχή αντιστοίχισης footprint→τοίχου (scene units). */
   readonly tol: number;
+  /**
+   * Outlines οριζόντιων προβόλων **πάνω** από τα παράθυρα (active-floor roof slabs +
+   * cross-floor floor slabs των άνω ορόφων, world XY) — geometry-derived overhang
+   * shading `F_ov` (ADR-422 L7.3 Slice B). Absent/κενό ⇒ zero-regression.
+   */
+  readonly overhangOutlines?: readonly OverhangOutline[];
 }
 
 /** Συγκεντρωτικό αποτέλεσμα ορόφου: per-space φορτία + εύρος + άθροισμα. */
@@ -68,6 +75,7 @@ export function computeOneSpaceHeatLoad(
     exteriorWallIds: inputs.exteriorWallIds,
     storeyPosition: inputs.storeyPosition,
     tol: inputs.tol,
+    overhangOutlines: inputs.overhangOutlines,
   });
   const geometry = space.geometry ?? computeThermalSpaceGeometry(space.params);
   return computeSpaceHeatLoad({

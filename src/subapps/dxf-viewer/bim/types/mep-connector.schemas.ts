@@ -42,8 +42,9 @@ export const PlumbingSystemClassificationSchema = z.enum([
 /** ADR-408 Φ9 — conveyed fluid. */
 export const PipeFluidSchema = z.enum(['water', 'hot-water', 'wastewater', 'glycol', 'other']);
 
-/** ADR-408 (duct domain foundation) — duct system classification (opening: flue exhaust). */
-export const DuctSystemClassificationSchema = z.enum(['exhaust']);
+/** ADR-408 (duct domain foundation) + ADR-432 (HVAC) — duct system classification
+ *  (flue exhaust + HVAC supply-air / return-air). */
+export const DuctSystemClassificationSchema = z.enum(['exhaust', 'supply-air', 'return-air']);
 
 /** ADR-408 (fuel domain foundation) — fuel system classification (gas/oil supply). */
 export const FuelSystemClassificationSchema = z.enum(['fuel-gas', 'fuel-oil']);

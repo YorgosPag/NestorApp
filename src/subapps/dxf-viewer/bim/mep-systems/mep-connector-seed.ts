@@ -39,10 +39,19 @@ import {
 import { getEntityConnectors } from './connector-access';
 import {
   buildDefaultLightingConnector,
+  buildDefaultPowerConnector,
+  buildDefaultDataConnector,
   buildDefaultPanelOutgoingConnector,
+  buildDefaultCommsRackOutgoingConnector,
   buildSegmentEndpointConnector,
   buildFloorDrainConnector,
+  buildAirTerminalSupplyConnector,
+  buildAhuSupplyAirConnector,
 } from '../types/mep-connector-types';
+import { isSocketKind } from '../mep-fixtures/socket-symbol-spec';
+import { isDataOutletKind } from '../mep-fixtures/data-outlet-symbol-spec';
+import { isAirTerminalKind, DEFAULT_AIR_TERMINAL_DUCT_DIAMETER_MM } from '../mep-fixtures/air-terminal-symbol-spec';
+import { isAhuKind, DEFAULT_AHU_DUCT_DIAMETER_MM } from '../mep-fixtures/ahu-symbol-spec';
 import { DEFAULT_FLOOR_DRAIN_CONNECTOR_DIAMETER_MM } from '../types/mep-fixture-types';
 import { isPlumbingFixtureKind } from '../mep-fixtures/plumbing-fixture-spec';
 import { buildSanitaryFixtureConnectors } from '../mep-fixtures/sanitary-fixture-connectors';
@@ -75,11 +84,33 @@ export function seedDefaultConnectors(entity: Entity): Entity {
       ? buildSanitaryFixtureConnectors(kind, sceneUnits)
       : kind === 'floor-drain'
         ? [buildFloorDrainConnector({ x: 0, y: 0, z: 0 }, DEFAULT_FLOOR_DRAIN_CONNECTOR_DIAMETER_MM)]
-        : [buildDefaultLightingConnector()];
+        // ADR-430 — a socket re-materialises a `'power'` connector (not `'lighting'`),
+        // so a load-time socket re-joins its 16A circuit.
+        : isSocketKind(kind)
+          ? [buildDefaultPowerConnector()]
+          // ADR-431 — a data outlet re-materialises a `'data'` connector, so a
+          // load-time RJ45 outlet re-joins its structured-cabling channel.
+          : isDataOutletKind(kind)
+            ? [buildDefaultDataConnector()]
+            // ADR-432 — an air terminal re-materialises its supply-air duct INLET, an
+            // AHU its supply-air duct OUTLET, so a load-time HVAC component re-joins
+            // (terminal) / re-sources (AHU) the supply-air duct network.
+            : isAirTerminalKind(kind)
+              ? [buildAirTerminalSupplyConnector({ x: 0, y: 0, z: 0 }, DEFAULT_AIR_TERMINAL_DUCT_DIAMETER_MM)]
+              : isAhuKind(kind)
+                ? [buildAhuSupplyAirConnector({ x: 0, y: 0, z: 0 }, DEFAULT_AHU_DUCT_DIAMETER_MM)]
+                : [buildDefaultLightingConnector()];
     return { ...entity, params: { ...entity.params, connectors } };
   }
   if (isElectricalPanelEntity(entity)) {
-    return { ...entity, params: { ...entity.params, connectors: [buildDefaultPanelOutgoingConnector()] } };
+    // ADR-431 — a comms-rack (weak-current source) re-materialises a `'data'` out
+    // connector so it sources structured-cabling channels; a power panel keeps its
+    // `'power'` out connector (kind-aware, Revit family-definition).
+    const connector =
+      entity.params.kind === 'comms-rack'
+        ? buildDefaultCommsRackOutgoingConnector()
+        : buildDefaultPanelOutgoingConnector();
+    return { ...entity, params: { ...entity.params, connectors: [connector] } };
   }
   // A plumbing manifold (Φ12) materialises 1 inlet + N outlet pipe connectors,
   // derived from its `outletCount` + diameters (SSoT `buildMepManifoldConnectors`).

@@ -21,6 +21,10 @@ import {
   isPlumbingFixtureKind,
   resolvePlumbingFixtureDrawer,
 } from './plumbing-fixture-spec';
+import { isSocketKind, socketDrawer } from './socket-symbol-spec';
+import { isDataOutletKind, dataOutletDrawer } from './data-outlet-symbol-spec';
+import { isAirTerminalKind, airTerminalDrawer } from './air-terminal-symbol-spec';
+import { isAhuKind, ahuDrawer } from './ahu-symbol-spec';
 
 /** A polyline of world-space points (canvas units). */
 export type FixtureStroke = readonly Point3D[];
@@ -77,6 +81,27 @@ export function buildFixtureSymbol(
   // geometry.
   if (isPlumbingFixtureKind(params.kind) && outline.length >= 4) {
     return { outline, strokes: resolvePlumbingFixtureDrawer(params.kind)(outline) };
+  }
+
+  // ADR-430 — a socket (πρίζα) draws the round receptacle glyph (face + two contact
+  // pins) via the socket SSoT drawer, rotation/scale-aware for free.
+  if (isSocketKind(params.kind) && outline.length >= 4) {
+    return { outline, strokes: socketDrawer(outline) };
+  }
+
+  // ADR-431 — a data outlet (RJ45) draws the downward-triangle telecom glyph via the
+  // data-outlet SSoT drawer, rotation/scale-aware for free.
+  if (isDataOutletKind(params.kind) && outline.length >= 4) {
+    return { outline, strokes: dataOutletDrawer(outline) };
+  }
+
+  // ADR-432 — HVAC: a supply-air terminal draws the concentric-square ceiling-diffuser
+  // glyph; an AHU draws the fan + airflow-chevron unit glyph. Both rotation/scale-aware.
+  if (isAirTerminalKind(params.kind) && outline.length >= 4) {
+    return { outline, strokes: airTerminalDrawer(outline) };
+  }
+  if (isAhuKind(params.kind) && outline.length >= 4) {
+    return { outline, strokes: ahuDrawer(outline) };
   }
 
   if (params.shape === 'rectangular' && outline.length === 4) {

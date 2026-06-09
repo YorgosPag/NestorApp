@@ -263,6 +263,69 @@ export function useDxfViewerNotifications(): void {
       }),
     );
 
+    // ADR-430 Slice 2 — electrical-strong auto-design feedback (Generate → review → accept).
+    unsubs.push(
+      EventBus.on('bim:electrical-generated', ({ circuitCount, warningCount }) => {
+        toast.info(
+          warningCount > 0
+            ? t('electrical.generatedWithWarnings', { count: circuitCount, warnings: warningCount })
+            : t('electrical.generated', { count: circuitCount }),
+        );
+      }),
+    );
+    unsubs.push(
+      EventBus.on('bim:electrical-empty', ({ reason }) => {
+        toast.warning(t(`electrical.empty.${reason}`));
+      }),
+    );
+    unsubs.push(
+      EventBus.on('bim:electrical-committed', ({ circuitCount }) => {
+        toast.success(t('electrical.committed', { count: circuitCount }));
+      }),
+    );
+
+    // ADR-431 Slice 2 — electrical-weak (ασθενή) auto-design feedback.
+    unsubs.push(
+      EventBus.on('bim:electrical-weak-generated', ({ channelCount, warningCount }) => {
+        toast.info(
+          warningCount > 0
+            ? t('electricalWeak.generatedWithWarnings', { count: channelCount, warnings: warningCount })
+            : t('electricalWeak.generated', { count: channelCount }),
+        );
+      }),
+    );
+    unsubs.push(
+      EventBus.on('bim:electrical-weak-empty', ({ reason }) => {
+        toast.warning(t(`electricalWeak.empty.${reason}`));
+      }),
+    );
+    unsubs.push(
+      EventBus.on('bim:electrical-weak-committed', ({ channelCount }) => {
+        toast.success(t('electricalWeak.committed', { count: channelCount }));
+      }),
+    );
+
+    // ADR-432 Slice 2 — HVAC (αερισμός) auto-design feedback (Generate → review → accept).
+    unsubs.push(
+      EventBus.on('bim:hvac-generated', ({ networkCount, warningCount }) => {
+        toast.info(
+          warningCount > 0
+            ? t('hvac.generatedWithWarnings', { count: networkCount, warnings: warningCount })
+            : t('hvac.generated', { count: networkCount }),
+        );
+      }),
+    );
+    unsubs.push(
+      EventBus.on('bim:hvac-empty', ({ reason }) => {
+        toast.warning(t(`hvac.empty.${reason}`));
+      }),
+    );
+    unsubs.push(
+      EventBus.on('bim:hvac-committed', ({ networkCount, segmentCount }) => {
+        toast.success(t('hvac.committed', { count: networkCount, segments: segmentCount }));
+      }),
+    );
+
     // ADR-401 Phase G.3 — stair attach mirrors (reuse the generic messages).
     unsubs.push(
       EventBus.on('bim:stairs-auto-attached', () => {

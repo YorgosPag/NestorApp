@@ -23,6 +23,7 @@ import {
   MIN_BOILER_DIMENSION_MM,
   DEFAULT_BOILER_FLUE_DIAMETER_MM,
   DEFAULT_BOILER_FUEL_DIAMETER_MM,
+  DEFAULT_BOILER_CONDENSATE_DIAMETER_MM,
 } from '../types/mep-boiler-types';
 import type { MepConnector, FuelSystemClassification } from '../types/mep-connector-types';
 import {
@@ -98,6 +99,48 @@ function transformFootprint(
 // ─── Connector layout (pure SSoT) ──────────────────────────────────────────────
 
 /**
+ * Connector id for the condensate drain outlet of a condensing boiler (αποχέτευση
+ * συμπυκνωμάτων). Host-local (unique within the boiler component).
+ */
+export const BOILER_CONDENSATE_CONNECTOR_ID = 'boiler-condensate';
+
+/**
+ * Condensate DRAIN outlet connector of a condensing heating boiler (ADR-408 Εύρος Β #2 —
+ * condensate drain, Revit "Mechanical Equipment → condensate connector", αποχέτευση
+ * συμπυκνωμάτων). A condensing boiler extracts latent heat from the flue gases and
+ * produces acidic CONDENSATE that drains to the sewer: the condensate LEAVES the boiler
+ * (`flow:'out'`), `domain:'pipe'`, classification REUSED as `'sanitary-drainage'` (NOT a
+ * new union member — exactly the recirc-reuse pattern, so a pipe snapped here joins the
+ * SAME drainage network a floor drain / sanitary fixture sources, with zero new switch
+ * cases). This makes the boiler a drainage PRODUCER, the mirror of its hydronic SOURCE role.
+ *
+ * Co-located here (boiler-owned geometry module) next to its sole consumer
+ * {@link buildBoilerConnectors} rather than in `mep-connector-types.ts` with the other
+ * boiler builders: a deliberate, reversible call — the connector needs no new
+ * classification/schema, so this keeps the change 100% boiler-owned (the shared connector
+ * file stays untouched). May be relocated alongside the siblings in a later cleanup.
+ *
+ * Only seeded when the boiler's `condensing` flag is set (gated in `buildBoilerConnectors`,
+ * independent of `fuelType` — Revit-grade explicit property, not inferred from efficiency).
+ *
+ * `localPosition` is host-local (scene units, pre-rotation) — the caller places it at the
+ * back-right corner, distinct from the supply/return/DHW/flue/fuel ports (see
+ * `buildBoilerConnectors`).
+ */
+export function buildBoilerCondensateConnector(
+  localPosition: Point3D,
+  diameterMm: number,
+): MepConnector {
+  return {
+    connectorId: BOILER_CONDENSATE_CONNECTOR_ID,
+    domain: 'pipe',
+    flow: 'out',
+    localPosition,
+    pipe: { systemClassification: 'sanitary-drainage', diameterMm },
+  };
+}
+
+/**
  * Build the boiler's embedded connectors (supply outlet + return inlet, plus an
  * optional DHW hot outlet for a combi boiler), derived from `params`. SSoT consumed
  * by both the completion builder (creation) and `seedDefaultConnectors` (load-time
@@ -122,7 +165,12 @@ function transformFootprint(
  * inlet (τροφοδοσία καυσίμου) at the front-centre `{0,+hl}` (`flow:'in'`, classification
  * `fuel-gas`/`fuel-oil` from `fuelType`, diameter `fuelConnectorDiameterMm ??
  * DEFAULT_BOILER_FUEL_DIAMETER_MM`) — an electric boiler / heat-pump has neither.
- * `connectorWorldPosition` applies the host rotation/translation for free.
+ * INDEPENDENTLY of every gate above, when `condensing` is set a `pipe`-domain condensate
+ * drain (αποχέτευση συμπυκνωμάτων) is appended at the back-right `{+hw,-hl}` (`flow:'out'`,
+ * REUSING the `sanitary-drainage` classification, diameter `condensateConnectorDiameterMm
+ * ?? DEFAULT_BOILER_CONDENSATE_DIAMETER_MM`) — a condensing boiler drains its acidic
+ * condensate to the sewer. `connectorWorldPosition` applies the host rotation/translation
+ * for free.
  */
 export function buildBoilerConnectors(params: MepBoilerParams): MepConnector[] {
   const s = mmToSceneUnits(params.sceneUnits ?? 'mm');
@@ -169,6 +217,19 @@ export function buildBoilerConnectors(params: MepBoilerParams): MepConnector[] {
     const fuelClassification: FuelSystemClassification =
       params.fuelType === 'oil' ? 'fuel-oil' : 'fuel-gas';
     connectors.push(buildBoilerFuelConnector(fuel, fuelDiameter, fuelClassification));
+  }
+  // Condensate drain (αποχέτευση συμπυκνωμάτων) — a CONDENSING boiler produces acidic
+  // condensate that must drain to the sanitary system. Gated by the explicit `condensing`
+  // flag (Revit-grade), INDEPENDENT of `fuelType` and of the combi/flue gates. Placed at
+  // the back-right `{+hw,-hl}` corner — free of the supply/return (y=0), the four DHW
+  // corners, the back-centre flue `{0,-hl}` and the front-centre fuel `{0,+hl}`. REUSES
+  // the `sanitary-drainage` classification (no new union member) so it joins the same
+  // drainage network a floor drain does.
+  if (params.condensing) {
+    const condensate: Point3D = { x: hw, y: -hl, z: 0 };
+    const condensateDiameter =
+      params.condensateConnectorDiameterMm ?? DEFAULT_BOILER_CONDENSATE_DIAMETER_MM;
+    connectors.push(buildBoilerCondensateConnector(condensate, condensateDiameter));
   }
   return connectors;
 }

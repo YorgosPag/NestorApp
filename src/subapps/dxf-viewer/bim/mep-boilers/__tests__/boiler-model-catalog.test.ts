@@ -10,10 +10,13 @@
 
 import {
   BOILER_MODEL_CATALOG,
+  BOILER_FUEL_TYPES,
+  isBoilerFuelType,
   listBoilerModels,
   resolveBoilerModel,
   applyBoilerModelToParams,
   clearBoilerModel,
+  type BoilerFuelType,
 } from '../boiler-model-catalog';
 import type { MepBoilerParams } from '../../types/mep-boiler-types';
 
@@ -69,6 +72,14 @@ describe('listBoilerModels', () => {
   it('all entries have a positive seasonal efficiency', () => {
     listBoilerModels().forEach((m) => {
       expect(m.seasonalEfficiencyPercent).toBeGreaterThan(0);
+    });
+  });
+
+  it('marks the gas presets condensing and the rest non-condensing', () => {
+    // Gas presets (94/93/91%) are condensing appliances → produce condensate to drain.
+    // Traditional floor-standing oil, heat-pumps and direct-electric do not.
+    listBoilerModels().forEach((m) => {
+      expect(m.condensing).toBe(m.fuelType === 'gas');
     });
   });
 });
@@ -140,6 +151,11 @@ describe('applyBoilerModelToParams', () => {
     expect(next.seasonalEfficiencyPercent).toBe(model!.seasonalEfficiencyPercent);
   });
 
+  it('writes condensing from the preset (gas condensing → true)', () => {
+    const next = applyBoilerModelToParams(BASE_PARAMS, model!);
+    expect(next.condensing).toBe(true);
+  });
+
   it('is pure — does not mutate the original params', () => {
     const before = { ...BASE_PARAMS };
     applyBoilerModelToParams(BASE_PARAMS, model!);
@@ -184,6 +200,11 @@ describe('clearBoilerModel', () => {
     expect(cleared.seasonalEfficiencyPercent).toBeUndefined();
   });
 
+  it('sets condensing to undefined (a Type-Catalog property)', () => {
+    const cleared = clearBoilerModel(withModel);
+    expect(cleared.condensing).toBeUndefined();
+  });
+
   it('preserves all other params (width, thermalOutputW, position, etc.)', () => {
     const cleared = clearBoilerModel(withModel);
     // geometry fields set by applyBoilerModelToParams remain (user can then adjust)
@@ -202,5 +223,43 @@ describe('clearBoilerModel', () => {
   it('is pure — does not mutate the original params', () => {
     clearBoilerModel(withModel);
     expect(withModel.modelId).toBe('oil-floor-30');
+  });
+});
+
+// ─── BOILER_FUEL_TYPES + isBoilerFuelType (standalone fuel-type picker SSoT) ───
+
+describe('BOILER_FUEL_TYPES', () => {
+  it('lists exactly the four BoilerFuelType members', () => {
+    expect(BOILER_FUEL_TYPES).toEqual(['gas', 'oil', 'electric', 'heat-pump']);
+  });
+
+  it('has no duplicate entries', () => {
+    expect(new Set(BOILER_FUEL_TYPES).size).toBe(BOILER_FUEL_TYPES.length);
+  });
+
+  it('covers every fuelType used in the model catalog', () => {
+    listBoilerModels().forEach((m) => {
+      expect(BOILER_FUEL_TYPES).toContain(m.fuelType);
+    });
+  });
+
+  it('is assignable to BoilerFuelType[] (compile-time membership)', () => {
+    const fuels: readonly BoilerFuelType[] = BOILER_FUEL_TYPES;
+    expect(fuels.length).toBe(4);
+  });
+});
+
+describe('isBoilerFuelType', () => {
+  it('returns true for every member of BOILER_FUEL_TYPES', () => {
+    BOILER_FUEL_TYPES.forEach((fuel) => {
+      expect(isBoilerFuelType(fuel)).toBe(true);
+    });
+  });
+
+  it('returns false for unrelated strings', () => {
+    expect(isBoilerFuelType('')).toBe(false);
+    expect(isBoilerFuelType('biomass')).toBe(false);
+    expect(isBoilerFuelType('GAS')).toBe(false);
+    expect(isBoilerFuelType('heat_pump')).toBe(false);
   });
 });

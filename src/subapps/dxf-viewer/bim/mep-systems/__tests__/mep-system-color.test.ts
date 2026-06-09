@@ -10,6 +10,7 @@ import {
   resolveEntitySystemColor,
   resolveFittingSystemColor,
   classificationDefaultColor,
+  ductClassificationDefaultColor,
   resolveSegmentClassificationColor,
   isDefaultClassificationColor,
   hexToThreeInt,
@@ -128,6 +129,26 @@ describe('resolveSegmentClassificationColor (ADR-408 Φ14 — standalone pipe co
     expect(resolveSegmentClassificationColor('hydronic-supply')).toBe(
       classificationDefaultColor('hydronic-supply'),
     );
+  });
+
+  it('resolves HVAC duct classifications (ADR-432) via the same SSoT', () => {
+    expect(resolveSegmentClassificationColor('supply-air')).toBe('#38bdf8');
+    expect(resolveSegmentClassificationColor('return-air')).toBe('#0d9488');
+    expect(resolveSegmentClassificationColor('exhaust')).toBe('#6b7280');
+  });
+
+  it('agrees with ductClassificationDefaultColor (duct dispatch)', () => {
+    expect(resolveSegmentClassificationColor('supply-air')).toBe(
+      ductClassificationDefaultColor('supply-air'),
+    );
+  });
+});
+
+describe('ductClassificationDefaultColor (ADR-432 — HVAC air convention)', () => {
+  it('maps duct classifications to industry-convention colours', () => {
+    expect(ductClassificationDefaultColor('exhaust')).toBe('#6b7280'); // grey
+    expect(ductClassificationDefaultColor('supply-air')).toBe('#38bdf8'); // light blue
+    expect(ductClassificationDefaultColor('return-air')).toBe('#0d9488'); // teal
   });
 });
 

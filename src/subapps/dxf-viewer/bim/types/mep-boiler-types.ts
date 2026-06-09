@@ -132,6 +132,25 @@ export interface MepBoilerParams extends MepConnectorHostParams {
    */
   readonly fuelConnectorDiameterMm?: number;
   /**
+   * CONDENSING boiler flag (ADR-408 Εύρος Β — condensate drain). When `true` the boiler
+   * is a condensing appliance (Revit «Condensing» Yes/No): it extracts latent heat from
+   * the flue gases and produces acidic CONDENSATE that must drain to the sanitary system.
+   * `buildBoilerConnectors` then seeds a `boiler-condensate` connector (`flow:'out'`,
+   * REUSING the `sanitary-drainage` classification — NOT a new union member) so the
+   * condensate joins the SAME drainage network a floor drain / sanitary fixture does.
+   * Set automatically for the gas condensing presets (`applyBoilerModelToParams`); cleared
+   * with the model (Type-property). Explicit (Revit-grade), NOT inferred from efficiency —
+   * gated independently of `fuelType`. Additive/optional — pre-condensate boilers unchanged.
+   */
+  readonly condensing?: boolean;
+  /**
+   * mm — nominal CONDENSATE DRAIN (αποχέτευση συμπυκνωμάτων) diameter for a condensing
+   * boiler. Drives the `boiler-condensate` pipe connector (`buildBoilerConnectors`).
+   * Absent ⇒ falls back to {@link DEFAULT_BOILER_CONDENSATE_DIAMETER_MM}. Only relevant
+   * when `condensing` is set. Additive/optional — pre-condensate boilers unchanged.
+   */
+  readonly condensateConnectorDiameterMm?: number;
+  /**
    * Combustion flue VENT TERMINAL type (Revit «Vent Terminal», καμινάδα) — how the flue
    * discharges to atmosphere (roof cowl / through-wall / concentric). Drives the distinct
    * terminal-cap glyph on the plan symbol + the tag line. Absent ⇒ {@link
@@ -250,6 +269,13 @@ export const DEFAULT_BOILER_FLUE_DIAMETER_MM = 100;
  * the user can override per boiler).
  */
 export const DEFAULT_BOILER_FUEL_DIAMETER_MM = 20;
+
+/**
+ * Default CONDENSATE DRAIN (αποχέτευση συμπυκνωμάτων) diameter (mm) for a condensing
+ * boiler — typical DN25 condensate trap line (range DN20–32). Used when
+ * `condensateConnectorDiameterMm` is absent.
+ */
+export const DEFAULT_BOILER_CONDENSATE_DIAMETER_MM = 25;
 
 /**
  * Default classification the boiler sources — the hydronic supply flow. A network

@@ -6,6 +6,10 @@ import type { Point2D } from '../../rendering/types/Types';
 import { isInteractiveTool } from '../../systems/tools/ToolStateManager';
 import { isColumnRegionTool, isWallRegionTool } from '../../systems/tools/region-tool-ids';
 import { plumbingFixtureToolKind } from '../../bim/mep-fixtures/plumbing-fixture-spec';
+import { socketFixtureToolKind } from '../../bim/mep-fixtures/socket-symbol-spec';
+import { dataOutletFixtureToolKind } from '../../bim/mep-fixtures/data-outlet-symbol-spec';
+import { airTerminalFixtureToolKind } from '../../bim/mep-fixtures/air-terminal-symbol-spec';
+import { ahuFixtureToolKind } from '../../bim/mep-fixtures/ahu-symbol-spec';
 import { isPointInPolygon } from '../../utils/geometry/GeometryUtils';
 import { dwarn } from '../../debug';
 import { PolygonCropStore } from '../../systems/lasso/LassoCropStore';
@@ -307,7 +311,11 @@ export function useCanvasClickHandler(params: UseCanvasClickHandlerParams): UseC
     if (
       (activeTool === 'mep-fixture' ||
         activeTool === 'mep-floor-drain' ||
-        plumbingFixtureToolKind(activeTool) !== null) &&
+        plumbingFixtureToolKind(activeTool) !== null ||
+        socketFixtureToolKind(activeTool) !== null ||
+        dataOutletFixtureToolKind(activeTool) !== null ||
+        airTerminalFixtureToolKind(activeTool) !== null ||
+        ahuFixtureToolKind(activeTool) !== null) &&
       mepFixtureTool?.isActive
     ) {
       mepFixtureTool.onCanvasClick(worldPoint);

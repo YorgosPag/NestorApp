@@ -34,6 +34,7 @@ import {
   DIM3D_DEFAULT_LAYOUT_OPTIONS,
   buildDim3DLineLayout,
   type ArrowTransform,
+  type LayoutOptions,
 } from './dim3d-line-geometry';
 import { resolveTextPlaneQuaternion } from './dim3d-text-plane-orienter';
 import { formatDim3DValue } from './dim3d-value-computer';
@@ -41,6 +42,11 @@ import type { BimDimension3D, Vec3 } from './dim3d-types';
 
 const LINE_COLOR = UI_COLORS_BASE.MEASUREMENT_LINE;
 const TEXT_COLOR = UI_COLORS_BASE.DISTANCE_MEASUREMENT_TEXT;
+/** Black halo around the label glyphs for legibility on any background (test). */
+const TEXT_OUTLINE_COLOR = '#000000';
+const TEXT_OUTLINE_WIDTH = 8;
+/** Lines + arrows draw OVER the model (depthTest off); the label (999) sits above them. */
+const DIM_LINE_RENDER_ORDER = 998;
 
 interface Dim3DRendererHandles {
   readonly root: Group;
@@ -52,25 +58,32 @@ interface Dim3DRendererHandles {
   update(dim: BimDimension3D, cameraPosition?: Vec3): void;
 }
 
-export function createDimension3DRenderer(dim: BimDimension3D): Dim3DRendererHandles {
+export function createDimension3DRenderer(
+  dim: BimDimension3D,
+  layoutOverride?: Partial<LayoutOptions>,
+): Dim3DRendererHandles {
   const root = new Group();
   root.name = `dim3d_${dim.id}`;
   root.userData['dim3dId'] = dim.id;
 
-  const dimMaterial = new LineBasicMaterial({ color: LINE_COLOR });
-  const leaderMaterial = new LineBasicMaterial({ color: LINE_COLOR });
+  // depthTest:false → dim + leader lines are NEVER occluded by walls (Revit annotation
+  // overlay), mirroring the label; renderOrder keeps them just under the text.
+  const dimMaterial = new LineBasicMaterial({ color: LINE_COLOR, depthTest: false, depthWrite: false });
+  const leaderMaterial = new LineBasicMaterial({ color: LINE_COLOR, depthTest: false, depthWrite: false });
 
   const dimGeometry = new BufferGeometry();
   const leaderGeometry = new BufferGeometry();
   const dimLine = new Line(dimGeometry, dimMaterial);
   const leaderLine = new Line(leaderGeometry, leaderMaterial);
+  dimLine.renderOrder = DIM_LINE_RENDER_ORDER;
+  leaderLine.renderOrder = DIM_LINE_RENDER_ORDER;
   root.add(dimLine, leaderLine);
 
   const textSprite = createTextSprite(formatLabel(dim));
   root.add(textSprite);
 
   const arrows: Mesh[] = [];
-  const arrowMaterial = new MeshBasicMaterial({ color: LINE_COLOR });
+  const arrowMaterial = new MeshBasicMaterial({ color: LINE_COLOR, depthTest: false, depthWrite: false });
 
   function syncArrows(transforms: readonly ArrowTransform[]) {
     while (arrows.length > transforms.length) {
@@ -82,6 +95,7 @@ export function createDimension3DRenderer(dim: BimDimension3D): Dim3DRendererHan
     }
     while (arrows.length < transforms.length) {
       const cone = new Mesh(new ConeGeometry(0.04, 0.12, 6), arrowMaterial);
+      cone.renderOrder = DIM_LINE_RENDER_ORDER;
       arrows.push(cone);
       root.add(cone);
     }
@@ -94,6 +108,7 @@ export function createDimension3DRenderer(dim: BimDimension3D): Dim3DRendererHan
     const layout = buildDim3DLineLayout(next.mode, next.placement, next.anchor, {
       ...DIM3D_DEFAULT_LAYOUT_OPTIONS,
       leaderShape: next.leaderStyle.shape,
+      ...layoutOverride,
     });
     writeLineGeometry(dimGeometry, layout.dimLine);
     writeLineGeometry(leaderGeometry, layout.leaderLines);
@@ -169,8 +184,11 @@ function formatLabel(dim: BimDimension3D): string {
 
 function createTextSprite(text: string): Sprite {
   const texture = createLabelTexture(text);
-  const material = new SpriteMaterial({ map: texture, transparent: true });
+  // depthTest:false → the label is NEVER occluded by walls/geometry (Revit annotation
+  // overlay); the high renderOrder keeps it above other transparents (e.g. the ghost).
+  const material = new SpriteMaterial({ map: texture, transparent: true, opacity: 1, depthTest: false, depthWrite: false });
   const sprite = new Sprite(material);
+  sprite.renderOrder = 999;
   sprite.scale.set(0.4, 0.12, 1);
   return sprite;
 }
@@ -182,11 +200,21 @@ function createLabelTexture(text: string): CanvasTexture {
   const ctx = canvas.getContext('2d');
   if (ctx) {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-    ctx.font = 'bold 64px sans-serif';
+    ctx.font = '64px sans-serif';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
+    const cx = canvas.width / 2;
+    const cy = canvas.height / 2;
+    // Black outline (halo) around the glyphs for legibility on any background.
+    ctx.lineJoin = 'round';
+    ctx.strokeStyle = TEXT_OUTLINE_COLOR;
+    ctx.lineWidth = TEXT_OUTLINE_WIDTH;
+    ctx.strokeText(text, cx, cy);
     ctx.fillStyle = TEXT_COLOR;
-    ctx.fillText(text, canvas.width / 2, canvas.height / 2);
+    // Overdraw so the anti-aliased glyph edges accumulate to full opacity (solid /
+    // «συμπαγή» — no residual translucency on the thin non-bold strokes).
+    ctx.fillText(text, cx, cy);
+    ctx.fillText(text, cx, cy);
   }
   const texture = new CanvasTexture(canvas);
   texture.needsUpdate = true;

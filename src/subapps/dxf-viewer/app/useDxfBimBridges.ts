@@ -23,6 +23,9 @@ import { useRibbonMepSegmentBridge, type UseRibbonMepSegmentBridgeProps } from '
 import { useRibbonWaterAutoSupplyBridge, type UseRibbonWaterAutoSupplyBridgeProps } from '../ui/ribbon/hooks/useRibbonWaterAutoSupplyBridge';
 import { useRibbonDrainageAutoBridge, type UseRibbonDrainageAutoBridgeProps } from '../ui/ribbon/hooks/useRibbonDrainageAutoBridge';
 import { useRibbonHeatingAutoBridge, type UseRibbonHeatingAutoBridgeProps } from '../ui/ribbon/hooks/useRibbonHeatingAutoBridge';
+import { useRibbonElectricalAutoBridge, type UseRibbonElectricalAutoBridgeProps } from '../ui/ribbon/hooks/useRibbonElectricalAutoBridge';
+import { useRibbonElectricalWeakAutoBridge } from '../ui/ribbon/hooks/useRibbonElectricalWeakAutoBridge';
+import { useRibbonHvacAutoBridge } from '../ui/ribbon/hooks/useRibbonHvacAutoBridge';
 import { useRibbonFurnitureBridge } from '../ui/ribbon/hooks/useRibbonFurnitureBridge';
 import { useRibbonFloorplanSymbolBridge } from '../ui/ribbon/hooks/useRibbonFloorplanSymbolBridge';
 import { useRibbonMepFixtureLibraryBridge } from '../ui/ribbon/hooks/useRibbonMepFixtureLibraryBridge';
@@ -50,7 +53,8 @@ export type UseDxfBimBridgesProps =
   & UseRibbonMepSegmentBridgeProps
   & UseRibbonWaterAutoSupplyBridgeProps
   & UseRibbonDrainageAutoBridgeProps
-  & UseRibbonHeatingAutoBridgeProps;
+  & UseRibbonHeatingAutoBridgeProps
+  & UseRibbonElectricalAutoBridgeProps;
 
 export function useDxfBimBridges(p: UseDxfBimBridgesProps) {
   const stairBridge = useRibbonStairBridge(p);
@@ -86,6 +90,11 @@ export function useDxfBimBridges(p: UseDxfBimBridgesProps) {
   const drainageAutoBridge = useRibbonDrainageAutoBridge(p);
   // ADR-428 Slice 2 — heating (hydronic) auto-design (Generate → review → accept).
   const heatingAutoBridge = useRibbonHeatingAutoBridge(p);
+  const electricalAutoBridge = useRibbonElectricalAutoBridge(p);
+  // ADR-431 Slice 2 — electrical-weak (ασθενή) auto-design (Generate → review → accept).
+  const electricalWeakAutoBridge = useRibbonElectricalWeakAutoBridge(p);
+  // ADR-432 Slice 2 — HVAC (αερισμός) auto-design (Generate → review → accept).
+  const hvacAutoBridge = useRibbonHvacAutoBridge(p);
   // ADR-410 — furniture library contextual bridge (tool-active picker).
   const furnitureBridge = useRibbonFurnitureBridge();
   // ADR-415 — floorplan-symbol library contextual bridge (tool-active picker).
@@ -100,5 +109,5 @@ export function useDxfBimBridges(p: UseDxfBimBridgesProps) {
   const thermalSpaceBridge = useRibbonThermalSpaceBridge(p);
   // ADR-363 Phase 4.5e+ — Tab/Shift+Tab material cycling for selected BIM entities.
   useBimMaterialCycler(p);
-  return { stairBridge, wallBridge, openingBridge, slabBridge, roofBridge, columnBridge, beamBridge, slabOpeningBridge, mepCircuitBridge, mepPipeNetworkBridge, mepFixtureBridge, mepManifoldBridge, mepRadiatorBridge, mepBoilerBridge, mepWaterHeaterBridge, mepUnderfloorBridge, mepSegmentBridge, waterAutoSupplyBridge, drainageAutoBridge, heatingAutoBridge, furnitureBridge, floorplanSymbolBridge, mepFixtureLibraryBridge, mepRiserBridge, floorFinishBridge, thermalSpaceBridge };
+  return { stairBridge, wallBridge, openingBridge, slabBridge, roofBridge, columnBridge, beamBridge, slabOpeningBridge, mepCircuitBridge, mepPipeNetworkBridge, mepFixtureBridge, mepManifoldBridge, mepRadiatorBridge, mepBoilerBridge, mepWaterHeaterBridge, mepUnderfloorBridge, mepSegmentBridge, waterAutoSupplyBridge, drainageAutoBridge, heatingAutoBridge, electricalAutoBridge, electricalWeakAutoBridge, hvacAutoBridge, furnitureBridge, floorplanSymbolBridge, mepFixtureLibraryBridge, mepRiserBridge, floorFinishBridge, thermalSpaceBridge };
 }

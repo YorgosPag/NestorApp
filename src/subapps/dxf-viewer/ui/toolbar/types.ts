@@ -158,6 +158,16 @@ export type ToolType =
   | 'floor-finish'
   // ADR-406: point-based MEP fixture drawing tool (light fixture first)
   | 'mep-fixture'
+  // ADR-430: point-based electrical socket (πρίζα / power outlet) — mep-fixture kind, power-in connector
+  | 'mep-socket'
+  // ADR-431: point-based structured-cabling data outlet (πρίζα δικτύου / RJ45) — mep-fixture kind, data-in connector
+  | 'mep-data-outlet'
+  // ADR-432: point-based HVAC air terminal (στόμιο/diffuser) — mep-fixture kind, supply-air duct inlet
+  | 'mep-air-terminal'
+  // ADR-432: point-based air handling unit (ΚΚΜ/AHU) — mep-fixture kind, supply-air duct outlet = network source
+  | 'mep-ahu'
+  // ADR-431: point-based comms-rack (rack/patch-panel) — electrical-panel kind, weak-current source
+  | 'mep-comms-rack'
   // ADR-408 Φ3: point-based electrical panel drawing tool (circuit source)
   | 'electrical-panel'
   // ADR-408 Φ12: point-based plumbing manifold drawing tool (συλλέκτης, pipe-network source)

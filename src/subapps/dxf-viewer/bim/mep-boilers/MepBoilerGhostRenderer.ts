@@ -17,6 +17,7 @@
 import type { Point2D, ViewTransform } from '../../rendering/types/Types';
 import { CoordinateTransforms } from '../../rendering/core/CoordinateTransforms';
 import type { BoilerSymbolGeometry } from './mep-boiler-symbol';
+import { resolveSegmentClassificationColor } from '../mep-systems/mep-system-color';
 
 /** Warm-red boiler palette — mirror of `MepBoilerRenderer`. */
 const BOILER_STROKE = '#dc2626';
@@ -59,9 +60,11 @@ export class MepBoilerGhostRenderer {
 
   /**
    * Draw the full boiler symbol on top of the footprint (WYSIWYG): connector stubs +
-   * flue vent chevron at `GHOST_LINE_WIDTH`, divider/flame glyph at the thinner
-   * `GHOST_GLYPH_LINE_WIDTH` — same read as the placed `MepBoilerRenderer`, same
-   * warm-red palette. Strokes arrive in world units (open polylines).
+   * flue vent chevron + fuel-cock glyph at `GHOST_LINE_WIDTH`, divider/flame glyph at the
+   * thinner `GHOST_GLYPH_LINE_WIDTH` — same read as the placed `MepBoilerRenderer`. Connector
+   * stubs are coloured by their System Classification via the `resolveSegmentClassificationColor`
+   * SSoT (supply red, return blue, DHW hot/cold, drainage brown, flue exhaust grey); the
+   * fuel-cock + body keep the warm-red boiler palette. Strokes arrive in world units (open polylines).
    */
   private drawSymbol(
     symbol: Readonly<BoilerSymbolGeometry>,
@@ -70,12 +73,19 @@ export class MepBoilerGhostRenderer {
   ): void {
     const ctx = this.ctx;
     ctx.save();
-    ctx.strokeStyle = BOILER_STROKE;
     ctx.globalAlpha = 1;
     ctx.setLineDash([]);
     ctx.lineWidth = GHOST_LINE_WIDTH;
-    for (const stroke of symbol.strokes) this.traceStroke(stroke, transform, viewport);
-    for (const stroke of symbol.ventStrokes) this.traceStroke(stroke, transform, viewport);
+    for (const { line, classification } of symbol.strokes) {
+      ctx.strokeStyle = resolveSegmentClassificationColor(classification) ?? BOILER_STROKE;
+      this.traceStroke(line, transform, viewport);
+    }
+    for (const { line, classification } of symbol.ventStrokes) {
+      ctx.strokeStyle = resolveSegmentClassificationColor(classification) ?? BOILER_STROKE;
+      this.traceStroke(line, transform, viewport);
+    }
+    ctx.strokeStyle = BOILER_STROKE;
+    for (const stroke of symbol.fuelStrokes) this.traceStroke(stroke, transform, viewport);
     ctx.lineWidth = GHOST_GLYPH_LINE_WIDTH;
     for (const stroke of symbol.glyphStrokes) this.traceStroke(stroke, transform, viewport);
     ctx.restore();

@@ -38,6 +38,10 @@ import { addMepWaterHeaterToScene } from '../../bim/mep-water-heaters/add-mep-wa
 import { addMepSegmentToScene } from '../../bim/mep-segments/add-mep-segment-to-scene';
 import { DEFAULT_DRAINAGE_SLOPE_PERCENT } from '../../bim/types/mep-segment-types';
 import { plumbingFixtureToolKind } from '../../bim/mep-fixtures/plumbing-fixture-spec';
+import { socketFixtureToolKind } from '../../bim/mep-fixtures/socket-symbol-spec';
+import { dataOutletFixtureToolKind } from '../../bim/mep-fixtures/data-outlet-symbol-spec';
+import { airTerminalFixtureToolKind } from '../../bim/mep-fixtures/air-terminal-symbol-spec';
+import { ahuFixtureToolKind } from '../../bim/mep-fixtures/ahu-symbol-spec';
 import { addRailingToScene } from '../../bim/railings/add-railing-to-scene';
 import type { LevelsHookReturn } from '../../systems/levels';
 
@@ -89,8 +93,24 @@ export function useSpecialToolsPlacementTools(
   // tool id drives the `kind` preset (one tool id per kind, the manifold/segment/
   // floor-drain convention).
   const plumbingKind = plumbingFixtureToolKind(activeTool);
+  // ADR-430 — the electrical socket (πρίζα) shares the fixture tool (one tool id per
+  // kind), distinct from plumbing/light kinds; its tool id drives the `'socket'` preset.
+  const socketKind = socketFixtureToolKind(activeTool);
+  // ADR-431 — the data outlet (πρίζα δικτύου / RJ45) likewise shares the fixture tool;
+  // its tool id drives the `'data-outlet'` preset (weak-current counterpart of socket).
+  const dataOutletKind = dataOutletFixtureToolKind(activeTool);
+  // ADR-432 — the HVAC air terminal (στόμιο) + AHU (ΚΚΜ) likewise share the fixture
+  // tool; their tool ids drive the `'air-terminal'` / `'ahu'` presets.
+  const airTerminalKind = airTerminalFixtureToolKind(activeTool);
+  const ahuKind = ahuFixtureToolKind(activeTool);
   const isMepFixtureTool =
-    activeTool === 'mep-fixture' || activeTool === 'mep-floor-drain' || plumbingKind !== null;
+    activeTool === 'mep-fixture' ||
+    activeTool === 'mep-floor-drain' ||
+    plumbingKind !== null ||
+    socketKind !== null ||
+    dataOutletKind !== null ||
+    airTerminalKind !== null ||
+    ahuKind !== null;
   useToolLifecycle(isMepFixtureTool, mepFixtureTool.activate, mepFixtureTool.deactivate);
   useEffect(() => {
     if (activeTool === 'mep-fixture') {
@@ -99,8 +119,16 @@ export function useSpecialToolsPlacementTools(
       mepFixtureTool.setParamOverrides({ kind: 'floor-drain' });
     } else if (plumbingKind !== null) {
       mepFixtureTool.setParamOverrides({ kind: plumbingKind });
+    } else if (socketKind !== null) {
+      mepFixtureTool.setParamOverrides({ kind: socketKind });
+    } else if (dataOutletKind !== null) {
+      mepFixtureTool.setParamOverrides({ kind: dataOutletKind });
+    } else if (airTerminalKind !== null) {
+      mepFixtureTool.setParamOverrides({ kind: airTerminalKind });
+    } else if (ahuKind !== null) {
+      mepFixtureTool.setParamOverrides({ kind: ahuKind });
     }
-  }, [activeTool, plumbingKind, mepFixtureTool.setParamOverrides]);
+  }, [activeTool, plumbingKind, socketKind, dataOutletKind, airTerminalKind, ahuKind, mepFixtureTool.setParamOverrides]);
 
   // ADR-410 — FURNITURE TOOL: single-click placement; entity appended+broadcast.
   const furnitureTool = useFurnitureTool({
@@ -133,7 +161,18 @@ export function useSpecialToolsPlacementTools(
       return lid ? resolveSceneUnits(levelManager.getLevelScene(lid)) : 'mm';
     },
   });
-  useToolLifecycle(activeTool === 'electrical-panel', electricalPanelTool.activate, electricalPanelTool.deactivate);
+  // ADR-408 Φ3 / ADR-431 — the electrical panel (distribution-board) AND the
+  // comms-rack (weak-current source) share ONE panel tool; the active tool id drives
+  // the `kind` preset (one tool id per kind, the fixture/manifold convention).
+  const isElectricalPanelTool = activeTool === 'electrical-panel' || activeTool === 'mep-comms-rack';
+  useToolLifecycle(isElectricalPanelTool, electricalPanelTool.activate, electricalPanelTool.deactivate);
+  useEffect(() => {
+    if (activeTool === 'electrical-panel') {
+      electricalPanelTool.setParamOverrides({ kind: 'distribution-board' });
+    } else if (activeTool === 'mep-comms-rack') {
+      electricalPanelTool.setParamOverrides({ kind: 'comms-rack' });
+    }
+  }, [activeTool, electricalPanelTool.setParamOverrides]);
 
   // ADR-408 Φ12 — PLUMBING MANIFOLD TOOL: single-click placement; entity appended+broadcast.
   const mepManifoldTool = useMepManifoldTool({

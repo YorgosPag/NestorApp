@@ -98,6 +98,13 @@ const FUEL_DIAMETER_MM_OPTIONS = [
   { value: '25', labelKey: '25', isLiteralLabel: true },
 ] as const;
 
+// Condensate drain (αποχέτευση συμπυκνωμάτων) diameter (mm) — typical condensate trap line DN20/25/32.
+const CONDENSATE_DIAMETER_MM_OPTIONS = [
+  { value: '20', labelKey: '20', isLiteralLabel: true },
+  { value: '25', labelKey: '25', isLiteralLabel: true },
+  { value: '32', labelKey: '32', isLiteralLabel: true },
+] as const;
+
 // Seasonal appliance efficiency (%) — Revit «Nominal Efficiency». Editable; the heat-pump
 // catalogue value (~156%) lands above the list but the bridge still surfaces it as the
 // current value (editable combobox). Drives the read-only ErP class readout.
@@ -146,6 +153,21 @@ export const CONTEXTUAL_MEP_BOILER_TAB: RibbonTab = {
                 // Options are supplied dynamically by the bridge at runtime
                 // (BOILER_MODEL_CATALOG → getComboboxState). Declaring [] here
                 // mirrors the sanitary-fixture assetId picker pattern (ADR-411).
+                options: [],
+              },
+            },
+            {
+              // ADR-408 — standalone HEATING FUEL picker (Revit editable instance param).
+              // Options are supplied dynamically by the bridge (BOILER_FUEL_TYPES + clear
+              // sentinel → getComboboxState), mirroring the model-picker pattern (declare
+              // [] here). Setting it on a parametric boiler opens the combustion panels.
+              type: 'combobox',
+              size: 'small',
+              command: {
+                id: 'mepBoiler.fuelType',
+                labelKey: 'ribbon.commands.mepBoilerEditor.fuelType',
+                commandKey: MEP_BOILER_RIBBON_KEYS.stringParams.fuelType,
+                comboboxWidthPx: 150,
                 options: [],
               },
             },
@@ -237,6 +259,46 @@ export const CONTEXTUAL_MEP_BOILER_TAB: RibbonTab = {
                 commandKey: MEP_BOILER_RIBBON_KEYS.stringParams.flueTermination,
                 comboboxWidthPx: 160,
                 options: [],
+              },
+            },
+            {
+              // ADR-408 Εύρος Β (condensate drain) — «Συμπύκνωση» Revit Yes/No toggle. ON →
+              // condensing=true → a condensate drain connector is seeded (REUSING
+              // sanitary-drainage) + the «Συμπύκνωση» panel (diameter) appears. Lives in the
+              // combustion «Καπναγωγός» panel: condensate is the liquid product of flue-gas
+              // condensation. Mirror του producesDhw toggle.
+              type: 'toggle',
+              size: 'small',
+              command: {
+                id: 'mepBoiler.condensing',
+                labelKey: 'ribbon.commands.mepBoilerEditor.condensing',
+                commandKey: MEP_BOILER_RIBBON_KEYS.toggles.condensing,
+              },
+            },
+          ],
+        },
+      ],
+    },
+    // ADR-408 Εύρος Β (condensate drain) — «Συμπύκνωση» panel: εμφανίζεται μόνο για λέβητα
+    // συμπύκνωσης (visibilityKey `condensing` → bridge.getPanelVisibility → condensing).
+    // Condensate drain (αποχέτευση συμπυκνωμάτων) connector diameter (typical trap DN20/25/32).
+    {
+      id: 'mep-boiler-condensate',
+      labelKey: 'ribbon.panels.mepBoilerCondensate',
+      visibilityKey: MEP_BOILER_RIBBON_VISIBILITY_KEYS.condensing,
+      rows: [
+        {
+          isInFlyout: false,
+          buttons: [
+            {
+              type: 'combobox',
+              size: 'small',
+              command: {
+                id: 'mepBoiler.condensateDiameter',
+                labelKey: 'ribbon.commands.mepBoilerEditor.condensateDiameter',
+                commandKey: MEP_BOILER_RIBBON_KEYS.params.condensateDiameter,
+                comboboxWidthPx: 90,
+                options: CONDENSATE_DIAMETER_MM_OPTIONS,
               },
             },
           ],

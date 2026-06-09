@@ -12,10 +12,15 @@ import { z } from 'zod';
 import {
   ElectricalSystemClassificationSchema,
   PlumbingSystemClassificationSchema,
+  DuctSystemClassificationSchema,
   PipeFluidSchema,
 } from './mep-connector.schemas';
 
-export const MepSystemTypeSchema = z.enum(['electrical-circuit', 'pipe-network']);
+export const MepSystemTypeSchema = z.enum([
+  'electrical-circuit',
+  'pipe-network',
+  'duct-network',
+]);
 
 export const MepSystemMemberSchema = z
   .object({
@@ -74,10 +79,25 @@ export const MepPipeSystemParamsSchema = z
   })
   .strict();
 
-/** Discriminated union on `systemType` (ADR-408 Φ2 + Φ9). */
+/** ADR-432 — duct-network arm (HVAC air: προσαγωγή / επιστροφή). */
+export const MepDuctSystemParamsSchema = z
+  .object({
+    systemType: z.literal('duct-network'),
+    name: z.string().min(1),
+    systemClassification: DuctSystemClassificationSchema,
+    sourceEntityId: z.string().min(1),
+    sourceConnectorId: z.string().min(1),
+    members: z.array(MepSystemMemberSchema),
+    color: SystemColorSchema,
+    diameterMm: z.number().positive().optional(),
+  })
+  .strict();
+
+/** Discriminated union on `systemType` (ADR-408 Φ2 + Φ9 + ADR-432 duct). */
 export const MepSystemParamsSchema = z.discriminatedUnion('systemType', [
   MepElectricalSystemParamsSchema,
   MepPipeSystemParamsSchema,
+  MepDuctSystemParamsSchema,
 ]);
 
 export type MepSystemParamsParsed = z.infer<typeof MepSystemParamsSchema>;

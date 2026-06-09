@@ -33,7 +33,10 @@ import { mmScaleFor } from '../../utils/scene-units';
 import type { IfcEntityMixin } from './ifc-entity-mixin';
 import { polygonArea, polygonPerimeter, polygonBbox } from '../geometry/shared/polygon-utils';
 import type { ReheatMode, ThermalBridgeLevel } from '../thermal/heat-load/heat-load-config';
-import type { SolarShadingLevel } from '../thermal/heat-load/annual-gains-config';
+import type {
+  SolarShadingLevel,
+  SurfaceColorLevel,
+} from '../thermal/heat-load/annual-gains-config';
 
 // ─── Χρήση χώρου (ΤΟΤΕΕ 20701-1) ────────────────────────────────────────────────
 
@@ -77,6 +80,8 @@ export const THERMAL_SPACE_USE_TYPES: readonly ThermalSpaceUseType[] = [
  *   - `thermalBridgeLevel?` — **override** θερμογεφυρών (L1.5). Absent ⇒ `none`.
  *   - `reheatMode?` — **override** λειτουργίας/reheat (L1.5). Absent ⇒ `continuous`.
  *   - `solarShadingLevel?` — **override** σκίασης εξωτ. εμποδίων (L7.3). Absent ⇒ `none`.
+ *   - `wallSolarAbsorptanceLevel?` — **override** απόχρωσης εξωτ. τοίχων (L7.6). Absent ⇒ `medium`.
+ *   - `roofSolarAbsorptanceLevel?` — **override** απόχρωσης στέγης/οριζόντιων (L7.7). Absent ⇒ `medium`.
  *   - `ceilingHeightMm` — mm, καθαρό ύψος χώρου (για όγκο = εμβαδό × ύψος).
  *   - `name?` — user label (π.χ. «Υπνοδωμάτιο 1»).
  *   - `sceneUnits` — canvas coordinate unit. Defaults to 'mm' (legacy compat).
@@ -93,6 +98,10 @@ export interface ThermalSpaceParams {
   readonly reheatMode?: ReheatMode;
   /** **override** σκίασης εξωτ. εμποδίων (L7.3). Absent ⇒ `none` (obstruction=1.0). */
   readonly solarShadingLevel?: SolarShadingLevel;
+  /** **override** απόχρωσης εξωτ. τοίχων (L7.6). Absent ⇒ `medium` (α_S=0.6). */
+  readonly wallSolarAbsorptanceLevel?: SurfaceColorLevel;
+  /** **override** απόχρωσης στέγης/οριζόντιων αδιαφανών (L7.7). Absent ⇒ `medium` (α_S=0.6). */
+  readonly roofSolarAbsorptanceLevel?: SurfaceColorLevel;
   readonly ceilingHeightMm: number;
   readonly name?: string;
   readonly sceneUnits?: SceneUnits;

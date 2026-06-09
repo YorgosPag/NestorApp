@@ -289,4 +289,53 @@ describe('buildBoilerConnectors', () => {
     expect(ids).toContain('boiler-fuel');
     expect(ids).toContain('boiler-flue');
   });
+
+  // ─── Condensate drain (αποχέτευση συμπυκνωμάτων) — pipe connector (ADR-408 condensate) ─
+
+  it('appends a condensate drain for a condensing boiler (back-right, flow:out, sanitary-drainage)', () => {
+    const connectors = buildBoilerConnectors(params({ fuelType: 'gas', condensing: true }));
+    const condensate = connectors.find((c) => c.connectorId === 'boiler-condensate')!;
+    expect(condensate.domain).toBe('pipe');
+    expect(condensate.flow).toBe('out'); // condensate LEAVES toward the sewer
+    expect(condensate.pipe?.systemClassification).toBe('sanitary-drainage');
+    // back-right {+hw, -hl}: width 450 → +225, length 350 → -175 (mm-scene s=1).
+    expect(condensate.localPosition.x).toBeCloseTo(225, 6);
+    expect(condensate.localPosition.y).toBeCloseTo(-175, 6);
+    // distinct fuel/duct payloads absent — it is a plain pipe-domain connector (renders as stub).
+    expect(condensate.duct).toBeUndefined();
+    expect(condensate.fuel).toBeUndefined();
+  });
+
+  it('omits the condensate drain when condensing is absent/false', () => {
+    expect(buildBoilerConnectors(params({ fuelType: 'gas' })).map((c) => c.connectorId)).not.toContain('boiler-condensate');
+    expect(buildBoilerConnectors(params({ fuelType: 'gas', condensing: false })).map((c) => c.connectorId)).not.toContain('boiler-condensate');
+  });
+
+  it('seeds the condensate drain by the explicit flag, independent of fuelType', () => {
+    // Revit-grade: the condensing flag is explicit, NOT inferred from fuelType — an electric
+    // boiler the user marks condensing still gets the drain (and a plain gas boiler does not).
+    expect(buildBoilerConnectors(params({ fuelType: 'electric', condensing: true })).map((c) => c.connectorId)).toContain('boiler-condensate');
+    expect(buildBoilerConnectors(params({ condensing: true })).map((c) => c.connectorId)).toContain('boiler-condensate');
+  });
+
+  it('condensate diameter defaults to DN25, overridden by condensateConnectorDiameterMm', () => {
+    const def = buildBoilerConnectors(params({ condensing: true }));
+    expect(def.find((c) => c.connectorId === 'boiler-condensate')!.pipe?.diameterMm).toBe(25);
+    const overridden = buildBoilerConnectors(params({ condensing: true, condensateConnectorDiameterMm: 32 }));
+    expect(overridden.find((c) => c.connectorId === 'boiler-condensate')!.pipe?.diameterMm).toBe(32);
+  });
+
+  it('coexists with a full gas combi + recirc + condensing boiler — 8 distinct connectors', () => {
+    const connectors = buildBoilerConnectors(
+      params({ fuelType: 'gas', producesDhw: true, dhwRecirculation: true, condensing: true }),
+    );
+    expect(connectors).toHaveLength(8); // supply, return, dhwHot, dhwCold, recirc, flue, fuel, condensate
+    const ids = connectors.map((c) => c.connectorId).sort();
+    expect(ids).toEqual(
+      ['boiler-condensate', 'boiler-dhw-cold', 'boiler-dhw-hot', 'boiler-dhw-recirc', 'boiler-flue', 'boiler-fuel', 'boiler-return', 'boiler-supply'].sort(),
+    );
+    // all eight local positions are distinct.
+    const keys = new Set(connectors.map((c) => `${c.localPosition.x},${c.localPosition.y}`));
+    expect(keys.size).toBe(8);
+  });
 });

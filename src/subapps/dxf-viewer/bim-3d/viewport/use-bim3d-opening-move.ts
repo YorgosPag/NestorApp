@@ -36,18 +36,16 @@ import { resolveOpeningAltMove, openingRehostToleranceWorld } from '../../bim/wa
 import { mmToSceneUnits } from '../../utils/scene-units';
 import { resolveEntityBuilding } from '../../bim/utils/bim-floor-utils';
 import { resolveActiveFloorElevationMm } from '../placement/raycast-floor-point';
-import { worldToDxfPlan, dxfPlanToWorld } from './coordinate-transforms';
+import { worldToDxfPlan } from './coordinate-transforms';
 import { raycastWorldPoint } from '../systems/raycaster/BimEntityRaycaster';
-import { getGlobalSnapEngine } from '../../snapping/global-snap-engine';
-import { makeResizeSnapFn, type SnapFn } from '../gizmo/bim3d-snap-bridge';
-import { PlacementSnapMarker } from '../placement/PlacementSnapMarker';
 import { OpeningMoveGhost } from '../placement/OpeningMoveGhost';
+import { TempOpeningDimOverlay } from '../placement/TempOpeningDimOverlay';
+import { getSiblingOpeningsOnWall } from '../../bim/walls/opening-siblings';
 import { resolveEntityLevelId } from '../animation/bim3d-edit-live-preview-apply';
 import { createSceneManagerAdapter } from '../../hooks/grips/grip-commit-adapters';
 import type { DxfCommitDeps } from '../../hooks/grips/unified-grip-types';
 import { getGlobalCommandHistory } from '../../core/commands';
 import { UpdateOpeningParamsCommand } from '../../core/commands/entity-commands/UpdateOpeningParamsCommand';
-import type { Vector3, Camera } from 'three';
 import type { ThreeJsSceneManager } from '../scene/ThreeJsSceneManager';
 
 /** A press whose pointer moved less than this (px) before release was a click, not a
@@ -69,8 +67,6 @@ interface OpeningDrag {
   readonly buildingBaseElevationM: number;
   readonly downX: number;
   readonly downY: number;
-  /** Cursor snap via the ONE shared engine (gizmo `makeResizeSnapFn` bridge), captured per-drag. */
-  readonly snapFn: SnapFn;
   resolvedParams: OpeningParams | null;
   resolvedHost: WallEntity | null;
 }
@@ -90,34 +86,9 @@ function captureDrag(opening: OpeningEntity, downX: number, downY: number): Open
     buildingBaseElevationM: building?.baseElevation ?? 0,
     downX,
     downY,
-    // Exclude the opening itself so it never snaps to its own geometry; the host wall
-    // (endpoints/midpoint) + other openings + grid stay snappable (the same engine 2D uses).
-    snapFn: makeResizeSnapFn(getGlobalSnapEngine(), opening.id),
     resolvedParams: null,
     resolvedHost: null,
   };
-}
-
-/**
- * ADR-363 Φ1G.5 Slice 2e — snap the raw cursor world point through the ONE shared snap
- * engine (entity-agnostic SSoT, via the gizmo `makeResizeSnapFn` bridge captured in
- * `drag.snapFn`), drive the 3D marker, and return the (snapped) cursor as scene-units
- * plan coords for `resolveOpeningAltMove` — whose wall projection keeps the host
- * constraint. No snap (OSNAP off / nothing in tolerance) → the raw cursor, marker hidden.
- */
-function snappedCurrentPos(
-  drag: OpeningDrag,
-  point: Vector3,
-  snapMarker: PlacementSnapMarker,
-  camera: Camera,
-): { x: number; y: number } {
-  const cursorMm = worldToDxfPlan(point);
-  const res = drag.snapFn({ x: cursorMm.x, y: cursorMm.y });
-  if (res) snapMarker.show(dxfPlanToWorld(res.markerMm.x, res.markerMm.y, cursorMm.z), camera);
-  else snapMarker.hide();
-  const eff = res ? res.snappedMm : { x: cursorMm.x, y: cursorMm.y };
-  const f = mmToSceneUnits(drag.host.params.sceneUnits ?? 'mm');
-  return { x: eff.x * f, y: eff.y * f };
 }
 
 /** Set the visibility of every body mesh tagged with `bimId` (hide the original while dragging). */
@@ -152,7 +123,7 @@ export function useBim3DOpeningMove({ managerRef, canvasEl }: UseBim3DOpeningMov
     if (!canvasEl || !manager) return;
 
     const ghost = new OpeningMoveGhost(manager.scene);
-    const snapMarker = new PlacementSnapMarker(manager.scene);
+    const dimOverlay = new TempOpeningDimOverlay(manager.scene);
     let abort: AbortController | null = null;
     let drag: OpeningDrag | null = null;
     let justDragged = false;
@@ -184,10 +155,10 @@ export function useBim3DOpeningMove({ managerRef, canvasEl }: UseBim3DOpeningMov
       // World-space point ON the wall under the cursor (the pure raycaster SSoT, called
       // with the manager's public group/camera/canvas — no extra ThreeJsSceneManager API).
       const point = raycastWorldPoint(manager.bimLayer.group, manager.getCamera(), manager.getRendererCanvas(), e.clientX, e.clientY);
-      if (!point) { ghost.hide(); snapMarker.hide(); manager.markSceneDirty(); return; }
-      // ADR-363 Φ1G.5 Slice 2e — snap the cursor through the ONE shared engine before
-      // resolving; resolveOpeningAltMove's wall projection keeps the host constraint.
-      const currentPos = snappedCurrentPos(drag, point, snapMarker, manager.getCamera());
+      if (!point) { ghost.hide(); dimOverlay.hide(); manager.markSceneDirty(); return; }
+      const f = mmToSceneUnits(drag.host.params.sceneUnits ?? 'mm');
+      const dxf = worldToDxfPlan(point);
+      const currentPos = { x: dxf.x * f, y: dxf.y * f };
       const hit = manager.raycastBimEntities(e.clientX, e.clientY);
       const forcedHost = hit?.bimType === 'wall' ? drag.walls.find((w) => w.id === hit.bimId) : undefined;
       const resolved = resolveOpeningAltMove({
@@ -201,8 +172,14 @@ export function useBim3DOpeningMove({ managerRef, canvasEl }: UseBim3DOpeningMov
       });
       drag.resolvedParams = resolved?.params ?? null;
       drag.resolvedHost = resolved?.host ?? null;
-      if (resolved) ghost.showFor(drag.opening, resolved.params, resolved.host, drag.floorElevationMm, drag.buildingBaseElevationM);
-      else ghost.hide();
+      if (resolved) {
+        ghost.showFor(drag.opening, resolved.params, resolved.host, drag.floorElevationMm, drag.buildingBaseElevationM);
+        const siblings = getSiblingOpeningsOnWall(resolved.host.id, useBim3DEntitiesStore.getState().openings, drag.opening.id);
+        dimOverlay.update(resolved.params, resolved.host, siblings, drag.floorElevationMm, drag.buildingBaseElevationM, manager.getCamera(), manager.getRendererCanvas(), drag.walls);
+      } else {
+        ghost.hide();
+        dimOverlay.hide();
+      }
       e.preventDefault();
       e.stopPropagation();
       manager.markSceneDirty();
@@ -235,7 +212,7 @@ export function useBim3DOpeningMove({ managerRef, canvasEl }: UseBim3DOpeningMov
       if (drag) setOpeningBodyVisible(manager, drag.opening.id, true);
       drag = null;
       ghost.hide();
-      snapMarker.hide();
+      dimOverlay.hide();
       manager.viewport.setControlsEnabled(true);
       manager.markSceneDirty();
     };
@@ -245,7 +222,7 @@ export function useBim3DOpeningMove({ managerRef, canvasEl }: UseBim3DOpeningMov
       setOpeningBodyVisible(manager, drag.opening.id, true);
       drag = null;
       ghost.hide();
-      snapMarker.hide();
+      dimOverlay.hide();
       manager.viewport.setControlsEnabled(true);
       manager.markSceneDirty();
     };
@@ -276,7 +253,7 @@ export function useBim3DOpeningMove({ managerRef, canvasEl }: UseBim3DOpeningMov
       abort = null;
       justDragged = false;
       ghost.hide();
-      snapMarker.hide();
+      dimOverlay.hide();
       manager.markSceneDirty();
     };
 
@@ -297,7 +274,7 @@ export function useBim3DOpeningMove({ managerRef, canvasEl }: UseBim3DOpeningMov
       unsubView();
       teardown();
       ghost.dispose();
-      snapMarker.dispose();
+      dimOverlay.dispose();
     };
   }, [canvasEl, managerRef]);
 }

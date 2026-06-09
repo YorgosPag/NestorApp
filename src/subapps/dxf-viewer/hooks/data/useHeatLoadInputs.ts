@@ -25,7 +25,16 @@ import { useMemo } from 'react';
 import { useLevelsOptional } from '../../systems/levels/useLevels';
 import { useFirestoreBuildings } from '@/hooks/useFirestoreBuildings';
 import { useFloorsByBuilding } from '@/components/properties/shared/useFloorsByBuilding';
-import { isWallEntity, isOpeningEntity, isThermalSpaceEntity } from '../../types/entities';
+import {
+  isWallEntity,
+  isOpeningEntity,
+  isThermalSpaceEntity,
+  isSlabEntity,
+  type Entity,
+} from '../../types/entities';
+import { useBuildingFloorScenes, type BuildingFloorScene } from './useBuildingFloorScenes';
+import type { SlabEntity, SlabKind } from '../../bim/types/slab-types';
+import type { OverhangOutline } from '../../bim/thermal/heat-load/solar-overhang-geometry';
 import {
   computeEnvelopePerimeter,
   type WallForEnvelope,
@@ -93,6 +102,50 @@ function resolveExteriorWallIds(
   return set;
 }
 
+/**
+ * SlabKind του **active** ορόφου που σχηματίζουν οριζόντιο πρόβολο πάνω από τα
+ * παράθυρά του (στέγη / κορνίζα). Οι slabs των άνω ορόφων μετρούν όλες (κάθε
+ * προεξέχουσα πλάκα/μπαλκόνι σκιάζει· οι ευθυγραμμισμένες → `d_ov≈0`).
+ */
+const ACTIVE_FLOOR_OVERHANG_KINDS: ReadonlySet<SlabKind> = new Set<SlabKind>(['roof', 'ceiling']);
+
+/** Outline μιας πλάκας ως κλειστό πολύγωνο XY (world coords μονάδα σκηνής). */
+function slabOutline(slab: SlabEntity): OverhangOutline {
+  return { polygonXY: slab.params.outline.vertices.map((v) => ({ x: v.x, y: v.y })) };
+}
+
+/** Σύνολο floorId των ορόφων **πάνω** από τον active (ordered floors basement→up). */
+function floorsAboveActive(
+  floors: ReadonlyArray<{ id: string }>,
+  activeFloorId: string | null,
+): ReadonlySet<string> {
+  if (!activeFloorId) return new Set();
+  const idx = floors.findIndex((f) => f.id === activeFloorId);
+  if (idx < 0) return new Set();
+  return new Set(floors.slice(idx + 1).map((f) => f.id));
+}
+
+/**
+ * Outlines οριζόντιων προβόλων (ADR-422 L7.3 Slice B): οι στέγες/κορνίζες του
+ * active ορόφου + ΟΛΕΣ οι πλάκες των άνω ορόφων (κάθε προεξοχή σκιάζει· οι
+ * ευθυγραμμισμένες δίνουν `d_ov≈0` ⇒ zero-regression). Ίδιο world-XY frame.
+ */
+function collectOverhangOutlines(
+  activeEntities: readonly Entity[],
+  upperFloorScenes: readonly BuildingFloorScene[],
+  aboveFloorIds: ReadonlySet<string>,
+): readonly OverhangOutline[] {
+  const outlines: OverhangOutline[] = [];
+  for (const e of activeEntities) {
+    if (isSlabEntity(e) && ACTIVE_FLOOR_OVERHANG_KINDS.has(e.params.kind)) outlines.push(slabOutline(e));
+  }
+  for (const fs of upperFloorScenes) {
+    if (!aboveFloorIds.has(fs.floorId)) continue;
+    for (const e of fs.model.entities) if (isSlabEntity(e)) outlines.push(slabOutline(e));
+  }
+  return outlines;
+}
+
 export function useHeatLoadInputs(
   scene: SceneModel | null | undefined,
   active: boolean,
@@ -110,6 +163,8 @@ export function useHeatLoadInputs(
 
   const { buildings } = useFirestoreBuildings();
   const { floors } = useFloorsByBuilding(buildingId, active);
+  // L7.3 Slice B — cross-floor overhang sourcing (πλάκες άνω ορόφων, riser pattern).
+  const buildingFloorScenes = useBuildingFloorScenes(active);
 
   return useMemo<HeatLoadInputsBundle | null>(() => {
     if (!active || !scene) return null;
@@ -121,6 +176,11 @@ export function useHeatLoadInputs(
     const openings = entities.filter(isOpeningEntity);
     const sceneUnits = resolveSceneUnits(scene);
     const climateZone = resolveClimateZone(buildings, buildingId);
+    const overhangOutlines = collectOverhangOutlines(
+      entities,
+      buildingFloorScenes,
+      floorsAboveActive(floors, activeFloorId),
+    );
 
     return {
       spaces,
@@ -132,6 +192,7 @@ export function useHeatLoadInputs(
       outdoorTempC: getDesignOutdoorTempC(climateZone),
       storeyPosition: resolveStoreyPosition(floors, activeFloorId),
       tol: HEAT_LOAD_MATCH_TOL_M / sceneUnitsToMeters(sceneUnits),
+      overhangOutlines,
     };
-  }, [active, scene, buildings, buildingId, floors, activeFloorId]);
+  }, [active, scene, buildings, buildingId, floors, activeFloorId, buildingFloorScenes]);
 }

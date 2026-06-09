@@ -418,6 +418,20 @@ function buildHingeArc(
 }
 
 /**
+ * The world position (scene units, plan XY) of the point on the host wall axis at
+ * `offsetMm` mm from the wall start. SSoT for "host-relative mm offset → axis point";
+ * reuses the same `walkPolylineToDistance` walk as `computeOpeningGeometry` (which
+ * walks in scene units), so straight, curved and polyline hosts all behave identically.
+ * Consumed by the 3D temporary-dimension overlay (ADR-363 Φ1G.5 Slice 2f) to anchor
+ * witness lines on the wall axis without re-deriving the walk.
+ */
+export function wallAxisPointAtOffsetMm(hostWall: WallEntity, offsetMm: number): Point3D {
+  const mmFactor = mmToSceneUnits(hostWall.params.sceneUnits ?? 'mm');
+  const axisVertices = getWallAxisVertices(hostWall.params, hostWall.kind);
+  return walkPolylineToDistance(axisVertices, Math.max(0, offsetMm) * mmFactor).point;
+}
+
+/**
  * Project an arbitrary point onto the host wall axis, returning the offset
  * clamped to `[0, arcLength]`, **in the scene's world units** (the wall axis
  * vertices come from `params.start/end` which are world coords — m / cm / mm).

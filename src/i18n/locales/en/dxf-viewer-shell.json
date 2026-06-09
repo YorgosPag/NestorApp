@@ -543,6 +543,21 @@
     "mepSanitaryFixture": {
       "statusPosition": "Click to place sanitary fixture"
     },
+    "mepSocket": {
+      "statusPosition": "Click to place a socket"
+    },
+    "mepDataOutlet": {
+      "statusPosition": "Click to place a data outlet"
+    },
+    "mepAirTerminal": {
+      "statusPosition": "Click to place an air terminal (supply diffuser)"
+    },
+    "mepAhu": {
+      "statusPosition": "Click to place an air handling unit (AHU)"
+    },
+    "commsRack": {
+      "statusPosition": "Click to place a comms rack"
+    },
     "mepRiser": {
       "statusPosition": "Click to place a vertical drain stack"
     },
@@ -964,6 +979,7 @@
       "mepBoilerDhw": "DHW",
       "mepBoilerFlue": "Flue",
       "mepBoilerFuel": "Fuel",
+      "mepBoilerCondensate": "Condensate",
       "mepBoilerGeometry": "Geometry",
       "mepBoilerThermal": "Thermal",
       "mepBoilerSizing": "Sizing",
@@ -1195,9 +1211,29 @@
           "label": "Light fixture",
           "tooltip": "Place a ceiling light fixture with a single click (discipline: electrical) (shortcut LF)"
         },
+        "mepSocket": {
+          "label": "Socket",
+          "tooltip": "Place a power socket (receptacle) with a single click (discipline: electrical) (shortcut SK)"
+        },
         "electricalPanel": {
           "label": "Electrical panel",
           "tooltip": "Place an electrical panel with a single click — the circuit source (discipline: electrical) (shortcut EP)"
+        },
+        "mepDataOutlet": {
+          "label": "Data outlet",
+          "tooltip": "Place a data outlet (RJ45) with a single click — structured cabling (discipline: weak-current) (shortcut DO)"
+        },
+        "mepAirTerminal": {
+          "label": "Air terminal",
+          "tooltip": "Place an air terminal (supply diffuser) with a single click — HVAC supply air (discipline: mechanical) (shortcut AT)"
+        },
+        "mepAhu": {
+          "label": "AHU",
+          "tooltip": "Place an air handling unit (AHU) with a single click — the supply-air network source (discipline: mechanical) (shortcut AH)"
+        },
+        "commsRack": {
+          "label": "Comms rack",
+          "tooltip": "Place a rack / patch-panel with a single click — the structured-cabling source (discipline: weak-current) (shortcut CR)"
         },
         "mepManifold": {
           "label": "Manifold",
@@ -1386,6 +1422,54 @@
         "heatingAutoReject": {
           "label": "Reject",
           "tooltip": "Discard the heating proposal"
+        },
+        "electricalAuto": {
+          "label": "Auto Electrical",
+          "tooltip": "Auto-design branch circuits (lighting + sockets, ΕΛΟΤ HD 384 / IEC 60364): Generate → review → accept"
+        },
+        "electricalAutoGenerate": {
+          "label": "Generate",
+          "tooltip": "Recognize the storey + auto-group loads into circuits (preview)"
+        },
+        "electricalAutoAccept": {
+          "label": "Accept",
+          "tooltip": "Turn the proposal into real circuits (MepSystem)"
+        },
+        "electricalAutoReject": {
+          "label": "Reject",
+          "tooltip": "Discard the electrical proposal"
+        },
+        "electricalWeakAuto": {
+          "label": "Auto Weak-current",
+          "tooltip": "Auto-design structured cabling (data/RJ45, ISO/IEC 11801): Generate → review → accept"
+        },
+        "electricalWeakAutoGenerate": {
+          "label": "Generate",
+          "tooltip": "Recognize the storey + auto-group data outlets into channels (preview)"
+        },
+        "electricalWeakAutoAccept": {
+          "label": "Accept",
+          "tooltip": "Turn the proposal into real structured-cabling channels (MepSystem)"
+        },
+        "electricalWeakAutoReject": {
+          "label": "Reject",
+          "tooltip": "Discard the weak-current proposal"
+        },
+        "hvacAuto": {
+          "label": "Auto Ventilation",
+          "tooltip": "Auto-design the ventilation network (supply-air ducts, ASHRAE): Generate → review → accept"
+        },
+        "hvacAutoGenerate": {
+          "label": "Generate",
+          "tooltip": "Recognize the storey + auto-design the supply-air duct network (preview)"
+        },
+        "hvacAutoAccept": {
+          "label": "Accept",
+          "tooltip": "Turn the proposal into real ducts + a ventilation network"
+        },
+        "hvacAutoReject": {
+          "label": "Reject",
+          "tooltip": "Discard the ventilation proposal"
         }
       },
       "select": "Select",
@@ -2291,6 +2375,8 @@
       "mepBoilerEditor": {
         "modelId": "Model",
         "modelCustom": "Custom",
+        "fuelType": "Fuel type",
+        "fuelTypeUnset": "Unspecified",
         "producesDhw": "DHW (Combi)",
         "dhwConnectorDiameter": "DHW diameter",
         "dhwRecirculation": "DHW Recirculation",
@@ -2302,6 +2388,8 @@
           "balanced-concentric": "Concentric"
         },
         "fuelDiameter": "Fuel supply diameter",
+        "condensing": "Condensing",
+        "condensateDiameter": "Condensate drain diameter",
         "width": "Width",
         "length": "Depth",
         "bodyHeight": "Body height",
@@ -2946,6 +3034,20 @@
       "heating": {
         "supplyName": "Heating Supply",
         "returnName": "Heating Return"
+      },
+      "electrical": {
+        "lightingName": "Lighting",
+        "powerName": "Sockets"
+      },
+      "electricalWeak": {
+        "dataName": "Data",
+        "controlsName": "Controls"
+      },
+      "hvac": {
+        "networkName": "{service} air {n}",
+        "service": {
+          "supply": "Supply"
+        }
       }
     },
     "tooltips": {
@@ -3530,5 +3632,32 @@
       "no-source": "No boiler (supply/return) found — network skipped."
     },
     "committed": "Heating network created — networks: {count}, pipes: {segments}."
+  },
+  "electrical": {
+    "generated": "Electrical proposal created — circuits: {count}.",
+    "generatedWithWarnings": "Electrical proposal created — circuits: {count} (warnings: {warnings}).",
+    "empty": {
+      "no-terminals": "No luminaires or sockets recognized on this storey.",
+      "no-source": "No electrical panel found — no circuits generated."
+    },
+    "committed": "Circuits created — circuits: {count}."
+  },
+  "electricalWeak": {
+    "generated": "Weak-current proposal created — channels: {count}.",
+    "generatedWithWarnings": "Weak-current proposal created — channels: {count} (warnings: {warnings}).",
+    "empty": {
+      "no-terminals": "No data outlets recognized on this storey.",
+      "no-source": "No comms-rack found — no channels generated."
+    },
+    "committed": "Structured-cabling channels created — channels: {count}."
+  },
+  "hvac": {
+    "generated": "Ventilation proposal created — networks: {count}.",
+    "generatedWithWarnings": "Ventilation proposal created — networks: {count} (warnings: {warnings}).",
+    "empty": {
+      "no-terminals": "No air terminals recognized on this storey.",
+      "no-source": "No AHU (supply-air source) found — network skipped."
+    },
+    "committed": "Ventilation network created — networks: {count}, ducts: {segments}."
   }
 }

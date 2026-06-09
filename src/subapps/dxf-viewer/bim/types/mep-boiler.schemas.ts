@@ -65,6 +65,10 @@ export const MepBoilerParamsSchema = z
     flueDiameterMm: z.number().positive().optional(),
     // Combustion fuel supply (τροφοδοσία καυσίμου) diameter — gas/oil only; falls back to DEFAULT_BOILER_FUEL_DIAMETER_MM.
     fuelConnectorDiameterMm: z.number().positive().optional(),
+    // CONDENSING flag — when set, the boiler drains acidic condensate to the sanitary-drainage network.
+    condensing: z.boolean().optional(),
+    // CONDENSATE DRAIN (αποχέτευση συμπυκνωμάτων) diameter — condensing only; falls back to DEFAULT_BOILER_CONDENSATE_DIAMETER_MM.
+    condensateConnectorDiameterMm: z.number().positive().optional(),
     // Combustion flue VENT TERMINAL type (Revit «Vent Terminal») — gas/oil only; falls back to DEFAULT_FLUE_TERMINATION.
     flueTermination: z.enum(['roof-cowl', 'wall-horizontal', 'balanced-concentric']).optional(),
     // Optional catalogue thermal output (W) — drives future sizing.

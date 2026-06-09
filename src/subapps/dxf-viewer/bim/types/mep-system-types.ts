@@ -29,18 +29,20 @@ import type { Timestamp } from 'firebase/firestore';
 import type {
   ElectricalSystemClassification,
   PlumbingSystemClassification,
+  DuctSystemClassification,
   PipeFluid,
 } from './mep-connector-types';
 import type { WireStyle } from '../mep-systems/mep-wire-routing';
 import type { WireWaypointMap } from '../mep-systems/mep-wire-waypoints';
 
 /**
- * System type discriminator (ADR-408). `electrical-circuit` (Φ2) and
- * `pipe-network` (Φ9 — plumbing: ύδρευση / αποχέτευση / θέρμανση). The discriminant
- * narrows {@link MepSystemParams} so electrical-only fields (wireStyle, conductors,
- * …) never appear on a pipe network and vice-versa.
+ * System type discriminator (ADR-408 + ADR-432). `electrical-circuit` (Φ2),
+ * `pipe-network` (Φ9 — plumbing: ύδρευση / αποχέτευση / θέρμανση) and `duct-network`
+ * (ADR-432 — HVAC αεραγωγοί: προσαγωγή / επιστροφή αέρα). The discriminant narrows
+ * {@link MepSystemParams} so electrical-only fields (wireStyle, conductors, …) never
+ * appear on a pipe/duct network and the air classification never appears on a pipe one.
  */
-export type MepSystemType = 'electrical-circuit' | 'pipe-network';
+export type MepSystemType = 'electrical-circuit' | 'pipe-network' | 'duct-network';
 
 /** One member of a System: a specific connector on a specific component. */
 export interface MepSystemMember {
@@ -113,11 +115,22 @@ export interface MepPipeSystemParams extends MepSystemParamsBase {
   readonly fluid?: PipeFluid;
 }
 
+/** Duct-network params (ADR-432 — HVAC: αεραγωγοί προσαγωγής / επιστροφής αέρα). */
+export interface MepDuctSystemParams extends MepSystemParamsBase {
+  readonly systemType: 'duct-network';
+  readonly systemClassification: DuctSystemClassification;
+  /** mm — nominal network duct diameter (round duct; optional, feeds sizing). */
+  readonly diameterMm?: number;
+}
+
 /**
  * User-editable SSoT params for a MEP system — a **discriminated union** on
  * `systemType`. Narrow before touching domain-specific fields.
  */
-export type MepSystemParams = MepElectricalSystemParams | MepPipeSystemParams;
+export type MepSystemParams =
+  | MepElectricalSystemParams
+  | MepPipeSystemParams
+  | MepDuctSystemParams;
 
 /** Narrow to the electrical-circuit arm (Revit circuit). */
 export function isElectricalSystemParams(
@@ -131,6 +144,13 @@ export function isPipeSystemParams(
   params: MepSystemParams,
 ): params is MepPipeSystemParams {
   return params.systemType === 'pipe-network';
+}
+
+/** Narrow to the duct-network arm (ADR-432 — HVAC air). */
+export function isDuctSystemParams(
+  params: MepSystemParams,
+): params is MepDuctSystemParams {
+  return params.systemType === 'duct-network';
 }
 
 /**
@@ -204,6 +224,32 @@ export function buildDefaultPipeNetworkParams(
 ): MepPipeSystemParams {
   return {
     systemType: 'pipe-network',
+    name,
+    systemClassification,
+    sourceEntityId,
+    sourceConnectorId,
+    members,
+    ...(color ? { color } : {}),
+  };
+}
+
+/**
+ * Default duct-network params (ADR-432 — HVAC). Mirror of {@link buildDefaultPipeNetworkParams}
+ * for the air domain: the caller passes the AHU outlet connector as source and the duct
+ * classification (`supply-air` / `return-air`) the network carries. Members filled by the
+ * caller (the HVAC commit: every emitted duct segment's two endpoint connectors + the served
+ * air terminals' duct inlets).
+ */
+export function buildDefaultDuctNetworkParams(
+  name: string,
+  systemClassification: DuctSystemClassification,
+  sourceEntityId: string,
+  sourceConnectorId: string,
+  members: readonly MepSystemMember[] = [],
+  color?: string,
+): MepDuctSystemParams {
+  return {
+    systemType: 'duct-network',
     name,
     systemClassification,
     sourceEntityId,

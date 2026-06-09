@@ -63,6 +63,10 @@ function computeBoundaryLoss(
     thermalBridgeW,
     refId: boundary.refId,
     azimuthDeg: boundary.azimuthDeg, // L7.2: propagate orientation (μη-υπολογιστικό)
+    overhangShadingFactor: boundary.overhangShadingFactor, // L7.3 Slice B: propagate F_ov
+    solarFactorG: boundary.solarFactorG, // L7.4: propagate per-window g (μη-υπολογιστικό)
+    frameFactorF: boundary.frameFactorF, // L7.5: propagate per-window F_F (μη-υπολογιστικό)
+    solarAbsorptance: boundary.solarAbsorptance, // L7.6: propagate per-wall α_S (μη-υπολογιστικό)
   };
 }
 

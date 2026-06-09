@@ -37,6 +37,8 @@ export const MEP_BOILER_RIBBON_KEYS = {
     flueDiameter: 'mepBoiler.params.flueDiameter',
     /** mm — combustion fuel supply (τροφοδοσία καυσίμου) diameter. Gas/oil-only panel («Καύσιμο»). */
     fuelDiameter: 'mepBoiler.params.fuelDiameter',
+    /** mm — condensate drain (αποχέτευση συμπυκνωμάτων) diameter. Condensing-only panel («Συμπύκνωση»). */
+    condensateDiameter: 'mepBoiler.params.condensateDiameter',
   },
   /**
    * String (non-numeric) combobox params — model catalog picker.
@@ -52,6 +54,16 @@ export const MEP_BOILER_RIBBON_KEYS = {
      * Lives in the «Καπναγωγός» panel (combustion-only).
      */
     flueTermination: 'mepBoiler.params.flueTermination',
+    /**
+     * `fuelType`: standalone HEATING FUEL / energy-source picker (Revit editable
+     * instance parameter — gas / oil / electric / heat-pump, or unset). A static enum
+     * (`BOILER_FUEL_TYPES`), NOT a catalog — routed by `isMepBoilerFuelTypeKey`, distinct
+     * from the dynamic model picker. Setting it on a parametric boiler is what opens the
+     * combustion panels («Καπναγωγός»/«Καύσιμο») and drives the ErP primary-energy factor;
+     * the model catalog also fills it, but this instance param can override independently.
+     * Lives in the «Μοντέλο» panel next to the model picker.
+     */
+    fuelType: 'mepBoiler.params.fuelType',
   },
   /**
    * Boolean toggle params (Revit Yes/No parameter → ribbon toggle button).
@@ -64,6 +76,13 @@ export const MEP_BOILER_RIBBON_KEYS = {
   toggles: {
     producesDhw: 'mepBoiler.params.producesDhw',
     dhwRecirculation: 'mepBoiler.params.dhwRecirculation',
+    /**
+     * `condensing`: CONDENSING flag (ADR-408 Εύρος Β — condensate drain). ON → the boiler
+     * drains acidic condensate to the sanitary network (a `boiler-condensate` connector is
+     * seeded, REUSING `sanitary-drainage`). Lives in the combustion-gated «Καπναγωγός» panel
+     * (condensate = the liquid product of flue-gas condensation). Mirror του producesDhw toggle.
+     */
+    condensing: 'mepBoiler.params.condensing',
   },
   /**
    * ADR-422 L2 — read-only sizing readouts (Revit «Heating Loads → Equipment»).
@@ -92,6 +111,7 @@ export type MepBoilerRibbonNumberCommandKey =
   | typeof MEP_BOILER_RIBBON_KEYS.params.dhwConnectorDiameter
   | typeof MEP_BOILER_RIBBON_KEYS.params.flueDiameter
   | typeof MEP_BOILER_RIBBON_KEYS.params.fuelDiameter
+  | typeof MEP_BOILER_RIBBON_KEYS.params.condensateDiameter
   | typeof MEP_BOILER_RIBBON_KEYS.params.efficiency;
 
 export const MEP_BOILER_RIBBON_NUMBER_KEYS: readonly MepBoilerRibbonNumberCommandKey[] = [
@@ -104,6 +124,7 @@ export const MEP_BOILER_RIBBON_NUMBER_KEYS: readonly MepBoilerRibbonNumberComman
   MEP_BOILER_RIBBON_KEYS.params.dhwConnectorDiameter,
   MEP_BOILER_RIBBON_KEYS.params.flueDiameter,
   MEP_BOILER_RIBBON_KEYS.params.fuelDiameter,
+  MEP_BOILER_RIBBON_KEYS.params.condensateDiameter,
   MEP_BOILER_RIBBON_KEYS.params.efficiency,
 ];
 
@@ -111,11 +132,13 @@ export const MEP_BOILER_RIBBON_NUMBER_KEYS: readonly MepBoilerRibbonNumberComman
 
 export type MepBoilerRibbonToggleCommandKey =
   | typeof MEP_BOILER_RIBBON_KEYS.toggles.producesDhw
-  | typeof MEP_BOILER_RIBBON_KEYS.toggles.dhwRecirculation;
+  | typeof MEP_BOILER_RIBBON_KEYS.toggles.dhwRecirculation
+  | typeof MEP_BOILER_RIBBON_KEYS.toggles.condensing;
 
 export const MEP_BOILER_RIBBON_TOGGLE_KEYS: readonly MepBoilerRibbonToggleCommandKey[] = [
   MEP_BOILER_RIBBON_KEYS.toggles.producesDhw,
   MEP_BOILER_RIBBON_KEYS.toggles.dhwRecirculation,
+  MEP_BOILER_RIBBON_KEYS.toggles.condensing,
 ];
 
 const MEP_BOILER_TOGGLE_KEY_SET: ReadonlySet<string> = new Set<string>(
@@ -151,17 +174,21 @@ export const MEP_BOILER_RIBBON_VISIBILITY_KEYS = {
   combi: 'mepBoiler.visibility.combi',
   /** The «Καπναγωγός» panel (flue diameter) shows only for a combustion boiler (`fuelType` gas/oil). */
   combustion: 'mepBoiler.visibility.combustion',
+  /** The «Συμπύκνωση» panel (condensate diameter) shows only for a condensing boiler (`condensing`). */
+  condensing: 'mepBoiler.visibility.condensing',
 } as const;
 
 export type MepBoilerRibbonVisibilityKey =
   | typeof MEP_BOILER_RIBBON_VISIBILITY_KEYS.hasNetwork
   | typeof MEP_BOILER_RIBBON_VISIBILITY_KEYS.combi
-  | typeof MEP_BOILER_RIBBON_VISIBILITY_KEYS.combustion;
+  | typeof MEP_BOILER_RIBBON_VISIBILITY_KEYS.combustion
+  | typeof MEP_BOILER_RIBBON_VISIBILITY_KEYS.condensing;
 
 const MEP_BOILER_VISIBILITY_KEY_SET: ReadonlySet<string> = new Set<string>([
   MEP_BOILER_RIBBON_VISIBILITY_KEYS.hasNetwork,
   MEP_BOILER_RIBBON_VISIBILITY_KEYS.combi,
   MEP_BOILER_RIBBON_VISIBILITY_KEYS.combustion,
+  MEP_BOILER_RIBBON_VISIBILITY_KEYS.condensing,
 ]);
 
 export function isMepBoilerVisibilityKey(
@@ -205,11 +232,13 @@ export function isMepBoilerReadoutKey(commandKey: string): commandKey is MepBoil
 /** String (non-numeric) commandKeys: the model-catalog picker + the flue-terminal picker. */
 export type MepBoilerRibbonStringCommandKey =
   | typeof MEP_BOILER_RIBBON_KEYS.stringParams.modelId
-  | typeof MEP_BOILER_RIBBON_KEYS.stringParams.flueTermination;
+  | typeof MEP_BOILER_RIBBON_KEYS.stringParams.flueTermination
+  | typeof MEP_BOILER_RIBBON_KEYS.stringParams.fuelType;
 
 export const MEP_BOILER_STRING_KEY_SET: ReadonlySet<string> = new Set<string>([
   MEP_BOILER_RIBBON_KEYS.stringParams.modelId,
   MEP_BOILER_RIBBON_KEYS.stringParams.flueTermination,
+  MEP_BOILER_RIBBON_KEYS.stringParams.fuelType,
 ]);
 
 /**
@@ -229,4 +258,14 @@ export function isMepBoilerRibbonStringKey(commandKey: string): boolean {
  */
 export function isMepBoilerFlueTerminationKey(commandKey: string): boolean {
   return commandKey === MEP_BOILER_RIBBON_KEYS.stringParams.flueTermination;
+}
+
+/**
+ * Returns `true` for the standalone HEATING FUEL picker specifically (a static enum of
+ * `BOILER_FUEL_TYPES`, NOT the dynamic model catalog). The bridge checks this BEFORE the
+ * model-picker logic so the two string comboboxes don't cross-talk (mirror of
+ * `isMepBoilerFlueTerminationKey`).
+ */
+export function isMepBoilerFuelTypeKey(commandKey: string): boolean {
+  return commandKey === MEP_BOILER_RIBBON_KEYS.stringParams.fuelType;
 }

@@ -82,12 +82,16 @@ function makeWindow(id: string, wallId: string, cx: number, cy: number): Opening
   });
 }
 
-function makeCtx(walls: WallEntity[], openings: OpeningEntity[]): SpaceBoundaryContext {
+function makeCtx(
+  walls: WallEntity[],
+  openings: OpeningEntity[],
+  storeyPosition: SpaceBoundaryContext['storeyPosition'] = 'middle',
+): SpaceBoundaryContext {
   return {
     walls,
     openings,
     exteriorWallIds: new Set(walls.map((w) => w.id)),
-    storeyPosition: 'middle', // δάπεδο/οροφή adjacent-heated → χωρίς azimuth
+    storeyPosition, // 'middle' ⇒ δάπεδο/οροφή adjacent-heated (default)· 'highest'/'only' ⇒ εξωτ. στέγη
     tol: 150, // mm — αρκετό για το offset όψης τοίχου (±100)
   };
 }
@@ -117,9 +121,51 @@ describe('resolveSpaceBoundaries — προσανατολισμός εξωτ. κ
     expect(east?.azimuthDeg).toBeCloseTo(90);
   });
 
-  it('αφήνει το azimuthDeg absent σε τοίχους/δάπεδο/οροφή (μη-κουφώματα)', () => {
-    const nonWindows = boundaries.filter((b) => b.kind !== 'window');
-    expect(nonWindows.length).toBeGreaterThan(0);
-    for (const b of nonWindows) expect(b.azimuthDeg).toBeUndefined();
+  it('αφήνει το azimuthDeg/solarAbsorptance absent σε δάπεδο/οροφή (adjacent-heated)', () => {
+    const slabs = boundaries.filter(
+      (b) => b.kind === 'floor' || b.kind === 'roof' || b.kind === 'ceiling',
+    );
+    expect(slabs.length).toBeGreaterThan(0);
+    for (const b of slabs) {
+      expect(b.azimuthDeg).toBeUndefined();
+      expect(b.solarAbsorptance).toBeUndefined();
+    }
+  });
+
+  // L7.6 — οι εξωτ. τοίχοι γίνονται «συλλέκτες» ηλιακής (azimuth + ηλιακή απορρόφηση α_S)
+  it('L7.6 — θέτει azimuthDeg + solarAbsorptance (default medium 0.6) στους εξωτ. τοίχους', () => {
+    const south = boundaries.find((b) => b.kind === 'wall' && b.refId === 'wall-south');
+    const east = boundaries.find((b) => b.kind === 'wall' && b.refId === 'wall-east');
+    expect(south?.azimuthDeg).toBeCloseTo(180);
+    expect(east?.azimuthDeg).toBeCloseTo(90);
+    expect(south?.solarAbsorptance).toBeCloseTo(0.6);
+    expect(east?.solarAbsorptance).toBeCloseTo(0.6);
+  });
+});
+
+// L7.7 — η εξωτ. στέγη (ψηλότερος όροφος) γίνεται «συλλέκτης» ηλιακής (α_S, οριζόντια)
+describe('resolveSpaceBoundaries — ηλιακή απορρόφηση εξωτ. στέγης (L7.7)', () => {
+  const southWall = makeWall({ x: 0, y: 0 }, { x: 4000, y: 0 }, 'wall-south');
+
+  it('θέτει solarAbsorptance (default medium 0.6) + azimuth undefined στη roof external-air (highest)', () => {
+    const boundaries = resolveSpaceBoundaries(
+      makeSpace(),
+      makeCtx([southWall], [], 'highest'),
+    );
+    const roof = boundaries.find((b) => b.kind === 'roof');
+    expect(roof?.condition).toBe('external-air');
+    expect(roof?.solarAbsorptance).toBeCloseTo(0.6);
+    expect(roof?.azimuthDeg).toBeUndefined(); // οριζόντια — βλέπει όλο τον ουρανό
+  });
+
+  it('αφήνει solarAbsorptance absent στην εσωτ. οροφή (ceiling / adjacent-heated, middle)', () => {
+    const boundaries = resolveSpaceBoundaries(
+      makeSpace(),
+      makeCtx([southWall], [], 'middle'),
+    );
+    const ceiling = boundaries.find((b) => b.kind === 'ceiling' || b.kind === 'roof');
+    expect(ceiling?.kind).toBe('ceiling');
+    expect(ceiling?.condition).toBe('adjacent-heated');
+    expect(ceiling?.solarAbsorptance).toBeUndefined();
   });
 });

@@ -567,6 +567,15 @@ export const HOME_DRAW_PANEL: RibbonPanelDef = {
                   commandKey: 'mep-fixture',
                   shortcut: 'LF',
                 },
+                // ADR-430 — point-based electrical socket (πρίζα / power outlet).
+                {
+                  id: 'draw.bim.mepSocket',
+                  labelKey: 'ribbon.commands.bim.mepSocket.label',
+                  tooltipKey: 'ribbon.commands.bim.mepSocket.tooltip',
+                  icon: 'bim-socket',
+                  commandKey: 'mep-socket',
+                  shortcut: 'SK',
+                },
                 // ADR-408 Φ3 — point-based electrical panel (circuit source).
                 {
                   id: 'draw.bim.electricalPanel',
@@ -575,6 +584,112 @@ export const HOME_DRAW_PANEL: RibbonPanelDef = {
                   icon: 'bim-electrical-panel',
                   commandKey: 'electrical-panel',
                   shortcut: 'EP',
+                },
+                // ADR-431 — point-based structured-cabling data outlet (RJ45).
+                {
+                  id: 'draw.bim.mepDataOutlet',
+                  labelKey: 'ribbon.commands.bim.mepDataOutlet.label',
+                  tooltipKey: 'ribbon.commands.bim.mepDataOutlet.tooltip',
+                  icon: 'bim-socket',
+                  commandKey: 'mep-data-outlet',
+                  shortcut: 'DO',
+                },
+                // ADR-431 — point-based comms-rack (weak-current source).
+                {
+                  id: 'draw.bim.commsRack',
+                  labelKey: 'ribbon.commands.bim.commsRack.label',
+                  tooltipKey: 'ribbon.commands.bim.commsRack.tooltip',
+                  icon: 'bim-electrical-panel',
+                  commandKey: 'mep-comms-rack',
+                  shortcut: 'CR',
+                },
+                // ADR-432 — point-based HVAC air terminal (στόμιο / supply diffuser).
+                {
+                  id: 'draw.bim.mepAirTerminal',
+                  labelKey: 'ribbon.commands.bim.mepAirTerminal.label',
+                  tooltipKey: 'ribbon.commands.bim.mepAirTerminal.tooltip',
+                  icon: 'bim-duct',
+                  commandKey: 'mep-air-terminal',
+                  shortcut: 'AT',
+                },
+                // ADR-432 — point-based air handling unit (ΚΚΜ / AHU, supply-air source).
+                {
+                  id: 'draw.bim.mepAhu',
+                  labelKey: 'ribbon.commands.bim.mepAhu.label',
+                  tooltipKey: 'ribbon.commands.bim.mepAhu.tooltip',
+                  icon: 'bim-duct',
+                  commandKey: 'mep-ahu',
+                  shortcut: 'AH',
+                },
+              ],
+            },
+            // ── Αυτόματος Ηλεκτρολογικός (submenu, ADR-430 Slice 2) ────────
+            // Revit "Generate → review → accept": all three are `action` buttons.
+            {
+              id: 'draw.bim.electricalAuto',
+              labelKey: 'ribbon.commands.bim.electricalAuto.label',
+              tooltipKey: 'ribbon.commands.bim.electricalAuto.tooltip',
+              icon: 'bim-socket',
+              commandKey: 'draw.bim.electricalAuto',
+              subVariants: [
+                {
+                  id: 'draw.bim.electricalAutoGenerate',
+                  labelKey: 'ribbon.commands.bim.electricalAutoGenerate.label',
+                  tooltipKey: 'ribbon.commands.bim.electricalAutoGenerate.tooltip',
+                  icon: 'bim-socket',
+                  commandKey: 'electricalAuto.actions.generate',
+                  action: 'electricalAuto.actions.generate',
+                },
+                {
+                  id: 'draw.bim.electricalAutoAccept',
+                  labelKey: 'ribbon.commands.bim.electricalAutoAccept.label',
+                  tooltipKey: 'ribbon.commands.bim.electricalAutoAccept.tooltip',
+                  icon: 'bim-socket',
+                  commandKey: 'electricalAuto.actions.accept',
+                  action: 'electricalAuto.actions.accept',
+                },
+                {
+                  id: 'draw.bim.electricalAutoReject',
+                  labelKey: 'ribbon.commands.bim.electricalAutoReject.label',
+                  tooltipKey: 'ribbon.commands.bim.electricalAutoReject.tooltip',
+                  icon: 'bim-socket',
+                  commandKey: 'electricalAuto.actions.reject',
+                  action: 'electricalAuto.actions.reject',
+                },
+              ],
+            },
+            // ── Αυτόματα Ασθενή (submenu, ADR-431 Slice 2) ────────────────
+            // Revit "Generate → review → accept": all three are `action` buttons.
+            {
+              id: 'draw.bim.electricalWeakAuto',
+              labelKey: 'ribbon.commands.bim.electricalWeakAuto.label',
+              tooltipKey: 'ribbon.commands.bim.electricalWeakAuto.tooltip',
+              icon: 'bim-socket',
+              commandKey: 'draw.bim.electricalWeakAuto',
+              subVariants: [
+                {
+                  id: 'draw.bim.electricalWeakAutoGenerate',
+                  labelKey: 'ribbon.commands.bim.electricalWeakAutoGenerate.label',
+                  tooltipKey: 'ribbon.commands.bim.electricalWeakAutoGenerate.tooltip',
+                  icon: 'bim-socket',
+                  commandKey: 'electricalWeakAuto.actions.generate',
+                  action: 'electricalWeakAuto.actions.generate',
+                },
+                {
+                  id: 'draw.bim.electricalWeakAutoAccept',
+                  labelKey: 'ribbon.commands.bim.electricalWeakAutoAccept.label',
+                  tooltipKey: 'ribbon.commands.bim.electricalWeakAutoAccept.tooltip',
+                  icon: 'bim-socket',
+                  commandKey: 'electricalWeakAuto.actions.accept',
+                  action: 'electricalWeakAuto.actions.accept',
+                },
+                {
+                  id: 'draw.bim.electricalWeakAutoReject',
+                  labelKey: 'ribbon.commands.bim.electricalWeakAutoReject.label',
+                  tooltipKey: 'ribbon.commands.bim.electricalWeakAutoReject.tooltip',
+                  icon: 'bim-socket',
+                  commandKey: 'electricalWeakAuto.actions.reject',
+                  action: 'electricalWeakAuto.actions.reject',
                 },
               ],
             },
@@ -720,6 +835,42 @@ export const HOME_DRAW_PANEL: RibbonPanelDef = {
                   icon: 'bim-pipe',
                   commandKey: 'heatingAuto.actions.reject',
                   action: 'heatingAuto.actions.reject',
+                },
+              ],
+            },
+            // ── Αυτόματος Αερισμός (submenu, ADR-432 Slice 2) ─────────────
+            // Revit "Generate → review → accept": all three are `action`
+            // buttons (fire onAction, not a draw tool).
+            {
+              id: 'draw.bim.hvacAuto',
+              labelKey: 'ribbon.commands.bim.hvacAuto.label',
+              tooltipKey: 'ribbon.commands.bim.hvacAuto.tooltip',
+              icon: 'bim-duct',
+              commandKey: 'draw.bim.hvacAuto',
+              subVariants: [
+                {
+                  id: 'draw.bim.hvacAutoGenerate',
+                  labelKey: 'ribbon.commands.bim.hvacAutoGenerate.label',
+                  tooltipKey: 'ribbon.commands.bim.hvacAutoGenerate.tooltip',
+                  icon: 'bim-duct',
+                  commandKey: 'hvacAuto.actions.generate',
+                  action: 'hvacAuto.actions.generate',
+                },
+                {
+                  id: 'draw.bim.hvacAutoAccept',
+                  labelKey: 'ribbon.commands.bim.hvacAutoAccept.label',
+                  tooltipKey: 'ribbon.commands.bim.hvacAutoAccept.tooltip',
+                  icon: 'bim-duct',
+                  commandKey: 'hvacAuto.actions.accept',
+                  action: 'hvacAuto.actions.accept',
+                },
+                {
+                  id: 'draw.bim.hvacAutoReject',
+                  labelKey: 'ribbon.commands.bim.hvacAutoReject.label',
+                  tooltipKey: 'ribbon.commands.bim.hvacAutoReject.tooltip',
+                  icon: 'bim-duct',
+                  commandKey: 'hvacAuto.actions.reject',
+                  action: 'hvacAuto.actions.reject',
                 },
               ],
             },

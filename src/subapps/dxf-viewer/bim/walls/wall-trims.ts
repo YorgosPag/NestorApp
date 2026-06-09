@@ -58,8 +58,12 @@ export type { MiterPt } from './wall-trims-geometry';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-/** Physical distance (mm) within which an axis endpoint is "touching" the intersection. */
-const JOIN_THRESHOLD_MM = 200;
+/**
+ * Physical distance (mm) within which an axis endpoint is "touching" the intersection.
+ * Exported as the SSoT junction-detection tolerance (reused by `opening-junction-refs`
+ * to find the transverse wall at an opening's host-wall end — ADR-363 Φ1G.5 Slice 2f).
+ */
+export const JOIN_THRESHOLD_MM = 200;
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 

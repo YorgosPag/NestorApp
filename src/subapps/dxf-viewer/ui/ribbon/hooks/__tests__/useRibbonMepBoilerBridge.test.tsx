@@ -381,6 +381,105 @@ describe('useRibbonMepBoilerBridge — model catalog picker', () => {
   });
 });
 
+describe('useRibbonMepBoilerBridge — standalone fuel-type picker', () => {
+  const FUEL_KEY = MEP_BOILER_RIBBON_KEYS.stringParams.fuelType;
+
+  it('getComboboxState returns the current fuelType when one is set', () => {
+    const boilerWithFuel = {
+      ...boiler,
+      params: { ...boiler.params, fuelType: 'oil' as const },
+    };
+    const { result } = renderHook(() =>
+      useRibbonMepBoilerBridge({
+        levelManager: makeLevelManager(boilerWithFuel),
+        universalSelection: makeSelection('boiler-1'),
+      }),
+    );
+    expect(result.current.getComboboxState(FUEL_KEY)?.value).toBe('oil');
+  });
+
+  it('getComboboxState returns the clear sentinel when no fuelType is set', () => {
+    const { result } = renderHook(() =>
+      useRibbonMepBoilerBridge({
+        levelManager: makeLevelManager(boiler),
+        universalSelection: makeSelection('boiler-1'),
+      }),
+    );
+    expect(result.current.getComboboxState(FUEL_KEY)?.value).toBe(SELECT_CLEAR_VALUE);
+  });
+
+  it('getComboboxState lists the clear sentinel first then all four fuels', () => {
+    const { result } = renderHook(() =>
+      useRibbonMepBoilerBridge({
+        levelManager: makeLevelManager(boiler),
+        universalSelection: makeSelection('boiler-1'),
+      }),
+    );
+    const state = result.current.getComboboxState(FUEL_KEY);
+    expect(state?.options[0].value).toBe(SELECT_CLEAR_VALUE);
+    expect(state?.options.slice(1).map((o) => o.value)).toEqual([
+      'gas',
+      'oil',
+      'electric',
+      'heat-pump',
+    ]);
+  });
+
+  it('getComboboxState returns null when no entity is selected', () => {
+    const { result } = renderHook(() =>
+      useRibbonMepBoilerBridge({
+        levelManager: makeLevelManager(null),
+        universalSelection: makeSelection(null),
+      }),
+    );
+    expect(result.current.getComboboxState(FUEL_KEY)).toBeNull();
+  });
+
+  it('picking a fuel persists fuelType without touching modelId', () => {
+    const boilerWithModel = {
+      ...boiler,
+      params: { ...boiler.params, modelId: 'gas-condensing-24', fuelType: 'gas' as const },
+    };
+    const { result } = renderHook(() =>
+      useRibbonMepBoilerBridge({
+        levelManager: makeLevelManager(boilerWithModel),
+        universalSelection: makeSelection('boiler-1'),
+      }),
+    );
+    act(() => result.current.onComboboxChange(FUEL_KEY, 'oil'));
+    const next = (UpdateMepBoilerParamsCommand as jest.Mock).mock.calls[0]?.[1];
+    expect(next.fuelType).toBe('oil');
+    expect(next.modelId).toBe('gas-condensing-24');
+  });
+
+  it('picking the clear sentinel removes fuelType (parametric boiler, no fuel)', () => {
+    const boilerWithFuel = {
+      ...boiler,
+      params: { ...boiler.params, fuelType: 'electric' as const },
+    };
+    const { result } = renderHook(() =>
+      useRibbonMepBoilerBridge({
+        levelManager: makeLevelManager(boilerWithFuel),
+        universalSelection: makeSelection('boiler-1'),
+      }),
+    );
+    act(() => result.current.onComboboxChange(FUEL_KEY, SELECT_CLEAR_VALUE));
+    const next = (UpdateMepBoilerParamsCommand as jest.Mock).mock.calls[0]?.[1];
+    expect(next.fuelType).toBeUndefined();
+  });
+
+  it('picking an invalid fuel string dispatches nothing', () => {
+    const { result } = renderHook(() =>
+      useRibbonMepBoilerBridge({
+        levelManager: makeLevelManager(boiler),
+        universalSelection: makeSelection('boiler-1'),
+      }),
+    );
+    act(() => result.current.onComboboxChange(FUEL_KEY, 'biomass'));
+    expect((UpdateMepBoilerParamsCommand as jest.Mock).mock.calls.length).toBe(0);
+  });
+});
+
 describe('useRibbonMepBoilerBridge — onAction', () => {
   it('emits bim:mep-boiler-delete-requested when confirmed', () => {
     const confirmSpy = jest.spyOn(window, 'confirm').mockReturnValue(true);
