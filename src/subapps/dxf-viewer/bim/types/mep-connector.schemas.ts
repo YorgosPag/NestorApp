@@ -30,13 +30,14 @@ export const ElectricalSystemClassificationSchema = z.enum([
   'controls',
 ]);
 
-/** ADR-408 Φ9 — plumbing/piping system classification. */
+/** ADR-408 Φ9 + ADR-433 — plumbing/piping system classification (incl. fire-sprinkler). */
 export const PlumbingSystemClassificationSchema = z.enum([
   'domestic-cold-water',
   'domestic-hot-water',
   'sanitary-drainage',
   'hydronic-supply',
   'hydronic-return',
+  'fire-sprinkler',
 ]);
 
 /** ADR-408 Φ9 — conveyed fluid. */

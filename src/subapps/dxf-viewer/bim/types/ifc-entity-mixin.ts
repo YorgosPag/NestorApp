@@ -56,7 +56,19 @@ export type IfcEntityType =
   // ADR-419 — thin floor covering per room (IfcCovering FLOORING).
   | 'IfcCovering'
   // ADR-422 — analytical thermal space / θερμικός χώρος (HVAC analytical space).
-  | 'IfcSpace';
+  | 'IfcSpace'
+  // ADR-430/431 — electrical/data receptacle (socket / data outlet; IfcOutlet, IfcFlowTerminal family).
+  | 'IfcOutlet'
+  // ADR-432 — HVAC supply diffuser (στόμιο; IfcAirTerminal, IfcFlowTerminal family).
+  | 'IfcAirTerminal'
+  // ADR-433 — fire sprinkler head (καταιονητήρας; IfcFireSuppressionTerminal, IfcFlowTerminal family).
+  | 'IfcFireSuppressionTerminal'
+  // ADR-433 — fire riser / control-valve assembly source (στήλη πυρόσβεσης; IfcFlowController family).
+  | 'IfcFlowController'
+  // ADR-434 — gas meter (μετρητής αερίου; IfcFlowMeter, fuel-network source) + gas cooker/hob
+  // (εστία αερίου; IfcBurner, gas appliance terminal).
+  | 'IfcFlowMeter'
+  | 'IfcBurner';
 
 export const IFC_ENTITY_TYPE_VALUES: readonly IfcEntityType[] = [
   'IfcWall',
@@ -98,6 +110,17 @@ export const IFC_ENTITY_TYPE_VALUES: readonly IfcEntityType[] = [
   'IfcCovering',
   // ADR-422 — analytical thermal space (IfcSpace).
   'IfcSpace',
+  // ADR-430/431 — electrical/data receptacle (socket / data outlet).
+  'IfcOutlet',
+  // ADR-432 — HVAC supply diffuser (στόμιο).
+  'IfcAirTerminal',
+  // ADR-433 — fire sprinkler head (καταιονητήρας).
+  'IfcFireSuppressionTerminal',
+  // ADR-433 — fire riser / control-valve assembly source (στήλη πυρόσβεσης).
+  'IfcFlowController',
+  // ADR-434 — gas meter (μετρητής αερίου) + gas cooker/hob (εστία αερίου).
+  'IfcFlowMeter',
+  'IfcBurner',
 ] as const;
 
 export type IfcPropertySetValue = string | number | boolean | null;
@@ -163,6 +186,16 @@ export const IfcEntityTypeSchema = z.enum([
   'IfcCovering',
   // ADR-422 — analytical thermal space (IfcSpace).
   'IfcSpace',
+  // ADR-430/431 — electrical/data receptacle (socket / data outlet).
+  'IfcOutlet',
+  // ADR-432 — HVAC supply diffuser (στόμιο) + air handling unit (ΚΚΜ).
+  'IfcAirTerminal',
+  // ADR-433 — fire sprinkler head (καταιονητήρας) + fire riser (στήλη πυρόσβεσης).
+  'IfcFireSuppressionTerminal',
+  'IfcFlowController',
+  // ADR-434 — gas meter (μετρητής αερίου) + gas cooker/hob (εστία αερίου).
+  'IfcFlowMeter',
+  'IfcBurner',
 ]);
 
 export const IfcPropertySetValueSchema = z.union([

@@ -39,6 +39,10 @@ import { isSocketKind, type SocketKind } from '../mep-fixtures/socket-symbol-spe
 import { isDataOutletKind, type DataOutletKind } from '../mep-fixtures/data-outlet-symbol-spec';
 import { isAirTerminalKind, type AirTerminalKind } from '../mep-fixtures/air-terminal-symbol-spec';
 import { isAhuKind, type AhuKind } from '../mep-fixtures/ahu-symbol-spec';
+import { isSprinklerKind, type SprinklerKind } from '../mep-fixtures/sprinkler-symbol-spec';
+import { isFireRiserKind, type FireRiserKind } from '../mep-fixtures/fire-riser-symbol-spec';
+import { isGasMeterKind, type GasMeterKind } from '../mep-fixtures/gas-meter-symbol-spec';
+import { isGasCookerKind, type GasCookerKind } from '../mep-fixtures/gas-cooker-symbol-spec';
 
 // ─── Sub-type discriminator (ADR-406) ────────────────────────────────────────
 
@@ -65,7 +69,15 @@ export type MepFixtureKind =
   // ADR-432 — HVAC: the supply-air terminal (στόμιο/diffuser) + the air handling
   // unit (ΚΚΜ/AHU) source, both carrying a `'duct'`-domain connector.
   | AirTerminalKind
-  | AhuKind;
+  | AhuKind
+  // ADR-433 — Fire protection: the sprinkler head (καταιονητήρας) terminal + the fire
+  // riser (στήλη πυρόσβεσης) source, both carrying a `'fire-sprinkler'` pipe connector.
+  | SprinklerKind
+  | FireRiserKind
+  // ADR-434 — Gas: the gas meter (μετρητής αερίου) source + the gas cooker (εστία αερίου)
+  // terminal, both carrying a `'fuel-gas'` fuel connector.
+  | GasMeterKind
+  | GasCookerKind;
 
 /**
  * IFC4 class of a fixture, derived from {@link MepFixtureKind} via the SSoT
@@ -81,7 +93,15 @@ export type MepFixtureIfcType =
   // ADR-432 — HVAC: a supply diffuser is an IfcAirTerminal; an AHU is an
   // IfcUnitaryEquipment (Revit Mechanical Equipment).
   | 'IfcAirTerminal'
-  | 'IfcUnitaryEquipment';
+  | 'IfcUnitaryEquipment'
+  // ADR-433 — Fire protection: a sprinkler head is an IfcFireSuppressionTerminal; a
+  // fire riser (wet-riser / control-valve assembly source) is an IfcFlowController.
+  | 'IfcFireSuppressionTerminal'
+  | 'IfcFlowController'
+  // ADR-434 — Gas: a gas meter is an IfcFlowMeter (metering device, fuel-network source);
+  // a gas cooker / hob is an IfcBurner (gas-combustion appliance terminal).
+  | 'IfcFlowMeter'
+  | 'IfcBurner';
 
 /**
  * 2D/3D footprint shape of the fixture body.
@@ -191,6 +211,14 @@ export function resolveFixtureIfcType(kind: MepFixtureKind): MepFixtureIfcType {
   // IfcUnitaryEquipment (Revit Mechanical Equipment).
   if (isAirTerminalKind(kind)) return 'IfcAirTerminal';
   if (isAhuKind(kind)) return 'IfcUnitaryEquipment';
+  // ADR-433 — Fire protection: a sprinkler head is an IfcFireSuppressionTerminal; a fire
+  // riser (the wet-riser / control-valve assembly that sources the network) is an
+  // IfcFlowController.
+  if (isSprinklerKind(kind)) return 'IfcFireSuppressionTerminal';
+  if (isFireRiserKind(kind)) return 'IfcFlowController';
+  // ADR-434 — Gas: meter = IfcFlowMeter (metering source); cooker = IfcBurner (gas appliance).
+  if (isGasMeterKind(kind)) return 'IfcFlowMeter';
+  if (isGasCookerKind(kind)) return 'IfcBurner';
   return kind === 'floor-drain' || isSanitaryKind(kind) ? 'IfcSanitaryTerminal' : 'IfcLightFixture';
 }
 
@@ -213,6 +241,13 @@ export function resolveFixtureBimCategory(params: MepFixtureParams): BimCategory
   // ADR-432 — HVAC air terminal + AHU share the `'duct'` V/G bucket, so they toggle +
   // hide together with the supply-air ducts they connect to (Revit "Mechanical" V/G).
   if (isAirTerminalKind(params.kind) || isAhuKind(params.kind)) return 'duct';
+  // ADR-433 — Fire sprinkler head + riser share the `'pipe'` V/G bucket, so they toggle +
+  // hide together with the fire-sprinkler pipes they connect to (fire water is pressurised
+  // pipe — a fire-sprinkler segment resolves to the `'pipe'` category, not a fire-specific one).
+  if (isSprinklerKind(params.kind) || isFireRiserKind(params.kind)) return 'pipe';
+  // ADR-434 — Gas meter + cooker share the `'fuel'` V/G bucket, so they toggle + hide together
+  // with the gas supply lines they connect to (Revit groups gas piping under Mechanical).
+  if (isGasMeterKind(params.kind) || isGasCookerKind(params.kind)) return 'fuel';
   return 'light-fixture';
 }
 

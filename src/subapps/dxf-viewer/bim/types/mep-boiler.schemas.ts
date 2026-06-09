@@ -69,10 +69,30 @@ export const MepBoilerParamsSchema = z
     condensing: z.boolean().optional(),
     // CONDENSATE DRAIN (αποχέτευση συμπυκνωμάτων) diameter — condensing only; falls back to DEFAULT_BOILER_CONDENSATE_DIAMETER_MM.
     condensateConnectorDiameterMm: z.number().positive().optional(),
+    // CONDENSATE NEUTRALISER (εξουδετερωτής) — condensing-only in-line cartridge glyph flag.
+    condensateNeutraliser: z.boolean().optional(),
     // Combustion flue VENT TERMINAL type (Revit «Vent Terminal») — gas/oil only; falls back to DEFAULT_FLUE_TERMINATION.
     flueTermination: z.enum(['roof-cowl', 'wall-horizontal', 'balanced-concentric']).optional(),
+    // SERVICE CLEARANCE (Revit «Clearances») — dashed keep-clear envelope visualisation flag.
+    showServiceClearance: z.boolean().optional(),
+    // Uniform service-clearance distance (mm) — falls back to DEFAULT_BOILER_SERVICE_CLEARANCE_MM.
+    serviceClearanceMm: z.number().positive().optional(),
+    // SAFETY RELIEF VALVE (Revit «Safety Relief Valve») — code-mandatory relief-valve body-glyph flag.
+    safetyReliefValve: z.boolean().optional(),
+    // Relief-valve SET PRESSURE (bar) — falls back to DEFAULT_BOILER_RELIEF_PRESSURE_BAR.
+    reliefValvePressureBar: z.number().positive().optional(),
+    // EXPANSION VESSEL (Revit accessory, IFC IfcTank EXPANSION) — diaphragm-vessel body-glyph flag.
+    expansionVessel: z.boolean().optional(),
+    // Expansion-vessel VOLUME (L) — falls back to DEFAULT_BOILER_EXPANSION_VESSEL_L.
+    expansionVesselVolumeL: z.number().positive().optional(),
+    // PRESSURE GAUGE (Revit accessory, IFC IfcSensor PRESSURE) — dial-gauge body-glyph flag.
+    pressureGauge: z.boolean().optional(),
+    // SYSTEM (cold fill) PRESSURE (bar) shown on the gauge — falls back to DEFAULT_BOILER_SYSTEM_PRESSURE_BAR.
+    systemPressureBar: z.number().positive().optional(),
     // Optional catalogue thermal output (W) — drives future sizing.
     thermalOutputW: z.number().positive().optional(),
+    // MINIMUM modulating output (W) — Revit «Turndown Ratio»; absent ⇒ on/off appliance.
+    minThermalOutputW: z.number().positive().optional(),
     // Seasonal appliance efficiency (%) — drives the EU ErP energy class. Optional/additive.
     seasonalEfficiencyPercent: z.number().positive().optional(),
     sceneUnits: z.string().optional(),

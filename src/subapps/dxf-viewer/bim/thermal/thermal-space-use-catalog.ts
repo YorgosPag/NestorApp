@@ -33,8 +33,12 @@ import {
   getThermalBridgeSurcharge,
 } from './heat-load/heat-load-config';
 import {
+  DEFAULT_FIN_SHADING_LEVEL,
+  DEFAULT_HORIZON_SHADING_LEVEL,
   DEFAULT_SOLAR_SHADING_LEVEL,
   DEFAULT_SURFACE_COLOR_LEVEL,
+  type FinShadingLevel,
+  type HorizonShadingLevel,
   type SolarShadingLevel,
   type SurfaceColorLevel,
 } from './heat-load/annual-gains-config';
@@ -170,6 +174,28 @@ export function resolveSolarShadingLevel(
   params: Pick<ThermalSpaceParams, 'solarShadingLevel'>,
 ): SolarShadingLevel {
   return params.solarShadingLevel ?? DEFAULT_SOLAR_SHADING_LEVEL;
+}
+
+/**
+ * Effective επίπεδο σκίασης **μακρινού ορίζοντα** `F_hor`: per-space override ?? `none`.
+ * ADR-422 L7.3 Slice C — pure SSoT· default `none` ⇒ 1.0 ⇒ zero-regression. Επιστρέφει
+ * το **επίπεδο** (ο orientation-aware συντελεστής μέσω `getHorizonShadingFactor`).
+ */
+export function resolveHorizonShadingLevel(
+  params: Pick<ThermalSpaceParams, 'horizonShadingLevel'>,
+): HorizonShadingLevel {
+  return params.horizonShadingLevel ?? DEFAULT_HORIZON_SHADING_LEVEL;
+}
+
+/**
+ * Effective επίπεδο σκίασης **πλευρικών πτερυγίων** `F_fin`: per-space override ?? `none`.
+ * ADR-422 L7.3 Slice C — pure SSoT· default `none` ⇒ 1.0 ⇒ zero-regression. Επιστρέφει
+ * το **επίπεδο** (ο orientation-aware συντελεστής μέσω `getFinShadingFactor`).
+ */
+export function resolveFinShadingLevel(
+  params: Pick<ThermalSpaceParams, 'finShadingLevel'>,
+): FinShadingLevel {
+  return params.finShadingLevel ?? DEFAULT_FIN_SHADING_LEVEL;
 }
 
 /**

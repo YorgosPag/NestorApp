@@ -60,13 +60,19 @@ export type ElectricalSystemClassification = 'power' | 'lighting' | 'data' | 'co
  *   - `domestic-cold-water` / `domestic-hot-water` — ύδρευση κρύου / ζεστού.
  *   - `sanitary-drainage`                          — αποχέτευση (gravity, sloped).
  *   - `hydronic-supply` / `hydronic-return`        — θέρμανση προσαγωγή / επιστροφή.
+ *   - `fire-sprinkler`                             — πυρόσβεση (pressurised wet pipe,
+ *     ADR-433). A fire-protection line is plumbing-domain (it conveys water under
+ *     pressure, exactly like cold/hot supply — NOT a duct), so it lives here and rides
+ *     the whole pipe network / sizing / colour machinery for free; only its own
+ *     industry colour (fire-red) and design standards (NFPA 13 / EN 12845) differ.
  */
 export type PlumbingSystemClassification =
   | 'domestic-cold-water'
   | 'domestic-hot-water'
   | 'sanitary-drainage'
   | 'hydronic-supply'
-  | 'hydronic-return';
+  | 'hydronic-return'
+  | 'fire-sprinkler';
 
 /**
  * Any MEP system classification across domains. Held only where the domain is
@@ -75,7 +81,8 @@ export type PlumbingSystemClassification =
 export type MepSystemClassification =
   | ElectricalSystemClassification
   | PlumbingSystemClassification
-  | DuctSystemClassification;
+  | DuctSystemClassification
+  | FuelSystemClassification;
 
 /** Conveyed fluid for a plumbing connector/segment (drives later sizing/analysis). */
 export type PipeFluid = 'water' | 'hot-water' | 'wastewater' | 'glycol' | 'other';
@@ -420,7 +427,7 @@ export const SEGMENT_END_CONNECTOR_ID = 'seg-end';
  */
 export function buildSegmentEndpointConnector(
   role: 'start' | 'end',
-  domain: 'duct' | 'pipe',
+  domain: 'duct' | 'pipe' | 'fuel',
 ): MepConnector {
   return {
     connectorId: role === 'start' ? SEGMENT_START_CONNECTOR_ID : SEGMENT_END_CONNECTOR_ID,
@@ -954,5 +961,127 @@ export function buildAhuSupplyAirConnector(
     flow: 'out',
     localPosition,
     duct: { systemClassification: 'supply-air', diameterMm },
+  };
+}
+
+// ─── Fire-protection sprinkler + riser connectors (ADR-433 — wet pipe) ─────────────
+
+/** Connector id for the single fire-sprinkler supply connector of a sprinkler head. */
+export const SPRINKLER_SUPPLY_CONNECTOR_ID = 'spk-supply';
+/** Connector id for the fire-sprinkler supply OUTLET of a fire riser (στήλη πυρόσβεσης). */
+export const FIRE_RISER_SUPPLY_CONNECTOR_ID = 'fire-riser-supply';
+
+/**
+ * Fire-sprinkler supply connector of a sprinkler head (ADR-433, κεφαλή καταιονητήρα —
+ * Revit "Fire Protection Terminal" / `IfcFireSuppressionTerminal`). A sprinkler is a
+ * fire-protection TERMINAL: pressurised fire water ENTERS the head from the wet-pipe
+ * network (`flow: 'in'`) and is discharged onto the fire — exactly the hydraulic role
+ * of the sanitary cold inlet ({@link buildSanitaryColdWaterConnector}) or the radiator
+ * supply inlet, but classified `fire-sprinkler`. `domain: 'pipe'` (fire water is
+ * pressurised plumbing, NOT a duct), classification FIXED to `fire-sprinkler` (set by
+ * physics — a sprinkler is fed fire water, not user choice). A pipe snapped here joins
+ * the fire-protection network for free.
+ *
+ * `localPosition` is host-local (scene units, pre-rotation) — the caller resolves it
+ * from the head body geometry (the head centre, ceiling-mounted).
+ */
+export function buildSprinklerSupplyConnector(
+  localPosition: Point3D,
+  diameterMm: number,
+): MepConnector {
+  return {
+    connectorId: SPRINKLER_SUPPLY_CONNECTOR_ID,
+    domain: 'pipe',
+    flow: 'in',
+    localPosition,
+    pipe: { systemClassification: 'fire-sprinkler', diameterMm },
+  };
+}
+
+/**
+ * Fire-sprinkler supply OUTLET connector of a fire riser (ADR-433, στήλη / wet riser —
+ * Revit "Fire Protection Equipment"). A fire riser is the fire-protection SOURCE
+ * (opposite of a sprinkler head): pressurised fire water LEAVES the riser here
+ * (`flow: 'out'`), so this connector SOURCES the fire-sprinkler network — exactly the
+ * role of the boiler supply outlet ({@link buildBoilerSupplyConnector}) or the manifold
+ * inlet, but classified `fire-sprinkler`. `domain: 'pipe'`, classification FIXED to
+ * `fire-sprinkler`. The connector-driven source resolver finds this outlet to root the
+ * wet-pipe distribution; a future standalone fire-pump entity drops in for free as long
+ * as it exposes a `fire-sprinkler` pipe outlet.
+ *
+ * `localPosition` is host-local (scene units, pre-rotation) — the caller resolves it
+ * from the riser body geometry.
+ */
+export function buildFireRiserSupplyConnector(
+  localPosition: Point3D,
+  diameterMm: number,
+): MepConnector {
+  return {
+    connectorId: FIRE_RISER_SUPPLY_CONNECTOR_ID,
+    domain: 'pipe',
+    flow: 'out',
+    localPosition,
+    pipe: { systemClassification: 'fire-sprinkler', diameterMm },
+  };
+}
+
+// ─── Gas supply: meter source + cooker terminal (ADR-434 — fuel network) ───────────
+
+/** Connector id for the fuel-gas supply OUTLET of a gas meter (μετρητής αερίου). */
+export const GAS_METER_OUTLET_CONNECTOR_ID = 'gas-meter-out';
+/** Connector id for the single fuel-gas supply inlet of a gas cooker (εστία αερίου). */
+export const GAS_COOKER_SUPPLY_CONNECTOR_ID = 'gas-cooker-supply';
+
+/**
+ * Fuel-gas supply OUTLET connector of a gas meter (ADR-434, μετρητής αερίου — Revit
+ * "Mechanical Equipment → fuel connector" / `IfcFlowMeter`). A gas meter is the gas
+ * network SOURCE (opposite of a gas appliance): metered gas LEAVES the meter here
+ * (`flow: 'out'`), so this connector SOURCES the fuel-gas supply network — exactly the
+ * role of the AHU supply-air outlet ({@link buildAhuSupplyAirConnector}) but `domain:
+ * 'fuel'` (combustion fuel, not air or water). Classification FIXED to `fuel-gas`. The
+ * connector-driven source resolver finds this outlet to root the gas distribution; a
+ * future standalone gas-meter entity drops in for free as long as it exposes a fuel-gas
+ * outlet.
+ *
+ * `localPosition` is host-local (scene units, pre-rotation) — the caller resolves it
+ * from the meter body geometry.
+ */
+export function buildGasMeterOutletConnector(
+  localPosition: Point3D,
+  diameterMm: number,
+): MepConnector {
+  return {
+    connectorId: GAS_METER_OUTLET_CONNECTOR_ID,
+    domain: 'fuel',
+    flow: 'out',
+    localPosition,
+    fuel: { systemClassification: 'fuel-gas', diameterMm },
+  };
+}
+
+/**
+ * Fuel-gas supply connector of a gas cooker / hob (ADR-434, εστία αερίου — Revit "Gas
+ * Appliance" / `IfcBurner`). A gas cooker is a gas TERMINAL (it burns the supplied gas):
+ * gas ENTERS the appliance from the fuel network (`flow: 'in'`) — exactly the hydraulic
+ * role of the air-terminal supply inlet ({@link buildAirTerminalSupplyConnector}) or the
+ * boiler fuel inlet ({@link buildBoilerFuelConnector}), but a standalone appliance rather
+ * than a heat source. `domain: 'fuel'`, classification FIXED to `fuel-gas` (set by physics —
+ * a gas hob is fed gas, not user choice). A fuel line snapped here joins the gas network for
+ * free. Together with the gas-fuelled boiler (already a gas terminal via its fuel inlet) it
+ * gives the recognizer two terminal kinds to feed.
+ *
+ * `localPosition` is host-local (scene units, pre-rotation) — the caller resolves it from the
+ * cooker body geometry.
+ */
+export function buildGasCookerSupplyConnector(
+  localPosition: Point3D,
+  diameterMm: number,
+): MepConnector {
+  return {
+    connectorId: GAS_COOKER_SUPPLY_CONNECTOR_ID,
+    domain: 'fuel',
+    flow: 'in',
+    localPosition,
+    fuel: { systemClassification: 'fuel-gas', diameterMm },
   };
 }
