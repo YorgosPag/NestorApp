@@ -10,6 +10,7 @@
 import { useCallback } from 'react';
 import type { MouseEvent as ReactMouseEvent, RefObject } from 'react';
 import { useQuickProperties3DStore } from '../stores/QuickProperties3DStore';
+import { useBim3DEditStore } from '../stores/Bim3DEditStore';
 import type { ThreeJsSceneManager } from '../scene/ThreeJsSceneManager';
 
 const HOVER_DEBOUNCE_MS = 800;
@@ -41,6 +42,10 @@ export function useBim3DPointerHandlers(
 
   const handleClick = useCallback((e: ReactMouseEvent) => {
     e.stopPropagation();
+    // ADR-408 — while a 3D edit gizmo is mounted, Ctrl+click is reserved for relocating
+    // its base point / rotation centre (handled by the edit interaction); never let it
+    // change the selection. No gizmo → Ctrl is free (left for future use).
+    if (e.ctrlKey && useBim3DEditStore.getState().editToolActive) return;
     // ADR-366 §A.6.Q5 — Alt+click sets the orbit pivot to the picked point.
     // A static Alt+click reaches here (Alt+drag is consumed by tumble rotation);
     // selection is left untouched (Blender/CAD pivot-pick convention).

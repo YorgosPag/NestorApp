@@ -107,6 +107,44 @@ describe('BimGizmoOverlay — active-handle visibility', () => {
   });
 });
 
+describe('BimGizmoOverlay — relocatable base-point marker (ADR-408)', () => {
+  it('shows the ⊙ marker at a world point and hides it on null', () => {
+    const scene = new THREE.Scene();
+    const overlay = new BimGizmoOverlay(scene);
+
+    // Hidden by default (no override).
+    expect(findByName(scene, 'gizmo-base-point-marker')?.visible).toBe(false);
+
+    overlay.setBasePointMarker(new THREE.Vector3(1, 2, 3));
+    const marker = findByName(scene, 'gizmo-base-point-marker');
+    expect(marker?.visible).toBe(true);
+    expect(marker?.position.toArray()).toEqual([1, 2, 3]);
+
+    overlay.setBasePointMarker(null);
+    expect(findByName(scene, 'gizmo-base-point-marker')?.visible).toBe(false);
+
+    overlay.dispose();
+  });
+
+  it('keeps the marker camera-facing + screen-constant after updateScale (no NaN)', () => {
+    const scene = new THREE.Scene();
+    const overlay = new BimGizmoOverlay(scene);
+    const camera = new THREE.PerspectiveCamera(50, 1, 0.1, 100);
+    camera.position.set(0, 0, 5);
+    camera.updateMatrixWorld(true);
+
+    overlay.setBasePointMarker(new THREE.Vector3(0, 0, 0));
+    overlay.updateScale(camera);
+
+    const marker = findByName(scene, 'gizmo-base-point-marker');
+    expect(marker?.visible).toBe(true);
+    expect(Number.isFinite(marker?.scale.x ?? NaN)).toBe(true);
+    expect((marker?.scale.x ?? 0)).toBeGreaterThan(0);
+
+    overlay.dispose();
+  });
+});
+
 describe('activeHandlesFor — per-type resize handles (ADR-408 Φ1, Revit-faithful)', () => {
   // Revit: a section (thickness/width/depth) is NEVER a drag — only a Type parameter.
   // So wall/column keep only the vertical HEIGHT octahedra (top + base); the X/Z

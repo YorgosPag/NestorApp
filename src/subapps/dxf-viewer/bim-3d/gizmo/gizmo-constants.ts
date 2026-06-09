@@ -114,6 +114,24 @@ export const ENDPOINT_RING_TUBE = 0.011;
 /** Invisible endpoint hitbox side length (covers the thin ring for easy clicking). */
 export const ENDPOINT_HITBOX_SIZE = 0.12;
 
+// -- Base-point / rotation-centre marker (ADR-408 — relocatable gizmo origin) ---
+/**
+ * Revit-style rotation-centre glyph (camera-facing circle + crosshair, ⊙) drawn at
+ * the relocated base point. Orange so it reads as "the pivot moved here", distinct
+ * from the cyan snap marker. Above the gizmo handles so the moved origin is obvious.
+ */
+export const BASE_POINT_MARKER_COLOR = 0xe8731a;
+/** Base ring radius in world metres before screen-constant scaling. */
+export const BASE_POINT_MARKER_RADIUS = 0.09;
+/** Screen-constant multiplier: markerScale = cameraDistance * tan(fov/2) * this. */
+export const BASE_POINT_MARKER_SCREEN_SCALE = 0.16;
+/** Render order — above the gizmo handles so the moved origin is always visible. */
+export const BASE_POINT_MARKER_RENDER_ORDER = 2001;
+/** Circle outline segment count. */
+export const BASE_POINT_MARKER_SEGMENTS = 32;
+/** Crosshair half-length as a multiple of the ring radius (arms poke past the ring). */
+export const BASE_POINT_MARKER_CROSS_FACTOR = 1.4;
+
 // -- Rendering -----------------------------------------------------------------
 export const GIZMO_RENDER_ORDER = 2000;
 

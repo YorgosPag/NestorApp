@@ -59,6 +59,8 @@ import { linearEndpointHandleWorld } from '../gizmo/linear-endpoint-world';
 import { resolveEntityBuilding } from '../../bim/utils/bim-floor-utils';
 // ADR-404 — drag outcome → view-agnostic command (extracted for file size, N.7.1).
 import { buildEditCommand } from './bim3d-edit-command-builders';
+// ADR-408 — Ctrl+click relocatable base point / rotation centre (snap-pick SSoT).
+import { pickEntityBasePoint } from './bim3d-base-point';
 
 export interface EditInteractionCtx {
   readonly manager: ThreeJsSceneManager;
@@ -74,6 +76,11 @@ export interface EditInteractionCtx {
 /**
  * Re-anchor the gizmo to the union world-centre of every edited element (the
  * group centroid for multi-select). Returns false when no mesh is found.
+ *
+ * ADR-408 — a relocated base point (Ctrl+click, `basePointOverride`) wins over the
+ * centroid: the gizmo origin (= rotation pivot + move base) sits on the picked point
+ * and the ⊙ marker is shown. The box-existence guard stays, so a deleted entity still
+ * hides the gizmo regardless of the override.
  */
 export function computeEditAnchor(ctx: EditInteractionCtx, entityIds: readonly string[]): boolean {
   let box: THREE.Box3 | null = null;
@@ -84,9 +91,12 @@ export function computeEditAnchor(ctx: EditInteractionCtx, entityIds: readonly s
     else box = b;
   }
   if (!box) return false;
-  const centre = new THREE.Vector3();
-  box.getCenter(centre);
-  ctx.overlay.updatePosition(centre);
+  const override = useBim3DEditStore.getState().basePointOverride;
+  const anchor = override
+    ? new THREE.Vector3(override.x, override.y, override.z)
+    : box.getCenter(new THREE.Vector3());
+  ctx.overlay.updatePosition(anchor);
+  ctx.overlay.setBasePointMarker(override ? anchor : null);
   ctx.overlay.updateScale(ctx.manager.getCamera());
   return true;
 }
@@ -150,6 +160,14 @@ function refreshStructuralEndpointHandles(ctx: EditInteractionCtx, id: string, b
 
 export function onEditPointerDown(ctx: EditInteractionCtx, e: PointerEvent): void {
   if (e.button !== 0 || !ctx.overlay.visible) return;
+  // ADR-408 — Ctrl+click relocates the gizmo base point / rotation centre (Revit
+  // «specify base point»): snap-pick a point on the selected entity, NOT a drag.
+  if (e.ctrlKey && !ctx.controller.isDragging()) {
+    trySetBasePoint(ctx, e);
+    e.preventDefault();
+    e.stopPropagation();
+    return;
+  }
   const started = ctx.controller.beginDrag(ctx.manager.getCamera(), ctx.canvasEl, e.clientX, e.clientY);
   if (!started) return; // missed the gizmo → leave the event for selection / orbit
   // ADR-402 Phase B — build the snap callback for this drag from the snap-engine
@@ -190,6 +208,28 @@ export function onEditPointerDown(ctx: EditInteractionCtx, e: PointerEvent): voi
   e.stopPropagation();
   ctx.manager.viewport.setControlsEnabled(false);
   (e.target as Element | null)?.setPointerCapture?.(e.pointerId);
+}
+
+/**
+ * ADR-408 — Ctrl+click set-base-point: snap-pick a point on the selected entity and
+ * relocate the gizmo origin (rotation pivot + move base) there. Misses keep the
+ * current base point (no-op). Reuses the 3D snap SSoT (`pickEntityBasePoint`).
+ */
+function trySetBasePoint(ctx: EditInteractionCtx, e: PointerEvent): void {
+  const ids = useBim3DEditStore.getState().editEntityIds;
+  if (ids.length === 0) return;
+  const point = pickEntityBasePoint({
+    group: ctx.manager.bimLayer.group,
+    camera: ctx.manager.getCamera(),
+    domElement: ctx.canvasEl,
+    entityIds: ids,
+    clientX: e.clientX,
+    clientY: e.clientY,
+  });
+  if (!point) return;
+  useBim3DEditStore.getState().setBasePointOverride(point);
+  computeEditAnchor(ctx, ids);
+  ctx.manager.markSceneDirty();
 }
 
 /**
@@ -269,6 +309,15 @@ function buildDragSnapFn(ctx: EditInteractionCtx): SnapFn | null {
   // move (axis / plane / free): characteristic points of EVERY selected element as
   // plan-mm offsets from the group anchor (ADR-402 Phase C — snap from all, nearest-wins).
   const anchorPlan = worldToDxfPlan(ctx.overlay.getPosition());
+  // ADR-408 — a relocated base point snaps THAT single point (Revit Move base→dest),
+  // not all grips. The gizmo anchor IS the override, so the offset is ~0; computing it
+  // explicitly stays robust if the two ever diverge.
+  const override = useBim3DEditStore.getState().basePointOverride;
+  if (override) {
+    const op = worldToDxfPlan(new THREE.Vector3(override.x, override.y, override.z));
+    const offset = { x: op.x - anchorPlan.x, y: op.y - anchorPlan.y };
+    return makeMoveSnapFn(engine, [offset], targets[0].entityId);
+  }
   const offsets = targets.flatMap((t) =>
     computeDxfEntityGrips(t.entity as unknown as DxfEntityUnion).map((g) => ({
       x: g.position.x - anchorPlan.x,
@@ -371,6 +420,10 @@ function dispatchOutcome(ctx: EditInteractionCtx, outcome: BridgeOutcome): boole
   // `validate` is optional on ICommand (CompoundCommand has none — it validates each
   // child at execute time and rolls back on failure). Only block on a real error.
   if ('validate' in cmd && cmd.validate() !== null) return false;
+  // ADR-408 — a relocated base point is CONSUMED by any non-rotate transform (Revit
+  // «specify base point» is per-command); rotate keeps the invariant pivot. Clear
+  // BEFORE execute so the entity-resync re-anchors the gizmo on the centroid.
+  if (outcome.kind !== 'rotate') useBim3DEditStore.getState().setBasePointOverride(null);
   getGlobalCommandHistory().execute(cmd);
   useBim3DEditStore.getState().setTargetLevel(levelId);
   return true;

@@ -19,6 +19,12 @@ export type Bim3DAxisLock = 'X' | 'Z' | null;
 /** Active edit gizmo. `move` ships in Sub-Phase 2; `rotate` reserved for Sub-Phase 3. */
 export type Bim3DEditMode = 'move' | 'rotate' | null;
 
+/**
+ * ADR-408 — relocated gizmo base point / rotation centre (Revit «specify base point»),
+ * a plain world point so the store stays THREE-free. `null` = default (entity centroid).
+ */
+export type Bim3DBasePointOverride = { readonly x: number; readonly y: number; readonly z: number } | null;
+
 interface Bim3DEditState {
   /** True while a gizmo is mounted on an element (G/R toggled on). */
   editToolActive: boolean;
@@ -35,6 +41,12 @@ interface Bim3DEditState {
   /** Level the edited element lives on — resolved lazily; null = use currentLevelId. */
   targetLevelId: string | null;
   axisLock: Bim3DAxisLock;
+  /**
+   * ADR-408 — relocated gizmo base point / rotation centre (world point), or null for
+   * the default entity centroid. Set via Ctrl+click; cleared on (de)selection and on
+   * any non-rotate transform commit (rotate keeps the invariant pivot). Low-frequency.
+   */
+  basePointOverride: Bim3DBasePointOverride;
 }
 
 interface Bim3DEditActions {
@@ -50,6 +62,8 @@ interface Bim3DEditActions {
   /** Toggle an axis lock — clicking the active axis again clears it. */
   toggleAxisLock(axis: 'X' | 'Z'): void;
   setAxisLock(axis: Bim3DAxisLock): void;
+  /** ADR-408 — relocate (or clear, with null) the gizmo base point / rotation centre. */
+  setBasePointOverride(point: Bim3DBasePointOverride): void;
 }
 
 type Bim3DEditStoreType = Bim3DEditState & Bim3DEditActions;
@@ -63,6 +77,7 @@ export const useBim3DEditStore = create<Bim3DEditStoreType>()(
     editBimType: null,
     targetLevelId: null,
     axisLock: null,
+    basePointOverride: null,
 
     activateMove: (entityIds, bimType) =>
       set({
@@ -73,6 +88,8 @@ export const useBim3DEditStore = create<Bim3DEditStoreType>()(
         editBimType: bimType,
         targetLevelId: null,
         axisLock: null,
+        // ADR-408 — a new/changed selection resets the relocated base point.
+        basePointOverride: null,
       }),
 
     deactivate: () =>
@@ -84,6 +101,7 @@ export const useBim3DEditStore = create<Bim3DEditStoreType>()(
         editBimType: null,
         targetLevelId: null,
         axisLock: null,
+        basePointOverride: null,
       }),
 
     setTargetLevel: (levelId) => set({ targetLevelId: levelId }),
@@ -92,6 +110,8 @@ export const useBim3DEditStore = create<Bim3DEditStoreType>()(
       set((s) => ({ axisLock: s.axisLock === axis ? null : axis })),
 
     setAxisLock: (axisLock) => set({ axisLock }),
+
+    setBasePointOverride: (point) => set({ basePointOverride: point }),
   })),
 );
 

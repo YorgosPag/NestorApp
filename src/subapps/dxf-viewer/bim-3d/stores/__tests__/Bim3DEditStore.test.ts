@@ -48,3 +48,32 @@ describe('Bim3DEditStore — multi-edit', () => {
     expect(selectEditToolActive(st)).toBe(false);
   });
 });
+
+describe('Bim3DEditStore — relocatable base point (ADR-408)', () => {
+  it('defaults to null (entity centroid)', () => {
+    useBim3DEditStore.getState().activateMove(['a'], 'wall');
+    expect(useBim3DEditStore.getState().basePointOverride).toBeNull();
+  });
+
+  it('setBasePointOverride stores + clears the world point', () => {
+    useBim3DEditStore.getState().activateMove(['a'], 'wall');
+    useBim3DEditStore.getState().setBasePointOverride({ x: 1, y: 2, z: 3 });
+    expect(useBim3DEditStore.getState().basePointOverride).toEqual({ x: 1, y: 2, z: 3 });
+    useBim3DEditStore.getState().setBasePointOverride(null);
+    expect(useBim3DEditStore.getState().basePointOverride).toBeNull();
+  });
+
+  it('a new/changed selection (activateMove) resets the override', () => {
+    useBim3DEditStore.getState().activateMove(['a'], 'wall');
+    useBim3DEditStore.getState().setBasePointOverride({ x: 1, y: 2, z: 3 });
+    useBim3DEditStore.getState().activateMove(['b'], 'wall');
+    expect(useBim3DEditStore.getState().basePointOverride).toBeNull();
+  });
+
+  it('deactivate clears the override', () => {
+    useBim3DEditStore.getState().activateMove(['a'], 'wall');
+    useBim3DEditStore.getState().setBasePointOverride({ x: 1, y: 2, z: 3 });
+    useBim3DEditStore.getState().deactivate();
+    expect(useBim3DEditStore.getState().basePointOverride).toBeNull();
+  });
+});

@@ -23,11 +23,13 @@ import { createGizmoMeshes, type GizmoMeshSet } from './gizmo-geometry';
 import type { GizmoHitTestSet } from './gizmo-hit-test';
 import type { GizmoHandleId, GizmoEndpoint, GizmoEndpointMode } from './gizmo-types';
 import {
-  AXIS_COLORS, PLANE_COLORS, RESIZE_IDLE_COLORS, GIZMO_COLOR_CENTER, GIZMO_COLOR_HOVER,
-  GIZMO_ENDPOINT_COLOR,
-  GIZMO_SCREEN_SCALE, GIZMO_RENDER_ORDER,
-  SNAP_MARKER_COLOR, SNAP_MARKER_RADIUS, SNAP_MARKER_SCREEN_SCALE, SNAP_MARKER_RENDER_ORDER,
+  GIZMO_COLOR_HOVER, GIZMO_SCREEN_SCALE, GIZMO_RENDER_ORDER,
+  SNAP_MARKER_RADIUS, SNAP_MARKER_SCREEN_SCALE,
+  BASE_POINT_MARKER_RADIUS, BASE_POINT_MARKER_SCREEN_SCALE,
 } from './gizmo-constants';
+import {
+  createSnapMarker, createBasePointMarker, disposeBasePointMarker, defaultColorOf,
+} from './bim-gizmo-overlay-markers';
 
 /**
  * Move/rotate handles active for every selected entity.
@@ -145,6 +147,12 @@ export class BimGizmoOverlay {
   /** ADR-402 Phase B — drag snap marker (square frame, depth-test off → always visible). */
   private readonly snapMarker: THREE.LineSegments;
   /**
+   * ADR-408 — relocatable base-point / rotation-centre marker (camera-facing ⊙) +
+   * its world anchor (null = hidden). Sized screen-constant in `updateScale`.
+   */
+  private readonly basePointMarker: THREE.Group;
+  private basePointWorld: THREE.Vector3 | null = null;
+  /**
    * ADR-408 Φ-D — world positions of the two endpoint handles (null = not a linear
    * segment selection). The handles live in root-local space but must sit on the
    * ABSOLUTE pipe ends, so we re-derive their local offset (`(world − anchor) /
@@ -174,6 +182,9 @@ export class BimGizmoOverlay {
 
     this.snapMarker = createSnapMarker();
     this.scene.add(this.snapMarker);
+
+    this.basePointMarker = createBasePointMarker();
+    this.scene.add(this.basePointMarker);
   }
 
   /** Cache the visual + hitbox object of each endpoint handle (built once). */
@@ -227,6 +238,21 @@ export class BimGizmoOverlay {
   hideSnapMarker(): void {
     if (this.disposed) return;
     this.snapMarker.visible = false;
+  }
+
+  /**
+   * ADR-408 — show (or hide, with null) the relocated base-point / rotation-centre
+   * marker at a world point. Only records the anchor + visibility; the screen-constant
+   * size + camera billboard are applied in `updateScale` (called right after).
+   */
+  setBasePointMarker(world: THREE.Vector3 | null): void {
+    if (this.disposed) return;
+    this.basePointWorld = world ? world.clone() : null;
+    this.basePointMarker.visible = world !== null;
+    if (world) {
+      this.basePointMarker.position.copy(world);
+      this.basePointMarker.updateMatrixWorld(true);
+    }
   }
 
   /**
@@ -320,6 +346,24 @@ export class BimGizmoOverlay {
     this.refreshEndpointOffsets();
     this.billboardEndpointRings(camera);
     this.meshSet.root.updateMatrixWorld(true);
+    this.refreshBasePointMarker(camera);
+  }
+
+  /**
+   * ADR-408 — keep the base-point marker screen-constant + camera-facing (the circle
+   * stays a circle from any orbit). No-op when the marker is hidden.
+   */
+  private refreshBasePointMarker(camera: THREE.Camera): void {
+    if (this.disposed || !this.basePointWorld) return;
+    let s = BASE_POINT_MARKER_RADIUS;
+    if (camera instanceof THREE.PerspectiveCamera) {
+      const dist = camera.position.distanceTo(this.basePointWorld);
+      s = dist * Math.tan(THREE.MathUtils.degToRad(camera.fov) / 2) * BASE_POINT_MARKER_SCREEN_SCALE;
+    }
+    this.basePointMarker.scale.setScalar(Math.max(s, 1e-3));
+    this.basePointMarker.quaternion.copy(camera.quaternion);
+    this.basePointMarker.position.copy(this.basePointWorld);
+    this.basePointMarker.updateMatrixWorld(true);
   }
 
   /**
@@ -352,6 +396,8 @@ export class BimGizmoOverlay {
     this.scene.remove(this.snapMarker);
     this.snapMarker.geometry.dispose();
     (this.snapMarker.material as THREE.Material).dispose();
+    this.scene.remove(this.basePointMarker);
+    disposeBasePointMarker(this.basePointMarker);
   }
 
   // ── internals ──────────────────────────────────────────────────────────────
@@ -385,36 +431,4 @@ export class BimGizmoOverlay {
       }
     });
   }
-}
-
-/**
- * Build the drag snap marker — a small cube wireframe (reads as a square frame
- * from any orbit angle, mirroring the 2D endpoint square). Depth-test off + high
- * render order so it stays visible through geometry. Unit half-extent (box side 2)
- * so `scale.setScalar(s)` gives a half-extent of `s` metres.
- */
-function createSnapMarker(): THREE.LineSegments {
-  const edges = new THREE.EdgesGeometry(new THREE.BoxGeometry(2, 2, 2));
-  const material = new THREE.LineBasicMaterial({
-    color: SNAP_MARKER_COLOR,
-    depthTest: false,
-    transparent: true,
-  });
-  const marker = new THREE.LineSegments(edges, material);
-  marker.renderOrder = SNAP_MARKER_RENDER_ORDER;
-  marker.visible = false;
-  return marker;
-}
-
-/** Idle colour for a handle id (restored when hover leaves). */
-function defaultColorOf(id: GizmoHandleId): number {
-  if (id === 'center') return GIZMO_COLOR_CENTER;
-  // ADR-408 Φ-D — endpoint grab dot: clear teal (distinct from axes/centre).
-  if (id.startsWith('endpoint-')) return GIZMO_ENDPOINT_COLOR;
-  if (id.startsWith('resize-m-')) return RESIZE_IDLE_COLORS[id.slice(9)] ?? GIZMO_COLOR_CENTER;
-  if (id.startsWith('resize-')) return RESIZE_IDLE_COLORS[id.slice(7)] ?? GIZMO_COLOR_CENTER;
-  if (id.startsWith('rotate-')) return AXIS_COLORS[id.slice(7)] ?? GIZMO_COLOR_CENTER;
-  if (id.startsWith('axis-')) return AXIS_COLORS[id.slice(5)] ?? GIZMO_COLOR_CENTER;
-  if (id.startsWith('plane-')) return PLANE_COLORS[id.slice(6)] ?? GIZMO_COLOR_CENTER;
-  return GIZMO_COLOR_CENTER;
 }
