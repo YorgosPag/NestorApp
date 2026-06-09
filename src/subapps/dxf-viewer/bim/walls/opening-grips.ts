@@ -8,7 +8,10 @@
  *
  * Grip layout (centred rotatable rectangle, the SAME visual SSoT used by
  * furniture / MEP / floorplan-symbol via `centred-box-grips.ts`):
- *   0 → opening-move        (whole-opening translate ALONG the host wall axis)
+ *   0 → opening-move        (SUPPRESSED, ADR-363 Φ1G.5 Slice 2 — declutter; the
+ *                            whole-opening slide-along-wall is now an Alt+drag
+ *                            from any grip via `applyOpeningAltSlide`. Still
+ *                            computed for index stability, filtered from output.)
  *   1 → opening-rotation    (FLIP handing — Revit-style· stays hosted on the wall)
  *   2-5 → opening-corner-{ne,nw,sw,se} (resize WIDTH along the wall· opposite jamb pinned)
  *
@@ -79,10 +82,12 @@ function halfExtents(
 }
 
 /**
- * Compute the 6 parametric grips for an `OpeningEntity` (centred-box layout):
- * move (centre) + rotation (flip handle, perpendicular stand-off) + 4 corners.
- * Returns an empty array when the geometry cache / outline isn't populated yet
- * (e.g. opening hydrated before its host wall arrived).
+ * Compute the parametric grips for an `OpeningEntity` (centred-box layout):
+ * rotation (flip handle, perpendicular stand-off) + 4 corners (+ facing on hinged
+ * kinds). ADR-363 Φ1G.5 Slice 2: the central `opening-move` grip is computed (for
+ * gripIndex stability) but filtered from the returned set — the opening is moved
+ * by Alt+drag along the wall instead. Returns an empty array when the geometry
+ * cache / outline isn't populated yet (e.g. opening hydrated before its host wall).
  */
 export function getOpeningGrips(entity: Readonly<OpeningEntity>): GripInfo[] {
   const g = entity.geometry;
@@ -144,7 +149,13 @@ export function getOpeningGrips(entity: Readonly<OpeningEntity>): GripInfo[] {
       openingGripKind: 'opening-facing',
     });
   }
-  return grips;
+  // ADR-363 Φ1G.5 Slice 2 — drop the central MOVE marker (`opening-move`, 4-way
+  // arrow): redundant now that Alt+drag from any opening grip (corner / rotation)
+  // slides the WHOLE opening along the host wall (`applyOpeningAltSlide`). Filtered
+  // here (not un-pushed) so the gripIndex math above — incl. the `opening-facing`
+  // `grips.length` index — stays intact; the `opening-move` transform
+  // (`moveAlongWall`) is retained but no longer reachable from a grip.
+  return grips.filter((g) => g.openingGripKind !== 'opening-move');
 }
 
 // ─── Drag transforms ─────────────────────────────────────────────────────────
@@ -177,6 +188,36 @@ function moveAlongWall(
   const clamped = clamp(projectPointToWallOffsetMm(currentPos, hostWall) - params.width / 2, minOffset, maxOffset);
   if (clamped === params.offsetFromStart) return params;
   return { ...params, offsetFromStart: clamped };
+}
+
+/**
+ * ADR-363 Φ1G.5 Slice 2 — Alt-drag «move-from-characteristic-point» for a hosted
+ * opening: translate the WHOLE opening ALONG the host wall by the world `delta`,
+ * keeping the grabbed point (`basePoint`) under the cursor. Unlike the free
+ * whole-entity move (walls/columns/…), a hosted opening can only slide on its
+ * wall, so the displacement is the component of `delta` along the wall axis —
+ * computed via the projection SSoT (`projectPointToWallOffsetMm`) as the offset
+ * difference between `basePoint` and `basePoint + delta`. Base-point semantics
+ * (offset += Δ), NOT center-on-cursor, so grabbing any corner slides 1:1.
+ * Clamped to the same [frame, hostLength − width − frame] bounds as `moveAlongWall`.
+ */
+function slideAlongWallByDelta(
+  params: OpeningParams,
+  basePoint: Point2D,
+  currentPos: Point2D,
+  hostWall: WallEntity,
+): OpeningParams {
+  const hostLengthMm = hostWall.geometry.length * 1000;
+  const frameWidth = params.frameWidth ?? DEFAULT_FRAME_WIDTH_MM;
+  const minOffset = frameWidth;
+  const maxOffset = hostLengthMm - params.width - frameWidth;
+  if (maxOffset < minOffset) return params; // host too short for opening + jambs
+
+  const baseMm = projectPointToWallOffsetMm(basePoint, hostWall);
+  const curMm = projectPointToWallOffsetMm(currentPos, hostWall);
+  const newOffset = clamp(params.offsetFromStart + (curMm - baseMm), minOffset, maxOffset);
+  if (newOffset === params.offsetFromStart) return params;
+  return { ...params, offsetFromStart: newOffset };
 }
 
 /** Resize by moving ONE jamb along the wall; the opposite jamb stays pinned. */
@@ -259,4 +300,29 @@ export function applyOpeningGripDrag(
     default:
       return originalParams;
   }
+}
+
+// ─── Alt-drag whole-opening slide (ADR-363 Φ1G.5 Slice 2) ────────────────────
+
+export interface OpeningAltSlideInput {
+  /** Original params at drag start (preserves width / kind / handing / etc.). */
+  readonly originalParams: OpeningParams;
+  /** The grabbed characteristic point (grip world position) = the move base point. */
+  readonly basePoint: Point2D;
+  /** Current world cursor position (= basePoint + drag delta). */
+  readonly currentPos: Point2D;
+  /** Host wall — required for axis projection + length clamp. */
+  readonly hostWall: WallEntity;
+}
+
+/**
+ * Pure transform: Alt-drag base-point move of a hosted opening → new
+ * `OpeningParams`, sliding it ALONG the host wall (offsetFromStart += projected
+ * delta). Returns `originalParams` referentially unchanged on any no-op (host too
+ * short / out-of-range / identity) so the commit short-circuits. Geometry is NOT
+ * recomputed here — `UpdateOpeningParamsCommand` re-derives it.
+ */
+export function applyOpeningAltSlide(input: Readonly<OpeningAltSlideInput>): OpeningParams {
+  const { originalParams, basePoint, currentPos, hostWall } = input;
+  return slideAlongWallByDelta(originalParams, basePoint, currentPos, hostWall);
 }

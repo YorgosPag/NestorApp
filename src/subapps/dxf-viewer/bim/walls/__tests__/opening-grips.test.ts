@@ -15,7 +15,8 @@
  *       · foreign / no-swing kinds → original params unchanged.
  */
 
-import { applyOpeningGripDrag, getOpeningGrips } from '../opening-grips';
+import { applyOpeningGripDrag, applyOpeningAltSlide, getOpeningGrips } from '../opening-grips';
+import { DEFAULT_FRAME_WIDTH_MM } from '../../types/opening-types';
 import {
   buildDefaultOpeningParams,
   buildOpeningEntity,
@@ -51,12 +52,14 @@ describe('opening-grips (Phase 2.5 — wall parity)', () => {
 
   // ─── getOpeningGrips ─────────────────────────────────────────────────────
 
-  it('1. door emits 7 grips: move + rotation + 4 corners + facing', () => {
+  // ADR-363 Φ1G.5 Slice 2 — the central `opening-move` grip is no longer emitted
+  // (Alt+drag slides the opening along the wall instead). The `opening-move`
+  // TRANSFORM is retained (see applyOpeningGripDrag tests below).
+  it('1. door emits 6 grips: rotation + 4 corners + facing (no central move grip)', () => {
     const host = makeHorizontalWall();
     const grips = getOpeningGrips(makeDoor(host, 2000));
-    expect(grips).toHaveLength(7);
+    expect(grips).toHaveLength(6);
     expect(grips.map((g) => g.openingGripKind)).toEqual([
-      'opening-move',
       'opening-rotation',
       'opening-corner-ne',
       'opening-corner-nw',
@@ -64,27 +67,25 @@ describe('opening-grips (Phase 2.5 — wall parity)', () => {
       'opening-corner-se',
       'opening-facing',
     ]);
-    expect(grips[0].type).toBe('center');
-    expect(grips[0].movesEntity).toBe(true);
-    expect(grips[1].movesEntity).toBe(false);
-    expect(grips[6].movesEntity).toBe(false);
+    expect(grips.map((g) => g.openingGripKind)).not.toContain('opening-move');
+    expect(grips.every((g) => !g.movesEntity)).toBe(true);
   });
 
-  it('1b. window emits 6 grips: no facing grip (openDirection undefined for windows)', () => {
+  it('1b. window emits 5 grips: no facing grip (move removed Slice 2; openDirection undefined)', () => {
     const host = makeHorizontalWall();
     const params = buildDefaultOpeningParams(host, { x: 2000, y: 0 }, { kind: 'window' });
     const windowOpening = unwrapOpening(buildOpeningEntity(params, host, '0'));
     const grips = getOpeningGrips(windowOpening);
-    expect(grips).toHaveLength(6);
+    expect(grips).toHaveLength(5);
     expect(grips.map((g) => g.openingGripKind)).not.toContain('opening-facing');
+    expect(grips.map((g) => g.openingGripKind)).not.toContain('opening-move');
   });
 
-  it('2. move grip sits at geometry.position (opening world centre)', () => {
+  it('2. central move grip (opening-move) is NOT emitted; first grip is rotation', () => {
     const host = makeHorizontalWall();
-    const opening = makeDoor(host, 2000);
-    const move = getOpeningGrips(opening)[0];
-    expect(move.position.x).toBeCloseTo(opening.geometry.position.x, 3);
-    expect(move.position.y).toBeCloseTo(opening.geometry.position.y, 3);
+    const grips = getOpeningGrips(makeDoor(host, 2000));
+    expect(grips.map((g) => g.openingGripKind)).not.toContain('opening-move');
+    expect(grips[0].openingGripKind).toBe('opening-rotation');
   });
 
   it('3. the 4 corners coincide with the cutout outline vertices', () => {
@@ -299,5 +300,55 @@ describe('opening-grips (Phase 2.5 — wall parity)', () => {
       hostWall: shortHost,
     });
     expect(next).toBe(originalParams);
+  });
+});
+
+// ─── Φ1G.5 Slice 2 — Alt-drag «move-from-characteristic-point» (slide along wall) ──
+describe('applyOpeningAltSlide (Alt move along host wall)', () => {
+  const wallStart = { x: 0, y: 0 };
+  const wallEnd = { x: 4000, y: 0 }; // 4m horizontal wall along +X
+  const makeHorizontalWall = (): WallEntity =>
+    unwrapWall(buildWallEntity(buildDefaultWallParams(wallStart, wallEnd), '0', 'straight'));
+  const makeDoor = (host: WallEntity, clickX: number): OpeningEntity =>
+    unwrapOpening(buildOpeningEntity(buildDefaultOpeningParams(host, { x: clickX, y: 0 }, { kind: 'door' }), host, '0'));
+
+  it('slides the opening along the wall by the projected delta (base-point semantics)', () => {
+    const host = makeHorizontalWall();
+    const opening = makeDoor(host, 2000);
+    const base = opening.geometry.position; // any characteristic point on the opening
+    const next = applyOpeningAltSlide({
+      originalParams: opening.params,
+      basePoint: { x: base.x, y: base.y },
+      currentPos: { x: base.x + 500, y: base.y + 999 }, // +500 along axis (perp ignored)
+      hostWall: host,
+    });
+    expect(next.offsetFromStart).toBeCloseTo(opening.params.offsetFromStart + 500, 0);
+  });
+
+  it('ignores the perpendicular component (constrained to the wall axis → no-op)', () => {
+    const host = makeHorizontalWall();
+    const opening = makeDoor(host, 2000);
+    const base = opening.geometry.position;
+    const next = applyOpeningAltSlide({
+      originalParams: opening.params,
+      basePoint: { x: base.x, y: base.y },
+      currentPos: { x: base.x, y: base.y + 800 }, // pure perpendicular drag
+      hostWall: host,
+    });
+    expect(next).toBe(opening.params);
+  });
+
+  it('clamps within [frame, hostLength − width − frame]', () => {
+    const host = makeHorizontalWall();
+    const opening = makeDoor(host, 2000);
+    const base = opening.geometry.position;
+    const next = applyOpeningAltSlide({
+      originalParams: opening.params,
+      basePoint: { x: base.x, y: base.y },
+      currentPos: { x: base.x + 99999, y: base.y }, // far past the end → clamp
+      hostWall: host,
+    });
+    const frame = opening.params.frameWidth ?? DEFAULT_FRAME_WIDTH_MM;
+    expect(next.offsetFromStart).toBeCloseTo(4000 - opening.params.width - frame, 0);
   });
 });

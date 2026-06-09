@@ -104,6 +104,18 @@ function createSceneManagerAdapter(
       return undefined;
     },
 
+    // ADR-363 §5.4 — the hosted-opening cascade (`cascadeHostedOpeningsForWalls`,
+    // run by Move/MoveMultiple commands) resolves a wall's openings by scanning
+    // ALL entities for `opening.params.wallId === wall.id` (the authoritative
+    // child→parent foreign key). Without `getEntities` it silently fell back to
+    // the `wall.hostedOpeningIds` mirror, so an Alt-drag whole-wall move (ADR-363
+    // Φ1G.5) left hosted doors/windows behind. Mirror the grip adapter (which has
+    // always implemented this) so every move path keeps openings attached.
+    getEntities(): readonly SceneEntity[] {
+      const scene = getLevelScene(levelId);
+      return (scene?.entities ?? []) as readonly SceneEntity[];
+    },
+
     updateEntity(entityId: string, updates: Partial<SceneEntity>): void {
       const scene = getLevelScene(levelId);
       if (scene) {

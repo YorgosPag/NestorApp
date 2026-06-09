@@ -73,6 +73,7 @@ import {
   commitStairGripDrag,
   commitWallGripDrag,
   commitOpeningGripDrag,
+  commitOpeningAltSlide,
   commitSlabGripDrag,
   commitSlabOpeningGripDrag,
   commitRoofGripDrag,
@@ -158,6 +159,15 @@ export function commitDxfGripDragModeAware(
   // base point. Sole move-from-point path for params-driven BIM entities, whose
   // parametric returns otherwise pre-empt the `mode === 'move'` branch far below.
   if (GripAltMoveStore.getActive()) {
+    // ADR-363 Φ1G.5 Slice 2 — a hosted opening cannot free-translate (it lives ON
+    // a wall; `calculateBimMovedGeometry` no-ops for it). Slide it ALONG the host
+    // wall instead — base point = grabbed grip, displacement projected onto the
+    // wall axis — so Alt+drag from any opening grip moves it the same gesture as a
+    // free entity, just constrained to its wall. (Flip grips return earlier.)
+    if (grip.openingGripKind) {
+      commitOpeningAltSlide(grip, delta, deps);
+      return;
+    }
     const copy = GripCopyModeStore.getSnapshot().enabled || CtrlKeyTracker.getSnapshot();
     commitWholeEntityMove(grip, delta, deps, copy);
     return;

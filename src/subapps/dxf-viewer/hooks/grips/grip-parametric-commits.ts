@@ -26,7 +26,7 @@ import { UpdateMepSegmentParamsCommand } from '../../core/commands/entity-comman
 import { applyStairGripDrag } from '../../bim/stairs/stair-grips';
 import { applyWallGripDrag } from '../../bim/walls/wall-grips';
 import { BimRotateHotGripStore } from '../../bim/grips/bim-rotate-hotgrip-store';
-import { applyOpeningGripDrag } from '../../bim/walls/opening-grips';
+import { applyOpeningGripDrag, applyOpeningAltSlide } from '../../bim/walls/opening-grips';
 import { applyBeamGripDrag } from '../../bim/beams/beam-grips';
 import { applyColumnGripDrag } from '../../bim/columns/column-grips';
 import { applyMepSegmentGripDrag } from '../../bim/mep-segments/mep-segment-grips';
@@ -218,6 +218,53 @@ export function commitOpeningGripDrag(
   const newParams = applyOpeningGripDrag(grip.openingGripKind, {
     originalParams,
     currentPos,
+    hostWall,
+  });
+  if (newParams === originalParams) return;
+  const command = new UpdateOpeningParamsCommand(
+    grip.entityId,
+    newParams,
+    originalParams,
+    sceneManager,
+    true,
+  );
+  if (command.validate() !== null) return;
+  deps.execute(command);
+  EventBus.emit('bim:opening-params-updated', { openingId: grip.entityId });
+}
+
+/**
+ * ADR-363 Φ1G.5 Slice 2 — Alt-drag «move-from-characteristic-point» commit for a
+ * hosted opening. Mirrors `commitOpeningGripDrag` (same host resolution +
+ * `UpdateOpeningParamsCommand` + merge-window) but routes through
+ * `applyOpeningAltSlide`, which slides the WHOLE opening ALONG the host wall by
+ * the projected delta (base point = the grabbed grip). Used by the Alt-armed
+ * branch of `commitDxfGripDragModeAware` so an opening moves the same way (Alt +
+ * drag from a characteristic point) as a free entity — just constrained to its wall.
+ */
+export function commitOpeningAltSlide(
+  grip: UnifiedGripInfo,
+  delta: Point2D,
+  deps: DxfCommitDeps,
+): void {
+  if (!grip.entityId || !grip.openingGripKind) return;
+  const sceneManager = createSceneManagerAdapter(deps);
+  if (!sceneManager) return;
+  const raw = sceneManager.getEntity(grip.entityId);
+  if (!raw) return;
+  const candidate = raw as unknown as Partial<OpeningEntity>;
+  if (candidate.type !== 'opening' || !candidate.params) return;
+  const opening = candidate as OpeningEntity;
+  const hostRaw = sceneManager.getEntity(opening.params.wallId);
+  if (!hostRaw) return;
+  const hostCandidate = hostRaw as unknown as Partial<WallEntity>;
+  if (hostCandidate.type !== 'wall' || !hostCandidate.params || !hostCandidate.geometry) return;
+  const hostWall = hostCandidate as WallEntity;
+  const originalParams = opening.params;
+  const newParams = applyOpeningAltSlide({
+    originalParams,
+    basePoint: grip.position,
+    currentPos: { x: grip.position.x + delta.x, y: grip.position.y + delta.y },
     hostWall,
   });
   if (newParams === originalParams) return;

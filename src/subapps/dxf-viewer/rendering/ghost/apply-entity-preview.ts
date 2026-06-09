@@ -60,6 +60,7 @@ import type { MepSegmentEntity } from '../../bim/types/mep-segment-types';
 import { applyFurnitureGripDrag } from '../../bim/furniture/furniture-grips';
 import { computeFurnitureGeometry } from '../../bim/furniture/furniture-geometry';
 import type { FurnitureEntity } from '../../bim/types/furniture-types';
+import type { OpeningEntity } from '../../bim/types/opening-types';
 import { cadToggleState } from '../../systems/constraints/cad-toggle-state';
 import type { EntityPreviewTransform } from './entity-preview-types';
 import { unwrapStair, applyClassicEntityPreview } from './apply-entity-preview-helpers';
@@ -313,6 +314,23 @@ export function applyEntityPreview(
       type: 'stair',
       stairEntity: ghostStair,
     } as unknown as DxfEntityUnion;
+  }
+
+  // ── ADR-363 Φ1G.5 Slice 2 — hosted-opening Alt-slide ghost (constrained) ──
+  // A hosted opening can only slide ALONG its wall, so the free whole-entity
+  // translate (classic opening case) would fly the ghost off the wall during the
+  // drag. Constrain `delta` to the wall axis — which the opening already encodes
+  // in `geometry.rotation` (radians) — and reuse the classic opening translate
+  // with that projected vector, so the live ghost slides on the wall like the
+  // commit (`applyOpeningAltSlide` → offsetFromStart). Self-contained: the ghost
+  // needs no host-wall lookup (the axis is on the opening itself).
+  if (movesEntity && entity.type === 'opening') {
+    const rot = (entity as unknown as OpeningEntity).geometry?.rotation;
+    if (rot === undefined) return entity;
+    const axis: Point2D = { x: Math.cos(rot), y: Math.sin(rot) };
+    const along = delta.x * axis.x + delta.y * axis.y;
+    const slideVec: Point2D = { x: axis.x * along, y: axis.y * along };
+    return applyClassicEntityPreview(entity, slideVec, gripIndex, true, edgeVertexIndices);
   }
 
   // ── ADR-363 Phase 1G.5 — Alt «move-from-characteristic-point» whole-entity ghost ──
