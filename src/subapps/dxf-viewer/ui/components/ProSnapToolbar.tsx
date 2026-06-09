@@ -47,6 +47,8 @@ const SNAP_MODE_KEYS: Record<ExtendedSnapType, string> = {
   [ExtendedSnapType.BIM_SLAB_CORNER]:    'bim.slabCorner',
   [ExtendedSnapType.BIM_COLUMN_CORNER]:  'bim.columnCorner',
   [ExtendedSnapType.BIM_OPENING_CORNER]: 'bim.openingCorner',
+  // ADR-363 Slice 2i: wall face-to-face magnetism snap — nested i18n path
+  [ExtendedSnapType.BIM_WALL_FACE]:      'bim.wallFace',
   // ADR-408 Φ9: MEP connector attach-point snap — nested i18n path
   [ExtendedSnapType.BIM_MEP_CONNECTOR]:  'bim.mepConnector',
   // ADR-378 Phase 3: TEXT/MTEXT 8-point snap — flat label key (sub-keys for individual points in snapModes.labels.text.*)
