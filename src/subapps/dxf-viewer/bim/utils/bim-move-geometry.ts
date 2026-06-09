@@ -54,6 +54,11 @@ import type { MepManifoldEntity, MepManifoldParams } from '../types/mep-manifold
 import type { FurnitureEntity, FurnitureParams } from '../types/furniture-types';
 import type { FloorFinishEntity, FloorFinishParams } from '../types/floor-finish-types';
 import { computeFloorFinishGeometry } from '../types/floor-finish-types';
+import type { MepRadiatorEntity, MepRadiatorParams } from '../types/mep-radiator-types';
+import type { MepBoilerEntity, MepBoilerParams } from '../types/mep-boiler-types';
+import type { MepWaterHeaterEntity, MepWaterHeaterParams } from '../types/mep-water-heater-types';
+import type { RoofEntity, RoofParams } from '../types/roof-types';
+import type { MepUnderfloorEntity, MepUnderfloorParams } from '../types/mep-underfloor-types';
 import type { Point3D, Polygon3D } from '../types/bim-base';
 import { computeWallGeometry } from '../geometry/wall-geometry';
 import { translateWallParams } from '../walls/wall-grip-transforms';
@@ -67,6 +72,11 @@ import { computeElectricalPanelGeometry } from '../electrical-panels/electrical-
 import { computeMepManifoldGeometry } from '../mep-manifolds/mep-manifold-geometry';
 import { computeMepSegmentGeometry } from '../geometry/mep-segment-geometry';
 import { computeFurnitureGeometry } from '../furniture/furniture-geometry';
+import { computeMepRadiatorGeometry } from '../mep-radiators/mep-radiator-geometry';
+import { computeMepBoilerGeometry } from '../mep-boilers/mep-boiler-geometry';
+import { computeMepWaterHeaterGeometry } from '../mep-water-heaters/mep-water-heater-geometry';
+import { computeRoofGeometry } from '../geometry/roof-geometry';
+import { computeMepUnderfloorGeometry } from '../mep-underfloor/mep-underfloor-geometry';
 
 // ─── Point3D delta helpers ──────────────────────────────────────────────────
 
@@ -204,6 +214,61 @@ function moveMepSegment(entity: MepSegmentEntity, delta: Point2D): Partial<Scene
   return { params: newParams, geometry } as unknown as Partial<SceneEntity>;
 }
 
+// ADR-408 Εύρος Β — point-based heating radiator: shift the single `position`
+// anchor (same shape as the fixture). Connectors are host-local → they follow
+// for free (recomputed by `computeMepRadiatorGeometry` from the moved params).
+function moveMepRadiator(entity: MepRadiatorEntity, delta: Point2D): Partial<SceneEntity> {
+  const newParams: MepRadiatorParams = {
+    ...entity.params,
+    position: shiftPoint3D(entity.params.position, delta),
+  };
+  const geometry = computeMepRadiatorGeometry(newParams);
+  return { params: newParams, geometry } as unknown as Partial<SceneEntity>;
+}
+
+// ADR-408 Εύρος Β #2 — point-based heating boiler: shift the single `position` anchor (mirror radiator).
+function moveMepBoiler(entity: MepBoilerEntity, delta: Point2D): Partial<SceneEntity> {
+  const newParams: MepBoilerParams = {
+    ...entity.params,
+    position: shiftPoint3D(entity.params.position, delta),
+  };
+  const geometry = computeMepBoilerGeometry(newParams);
+  return { params: newParams, geometry } as unknown as Partial<SceneEntity>;
+}
+
+// ADR-408 DHW — point-based domestic hot water heater: shift the single `position` anchor (mirror radiator).
+function moveMepWaterHeater(entity: MepWaterHeaterEntity, delta: Point2D): Partial<SceneEntity> {
+  const newParams: MepWaterHeaterParams = {
+    ...entity.params,
+    position: shiftPoint3D(entity.params.position, delta),
+  };
+  const geometry = computeMepWaterHeaterGeometry(newParams);
+  return { params: newParams, geometry } as unknown as Partial<SceneEntity>;
+}
+
+// ADR-417 — polygon roof: shift every `outline` vertex (mirror slab outline). Per-edge
+// slope flags are positional-invariant → unchanged; geometry recomputes from moved outline.
+function moveRoof(entity: RoofEntity, delta: Point2D): Partial<SceneEntity> {
+  const newParams: RoofParams = {
+    ...entity.params,
+    outline: shiftPolygon3D(entity.params.outline, delta),
+  };
+  const geometry = computeRoofGeometry(newParams);
+  return { params: newParams, geometry } as unknown as Partial<SceneEntity>;
+}
+
+// ADR-408 Εύρος Β #3 — polygon underfloor loop: shift every `footprint` vertex (mirror
+// floor-finish). The serpentine loop + both connector positions re-derive from the moved
+// footprint inside `computeMepUnderfloorGeometry`.
+function moveMepUnderfloor(entity: MepUnderfloorEntity, delta: Point2D): Partial<SceneEntity> {
+  const newParams: MepUnderfloorParams = {
+    ...entity.params,
+    footprint: shiftPolygon3D(entity.params.footprint, delta),
+  };
+  const geometry = computeMepUnderfloorGeometry(newParams);
+  return { params: newParams, geometry } as unknown as Partial<SceneEntity>;
+}
+
 /**
  * Returns the partial entity patch (`{params, geometry}`) for moving a BIM
  * entity by a 2D delta. Returns `null` if the entity is not a BIM type
@@ -249,6 +314,16 @@ export function calculateBimMovedGeometry(
       return moveFloorFinish(entity, delta);
     case 'mep-segment':
       return moveMepSegment(entity, delta);
+    case 'mep-radiator':
+      return moveMepRadiator(entity, delta);
+    case 'mep-boiler':
+      return moveMepBoiler(entity, delta);
+    case 'mep-water-heater':
+      return moveMepWaterHeater(entity, delta);
+    case 'roof':
+      return moveRoof(entity, delta);
+    case 'mep-underfloor':
+      return moveMepUnderfloor(entity, delta);
     default:
       return null;
   }

@@ -17,6 +17,11 @@ import type { SlabEntity } from '../../types/slab-types';
 import type { SlabOpeningEntity } from '../../types/slab-opening-types';
 import type { ColumnEntity } from '../../types/column-types';
 import type { BeamEntity } from '../../types/beam-types';
+import type { MepRadiatorEntity } from '../../types/mep-radiator-types';
+import type { MepBoilerEntity } from '../../types/mep-boiler-types';
+import type { MepWaterHeaterEntity } from '../../types/mep-water-heater-types';
+import type { RoofEntity } from '../../types/roof-types';
+import type { MepUnderfloorEntity } from '../../types/mep-underfloor-types';
 
 const DELTA = { x: 1000, y: 500 };
 
@@ -140,6 +145,89 @@ function makeBeam(): BeamEntity {
   } as unknown as BeamEntity;
 }
 
+// ─── ADR-363 Phase 1G.5 — point/polygon BIM entities added after Phase 7A ─────
+
+/** Centred-box equipment fixture (radiator/boiler/water-heater share the shape). */
+function makeCentredBoxEquipment<T>(type: string, id: string): T {
+  return {
+    id,
+    name: id,
+    type,
+    layerId: 'L',
+    params: {
+      position: { x: 2000, y: 2000, z: 800 },
+      rotation: 0,
+      width: 600,
+      length: 400,
+      bodyHeightMm: 600,
+      connectors: [],
+    },
+    geometry: { footprint: { vertices: [] }, bbox: { min: { x: 1700, y: 1800 }, max: { x: 2300, y: 2200 } } },
+    validation: { hasCodeViolations: false, violationKeys: [], lastValidatedAt: null },
+  } as unknown as T;
+}
+
+function makeRoof(): RoofEntity {
+  return {
+    id: 'roof_1',
+    name: 'R1',
+    type: 'roof',
+    kind: 'pitched',
+    layerId: 'L',
+    params: {
+      outline: {
+        vertices: [
+          { x: 0, y: 0, z: 0 },
+          { x: 4000, y: 0, z: 0 },
+          { x: 4000, y: 3000, z: 0 },
+          { x: 0, y: 3000, z: 0 },
+        ],
+      },
+      edges: [
+        { definesSlope: false, slope: 0, overhangMm: 0 },
+        { definesSlope: false, slope: 0, overhangMm: 0 },
+        { definesSlope: false, slope: 0, overhangMm: 0 },
+        { definesSlope: false, slope: 0, overhangMm: 0 },
+      ],
+      slopeUnit: 'deg',
+      basePivotZ: 3000,
+      thickness: 200,
+    },
+    geometry: { bbox: { min: { x: 0, y: 0, z: 2.8 }, max: { x: 4000, y: 3000, z: 3 } } },
+    validation: { hasCodeViolations: false, violationKeys: [], lastValidatedAt: null },
+  } as unknown as RoofEntity;
+}
+
+function makeUnderfloor(): MepUnderfloorEntity {
+  return {
+    id: 'mufl_1',
+    name: 'UF1',
+    type: 'mep-underfloor',
+    kind: 'wet',
+    layerId: 'L',
+    params: {
+      kind: 'wet',
+      footprint: {
+        vertices: [
+          { x: 0, y: 0, z: 0 },
+          { x: 2000, y: 0, z: 0 },
+          { x: 2000, y: 2000, z: 0 },
+          { x: 0, y: 2000, z: 0 },
+        ],
+      },
+      pipeSpacingMm: 150,
+      edgeClearanceMm: 100,
+      patternType: 'boustrophedon',
+      entrySide: 0,
+      screedOffsetMm: 50,
+      connectorDiameterMm: 16,
+      connectors: [],
+    },
+    geometry: { bbox: { min: { x: 0, y: 0 }, max: { x: 2000, y: 2000 } } },
+    validation: { hasCodeViolations: false, violationKeys: [], lastValidatedAt: null },
+  } as unknown as MepUnderfloorEntity;
+}
+
 describe('ADR-363 Phase 7A — calculateBimMovedGeometry', () => {
   it('wall: shifts params.start + params.end by delta, preserves z', () => {
     const patch = calculateBimMovedGeometry(makeWall() as unknown as Entity, DELTA);
@@ -250,5 +338,50 @@ describe('ADR-363 Phase 7A — calculateBimMovedGeometry', () => {
     };
     expect(patch.params.startMiter).toBeUndefined();
     expect(patch.params.endMiter).toBeUndefined();
+  });
+});
+
+describe('ADR-363 Phase 1G.5 — point/polygon BIM move SSoT gap fix', () => {
+  it.each([
+    ['mep-radiator', () => makeCentredBoxEquipment<MepRadiatorEntity>('mep-radiator', 'rad_1')],
+    ['mep-boiler', () => makeCentredBoxEquipment<MepBoilerEntity>('mep-boiler', 'blr_1')],
+    ['mep-water-heater', () => makeCentredBoxEquipment<MepWaterHeaterEntity>('mep-water-heater', 'wht_1')],
+  ])('%s: shifts params.position by delta + recomputes geometry (no longer a no-op)', (_type, make) => {
+    const patch = calculateBimMovedGeometry(make() as unknown as Entity, DELTA) as {
+      params: { position: { x: number; y: number; z?: number } };
+      geometry: unknown;
+    } | null;
+    expect(patch).not.toBeNull();
+    expect(patch).not.toEqual({});
+    expect(patch!.params.position).toEqual({ x: 3000, y: 2500, z: 800 });
+    expect(patch!.geometry).toBeDefined();
+  });
+
+  it('roof: shifts every params.outline vertex by delta + recomputes geometry, preserves z', () => {
+    const patch = calculateBimMovedGeometry(makeRoof() as unknown as Entity, DELTA) as {
+      params: { outline: { vertices: readonly { x: number; y: number; z?: number }[] } };
+      geometry: unknown;
+    };
+    expect(patch.params.outline.vertices).toEqual([
+      { x: 1000, y: 500, z: 0 },
+      { x: 5000, y: 500, z: 0 },
+      { x: 5000, y: 3500, z: 0 },
+      { x: 1000, y: 3500, z: 0 },
+    ]);
+    expect(patch.geometry).toBeDefined();
+  });
+
+  it('mep-underfloor: shifts every params.footprint vertex by delta + recomputes geometry', () => {
+    const patch = calculateBimMovedGeometry(makeUnderfloor() as unknown as Entity, DELTA) as {
+      params: { footprint: { vertices: readonly { x: number; y: number; z?: number }[] } };
+      geometry: unknown;
+    };
+    expect(patch.params.footprint.vertices).toEqual([
+      { x: 1000, y: 500, z: 0 },
+      { x: 3000, y: 500, z: 0 },
+      { x: 3000, y: 2500, z: 0 },
+      { x: 1000, y: 2500, z: 0 },
+    ]);
+    expect(patch.geometry).toBeDefined();
   });
 });

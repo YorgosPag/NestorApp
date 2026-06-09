@@ -23,6 +23,8 @@ import { gripToVertexRefs } from '../../systems/grip/grip-to-vertex-refs';
 import { StretchEntityCommand, type StretchParams } from '../../core/commands/entity-commands/StretchEntityCommand';
 import { CopyEntityCommand, type CopyEntityParams } from '../../core/commands/entity-commands/CopyEntityCommand';
 import { GripCopyModeStore } from '../../systems/grip/GripCopyModeStore';
+import { AltKeyTracker } from '../../keyboard/AltKeyTracker';
+import { CtrlKeyTracker } from '../../keyboard/CtrlKeyTracker';
 import type { Entity } from '../../types/entities';
 export type { DxfCommitDeps, OverlayCommitDeps } from './unified-grip-types';
 import type { DxfCommitDeps, OverlayCommitDeps } from './unified-grip-types';
@@ -92,6 +94,34 @@ import {
   commitRayGripDrag,
   commitDimensionGripDrag,
 } from './grip-parametric-commits';
+/**
+ * ADR-363 Phase 1G.5 — whole-entity "move from characteristic point" (AutoCAD
+ * base-point move). Translates the ENTIRE entity by `delta` via
+ * `deps.moveEntities` (→ MoveEntityCommand → `calculateBimMovedGeometry`), or
+ * clones it with the same displacement when `copy` is set (CopyEntityCommand,
+ * copy-with-base-point). Shared SSoT for the `mode === 'move'` branch AND the
+ * Alt-modifier bypass so both routes stay byte-identical.
+ */
+function commitWholeEntityMove(
+  grip: UnifiedGripInfo,
+  delta: Point2D,
+  deps: DxfCommitDeps,
+  copy: boolean,
+): void {
+  if (!grip.entityId) return;
+  if (copy) {
+    const sceneManager = createSceneManagerAdapter(deps);
+    if (!sceneManager) return;
+    const params: CopyEntityParams = { vertexMoves: [], anchorMoves: [grip.entityId], displacement: delta };
+    const command = new CopyEntityCommand(params, sceneManager);
+    if (command.validate() !== null) return;
+    deps.execute(command);
+    GripCopyModeStore.bumpCount();
+    return;
+  }
+  deps.moveEntities([grip.entityId], delta, { isDragging: false });
+}
+
 /** ADR-349 Phase 1c-A/B2/B3 — mode-aware DXF grip commit (stretch/move/rotate/scale/mirror). */
 export function commitDxfGripDragModeAware(
   grip: UnifiedGripInfo,
@@ -117,6 +147,20 @@ export function commitDxfGripDragModeAware(
   }
   if (delta.x === 0 && delta.y === 0) return;
   if (!grip.entityId) return;
+  // ADR-363 Phase 1G.5 — Alt held → whole-entity "move from characteristic
+  // point" (AutoCAD base-point move). Bypasses EVERY parametric grip path
+  // below: the grabbed grip (corner / endpoint / midpoint / thickness / corner-
+  // resize) becomes the base point — `delta` is already measured from
+  // `grip.position` upstream (`runGripMouseUp`) — so the WHOLE entity
+  // translates instead of reshaping. Alt+Ctrl (or the right-click Copy toggle)
+  // clones with the same base point. This is the SOLE move-from-point path for
+  // params-driven BIM entities, whose parametric returns otherwise pre-empt the
+  // `mode === 'move'` branch far below.
+  if (AltKeyTracker.getSnapshot()) {
+    const copy = GripCopyModeStore.getSnapshot().enabled || CtrlKeyTracker.getSnapshot();
+    commitWholeEntityMove(grip, delta, deps, copy);
+    return;
+  }
   // ADR-358 Phase 5b — stair parametric grip path (5 kinds, §5.12).
   if (grip.stairGripKind) {
     commitStairGripDrag(grip, delta, deps);
@@ -286,22 +330,9 @@ export function commitDxfGripDragModeAware(
   const copyOn = GripCopyModeStore.getSnapshot().enabled;
 
   if (mode === 'move') {
-    if (copyOn) {
-      // Copy + Move = clone-with-anchor-translation through `CopyEntityCommand`.
-      const sceneManager = createSceneManagerAdapter(deps);
-      if (!sceneManager) return;
-      const params: CopyEntityParams = {
-        vertexMoves: [],
-        anchorMoves: [grip.entityId],
-        displacement: delta,
-      };
-      const command = new CopyEntityCommand(params, sceneManager);
-      if (command.validate() !== null) return;
-      deps.execute(command);
-      GripCopyModeStore.bumpCount();
-      return;
-    }
-    deps.moveEntities([grip.entityId], delta, { isDragging: false });
+    // Copy + Move = clone-with-anchor-translation; plain Move = whole-entity
+    // translate. Shared with the Alt base-point bypass (single SSoT).
+    commitWholeEntityMove(grip, delta, deps, copyOn);
     return;
   }
   if (mode === 'rotate' || mode === 'scale' || mode === 'mirror') {
