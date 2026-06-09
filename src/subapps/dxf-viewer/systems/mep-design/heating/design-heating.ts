@@ -124,13 +124,12 @@ export function designHeating(
   }
   const returnSink = resolveHeatingReturnSink(entities);
   if (returnSink) {
-    // ADR-429 Slice 3B — pair the return as a parallel offset of the supply spine when there
-    // are no walls to detour around; with obstacles, keep the independent wall-aware route.
-    const canPair =
-      supply != null && obstacles.length === 0 && supply.segments.some((s) => s.role === 'trunk');
+    // ADR-429 Slice 3B/3C — pair the return as a parallel offset of the supply spine. Wall-aware
+    // (3C): the offset twin is locally A*-detoured by the core wherever it would land on a wall.
+    const canPair = supply != null && supply.segments.some((s) => s.role === 'trunk');
     networks.push(
       canPair
-        ? buildPairedReturnNetwork(supply!, returnSink, demands, discipline)
+        ? buildPairedReturnNetwork(supply!, returnSink, demands, discipline, obstacles)
         : buildNetwork(returnSink, demands, discipline, obstacles),
     );
   } else {
