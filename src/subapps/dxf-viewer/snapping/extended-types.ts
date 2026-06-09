@@ -43,6 +43,7 @@ export enum ExtendedSnapType {
   DIM_LINE = 'dim_line',            // ADR-362 I1: snap to dimension line for baseline/continued chains
   BIM_COLUMN_CENTER  = 'bim_column_center',   // ADR-363 Phase 5.5i: structural column center-axis snap
   BIM_WALL_CORNER    = 'bim_wall_corner',    // ADR-370: wall face corner (outer/inner edge)
+  BIM_WALL_FACE      = 'bim_wall_face',       // ADR-363 Φ1G.5 Slice 2i: wall outer/inner FACE line (face-to-face magnetism)
   BIM_BEAM_CORNER    = 'bim_beam_corner',    // ADR-370: beam outline corner
   BIM_SLAB_CORNER    = 'bim_slab_corner',    // ADR-370: slab polygon vertex
   BIM_COLUMN_CORNER  = 'bim_column_corner',  // ADR-370: column perimeter corner
@@ -59,6 +60,14 @@ export interface SnapCandidate {
   distance: number;
   priority: number;
   entityId?: string;
+  /**
+   * ADR-363 Φ1G.5 Slice 2i — the linear reference the snap projected onto (a wall
+   * face line, a wall axis, a grid line). Present ONLY for *linear* snaps (faces /
+   * axes / grids); discrete point snaps (endpoint / corner / midpoint) leave it
+   * undefined. Surfaced up through `ProSnapResult.snapPoint` so the 3D gizmo can
+   * draw a Revit dashed alignment line along it. Additive / back-compat.
+   */
+  referenceSegment?: { start: Point2D; end: Point2D };
 }
 
 export interface ProSnapResult {
@@ -124,6 +133,7 @@ export const DEFAULT_PRO_SNAP_SETTINGS: ProSnapSettings = {
     ExtendedSnapType.DIM_LINE,          // ADR-362 I1: dimension line snap
     ExtendedSnapType.BIM_COLUMN_CENTER,   // ADR-363 Phase 5.5i: column center axis snap
     ExtendedSnapType.BIM_WALL_CORNER,     // ADR-370: wall face corner
+    ExtendedSnapType.BIM_WALL_FACE,       // ADR-363 Φ1G.5 Slice 2i: wall face line (face magnetism)
     ExtendedSnapType.BIM_BEAM_CORNER,     // ADR-370: beam outline corner
     ExtendedSnapType.BIM_SLAB_CORNER,     // ADR-370: slab polygon vertex
     ExtendedSnapType.BIM_COLUMN_CORNER,   // ADR-370: column perimeter corner
@@ -153,6 +163,7 @@ export const DEFAULT_PRO_SNAP_SETTINGS: ProSnapSettings = {
     ExtendedSnapType.QUADRANT,
     ExtendedSnapType.EXTENSION,
     ExtendedSnapType.NODE,
+    ExtendedSnapType.BIM_WALL_FACE,       // ADR-363 Φ1G.5 Slice 2i: linear face snap — runs after discrete points, before NEAREST
     ExtendedSnapType.NEAREST,
     ExtendedSnapType.NEAR,
     ExtendedSnapType.GUIDE,              // ADR-189: Construction guide snap
@@ -184,6 +195,7 @@ export const DEFAULT_PRO_SNAP_SETTINGS: ProSnapSettings = {
     [ExtendedSnapType.DIM_LINE]: 10,            // ADR-362 I1: dim line reference point
     [ExtendedSnapType.BIM_COLUMN_CENTER]:   10, // ADR-363 Phase 5.5i: column center axis snap
     [ExtendedSnapType.BIM_WALL_CORNER]:     10, // ADR-370
+    [ExtendedSnapType.BIM_WALL_FACE]:       30, // ADR-363 Φ1G.5 Slice 2i/2j: wall face line (2j: strong diagnostic pull, Giorgio)
     [ExtendedSnapType.BIM_BEAM_CORNER]:     10, // ADR-370
     [ExtendedSnapType.BIM_SLAB_CORNER]:     10, // ADR-370
     [ExtendedSnapType.BIM_COLUMN_CORNER]:   10, // ADR-370

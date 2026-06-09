@@ -326,6 +326,48 @@ export function useDxfViewerNotifications(): void {
       }),
     );
 
+    // ADR-433 Slice 2 — fire-protection (πυρόσβεση) auto-design feedback (Generate → review → accept).
+    unsubs.push(
+      EventBus.on('bim:fire-generated', ({ networkCount, warningCount }) => {
+        toast.info(
+          warningCount > 0
+            ? t('fire.generatedWithWarnings', { count: networkCount, warnings: warningCount })
+            : t('fire.generated', { count: networkCount }),
+        );
+      }),
+    );
+    unsubs.push(
+      EventBus.on('bim:fire-empty', ({ reason }) => {
+        toast.warning(t(`fire.empty.${reason}`));
+      }),
+    );
+    unsubs.push(
+      EventBus.on('bim:fire-committed', ({ networkCount, segmentCount }) => {
+        toast.success(t('fire.committed', { count: networkCount, segments: segmentCount }));
+      }),
+    );
+
+    // ADR-434 Slice 2 — gas (φυσικό αέριο) auto-design feedback (Generate → review → accept).
+    unsubs.push(
+      EventBus.on('bim:gas-generated', ({ networkCount, warningCount }) => {
+        toast.info(
+          warningCount > 0
+            ? t('gas.generatedWithWarnings', { count: networkCount, warnings: warningCount })
+            : t('gas.generated', { count: networkCount }),
+        );
+      }),
+    );
+    unsubs.push(
+      EventBus.on('bim:gas-empty', ({ reason }) => {
+        toast.warning(t(`gas.empty.${reason}`));
+      }),
+    );
+    unsubs.push(
+      EventBus.on('bim:gas-committed', ({ networkCount, segmentCount }) => {
+        toast.success(t('gas.committed', { count: networkCount, segments: segmentCount }));
+      }),
+    );
+
     // ADR-401 Phase G.3 — stair attach mirrors (reuse the generic messages).
     unsubs.push(
       EventBus.on('bim:stairs-auto-attached', () => {

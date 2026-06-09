@@ -42,6 +42,10 @@ import { socketFixtureToolKind } from '../../bim/mep-fixtures/socket-symbol-spec
 import { dataOutletFixtureToolKind } from '../../bim/mep-fixtures/data-outlet-symbol-spec';
 import { airTerminalFixtureToolKind } from '../../bim/mep-fixtures/air-terminal-symbol-spec';
 import { ahuFixtureToolKind } from '../../bim/mep-fixtures/ahu-symbol-spec';
+import { sprinklerFixtureToolKind } from '../../bim/mep-fixtures/sprinkler-symbol-spec';
+import { fireRiserFixtureToolKind } from '../../bim/mep-fixtures/fire-riser-symbol-spec';
+import { gasMeterFixtureToolKind } from '../../bim/mep-fixtures/gas-meter-symbol-spec';
+import { gasCookerFixtureToolKind } from '../../bim/mep-fixtures/gas-cooker-symbol-spec';
 import { addRailingToScene } from '../../bim/railings/add-railing-to-scene';
 import type { LevelsHookReturn } from '../../systems/levels';
 
@@ -103,6 +107,14 @@ export function useSpecialToolsPlacementTools(
   // tool; their tool ids drive the `'air-terminal'` / `'ahu'` presets.
   const airTerminalKind = airTerminalFixtureToolKind(activeTool);
   const ahuKind = ahuFixtureToolKind(activeTool);
+  // ADR-433 — the fire sprinkler head (καταιονητήρας) + fire riser (στήλη) likewise share
+  // the fixture tool; their tool ids drive the `'sprinkler'` / `'fire-riser'` presets.
+  const sprinklerKind = sprinklerFixtureToolKind(activeTool);
+  const fireRiserKind = fireRiserFixtureToolKind(activeTool);
+  // ADR-434 — the gas meter (μετρητής αερίου) source + gas cooker (εστία αερίου) terminal
+  // likewise share the fixture tool; their tool ids drive the `'gas-meter'` / `'gas-cooker'` presets.
+  const gasMeterKind = gasMeterFixtureToolKind(activeTool);
+  const gasCookerKind = gasCookerFixtureToolKind(activeTool);
   const isMepFixtureTool =
     activeTool === 'mep-fixture' ||
     activeTool === 'mep-floor-drain' ||
@@ -110,7 +122,11 @@ export function useSpecialToolsPlacementTools(
     socketKind !== null ||
     dataOutletKind !== null ||
     airTerminalKind !== null ||
-    ahuKind !== null;
+    ahuKind !== null ||
+    sprinklerKind !== null ||
+    fireRiserKind !== null ||
+    gasMeterKind !== null ||
+    gasCookerKind !== null;
   useToolLifecycle(isMepFixtureTool, mepFixtureTool.activate, mepFixtureTool.deactivate);
   useEffect(() => {
     if (activeTool === 'mep-fixture') {
@@ -127,8 +143,16 @@ export function useSpecialToolsPlacementTools(
       mepFixtureTool.setParamOverrides({ kind: airTerminalKind });
     } else if (ahuKind !== null) {
       mepFixtureTool.setParamOverrides({ kind: ahuKind });
+    } else if (sprinklerKind !== null) {
+      mepFixtureTool.setParamOverrides({ kind: sprinklerKind });
+    } else if (fireRiserKind !== null) {
+      mepFixtureTool.setParamOverrides({ kind: fireRiserKind });
+    } else if (gasMeterKind !== null) {
+      mepFixtureTool.setParamOverrides({ kind: gasMeterKind });
+    } else if (gasCookerKind !== null) {
+      mepFixtureTool.setParamOverrides({ kind: gasCookerKind });
     }
-  }, [activeTool, plumbingKind, socketKind, dataOutletKind, airTerminalKind, ahuKind, mepFixtureTool.setParamOverrides]);
+  }, [activeTool, plumbingKind, socketKind, dataOutletKind, airTerminalKind, ahuKind, sprinklerKind, fireRiserKind, gasMeterKind, gasCookerKind, mepFixtureTool.setParamOverrides]);
 
   // ADR-410 — FURNITURE TOOL: single-click placement; entity appended+broadcast.
   const furnitureTool = useFurnitureTool({

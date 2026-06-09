@@ -58,7 +58,10 @@ export abstract class BaseSnapEngine {
     description: string,
     distance: number,
     priority: number,
-    entityId?: string
+    entityId?: string,
+    // ADR-363 Φ1G.5 Slice 2i — the linear reference the snap projected onto (wall
+    // face / axis / grid line), for the Revit dashed alignment line. Optional.
+    referenceSegment?: { start: Point2D; end: Point2D },
   ): SnapCandidate {
     return {
       point,
@@ -66,7 +69,8 @@ export abstract class BaseSnapEngine {
       description,
       distance,
       priority,
-      entityId
+      entityId,
+      ...(referenceSegment ? { referenceSegment } : {}),
     };
   }
 

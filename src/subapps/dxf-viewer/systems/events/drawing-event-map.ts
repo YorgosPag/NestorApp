@@ -294,6 +294,14 @@ export interface DrawingEventMap {
   'bim:hvac-generated': { networkCount: number; warningCount: number };
   'bim:hvac-empty': { reason: 'no-terminals' | 'no-source' };
   'bim:hvac-committed': { networkCount: number; segmentCount: number };
+  // ADR-433 Slice 2 — fire-protection (πυρόσβεση) auto-design feedback (Generate → review → accept).
+  'bim:fire-generated': { networkCount: number; warningCount: number };
+  'bim:fire-empty': { reason: 'no-terminals' | 'no-source' };
+  'bim:fire-committed': { networkCount: number; segmentCount: number };
+  // ADR-434 Slice 2 — gas (φυσικό αέριο) auto-design feedback (Generate → review → accept).
+  'bim:gas-generated': { networkCount: number; warningCount: number };
+  'bim:gas-empty': { reason: 'no-terminals' | 'no-source' };
+  'bim:gas-committed': { networkCount: number; segmentCount: number };
   // ADR-407 — BIM railing params + delete events
   'bim:railing-params-updated': { railingId: string };
   'bim:railing-delete-requested': { railingId: string };

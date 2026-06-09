@@ -36,6 +36,10 @@ import { isSocketKind } from '../../bim/mep-fixtures/socket-symbol-spec';
 import { isDataOutletKind } from '../../bim/mep-fixtures/data-outlet-symbol-spec';
 import { isAirTerminalKind } from '../../bim/mep-fixtures/air-terminal-symbol-spec';
 import { isAhuKind } from '../../bim/mep-fixtures/ahu-symbol-spec';
+import { isSprinklerKind } from '../../bim/mep-fixtures/sprinkler-symbol-spec';
+import { isFireRiserKind } from '../../bim/mep-fixtures/fire-riser-symbol-spec';
+import { isGasMeterKind } from '../../bim/mep-fixtures/gas-meter-symbol-spec';
+import { isGasCookerKind } from '../../bim/mep-fixtures/gas-cooker-symbol-spec';
 import { mepFixtureToolBridgeStore } from '../../ui/ribbon/hooks/bridge/mep-fixture-tool-bridge-store';
 import { EventBus } from '../../systems/events/EventBus';
 
@@ -186,6 +190,12 @@ export function useMepFixtureTool(options: UseMepFixtureToolOptions = {}): UseMe
     // ADR-432 — the air terminal (στόμιο) + AHU (ΚΚΜ) show their own placement prompts.
     if (s.overrides.kind && isAirTerminalKind(s.overrides.kind)) return 'tools.mepAirTerminal.statusPosition';
     if (s.overrides.kind && isAhuKind(s.overrides.kind)) return 'tools.mepAhu.statusPosition';
+    // ADR-433 — the sprinkler head (καταιονητήρας) + fire riser (στήλη) show their own prompts.
+    if (s.overrides.kind && isSprinklerKind(s.overrides.kind)) return 'tools.mepSprinkler.statusPosition';
+    if (s.overrides.kind && isFireRiserKind(s.overrides.kind)) return 'tools.mepFireRiser.statusPosition';
+    // ADR-434 — the gas meter (μετρητής αερίου) + gas cooker (εστία) show their own prompts.
+    if (s.overrides.kind && isGasMeterKind(s.overrides.kind)) return 'tools.mepGasMeter.statusPosition';
+    if (s.overrides.kind && isGasCookerKind(s.overrides.kind)) return 'tools.mepGasCooker.statusPosition';
     return 'tools.mepFixture.statusPosition';
   }, []);
 

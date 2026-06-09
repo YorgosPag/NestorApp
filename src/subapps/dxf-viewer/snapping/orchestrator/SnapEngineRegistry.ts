@@ -44,6 +44,8 @@ import { DimLineSnapEngine } from '../engines/DimLineSnapEngine';
 import { ColumnCenterSnapEngine } from '../engines/ColumnCenterSnapEngine';
 // ADR-370: BIM face-corner snap engines
 import { WallCornerSnapEngine } from '../engines/WallCornerSnapEngine';
+// ADR-363 Φ1G.5 Slice 2i: BIM wall face-line snap (face-to-face magnetism)
+import { WallFaceSnapEngine } from '../engines/WallFaceSnapEngine';
 import { BeamCornerSnapEngine } from '../engines/BeamCornerSnapEngine';
 import { SlabCornerSnapEngine } from '../engines/SlabCornerSnapEngine';
 import { ColumnCornerSnapEngine } from '../engines/ColumnCornerSnapEngine';
@@ -98,6 +100,8 @@ export class SnapEngineRegistry {
     this.engines.set(ExtendedSnapType.BIM_COLUMN_CENTER, new ColumnCenterSnapEngine());
     // ADR-370: BIM face-corner snaps (priority -2 — highest structural precision)
     this.engines.set(ExtendedSnapType.BIM_WALL_CORNER,    new WallCornerSnapEngine());
+    // ADR-363 Φ1G.5 Slice 2i: wall FACE line snap (face-to-face magnetism, priority -1.8)
+    this.engines.set(ExtendedSnapType.BIM_WALL_FACE,      new WallFaceSnapEngine());
     this.engines.set(ExtendedSnapType.BIM_BEAM_CORNER,    new BeamCornerSnapEngine());
     this.engines.set(ExtendedSnapType.BIM_SLAB_CORNER,    new SlabCornerSnapEngine());
     this.engines.set(ExtendedSnapType.BIM_COLUMN_CORNER,  new ColumnCornerSnapEngine());
