@@ -90,8 +90,8 @@ export function entityWorldAABB(
   if (isMepSegmentEntity(entity)) return segmentEntity(entity, sceneToM, systemIds);
 
   if (isBeamEntity(entity) || isWallEntity(entity) || isSlabEntity(entity) || isMepFittingEntity(entity)) {
-    const bbox = entity.geometry.bbox; // Z already in metres for these kinds
-    return { id: entity.id, kind: entity.type, aabb: bboxToAabb(bbox, sceneToM, bbox.min.z, bbox.max.z), systemIds };
+    const bbox = entity.geometry.bbox; // Z already in metres for these kinds (optional → 0)
+    return { id: entity.id, kind: entity.type, aabb: bboxToAabb(bbox, sceneToM, bbox.min.z ?? 0, bbox.max.z ?? 0), systemIds };
   }
 
   if (isColumnEntity(entity)) {
