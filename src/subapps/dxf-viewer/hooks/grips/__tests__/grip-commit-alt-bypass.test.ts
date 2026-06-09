@@ -15,7 +15,7 @@
 import { commitDxfGripDragModeAware } from '../grip-commit-adapters';
 import type { DxfCommitDeps } from '../unified-grip-types';
 import type { UnifiedGripInfo } from '../unified-grip-types';
-import { AltKeyTracker } from '../../../keyboard/AltKeyTracker';
+import { GripAltMoveStore } from '../../../systems/grip/GripAltMoveStore';
 import { CtrlKeyTracker } from '../../../keyboard/CtrlKeyTracker';
 import { GripCopyModeStore } from '../../../systems/grip/GripCopyModeStore';
 
@@ -59,29 +59,29 @@ function wallGrip(): UnifiedGripInfo {
 
 describe('ADR-363 Phase 1G.5 — Alt move-from-characteristic-point bypass', () => {
   afterEach(() => {
-    AltKeyTracker._setForTest(false);
+    GripAltMoveStore.clear();
     CtrlKeyTracker._setForTest(false);
     GripCopyModeStore.clear();
     commitWallGripDrag.mockClear();
   });
 
-  it('Alt held → whole-entity move (moveEntities), parametric path bypassed', () => {
-    AltKeyTracker._setForTest(true);
+  it('Alt-armed → whole-entity move (moveEntities), parametric path bypassed', () => {
+    GripAltMoveStore.arm();
     const { deps, moveEntities } = makeDeps();
     commitDxfGripDragModeAware(wallGrip(), DELTA, deps, 'stretch');
     expect(moveEntities).toHaveBeenCalledWith(['wall_1'], DELTA, { isDragging: false });
     expect(commitWallGripDrag).not.toHaveBeenCalled();
   });
 
-  it('Alt NOT held → parametric wall path runs (zero regression)', () => {
+  it('NOT Alt-armed → parametric wall path runs (zero regression)', () => {
     const { deps, moveEntities } = makeDeps();
     commitDxfGripDragModeAware(wallGrip(), DELTA, deps, 'stretch');
     expect(commitWallGripDrag).toHaveBeenCalledTimes(1);
     expect(moveEntities).not.toHaveBeenCalled();
   });
 
-  it('Alt + Copy toggle → clone-with-base (CopyEntityCommand), no plain move', () => {
-    AltKeyTracker._setForTest(true);
+  it('Alt-armed + Copy toggle → clone-with-base (CopyEntityCommand), no plain move', () => {
+    GripAltMoveStore.arm();
     GripCopyModeStore.toggle(); // enable
     const { deps, moveEntities, execute } = makeDeps();
     commitDxfGripDragModeAware(wallGrip(), DELTA, deps, 'stretch');
@@ -90,8 +90,8 @@ describe('ADR-363 Phase 1G.5 — Alt move-from-characteristic-point bypass', () 
     expect(commitWallGripDrag).not.toHaveBeenCalled();
   });
 
-  it('Alt + Ctrl → clone-with-base (AutoCAD MOVE→COPY composition)', () => {
-    AltKeyTracker._setForTest(true);
+  it('Alt-armed + Ctrl → clone-with-base (AutoCAD MOVE→COPY composition)', () => {
+    GripAltMoveStore.arm();
     CtrlKeyTracker._setForTest(true);
     const { deps, moveEntities, execute } = makeDeps();
     commitDxfGripDragModeAware(wallGrip(), DELTA, deps, 'stretch');
@@ -99,8 +99,8 @@ describe('ADR-363 Phase 1G.5 — Alt move-from-characteristic-point bypass', () 
     expect(moveEntities).not.toHaveBeenCalled();
   });
 
-  it('Alt + zero delta (click, no drag) → no-op (drag guard precedes bypass)', () => {
-    AltKeyTracker._setForTest(true);
+  it('Alt-armed + zero delta (click, no drag) → no-op (drag guard precedes bypass)', () => {
+    GripAltMoveStore.arm();
     const { deps, moveEntities, execute } = makeDeps();
     commitDxfGripDragModeAware(wallGrip(), { x: 0, y: 0 }, deps, 'stretch');
     expect(moveEntities).not.toHaveBeenCalled();

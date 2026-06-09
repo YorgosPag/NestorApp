@@ -31,6 +31,7 @@ import {
 } from './overlay-grip-commit-adapters';
 import { GripModeStore } from '../../systems/grip/GripModeStore';
 import { GripBasePointStore } from '../../systems/grip/GripBasePointStore';
+import { GripAltMoveStore } from '../../systems/grip/GripAltMoveStore';
 import { GripCopyModeStore } from '../../systems/grip/GripCopyModeStore';
 import { GripReferenceStore } from '../../systems/grip/GripReferenceStore';
 import { GripSessionUndoStore } from '../../systems/grip/GripSessionUndoStore';
@@ -198,11 +199,19 @@ export function runGripMouseDown(worldPos: Point2D, isShift: boolean, ctx: GripM
   }
   // DXF grip
   if (nearGrip.source === 'dxf') {
+    // ADR-363 Phase 1G.5 — Alt held at press → «move-from-characteristic-point».
+    // The grabbed grip (corner / endpoint / midpoint / thickness) becomes the
+    // base point of a WHOLE-entity move: skip the hot-grip click-click flow and
+    // route the gesture through the plain press-drag `dragging` path so the
+    // ghost + commit translate the entire entity. Arm the SSoT the live ghost
+    // (buildDxfDragPreview) and the commit (commitDxfGripDragModeAware) read.
+    const altMove = GripAltMoveStore.wasAltAtMouseDown();
     // ADR-363 Phase 1G — wall corner grips use the AutoCAD hot-grip (click-
     // click) flow instead of press-drag-release: 1st click enters `hotGrip`,
     // cursor moves live, 2nd click (mouseup) commits. All other wall grips
-    // fall through to the standard `dragging` path below.
-    if (resolveHotGripMouseDown(phase, hotGripKindOf(nearGrip)) === 'enter') {
+    // fall through to the standard `dragging` path below. Alt bypasses this so
+    // the corner becomes a base-point move handle.
+    if (!altMove && resolveHotGripMouseDown(phase, hotGripKindOf(nearGrip)) === 'enter') {
       const op = hotGripOpForKind(hotGripKindOf(nearGrip))!; // non-null: 'enter' ⇒ hot kind
       setActiveGrip(nearGrip);
       setPhase('hotGrip');
@@ -239,6 +248,9 @@ export function runGripMouseDown(worldPos: Point2D, isShift: boolean, ctx: GripM
     unlockGripSnapPosition();
     anchorRef.current = nearGrip.position;
     setCurrentWorldPos(nearGrip.position);
+    // ADR-363 Phase 1G.5 — arm the whole-entity move for this drag (Alt at press).
+    // The anchor is the grabbed grip position → base point of the move.
+    if (altMove) GripAltMoveStore.arm();
     if (warmTimerRef.current) { clearTimeout(warmTimerRef.current); warmTimerRef.current = null; }
     // ADR-371 extension — expose active grip to mouse handlers for face corner projection snap.
     // ADR-398 — also publish the column grip kind + the resize/drag anchor (grip

@@ -38,6 +38,7 @@ import { WallRotateHotGripStore } from '../../bim/walls/wall-rotate-hotgrip-stor
 import { runGripMouseDown, runGripMouseUp } from './grip-mouse-handlers';
 import type { DxfCommitDeps, OverlayCommitDeps } from './grip-commit-adapters';
 import { GripBasePointStore } from '../../systems/grip/GripBasePointStore';
+import { GripAltMoveStore } from '../../systems/grip/GripAltMoveStore';
 import { GripCopyModeStore } from '../../systems/grip/GripCopyModeStore';
 import { GripReferenceStore } from '../../systems/grip/GripReferenceStore';
 import { GripSessionUndoStore } from '../../systems/grip/GripSessionUndoStore';
@@ -218,6 +219,9 @@ export function useUnifiedGripInteraction(
     hotGripRefEndRef.current = null;
     hotGripAlignStartRef.current = null;
     WallRotateHotGripStore.clear();
+    // ADR-363 Phase 1G.5 — disarm the Alt whole-entity move at the end of every
+    // grip session so the next drag starts from its natural parametric behaviour.
+    GripAltMoveStore.clear();
     // ADR-363 Phase 1G.3 — drop any hot-grip step hint so a finished/cancelled
     // flow does not leave a stale "click alignment point" prompt in the status bar.
     toolHintOverrideStore.setOverride(null);
@@ -333,7 +337,8 @@ export function useUnifiedGripInteraction(
           currentWorldPos,
         );
       }
-      return buildDxfDragPreview(phase, activeGrip, anchorRef.current, currentWorldPos);
+      // ADR-363 Phase 1G.5 — Alt drag → whole-entity move ghost (base = grabbed grip).
+      return buildDxfDragPreview(phase, activeGrip, anchorRef.current, currentWorldPos, GripAltMoveStore.getActive());
     },
     [phase, activeGrip, currentWorldPos],
   );

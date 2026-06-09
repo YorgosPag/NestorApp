@@ -29,11 +29,20 @@ export function buildDxfDragPreview(
   activeGrip: UnifiedGripInfo | null,
   anchorPos: Point2D | null,
   currentWorldPos: Point2D | null,
+  altMove = false,
 ): DxfGripDragPreview | null {
   // ADR-363 Phase 1G — `hotGrip` reuses the same preview pipeline as `dragging`
   // (live ghost + delta) so the corner click-click move shows the same wall ghost.
   if ((phase !== 'dragging' && phase !== 'hotGrip') || !activeGrip || activeGrip.source !== 'dxf' || !anchorPos || !currentWorldPos) {
     return null;
+  }
+  const delta = { x: currentWorldPos.x - anchorPos.x, y: currentWorldPos.y - anchorPos.y };
+  // ADR-363 Phase 1G.5 — Alt «move-from-characteristic-point»: emit a parametric-
+  // kind-free snapshot with `movesEntity: true` so `applyEntityPreview` translates
+  // the WHOLE entity by `delta` (via the move SSoT) instead of running a corner /
+  // thickness / resize parametric ghost. The grabbed grip is the base point.
+  if (altMove) {
+    return { entityId: activeGrip.entityId!, gripIndex: activeGrip.gripIndex, delta, movesEntity: true };
   }
   return {
     entityId: activeGrip.entityId!,

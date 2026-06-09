@@ -23,7 +23,7 @@ import { gripToVertexRefs } from '../../systems/grip/grip-to-vertex-refs';
 import { StretchEntityCommand, type StretchParams } from '../../core/commands/entity-commands/StretchEntityCommand';
 import { CopyEntityCommand, type CopyEntityParams } from '../../core/commands/entity-commands/CopyEntityCommand';
 import { GripCopyModeStore } from '../../systems/grip/GripCopyModeStore';
-import { AltKeyTracker } from '../../keyboard/AltKeyTracker';
+import { GripAltMoveStore } from '../../systems/grip/GripAltMoveStore';
 import { CtrlKeyTracker } from '../../keyboard/CtrlKeyTracker';
 import type { Entity } from '../../types/entities';
 export type { DxfCommitDeps, OverlayCommitDeps } from './unified-grip-types';
@@ -147,16 +147,17 @@ export function commitDxfGripDragModeAware(
   }
   if (delta.x === 0 && delta.y === 0) return;
   if (!grip.entityId) return;
-  // ADR-363 Phase 1G.5 — Alt held → whole-entity "move from characteristic
-  // point" (AutoCAD base-point move). Bypasses EVERY parametric grip path
-  // below: the grabbed grip (corner / endpoint / midpoint / thickness / corner-
-  // resize) becomes the base point — `delta` is already measured from
-  // `grip.position` upstream (`runGripMouseUp`) — so the WHOLE entity
-  // translates instead of reshaping. Alt+Ctrl (or the right-click Copy toggle)
-  // clones with the same base point. This is the SOLE move-from-point path for
-  // params-driven BIM entities, whose parametric returns otherwise pre-empt the
-  // `mode === 'move'` branch far below.
-  if (AltKeyTracker.getSnapshot()) {
+  // ADR-363 Phase 1G.5 — Alt-armed drag → whole-entity "move from characteristic
+  // point" (AutoCAD base-point move). The flag is armed at grip mousedown from
+  // the native `e.altKey` (GripAltMoveStore), so it survives the whole drag even
+  // if Alt is released or the window blurs mid-gesture. Bypasses EVERY parametric
+  // grip path below: the grabbed grip (corner / endpoint / midpoint / thickness /
+  // corner-resize) becomes the base point — `delta` is already measured from
+  // `grip.position` upstream — so the WHOLE entity translates instead of
+  // reshaping. Alt+Ctrl (or the right-click Copy toggle) clones with the same
+  // base point. Sole move-from-point path for params-driven BIM entities, whose
+  // parametric returns otherwise pre-empt the `mode === 'move'` branch far below.
+  if (GripAltMoveStore.getActive()) {
     const copy = GripCopyModeStore.getSnapshot().enabled || CtrlKeyTracker.getSnapshot();
     commitWholeEntityMove(grip, delta, deps, copy);
     return;

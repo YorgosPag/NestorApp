@@ -22,6 +22,9 @@
 
 import type { Point2D } from '../types/Types';
 import type { DxfEntityUnion } from '../../canvas-v2/dxf-canvas/dxf-types';
+import type { Entity } from '../../types/entities';
+// ADR-363 Phase 1G.5 — whole-entity translate SSoT (shared by the Alt move ghost + commit).
+import { calculateBimMovedGeometry } from '../../bim/utils/bim-move-geometry';
 import { applyStairGripDrag } from '../../bim/stairs/stair-grips';
 import { computeStairGeometry } from '../../bim/geometry/stairs/StairGeometryService';
 import type { StairEntity } from '../../bim/types/stair-types';
@@ -310,6 +313,19 @@ export function applyEntityPreview(
       type: 'stair',
       stairEntity: ghostStair,
     } as unknown as DxfEntityUnion;
+  }
+
+  // ── ADR-363 Phase 1G.5 — Alt «move-from-characteristic-point» whole-entity ghost ──
+  // Reached when the preview carries `movesEntity` + `delta` but NO parametric
+  // gripKind (every kind-specific branch above returns first). Translate the WHOLE
+  // BIM entity by `delta` through the move SSoT so the live ghost matches the commit
+  // (`calculateBimMovedGeometry`). Non-BIM entities (line/circle/text) → null patch →
+  // fall through to the classic translate path below. `opening` → `{}` (host-derived).
+  if (movesEntity) {
+    const bimPatch = calculateBimMovedGeometry(entity as unknown as Entity, delta);
+    if (bimPatch && Object.keys(bimPatch).length > 0) {
+      return { ...(entity as object), ...bimPatch } as unknown as DxfEntityUnion;
+    }
   }
 
   // Classic (non-parametric) path: whole-translation, edge-stretch, vertex-stretch.
