@@ -70,6 +70,15 @@ export interface HeatLoadBoundary {
    */
   readonly overhangShadingFactor?: number;
   /**
+   * Συντελεστής σκίασης **πλευρικού πτερυγίου** `F_fin` ∈ (0,1] — geometry-derived
+   * per-window από τους κάθετους τοίχους/παραστάδες δίπλα στο παράθυρο (ADR-422 L7.3
+   * Slice D, EN ISO 13790 §11.4.4). Μόνο για εξωτ. παράθυρα με ανιχνεύσιμο κάθετο
+   * πτερύγιο· **υπερισχύει** του manual `finShadingLevel` του χώρου (Slice C) στα
+   * ηλιακά κέρδη (`finShadingFactor ?? getFinShadingFactor(level)` — όχι multiply,
+   * ίδιο φυσικό εμπόδιο). **Absent ⇒ fallback Slice C ⇒ zero-regression.**
+   */
+  readonly finShadingFactor?: number;
+  /**
    * Ολικός συντελεστής ηλιακής διαπερατότητας υαλοπίνακα `g` (SHGC, αδιάστατο) —
    * per-window από τον αριθμό υαλοπινάκων (ADR-422 L7.4, EN 410 / ΤΟΤΕΕ 20701-1).
    * Μόνο για εξωτ. παράθυρα· οδηγεί τα ηλιακά κέρδη (`A·g·F_F·F_sh·…`). **Absent ⇒
@@ -92,6 +101,25 @@ export interface HeatLoadBoundary {
    * απορροφά κάτι· zero-regression έρχεται από το window-only φιλτράρισμα του aggregator).
    */
   readonly solarAbsorptance?: number;
+  /**
+   * Επιφανειακή θερμοχωρητικότητα `κ_m = Σ ρ·c·d_eff` (J/m²K) της αδιαφανούς διάταξης —
+   * geometry-derived από τα στρώματα του assembly (ADR-422 L7.9-B, EN ISO 13790 §12.3.1.1).
+   * Μόνο για **τοίχους** με resolvable `WallDna` (δάπεδα/στέγες/κουφώματα = absent v1)·
+   * ο aggregator το αθροίζει `Σ κ_m·A` → εσωτερική θερμοχωρητικότητα `C_m` του χώρου
+   * (precedence πάνω από την κατηγορία `thermalMassLevel` του L7.9). **Absent ⇒ fallback
+   * κατηγορία/absent ⇒ zero-regression** (custom/άγνωστα υλικά → χωρίς resolvable μάζα).
+   */
+  readonly arealHeatCapacityJperM2K?: number;
+  /**
+   * Override του μειωτικού συντελεστή θερμοκρασίας `b` ενός δαπέδου **επί εδάφους**
+   * (ADR-422 L1.6, EN ISO 13370). Όταν στάμπεται (=1.0), το `uValue` κουβαλά το
+   * effective `U_g` (floor-to-external, ενσωματώνει τη διαδρομή εδάφους) → εφαρμόζεται
+   * με πλήρες ΔΤ αντί του geometry-blind flat `b≈0.5`. Η παρουσία του σηματοδοτεί επίσης
+   * 13370-coupled boundary → ο engine **εξαιρεί** το blanket `ΔU_TB` (το `U_g` ήδη
+   * περιλαμβάνει γεωμετρικά τον edge effect — αποφυγή διπλομέτρησης). **Absent ⇒
+   * `getBoundaryTemperatureFactor(condition)` (flat) + κανονικό ΔU_TB ⇒ zero-regression.**
+   */
+  readonly groundTemperatureFactor?: number;
 }
 
 /** Resolved input για τον υπολογισμό φορτίου ενός χώρου. */
@@ -150,6 +178,12 @@ export interface BoundaryHeatLoss {
    */
   readonly overhangShadingFactor?: number;
   /**
+   * Συντελεστής σκίασης πλευρικού πτερυγίου `F_fin` ∈ (0,1] — propagated από το
+   * `HeatLoadBoundary` (ADR-422 L7.3 Slice D). Absent ⇒ fallback manual `finShadingLevel`
+   * (Slice C). ΔΕΝ επηρεάζει το φορτίο — μόνο τα ηλιακά κέρδη (`derive-annual-energy`).
+   */
+  readonly finShadingFactor?: number;
+  /**
    * Συντελεστής ηλιακής διαπερατότητας υαλοπίνακα `g` (SHGC) — propagated από το
    * `HeatLoadBoundary` (ADR-422 L7.4). Absent ⇒ `GLAZING_SOLAR_FACTOR_G` (0.60).
    * ΔΕΝ επηρεάζει το φορτίο — μόνο τα ηλιακά κέρδη (`derive-annual-energy`).
@@ -167,6 +201,19 @@ export interface BoundaryHeatLoss {
    * (0.60). ΔΕΝ επηρεάζει το φορτίο — μόνο τα ηλιακά κέρδη (`derive-annual-energy`).
    */
   readonly solarAbsorptance?: number;
+  /**
+   * Επιφανειακή θερμοχωρητικότητα `κ_m` (J/m²K) — propagated από το `HeatLoadBoundary`
+   * (ADR-422 L7.9-B). Absent ⇒ χωρίς geometry-derived μάζα (fallback κατηγορία). ΔΕΝ
+   * επηρεάζει το φορτίο — μόνο τη δυναμική αξιοποίηση κερδών (`derive-annual-energy`).
+   */
+  readonly arealHeatCapacityJperM2K?: number;
+  /**
+   * Override συντελεστή `b` δαπέδου επί εδάφους (EN ISO 13370, ADR-422 L1.6) —
+   * propagated από το `HeatLoadBoundary`. Παρόν (=1.0) ⇒ το `factor`/`uValue` αυτής
+   * της επιφάνειας προέρχεται από το 13370 `U_g`. Absent ⇒ flat `b`. Πληροφοριακό
+   * (το εφαρμοσμένο `b` είναι ήδη στο `factor`).
+   */
+  readonly groundTemperatureFactor?: number;
 }
 
 /** Αποτέλεσμα υπολογισμού φορτίου ενός χώρου (`Φ` + breakdown). */

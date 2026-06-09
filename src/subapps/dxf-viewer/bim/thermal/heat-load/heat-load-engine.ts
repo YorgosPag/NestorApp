@@ -45,12 +45,20 @@ function computeBoundaryLoss(
   deltaTC: number,
   thermalBridgeSurchargeWperM2K: number,
 ): BoundaryHeatLoss {
-  const factor = getBoundaryTemperatureFactor(boundary.condition);
+  // L1.6: δάπεδο επί εδάφους με EN ISO 13370 σύζευξη κουβαλά override `b`=1.0 (το
+  // `uValue` είναι ήδη το effective `U_g` με πλήρες ΔΤ). Absent ⇒ flat `b` (ground
+  // ≈0.5) — zero-regression για legacy/degenerate (P≤0) δάπεδα & κάθε άλλο στοιχείο.
+  const overrideFactor = boundary.groundTemperatureFactor;
+  const factor = overrideFactor ?? getBoundaryTemperatureFactor(boundary.condition);
   const u = Number.isFinite(boundary.uValue) ? boundary.uValue : 0;
   const a = Number.isFinite(boundary.area) && boundary.area > 0 ? boundary.area : 0;
-  const deltaU = boundaryReceivesThermalBridge(boundary.kind, boundary.condition)
-    ? thermalBridgeSurchargeWperM2K
-    : 0;
+  // L1.6: το 13370 `U_g` περιλαμβάνει ήδη γεωμετρικά τον edge effect του δαπέδου →
+  // το blanket `ΔU_TB` (EN 12831-1 §6.3.2) θα διπλομετρούσε την περίμετρο ⇒ εξαιρείται
+  // για 13370-coupled δάπεδα (το ψ_g linear edge thermal bridge = future, ADR-422 L1.6).
+  const deltaU =
+    overrideFactor === undefined && boundaryReceivesThermalBridge(boundary.kind, boundary.condition)
+      ? thermalBridgeSurchargeWperM2K
+      : 0;
   const lossW = (u + deltaU) * a * factor * deltaTC;
   const thermalBridgeW = deltaU * a * factor * deltaTC;
   return {
@@ -64,9 +72,12 @@ function computeBoundaryLoss(
     refId: boundary.refId,
     azimuthDeg: boundary.azimuthDeg, // L7.2: propagate orientation (μη-υπολογιστικό)
     overhangShadingFactor: boundary.overhangShadingFactor, // L7.3 Slice B: propagate F_ov
+    finShadingFactor: boundary.finShadingFactor, // L7.3 Slice D: propagate F_fin (geometry)
     solarFactorG: boundary.solarFactorG, // L7.4: propagate per-window g (μη-υπολογιστικό)
     frameFactorF: boundary.frameFactorF, // L7.5: propagate per-window F_F (μη-υπολογιστικό)
     solarAbsorptance: boundary.solarAbsorptance, // L7.6: propagate per-wall α_S (μη-υπολογιστικό)
+    arealHeatCapacityJperM2K: boundary.arealHeatCapacityJperM2K, // L7.9-B: propagate per-wall κ_m
+    groundTemperatureFactor: overrideFactor, // L1.6: propagate 13370 ground `b` override
   };
 }
 

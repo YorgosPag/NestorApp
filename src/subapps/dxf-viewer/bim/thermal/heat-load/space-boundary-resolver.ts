@@ -25,6 +25,7 @@ import type { OpeningEntity } from '../../types/opening-types';
 import type { ThermalSpaceEntity } from '../../types/thermal-space-types';
 import { computeThermalSpaceGeometry } from '../../types/thermal-space-types';
 import { computeWallTypeUValue } from '../wall-assembly-thermal';
+import { computeWallArealHeatCapacity } from './assembly-heat-capacity';
 import { getGlazingSolarFactor, resolveOpeningUValue } from '../glazing-u-catalog';
 import { isWindowKind } from '../../types/opening-types';
 import { sceneUnitsToMeters, type SceneUnits } from '../../../utils/scene-units';
@@ -34,17 +35,22 @@ import {
   resolveWindowOverhangFactor,
   type OverhangOutline,
 } from './solar-overhang-geometry';
+import { resolveWindowFinFactor } from './solar-fin-geometry';
 import { computeFrameFactor } from './frame-factor-geometry';
-import { getSolarAbsorptance } from './annual-gains-config';
+import { EXTERNAL_SURFACE_RESISTANCE_R_SE, getSolarAbsorptance } from './annual-gains-config';
 import {
   resolveRoofSolarAbsorptanceLevel,
   resolveWallSolarAbsorptanceLevel,
 } from '../thermal-space-use-catalog';
 import {
   DEFAULT_FLOOR_U_WPER_M2K,
+  DEFAULT_GROUND_WALL_THICKNESS_M,
   DEFAULT_ROOF_U_WPER_M2K,
   DEFAULT_WALL_U_WPER_M2K,
+  GROUND_FLOOR_INTERNAL_RESISTANCE_R_SI,
+  SOIL_THERMAL_CONDUCTIVITY_WPER_MK,
 } from './heat-load-config';
+import { computeGroundFloorUValue } from './ground-coupling';
 import type { BoundaryCondition, HeatLoadBoundary } from './heat-load-types';
 import {
   matchWallsToFootprint,
@@ -130,10 +136,118 @@ function openingsOnSpaceWall(
   });
 }
 
+/** Μοναδιαία διεύθυνση τοίχου (start→end άξονα/εσωτ. όψης), ή `null` αν degenerate. */
+function wallDirection(wall: WallEntity): Vec2 | null {
+  const pts = wall.geometry?.axisPolyline?.points ?? wall.geometry?.innerEdge?.points;
+  if (!pts || pts.length < 2) return null;
+  const a = pts[0];
+  const b = pts[pts.length - 1];
+  const dx = b.x - a.x;
+  const dy = b.y - a.y;
+  const len = Math.hypot(dx, dy);
+  return len < 1e-9 ? null : { x: dx / len, y: dy / len };
+}
+
+/** Footprint πολύγωνο τοίχου (inner edge + reversed outer edge) ως XY, ή `null`. */
+function wallFootprintPolygon(wall: WallEntity): readonly Vec2[] | null {
+  const inner = wall.geometry?.innerEdge?.points;
+  const outer = wall.geometry?.outerEdge?.points;
+  if (!inner || inner.length < 2 || !outer || outer.length < 2) return null;
+  const poly: Vec2[] = inner.map((p) => ({ x: p.x, y: p.y }));
+  for (let i = outer.length - 1; i >= 0; i--) poly.push({ x: outer[i].x, y: outer[i].y });
+  return poly.length >= 3 ? poly : null;
+}
+
+/** cos(30°) — κατώφλι «κάθετου στο facade» τοίχου (~παράλληλου στον outward normal). */
+const FIN_PERPENDICULAR_COS = Math.cos((30 * Math.PI) / 180);
+
+/**
+ * Footprints των **κάθετων** τοίχων/πτερυγίων δίπλα σε ένα παράθυρο (geometry-derived
+ * `F_fin`, ADR-422 L7.3 Slice D): κάθε τοίχος **εκτός του host** (`hostWallId`) με
+ * διεύθυνση ~παράλληλη στον outward normal `n` (`|dir·n| ≥ cos30°` ⇒ ⟂ στην όψη)
+ * δίνει το footprint του ως candidate fin outline. Το αν προεξέχει πέρα από το facade
+ * το κρίνει η ray-cast (recessed/flush ⇒ d=0 ⇒ absent). Same-floor (κατακόρυφα πτερύγια).
+ */
+function perpendicularWallOutlines(
+  ctx: SpaceBoundaryContext,
+  hostWallId: string | undefined,
+  normal: Vec2,
+): OverhangOutline[] {
+  const outlines: OverhangOutline[] = [];
+  for (const wall of ctx.walls) {
+    if (wall.id === hostWallId) continue;
+    const dir = wallDirection(wall);
+    if (!dir) continue;
+    if (Math.abs(dir.x * normal.x + dir.y * normal.y) < FIN_PERPENDICULAR_COS) continue;
+    const poly = wallFootprintPolygon(wall);
+    if (poly) outlines.push({ polygonXY: poly });
+  }
+  return outlines;
+}
+
+/**
+ * Geometry-derived συντελεστής προβόλου `F_ov` ενός κουφώματος (L7.3 Slice B) — μόνο
+ * παράθυρα με θέση/αζιμούθιο & διαθέσιμα overhang outlines· αλλιώς `undefined` (1.0).
+ */
+function resolveOpeningOverhangFactor(
+  pos: Point3D | undefined,
+  azimuthDeg: number | undefined,
+  isWindow: boolean,
+  params: OpeningEntity['params'],
+  ceilingHeightMm: number,
+  sceneToM: number,
+  wallThicknessMm: number,
+  ctx: SpaceBoundaryContext,
+): number | undefined {
+  if (!isWindow || !pos || azimuthDeg == null || !ctx.overhangOutlines?.length) return undefined;
+  return resolveWindowOverhangFactor({
+    openingPos: pos,
+    azimuthDeg,
+    sillHeightMm: params.sillHeight,
+    openingHeightMm: params.height,
+    ceilingHeightMm,
+    wallThicknessMm,
+    sceneToM,
+    outlines: ctx.overhangOutlines,
+  });
+}
+
+/**
+ * Geometry-derived συντελεστής πλευρικού πτερυγίου `F_fin` ενός παραθύρου (L7.3 Slice D):
+ * μαζεύει τα footprints των κάθετων τοίχων (εξαιρώντας τον host) και ray-cast-άρει.
+ * `undefined` για μη-παράθυρα, χωρίς θέση/αζιμούθιο, ή χωρίς ανιχνεύσιμο πτερύγιο
+ * (⇒ fallback manual `finShadingLevel` Slice C ⇒ zero-regression).
+ */
+function resolveOpeningFinFactor(
+  op: OpeningEntity,
+  pos: Point3D | undefined,
+  azimuthDeg: number | undefined,
+  isWindow: boolean,
+  openingWidthMm: number,
+  sceneToM: number,
+  wallThicknessMm: number,
+  ctx: SpaceBoundaryContext,
+): number | undefined {
+  if (!isWindow || !pos || azimuthDeg == null) return undefined;
+  const azRad = (azimuthDeg * Math.PI) / 180;
+  const normal: Vec2 = { x: Math.sin(azRad), y: Math.cos(azRad) };
+  const outlines = perpendicularWallOutlines(ctx, op.params.wallId, normal);
+  if (outlines.length === 0) return undefined;
+  return resolveWindowFinFactor({
+    openingPos: { x: pos.x, y: pos.y },
+    azimuthDeg,
+    openingWidthMm,
+    wallThicknessMm,
+    sceneToM,
+    outlines,
+  });
+}
+
 /**
  * Ένα κούφωμα ως `HeatLoadBoundary` (`external-air`): kind/U/area + το αζιμούθιο
- * (L7.2) + ο geometry-derived συντελεστής προβόλου `F_ov` (L7.3 Slice B, μόνο για
- * παράθυρα με ανιχνεύσιμο πρόβολο· absent ⇒ 1.0) + το per-window `g` (L7.4) + ο
+ * (L7.2) + ο geometry-derived συντελεστής προβόλου `F_ov` (L7.3 Slice B) + ο
+ * geometry-derived συντελεστής πλευρικού πτερυγίου `F_fin` (L7.3 Slice D, από τους
+ * κάθετους τοίχους δίπλα· absent ⇒ fallback Slice C) + το per-window `g` (L7.4) + ο
  * γεωμετρικός συντελεστής πλαισίου `F_F` (L7.5, μόνο παράθυρα με ρητό `frameWidth`·
  * absent ⇒ 0.70). `null` αν μηδενικό εμβαδό.
  */
@@ -151,25 +265,9 @@ function buildOpeningBoundary(
   const pos = op.geometry?.position;
   const azimuthDeg = pos ? nearestEdgeOutwardAzimuthDeg(polygon, pos) ?? undefined : undefined;
   const isWindow = isWindowKind(params.kind);
-  const overhangShadingFactor =
-    isWindow && pos && azimuthDeg != null && ctx.overhangOutlines?.length
-      ? resolveWindowOverhangFactor({
-          openingPos: pos,
-          azimuthDeg,
-          sillHeightMm: params.sillHeight,
-          openingHeightMm: params.height,
-          ceilingHeightMm,
-          wallThicknessMm,
-          sceneToM,
-          outlines: ctx.overhangOutlines,
-        })
-      : undefined;
-  // L7.4: per-window g-value (SHGC) από τον αριθμό υαλοπινάκων (μόνο παράθυρα·
-  // πόρτες δεν έχουν ηλιακά κέρδη). Absent panes ⇒ default (διπλό) ⇒ g=0.60.
+  // L7.4: per-window g-value (SHGC)· πόρτες δεν έχουν ηλιακά κέρδη ⇒ undefined.
   const solarFactorG = isWindow ? getGlazingSolarFactor(params.glazingPanes) : undefined;
-  // L7.5: γεωμετρικός συντελεστής πλαισίου F_F = (W−2f)(H−2f)/(W·H) — ΜΟΝΟ όταν το
-  // frameWidth είναι ρητό (absent-anchor)· absent ⇒ undefined ⇒ aggregator ?? 0.70
-  // ⇒ zero-regression (το γεωμετρικό default frameWidth δεν δίνει 0.70).
+  // L7.5: γεωμετρικός F_F = (W−2f)(H−2f)/(W·H) — ΜΟΝΟ με ρητό frameWidth (absent-anchor).
   const frameFactorF =
     isWindow && params.frameWidth !== undefined
       ? computeFrameFactor(params.width, params.height, params.frameWidth)
@@ -181,7 +279,12 @@ function buildOpeningBoundary(
     area,
     refId: op.id,
     azimuthDeg,
-    overhangShadingFactor,
+    overhangShadingFactor: resolveOpeningOverhangFactor(
+      pos, azimuthDeg, isWindow, params, ceilingHeightMm, sceneToM, wallThicknessMm, ctx,
+    ),
+    finShadingFactor: resolveOpeningFinFactor(
+      op, pos, azimuthDeg, isWindow, params.width, sceneToM, wallThicknessMm, ctx,
+    ),
     solarFactorG,
     frameFactorF,
   };
@@ -220,6 +323,14 @@ function resolveWallBoundaries(
   const azimuthDeg = mid ? nearestEdgeOutwardAzimuthDeg(polygon, mid) ?? undefined : undefined;
   const netWallAreaM2 = Math.max(0, grossAreaM2 - openingsAreaM2);
   const resolveU = ctx.resolveWallU ?? defaultWallU;
+  // L7.9-B: geometry-derived επιφανειακή θερμοχωρητικότητα `κ_m` από τα στρώματα του
+  // assembly (EN ISO 13790 §12.3.1.1). Μόνο τοίχοι με resolvable DNA· custom/άγνωστα
+  // υλικά → 0 → absent → fallback κατηγορία (zero-regression). Εξωτ. & εσωτ. τοίχοι
+  // αποθηκεύουν θερμότητα, άρα stamp ανεξάρτητα από `isExterior`.
+  const dna = wall.params.dna;
+  const arealHeatCapacityJperM2K = dna
+    ? computeWallArealHeatCapacity(dna) || undefined
+    : undefined;
   out.push({
     kind: 'wall',
     condition,
@@ -228,18 +339,45 @@ function resolveWallBoundaries(
     refId: wall.id,
     azimuthDeg,
     solarAbsorptance: isExterior ? wallSolarAbsorptance : undefined,
+    arealHeatCapacityJperM2K,
   });
   return out;
 }
 
-/** Συνθήκη + U + kind δαπέδου ανάλογα με τη θέση ορόφου. */
-function resolveFloorBoundary(areaM2: number, position: StoreyPosition): HeatLoadBoundary {
+/**
+ * Συνθήκη + U + kind δαπέδου ανάλογα με τη θέση ορόφου. Για δάπεδο **επί εδάφους**
+ * (`lowest`/`only`) εφαρμόζεται EN ISO 13370 σύζευξη (ADR-422 L1.6): effective `U_g`
+ * (από `A`, εκτεθειμένη περίμετρο `P`, ισοδύναμο πάχος) με override `b`=1.0. Όταν
+ * `P≤0` (degenerate/πλήρως εσωτερικό δάπεδο) ⇒ `computeGroundFloorUValue` επιστρέφει
+ * `null` ⇒ fallback flat `b≈0.5` με `DEFAULT_FLOOR_U` (συντηρητικό, zero-regression).
+ */
+function resolveFloorBoundary(
+  areaM2: number,
+  position: StoreyPosition,
+  exposedPerimeterM: number,
+  groundWallThicknessM: number,
+): HeatLoadBoundary {
   const onGround = position === 'lowest' || position === 'only';
+  if (!onGround) {
+    return { kind: 'floor', condition: 'adjacent-heated', uValue: DEFAULT_FLOOR_U_WPER_M2K, area: areaM2 };
+  }
+  const groundUValue = computeGroundFloorUValue({
+    areaM2,
+    exposedPerimeterM,
+    floorUValueWperM2K: DEFAULT_FLOOR_U_WPER_M2K,
+    wallThicknessM: groundWallThicknessM,
+    soilConductivityWperMK: SOIL_THERMAL_CONDUCTIVITY_WPER_MK,
+    internalSurfaceResistanceM2KperW: GROUND_FLOOR_INTERNAL_RESISTANCE_R_SI,
+    externalSurfaceResistanceM2KperW: EXTERNAL_SURFACE_RESISTANCE_R_SE,
+  });
   return {
     kind: 'floor',
-    condition: onGround ? 'ground' : 'adjacent-heated',
-    uValue: DEFAULT_FLOOR_U_WPER_M2K,
+    condition: 'ground',
+    uValue: groundUValue ?? DEFAULT_FLOOR_U_WPER_M2K,
     area: areaM2,
+    // 13370 `U_g` ενσωματώνει τη διαδρομή εδάφους ⇒ πλήρες ΔΤ (b=1). Fallback (null) ⇒
+    // χωρίς stamp ⇒ ο engine εφαρμόζει το flat ground `b`.
+    ...(groundUValue !== null ? { groundTemperatureFactor: 1.0 } : {}),
   };
 }
 
@@ -293,10 +431,20 @@ export function resolveSpaceBoundaries(
     resolveRoofSolarAbsorptanceLevel(space.params),
   );
 
+  // L1.6: εκτεθειμένη περίμετρος `P` = Σ μηκών matched **εξωτ.** τοίχων + length-weighted
+  // μέσο πάχος `w` (Revit-grade· fallback `DEFAULT_GROUND_WALL_THICKNESS_M` αν P≤0) — για
+  // την EN ISO 13370 σύζευξη του δαπέδου επί εδάφους.
+  let exposedPerimeterScene = 0;
+  let exteriorThicknessLenScene = 0;
+
   const boundaries: HeatLoadBoundary[] = [];
   for (const wall of ctx.walls) {
     const lenScene = matched.get(wall.id);
     if (lenScene === undefined || lenScene <= 0) continue;
+    if (ctx.exteriorWallIds.has(wall.id)) {
+      exposedPerimeterScene += lenScene;
+      exteriorThicknessLenScene += lenScene * Math.max(0, wall.params.thickness);
+    }
     boundaries.push(
       ...resolveWallBoundaries(
         wall,
@@ -310,7 +458,15 @@ export function resolveSpaceBoundaries(
     );
   }
 
-  boundaries.push(resolveFloorBoundary(geometry.area, ctx.storeyPosition));
+  const exposedPerimeterM = exposedPerimeterScene * sceneToM;
+  const groundWallThicknessM =
+    exposedPerimeterScene > 0
+      ? (exteriorThicknessLenScene / exposedPerimeterScene) * sceneToM
+      : DEFAULT_GROUND_WALL_THICKNESS_M;
+
+  boundaries.push(
+    resolveFloorBoundary(geometry.area, ctx.storeyPosition, exposedPerimeterM, groundWallThicknessM),
+  );
   boundaries.push(resolveRoofBoundary(geometry.area, ctx.storeyPosition, roofSolarAbsorptance));
   return boundaries;
 }

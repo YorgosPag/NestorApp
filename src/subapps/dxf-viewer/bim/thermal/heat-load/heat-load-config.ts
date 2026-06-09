@@ -65,6 +65,30 @@ export const DEFAULT_WALL_U_WPER_M2K = 0.5;
  */
 export const AIR_VENTILATION_FACTOR = 0.34;
 
+// ─── L1.6 — EN ISO 13370 ground coupling (πλάκα επί εδάφους) ───────────────────
+
+/**
+ * Θερμική αγωγιμότητα εδάφους `λ_g` (W/mK) — EN ISO 13370 / ΤΟΤΕΕ 20701-2,
+ * αντιπροσωπευτικό «τυπικό έδαφος» (αργιλώδες/αμμώδες ≈ 2.0· βράχος ~3.5· editable).
+ * Οδηγεί το `U_g` (χαρακτηριστική διάσταση B′ + ισοδύναμο πάχος d_t). Per-soil-type
+ * catalog = future.
+ */
+export const SOIL_THERMAL_CONDUCTIVITY_WPER_MK = 2.0;
+
+/**
+ * Εσωτερική επιφανειακή αντίσταση δαπέδου `R_si` (m²K/W) για ροή θερμότητας **προς
+ * τα κάτω** — EN ISO 6946 (πλάκα επί εδάφους). Συστατικό του ισοδύναμου πάχους `d_t`
+ * (EN ISO 13370 §9.3). Editable.
+ */
+export const GROUND_FLOOR_INTERNAL_RESISTANCE_R_SI = 0.17;
+
+/**
+ * Αντιπροσωπευτικό πάχος εξωτ. τοίχου `w` (m) — fallback του ισοδύναμου πάχους `d_t`
+ * (EN ISO 13370 §9.3) όταν δεν υπάρχουν matched εξωτ. τοίχοι για length-weighted μέσο
+ * όρο. Editable· έχει μικρή επίδραση στο `U_g` (d_t κυριαρχείται από λ_g·R_f).
+ */
+export const DEFAULT_GROUND_WALL_THICKNESS_M = 0.3;
+
 // ─── L1.5 — Θερμογέφυρες (ΔU_TB) ──────────────────────────────────────────────
 
 /**
