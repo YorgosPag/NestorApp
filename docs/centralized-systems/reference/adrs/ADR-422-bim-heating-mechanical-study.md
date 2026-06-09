@@ -1,6 +1,6 @@
 # ADR-422 — BIM Μηχανολογική Μελέτη Θέρμανσης (ΤΟΤΕΕ/ΚΕΝΑΚ)
 
-**Status:** 🟡 IN PROGRESS — L0 IMPLEMENTED (pending browser-verify + commit)
+**Status:** 🟡 IN PROGRESS — L0→L7 IMPLEMENTED (L7 ετήσια ενεργειακή ζήτηση degree-day, 24/24 tests· pending browser-verify + commit)
 **Date:** 2026-06-08
 **Owner:** Giorgio (YorgosPag)
 **Πρότυπο (κλειδωμένο):** Ελληνικό **ΤΟΤΕΕ/ΚΕΝΑΚ** — ΤΟΤΕΕ 20701-1 (υπολογισμοί / θερμοκρασίες σχεδιασμού), ΤΟΤΕΕ 20701-3 (κλιματικά δεδομένα), με βάση **EN 12831**.
@@ -235,5 +235,25 @@
 - **ΜΑΘΗΜΑ:** το compliance layer = καθαρός consumer των boundaries (μηδέν re-resolve)· μία `getKenakMaxU` που επιστρέφει `number|null` κωδικοποιεί ταυτόχρονα τον πίνακα ορίων ΚΑΙ το gate εξωτ. κελύφους — αποφεύγει διπλό branching σε config + engine.
 - **🔴 PENDING:** tsc full background (N.17 slot) · browser-verify + commit (Giorgio).
 - **⚠️ Crash-recovery note:** το L6 code έγινε commit (`12c9b0c1`) με **ημιτελές `en` locale** (κράσαρε Bun mid-edit) + **σπασμένο report test** (5→6 sections) + **χωρίς dedicated engine tests** — ολοκληρώθηκαν follow-up (en locale 11 keys, report test, 2 νέα test files, +N.15 docs).
+
+### L7 — Ετήσια Ενεργειακή Ζήτηση Θέρμανσης + Ενδεικτική Κατηγορία (degree-day) (2026-06-09, Opus, Plan Mode)
+
+**Ο τελευταίος κανονιστικός κρίκος των «μεγάλων παιχτών» (Revit Energy / 4M-FineHEAT-KENAK): πόση ΕΝΕΡΓΕΙΑ καταναλώνει ετησίως το κτίριο** — το φορτίο σχεδιασμού (W, στιγμιαία αιχμή) δεν λέει kWh/έτος. Το L7 υπολογίζει **ετήσια ζήτηση θέρμανσης `Q_H`** (kWh/έτος) με τη **μέθοδο βαθμοημερών (ΤΟΤΕΕ 20701-3 / EN ISO 13790 simplified)**, ειδική ζήτηση `q_H` (kWh/m²·έτος) + **ενδεικτική κατηγορία** ζήτησης → νέα **7η section** στο L5 report + 3 νέα summary KPIs. **Όλα derived** (μηδέν persist), **advisory**, **ΕΚΤΟΣ ADR-040** (καθαρή αριθμητική + data + report· μηδέν canvas).
+- **Φυσική (ανά χώρο, από τα ήδη-υπολογισμένα L1 results):** `H = (transmissionW + ventilationW) / deltaTC` [W/K] (το `transmissionW` ήδη φέρει θερμογέφυρες· το `reheatW` **ΕΞΑΙΡΕΙΤΑΙ** — εφάπαξ προθέρμανση, όχι συνεχής απώλεια)· `Q_H = H · HDD · 24 / 1000` [kWh/έτος] (οι βαθμοημέρες ολοκληρώνουν ΔΤ → **ΟΧΙ** το ΔΤ σχεδιασμού)· εσωτερικά/ηλιακά κέρδη συντηρητικά αμελούνται v1· `q_H = ΣQ_H / ΣA → κατηγορία`.
+- **Έντιμο όριο (HONESTY):** η επίσημη ΚΕΝΑΚ κατάταξη (Α+→Η) = λόγος **πρωτογενούς ενέργειας** προς κτίριο αναφοράς (απαιτεί βαθμό απόδοσης λέβητα + συντελεστή καυσίμου — pending boiler agent). Άρα v1 = **ζήτηση** (system-independent) + **ενδεικτική** κατηγορία, ρητά μη-επίσημη. Πλήρης primary-energy = future **L8**.
+- **Αποφάσεις (Revit-grade, locked):**
+  - **D-A — μέθοδος degree-day** (μηδέν εξάρτηση από σύστημα/καύσιμο)· πηγή απωλειών = τα L1 results (μηδέν νέα φυσική/re-resolve geometry).
+  - **D-B — νέο config** `bim/thermal/heat-load/annual-energy-config.ts` (όχι fork ADR-396· isolation, mirror της D-B του L6): `HEATING_DEGREE_DAYS` (A≈900/B≈1300/C≈1800/D≈2400 K·ημέρα) + `ENERGY_DEMAND_CLASS_BANDS` (αύξοντα κατώφλια kWh/m²·έτος → A+…H, documented indicative) + `getHeatingDegreeDays`/`classifyEnergyDemand`. Reuse `ClimateZone`· μηδέν inline literal στον engine.
+  - **D-C — pure aggregator** `bim/thermal/heat-load/derive-annual-energy.ts` (mirror `deriveEnvelopeCompliance`): `deriveAnnualHeating(results, spaces, zone)` → per-space `{ spaceId, lossCoefficientWperK, floorAreaM2, annualDemandKWh, specificDemandKWhM2 }` + σύνοψη `{ rows, totalAnnualKWh, totalAreaM2, specificDemandKWhM2, energyClass, hdd, zone }`. Heated area από `space.geometry.area` (cached)· guard area>0 + ΔΤ>0.
+  - **D-D — UI = 7η section στο L5 report + 3 summary KPIs** (ΟΧΙ νέο ribbon/overlay) → **μηδέν shared αρχείο με boiler agent**· `spaceLoads`+`climateZone` ήδη στο `ThermalStudyReportInput` → καμία αλλαγή hook/input. Shared `resolveAnnualHeating` (μία πηγή αλήθειας σύνοψη+πίνακα).
+  - **D-E — έντιμη ονοματοδοσία:** «Ετήσια Ενεργειακή Ζήτηση Θέρμανσης (ενδεικτική)» · KPI «Ενδεικτική κατηγορία». `climateZone: null` ⇒ 0 γραμμές + KPI κατηγορία «—» (graceful).
+  - **D-F — μονάδες:** H [W/K] `number` (2-δεκ)· A [m²] `area-m2`· Q [kWh] `count` (ακέραιο)· q [kWh/m²·έτος] `number`· class `text`. **Καμία νέα `ScheduleColumnValueType`** (FULL SSOT).
+- **Νέα pure SSoT:** `bim/thermal/heat-load/annual-energy-config.ts` (config + getters) · `bim/thermal/heat-load/derive-annual-energy.ts` (read-model).
+- **MOD:** `bim/thermal/report/thermal-study-report.ts` (+`buildAnnualEnergySection`/`annualEnergyRow`/`resolveAnnualHeating`, 7η section + 3 summary KPIs) + `thermal-study-report-types.ts` (doc 6 πίνακες) · i18n el+en (`thermalStudyReport.sections.annualEnergy` + `columns.{lossCoeff,floorArea,annualDemand,specificDemand}` + `summary.{annualEnergy,specificDemand,energyClass}`).
+- **ΖΕΡΟ αλλαγή:** `useThermalStudyReport.ts`, `useRibbonCommands.ts`, οποιοδήποτε boiler/heating/MEP αρχείο (shared-tree isolation).
+- **Worked example (sanity):** χώρος 4×4 m (A=16 m²), H=(600+200)/20=40 W/K, ζώνη Β (HDD 1300) → `Q=40·1300·24/1000=1248 kWh/έτος`· `q=78 kWh/m²·έτος` → ενδεικτική κατηγορία Β.
+- **Tests:** `annual-energy-config` (HDD μονοτονία/getters · bands αύξοντα+Infinity · classify όρια/μονοτονία) · `derive-annual-energy` (worked example · **reheat εξαιρείται** · area από geometry · guards area/ΔΤ · totals+class · empty) · `thermal-study-report` (7η section + summary KPIs + null-zone omit) = **24/24 PASS** (3 suites).
+- **ΜΑΘΗΜΑ:** η ετήσια ζήτηση = καθαρός consumer των L1 απωλειών — `H = ΣαπωλειώνW/ΔΤ`, οι βαθμοημέρες αντικαθιστούν το ΔΤ σχεδιασμού· isolation μέσω «section-only στο report» = μηδέν επαφή με το shared ribbon του boiler agent.
+- **🔴 PENDING:** tsc full background (N.17 slot) · browser-verify + commit (Giorgio).
 
 > **ΜΗΝ** ενημερωθεί το `adr-index.md` σε αυτό το slice (shared working tree).

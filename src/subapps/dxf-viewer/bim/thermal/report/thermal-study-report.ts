@@ -102,6 +102,7 @@ function buildSummarySection(input: ThermalStudyReportInput): ReportSection {
     { key: 'pumpHead', i18nKey: `${K.summary}.pumpHead`, valueType: 'number', align: 'right' },
     { key: 'circuits', i18nKey: `${K.summary}.circuits`, valueType: 'count', align: 'right' },
     { key: 'totalFlow', i18nKey: `${K.summary}.totalFlow`, valueType: 'number', align: 'right' },
+    { key: 'grossEnergy', i18nKey: `${K.summary}.grossEnergy`, valueType: 'count', align: 'right' },
     { key: 'annualEnergy', i18nKey: `${K.summary}.annualEnergy`, valueType: 'count', align: 'right' },
     { key: 'specificDemand', i18nKey: `${K.summary}.specificDemand`, valueType: 'number', align: 'right' },
     { key: 'energyClass', i18nKey: `${K.summary}.energyClass`, valueType: 'text', align: 'center' },
@@ -113,6 +114,7 @@ function buildSummarySection(input: ThermalStudyReportInput): ReportSection {
     pumpHead: balancing.pumpHeadPa / PA_PER_KPA,
     circuits: balancing.terminals.size,
     totalFlow: totalFlowKgS,
+    grossEnergy: annual ? Math.round(annual.totalGrossKWh) : 0,
     annualEnergy: annual ? Math.round(annual.totalAnnualKWh) : 0,
     specificDemand: annual ? annual.specificDemandKWhM2 : null,
     energyClass: annual ? annual.energyClass : MARK_NONE,
@@ -295,6 +297,9 @@ function resolveAnnualHeating(input: ThermalStudyReportInput): AnnualHeatingResu
   return deriveAnnualHeating(spaceLoads.results, spaceLoads.spaces, climateZone);
 }
 
+/** %  — ο συντελεστής αξιοποίησης (0-1) σε ποσοστό για το report (×100). */
+const UTILISATION_PERCENT = 100;
+
 function annualEnergyRow(
   row: AnnualEnergyRow,
   spaceLabelById: ReadonlyMap<string, string>,
@@ -303,6 +308,9 @@ function annualEnergyRow(
     space: spaceLabelById.get(row.spaceId) ?? row.spaceId,
     lossCoeff: row.lossCoefficientWperK,
     floorArea: row.floorAreaM2,
+    grossDemand: Math.round(row.grossDemandKWh),
+    gains: Math.round(row.internalGainKWh + row.solarGainKWh),
+    utilisation: row.utilisation * UTILISATION_PERCENT,
     annualDemand: Math.round(row.annualDemandKWh),
     specificDemand: row.specificDemandKWhM2,
   };
@@ -316,6 +324,9 @@ function buildAnnualEnergySection(
     col('space', 'space', 'text', 'left'),
     col('lossCoeff', 'lossCoeff', 'number', 'right'),
     col('floorArea', 'floorArea', 'area-m2', 'right'),
+    col('grossDemand', 'grossDemand', 'count', 'right'),
+    col('gains', 'gains', 'count', 'right'),
+    col('utilisation', 'utilisation', 'number', 'right'),
     col('annualDemand', 'annualDemand', 'count', 'right'),
     col('specificDemand', 'specificDemand', 'number', 'right'),
   ];
