@@ -27,6 +27,8 @@ function spaceResult(spaceId: string, boundaries: BoundaryHeatLoss[]): SpaceHeat
     deltaTC: 20,
     transmissionW: 0,
     ventilationW: 0,
+    infiltrationW: 0,
+    designedVentilationW: 0,
     thermalBridgeW: 0,
     reheatW: 0,
     totalW: 0,

@@ -33,6 +33,7 @@ import {
   type Entity,
 } from '../../types/entities';
 import { useBuildingFloorScenes, type BuildingFloorScene } from './useBuildingFloorScenes';
+import { useSiteNeighbourMasses } from './useSiteNeighbourMasses';
 import type { SlabEntity, SlabKind } from '../../bim/types/slab-types';
 import type { OverhangOutline } from '../../bim/thermal/heat-load/solar-overhang-geometry';
 import {
@@ -78,6 +79,22 @@ function resolveClimateZone(
 ): ClimateZone {
   const z = buildings.find((b) => b.id === buildingId)?.climateZone;
   return z === 'A' || z === 'B' || z === 'C' || z === 'D' ? z : FALLBACK_CLIMATE_ZONE;
+}
+
+/**
+ * Απόλυτο ύψος βάσης του ενεργού ορόφου στο site datum (ADR-369): `building.baseElevation
+ * + floor.elevation` (μέτρα). Αναφορά ύψους ανοίγματος για τη σκίαση ορίζοντα (Slice E).
+ * Absent fields ⇒ 0 (single-building / χωρίς elevation data).
+ */
+function resolveApertureBaseElevationM(
+  buildings: ReadonlyArray<{ id: string; baseElevation?: number }>,
+  buildingId: string | null,
+  floors: ReadonlyArray<{ id: string; elevation?: number }>,
+  activeFloorId: string | null,
+): number {
+  const base = buildings.find((b) => b.id === buildingId)?.baseElevation ?? 0;
+  const floorElev = floors.find((f) => f.id === activeFloorId)?.elevation ?? 0;
+  return base + floorElev;
 }
 
 /** Θέση ορόφου: floors ταξινομημένα αύξοντα (basement→up) → lowest/highest/middle. */
@@ -165,6 +182,8 @@ export function useHeatLoadInputs(
   const { floors } = useFloorsByBuilding(buildingId, active);
   // L7.3 Slice B — cross-floor overhang sourcing (πλάκες άνω ορόφων, riser pattern).
   const buildingFloorScenes = useBuildingFloorScenes(active);
+  // L7.3 Slice E — cross-building horizon masses (γειτονικά κτίρια, ADR-369 placement).
+  const horizonObstacleOutlines = useSiteNeighbourMasses(active);
 
   return useMemo<HeatLoadInputsBundle | null>(() => {
     if (!active || !scene) return null;
@@ -193,6 +212,17 @@ export function useHeatLoadInputs(
       storeyPosition: resolveStoreyPosition(floors, activeFloorId),
       tol: HEAT_LOAD_MATCH_TOL_M / sceneUnitsToMeters(sceneUnits),
       overhangOutlines,
+      horizonObstacleOutlines,
+      apertureBaseElevationM: resolveApertureBaseElevationM(buildings, buildingId, floors, activeFloorId),
     };
-  }, [active, scene, buildings, buildingId, floors, activeFloorId, buildingFloorScenes]);
+  }, [
+    active,
+    scene,
+    buildings,
+    buildingId,
+    floors,
+    activeFloorId,
+    buildingFloorScenes,
+    horizonObstacleOutlines,
+  ]);
 }

@@ -104,7 +104,7 @@ describe('resolveSpaceBoundaries — προσανατολισμός εξωτ. κ
   const southWindow = makeWindow('win-south', 'wall-south', 2000, 0);
   const eastWindow = makeWindow('win-east', 'wall-east', 4000, 2000);
 
-  const boundaries = resolveSpaceBoundaries(
+  const { boundaries } = resolveSpaceBoundaries(
     makeSpace(),
     makeCtx([southWall, eastWall], [southWindow, eastWindow]),
   );
@@ -148,7 +148,7 @@ describe('resolveSpaceBoundaries — ηλιακή απορρόφηση εξωτ.
   const southWall = makeWall({ x: 0, y: 0 }, { x: 4000, y: 0 }, 'wall-south');
 
   it('θέτει solarAbsorptance (default medium 0.6) + azimuth undefined στη roof external-air (highest)', () => {
-    const boundaries = resolveSpaceBoundaries(
+    const { boundaries } = resolveSpaceBoundaries(
       makeSpace(),
       makeCtx([southWall], [], 'highest'),
     );
@@ -159,7 +159,7 @@ describe('resolveSpaceBoundaries — ηλιακή απορρόφηση εξωτ.
   });
 
   it('αφήνει solarAbsorptance absent στην εσωτ. οροφή (ceiling / adjacent-heated, middle)', () => {
-    const boundaries = resolveSpaceBoundaries(
+    const { boundaries } = resolveSpaceBoundaries(
       makeSpace(),
       makeCtx([southWall], [], 'middle'),
     );
@@ -167,6 +167,75 @@ describe('resolveSpaceBoundaries — ηλιακή απορρόφηση εξωτ.
     expect(ceiling?.kind).toBe('ceiling');
     expect(ceiling?.condition).toBe('adjacent-heated');
     expect(ceiling?.solarAbsorptance).toBeUndefined();
+  });
+});
+
+// L7.3 Slice E — geometry-derived ορίζοντας: το νότιο παράθυρο παίρνει horizonShadingFactor
+// όταν υπάρχει γειτονική μάζα νότια (y<0)· absent obstacles ⇒ undefined (zero-regression).
+describe('resolveSpaceBoundaries — geometry-derived ορίζοντας (L7.3 Slice E)', () => {
+  const southWall = makeWall({ x: 0, y: 0 }, { x: 4000, y: 0 }, 'wall-south');
+  const southWindow = makeWindow('win-south', 'wall-south', 2000, 0);
+
+  /** Γειτονική μάζα νότια του χώρου (y∈[−20m,−10m] σε mm), ύψος κορυφής 10 m. */
+  const southMass = {
+    polygonXY: [
+      { x: 0, y: -20000 },
+      { x: 4000, y: -20000 },
+      { x: 4000, y: -10000 },
+      { x: 0, y: -10000 },
+    ],
+    topElevationM: 10,
+  };
+
+  it('στάμπα horizonShadingFactor ∈ (0,1) στο νότιο παράθυρο όταν υπάρχει μάζα', () => {
+    const ctx: SpaceBoundaryContext = {
+      ...makeCtx([southWall], [southWindow]),
+      horizonObstacleOutlines: [southMass],
+      apertureBaseElevationM: 0,
+    };
+    const { boundaries } = resolveSpaceBoundaries(makeSpace(), ctx);
+    const win = boundaries.find((b) => b.refId === 'win-south');
+    expect(win?.horizonShadingFactor).toBeDefined();
+    expect(win?.horizonShadingFactor as number).toBeGreaterThan(0);
+    expect(win?.horizonShadingFactor as number).toBeLessThan(1);
+  });
+
+  it('absent horizonObstacleOutlines ⇒ horizonShadingFactor undefined (zero-regression)', () => {
+    const { boundaries } = resolveSpaceBoundaries(makeSpace(), makeCtx([southWall], [southWindow]));
+    const win = boundaries.find((b) => b.refId === 'win-south');
+    expect(win?.horizonShadingFactor).toBeUndefined();
+  });
+});
+
+// L1.7 — αριθμός εκτεθειμένων όψεων (distinct matched εξωτ. τοίχοι) → συντελεστής
+// ανεμοπροστασίας `e` της διείσδυσης. makeCtx θέτει ΟΛΟΥΣ τους τοίχους ως εξωτ.
+describe('resolveSpaceBoundaries — exposedFacadeCount (L1.7)', () => {
+  const south = makeWall({ x: 0, y: 0 }, { x: 4000, y: 0 }, 'w-s');
+  const east = makeWall({ x: 4000, y: 0 }, { x: 4000, y: 4000 }, 'w-e');
+
+  it('μετρά τους matched εξωτ. τοίχους (2 όψεις → γωνιακός)', () => {
+    const { exposedFacadeCount } = resolveSpaceBoundaries(
+      makeSpace(),
+      makeCtx([south, east], [], 'only'),
+    );
+    expect(exposedFacadeCount).toBe(2);
+  });
+
+  it('χωρίς εξωτ. τοίχους → 0 όψεις (εσωτερικός χώρος)', () => {
+    const ctx: SpaceBoundaryContext = { ...makeCtx([south, east], [], 'only'), exteriorWallIds: new Set() };
+    const { exposedFacadeCount } = resolveSpaceBoundaries(makeSpace(), ctx);
+    expect(exposedFacadeCount).toBe(0);
+  });
+
+  it('degenerate footprint (<3 κορυφές) → 0 όψεις + κενά όρια', () => {
+    const space = makeSpace();
+    const degenerate = {
+      ...space,
+      params: { ...space.params, footprint: { vertices: [{ x: 0, y: 0 }, { x: 1, y: 0 }] } },
+    } as typeof space;
+    const res = resolveSpaceBoundaries(degenerate, makeCtx([south, east], [], 'only'));
+    expect(res.exposedFacadeCount).toBe(0);
+    expect(res.boundaries).toHaveLength(0);
   });
 });
 
@@ -181,7 +250,7 @@ describe('resolveSpaceBoundaries — EN ISO 13370 ground coupling (L1.6)', () =>
   const allWalls = [south, east, north, west];
 
   it("'only' με 4 εξωτ. τοίχους → δάπεδο ground με U_g (≈0.355) + groundTemperatureFactor=1.0", () => {
-    const boundaries = resolveSpaceBoundaries(makeSpace(), makeCtx(allWalls, [], 'only'));
+    const { boundaries } = resolveSpaceBoundaries(makeSpace(), makeCtx(allWalls, [], 'only'));
     const floor = boundaries.find((b) => b.kind === 'floor');
     expect(floor?.condition).toBe('ground');
     expect(floor?.groundTemperatureFactor).toBe(1.0);
@@ -193,7 +262,7 @@ describe('resolveSpaceBoundaries — EN ISO 13370 ground coupling (L1.6)', () =>
   });
 
   it("'lowest' με 4 εξωτ. τοίχους → ground coupling εφαρμόζεται (lowest=επί εδάφους)", () => {
-    const boundaries = resolveSpaceBoundaries(makeSpace(), makeCtx(allWalls, [], 'lowest'));
+    const { boundaries } = resolveSpaceBoundaries(makeSpace(), makeCtx(allWalls, [], 'lowest'));
     const floor = boundaries.find((b) => b.kind === 'floor');
     expect(floor?.condition).toBe('ground');
     expect(floor?.groundTemperatureFactor).toBe(1.0);
@@ -201,7 +270,7 @@ describe('resolveSpaceBoundaries — EN ISO 13370 ground coupling (L1.6)', () =>
 
   it('χωρίς εξωτ. τοίχους (P=0) → fallback flat: uValue=0.5, χωρίς override (zero-regression)', () => {
     const ctx: SpaceBoundaryContext = { ...makeCtx(allWalls, [], 'only'), exteriorWallIds: new Set() };
-    const boundaries = resolveSpaceBoundaries(makeSpace(), ctx);
+    const { boundaries } = resolveSpaceBoundaries(makeSpace(), ctx);
     const floor = boundaries.find((b) => b.kind === 'floor');
     expect(floor?.condition).toBe('ground');
     expect(floor?.uValue).toBeCloseTo(0.5, 6);
@@ -209,7 +278,7 @@ describe('resolveSpaceBoundaries — EN ISO 13370 ground coupling (L1.6)', () =>
   });
 
   it("'middle' (ενδιάμεσος όροφος) → δάπεδο adjacent-heated, χωρίς ground coupling", () => {
-    const boundaries = resolveSpaceBoundaries(makeSpace(), makeCtx(allWalls, [], 'middle'));
+    const { boundaries } = resolveSpaceBoundaries(makeSpace(), makeCtx(allWalls, [], 'middle'));
     const floor = boundaries.find((b) => b.kind === 'floor');
     expect(floor?.condition).toBe('adjacent-heated');
     expect(floor?.groundTemperatureFactor).toBeUndefined();
