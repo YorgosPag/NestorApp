@@ -38,7 +38,7 @@ import { LayoutPlausibilityWarning } from '@/components/properties/shared/Layout
 import { AreaPlausibilityWarning } from '@/components/properties/shared/AreaPlausibilityWarning';
 import { resolveAreaValues } from './area-values-resolver';
 import {
-  Ruler, FileText, Lock, Layers
+  Ruler, FileText, Lock, Layers, AlertTriangle
 } from 'lucide-react';
 
 import type { CommercialStatus, OperationalStatus } from '@/types/property';
@@ -355,6 +355,17 @@ export function PropertyFieldsEditForm({
                     </dl>
                   ) : null
                 ))}
+                {/* UX guard: multi-level unit with no per-level area distributed.
+                    The totals view shows nothing, so the user can't tell the
+                    floors are empty. Prompt them to open each level tab. */}
+                {aggregatedTotals.areas.gross === 0 && (
+                  <Alert className="py-2 px-3 border-border bg-[hsl(var(--bg-warning))]/20 text-[hsl(var(--text-warning))]">
+                    <AlertTriangle className={iconSizes.sm} />
+                    <AlertDescription className="text-xs">
+                      {t('multiLevel.perLevel.distributeAreaHint')}
+                    </AlertDescription>
+                  </Alert>
+                )}
               </div>
             ) : (
               <div className="space-y-2">

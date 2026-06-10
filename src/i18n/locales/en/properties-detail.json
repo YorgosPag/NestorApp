@@ -191,7 +191,8 @@
       "perFloorHint": "per floor",
       "sharedHint": "shared",
       "autoComputed": "Auto-computed totals from levels",
-      "tabTotals": "Totals"
+      "tabTotals": "Totals",
+      "distributeAreaHint": "No area distributed across levels. Select each level tab and enter its area."
     }
   },
   "documents": {

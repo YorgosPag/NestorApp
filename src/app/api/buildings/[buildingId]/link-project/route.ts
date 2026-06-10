@@ -174,8 +174,14 @@ export async function POST(
             {
               field: 'projectId',
               oldValue: null,
-              newValue: projectName ?? projectId,
-              label: 'Έργο',
+              // ADR-195: canonical document id stays in newValue (immutable FK
+              // reference for re-linking/queries); the resolved project name is
+              // attached as newValueLabel for display. Previously stored the
+              // name in newValue, which lost the id. label = field identifier
+              // (N.11 — no hardcoded Greek; the reader localizes the field key).
+              newValue: projectId,
+              label: 'projectId',
+              ...(projectName ? { newValueLabel: projectName } : {}),
             },
           ],
           performedBy: ctx.uid,
