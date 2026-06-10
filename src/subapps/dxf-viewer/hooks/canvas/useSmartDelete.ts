@@ -276,6 +276,10 @@ export function useSmartDelete({
       const slabOpeningIdsInBatch = idsToDelete.filter(
         (id) => adapter.getEntity(id)?.type === 'slab-opening',
       );
+      // ADR-436 — collect foundation IDs so we can trigger Firestore deleteDoc.
+      const foundationIdsInBatch = idsToDelete.filter(
+        (id) => adapter.getEntity(id)?.type === 'foundation',
+      );
       // ADR-406 — collect MEP fixture IDs so we can trigger Firestore deleteDoc.
       const fixtureIdsInBatch = idsToDelete.filter(
         (id) => adapter.getEntity(id)?.type === 'mep-fixture',
@@ -360,6 +364,10 @@ export function useSmartDelete({
       }
       for (const beamId of beamIdsInBatch) {
         eventBus.emit('bim:beam-delete-requested', { beamId });
+      }
+      // ADR-436 — trigger Firestore deleteDoc + prevent subscription re-add for each foundation.
+      for (const foundationId of foundationIdsInBatch) {
+        eventBus.emit('bim:foundation-delete-requested', { foundationId });
       }
       // ADR-358 Phase 9C-3 — trigger Firestore deleteDoc for each deleted stair.
       for (const stairId of stairIdsInBatch) {
