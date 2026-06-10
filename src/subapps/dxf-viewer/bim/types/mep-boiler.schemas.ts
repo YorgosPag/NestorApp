@@ -89,12 +89,18 @@ export const MepBoilerParamsSchema = z
     pressureGauge: z.boolean().optional(),
     // SYSTEM (cold fill) PRESSURE (bar) shown on the gauge — falls back to DEFAULT_BOILER_SYSTEM_PRESSURE_BAR.
     systemPressureBar: z.number().positive().optional(),
+    // FILLING LOOP (βρόχος πλήρωσης, Revit/IFC IfcValve CHECK) — double-check-valve body-glyph flag.
+    fillingLoop: z.boolean().optional(),
     // Optional catalogue thermal output (W) — drives future sizing.
     thermalOutputW: z.number().positive().optional(),
     // MINIMUM modulating output (W) — Revit «Turndown Ratio»; absent ⇒ on/off appliance.
     minThermalOutputW: z.number().positive().optional(),
     // Seasonal appliance efficiency (%) — drives the EU ErP energy class. Optional/additive.
     seasonalEfficiencyPercent: z.number().positive().optional(),
+    // Measured NOx emissions (mg/kWh) — drives the EU Ecodesign compliance verdict. Optional/additive.
+    noxMgKwh: z.number().positive().optional(),
+    // Measured sound power level L_WA (dB(A)) — drives the placement-suitability band. Optional/additive.
+    soundPowerDbA: z.number().positive().optional(),
     sceneUnits: z.string().optional(),
     storeyId: z.string().min(1).optional(),
     material: z.string().min(1).optional(),
@@ -103,6 +109,8 @@ export const MepBoilerParamsSchema = z
     modelId: z.string().min(1).optional(),
     // Heating fuel / energy source discriminator (populated by catalog picker).
     fuelType: z.enum(['gas', 'oil', 'electric', 'heat-pump']).optional(),
+    // MOUNTING type (Revit «Mounting» type-property) — floor-standing ignores the wall elevation; absent ⇒ wall-hung.
+    mountingType: z.enum(['wall-hung', 'floor-standing']).optional(),
     // ADR-408 Φ1 — embedded MEP connectors (host-local). Optional/additive.
     connectors: z.array(MepConnectorSchema).optional(),
   })

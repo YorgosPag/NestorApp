@@ -42,7 +42,7 @@ import type { SceneUnits } from '../../utils/scene-units';
 import type { IfcEntityMixin } from './ifc-entity-mixin';
 import type { MepConnectorHostParams } from './mep-component-types';
 import type { PlumbingSystemClassification } from './mep-connector-types';
-import type { BoilerFuelType } from '../mep-boilers/boiler-model-catalog';
+import type { BoilerFuelType, MepBoilerMountingType } from '../mep-boilers/boiler-model-catalog';
 import type { FlueTerminationType } from '../mep-boilers/boiler-flue-terminal';
 
 // ─── Sub-type discriminator (ADR-408 Εύρος Β #2) ──────────────────────────────
@@ -232,6 +232,17 @@ export interface MepBoilerParams extends MepConnectorHostParams {
    */
   readonly systemPressureBar?: number;
   /**
+   * FILLING LOOP flag (βρόχος πλήρωσης, Revit/IFC `IfcValve` CHECK). When `true` the plan symbol
+   * draws a filling-loop body glyph on the boiler body — a short pipe run with a DOUBLE-CHECK VALVE
+   * (WRAS backflow preventer), a flexible-connector loop and an isolation valve at each end: the
+   * device used to CHARGE a sealed heating system to its cold-fill pressure (the gauge's {@link
+   * systemPressureBar}). Closes the sealed-system family (relief valve + expansion vessel + gauge +
+   * filling loop). Visualisation only — no extra connector (the footprint perimeter is full) and NO
+   * extra pressure property (the fill target is already `systemPressureBar`). Additive/optional —
+   * pre-filling-loop boilers unchanged.
+   */
+  readonly fillingLoop?: boolean;
+  /**
    * W — optional catalogue thermal output (nominal heat output). Drives future
    * sizing/load-balancing; absent ⇒ not yet specified.
    */
@@ -253,6 +264,24 @@ export interface MepBoilerParams extends MepConnectorHostParams {
    * (`Q_primary = Q_net / η`). Absent ⇒ unspecified. Additive/optional.
    */
   readonly seasonalEfficiencyPercent?: number;
+  /**
+   * mg/kWh — measured NOx (nitrogen-oxide) emissions, GCV basis (Revit «NOx Emission»,
+   * IFC `Pset_BoilerTypeCommon` emissions family). The EU Ecodesign 813/2013 companion of
+   * `seasonalEfficiencyPercent`: resolved against the per-fuel legal ceiling (gas ≤56,
+   * oil ≤120) by `resolveNoxClass` → the «NOx» compliance readout + plan-tag line. Populated
+   * by the Type Catalog for combustion presets; meaningless for electric/heat-pump (no
+   * combustion). Absent ⇒ unspecified. Additive/optional.
+   */
+  readonly noxMgKwh?: number;
+  /**
+   * dB(A) — measured internal SOUND POWER LEVEL `L_WA` (Revit Mechanical Equipment «Sound»,
+   * IFC `Pset_SoundAttenuation`). The third datum of the EU energy label (Reg. 811/2013),
+   * alongside `seasonalEfficiencyPercent` + `noxMgKwh`: resolved to a placement-suitability
+   * band by `resolveAcousticBand` → the «Θόρυβος» readout + plan-tag line. Applies to EVERY
+   * fuel type (pump/fan/burner all emit noise, ≠ NOx which is combustion-only). Populated by
+   * the Type Catalog. Absent ⇒ unspecified. Additive/optional.
+   */
+  readonly soundPowerDbA?: number;
   /**
    * DXF canvas coordinate unit. Stored so `computeMepBoilerGeometry` can convert
    * mm scalars → canvas units for the 2D footprint. Defaults to `'mm'`.
@@ -281,6 +310,18 @@ export interface MepBoilerParams extends MepConnectorHostParams {
    * Matches `BoilerFuelType` from `boiler-model-catalog`.
    */
   readonly fuelType?: BoilerFuelType;
+  /**
+   * MOUNTING type (Revit «Mounting» type-property, the «Wall-Hung» vs «Floor-Standing»
+   * boiler-family split). `'wall-hung'` (default when absent) hangs on the wall at a
+   * `mountingElevationMm` vertical centre; `'floor-standing'` (the oil-floor catalog
+   * presets) sits on the floor and ignores the wall-mounting elevation. Modelled as an
+   * additive type-property (NOT a new `MepBoilerKind` member) → zero exhaustive-switch
+   * risk, no 3D-converter touch. Populated by the Type Catalog (floor-standing for the
+   * oil-floor presets) or set directly via the «Τοποθέτηση» instance picker; cleared with
+   * the model (Type-property). Drives the «Τοποθέτηση» readout + plan-tag line.
+   * Additive/optional — pre-mounting-type boilers stay επίτοιχοι.
+   */
+  readonly mountingType?: MepBoilerMountingType;
 }
 
 // ─── Geometry cache (derivable from params; SSoT = params) ────────────────────

@@ -32,6 +32,7 @@ import { resolveBoilerModel, type BoilerFuelType } from './boiler-model-catalog'
 import { DEFAULT_FLUE_TERMINATION } from './boiler-flue-terminal';
 import { resolveErpClass } from './boiler-efficiency';
 import { resolveTurndownRatio } from './boiler-modulation';
+import { resolveNoxClass } from './boiler-nox';
 
 /** i18n key prefix for every boiler-tag string (namespace `dxf-viewer-shell`). */
 const TAG_KEY_PREFIX = 'ribbon.commands.mepBoilerTag.';
@@ -50,6 +51,15 @@ const MM_GLYPH = 'mm';
 
 /** Check mark for boolean-present lines (neutraliser) — non-translatable annotation symbol. */
 const CHECK_GLYPH = '✓';
+
+/** Cross mark for the NOx-exceeds verdict — non-translatable annotation symbol. */
+const CROSS_GLYPH = '✗';
+
+/** NOx emission unit glyph (mg per kWh) — non-translatable annotation symbol. */
+const NOX_UNIT = 'mg/kWh';
+
+/** Sound power level unit glyph (A-weighted decibels) — non-translatable annotation symbol. */
+const DB_UNIT = 'dB(A)';
 
 /** Pressure unit glyph for the safety-relief-valve line — non-translatable annotation symbol. */
 const BAR_UNIT = 'bar';
@@ -93,6 +103,11 @@ export type BoilerTagTranslator = (shortKey: string) => string;
  *  13. Expansion vessel — `expansionVesselVolumeL` as `N L`, ONLY when `expansionVessel` is set.
  *  14. Pressure gauge — `systemPressureBar` as `N bar`, ONLY when `pressureGauge` is set.
  *  15. Modulation — `min–max kW (R:1)`, ONLY when a modulating range exists (min < max).
+ *  16. Filling loop — `✓`, ONLY when `fillingLoop` is set (sealed-system charging device).
+ *  17. NOx — `NN mg/kWh (✓/✗)` Ecodesign compliance, ONLY for a combustion fuel with a measured value.
+ *  18. Sound power — `NN dB(A)` measured L_WA, ANY fuel type, ONLY when a positive value is present.
+ *  19. Mounting — the localized mounting type, ONLY for a `'floor-standing'` boiler (the exception
+ *      that the επίτοιχος default does not annotate; mirrors Revit tagging the non-default mounting).
  *
  * @param params Boiler params (SSoT).
  * @param t      Short-key translator (see {@link BoilerTagTranslator}).
@@ -193,6 +208,37 @@ export function buildBoilerTagLines(
     const minKw = Math.round(minW / 1000);
     const maxKw = Math.round(maxW / 1000);
     lines.push(`${t('modulation')}: ${minKw}${RANGE_DASH}${maxKw} ${t('kWUnit')} (${turndown}:1)`);
+  }
+
+  // 16 — Filling loop (βρόχος πλήρωσης, Revit/IFC IfcValve CHECK). Drawn whenever the sealed-system
+  // charging device is fitted; present/absent only (the fill pressure is the gauge's systemPressureBar).
+  if (params.fillingLoop) {
+    lines.push(`${t('fillingLoop')}: ${CHECK_GLYPH}`);
+  }
+
+  // 17 — NOx emission compliance (EU Ecodesign 813/2013). The measured NOx (mg/kWh) paired with
+  // the verdict against the per-fuel legal ceiling (gas ≤56, oil ≤120). The verdict
+  // (`resolveNoxClass`) is the SINGLE gate — `null` for a non-combustion fuel or absent value
+  // omits the line entirely (so electric/heat-pump never print a meaningless NOx figure).
+  const noxClass = resolveNoxClass(params.noxMgKwh, params.fuelType);
+  if (noxClass !== null && typeof params.noxMgKwh === 'number') {
+    const mark = noxClass === 'compliant' ? CHECK_GLYPH : CROSS_GLYPH;
+    lines.push(`${t('nox')}: ${Math.round(params.noxMgKwh)} ${NOX_UNIT} (${mark})`);
+  }
+
+  // 18 — Sound power level (L_WA). The measured internal sound power (dB(A)) — Revit «Sound».
+  // Gated on a present positive value; applies to ANY fuel type (a pump/fan/burner all emit
+  // noise, ≠ NOx which is combustion-only). The tag prints the VALUE only — the placement-
+  // suitability band (`resolveAcousticBand`) is surfaced in the «Θόρυβος» readout, not here.
+  if (typeof params.soundPowerDbA === 'number' && params.soundPowerDbA > 0) {
+    lines.push(`${t('soundPower')}: ${Math.round(params.soundPowerDbA)} ${DB_UNIT}`);
+  }
+
+  // 19 — Mounting type (Revit «Mounting» type-property). Annotated ONLY for a floor-standing
+  // boiler — the exception worth tagging; the επίτοιχος default (absent ⇒ wall-hung) prints
+  // nothing, keeping every wall-hung tag clean (mirrors Revit tagging the non-default mounting).
+  if (params.mountingType === 'floor-standing') {
+    lines.push(`${t('mounting')}: ${t('mountingTypes.floor-standing')}`);
   }
 
   return lines;
