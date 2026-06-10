@@ -2482,6 +2482,7 @@
         "modelCustom": "Παραμετρικό",
         "fuelType": "Τύπος καυσίμου",
         "fuelTypeUnset": "Απροσδιόριστο",
+        "mountingType": "Τοποθέτηση",
         "producesDhw": "Παραγωγή ΖΝΧ (Combi)",
         "dhwConnectorDiameter": "Διάμετρος ΖΝΧ",
         "dhwRecirculation": "Ανακυκλοφορία ΖΝΧ",
@@ -2504,6 +2505,7 @@
         "expansionVesselVolume": "Όγκος (L)",
         "pressureGauge": "Μανόμετρο",
         "systemPressure": "Πίεση δικτύου (bar)",
+        "fillingLoop": "Βρόχος πλήρωσης",
         "width": "Πλάτος",
         "length": "Βάθος",
         "bodyHeight": "Ύψος σώματος",
@@ -2513,6 +2515,15 @@
         "minThermalOutput": "Ελάχιστη ισχύς (W)",
         "efficiency": "Απόδοση (%)",
         "erpClass": "ErP",
+        "nox": "NOx (mg/kWh)",
+        "noxClass": "NOx",
+        "noxCompliant": "Συμμόρφωση",
+        "noxExceeds": "Υπέρβαση",
+        "soundPower": "Θόρυβος (dB(A))",
+        "acousticBand": "Θόρυβος",
+        "acousticQuiet": "Ήσυχος",
+        "acousticStandard": "Κανονικός",
+        "acousticLoud": "Θορυβώδης",
         "requiredOutput": "Απαιτούμενη (kW)",
         "installedOutput": "Εγκατεστημένη (kW)",
         "adequacy": "Επάρκεια",
@@ -2530,6 +2541,8 @@
         "power": "Ισχύς",
         "efficiency": "Απόδοση",
         "erp": "ErP",
+        "nox": "NOx",
+        "soundPower": "Θόρυβος",
         "fuel": "Καύσιμο",
         "flue": "Καπναγωγός",
         "terminationLabel": "Τερματικό",
@@ -2541,6 +2554,8 @@
         "expansionVessel": "Δοχείο",
         "pressureGauge": "Πίεση",
         "modulation": "Διαμόρφωση",
+        "fillingLoop": "Βρόχος πλήρωσης",
+        "mounting": "Τοποθέτηση",
         "modelFallback": "Λέβητας",
         "kWUnit": "kW",
         "dnPrefix": "DN",
@@ -2554,6 +2569,10 @@
           "roof-cowl": "Κατακόρυφος",
           "wall-horizontal": "Επίτοιχος",
           "balanced-concentric": "Ομοαξονικός"
+        },
+        "mountingTypes": {
+          "wall-hung": "Επίτοιχος",
+          "floor-standing": "Επιδαπέδιος"
         }
       },
       "mepWaterHeaterEditor": {
@@ -2600,6 +2619,8 @@
         "thermalBridgeLevel": "Θερμογέφυρες",
         "reheatMode": "Λειτουργία θέρμανσης",
         "solarShadingLevel": "Σκίαση",
+        "airTightnessLevel": "Στεγανότητα κελύφους",
+        "ventilationSystem": "Σύστημα αερισμού",
         "ceilingHeightMm": "Ύψος (mm)",
         "close": "Κλείσιμο",
         "delete": "Διαγραφή",
@@ -3671,6 +3692,20 @@
       "light": "Ελαφριά (×0.90)",
       "moderate": "Μέτρια (×0.70)",
       "heavy": "Έντονη (×0.50)"
+    },
+    "airTightness": {
+      "unspecified": "Δεν λαμβάνεται υπόψη",
+      "tight": "Στεγανό (n50 1.0)",
+      "standard": "Τυπικό (n50 3.0)",
+      "leaky": "Διαπερατό (n50 6.0)",
+      "very-leaky": "Πολύ διαπερατό (n50 10.0)"
+    },
+    "ventilationSystem": {
+      "natural": "Φυσικός αερισμός",
+      "mechanical": "Μηχανικός (χωρίς ανάκτηση)",
+      "mechanical-hr-standard": "Μηχανικός + ανάκτηση (η 0.60)",
+      "mechanical-hr-high": "Μηχανικός + ανάκτηση (η 0.80)",
+      "mechanical-hr-passive": "Μηχανικός + ανάκτηση (η 0.90)"
     }
   },
   "thermalStudyReport": {
@@ -3684,7 +3719,8 @@
       "pipes": "Διαστασιολόγηση Σωληνώσεων",
       "balancing": "Υδραυλική Εξισορρόπηση",
       "compliance": "Έλεγχος Συμμόρφωσης Κελύφους ΚΕΝΑΚ",
-      "annualEnergy": "Ετήσια Ενεργειακή Ζήτηση Θέρμανσης (ενδεικτική)"
+      "annualEnergy": "Ετήσια Ενεργειακή Ζήτηση Θέρμανσης (ενδεικτική)",
+      "lossBreakdown": "Ανάλυση Απωλειών ανά Χώρο"
     },
     "columns": {
       "space": "Χώρος",
@@ -3718,7 +3754,18 @@
       "gains": "Κέρδη (kWh)",
       "utilisation": "Αξιοπ. Κερδών (%)",
       "annualDemand": "Καθαρή Ζήτηση (kWh)",
-      "specificDemand": "Ειδική (kWh/m²·έτος)"
+      "specificDemand": "Ειδική (kWh/m²·έτος)",
+      "walls": "Τοίχοι (W)",
+      "windows": "Κουφώματα (W)",
+      "doors": "Πόρτες (W)",
+      "floor": "Δάπεδο (W)",
+      "roof": "Στέγη/Οροφή (W)",
+      "infiltration": "Διείσδυση (W)",
+      "designedVentilation": "Σχεδ. Αερισμός (W)",
+      "total": "Σύνολο (W)"
+    },
+    "footnotes": {
+      "lossBreakdownVentilation": "Αερισμός = max(Διείσδυση, Σχεδ. Αερισμός) — στο Σύνολο προσμετράται μόνο το μεγαλύτερο σκέλος (EN 12831-1 §6.3.3)."
     },
     "elementKinds": {
       "wall": "Τοίχος",

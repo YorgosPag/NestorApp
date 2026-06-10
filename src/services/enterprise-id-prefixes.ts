@@ -246,6 +246,7 @@ export const ENTERPRISE_ID_PREFIXES = {
   BIM_STACK_GROUP: 'bmstkg',   // multiStoreyStackGroupId — shared by stacked slab-opening copies (ADR-363 Phase 3.7b+)
   COLUMN: 'col',               // floorplan_columns collection — rectangular/circular/L-shape/T-shape (4 kinds)
   BEAM: 'beam',                // floorplan_beams collection — straight/curved/cantilever (3 kinds)
+  FOUNDATION: 'fnd',           // floorplan_foundations collection — pad/strip/tie-beam footings (3 kinds) (ADR-436)
   MEP_FIXTURE: 'mepfix',       // floorplan_mep_fixtures collection — point-based MEP fixture (ADR-406, light fixture first)
   MEP_SYSTEM: 'mepsys',        // floorplan_mep_systems collection — logical MEP network (ADR-408, electrical circuit first)
   ELECTRICAL_PANEL: 'elecpnl', // floorplan_electrical_panels collection — point-based electrical panel / circuit source (ADR-408 Φ3)

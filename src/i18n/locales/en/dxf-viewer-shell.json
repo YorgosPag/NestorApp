@@ -2482,6 +2482,7 @@
         "modelCustom": "Custom",
         "fuelType": "Fuel type",
         "fuelTypeUnset": "Unspecified",
+        "mountingType": "Mounting",
         "producesDhw": "DHW (Combi)",
         "dhwConnectorDiameter": "DHW diameter",
         "dhwRecirculation": "DHW Recirculation",
@@ -2504,6 +2505,7 @@
         "expansionVesselVolume": "Volume (L)",
         "pressureGauge": "Pressure gauge",
         "systemPressure": "System pressure (bar)",
+        "fillingLoop": "Filling loop",
         "width": "Width",
         "length": "Depth",
         "bodyHeight": "Body height",
@@ -2513,6 +2515,15 @@
         "minThermalOutput": "Min output (W)",
         "efficiency": "Efficiency (%)",
         "erpClass": "ErP",
+        "nox": "NOx (mg/kWh)",
+        "noxClass": "NOx",
+        "noxCompliant": "Compliant",
+        "noxExceeds": "Exceeds",
+        "soundPower": "Sound power (dB(A))",
+        "acousticBand": "Sound",
+        "acousticQuiet": "Quiet",
+        "acousticStandard": "Standard",
+        "acousticLoud": "Loud",
         "requiredOutput": "Required (kW)",
         "installedOutput": "Installed (kW)",
         "adequacy": "Adequacy",
@@ -2530,6 +2541,8 @@
         "power": "Power",
         "efficiency": "Efficiency",
         "erp": "ErP",
+        "nox": "NOx",
+        "soundPower": "Sound",
         "fuel": "Fuel",
         "flue": "Flue",
         "terminationLabel": "Terminal",
@@ -2541,6 +2554,8 @@
         "expansionVessel": "Vessel",
         "pressureGauge": "Pressure",
         "modulation": "Modulation",
+        "fillingLoop": "Filling loop",
+        "mounting": "Mounting",
         "modelFallback": "Boiler",
         "kWUnit": "kW",
         "dnPrefix": "DN",
@@ -2554,6 +2569,10 @@
           "roof-cowl": "Vertical",
           "wall-horizontal": "Wall",
           "balanced-concentric": "Concentric"
+        },
+        "mountingTypes": {
+          "wall-hung": "Wall-hung",
+          "floor-standing": "Floor-standing"
         }
       },
       "mepWaterHeaterEditor": {
@@ -2600,6 +2619,8 @@
         "thermalBridgeLevel": "Thermal bridges",
         "reheatMode": "Heating operation",
         "solarShadingLevel": "Solar shading",
+        "airTightnessLevel": "Envelope air-tightness",
+        "ventilationSystem": "Ventilation system",
         "ceilingHeightMm": "Height (mm)",
         "close": "Close",
         "delete": "Delete",
@@ -3671,6 +3692,20 @@
       "light": "Light (×0.90)",
       "moderate": "Moderate (×0.70)",
       "heavy": "Heavy (×0.50)"
+    },
+    "airTightness": {
+      "unspecified": "Not considered",
+      "tight": "Tight (n50 1.0)",
+      "standard": "Standard (n50 3.0)",
+      "leaky": "Leaky (n50 6.0)",
+      "very-leaky": "Very leaky (n50 10.0)"
+    },
+    "ventilationSystem": {
+      "natural": "Natural ventilation",
+      "mechanical": "Mechanical (no recovery)",
+      "mechanical-hr-standard": "Mechanical + recovery (η 0.60)",
+      "mechanical-hr-high": "Mechanical + recovery (η 0.80)",
+      "mechanical-hr-passive": "Mechanical + recovery (η 0.90)"
     }
   },
   "thermalStudyReport": {
@@ -3684,7 +3719,8 @@
       "pipes": "Pipe Sizing",
       "balancing": "Hydraulic Balancing",
       "compliance": "KENAK Envelope Compliance Check",
-      "annualEnergy": "Annual Heating Energy Demand (indicative)"
+      "annualEnergy": "Annual Heating Energy Demand (indicative)",
+      "lossBreakdown": "Heat-Loss Breakdown per Space"
     },
     "columns": {
       "space": "Space",
@@ -3718,7 +3754,18 @@
       "gains": "Gains (kWh)",
       "utilisation": "Gain util. (%)",
       "annualDemand": "Net demand (kWh)",
-      "specificDemand": "Specific (kWh/m²·yr)"
+      "specificDemand": "Specific (kWh/m²·yr)",
+      "walls": "Walls (W)",
+      "windows": "Windows (W)",
+      "doors": "Doors (W)",
+      "floor": "Floor (W)",
+      "roof": "Roof/Ceiling (W)",
+      "infiltration": "Infiltration (W)",
+      "designedVentilation": "Designed vent. (W)",
+      "total": "Total (W)"
+    },
+    "footnotes": {
+      "lossBreakdownVentilation": "Ventilation = max(Infiltration, Designed vent.) — only the larger branch is counted in Total (EN 12831-1 §6.3.3)."
     },
     "elementKinds": {
       "wall": "Wall",
