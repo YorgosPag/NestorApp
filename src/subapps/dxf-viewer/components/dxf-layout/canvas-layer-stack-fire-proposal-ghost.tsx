@@ -1,39 +1,57 @@
+'use client';
+
 /**
  * ⚠️  ARCHITECTURE-CRITICAL FILE — READ ADR-040 BEFORE EDITING
  * docs/centralized-systems/reference/adrs/ADR-040-preview-canvas-performance.md
  *
- * FireProposalGhostPreviewMount (ADR-433 Slice 2) — micro-leaf for the
- * fire-protection (sprinkler) auto-design proposal ghost. Mirror of
- * `HvacProposalGhostPreviewMount`, but driven by the LOW-FREQUENCY
- * `useFireProposal()` store (set on Generate, cleared on Accept/Reject) instead of
- * the 60 fps cursor stream — so the shell never re-renders on its account.
- *
- * Always mounted; it is an inert leaf while no proposal is under review.
+ * FireProposalGhostPreviewMount (ADR-433 Slice 2) — fire-protection (sprinkler) auto-design
+ * proposal ghost. Thin discipline mount: subscribes to `useFireProposal()` and hands the SSoT
+ * `ProposalGhostOverlay` a `paint` closure that strokes every proposed wet-pipe run (domain
+ * `pipe`) with the SSoT classification colour (`fire-sprinkler` → fire-red).
  */
 
-'use client';
-
-import React from 'react';
-import {
-  useFireProposalGhostPreview,
-  type UseFireProposalGhostPreviewProps,
-} from '../../hooks/tools/useFireProposalGhostPreview';
+import React, { useCallback } from 'react';
 import type { ViewTransform } from '../../rendering/types/Types';
+import { ProposalGhostOverlay, type ProposalGhostPaint } from './ProposalGhostOverlay';
+import { paintGhostSegments, type GhostSegmentDraw } from './proposal-ghost-paint';
+import { useFireProposal } from '../../systems/mep-design/fire/fire-proposal-store';
+import { resolveSegmentClassificationColor } from '../../bim/mep-systems/mep-system-color';
+import { mmToSceneUnits } from '../../utils/scene-units';
 
 export interface FireProposalGhostPreviewMountProps {
-  transform: ViewTransform;
-  getCanvas: () => HTMLCanvasElement | null;
-  getViewportElement: () => HTMLElement | null;
+  readonly transform: ViewTransform;
+  readonly viewport: { readonly width: number; readonly height: number };
 }
 
-export const FireProposalGhostPreviewMount = React.memo(function FireProposalGhostPreviewMount(
-  props: FireProposalGhostPreviewMountProps,
-) {
-  const hookProps: UseFireProposalGhostPreviewProps = {
-    transform: props.transform,
-    getCanvas: props.getCanvas,
-    getViewportElement: props.getViewportElement,
-  };
-  useFireProposalGhostPreview(hookProps);
-  return null;
-});
+export const FireProposalGhostPreviewMount = React.memo(
+  function FireProposalGhostPreviewMount({
+    transform,
+    viewport,
+  }: FireProposalGhostPreviewMountProps) {
+    const review = useFireProposal();
+    const paint = useCallback<ProposalGhostPaint>(
+      (ctx, t, vp) => {
+        if (!review) return;
+        const mmScale = mmToSceneUnits(review.sceneUnits);
+        const segs: GhostSegmentDraw[] = [];
+        for (const network of review.proposal.networks) {
+          const stroke = resolveSegmentClassificationColor(network.classification) ?? undefined;
+          for (const seg of network.segments) {
+            segs.push({ start: seg.start, end: seg.end, diameterMm: seg.diameterMm, stroke });
+          }
+        }
+        paintGhostSegments(ctx, segs, t, vp, mmScale, 'pipe');
+      },
+      [review],
+    );
+    return (
+      <ProposalGhostOverlay
+        active={review !== null}
+        transform={transform}
+        viewport={viewport}
+        paint={paint}
+        dataOverlay="fire-proposal"
+      />
+    );
+  },
+);
