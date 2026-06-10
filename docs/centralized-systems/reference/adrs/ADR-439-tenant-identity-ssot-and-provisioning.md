@@ -82,7 +82,7 @@ Priority στον `company-name-resolver` (ήδη υποστηρίζει legalNa
 - **NEW** `src/app/api/admin/migrate-accounting-singletons/route.ts` — one-time migration (μοτίβο `migrate-accounting-profile`), **γενικό descriptor** (collection + legacy doc-id + target doc-id fn) ώστε να καλύπτει και τα 5 του `accounting_settings` (composite) και το EFKA (ξεχωριστή collection, bare): `GET` dry-run/preview (super_admin, per-singleton status, zero writes)· `POST` execute (super_admin + `withSensitiveRateLimit`, **idempotent ανά singleton**): `setDoc(target, {...global, companyId, updatedAt})`· globals άθικτα (rollback)· `logSystemOperation` audit.
 - **Tests** — `accounting-doc-ids` (helper) + repository singletons (κάθε get/save → per-tenant doc, service_presets+EFKA stamp companyId, matching_config per-tenant) + migration route (per-singleton dry-run/idempotent/companyId-stamped/globals-intact/super_admin gate, 6 entries incl EFKA). 20 νέα pass· 282/282 accounting engines+repository regression· tsc καθαρό. Zero rules/index change.
 
-**CHECKPOINT Giorgio**: 🔴 PENDING — browser `GET` preview → `POST` execute `/api/admin/migrate-accounting-singletons` (super_admin, `credentials:'include'`) + commit.
+**CHECKPOINT Giorgio**: ✅ MIGRATION RUN 2026-06-11 (super_admin browser): `GET`/`POST` → όλα τα 6 `NO_SOURCE` (no-op — ο tenant δεν είχε ποτέ legacy global data στα 6· τίποτα προς μετάφραση, μηδέν απώλεια). ✅ `matching_config` BROWSER-VERIFIED end-to-end: αλλαγή threshold → save → F5 reload → η τιμή επιβίωσε (write+read στο `accounting_settings/{companyId}__matching_config`). 🔴 PENDING μόνο commit.
 
 ### PHASE 3 — Tenant provisioning (PLANNED, risk ΥΨΗΛΟ — αγγίζει login path)
 
