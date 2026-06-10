@@ -146,6 +146,8 @@ export const SUBCATEGORY_TAXONOMY: Readonly<Record<BimCategory, ReadonlyArray<st
   'floor-finish':  [],
   // ADR-422 — thermal-space: no subcategory model (analytical fill + tag overlay).
   'thermal-space': [],
+  // ADR-437 — space-separator: no subcategory model (boundary line only).
+  'space-separator': [],
   // ADR-436 Slice 1 — θεμελίωση: hidden-lines (διακεκομμένο περίγραμμα below-grade,
   // WIRED στον FoundationRenderer) + centerline (strip/tie-beam άξονας, Slice 2) +
   // cut-pattern (concrete hatch).

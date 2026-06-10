@@ -96,6 +96,8 @@ export type BimCategory =
   | 'floor-finish'
   // ADR-422 — analytical thermal space / θερμικός χώρος (IfcSpace, architectural overlay).
   | 'thermal-space'
+  // ADR-437 — space separator / γραμμή διαχωρισμού χώρου (IfcVirtualElement, architectural overlay).
+  | 'space-separator'
   // ADR-434 — gas/oil fuel supply run (μηχανολογικό· own V/G discipline, yellow gas convention).
   | 'fuel'
   // ADR-436 — θεμελίωση / substructure (πέδιλα/πεδιλοδοκοί/συνδετήριες δοκοί, structural).
@@ -333,6 +335,8 @@ export const DEFAULT_OBJECT_STYLES: Readonly<Record<BimCategory, ObjectStyle>> =
   'floor-finish': { projectionPen: 3, cutPen: 3 },
   // ADR-422 — θερμικός χώρος: λεπτή γραμμή (IfcSpace analytical overlay, interior tag).
   'thermal-space': { projectionPen: 3, cutPen: 3 },
+  // ADR-437 — διαχωριστής χώρου: λεπτή γραμμή (IfcVirtualElement boundary line).
+  'space-separator': { projectionPen: 3, cutPen: 3 },
   // ADR-436 — θεμελίωση: μεσαία γραμμή (below-grade structural). Foundation-plan
   // 2Δ διακεκομμένη σύμβαση + subcategories wiring = Slice 1 (renderer).
   foundation: {

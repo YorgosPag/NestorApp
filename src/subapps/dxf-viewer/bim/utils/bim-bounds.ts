@@ -49,6 +49,8 @@ export function calculateBimEntity2DBounds(entity: Entity): { min: Point2D; max:
     case 'floor-finish':
     // ADR-422 — thermal space (IfcSpace) footprint bbox projects to 2D (same).
     case 'thermal-space':
+    // ADR-437 — space separator (IfcVirtualElement) segment bbox projects to 2D (same).
+    case 'space-separator':
     // ADR-408 Φ12 — plumbing manifold projects geometry.bbox to 2D (same).
     case 'mep-manifold':
     // ADR-408 Εύρος Β — heating radiator projects geometry.bbox to 2D (same).

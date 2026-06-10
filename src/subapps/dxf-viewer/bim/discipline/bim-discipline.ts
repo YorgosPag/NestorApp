@@ -105,6 +105,8 @@ export const DISCIPLINE_BY_CATEGORY: Readonly<Record<BimCategory, DisciplineOrAn
   'floor-finish':  'architectural',
   // ADR-422 — thermal space (IfcSpace analytical) ⊂ architectural (Revit Spaces).
   'thermal-space': 'architectural',
+  // ADR-437 — space separator (IfcVirtualElement boundary) ⊂ architectural (Revit Spaces).
+  'space-separator': 'architectural',
   // ADR-436 — θεμελίωση (πέδιλα/πεδιλοδοκοί/συνδετήριες δοκοί) ⊂ structural (Revit Structural Foundation).
   foundation:      'structural',
 } as const;

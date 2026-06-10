@@ -23,6 +23,7 @@ import {
   isColumnEntity,
   isFloorFinishEntity,
   isThermalSpaceEntity,
+  isSpaceSeparatorEntity,
   isMepUnderfloorEntity,
 } from '../../types/entities';
 import { getColumnAnchorWorldPoints } from '../columns/column-anchors';
@@ -86,6 +87,13 @@ export function getBimEntityKeyPoints2D(entity: Entity): Point2D[] {
     const verts = entity.params.footprint?.vertices;
     if (!verts) return [];
     return verts.map(v => ({ x: v.x, y: v.y }));
+  }
+
+  // ADR-437 — space separator key points = its two endpoints.
+  if (isSpaceSeparatorEntity(entity)) {
+    const { start, end } = entity.params;
+    if (!start || !end) return [];
+    return [{ x: start.x, y: start.y }, { x: end.x, y: end.y }];
   }
 
   // ADR-408 Εύρος Β #3 — underfloor heating loop footprint vertices (closed
