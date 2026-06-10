@@ -25,6 +25,7 @@ import { CopyEntityCommand, type CopyEntityParams } from '../../core/commands/en
 import { GripCopyModeStore } from '../../systems/grip/GripCopyModeStore';
 import { GripAltMoveStore } from '../../systems/grip/GripAltMoveStore';
 import { CtrlKeyTracker } from '../../keyboard/CtrlKeyTracker';
+import { executeWholeEntityConnectivityMove } from '../../bim/mep-segments/build-whole-entity-connectivity-move';
 import type { Entity } from '../../types/entities';
 export type { DxfCommitDeps, OverlayCommitDeps } from './unified-grip-types';
 import type { DxfCommitDeps, OverlayCommitDeps } from './unified-grip-types';
@@ -120,6 +121,22 @@ function commitWholeEntityMove(
     GripCopyModeStore.bumpCount();
     return;
   }
+  // ADR-408 Φ-C (move-from-point side) — when the moved entity is a plumbing
+  // connector host (sink / manifold / boiler / radiator / water-heater), its
+  // connected pipe ends must FOLLOW it (Revit "host moves, connectors move with
+  // it"). The parametric grip path already does this via
+  // `executeHostMoveWithConnectedPipes`; this whole-entity / Alt move-from-point
+  // path historically used a bare `MoveEntityCommand` (connectivity-blind), so the
+  // run tore off the network. Route plumbing hosts through the SAME shared executor
+  // (one CompoundCommand = single undo). Returns false for non-plumbing entities →
+  // fall back to the standard move (walls / furniture / panels stay byte-identical).
+  const sceneManager = createSceneManagerAdapter(deps);
+  if (
+    sceneManager &&
+    executeWholeEntityConnectivityMove({ entityId: grip.entityId, delta, sceneManager, execute: deps.execute })
+  ) {
+    return;
+  }
   deps.moveEntities([grip.entityId], delta, { isDragging: false });
 }
 
@@ -139,9 +156,14 @@ export function commitDxfGripDragModeAware(
   // ADR-408 Φ12 — manifold outlet add/remove are single-click ACTION grips (Revit
   // "array control" ▲/▼): they bump `outletCount` ±1 and must fire even on zero
   // delta (no drag), so they also precede the zero-delta guard.
+  // ADR-408 Φ-C EXT — but ONLY when Alt is NOT armed: the ▲/▼ grips sit ~150mm off
+  // the manifold edge, so an Alt+drag «move-from-point» can grab one. With Alt held
+  // the user intends a WHOLE-ENTITY move (connectivity-preserving), not an outlet
+  // bump — fall through to the Alt branch below so the manifold actually moves.
   if (
-    grip.mepManifoldGripKind === 'mep-manifold-outlet-add' ||
-    grip.mepManifoldGripKind === 'mep-manifold-outlet-remove'
+    !GripAltMoveStore.getActive() &&
+    (grip.mepManifoldGripKind === 'mep-manifold-outlet-add' ||
+      grip.mepManifoldGripKind === 'mep-manifold-outlet-remove')
   ) {
     commitMepManifoldOutletCountGrip(grip, deps);
     return;

@@ -249,6 +249,10 @@ export function useMepSegmentPersistence(
   const persist = useCallback(async (entity: MepSegmentEntity) => {
     const svc = serviceRef.current;
     if (!svc) return;
+    // Race guard (delete-wins): the segment was already deleted before this persist ran
+    // (e.g. delete fired before the first-save's write started) — writing now would leave a
+    // Firestore zombie that reappears on reload. Skip the write entirely.
+    if (deletedIdsRef.current.has(entity.id)) return;
     const prevParams = lastSavedParamsRef.current.get(entity.id) ?? null;
     const isNew = prevParams === null;
     setSaveState('saving');
@@ -263,6 +267,14 @@ export function useMepSegmentPersistence(
           geometry: entity.geometry,
           layerId: entity.layerId,
         });
+      }
+      // Race guard (delete raced AHEAD while this write was in-flight): a delete's `deleteDoc`
+      // ran before this `setDoc` landed, so it deleted nothing and our write is now a zombie
+      // that would reappear on reload. Compensate by deleting the doc we just wrote, and skip
+      // the post-save bookkeeping (the deleteSegment handler already recorded the audit/BOQ).
+      if (deletedIdsRef.current.has(entity.id)) {
+        await svc.deleteSegment(entity.id);
+        return;
       }
       lastSavedParamsRef.current.set(entity.id, entity.params);
       dirtyIdsRef.current.delete(entity.id);
@@ -408,6 +420,10 @@ export function useMepSegmentPersistence(
   // Delete-requested listener.
   useEffect(() => {
     const cleanup = EventBus.on('bim:mep-segment-delete-requested', ({ segmentId }) => {
+      // Mark deleted SYNCHRONOUSLY (before the async delete) so an in-flight first-save
+      // persist detects the race and compensates instead of leaving a Firestore zombie.
+      // Mirrors useWallPersistence. The async deleteSegment re-adds it harmlessly (Set).
+      deletedIdsRef.current.add(segmentId);
       void deleteSegment(segmentId);
     });
     return cleanup;
