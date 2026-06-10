@@ -58,6 +58,8 @@ export function createAuditedRepository(
     getInvoiceSeries: repo.getInvoiceSeries.bind(repo),
     getServicePresets: repo.getServicePresets.bind(repo),
     saveServicePresets: repo.saveServicePresets.bind(repo),
+    getMatchingConfig: repo.getMatchingConfig.bind(repo),
+    saveMatchingConfig: repo.saveMatchingConfig.bind(repo),
     getBankTransaction: repo.getBankTransaction.bind(repo),
     listBankTransactions: repo.listBankTransactions.bind(repo),
     getBankAccounts: repo.getBankAccounts.bind(repo),
