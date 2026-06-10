@@ -1,14 +1,18 @@
 /**
  * ADR-397 / ADR-408 — Centre-anchored rotatable-box grip SSoT.
  *
- * The single source of truth for the grip geometry + drag math shared by EVERY
- * point-based BIM element whose footprint is a **centre-anchored, rotatable
- * rectangle**: a MEP fixture (`bim/mep-fixtures/mep-fixture-grips.ts`, rectangular
- * shape) and an electrical panel (`bim/electrical-panels/electrical-panel-grips.ts`).
- * Before this module the two owned ~200 lines of byte-identical grip math
- * (`cornerWorld` / `rotationHandleWorld` / `moveCentre` / `rotateAboutCentre` /
- * `resizeCorner`); this collapses them into ONE implementation that each entity
- * consumes through a thin role→kind adapter (N.0.2 Boy-Scout de-duplication).
+ * The CENTRE-anchored consumer of the rotated-rectangle grip SSoT, shared by
+ * EVERY point-based BIM element whose footprint is a **centre-anchored, rotatable
+ * rectangle**: MEP fixture, electrical panel, water-heater, manifold, boiler,
+ * radiator, furniture, floorplan-symbol (8 entities). Each consumes it through a
+ * thin role→kind adapter (N.0.2 Boy-Scout de-duplication).
+ *
+ * SSoT layering (2026-06-10 unification — Giorgio «παντού ίδιος κώδικας»): the
+ * corner GEOMETRY + opposite-corner-fixed RESIZE math live in the entity-agnostic
+ * `bim/grips/rect-grip-engine` + `rect-frame` core (the SAME code the anchored
+ * pad / column / wall grips use). This module adds the centre-anchored mapping
+ * (`position` IS the centre), the grip ROLES, the MOVE + ROTATION (legacy +
+ * 6-click pivot) transforms, and ORTHO — none of which belong in the pure core.
  *
  * What stays per-entity (NOT here):
  *   - the entity-specific grip-kind STRINGS (`'mep-fixture-corner-ne'` vs
@@ -31,8 +35,14 @@
 import type { Point2D } from '../../rendering/types/Types';
 import type { SceneUnits } from '../../utils/scene-units';
 import { mmScaleFor } from '../../utils/scene-units';
-import { rotateVector, projectToLocalFrame, sweptAngleDegAboutPivot } from './grip-math';
+import { rotateVector, sweptAngleDegAboutPivot } from './grip-math';
 import { rotatePoint } from '../../utils/rotation-math';
+// ADR-363 SSoT unification (2026-06-10) — corner geometry + opposite-corner-fixed
+// resize are the shared `rect-grip-engine` core (same code pad/column/wall use).
+// This module is now the CENTRE-anchored consumer (+ roles / move / rotation / ORTHO).
+import type { RectFrame } from './rect-frame';
+import { rectCornerWorld } from './rect-frame';
+import { applyRectCornerDrag } from './rect-grip-engine';
 
 const RAD_TO_DEG = 180 / Math.PI;
 
@@ -138,13 +148,20 @@ function centre(params: CentredBoxParams): Point2D {
   return { x: params.position.x, y: params.position.y };
 }
 
-/** World position of a corner (signX, signY) of the rotated footprint. */
-function cornerWorld(params: CentredBoxParams, sx: number, sy: number): Point2D {
+/** Centre-anchored box params → shared `RectFrame` (centre = `position`, scene units). */
+function centredBoxToRectFrame(params: CentredBoxParams): RectFrame {
   const s = mmScaleFor(params);
-  const local = { x: (sx * params.width * s) / 2, y: (sy * params.length * s) / 2 };
-  const c = centre(params);
-  const rot = rotateVector(local, params.rotation);
-  return { x: c.x + rot.x, y: c.y + rot.y };
+  return {
+    center: centre(params),
+    rotationDeg: params.rotation,
+    halfWidth: (params.width * s) / 2,
+    halfLength: (params.length * s) / 2,
+  };
+}
+
+/** World position of a corner (signX, signY) — shared `rect-frame` SSoT. */
+function cornerWorld(params: CentredBoxParams, sx: 1 | -1, sy: 1 | -1): Point2D {
+  return rectCornerWorld(centredBoxToRectFrame(params), { sx, sy });
 }
 
 /** World position of the rotation handle (beyond the +Y / length edge midpoint). */
@@ -268,10 +285,12 @@ function rotateAboutCentre(input: Readonly<CentredBoxGripDragInput>): CentredBox
 }
 
 /**
- * Opposite-corner-anchored two-direction resize. The corner diagonally opposite
- * the dragged one is pinned in world space; `width`/`length` grow toward the
- * dragged corner and `position` re-centres to the new box centre. ORTHO snaps
- * the motion to the dominant local axis (pure width OR length).
+ * Opposite-corner-anchored two-direction resize. Delegates the geometry to the
+ * shared `rect-grip-engine` SSoT (same opposite-corner-fixed math pad/column/wall
+ * use): the corner diagonally opposite the dragged one is pinned, `width`/`length`
+ * grow toward the dragged corner and `position` re-centres. ORTHO constrains the
+ * drag to the dominant local axis. The centre-anchored frame ⇔ params mapping is
+ * trivial here (`position` IS the centre — no 9-position anchor layer).
  */
 function resizeCorner(
   role: CentredBoxGripRole,
@@ -280,38 +299,18 @@ function resizeCorner(
   const { originalParams, delta, ortho, minDimensionMm } = input;
   const { sx, sy } = CORNER_SIGNS[role];
   const s = mmScaleFor(originalParams);
-  const c = centre(originalParams);
-  const rot = originalParams.rotation;
-
-  // Anchor = opposite corner, fixed in world.
-  const anchorLocal = { x: (-sx * originalParams.width * s) / 2, y: (-sy * originalParams.length * s) / 2 };
-  const anchorRot = rotateVector(anchorLocal, rot);
-  const anchorWorld = { x: c.x + anchorRot.x, y: c.y + anchorRot.y };
-
-  // anchor → dragged corner vector in the local frame (scene units).
-  const baseLocal = { x: sx * originalParams.width * s, y: sy * originalParams.length * s };
-
-  // Drag projected to local axes; ORTHO zeroes the smaller component.
-  let dLocal = projectToLocalFrame(delta, rot);
-  if (ortho) {
-    dLocal = Math.abs(dLocal.x) >= Math.abs(dLocal.y)
-      ? { x: dLocal.x, y: 0 }
-      : { x: 0, y: dLocal.y };
-  }
-
-  const newWidth = Math.max(minDimensionMm, Math.abs(baseLocal.x + dLocal.x) / s);
-  const newLength = Math.max(minDimensionMm, Math.abs(baseLocal.y + dLocal.y) / s);
-
-  // Re-form the anchor→dragged vector with the original signs + clamped span, so
-  // the dragged corner stays diagonally opposite the anchor. New centre = midpoint.
-  const clampedLocal = { x: sx * newWidth * s, y: sy * newLength * s };
-  const halfRot = rotateVector({ x: clampedLocal.x / 2, y: clampedLocal.y / 2 }, rot);
-  const newCentre = { x: anchorWorld.x + halfRot.x, y: anchorWorld.y + halfRot.y };
-
+  const minHalf = (minDimensionMm * s) / 2;
+  const frame = applyRectCornerDrag(
+    centredBoxToRectFrame(originalParams),
+    { sx, sy },
+    delta,
+    { minHalfWidth: minHalf, minHalfLength: minHalf },
+    ortho,
+  );
   return {
     ...basePatch(originalParams),
-    width: newWidth,
-    length: newLength,
-    position: { x: newCentre.x, y: newCentre.y, z: originalParams.position.z ?? 0 },
+    width: (frame.halfWidth * 2) / s,
+    length: (frame.halfLength * 2) / s,
+    position: { x: frame.center.x, y: frame.center.y, z: originalParams.position.z ?? 0 },
   };
 }

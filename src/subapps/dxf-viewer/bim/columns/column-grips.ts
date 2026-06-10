@@ -93,6 +93,14 @@ import {
   polyVertexHandlePosition,
   resizePolyVertex,
 } from './column-poly-vertex-grips';
+// ADR-363 Slice C — rectangular / shear-wall corners + edges via shared
+// `rect-grip-engine` SSoT (wall/foundation parity). Variant/circular/polygon
+// kinds keep their own transforms (this adapter returns null for them).
+import {
+  isRectColumn,
+  rectColumnCornerGrips,
+  applyRectColumnGrip,
+} from './column-rect-adapter';
 
 // ─── Grip emission (ADR-363 §6 Phase 4.5 + 4.5b) ─────────────────────────────
 
@@ -292,7 +300,13 @@ export function getColumnGrips(entity: Readonly<ColumnEntity>): GripInfo[] {
       columnGripKind: 'column-base-thickness',
     });
   }
-  // shear-wall: falls through με 4 grips (rect parity — bbox = width × depth)
+  // ADR-363 Slice C — rectangular / shear-wall: add the 4 corner grips (indices
+  // 4..7) so the rect column matches the wall/foundation 7-grip layout, sharing
+  // the rect-grip-engine. (Variant kinds already consumed indices 4/5 above and
+  // are excluded by `isRectColumn`.)
+  if (isRectColumn(params)) {
+    grips.push(...rectColumnCornerGrips(entity));
+  }
 
   return grips;
 }
@@ -337,6 +351,11 @@ export function applyColumnGripDrag(
   if (gripKind === 'column-rotation') {
     return input.pivot ? rotateAroundPivot(input) : rotateAroundPosition(input);
   }
+  // ADR-363 Slice C — rect/shear-wall corners + width/depth edges → shared engine.
+  // Returns null for non-rect kinds (circular/polygon/L/T/I/U) → fall through to
+  // their own transforms below.
+  const rectResult = applyRectColumnGrip(gripKind, input.originalParams, input.delta);
+  if (rectResult) return rectResult;
   if (gripKind === 'column-width') return resizeWidth(input);
   if (gripKind === 'column-depth') return resizeDepth(input);
   if (gripKind === 'column-arm-length') return resizeArmLength(input);
