@@ -44,6 +44,7 @@ import { getLayer } from '../../stores/LayerStore';
 import { isConcreteLineweight } from '../../config/lineweight-iso-catalog';
 import { getBeamGrips, beamDepthHandlePosition } from '../beams/beam-grips';
 import { gripGlyphShape } from '../grips/grip-glyph-registry';
+import { drawEntityDimLabel } from '../labels/bim-dim-labels';
 import { getBimEntityKeyPoints2D } from '../utils/bim-entity-points';
 import {
   computeBeamHatchPlan,
@@ -185,6 +186,11 @@ export class BeamRenderer extends BaseEntityRenderer {
       this.drawDepthIndicator(beam);
       this.drawSectionProfile(beam);
       this.drawAnchorPulse(beam);
+    }
+
+    // Revit-style centred dimension pill (hover/select) — shared SSoT.
+    if (phaseState.phase === 'highlighted' || options.selected) {
+      drawEntityDimLabel(this.ctx, beam, beam.geometry.bbox, (p) => this.worldToScreen(p));
     }
 
     this.finalizeRender(entity, options);

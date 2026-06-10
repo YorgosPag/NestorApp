@@ -71,6 +71,10 @@ Mouse Event → DxfCanvas.onMouseMove
 
 ## Changelog
 
+### 2026-06-11 — Entity renderers draw shared dim-label pill (ADR-363/ADR-436) — pure canvas, μηδέν νέο subscription (CHECK 6D)
+
+**Status**: IMPLEMENTED 2026-06-11. Οι entity renderers (`WallRenderer`, `BeamRenderer`, `ColumnRenderer`, `FoundationRenderer`, `OpeningRenderer`) ζωγραφίζουν πλέον — σε hover/select — ένα κεντρωμένο Revit-style **dimension pill** μέσω του νέου **κοινού SSoT** `bim/labels/bim-dim-labels.ts` (`drawEntityDimLabel`, στηριγμένο στο `rendering/utils/canvas-pill.ts`). **Pure canvas draw — μηδέν React, μηδέν stores, μηδέν `useSyncExternalStore`** (το module είναι ρητά «ADR-040 micro-leaf safe»): ο κάθε renderer καλεί τη συνάρτηση στο τέλος του render pass με `worldToScreen` projector, χωρίς νέα subscription και χωρίς αλλαγή σε bitmap cache-key. Καμία αλλαγή στο micro-leaf subscription pattern — μόνο canvas drawing touch (CHECK 6D — co-staged ADR-040). Λεπτομέρεια στο ADR-363 §5.6 Phase 8F + ADR-436 Slice D (rect-frame grip SSoT).
+
 ### 2026-06-10 — Space-separator tool wiring (ADR-437) — pure pass-through στον orchestrator, μηδέν νέο subscription (CHECK 6B)
 
 **Status**: IMPLEMENTED 2026-06-10. Το νέο `spaceSeparatorTool` (Revit «Room Separator», ADR-437) περνάει μέσα από τον `CanvasSection.tsx` orchestrator: (i) destructure από το αποτέλεσμα του `useSpecialTools(...)` και (ii) forward ως πεδίο στα `useCanvasClickHandler` params — μαζί με νέο optional `spaceSeparatorTool?: SlabToolLike` στο `UseCanvasClickHandlerParams` (`canvas-click-types.ts`). **Καθαρό pass-through**: ο orchestrator ΔΕΝ αποκτά νέο `useSyncExternalStore` (CHECK 6C respected), καμία αλλαγή σε bitmap cache-key, η click-FSM ζει στο `useSpaceSeparatorTool` (leaf/hook). Το shell-touch είναι μόνο το threading ενός ακόμη tool handle — ίδιο μοτίβο με `thermalSpaceTool` (ADR-422). Co-staged για CHECK 6B (`CanvasSection.tsx`). Λεπτομέρεια στο ADR-437 changelog.

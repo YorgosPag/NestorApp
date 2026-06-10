@@ -37,6 +37,7 @@ import { isConcreteLineweight } from '../../config/lineweight-iso-catalog';
 import { FOUNDATION_KIND_FILL } from '../foundations/foundation-render-palette';
 import { getFoundationGrips } from '../foundations/foundation-grips';
 import { gripGlyphShape } from '../grips/grip-glyph-registry';
+import { drawEntityDimLabel } from '../labels/bim-dim-labels';
 import {
   computeFoundationHatchPlan,
   FOUNDATION_HATCH_DOT_RADIUS_PX,
@@ -127,6 +128,11 @@ export class FoundationRenderer extends BaseEntityRenderer {
     // Centerline (dash-dot άξονας) — μόνο line-based kinds (strip / tie-beam).
     if (foundation.kind !== 'pad') {
       this.drawCenterline(foundation);
+    }
+
+    // Revit-style centred dimension pill (hover/select) — shared SSoT.
+    if (phaseState.phase === 'highlighted' || options.selected) {
+      drawEntityDimLabel(this.ctx, foundation, foundation.geometry.bbox, (p) => this.worldToScreen(p));
     }
 
     this.finalizeRender(entity, options);

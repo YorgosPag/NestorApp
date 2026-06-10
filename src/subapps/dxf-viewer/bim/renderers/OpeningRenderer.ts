@@ -39,6 +39,7 @@ import { getLayer } from '../../stores/LayerStore';
 import { isConcreteLineweight } from '../../config/lineweight-iso-catalog';
 import { getOpeningGrips } from '../walls/opening-grips';
 import { gripGlyphShape } from '../grips/grip-glyph-registry';
+import { drawEntityDimLabel } from '../labels/bim-dim-labels';
 import { isPointInPolygon } from '../../utils/geometry/GeometryUtils';
 import { OPENING_KIND_STROKE } from './opening-kind-style';
 import { drawOpeningPlanOverlay } from './opening-overlay-drawing';
@@ -135,6 +136,13 @@ export class OpeningRenderer extends BaseEntityRenderer {
       opening,
       layerVisible: isOpeningTagLayerVisible(),
     });
+
+    // Revit-style centred dimension pill (hover/select) — shared SSoT. The Mark
+    // tag (above) is offset along the wall normal; the dim pill is bbox-centred,
+    // so they separate. w×h is the opening's meaningful primary dimension.
+    if (phaseState.phase === 'highlighted' || options.selected) {
+      drawEntityDimLabel(this.ctx, opening, opening.geometry.bbox, (p) => this.worldToScreen(p));
+    }
 
     this.finalizeRender(entity, options);
   }

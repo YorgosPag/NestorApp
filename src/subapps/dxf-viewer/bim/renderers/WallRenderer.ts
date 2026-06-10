@@ -38,6 +38,7 @@ import { useDrawingScaleStore } from '../../state/drawing-scale-store';
 import { isPointInPolygon } from '../../utils/geometry/GeometryUtils';
 import { HOVER_HIGHLIGHT } from '../../config/color-config';
 import { getWallGrips, wallGripGlyphShape } from '../walls/wall-grips';
+import { drawEntityDimLabel } from '../labels/bim-dim-labels';
 import { getLayer } from '../../stores/LayerStore';
 import { isConcreteLineweight } from '../../config/lineweight-iso-catalog';
 import {
@@ -152,6 +153,11 @@ export class WallRenderer extends BaseEntityRenderer {
           this.ctx, ring, _tiltShift, (p) => this.worldToScreen(p), TILT_PROJECTION_STROKE,
         );
       }
+    }
+
+    // Revit-style centred dimension pill (hover/select) — shared SSoT.
+    if (phaseState.phase === 'highlighted' || options.selected) {
+      drawEntityDimLabel(this.ctx, wall, wall.geometry.bbox, (p) => this.worldToScreen(p));
     }
 
     this.finalizeRender(entity, options);

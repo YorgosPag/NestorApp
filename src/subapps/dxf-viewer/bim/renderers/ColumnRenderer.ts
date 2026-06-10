@@ -67,11 +67,7 @@ import {
   COL_SECTION_LINE_WIDTH_PX,
 } from '../columns/column-section-profile';
 import { resolveColumnSectionOutline } from '../columns/column-section-symbol';
-import {
-  formatColumnDimLabels,
-  drawColumnDimPill,
-  COLUMN_LABEL_MIN_FOOTPRINT_PX,
-} from '../columns/column-dim-labels';
+import { drawEntityDimLabel } from '../labels/bim-dim-labels';
 import { KIND_STROKE, KIND_FILL } from '../columns/column-render-palette';
 import { isWallColumnKind } from '../columns/column-from-faces';
 import { columnCutPlaneShiftCanvas } from '../geometry/cut-plane-tilt';
@@ -403,18 +399,12 @@ export class ColumnRenderer extends BaseEntityRenderer {
   }
 
   /**
-   * Phase 8F — Revit-style centred dimension pill.
-   * Drawn at bbox centre in screen space; hidden when footprint is < threshold.
+   * Phase 8F — Revit-style centred dimension pill. Now routed through the shared
+   * `drawEntityDimLabel` SSoT (bbox centre + min-footprint gate + formatter +
+   * `drawDimPill`) — identical behaviour, zero duplication across BIM renderers.
    */
   private drawCenterDimLabel(column: ColumnEntity): void {
-    const bb = column.geometry.bbox;
-    const minS = this.worldToScreen({ x: bb.min.x, y: bb.min.y });
-    const maxS = this.worldToScreen({ x: bb.max.x, y: bb.max.y });
-    const span = Math.max(Math.abs(maxS.x - minS.x), Math.abs(maxS.y - minS.y));
-    if (span < COLUMN_LABEL_MIN_FOOTPRINT_PX) return;
-    const lines = formatColumnDimLabels(column.params);
-    if (lines.length === 0) return;
-    drawColumnDimPill(this.ctx, lines, (minS.x + maxS.x) / 2, (minS.y + maxS.y) / 2);
+    drawEntityDimLabel(this.ctx, column, column.geometry.bbox, (p) => this.worldToScreen(p));
   }
 
   getGrips(entity: EntityModel): GripInfo[] {
