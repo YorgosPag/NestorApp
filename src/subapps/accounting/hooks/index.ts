@@ -38,9 +38,6 @@ export { useExpenseDocument } from './useExpenseDocument';
 // ── Service Presets Hooks (ADR-ACC-011) ──────────────────────────────────────
 export { useServicePresets } from './useServicePresets';
 
-// ── Partners Hooks (ADR-ACC-012 OE) ─────────────────────────────────────────
-export { usePartners } from './usePartners';
-
 // ── APY Certificate Hooks (ADR-ACC-020) ──────────────────────────────────────
 export { useAPYCertificates } from './useAPYCertificates';
 

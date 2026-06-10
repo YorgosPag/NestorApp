@@ -30,7 +30,6 @@ import type {
   ServicePreset,
 } from '../../types/invoice';
 import type { TaxInstallment } from '../../types/tax';
-import type { Partner, Member, Shareholder } from '../../types/entity';
 import type { EFKAPayment, EFKAUserConfig } from '../../types/efka';
 import type {
   BankTransaction,
@@ -55,6 +54,11 @@ import type { AccountingAuditEntry, AuditEntryFilters } from '../../types/accoun
 import type { MatchingConfig } from '../../types/matching-config';
 
 import { sanitizeForFirestore, isoNow } from './firestore-helpers';
+import {
+  getProfilePartners,
+  getProfileMembers,
+  getProfileShareholders,
+} from './profile-entity-accessors';
 
 // Domain modules — standalone functions
 import * as financial from './accounting-repo-financial';
@@ -159,27 +163,21 @@ export class FirestoreAccountingRepository implements IAccountingRepository {
   updateTaxInstallment = (installmentNumber: number, fiscalYear: number, updates: Partial<TaxInstallment>) =>
     financial.updateTaxInstallment(this.tenant, installmentNumber, fiscalYear, updates);
 
-  // ── Entities: Partners ────────────────────────────────────────────────
-  getPartners = () =>
-    entities.getPartners(this.tenant);
-  savePartners = (partners: Partner[]) =>
-    entities.savePartners(this.tenant, partners);
+  // ── Entities: Partners (ADR-440: profile is SSoT, read via getCompanySetup) ──
+  getPartners = async () =>
+    getProfilePartners(await this.getCompanySetup());
   getPartnerEFKAPayments = (partnerId: string, year: number) =>
     entities.getPartnerEFKAPayments(this.tenant, partnerId, year);
 
-  // ── Entities: Members ─────────────────────────────────────────────────
-  getMembers = () =>
-    entities.getMembers(this.tenant);
-  saveMembers = (members: Member[]) =>
-    entities.saveMembers(this.tenant, members);
+  // ── Entities: Members (ADR-440: profile is SSoT) ──────────────────────
+  getMembers = async () =>
+    getProfileMembers(await this.getCompanySetup());
   getMemberEFKAPayments = (memberId: string, year: number) =>
     entities.getMemberEFKAPayments(this.tenant, memberId, year);
 
-  // ── Entities: Shareholders ────────────────────────────────────────────
-  getShareholders = () =>
-    entities.getShareholders(this.tenant);
-  saveShareholders = (shareholders: Shareholder[]) =>
-    entities.saveShareholders(this.tenant, shareholders);
+  // ── Entities: Shareholders (ADR-440: profile is SSoT) ─────────────────
+  getShareholders = async () =>
+    getProfileShareholders(await this.getCompanySetup());
   getShareholderEFKAPayments = (shareholderId: string, year: number) =>
     entities.getShareholderEFKAPayments(this.tenant, shareholderId, year);
 

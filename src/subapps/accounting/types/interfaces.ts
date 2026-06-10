@@ -146,19 +146,16 @@ export interface IAccountingRepository {
   createDepreciationRecord(data: Omit<DepreciationRecord, 'recordId'>): Promise<{ id: string }>;
   getDepreciationRecords(assetId: string, fiscalYear?: number): Promise<DepreciationRecord[]>;
 
-  // ── Partners (ADR-ACC-012 OE) ──────────────────────────────────────────
+  // ── Partners (ADR-ACC-012 OE) — arrays read from profile SSoT (ADR-440) ──
   getPartners(): Promise<Partner[]>;
-  savePartners(partners: Partner[]): Promise<void>;
   getPartnerEFKAPayments(partnerId: string, year: number): Promise<EFKAPayment[]>;
 
-  // ── Members (ADR-ACC-014 EPE) ────────────────────────────────────────
+  // ── Members (ADR-ACC-014 EPE) — arrays read from profile SSoT (ADR-440) ──
   getMembers(): Promise<Member[]>;
-  saveMembers(members: Member[]): Promise<void>;
   getMemberEFKAPayments(memberId: string, year: number): Promise<EFKAPayment[]>;
 
-  // ── Shareholders (ADR-ACC-015 AE) ────────────────────────────────────
+  // ── Shareholders (ADR-ACC-015 AE) — arrays read from profile SSoT (ADR-440) ──
   getShareholders(): Promise<Shareholder[]>;
-  saveShareholders(shareholders: Shareholder[]): Promise<void>;
   getShareholderEFKAPayments(shareholderId: string, year: number): Promise<EFKAPayment[]>;
 
   // ── EFKA Payments ───────────────────────────────────────────────────────
