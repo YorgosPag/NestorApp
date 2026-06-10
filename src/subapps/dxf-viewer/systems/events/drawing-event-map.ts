@@ -218,6 +218,9 @@ export interface DrawingEventMap extends MepAutoDesignEventMap {
   // ADR-422 — BIM thermal space (IfcSpace) params + delete events
   'bim:thermal-space-params-updated': { thermalSpaceId: string };
   'bim:thermal-space-delete-requested': { id: string };
+  // ADR-437 — BIM space separator (IfcVirtualElement) params + delete events
+  'bim:space-separator-params-updated': { spaceSeparatorId: string };
+  'bim:space-separator-delete-requested': { id: string };
   // ADR-363 Phase 3.7 — BIM slab-opening params + delete events
   'bim:slab-opening-params-updated': { slabOpeningId: string };
   'bim:slab-opening-delete-requested': { slabOpeningId: string };
@@ -334,7 +337,7 @@ export interface DrawingEventMap extends MepAutoDesignEventMap {
   // DeleteEntityCommand.undo() and DeleteMultipleEntitiesCommand.undo().
   'bim:entity-restore-requested': {
     // ADR-406 — 'mep-fixture' appended. ADR-407 — 'railing' appended. ADR-408 Φ3 — 'electrical-panel'. ADR-408 Φ8 — 'mep-segment'. ADR-410 — 'furniture'. ADR-408 Φ12 — 'mep-manifold'. ADR-408 Εύρος Β — 'mep-radiator'. ADR-408 Εύρος Β #2 — 'mep-boiler'. ADR-408 — 'mep-water-heater'.
-    entityType: 'wall' | 'opening' | 'slab' | 'slab-opening' | 'column' | 'beam' | 'stair' | 'mep-fixture' | 'electrical-panel' | 'mep-manifold' | 'mep-radiator' | 'mep-boiler' | 'mep-water-heater' | 'mep-underfloor' | 'railing' | 'mep-segment' | 'furniture' | 'floor-finish' | 'roof' | 'thermal-space';
+    entityType: 'wall' | 'opening' | 'slab' | 'slab-opening' | 'column' | 'beam' | 'stair' | 'mep-fixture' | 'electrical-panel' | 'mep-manifold' | 'mep-radiator' | 'mep-boiler' | 'mep-water-heater' | 'mep-underfloor' | 'railing' | 'mep-segment' | 'furniture' | 'floor-finish' | 'roof' | 'thermal-space' | 'space-separator';
     entitySnapshot: AnySceneEntity;
     source: 'undo-delete' | 'redo-restore';
   };

@@ -61,6 +61,7 @@ export function useCanvasClickHandler(params: UseCanvasClickHandlerParams): UseC
     mepWaterHeaterTool,
     mepUnderfloorTool,
     thermalSpaceTool,
+    spaceSeparatorTool,
     mepSegmentTool,
     mepRiserTool,
     railingTool,
@@ -265,6 +266,11 @@ export function useCanvasClickHandler(params: UseCanvasClickHandlerParams): UseC
       thermalSpaceTool.onCanvasClick(bimPoint);
       return;
     }
+    // PRIORITY 4.7f: ADR-437 — Space-separator tool 2-click line placement.
+    if (activeTool === 'space-separator' && spaceSeparatorTool?.isActive) {
+      spaceSeparatorTool.onCanvasClick(bimPoint);
+      return;
+    }
     // PRIORITY 4.8: ADR-363 Phase 4 — Column tool single-click placement.
     // Φάση 3 / 3c — 'column-from-perimeter' & 'column-discrete-from-perimeter' share
     // the same tool; click-inside a perimeter builds (RAW worldPoint — hit-tests
@@ -291,6 +297,19 @@ export function useCanvasClickHandler(params: UseCanvasClickHandlerParams): UseC
     // PRIORITY 4.85: ADR-436 Slice 1 — Foundation pad tool single-click placement
     // (mirror column freehand; RAW worldPoint so the anchor point matches the click).
     if (activeTool === 'foundation-pad' && foundationTool?.isActive) {
+      foundationTool.onCanvasClick(worldPoint);
+      return;
+    }
+    // PRIORITY 4.86: ADR-436 Slice 2 — Foundation line tools (strip / tie-beam) 2-click.
+    // Uses bimPoint (ORTHO/POLAR-snapped) so the axis aligns cleanly, mirror beam.
+    if ((activeTool === 'foundation-strip' || activeTool === 'foundation-tie-beam') && foundationTool?.isActive) {
+      foundationTool.onCanvasClick(bimPoint);
+      return;
+    }
+    // PRIORITY 4.87: ADR-436 Slice 2 — «Πεδιλοδοκός από τοίχο» 1-click pick of an
+    // existing wall. RAW worldPoint (hit-tests geometry — ORTHO must NOT shift),
+    // mirror 'beam-from-wall'.
+    if (activeTool === 'foundation-strip-from-wall' && foundationTool?.isActive) {
       foundationTool.onCanvasClick(worldPoint);
       return;
     }
@@ -385,6 +404,7 @@ export function useCanvasClickHandler(params: UseCanvasClickHandlerParams): UseC
     mepBoilerTool,
     mepUnderfloorTool,
     thermalSpaceTool,
+    spaceSeparatorTool,
     mepSegmentTool,
     mepRiserTool,
     railingTool,

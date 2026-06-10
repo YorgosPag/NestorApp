@@ -13,7 +13,7 @@ import type { DxfEntityUnion, DxfTextStyle } from '../../canvas-v2/dxf-canvas/dx
 import type { DxfColor } from '../../text-engine/types';
 import type { Point2D } from '../../rendering/types/Types';
 import type { SceneModel, TextEntity } from '../../types/entities';
-import { isSlabEntity, isSlabOpeningEntity, isOpeningEntity, isWallEntity, isBeamEntity, isColumnEntity, isFoundationEntity, isMepFixtureEntity, isElectricalPanelEntity, isRailingEntity, isFurnitureEntity, isMepSegmentEntity, isMepFittingEntity, isFloorplanSymbolEntity, isMepManifoldEntity, isMepRadiatorEntity, isMepBoilerEntity, isMepWaterHeaterEntity, isMepUnderfloorEntity, isRoofEntity, isFloorFinishEntity, isThermalSpaceEntity, isXLineEntity, isRayEntity } from '../../types/entities';
+import { isSlabEntity, isSlabOpeningEntity, isOpeningEntity, isWallEntity, isBeamEntity, isColumnEntity, isFoundationEntity, isMepFixtureEntity, isElectricalPanelEntity, isRailingEntity, isFurnitureEntity, isMepSegmentEntity, isMepFittingEntity, isFloorplanSymbolEntity, isMepManifoldEntity, isMepRadiatorEntity, isMepBoilerEntity, isMepWaterHeaterEntity, isMepUnderfloorEntity, isRoofEntity, isFloorFinishEntity, isThermalSpaceEntity, isSpaceSeparatorEntity, isXLineEntity, isRayEntity } from '../../types/entities';
 import type { XLineEntity, RayEntity } from '../../types/entities';
 import type { StairEntity } from '../../bim/types/stair-types';
 import type { SlabEntity } from '../../bim/types/slab-types';
@@ -46,6 +46,7 @@ import type { RoofEntity } from '../../bim/types/roof-types';
 // ADR-419 — floor finish direct entity for DXF render pipeline.
 import type { FloorFinishEntity } from '../../bim/types/floor-finish-types';
 import type { ThermalSpaceEntity } from '../../bim/types/thermal-space-types';
+import type { SpaceSeparatorEntity } from '../../bim/types/space-separator-types';
 import type { MepSegmentEntity } from '../../bim/types/mep-segment-types';
 import type { MepFittingEntity } from '../../bim/types/mep-fitting-types';
 import type { DimensionEntity } from '../../types/dimension';
@@ -391,6 +392,15 @@ export function convertEntity(entity: SceneEntity, layers: SceneLayers, layersBy
       if (!isThermalSpaceEntity(entity)) return null;
       const ts = entity as ThermalSpaceEntity;
       return { ...base, type: 'thermal-space' as const, kind: ts.kind, params: ts.params, geometry: ts.geometry } as DxfEntityUnion;
+    }
+    case 'space-separator': {
+      // ADR-437 — space separator (IfcVirtualElement), direct entity (same pattern as
+      // thermal-space). SpaceSeparatorRenderer reads geometry.bbox + params.start/end at
+      // top level. Without this case freshly-committed separators are silently dropped
+      // here → invisible on 2D canvas.
+      if (!isSpaceSeparatorEntity(entity)) return null;
+      const ss = entity as SpaceSeparatorEntity;
+      return { ...base, type: 'space-separator' as const, kind: ss.kind, params: ss.params, geometry: ss.geometry } as DxfEntityUnion;
     }
     case 'floorplan-symbol': {
       // ADR-415 — direct entity (same pattern as furniture/mep-fixture).

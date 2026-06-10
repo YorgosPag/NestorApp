@@ -324,6 +324,10 @@ export function useSmartDelete({
       const underfloorIdsInBatch = idsToDelete.filter(
         (id) => adapter.getEntity(id)?.type === 'mep-underfloor',
       );
+      // ADR-437 — collect space-separator IDs so we can trigger Firestore deleteDoc.
+      const spaceSeparatorIdsInBatch = idsToDelete.filter(
+        (id) => adapter.getEntity(id)?.type === 'space-separator',
+      );
 
       const deleteCommand: ICommand = idsToDelete.length === 1
         ? new DeleteEntityCommand(idsToDelete[0], adapter)
@@ -423,6 +427,10 @@ export function useSmartDelete({
       // ADR-408 Εύρος Β #3 — trigger Firestore deleteDoc + prevent subscription re-add for each underfloor.
       for (const underfloorId of underfloorIdsInBatch) {
         eventBus.emit('bim:mep-underfloor-delete-requested', { underfloorId });
+      }
+      // ADR-437 — trigger Firestore deleteDoc + prevent subscription re-add for each space separator.
+      for (const spaceSeparatorId of spaceSeparatorIdsInBatch) {
+        eventBus.emit('bim:space-separator-delete-requested', { id: spaceSeparatorId });
       }
 
       return true;

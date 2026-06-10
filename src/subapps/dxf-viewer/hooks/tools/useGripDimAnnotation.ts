@@ -107,6 +107,12 @@ function buildColumnLabel(
       return `w=${Math.round(p.width)}`;
     case 'column-depth':
       return `d=${Math.round(p.depth)}`;
+    // ADR-363 Slice C — rect/shear-wall corners are 2-DOF: show both dimensions.
+    case 'column-corner-ne':
+    case 'column-corner-nw':
+    case 'column-corner-sw':
+    case 'column-corner-se':
+      return `w=${Math.round(p.width)} d=${Math.round(p.depth)}`;
     case 'column-arm-length':
       return `al=${Math.round(p.lshape?.armLength ?? p.depth / 3)}`;
     case 'column-arm-width':
@@ -175,6 +181,12 @@ function buildFoundationLabel(
       return `w=${Math.round(p.width)}`;
     case 'foundation-length':
       return `l=${Math.round(p.length)}`;
+    // ADR-436 Slice 1c — corners are 2-DOF: show both dimensions (Revit parity).
+    case 'foundation-corner-ne':
+    case 'foundation-corner-nw':
+    case 'foundation-corner-sw':
+    case 'foundation-corner-se':
+      return `w=${Math.round(p.width)} l=${Math.round(p.length)}`;
     default:
       return null;
   }
