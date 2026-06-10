@@ -36,6 +36,7 @@ import { useBuildingFloorScenes, type BuildingFloorScene } from './useBuildingFl
 import { useSiteNeighbourMasses } from './useSiteNeighbourMasses';
 import type { SlabEntity, SlabKind } from '../../bim/types/slab-types';
 import type { OverhangOutline } from '../../bim/thermal/heat-load/solar-overhang-geometry';
+import type { SlabMatchCandidate } from '../../bim/thermal/heat-load/slab-space-match';
 import {
   computeEnvelopePerimeter,
   type WallForEnvelope,
@@ -163,6 +164,70 @@ function collectOverhangOutlines(
   return outlines;
 }
 
+/** SlabKinds που λειτουργούν ως **δάπεδο** χώρου (εσωτ. επιφάνεια προς τα πάνω). */
+const FLOOR_ROLE_SLAB_KINDS: ReadonlySet<SlabKind> = new Set<SlabKind>(['floor', 'ground', 'foundation']);
+
+/** SlabKinds του **ενεργού** ορόφου που λειτουργούν ως **οροφή/στέγη** του χώρου. */
+const ROOF_ROLE_ACTIVE_SLAB_KINDS: ReadonlySet<SlabKind> = new Set<SlabKind>(['roof', 'ceiling']);
+
+/** Μια πλάκα ως υποψήφια αντιστοίχισης (id + outline + dna + kind). L7.9-C. */
+function slabCandidate(slab: SlabEntity): SlabMatchCandidate {
+  return {
+    id: slab.id,
+    outline: slab.params.outline.vertices,
+    dna: slab.params.dna,
+    kind: slab.params.kind,
+  };
+}
+
+/** floorId του ορόφου **ακριβώς πάνω** από τον active (η πλάκα του = οροφή του χώρου). */
+function immediateFloorAboveId(
+  floors: ReadonlyArray<{ id: string }>,
+  activeFloorId: string | null,
+): string | null {
+  if (!activeFloorId) return null;
+  const idx = floors.findIndex((f) => f.id === activeFloorId);
+  if (idx < 0 || idx + 1 >= floors.length) return null;
+  return floors[idx + 1].id;
+}
+
+/**
+ * Υποψήφιες πλάκες **δαπέδου** (ADR-422 L7.9-C): οι floor/ground/foundation του
+ * active ορόφου. Best-match με containment στον resolver. Κενό ⇒ zero-regression.
+ */
+function collectFloorSlabs(activeEntities: readonly Entity[]): SlabMatchCandidate[] {
+  const out: SlabMatchCandidate[] = [];
+  for (const e of activeEntities) {
+    if (isSlabEntity(e) && FLOOR_ROLE_SLAB_KINDS.has(e.params.kind)) out.push(slabCandidate(e));
+  }
+  return out;
+}
+
+/**
+ * Υποψήφιες πλάκες **οροφής/στέγης** (ADR-422 L7.9-C): roof/ceiling του active
+ * ορόφου + οι floor/ground πλάκες του ορόφου **ακριβώς από πάνω** (το δάπεδό του =
+ * οροφή του χώρου, cross-floor). Best-match με containment. Κενό ⇒ zero-regression.
+ */
+function collectCeilingSlabs(
+  activeEntities: readonly Entity[],
+  upperFloorScenes: readonly BuildingFloorScene[],
+  aboveFloorId: string | null,
+): SlabMatchCandidate[] {
+  const out: SlabMatchCandidate[] = [];
+  for (const e of activeEntities) {
+    if (isSlabEntity(e) && ROOF_ROLE_ACTIVE_SLAB_KINDS.has(e.params.kind)) out.push(slabCandidate(e));
+  }
+  if (aboveFloorId) {
+    for (const fs of upperFloorScenes) {
+      if (fs.floorId !== aboveFloorId) continue;
+      for (const e of fs.model.entities) {
+        if (isSlabEntity(e) && FLOOR_ROLE_SLAB_KINDS.has(e.params.kind)) out.push(slabCandidate(e));
+      }
+    }
+  }
+  return out;
+}
+
 export function useHeatLoadInputs(
   scene: SceneModel | null | undefined,
   active: boolean,
@@ -200,6 +265,14 @@ export function useHeatLoadInputs(
       buildingFloorScenes,
       floorsAboveActive(floors, activeFloorId),
     );
+    // L7.9-C: πλάκες δαπέδου (active) + οροφής/στέγης (active roof/ceiling + δάπεδο
+    // ορόφου ακριβώς από πάνω) → geometry-derived θερμική μάζα `κ_m` οριζοντίων.
+    const floorSlabs = collectFloorSlabs(entities);
+    const ceilingSlabs = collectCeilingSlabs(
+      entities,
+      buildingFloorScenes,
+      immediateFloorAboveId(floors, activeFloorId),
+    );
 
     return {
       spaces,
@@ -214,6 +287,8 @@ export function useHeatLoadInputs(
       overhangOutlines,
       horizonObstacleOutlines,
       apertureBaseElevationM: resolveApertureBaseElevationM(buildings, buildingId, floors, activeFloorId),
+      floorSlabs,
+      ceilingSlabs,
     };
   }, [
     active,

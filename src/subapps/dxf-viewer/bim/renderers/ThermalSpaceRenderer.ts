@@ -44,7 +44,7 @@ export class ThermalSpaceRenderer extends BaseEntityRenderer {
 
     const phaseState = this.phaseManager.determinePhase(entity as Entity, options);
 
-    // Hover halo.
+    // Hover halo (only when NOT selected — PhaseManager collapses selected→'normal').
     if (phaseState.phase === 'highlighted') {
       this.ctx.save();
       this.ctx.strokeStyle = HOVER_HIGHLIGHT.ENTITY.glowColor;
@@ -56,11 +56,25 @@ export class ThermalSpaceRenderer extends BaseEntityRenderer {
       this.ctx.restore();
     }
 
+    // Selection emphasis (solid accent halo). Grips are disabled for wall-bound
+    // spaces (ADR-422 L0), so selection MUST be signalled by this highlight —
+    // reuses the section-panel «selected cap» SSoT (HOVER_HIGHLIGHT.ENTITY.glowColor).
+    if (options.selected) {
+      this.ctx.save();
+      this.ctx.strokeStyle = HOVER_HIGHLIGHT.ENTITY.glowColor;
+      this.ctx.lineWidth = HOVER_HIGHLIGHT.ENTITY.glowExtraWidth + 2;
+      this.ctx.globalAlpha = 0.9;
+      this.ctx.setLineDash([]);
+      this.drawPolygonPath(verts);
+      this.ctx.stroke();
+      this.ctx.restore();
+    }
+
     this.phaseManager.applyPhaseStyle(entity as Entity, phaseState);
     this.ctx.save();
 
-    // Translucent analytical fill.
-    this.ctx.fillStyle = 'rgba(13, 148, 136, 0.12)';
+    // Translucent analytical fill — stronger when selected so the whole area reads as picked.
+    this.ctx.fillStyle = options.selected ? 'rgba(13, 148, 136, 0.24)' : 'rgba(13, 148, 136, 0.12)';
     this.drawPolygonPath(verts);
     this.ctx.fill();
 
