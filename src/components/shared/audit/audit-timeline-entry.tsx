@@ -114,6 +114,9 @@ function sanitizeChange(raw: AuditFieldChange): AuditFieldChange {
     ...raw,
     field: safeStr(raw.field as unknown),
     label: raw.label != null ? safeStr(raw.label as unknown) : undefined,
+    // ADR-195 FK id + display label: prefer these over raw value when present.
+    newValueLabel: raw.newValueLabel != null ? safeStr(raw.newValueLabel as unknown) : undefined,
+    oldValueLabel: raw.oldValueLabel != null ? safeStr(raw.oldValueLabel as unknown) : undefined,
     itemKey: raw.itemKey != null ? safeStr(raw.itemKey as unknown) : undefined,
     itemLabel: raw.itemLabel != null ? safeStr(raw.itemLabel as unknown) : undefined,
     kind: raw.kind != null ? (safeStr(raw.kind as unknown) as AuditFieldChange['kind']) : undefined,
@@ -347,11 +350,15 @@ export function AuditTimelineEntry({
                       "line-through decoration-red-400/60",
                     )}
                   >
-                    {formatFieldAwareValue(change.field, change.oldValue, translateFieldValue)}
+                    {change.oldValueLabel
+                      ? safeStr(change.oldValueLabel as unknown)
+                      : formatFieldAwareValue(change.field, change.oldValue, translateFieldValue)}
                   </span>
                   {" → "}
                   <span className="font-medium text-foreground">
-                    {formatFieldAwareValue(change.field, change.newValue, translateFieldValue)}
+                    {change.newValueLabel
+                      ? safeStr(change.newValueLabel as unknown)
+                      : formatFieldAwareValue(change.field, change.newValue, translateFieldValue)}
                   </span>
                 </li>
               );

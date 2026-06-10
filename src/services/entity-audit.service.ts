@@ -212,11 +212,18 @@ export class EntityAuditService {
    * Use this when tracked fields contain IDs that need human-readable names
    * (e.g. buildingId → "ΚΤΙΡΙΟ Α").
    *
+   * ADR-195 enterprise policy: the canonical document id **stays** in
+   * `oldValue`/`newValue` (immutable FK reference) and the resolved display
+   * name is stored separately in `oldValueLabel`/`newValueLabel`. This keeps
+   * the audit entry lossless — both the id (for re-linking/queries) and the
+   * name (for display) survive. When the resolver returns null the label is
+   * omitted and the reader falls back to formatting the raw value.
+   *
    * @param oldDoc - Document state before update
    * @param newDoc - Fields being updated (partial)
    * @param trackedFields - Map of field name → human-readable label
    * @param resolvers - Map of field name → async function that resolves an ID to a display name
-   * @returns Array of field changes with resolved names
+   * @returns Array of field changes with id-in-value + name-in-label
    */
   static async diffFieldsWithResolution(
     oldDoc: Record<string, unknown>,
@@ -226,7 +233,8 @@ export class EntityAuditService {
   ): Promise<AuditFieldChange[]> {
     const changes = this.diffFields(oldDoc, newDoc, trackedFields);
 
-    // Resolve IDs to names for fields that have resolvers
+    // Resolve IDs to display labels for fields that have resolvers. The raw
+    // id remains the canonical value; only the *Label fields are populated.
     const resolved = await Promise.all(
       changes.map(async (change) => {
         const resolver = resolvers[change.field];
@@ -239,8 +247,8 @@ export class EntityAuditService {
 
         return {
           ...change,
-          oldValue: oldName ?? change.oldValue,
-          newValue: newName ?? change.newValue,
+          ...(oldName ? { oldValueLabel: oldName } : {}),
+          ...(newName ? { newValueLabel: newName } : {}),
         };
       }),
     );

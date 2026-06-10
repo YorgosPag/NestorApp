@@ -349,6 +349,12 @@ export interface AuditLogEntry {
   previousValue: AuditChangeValue | null;
   newValue: AuditChangeValue | null;
   timestamp: Date;
+  /**
+   * ADR-438 — TTL expiry instant (now + retention window at write time).
+   * Firestore's TTL policy auto-deletes the document after this time.
+   * Optional because audit docs written before ADR-438 lack the field.
+   */
+  expiresAt?: Date;
   metadata: AuditMetadata;
 }
 

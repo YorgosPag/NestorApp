@@ -129,6 +129,18 @@ export interface AuditFieldChange {
   /** Optional human-readable label (e.g. 'Κατάσταση', 'Διευθύνσεις') */
   label?: string;
 
+  // ── FK id + display label (ADR-195 enterprise enhancement) ──
+  // For foreign-key fields (projectId, buildingId, linkedCompanyId, …) the
+  // canonical document id stays in `oldValue`/`newValue` (immutable reference,
+  // SAP/event-sourcing pattern) while these carry the denormalized display
+  // name at the time of the change. The audit reader prefers `*Label` when
+  // present and falls back to formatting the raw value otherwise — so legacy
+  // records that stored the name directly in `*Value` keep rendering unchanged.
+  /** Display label for `newValue` when it is an FK id (e.g. 'ΕΡΓΟ 1'). */
+  newValueLabel?: string | null;
+  /** Display label for `oldValue` when it is an FK id. */
+  oldValueLabel?: string | null;
+
   // ── Collection-aware extension (ADR-195 Phase 11) ──
   /** Discriminator. Omitted = scalar (legacy). */
   kind?: 'scalar' | 'collection';

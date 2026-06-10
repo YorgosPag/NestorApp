@@ -44,6 +44,34 @@ import { nowISO } from '@/lib/date-local';
 const AUDIT_COLLECTION = SUBCOLLECTIONS.COMPANY_AUDIT_LOGS;
 
 // =============================================================================
+// RETENTION / TTL (ADR-438)
+// =============================================================================
+
+/**
+ * Audit log retention window, in months. After this period elapses, Firestore's
+ * TTL policy on the `expiresAt` field auto-deletes the document. This bounds the
+ * otherwise-unbounded growth of the audit trail.
+ *
+ * TTL policy is enabled out-of-band (GCP-side) on the `audit_logs` and
+ * `system_audit_logs` collection groups — see ADR-438 for the gcloud command.
+ *
+ * @see docs/centralized-systems/reference/adrs/ADR-438-audit-log-retention-ttl.md
+ */
+const AUDIT_LOG_RETENTION_MONTHS = 12;
+
+/**
+ * Compute the TTL expiry instant for a new audit entry: now + retention window.
+ *
+ * Returned as a JS `Date`; the Firebase Admin SDK persists it as a Firestore
+ * `Timestamp`, which is the type the TTL policy requires.
+ */
+function computeAuditExpiry(): Date {
+  const expiry = new Date();
+  expiry.setMonth(expiry.getMonth() + AUDIT_LOG_RETENTION_MONTHS);
+  return expiry;
+}
+
+// =============================================================================
 // FIRESTORE DATA SANITIZATION
 // =============================================================================
 
@@ -143,6 +171,7 @@ export async function logAuditEvent(
     previousValue: options.previousValue ?? null,
     newValue: options.newValue ?? null,
     timestamp: FieldValue.serverTimestamp(),
+    expiresAt: computeAuditExpiry(), // ADR-438: TTL auto-deletes after retention window
     metadata: removeUndefinedValues({
       ipAddress: options.metadata?.ipAddress,
       userAgent: options.metadata?.userAgent,
@@ -251,6 +280,7 @@ export async function logWebhookEvent(
       },
     },
     timestamp: FieldValue.serverTimestamp(),
+    expiresAt: computeAuditExpiry(), // ADR-438: TTL auto-deletes after retention window
     metadata: removeUndefinedValues({
       ipAddress: metadata.ipAddress,
       userAgent: metadata.userAgent,
