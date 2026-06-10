@@ -21,7 +21,7 @@
 
 import { useCallback, useRef, useEffect } from 'react';
 import type { ViewTransform } from '../../rendering/types/Types';
-import type { AnySceneEntity } from '../../types/entities';
+import type { AnySceneEntity, Entity } from '../../types/entities';
 import type { WallEntity } from '../../bim/types/wall-types';
 import type { DxfEntityUnion } from '../../canvas-v2/dxf-canvas/dxf-types';
 import type { useLevels } from '../../systems/levels';
@@ -32,6 +32,9 @@ import {
   GHOST_DEFAULTS,
 } from '../../rendering/ghost';
 import { CoordinateTransforms } from '../../rendering/core/CoordinateTransforms';
+// ADR-408 Φ-C — connected pipe ends follow a moving plumbing host (SSoT builder,
+// shared with the commit + any future 3D pipe ghost), so the run stretches live.
+import { buildConnectedPipeGhosts } from '../../bim/mep-segments/build-connected-pipe-ghosts';
 // ADR-408 Φ7 P2 — SSoT snapshot→transform map (shared with HomeRunWiresOverlay).
 import { toEntityPreviewTransform } from './grip-drag-preview-transform';
 
@@ -174,8 +177,24 @@ export function useGripGhostPreview(props: UseGripGhostPreviewProps): void {
     ctx.fillStyle = GHOST_DEFAULTS.color;
     ctx.lineWidth = GHOST_DEFAULTS.lineWidth;
     drawGhostEntity(ctx, transformed, transform, vp);
+
+    // ADR-408 Φ-C — when the dragged entity is a plumbing connector host, draw the
+    // connected pipe ends following it so the run visibly stretches WITH the host
+    // during the drag (matches the connectivity-preserving commit). The SSoT builder
+    // resolves + recomputes geometry once; returns [] for non-plumbing entities.
+    const sceneEntities = levelManager.currentLevelId
+      ? levelManager.getLevelScene(levelManager.currentLevelId)?.entities ?? []
+      : [];
+    const pipeGhosts = buildConnectedPipeGhosts(
+      sceneEntities as unknown as readonly Entity[],
+      entity as unknown as Entity,
+      transformed as unknown as Entity,
+    );
+    for (const ghost of pipeGhosts) {
+      drawGhostEntity(ctx, ghost as unknown as DxfEntityUnion, transform, vp);
+    }
     ctx.restore();
-  }, [dragPreview, getEntity, transform, getCanvas, getViewportElement]);
+  }, [dragPreview, getEntity, transform, getCanvas, getViewportElement, levelManager]);
 
   // Clear canvas when drag finishes (idle → active transition is handled by RAF)
   useEffect(() => {
