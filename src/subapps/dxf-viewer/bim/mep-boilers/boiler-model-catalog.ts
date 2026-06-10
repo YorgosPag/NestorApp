@@ -52,6 +52,50 @@ export function isBoilerFuelType(value: string): value is BoilerFuelType {
   return (BOILER_FUEL_TYPES as readonly string[]).includes(value);
 }
 
+// ─── Mounting type ────────────────────────────────────────────────────────────
+
+/**
+ * Boiler MOUNTING type (Revit «Mounting» type-property; the boiler-family split
+ * «Wall-Hung Boiler» vs «Floor-Standing Boiler»). Persisted in
+ * `MepBoilerParams.mountingType`.
+ *   - `'wall-hung'`     — επίτοιχος: hung on the wall at a `mountingElevationMm`
+ *     vertical centre (the original boiler slice). The default when absent.
+ *   - `'floor-standing'` — επιδαπέδιος: sits on the floor (no mounting elevation);
+ *     a larger cabinet (e.g. the oil-floor catalog presets).
+ *
+ * Modelled as an additive type-property (NOT a new `MepBoilerKind` member) so it
+ * carries ZERO exhaustive-`switch(kind)` risk and needs no 3D-converter touch — the
+ * Revit-grade move (Revit keeps mounting as a type parameter, not a family
+ * discriminator here).
+ */
+export type MepBoilerMountingType = 'wall-hung' | 'floor-standing';
+
+/**
+ * Runtime SSoT of the two `MepBoilerMountingType` members — the single source for the
+ * «Τοποθέτηση» instance-param picker options, the `isMepBoilerMountingType` runtime
+ * validation guard, and any future enumeration. Ordered wall-hung-first (the default).
+ */
+export const MEP_BOILER_MOUNTING_TYPES: readonly MepBoilerMountingType[] = [
+  'wall-hung',
+  'floor-standing',
+] as const;
+
+/**
+ * Default boiler mounting type — `'wall-hung'` (the original επίτοιχος slice). Used
+ * when `MepBoilerParams.mountingType` is absent, so pre-mounting-type boilers stay
+ * επίτοιχοι with zero regression.
+ */
+export const DEFAULT_BOILER_MOUNTING_TYPE: MepBoilerMountingType = 'wall-hung';
+
+/**
+ * Runtime type guard for an arbitrary string against `MepBoilerMountingType`. Used by
+ * the ribbon bridge to validate a picked combobox value before persisting it (mirror
+ * of `isBoilerFuelType`).
+ */
+export function isMepBoilerMountingType(value: string): value is MepBoilerMountingType {
+  return (MEP_BOILER_MOUNTING_TYPES as readonly string[]).includes(value);
+}
+
 // ─── Preset interface ─────────────────────────────────────────────────────────
 
 export interface BoilerModelPreset {
@@ -92,6 +136,23 @@ export interface BoilerModelPreset {
    */
   readonly seasonalEfficiencyPercent: number;
   /**
+   * mg/kWh — measured NOx emissions (Revit «NOx Emission», EU Ecodesign 813/2013). Set on the
+   * COMBUSTION presets (gas/oil) and resolved against the per-fuel legal ceiling by
+   * `resolveNoxClass`; OMITTED for electric/heat-pump (no combustion → no NOx). Modern gas
+   * condensing ≈30–45 (Class 6, ≤56); oil ≈110–115 (≤120). Optional/additive — drives
+   * `MepBoilerParams.noxMgKwh` (the «NOx» readout + plan-tag line).
+   */
+  readonly noxMgKwh?: number;
+  /**
+   * dB(A) — internal SOUND POWER LEVEL `L_WA` (Revit Mechanical Equipment «Sound», IFC
+   * `Pset_SoundAttenuation`). Set on EVERY preset (a pump/fan/burner all emit noise, ≠ NOx
+   * which is combustion-only): wall-hung gas ≈45–49, floor-standing oil ≈55–60, heat-pump
+   * ≈50–58, direct-electric ≈40. Resolved to a placement-suitability band by
+   * `resolveAcousticBand`; drives `MepBoilerParams.soundPowerDbA` (the «Θόρυβος» readout +
+   * plan-tag line). Optional/additive.
+   */
+  readonly soundPowerDbA?: number;
+  /**
    * Whether the model is a CONDENSING appliance (Revit «Condensing» Yes/No) — extracts
    * latent flue-gas heat and therefore produces acidic condensate that must drain to the
    * sanitary system. `true` for the gas condensing presets; `false` for traditional
@@ -99,6 +160,13 @@ export interface BoilerModelPreset {
    * `MepBoilerParams.condensing` (→ the `boiler-condensate` drain connector).
    */
   readonly condensing: boolean;
+  /**
+   * MOUNTING type (Revit «Mounting» type-property) — `'floor-standing'` for the larger
+   * oil-floor cabinets, OMITTED (⇒ `'wall-hung'` default) for the wall-hung gas/electric
+   * presets. Drives `MepBoilerParams.mountingType` (the «Τοποθέτηση» readout + plan-tag
+   * line; floor-standing boilers ignore the wall-mounting elevation). Optional/additive.
+   */
+  readonly mountingType?: MepBoilerMountingType;
 }
 
 // ─── Catalog data ─────────────────────────────────────────────────────────────
@@ -123,6 +191,8 @@ export const BOILER_MODEL_CATALOG: readonly BoilerModelPreset[] = [
     connectorDiameterMm: 22,
     fuelType: 'gas',
     seasonalEfficiencyPercent: 94,
+    noxMgKwh: 32,
+    soundPowerDbA: 45,
     condensing: true,
   },
   {
@@ -136,6 +206,8 @@ export const BOILER_MODEL_CATALOG: readonly BoilerModelPreset[] = [
     connectorDiameterMm: 22,
     fuelType: 'gas',
     seasonalEfficiencyPercent: 93,
+    noxMgKwh: 38,
+    soundPowerDbA: 48,
     condensing: true,
   },
   {
@@ -149,6 +221,8 @@ export const BOILER_MODEL_CATALOG: readonly BoilerModelPreset[] = [
     connectorDiameterMm: 22,
     fuelType: 'gas',
     seasonalEfficiencyPercent: 91,
+    noxMgKwh: 45,
+    soundPowerDbA: 47,
     condensing: true,
   },
   {
@@ -161,7 +235,10 @@ export const BOILER_MODEL_CATALOG: readonly BoilerModelPreset[] = [
     connectorDiameterMm: 28,
     fuelType: 'oil',
     seasonalEfficiencyPercent: 89,
+    noxMgKwh: 110,
+    soundPowerDbA: 56,
     condensing: false,
+    mountingType: 'floor-standing',
   },
   {
     id: 'oil-floor-45',
@@ -173,7 +250,10 @@ export const BOILER_MODEL_CATALOG: readonly BoilerModelPreset[] = [
     connectorDiameterMm: 28,
     fuelType: 'oil',
     seasonalEfficiencyPercent: 88,
+    noxMgKwh: 115,
+    soundPowerDbA: 58,
     condensing: false,
+    mountingType: 'floor-standing',
   },
   {
     id: 'heatpump-12',
@@ -185,6 +265,7 @@ export const BOILER_MODEL_CATALOG: readonly BoilerModelPreset[] = [
     connectorDiameterMm: 28,
     fuelType: 'heat-pump',
     seasonalEfficiencyPercent: 156,
+    soundPowerDbA: 52,
     condensing: false,
   },
   {
@@ -197,6 +278,7 @@ export const BOILER_MODEL_CATALOG: readonly BoilerModelPreset[] = [
     connectorDiameterMm: 22,
     fuelType: 'electric',
     seasonalEfficiencyPercent: 99,
+    soundPowerDbA: 40,
     condensing: false,
   },
 ] as const;
@@ -250,7 +332,14 @@ export function applyBoilerModelToParams(
     bodyHeightMm: model.bodyHeightMm,
     connectorDiameterMm: model.connectorDiameterMm,
     seasonalEfficiencyPercent: model.seasonalEfficiencyPercent,
+    // Combustion presets carry a NOx figure; electric/heat-pump clear it (undefined ⇒ no NOx).
+    noxMgKwh: model.noxMgKwh,
+    // Every preset carries a sound power figure (all appliances emit noise); absent ⇒ unspecified.
+    soundPowerDbA: model.soundPowerDbA,
     condensing: model.condensing,
+    // Floor-standing presets (oil-floor) carry the mounting type; wall-hung presets clear it
+    // (undefined ⇒ DEFAULT_BOILER_MOUNTING_TYPE = wall-hung).
+    mountingType: model.mountingType,
   };
 }
 
@@ -260,15 +349,18 @@ export function applyBoilerModelToParams(
  * (clear sentinel) in the Model picker.
  */
 export function clearBoilerModel(params: MepBoilerParams): MepBoilerParams {
-  // Omit modelId, fuelType, the seasonal efficiency, the condensing flag and the minimum
-  // modulating output — all are Type-Catalog properties (≠ thermalOutputW/geometry which the
-  // user may keep and re-size). Back to a purely parametric boiler.
+  // Omit modelId, fuelType, the seasonal efficiency, the NOx figure, the sound power, the condensing
+  // flag and the minimum modulating output — all are Type-Catalog properties (≠ thermalOutputW/geometry
+  // which the user may keep and re-size). Back to a purely parametric boiler.
   const {
     modelId: _modelId,
     fuelType: _fuelType,
     seasonalEfficiencyPercent: _seasonalEfficiencyPercent,
+    noxMgKwh: _noxMgKwh,
+    soundPowerDbA: _soundPowerDbA,
     condensing: _condensing,
     minThermalOutputW: _minThermalOutputW,
+    mountingType: _mountingType,
     ...rest
   } = params;
   return rest as MepBoilerParams;

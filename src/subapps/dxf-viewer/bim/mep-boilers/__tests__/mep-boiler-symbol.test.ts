@@ -455,3 +455,42 @@ describe('buildMepBoilerSymbol — pressure gauge glyph (Revit accessory, IFC If
     expect(sym.clearanceOutline).toBeUndefined();
   });
 });
+
+describe('buildMepBoilerSymbol — filling loop glyph (βρόχος πλήρωσης, Revit/IFC IfcValve CHECK)', () => {
+  it('draws no filling-loop glyph by default (exactly 4 base glyph strokes: divider + flame)', () => {
+    expect(symbol().glyphStrokes).toHaveLength(4);
+  });
+
+  it('appends the 6-stroke filling-loop glyph when fillingLoop is set (4 base + 6 = 10)', () => {
+    expect(symbol({ fillingLoop: true }).glyphStrokes).toHaveLength(10);
+  });
+
+  it('stacks on top of the full sealed-system trio (4 base + 5 valve + 3 vessel + 3 gauge + 6 loop = 21)', () => {
+    expect(
+      symbol({
+        safetyReliefValve: true,
+        expansionVessel: true,
+        pressureGauge: true,
+        fillingLoop: true,
+      }).glyphStrokes,
+    ).toHaveLength(21);
+  });
+
+  it('keeps every glyph stroke a finite-point polyline (rotation 90°)', () => {
+    const sym = symbol({ fillingLoop: true, rotation: 90 });
+    expect(sym.glyphStrokes).toHaveLength(10);
+    for (const stroke of sym.glyphStrokes) {
+      expect(stroke.length).toBeGreaterThanOrEqual(2);
+      for (const p of stroke) {
+        expect(Number.isFinite(p.x)).toBe(true);
+        expect(Number.isFinite(p.y)).toBe(true);
+      }
+    }
+  });
+
+  it('does not touch the connector stubs / clearance (visual-only body glyph)', () => {
+    const sym = symbol({ fillingLoop: true });
+    expect(sym.strokes).toHaveLength(2); // plain supply + return, unchanged
+    expect(sym.clearanceOutline).toBeUndefined();
+  });
+});

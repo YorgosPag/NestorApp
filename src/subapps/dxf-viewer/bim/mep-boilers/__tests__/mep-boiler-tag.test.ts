@@ -327,4 +327,102 @@ describe('buildBoilerTagLines', () => {
     const lines = buildBoilerTagLines(params({ minThermalOutputW: 6000 }), fakeT);
     expect(lines.some((l) => l.startsWith('modulation'))).toBe(false);
   });
+
+  // ─── Filling loop (βρόχος πλήρωσης, Revit/IFC IfcValve CHECK), present/absent ──────────
+
+  it('shows the filling-loop line with a check mark when fillingLoop is set', () => {
+    const lines = buildBoilerTagLines(params({ fillingLoop: true }), fakeT);
+    expect(lines).toContain('fillingLoop: ✓');
+  });
+
+  it('omits the filling-loop line when fillingLoop is absent', () => {
+    const lines = buildBoilerTagLines(params(), fakeT);
+    expect(lines.some((l) => l.startsWith('fillingLoop'))).toBe(false);
+  });
+
+  // ─── NOx emission compliance (EU Ecodesign 813/2013), combustion fuels only ───────────
+
+  it('shows the NOx line with a check mark for a compliant gas boiler', () => {
+    const lines = buildBoilerTagLines(params({ fuelType: 'gas', noxMgKwh: 40 }), fakeT);
+    expect(lines).toContain('nox: 40 mg/kWh (✓)');
+  });
+
+  it('shows the NOx line with a cross mark when the gas figure exceeds the ceiling', () => {
+    const lines = buildBoilerTagLines(params({ fuelType: 'gas', noxMgKwh: 70 }), fakeT);
+    expect(lines).toContain('nox: 70 mg/kWh (✗)');
+  });
+
+  it('uses the oil ceiling (110 mg/kWh is compliant for oil)', () => {
+    const lines = buildBoilerTagLines(params({ fuelType: 'oil', noxMgKwh: 110 }), fakeT);
+    expect(lines).toContain('nox: 110 mg/kWh (✓)');
+  });
+
+  it('rounds the measured NOx figure to a whole mg/kWh', () => {
+    const lines = buildBoilerTagLines(params({ fuelType: 'gas', noxMgKwh: 39.6 }), fakeT);
+    expect(lines).toContain('nox: 40 mg/kWh (✓)');
+  });
+
+  it('omits the NOx line for a non-combustion boiler even when a figure is present', () => {
+    const lines = buildBoilerTagLines(params({ fuelType: 'electric', noxMgKwh: 40 }), fakeT);
+    expect(lines.some((l) => l.startsWith('nox'))).toBe(false);
+  });
+
+  it('omits the NOx line when no measured figure is present', () => {
+    const lines = buildBoilerTagLines(params({ fuelType: 'gas' }), fakeT);
+    expect(lines.some((l) => l.startsWith('nox'))).toBe(false);
+  });
+
+  // ─── Sound power level L_WA (Revit «Sound»), ANY fuel type, NOT combustion-gated ───────
+
+  it('shows the sound-power line with the dB(A) unit when a figure is present', () => {
+    const lines = buildBoilerTagLines(params({ fuelType: 'gas', soundPowerDbA: 49 }), fakeT);
+    expect(lines).toContain('soundPower: 49 dB(A)');
+  });
+
+  it('rounds the measured sound-power figure to a whole dB(A)', () => {
+    const lines = buildBoilerTagLines(params({ fuelType: 'oil', soundPowerDbA: 57.4 }), fakeT);
+    expect(lines).toContain('soundPower: 57 dB(A)');
+  });
+
+  it('shows the sound-power line for a non-combustion boiler too (NOT combustion-gated)', () => {
+    // Unlike NOx, sound power applies to every fuel (a pump/fan/burner all emit noise).
+    expect(
+      buildBoilerTagLines(params({ fuelType: 'electric', soundPowerDbA: 40 }), fakeT),
+    ).toContain('soundPower: 40 dB(A)');
+    expect(
+      buildBoilerTagLines(params({ fuelType: 'heat-pump', soundPowerDbA: 52 }), fakeT),
+    ).toContain('soundPower: 52 dB(A)');
+  });
+
+  it('omits the sound-power line when no figure is present or it is non-positive', () => {
+    expect(
+      buildBoilerTagLines(params({ fuelType: 'gas' }), fakeT).some((l) => l.startsWith('soundPower')),
+    ).toBe(false);
+    expect(
+      buildBoilerTagLines(params({ fuelType: 'gas', soundPowerDbA: 0 }), fakeT).some((l) =>
+        l.startsWith('soundPower'),
+      ),
+    ).toBe(false);
+  });
+
+  // ─── Mounting type (Revit «Mounting»), annotated ONLY for the floor-standing exception ─────
+
+  it('shows the mounting line ONLY for a floor-standing boiler', () => {
+    const lines = buildBoilerTagLines(params({ mountingType: 'floor-standing' }), fakeT);
+    expect(lines).toContain('mounting: mountingTypes.floor-standing');
+  });
+
+  it('omits the mounting line for a wall-hung boiler (the default — not annotated)', () => {
+    expect(
+      buildBoilerTagLines(params({ mountingType: 'wall-hung' }), fakeT).some((l) =>
+        l.startsWith('mounting'),
+      ),
+    ).toBe(false);
+  });
+
+  it('omits the mounting line when mountingType is absent (wall-hung default)', () => {
+    expect(
+      buildBoilerTagLines(params(), fakeT).some((l) => l.startsWith('mounting')),
+    ).toBe(false);
+  });
 });

@@ -12,11 +12,15 @@ import {
   BOILER_MODEL_CATALOG,
   BOILER_FUEL_TYPES,
   isBoilerFuelType,
+  MEP_BOILER_MOUNTING_TYPES,
+  DEFAULT_BOILER_MOUNTING_TYPE,
+  isMepBoilerMountingType,
   listBoilerModels,
   resolveBoilerModel,
   applyBoilerModelToParams,
   clearBoilerModel,
   type BoilerFuelType,
+  type MepBoilerMountingType,
 } from '../boiler-model-catalog';
 import type { MepBoilerParams } from '../../types/mep-boiler-types';
 
@@ -161,10 +165,50 @@ describe('applyBoilerModelToParams', () => {
     expect(next.minThermalOutputW).toBe(6000);
   });
 
+  it('writes noxMgKwh from a combustion preset (gas condensing 24 → 32)', () => {
+    const next = applyBoilerModelToParams(BASE_PARAMS, model!);
+    expect(next.noxMgKwh).toBe(32);
+  });
+
+  it('clears noxMgKwh for a non-combustion preset (electric → undefined)', () => {
+    const electric = resolveBoilerModel('electric-9');
+    const next = applyBoilerModelToParams(BASE_PARAMS, electric!);
+    expect(next.noxMgKwh).toBeUndefined();
+  });
+
   it('clears minThermalOutputW for an on/off preset (oil floor → undefined)', () => {
     const oil = resolveBoilerModel('oil-floor-30');
     const next = applyBoilerModelToParams(BASE_PARAMS, oil!);
     expect(next.minThermalOutputW).toBeUndefined();
+  });
+
+  it('writes soundPowerDbA from the preset (gas condensing 24 → 45)', () => {
+    const next = applyBoilerModelToParams(BASE_PARAMS, model!);
+    expect(next.soundPowerDbA).toBe(45);
+  });
+
+  it('writes soundPowerDbA for EVERY fuel type (incl. electric/heat-pump, NOT combustion-only)', () => {
+    // Unlike noxMgKwh, sound power is present on every preset (all appliances emit noise).
+    listBoilerModels().forEach((m) => {
+      const next = applyBoilerModelToParams(BASE_PARAMS, m);
+      expect(next.soundPowerDbA).toBe(m.soundPowerDbA);
+      expect(next.soundPowerDbA).toBeGreaterThan(0);
+    });
+  });
+
+  it('writes mountingType floor-standing for the oil-floor presets', () => {
+    const oil30 = applyBoilerModelToParams(BASE_PARAMS, resolveBoilerModel('oil-floor-30')!);
+    const oil45 = applyBoilerModelToParams(BASE_PARAMS, resolveBoilerModel('oil-floor-45')!);
+    expect(oil30.mountingType).toBe('floor-standing');
+    expect(oil45.mountingType).toBe('floor-standing');
+  });
+
+  it('clears mountingType for a wall-hung preset (gas/electric/heat-pump → undefined ⇒ wall-hung default)', () => {
+    // Only the oil-floor presets carry a mountingType; the rest are absent (wall-hung default).
+    ['gas-condensing-24', 'electric-9', 'heatpump-12'].forEach((id) => {
+      const next = applyBoilerModelToParams(BASE_PARAMS, resolveBoilerModel(id)!);
+      expect(next.mountingType).toBeUndefined();
+    });
   });
 
   it('is pure — does not mutate the original params', () => {
@@ -216,6 +260,12 @@ describe('clearBoilerModel', () => {
     expect(cleared.condensing).toBeUndefined();
   });
 
+  it('sets noxMgKwh to undefined (a Type-Catalog property)', () => {
+    const withGas = applyBoilerModelToParams(BASE_PARAMS, resolveBoilerModel('gas-condensing-24')!);
+    expect(withGas.noxMgKwh).toBe(32);
+    expect(clearBoilerModel(withGas).noxMgKwh).toBeUndefined();
+  });
+
   it('sets minThermalOutputW to undefined (a Type-Catalog property)', () => {
     const withModulating = applyBoilerModelToParams(
       BASE_PARAMS,
@@ -223,6 +273,16 @@ describe('clearBoilerModel', () => {
     );
     expect(withModulating.minThermalOutputW).toBe(6000);
     expect(clearBoilerModel(withModulating).minThermalOutputW).toBeUndefined();
+  });
+
+  it('sets soundPowerDbA to undefined (a Type-Catalog property)', () => {
+    expect(withModel.soundPowerDbA).toBe(56); // oil-floor-30
+    expect(clearBoilerModel(withModel).soundPowerDbA).toBeUndefined();
+  });
+
+  it('sets mountingType to undefined (a Type-Catalog property; oil-floor was floor-standing)', () => {
+    expect(withModel.mountingType).toBe('floor-standing'); // oil-floor-30
+    expect(clearBoilerModel(withModel).mountingType).toBeUndefined();
   });
 
   it('preserves all other params (width, thermalOutputW, position, etc.)', () => {
@@ -281,5 +341,42 @@ describe('isBoilerFuelType', () => {
     expect(isBoilerFuelType('biomass')).toBe(false);
     expect(isBoilerFuelType('GAS')).toBe(false);
     expect(isBoilerFuelType('heat_pump')).toBe(false);
+  });
+});
+
+// ─── MEP_BOILER_MOUNTING_TYPES + isMepBoilerMountingType (mounting picker SSoT) ─
+
+describe('MEP_BOILER_MOUNTING_TYPES', () => {
+  it('lists exactly the two MepBoilerMountingType members, wall-hung first', () => {
+    expect(MEP_BOILER_MOUNTING_TYPES).toEqual(['wall-hung', 'floor-standing']);
+  });
+
+  it('has no duplicate entries', () => {
+    expect(new Set(MEP_BOILER_MOUNTING_TYPES).size).toBe(MEP_BOILER_MOUNTING_TYPES.length);
+  });
+
+  it('defaults to wall-hung (the original επίτοιχος slice)', () => {
+    expect(DEFAULT_BOILER_MOUNTING_TYPE).toBe('wall-hung');
+    expect(MEP_BOILER_MOUNTING_TYPES).toContain(DEFAULT_BOILER_MOUNTING_TYPE);
+  });
+
+  it('is assignable to MepBoilerMountingType[] (compile-time membership)', () => {
+    const mounts: readonly MepBoilerMountingType[] = MEP_BOILER_MOUNTING_TYPES;
+    expect(mounts.length).toBe(2);
+  });
+});
+
+describe('isMepBoilerMountingType', () => {
+  it('returns true for every member of MEP_BOILER_MOUNTING_TYPES', () => {
+    MEP_BOILER_MOUNTING_TYPES.forEach((mt) => {
+      expect(isMepBoilerMountingType(mt)).toBe(true);
+    });
+  });
+
+  it('returns false for unrelated strings', () => {
+    expect(isMepBoilerMountingType('')).toBe(false);
+    expect(isMepBoilerMountingType('ceiling')).toBe(false);
+    expect(isMepBoilerMountingType('Wall-Hung')).toBe(false);
+    expect(isMepBoilerMountingType('floor_standing')).toBe(false);
   });
 });

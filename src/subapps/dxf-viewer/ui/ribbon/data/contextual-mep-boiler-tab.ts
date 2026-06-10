@@ -131,6 +131,30 @@ const EFFICIENCY_PERCENT_OPTIONS = [
   { value: '98', labelKey: '98', isLiteralLabel: true },
 ] as const;
 
+// Measured NOx emissions (mg/kWh) — Revit «NOx Emission». Editable; spans the two EU Ecodesign
+// ceilings (gas ≤56, oil ≤120) so the picker covers both a compliant gas figure and a typical
+// oil one. Integer mg → plain numeric combobox (no rounding hazard). Drives the read-only NOx
+// compliance readout (resolveNoxClass).
+const NOX_MG_KWH_OPTIONS = [
+  { value: '30',  labelKey: '30',  isLiteralLabel: true },
+  { value: '40',  labelKey: '40',  isLiteralLabel: true },
+  { value: '56',  labelKey: '56',  isLiteralLabel: true },
+  { value: '80',  labelKey: '80',  isLiteralLabel: true },
+  { value: '120', labelKey: '120', isLiteralLabel: true },
+] as const;
+
+// Measured sound power level L_WA (dB(A)) — Revit Mechanical Equipment «Sound». Editable; spans the
+// guidance bands (≤45 quiet, ≤55 standard, >55 loud) so the picker covers a quiet wall-hung gas unit
+// up to a floor-standing oil one. Integer dB → plain numeric combobox (no rounding hazard). Drives the
+// read-only placement-suitability readout (resolveAcousticBand). ANY fuel type (≠ NOx, combustion-only).
+const SOUND_POWER_DBA_OPTIONS = [
+  { value: '40', labelKey: '40', isLiteralLabel: true },
+  { value: '45', labelKey: '45', isLiteralLabel: true },
+  { value: '50', labelKey: '50', isLiteralLabel: true },
+  { value: '55', labelKey: '55', isLiteralLabel: true },
+  { value: '60', labelKey: '60', isLiteralLabel: true },
+] as const;
+
 // Safety relief valve set pressure (bar) — Revit «Safety Relief Valve» set pressure. Derived
 // from the SSoT standard valve ratings (BOILER_RELIEF_PRESSURES_BAR) so the picker and the
 // param defaults never drift. String values (fractional ratings → string combobox, not numeric).
@@ -219,6 +243,21 @@ export const CONTEXTUAL_MEP_BOILER_TAB: RibbonTab = {
                 id: 'mepBoiler.fuelType',
                 labelKey: 'ribbon.commands.mepBoilerEditor.fuelType',
                 commandKey: MEP_BOILER_RIBBON_KEYS.stringParams.fuelType,
+                comboboxWidthPx: 150,
+                options: [],
+              },
+            },
+            {
+              // ADR-408 — standalone MOUNTING picker (Revit «Mounting» type-property:
+              // wall-hung / floor-standing). Options are supplied dynamically by the bridge
+              // (MEP_BOILER_MOUNTING_TYPES → getComboboxState; declare [] here). Floor-standing
+              // boilers ignore the wall-mounting elevation (the oil-floor catalog presets).
+              type: 'combobox',
+              size: 'small',
+              command: {
+                id: 'mepBoiler.mountingType',
+                labelKey: 'ribbon.commands.mepBoilerEditor.mountingType',
+                commandKey: MEP_BOILER_RIBBON_KEYS.stringParams.mountingType,
                 comboboxWidthPx: 150,
                 options: [],
               },
@@ -568,6 +607,20 @@ export const CONTEXTUAL_MEP_BOILER_TAB: RibbonTab = {
                 options: SYSTEM_PRESSURE_BAR_OPTIONS,
               },
             },
+            {
+              // ADR-408 Εύρος Β — FILLING LOOP (βρόχος πλήρωσης, Revit/IFC IfcValve CHECK) Yes/No
+              // toggle. ON → the plan symbol draws a filling-loop body glyph (double-check valve +
+              // flexible loop + isolation ticks) — the sealed-system charging device that completes
+              // the family (valve + vessel + gauge + filling loop). Visualisation only — no connector,
+              // no extra pressure (the fill target is the gauge's system pressure above).
+              type: 'toggle',
+              size: 'small',
+              command: {
+                id: 'mepBoiler.fillingLoop',
+                labelKey: 'ribbon.commands.mepBoilerEditor.fillingLoop',
+                commandKey: MEP_BOILER_RIBBON_KEYS.toggles.fillingLoop,
+              },
+            },
           ],
         },
       ],
@@ -638,6 +691,61 @@ export const CONTEXTUAL_MEP_BOILER_TAB: RibbonTab = {
                 labelKey: 'ribbon.commands.mepBoilerEditor.erpClass',
                 commandKey: MEP_BOILER_RIBBON_KEYS.readouts.erpClass,
                 comboboxWidthPx: 80,
+                options: [],
+              },
+            },
+            {
+              // ADR-408 — measured NOx emissions (Revit «NOx Emission»). Editable mg/kWh;
+              // drives the NOx compliance readout below. Combustion fuels only (the readout
+              // returns «—» for electric/heat-pump), plain numeric combobox.
+              type: 'combobox',
+              size: 'small',
+              command: {
+                id: 'mepBoiler.nox',
+                labelKey: 'ribbon.commands.mepBoilerEditor.nox',
+                commandKey: MEP_BOILER_RIBBON_KEYS.params.nox,
+                comboboxWidthPx: 90,
+                options: NOX_MG_KWH_OPTIONS,
+              },
+            },
+            {
+              // ADR-408 — EU Ecodesign NOx compliance readout (read-only; bridge returns
+              // `disabled` state). Derived from noxMgKwh + fuelType (resolveNoxClass).
+              type: 'combobox',
+              size: 'small',
+              command: {
+                id: 'mepBoiler.noxClass',
+                labelKey: 'ribbon.commands.mepBoilerEditor.noxClass',
+                commandKey: MEP_BOILER_RIBBON_KEYS.readouts.noxClass,
+                comboboxWidthPx: 100,
+                options: [],
+              },
+            },
+            {
+              // ADR-408 — measured sound power level L_WA (Revit «Sound»). Editable dB(A);
+              // drives the placement-suitability readout below. ANY fuel type (a pump/fan/burner
+              // all emit noise, ≠ NOx combustion-only), plain numeric combobox (integer dB).
+              type: 'combobox',
+              size: 'small',
+              command: {
+                id: 'mepBoiler.soundPower',
+                labelKey: 'ribbon.commands.mepBoilerEditor.soundPower',
+                commandKey: MEP_BOILER_RIBBON_KEYS.params.soundPower,
+                comboboxWidthPx: 110,
+                options: SOUND_POWER_DBA_OPTIONS,
+              },
+            },
+            {
+              // ADR-408 — placement-suitability band readout (read-only; bridge returns
+              // `disabled` state). Derived from soundPowerDbA (resolveAcousticBand). A guidance
+              // heuristic (quiet/standard/loud), NOT a legal limit — see boiler-acoustics.ts.
+              type: 'combobox',
+              size: 'small',
+              command: {
+                id: 'mepBoiler.acousticBand',
+                labelKey: 'ribbon.commands.mepBoilerEditor.acousticBand',
+                commandKey: MEP_BOILER_RIBBON_KEYS.readouts.acousticBand,
+                comboboxWidthPx: 110,
                 options: [],
               },
             },

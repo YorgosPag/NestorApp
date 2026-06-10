@@ -50,6 +50,7 @@ import {
   buildSafetyValveGlyph,
   buildExpansionVesselGlyph,
   buildPressureGaugeGlyph,
+  buildFillingLoopGlyph,
   buildFlueVentStroke,
   buildFuelCockStroke,
   buildCondensateTrapStroke,
@@ -241,6 +242,14 @@ export function buildMepBoilerSymbol(
   // drawn warm-red THIN by the existing loop (zero drawing-file change). Drawn only when toggled.
   if (params.pressureGauge) {
     glyphStrokes.push(...buildPressureGaugeGlyph(v0, v1, v2, v3));
+  }
+
+  // FILLING LOOP (βρόχος πλήρωσης, Revit/IFC IfcValve CHECK) — the sealed-system charging device
+  // (double-check valve + flexible loop + 2 isolation ticks) that fills the system to the gauge's
+  // cold-fill pressure. A body glyph appended to glyphStrokes → drawn warm-red THIN by the existing
+  // loop (zero drawing-file change). Drawn only when toggled.
+  if (params.fillingLoop) {
+    glyphStrokes.push(...buildFillingLoopGlyph(v0, v1, v2, v3));
   }
 
   // Service-clearance envelope (Revit «Clearances») — dashed keep-clear zone offset
