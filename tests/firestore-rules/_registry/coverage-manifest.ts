@@ -1212,6 +1212,8 @@ export const FIRESTORE_RULES_PENDING: readonly string[] = [
   'floorplan_floor_finishes',   // lines 4100-4120 — tenant-scoped CRUD (per-room floor finish, mirror floorplan_walls); full matrix with the BIM batch
   // — BIM Thermal Spaces (ADR-422, 2026-06-08) —
   'floorplan_thermal_spaces',   // analytical thermal spaces per room (IfcSpace, mirror floorplan_floor_finishes); full matrix with the BIM batch
+  // — BIM Space Separators (ADR-437, 2026-06-10) —
+  'floorplan_space_separators', // room/space separator lines (IfcVirtualElement, mirror floorplan_thermal_spaces); full matrix with the BIM batch
   // — BIM MEP Water Heater / DHW (ADR-408, 2026-06-08) —
   'floorplan_mep_water_heaters', // lines 4025-4047 — tenant-scoped CRUD (DHW water heater / θερμοσίφωνας, mirror mep_boilers); full matrix with the BIM batch
 ] as const;
