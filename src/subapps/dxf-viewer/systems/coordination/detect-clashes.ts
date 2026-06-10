@@ -17,7 +17,7 @@
 import type { Entity } from '../../types/entities';
 import type { MepSystemEntity } from '../../bim/types/mep-system-types';
 import type { SceneUnits } from '../../utils/scene-units';
-import type { Clash, ClashEntity, ClashReport, ClashRule } from './clash-types';
+import type { Aabb3, Clash, ClashEntity, ClashReport, ClashRule, Vec3 } from './clash-types';
 import { entityWorldAABB } from './entity-world-aabb';
 import { broadPhasePairs } from './broad-phase';
 import { shouldSkipPair } from './clash-pair-filter';
@@ -67,9 +67,24 @@ function evaluateSegmentSegment(a: ClashEntity, b: ClashEntity, rules: readonly 
   return null;
 }
 
+/** Is point `p` inside the AABB `box`? */
+function pointInAabb(p: Vec3, box: Aabb3): boolean {
+  return p.x >= box.min.x && p.x <= box.max.x
+    && p.y >= box.min.y && p.y <= box.max.y
+    && p.z >= box.min.z && p.z <= box.max.z;
+}
+
 /** Capsule↔AABB (segment vs structural/equipment/fitting): hard only in v1. */
 function evaluateSegmentBox(seg: ClashEntity, box: ClashEntity): Clash | null {
   if (!seg.capsule) return null;
+  // A fitting sitting on this segment's OWN end (an endpoint falls inside the fitting
+  // box) is a connection, not a clash — skip it. Manual pipes aren't in a shared
+  // MepSystem yet, so the membership filter can't catch this; the geometry can. A
+  // DIFFERENT pipe passing through the fitting (neither endpoint inside) still clashes.
+  if (box.kind === 'mep-fitting'
+    && (pointInAabb(seg.capsule.a, box.aabb) || pointInAabb(seg.capsule.b, box.aabb))) {
+    return null;
+  }
   const hit = segmentAabbHit(seg.capsule.a, seg.capsule.b, box.aabb, seg.capsule.radiusM);
   if (!hit) return null;
   return makeClash(seg, box, 'hard', hardSeverity(seg.kind, box.kind), hit.point, 0, 'hard-default');

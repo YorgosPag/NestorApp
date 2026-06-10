@@ -55,6 +55,10 @@ function beam(id: string, bbox: Aabb3): Entity {
   return { id, type: 'beam', layerId: 'struct', params: {}, geometry: { bbox } } as unknown as Entity;
 }
 
+function fitting(id: string, bbox: Aabb3): Entity {
+  return { id, type: 'mep-fitting', layerId: 'mep', params: {}, geometry: { bbox } } as unknown as Entity;
+}
+
 function system(id: string, memberIds: readonly string[]): MepSystemEntity {
   return {
     id,
@@ -201,6 +205,19 @@ describe('detectClashes', () => {
     expect(report.clashes).toHaveLength(1);
     expect(report.clashes[0].type).toBe('clearance');
     expect(report.clashes[0].ruleId).toBe('drainage-potable-separation');
+  });
+
+  it('does NOT flag a fitting sitting on its own pipe end (connection, not a clash)', () => {
+    // Fitting box covers the pipe's end at (2, 0, 1) → connected → skipped.
+    const report = run([pipe('p', [0, 0], [2, 0]), fitting('f', box([1.9, -0.1, 0.9], [2.1, 0.1, 1.1]))]);
+    expect(report.clashes).toHaveLength(0);
+  });
+
+  it('still flags a pipe passing THROUGH an unrelated fitting (no endpoint inside)', () => {
+    // Pipe ends at (0,0,1) and (4,0,1); the fitting sits mid-span at (2,0,1) → real clash.
+    const report = run([pipe('p', [0, 0], [4, 0]), fitting('f', box([1.9, -0.1, 0.9], [2.1, 0.1, 1.1]))]);
+    expect(report.clashes).toHaveLength(1);
+    expect(report.clashes[0].bKind === 'mep-fitting' || report.clashes[0].aKind === 'mep-fitting').toBe(true);
   });
 
   it('finds no clash between distant pipes', () => {

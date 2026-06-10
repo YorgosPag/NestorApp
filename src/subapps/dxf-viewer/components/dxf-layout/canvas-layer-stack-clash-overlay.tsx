@@ -24,7 +24,7 @@ import { CoordinateTransforms } from '../../rendering/core/CoordinateTransforms'
 import { useClashReport } from '../../systems/coordination/clash-report-store';
 import { sceneUnitsToMeters } from '../../utils/scene-units';
 import { getImmediateTransform } from '../../systems/cursor/ImmediateTransformStore';
-import { UnifiedFrameScheduler, RENDER_PRIORITIES } from '../../rendering/core/UnifiedFrameScheduler';
+import { subscribeImmediateTransformFrame } from '../../rendering/core/immediate-transform-frame';
 import { useViewMode3DStore, selectIs3D } from '../../bim-3d/stores/ViewMode3DStore';
 import { ClashMarkerLayer } from './clash-markers/ClashMarkerLayer';
 import type { ClashMarkerGlyphProps } from './clash-markers/ClashMarkerGlyph';
@@ -69,25 +69,12 @@ export const ClashOverlayMount = React.memo(function ClashOverlayMount(props: Cl
 
   // Reproject in the scheduler frame, AFTER the 2D canvases render (LOW), reading the
   // immediate transform — frame-synced with the canvas so the markers track pan/zoom
-  // zero-lag (same approach as the 3D overlay). Gated on the transform actually changing.
-  const subscribe = useCallback((reproject: () => void) => {
-    let lastSig = '';
-    const unregister = UnifiedFrameScheduler.register(
-      'clash-markers-2d',
-      'Clash Markers 2D',
-      RENDER_PRIORITIES.LOW,
-      () => reproject(),
-      () => {
-        const t = getImmediateTransform();
-        const sig = `${t.scale},${t.offsetX},${t.offsetY}`;
-        if (sig === lastSig) return false;
-        lastSig = sig;
-        return true;
-      },
-    );
-    reproject();
-    return unregister;
-  }, []);
+  // zero-lag. SSoT: the same helper the proposal-ghost + home-run-wires overlays use.
+  const subscribe = useCallback(
+    (reproject: () => void) =>
+      subscribeImmediateTransformFrame('clash-markers-2d', 'Clash Markers 2D', reproject),
+    [],
+  );
 
   if (!review || is3D) return null;
   return <ClashMarkerLayer markers={markers} project={project} subscribe={subscribe} className="z-[60]" />;

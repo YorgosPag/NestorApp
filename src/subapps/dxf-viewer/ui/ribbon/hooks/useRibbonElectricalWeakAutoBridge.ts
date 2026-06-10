@@ -36,7 +36,8 @@ import type { ProposedWeakChannel } from '../../../systems/mep-design/electrical
 import { electricalProposalStore } from '../../../systems/mep-design/electrical/electrical-proposal-store';
 import { buildWeakCommit } from '../../../systems/mep-design/electrical/commit/build-electrical-weak-commit';
 import { computeCircuitWirePaths } from '../../../bim/mep-systems/mep-wire-routing';
-import { resolverFromHosts, type WireHostXform } from '../../../bim/mep-systems/mep-wire-resolver';
+import { resolverFromHosts } from '../../../bim/mep-systems/mep-wire-resolver';
+import { collectWireHosts } from '../../../bim/mep-systems/mep-wire-scene';
 import { useMepSystemStore } from '../../../bim/mep-systems/mep-system-store';
 import { ELECTRICAL_WEAK_AUTO_RIBBON_ACTIONS } from './bridge/electrical-weak-auto-command-keys';
 import type { useLevels } from '../../../systems/levels';
@@ -53,28 +54,6 @@ export interface UseRibbonElectricalWeakAutoBridgeProps {
 
 export interface RibbonElectricalWeakAutoBridge {
   readonly onAction: (action: string) => void;
-}
-
-/** Collect the connector-host transforms (fixtures + racks/panels) for the wire resolver. */
-function collectWireHosts(entities: readonly Entity[]): Map<string, WireHostXform> {
-  const hosts = new Map<string, WireHostXform>();
-  for (const e of entities) {
-    if (e.type !== 'mep-fixture' && e.type !== 'electrical-panel') continue;
-    const params = e.params as {
-      position: { x: number; y: number };
-      rotation: number;
-      mountingElevationMm?: number;
-      connectors?: WireHostXform['connectors'];
-    };
-    hosts.set(e.id, {
-      x: params.position.x,
-      y: params.position.y,
-      rotation: params.rotation,
-      zMm: params.mountingElevationMm ?? 0,
-      connectors: params.connectors ?? [],
-    });
-  }
-  return hosts;
 }
 
 export function useRibbonElectricalWeakAutoBridge(
@@ -114,7 +93,7 @@ export function useRibbonElectricalWeakAutoBridge(
     const plan = buildWeakCommit(proposal, resolveChannelName);
     const resolve = resolverFromHosts(collectWireHosts(entities));
     const wirePaths = computeCircuitWirePaths(plan.systemEntities, resolve);
-    electricalProposalStore.set({ proposal, systemEntities: plan.systemEntities, wirePaths });
+    electricalProposalStore.set({ proposal, systemEntities: plan.systemEntities, wirePaths, sceneUnits });
     EventBus.emit('bim:electrical-weak-generated', {
       channelCount: proposal.channels.length,
       skipped: proposal.skippedAlreadyCircuited,
