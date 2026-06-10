@@ -16,6 +16,7 @@ import type { DxfEntityUnion, DxfLine, DxfCircle, DxfPolyline, DxfArc, DxfText, 
 import type { BaseEntity } from '../types/entities';
 import { computeStairGeometry } from '../bim/geometry/stairs/StairGeometryService';
 import { computeColumnGeometry } from '../bim/geometry/column-geometry';
+import { computeFoundationGeometry } from '../bim/geometry/foundation-geometry';
 import { computeMepFixtureGeometry } from '../bim/mep-fixtures/mep-fixture-geometry';
 import { computeElectricalPanelGeometry } from '../bim/electrical-panels/electrical-panel-geometry';
 import { computeMepManifoldGeometry } from '../bim/mep-manifolds/mep-manifold-geometry';
@@ -159,6 +160,15 @@ export function convertDxfEntityToEntityModel(entity: DxfEntityUnion): EntityMod
       const col = entity as unknown as Partial<import('../bim/types/column-types').ColumnEntity>;
       const geometry = col.geometry ?? (col.params ? computeColumnGeometry(col.params) : undefined);
       return buildBimEntityModel('column', { ...(entity as object), geometry } as typeof entity, baseModel);
+    }
+    // ADR-436 Slice 1 — foundation needs a geometry-recompute fallback (mirror column):
+    // a Firestore-loaded FoundationEntity may arrive before its geometry cache is
+    // hydrated; without geometry.bbox BoundsCalculator drops it from the spatial
+    // index → body-click selection silently fails.
+    case 'foundation': {
+      const fnd = entity as unknown as Partial<import('../bim/types/foundation-types').FoundationEntity>;
+      const geometry = fnd.geometry ?? (fnd.params ? computeFoundationGeometry(fnd.params) : undefined);
+      return buildBimEntityModel('foundation', { ...(entity as object), geometry } as typeof entity, baseModel);
     }
     // ADR-406 — mep-fixture needs a geometry-recompute fallback (mirror column):
     // a Firestore-loaded MepFixtureEntity may arrive before its geometry cache is

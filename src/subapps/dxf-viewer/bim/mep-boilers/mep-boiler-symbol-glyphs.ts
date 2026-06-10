@@ -109,6 +109,27 @@ const GAUGE_PIVOT_FRAC = 0.16;
 const GAUGE_NEEDLE_COS = Math.SQRT1_2;
 const GAUGE_NEEDLE_SIN = Math.SQRT1_2;
 
+/** Filling-loop centre offset toward the bottom edge (−width, lower chamber), as a fraction of the body width. */
+const FILLING_CENTRE_WIDTH_FRAC = 0.28;
+
+/** Filling-loop centre lateral offset (−depth, OPPOSITE the pressure gauge), as a fraction of the body depth. */
+const FILLING_CENTRE_DEPTH_FRAC = 0.22;
+
+/** Half-length of the filling-loop pipe run along the lateral (perp) flow axis, as a fraction of the body depth. */
+const FILLING_RUN_HALF_FRAC = 0.1;
+
+/** Double-check-valve chevron leg length (along the flow axis), as a fraction of the body depth. */
+const FILLING_CHEVRON_LEN_FRAC = 0.05;
+
+/** Double-check-valve chevron half-width (across the flow axis), as a fraction of the body width. */
+const FILLING_CHEVRON_HALF_FRAC = 0.04;
+
+/** Flexible-loop semicircle bulge radius (in the +width direction), as a fraction of the body width. */
+const FILLING_LOOP_RADIUS_FRAC = 0.06;
+
+/** Isolation-valve end-tick half-length (across the run), as a fraction of the body width. */
+const FILLING_TICK_HALF_FRAC = 0.04;
+
 // ---------------------------------------------------------------------------
 // Shared micro-helpers (pure)
 // ---------------------------------------------------------------------------
@@ -373,6 +394,74 @@ export function buildPressureGaugeGlyph(v0: Point3D, v1: Point3D, v2: Point3D, v
   ];
 
   return [circle, needleLine, pivotDot];
+}
+
+/**
+ * Build the FILLING LOOP body glyph (βρόχος πλήρωσης, Revit/IFC `IfcValve` CHECK) — the device that
+ * charges a SEALED heating system to its cold-fill pressure (the gauge's `systemPressureBar`). Drawn
+ * as a short pipe run carrying a DOUBLE-CHECK VALVE (two «»» chevrons in series, the WRAS backflow
+ * preventer) with a flexible-connector loop (a small semicircle bulge) and an isolation-valve tick at
+ * each end. Placed in the lower chamber (−width) on the lateral side OPPOSITE the pressure gauge
+ * (−depth) — the fourth distinct sealed-system position (flame=centre, valve=+w/+d, vessel=+w/−d,
+ * gauge=−w/+d). Pure + rotation-aware. Returns [run, chevron1, chevron2, loopArc, tick1, tick2].
+ */
+export function buildFillingLoopGlyph(v0: Point3D, v1: Point3D, v2: Point3D, v3: Point3D): BoilerStroke[] {
+  // Local body axes in world: +X (width, toward the top edge) and +Y (depth, lateral = flow axis).
+  const along = unit(v1.x - v0.x, v1.y - v0.y);
+  const perp  = unit(v3.x - v0.x, v3.y - v0.y);
+  const bodyWidth = Math.hypot(v1.x - v0.x, v1.y - v0.y);
+  const bodyDepth = Math.hypot(v3.x - v0.x, v3.y - v0.y);
+
+  // Loop centre: lower chamber (−width), lateral side OPPOSITE the gauge (−depth), clear of the flame.
+  const cx = (v0.x + v1.x + v2.x + v3.x) / 4;
+  const cy = (v0.y + v1.y + v2.y + v3.y) / 4;
+  const centre: Point3D = {
+    x: cx - along.x * bodyWidth * FILLING_CENTRE_WIDTH_FRAC - perp.x * bodyDepth * FILLING_CENTRE_DEPTH_FRAC,
+    y: cy - along.y * bodyWidth * FILLING_CENTRE_WIDTH_FRAC - perp.y * bodyDepth * FILLING_CENTRE_DEPTH_FRAC,
+    z: 0,
+  };
+
+  const runHalf = bodyDepth * FILLING_RUN_HALF_FRAC;     // run extends ± along the lateral (perp) axis
+  const chevLen = bodyDepth * FILLING_CHEVRON_LEN_FRAC;  // chevron leg length along the flow (perp)
+  const chevHalf = bodyWidth * FILLING_CHEVRON_HALF_FRAC; // chevron half-width across the flow (along)
+  const r = bodyWidth * FILLING_LOOP_RADIUS_FRAC;        // flexible-loop semicircle bulge radius
+  const tickHalf = bodyWidth * FILLING_TICK_HALF_FRAC;   // isolation-valve end-tick half-length
+
+  // Pipe run: a straight segment along the lateral (perp) flow axis through the centre.
+  const run: BoilerStroke = [
+    pointAt(centre, along, perp, 0, -runHalf),
+    pointAt(centre, along, perp, 0, runHalf),
+  ];
+
+  // Double-check valve: two chevrons «»» pointing in the +perp flow direction, in series along the run.
+  // Each chevron is one open polyline: legLeft → apex → legRight.
+  const chevron = (atPerp: number): BoilerStroke => [
+    pointAt(centre, along, perp, chevHalf, atPerp),
+    pointAt(centre, along, perp, 0, atPerp + chevLen),
+    pointAt(centre, along, perp, -chevHalf, atPerp),
+  ];
+  const chevron1 = chevron(-runHalf * 0.45);
+  const chevron2 = chevron(runHalf * 0.1);
+
+  // Flexible-connector loop: a small semicircle bulging in the +width (+along) direction at the centre,
+  // sweeping from (−r along perp) up over (+r along the bulge axis) to (+r along perp). N-gon half-circle.
+  const loopArc: Point3D[] = [];
+  for (let i = 0; i <= VESSEL_SEGMENTS; i += 1) {
+    const a = (Math.PI * i) / VESSEL_SEGMENTS;
+    loopArc.push(pointAt(centre, along, perp, r * Math.sin(a), -r * Math.cos(a)));
+  }
+
+  // Isolation valves: a short cross-tick across the run at each end (the two service stop-cocks).
+  const tick1: BoilerStroke = [
+    pointAt(centre, along, perp, -tickHalf, -runHalf),
+    pointAt(centre, along, perp, tickHalf, -runHalf),
+  ];
+  const tick2: BoilerStroke = [
+    pointAt(centre, along, perp, -tickHalf, runHalf),
+    pointAt(centre, along, perp, tickHalf, runHalf),
+  ];
+
+  return [run, chevron1, chevron2, loopArc, tick1, tick2];
 }
 
 /**

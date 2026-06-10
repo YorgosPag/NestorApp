@@ -34,6 +34,7 @@ import type {
   SlabToolLike,
   ColumnToolLike,
   BeamToolLike,
+  FoundationToolLike,
   MepFixtureToolLike,
   MepSegmentToolLike,
   ElectricalPanelToolLike,
@@ -81,6 +82,8 @@ export interface UseCanvasClickHandlerParams {
   floorFinishTool?: SlabToolLike;
   /** ADR-363 Phase 4 — Column tool click pipeline. */
   columnTool?: ColumnToolLike;
+  /** ADR-436 Slice 1 — Foundation pad tool click pipeline. */
+  foundationTool?: FoundationToolLike;
   /** ADR-363 Phase 5 — Beam tool click pipeline. */
   beamTool?: BeamToolLike;
   /** ADR-406 — MEP fixture tool click pipeline. */

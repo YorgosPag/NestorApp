@@ -42,6 +42,9 @@ import {
   clearBoilerModel,
   BOILER_FUEL_TYPES,
   isBoilerFuelType,
+  MEP_BOILER_MOUNTING_TYPES,
+  DEFAULT_BOILER_MOUNTING_TYPE,
+  isMepBoilerMountingType,
 } from '../../../bim/mep-boilers/boiler-model-catalog';
 import { SELECT_CLEAR_VALUE, isSelectClearValue } from '@/config/domain-constants';
 import { useCommandHistory } from '../../../core/commands';
@@ -56,6 +59,7 @@ import {
   isMepBoilerRibbonStringKey,
   isMepBoilerFlueTerminationKey,
   isMepBoilerFuelTypeKey,
+  isMepBoilerMountingTypeKey,
   isMepBoilerReliefPressureKey,
   isMepBoilerSystemPressureKey,
   isMepBoilerToggleKey,
@@ -71,6 +75,8 @@ import {
   isFlueTerminationType,
 } from '../../../bim/mep-boilers/boiler-flue-terminal';
 import { resolveErpClass } from '../../../bim/mep-boilers/boiler-efficiency';
+import { resolveNoxClass } from '../../../bim/mep-boilers/boiler-nox';
+import { resolveAcousticBand, type AcousticBand } from '../../../bim/mep-boilers/boiler-acoustics';
 import { EventBus } from '../../../systems/events/EventBus';
 import { useMepSystemStore } from '../../../bim/mep-systems/mep-system-store';
 import { resolveManagedSystems } from '../../../bim/mep-systems/mep-circuit-editor';
@@ -194,6 +200,42 @@ export function useRibbonMepBoilerBridge(
             disabled: true,
           };
         }
+        // NOx compliance verdict — independent of sizing (depends on noxMgKwh + fuelType), so it
+        // is resolved BEFORE the sizing guard, alongside the ErP class. Disabled (read-only) combobox.
+        // `null` (non-combustion fuel / no measured value) → the «—» placeholder.
+        if (commandKey === MEP_BOILER_RIBBON_KEYS.readouts.noxClass) {
+          const boiler = resolveBoiler();
+          const nox = resolveNoxClass(boiler?.params.noxMgKwh, boiler?.params.fuelType);
+          if (!boiler || nox === null) {
+            return { value: '—', options: [], disabled: true };
+          }
+          return {
+            value: t(
+              nox === 'compliant'
+                ? 'ribbon.commands.mepBoilerEditor.noxCompliant'
+                : 'ribbon.commands.mepBoilerEditor.noxExceeds',
+            ),
+            options: [],
+            disabled: true,
+          };
+        }
+        // Sound power (L_WA) placement-suitability band — independent of sizing (depends only on
+        // soundPowerDbA), so it is resolved BEFORE the sizing guard, alongside ErP/NOx. Disabled
+        // (read-only) combobox. `null` (absent/non-positive value) → the «—» placeholder. The band
+        // is a guidance heuristic (NOT a legal limit) — see `boiler-acoustics.ts`.
+        if (commandKey === MEP_BOILER_RIBBON_KEYS.readouts.acousticBand) {
+          const boiler = resolveBoiler();
+          const band = resolveAcousticBand(boiler?.params.soundPowerDbA);
+          if (!boiler || band === null) {
+            return { value: '—', options: [], disabled: true };
+          }
+          const BAND_LABEL_KEY: Readonly<Record<AcousticBand, string>> = {
+            quiet: 'ribbon.commands.mepBoilerEditor.acousticQuiet',
+            standard: 'ribbon.commands.mepBoilerEditor.acousticStandard',
+            loud: 'ribbon.commands.mepBoilerEditor.acousticLoud',
+          };
+          return { value: t(BAND_LABEL_KEY[band]), options: [], disabled: true };
+        }
         if (!sizing) return { value: '—', options: [], disabled: true };
         if (commandKey === MEP_BOILER_RIBBON_KEYS.readouts.adequacyStatus) {
           const status: HeatingEquipmentSizingStatus = sizing.status;
@@ -267,6 +309,22 @@ export function useRibbonMepBoilerBridge(
               isLiteralLabel: false,
             })),
           ],
+        };
+      }
+      // ADR-408 — standalone MOUNTING picker (static enum, Revit «Mounting» type-property).
+      // Checked BEFORE the model-catalog branch (both pass `isMepBoilerRibbonStringKey`). No clear
+      // sentinel — a boiler is always wall-hung or floor-standing; the value falls back to the
+      // wall-hung default when unset. Reuses the tag mounting labels (SSoT).
+      if (isMepBoilerMountingTypeKey(commandKey)) {
+        const boiler = resolveBoiler();
+        if (!boiler) return null;
+        return {
+          value: boiler.params.mountingType ?? DEFAULT_BOILER_MOUNTING_TYPE,
+          options: MEP_BOILER_MOUNTING_TYPES.map((mt) => ({
+            value: mt,
+            labelKey: `ribbon.commands.mepBoilerTag.mountingTypes.${mt}`,
+            isLiteralLabel: false,
+          })),
         };
       }
       // ADR-408 Vent Terminal — flue-termination picker (static enum). Checked BEFORE the
@@ -355,6 +413,17 @@ export function useRibbonMepBoilerBridge(
         } else if (isBoilerFuelType(value)) {
           dispatchParams(boiler, { ...boiler.params, fuelType: value });
         }
+        return;
+      }
+      // ADR-408 — standalone MOUNTING change (static enum, Revit «Mounting» type-property).
+      // Checked before the model-catalog branch; persists the validated mounting type. No clear
+      // sentinel (always wall-hung or floor-standing). Does NOT touch `modelId` (instance override
+      // ≠ family default). Data-only — no connector re-seed (mounting affects 3D elevation, deferred).
+      if (isMepBoilerMountingTypeKey(commandKey)) {
+        const boiler = resolveBoiler();
+        if (!boiler) return;
+        if (!isMepBoilerMountingType(value)) return;
+        dispatchParams(boiler, { ...boiler.params, mountingType: value });
         return;
       }
       // ADR-408 Vent Terminal — flue-termination change (static enum). Checked before the

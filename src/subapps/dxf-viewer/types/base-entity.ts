@@ -48,6 +48,8 @@ export type EntityType =
   | 'slab-opening'
   | 'column'
   | 'beam'
+  // ADR-436 — structural foundation (pad/strip/tie-beam, IfcFooting).
+  | 'foundation'
   // ADR-406 — point-based MEP fixture (light fixture first; generic over kind).
   | 'mep-fixture'
   // ADR-408 Φ3 — point-based electrical panel (circuit source, IfcElectricDistributionBoard).

@@ -136,6 +136,9 @@ function computeBounds(entity: Entity, forExtents: boolean): SpatialBounds {
     case 'slab-opening':
     case 'column':
     case 'beam':
+    // ADR-436 — foundation uses pre-computed geometry.bbox for spatial bounds
+    // (without this it falls to default → EMPTY bounds → culled in 2D viewport).
+    case 'foundation':
     // ADR-406 — MEP fixture uses pre-computed geometry.bbox for spatial bounds.
     case 'mep-fixture':
     // ADR-408 Φ3 — electrical panel uses pre-computed geometry.bbox (same).

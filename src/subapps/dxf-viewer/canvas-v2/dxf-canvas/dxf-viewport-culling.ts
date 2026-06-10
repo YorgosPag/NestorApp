@@ -115,6 +115,14 @@ export function getEntityBBox(entity: DxfEntityUnion): BBox {
       }
       return { minX: -1e6, minY: -1e6, maxX: 1e6, maxY: 1e6 };
     }
+    case 'foundation': {
+      // ADR-436 Slice 1 — use geometry.bbox (world-space AABB of the footprint).
+      const bb = entity.geometry?.bbox;
+      if (bb) {
+        return { minX: bb.min.x, minY: bb.min.y, maxX: bb.max.x, maxY: bb.max.y };
+      }
+      return { minX: -1e6, minY: -1e6, maxX: 1e6, maxY: 1e6 };
+    }
     default: {
       // Conservative fallback for entity types not yet handled (e.g. dimension).
       return { minX: -1e6, minY: -1e6, maxX: 1e6, maxY: 1e6 };

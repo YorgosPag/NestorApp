@@ -13,7 +13,7 @@ import type { DxfEntityUnion, DxfTextStyle } from '../../canvas-v2/dxf-canvas/dx
 import type { DxfColor } from '../../text-engine/types';
 import type { Point2D } from '../../rendering/types/Types';
 import type { SceneModel, TextEntity } from '../../types/entities';
-import { isSlabEntity, isSlabOpeningEntity, isOpeningEntity, isWallEntity, isBeamEntity, isColumnEntity, isMepFixtureEntity, isElectricalPanelEntity, isRailingEntity, isFurnitureEntity, isMepSegmentEntity, isMepFittingEntity, isFloorplanSymbolEntity, isMepManifoldEntity, isMepRadiatorEntity, isMepBoilerEntity, isMepWaterHeaterEntity, isMepUnderfloorEntity, isRoofEntity, isFloorFinishEntity, isThermalSpaceEntity, isXLineEntity, isRayEntity } from '../../types/entities';
+import { isSlabEntity, isSlabOpeningEntity, isOpeningEntity, isWallEntity, isBeamEntity, isColumnEntity, isFoundationEntity, isMepFixtureEntity, isElectricalPanelEntity, isRailingEntity, isFurnitureEntity, isMepSegmentEntity, isMepFittingEntity, isFloorplanSymbolEntity, isMepManifoldEntity, isMepRadiatorEntity, isMepBoilerEntity, isMepWaterHeaterEntity, isMepUnderfloorEntity, isRoofEntity, isFloorFinishEntity, isThermalSpaceEntity, isXLineEntity, isRayEntity } from '../../types/entities';
 import type { XLineEntity, RayEntity } from '../../types/entities';
 import type { StairEntity } from '../../bim/types/stair-types';
 import type { SlabEntity } from '../../bim/types/slab-types';
@@ -25,6 +25,7 @@ import type { WallEntity } from '../../bim/types/wall-types';
 import type { BeamEntity } from '../../bim/types/beam-types';
 // ADR-363 Phase 4 — column direct entity for DXF render pipeline.
 import type { ColumnEntity } from '../../bim/types/column-types';
+import type { FoundationEntity } from '../../bim/types/foundation-types';
 // ADR-406 — MEP fixture direct entity for DXF render pipeline.
 import type { MepFixtureEntity } from '../../bim/types/mep-fixture-types';
 import type { ElectricalPanelEntity } from '../../bim/types/electrical-panel-types';
@@ -318,6 +319,15 @@ export function convertEntity(entity: SceneEntity, layers: SceneLayers, layersBy
       if (!isColumnEntity(entity)) return null;
       const col = entity as ColumnEntity;
       return { ...base, type: 'column' as const, kind: col.kind, params: col.params, geometry: col.geometry, validation: col.validation } as DxfEntityUnion;
+    }
+    case 'foundation': {
+      // ADR-436 Slice 1 — direct entity (same pattern as column/beam). FoundationRenderer
+      // reads geometry.footprint + kind + params at top level. Without this case,
+      // freshly-committed foundations were silently dropped here → invisible on 2D
+      // canvas (visible only in 3D which reads params directly).
+      if (!isFoundationEntity(entity)) return null;
+      const fnd = entity as FoundationEntity;
+      return { ...base, type: 'foundation' as const, kind: fnd.kind, params: fnd.params, geometry: fnd.geometry, validation: fnd.validation } as DxfEntityUnion;
     }
     case 'mep-fixture': {
       // ADR-406 — direct entity (same pattern as wall/beam/column). MepFixtureRenderer

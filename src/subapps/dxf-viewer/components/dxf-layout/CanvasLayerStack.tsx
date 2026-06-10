@@ -21,6 +21,8 @@ import { dwarn } from '../../debug';
 import type { ViewTransform, Point2D } from '../../rendering/types/Types';
 import { getImmediatePosition } from '../../systems/cursor/ImmediatePositionStore';
 import { setHoveredEntity, setHoveredOverlay } from '../../systems/hover/HoverStore';
+// ADR-408 — circuit wire marquee-select sets the active circuit (mirrors wire click-select).
+import { useMepCircuitEditorStore } from '../../bim/mep-systems/mep-circuit-editor-store';
 import type { PreviewCanvasHandle } from '../../canvas-v2/preview-canvas';
 import type { DxfRenderOptions } from '../../canvas-v2/dxf-canvas/dxf-types';
 import type { CanvasLayerStackProps } from './canvas-layer-stack-types';
@@ -95,12 +97,23 @@ export const CanvasLayerStack = React.memo(function CanvasLayerStack({
   const handleUnifiedMarqueeResult = ({
     layerIds,
     entityIds,
+    circuitIds,
     subtract,
   }: {
     layerIds: string[];
     entityIds: string[];
+    circuitIds?: string[];
     subtract?: boolean;
   }) => {
+    // ADR-408 — a window/crossing box that catches circuits' home-run wires selects ALL of
+    // them (Revit multi-select), mutually exclusive with entity selection (clear it, mirroring
+    // wire click-select). Every selected circuit lights its grips; the primary (top-most in
+    // paint order) drives the «Κύκλωμα» properties tab.
+    if (circuitIds && circuitIds.length > 0) {
+      universalSelection.clearAll();
+      useMepCircuitEditorStore.getState().setSelectedCircuits(circuitIds);
+      return;
+    }
     universalSelection.handleMarqueeResult(layerIds, entityIds, { subtract: !!subtract });
   };
   const handleOverlayClickWithEntityClear = (overlayId: string, point: Point2D) => {
@@ -415,6 +428,7 @@ export const CanvasLayerStack = React.memo(function CanvasLayerStack({
             selectedEntityIds={selectedEntityIds}
             levelManager={levelManager}
             transform={transform}
+            viewport={viewport}
             getCanvas={getPreviewCanvas}
             getViewportElement={getViewportEl}
           />

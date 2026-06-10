@@ -195,7 +195,7 @@ interface DxfCanvasSubscriberProps {
   onLayerSelected?: (layerId: string, position: Point2D) => void;
   onMultiLayerSelected?: (layerIds: string[]) => void;
   onEntitiesSelected?: (entityIds: string[]) => void;
-  onUnifiedMarqueeResult?: (result: { layerIds: string[]; entityIds: string[] }) => void;
+  onUnifiedMarqueeResult?: (result: { layerIds: string[]; entityIds: string[]; circuitIds?: string[] }) => void;
   onHoverEntity?: (entityId: string | null) => void;
   onHoverOverlay?: (overlayId: string | null) => void;
   onEntitySelect?: (entityId: string | null) => void;
@@ -331,6 +331,8 @@ interface PreviewCanvasMountsProps {
     setLevelScene: (levelId: string, scene: SceneModel) => void;
   };
   transform: ViewTransform;
+  /** ADR-040 SSoT — viewport size for the dedicated-canvas proposal ghost overlays. */
+  viewport: { width: number; height: number };
   getCanvas: () => HTMLCanvasElement | null;
   getViewportElement: () => HTMLElement | null;
 }
@@ -342,7 +344,7 @@ interface PreviewCanvasMountsProps {
 export const PreviewCanvasMounts = React.memo(function PreviewCanvasMounts(
   props: PreviewCanvasMountsProps,
 ) {
-  const { rotation, move, mirror, scale, stretch, columnGhost, mepFixtureGhost, electricalPanelGhost, mepManifoldGhost, mepRadiatorGhost, mepBoilerGhost, mepWaterHeaterGhost, mepSegmentGhost, slabOpeningGhost, openingGhost, gripDragPreview, selectedEntityIds, levelManager, transform, getCanvas, getViewportElement } = props;
+  const { rotation, move, mirror, scale, stretch, columnGhost, mepFixtureGhost, electricalPanelGhost, mepManifoldGhost, mepRadiatorGhost, mepBoilerGhost, mepWaterHeaterGhost, mepSegmentGhost, slabOpeningGhost, openingGhost, gripDragPreview, selectedEntityIds, levelManager, transform, viewport, getCanvas, getViewportElement } = props;
   return (
     <>
       <RotationPreviewMount
@@ -448,20 +450,22 @@ export const PreviewCanvasMounts = React.memo(function PreviewCanvasMounts(
         getCanvas={getCanvas}
         getViewportElement={getViewportElement}
       />
+      {/* ADR-040 SSoT: every proposal ghost now owns its OWN dedicated canvas (ProposalGhostOverlay),
+          so it persists across idle/pan/zoom instead of being wiped by the shared PreviewCanvas. */}
       {/* ADR-426 Slice 2 — water auto-design proposal ghost (low-freq store, inert while idle). */}
-      <WaterProposalGhostPreviewMount transform={transform} getCanvas={getCanvas} getViewportElement={getViewportElement} />
+      <WaterProposalGhostPreviewMount transform={transform} viewport={viewport} />
       {/* ADR-427 Slice 2 — drainage auto-design proposal ghost (low-freq store, inert while idle). */}
-      <DrainageProposalGhostPreviewMount transform={transform} getCanvas={getCanvas} getViewportElement={getViewportElement} />
+      <DrainageProposalGhostPreviewMount transform={transform} viewport={viewport} />
       {/* ADR-428 Slice 2 — heating auto-design proposal ghost (low-freq store, inert while idle). */}
-      <HeatingProposalGhostPreviewMount transform={transform} getCanvas={getCanvas} getViewportElement={getViewportElement} />
+      <HeatingProposalGhostPreviewMount transform={transform} viewport={viewport} />
       {/* ADR-430 Slice 2 — electrical auto-design proposal ghost (low-freq store, inert while idle). */}
-      <ElectricalProposalGhostPreviewMount transform={transform} getCanvas={getCanvas} getViewportElement={getViewportElement} />
+      <ElectricalProposalGhostPreviewMount transform={transform} viewport={viewport} />
       {/* ADR-432 Slice 2 — HVAC (ventilation) auto-design proposal ghost (low-freq store, inert while idle). */}
-      <HvacProposalGhostPreviewMount transform={transform} getCanvas={getCanvas} getViewportElement={getViewportElement} />
+      <HvacProposalGhostPreviewMount transform={transform} viewport={viewport} />
       {/* ADR-433 Slice 2 — fire-protection (sprinkler) auto-design proposal ghost (low-freq store, inert while idle). */}
-      <FireProposalGhostPreviewMount transform={transform} getCanvas={getCanvas} getViewportElement={getViewportElement} />
+      <FireProposalGhostPreviewMount transform={transform} viewport={viewport} />
       {/* ADR-434 Slice 2 — gas (φυσικό αέριο) auto-design proposal ghost (low-freq store, inert while idle). */}
-      <GasProposalGhostPreviewMount transform={transform} getCanvas={getCanvas} getViewportElement={getViewportElement} />
+      <GasProposalGhostPreviewMount transform={transform} viewport={viewport} />
       {/* ADR-435 Slice 1 — clash-detection report overlay (low-freq store, inert while idle). */}
       <ClashOverlayMount transform={transform} getCanvas={getCanvas} getViewportElement={getViewportElement} />
       <SlabOpeningGhostPreviewMount {...slabOpeningGhost} transform={transform} getCanvas={getCanvas} getViewportElement={getViewportElement} />

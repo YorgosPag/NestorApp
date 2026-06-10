@@ -27,6 +27,7 @@ import { useFloorFinishTool, FLOOR_FINISH_AUTO_CLOSE_TOLERANCE_DEFAULT } from '.
 import { useMepUnderfloorTool, MEP_UNDERFLOOR_AUTO_CLOSE_TOLERANCE_DEFAULT } from '../drawing/useMepUnderfloorTool';
 import { useThermalSpaceTool } from '../drawing/useThermalSpaceTool';
 import { useColumnTool } from '../drawing/useColumnTool';
+import { useFoundationTool } from '../drawing/useFoundationTool';
 import { useBeamTool } from '../drawing/useBeamTool';
 import { useSlabOpeningTool } from '../drawing/useSlabOpeningTool';
 import { buildSlabOpeningResolvers } from './useSpecialTools-slab-opening';
@@ -49,6 +50,7 @@ import { useSpecialToolsPlacementTools, type PlacementToolsReturn } from './useS
 import { addWallToScene } from '../../bim/walls/add-wall-to-scene';
 import { useWallAutoTyping } from '../../bim/family-types/useWallAutoTyping';
 import { addColumnToScene } from '../../bim/columns/add-column-to-scene';
+import { addFoundationToScene } from '../../bim/foundations/add-foundation-to-scene';
 // ADR-397 — slab / roof / beam draw delegate to the `appendEntityToScene` SSoT.
 // Column draw + Ctrl-copy go through `addColumnToScene` (same SSoT, 'column' tag).
 import { appendEntityToScene } from '../../bim/scene/append-entity-to-scene';
@@ -84,6 +86,7 @@ export interface UseSpecialToolsReturn extends SelectionToolsReturn, PlacementTo
   mepUnderfloorTool: ReturnType<typeof useMepUnderfloorTool>; // ADR-408 Εύρος Β #3
   thermalSpaceTool: ReturnType<typeof useThermalSpaceTool>; // ADR-422
   columnTool: ReturnType<typeof useColumnTool>;
+  foundationTool: ReturnType<typeof useFoundationTool>; // ADR-436
   beamTool: ReturnType<typeof useBeamTool>;
   slabOpeningTool: ReturnType<typeof useSlabOpeningTool>;
 }
@@ -387,6 +390,20 @@ export function useSpecialTools(props: UseSpecialToolsProps): UseSpecialToolsRet
       }
     }
   }, [activeTool, columnTool.setPlacementMode, columnTool.setRegionMethod, columnTool.setDiscreteIntent]);
+
+  // ADR-436 Slice 1 — foundation pad tool (point-based single-click + Tab anchor).
+  // The created `FoundationEntity` is appended + broadcast via `addFoundationToScene`
+  // (shared `appendEntityToScene` SSoT, 'foundation' tag).
+  const foundationTool = useFoundationTool({
+    currentLevelId: levelManager.currentLevelId || '0',
+    onFoundationCreated: (foundationEntity) => addFoundationToScene(foundationEntity, levelManager),
+    getSceneUnits: () => {
+      const levelId = levelManager.currentLevelId;
+      if (!levelId) return 'mm';
+      return resolveSceneUnits(levelManager.getLevelScene(levelId));
+    },
+  });
+  useToolLifecycle(activeTool === 'foundation-pad', foundationTool.activate, foundationTool.deactivate);
   // ADR-406/407/408/410/415 — MEP + furnishing single/2-click placement tools
   // (mepFixture, furniture, floorplanSymbol, electricalPanel, mepManifold,
   // mepRadiator, mepBoiler, mepSegment, railing). Extracted to a sub-hook (N.7.1) — each
@@ -467,6 +484,7 @@ export function useSpecialTools(props: UseSpecialToolsProps): UseSpecialToolsRet
     mepUnderfloorTool,
     thermalSpaceTool,
     columnTool,
+    foundationTool,
     mepFixtureTool,
     furnitureTool,
     floorplanSymbolTool,

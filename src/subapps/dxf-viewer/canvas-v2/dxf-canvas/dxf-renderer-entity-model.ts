@@ -107,6 +107,10 @@ export function buildEntityModelFromDxf(
       return { ...base, type: 'beam', kind: entity.kind, params: entity.params, geometry: entity.geometry, validation: entity.validation } as unknown as Entity;
     case 'column':
       return { ...base, type: 'column', kind: entity.kind, params: entity.params, geometry: entity.geometry, validation: entity.validation } as unknown as Entity;
+    case 'foundation':
+      // ADR-436 Slice 1 — direct entity (same pattern as column/beam). FoundationRenderer
+      // reads geometry.footprint + kind + params at top level.
+      return { ...base, type: 'foundation', kind: entity.kind, params: entity.params, geometry: entity.geometry, validation: entity.validation } as unknown as Entity;
     case 'mep-fixture':
       return { ...base, type: 'mep-fixture', kind: entity.kind, params: entity.params, geometry: entity.geometry, validation: entity.validation } as unknown as Entity;
     case 'electrical-panel':

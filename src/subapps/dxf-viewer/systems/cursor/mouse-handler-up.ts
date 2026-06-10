@@ -19,7 +19,12 @@ import { EventBus } from '../events/EventBus';
 import { TOLERANCE_CONFIG } from '../../config/tolerance-config';
 import type { CentralizedMouseHandlersProps, MouseHandlerRefs, SnapManagerAPI } from './mouse-handler-types';
 // ADR-358 Phase 9D-5b-ii Sub-D — Entity type bridge for performSelection narrow.
-import type { Entity } from '../../types/entities';
+import type { Entity, SceneModel } from '../../types/entities';
+// ADR-408 — circuits are derived (not scene entities), so the marquee selector can't see
+// them; hit-test the same wire polylines the overlay draws for window/crossing selection.
+import { useMepSystemStore } from '../../bim/mep-systems/mep-system-store';
+import { resolveCircuitWirePaths } from '../../bim/mep-systems/mep-wire-scene';
+import { selectCircuitsInMarquee } from '../../bim/mep-systems/mep-wire-hit';
 // ADR-362 hotfix Round 3 (2026-05-19) — skip upstream click-snap on dim-line-offset
 // pick so committed defPoints[2] matches the cursor (not a nearby entity endpoint).
 // Round 1+2 gated snap only in the downstream `useDrawingHandlers.onDrawingPoint`,
@@ -409,13 +414,35 @@ function processMarqueeSelection(
     }
   );
 
-  if (selectionResult.selectedIds.length > 0) {
+  // Small selection = point click, large empty selection = deselect.
+  const selectionWidth = Math.abs(cursor.position!.x - cursor.selectionStart!.x);
+  const selectionHeight = Math.abs(cursor.position!.y - cursor.selectionStart!.y);
+  const MIN_MARQUEE_SIZE = 5;
+  const isSmallSelection = selectionWidth < MIN_MARQUEE_SIZE && selectionHeight < MIN_MARQUEE_SIZE;
+
+  // ADR-408 — window/crossing over circuit home-run wires. Only for real drag boxes: a
+  // click-sized box is a wire CLICK, owned by the wire-click pointer FSM, not the marquee.
+  // Uses the result's own world bounds + window/crossing verdict (zero recomputation).
+  let circuitIds: string[] = [];
+  if (!isSmallSelection) {
+    // ADR-358 bridge cast (same as the entities narrow above) — DxfScene ⇄ SceneModel.
+    const paths = resolveCircuitWirePaths(scene as unknown as SceneModel, useMepSystemStore.getState().systems);
+    if (paths.length > 0) {
+      circuitIds = selectCircuitsInMarquee(
+        selectionResult.selectionBounds,
+        selectionResult.selectionType === 'crossing',
+        paths,
+      );
+    }
+  }
+
+  if (selectionResult.selectedIds.length > 0 || circuitIds.length > 0) {
     const breakdown = selectionResult.breakdown;
     const layerAndOverlayIds = [...(breakdown?.layerIds ?? []), ...(breakdown?.overlayIds ?? [])];
     const entityIds = breakdown?.entityIds ?? [];
 
     if (hasUnifiedCallback) {
-      onUnifiedMarqueeResult!({ layerIds: layerAndOverlayIds, entityIds, subtract: e.shiftKey });
+      onUnifiedMarqueeResult!({ layerIds: layerAndOverlayIds, entityIds, circuitIds, subtract: e.shiftKey });
     } else {
       if (layerAndOverlayIds.length > 0) {
         if (hasMultiCallback) onMultiLayerSelected!(layerAndOverlayIds);
@@ -424,12 +451,6 @@ function processMarqueeSelection(
       if (entityIds.length > 0 && hasEntityCallback) onEntitiesSelected!(entityIds);
     }
   } else {
-    // Small selection = point click, large empty selection = deselect
-    const selectionWidth = Math.abs(cursor.position!.x - cursor.selectionStart!.x);
-    const selectionHeight = Math.abs(cursor.position!.y - cursor.selectionStart!.y);
-    const MIN_MARQUEE_SIZE = 5;
-    const isSmallSelection = selectionWidth < MIN_MARQUEE_SIZE && selectionHeight < MIN_MARQUEE_SIZE;
-
     if (isSmallSelection) {
       processPointClick(e, ctx);
     } else if (onCanvasClick) {

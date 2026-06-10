@@ -33,6 +33,7 @@ import { dwarn, derr } from '../../debug';
 import { useFloorplanBackgroundForLevel } from '../../floorplan-background';
 import { useEventBus } from '../../systems/events';
 import { useUniversalSelection } from '../../systems/selection';
+import { useMepCircuitEditorStore } from '../../bim/mep-systems/mep-circuit-editor-store';
 import { useCommandHistory, useCommandHistoryKeyboard } from '../../core/commands';
 import {
   useCanvasSettings, useCanvasMouse, useViewportManager, useDxfSceneConversion,
@@ -201,7 +202,7 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
   const { draftPolygon, setDraftPolygon, draftPolygonRef, isSavingPolygon, setIsSavingPolygon, finishDrawingWithPolygonRef, finishDrawing } = usePolygonCompletion({
     levelManager, overlayStore, eventBus, currentStatus, currentKind, activeTool, overlayMode,
   });
-  const { circleTTT, linePerpendicular, lineParallel, angleEntityMeasurement, stairTool, wallTool, slabTool, roofTool, floorFinishTool, columnTool, mepFixtureTool, furnitureTool, floorplanSymbolTool, electricalPanelTool, mepManifoldTool, mepRadiatorTool, mepBoilerTool, mepWaterHeaterTool, mepUnderfloorTool, thermalSpaceTool, mepSegmentTool, mepRiserTool, railingTool, beamTool, slabOpeningTool, openingTool } = useSpecialTools({ activeTool, levelManager });
+  const { circleTTT, linePerpendicular, lineParallel, angleEntityMeasurement, stairTool, wallTool, slabTool, roofTool, floorFinishTool, columnTool, foundationTool, mepFixtureTool, furnitureTool, floorplanSymbolTool, electricalPanelTool, mepManifoldTool, mepRadiatorTool, mepBoilerTool, mepWaterHeaterTool, mepUnderfloorTool, thermalSpaceTool, mepSegmentTool, mepRiserTool, railingTool, beamTool, slabOpeningTool, openingTool } = useSpecialTools({ activeTool, levelManager });
   // === Cursor + touch gestures ===
   const { updatePosition, setActive } = useCursorActions();
   const { layoutMode: canvasLayoutMode } = useResponsiveLayoutForCanvas();
@@ -316,6 +317,7 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
     roofTool,
     floorFinishTool,
     columnTool,
+    foundationTool,
     mepFixtureTool,
     furnitureTool,
     floorplanSymbolTool,
@@ -393,7 +395,16 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
     handleArrayPolarEscape: arrayPolarTool.handleArrayPolarEscape, arrayPolarIsActive: arrayPolarTool.isActive,
     handleArrayPathEscape: arrayPathTool.handleArrayPathEscape, arrayPathIsActive: arrayPathTool.isActive, handleWallSplitEscape: wallSplitTool.handleWallSplitEscape, wallSplitIsActive: wallSplitTool.isActive, handleWallAttachEscape: wallAttachTool.handleWallAttachEscape, wallAttachIsActive: wallAttachTool.isActive, handleBimCopyEscape: bimCopyTool.handleBimCopyEscape, bimCopyIsActive: bimCopyTool.isActive,
     hasAnySelection: universalSelection.count() > selectedEntityIds.length,
-    clearEntitySelection: () => universalSelectionRef.current.clearAll(),
+    // Canonical deselect (Escape): clear the entity selection AND the active
+    // circuit (Revit wire-select has no entity, so the sync no longer clears it —
+    // this is the one place that does, keeping deselect symmetric).
+    clearEntitySelection: () => {
+      universalSelectionRef.current.clearAll();
+      useMepCircuitEditorStore.getState().setActiveSystemId(null);
+    },
+    // Event-time getter (ADR-040: no orchestrator subscription) — a wire-selected
+    // circuit has no scene entity, so the Escape guard must consult the circuit SSoT.
+    hasActiveCircuit: () => useMepCircuitEditorStore.getState().activeSystemId !== null,
     handleReorderEntity,
     // ADR-357 Phase 3: Direct Distance Entry — provide temp points + point callback
     drawingTempPoints: drawingHandlers?.drawingState?.tempPoints,

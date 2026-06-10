@@ -24,6 +24,9 @@ export function Bim3DReadOnlyOverlay({ bimSnapshot, projectId, onClose }: Bim3DR
       walls: bimSnapshot.walls,
       columns: bimSnapshot.columns,
       beams: bimSnapshot.beams,
+      // ADR-436 — read-only preview does not load floorplan_foundations yet
+      // (deferred, Slice 1-persist). Empty keeps the bundle valid.
+      foundations: [],
       slabs: bimSnapshot.slabs,
       slabOpenings: bimSnapshot.slabOpenings,
       openings: bimSnapshot.openings,

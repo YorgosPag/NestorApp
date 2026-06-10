@@ -73,7 +73,7 @@ interface DxfCanvasProps {
   onLayerSelected?: (layerId: string, position: Point2D) => void;
   onMultiLayerSelected?: (layerIds: string[]) => void;
   onEntitiesSelected?: (entityIds: string[]) => void;
-  onUnifiedMarqueeResult?: (result: { layerIds: string[]; entityIds: string[] }) => void;
+  onUnifiedMarqueeResult?: (result: { layerIds: string[]; entityIds: string[]; circuitIds?: string[] }) => void;
   isGripDragging?: boolean;
   onHoverEntity?: (entityId: string | null) => void;
   onHoverOverlay?: (overlayId: string | null) => void;
