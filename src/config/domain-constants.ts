@@ -750,7 +750,6 @@ export const API_ROUTES = {
       LIST: '/api/accounting/categories',
       BY_ID: (id: string) => `/api/accounting/categories/${id}` as const,
     },
-    PARTNERS: '/api/accounting/partners',
     APY_CERTIFICATES: {
       LIST: '/api/accounting/apy-certificates',
       BY_ID: (id: string) => `/api/accounting/apy-certificates/${id}` as const,

@@ -784,6 +784,7 @@
 | **ADR-420** | BIM Floor-Scope SSoT (stable floorId, not volatile floorplanId) | ✅ APPROVED | [View](./adrs/ADR-420-bim-floor-scope-ssot.md) |
 | **ADR-421** | BIM Opening Types (Revit-grade door & window catalog) | 🟡 RESEARCH + DESIGN | [View](./adrs/ADR-421-bim-opening-types-revit-grade.md) |
 | **ADR-439** | Tenant Identity SSoT & Provisioning (per-tenant company profile = legal-identity SSoT) | 🟡 IN PROGRESS | [View](./adrs/ADR-439-tenant-identity-ssot-and-provisioning.md) |
+| **ADR-440** | Accounting Entity-Data SSoT (partners/members/shareholders profile-embedded = SSoT) | 🟢 DONE — pending verify+commit | [View](./adrs/ADR-440-accounting-entity-data-ssot.md) |
 | **ADR-UI-001** | Visual Primitive Ownership & Semantic Tokens | ✅ APPROVED | [View](./adrs/ADR-UI-001.md) |
 
 ---

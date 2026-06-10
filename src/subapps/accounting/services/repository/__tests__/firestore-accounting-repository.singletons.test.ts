@@ -1,12 +1,17 @@
 /**
  * Unit tests for FirestoreAccountingRepository sibling singletons (ADR-439 Phase 2c).
  *
- * Pins the per-tenant composite doc-id: partners / members / shareholders /
- * service_presets / matching_config MUST address `accounting_settings/{companyId}__<type>`
- * (via `accountingDocId`) and stamp `companyId` — NOT the legacy global singleton.
+ * Pins the per-tenant composite doc-id: service_presets / matching_config MUST
+ * address `accounting_settings/{companyId}__<type>` (via `accountingDocId`) and stamp
+ * `companyId` — NOT the legacy global singleton.
+ *
+ * ADR-440: partners / members / shareholders are NO LONGER stored as singletons —
+ * they are read from the company profile (SSoT). Their per-tenant singleton tests
+ * were removed; see `profile-entity-accessors.test.ts` for the new coverage.
  *
  * @module subapps/accounting/services/repository/__tests__/singletons
  * @enterprise ADR-439 — Tenant Identity SSoT & Provisioning — Phase 2c
+ * @enterprise ADR-440 — Accounting Entity-Data SSoT
  */
 
 import { SYSTEM_DOCS } from '@/config/firestore-collections';
@@ -51,54 +56,6 @@ describe('FirestoreAccountingRepository — sibling singletons per-tenant (ADR-4
     accessedDocIds.length = 0;
     docStore = {};
     lastWrite = null;
-  });
-
-  // ── Partners ──────────────────────────────────────────────────────────────
-  it('getPartners reads {companyId}__partners, not the legacy global doc', async () => {
-    docStore[accountingDocId(COMPANY_ID, 'partners')] = { partners: [{ id: 'p1' }], companyId: COMPANY_ID };
-    const repo = new FirestoreAccountingRepository(tenant);
-
-    const result = await repo.getPartners();
-
-    expect(accessedDocIds).toContain(`${COMPANY_ID}__partners`);
-    expect(accessedDocIds).not.toContain(SYSTEM_DOCS.ACCT_PARTNERS);
-    expect(result).toHaveLength(1);
-  });
-
-  it('savePartners writes {companyId}__partners and stamps companyId', async () => {
-    const repo = new FirestoreAccountingRepository(tenant);
-    await repo.savePartners([{ id: 'p1' }] as never);
-
-    expect(lastWrite?.docId).toBe(`${COMPANY_ID}__partners`);
-    expect(lastWrite?.data.companyId).toBe(COMPANY_ID);
-  });
-
-  // ── Members ─────────────────────────────────────────────────────────────
-  it('getMembers / saveMembers address {companyId}__members and stamp companyId', async () => {
-    const repo = new FirestoreAccountingRepository(tenant);
-    await repo.saveMembers([{ id: 'm1' }] as never);
-
-    expect(lastWrite?.docId).toBe(`${COMPANY_ID}__members`);
-    expect(lastWrite?.data.companyId).toBe(COMPANY_ID);
-
-    docStore[accountingDocId(COMPANY_ID, 'members')] = { members: [{ id: 'm1' }], companyId: COMPANY_ID };
-    const result = await repo.getMembers();
-    expect(result).toHaveLength(1);
-    expect(accessedDocIds).not.toContain(SYSTEM_DOCS.ACCT_MEMBERS);
-  });
-
-  // ── Shareholders ────────────────────────────────────────────────────────
-  it('getShareholders / saveShareholders address {companyId}__shareholders and stamp companyId', async () => {
-    const repo = new FirestoreAccountingRepository(tenant);
-    await repo.saveShareholders([{ id: 's1' }] as never);
-
-    expect(lastWrite?.docId).toBe(`${COMPANY_ID}__shareholders`);
-    expect(lastWrite?.data.companyId).toBe(COMPANY_ID);
-
-    docStore[accountingDocId(COMPANY_ID, 'shareholders')] = { shareholders: [{ id: 's1' }], companyId: COMPANY_ID };
-    const result = await repo.getShareholders();
-    expect(result).toHaveLength(1);
-    expect(accessedDocIds).not.toContain(SYSTEM_DOCS.ACCT_SHAREHOLDERS);
   });
 
   // ── Service Presets (Phase 2c: now stamps companyId) ──────────────────────
