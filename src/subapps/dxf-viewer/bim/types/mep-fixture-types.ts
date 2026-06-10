@@ -191,6 +191,18 @@ export interface MepFixtureEntity
 // ─── Kind-derived SSoT resolvers (ADR-408 Φ14) ───────────────────────────────
 
 /**
+ * SSoT — is the given fixture kind an electrical receptacle device (πρίζα)? Groups
+ * the power socket (ADR-430, IfcOutlet) and the structured-cabling data outlet
+ * (ADR-431, IfcOutlet PredefinedType DATAOUTLET) — both wall-mounted IfcOutlet
+ * "Devices" sharing identical box geometry. Consumed where the two are treated
+ * uniformly (IFC class, 3D box conversion); contextual routing still distinguishes
+ * them by the precise per-kind guards (distinct Revit categories → distinct tabs).
+ */
+export function isElectricalDeviceKind(kind: string): boolean {
+  return isSocketKind(kind) || isDataOutletKind(kind);
+}
+
+/**
  * SSoT — resolve the IFC4 class for a fixture kind. A light fixture is an
  * `IfcLightFixture`; a floor drain is an `IfcSanitaryTerminal` (Revit Plumbing
  * Fixture). Used by the factory + 3D/IFC serializers so the IFC class is never
@@ -206,7 +218,7 @@ export function resolveFixtureIfcType(kind: MepFixtureKind): MepFixtureIfcType {
   // ADR-430 — a socket (πρίζα) is an IfcOutlet (Revit electrical receptacle), distinct
   // from the luminaire's IfcLightFixture. ADR-431 — a data outlet (RJ45) is likewise an
   // IfcOutlet (IFC PredefinedType DATAOUTLET), a weak-current communication device.
-  if (isSocketKind(kind) || isDataOutletKind(kind)) return 'IfcOutlet';
+  if (isElectricalDeviceKind(kind)) return 'IfcOutlet';
   // ADR-432 — HVAC: a supply diffuser is an IfcAirTerminal; an AHU (ΚΚΜ) is an
   // IfcUnitaryEquipment (Revit Mechanical Equipment).
   if (isAirTerminalKind(kind)) return 'IfcAirTerminal';

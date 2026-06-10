@@ -12,6 +12,7 @@
 import {
   resolveFixtureBimCategory,
   resolveFixtureIfcType,
+  isElectricalDeviceKind,
   type MepFixtureEntity,
   type MepFixtureParams,
 } from '../../types/mep-fixture-types';
@@ -50,6 +51,18 @@ describe('ADR-430 Slice 0 — electrical socket kind', () => {
       expect(isSocketKind('light-fixture')).toBe(false);
       expect(isSocketKind('wc')).toBe(false);
       expect(isSocketKind('floor-drain')).toBe(false);
+    });
+  });
+
+  describe('isElectricalDeviceKind SSoT guard', () => {
+    it('groups the socket + data outlet (IfcOutlet devices), excludes the rest', () => {
+      expect(isElectricalDeviceKind('socket')).toBe(true);
+      expect(isElectricalDeviceKind('data-outlet')).toBe(true);
+      // regression — a luminaire / sanitary / appliance is NOT an electrical receptacle device
+      expect(isElectricalDeviceKind('light-fixture')).toBe(false);
+      expect(isElectricalDeviceKind('wc')).toBe(false);
+      expect(isElectricalDeviceKind('washing-machine')).toBe(false);
+      expect(isElectricalDeviceKind('floor-drain')).toBe(false);
     });
   });
 

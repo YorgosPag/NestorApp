@@ -472,6 +472,25 @@ export const HOME_DRAW_PANEL: RibbonPanelDef = {
                 },
               ],
             },
+            // ── Θεμελίωση (submenu) ───────────────────────────────────────
+            // ADR-436 Slice 1 — μεμονωμένο πέδιλο (pad footing, point-based).
+            {
+              id: 'draw.bim.foundationGroup',
+              labelKey: 'ribbon.commands.bim.foundationGroup.label',
+              tooltipKey: 'ribbon.commands.bim.foundationGroup.tooltip',
+              icon: 'bim-column',
+              commandKey: 'draw.bim.foundationGroup',
+              subVariants: [
+                {
+                  id: 'draw.bim.foundationPad',
+                  labelKey: 'ribbon.commands.bim.foundationPad.label',
+                  tooltipKey: 'ribbon.commands.bim.foundationPad.tooltip',
+                  icon: 'bim-column',
+                  commandKey: 'foundation-pad',
+                  shortcut: 'FP',
+                },
+              ],
+            },
             // ── Σκάλα (leaf) ──────────────────────────────────────────────
             // ADR-358 Phase 5a: Stair tool (useStairTool orchestrator).
             {

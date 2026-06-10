@@ -12,7 +12,7 @@ import * as THREE from 'three';
 const viewState = { floor3DScope: 'single' as 'single' | 'all' };
 const entitiesState = { activeLevelId: null as string | null };
 const EMPTY_BIM_ENTITIES = {
-  walls: [], columns: [], beams: [], slabs: [], slabOpenings: [], openings: [], stairs: [],
+  walls: [], columns: [], beams: [], foundations: [], slabs: [], slabOpenings: [], openings: [], stairs: [],
   fixtures: [], panels: [], railings: [],
 };
 
