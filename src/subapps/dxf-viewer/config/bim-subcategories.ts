@@ -47,6 +47,12 @@ export type BeamSubcategoryKey =
   | 'rigid-links'      // 🔒 TBD
   | 'section-profile'; // ⭐✅ drawSectionProfile() — I/H/IPE/HEA steel (Phase 5.5h)
 
+// ADR-436 Slice 1 — θεμελίωση (substructure, below grade).
+export type FoundationSubcategoryKey =
+  | 'hidden-lines'     // ✅ FoundationRenderer — διακεκομμένο περίγραμμα (below grade)
+  | 'centerline'       // 🔒 strip/tie-beam άξονας (dash-dot) — Slice 2
+  | 'cut-pattern';     // ✅ concrete (RC) hatch SSoT
+
 export type OpeningSubcategoryKey =
   | 'door-panel'            // 🔒 separate panel leaf from frame TBD
   | 'door-frame'            // ✅ drawOutline()
@@ -140,9 +146,10 @@ export const SUBCATEGORY_TAXONOMY: Readonly<Record<BimCategory, ReadonlyArray<st
   'floor-finish':  [],
   // ADR-422 — thermal-space: no subcategory model (analytical fill + tag overlay).
   'thermal-space': [],
-  // ADR-436 — θεμελίωση: subcategories (hidden-lines/centerline/tie-beam) wiring
-  // = Slice 1 (renderer). Κενό προς το παρόν (μόνο data-model registration).
-  foundation:      [],
+  // ADR-436 Slice 1 — θεμελίωση: hidden-lines (διακεκομμένο περίγραμμα below-grade,
+  // WIRED στον FoundationRenderer) + centerline (strip/tie-beam άξονας, Slice 2) +
+  // cut-pattern (concrete hatch).
+  foundation:      ['hidden-lines', 'centerline', 'cut-pattern'],
 };
 
 /**

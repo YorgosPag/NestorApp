@@ -146,6 +146,8 @@ export type ToolType =
   // ADR-419 «Πολλαπλή δημιουργία τοιχίων» — discrete-from-perimeter με intent=walls
   // (καθρέφτης του 'column-discrete-from-perimeter' intent=columns· ίδια εντολή/SSoT)
   | 'column-discrete-from-perimeter-walls'
+  // ADR-436 Slice 1: BIM Foundation pad drawing tool (μεμονωμένο πέδιλο, point-based)
+  | 'foundation-pad'
   // ADR-363 Phase 5: BIM Beam drawing tool (straight/curved/cantilever)
   | 'beam'
   // ADR-363 «Δοκάρι από τοίχο» — 1-click pick wall → beam on its axis

@@ -10,11 +10,13 @@ import { useRibbonSlabBridge, type UseRibbonSlabBridgeProps } from '../ui/ribbon
 import { useRibbonRoofBridge, type UseRibbonRoofBridgeProps } from '../ui/ribbon/hooks/useRibbonRoofBridge';
 import { useRibbonColumnBridge, type UseRibbonColumnBridgeProps } from '../ui/ribbon/hooks/useRibbonColumnBridge';
 import { useRibbonBeamBridge, type UseRibbonBeamBridgeProps } from '../ui/ribbon/hooks/useRibbonBeamBridge';
+import { useRibbonFoundationBridge, type UseRibbonFoundationBridgeProps } from '../ui/ribbon/hooks/useRibbonFoundationBridge';
 import { useRibbonSlabOpeningBridge, type UseRibbonSlabOpeningBridgeProps } from '../ui/ribbon/hooks/useRibbonSlabOpeningBridge';
 import { useRibbonMepCircuitBridge, type UseRibbonMepCircuitBridgeProps } from '../ui/ribbon/hooks/useRibbonMepCircuitBridge';
 import { useRibbonMepPipeNetworkBridge } from '../ui/ribbon/hooks/useRibbonMepPipeNetworkBridge';
 import { useRibbonMepFixtureBridge, type UseRibbonMepFixtureBridgeProps } from '../ui/ribbon/hooks/useRibbonMepFixtureBridge';
 import { useRibbonMepManifoldBridge, type UseRibbonMepManifoldBridgeProps } from '../ui/ribbon/hooks/useRibbonMepManifoldBridge';
+import { useRibbonElectricalPanelBridge, type UseRibbonElectricalPanelBridgeProps } from '../ui/ribbon/hooks/useRibbonElectricalPanelBridge';
 import { useRibbonMepRadiatorBridge, type UseRibbonMepRadiatorBridgeProps } from '../ui/ribbon/hooks/useRibbonMepRadiatorBridge';
 import { useRibbonMepBoilerBridge, type UseRibbonMepBoilerBridgeProps } from '../ui/ribbon/hooks/useRibbonMepBoilerBridge';
 import { useRibbonMepWaterHeaterBridge, type UseRibbonMepWaterHeaterBridgeProps } from '../ui/ribbon/hooks/useRibbonMepWaterHeaterBridge';
@@ -45,10 +47,12 @@ export type UseDxfBimBridgesProps =
   & UseRibbonRoofBridgeProps
   & UseRibbonColumnBridgeProps
   & UseRibbonBeamBridgeProps
+  & UseRibbonFoundationBridgeProps
   & UseRibbonSlabOpeningBridgeProps
   & UseRibbonMepCircuitBridgeProps
   & UseRibbonMepFixtureBridgeProps
   & UseRibbonMepManifoldBridgeProps
+  & UseRibbonElectricalPanelBridgeProps
   & UseRibbonMepRadiatorBridgeProps
   & UseRibbonMepBoilerBridgeProps
   & UseRibbonMepWaterHeaterBridgeProps
@@ -68,6 +72,8 @@ export function useDxfBimBridges(p: UseDxfBimBridgesProps) {
   const roofBridge = useRibbonRoofBridge(p);
   const columnBridge = useRibbonColumnBridge(p);
   const beamBridge = useRibbonBeamBridge(p);
+  // ADR-436 — foundation (θεμελίωση) contextual properties bridge.
+  const foundationBridge = useRibbonFoundationBridge(p);
   const slabOpeningBridge = useRibbonSlabOpeningBridge(p);
   // ADR-408 Φ5 — MEP circuit contextual bridge (create-from-selection).
   const mepCircuitBridge = useRibbonMepCircuitBridge(p);
@@ -77,6 +83,9 @@ export function useDxfBimBridges(p: UseDxfBimBridgesProps) {
   const mepFixtureBridge = useRibbonMepFixtureBridge(p);
   // ADR-408 Φ12 — MEP manifold (συλλέκτης) contextual properties bridge.
   const mepManifoldBridge = useRibbonMepManifoldBridge(p);
+  // ADR-408 Φ3/Φ6 — electrical panel (πίνακας) contextual properties bridge
+  // (geometry + folded «Κυκλώματα» management).
+  const electricalPanelBridge = useRibbonElectricalPanelBridge(p);
   // ADR-408 Εύρος Β — MEP radiator (καλοριφέρ) contextual properties bridge.
   const mepRadiatorBridge = useRibbonMepRadiatorBridge(p);
   // ADR-408 Εύρος Β #2 — MEP boiler (λέβητας) contextual properties bridge.
@@ -118,5 +127,5 @@ export function useDxfBimBridges(p: UseDxfBimBridgesProps) {
   const thermalSpaceBridge = useRibbonThermalSpaceBridge(p);
   // ADR-363 Phase 4.5e+ — Tab/Shift+Tab material cycling for selected BIM entities.
   useBimMaterialCycler(p);
-  return { stairBridge, wallBridge, openingBridge, slabBridge, roofBridge, columnBridge, beamBridge, slabOpeningBridge, mepCircuitBridge, mepPipeNetworkBridge, mepFixtureBridge, mepManifoldBridge, mepRadiatorBridge, mepBoilerBridge, mepWaterHeaterBridge, mepUnderfloorBridge, mepSegmentBridge, waterAutoSupplyBridge, drainageAutoBridge, heatingAutoBridge, electricalAutoBridge, electricalWeakAutoBridge, hvacAutoBridge, fireAutoBridge, gasAutoBridge, clashDetectionBridge, furnitureBridge, floorplanSymbolBridge, mepFixtureLibraryBridge, mepRiserBridge, floorFinishBridge, thermalSpaceBridge };
+  return { stairBridge, wallBridge, openingBridge, slabBridge, roofBridge, columnBridge, beamBridge, foundationBridge, slabOpeningBridge, mepCircuitBridge, mepPipeNetworkBridge, mepFixtureBridge, mepManifoldBridge, electricalPanelBridge, mepRadiatorBridge, mepBoilerBridge, mepWaterHeaterBridge, mepUnderfloorBridge, mepSegmentBridge, waterAutoSupplyBridge, drainageAutoBridge, heatingAutoBridge, electricalAutoBridge, electricalWeakAutoBridge, hvacAutoBridge, fireAutoBridge, gasAutoBridge, clashDetectionBridge, furnitureBridge, floorplanSymbolBridge, mepFixtureLibraryBridge, mepRiserBridge, floorFinishBridge, thermalSpaceBridge };
 }

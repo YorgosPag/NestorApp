@@ -13,6 +13,7 @@ import { CONTEXTUAL_SLAB_TAB, SLAB_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/
 import { CONTEXTUAL_ROOF_TAB, ROOF_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-roof-tab';
 import { CONTEXTUAL_COLUMN_TAB, COLUMN_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-column-tab';
 import { CONTEXTUAL_BEAM_TAB, BEAM_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-beam-tab';
+import { CONTEXTUAL_FOUNDATION_TAB, FOUNDATION_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-foundation-tab';
 import { CONTEXTUAL_SLAB_OPENING_TAB, SLAB_OPENING_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-slab-opening-tab';
 import { DIMENSION_CONTEXTUAL_TAB, DIMENSION_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-dimension-tab';
 import { CONTEXTUAL_LINE_TOOL_TAB, LINE_TOOL_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-line-tool-tab';
@@ -24,8 +25,12 @@ import { CONTEXTUAL_MEP_FIXTURE_TAB, MEP_FIXTURE_CONTEXTUAL_TRIGGER } from '../u
 import { CONTEXTUAL_MEP_FLOOR_DRAIN_TAB, MEP_FLOOR_DRAIN_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-mep-floor-drain-tab';
 import { CONTEXTUAL_MEP_SANITARY_FIXTURE_TAB, MEP_SANITARY_FIXTURE_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-mep-sanitary-fixture-tab';
 import { CONTEXTUAL_MEP_APPLIANCE_FIXTURE_TAB, MEP_APPLIANCE_FIXTURE_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-mep-appliance-fixture-tab';
+import { CONTEXTUAL_MEP_SOCKET_TAB, MEP_SOCKET_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-mep-socket-tab';
+import { CONTEXTUAL_MEP_DATA_OUTLET_TAB, MEP_DATA_OUTLET_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-mep-data-outlet-tab';
 import { isSanitaryKind } from '../bim/sanitary/sanitary-symbol-spec';
 import { isApplianceKind } from '../bim/appliances/appliance-symbol-spec';
+import { isSocketKind } from '../bim/mep-fixtures/socket-symbol-spec';
+import { isDataOutletKind } from '../bim/mep-fixtures/data-outlet-symbol-spec';
 import { CONTEXTUAL_MEP_MANIFOLD_TAB, MEP_MANIFOLD_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-mep-manifold-tab';
 import { CONTEXTUAL_DRAINAGE_COLLECTOR_TAB, DRAINAGE_COLLECTOR_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-drainage-collector-tab';
 import { CONTEXTUAL_MEP_RADIATOR_TAB, MEP_RADIATOR_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-mep-radiator-tab';
@@ -43,12 +48,12 @@ import { ANIMATION_CONTEXTUAL_TAB, ANIMATION_CONTEXTUAL_TRIGGER } from '../ui/ri
 import { selectAnimationToolActive, useAnimationStore } from '../bim-3d/animation/AnimationStore';
 import { useMepSystemStore } from '../bim/mep-systems/mep-system-store';
 import { useMepCircuitEditorStore } from '../bim/mep-systems/mep-circuit-editor-store';
-import { resolveManagedSystems } from '../bim/mep-systems/mep-circuit-editor';
+import { CONTEXTUAL_ELECTRICAL_PANEL_TAB, ELECTRICAL_PANEL_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-electrical-panel-tab';
 import { isPipeNetworkSourceEntity } from '../bim/mep-systems/pipe-network-source';
 import { isMepSegmentEntity } from '../types/entities';
 
 const BIM_KIND_TYPES: ReadonlySet<string> = new Set([
-  'wall', 'opening', 'slab', 'slab-opening', 'column', 'beam', 'stair', 'roof',
+  'wall', 'opening', 'slab', 'slab-opening', 'column', 'beam', 'foundation', 'stair', 'roof',
 ]);
 
 export const RIBBON_CONTEXTUAL_TABS = [
@@ -63,6 +68,7 @@ export const RIBBON_CONTEXTUAL_TABS = [
   CONTEXTUAL_ROOF_TAB,
   CONTEXTUAL_COLUMN_TAB,
   CONTEXTUAL_BEAM_TAB,
+  CONTEXTUAL_FOUNDATION_TAB,
   CONTEXTUAL_SLAB_OPENING_TAB,
   DIMENSION_CONTEXTUAL_TAB,
   CONTEXTUAL_LINE_TOOL_TAB,
@@ -74,6 +80,9 @@ export const RIBBON_CONTEXTUAL_TABS = [
   CONTEXTUAL_MEP_FLOOR_DRAIN_TAB,
   CONTEXTUAL_MEP_SANITARY_FIXTURE_TAB,
   CONTEXTUAL_MEP_APPLIANCE_FIXTURE_TAB,
+  CONTEXTUAL_MEP_SOCKET_TAB,
+  CONTEXTUAL_MEP_DATA_OUTLET_TAB,
+  CONTEXTUAL_ELECTRICAL_PANEL_TAB,
   CONTEXTUAL_MEP_MANIFOLD_TAB,
   CONTEXTUAL_DRAINAGE_COLLECTOR_TAB,
   CONTEXTUAL_MEP_RADIATOR_TAB,
@@ -181,20 +190,14 @@ export function useActiveContextualTrigger({
       }
       if (hasNetworkSource && hasPipe) return MEP_PIPE_NETWORK_CONTEXTUAL_TRIGGER;
     }
-    // ADR-408 Φ6: selecting an electrical panel that feeds ≥1 circuit surfaces
-    // the circuit tab in manage mode (picker → its circuits). Panel-centric so a
-    // selected fixture keeps its own fixture-properties tab (Revit shows the
-    // circuit from the panel / system browser, not in place of device props).
-    // Resolved from the primary selection to match `useMepCircuitEditorSync`.
-    if (primarySelectedId && currentScene && mepSystems.length > 0) {
-      const primary = currentScene.entities.find((e) => e.id === primarySelectedId);
-      if (
-        primary?.type === 'electrical-panel' &&
-        resolveManagedSystems([primary], mepSystems).length > 0
-      ) {
-        return MEP_CIRCUIT_CONTEXTUAL_TRIGGER;
-      }
-    }
+    // ADR-408 Φ3/Φ6 fold-in: a selected electrical panel ALWAYS shows its OWN
+    // «Ιδιότητες Ηλεκτρικού Πίνακα» tab (resolveContextualTrigger below), NOT the
+    // circuit tab — a panel feeds MANY circuits, so showing one circuit's props is
+    // ambiguous + loses the panel's identity (Revit "Electrical Equipment" props +
+    // "Edit Circuits"). Its circuit management is folded into that tab as a
+    // self-hiding «Κυκλώματα» panel, mirroring the manifold/boiler «Δίκτυο» panel.
+    // (The mixed panel+fixtures CREATE case is handled above; wire-select stays the
+    // circuit tab.)
     // ADR-408 Φ13 fold-in: a selected manifold ALWAYS shows «Ιδιότητες Συλλέκτη»
     // (resolveContextualTrigger below); its network management is folded into that
     // tab as a self-hiding «Δίκτυο» panel (Revit "System Properties" from the
@@ -245,6 +248,9 @@ export function useActiveContextualTrigger({
     // ADR-363 «Δοκάρι από τοίχο» μοιράζεται το beam contextual tab (depth/elevation/
     // width overrides feed the from-wall build· το width default = πάχος τοίχου).
     if (activeTool === 'beam' || activeTool === 'beam-from-wall') return BEAM_CONTEXTUAL_TRIGGER;
+    // ADR-436 Slice 1 — foundation pad tool active → show the foundation property tab
+    // (kind/anchor/geometry/elevation drive the next single-click placement).
+    if (activeTool === 'foundation-pad') return FOUNDATION_CONTEXTUAL_TRIGGER;
     // ADR-410 — furniture tool active → show the furniture library picker tab.
     if (activeTool === 'furniture') return FURNITURE_CONTEXTUAL_TRIGGER;
     // ADR-415 — floorplan-symbol tool active → show the symbol library picker tab.
@@ -303,6 +309,8 @@ export function resolveContextualTrigger(entity: EntityLike): string | null {
   if (entity.type === 'roof') return ROOF_CONTEXTUAL_TRIGGER;
   if (entity.type === 'column') return COLUMN_CONTEXTUAL_TRIGGER;
   if (entity.type === 'beam') return BEAM_CONTEXTUAL_TRIGGER;
+  // ADR-436 — structural foundation (pad/strip/tie-beam) → contextual properties tab.
+  if (entity.type === 'foundation') return FOUNDATION_CONTEXTUAL_TRIGGER;
   if (entity.type === 'slab-opening') return SLAB_OPENING_CONTEXTUAL_TRIGGER;
   // ADR-406 / ADR-408 Φ14 — point-based MEP fixture. A floor-drain (σιφώνι)
   // surfaces «Ιδιότητες Σιφωνιού»; a light-fixture the «Ιδιότητες Φωτιστικού» tab.
@@ -316,6 +324,13 @@ export function resolveContextualTrigger(entity: EntityLike): string | null {
     // ADR-408 Φ14 — a sanitary terminal (WC/basin/…) surfaces «Ιδιότητες Είδους
     // Υγιεινής»; same kind-agnostic bridge, richer geometry presets + rotation.
     if (fixtureKind && isSanitaryKind(fixtureKind)) return MEP_SANITARY_FIXTURE_CONTEXTUAL_TRIGGER;
+    // ADR-430 — a power socket (πρίζα, Revit "Electrical Fixtures", IfcOutlet) surfaces
+    // «Ιδιότητες Πρίζας»; ADR-431 — a data outlet (πρίζα δικτύου, Revit "Communication
+    // Devices") surfaces «Ιδιότητες Πρίζας Δικτύου». Distinct Revit categories → distinct
+    // tabs (both reuse the kind-agnostic fixture bridge). Checked BEFORE the light-fixture
+    // default so an electrical device never mislabels as «Ιδιότητες Φωτιστικού».
+    if (fixtureKind && isSocketKind(fixtureKind)) return MEP_SOCKET_CONTEXTUAL_TRIGGER;
+    if (fixtureKind && isDataOutletKind(fixtureKind)) return MEP_DATA_OUTLET_CONTEXTUAL_TRIGGER;
     return MEP_FIXTURE_CONTEXTUAL_TRIGGER;
   }
   // ADR-408 Φ12 / Φ14 — point-based manifold. A drainage-collector (φρεάτιο)
@@ -326,6 +341,11 @@ export function resolveContextualTrigger(entity: EntityLike): string | null {
       ? DRAINAGE_COLLECTOR_CONTEXTUAL_TRIGGER
       : MEP_MANIFOLD_CONTEXTUAL_TRIGGER;
   }
+  // ADR-408 Φ3/Φ6 — electrical panel (πίνακας διανομής, Revit "Electrical
+  // Equipment") → «Ιδιότητες Ηλεκτρικού Πίνακα». Its own identity tab (geometry) +
+  // a folded self-hiding «Κυκλώματα» management panel; NOT the circuit tab (a panel
+  // feeds many circuits). Mirrors the manifold/boiler equipment-tab fold-in.
+  if (entity.type === 'electrical-panel') return ELECTRICAL_PANEL_CONTEXTUAL_TRIGGER;
   // ADR-408 Εύρος Β — καλοριφέρ (heating radiator, terminal) → «Ιδιότητες Καλοριφέρ».
   if (entity.type === 'mep-radiator') return MEP_RADIATOR_CONTEXTUAL_TRIGGER;
   // ADR-408 Εύρος Β #2 — λέβητας (hydronic boiler, source) → «Ιδιότητες Λέβητα».
