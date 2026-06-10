@@ -975,6 +975,33 @@ const BEAM_TRACKED_FIELDS_RAW: Record<string, string> = {
 export const BEAM_TRACKED_FIELDS: Record<string, TrackedFieldDef> =
   mergeDefs(BEAM_TRACKED_FIELDS_RAW, {});
 
+// ADR-436 — substructure footing (pad/strip/tie-beam, IfcFooting). Discriminated
+// union by `kind`. Coordinate-heavy `position`/`start`/`end` are intentionally
+// OUT (xyz triples → noise every grip drag). Dimensional intent
+// (width/length/thicknessMm/topElevationMm/rotation) IS tracked. `stepped`/
+// `sloped` are nested pad-profile objects → JSON scalar (mirror column lshape).
+const FOUNDATION_TRACKED_FIELDS_RAW: Record<string, string> = {
+  kind: 'kind',
+  layerId: 'layerId',
+  topElevationMm: 'topElevationMm',
+  thicknessMm: 'thicknessMm',
+  width: 'width',
+  length: 'length',
+  rotation: 'rotation',
+  anchor: 'anchor',
+  profile: 'profile',
+  material: 'material',
+  catalogProfile: 'catalogProfile',
+  storeyId: 'storeyId',
+  offsetFromStorey: 'offsetFromStorey',
+  // Pad vertical-profile variant blocks serialized as JSON scalars.
+  stepped: 'stepped',
+  sloped: 'sloped',
+};
+
+export const FOUNDATION_TRACKED_FIELDS: Record<string, TrackedFieldDef> =
+  mergeDefs(FOUNDATION_TRACKED_FIELDS_RAW, {});
+
 const OPENING_TRACKED_FIELDS_RAW: Record<string, string> = {
   kind: 'kind',
   layerId: 'layerId',
@@ -1157,6 +1184,8 @@ export function getTrackedFieldsForEntityAuditType(
       return SLAB_TRACKED_FIELDS;
     case 'beam':
       return BEAM_TRACKED_FIELDS;
+    case 'foundation':
+      return FOUNDATION_TRACKED_FIELDS;
     case 'opening':
       return OPENING_TRACKED_FIELDS;
     case 'slab-opening':

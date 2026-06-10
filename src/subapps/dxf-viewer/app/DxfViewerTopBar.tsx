@@ -137,7 +137,14 @@ export function DxfViewerTopBar({
         buildingId={buildingId}
         floorId={floorId}
       />
-      <FoundationPersistenceHost currentScene={currentScene} />
+      <FoundationPersistenceHost
+        primarySelectedId={primarySelectedId}
+        currentScene={currentScene}
+        levelManager={levelManager}
+        projectId={levelManager.saveContext?.projectId ?? undefined}
+        floorplanId={levelManager.fileRecordId ?? undefined}
+        floorId={floorId}
+      />
       <BeamPersistenceHost
         primarySelectedId={primarySelectedId}
         currentScene={currentScene}
