@@ -248,9 +248,15 @@ export function useActiveContextualTrigger({
     // ADR-363 «Δοκάρι από τοίχο» μοιράζεται το beam contextual tab (depth/elevation/
     // width overrides feed the from-wall build· το width default = πάχος τοίχου).
     if (activeTool === 'beam' || activeTool === 'beam-from-wall') return BEAM_CONTEXTUAL_TRIGGER;
-    // ADR-436 Slice 1 — foundation pad tool active → show the foundation property tab
-    // (kind/anchor/geometry/elevation drive the next single-click placement).
-    if (activeTool === 'foundation-pad') return FOUNDATION_CONTEXTUAL_TRIGGER;
+    // ADR-436 — foundation tools active → show the foundation property tab. Slice 1
+    // pad (single-click) + Slice 2 strip / tie-beam / strip-from-wall (line, 2-click).
+    // The active kind is fixed by the tool id; the tab shows kind-conditional panels.
+    if (
+      activeTool === 'foundation-pad' ||
+      activeTool === 'foundation-strip' ||
+      activeTool === 'foundation-tie-beam' ||
+      activeTool === 'foundation-strip-from-wall'
+    ) return FOUNDATION_CONTEXTUAL_TRIGGER;
     // ADR-410 — furniture tool active → show the furniture library picker tab.
     if (activeTool === 'furniture') return FURNITURE_CONTEXTUAL_TRIGGER;
     // ADR-415 — floorplan-symbol tool active → show the symbol library picker tab.
