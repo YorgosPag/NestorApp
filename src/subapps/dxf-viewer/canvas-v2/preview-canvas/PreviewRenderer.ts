@@ -4,7 +4,7 @@
  * ADR-065 SRP split: 958 lines -> 3 files (types, entity-renderers, main)
  */
 
-import type { Point2D, ViewTransform, Viewport } from '../../rendering/types/Types';
+import type { Point2D, ViewTransform, Viewport, Entity } from '../../rendering/types/Types';
 import type { ExtendedSceneEntity, ExtendedLineEntity, ExtendedCircleEntity, ExtendedPolylineEntity, PreviewPoint } from '../../hooks/drawing/useUnifiedDrawing';
 import type { AngleMeasurementEntity } from '../../types/scene';
 import { getDevicePixelRatio, toDevicePixels } from '../../systems/cursor/utils';
@@ -28,6 +28,9 @@ import {
 // (Phase C2 deliverable). PreviewRenderer keeps DIMSTYLE resolution local so
 // the dim creation flow doesn't have to thread styles through props.
 import { renderPreviewDimension } from './preview-dimension-renderer';
+// 🏢 WYSIWYG placement preview — render synthetic BIM entities (wall/foundation/…)
+// through the REAL entity renderers instead of a schematic green outline.
+import { BimPreviewRenderer } from './bim-preview-render';
 import { getDimStyleRegistry } from '../../systems/dimensions/dim-style-registry';
 import type { DimensionEntity } from '../../types/dimension';
 import type { SceneUnits } from '../../utils/scene-units';
@@ -35,8 +38,14 @@ import type { SceneUnits } from '../../utils/scene-units';
 import {
   detectTrackingTheme,
   getTrackingPalette,
-  type TrackingPalette,
 } from './tracking-colors';
+// ADR-357 Phase 4 — Object Snap Tracking paint helpers (extracted, SRP).
+import {
+  paintTrackingMarkers,
+  paintAlignmentPaths,
+  paintIntersections,
+  paintTooltip,
+} from './tracking-paint';
 import type { AcquiredTrackingPoint } from '../../systems/tracking/TrackingPointStore';
 import type { TrackingAlignmentPath } from '../../systems/tracking/tracking-resolver';
 
@@ -44,6 +53,9 @@ export class PreviewRenderer {
   private ctx: CanvasRenderingContext2D | null = null;
   private canvas: HTMLCanvasElement | null = null;
   private _gripRenderer: UnifiedGripRenderer | null = null;
+  // 🏢 WYSIWYG placement preview — real-renderer pass for BIM entities (lazy
+  // composite bound to the preview ctx; created in `initialize`).
+  private bimPreview: BimPreviewRenderer | null = null;
   private currentPreview: ExtendedSceneEntity | null = null;
   private currentTransform: ViewTransform | null = null;
   private currentViewport: Viewport | null = null;
@@ -75,6 +87,7 @@ export class PreviewRenderer {
     this.ctx = canvas.getContext('2d', { alpha: true, desynchronized: true });
     this.dpr = getDevicePixelRatio();
     this._gripRenderer = this.ctx ? new UnifiedGripRenderer(this.ctx, (p) => p) : null;
+    this.bimPreview = this.ctx ? new BimPreviewRenderer(this.ctx) : null;
   }
 
   updateSize(width: number, height: number): void {
@@ -159,9 +172,9 @@ export class PreviewRenderer {
   ): void {
     if (!this.ctx) return;
     const palette = getTrackingPalette(detectTrackingTheme());
-    this.paintAlignmentPaths(this.ctx, paths, transform, viewport, palette);
-    this.paintIntersections(this.ctx, intersections, transform, viewport, palette);
-    this.paintTooltip(this.ctx, snappedPoint, label, transform, viewport, palette);
+    paintAlignmentPaths(this.ctx, paths, transform, viewport, palette);
+    paintIntersections(this.ctx, intersections, transform, viewport, palette);
+    paintTooltip(this.ctx, snappedPoint, label, transform, viewport, palette);
   }
 
   /**
@@ -254,7 +267,7 @@ export class PreviewRenderer {
     // renders on top and the markers anchor the visual feedback.
     if (this.trackingMarkers.length > 0) {
       const palette = getTrackingPalette(detectTrackingTheme());
-      this.paintTrackingMarkers(ctx, this.trackingMarkers, transform, viewport, palette);
+      paintTrackingMarkers(ctx, this.trackingMarkers, transform, viewport, palette);
     }
 
     if (!this.currentPreview) {
@@ -262,6 +275,19 @@ export class PreviewRenderer {
     }
 
     const entity = this.currentPreview;
+
+    // 🏢 WYSIWYG placement preview: when the tool's preview helper returns a full
+    // BIM entity (`.params` + `.geometry`, flagged `wysiwygPreview`), render it
+    // through the SAME real renderers as the committed scene so the rubber-band
+    // IS the final element (fill / hatch / lineweight), not a green outline.
+    // Tracking markers were already painted above; polar/tracking overlays draw
+    // on top via the handler's subsequent drawPolarTrackingLine/Alignment calls.
+    const bimMeta = entity as { wysiwygPreview?: boolean };
+    if (bimMeta.wysiwygPreview && this.bimPreview) {
+      this.bimPreview.render(entity as unknown as Entity, transform);
+      return;
+    }
+
     const opts = this.currentOptions;
 
     // Colored preview grips override entity-renderer grips (ADR-142 icon click sequence)
@@ -381,110 +407,6 @@ export class PreviewRenderer {
     ctx.restore();
   }
 
-  // ===== ADR-357 Phase 4 — Object Snap Tracking paint helpers =====
-
-  private paintTrackingMarkers(
-    ctx: CanvasRenderingContext2D,
-    markers: readonly AcquiredTrackingPoint[],
-    transform: ViewTransform,
-    viewport: Viewport,
-    palette: TrackingPalette,
-  ): void {
-    const SIZE = 7;
-    ctx.save();
-    ctx.setLineDash([]);
-    ctx.strokeStyle = palette.acquiredMarker;
-    ctx.lineWidth = 2;
-    ctx.globalAlpha = 0.95;
-    for (const m of markers) {
-      const s = CoordinateTransforms.worldToScreen({ x: m.x, y: m.y }, transform, viewport);
-      ctx.beginPath();
-      ctx.moveTo(s.x - SIZE, s.y);
-      ctx.lineTo(s.x + SIZE, s.y);
-      ctx.moveTo(s.x, s.y - SIZE);
-      ctx.lineTo(s.x, s.y + SIZE);
-      ctx.stroke();
-    }
-    ctx.restore();
-  }
-
-  private paintAlignmentPaths(
-    ctx: CanvasRenderingContext2D,
-    paths: readonly TrackingAlignmentPath[],
-    transform: ViewTransform,
-    viewport: Viewport,
-    palette: TrackingPalette,
-  ): void {
-    if (paths.length === 0) return;
-    const EXTEND = 6000;
-    ctx.save();
-    ctx.setLineDash([8, 5]);
-    ctx.strokeStyle = palette.alignmentPath;
-    ctx.lineWidth = 1;
-    ctx.globalAlpha = 0.75;
-    for (const path of paths) {
-      const origin = CoordinateTransforms.worldToScreen(path.origin, transform, viewport);
-      // Flip Y for screen space (world is Y-up, screen Y-down).
-      const sdx = path.dx;
-      const sdy = -path.dy;
-      ctx.beginPath();
-      ctx.moveTo(origin.x - sdx * EXTEND, origin.y - sdy * EXTEND);
-      ctx.lineTo(origin.x + sdx * EXTEND, origin.y + sdy * EXTEND);
-      ctx.stroke();
-    }
-    ctx.restore();
-  }
-
-  private paintIntersections(
-    ctx: CanvasRenderingContext2D,
-    intersections: readonly Point2D[],
-    transform: ViewTransform,
-    viewport: Viewport,
-    palette: TrackingPalette,
-  ): void {
-    if (intersections.length === 0) return;
-    const RADIUS = 6;
-    ctx.save();
-    ctx.setLineDash([]);
-    ctx.strokeStyle = palette.intersectionStroke;
-    ctx.fillStyle = palette.intersectionFill;
-    ctx.lineWidth = 1.5;
-    ctx.globalAlpha = 0.9;
-    for (const pt of intersections) {
-      const s = CoordinateTransforms.worldToScreen(pt, transform, viewport);
-      ctx.beginPath();
-      ctx.arc(s.x, s.y, RADIUS, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.stroke();
-    }
-    ctx.restore();
-  }
-
-  private paintTooltip(
-    ctx: CanvasRenderingContext2D,
-    snappedPoint: Point2D,
-    label: string | null,
-    transform: ViewTransform,
-    viewport: Viewport,
-    palette: TrackingPalette,
-  ): void {
-    if (!label) return;
-    const screen = CoordinateTransforms.worldToScreen(snappedPoint, transform, viewport);
-    const x = screen.x + 14;
-    const y = screen.y - 12;
-    ctx.save();
-    ctx.font = '11px monospace';
-    ctx.textBaseline = 'middle';
-    const metrics = ctx.measureText(label);
-    const padding = 4;
-    ctx.fillStyle = palette.tooltipBackground;
-    ctx.globalAlpha = 1;
-    ctx.fillRect(x - padding, y - 9, metrics.width + padding * 2, 18);
-    ctx.fillStyle = palette.tooltipText;
-    ctx.fillText(label, x, y);
-    ctx.restore();
-  }
-
   // ===== CLEANUP =====
 
   dispose(): void {
@@ -492,5 +414,6 @@ export class PreviewRenderer {
     this.ctx = null;
     this.canvas = null;
     this._gripRenderer = null;
+    this.bimPreview = null;
   }
 }

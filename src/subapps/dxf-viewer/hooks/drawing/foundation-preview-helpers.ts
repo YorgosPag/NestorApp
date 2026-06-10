@@ -6,19 +6,21 @@
  *
  * Exported: generateFoundationPreview()
  *
+ * WYSIWYG placement (2026-06-11): the rubber-band returns a FULL
+ * `FoundationEntity` (via the SSoT `buildFoundationEntity` — same builder as
+ * commit) flagged `wysiwygPreview`, so PreviewCanvas renders it through the real
+ * `FoundationRenderer` (kind fill / RC hatch / dashed hidden-line / centerline)
+ * instead of a green band outline. The ghost IS the final foundation.
+ *
  * @see docs/centralized-systems/reference/adrs/ADR-436-bim-foundation-discipline.md §4
  */
 
 import type { Point2D } from '../../rendering/types/Types';
-import type { PolylineEntity } from '../../types/scene';
-import type { ExtendedSceneEntity, ExtendedPolylineEntity, PreviewPoint } from './drawing-types';
+import type { ExtendedSceneEntity, PreviewPoint } from './drawing-types';
 import type { Point3D } from '../../bim/types/bim-base';
 import { foundationPreviewStore } from '../../bim/foundations/foundation-preview-store';
-import { buildDefaultFoundationParams, type FoundationParamOverrides, type SceneUnits } from './foundation-completion';
-import { computeFoundationGeometry } from '../../bim/geometry/foundation-geometry';
+import { buildDefaultFoundationParams, buildFoundationEntity, type FoundationParamOverrides, type SceneUnits } from './foundation-completion';
 import type { FoundationKind } from '../../bim/types/foundation-types';
-import { LINEWEIGHT_SPECIAL } from '../../config/lineweight-iso-catalog';
-import { UI_COLORS } from '../../config/color-config';
 import { DXF_DEFAULT_LAYER } from '../../config/layer-config';
 import { getLayer } from '../../stores/LayerStore';
 
@@ -27,10 +29,10 @@ const defaultLayerId = (): string => getLayer(DXF_DEFAULT_LAYER)?.id ?? '';
 /**
  * Build a foundation line preview entity from `tempPoints` + cursor. State map:
  *   - [] (awaitingStart) → cursor start marker
- *   - [start] → band footprint ghost start→cursor (WYSIWYG outline rectangle)
+ *   - [start] → full FoundationEntity band ghost start→cursor (WYSIWYG)
  *
- * Returns a green translucent polyline tracing the band outline. WYSIWYG: uses
- * `computeFoundationGeometry` so the ghost matches the committed entity.
+ * Returns a full `FoundationEntity` (WYSIWYG) so the placement preview is
+ * identical to the committed band. `null` on a degenerate/invalid frame.
  */
 export function generateFoundationPreview(
   tempPoints: readonly Point2D[],
@@ -62,22 +64,10 @@ function makeFoundationBandGhost(
   kind: FoundationKind,
   overrides: FoundationParamOverrides,
   sceneUnits: SceneUnits,
-): ExtendedPolylineEntity {
+): ExtendedSceneEntity | null {
   const axisEnd: Point3D = { x: endPt.x, y: endPt.y, z: 0 };
   const params = buildDefaultFoundationParams(startPt, kind, { ...overrides, kind, axisEnd }, sceneUnits);
-  const geometry = computeFoundationGeometry(params);
-  const vertices: Point2D[] = geometry.footprint.vertices.map((p) => ({ x: p.x, y: p.y }));
-  const polyline: PolylineEntity = {
-    id,
-    type: 'polyline',
-    vertices,
-    closed: true,
-    visible: true,
-    layerId: defaultLayerId(),
-    color: UI_COLORS.BRIGHT_GREEN,
-    lineweight: LINEWEIGHT_SPECIAL.BYLAYER,
-    opacity: 0.6,
-    lineType: 'solid' as const,
-  };
-  return { ...polyline, preview: true, showEdgeDistances: true, showPreviewGrips: false } as ExtendedPolylineEntity;
+  const built = buildFoundationEntity(params, defaultLayerId());
+  if (!built.ok) return null;
+  return { ...built.entity, id, preview: true, wysiwygPreview: true } as unknown as ExtendedSceneEntity;
 }
