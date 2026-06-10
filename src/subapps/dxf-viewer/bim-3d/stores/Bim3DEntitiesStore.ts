@@ -13,6 +13,7 @@ import { subscribeWithSelector } from 'zustand/middleware';
 import type { WallEntity } from '../../bim/types/wall-types';
 import type { ColumnEntity } from '../../bim/types/column-types';
 import type { BeamEntity } from '../../bim/types/beam-types';
+import type { FoundationEntity } from '../../bim/types/foundation-types';
 import type { SlabEntity } from '../../bim/types/slab-types';
 import type { SlabOpeningEntity } from '../../bim/types/slab-opening-types';
 import type { OpeningEntity } from '../../bim/types/opening-types';
@@ -49,6 +50,8 @@ export interface Bim3DEntities {
   readonly walls: readonly WallEntity[];
   readonly columns: readonly ColumnEntity[];
   readonly beams: readonly BeamEntity[];
+  /** ADR-436 — structural foundations (pad/strip/tie-beam, IfcFooting). */
+  readonly foundations: readonly FoundationEntity[];
   readonly slabs: readonly SlabEntity[];
   readonly slabOpenings: readonly SlabOpeningEntity[];
   /** ADR-363 Bug 2 — opening (door/window) entities for wall cutouts σε 3D. */
@@ -92,6 +95,7 @@ export const EMPTY_BIM_ENTITIES: Bim3DEntities = {
   walls: [],
   columns: [],
   beams: [],
+  foundations: [],
   slabs: [],
   slabOpenings: [],
   openings: [],
@@ -143,6 +147,8 @@ interface Bim3DEntitiesStoreState extends Bim3DEntities {
   setWalls: (walls: readonly WallEntity[]) => void;
   setColumns: (columns: readonly ColumnEntity[]) => void;
   setBeams: (beams: readonly BeamEntity[]) => void;
+  /** ADR-436 — feed the structural foundations slice. */
+  setFoundations: (foundations: readonly FoundationEntity[]) => void;
   setSlabs: (slabs: readonly SlabEntity[]) => void;
   setSlabOpenings: (slabOpenings: readonly SlabOpeningEntity[]) => void;
   setOpenings: (openings: readonly OpeningEntity[]) => void;
@@ -187,6 +193,7 @@ export const useBim3DEntitiesStore = create<Bim3DEntitiesStoreState>()(
     walls: [],
     columns: [],
     beams: [],
+    foundations: [],
     slabs: [],
     slabOpenings: [],
     openings: [],
@@ -215,6 +222,7 @@ export const useBim3DEntitiesStore = create<Bim3DEntitiesStoreState>()(
     setWalls: (walls) => set({ walls }),
     setColumns: (columns) => set({ columns }),
     setBeams: (beams) => set({ beams }),
+    setFoundations: (foundations) => set({ foundations }),
     setSlabs: (slabs) => set({ slabs }),
     setSlabOpenings: (slabOpenings) => set({ slabOpenings }),
     setOpenings: (openings) => set({ openings }),
@@ -260,6 +268,7 @@ export function selectBim3DEntities(state: Bim3DEntitiesStoreState): Bim3DEntiti
     walls: state.walls,
     columns: state.columns,
     beams: state.beams,
+    foundations: state.foundations,
     slabs: state.slabs,
     slabOpenings: state.slabOpenings,
     openings: state.openings,

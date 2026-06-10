@@ -22,8 +22,7 @@ import { buildDrainageGratingStrokes } from '../../bim/mep-manifolds/mep-manifol
 import { buildShape, extrudeAndRotate, tagMesh } from './bim-three-shape-helpers';
 import { attachEdgesProjection } from './bim-three-edges';
 import { isSanitaryKind } from '../../bim/sanitary/sanitary-symbol-spec';
-import { isSocketKind } from '../../bim/mep-fixtures/socket-symbol-spec';
-import { isDataOutletKind } from '../../bim/mep-fixtures/data-outlet-symbol-spec';
+import { isElectricalDeviceKind } from '../../bim/types/mep-fixture-types';
 
 const MM_TO_M = 0.001;
 
@@ -139,7 +138,7 @@ export function fixtureToMesh(
   // box: bottom face at the mounting elevation (~300mm above FFL), extruded UP by
   // bodyHeight. Identical wall-box geometry — only the 2D glyph + connector differ.
   // Tinted by a System membership colour when wired to a circuit/channel.
-  if (isSocketKind(fixture.params.kind) || isDataOutletKind(fixture.params.kind)) {
+  if (isElectricalDeviceKind(fixture.params.kind)) {
     const sceneToM = sceneUnitsToMeters(fixture.params.sceneUnits ?? 'mm');
     const socketShape = buildShape(verts.map((v) => ({ x: v.x * sceneToM, y: v.y * sceneToM, z: 0 })));
     if (!socketShape) return null;
@@ -159,7 +158,13 @@ export function fixtureToMesh(
     return socketTagged;
   }
 
-  const shape = buildShape(verts);
+  // ADR-408 Φ-C EXT — units-safe footprint (mm-scene correct via sceneUnitsToMeters),
+  // identical to the floor-drain / sanitary / socket branches above. This light-fixture
+  // fallback was the ONLY branch consuming the footprint UNSCALED, so in an mm scene the
+  // body landed 1000× away from its (correctly-scaled) home-run wire → "wires don't reach
+  // the light fixture" in 3D. Scaling here aligns the body with the wire endpoint.
+  const sceneToM = sceneUnitsToMeters(fixture.params.sceneUnits ?? 'mm');
+  const shape = buildShape(verts.map((v) => ({ x: v.x * sceneToM, y: v.y * sceneToM, z: 0 })));
   if (!shape) return null;
 
   const bodyHeightM = fixture.params.bodyHeightMm * MM_TO_M;
@@ -182,9 +187,9 @@ export function fixtureToMesh(
  * ADR-408 Φ3 — point-based electrical panel → solid mesh. The footprint is
  * extruded by the body height; the box is centred vertically on the mounting
  * elevation (wall-mounted). Units-safe: the footprint (scene units) is converted
- * to meters via `sceneUnitsToMeters` (the StairToThreeConverter pattern), NOT the
- * fixture's latent meter-scene assumption (`fixtureToMesh` consumes the footprint
- * unscaled, so it only renders correctly in meter scenes).
+ * to meters via `sceneUnitsToMeters` (the StairToThreeConverter pattern) — the same
+ * scaling every `fixtureToMesh` branch now applies (ADR-408 Φ-C EXT fixed the old
+ * light-fixture fallback that consumed the footprint unscaled).
  */
 export function panelToMesh(
   panel: ElectricalPanelEntity,

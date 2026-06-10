@@ -15,7 +15,7 @@
 import * as THREE from 'three';
 import type { Bim3DEntities } from '../stores/Bim3DEntitiesStore';
 import type { FloorStackEntry } from './multi-floor-3d-source';
-import { beamToMesh, slabToMesh, fixtureToMesh, panelToMesh, manifoldToMesh, radiatorToMesh, boilerToMesh, waterHeaterToMesh } from '../converters/BimToThreeConverter';
+import { beamToMesh, slabToMesh, fixtureToMesh, panelToMesh, manifoldToMesh, radiatorToMesh, boilerToMesh, waterHeaterToMesh, foundationToMesh } from '../converters/BimToThreeConverter';
 import { syncWalls, syncColumns } from './bim-scene-attach-syncs';
 import { stairToMeshes } from '../converters/StairToThreeConverter';
 import { railingToMesh } from '../converters/railing-to-three';
@@ -144,6 +144,7 @@ export class BimSceneLayer {
     syncWalls(this.group, entities, ctx, (e, c, cx) => this.resolveEntity(e, c, cx));
     syncColumns(this.group, entities, ctx, (e, c, cx) => this.resolveEntity(e, c, cx));
     this.syncBeams(entities, ctx);
+    this.syncFoundations(entities, ctx);
     this.syncSlabs(entities, ctx);
     this.syncStairs(entities, ctx);
     this.syncFixtures(entities, ctx);
@@ -315,6 +316,21 @@ export class BimSceneLayer {
       const r = this.resolveEntity(beam, 'beam', ctx);
       if (!r) continue;
       const mesh = beamToMesh(beam, ctx.activeLevelId, r.baseElevation);
+      if (mesh) { mesh.userData['buildingId'] = r.buildingId; this.group.add(mesh); }
+    }
+  }
+
+  /**
+   * ADR-436 — structural foundations (pad/strip/tie-beam, IfcFooting). Hang-down
+   * solid below grade (`topElevationMm − thickness`). Own V/G category
+   * `'foundation'` (structural discipline). `?? []` guards legacy floor-stack
+   * entries predating ADR-436.
+   */
+  private syncFoundations(entities: Bim3DEntities, ctx: SyncContext): void {
+    for (const foundation of entities.foundations ?? []) {
+      const r = this.resolveEntity(foundation, 'foundation', ctx);
+      if (!r) continue;
+      const mesh = foundationToMesh(foundation, ctx.floorElevationMm, ctx.activeLevelId, r.baseElevation);
       if (mesh) { mesh.userData['buildingId'] = r.buildingId; this.group.add(mesh); }
     }
   }

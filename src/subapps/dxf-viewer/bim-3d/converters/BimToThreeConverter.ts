@@ -49,6 +49,8 @@ export { fixtureToMesh, panelToMesh, manifoldToMesh, radiatorToMesh, boilerToMes
 // Structural element converters re-exported from their own module
 // (file-size SSoT, N.7.1, 2026-06-08). Importers keep `from '.../BimToThreeConverter'`.
 export { columnToMesh, beamToMesh, slabToMesh } from './bim-three-structural-converters';
+// ADR-436 — structural foundation converter (own module, file-size SSoT N.7.1).
+export { foundationToMesh } from './foundation-to-three';
 
 // BIM shape vertices (outerEdge, innerEdge, footprint, outline) are already in meters
 // (canvas world coordinates). Scalar params — slab thickness/elevation, beam depth/elevation,

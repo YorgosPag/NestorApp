@@ -42,4 +42,17 @@ describe('fixtureToMesh', () => {
     const bad = { ...fixture(), geometry: { ...fixture().geometry, footprint: { vertices: [] } } } as MepFixtureEntity;
     expect(fixtureToMesh(bad, 0, '0', 0)).toBeNull();
   });
+
+  // ADR-408 Φ-C EXT — the light-fixture fallback was the ONLY branch consuming the
+  // footprint UNSCALED, so in an mm scene the body landed 1000× away from its
+  // (correctly-scaled) home-run wire. Pin that the body is now metre-scaled.
+  it('scales the footprint to metres (mm scene) so the body aligns with its wire', () => {
+    // A 300mm fixture → scaled body span ≈ 0.3 m. The pre-fix unscaled bug would
+    // build a ~300 m body, so any horizontal extent < 1 m proves the scaling.
+    const mesh = fixtureToMesh(fixture({ width: 300, length: 300 }), 0, '0', 0) as THREE.Mesh;
+    mesh.geometry.computeBoundingBox();
+    const bb = mesh.geometry.boundingBox!;
+    expect(bb.max.x - bb.min.x).toBeLessThan(1);
+    expect(bb.max.z - bb.min.z).toBeLessThan(1);
+  });
 });

@@ -58,7 +58,7 @@ function wallFloor(wallId: string): Bim3DEntities {
       kind: 'straight',
       params: { start: { x: 0, y: 0 }, end: { x: 1, y: 0 } },
     } as unknown as Bim3DEntities['walls'][number]],
-    columns: [], beams: [], slabs: [], slabOpenings: [], openings: [], stairs: [],
+    columns: [], beams: [], foundations: [], slabs: [], slabOpenings: [], openings: [], stairs: [],
     fixtures: [], panels: [], railings: [],
   };
 }
