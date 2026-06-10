@@ -68,7 +68,9 @@ export type BimElementType =
   // ADR-419 — thin polygon floor covering per room (IfcCovering FLOORING).
   | 'floor-finish'
   // ADR-422 — analytical thermal space / θερμικός χώρος (IfcSpace).
-  | 'thermal-space';
+  | 'thermal-space'
+  // ADR-436 — substructure / θεμελίωση (πέδιλα/πεδιλοδοκοί/συνδετήριες δοκοί).
+  | 'foundation';
 
 /**
  * Union of all BIM sub-type discriminators (one per element type).

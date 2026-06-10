@@ -68,7 +68,9 @@ export type IfcEntityType =
   // ADR-434 — gas meter (μετρητής αερίου; IfcFlowMeter, fuel-network source) + gas cooker/hob
   // (εστία αερίου; IfcBurner, gas appliance terminal).
   | 'IfcFlowMeter'
-  | 'IfcBurner';
+  | 'IfcBurner'
+  // ADR-436 — θεμελίωση: shallow footing (πέδιλο/πεδιλοδοκός/συνδετήρια δοκός).
+  | 'IfcFooting';
 
 export const IFC_ENTITY_TYPE_VALUES: readonly IfcEntityType[] = [
   'IfcWall',
@@ -121,6 +123,8 @@ export const IFC_ENTITY_TYPE_VALUES: readonly IfcEntityType[] = [
   // ADR-434 — gas meter (μετρητής αερίου) + gas cooker/hob (εστία αερίου).
   'IfcFlowMeter',
   'IfcBurner',
+  // ADR-436 — θεμελίωση: shallow footing.
+  'IfcFooting',
 ] as const;
 
 export type IfcPropertySetValue = string | number | boolean | null;
@@ -196,6 +200,8 @@ export const IfcEntityTypeSchema = z.enum([
   // ADR-434 — gas meter (μετρητής αερίου) + gas cooker/hob (εστία αερίου).
   'IfcFlowMeter',
   'IfcBurner',
+  // ADR-436 — θεμελίωση: shallow footing.
+  'IfcFooting',
 ]);
 
 export const IfcPropertySetValueSchema = z.union([

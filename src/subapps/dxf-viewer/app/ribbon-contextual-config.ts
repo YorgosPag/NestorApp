@@ -42,6 +42,7 @@ import { CONTEXTUAL_MEP_RISER_TAB, MEP_RISER_CONTEXTUAL_TRIGGER } from '../ui/ri
 import { ANIMATION_CONTEXTUAL_TAB, ANIMATION_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-animation-tab';
 import { selectAnimationToolActive, useAnimationStore } from '../bim-3d/animation/AnimationStore';
 import { useMepSystemStore } from '../bim/mep-systems/mep-system-store';
+import { useMepCircuitEditorStore } from '../bim/mep-systems/mep-circuit-editor-store';
 import { resolveManagedSystems } from '../bim/mep-systems/mep-circuit-editor';
 import { isPipeNetworkSourceEntity } from '../bim/mep-systems/pipe-network-source';
 import { isMepSegmentEntity } from '../types/entities';
@@ -141,8 +142,15 @@ export function useActiveContextualTrigger({
   // ADR-408 Φ6 — the circuit tab also surfaces when the selection touches an
   // existing circuit (manage mode), so subscribe to the systems store.
   const mepSystems = useMepSystemStore((s) => s.systems);
+  // Revit "click a wire to select it": a directly-selected circuit (wire click,
+  // no entity selected) surfaces the «Κύκλωμα» tab — the wire IS the selection.
+  const activeSystemId = useMepCircuitEditorStore((s) => s.activeSystemId);
   return React.useMemo<string | null>(() => {
     if (animationToolActive) return ANIMATION_CONTEXTUAL_TRIGGER;
+    // Wire-selected circuit (no competing entity selection) → «Κύκλωμα» tab.
+    if (!primarySelectedId && activeSystemId && mepSystems.some((s) => s.id === activeSystemId)) {
+      return MEP_CIRCUIT_CONTEXTUAL_TRIGGER;
+    }
     // ADR-408 Φ5: mixed MEP selection (≥1 electrical panel = source + ≥1 light
     // fixture = members) → circuit-creation tab. Checked before the generic
     // structural multi-select since panels/fixtures are not in BIM_KIND_TYPES.
@@ -282,7 +290,7 @@ export function useActiveContextualTrigger({
       activeTool === 'ellipse'
     ) return LINE_TOOL_CONTEXTUAL_TRIGGER;
     return null;
-  }, [primarySelectedId, selectedEntityIds, currentScene, activeTool, animationToolActive, mepSystems]);
+  }, [primarySelectedId, selectedEntityIds, currentScene, activeTool, animationToolActive, mepSystems, activeSystemId]);
 }
 
 export function resolveContextualTrigger(entity: EntityLike): string | null {

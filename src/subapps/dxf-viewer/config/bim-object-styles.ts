@@ -38,6 +38,8 @@ export const BIM_CATEGORY_LINE_COLORS = {
   door: '#c97c2f',
   /** Παράθυρο — μπλε τζαμιού (opening window-* subcategories). */
   window: '#2d72b8',
+  /** Θεμελίωση — γαιώδες γκρι-μπλε (below-grade, parent `foundation`). */
+  foundation: '#6b7a8f',
 } as const;
 
 /**
@@ -95,7 +97,9 @@ export type BimCategory =
   // ADR-422 — analytical thermal space / θερμικός χώρος (IfcSpace, architectural overlay).
   | 'thermal-space'
   // ADR-434 — gas/oil fuel supply run (μηχανολογικό· own V/G discipline, yellow gas convention).
-  | 'fuel';
+  | 'fuel'
+  // ADR-436 — θεμελίωση / substructure (πέδιλα/πεδιλοδοκοί/συνδετήριες δοκοί, structural).
+  | 'foundation';
 
 /**
  * Per-subcategory style overrides (ADR-377).
@@ -164,6 +168,8 @@ export const BIM_CATEGORIES: readonly BimCategory[] = [
   'stair', 'roof', 'ceiling', 'dimension', 'hatch', 'grip', 'envelope',
   'light-fixture', 'electrical-panel', 'mep-manifold', 'mep-radiator', 'mep-boiler', 'mep-water-heater', 'mep-underfloor', 'railing', 'mep-wire', 'furniture',
   'duct', 'pipe', 'fuel', 'drain-pipe', 'sanitary', 'kitchen',
+  // ADR-436 — θεμελίωση.
+  'foundation',
 ] as const;
 
 /**
@@ -210,6 +216,8 @@ export const MODEL_BIM_CATEGORIES: readonly BimCategory[] = [
   'drain-pipe',
   // ADR-415 — pure-vector 2D floorplan symbols (sanitary + kitchen).
   'sanitary', 'kitchen',
+  // ADR-436 — θεμελίωση (πέδιλα/πεδιλοδοκοί/συνδετήριες δοκοί).
+  'foundation',
 ] as const;
 
 /**
@@ -325,4 +333,11 @@ export const DEFAULT_OBJECT_STYLES: Readonly<Record<BimCategory, ObjectStyle>> =
   'floor-finish': { projectionPen: 3, cutPen: 3 },
   // ADR-422 — θερμικός χώρος: λεπτή γραμμή (IfcSpace analytical overlay, interior tag).
   'thermal-space': { projectionPen: 3, cutPen: 3 },
+  // ADR-436 — θεμελίωση: μεσαία γραμμή (below-grade structural). Foundation-plan
+  // 2Δ διακεκομμένη σύμβαση + subcategories wiring = Slice 1 (renderer).
+  foundation: {
+    projectionPen: 4, cutPen: 6,
+    projectionColor: BIM_CATEGORY_LINE_COLORS.foundation,
+    cutColor: BIM_CATEGORY_LINE_COLORS.foundation,
+  },
 } as const;

@@ -140,6 +140,9 @@ export const SUBCATEGORY_TAXONOMY: Readonly<Record<BimCategory, ReadonlyArray<st
   'floor-finish':  [],
   // ADR-422 — thermal-space: no subcategory model (analytical fill + tag overlay).
   'thermal-space': [],
+  // ADR-436 — θεμελίωση: subcategories (hidden-lines/centerline/tie-beam) wiring
+  // = Slice 1 (renderer). Κενό προς το παρόν (μόνο data-model registration).
+  foundation:      [],
 };
 
 /**
