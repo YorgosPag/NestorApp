@@ -36,13 +36,14 @@ import { useMepSystemStore } from '../../bim/mep-systems/mep-system-store';
 import { useMepCircuitEditorStore } from '../../bim/mep-systems/mep-circuit-editor-store';
 import type { MepSystemEntity, MepElectricalSystemParams } from '../../bim/types/mep-system-types';
 import { isElectricalSystemParams } from '../../bim/types/mep-system-types';
-import type { MepConnector } from '../../bim/types/mep-connector-types';
 import {
   computeCircuitHostSegments,
   type CircuitHostSegment,
   type ResolveWireHost,
 } from '../../bim/mep-systems/mep-wire-routing';
-import { resolverFromHosts, type WireHostXform } from '../../bim/mep-systems/mep-wire-resolver';
+import { hitTestCircuitWirePaths } from '../../bim/mep-systems/mep-wire-hit';
+import { resolverFromHosts } from '../../bim/mep-systems/mep-wire-resolver';
+import { collectWireHosts, resolveCircuitWirePaths } from '../../bim/mep-systems/mep-wire-scene';
 import {
   hitTestWaypointNode,
   hitTestInsertion,
@@ -69,6 +70,13 @@ export interface UseMepWireWaypointInteractionParams {
   readonly getViewportElement: () => HTMLElement | null;
   readonly getCurrentLevelId: () => string | null;
   readonly getLevelScene: (levelId: string) => SceneModel | null;
+  /**
+   * Revit "click a wire to select it": invoked when a plain click lands on a
+   * circuit's home-run wire that is NOT the active circuit's editable wire. The
+   * caller makes that circuit the active selection (clears entity selection +
+   * sets the active circuit → grips light up + the «Κύκλωμα» tab opens).
+   */
+  readonly selectCircuit: (systemId: string) => void;
 }
 
 interface ActiveContext {
@@ -79,30 +87,10 @@ interface ActiveContext {
   readonly resolve: ResolveWireHost;
 }
 
-/** Collect host transforms (fixtures + panels) from the level scene. */
-function collectHosts(scene: SceneModel): Map<string, WireHostXform> {
-  const hosts = new Map<string, WireHostXform>();
-  for (const e of scene.entities) {
-    if (e.type !== 'mep-fixture' && e.type !== 'electrical-panel') continue;
-    const params = e.params as {
-      position: { x: number; y: number };
-      rotation: number;
-      connectors?: readonly MepConnector[];
-    };
-    hosts.set(e.id, {
-      x: params.position.x,
-      y: params.position.y,
-      rotation: params.rotation,
-      connectors: params.connectors ?? [],
-    });
-  }
-  return hosts;
-}
-
 export function useMepWireWaypointInteraction(
   params: UseMepWireWaypointInteractionParams,
 ): void {
-  const { transform, getViewportElement, getCurrentLevelId, getLevelScene } = params;
+  const { transform, getViewportElement, getCurrentLevelId, getLevelScene, selectCircuit } = params;
   const { execute: executeCommand } = useCommandHistory();
 
   // Refs mirror props so handlers see latest values without effect teardown.
@@ -114,6 +102,8 @@ export function useMepWireWaypointInteraction(
   getCurrentLevelIdRef.current = getCurrentLevelId;
   const getLevelSceneRef = useRef(getLevelScene);
   getLevelSceneRef.current = getLevelScene;
+  const selectCircuitRef = useRef(selectCircuit);
+  selectCircuitRef.current = selectCircuit;
 
   const controllerRef = useRef<MepWireWaypointDragController | null>(null);
   if (controllerRef.current === null) controllerRef.current = new MepWireWaypointDragController();
@@ -137,7 +127,7 @@ export function useMepWireWaypointInteraction(
       if (!levelId) return null;
       const scene = getLevelSceneRef.current(levelId);
       if (!scene) return null;
-      const resolve = resolverFromHosts(collectHosts(scene));
+      const resolve = resolverFromHosts(collectWireHosts(scene.entities));
       const segments = computeCircuitHostSegments([system], resolve);
       return { system, params: system.params, segments, resolve };
     }
@@ -211,6 +201,23 @@ export function useMepWireWaypointInteraction(
       return true;
     }
 
+    /**
+     * Revit wire-select hit-test: the nearest circuit whose home-run wire passes
+     * under the click (ANY circuit, not just the active one), or `null`. Built at
+     * event time from the live systems + scene hosts (same SSoT the overlay draws).
+     */
+    function hitTestAnyCircuitWire(e: PointerEvent): string | null {
+      const levelId = getCurrentLevelIdRef.current();
+      if (!levelId) return null;
+      const scene = getLevelSceneRef.current(levelId);
+      if (!scene) return null;
+      const systems = useMepSystemStore.getState().systems;
+      const paths = resolveCircuitWirePaths(scene, systems);
+      if (paths.length === 0) return null;
+      const { world, scale } = toWorld(e);
+      return hitTestCircuitWirePaths(world, paths, WIRE_TOL_PX / scale);
+    }
+
     function onPointerDown(e: PointerEvent): void {
       if (e.button === 2) {
         if (deleteNodeAt(e)) {
@@ -220,13 +227,25 @@ export function useMepWireWaypointInteraction(
         return;
       }
       if (e.button !== 0) return;
-      if (!beginGesture(e)) return;
-      e.stopPropagation();
-      e.preventDefault();
-      try {
-        el!.setPointerCapture(e.pointerId);
-      } catch {
-        /* setPointerCapture can fail on detached elements — non-fatal. */
+      // Active-circuit waypoint edit (move / insert vertex) wins.
+      if (beginGesture(e)) {
+        e.stopPropagation();
+        e.preventDefault();
+        try {
+          el!.setPointerCapture(e.pointerId);
+        } catch {
+          /* setPointerCapture can fail on detached elements — non-fatal. */
+        }
+        return;
+      }
+      // Otherwise a click on ANY circuit's wire selects that circuit (Revit
+      // "Modify | Wires"). `preventDefault` suppresses the compat mouse events so
+      // the canvas selection handlers don't clear the selection we just made.
+      const systemId = hitTestAnyCircuitWire(e);
+      if (systemId) {
+        selectCircuitRef.current(systemId);
+        e.stopPropagation();
+        e.preventDefault();
       }
     }
 
@@ -238,23 +257,28 @@ export function useMepWireWaypointInteraction(
         if (point) schedulePatch(point);
         return;
       }
-      // Idle hover affordance (active circuit only).
-      const ctx = getActiveContext();
-      if (!ctx) {
-        setWireWaypointHover(null);
-        return;
-      }
       const { world, scale } = toWorld(e);
-      const map = ctx.params.wireWaypoints;
-      const node = hitTestWaypointNode(world, ctx.segments, map, NODE_TOL_PX / scale);
-      if (node) {
-        setWireWaypointHover({ systemId: ctx.system.id, x: node.point.x, y: node.point.y, kind: 'node' });
-        return;
+      // Active circuit: rich edit affordance — grab an existing vertex, or a "+"
+      // insert ghost anywhere along its run (not just pixel-perfect on a sub-segment).
+      const ctx = getActiveContext();
+      if (ctx) {
+        const map = ctx.params.wireWaypoints;
+        const node = hitTestWaypointNode(world, ctx.segments, map, NODE_TOL_PX / scale);
+        if (node) {
+          setWireWaypointHover({ systemId: ctx.system.id, x: node.point.x, y: node.point.y, kind: 'node' });
+          return;
+        }
+        const ins = hitTestInsertion(world, ctx.segments, map, WIRE_TOL_PX / scale);
+        if (ins) {
+          setWireWaypointHover({ systemId: ctx.system.id, x: ins.point.x, y: ins.point.y, kind: 'insert' });
+          return;
+        }
       }
-      // Generous wire-hover: the whole circuit lights up + a "+" ghost appears
-      // anywhere along the run (not just pixel-perfect on a sub-segment).
-      const ins = hitTestInsertion(world, ctx.segments, map, WIRE_TOL_PX / scale);
-      setWireWaypointHover(ins ? { systemId: ctx.system.id, x: ins.point.x, y: ins.point.y, kind: 'insert' } : null);
+      // Any circuit's wire under the cursor → pre-selection highlight (Revit hover
+      // halo), even before it is selected. Reuses the click-select hit-test; the "+"
+      // handles only draw for the active circuit, so a non-active hover is halo-only.
+      const hoveredId = hitTestAnyCircuitWire(e);
+      setWireWaypointHover(hoveredId ? { systemId: hoveredId, x: world.x, y: world.y, kind: 'insert' } : null);
     }
 
     function commit(): void {

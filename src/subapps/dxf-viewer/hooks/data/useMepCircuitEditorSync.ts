@@ -46,8 +46,15 @@ export function useMepCircuitEditorSync({
   }, [primarySelectedId, currentScene, systems]);
 
   useEffect(() => {
+    // Entity-driven reconciliation runs ONLY while an entity is the primary
+    // selection. With no entity selected the active circuit is left untouched —
+    // it may have been set directly by a wire click (Revit "Modify | Wires"), and
+    // clearing on deselect is the deselect path's job (Escape → the canonical
+    // `clearEntitySelection`, which also clears the active circuit). Without this
+    // guard the sync would wipe a wire-selected circuit on the very next render.
+    if (!primarySelectedId) return;
     const current = useMepCircuitEditorStore.getState().activeSystemId;
     if (current && candidateIds.includes(current)) return; // still valid — keep the pick
     setActiveSystemId(candidateIds[0] ?? null);
-  }, [candidateIds, setActiveSystemId]);
+  }, [primarySelectedId, candidateIds, setActiveSystemId]);
 }

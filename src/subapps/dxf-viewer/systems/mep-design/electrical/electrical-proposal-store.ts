@@ -27,6 +27,7 @@
 import { useSyncExternalStore } from 'react';
 import type { MepSystemEntity } from '../../../bim/types/mep-system-types';
 import type { CircuitWirePath } from '../../../bim/mep-systems/mep-wire-routing';
+import type { SceneUnits } from '../../../utils/scene-units';
 
 /**
  * The discipline-agnostic summary both proposals satisfy (ADR-431). The store + ghost
@@ -47,6 +48,12 @@ export interface ElectricalProposalReview {
   readonly systemEntities: readonly MepSystemEntity[];
   /** Pre-routed home-run wires (panel→members per circuit) — the ghost paints these. */
   readonly wirePaths: readonly CircuitWirePath[];
+  /**
+   * Active scene units (mm/cm/m) — carried so the 3D proposal ghost can scale the wire
+   * plan coordinates to metres (the segment disciplines carry this on their networks; the
+   * electrical review carries it here for parity). Set by the ribbon bridge at Generate.
+   */
+  readonly sceneUnits: SceneUnits;
 }
 
 type Listener = () => void;

@@ -21,9 +21,11 @@
  * @see ../../bim/renderers/MepWireRenderer (drawCircuitWires — draw)
  */
 
-import { useEffect, useRef, useSyncExternalStore } from 'react';
+import { useCallback, useEffect, useRef, useSyncExternalStore } from 'react';
 import type { DxfEntityUnion, DxfScene } from '../../canvas-v2/dxf-canvas/dxf-types';
 import type { ViewTransform, Viewport } from '../../rendering/types/Types';
+import { getImmediateTransform } from '../../systems/cursor/ImmediateTransformStore';
+import { subscribeImmediateTransformFrame } from '../../rendering/core/immediate-transform-frame';
 import { useMepSystemStore } from '../../bim/mep-systems/mep-system-store';
 import {
   computeCircuitWirePaths,
@@ -31,6 +33,8 @@ import {
   type ResolveWireHost,
 } from '../../bim/mep-systems/mep-wire-routing';
 import { resolverFromHosts, type WireHostXform } from '../../bim/mep-systems/mep-wire-resolver';
+import { collectWireHosts } from '../../bim/mep-systems/mep-wire-scene';
+import type { Entity } from '../../types/entities';
 import { drawCircuitWires, drawWaypointHandles, DEFAULT_WIRE_COLOR } from '../../bim/renderers/MepWireRenderer';
 import { useMepCircuitEditorStore } from '../../bim/mep-systems/mep-circuit-editor-store';
 import { isElectricalSystemParams } from '../../bim/types/mep-system-types';
@@ -71,30 +75,32 @@ export interface HomeRunWiresOverlayProps {
  * frame-by-frame while the committed scene still holds the old transform.
  */
 export function buildResolver(scene: DxfScene, dragPreview: DxfGripDragPreview | null): ResolveWireHost {
-  const hosts = new Map<string, WireHostXform>();
-  for (const e of scene.entities) {
-    if (e.type !== 'mep-fixture' && e.type !== 'electrical-panel') continue;
-    let params = e.params;
-    if (dragPreview && dragPreview.entityId === e.id) {
+  // SSoT host collection (shared with click-select / marquee / auto-design bridges).
+  const hosts = collectWireHosts(scene.entities as unknown as Entity[]);
+  // ADR-408 Φ7 P2 — live drag follow: re-resolve ONLY the dragged host from the PREVIEWED
+  // entity (same SSoT the ghost uses) so its wire endpoint tracks the cursor frame-by-frame.
+  if (dragPreview) {
+    const e = scene.entities.find((x) => x.id === dragPreview.entityId);
+    if (e && (e.type === 'mep-fixture' || e.type === 'electrical-panel')) {
       const previewed = applyEntityPreview(e as unknown as DxfEntityUnion, toEntityPreviewTransform(dragPreview));
       // `applyEntityPreview` returns the same ref for a zero/identity drag → keep committed.
       if (previewed !== (e as unknown as DxfEntityUnion)) {
-        params = (previewed as unknown as { params: typeof e.params }).params;
+        const p = (previewed as unknown as { params: { position: { x: number; y: number }; rotation: number; mountingElevationMm?: number; connectors?: WireHostXform['connectors'] } }).params;
+        hosts.set(e.id, {
+          x: p.position.x,
+          y: p.position.y,
+          rotation: p.rotation,
+          zMm: p.mountingElevationMm ?? 0,
+          connectors: p.connectors ?? [],
+        });
       }
     }
-    hosts.set(e.id, {
-      x: params.position.x,
-      y: params.position.y,
-      rotation: params.rotation,
-      connectors: params.connectors ?? [],
-    });
   }
   return resolverFromHosts(hosts);
 }
 
 export function HomeRunWiresOverlay({
   scene,
-  transform,
   viewport,
   gripDragPreview,
 }: HomeRunWiresOverlayProps) {
@@ -107,58 +113,90 @@ export function HomeRunWiresOverlay({
   // ADR-408 Φ7 — colour-by-system master toggle (leaf subscription). OFF ⇒ wires +
   // handles fall back to DEFAULT_WIRE_COLOR (2D/3D parity).
   const colorBySystem = useDrawingScaleStore((s) => s.colorBySystem);
-  // ADR-408 Φ7 FU#3 — editable waypoints: which circuit is active (shows handles)
-  // + the cursor hover affordance (highlight node / insert ghost). Both are leaf
-  // subscriptions — orchestrators stay untouched (CHECK 6C safe).
-  const activeSystemId = useMepCircuitEditorStore((s) => s.activeSystemId);
+  // ADR-408 Φ7 FU#3 + Revit window/crossing multi-select: the set of selected circuits
+  // (every member shows editable grips; the primary owns the editing affordances) + the
+  // cursor hover affordance (highlight node / insert ghost). Both are leaf subscriptions —
+  // orchestrators stay untouched (CHECK 6C safe).
+  const selectedSystemIds = useMepCircuitEditorStore((s) => s.selectedSystemIds);
   const waypointHover = useSyncExternalStore(subscribeWireWaypointHover, getWireWaypointHover);
   const visible = resolveIsEntityVisible(
     { category: 'mep-wire' },
     { objectStyles, disciplineVisibility },
   );
 
-  useEffect(() => {
+  // ADR-040 zero-lag (2026-06-10): the wires used to repaint on the React `transform`
+  // prop, which lags the canvas during pan (the canvas pans via the 60 fps IMMEDIATE
+  // transform, not React state) — the whole wire visibly trailed the cursor. The draw
+  // now reads `getImmediateTransform()` inside a LOW-priority `UnifiedFrameScheduler`
+  // frame (same zero-lag mechanism as the DXF canvas + clash overlay). All volatile
+  // draw inputs are funnelled through a ref so the scheduler callback reads the latest.
+  const drawStateRef = useRef({
+    scene, viewport, systems, visible, gripDragPreview, selectedSystemIds, waypointHover, colorBySystem,
+  });
+  drawStateRef.current = {
+    scene, viewport, systems, visible, gripDragPreview, selectedSystemIds, waypointHover, colorBySystem,
+  };
+
+  const repaint = useCallback(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    // ADR-408 Φ7 perf guard: skip the (non-trivial) routing recompute + draw when
-    // the overlay canvas has no usable size. Without this, an idle 0×0 viewport
-    // (layout not yet settled / collapsed shell) makes every parent re-render run
-    // `computeCircuitWirePaths` + `drawCircuitWires`, and `worldToScreen` floods the
-    // console with "Invalid viewport dimensions" — burning CPU for zero pixels.
-    if (viewport.width <= 0 || viewport.height <= 0) return;
+    const {
+      scene: s, viewport: vp, systems: sys, visible: vis,
+      gripDragPreview: drag, selectedSystemIds: selectedIds, waypointHover: hover, colorBySystem: colorOn,
+    } = drawStateRef.current;
 
-    if (!visible || !scene || systems.length === 0) return;
-    const resolve = buildResolver(scene, gripDragPreview);
-    const paths = computeCircuitWirePaths(systems, resolve);
+    // ADR-408 Φ7 perf guard: skip the (non-trivial) routing recompute + draw when the
+    // overlay canvas has no usable size (idle 0×0 viewport / collapsed shell).
+    if (vp.width <= 0 || vp.height <= 0) return;
+    if (!vis || !s || sys.length === 0) return;
+
+    // Zero-lag: project through the IMMEDIATE transform, read at draw time (not the prop).
+    const t = getImmediateTransform();
+    const resolve = buildResolver(s, drag);
+    const paths = computeCircuitWirePaths(sys, resolve);
     if (paths.length === 0) return;
     // Hovering the active circuit's wire lights up the whole run (mirror of the
     // 2D DXF entity hover): pass the hovered systemId so its path strokes a halo.
-    drawCircuitWires(ctx, paths, transform, viewport, waypointHover?.systemId ?? null, colorBySystem);
+    drawCircuitWires(ctx, paths, t, vp, hover?.systemId ?? null, colorOn);
 
-    // ADR-408 Φ7 FU#3 — editable handles for the active circuit only (Revit: grips
-    // appear on the selected wire). Drawn on top of the wire so the user can grab
-    // existing vertices or insert a new one on a segment.
-    const active = activeSystemId ? systems.find((s) => s.id === activeSystemId) ?? null : null;
-    if (active && isElectricalSystemParams(active.params)) {
-      const segments = computeCircuitHostSegments([active], resolve);
-      const path = paths.find((p) => p.systemId === active.id);
-      drawWaypointHandles(
-        ctx,
-        segments,
-        active.params.wireWaypoints,
-        colorBySystem ? (path?.colorHex ?? '#1e88e5') : DEFAULT_WIRE_COLOR,
-        waypointHover,
-        transform,
-        viewport,
-      );
+    // ADR-408 Φ7 FU#3 + Revit multi-select — editable grips appear on EVERY selected wire
+    // (window/crossing can select several circuits). Drawn on top of the wires so the user
+    // can grab existing vertices or insert a new one. The hover/insert affordance is scoped
+    // to the circuit actually hovered (its own systemId), so only that wire reacts.
+    if (selectedIds.size > 0) {
+      for (const sy of sys) {
+        if (!selectedIds.has(sy.id) || !isElectricalSystemParams(sy.params)) continue;
+        const segments = computeCircuitHostSegments([sy], resolve);
+        const path = paths.find((p) => p.systemId === sy.id);
+        drawWaypointHandles(
+          ctx,
+          segments,
+          sy.params.wireWaypoints,
+          colorOn ? (path?.colorHex ?? '#1e88e5') : DEFAULT_WIRE_COLOR,
+          hover?.systemId === sy.id ? hover : null,
+          t,
+          vp,
+        );
+      }
     }
-    // ADR-408 Φ7 P2 — `gripDragPreview` in deps ⇒ repaint each drag frame so the
-    // wire tracks the previewed host (the snapshot changes on every mousemove).
-  }, [scene, transform, viewport, systems, visible, gripDragPreview, activeSystemId, waypointHover, colorBySystem]);
+  }, []);
+
+  // Repaint on content change (systems / scene / viewport / visibility / hover / live
+  // host drag — `gripDragPreview` changes each drag frame so the wire tracks the host).
+  useEffect(() => {
+    repaint();
+  }, [scene, viewport, systems, visible, gripDragPreview, selectedSystemIds, waypointHover, colorBySystem, repaint]);
+
+  // Zero-lag pan/zoom: reproject in the LOW-priority scheduler frame (after the DXF
+  // canvas), gated on the immediate transform changing — frame-synced, no React churn.
+  // SSoT: the same helper the clash + proposal-ghost overlays use.
+  useEffect(() => {
+    return subscribeImmediateTransformFrame('home-run-wires', 'Home-Run Wires', repaint);
+  }, [repaint]);
 
   return (
     <canvas

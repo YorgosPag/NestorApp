@@ -22,6 +22,11 @@ import { getOrientedWaypoints, type WireWaypointMap } from '../mep-systems/mep-w
 import { buildConductorTicks, GROUND_DOT_R } from '../mep-systems/mep-wire-conductor-ticks';
 import { DEFAULT_CONDUCTORS, type ConductorBreakdown } from '../types/mep-system-types';
 import type { WireWaypointHover } from '../mep-systems/mep-wire-waypoint-ui-store';
+// SSoT grip language: a selected wire shows the SAME grips as every other selected
+// entity (wall/DXF) — routed through the ONE grip facade (UnifiedGripRenderer), so
+// size / colour / cold-warm-hot temperature / DPI all resolve in a single place. No
+// hand-rolled grip sizes or colours here (CLAUDE.md "no magic numbers").
+import { createGripRenderer, type GripRenderConfig } from '../../rendering/grips';
 
 /**
  * ADR-408 Φ7 — default wire colour when the per-view `colorBySystem` toggle is
@@ -156,21 +161,8 @@ export function drawCircuitWires(
 
 // ─── Waypoint handles (ADR-408 Φ7 FU#3 — editable «Wire Vertex») ────────────────
 
-const HANDLE_RADIUS_PX = 4; // screen-space node dot radius (zoom-independent)
-const HANDLE_HOVER_RADIUS_PX = 6; // highlighted node ring
 const HANDLE_STROKE_PX = 1.5;
 const INSERT_GHOST_RADIUS_PX = 5; // hollow "+" preview where a vertex would be born
-
-/** A filled white-cored dot in the circuit colour — a draggable waypoint handle. */
-function drawNodeHandle(ctx: CanvasRenderingContext2D, p: Point2D, color: string, radius: number): void {
-  ctx.beginPath();
-  ctx.arc(p.x, p.y, radius, 0, Math.PI * 2);
-  ctx.fillStyle = '#ffffff';
-  ctx.fill();
-  ctx.lineWidth = HANDLE_STROKE_PX;
-  ctx.strokeStyle = color;
-  ctx.stroke();
-}
 
 /** Hollow ring + "+" ghost marking where a new vertex would be inserted on hover. */
 function drawInsertGhost(ctx: CanvasRenderingContext2D, p: Point2D, color: string): void {
@@ -188,10 +180,11 @@ function drawInsertGhost(ctx: CanvasRenderingContext2D, p: Point2D, color: strin
 }
 
 /**
- * Draw the editable waypoint handles of the **active** circuit (Revit shows wire
- * grips only on the selected wire): a dot at every existing vertex, plus the hover
- * affordance — a highlight ring on the hovered vertex (`'node'`) or an insert "+"
- * ghost on a hovered segment (`'insert'`). Screen-space, style-agnostic.
+ * Draw the grips of the **active** (selected) circuit (Revit shows wire grips only on
+ * the selected wire): a dot at every host endpoint (panel + each device connection —
+ * visible even on a fresh circuit with no waypoints) AND at every inserted vertex,
+ * plus the hover affordance — a highlight ring on the hovered vertex (`'node'`) or an
+ * insert "+" ghost on a hovered segment (`'insert'`). Screen-space, style-agnostic.
  */
 export function drawWaypointHandles(
   ctx: CanvasRenderingContext2D,
@@ -203,20 +196,39 @@ export function drawWaypointHandles(
   viewport: Viewport,
 ): void {
   ctx.save();
-  ctx.lineJoin = 'round';
-  ctx.lineCap = 'round';
   ctx.setLineDash([]);
+  // One grip facade for the whole app: the SAME UnifiedGripRenderer the walls/DXF
+  // entities use resolves the square shape, GRIP_COLD_COLOR, the size (UI_SIZE_DEFAULTS
+  // + temperature multipliers) and DPI — so a selected wire's grips are byte-identical
+  // to a selected wall's. We only feed it the grip positions + temperature.
+  const grips = createGripRenderer(ctx, (p) => CoordinateTransforms.worldToScreen(p, transform, viewport));
+
+  // The wire's vertices: host endpoints (panel + each device, deduped by host key so a
+  // shared daisy-chain join draws one grip) + any inserted bend vertices. Visible the
+  // instant the circuit is selected, before any bend exists.
+  const endpoints = new Map<string, Point2D>();
+  for (const seg of segments) {
+    endpoints.set(seg.keyA, { x: seg.a.x, y: seg.a.y });
+    endpoints.set(seg.keyB, { x: seg.b.x, y: seg.b.y });
+  }
+  const configs: GripRenderConfig[] = [];
+  for (const p of endpoints.values()) configs.push({ position: p, type: 'vertex', temperature: 'cold' });
   for (const seg of segments) {
     const wps = getOrientedWaypoints(waypoints, seg.keyA, seg.keyB);
-    for (const wp of wps) {
-      const s = CoordinateTransforms.worldToScreen({ x: wp.x, y: wp.y }, transform, viewport);
-      drawNodeHandle(ctx, s, color, HANDLE_RADIUS_PX);
-    }
+    for (const wp of wps) configs.push({ position: { x: wp.x, y: wp.y }, type: 'vertex', temperature: 'cold' });
   }
+  grips.renderGripSetBatched(configs);
+
   if (hover) {
-    const s = CoordinateTransforms.worldToScreen({ x: hover.x, y: hover.y }, transform, viewport);
-    if (hover.kind === 'node') drawNodeHandle(ctx, s, color, HANDLE_HOVER_RADIUS_PX);
-    else drawInsertGhost(ctx, s, color);
+    // Hovered vertex → the SSoT warm grip (AutoCAD hover feedback) overlaid on top; a
+    // hovered segment → the "+" insert ghost (distinct add-vertex affordance, not a
+    // grip — kept circuit-coloured so it reads as "add here", not "selected vertex").
+    if (hover.kind === 'node') {
+      grips.renderGrip({ position: { x: hover.x, y: hover.y }, type: 'vertex' }, undefined, 'warm');
+    } else {
+      const s = CoordinateTransforms.worldToScreen({ x: hover.x, y: hover.y }, transform, viewport);
+      drawInsertGhost(ctx, s, color);
+    }
   }
   ctx.restore();
 }
