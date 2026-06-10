@@ -33,6 +33,10 @@ export const MEP_BOILER_RIBBON_KEYS = {
     minThermalOutput: 'mepBoiler.params.minThermalOutput',
     /** % — seasonal appliance efficiency (Revit «Nominal Efficiency»). Drives ErP class. */
     efficiency: 'mepBoiler.params.efficiency',
+    /** mg/kWh — measured NOx emissions (Revit «NOx Emission»). Drives the Ecodesign compliance class. */
+    nox: 'mepBoiler.params.nox',
+    /** dB(A) — measured sound power level L_WA (Revit «Sound»). Drives the placement-suitability band. */
+    soundPower: 'mepBoiler.params.soundPower',
     /** mm — COMBI DHW connector diameter (hot outlet + cold inlet). Combi-only panel. */
     dhwConnectorDiameter: 'mepBoiler.params.dhwConnectorDiameter',
     /** mm — combustion flue (καπναγωγός) diameter. Gas/oil-only panel («Καπναγωγός»). */
@@ -87,6 +91,15 @@ export const MEP_BOILER_RIBBON_KEYS = {
      * Lives in the «Μοντέλο» panel next to the model picker.
      */
     fuelType: 'mepBoiler.params.fuelType',
+    /**
+     * `mountingType`: standalone MOUNTING picker (Revit «Mounting» type-property — wall-hung /
+     * floor-standing). A static enum (`MEP_BOILER_MOUNTING_TYPES`), NOT a catalog — routed by
+     * `isMepBoilerMountingTypeKey`, distinct from the dynamic model picker. No clear sentinel
+     * (a boiler is always one or the other; absent ⇒ wall-hung default). The model catalog also
+     * fills it (floor-standing for the oil-floor presets), but this instance param overrides
+     * independently. Lives in the «Μοντέλο» panel next to the fuel picker.
+     */
+    mountingType: 'mepBoiler.params.mountingType',
   },
   /**
    * Boolean toggle params (Revit Yes/No parameter → ribbon toggle button).
@@ -139,6 +152,14 @@ export const MEP_BOILER_RIBBON_KEYS = {
      * Lives in the always-visible «Ασφάλεια» panel next to the expansion-vessel toggle.
      */
     pressureGauge: 'mepBoiler.params.pressureGauge',
+    /**
+     * `fillingLoop`: FILLING LOOP flag (βρόχος πλήρωσης, Revit/IFC `IfcValve` CHECK). ON → the plan
+     * symbol draws a filling-loop body glyph (double-check valve + flexible loop + isolation ticks) —
+     * the sealed-system charging device. Visualisation only — no connector, no extra pressure (the
+     * fill target is the gauge's `systemPressure`). Lives in the always-visible «Ασφάλεια» panel,
+     * completing the sealed-system family (valve + vessel + gauge + filling loop).
+     */
+    fillingLoop: 'mepBoiler.params.fillingLoop',
   },
   /**
    * ADR-422 L2 — read-only sizing readouts (Revit «Heating Loads → Equipment»).
@@ -154,6 +175,10 @@ export const MEP_BOILER_RIBBON_KEYS = {
     adequacyStatus: 'mepBoiler.readout.adequacyStatus',
     /** EU ErP energy class (A+++…G) — derived from seasonalEfficiencyPercent + fuelType. */
     erpClass: 'mepBoiler.readout.erpClass',
+    /** EU Ecodesign NOx compliance verdict — derived from noxMgKwh + fuelType (resolveNoxClass). */
+    noxClass: 'mepBoiler.readout.noxClass',
+    /** Placement-suitability band (quiet/standard/loud) — derived from soundPowerDbA (resolveAcousticBand). */
+    acousticBand: 'mepBoiler.readout.acousticBand',
   },
 } as const;
 
@@ -171,7 +196,9 @@ export type MepBoilerRibbonNumberCommandKey =
   | typeof MEP_BOILER_RIBBON_KEYS.params.condensateDiameter
   | typeof MEP_BOILER_RIBBON_KEYS.params.serviceClearance
   | typeof MEP_BOILER_RIBBON_KEYS.params.expansionVesselVolume
-  | typeof MEP_BOILER_RIBBON_KEYS.params.efficiency;
+  | typeof MEP_BOILER_RIBBON_KEYS.params.efficiency
+  | typeof MEP_BOILER_RIBBON_KEYS.params.nox
+  | typeof MEP_BOILER_RIBBON_KEYS.params.soundPower;
 
 export const MEP_BOILER_RIBBON_NUMBER_KEYS: readonly MepBoilerRibbonNumberCommandKey[] = [
   MEP_BOILER_RIBBON_KEYS.params.width,
@@ -188,6 +215,8 @@ export const MEP_BOILER_RIBBON_NUMBER_KEYS: readonly MepBoilerRibbonNumberComman
   MEP_BOILER_RIBBON_KEYS.params.serviceClearance,
   MEP_BOILER_RIBBON_KEYS.params.expansionVesselVolume,
   MEP_BOILER_RIBBON_KEYS.params.efficiency,
+  MEP_BOILER_RIBBON_KEYS.params.nox,
+  MEP_BOILER_RIBBON_KEYS.params.soundPower,
 ];
 
 // ─── Toggle keys (Revit Yes/No params) ───────────────────────────────────────
@@ -200,7 +229,8 @@ export type MepBoilerRibbonToggleCommandKey =
   | typeof MEP_BOILER_RIBBON_KEYS.toggles.showServiceClearance
   | typeof MEP_BOILER_RIBBON_KEYS.toggles.safetyReliefValve
   | typeof MEP_BOILER_RIBBON_KEYS.toggles.expansionVessel
-  | typeof MEP_BOILER_RIBBON_KEYS.toggles.pressureGauge;
+  | typeof MEP_BOILER_RIBBON_KEYS.toggles.pressureGauge
+  | typeof MEP_BOILER_RIBBON_KEYS.toggles.fillingLoop;
 
 export const MEP_BOILER_RIBBON_TOGGLE_KEYS: readonly MepBoilerRibbonToggleCommandKey[] = [
   MEP_BOILER_RIBBON_KEYS.toggles.producesDhw,
@@ -211,6 +241,7 @@ export const MEP_BOILER_RIBBON_TOGGLE_KEYS: readonly MepBoilerRibbonToggleComman
   MEP_BOILER_RIBBON_KEYS.toggles.safetyReliefValve,
   MEP_BOILER_RIBBON_KEYS.toggles.expansionVessel,
   MEP_BOILER_RIBBON_KEYS.toggles.pressureGauge,
+  MEP_BOILER_RIBBON_KEYS.toggles.fillingLoop,
 ];
 
 const MEP_BOILER_TOGGLE_KEY_SET: ReadonlySet<string> = new Set<string>(
@@ -285,13 +316,17 @@ export type MepBoilerRibbonReadoutKey =
   | typeof MEP_BOILER_RIBBON_KEYS.readouts.requiredOutputW
   | typeof MEP_BOILER_RIBBON_KEYS.readouts.installedOutputW
   | typeof MEP_BOILER_RIBBON_KEYS.readouts.adequacyStatus
-  | typeof MEP_BOILER_RIBBON_KEYS.readouts.erpClass;
+  | typeof MEP_BOILER_RIBBON_KEYS.readouts.erpClass
+  | typeof MEP_BOILER_RIBBON_KEYS.readouts.noxClass
+  | typeof MEP_BOILER_RIBBON_KEYS.readouts.acousticBand;
 
 const MEP_BOILER_READOUT_KEY_SET: ReadonlySet<string> = new Set<string>([
   MEP_BOILER_RIBBON_KEYS.readouts.requiredOutputW,
   MEP_BOILER_RIBBON_KEYS.readouts.installedOutputW,
   MEP_BOILER_RIBBON_KEYS.readouts.adequacyStatus,
   MEP_BOILER_RIBBON_KEYS.readouts.erpClass,
+  MEP_BOILER_RIBBON_KEYS.readouts.noxClass,
+  MEP_BOILER_RIBBON_KEYS.readouts.acousticBand,
 ]);
 
 /** Read-only sizing readouts — served by the bridge as `disabled` combobox state. */
@@ -306,6 +341,7 @@ export type MepBoilerRibbonStringCommandKey =
   | typeof MEP_BOILER_RIBBON_KEYS.stringParams.modelId
   | typeof MEP_BOILER_RIBBON_KEYS.stringParams.flueTermination
   | typeof MEP_BOILER_RIBBON_KEYS.stringParams.fuelType
+  | typeof MEP_BOILER_RIBBON_KEYS.stringParams.mountingType
   | typeof MEP_BOILER_RIBBON_KEYS.stringParams.reliefValvePressure
   | typeof MEP_BOILER_RIBBON_KEYS.stringParams.systemPressure;
 
@@ -313,6 +349,7 @@ export const MEP_BOILER_STRING_KEY_SET: ReadonlySet<string> = new Set<string>([
   MEP_BOILER_RIBBON_KEYS.stringParams.modelId,
   MEP_BOILER_RIBBON_KEYS.stringParams.flueTermination,
   MEP_BOILER_RIBBON_KEYS.stringParams.fuelType,
+  MEP_BOILER_RIBBON_KEYS.stringParams.mountingType,
   MEP_BOILER_RIBBON_KEYS.stringParams.reliefValvePressure,
   MEP_BOILER_RIBBON_KEYS.stringParams.systemPressure,
 ]);
@@ -344,6 +381,16 @@ export function isMepBoilerFlueTerminationKey(commandKey: string): boolean {
  */
 export function isMepBoilerFuelTypeKey(commandKey: string): boolean {
   return commandKey === MEP_BOILER_RIBBON_KEYS.stringParams.fuelType;
+}
+
+/**
+ * Returns `true` for the standalone MOUNTING picker specifically (a static enum of
+ * `MEP_BOILER_MOUNTING_TYPES`, NOT the dynamic model catalog). The bridge checks this BEFORE
+ * the model-picker logic so the two string comboboxes don't cross-talk (mirror of
+ * `isMepBoilerFuelTypeKey`).
+ */
+export function isMepBoilerMountingTypeKey(commandKey: string): boolean {
+  return commandKey === MEP_BOILER_RIBBON_KEYS.stringParams.mountingType;
 }
 
 /**

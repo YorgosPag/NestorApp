@@ -62,6 +62,9 @@ export const MATERIAL_DEFS: Record<string, PbrMaterialDef> = {
   'elem-column':  { color: 0x8a8a8a, roughness: 0.75, metalness: 0.05 },
   'elem-beam':    { color: 0x6d4c3d, roughness: 0.75, metalness: 0.05 },
   'elem-slab':    { color: 0xbdbdbd, roughness: 0.80, metalness: 0.00 },
+  // ADR-436 — θεμελίωση (πέδιλα/πεδιλοδοκοί/συνδετήριες δοκοί): σκυρόδεμα/χώμα,
+  // ελαφρώς πιο γαιώδες & πιο ματ από slab (below-grade RC), μηδέν metalness.
+  'elem-foundation': { color: 0x9a9488, roughness: 0.88, metalness: 0.00 },
   // ADR-417 — pitched roof «νερά»: terracotta clay-tile tone, matte non-metallic
   // (flat fallback before the CC0 roof-tile PBR set loads).
   'elem-roof':    { color: 0x9e4a2c, roughness: 0.85, metalness: 0.00 },

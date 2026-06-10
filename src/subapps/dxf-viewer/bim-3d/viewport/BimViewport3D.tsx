@@ -33,6 +33,7 @@ import { useWaypointDragInteraction } from '../animation/use-waypoint-drag-inter
 import { useBim3DEditInteraction } from '../animation/use-bim3d-edit-interaction';
 import { useBim3DPlacementAndPickHooks } from './use-bim3d-placement-and-pick-hooks';
 import { ClashMarkers3DOverlay } from '../coordination/ClashMarkers3DOverlay';
+import { ProposalGhost3DMount } from '../proposal/ProposalGhost3DMount';
 import { useNotifications } from '@/providers/NotificationProvider';
 import { useBim3DStoreSync } from './use-bim3d-store-sync';
 import { useBim3DVgResync } from './use-bim3d-vg-resync';
@@ -378,6 +379,9 @@ export function BimViewport3D({ projectId: projectIdProp, readOnly = false, bimE
 
       {/* ADR-435 Slice 1b — 3D clash markers (DOM ⊙ projected via camera; same glyph as 2D). */}
       <ClashMarkers3DOverlay managerRef={managerRef} />
+
+      {/* MEP auto-design 3D proposal ghost (SSoT twin of the 2D ProposalGhostOverlay). */}
+      <ProposalGhost3DMount managerRef={managerRef} />
 
 
       {/* ADR-366 §A.3 Q3 Phase 7.0B — 2D Live Section Panel (bottom strip, toggle from Section tab) */}

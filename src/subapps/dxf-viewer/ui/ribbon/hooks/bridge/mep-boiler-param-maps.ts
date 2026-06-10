@@ -22,6 +22,7 @@ export const TOGGLE_KEY_TO_FIELD: Readonly<Record<string, keyof MepBoilerParams>
   [MEP_BOILER_RIBBON_KEYS.toggles.safetyReliefValve]: 'safetyReliefValve',
   [MEP_BOILER_RIBBON_KEYS.toggles.expansionVessel]: 'expansionVessel',
   [MEP_BOILER_RIBBON_KEYS.toggles.pressureGauge]: 'pressureGauge',
+  [MEP_BOILER_RIBBON_KEYS.toggles.fillingLoop]: 'fillingLoop',
 };
 
 /** commandKey → numeric `MepBoilerParams` field. */
@@ -40,4 +41,6 @@ export const NUMBER_KEY_TO_FIELD: Readonly<Record<string, keyof MepBoilerParams>
   [MEP_BOILER_RIBBON_KEYS.params.serviceClearance]: 'serviceClearanceMm',
   [MEP_BOILER_RIBBON_KEYS.params.expansionVesselVolume]: 'expansionVesselVolumeL',
   [MEP_BOILER_RIBBON_KEYS.params.efficiency]: 'seasonalEfficiencyPercent',
+  [MEP_BOILER_RIBBON_KEYS.params.nox]: 'noxMgKwh',
+  [MEP_BOILER_RIBBON_KEYS.params.soundPower]: 'soundPowerDbA',
 };
