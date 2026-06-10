@@ -11,9 +11,11 @@ import type { GridGuide, GridGroup } from '../../ai-assistant/grid-types';
 import type { OpeningKind } from '../../bim/types/opening-types';
 import type { WallEntity, WallKind, WallCategory } from '../../bim/types/wall-types';
 import type { OpeningUpdate } from '../../bim/walls/wall-split';
+import type { MepAutoDesignEventMap } from './drawing-event-map-mep-autodesign';
 
-// Event type definitions - centralized and type-safe
-export interface DrawingEventMap {
+// Event type definitions - centralized and type-safe.
+// MEP auto-design feedback events live in `MepAutoDesignEventMap` (SRP split, N.7.1).
+export interface DrawingEventMap extends MepAutoDesignEventMap {
   'dynamic-input-coordinate-submit': {
     tool: string;
     coordinates: Point2D;
@@ -224,6 +226,10 @@ export interface DrawingEventMap {
   // ADR-363 Phase 4 — BIM column params + delete events
   'bim:column-params-updated': { columnId: string };
   'bim:column-delete-requested': { columnId: string };
+  // ADR-436 Slice 1b — BIM foundation params event (grip-drag commit)
+  'bim:foundation-params-updated': { foundationId: string };
+  // ADR-436 Slice 1-persist — BIM foundation delete event (Firestore deleteDoc)
+  'bim:foundation-delete-requested': { foundationId: string };
   // ADR-406 — BIM MEP fixture params + delete events
   'bim:mep-fixture-params-updated': { fixtureId: string };
   'bim:mep-fixture-delete-requested': { fixtureId: string };
@@ -270,38 +276,7 @@ export interface DrawingEventMap {
   'bim:mep-network-members-added': { memberCount: number };
   'bim:mep-network-members-removed': { memberCount: number };
   'bim:mep-network-edit-failed': { reason: 'noActiveNetwork' | 'addFailed' | 'removeFailed' };
-  // ADR-426 Slice 2 — water-supply auto-design (Generate → review → accept) feedback.
-  'bim:water-supply-generated': { networkCount: number; warningCount: number };
-  'bim:water-supply-empty': { reason: 'no-fixtures' | 'no-source' };
-  'bim:water-supply-committed': { networkCount: number; segmentCount: number };
-  // ADR-427 Slice 2 — sanitary-drainage auto-design (Generate → review → accept) feedback.
-  'bim:drainage-generated': { networkCount: number; warningCount: number };
-  'bim:drainage-empty': { reason: 'no-fixtures' | 'no-collector' };
-  'bim:drainage-committed': { networkCount: number; segmentCount: number };
-  // ADR-428 Slice 2 — heating (hydronic) auto-design (Generate → review → accept) feedback.
-  'bim:heating-generated': { networkCount: number; warningCount: number };
-  'bim:heating-empty': { reason: 'no-terminals' | 'no-source' };
-  'bim:heating-committed': { networkCount: number; segmentCount: number };
-  // ADR-430 Slice 2 — electrical-strong auto-design (Generate → review → accept) feedback.
-  'bim:electrical-generated': { circuitCount: number; skipped: number; warningCount: number };
-  'bim:electrical-empty': { reason: 'no-terminals' | 'no-source' };
-  'bim:electrical-committed': { circuitCount: number };
-  // ADR-431 Slice 2 — electrical-weak (ασθενή) auto-design feedback.
-  'bim:electrical-weak-generated': { channelCount: number; skipped: number; warningCount: number };
-  'bim:electrical-weak-empty': { reason: 'no-terminals' | 'no-source' };
-  'bim:electrical-weak-committed': { channelCount: number };
-  // ADR-432 Slice 2 — HVAC (αερισμός) auto-design feedback (Generate → review → accept).
-  'bim:hvac-generated': { networkCount: number; warningCount: number };
-  'bim:hvac-empty': { reason: 'no-terminals' | 'no-source' };
-  'bim:hvac-committed': { networkCount: number; segmentCount: number };
-  // ADR-433 Slice 2 — fire-protection (πυρόσβεση) auto-design feedback (Generate → review → accept).
-  'bim:fire-generated': { networkCount: number; warningCount: number };
-  'bim:fire-empty': { reason: 'no-terminals' | 'no-source' };
-  'bim:fire-committed': { networkCount: number; segmentCount: number };
-  // ADR-434 Slice 2 — gas (φυσικό αέριο) auto-design feedback (Generate → review → accept).
-  'bim:gas-generated': { networkCount: number; warningCount: number };
-  'bim:gas-empty': { reason: 'no-terminals' | 'no-source' };
-  'bim:gas-committed': { networkCount: number; segmentCount: number };
+  // MEP auto-design feedback events (water-supply…gas) → `MepAutoDesignEventMap` (N.7.1 split).
   // ADR-407 — BIM railing params + delete events
   'bim:railing-params-updated': { railingId: string };
   'bim:railing-delete-requested': { railingId: string };
