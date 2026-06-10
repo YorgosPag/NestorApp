@@ -92,13 +92,17 @@ export type DrawingTool =
   | 'slab'
   | 'column'
   | 'beam'
+  // ADR-436 Slice 2 — foundation line tools (rubber-band band preview).
+  | 'foundation-strip'
+  | 'foundation-tie-beam'
   | 'xline'
   | 'ray'
   | 'slab-opening'
   | 'roof'
   | 'floor-finish'
   | 'mep-underfloor'
-  | 'thermal-space';
+  | 'thermal-space'
+  | 'space-separator';
 
 export interface DrawingState {
   currentTool: DrawingTool;

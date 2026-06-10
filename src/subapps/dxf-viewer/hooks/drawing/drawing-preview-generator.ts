@@ -28,6 +28,8 @@ import { generateWallPreview } from './wall-preview-helpers';
 import { generateSlabPreview } from './slab-preview-helpers';
 // ADR-363 Phase 5.5P — beam preview.
 import { generateBeamPreview } from './beam-preview-helpers';
+// ADR-436 Slice 2 — foundation line-tool preview (strip / tie-beam band ghost).
+import { generateFoundationPreview } from './foundation-preview-helpers';
 import { LINEWEIGHT_SPECIAL } from '../../config/lineweight-iso-catalog';
 import {
   arcFrom3Points,
@@ -124,6 +126,11 @@ export function generatePreviewEntity(
   // ── ADR-363 Phase 5.5P — Beam tool preview branch ────────────────────────
   if (tool === 'beam') {
     return generateBeamPreview(tempPoints, cursorPoint, sceneUnits);
+  }
+  // ── ADR-436 Slice 2 — Foundation line tools (strip / tie-beam) preview branch.
+  //    from-wall (1-click pick) has no rubber-band band (mirror beam-from-wall). ──
+  if (tool === 'foundation-strip' || tool === 'foundation-tie-beam') {
+    return generateFoundationPreview(tempPoints, cursorPoint, sceneUnits);
   }
   // ── ADR-359 Phase 3 — XLine preview ──────────────────────────────────────
   if (tool === 'xline') {

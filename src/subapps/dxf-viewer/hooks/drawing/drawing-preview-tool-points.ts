@@ -22,6 +22,8 @@ import { floorFinishPreviewStore } from '../../bim/floor-finishes/floor-finish-p
 import { mepUnderfloorPreviewStore } from '../../bim/mep-underfloor/mep-underfloor-preview-store';
 // ADR-363 Phase 5.5P — beam preview SSoT.
 import { beamPreviewStore } from '../../bim/beams/beam-preview-store';
+// ADR-436 Slice 2 — foundation line preview SSoT (strip / tie-beam).
+import { foundationPreviewStore } from '../../bim/foundations/foundation-preview-store';
 
 /**
  * Resolve the preview point tuple for the active tool. Non-BIM tools fall back to the
@@ -63,6 +65,11 @@ export function resolveBimToolTempPoints(
     // ADR-363 Phase 5.5P — beam tempPoints from store.
     const bp = beamPreviewStore.get();
     return bp.startPoint && bp.endPoint ? [bp.startPoint, bp.endPoint] : bp.startPoint ? [bp.startPoint] : [];
+  }
+  if (activeTool === 'foundation-strip' || activeTool === 'foundation-tie-beam') {
+    // ADR-436 Slice 2 — foundation line tempPoints from store (mirror beam).
+    const fp = foundationPreviewStore.get();
+    return fp.startPoint && fp.endPoint ? [fp.startPoint, fp.endPoint] : fp.startPoint ? [fp.startPoint] : [];
   }
   return machinePoints;
 }

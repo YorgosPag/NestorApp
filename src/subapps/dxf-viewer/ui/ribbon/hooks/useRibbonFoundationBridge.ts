@@ -33,6 +33,7 @@ import {
   FOUNDATION_RIBBON_KEYS,
   FOUNDATION_RIBBON_KEYS_ACTIONS,
   FOUNDATION_RIBBON_BADGE_KEYS,
+  FOUNDATION_RIBBON_VISIBILITY_KEYS,
   isFoundationRibbonKey,
   isFoundationRibbonStringKey,
 } from './bridge/foundation-command-keys';
@@ -168,8 +169,8 @@ export function useRibbonFoundationBridge(
       // ── SELECTED ENTITY BRANCH ────────────────────────────────────────────
       if (foundation) {
         if (commandKey === FOUNDATION_RIBBON_KEYS.stringParams.kind) {
-          // Slice 1 = pad μόνο· το dropdown έχει μία επιλογή. Forward verbatim.
-          dispatchParams(foundation, { ...foundation.params, kind: value as FoundationKind } as FoundationParams);
+          // ADR-436 Slice 2 — kind combobox = DISPLAY-ONLY (Revit 3 separate tools).
+          // pad↔line είναι geometrically invalid· δεν επιτρέπουμε kind-switch. No-op.
           return;
         }
         if (commandKey === FOUNDATION_RIBBON_KEYS.stringParams.anchor) {
@@ -193,7 +194,7 @@ export function useRibbonFoundationBridge(
       const handle = foundationToolBridgeStore.get();
       if (!handle || !handle.isActive) return;
       if (commandKey === FOUNDATION_RIBBON_KEYS.stringParams.kind) {
-        handle.setKind(value as FoundationKind);
+        // ADR-436 Slice 2 — kind fixed by tool id (DISPLAY-ONLY combobox). No-op.
         return;
       }
       if (commandKey === FOUNDATION_RIBBON_KEYS.stringParams.anchor) {
@@ -247,8 +248,19 @@ export function useRibbonFoundationBridge(
     [resolveFoundation, levelManager, t],
   );
 
-  // Slice 1 — no kind-specific panels (pad only) → always visible.
-  const getPanelVisibility = useCallback((_visibilityKey: string): boolean => true, []);
+  // ADR-436 Slice 2 — kind-conditional panels. Resolve the active kind (selected
+  // entity, else the active tool handle) → pad-only vs line-only panel visibility.
+  const getPanelVisibility = useCallback((visibilityKey: string): boolean => {
+    const foundation = resolveFoundation();
+    const kind: FoundationKind | null = foundation
+      ? foundation.params.kind
+      : (toolHandle?.isActive ? toolHandle.kind : null);
+    if (kind === null) return true; // no context → show all (defensive)
+    const isLine = kind === 'strip' || kind === 'tie-beam';
+    if (visibilityKey === FOUNDATION_RIBBON_VISIBILITY_KEYS.padOnly) return kind === 'pad';
+    if (visibilityKey === FOUNDATION_RIBBON_VISIBILITY_KEYS.lineOnly) return isLine;
+    return true;
+  }, [resolveFoundation, toolHandle]);
 
   return useMemo(
     () => ({ onComboboxChange, getComboboxState, onToggle, getToggleState, getBadgeState, onAction, getPanelVisibility }),
