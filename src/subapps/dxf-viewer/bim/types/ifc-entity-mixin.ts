@@ -70,7 +70,9 @@ export type IfcEntityType =
   | 'IfcFlowMeter'
   | 'IfcBurner'
   // ADR-436 — θεμελίωση: shallow footing (πέδιλο/πεδιλοδοκός/συνδετήρια δοκός).
-  | 'IfcFooting';
+  | 'IfcFooting'
+  // ADR-437 — space separator / γραμμή διαχωρισμού χώρου (virtual boundary).
+  | 'IfcVirtualElement';
 
 export const IFC_ENTITY_TYPE_VALUES: readonly IfcEntityType[] = [
   'IfcWall',
@@ -125,6 +127,8 @@ export const IFC_ENTITY_TYPE_VALUES: readonly IfcEntityType[] = [
   'IfcBurner',
   // ADR-436 — θεμελίωση: shallow footing.
   'IfcFooting',
+  // ADR-437 — space separator (virtual boundary).
+  'IfcVirtualElement',
 ] as const;
 
 export type IfcPropertySetValue = string | number | boolean | null;
@@ -202,6 +206,8 @@ export const IfcEntityTypeSchema = z.enum([
   'IfcBurner',
   // ADR-436 — θεμελίωση: shallow footing.
   'IfcFooting',
+  // ADR-437 — space separator (virtual boundary).
+  'IfcVirtualElement',
 ]);
 
 export const IfcPropertySetValueSchema = z.union([

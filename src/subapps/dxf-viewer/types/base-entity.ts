@@ -79,7 +79,9 @@ export type EntityType =
   // ADR-419 — thin polygon floor covering per room (IfcCovering FLOORING).
   | 'floor-finish'
   // ADR-422 — analytical thermal space / θερμικός χώρος (IfcSpace).
-  | 'thermal-space';
+  | 'thermal-space'
+  // ADR-437 — space separator / γραμμή διαχωρισμού χώρου (IfcVirtualElement).
+  | 'space-separator';
 
 export interface BaseEntity {
   id: string;

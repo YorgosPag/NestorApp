@@ -40,6 +40,7 @@ import {
   isLWPolylineEntity,
   isRectangleEntity,
   isRectEntity,
+  isSpaceSeparatorEntity,
 } from '../../types/entities';
 import { rectangleCorners } from './wall-from-entity';
 import {
@@ -408,14 +409,18 @@ function regionLineSignature(entities: readonly Entity[]): string {
   let lines = 0;
   let polys = 0;
   let verts = 0;
+  // ADR-437 — οι διαχωριστές χώρου συμμετέχουν στην ανίχνευση περιοχής (ως segments).
+  // ΧΩΡΙΣ μέτρησή τους εδώ, η προσθήκη/διαγραφή διαχωριστή ΔΕΝ σπάει το content-fallback
+  // cache (ίδια υπογραφή πριν/μετά) → ο διαχωριστής γίνεται αόρατος στον detector.
+  let seps = 0;
   for (const e of entities) {
     if (isLineEntity(e)) lines++;
     else if (isPolylineEntity(e) || isLWPolylineEntity(e)) {
       polys++;
       verts += e.vertices?.length ?? 0;
-    }
+    } else if (isSpaceSeparatorEntity(e)) seps++;
   }
-  return `${lines}:${polys}:${verts}`;
+  return `${lines}:${polys}:${verts}:${seps}`;
 }
 
 /**

@@ -69,6 +69,8 @@ export type BimElementType =
   | 'floor-finish'
   // ADR-422 — analytical thermal space / θερμικός χώρος (IfcSpace).
   | 'thermal-space'
+  // ADR-437 — space separator / γραμμή διαχωρισμού χώρου (IfcVirtualElement).
+  | 'space-separator'
   // ADR-436 — substructure / θεμελίωση (πέδιλα/πεδιλοδοκοί/συνδετήριες δοκοί).
   | 'foundation';
 

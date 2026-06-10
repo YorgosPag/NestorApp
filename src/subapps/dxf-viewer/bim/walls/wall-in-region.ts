@@ -26,6 +26,7 @@ import {
   isLineEntity,
   isPolylineEntity,
   isLWPolylineEntity,
+  isSpaceSeparatorEntity,
 } from '../../types/entities';
 import { pointToLineDistance } from '../../rendering/entities/shared/geometry-utils';
 import { isPointInPolygon } from '../../utils/geometry/GeometryUtils';
@@ -81,6 +82,14 @@ export function extractLineSegments(entities: readonly Entity[]): RegionLineSeg[
         const b = verts[(i + 1) % verts.length];
         segs.push({ id: e.id, start: { x: a.x, y: a.y }, end: { x: b.x, y: b.y } });
       }
+      continue;
+    }
+    // ADR-437 — ο διαχωριστής χώρου (IfcVirtualElement) συμμετέχει στην ανίχνευση
+    // περιοχής ΟΠΩΣ μια γραμμή: εκθέτει το 2-point segment του ώστε ο θερμικός χώρος
+    // να κλείνει/υποδιαιρεί περιοχές πάνω σε διαχωριστές όπως πάνω σε τοίχους.
+    if (isSpaceSeparatorEntity(e)) {
+      const { start, end } = e.params;
+      segs.push({ id: e.id, start: { x: start.x, y: start.y }, end: { x: end.x, y: end.y } });
     }
   }
   return segs;
