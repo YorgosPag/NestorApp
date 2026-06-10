@@ -201,6 +201,28 @@ const MIN_THERMAL_OUTPUT_W_OPTIONS = [
   { value: '12000', labelKey: '12000', isLiteralLabel: true },
 ] as const;
 
+// Appliance dry weight (kg) — Revit Mechanical Equipment «Weight». Editable; spans light wall-hung
+// gas (~35 kg) to heavy floor-standing oil (~180 kg). Integer kg → plain numeric combobox. Drives
+// the «Βάρος» plan-tag line (structural loading).
+const WEIGHT_KG_OPTIONS = [
+  { value: '20',  labelKey: '20',  isLiteralLabel: true },
+  { value: '35',  labelKey: '35',  isLiteralLabel: true },
+  { value: '80',  labelKey: '80',  isLiteralLabel: true },
+  { value: '130', labelKey: '130', isLiteralLabel: true },
+  { value: '180', labelKey: '180', isLiteralLabel: true },
+] as const;
+
+// Boiler water content (L) — IFC Pset_BoilerTypeCommon.WaterStorageCapacity. Editable; spans a
+// small wall-hung heat exchanger (~2.5 L) to a large floor-standing oil body (~38 L). Decimal L →
+// plain numeric combobox. Drives the «Νερό» plan-tag line + the «Προτεινόμενο δοχείο» readout.
+const WATER_CONTENT_L_OPTIONS = [
+  { value: '2.5', labelKey: '2.5', isLiteralLabel: true },
+  { value: '5',   labelKey: '5',   isLiteralLabel: true },
+  { value: '12',  labelKey: '12',  isLiteralLabel: true },
+  { value: '25',  labelKey: '25',  isLiteralLabel: true },
+  { value: '38',  labelKey: '38',  isLiteralLabel: true },
+] as const;
+
 // ─── Tab definition ──────────────────────────────────────────────────────────
 
 export const CONTEXTUAL_MEP_BOILER_TAB: RibbonTab = {
@@ -746,6 +768,58 @@ export const CONTEXTUAL_MEP_BOILER_TAB: RibbonTab = {
                 labelKey: 'ribbon.commands.mepBoilerEditor.acousticBand',
                 commandKey: MEP_BOILER_RIBBON_KEYS.readouts.acousticBand,
                 comboboxWidthPx: 110,
+                options: [],
+              },
+            },
+          ],
+        },
+      ],
+    },
+    // ADR-408 Εύρος Β — «Εγκατάσταση» panel (physical/installation data). Revit groups the
+    // appliance's physical properties separately from thermal performance: dry weight (structural
+    // loading, partner of the mounting type) + water content (feeds the recommended-vessel readout).
+    // Always visible. The «Προτεινόμενο δοχείο» readout is read-only (`options: []` → bridge returns
+    // `disabled` state) and an indicative engineering estimate (see boiler-expansion-sizing.ts).
+    {
+      id: 'mep-boiler-installation',
+      labelKey: 'ribbon.panels.mepBoilerInstallation',
+      rows: [
+        {
+          isInFlyout: false,
+          buttons: [
+            {
+              type: 'combobox',
+              size: 'small',
+              command: {
+                id: 'mepBoiler.weight',
+                labelKey: 'ribbon.commands.mepBoilerEditor.weight',
+                commandKey: MEP_BOILER_RIBBON_KEYS.params.weight,
+                comboboxWidthPx: 90,
+                options: WEIGHT_KG_OPTIONS,
+              },
+            },
+            {
+              type: 'combobox',
+              size: 'small',
+              command: {
+                id: 'mepBoiler.waterContent',
+                labelKey: 'ribbon.commands.mepBoilerEditor.waterContent',
+                commandKey: MEP_BOILER_RIBBON_KEYS.params.waterContent,
+                comboboxWidthPx: 110,
+                options: WATER_CONTENT_L_OPTIONS,
+              },
+            },
+            {
+              // ADR-408 — recommended expansion-vessel readout (read-only; bridge returns
+              // `disabled` state). Derived from waterContentL (resolveRecommendedExpansionVesselL).
+              // An indicative engineering estimate (NOT code-exact) — see boiler-expansion-sizing.ts.
+              type: 'combobox',
+              size: 'small',
+              command: {
+                id: 'mepBoiler.recommendedVessel',
+                labelKey: 'ribbon.commands.mepBoilerEditor.recommendedVessel',
+                commandKey: MEP_BOILER_RIBBON_KEYS.readouts.recommendedVessel,
+                comboboxWidthPx: 120,
                 options: [],
               },
             },

@@ -43,4 +43,6 @@ export const NUMBER_KEY_TO_FIELD: Readonly<Record<string, keyof MepBoilerParams>
   [MEP_BOILER_RIBBON_KEYS.params.efficiency]: 'seasonalEfficiencyPercent',
   [MEP_BOILER_RIBBON_KEYS.params.nox]: 'noxMgKwh',
   [MEP_BOILER_RIBBON_KEYS.params.soundPower]: 'soundPowerDbA',
+  [MEP_BOILER_RIBBON_KEYS.params.weight]: 'weightKg',
+  [MEP_BOILER_RIBBON_KEYS.params.waterContent]: 'waterContentL',
 };

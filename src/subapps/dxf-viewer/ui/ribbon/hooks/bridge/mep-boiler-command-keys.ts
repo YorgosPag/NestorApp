@@ -49,6 +49,10 @@ export const MEP_BOILER_RIBBON_KEYS = {
     serviceClearance: 'mepBoiler.params.serviceClearance',
     /** L — expansion-vessel volume (Revit accessory). Lives in the always-visible «Ασφάλεια» panel. */
     expansionVesselVolume: 'mepBoiler.params.expansionVesselVolume',
+    /** kg — appliance dry weight (Revit «Weight», structural loading). «Εγκατάσταση» panel. */
+    weight: 'mepBoiler.params.weight',
+    /** L — boiler water content (IFC water storage). «Εγκατάσταση» panel; feeds the vessel readout. */
+    waterContent: 'mepBoiler.params.waterContent',
   },
   /**
    * String (non-numeric) combobox params — model catalog picker.
@@ -179,6 +183,8 @@ export const MEP_BOILER_RIBBON_KEYS = {
     noxClass: 'mepBoiler.readout.noxClass',
     /** Placement-suitability band (quiet/standard/loud) — derived from soundPowerDbA (resolveAcousticBand). */
     acousticBand: 'mepBoiler.readout.acousticBand',
+    /** L — indicative recommended expansion-vessel size — derived from waterContentL (resolveRecommendedExpansionVesselL). */
+    recommendedVessel: 'mepBoiler.readout.recommendedVessel',
   },
 } as const;
 
@@ -198,7 +204,9 @@ export type MepBoilerRibbonNumberCommandKey =
   | typeof MEP_BOILER_RIBBON_KEYS.params.expansionVesselVolume
   | typeof MEP_BOILER_RIBBON_KEYS.params.efficiency
   | typeof MEP_BOILER_RIBBON_KEYS.params.nox
-  | typeof MEP_BOILER_RIBBON_KEYS.params.soundPower;
+  | typeof MEP_BOILER_RIBBON_KEYS.params.soundPower
+  | typeof MEP_BOILER_RIBBON_KEYS.params.weight
+  | typeof MEP_BOILER_RIBBON_KEYS.params.waterContent;
 
 export const MEP_BOILER_RIBBON_NUMBER_KEYS: readonly MepBoilerRibbonNumberCommandKey[] = [
   MEP_BOILER_RIBBON_KEYS.params.width,
@@ -217,6 +225,8 @@ export const MEP_BOILER_RIBBON_NUMBER_KEYS: readonly MepBoilerRibbonNumberComman
   MEP_BOILER_RIBBON_KEYS.params.efficiency,
   MEP_BOILER_RIBBON_KEYS.params.nox,
   MEP_BOILER_RIBBON_KEYS.params.soundPower,
+  MEP_BOILER_RIBBON_KEYS.params.weight,
+  MEP_BOILER_RIBBON_KEYS.params.waterContent,
 ];
 
 // ─── Toggle keys (Revit Yes/No params) ───────────────────────────────────────
@@ -318,7 +328,8 @@ export type MepBoilerRibbonReadoutKey =
   | typeof MEP_BOILER_RIBBON_KEYS.readouts.adequacyStatus
   | typeof MEP_BOILER_RIBBON_KEYS.readouts.erpClass
   | typeof MEP_BOILER_RIBBON_KEYS.readouts.noxClass
-  | typeof MEP_BOILER_RIBBON_KEYS.readouts.acousticBand;
+  | typeof MEP_BOILER_RIBBON_KEYS.readouts.acousticBand
+  | typeof MEP_BOILER_RIBBON_KEYS.readouts.recommendedVessel;
 
 const MEP_BOILER_READOUT_KEY_SET: ReadonlySet<string> = new Set<string>([
   MEP_BOILER_RIBBON_KEYS.readouts.requiredOutputW,
@@ -327,6 +338,7 @@ const MEP_BOILER_READOUT_KEY_SET: ReadonlySet<string> = new Set<string>([
   MEP_BOILER_RIBBON_KEYS.readouts.erpClass,
   MEP_BOILER_RIBBON_KEYS.readouts.noxClass,
   MEP_BOILER_RIBBON_KEYS.readouts.acousticBand,
+  MEP_BOILER_RIBBON_KEYS.readouts.recommendedVessel,
 ]);
 
 /** Read-only sizing readouts — served by the bridge as `disabled` combobox state. */
