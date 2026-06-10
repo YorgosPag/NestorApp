@@ -66,6 +66,7 @@ const LEGACY = {
   shareholders: SYSTEM_DOCS.ACCT_SHAREHOLDERS,
   service_presets: SYSTEM_DOCS.ACCT_SERVICE_PRESETS,
   matching_config: SYSTEM_DOCS.ACCT_MATCHING_CONFIG,
+  efka_user_config: SYSTEM_DOCS.ACCT_EFKA_USER_CONFIG,
 };
 
 let docStore: Record<string, Record<string, unknown> | undefined>;
@@ -113,6 +114,7 @@ describe('GET — dry-run preview', () => {
     expect(statusOf(body, 'partners')).toBe('READY_TO_MIGRATE');
     expect(statusOf(body, 'members')).toBe('ALREADY_MIGRATED');
     expect(statusOf(body, 'shareholders')).toBe('NO_SOURCE');
+    expect(statusOf(body, 'efka_user_config')).toBe('NO_SOURCE');
     expect(body.willMigrate).toBe(1);
     // zero writes
     expect(docStore[`${COMPANY_ID}__partners`]).toBeUndefined();
@@ -126,20 +128,25 @@ describe('GET — dry-run preview', () => {
 });
 
 describe('POST — execute migration', () => {
-  it('copies each available global → {companyId}__<type>, stamps companyId, keeps globals', async () => {
+  it('copies each available global → per-tenant, stamps companyId, keeps globals', async () => {
     docStore[LEGACY.partners] = { partners: [{ id: 'p1' }] };
     docStore[LEGACY.matching_config] = { amountTolerancePercent: 5 };
+    docStore[LEGACY.efka_user_config] = { contributionClass: 1 };
 
     const res = await POST(req as never, undefined as never, undefined as never);
     const body = await res.json();
 
-    expect(body.migratedCount).toBe(2);
+    expect(body.migratedCount).toBe(3);
     expect(docStore[`${COMPANY_ID}__partners`]?.companyId).toBe(COMPANY_ID);
     expect(docStore[`${COMPANY_ID}__matching_config`]?.companyId).toBe(COMPANY_ID);
     expect(docStore[`${COMPANY_ID}__matching_config`]?.amountTolerancePercent).toBe(5);
     expect(docStore[`${COMPANY_ID}__partners`]?.updatedAt).toBeDefined();
+    // EFKA config → bare {companyId} doc id (separate collection), companyId stamped
+    expect(docStore[COMPANY_ID]?.companyId).toBe(COMPANY_ID);
+    expect(docStore[COMPANY_ID]?.contributionClass).toBe(1);
     // globals intact (rollback safety)
     expect(docStore[LEGACY.partners]).toBeDefined();
+    expect(docStore[LEGACY.efka_user_config]).toBeDefined();
     expect(deletedDocs).toHaveLength(0);
     // singletons without a source are skipped
     expect(docStore[`${COMPANY_ID}__shareholders`]).toBeUndefined();

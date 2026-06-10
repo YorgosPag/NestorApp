@@ -625,6 +625,9 @@ export const SYSTEM_DOCS = {
 
   // 📊 ACCOUNTING EFKA CONFIG DOCUMENT (ADR-245B: Hardcoded Strings Audit)
   // Path: accounting_efka_config/user_config — EFKA user configuration
+  // ⚠️ ADR-439 Phase 2c: now per-tenant (`accounting_efka_config/{companyId}`, bare doc id like
+  // company_profile). This legacy GLOBAL doc id survives ONLY as the migration source
+  // (/api/admin/migrate-accounting-singletons). Do NOT use for new reads/writes.
   ACCT_EFKA_USER_CONFIG: process.env.NEXT_PUBLIC_ACCT_EFKA_USER_CONFIG_DOC || 'user_config',
 
   // 🔄 ACCOUNTING MATCHING ENGINE CONFIG (Phase 2a — SAP/Midday pattern)

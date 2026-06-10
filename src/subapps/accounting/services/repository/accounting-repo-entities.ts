@@ -8,7 +8,7 @@
  */
 
 import { safeFirestoreOperation } from '@/lib/firebaseAdmin';
-import { COLLECTIONS, SYSTEM_DOCS } from '@/config/firestore-collections';
+import { COLLECTIONS } from '@/config/firestore-collections';
 
 import type { Partner, Member, Shareholder } from '../../types/entity';
 import type { EFKAPayment, EFKAUserConfig } from '../../types/efka';
@@ -176,7 +176,9 @@ export async function updateEFKAPayment(
 
 export async function getEFKAUserConfig(tenant: TenantContext): Promise<EFKAUserConfig | null> {
   return safeFirestoreOperation(async (db) => {
-    const snap = await db.collection(COLLECTIONS.ACCOUNTING_EFKA_CONFIG).doc(SYSTEM_DOCS.ACCT_EFKA_USER_CONFIG).get();
+    // ADR-439 Phase 2c: per-tenant. The EFKA config lives in its own collection with one
+    // config per tenant → bare `{companyId}` doc id (mirrors company_profile), not composite.
+    const snap = await db.collection(COLLECTIONS.ACCOUNTING_EFKA_CONFIG).doc(tenant.companyId).get();
     if (!snap.exists) return null;
     return snap.data() as EFKAUserConfig;
   }, null);
@@ -184,8 +186,9 @@ export async function getEFKAUserConfig(tenant: TenantContext): Promise<EFKAUser
 
 export async function saveEFKAUserConfig(tenant: TenantContext, config: EFKAUserConfig): Promise<void> {
   await safeFirestoreOperation(async (db) => {
-    await db.collection(COLLECTIONS.ACCOUNTING_EFKA_CONFIG).doc(SYSTEM_DOCS.ACCT_EFKA_USER_CONFIG).set(
-      sanitizeForFirestore(config as unknown as Record<string, unknown>)
+    // Stamp companyId so the gate-by-body-companyId rules accept the write/read.
+    await db.collection(COLLECTIONS.ACCOUNTING_EFKA_CONFIG).doc(tenant.companyId).set(
+      sanitizeForFirestore({ ...config, companyId: tenant.companyId } as unknown as Record<string, unknown>)
     );
   }, undefined);
 }

@@ -142,4 +142,25 @@ describe('FirestoreAccountingRepository — sibling singletons per-tenant (ADR-4
     expect(lastWrite?.data.companyId).toBe(COMPANY_ID);
     expect(lastWrite?.data.amountTolerancePercent).toBe(5);
   });
+
+  // ── EFKA User Config (separate collection → bare {companyId} doc id) ───────
+  it('getEFKAUserConfig reads accounting_efka_config/{companyId}, not the legacy global doc', async () => {
+    docStore[COMPANY_ID] = { contributionClass: 1, companyId: COMPANY_ID };
+    const repo = new FirestoreAccountingRepository(tenant);
+
+    const result = await repo.getEFKAUserConfig();
+
+    expect(accessedDocIds).toContain(COMPANY_ID);
+    expect(accessedDocIds).not.toContain(SYSTEM_DOCS.ACCT_EFKA_USER_CONFIG);
+    expect(result).not.toBeNull();
+  });
+
+  it('saveEFKAUserConfig writes accounting_efka_config/{companyId} and stamps companyId', async () => {
+    const repo = new FirestoreAccountingRepository(tenant);
+    await repo.saveEFKAUserConfig({ contributionClass: 1 } as never);
+
+    expect(lastWrite?.docId).toBe(COMPANY_ID);
+    expect(lastWrite?.data.companyId).toBe(COMPANY_ID);
+    expect(accessedDocIds).not.toContain(SYSTEM_DOCS.ACCT_EFKA_USER_CONFIG);
+  });
 });
