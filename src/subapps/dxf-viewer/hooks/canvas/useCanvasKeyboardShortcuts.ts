@@ -126,6 +126,12 @@ export interface UseCanvasKeyboardShortcutsParams {
   clearEntitySelection?: () => void;
   /** True when any non-DXF entity is selected (e.g. overlays) — widens the Escape guard */
   hasAnySelection?: boolean;
+  /**
+   * Event-time getter — true when a MEP circuit is wire-selected (`activeSystemId`,
+   * no scene entity). Widens the Escape deselect guard so ESC clears a circuit-only
+   * selection. Getter (not snapshot) → no orchestrator subscription (ADR-040).
+   */
+  hasActiveCircuit?: () => boolean;
   /** PageUp/PageDown: bring selected entity to front / send to back */
   handleReorderEntity?: (direction: 'front' | 'back') => void;
   /**
@@ -195,6 +201,7 @@ export function useCanvasKeyboardShortcuts({
   bimCopyIsActive = false,
   clearEntitySelection,
   hasAnySelection = false,
+  hasActiveCircuit,
   handleReorderEntity,
   drawingTempPoints,
   onDirectDistanceEntry,
@@ -424,6 +431,7 @@ export function useCanvasKeyboardShortcuts({
     setSelectedGrips,
     selectedEntityIds,
     hasAnySelection,
+    hasActiveCircuit,
     onExitDrawMode,
     clearEntitySelection,
     handleMoveEscape,
