@@ -23,7 +23,7 @@ import {
   type DetectedRectangle,
 } from '../../bim/walls/wall-in-region';
 import { perimeterFacesToRects, type PerimeterFacesResult } from '../../bim/walls/perimeter-from-faces';
-import type { WallParamOverrides } from './wall-completion';
+import { defaultEdgeAlignmentPoint, type WallParamOverrides } from './wall-completion';
 import type { WallToolState } from './wall-tool-types';
 
 export interface WallToolListenerCtx {
@@ -95,11 +95,13 @@ export function useWallToolDynamicInputListener(ctx: WallToolListenerCtx): void 
         }
         return;
       }
-      // ADR-363 Phase 1F — DI is the precision path. Explicit numeric submit at
-      // `awaitingEnd` commits centered on A→B, BYPASSING the 3-click alignment.
-      // Manual mouse-click users still get the strict 3-click flow.
+      // ADR-363 "Location Line = Finish Face" — DI is the precision path. Explicit
+      // numeric submit at `awaitingEnd` commits with the drawn A→B line on one wall
+      // FACE (edge), body to the default side — matching the awaitingEnd rubber-band
+      // preview (WYSIWYG). Manual mouse-click users still get the strict 3-click flow
+      // where the side is re-picked at click 3.
       if (s.phase === 'awaitingEnd' && mergedState.startPoint) {
-        commitStraightFromState(mergedState, target);
+        commitStraightFromState(mergedState, target, defaultEdgeAlignmentPoint(mergedState.startPoint, target));
       } else if (
         s.phase === 'awaitingAlignment' &&
         mergedState.startPoint &&

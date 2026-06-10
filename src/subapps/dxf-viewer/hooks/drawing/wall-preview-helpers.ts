@@ -14,7 +14,7 @@
 
 import type { Point2D } from '../../rendering/types/Types';
 import type { ExtendedSceneEntity, PreviewPoint } from './drawing-types';
-import { buildDefaultWallParams, buildWallEntity, type WallParamOverrides } from './wall-completion';
+import { buildDefaultWallParams, buildWallEntity, defaultEdgeAlignmentPoint, type WallParamOverrides } from './wall-completion';
 import { wallPreviewStore } from '../../bim/walls/wall-preview-store';
 import type { WallKind } from '../../bim/types/wall-types';
 import type { Point3D } from '../../bim/types/bim-base';
@@ -88,7 +88,12 @@ export function generateWallPreview(
 
   const endPt = cursorPoint;
   const kind: WallKind = preview.curveControl ? 'curved' : 'straight';
-  return makeWallFootprintGhost('preview_wall_footprint', startPt, endPt, overrides, kind, sceneUnits, preview.curveControl, null);
+  // ADR-363 "Location Line = Finish Face": the straight rubber-band (awaitingEnd,
+  // before the side is picked) places the drawn start→cursor line on one wall
+  // FACE (edge) with the body to a default side, NOT the centerline. The actual
+  // side is re-picked at the 3rd alignment click. Curved keeps its centered axis.
+  const alignment = kind === 'straight' ? defaultEdgeAlignmentPoint(startPt, endPt) : null;
+  return makeWallFootprintGhost('preview_wall_footprint', startPt, endPt, overrides, kind, sceneUnits, preview.curveControl, alignment);
 }
 
 /**

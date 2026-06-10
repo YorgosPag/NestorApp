@@ -160,6 +160,31 @@ export function computeWallAlignmentOffset(
   };
 }
 
+/**
+ * ADR-363 — "Location Line = Finish Face" default for the straight wall tool:
+ * returns a synthetic alignment point on the +n_ccw (left) side of A→B so the
+ * drawn A→B line becomes one wall FACE (edge) and the body extends left, instead
+ * of the line being the centerline. Reuses `computeWallAlignmentOffset` (SSoT) —
+ * feed the returned point as `alignmentPoint` to `buildDefaultWallParams`.
+ *
+ * This is the PRE-PICK default shown by the `awaitingEnd` rubber-band preview and
+ * applied by the dynamic-input precision commit, so preview == commit (WYSIWYG).
+ * The user re-picks the actual side at the 3rd alignment click. Returns `null`
+ * for a degenerate (zero-length) segment ⇒ caller falls back to centered.
+ */
+export function defaultEdgeAlignmentPoint(
+  startPoint: Readonly<Point2D>,
+  endPoint: Readonly<Point2D>,
+): Point2D | null {
+  const dx = endPoint.x - startPoint.x;
+  const dy = endPoint.y - startPoint.y;
+  const len = Math.hypot(dx, dy);
+  if (len < 1e-9) return null;
+  // +n_ccw (left of A→B direction): any positive distance picks the left side
+  // in `computeWallAlignmentOffset` (cross > 0).
+  return { x: startPoint.x + (-dy / len), y: startPoint.y + (dx / len) };
+}
+
 // ─── Entity builder ──────────────────────────────────────────────────────────
 
 /**
