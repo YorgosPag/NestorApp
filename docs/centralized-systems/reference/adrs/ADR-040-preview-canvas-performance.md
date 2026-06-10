@@ -71,10 +71,6 @@ Mouse Event → DxfCanvas.onMouseMove
 
 ## Changelog
 
-### 2026-06-11 — Entity renderers draw shared dim-label pill (ADR-363/ADR-436) — pure canvas, μηδέν νέο subscription (CHECK 6D)
-
-**Status**: IMPLEMENTED 2026-06-11. Οι entity renderers (`WallRenderer`, `BeamRenderer`, `ColumnRenderer`, `FoundationRenderer`, `OpeningRenderer`) ζωγραφίζουν πλέον — σε hover/select — ένα κεντρωμένο Revit-style **dimension pill** μέσω του νέου **κοινού SSoT** `bim/labels/bim-dim-labels.ts` (`drawEntityDimLabel`, στηριγμένο στο `rendering/utils/canvas-pill.ts`). **Pure canvas draw — μηδέν React, μηδέν stores, μηδέν `useSyncExternalStore`** (το module είναι ρητά «ADR-040 micro-leaf safe»): ο κάθε renderer καλεί τη συνάρτηση στο τέλος του render pass με `worldToScreen` projector, χωρίς νέα subscription και χωρίς αλλαγή σε bitmap cache-key. Καμία αλλαγή στο micro-leaf subscription pattern — μόνο canvas drawing touch (CHECK 6D — co-staged ADR-040). Λεπτομέρεια στο ADR-363 §5.6 Phase 8F + ADR-436 Slice D (rect-frame grip SSoT).
-
 ### 2026-06-10 — Space-separator tool wiring (ADR-437) — pure pass-through στον orchestrator, μηδέν νέο subscription (CHECK 6B)
 
 **Status**: IMPLEMENTED 2026-06-10. Το νέο `spaceSeparatorTool` (Revit «Room Separator», ADR-437) περνάει μέσα από τον `CanvasSection.tsx` orchestrator: (i) destructure από το αποτέλεσμα του `useSpecialTools(...)` και (ii) forward ως πεδίο στα `useCanvasClickHandler` params — μαζί με νέο optional `spaceSeparatorTool?: SlabToolLike` στο `UseCanvasClickHandlerParams` (`canvas-click-types.ts`). **Καθαρό pass-through**: ο orchestrator ΔΕΝ αποκτά νέο `useSyncExternalStore` (CHECK 6C respected), καμία αλλαγή σε bitmap cache-key, η click-FSM ζει στο `useSpaceSeparatorTool` (leaf/hook). Το shell-touch είναι μόνο το threading ενός ακόμη tool handle — ίδιο μοτίβο με `thermalSpaceTool` (ADR-422). Co-staged για CHECK 6B (`CanvasSection.tsx`). Λεπτομέρεια στο ADR-437 changelog.
@@ -2531,6 +2527,18 @@ DxfCanvas (z=10, UPPER):
 **Validation**: `localStorage.setItem('dxf-perf-trace','1')`, hard reload, hover dense scene 5-10s. Target: mousemove violation < 30ms, FPS ≈ 60. Pan still triggers full rebuild (cache invalidates by design).
 
 **Risk recurrence**: any future PR adding `hoveredEntityId` / `selectedEntityIds` / `gripInteractionState` / `dragPreview` to the bitmap cache key WILL re-trigger the Phase D v1 freeze. Test: hover a dense scene, FPS must stay ≥ 30. Comments in `dxf-bitmap-cache.ts` and the architectural rule above guard against regression.
+
+---
+
+### 2026-06-11: BIM dimension-label SSoT (hover/select pill on all structural entities) + grip-drag Y-flip fix
+
+**Change (ADR-363/ADR-436)**: centralized "BIM dimension annotation" — a Revit-style centred dimension pill shown on **hover/select** for every structural BIM entity (column, foundation, wall, beam, opening), plus the existing live **grip-drag** label, all sharing one font + pill + formatter SSoT. NEW `bim/labels/bim-dim-labels.ts` (`formatBimDimLabels` dispatch — columns reuse `formatColumnDimLabels`; wall/beam `geometry.length` is **metres**→mm; foundation strip/tie-beam length from start/end via `scene-units`; `drawDimPill`; `drawEntityDimLabel` **free function** — not a `BaseEntityRenderer` method, keeps the generic render layer BIM-free and avoids the `rendering/entities/` CHECK 6D gate). NEW `PILL_DIM_FONT='12px'` + `PILL_DIM_LINE_HEIGHT` in `canvas-pill` (opening Mark tags keep `PILL_FONT`). `drawColumnDimPill` removed (→ `drawDimPill`).
+
+**Renderers touched (micro-leaf compliant — pure ctx, zero new subscriptions)**: `bim/renderers/{Column,Wall,Beam,Foundation,Opening}Renderer.ts` each gain ONE `drawEntityDimLabel(...)` call gated on `phaseState.phase === 'highlighted' || options.selected`, drawn before `finalizeRender`. ColumnRenderer migrated off its bespoke `drawCenterDimLabel` body (behaviour identical). Opening Mark tag untouched (offset along wall normal vs centred pill).
+
+**Grip-drag annotation (`hooks/tools/useGripDimAnnotation.ts`)**: (1) label font → `PILL_DIM_FONT` (readability); (2) **BUG FIX** — replaced the local `worldToScreen` (which omitted the Y-flip → label tracked the cursor vertically inverted) with the canonical `CoordinateTransforms.worldToScreen(p, transform, viewport)` SSoT (viewport from the already-passed `getViewportElement`, mirroring `useGripGhostPreview`). Removes the duplicate transform.
+
+**Verify**: 30 bim-dim-labels jest + full bim/{labels,walls,grips,columns,foundations,beams,renderers} green; tsc clean. ⚠️ Browser verify (hover/select pill per entity + drag label vertical tracking).
 
 ---
 
