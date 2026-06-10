@@ -1032,6 +1032,54 @@ describe('deriveAnnualHeating', () => {
     expect(row.timeConstantHours).toBeCloseTo(catTau, 3); // κατηγορία (geometry=0)
   });
 
+  // ─── L7.9-C — geometry-derived C_m από ΟΡΙΖΟΝΤΙΑ (floor/roof/ceiling κ_m·A) ─────
+
+  // Η βαριά μπετονένια πλάκα δαπέδου μπαίνει στο ίδιο kind-agnostic άθροισμα του C_m.
+  const KAPPA_FLOOR = 136800; // worked example: default floor DNA, top-first (tile+screed)
+
+  it('L7.9-C — floor boundary χωρίς κ_m ⇒ ΑΜΕΤΑΒΛΗΤΑ (zero-regression vs L7.9-B walls-only)', () => {
+    const floor = makeResult('sp-1', {
+      boundaries: [boundary({ kind: 'floor', condition: 'adjacent-heated', area: 16 })],
+    });
+    const row = deriveAnnualHeating(resultsOf(floor), [makeSpace('sp-1')], 'B').rows[0];
+    expect(row.timeConstantHours).toBeUndefined();
+    expect(row.utilisation).toBeCloseTo(0.783114); // byte-identical L7.1
+    expect(row.netDemandKWh).toBeCloseTo(977.349);
+  });
+
+  it('L7.9-C — βαρύ δάπεδο (κ_m·A) → μεγαλύτερο C_m/τ/a0 → μεγαλύτερο η_gn → μικρότερη net', () => {
+    const floor = makeResult('sp-1', {
+      boundaries: [boundary({ kind: 'floor', condition: 'ground', area: 16, arealHeatCapacityJperM2K: KAPPA_FLOOR })],
+    });
+    const row = deriveAnnualHeating(resultsOf(floor), [makeSpace('sp-1')], 'B').rows[0];
+    const tau = computeTimeConstantHours(KAPPA_FLOOR * 16, 40); // C_m=2.19 MJ/K, H=40
+    const a0 = computeNumericParam(tau);
+    const gains = 345.6; // internal-only
+    const expectedEta = computeGainUtilisation(gains / 1248, a0);
+    expect(row.timeConstantHours).toBeCloseTo(tau, 3);
+    expect(row.utilisation).toBeCloseTo(expectedEta);
+    expect(row.netDemandKWh).toBeCloseTo(1248 - expectedEta * gains, 2);
+    const base = deriveAnnualHeating(resultsOf(makeResult('sp-1')), [makeSpace('sp-1')], 'B').rows[0];
+    expect(row.utilisation).toBeGreaterThan(base.utilisation);
+    expect(row.netDemandKWh).toBeLessThan(base.netDemandKWh);
+  });
+
+  it('L7.9-C — δάπεδο + τοίχος κ_m αθροίζονται στο ίδιο C_m (kind-agnostic aggregator)', () => {
+    const floorOnly = makeResult('sp-1', {
+      boundaries: [boundary({ kind: 'floor', condition: 'ground', area: 16, arealHeatCapacityJperM2K: KAPPA_FLOOR })],
+    });
+    const floorPlusWall = makeResult('sp-2', {
+      boundaries: [
+        boundary({ kind: 'floor', condition: 'ground', area: 16, arealHeatCapacityJperM2K: KAPPA_FLOOR }),
+        boundary({ kind: 'wall', condition: 'adjacent-heated', area: 48, arealHeatCapacityJperM2K: KAPPA_CONCRETE }),
+      ],
+    });
+    const rf = deriveAnnualHeating(resultsOf(floorOnly), [makeSpace('sp-1')], 'B').rows[0];
+    const rfw = deriveAnnualHeating(resultsOf(floorPlusWall), [makeSpace('sp-2')], 'B').rows[0];
+    expect(rfw.timeConstantHours!).toBeGreaterThan(rf.timeConstantHours!); // περισσότερη μάζα
+    expect(rfw.netDemandKWh).toBeLessThan(rf.netDemandKWh);
+  });
+
   it('ΕΞΑΙΡΕΙ το reheat από τον συντελεστή απωλειών (συνεχής vs επανέναρξη)', () => {
     const withReheat = makeResult('sp-1', { reheatW: 5000, totalW: 5800 });
     const result = deriveAnnualHeating(resultsOf(withReheat), [makeSpace('sp-1')], 'B');

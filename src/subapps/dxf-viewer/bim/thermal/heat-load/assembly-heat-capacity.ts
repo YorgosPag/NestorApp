@@ -28,11 +28,14 @@
  */
 
 import type { WallDna } from '../../types/wall-dna-types';
+import type { SlabDna } from '../../types/slab-dna-types';
+import type { SlabKind } from '../../types/slab-types';
 import {
   getDensity,
   getSpecificHeat,
   getThermalConductivityLambda,
 } from '../../walls/wall-material-catalog';
+import { getConstructionMaterialThermal } from '../construction-material-thermal';
 
 /**
  * Μέγιστο ενεργό πάχος `d_eff,max` (m) — EN ISO 13790 §12.3.1.1. Σωρευτικό όριο: η
@@ -133,4 +136,59 @@ export function computeWallArealHeatCapacity(
   opts?: ArealHeatCapacityOptions,
 ): number {
   return computeArealHeatCapacity(wallDnaToHeatCapacityLayers(dna), opts);
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// L7.9-C — ΟΡΙΖΟΝΤΙΑ στοιχεία (πλάκες/στέγες/δάπεδα/οροφές) — geometry-derived κ_m
+// ════════════════════════════════════════════════════════════════════════════
+
+/**
+ * Slab kinds με **εσωτερική επιφάνεια προς τα ΚΑΤΩ** (η οροφή ενός χώρου: ο χώρος
+ * βλέπει την κάτω παρειά / soffit). Το `SlabDna.layers` είναι ordered **top→bottom**,
+ * άρα γι' αυτά καταναλώνουμε **αντίστροφα** (bottom-first) για το interior-first
+ * άθροισμα. Τα υπόλοιπα (`floor`/`ground`/`foundation` — το δάπεδο του χώρου) έχουν
+ * εσωτ. επιφάνεια προς τα **πάνω** (finish side) ⇒ top-first ⇒ forward.
+ */
+const BOTTOM_INTERIOR_SLAB_KINDS: ReadonlySet<SlabKind> = new Set<SlabKind>(['roof', 'ceiling']);
+
+/**
+ * Μετατρέπει `SlabDna` σε `HeatCapacityLayer[]` σε σειρά **interior-first** ανάλογα
+ * με το `kind` (EN ISO 13790 §12.3.1.1). Τα `SlabDna.layers` είναι ordered
+ * **top→bottom**:
+ *   - `floor`/`ground`/`foundation` (δάπεδο χώρου, εσωτ.=πάνω) ⇒ **forward** (top-first),
+ *   - `roof`/`ceiling` (οροφή χώρου, εσωτ.=κάτω) ⇒ **reverse** (bottom-first).
+ * ρ/c/λ από το construction-material thermal catalog (ΟΧΙ το graded wall catalog —
+ * διαφορετικό vocabulary). Στρώσεις χωρίς γνωστό υλικό παραλείπονται (μηδέν μάζα,
+ * mirror `wallDnaToHeatCapacityLayers`).
+ */
+export function slabDnaToHeatCapacityLayers(dna: SlabDna, kind: SlabKind): HeatCapacityLayer[] {
+  const bottomFirst = BOTTOM_INTERIOR_SLAB_KINDS.has(kind);
+  const out: HeatCapacityLayer[] = [];
+  for (let k = 0; k < dna.layers.length; k++) {
+    const i = bottomFirst ? dna.layers.length - 1 - k : k;
+    const layer = dna.layers[i];
+    const thermal = getConstructionMaterialThermal(layer.materialId);
+    if (thermal === undefined) continue;
+    out.push({
+      thickness_m: layer.thickness * 0.001,
+      density: thermal.density,
+      specificHeat: thermal.specificHeat,
+      lambda: thermal.lambda,
+    });
+  }
+  return out;
+}
+
+/**
+ * Επιφανειακή θερμοχωρητικότητα `κ_m` (J/m²K) μιας πλάκας από τα `SlabDna` layers,
+ * interior-first ανά `kind` (EN ISO 13790 §12.3.1.1). `0` αν καμία στρώση έχει
+ * resolvable μάζα (custom/άγνωστα υλικά) → ο caller δεν κάνει stamp → fallback
+ * κατηγορίας (zero-regression). Reuse του `computeArealHeatCapacity` core (N.0.2).
+ */
+export function computeSlabArealHeatCapacity(
+  dna: SlabDna,
+  kind: SlabKind,
+  opts?: ArealHeatCapacityOptions,
+): number {
+  return computeArealHeatCapacity(slabDnaToHeatCapacityLayers(dna, kind), opts);
 }

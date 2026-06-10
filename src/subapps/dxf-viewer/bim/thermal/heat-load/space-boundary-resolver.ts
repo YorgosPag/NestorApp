@@ -25,7 +25,8 @@ import type { OpeningEntity } from '../../types/opening-types';
 import type { ThermalSpaceEntity } from '../../types/thermal-space-types';
 import { computeThermalSpaceGeometry } from '../../types/thermal-space-types';
 import { computeWallTypeUValue } from '../wall-assembly-thermal';
-import { computeWallArealHeatCapacity } from './assembly-heat-capacity';
+import { computeSlabArealHeatCapacity, computeWallArealHeatCapacity } from './assembly-heat-capacity';
+import { findBestSlabMatch, type SlabMatchCandidate } from './slab-space-match';
 import { getGlazingSolarFactor, resolveOpeningUValue } from '../glazing-u-catalog';
 import { isWindowKind } from '../../types/opening-types';
 import { sceneUnitsToMeters, type SceneUnits } from '../../../utils/scene-units';
@@ -111,6 +112,34 @@ export interface SpaceBoundaryContext {
    * σκίαση ορίζοντα (Slice E). Absent ⇒ 0 (single-building / άστοχη τοποθέτηση).
    */
   readonly apertureBaseElevationM?: number;
+  /**
+   * Πλάκες που μπορεί να αποτελούν το **δάπεδο** του χώρου (kinds floor/ground/
+   * foundation του ενεργού ορόφου) — geometry-derived θερμική μάζα δαπέδου `κ_m`
+   * (ADR-422 L7.9-C). Best-match με footprint containment. Absent/κενό ⇒ no stamp
+   * ⇒ fallback κατηγορίας (zero-regression).
+   */
+  readonly floorSlabs?: readonly SlabMatchCandidate[];
+  /**
+   * Πλάκες που μπορεί να αποτελούν την **οροφή/στέγη** του χώρου (roof/ceiling του
+   * ενεργού ορόφου ή το δάπεδο του άνω ορόφου) — geometry-derived θερμική μάζα
+   * οροφής `κ_m` (ADR-422 L7.9-C). Absent/κενό ⇒ no stamp ⇒ zero-regression.
+   */
+  readonly ceilingSlabs?: readonly SlabMatchCandidate[];
+}
+
+/**
+ * geometry-derived `κ_m` (J/m²K) της πλάκας που οριοθετεί τον χώρο (L7.9-C), ή
+ * `undefined` όταν δεν υπάρχει matched slab με resolvable DNA (⇒ fallback
+ * κατηγορίας, zero-regression). Best-match με footprint containment.
+ */
+function resolveSlabArealHeatCapacity(
+  footprint: readonly Point3D[],
+  candidates: readonly SlabMatchCandidate[] | undefined,
+): number | undefined {
+  if (!candidates || candidates.length === 0) return undefined;
+  const match = findBestSlabMatch(footprint, candidates);
+  if (!match?.dna) return undefined;
+  return computeSlabArealHeatCapacity(match.dna, match.kind) || undefined;
 }
 
 /** U τοίχου: από DNA αν υπάρχει, αλλιώς fallback default. */
@@ -280,10 +309,17 @@ function resolveFloorBoundary(
   position: StoreyPosition,
   exposedPerimeterM: number,
   groundWallThicknessM: number,
+  arealHeatCapacityJperM2K: number | undefined,
 ): HeatLoadBoundary {
   const onGround = position === 'lowest' || position === 'only';
   if (!onGround) {
-    return { kind: 'floor', condition: 'adjacent-heated', uValue: DEFAULT_FLOOR_U_WPER_M2K, area: areaM2 };
+    return {
+      kind: 'floor',
+      condition: 'adjacent-heated',
+      uValue: DEFAULT_FLOOR_U_WPER_M2K,
+      area: areaM2,
+      arealHeatCapacityJperM2K,
+    };
   }
   const groundUValue = computeGroundFloorUValue({
     areaM2,
@@ -299,6 +335,7 @@ function resolveFloorBoundary(
     condition: 'ground',
     uValue: groundUValue ?? DEFAULT_FLOOR_U_WPER_M2K,
     area: areaM2,
+    arealHeatCapacityJperM2K,
     // 13370 `U_g` ενσωματώνει τη διαδρομή εδάφους ⇒ πλήρες ΔΤ (b=1). Fallback (null) ⇒
     // χωρίς stamp ⇒ ο engine εφαρμόζει το flat ground `b`.
     ...(groundUValue !== null ? { groundTemperatureFactor: 1.0 } : {}),
@@ -315,6 +352,7 @@ function resolveRoofBoundary(
   areaM2: number,
   position: StoreyPosition,
   roofSolarAbsorptance: number,
+  arealHeatCapacityJperM2K: number | undefined,
 ): HeatLoadBoundary {
   const isRoof = position === 'highest' || position === 'only';
   return {
@@ -323,6 +361,7 @@ function resolveRoofBoundary(
     uValue: DEFAULT_ROOF_U_WPER_M2K,
     area: areaM2,
     solarAbsorptance: isRoof ? roofSolarAbsorptance : undefined,
+    arealHeatCapacityJperM2K,
   };
 }
 
@@ -395,9 +434,15 @@ export function resolveSpaceBoundaries(
       ? (exteriorThicknessLenScene / exposedPerimeterScene) * sceneToM
       : DEFAULT_GROUND_WALL_THICKNESS_M;
 
+  // L7.9-C: geometry-derived θερμική μάζα δαπέδου/οροφής `κ_m` από τη matched πλάκα
+  // (footprint containment). Absent slab/DNA ⇒ undefined ⇒ no stamp ⇒ fallback
+  // κατηγορίας (zero-regression).
+  const floorKappa = resolveSlabArealHeatCapacity(verts, ctx.floorSlabs);
+  const roofKappa = resolveSlabArealHeatCapacity(verts, ctx.ceilingSlabs);
+
   boundaries.push(
-    resolveFloorBoundary(geometry.area, ctx.storeyPosition, exposedPerimeterM, groundWallThicknessM),
+    resolveFloorBoundary(geometry.area, ctx.storeyPosition, exposedPerimeterM, groundWallThicknessM, floorKappa),
   );
-  boundaries.push(resolveRoofBoundary(geometry.area, ctx.storeyPosition, roofSolarAbsorptance));
+  boundaries.push(resolveRoofBoundary(geometry.area, ctx.storeyPosition, roofSolarAbsorptance, roofKappa));
   return { boundaries, exposedFacadeCount };
 }

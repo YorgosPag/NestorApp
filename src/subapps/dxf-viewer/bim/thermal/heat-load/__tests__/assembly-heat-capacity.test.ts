@@ -10,7 +10,9 @@
 import {
   THERMAL_MASS_EFFECTIVE_THICKNESS_MAX_M,
   computeArealHeatCapacity,
+  computeSlabArealHeatCapacity,
   computeWallArealHeatCapacity,
+  slabDnaToHeatCapacityLayers,
   wallDnaToHeatCapacityLayers,
   type HeatCapacityLayer,
 } from '../assembly-heat-capacity';
@@ -19,6 +21,11 @@ import {
   type WallDna,
   type WallDnaLayer,
 } from '../../../types/wall-dna-types';
+import {
+  createDefaultFloorBuildup,
+  createDefaultRoofBuildup,
+  type SlabDna,
+} from '../../../types/slab-dna-types';
 
 // ─── computeArealHeatCapacity (raw layers) ──────────────────────────────────────
 
@@ -119,5 +126,65 @@ describe('computeWallArealHeatCapacity', () => {
     ];
     const dna: WallDna = { layers, totalThickness: 100 };
     expect(computeWallArealHeatCapacity(dna)).toBe(0);
+  });
+});
+
+// ─── L7.9-C — slabDnaToHeatCapacityLayers + computeSlabArealHeatCapacity ──────────
+
+describe('slabDnaToHeatCapacityLayers (interior-first ανά kind)', () => {
+  it('floor: forward (top-first) — εσωτ. επιφάνεια προς τα πάνω (finish side)', () => {
+    const dna = createDefaultFloorBuildup(); // top→bottom: tile, screed, insulation, concrete, plaster
+    const layers = slabDnaToHeatCapacityLayers(dna, 'floor');
+    expect(layers[0].density).toBe(2000); // tile (πάνω = πρώτο)
+    expect(layers[0].thickness_m).toBeCloseTo(0.01);
+    expect(layers[1].density).toBe(2000); // screed
+    expect(layers[2].lambda).toBeCloseTo(0.035); // acoustic insulation
+  });
+
+  it('ceiling: reverse (bottom-first) — εσωτ. επιφάνεια προς τα κάτω (soffit side)', () => {
+    const dna = createDefaultFloorBuildup();
+    const layers = slabDnaToHeatCapacityLayers(dna, 'ceiling');
+    expect(layers[0].density).toBe(1200); // plaster soffit (κάτω = πρώτο)
+    expect(layers[0].thickness_m).toBeCloseTo(0.015);
+    expect(layers[1].density).toBe(2400); // concrete core
+  });
+});
+
+describe('computeSlabArealHeatCapacity (worked example από τον τύπο)', () => {
+  it('default FLOOR (top-first): tile + screed, μετά insulation-stop → 136800 J/m²K', () => {
+    const dna = createDefaultFloorBuildup();
+    // tile 0.010·2000·840 + screed 0.060·2000·1000 = 16800 + 120000 (acoustic insul λ=0.035 → stop).
+    const expected = 0.01 * 2000 * 840 + 0.06 * 2000 * 1000; // 136800
+    expect(computeSlabArealHeatCapacity(dna, 'floor')).toBeCloseTo(expected);
+  });
+
+  it('ΙΔΙΟ DNA ως ceiling (bottom-first): soffit + concrete clamp → 189360 J/m²K (≠ floor)', () => {
+    const dna = createDefaultFloorBuildup();
+    // plaster 0.015·1200·1000 + concrete clamp 0.085·2400·840 = 18000 + 171360.
+    const expected = 0.015 * 1200 * 1000 + 0.085 * 2400 * 840; // 189360
+    const ceiling = computeSlabArealHeatCapacity(dna, 'ceiling');
+    expect(ceiling).toBeCloseTo(expected);
+    // §5.2: το interior-first ordering κάνει το ΙΔΙΟ DNA διαφορετικό floor↔ceiling.
+    expect(ceiling).not.toBeCloseTo(computeSlabArealHeatCapacity(dna, 'floor'));
+  });
+
+  it('default ROOF (bottom-first): soffit + concrete clamp → 189360 (βαριά στέγη)', () => {
+    const dna = createDefaultRoofBuildup(); // RC core 200 + soffit 15 (κάτω)
+    const expected = 0.015 * 1200 * 1000 + 0.085 * 2400 * 840; // 189360
+    expect(computeSlabArealHeatCapacity(dna, 'roof')).toBeCloseTo(expected);
+  });
+
+  it('κ_m οροφής (RC core) σε ίδια τάξη με concrete τοίχο L7.9-B (~185000)', () => {
+    const roof = computeSlabArealHeatCapacity(createDefaultRoofBuildup(), 'roof');
+    expect(roof).toBeGreaterThan(150_000);
+    expect(roof).toBeLessThan(220_000);
+  });
+
+  it('DNA με μόνο άγνωστα υλικά → 0 (fallback κατηγορία, zero-regression)', () => {
+    const dna: SlabDna = {
+      layers: [{ id: 'x', name: 'Custom', thickness: 200, materialId: 'custom-foo', zone: 'core' }],
+      totalThickness: 200,
+    };
+    expect(computeSlabArealHeatCapacity(dna, 'floor')).toBe(0);
   });
 });

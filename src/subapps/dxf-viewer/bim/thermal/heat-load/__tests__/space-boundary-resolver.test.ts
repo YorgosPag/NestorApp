@@ -24,6 +24,9 @@ import {
 import type { OpeningEntity, OpeningGeometry } from '../../../types/opening-types';
 import type { WallEntity } from '../../../types/wall-types';
 import { resolveSpaceBoundaries, type SpaceBoundaryContext } from '../space-boundary-resolver';
+import type { SlabMatchCandidate } from '../slab-space-match';
+import { createDefaultFloorBuildup } from '../../../types/slab-dna-types';
+import { computeSlabArealHeatCapacity } from '../assembly-heat-capacity';
 
 // ─── Fixtures ──────────────────────────────────────────────────────────────────
 
@@ -283,5 +286,61 @@ describe('resolveSpaceBoundaries — EN ISO 13370 ground coupling (L1.6)', () =>
     expect(floor?.condition).toBe('adjacent-heated');
     expect(floor?.groundTemperatureFactor).toBeUndefined();
     expect(floor?.uValue).toBeCloseTo(0.5, 6);
+  });
+});
+
+// L7.9-C — geometry-derived θερμική μάζα δαπέδου/οροφής `κ_m` από τη matched πλάκα.
+describe('resolveSpaceBoundaries — slab thermal mass κ_m (L7.9-C)', () => {
+  const south = makeWall({ x: 0, y: 0 }, { x: 4000, y: 0 }, 'w-s');
+  /** Πλάκα 6×6 m (mm) που καλύπτει πλήρως τον χώρο 4×4. */
+  const slabOutline = [
+    { x: -1000, y: -1000, z: 0 },
+    { x: 5000, y: -1000, z: 0 },
+    { x: 5000, y: 5000, z: 0 },
+    { x: -1000, y: 5000, z: 0 },
+  ];
+  const floorCandidate: SlabMatchCandidate = {
+    id: 'slab-floor', outline: slabOutline, dna: createDefaultFloorBuildup(), kind: 'floor',
+  };
+  const ceilingCandidate: SlabMatchCandidate = {
+    id: 'slab-ceil', outline: slabOutline, dna: createDefaultFloorBuildup(), kind: 'ceiling',
+  };
+
+  it('στάμπα arealHeatCapacityJperM2K στο δάπεδο όταν υπάρχει matched slab DNA (floor top-first)', () => {
+    const ctx: SpaceBoundaryContext = { ...makeCtx([south], [], 'middle'), floorSlabs: [floorCandidate] };
+    const { boundaries } = resolveSpaceBoundaries(makeSpace(), ctx);
+    const floor = boundaries.find((b) => b.kind === 'floor');
+    expect(floor?.arealHeatCapacityJperM2K).toBeCloseTo(
+      computeSlabArealHeatCapacity(createDefaultFloorBuildup(), 'floor'),
+    );
+  });
+
+  it('στάμπα διαφορετική στην οροφή (bottom-first) — interior-first ordering §5.2', () => {
+    const ctx: SpaceBoundaryContext = { ...makeCtx([south], [], 'middle'), ceilingSlabs: [ceilingCandidate] };
+    const { boundaries } = resolveSpaceBoundaries(makeSpace(), ctx);
+    const ceiling = boundaries.find((b) => b.kind === 'ceiling' || b.kind === 'roof');
+    expect(ceiling?.arealHeatCapacityJperM2K).toBeCloseTo(
+      computeSlabArealHeatCapacity(createDefaultFloorBuildup(), 'ceiling'),
+    );
+  });
+
+  it('absent floorSlabs/ceilingSlabs ⇒ arealHeatCapacityJperM2K undefined (zero-regression)', () => {
+    const { boundaries } = resolveSpaceBoundaries(makeSpace(), makeCtx([south], [], 'middle'));
+    const floor = boundaries.find((b) => b.kind === 'floor');
+    const ceiling = boundaries.find((b) => b.kind === 'ceiling' || b.kind === 'roof');
+    expect(floor?.arealHeatCapacityJperM2K).toBeUndefined();
+    expect(ceiling?.arealHeatCapacityJperM2K).toBeUndefined();
+  });
+
+  it('slab μακριά από τον χώρο (μηδέν containment) ⇒ no stamp', () => {
+    const farSlab: SlabMatchCandidate = {
+      id: 'far', outline: [
+        { x: 100000, y: 100000, z: 0 }, { x: 110000, y: 100000, z: 0 },
+        { x: 110000, y: 110000, z: 0 }, { x: 100000, y: 110000, z: 0 },
+      ], dna: createDefaultFloorBuildup(), kind: 'floor',
+    };
+    const ctx: SpaceBoundaryContext = { ...makeCtx([south], [], 'middle'), floorSlabs: [farSlab] };
+    const { boundaries } = resolveSpaceBoundaries(makeSpace(), ctx);
+    expect(boundaries.find((b) => b.kind === 'floor')?.arealHeatCapacityJperM2K).toBeUndefined();
   });
 });

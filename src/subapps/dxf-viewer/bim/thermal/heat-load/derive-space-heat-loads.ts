@@ -29,6 +29,7 @@ import {
   resolveThermalSpaceHeatRecovery,
 } from '../thermal-space-use-catalog';
 import { resolveSpaceBoundaries, type StoreyPosition } from './space-boundary-resolver';
+import type { SlabMatchCandidate } from './slab-space-match';
 import { computeSpaceHeatLoad } from './heat-load-engine';
 import {
   computeDesignVentilationRate,
@@ -75,6 +76,16 @@ export interface SpaceHeatLoadDeriveInputs {
    * ορίζοντα (Slice E). Absent ⇒ 0.
    */
   readonly apertureBaseElevationM?: number;
+  /**
+   * Υποψήφιες πλάκες **δαπέδου** (kinds floor/ground/foundation ενεργού ορόφου) —
+   * geometry-derived θερμική μάζα δαπέδου `κ_m` (ADR-422 L7.9-C). Absent ⇒ zero-regression.
+   */
+  readonly floorSlabs?: readonly SlabMatchCandidate[];
+  /**
+   * Υποψήφιες πλάκες **οροφής/στέγης** (roof/ceiling ενεργού ορόφου ή δάπεδο άνω
+   * ορόφου) — geometry-derived θερμική μάζα οροφής `κ_m` (L7.9-C). Absent ⇒ zero-regression.
+   */
+  readonly ceilingSlabs?: readonly SlabMatchCandidate[];
 }
 
 /** Συγκεντρωτικό αποτέλεσμα ορόφου: per-space φορτία + εύρος + άθροισμα. */
@@ -102,6 +113,8 @@ export function computeOneSpaceHeatLoad(
     overhangOutlines: inputs.overhangOutlines,
     horizonObstacleOutlines: inputs.horizonObstacleOutlines,
     apertureBaseElevationM: inputs.apertureBaseElevationM,
+    floorSlabs: inputs.floorSlabs,
+    ceilingSlabs: inputs.ceilingSlabs,
   });
   const geometry = space.geometry ?? computeThermalSpaceGeometry(space.params);
   // L1.7: effective εναλλαγές αέρα `n_eff = max(n_inf, n_ven)` (EN 12831-1 §6.3.3) —
