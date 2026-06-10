@@ -75,4 +75,5 @@ Parameterised by the **electrical-strong discipline descriptor** (the 4th `MepDi
 ---
 
 ## 5. Changelog
+- **2026-06-10 (Opus 4.8):** Contextual properties tab fix — a selected socket (πρίζα) was mislabelling as «Ιδιότητες Φωτιστικού» (it fell through to the light-fixture default in `resolveContextualTrigger`). Added a dedicated **`mep-socket-selected` contextual tab «Ιδιότητες Πρίζας»** (distinct Revit "Electrical Fixtures" category), routed by the precise `isSocketKind` guard BEFORE the light default. FULL SSoT — the tab is a thin copy reusing the kind-agnostic `useRibbonMepFixtureBridge` + `MEP_FIXTURE_RIBBON_KEYS` (zero new bridge). New SSoT guard `isElectricalDeviceKind` (`mep-fixture-types.ts`, = socket ∨ data-outlet) consolidates the repeated `isSocketKind||isDataOutletKind` (IfcOutlet resolver + 3D box converter, Boy-Scout N.0.2). +1 test. (Data outlet counterpart → ADR-431.)
 - **2026-06-09 (Opus 4.8):** ADR created. Slices 0+1+2 implemented. Tests: socket (Slice 0) + engine (Slice 1, demand/grouping/phase/sizing/integration) + commit (Slice 2), all green; full mep-design suite regression-free. Registry `electrical-strong` → active.

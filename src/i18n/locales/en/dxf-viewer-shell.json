@@ -534,6 +534,9 @@
         "invalidTshapeFlange": "Invalid T-shape flange length"
       }
     },
+    "foundation": {
+      "statusPosition": "Click to place footing — Tab cycles the anchor point"
+    },
     "mepFixture": {
       "statusPosition": "Click to place light fixture"
     },
@@ -891,6 +894,7 @@
       "slabProperties": "Slab Properties",
       "roofProperties": "Roof Properties",
       "columnProperties": "Column Properties",
+      "foundationProperties": "Foundation Properties",
       "beamProperties": "Beam Properties",
       "slabOpeningProperties": "Slab Opening Properties",
       "multiSelection": "Multi-Selection",
@@ -900,6 +904,9 @@
       "mepFloorDrainProperties": "Floor Drain Properties",
       "mepSanitaryFixtureProperties": "Sanitary Fixture Properties",
       "mepApplianceFixtureProperties": "Appliance Properties",
+      "mepSocketProperties": "Socket Properties",
+      "mepDataOutletProperties": "Data Outlet Properties",
+      "electricalPanelProperties": "Electrical Panel Properties",
       "mepManifoldProperties": "Manifold Properties",
       "mepDrainageCollectorProperties": "Catch Basin Properties",
       "mepRadiatorProperties": "Radiator Properties",
@@ -986,6 +993,10 @@
       "columnStructuralAttach": "Structural Attach",
       "columnShearWallCatalog": "Concrete Catalog",
       "columnIshapeCatalog": "Profile Catalog",
+      "foundationKind": "Type",
+      "foundationGeometry": "Geometry",
+      "foundationElevation": "Elevation",
+      "foundationActions": "Actions",
       "beamKind": "Type",
       "beamIshape": "I-Section",
       "beamIshapeCatalog": "Profile Catalog",
@@ -1009,6 +1020,15 @@
       "mepApplianceFixtureGeometry": "Geometry",
       "mepApplianceFixture3dView": "3D View",
       "mepApplianceFixtureActions": "Actions",
+      "mepSocketGeometry": "Geometry",
+      "mepSocket3dView": "3D View",
+      "mepSocketActions": "Actions",
+      "mepDataOutletGeometry": "Geometry",
+      "mepDataOutlet3dView": "3D View",
+      "mepDataOutletActions": "Actions",
+      "electricalPanelGeometry": "Geometry",
+      "electricalPanelCircuits": "Circuits",
+      "electricalPanelActions": "Actions",
       "mepManifoldSystem": "System",
       "mepManifoldGeometry": "Geometry",
       "mepManifoldOutlets": "Outlets",
@@ -1379,6 +1399,14 @@
         "beamGroup": {
           "label": "Beam",
           "tooltip": "Beam: free or from wall"
+        },
+        "foundationGroup": {
+          "label": "Foundation",
+          "tooltip": "Foundation: isolated pad footing"
+        },
+        "foundationPad": {
+          "label": "Isolated footing",
+          "tooltip": "Place an isolated pad footing with one click (Tab = anchor point)"
         },
         "archGroup": {
           "label": "Architectural",
@@ -2323,6 +2351,36 @@
           "none": "None"
         }
       },
+      "foundationEditor": {
+        "width": "Width",
+        "length": "Length",
+        "thickness": "Thickness",
+        "rotation": "Rotation",
+        "topElevation": "Top elevation",
+        "close": "Close",
+        "delete": "Delete",
+        "deleteConfirm": "Delete footing? This action cannot be undone.",
+        "kind": {
+          "section": {
+            "title": "Type"
+          },
+          "pad": "Isolated footing"
+        },
+        "anchor": {
+          "section": {
+            "title": "Anchor"
+          },
+          "center": "Center",
+          "n": "North",
+          "s": "South",
+          "e": "East",
+          "w": "West",
+          "nw": "Northwest",
+          "ne": "Northeast",
+          "sw": "Southwest",
+          "se": "Southeast"
+        }
+      },
       "columnEditor": {
         "width": "Width",
         "depth": "Depth",
@@ -2423,6 +2481,16 @@
         "close": "Close",
         "delete": "Delete",
         "deleteConfirm": "Delete manifold? This action cannot be undone."
+      },
+      "electricalPanelEditor": {
+        "width": "Width",
+        "length": "Depth",
+        "rotation": "Rotation",
+        "bodyHeight": "Body height",
+        "mountingElevation": "Mounting height",
+        "close": "Close",
+        "delete": "Delete",
+        "deleteConfirm": "Delete electrical panel? This action cannot be undone."
       },
       "mepDrainageCollectorEditor": {
         "width": "Width",
@@ -3452,6 +3520,21 @@
         "maxSlendernessExceeded": "Slenderness ratio above 30 — Eurocode check",
         "shearWallThicknessTooSmall": "Wall thickness below Eurocode 8 minimum (150mm)",
         "shearWallAspectRatioBelow": "Length-to-thickness ratio below 4 — not a shear wall"
+      }
+    }
+  },
+  "foundation": {
+    "validation": {
+      "hardErrors": {
+        "nonPositiveWidth": "Width must be greater than 0",
+        "nonPositiveLength": "Length must be greater than 0",
+        "zeroLengthAxis": "Axis has zero length — start and end coincide",
+        "nonPositiveThickness": "Thickness must be greater than 0"
+      },
+      "codeViolations": {
+        "widthTooSmall": "Width below minimum (100mm)",
+        "lengthTooSmall": "Length below minimum (100mm)",
+        "thicknessTooSmall": "Thickness below minimum (100mm)"
       }
     }
   },
