@@ -38,7 +38,7 @@ import {
   resolveFloorDatumRelativeElevationMm,
 } from '../../bim-3d/scene/floor-stack-elevation';
 import {
-  isWallEntity, isColumnEntity, isBeamEntity, isSlabEntity,
+  isWallEntity, isColumnEntity, isBeamEntity, isFoundationEntity, isSlabEntity,
   isSlabOpeningEntity, isOpeningEntity, isStairEntity, isMepFixtureEntity, isElectricalPanelEntity, isRailingEntity, isFurnitureEntity, isMepSegmentEntity, isMepFittingEntity, isMepManifoldEntity, isMepRadiatorEntity, isMepBoilerEntity, isMepWaterHeaterEntity, isRoofEntity, isFloorFinishEntity, isMepUnderfloorEntity,
 } from '../../types/entities';
 import type { SceneModel } from '../../types/scene';
@@ -57,6 +57,7 @@ function extractBim3DEntities(scene: SceneModel): Bim3DEntities {
     walls: e.filter(isWallEntity),
     columns: e.filter(isColumnEntity),
     beams: e.filter(isBeamEntity),
+    foundations: e.filter(isFoundationEntity),
     slabs: e.filter(isSlabEntity),
     slabOpenings: e.filter(isSlabOpeningEntity),
     openings: e.filter(isOpeningEntity),
@@ -117,13 +118,14 @@ export function useFloors3DAggregator(active: boolean): void {
   const boilers = useBim3DEntitiesStore((s) => s.boilers);
   const waterHeaters = useBim3DEntitiesStore((s) => s.waterHeaters);
   const underfloors = useBim3DEntitiesStore((s) => s.underfloors);
+  const foundations = useBim3DEntitiesStore((s) => s.foundations);
 
   // Firestore snapshots for floors the user has not visited this session.
   const [loaded, setLoaded] = useState<ReadonlyMap<string, Bim3DEntities>>(new Map());
 
   const liveActive = useMemo<Bim3DEntities>(
-    () => ({ walls, columns, beams, slabs, slabOpenings, openings, stairs, fixtures, panels, railings, furnitures, roofs, floorFinishes, mepSegments, mepFittings, manifolds, radiators, boilers, waterHeaters, underfloors }),
-    [walls, columns, beams, slabs, slabOpenings, openings, stairs, fixtures, panels, railings, furnitures, roofs, floorFinishes, mepSegments, mepFittings, manifolds, radiators, boilers, waterHeaters, underfloors],
+    () => ({ walls, columns, beams, foundations, slabs, slabOpenings, openings, stairs, fixtures, panels, railings, furnitures, roofs, floorFinishes, mepSegments, mepFittings, manifolds, radiators, boilers, waterHeaters, underfloors }),
+    [walls, columns, beams, foundations, slabs, slabOpenings, openings, stairs, fixtures, panels, railings, furnitures, roofs, floorFinishes, mepSegments, mepFittings, manifolds, radiators, boilers, waterHeaters, underfloors],
   );
 
   // One target per building floor (first level wins for a floor with duplicates).

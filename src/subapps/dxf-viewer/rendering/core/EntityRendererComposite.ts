@@ -31,6 +31,7 @@ import { SlabRenderer, type SlabOpeningsBySlab } from '../../bim/renderers/SlabR
 import { SlabOpeningRenderer } from '../../bim/renderers/SlabOpeningRenderer';
 // ADR-363 Phase 4 — column leaf (rectangular/circular/L-shape/T-shape).
 import { ColumnRenderer } from '../../bim/renderers/ColumnRenderer';
+import { FoundationRenderer } from '../../bim/renderers/FoundationRenderer';
 // ADR-363 Phase 5 — beam leaf (straight/curved/cantilever).
 import { BeamRenderer } from '../../bim/renderers/BeamRenderer';
 // ADR-406 — MEP fixture leaf (point-based light fixture).
@@ -112,6 +113,8 @@ export class EntityRendererComposite {
     const columnRenderer = new ColumnRenderer(this.ctx);
     // ADR-363 Phase 5 — beam renderer (3 kinds, dashed outline + axis centerline).
     const beamRenderer = new BeamRenderer(this.ctx);
+    // ADR-436 — foundation renderer (pad/strip/tie-beam, hidden-line + concrete hatch).
+    const foundationRenderer = new FoundationRenderer(this.ctx);
     // ADR-406 — MEP fixture renderer (point-based light fixture, family symbol).
     const mepFixtureRenderer = new MepFixtureRenderer(this.ctx);
     const electricalPanelRenderer = new ElectricalPanelRenderer(this.ctx);
@@ -166,6 +169,7 @@ export class EntityRendererComposite {
     this.renderers.set('slab-opening', slabOpeningRenderer);
     this.renderers.set('column', columnRenderer);
     this.renderers.set('beam', beamRenderer);
+    this.renderers.set('foundation', foundationRenderer);
     this.renderers.set('mep-fixture', mepFixtureRenderer);
     this.renderers.set('electrical-panel', electricalPanelRenderer);
     this.renderers.set('railing', railingRenderer);

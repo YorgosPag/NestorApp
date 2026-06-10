@@ -37,6 +37,9 @@ import { resolveMepCascadeOnDelete } from '../../bim/mep-systems/mep-system-coor
 import { useMepSystemStore } from '../../bim/mep-systems/mep-system-store';
 import { UpdateMepSystemParamsCommand } from '../../core/commands/entity-commands/UpdateMepSystemParamsCommand';
 import { DissolveMepSystemCommand } from '../../core/commands/entity-commands/DissolveMepSystemCommand';
+// ADR-408 Φ-C EXT — Delete on a selected electrical CIRCUIT (the home-run wire is a
+// derived MepSystem visualization, not an entity → circuit lives in this store).
+import { useMepCircuitEditorStore } from '../../bim/mep-systems/mep-circuit-editor-store';
 // ADR-363 Phase 7A — centralized cascade resolver SSoT (Boy Scout N.0.2:
 // replaces the inline wall→opening sweep that previously lived here; adds
 // slab→slab-opening cascade alongside).
@@ -415,6 +418,33 @@ export function useSmartDelete({
       }
 
       return true;
+    }
+
+    // PRIORITY 4: ADR-408 Φ-C EXT — delete the selected electrical CIRCUIT(s).
+    // The home-run wire is a DERIVED visualization of a MepSystem (not a scene
+    // entity), so selecting a wire selects the circuit (`selectedSystemIds` in the
+    // circuit editor store) and `universalSelection` stays empty — every entity
+    // priority above misses. Detect the circuit selection at event time (getState
+    // getter, ADR-040: no React subscription) and dissolve each via the SAME
+    // `DissolveMepSystemCommand` SSoT the entity-delete cascade uses above (members
+    // — panel / sockets / lights — stay; only the circuit + its derived wire go).
+    // Multi-select aware (marquee), one CompoundCommand = single undo. Then clear
+    // the circuit selection, mirroring the ESC `clearEntitySelection`.
+    const circuitStore = useMepCircuitEditorStore.getState();
+    const selectedCircuitIds = [...circuitStore.selectedSystemIds];
+    if (selectedCircuitIds.length > 0) {
+      const systems = useMepSystemStore.getState().getSystems();
+      const snapshots = selectedCircuitIds
+        .map((id) => systems.find((s) => s.id === id))
+        .filter((s): s is NonNullable<typeof s> => s != null);
+      if (snapshots.length > 0) {
+        const commands = snapshots.map((s) => new DissolveMepSystemCommand(s));
+        executeCommand(
+          commands.length === 1 ? commands[0] : new CompoundCommand('Delete circuits', commands),
+        );
+        circuitStore.setActiveSystemId(null);
+        return true;
+      }
     }
 
     return false;

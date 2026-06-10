@@ -103,6 +103,12 @@ export interface BeamToolLike {
   onCanvasClick: (point: Point2D) => boolean;
 }
 
+/** ADR-436 Slice 1 — Minimal foundation pad tool interface for click routing. */
+export interface FoundationToolLike {
+  readonly isActive: boolean;
+  onCanvasClick: (point: Point2D) => boolean;
+}
+
 /** ADR-406 — Minimal MEP fixture tool interface for click routing. */
 export interface MepFixtureToolLike {
   readonly isActive: boolean;

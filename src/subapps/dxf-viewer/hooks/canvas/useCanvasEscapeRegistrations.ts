@@ -42,6 +42,12 @@ export interface UseCanvasEscapeRegistrationsParams {
   readonly setSelectedGrips: (grips: SelectedGrip[]) => void;
   readonly selectedEntityIds: readonly string[];
   readonly hasAnySelection: boolean;
+  /**
+   * Event-time getter — true when a MEP circuit is selected via wire-click
+   * (`activeSystemId`, no scene entity). Read as a getter (not a snapshot prop)
+   * so the orchestrator never subscribes to the circuit store (ADR-040).
+   */
+  readonly hasActiveCircuit?: () => boolean;
   readonly onExitDrawMode?: () => void;
   readonly clearEntitySelection?: () => void;
   readonly handleMoveEscape?: () => void;
@@ -128,12 +134,13 @@ export function useCanvasEscapeRegistrations(p: UseCanvasEscapeRegistrationsPara
       p.draftPolygon.length > 0 ||
       p.selectedGrips.length > 0 ||
       p.selectedEntityIds.length > 0 ||
-      p.hasAnySelection,
+      p.hasAnySelection ||
+      (p.hasActiveCircuit?.() ?? false),
     handle: () => {
       p.setDraftPolygon([]);
       p.onExitDrawMode?.();
       if (p.selectedGrips.length > 0) p.setSelectedGrips([]);
-      if (p.selectedEntityIds.length > 0 || p.hasAnySelection) {
+      if (p.selectedEntityIds.length > 0 || p.hasAnySelection || (p.hasActiveCircuit?.() ?? false)) {
         p.clearEntitySelection?.();
       }
       return true;

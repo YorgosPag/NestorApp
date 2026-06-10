@@ -49,6 +49,7 @@ export function useCanvasClickHandler(params: UseCanvasClickHandlerParams): UseC
     roofTool,
     floorFinishTool,
     columnTool,
+    foundationTool,
     beamTool,
     mepFixtureTool,
     furnitureTool,
@@ -287,6 +288,12 @@ export function useCanvasClickHandler(params: UseCanvasClickHandlerParams): UseC
       columnTool.onCanvasClick(worldPoint);
       return;
     }
+    // PRIORITY 4.85: ADR-436 Slice 1 — Foundation pad tool single-click placement
+    // (mirror column freehand; RAW worldPoint so the anchor point matches the click).
+    if (activeTool === 'foundation-pad' && foundationTool?.isActive) {
+      foundationTool.onCanvasClick(worldPoint);
+      return;
+    }
     // PRIORITY 4.9: ADR-363 Phase 5 — Beam tool 2-click (straight/cantilever) or 3-click (curved).
     if (activeTool === 'beam' && beamTool?.isActive) {
       beamTool.onCanvasClick(bimPoint);
@@ -367,6 +374,7 @@ export function useCanvasClickHandler(params: UseCanvasClickHandlerParams): UseC
     roofTool,
     floorFinishTool,
     columnTool,
+    foundationTool,
     beamTool,
     mepFixtureTool,
     furnitureTool,
