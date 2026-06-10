@@ -8,7 +8,7 @@
  */
 
 import { safeFirestoreOperation } from '@/lib/firebaseAdmin';
-import { COLLECTIONS, SYSTEM_DOCS } from '@/config/firestore-collections';
+import { COLLECTIONS } from '@/config/firestore-collections';
 import { FIELDS } from '@/config/firestore-field-constants';
 import {
   generateJournalEntryId,
@@ -35,6 +35,7 @@ import type { TaxInstallment } from '../../types/tax';
 import type { TenantContext } from '../../types/common';
 
 import { sanitizeForFirestore, isoNow } from './firestore-helpers';
+import { accountingDocId } from './accounting-doc-ids';
 
 // ============================================================================
 // JOURNAL ENTRIES
@@ -262,7 +263,7 @@ export async function getServicePresets(tenant: TenantContext): Promise<ServiceP
   return safeFirestoreOperation(async (db) => {
     const snap = await db
       .collection(COLLECTIONS.ACCOUNTING_SETTINGS)
-      .doc(SYSTEM_DOCS.ACCT_SERVICE_PRESETS)
+      .doc(accountingDocId(tenant.companyId, 'service_presets'))
       .get();
     if (!snap.exists) return [];
     const doc = snap.data() as ServicePresetsDocument;
@@ -275,9 +276,10 @@ export async function saveServicePresets(tenant: TenantContext, presets: Service
   await safeFirestoreOperation(async (db) => {
     const docRef = db
       .collection(COLLECTIONS.ACCOUNTING_SETTINGS)
-      .doc(SYSTEM_DOCS.ACCT_SERVICE_PRESETS);
+      .doc(accountingDocId(tenant.companyId, 'service_presets'));
     const doc = sanitizeForFirestore({
       presets,
+      companyId: tenant.companyId,
       updatedAt: now,
     } as unknown as Record<string, unknown>);
     await docRef.set(doc);

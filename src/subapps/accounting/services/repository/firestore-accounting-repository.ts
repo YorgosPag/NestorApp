@@ -14,7 +14,7 @@
  */
 
 import { safeFirestoreOperation } from '@/lib/firebaseAdmin';
-import { COLLECTIONS, SYSTEM_DOCS } from '@/config/firestore-collections';
+import { COLLECTIONS } from '@/config/firestore-collections';
 import type { IAccountingRepository } from '../../types/interfaces';
 import type { CompanyProfile, CompanySetupInput } from '../../types/company';
 import type { TenantContext } from '../../types/common';
@@ -52,6 +52,7 @@ import type {
 import type { CustomerBalance } from '../../types/customer-balance';
 import type { FiscalPeriod } from '../../types/fiscal-period';
 import type { AccountingAuditEntry, AuditEntryFilters } from '../../types/accounting-audit';
+import type { MatchingConfig } from '../../types/matching-config';
 
 import { sanitizeForFirestore, isoNow } from './firestore-helpers';
 
@@ -62,6 +63,7 @@ import * as operations from './accounting-repo-operations';
 import * as documents from './accounting-repo-documents';
 import * as balances from './accounting-repo-balances';
 import * as audit from './accounting-repo-audit';
+import * as config from './accounting-repo-config';
 
 // ============================================================================
 // FIRESTORE ACCOUNTING REPOSITORY IMPLEMENTATION
@@ -81,7 +83,7 @@ export class FirestoreAccountingRepository implements IAccountingRepository {
 
   async getCompanySetup(): Promise<CompanyProfile | null> {
     return safeFirestoreOperation(async (db) => {
-      const snap = await db.collection(COLLECTIONS.ACCOUNTING_SETTINGS).doc(SYSTEM_DOCS.ACCT_COMPANY_PROFILE).get();
+      const snap = await db.collection(COLLECTIONS.ACCOUNTING_SETTINGS).doc(this.tenant.companyId).get();
       if (!snap.exists) return null;
       const raw = snap.data() as Record<string, unknown>;
       // Backward compat: docs without entityType → sole_proprietor
@@ -95,7 +97,7 @@ export class FirestoreAccountingRepository implements IAccountingRepository {
   async saveCompanySetup(data: CompanySetupInput): Promise<void> {
     const now = isoNow();
     await safeFirestoreOperation(async (db) => {
-      const docRef = db.collection(COLLECTIONS.ACCOUNTING_SETTINGS).doc(SYSTEM_DOCS.ACCT_COMPANY_PROFILE);
+      const docRef = db.collection(COLLECTIONS.ACCOUNTING_SETTINGS).doc(this.tenant.companyId);
       const existing = await docRef.get();
 
       const doc = sanitizeForFirestore({
@@ -144,6 +146,12 @@ export class FirestoreAccountingRepository implements IAccountingRepository {
     financial.getServicePresets(this.tenant);
   saveServicePresets = (presets: ServicePreset[]) =>
     financial.saveServicePresets(this.tenant, presets);
+
+  // ── Config: Matching Engine (ADR-439 Phase 2c — per-tenant) ───────────
+  getMatchingConfig = () =>
+    config.getMatchingConfig(this.tenant);
+  saveMatchingConfig = (matchingConfig: MatchingConfig) =>
+    config.saveMatchingConfig(this.tenant, matchingConfig);
 
   // ── Financial: Tax Installments ───────────────────────────────────────
   getTaxInstallments = (fiscalYear: number) =>

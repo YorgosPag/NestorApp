@@ -15,6 +15,7 @@ import type { EFKAPayment, EFKAUserConfig } from '../../types/efka';
 import type { TenantContext } from '../../types/common';
 
 import { sanitizeForFirestore, isoNow } from './firestore-helpers';
+import { accountingDocId } from './accounting-doc-ids';
 
 // ============================================================================
 // PARTNERS (ADR-ACC-012 OE)
@@ -22,7 +23,7 @@ import { sanitizeForFirestore, isoNow } from './firestore-helpers';
 
 export async function getPartners(tenant: TenantContext): Promise<Partner[]> {
   return safeFirestoreOperation(async (db) => {
-    const snap = await db.collection(COLLECTIONS.ACCOUNTING_SETTINGS).doc(SYSTEM_DOCS.ACCT_PARTNERS).get();
+    const snap = await db.collection(COLLECTIONS.ACCOUNTING_SETTINGS).doc(accountingDocId(tenant.companyId, 'partners')).get();
     if (!snap.exists) return [];
     const data = snap.data() as { partners: Partner[] };
     return data.partners ?? [];
@@ -32,7 +33,7 @@ export async function getPartners(tenant: TenantContext): Promise<Partner[]> {
 export async function savePartners(tenant: TenantContext, partners: Partner[]): Promise<void> {
   const now = isoNow();
   await safeFirestoreOperation(async (db) => {
-    const docRef = db.collection(COLLECTIONS.ACCOUNTING_SETTINGS).doc(SYSTEM_DOCS.ACCT_PARTNERS);
+    const docRef = db.collection(COLLECTIONS.ACCOUNTING_SETTINGS).doc(accountingDocId(tenant.companyId, 'partners'));
     const doc = sanitizeForFirestore({
       partners,
       companyId: tenant.companyId,
@@ -65,7 +66,7 @@ export async function getPartnerEFKAPayments(
 
 export async function getMembers(tenant: TenantContext): Promise<Member[]> {
   return safeFirestoreOperation(async (db) => {
-    const snap = await db.collection(COLLECTIONS.ACCOUNTING_SETTINGS).doc(SYSTEM_DOCS.ACCT_MEMBERS).get();
+    const snap = await db.collection(COLLECTIONS.ACCOUNTING_SETTINGS).doc(accountingDocId(tenant.companyId, 'members')).get();
     if (!snap.exists) return [];
     const data = snap.data() as { members: Member[] };
     return data.members ?? [];
@@ -75,7 +76,7 @@ export async function getMembers(tenant: TenantContext): Promise<Member[]> {
 export async function saveMembers(tenant: TenantContext, members: Member[]): Promise<void> {
   const now = isoNow();
   await safeFirestoreOperation(async (db) => {
-    const docRef = db.collection(COLLECTIONS.ACCOUNTING_SETTINGS).doc(SYSTEM_DOCS.ACCT_MEMBERS);
+    const docRef = db.collection(COLLECTIONS.ACCOUNTING_SETTINGS).doc(accountingDocId(tenant.companyId, 'members'));
     const doc = sanitizeForFirestore({
       members,
       companyId: tenant.companyId,
@@ -108,7 +109,7 @@ export async function getMemberEFKAPayments(
 
 export async function getShareholders(tenant: TenantContext): Promise<Shareholder[]> {
   return safeFirestoreOperation(async (db) => {
-    const snap = await db.collection(COLLECTIONS.ACCOUNTING_SETTINGS).doc(SYSTEM_DOCS.ACCT_SHAREHOLDERS).get();
+    const snap = await db.collection(COLLECTIONS.ACCOUNTING_SETTINGS).doc(accountingDocId(tenant.companyId, 'shareholders')).get();
     if (!snap.exists) return [];
     const data = snap.data() as { shareholders: Shareholder[] };
     return data.shareholders ?? [];
@@ -118,7 +119,7 @@ export async function getShareholders(tenant: TenantContext): Promise<Shareholde
 export async function saveShareholders(tenant: TenantContext, shareholders: Shareholder[]): Promise<void> {
   const now = isoNow();
   await safeFirestoreOperation(async (db) => {
-    const docRef = db.collection(COLLECTIONS.ACCOUNTING_SETTINGS).doc(SYSTEM_DOCS.ACCT_SHAREHOLDERS);
+    const docRef = db.collection(COLLECTIONS.ACCOUNTING_SETTINGS).doc(accountingDocId(tenant.companyId, 'shareholders'));
     const doc = sanitizeForFirestore({
       shareholders,
       companyId: tenant.companyId,

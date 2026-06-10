@@ -37,28 +37,8 @@ import {
   preFilterCandidates,
   type CombinationCandidate,
 } from './matching-combination';
-import { COLLECTIONS, SYSTEM_DOCS } from '@/config/firestore-collections';
 import { generateMatchGroupId } from '@/services/enterprise-id.service';
 import type { RuleLearningEngine } from './rule-learning-engine';
-
-// ============================================================================
-// FIRESTORE CONFIG LOADER
-// ============================================================================
-
-async function loadMatchingConfig(): Promise<MatchingConfig | null> {
-  try {
-    const { getFirestore } = await import('firebase/firestore');
-    const { doc, getDoc } = await import('firebase/firestore');
-    const { getApp } = await import('firebase/app');
-    const db = getFirestore(getApp());
-    const docRef = doc(db, COLLECTIONS.ACCOUNTING_SETTINGS, SYSTEM_DOCS.ACCT_MATCHING_CONFIG);
-    const snap = await getDoc(docRef);
-    if (!snap.exists()) return null;
-    return snap.data() as MatchingConfig;
-  } catch {
-    return null;
-  }
-}
 
 // ============================================================================
 // MATCHING ENGINE
@@ -76,7 +56,9 @@ export class MatchingEngine implements IMatchingEngine {
 
   async getConfig(): Promise<MatchingConfig> {
     if (this.configCache) return this.configCache;
-    const stored = await loadMatchingConfig();
+    // ADR-439 Phase 2c: read the per-tenant config via the repository (Admin SDK).
+    // companyId flows from the repository's TenantContext — no client SDK on the server.
+    const stored = await this.repository.getMatchingConfig();
     this.configCache = stored ?? DEFAULT_MATCHING_CONFIG;
     return this.configCache;
   }
