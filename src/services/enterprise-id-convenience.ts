@@ -270,6 +270,7 @@ export const generateSlabId = () => enterpriseIdService.generateSlabId();
 export const generateRoofId = () => enterpriseIdService.generateRoofId();
 export const generateFloorFinishId = () => enterpriseIdService.generateFloorFinishId();
 export const generateThermalSpaceId = () => enterpriseIdService.generateThermalSpaceId();
+export const generateSpaceSeparatorId = () => enterpriseIdService.generateSpaceSeparatorId();
 export const generateSlabOpeningId = () => enterpriseIdService.generateSlabOpeningId();
 export const generateBimStackGroupId = () => enterpriseIdService.generateBimStackGroupId();
 export const generateColumnId = () => enterpriseIdService.generateColumnId();

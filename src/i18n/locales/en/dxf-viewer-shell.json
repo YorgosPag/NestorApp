@@ -535,7 +535,11 @@
       }
     },
     "foundation": {
-      "statusPosition": "Click to place footing — Tab cycles the anchor point"
+      "statusPosition": "Click to place footing — Tab cycles the anchor point",
+      "statusStart": "Click for the strip-footing start",
+      "statusEnd": "Click for the strip-footing end",
+      "statusPickWall": "Pick a wall to place the strip footing",
+      "errorNoWall": "No wall found at the picked point"
     },
     "mepFixture": {
       "statusPosition": "Click to place light fixture"
@@ -594,6 +598,10 @@
     "mepSegment": {
       "statusStart": "Pick run start",
       "statusEnd": "Pick run end"
+    },
+    "spaceSeparator": {
+      "statusStart": "Pick separation line start",
+      "statusEnd": "Pick separation line end"
     },
     "mepFitting": {
       "name": "Fitting",
@@ -1373,6 +1381,10 @@
           "label": "Thermal Space",
           "tooltip": "Place a thermal space (click inside a room) — Revit IfcSpace analytical space for the heating study (shortcut TS)"
         },
+        "spaceSeparator": {
+          "label": "Space Separation Line",
+          "tooltip": "Draw a space separation line (click start → click end) — bounds/subdivides a thermal space without a wall, Revit IfcVirtualElement (shortcut SS)"
+        },
         "group": {
           "label": "Structural Elements",
           "tooltip": "Load-bearing structural elements: wall, opening, slab, column/shear wall, beam, stair, railing"
@@ -1403,11 +1415,23 @@
         },
         "foundationGroup": {
           "label": "Foundation",
-          "tooltip": "Foundation: isolated pad footing"
+          "tooltip": "Foundation: isolated pad, strip footing, tie beam"
         },
         "foundationPad": {
           "label": "Isolated footing",
           "tooltip": "Place an isolated pad footing with one click (Tab = anchor point)"
+        },
+        "foundationStrip": {
+          "label": "Strip footing",
+          "tooltip": "Continuous / strip footing with 2 clicks (axis start → end)"
+        },
+        "foundationTieBeam": {
+          "label": "Tie beam",
+          "tooltip": "Tie beam with 2 clicks — links footings/columns (Eurocode 8)"
+        },
+        "foundationStripFromWall": {
+          "label": "Strip footing from wall",
+          "tooltip": "1 click on a wall → strip footing on its axis (width = wall thickness)"
         },
         "archGroup": {
           "label": "Architectural",
@@ -2365,7 +2389,9 @@
           "section": {
             "title": "Type"
           },
-          "pad": "Isolated footing"
+          "pad": "Isolated footing",
+          "strip": "Strip footing",
+          "tieBeam": "Tie beam"
         },
         "anchor": {
           "section": {
