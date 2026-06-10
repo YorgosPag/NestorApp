@@ -6,6 +6,7 @@ import {
   buildDefaultFoundationParams,
   buildFoundationEntity,
   completeFoundationFromClick,
+  completeFoundationFromTwoClicks,
 } from '../foundation-completion';
 
 describe('buildDefaultFoundationParams', () => {
@@ -59,5 +60,39 @@ describe('completeFoundationFromClick', () => {
     expect(result.ok).toBe(true);
     if (!result.ok) return;
     expect(result.entity.params.kind).toBe('pad');
+  });
+});
+
+describe('completeFoundationFromTwoClicks (Slice 2 — line kinds)', () => {
+  it('builds a strip from 2 clicks with axis start→end', () => {
+    const result = completeFoundationFromTwoClicks({ x: 0, y: 0 }, { x: 3000, y: 0 }, 'layer-1', 'strip');
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    const p = result.entity.params;
+    expect(p.kind).toBe('strip');
+    if (p.kind === 'pad') throw new Error('expected line');
+    expect(p.start).toEqual({ x: 0, y: 0, z: 0 });
+    expect(p.end).toEqual({ x: 3000, y: 0, z: 0 });
+    expect(result.entity.predefinedType).toBe('STRIP_FOOTING');
+  });
+
+  it('builds a tie-beam with FOOTING_BEAM predefined type', () => {
+    const result = completeFoundationFromTwoClicks({ x: 0, y: 0 }, { x: 2000, y: 0 }, 'layer-1', 'tie-beam');
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.entity.params.kind).toBe('tie-beam');
+    expect(result.entity.predefinedType).toBe('FOOTING_BEAM');
+  });
+
+  it('honours width override (e.g. from-wall thickness)', () => {
+    const result = completeFoundationFromTwoClicks({ x: 0, y: 0 }, { x: 2000, y: 0 }, 'layer-1', 'strip', { width: 350 });
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.entity.params.width).toBe(350);
+  });
+
+  it('rejects a zero-length axis (degenerate → hard error)', () => {
+    const result = completeFoundationFromTwoClicks({ x: 100, y: 100 }, { x: 100, y: 100 }, 'layer-1', 'strip');
+    expect(result.ok).toBe(false);
   });
 });

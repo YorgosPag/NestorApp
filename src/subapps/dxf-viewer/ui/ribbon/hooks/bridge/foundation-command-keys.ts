@@ -52,6 +52,16 @@ export const FOUNDATION_RIBBON_BADGE_KEYS = {
   violations: 'foundation.badge.violations',
 } as const;
 
+/**
+ * ADR-436 Slice 2 — panel visibility keys (kind-conditional). Το kind ορίζεται
+ * από το tool id (Revit 3 separate tools)· τα panels εμφανίζονται ανά geometry
+ * family: `padOnly` (anchor + length + rotation) vs `lineOnly` (band width).
+ */
+export const FOUNDATION_RIBBON_VISIBILITY_KEYS = {
+  padOnly: 'foundation.visibility.pad',
+  lineOnly: 'foundation.visibility.line',
+} as const;
+
 export function isFoundationActionKey(action: string): boolean {
   return (
     action === FOUNDATION_RIBBON_KEYS_ACTIONS.close ||

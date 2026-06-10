@@ -193,3 +193,24 @@ export function completeFoundationFromClick(
   const params = buildDefaultFoundationParams(clickPoint, kind, overrides, sceneUnits);
   return buildFoundationEntity(params, layerId);
 }
+
+// ─── Two-click completion helper (line kinds — Slice 2) ──────────────────────
+
+/**
+ * High-level helper που bridges το foundation-tool line FSM (Slice 2: 2-click
+ * strip / tie-beam) και το builder pipeline. Pure — no side effects. Ο `end`
+ * περνά ως `axisEnd` override ώστε το `buildDefaultFoundationParams` να χτίσει το
+ * line-based band (mirror `completeBeamFromTwoClicks`).
+ */
+export function completeFoundationFromTwoClicks(
+  startPoint: Readonly<Point2D>,
+  endPoint: Readonly<Point2D>,
+  layerId: string,
+  kind: FoundationKind = 'strip',
+  overrides: FoundationParamOverrides = {},
+  sceneUnits: SceneUnits = 'mm',
+): BuildFoundationEntityResult {
+  const axisEnd: Point3D = { x: endPoint.x, y: endPoint.y, z: 0 };
+  const params = buildDefaultFoundationParams(startPoint, kind, { ...overrides, kind, axisEnd }, sceneUnits);
+  return buildFoundationEntity(params, layerId);
+}

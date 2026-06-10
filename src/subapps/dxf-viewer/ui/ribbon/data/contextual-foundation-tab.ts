@@ -22,16 +22,40 @@ import {
   FOUNDATION_RIBBON_KEYS,
   FOUNDATION_RIBBON_KEYS_ACTIONS,
   FOUNDATION_RIBBON_BADGE_KEYS,
+  FOUNDATION_RIBBON_VISIBILITY_KEYS,
 } from '../hooks/bridge/foundation-command-keys';
 
 export const FOUNDATION_CONTEXTUAL_TRIGGER = 'foundation-selected';
 
 // ─── Combobox options ────────────────────────────────────────────────────────
 
-// Slice 1 = pad μόνο. Τα line-based kinds (strip/tie-beam) προστίθενται στο
-// Slice 2 μαζί με το line tool.
+// Slice 2 — 3 kinds. Το combobox είναι DISPLAY-ONLY (το kind ορίζεται από το tool
+// id· Revit 3 separate foundation tools, ΟΧΙ switchable combobox — pad↔line είναι
+// geometrically invalid). Όλες οι τιμές υπάρχουν ώστε επιλεγμένο entity να δείχνει
+// το σωστό label.
 const FOUNDATION_KIND_OPTIONS = [
-  { value: 'pad', labelKey: 'ribbon.commands.foundationEditor.kind.pad', isLiteralLabel: false },
+  { value: 'pad',      labelKey: 'ribbon.commands.foundationEditor.kind.pad',     isLiteralLabel: false },
+  { value: 'strip',    labelKey: 'ribbon.commands.foundationEditor.kind.strip',   isLiteralLabel: false },
+  { value: 'tie-beam', labelKey: 'ribbon.commands.foundationEditor.kind.tieBeam', isLiteralLabel: false },
+] as const;
+
+// Τυπικά πλάτη band πεδιλοδοκού/συνδετήριας (mm) — μικρότερα από pad.
+const LINE_WIDTH_MM_OPTIONS = [
+  { value: '200', labelKey: '200', isLiteralLabel: true },
+  { value: '250', labelKey: '250', isLiteralLabel: true },
+  { value: '300', labelKey: '300', isLiteralLabel: true },
+  { value: '400', labelKey: '400', isLiteralLabel: true },
+  { value: '500', labelKey: '500', isLiteralLabel: true },
+  { value: '600', labelKey: '600', isLiteralLabel: true },
+  { value: '800', labelKey: '800', isLiteralLabel: true },
+] as const;
+
+const LINE_THICKNESS_MM_OPTIONS = [
+  { value: '300', labelKey: '300', isLiteralLabel: true },
+  { value: '400', labelKey: '400', isLiteralLabel: true },
+  { value: '500', labelKey: '500', isLiteralLabel: true },
+  { value: '600', labelKey: '600', isLiteralLabel: true },
+  { value: '700', labelKey: '700', isLiteralLabel: true },
 ] as const;
 
 const FOUNDATION_ANCHOR_OPTIONS = [
@@ -111,6 +135,19 @@ export const CONTEXTUAL_FOUNDATION_TAB: RibbonTab = {
                 options: FOUNDATION_KIND_OPTIONS,
               },
             },
+          ],
+        },
+      ],
+    },
+    {
+      // pad-only geometry: anchor + width × length + thickness + rotation.
+      id: 'foundation-geometry-pad',
+      labelKey: 'ribbon.panels.foundationGeometry',
+      visibilityKey: FOUNDATION_RIBBON_VISIBILITY_KEYS.padOnly,
+      rows: [
+        {
+          isInFlyout: false,
+          buttons: [
             {
               type: 'combobox',
               size: 'small',
@@ -122,17 +159,6 @@ export const CONTEXTUAL_FOUNDATION_TAB: RibbonTab = {
                 options: FOUNDATION_ANCHOR_OPTIONS,
               },
             },
-          ],
-        },
-      ],
-    },
-    {
-      id: 'foundation-geometry',
-      labelKey: 'ribbon.panels.foundationGeometry',
-      rows: [
-        {
-          isInFlyout: false,
-          buttons: [
             {
               type: 'combobox',
               size: 'small',
@@ -175,6 +201,43 @@ export const CONTEXTUAL_FOUNDATION_TAB: RibbonTab = {
                 commandKey: FOUNDATION_RIBBON_KEYS.params.rotation,
                 comboboxWidthPx: 80,
                 options: ROTATION_DEG_OPTIONS,
+              },
+            },
+          ],
+        },
+      ],
+    },
+    {
+      // line-only geometry (strip / tie-beam): band width + section thickness.
+      // length/rotation/anchor δεν ισχύουν (το μήκος ορίζεται από τα 2 clicks,
+      // ο προσανατολισμός από τον άξονα).
+      id: 'foundation-geometry-line',
+      labelKey: 'ribbon.panels.foundationGeometry',
+      visibilityKey: FOUNDATION_RIBBON_VISIBILITY_KEYS.lineOnly,
+      rows: [
+        {
+          isInFlyout: false,
+          buttons: [
+            {
+              type: 'combobox',
+              size: 'small',
+              command: {
+                id: 'foundation.line.width',
+                labelKey: 'ribbon.commands.foundationEditor.width',
+                commandKey: FOUNDATION_RIBBON_KEYS.params.width,
+                comboboxWidthPx: 80,
+                options: LINE_WIDTH_MM_OPTIONS,
+              },
+            },
+            {
+              type: 'combobox',
+              size: 'small',
+              command: {
+                id: 'foundation.line.thickness',
+                labelKey: 'ribbon.commands.foundationEditor.thickness',
+                commandKey: FOUNDATION_RIBBON_KEYS.params.thickness,
+                comboboxWidthPx: 80,
+                options: LINE_THICKNESS_MM_OPTIONS,
               },
             },
           ],

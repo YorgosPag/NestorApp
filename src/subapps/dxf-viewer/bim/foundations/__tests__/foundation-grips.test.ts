@@ -32,16 +32,43 @@ const pad = (over: Partial<PadFootingParams> = {}): PadFootingParams => ({
 const padEntity = (over: Partial<PadFootingParams> = {}): FoundationEntity =>
   ({ id: 'fnd-1', type: 'foundation', kind: 'pad', params: pad(over) } as unknown as FoundationEntity);
 
+const strip = (over: Partial<StripFootingParams> = {}): StripFootingParams => ({
+  kind: 'strip',
+  topElevationMm: -1000,
+  thicknessMm: 400,
+  start: { x: 0, y: 0, z: 0 },
+  end: { x: 2000, y: 0, z: 0 },
+  width: 600,
+  sceneUnits: 'mm',
+  ...over,
+});
+
+const stripEntity = (over: Partial<StripFootingParams> = {}): FoundationEntity =>
+  ({ id: 'fnd-2', type: 'foundation', kind: 'strip', params: strip(over) } as unknown as FoundationEntity);
+
 describe('getFoundationGrips — pad', () => {
-  it('emits exactly 3 grips: rotation / width / length (no central move)', () => {
+  it('emits exactly 7 grips: rotation / 2 edges / 4 corners (no central move)', () => {
     const grips = getFoundationGrips(padEntity());
-    expect(grips).toHaveLength(3);
+    expect(grips).toHaveLength(7);
     expect(grips.map((g) => g.foundationGripKind)).toEqual([
       'foundation-rotation',
       'foundation-width',
       'foundation-length',
+      'foundation-corner-ne',
+      'foundation-corner-nw',
+      'foundation-corner-sw',
+      'foundation-corner-se',
     ]);
     expect(grips.every((g) => g.movesEntity === false)).toBe(true);
+  });
+
+  it('places the four corners at the footprint vertices (anchor=center, rotation=0)', () => {
+    const grips = getFoundationGrips(padEntity());
+    const at = (k: string) => grips.find((g) => g.foundationGripKind === k)!.position;
+    expect(at('foundation-corner-ne')).toEqual({ x: 750, y: 1000 });
+    expect(at('foundation-corner-nw')).toEqual({ x: -750, y: 1000 });
+    expect(at('foundation-corner-sw')).toEqual({ x: -750, y: -1000 });
+    expect(at('foundation-corner-se')).toEqual({ x: 750, y: -1000 });
   });
 
   it('places width handle at the far +X edge for anchor=center, rotation=0', () => {
@@ -64,33 +91,113 @@ describe('getFoundationGrips — pad', () => {
     expect(rot.position.y).toBeCloseTo(1200); // length/2 + 200 offset
   });
 
-  it('emits no grips for line-based kinds (strip/tie-beam = Slice 2)', () => {
-    const strip = {
-      id: 'fnd-2',
-      type: 'foundation',
-      kind: 'strip',
-      params: { kind: 'strip' } as StripFootingParams,
-    } as unknown as FoundationEntity;
-    expect(getFoundationGrips(strip)).toEqual([]);
+});
+
+describe('getFoundationGrips — line (strip / tie-beam, Slice 2)', () => {
+  it('emits start / end / width grips in stable order', () => {
+    const grips = getFoundationGrips(stripEntity());
+    expect(grips.map((g) => g.foundationGripKind)).toEqual([
+      'foundation-start',
+      'foundation-end',
+      'foundation-line-width',
+    ]);
+    expect(grips.every((g) => g.movesEntity === false)).toBe(true);
+  });
+
+  it('places start/end grips at the axis endpoints', () => {
+    const grips = getFoundationGrips(stripEntity());
+    const start = grips.find((g) => g.foundationGripKind === 'foundation-start')!;
+    const end = grips.find((g) => g.foundationGripKind === 'foundation-end')!;
+    expect(start.position).toEqual({ x: 0, y: 0 });
+    expect(end.position).toEqual({ x: 2000, y: 0 });
+  });
+
+  it('places width handle at axis midpoint offset by width/2 along perpendicular', () => {
+    const grips = getFoundationGrips(stripEntity());
+    const w = grips.find((g) => g.foundationGripKind === 'foundation-line-width')!;
+    // axis along +X → CCW perp = +Y; midpoint (1000,0) + 300 → (1000, 300).
+    expect(w.position.x).toBeCloseTo(1000);
+    expect(w.position.y).toBeCloseTo(300);
+  });
+
+  it('skips the width handle on a degenerate (zero-length) axis', () => {
+    const grips = getFoundationGrips(stripEntity({ end: { x: 0, y: 0, z: 0 } }));
+    expect(grips.map((g) => g.foundationGripKind)).toEqual(['foundation-start', 'foundation-end']);
   });
 });
 
-describe('applyFoundationGripDrag — resize', () => {
-  it('width resize is anchor-aware (center anchor → coef 0.5 → 2× delta)', () => {
+describe('applyFoundationGripDrag — line transforms (Slice 2)', () => {
+  it('foundation-start translates only the start endpoint', () => {
+    const p = applyFoundationGripDrag('foundation-start', {
+      originalParams: strip(),
+      delta: { x: 100, y: 50 },
+    });
+    expect(p.kind !== 'pad' && p.start).toEqual({ x: 100, y: 50, z: 0 });
+    expect(p.kind !== 'pad' && p.end).toEqual({ x: 2000, y: 0, z: 0 });
+  });
+
+  it('foundation-end translates only the end endpoint', () => {
+    const p = applyFoundationGripDrag('foundation-end', {
+      originalParams: strip(),
+      delta: { x: -100, y: 0 },
+    });
+    expect(p.kind !== 'pad' && p.end).toEqual({ x: 1900, y: 0, z: 0 });
+    expect(p.kind !== 'pad' && p.start).toEqual({ x: 0, y: 0, z: 0 });
+  });
+
+  it('foundation-line-width resizes the band symmetrically (perp delta × 2)', () => {
+    const p = applyFoundationGripDrag('foundation-line-width', {
+      originalParams: strip(),
+      delta: { x: 0, y: 100 }, // perpendicular to +X axis
+    });
+    // newWidth = 600 + 2 * 100 = 800
+    expect(p.kind !== 'pad' && p.width).toBe(800);
+  });
+
+  it('foundation-line-width ignores parallel-to-axis drag', () => {
+    const p = applyFoundationGripDrag('foundation-line-width', {
+      originalParams: strip(),
+      delta: { x: 500, y: 0 }, // parallel to axis → projects to 0
+    });
+    expect(p.kind !== 'pad' && p.width).toBe(600);
+  });
+
+  it('foundation-line-width clamps to MIN_FOUNDATION_DIMENSION_MM', () => {
+    const p = applyFoundationGripDrag('foundation-line-width', {
+      originalParams: strip(),
+      delta: { x: 0, y: -100000 },
+    });
+    expect(p.kind !== 'pad' && p.width).toBe(MIN_FOUNDATION_DIMENSION_MM);
+  });
+
+  it('foundation-center (Alt-move) translates both endpoints', () => {
+    const p = applyFoundationGripDrag('foundation-center', {
+      originalParams: strip(),
+      delta: { x: 10, y: 20 },
+    });
+    expect(p.kind !== 'pad' && p.start).toEqual({ x: 10, y: 20, z: 0 });
+    expect(p.kind !== 'pad' && p.end).toEqual({ x: 2010, y: 20, z: 0 });
+  });
+});
+
+describe('applyFoundationGripDrag — edge resize (opposite edge fixed)', () => {
+  it('width edge follows the cursor 1:1, opposite edge fixed (center anchor)', () => {
     const p = applyFoundationGripDrag('foundation-width', {
       originalParams: pad(),
       delta: { x: 100, y: 0 },
     });
-    // newWidth = 1500 + 100 / (0.5 * 1) = 1700
-    expect(p.kind === 'pad' && p.width).toBe(1700);
+    // Opposite (−X) edge holds at −750: width +100 → 1600, centroid shifts +50.
+    expect(p.kind === 'pad' && p.width).toBe(1600);
+    expect(p.kind === 'pad' && p.position.x).toBeCloseTo(50);
   });
 
-  it('length resize is anchor-aware (center anchor → coef 0.5 → 2× delta)', () => {
+  it('length edge follows the cursor 1:1, opposite edge fixed (center anchor)', () => {
     const p = applyFoundationGripDrag('foundation-length', {
       originalParams: pad(),
       delta: { x: 0, y: 100 },
     });
-    expect(p.kind === 'pad' && (p as PadFootingParams).length).toBe(2200);
+    expect(p.kind === 'pad' && (p as PadFootingParams).length).toBe(2100);
+    expect(p.kind === 'pad' && p.position.y).toBeCloseTo(50);
   });
 
   it('clamps width to MIN_FOUNDATION_DIMENSION_MM on a large negative drag', () => {
@@ -107,6 +214,40 @@ describe('applyFoundationGripDrag — resize', () => {
       delta: { x: 100, y: 0 },
     });
     expect(p.kind === 'pad' && (p as PadFootingParams).length).toBe(2000);
+  });
+});
+
+describe('applyFoundationGripDrag — corner resize (opposite corner fixed)', () => {
+  it('corner-ne resizes both dims and shifts the centroid, keeping SW fixed', () => {
+    const p = applyFoundationGripDrag('foundation-corner-ne', {
+      originalParams: pad(),
+      delta: { x: 100, y: 200 },
+    });
+    expect(p.kind === 'pad' && p.width).toBeCloseTo(1600); // 1500 + 100
+    expect(p.kind === 'pad' && (p as PadFootingParams).length).toBeCloseTo(2200); // 2000 + 200
+    // SW corner before = (−750, −1000); after, centroid (50,100) − (800,1100) = (−750,−1000).
+    expect(p.kind === 'pad' && p.position.x).toBeCloseTo(50);
+    expect(p.kind === 'pad' && p.position.y).toBeCloseTo(100);
+  });
+
+  it('corner-sw grows toward −X/−Y and keeps NE fixed', () => {
+    const p = applyFoundationGripDrag('foundation-corner-sw', {
+      originalParams: pad(),
+      delta: { x: -100, y: -200 },
+    });
+    expect(p.kind === 'pad' && p.width).toBeCloseTo(1600);
+    expect(p.kind === 'pad' && (p as PadFootingParams).length).toBeCloseTo(2200);
+    expect(p.kind === 'pad' && p.position.x).toBeCloseTo(-50);
+    expect(p.kind === 'pad' && p.position.y).toBeCloseTo(-100);
+  });
+
+  it('clamps a corner drag to the minimum dimension', () => {
+    const p = applyFoundationGripDrag('foundation-corner-ne', {
+      originalParams: pad(),
+      delta: { x: -100000, y: -100000 },
+    });
+    expect(p.kind === 'pad' && p.width).toBe(MIN_FOUNDATION_DIMENSION_MM);
+    expect(p.kind === 'pad' && (p as PadFootingParams).length).toBe(MIN_FOUNDATION_DIMENSION_MM);
   });
 });
 

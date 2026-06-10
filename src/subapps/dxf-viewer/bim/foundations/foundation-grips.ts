@@ -1,13 +1,12 @@
 /**
- * ADR-436 Slice 1b — Foundation (pad) parametric grip handlers.
+ * ADR-436 Slice 1b/1c — Foundation (pad) parametric grip handlers.
  *
- * Pure functions: zero React / DOM / Firestore / canvas deps. 1:1 mirror του
- * `bim/columns/column-grips.ts` (rectangular branch) — pad-only, πολύ μικρότερο
- * (μηδέν circular/polygon/variant kinds). Exposes τα grips του ADR-436 §4.3:
+ * Pure functions: zero React / DOM / Firestore / canvas deps. Exposes τα 7 grips
+ * του pad (Slice 1c — wall/column parity, Giorgio 2026-06-10):
  *
- *   - `foundation-rotation` → rotate γύρω από `position` (anchor invariant).
- *   - `foundation-width`    → resize `width` on the far edge from anchor (local X).
- *   - `foundation-length`   → resize `length` on the far edge from anchor (local Y).
+ *   - `foundation-rotation`              → rotate γύρω από `position` (anchor invariant).
+ *   - `foundation-width` / `-length`     → edge-midpoint resize (opposite edge fixed).
+ *   - `foundation-corner-{ne,nw,sw,se}`  → 2-DOF corner resize (opposite corner fixed).
  *
  * ΠΡΟΣΟΧΗ: pad = **width × length** (ΟΧΙ width × depth όπως column). Ο δεύτερος
  * άξονας (local Y) είναι το `length`.
@@ -21,13 +20,14 @@
  *   - Geometry math via `computeFoundationGeometry()` (called by
  *     `UpdateFoundationParamsCommand` at commit time — αυτό το module επιστρέφει
  *     ΜΟΝΟ νέα `FoundationParams`).
- *   - Local-frame primitives = shared `bim/grips/grip-math` (rotateVector /
- *     projectToLocalFrame / sweptAngleDegAboutPivot) + canonical `rotatePoint`
- *     (ADR-188). Anchor invariant during drag — `position` stays fixed για
- *     width/length/rotation grips· centroid shifts μέσω της geometry pipeline.
+ *   - Corner/edge resize math = shared `bim/grips/rect-grip-engine` (RectFrame
+ *     SSoT, κοινό με wall/column)· ο pad adapter (`padToRectFrame` /
+ *     `rectFrameToPadParams`) μεταφράζει params ↔ frame + preserves anchor.
+ *     Rotation = shared `grip-math` (sweptAngleDegAboutPivot) + canonical
+ *     `rotatePoint` (ADR-188).
  *
  * @see docs/centralized-systems/reference/adrs/ADR-436-bim-foundation-discipline.md §4.3
- * @see bim/columns/column-grips.ts — πρότυπο
+ * @see bim/grips/rect-grip-engine.ts — shared corner/edge SSoT
  */
 
 import type { Point2D } from '../../rendering/types/Types';
@@ -36,15 +36,31 @@ import type {
   FoundationEntity,
   FoundationParams,
   PadFootingParams,
+  StripFootingParams,
+  TieBeamParams,
 } from '../types/foundation-types';
 import { ANCHOR_OFFSETS, MIN_FOUNDATION_DIMENSION_MM } from '../types/foundation-types';
 import { rotatePoint } from '../../utils/rotation-math';
 import {
   rotateVector,
-  projectToLocalFrame,
   sweptAngleDegAboutPivot,
+  unitVector,
+  perpUnit,
 } from '../grips/grip-math';
+import type { RectFrame, RectCorner } from '../grips/rect-frame';
+import {
+  applyRectCornerDrag,
+  applyRectEdgeDrag,
+  type RectResizeLimits,
+} from '../grips/rect-grip-engine';
 import { mmScaleFor } from '../../utils/scene-units';
+
+/** Line-based foundation params (strip / tie-beam) — share start/end/width. */
+type LineFoundationParams = StripFootingParams | TieBeamParams;
+
+function isLineFoundation(params: FoundationParams): params is LineFoundationParams {
+  return params.kind === 'strip' || params.kind === 'tie-beam';
+}
 
 const RAD_TO_DEG = 180 / Math.PI;
 
@@ -61,12 +77,6 @@ function farEdgeSignX(dx: number): number {
 /** Far-edge sign along local Y: `+1` (north) for `dy <= 0`, `-1` (south) otherwise. */
 function farEdgeSignY(dy: number): number {
   return dy <= 0 ? +1 : -1;
-}
-
-/** Project world delta onto the pad's local rotated axes (`{ dxLocal, dyLocal }`). */
-function projectDeltaToLocal(delta: Point2D, rotDeg: number): { dxLocal: number; dyLocal: number } {
-  const local = projectToLocalFrame(delta, rotDeg);
-  return { dxLocal: local.x, dyLocal: local.y };
 }
 
 /**
@@ -111,6 +121,92 @@ function rotationHandleWorld(params: PadFootingParams): Point2D {
   return localToWorld({ x: 0, y: params.length / 2 + ROTATION_HANDLE_OFFSET_MM }, params);
 }
 
+/** World position μιας γωνιακής λαβής (local signs `sx`/`sy` × half-extents). */
+function cornerHandleWorld(params: PadFootingParams, sx: number, sy: number): Point2D {
+  return localToWorld({ x: (sx * params.width) / 2, y: (sy * params.length) / 2 }, params);
+}
+
+// ─── RectFrame adapter (ADR-436 Slice 1c — shared rect-grip-engine SSoT) ──────
+
+/** `foundation-corner-*` grip kind → local-axis signs for the engine. */
+const FOUNDATION_CORNER_MAP: Partial<Record<FoundationGripKind, RectCorner>> = {
+  'foundation-corner-ne': { sx: 1, sy: 1 },
+  'foundation-corner-nw': { sx: -1, sy: 1 },
+  'foundation-corner-sw': { sx: -1, sy: -1 },
+  'foundation-corner-se': { sx: 1, sy: -1 },
+};
+
+/**
+ * Pad params → centroid `RectFrame` (scene units). The centroid + half-extents
+ * are exactly what `computeCentroidWorld` / `mmScaleFor` already derive, so the
+ * engine math is unit- and anchor-agnostic.
+ */
+function padToRectFrame(pad: PadFootingParams): RectFrame {
+  const s = mmScaleFor(pad);
+  return {
+    center: computeCentroidWorld(pad),
+    rotationDeg: pad.rotation,
+    halfWidth: (pad.width * s) / 2,
+    halfLength: (pad.length * s) / 2,
+  };
+}
+
+/**
+ * `RectFrame` (post-resize) → pad params, preserving the anchor: `position` is
+ * recomputed as the anchor reference point of the new rectangle
+ * (`centroid + R(dx·width, dy·length)`), the inverse of `computeCentroidWorld`.
+ */
+function rectFrameToPadParams(frame: RectFrame, pad: PadFootingParams): PadFootingParams {
+  const s = mmScaleFor(pad);
+  const width = (frame.halfWidth * 2) / s;
+  const length = (frame.halfLength * 2) / s;
+  const { dx, dy } = ANCHOR_OFFSETS[pad.anchor];
+  const shift = rotateVector({ x: dx * width * s, y: dy * length * s }, frame.rotationDeg);
+  return {
+    ...pad,
+    width,
+    length,
+    position: { x: frame.center.x + shift.x, y: frame.center.y + shift.y, z: pad.position.z ?? 0 },
+  };
+}
+
+/** Min half-extents (scene units) for the engine clamp = `MIN_FOUNDATION_DIMENSION_MM`. */
+function padResizeLimits(pad: PadFootingParams): RectResizeLimits {
+  const half = (MIN_FOUNDATION_DIMENSION_MM * mmScaleFor(pad)) / 2;
+  return { minHalfWidth: half, minHalfLength: half };
+}
+
+// ─── Line-frame helpers (strip / tie-beam — mirror beam-grips) ────────────────
+
+/** Axis midpoint (world coords) του line-based πεδίλου. */
+function lineAxisMidpoint(params: LineFoundationParams): Point2D {
+  return {
+    x: (params.start.x + params.end.x) / 2,
+    y: (params.start.y + params.end.y) / 2,
+  };
+}
+
+/** Unit axis vector (start → end). null on degenerate (zero-length). */
+function lineUnitAxis(params: LineFoundationParams): { x: number; y: number } | null {
+  return unitVector(
+    { x: params.start.x, y: params.start.y },
+    { x: params.end.x, y: params.end.y },
+  );
+}
+
+/**
+ * World position της λαβής width: axis midpoint offset κατά `width/2` (mm →
+ * canvas units via `mmScaleFor`) along perpendicular. null σε degenerate axis.
+ */
+function lineWidthHandleWorld(params: LineFoundationParams): Point2D | null {
+  const u = lineUnitAxis(params);
+  if (!u) return null;
+  const p = perpUnit(u);
+  const mid = lineAxisMidpoint(params);
+  const halfW = (params.width * mmScaleFor(params)) / 2;
+  return { x: mid.x + halfW * p.x, y: mid.y + halfW * p.y };
+}
+
 // ─── Grip emission ───────────────────────────────────────────────────────────
 
 /**
@@ -118,12 +214,13 @@ function rotationHandleWorld(params: PadFootingParams): Point2D {
  * Μόνο `pad` εκπέμπει grips (strip / tie-beam = Slice 2). Declutter: NO central
  * move grip (gripIndex 0 unused) — Alt+drag μετακινεί.
  *
- *   pad (3 grips):
- *     1 → rotation, 2 → width, 3 → length
+ *   pad (7 grips — ADR-436 Slice 1c, wall/column parity):
+ *     1 → rotation, 2 → width edge, 3 → length edge,
+ *     4 → corner-ne, 5 → corner-nw, 6 → corner-sw, 7 → corner-se
  */
 export function getFoundationGrips(entity: Readonly<FoundationEntity>): GripInfo[] {
   const { params } = entity;
-  if (params.kind !== 'pad') return [];
+  if (isLineFoundation(params)) return getLineFoundationGrips(entity, params);
 
   return [
     {
@@ -137,7 +234,7 @@ export function getFoundationGrips(entity: Readonly<FoundationEntity>): GripInfo
     {
       entityId: entity.id,
       gripIndex: 2,
-      type: 'vertex',
+      type: 'edge',
       position: widthHandleWorld(params),
       movesEntity: false,
       foundationGripKind: 'foundation-width',
@@ -145,12 +242,86 @@ export function getFoundationGrips(entity: Readonly<FoundationEntity>): GripInfo
     {
       entityId: entity.id,
       gripIndex: 3,
-      type: 'vertex',
+      type: 'edge',
       position: lengthHandleWorld(params),
       movesEntity: false,
       foundationGripKind: 'foundation-length',
     },
+    {
+      entityId: entity.id,
+      gripIndex: 4,
+      type: 'vertex',
+      position: cornerHandleWorld(params, +1, +1),
+      movesEntity: false,
+      foundationGripKind: 'foundation-corner-ne',
+    },
+    {
+      entityId: entity.id,
+      gripIndex: 5,
+      type: 'vertex',
+      position: cornerHandleWorld(params, -1, +1),
+      movesEntity: false,
+      foundationGripKind: 'foundation-corner-nw',
+    },
+    {
+      entityId: entity.id,
+      gripIndex: 6,
+      type: 'vertex',
+      position: cornerHandleWorld(params, -1, -1),
+      movesEntity: false,
+      foundationGripKind: 'foundation-corner-sw',
+    },
+    {
+      entityId: entity.id,
+      gripIndex: 7,
+      type: 'vertex',
+      position: cornerHandleWorld(params, +1, -1),
+      movesEntity: false,
+      foundationGripKind: 'foundation-corner-se',
+    },
   ];
+}
+
+/**
+ * Line-based foundation grips (strip / tie-beam). Stable order, mirror beam:
+ *   0 → start endpoint, 1 → end endpoint, 2 → width edge handle (perp midpoint).
+ * Width handle skipped σε degenerate axis (start === end). Declutter: no central
+ * MOVE grip — Alt+drag translates both endpoints (mirror pad).
+ */
+function getLineFoundationGrips(
+  entity: Readonly<FoundationEntity>,
+  params: LineFoundationParams,
+): GripInfo[] {
+  const grips: GripInfo[] = [
+    {
+      entityId: entity.id,
+      gripIndex: 0,
+      type: 'vertex',
+      position: { x: params.start.x, y: params.start.y },
+      movesEntity: false,
+      foundationGripKind: 'foundation-start',
+    },
+    {
+      entityId: entity.id,
+      gripIndex: 1,
+      type: 'vertex',
+      position: { x: params.end.x, y: params.end.y },
+      movesEntity: false,
+      foundationGripKind: 'foundation-end',
+    },
+  ];
+  const widthPos = lineWidthHandleWorld(params);
+  if (widthPos) {
+    grips.push({
+      entityId: entity.id,
+      gripIndex: 2,
+      type: 'edge',
+      position: widthPos,
+      movesEntity: false,
+      foundationGripKind: 'foundation-line-width',
+    });
+  }
+  return grips;
 }
 
 // ─── Drag transforms ─────────────────────────────────────────────────────────
@@ -180,14 +351,39 @@ export function applyFoundationGripDrag(
 ): FoundationParams {
   if (input.delta.x === 0 && input.delta.y === 0) return input.originalParams;
   if (gripKind === 'foundation-center') return moveCenter(input);
-  // Rotation / width / length apply only to pad (line-based kinds = Slice 2).
+  // Line-based grips (strip / tie-beam) — mirror beam-grips.
+  if (isLineFoundation(input.originalParams)) {
+    const line = input.originalParams;
+    if (gripKind === 'foundation-start') return moveLineStart(line, input.delta);
+    if (gripKind === 'foundation-end') return moveLineEnd(line, input.delta);
+    if (gripKind === 'foundation-line-width') return resizeLineWidth(line, input.delta);
+    return input.originalParams;
+  }
+  // Rotation / width / length / corners apply only to pad.
   if (input.originalParams.kind !== 'pad') return input.originalParams;
   const pad = input.originalParams;
   if (gripKind === 'foundation-rotation') {
     return input.pivot ? rotateAroundPivot(pad, input) : rotateAroundPosition(pad, input);
   }
-  if (gripKind === 'foundation-width') return resizeWidth(pad, input.delta);
-  if (gripKind === 'foundation-length') return resizeLength(pad, input.delta);
+  // Corner + edge resize → shared rect-grip-engine SSoT (opposite element fixed).
+  const corner = FOUNDATION_CORNER_MAP[gripKind];
+  if (corner) {
+    const frame = applyRectCornerDrag(padToRectFrame(pad), corner, input.delta, padResizeLimits(pad));
+    return rectFrameToPadParams(frame, pad);
+  }
+  const { dx, dy } = ANCHOR_OFFSETS[pad.anchor];
+  if (gripKind === 'foundation-width') {
+    const frame = applyRectEdgeDrag(
+      padToRectFrame(pad), { axis: 'x', sign: farEdgeSignX(dx) === 1 ? 1 : -1 }, input.delta, padResizeLimits(pad),
+    );
+    return rectFrameToPadParams(frame, pad);
+  }
+  if (gripKind === 'foundation-length') {
+    const frame = applyRectEdgeDrag(
+      padToRectFrame(pad), { axis: 'y', sign: farEdgeSignY(dy) === 1 ? 1 : -1 }, input.delta, padResizeLimits(pad),
+    );
+    return rectFrameToPadParams(frame, pad);
+  }
   return input.originalParams;
 }
 
@@ -258,22 +454,37 @@ function rotateAroundPivot(
   };
 }
 
-function resizeWidth(pad: PadFootingParams, delta: Point2D): PadFootingParams {
-  const s = mmScaleFor(pad);
-  const { dx } = ANCHOR_OFFSETS[pad.anchor];
-  const signX = farEdgeSignX(dx);
-  const coefX = signX * 0.5 - dx;
-  const { dxLocal } = projectDeltaToLocal(delta, pad.rotation);
-  const newWidth = Math.max(MIN_FOUNDATION_DIMENSION_MM, pad.width + dxLocal / (coefX * s));
-  return { ...pad, width: newWidth };
+// ─── Line transforms (strip / tie-beam — mirror beam-grips) ───────────────────
+
+/** Translate axis start endpoint (no other params change). */
+function moveLineStart(line: LineFoundationParams, delta: Point2D): LineFoundationParams {
+  return {
+    ...line,
+    start: { x: line.start.x + delta.x, y: line.start.y + delta.y, z: line.start.z ?? 0 },
+  };
 }
 
-function resizeLength(pad: PadFootingParams, delta: Point2D): PadFootingParams {
-  const s = mmScaleFor(pad);
-  const { dy } = ANCHOR_OFFSETS[pad.anchor];
-  const signY = farEdgeSignY(dy);
-  const coefY = signY * 0.5 - dy;
-  const { dyLocal } = projectDeltaToLocal(delta, pad.rotation);
-  const newLength = Math.max(MIN_FOUNDATION_DIMENSION_MM, pad.length + dyLocal / (coefY * s));
-  return { ...pad, length: newLength };
+/** Translate axis end endpoint. */
+function moveLineEnd(line: LineFoundationParams, delta: Point2D): LineFoundationParams {
+  return {
+    ...line,
+    end: { x: line.end.x + delta.x, y: line.end.y + delta.y, z: line.end.z ?? 0 },
+  };
+}
+
+/**
+ * Symmetric width resize perpendicular to axis (mirror `beam-grips.resizeWidth`).
+ * Handle stands στη μία πλευρά (offset `width/2`), οπότε ένα perpendicular delta
+ * `d` (canvas units) αντιστοιχεί σε `2d` συνολικό πλάτος. Canvas → mm via scene
+ * scale. Parallel-to-axis delta → 0 (width unchanged). Degenerate axis → no-op.
+ * Clamps κάτω από `MIN_FOUNDATION_DIMENSION_MM`.
+ */
+function resizeLineWidth(line: LineFoundationParams, delta: Point2D): LineFoundationParams {
+  const u = lineUnitAxis(line);
+  if (!u) return line;
+  const p = perpUnit(u);
+  const deltaPerpCanvas = delta.x * p.x + delta.y * p.y;
+  const deltaPerpMm = deltaPerpCanvas / mmScaleFor(line);
+  const newWidth = Math.max(MIN_FOUNDATION_DIMENSION_MM, line.width + 2 * deltaPerpMm);
+  return { ...line, width: newWidth };
 }
