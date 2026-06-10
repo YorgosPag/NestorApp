@@ -50,16 +50,17 @@ export interface CompanySettings {
  *
  * Path: `companies/{id}`
  *
- * Links to the contact record via `contactId` (FK → `contacts` collection).
- * The contact record holds the business details (name, VAT, phones, address).
- * This document holds tenant-level configuration and metadata.
+ * The legal identity (επωνυμία, ΑΦΜ, ΔΟΥ, ΚΑΔ, entity type) lives in the
+ * per-tenant company profile (`accounting_settings/{companyId}` — SSoT, ADR-439).
+ * This document holds tenant-level configuration and metadata; its `name` is a
+ * derived display cache of that profile (no self-contact for the tenant).
  */
 export interface CompanyDocument {
   /** Firestore document ID (legacy: raw Firestore ID, new: comp_xxx) */
   readonly id: string;
-  /** Human-readable company name (denormalized from contact for quick access) */
+  /** Human-readable display name — derived cache from the per-tenant company profile (ADR-439) */
   readonly name: string;
-  /** FK → contacts collection (the contact with type='company') */
+  /** Optional FK → external `contacts` record (NOT a self-contact; usually null) */
   readonly contactId: string;
   /** Company lifecycle status */
   readonly status: CompanyStatus;

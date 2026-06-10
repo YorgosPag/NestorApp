@@ -370,6 +370,8 @@ export const COLLECTIONS = {
   FLOORPLAN_FLOOR_FINISHES: process.env.NEXT_PUBLIC_FLOORPLAN_FLOOR_FINISHES_COLLECTION || 'floorplan_floor_finishes',
   /** ADR-422 — analytical thermal spaces per room (IfcSpace). IDs via tsp_* prefix. */
   FLOORPLAN_THERMAL_SPACES: process.env.NEXT_PUBLIC_FLOORPLAN_THERMAL_SPACES_COLLECTION || 'floorplan_thermal_spaces',
+  /** ADR-437 — space separators per floorplan (IfcVirtualElement). IDs via ssp_* prefix. */
+  FLOORPLAN_SPACE_SEPARATORS: process.env.NEXT_PUBLIC_FLOORPLAN_SPACE_SEPARATORS_COLLECTION || 'floorplan_space_separators',
   /** ADR-408 — logical MEP systems (electrical circuits first; geometry-less). IDs via mepsys_* prefix. */
   FLOORPLAN_MEP_SYSTEMS: process.env.NEXT_PUBLIC_FLOORPLAN_MEP_SYSTEMS_COLLECTION || 'floorplan_mep_systems',
   /** ADR-408 Φ3 — point-based electrical panels (circuit sources). IDs via elecpnl_* prefix. */
@@ -489,6 +491,7 @@ export const FLOOR_SCOPED_BIM_COLLECTIONS = [
   COLLECTIONS.FLOORPLAN_MEP_WATER_HEATERS,
   COLLECTIONS.FLOORPLAN_MEP_UNDERFLOORS,
   COLLECTIONS.FLOORPLAN_THERMAL_SPACES,
+  COLLECTIONS.FLOORPLAN_SPACE_SEPARATORS,
 ] as const;
 
 export type FloorScopedBimCollection = (typeof FLOOR_SCOPED_BIM_COLLECTIONS)[number];
@@ -607,7 +610,14 @@ export const SYSTEM_DOCS = {
 
   // 📊 ACCOUNTING SETTINGS DOCUMENTS (ADR-245B: Hardcoded Strings Audit)
   // Path: accounting_settings/{docId} — Accounting subsystem singleton documents
+  // ⚠️ ACCT_COMPANY_PROFILE: LEGACY global doc id. As of ADR-439 Phase 2 the company
+  // profile is per-tenant (accounting_settings/{companyId}); this constant survives only
+  // for the one-time migration + transitional fallback. Do NOT use for new reads/writes.
   ACCT_COMPANY_PROFILE: process.env.NEXT_PUBLIC_ACCT_COMPANY_PROFILE_DOC || 'company_profile',
+  // ⚠️ ADR-439 Phase 2c: the singletons below are now per-tenant
+  // (`accounting_settings/{companyId}__<type>` via `accountingDocId()`). These legacy
+  // GLOBAL doc ids survive ONLY as the one-time migration source
+  // (/api/admin/migrate-accounting-singletons). Do NOT use for new reads/writes.
   ACCT_PARTNERS: process.env.NEXT_PUBLIC_ACCT_PARTNERS_DOC || 'partners',
   ACCT_MEMBERS: process.env.NEXT_PUBLIC_ACCT_MEMBERS_DOC || 'members',
   ACCT_SHAREHOLDERS: process.env.NEXT_PUBLIC_ACCT_SHAREHOLDERS_DOC || 'shareholders',
@@ -619,6 +629,9 @@ export const SYSTEM_DOCS = {
 
   // 🔄 ACCOUNTING MATCHING ENGINE CONFIG (Phase 2a — SAP/Midday pattern)
   // Path: accounting_settings/matching_config — Weighted scoring weights + thresholds
+  // ⚠️ ADR-439 Phase 2c: now per-tenant (`accounting_settings/{companyId}__matching_config`
+  // via `accountingDocId()`). This legacy GLOBAL doc id survives ONLY as the migration
+  // source (/api/admin/migrate-accounting-singletons). Do NOT use for new reads/writes.
   ACCT_MATCHING_CONFIG: process.env.NEXT_PUBLIC_ACCT_MATCHING_CONFIG_DOC || 'matching_config',
 
   // 🔔 UI SYNC SIGNAL (Server→Client bridge for AI agent mutations)

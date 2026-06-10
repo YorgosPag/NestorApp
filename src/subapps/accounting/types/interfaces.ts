@@ -126,6 +126,10 @@ export interface IAccountingRepository {
   getServicePresets(): Promise<ServicePreset[]>;
   saveServicePresets(presets: ServicePreset[]): Promise<void>;
 
+  // ── Matching Engine Config (ADR-439 Phase 2c — per-tenant) ───────────────
+  getMatchingConfig(): Promise<MatchingConfig | null>;
+  saveMatchingConfig(config: MatchingConfig): Promise<void>;
+
   // ── Bank Transactions ───────────────────────────────────────────────────
   createBankTransaction(data: Omit<BankTransaction, 'transactionId' | 'createdAt' | 'updatedAt'>): Promise<{ id: string }>;
   getBankTransaction(transactionId: string): Promise<BankTransaction | null>;

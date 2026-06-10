@@ -34,7 +34,7 @@ export interface KadEntry {
 /**
  * Κοινά πεδία προφίλ επιχείρησης
  *
- * Firestore path: `accounting_settings/company_profile`
+ * Firestore path: `accounting_settings/{companyId}` (per-tenant SSoT, ADR-439 Phase 2).
  * Χρησιμοποιείται ως βάση για discriminated union.
  */
 interface CompanyProfileBase {
