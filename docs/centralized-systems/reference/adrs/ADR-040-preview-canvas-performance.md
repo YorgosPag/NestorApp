@@ -71,6 +71,10 @@ Mouse Event → DxfCanvas.onMouseMove
 
 ## Changelog
 
+### 2026-06-10 — Space-separator tool wiring (ADR-437) — pure pass-through στον orchestrator, μηδέν νέο subscription (CHECK 6B)
+
+**Status**: IMPLEMENTED 2026-06-10. Το νέο `spaceSeparatorTool` (Revit «Room Separator», ADR-437) περνάει μέσα από τον `CanvasSection.tsx` orchestrator: (i) destructure από το αποτέλεσμα του `useSpecialTools(...)` και (ii) forward ως πεδίο στα `useCanvasClickHandler` params — μαζί με νέο optional `spaceSeparatorTool?: SlabToolLike` στο `UseCanvasClickHandlerParams` (`canvas-click-types.ts`). **Καθαρό pass-through**: ο orchestrator ΔΕΝ αποκτά νέο `useSyncExternalStore` (CHECK 6C respected), καμία αλλαγή σε bitmap cache-key, η click-FSM ζει στο `useSpaceSeparatorTool` (leaf/hook). Το shell-touch είναι μόνο το threading ενός ακόμη tool handle — ίδιο μοτίβο με `thermalSpaceTool` (ADR-422). Co-staged για CHECK 6B (`CanvasSection.tsx`). Λεπτομέρεια στο ADR-437 changelog.
+
 ### 2026-06-10 — MEP connectivity live ghost: connected pipes follow a moving host (CHECK 6D, μηδέν νέο subscription)
 
 **Status**: IMPLEMENTED 2026-06-10 (jest mep-segments 81/81). Όταν ο χρήστης μετακινεί έναν plumbing host (Alt+drag «move-from-point» ή grip-menu Move), το `useGripGhostPreview` ζωγραφίζει πλέον — μαζί με το ghost του host — και τα **connected pipe ends** να τεντώνονται live (`resolveHostMoveConnectedPipePatches` → `drawGhostEntity` ανά segment). Παραμένει **RAF-driven στο PreviewCanvas, μηδέν React re-render, μηδέν νέο `useSyncExternalStore`** — pure read του scene + draw στον ίδιο ghost ctx (καμία αλλαγή σε bitmap cache-key, κανένα orchestrator subscription). Η commit-side connectivity (host move → CompoundCommand με pipe follow) ζει στο ADR-408 Φ-C EXT· εδώ μόνο το ghost rendering touch (CHECK 6D — co-staged ADR-408/ADR-363). Λεπτομέρεια στο ADR-408 changelog.

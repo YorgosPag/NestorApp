@@ -102,6 +102,8 @@ export interface UseCanvasClickHandlerParams {
   mepUnderfloorTool?: SlabToolLike;
   /** ADR-422 — Thermal-space tool click pipeline (Revit «Place Space» click-in-region). */
   thermalSpaceTool?: SlabToolLike;
+  /** ADR-437 — Space-separator tool click pipeline (2-click line). */
+  spaceSeparatorTool?: SlabToolLike;
   /** ADR-408 Φ8 — MEP segment (duct/pipe) tool click pipeline. */
   mepSegmentTool?: MepSegmentToolLike;
   /** ADR-408 Φ15 — MEP riser (vertical drain stack) tool click pipeline (1-click). */
