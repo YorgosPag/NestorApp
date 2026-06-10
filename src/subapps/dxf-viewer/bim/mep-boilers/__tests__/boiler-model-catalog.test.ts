@@ -211,6 +211,32 @@ describe('applyBoilerModelToParams', () => {
     });
   });
 
+  it('writes weightKg from the preset (gas condensing 24 → 35)', () => {
+    const next = applyBoilerModelToParams(BASE_PARAMS, model!);
+    expect(next.weightKg).toBe(35);
+  });
+
+  it('writes waterContentL from the preset (gas condensing 24 → 2.5)', () => {
+    const next = applyBoilerModelToParams(BASE_PARAMS, model!);
+    expect(next.waterContentL).toBe(2.5);
+  });
+
+  it('writes weightKg + waterContentL for EVERY preset (installation data on all entries)', () => {
+    listBoilerModels().forEach((m) => {
+      const next = applyBoilerModelToParams(BASE_PARAMS, m);
+      expect(next.weightKg).toBe(m.weightKg);
+      expect(next.weightKg).toBeGreaterThan(0);
+      expect(next.waterContentL).toBe(m.waterContentL);
+      expect(next.waterContentL).toBeGreaterThan(0);
+    });
+  });
+
+  it('writes the heavier weight for the floor-standing oil presets than the wall-hung gas ones', () => {
+    const oil = applyBoilerModelToParams(BASE_PARAMS, resolveBoilerModel('oil-floor-45')!);
+    const gas = applyBoilerModelToParams(BASE_PARAMS, resolveBoilerModel('gas-condensing-24')!);
+    expect(oil.weightKg!).toBeGreaterThan(gas.weightKg!);
+  });
+
   it('is pure — does not mutate the original params', () => {
     const before = { ...BASE_PARAMS };
     applyBoilerModelToParams(BASE_PARAMS, model!);
@@ -283,6 +309,16 @@ describe('clearBoilerModel', () => {
   it('sets mountingType to undefined (a Type-Catalog property; oil-floor was floor-standing)', () => {
     expect(withModel.mountingType).toBe('floor-standing'); // oil-floor-30
     expect(clearBoilerModel(withModel).mountingType).toBeUndefined();
+  });
+
+  it('sets weightKg to undefined (a Type-Catalog property; oil-floor-30 was 130)', () => {
+    expect(withModel.weightKg).toBe(130);
+    expect(clearBoilerModel(withModel).weightKg).toBeUndefined();
+  });
+
+  it('sets waterContentL to undefined (a Type-Catalog property; oil-floor-30 was 28)', () => {
+    expect(withModel.waterContentL).toBe(28);
+    expect(clearBoilerModel(withModel).waterContentL).toBeUndefined();
   });
 
   it('preserves all other params (width, thermalOutputW, position, etc.)', () => {

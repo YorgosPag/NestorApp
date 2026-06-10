@@ -425,4 +425,37 @@ describe('buildBoilerTagLines', () => {
       buildBoilerTagLines(params(), fakeT).some((l) => l.startsWith('mounting')),
     ).toBe(false);
   });
+
+  it('shows the weight line (kg) when weightKg is present and positive', () => {
+    const lines = buildBoilerTagLines(params({ weightKg: 130 }), fakeT);
+    expect(lines).toContain('weight: 130 kg');
+  });
+
+  it('rounds the weight to a whole kg', () => {
+    const lines = buildBoilerTagLines(params({ weightKg: 35.6 }), fakeT);
+    expect(lines).toContain('weight: 36 kg');
+  });
+
+  it('omits the weight line when weightKg is absent or zero', () => {
+    expect(buildBoilerTagLines(params(), fakeT).some((l) => l.startsWith('weight'))).toBe(false);
+    expect(
+      buildBoilerTagLines(params({ weightKg: 0 }), fakeT).some((l) => l.startsWith('weight')),
+    ).toBe(false);
+  });
+
+  it('shows the water-content line (L) when waterContentL is present and positive', () => {
+    const lines = buildBoilerTagLines(params({ waterContentL: 2.5 }), fakeT);
+    expect(lines).toContain('waterContent: 2.5 L');
+  });
+
+  it('omits the water-content line when waterContentL is absent or zero', () => {
+    expect(
+      buildBoilerTagLines(params(), fakeT).some((l) => l.startsWith('waterContent')),
+    ).toBe(false);
+    expect(
+      buildBoilerTagLines(params({ waterContentL: 0 }), fakeT).some((l) =>
+        l.startsWith('waterContent'),
+      ),
+    ).toBe(false);
+  });
 });

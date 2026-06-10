@@ -111,6 +111,10 @@ export const MepBoilerParamsSchema = z
     fuelType: z.enum(['gas', 'oil', 'electric', 'heat-pump']).optional(),
     // MOUNTING type (Revit «Mounting» type-property) — floor-standing ignores the wall elevation; absent ⇒ wall-hung.
     mountingType: z.enum(['wall-hung', 'floor-standing']).optional(),
+    // Appliance dry WEIGHT (kg) — Revit «Weight», structural loading. Optional/additive.
+    weightKg: z.number().positive().optional(),
+    // Boiler WATER CONTENT (L) — IFC Pset_BoilerTypeCommon.WaterStorageCapacity; feeds expansion-vessel sizing. Optional/additive.
+    waterContentL: z.number().positive().optional(),
     // ADR-408 Φ1 — embedded MEP connectors (host-local). Optional/additive.
     connectors: z.array(MepConnectorSchema).optional(),
   })

@@ -64,8 +64,11 @@ const DB_UNIT = 'dB(A)';
 /** Pressure unit glyph for the safety-relief-valve line — non-translatable annotation symbol. */
 const BAR_UNIT = 'bar';
 
-/** Litre unit glyph for the expansion-vessel line — non-translatable annotation symbol. */
+/** Litre unit glyph for the expansion-vessel + water-content lines — non-translatable annotation symbol. */
 const LITRE_UNIT = 'L';
+
+/** Kilogram unit glyph for the weight line — non-translatable annotation symbol. */
+const KG_UNIT = 'kg';
 
 /** En-dash joining the min–max kW range on the modulation line — non-translatable glyph. */
 const RANGE_DASH = '–';
@@ -108,6 +111,8 @@ export type BoilerTagTranslator = (shortKey: string) => string;
  *  18. Sound power — `NN dB(A)` measured L_WA, ANY fuel type, ONLY when a positive value is present.
  *  19. Mounting — the localized mounting type, ONLY for a `'floor-standing'` boiler (the exception
  *      that the επίτοιχος default does not annotate; mirrors Revit tagging the non-default mounting).
+ *  20. Weight — `weightKg` as `NN kg` (Revit «Weight», structural loading), ONLY when present (> 0).
+ *  21. Water content — `waterContentL` as `N L` (IFC water storage), ONLY when present (> 0).
  *
  * @param params Boiler params (SSoT).
  * @param t      Short-key translator (see {@link BoilerTagTranslator}).
@@ -239,6 +244,20 @@ export function buildBoilerTagLines(
   // nothing, keeping every wall-hung tag clean (mirrors Revit tagging the non-default mounting).
   if (params.mountingType === 'floor-standing') {
     lines.push(`${t('mounting')}: ${t('mountingTypes.floor-standing')}`);
+  }
+
+  // 20 — Appliance weight (Revit «Weight», structural loading). The measured dry weight (kg).
+  // Gated on a present positive value; applies to ANY fuel/mounting type. Plain data line
+  // (no resolver) — the tag prints the value directly.
+  if (typeof params.weightKg === 'number' && params.weightKg > 0) {
+    lines.push(`${t('weight')}: ${Math.round(params.weightKg)} ${KG_UNIT}`);
+  }
+
+  // 21 — Water content (IFC Pset_BoilerTypeCommon.WaterStorageCapacity). The boiler's internal
+  // system-water volume (L). Gated on a present positive value; applies to ANY fuel type. Plain
+  // data line — the «Προτεινόμενο δοχείο» readout (not the tag) consumes it for vessel sizing.
+  if (typeof params.waterContentL === 'number' && params.waterContentL > 0) {
+    lines.push(`${t('waterContent')}: ${params.waterContentL} ${LITRE_UNIT}`);
   }
 
   return lines;

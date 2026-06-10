@@ -167,6 +167,19 @@ export interface BoilerModelPreset {
    * line; floor-standing boilers ignore the wall-mounting elevation). Optional/additive.
    */
   readonly mountingType?: MepBoilerMountingType;
+  /**
+   * kg — appliance dry WEIGHT (Revit «Weight»). Structural-loading datum: floor-standing
+   * oil cabinets are heavy (~120–180 kg), wall-hung gas units light (~35–40 kg). Drives
+   * `MepBoilerParams.weightKg` (the «Βάρος» plan-tag line). Optional/additive.
+   */
+  readonly weightKg?: number;
+  /**
+   * L — boiler WATER CONTENT (IFC `Pset_BoilerTypeCommon.WaterStorageCapacity`). System
+   * water held in the heat exchanger / body; feeds the recommended expansion-vessel sizing.
+   * Drives `MepBoilerParams.waterContentL` (the «Νερό» plan-tag line + «Προτεινόμενο δοχείο»
+   * readout). Optional/additive.
+   */
+  readonly waterContentL?: number;
 }
 
 // ─── Catalog data ─────────────────────────────────────────────────────────────
@@ -194,6 +207,8 @@ export const BOILER_MODEL_CATALOG: readonly BoilerModelPreset[] = [
     noxMgKwh: 32,
     soundPowerDbA: 45,
     condensing: true,
+    weightKg: 35,
+    waterContentL: 2.5,
   },
   {
     id: 'gas-condensing-35',
@@ -209,6 +224,8 @@ export const BOILER_MODEL_CATALOG: readonly BoilerModelPreset[] = [
     noxMgKwh: 38,
     soundPowerDbA: 48,
     condensing: true,
+    weightKg: 40,
+    waterContentL: 3,
   },
   {
     id: 'gas-system-28',
@@ -224,6 +241,8 @@ export const BOILER_MODEL_CATALOG: readonly BoilerModelPreset[] = [
     noxMgKwh: 45,
     soundPowerDbA: 47,
     condensing: true,
+    weightKg: 37,
+    waterContentL: 2.8,
   },
   {
     id: 'oil-floor-30',
@@ -239,6 +258,8 @@ export const BOILER_MODEL_CATALOG: readonly BoilerModelPreset[] = [
     soundPowerDbA: 56,
     condensing: false,
     mountingType: 'floor-standing',
+    weightKg: 130,
+    waterContentL: 28,
   },
   {
     id: 'oil-floor-45',
@@ -254,6 +275,8 @@ export const BOILER_MODEL_CATALOG: readonly BoilerModelPreset[] = [
     soundPowerDbA: 58,
     condensing: false,
     mountingType: 'floor-standing',
+    weightKg: 165,
+    waterContentL: 38,
   },
   {
     id: 'heatpump-12',
@@ -267,6 +290,8 @@ export const BOILER_MODEL_CATALOG: readonly BoilerModelPreset[] = [
     seasonalEfficiencyPercent: 156,
     soundPowerDbA: 52,
     condensing: false,
+    weightKg: 80,
+    waterContentL: 3,
   },
   {
     id: 'electric-9',
@@ -280,6 +305,8 @@ export const BOILER_MODEL_CATALOG: readonly BoilerModelPreset[] = [
     seasonalEfficiencyPercent: 99,
     soundPowerDbA: 40,
     condensing: false,
+    weightKg: 22,
+    waterContentL: 4,
   },
 ] as const;
 
@@ -340,6 +367,9 @@ export function applyBoilerModelToParams(
     // Floor-standing presets (oil-floor) carry the mounting type; wall-hung presets clear it
     // (undefined ⇒ DEFAULT_BOILER_MOUNTING_TYPE = wall-hung).
     mountingType: model.mountingType,
+    // Installation data (physical Type-properties) — appliance weight + water content.
+    weightKg: model.weightKg,
+    waterContentL: model.waterContentL,
   };
 }
 
@@ -361,6 +391,8 @@ export function clearBoilerModel(params: MepBoilerParams): MepBoilerParams {
     condensing: _condensing,
     minThermalOutputW: _minThermalOutputW,
     mountingType: _mountingType,
+    weightKg: _weightKg,
+    waterContentL: _waterContentL,
     ...rest
   } = params;
   return rest as MepBoilerParams;

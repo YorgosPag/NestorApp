@@ -322,6 +322,23 @@ export interface MepBoilerParams extends MepConnectorHostParams {
    * Additive/optional — pre-mounting-type boilers stay επίτοιχοι.
    */
   readonly mountingType?: MepBoilerMountingType;
+  /**
+   * kg — appliance dry WEIGHT (Revit Mechanical Equipment «Weight», IFC
+   * `Pset_ManufacturerTypeInformation` mass). Physical installation datum used for
+   * STRUCTURAL LOADING — the natural partner of {@link mountingType}: a floor-standing
+   * oil boiler (~120–180 kg) needs a load-bearing plinth, a wall-hung gas boiler
+   * (~35–40 kg) needs an adequate wall bracket. Populated by the Type Catalog; absent ⇒
+   * unspecified. Drives the «Βάρος» plan-tag line. Additive/optional.
+   */
+  readonly weightKg?: number;
+  /**
+   * L — boiler WATER CONTENT (IFC `Pset_BoilerTypeCommon.WaterStorageCapacity`). The volume
+   * of system water held inside the appliance's heat exchanger / body. Feeds the sealed-system
+   * expansion-vessel sizing (`resolveRecommendedExpansionVesselL`) — the natural partner of the
+   * {@link expansionVessel} accessory. Populated by the Type Catalog; absent ⇒ unspecified.
+   * Drives the «Νερό» plan-tag line + the «Προτεινόμενο δοχείο» readout. Additive/optional.
+   */
+  readonly waterContentL?: number;
 }
 
 // ─── Geometry cache (derivable from params; SSoT = params) ────────────────────
