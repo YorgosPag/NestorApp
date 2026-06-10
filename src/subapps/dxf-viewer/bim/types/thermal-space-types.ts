@@ -32,7 +32,12 @@ import type { SceneUnits } from '../../utils/scene-units';
 import { mmScaleFor } from '../../utils/scene-units';
 import type { IfcEntityMixin } from './ifc-entity-mixin';
 import { polygonArea, polygonPerimeter, polygonBbox } from '../geometry/shared/polygon-utils';
-import type { ReheatMode, ThermalBridgeLevel } from '../thermal/heat-load/heat-load-config';
+import type {
+  AirTightnessLevel,
+  ReheatMode,
+  ThermalBridgeLevel,
+  VentilationSystem,
+} from '../thermal/heat-load/heat-load-config';
 import type {
   FinShadingLevel,
   HorizonShadingLevel,
@@ -82,6 +87,8 @@ export const THERMAL_SPACE_USE_TYPES: readonly ThermalSpaceUseType[] = [
  *   - `airChangesPerHour?` — **override** εναλλαγών αέρα (1/h). Absent ⇒ default χρήσης.
  *   - `thermalBridgeLevel?` — **override** θερμογεφυρών (L1.5). Absent ⇒ `none`.
  *   - `reheatMode?` — **override** λειτουργίας/reheat (L1.5). Absent ⇒ `continuous`.
+ *   - `airTightnessLevel?` — **override** αεροστεγανότητας κελύφους (L1.7, διείσδυση). Absent ⇒ `unspecified` (n50=0).
+ *   - `ventilationSystem?` — **override** συστήματος αερισμού/ανάκτησης (L1.7). Absent ⇒ `natural` (η=0).
  *   - `solarShadingLevel?` — **override** σκίασης εξωτ. εμποδίων (L7.3, generic). Absent ⇒ `none`.
  *   - `horizonShadingLevel?` — **override** σκίασης ορίζοντα `F_hor` (L7.3 Slice C). Absent ⇒ `none`.
  *   - `finShadingLevel?` — **override** σκίασης πτερυγίων `F_fin` (L7.3 Slice C). Absent ⇒ `none`.
@@ -102,6 +109,10 @@ export interface ThermalSpaceParams {
   readonly thermalBridgeLevel?: ThermalBridgeLevel;
   /** **override** λειτουργίας θέρμανσης/reheat (L1.5). Absent ⇒ `continuous` (f_RH=0). */
   readonly reheatMode?: ReheatMode;
+  /** **override** αεροστεγανότητας κελύφους (L1.7, διείσδυση). Absent ⇒ `unspecified` (n50=0, n_inf=0). */
+  readonly airTightnessLevel?: AirTightnessLevel;
+  /** **override** συστήματος αερισμού/ανάκτησης (L1.7). Absent ⇒ `natural` (η=0, n_ven=n_min). */
+  readonly ventilationSystem?: VentilationSystem;
   /** **override** σκίασης εξωτ. εμποδίων (L7.3, generic). Absent ⇒ `none` (obstruction=1.0). */
   readonly solarShadingLevel?: SolarShadingLevel;
   /** **override** σκίασης μακρινού ορίζοντα `F_hor` (L7.3 Slice C). Absent ⇒ `none` (1.0). */

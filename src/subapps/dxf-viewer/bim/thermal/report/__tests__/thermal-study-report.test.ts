@@ -60,6 +60,8 @@ function makeSpaceLoads(spaces: ThermalSpaceEntity[]): SpaceHeatLoads {
         deltaTC: 20,
         transmissionW: 600 + i * 100,
         ventilationW: 200,
+        infiltrationW: 0,
+        designedVentilationW: 200,
         thermalBridgeW: 0,
         reheatW: 0,
         totalW: 800 + i * 100,
@@ -163,7 +165,7 @@ describe('buildThermalStudyReport', () => {
 
     expect(report.isEmpty).toBe(false);
     expect(report.header).toEqual({ buildingLabel: 'Κτίριο Α', floorLabel: 'Ισόγειο' });
-    expect(report.sections).toHaveLength(7);
+    expect(report.sections).toHaveLength(8);
 
     const [summary, loads, radiators, pipes, balancingSection] = report.sections;
     expect(loads.rows).toHaveLength(2);
@@ -327,6 +329,86 @@ describe('buildThermalStudyReport', () => {
     expect(report.sections[0].rows[0].grossEnergy).toBe(0);
   });
 
+  it('builds the L1.8 heat-loss breakdown section (fabric-by-kind + split + Σ invariant)', () => {
+    const spaces = [makeSpace('sp-1', 'Σαλόνι')];
+    const base = makeSpaceLoads(spaces);
+    // fabric: τοίχος 300 + κούφωμα 150 + δάπεδο 125 + στέγη 200 + οροφή 50 = 825 (=transmission)·
+    // split: infiltration 100 ↔ designed 382.5 → ventilationW = max = 382.5· reheat 0.
+    // totalW = 825 + 382.5 = 1207.5.
+    const withBreakdown: SpaceHeatLoads = {
+      ...base,
+      results: new Map([
+        [
+          'sp-1',
+          {
+            ...base.results.get('sp-1')!,
+            transmissionW: 825,
+            ventilationW: 382.5,
+            infiltrationW: 100,
+            designedVentilationW: 382.5,
+            reheatW: 0,
+            totalW: 1207.5,
+            boundaries: [
+              { kind: 'wall', condition: 'external-air', uValue: 0.4, area: 12, factor: 1, lossW: 300, thermalBridgeW: 0 },
+              { kind: 'window', condition: 'external-air', uValue: 2.5, area: 2, factor: 1, lossW: 150, thermalBridgeW: 0 },
+              { kind: 'floor', condition: 'ground', uValue: 0.5, area: 20, factor: 0.5, lossW: 125, thermalBridgeW: 0 },
+              { kind: 'roof', condition: 'external-air', uValue: 0.4, area: 20, factor: 1, lossW: 200, thermalBridgeW: 0 },
+              { kind: 'ceiling', condition: 'adjacent-heated', uValue: 1, area: 10, factor: 0.5, lossW: 50, thermalBridgeW: 0 },
+            ],
+          },
+        ],
+      ]),
+    };
+
+    const report = buildThermalStudyReport({
+      spaceLoads: withBreakdown,
+      radiatorSizing: new Map(),
+      pipeSizing: new Map(),
+      balancing: { terminals: new Map(), indexTerminalId: null, pumpHeadPa: 0, segmentDropPa: new Map() },
+      climateZone: null,
+      lookups: LOOKUPS,
+    });
+
+    const lossBreakdown = report.sections[7];
+    expect(lossBreakdown.titleKey).toBe('thermalStudyReport.sections.lossBreakdown');
+    expect(lossBreakdown.footnoteKey).toBe('thermalStudyReport.footnotes.lossBreakdownVentilation');
+    expect(lossBreakdown.rows).toHaveLength(1);
+    const r = lossBreakdown.rows[0];
+    expect(r.space).toBe('Σαλόνι');
+    expect(r.walls).toBe(300);
+    expect(r.windows).toBe(150);
+    expect(r.doors).toBe(0);
+    expect(r.floor).toBe(125);
+    expect(r.roof).toBe(250); // στέγη 200 + οροφή 50 ενοποιημένα
+    expect(r.infiltration).toBe(100);
+    expect(r.designedVentilation).toBe(383); // round(382.5)
+    expect(r.reheat).toBe(0);
+    expect(r.total).toBe(1208); // round(1207.5)
+    // Σ invariant (raw): fabric (825) + ventilationW=max (382.5) + reheat (0) === totalW (1207.5).
+    const fabricSum =
+      (r.walls as number) +
+      (r.windows as number) +
+      (r.doors as number) +
+      (r.floor as number) +
+      (r.roof as number);
+    expect(fabricSum + 382.5 + 0).toBeCloseTo(1207.5, 5);
+  });
+
+  it('omits loss-breakdown rows when no heating model (footnote still present)', () => {
+    const report = buildThermalStudyReport({
+      spaceLoads: null,
+      radiatorSizing: new Map(),
+      pipeSizing: new Map(),
+      balancing: { terminals: new Map(), indexTerminalId: null, pumpHeadPa: 0, segmentDropPa: new Map() },
+      climateZone: null,
+      lookups: LOOKUPS,
+    });
+    const lossBreakdown = report.sections[7];
+    expect(lossBreakdown.titleKey).toBe('thermalStudyReport.sections.lossBreakdown');
+    expect(lossBreakdown.rows).toHaveLength(0);
+    expect(lossBreakdown.footnoteKey).toBe('thermalStudyReport.footnotes.lossBreakdownVentilation');
+  });
+
   it('returns isEmpty for a floor with no heating model', () => {
     const report = buildThermalStudyReport({
       spaceLoads: null,
@@ -337,7 +419,7 @@ describe('buildThermalStudyReport', () => {
       lookups: LOOKUPS,
     });
     expect(report.isEmpty).toBe(true);
-    expect(report.sections).toHaveLength(7);
+    expect(report.sections).toHaveLength(8);
     expect(report.sections[0].rows).toHaveLength(1); // σύνοψη πάντα παρούσα
     expect(report.sections[1].rows).toHaveLength(0);
     expect(report.sections[0].rows[0].floorLoad).toBe(0);

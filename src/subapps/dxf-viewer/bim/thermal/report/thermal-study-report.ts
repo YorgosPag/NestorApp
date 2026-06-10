@@ -24,6 +24,10 @@ import type { HydraulicBalancingResult } from '../balancing/circuit-balancing';
 import type { ClimateZone } from '../kenak-thermal-config';
 import { deriveEnvelopeCompliance } from '../heat-load/derive-envelope-compliance';
 import {
+  deriveHeatLossBreakdown,
+  type HeatLossBreakdownRow,
+} from '../heat-load/derive-heat-loss-breakdown';
+import {
   deriveAnnualHeating,
   type AnnualEnergyRow,
   type AnnualHeatingResult,
@@ -69,6 +73,7 @@ const K = {
   sections: 'thermalStudyReport.sections',
   columns: 'thermalStudyReport.columns',
   summary: 'thermalStudyReport.summary',
+  footnotes: 'thermalStudyReport.footnotes',
 } as const;
 
 function col(
@@ -153,6 +158,57 @@ function buildLoadsSection(input: ThermalStudyReportInput): ReportSection {
     }
   }
   return { titleKey: `${K.sections}.loads`, columns, rows };
+}
+
+// ─── L1.8 — Ανάλυση απωλειών ανά χώρο (fabric + split + reheat) ────────────────
+
+/** Μία γραμμή ανάλυσης απωλειών → cells (W ακέραια· στέγη+οροφή ενοποιημένα). */
+function lossBreakdownRow(
+  row: HeatLossBreakdownRow,
+  spaceLabelById: ReadonlyMap<string, string>,
+): ReportRow {
+  const f = row.fabricByKind;
+  return {
+    space: spaceLabelById.get(row.spaceId) ?? row.spaceId,
+    walls: Math.round(f.wall ?? 0),
+    windows: Math.round(f.window ?? 0),
+    doors: Math.round(f.door ?? 0),
+    floor: Math.round(f.floor ?? 0),
+    roof: Math.round((f.roof ?? 0) + (f.ceiling ?? 0)),
+    infiltration: Math.round(row.infiltrationW),
+    designedVentilation: Math.round(row.designedVentilationW),
+    reheat: Math.round(row.reheatW),
+    total: Math.round(row.totalW),
+  };
+}
+
+function buildLossBreakdownSection(
+  input: ThermalStudyReportInput,
+  spaceLabelById: ReadonlyMap<string, string>,
+): ReportSection {
+  const columns: ReportColumn[] = [
+    col('space', 'space', 'text', 'left'),
+    col('walls', 'walls', 'count', 'right'),
+    col('windows', 'windows', 'count', 'right'),
+    col('doors', 'doors', 'count', 'right'),
+    col('floor', 'floor', 'count', 'right'),
+    col('roof', 'roof', 'count', 'right'),
+    col('infiltration', 'infiltration', 'count', 'right'),
+    col('designedVentilation', 'designedVentilation', 'count', 'right'),
+    col('reheat', 'reheat', 'count', 'right'),
+    col('total', 'total', 'count', 'right'),
+  ];
+  const footnoteKey = `${K.footnotes}.lossBreakdownVentilation`;
+  if (!input.spaceLoads) {
+    return { titleKey: `${K.sections}.lossBreakdown`, columns, rows: [], footnoteKey };
+  }
+  const { rows } = deriveHeatLossBreakdown(input.spaceLoads.results);
+  return {
+    titleKey: `${K.sections}.lossBreakdown`,
+    columns,
+    rows: rows.map((r) => lossBreakdownRow(r, spaceLabelById)),
+    footnoteKey,
+  };
 }
 
 // ─── L2 — Διαστασιολόγηση σωμάτων ──────────────────────────────────────────────
@@ -372,6 +428,7 @@ export function buildThermalStudyReport(input: ThermalStudyReportInput): Thermal
   const balancing = buildBalancingSection(input, spaceLabelById);
   const compliance = buildComplianceSection(input, spaceLabelById);
   const annualEnergy = buildAnnualEnergySection(input, spaceLabelById);
+  const lossBreakdown = buildLossBreakdownSection(input, spaceLabelById);
 
   const isEmpty =
     loads.rows.length === 0 &&
@@ -381,7 +438,7 @@ export function buildThermalStudyReport(input: ThermalStudyReportInput): Thermal
 
   return {
     header: { buildingLabel: input.lookups.buildingLabel, floorLabel: input.lookups.floorLabel },
-    sections: [summary, loads, radiators, pipes, balancing, compliance, annualEnergy],
+    sections: [summary, loads, radiators, pipes, balancing, compliance, annualEnergy, lossBreakdown],
     isEmpty,
   };
 }

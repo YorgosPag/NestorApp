@@ -10,6 +10,8 @@ import {
   resolveThermalSpaceAch,
   resolveThermalSpaceThermalBridgeSurcharge,
   resolveThermalSpaceReheatFactor,
+  resolveThermalSpaceAirTightnessN50,
+  resolveThermalSpaceHeatRecovery,
   resolveSolarShadingLevel,
   THERMAL_SPACE_USE_DEFAULTS,
 } from '../thermal-space-use-catalog';
@@ -80,6 +82,29 @@ describe('thermal-space-use-catalog', () => {
       REHEAT_FACTOR_PRESETS['night-setback'],
     );
     expect(resolveThermalSpaceReheatFactor({ reheatMode: 'intermittent' })).toBe(22);
+  });
+
+  // ─── L1.7 — αερισμός/διείσδυση resolvers ──────────────────────────────────────
+
+  it('αεροστεγανότητα: default (απουσία override) → unspecified n50=0 (zero-regression)', () => {
+    expect(resolveThermalSpaceAirTightnessN50({})).toBe(0);
+    expect(resolveThermalSpaceAirTightnessN50({ airTightnessLevel: undefined })).toBe(0);
+  });
+
+  it('αεροστεγανότητα: override → preset n50 από το config', () => {
+    expect(resolveThermalSpaceAirTightnessN50({ airTightnessLevel: 'leaky' })).toBe(6.0);
+    expect(resolveThermalSpaceAirTightnessN50({ airTightnessLevel: 'tight' })).toBe(1.0);
+  });
+
+  it('ανάκτηση: default (απουσία override) → natural η=0 (zero-regression)', () => {
+    expect(resolveThermalSpaceHeatRecovery({})).toBe(0);
+    expect(resolveThermalSpaceHeatRecovery({ ventilationSystem: undefined })).toBe(0);
+    expect(resolveThermalSpaceHeatRecovery({ ventilationSystem: 'mechanical' })).toBe(0);
+  });
+
+  it('ανάκτηση: override → preset η από το config', () => {
+    expect(resolveThermalSpaceHeatRecovery({ ventilationSystem: 'mechanical-hr-high' })).toBeCloseTo(0.8, 6);
+    expect(resolveThermalSpaceHeatRecovery({ ventilationSystem: 'mechanical-hr-passive' })).toBeCloseTo(0.9, 6);
   });
 
   // ─── L7.3 — σκίαση εξωτ. εμποδίων resolver ─────────────────────────────────────

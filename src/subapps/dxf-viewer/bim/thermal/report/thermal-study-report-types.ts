@@ -38,6 +38,12 @@ export interface ReportSection {
   readonly titleKey: string;
   readonly columns: readonly ReportColumn[];
   readonly rows: readonly ReportRow[];
+  /**
+   * Προαιρετικό i18n key υποσημείωσης (resolved @export) — διευκρίνιση κάτω από τον
+   * πίνακα. Χρησιμοποιείται στη L1.8 ανάλυση απωλειών για τον κανόνα «Αερισμός =
+   * max(Διείσδυση, Σχεδιασμένος)» ώστε ο αναγνώστης να μην διπλομετρά τα 2 σκέλη.
+   */
+  readonly footnoteKey?: string;
 }
 
 /** Resolved header context (ήδη μεταφρασμένα labels — δεν περνούν από translator). */
@@ -46,10 +52,10 @@ export interface ThermalStudyHeader {
   readonly floorLabel: string;
 }
 
-/** Πλήρες report: header + σύνοψη + 6 πίνακες (ΟΛΑ ως sections). */
+/** Πλήρες report: header + σύνοψη + 7 πίνακες (ΟΛΑ ως sections). */
 export interface ThermalStudyReport {
   readonly header: ThermalStudyHeader;
-  /** [σύνοψη, φορτία, σώματα, σωληνώσεις, εξισορρόπηση, ΚΕΝΑΚ-κέλυφος, ετήσια ζήτηση]. */
+  /** [σύνοψη, φορτία, σώματα, σωληνώσεις, εξισορρόπηση, ΚΕΝΑΚ, ετήσια, ανάλυση απωλειών]. */
   readonly sections: readonly ReportSection[];
   /** true ⇒ δεν υπάρχει μοντέλο θέρμανσης στον όροφο (όλοι οι πίνακες κενοί). */
   readonly isEmpty: boolean;

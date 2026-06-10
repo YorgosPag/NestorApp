@@ -27,8 +27,12 @@ import type {
 } from '../types/thermal-space-types';
 import { THERMAL_SPACE_USE_TYPES } from '../types/thermal-space-types';
 import {
+  DEFAULT_AIR_TIGHTNESS_LEVEL,
   DEFAULT_REHEAT_MODE,
   DEFAULT_THERMAL_BRIDGE_LEVEL,
+  DEFAULT_VENTILATION_SYSTEM,
+  getHeatRecoveryEfficiency,
+  getInfiltrationN50,
   getReheatFactor,
   getThermalBridgeSurcharge,
 } from './heat-load/heat-load-config';
@@ -163,6 +167,27 @@ export function resolveThermalSpaceReheatFactor(
   params: Pick<ThermalSpaceParams, 'reheatMode'>,
 ): number {
   return getReheatFactor(params.reheatMode ?? DEFAULT_REHEAT_MODE);
+}
+
+/**
+ * Effective αεροστεγανότητα `n50` (1/h @50Pa): per-space override ?? `unspecified`
+ * (n50=0). ADR-422 L1.7 — pure SSoT· default 0 ⇒ διείσδυση δεν λαμβάνεται υπόψη ⇒
+ * `n_inf=0` ⇒ zero-regression.
+ */
+export function resolveThermalSpaceAirTightnessN50(
+  params: Pick<ThermalSpaceParams, 'airTightnessLevel'>,
+): number {
+  return getInfiltrationN50(params.airTightnessLevel ?? DEFAULT_AIR_TIGHTNESS_LEVEL);
+}
+
+/**
+ * Effective απόδοση ανάκτησης θερμότητας `η` ∈ [0,1): per-space override ?? `natural`
+ * (η=0). ADR-422 L1.7 — pure SSoT· default 0 ⇒ `n_ven=n_min` ⇒ zero-regression.
+ */
+export function resolveThermalSpaceHeatRecovery(
+  params: Pick<ThermalSpaceParams, 'ventilationSystem'>,
+): number {
+  return getHeatRecoveryEfficiency(params.ventilationSystem ?? DEFAULT_VENTILATION_SYSTEM);
 }
 
 /**
