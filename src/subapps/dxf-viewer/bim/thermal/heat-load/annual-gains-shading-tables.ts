@@ -267,3 +267,47 @@ export const FIN_GEOMETRY_SHADING_FACTOR: Readonly<
 export function getFinGeometryShadingFactor(angleDeg: number, orientation: SolarOrientation): number {
   return interpolateOrientationBands(FIN_GEOMETRY_SHADING_FACTOR[orientation], angleDeg);
 }
+
+// ─── L7.3 Slice E — Geometry-derived ορίζοντας / γειτονικά κτίρια (F_hor) ───────
+
+/**
+ * Συντελεστής σκίασης **ορίζοντα** `F_hor` ∈ (0,1] ανά **προσανατολισμό** και **γωνία
+ * ανύψωσης** `α_hor = atan(h_obs/d_obs)` — geometry-derived **κατοπτρικό του
+ * `OVERHANG_SHADING_FACTOR`** (Slice B) στον **κατακόρυφο-μακρινό** άξονα (EN ISO 13790
+ * §11.4.4 `F_sh,gl = F_hor·F_ov·F_fin` / ΤΟΤΕΕ 20701-1 πίν. σκίασης ορίζοντα / Revit
+ * Energy «Site/Context Shading»), αντιπροσωπευτικές documented defaults (editable).
+ * Φυσική (**ίδια σειρά** με τον level-based `HORIZON_SHADING_FACTOR` Slice C):
+ *   - **Νότος = μεγαλύτερη μείωση** — η μακρινή μάζα κόβει τον **χαμηλό χειμερινό**
+ *     νότιο ήλιο (ηλιακή ανύψωση μεσημβρίας ~28° στην Ελλάδα) → ακόμη και μέτριος
+ *     ορίζοντας τον αποκλείει.
+ *   - **Βόρειος ≈ 1.0** — μόνο διάχυτη ακτινοβολία, ελάχιστα κομμένη.
+ *   - Α/Δ ενδιάμεσα· ΝΑ/ΝΔ κοντά στον Ν· ΒΑ/ΒΔ κοντά στον Β· συμμετρικό Α↔Δ.
+ * **Βαθμονόμηση** ώστε να συμφωνεί σε τάξη μεγέθους με τον `HORIZON_SHADING_FACTOR`
+ * (Slice C high: S≈0.70, N≈0.95): ψηλός ορίζοντας (`α≈60°`) ⇒ ≈/κάτω από `high`,
+ * μέτριος (`α≈30°`) ⇒ ≈ `medium`. `α=0` (κανένα εμπόδιο) ⇒ `1.0` παντού ⇒ zero-regression.
+ * Γραμμική interpolation (`getHorizonGeometryShadingFactor`). SSoT — ο resolver διαβάζει
+ * ΜΟΝΟ από εδώ.
+ */
+export const HORIZON_GEOMETRY_SHADING_FACTOR: Readonly<
+  Record<SolarOrientation, readonly OverhangShadingBand[]>
+> = {
+  S:  [{ angle: 0, factor: 1.0 }, { angle: 15, factor: 0.92 }, { angle: 30, factor: 0.80 }, { angle: 45, factor: 0.65 }, { angle: 60, factor: 0.55 }],
+  SE: [{ angle: 0, factor: 1.0 }, { angle: 15, factor: 0.93 }, { angle: 30, factor: 0.83 }, { angle: 45, factor: 0.70 }, { angle: 60, factor: 0.60 }],
+  SW: [{ angle: 0, factor: 1.0 }, { angle: 15, factor: 0.93 }, { angle: 30, factor: 0.83 }, { angle: 45, factor: 0.70 }, { angle: 60, factor: 0.60 }],
+  E:  [{ angle: 0, factor: 1.0 }, { angle: 15, factor: 0.95 }, { angle: 30, factor: 0.88 }, { angle: 45, factor: 0.78 }, { angle: 60, factor: 0.70 }],
+  W:  [{ angle: 0, factor: 1.0 }, { angle: 15, factor: 0.95 }, { angle: 30, factor: 0.88 }, { angle: 45, factor: 0.78 }, { angle: 60, factor: 0.70 }],
+  NE: [{ angle: 0, factor: 1.0 }, { angle: 15, factor: 0.98 }, { angle: 30, factor: 0.94 }, { angle: 45, factor: 0.89 }, { angle: 60, factor: 0.85 }],
+  NW: [{ angle: 0, factor: 1.0 }, { angle: 15, factor: 0.98 }, { angle: 30, factor: 0.94 }, { angle: 45, factor: 0.89 }, { angle: 60, factor: 0.85 }],
+  N:  [{ angle: 0, factor: 1.0 }, { angle: 15, factor: 0.99 }, { angle: 30, factor: 0.97 }, { angle: 45, factor: 0.95 }, { angle: 60, factor: 0.93 }],
+};
+
+/**
+ * Συντελεστής σκίασης ορίζοντα `F_hor` για γωνία ανύψωσης `α_hor` (deg) και
+ * προσανατολισμό — **γραμμική interpolation** στις γωνίες του `HORIZON_GEOMETRY_SHADING_FACTOR`
+ * (REUSE `interpolateOrientationBands`, ίδιο pattern με `getOverhangShadingFactor`/
+ * `getFinGeometryShadingFactor`). `α ≤ 0` ⇒ `1.0` (κανένα εμπόδιο, zero-regression)· `α`
+ * πέρα από την τελευταία γωνία ⇒ clamp στον τελευταίο συντελεστή. Αποτέλεσμα `∈ (0,1]`. Pure.
+ */
+export function getHorizonGeometryShadingFactor(angleDeg: number, orientation: SolarOrientation): number {
+  return interpolateOrientationBands(HORIZON_GEOMETRY_SHADING_FACTOR[orientation], angleDeg);
+}

@@ -102,6 +102,31 @@ export function computeOverhangProjection(input: OverhangProjectionInput): numbe
   return maxDist;
 }
 
+/**
+ * **Πλησιέστερη** απόσταση `d ≥ 0` που η ακτίνα από το facade τέμνει κάποιο outline
+ * (ελάχιστη θετική τομή, αντί της μέγιστης). 0 αν δεν υπάρχει τομή ή ο normal είναι
+ * degenerate. Σε αντίθεση με το {@link computeOverhangProjection} (max exit = βάθος
+ * προβόλου/πτερυγίου, Slice B/D), το **silhouette / κοντινή παρειά** είναι το σωστό
+ * μέγεθος για τη γωνία ανύψωσης ορίζοντα (Slice E): η κοντινότερη μάζα υποτείνει τη
+ * μεγαλύτερη γωνία. REUSE της ΙΔΙΑΣ `raySegmentExitDistance` — μηδέν νέα ray math.
+ * Idempotent.
+ */
+export function computeNearestObstacleDistance(input: OverhangProjectionInput): number {
+  const { facadePoint: f, outwardNormal: n, outlines } = input;
+  if (Math.hypot(n.x, n.y) < PROJECTION_EPS) return 0;
+
+  let minDist = Infinity;
+  for (const outline of outlines) {
+    const poly = outline.polygonXY;
+    if (poly.length < 3) continue;
+    for (let i = 0; i < poly.length; i++) {
+      const dist = raySegmentExitDistance(f, n, poly[i], poly[(i + 1) % poly.length]);
+      if (dist !== null && dist >= 0 && dist < minDist) minDist = dist;
+    }
+  }
+  return Number.isFinite(minDist) ? minDist : 0;
+}
+
 /** Παράμετροι της γωνίας προβόλου `β` (ίδια μονάδα για `d_ov` και `height`). */
 export interface OverhangAngleInput {
   /** Βάθος προβόλου `d_ov` (από {@link computeOverhangProjection}). */

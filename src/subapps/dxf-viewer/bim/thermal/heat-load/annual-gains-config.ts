@@ -53,6 +53,8 @@ export {
   getFinShadingFactor,
   FIN_GEOMETRY_SHADING_FACTOR,
   getFinGeometryShadingFactor,
+  HORIZON_GEOMETRY_SHADING_FACTOR,
+  getHorizonGeometryShadingFactor,
 } from './annual-gains-shading-tables';
 
 /**
