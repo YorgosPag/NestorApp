@@ -1,0 +1,107 @@
+{
+  "baseline": {
+    "takenAt": "2026-06-10",
+    "takenBy": "Claude Opus 4.8 (pre-write snapshot)",
+    "purpose": "Baseline DB+Storage ΠΡΙΝ ο Giorgio δημιουργήσει: νομικό πρόσωπο (επαφή) -> εταιρεία -> έργο -> κτίριο -> 2 ορόφους -> ακίνητο μεζονέτα (2 ορόφων). Diff μετά.",
+    "project": "pagonis-87766",
+    "tenantCompanyId": "comp_9c7c1a50-f370-466d-bdf7-aa7b2b2d7757"
+  },
+
+  "firestore": {
+    "topLevelCollectionCount": 9,
+    "note": "ΜΟΝΟ οι 9 προστατευμένες collections υπάρχουν. companies + dxf_viewer_levels ΔΕΝ υπάρχουν (διαγράφηκαν, δεν έχουν re-materialized ακόμα). Οτιδήποτε νέο εμφανιστεί = αποτέλεσμα των εγγραφών.",
+    "collections": {
+      "accounting_invoice_counters": {
+        "count": 1,
+        "docIds": ["A"]
+      },
+      "accounting_settings": {
+        "count": 1,
+        "docIds": ["company_profile"]
+      },
+      "config": {
+        "count": 6,
+        "docIds": [
+          "buildings-critical",
+          "contacts-critical",
+          "crm-dashboard-admin",
+          "dxf-viewer-admin",
+          "properties-idle",
+          "ui_sync_signal"
+        ]
+      },
+      "settings": {
+        "count": 4,
+        "docIds": [
+          "ai_tool_analytics",
+          "budget_variance_proj_db13f4bb-fe0e-4f6a-a30e-c2698a691cc8",
+          "euribor_rates",
+          "super_admin_registry"
+        ]
+      },
+      "system": {
+        "count": 2,
+        "docIds": ["backup_status", "settings"]
+      },
+      "user_2fa_settings": {
+        "count": 2,
+        "docIds": [
+          "ITjmw0syn7WiYuskqaGtzLPuN852",
+          "WKBWEg3DSfcdSbLNJfzGEW3vkct1"
+        ]
+      },
+      "user_notification_settings": {
+        "count": 1,
+        "docIds": ["WKBWEg3DSfcdSbLNJfzGEW3vkct1"]
+      },
+      "user_preferences": {
+        "count": 3,
+        "docIds": [
+          "ITjmw0syn7WiYuskqaGtzLPuN852_comp_9c7c1a50-f370-466d-bdf7-aa7b2b2d7757",
+          "WKBWEg3DSfcdSbLNJfzGEW3vkct1_comp_9c7c1a50-f370-466d-bdf7-aa7b2b2d7757",
+          "WKBWEg3DSfcdSbLNJfzGEW3vkct1_pzNUy8ksddGCtcQMqumR"
+        ]
+      },
+      "users": {
+        "count": 3,
+        "docs": [
+          { "id": "ITjmw0syn7WiYuskqaGtzLPuN852", "email": "pagonis.oe@gmail.com", "companyId": "comp_9c7c1a50-f370-466d-bdf7-aa7b2b2d7757", "globalRole": "external_user", "loginCount": 5925 },
+          { "id": "WKBWEg3DSfcdSbLNJfzGEW3vkct1", "email": "georgios.pagonis@gmail.com", "companyId": "comp_9c7c1a50-f370-466d-bdf7-aa7b2b2d7757", "activeCompanyId": "comp_9c7c1a50-f370-466d-bdf7-aa7b2b2d7757", "globalRole": "super_admin", "loginCount": 1027 },
+          { "id": "dev-admin", "email": "dev@localhost", "companyId": null, "globalRole": "admin", "loginCount": 0 }
+        ]
+      }
+    }
+  },
+
+  "storage": {
+    "rootFolders": ["bim-mesh-library/"],
+    "rootFiles": 0,
+    "totalFiles": 6,
+    "tree": {
+      "bim-mesh-library/appliance/": [
+        { "name": "washing_machine_01.glb", "size": "5.4 MB" }
+      ],
+      "bim-mesh-library/sanitary/": [
+        { "name": "shower_realistic_01.glb", "size": "5.3 MB" },
+        { "name": "shower_tray_01.glb", "size": "708.6 KB" },
+        { "name": "shower_tray_02.glb", "size": "70.1 KB" },
+        { "name": "wc_realistic_01.glb", "size": "112.7 KB" },
+        { "name": "wc_realistic_02.glb", "size": "4.0 MB" }
+      ]
+    }
+  },
+
+  "expectedNewCollectionsAfterWrites": {
+    "note": "Πιθανές collections που θα εμφανιστούν μετά (για να ελεγχθούν στο diff). Δεν είναι εγγυημένο — εξαρτάται από τη ροή UI.",
+    "candidates": [
+      "contacts (νομικό πρόσωπο)",
+      "companies (re-materialized + νέα εταιρεία)",
+      "projects (έργο)",
+      "buildings (κτίριο)",
+      "building_floors / floors (2 όροφοι)",
+      "properties / units (μεζονέτα 2 ορόφων)",
+      "entity_audit_trail (audit)",
+      "dxf_viewer_levels (αν ανοίξει DXF viewer)"
+    ]
+  }
+}
