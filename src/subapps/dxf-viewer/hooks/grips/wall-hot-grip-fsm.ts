@@ -65,6 +65,10 @@ export const HOT_GRIP_OP_REGISTRY: Readonly<Record<string, WallHotGripOp>> = {
   // Columns (ADR-397) — center MOVE (3-click), rotation REFERENCE (6-click)
   'column-center': 'move',
   'column-rotation': 'rotate',
+  // Foundations (ADR-436 Slice 1b) — pad: rotation REFERENCE (6-click). center
+  // MOVE (Alt+drag, not emitted). width/length stay press-drag.
+  'foundation-center': 'move',
+  'foundation-rotation': 'rotate',
   // MEP fixtures (ADR-406) — full wall parity: move MOVE (3-click), rotation
   // REFERENCE (6-click), 4 corners 2-click. Diameter (circular) stays press-drag.
   'mep-fixture-move': 'move',
@@ -129,7 +133,7 @@ export function isWallHotGripKind(kind: string | undefined | null): boolean {
  */
 export function hotGripKindOf(grip: UnifiedGripInfo | null | undefined): string | undefined {
   if (!grip) return undefined;
-  return grip.wallGripKind ?? grip.beamGripKind ?? grip.columnGripKind ?? grip.stairGripKind ?? grip.mepFixtureGripKind ?? grip.electricalPanelGripKind ?? grip.mepManifoldGripKind ?? grip.mepSegmentGripKind ?? grip.furnitureGripKind ?? grip.floorplanSymbolGripKind;
+  return grip.wallGripKind ?? grip.beamGripKind ?? grip.columnGripKind ?? grip.foundationGripKind ?? grip.stairGripKind ?? grip.mepFixtureGripKind ?? grip.electricalPanelGripKind ?? grip.mepManifoldGripKind ?? grip.mepSegmentGripKind ?? grip.furnitureGripKind ?? grip.floorplanSymbolGripKind;
 }
 
 /**

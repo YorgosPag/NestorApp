@@ -10,7 +10,7 @@
  */
 
 import type { Point2D } from '../../rendering/types/Types';
-import type { StairGripKind, DimensionGripKind, WallGripKind, OpeningGripKind, SlabGripKind, SlabOpeningGripKind, RoofGripKind, FloorFinishGripKind, MepUnderfloorGripKind, BeamGripKind, ColumnGripKind, MepFixtureGripKind, ElectricalPanelGripKind, MepManifoldGripKind, MepRadiatorGripKind, MepBoilerGripKind, MepWaterHeaterGripKind, MepSegmentGripKind, FurnitureGripKind, FloorplanSymbolGripKind, XLineGripKind, RayGripKind } from '../useGripMovement';
+import type { StairGripKind, DimensionGripKind, WallGripKind, OpeningGripKind, SlabGripKind, SlabOpeningGripKind, RoofGripKind, FloorFinishGripKind, MepUnderfloorGripKind, BeamGripKind, ColumnGripKind, FoundationGripKind, MepFixtureGripKind, ElectricalPanelGripKind, MepManifoldGripKind, MepRadiatorGripKind, MepBoilerGripKind, MepWaterHeaterGripKind, MepSegmentGripKind, FurnitureGripKind, FloorplanSymbolGripKind, XLineGripKind, RayGripKind } from '../useGripMovement';
 import type {
   DxfGripDragPreview,
   DxfGripInteractionState,
@@ -192,6 +192,13 @@ export interface UnifiedGripInfo {
    * resize).
    */
   readonly columnGripKind?: ColumnGripKind;
+  /**
+   * ADR-436 Slice 1b — parametric foundation grip discriminator (forwarded from
+   * `GripInfo.foundationGripKind`). Routes commit through
+   * `applyFoundationGripDrag()` + `UpdateFoundationParamsCommand` (rotation +
+   * width/length resize; Alt+drag whole-entity move).
+   */
+  readonly foundationGripKind?: FoundationGripKind;
   /**
    * ADR-406 — parametric MEP fixture grip discriminator (forwarded from
    * `GripInfo.mepFixtureGripKind`). Routes commit through

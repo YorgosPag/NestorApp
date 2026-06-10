@@ -21,9 +21,11 @@ import type { useLevels } from '../../systems/levels';
 import type { DxfGripDragPreview } from '../grip-computation';
 import type { ColumnParams } from '../../bim/types/column-types';
 import type { BeamParams } from '../../bim/types/beam-types';
+import type { FoundationParams } from '../../bim/types/foundation-types';
 import { applyColumnGripDrag } from '../../bim/columns/column-grips';
 import { applyBeamGripDrag } from '../../bim/beams/beam-grips';
-import { isColumnEntity, isBeamEntity } from '../../types/entities';
+import { applyFoundationGripDrag } from '../../bim/foundations/foundation-grips';
+import { isColumnEntity, isBeamEntity, isFoundationEntity } from '../../types/entities';
 import {
   PILL_FONT,
   PILL_TEXT_COLOR,
@@ -153,6 +155,31 @@ function buildBeamLabel(
   }
 }
 
+/**
+ * ADR-436 Slice 1b — live "w=350" / "l=400" label for foundation pad resize grips.
+ * Rotation / Alt-move show no scalar dimension (mirror column center/rotation).
+ */
+function buildFoundationLabel(
+  preview: DxfGripDragPreview,
+  originalParams: FoundationParams,
+): string | null {
+  const { foundationGripKind } = preview;
+  if (!foundationGripKind) return null;
+  if (foundationGripKind === 'foundation-center' || foundationGripKind === 'foundation-rotation') return null;
+
+  const p = applyFoundationGripDrag(foundationGripKind, { originalParams, delta: preview.delta });
+  if (p.kind !== 'pad') return null;
+
+  switch (foundationGripKind) {
+    case 'foundation-width':
+      return `w=${Math.round(p.width)}`;
+    case 'foundation-length':
+      return `l=${Math.round(p.length)}`;
+    default:
+      return null;
+  }
+}
+
 // ── Hook ─────────────────────────────────────────────────────────────────────
 
 export function useGripDimAnnotation(props: UseGripDimAnnotationProps): void {
@@ -163,7 +190,9 @@ export function useGripDimAnnotation(props: UseGripDimAnnotationProps): void {
 
   const isDimPreview =
     dragPreview !== null &&
-    (dragPreview.columnGripKind !== undefined || dragPreview.beamGripKind !== undefined);
+    (dragPreview.columnGripKind !== undefined ||
+      dragPreview.beamGripKind !== undefined ||
+      dragPreview.foundationGripKind !== undefined);
 
   const drawFrame = useCallback(() => {
     const canvas = getCanvas();
@@ -177,8 +206,8 @@ export function useGripDimAnnotation(props: UseGripDimAnnotationProps): void {
     // the already-cleared canvas. Two clears in the same frame = label wipe.
     if (!dragPreview?.anchorPos) return;
 
-    const { columnGripKind, beamGripKind, anchorPos, delta, entityId } = dragPreview;
-    if (!columnGripKind && !beamGripKind) return;
+    const { columnGripKind, beamGripKind, foundationGripKind, anchorPos, delta, entityId } = dragPreview;
+    if (!columnGripKind && !beamGripKind && !foundationGripKind) return;
 
     const lid = levelManager.currentLevelId;
     if (!lid) return;
@@ -194,6 +223,8 @@ export function useGripDimAnnotation(props: UseGripDimAnnotationProps): void {
       label = buildColumnLabel(dragPreview, entity.params);
     } else if (beamGripKind && isBeamEntity(entity)) {
       label = buildBeamLabel(dragPreview, entity.params);
+    } else if (foundationGripKind && isFoundationEntity(entity)) {
+      label = buildFoundationLabel(dragPreview, entity.params);
     }
 
     if (label) drawLabelPill(ctx, label, sx, sy);

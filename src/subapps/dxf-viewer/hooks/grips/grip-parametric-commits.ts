@@ -16,12 +16,14 @@ import type { WallEntity, WallKind } from '../../bim/types/wall-types';
 import type { OpeningEntity } from '../../bim/types/opening-types';
 import type { BeamEntity } from '../../bim/types/beam-types';
 import type { ColumnEntity } from '../../bim/types/column-types';
+import type { FoundationEntity } from '../../bim/types/foundation-types';
 import type { MepSegmentEntity } from '../../bim/types/mep-segment-types';
 import { UpdateStairParamsCommand } from '../../core/commands/entity-commands/UpdateStairParamsCommand';
 import { UpdateWallParamsCommand } from '../../core/commands/entity-commands/UpdateWallParamsCommand';
 import { UpdateOpeningParamsCommand } from '../../core/commands/entity-commands/UpdateOpeningParamsCommand';
 import { UpdateBeamParamsCommand } from '../../core/commands/entity-commands/UpdateBeamParamsCommand';
 import { UpdateColumnParamsCommand } from '../../core/commands/entity-commands/UpdateColumnParamsCommand';
+import { UpdateFoundationParamsCommand } from '../../core/commands/entity-commands/UpdateFoundationParamsCommand';
 import { UpdateMepSegmentParamsCommand } from '../../core/commands/entity-commands/UpdateMepSegmentParamsCommand';
 import { applyStairGripDrag } from '../../bim/stairs/stair-grips';
 import { applyWallGripDrag } from '../../bim/walls/wall-grips';
@@ -30,6 +32,7 @@ import { applyOpeningGripDrag, resolveOpeningAltMove, openingRehostToleranceWorl
 import { isWallEntity, type Entity } from '../../types/entities';
 import { applyBeamGripDrag } from '../../bim/beams/beam-grips';
 import { applyColumnGripDrag } from '../../bim/columns/column-grips';
+import { applyFoundationGripDrag } from '../../bim/foundations/foundation-grips';
 import { applyMepSegmentGripDrag } from '../../bim/mep-segments/mep-segment-grips';
 import { executeSegmentMoveWithConnectedPipes } from '../../bim/mep-segments/build-connectivity-host-update';
 import { EventBus } from '../../systems/events/EventBus';
@@ -441,4 +444,52 @@ export function commitColumnGripDrag(
   if (command.validate() !== null) return;
   deps.execute(command);
   EventBus.emit('bim:column-params-updated', { columnId: grip.entityId });
+}
+
+/**
+ * ADR-436 Slice 1b — parametric foundation pad grip commit via
+ * `UpdateFoundationParamsCommand`. 1:1 mirror of `commitColumnGripDrag`: routes
+ * through `applyFoundationGripDrag()` (rotation + width/length resize + Alt-move)
+ * — NOT the generic stretch/move — because the pad is params-driven (geometry
+ * recomputed atomically). The `foundation-rotation` 6-click hot-grip rotates
+ * around a picked centre published in `BimRotateHotGripStore`; all other grips
+ * use the grip position as the anchor. Merge window enabled (isDragging=true)
+ * collapses a continuous drag into one undo (ADR-031).
+ */
+export function commitFoundationGripDrag(
+  grip: UnifiedGripInfo,
+  delta: Point2D,
+  deps: DxfCommitDeps,
+): void {
+  if (!grip.entityId || !grip.foundationGripKind) return;
+  const sceneManager = createSceneManagerAdapter(deps);
+  if (!sceneManager) return;
+  const raw = sceneManager.getEntity(grip.entityId);
+  if (!raw) return;
+  const candidate = raw as unknown as Partial<FoundationEntity>;
+  if (candidate.type !== 'foundation' || !candidate.params) return;
+  const foundation = candidate as FoundationEntity;
+  const originalParams = foundation.params;
+  const rotateCtx = BimRotateHotGripStore.getSnapshot();
+  const useRotatePivot =
+    grip.foundationGripKind === 'foundation-rotation' && rotateCtx.pivot !== null && rotateCtx.anchor !== null;
+  const anchor: Point2D = useRotatePivot ? rotateCtx.anchor! : grip.position;
+  const currentPos: Point2D = { x: anchor.x + delta.x, y: anchor.y + delta.y };
+  const newParams = applyFoundationGripDrag(grip.foundationGripKind, {
+    originalParams,
+    delta,
+    currentPos,
+    ...(useRotatePivot ? { pivot: rotateCtx.pivot! } : {}),
+  });
+  if (newParams === originalParams) return;
+  const command = new UpdateFoundationParamsCommand(
+    grip.entityId,
+    newParams,
+    originalParams,
+    sceneManager,
+    true,
+  );
+  if (command.validate() !== null) return;
+  deps.execute(command);
+  EventBus.emit('bim:foundation-params-updated', { foundationId: grip.entityId });
 }

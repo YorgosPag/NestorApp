@@ -80,6 +80,7 @@ import {
   commitRoofGripDrag,
   commitBeamGripDrag,
   commitColumnGripDrag,
+  commitFoundationGripDrag,
   commitMepFixtureGripDrag,
   commitElectricalPanelGripDrag,
   commitMepManifoldGripDrag,
@@ -260,6 +261,13 @@ export function commitDxfGripDragModeAware(
   // by UpdateColumnParamsCommand.
   if (grip.columnGripKind) {
     commitColumnGripDrag(grip, delta, deps);
+    return;
+  }
+  // ADR-436 Slice 1b — foundation pad parametric grip path (rotation + width/length
+  // resize + Alt-move). Bypasses stretch because the pad is params-driven; geometry
+  // (footprint / bbox / area / volume) recomputed atomically by UpdateFoundationParamsCommand.
+  if (grip.foundationGripKind) {
+    commitFoundationGripDrag(grip, delta, deps);
     return;
   }
   // ADR-406 — MEP fixture parametric grip path (center translate + rotation +

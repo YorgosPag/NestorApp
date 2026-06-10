@@ -32,6 +32,8 @@ export function toEntityPreviewTransform(dp: DxfGripDragPreview): EntityPreviewT
     ...(dp.beamGripKind        ? { beamGripKind:        dp.beamGripKind }         : {}),
     // ADR-397 — column parametric ghost (move/rotation/resize) pass-through.
     ...(dp.columnGripKind      ? { columnGripKind:      dp.columnGripKind }       : {}),
+    // ADR-436 Slice 1b — foundation parametric ghost (rotation / width-length resize / move).
+    ...(dp.foundationGripKind  ? { foundationGripKind:  dp.foundationGripKind }   : {}),
     ...(dp.slabGripKind        ? { slabGripKind:        dp.slabGripKind }         : {}),
     ...(dp.slabOpeningGripKind ? { slabOpeningGripKind: dp.slabOpeningGripKind }  : {}),
     // ADR-417 Φ1-part-2 #2 — roof parametric ghost (footprint vertex / insert).
