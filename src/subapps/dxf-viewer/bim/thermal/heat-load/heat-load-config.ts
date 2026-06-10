@@ -89,6 +89,135 @@ export const GROUND_FLOOR_INTERNAL_RESISTANCE_R_SI = 0.17;
  */
 export const DEFAULT_GROUND_WALL_THICKNESS_M = 0.3;
 
+// ─── L1.7 — Αερισμός / Διείσδυση (EN 12831-1 §6.3.3) ──────────────────────────
+//
+// Διαχωρισμός του μονού `n` σε δύο φυσικά σκέλη:
+//   n_inf = 2·n50·e·ε        (ανεξέλεγκτη διείσδυση μέσω στεγανότητας κελύφους)
+//   n_ven = n_min·(1−η)       (σχεδιασμένος/υγιεινός αερισμός μείον ανάκτηση η)
+//   n_eff = max(n_inf, n_ven) (EN 12831-1 §6.3.3 — ΜΕΓΙΣΤΟ, single-zone)
+// Το `n_min` (=σημερινό `airChangesPerHour`) είναι το σχεδιασμένο σκέλος.
+// Per-facade ανεμοπίεση/φαινόμενο φουγάρου + balanced-pressure μηχανικού = future.
+
+/**
+ * Κλάση αεροστεγανότητας κελύφους — ο discriminator της διείσδυσης (EN 13829 /
+ * Passivhaus). Καθορίζει το `n50` (εναλλαγές αέρα στα 50 Pa) μέσω
+ * `INFILTRATION_N50_PRESETS`. Default χώρου `unspecified` (n50=0 ⇒ n_inf=0 ⇒
+ * zero-regression: η διείσδυση δεν λαμβάνεται υπόψη μέχρι να την ορίσει ο μελετητής).
+ */
+export type AirTightnessLevel = 'unspecified' | 'tight' | 'standard' | 'leaky' | 'very-leaky';
+
+/**
+ * `n50` (1/h @ 50 Pa) ανά κλάση αεροστεγανότητας — EN 12831-1 / EN 13829 / Passivhaus.
+ * Αντιπροσωπευτικές τιμές (editable):
+ *   - `unspecified` → 0    (δεν λαμβάνεται υπόψη — default, zero-regression)
+ *   - `tight`       → 1.0  (πολύ καλή στεγανότητα / νέα κατασκευή, ~Passivhaus 0.6-1.0)
+ *   - `standard`    → 3.0  (τυπική σύγχρονη κατασκευή)
+ *   - `leaky`       → 6.0  (μέτρια / παλαιότερη κατασκευή)
+ *   - `very-leaky`  → 10.0 (πολύ διαπερατό κέλυφος / αμελέτητη στεγανότητα)
+ * SSoT — το `ventilation-model` διαβάζει ΜΟΝΟ από εδώ (ποτέ inline literal).
+ */
+export const INFILTRATION_N50_PRESETS: Readonly<Record<AirTightnessLevel, number>> = {
+  unspecified: 0,
+  tight: 1.0,
+  standard: 3.0,
+  leaky: 6.0,
+  'very-leaky': 10.0,
+};
+
+/** Σειρά εμφάνισης κλάσεων αεροστεγανότητας (για dropdown options). */
+export const AIR_TIGHTNESS_LEVELS: readonly AirTightnessLevel[] = [
+  'unspecified',
+  'tight',
+  'standard',
+  'leaky',
+  'very-leaky',
+] as const;
+
+/** Default κλάση αεροστεγανότητας χώρου — `unspecified` (n50=0, zero-regression). */
+export const DEFAULT_AIR_TIGHTNESS_LEVEL: AirTightnessLevel = 'unspecified';
+
+/** `n50` (1/h) μιας κλάσης αεροστεγανότητας (πάντα ορισμένο — exhaustive Record). */
+export function getInfiltrationN50(level: AirTightnessLevel): number {
+  return INFILTRATION_N50_PRESETS[level];
+}
+
+/**
+ * Σύστημα αερισμού — ο discriminator της ανάκτησης θερμότητας `η`. Καθορίζει το `η`
+ * μέσω `HEAT_RECOVERY_EFFICIENCY_BY_SYSTEM`. Default χώρου `natural` (η=0 ⇒
+ * n_ven=n_min ⇒ zero-regression). Οι `mechanical-hr-*` παραλλαγές καλύπτουν τις
+ * τυπικές αποδόσεις εναλλάκτη (καθιστούν κάθε preset ανάκτησης reachable — μηδέν dead-code).
+ */
+export type VentilationSystem =
+  | 'natural'
+  | 'mechanical'
+  | 'mechanical-hr-standard'
+  | 'mechanical-hr-high'
+  | 'mechanical-hr-passive';
+
+/**
+ * Απόδοση ανάκτησης θερμότητας `η` ∈ [0,1) ανά σύστημα αερισμού — EN 12831-1 §6.3.3.
+ * Το σχεδιασμένο σκέλος μειώνεται κατά `(1−η)`. Αντιπροσωπευτικές τιμές (editable):
+ *   - `natural`                → 0    (φυσικός αερισμός — default, zero-regression)
+ *   - `mechanical`             → 0    (μηχανικός χωρίς ανάκτηση)
+ *   - `mechanical-hr-standard` → 0.6  (τυπικός εναλλάκτης HRV)
+ *   - `mechanical-hr-high`     → 0.8  (υψηλής απόδοσης εναλλάκτης)
+ *   - `mechanical-hr-passive`  → 0.9  (Passivhaus-grade εναλλάκτης)
+ * SSoT — το `ventilation-model` διαβάζει ΜΟΝΟ από εδώ (ποτέ inline literal).
+ */
+export const HEAT_RECOVERY_EFFICIENCY_BY_SYSTEM: Readonly<Record<VentilationSystem, number>> = {
+  natural: 0,
+  mechanical: 0,
+  'mechanical-hr-standard': 0.6,
+  'mechanical-hr-high': 0.8,
+  'mechanical-hr-passive': 0.9,
+};
+
+/** Σειρά εμφάνισης συστημάτων αερισμού (για dropdown options). */
+export const VENTILATION_SYSTEMS: readonly VentilationSystem[] = [
+  'natural',
+  'mechanical',
+  'mechanical-hr-standard',
+  'mechanical-hr-high',
+  'mechanical-hr-passive',
+] as const;
+
+/** Default σύστημα αερισμού χώρου — `natural` (η=0, zero-regression). */
+export const DEFAULT_VENTILATION_SYSTEM: VentilationSystem = 'natural';
+
+/** Απόδοση ανάκτησης `η` ενός συστήματος (πάντα ορισμένο — exhaustive Record). */
+export function getHeatRecoveryEfficiency(system: VentilationSystem): number {
+  return HEAT_RECOVERY_EFFICIENCY_BY_SYSTEM[system];
+}
+
+/**
+ * Συντελεστής ανεμοπροστασίας `e` (wind shielding, EN 12831-1 Πίν. — τυπική
+ * προστασία) ανά αριθμό **εκτεθειμένων όψεων** του χώρου:
+ *   - 0 όψεις (πλήρως εσωτερικός) → 0    (καμία διείσδυση)
+ *   - 1 όψη                       → 0.02
+ *   - ≥2 όψεις (γωνιακός/εκτεθειμένος) → 0.03
+ * Editable. Per-orientation wind/stack coefficient = future.
+ */
+export const WIND_SHIELDING_NO_EXPOSED_FACADE = 0;
+export const WIND_SHIELDING_SINGLE_EXPOSED_FACADE = 0.02;
+export const WIND_SHIELDING_MULTIPLE_EXPOSED_FACADES = 0.03;
+
+/** Συντελεστής ανεμοπροστασίας `e` από τον αριθμό εκτεθειμένων όψεων (clamp στο 0). */
+export function getWindShieldingCoefficient(exposedFacadeCount: number): number {
+  if (!Number.isFinite(exposedFacadeCount) || exposedFacadeCount <= 0) {
+    return WIND_SHIELDING_NO_EXPOSED_FACADE;
+  }
+  return exposedFacadeCount === 1
+    ? WIND_SHIELDING_SINGLE_EXPOSED_FACADE
+    : WIND_SHIELDING_MULTIPLE_EXPOSED_FACADES;
+}
+
+/**
+ * Συντελεστής διόρθωσης ύψους `ε` (height correction, EN 12831-1) — ≈1.0 για
+ * τυπικά χαμηλά/μεσαία κτίρια. Per-storey ε (αύξηση με το ύψος λόγω φαινομένου
+ * φουγάρου) = future. Editable.
+ */
+export const HEIGHT_CORRECTION_FACTOR_EPSILON = 1.0;
+
 // ─── L1.5 — Θερμογέφυρες (ΔU_TB) ──────────────────────────────────────────────
 
 /**

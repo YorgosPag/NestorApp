@@ -79,6 +79,16 @@ export interface HeatLoadBoundary {
    */
   readonly finShadingFactor?: number;
   /**
+   * Συντελεστής σκίασης **ορίζοντα** `F_hor` ∈ (0,1] — geometry-derived per-window
+   * από τις **μάζες γειτονικών κτιρίων** (ray-cast κατά τον outward normal, γωνία
+   * ανύψωσης `α_hor`· ADR-422 L7.3 Slice E, EN ISO 13790 §11.4.4· ADR-369 site
+   * placement). Μόνο για εξωτ. παράθυρα με ανιχνεύσιμη μάζα ορίζοντα· **υπερισχύει**
+   * του manual `horizonShadingLevel` του χώρου (Slice C) στα ηλιακά κέρδη
+   * (`horizonShadingFactor ?? getHorizonShadingFactor(level)` — όχι multiply, ίδιο
+   * φυσικό εμπόδιο). **Absent ⇒ fallback Slice C ⇒ zero-regression.**
+   */
+  readonly horizonShadingFactor?: number;
+  /**
    * Ολικός συντελεστής ηλιακής διαπερατότητας υαλοπίνακα `g` (SHGC, αδιάστατο) —
    * per-window από τον αριθμό υαλοπινάκων (ADR-422 L7.4, EN 410 / ΤΟΤΕΕ 20701-1).
    * Μόνο για εξωτ. παράθυρα· οδηγεί τα ηλιακά κέρδη (`A·g·F_F·F_sh·…`). **Absent ⇒
@@ -131,6 +141,19 @@ export interface SpaceHeatLoadInput {
   readonly outdoorTempC: number;
   /** 1/h — εναλλαγές αέρα n. */
   readonly airChangesPerHour: number;
+  /**
+   * 1/h — ρυθμός **διείσδυσης** `n_inf = 2·n50·e·ε` (EN 12831-1 §6.3.3, ADR-422 L1.7).
+   * Πληροφοριακό σκέλος του αερισμού — ο engine το αποτυπώνει ως `infiltrationW`
+   * (`0.34·n_inf·V·ΔΤ`) χωρίς να το προσθέτει ξανά στο `totalW` (το κυρίαρχο σκέλος
+   * περνά ήδη μέσω του `airChangesPerHour=n_eff`). **Absent ⇒ 0 ⇒ zero-regression.**
+   */
+  readonly infiltrationAch?: number;
+  /**
+   * 1/h — **σχεδιασμένος** ρυθμός αερισμού `n_ven = n_min·(1−η)` (EN 12831-1 §6.3.3,
+   * ADR-422 L1.7). Πληροφοριακό σκέλος — ο engine το αποτυπώνει ως `designedVentilationW`
+   * (`0.34·n_ven·V·ΔΤ`). **Absent ⇒ 0 ⇒ zero-regression.**
+   */
+  readonly designedVentilationAch?: number;
   /** m³ — όγκος χώρου (για απώλειες αερισμού). */
   readonly volume: number;
   /** m² — εμβαδό δαπέδου (για ειδικό φορτίο W/m² + φορτίο επανέναρξης Φ_RH). */
@@ -184,6 +207,12 @@ export interface BoundaryHeatLoss {
    */
   readonly finShadingFactor?: number;
   /**
+   * Συντελεστής σκίασης ορίζοντα `F_hor` ∈ (0,1] — propagated από το `HeatLoadBoundary`
+   * (ADR-422 L7.3 Slice E). Absent ⇒ fallback manual `horizonShadingLevel` (Slice C).
+   * ΔΕΝ επηρεάζει το φορτίο — μόνο τα ηλιακά κέρδη (`derive-annual-energy`).
+   */
+  readonly horizonShadingFactor?: number;
+  /**
    * Συντελεστής ηλιακής διαπερατότητας υαλοπίνακα `g` (SHGC) — propagated από το
    * `HeatLoadBoundary` (ADR-422 L7.4). Absent ⇒ `GLAZING_SOLAR_FACTOR_G` (0.60).
    * ΔΕΝ επηρεάζει το φορτίο — μόνο τα ηλιακά κέρδη (`derive-annual-energy`).
@@ -223,8 +252,21 @@ export interface SpaceHeatLoadResult {
   readonly deltaTC: number;
   /** W — απώλειες αγωγής Σ U_corr·A·b·ΔΤ (περιλαμβάνει θερμογέφυρες). */
   readonly transmissionW: number;
-  /** W — απώλειες αερισμού 0.34·n·V·ΔΤ. */
+  /** W — απώλειες αερισμού 0.34·n_eff·V·ΔΤ = max(infiltrationW, designedVentilationW). */
   readonly ventilationW: number;
+  /**
+   * W — σκέλος **διείσδυσης** του αερισμού `0.34·n_inf·V·ΔΤ` (EN 12831-1 §6.3.3,
+   * ADR-422 L1.7/L1.8). Πληροφοριακό υποσύνολο — ΟΧΙ ξανα-προστίθεται στο `totalW`
+   * (το `ventilationW=max(...)` που μπαίνει στο σύνολο είναι το κυρίαρχο σκέλος).
+   * Absent split στο input ⇒ 0 (zero-regression).
+   */
+  readonly infiltrationW: number;
+  /**
+   * W — σκέλος **σχεδιασμένου** αερισμού `0.34·n_ven·V·ΔΤ` (EN 12831-1 §6.3.3,
+   * ADR-422 L1.7/L1.8). Πληροφοριακό υποσύνολο — ΟΧΙ ξανα-προστίθεται στο `totalW`.
+   * Absent split στο input ⇒ 0 (zero-regression).
+   */
+  readonly designedVentilationW: number;
   /**
    * W — μέρος του `transmissionW` που οφείλεται στις θερμογέφυρες
    * (Σ ΔU_TB·A·b·ΔΤ). Πληροφοριακό υποσύνολο — ΟΧΙ ξανα-προστίθεται στο `totalW`.

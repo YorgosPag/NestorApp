@@ -73,6 +73,7 @@ function computeBoundaryLoss(
     azimuthDeg: boundary.azimuthDeg, // L7.2: propagate orientation (μη-υπολογιστικό)
     overhangShadingFactor: boundary.overhangShadingFactor, // L7.3 Slice B: propagate F_ov
     finShadingFactor: boundary.finShadingFactor, // L7.3 Slice D: propagate F_fin (geometry)
+    horizonShadingFactor: boundary.horizonShadingFactor, // L7.3 Slice E: propagate F_hor (geometry)
     solarFactorG: boundary.solarFactorG, // L7.4: propagate per-window g (μη-υπολογιστικό)
     frameFactorF: boundary.frameFactorF, // L7.5: propagate per-window F_F (μη-υπολογιστικό)
     solarAbsorptance: boundary.solarAbsorptance, // L7.6: propagate per-wall α_S (μη-υπολογιστικό)
@@ -112,6 +113,16 @@ export function computeSpaceHeatLoad(input: SpaceHeatLoadInput): SpaceHeatLoadRe
   const transmissionW = boundaries.reduce((sum, b) => sum + b.lossW, 0);
   const thermalBridgeW = boundaries.reduce((sum, b) => sum + b.thermalBridgeW, 0);
   const ventilationW = computeVentilationLoss(input.airChangesPerHour, input.volume, deltaTC);
+  // L1.8: επιφανειοποίηση του L1.7 split — τα 2 φυσικά σκέλη του αερισμού ως W μέσω
+  // του ΙΔΙΟΥ `computeVentilationLoss` (μηδέν δεύτερο 0.34·n·V·ΔΤ literal — FULL SSoT).
+  // `ventilationW = max(infiltrationW, designedVentilationW)` by construction (γραμμικό
+  // στο n, και `airChangesPerHour=max(n_inf,n_ven)`). Absent split ⇒ 0 (zero-regression).
+  const infiltrationW = computeVentilationLoss(input.infiltrationAch ?? 0, input.volume, deltaTC);
+  const designedVentilationW = computeVentilationLoss(
+    input.designedVentilationAch ?? 0,
+    input.volume,
+    deltaTC,
+  );
 
   const floorArea = Number.isFinite(input.floorArea) && input.floorArea > 0 ? input.floorArea : 0;
   const reheatW = computeReheat(floorArea, input.reheatFactorWperM2 ?? 0);
@@ -123,6 +134,8 @@ export function computeSpaceHeatLoad(input: SpaceHeatLoadInput): SpaceHeatLoadRe
     deltaTC,
     transmissionW,
     ventilationW,
+    infiltrationW,
+    designedVentilationW,
     thermalBridgeW,
     reheatW,
     totalW,

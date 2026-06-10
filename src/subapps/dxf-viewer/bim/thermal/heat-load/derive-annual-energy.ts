@@ -180,11 +180,12 @@ interface GlazingShading {
  * absent ⇒ `GLAZING_SOLAR_FACTOR_G` 0.60). Το `F_F` **per-window** (L7.5· absent ⇒
  * `FRAME_FACTOR` 0.70). Η ακτινοβολία **και** τα `F_hor`/`F_fin` εξαρτώνται από τον
  * προσανατολισμό (`azimuthDeg`)· **απουσία `azimuthDeg` ⇒ orientation-agnostic μέσος**
- * (zero-regression L7.1). Triad σκίασης: `F_hor` (ορίζοντας, Slice C level) & `F_fin`
- * (πλευρικά πτερύγια) — **precedence Slice D**: per-window geometry `b.finShadingFactor`
- * (κάθετοι τοίχοι) **>** manual per-space `finLevel` (Slice C, default `none` ⇒ 1.0)·
- * πολλαπλασιάζονται με το generic `obstruction` (L7.3 v1) & το per-window geometry `F_ov`
- * (Slice B). Area/azimuth/F_ov/F_fin/g/F_F από τα ήδη-resolved boundaries — μηδέν re-resolve.
+ * (zero-regression L7.1). Triad σκίασης `F_hor` (ορίζοντας) & `F_fin` (πλευρικά πτερύγια)
+ * — **precedence geometry > manual** (Slice D/E): per-window geometry `b.horizonShadingFactor`
+ * (γειτονικές μάζες, Slice E) & `b.finShadingFactor` (κάθετοι τοίχοι, Slice D) **>** το
+ * manual per-space level (Slice C, default `none` ⇒ 1.0)· πολλαπλασιάζονται με το generic
+ * `obstruction` (L7.3 v1) & το per-window geometry `F_ov` (Slice B). Area/azimuth/F_ov/
+ * F_hor/F_fin/g/F_F από τα ήδη-resolved boundaries — μηδέν re-resolve.
  */
 function solarGainKWh(
   result: SpaceHeatLoadResult,
@@ -200,10 +201,14 @@ function solarGainKWh(
     const g = b.solarFactorG ?? GLAZING_SOLAR_FACTOR_G; // L7.4 (absent ⇒ 0.60)
     const frameFactor = b.frameFactorF ?? FRAME_FACTOR; // L7.5 (absent ⇒ 0.70)
     const overhang = b.overhangShadingFactor ?? 1; // L7.3 Slice B (absent ⇒ 1.0)
+    // L7.3 Slice E: per-window geometry `F_hor` (γειτονικές μάζες) **υπερισχύει** του
+    // manual per-space level (Slice C) — absent-anchor, ΟΧΙ multiply (ίδιο φυσικό
+    // εμπόδιο· double-count). Absent geometry ⇒ Slice C αμετάβλητο ⇒ zero-regression.
     const horizon =
-      orientation !== undefined
+      b.horizonShadingFactor ??
+      (orientation !== undefined
         ? getHorizonShadingFactor(shading.horizonLevel, orientation)
-        : getHorizonShadingFactor(shading.horizonLevel);
+        : getHorizonShadingFactor(shading.horizonLevel));
     // L7.3 Slice D: per-window geometry `F_fin` (κάθετοι τοίχοι) **υπερισχύει** του
     // manual per-space level (Slice C) — absent-anchor, ΟΧΙ multiply (ίδιο φυσικό
     // εμπόδιο· double-count). Absent geometry ⇒ Slice C αμετάβλητο ⇒ zero-regression.

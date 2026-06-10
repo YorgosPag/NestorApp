@@ -25,11 +25,23 @@ import {
   resolveThermalSpaceAch,
   resolveThermalSpaceThermalBridgeSurcharge,
   resolveThermalSpaceReheatFactor,
+  resolveThermalSpaceAirTightnessN50,
+  resolveThermalSpaceHeatRecovery,
 } from '../thermal-space-use-catalog';
 import { resolveSpaceBoundaries, type StoreyPosition } from './space-boundary-resolver';
 import { computeSpaceHeatLoad } from './heat-load-engine';
+import {
+  computeDesignVentilationRate,
+  computeEffectiveVentilationRate,
+  computeInfiltrationRate,
+} from './ventilation-model';
+import {
+  getWindShieldingCoefficient,
+  HEIGHT_CORRECTION_FACTOR_EPSILON,
+} from './heat-load-config';
 import type { SpaceHeatLoadResult } from './heat-load-types';
 import type { OverhangOutline } from './solar-overhang-geometry';
+import type { HorizonObstacle } from './solar-horizon-geometry';
 
 /** Active-floor context που χρειάζεται το engine (δίνεται από `useHeatLoadInputs`). */
 export interface SpaceHeatLoadDeriveInputs {
@@ -51,6 +63,18 @@ export interface SpaceHeatLoadDeriveInputs {
    * shading `F_ov` (ADR-422 L7.3 Slice B). Absent/κενό ⇒ zero-regression.
    */
   readonly overhangOutlines?: readonly OverhangOutline[];
+  /**
+   * Μάζες **γειτονικών κτιρίων** ως εμπόδια ορίζοντα (footprints στο ενεργό scene frame
+   * μέσω ADR-369 site placement + απόλυτο ύψος κορυφής) — geometry-derived horizon shading
+   * `F_hor` (ADR-422 L7.3 Slice E). Absent/κενό ⇒ fallback Slice C ⇒ zero-regression.
+   */
+  readonly horizonObstacleOutlines?: readonly HorizonObstacle[];
+  /**
+   * METRES — απόλυτο ύψος βάσης του ενεργού ορόφου στο site datum (ADR-369:
+   * `building.baseElevation + floor.elevation`) — αναφορά ύψους ανοίγματος για τη σκίαση
+   * ορίζοντα (Slice E). Absent ⇒ 0.
+   */
+  readonly apertureBaseElevationM?: number;
 }
 
 /** Συγκεντρωτικό αποτέλεσμα ορόφου: per-space φορτία + εύρος + άθροισμα. */
@@ -69,20 +93,45 @@ export function computeOneSpaceHeatLoad(
   space: ThermalSpaceEntity,
   inputs: SpaceHeatLoadDeriveInputs,
 ): SpaceHeatLoadResult {
-  const boundaries = resolveSpaceBoundaries(space, {
+  const { boundaries, exposedFacadeCount } = resolveSpaceBoundaries(space, {
     walls: inputs.walls,
     openings: inputs.openings,
     exteriorWallIds: inputs.exteriorWallIds,
     storeyPosition: inputs.storeyPosition,
     tol: inputs.tol,
     overhangOutlines: inputs.overhangOutlines,
+    horizonObstacleOutlines: inputs.horizonObstacleOutlines,
+    apertureBaseElevationM: inputs.apertureBaseElevationM,
   });
   const geometry = space.geometry ?? computeThermalSpaceGeometry(space.params);
+  // L1.7: effective εναλλαγές αέρα `n_eff = max(n_inf, n_ven)` (EN 12831-1 §6.3.3) —
+  // διαχωρισμός διείσδυσης (n50·#όψεων) ↔ σχεδιασμένου αερισμού (n_min μείον ανάκτηση η).
+  // Defaults absent ⇒ n50=0 & η=0 ⇒ n_eff=n_min ⇒ byte-identical (zero-regression). Ο
+  // engine μένει τυφλός: το n_eff περνά ως το υπάρχον `airChangesPerHour`.
+  const nMin = resolveThermalSpaceAch(space.params);
+  const n50 = resolveThermalSpaceAirTightnessN50(space.params);
+  const shieldingE = getWindShieldingCoefficient(exposedFacadeCount);
+  const heatRecoveryEta = resolveThermalSpaceHeatRecovery(space.params);
+  const ventInput = {
+    nMin,
+    n50,
+    shieldingE,
+    heightEpsilon: HEIGHT_CORRECTION_FACTOR_EPSILON,
+    heatRecoveryEta,
+  };
+  const airChangesPerHour = computeEffectiveVentilationRate(ventInput);
+  // L1.8: σταθεροποίηση των 2 σκελών του split ως ξεχωριστά n (infiltration/designed)
+  // ώστε ο engine να τα αποτυπώσει ως W (report breakdown). Το `airChangesPerHour=n_eff`
+  // παραμένει το `max` (SSoT στο computeEffectiveVentilationRate) — μηδέν αλλαγή φορτίου.
+  const infiltrationAch = computeInfiltrationRate(n50, shieldingE, HEIGHT_CORRECTION_FACTOR_EPSILON);
+  const designedVentilationAch = computeDesignVentilationRate(nMin, heatRecoveryEta);
   return computeSpaceHeatLoad({
     spaceId: space.id,
     indoorTempC: resolveThermalSpaceSetpointC(space.params),
     outdoorTempC: inputs.outdoorTempC,
-    airChangesPerHour: resolveThermalSpaceAch(space.params),
+    airChangesPerHour,
+    infiltrationAch,
+    designedVentilationAch,
     volume: geometry.volume,
     floorArea: geometry.area,
     boundaries,

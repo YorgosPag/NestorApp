@@ -119,6 +119,21 @@ describe('computeSpaceHeatLoad — L1.5 θερμογέφυρες (ΔU_TB)', () =
   });
 });
 
+describe('computeSpaceHeatLoad — L7.3 Slice E propagate F_hor (μη-υπολογιστικό)', () => {
+  it('propagate-άρει το horizonShadingFactor στο boundary χωρίς να επηρεάζει το φορτίο', () => {
+    const win: HeatLoadBoundary = {
+      kind: 'window', condition: 'external-air', uValue: 2.8, area: 2, horizonShadingFactor: 0.65,
+    };
+    const withHorizon = computeSpaceHeatLoad(input({ boundaries: [win] }));
+    const without = computeSpaceHeatLoad(
+      input({ boundaries: [{ kind: 'window', condition: 'external-air', uValue: 2.8, area: 2 }] }),
+    );
+    const out = withHorizon.boundaries.find((b) => b.kind === 'window')!;
+    expect(out.horizonShadingFactor).toBe(0.65);
+    expect(withHorizon.totalW).toBeCloseTo(without.totalW, 9); // φορτίο αμετάβλητο
+  });
+});
+
 describe('computeSpaceHeatLoad — L1.6 EN ISO 13370 ground coupling override', () => {
   // Δάπεδο επί εδάφους με 13370 σύζευξη: uValue=U_g (effective 0.355), b override=1.0.
   // ΔΤ=25, A=20 → lossW = 0.355·20·1·25 = 177.5 (πλήρες ΔΤ, ΟΧΙ flat 0.5).
@@ -170,6 +185,33 @@ describe('computeSpaceHeatLoad — L1.5 επανέναρξη (Φ_RH)', () => {
   it('μηδενικό εμβαδό δαπέδου → reheatW 0 (όχι NaN)', () => {
     const res = computeSpaceHeatLoad(input({ floorArea: 0, reheatFactorWperM2: 22 }));
     expect(res.reheatW).toBe(0);
+  });
+});
+
+describe('computeSpaceHeatLoad — L1.8 αερισμός split (διείσδυση ↔ σχεδιασμένος)', () => {
+  // volume=50, ΔΤ=25. n_inf=0.6 → 0.34·0.6·50·25 = 255· n_ven=0.5 → 0.34·0.5·50·25 = 212.5.
+  // airChangesPerHour=max=0.6 → ventilationW=255 = max(255, 212.5).
+  it('επιφανειοποιεί τα 2 σκέλη ως W μέσω του ίδιου 0.34·n·V·ΔΤ', () => {
+    const res = computeSpaceHeatLoad(
+      input({ airChangesPerHour: 0.6, infiltrationAch: 0.6, designedVentilationAch: 0.5 }),
+    );
+    expect(res.infiltrationW).toBeCloseTo(255, 5);
+    expect(res.designedVentilationW).toBeCloseTo(212.5, 5);
+    expect(res.ventilationW).toBeCloseTo(255, 5);
+  });
+
+  it('ventilationW === max(infiltrationW, designedVentilationW) (κανόνας EN 12831-1 §6.3.3)', () => {
+    const res = computeSpaceHeatLoad(
+      input({ airChangesPerHour: 0.6, infiltrationAch: 0.6, designedVentilationAch: 0.5 }),
+    );
+    expect(res.ventilationW).toBeCloseTo(Math.max(res.infiltrationW, res.designedVentilationW), 5);
+  });
+
+  it('absent split ⇒ infiltrationW/designedVentilationW = 0, ventilationW αμετάβλητο (zero-regression)', () => {
+    const res = computeSpaceHeatLoad(input()); // airChangesPerHour=0.75, χωρίς split
+    expect(res.infiltrationW).toBe(0);
+    expect(res.designedVentilationW).toBe(0);
+    expect(res.ventilationW).toBeCloseTo(AIR_VENTILATION_FACTOR * 0.75 * 50 * 25, 5); // 318.75
   });
 });
 
