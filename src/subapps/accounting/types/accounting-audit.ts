@@ -34,7 +34,10 @@ export type AccountingAuditEventType =
   | 'DISPUTE_FLAGGED'
   | 'BANK_MATCHED'
   | 'BANK_RECONCILED'
-  | 'BANK_RECONCILE_UNLOCKED';
+  | 'BANK_RECONCILE_UNLOCKED'
+  // ADR-440: ownership / dividend changes on the company profile
+  // (partners / members / shareholders). Material data → audited.
+  | 'COMPANY_PROFILE_UPDATED';
 
 /**
  * Entity types that can be audited
@@ -44,7 +47,8 @@ export type AuditEntityType =
   | 'journal'
   | 'balance'
   | 'period'
-  | 'bank_transaction';
+  | 'bank_transaction'
+  | 'company_profile';
 
 // ============================================================================
 // AUDIT ENTRY (Q2 — Flat collection + composite indexes)

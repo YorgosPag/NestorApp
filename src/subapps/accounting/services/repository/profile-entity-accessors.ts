@@ -17,20 +17,28 @@
  * @compliance CLAUDE.md Enterprise Standards — zero `any`
  */
 
-import type { CompanyProfile } from '../../types/company';
+import type { CompanyProfile, CompanySetupInput } from '../../types/company';
 import type { Partner, Member, Shareholder } from '../../types/entity';
 
+/**
+ * Accepts a persisted profile OR a setup-input payload — both carry the same
+ * `entityType` discriminant and entity arrays (the input is just the profile
+ * minus timestamps), so a single SSoT accessor set serves readers and the
+ * ownership-audit diff alike.
+ */
+type ProfileLike = CompanyProfile | CompanySetupInput | null;
+
 /** Εταίροι ΟΕ από το profile (κενό για κάθε άλλη μορφή). */
-export function getProfilePartners(profile: CompanyProfile | null): Partner[] {
+export function getProfilePartners(profile: ProfileLike): Partner[] {
   return profile?.entityType === 'oe' ? profile.partners : [];
 }
 
 /** Μέλη ΕΠΕ από το profile (κενό για κάθε άλλη μορφή). */
-export function getProfileMembers(profile: CompanyProfile | null): Member[] {
+export function getProfileMembers(profile: ProfileLike): Member[] {
   return profile?.entityType === 'epe' ? profile.members : [];
 }
 
 /** Μέτοχοι ΑΕ από το profile (κενό για κάθε άλλη μορφή). */
-export function getProfileShareholders(profile: CompanyProfile | null): Shareholder[] {
+export function getProfileShareholders(profile: ProfileLike): Shareholder[] {
   return profile?.entityType === 'ae' ? profile.shareholders : [];
 }

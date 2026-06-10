@@ -20,8 +20,13 @@ import { withAuth } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { createAccountingServices } from '@/subapps/accounting/services/create-accounting-services';
+import { createAuditedRepository } from '@/subapps/accounting/services/audited-repository-wrapper';
 import type { CompanySetupInput } from '@/subapps/accounting/types';
 import type { Partner, Member, Shareholder } from '@/subapps/accounting/types/entity';
+import {
+  validateCompanyEntityArrays,
+  deriveShareholderEfkaModes,
+} from '@/subapps/accounting/services/validation/entity-arrays-validator';
 import { getErrorMessage } from '@/lib/error-utils';
 
 // =============================================================================
@@ -161,7 +166,24 @@ async function handlePut(request: NextRequest): Promise<NextResponse> {
           };
         }
 
-        await repository.saveCompanySetup(data);
+        // ADR-440: the live write path is the SSoT for partners/members/shareholders.
+        // Re-derive ΑΕ EFKA mode server-side (never trust the client for derived fields)
+        // and validate the entity arrays (money-affecting: dividend/profit sums = 100%).
+        if (data.entityType === 'ae') {
+          data = { ...data, shareholders: deriveShareholderEfkaModes(data.shareholders) };
+        }
+        const entityArraysError = validateCompanyEntityArrays(data);
+        if (entityArraysError) {
+          return NextResponse.json(
+            { success: false, error: entityArraysError },
+            { status: 400 }
+          );
+        }
+
+        // ADR-440: wrap with the audited repository so ownership/dividend changes
+        // emit a COMPANY_PROFILE_UPDATED audit entry (material data).
+        const auditedRepository = createAuditedRepository(repository, ctx.uid, ctx.companyId);
+        await auditedRepository.saveCompanySetup(data);
 
         return NextResponse.json({ success: true });
       } catch (error) {

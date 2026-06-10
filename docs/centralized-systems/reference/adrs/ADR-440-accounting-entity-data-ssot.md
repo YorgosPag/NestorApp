@@ -70,9 +70,22 @@
 - Ταιριάζει με το domain model (discriminated union).
 - Αφαιρέθηκε νεκρός κώδικας (3 routes + 1 hook + 6 repo methods + interface noise).
 
+**Validation hardening (DONE — δεύτερο pass):**
+- Το παλιό PUT route-validation (άθροισμα shares = 100%, ΑΦΜ 9-ψήφιο, board-role) έτρεχε **μόνο στο νεκρό path** → χάθηκε όταν αφαιρέθηκαν τα routes. Μεταφέρθηκε σε **SSoT validator** `services/validation/entity-arrays-validator.ts` που καλεί το ζωντανό `PUT /api/accounting/setup` ανά entityType.
+  - **Ενσυνείδητη απόκλιση:** κενό array = έγκυρο (incremental setup — ο χρήστης σώζει profile πριν συμπληρώσει όλους τους μετόχους)· το 100%-sum invariant επιβάλλεται **μόνο όταν το array ΔΕΝ είναι κενό** (ακριβώς η περίπτωση που αλλιώς σιωπηλά μισ-υπολογίζει φόρο/μερίσματα).
+  - **ΑΕ efkaMode = server-derived** (`deriveShareholderEfkaModes`) — δεν εμπιστευόμαστε client για derived πεδίο (Εγκύκλιοι ΕΦΚΑ 4/2017, 17/2017).
+- 13 νέα jest (validator).
+
+**Audit trail σε αλλαγές ιδιοκτησίας/μερισμάτων (DONE — τρίτο pass):**
+- Το `saveCompanySetup` ήταν **pass-through (χωρίς audit)** → αλλαγές μετόχων/εταίρων/μελών & ποσοστών (material ownership data) δεν άφηναν ίχνος.
+- **NEW** `services/audit/company-ownership-audit.ts` (pure `diffCompanyOwnership`, reuse των profile accessors) + **MOD** `audited-repository-wrapper.ts`: το `saveCompanySetup` έγινε **audited mutation** (read-before → save → diff → log). Εκπέμπει `COMPANY_PROFILE_UPDATED` ΜΟΝΟ όταν αλλάζει ιδιοκτησία (added/removed/share-%) ή νομική μορφή (signal-rich log· καθαρές αλλαγές διεύθυνσης/τηλεφώνου δεν λογάρονται εδώ).
+- NEW audit types: `COMPANY_PROFILE_UPDATED` event + `company_profile` entity type. Rich delta = JSON string στο flat metadata. 7 νέα jest.
+- **ΕΥΡΗΜΑ (honesty):** ο `createAuditedRepository` (Phase 1c) ήταν **ΑΣΥΝΔΕΤΟΣ** — δεν τον καλούσε καμία route → ΟΛΟ το accounting audit (invoices/journals/…) ήταν dead infrastructure. Συνέδεσα **μόνο** τη `PUT /api/accounting/setup` (wrap repository με `createAuditedRepository(repo, uid, companyId)`)· οι υπόλοιπες routes παραμένουν ασύνδετες — **ξεχωριστό pre-existing cross-cutting gap, εκτός ADR-440 scope** (βλ. §4).
+
 **Trade-offs / γνωστά:**
-- Το παλιό PUT route-validation (άθροισμα shares = 100%, ΑΦΜ 9-ψήφιο) έτρεχε **μόνο στο νεκρό path**. Η ζωντανή write-UI (Setup form) κάνει client-side validation. **DEFER:** προαιρετική προσθήκη server-side share-sum validation στο `saveCompanySetup` (pre-existing gap, εκτός scope).
-- **DEFER:** καθαρισμός orphan singleton docs `{companyId}__{partners|members|shareholders}` (κενά τώρα, μη επείγον).
+- ✅ Orphan singleton docs: **live-verified κενά** (δεν υπάρχουν) → καμία cleanup/migration. Closed.
+- 🔴 **Ξεχωριστό cross-cutting gap (NOT ADR-440):** ο `createAuditedRepository` δεν καλείται από καμία route εκτός της setup (που μόλις συνδέθηκε). Invoices/journals/bank/period audit είναι **ασύνδετα** → καμία route δεν παράγει accounting audit entries. Θέλει ξεχωριστό ADR/εργασία (wrap ΟΛΩΝ των mutating routes). Σημειώθηκε στο `local_ΕΚΚΡΕΜΟΤΗΤΕΣ.txt`.
+- **DEFER (polish, όχι μπακάλικο):** route-level integration test για το setup wiring· πλήρες schema-parse (Zod) αντί `as` casts στα non-money πεδία· optimistic concurrency στο `saveCompanySetup` (read-then-write).
 
 **Relationship με ADR-439 Phase 2c:** 3 από τα 5 accounting sibling singletons (partners/members/shareholders) **καταργούνται** ως active write/read paths. matching_config / service_presets / EFKA config μένουν per-tenant ως έχουν.
 
@@ -80,7 +93,8 @@
 
 ## 5. Verification
 
-- `npx jest src/subapps/accounting` → **351/351 pass** (incl. 4 νέα accessor tests, tax/vat/EFKA regression).
+- `npx jest src/subapps/accounting` → **371/371 pass** (4 accessor + 13 validator + 7 ownership-audit tests + tax/vat/EFKA regression).
+- **Live Firestore verify (`pagonis-87766`, 2026-06-11):** τα 3 singleton docs `{companyId}__{partners|members|shareholders}` **ΔΕΝ υπάρχουν** → μηδέν orphan data, καμία migration. Ο live tenant = ΑΕ με `shareholders: []` → το bug ήταν συμπτωματικά αόρατο (κενά και τα δύο)· το fix ασφαλές· επιβεβαιώνει ότι «κενό array = επιτρεπτό» ήταν σωστή απόφαση (αλλιώς ο tenant δεν θα μπορούσε να σώσει profile).
 - `tsc --noEmit` → καθαρό για τα θιγόμενα αρχεία.
 - 🔴 Browser-verify (Giorgio): ΑΕ setup με μετόχους → `calculateAETax` τους βλέπει.
 
@@ -88,4 +102,6 @@
 
 ## Changelog
 
-- **2026-06-11** — ADR-440 created. Option A (profile = SSoT) implemented: NEW `profile-entity-accessors.ts` + test· repository getters → profile-backed· retired dead singleton write-path (3 routes + `usePartners` hook + 6 repo methods + interface/wrapper/domain-constants cleanup)· singletons/tax/vat tests updated. 351/351 accounting tests green. Pending browser-verify + commit (Giorgio).
+- **2026-06-11** — ADR-440 created. Option A (profile = SSoT) implemented: NEW `profile-entity-accessors.ts` + test· repository getters → profile-backed· retired dead singleton write-path (3 routes + `usePartners` hook + 6 repo methods + interface/wrapper/domain-constants cleanup)· singletons/tax/vat tests updated. (Committed 033440b7/7e126e77 + fix ef5bd34f matching-config wrapper binding.)
+- **2026-06-11 (validation hardening)** — NEW `services/validation/entity-arrays-validator.ts` (SSoT) + 13 tests· wired into `PUT /api/accounting/setup`: per-entity shape validation + 100%-sum (when non-empty) + ΑΕ server-derived efkaMode. Closes the gap where the live write path saved partners/members/shareholders unvalidated after the dead routes were removed. 364/364 accounting tests green.
+- **2026-06-11 (audit trail)** — NEW `services/audit/company-ownership-audit.ts` (pure `diffCompanyOwnership`) + 7 tests· `saveCompanySetup` in the audited wrapper → audited mutation emitting `COMPANY_PROFILE_UPDATED` on ownership/legal-form change· +audit types (`COMPANY_PROFILE_UPDATED`, `company_profile`). Discovered `createAuditedRepository` was unwired everywhere → wired it into `PUT /api/accounting/setup` (`createAuditedRepository(repo, uid, companyId)`); flagged the broader unwired-audit gap for a separate ADR. Live Firestore verified: zero orphan singleton docs. 371/371 accounting tests green. tsc clean (only 6 unrelated dxf-viewer errors). Pending browser-verify + commit (Giorgio).

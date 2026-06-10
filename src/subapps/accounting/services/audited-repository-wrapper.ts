@@ -14,6 +14,7 @@ import type {
 } from '../types/accounting-audit';
 import type { FiscalPeriod } from '../types/fiscal-period';
 import { logAccountingEvent } from './accounting-audit-service';
+import { diffCompanyOwnership } from './audit/company-ownership-audit';
 
 // ============================================================================
 // PERIOD STATUS → EVENT TYPE MAPPING
@@ -43,12 +44,12 @@ function periodStatusToEventType(
  */
 export function createAuditedRepository(
   repo: IAccountingRepository,
-  userId: string
+  userId: string,
+  companyId: string
 ): IAccountingRepository {
   return {
     // ── Read methods — pass-through (NO audit) ────────────────────────────
     getCompanySetup: repo.getCompanySetup.bind(repo),
-    saveCompanySetup: repo.saveCompanySetup.bind(repo),
     getJournalEntry: repo.getJournalEntry.bind(repo),
     listJournalEntries: repo.listJournalEntries.bind(repo),
     getJournalEntryByInvoiceId: repo.getJournalEntryByInvoiceId.bind(repo),
@@ -111,6 +112,19 @@ export function createAuditedRepository(
     deleteJournalEntry: repo.deleteJournalEntry.bind(repo),
 
     // ── Audited mutations ─────────────────────────────────────────────────
+
+    async saveCompanySetup(data) {
+      // ADR-440: ownership/dividend changes (partners/members/shareholders) are
+      // material data. Read the prior profile, persist, then audit the delta.
+      const before = await repo.getCompanySetup();
+      await repo.saveCompanySetup(data);
+
+      const audit = diffCompanyOwnership(before, data);
+      if (audit.changed) {
+        await logAudit(repo, userId, 'COMPANY_PROFILE_UPDATED', 'company_profile', companyId,
+          audit.details, audit.metadata);
+      }
+    },
 
     async createInvoice(data) {
       const result = await repo.createInvoice(data);
