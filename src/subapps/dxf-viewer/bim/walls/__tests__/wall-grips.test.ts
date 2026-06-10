@@ -3,9 +3,10 @@
  *
  * Coverage:
  *   - `getWallGrips()` returns the right grip set per kind:
- *       straight  → midpoint + 4 corners (Phase 1C-ter hides start/end/thickness)
- *       curved    → start / end / midpoint / thickness + curve control
- *       polyline  → start / end / midpoint / thickness + N interior vertices
+ *       straight  → thickness + length edges + 4 corners + rotation (ADR-363
+ *                   Slice D; only start/end/midpoint suppressed)
+ *       curved    → start / end / thickness + curve control
+ *       polyline  → start / end / thickness + N interior vertices
  *   - `applyWallGripDrag()` produces correct `WallParams` per grip kind:
  *       wall-start / wall-end translate the respective endpoint
  *       wall-midpoint translates both endpoints by delta
@@ -59,12 +60,15 @@ describe('wall-grips (Phase 1C)', () => {
   // emitted on any kind (Alt+drag moves the whole wall). It is still PUSHED then
   // filtered, so the `applyWallGripDrag('wall-midpoint', …)` transform tests below
   // (drag math retained) keep passing.
-  it('1. straight wall → 5 VISIBLE grips (4 corners + rotation; midpoint removed Slice 2)', () => {
+  it('1. straight wall → 7 VISIBLE grips (thickness + length edges + 4 corners + rotation; ADR-363 Slice D)', () => {
     const entity = makeStraight();
     const grips = getWallGrips(entity);
-    // endpoint (wall-start/wall-end) + both thickness handles suppressed (Phase
-    // 1C-ter); central move (wall-midpoint) dropped (Slice 2). Corners + rotation remain.
+    // Slice D: straight wall now exposes the shared 7-grip rect set. Only the
+    // endpoint translates (wall-start/wall-end) + central move (wall-midpoint)
+    // stay suppressed; the thickness + length edge midpoints are first-class.
     expect(grips.map((g) => g.wallGripKind)).toEqual([
+      'wall-thickness',
+      'wall-edge-length',
       'wall-corner-start-pos',
       'wall-corner-start-neg',
       'wall-corner-end-pos',
@@ -89,18 +93,19 @@ describe('wall-grips (Phase 1C)', () => {
     expect(grips[4].wallGripKind).toBe('wall-vertex-2');
   });
 
-  it('4. straight wall hides wall-start / wall-end / wall-thickness (Phase 1C-ter)', () => {
+  it('4. straight wall hides wall-start / wall-end but SHOWS thickness + length edges (Slice D)', () => {
     const kinds = getWallGrips(makeStraight()).map((g) => g.wallGripKind);
     expect(kinds).not.toContain('wall-start');
     expect(kinds).not.toContain('wall-end');
-    expect(kinds).not.toContain('wall-thickness');
+    expect(kinds).toContain('wall-thickness');
+    expect(kinds).toContain('wall-edge-length');
   });
 
   it('5. central move grip (wall-midpoint) is NOT emitted (Slice 2 declutter)', () => {
     const grips = getWallGrips(makeStraight());
     expect(grips.map((g) => g.wallGripKind)).not.toContain('wall-midpoint');
-    // First visible grip is now the start-pos corner.
-    expect(grips[0].wallGripKind).toBe('wall-corner-start-pos');
+    // First visible grip is now the thickness edge handle (Slice D).
+    expect(grips[0].wallGripKind).toBe('wall-thickness');
   });
 
   // ─── applyWallGripDrag ─────────────────────────────────────────────────
@@ -141,27 +146,28 @@ describe('wall-grips (Phase 1C)', () => {
     expect(next.end.x).toBe(1000);
   });
 
-  it('9. wall-thickness drag updates thickness and drops dna', () => {
+  it('9. wall-thickness edge drag grows thickness by delta (opposite edge fixed) + drops dna', () => {
     const entity = makeStraight();
+    const t = entity.params.thickness;
     // exterior default DNA present in initial params
     expect(entity.params.dna).toBeDefined();
-    // Drag perpendicular (axis is along +X, perp is +Y).
+    // ADR-363 Slice D — the thickness edge now uses the rect-grip-engine
+    // (relative, opposite-edge-fixed): a +perp drag of Δy grows thickness by Δy.
     const next = applyWallGripDrag('wall-thickness', {
       originalParams: entity.params,
       delta: { x: 0, y: 150 },
       currentPos: { x: 500, y: 150 },
     });
     expect(next.dna).toBeUndefined();
-    // thickness = |proj| * 2 = 150 * 2 = 300 (within bounds)
-    expect(next.thickness).toBeCloseTo(300, 1);
+    expect(next.thickness).toBeCloseTo(t + 150, 6);
   });
 
-  it('10. wall-thickness clamps to minimum (50 mm) on shrink', () => {
+  it('10. wall-thickness clamps to minimum (50 mm) on large shrink', () => {
     const entity = makeStraight();
     const next = applyWallGripDrag('wall-thickness', {
       originalParams: entity.params,
-      delta: { x: 0, y: 0.001 },
-      currentPos: { x: 500, y: 0.001 },
+      delta: { x: 0, y: -10000 },
+      currentPos: { x: 500, y: -10000 },
     });
     expect(next.thickness).toBeGreaterThanOrEqual(50);
   });
@@ -215,18 +221,15 @@ describe('wall-grips (Phase 1C)', () => {
     const entity = makeStraight();
     const grips = getWallGrips(entity);
     const halfT = entity.params.thickness / 2; // mm scene → s=1, canvas == mm.
-    // axis along +X → perpUnit (CCW 90°) = +Y. Visible order after Phase 1C-ter
-    // suppression + Slice 2 midpoint removal: [0..3]=corners.
-    expect(grips[0].wallGripKind).toBe('wall-corner-start-pos');
-    expect(grips[0].position).toMatchObject({ x: 0 });
-    expect(grips[0].position.y).toBeCloseTo(halfT, 6);
-    expect(grips[1].wallGripKind).toBe('wall-corner-start-neg');
-    expect(grips[1].position.y).toBeCloseTo(-halfT, 6);
-    expect(grips[2].wallGripKind).toBe('wall-corner-end-pos');
-    expect(grips[2].position.x).toBeCloseTo(1000, 6);
-    expect(grips[2].position.y).toBeCloseTo(halfT, 6);
-    expect(grips[3].wallGripKind).toBe('wall-corner-end-neg');
-    expect(grips[3].position.y).toBeCloseTo(-halfT, 6);
+    const at = (k: string) => grips.find((g) => g.wallGripKind === k)!.position;
+    // axis along +X → perpUnit (CCW 90°) = +Y. Order is now thickness/length
+    // edges first (Slice D), so find corners by kind rather than index.
+    expect(at('wall-corner-start-pos')).toMatchObject({ x: 0 });
+    expect(at('wall-corner-start-pos').y).toBeCloseTo(halfT, 6);
+    expect(at('wall-corner-start-neg').y).toBeCloseTo(-halfT, 6);
+    expect(at('wall-corner-end-pos').x).toBeCloseTo(1000, 6);
+    expect(at('wall-corner-end-pos').y).toBeCloseTo(halfT, 6);
+    expect(at('wall-corner-end-neg').y).toBeCloseTo(-halfT, 6);
   });
 
   it('15b. curved wall still exposes its single thickness handle (suppression is straight-only)', () => {
@@ -354,15 +357,14 @@ describe('wall-grips (Phase 1C)', () => {
     expect(entity.params.sceneUnits).toBe('m');
     const grips = getWallGrips(entity);
     const halfTCanvas = (entity.params.thickness / 2) * 0.001;
-    // Visible after Phase 1C-ter + Slice 2 midpoint removal: [0..3]=corners.
-    expect(grips[0].wallGripKind).toBe('wall-corner-start-pos');
-    expect(grips[0].position.y).toBeCloseTo(halfTCanvas, 6);   // start-pos
-    expect(grips[1].position.y).toBeCloseTo(-halfTCanvas, 6);  // start-neg
-    expect(grips[2].position.x).toBeCloseTo(1000, 6);          // end-pos x
-    expect(grips[2].position.y).toBeCloseTo(halfTCanvas, 6);
-    expect(grips[3].position.y).toBeCloseTo(-halfTCanvas, 6);  // end-neg
+    const at = (k: string) => grips.find((g) => g.wallGripKind === k)!.position;
+    expect(at('wall-corner-start-pos').y).toBeCloseTo(halfTCanvas, 6);
+    expect(at('wall-corner-start-neg').y).toBeCloseTo(-halfTCanvas, 6);
+    expect(at('wall-corner-end-pos').x).toBeCloseTo(1000, 6);
+    expect(at('wall-corner-end-pos').y).toBeCloseTo(halfTCanvas, 6);
+    expect(at('wall-corner-end-neg').y).toBeCloseTo(-halfTCanvas, 6);
     // Offsets must NOT be the raw mm value (the pre-fix bug).
-    expect(Math.abs(grips[0].position.y)).toBeLessThan(1);
+    expect(Math.abs(at('wall-corner-start-pos').y)).toBeLessThan(1);
   });
 
   it('24. meters scene → corner perp drag converts canvas delta → mm thickness', () => {
@@ -380,15 +382,31 @@ describe('wall-grips (Phase 1C)', () => {
     expect(next.end.y).toBeCloseTo(0.05, 6);
   });
 
-  it('25. meters scene → wall-thickness drag converts canvas proj → mm', () => {
+  it('25. meters scene → wall-thickness edge drag converts canvas delta → mm (relative)', () => {
     const entity = makeStraightMeters();
-    // proj = currentPos.y - mid.y = 0.15 canvas → thickness = 0.15·2 / 0.001 = 300 mm.
+    const t = entity.params.thickness;
+    // ADR-363 Slice D — relative edge drag: Δy 0.15 canvas (m) → +150 mm thickness.
     const next = applyWallGripDrag('wall-thickness', {
       originalParams: entity.params,
       delta: { x: 0, y: 0.15 },
       currentPos: { x: 500, y: 0.15 },
     });
-    expect(next.thickness).toBeCloseTo(300, 6);
+    expect(next.thickness).toBeCloseTo(t + 150, 6);
+  });
+
+  it('25b. wall-edge-length drag grows length from the END edge (start fixed), via rect-engine', () => {
+    const entity = makeStraight();
+    const t = entity.params.thickness;
+    const next = applyWallGripDrag('wall-edge-length', {
+      originalParams: entity.params,
+      delta: { x: 200, y: 0 },
+      currentPos: { x: 1200, y: 0 },
+    });
+    expect(next.start.x).toBeCloseTo(0, 6);
+    expect(next.end.x).toBeCloseTo(1200, 6);
+    expect(next.start.y).toBeCloseTo(0, 6);
+    expect(next.end.y).toBeCloseTo(0, 6);
+    expect(next.thickness).toBeCloseTo(t, 6);
   });
 
   // ─── Phase 1C-ter: move/rotation glyphs + wall-rotation grip ──────────────

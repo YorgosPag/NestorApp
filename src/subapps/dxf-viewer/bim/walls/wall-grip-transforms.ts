@@ -19,44 +19,21 @@
 import type { Point2D } from '../../rendering/types/Types';
 import type { WallGripKind } from '../../hooks/useGripMovement';
 import type { WallParams } from '../types/wall-types';
-import {
-  MIN_WALL_THICKNESS_MM,
-  MAX_WALL_THICKNESS_MM,
-} from '../types/wall-types';
 import type { Point3D } from '../types/bim-base';
 import { mmScaleFor } from '../../utils/scene-units';
-import { unitAxis, perpUnit } from './wall-grip-math';
+import {
+  unitAxis,
+  perpUnit,
+  minThicknessFloorFor,
+  maxThicknessCeilingFor,
+} from './wall-grip-math';
+// ADR-363 Slice D — straight-wall corner/edge resize delegates to the shared
+// rect-grip-engine (opposite-element-fixed), same code as column/foundation.
+import { applyRectWallGrip } from './wall-rect-adapter';
 // ADR-397 §D3 — rotate-about-pivot is shared SSoT: `rotateAxisPointsAboutPivot`
 // (swept angle from grip-math + canonical rotatePoint, ADR-188) is consumed by
 // both the wall and beam rotation grips. No re-implemented cos/sin here.
 import { rotateAxisPointsAboutPivot } from '../grips/grip-math';
-
-// ─── Thickness unit floor (scene-unit-aware) ─────────────────────────────────
-
-/**
- * Pick a minimum-thickness floor in whatever scene units the current `thickness`
- * is expressed in. Mirrors `bim/stairs/stair-grips.minWidthFloorFor()` — a
- * thickness default of 0.2 (m), 20 (cm), 200 (mm) → respective floors 0.05, 5,
- * 50 (same physical 50 mm everywhere).
- */
-function minThicknessFloorFor(currentThickness: number): number {
-  if (!Number.isFinite(currentThickness) || currentThickness <= 0) {
-    return MIN_WALL_THICKNESS_MM;
-  }
-  if (currentThickness < 10) return 0.05;   // metres
-  if (currentThickness < 100) return 5;     // centimetres
-  return MIN_WALL_THICKNESS_MM;             // millimetres (or larger units)
-}
-
-/** Same heuristic, max side. */
-function maxThicknessCeilingFor(currentThickness: number): number {
-  if (!Number.isFinite(currentThickness) || currentThickness <= 0) {
-    return MAX_WALL_THICKNESS_MM;
-  }
-  if (currentThickness < 10) return 2;         // metres (2 m)
-  if (currentThickness < 100) return 200;      // centimetres (200 cm = 2 m)
-  return MAX_WALL_THICKNESS_MM;                // millimetres
-}
 
 // ─── Whole-wall translation SSoT ─────────────────────────────────────────────
 
@@ -126,6 +103,13 @@ export function applyWallGripDrag(
   gripKind: WallGripKind,
   input: Readonly<WallGripDragInput>,
 ): WallParams {
+  // ADR-363 Slice D — straight-wall corners (4) + thickness/length edges (2) go
+  // through the shared rect-grip-engine SSoT (opposite-element-fixed, same code
+  // as column/foundation). Returns `null` for curved/polyline walls OR non-rect
+  // grip kinds (rotation / curve / vertex / endpoint / midpoint) → fall through
+  // to the bespoke handlers below.
+  const rect = applyRectWallGrip(gripKind, input.originalParams, input.delta);
+  if (rect) return rect;
   if (gripKind === 'wall-start') return moveStart(input);
   if (gripKind === 'wall-end') return moveEnd(input);
   if (gripKind === 'wall-midpoint') return moveMidpoint(input);

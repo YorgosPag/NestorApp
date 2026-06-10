@@ -164,7 +164,9 @@ export function getWallGrips(entity: Readonly<WallEntity>): GripInfo[] {
       const negStart = project2D(negSide[0]);
       const negEnd = project2D(negSide[negSide.length - 1]);
 
-      // 3 — thickness handle on the +perp face (edge midpoint, SSoT helper).
+      // 3 — thickness edge handle on the +perp face (`posSide` midpoint). ADR-363
+      // Slice D: now routed through the shared rect-grip-engine (opposite-edge-
+      // fixed), the same code column/foundation use — see `wall-rect-adapter`.
       grips.push({
         entityId: entity.id,
         gripIndex: 3,
@@ -173,16 +175,16 @@ export function getWallGrips(entity: Readonly<WallEntity>): GripInfo[] {
         movesEntity: false,
         wallGripKind: 'wall-thickness',
       });
-      // 4 — symmetric thickness handle on the -perp face (AutoCAD edge-midpoint
-      // parity). Same `wall-thickness` transform: `resizeThickness` is symmetric
-      // about the axis, so either face drives the same resize.
+      // 4 — length edge handle on the END short edge (midpoint of the two end
+      // corners). ADR-363 Slice D: rect-grip-engine edge drag along the axis
+      // (start short edge fixed) → 7-grip wall/column/pad parity.
       grips.push({
         entityId: entity.id,
         gripIndex: 4,
         type: 'edge',
-        position: calculateMidpoint(negStart, negEnd),
+        position: calculateMidpoint(posEnd, negEnd),
         movesEntity: false,
-        wallGripKind: 'wall-thickness',
+        wallGripKind: 'wall-edge-length',
       });
       // 5..8 — corners at the footprint vertices.
       grips.push({
@@ -297,10 +299,11 @@ function suppressRedundantStraightGrips(
   kind: WallEntity['kind'],
 ): GripInfo[] {
   if (kind === 'curved' || kind === 'polyline') return grips;
+  // ADR-363 Slice D — straight walls now expose 7 grips: 4 corners + thickness
+  // edge + length edge + rotation. Only the redundant endpoint translate grips
+  // (`wall-start`/`wall-end`) stay suppressed (the corners cover length); the
+  // thickness + length edge midpoints are now first-class (rect-grip-engine).
   return grips.filter(
-    (g) =>
-      g.wallGripKind !== 'wall-start' &&
-      g.wallGripKind !== 'wall-end' &&
-      g.wallGripKind !== 'wall-thickness',
+    (g) => g.wallGripKind !== 'wall-start' && g.wallGripKind !== 'wall-end',
   );
 }
