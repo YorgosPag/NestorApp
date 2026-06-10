@@ -84,6 +84,8 @@ function makeResult(
     deltaTC: 20,
     transmissionW: 600,
     ventilationW: 200,
+    infiltrationW: 0,
+    designedVentilationW: 200,
     thermalBridgeW: 0,
     reheatW: 0,
     totalW: 800,
@@ -377,6 +379,61 @@ describe('deriveAnnualHeating', () => {
     const result = deriveAnnualHeating(resultsOf(south), [space], 'B');
     // 385.56 · 0.5(obstr) · 0.5(F_ov) · 0.70(F_hor) · 0.6(geometry F_fin) — ΟΧΙ ×0.78
     expect(result.rows[0].solarGainKWh).toBeCloseTo(385.56 * 0.5 * 0.5 * 0.7 * 0.6); // 40.4838
+  });
+
+  // ─── L7.3 Slice E — geometry-derived ορίζοντας (per-window F_hor) ──────────────
+
+  it('Slice E — απουσία horizonShadingFactor == manual level (Slice C, zero-regression)', () => {
+    // νότιο, manual horizonShadingLevel=high (F_hor S=0.70), ΧΩΡΙΣ per-window geometry.
+    const south = makeResult('sp-1', { boundaries: [boundary({ area: 2, azimuthDeg: 180 })] });
+    const space = makeSpace('sp-1', undefined, { horizonShadingLevel: 'high' });
+    const result = deriveAnnualHeating(resultsOf(south), [space], 'B');
+    expect(result.rows[0].solarGainKWh).toBeCloseTo(385.56 * 0.7); // 269.892 — αμετάβλητο
+  });
+
+  it('Slice E — per-window horizonShadingFactor ΥΠΕΡΙΣΧΥΕΙ του manual level (precedence)', () => {
+    // geometry F_hor=0.5 αντικαθιστά το manual high (0.70), ΟΧΙ να πολλαπλασιαστεί.
+    const south = makeResult('sp-1', {
+      boundaries: [boundary({ area: 2, azimuthDeg: 180, horizonShadingFactor: 0.5 })],
+    });
+    const space = makeSpace('sp-1', undefined, { horizonShadingLevel: 'high' });
+    const result = deriveAnnualHeating(resultsOf(south), [space], 'B');
+    expect(result.rows[0].solarGainKWh).toBeCloseTo(385.56 * 0.5); // 192.78 (0.5, ΟΧΙ 0.5·0.70)
+  });
+
+  it('Slice E — μικρότερο geometry F_hor → λιγότερα ηλιακά → μεγαλύτερη καθαρή ζήτηση', () => {
+    const mild = makeResult('sp-1', {
+      boundaries: [boundary({ area: 2, azimuthDeg: 180, horizonShadingFactor: 0.9 })],
+    });
+    const heavy = makeResult('sp-1', {
+      boundaries: [boundary({ area: 2, azimuthDeg: 180, horizonShadingFactor: 0.5 })],
+    });
+    const rm = deriveAnnualHeating(resultsOf(mild), [makeSpace('sp-1')], 'B').rows[0];
+    const rh = deriveAnnualHeating(resultsOf(heavy), [makeSpace('sp-1')], 'B').rows[0];
+    expect(rh.solarGainKWh).toBeLessThan(rm.solarGainKWh);
+    expect(rh.netDemandKWh).toBeGreaterThan(rm.netDemandKWh);
+  });
+
+  it('Slice E — geometry F_hor συνδυάζεται με obstruction/F_ov/F_fin (όχι με manual horizon)', () => {
+    const south = makeResult('sp-1', {
+      boundaries: [
+        boundary({
+          area: 2,
+          azimuthDeg: 180,
+          overhangShadingFactor: 0.5,
+          finShadingFactor: 0.6,
+          horizonShadingFactor: 0.8,
+        }),
+      ],
+    });
+    const space = makeSpace('sp-1', undefined, {
+      solarShadingLevel: 'heavy', // obstruction 0.5
+      horizonShadingLevel: 'high', // αγνοείται (geometry υπερισχύει)
+      finShadingLevel: 'heavy', // αγνοείται (geometry υπερισχύει)
+    });
+    const result = deriveAnnualHeating(resultsOf(south), [space], 'B');
+    // 385.56 · 0.5(obstr) · 0.5(F_ov) · 0.8(geometry F_hor) · 0.6(geometry F_fin) — ΟΧΙ ×0.70
+    expect(result.rows[0].solarGainKWh).toBeCloseTo(385.56 * 0.5 * 0.5 * 0.8 * 0.6); // 46.2672
   });
 
   // ─── L7.4 — per-window g-value (SHGC) ανά τύπο υαλοπίνακα ──────────────────────

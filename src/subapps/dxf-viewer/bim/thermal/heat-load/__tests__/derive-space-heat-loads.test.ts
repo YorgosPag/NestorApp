@@ -120,6 +120,59 @@ describe('computeOneSpaceHeatLoad — L1.5 per-space overrides', () => {
   });
 });
 
+describe('computeOneSpaceHeatLoad — L1.7 αερισμός/ανάκτηση', () => {
+  it('default (χωρίς airTightness/ventilation override) ⇒ ventilationW = VENT_W (zero-regression)', () => {
+    const r = computeOneSpaceHeatLoad(makeSpace('a'), makeInputs('only'));
+    expect(r.ventilationW).toBeCloseTo(VENT_W, 5);
+  });
+
+  it("ventilationSystem='mechanical-hr-high' (η=0.8) ⇒ ventilationW μειωμένο −80% = 76.5", () => {
+    // n_ven = 0.75·(1−0.8)=0.15· walls:[] ⇒ #όψεων=0 ⇒ n_inf=0 ⇒ n_eff=0.15.
+    // Φ_V = 0.34·0.15·60·25 = 76.5 W.
+    const r = computeOneSpaceHeatLoad(
+      makeSpace('a', { ventilationSystem: 'mechanical-hr-high' }),
+      makeInputs('only'),
+    );
+    expect(r.ventilationW).toBeCloseTo(76.5, 5);
+  });
+
+  it("airTightnessLevel χωρίς εκτεθειμένες όψεις (walls:[]) ⇒ n_inf=0 ⇒ VENT_W αμετάβλητο", () => {
+    // makeInputs έχει walls:[] ⇒ exposedFacadeCount=0 ⇒ e=0 ⇒ n_inf=0 ανεξαρτήτως n50.
+    const r = computeOneSpaceHeatLoad(
+      makeSpace('a', { airTightnessLevel: 'very-leaky' }),
+      makeInputs('only'),
+    );
+    expect(r.ventilationW).toBeCloseTo(VENT_W, 5);
+  });
+});
+
+describe('computeOneSpaceHeatLoad — L1.8 αερισμός split επιφανειοποίηση', () => {
+  it('default χώρος ⇒ infiltrationW=0, designedVentilationW=VENT_W, ventilationW=max', () => {
+    // walls:[] ⇒ n_inf=0 ⇒ infiltrationW=0· n_ven=n_min=0.75 ⇒ designedVentilationW=382.5.
+    const r = computeOneSpaceHeatLoad(makeSpace('a'), makeInputs('only'));
+    expect(r.infiltrationW).toBeCloseTo(0, 5);
+    expect(r.designedVentilationW).toBeCloseTo(VENT_W, 5);
+    expect(r.ventilationW).toBeCloseTo(Math.max(r.infiltrationW, r.designedVentilationW), 5);
+  });
+
+  it("mechanical-hr-high (η=0.8) ⇒ designedVentilationW μειωμένο, ventilationW=max(0, designed)", () => {
+    // n_ven=0.75·0.2=0.15 ⇒ designedVentilationW=0.34·0.15·60·25=76.5· infiltrationW=0.
+    const r = computeOneSpaceHeatLoad(
+      makeSpace('a', { ventilationSystem: 'mechanical-hr-high' }),
+      makeInputs('only'),
+    );
+    expect(r.infiltrationW).toBeCloseTo(0, 5);
+    expect(r.designedVentilationW).toBeCloseTo(76.5, 5);
+    expect(r.ventilationW).toBeCloseTo(76.5, 5);
+  });
+
+  it('Σ invariant: Σ boundaries.lossW + ventilationW + reheatW === totalW', () => {
+    const r = computeOneSpaceHeatLoad(makeSpace('a'), makeInputs('only'));
+    const fabric = r.boundaries.reduce((s, b) => s + b.lossW, 0);
+    expect(fabric + r.ventilationW + r.reheatW).toBeCloseTo(r.totalW, 5);
+  });
+});
+
 describe('deriveSpaceHeatLoads — aggregation + range', () => {
   it('Map ανά spaceId + άθροισμα totalW', () => {
     const spaces = [makeSpace('a'), makeSpace('b')];
