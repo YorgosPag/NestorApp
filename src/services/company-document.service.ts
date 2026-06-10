@@ -24,7 +24,8 @@ import { ENTITY_TYPES } from '@/config/domain-constants';
 import type { AuditFieldChange } from '@/types/audit-trail';
 
 import type { CompanyDocument, CompanySettings, CompanyStatus, CompanyPlan } from '@/types/company';
-import { resolveCompanyDisplayName } from '@/services/company/company-name-resolver';
+import { resolveCompanyName, resolveCompanyDisplayName } from '@/services/company/company-name-resolver';
+import { readCompanyLegalIdentity } from '@/services/company/company-legal-identity';
 
 const logger = createModuleLogger('CompanyDocumentService');
 
@@ -127,11 +128,13 @@ export async function getCompanyDocument(companyId: string): Promise<CompanyDocu
 /**
  * Ensure a company document exists. If not, create a basic one.
  *
- * This is the "materialize phantom → real" operation.
- * It reads company data from the contacts collection to populate the document.
+ * This is the "materialize phantom → real" operation. The display name is
+ * derived from the per-tenant company profile (legal-identity SSoT, ADR-439)
+ * via {@link readCompanyLegalIdentity}; a user's displayName is only a
+ * last-resort fallback.
  *
  * @param companyId - The company document ID
- * @param contactData - Optional contact data to populate from
+ * @param contactData - Optional explicit name/contactId override (highest priority)
  * @param createdBy - UID of the user performing the operation
  * @returns The company document (existing or newly created)
  */
@@ -143,18 +146,18 @@ export async function ensureCompanyDocument(
   const db = getAdminFirestore();
   const docRef = db.collection(COLLECTIONS.COMPANIES).doc(companyId);
 
-  // Resolve name before the transaction (read-only, no side effects)
-  let resolvedName = contactData?.name ?? '';
-  if (!resolvedName && createdBy && createdBy !== 'system') {
+  // Resolve display name before the transaction (read-only, no side effects).
+  // SSoT (ADR-439): the per-tenant company profile (businessName / tradeName)
+  // is the legal identity. A user's displayName is only the LAST resort before
+  // the identifier fallback — this is what fixes the "Georgios Pagonis" bug.
+  const identity = await readCompanyLegalIdentity(companyId);
+
+  let userDisplayName = '';
+  if (!contactData?.name && createdBy && createdBy !== 'system') {
     try {
       const userDoc = await db.collection(COLLECTIONS.USERS).doc(createdBy).get();
       if (userDoc.exists) {
-        resolvedName = userDoc.data()?.displayName || '';
-        logger.info('[CompanyDocument] Auto-resolved workspace name from user', {
-          companyId,
-          createdBy,
-          name: resolvedName,
-        });
+        userDisplayName = userDoc.data()?.displayName || '';
       }
     } catch (lookupError) {
       logger.warn('[CompanyDocument] User lookup failed, using ID-based fallback', {
@@ -164,9 +167,19 @@ export async function ensureCompanyDocument(
     }
   }
 
+  // Priority (resolver-enforced): explicit contact name → profile trade name →
+  // profile legal name → user displayName → identifier fallback.
+  const resolvedName = resolveCompanyDisplayName({
+    id: companyId,
+    companyName: contactData?.name || undefined,
+    tradeName: identity?.tradeName,
+    legalName: identity?.businessName,
+    displayName: userDisplayName || undefined,
+  });
+
   const now = FieldValue.serverTimestamp();
   const docData = {
-    name: resolveCompanyDisplayName({ id: companyId, name: resolvedName }),
+    name: resolvedName,
     contactId: contactData?.contactId ?? null,
     status: 'active' as CompanyStatus,
     plan: 'free' as CompanyPlan,
@@ -231,10 +244,12 @@ export async function ensureCompanyDocument(
 // =============================================================================
 
 /**
- * Repair a company document whose `name` or `contactId` are stale/incorrect.
+ * Repair a company document whose `name` is stale/incorrect.
  *
- * Looks up the matching contact in the `contacts` collection (type=company,
- * companyId==companyId) and patches the document with the correct values.
+ * Re-derives the display name from the per-tenant company profile
+ * (legal-identity SSoT, ADR-439) and patches the document. A user's
+ * displayName is only a last-resort fallback. No-ops when the name is already
+ * correct or when no real name can be resolved.
  *
  * @returns Object describing what was changed
  */
@@ -244,25 +259,46 @@ export async function repairCompanyDocument(
 ): Promise<{ name: string; wasRepaired: boolean }> {
   const db = getAdminFirestore();
 
-  // Resolve workspace name from the earliest admin user of this company
-  const usersSnap = await db
-    .collection(COLLECTIONS.USERS)
-    .where('companyId', '==', companyId)
-    .orderBy('createdAt', 'asc')
-    .limit(1)
-    .get();
+  // Legal-identity SSoT: per-tenant company profile (businessName / tradeName).
+  const identity = await readCompanyLegalIdentity(companyId);
 
-  if (usersSnap.empty) {
-    logger.warn('[CompanyDocument] repairCompanyDocument: no users found for company', { companyId });
+  // Last-resort fallback: earliest admin user's displayName.
+  let userDisplayName = '';
+  try {
+    const usersSnap = await db
+      .collection(COLLECTIONS.USERS)
+      .where('companyId', '==', companyId)
+      .orderBy('createdAt', 'asc')
+      .limit(1)
+      .get();
+    if (!usersSnap.empty) {
+      userDisplayName = usersSnap.docs[0].data().displayName || '';
+    }
+  } catch (lookupError) {
+    logger.warn('[CompanyDocument] repairCompanyDocument: user lookup failed', {
+      companyId,
+      error: getErrorMessage(lookupError),
+    });
+  }
+
+  const resolution = resolveCompanyName({
+    id: companyId,
+    tradeName: identity?.tradeName,
+    legalName: identity?.businessName,
+    displayName: userDisplayName || undefined,
+  });
+
+  if (!resolution.hasRealName) {
+    logger.warn('[CompanyDocument] repairCompanyDocument: no legal identity or user name found', { companyId });
     return { name: '', wasRepaired: false };
   }
 
-  const userData = usersSnap.docs[0].data();
-  const correctName = userData.displayName || '';
+  const correctName = resolution.displayName;
+  const existing = await getCompanyDocument(companyId);
+  const previousName = existing?.name ?? null;
 
-  if (!correctName) {
-    logger.warn('[CompanyDocument] repairCompanyDocument: user has no displayName', { companyId });
-    return { name: '', wasRepaired: false };
+  if (previousName === correctName) {
+    return { name: correctName, wasRepaired: false };
   }
 
   await db.collection(COLLECTIONS.COMPANIES).doc(companyId).update({
@@ -278,7 +314,7 @@ export async function repairCompanyDocument(
     entityName: correctName,
     action: 'updated',
     changes: [
-      { field: 'name', oldValue: null, newValue: correctName, label: 'name' },
+      { field: 'name', oldValue: previousName, newValue: correctName, label: 'name' },
     ],
     performedBy: repairedBy,
     performedByName: null,
@@ -288,6 +324,7 @@ export async function repairCompanyDocument(
   logger.info('[CompanyDocument] Repaired company document name', {
     companyId,
     name: correctName,
+    source: resolution.source,
   });
 
   return { name: correctName, wasRepaired: true };

@@ -122,10 +122,23 @@ export async function handleUpdateProject(
   // whitelist and drops fields that haven't actually changed, so form autosaves
   // that PATCH the full payload don't produce ghost "— → —" entries.
   const projectCompanyId = (projectData?.companyId as string | undefined) ?? ctx.companyId;
-  const auditChanges = EntityAuditService.diffFields(
+  // ADR-195 enterprise policy: `linkedCompanyId` is a foreign key. Keep the
+  // canonical contact id in the change value and resolve the company name into
+  // `*Label` (id-in-value + name-in-label) so the History tab shows the company
+  // name instead of the raw `comp_…` id, mirroring the create path.
+  const auditChanges = await EntityAuditService.diffFieldsWithResolution(
     (projectData ?? {}) as Record<string, unknown>,
     cleanData,
     PROJECT_TRACKED_FIELDS,
+    {
+      linkedCompanyId: async (id) => {
+        if (!id || typeof id !== 'string') return null;
+        const snap = await getAdminFirestore().collection(COLLECTIONS.CONTACTS).doc(id).get();
+        if (!snap.exists) return null;
+        const name = snap.data()?.companyName;
+        return typeof name === 'string' && name.trim() ? name.trim() : null;
+      },
+    },
   );
 
   if (auditChanges.length > 0) {

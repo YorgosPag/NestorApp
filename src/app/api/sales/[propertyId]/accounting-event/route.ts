@@ -20,6 +20,7 @@ import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { SalesAccountingBridge } from '@/services/sales-accounting';
 import type { SalesAccountingEvent } from '@/services/sales-accounting';
+import { getCompanyId } from '@/config/tenant';
 import { getErrorMessage } from '@/lib/error-utils';
 import { nowISO } from '@/lib/date-local';
 
@@ -135,7 +136,7 @@ export const POST = withStandardRateLimit(handlePost);
 
 export async function GET(): Promise<NextResponse> {
   try {
-    const bridge = new SalesAccountingBridge({ companyId: 'system', userId: 'system' });
+    const bridge = new SalesAccountingBridge({ companyId: getCompanyId(), userId: 'system' });
     const profile = await bridge.checkSetup();
     return NextResponse.json({
       route: 'sales-accounting-event',

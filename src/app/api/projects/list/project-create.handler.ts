@@ -156,17 +156,18 @@ export const POST = withHighRateLimit(
         // The dynamic diff replaces the previous hardcoded three-entry
         // snapshot (`name`, `projectCode`, `linkedCompanyId`) that silently
         // dropped every other field the user entered on the General tab.
-        const auditBody: Record<string, unknown> = {
-          ...body,
-          // Substitute the resolved display name for `linkedCompanyId` so
-          // the audit entry stores a human-readable value instead of the
-          // raw company document id (ADR-195 denormalization policy).
-          linkedCompanyId: linkedCompanyName ?? body.linkedCompanyId ?? null,
-        };
-        const diffedChanges = EntityAuditService.diffFields(
+        // ADR-195 enterprise policy: keep the canonical `linkedCompanyId`
+        // document id in the change value and attach the resolved company
+        // name as `newValueLabel` (id-in-value + name-in-label), aligned with
+        // the building/floor/property create routes. The company was already
+        // fetched above, so the resolver just hands back the cached name.
+        const diffedChanges = await EntityAuditService.diffFieldsWithResolution(
           {},
-          auditBody,
+          body,
           PROJECT_TRACKED_FIELDS,
+          {
+            linkedCompanyId: async () => linkedCompanyName ?? null,
+          },
         );
 
         // `projectCode` is server-assigned (ADR-210 sequential counter) and

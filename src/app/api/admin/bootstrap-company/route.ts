@@ -113,20 +113,27 @@ export const POST = withSensitiveRateLimit(
           });
         }
 
-        // Step 2: Read company data from contacts collection
+        // Step 2: Read any explicit contact override (optional — the legal
+        // identity SSoT is the per-tenant company profile, read inside
+        // ensureCompanyDocument; ADR-439).
         const db = getAdminFirestore();
         const contactDoc = await db.collection(COLLECTIONS.CONTACTS).doc(companyId).get();
 
         let companyName = 'ΠΑΓΩΝΗΣ';
+        let contactData: { name: string; contactId: string } | undefined;
         if (contactDoc.exists) {
-          const contactData = contactDoc.data();
-          companyName = contactData?.companyName ?? contactData?.name ?? companyName;
+          const cd = contactDoc.data();
+          const resolvedContactName = cd?.companyName ?? cd?.name;
+          if (resolvedContactName) {
+            companyName = resolvedContactName;
+            contactData = { name: resolvedContactName, contactId: contactDoc.id };
+          }
         } else {
-          logger.warn('[BootstrapCompany] Contact document not found, using default name', { companyId });
+          logger.warn('[BootstrapCompany] Contact document not found, deriving name from company profile', { companyId });
         }
 
-        // Step 3: Materialize (contactId resolved inside ensureCompanyDocument)
-        const document = await ensureCompanyDocument(companyId, undefined, ctx.uid);
+        // Step 3: Materialize — name derived from company profile (or contact override)
+        const document = await ensureCompanyDocument(companyId, contactData, ctx.uid);
 
         const duration = Date.now() - startTime;
 
