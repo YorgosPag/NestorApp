@@ -169,11 +169,21 @@ offset for 3D markers (v1 = floor-relative) · element highlight on clash select
      no lag. 2D hidden in 3D (no double set).
   4. **Panel** — now a draggable `FloatingPanel` (SSoT) so it never covers the 3D toggle / ViewCube;
      row `key` index-suffixed (duplicate `Clash.id`).
-  5. **Engine fixes** — `detectClashes` now **dedups entities by id** at intake (the level scene can
-     contain the same id twice → inflated counts + duplicate `Clash.id`); 2D click-to-zoom focus box is
-     in **metres** (scale-correct).
-  - **Known issues (deferred):** segment↔fitting false positives (a fitting on its own run isn't
-     filtered when the pipes aren't yet in a shared `MepSystem` — pair-filter needs connectivity, not
-     just shared-system); upstream duplicate-entity data in the level scene (worth a separate look).
-  - 24 coordination jest green (marker-math + severity + detection). Coordination Phase 1 complete.
-    Commit pending (Giorgio).
+  5. **Engine fixes** — (a) `detectClashes` now **dedups entities by id** at intake (the level scene can
+     contain the same id twice → inflated counts + duplicate `Clash.id`); (b) **segment↔fitting
+     false positives fixed** — `evaluateSegmentBox` skips a fitting when a segment endpoint falls inside
+     the fitting's AABB (a connection, not a clash; the membership filter can't catch it for manual pipes
+     not yet in a shared `MepSystem`, but the geometry can — a DIFFERENT pipe passing through the fitting
+     still clashes). Verified live: 3 crossing pipes went 9 → **3** clashes (only the real pipe↔pipe
+     crossings). (c) 2D click-to-zoom focus box is in **metres** (scale-correct).
+  6. **Full-scope browser verification (Giorgio).** Beyond manual pipes: ran clash on a **real
+     auto-generated water network** (ADR-426) + a crossing beam → exactly **1 «pipe ↔ beam» HIGH
+     (red)** clash (16 entities / 14 pairs / 1 clash — the network's own fittings produced no false
+     positives). High-severity (structural) narrow-phase + red severity colour confirmed identical
+     across 2D markers, 3D markers and the panel dot (severity-colour SSoT). The water canary itself
+     (Generate → ghost → Accept → real network → atomic undo) was re-confirmed, validating the shared
+     preview/commit layer all 8 disciplines reuse.
+  - **Known issue (deferred):** upstream duplicate-entity data in the level scene (the same id appearing
+     twice is defended against by the dedup, but the source is worth a separate look).
+  - 27 coordination jest green (19 detection + 5 marker-math + 3 severity). Coordination Phase 1
+    complete. Commit pending (Giorgio).
