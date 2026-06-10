@@ -276,6 +276,12 @@ export function convertDxfEntityToEntityModel(entity: DxfEntityUnion): EntityMod
     // build the spatial index entry → hit-test never finds the entity → selection silently fails.
     case 'floor-finish':
       return buildBimEntityModel('floor-finish', entity, baseModel);
+    // ADR-422 L0 — thermal space is a direct entity (params + geometry at top level, like floor-finish).
+    // Without this case it fell to `default` which drops geometry → BoundsCalculator returned null →
+    // the space never entered the spatial index → click-selection silently failed (console: «Unknown
+    // entity type: thermal-space» + QuadTree «Item outside index bounds» flood).
+    case 'thermal-space':
+      return buildBimEntityModel('thermal-space', entity, baseModel);
     // ADR-363 Phases 1B/5 — wall/beam are direct entities (no DXF wrapper).
     // `geometry.bbox` powers spatial broad-phase via BoundsCalculator.calculateBimEntityBounds.
     // SSoT: buildBimEntityModel in bim/utils/bim-entity-passthrough.ts.

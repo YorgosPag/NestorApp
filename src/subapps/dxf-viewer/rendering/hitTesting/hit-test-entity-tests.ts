@@ -14,6 +14,7 @@ import {
   isColumnEntity,
   isBeamEntity,
   isFloorFinishEntity,
+  isFoundationEntity,
 } from '../../types/entities';
 import type { HitTestResult, SnapResult } from './hit-tester-types';
 import { pointToLineDistance, clamp, degToRad } from '../entities/shared/geometry-utils';
@@ -65,6 +66,8 @@ export function performDetailedHitTest(
     case 'wall': return hitTestWall(entity, point);
     case 'column': return hitTestColumn(entity, point);
     case 'beam': return hitTestBeam(entity, point);
+    // ADR-436 Slice 1b — foundation footprint polygon containment (mirror column).
+    case 'foundation': return hitTestFoundation(entity, point);
     // ADR-419 — floor-finish polygon containment (same as slab/slab-opening).
     case 'floor-finish': return hitTestFloorFinish(entity, point);
     default: return { hitType: 'entity', hitPoint: point };
@@ -146,6 +149,15 @@ function hitTestWall(entity: Entity, point: Point2D): Partial<HitTestResult> | n
 
 function hitTestColumn(entity: Entity, point: Point2D): Partial<HitTestResult> | null {
   if (!isColumnEntity(entity)) return null;
+  const verts = entity.geometry?.footprint?.vertices;
+  if (!verts || verts.length < 3) return null;
+  return isPointInPolygon(point, poly3to2(verts)) ? { hitType: 'entity', hitPoint: point } : null;
+}
+
+// ADR-436 Slice 1b — foundation footprint containment (pad/strip/tie-beam all
+// expose `geometry.footprint.vertices`; identical to column polygon test).
+function hitTestFoundation(entity: Entity, point: Point2D): Partial<HitTestResult> | null {
+  if (!isFoundationEntity(entity)) return null;
   const verts = entity.geometry?.footprint?.vertices;
   if (!verts || verts.length < 3) return null;
   return isPointInPolygon(point, poly3to2(verts)) ? { hitType: 'entity', hitPoint: point } : null;

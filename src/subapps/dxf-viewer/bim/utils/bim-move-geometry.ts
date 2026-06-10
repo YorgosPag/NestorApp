@@ -45,6 +45,7 @@ import type {
   SlabOpeningParams,
 } from '../types/slab-opening-types';
 import type { ColumnEntity, ColumnParams } from '../types/column-types';
+import type { FoundationEntity, FoundationParams } from '../types/foundation-types';
 import type { BeamEntity, BeamParams } from '../types/beam-types';
 import type { StairEntity, StairParams } from '../types/stair-types';
 import type { MepFixtureEntity, MepFixtureParams } from '../types/mep-fixture-types';
@@ -65,6 +66,7 @@ import { translateWallParams } from '../walls/wall-grip-transforms';
 import { computeSlabGeometry } from '../geometry/slab-geometry';
 import { computeSlabOpeningGeometry } from '../geometry/slab-opening-geometry';
 import { computeColumnGeometry } from '../geometry/column-geometry';
+import { computeFoundationGeometry } from '../geometry/foundation-geometry';
 import { computeBeamGeometry } from '../geometry/beam-geometry';
 import { computeStairGeometry } from '../geometry/stairs/StairGeometryService';
 import { computeMepFixtureGeometry } from '../mep-fixtures/mep-fixture-geometry';
@@ -126,6 +128,17 @@ function moveColumn(entity: ColumnEntity, delta: Point2D): Partial<SceneEntity> 
     position: shiftPoint3D(entity.params.position, delta),
   };
   const geometry = computeColumnGeometry(newParams);
+  return { params: newParams, geometry } as unknown as Partial<SceneEntity>;
+}
+
+// ADR-436 Slice 1b — Alt+drag whole-entity move. pad shifts `position`; the
+// line-based kinds (strip / tie-beam, Slice 2) shift both axis endpoints.
+function moveFoundation(entity: FoundationEntity, delta: Point2D): Partial<SceneEntity> {
+  const p = entity.params;
+  const newParams: FoundationParams = p.kind === 'pad'
+    ? { ...p, position: shiftPoint3D(p.position, delta) }
+    : { ...p, start: shiftPoint3D(p.start, delta), end: shiftPoint3D(p.end, delta) };
+  const geometry = computeFoundationGeometry(newParams);
   return { params: newParams, geometry } as unknown as Partial<SceneEntity>;
 }
 
@@ -298,6 +311,8 @@ export function calculateBimMovedGeometry(
       return moveSlabOpening(entity, delta);
     case 'column':
       return moveColumn(entity, delta);
+    case 'foundation':
+      return moveFoundation(entity, delta);
     case 'beam':
       return moveBeam(entity, delta);
     case 'stair':

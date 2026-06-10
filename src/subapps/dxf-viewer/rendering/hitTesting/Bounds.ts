@@ -84,6 +84,8 @@ export class BoundsCalculator {
       case 'slab-opening':
       case 'column':
       case 'beam':
+      // ADR-436 Slice 1b — foundation pad/strip/tie-beam; geometry.bbox from computeFoundationGeometry().
+      case 'foundation':
       case 'mep-fixture':
       case 'electrical-panel':
       case 'railing':
@@ -102,6 +104,8 @@ export class BoundsCalculator {
       case 'mep-water-heater':
       // ADR-408 Εύρος Β #3 — underfloor heating loop; geometry.bbox from computeMepUnderfloorGeometry().
       case 'mep-underfloor':
+      // ADR-422 L0 — thermal space (analytical IfcSpace); geometry.bbox from computeThermalSpaceGeometry().
+      case 'thermal-space':
         return this.calculateBimEntityBounds(entity, tolerance);
       // ADR-359 Phase 11 follow-up — XLINE/RAY bounds extracted to sibling module.
       case 'xline':

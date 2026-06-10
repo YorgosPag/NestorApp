@@ -246,6 +246,14 @@ export function computeCircuitWirePaths(
   return paths;
 }
 
+/**
+ * ADR-408 Φ-C EXT — below this |Δz| (mm) two consecutive hosts count as the same
+ * height, so the leg stays a plain straight segment (no 3D riser). Guards against
+ * float noise (e.g. a 2700 vs 2699.9999 mounting elevation) inserting a spurious
+ * sub-micron riser.
+ */
+const WIRE_RISER_EPS_MM = 0.5;
+
 /** Number of straight chords used to approximate one `'arc'` segment. */
 const ARC_SAMPLES = 16;
 /** Arc bulge as a fraction of the segment length (control-point offset). */
@@ -302,6 +310,22 @@ export function expandSegment(
   }
   if (style === 'arc') {
     return arcSegment(a, b);
+  }
+  // ADR-408 Φ-C EXT — 3D vertical riser for a height change. A real home-run conduit
+  // never runs a free DIAGONAL through the air between hosts at different elevations
+  // (panel 1.5m → ceiling light 2.7m → wall socket 0.3m). Revit/conduit practice: the
+  // run stays HIGH (at the ceiling-side of the leg) and DROPS vertically onto the
+  // lower device — never sags to the previous device's height. So the horizontal leg
+  // sits at the HIGHER of the two ends, and the vertical riser is at the lower device:
+  //   - a higher (or equal): horizontal at `a.z` to b's XY, then drop down to `b`.
+  //   - b higher:            rise up at a's XY to `b.z`, then horizontal to `b`.
+  // The corner always shares the XY of one endpoint, so in 2D (z ignored) it collapses
+  // onto that endpoint and the plan line stays a straight `a→b` (overlay unchanged).
+  // Same-height legs (light→light, socket→socket) stay a plain straight segment.
+  if (Math.abs(a.zMm - b.zMm) > WIRE_RISER_EPS_MM) {
+    return a.zMm >= b.zMm
+      ? [a, { x: b.x, y: b.y, zMm: a.zMm }, b]
+      : [a, { x: a.x, y: a.y, zMm: b.zMm }, b];
   }
   return [a, b];
 }

@@ -194,6 +194,8 @@ export const getEntityBounds = getEntityRenderBounds;
  */
 export type BimEntityWithBounds =
   | 'wall' | 'opening' | 'slab' | 'slab-opening' | 'column' | 'beam' | 'stair'
+  // ADR-436 — foundation (pad/strip/tie-beam)
+  | 'foundation'
   // ADR-406 — MEP fixture
   | 'mep-fixture'
   // ADR-408 Φ3 — electrical panel

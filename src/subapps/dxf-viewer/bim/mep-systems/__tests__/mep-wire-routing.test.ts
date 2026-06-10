@@ -132,6 +132,35 @@ describe('expandSegment (style seam)', () => {
     expect(expandSegment(P(0, 0), P(10, 5))).toEqual([P(0, 0), P(10, 5)]);
   });
 
+  // ADR-408 Φ-C EXT — 3D vertical riser for height changes (no free diagonal). The
+  // horizontal leg runs at the HIGHER end; the vertical riser is at the lower device.
+  it('rises at the lower end when the destination is higher (run stays high)', () => {
+    // a@300 → b@2700 (b higher): rise vertically at a's XY to b.z, then horizontal to b.
+    // 2D (z ignored): corner shares a's XY → collapses onto a → straight a→b.
+    expect(expandSegment(P(0, 0, 300), P(10, 5, 2700), 'straight')).toEqual([
+      P(0, 0, 300),
+      P(0, 0, 2700),
+      P(10, 5, 2700),
+    ]);
+  });
+
+  it('drops at the destination when the source is higher (run stays high)', () => {
+    // a@2700 → b@300 (a higher): horizontal at a.z to b's XY, then drop down to b.
+    // 2D: corner shares b's XY → collapses onto b → straight a→b.
+    expect(expandSegment(P(10, 5, 2700), P(0, 0, 300), 'straight')).toEqual([
+      P(10, 5, 2700),
+      P(0, 0, 2700),
+      P(0, 0, 300),
+    ]);
+  });
+
+  it('straight stays a direct segment when the height delta is below epsilon (float noise)', () => {
+    expect(expandSegment(P(0, 0, 2700), P(10, 5, 2699.9999), 'straight')).toEqual([
+      P(0, 0, 2700),
+      P(10, 5, 2699.9999),
+    ]);
+  });
+
   it('orthogonal inserts an L-elbow (horizontal then vertical)', () => {
     expect(expandSegment(P(0, 0, 1), P(10, 5, 2), 'orthogonal')).toEqual([
       P(0, 0, 1),
@@ -181,6 +210,20 @@ describe('buildWirePolyline', () => {
 
   it('returns empty for a path with no points', () => {
     expect(buildWirePolyline({ systemId: 's', colorHex: '#000000', points: [] })).toEqual([]);
+  });
+
+  // ADR-408 Φ-C EXT — straight path crossing heights (panel 1500 → light 2700 →
+  // light 2700): the height-changing leg gets a riser; the same-height leg stays direct.
+  it('inserts 3D risers on a straight path that crosses heights', () => {
+    const path: CircuitWirePath = {
+      systemId: 's', colorHex: '#000000', points: [P(0, 0, 1500), P(10, 0, 2700), P(20, 0, 2700)],
+    };
+    expect(buildWirePolyline(path)).toEqual([
+      P(0, 0, 1500),
+      P(0, 0, 2700), // panel rises in place to the higher (light) elevation
+      P(10, 0, 2700), // light1 (horizontal run at ceiling height)
+      P(20, 0, 2700), // light2 (same height → no riser)
+    ]);
   });
 });
 
