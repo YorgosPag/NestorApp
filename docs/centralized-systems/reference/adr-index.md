@@ -399,6 +399,7 @@
 | **ADR-419** | Floor Finish Per Room (IfcCovering FLOORING) — λεπτό covering ανά δωμάτιο (10–50mm), 8 materials SSoT (wood/tile/marble/laminate/parquet/epoxy/carpet), 2D hatch + 3D PBR, Pset_CoveringCommon, enterprise-id ffl_ | ✅ APPROVED | 2026-06-06 | Entity Systems | [📄](./adrs/ADR-419-floor-finish-per-room.md) |
 | **ADR-420** | BIM Floor-Scope SSoT — οι BIM οντότητες (20 collections) σκοπεύονται στο σταθερό `floorId` (IfcBuildingStorey) αντί για volatile `floorplanId` (=fileRecordId, αλλάζει σε κάθε re-import → orphaning). SSoT `bim-floor-scope`· rollout dual-write→backfill→flip· 40 indexes· wizard find-or-create level by floorId | ✅ APPROVED | 2026-06-07 | BIM Persistence | [📄](./adrs/ADR-420-bim-floor-scope-ssot.md) |
 | **ADR-421** | BIM Opening Types (Revit-grade door & window catalog) — deep research Revit families/types + IFC4 enums (IfcDoorTypeOperationEnum 20· IfcWindowPanel/Partitioning 14+11)· πρόταση 17 τύπων (single/double/sliding/pocket/bifold/overhead/revolving doors· casement/fixed/double-hung/sliding/awning/hopper/tilt-turn/bay windows) με 2D plan/3D/IFC/params mapping· 2 decision μοντέλα (enum-extension vs ADR-412 Family/Type) | 🟡 RESEARCH + DESIGN (PROPOSED) | 2026-06-07 | Entity Systems | [📄](./adrs/ADR-421-bim-opening-types-revit-grade.md) |
+| **ADR-439** | Tenant Identity SSoT & Provisioning — per-tenant `company_profile` (`accounting_settings/{companyId}`) = legal-identity SSoT· `companies/{id}.name` = derived cache (`resolveCompanyDisplayName`)· κανένα self-contact· Phase 1 identity-derivation DONE (fixes "Georgios Pagonis")· Phase 2 profile→per-tenant + migration· Phase 3 tenant provisioning (login path) | 🟡 IN PROGRESS (Phase 1) | 2026-06-10 | Identity / Multi-tenancy | [📄](./adrs/ADR-439-tenant-identity-ssot-and-provisioning.md) |
 | **ADR-UI-001** | Visual Primitive Ownership & Semantic Tokens | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-UI-001.md) |
 
 ---
@@ -782,6 +783,7 @@
 | **ADR-419** | Floor Finish Per Room (IfcCovering FLOORING) | ✅ APPROVED | [View](./adrs/ADR-419-floor-finish-per-room.md) |
 | **ADR-420** | BIM Floor-Scope SSoT (stable floorId, not volatile floorplanId) | ✅ APPROVED | [View](./adrs/ADR-420-bim-floor-scope-ssot.md) |
 | **ADR-421** | BIM Opening Types (Revit-grade door & window catalog) | 🟡 RESEARCH + DESIGN | [View](./adrs/ADR-421-bim-opening-types-revit-grade.md) |
+| **ADR-439** | Tenant Identity SSoT & Provisioning (per-tenant company profile = legal-identity SSoT) | 🟡 IN PROGRESS | [View](./adrs/ADR-439-tenant-identity-ssot-and-provisioning.md) |
 | **ADR-UI-001** | Visual Primitive Ownership & Semantic Tokens | ✅ APPROVED | [View](./adrs/ADR-UI-001.md) |
 
 ---

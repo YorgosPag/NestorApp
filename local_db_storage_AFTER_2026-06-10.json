@@ -1,0 +1,69 @@
+{
+  "snapshot": {
+    "takenAt": "2026-06-10",
+    "label": "AFTER Giorgio writes: contact(νομικό πρόσωπο) -> company -> project -> building -> 2 floors -> maisonette(2 ορόφων)",
+    "comparedTo": "local_db_storage_baseline_2026-06-10.json",
+    "project": "pagonis-87766",
+    "tenantCompanyId": "comp_9c7c1a50-f370-466d-bdf7-aa7b2b2d7757"
+  },
+
+  "diffSummary": {
+    "collectionsBefore": 9,
+    "collectionsAfter": 19,
+    "newCollections": 10,
+    "newDocsTotal": 22,
+    "storageChanged": false
+  },
+
+  "newCollections": {
+    "contacts": [
+      { "id": "cont_a181abb2-c786-45ba-b6a2-7bf689b1379f", "type": "company", "companyName": "ALFA ΚΑΤΑΣΚΕΥΑΣΤΙΚΗ Α.Ε.", "vatNumber": "040817944", "companyId": "comp_9c7c…", "createdBy": "WKBWEg3DSfcdSbLNJfzGEW3vkct1" }
+    ],
+    "companies": [
+      { "id": "comp_9c7c1a50-f370-466d-bdf7-aa7b2b2d7757", "name": "Georgios Pagonis", "contactId": null, "note": "RE-MATERIALIZED (ADR-210), όχι νέα company. ⚠️ name=user displayName fallback, όχι νομικό όνομα." }
+    ],
+    "projects": [
+      { "id": "proj_78cdbb80-b8c2-4d45-93e5-e7d4815cffab", "name": "ΕΡΓΟ 1", "projectCode": "PRJ-001", "linkedCompanyId": "cont_a181abb2-…", "companyId": "comp_9c7c…" }
+    ],
+    "buildings": [
+      { "id": "bldg_553db177-1e2d-41ff-9d12-b240f8883bd5", "name": "Κτήριο Α", "category": "residential", "projectId": "proj_78cdbb80-…" }
+    ],
+    "floors": [
+      { "id": "flr_4f0ddac4-71ec-4d1e-91f8-359a7e5c9cc9", "number": 1, "name": "1ος Όροφος", "elevation": 3, "buildingId": "bldg_553db177-…" },
+      { "id": "flr_9c93c527-c766-4ef3-afe8-4ba68f57a47c", "number": 2, "name": "2ος Όροφος", "elevation": 6, "buildingId": "bldg_553db177-…" }
+    ],
+    "properties": [
+      { "id": "prop_601abe1d-1c85-4abf-9e04-457819a0d9ac", "name": "Μεζονέτα 140 τ.μ.", "type": "maisonette", "isMultiLevel": true, "levels": ["flr_4f0ddac4 (primary)", "flr_9c93c527"], "areas.gross": 140, "note": "⚠️ levelData[flr_9c93…] (2ος)=όλα μηδενικά — όλο το εμβαδόν στον 1ο." }
+    ],
+    "counters": [
+      { "id": "projects", "next": 2, "totalGenerated": 1 }
+    ],
+    "dxf_viewer_levels": [
+      { "id": "lvl_c3b41527-2a64-4f77-9e1c-0348c37a61ff", "name": "Επίπεδο 1", "isDefault": true, "floorId": null, "note": "auto-created από DXF viewer, orphan (όχι linked σε κτιριακό όροφο)." }
+    ],
+    "entity_audit_trail": {
+      "count": 7,
+      "entities": ["company", "building", "floor x2", "property", "contact", "project"],
+      "note": "⚠️ FK fields (projectId/buildingId/linkedCompanyId) κρατούν ΟΝΟΜΑΤΑ αντί IDs στα changes[].newValue."
+    },
+    "search_documents": {
+      "count": 6,
+      "idPattern": "entityType_entityId (deterministic, idempotent)",
+      "entities": ["contact", "project", "building", "floor x2", "property"]
+    }
+  },
+
+  "unchangedCollections": [
+    "accounting_invoice_counters(1)", "accounting_settings(1)", "config(6)", "settings(4)",
+    "system(2)", "user_2fa_settings(2)", "user_notification_settings(1)", "user_preferences(3)", "users(3)"
+  ],
+
+  "storage": { "unchanged": true, "totalFiles": 6, "tree": "bim-mesh-library/{appliance(1),sanitary(5)}" },
+
+  "qualityFindings": {
+    "1_audit_fk_as_name": "🔴 audit changes: projectId/buildingId/linkedCompanyId = names not IDs. Fix planned.",
+    "2_company_name_fallback": "🟡 companies/{id}.name = 'Georgios Pagonis' (user displayName) αντί νομικού ονόματος. Fix planned.",
+    "3_maisonette_floor2_zero": "🟡 2ος όροφος levelData όλα μηδέν — data-entry, όχι system bug.",
+    "4_dxf_level_orphan": "🟢 default dxf level floorId:null — αναμενόμενο."
+  }
+}
