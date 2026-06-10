@@ -30,28 +30,17 @@ import type {
   MepBoilerParams,
 } from '../../../bim/types/mep-boiler-types';
 import {
-  BOILER_RELIEF_PRESSURES_BAR,
-  DEFAULT_BOILER_RELIEF_PRESSURE_BAR,
-  BOILER_SYSTEM_PRESSURES_BAR,
-  DEFAULT_BOILER_SYSTEM_PRESSURE_BAR,
-} from '../../../bim/types/mep-boiler-types';
-import {
-  listBoilerModels,
   resolveBoilerModel,
   applyBoilerModelToParams,
   clearBoilerModel,
-  BOILER_FUEL_TYPES,
   isBoilerFuelType,
-  MEP_BOILER_MOUNTING_TYPES,
-  DEFAULT_BOILER_MOUNTING_TYPE,
   isMepBoilerMountingType,
 } from '../../../bim/mep-boilers/boiler-model-catalog';
-import { SELECT_CLEAR_VALUE, isSelectClearValue } from '@/config/domain-constants';
+import { isSelectClearValue } from '@/config/domain-constants';
 import { useCommandHistory } from '../../../core/commands';
 import { UpdateMepBoilerParamsCommand } from '../../../core/commands/entity-commands/UpdateMepBoilerParamsCommand';
 import { LevelSceneManagerAdapter } from '../../../systems/entity-creation/LevelSceneManagerAdapter';
 import {
-  MEP_BOILER_RIBBON_KEYS,
   MEP_BOILER_RIBBON_KEYS_ACTIONS,
   MEP_BOILER_RIBBON_VISIBILITY_KEYS,
   isMepBoilerRibbonKey,
@@ -69,22 +58,16 @@ import {
   TOGGLE_KEY_TO_FIELD,
   NUMBER_KEY_TO_FIELD,
 } from './bridge/mep-boiler-param-maps';
+import { isFlueTerminationType } from '../../../bim/mep-boilers/boiler-flue-terminal';
 import {
-  FLUE_TERMINATION_TYPES,
-  DEFAULT_FLUE_TERMINATION,
-  isFlueTerminationType,
-} from '../../../bim/mep-boilers/boiler-flue-terminal';
-import { resolveErpClass } from '../../../bim/mep-boilers/boiler-efficiency';
-import { resolveNoxClass } from '../../../bim/mep-boilers/boiler-nox';
-import { resolveAcousticBand, type AcousticBand } from '../../../bim/mep-boilers/boiler-acoustics';
+  resolveBoilerReadoutComboboxState,
+  resolveBoilerEnumComboboxState,
+} from './mep-boiler-combobox-resolvers';
 import { EventBus } from '../../../systems/events/EventBus';
 import { useMepSystemStore } from '../../../bim/mep-systems/mep-system-store';
 import { resolveManagedSystems } from '../../../bim/mep-systems/mep-circuit-editor';
 import { useSpaceHeatLoads } from '../../../hooks/data/useSpaceHeatLoads';
-import {
-  computeHeatingEquipmentSizing,
-  type HeatingEquipmentSizingStatus,
-} from '../../../bim/thermal/heating-equipment-sizing';
+import { computeHeatingEquipmentSizing } from '../../../bim/thermal/heating-equipment-sizing';
 import {
   resolveSourceServedSpaces,
   sumServedHeatLoadW,
@@ -183,187 +166,15 @@ export function useRibbonMepBoilerBridge(
 
   const getComboboxState = useCallback(
     (commandKey: string): RibbonComboboxState | null => {
-      // ADR-422 L2 — read-only sizing readouts (disabled combobox). Resolved before
-      // the editable-key guard so they don't fall through to the params path.
+      // ADR-422 L2 — read-only sizing/readout comboboxes (ErP/NOx/acoustic/vessel/sizing).
+      // Resolved before the editable-key guard so they don't fall through to the params path.
       if (isMepBoilerReadoutKey(commandKey)) {
-        // ErP energy class — independent of sizing (depends on efficiency + fuelType),
-        // so it is resolved BEFORE the sizing guard. Disabled (read-only) combobox.
-        if (commandKey === MEP_BOILER_RIBBON_KEYS.readouts.erpClass) {
-          const boiler = resolveBoiler();
-          const eff = boiler?.params.seasonalEfficiencyPercent;
-          if (!boiler || typeof eff !== 'number') {
-            return { value: '—', options: [], disabled: true };
-          }
-          return {
-            value: resolveErpClass(eff, boiler.params.fuelType),
-            options: [],
-            disabled: true,
-          };
-        }
-        // NOx compliance verdict — independent of sizing (depends on noxMgKwh + fuelType), so it
-        // is resolved BEFORE the sizing guard, alongside the ErP class. Disabled (read-only) combobox.
-        // `null` (non-combustion fuel / no measured value) → the «—» placeholder.
-        if (commandKey === MEP_BOILER_RIBBON_KEYS.readouts.noxClass) {
-          const boiler = resolveBoiler();
-          const nox = resolveNoxClass(boiler?.params.noxMgKwh, boiler?.params.fuelType);
-          if (!boiler || nox === null) {
-            return { value: '—', options: [], disabled: true };
-          }
-          return {
-            value: t(
-              nox === 'compliant'
-                ? 'ribbon.commands.mepBoilerEditor.noxCompliant'
-                : 'ribbon.commands.mepBoilerEditor.noxExceeds',
-            ),
-            options: [],
-            disabled: true,
-          };
-        }
-        // Sound power (L_WA) placement-suitability band — independent of sizing (depends only on
-        // soundPowerDbA), so it is resolved BEFORE the sizing guard, alongside ErP/NOx. Disabled
-        // (read-only) combobox. `null` (absent/non-positive value) → the «—» placeholder. The band
-        // is a guidance heuristic (NOT a legal limit) — see `boiler-acoustics.ts`.
-        if (commandKey === MEP_BOILER_RIBBON_KEYS.readouts.acousticBand) {
-          const boiler = resolveBoiler();
-          const band = resolveAcousticBand(boiler?.params.soundPowerDbA);
-          if (!boiler || band === null) {
-            return { value: '—', options: [], disabled: true };
-          }
-          const BAND_LABEL_KEY: Readonly<Record<AcousticBand, string>> = {
-            quiet: 'ribbon.commands.mepBoilerEditor.acousticQuiet',
-            standard: 'ribbon.commands.mepBoilerEditor.acousticStandard',
-            loud: 'ribbon.commands.mepBoilerEditor.acousticLoud',
-          };
-          return { value: t(BAND_LABEL_KEY[band]), options: [], disabled: true };
-        }
-        if (!sizing) return { value: '—', options: [], disabled: true };
-        if (commandKey === MEP_BOILER_RIBBON_KEYS.readouts.adequacyStatus) {
-          const status: HeatingEquipmentSizingStatus = sizing.status;
-          return {
-            value: t(`ribbon.commands.mepBoilerEditor.sizingStatus.${status}`),
-            options: [],
-            disabled: true,
-          };
-        }
-        const w =
-          commandKey === MEP_BOILER_RIBBON_KEYS.readouts.requiredOutputW
-            ? sizing.requiredWithMarginW
-            : sizing.installedW;
-        if (w == null) return { value: '—', options: [], disabled: true };
-        const kW = (w / 1000).toLocaleString('el-GR', { maximumFractionDigits: 1 });
-        return { value: `${kW} kW`, options: [], disabled: true };
+        return resolveBoilerReadoutComboboxState(commandKey, resolveBoiler(), sizing, t);
       }
-      // ADR-408 — SAFETY RELIEF VALVE set-pressure picker (static enum of standard valve
-      // ratings). Checked BEFORE the model-catalog branch (passes `isMepBoilerRibbonStringKey`).
-      // A string combobox — the set-pressures are fractional (1.5/2.5 bar) so the generic numeric
-      // path (which rounds) is unsuitable. Value/options stringify the standard bar ratings.
-      if (isMepBoilerReliefPressureKey(commandKey)) {
-        const boiler = resolveBoiler();
-        if (!boiler) return null;
-        const bar = boiler.params.reliefValvePressureBar ?? DEFAULT_BOILER_RELIEF_PRESSURE_BAR;
-        return {
-          value: String(bar),
-          options: BOILER_RELIEF_PRESSURES_BAR.map((p) => ({
-            value: String(p),
-            labelKey: String(p),
-            isLiteralLabel: true,
-          })),
-        };
-      }
-      // ADR-408 — PRESSURE GAUGE system (cold fill) pressure picker (static enum of standard fill
-      // pressures). Checked BEFORE the model-catalog branch (passes `isMepBoilerRibbonStringKey`).
-      // A string combobox — the fill pressures are fractional (1.2/1.5 bar) so the generic numeric
-      // path (which rounds) is unsuitable. DISTINCT from the relief-valve set-pressure branch above.
-      if (isMepBoilerSystemPressureKey(commandKey)) {
-        const boiler = resolveBoiler();
-        if (!boiler) return null;
-        const bar = boiler.params.systemPressureBar ?? DEFAULT_BOILER_SYSTEM_PRESSURE_BAR;
-        return {
-          value: String(bar),
-          options: BOILER_SYSTEM_PRESSURES_BAR.map((p) => ({
-            value: String(p),
-            labelKey: String(p),
-            isLiteralLabel: true,
-          })),
-        };
-      }
-      // ADR-408 — standalone HEATING FUEL picker (static enum, Revit editable instance
-      // parameter). Checked BEFORE the model-catalog branch (both pass
-      // `isMepBoilerRibbonStringKey`). Supplies the 4 fuel options + an «Απροσδιόριστο»
-      // (clear) sentinel so a parametric boiler can have no fuel; reuses the tag fuel
-      // labels (SSoT). Value falls back to the clear sentinel when unset.
-      if (isMepBoilerFuelTypeKey(commandKey)) {
-        const boiler = resolveBoiler();
-        if (!boiler) return null;
-        return {
-          value: boiler.params.fuelType ?? SELECT_CLEAR_VALUE,
-          options: [
-            {
-              value: SELECT_CLEAR_VALUE,
-              labelKey: 'ribbon.commands.mepBoilerEditor.fuelTypeUnset',
-              isLiteralLabel: false,
-            },
-            ...BOILER_FUEL_TYPES.map((fuel) => ({
-              value: fuel,
-              labelKey: `ribbon.commands.mepBoilerTag.fuelTypes.${fuel}`,
-              isLiteralLabel: false,
-            })),
-          ],
-        };
-      }
-      // ADR-408 — standalone MOUNTING picker (static enum, Revit «Mounting» type-property).
-      // Checked BEFORE the model-catalog branch (both pass `isMepBoilerRibbonStringKey`). No clear
-      // sentinel — a boiler is always wall-hung or floor-standing; the value falls back to the
-      // wall-hung default when unset. Reuses the tag mounting labels (SSoT).
-      if (isMepBoilerMountingTypeKey(commandKey)) {
-        const boiler = resolveBoiler();
-        if (!boiler) return null;
-        return {
-          value: boiler.params.mountingType ?? DEFAULT_BOILER_MOUNTING_TYPE,
-          options: MEP_BOILER_MOUNTING_TYPES.map((mt) => ({
-            value: mt,
-            labelKey: `ribbon.commands.mepBoilerTag.mountingTypes.${mt}`,
-            isLiteralLabel: false,
-          })),
-        };
-      }
-      // ADR-408 Vent Terminal — flue-termination picker (static enum). Checked BEFORE the
-      // model-catalog branch (both pass `isMepBoilerRibbonStringKey`). Supplies the 3 type
-      // options + the current value, defaulting to the roof cowl when unset.
-      if (isMepBoilerFlueTerminationKey(commandKey)) {
-        const boiler = resolveBoiler();
-        if (!boiler) return null;
-        return {
-          value: boiler.params.flueTermination ?? DEFAULT_FLUE_TERMINATION,
-          options: FLUE_TERMINATION_TYPES.map((type) => ({
-            value: type,
-            labelKey: `ribbon.commands.mepBoilerEditor.flueTerminationTypes.${type}`,
-            isLiteralLabel: false,
-          })),
-        };
-      }
-      // ADR-408 Type Catalog — model picker (string commandKey branch).
-      // Returns dynamic options from BOILER_MODEL_CATALOG + the clear («Παραμετρικό»)
-      // sentinel. Pattern mirrors the fixture assetId branch (ADR-411).
-      if (isMepBoilerRibbonStringKey(commandKey)) {
-        const boiler = resolveBoiler();
-        if (!boiler) return null;
-        return {
-          value: boiler.params.modelId ?? SELECT_CLEAR_VALUE,
-          options: [
-            {
-              value: SELECT_CLEAR_VALUE,
-              labelKey: 'ribbon.commands.mepBoilerEditor.modelCustom',
-              isLiteralLabel: false,
-            },
-            ...listBoilerModels().map((m) => ({
-              value: m.id,
-              labelKey: m.labelKey,
-              isLiteralLabel: true,
-            })),
-          ],
-        };
-      }
+      // ADR-408 — static-enum pickers (pressures/fuel/mounting/flue/model). `undefined` →
+      // not an enum key, fall through to the numeric-param path below.
+      const enumState = resolveBoilerEnumComboboxState(commandKey, resolveBoiler());
+      if (enumState !== undefined) return enumState;
       if (!isMepBoilerRibbonKey(commandKey)) return null;
       const boiler = resolveBoiler();
       if (!boiler) return null;

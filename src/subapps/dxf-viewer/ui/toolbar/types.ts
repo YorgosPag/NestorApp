@@ -148,6 +148,11 @@ export type ToolType =
   | 'column-discrete-from-perimeter-walls'
   // ADR-436 Slice 1: BIM Foundation pad drawing tool (μεμονωμένο πέδιλο, point-based)
   | 'foundation-pad'
+  // ADR-436 Slice 2: BIM Foundation line tools (line-based, 2-click — mirror beam)
+  | 'foundation-strip'        // πεδιλοδοκός / συνεχές πέδιλο (IfcFooting/STRIP_FOOTING)
+  | 'foundation-tie-beam'     // συνδετήρια δοκός (IfcFooting/FOOTING_BEAM)
+  // ADR-436 Slice 2 (Phase 2b): «Πεδιλοδοκός από τοίχο» — 1-click pick wall → strip on its axis
+  | 'foundation-strip-from-wall'
   // ADR-363 Phase 5: BIM Beam drawing tool (straight/curved/cantilever)
   | 'beam'
   // ADR-363 «Δοκάρι από τοίχο» — 1-click pick wall → beam on its axis

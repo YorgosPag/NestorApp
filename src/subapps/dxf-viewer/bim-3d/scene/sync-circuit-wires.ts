@@ -75,6 +75,19 @@ export function syncCircuitWires(
   for (const p of entities.panels ?? []) addHost(p, 'electrical-panel');
   if (!haveScene) return;
 
+  // TEMP DEBUG (ADR-408 wire stale-mesh diagnosis) — remove after fix. If wire meshes
+  // already exist in the group BEFORE we add the new ones, they were never cleared →
+  // old (diagonal) meshes accumulate under the new (riser) ones, which is what the
+  // user sees. Logs only when leftovers exist (silent when the group is clean).
+  const existingWires = group.children.filter(
+    (c) => (c.userData as Record<string, unknown> | undefined)?.['mepWireSystemId'] !== undefined,
+  ).length;
+  if (existingWires > 0) {
+    // eslint-disable-next-line no-console
+    console.log('[WIRE-COUNT] STALE wire meshes already in group BEFORE add:', existingWires,
+      '| total group children:', group.children.length, '→ old wires are NOT being cleared');
+  }
+
   const paths = computeCircuitWirePaths(useMepSystemStore.getState().getSystems(), resolverFromHosts(hosts));
   for (const path of paths) {
     // ADR-408 Φ7 — colour-by-system master toggle: OFF ⇒ default wire material.

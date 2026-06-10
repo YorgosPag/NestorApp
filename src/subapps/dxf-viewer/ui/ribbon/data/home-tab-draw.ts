@@ -473,7 +473,9 @@ export const HOME_DRAW_PANEL: RibbonPanelDef = {
               ],
             },
             // ── Θεμελίωση (submenu) ───────────────────────────────────────
-            // ADR-436 Slice 1 — μεμονωμένο πέδιλο (pad footing, point-based).
+            // ADR-436 — Revit «Structural Foundation»: 3 ξεχωριστά εργαλεία
+            // (Isolated/Wall/Slab analogue). Slice 1: pad (point). Slice 2: strip
+            // (πεδιλοδοκός) + tie-beam (συνδετήρια) line tools + «από τοίχο».
             {
               id: 'draw.bim.foundationGroup',
               labelKey: 'ribbon.commands.bim.foundationGroup.label',
@@ -488,6 +490,32 @@ export const HOME_DRAW_PANEL: RibbonPanelDef = {
                   icon: 'bim-column',
                   commandKey: 'foundation-pad',
                   shortcut: 'FP',
+                },
+                // ADR-436 Slice 2 — πεδιλοδοκός (strip, 2-click line, mirror beam).
+                {
+                  id: 'draw.bim.foundationStrip',
+                  labelKey: 'ribbon.commands.bim.foundationStrip.label',
+                  tooltipKey: 'ribbon.commands.bim.foundationStrip.tooltip',
+                  icon: 'bim-beam',
+                  commandKey: 'foundation-strip',
+                  shortcut: 'FS',
+                },
+                // ADR-436 Slice 2 — συνδετήρια δοκός (tie-beam, 2-click line).
+                {
+                  id: 'draw.bim.foundationTieBeam',
+                  labelKey: 'ribbon.commands.bim.foundationTieBeam.label',
+                  tooltipKey: 'ribbon.commands.bim.foundationTieBeam.tooltip',
+                  icon: 'bim-beam',
+                  commandKey: 'foundation-tie-beam',
+                },
+                // ADR-436 Slice 2 (Phase 2b) — «Πεδιλοδοκός από τοίχο» (Revit Wall
+                // Foundation): 1 κλικ σε τοίχο → strip στον άξονά του (πλάτος = πάχος).
+                {
+                  id: 'draw.bim.foundationStripFromWall',
+                  labelKey: 'ribbon.commands.bim.foundationStripFromWall.label',
+                  tooltipKey: 'ribbon.commands.bim.foundationStripFromWall.tooltip',
+                  icon: 'bim-beam',
+                  commandKey: 'foundation-strip-from-wall',
                 },
               ],
             },
@@ -552,6 +580,15 @@ export const HOME_DRAW_PANEL: RibbonPanelDef = {
               icon: 'bim-slab',
               commandKey: 'thermal-space',
               shortcut: 'TS',
+            },
+            // ADR-437 — space separator (IfcVirtualElement, 2-click room-bounding line).
+            {
+              id: 'draw.bim.spaceSeparator',
+              labelKey: 'ribbon.commands.bim.spaceSeparator.label',
+              tooltipKey: 'ribbon.commands.bim.spaceSeparator.tooltip',
+              icon: 'bim-slab',
+              commandKey: 'space-separator',
+              shortcut: 'SS',
             },
           ],
         },
