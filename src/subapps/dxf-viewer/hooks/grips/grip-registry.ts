@@ -56,6 +56,8 @@ function wrapDxfGrip(grip: GripInfo): UnifiedGripInfo {
     ...(grip.beamGripKind ? { beamGripKind: grip.beamGripKind } : {}),
     // ADR-363 Phase 4.5 — forward column parametric grip discriminator.
     ...(grip.columnGripKind ? { columnGripKind: grip.columnGripKind } : {}),
+    // ADR-436 Slice 1b — forward foundation parametric grip discriminator.
+    ...(grip.foundationGripKind ? { foundationGripKind: grip.foundationGripKind } : {}),
     // ADR-406 — forward MEP fixture parametric grip discriminator.
     ...(grip.mepFixtureGripKind ? { mepFixtureGripKind: grip.mepFixtureGripKind } : {}),
     // ADR-408 Φ3 — forward electrical panel parametric grip discriminator.

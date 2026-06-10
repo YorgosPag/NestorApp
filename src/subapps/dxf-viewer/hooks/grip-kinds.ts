@@ -311,6 +311,27 @@ export type ColumnGripKind =
   | `column-poly-vertex-${number}`;
 
 /**
+ * ADR-436 Slice 1b — Foundation (pad) grip kind (parametric grip type). Routes
+ * commit through `applyFoundationGripDrag()` + `UpdateFoundationParamsCommand`
+ * (mirror of `ColumnGripKind`). pad = **width × length** (ΟΧΙ width × depth).
+ *
+ * Grips exposed by `FoundationEntity` (`bim/foundations/foundation-grips.ts`):
+ *   - `foundation-center`   → translate `position` (NOT emitted — Alt+drag MOVE
+ *                              glyph, declutter mirror column Φ1G.5 Slice 2).
+ *   - `foundation-rotation` → rotate γύρω από `position` (anchor invariant).
+ *   - `foundation-width`    → resize `width` on the far edge from anchor (local X).
+ *   - `foundation-length`   → resize `length` on the far edge from anchor (local Y).
+ *
+ * Νέες διαστάσεις clamp στο `MIN_FOUNDATION_DIMENSION_MM`. Strip / tie-beam
+ * (line-based) δεν εκπέμπουν grips ακόμη (Slice 2).
+ */
+export type FoundationGripKind =
+  | 'foundation-center'
+  | 'foundation-rotation'
+  | 'foundation-width'
+  | 'foundation-length';
+
+/**
  * ADR-406 — MEP fixture (light fixture) grip kind (parametric grip type).
  * Routes commit through `applyMepFixtureGripDrag()` + `UpdateMepFixtureParamsCommand`
  * instead of the standard `StretchEntityCommand` vertex path.

@@ -21,6 +21,7 @@ import type {
   MepUnderfloorGripKind,
   BeamGripKind,
   ColumnGripKind,
+  FoundationGripKind,
   MepFixtureGripKind,
   ElectricalPanelGripKind,
   MepManifoldGripKind,
@@ -49,6 +50,7 @@ export type {
   MepUnderfloorGripKind,
   BeamGripKind,
   ColumnGripKind,
+  FoundationGripKind,
   MepFixtureGripKind,
   ElectricalPanelGripKind,
   MepManifoldGripKind,
@@ -146,6 +148,13 @@ export interface GripInfo {
    * rotation + width/depth resize).
    */
   columnGripKind?: ColumnGripKind;
+  /**
+   * ADR-436 Slice 1b — parametric foundation grip discriminator. Present only
+   * when the grip belongs to a `FoundationEntity`; routes the commit through
+   * `applyFoundationGripDrag()` + `UpdateFoundationParamsCommand` (rotation +
+   * width/length resize; Alt+drag whole-entity move). pad = width × length.
+   */
+  foundationGripKind?: FoundationGripKind;
   /**
    * ADR-406 — parametric MEP fixture grip discriminator. Present only when the
    * grip belongs to a `MepFixtureEntity`; routes the commit through

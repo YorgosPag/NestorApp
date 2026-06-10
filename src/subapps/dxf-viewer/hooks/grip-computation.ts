@@ -15,6 +15,7 @@ import type { GripInfo } from './useGripMovement';
 import type { WallEntity } from '../bim/types/wall-types';
 import type { BeamEntity } from '../bim/types/beam-types';
 import type { ColumnEntity } from '../bim/types/column-types';
+import type { FoundationEntity } from '../bim/types/foundation-types';
 import type { StairEntity } from '../bim/types/stair-types';
 import type { SlabEntity } from '../bim/types/slab-types';
 import type { OpeningEntity } from '../bim/types/opening-types';
@@ -35,6 +36,7 @@ import { getStairGrips } from '../bim/stairs/stair-grips';
 import { getWallGrips } from '../bim/walls/wall-grips';
 import { getBeamGrips } from '../bim/beams/beam-grips';
 import { getColumnGrips } from '../bim/columns/column-grips';
+import { getFoundationGrips } from '../bim/foundations/foundation-grips';
 import { getSlabGrips } from '../bim/slabs/slab-grips';
 import { getSlabOpeningGrips } from '../bim/slab-openings/slab-opening-grips';
 import { getOpeningGrips } from '../bim/walls/opening-grips';
@@ -237,6 +239,14 @@ export function computeDxfEntityGrips(entity: DxfEntityUnion): GripInfo[] {
       // ZERO column grips, so hover/hot-grip/drag never fired (only the render-loop
       // move glyph was visible). Mirrors wall/beam dispatch.
       grips.push(...getColumnGrips(entity as unknown as ColumnEntity));
+      break;
+    }
+
+    case 'foundation': {
+      // ADR-436 Slice 1b — parametric foundation pad grips (rotation / width /
+      // length). Without this case the interactive grip registry got ZERO
+      // foundation grips → hover/hot-grip/drag never fired. Mirrors column.
+      grips.push(...getFoundationGrips(entity as unknown as FoundationEntity));
       break;
     }
 

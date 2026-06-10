@@ -11,7 +11,7 @@
 
 import type { Point2D } from '../rendering/types/Types';
 import type { StairGripKind, WallGripKind } from './useGripMovement';
-import type { ColumnGripKind, BeamGripKind, SlabGripKind, SlabOpeningGripKind, RoofGripKind, OpeningGripKind, MepFixtureGripKind, ElectricalPanelGripKind, MepManifoldGripKind, MepRadiatorGripKind, MepBoilerGripKind, MepWaterHeaterGripKind, FurnitureGripKind, FloorplanSymbolGripKind, MepSegmentGripKind, FloorFinishGripKind, MepUnderfloorGripKind } from './grip-types';
+import type { ColumnGripKind, FoundationGripKind, BeamGripKind, SlabGripKind, SlabOpeningGripKind, RoofGripKind, OpeningGripKind, MepFixtureGripKind, ElectricalPanelGripKind, MepManifoldGripKind, MepRadiatorGripKind, MepBoilerGripKind, MepWaterHeaterGripKind, FurnitureGripKind, FloorplanSymbolGripKind, MepSegmentGripKind, FloorFinishGripKind, MepUnderfloorGripKind } from './grip-types';
 
 // ============================================================================
 // TYPES (still used by grips/ modules and CanvasLayerStack)
@@ -55,6 +55,12 @@ export interface DxfGripDragPreview {
    * canvas. Non-dimensional grips (center, rotation, start/end) are omitted.
    */
   columnGripKind?: ColumnGripKind;
+  /**
+   * ADR-436 Slice 1b — parametric foundation grip discriminator. Routes the live
+   * ghost through `applyFoundationGripDrag` + `computeFoundationGeometry`, and
+   * drives the "w=350" / "l=400" dim label via `useGripDimAnnotation`.
+   */
+  foundationGripKind?: FoundationGripKind;
   beamGripKind?: BeamGripKind;
   slabGripKind?: SlabGripKind;
   slabOpeningGripKind?: SlabOpeningGripKind;

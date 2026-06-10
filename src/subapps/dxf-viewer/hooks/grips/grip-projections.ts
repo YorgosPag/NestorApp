@@ -70,6 +70,8 @@ export function buildDxfDragPreview(
     ...(activeGrip.columnGripKind ? { columnGripKind: activeGrip.columnGripKind } : {}),
     ...(activeGrip.beamGripKind   ? { beamGripKind:   activeGrip.beamGripKind }   : {}),
     ...((activeGrip.columnGripKind ?? activeGrip.beamGripKind) ? { anchorPos } : {}),
+    // ADR-436 Slice 1b — foundation grip kind + anchor for live resize/rotate ghost + "w=/l=" label.
+    ...(activeGrip.foundationGripKind ? { foundationGripKind: activeGrip.foundationGripKind, anchorPos } : {}),
     // ADR-406 — MEP fixture grip kind + anchor for the live corner/move/rotate ghost.
     ...(activeGrip.mepFixtureGripKind ? { mepFixtureGripKind: activeGrip.mepFixtureGripKind, anchorPos } : {}),
     // ADR-408 Φ3 — electrical panel grip kind + anchor for the live corner/move/rotate ghost.
@@ -125,6 +127,8 @@ export function buildRotateReferencePreview(
     ...(activeGrip.wallGripKind ? { wallGripKind: activeGrip.wallGripKind } : {}),
     ...(activeGrip.beamGripKind ? { beamGripKind: activeGrip.beamGripKind } : {}),
     ...(activeGrip.columnGripKind ? { columnGripKind: activeGrip.columnGripKind } : {}),
+    // ADR-436 Slice 1b — foundation pad 6-click rotate live ghost.
+    ...(activeGrip.foundationGripKind ? { foundationGripKind: activeGrip.foundationGripKind } : {}),
     ...(activeGrip.mepFixtureGripKind ? { mepFixtureGripKind: activeGrip.mepFixtureGripKind } : {}),
     ...(activeGrip.electricalPanelGripKind ? { electricalPanelGripKind: activeGrip.electricalPanelGripKind } : {}),
     // ADR-408 Φ12 — MEP manifold 6-click rotate live ghost.
