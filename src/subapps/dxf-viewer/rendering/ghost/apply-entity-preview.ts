@@ -37,6 +37,9 @@ import type { BeamEntity } from '../../bim/types/beam-types';
 import { applyColumnGripDrag } from '../../bim/columns/column-grips';
 import { computeColumnGeometry } from '../../bim/geometry/column-geometry';
 import type { ColumnEntity } from '../../bim/types/column-types';
+import { applyFoundationGripDrag } from '../../bim/foundations/foundation-grips';
+import { computeFoundationGeometry } from '../../bim/geometry/foundation-geometry';
+import type { FoundationEntity } from '../../bim/types/foundation-types';
 import { applySlabGripDrag } from '../../bim/slabs/slab-grips';
 import type { SlabEntity } from '../../bim/types/slab-types';
 import { applySlabOpeningGripDrag } from '../../bim/slab-openings/slab-opening-grips';
@@ -96,7 +99,7 @@ export function applyEntityPreview(
   ctx?: ApplyEntityPreviewContext,
 ): DxfEntityUnion {
   if (!preview || preview.entityId !== entity.id) return entity;
-  const { delta, gripIndex, movesEntity, edgeVertexIndices, stairGripKind, wallGripKind, beamGripKind, columnGripKind, slabGripKind, slabOpeningGripKind, roofGripKind, floorFinishGripKind, mepFixtureGripKind, electricalPanelGripKind, mepManifoldGripKind, mepSegmentGripKind, furnitureGripKind, anchorPos, rotatePivot } = preview;
+  const { delta, gripIndex, movesEntity, edgeVertexIndices, stairGripKind, wallGripKind, beamGripKind, columnGripKind, foundationGripKind, slabGripKind, slabOpeningGripKind, roofGripKind, floorFinishGripKind, mepFixtureGripKind, electricalPanelGripKind, mepManifoldGripKind, mepSegmentGripKind, furnitureGripKind, anchorPos, rotatePivot } = preview;
   if (delta.x === 0 && delta.y === 0) return entity;
 
   // ── ADR-363 Phase 1C — parametric wall live preview ───────────────────────
@@ -122,6 +125,19 @@ export function applyEntityPreview(
     const newParams = applyColumnGripDrag(columnGripKind, { originalParams: col.params, delta, currentPos, ...(rotatePivot ? { pivot: rotatePivot } : {}) });
     if (newParams === col.params) return entity;
     const newGeometry = computeColumnGeometry(newParams);
+    return { ...(entity as object), params: newParams, geometry: newGeometry } as unknown as DxfEntityUnion;
+  }
+
+  // ── ADR-436 Slice 1b — parametric foundation pad live preview ──────────────
+  // Mirror of the column branch: `applyFoundationGripDrag` (rotation / width-length
+  // resize / Alt-move) so the live ghost matches the commit. `rotatePivot`
+  // (foundation-rotation 6-click) orbits the picked centre.
+  if (foundationGripKind && anchorPos && entity.type === 'foundation') {
+    const foundation = entity as unknown as FoundationEntity;
+    const currentPos: Point2D = { x: anchorPos.x + delta.x, y: anchorPos.y + delta.y };
+    const newParams = applyFoundationGripDrag(foundationGripKind, { originalParams: foundation.params, delta, currentPos, ...(rotatePivot ? { pivot: rotatePivot } : {}) });
+    if (newParams === foundation.params) return entity;
+    const newGeometry = computeFoundationGeometry(newParams);
     return { ...(entity as object), params: newParams, geometry: newGeometry } as unknown as DxfEntityUnion;
   }
 

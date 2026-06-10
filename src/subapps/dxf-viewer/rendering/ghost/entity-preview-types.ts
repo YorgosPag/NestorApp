@@ -14,6 +14,7 @@ import type { Point2D } from '../types/Types';
 import type {
   StairGripKind,
   ColumnGripKind,
+  FoundationGripKind,
   BeamGripKind,
   SlabGripKind,
   SlabOpeningGripKind,
@@ -68,6 +69,12 @@ export interface EntityPreviewTransform {
    * `rotatePivot` set (column-rotation 6-click) the ghost orbits the picked centre.
    */
   readonly columnGripKind?: ColumnGripKind;
+  /**
+   * ADR-436 Slice 1b — parametric foundation discriminator. Routes preview through
+   * `applyFoundationGripDrag` + `computeFoundationGeometry`. With `rotatePivot`
+   * set (foundation-rotation 6-click) the ghost orbits the picked centre.
+   */
+  readonly foundationGripKind?: FoundationGripKind;
   readonly slabGripKind?: SlabGripKind;
   readonly slabOpeningGripKind?: SlabOpeningGripKind;
   /**

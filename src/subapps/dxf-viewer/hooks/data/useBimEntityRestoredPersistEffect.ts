@@ -28,6 +28,8 @@ import type { AnySceneEntity } from '../../types/entities';
 
 type BimRestoreEntityType =
   | 'wall' | 'opening' | 'slab' | 'slab-opening' | 'column' | 'beam' | 'stair'
+  // ADR-436 — substructure footing (pad/strip/tie-beam, IfcFooting).
+  | 'foundation'
   // ADR-406 — point-based MEP fixture.
   | 'mep-fixture'
   // ADR-408 Φ3 — point-based electrical panel.
