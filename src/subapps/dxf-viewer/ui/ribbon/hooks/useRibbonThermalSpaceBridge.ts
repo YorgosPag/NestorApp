@@ -31,10 +31,14 @@ import {
   resolveThermalSpaceAch,
 } from '../../../bim/thermal/thermal-space-use-catalog';
 import {
+  DEFAULT_AIR_TIGHTNESS_LEVEL,
   DEFAULT_REHEAT_MODE,
   DEFAULT_THERMAL_BRIDGE_LEVEL,
+  DEFAULT_VENTILATION_SYSTEM,
+  type AirTightnessLevel,
   type ReheatMode,
   type ThermalBridgeLevel,
+  type VentilationSystem,
 } from '../../../bim/thermal/heat-load/heat-load-config';
 import {
   DEFAULT_SOLAR_SHADING_LEVEL,
@@ -142,6 +146,12 @@ export function useRibbonThermalSpaceBridge(
         if (commandKey === THERMAL_SPACE_RIBBON_KEYS.stringParams.solarShadingLevel) {
           return { value: ts.params.solarShadingLevel ?? DEFAULT_SOLAR_SHADING_LEVEL, options: [] };
         }
+        if (commandKey === THERMAL_SPACE_RIBBON_KEYS.stringParams.airTightnessLevel) {
+          return { value: ts.params.airTightnessLevel ?? DEFAULT_AIR_TIGHTNESS_LEVEL, options: [] };
+        }
+        if (commandKey === THERMAL_SPACE_RIBBON_KEYS.stringParams.ventilationSystem) {
+          return { value: ts.params.ventilationSystem ?? DEFAULT_VENTILATION_SYSTEM, options: [] };
+        }
         return { value: ts.params.useType, options: [] };
       }
       if (isThermalSpaceRibbonNumberKey(commandKey)) {
@@ -174,6 +184,14 @@ export function useRibbonThermalSpaceBridge(
         }
         if (commandKey === THERMAL_SPACE_RIBBON_KEYS.stringParams.solarShadingLevel) {
           dispatchParams(ts, { ...ts.params, solarShadingLevel: value as SolarShadingLevel });
+          return;
+        }
+        if (commandKey === THERMAL_SPACE_RIBBON_KEYS.stringParams.airTightnessLevel) {
+          dispatchParams(ts, { ...ts.params, airTightnessLevel: value as AirTightnessLevel });
+          return;
+        }
+        if (commandKey === THERMAL_SPACE_RIBBON_KEYS.stringParams.ventilationSystem) {
+          dispatchParams(ts, { ...ts.params, ventilationSystem: value as VentilationSystem });
           return;
         }
         const nextParams: ThermalSpaceParams = { ...ts.params, useType: value as ThermalSpaceUseType };

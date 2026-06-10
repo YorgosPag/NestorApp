@@ -16,8 +16,10 @@ import type { RibbonTab } from '../types/ribbon-types';
 import { THERMAL_SPACE_RIBBON_KEYS } from '../hooks/bridge/thermal-space-command-keys';
 import { listThermalSpaceUseTypes } from '../../../bim/thermal/thermal-space-use-catalog';
 import {
+  AIR_TIGHTNESS_LEVELS,
   REHEAT_MODES,
   THERMAL_BRIDGE_LEVELS,
+  VENTILATION_SYSTEMS,
 } from '../../../bim/thermal/heat-load/heat-load-config';
 import { SOLAR_SHADING_LEVELS } from '../../../bim/thermal/heat-load/annual-gains-config';
 
@@ -68,6 +70,20 @@ const REHEAT_MODE_OPTIONS = REHEAT_MODES.map((mode) => ({
 const SOLAR_SHADING_OPTIONS = SOLAR_SHADING_LEVELS.map((level) => ({
   value: level,
   labelKey: `thermalSpace.solarShading.${level}`,
+  isLiteralLabel: false,
+}));
+
+/** Envelope air-tightness options (ADR-422 L1.7) — from the config SSoT. */
+const AIR_TIGHTNESS_OPTIONS = AIR_TIGHTNESS_LEVELS.map((level) => ({
+  value: level,
+  labelKey: `thermalSpace.airTightness.${level}`,
+  isLiteralLabel: false,
+}));
+
+/** Ventilation-system / heat-recovery options (ADR-422 L1.7) — from the config SSoT. */
+const VENTILATION_SYSTEM_OPTIONS = VENTILATION_SYSTEMS.map((system) => ({
+  value: system,
+  labelKey: `thermalSpace.ventilationSystem.${system}`,
   isLiteralLabel: false,
 }));
 
@@ -160,6 +176,28 @@ export const CONTEXTUAL_THERMAL_SPACE_TAB: RibbonTab = {
                 commandKey: THERMAL_SPACE_RIBBON_KEYS.stringParams.solarShadingLevel,
                 comboboxWidthPx: 160,
                 options: SOLAR_SHADING_OPTIONS,
+              },
+            },
+            {
+              type: 'combobox',
+              size: 'small',
+              command: {
+                id: 'thermalSpace.airTightnessLevel',
+                labelKey: 'ribbon.commands.thermalSpaceEditor.airTightnessLevel',
+                commandKey: THERMAL_SPACE_RIBBON_KEYS.stringParams.airTightnessLevel,
+                comboboxWidthPx: 170,
+                options: AIR_TIGHTNESS_OPTIONS,
+              },
+            },
+            {
+              type: 'combobox',
+              size: 'small',
+              command: {
+                id: 'thermalSpace.ventilationSystem',
+                labelKey: 'ribbon.commands.thermalSpaceEditor.ventilationSystem',
+                commandKey: THERMAL_SPACE_RIBBON_KEYS.stringParams.ventilationSystem,
+                comboboxWidthPx: 190,
+                options: VENTILATION_SYSTEM_OPTIONS,
               },
             },
           ],

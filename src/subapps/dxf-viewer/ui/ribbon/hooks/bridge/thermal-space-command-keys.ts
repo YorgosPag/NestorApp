@@ -18,6 +18,10 @@ export const THERMAL_SPACE_RIBBON_KEYS = {
     reheatMode: 'thermalSpace.params.reheatMode',
     /** Solar obstruction shading level override (SolarShadingLevel, ADR-422 L7.3). */
     solarShadingLevel: 'thermalSpace.params.solarShadingLevel',
+    /** Envelope air-tightness level override (AirTightnessLevel, ADR-422 L1.7). */
+    airTightnessLevel: 'thermalSpace.params.airTightnessLevel',
+    /** Ventilation system / heat-recovery override (VentilationSystem, ADR-422 L1.7). */
+    ventilationSystem: 'thermalSpace.params.ventilationSystem',
   },
   params: {
     /** °C — design indoor temperature override (Ti). */
@@ -50,7 +54,9 @@ export type ThermalSpaceRibbonStringCommandKey =
   | typeof THERMAL_SPACE_RIBBON_KEYS.stringParams.useType
   | typeof THERMAL_SPACE_RIBBON_KEYS.stringParams.thermalBridgeLevel
   | typeof THERMAL_SPACE_RIBBON_KEYS.stringParams.reheatMode
-  | typeof THERMAL_SPACE_RIBBON_KEYS.stringParams.solarShadingLevel;
+  | typeof THERMAL_SPACE_RIBBON_KEYS.stringParams.solarShadingLevel
+  | typeof THERMAL_SPACE_RIBBON_KEYS.stringParams.airTightnessLevel
+  | typeof THERMAL_SPACE_RIBBON_KEYS.stringParams.ventilationSystem;
 
 export type ThermalSpaceRibbonActionKey =
   | typeof THERMAL_SPACE_RIBBON_KEYS.actions.close
@@ -70,6 +76,8 @@ const STRING_KEY_SET: ReadonlySet<string> = new Set<string>([
   THERMAL_SPACE_RIBBON_KEYS.stringParams.thermalBridgeLevel,
   THERMAL_SPACE_RIBBON_KEYS.stringParams.reheatMode,
   THERMAL_SPACE_RIBBON_KEYS.stringParams.solarShadingLevel,
+  THERMAL_SPACE_RIBBON_KEYS.stringParams.airTightnessLevel,
+  THERMAL_SPACE_RIBBON_KEYS.stringParams.ventilationSystem,
 ]);
 const ACTION_KEY_SET: ReadonlySet<string> = new Set<string>([
   THERMAL_SPACE_RIBBON_KEYS.actions.close,
