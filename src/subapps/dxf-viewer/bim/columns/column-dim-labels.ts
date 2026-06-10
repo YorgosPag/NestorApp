@@ -4,8 +4,10 @@
  * Revit-style: when a column is selected or hovered, a centred pill label
  * appears directly on the column footprint (NOT a floating tooltip).
  *
- * `formatColumnDimLabels` is the SSoT for the label text per kind.
- * `drawColumnDimPill` renders the centred pill on a canvas context.
+ * `formatColumnDimLabels` is the SSoT for the column label text per kind. The
+ * centred pill DRAWING now lives in the shared `bim/labels/bim-dim-labels`
+ * (`drawDimPill`) consumed by every BIM renderer (the former `drawColumnDimPill`
+ * moved there, generalised + larger font).
  *
  * Label format per kind:
  *   rectangular  → "w=400  d=400"
@@ -26,19 +28,9 @@
 
 import type { ColumnParams } from '../types/column-types';
 import { DEFAULT_POLYGON_SIDES } from '../types/column-types';
-import {
-  PILL_FONT,
-  PILL_TEXT_COLOR,
-  PILL_BG_COLOR,
-  PILL_PADDING,
-  PILL_RADIUS,
-  pillPath,
-} from '../../rendering/utils/canvas-pill';
 
 /** Hide label when the screen bounding-box span is smaller than this (px). */
 export const COLUMN_LABEL_MIN_FOOTPRINT_PX = 20;
-
-const LINE_HEIGHT = 11;
 
 /**
  * Returns the ordered array of label lines for the column.
@@ -68,32 +60,3 @@ export function formatColumnDimLabels(params: ColumnParams): string[] {
   }
 }
 
-/**
- * Draws a centred pill label at screen position `(cx, cy)`.
- * Multi-line: each element in `lines` is stacked vertically.
- * Pure canvas draw — no React, no stores (ADR-040 compliant).
- */
-export function drawColumnDimPill(
-  ctx: CanvasRenderingContext2D,
-  lines: string[],
-  cx: number,
-  cy: number,
-): void {
-  if (lines.length === 0) return;
-  ctx.save();
-  ctx.font = PILL_FONT;
-  const pillW = Math.max(...lines.map((l) => ctx.measureText(l).width)) + PILL_PADDING * 2;
-  const pillH = LINE_HEIGHT * lines.length + PILL_PADDING * 2;
-  const x = cx - pillW / 2;
-  const y = cy - pillH / 2;
-  pillPath(ctx, x, y, pillW, pillH, PILL_RADIUS);
-  ctx.fillStyle = PILL_BG_COLOR;
-  ctx.fill();
-  ctx.fillStyle = PILL_TEXT_COLOR;
-  ctx.textBaseline = 'top';
-  ctx.textAlign = 'center';
-  for (let i = 0; i < lines.length; i++) {
-    ctx.fillText(lines[i], cx, y + PILL_PADDING + i * LINE_HEIGHT);
-  }
-  ctx.restore();
-}

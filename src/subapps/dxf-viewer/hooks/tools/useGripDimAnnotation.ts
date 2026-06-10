@@ -27,13 +27,14 @@ import { applyBeamGripDrag } from '../../bim/beams/beam-grips';
 import { applyFoundationGripDrag } from '../../bim/foundations/foundation-grips';
 import { isColumnEntity, isBeamEntity, isFoundationEntity } from '../../types/entities';
 import {
-  PILL_FONT,
+  PILL_DIM_FONT,
   PILL_TEXT_COLOR,
   PILL_BG_COLOR,
   PILL_PADDING,
   PILL_RADIUS,
   pillPath,
 } from '../../rendering/utils/canvas-pill';
+import { CoordinateTransforms } from '../../rendering/core/CoordinateTransforms';
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -66,10 +67,6 @@ function clearCanvas(canvas: HTMLCanvasElement): void {
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 }
 
-function worldToScreen(p: Point2D, t: ViewTransform): Point2D {
-  return { x: p.x * t.scale + t.offsetX, y: p.y * t.scale + t.offsetY };
-}
-
 function drawLabelPill(
   ctx: CanvasRenderingContext2D,
   text: string,
@@ -77,10 +74,10 @@ function drawLabelPill(
   sy: number,
 ): void {
   ctx.save();
-  ctx.font = PILL_FONT;
+  ctx.font = PILL_DIM_FONT;
   const metrics = ctx.measureText(text);
   const w = metrics.width + PILL_PADDING * 2;
-  const h = 13;
+  const h = 16;
   const x = sx + LABEL_OFFSET_X;
   const y = sy + LABEL_OFFSET_Y - h + PILL_PADDING;
   pillPath(ctx, x, y, w, h, PILL_RADIUS);
@@ -195,7 +192,7 @@ function buildFoundationLabel(
 // ── Hook ─────────────────────────────────────────────────────────────────────
 
 export function useGripDimAnnotation(props: UseGripDimAnnotationProps): void {
-  const { dragPreview, levelManager, transform, getCanvas } = props;
+  const { dragPreview, levelManager, transform, getCanvas, getViewportElement } = props;
 
   const rafRef = useRef<number>(0);
   const prevActiveRef = useRef<boolean>(false);
@@ -228,7 +225,14 @@ export function useGripDimAnnotation(props: UseGripDimAnnotationProps): void {
     if (!entity) return;
 
     const gripWorld: Point2D = { x: anchorPos.x + delta.x, y: anchorPos.y + delta.y };
-    const { x: sx, y: sy } = worldToScreen(gripWorld, transform);
+    // BUG FIX (Y-flip): use the canonical CoordinateTransforms.worldToScreen SSoT
+    // (Y-inversion + margins) — the previous local helper omitted the Y-flip, so
+    // the label tracked the cursor vertically inverted. Viewport derived from the
+    // same element the ghost uses (`getGhostPreview` pattern) for 1:1 placement.
+    const viewportEl = getViewportElement?.() ?? canvas;
+    const rect = viewportEl.getBoundingClientRect();
+    const vp = { width: rect.width, height: rect.height };
+    const { x: sx, y: sy } = CoordinateTransforms.worldToScreen(gripWorld, transform, vp);
 
     let label: string | null = null;
     if (columnGripKind && isColumnEntity(entity)) {
@@ -240,7 +244,7 @@ export function useGripDimAnnotation(props: UseGripDimAnnotationProps): void {
     }
 
     if (label) drawLabelPill(ctx, label, sx, sy);
-  }, [dragPreview, levelManager, transform, getCanvas]);
+  }, [dragPreview, levelManager, transform, getCanvas, getViewportElement]);
 
   useEffect(() => {
     if (prevActiveRef.current && !isDimPreview) {

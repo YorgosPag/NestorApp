@@ -9,6 +9,15 @@
  */
 
 export const PILL_FONT = '9px sans-serif';
+/**
+ * Larger, Revit-grade font for BIM **dimension** pills (hover/select centred
+ * label + live grip-drag annotation). SSoT consumed by `bim/labels/bim-dim-labels`
+ * (`drawDimPill`) and `hooks/tools/useGripDimAnnotation`. Kept separate from
+ * `PILL_FONT` so opening Mark tags (their own configurable font) stay unaffected.
+ */
+export const PILL_DIM_FONT = '12px sans-serif';
+/** Line height matched to `PILL_DIM_FONT` for multi-line centred dim pills. */
+export const PILL_DIM_LINE_HEIGHT = 15;
 export const PILL_TEXT_COLOR = 'rgba(0,0,0,0.75)';
 export const PILL_BG_COLOR = 'rgba(255,255,255,0.88)';
 export const PILL_PADDING = 3;

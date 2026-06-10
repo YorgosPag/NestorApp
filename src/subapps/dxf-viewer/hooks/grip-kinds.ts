@@ -108,6 +108,7 @@ export type WallGripKind =
   | 'wall-end'
   | 'wall-midpoint'
   | 'wall-thickness'
+  | 'wall-edge-length'
   | 'wall-rotation'
   | 'wall-corner-start-pos'
   | 'wall-corner-start-neg'
