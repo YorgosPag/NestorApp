@@ -42,12 +42,14 @@ const BIM_ENTITY_TYPES = new Set<string>([
   'floor-finish',
   // ADR-422 — thermal space (IfcSpace).
   'thermal-space',
+  // ADR-437 — space separator (IfcVirtualElement).
+  'space-separator',
 ]);
 
 type BimEntityType =
   | 'wall' | 'opening' | 'slab' | 'slab-opening' | 'column' | 'beam' | 'stair'
   | 'mep-fixture' | 'electrical-panel' | 'railing' | 'mep-segment' | 'mep-manifold' | 'mep-radiator'
-  | 'mep-boiler' | 'mep-water-heater' | 'mep-underfloor' | 'roof' | 'floor-finish' | 'thermal-space';
+  | 'mep-boiler' | 'mep-water-heater' | 'mep-underfloor' | 'roof' | 'floor-finish' | 'thermal-space' | 'space-separator';
 
 function emitBimRestoreIfApplicable(snapshot: SceneEntity): void {
   const type = (snapshot as { type?: string }).type;

@@ -106,6 +106,8 @@ export class BoundsCalculator {
       case 'mep-underfloor':
       // ADR-422 L0 — thermal space (analytical IfcSpace); geometry.bbox from computeThermalSpaceGeometry().
       case 'thermal-space':
+      // ADR-437 — space separator (IfcVirtualElement); geometry.bbox from computeSpaceSeparatorGeometry().
+      case 'space-separator':
         return this.calculateBimEntityBounds(entity, tolerance);
       // ADR-359 Phase 11 follow-up — XLINE/RAY bounds extracted to sibling module.
       case 'xline':

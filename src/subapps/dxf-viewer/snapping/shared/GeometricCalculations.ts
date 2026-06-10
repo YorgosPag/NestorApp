@@ -36,6 +36,7 @@ import {
   isSlabEntity,
   isSlabOpeningEntity,
   isOpeningEntity,
+  isFoundationEntity,
 } from '../../types/entities';
 // ADR-363 BIM entity key-point SSoT (delegates to bim-entity-points.ts).
 import { getBimEntityKeyPoints2D, getBimEntityEdgeMidpoints2D } from '../../bim/utils/bim-entity-points';
@@ -200,6 +201,15 @@ export class GeometricCalculations {
     // 🏢 ENTERPRISE: Use type guards for safe property access
     if (isCircleEntity(entity) || isArcEntity(entity)) {
       return entity.center;
+    } else if (isFoundationEntity(entity)) {
+      // ADR-436 Slice 2 — pad footing center axis = `position` (mirror column
+      // center snap). Lets the tie-beam / strip line tools snap their endpoints
+      // to existing pad centers via the shared CENTER snap engine (μηδέν νέο engine).
+      const params = entity.params;
+      if (params.kind === 'pad') {
+        return { x: params.position.x, y: params.position.y };
+      }
+      return null;
     } else if (isRectangleEntity(entity)) {
       // RectangleEntity has required corner1 and corner2
       if (entity.corner1 && entity.corner2) {

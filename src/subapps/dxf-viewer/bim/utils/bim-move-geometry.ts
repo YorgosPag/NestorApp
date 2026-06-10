@@ -55,6 +55,8 @@ import type { MepManifoldEntity, MepManifoldParams } from '../types/mep-manifold
 import type { FurnitureEntity, FurnitureParams } from '../types/furniture-types';
 import type { FloorFinishEntity, FloorFinishParams } from '../types/floor-finish-types';
 import { computeFloorFinishGeometry } from '../types/floor-finish-types';
+import type { SpaceSeparatorEntity, SpaceSeparatorParams } from '../types/space-separator-types';
+import { computeSpaceSeparatorGeometry } from '../types/space-separator-types';
 import type { MepRadiatorEntity, MepRadiatorParams } from '../types/mep-radiator-types';
 import type { MepBoilerEntity, MepBoilerParams } from '../types/mep-boiler-types';
 import type { MepWaterHeaterEntity, MepWaterHeaterParams } from '../types/mep-water-heater-types';
@@ -216,6 +218,17 @@ function moveFloorFinish(entity: FloorFinishEntity, delta: Point2D): Partial<Sce
   return { params: newParams, geometry } as unknown as Partial<SceneEntity>;
 }
 
+// ADR-437 — linear space separator: shift both endpoints (mirror mep-segment).
+function moveSpaceSeparator(entity: SpaceSeparatorEntity, delta: Point2D): Partial<SceneEntity> {
+  const newParams: SpaceSeparatorParams = {
+    ...entity.params,
+    start: shiftPoint3D(entity.params.start, delta),
+    end: shiftPoint3D(entity.params.end, delta),
+  };
+  const geometry = computeSpaceSeparatorGeometry(newParams);
+  return { params: newParams, geometry } as unknown as Partial<SceneEntity>;
+}
+
 // ADR-408 Φ8 — linear MEP segment: shift both axis endpoints (mirror beam).
 function moveMepSegment(entity: MepSegmentEntity, delta: Point2D): Partial<SceneEntity> {
   const newParams: MepSegmentParams = {
@@ -327,6 +340,8 @@ export function calculateBimMovedGeometry(
       return moveFurniture(entity, delta);
     case 'floor-finish':
       return moveFloorFinish(entity, delta);
+    case 'space-separator':
+      return moveSpaceSeparator(entity, delta);
     case 'mep-segment':
       return moveMepSegment(entity, delta);
     case 'mep-radiator':

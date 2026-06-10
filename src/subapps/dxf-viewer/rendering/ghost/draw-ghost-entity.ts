@@ -252,6 +252,19 @@ export function drawGhostEntity(
       return;
     }
 
+    // ADR-419 — floor-finish ghost: footprint polygon from raw FloorFinishEntity.params
+    // (params-level, mirror slab/roof — `applyFloorFinishGripDrag` mutates
+    // `params.footprint.vertices`). Was missing → the live vertex-drag ghost never painted.
+    case 'floor-finish': {
+      const finish = entity as unknown as {
+        params?: { footprint?: { vertices: ReadonlyArray<{ x: number; y: number }> } };
+      };
+      const verts = finish.params?.footprint?.vertices ?? [];
+      if (verts.length < 2) return;
+      drawPolygon(ctx, verts, toScreen);
+      return;
+    }
+
     // ADR-397 — column ghost: footprint polygon (scene-units, from ColumnGeometry).
     // Mirror beam/slab so the live move/rotation/resize ghost paints.
     case 'column': {
@@ -259,6 +272,20 @@ export function drawGhostEntity(
         geometry?: { footprint?: { vertices: ReadonlyArray<{ x: number; y: number }> } };
       };
       const verts = col.geometry?.footprint?.vertices ?? [];
+      if (verts.length < 2) return;
+      drawPolygon(ctx, verts, toScreen);
+      return;
+    }
+
+    // ADR-436 Slice 1c — foundation ghost: footprint polygon (from FoundationGeometry).
+    // Mirror column so the live move / corner-edge resize / rotation ghost paints.
+    // (Before Slice 1c there was NO foundation case → the pad drag rendered no
+    // live ghost even though `applyFoundationGripDrag` transformed it correctly.)
+    case 'foundation': {
+      const fnd = entity as unknown as {
+        geometry?: { footprint?: { vertices: ReadonlyArray<{ x: number; y: number }> } };
+      };
+      const verts = fnd.geometry?.footprint?.vertices ?? [];
       if (verts.length < 2) return;
       drawPolygon(ctx, verts, toScreen);
       return;

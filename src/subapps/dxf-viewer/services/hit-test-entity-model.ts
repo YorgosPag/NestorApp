@@ -282,6 +282,11 @@ export function convertDxfEntityToEntityModel(entity: DxfEntityUnion): EntityMod
     // entity type: thermal-space» + QuadTree «Item outside index bounds» flood).
     case 'thermal-space':
       return buildBimEntityModel('thermal-space', entity, baseModel);
+    // ADR-437 — space separator is a direct entity (params + geometry at top level, like
+    // thermal-space). Same silent-drop hazard: without this case it falls to `default`,
+    // geometry is dropped → Bounds null → never indexed → click-selection fails silently.
+    case 'space-separator':
+      return buildBimEntityModel('space-separator', entity, baseModel);
     // ADR-363 Phases 1B/5 — wall/beam are direct entities (no DXF wrapper).
     // `geometry.bbox` powers spatial broad-phase via BoundsCalculator.calculateBimEntityBounds.
     // SSoT: buildBimEntityModel in bim/utils/bim-entity-passthrough.ts.
