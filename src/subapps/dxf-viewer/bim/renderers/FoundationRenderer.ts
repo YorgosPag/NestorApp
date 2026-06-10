@@ -35,6 +35,8 @@ import { HOVER_HIGHLIGHT } from '../../config/color-config';
 import { getLayer } from '../../stores/LayerStore';
 import { isConcreteLineweight } from '../../config/lineweight-iso-catalog';
 import { FOUNDATION_KIND_FILL } from '../foundations/foundation-render-palette';
+import { getFoundationGrips } from '../foundations/foundation-grips';
+import { gripGlyphShape } from '../grips/grip-glyph-registry';
 import {
   computeFoundationHatchPlan,
   FOUNDATION_HATCH_DOT_RADIUS_PX,
@@ -179,11 +181,23 @@ export class FoundationRenderer extends BaseEntityRenderer {
     this.ctx.restore();
   }
 
-  getGrips(_entity: EntityModel): GripInfo[] {
-    // ADR-436 Slice 1 — canvas grip-drag (rotation/width/length) αναβάλλεται στο
-    // Slice 1b (αγγίζει το shared `useGripMovement` ColumnGripKind union). Πλήρης
-    // numeric editing γίνεται μέσω του contextual foundation ribbon tab.
-    return [];
+  getGrips(entity: EntityModel): GripInfo[] {
+    // ADR-436 Slice 1b — parametric foundation pad grips (rotation / width / length).
+    // Commit routed through `applyFoundationGripDrag()` + `UpdateFoundationParamsCommand`
+    // by `commitFoundationGripDrag` (grip-parametric-commits). Declutter: central
+    // MOVE grip not emitted — Alt+drag moves the pad. strip/tie-beam = Slice 2.
+    if (!isFoundationEntity(entity)) return [];
+    return getFoundationGrips(entity as FoundationEntity).map((g) => ({
+      id: `${g.entityId}-grip-${g.gripIndex}`,
+      position: g.position,
+      type: 'vertex' as const,
+      entityId: g.entityId,
+      isVisible: true,
+      gripIndex: g.gripIndex,
+      // ADR-397 — rotation handle gets the curved-arrow glyph via the shared
+      // registry SSoT; width/length stay square.
+      shape: gripGlyphShape(g.foundationGripKind),
+    }));
   }
 
   hitTest(entity: EntityModel, point: Point2D, tolerance: number): boolean {

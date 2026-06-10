@@ -1,40 +1,79 @@
 'use client';
 
 /**
- * ADR-436 Slice 1 — Always-on host που τροφοδοτεί το 3D store με τις θεμελιώσεις
- * του ενεργού scene (renders `null`).
+ * ADR-436 — Always-on host για Foundation persistence (renders `null`).
  *
- * Mounted στο `DxfViewerTopBar`. Mirror του 3D-push effect του
- * `ColumnPersistenceHost`: όποτε αλλάζει το `currentScene`, σπρώχνει τα
- * `FoundationEntity` στο `Bim3DEntitiesStore` (→ `BimSceneLayer.syncFoundations`).
+ * Mounted στο `DxfViewerTopBar`. Δύο responsibilities:
+ *   1. **3D push** (Slice 1): όποτε αλλάζει το `currentScene`, σπρώχνει τα
+ *      `FoundationEntity` στο `Bim3DEntitiesStore` (→ `BimSceneLayer.syncFoundations`).
+ *   2. **Firestore persistence** (Slice 1-persist, mirror `ColumnPersistenceHost`):
+ *      - listens για `drawing:entity-created` (tool: 'foundation') → first-save
+ *      - debounced auto-save όταν `primarySelectedFoundation.params` αλλάξουν
+ *      - subscribes σε Firestore + diff-merges incoming foundation docs στο scene
+ *      - delete μέσω `bim:foundation-delete-requested`
  *
- * NOTE (Slice 1 scope): η Firestore persistence (subscribe / auto-save / delete /
- * audit / collection / rules+indexes deploy) ΔΕΝ είναι εδώ — μπαίνει στο
- * **Slice 1-persist** (mirror του `useColumnPersistence`), ώστε ο deploy tail
- * (rules/indexes, ADR-298 CHECK 3.16) να γίνει χωριστά. Το draw→2D→3D
- * browser-verify δουλεύει από το in-memory scene + αυτό το push.
+ * **ΧΩΡΙΣ buildingId / BOQ** — η θεμελίωση είναι structural substructure
+ * (BOQ/ATOE = Slice 4), όπως ακριβώς η κολώνα.
  *
  * Zero high-frequency subscriptions — CHECK 6B/6C compliant.
  *
- * @see docs/centralized-systems/reference/adrs/ADR-436-bim-foundation-discipline.md §5.3
+ * @see docs/centralized-systems/reference/adrs/ADR-436-bim-foundation-discipline.md
  */
 
 import React from 'react';
+import { useAuth } from '@/auth/hooks/useAuth';
 import type { SceneModel } from '../types/scene';
+import type { useLevels } from '../systems/levels';
+import type { FoundationEntity } from '../bim/types/foundation-types';
 import { isFoundationEntity } from '../types/entities';
+import { useFoundationPersistence } from '../hooks/data/useFoundationPersistence';
 import { useBim3DEntitiesStore } from '../bim-3d/stores/Bim3DEntitiesStore';
 
+type LevelManagerLike = Pick<
+  ReturnType<typeof useLevels>,
+  'getLevelScene' | 'setLevelScene' | 'currentLevelId'
+>;
+
 export interface FoundationPersistenceHostProps {
+  readonly primarySelectedId: string | null;
   readonly currentScene: SceneModel | null;
+  readonly levelManager: LevelManagerLike;
+  readonly projectId?: string;
+  readonly floorplanId?: string;
+  readonly floorId?: string;
 }
 
 export function FoundationPersistenceHost({
+  primarySelectedId,
   currentScene,
+  levelManager,
+  projectId,
+  floorplanId,
+  floorId,
 }: FoundationPersistenceHostProps): React.ReactElement | null {
+  const { user } = useAuth();
+
+  const primarySelectedFoundation: FoundationEntity | null = React.useMemo(() => {
+    if (!primarySelectedId || !currentScene) return null;
+    const e = currentScene.entities.find((x) => x.id === primarySelectedId);
+    if (!e || !isFoundationEntity(e)) return null;
+    return e;
+  }, [primarySelectedId, currentScene]);
+
   React.useEffect(() => {
     const foundations = currentScene?.entities.filter(isFoundationEntity) ?? [];
     useBim3DEntitiesStore.getState().setFoundations(foundations);
   }, [currentScene]);
+
+  useFoundationPersistence({
+    companyId: user?.companyId ?? null,
+    projectId,
+    floorplanId,
+    floorId,
+    userId: user?.uid ?? null,
+    levelManager,
+    primarySelectedFoundation,
+  });
 
   return null;
 }
