@@ -47,6 +47,9 @@ import {
 /** Hidden-line dash pattern (CSS px) — foundation-plan «below grade» σύμβαση. */
 const HIDDEN_LINE_DASH: readonly number[] = [6, 4];
 
+/** Centerline dash-dot pattern (CSS px) — άξονας πεδιλοδοκού/συνδετήριας (ISO). */
+const CENTERLINE_DASH_DOT: readonly number[] = [12, 3, 3, 3];
+
 /** Κεντρικός σταυρός (column footprint indicator) μισό-μήκος σε CSS px. */
 const CENTER_CROSS_HALF_PX = 7;
 
@@ -121,6 +124,11 @@ export class FoundationRenderer extends BaseEntityRenderer {
       this.drawCenterCross(foundation);
     }
 
+    // Centerline (dash-dot άξονας) — μόνο line-based kinds (strip / tie-beam).
+    if (foundation.kind !== 'pad') {
+      this.drawCenterline(foundation);
+    }
+
     this.finalizeRender(entity, options);
   }
 
@@ -178,6 +186,34 @@ export class FoundationRenderer extends BaseEntityRenderer {
     this.ctx.moveTo(c.x, c.y - CENTER_CROSS_HALF_PX);
     this.ctx.lineTo(c.x, c.y + CENTER_CROSS_HALF_PX);
     this.ctx.stroke();
+    this.ctx.restore();
+  }
+
+  /**
+   * Centerline (dash-dot άξονας) για line-based πέδιλα (strip / tie-beam) — ISO
+   * foundation-plan σύμβαση (διακεκομμένο band + κεντρικός άξονας). Color +
+   * weight μέσω SSoT subcategory resolver (`'centerline'`).
+   */
+  private drawCenterline(foundation: FoundationEntity): void {
+    const { params } = foundation;
+    if (params.kind === 'pad') return;
+    const a = this.worldToScreen({ x: params.start.x, y: params.start.y });
+    const b = this.worldToScreen({ x: params.end.x, y: params.end.y });
+    const { lineWidthPx, color } = resolveSubcategoryStyle({
+      category: 'foundation', subcategoryKey: 'centerline',
+      cutState: 'cut', scaleDenominator: useDrawingScaleStore.getState().drawingScale,
+      dpi: 96, objectStyles: useDrawingScaleStore.getState().objectStyles,
+      elementOverride: foundation.styleOverride,
+    });
+    this.ctx.save();
+    this.ctx.lineWidth = lineWidthPx;
+    if (color !== null) this.ctx.strokeStyle = color;
+    this.ctx.setLineDash(CENTERLINE_DASH_DOT as number[]);
+    this.ctx.beginPath();
+    this.ctx.moveTo(a.x, a.y);
+    this.ctx.lineTo(b.x, b.y);
+    this.ctx.stroke();
+    this.ctx.setLineDash([]);
     this.ctx.restore();
   }
 
