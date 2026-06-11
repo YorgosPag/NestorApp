@@ -980,7 +980,8 @@
       "floorFinishProperties": "Ιδιότητες Επικάλυψης Δαπέδου",
       "thermalSpaceProperties": "Ιδιότητες Θερμικού Χώρου",
       "mepFixtureLibrary": "Βιβλιοθήκη Φωτιστικών",
-      "mepRiser": "Κατακόρυφη Στήλη"
+      "mepRiser": "Κατακόρυφη Στήλη",
+      "guides": "Οδηγοί"
     },
     "panels": {
       "draw": "Σχεδίαση",
@@ -1135,6 +1136,11 @@
       "placeholder": "Σε φάση ανάπτυξης",
       "history": "Ιστορικό",
       "guides": "Οδηγοί",
+      "guidesDraw": "Σχεδίαση Οδηγών",
+      "guidesArcsPoints": "Τόξα & Σημεία",
+      "guidesModify": "Επεξεργασία Οδηγών",
+      "guidesGridArrays": "Κάναβοι & Διατάξεις",
+      "guidesDisplay": "Εμφάνιση & Ανάλυση",
       "display": "Εμφάνιση",
       "dxfFiles": "Αρχεία DXF",
       "background": "Υπόβαθρο",
@@ -1155,6 +1161,9 @@
       "bimGraphics": "Ορατότητα/Γραφικά",
       "bimStyles": "Στυλ & Πρότυπα",
       "dimensions": "Διαστάσεις",
+      "dimLinear": "Γραμμικές",
+      "dimRadialAngular": "Ακτινικές & Γωνιακές",
+      "dimCenters": "Κέντρα",
       "dimStyle": "Στυλ",
       "dimOverride": "Παράκαμψη",
       "dimText": "Κείμενο",

@@ -242,6 +242,12 @@ export interface DrawingEventMap extends MepAutoDesignEventMap {
   // 0/0/0/0 → «ενημερωμένο» (idempotent re-run). UI: non-blocking Revit-style summary
   // toast (πληθυντικότητα ICU).
   'bim:foundations-from-grid': { created: number; deleted: number; rehosted: number; reJustified: number };
+  // ADR-441 Slice 7 — ένας άξονας του κανάβου μετακινήθηκε & «κάθισε» (drag-complete
+  // settle). Εκπέμπεται από τον grid settle-emitter όταν αλλάζει όντως το σύνολο των
+  // ορατών offsets ΚΑΙ δεν σύρεται πια οδηγός. Ο foundation bridge το ακούει → τρέχει
+  // αυτόματα το ίδιο managed reconcile με το «Εσχάρα» (live re-split + reflow γωνιών),
+  // χωρίς ο μηχανικός να πατήσει κουμπί (Revit associative grid). Toast μόνο αν delta>0.
+  'bim:grid-guides-settled': { levelId: string };
   // ADR-441 Slice 2 — η εσχάρα δεν παρήχθη: 'insufficient-guides' (<2 άξονες
   // ανά διεύθυνση) ή 'empty' (κανένα έγκυρο segment). UI: warning toast.
   'bim:foundations-from-grid-failed': { reason: 'insufficient-guides' | 'empty' };

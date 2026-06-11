@@ -17,9 +17,10 @@
  * @see docs/centralized-systems/reference/adrs/ADR-436-bim-foundation-discipline.md §6
  */
 
-import { useCallback, useMemo } from 'react';
+import { useCallback, useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { isFoundationEntity } from '../../../types/entities';
+import { hasGuideBindings } from '../../../bim/hosting/guide-binding-types';
 import {
   DEFAULT_STRIP_JUSTIFICATION,
   type FoundationAnchor,
@@ -35,7 +36,10 @@ import { LevelSceneManagerAdapter } from '../../../systems/entity-creation/Level
 import { getGlobalGuideStore } from '../../../systems/guides/guide-store';
 import { resolveSceneUnits } from '../../../utils/scene-units';
 import { EventBus } from '../../../systems/events/EventBus';
-import { commitFoundationGridFromGuides } from '../../../bim/foundations/foundation-grid-commit';
+import {
+  commitFoundationGridFromGuides,
+  type FoundationGridCommitResult,
+} from '../../../bim/foundations/foundation-grid-commit';
 import {
   FOUNDATION_RIBBON_KEYS,
   FOUNDATION_RIBBON_KEYS_ACTIONS,
@@ -208,14 +212,13 @@ export function useRibbonFoundationBridge(
     return foundation.validation.hasCodeViolations;
   }, [resolveFoundation]);
 
-  // ADR-441 Slice 2 — one-shot «Εσχάρα από κάναβο»: διαβάζει τον τρέχοντα κάναβο,
-  // χτίζει born-hosted strips και τα commit-άρει ως ΕΝΑ atomic CompoundCommand-grade
-  // batch (1 undo). Καμία επιλογή entity δεν απαιτείται.
-  const handleFromGrid = useCallback((): void => {
+  // ADR-441 Slice 2+6 — managed reconcile εσχάρας από τον κάναβο (atomic, 1 undo).
+  // SSoT call: χρησιμοποιείται από το κουμπί «Εσχάρα» ΚΑΙ από το auto-trigger (Slice 7).
+  const runFoundationGridCommit = useCallback((): FoundationGridCommitResult | null => {
     const levelId = levelManager.currentLevelId;
-    if (!levelId) return;
+    if (!levelId) return null;
     const scene = levelManager.getLevelScene(levelId);
-    const result = commitFoundationGridFromGuides({
+    return commitFoundationGridFromGuides({
       guideReader: getGlobalGuideStore(),
       getLevelScene: levelManager.getLevelScene,
       setLevelScene: levelManager.setLevelScene,
@@ -223,8 +226,11 @@ export function useRibbonFoundationBridge(
       sceneUnits: scene ? resolveSceneUnits(scene) : 'mm',
       executeCommand,
     });
-    // ADR-441 Slice 6 — idempotent re-run: το 'up-to-date' ΔΕΝ είναι αποτυχία
-    // (Revit «ενημερωμένο»). Εκπέμπεται ως success-style summary με created=0,deleted=0.
+  }, [levelManager, executeCommand]);
+
+  // ADR-441 Slice 6 — idempotent re-run: το 'up-to-date' ΔΕΝ είναι αποτυχία (Revit
+  // «ενημερωμένο»). Εκπέμπεται ως success-style summary με created=0,deleted=0.
+  const emitFromGridToast = useCallback((result: FoundationGridCommitResult): void => {
     if (result.ok || result.reason === 'up-to-date') {
       EventBus.emit('bim:foundations-from-grid', {
         created: result.created,
@@ -235,7 +241,34 @@ export function useRibbonFoundationBridge(
     } else {
       EventBus.emit('bim:foundations-from-grid-failed', { reason: result.reason ?? 'empty' });
     }
-  }, [levelManager, executeCommand]);
+  }, []);
+
+  // Κουμπί «Εσχάρα» (one-shot): τρέχει το reconcile και **πάντα** δείχνει toast.
+  const handleFromGrid = useCallback((): void => {
+    const result = runFoundationGridCommit();
+    if (result) emitFromGridToast(result);
+  }, [runFoundationGridCommit, emitFromGridToast]);
+
+  // ADR-441 Slice 7 — auto re-split/reflow στο follow-move: όταν ένας άξονας «κάθεται»
+  // μετά από μετακίνηση (`bim:grid-guides-settled`), τρέχει το ΙΔΙΟ managed reconcile
+  // αυτόματα. Gate: μόνο αν υπάρχει ήδη grid-managed εσχάρα (ΜΗΝ auto-create στο αρχικό
+  // draw του κανάβου — αυτό μένει ρητή ενέργεια του μηχανικού). Toast μόνο αν όντως
+  // άλλαξε κάτι (split/reflow/rehost) → μηδέν spam σε απλή μετακίνηση χωρίς cross.
+  useEffect(() => {
+    const off = EventBus.on('bim:grid-guides-settled', ({ levelId }) => {
+      if (levelManager.currentLevelId !== levelId) return;
+      const scene = levelManager.getLevelScene(levelId);
+      if (!scene || !scene.entities.some((e) => isFoundationEntity(e) && hasGuideBindings(e))) return;
+      const result = runFoundationGridCommit();
+      if (
+        result?.ok &&
+        result.created + result.deleted + result.reJustified + result.rehosted > 0
+      ) {
+        emitFromGridToast(result);
+      }
+    });
+    return off;
+  }, [levelManager, runFoundationGridCommit, emitFromGridToast]);
 
   const onAction = useCallback(
     (action: string): void => {

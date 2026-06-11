@@ -6,7 +6,13 @@
  * guideBindings tagging (X vs Y strips), invisible-skip, dedup, edge (<2 guides).
  */
 
-import { buildStripGridFromGuides, type AxisGuideReader } from '../foundation-from-grid';
+import {
+  buildStripGridFromGuides,
+  enumerateGridStrips,
+  gridAxesFromReader,
+  type AxisGuideReader,
+  type GridStripSpec,
+} from '../foundation-from-grid';
 import type { Guide } from '../../../systems/guides/guide-types';
 
 const guide = (id: string, axis: Guide['axis'], offset: number, visible = true): Guide =>
@@ -143,5 +149,28 @@ describe('buildStripGridFromGuides', () => {
     const result = buildStripGridFromGuides(reader(guides), {}, '0', 'mm');
     // x0 και x0b dedup → nX=2, nY=3 → 7.
     expect(result.strips).toHaveLength(7);
+  });
+});
+
+// ADR-441 Slice 7 — SSoT enumeration helpers (κοινά builder + live ghost).
+describe('gridAxesFromReader + enumerateGridStrips', () => {
+  it('gridAxesFromReader: <2 άξονες → null', () => {
+    expect(gridAxesFromReader(reader([guide('x0', 'X', 0), ...Y3]))).toBeNull();
+  });
+
+  it('enumerateGridStrips: 3×3 → 12 specs με σωστά bindings/justification (ίδια με builder)', () => {
+    const axes = gridAxesFromReader(reader([...X3, ...Y3]));
+    expect(axes).not.toBeNull();
+    const specs: GridStripSpec[] = [];
+    enumerateGridStrips(axes!, (s) => specs.push(s));
+    expect(specs).toHaveLength(12);
+    // πρώτη κατακόρυφη (xi=0) = inward 'right' με καθαρά bindings (μηδέν extend).
+    expect(specs[0].justification).toBe('right');
+    expect(specs[0].bindings).toEqual([
+      { guideId: 'x0', slot: 'start-x' },
+      { guideId: 'x0', slot: 'end-x' },
+      { guideId: 'y0', slot: 'start-y' },
+      { guideId: 'y1', slot: 'end-y' },
+    ]);
   });
 });

@@ -45,6 +45,7 @@ import { CONTEXTUAL_FLOORPLAN_SYMBOL_TAB, FLOORPLAN_SYMBOL_CONTEXTUAL_TRIGGER } 
 import { CONTEXTUAL_MEP_FIXTURE_LIBRARY_TAB, MEP_FIXTURE_LIBRARY_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-mep-fixture-library-tab';
 import { CONTEXTUAL_MEP_RISER_TAB, MEP_RISER_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-mep-riser-tab';
 import { ANIMATION_CONTEXTUAL_TAB, ANIMATION_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-animation-tab';
+import { CONTEXTUAL_GUIDES_TAB, GUIDES_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-guides-tab';
 import { selectAnimationToolActive, useAnimationStore } from '../bim-3d/animation/AnimationStore';
 import { useMepSystemStore } from '../bim/mep-systems/mep-system-store';
 import { useMepCircuitEditorStore } from '../bim/mep-systems/mep-circuit-editor-store';
@@ -97,6 +98,7 @@ export const RIBBON_CONTEXTUAL_TABS = [
   CONTEXTUAL_FLOOR_FINISH_TAB,
   CONTEXTUAL_THERMAL_SPACE_TAB,
   ANIMATION_CONTEXTUAL_TAB,
+  CONTEXTUAL_GUIDES_TAB,
 ] as const;
 
 type EntityLike = { readonly type: string; readonly params?: unknown };
@@ -281,6 +283,13 @@ export function useActiveContextualTrigger({
       activeTool === 'mep-drain-pipe'
     )
       return MEP_SEGMENT_CONTEXTUAL_TRIGGER;
+    // ADR-442 — any guide tool active → surface the «Οδηγοί» contextual tab.
+    // Guides have no persistent selection (selection lives only while a guide
+    // tool is active, `useGuideWorkflowState`), so this single tool-active check
+    // covers both the tool-active and the guide-selected case. All guide tool
+    // ids share the `guide-` prefix; `guides-visibility`/grid actions don't set
+    // `activeTool`, so toggling them keeps this tab open.
+    if (activeTool.startsWith('guide-')) return GUIDES_CONTEXTUAL_TRIGGER;
     if (activeTool === 'slab-opening') return SLAB_OPENING_CONTEXTUAL_TRIGGER;
     // ADR-359 Phase 10.b: xline active → show mode selection panel.
     if (activeTool === 'xline') return XLINE_MODE_CONTEXTUAL_TRIGGER;

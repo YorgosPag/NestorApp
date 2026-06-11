@@ -139,9 +139,16 @@ function buildBandFootprint(params: StripFootingParams | TieBeamParams, s: numbe
       { x: start.x - hw, y: start.y + hw, z: 0 },
     ];
   }
+  // Canonical tangent (κατακόρυφη → +Y, οριζόντια → +X): το justification ('left'/'right')
+  // ορίζεται relative στη φορά start→end, αλλά η φορά είναι ΑΥΘΑΙΡΕΤΗ (ο builder παράγει +Y/+X,
+  // όμως το follow-on-move μπορεί να την αντιστρέψει όταν ένας άξονας προσπεράσει άλλον — τότε
+  // το CCW normal γυρίζει και η έκκεντρη λωρίδα προεξέχει προς τη ΛΑΘΟΣ πλευρά). Κανονικοποιώντας
+  // εδώ, το geometry γίνεται orientation-invariant (Revit Location Line). ADR-441 Slice 5a-grid fix.
+  let ux = dx / len, uy = dy / len;
+  if (uy < -1e-9 || (Math.abs(uy) <= 1e-9 && ux < 0)) { ux = -ux; uy = -uy; }
   // CCW 90° unit normal (rotate tangent (ux,uy) → (-uy,ux)).
-  const nx = -dy / len;
-  const ny = dx / len;
+  const nx = -uy;
+  const ny = ux;
   // Perpendicular justification shift του centerline (sign·hw κατά τον normal).
   const j = JUSTIFICATION_NORMAL_SIGN[params.justification ?? 'center'] * hw;
   const ax = start.x + nx * j, ay = start.y + ny * j;

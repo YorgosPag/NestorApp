@@ -147,6 +147,49 @@ describe('computeFoundationGeometry — strip justification (ADR-441 Slice 5a)',
   });
 });
 
+describe('strip justification — orientation-invariant (ADR-441 Slice 5a-grid follow-move fix)', () => {
+  // Κατακόρυφη λωρίδα (x=0), έδραση 'right' → inward +X (x∈[0,600]). Το follow-on-move
+  // μπορεί να αντιστρέψει τη φορά (ένας άξονας προσπερνά άλλον → start.y>end.y) — το geometry
+  // ΔΕΝ πρέπει να αλλάξει (αλλιώς η λωρίδα προεξέχει προς τα έξω: το bug του screenshot).
+  const vStrip = (reversed: boolean, j: 'left' | 'right'): StripFootingParams => ({
+    kind: 'strip',
+    topElevationMm: -1000,
+    thicknessMm: 400,
+    start: reversed ? { x: 0, y: 2000, z: 0 } : { x: 0, y: 0, z: 0 },
+    end: reversed ? { x: 0, y: 0, z: 0 } : { x: 0, y: 2000, z: 0 },
+    width: 600,
+    sceneUnits: 'mm',
+    justification: j,
+  });
+
+  it('vertical right: reversed start→end gives identical inward band (x∈[0,600], not outward)', () => {
+    const fwd = computeFoundationGeometry(vStrip(false, 'right'));
+    const rev = computeFoundationGeometry(vStrip(true, 'right'));
+    expect(fwd.bbox.min.x).toBeCloseTo(0);
+    expect(fwd.bbox.max.x).toBeCloseTo(600);
+    expect(rev.bbox.min.x).toBeCloseTo(fwd.bbox.min.x);
+    expect(rev.bbox.max.x).toBeCloseTo(fwd.bbox.max.x);
+  });
+
+  it('vertical left: reversed start→end gives identical inward band (x∈[-600,0])', () => {
+    const fwd = computeFoundationGeometry(vStrip(false, 'left'));
+    const rev = computeFoundationGeometry(vStrip(true, 'left'));
+    expect(fwd.bbox.min.x).toBeCloseTo(-600);
+    expect(fwd.bbox.max.x).toBeCloseTo(0);
+    expect(rev.bbox.min.x).toBeCloseTo(fwd.bbox.min.x);
+    expect(rev.bbox.max.x).toBeCloseTo(fwd.bbox.max.x);
+  });
+
+  it('reversed direction preserves area & volume (only the side is pinned)', () => {
+    for (const j of ['left', 'right'] as const) {
+      const fwd = computeFoundationGeometry(vStrip(false, j));
+      const rev = computeFoundationGeometry(vStrip(true, j));
+      expect(rev.area).toBeCloseTo(fwd.area, 9);
+      expect(rev.volume).toBeCloseTo(fwd.volume, 9);
+    }
+  });
+});
+
 describe('buildDefaultFoundationParams smoke (geometry round-trip)', () => {
   it('produces non-degenerate geometry for every kind', () => {
     for (const kind of ['pad', 'strip', 'tie-beam'] as const) {

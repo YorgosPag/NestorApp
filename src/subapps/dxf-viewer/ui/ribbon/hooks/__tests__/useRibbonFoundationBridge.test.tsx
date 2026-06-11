@@ -16,6 +16,15 @@ import { UpdateFoundationParamsCommand } from '../../../../core/commands/entity-
 import { foundationToolBridgeStore } from '../bridge/foundation-tool-bridge-store';
 import { DEFAULT_STRIP_JUSTIFICATION } from '../../../../bim/types/foundation-types';
 import { resetGlobalCommandHistory } from '../../../../core/commands';
+import { EventBus } from '../../../../systems/events/EventBus';
+import { commitFoundationGridFromGuides } from '../../../../bim/foundations/foundation-grid-commit';
+
+// ── Mock the grid commit (SSoT reconcile) to capture auto-trigger invocations ──
+jest.mock('../../../../bim/foundations/foundation-grid-commit', () => ({
+  commitFoundationGridFromGuides: jest.fn(() => ({
+    ok: true, created: 0, deleted: 0, unchanged: 0, rehosted: 0, reJustified: 0,
+  })),
+}));
 
 // ── Mock react-i18next (bridge calls useTranslation for delete confirm) ───────
 jest.mock('react-i18next', () => ({
@@ -206,5 +215,69 @@ describe('useRibbonFoundationBridge — justification (drawing mode)', () => {
       }),
     );
     expect(result.current.getComboboxState(JUST_KEY)).toBe(null);
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// ADR-441 Slice 7 — AUTO RECONCILE on grid-guide settle
+// ─────────────────────────────────────────────────────────────────────────────
+
+const gridStrip = {
+  ...stripFoundation,
+  id: 'grid-strip-1',
+  guideBindings: [
+    { guideId: 'x0', slot: 'start-x' as const },
+    { guideId: 'x0', slot: 'end-x' as const },
+    { guideId: 'y0', slot: 'start-y' as const },
+    { guideId: 'y1', slot: 'end-y' as const },
+  ],
+};
+
+describe('useRibbonFoundationBridge — auto reconcile on grid-guides-settled', () => {
+  const commitMock = commitFoundationGridFromGuides as jest.Mock;
+
+  function mount(entity: unknown | null) {
+    return renderHook(() =>
+      useRibbonFoundationBridge({
+        levelManager: makeLevelManager(entity),
+        universalSelection: makeSelection(null),
+      }),
+    );
+  }
+
+  beforeEach(() => commitMock.mockClear());
+
+  it('grid εσχάρα υπάρχει + delta>0 → τρέχει commit ΚΑΙ δείχνει toast', () => {
+    commitMock.mockReturnValueOnce({ ok: true, created: 2, deleted: 1, unchanged: 5, rehosted: 0, reJustified: 1 });
+    const toast = jest.fn();
+    const offToast = EventBus.on('bim:foundations-from-grid', toast);
+    mount(gridStrip);
+    act(() => EventBus.emit('bim:grid-guides-settled', { levelId: 'lvl-1' }));
+    expect(commitMock).toHaveBeenCalledTimes(1);
+    expect(toast).toHaveBeenCalledWith({ created: 2, deleted: 1, rehosted: 0, reJustified: 1 });
+    offToast();
+  });
+
+  it('καμία grid εσχάρα (strip χωρίς bindings) → ΔΕΝ τρέχει commit (μην auto-create)', () => {
+    mount(stripFoundation);
+    act(() => EventBus.emit('bim:grid-guides-settled', { levelId: 'lvl-1' }));
+    expect(commitMock).not.toHaveBeenCalled();
+  });
+
+  it('delta=0 (up-to-date) → τρέχει commit αλλά ΧΩΡΙΣ toast (μηδέν spam)', () => {
+    commitMock.mockReturnValueOnce({ ok: false, reason: 'up-to-date', created: 0, deleted: 0, unchanged: 6, rehosted: 0, reJustified: 0 });
+    const toast = jest.fn();
+    const offToast = EventBus.on('bim:foundations-from-grid', toast);
+    mount(gridStrip);
+    act(() => EventBus.emit('bim:grid-guides-settled', { levelId: 'lvl-1' }));
+    expect(commitMock).toHaveBeenCalledTimes(1);
+    expect(toast).not.toHaveBeenCalled();
+    offToast();
+  });
+
+  it('διαφορετικό levelId → αγνοείται (gate)', () => {
+    mount(gridStrip);
+    act(() => EventBus.emit('bim:grid-guides-settled', { levelId: 'other-level' }));
+    expect(commitMock).not.toHaveBeenCalled();
   });
 });

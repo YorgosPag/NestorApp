@@ -58,13 +58,22 @@ interface AxisData {
   readonly ids: string[];
 }
 
-/** Push callback (ορισμένο από `buildStripGridFromGuides`) — emit ΕΝΑ segment. */
-type PushStrip = (
-  start: Point2D,
-  end: Point2D,
-  bindings: readonly GuideBinding[],
-  justification: StripJustification,
-) => void;
+/** Προδιαγραφή ΕΝΟΣ grid segment (intersection-to-intersection) πριν χτιστεί entity/geometry. */
+export interface GridStripSpec {
+  readonly start: Point2D;
+  readonly end: Point2D;
+  readonly bindings: readonly GuideBinding[];
+  readonly justification: StripJustification;
+}
+
+/** Sorted+dedup άξονες X & Y (≥2 ανά διεύθυνση), έτοιμοι για enumeration. */
+export interface GridAxes {
+  readonly xs: AxisData;
+  readonly ys: AxisData;
+}
+
+/** Push callback — emit ΕΝΑ segment spec. */
+type PushStrip = (spec: GridStripSpec) => void;
 
 /** Sorted unique offsets + παράλληλο array των αντίστοιχων guide ids. */
 function uniqueSortedAxis(guides: readonly Guide[]): AxisData {
@@ -113,17 +122,17 @@ function emitVerticalStrips(xs: AxisData, ys: AxisData, push: PushStrip): void {
   for (let xi = 0; xi < xs.offsets.length; xi++) {
     const justification = gridStripJustification('V', xi, xs.offsets.length);
     for (let i = 0; i < lastY; i++) {
-      push(
-        { x: xs.offsets[xi], y: ys.offsets[i] },
-        { x: xs.offsets[xi], y: ys.offsets[i + 1] },
-        [
+      push({
+        start: { x: xs.offsets[xi], y: ys.offsets[i] },
+        end: { x: xs.offsets[xi], y: ys.offsets[i + 1] },
+        bindings: [
           { guideId: xs.ids[xi], slot: 'start-x' },
           { guideId: xs.ids[xi], slot: 'end-x' },
           { guideId: ys.ids[i], slot: 'start-y' },
           { guideId: ys.ids[i + 1], slot: 'end-y' },
         ],
         justification,
-      );
+      });
     }
   }
 }
@@ -134,19 +143,41 @@ function emitHorizontalStrips(xs: AxisData, ys: AxisData, push: PushStrip): void
   for (let yi = 0; yi < ys.offsets.length; yi++) {
     const justification = gridStripJustification('H', yi, ys.offsets.length);
     for (let i = 0; i < lastX; i++) {
-      push(
-        { x: xs.offsets[i], y: ys.offsets[yi] },
-        { x: xs.offsets[i + 1], y: ys.offsets[yi] },
-        [
+      push({
+        start: { x: xs.offsets[i], y: ys.offsets[yi] },
+        end: { x: xs.offsets[i + 1], y: ys.offsets[yi] },
+        bindings: [
           { guideId: ys.ids[yi], slot: 'start-y' },
           { guideId: ys.ids[yi], slot: 'end-y' },
           { guideId: xs.ids[i], slot: 'start-x' },
           { guideId: xs.ids[i + 1], slot: 'end-x' },
         ],
         justification,
-      );
+      });
     }
   }
+}
+
+/**
+ * SSoT enumeration των grid segments (vertical + horizontal) με τα bindings &
+ * justification τους. Χρησιμοποιείται ΚΑΙ από τον entity builder
+ * (`buildStripGridFromGuides`) ΚΑΙ από τον live ghost deriver (ADR-441 Slice 7) —
+ * μηδέν duplication των loops/justification math.
+ */
+export function enumerateGridStrips(axes: GridAxes, cb: PushStrip): void {
+  emitVerticalStrips(axes.xs, axes.ys, cb);
+  emitHorizontalStrips(axes.xs, axes.ys, cb);
+}
+
+/**
+ * Sorted+dedup ορατοί άξονες X & Y από τον reader. `null` αν λείπουν άξονες
+ * (<2 ανά διεύθυνση) → δεν παράγεται εσχάρα. SSoT input και για builder και ghost.
+ */
+export function gridAxesFromReader(reader: AxisGuideReader): GridAxes | null {
+  const xs = uniqueSortedAxis(reader.getGuidesByAxis('X').filter((g) => g.visible));
+  const ys = uniqueSortedAxis(reader.getGuidesByAxis('Y').filter((g) => g.visible));
+  if (xs.offsets.length < 2 || ys.offsets.length < 2) return null;
+  return { xs, ys };
 }
 
 /**
@@ -159,22 +190,18 @@ export function buildStripGridFromGuides(
   levelId: string,
   sceneUnits: SceneUnits,
 ): BuildStripGridResult {
-  const xs = uniqueSortedAxis(reader.getGuidesByAxis('X').filter((g) => g.visible));
-  const ys = uniqueSortedAxis(reader.getGuidesByAxis('Y').filter((g) => g.visible));
-  if (xs.offsets.length < 2 || ys.offsets.length < 2) {
+  const axes = gridAxesFromReader(reader);
+  if (!axes) {
     return { ok: false, reason: 'insufficient-guides', strips: [], ignoredCount: 0 };
   }
 
   const strips: FoundationEntity[] = [];
   let ignoredCount = 0;
-  const push: PushStrip = (start, end, bindings, justification) => {
+  enumerateGridStrips(axes, ({ start, end, bindings, justification }) => {
     const strip = buildBoundStrip(start, end, bindings, justification, levelId, overrides, sceneUnits);
     if (strip) strips.push(strip);
     else ignoredCount++;
-  };
-
-  emitVerticalStrips(xs, ys, push);
-  emitHorizontalStrips(xs, ys, push);
+  });
 
   return { ok: true, strips, ignoredCount };
 }

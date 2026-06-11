@@ -18,6 +18,7 @@
 import React from 'react';
 import type { useLevels } from '../systems/levels';
 import { useHostingReconciler } from '../hooks/data/useHostingReconciler';
+import { useGridGuideSettleEmitter } from '../hooks/data/useGridGuideSettleEmitter';
 
 type LevelManagerLike = Pick<
   ReturnType<typeof useLevels>,
@@ -32,5 +33,8 @@ export function HostingReconcilerHost({
   levelManager,
 }: HostingReconcilerHostProps): React.ReactElement | null {
   useHostingReconciler({ levelManager });
+  // ADR-441 Slice 7 — μετά το coordinate-follow, εκπέμπει settle ώστε ο foundation
+  // bridge να τρέξει αυτόματα το managed reconcile (live re-split + reflow γωνιών).
+  useGridGuideSettleEmitter({ levelManager });
   return null;
 }

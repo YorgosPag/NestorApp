@@ -38,6 +38,9 @@ import {
   deriveFollowGhostFootprints,
   type FollowGhostFootprint,
 } from '../../bim/hosting/guide-follow-ghost';
+import { deriveGridFollowGhostFootprints } from '../../bim/foundations/foundation-grid-ghost';
+import { gridStripSignature } from '../../bim/foundations/foundation-grid-segments';
+import { resolveSceneUnits } from '../../utils/scene-units';
 import type { GuideOffsetLookup } from '../../bim/hosting/derive-params-from-guides';
 import { getGlobalGuideStore } from '../../systems/guides/guide-store';
 import { getDraggingGuideId, subscribeGuideDrag } from '../../systems/guides/guide-drag-store';
@@ -72,6 +75,29 @@ function makeOffsetLookup(): GuideOffsetLookup {
     const g = store.getGuideById(id);
     return g && g.axis !== 'XZ' ? g.offset : undefined;
   };
+}
+
+/**
+ * ADR-441 Slice 7 — footprints προς ζωγράφισμα όσο σύρεται οδηγός. Αν υπάρχει
+ * grid-managed εσχάρα → **live target** (split-aware: οι λωρίδες σπάνε στα νέα
+ * σταυρόδρομα & οι γωνίες ευθυγραμμίζονται ζωντανά, ίδιο geometry με το commit). Τα
+ * non-grid hosted (π.χ. πεδιλοδοκός από τοίχο με χειροκίνητα bindings) κρατούν το
+ * coordinate-follow. Χωρίς εσχάρα → μόνο coordinate-follow (μηδέν auto-preview).
+ */
+function computeGhostFootprints(
+  hosted: readonly FoundationEntity[],
+  levelId: string,
+  scene: SceneModel | null,
+): FollowGhostFootprint[] {
+  const lookup = makeOffsetLookup();
+  const hasGrid = hosted.some((e) => gridStripSignature(e) !== null);
+  if (!hasGrid) return deriveFollowGhostFootprints(hosted, lookup);
+  const sceneUnits = scene ? resolveSceneUnits(scene) : 'mm';
+  const gridFootprints = deriveGridFollowGhostFootprints(getGlobalGuideStore(), {}, levelId, sceneUnits);
+  const nonGrid = hosted.filter((e) => gridStripSignature(e) === null);
+  return nonGrid.length > 0
+    ? [...gridFootprints, ...deriveFollowGhostFootprints(nonGrid, lookup)]
+    : gridFootprints;
 }
 
 /** Draw κάθε footprint ως μπλε ghost (faint fill + solid outline). */
@@ -127,12 +153,12 @@ function GuideFollowGhostOverlayInner({
     const lm = levelManagerRef.current;
     const levelId = lm.currentLevelId;
     if (!levelId) return;
-    const entities = lm.getLevelScene(levelId)?.entities ?? [];
-    const hosted = entities.filter(
+    const scene = lm.getLevelScene(levelId);
+    const hosted = (scene?.entities ?? []).filter(
       (e): e is FoundationEntity => isFoundationEntity(e) && hasGuideBindings(e),
     );
     if (hosted.length === 0) return;
-    const footprints = deriveFollowGhostFootprints(hosted, makeOffsetLookup());
+    const footprints = computeGhostFootprints(hosted, levelId, scene);
     paintFootprints(ctx, footprints, getImmediateTransform(), vp);
   }, []);
 

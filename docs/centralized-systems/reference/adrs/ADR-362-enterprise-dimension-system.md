@@ -711,6 +711,14 @@ A1 → A2 → A3 → B1 → B2 → B3 → C1 → C2 → D1 → D2 → D3 → E1 
 
 ## 7. Changelog
 
+- **2026-06-12 (Phase E3 — dimension CREATION moved to persistent Annotate tab, Revit-grade)**
+  - **What**: Full dimension-creation toolset relocated to the persistent «Επισημείωση» (Annotate) tab as LARGE grouped buttons (Revit/AutoCAD Annotate pattern). Home keeps a COMPACT single split-button quick-access launcher (AutoCAD "Home → Annotation" panel — most frequent action one click away, no tab switch). Dimension EDITING stays in the existing `dim-selected` contextual tab (no change).
+  - **Why**: Dimensioning is a primary, always-needed annotation activity; big players keep it on a persistent tab, NOT behind a tool-active contextual tab (that pattern fits transient guides — ADR-442). Also kills the crowded dropdown (Giorgio: all big readable icons).
+  - **IA**: 3 panels — Γραμμικές (smart/linear/aligned/baseline/continued/ordinate) · Ακτινικές & Γωνιακές (radius/diameter/jogged-radius/arc-length/angular2L/angular3P) · Κέντρα (center-mark/centerline). All 14 ToolType commandKeys preserved + unique.
+  - **SSoT**: reuses exact commandKeys/icons/i18n labels; only 3 new panel labels (`ribbon.panels.dim{Linear,RadialAngular,Centers}`, el+en).
+  - ✅ Google-level: YES — data-driven, zero dispatch change, structural test rewritten (`annotate-tab-dimensions.test.ts`) preserving the all-14-keys invariant.
+  - **Files**: `ui/ribbon/data/annotate-tab-dimensions.ts` (NEW + test), `ui/ribbon/data/home-tab-dimensions.ts` (REWRITTEN to slim launcher + test rewritten), `ui/ribbon/data/ribbon-default-tabs.ts` (MOD — Annotate gets full set, Home keeps launcher), el/en `dxf-viewer-shell.json` (MOD, 3 panel keys). 9/9 tests pass. Pending browser-verify + commit.
+
 - **2026-05-20 (Round 13 — render-time dimscale rescue for built-in styles in meters scenes)**
   - **Symptom**: After R12, imported DXF styles (rescaled via `dim-style-importer.ts`) rendered correctly, but built-in styles (ISO_129, Standard) that bypass the importer still carried `dimscale=1` → `2.5×1×0.001×vs = 0.0025×vs` = invisible text.
   - **Root cause**: R12 rescue lived only in `dim-style-importer.ts`, which is not called for built-in styles. Built-in styles arrive at the renderer with `dimscale=1` and no rescue applied.

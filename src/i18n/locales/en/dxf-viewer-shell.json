@@ -980,7 +980,8 @@
       "floorFinishProperties": "Floor Finish Properties",
       "thermalSpaceProperties": "Thermal Space Properties",
       "mepFixtureLibrary": "Light Fixture Library",
-      "mepRiser": "Vertical Stack"
+      "mepRiser": "Vertical Stack",
+      "guides": "Guides"
     },
     "panels": {
       "draw": "Draw",
@@ -1135,6 +1136,11 @@
       "placeholder": "Coming soon",
       "history": "History",
       "guides": "Guides",
+      "guidesDraw": "Draw Guides",
+      "guidesArcsPoints": "Arcs & Points",
+      "guidesModify": "Modify Guides",
+      "guidesGridArrays": "Grids & Arrays",
+      "guidesDisplay": "Display & Analysis",
       "display": "Display",
       "dxfFiles": "DXF Files",
       "background": "Background",
@@ -1155,6 +1161,9 @@
       "bimGraphics": "Visibility/Graphics",
       "bimStyles": "Styles & Templates",
       "dimensions": "Dimensions",
+      "dimLinear": "Linear",
+      "dimRadialAngular": "Radial & Angular",
+      "dimCenters": "Centers",
       "dimStyle": "Style",
       "dimOverride": "Override",
       "dimText": "Text",
