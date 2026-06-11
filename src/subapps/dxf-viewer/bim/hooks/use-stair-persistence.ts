@@ -30,8 +30,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { dequal } from 'dequal';
 
-import type { AnySceneEntity, SceneModel } from '../../types/entities';
-import type { StairDoc, StairEntity } from '../types/stair-types';
+import type { SceneModel } from '../../types/entities';
+import type { SceneWriteOrigin } from '../../hooks/scene/scene-write-origin';
+import type { StairEntity } from '../types/stair-types';
 import { makeStairHostResolverFromScene } from '../geometry/stairs/stair-host-resolver';
 import { EventBus } from '../../systems/events/EventBus';
 import {
@@ -42,8 +43,8 @@ import {
 import { recordStairChange } from '../stairs/stair-audit-client';
 import { useBimEntityRestoredPersistEffect } from '../../hooks/data/useBimEntityRestoredPersistEffect';
 import { useBimEntityAttachedPersistEffect } from '../../hooks/data/useBimEntityAttachedPersistEffect';
-import { stairDocToEntity } from '../stairs/stair-doc-hydration';
 import { upsertStairBoq, deleteStairBoq } from '../services/stair-boq-sync';
+import { isStair, mergeStairSnapshot } from '../stairs/stair-snapshot-merge';
 
 // ============================================================================
 // TYPES
@@ -54,7 +55,7 @@ export type StairSaveState = 'idle' | 'saving' | 'saved' | 'error';
 interface LevelManagerLike {
   readonly currentLevelId: string | null;
   getLevelScene(levelId: string): SceneModel | null;
-  setLevelScene(levelId: string, scene: SceneModel): void;
+  setLevelScene(levelId: string, scene: SceneModel, origin?: SceneWriteOrigin): void;
 }
 
 export interface UseStairPersistenceParams {
@@ -84,14 +85,6 @@ export interface UseStairPersistenceResult {
 
 const AUTO_SAVE_DEBOUNCE_MS = 500;
 const LOCK_TTL_MS = 5 * 60 * 1000;
-
-// ============================================================================
-// HELPERS
-// ============================================================================
-
-function isStair(entity: AnySceneEntity): entity is StairEntity {
-  return (entity as { type?: string }).type === 'stair';
-}
 
 // ============================================================================
 // HOOK
@@ -153,74 +146,15 @@ export function useStairPersistence(
         const scene = levelManager.getLevelScene(levelId);
         if (!scene) return;
 
-        const docsById = new Map<string, StairDoc>();
-        for (const d of docs) docsById.set(d.id, d);
-
-        const dirty = dirtyIdsRef.current;
-        const nonStairs: AnySceneEntity[] = [];
-        const sceneStairs = new Map<string, StairEntity>();
-        for (const e of scene.entities) {
-          if (isStair(e)) sceneStairs.set(e.id, e);
-          else nonStairs.push(e);
-        }
-
-        const nextStairs: StairEntity[] = [];
-        let mutated = false;
-
-        const deleted = deletedIdsRef.current;
-        const pending = pendingFirstSaveIdsRef.current;
-
-        for (const doc of docs) {
-          if (deleted.has(doc.id)) continue;
-          // ADR-402 — seed the saved baseline for loaded stairs (mirror
-          // useWallPersistence) so the auto-save gate treats them as `known`.
-          // Without this a 3D gizmo edit of a previously-loaded stair never
-          // passed the `known` check → never persisted → the next snapshot's
-          // diff-merge reverted it to the stored position (the revert bug).
-          if (!dirty.has(doc.id) && !lastSavedParamsRef.current.has(doc.id)) {
-            lastSavedParamsRef.current.set(doc.id, doc.params);
-          }
-          const existing = sceneStairs.get(doc.id);
-          if (!existing) {
-            // Remote add — only if not currently in local-create flow.
-            if (!dirty.has(doc.id)) {
-              nextStairs.push(stairDocToEntity(doc));
-              mutated = true;
-            }
-            continue;
-          }
-          if (dirty.has(doc.id)) {
-            // Local wins — preserve in-flight edit.
-            nextStairs.push(existing);
-            continue;
-          }
-          // Remote update — merge if params actually differ.
-          if (!dequal(existing.params, doc.params) || !dequal(existing.editingBy, doc.editingBy)) {
-            nextStairs.push(stairDocToEntity(doc));
-            mutated = true;
-          } else {
-            nextStairs.push(existing);
-          }
-        }
-
-        // ADR-390 — replaces buggy `neverSaved` guard. Preserve stairs only
-        // αν είναι dirty ή pendingFirstSave (drawn / restored via undo). Closes
-        // the Bug B ghost-render path όπου fresh refresh με κενό `lastSavedParamsRef`
-        // κρατούσε ορφανές entities σε scene.
-        for (const [id, entity] of sceneStairs) {
-          if (docsById.has(id)) continue;
-          if (dirty.has(id) || pending.has(id)) {
-            nextStairs.push(entity);
-          } else {
-            mutated = true;
-          }
-        }
+        const { entities, mutated } = mergeStairSnapshot(docs, scene, {
+          dirty: dirtyIdsRef.current,
+          deleted: deletedIdsRef.current,
+          pending: pendingFirstSaveIdsRef.current,
+          lastSavedParams: lastSavedParamsRef.current,
+        });
 
         if (mutated) {
-          levelManager.setLevelScene(levelId, {
-            ...scene,
-            entities: [...nonStairs, ...nextStairs],
-          });
+          levelManager.setLevelScene(levelId, { ...scene, entities }, 'remote-echo');
         }
       },
       (err: Error) => {

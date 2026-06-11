@@ -34,6 +34,30 @@ export const MARGINS = COORDINATE_LAYOUT.MARGINS;
 
 export class CoordinateTransforms {
   /**
+   * SSoT viewport-readiness classifier (shared by worldToScreen + screenToWorld).
+   *
+   * - `ready`     → dimensions are positive, use the real Y-inverted formula.
+   * - `transient` → width/height is exactly 0. This is the EXPECTED state before the
+   *                 canvas is laid out (first paint, hidden tab, sidebar/panel toggle).
+   *                 It must stay SILENT — logging here floods the console at 60fps with
+   *                 "Invalid viewport dimensions {0,0}" (the noise Giorgio flagged).
+   * - `malformed` → missing, negative, or NaN. A genuine bug worth a single warn.
+   *
+   * Both states still fall back to the non-inverted conversion; only the logging differs.
+   */
+  private static classifyViewport(
+    viewport: Viewport | undefined | null
+  ): 'ready' | 'transient' | 'malformed' {
+    if (!viewport) return 'malformed';
+    const { width, height } = viewport;
+    if (Number.isNaN(width) || Number.isNaN(height) || width < 0 || height < 0) {
+      return 'malformed';
+    }
+    if (width === 0 || height === 0) return 'transient';
+    return 'ready';
+  }
+
+  /**
    * Μετατροπή από world coordinates σε screen coordinates
    * ✅ ARCHITECTURAL FIX: offsetX/offsetY are SCREEN offsets (pixels), not world!
    *
@@ -54,9 +78,13 @@ export class CoordinateTransforms {
     }
 
     // 🏢 ENTERPRISE FIX (2026-01-27): Viewport validation
-    // Αν το viewport δεν είναι έτοιμο, χρησιμοποιεί fallback υπολογισμό
-    if (!viewport || viewport.height <= 0 || viewport.width <= 0) {
-      logger.warn('worldToScreen: Invalid viewport dimensions', { viewport });
+    // Αν το viewport δεν είναι έτοιμο, χρησιμοποιεί fallback υπολογισμό.
+    // 0×0 = αναμενόμενο πριν το layout → σιωπηλό. Μόνο malformed → warn.
+    const worldViewportState = CoordinateTransforms.classifyViewport(viewport);
+    if (worldViewportState !== 'ready') {
+      if (worldViewportState === 'malformed') {
+        logger.warn('worldToScreen: malformed viewport dimensions', { viewport });
+      }
       // Fallback: Use simple conversion without Y-inversion
       return {
         x: left + worldPoint.x * transform.scale + transform.offsetX,
@@ -96,11 +124,13 @@ export class CoordinateTransforms {
     }
 
     // 🏢 ENTERPRISE FIX (2026-01-27): Viewport validation
-    // Αν το viewport δεν είναι έτοιμο (width ή height = 0), επιστρέφει fallback
-    // που βασίζεται μόνο στο X coordinate (Y θα είναι 0)
-    // Αυτό αποτρέπει λανθασμένες μετατροπές πριν το layout stabilize
-    if (!viewport || viewport.height <= 0 || viewport.width <= 0) {
-      logger.warn('screenToWorld: Invalid viewport dimensions', { viewport });
+    // Αν το viewport δεν είναι έτοιμο (width ή height = 0), επιστρέφει fallback.
+    // 0×0 = αναμενόμενο πριν το layout stabilize → σιωπηλό. Μόνο malformed → warn.
+    const screenViewportState = CoordinateTransforms.classifyViewport(viewport);
+    if (screenViewportState !== 'ready') {
+      if (screenViewportState === 'malformed') {
+        logger.warn('screenToWorld: malformed viewport dimensions', { viewport });
+      }
       // Fallback: Use screen position as world position (1:1 mapping)
       // This is better than returning wildly incorrect values
       return {
@@ -422,90 +452,13 @@ export function screenToWorldFromElement(
 // ============================================================================
 // 🏢 ADR-151: SIMPLE COORDINATE TRANSFORM FUNCTIONS (Standalone Exports)
 // ============================================================================
-// PURPOSE: Eliminate scattered inline coordinate transform patterns like:
-//   x: point.x * transform.scale + transform.offsetX,
-//   y: point.y * transform.scale + transform.offsetY
-//
-// USE CASES: Overlay systems, visibility checks, bounding boxes (NO Y-inversion needed)
-// For CAD rendering with Y-inversion, use CoordinateTransforms.worldToScreen() instead
+// Extracted to ./coordinate-transforms-simple for the Google SRP 500-line
+// limit. Re-exported here so existing deep imports keep resolving.
 // ============================================================================
-
-/**
- * 🏢 ADR-151: Simple world-to-screen coordinate transform (NO Y-inversion)
- *
- * Standalone export wrapper for CoordinateTransforms.worldToScreenSimple()
- * Use this for overlay systems, visibility checks, and bounding box calculations
- * where Y-axis inversion is NOT needed.
- *
- * @param point - World coordinates to convert
- * @param transform - Current view transform (scale, offsetX, offsetY)
- * @returns Screen coordinates (without Y-axis inversion)
- */
-export function worldToScreenSimple(point: Point2D, transform: ViewTransform): Point2D {
-  return CoordinateTransforms.worldToScreenSimple(point, transform);
-}
-
-/**
- * 🏢 ADR-151: Simple screen-to-world coordinate transform (NO Y-inversion)
- *
- * Inverse of worldToScreenSimple - converts screen coordinates back to world.
- * Use this for overlay systems and visibility checks where Y-axis inversion is NOT needed.
- *
- * @param point - Screen coordinates to convert
- * @param transform - Current view transform (scale, offsetX, offsetY)
- * @returns World coordinates (without Y-axis inversion)
- */
-export function screenToWorldSimple(point: Point2D, transform: ViewTransform): Point2D {
-  return {
-    x: (point.x - transform.offsetX) / transform.scale,
-    y: (point.y - transform.offsetY) / transform.scale
-  };
-}
-
-/**
- * 🏢 ADR-151: Transform bounding box from world to screen (NO Y-inversion)
- *
- * Converts all four corners of a bounding box from world to screen coordinates.
- * Use this for visibility checks and culling operations.
- *
- * @param bounds - World-space bounding box
- * @param transform - Current view transform (scale, offsetX, offsetY)
- * @returns Screen-space bounding box
- */
-export function transformBoundsToScreen(
-  bounds: { minX: number; minY: number; maxX: number; maxY: number },
-  transform: ViewTransform
-): { minX: number; minY: number; maxX: number; maxY: number } {
-  return {
-    minX: bounds.minX * transform.scale + transform.offsetX,
-    minY: bounds.minY * transform.scale + transform.offsetY,
-    maxX: bounds.maxX * transform.scale + transform.offsetX,
-    maxY: bounds.maxY * transform.scale + transform.offsetY
-  };
-}
-
-/**
- * 🏢 ADR-151: Transform bounding box from screen to world (NO Y-inversion)
- *
- * Inverse of transformBoundsToScreen - converts screen bounds back to world.
- *
- * @param bounds - Screen-space bounding box
- * @param transform - Current view transform (scale, offsetX, offsetY)
- * @returns World-space bounding box
- */
-export function transformBoundsToWorld(
-  bounds: { minX: number; minY: number; maxX: number; maxY: number },
-  transform: ViewTransform
-): { minX: number; minY: number; maxX: number; maxY: number } {
-  return {
-    minX: (bounds.minX - transform.offsetX) / transform.scale,
-    minY: (bounds.minY - transform.offsetY) / transform.scale,
-    maxX: (bounds.maxX - transform.offsetX) / transform.scale,
-    maxY: (bounds.maxY - transform.offsetY) / transform.scale
-  };
-}
-
-export const IDENTITY_COORDINATE_TRANSFORM = {
-  worldToScreen: (point: Point2D): Point2D => point,
-  screenToWorld: (point: Point2D): Point2D => point
-} as const;
+export {
+  worldToScreenSimple,
+  screenToWorldSimple,
+  transformBoundsToScreen,
+  transformBoundsToWorld,
+  IDENTITY_COORDINATE_TRANSFORM,
+} from './coordinate-transforms-simple';

@@ -31,146 +31,18 @@
  */
 
 // ============================================================================
-// LOG LEVELS
+// CORE TYPES + OUTPUTS (extracted for Google SRP 500-line limit)
 // ============================================================================
-export enum LogLevel {
-  ERROR = 0,
-  WARN = 1,
-  INFO = 2,
-  DEBUG = 3
-}
-// ============================================================================
-// LOG ENTRY
-// ============================================================================
-export interface LogEntry {
-  level: LogLevel;
-  message: string;
-  timestamp: number;
-  correlationId?: string;
-  metadata?: Record<string, unknown>;
-}
-// ============================================================================
-// LOG OUTPUT INTERFACE
-// ============================================================================
-export interface LogOutput {
-  write(entry: LogEntry): void;
-}
-// ============================================================================
-// CONSOLE OUTPUT
-// ============================================================================
+import { LogLevel } from './log-types';
+import type { LogEntry, LogOutput } from './log-types';
+import { ConsoleOutput, CompositeOutput } from './log-outputs';
 
-/**
- * Normalize metadata so Error instances serialize to plain objects.
- * Error instances are non-enumerable by default, which makes them log as
- * `{}` in both browser consoles and JSON.stringify. We expand them to
- * { message, name, stack, cause } plus any own enumerable properties.
- */
-function normalizeMetadata(metadata: Record<string, unknown> | undefined): Record<string, unknown> | undefined {
-  if (!metadata) return metadata;
-  const out: Record<string, unknown> = {};
-  for (const [key, value] of Object.entries(metadata)) {
-    if (value instanceof Error) {
-      const hasToJSON = typeof (value as { toJSON?: unknown }).toJSON === 'function';
-      out[key] = hasToJSON
-        ? (value as unknown as { toJSON: () => Record<string, unknown> }).toJSON()
-        : {
-            message: value.message,
-            name: value.name,
-            stack: value.stack,
-            ...(value.cause !== undefined ? { cause: value.cause } : {}),
-            ...Object.fromEntries(
-              Object.entries(value).filter(
-                ([k, v]) =>
-                  !['message', 'name', 'stack', 'cause'].includes(k) &&
-                  !(typeof Response !== 'undefined' && v instanceof Response),
-              ),
-            ),
-          };
-    } else if (
-      value !== null &&
-      typeof value === 'object' &&
-      Object.keys(value).length === 0 &&
-      Object.getOwnPropertyNames(value).length > 0
-    ) {
-      // Object with non-enumerable properties only (e.g. FirebaseError, FirestoreError)
-      // Extract via getOwnPropertyNames so prototype-chain props become visible
-      const extracted: Record<string, unknown> = { _str: String(value) };
-      for (const prop of ['message', 'code', 'name', 'stack']) {
-        const v = (value as Record<string, unknown>)[prop];
-        if (v !== undefined) extracted[prop] = v;
-      }
-      out[key] = extracted;
-    } else {
-      out[key] = value;
-    }
-  }
-  return out;
-}
+// Re-export core types + concrete outputs so existing deep imports
+// (`@/lib/telemetry/Logger`) keep resolving after the split.
+export { LogLevel } from './log-types';
+export type { LogEntry, LogOutput } from './log-types';
+export { ConsoleOutput, DevNullOutput, CompositeOutput } from './log-outputs';
 
-export class ConsoleOutput implements LogOutput {
-  write(entry: LogEntry): void {
-    const prefix = `[${LogLevel[entry.level]}]`;
-    const timestamp = new Date(entry.timestamp).toISOString();
-    const correlationId = entry.correlationId ? ` [${entry.correlationId}]` : '';
-
-    const message = `${timestamp}${correlationId} ${prefix} ${entry.message}`;
-    const rawMeta = entry.metadata;
-    // Use JSON.stringify with a replacer that handles non-serializable values.
-    // This avoids the `{}` display bug caused by FirebaseError / FirestoreError
-    // having non-enumerable prototype properties.
-    const metaStr = rawMeta
-      ? JSON.stringify(rawMeta, (_k, v: unknown) => {
-          if (v === undefined) return '[undefined]';
-          if (typeof v === 'object' && v !== null) {
-            const asErr = v as { message?: unknown; code?: unknown; name?: unknown; stack?: unknown };
-            if (typeof asErr.message === 'string' || typeof asErr.code === 'string') {
-              return { message: asErr.message, code: asErr.code, name: asErr.name };
-            }
-          }
-          return v;
-        })
-      : '';
-
-    switch (entry.level) {
-      case LogLevel.ERROR:
-        console.error(message, metaStr || '');
-        break;
-      case LogLevel.WARN:
-        console.warn(message, metaStr || '');
-        break;
-      case LogLevel.INFO:
-        console.info(message, metaStr || '');
-        break;
-      case LogLevel.DEBUG:
-        console.debug(message, metaStr || '');
-        break;
-    }
-  }
-}
-// ============================================================================
-// DEVNULL OUTPUT (SILENT)
-// ============================================================================
-export class DevNullOutput implements LogOutput {
-  write(_entry: LogEntry): void {
-    // Do nothing (silent)
-  }
-}
-// ============================================================================
-// COMPOSITE OUTPUT (multiple outputs)
-// ============================================================================
-export class CompositeOutput implements LogOutput {
-  private outputs: LogOutput[];
-
-  constructor(outputs: LogOutput[]) {
-    this.outputs = outputs;
-  }
-
-  write(entry: LogEntry): void {
-    for (const output of this.outputs) {
-      output.write(entry);
-    }
-  }
-}
 // ============================================================================
 // ERROR NORMALIZATION
 // ============================================================================
@@ -465,17 +337,20 @@ export function createLogger(correlationId?: string): Logger {
  * ```
  */
 export function createModuleLogger(moduleName: string, level?: LogLevel): Logger {
-  // Dev default = DEBUG (verbose for local debugging).
-  // Prod default = INFO (significant business events only).
-  // Override globally via env: NEXT_PUBLIC_LOG_LEVEL=debug|info|warn|error
-  const envLevel = (process.env.NEXT_PUBLIC_LOG_LEVEL || '').toLowerCase();
-  const fromEnv = envLevel === 'debug' ? LogLevel.DEBUG
-    : envLevel === 'info' ? LogLevel.INFO
-    : envLevel === 'warn' ? LogLevel.WARN
-    : envLevel === 'error' ? LogLevel.ERROR
-    : null;
-  const isProd = process.env.NODE_ENV === 'production';
-  const defaultLevel = fromEnv ?? (isProd ? LogLevel.INFO : LogLevel.DEBUG);
+  // Level resolution (highest priority → lowest):
+  //   1. explicit `level` argument (a module that pins its own verbosity)
+  //   2. localStorage 'LOG_LEVEL'  — BROWSER RUNTIME override, no rebuild needed
+  //      (e.g. `localStorage.setItem('LOG_LEVEL','debug')` then refresh; remove to reset).
+  //      Mirrors Firebase `setLogLevel` / the `debug` npm package's `localStorage.debug`.
+  //   3. NEXT_PUBLIC_LOG_LEVEL      — build-time env (CI / team-wide default)
+  //   4. default: BROWSER → WARN (clean user console — only warnings/errors surface,
+  //      Revit/Google/VS-Code-grade), SERVER → INFO (production observability: business
+  //      and lifecycle events still reach server logs/telemetry). DEBUG is ALWAYS opt-in.
+  //      Dial verbosity per-side: localStorage 'LOG_LEVEL' (browser) or env (both).
+  const fromRuntime = resolveRuntimeLogLevel();
+  const fromEnv = parseLogLevel(process.env.NEXT_PUBLIC_LOG_LEVEL);
+  const isBrowser = typeof window !== 'undefined';
+  const defaultLevel = isBrowser ? LogLevel.WARN : LogLevel.INFO;
 
   // Lazy-register Telegram alerts (one-time, server-side, production only)
   ensureTelegramAlertRegistered();
@@ -487,9 +362,38 @@ export function createModuleLogger(moduleName: string, level?: LogLevel): Logger
 
   return new Logger({
     prefix: `[${moduleName}]`,
-    level: level ?? defaultLevel,
+    level: level ?? fromRuntime ?? fromEnv ?? defaultLevel,
     output,
   });
+}
+
+/**
+ * Parse a string log level ('debug'|'info'|'warn'|'error', case-insensitive) into a
+ * `LogLevel`. SSoT for level string→enum parsing (env + localStorage share it).
+ * Returns null for empty/unknown input so callers can fall through to the next source.
+ */
+function parseLogLevel(raw: string | null | undefined): LogLevel | null {
+  switch ((raw || '').toLowerCase()) {
+    case 'debug': return LogLevel.DEBUG;
+    case 'info': return LogLevel.INFO;
+    case 'warn': return LogLevel.WARN;
+    case 'error': return LogLevel.ERROR;
+    default: return null;
+  }
+}
+
+/**
+ * Browser-only runtime log-level override read from `localStorage['LOG_LEVEL']`.
+ * Lets a developer dial verbosity up/down live (refresh re-reads it) without an env
+ * change or rebuild. Server-side (no `window`) or unavailable storage → null.
+ */
+function resolveRuntimeLogLevel(): LogLevel | null {
+  if (typeof window === 'undefined') return null;
+  try {
+    return parseLogLevel(window.localStorage.getItem('LOG_LEVEL'));
+  } catch {
+    return null;
+  }
 }
 
 // ============================================================================
