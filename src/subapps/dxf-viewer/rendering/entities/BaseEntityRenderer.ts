@@ -128,16 +128,17 @@ export abstract class BaseEntityRenderer {
     // 🏢 ENTERPRISE: EntityModel is alias for Entity, type assertion is safe
     const phaseState = this.phaseManager.determinePhase(entity as Entity, options);
     
-    // Set grip interaction state for PhaseManager. The PRESSED / actively-manipulated
-    // grip (`gripInteraction.active`, set during a drag OR the click-armed hot-grip
-    // rotate/move flow) is the `dragginGrip` — `GripPhaseRenderer.getGripTemperature`
-    // reads ONLY `dragginGrip` for the HOT state, so the pressed rotation handle stays
-    // hot for the whole operation (Giorgio). Was hardcoded `undefined` → no grip ever
-    // went hot through this path.
+    // Set grip interaction state for PhaseManager using consistent naming. The
+    // PRESSED / actively-manipulated grip (`gripInteraction.active`, set during a
+    // drag OR the click-armed hot-grip rotate/move flow) feeds `selectedGrip`. The
+    // temperature SSoT (`resolveGripTemperature`) maps `active: selectedGrip ??
+    // dragginGrip` → such a grip resolves HOT and stays hot for the whole operation
+    // (ADR-397). No need to also stuff it into `dragginGrip` — that was a workaround
+    // for the old getGripTemperature that read ONLY `dragginGrip`.
     phaseState.gripState = {
       hoveredGrip: this.gripInteraction.hovered,
       selectedGrip: this.gripInteraction.active,
-      dragginGrip: this.gripInteraction.active,
+      dragginGrip: undefined,
     };
     
     this.phaseManager.renderPhaseGrips(entity as Entity, grips, phaseState);

@@ -16,6 +16,8 @@ import type {
   Entity
 } from '../types';
 import type { GripSettings, GripRenderConfig } from '../../../rendering/grips/types';
+// 🏢 SSoT (ADR-397 §15): the ONE temperature resolver — no local re-implementation
+import { resolveGripTemperature } from '../../../rendering/grips/grip-temperature';
 
 // ============================================================================
 // TYPE DEFINITIONS
@@ -108,27 +110,19 @@ export class GripPhaseRenderer {
     state: PhaseRenderingState
   ): GripTemperature {
     const gripState = state.gripState;
-
     if (!gripState) return 'cold';
 
-    // Hot (red) - Active/dragging grip
-    if (
-      gripState.dragginGrip?.entityId === entityId &&
-      gripState.dragginGrip?.gripIndex === gripIndex
-    ) {
-      return 'hot';
-    }
-
-    // Warm (orange) - Hovered grip
-    if (
-      gripState.hoveredGrip?.entityId === entityId &&
-      gripState.hoveredGrip?.gripIndex === gripIndex
-    ) {
-      return 'warm';
-    }
-
-    // Cold (blue) - Normal grip
-    return 'cold';
+    // 🏢 SSoT: map the phase-manager naming ({hoveredGrip, selectedGrip,
+    // dragginGrip}) onto the canonical {hovered, active, dragging} and delegate
+    // to the single resolver. `active: selectedGrip ?? dragginGrip` is why a
+    // pressed grip stays HOT regardless of which field the caller filled —
+    // this is the permanent fix for the old "selectedGrip ignored" bug
+    // (ADR-397). The local priority logic is gone — no second implementation.
+    return resolveGripTemperature(entityId, gripIndex, {
+      hovered: gripState.hoveredGrip,
+      active: gripState.selectedGrip ?? gripState.dragginGrip,
+      dragging: gripState.dragginGrip,
+    });
   }
 
   // ==========================================================================
