@@ -206,6 +206,8 @@ export interface DrawingEventMap extends MepAutoDesignEventMap {
   'bim:opening-schedule-pdf-requested': Record<string, never>;
   // ADR-396 Phase P6 — Thermal Envelope (ETICS) authoring dialog trigger
   'bim:thermal-envelope-requested': Record<string, never>;
+  // ADR-363 §6 Phase 8 — BIM Schedule («Πίνακας BIM») dialog trigger
+  'bim:schedule-dialog-requested': Record<string, never>;
   // ADR-363 Phase 3 — BIM slab params + delete events
   'bim:slab-params-updated': { slabId: string };
   'bim:slab-delete-requested': { slabId: string };

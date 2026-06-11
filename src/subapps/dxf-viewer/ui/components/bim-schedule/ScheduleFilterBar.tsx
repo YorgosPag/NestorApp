@@ -28,6 +28,7 @@ import { Label } from '@/components/ui/label';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { cn } from '@/lib/utils';
 
 import type { ScheduleFilterCriteria } from '@/subapps/dxf-viewer/bim/schedule';
 
@@ -92,13 +93,22 @@ function ChecklistSection({
               const id = `${idPrefix}-${option.id}`;
               const checked = selected?.includes(option.id) ?? false;
               return (
-                <li key={option.id} className="flex items-center gap-2">
+                <li
+                  key={option.id}
+                  className={cn(
+                    'flex items-center gap-2 rounded px-1.5 py-1 transition-colors',
+                    checked ? 'bg-primary/10' : 'hover:bg-accent',
+                  )}
+                >
                   <Checkbox
                     id={id}
                     checked={checked}
                     onCheckedChange={() => onToggle(option.id)}
                   />
-                  <Label htmlFor={id} className="cursor-pointer text-sm">
+                  <Label
+                    htmlFor={id}
+                    className={cn('cursor-pointer text-sm', checked && 'font-medium')}
+                  >
                     {option.label}
                   </Label>
                 </li>
@@ -208,7 +218,12 @@ export function ScheduleFilterBar({
         <legend className="text-sm font-medium text-foreground">
           {t('dxf-schedule:filters.selection.label')}
         </legend>
-        <div className="flex items-center gap-2 rounded-md border border-border bg-background p-2">
+        <div
+          className={cn(
+            'flex items-center gap-2 rounded-md border p-2 transition-colors',
+            selectionActive ? 'border-primary bg-primary/10 ring-1 ring-primary' : 'border-border bg-background',
+          )}
+        >
           <Checkbox
             id="schedule-selection-only"
             checked={selectionActive}

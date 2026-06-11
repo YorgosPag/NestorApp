@@ -19,6 +19,7 @@ import * as React from 'react';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { cn } from '@/lib/utils';
 
 import type { ScheduleEntityType } from '@/subapps/dxf-viewer/bim/schedule';
 
@@ -62,13 +63,25 @@ export function ScheduleEntityToggle({ value, onChange }: ScheduleEntityTogglePr
       >
         {ENTITY_TYPES.map((kind) => {
           const id = `schedule-entity-${kind}`;
+          const isSelected = value === kind;
           return (
             <div
               key={kind}
-              className="flex items-center gap-2 rounded-md border border-border bg-background p-2"
+              className={cn(
+                'flex items-center gap-2 rounded-md border p-2 transition-colors',
+                isSelected
+                  ? 'border-primary bg-primary/10 ring-1 ring-primary'
+                  : 'border-border bg-background hover:bg-accent',
+              )}
             >
               <RadioGroupItem value={kind} id={id} />
-              <Label htmlFor={id} className="cursor-pointer text-sm">
+              <Label
+                htmlFor={id}
+                className={cn(
+                  'cursor-pointer text-sm',
+                  isSelected ? 'font-medium text-foreground' : 'text-foreground',
+                )}
+              >
                 {t(`dxf-schedule:entityType.${kind}`)}
               </Label>
             </div>

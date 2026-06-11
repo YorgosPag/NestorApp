@@ -30,8 +30,8 @@ import {
   TestsModal, CreditsDialog, FloorplanBackgroundPanel, ReplaceConfirmDialog, CalibrationDialog,
   DxfImportModal, SimpleProjectDialog, FloorplanImportWizard, ConstructionLayerScaffoldDialog,
   DxfFindReplaceHost, DxfSymbolPickerHost, RenumberOpeningsHost, OpeningTagStyleHost,
-  OpeningSchedulePdfHost, ThermalEnvelopeHost, AdminLayerManagerDialogHost, DxfAiChatPanel,
-  ColumnPerimeterConfirmDialog,
+  OpeningSchedulePdfHost, ThermalEnvelopeHost, BimScheduleHost, AdminLayerManagerDialogHost,
+  DxfAiChatPanel, ColumnPerimeterConfirmDialog,
 } from './dxf-viewer-lazy-components';
 
 type LevelManager = ReturnType<typeof useLevels>;
@@ -47,6 +47,8 @@ export interface DxfViewerDialogsProps {
   readonly setFindReplaceOpen: (open: boolean) => void;
   readonly symbolPickerOpen: boolean;
   readonly setSymbolPickerOpen: (open: boolean) => void;
+  // ADR-363 §6 Phase 8 — live canvas selection για το selection-only φίλτρο του «Πίνακα BIM».
+  readonly selectionIds: readonly string[];
 }
 
 const hiddenFallback = <div className="hidden" />;
@@ -61,6 +63,7 @@ export function DxfViewerDialogs(props: DxfViewerDialogsProps): React.JSX.Elemen
     ui, levelManager, perfMonitorEnabled,
     handleFileImportWithEncoding, showCopyableNotification,
     findReplaceOpen, setFindReplaceOpen, symbolPickerOpen, setSymbolPickerOpen,
+    selectionIds,
   } = props;
 
   const projectId = levelManager.saveContext?.projectId ?? undefined;
@@ -131,6 +134,8 @@ export function DxfViewerDialogs(props: DxfViewerDialogsProps): React.JSX.Elemen
       <React.Suspense fallback={hiddenFallback}><OpeningSchedulePdfHost getEntities={() => (levelManager.getLevelScene(levelManager.currentLevelId ?? '')?.entities ?? []) as unknown as ReadonlyArray<Record<string, unknown>>} levels={levelManager.levels} /></React.Suspense>
       {/* ADR-396 P6 — Thermal Envelope (ETICS) authoring dialog (opened via Analyze tab). */}
       <React.Suspense fallback={hiddenFallback}><ThermalEnvelopeHost currentLevelId={levelManager.currentLevelId} levels={levelManager.levels} getLevelScene={levelManager.getLevelScene} setLevelScene={levelManager.setLevelScene} projectId={projectId} /></React.Suspense>
+      {/* ADR-363 §6 Phase 8 — BIM Schedule («Πίνακας BIM») dialog (opened via Analyze tab). */}
+      <React.Suspense fallback={hiddenFallback}><BimScheduleHost selectionIds={selectionIds} /></React.Suspense>
       {/* ADR-391 — AdminLayerManager modal (opened via View tab button or Ctrl+L). */}
       <React.Suspense fallback={hiddenFallback}><AdminLayerManagerDialogHost projectId={levelManager.saveContext?.projectId ?? null} /></React.Suspense>
       {USE_AI_DRAWING_ASSISTANT && (

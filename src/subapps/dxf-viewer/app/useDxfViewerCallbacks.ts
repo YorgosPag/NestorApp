@@ -196,6 +196,11 @@ export function useDxfViewerCallbacks(params: DxfViewerCallbacksParams): DxfView
       EventBus.emit('bim:thermal-envelope-requested', {});
       return;
     }
+    // ADR-363 §6 Phase 8: Open BIM Schedule («Πίνακας BIM») dialog (BimScheduleHost listens)
+    if (action === 'open-schedule-dialog') {
+      EventBus.emit('bim:schedule-dialog-requested', {});
+      return;
+    }
     // ADR-345 Fase 6: Import/export dialog actions (migrated from toolbar)
     if (action === 'import-dxf-enhanced') {
       setShowEnhancedImport(true);

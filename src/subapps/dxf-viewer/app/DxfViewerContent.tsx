@@ -369,6 +369,7 @@ export const DxfViewerContent = React.memo<DxfViewerAppProps>((props) => {
         setFindReplaceOpen={state.setFindReplaceOpen}
         symbolPickerOpen={state.symbolPickerOpen}
         setSymbolPickerOpen={state.setSymbolPickerOpen}
+        selectionIds={selectedEntityIds}
       />
       </section>
       </div>

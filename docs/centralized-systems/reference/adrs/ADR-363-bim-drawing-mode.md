@@ -2989,6 +2989,26 @@ lifecycle).
 - `ui/ribbon/components/buttons/RibbonButtonIcon.tsx` (+bim-schedule icon)
 - `src/i18n/locales/el/dxf-schedule.json`, `src/i18n/locales/en/dxf-schedule.json`
 
+**Phase 8 MOUNT — Live UI activation (2026-06-11, Revit-grade «Schedules»)**:
+M1–M7 έχτισαν την οθόνη αλλά την άφησαν **dormant** (0 consumers· `useBimScheduleExport`
+χωρίς caller· ribbon action `'open-schedule-dialog'` = no-op). Ενεργοποίηση Phase 1
+(χωρίς region-pick — DEFER ως Phase 2/M5):
+- EventBus event `'bim:schedule-dialog-requested'` (`systems/events/drawing-event-map.ts`).
+- NEW `hooks/data/useBimScheduleLookups.ts` — **SSoT** builder `ScheduleLookups` +
+  `availableFloors`/`availableCategories`/`availableBuildings` από `useLevels` +
+  `useFirestoreBuildings` + `construction-materials` (αντικαθιστά τον inline
+  `buildLookupsFromLevels` του `OpeningSchedulePdfHost`, N.0.2). +7 jest.
+- NEW `app/BimScheduleHost.tsx` — EventBus-subscribe leaf (mirror `DxfFindReplaceHost` +
+  `ThermalEnvelopeHost`)· `useCurrentSceneModel` → filter στους 8 schedulable τύπους →
+  `<BimScheduleDialog>`.
+- MOD: lazy export (`dxf-viewer-lazy-components.tsx`), mount (`DxfViewerDialogs.tsx` +
+  `selectionIds` prop από `DxfViewerContent`), action intercept (`useDxfViewerCallbacks.ts`
+  `wrappedHandleAction`, mirror `thermal-envelope.open`).
+- Region-pick props περνούν αυτούσια αλλά το canvas tool ΔΕΝ ενεργοποιείται (activeRegion=null).
+  Phase 2 = wire `useScheduleRegionPickTool` (touches canvas → ADR-040).
+- ADR-441 Slice 4: η θεμελίωση είναι πλέον **ορατή** στον πίνακα με net όγκο εσχάρας
+  (`applyFoundationGridNet`, ήδη μέσα στο dialog useMemo).
+
 ### Phase 9+ — Out of Scope (διατυπώνεται για documentation)
 
 - 3D viewer (Three.js port από genarc) → ίσως `dxf-viewer-3d/` subapp.
