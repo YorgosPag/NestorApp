@@ -16,6 +16,7 @@ import {
   IfcGuidSchema,
   IfcPropertySetSchema,
 } from './ifc-entity-mixin';
+import { GuideBindingsSchema } from './guide-binding.schemas';
 
 // ─── Point3D ──────────────────────────────────────────────────────────────────
 
@@ -152,6 +153,8 @@ export const FoundationEntitySchema = z
     ifcGuid: IfcGuidSchema,
     ifcType: FoundationIfcTypeSchema,
     pset: IfcPropertySetSchema.optional(),
+    // ADR-441 — associative grid hosting (Slice 0). Optional → backward-compatible.
+    guideBindings: GuideBindingsSchema,
   })
   .passthrough();
 

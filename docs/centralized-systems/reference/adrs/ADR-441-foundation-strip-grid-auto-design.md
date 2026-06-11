@@ -1,6 +1,6 @@
 # ADR-441 — Αυτόματη Εσχάρα Πεδιλοδοκών / Ενοποιημένο Πέδιλο (Foundation Strip-Grid Auto-Design)
 
-**Status**: 🟡 PROPOSED / DRAFT — συζήτηση σε εξέλιξη με Giorgio (2026-06-11). ΔΕΝ υλοποιήθηκε κώδικας ακόμη.
+**Status**: 🟢 IN PROGRESS — αποφάσεις LOCKED (2026-06-11), υλοποίηση σε slices. **Slice 0 DONE** (hosting types). Εκκρεμούν Slice 1 (grid persistence per-όροφο) / Slice 2 (εσχάρα από grid) / Slice 3 (follow-on-move). Σχέδιο: §10.
 **Date**: 2026-06-11
 **Author**: Opus (συνομιλία Giorgio)
 **Σχέση**: επεκτείνει ADR-436 (BIM Foundation Discipline — pad/strip/tie-beam). Δες επίσης ADR-363 (wall region/perimeter tools), ADR-423 (MEP auto-design pattern).
@@ -184,10 +184,24 @@
 
 **ΣΥΜΠΕΡΑΣΜΑ:** ο «κάναβος» της §8.3 **υπάρχει ήδη ως guides (ADR-189)** — είναι ~80% του δρόμου. Για να γίνει το SSoT της αυτόματης θεμελίωσης/ανέγερσης χρειάζεται: **(α) persistence** + **(β) associative hosting** (BIM entities → constrained σε guide axes, follow-on-move). Τότε: εσχάρα πεδίλων = «πέδιλα στις τομές/γραμμές του grid», και το «N×M φατνώματα / αυξομείωση / move-no-break / παραμετρικό» βγαίνουν φυσικά. **Σχέση: ADR-189 (grid) + ADR-436 (foundation) + ADR-441 (αυτό).**
 
+## 10. Σχέδιο υλοποίησης (LOCKED 2026-06-11) — 4 slices
+
+**Αποφάσεις Giorgio:** (1) αφετηρία = **associative grid hosting** (Revit way)· (2) πηγή εσχάρας = **ο κάναβος (grid)**· (3) αναπαράσταση = **διακριτοί πεδιλοδοκοί + join**· (4) **ΟΧΙ** συνδετήριες v1· scope = **όλα τα slices 0→3** (έγκριση ανά slice)· grid = **per-όροφο** (Revit-grade).
+
+**Canonical hosting model (SSoT, generic):** slot-based `GuideBinding { guideId, slot }` όπου `slot ∈ {start-x,start-y,end-x,end-y,center-x,center-y}`, σε `BimEntity.guideBindings?` (base). Υπερκαλύπτει foundation-specific tags· επιτρέπει αύριο wall/column/beam χωρίς re-write.
+
+- **Slice 0 — Hosting types (✅ DONE):** `bim/hosting/guide-binding-types.ts` (GuideBinding/GuideBindingSlot/HostedEntityMixin + extractBoundGuideIds/hasGuideBindings)· `BimEntity.guideBindings?` (`bim/types/bim-base.ts`)· Zod `bim/types/guide-binding.schemas.ts` + foundation entity schema. Backward-compatible (optional· entity schemas `.passthrough()`). 11 jest + 383 regression PASS.
+- **Slice 1 — Grid persistence per-όροφο:** mirror foundation Firestore pattern· 1 doc/floor (`floorplan_grid_guides`)· N.6 `generateGridGuideDocId`· hydrate store on mount / `store.clear()`+reload on floor change· debounced save μετά drag-complete. + rules + indexes (deploy).
+- **Slice 2 — Εσχάρα από grid (1ο ορατό):** `foundation-from-grid.ts` (`buildStripGridFromGuides`· intersection-to-intersection segments → zero-overlap join· strips born-hosted με guideBindings)· batch `use-foundation-grid-commit.ts` + `CompoundCommand` (1 undo)· tool `foundation-strip-from-grid` + ribbon + i18n + toast. BOQ: `safeUnion` offline (overlap στους κόμβους).
+- **Slice 3 — Follow-on-move:** reconciler (RAF-throttled subscriber στο guide-store `notify`· inverted index· imperative scene write ADR-040) + per-kind derive strategies· emit `grid:guide-moved` on drag-complete· persist bindings (FoundationDoc). Stage ADR-040 (CHECK 6B/6D).
+
+**Hook point (επιβεβαιωμένο):** `guide-store.ts` `moveGuideById`/`moveDiagonalGuideById` → `notify()`· `subscribe()`+`getVersion()` καλύπτουν όλα τα move paths.
+
 ## 9. Changelog
 
 | Date | Author | Change |
 |------|--------|--------|
 | 2026-06-11 | Opus | Αρχική σύνταξη (DRAFT): καταγραφή συζήτησης Giorgio (εικόνες εσχάρας πεδιλοδοκών, δομική θεωρία, Revit comparison «ένα-ένα ανά κατηγορία») + ευρήματα έρευνας κώδικα (τι υπάρχει/τι λείπει: safeUnion + region detection + buildStripFromWall + batch pattern + CompoundCommand υπάρχουν· batch-from-walls + crossing-join/union + grid FSM/ribbon λείπουν) + 3 ανοιχτές αποφάσεις (trigger / αναπαράσταση / συνδετήριες) + πρόταση v1. Status PROPOSED — συνέχεια συζήτησης. ΟΧΙ κώδικας ακόμη. |
 | 2026-06-11 | Opus | +§8 Ευρύτερη φιλοσοφία & στρατηγική (καταγραφή 2ης συζήτησης Giorgio): διπλό mode (design-from-scratch + import-driven bottom-up erection θεμελίωση→όροφοι, σκυρόδεμα)· παραμετρική θεμελίωση N×M φατνώματα (αυξομείωση/κεντρικά-έκκεντρα/move-no-break/variable πάχη-ύψη)· **GRID-FIRST** = πώς το κάνουν όλοι οι μεγάλοι (Revit/Tekla/ETABS-SAFE/ProtaStructure/Allplan/SCIA/Graitec· associative grid→hosted follow)· ProtaStructure=πιο κοντινός workflow· honesty: πλήρως-αυτόματο 2D→3D ΔΕΝ λύθηκε πουθενά, όλοι ημι-αυτόματο human-in-the-loop· κεντρικά vs έκκεντρα + strap beams· σύσταση=structural grid ως SSoT. ΑΝΟΙΧΤΟ: υπάρχοντες guides (useGuideState/Actions) == grid ή διαφορετικό (υπό διερεύνηση). |
+| 2026-06-11 | Opus | **Αποφάσεις LOCKED + Slice 0 DONE.** Giorgio: (1) associative grid hosting πρώτα· (2) πηγή=κάναβος· (3) διακριτοί+join· (4) ΟΧΙ συνδετήριες v1· scope=όλα 0→3 έγκριση ανά slice· grid per-όροφο. +§10 σχέδιο 4 slices + canonical slot-based hosting model. Status PROPOSED→IN PROGRESS. **Slice 0** (hosting types): NEW `bim/hosting/guide-binding-types.ts` + `bim/types/guide-binding.schemas.ts`· MOD `bim/types/bim-base.ts` (`BimEntity.guideBindings?`) + `foundation.schemas.ts`. Backward-compatible. 11 jest + 383 regression PASS. Recognition: επιβεβαιώθηκε hook point `guide-store.moveGuideById/moveDiagonalGuideById→notify`, `BimEntity` base, foundation persistence mirror checklist. |
 | 2026-06-11 | Opus | +§8.8 ΕΥΡΗΜΑ (έρευνα guides): το `systems/guides/` (ADR-189) ΕΙΝΑΙ ήδη πλούσιος structural grid — named άξονες Α/Β/Γ×1/2/3 + bubbles + bay dimensions + groups + presets 4/5/6/8m + GuideSnapEngine + IFC4 IFCGRID/IFCGRIDAXIS + full command set/undo. **ΛΕΙΠΟΥΝ 2 κρίσιμα** για Revit-grade grid που οδηγεί ανέγερση: (1) **persistence** (guides=session-only, καμία Firestore) (2) **associative hosting** (καμία BIM entity δεν φέρει guideId/gridAxisId → move άξονα δεν παρασύρει στοιχεία = το «move-no-break» που ζητά ο Giorgio). Δευτερεύοντα: per-floor scope, bubble extents, crop. Συμπέρασμα: ~80% έτοιμο· grid=SSoT ανέγερσης χρειάζεται persistence+associative-hosting. Σχέση ADR-189+436+441. |
