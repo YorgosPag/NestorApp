@@ -169,7 +169,7 @@ export interface ISpatialIndex {
   /**
    * Find items for snapping operations
    */
-  querySnap(point: Point2D, tolerance: number, snapType: 'endpoint' | 'midpoint' | 'center' | 'dim_def_point' | 'dim_line' | 'beam_corner' | 'column_center' | 'column_corner' | 'opening_corner' | 'slab_corner' | 'wall_corner' | 'mep_connector'): SpatialQueryResult[];
+  querySnap(point: Point2D, tolerance: number, snapType: 'endpoint' | 'midpoint' | 'center' | 'dim_def_point' | 'dim_line' | 'column_center' | 'bim_corner' | 'bim_midpoint' | 'bim_center' | 'mep_connector'): SpatialQueryResult[];
 
   /**
    * Find items for selection operations

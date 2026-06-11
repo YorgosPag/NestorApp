@@ -42,14 +42,12 @@ import { ConstructionPointSnapEngine } from '../engines/ConstructionPointSnapEng
 import { DimDefPointSnapEngine } from '../engines/DimDefPointSnapEngine';
 import { DimLineSnapEngine } from '../engines/DimLineSnapEngine';
 import { ColumnCenterSnapEngine } from '../engines/ColumnCenterSnapEngine';
-// ADR-370: BIM face-corner snap engines
-import { WallCornerSnapEngine } from '../engines/WallCornerSnapEngine';
+// ADR-370: ONE generic BIM characteristic-point snap engine (corner/midpoint/center)
+// — replaces the 5 per-entity {Wall,Beam,Slab,Column,Opening}CornerSnapEngine classes.
+import { BimCharacteristicSnapEngine } from '../engines/BimCharacteristicSnapEngine';
+import { SNAP_ENGINE_PRIORITIES } from '../../config/tolerance-config';
 // ADR-363 Φ1G.5 Slice 2i: BIM wall face-line snap (face-to-face magnetism)
 import { WallFaceSnapEngine } from '../engines/WallFaceSnapEngine';
-import { BeamCornerSnapEngine } from '../engines/BeamCornerSnapEngine';
-import { SlabCornerSnapEngine } from '../engines/SlabCornerSnapEngine';
-import { ColumnCornerSnapEngine } from '../engines/ColumnCornerSnapEngine';
-import { OpeningCornerSnapEngine } from '../engines/OpeningCornerSnapEngine';
 // ADR-408 Φ9: MEP connector attach-point snap (segment endpoints / fixture / panel)
 import { MepConnectorSnapEngine } from '../engines/MepConnectorSnapEngine';
 // ADR-378 Phase 3: Text snap engine (TEXT/MTEXT 8-point snap — completes ADR-344 Phase 6.C)
@@ -100,14 +98,23 @@ export class SnapEngineRegistry {
     this.engines.set(ExtendedSnapType.DIM_LINE, new DimLineSnapEngine());
     // ADR-363 Phase 5.5i: Column center axis snap (structural precision)
     this.engines.set(ExtendedSnapType.BIM_COLUMN_CENTER, new ColumnCenterSnapEngine());
-    // ADR-370: BIM face-corner snaps (priority -2 — highest structural precision)
-    this.engines.set(ExtendedSnapType.BIM_WALL_CORNER,    new WallCornerSnapEngine());
+    // ADR-370: ONE generic BIM structural-corner snap (priority -2 — highest structural
+    // precision) for ALL BIM entities, sourced from the bim-characteristic-points SSoT.
+    this.engines.set(
+      ExtendedSnapType.BIM_CORNER,
+      new BimCharacteristicSnapEngine(ExtendedSnapType.BIM_CORNER, 'corner', SNAP_ENGINE_PRIORITIES.BIM_CORNER),
+    );
+    // ADR-370: generic BIM edge/axis midpoint + centroid snaps (same engine, other categories).
+    this.engines.set(
+      ExtendedSnapType.BIM_MIDPOINT,
+      new BimCharacteristicSnapEngine(ExtendedSnapType.BIM_MIDPOINT, 'midpoint', SNAP_ENGINE_PRIORITIES.BIM_MIDPOINT),
+    );
+    this.engines.set(
+      ExtendedSnapType.BIM_CENTER,
+      new BimCharacteristicSnapEngine(ExtendedSnapType.BIM_CENTER, 'center', SNAP_ENGINE_PRIORITIES.BIM_CENTER),
+    );
     // ADR-363 Φ1G.5 Slice 2i: wall FACE line snap (face-to-face magnetism, priority -1.8)
     this.engines.set(ExtendedSnapType.BIM_WALL_FACE,      new WallFaceSnapEngine());
-    this.engines.set(ExtendedSnapType.BIM_BEAM_CORNER,    new BeamCornerSnapEngine());
-    this.engines.set(ExtendedSnapType.BIM_SLAB_CORNER,    new SlabCornerSnapEngine());
-    this.engines.set(ExtendedSnapType.BIM_COLUMN_CORNER,  new ColumnCornerSnapEngine());
-    this.engines.set(ExtendedSnapType.BIM_OPENING_CORNER, new OpeningCornerSnapEngine());
     // ADR-408 Φ9: MEP connector attach point (priority -1.5 — above endpoint/column centre)
     this.engines.set(ExtendedSnapType.BIM_MEP_CONNECTOR, new MepConnectorSnapEngine());
     // ADR-378 Phase 3: TEXT/MTEXT 8-point snap (insertion + corners + center + edges)

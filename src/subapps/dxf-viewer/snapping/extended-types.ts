@@ -42,12 +42,13 @@ export enum ExtendedSnapType {
   DIM_DEF_POINT = 'dim_def_point',  // ADR-362 I1: snap to dimension def points (AutoCAD DIMSNAP)
   DIM_LINE = 'dim_line',            // ADR-362 I1: snap to dimension line for baseline/continued chains
   BIM_COLUMN_CENTER  = 'bim_column_center',   // ADR-363 Phase 5.5i: structural column center-axis snap
-  BIM_WALL_CORNER    = 'bim_wall_corner',    // ADR-370: wall face corner (outer/inner edge)
+  // ADR-370: ONE generic BIM structural corner snap (wall/beam/slab/column/opening +
+  // foundation/centred-box…). Replaces the 5 per-entity BIM_*_CORNER types — the
+  // per-entity label («Γωνία τοίχου»/«δοκαριού») comes from the candidate `description`.
+  BIM_CORNER         = 'bim_corner',
+  BIM_MIDPOINT       = 'bim_midpoint',        // ADR-370: generic BIM edge/axis midpoint («Μέσο τοίχου»…)
+  BIM_CENTER         = 'bim_center',          // ADR-370: generic BIM centroid («Κέντρο πλάκας»…)
   BIM_WALL_FACE      = 'bim_wall_face',       // ADR-363 Φ1G.5 Slice 2i: wall outer/inner FACE line (face-to-face magnetism)
-  BIM_BEAM_CORNER    = 'bim_beam_corner',    // ADR-370: beam outline corner
-  BIM_SLAB_CORNER    = 'bim_slab_corner',    // ADR-370: slab polygon vertex
-  BIM_COLUMN_CORNER  = 'bim_column_corner',  // ADR-370: column perimeter corner
-  BIM_OPENING_CORNER = 'bim_opening_corner', // ADR-370: opening (door/window) face corner
   BIM_MEP_CONNECTOR  = 'bim_mep_connector',  // ADR-408 Φ9: MEP connector attach point (segment endpoints / fixture / panel)
   TEXT               = 'text',                // ADR-378 Phase 3: TEXT/MTEXT 8-point snap (insertion + 4 corners + center + 2 edge mids)
   ROTATION_PIVOT     = 'rotation_pivot',      // ADR-397: rotation centre ⊙ snap (active only during a rotation op)
@@ -134,12 +135,10 @@ export const DEFAULT_PRO_SNAP_SETTINGS: ProSnapSettings = {
     ExtendedSnapType.DIM_DEF_POINT,     // ADR-362 I1: dimension def point snap
     ExtendedSnapType.DIM_LINE,          // ADR-362 I1: dimension line snap
     ExtendedSnapType.BIM_COLUMN_CENTER,   // ADR-363 Phase 5.5i: column center axis snap
-    ExtendedSnapType.BIM_WALL_CORNER,     // ADR-370: wall face corner
+    ExtendedSnapType.BIM_CORNER,          // ADR-370: generic BIM structural corner (all entities)
+    ExtendedSnapType.BIM_MIDPOINT,        // ADR-370: generic BIM edge/axis midpoint (all entities)
+    ExtendedSnapType.BIM_CENTER,          // ADR-370: generic BIM centroid (area entities)
     ExtendedSnapType.BIM_WALL_FACE,       // ADR-363 Φ1G.5 Slice 2i: wall face line (face magnetism)
-    ExtendedSnapType.BIM_BEAM_CORNER,     // ADR-370: beam outline corner
-    ExtendedSnapType.BIM_SLAB_CORNER,     // ADR-370: slab polygon vertex
-    ExtendedSnapType.BIM_COLUMN_CORNER,   // ADR-370: column perimeter corner
-    ExtendedSnapType.BIM_OPENING_CORNER,  // ADR-370: opening face corner
     ExtendedSnapType.BIM_MEP_CONNECTOR,   // ADR-408 Φ9: MEP connector attach point
     ExtendedSnapType.TEXT,                // ADR-378 Phase 3: TEXT/MTEXT 8-point snap
     ExtendedSnapType.ROTATION_PIVOT,      // ADR-397: rotation centre snap (contextual — store empty when idle)
@@ -149,19 +148,17 @@ export const DEFAULT_PRO_SNAP_SETTINGS: ProSnapSettings = {
   showSnapTooltips: true,
   priority: [
     ExtendedSnapType.ROTATION_PIVOT,      // ADR-397: rotation centre — highest precision while rotating
-    ExtendedSnapType.BIM_WALL_CORNER,     // ADR-370: face corners — highest structural precision
-    ExtendedSnapType.BIM_BEAM_CORNER,     // ADR-370
-    ExtendedSnapType.BIM_SLAB_CORNER,     // ADR-370
-    ExtendedSnapType.BIM_COLUMN_CORNER,   // ADR-370
-    ExtendedSnapType.BIM_OPENING_CORNER,  // ADR-370
+    ExtendedSnapType.BIM_CORNER,          // ADR-370: BIM structural corners — highest structural precision
     ExtendedSnapType.BIM_MEP_CONNECTOR,   // ADR-408 Φ9: MEP attach point — before column centre & endpoint
     ExtendedSnapType.BIM_COLUMN_CENTER,   // ADR-363 Phase 5.5i: structural precision — before generic endpoint
     ExtendedSnapType.INTERSECTION,
     ExtendedSnapType.ENDPOINT,
     ExtendedSnapType.ROTATION_GRIP,       // ADR-397: rotating entity grips — endpoint tier
+    ExtendedSnapType.BIM_MIDPOINT,        // ADR-370: BIM edge/axis midpoint — before generic MIDPOINT
     ExtendedSnapType.MIDPOINT,
     ExtendedSnapType.INSERTION,           // ADR-378 §5: priority 2 — before TEXT (also 2)
     ExtendedSnapType.TEXT,                // ADR-378 Phase 3: text 8-point snap — priority 2 (after INSERTION)
+    ExtendedSnapType.BIM_CENTER,          // ADR-370: BIM centroid — before generic CENTER
     ExtendedSnapType.CENTER,
     ExtendedSnapType.PERPENDICULAR,
     ExtendedSnapType.TANGENT,
@@ -200,12 +197,10 @@ export const DEFAULT_PRO_SNAP_SETTINGS: ProSnapSettings = {
     [ExtendedSnapType.DIM_DEF_POINT]: 10,      // ADR-362 I1: exact definition point — AutoCAD APERTURE default
     [ExtendedSnapType.DIM_LINE]: 10,            // ADR-362 I1: dim line reference point
     [ExtendedSnapType.BIM_COLUMN_CENTER]:   10, // ADR-363 Phase 5.5i: column center axis snap
-    [ExtendedSnapType.BIM_WALL_CORNER]:     10, // ADR-370
+    [ExtendedSnapType.BIM_CORNER]:          10, // ADR-370: generic BIM structural corner
+    [ExtendedSnapType.BIM_MIDPOINT]:        10, // ADR-370: generic BIM edge/axis midpoint
+    [ExtendedSnapType.BIM_CENTER]:          10, // ADR-370: generic BIM centroid
     [ExtendedSnapType.BIM_WALL_FACE]:       30, // ADR-363 Φ1G.5 Slice 2i/2j: wall face line (2j: strong diagnostic pull, Giorgio)
-    [ExtendedSnapType.BIM_BEAM_CORNER]:     10, // ADR-370
-    [ExtendedSnapType.BIM_SLAB_CORNER]:     10, // ADR-370
-    [ExtendedSnapType.BIM_COLUMN_CORNER]:   10, // ADR-370
-    [ExtendedSnapType.BIM_OPENING_CORNER]:  10, // ADR-370
     [ExtendedSnapType.BIM_MEP_CONNECTOR]:   10, // ADR-408 Φ9: MEP connector attach point
     [ExtendedSnapType.TEXT]:                10, // ADR-378 Phase 3: text 8-point snap (insertion/corners/center/edges)
     [ExtendedSnapType.ROTATION_PIVOT]:      12, // ADR-397: rotation centre — wide grab (easy magnetism to ⊙)

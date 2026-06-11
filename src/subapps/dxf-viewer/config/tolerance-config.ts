@@ -468,12 +468,12 @@ export const SNAP_ENGINE_PRIORITIES = {
    *  hidden centreline. Kept low-priority on purpose: zero regression to other tools (the wall-move
    *  flush still works because that path picks by distance across multi-grab probes). */
   BIM_WALL_FACE:      9.5,
-  /** ADR-370: BIM face corner snaps — highest structural precision, supersedes BIM_COLUMN_CENTER */
-  BIM_WALL_CORNER:    -2,
-  BIM_BEAM_CORNER:    -2,
-  BIM_SLAB_CORNER:    -2,
-  BIM_COLUMN_CORNER:  -2,
-  BIM_OPENING_CORNER: -2,
+  /** ADR-370: generic BIM structural corner snap — highest structural precision, supersedes BIM_COLUMN_CENTER */
+  BIM_CORNER:         -2,
+  /** ADR-370: generic BIM edge/axis midpoint — above generic MIDPOINT (1), below endpoints/corners */
+  BIM_MIDPOINT:       0.5,
+  /** ADR-370: generic BIM centroid — above generic CENTER (3) */
+  BIM_CENTER:         2.5,
   /** ADR-378 Phase 3: TEXT/MTEXT 8-point snap (insertion + 4 corners + center + 2 edge mids) — same tier as INSERTION */
   TEXT: 2,
   /** ADR-397: rotation centre ⊙ — highest precision while rotating (beats BIM face corners) */

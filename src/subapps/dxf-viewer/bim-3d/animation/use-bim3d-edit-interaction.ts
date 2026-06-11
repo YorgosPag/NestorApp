@@ -29,7 +29,7 @@ import { TempWallMoveDimOverlay } from '../placement/TempWallMoveDimOverlay';
 import { TempAlignmentLineOverlay } from '../placement/TempAlignmentLineOverlay';
 import { TempSnapLabelOverlay } from '../placement/TempSnapLabelOverlay';
 // ADR-363 Φ1G.5 Slice 2i — snap description/type → i18n label key (SSoT shared with 2D indicator).
-import { resolveSnapLabelKey } from '../../snapping/snap-description-keys';
+import { resolveSnapLabelText } from '../../snapping/snap-description-keys';
 import type { ExtendedSnapType } from '../../snapping/extended-types';
 import {
   useBim3DEditStore,
@@ -79,7 +79,8 @@ export function useBim3DEditInteraction({ managerRef, canvasEl }: UseBim3DEditIn
     const snapLabel = new TempSnapLabelOverlay(manager.scene);
     const resolveSnapLabel = (type?: string, description?: string): string => {
       if (!type && !description) return '';
-      return tRef.current(resolveSnapLabelKey((type ?? '') as ExtendedSnapType, description));
+      // ADR-370: composition-aware (BIM characteristic-point «Γωνία/Μέσο/Κέντρο X» labels).
+      return resolveSnapLabelText(tRef.current, (type ?? '') as ExtendedSnapType, description);
     };
     const ctx: EditInteractionCtx = {
       manager, canvasEl, overlay, controller, preview, wallMoveDim, alignmentLine,

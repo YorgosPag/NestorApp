@@ -1,6 +1,9 @@
 # Pending Ratchet Work — Live Checklist
 
 **STATUS: ACTIVE**
+
+**ADR-370 BIM corner-snap 5→1 consolidation (2026-06-11, Opus 4.8) — ✅ DONE (large-duplicate closed):** τα 5 σχεδόν-πανομοιότυπα `{Wall,Beam,Slab,Column,Opening}CornerSnapEngine` (97% structural duplicate) **ενοποιήθηκαν** σε 1 generic `BimCharacteristicSnapEngine` πάνω σε NEW `bim/utils/bim-characteristic-points.ts` SSoT dispatcher (corner+midpoint+center για ΟΛΕΣ τις BIM οντότητες, reuse υπάρχουσα γεωμετρία). 5 engine files + 5 tests διαγράφηκαν. **DEFER (residual duplicate, low):** ο `ColumnCenterSnapEngine` (BIM_COLUMN_CENTER) ΔΕΝ έγινε ακόμα collapse στο generic `BIM_CENTER` — προς το παρόν το column center το χειρίζεται ο legacy engine (dispatcher `columnPoints.center=null` για αποφυγή διπλού candidate). Full collapse = όταν επιβεβαιωθεί browser parity· χαμηλό ρίσκο, μηχανικό. 🔴 browser-verify + commit pending (Giorgio).
+
 **ADR-418 deferred (2026-06-05, Opus 4.8) — view-scale SSoT follow-ups (low priority, migrate-on-touch):**
 - (a) **DPI centralization:** ~9 BIM lineweight renderers pass `dpi: 96` inline to `lineweightToPx()` (`WallRenderer/StairRenderer/SlabRenderer/SlabOpeningRenderer/OpeningRenderer/ColumnRenderer/BeamRenderer` + `bim-line-weight-resolver.ts` + `bim-3d/converters/wall-opening-extrude.ts`). Migrate to `SCREEN_DPI` from NEW `config/dpi-config.ts` (ADR-418). Fix when next touching each renderer.
 - (b) **`useCurrentSceneModel` relocation:** lives in `ui/text-toolbar/hooks/` but is a generic current-scene selector (ADR-344) now consumed by `systems/zoom/hooks/useViewScale.ts` (cross-feature import). Consider relocating to `systems/levels/` as the canonical selector.

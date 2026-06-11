@@ -23,7 +23,7 @@
  *
  * @see ../../bim/mep-segments/mep-segment-connectors.ts — segment endpoint resolver
  * @see ../../bim/types/mep-connector-types.ts — connectorWorldPosition (point hosts)
- * @see ../engines/WallCornerSnapEngine.ts — pattern reference (ADR-370)
+ * @see ../engines/BimCharacteristicSnapEngine.ts — pattern reference (ADR-370)
  * @see canvas-v2/overlays/SnapIndicatorOverlay.tsx — ◇ visual + i18n label
  */
 

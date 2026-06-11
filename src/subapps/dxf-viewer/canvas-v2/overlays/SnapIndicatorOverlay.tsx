@@ -26,7 +26,7 @@ import {
 } from '../../rendering/ui/snap/snap-icon-config';
 
 // ADR-363 Phase A + 5.5i + ADR-370 + Slice 2i: BIM description → i18n key (SSoT).
-import { BIM_SNAP_DESCRIPTION_KEY as BIM_DESCRIPTION_KEY } from '../../snapping/snap-description-keys';
+import { resolveBimSnapLabelText } from '../../snapping/snap-description-keys';
 
 interface SnapResult {
   point: Point2D;
@@ -196,9 +196,10 @@ function SnapShape({ type, color }: { type: string; color: string }) {
         </svg>
       );
 
-    // ⊕ BIM_COLUMN_CENTER: Circle + crosshair — structural column axis (ADR-363 Phase 5.5i)
-    // Revit/Tekla plan-view convention: column shown as circle with center cross.
+    // ⊕ BIM_COLUMN_CENTER + BIM_CENTER: Circle + crosshair — structural axis / centroid.
+    // Revit/Tekla plan-view convention: center shown as circle with cross (ADR-363/ADR-370).
     case 'bim_column_center':
+    case 'bim_center':
       return (
         <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
           <circle
@@ -214,13 +215,11 @@ function SnapShape({ type, color }: { type: string; color: string }) {
         </svg>
       );
 
-    // ┘ BIM_CORNER: L-bracket — ADR-370 BIM face-corner snap (wall/beam/slab/column/opening)
+    // ┘ BIM_CORNER: L-bracket — ADR-370 generic BIM structural-corner snap (one glyph for
+    // wall/beam/slab/column/opening/foundation/…). The per-entity label comes from the
+    // candidate description; «περίεργα σχήματα» emit no description → glyph ΧΩΡΙΣ text.
     // Industry convention: right-angle bracket at corner indicates structural face corner.
-    case 'bim_wall_corner':
-    case 'bim_beam_corner':
-    case 'bim_slab_corner':
-    case 'bim_column_corner':
-    case 'bim_opening_corner':
+    case 'bim_corner':
       return (
         <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
           <polyline
@@ -229,6 +228,22 @@ function SnapShape({ type, color }: { type: string; color: string }) {
             stroke={color}
             strokeWidth={strokeWidth}
             strokeLinecap="square"
+            strokeLinejoin="miter"
+          />
+        </svg>
+      );
+
+    // ▲ BIM_MIDPOINT: Filled triangle — ADR-370 BIM edge/axis midpoint («Μέσο τοίχου»…).
+    // Distinct from the generic △ midpoint (outline) — a filled triangle reads as
+    // "structural BIM midpoint", mirroring the ┘ corner / ⊕ centre BIM family.
+    case 'bim_midpoint':
+      return (
+        <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
+          <polygon
+            points={`${half},${strokeWidth} ${size - strokeWidth},${size - strokeWidth} ${strokeWidth},${size - strokeWidth}`}
+            fill={color}
+            stroke={color}
+            strokeWidth={strokeWidth}
             strokeLinejoin="miter"
           />
         </svg>
@@ -353,8 +368,9 @@ export default function SnapIndicatorOverlay({
   if (snapResult.type === 'grid') return null;
 
   const { point, type, description } = snapResult;
-  const bimLabelKey = description ? BIM_DESCRIPTION_KEY[description] : undefined;
-  const bimLabel = bimLabelKey ? t(bimLabelKey) : undefined;
+  // ADR-370: BIM label = «Γωνία/Μέσο/Κέντρο» + entity noun (composition), or null for
+  // «περίεργα σχήματα» (empty description) → glyph WITHOUT text (req #4).
+  const bimLabel = resolveBimSnapLabelText(t, description) ?? undefined;
   const snapColor = canvasUI.overlay.colors.snap.border;
 
   // 🏢 ENTERPRISE (2026-02-17): Convert world coordinates → screen coordinates

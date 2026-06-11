@@ -42,11 +42,11 @@ const SNAP_MODE_KEYS: Record<ExtendedSnapType, string> = {
   [ExtendedSnapType.DIM_LINE]: 'dimLine',           // ADR-362 I1
   // ADR-363 Phase 5.5i + ADR-370: BIM structural snaps — nested i18n path
   [ExtendedSnapType.BIM_COLUMN_CENTER]:  'bim.columnAxis',
-  [ExtendedSnapType.BIM_WALL_CORNER]:    'bim.wallCorner',
-  [ExtendedSnapType.BIM_BEAM_CORNER]:    'bim.beamCorner',
-  [ExtendedSnapType.BIM_SLAB_CORNER]:    'bim.slabCorner',
-  [ExtendedSnapType.BIM_COLUMN_CORNER]:  'bim.columnCorner',
-  [ExtendedSnapType.BIM_OPENING_CORNER]: 'bim.openingCorner',
+  // ADR-370: generic BIM characteristic-point toggles (per-entity label «Γωνία/Μέσο/Κέντρο
+  // τοίχου…» comes from the candidate description, not the toolbar toggle).
+  [ExtendedSnapType.BIM_CORNER]:         'bim.corner',
+  [ExtendedSnapType.BIM_MIDPOINT]:       'bim.midpoint',
+  [ExtendedSnapType.BIM_CENTER]:         'bim.center',
   // ADR-363 Slice 2i: wall face-to-face magnetism snap — nested i18n path
   [ExtendedSnapType.BIM_WALL_FACE]:      'bim.wallFace',
   // ADR-408 Φ9: MEP connector attach-point snap — nested i18n path
@@ -134,12 +134,9 @@ const ADVANCED_MODES = [
 // Shown in the advanced panel when at least one BIM entity exists on the canvas.
 const BIM_MODES = [
   ExtendedSnapType.BIM_COLUMN_CENTER,
-  ExtendedSnapType.BIM_WALL_CORNER,
-  ExtendedSnapType.BIM_BEAM_CORNER,
-  ExtendedSnapType.BIM_SLAB_CORNER,
-  ExtendedSnapType.BIM_COLUMN_CORNER,
-  ExtendedSnapType.BIM_OPENING_CORNER,
   ExtendedSnapType.BIM_MEP_CONNECTOR, // ADR-408 Φ9: MEP connector attach point
+  // ADR-370: BIM_CORNER / BIM_MIDPOINT / BIM_CENTER are always-on structural snaps
+  // (force-enabled with OSNAP, no per-mode toggle) — see SnapContext.ALWAYS_ON_BIM_SNAPS.
 ];
 
 interface ProSnapToolbarProps {

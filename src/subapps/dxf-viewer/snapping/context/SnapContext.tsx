@@ -37,19 +37,24 @@ const ALL_MODES: ExtendedSnapType[] = [
   // ADR-362: Dimension snap types
   ExtendedSnapType.DIM_DEF_POINT,
   ExtendedSnapType.DIM_LINE,
-  // ADR-371: BIM corner snap types
+  // ADR-363 Phase 5.5i: column center axis snap
   ExtendedSnapType.BIM_COLUMN_CENTER,
-  ExtendedSnapType.BIM_WALL_CORNER,
-  ExtendedSnapType.BIM_BEAM_CORNER,
-  ExtendedSnapType.BIM_SLAB_CORNER,
-  ExtendedSnapType.BIM_COLUMN_CORNER,
-  ExtendedSnapType.BIM_OPENING_CORNER,
   // ADR-408 Φ9: MEP connector attach-point snap
   ExtendedSnapType.BIM_MEP_CONNECTOR,
-  // NOTE: ROTATION_PIVOT / ROTATION_GRIP (ADR-397) are intentionally NOT in
-  // ALL_MODES — they are contextual snaps force-enabled with the global OSNAP
-  // toggle (see `enabledModes` below), so they bypass per-mode persistence/UI and
-  // work for existing users without a stored activeTypes entry.
+  // NOTE: ROTATION_PIVOT / ROTATION_GRIP (ADR-397) and BIM_CORNER / BIM_MIDPOINT /
+  // BIM_CENTER (ADR-370) are intentionally NOT in ALL_MODES — they are always-on
+  // structural snaps force-enabled with the global OSNAP toggle (see `enabledModes`
+  // below), so they bypass per-mode persistence and CANNOT silently vanish for existing
+  // users when a new snap id ships (Revit treats structural snaps as always available).
+];
+
+// ADR-370 — the generic BIM characteristic-point snaps (BIM_CORNER / BIM_MIDPOINT /
+// BIM_CENTER) are always-on: force-enabled in `enabledModes` with the OSNAP toggle, NOT
+// persisted per-mode. This is the rotation-snap pattern (ADR-397) and the definitive fix
+// for "structural snaps vanish for existing users" — a stored blob can never disable a
+// snap id it predates, because these ids are never read from / written to the blob.
+const ALWAYS_ON_BIM_SNAPS = [
+  ExtendedSnapType.BIM_CORNER, ExtendedSnapType.BIM_MIDPOINT, ExtendedSnapType.BIM_CENTER,
 ];
 
 interface SnapContextType {
@@ -86,12 +91,8 @@ export const SnapProvider: React.FC<SnapProviderProps> = ({ children }) => {
         type === ExtendedSnapType.DIM_DEF_POINT ||
         type === ExtendedSnapType.DIM_LINE ||
         type === ExtendedSnapType.BIM_COLUMN_CENTER ||
-        type === ExtendedSnapType.BIM_WALL_CORNER ||
-        type === ExtendedSnapType.BIM_BEAM_CORNER ||
-        type === ExtendedSnapType.BIM_SLAB_CORNER ||
-        type === ExtendedSnapType.BIM_COLUMN_CORNER ||
-        type === ExtendedSnapType.BIM_OPENING_CORNER ||
         type === ExtendedSnapType.BIM_MEP_CONNECTOR // ADR-408 Φ9: enabled by default
+        // ADR-370 BIM_CORNER/MIDPOINT/CENTER are always-on (force-enabled in enabledModes)
       );
     });
     return initialState;
@@ -116,6 +117,9 @@ export const SnapProvider: React.FC<SnapProviderProps> = ({ children }) => {
       // accidentally turned off (it has no toolbar button).
       modes.add(ExtendedSnapType.ROTATION_PIVOT);
       modes.add(ExtendedSnapType.ROTATION_GRIP);
+      // ADR-370: BIM characteristic-point snaps are always-on structural snaps (same
+      // pattern) — force-enabled so they never depend on a stored per-mode preference.
+      for (const t of ALWAYS_ON_BIM_SNAPS) modes.add(t);
     }
     return modes;
   }, [snapState, snapEnabled]);
