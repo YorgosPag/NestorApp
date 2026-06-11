@@ -180,8 +180,10 @@ export interface ScheduleLookups {
   readonly floorFinish: FloorFinishLookup;
   /** ADR-369 §9.2 Q2.4 — resolves building name for BOQ group-by-building. Optional. */
   readonly building?: BuildingLookup;
-  /** ADR-376 C.3 — Translates raw opening kind enum to display label. Optional. */
+  /** ADR-376 C.3 — Translates raw kind enum (opening/wall/column/…) to display label. Optional. */
   readonly translateKind?: (kind: string) => string;
+  /** ADR-363 §6 Phase 8 — translates raw entity `type` (wall/opening/…) to a singular Greek label. Optional. */
+  readonly translateType?: (type: string) => string;
 }
 
 // ─── Schedule config (what to build) ─────────────────────────────────────────

@@ -36,6 +36,7 @@ import type { FoundationEntity } from '../types/foundation-types';
 import {
   resolveAtoeMapping,
   resolveStairComponentMapping,
+  resolveFoundationMapping,
   deriveAtoeQuantity,
   type BimEntityType,
 } from '../config/bim-to-atoe-mapping';
@@ -190,7 +191,7 @@ function mapWall(entity: AnyBimEntity, lookups: ScheduleLookups): ScheduleRow['c
     buildingName: lookups.building?.(entity.buildingId)?.name ?? null,
     floor: lookups.floor(entity.floorId),
     category: p.category,
-    kind: entity.kind,
+    kind: lookups.translateKind ? lookups.translateKind(entity.kind) : entity.kind,
     length: safeNumber(g.length),
     thickness: safeNumber(p.thickness),
     height: safeNumber(p.height),
@@ -217,7 +218,7 @@ function mapSlab(entity: AnyBimEntity, lookups: ScheduleLookups): ScheduleRow['c
     id: entity.id,
     buildingName: lookups.building?.(entity.buildingId)?.name ?? null,
     floor: lookups.floor(entity.floorId),
-    kind: entity.kind,
+    kind: lookups.translateKind ? lookups.translateKind(entity.kind) : entity.kind,
     elevation: safeNumber(p.levelElevation),
     tosElevation,
     thickness: safeNumber(p.thickness),
@@ -240,7 +241,7 @@ function mapColumn(entity: AnyBimEntity, lookups: ScheduleLookups): ScheduleRow[
     id: entity.id,
     buildingName: lookups.building?.(entity.buildingId)?.name ?? null,
     floor: lookups.floor(entity.floorId),
-    kind: entity.kind,
+    kind: lookups.translateKind ? lookups.translateKind(entity.kind) : entity.kind,
     width: safeNumber(p.width),
     depth: safeNumber(p.depth),
     height: safeNumber(p.height),
@@ -261,7 +262,7 @@ function mapBeam(entity: AnyBimEntity, lookups: ScheduleLookups): ScheduleRow['c
     id: entity.id,
     buildingName: lookups.building?.(entity.buildingId)?.name ?? null,
     floor: lookups.floor(entity.floorId),
-    kind: entity.kind,
+    kind: lookups.translateKind ? lookups.translateKind(entity.kind) : entity.kind,
     length: safeNumber(g.length),
     width: safeNumber(p.width),
     depth: safeNumber(p.depth),
@@ -281,7 +282,7 @@ function mapStair(entity: AnyBimEntity, lookups: ScheduleLookups): ScheduleRow['
   return {
     id: entity.id,
     floor: lookups.floor(entity.floorId),
-    kind: entity.kind,
+    kind: lookups.translateKind ? lookups.translateKind(entity.kind) : entity.kind,
     stepCount: safeNumber(p.stepCount),
     rise: safeNumber(p.rise),
     tread: safeNumber(p.tread),
@@ -302,7 +303,7 @@ function mapSlabOpening(entity: AnyBimEntity, lookups: ScheduleLookups): Schedul
   return {
     id: entity.id,
     floor: lookups.floor(entity.floorId),
-    kind: entity.kind,
+    kind: lookups.translateKind ? lookups.translateKind(entity.kind) : entity.kind,
     area: safeNumber(g.area),
     perimeter: safeNumber(g.perimeter),
     fireRating: safeNumber(p.fireRating),
@@ -327,7 +328,7 @@ function mapFoundation(entity: AnyBimEntity, lookups: ScheduleLookups): Schedule
     id: entity.id,
     buildingName: lookups.building?.(entity.buildingId)?.name ?? null,
     floor: lookups.floor(entity.floorId),
-    kind: entity.kind,
+    kind: lookups.translateKind ? lookups.translateKind(entity.kind) : entity.kind,
     width: safeNumber(p.width),
     length: safeNumber('length' in p ? p.length : null),
     thickness: safeNumber(p.thicknessMm),
@@ -340,7 +341,7 @@ function mapFoundation(entity: AnyBimEntity, lookups: ScheduleLookups): Schedule
 
 // ─── Combined preset (cross-type geometry-derived roll-up) ───────────────────
 
-/** Entity types covered by the kind-dispatched ΑΤΟΕ table (stair + slab-opening excluded). */
+/** Entity types covered by the kind-dispatched ΑΤΟΕ table (stair + foundation handled separately). */
 const COMBINED_ATOE_TYPES: ReadonlySet<string> = new Set(['wall', 'opening', 'slab', 'column', 'beam', 'railing']);
 
 interface CombinedPrimaryQuantity {
@@ -364,6 +365,14 @@ function combinedPrimary(entity: AnyBimEntity): CombinedPrimaryQuantity {
       return { quantity: q.concreteVolumeM3, unit: 'm3', atoeCategory: resolveStairComponentMapping('concrete').categoryCode };
     }
     return { quantity: q.treadCladdingAreaM2, unit: 'm2', atoeCategory: resolveStairComponentMapping('cladding').categoryCode };
+  }
+  // ADR-441 — foundation: ΑΤΟΕ εκτός του BimEntityType table (δικό της resolver).
+  // Όγκος (m³) = NET geometry (μέσω applyFoundationGridNet για grid strips).
+  if (entity.type === 'foundation') {
+    const mapping = resolveFoundationMapping(entity.kind);
+    if (!mapping) return { quantity: 0, unit: null, atoeCategory: null };
+    const geometry = entity.geometry as { area?: number; volume?: number; lengthM?: number } | undefined;
+    return { quantity: deriveAtoeQuantity(mapping.unit, geometry), unit: mapping.unit, atoeCategory: mapping.categoryCode };
   }
   if (!COMBINED_ATOE_TYPES.has(entity.type)) {
     return { quantity: 0, unit: null, atoeCategory: null };
@@ -394,8 +403,8 @@ function mapCombined(entity: AnyBimEntity, lookups: ScheduleLookups): ScheduleRo
   return {
     id: entity.id,
     buildingName: lookups.building?.(entity.buildingId)?.name ?? null,
-    type: entity.type,
-    kind: entity.kind,
+    type: lookups.translateType ? lookups.translateType(entity.type) : entity.type,
+    kind: lookups.translateKind ? lookups.translateKind(entity.kind) : entity.kind,
     floor: lookups.floor(entity.floorId),
     primaryQuantity: safeNumber(primary.quantity),
     primaryUnit: primary.unit,

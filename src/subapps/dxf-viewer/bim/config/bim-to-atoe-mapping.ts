@@ -15,6 +15,7 @@ import type { OpeningKind } from '../types/opening-types';
 import type { SlabKind } from '../types/slab-types';
 import type { ColumnKind } from '../types/column-types';
 import type { BeamKind } from '../types/beam-types';
+import type { FoundationKind } from '../types/foundation-types';
 import type { RailingKind } from '../types/railing-types';
 import type { FurnitureKind } from '../types/furniture-types';
 import type { RoofKind } from '../types/roof-types';
@@ -127,6 +128,17 @@ const BEAM_MAPPING: Readonly<Record<BeamKind, AtoeMappingEntry>> = {
   straight:    { categoryCode: 'OIK-2.04', unit: 'm3', titleEL: 'Δοκός RC ευθύγραμμη (BIM)' },
   curved:      { categoryCode: 'OIK-2.04', unit: 'm3', titleEL: 'Δοκός RC καμπύλη (BIM)' },
   cantilever:  { categoryCode: 'OIK-2.04', unit: 'm3', titleEL: 'Πρόβολος RC (BIM)' },
+};
+
+/**
+ * ADR-441 — θεμελίωση RC (m³). Πέδιλο/πεδιλοδοκός → OIK-2.02 (θεμελιώσεις)·
+ * συνδετήρια δοκός → OIK-2.04 (δοκοί), όπως η υπέργεια δοκός. Όγκος = NET (μέσω
+ * `applyFoundationGridNet` για grid strips) ώστε να μη διπλομετρώνται οι κόμβοι.
+ */
+const FOUNDATION_MAPPING: Readonly<Record<FoundationKind, AtoeMappingEntry>> = {
+  pad:        { categoryCode: 'OIK-2.02', unit: 'm3', titleEL: 'Πέδιλο RC (BIM)' },
+  strip:      { categoryCode: 'OIK-2.02', unit: 'm3', titleEL: 'Πεδιλοδοκός RC (BIM)' },
+  'tie-beam': { categoryCode: 'OIK-2.04', unit: 'm3', titleEL: 'Συνδετήρια δοκός RC (BIM)' },
 };
 
 /**
@@ -315,6 +327,16 @@ export function resolveAtoeMapping(
 
   const typeMap = BIM_TO_ATOE_MAPPING[entityType] as Readonly<Record<string, AtoeMappingEntry>>;
   return typeMap?.[kind] ?? null;
+}
+
+/**
+ * ADR-441 — foundation ΑΤΟΕ mapping. Κρατιέται ΕΚΤΟΣ του `BimEntityType`
+ * bridge-contract (η θεμελίωση τροφοδοτεί BOQ μέσω δικού της path
+ * `foundation-grid-boq.ts`, όχι μέσω `BimToBoqBridge`). Χρησιμοποιείται από το
+ * combined schedule preset για την κύρια ποσότητα (όγκος m³).
+ */
+export function resolveFoundationMapping(kind: FoundationKind): AtoeMappingEntry | null {
+  return FOUNDATION_MAPPING[kind] ?? null;
 }
 
 /**

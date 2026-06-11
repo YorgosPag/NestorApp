@@ -112,7 +112,16 @@ export function buildSchedule(
   );
   const survivors = candidates.filter((e) => survivorIds.has(e.id));
 
-  const rows = survivors.map((e) => buildRow(e, config.entityType, lookups, preset.map));
+  // ADR-363 §6 Phase 8 — «Κωδικός» = αναγνώσιμη σήμανση «<Τύπος> <αύξων>» ανά τύπο
+  // (Revit auto-mark), αντί για raw GUID. Το πλήρες id μένει στο `row.entityId`.
+  const typeCounters = new Map<string, number>();
+  const rows = survivors.map((e) => {
+    const row = buildRow(e, config.entityType, lookups, preset.map);
+    const n = (typeCounters.get(e.type) ?? 0) + 1;
+    typeCounters.set(e.type, n);
+    const typeLabel = lookups.translateType ? lookups.translateType(e.type) : e.type;
+    return { ...row, cells: { ...row.cells, id: `${typeLabel} ${n}` } };
+  });
 
   if (config.groupByBuilding === true) {
     rows.sort((a, b) => compareByLocale(a.buildingId ?? '', b.buildingId ?? ''));

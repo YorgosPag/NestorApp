@@ -3009,6 +3009,24 @@ M1–M7 έχτισαν την οθόνη αλλά την άφησαν **dormant*
 - ADR-441 Slice 4: η θεμελίωση είναι πλέον **ορατή** στον πίνακα με net όγκο εσχάρας
   (`applyFoundationGridNet`, ήδη μέσα στο dialog useMemo).
 
+**Phase 8 CONTENT — Revit-grade παρουσίαση (2026-06-11)**:
+Browser-review αποκάλυψε ότι το περιεχόμενο δεν ήταν παρουσιάσιμο (GUID, αγγλικά enums,
+θεμελιώσεις 0). Διορθώσεις στο **κοινό schedule SSoT** (τροφοδοτεί και τα exports):
+- **Κωδικός** = σήμανση «<Τύπος> <αύξων>» ανά τύπο (Revit auto-mark) αντί GUID —
+  override `cells.id` στο `schedule-builder.ts` (το πλήρες id μένει στο `row.entityId`).
+- **Τύπος/Είδος** = i18n: νέα sections `typeLabel.*` (singular) + `kind.*` (όλα τα kinds,
+  el+en) στο `dxf-schedule.json`· νέο `translateType` + διευρυμένο `translateKind` στο
+  `ScheduleLookups` (`types.ts`) + `useBimScheduleLookups`· εφαρμογή σε `mapCombined` +
+  per-type mappers (`schedule-presets.ts`).
+- **Θεμελιώσεις στο combined** = NEW `FOUNDATION_MAPPING` (pad/strip→`OIK-2.02`,
+  tie-beam→`OIK-2.04`, m³) + `'foundation'` στο `BimEntityType`/`BIM_TO_ATOE_MAPPING`
+  (`bim-to-atoe-mapping.ts`) + στο `COMBINED_ATOE_TYPES`. Η ποσότητα>0 εξαρτάται από
+  `geometry.volume` (net feed ADR-441 Slice 4).
+- **Όροφος/Κτίριο fallback** = `useBimScheduleLookups`: floor → τρέχον level όταν λείπει
+  `floorId`· building → μοναδικό κτίριο όταν λείπει `buildingId`. (Υλικό = κενό όταν δεν
+  έχει ανατεθεί — γνήσια data.)
+- 119/119 jest (schedule + lookups) + tsc.
+
 ### Phase 9+ — Out of Scope (διατυπώνεται για documentation)
 
 - 3D viewer (Three.js port από genarc) → ίσως `dxf-viewer-3d/` subapp.

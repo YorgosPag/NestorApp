@@ -47,7 +47,7 @@ export interface BimScheduleLookupsResult {
 
 /** Type-safe read ενός string πεδίου από τα ετερογενή `params` ενός entity. */
 function readParam(entity: AnyBimEntity, field: 'material' | 'kind'): string | undefined {
-  const params = entity.params as Readonly<Record<string, unknown>>;
+  const params = entity.params as { material?: unknown; kind?: unknown };
   const value = params[field];
   return typeof value === 'string' && value.length > 0 ? value : undefined;
 }
@@ -55,7 +55,7 @@ function readParam(entity: AnyBimEntity, field: 'material' | 'kind'): string | u
 export function useBimScheduleLookups(
   entities: readonly AnyBimEntity[],
 ): BimScheduleLookupsResult {
-  const { levels } = useLevels();
+  const { levels, currentLevelId } = useLevels();
   const { buildings } = useFirestoreBuildings();
   const { t: tShell } = useTranslation('dxf-viewer-shell');
   const { t: tSchedule } = useTranslation('dxf-schedule');
@@ -74,24 +74,39 @@ export function useBimScheduleLookups(
     [tShell],
   );
 
+  // Όλα τα kinds (όχι μόνο opening) → `dxf-schedule:kind.*`· fallback στο raw enum.
   const translateKind = React.useCallback(
-    (kind: string): string => tSchedule(`openingKind.${kind}`, { defaultValue: kind }),
+    (kind: string): string => tSchedule(`kind.${kind}`, { defaultValue: kind }),
+    [tSchedule],
+  );
+
+  // Singular ελληνικό label τύπου (Τοίχος/Άνοιγμα/…) για τη στήλη «Τύπος» + τη σήμανση «Κωδικός».
+  const translateType = React.useCallback(
+    (type: string): string => tSchedule(`typeLabel.${type}`, { defaultValue: type }),
     [tSchedule],
   );
 
   const lookups = React.useMemo<ScheduleLookups>(
     () => ({
-      floor: (floorId) => (floorId ? (floorNames.get(floorId) ?? floorId) : ''),
+      // Τα entities του τρέχοντος ορόφου συχνά δεν φέρουν floorId → fallback στο τρέχον level
+      // (όλα τα εμφανιζόμενα entities ανήκουν σε αυτό· ο host διαβάζει τη scene του).
+      floor: (floorId) => {
+        const id = floorId ?? currentLevelId ?? undefined;
+        return id ? (floorNames.get(id) ?? floorId ?? '') : '';
+      },
       material: materialLabel,
       floorFinish: () => undefined,
       building: (buildingId): BuildingRef | undefined => {
-        if (!buildingId) return undefined;
-        const b = buildings.find((x) => x.id === buildingId);
+        // Single-building context: τα entities δεν φέρουν buildingId → πέφτουμε στο μοναδικό κτίριο.
+        const id = buildingId ?? (buildings.length === 1 ? buildings[0]?.id : undefined);
+        if (!id) return undefined;
+        const b = buildings.find((x) => x.id === id);
         return b ? { id: b.id, name: b.name } : undefined;
       },
       translateKind,
+      translateType,
     }),
-    [floorNames, materialLabel, buildings, translateKind],
+    [floorNames, currentLevelId, materialLabel, buildings, translateKind, translateType],
   );
 
   const availableFloors = React.useMemo<readonly FilterOption[]>(

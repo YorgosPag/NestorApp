@@ -2,10 +2,10 @@
  * ADR-363 §6 Phase 8 — useBimScheduleLookups SSoT tests.
  *
  * Coverage:
- *  - floor resolver: level name → fallback to id → '' for undefined
- *  - material resolver: construction material → localized label,
- *    non-construction id → raw, undefined → ''
- *  - building resolver: clean BuildingRef → undefined when missing
+ *  - floor resolver: level name → fallback to current level (missing floorId) → ''
+ *  - material resolver: construction material → localized label, others → raw
+ *  - building resolver: explicit id → clean BuildingRef· missing id → single-building fallback
+ *  - translateType / translateKind → dxf-schedule typeLabel.* / kind.*
  *  - availableFloors / availableBuildings mapping
  *  - availableCategories: unique material ids + kinds, deduped, insertion order
  */
@@ -26,10 +26,12 @@ jest.mock('@/hooks/useFirestoreBuildings', () => ({
 }));
 jest.mock('@/i18n/hooks/useTranslation', () => ({
   useTranslation: () => ({
-    t: (key: string, opts?: { defaultValue?: string }) =>
-      key.startsWith('constructionMaterials.')
-        ? `LBL:${key.slice('constructionMaterials.'.length)}`
-        : (opts?.defaultValue ?? key),
+    t: (key: string, opts?: { defaultValue?: string }) => {
+      if (key.startsWith('constructionMaterials.')) return `LBL:${key.slice('constructionMaterials.'.length)}`;
+      if (key.startsWith('kind.')) return `KIND:${key.slice('kind.'.length)}`;
+      if (key.startsWith('typeLabel.')) return `TYPE:${key.slice('typeLabel.'.length)}`;
+      return opts?.defaultValue ?? key;
+    },
   }),
 }));
 jest.mock('../../../bim/materials/construction-materials', () => ({
@@ -48,6 +50,7 @@ const ENTITIES = [
 beforeEach(() => {
   jest.clearAllMocks();
   mockUseLevels.mockReturnValue({
+    currentLevelId: 'L0',
     levels: [
       { id: 'L0', name: 'Ισόγειο' },
       { id: 'L1', name: '1ος όροφος' },
@@ -59,12 +62,17 @@ beforeEach(() => {
 });
 
 describe('useBimScheduleLookups — resolvers', () => {
-  it('floor resolver returns level name, falls back to id, empty for undefined', () => {
+  it('floor resolver returns level name, falls back to current level when floorId missing', () => {
     const { result } = renderHook(() => useBimScheduleLookups(ENTITIES));
     const { floor } = result.current.lookups;
-    expect(floor('L0')).toBe('Ισόγειο');
-    expect(floor('unknown')).toBe('unknown');
-    expect(floor(undefined)).toBe('');
+    expect(floor('L1')).toBe('1ος όροφος');
+    expect(floor(undefined)).toBe('Ισόγειο'); // fallback → currentLevelId 'L0'
+  });
+
+  it('floor resolver returns empty when neither floorId nor current level resolve', () => {
+    mockUseLevels.mockReturnValue({ currentLevelId: null, levels: [] });
+    const { result } = renderHook(() => useBimScheduleLookups(ENTITIES));
+    expect(result.current.lookups.floor(undefined)).toBe('');
   });
 
   it('material resolver localizes construction ids, passes through others', () => {
@@ -75,17 +83,23 @@ describe('useBimScheduleLookups — resolvers', () => {
     expect(material(undefined)).toBe('');
   });
 
-  it('building resolver returns a clean BuildingRef or undefined', () => {
+  it('building resolver returns explicit ref, falls back to single building when id missing', () => {
     const { result } = renderHook(() => useBimScheduleLookups(ENTITIES));
     const { building } = result.current.lookups;
     expect(building?.('b1')).toEqual({ id: 'b1', name: 'Κτήριο Α' });
-    expect(building?.('missing')).toBeUndefined();
-    expect(building?.(undefined)).toBeUndefined();
+    expect(building?.(undefined)).toEqual({ id: 'b1', name: 'Κτήριο Α' }); // single-building fallback
   });
 
-  it('floorFinish resolver is undefined (ToS derivation deferred)', () => {
+  it('building resolver returns undefined when id missing and multiple buildings', () => {
+    mockUseBuildings.mockReturnValue({ buildings: [{ id: 'b1', name: 'Α' }, { id: 'b2', name: 'Β' }] });
     const { result } = renderHook(() => useBimScheduleLookups(ENTITIES));
-    expect(result.current.lookups.floorFinish('L0')).toBeUndefined();
+    expect(result.current.lookups.building?.(undefined)).toBeUndefined();
+  });
+
+  it('translateType / translateKind resolve dxf-schedule namespaces', () => {
+    const { result } = renderHook(() => useBimScheduleLookups(ENTITIES));
+    expect(result.current.lookups.translateType?.('wall')).toBe('TYPE:wall');
+    expect(result.current.lookups.translateKind?.('strip')).toBe('KIND:strip');
   });
 });
 
@@ -103,9 +117,9 @@ describe('useBimScheduleLookups — filter options', () => {
     const { result } = renderHook(() => useBimScheduleLookups(ENTITIES));
     expect(result.current.availableCategories).toEqual([
       { id: 'mat-concrete', label: 'LBL:mat-concrete' },
-      { id: 'door', label: 'door' },
+      { id: 'door', label: 'KIND:door' },
       { id: 'raw-mix', label: 'raw-mix' },
-      { id: 'pad', label: 'pad' },
+      { id: 'pad', label: 'KIND:pad' },
     ]);
   });
 
