@@ -467,7 +467,7 @@ function resizeDepth(input: Readonly<ColumnGripDragInput>): ColumnParams {
   }
   const s = mmScaleFor(originalParams);
   const { dy } = ANCHOR_OFFSETS[originalParams.anchor];
-  const signY = farEdgeSignY(dy);
+  const signY = farEdgeSign(dy);
   const coefY = signY * 0.5 - dy;
   const { dyLocal } = projectDeltaToLocal(delta, originalParams.rotation);
   const newDepth = Math.max(MIN_COLUMN_DIMENSION_MM, originalParams.depth + dyLocal / (coefY * s));

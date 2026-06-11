@@ -25,7 +25,7 @@ import type { GripInfo, ColumnGripKind } from '../../hooks/useGripMovement';
 import type { ColumnEntity, ColumnParams } from '../types/column-types';
 import { ANCHOR_OFFSETS, MIN_COLUMN_DIMENSION_MM } from '../types/column-types';
 import { mmScaleFor } from '../../utils/scene-units';
-import { rotateVector } from '../grips/grip-math';
+import { rotateVector, farEdgeSign } from '../grips/grip-math';
 import type { RectFrame, RectCorner } from '../grips/rect-frame';
 import {
   applyRectCornerDrag,
@@ -35,8 +35,6 @@ import {
 import {
   computeCentroidWorld,
   localToWorld,
-  farEdgeSignX,
-  farEdgeSignY,
 } from './column-grip-utils';
 
 /** True-rectangle column kinds that share the rect-grip-engine. */
@@ -119,13 +117,13 @@ export function applyRectColumnGrip(
   const { dx, dy } = ANCHOR_OFFSETS[params.anchor];
   if (gripKind === 'column-width') {
     return rectFrameToColumnParams(
-      applyRectEdgeDrag(columnToRectFrame(params), { axis: 'x', sign: farEdgeSignX(dx) === 1 ? 1 : -1 }, delta, limits),
+      applyRectEdgeDrag(columnToRectFrame(params), { axis: 'x', sign: farEdgeSign(dx) === 1 ? 1 : -1 }, delta, limits),
       params,
     );
   }
   if (gripKind === 'column-depth') {
     return rectFrameToColumnParams(
-      applyRectEdgeDrag(columnToRectFrame(params), { axis: 'y', sign: farEdgeSignY(dy) === 1 ? 1 : -1 }, delta, limits),
+      applyRectEdgeDrag(columnToRectFrame(params), { axis: 'y', sign: farEdgeSign(dy) === 1 ? 1 : -1 }, delta, limits),
       params,
     );
   }

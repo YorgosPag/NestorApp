@@ -44,6 +44,7 @@ import { rotatePoint } from '../../utils/rotation-math';
 import {
   rotateVector,
   sweptAngleDegAboutPivot,
+  farEdgeSign,
 } from '../grips/grip-math';
 import type { RectFrame, RectCorner } from '../grips/rect-frame';
 import {
@@ -97,16 +98,8 @@ function lineAxisBoxParams(params: LineFoundationParams): AxisBoxParams {
 const RAD_TO_DEG = 180 / Math.PI;
 
 // ─── Local-frame helpers (mirror column-grip-utils, pad width×length) ─────────
-
-/** Far-edge sign along local X: `+1` (east) for `dx <= 0`, `-1` (west) otherwise. */
-function farEdgeSignX(dx: number): number {
-  return dx <= 0 ? +1 : -1;
-}
-
-/** Far-edge sign along local Y: `+1` (north) for `dy <= 0`, `-1` (south) otherwise. */
-function farEdgeSignY(dy: number): number {
-  return dy <= 0 ? +1 : -1;
-}
+// Far-edge face sign = shared `farEdgeSign` SSoT (grip-math), applied to dx (width)
+// or dy (length); was a local `farEdgeSignX`/`farEdgeSignY` duplicate.
 
 /**
  * Centroid (bbox centre) του pad footprint σε world coords.
@@ -134,14 +127,14 @@ function localToWorld(local: Point2D, params: PadFootingParams): Point2D {
 /** World position της λαβής width (far edge midpoint κατά local X). */
 function widthHandleWorld(params: PadFootingParams): Point2D {
   const { dx } = ANCHOR_OFFSETS[params.anchor];
-  const signX = farEdgeSignX(dx);
+  const signX = farEdgeSign(dx);
   return localToWorld({ x: (signX * params.width) / 2, y: 0 }, params);
 }
 
 /** World position της λαβής length (far edge midpoint κατά local Y). */
 function lengthHandleWorld(params: PadFootingParams): Point2D {
   const { dy } = ANCHOR_OFFSETS[params.anchor];
-  const signY = farEdgeSignY(dy);
+  const signY = farEdgeSign(dy);
   return localToWorld({ x: 0, y: (signY * params.length) / 2 }, params);
 }
 
@@ -152,7 +145,7 @@ function lengthHandleWorld(params: PadFootingParams): Point2D {
  */
 function rotationHandleWorld(params: PadFootingParams): Point2D {
   const { dy } = ANCHOR_OFFSETS[params.anchor];
-  const signY = farEdgeSignY(dy);
+  const signY = farEdgeSign(dy);
   return localToWorld({ x: 0, y: rotationHandlePerpOffset(params.length / 2, signY) }, params);
 }
 
@@ -378,13 +371,13 @@ export function applyFoundationGripDrag(
   const { dx, dy } = ANCHOR_OFFSETS[pad.anchor];
   if (gripKind === 'foundation-width') {
     const frame = applyRectEdgeDrag(
-      padToRectFrame(pad), { axis: 'x', sign: farEdgeSignX(dx) === 1 ? 1 : -1 }, input.delta, padResizeLimits(pad),
+      padToRectFrame(pad), { axis: 'x', sign: farEdgeSign(dx) === 1 ? 1 : -1 }, input.delta, padResizeLimits(pad),
     );
     return rectFrameToPadParams(frame, pad);
   }
   if (gripKind === 'foundation-length') {
     const frame = applyRectEdgeDrag(
-      padToRectFrame(pad), { axis: 'y', sign: farEdgeSignY(dy) === 1 ? 1 : -1 }, input.delta, padResizeLimits(pad),
+      padToRectFrame(pad), { axis: 'y', sign: farEdgeSign(dy) === 1 ? 1 : -1 }, input.delta, padResizeLimits(pad),
     );
     return rectFrameToPadParams(frame, pad);
   }
