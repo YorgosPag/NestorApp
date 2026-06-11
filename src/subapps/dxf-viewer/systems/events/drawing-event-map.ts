@@ -235,10 +235,11 @@ export interface DrawingEventMap extends MepAutoDesignEventMap {
   'bim:foundation-params-updated': { foundationId: string };
   // ADR-436 Slice 1-persist — BIM foundation delete event (Firestore deleteDoc)
   'bim:foundation-delete-requested': { foundationId: string };
-  // ADR-441 Slice 2 — N πεδιλοδοκοί χτίστηκαν από τον κάναβο (εσχάρα από grid).
-  // `ignored` = degenerate segments που απέρριψε ο validator. UI: non-blocking
+  // ADR-441 Slice 2+6 — managed reconcile εσχάρας από τον κάναβο.
+  // `created` = νέες λωρίδες· `deleted` = obsolete που αντικαταστάθηκαν (split /
+  // stale corner-fill). 0/0 → «ενημερωμένο» (idempotent re-run). UI: non-blocking
   // Revit-style summary toast (πληθυντικότητα ICU).
-  'bim:foundations-from-grid': { built: number; ignored: number };
+  'bim:foundations-from-grid': { created: number; deleted: number };
   // ADR-441 Slice 2 — η εσχάρα δεν παρήχθη: 'insufficient-guides' (<2 άξονες
   // ανά διεύθυνση) ή 'empty' (κανένα έγκυρο segment). UI: warning toast.
   'bim:foundations-from-grid-failed': { reason: 'insufficient-guides' | 'empty' };

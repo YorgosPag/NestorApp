@@ -248,8 +248,13 @@ export function useRibbonFoundationBridge(
       sceneUnits: scene ? resolveSceneUnits(scene) : 'mm',
       executeCommand,
     });
-    if (result.ok) {
-      EventBus.emit('bim:foundations-from-grid', { built: result.built, ignored: result.ignored });
+    // ADR-441 Slice 6 — idempotent re-run: το 'up-to-date' ΔΕΝ είναι αποτυχία
+    // (Revit «ενημερωμένο»). Εκπέμπεται ως success-style summary με created=0,deleted=0.
+    if (result.ok || result.reason === 'up-to-date') {
+      EventBus.emit('bim:foundations-from-grid', {
+        created: result.created,
+        deleted: result.deleted,
+      });
     } else {
       EventBus.emit('bim:foundations-from-grid-failed', { reason: result.reason ?? 'empty' });
     }
