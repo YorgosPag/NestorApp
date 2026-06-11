@@ -802,6 +802,8 @@
         "mepConnector": "MEP connector"
       },
       "text": "Text",
+      "rotationPivot": "Rotation Centre",
+      "rotationGrip": "Rotation Grip",
       "textPoints": {
         "insertion": "Text insertion point",
         "cornerTl": "Text top-left corner",
@@ -841,7 +843,9 @@
         "openingCorner": "Opening Corner - Snap to door/window face corner",
         "mepConnector": "MEP Connector - Snap to a pipe/duct/fixture/panel connection point"
       },
-      "text": "Text - Snap to insertion point, corners, center and edge midpoints of TEXT/MTEXT"
+      "text": "Text - Snap to insertion point, corners, center and edge midpoints of TEXT/MTEXT",
+      "rotationPivot": "Rotation Centre - Snap to the rotation centre during a rotation operation",
+      "rotationGrip": "Rotation Grip - Snap to the entity's grips during rotation"
     },
     "ui": {
       "showAdvanced": "Show advanced features",
