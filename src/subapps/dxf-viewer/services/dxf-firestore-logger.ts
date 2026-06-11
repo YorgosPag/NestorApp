@@ -1,23 +1,21 @@
-import { Logger, LogLevel, DevNullOutput } from '../settings/telemetry/Logger';
+import { createModuleLogger } from '../settings/telemetry/Logger';
 
 // =============================================================================
 // 🏢 ENTERPRISE LOGGER CONFIGURATION
 // =============================================================================
 
 /**
- * DxfFirestore Logger - Enterprise-grade logging with configurable levels
+ * DxfFirestore logger — routed through the `createModuleLogger` SSoT (ADR-036) so it
+ * honours the side-aware default (browser → WARN, server → INFO), the `localStorage`
+ * 'LOG_LEVEL' runtime override, and `NEXT_PUBLIC_LOG_LEVEL`.
  *
- * In PRODUCTION: Only ERROR level logs (clean console)
- * In DEVELOPMENT: DEBUG level logs (verbose for debugging)
+ * Was a hand-rolled `new Logger({ level: dev ? DEBUG : ERROR })` that bypassed ALL of the
+ * above and unconditionally flooded the dev browser console with `[DEBUG] [DxfFirestore]`
+ * (scene load/save traces) — the noise that survived the global level change.
  *
- * @enterprise ADR - Centralized Logging System
+ * @enterprise ADR-036 — Centralized Logging System
  */
-export const dxfLogger = new Logger({
-  level: process.env.NODE_ENV === 'production' ? LogLevel.ERROR : LogLevel.DEBUG,
-  prefix: '[DxfFirestore]',
-  // In production, use DevNullOutput for DEBUG/INFO to ensure zero noise
-  output: process.env.NODE_ENV === 'production' ? new DevNullOutput() : undefined,
-});
+export const dxfLogger = createModuleLogger('DxfFirestore');
 
 /**
  * Error classification for intelligent logging

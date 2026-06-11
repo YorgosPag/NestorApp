@@ -217,16 +217,11 @@ export class DxfFirestoreService {
     scene: SceneModel,
     context?: DxfSaveContext
   ): Promise<boolean> {
-    // Check if file already exists to determine save method
-    const existingMetadata = await getFileMetadataImpl(fileId);
-
-    if (existingMetadata && existingMetadata.storageUrl) {
-      // File already uses Storage - continue using Storage
-      return saveToStorageImpl(fileId, fileName, scene, context);
-    } else {
-      // New file or legacy file - use Storage for better performance
-      return saveToStorageImpl(fileId, fileName, scene, context);
-    }
+    // ADR-040: both legacy and new files route through Storage-based save. The old
+    // pre-flight getFileMetadataImpl(fileId) getDoc only chose between two IDENTICAL
+    // branches, so it was a full Firestore read on EVERY auto-save with zero effect —
+    // removed to cut per-save main-thread + network cost.
+    return saveToStorageImpl(fileId, fileName, scene, context);
   }
 
   /**

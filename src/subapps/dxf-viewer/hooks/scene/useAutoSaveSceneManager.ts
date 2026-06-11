@@ -2,6 +2,11 @@ import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import { PANEL_LAYOUT } from '../../config/panel-tokens';
 import { STORAGE_TIMING } from '../../config/timing-config';
 import { useSceneManager, type SceneManagerState } from './useSceneManager';
+import {
+  originSchedulesAutoSave,
+  DEFAULT_SCENE_WRITE_ORIGIN,
+  type SceneWriteOrigin,
+} from './scene-write-origin';
 import { DxfFirestoreService } from '../../services/dxf-firestore.service';
 import type { DxfSaveContext } from '../../services/dxf-firestore.service';
 import type { SceneModel } from '../../types/scene';
@@ -156,7 +161,13 @@ export function useAutoSaveSceneManager(): AutoSaveSceneManagerState {
   /**
    * Enhanced setLevelScene with auto-save
    */
-  const setLevelSceneWithAutoSave = useCallback((levelId: string, scene: SceneModel) => {
+  const setLevelSceneWithAutoSave = useCallback((
+    levelId: string,
+    scene: SceneModel,
+    origin: SceneWriteOrigin = DEFAULT_SCENE_WRITE_ORIGIN,
+  ) => {
+    // ALWAYS update in-memory + React state for EVERY origin — remote edits must be
+    // visible in the UI even though they don't trigger our own auto-save.
     sceneManagerRef.current.setLevelScene(levelId, scene);
 
     // Read filename from ref — always current even before React re-renders
@@ -175,8 +186,16 @@ export function useAutoSaveSceneManager(): AutoSaveSceneManagerState {
     // far less harmful than silently wiping a populated floorplan).
     const isEmptyScene = scene.entities.length === 0;
 
-    // Trigger auto-save if enabled and we have a filename and not loading from Firestore
-    if (autoSaveEnabled && fileName && !isLoadingFromFirestoreRef.current && !isEmptyScene) {
+    // 🏢 ADR-040 SSoT GATE (root-cause #2 — auto-save storm): ONLY a `local-edit`
+    // origin schedules a save. `remote-echo` (Firestore snapshot reconciliation),
+    // `load` and `system-reconcile` reflect ALREADY-persisted doc state, so re-saving
+    // the derived 950KB scene blob would be pure waste — and the snapshot echo from
+    // that write would re-enter ~22 persistence hooks → storm. The SINGLE decision
+    // lives in `originSchedulesAutoSave` (no scattered suppress flags).
+    if (
+      originSchedulesAutoSave(origin) &&
+      autoSaveEnabled && fileName && !isLoadingFromFirestoreRef.current && !isEmptyScene
+    ) {
       // Clear existing timeout
       if (saveTimeoutRef.current) {
         clearTimeout(saveTimeoutRef.current);

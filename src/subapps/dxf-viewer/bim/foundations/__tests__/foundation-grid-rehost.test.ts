@@ -106,6 +106,31 @@ describe('rehostOrphanStrips', () => {
     expect(rehostOrphanStrips([hosted], target, X3, Y3)).toHaveLength(0);
   });
 
+  it('multi-bay ορφανός (όλο το ύψος άξονα) → υιοθετεί ΤΟ ΠΡΩΤΟ φάτνωμα (V|x0|y0|y1)', () => {
+    // Χειροκίνητη λωρίδα σε όλο το ύψος του x0 (y0→y2, 2 φατνώματα). Πρέπει να
+    // ταιριάξει στο πρώτο grid segment (y0→y1)· τα υπόλοιπα τα φτιάχνει ο reconciler.
+    const target = buildTarget([...X3, ...Y3]);
+    const o = orphan({ x: 0, y: 0 }, { x: 0, y: 8000 });
+    const res = rehostOrphanStrips([o], target, X3, Y3);
+    expect(res).toHaveLength(1);
+    // Το rehosted signature ταυτίζεται με ΑΚΡΙΒΩΣ ένα target strip = το πρώτο φάτνωμα.
+    const sig = gridStripSignature(res[0].rehosted);
+    expect(target.filter((t) => gridStripSignature(t) === sig)).toHaveLength(1);
+    // Coords του πρώτου φατνώματος (y0→y1), όχι όλο το ύψος (y0→y2).
+    expect((res[0].rehosted.params as { end: { y: number } }).end.y).toBe(4000);
+    expect(res[0].rehosted.id).toBe(o.id);
+  });
+
+  it('multi-bay horizontal ορφανός → υιοθετεί το πρώτο φάτνωμα (H|y0|x0|x1)', () => {
+    const target = buildTarget([...X3, ...Y3]);
+    const o = orphan({ x: 0, y: 0 }, { x: 8000, y: 0 });
+    const res = rehostOrphanStrips([o], target, X3, Y3);
+    expect(res).toHaveLength(1);
+    // Σπάει στο πρώτο φάτνωμα x0→x1 (ίδιο signature με ένα μόνο target strip).
+    const sig = gridStripSignature(res[0].rehosted);
+    expect(target.filter((t) => gridStripSignature(t) === sig)).toHaveLength(1);
+  });
+
   it('2 ορφανοί ίδιο segment → πρώτος κερδίζει (deterministic, μηδέν διπλό re-host)', () => {
     const target = buildTarget([...X3, ...Y3]);
     const a = orphan({ x: 0, y: 0 }, { x: 0, y: 4000 });

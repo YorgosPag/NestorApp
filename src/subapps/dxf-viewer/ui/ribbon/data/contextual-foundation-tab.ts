@@ -50,6 +50,14 @@ const LINE_WIDTH_MM_OPTIONS = [
   { value: '800', labelKey: '800', isLiteralLabel: true },
 ] as const;
 
+// ADR-441 Slice 5a-control — Location Line (justification) γραμμικού πεδίλου/συνδετήριας.
+// Σχετικά με τη φορά σχεδίασης start→end (Revit «Location Line»). `center` = concentric default.
+const JUSTIFICATION_OPTIONS = [
+  { value: 'center', labelKey: 'ribbon.commands.foundationEditor.justification.center', isLiteralLabel: false },
+  { value: 'left',   labelKey: 'ribbon.commands.foundationEditor.justification.left',   isLiteralLabel: false },
+  { value: 'right',  labelKey: 'ribbon.commands.foundationEditor.justification.right',  isLiteralLabel: false },
+] as const;
+
 const LINE_THICKNESS_MM_OPTIONS = [
   { value: '300', labelKey: '300', isLiteralLabel: true },
   { value: '400', labelKey: '400', isLiteralLabel: true },
@@ -238,6 +246,18 @@ export const CONTEXTUAL_FOUNDATION_TAB: RibbonTab = {
                 commandKey: FOUNDATION_RIBBON_KEYS.params.thickness,
                 comboboxWidthPx: 80,
                 options: LINE_THICKNESS_MM_OPTIONS,
+              },
+            },
+            {
+              // ADR-441 Slice 5a-control — Location Line (έκκεντρη ανάπτυξη band).
+              type: 'combobox',
+              size: 'small',
+              command: {
+                id: 'foundation.line.justification',
+                labelKey: 'ribbon.commands.foundationEditor.justification.section.title',
+                commandKey: FOUNDATION_RIBBON_KEYS.stringParams.justification,
+                comboboxWidthPx: 110,
+                options: JUSTIFICATION_OPTIONS,
               },
             },
           ],

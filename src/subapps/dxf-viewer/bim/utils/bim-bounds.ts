@@ -61,7 +61,11 @@ export function calculateBimEntity2DBounds(entity: Entity): { min: Point2D; max:
     case 'mep-water-heater':
     // ADR-408 Εύρος Β #3 — underfloor heating loop: footprint bbox projects to 2D (area entity,
     // same fallthrough as floor-finish — the footprint polygon bbox is the geometry.bbox SSoT).
-    case 'mep-underfloor': {
+    case 'mep-underfloor':
+    // ADR-436 — foundation (pad/strip/tie-beam) projects geometry.bbox to 2D (same).
+    // Without this case window/crossing marquee silently skipped foundations even
+    // though click hit-test (Bounds.ts) and Ctrl+A already selected them.
+    case 'foundation': {
       const bbox = entity.geometry?.bbox;
       if (!bbox) return null;
       return {

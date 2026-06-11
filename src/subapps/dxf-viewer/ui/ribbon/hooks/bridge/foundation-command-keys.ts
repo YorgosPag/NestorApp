@@ -13,6 +13,8 @@ export const FOUNDATION_RIBBON_KEYS = {
     kind: 'foundation.params.kind',
     anchor: 'foundation.params.anchor',
     material: 'foundation.params.material',
+    // ADR-441 Slice 5a-control — Location Line (justification) γραμμικού πεδίλου/συνδετήριας.
+    justification: 'foundation.params.justification',
   },
   params: {
     width: 'foundation.params.width',
@@ -41,6 +43,7 @@ export const FOUNDATION_RIBBON_STRING_KEYS: readonly FoundationRibbonStringComma
   FOUNDATION_RIBBON_KEYS.stringParams.kind,
   FOUNDATION_RIBBON_KEYS.stringParams.anchor,
   FOUNDATION_RIBBON_KEYS.stringParams.material,
+  FOUNDATION_RIBBON_KEYS.stringParams.justification,
 ];
 
 export const FOUNDATION_RIBBON_KEYS_ACTIONS = {

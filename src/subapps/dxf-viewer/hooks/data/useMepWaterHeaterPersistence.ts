@@ -15,6 +15,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { dequal } from 'dequal';
 
 import type { AnySceneEntity, SceneModel } from '../../types/entities';
+import type { SceneWriteOrigin } from '../scene/scene-write-origin';
 import type { MepWaterHeaterEntity } from '../../bim/types/mep-water-heater-types';
 import {
   computeMepWaterHeaterGeometry,
@@ -42,7 +43,7 @@ export type MepWaterHeaterSaveState = 'idle' | 'saving' | 'saved' | 'error';
 interface LevelManagerLike {
   readonly currentLevelId: string | null;
   getLevelScene(levelId: string): SceneModel | null;
-  setLevelScene(levelId: string, scene: SceneModel): void;
+  setLevelScene(levelId: string, scene: SceneModel, origin?: SceneWriteOrigin): void;
 }
 
 export interface UseMepWaterHeaterPersistenceParams {
@@ -233,7 +234,7 @@ export function useMepWaterHeaterPersistence(
           lm.setLevelScene(levelId, {
             ...scene,
             entities: [...nonWaterHeaters, ...nextWaterHeaters],
-          });
+          }, 'remote-echo');
         }
       },
       (err: Error) => {

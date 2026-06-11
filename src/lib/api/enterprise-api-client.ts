@@ -297,7 +297,12 @@ export class EnterpriseApiClient {
           return apiResponse.data as T;
         }
 
-        logger.warn(`[API Contract] ${context.url} returned 200 but not canonical format. Keys: [${keys.join(', ')}]`);
+        // Non-canonical 200 response. This is tracked dev tech-debt (see
+        // docs/API_CONTRACT_MIGRATION_PLAN.md), NOT a user-actionable warning — the
+        // consumers depend on the raw shape, so it cannot be "fixed" at call time.
+        // Logged at DEBUG so it stays available when investigating (LOG_LEVEL=debug)
+        // without flooding the browser console on every request (ADR-036: demote, don't suppress).
+        logger.debug(`[API Contract] ${context.url} returned 200 but not canonical format. Keys: [${keys.join(', ')}]`);
         return json as T;
       }
 

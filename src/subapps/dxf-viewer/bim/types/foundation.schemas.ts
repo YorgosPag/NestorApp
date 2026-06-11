@@ -101,6 +101,7 @@ const StripFootingParamsSchema = z
     end: Point3DSchema,
     width: z.number().positive(),
     justification: StripJustificationSchema.optional(),
+    justificationManual: z.boolean().optional(),
   })
   .strict();
 
@@ -112,6 +113,7 @@ const TieBeamParamsSchema = z
     end: Point3DSchema,
     width: z.number().positive(),
     justification: StripJustificationSchema.optional(),
+    justificationManual: z.boolean().optional(),
   })
   .strict();
 

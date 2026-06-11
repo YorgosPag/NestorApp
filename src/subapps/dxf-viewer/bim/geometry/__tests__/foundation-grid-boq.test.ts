@@ -5,9 +5,10 @@
  * το άθροισμα των per-strip net μεριδίων ισούται με το union total.
  *
  * Reference 2×2 κάναβος (X 0/4000, Y 0/4000· default width 600, thickness 400, mm):
- *   - 4 corner-filled λωρίδες, καθεμία -300→4300 (μήκος 4600), πλάτος 600.
- *   - gross area/λωρίδα = 4600×600 = 2.76 m²· Σgross = 11.04 m²· Σvol = 4.416 m³.
- *   - 4 κόμβοι × (600×600) = 1.44 m² επικάλυψη → union = 9.6 m²· net vol = 3.84 m³.
+ *   - ADR-441 5a-grid: 4 inward-περιμετρικές λωρίδες (μηδέν corner-fill), καθεμία 0→4000
+ *     (μήκος 4000), πλάτος 600 → η εξωτερική παρειά πέφτει στον άξονα.
+ *   - gross area/λωρίδα = 4000×600 = 2.40 m²· Σgross = 9.6 m²· Σvol = 3.84 m³.
+ *   - 4 κόμβοι × (600×600) = 1.44 m² επικάλυψη → union = 8.16 m²· net vol = 3.264 m³.
  */
 
 import {
@@ -28,7 +29,7 @@ function reader(guides: readonly Guide[]): AxisGuideReader {
   return { getGuidesByAxis: (axis) => guides.filter((g) => g.axis === axis) };
 }
 
-/** 2×2 grid → 4 corner-filled strips. */
+/** 2×2 grid → 4 inward-περιμετρικές strips (ADR-441 5a-grid, μηδέν corner-fill). */
 function grid2x2(): FoundationEntity[] {
   const guides = [
     guide('x0', 'X', 0), guide('x1', 'X', 4000),
@@ -39,11 +40,11 @@ function grid2x2(): FoundationEntity[] {
 }
 
 describe('computeFoundationGridNet — union (anti-double-count)', () => {
-  it('net < gross· union αφαιρεί τους κόμβους (2×2 → 9.6 m² / 3.84 m³)', () => {
+  it('net < gross· union αφαιρεί τους κόμβους (2×2 inward → 8.16 m² / 3.264 m³)', () => {
     const net = computeFoundationGridNet(grid2x2());
-    expect(net.grossVolumeM3).toBeCloseTo(4.416, 2);
-    expect(net.netAreaM2).toBeCloseTo(9.6, 1);
-    expect(net.netVolumeM3).toBeCloseTo(3.84, 2);
+    expect(net.grossVolumeM3).toBeCloseTo(3.84, 2);
+    expect(net.netAreaM2).toBeCloseTo(8.16, 1);
+    expect(net.netVolumeM3).toBeCloseTo(3.264, 2);
     expect(net.overlapVolumeM3).toBeCloseTo(0.576, 2);
     expect(net.netVolumeM3).toBeLessThan(net.grossVolumeM3);
   });
@@ -73,11 +74,11 @@ describe('foundationStripNetGeometry — per-strip net share', () => {
     expect(sumNetArea).toBeCloseTo(computeFoundationGridNet(strips).netAreaM2, 1);
   });
 
-  it('κάθε γωνιακή λωρίδα 2×2 χάνει 2 μισά-κόμβων (net area = 2.40 m²)', () => {
+  it('κάθε γωνιακή λωρίδα 2×2 χάνει 2 μισά-κόμβων (net area = 2.04 m²)', () => {
     const strips = grid2x2();
     for (const s of strips) {
       const net = foundationStripNetGeometry(s, strips);
-      expect(net.area).toBeCloseTo(2.4, 1); // gross 2.76 − 0.72/2
+      expect(net.area).toBeCloseTo(2.04, 1); // gross 2.40 − 0.72/2
       expect(net.volume).toBeLessThan(s.geometry.volume);
     }
   });

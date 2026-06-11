@@ -39,6 +39,10 @@ export type AuditEntityType =
   | 'stair'
   // ADR-417 — parametric pitched roof (footprint ⊥ type).
   | 'roof'
+  // ADR-436 — foundation discipline (pads / strip footings / tie-beams, top-level
+  // floorplan_foundations collection). Was missing → every foundation audit POST
+  // 400'd ("Invalid entityType"), spamming the console whenever the grid reconciler ran.
+  | 'foundation'
   | 'mep-fixture'
   | 'mep-system'
   | 'electrical-panel'

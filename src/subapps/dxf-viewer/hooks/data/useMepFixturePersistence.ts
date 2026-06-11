@@ -16,6 +16,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { dequal } from 'dequal';
 
 import type { AnySceneEntity, SceneModel } from '../../types/entities';
+import type { SceneWriteOrigin } from '../scene/scene-write-origin';
 import type { MepFixtureEntity } from '../../bim/types/mep-fixture-types';
 import {
   computeMepFixtureGeometry,
@@ -42,7 +43,7 @@ export type MepFixtureSaveState = 'idle' | 'saving' | 'saved' | 'error';
 interface LevelManagerLike {
   readonly currentLevelId: string | null;
   getLevelScene(levelId: string): SceneModel | null;
-  setLevelScene(levelId: string, scene: SceneModel): void;
+  setLevelScene(levelId: string, scene: SceneModel, origin?: SceneWriteOrigin): void;
 }
 
 export interface UseMepFixturePersistenceParams {
@@ -228,7 +229,7 @@ export function useMepFixturePersistence(
           lm.setLevelScene(levelId, {
             ...scene,
             entities: [...nonFixtures, ...nextFixtures],
-          });
+          }, 'remote-echo');
         }
       },
       (err: Error) => {

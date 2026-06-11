@@ -82,7 +82,7 @@ export async function preloadRoute(route: PreloadableRoute): Promise<void> {
     const preloader = routePreloaders[route];
     if (preloader) {
       await preloader();
-      console.debug(`Preloaded route: ${route}`);
+      logger.debug(`Preloaded route: ${route}`);
     }
   } catch (error) {
     logger.warn(`Failed to preload route ${route}`, { error });

@@ -27,6 +27,10 @@ import {
   shouldApplyOptimization,
   triggerGarbageCollection
 } from './dxf-perf-actions';
+import { createModuleLogger } from '@/lib/telemetry';
+
+// SSoT logger — gated by LOG_LEVEL (replaces raw console.* that always printed).
+const logger = createModuleLogger('DxfPerformanceOptimizer');
 
 // Re-export types for consumers
 export type { DxfPerformanceConfig, PerformanceMetrics, OptimizationAction, PerformanceAlert } from './dxf-perf-types';
@@ -65,7 +69,7 @@ export class DxfPerformanceOptimizer {
     this.setupPerformanceObservers();
     this.startMonitoring();
     this.optimizationActions = generateOptimizationActions(this.config);
-    console.log('🔍 Auto-optimizations enabled');
+    logger.debug('🔍 Auto-optimizations enabled');
   }
 
   // ── Config ──
@@ -268,7 +272,7 @@ export class DxfPerformanceOptimizer {
     if (typeof window !== 'undefined') {
       window.dispatchEvent(new CustomEvent('dxf-performance-alert', { detail: alert }));
     }
-    console.warn(`⚠️ Performance Alert [${type.toUpperCase()}]: ${message}`);
+    logger.warn(`⚠️ Performance Alert [${type.toUpperCase()}]: ${message}`);
   }
 
   // ── Auto-optimization ──
@@ -303,7 +307,11 @@ export class DxfPerformanceOptimizer {
   }
 
   private getCanvasElementCount(): number {
-    return Math.floor(Math.random() * 2000) + 500;
+    // 🚀 PERF (2026-06-11): real metric — count live <canvas> elements in the DOM.
+    // Was a Math.random() stub (500–2500) that randomly tripped the >1000
+    // optimization gate in dxf-perf-actions.ts and polluted the perf log.
+    if (typeof document === 'undefined') return 0;
+    return document.getElementsByTagName('canvas').length;
   }
 
   // ── Public API ──
@@ -340,7 +348,7 @@ export class DxfPerformanceOptimizer {
 
   public updateConfig(newConfig: Partial<DxfPerformanceConfig>): void {
     this.config = { ...this.config, ...newConfig };
-    console.log('⚙️ Performance configuration updated');
+    logger.debug('⚙️ Performance configuration updated');
   }
 
   public destroy(): void {
@@ -353,7 +361,7 @@ export class DxfPerformanceOptimizer {
       this.unsubscribeFrameMetrics = null;
     }
     DxfPerformanceOptimizer.instance = null;
-    console.log('🛑 DXF Performance Optimizer destroyed');
+    logger.debug('🛑 DXF Performance Optimizer destroyed');
   }
 }
 

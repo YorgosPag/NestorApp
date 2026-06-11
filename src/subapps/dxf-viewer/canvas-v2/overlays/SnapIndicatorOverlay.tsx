@@ -363,8 +363,12 @@ export default function SnapIndicatorOverlay({
 }: SnapIndicatorOverlayProps) {
   const { t } = useTranslation('dxf-viewer-shell');
   if (!snapResult || !snapResult.point || !transform) return null;
-  // AutoCAD standard: grid snap has no floating visual marker — cursor snaps silently
-  if (snapResult.type === 'grid') return null;
+  // AutoCAD standard: grid snap has no floating visual marker — cursor snaps silently.
+  // ADR-189 §3.17 (2026-06-11): a guide *line* snap is likewise silent — the visible guide
+  // line already shows where the cursor locked, so the cursor-following ═ glyph was pure
+  // noise (Giorgio). Only a discrete guide *crossing* draws a marker, and GuideSnapEngine
+  // emits that as an INTERSECTION (✕) — not as type 'guide'.
+  if (snapResult.type === 'grid' || snapResult.type === 'guide') return null;
 
   const { point, type, description } = snapResult;
   // ADR-370: BIM label = «Γωνία/Μέσο/Κέντρο» + entity noun (composition), or null for

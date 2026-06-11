@@ -33,6 +33,9 @@ import { createModuleLogger } from '@/lib/telemetry';
 
 const logger = createModuleLogger('DxfBitmapCache');
 
+/** Normal-state render toggles that change the cached pixels (ADR-040 Phase D wiring). */
+export type BitmapCacheRenderInputs = Pick<DxfRenderOptions, 'showGrid' | 'showLayerNames' | 'wireframeMode'>;
+
 interface CacheKey {
   sceneRef: object | null;
   scale: number;
@@ -47,6 +50,12 @@ interface CacheKey {
   drawingScale: number;
   /** ADR-375 Phase B.2: viewRange/objectStyles hash — JSON snapshot of small structs. */
   bimSettingsHash: string;
+  /** ADR-040 Phase D wiring (2026-06-11): wireframe / layer-name / grid toggles
+   *  alter the cached normal-state pixels — they arrive via renderOptions, not a
+   *  store the cache subscribes to, so they must live in the key. */
+  showGrid: boolean;
+  showLayerNames: boolean;
+  wireframeMode: boolean;
 }
 
 function readBimCacheInputs(): { drawingScale: number; bimSettingsHash: string } {
@@ -63,7 +72,12 @@ export class DxfBitmapCache {
   private cacheKey: CacheKey | null = null;
 
   /** True when cache content is missing or stale relative to inputs. */
-  isDirty(scene: DxfScene | null, transform: ViewTransform, viewport: Viewport): boolean {
+  isDirty(
+    scene: DxfScene | null,
+    transform: ViewTransform,
+    viewport: Viewport,
+    inputs: BitmapCacheRenderInputs,
+  ): boolean {
     if (!this.offscreenCanvas || !this.cacheKey) return true;
 
     const dpr = getDevicePixelRatio();
@@ -79,8 +93,21 @@ export class DxfBitmapCache {
       this.cacheKey.dpr !== dpr ||
       this.cacheKey.activeAnnotationScale !== activeAnnotationScale ||
       this.cacheKey.drawingScale !== drawingScale ||
-      this.cacheKey.bimSettingsHash !== bimSettingsHash
+      this.cacheKey.bimSettingsHash !== bimSettingsHash ||
+      this.cacheKey.showGrid !== !!inputs.showGrid ||
+      this.cacheKey.showLayerNames !== !!inputs.showLayerNames ||
+      this.cacheKey.wireframeMode !== !!inputs.wireframeMode
     );
+  }
+
+  /**
+   * Force the next isDirty() to return true. Used for inputs that affect the
+   * cached entity layer but are NOT part of the key — isolate alpha and
+   * LayerStore visible/frozen/colour flags, which the renderer reads from their
+   * stores at paint time. The renderer subscribes to those stores and calls this.
+   */
+  invalidate(): void {
+    this.cacheKey = null;
   }
 
   /**
@@ -122,6 +149,9 @@ export class DxfBitmapCache {
         activeAnnotationScale: getActiveScaleName(),
         drawingScale,
         bimSettingsHash,
+        showGrid: !!baseOptions.showGrid,
+        showLayerNames: !!baseOptions.showLayerNames,
+        wireframeMode: !!baseOptions.wireframeMode,
       };
     } catch (error) {
       logger.error('Bitmap cache rebuild failed', { error });
@@ -136,16 +166,18 @@ export class DxfBitmapCache {
   blit(targetCtx: CanvasRenderingContext2D, viewport: Viewport): void {
     if (!this.offscreenCanvas || !this.cacheKey) return;
     const dpr = this.cacheKey.dpr;
+    const physW = toDevicePixels(viewport.width, dpr);
+    const physH = toDevicePixels(viewport.height, dpr);
 
     targetCtx.save();
     // Reset to identity so we draw at backing-store pixel coords (1:1 with offscreen).
     targetCtx.setTransform(1, 0, 0, 1, 0, 0);
-    targetCtx.drawImage(
-      this.offscreenCanvas,
-      0, 0,
-      toDevicePixels(viewport.width, dpr),
-      toDevicePixels(viewport.height, dpr),
-    );
+    // The blit now OWNS the entity-layer repaint (it replaced renderer.render(),
+    // which used to clearRect each frame). The cached bitmap has a transparent
+    // background, so drawImage alone would composite over last frame's overlays
+    // → ghost trails. Clear the full backing store first.
+    targetCtx.clearRect(0, 0, physW, physH);
+    targetCtx.drawImage(this.offscreenCanvas, 0, 0, physW, physH);
     // Restore caller's DPR transform.
     targetCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
     targetCtx.restore();

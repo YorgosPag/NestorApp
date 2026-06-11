@@ -102,11 +102,10 @@ describe('commitFoundationGridFromGuides — reconcile', () => {
     expect(executed).toHaveLength(1);
   });
 
-  it('REGRESSION (μέτρα): εξωτερικός οδηγός → stale corner-fill περιμετρικές διαγράφονται', () => {
-    // Σκηνή σε ΜΕΤΡΑ (scale 0.001· corner-fill overhang width/2 ≈ 0.25 σκην. μονάδες).
-    // Με το παλιό signature tol=1 το 0.25 χανόταν → οι πρώην ακραίες λωρίδες (που
-    // έγιναν εσωτερικές) έπαιρναν ίδιο signature → ΔΕΝ διαγράφονταν → προεξοχή w/2
-    // εισχωρούσε στις νέες (Giorgio screenshot). Με tol=0.001 ανιχνεύονται.
+  it('5a-grid self-heal (μέτρα): εξωτερικός οδηγός → πρώην περιμετρική γίνεται εσωτερική → reflow στον κανόνα', () => {
+    // Σκηνή 2×2 σε ΜΕΤΡΑ (inward περίμετρος). Νέος εξωτερικός Y πάνω (y2=8) → ο πρώην
+    // ακραίος y1 γίνεται ΕΣΩΤΕΡΙΚΟΣ → ο κανόνας του = center. Η auto λωρίδα (μη
+    // χειροκίνητη) ευθυγραμμίζεται αυτόματα (reJustified), ΧΩΡΙΣ διαγραφή (κρατά id).
     const Xm = [guide('x0', 'X', 0), guide('x1', 'X', 4)];
     const Ym = [guide('y0', 'Y', 0), guide('y1', 'Y', 4)];
     const built = buildStripGridFromGuides(reader([...Xm, ...Ym]), {}, '0', 'm');
@@ -121,8 +120,10 @@ describe('commitFoundationGridFromGuides — reconcile', () => {
       executeCommand: (c) => executed.push(c),
     });
     expect(result.ok).toBe(true);
-    // Οι πρώην ακραίες (top corner-fill) έγιναν εσωτερικές → ΠΡΕΠΕΙ να αντικατασταθούν.
-    expect(result.deleted).toBeGreaterThan(0);
+    // Η πρώην ακραία οριζόντια y1 (top, inward) → εσωτερική (center) → reflow, όχι delete.
+    expect(result.reJustified).toBeGreaterThan(0);
+    expect(result.created).toBeGreaterThan(0); // νέα φατνώματα y1→y2
+    expect(executed).toHaveLength(1);
   });
 
   it('δεν dispatch-άρει όταν λείπουν άξονες (<2 ανά διεύθυνση)', () => {
@@ -186,6 +187,41 @@ describe('commitFoundationGridFromGuides — reconcile', () => {
     expect(scene.entities).toHaveLength(12); // 11 created + 1 rehosted, ΟΧΙ 13
     const kept = scene.entities.find((e) => (e as { id: string }).id === o.id);
     expect(kept).toBeDefined();
+    expect((kept as { guideBindings?: unknown[] }).guideBindings?.length).toBeGreaterThan(0);
+  });
+
+  it('multi-bay ορφανός (όλο το ύψος άξονα) → rehosted=1 + create υπολοίπων, μηδέν διπλό', () => {
+    // Σενάριο Giorgio: νέος άξονας + χειροκίνητη πεδιλοδοκός σε όλο το ύψος του →
+    // «Εσχάρα». Ο ορφανός υιοθετεί το 1ο φάτνωμα· ο reconciler φτιάχνει τα υπόλοιπα.
+    const scene = sceneWithEntities([orphanStrip({ x: 0, y: 0 }, { x: 0, y: 8000 })]);
+    const executed: ICommand[] = [];
+    const result = commitFoundationGridFromGuides({
+      guideReader: reader([...X3, ...Y3]),
+      getLevelScene: () => scene,
+      setLevelScene: () => {},
+      levelId: '0', sceneUnits: 'mm',
+      executeCommand: (c) => executed.push(c),
+    });
+    expect(result.ok).toBe(true);
+    expect(result.rehosted).toBe(1);
+    expect(result.created).toBe(11); // 12 - 1 (το φάτνωμα του rehosted)
+    expect(result.deleted).toBe(0);
+    expect(executed).toHaveLength(1);
+  });
+
+  it('multi-bay ορφανός: εκτελεσμένο → 12 entities (μηδέν διπλό), id διατηρείται', () => {
+    const o = orphanStrip({ x: 0, y: 0 }, { x: 0, y: 8000 });
+    const scene = sceneWithEntities([o]);
+    const result = commitFoundationGridFromGuides({
+      guideReader: reader([...X3, ...Y3]),
+      getLevelScene: () => scene,
+      setLevelScene: (_id, next) => { (scene as { entities: unknown[] }).entities = next.entities; },
+      levelId: '0', sceneUnits: 'mm',
+      executeCommand: (c) => c.execute(),
+    });
+    expect(result.ok).toBe(true);
+    expect(scene.entities).toHaveLength(12); // 11 created + 1 rehosted, ΟΧΙ 13
+    const kept = scene.entities.find((e) => (e as { id: string }).id === o.id);
     expect((kept as { guideBindings?: unknown[] }).guideBindings?.length).toBeGreaterThan(0);
   });
 

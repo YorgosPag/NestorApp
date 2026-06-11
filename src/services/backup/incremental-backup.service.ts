@@ -81,6 +81,8 @@ const ENTITY_TYPE_TO_COLLECTION_KEY: Record<AuditEntityType, string> = {
   stair: '',
   // Roof (ADR-417) — not backed up via this service at this stage
   roof: '',
+  // Foundation (ADR-436) — not backed up via this service at this stage
+  foundation: '',
   // MEP fixtures (ADR-406) — not backed up via this service at this stage
   'mep-fixture': '',
   // MEP systems (ADR-408) — not backed up via this service at this stage

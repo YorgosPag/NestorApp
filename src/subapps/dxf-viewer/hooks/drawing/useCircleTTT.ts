@@ -22,6 +22,11 @@ import { isLineEntity, isPolylineEntity, generateEntityId } from '../../types/sc
 // 🏢 ADR-XXX: Centralized geometry utils - pointToLineDistance replaces local pointToLineDistance
 import { circleTangentTo3Lines, pointToLineDistance } from '../../rendering/entities/shared/geometry-utils';
 import { EventBus } from '../../systems/events';
+import { createModuleLogger } from '@/lib/telemetry';
+
+// SSoT logger — gated by NEXT_PUBLIC_LOG_LEVEL (replaces raw console.* that always
+// flooded the console regardless of level).
+const logger = createModuleLogger('CircleTTT');
 
 // ============================================================================
 // TYPES
@@ -107,7 +112,7 @@ export function useCircleTTT(options: {
       currentStep: 0,
       error: null,
     });
-    console.debug('🎯 [CircleTTT] Activated - waiting for 1st line');
+    logger.debug('🎯Activated - waiting for 1st line');
   }, []);
 
   const deactivate = useCallback(() => {
@@ -117,7 +122,7 @@ export function useCircleTTT(options: {
       currentStep: 0,
       error: null,
     });
-    console.debug('🎯 [CircleTTT] Deactivated');
+    logger.debug('🎯Deactivated');
   }, []);
 
   const reset = useCallback(() => {
@@ -127,7 +132,7 @@ export function useCircleTTT(options: {
       currentStep: 0,
       error: null,
     }));
-    console.debug('🎯 [CircleTTT] Reset - waiting for 1st line');
+    logger.debug('🎯Reset - waiting for 1st line');
   }, []);
 
   // ============================================================================
@@ -189,7 +194,7 @@ export function useCircleTTT(options: {
     // Only accept LINE or POLYLINE entities
     if (!isLineEntity(entity) && !isPolylineEntity(entity)) {
       setState(prev => ({ ...prev, error: 'Επιλέξτε γραμμή (LINE ή POLYLINE)' }));
-      console.warn('🎯 [CircleTTT] Rejected entity - not a line:', entity.type);
+      logger.warn('🎯Rejected entity - not a line:', entity.type);
       return false;
     }
 
@@ -252,7 +257,7 @@ export function useCircleTTT(options: {
     const newSelectedLines = [...currentState.selectedLines, selectedLine];
     const newStep = newSelectedLines.length;
 
-    console.debug(`🎯 [CircleTTT] Line ${newStep}/3 selected:`, selectedLine);
+    logger.debug(`🎯Line ${newStep}/3 selected:`, selectedLine);
 
     // If we have 3 lines, calculate and create the circle
     if (newSelectedLines.length === 3) {
@@ -269,7 +274,7 @@ export function useCircleTTT(options: {
           currentStep: 0,
           error: 'Οι γραμμές δεν σχηματίζουν έγκυρο τρίγωνο (παράλληλες ή συγγραμμικές)',
         }));
-        console.warn('🎯 [CircleTTT] Failed - lines do not form valid triangle');
+        logger.warn('🎯Failed - lines do not form valid triangle');
         return false;
       }
 
@@ -283,7 +288,7 @@ export function useCircleTTT(options: {
         layerId: currentLevelId,
       };
 
-      console.debug('🎯 [CircleTTT] Circle created:', circleEntity);
+      logger.debug('🎯Circle created:', circleEntity);
 
       // Notify via callback
       onCircleCreated?.(circleEntity);

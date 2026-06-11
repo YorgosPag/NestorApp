@@ -65,47 +65,85 @@ export class GuideSnapEngine extends BaseSnapEngine {
 
     const radius = context.worldRadiusForType(cursorPoint, ExtendedSnapType.GUIDE);
 
+    // ADR-189 §3.17 (2026-06-11): Marker policy — a guide *line* snap slides one axis
+    // along the guide while the other tracks the cursor, so a floating glyph would glide
+    // with the cursor at every pixel (Giorgio: «πολύ κουραστικό, καμία ωφέλεια»). The
+    // guide line is already drawn on the canvas, so the *line* snap is SILENT (the overlay
+    // suppresses type 'guide', like 'grid'). A marker is shown ONLY at a discrete point:
+    // the crossing of a vertical + horizontal guide → emitted as an INTERSECTION (✕).
+    // We therefore track only the *nearest in-range* orthogonal guide per axis.
+    let nearestX: { offset: number; dist: number; label?: string; id: string } | null = null;
+    let nearestY: { offset: number; dist: number; label?: string; id: string } | null = null;
+
     for (const guide of guides) {
       if (!guide.visible) continue;
 
-      let distance: number;
-      let snapPoint: Point2D;
-
       if (guide.axis === 'XZ' && guide.startPoint && guide.endPoint) {
-        // ADR-189 §3.3: Diagonal guide — perpendicular snap to segment
+        // ADR-189 §3.3: Diagonal guide — perpendicular snap to segment (slides → silent line).
         const result = projectPointOnSegment(cursorPoint, guide.startPoint, guide.endPoint);
-        distance = result.distance;
-        snapPoint = result.snapPoint;
+        if (result.distance <= radius) {
+          candidates.push(this.createCandidate(
+            result.snapPoint,
+            guide.label ? `Guide "${guide.label}"` : `Guide (XZ)`,
+            result.distance,
+            SNAP_ENGINE_PRIORITIES.GUIDE,
+            guide.id,
+          ));
+        }
       } else if (guide.axis === 'X') {
-        // Vertical guide — snap X to guide offset, keep cursor Y
-        distance = Math.abs(cursorPoint.x - guide.offset);
-        snapPoint = { x: guide.offset, y: cursorPoint.y };
+        // Vertical guide — snap X to guide offset, keep cursor Y.
+        const dist = Math.abs(cursorPoint.x - guide.offset);
+        if (dist <= radius && (!nearestX || dist < nearestX.dist)) {
+          nearestX = { offset: guide.offset, dist, label: guide.label, id: guide.id };
+        }
       } else {
-        // Horizontal guide — snap Y to guide offset, keep cursor X
-        distance = Math.abs(cursorPoint.y - guide.offset);
-        snapPoint = { x: cursorPoint.x, y: guide.offset };
+        // Horizontal guide — snap Y to guide offset, keep cursor X.
+        const dist = Math.abs(cursorPoint.y - guide.offset);
+        if (dist <= radius && (!nearestY || dist < nearestY.dist)) {
+          nearestY = { offset: guide.offset, dist, label: guide.label, id: guide.id };
+        }
       }
-
-      if (distance <= radius) {
-        candidates.push(this.createCandidate(
-          snapPoint,
-          guide.label ? `Guide "${guide.label}"` : `Guide (${guide.axis})`,
-          distance,
-          SNAP_ENGINE_PRIORITIES.GUIDE,
-          guide.id,
-        ));
-      }
-
-      // Performance: cap at 4 candidates
-      if (candidates.length >= 4) break;
     }
 
-    // B12: Midpoint snap between adjacent same-axis guides
+    if (nearestX && nearestY) {
+      // Discrete crossing of two orthogonal guides → INTERSECTION marker (✕).
+      // Priority just above the guide line tier so it always wins over the silent
+      // line/midpoint/fractal guide candidates near the crossing, yet stays well below
+      // real-geometry endpoints/intersections (no regression to drawn entities).
+      candidates.push({
+        point: { x: nearestX.offset, y: nearestY.offset },
+        type: ExtendedSnapType.INTERSECTION,
+        description: 'Guide Intersection',
+        distance: Math.hypot(nearestX.dist, nearestY.dist),
+        priority: SNAP_ENGINE_PRIORITIES.GUIDE - 0.5,
+        entityId: nearestX.id,
+      });
+    } else if (nearestX) {
+      // Single vertical guide in range → silent line snap (overlay hides type 'guide').
+      candidates.push(this.createCandidate(
+        { x: nearestX.offset, y: cursorPoint.y },
+        nearestX.label ? `Guide "${nearestX.label}"` : `Guide (X)`,
+        nearestX.dist,
+        SNAP_ENGINE_PRIORITIES.GUIDE,
+        nearestX.id,
+      ));
+    } else if (nearestY) {
+      // Single horizontal guide in range → silent line snap.
+      candidates.push(this.createCandidate(
+        { x: cursorPoint.x, y: nearestY.offset },
+        nearestY.label ? `Guide "${nearestY.label}"` : `Guide (Y)`,
+        nearestY.dist,
+        SNAP_ENGINE_PRIORITIES.GUIDE,
+        nearestY.id,
+      ));
+    }
+
+    // B12: Midpoint snap between adjacent same-axis guides (slides → silent line snap).
     if (candidates.length < 6) {
       this.addMidpointCandidates(candidates, guides, cursorPoint, radius);
     }
 
-    // B80: Fractal subdivision snap candidates (1/3, 1/4 positions between guides)
+    // B80: Fractal subdivision snap candidates (1/3, 1/4 positions between guides — silent).
     if (candidates.length < 8) {
       this.addFractalCandidates(candidates, guides, cursorPoint, radius);
     }

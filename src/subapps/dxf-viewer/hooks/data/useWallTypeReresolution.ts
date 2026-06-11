@@ -23,13 +23,14 @@
 import { useEffect, type RefObject } from 'react';
 
 import type { SceneModel } from '../../types/entities';
+import type { SceneWriteOrigin } from '../scene/scene-write-origin';
 import { useBimFamilyTypeStore } from '../../bim/family-types/bim-family-type-store';
 import { reresolveSceneWalls } from './wall-persistence-helpers';
 
 interface LevelManagerLike {
   readonly currentLevelId: string | null;
   getLevelScene(levelId: string): SceneModel | null;
-  setLevelScene(levelId: string, scene: SceneModel): void;
+  setLevelScene(levelId: string, scene: SceneModel, origin?: SceneWriteOrigin): void;
 }
 
 /**
@@ -51,7 +52,7 @@ export function useWallTypeReresolution(
       const scene = levelManager.getLevelScene(levelId);
       if (!scene) return;
       const next = reresolveSceneWalls(scene, dirtyIdsRef.current ?? new Set());
-      if (next !== scene) levelManager.setLevelScene(levelId, next);
+      if (next !== scene) levelManager.setLevelScene(levelId, next, 'system-reconcile');
     };
 
     // subscribeWithSelector: fire only when `version` actually changes.

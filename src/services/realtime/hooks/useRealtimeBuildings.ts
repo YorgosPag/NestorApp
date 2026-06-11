@@ -75,7 +75,12 @@ export function useRealtimeBuildings(enabled = true): UseRealtimeBuildingsReturn
 
   // Refs
   const unsubscribeRef = useRef<(() => void) | null>(null);
-  const refreshTriggerRef = useRef(0);
+  // 🚀 PERF (2026-06-11): refetch trigger is STATE, not a ref. A ref read in the
+  // effect dep array (`refreshTriggerRef.current`) is an anti-pattern — the value
+  // is captured non-reactively and re-evaluated on every unrelated re-render
+  // (e.g. auth flip), risking spurious re-subscribes. State makes refetch the
+  // sole, reliable cause of re-subscription.
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
 
   /**
    * 🏢 ENTERPRISE: Group buildings by projectId
@@ -118,7 +123,7 @@ export function useRealtimeBuildings(enabled = true): UseRealtimeBuildingsReturn
    * 🏢 ENTERPRISE: Manual refetch
    */
   const refetch = useCallback(() => {
-    refreshTriggerRef.current += 1;
+    setRefreshTrigger(n => n + 1);
     setLoading(true);
     setError(null);
   }, []);
@@ -182,7 +187,7 @@ export function useRealtimeBuildings(enabled = true): UseRealtimeBuildingsReturn
       logger.debug('Cleaning up subscription');
       unsubscribe();
     };
-  }, [enabled, refreshTriggerRef.current, groupBuildingsByProject]);
+  }, [enabled, refreshTrigger, groupBuildingsByProject]);
 
   // ==========================================================================
   // LISTEN FOR EXTERNAL EVENTS

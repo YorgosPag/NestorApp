@@ -19,6 +19,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { dequal } from 'dequal';
 
 import type { AnySceneEntity, SceneModel } from '../../types/entities';
+import type { SceneWriteOrigin } from '../scene/scene-write-origin';
 import type { FloorplanSymbolEntity } from '../../bim/types/floorplan-symbol-types';
 import {
   computeFloorplanSymbolGeometry,
@@ -44,7 +45,7 @@ export type FloorplanSymbolSaveState = 'idle' | 'saving' | 'saved' | 'error';
 interface LevelManagerLike {
   readonly currentLevelId: string | null;
   getLevelScene(levelId: string): SceneModel | null;
-  setLevelScene(levelId: string, scene: SceneModel): void;
+  setLevelScene(levelId: string, scene: SceneModel, origin?: SceneWriteOrigin): void;
 }
 
 export interface UseFloorplanSymbolPersistenceParams {
@@ -223,7 +224,7 @@ export function useFloorplanSymbolPersistence(
           lm.setLevelScene(levelId, {
             ...scene,
             entities: [...others, ...nextSymbols],
-          });
+          }, 'remote-echo');
         }
       },
       (err: Error) => {

@@ -147,6 +147,12 @@ export interface StripFootingParams extends FoundationCommonParams {
   readonly width: number;
   /** Location Line ως προς τον άξονα (default 'center', ADR-441 Slice 5a). */
   readonly justification?: StripJustification;
+  /**
+   * ADR-441 Slice 5a-grid — `true` όταν ο μηχανικός όρισε χειροκίνητα το
+   * `justification` (5a-control), ώστε η αυτόματη αναγέννηση εσχάρας (managed
+   * reconcile) να ΜΗΝ το επαναφέρει στον κανόνα. Absent/false = auto (rule-driven).
+   */
+  readonly justificationManual?: boolean;
 }
 
 /**
@@ -161,6 +167,8 @@ export interface TieBeamParams extends FoundationCommonParams {
   readonly width: number;
   /** Location Line ως προς τον άξονα (default 'center', ADR-441 Slice 5a). */
   readonly justification?: StripJustification;
+  /** ADR-441 Slice 5a-grid — χειροκίνητη υπεροχή justification (βλ. StripFootingParams). */
+  readonly justificationManual?: boolean;
 }
 
 /** Discriminated union ανά `kind`. */

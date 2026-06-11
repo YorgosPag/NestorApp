@@ -16,6 +16,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { dequal } from 'dequal';
 
 import type { AnySceneEntity, SceneModel } from '../../types/entities';
+import type { SceneWriteOrigin } from '../scene/scene-write-origin';
 import type { RoofEntity } from '../../bim/types/roof-types';
 import { EventBus } from '../../systems/events/EventBus';
 import {
@@ -46,7 +47,7 @@ export type RoofSaveState = 'idle' | 'saving' | 'saved' | 'error';
 interface LevelManagerLike {
   readonly currentLevelId: string | null;
   getLevelScene(levelId: string): SceneModel | null;
-  setLevelScene(levelId: string, scene: SceneModel): void;
+  setLevelScene(levelId: string, scene: SceneModel, origin?: SceneWriteOrigin): void;
 }
 
 export interface UseRoofPersistenceParams {
@@ -214,7 +215,7 @@ export function useRoofPersistence(
           lm.setLevelScene(levelId, {
             ...scene,
             entities: [...nonRoofs, ...nextRoofs],
-          });
+          }, 'remote-echo');
         }
       },
       (err: Error) => {

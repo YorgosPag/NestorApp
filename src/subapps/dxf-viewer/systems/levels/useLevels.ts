@@ -16,6 +16,7 @@ import type {
   FloorplanType,
 } from './config';
 import type { SceneModel } from '../../types/scene';
+import type { SceneWriteOrigin } from '../../hooks/scene/scene-write-origin';
 
 export interface LevelSystemState {
   levels: Level[];
@@ -53,7 +54,8 @@ export interface LevelSystemActions extends ImportWizardActions {
   calibrateFloorplan: (floorplanId: string, calibration: CalibrationData) => void;
 
   // Scene management
-  setLevelScene: (levelId: string, scene: SceneModel) => void;
+  // 🏢 ADR-040: optional SSoT write origin → drives the auto-save gate.
+  setLevelScene: (levelId: string, scene: SceneModel, origin?: SceneWriteOrigin) => void;
   getLevelScene: (levelId: string) => SceneModel | null;
   clearLevelScene: (levelId: string) => void;
   

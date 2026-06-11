@@ -15,6 +15,10 @@ import { calculateBoundingBox } from '../../../rendering/entities/shared/geometr
 import { EMPTY_BOUNDS } from '../../../config/geometry-constants';
 import { isValidPointStrict } from '../../../rendering/entities/shared/entity-validation-utils';
 import { SpatialUtils } from '../../../core/spatial/SpatialUtils';
+// ADR-436/ADR-363 — BIM 2D bounds SSoT (geometry.bbox → {min,max}). Reused here so
+// Home/Shift+1 zoom-extents frames BIM entities, not just DXF primitives.
+import { calculateBimEntity2DBounds } from '../../../bim/utils/bim-bounds';
+import type { Entity } from '../../../types/entities';
 
 // ============================================================================
 // 🏢 CANONICAL TYPES
@@ -140,6 +144,18 @@ export function createBoundsFromDxfScene(
           });
         }
         break;
+      default: {
+        // 🏢 ADR-436/ADR-363 — BIM entities (wall/column/beam/foundation/slab/opening/
+        // mep-*/…) expose no DXF primitive points; their 2D extent lives in
+        // geometry.bbox. Project it via the BIM bounds SSoT so Home/Shift+1
+        // zoom-extents includes them. Previously the switch had no BIM cases →
+        // every BIM entity was ignored → fit-to-view framed only raw DXF geometry.
+        const bimBounds = calculateBimEntity2DBounds(entity as unknown as Entity);
+        if (bimBounds && isValidPointStrict(bimBounds.min) && isValidPointStrict(bimBounds.max)) {
+          allPoints.push(bimBounds.min, bimBounds.max);
+        }
+        break;
+      }
     }
   }
 

@@ -88,38 +88,38 @@ function freshCache(): DxfBitmapCache {
 describe('DxfBitmapCache — ADR-377 subcategory style invalidation (ADR-040)', () => {
   it('is clean immediately after rebuild with unchanged inputs', () => {
     const cache = freshCache();
-    expect(cache.isDirty(SCENE, TRANSFORM, VIEWPORT)).toBe(false);
+    expect(cache.isDirty(SCENE, TRANSFORM, VIEWPORT, BASE_OPTIONS)).toBe(false);
   });
 
   it('invalidates when a subcategory style field is set', () => {
     const cache = freshCache();
-    expect(cache.isDirty(SCENE, TRANSFORM, VIEWPORT)).toBe(false);
+    expect(cache.isDirty(SCENE, TRANSFORM, VIEWPORT, BASE_OPTIONS)).toBe(false);
 
     act(() => get().setSubcategoryStyleField('wall', 'common-edges', 'cutColor', '#ff0000'));
 
-    expect(cache.isDirty(SCENE, TRANSFORM, VIEWPORT)).toBe(true);
+    expect(cache.isDirty(SCENE, TRANSFORM, VIEWPORT, BASE_OPTIONS)).toBe(true);
   });
 
   it('invalidates when a subcategory line pattern changes', () => {
     const cache = freshCache();
     act(() => get().setSubcategoryStyleField('beam', 'section-profile', 'linePattern', 'dashed'));
-    expect(cache.isDirty(SCENE, TRANSFORM, VIEWPORT)).toBe(true);
+    expect(cache.isDirty(SCENE, TRANSFORM, VIEWPORT, BASE_OPTIONS)).toBe(true);
   });
 
   it('invalidates again when a previously-set subcategory style is cleared', () => {
     act(() => get().setSubcategoryStyleField('wall', 'common-edges', 'cutColor', '#ff0000'));
     const cache = freshCache(); // key now embeds the override
-    expect(cache.isDirty(SCENE, TRANSFORM, VIEWPORT)).toBe(false);
+    expect(cache.isDirty(SCENE, TRANSFORM, VIEWPORT, BASE_OPTIONS)).toBe(false);
 
     act(() => get().clearSubcategoryStyle('wall', 'common-edges'));
 
-    expect(cache.isDirty(SCENE, TRANSFORM, VIEWPORT)).toBe(true);
+    expect(cache.isDirty(SCENE, TRANSFORM, VIEWPORT, BASE_OPTIONS)).toBe(true);
   });
 
   it('does NOT invalidate when an unrelated, non-keyed input is unchanged (control)', () => {
     const cache = freshCache();
     // No store mutation → cache must stay valid (guards against over-invalidation).
-    expect(cache.isDirty(SCENE, TRANSFORM, VIEWPORT)).toBe(false);
-    expect(cache.isDirty(SCENE, TRANSFORM, VIEWPORT)).toBe(false);
+    expect(cache.isDirty(SCENE, TRANSFORM, VIEWPORT, BASE_OPTIONS)).toBe(false);
+    expect(cache.isDirty(SCENE, TRANSFORM, VIEWPORT, BASE_OPTIONS)).toBe(false);
   });
 });

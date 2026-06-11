@@ -59,7 +59,7 @@ export function useDxfPipeline() {
       if (lm && lm.currentLevelId && result.scene) {
         // ✅ ENTERPRISE: Null safety for SceneModel assignment
         if (result.scene !== null) {
-          lm.setLevelScene(lm.currentLevelId, result.scene);
+          lm.setLevelScene(lm.currentLevelId, result.scene, 'load');
         }
       }
 
@@ -191,7 +191,7 @@ export function useDxfPipeline() {
     // Implementation would depend on your storage backend
     // For now, just use the existing level manager
     if (lm && lm.currentLevelId) {
-      lm.setLevelScene(`${destination.type}_${destination.id}`, scene);
+      lm.setLevelScene(`${destination.type}_${destination.id}`, scene, 'load');
     }
 
     // TODO: Implement actual storage to Firestore based on destination type

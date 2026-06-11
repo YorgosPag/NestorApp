@@ -21,14 +21,14 @@
 
 import type { Point2D } from '../../rendering/types/Types';
 import type { Guide } from '../../systems/guides/guide-types';
-import { DEFAULT_STRIP_WIDTH_MM, type FoundationEntity } from '../types/foundation-types';
-import type { GuideBinding, GuideBindingSlot } from '../hosting/guide-binding-types';
+import type { FoundationEntity, StripJustification } from '../types/foundation-types';
+import type { GuideBinding } from '../hosting/guide-binding-types';
 import {
   completeFoundationFromTwoClicks,
   type FoundationParamOverrides,
   type SceneUnits,
 } from '../../hooks/drawing/foundation-completion';
-import { mmToSceneUnits } from '../../utils/scene-units';
+import { gridStripJustification } from './foundation-grid-justification';
 
 /**
  * Tolerance (scene units) κάτω από την οποία δύο offsets θεωρούνται ταυτόσημοι →
@@ -63,16 +63,8 @@ type PushStrip = (
   start: Point2D,
   end: Point2D,
   bindings: readonly GuideBinding[],
+  justification: StripJustification,
 ) => void;
-
-/** Binding με optional `extend` (mm, signed). Παραλείπει το πεδίο όταν undefined. */
-function makeBinding(
-  guideId: string,
-  slot: GuideBindingSlot,
-  extendMm?: number,
-): GuideBinding {
-  return extendMm !== undefined ? { guideId, slot, extend: extendMm } : { guideId, slot };
-}
 
 /** Sorted unique offsets + παράλληλο array των αντίστοιχων guide ids. */
 function uniqueSortedAxis(guides: readonly Guide[]): AxisData {
@@ -88,16 +80,22 @@ function uniqueSortedAxis(guides: readonly Guide[]): AxisData {
   return { offsets, ids };
 }
 
-/** Build ΕΝΑ strip segment + tag του με guideBindings. null αν ο validator το απορρίψει. */
+/**
+ * Build ΕΝΑ strip segment + tag του με guideBindings. null αν ο validator το απορρίψει.
+ * Το `justification` (ADR-441 5a-grid) γράφεται στα params ΜΟΝΟ όταν ≠ center (Firestore-safe
+ * default· center → καμία αλλαγή). Ο μηχανικός το υπερισχύει αργότερα μέσω 5a-control.
+ */
 function buildBoundStrip(
   start: Readonly<Point2D>,
   end: Readonly<Point2D>,
   bindings: readonly GuideBinding[],
+  justification: StripJustification,
   levelId: string,
   overrides: FoundationParamOverrides,
   sceneUnits: SceneUnits,
 ): FoundationEntity | null {
-  const result = completeFoundationFromTwoClicks(start, end, levelId, 'strip', overrides, sceneUnits);
+  const merged = justification === 'center' ? overrides : { ...overrides, justification };
+  const result = completeFoundationFromTwoClicks(start, end, levelId, 'strip', merged, sceneUnits);
   if (!result.ok) return null;
   return { ...result.entity, guideBindings: bindings };
 }
@@ -105,60 +103,47 @@ function buildBoundStrip(
 /**
  * X-guides (κατακόρυφες) → λωρίδες κατά μήκος του Y, ανά διαδοχικό φάτνωμα.
  *
- * Corner-fill (ADR-441 Slice JOIN): ΜΟΝΟ στις 4 εξωτερικές γωνίες προεκτείνεται
- * το άκρο κατά ±width/2 προς τα έξω → κλείνει το ακάλυπτο τεταρτημόριο. Γωνία =
- * extreme parallel-axis (πρώτος/τελευταίος X) × extreme perpendicular (κάτω/πάνω Y).
+ * Auto-justification (ADR-441 Slice 5a-grid): οι ΠΕΡΙΜΕΤΡΙΚΕΣ κατακόρυφες (πρώτος/
+ * τελευταίος X-άξονας) αναπτύσσονται **προς τα μέσα** (εξωτερική παρειά ΠΑΝΩ στον άξονα,
+ * μηδέν overhang) → η γωνία κλείνει φυσικά, αντικαθιστά το παλιό corner-fill. Εσωτερικές
+ * = center. Τα start/end είναι καθαρά axis offsets (μηδέν coord extend).
  */
-function emitVerticalStrips(
-  xs: AxisData,
-  ys: AxisData,
-  halfMm: number,
-  scale: number,
-  push: PushStrip,
-): void {
+function emitVerticalStrips(xs: AxisData, ys: AxisData, push: PushStrip): void {
   const lastY = ys.offsets.length - 1;
   for (let xi = 0; xi < xs.offsets.length; xi++) {
-    const xExtreme = xi === 0 || xi === xs.offsets.length - 1;
+    const justification = gridStripJustification('V', xi, xs.offsets.length);
     for (let i = 0; i < lastY; i++) {
-      const startExt = xExtreme && i === 0 ? -halfMm : undefined;
-      const endExt = xExtreme && i === lastY - 1 ? halfMm : undefined;
       push(
-        { x: xs.offsets[xi], y: ys.offsets[i] + (startExt ?? 0) * scale },
-        { x: xs.offsets[xi], y: ys.offsets[i + 1] + (endExt ?? 0) * scale },
+        { x: xs.offsets[xi], y: ys.offsets[i] },
+        { x: xs.offsets[xi], y: ys.offsets[i + 1] },
         [
-          makeBinding(xs.ids[xi], 'start-x'),
-          makeBinding(xs.ids[xi], 'end-x'),
-          makeBinding(ys.ids[i], 'start-y', startExt),
-          makeBinding(ys.ids[i + 1], 'end-y', endExt),
+          { guideId: xs.ids[xi], slot: 'start-x' },
+          { guideId: xs.ids[xi], slot: 'end-x' },
+          { guideId: ys.ids[i], slot: 'start-y' },
+          { guideId: ys.ids[i + 1], slot: 'end-y' },
         ],
+        justification,
       );
     }
   }
 }
 
-/** Y-guides (οριζόντιες) → λωρίδες κατά μήκος του X. Corner-fill mirror του vertical. */
-function emitHorizontalStrips(
-  xs: AxisData,
-  ys: AxisData,
-  halfMm: number,
-  scale: number,
-  push: PushStrip,
-): void {
+/** Y-guides (οριζόντιες) → λωρίδες κατά μήκος του X. Auto-justification mirror του vertical. */
+function emitHorizontalStrips(xs: AxisData, ys: AxisData, push: PushStrip): void {
   const lastX = xs.offsets.length - 1;
   for (let yi = 0; yi < ys.offsets.length; yi++) {
-    const yExtreme = yi === 0 || yi === ys.offsets.length - 1;
+    const justification = gridStripJustification('H', yi, ys.offsets.length);
     for (let i = 0; i < lastX; i++) {
-      const startExt = yExtreme && i === 0 ? -halfMm : undefined;
-      const endExt = yExtreme && i === lastX - 1 ? halfMm : undefined;
       push(
-        { x: xs.offsets[i] + (startExt ?? 0) * scale, y: ys.offsets[yi] },
-        { x: xs.offsets[i + 1] + (endExt ?? 0) * scale, y: ys.offsets[yi] },
+        { x: xs.offsets[i], y: ys.offsets[yi] },
+        { x: xs.offsets[i + 1], y: ys.offsets[yi] },
         [
-          makeBinding(ys.ids[yi], 'start-y'),
-          makeBinding(ys.ids[yi], 'end-y'),
-          makeBinding(xs.ids[i], 'start-x', startExt),
-          makeBinding(xs.ids[i + 1], 'end-x', endExt),
+          { guideId: ys.ids[yi], slot: 'start-y' },
+          { guideId: ys.ids[yi], slot: 'end-y' },
+          { guideId: xs.ids[i], slot: 'start-x' },
+          { guideId: xs.ids[i + 1], slot: 'end-x' },
         ],
+        justification,
       );
     }
   }
@@ -182,16 +167,14 @@ export function buildStripGridFromGuides(
 
   const strips: FoundationEntity[] = [];
   let ignoredCount = 0;
-  const push: PushStrip = (start, end, bindings) => {
-    const strip = buildBoundStrip(start, end, bindings, levelId, overrides, sceneUnits);
+  const push: PushStrip = (start, end, bindings, justification) => {
+    const strip = buildBoundStrip(start, end, bindings, justification, levelId, overrides, sceneUnits);
     if (strip) strips.push(strip);
     else ignoredCount++;
   };
 
-  const halfMm = (overrides.width ?? DEFAULT_STRIP_WIDTH_MM) / 2;
-  const scale = mmToSceneUnits(sceneUnits);
-  emitVerticalStrips(xs, ys, halfMm, scale, push);
-  emitHorizontalStrips(xs, ys, halfMm, scale, push);
+  emitVerticalStrips(xs, ys, push);
+  emitHorizontalStrips(xs, ys, push);
 
   return { ok: true, strips, ignoredCount };
 }

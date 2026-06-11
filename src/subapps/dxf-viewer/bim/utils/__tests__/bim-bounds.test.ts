@@ -13,7 +13,7 @@ import { calculateBimEntity2DBounds } from '../bim-bounds';
 import type { Entity } from '../../../types/entities';
 
 function makeBimEntity(
-  type: 'wall' | 'opening' | 'slab' | 'slab-opening' | 'column' | 'beam' | 'stair',
+  type: 'wall' | 'opening' | 'slab' | 'slab-opening' | 'column' | 'beam' | 'stair' | 'foundation',
   bbox: { min: { x: number; y: number; z?: number }; max: { x: number; y: number; z?: number } } | null,
 ): Entity {
   return {
@@ -31,6 +31,7 @@ describe('ADR-363 Phase 7A — calculateBimEntity2DBounds', () => {
     'column',
     'beam',
     'stair',
+    'foundation', // ADR-436 — pad/strip/tie-beam, marquee window/crossing select
   ] as const)('projects geometry.bbox to 2D for %s', (type) => {
     const e = makeBimEntity(type, { min: { x: 10, y: 20 }, max: { x: 100, y: 200 } });
     expect(calculateBimEntity2DBounds(e)).toEqual({

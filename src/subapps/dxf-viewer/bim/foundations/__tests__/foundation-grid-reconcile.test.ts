@@ -79,6 +79,39 @@ describe('reconcileGridStrips', () => {
     expect(r.toCreate.map((s) => s.id)).toEqual([gridStrip.id]);
   });
 
+  it('χειροκίνητη υπεροχή (5a-grid): existing justificationManual ≠ target → preserve (μηδέν reflow)', () => {
+    // Ο μηχανικός όρισε justification με flag → managed reconcile ΔΕΝ το επαναφέρει.
+    const target = strip(vbind('x0', 'y0', 'y1'), { x: 0, y: 0 }, { x: 0, y: 4000 });
+    const base = strip(vbind('x0', 'y0', 'y1'), { x: 0, y: 0 }, { x: 0, y: 4000 });
+    const manual = {
+      ...base,
+      params: { ...base.params, justification: 'left', justificationManual: true },
+    } as FoundationEntity;
+    const r = reconcileGridStrips([target], [manual]);
+    expect(r.toDelete).toHaveLength(0);
+    expect(r.toCreate).toHaveLength(0);
+    expect(r.toReJustify).toHaveLength(0); // χειροκίνητη → δεν αγγίζεται
+    expect(r.unchanged).toBe(1);
+  });
+
+  it('auto reflow (5a-grid): existing auto με stale justification ≠ target → re-justify στον κανόνα', () => {
+    // Άξονας άλλαξε ρόλο (περιμετρικός→εσωτερικός): η παλιά auto λωρίδα ήταν inward,
+    // ο κανόνας τώρα = center → self-heal χωρίς διαγραφή (κρατά id), αφού ΔΕΝ είναι manual.
+    const target = strip(vbind('x0', 'y0', 'y1'), { x: 0, y: 0 }, { x: 0, y: 4000 }); // center
+    const base = strip(vbind('x0', 'y0', 'y1'), { x: 0, y: 0 }, { x: 0, y: 4000 });
+    const stale = { ...base, params: { ...base.params, justification: 'right' } } as FoundationEntity; // auto, no flag
+    const r = reconcileGridStrips([target], [stale]);
+    expect(r.toCreate).toHaveLength(0);
+    expect(r.toDelete).toHaveLength(0);
+    expect(r.toReJustify).toHaveLength(1);
+    expect(r.toReJustify[0].original.id).toBe(stale.id);
+    expect(r.toReJustify[0].rejustified.id).toBe(stale.id); // ίδιο id (in-place)
+    // center → το πεδίο αφαιρείται (Firestore-clean).
+    const nextParams = r.toReJustify[0].rejustified.params;
+    expect('justification' in nextParams ? nextParams.justification : undefined).toBeUndefined();
+    expect(r.unchanged).toBe(0);
+  });
+
   it('μερική επικάλυψη: κρατά αμετάβλητες, create/delete μόνο το delta', () => {
     const keepV = strip(vbind('x0', 'y0', 'y1'), { x: 0, y: 0 }, { x: 0, y: 4000 });
     const dropV = strip(vbind('x1', 'y0', 'y1'), { x: 4000, y: 0 }, { x: 4000, y: 4000 });

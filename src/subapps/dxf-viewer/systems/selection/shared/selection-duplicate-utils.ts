@@ -17,6 +17,12 @@ import { createInfinityBounds, EMPTY_SPATIAL_BOUNDS } from '../../../config/geom
 import { TEXT_METRICS_RATIOS } from '../../../config/text-rendering-config';
 // ADR-363 Phase 7A — BIM marquee bounds (SSoT delegation).
 import { calculateBimEntity2DBounds } from '../../../bim/utils/bim-bounds';
+// ADR-394 — full per-type DXF bounds SSoT (the same calculator the spatial-index
+// hit-test uses). Delegated from the `default` branch so Z fit-to-selection and
+// window/crossing marquee cover every DXF type that can be click-selected
+// (ellipse/spline/point/dimension/xline/ray), not just the enumerated primitives.
+import { BoundsCalculator } from '../../../rendering/hitTesting/Bounds';
+import type { EntityModel } from '../../../rendering/types/Types';
 
 /**
  * Calculate bounding box for entities
@@ -234,6 +240,7 @@ export function calculateEntityBounds(entity: AnySceneEntity): { min: Point2D, m
     case 'mep-underfloor': // ADR-408 Εύρος Β #3 — underfloor heating area-based BIM, marquee select
     case 'floor-finish':  // ADR-419 — floor-finish polygon covering, marquee select
     case 'roof':          // ADR-417 — parametric pitched roof, marquee select
+    case 'foundation':    // ADR-436 — foundation (pad/strip/tie-beam), marquee select
       return calculateBimEntity2DBounds(entity as unknown as Entity);
     case 'text':
     case 'mtext': {
@@ -267,6 +274,20 @@ export function calculateEntityBounds(entity: AnySceneEntity): { min: Point2D, m
         y: pos.y + c.x * sinA + c.y * cosA,
       }));
       return calculateVerticesBounds(worldCorners);
+    }
+    // ADR-394 — DXF types that are click-selectable (hit-test SSoT covers them) but
+    // were missing here, so Z fit-to-selection + window/crossing marquee skipped them.
+    // Delegate to the full hit-test `BoundsCalculator` (no new bounds math). Listed
+    // explicitly (not a catch-all default) so genuinely unsupported types stay silent
+    // instead of triggering BoundsCalculator's "Unknown entity type" console warning.
+    case 'ellipse':
+    case 'spline':
+    case 'point':
+    case 'dimension':
+    case 'xline':
+    case 'ray': {
+      const bb = BoundsCalculator.calculateEntityBounds(entity as unknown as EntityModel, 0);
+      return bb ? { min: { x: bb.minX, y: bb.minY }, max: { x: bb.maxX, y: bb.maxY } } : null;
     }
     default:
       return null;

@@ -149,7 +149,7 @@ export function useMepConnectorReconciliation(
       return seeded;
     });
 
-    if (changed) lm.setLevelScene(levelId, { ...scene, entities: nextEntities });
+    if (changed) lm.setLevelScene(levelId, { ...scene, entities: nextEntities }, 'system-reconcile');
   }, []);
 
   // (a) Scene change — a fixture/panel was placed, or the active level switched.

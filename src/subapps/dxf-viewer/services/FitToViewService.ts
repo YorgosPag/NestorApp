@@ -75,15 +75,27 @@ export class FitToViewService {
     }
 
     // Υπολογισμός scale με padding
-    const boundsWidth = Math.abs(unifiedBounds.max.x - unifiedBounds.min.x);
-    const boundsHeight = Math.abs(unifiedBounds.max.y - unifiedBounds.min.y);
+    let boundsWidth = Math.abs(unifiedBounds.max.x - unifiedBounds.min.x);
+    let boundsHeight = Math.abs(unifiedBounds.max.y - unifiedBounds.min.y);
 
+    // 🏢 ADR-394 — Degenerate bounds (one dimension is 0). The classic case is
+    // Z fit-to-selection on a SINGLE axis-aligned line: a horizontal line has
+    // boundsHeight=0, a vertical line has boundsWidth=0. Previously this hit the
+    // reject branch below → no zoom at all (worked only when a 2D entity was also
+    // selected). Substitute the dominant span for the zero axis so the line still
+    // frames (square fit around its midpoint). Only a true point (both zero) is
+    // genuinely un-fittable and still rejected.
     if (boundsWidth <= 0 || boundsHeight <= 0) {
-      return {
-        transform: null,
-        success: false,
-        reason: 'Invalid bounds dimensions'
-      };
+      const span = Math.max(boundsWidth, boundsHeight);
+      if (span <= 0) {
+        return {
+          transform: null,
+          success: false,
+          reason: 'Invalid bounds dimensions'
+        };
+      }
+      if (boundsWidth <= 0) boundsWidth = span;
+      if (boundsHeight <= 0) boundsHeight = span;
     }
 
     // 🛡️ GUARD: Ensure padding doesn't exceed 0.9 (90%) to prevent NaN
@@ -231,15 +243,29 @@ export class FitToViewService {
       };
     }
 
-    const boundsWidth = Math.abs(bounds.max.x - bounds.min.x);
-    const boundsHeight = Math.abs(bounds.max.y - bounds.min.y);
+    let boundsWidth = Math.abs(bounds.max.x - bounds.min.x);
+    let boundsHeight = Math.abs(bounds.max.y - bounds.min.y);
 
+    // 🏢 ADR-394 — Degenerate bounds (one dimension is 0). THIS is the method the
+    // Z fit-to-selection path reaches (zoomToFit → calculateFitTransform →
+    // calculateFitToViewFromBounds). A single axis-aligned line gives a 0 width
+    // (vertical) or 0 height (horizontal) → previously rejected here → no zoom
+    // (worked only when a 2D entity was co-selected). Substitute the dominant span
+    // for the zero axis so the line frames (square fit around its midpoint). A true
+    // point (both zero) stays un-fittable and is still rejected.
+    // NOTE: duplicated guard logic also lives in calculateFitToViewTransform above —
+    // flagged for SSoT unification (pending-ratchet).
     if (boundsWidth <= 0 || boundsHeight <= 0) {
-      return {
-        transform: null,
-        success: false,
-        reason: 'Invalid bounds dimensions'
-      };
+      const span = Math.max(boundsWidth, boundsHeight);
+      if (span <= 0) {
+        return {
+          transform: null,
+          success: false,
+          reason: 'Invalid bounds dimensions'
+        };
+      }
+      if (boundsWidth <= 0) boundsWidth = span;
+      if (boundsHeight <= 0) boundsHeight = span;
     }
 
     // 🛡️ GUARD: Ensure padding doesn't exceed 0.9 (90%) to prevent NaN

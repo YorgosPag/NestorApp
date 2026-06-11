@@ -15,6 +15,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { dequal } from 'dequal';
 
 import type { AnySceneEntity, SceneModel } from '../../types/entities';
+import type { SceneWriteOrigin } from '../scene/scene-write-origin';
 import type { MepSegmentEntity } from '../../bim/types/mep-segment-types';
 import { computeMepSegmentGeometry } from '../../bim/geometry/mep-segment-geometry';
 import { makeBimValidation } from '../../bim/types/bim-base';
@@ -39,7 +40,7 @@ export type MepSegmentSaveState = 'idle' | 'saving' | 'saved' | 'error';
 interface LevelManagerLike {
   readonly currentLevelId: string | null;
   getLevelScene(levelId: string): SceneModel | null;
-  setLevelScene(levelId: string, scene: SceneModel): void;
+  setLevelScene(levelId: string, scene: SceneModel, origin?: SceneWriteOrigin): void;
 }
 
 export interface UseMepSegmentPersistenceParams {
@@ -233,7 +234,7 @@ export function useMepSegmentPersistence(
           lm.setLevelScene(levelId, {
             ...scene,
             entities: [...nonSegments, ...nextSegments],
-          });
+          }, 'remote-echo');
         }
       },
       (err: Error) => {

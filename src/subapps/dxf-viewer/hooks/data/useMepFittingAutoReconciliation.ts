@@ -42,6 +42,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { dequal } from 'dequal';
 
 import type { AnySceneEntity, SceneModel } from '../../types/entities';
+import type { SceneWriteOrigin } from '../scene/scene-write-origin';
 import type { MepFittingEntity, MepFittingDraft } from '../../bim/types/mep-fitting-types';
 import { mepFittingIfcType } from '../../bim/types/mep-fitting-types';
 import { computeMepFittingGeometry } from '../../bim/geometry/mep-fitting-geometry';
@@ -66,7 +67,7 @@ import { createMepFitting } from '@/services/factories/mep-fitting.factory';
 interface LevelManagerLike {
   readonly currentLevelId: string | null;
   getLevelScene(levelId: string): SceneModel | null;
-  setLevelScene(levelId: string, scene: SceneModel): void;
+  setLevelScene(levelId: string, scene: SceneModel, origin?: SceneWriteOrigin): void;
 }
 
 export interface UseMepFittingAutoReconciliationParams {
@@ -335,7 +336,7 @@ function mergeDocsIntoScene(
     levelManager.setLevelScene(levelId, {
       ...scene,
       entities: [...nonFittings, ...nextFittings],
-    });
+    }, 'system-reconcile');
   }
 }
 
@@ -504,7 +505,7 @@ function applySceneOps(
   levelManager.setLevelScene(levelId, {
     ...scene,
     entities: [...kept, ...(created as unknown as AnySceneEntity[])],
-  });
+  }, 'system-reconcile');
 }
 
 // ============================================================================

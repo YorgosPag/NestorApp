@@ -59,7 +59,7 @@ describe('applyFoundationGridNet — pre-pass', () => {
     const net = applyFoundationGridNet(strips) as FoundationEntity[];
     const netSum = net.reduce((s, e) => s + e.geometry.volume, 0);
     expect(netSum).toBeLessThan(gross);
-    expect(netSum).toBeCloseTo(3.84, 1); // union total 2×2
+    expect(netSum).toBeCloseTo(3.264, 1); // union total 2×2 (ADR-441 5a-grid inward, μηδέν corner-fill)
   });
 
   it('< 2 grid strips → passthrough (καμία αλλαγή)', () => {

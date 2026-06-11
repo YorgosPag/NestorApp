@@ -75,6 +75,38 @@ function nearestGuideId(coord: number, guides: readonly Guide[], tol: number): s
   return bestId;
 }
 
+/** Άξονες ταξινομημένοι κατά offset (ασφαλές για index-based adjacency). */
+function sortedByOffset(guides: readonly Guide[]): readonly Guide[] {
+  return [...guides].sort((a, b) => a.offset - b.offset);
+}
+
+/** Index του πλησιέστερου άξονα εντός `tol` στη sorted λίστα (αλλιώς null). */
+function nearestIndex(coord: number, sorted: readonly Guide[], tol: number): number | null {
+  let best: number | null = null;
+  let bestDist = tol;
+  for (let i = 0; i < sorted.length; i++) {
+    const d = Math.abs(sorted[i].offset - coord);
+    if (d <= bestDist) { bestDist = d; best = i; }
+  }
+  return best;
+}
+
+/**
+ * Το **πρώτο (χαμηλότερο) φάτνωμα** που καλύπτει ένας ορφανός κατά τον κάθετο άξονα.
+ * Πολυ-φατνωματικός ορφανός (χειροκίνητη λωρίδα σε όλο το ύψος ενός άξονα) υιοθετεί
+ * αυτό το ένα segment (κρατά id+διατομή)· τα υπόλοιπα φατνώματα του άξονα τα φτιάχνει
+ * κανονικά ο reconciler (target ∉ existing → create) → πλήρης κάλυψη, **μηδέν διπλό**
+ * (ADR-441 Slice 6b multi-bay). `null` αν δεν εκτείνεται σε ≥1 πλήρες φάτνωμα.
+ */
+function firstBay(
+  a: number, b: number, sorted: readonly Guide[], tol: number,
+): { readonly lo: string; readonly hi: string } | null {
+  const iLo = nearestIndex(Math.min(a, b), sorted, tol);
+  const iHi = nearestIndex(Math.max(a, b), sorted, tol);
+  if (iLo === null || iHi === null || iLo === iHi) return null;
+  return { lo: sorted[iLo].id, hi: sorted[iLo + 1].id };
+}
+
 /** Συνθετικά bindings γραμμικού ορφανού (mirror builder slot-λογική, χωρίς extend). */
 function lineBindings(parallelId: string, startId: string, endId: string, vertical: boolean): GuideBinding[] {
   return vertical
@@ -88,7 +120,12 @@ function lineBindings(parallelId: string, startId: string, endId: string, vertic
       ];
 }
 
-/** Grid segmentKey ενός ορφανού από nearest-guide matching, ή null αν δεν ταιριάζει. */
+/**
+ * Grid segmentKey ενός ορφανού, ή null αν δεν ταιριάζει. Ο ορφανός ταυτοποιείται με
+ * το **πρώτο φάτνωμα** της διαδρομής του (όχι ολόκληρο το άνοιγμα) → ένας
+ * πολυ-φατνωματικός χειροκίνητος πεδιλοδοκός υιοθετεί ένα grid segment ενώ τα
+ * υπόλοιπα φατνώματα του άξονα δημιουργούνται από τον reconciler (μηδέν διπλό).
+ */
 function orphanSegmentKey(
   p: LineParams,
   xGuides: readonly Guide[],
@@ -102,22 +139,28 @@ function orphanSegmentKey(
 
   if (vertical) {
     const gx = nearestGuideId((p.start.x + p.end.x) / 2, xGuides, tolX);
-    const gyS = nearestGuideId(p.start.y, yGuides, tolY);
-    const gyE = nearestGuideId(p.end.y, yGuides, tolY);
-    if (!gx || !gyS || !gyE || gyS === gyE) return null;
-    return segmentKeyFromBindings(lineBindings(gx, gyS, gyE, true));
+    const bay = firstBay(p.start.y, p.end.y, sortedByOffset(yGuides), tolY);
+    if (!gx || !bay) return null;
+    return segmentKeyFromBindings(lineBindings(gx, bay.lo, bay.hi, true));
   }
   const gy = nearestGuideId((p.start.y + p.end.y) / 2, yGuides, tolY);
-  const gxS = nearestGuideId(p.start.x, xGuides, tolX);
-  const gxE = nearestGuideId(p.end.x, xGuides, tolX);
-  if (!gy || !gxS || !gxE || gxS === gxE) return null;
-  return segmentKeyFromBindings(lineBindings(gy, gxS, gxE, false));
+  const bay = firstBay(p.start.x, p.end.x, sortedByOffset(xGuides), tolX);
+  if (!gy || !bay) return null;
+  return segmentKeyFromBindings(lineBindings(gy, bay.lo, bay.hi, false));
 }
 
-/** rehosted entity: ίδιο id + διατομή, αλλά target bindings/coords + re-derived geometry. */
+/**
+ * rehosted entity: ίδιο id + διατομή (width/thickness), αλλά υιοθετεί target
+ * bindings/coords **και την έδραση κανόνα** (ADR-441 5a-grid: π.χ. περιμετρικό
+ * φάτνωμα → inward) → ο reconciler το βλέπει σύμφωνο με τον κανόνα (μηδέν reflow).
+ * Re-derived geometry. Τυχόν έδραση του ορφανού αντικαθίσταται από τον κανόνα.
+ */
 function adoptTarget(orphan: FoundationEntity, target: FoundationEntity): FoundationEntity {
   const tp = target.params as LineParams;
-  const mergedParams = { ...(orphan.params as LineParams), start: tp.start, end: tp.end };
+  const { justification: _j, justificationManual: _m, ...rest } = orphan.params as LineParams;
+  const base = { ...(rest as LineParams), start: tp.start, end: tp.end };
+  const mergedParams: LineParams =
+    tp.justification === undefined ? base : { ...base, justification: tp.justification };
   return {
     ...orphan,
     params: mergedParams,

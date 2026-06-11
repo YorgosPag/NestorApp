@@ -110,7 +110,7 @@ export function useLevelSceneLoader({
     if (!sceneFileId) {
       // No DXF linked to this level yet — create empty scene (target already reset above)
       if (!existingScene) {
-        sceneManager.setLevelScene(currentLevelId, createEmptyScene());
+        sceneManager.setLevelScene(currentLevelId, createEmptyScene(), 'load');
       }
       return;
     }
@@ -118,7 +118,7 @@ export function useLevelSceneLoader({
     // Prevent duplicate loads for the same level
     if (loadedSceneLevelsRef.current.has(currentLevelId)) {
       if (!existingScene) {
-        sceneManager.setLevelScene(currentLevelId, createEmptyScene());
+        sceneManager.setLevelScene(currentLevelId, createEmptyScene(), 'load');
       }
       return;
     }
@@ -151,13 +151,13 @@ export function useLevelSceneLoader({
             `[LevelsSystem] sceneFileId ${sceneFileId} belongs to floor ${fileRecord?.entityId} ` +
             `but level ${currentLevelId} is floor ${level?.floorId} — skipping cross-floor load.`,
           );
-          sceneManager.setLevelScene(currentLevelId, createEmptyScene());
+          sceneManager.setLevelScene(currentLevelId, createEmptyScene(), 'load');
           resetDxfAutoSaveTarget();
           return;
         }
 
         if (fileRecord?.scene && Array.isArray(fileRecord.scene.entities) && fileRecord.scene.layersById != null) {
-          sceneManager.setLevelScene(currentLevelId, fileRecord.scene);
+          sceneManager.setLevelScene(currentLevelId, fileRecord.scene, 'load');
           // Set the filename for auto-save context
           if (fileRecord.fileName && sceneManager.setCurrentFileName) {
             sceneManager.setCurrentFileName(fileRecord.fileName);
@@ -195,12 +195,12 @@ export function useLevelSceneLoader({
         } else {
           // File exists in Firestore but scene couldn't be loaded (corrupted/deleted)
           console.warn(`[LevelsSystem] Scene not found for fileId: ${sceneFileId}`);
-          sceneManager.setLevelScene(currentLevelId, createEmptyScene());
+          sceneManager.setLevelScene(currentLevelId, createEmptyScene(), 'load');
         }
       } catch (err) {
         if (!abortController.signal.aborted) {
           console.error('[LevelsSystem] Failed to load scene:', err);
-          sceneManager.setLevelScene(currentLevelId, createEmptyScene());
+          sceneManager.setLevelScene(currentLevelId, createEmptyScene(), 'load');
         }
       } finally {
         if (!abortController.signal.aborted) {

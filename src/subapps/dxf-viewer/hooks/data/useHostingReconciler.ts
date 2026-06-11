@@ -28,6 +28,7 @@
 
 import { useEffect, useRef } from 'react';
 import type { AnySceneEntity, SceneModel } from '../../types/scene';
+import type { SceneWriteOrigin } from '../scene/scene-write-origin';
 import { isFoundationEntity } from '../../types/entities';
 import type { FoundationEntity } from '../../bim/types/foundation-types';
 import { getGlobalGuideStore } from '../../systems/guides/guide-store';
@@ -44,7 +45,7 @@ import type { GuideOffsetLookup } from '../../bim/hosting/derive-params-from-gui
 interface LevelManagerLike {
   readonly currentLevelId: string | null;
   getLevelScene(levelId: string): SceneModel | null;
-  setLevelScene(levelId: string, scene: SceneModel): void;
+  setLevelScene(levelId: string, scene: SceneModel, origin?: SceneWriteOrigin): void;
 }
 
 export interface UseHostingReconcilerParams {
@@ -99,7 +100,7 @@ export function useHostingReconciler({ levelManager }: UseHostingReconcilerParam
         const u = byId.get(e.id);
         return u ? ({ ...e, params: u.nextParams, geometry: u.nextGeometry, validation: u.nextValidation } as AnySceneEntity) : e;
       });
-      levelManagerRef.current.setLevelScene(levelId, { ...scene, entities: nextEntities });
+      levelManagerRef.current.setLevelScene(levelId, { ...scene, entities: nextEntities }, 'system-reconcile');
       for (const u of updates) pendingPersistIdsRef.current.add(u.id);
       if (settleTimerRef.current) clearTimeout(settleTimerRef.current);
       settleTimerRef.current = setTimeout(flushSettlePersist, SETTLE_PERSIST_MS);

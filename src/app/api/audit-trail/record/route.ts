@@ -31,10 +31,6 @@ const logger = createModuleLogger('AuditTrailRecord');
 // VALIDATION
 // ============================================================================
 
-const VALID_ENTITY_TYPES: ReadonlySet<string> = new Set<AuditEntityType>([
-  'contact', 'building', 'property', 'project', 'parking', 'storage', 'wall', 'opening', 'slab', 'slab-opening', 'column', 'beam', 'stair', 'roof', 'mep-fixture', 'mep-system', 'electrical-panel', 'mep-segment', 'mep-fitting', 'mep-manifold', 'bim_family_type',
-]);
-
 /**
  * Entity types whose documents live in a per-company subcollection
  * (`companies/{companyId}/<collection>/{id}`) rather than a top-level
@@ -52,8 +48,21 @@ const VALID_ACTIONS: ReadonlySet<string> = new Set<AuditAction>([
   'document_added', 'document_removed',
 ]);
 
-/** Map entity type → Firestore collection for ownership verification */
-const ENTITY_COLLECTION_MAP: Record<string, string> = {
+/**
+ * Map entity type → Firestore collection for ownership verification.
+ *
+ * SSoT: this map is the SINGLE source of valid audit entity types. `VALID_ENTITY_TYPES`
+ * is DERIVED from its keys (below), so an entity type can never be "valid" without a
+ * collection mapping. This permanently kills the desync class of bug where a type was
+ * added to the allow-list but not the map (mep-fitting, foundation) → every POST 400'd.
+ * Add a new auditable entity HERE (one place) and it is automatically accepted.
+ *
+ * Typing: `Record<string, string | undefined>` keeps it indexable by the raw
+ * `body.entityType` string (returning `undefined` for unknown types, preserving the
+ * runtime guard), while `satisfies Partial<Record<AuditEntityType, string>>` compile-time
+ * rejects any key that is not a real `AuditEntityType`.
+ */
+const ENTITY_COLLECTION_MAP: Record<string, string | undefined> = {
   contact: COLLECTIONS.CONTACTS,
   building: COLLECTIONS.BUILDINGS,
   property: COLLECTIONS.PROPERTIES,
@@ -83,9 +92,19 @@ const ENTITY_COLLECTION_MAP: Record<string, string> = {
   // here → every fitting audit POST 400'd ("No collection mapping"), spamming the
   // console in bursts whenever pipes were drawn (auto-reconciler creates fittings).
   'mep-fitting': COLLECTIONS.FLOORPLAN_MEP_FITTINGS,
+  // ADR-436 — foundation discipline (pads / strip footings / tie-beams). Was missing
+  // → every foundation audit POST 400'd ("Invalid entityType"), spamming the console
+  // in bursts whenever the grid reconciler ran. Same desync class as mep-fitting above.
+  foundation: COLLECTIONS.FLOORPLAN_FOUNDATIONS,
   // ADR-412 Φ5 — BIM family types (subcollection — see SUBCOLLECTION_ENTITY_TYPES).
   bim_family_type: COLLECTIONS.BIM_FAMILY_TYPES,
-};
+} satisfies Partial<Record<AuditEntityType, string>>;
+
+/**
+ * Valid audit entity types — DERIVED from `ENTITY_COLLECTION_MAP` keys (SSoT).
+ * Never hand-maintain a parallel list again.
+ */
+const VALID_ENTITY_TYPES: ReadonlySet<string> = new Set(Object.keys(ENTITY_COLLECTION_MAP));
 
 // ============================================================================
 // TYPES

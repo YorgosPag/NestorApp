@@ -27,6 +27,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { dequal } from 'dequal';
 
 import type { AnySceneEntity, SceneModel } from '../../types/entities';
+import type { SceneWriteOrigin } from '../scene/scene-write-origin';
 import type { FoundationEntity } from '../../bim/types/foundation-types';
 import { computeFoundationGeometry } from '../../bim/geometry/foundation-geometry';
 import { validateFoundationParams } from '../../bim/validators/foundation-validator';
@@ -52,7 +53,7 @@ export type FoundationSaveState = 'idle' | 'saving' | 'saved' | 'error';
 interface LevelManagerLike {
   readonly currentLevelId: string | null;
   getLevelScene(levelId: string): SceneModel | null;
-  setLevelScene(levelId: string, scene: SceneModel): void;
+  setLevelScene(levelId: string, scene: SceneModel, origin?: SceneWriteOrigin): void;
 }
 
 export interface UseFoundationPersistenceParams {
@@ -243,7 +244,7 @@ export function useFoundationPersistence(
           lm.setLevelScene(levelId, {
             ...scene,
             entities: [...nonFoundations, ...nextFoundations],
-          });
+          }, 'remote-echo');
         }
       },
       (err: Error) => {

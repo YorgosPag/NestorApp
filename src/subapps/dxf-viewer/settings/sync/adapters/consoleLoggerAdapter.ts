@@ -11,11 +11,15 @@
  */
 
 import type { LoggerPort } from '../ports';
+import { createModuleLogger } from '@/lib/telemetry';
+
+// SSoT logger (ADR-036) — replaces raw console.* so settings-sync logs honour the
+// side-aware default (browser WARN / server INFO) + LOG_LEVEL override instead of
+// always printing.
+const logger = createModuleLogger('SettingsSync');
 
 /**
- * Console Logger Adapter
- *
- * Simple logger implementation using console.* methods
+ * Console Logger Adapter — `LoggerPort` backed by the centralized Logger SSoT.
  *
  * @example
  * ```ts
@@ -25,25 +29,25 @@ import type { LoggerPort } from '../ports';
 export const consoleLoggerAdapter: LoggerPort = {
   info(msg: string, data?: unknown) {
     if (data !== undefined) {
-      console.log(`[INFO] ${msg}`, data);
+      logger.info(msg, data);
     } else {
-      console.log(`[INFO] ${msg}`);
+      logger.info(msg);
     }
   },
 
   warn(msg: string, data?: unknown) {
     if (data !== undefined) {
-      console.warn(`[WARN] ${msg}`, data);
+      logger.warn(msg, data);
     } else {
-      console.warn(`[WARN] ${msg}`);
+      logger.warn(msg);
     }
   },
 
   error(msg: string, data?: unknown) {
     if (data !== undefined) {
-      console.error(`[ERROR] ${msg}`, data);
+      logger.error(msg, data);
     } else {
-      console.error(`[ERROR] ${msg}`);
+      logger.error(msg);
     }
   }
 };

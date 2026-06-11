@@ -14,6 +14,7 @@ import { FloorplanOperations, CalibrationOperations, LevelOperations } from './u
 import { type LevelsHookReturn } from './useLevels';
 import { useAutoSaveSceneManager } from '../../hooks/scene/useAutoSaveSceneManager';
 import type { SceneModel } from '../../types/scene';
+import type { SceneWriteOrigin } from '../../hooks/scene/scene-write-origin';
 import { StorageErrorHandler } from '../../utils/storage-utils';
 import { getErrorMessage } from '@/lib/error-utils';
 import { LevelsSystemProps, DEFAULT_IMPORT_WIZARD_STATE } from './LevelsSystem.types';
@@ -215,8 +216,12 @@ function useLevelsSystemState({
 
   // Scene management (delegated to sceneManager via stable ref)
   const setLevelScene = useCallback(
-    (levelId: string, scene: SceneModel) => {
-      sceneManagerRef.current.setLevelScene(levelId, scene);
+    // 🏢 ADR-040: forward the SSoT write origin so the auto-save gate can decide.
+    // This is the generic forwarder ALL consumers use via useLevels — it must NOT
+    // swallow the 3rd arg, otherwise every 'remote-echo'/'system-reconcile'/'load'
+    // tag set by persistence hooks/reconcilers/loaders would be lost here.
+    (levelId: string, scene: SceneModel, origin?: SceneWriteOrigin) => {
+      sceneManagerRef.current.setLevelScene(levelId, scene, origin);
     },
     []
   );

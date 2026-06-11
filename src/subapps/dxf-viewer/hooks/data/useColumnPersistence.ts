@@ -26,6 +26,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { dequal } from 'dequal';
 
 import type { AnySceneEntity, SceneModel } from '../../types/entities';
+import type { SceneWriteOrigin } from '../scene/scene-write-origin';
 import type { ColumnEntity } from '../../bim/types/column-types';
 import { computeColumnGeometry } from '../../bim/geometry/column-geometry';
 import { validateColumnParams } from '../../bim/validators/column-validator';
@@ -52,7 +53,7 @@ export type ColumnSaveState = 'idle' | 'saving' | 'saved' | 'error';
 interface LevelManagerLike {
   readonly currentLevelId: string | null;
   getLevelScene(levelId: string): SceneModel | null;
-  setLevelScene(levelId: string, scene: SceneModel): void;
+  setLevelScene(levelId: string, scene: SceneModel, origin?: SceneWriteOrigin): void;
 }
 
 export interface UseColumnPersistenceParams {
@@ -248,7 +249,7 @@ export function useColumnPersistence(
           lm.setLevelScene(levelId, {
             ...scene,
             entities: [...nonColumns, ...nextColumns],
-          });
+          }, 'remote-echo');
         }
       },
       (err: Error) => {

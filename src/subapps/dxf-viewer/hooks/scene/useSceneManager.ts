@@ -1,9 +1,15 @@
 import { useState, useCallback, useRef, useMemo } from 'react';
 import type { SceneModel } from '../../types/scene';
+import type { SceneWriteOrigin } from './scene-write-origin';
 
 export interface SceneManagerState {
   levelScenes: Record<string, SceneModel>;
-  setLevelScene: (levelId: string, scene: SceneModel) => void;
+  /**
+   * ADR-040: optional `origin` is the SSoT provenance consumed by the auto-save
+   * override (`useAutoSaveSceneManager`). The base manager IGNORES it for state —
+   * it only stores the scene. Optional → backward-compatible, no call site breaks.
+   */
+  setLevelScene: (levelId: string, scene: SceneModel, origin?: SceneWriteOrigin) => void;
   getLevelScene: (levelId: string) => SceneModel | null;
   clearLevelScene: (levelId: string) => void;
   clearAllScenes: () => void;
@@ -20,7 +26,9 @@ export function useSceneManager(): SceneManagerState {
   const levelScenesRef = useRef(levelScenes);
   levelScenesRef.current = levelScenes;
 
-  const setLevelScene = useCallback((levelId: string, scene: SceneModel) => {
+  const setLevelScene = useCallback((levelId: string, scene: SceneModel, _origin?: SceneWriteOrigin) => {
+    // ADR-040: base manager ignores `_origin` (state-only); the auto-save override
+    // reads it to gate the debounce. Param kept for signature compatibility.
     const prev = levelScenesRef.current;
     // No-op if pointer unchanged (avoids rerender loops)
     if (prev[levelId] === scene) return;

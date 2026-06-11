@@ -2458,6 +2458,14 @@
           "ne": "Northeast",
           "sw": "Southwest",
           "se": "Southeast"
+        },
+        "justification": {
+          "section": {
+            "title": "Location Line"
+          },
+          "center": "Center",
+          "left": "Left",
+          "right": "Right"
         }
       },
       "columnEditor": {

@@ -78,7 +78,11 @@ export async function getFileImpl(fileId: string): Promise<DxfFileRecord | null>
  */
 export async function validateForSaveImpl(
   fileName: string,
-  scene: SceneModel
+  scene: SceneModel,
+  // 🚀 PERF (2026-06-11): callers that already serialised the scene (saveToStorageImpl
+  // encodes the same bytes for upload) pass the byte length here to avoid a second
+  // ~950KB JSON.stringify per save. Omitted → serialise as before (standalone call).
+  precomputedSizeBytes?: number
 ): Promise<{
   isValid: boolean;
   fileId: string;
@@ -87,9 +91,8 @@ export async function validateForSaveImpl(
 }> {
   dxfLogger.debug('Running enterprise security validation', { fileName });
 
-  // Estimate file size from scene JSON
-  const sceneJson = JSON.stringify(scene, null, 0);
-  const estimatedFileSize = sceneJson.length;
+  // Estimate file size from scene JSON (reuse caller's serialisation when available).
+  const estimatedFileSize = precomputedSizeBytes ?? JSON.stringify(scene, null, 0).length;
 
   // Run complete validation workflow
   const validationResults = DxfSecurityValidator.validateDxfUpload({
@@ -185,8 +188,10 @@ export async function saveToStorageImpl(
     // 3. Get download URL
     const downloadURL = await getDownloadURL(snapshot.ref);
 
-    // 4. Run security validation for audit trail
-    const validation = await validateForSaveImpl(fileName, scene);
+    // 4. Run security validation for audit trail.
+    //    🚀 PERF (2026-06-11): reuse the bytes already encoded above (step 1) so the
+    //    validator does not re-stringify the full ~950KB scene a second time per save.
+    const validation = await validateForSaveImpl(fileName, scene, sceneBytes.length);
 
     // 5. 🏢 ADR-288: Upsert cadFiles metadata via centralized server endpoint.
     //    Server computes the next version, writes cadFiles, dual-writes `files`,

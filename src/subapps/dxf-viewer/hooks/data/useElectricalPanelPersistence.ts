@@ -15,6 +15,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { dequal } from 'dequal';
 
 import type { AnySceneEntity, SceneModel } from '../../types/entities';
+import type { SceneWriteOrigin } from '../scene/scene-write-origin';
 import type { ElectricalPanelEntity } from '../../bim/types/electrical-panel-types';
 import {
   computeElectricalPanelGeometry,
@@ -41,7 +42,7 @@ export type ElectricalPanelSaveState = 'idle' | 'saving' | 'saved' | 'error';
 interface LevelManagerLike {
   readonly currentLevelId: string | null;
   getLevelScene(levelId: string): SceneModel | null;
-  setLevelScene(levelId: string, scene: SceneModel): void;
+  setLevelScene(levelId: string, scene: SceneModel, origin?: SceneWriteOrigin): void;
 }
 
 export interface UseElectricalPanelPersistenceParams {
@@ -226,7 +227,7 @@ export function useElectricalPanelPersistence(
           lm.setLevelScene(levelId, {
             ...scene,
             entities: [...nonPanels, ...nextPanels],
-          });
+          }, 'remote-echo');
         }
       },
       (err: Error) => {

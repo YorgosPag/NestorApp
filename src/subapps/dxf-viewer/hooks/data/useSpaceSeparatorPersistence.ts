@@ -16,6 +16,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { dequal } from 'dequal';
 
 import type { AnySceneEntity, SceneModel } from '../../types/entities';
+import type { SceneWriteOrigin } from '../scene/scene-write-origin';
 import type { SpaceSeparatorEntity } from '../../bim/types/space-separator-types';
 import { isSpaceSeparatorEntity } from '../../types/entities';
 import { EventBus } from '../../systems/events/EventBus';
@@ -45,7 +46,7 @@ export type SpaceSeparatorSaveState = 'idle' | 'saving' | 'saved' | 'error';
 interface LevelManagerLike {
   readonly currentLevelId: string | null;
   getLevelScene(levelId: string): SceneModel | null;
-  setLevelScene(levelId: string, scene: SceneModel): void;
+  setLevelScene(levelId: string, scene: SceneModel, origin?: SceneWriteOrigin): void;
 }
 
 export interface UseSpaceSeparatorPersistenceParams {
@@ -165,7 +166,7 @@ export function useSpaceSeparatorPersistence(
         }
 
         if (mutated) {
-          lm.setLevelScene(levelId, { ...scene, entities: [...others, ...nextEntities] });
+          lm.setLevelScene(levelId, { ...scene, entities: [...others, ...nextEntities] }, 'remote-echo');
         }
 
         for (const d of docs) {

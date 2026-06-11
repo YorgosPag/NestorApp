@@ -28,6 +28,7 @@ import { dequal } from 'dequal';
 import { recomputeWallTrimsAfterDelete } from '../../bim/walls/add-wall-to-scene';
 
 import type { AnySceneEntity, SceneModel } from '../../types/entities';
+import type { SceneWriteOrigin } from '../scene/scene-write-origin';
 import type { WallEntity } from '../../bim/types/wall-types';
 import { EventBus } from '../../systems/events/EventBus';
 import {
@@ -62,7 +63,7 @@ export type WallSaveState = 'idle' | 'saving' | 'saved' | 'error';
 interface LevelManagerLike {
   readonly currentLevelId: string | null;
   getLevelScene(levelId: string): SceneModel | null;
-  setLevelScene(levelId: string, scene: SceneModel): void;
+  setLevelScene(levelId: string, scene: SceneModel, origin?: SceneWriteOrigin): void;
 }
 
 export interface UseWallPersistenceParams {
@@ -248,7 +249,7 @@ export function useWallPersistence(
           lm.setLevelScene(levelId, {
             ...scene,
             entities: [...nonWalls, ...nextWalls],
-          });
+          }, 'remote-echo');
         }
       },
       (err: Error) => {

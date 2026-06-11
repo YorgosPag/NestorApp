@@ -152,11 +152,36 @@ export function useDxfCanvasRenderer(params: DxfCanvasRendererParams) {
       // Absent → renderer falls back to per-entity literal values (Phase 1-4 baseline).
       const curLayersById = curScene?.layersById;
 
-      renderer.render(curScene, currentTransform, currentViewport, {
-        ...curRenderOptions,
-        skipInteractive: true,
-        layersById: curLayersById,
-      });
+      // 🚀 PERF (ADR-040 Phase D wiring, 2026-06-11): the normal-state entity layer
+      // is served from the hybrid bitmap cache instead of a full N-entity redraw
+      // every dirty frame. THE FPS-0 / 1793ms-freeze cause: each hover/selection
+      // change marked the layer dirty → renderer.render() re-painted ALL 188–4200
+      // entities. The cache rebuilds ONLY when scene/transform/viewport/annotation/
+      // BIM-settings/wireframe/layer-name change; on a static transform a hover is
+      // a cache HIT → one blit (1 drawImage) + the single hovered/selected overlay.
+      // Isolate + LayerStore mutations invalidate it imperatively (see subscriptions
+      // below). Interactive overlays stay OUTSIDE the cache — ADR-040 cardinal rule #3.
+      // The cache rebuild mirrors render(skipInteractive:true) verbatim (which itself
+      // drops layersById), so the blitted pixels are identical to the pre-cache path.
+      const bitmapCache = bitmapCacheRef.current;
+      const cacheInputs = {
+        showGrid: curRenderOptions.showGrid,
+        showLayerNames: curRenderOptions.showLayerNames,
+        wireframeMode: curRenderOptions.wireframeMode,
+      };
+      if (bitmapCache && ctx) {
+        if (bitmapCache.isDirty(curScene, currentTransform, currentViewport, cacheInputs)) {
+          bitmapCache.rebuild(curScene, currentTransform, currentViewport, cacheInputs);
+        }
+        bitmapCache.blit(ctx, currentViewport);
+      } else {
+        // Fallback before the cache effect mounts (or no 2D ctx): direct redraw.
+        renderer.render(curScene, currentTransform, currentViewport, {
+          ...curRenderOptions,
+          skipInteractive: true,
+          layersById: curLayersById,
+        });
+      }
 
       // 1b: Single-entity interactive overlays (O(1) via entityMap)
       if (curScene) {
@@ -327,6 +352,9 @@ export function useDxfCanvasRenderer(params: DxfCanvasRendererParams) {
   // store is idle (single Set entry, no notifications until command fires).
   useEffect(() => {
     return subscribeIsolateEffects(() => {
+      // ADR-040 Phase D wiring: isolate alpha is applied at entity-paint time and
+      // is NOT part of the bitmap cache key → invalidate so the layer rebuilds.
+      bitmapCacheRef.current?.invalidate();
       isDirtyRef.current = true;
     });
   }, []);
@@ -336,6 +364,9 @@ export function useDxfCanvasRenderer(params: DxfCanvasRendererParams) {
   // reads layer flags from LayerStore as the runtime SSoT.
   useEffect(() => {
     return subscribeLayerStore(() => {
+      // ADR-040 Phase D wiring: visible/frozen/lock/colour flags are read from
+      // LayerStore at paint time (not the cache key) → invalidate to force rebuild.
+      bitmapCacheRef.current?.invalidate();
       isDirtyRef.current = true;
     });
   }, []);

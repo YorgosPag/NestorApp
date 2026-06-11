@@ -26,6 +26,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { dequal } from 'dequal';
 
 import type { AnySceneEntity, SceneModel } from '../../types/entities';
+import type { SceneWriteOrigin } from '../scene/scene-write-origin';
 import type { BeamEntity } from '../../bim/types/beam-types';
 import { computeBeamGeometry } from '../../bim/geometry/beam-geometry';
 import { validateBeamParams } from '../../bim/validators/beam-validator';
@@ -50,7 +51,7 @@ export type BeamSaveState = 'idle' | 'saving' | 'saved' | 'error';
 interface LevelManagerLike {
   readonly currentLevelId: string | null;
   getLevelScene(levelId: string): SceneModel | null;
-  setLevelScene(levelId: string, scene: SceneModel): void;
+  setLevelScene(levelId: string, scene: SceneModel, origin?: SceneWriteOrigin): void;
 }
 
 export interface UseBeamPersistenceParams {
@@ -237,7 +238,7 @@ export function useBeamPersistence(
           lm.setLevelScene(levelId, {
             ...scene,
             entities: [...nonBeams, ...nextBeams],
-          });
+          }, 'remote-echo');
         }
       },
       (err: Error) => {

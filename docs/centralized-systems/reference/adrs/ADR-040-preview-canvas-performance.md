@@ -71,6 +71,37 @@ Mouse Event → DxfCanvas.onMouseMove
 
 ## Changelog
 
+### 2026-06-11 — Root-cause #2 auto-save storm fix: SSoT `SceneWriteOrigin` gate (transaction-origin pattern)
+
+**Status**: IMPLEMENTED 2026-06-11, εκκρεμεί browser-verify. **Πρόβλημα (Giorgio console):** `DxfFirestore Storage save` version 181→185 σε ~25s (~950KB upload/save) **χωρίς ο χρήστης να αλλάζει τίποτα** — storm αποθηκεύσεων που πίεζε το main thread. **Αιτία (ground-truth):** το `setLevelSceneWithAutoSave` (override του `setLevelScene`) reset-άρει το 2s debounce σε **κάθε** κλήση, ανεξαρτήτως πηγής. Κάθε save → Firestore metadata write → `onSnapshot` echo σε ~23 BIM persistence hooks → ο καθένας diff-merge → `lm.setLevelScene({...scene})` (πάντα νέο object → ο reference guard ΠΟΤΕ δεν πιάνει) → reset debounce → νέο save → loop.
+
+**Λύση (Revit/Figma/Yjs transaction-origin):** κάθε scene mutation κουβαλά **origin**, και το auto-save είναι gated στο origin μέσω **ΜΙΑΣ** SSoT απόφασης — μηδέν scattered `suppressAutoSave` booleans:
+- **NEW `hooks/scene/scene-write-origin.ts`**: `type SceneWriteOrigin = 'local-edit' | 'remote-echo' | 'load' | 'system-reconcile'` + `originSchedulesAutoSave(origin) => origin === 'local-edit'` (η μοναδική απόφαση, type-enforced — νέο origin → compile error). Αρχή: τα per-entity Firestore docs είναι το SSoT· το 950KB scene blob είναι **παράγωγο cache** → ένα `remote-echo` (ήδη persisted) ΠΟΤΕ δεν χρειάζεται να ξανα-σώσει το blob (όπως η αναγέννηση view/cache στο Revit δεν «βρομίζει» το document).
+- **Core gate**: `useSceneManager.setLevelScene(levelId, scene, origin?)` (base αγνοεί το origin, κρατά reference guard) + `useAutoSaveSceneManager.setLevelSceneWithAutoSave(…, origin = 'local-edit')` που ΠΑΝΤΑ ενημερώνει in-memory/React state (το UI δείχνει και remote edits) αλλά προγραμματίζει debounce **μόνο** αν `originSchedulesAutoSave(origin)`.
+- **Optional 3ο param → backward-compatible**: default `local-edit` → opt-OUT migration, κανένα υπάρχον user-edit call site (commands/drawing/grips) δεν σπάει. Ταγκαρίστηκαν ΜΟΝΟ τα μη-τοπικά paths: **23 persistence hooks snapshot callbacks → `'remote-echo'`** (22 BIM + stair), **reconcilers + 4 type-reresolution hooks → `'system-reconcile'`** (hosting/fitting/connector + wall/slab/roof/opening), **loaders (`useLevelSceneLoader`/`useDxfPipeline`) → `'load'`**. Τα delete callbacks ΜΕΝΟΥΝ `local-edit` (local user action → πρέπει να σωθεί).
+- **Linchpin**: ο γενικός forwarder `LevelsSystem.setLevelScene` + ο δημόσιος τύπος `LevelSystemActions.setLevelScene` (`useLevels.ts`) widened να **προωθούν** το origin — αλλιώς όλα τα tags θα καταπίνονταν εκεί.
+- **Component 5 (δευτερεύον)**: `DxfFirestoreService.autoSaveV2` — αφαιρέθηκε το redundant `getFileMetadataImpl(fileId)` getDoc (επέλεγε ανάμεσα σε δύο ΙΔΕΝΤΙΚΑ branches → full Firestore read ανά save με μηδέν επίδραση).
+
+**ΕΚΤΟΣ CHECK 6B/6D paths** (scene/persistence hooks, όχι renderer/cursor/hover/bitmap-cache· καμία αλλαγή σε cache-key ή micro-leaf δομή — co-staged ADR-040 για ασφάλεια του perf domain). Tests: `scene-write-origin.test.ts` (truth table) + `useAutoSaveSceneManager-origin-gate.test.ts` (fake-timers: `local-edit`→1 save, `remote-echo`/`load`/`system-reconcile`→0 save) = 11 PASS. tsc καθαρό.
+
+### 2026-06-11 — Phase D bitmap cache ΕΠΙΤΕΛΟΥΣ wired (FPS-0 / 1793ms freeze fix): normal-state entity layer served από το cache αντί full N-entity redraw ανά dirty frame
+
+**Status**: IMPLEMENTED 2026-06-11, εκκρεμεί browser-verify. **Πρόβλημα (regression που το Phase D υποτίθεται απέτρεπε):** το `DxfBitmapCache` instantiate-αρόταν (`dxf-canvas-renderer.ts` effect) αλλά **ΠΟΤΕ δεν χρησιμοποιόταν** στο render path — το `renderScene()` καλούσε unconditional `renderer.render(curScene, …, { skipInteractive:true })`, δηλαδή **πλήρη redraw ΟΛΩΝ των 188–4200 entities κάθε dirty frame**. Επειδή κάθε hover/selection αλλαγή μαρκάρει τη σκηνή dirty (renderOptions στο dep array), το **κάθε κούνημα του ποντικιού** πάνω σε πυκνό σχέδιο = full N-entity repaint → 200–1800ms/frame → `[Violation] message handler took 1793ms` + `FPS below threshold: 0` (main-thread freeze, RAF deltaTime~1.8s → instantaneous FPS≈0).
+
+**Λύση (AutoCAD dual-buffer, το αρχικό Phase D design):** το `renderScene()` σερβίρει πλέον το normal-state entity layer από το cache:
+- `if (cache.isDirty(scene, transform, viewport, inputs)) cache.rebuild(…); cache.blit(ctx, viewport);` — με fallback στο direct `renderer.render()` μέχρι να mount-άρει το cache effect (ή χωρίς 2D ctx).
+- **Cache HIT = ο κρίσιμος κερδισμένος χρόνος:** σε στατικό transform, ένα hover/selection ΔΕΝ αλλάζει scene/transform/viewport/toggles → cache hit → **ένα `drawImage` (blit) αντί για redraw 4200 entities** + το single hovered/selected overlay (renderSingleEntity) ΠΑΝΩ από το blit. Τα interactive overlays μένουν **ΕΚΤΟΣ** του cache (Cardinal Rule #3 — το cache key ΔΕΝ περιέχει hoveredEntityId/selectedEntityIds/gripInteractionState).
+- **Pixel-identical:** το `rebuild` αναπαράγει verbatim το `render(skipInteractive:true)` (το ίδιο effectiveOptions branch πετάει το `layersById`), οπότε τα blitted pixels είναι ίδια με το pre-cache path → μηδέν visual regression.
+
+**Cache-key ορθότητα (το naïve one-liner wiring θα έσπαγε):**
+- **`blit` κάνει `clearRect` πριν το `drawImage`** — το blit ΑΝΕΛΑΒΕ το entity-layer repaint (που πριν το `renderer.render` έκανε clearRect ανά frame)· το cached bitmap έχει διάφανο background → σκέτο drawImage θα άφηνε ghost trails του προηγούμενου hover overlay.
+- **`wireframeMode` / `showLayerNames` / `showGrid` μπήκαν στο cache key** — φτάνουν μέσω renderOptions (όχι store που το cache subscribes) → toggle τους πρέπει να bust-άρει το cache.
+- **NEW `invalidate()`** καλείται από τα isolate + LayerStore subscriptions του renderer — isolate alpha + visible/frozen/lock/colour flags διαβάζονται από τα stores τη στιγμή του paint, ΕΚΤΟΣ key, οπότε χρειάζονται imperative invalidation (το bimSettingsHash/annotationScale ήταν ήδη στο key).
+
+**Δευτερεύον (root-cause #1b, ίδιο commit):** (i) `dxf-firestore-storage.impl.ts` — το `validateForSaveImpl` δέχεται προαιρετικό `precomputedSizeBytes`· το `saveToStorageImpl` περνά τα ήδη-encoded `sceneBytes.length` → μείον ένα ~950KB `JSON.stringify` ανά save. (ii) `DxfPerformanceOptimizer.getCanvasElementCount()` — αντικαταστάθηκε ο `Math.random()` stub (που τύχαια έσκαγε το `>1000` optimization gate) με πραγματικό DOM `<canvas>` count.
+
+Tests: `dxf-bitmap-cache-phase-d-wiring.test.ts` (6 PASS — toggle invalidation + invalidate() + hover cache-HIT) + updated `dxf-bitmap-cache-subcategory-invalidation.test.ts` (νέα isDirty signature). tsc καθαρό. Co-staged για **CHECK 6B/6D** (`dxf-canvas-renderer.ts`, `dxf-bitmap-cache.ts`).
+
 ### 2026-06-11 — Zero-lag associative follow ghost (ADR-441 Slice 3-perf): hosted strips follow a dragged axis frame-for-frame on a dedicated canvas
 
 **Status**: IMPLEMENTED 2026-06-11, εκκρεμεί browser-verify. **Πρόβλημα:** ο reconciler (παρακάτω entry) ακολουθεί τον οδηγό μέσω `setLevelScene` (React state) → re-render → bitmap rebuild = **1-3 frames lag** (Giorgio: ορατό lag οδηγού↔πεδιλοδοκού). Ο οδηγός όμως ζωγραφίζεται imperative από το guide-store snapshot (μηδέν lag) → οι strips «μένουν πίσω».

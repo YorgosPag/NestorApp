@@ -102,6 +102,15 @@
 
 - [ ] **`railing` λείπει από 2 hit-testing switch** (ίδιο κενό που διορθώθηκε για `furniture` στο ADR-410 v2.2). Το `RailingEntity` δεν έχει `case 'railing'` σε: (1) `services/HitTestingService.ts` → `convertToEntityModel()` (χρειάζεται geometry-recompute fallback με `computeRailingGeometry` από `../bim/railings/railing-geometry`, mirror του `furniture` case) και (2) `systems/selection/shared/selection-duplicate-utils.ts` → `calculateEntityBounds()` (πρόσθεσε `case 'railing'` στη fall-through λίστα → `calculateBimEntity2DBounds`). **Συνέπεια:** τα κάγκελα πιθανότατα δεν φωτίζονται σε hover ούτε επιλέγονται με click/marquee στο 2Δ. **Μικρό fix (~15min, 2 cases).** Επιβεβαίωσε ότι `RailingEntity` έχει `params`+`geometry` και ότι `'railing'` είναι στο `Entity` union πριν. Ο Giorgio ζήτησε μόνο έπιπλα σε αυτή τη συνεδρία → αναβλήθηκε.
 
+### 📐 ENTITY-BOUNDS CALCULATORS — 3 παράλληλα switch (priorità media, Boy-Scout flag 2026-06-11)
+
+- [ ] **3 ξεχωριστοί entity→2D-bounds calculators που πρέπει να μένουν συγχρονισμένοι χειροκίνητα** — κάθε νέο entity type πρέπει να προστεθεί και στους 3, αλλιώς δουλεύει σε άλλα paths και σπάει σε άλλα (το ίδιο family bug που χτύπησε `foundation` σε marquee + Home, και `railing` παραπάνω):
+  1. `systems/zoom/utils/bounds.ts` → `createBoundsFromDxfScene` (Home/Shift+1 zoom-extents) — τώρα έχει `default → calculateBimEntity2DBounds` (ADR-394 2026-06-11), οπότε αυτό πλέον γενικεύει.
+  2. `systems/selection/shared/selection-duplicate-utils.ts` → `calculateEntityBounds` (marquee window/crossing) — explicit per-type switch (χρειάζεται add ανά type· λείπει `railing`).
+  3. `rendering/hitTesting/Bounds.ts` → `BoundsCalculator.calculateEntityBounds` (spatial-index/click) — explicit per-type switch.
+  **Προτεινόμενο SSoT unification:** τα (2)+(3) να γενικευτούν όπως το (1) (BIM fall-through → `calculateBimEntity2DBounds`) ώστε ένας μόνο τόπος να ορίζει BIM bounds. ~1-2h, χρειάζεται προσοχή σε tolerance/DXF-primitive paths. Όχι τώρα (Giorgio ζήτησε μόνο τα 2 bugfixes).
+- [ ] **`FitToViewService` — διπλότυπο scale/guard math σε 2 μεθόδους** (ADR-394 2026-06-11): `calculateFitToViewTransform` (scene-based) και `calculateFitToViewFromBounds` (pure-bounds) έχουν **πανομοιότυπο** boundsWidth/Height + padding + scaleX/scaleY + degenerate guard inline. Το degenerate-line fix έπρεπε να μπει **και στις δύο** (έμπειρο bug: μπήκε αρχικά μόνο στη μία). Προτεινόμενο: η `calculateFitToViewTransform` να καλεί την `calculateFitToViewFromBounds` αφού υπολογίσει bounds (DRY). ~30min.
+
 ### 🔥 CRITICAL PATH (Scenario A — ~21h expected)
 
 - [x] **CHECK 3.17 Entity Audit Coverage** — COMPLETATO. Baseline 9→0. _(Batch 4: 4 wire-up server-side + 5 HARD_EXEMPT nel scanner.)_

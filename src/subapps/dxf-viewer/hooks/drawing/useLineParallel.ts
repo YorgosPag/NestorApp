@@ -22,6 +22,11 @@ import { isLineEntity, isPolylineEntity, generateEntityId } from '../../types/sc
 import { createParallelLine, pointToLineDistance } from '../../rendering/entities/shared/geometry-utils';
 import { EventBus } from '../../systems/events';
 import { UI_COLORS } from '../../config/color-config';
+import { createModuleLogger } from '@/lib/telemetry';
+
+// SSoT logger — gated by NEXT_PUBLIC_LOG_LEVEL (replaces raw console.* that always
+// flooded the console regardless of level).
+const logger = createModuleLogger('LineParallel');
 
 // ============================================================================
 // TYPES
@@ -116,7 +121,7 @@ export function useLineParallel(options: {
       currentStep: 0,
       error: null,
     });
-    console.debug('⫽ [LineParallel] Activated - waiting for reference line');
+    logger.debug('⫽Activated - waiting for reference line');
   }, []);
 
   const deactivate = useCallback(() => {
@@ -126,7 +131,7 @@ export function useLineParallel(options: {
       currentStep: 0,
       error: null,
     });
-    console.debug('⫽ [LineParallel] Deactivated');
+    logger.debug('⫽Deactivated');
   }, []);
 
   const reset = useCallback(() => {
@@ -136,7 +141,7 @@ export function useLineParallel(options: {
       currentStep: 0,
       error: null,
     }));
-    console.debug('⫽ [LineParallel] Reset - waiting for reference line');
+    logger.debug('⫽Reset - waiting for reference line');
   }, []);
 
   // ============================================================================
@@ -189,7 +194,7 @@ export function useLineParallel(options: {
     // Only accept LINE or POLYLINE entities
     if (!isLineEntity(entity) && !isPolylineEntity(entity)) {
       setState(prev => ({ ...prev, error: 'Επιλέξτε γραμμή (LINE ή POLYLINE)' }));
-      console.warn('⫽ [LineParallel] Rejected entity - not a line:', entity.type);
+      logger.warn('⫽Rejected entity - not a line:', entity.type);
       return false;
     }
 
@@ -234,7 +239,7 @@ export function useLineParallel(options: {
       return false;
     }
 
-    console.debug('⫽ [LineParallel] Reference line selected:', selectedLine);
+    logger.debug('⫽Reference line selected:', selectedLine);
 
     setState(prev => ({
       ...prev,
@@ -285,7 +290,7 @@ export function useLineParallel(options: {
       color: UI_COLORS.BRIGHT_GREEN, // 🏢 ENTERPRISE: Consistent green color for new entities
     };
 
-    console.debug('⫽ [LineParallel] Line created:', lineEntity);
+    logger.debug('⫽Line created:', lineEntity);
 
     // Notify via callback
     onLineCreated?.(lineEntity);

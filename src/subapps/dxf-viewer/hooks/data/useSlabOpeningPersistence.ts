@@ -26,6 +26,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { dequal } from 'dequal';
 
 import type { AnySceneEntity, SceneModel } from '../../types/entities';
+import type { SceneWriteOrigin } from '../scene/scene-write-origin';
 import type { SlabOpeningEntity } from '../../bim/types/slab-opening-types';
 import { computeSlabOpeningGeometry } from '../../bim/geometry/slab-opening-geometry';
 import { validateSlabOpeningParams } from '../../bim/validators/slab-opening-validator';
@@ -49,7 +50,7 @@ export type SlabOpeningSaveState = 'idle' | 'saving' | 'saved' | 'error';
 interface LevelManagerLike {
   readonly currentLevelId: string | null;
   getLevelScene(levelId: string): SceneModel | null;
-  setLevelScene(levelId: string, scene: SceneModel): void;
+  setLevelScene(levelId: string, scene: SceneModel, origin?: SceneWriteOrigin): void;
 }
 
 export interface UseSlabOpeningPersistenceParams {
@@ -226,7 +227,7 @@ export function useSlabOpeningPersistence(
           lm.setLevelScene(levelId, {
             ...scene,
             entities: [...others, ...nextSlabOpenings],
-          });
+          }, 'remote-echo');
         }
       },
       (err: Error) => {

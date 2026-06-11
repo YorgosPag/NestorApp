@@ -15,6 +15,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { dequal } from 'dequal';
 
 import type { AnySceneEntity, SceneModel } from '../../types/entities';
+import type { SceneWriteOrigin } from '../scene/scene-write-origin';
 import type { MepUnderfloorEntity } from '../../bim/types/mep-underfloor-types';
 import {
   computeMepUnderfloorGeometry,
@@ -41,7 +42,7 @@ export type MepUnderfloorSaveState = 'idle' | 'saving' | 'saved' | 'error';
 interface LevelManagerLike {
   readonly currentLevelId: string | null;
   getLevelScene(levelId: string): SceneModel | null;
-  setLevelScene(levelId: string, scene: SceneModel): void;
+  setLevelScene(levelId: string, scene: SceneModel, origin?: SceneWriteOrigin): void;
 }
 
 export interface UseMepUnderfloorPersistenceParams {
@@ -232,7 +233,7 @@ export function useMepUnderfloorPersistence(
           lm.setLevelScene(levelId, {
             ...scene,
             entities: [...nonUnderfloors, ...nextUnderfloors],
-          });
+          }, 'remote-echo');
         }
       },
       (err: Error) => {

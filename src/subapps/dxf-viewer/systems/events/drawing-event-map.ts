@@ -235,12 +235,13 @@ export interface DrawingEventMap extends MepAutoDesignEventMap {
   'bim:foundation-params-updated': { foundationId: string };
   // ADR-436 Slice 1-persist — BIM foundation delete event (Firestore deleteDoc)
   'bim:foundation-delete-requested': { foundationId: string };
-  // ADR-441 Slice 2+6+6b — managed reconcile εσχάρας από τον κάναβο.
-  // `created` = νέες λωρίδες· `deleted` = obsolete που αντικαταστάθηκαν (split /
-  // stale corner-fill)· `rehosted` = legacy ορφανές που ξανα-κρεμάστηκαν (Slice 6b).
-  // 0/0/0 → «ενημερωμένο» (idempotent re-run). UI: non-blocking Revit-style summary
+  // ADR-441 Slice 2+6+6b+5a-grid — managed reconcile εσχάρας από τον κάναβο.
+  // `created` = νέες λωρίδες· `deleted` = obsolete που αντικαταστάθηκαν (split)·
+  // `rehosted` = legacy ορφανές που ξανα-κρεμάστηκαν (Slice 6b)· `reJustified` = auto
+  // λωρίδες που ευθυγραμμίστηκαν με τον κανόνα έδρασης όταν άλλαξε ρόλος άξονα (5a-grid).
+  // 0/0/0/0 → «ενημερωμένο» (idempotent re-run). UI: non-blocking Revit-style summary
   // toast (πληθυντικότητα ICU).
-  'bim:foundations-from-grid': { created: number; deleted: number; rehosted: number };
+  'bim:foundations-from-grid': { created: number; deleted: number; rehosted: number; reJustified: number };
   // ADR-441 Slice 2 — η εσχάρα δεν παρήχθη: 'insufficient-guides' (<2 άξονες
   // ανά διεύθυνση) ή 'empty' (κανένα έγκυρο segment). UI: warning toast.
   'bim:foundations-from-grid-failed': { reason: 'insufficient-guides' | 'empty' };

@@ -22,6 +22,11 @@ import { isLineEntity, isPolylineEntity, generateEntityId } from '../../types/sc
 import { createPerpendicularLine, pointToLineDistance } from '../../rendering/entities/shared/geometry-utils';
 import { EventBus } from '../../systems/events';
 import { UI_COLORS } from '../../config/color-config';
+import { createModuleLogger } from '@/lib/telemetry';
+
+// SSoT logger — gated by NEXT_PUBLIC_LOG_LEVEL (replaces raw console.* that always
+// flooded the console regardless of level).
+const logger = createModuleLogger('LinePerpendicular');
 
 // ============================================================================
 // TYPES
@@ -129,7 +134,7 @@ export function useLinePerpendicular(options: {
       currentStep: 0,
       error: null,
     });
-    console.debug('📐 [LinePerpendicular] Activated - waiting for reference line');
+    logger.debug('📐Activated - waiting for reference line');
   }, []);
 
   const deactivate = useCallback(() => {
@@ -139,7 +144,7 @@ export function useLinePerpendicular(options: {
       currentStep: 0,
       error: null,
     });
-    console.debug('📐 [LinePerpendicular] Deactivated');
+    logger.debug('📐Deactivated');
   }, []);
 
   const reset = useCallback(() => {
@@ -149,7 +154,7 @@ export function useLinePerpendicular(options: {
       currentStep: 0,
       error: null,
     }));
-    console.debug('📐 [LinePerpendicular] Reset - waiting for reference line');
+    logger.debug('📐Reset - waiting for reference line');
   }, []);
 
   // ============================================================================
@@ -202,7 +207,7 @@ export function useLinePerpendicular(options: {
     // Only accept LINE or POLYLINE entities
     if (!isLineEntity(entity) && !isPolylineEntity(entity)) {
       setState(prev => ({ ...prev, error: 'Επιλέξτε γραμμή (LINE ή POLYLINE)' }));
-      console.warn('📐 [LinePerpendicular] Rejected entity - not a line:', entity.type);
+      logger.warn('📐Rejected entity - not a line:', entity.type);
       return false;
     }
 
@@ -247,7 +252,7 @@ export function useLinePerpendicular(options: {
       return false;
     }
 
-    console.debug('📐 [LinePerpendicular] Reference line selected:', selectedLine);
+    logger.debug('📐Reference line selected:', selectedLine);
 
     setState(prev => ({
       ...prev,
@@ -299,7 +304,7 @@ export function useLinePerpendicular(options: {
       color: UI_COLORS.BRIGHT_GREEN, // 🏢 ENTERPRISE: Consistent green color for new entities
     };
 
-    console.debug('📐 [LinePerpendicular] Line created:', lineEntity);
+    logger.debug('📐Line created:', lineEntity);
 
     // Notify via callback
     onLineCreated?.(lineEntity);

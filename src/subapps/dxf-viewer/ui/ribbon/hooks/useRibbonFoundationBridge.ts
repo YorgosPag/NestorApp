@@ -20,11 +20,13 @@
 import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { isFoundationEntity } from '../../../types/entities';
-import type {
-  FoundationAnchor,
-  FoundationEntity,
-  FoundationKind,
-  FoundationParams,
+import {
+  DEFAULT_STRIP_JUSTIFICATION,
+  type FoundationAnchor,
+  type FoundationEntity,
+  type FoundationKind,
+  type FoundationParams,
+  type StripJustification,
 } from '../../../bim/types/foundation-types';
 import { useCommandHistory } from '../../../core/commands';
 import { UpdateFoundationParamsCommand } from '../../../core/commands/entity-commands/UpdateFoundationParamsCommand';
@@ -43,6 +45,7 @@ import {
   isFoundationRibbonStringKey,
 } from './bridge/foundation-command-keys';
 import { foundationToolBridgeStore } from './bridge/foundation-tool-bridge-store';
+import type { FoundationToolBridgeHandle } from './bridge/foundation-tool-bridge-store';
 import type {
   RibbonComboboxState,
   RibbonToggleState,
@@ -130,17 +133,8 @@ export function useRibbonFoundationBridge(
       // ── SELECTED ENTITY BRANCH ────────────────────────────────────────────
       if (foundation) {
         if (isFoundationRibbonStringKey(commandKey)) {
-          if (commandKey === FOUNDATION_RIBBON_KEYS.stringParams.kind) {
-            return { value: foundation.params.kind, options: [] };
-          }
-          if (commandKey === FOUNDATION_RIBBON_KEYS.stringParams.anchor) {
-            const anchor = foundation.params.kind === 'pad' ? foundation.params.anchor : 'center';
-            return { value: anchor, options: [] };
-          }
-          if (commandKey === FOUNDATION_RIBBON_KEYS.stringParams.material) {
-            return { value: foundation.params.material ?? 'rc', options: [] };
-          }
-          return null;
+          const s = readSelectedStringField(foundation.params, commandKey);
+          return s === null ? null : { value: s, options: [] };
         }
         if (isFoundationRibbonKey(commandKey)) {
           const raw = readNumberField(foundation.params, commandKey);
@@ -151,11 +145,9 @@ export function useRibbonFoundationBridge(
       }
       // ── DRAWING-MODE BRANCH (no selection, tool active) ──────────────────
       if (!toolHandle || !toolHandle.isActive) return null;
-      if (commandKey === FOUNDATION_RIBBON_KEYS.stringParams.kind) {
-        return { value: toolHandle.kind, options: [] };
-      }
-      if (commandKey === FOUNDATION_RIBBON_KEYS.stringParams.anchor) {
-        return { value: toolHandle.anchor, options: [] };
+      if (isFoundationRibbonStringKey(commandKey)) {
+        const s = readToolStringField(toolHandle, commandKey);
+        return s === null ? null : { value: s, options: [] };
       }
       if (isFoundationRibbonKey(commandKey)) {
         const field = NUMBER_KEY_TO_OVERRIDE[commandKey];
@@ -173,18 +165,9 @@ export function useRibbonFoundationBridge(
       const foundation = resolveFoundation();
       // ── SELECTED ENTITY BRANCH ────────────────────────────────────────────
       if (foundation) {
-        if (commandKey === FOUNDATION_RIBBON_KEYS.stringParams.kind) {
-          // ADR-436 Slice 2 — kind combobox = DISPLAY-ONLY (Revit 3 separate tools).
-          // pad↔line είναι geometrically invalid· δεν επιτρέπουμε kind-switch. No-op.
-          return;
-        }
-        if (commandKey === FOUNDATION_RIBBON_KEYS.stringParams.anchor) {
-          if (foundation.params.kind !== 'pad') return;
-          dispatchParams(foundation, { ...foundation.params, anchor: value as FoundationAnchor });
-          return;
-        }
-        if (commandKey === FOUNDATION_RIBBON_KEYS.stringParams.material) {
-          dispatchParams(foundation, { ...foundation.params, material: value });
+        if (isFoundationRibbonStringKey(commandKey)) {
+          const next = nextParamsForStringChange(foundation.params, commandKey, value);
+          if (next) dispatchParams(foundation, next);
           return;
         }
         if (isFoundationRibbonKey(commandKey)) {
@@ -198,16 +181,8 @@ export function useRibbonFoundationBridge(
       // ── DRAWING-MODE BRANCH ───────────────────────────────────────────────
       const handle = foundationToolBridgeStore.get();
       if (!handle || !handle.isActive) return;
-      if (commandKey === FOUNDATION_RIBBON_KEYS.stringParams.kind) {
-        // ADR-436 Slice 2 — kind fixed by tool id (DISPLAY-ONLY combobox). No-op.
-        return;
-      }
-      if (commandKey === FOUNDATION_RIBBON_KEYS.stringParams.anchor) {
-        handle.setAnchor(value as FoundationAnchor);
-        return;
-      }
-      if (commandKey === FOUNDATION_RIBBON_KEYS.stringParams.material) {
-        handle.setParamOverrides({ material: value });
+      if (isFoundationRibbonStringKey(commandKey)) {
+        applyStringChangeToHandle(handle, commandKey, value);
         return;
       }
       if (isFoundationRibbonKey(commandKey)) {
@@ -255,6 +230,7 @@ export function useRibbonFoundationBridge(
         created: result.created,
         deleted: result.deleted,
         rehosted: result.rehosted,
+        reJustified: result.reJustified,
       });
     } else {
       EventBus.emit('bim:foundations-from-grid-failed', { reason: result.reason ?? 'empty' });
@@ -300,6 +276,79 @@ export function useRibbonFoundationBridge(
     () => ({ onComboboxChange, getComboboxState, onToggle, getToggleState, getBadgeState, onAction, getPanelVisibility }),
     [onComboboxChange, getComboboxState, onToggle, getToggleState, getBadgeState, onAction, getPanelVisibility],
   );
+}
+
+// ─── String-field read/write helpers (discriminated-union-safe) ──────────────
+
+/** Selected-entity string-combobox value. null = combobox δεν ισχύει για το kind. */
+function readSelectedStringField(params: FoundationParams, commandKey: string): string | null {
+  if (commandKey === FOUNDATION_RIBBON_KEYS.stringParams.kind) return params.kind;
+  if (commandKey === FOUNDATION_RIBBON_KEYS.stringParams.anchor) {
+    return params.kind === 'pad' ? params.anchor : 'center';
+  }
+  if (commandKey === FOUNDATION_RIBBON_KEYS.stringParams.material) return params.material ?? 'rc';
+  // ADR-441 Slice 5a-control — justification μόνο για strip/tie-beam (pad → anchor).
+  if (commandKey === FOUNDATION_RIBBON_KEYS.stringParams.justification) {
+    return params.kind === 'pad' ? null : (params.justification ?? DEFAULT_STRIP_JUSTIFICATION);
+  }
+  return null;
+}
+
+/** Drawing-mode (tool handle) string-combobox value. null = δεν ισχύει για το kind. */
+function readToolStringField(handle: FoundationToolBridgeHandle, commandKey: string): string | null {
+  if (commandKey === FOUNDATION_RIBBON_KEYS.stringParams.kind) return handle.kind;
+  if (commandKey === FOUNDATION_RIBBON_KEYS.stringParams.anchor) return handle.anchor;
+  if (commandKey === FOUNDATION_RIBBON_KEYS.stringParams.material) {
+    return typeof handle.overrides.material === 'string' ? handle.overrides.material : null;
+  }
+  if (commandKey === FOUNDATION_RIBBON_KEYS.stringParams.justification) {
+    return handle.kind === 'pad' ? null : (handle.overrides.justification ?? DEFAULT_STRIP_JUSTIFICATION);
+  }
+  return null;
+}
+
+/** Next params for a string-combobox change on a selected foundation. null = no-op. */
+function nextParamsForStringChange(
+  params: FoundationParams,
+  commandKey: string,
+  value: string,
+): FoundationParams | null {
+  // ADR-436 Slice 2 — kind = DISPLAY-ONLY (pad↔line geometrically invalid). No-op.
+  if (commandKey === FOUNDATION_RIBBON_KEYS.stringParams.kind) return null;
+  if (commandKey === FOUNDATION_RIBBON_KEYS.stringParams.anchor) {
+    return params.kind === 'pad' ? { ...params, anchor: value as FoundationAnchor } : null;
+  }
+  if (commandKey === FOUNDATION_RIBBON_KEYS.stringParams.material) {
+    return { ...params, material: value };
+  }
+  if (commandKey === FOUNDATION_RIBBON_KEYS.stringParams.justification) {
+    // ADR-441 5a-grid — χειροκίνητη υπεροχή: flag ώστε το managed reconcile να μην το επαναφέρει.
+    return params.kind === 'pad'
+      ? null
+      : { ...params, justification: value as StripJustification, justificationManual: true };
+  }
+  return null;
+}
+
+/** Apply a string-combobox change to the active tool handle (drawing-mode overrides). */
+function applyStringChangeToHandle(
+  handle: FoundationToolBridgeHandle,
+  commandKey: string,
+  value: string,
+): void {
+  // ADR-436 Slice 2 — kind fixed by tool id (DISPLAY-ONLY). No-op.
+  if (commandKey === FOUNDATION_RIBBON_KEYS.stringParams.kind) return;
+  if (commandKey === FOUNDATION_RIBBON_KEYS.stringParams.anchor) {
+    handle.setAnchor(value as FoundationAnchor);
+    return;
+  }
+  if (commandKey === FOUNDATION_RIBBON_KEYS.stringParams.material) {
+    handle.setParamOverrides({ material: value });
+    return;
+  }
+  if (commandKey === FOUNDATION_RIBBON_KEYS.stringParams.justification) {
+    handle.setParamOverrides({ justification: value as StripJustification });
+  }
 }
 
 // ─── Number-field read/write helpers (discriminated-union-safe) ──────────────
