@@ -1,11 +1,12 @@
 /**
  * ADR-362 Phase E3 — Home → Dimensions QUICK-ACCESS launcher.
  *
- * The full dimension-creation toolset lives on the persistent «Επισημείωση»
- * (Annotate) tab as large grouped buttons (`annotate-tab-dimensions.ts`). This
- * panel is the compact Home entry point — exactly AutoCAD's "Home → Annotation"
- * panel, which carries a single Dimension button so the most frequent annotation
- * action is always one click away without switching tabs.
+ * The full dimension-creation toolset lives in the CONTEXTUAL «Διαστάσεις» tab
+ * (`contextual-dimensions-tab.ts`, `dim-tool-active`), which auto-opens the
+ * moment a dim tool is picked — mirroring the guides contextual tab (ADR-442).
+ * This panel is the compact Home entry point (AutoCAD "Home → Annotation"): a
+ * single Dimension button so the most frequent action is one click away, and it
+ * drives `dim-smart` → the contextual «Διαστάσεις» tab auto-opens.
  *
  * A single large split-button:
  *   • main click → `dim-smart` (Smart DIM) → starts dimensioning
@@ -13,7 +14,7 @@
  *                  diameter / angular2L); the remaining types live on Annotate.
  *
  * SSoT: reuses the exact commandKeys / icons / i18n labels also used by
- * `annotate-tab-dimensions.ts`. Zero new keys. Every `commandKey` is a `ToolType`
+ * `contextual-dimensions-tab.ts`. Zero new keys. Every `commandKey` is a `ToolType`
  * routed via `useDimToolRouting` → `DimensionCreateStore`.
  */
 

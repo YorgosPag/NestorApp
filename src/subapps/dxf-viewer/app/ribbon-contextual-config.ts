@@ -46,6 +46,7 @@ import { CONTEXTUAL_MEP_FIXTURE_LIBRARY_TAB, MEP_FIXTURE_LIBRARY_CONTEXTUAL_TRIG
 import { CONTEXTUAL_MEP_RISER_TAB, MEP_RISER_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-mep-riser-tab';
 import { ANIMATION_CONTEXTUAL_TAB, ANIMATION_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-animation-tab';
 import { CONTEXTUAL_GUIDES_TAB, GUIDES_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-guides-tab';
+import { CONTEXTUAL_DIMENSIONS_TAB, DIMENSIONS_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-dimensions-tab';
 import { selectAnimationToolActive, useAnimationStore } from '../bim-3d/animation/AnimationStore';
 import { useMepSystemStore } from '../bim/mep-systems/mep-system-store';
 import { useMepCircuitEditorStore } from '../bim/mep-systems/mep-circuit-editor-store';
@@ -99,6 +100,7 @@ export const RIBBON_CONTEXTUAL_TABS = [
   CONTEXTUAL_THERMAL_SPACE_TAB,
   ANIMATION_CONTEXTUAL_TAB,
   CONTEXTUAL_GUIDES_TAB,
+  CONTEXTUAL_DIMENSIONS_TAB,
 ] as const;
 
 type EntityLike = { readonly type: string; readonly params?: unknown };
@@ -290,6 +292,11 @@ export function useActiveContextualTrigger({
     // ids share the `guide-` prefix; `guides-visibility`/grid actions don't set
     // `activeTool`, so toggling them keeps this tab open.
     if (activeTool.startsWith('guide-')) return GUIDES_CONTEXTUAL_TRIGGER;
+    // ADR-362 Phase E3 — any dimension creation tool active → «Διαστάσεις» tab
+    // (mirror of guides). All dim ToolTypes share the `dim-` prefix. A SELECTED
+    // dimension instead surfaces the edit tab (`dim-selected`, resolved earlier
+    // via `fromSelection`), so placing vs editing never collide.
+    if (activeTool.startsWith('dim-')) return DIMENSIONS_CONTEXTUAL_TRIGGER;
     if (activeTool === 'slab-opening') return SLAB_OPENING_CONTEXTUAL_TRIGGER;
     // ADR-359 Phase 10.b: xline active → show mode selection panel.
     if (activeTool === 'xline') return XLINE_MODE_CONTEXTUAL_TRIGGER;

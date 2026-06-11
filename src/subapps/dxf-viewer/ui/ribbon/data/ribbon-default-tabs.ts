@@ -16,7 +16,6 @@ import { VIEW_DRAWING_SCALE_PANEL } from './view-tab-drawing-scale';
 import { BIM_GRAPHICS_PANEL, BIM_STYLES_PANEL } from './view-tab-bim-settings';
 import { VIEW_LAYER_MANAGER_PANEL } from './view-tab-layer-manager';
 import { ANNOTATE_MEASURE_PANEL } from './home-tab-measure';
-import { ANNOTATE_DIMENSION_PANELS } from './annotate-tab-dimensions';
 import { HOME_DIMENSIONS_PANEL } from './home-tab-dimensions';
 import { HOME_GUIDES_PANEL } from './home-tab-guides';
 import { HOME_AI_PANEL } from './home-tab-ai';
@@ -70,10 +69,10 @@ export const DEFAULT_RIBBON_TABS: readonly RibbonTab[] = [
     id: 'annotate',
     labelKey: 'ribbon.tabs.annotate',
     panels: [
-      // ADR-362 Phase E3 — dimension CREATION lives on the persistent Annotate
-      // tab (Revit-grade), large grouped buttons. Editing = `dim-selected`
-      // contextual tab. Moved here from Home → Dimensions (ADR-442 follow-on).
-      ...ANNOTATE_DIMENSION_PANELS,
+      // ADR-362 Phase E3 — dimension CREATION is a CONTEXTUAL «Διαστάσεις» tab
+      // (CONTEXTUAL_DIMENSIONS_TAB, `dim-tool-active`), mirroring guides — it
+      // auto-opens when a dim tool is picked. So the Annotate tab keeps only its
+      // future text/leader/tag placeholder here.
       { id: 'text', labelKey: 'ribbon.panels.text', rows: [] },
     ],
   },
