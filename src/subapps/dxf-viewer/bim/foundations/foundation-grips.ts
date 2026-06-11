@@ -63,6 +63,11 @@ import {
 } from '../grips/axis-box-grips';
 import { mmScaleFor } from '../../utils/scene-units';
 import { rotationHandlePerpOffset } from '../grips/rotation-handle-policy';
+import {
+  centredCentroidWorld,
+  centredLocalToWorld,
+  type CentredAnchorFrame,
+} from '../grips/centred-anchor-frame';
 
 /** Line-based foundation params (strip / tie-beam) — share start/end/width. */
 type LineFoundationParams = StripFootingParams | TieBeamParams;
@@ -102,26 +107,28 @@ const RAD_TO_DEG = 180 / Math.PI;
 // or dy (length); was a local `farEdgeSignX`/`farEdgeSignY` duplicate.
 
 /**
- * Centroid (bbox centre) του pad footprint σε world coords.
- * `centroid = position + rotatedR(-dx*width*s, -dy*length*s)` (s = scene-unit
- * scale ώστε τα grips να μένουν πάνω στο σώμα σε metre/cm scenes, mirror column).
+ * Pad footprint → shared `CentredAnchorFrame`. Pad is always a `width × length`
+ * rectangle (no polygon/circular variants), so `dimX = width`, `dimY = length`.
  */
-function computeCentroidWorld(params: PadFootingParams): Point2D {
-  const s = mmScaleFor(params);
-  const { dx, dy } = ANCHOR_OFFSETS[params.anchor];
-  const shift = rotateVector(
-    { x: -dx * params.width * s, y: -dy * params.length * s },
-    params.rotation,
-  );
-  return { x: params.position.x + shift.x, y: params.position.y + shift.y };
+function padAnchorFrame(params: PadFootingParams): CentredAnchorFrame {
+  return {
+    position: { x: params.position.x, y: params.position.y },
+    rotationDeg: params.rotation,
+    scale: mmScaleFor(params),
+    anchorOffset: ANCHOR_OFFSETS[params.anchor],
+    dimX: params.width,
+    dimY: params.length,
+  };
 }
 
-/** Local-frame mm point (centered on centroid, no anchor shift) → world coords. */
+/** Centroid (bbox centre) του pad footprint σε world coords — shared SSoT. */
+function computeCentroidWorld(params: PadFootingParams): Point2D {
+  return centredCentroidWorld(padAnchorFrame(params));
+}
+
+/** Local-frame mm point (centered on centroid, no anchor shift) → world — shared SSoT. */
 function localToWorld(local: Point2D, params: PadFootingParams): Point2D {
-  const s = mmScaleFor(params);
-  const centroid = computeCentroidWorld(params);
-  const rotated = rotateVector({ x: local.x * s, y: local.y * s }, params.rotation);
-  return { x: centroid.x + rotated.x, y: centroid.y + rotated.y };
+  return centredLocalToWorld(padAnchorFrame(params), local);
 }
 
 /** World position της λαβής width (far edge midpoint κατά local X). */

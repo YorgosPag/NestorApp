@@ -26,6 +26,16 @@
 
 import type { FoundationParams } from '../types/foundation-types';
 import type { GuideBinding } from './guide-binding-types';
+import { mmScaleFor } from '../../utils/scene-units';
+
+/**
+ * Scene-units μετατόπιση ενός binding endpoint: το `extend` (mm, signed) →
+ * scene units μέσω του SSoT `mmScaleFor`. `undefined` extend → 0 (καμία
+ * μετατόπιση). Conversion ΜΟΝΟ στο extend term — το offset μένει σκέτο.
+ */
+function extendInSceneUnits(binding: GuideBinding, scale: number): number {
+  return binding.extend !== undefined ? binding.extend * scale : 0;
+}
 
 /**
  * Lookup του τρέχοντος offset ενός άξονα. Επιστρέφει `undefined` αν ο άξονας
@@ -43,14 +53,17 @@ export function deriveFoundationParamsFromGuides(
   bindings: readonly GuideBinding[],
   getOffset: GuideOffsetLookup,
 ): FoundationParams | null {
+  const scale = mmScaleFor(params);
+
   if (params.kind === 'pad') {
     let { x, y } = params.position;
     let changed = false;
     for (const b of bindings) {
       const off = getOffset(b.guideId);
       if (off === undefined) continue;
-      if (b.slot === 'center-x' && x !== off) { x = off; changed = true; }
-      else if (b.slot === 'center-y' && y !== off) { y = off; changed = true; }
+      const target = off + extendInSceneUnits(b, scale);
+      if (b.slot === 'center-x' && x !== target) { x = target; changed = true; }
+      else if (b.slot === 'center-y' && y !== target) { y = target; changed = true; }
     }
     return changed ? { ...params, position: { ...params.position, x, y } } : null;
   }
@@ -62,10 +75,11 @@ export function deriveFoundationParamsFromGuides(
   for (const b of bindings) {
     const off = getOffset(b.guideId);
     if (off === undefined) continue;
-    if (b.slot === 'start-x' && sx !== off) { sx = off; changed = true; }
-    else if (b.slot === 'start-y' && sy !== off) { sy = off; changed = true; }
-    else if (b.slot === 'end-x' && ex !== off) { ex = off; changed = true; }
-    else if (b.slot === 'end-y' && ey !== off) { ey = off; changed = true; }
+    const target = off + extendInSceneUnits(b, scale);
+    if (b.slot === 'start-x' && sx !== target) { sx = target; changed = true; }
+    else if (b.slot === 'start-y' && sy !== target) { sy = target; changed = true; }
+    else if (b.slot === 'end-x' && ex !== target) { ex = target; changed = true; }
+    else if (b.slot === 'end-y' && ey !== target) { ey = target; changed = true; }
   }
   if (!changed) return null;
   return {

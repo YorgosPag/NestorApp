@@ -23,6 +23,8 @@ export const GuideBindingSchema = z
   .object({
     guideId: z.string().min(1),
     slot: GuideBindingSlotSchema,
+    // ADR-441 Slice JOIN — signed mm offset πέρα από το offset του άξονα (corner-fill).
+    extend: z.number().optional(),
   })
   .strict();
 

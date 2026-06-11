@@ -34,6 +34,16 @@ export interface GuideBinding {
   readonly guideId: string;
   /** Ποια διάσταση της entity ελέγχει ο άξονας. */
   readonly slot: GuideBindingSlot;
+  /**
+   * Σταθερή μετατόπιση (mm, signed) του coordinate ΠΕΡΑ από το offset του άξονα,
+   * κατά μήκος της διεύθυνσης του slot. Επιβιώνει του follow-on-move γιατί είναι
+   * σταθερή απόσταση *σχετικά* με τον (μετακινούμενο) άξονα.
+   *
+   * Χρήση (ADR-441 Slice JOIN): corner-fill της εσχάρας — τα 4 γωνιακά endpoints
+   * προεκτείνονται κατά ±width/2 προς τα έξω ώστε να κλείσουν τα κενά τεταρτημόρια
+   * στις εξωτερικές γωνίες. `undefined` → καμία μετατόπιση (coordinate = offset).
+   */
+  readonly extend?: number;
 }
 
 /**

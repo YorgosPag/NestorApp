@@ -42,8 +42,7 @@ import {
   MIN_POLYGON_SIDES,
 } from '../types/column-types';
 import { mmScaleFor } from '../../utils/scene-units';
-
-const DEG_TO_RAD = Math.PI / 180;
+import { centredLocalToWorld } from '../grips/centred-anchor-frame';
 const SQRT2_HALF = Math.SQRT2 / 2;
 
 /**
@@ -147,34 +146,24 @@ function circularAnchorLocal(anchor: ColumnAnchor, radius: number): Point2D {
  * bbox depends on N).
  */
 function localToWorld(local: Point2D, params: ColumnParams): Point2D {
-  // ADR-398 — the mm local offsets must be converted to scene units (× mmScaleFor)
-  // before being added to `position` (which is already in scene units). Without
-  // this, meter/cm scenes placed the anchors 1000×/10× off the column → the corner
-  // snap candidates landed far off-screen and never matched the visible corners.
-  // Mirrors `computeColumnGeometry` (the drawn footprint) + `column-grip-utils`
-  // (ADR-397 #2 grip fix). `position` is NOT scaled (already scene units).
-  const s = mmScaleFor(params);
+  // ADR-363 Slice F — geometry delegated to the shared `centredLocalToWorld` SSoT
+  // (rotate/shift/scale via `rotateVector` → canonical `rotatePoint`, ADR-188 — no
+  // more raw cos/sin here). The mm local offsets are scaled to scene units inside
+  // (metre/cm-scene-correct, ADR-398). This module keeps only its own footprint-dim
+  // extraction (circular = no shift/rotation; polygon = N-gon bbox; else width×depth).
+  const scale = mmScaleFor(params);
+  const position = { x: params.position.x, y: params.position.y };
   if (params.kind === 'circular') {
-    return { x: params.position.x + local.x * s, y: params.position.y + local.y * s };
+    // Rotationally symmetric → no anchor shift, no rotation (mirror transformFootprint).
+    return centredLocalToWorld({ position, rotationDeg: 0, scale, anchorOffset: { dx: 0, dy: 0 }, dimX: 0, dimY: 0 }, local);
   }
-  const { dx, dy } = ANCHOR_OFFSETS[params.anchor];
-  let dimX: number;
-  let dimY: number;
-  if (params.kind === 'polygon') {
-    ({ dimX, dimY } = polygonBboxMm(params.width, params.polygon?.sides));
-  } else {
-    dimX = params.width;
-    dimY = params.depth;
-  }
-  const shiftX = -dx * dimX;
-  const shiftY = -dy * dimY;
-  const cos = Math.cos(params.rotation * DEG_TO_RAD);
-  const sin = Math.sin(params.rotation * DEG_TO_RAD);
-  const lx = local.x + shiftX;
-  const ly = local.y + shiftY;
-  const rx = lx * cos - ly * sin;
-  const ry = lx * sin + ly * cos;
-  return { x: params.position.x + rx * s, y: params.position.y + ry * s };
+  const { dimX, dimY } = params.kind === 'polygon'
+    ? polygonBboxMm(params.width, params.polygon?.sides)
+    : { dimX: params.width, dimY: params.depth };
+  return centredLocalToWorld(
+    { position, rotationDeg: params.rotation, scale, anchorOffset: ANCHOR_OFFSETS[params.anchor], dimX, dimY },
+    local,
+  );
 }
 
 // ─── Polygon bbox SSoT (Phase 8C) ───────────────────────────────────────────

@@ -19,6 +19,11 @@ import { mmScaleFor } from '../../utils/scene-units';
 // thin wrappers so callers (column-grips / column-variant-grips) stay unchanged.
 import { rotateVector, projectToLocalFrame, farEdgeSign } from '../grips/grip-math';
 import { rotationHandlePerpOffset } from '../grips/rotation-handle-policy';
+import {
+  centredCentroidWorld,
+  centredLocalToWorld,
+  type CentredAnchorFrame,
+} from '../grips/centred-anchor-frame';
 
 export const DEG_TO_RAD = Math.PI / 180;
 export const RAD_TO_DEG = 180 / Math.PI;
@@ -70,57 +75,51 @@ export function polygonBackedBboxMm(
 }
 
 /**
- * Compute the centroid (bbox centre) of the column footprint σε world coords.
- * For non-circular / non-polygon: `centroid = position + rotatedR(-dx*width, -dy*depth)`.
- * For circular: anchor effectively 'center', `centroid = position`.
- * For polygon (Phase 8C): uses actual N-gon bbox `dimX, dimY` (mirror του
- * `transformFootprint` geometry pipeline), since polygon `depth` is meaningless
- * και bbox depends on sides count.
- * For polygon-backed U-shape / composite (Phase 2b): uses the actual polygon
- * bbox (mirror της `transformFootprint` `computeLocalBboxCanvas` κλάδου) ώστε
- * τα grips να ταιριάζουν με τη γεωμετρία σε ΟΛΑ τα anchors, όχι μόνο 'center'.
+ * Footprint extents (mm) along local +X / +Y per column kind. ENTITY-SPECIFIC part
+ * of the centre-anchored frame: rectangular/shear-wall/variants = `width × depth`;
+ * polygon (Phase 8C) = actual N-gon bbox (`depth` meaningless, bbox depends on
+ * sides); polygon-backed U-shape / composite (Phase 2b) = actual polygon bbox
+ * (mirror της `transformFootprint`). Circular is handled by the caller (anchor 0).
  */
-export function computeCentroidWorld(params: ColumnParams): Point2D {
-  if (params.kind === 'circular') {
-    return { x: params.position.x, y: params.position.y };
-  }
-  // ADR-397 — `params.position` is in scene units (the click point) but
-  // width/depth are in mm; scale the anchor shift by `mmScaleFor` so the centroid
-  // lands correctly in metre/cm scenes (same SSoT factor `computeColumnGeometry`
-  // applies). See feedback: BIM grip positions must be scene-unit-correct.
-  const s = mmScaleFor(params);
-  const { dx, dy } = ANCHOR_OFFSETS[params.anchor];
-  let dimX: number;
-  let dimY: number;
+function columnFootprintDims(params: ColumnParams): { dimX: number; dimY: number } {
   const uPoly = params.kind === 'U-shape' ? params.ushape?.polygon : undefined;
   const cPoly = params.kind === 'composite' ? params.composite?.polygon : undefined;
-  if (params.kind === 'polygon') {
-    ({ dimX, dimY } = polygonBboxMm(params.width, params.polygon?.sides));
-  } else if (uPoly && uPoly.length >= 3) {
-    ({ dimX, dimY } = polygonBackedBboxMm(uPoly));
-  } else if (cPoly && cPoly.length >= 3) {
-    ({ dimX, dimY } = polygonBackedBboxMm(cPoly));
-  } else {
-    dimX = params.width;
-    dimY = params.depth;
-  }
-  const shift = rotate({ x: -dx * dimX * s, y: -dy * dimY * s }, params.rotation);
-  return { x: params.position.x + shift.x, y: params.position.y + shift.y };
+  if (params.kind === 'polygon') return polygonBboxMm(params.width, params.polygon?.sides);
+  if (uPoly && uPoly.length >= 3) return polygonBackedBboxMm(uPoly);
+  if (cPoly && cPoly.length >= 3) return polygonBackedBboxMm(cPoly);
+  return { dimX: params.width, dimY: params.depth };
 }
 
 /**
- * Convert a local-frame point (centered on centroid, ΧΩΡΙΣ anchor shift,
- * ΧΩΡΙΣ rotation) σε world coords, εφαρμόζοντας params.rotation γύρω από το
- * centroid.
+ * Column footprint → shared `CentredAnchorFrame`. Circular bypasses the anchor
+ * shift (rotationally symmetric, centroid = `position`) via a zero anchor offset;
+ * other kinds use `ANCHOR_OFFSETS` + `columnFootprintDims`. The rotate/scale/shift
+ * geometry itself lives in the `centred-anchor-frame` SSoT (shared with the pad).
+ */
+function columnAnchorFrame(params: ColumnParams): CentredAnchorFrame {
+  const scale = mmScaleFor(params);
+  const position = { x: params.position.x, y: params.position.y };
+  if (params.kind === 'circular') {
+    return { position, rotationDeg: params.rotation, scale, anchorOffset: { dx: 0, dy: 0 }, dimX: 0, dimY: 0 };
+  }
+  return { position, rotationDeg: params.rotation, scale, anchorOffset: ANCHOR_OFFSETS[params.anchor], ...columnFootprintDims(params) };
+}
+
+/**
+ * Compute the centroid (bbox centre) of the column footprint σε world coords —
+ * thin wrapper over the shared `centredCentroidWorld` (ADR-397 scene-unit-correct
+ * anchor shift). For circular: anchor effectively 'center' → centroid = `position`.
+ */
+export function computeCentroidWorld(params: ColumnParams): Point2D {
+  return centredCentroidWorld(columnAnchorFrame(params));
+}
+
+/**
+ * Convert a local-frame mm point (centred on centroid, no anchor shift, no
+ * rotation) → world — thin wrapper over the shared `centredLocalToWorld`.
  */
 export function localToWorld(local: Point2D, params: ColumnParams): Point2D {
-  // ADR-397 — `local` is a mm offset in the column's own frame; scale to scene
-  // units (mirror `computeCentroidWorld`) so variant handles do not drift
-  // off-screen in metre/cm scenes.
-  const s = mmScaleFor(params);
-  const centroid = computeCentroidWorld(params);
-  const rotated = rotate({ x: local.x * s, y: local.y * s }, params.rotation);
-  return { x: centroid.x + rotated.x, y: centroid.y + rotated.y };
+  return centredLocalToWorld(columnAnchorFrame(params), local);
 }
 
 // Far-edge face sign = shared `farEdgeSign` SSoT (grip-math) — applied to the

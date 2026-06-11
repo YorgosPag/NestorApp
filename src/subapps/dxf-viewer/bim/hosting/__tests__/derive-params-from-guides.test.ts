@@ -111,6 +111,53 @@ describe('deriveFoundationParamsFromGuides — strip (line-based)', () => {
   });
 });
 
+describe('deriveFoundationParamsFromGuides — extend (corner-fill, ADR-441 Slice JOIN)', () => {
+  // Γωνιακή κατακόρυφη λωρίδα: start-y με extend=-300 (προς τα κάτω/έξω).
+  const corner: GuideBinding[] = [
+    { guideId: 'xId', slot: 'start-x' },
+    { guideId: 'xId', slot: 'end-x' },
+    { guideId: 'yA', slot: 'start-y', extend: -300 },
+    { guideId: 'yB', slot: 'end-y' },
+  ];
+
+  it('εφαρμόζει το extend (mm→scene) στο coordinate: start.y = offset - 300', () => {
+    const next = deriveFoundationParamsFromGuides(
+      stripParams({ start: { x: 0, y: -300, z: 0 } }),
+      corner,
+      lookup({ xId: 2500, yA: 0, yB: 4000 }),
+    ) as StripFootingParams;
+    expect(next.start.x).toBe(2500);
+    expect(next.start.y).toBe(-300); // 0 + (-300 * 1mm-scale)
+  });
+
+  it('follow-move: re-derive μετά μετακίνηση άξονα διατηρεί το extend (γωνία μένει κλειστή)', () => {
+    const next = deriveFoundationParamsFromGuides(
+      stripParams({ start: { x: 0, y: -300, z: 0 }, end: { x: 0, y: 4000, z: 0 } }),
+      corner,
+      lookup({ xId: 0, yA: 1000, yB: 4000 }), // yA μετακινήθηκε 0→1000
+    ) as StripFootingParams;
+    expect(next.start.y).toBe(700); // 1000 + (-300) → εξακολουθεί stand-off w/2
+  });
+
+  it('idempotent με extend: ίδια offsets + ήδη-extended coordinate → null', () => {
+    const next = deriveFoundationParamsFromGuides(
+      stripParams({ start: { x: 0, y: -300, z: 0 }, end: { x: 0, y: 4000, z: 0 } }),
+      corner,
+      lookup({ xId: 0, yA: 0, yB: 4000 }),
+    );
+    expect(next).toBeNull();
+  });
+
+  it('extend respects sceneUnits (m): -300mm → -0.3 scene units', () => {
+    const next = deriveFoundationParamsFromGuides(
+      stripParams({ sceneUnits: 'm', start: { x: 0, y: -0.3, z: 0 }, end: { x: 0, y: 4, z: 0 } }),
+      corner,
+      lookup({ xId: 0, yA: 1, yB: 4 }), // yA 0→1 (m)
+    ) as StripFootingParams;
+    expect(next.start.y).toBeCloseTo(0.7, 9); // 1 + (-300 * 0.001)
+  });
+});
+
 describe('deriveFoundationParamsFromGuides — pad (point-based)', () => {
   const bindings: GuideBinding[] = [
     { guideId: 'cx', slot: 'center-x' },
