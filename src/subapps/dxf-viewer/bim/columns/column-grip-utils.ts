@@ -12,7 +12,7 @@
 import type { Point2D } from '../../rendering/types/Types';
 import type { ColumnParams } from '../types/column-types';
 import { ANCHOR_OFFSETS } from '../types/column-types';
-import { polygonBboxMm } from './column-anchors';
+import { columnFootprintDims, polygonBboxMm } from './column-footprint-dims';
 import { mmScaleFor } from '../../utils/scene-units';
 // ADR-397 §D3 — local-frame rotation primitives are shared SSoT (grip-math →
 // canonical rotatePoint, ADR-188). This module keeps the column-named exports as
@@ -55,40 +55,10 @@ export function projectDeltaToLocal(
 }
 
 /**
- * Bounding-box dimensions (mm) of a polygon-backed cross-section (U-shape /
- * composite, ADR-363 Phase 2b). The polygon is bbox-centred by invariant (the
- * «από-περίγραμμα» generator + `resizePolyVertex` re-centre it), so the centre
- * is 0 and only the spans matter for the anchor shift.
+ * Footprint-dim SSoT lives in `column-footprint-dims`; re-exported here so existing
+ * importers (`column-poly-vertex-grips`) keep their import path.
  */
-export function polygonBackedBboxMm(
-  poly: readonly Point2D[],
-): { dimX: number; dimY: number } {
-  let minX = Number.POSITIVE_INFINITY, maxX = Number.NEGATIVE_INFINITY;
-  let minY = Number.POSITIVE_INFINITY, maxY = Number.NEGATIVE_INFINITY;
-  for (const p of poly) {
-    if (p.x < minX) minX = p.x;
-    if (p.x > maxX) maxX = p.x;
-    if (p.y < minY) minY = p.y;
-    if (p.y > maxY) maxY = p.y;
-  }
-  return { dimX: maxX - minX, dimY: maxY - minY };
-}
-
-/**
- * Footprint extents (mm) along local +X / +Y per column kind. ENTITY-SPECIFIC part
- * of the centre-anchored frame: rectangular/shear-wall/variants = `width × depth`;
- * polygon (Phase 8C) = actual N-gon bbox (`depth` meaningless, bbox depends on
- * sides); polygon-backed U-shape / composite (Phase 2b) = actual polygon bbox
- * (mirror της `transformFootprint`). Circular is handled by the caller (anchor 0).
- */
-function columnFootprintDims(params: ColumnParams): { dimX: number; dimY: number } {
-  const uPoly = params.kind === 'U-shape' ? params.ushape?.polygon : undefined;
-  const cPoly = params.kind === 'composite' ? params.composite?.polygon : undefined;
-  if (params.kind === 'polygon') return polygonBboxMm(params.width, params.polygon?.sides);
-  if (uPoly && uPoly.length >= 3) return polygonBackedBboxMm(uPoly);
-  if (cPoly && cPoly.length >= 3) return polygonBackedBboxMm(cPoly);
-  return { dimX: params.width, dimY: params.depth };
-}
+export { polygonBackedBboxMm } from './column-footprint-dims';
 
 /**
  * Column footprint → shared `CentredAnchorFrame`. Circular bypasses the anchor

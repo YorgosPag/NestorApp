@@ -34,15 +34,10 @@
 
 import type { Point2D } from '../../rendering/types/Types';
 import type { ColumnAnchor, ColumnEntity, ColumnParams } from '../types/column-types';
-import {
-  ANCHOR_CYCLE_ORDER,
-  ANCHOR_OFFSETS,
-  DEFAULT_POLYGON_SIDES,
-  MAX_POLYGON_SIDES,
-  MIN_POLYGON_SIDES,
-} from '../types/column-types';
+import { ANCHOR_CYCLE_ORDER, ANCHOR_OFFSETS } from '../types/column-types';
 import { mmScaleFor } from '../../utils/scene-units';
 import { centredLocalToWorld } from '../grips/centred-anchor-frame';
+import { columnFootprintDims } from './column-footprint-dims';
 const SQRT2_HALF = Math.SQRT2 / 2;
 
 /**
@@ -105,13 +100,11 @@ function anchorLocalPoint(anchor: ColumnAnchor, params: ColumnParams): Point2D {
   if (params.kind === 'circular') {
     return circularAnchorLocal(anchor, params.width / 2);
   }
-  if (params.kind === 'polygon') {
-    const { dimX, dimY } = polygonBboxMm(params.width, params.polygon?.sides);
-    const { dx, dy } = ANCHOR_OFFSETS[anchor];
-    return { x: dx * dimX, y: dy * dimY };
-  }
+  // SSoT footprint dims (poly-bbox for U-shape/composite/polygon, else width×depth)
+  // — same source as render + grips so every anchor sits on the visible footprint.
+  const { dimX, dimY } = columnFootprintDims(params);
   const { dx, dy } = ANCHOR_OFFSETS[anchor];
-  return { x: dx * params.width, y: dy * params.depth };
+  return { x: dx * dimX, y: dy * dimY };
 }
 
 /**
@@ -157,52 +150,11 @@ function localToWorld(local: Point2D, params: ColumnParams): Point2D {
     // Rotationally symmetric → no anchor shift, no rotation (mirror transformFootprint).
     return centredLocalToWorld({ position, rotationDeg: 0, scale, anchorOffset: { dx: 0, dy: 0 }, dimX: 0, dimY: 0 }, local);
   }
-  const { dimX, dimY } = params.kind === 'polygon'
-    ? polygonBboxMm(params.width, params.polygon?.sides)
-    : { dimX: params.width, dimY: params.depth };
+  // SSoT footprint dims — poly-bbox for U-shape/composite/polygon, else width×depth
+  // (matches render's `transformFootprint` + the grip handles, so anchor == footprint).
+  const { dimX, dimY } = columnFootprintDims(params);
   return centredLocalToWorld(
     { position, rotationDeg: params.rotation, scale, anchorOffset: ANCHOR_OFFSETS[params.anchor], dimX, dimY },
     local,
   );
-}
-
-// ─── Polygon bbox SSoT (Phase 8C) ───────────────────────────────────────────
-
-/**
- * Compute axis-aligned bbox dimensions ενός regular N-gon σε mm coords.
- * Mirror του `buildPolygonLocal` (column-geometry.ts) + `computeLocalBboxCanvas`
- * pattern, αλλά εκφρασμένο σε mm (όχι canvas units) ώστε να συμφωνεί με τα
- * mm-scoped anchor positions του παρόντος module.
- *
- * Vertex 0 points up (math +Y) per AutoCAD/Revit polygon default. Sides clamped
- * to [MIN_POLYGON_SIDES, MAX_POLYGON_SIDES] (3..12). Degenerate diameter ≤ 0
- * collapses bbox σε {0, 0} χωρίς exception.
- *
- * Exported ώστε `column-grips.ts` να μπορεί να positions το polygon rotation
- * handle σύμφωνα με actual bbox (όχι meaningless `params.depth`). Single SSoT.
- */
-export function polygonBboxMm(
-  diameter: number,
-  sides?: number,
-): { dimX: number; dimY: number } {
-  const r = Math.max(0, diameter / 2);
-  if (r === 0) return { dimX: 0, dimY: 0 };
-  const rawSides = sides ?? DEFAULT_POLYGON_SIDES;
-  const n = Math.max(MIN_POLYGON_SIDES, Math.min(MAX_POLYGON_SIDES, Math.round(rawSides)));
-  let minX = Number.POSITIVE_INFINITY;
-  let maxX = Number.NEGATIVE_INFINITY;
-  let minY = Number.POSITIVE_INFINITY;
-  let maxY = Number.NEGATIVE_INFINITY;
-  const startAngle = Math.PI / 2;
-  const step = (2 * Math.PI) / n;
-  for (let i = 0; i < n; i++) {
-    const a = startAngle + i * step;
-    const x = r * Math.cos(a);
-    const y = r * Math.sin(a);
-    if (x < minX) minX = x;
-    if (x > maxX) maxX = x;
-    if (y < minY) minY = y;
-    if (y > maxY) maxY = y;
-  }
-  return { dimX: maxX - minX, dimY: maxY - minY };
 }

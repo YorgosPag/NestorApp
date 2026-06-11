@@ -49,7 +49,8 @@
  *     module). Anchor invariant during drag — `position` stays fixed για
  *     width/depth/rotation/variant grips· centroid shifts automatically μέσω
  *     της geometry pipeline.
- *   - Polygon bbox math centralized στο `column-anchors.ts` (`polygonBboxMm`).
+ *   - Footprint-dim math (polygon/U-shape/composite bbox) centralized στο
+ *     `column-footprint-dims.ts` (`columnFootprintDims` SSoT, shared render/grips/anchors).
  *
  * @see docs/centralized-systems/reference/adrs/ADR-363-bim-drawing-mode.md §5.6 §6 Phase 4.5/4.5b/8C
  */
