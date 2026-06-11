@@ -29,6 +29,7 @@ import { OpeningPersistenceHost } from './OpeningPersistenceHost';
 import { SlabPersistenceHost } from './SlabPersistenceHost';
 import { ColumnPersistenceHost } from './ColumnPersistenceHost';
 import { FoundationPersistenceHost } from './FoundationPersistenceHost';
+import { GridGuidePersistenceHost } from './GridGuidePersistenceHost';
 import { MepFixturePersistenceHost } from './MepFixturePersistenceHost';
 import { FurniturePersistenceHost } from './FurniturePersistenceHost';
 import { FloorplanSymbolPersistenceHost } from './FloorplanSymbolPersistenceHost';
@@ -142,6 +143,11 @@ export function DxfViewerTopBar({
         primarySelectedId={primarySelectedId}
         currentScene={currentScene}
         levelManager={levelManager}
+        projectId={levelManager.saveContext?.projectId ?? undefined}
+        floorplanId={levelManager.fileRecordId ?? undefined}
+        floorId={floorId}
+      />
+      <GridGuidePersistenceHost
         projectId={levelManager.saveContext?.projectId ?? undefined}
         floorplanId={levelManager.fileRecordId ?? undefined}
         floorId={floorId}

@@ -349,6 +349,7 @@ export class EnterpriseIdService {
   generateColumnId(): string { return this.generateId(P.COLUMN).id; }
   generateBeamId(): string { return this.generateId(P.BEAM).id; }
   generateFoundationId(): string { return this.generateId(P.FOUNDATION).id; }
+  generateGridGuideDocId(): string { return this.generateId(P.GRID_GUIDE).id; }
   generateMepFixtureId(): string { return this.generateId(P.MEP_FIXTURE).id; }
   generateMepSystemId(): string { return this.generateId(P.MEP_SYSTEM).id; }
   generateElectricalPanelId(): string { return this.generateId(P.ELECTRICAL_PANEL).id; }

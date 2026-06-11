@@ -360,6 +360,8 @@ export const COLLECTIONS = {
   FLOORPLAN_BEAMS: process.env.NEXT_PUBLIC_FLOORPLAN_BEAMS_COLLECTION || 'floorplan_beams',
   /** ADR-436 — substructure footings (pad/strip/tie-beam, IfcFooting). IDs via fnd_* prefix. */
   FLOORPLAN_FOUNDATIONS: process.env.NEXT_PUBLIC_FLOORPLAN_FOUNDATIONS_COLLECTION || 'floorplan_foundations',
+  /** ADR-441/189 — per-floor construction grid (axes + groups, 1 doc/floor). IDs via grd_* prefix. */
+  FLOORPLAN_GRID_GUIDES: process.env.NEXT_PUBLIC_FLOORPLAN_GRID_GUIDES_COLLECTION || 'floorplan_grid_guides',
   /** ADR-406 — point-based MEP fixtures (light fixtures first). IDs via mepfix_* prefix. */
   FLOORPLAN_MEP_FIXTURES: process.env.NEXT_PUBLIC_FLOORPLAN_MEP_FIXTURES_COLLECTION || 'floorplan_mep_fixtures',
   /** ADR-407 — standalone path-based railings. IDs via ral_* prefix. */
@@ -474,6 +476,7 @@ export const FLOOR_SCOPED_BIM_COLLECTIONS = [
   COLLECTIONS.FLOORPLAN_COLUMNS,
   COLLECTIONS.FLOORPLAN_BEAMS,
   COLLECTIONS.FLOORPLAN_FOUNDATIONS,
+  COLLECTIONS.FLOORPLAN_GRID_GUIDES,
   COLLECTIONS.FLOORPLAN_STAIRS,
   COLLECTIONS.FLOORPLAN_RAILINGS,
   COLLECTIONS.FLOORPLAN_ROOFS,
