@@ -53,6 +53,9 @@ const SNAP_MODE_KEYS: Record<ExtendedSnapType, string> = {
   [ExtendedSnapType.BIM_MEP_CONNECTOR]:  'bim.mepConnector',
   // ADR-378 Phase 3: TEXT/MTEXT 8-point snap — flat label key (sub-keys for individual points in snapModes.labels.text.*)
   [ExtendedSnapType.TEXT]: 'text',
+  // ADR-397: rotation snap modes — contextual (not shown in the toolbar lists), keyed for type completeness + future panel use.
+  [ExtendedSnapType.ROTATION_PIVOT]: 'rotationPivot',
+  [ExtendedSnapType.ROTATION_GRIP]: 'rotationGrip',
 };
 
 // 🏢 ENTERPRISE: Get translated snap label
