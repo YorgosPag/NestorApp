@@ -38,6 +38,9 @@ export const FoundationAnchorSchema = z.enum([
   'center', 'n', 's', 'e', 'w', 'nw', 'ne', 'sw', 'se',
 ]);
 
+/** ADR-441 Slice 5a — Location Line γραμμικού πεδίλου/συνδετήριας. */
+export const StripJustificationSchema = z.enum(['center', 'left', 'right']);
+
 export const FoundationPredefinedTypeSchema = z.enum([
   'PAD_FOOTING', 'STRIP_FOOTING', 'FOOTING_BEAM',
 ]);
@@ -97,6 +100,7 @@ const StripFootingParamsSchema = z
     start: Point3DSchema,
     end: Point3DSchema,
     width: z.number().positive(),
+    justification: StripJustificationSchema.optional(),
   })
   .strict();
 
@@ -107,6 +111,7 @@ const TieBeamParamsSchema = z
     start: Point3DSchema,
     end: Point3DSchema,
     width: z.number().positive(),
+    justification: StripJustificationSchema.optional(),
   })
   .strict();
 

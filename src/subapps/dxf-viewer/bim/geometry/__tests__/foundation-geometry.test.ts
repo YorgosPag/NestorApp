@@ -98,6 +98,55 @@ describe('computeFoundationGeometry — strip / tie-beam band', () => {
   });
 });
 
+describe('computeFoundationGeometry — strip justification (ADR-441 Slice 5a)', () => {
+  // Horizontal strip, +X direction → CCW normal n = +Y. width 600 → ±300 band.
+  const strip = (justification?: 'center' | 'left' | 'right'): StripFootingParams => ({
+    kind: 'strip',
+    topElevationMm: -1000,
+    thicknessMm: 400,
+    start: { x: 0, y: 0, z: 0 },
+    end: { x: 2000, y: 0, z: 0 },
+    width: 600,
+    sceneUnits: 'mm',
+    ...(justification ? { justification } : {}),
+  });
+
+  it('center == undefined justification (zero-regression: identical band)', () => {
+    const gUndef = computeFoundationGeometry(strip());
+    const gCenter = computeFoundationGeometry(strip('center'));
+    expect(gCenter.footprint.vertices).toEqual(gUndef.footprint.vertices);
+    expect(gCenter.bbox.min.y).toBeCloseTo(-300);
+    expect(gCenter.bbox.max.y).toBeCloseTo(300);
+  });
+
+  it('left → develops toward +normal, right face on axis (y∈[0,600])', () => {
+    const g = computeFoundationGeometry(strip('left'));
+    expect(g.bbox.min.y).toBeCloseTo(0);   // η δεξιά παρειά πέφτει στον άξονα
+    expect(g.bbox.max.y).toBeCloseTo(600);
+  });
+
+  it('right → develops toward −normal, left face on axis (y∈[-600,0])', () => {
+    const g = computeFoundationGeometry(strip('right'));
+    expect(g.bbox.min.y).toBeCloseTo(-600);
+    expect(g.bbox.max.y).toBeCloseTo(0);    // η αριστερή παρειά πέφτει στον άξονα
+  });
+
+  it('justification preserves area & volume (only shifts perpendicular)', () => {
+    const c = computeFoundationGeometry(strip('center'));
+    for (const j of ['left', 'right'] as const) {
+      const g = computeFoundationGeometry(strip(j));
+      expect(g.area).toBeCloseTo(c.area, 9);
+      expect(g.volume).toBeCloseTo(c.volume, 9);
+    }
+  });
+
+  it('idempotent: 2× compute → ίδιο footprint', () => {
+    const a = computeFoundationGeometry(strip('left'));
+    const b = computeFoundationGeometry(strip('left'));
+    expect(a.footprint.vertices).toEqual(b.footprint.vertices);
+  });
+});
+
 describe('buildDefaultFoundationParams smoke (geometry round-trip)', () => {
   it('produces non-degenerate geometry for every kind', () => {
     for (const kind of ['pad', 'strip', 'tie-beam'] as const) {

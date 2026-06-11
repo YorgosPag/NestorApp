@@ -158,6 +158,26 @@ describe('deriveFoundationParamsFromGuides — extend (corner-fill, ADR-441 Slic
   });
 });
 
+describe('deriveFoundationParamsFromGuides — justification follow-move-safe (ADR-441 Slice 5a)', () => {
+  const bindings: GuideBinding[] = [
+    { guideId: 'xId', slot: 'start-x' },
+    { guideId: 'xId', slot: 'end-x' },
+    { guideId: 'yA', slot: 'start-y' },
+    { guideId: 'yB', slot: 'end-y' },
+  ];
+
+  it('re-derive μετά μετακίνηση άξονα ΔΙΑΤΗΡΕΙ το justification (param επιβιώνει του spread)', () => {
+    const next = deriveFoundationParamsFromGuides(
+      stripParams({ justification: 'left', start: { x: 0, y: 0, z: 0 }, end: { x: 0, y: 4000, z: 0 } }),
+      bindings,
+      lookup({ xId: 2500, yA: 0, yB: 4000 }), // ο κατακόρυφος άξονας μετακινήθηκε
+    ) as StripFootingParams;
+    expect(next).not.toBeNull();
+    expect(next.start.x).toBe(2500);
+    expect(next.justification).toBe('left'); // η εκκεντρότητα δεν χάνεται στο follow-move
+  });
+});
+
 describe('deriveFoundationParamsFromGuides — pad (point-based)', () => {
   const bindings: GuideBinding[] = [
     { guideId: 'cx', slot: 'center-x' },

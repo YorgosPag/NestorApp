@@ -70,6 +70,29 @@ describe('FoundationParamsSchema — discriminated union', () => {
   });
 });
 
+// ─── Params: strip/tie-beam justification (ADR-441 Slice 5a) ─────────────────
+
+describe('FoundationParamsSchema — justification (Location Line)', () => {
+  it('accepts strip με justification=left', () => {
+    const p = { ...buildDefaultFoundationParams('strip'), justification: 'left' };
+    expect(() => FoundationParamsSchema.parse(p)).not.toThrow();
+  });
+
+  it('accepts tie-beam με justification=right', () => {
+    const p = { ...buildDefaultFoundationParams('tie-beam'), justification: 'right' };
+    expect(() => FoundationParamsSchema.parse(p)).not.toThrow();
+  });
+
+  it('accepts strip χωρίς justification (optional → backward-compatible)', () => {
+    expect(() => FoundationParamsSchema.parse(buildDefaultFoundationParams('strip'))).not.toThrow();
+  });
+
+  it('rejects invalid justification enum value', () => {
+    const invalid = { ...buildDefaultFoundationParams('strip'), justification: 'inner-face' };
+    expect(() => FoundationParamsSchema.parse(invalid)).toThrow();
+  });
+});
+
 // ─── Params: superRefine (pad profile ⇒ block) ───────────────────────────────
 
 describe('FoundationParamsSchema — superRefine', () => {

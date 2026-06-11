@@ -36,6 +36,7 @@ import {
   type FoundationKind,
   type FoundationParams,
   type FoundationProfile,
+  type StripJustification,
 } from '../../bim/types/foundation-types';
 import { computeFoundationGeometry } from '../../bim/geometry/foundation-geometry';
 import { validateFoundationParams } from '../../bim/validators/foundation-validator';
@@ -72,6 +73,8 @@ export interface FoundationParamOverrides {
   readonly catalogProfile?: string;
   /** Line-based kinds — άξονας τέλος (Slice 2). */
   readonly axisEnd?: Point3D;
+  /** Location Line γραμμικού πεδίλου/συνδετήριας (default 'center', ADR-441 Slice 5a). */
+  readonly justification?: StripJustification;
 }
 
 /** Kind-specific defaults για width/length/thickness. */
@@ -145,6 +148,8 @@ export function buildDefaultFoundationParams(
     start,
     end,
     width,
+    // ADR-441 Slice 5a — παραλείπεται όταν undefined (Firestore-safe· default center).
+    ...(overrides.justification !== undefined ? { justification: overrides.justification } : {}),
   };
 }
 

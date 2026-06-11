@@ -52,6 +52,19 @@ export type FoundationAnchor =
   | 'n' | 's' | 'e' | 'w'
   | 'nw' | 'ne' | 'sw' | 'se';
 
+/**
+ * Justification (Location Line) γραμμικού πεδίλου/συνδετήριας — ΠΟΥ κάθεται το band
+ * ως προς τον άξονα (ADR-441 Slice 5a). Mirror της Revit «Location Line»:
+ *   - `center`  → band ±w/2 εκατέρωθεν (default, concentric — δομικά ιδανικό).
+ *   - `left`    → band αναπτύσσεται προς τα +CCW-normal (αριστερά της φοράς start→end)·
+ *                 η ΔΕΞΙΑ παρειά πέφτει στον άξονα.
+ *   - `right`   → band αναπτύσσεται προς τα −CCW-normal (δεξιά της φοράς)·
+ *                 η ΑΡΙΣΤΕΡΗ παρειά πέφτει στον άξονα.
+ * Έκκεντρη ανάπτυξη χρειάζεται σε όριο οικοπέδου/υπάρχον κτίριο (αλλιώς overhang
+ * εκτός περιγράμματος). Μόνο για `strip`/`tie-beam` — το `pad` χρησιμοποιεί `anchor`.
+ */
+export type StripJustification = 'center' | 'left' | 'right';
+
 /** IFC4 `IfcFootingTypeEnum` predefined type ανά kind. */
 export type FoundationPredefinedType = 'PAD_FOOTING' | 'STRIP_FOOTING' | 'FOOTING_BEAM';
 
@@ -132,6 +145,8 @@ export interface StripFootingParams extends FoundationCommonParams {
   readonly end: Point3D;
   /** mm. Πλάτος band κάθετα στον άξονα. */
   readonly width: number;
+  /** Location Line ως προς τον άξονα (default 'center', ADR-441 Slice 5a). */
+  readonly justification?: StripJustification;
 }
 
 /**
@@ -144,6 +159,8 @@ export interface TieBeamParams extends FoundationCommonParams {
   readonly end: Point3D;
   /** mm. Πλάτος διατομής κάθετα στον άξονα. */
   readonly width: number;
+  /** Location Line ως προς τον άξονα (default 'center', ADR-441 Slice 5a). */
+  readonly justification?: StripJustification;
 }
 
 /** Discriminated union ανά `kind`. */
@@ -221,6 +238,20 @@ export const MIN_FOUNDATION_THICKNESS_MM = 100;
 /** Default rotation (μοίρες) + anchor. */
 export const DEFAULT_FOUNDATION_ROTATION_DEG = 0;
 export const DEFAULT_FOUNDATION_ANCHOR: FoundationAnchor = 'center';
+
+/** Default Location Line γραμμικού πεδίλου/συνδετήριας (ADR-441 Slice 5a). */
+export const DEFAULT_STRIP_JUSTIFICATION: StripJustification = 'center';
+
+/**
+ * SSoT πρόσημο της κάθετης μετατόπισης του centerline ανά justification, κατά
+ * μήκος του CCW normal (αριστερά της φοράς start→end = +). Μοναδική πηγή φοράς —
+ * το geometry διαβάζει από εδώ (ADR-441 Slice 5a). `center` → 0 (no shift).
+ */
+export const JUSTIFICATION_NORMAL_SIGN: Readonly<Record<StripJustification, number>> = {
+  center: 0,
+  left: 1,
+  right: -1,
+};
 
 /**
  * Tab-cycle ring για το 9-position anchor (pad). Mirror του column

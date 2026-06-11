@@ -29,7 +29,7 @@ import type {
   StripFootingParams,
   TieBeamParams,
 } from '../types/foundation-types';
-import { ANCHOR_OFFSETS } from '../types/foundation-types';
+import { ANCHOR_OFFSETS, JUSTIFICATION_NORMAL_SIGN } from '../types/foundation-types';
 import type { Point3D } from '../types/bim-base';
 import { polygonArea, polygonBbox } from './shared/polygon-utils';
 import { mmToSceneUnits } from '../../utils/scene-units';
@@ -120,6 +120,10 @@ function transformPad(
  * Build a band rectangle of `width` centred on the axis start→end. CCW order
  * (left-of-direction first). Degenerate (zero-length) axis → tiny square so the
  * pipeline never produces < 3 vertices (validator blocks such params upstream).
+ *
+ * Justification (ADR-441 Slice 5a): πριν χτιστεί το band, ο centerline μετατοπίζεται
+ * ΚΑΘΕΤΑ κατά `sign·hw` (SSoT `JUSTIFICATION_NORMAL_SIGN`) ώστε η μία παρειά να
+ * πέφτει στον άξονα (έκκεντρη ανάπτυξη). `center` → sign 0 → identical footprint.
  */
 function buildBandFootprint(params: StripFootingParams | TieBeamParams, s: number): Point3D[] {
   const { start, end } = params;
@@ -138,10 +142,14 @@ function buildBandFootprint(params: StripFootingParams | TieBeamParams, s: numbe
   // CCW 90° unit normal (rotate tangent (ux,uy) → (-uy,ux)).
   const nx = -dy / len;
   const ny = dx / len;
+  // Perpendicular justification shift του centerline (sign·hw κατά τον normal).
+  const j = JUSTIFICATION_NORMAL_SIGN[params.justification ?? 'center'] * hw;
+  const ax = start.x + nx * j, ay = start.y + ny * j;
+  const bx = end.x + nx * j,   by = end.y + ny * j;
   return [
-    { x: start.x - nx * hw, y: start.y - ny * hw, z: 0 },
-    { x: end.x - nx * hw,   y: end.y - ny * hw,   z: 0 },
-    { x: end.x + nx * hw,   y: end.y + ny * hw,   z: 0 },
-    { x: start.x + nx * hw, y: start.y + ny * hw, z: 0 },
+    { x: ax - nx * hw, y: ay - ny * hw, z: 0 },
+    { x: bx - nx * hw, y: by - ny * hw, z: 0 },
+    { x: bx + nx * hw, y: by + ny * hw, z: 0 },
+    { x: ax + nx * hw, y: ay + ny * hw, z: 0 },
   ];
 }
