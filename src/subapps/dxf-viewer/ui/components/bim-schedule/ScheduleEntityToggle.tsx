@@ -22,6 +22,7 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { cn } from '@/lib/utils';
 
 import type { ScheduleEntityType } from '@/subapps/dxf-viewer/bim/schedule';
+import { SCHEDULE_SELECTED_CARD, SCHEDULE_RADIO_DOT } from './schedule-highlight-tokens';
 
 // ─── Public option list (mirrors ScheduleEntityType union) ───────────────────
 
@@ -69,17 +70,16 @@ export function ScheduleEntityToggle({ value, onChange }: ScheduleEntityTogglePr
               key={kind}
               className={cn(
                 'flex items-center gap-2 rounded-md border p-2 transition-colors',
-                isSelected
-                  ? 'border-primary bg-primary/10 ring-1 ring-primary'
-                  : 'border-border bg-background hover:bg-accent',
+                isSelected ? SCHEDULE_SELECTED_CARD : 'border-border bg-background hover:bg-accent',
               )}
             >
-              <RadioGroupItem value={kind} id={id} />
+              {/* Dot σε vivid info-blue (SSoT) — το default text-primary είναι σκούρο. */}
+              <RadioGroupItem value={kind} id={id} className={SCHEDULE_RADIO_DOT} />
               <Label
                 htmlFor={id}
                 className={cn(
-                  'cursor-pointer text-sm',
-                  isSelected ? 'font-medium text-foreground' : 'text-foreground',
+                  'cursor-pointer text-sm text-foreground',
+                  isSelected && 'font-semibold',
                 )}
               >
                 {t(`dxf-schedule:entityType.${kind}`)}

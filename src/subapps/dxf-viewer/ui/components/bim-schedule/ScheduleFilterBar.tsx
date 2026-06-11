@@ -31,6 +31,11 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { cn } from '@/lib/utils';
 
 import type { ScheduleFilterCriteria } from '@/subapps/dxf-viewer/bim/schedule';
+import {
+  SCHEDULE_SELECTED_CARD,
+  SCHEDULE_ROW_CHECKED,
+  SCHEDULE_CHECKBOX_CHECKED,
+} from './schedule-highlight-tokens';
 
 // ─── Public option shape ─────────────────────────────────────────────────────
 
@@ -97,13 +102,14 @@ function ChecklistSection({
                   key={option.id}
                   className={cn(
                     'flex items-center gap-2 rounded px-1.5 py-1 transition-colors',
-                    checked ? 'bg-primary/10' : 'hover:bg-accent',
+                    checked ? SCHEDULE_ROW_CHECKED : 'hover:bg-accent',
                   )}
                 >
                   <Checkbox
                     id={id}
                     checked={checked}
                     onCheckedChange={() => onToggle(option.id)}
+                    className={SCHEDULE_CHECKBOX_CHECKED}
                   />
                   <Label
                     htmlFor={id}
@@ -221,7 +227,7 @@ export function ScheduleFilterBar({
         <div
           className={cn(
             'flex items-center gap-2 rounded-md border p-2 transition-colors',
-            selectionActive ? 'border-primary bg-primary/10 ring-1 ring-primary' : 'border-border bg-background',
+            selectionActive ? SCHEDULE_SELECTED_CARD : 'border-border bg-background',
           )}
         >
           <Checkbox
@@ -229,6 +235,7 @@ export function ScheduleFilterBar({
             checked={selectionActive}
             disabled={selectionCount === 0}
             onCheckedChange={(next) => onSelectionToggle(next === true)}
+            className={SCHEDULE_CHECKBOX_CHECKED}
           />
           <Label
             htmlFor="schedule-selection-only"

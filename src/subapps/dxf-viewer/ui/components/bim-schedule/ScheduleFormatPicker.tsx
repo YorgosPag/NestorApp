@@ -18,8 +18,10 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { cn } from '@/lib/utils';
 
 import type { ScheduleExportFormat } from '@/subapps/dxf-viewer/bim/schedule';
+import { SCHEDULE_SELECTED_CARD, SCHEDULE_RADIO_DOT } from './schedule-highlight-tokens';
 
 const FORMATS: readonly ScheduleExportFormat[] = ['xlsx', 'csv', 'pdf'] as const;
 
@@ -51,13 +53,17 @@ export function ScheduleFormatPicker({
         >
           {FORMATS.map((entry) => {
             const id = `schedule-format-${entry}`;
+            const isSelected = format === entry;
             return (
               <div
                 key={entry}
-                className="flex items-center gap-2 rounded-md border border-border bg-background px-3 py-2"
+                className={cn(
+                  'flex items-center gap-2 rounded-md border px-3 py-2 transition-colors',
+                  isSelected ? SCHEDULE_SELECTED_CARD : 'border-border bg-background hover:bg-accent',
+                )}
               >
-                <RadioGroupItem value={entry} id={id} />
-                <Label htmlFor={id} className="cursor-pointer text-sm">
+                <RadioGroupItem value={entry} id={id} className={SCHEDULE_RADIO_DOT} />
+                <Label htmlFor={id} className={cn('cursor-pointer text-sm', isSelected && 'font-semibold')}>
                   {t(`dxf-schedule:format.${entry}`)}
                 </Label>
               </div>
