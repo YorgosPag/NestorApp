@@ -29,6 +29,11 @@ import type {
 import { useCommandHistory } from '../../../core/commands';
 import { UpdateFoundationParamsCommand } from '../../../core/commands/entity-commands/UpdateFoundationParamsCommand';
 import { LevelSceneManagerAdapter } from '../../../systems/entity-creation/LevelSceneManagerAdapter';
+// ADR-441 Slice 2 — «Εσχάρα πεδιλοδοκών από κάναβο» (one-shot ribbon action).
+import { getGlobalGuideStore } from '../../../systems/guides/guide-store';
+import { resolveSceneUnits } from '../../../utils/scene-units';
+import { EventBus } from '../../../systems/events/EventBus';
+import { commitFoundationGridFromGuides } from '../../../bim/foundations/foundation-grid-commit';
 import {
   FOUNDATION_RIBBON_KEYS,
   FOUNDATION_RIBBON_KEYS_ACTIONS,
@@ -228,8 +233,31 @@ export function useRibbonFoundationBridge(
     return foundation.validation.hasCodeViolations;
   }, [resolveFoundation]);
 
+  // ADR-441 Slice 2 — one-shot «Εσχάρα από κάναβο»: διαβάζει τον τρέχοντα κάναβο,
+  // χτίζει born-hosted strips και τα commit-άρει ως ΕΝΑ atomic CompoundCommand-grade
+  // batch (1 undo). Καμία επιλογή entity δεν απαιτείται.
+  const handleFromGrid = useCallback((): void => {
+    const levelId = levelManager.currentLevelId;
+    if (!levelId) return;
+    const scene = levelManager.getLevelScene(levelId);
+    const result = commitFoundationGridFromGuides({
+      guideReader: getGlobalGuideStore(),
+      getLevelScene: levelManager.getLevelScene,
+      setLevelScene: levelManager.setLevelScene,
+      levelId,
+      sceneUnits: scene ? resolveSceneUnits(scene) : 'mm',
+      executeCommand,
+    });
+    if (result.ok) {
+      EventBus.emit('bim:foundations-from-grid', { built: result.built, ignored: result.ignored });
+    } else {
+      EventBus.emit('bim:foundations-from-grid-failed', { reason: result.reason ?? 'empty' });
+    }
+  }, [levelManager, executeCommand]);
+
   const onAction = useCallback(
     (action: string): void => {
+      if (action === FOUNDATION_RIBBON_KEYS_ACTIONS.fromGrid) return handleFromGrid();
       if (action !== FOUNDATION_RIBBON_KEYS_ACTIONS.delete) return;
       const foundation = resolveFoundation();
       if (!foundation || !levelManager.currentLevelId) return;
@@ -245,7 +273,7 @@ export function useRibbonFoundationBridge(
         entities: scene.entities.filter((e) => e.id !== foundation.id),
       });
     },
-    [resolveFoundation, levelManager, t],
+    [resolveFoundation, levelManager, t, handleFromGrid],
   );
 
   // ADR-436 Slice 2 — kind-conditional panels. Resolve the active kind (selected

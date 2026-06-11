@@ -49,6 +49,25 @@ export function useDxfViewerNotifications(): void {
       }),
     );
 
+    // ADR-441 Slice 2 «Εσχάρα πεδιλοδοκών από κάναβο» — summary feedback μετά το
+    // one-shot batch (πληθυντικότητα μέσω ICU στα locale strings).
+    unsubs.push(
+      EventBus.on('bim:foundations-from-grid', ({ built, ignored }) => {
+        if (ignored > 0) {
+          toast.info(t('foundationGrid.builtWithIgnored', { built, ignored }));
+        } else {
+          toast.success(t('foundationGrid.built', { built }));
+        }
+      }),
+    );
+    unsubs.push(
+      EventBus.on('bim:foundations-from-grid-failed', ({ reason }) => {
+        toast.warning(
+          t(reason === 'insufficient-guides' ? 'foundationGrid.insufficientGuides' : 'foundationGrid.empty'),
+        );
+      }),
+    );
+
     // ADR-363 Φάση 3 «Τοιχίο από περίγραμμα» — summary feedback (ΕΝΑ τοιχίο/περίμετρο).
     unsubs.push(
       EventBus.on('bim:columns-from-perimeter', ({ built, ignored }) => {

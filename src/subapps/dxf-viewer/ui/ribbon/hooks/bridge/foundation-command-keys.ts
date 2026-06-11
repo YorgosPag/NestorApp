@@ -46,6 +46,8 @@ export const FOUNDATION_RIBBON_STRING_KEYS: readonly FoundationRibbonStringComma
 export const FOUNDATION_RIBBON_KEYS_ACTIONS = {
   close: 'foundation.actions.close',
   delete: 'foundation.actions.delete',
+  // ADR-441 Slice 2 — one-shot «Εσχάρα πεδιλοδοκών από κάναβο» (δεν θέλει επιλογή).
+  fromGrid: 'foundation.actions.fromGrid',
 } as const;
 
 export const FOUNDATION_RIBBON_BADGE_KEYS = {
@@ -65,7 +67,8 @@ export const FOUNDATION_RIBBON_VISIBILITY_KEYS = {
 export function isFoundationActionKey(action: string): boolean {
   return (
     action === FOUNDATION_RIBBON_KEYS_ACTIONS.close ||
-    action === FOUNDATION_RIBBON_KEYS_ACTIONS.delete
+    action === FOUNDATION_RIBBON_KEYS_ACTIONS.delete ||
+    action === FOUNDATION_RIBBON_KEYS_ACTIONS.fromGrid
   );
 }
 

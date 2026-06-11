@@ -147,10 +147,19 @@ function buildBeamLabel(
   ) return null;
 
   const p = applyBeamGripDrag(beamGripKind, { originalParams, delta: preview.delta });
+  const beamLen = Math.round(Math.hypot(p.endPoint.x - p.startPoint.x, p.endPoint.y - p.startPoint.y));
 
   switch (beamGripKind) {
     case 'beam-width':
       return `w=${Math.round(p.width)}`;
+    case 'beam-edge-length':
+      return `l=${beamLen}`;
+    // ADR-363 (2026-06-11) — axis-box corners are 2-DOF: show both width + length.
+    case 'beam-corner-start-pos':
+    case 'beam-corner-start-neg':
+    case 'beam-corner-end-pos':
+    case 'beam-corner-end-neg':
+      return `w=${Math.round(p.width)} l=${beamLen}`;
     case 'beam-depth':
       return `d=${Math.round(p.depth)}`;
     default:
@@ -171,6 +180,25 @@ function buildFoundationLabel(
   if (foundationGripKind === 'foundation-center' || foundationGripKind === 'foundation-rotation') return null;
 
   const p = applyFoundationGripDrag(foundationGripKind, { originalParams, delta: preview.delta });
+
+  // ADR-436 (2026-06-11) — line-based (strip / tie-beam) axis-box grips: width +
+  // length from the axis (wall/beam parity). Handled before the pad guard.
+  if (p.kind === 'strip' || p.kind === 'tie-beam') {
+    const lineLen = Math.round(Math.hypot(p.end.x - p.start.x, p.end.y - p.start.y));
+    switch (foundationGripKind) {
+      case 'foundation-line-width':
+        return `w=${Math.round(p.width)}`;
+      case 'foundation-line-length':
+        return `l=${lineLen}`;
+      case 'foundation-corner-start-pos':
+      case 'foundation-corner-start-neg':
+      case 'foundation-corner-end-pos':
+      case 'foundation-corner-end-neg':
+        return `w=${Math.round(p.width)} l=${lineLen}`;
+      default:
+        return null;
+    }
+  }
   if (p.kind !== 'pad') return null;
 
   switch (foundationGripKind) {

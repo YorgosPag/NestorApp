@@ -93,26 +93,33 @@ describe('getFoundationGrips — pad', () => {
 
 });
 
-describe('getFoundationGrips — line (strip / tie-beam, Slice 2)', () => {
-  it('emits start / end / width grips in stable order', () => {
+describe('getFoundationGrips — line (strip / tie-beam, axis-box 7-grip wall parity)', () => {
+  it('emits 7 wall-parity grips: width edge / length edge / 4 corners / rotation', () => {
     const grips = getFoundationGrips(stripEntity());
+    expect(grips).toHaveLength(7);
     expect(grips.map((g) => g.foundationGripKind)).toEqual([
-      'foundation-start',
-      'foundation-end',
       'foundation-line-width',
+      'foundation-line-length',
+      'foundation-corner-start-pos',
+      'foundation-corner-start-neg',
+      'foundation-corner-end-pos',
+      'foundation-corner-end-neg',
+      'foundation-rotation',
     ]);
     expect(grips.every((g) => g.movesEntity === false)).toBe(true);
   });
 
-  it('places start/end grips at the axis endpoints', () => {
+  it('places the 4 corners at the band footprint vertices (axis +X, width 600)', () => {
     const grips = getFoundationGrips(stripEntity());
-    const start = grips.find((g) => g.foundationGripKind === 'foundation-start')!;
-    const end = grips.find((g) => g.foundationGripKind === 'foundation-end')!;
-    expect(start.position).toEqual({ x: 0, y: 0 });
-    expect(end.position).toEqual({ x: 2000, y: 0 });
+    const at = (k: string) => grips.find((g) => g.foundationGripKind === k)!.position;
+    // axis (0,0)→(2000,0), +perp = +Y, halfWidth = width/2 = 300.
+    expect(at('foundation-corner-start-pos')).toEqual({ x: 0, y: 300 });
+    expect(at('foundation-corner-start-neg')).toEqual({ x: 0, y: -300 });
+    expect(at('foundation-corner-end-pos')).toEqual({ x: 2000, y: 300 });
+    expect(at('foundation-corner-end-neg')).toEqual({ x: 2000, y: -300 });
   });
 
-  it('places width handle at axis midpoint offset by width/2 along perpendicular', () => {
+  it('places width edge at axis midpoint offset by width/2 along perpendicular', () => {
     const grips = getFoundationGrips(stripEntity());
     const w = grips.find((g) => g.foundationGripKind === 'foundation-line-width')!;
     // axis along +X → CCW perp = +Y; midpoint (1000,0) + 300 → (1000, 300).
@@ -120,9 +127,15 @@ describe('getFoundationGrips — line (strip / tie-beam, Slice 2)', () => {
     expect(w.position.y).toBeCloseTo(300);
   });
 
-  it('skips the width handle on a degenerate (zero-length) axis', () => {
+  it('places length edge at the END short edge midpoint along the axis', () => {
+    const grips = getFoundationGrips(stripEntity());
+    const l = grips.find((g) => g.foundationGripKind === 'foundation-line-length')!;
+    expect(l.position).toEqual({ x: 2000, y: 0 });
+  });
+
+  it('emits no grips on a degenerate (zero-length) axis', () => {
     const grips = getFoundationGrips(stripEntity({ end: { x: 0, y: 0, z: 0 } }));
-    expect(grips.map((g) => g.foundationGripKind)).toEqual(['foundation-start', 'foundation-end']);
+    expect(grips).toEqual([]);
   });
 });
 
@@ -145,13 +158,39 @@ describe('applyFoundationGripDrag — line transforms (Slice 2)', () => {
     expect(p.kind !== 'pad' && p.start).toEqual({ x: 0, y: 0, z: 0 });
   });
 
-  it('foundation-line-width resizes the band symmetrically (perp delta × 2)', () => {
+  it('foundation-line-width resizes the band opposite-face-fixed (shared axis-box engine)', () => {
     const p = applyFoundationGripDrag('foundation-line-width', {
       originalParams: strip(),
       delta: { x: 0, y: 100 }, // perpendicular to +X axis
     });
-    // newWidth = 600 + 2 * 100 = 800
-    expect(p.kind !== 'pad' && p.width).toBe(800);
+    // ADR-436 (2026-06-11) — wall parity: +perp face moves +100, −perp face holds →
+    // width 600→700 (was symmetric ×2). The axis shifts +50 perpendicular.
+    expect(p.kind !== 'pad' && p.width).toBeCloseTo(700);
+    expect(p.kind !== 'pad' && p.start.y).toBeCloseTo(50);
+  });
+
+  it('foundation-line-length resizes length along the axis (END edge, start fixed)', () => {
+    const p = applyFoundationGripDrag('foundation-line-length', {
+      originalParams: strip(),
+      delta: { x: 400, y: 0 },
+    });
+    expect(p.kind !== 'pad' && p.start).toEqual({ x: 0, y: 0, z: 0 }); // start held
+    expect(p.kind !== 'pad' && p.end.x).toBeCloseTo(2400); // end +400
+  });
+
+  it('foundation-rotation spins the line band about its midpoint', () => {
+    // anchor at the +perp handle (1000,300); 90° CCW about midpoint (1000,0).
+    const anchor = { x: 1000, y: 300 };
+    const currentPos = { x: 700, y: 0 };
+    const p = applyFoundationGripDrag('foundation-rotation', {
+      originalParams: strip(),
+      delta: { x: currentPos.x - anchor.x, y: currentPos.y - anchor.y },
+      currentPos,
+    });
+    // 90° CCW about (1000,0): start (0,0)→(1000,-1000), end (2000,0)→(1000,1000).
+    expect(p.kind !== 'pad' && p.start.x).toBeCloseTo(1000);
+    expect(p.kind !== 'pad' && p.start.y).toBeCloseTo(-1000);
+    expect(p.kind !== 'pad' && p.end.y).toBeCloseTo(1000);
   });
 
   it('foundation-line-width ignores parallel-to-axis drag', () => {

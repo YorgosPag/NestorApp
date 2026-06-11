@@ -517,6 +517,17 @@ export const HOME_DRAW_PANEL: RibbonPanelDef = {
                   icon: 'bim-beam',
                   commandKey: 'foundation-strip-from-wall',
                 },
+                // ADR-441 Slice 2 — «Εσχάρα πεδιλοδοκών από κάναβο»: one-shot
+                // action (fire onAction, ΟΧΙ draw tool) → strips στις γραμμές/τομές
+                // του υπάρχοντος κανάβου, born-hosted (guideBindings), 1 undo.
+                {
+                  id: 'draw.bim.foundationFromGrid',
+                  labelKey: 'ribbon.commands.bim.foundationFromGrid.label',
+                  tooltipKey: 'ribbon.commands.bim.foundationFromGrid.tooltip',
+                  icon: 'bim-beam',
+                  commandKey: 'foundation.actions.fromGrid',
+                  action: 'foundation.actions.fromGrid',
+                },
               ],
             },
             // ── Σκάλα (leaf) ──────────────────────────────────────────────

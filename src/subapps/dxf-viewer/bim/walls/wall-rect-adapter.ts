@@ -39,9 +39,12 @@ import {
   applyRectEdgeDrag,
   type RectResizeLimits,
 } from '../grips/rect-grip-engine';
+// ADR-363 (2026-06-11) — the axis ⇄ RectFrame mapping is now the shared
+// `axis-box-grips` SSoT (the SAME primitives beam + foundation strip use). This
+// adapter only layers the WALL semantics (flip / miter / dna / thickness clamp)
+// on top — «παντού ίδιος κώδικας, μηδέν διπλότυπα» (Giorgio).
+import { axisToRectFrame, rectFrameToAxis } from '../grips/axis-box-grips';
 import { minThicknessFloorFor, maxThicknessCeilingFor } from './wall-grip-math';
-
-const DEG_PER_RAD = 180 / Math.PI;
 
 /**
  * True when the wall is a plain straight rectangle (no curve control, no
@@ -63,40 +66,36 @@ const WALL_CORNER_MAP: Partial<Record<WallGripKind, RectCorner>> = {
   'wall-corner-end-neg': { sx: 1, sy: -1 },
 };
 
-/** Straight-wall params → axis-midpoint `RectFrame` (scene units). */
+/**
+ * Straight-wall params → axis-midpoint `RectFrame` (scene units). Delegates to the
+ * shared `axisToRectFrame` (thickness = the perpendicular `width`); local +X = axis,
+ * +Y = +perp, halfLength = thickness/2 scene.
+ */
 function wallToRectFrame(params: WallParams): RectFrame {
-  const dx = params.end.x - params.start.x;
-  const dy = params.end.y - params.start.y;
-  const len = Math.hypot(dx, dy);
-  const s = mmScaleFor(params);
-  return {
-    center: { x: (params.start.x + params.end.x) / 2, y: (params.start.y + params.end.y) / 2 },
-    rotationDeg: Math.atan2(dy, dx) * DEG_PER_RAD,
-    halfWidth: len / 2,
-    halfLength: (params.thickness * s) / 2,
-  };
+  return axisToRectFrame({
+    start: { x: params.start.x, y: params.start.y },
+    end: { x: params.end.x, y: params.end.y },
+    width: params.thickness,
+    sceneUnits: params.sceneUnits,
+  });
 }
 
 /**
- * `RectFrame` (post-resize) → wall params: rebuild `start`/`end` from the new
- * centre ± ½ length along the axis, derive + clamp `thickness`, preserve `flip`,
- * clear miters (junctions break on resize) and drop `dna` (manual override).
+ * `RectFrame` (post-resize) → wall params: the `{start,end,width}` axis rebuild is
+ * the shared `rectFrameToAxis` SSoT; this layers the WALL semantics on top — derive
+ * + clamp `thickness` (= width), preserve `flip`, clear miters (junctions break on
+ * resize) and drop `dna` (manual override).
  */
 function rectFrameToWallParams(frame: RectFrame, params: WallParams): WallParams {
-  const s = mmScaleFor(params);
-  const rad = frame.rotationDeg / DEG_PER_RAD;
-  const ux = Math.cos(rad);
-  const uy = Math.sin(rad);
-  const hw = frame.halfWidth;
-  const rawThickness = (frame.halfLength * 2) / s;
+  const axis = rectFrameToAxis(frame, params.sceneUnits);
   const minT = minThicknessFloorFor(params.thickness);
   const maxT = maxThicknessCeilingFor(params.thickness);
-  const thickness = Math.max(minT, Math.min(maxT, rawThickness));
+  const thickness = Math.max(minT, Math.min(maxT, axis.width));
   const { dna: _dropped, ...rest } = params;
   return {
     ...rest,
-    start: { x: frame.center.x - hw * ux, y: frame.center.y - hw * uy, z: params.start.z },
-    end: { x: frame.center.x + hw * ux, y: frame.center.y + hw * uy, z: params.end.z },
+    start: { x: axis.start.x, y: axis.start.y, z: params.start.z },
+    end: { x: axis.end.x, y: axis.end.y, z: params.end.z },
     thickness,
     startMiter: undefined,
     endMiter: undefined,
