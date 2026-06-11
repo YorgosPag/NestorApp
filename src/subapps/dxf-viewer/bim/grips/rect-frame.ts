@@ -63,20 +63,25 @@ export const RECT_CORNERS: readonly RectCorner[] = [
   { sx: 1, sy: -1 },
 ];
 
-/** Local-frame mm/scene point (centred on the centroid) → world coords. */
-function localToWorld(frame: RectFrame, localX: number, localY: number): Point2D {
+/**
+ * Local-frame (scene-unit) point — centred on the centroid, axes aligned to the
+ * frame's local +X/+Y before rotation — → world coords. Exposed as SSoT so
+ * consumers can place handles at arbitrary local offsets (e.g. the rotation
+ * handle's stand-off beyond a face) instead of re-deriving the rotate+translate.
+ */
+export function rectLocalWorld(frame: RectFrame, localX: number, localY: number): Point2D {
   const r = rotateVector({ x: localX, y: localY }, frame.rotationDeg);
   return { x: frame.center.x + r.x, y: frame.center.y + r.y };
 }
 
 /** World position of a corner handle. */
 export function rectCornerWorld(frame: RectFrame, corner: RectCorner): Point2D {
-  return localToWorld(frame, corner.sx * frame.halfWidth, corner.sy * frame.halfLength);
+  return rectLocalWorld(frame, corner.sx * frame.halfWidth, corner.sy * frame.halfLength);
 }
 
 /** World position of an edge-midpoint handle (width edge for `x`, length edge for `y`). */
 export function rectEdgeWorld(frame: RectFrame, edge: RectEdge): Point2D {
   return edge.axis === 'x'
-    ? localToWorld(frame, edge.sign * frame.halfWidth, 0)
-    : localToWorld(frame, 0, edge.sign * frame.halfLength);
+    ? rectLocalWorld(frame, edge.sign * frame.halfWidth, 0)
+    : rectLocalWorld(frame, 0, edge.sign * frame.halfLength);
 }

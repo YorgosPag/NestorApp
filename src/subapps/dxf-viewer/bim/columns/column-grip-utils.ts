@@ -17,13 +17,14 @@ import { mmScaleFor } from '../../utils/scene-units';
 // ADR-397 §D3 — local-frame rotation primitives are shared SSoT (grip-math →
 // canonical rotatePoint, ADR-188). This module keeps the column-named exports as
 // thin wrappers so callers (column-grips / column-variant-grips) stay unchanged.
-import { rotateVector, projectToLocalFrame } from '../grips/grip-math';
+import { rotateVector, projectToLocalFrame, farEdgeSign } from '../grips/grip-math';
+import { rotationHandlePerpOffset } from '../grips/rotation-handle-policy';
 
 export const DEG_TO_RAD = Math.PI / 180;
 export const RAD_TO_DEG = 180 / Math.PI;
 
-/** mm. Offset της λαβής rotation πάνω από το north edge (visual separation). */
-export const ROTATION_HANDLE_OFFSET_MM = 200;
+/** mm. Rotation-handle stand-off. Single source = `rotation-handle-policy`; re-exported here for existing importers. */
+export { ROTATION_HANDLE_OFFSET_MM } from '../grips/rotation-handle-policy';
 
 /**
  * Rotate vector `v` by `rotDeg` (CCW) around the origin. Thin wrapper over the
@@ -122,21 +123,8 @@ export function localToWorld(local: Point2D, params: ColumnParams): Point2D {
   return { x: centroid.x + rotated.x, y: centroid.y + rotated.y };
 }
 
-/**
- * Resolve far-edge sign along local X axis. Returns `+1` (east edge) for
- * `dx <= 0`, `-1` (west edge) for `dx > 0`. Guarantees non-zero coefficient
- * for width handle even when anchor sits on east/west edge.
- */
-export function farEdgeSignX(dx: number): number {
-  return dx <= 0 ? +1 : -1;
-}
-
-/**
- * Same as `farEdgeSignX` but for local Y axis (north / south).
- */
-export function farEdgeSignY(dy: number): number {
-  return dy <= 0 ? +1 : -1;
-}
+// Far-edge face sign = shared `farEdgeSign` SSoT (grip-math) — applied to the
+// anchor's local dx (width axis) or dy (depth axis).
 
 // ─── Base grip handle positions (Phase 4.5 + 8C) ─────────────────────────────
 
@@ -161,7 +149,7 @@ export function widthHandleWorld(params: ColumnParams): Point2D {
     return localToWorld({ x: params.width / 2, y: 0 }, params);
   }
   const { dx } = ANCHOR_OFFSETS[params.anchor];
-  const signX = farEdgeSignX(dx);
+  const signX = farEdgeSign(dx);
   return localToWorld({ x: (signX * params.width) / 2, y: 0 }, params);
 }
 
@@ -170,7 +158,7 @@ export function widthHandleWorld(params: ColumnParams): Point2D {
  */
 export function depthHandleWorld(params: ColumnParams): Point2D {
   const { dy } = ANCHOR_OFFSETS[params.anchor];
-  const signY = farEdgeSignY(dy);
+  const signY = farEdgeSign(dy);
   return localToWorld({ x: 0, y: (signY * params.depth) / 2 }, params);
 }
 
@@ -188,9 +176,10 @@ export function rotationHandleWorld(params: ColumnParams): Point2D {
   const dimY = params.kind === 'polygon'
     ? polygonBboxMm(params.width, params.polygon?.sides).dimY
     : params.depth;
-  // Depth handle face = `signY` (farEdgeSignY of the anchor's dy); rotation stands
-  // off the opposite (−signY) face so the two never coincide for any anchor.
+  // Depth handle face = `signY` (farEdgeSign of the anchor's dy); the shared
+  // rotation-handle policy stands the rotation handle off the OPPOSITE (−signY)
+  // face so the two never coincide for any anchor (mm local frame → `localToWorld`).
   const dy = params.kind === 'polygon' ? 0 : ANCHOR_OFFSETS[params.anchor].dy;
-  const signY = farEdgeSignY(dy);
-  return localToWorld({ x: 0, y: -signY * (dimY / 2 + ROTATION_HANDLE_OFFSET_MM) }, params);
+  const signY = farEdgeSign(dy);
+  return localToWorld({ x: 0, y: rotationHandlePerpOffset(dimY / 2, signY) }, params);
 }

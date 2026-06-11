@@ -380,19 +380,20 @@ describe('beam-grips (Phase 5.5a)', () => {
 
   // ─── Phase 5.5d — rotation grip (wall parity) ──────────────────────────────
 
-  it('26. rotation grip (straight) stands at the OPPOSITE perp edge midpoint from width-edge', () => {
-    // ADR-363 (2026-06-11) — straight-beam rotation handle mirrors the wall: on the
-    // body at the −perp face midpoint, i.e. the OPPOSITE perp face from `beam-width`
-    // (clean separation, never coincident with the width handle, Revit-style).
+  it('26. rotation grip (straight) stands off the OPPOSITE perp face from width-edge', () => {
+    // ADR-363 (2026-06-11) — straight-beam rotation handle mirrors the wall: stands
+    // off the −perp face, i.e. the OPPOSITE perp face from `beam-width` (shared
+    // rotation-handle policy — never coincident with the width handle, Revit-style).
     const beam = makeStraight(); // (0,0)→(4000,0)
     const grips = getBeamGrips(beam);
     const rot = grips.find((g) => g.beamGripKind === 'beam-rotation');
     const widthEdge = grips.find((g) => g.beamGripKind === 'beam-width');
     expect(rot).toBeDefined();
-    // Same axial midpoint x, mirrored perpendicular (y) — opposite face, not coincident.
+    // Same axial midpoint x; opposite perpendicular side, standing OFF beyond the
+    // face → |y| greater than the width-edge's and of opposite sign.
     expect(rot!.position.x).toBeCloseTo(widthEdge!.position.x, 6);
-    expect(rot!.position.y).toBeCloseTo(-widthEdge!.position.y, 6);
-    expect(rot!.position).not.toEqual(widthEdge!.position);
+    expect(Math.sign(rot!.position.y)).toBe(-Math.sign(widthEdge!.position.y));
+    expect(Math.abs(rot!.position.y)).toBeGreaterThan(Math.abs(widthEdge!.position.y));
     expect(rot!.movesEntity).toBe(false);
   });
 

@@ -61,6 +61,7 @@ import {
   type AxisBoxGripRole,
 } from '../grips/axis-box-grips';
 import { mmScaleFor } from '../../utils/scene-units';
+import { rotationHandlePerpOffset } from '../grips/rotation-handle-policy';
 
 /** Line-based foundation params (strip / tie-beam) — share start/end/width. */
 type LineFoundationParams = StripFootingParams | TieBeamParams;
@@ -94,9 +95,6 @@ function lineAxisBoxParams(params: LineFoundationParams): AxisBoxParams {
 }
 
 const RAD_TO_DEG = 180 / Math.PI;
-
-/** mm. Offset της λαβής rotation πάνω από το north edge (visual separation). */
-const ROTATION_HANDLE_OFFSET_MM = 200;
 
 // ─── Local-frame helpers (mirror column-grip-utils, pad width×length) ─────────
 
@@ -147,9 +145,15 @@ function lengthHandleWorld(params: PadFootingParams): Point2D {
   return localToWorld({ x: 0, y: (signY * params.length) / 2 }, params);
 }
 
-/** World position της λαβής rotation (πάνω από το north edge). */
+/**
+ * World position της λαβής rotation. Shared `rotation-handle-policy` SSoT: stands
+ * off the local-Y face OPPOSITE the `length` edge handle (which sits on `signY`),
+ * so rotation is never coincident with the length dimension handle (Revit rule).
+ */
 function rotationHandleWorld(params: PadFootingParams): Point2D {
-  return localToWorld({ x: 0, y: params.length / 2 + ROTATION_HANDLE_OFFSET_MM }, params);
+  const { dy } = ANCHOR_OFFSETS[params.anchor];
+  const signY = farEdgeSignY(dy);
+  return localToWorld({ x: 0, y: rotationHandlePerpOffset(params.length / 2, signY) }, params);
 }
 
 /** World position μιας γωνιακής λαβής (local signs `sx`/`sy` × half-extents). */

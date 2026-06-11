@@ -59,12 +59,10 @@ import type { ColumnGripKind, GripInfo } from '../../hooks/useGripMovement';
 import type { ColumnEntity, ColumnParams } from '../types/column-types';
 import { ANCHOR_OFFSETS, MIN_COLUMN_DIMENSION_MM } from '../types/column-types';
 import { rotatePoint } from '../../utils/rotation-math';
-import { sweptAngleDegAboutPivot } from '../grips/grip-math';
+import { sweptAngleDegAboutPivot, farEdgeSign } from '../grips/grip-math';
 import {
   RAD_TO_DEG,
   depthHandleWorld,
-  farEdgeSignX,
-  farEdgeSignY,
   projectDeltaToLocal,
   rotationHandleWorld,
   widthHandleWorld,
@@ -455,7 +453,7 @@ function resizeWidth(input: Readonly<ColumnGripDragInput>): ColumnParams {
     return { ...originalParams, width: newWidth };
   }
   const { dx } = ANCHOR_OFFSETS[originalParams.anchor];
-  const signX = farEdgeSignX(dx);
+  const signX = farEdgeSign(dx);
   const coefX = signX * 0.5 - dx;
   const { dxLocal } = projectDeltaToLocal(delta, originalParams.rotation);
   const newWidth = Math.max(MIN_COLUMN_DIMENSION_MM, originalParams.width + dxLocal / (coefX * s));

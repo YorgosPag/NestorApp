@@ -48,13 +48,14 @@ import type { Point2D } from '../../rendering/types/Types';
 import type { SceneUnits } from '../../utils/scene-units';
 import { mmScaleFor } from '../../utils/scene-units';
 import type { RectFrame, RectCorner, RectSign } from './rect-frame';
-import { rectCornerWorld, rectEdgeWorld } from './rect-frame';
+import { rectCornerWorld, rectEdgeWorld, rectLocalWorld } from './rect-frame';
 import {
   applyRectCornerDrag,
   applyRectEdgeDrag,
   type RectResizeLimits,
 } from './rect-grip-engine';
 import { rotateAxisPointsAboutPivot } from './grip-math';
+import { ROTATION_HANDLE_OFFSET_MM, rotationHandlePerpOffset } from './rotation-handle-policy';
 
 const DEG_PER_RAD = 180 / Math.PI;
 
@@ -196,9 +197,9 @@ function axisBoxResizeLimits(params: AxisBoxParams, minWidthMm: number): RectRes
  * Compute the 7 role-tagged grips of an axis-anchored box. Stable order mirrors
  * the straight wall (`getWallGrips` gripIndex 3..9): width edge, length edge, the
  * four corners (start-pos, start-neg, end-pos, end-neg), rotation. The `width-edge`
- * handle sits on the `widthFaceSign` perp face midpoint; the `rotation` handle sits
- * on the OPPOSITE perp face midpoint (clean separation — never coincident with the
- * width/thickness handle, Revit-style); the corners on both faces.
+ * handle sits on the `widthFaceSign` perp face midpoint; the `rotation` handle stands
+ * off the OPPOSITE perp face (shared `rotation-handle-policy` SSoT — never coincident
+ * with the width/thickness handle, Revit-style); the corners on both faces.
  *
  * Skips everything on a degenerate axis (`start === end`) — there is no footprint.
  */
@@ -210,11 +211,16 @@ export function getAxisBoxGrips(params: AxisBoxParams): AxisBoxGrip[] {
   const frame = axisToRectFrame(params);
   const faceSign: RectSign = params.widthFaceSign ?? 1;
   const widthEdgePos = rectEdgeWorld(frame, { axis: 'y', sign: faceSign });
-  // Rotation handle sits on the OPPOSITE perp face from `width-edge`, so the two
-  // never coincide (Revit-style: rotation is a distinct control, never coincident
-  // with a dimension handle). The −perp midpoint is free — no other mid-handle there.
-  const rotationFaceSign: RectSign = faceSign === 1 ? -1 : 1;
-  const rotationPos = rectEdgeWorld(frame, { axis: 'y', sign: rotationFaceSign });
+  // Rotation handle via the shared rotation-handle policy SSoT: it stands off the
+  // perp face OPPOSITE the `width-edge`, so the two never coincide (Revit rule —
+  // rotation is a distinct control, never coincident with a dimension handle). The
+  // offset is mm → scaled to scene units to match `frame.halfLength` (also scene).
+  const rotationPerp = rotationHandlePerpOffset(
+    frame.halfLength,
+    faceSign,
+    ROTATION_HANDLE_OFFSET_MM * mmScaleFor(params),
+  );
+  const rotationPos = rectLocalWorld(frame, 0, rotationPerp);
 
   return [
     // width edge (perpendicular dimension, +perp face midpoint)

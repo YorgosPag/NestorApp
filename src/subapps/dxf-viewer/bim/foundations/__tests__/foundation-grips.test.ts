@@ -85,10 +85,13 @@ describe('getFoundationGrips — pad', () => {
     expect(length.position.y).toBeCloseTo(1000); // length/2
   });
 
-  it('places rotation handle above the north edge (length/2 + offset)', () => {
+  it('stands the rotation handle off the OPPOSITE (south) face from the length edge handle', () => {
     const grips = getFoundationGrips(padEntity());
     const rot = grips.find((g) => g.foundationGripKind === 'foundation-rotation')!;
-    expect(rot.position.y).toBeCloseTo(1200); // length/2 + 200 offset
+    // Shared rotation-handle policy: length handle on +Y (north) → rotation stands
+    // off the −Y (south) face: −(length/2 + 200) = −1200. Clean separation, Revit-style.
+    expect(rot.position.x).toBeCloseTo(0);
+    expect(rot.position.y).toBeCloseTo(-1200);
   });
 
 });

@@ -46,8 +46,15 @@ import { applyRectCornerDrag } from './rect-grip-engine';
 
 const RAD_TO_DEG = 180 / Math.PI;
 
-/** mm — rotation handle stand-off beyond the +Y (length) edge (visual separation). */
-export const ROTATION_HANDLE_OFFSET_MM = 200;
+/**
+ * mm — rotation handle stand-off. Single source = `rotation-handle-policy`;
+ * re-exported here for existing importers (e.g. `opening-grips`). This family
+ * emits ONLY corners + rotation (NO perpendicular edge dimension handle), so there
+ * is no face to avoid — the handle stays on the +Y (length) side. The shared policy
+ * still owns the offset magnitude so it changes in one place.
+ */
+export { ROTATION_HANDLE_OFFSET_MM } from './rotation-handle-policy';
+import { ROTATION_HANDLE_OFFSET_MM } from './rotation-handle-policy';
 
 /**
  * Entity-agnostic grip role of a centred rotatable box. Stable order:

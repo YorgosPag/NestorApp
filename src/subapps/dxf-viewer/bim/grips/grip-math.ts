@@ -58,6 +58,18 @@ export function perpUnit(u: { x: number; y: number }): { x: number; y: number } 
   return { x: -u.y, y: u.x };
 }
 
+/**
+ * ADR-363 — far-edge face sign for a centre-anchored box handle. Given a local
+ * anchor-offset component (`dx`/`dy` from the entity's `ANCHOR_OFFSETS`), returns
+ * the sign of the FAR face along that axis: `+1` for `offset <= 0`, `-1` otherwise.
+ * Guarantees a non-zero coefficient even when the anchor sits on that edge. Single
+ * SSoT for column + foundation-pad grip placement (was duplicated as identical
+ * `farEdgeSignX`/`farEdgeSignY` in both — one axis-agnostic helper).
+ */
+export function farEdgeSign(offsetComponent: number): number {
+  return offsetComponent <= 0 ? 1 : -1;
+}
+
 /** Unit vector `from → to`. Returns null when the two points coincide (degenerate). */
 export function unitVector(
   from: { x: number; y: number },
