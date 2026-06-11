@@ -61,7 +61,8 @@ export function useDxfViewerNotifications(): void {
           toast.success(t('foundationGrid.rehosted', { rehosted, created }));
         } else if (deleted > 0 || reJustified > 0) {
           // managed reconcile: αντικαταστάθηκαν obsolete (split) ή ευθυγραμμίστηκε η έδραση (5a-grid).
-          toast.success(t('foundationGrid.reconciled', { created, deleted }));
+          // ICU `=0 {}` κρύβει τα μηδενικά → δείχνει μόνο ό,τι όντως συνέβη (deleted ή/και reJustified).
+          toast.success(t('foundationGrid.reconciled', { created, deleted, reJustified }));
         } else {
           toast.success(t('foundationGrid.built', { built: created }));
         }

@@ -31,7 +31,7 @@
   "foundationGrid": {
     "built": "{built, plural, one {Δημιουργήθηκε # πεδιλοδοκός από τον κάναβο.} other {Δημιουργήθηκαν # πεδιλοδοκοί από τον κάναβο.}}",
     "builtWithIgnored": "{built, plural, one {Δημιουργήθηκε # πεδιλοδοκός} other {Δημιουργήθηκαν # πεδιλοδοκοί}}· αγνοήθηκαν {ignored} τμήματα.",
-    "reconciled": "{created, plural, one {Προστέθηκε # πεδιλοδοκός} other {Προστέθηκαν # πεδιλοδοκοί}}· {deleted, plural, one {αντικαταστάθηκε #} other {αντικαταστάθηκαν #}}.",
+    "reconciled": "{created, plural, one {Προστέθηκε # πεδιλοδοκός} other {Προστέθηκαν # πεδιλοδοκοί}}{deleted, plural, =0 {} other {· αντικαταστάθηκαν #}}{reJustified, plural, =0 {} other {· ευθυγραμμίστηκαν #}}.",
     "rehosted": "{rehosted, plural, one {Ξανα-κρεμάστηκε # παλιά λωρίδα στον κάναβο} other {Ξανα-κρεμάστηκαν # παλιές λωρίδες στον κάναβο}}{created, plural, =0 {.} other {· +# νέες.}}",
     "upToDate": "Η εσχάρα είναι ήδη ενημερωμένη με τον κάναβο.",
     "insufficientGuides": "Χρειάζονται τουλάχιστον 2 άξονες κανάβου ανά διεύθυνση (X και Y).",
