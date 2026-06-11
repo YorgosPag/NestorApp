@@ -28,6 +28,12 @@
     "builtWithIgnored": "Created {built} walls; ignored {ignored} shapes.",
     "noneBuilt": "No valid wall perimeter found in the selection."
   },
+  "foundationGrid": {
+    "built": "{built, plural, one {Created # footing strip from the grid.} other {Created # footing strips from the grid.}}",
+    "builtWithIgnored": "{built, plural, one {Created # footing strip} other {Created # footing strips}}; ignored {ignored} segments.",
+    "insufficientGuides": "At least 2 grid axes per direction are required (X and Y).",
+    "empty": "No valid footing strip from the current grid."
+  },
   "perimeterColumn": {
     "built": "Created {built} structural walls from the perimeter.",
     "builtWithIgnored": "Created {built} structural walls; ignored {ignored} shapes.",
@@ -1432,6 +1438,10 @@
         "foundationStripFromWall": {
           "label": "Strip footing from wall",
           "tooltip": "1 click on a wall → strip footing on its axis (width = wall thickness)"
+        },
+        "foundationFromGrid": {
+          "label": "Footing grid from guides",
+          "tooltip": "Auto strip footings along the existing construction grid lines/intersections (one command, one undo)"
         },
         "archGroup": {
           "label": "Architectural",
