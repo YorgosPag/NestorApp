@@ -105,10 +105,11 @@ describe('column-grips — getColumnGrips (Phase 4.5)', () => {
     });
     const grips = getColumnGrips(col);
     // ADR-363 Φ1G.5 Slice 2: center grip removed; array shifted down by 1.
-    // rotation handle: y + (600/2 + 200)*0.001 = 8 + 0.5 = 8.5 (on body, not 508).
+    // rotation handle moved to the face OPPOSITE the depth handle (clean separation
+    // from the πάχος handle, Revit-style): y − (600/2 + 200)*0.001 = 8 − 0.5 = 7.5.
     expect(grips[0].columnGripKind).toBe('column-rotation');
     expect(grips[0].position.x).toBeCloseTo(10, 6);
-    expect(grips[0].position.y).toBeCloseTo(8.5, 6);
+    expect(grips[0].position.y).toBeCloseTo(7.5, 6);
     // width handle: x + (400/2)*0.001 = 10.2 (not 210).
     expect(grips[1].position.x).toBeCloseTo(10.2, 6);
     expect(grips[1].position.y).toBeCloseTo(8, 6);
@@ -234,9 +235,9 @@ describe('column-grips — applyColumnGripDrag (Phase 4.5)', () => {
 
   it('11. rotation drag updates rotation preserving width/depth/position', () => {
     const col = makeRect();
-    // Old handle on anchor=center, rotation=0: at (0, depth/2 + offset) = (0, 400)
-    // Drag by (+100, 0) → new handle (100, 400). New angle from position(0,0):
-    // atan2(400, 100) ≈ 75.96°. Old angle = 90° → delta = -14.04°.
+    // Old handle on anchor=center, rotation=0: opposite the depth handle at
+    // (0, −(depth/2 + offset)) = (0, −400). Drag by (+100, 0) → new handle
+    // (100, −400). The swept angle about position(0,0) changes the rotation.
     const next = applyColumnGripDrag('column-rotation', {
       originalParams: col.params,
       delta: { x: 100, y: 0 },

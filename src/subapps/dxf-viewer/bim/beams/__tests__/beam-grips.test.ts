@@ -380,16 +380,19 @@ describe('beam-grips (Phase 5.5a)', () => {
 
   // ─── Phase 5.5d — rotation grip (wall parity) ──────────────────────────────
 
-  it('26. rotation grip (straight) stands at the +perp edge midpoint (wall parity)', () => {
-    // ADR-363 (2026-06-11) — straight-beam rotation handle mirrors the wall: ON the
-    // body at the +perp face midpoint (coincident with the width-edge grip), not the
-    // old 0.75 axis fraction.
+  it('26. rotation grip (straight) stands at the OPPOSITE perp edge midpoint from width-edge', () => {
+    // ADR-363 (2026-06-11) — straight-beam rotation handle mirrors the wall: on the
+    // body at the −perp face midpoint, i.e. the OPPOSITE perp face from `beam-width`
+    // (clean separation, never coincident with the width handle, Revit-style).
     const beam = makeStraight(); // (0,0)→(4000,0)
     const grips = getBeamGrips(beam);
     const rot = grips.find((g) => g.beamGripKind === 'beam-rotation');
     const widthEdge = grips.find((g) => g.beamGripKind === 'beam-width');
     expect(rot).toBeDefined();
-    expect(rot!.position).toEqual(widthEdge!.position);
+    // Same axial midpoint x, mirrored perpendicular (y) — opposite face, not coincident.
+    expect(rot!.position.x).toBeCloseTo(widthEdge!.position.x, 6);
+    expect(rot!.position.y).toBeCloseTo(-widthEdge!.position.y, 6);
+    expect(rot!.position).not.toEqual(widthEdge!.position);
     expect(rot!.movesEntity).toBe(false);
   });
 

@@ -196,8 +196,9 @@ function axisBoxResizeLimits(params: AxisBoxParams, minWidthMm: number): RectRes
  * Compute the 7 role-tagged grips of an axis-anchored box. Stable order mirrors
  * the straight wall (`getWallGrips` gripIndex 3..9): width edge, length edge, the
  * four corners (start-pos, start-neg, end-pos, end-neg), rotation. The `width-edge`
- * + `rotation` handles sit on the `widthFaceSign` perp face (the +perp face midpoint
- * — exactly where the wall places them); the corners on both faces.
+ * handle sits on the `widthFaceSign` perp face midpoint; the `rotation` handle sits
+ * on the OPPOSITE perp face midpoint (clean separation — never coincident with the
+ * width/thickness handle, Revit-style); the corners on both faces.
  *
  * Skips everything on a degenerate axis (`start === end`) — there is no footprint.
  */
@@ -209,6 +210,11 @@ export function getAxisBoxGrips(params: AxisBoxParams): AxisBoxGrip[] {
   const frame = axisToRectFrame(params);
   const faceSign: RectSign = params.widthFaceSign ?? 1;
   const widthEdgePos = rectEdgeWorld(frame, { axis: 'y', sign: faceSign });
+  // Rotation handle sits on the OPPOSITE perp face from `width-edge`, so the two
+  // never coincide (Revit-style: rotation is a distinct control, never coincident
+  // with a dimension handle). The −perp midpoint is free — no other mid-handle there.
+  const rotationFaceSign: RectSign = faceSign === 1 ? -1 : 1;
+  const rotationPos = rectEdgeWorld(frame, { axis: 'y', sign: rotationFaceSign });
 
   return [
     // width edge (perpendicular dimension, +perp face midpoint)
@@ -220,8 +226,9 @@ export function getAxisBoxGrips(params: AxisBoxParams): AxisBoxGrip[] {
     { role: 'corner-start-neg', type: 'vertex', position: rectCornerWorld(frame, AXIS_BOX_CORNER_MAP['corner-start-neg']) },
     { role: 'corner-end-pos', type: 'vertex', position: rectCornerWorld(frame, AXIS_BOX_CORNER_MAP['corner-end-pos']) },
     { role: 'corner-end-neg', type: 'vertex', position: rectCornerWorld(frame, AXIS_BOX_CORNER_MAP['corner-end-neg']) },
-    // rotation handle — ON the body at the +perp face midpoint (mirror wall grip 9)
-    { role: 'rotation', type: 'vertex', position: widthEdgePos },
+    // rotation handle — on the OPPOSITE perp face midpoint (clean separation from
+    // width-edge; the drag is anchor-relative swept angle, so position is click-target only)
+    { role: 'rotation', type: 'vertex', position: rotationPos },
   ];
 }
 

@@ -419,14 +419,15 @@ describe('wall-grips (Phase 1C)', () => {
     expect(wallGripGlyphShape(undefined)).toBe('square');
   });
 
-  it('27. wall-rotation handle sits at the +perp face midpoint (on the wall, centre of length, between the 2 +perp corners)', () => {
+  it('27. wall-rotation handle sits at the −perp face midpoint (OPPOSITE the thickness handle, centre of length, between the 2 −perp corners)', () => {
     const grips = getWallGrips(makeStraight());
     const rot = grips.find((g) => g.wallGripKind === 'wall-rotation');
     expect(rot).toBeDefined();
-    // Read from geometry: midpoint of the two +perp corner handles (not a raw-mm
-    // offset beyond the end edge). Centre of length (x≈500), on the +perp face.
-    const posStart = grips.find((g) => g.wallGripKind === 'wall-corner-start-pos')!.position;
-    const posEnd = grips.find((g) => g.wallGripKind === 'wall-corner-end-pos')!.position;
+    // Rotation handle moved to the OPPOSITE perp face from `wall-thickness` (clean
+    // separation, Revit-style): midpoint of the two −perp corner handles, centre of
+    // length (x≈500), on the −perp face.
+    const posStart = grips.find((g) => g.wallGripKind === 'wall-corner-start-neg')!.position;
+    const posEnd = grips.find((g) => g.wallGripKind === 'wall-corner-end-neg')!.position;
     expect(rot!.position.x).toBeCloseTo((posStart.x + posEnd.x) / 2, 6);
     expect(rot!.position.y).toBeCloseTo((posStart.y + posEnd.y) / 2, 6);
     expect(rot!.position.x).toBeCloseTo(500, 6); // centre of the 0→1000 length

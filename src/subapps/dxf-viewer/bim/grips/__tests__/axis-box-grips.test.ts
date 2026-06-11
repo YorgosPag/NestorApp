@@ -68,8 +68,8 @@ describe('getAxisBoxGrips', () => {
     expect(byRole['corner-start-neg']).toEqual({ x: 0, y: -10 });
     expect(byRole['corner-end-pos']).toEqual({ x: 100, y: 10 });
     expect(byRole['corner-end-neg']).toEqual({ x: 100, y: -10 });
-    // rotation handle mirrors the wall — coincident with the +perp edge midpoint.
-    expect(byRole['rotation']).toEqual({ x: 50, y: 10 });
+    // rotation handle on the OPPOSITE (−perp) face midpoint — clean separation from width-edge.
+    expect(byRole['rotation']).toEqual({ x: 50, y: -10 });
   });
 
   it('honours widthFaceSign (-1 = −perp face) for the single-handle grips', () => {
@@ -77,7 +77,7 @@ describe('getAxisBoxGrips', () => {
       getAxisBoxGrips({ ...horizontalBox(), widthFaceSign: -1 }).map((g) => [g.role, g.position]),
     );
     expect(byRole['width-edge']).toEqual({ x: 50, y: -10 });
-    expect(byRole['rotation']).toEqual({ x: 50, y: -10 });
+    expect(byRole['rotation']).toEqual({ x: 50, y: 10 }); // opposite (+perp) face
   });
 
   it('returns no grips on a degenerate (zero-length) axis', () => {
@@ -139,8 +139,8 @@ describe('applyAxisBoxGripDrag', () => {
   });
 
   it('rotation rotates both endpoints about the midpoint (anchor-relative)', () => {
-    // Grab the +perp handle at (50,10); drag so the swept angle about the midpoint
-    // (50,0) is +90°. anchor = currentPos − delta = handle position (50,10).
+    // Anchor-relative swept angle: grab at (50,10) and drag so the swept angle about
+    // the midpoint (50,0) is +90°. anchor = currentPos − delta = grab point (50,10).
     const anchor = { x: 50, y: 10 };
     const currentPos = { x: 40, y: 0 }; // pivot(50,0) → 90° CCW from anchor
     const patch = applyAxisBoxGripDrag('rotation', {

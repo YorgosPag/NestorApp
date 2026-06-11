@@ -175,13 +175,22 @@ export function depthHandleWorld(params: ColumnParams): Point2D {
 }
 
 /**
- * World position of the rotation grip handle. Sits centroid + rotated(0,
- * dimY/2 + offset) — visually πάνω από το north edge. Polygon uses actual
- * N-gon bbox dimY (από `polygonBboxMm`) αντί για το meaningless `params.depth`.
+ * World position of the rotation grip handle. Stands off the perpendicular face
+ * OPPOSITE the depth handle (centroid + rotated(0, −signY·(dimY/2 + offset))) —
+ * the depth handle (= the πάχος handle for a `shear-wall`, ADR-363 Phase 8) sits
+ * on the `signY` face, so the rotation handle goes on the −signY face. Revit-style
+ * clean separation: the rotation control is NEVER coincident with a dimension
+ * handle (mirrors the axis-box rule — rotation → opposite perp face from
+ * `width-edge` — so all 5 structural entities follow one rule). Polygon uses the
+ * actual N-gon bbox dimY (`polygonBboxMm`) αντί για το meaningless `params.depth`.
  */
 export function rotationHandleWorld(params: ColumnParams): Point2D {
   const dimY = params.kind === 'polygon'
     ? polygonBboxMm(params.width, params.polygon?.sides).dimY
     : params.depth;
-  return localToWorld({ x: 0, y: dimY / 2 + ROTATION_HANDLE_OFFSET_MM }, params);
+  // Depth handle face = `signY` (farEdgeSignY of the anchor's dy); rotation stands
+  // off the opposite (−signY) face so the two never coincide for any anchor.
+  const dy = params.kind === 'polygon' ? 0 : ANCHOR_OFFSETS[params.anchor].dy;
+  const signY = farEdgeSignY(dy);
+  return localToWorld({ x: 0, y: -signY * (dimY / 2 + ROTATION_HANDLE_OFFSET_MM) }, params);
 }
