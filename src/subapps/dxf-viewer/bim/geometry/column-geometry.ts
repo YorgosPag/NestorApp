@@ -24,11 +24,9 @@
  */
 
 import type {
-  ColumnAnchor,
   ColumnCompositeParams,
   ColumnGeometry,
   ColumnIShapeParams,
-  ColumnKind,
   ColumnLshapeParams,
   ColumnParams,
   ColumnPolygonParams,
@@ -48,9 +46,10 @@ import type { ColumnTopProfile, ColumnBaseProfile } from './column-vertical-prof
 import { polygonArea, polygonBbox } from './shared/polygon-utils';
 import { buildIShapeProfile } from './shared/i-shape-profile';
 import { mmToSceneUnits } from '../../utils/scene-units';
+import { columnFootprintDims } from '../columns/column-footprint-dims';
+import { centredPolyToWorld, type CentredAnchorFrame } from '../grips/centred-anchor-frame';
 
 const MM_TO_M = 1 / 1000;
-const DEG_TO_RAD = Math.PI / 180;
 
 /** Αριθμητικός μέσος όρος (mm) μιας readonly λίστας — άδεια → fallback. */
 function mean(values: readonly number[], fallback: number): number {
@@ -99,16 +98,7 @@ export function computeColumnGeometry(
   // `params.position` (always canvas units from user click).
   const s = mmToSceneUnits(params.sceneUnits ?? 'mm');
   const localVerts = buildLocalFootprint(params, s);
-  const transformed = transformFootprint(
-    localVerts,
-    params.position,
-    params.anchor,
-    params.width,
-    params.depth,
-    params.rotation,
-    params.kind,
-    s,
-  );
+  const transformed = transformFootprint(localVerts, params, s);
 
   const bbox = polygonBbox(transformed);
   // Polygon vertices are in canvas units → convert area to m².
@@ -332,58 +322,35 @@ function buildCompositeLocal(s: number, composite?: ColumnCompositeParams): Poin
 // ─── Anchor + rotation transform ────────────────────────────────────────────
 
 /**
- * Compute canvas-space bbox dimensions από local vertices. Used by polygon
- * (no `depth` param) ώστε anchor offsets να βασίζονται σε actual bbox.
- */
-function computeLocalBboxCanvas(local: readonly Point3D[]): { dimX: number; dimY: number } {
-  let minX = Number.POSITIVE_INFINITY, maxX = Number.NEGATIVE_INFINITY;
-  let minY = Number.POSITIVE_INFINITY, maxY = Number.NEGATIVE_INFINITY;
-  for (const v of local) {
-    if (v.x < minX) minX = v.x;
-    if (v.x > maxX) maxX = v.x;
-    if (v.y < minY) minY = v.y;
-    if (v.y > maxY) maxY = v.y;
-  }
-  return { dimX: maxX - minX, dimY: maxY - minY };
-}
-
-/**
- * Move local-frame vertices to world coords: translate by anchor offset so
- * the chosen anchor point sits on `position`, then rotate around `position`
- * για visual coherence με Tab cycling. Circular bypasses both (anchor fixed
- * 'center', rotation N/A). Polygon derives anchor dims from actual bbox.
+ * Move local-frame vertices to world coords: anchor-shift so the chosen anchor
+ * point sits on `position`, then rotate around `position` για visual coherence με
+ * Tab cycling. Circular bypasses both (anchor fixed 'center', rotation N/A).
+ *
+ * ADR-363 Slice F #2 — footprint dims come from the SHARED `columnFootprintDims`
+ * SSoT (the SAME source the grips + anchor-snap consume), and the anchor-shift →
+ * rotate → translate runs through the centre-anchored `centredPolyToWorld` SSoT
+ * (`rotateVector` → `rotatePoint`, ADR-188) — render == handles == insertion, no
+ * per-engine raw cos/sin. The local vertices are already canvas units (mm × s);
+ * only `dimX`/`dimY` (mm) get scaled internally for the anchor shift.
  */
 function transformFootprint(
   local: readonly Point3D[],
-  position: Point3D,
-  anchor: ColumnAnchor,
-  width: number,
-  depth: number,
-  rotationDeg: number,
-  kind: ColumnKind,
+  params: ColumnParams,
   s: number,
 ): Point3D[] {
-  if (kind === 'circular') {
-    return local.map((v) => ({ x: position.x + v.x, y: position.y + v.y, z: 0 }));
+  if (params.kind === 'circular') {
+    return local.map((v) => ({ x: params.position.x + v.x, y: params.position.y + v.y, z: 0 }));
   }
-  const { dx, dy } = ANCHOR_OFFSETS[anchor];
-  // dx/dy are unit fractions of width/depth. Convert mm → canvas units via s.
-  // polygon / U-shape / composite: η διατομή δεν είναι απλό width×depth → anchor
-  // dims από το πραγματικό bbox των local vertices (ADR-363 Phase 2/8).
-  const { dimX, dimY } = kind === 'polygon' || kind === 'U-shape' || kind === 'composite'
-    ? computeLocalBboxCanvas(local)
-    : { dimX: width * s, dimY: depth * s };
-  const shiftX = -dx * dimX;
-  const shiftY = -dy * dimY;
-  const cos = Math.cos(rotationDeg * DEG_TO_RAD);
-  const sin = Math.sin(rotationDeg * DEG_TO_RAD);
-  return local.map((v) => {
-    const lx = v.x + shiftX;
-    const ly = v.y + shiftY;
-    const rx = lx * cos - ly * sin;
-    const ry = lx * sin + ly * cos;
-    return { x: position.x + rx, y: position.y + ry, z: 0 };
-  });
+  const { dimX, dimY } = columnFootprintDims(params);
+  const frame: CentredAnchorFrame = {
+    position: params.position,
+    rotationDeg: params.rotation,
+    scale: s,
+    anchorOffset: ANCHOR_OFFSETS[params.anchor],
+    dimX,
+    dimY,
+  };
+  return centredPolyToWorld(frame, local).map((p) => ({ x: p.x, y: p.y, z: 0 }));
 }
 
 /**

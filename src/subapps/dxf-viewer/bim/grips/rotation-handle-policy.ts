@@ -9,17 +9,18 @@
  *
  * The Revit rule, in exactly one place:
  *
- *   **The rotation control is NEVER coincident with a dimension handle.** It stands
- *   off `ROTATION_HANDLE_OFFSET_MM` beyond the footprint face OPPOSITE the primary
- *   perpendicular dimension handle (thickness / width / depth / length edge).
+ *   **The rotation control sits ON the footprint face OPPOSITE the primary
+ *   perpendicular dimension handle** (thickness / width / depth / length edge), so
+ *   it is NEVER coincident with a dimension handle — Giorgio «πάνω στην παρειά, όχι
+ *   στον χώρο· σε παρειά που δεν υπάρχει λαβή». No stand-off into space:
+ *   `ROTATION_HANDLE_OFFSET_MM` is a tunable knob, currently `0` (= on the face).
  *
- * Before this module the constant `200` was redefined in THREE files and the
- * "opposite face + stand-off" formula was hand-written per family — some on the
- * SAME face as the dimension handle (the coincidence bug Giorgio reported:
- * «το σημάδι περιστροφής συμπίπτει με τη λαβή πάχους»). Families that carry NO
- * perpendicular dimension handle (the 8 centred-box placeable have only corners +
- * rotation) have no face to avoid, so they keep their face and consume only the
- * shared constant.
+ * Before this module the constant was redefined in THREE files and the "opposite
+ * face + stand-off" formula was hand-written per family — some on the SAME face as
+ * the dimension handle (the coincidence bug Giorgio reported: «το σημάδι
+ * περιστροφής συμπίπτει με τη λαβή πάχους»). Families that carry NO perpendicular
+ * dimension handle (the 8 centred-box placeable have only corners + rotation) have
+ * no face to avoid, so they keep their face and consume only the shared constant.
  *
  * Pure, unit-agnostic: `halfExtent` and `offset` must share a unit (mm in the
  * centre-anchored local frames, scene units in the axis `RectFrame`s); the caller
@@ -29,8 +30,13 @@
  * @see docs/centralized-systems/reference/adrs/ADR-363-bim-drawing-mode.md Slice F
  */
 
-/** mm. Stand-off of the rotation handle beyond the box face. The ONE definition. */
-export const ROTATION_HANDLE_OFFSET_MM = 200;
+/**
+ * mm. Extra stand-off of the rotation handle BEYOND the box face — the ONE
+ * definition + tunable knob. `0` = the handle sits exactly ON the opposite face
+ * (Giorgio: «πάνω στην παρειά, όχι στον χώρο»). A positive value would push it that
+ * many mm into free space beyond the face.
+ */
+export const ROTATION_HANDLE_OFFSET_MM = 0;
 
 /** A perpendicular-face sign: `+1` = positive face, `-1` = negative face. */
 export type FaceSign = -1 | 1;
@@ -46,12 +52,14 @@ export function oppositeFace(dimensionFaceSign: number): number {
 
 /**
  * Signed local-frame perpendicular coordinate of the rotation handle: the face
- * OPPOSITE `dimensionFaceSign`, standing off `offset` beyond the half-extent.
- * `halfExtent` and `offset` must be in the SAME unit (the result is in that unit);
- * the caller rotates + translates it into world space.
+ * OPPOSITE `dimensionFaceSign`, plus an optional `offset` beyond the half-extent
+ * (default `0` = exactly ON the opposite face). `halfExtent` and `offset` must be
+ * in the SAME unit (the result is in that unit); the caller rotates + translates
+ * it into world space.
  *
  * Example: a box with perpendicular half-extent `h`, its dimension handle on the
- * `+1` face → rotation handle at `-(h + offset)` (opposite face, standing off).
+ * `+1` face → rotation handle at `-(h + offset)` = `-h` by default (ON the opposite
+ * face); a positive `offset` stands it off into free space.
  */
 export function rotationHandlePerpOffset(
   halfExtent: number,

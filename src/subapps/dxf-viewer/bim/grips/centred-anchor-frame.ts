@@ -71,3 +71,23 @@ export function centredLocalToWorld(frame: CentredAnchorFrame, localMm: Point2D)
   const rotated = rotateVector({ x: localMm.x * frame.scale, y: localMm.y * frame.scale }, frame.rotationDeg);
   return { x: centroid.x + rotated.x, y: centroid.y + rotated.y };
 }
+
+/**
+ * Batch transform of an ALREADY-SCALED local footprint polygon (canvas units) →
+ * world: anchor-shift → rotate → translate, applied to every vertex. The geometry
+ * render core (`transformFootprint`) builds its local vertices in canvas units
+ * (mm × scale) already, so — unlike {@link centredLocalToWorld} — the points are NOT
+ * re-scaled here; only `dimX`/`dimY` (mm) inside `centredCentroidWorld` get scaled
+ * for the anchor shift. This is the SAME `rotateVector` (→ `rotatePoint`, ADR-188)
+ * SSoT the grip/anchor handles use — no more per-engine raw cos/sin.
+ */
+export function centredPolyToWorld(
+  frame: CentredAnchorFrame,
+  localCanvasPts: readonly Point2D[],
+): Point2D[] {
+  const centroid = centredCentroidWorld(frame);
+  return localCanvasPts.map((p) => {
+    const rotated = rotateVector({ x: p.x, y: p.y }, frame.rotationDeg);
+    return { x: centroid.x + rotated.x, y: centroid.y + rotated.y };
+  });
+}
