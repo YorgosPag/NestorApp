@@ -34,6 +34,7 @@ const ENTITY_TYPES: readonly ScheduleEntityType[] = [
   'beam',
   'stair',
   'slab-opening',
+  'foundation',
 ] as const;
 
 interface ScheduleEntityToggleProps {

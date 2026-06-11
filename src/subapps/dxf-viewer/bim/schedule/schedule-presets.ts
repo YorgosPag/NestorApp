@@ -32,6 +32,7 @@ import type { SlabEntity } from '../types/slab-types';
 import type { SlabOpeningEntity } from '../types/slab-opening-types';
 import type { StairEntity } from '../types/stair-types';
 import type { WallEntity } from '../types/wall-types';
+import type { FoundationEntity } from '../types/foundation-types';
 import {
   resolveAtoeMapping,
   resolveStairComponentMapping,
@@ -55,6 +56,7 @@ import {
   BEAM_COLUMNS,
   STAIR_COLUMNS,
   SLAB_OPENING_COLUMNS,
+  FOUNDATION_COLUMNS,
   COMBINED_COLUMNS,
   MULTI_BUILDING_COLUMNS,
 } from './schedule-preset-columns';
@@ -74,7 +76,8 @@ export type AnyBimEntity =
   | SlabOpeningEntity
   | ColumnEntity
   | BeamEntity
-  | StairEntity;
+  | StairEntity
+  | FoundationEntity;
 
 // ─── Handing helpers (ADR-363 §6 Phase 8 Q4) ─────────────────────────────────
 
@@ -309,6 +312,32 @@ function mapSlabOpening(entity: AnyBimEntity, lookups: ScheduleLookups): Schedul
   };
 }
 
+// ─── Foundation preset (ADR-441 — pad / strip / tie-beam) ────────────────────
+
+/**
+ * Foundation row. Pad έχει width+length· strip/tie-beam μόνο width. `area`/`volume`
+ * = NET (de-duplicated) όταν τα entities έχουν περάσει από `applyFoundationGridNet`
+ * (grid strips), αλλιώς gross — βλ. `hooks/data/foundation-boq-feed.ts` (ADR-441 Slice 4).
+ */
+function mapFoundation(entity: AnyBimEntity, lookups: ScheduleLookups): ScheduleRow['cells'] {
+  if (entity.type !== 'foundation') return {};
+  const p = entity.params;
+  const g = entity.geometry;
+  return {
+    id: entity.id,
+    buildingName: lookups.building?.(entity.buildingId)?.name ?? null,
+    floor: lookups.floor(entity.floorId),
+    kind: entity.kind,
+    width: safeNumber(p.width),
+    length: safeNumber('length' in p ? p.length : null),
+    thickness: safeNumber(p.thicknessMm),
+    elevation: safeNumber(p.topElevationMm),
+    area: safeNumber(g.area),
+    volume: safeNumber(g.volume),
+    material: lookups.material(p.material),
+  };
+}
+
 // ─── Combined preset (cross-type geometry-derived roll-up) ───────────────────
 
 /** Entity types covered by the kind-dispatched ΑΤΟΕ table (stair + slab-opening excluded). */
@@ -386,6 +415,7 @@ const PRESET_REGISTRY: Readonly<Record<ScheduleEntityType, SchedulePreset>> = {
   'beam':         { columns: BEAM_COLUMNS,         map: mapBeam },
   'stair':        { columns: STAIR_COLUMNS,        map: mapStair },
   'slab-opening': { columns: SLAB_OPENING_COLUMNS, map: mapSlabOpening },
+  'foundation':   { columns: FOUNDATION_COLUMNS,   map: mapFoundation },
   'combined':     { columns: COMBINED_COLUMNS,     map: mapCombined },
 };
 

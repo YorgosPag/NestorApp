@@ -69,6 +69,7 @@ import { ScheduleEntityToggle } from './ScheduleEntityToggle';
 import { ScheduleFilterBar, type FilterOption } from './ScheduleFilterBar';
 import { SchedulePreviewTable } from './SchedulePreviewTable';
 import { ScheduleFormatPicker } from './ScheduleFormatPicker';
+import { applyFoundationGridNet } from '@/subapps/dxf-viewer/hooks/data/foundation-boq-feed';
 import { nowISO } from '@/lib/date-local';
 
 // ─── Snapshot for region-pick pass-through (M5 hand-off) ─────────────────────
@@ -173,9 +174,11 @@ export function BimScheduleDialog({
     );
   }, [selectionIds]);
 
-  // Build the schedule on every state change — pure, fast (no I/O).
+  // Build the schedule on every state change — pure, fast (no I/O). ADR-441 Slice 4:
+  // foundation grid strips get NET (de-duplicated) geometry so the volume column
+  // δεν διπλομετρά τους κόμβους της εσχάρας (safeUnion). No-op για μη-foundation.
   const schedule: Schedule = React.useMemo(
-    () => buildSchedule(entities, { entityType, filters }, lookups),
+    () => buildSchedule(applyFoundationGridNet(entities), { entityType, filters }, lookups),
     [entities, entityType, filters, lookups],
   );
 

@@ -71,6 +71,7 @@ export type ScheduleEntityType =
   | 'beam'
   | 'stair'
   | 'slab-opening'
+  | 'foundation'
   | 'combined';
 
 /**

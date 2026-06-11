@@ -13,7 +13,8 @@
     "column": "Columns",
     "beam": "Beams",
     "stair": "Stairs",
-    "slab-opening": "Slab openings"
+    "slab-opening": "Slab openings",
+    "foundation": "Foundations"
   },
   "filters": {
     "floor": {

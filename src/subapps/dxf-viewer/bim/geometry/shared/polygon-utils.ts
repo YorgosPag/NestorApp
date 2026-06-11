@@ -12,6 +12,7 @@
  * @see docs/centralized-systems/reference/adrs/ADR-363-bim-drawing-mode.md §5.5
  */
 
+import type { MultiPolygon, Pair } from 'polygon-clipping';
 import type { BoundingBox3D, Point3D, Polygon3D } from '../../types/bim-base';
 import { segmentsIntersect } from '../../../utils/geometry/GeometryUtils';
 
@@ -37,6 +38,24 @@ export function shoelaceArea(vertices: readonly Point3D[]): number {
 /** Unsigned area — always ≥ 0. */
 export function polygonArea(vertices: readonly Point3D[]): number {
   return Math.abs(shoelaceArea(vertices));
+}
+
+/**
+ * Συνολικό εμβαδόν μιας `polygon-clipping` `MultiPolygon` (outer − holes), στις
+ * ίδιες μονάδες με τα input coords (canvas units²). Κάθε polygon: ring[0] = outer,
+ * τα υπόλοιπα rings = holes (αφαιρούνται). SSoT — πριν ήταν private duplicate σε
+ * `footprint-region-classifier.ts` + στο safe-polygon-boolean test (N.0.2 dedup).
+ */
+export function multiPolygonArea(mp: MultiPolygon): number {
+  let total = 0;
+  for (const polygon of mp) {
+    for (let i = 0; i < polygon.length; i++) {
+      const verts: Point3D[] = polygon[i].map((pr: Pair) => ({ x: pr[0], y: pr[1], z: 0 }));
+      const a = polygonArea(verts);
+      total += i === 0 ? a : -a; // ring[0] = outer, υπόλοιπα = holes
+    }
+  }
+  return Math.max(0, total);
 }
 
 /** True αν το πολύγωνο είναι CCW (positive signed area). */

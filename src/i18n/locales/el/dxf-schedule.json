@@ -13,7 +13,8 @@
     "column": "Υποστυλώματα",
     "beam": "Δοκοί",
     "stair": "Κλίμακες",
-    "slab-opening": "Ανοίγματα πλάκας"
+    "slab-opening": "Ανοίγματα πλάκας",
+    "foundation": "Θεμελιώσεις"
   },
   "filters": {
     "floor": {

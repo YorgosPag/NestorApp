@@ -140,6 +140,22 @@ export const SLAB_OPENING_COLUMNS: readonly ScheduleColumnDef[] = [
   { key: 'slabId',      i18nKey: 'col.slabId',      valueType: 'text',              align: 'left'  },
 ];
 
+// ─── Foundation preset (ADR-441 — pad / strip / tie-beam) ────────────────────
+
+export const FOUNDATION_COLUMNS: readonly ScheduleColumnDef[] = [
+  { key: 'id',           i18nKey: 'col.id',           valueType: 'text',              align: 'left'  },
+  { key: 'buildingName', i18nKey: 'col.buildingName', valueType: 'text',              align: 'left'  },
+  { key: 'floor',        i18nKey: 'col.floor',        valueType: 'text',              align: 'left'  },
+  { key: 'kind',         i18nKey: 'col.kind',         valueType: 'text',              align: 'left'  },
+  { key: 'width',        i18nKey: 'col.width',        valueType: 'dimension-mm-to-m', align: 'right' },
+  { key: 'length',       i18nKey: 'col.length',       valueType: 'dimension-mm-to-m', align: 'right' },
+  { key: 'thickness',    i18nKey: 'col.thickness',    valueType: 'dimension-mm-to-m', align: 'right' },
+  { key: 'elevation',    i18nKey: 'col.elevation',    valueType: 'dimension-mm-to-m', align: 'right' },
+  { key: 'area',         i18nKey: 'col.area',         valueType: 'area-m2',           align: 'right' },
+  { key: 'volume',       i18nKey: 'col.volume',       valueType: 'volume-m3',         align: 'right' },
+  { key: 'material',     i18nKey: 'col.material',     valueType: 'text',              align: 'left'  },
+];
+
 // ─── Combined preset (cross-type geometry-derived roll-up) ───────────────────
 
 export const COMBINED_COLUMNS: readonly ScheduleColumnDef[] = [

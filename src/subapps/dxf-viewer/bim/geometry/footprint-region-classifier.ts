@@ -26,12 +26,12 @@
  * @see docs/centralized-systems/reference/adrs/ADR-396-bim-external-thermal-envelope-etics.md §3.1.2
  */
 
-import type { MultiPolygon, Pair, Polygon, Ring } from 'polygon-clipping';
+import type { Pair, Polygon, Ring } from 'polygon-clipping';
 
 import { safeIntersection, safeUnion } from './shared/safe-polygon-boolean';
 import type { Point3D } from '../types/bim-base';
 import { ATRIUM_COVERAGE_THRESHOLD } from '../types/thermal-envelope-types';
-import { polygonArea } from './shared/polygon-utils';
+import { multiPolygonArea } from './shared/polygon-utils';
 import type { BuildingFootprintResult, FootprintRing } from './building-footprint';
 import type { SlabForZoneClassification } from './exposed-slab-classifier';
 import { resolveSlabTopMm } from './exposed-slab-classifier';
@@ -108,19 +108,6 @@ const EMPTY_RESULT: FootprintClassificationResult = {
 /** `Point3D` ring → `polygon-clipping` Ring (translated κατά offset). */
 function toRing(points: readonly Point3D[], ox: number, oy: number): Ring {
   return points.map((p): Pair => [p.x - ox, p.y - oy]);
-}
-
-/** Άθροισμα εμβαδών μιας `MultiPolygon` (outer − holes), σε canvas units². */
-function multiPolygonArea(mp: MultiPolygon): number {
-  let total = 0;
-  for (const polygon of mp) {
-    for (let i = 0; i < polygon.length; i++) {
-      const verts: Point3D[] = polygon[i].map((pr: Pair) => ({ x: pr[0], y: pr[1], z: 0 }));
-      const a = polygonArea(verts);
-      total += i === 0 ? a : -a; // ring[0] = outer, υπόλοιπα = holes
-    }
-  }
-  return Math.max(0, total);
 }
 
 /**
