@@ -232,6 +232,17 @@ export type FloorFinishGripKind =
  *                       Symmetric drag projection × 2 → new depth, clamps
  *                       στο `MIN_BEAM_DEPTH_MM`. Δεν αλλάζει το footprint
  *                       (depth ζει στον z-axis), μόνο το `params.depth`.
+ *                       ⚠️ ADR-363 (2026-06-11) — ΔΕΝ εκπέμπεται πλέον ως grip
+ *                       (η ίσια δοκός απέκτησε τις 7 wall-parity λαβές μέσω του
+ *                       κοινού `axis-box-grips` SSoT· το depth μένει στο Properties
+ *                       / 3Δ, Revit plan behavior). Το transform παραμένει.
+ *
+ * ADR-363 (2026-06-11) — straight-beam 7-grip wall parity μέσω του κοινού
+ * `axis-box-grips` SSoT (4 corners + width edge + length edge + rotation), ίδιος
+ * κώδικας με τοίχο/πεδιλοδοκό. Local +X = axis (start→end), +Y = +perp:
+ *   - `beam-corner-{start,end}-{pos,neg}` → 2-DOF corner (opposite corner fixed).
+ *   - `beam-edge-length` → resize length along axis (END short edge, start fixed).
+ *   - `beam-width` → reused ως το width-edge (perpendicular, opposite face fixed).
  */
 export type BeamGripKind =
   | 'beam-start'
@@ -240,6 +251,11 @@ export type BeamGripKind =
   | 'beam-rotation'
   | 'beam-curve'
   | 'beam-width'
+  | 'beam-edge-length'
+  | 'beam-corner-start-pos'
+  | 'beam-corner-start-neg'
+  | 'beam-corner-end-pos'
+  | 'beam-corner-end-neg'
   | 'beam-depth';
 
 /**
@@ -336,8 +352,14 @@ export type ColumnGripKind =
  * ADR-436 Slice 2 — line-based kinds (strip / tie-beam) grips (mirror `BeamGripKind`):
  *   - `foundation-start`    → translate axis start endpoint.
  *   - `foundation-end`      → translate axis end endpoint.
- *   - `foundation-line-width` → resize band `width` perpendicular to axis (symmetric
- *                              γύρω από axis midpoint, mirror `beam-width`).
+ *   - `foundation-line-width` → resize band `width` perpendicular to axis (reused ως
+ *                              το width-edge του κοινού `axis-box-grips` SSoT).
+ *
+ * ADR-363/436 (2026-06-11) — strip / tie-beam 7-grip wall parity μέσω του κοινού
+ * `axis-box-grips` SSoT (ίδιος κώδικας με τοίχο/δοκό). Local +X = axis (start→end),
+ * +Y = +perp· `foundation-rotation` reused για την περιστροφή του line πεδίλου:
+ *   - `foundation-corner-{start,end}-{pos,neg}` → 2-DOF corner (opposite corner fixed).
+ *   - `foundation-line-length` → resize length along axis (END short edge, start fixed).
  */
 export type FoundationGripKind =
   | 'foundation-center'
@@ -350,7 +372,12 @@ export type FoundationGripKind =
   | 'foundation-corner-se'
   | 'foundation-start'
   | 'foundation-end'
-  | 'foundation-line-width';
+  | 'foundation-line-width'
+  | 'foundation-line-length'
+  | 'foundation-corner-start-pos'
+  | 'foundation-corner-start-neg'
+  | 'foundation-corner-end-pos'
+  | 'foundation-corner-end-neg';
 
 // ADR-406/408/410/415/359 — placeable-object + linear-element grip kinds live in
 // the sibling module `grip-kinds-placeable.ts` (SRP / N.7.1) and are re-exported

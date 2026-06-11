@@ -44,6 +44,45 @@ import type { Point3D } from '../types/bim-base';
 // project2D / perpUnit / axis-unit). Replaces the local duplicates flagged in
 // ADR-393 §8.2.
 import { project2D, perpUnit, unitVector, rotateAxisPointsAboutPivot } from '../grips/grip-math';
+// ADR-363 (2026-06-11) — straight-beam 7-grip wall parity via the shared
+// axis-anchored box grip SSoT (same code as wall straight + foundation strip).
+import {
+  getAxisBoxGrips,
+  applyAxisBoxGripDrag,
+  type AxisBoxParams,
+  type AxisBoxGripRole,
+} from '../grips/axis-box-grips';
+
+/** Map a shared axis-box grip ROLE → the beam discriminator kind (stable order). */
+const BEAM_ROLE_TO_KIND: Readonly<Record<AxisBoxGripRole, BeamGripKind>> = {
+  'width-edge': 'beam-width',
+  'length-edge': 'beam-edge-length',
+  'corner-start-pos': 'beam-corner-start-pos',
+  'corner-start-neg': 'beam-corner-start-neg',
+  'corner-end-pos': 'beam-corner-end-pos',
+  'corner-end-neg': 'beam-corner-end-neg',
+  rotation: 'beam-rotation',
+};
+
+/** Inverse map: corner/edge beam kinds → axis-box role (rotation handled bespoke). */
+const BEAM_KIND_TO_AXIS_ROLE: Partial<Record<BeamGripKind, AxisBoxGripRole>> = {
+  'beam-width': 'width-edge',
+  'beam-edge-length': 'length-edge',
+  'beam-corner-start-pos': 'corner-start-pos',
+  'beam-corner-start-neg': 'corner-start-neg',
+  'beam-corner-end-pos': 'corner-end-pos',
+  'beam-corner-end-neg': 'corner-end-neg',
+};
+
+/** `BeamParams` → the minimal `AxisBoxParams` the shared SSoT reads. */
+function beamAxisBoxParams(params: BeamParams): AxisBoxParams {
+  return {
+    start: project2D(params.startPoint),
+    end: project2D(params.endPoint),
+    width: params.width,
+    sceneUnits: params.sceneUnits,
+  };
+}
 
 /**
  * Phase 5.5c — Extra perpendicular offset (mm) πέρα από `width/2` ώστε το
@@ -117,105 +156,50 @@ export function beamDepthHandlePosition(params: BeamParams): Point2D | null {
  */
 export function getBeamGrips(entity: Readonly<BeamEntity>): GripInfo[] {
   const { params, kind } = entity;
-  const grips: GripInfo[] = [];
 
+  // ── Straight beam → 7 wall-parity grips via the shared axis-box SSoT ─────────
+  // (4 corners + width edge + length edge + rotation — ίδιος κώδικας με τοίχο /
+  // πεδιλοδοκό, Giorgio 2026-06-11). `depth` δεν εκπέμπεται πλέον ως grip (Revit
+  // plan behavior — επεξεργάζεται στο Properties / 3Δ· το `beamDepthHandlePosition`
+  // μένει για τον read-only depth indicator του renderer).
+  if (kind !== 'curved') {
+    return getAxisBoxGrips(beamAxisBoxParams(params)).map((g, i) => ({
+      entityId: entity.id,
+      gripIndex: i,
+      type: g.type,
+      position: g.position,
+      movesEntity: false,
+      beamGripKind: BEAM_ROLE_TO_KIND[g.role],
+    }));
+  }
+
+  // ── Curved beam → bespoke (no rectangular footprint to read corners from) ────
+  // start / end / curve control / width / rotation. Mirror του curved wall path.
+  const grips: GripInfo[] = [];
   const start = project2D(params.startPoint);
   const end = project2D(params.endPoint);
   const mid = axisMidpoint2D(params);
 
-  // 0 — start endpoint
-  grips.push({
-    entityId: entity.id,
-    gripIndex: 0,
-    type: 'vertex',
-    position: start,
-    movesEntity: false,
-    beamGripKind: 'beam-start',
-  });
+  grips.push({ entityId: entity.id, gripIndex: 0, type: 'vertex', position: start, movesEntity: false, beamGripKind: 'beam-start' });
+  grips.push({ entityId: entity.id, gripIndex: 1, type: 'vertex', position: end, movesEntity: false, beamGripKind: 'beam-end' });
 
-  // 1 — end endpoint
-  grips.push({
-    entityId: entity.id,
-    gripIndex: 1,
-    type: 'vertex',
-    position: end,
-    movesEntity: false,
-    beamGripKind: 'beam-end',
-  });
+  // 3 — curve control. Seed στο midpoint όταν undefined.
+  const curvePos = params.curveControl ? project2D(params.curveControl) : mid;
+  grips.push({ entityId: entity.id, gripIndex: 3, type: 'vertex', position: curvePos, movesEntity: false, beamGripKind: 'beam-curve' });
 
-  // 2 — axis midpoint translate (MOVE). ADR-363 Φ1G.5 Slice 2: no longer emitted
-  // — Alt+drag from any remaining grip (start / end / width / depth / rotation)
-  // translates the whole beam (declutter). gripIndex 2 left unused (no reindex —
-  // the width/depth/rotation indices below are computed from a hardcoded base of
-  // 3, independent of this gap). The `beam-midpoint` transform (`moveMidpoint`) +
-  // hot-grip move path are retained but unreachable.
-
-  // 3 — curve control (curved kind only). Seed στο midpoint όταν undefined.
-  let widthGripIndex = 3;
-  if (kind === 'curved') {
-    const curvePos = params.curveControl ? project2D(params.curveControl) : mid;
-    grips.push({
-      entityId: entity.id,
-      gripIndex: 3,
-      type: 'vertex',
-      position: curvePos,
-      movesEntity: false,
-      beamGripKind: 'beam-curve',
-    });
-    widthGripIndex = 4;
-  }
-
-  // 3 ή 4 — width dimension handle (Phase 5.5b). Mid-axis offset κατά
-  // `width/2` along perpendicular. Skip σε degenerate axis (start === end).
+  // 4 — width dimension handle (mid-axis offset κατά width/2). Skip σε degenerate axis.
   const widthPos = beamWidthHandlePosition(params);
-  let depthGripIndex = widthGripIndex;
   if (widthPos) {
-    grips.push({
-      entityId: entity.id,
-      gripIndex: widthGripIndex,
-      type: 'edge',
-      position: widthPos,
-      movesEntity: false,
-      beamGripKind: 'beam-width',
-    });
-    depthGripIndex = widthGripIndex + 1;
+    grips.push({ entityId: entity.id, gripIndex: 4, type: 'edge', position: widthPos, movesEntity: false, beamGripKind: 'beam-width' });
   }
 
-  // 4 / 5 — depth dimension handle (Phase 5.5c). Opposite perpendicular side
-  // του width handle, με extra offset (`DEPTH_GRIP_OFFSET_MM`) ώστε ο user να
-  // καταλαβαίνει ότι είναι out-of-plane indicator. Skip σε degenerate axis.
-  const depthPos = beamDepthHandlePosition(params);
-  let rotationGripIndex = depthGripIndex;
-  if (depthPos) {
-    grips.push({
-      entityId: entity.id,
-      gripIndex: depthGripIndex,
-      type: 'edge',
-      position: depthPos,
-      movesEntity: false,
-      beamGripKind: 'beam-depth',
-    });
-    rotationGripIndex = depthGripIndex + 1;
-  }
-
-  // last — rotation handle. Full wall-parity (mirror `wall-rotation`): renders the
-  // curved ROTATION glyph and arms the 6-click ROTATE→Reference hot-grip that spins
-  // the whole beam. Position is read as an axis fraction (`lerp(start, end, 0.75)`)
-  // — scale-free (an interpolation of two existing axis points), so it never drifts
-  // off-screen in metre scenes (the grip-positions-read-geometry rule), sits ON the
-  // beam body, and is distinct from the move glyph at the midpoint (0.5) and the
-  // start/end vertex grips. The handle position is only a click target; the actual
-  // rotation comes from the picked centre + reference/alignment lines. Skipped on a
-  // degenerate axis (start === end) where there is nothing to rotate.
+  // 5 — rotation handle (axis fraction 0.75, scale-free). Spins start/end/curveControl.
   if (unitAxis(params)) {
     grips.push({
       entityId: entity.id,
-      gripIndex: rotationGripIndex,
+      gripIndex: 5,
       type: 'vertex',
-      position: {
-        x: start.x + 0.75 * (end.x - start.x),
-        y: start.y + 0.75 * (end.y - start.y),
-      },
+      position: { x: start.x + 0.75 * (end.x - start.x), y: start.y + 0.75 * (end.y - start.y) },
       movesEntity: false,
       beamGripKind: 'beam-rotation',
     });
@@ -259,14 +243,51 @@ export function applyBeamGripDrag(
   input: Readonly<BeamGripDragInput>,
 ): BeamParams {
   if (input.delta.x === 0 && input.delta.y === 0) return input.originalParams;
+  // Straight beam corner / width-edge / length-edge resize → shared axis-box engine
+  // (opposite-element-fixed, ίδιος κώδικας με τοίχο/πεδιλοδοκό). Returns null για
+  // curved beams OR non-rect kinds → fall through στους bespoke handlers.
+  const rect = applyBeamRectGrip(gripKind, input);
+  if (rect) return rect;
   if (gripKind === 'beam-start') return moveStart(input);
   if (gripKind === 'beam-end') return moveEnd(input);
   if (gripKind === 'beam-midpoint') return moveMidpoint(input);
   if (gripKind === 'beam-rotation') return rotateBeam(input);
   if (gripKind === 'beam-curve') return moveCurveControl(input);
-  if (gripKind === 'beam-width') return resizeWidth(input);
+  if (gripKind === 'beam-width') return resizeWidth(input); // curved-beam path only
   if (gripKind === 'beam-depth') return resizeDepth(input);
   return input.originalParams;
+}
+
+/** A plain straight beam (no Bezier control) — the rect-footprint discriminator. */
+function isRectBeam(params: BeamParams): boolean {
+  return params.curveControl === undefined;
+}
+
+/**
+ * Straight-beam corner / width-edge / length-edge drag via the shared axis-box
+ * SSoT (opposite-element-fixed). Returns `null` για curved beams (no rectangular
+ * footprint) OR non-rect kinds → caller falls back to the bespoke handlers. The
+ * `{start,end,width}` patch maps to `startPoint`/`endPoint`/`width`, preserving Z.
+ */
+function applyBeamRectGrip(
+  gripKind: BeamGripKind,
+  input: Readonly<BeamGripDragInput>,
+): BeamParams | null {
+  if (!isRectBeam(input.originalParams)) return null;
+  const role = BEAM_KIND_TO_AXIS_ROLE[gripKind];
+  if (!role) return null;
+  const patch = applyAxisBoxGripDrag(role, {
+    originalParams: beamAxisBoxParams(input.originalParams),
+    delta: input.delta,
+    minWidthMm: MIN_BEAM_WIDTH_MM,
+  });
+  if (!patch) return input.originalParams;
+  return {
+    ...input.originalParams,
+    startPoint: { x: patch.start.x, y: patch.start.y, z: input.originalParams.startPoint.z ?? 0 },
+    endPoint: { x: patch.end.x, y: patch.end.y, z: input.originalParams.endPoint.z ?? 0 },
+    width: patch.width,
+  };
 }
 
 /**

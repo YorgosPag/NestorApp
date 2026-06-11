@@ -76,47 +76,50 @@ function makeCurvedWithoutControl(): BeamEntity {
 describe('beam-grips (Phase 5.5a)', () => {
   // ─── getBeamGrips ──────────────────────────────────────────────────────────
 
-  it('1. straight beam emits 5 grips (start / end / width / depth / rotation)', () => {
-    // ADR-363 Φ1G.5 Slice 2: beam-midpoint no longer emitted — count drops 6→5
+  it('1. straight beam emits 7 wall-parity grips (4 corners + width edge + length edge + rotation)', () => {
+    // ADR-363 (2026-06-11) — straight beam unified with the wall via the shared
+    // axis-box SSoT: 7 grips, ίδιος κώδικας. `beam-depth` δεν εκπέμπεται πλέον.
     const beam = makeStraight();
     const grips = getBeamGrips(beam);
-    expect(grips).toHaveLength(5); // ADR-363 Φ1G.5 Slice 2
+    expect(grips).toHaveLength(7);
     expect(grips.map((g) => g.beamGripKind)).toEqual([
-      'beam-start',
-      'beam-end',
       'beam-width',
-      'beam-depth',
+      'beam-edge-length',
+      'beam-corner-start-pos',
+      'beam-corner-start-neg',
+      'beam-corner-end-pos',
+      'beam-corner-end-neg',
       'beam-rotation',
-    ]); // ADR-363 Φ1G.5 Slice 2: 'beam-midpoint' removed
+    ]);
   });
 
-  it('2. cantilever beam emits 5 grips (same layout as straight)', () => {
-    // ADR-363 Φ1G.5 Slice 2: beam-midpoint no longer emitted — count drops 6→5
+  it('2. cantilever beam emits the same 7 wall-parity grips as straight', () => {
     const beam = makeCantilever();
     const grips = getBeamGrips(beam);
-    expect(grips).toHaveLength(5); // ADR-363 Φ1G.5 Slice 2
+    expect(grips).toHaveLength(7);
     expect(grips.map((g) => g.beamGripKind)).toEqual([
-      'beam-start',
-      'beam-end',
       'beam-width',
-      'beam-depth',
+      'beam-edge-length',
+      'beam-corner-start-pos',
+      'beam-corner-start-neg',
+      'beam-corner-end-pos',
+      'beam-corner-end-neg',
       'beam-rotation',
-    ]); // ADR-363 Φ1G.5 Slice 2: 'beam-midpoint' removed
+    ]);
   });
 
-  it('3. curved beam emits 6 grips (start / end / curve / width / depth / rotation)', () => {
-    // ADR-363 Φ1G.5 Slice 2: beam-midpoint no longer emitted — count drops 7→6
+  it('3. curved beam emits 5 grips (start / end / curve / width / rotation — no rect footprint, no depth)', () => {
+    // Curved beam keeps the bespoke path (no rectangular footprint); depth dropped.
     const beam = makeCurvedWithControl();
     const grips = getBeamGrips(beam);
-    expect(grips).toHaveLength(6); // ADR-363 Φ1G.5 Slice 2
+    expect(grips).toHaveLength(5);
     expect(grips.map((g) => g.beamGripKind)).toEqual([
       'beam-start',
       'beam-end',
       'beam-curve',
       'beam-width',
-      'beam-depth',
       'beam-rotation',
-    ]); // ADR-363 Φ1G.5 Slice 2: 'beam-midpoint' removed
+    ]);
   });
 
   it('4. grip positions match params.startPoint / endPoint / curveControl', () => {
@@ -132,19 +135,15 @@ describe('beam-grips (Phase 5.5a)', () => {
   });
 
   it('5. curved beam without curveControl seeds curve grip at axis midpoint', () => {
-    // ADR-363 Φ1G.5 Slice 2: beam-midpoint removed → 7→6 grips; indices shift down by 1.
-    // New array: start(0) / end(1) / curve(2) / width(3) / depth(4) / rotation(5).
+    // Curved array: start(0) / end(1) / curve(2) / width(3) / rotation(4) — no depth.
     const beam = makeCurvedWithoutControl();
     const grips = getBeamGrips(beam);
-    // start + end + curve + width + depth + rotation (Phase 5.5b/5.5c/5.5d)
-    expect(grips).toHaveLength(6); // ADR-363 Φ1G.5 Slice 2
-    // ADR-363 Φ1G.5 Slice 2: grips[2] = beam-curve (was grips[3])
+    expect(grips).toHaveLength(5);
     expect(grips[2].beamGripKind).toBe('beam-curve');
     // Axis midpoint of (0,0)→(4000,0) is (2000,0).
     expect(grips[2].position).toEqual({ x: 2000, y: 0 });
-    expect(grips[3].beamGripKind).toBe('beam-width'); // ADR-363 Φ1G.5 Slice 2: was grips[4]
-    expect(grips[4].beamGripKind).toBe('beam-depth'); // ADR-363 Φ1G.5 Slice 2: was grips[5]
-    expect(grips[5].beamGripKind).toBe('beam-rotation'); // ADR-363 Φ1G.5 Slice 2: was grips[6]
+    expect(grips[3].beamGripKind).toBe('beam-width');
+    expect(grips[4].beamGripKind).toBe('beam-rotation');
   });
 
   it('6. beam-midpoint is NOT emitted; all remaining grips have movesEntity=false', () => {
@@ -272,15 +271,19 @@ describe('beam-grips (Phase 5.5a)', () => {
     expect(beamWidthHandlePosition(params)).toEqual({ x: 2000, y: 150 });
   });
 
-  it('17. width drag perpendicular to axis doubles delta into width (symmetric resize)', () => {
+  it('17. width drag (straight) grows width opposite-face-fixed via the shared axis-box engine', () => {
+    // ADR-363 (2026-06-11) — straight beam-width now routes through the axis-box
+    // width-edge (opposite face fixed, wall parity): +perp face moves +100, −perp
+    // face holds → width 300→400, the axis shifts +50 perpendicular.
     const base = buildDefaultBeamParams({ x: 0, y: 0 }, { x: 4000, y: 0 }, 'straight');
     const params: BeamParams = { ...base, width: 300 };
     const next = applyBeamGripDrag('beam-width', {
       originalParams: params,
       delta: { x: 0, y: 100 },
     });
-    // axis horizontal → perp = (0,1). delta·perp = 100. newWidth = 300 + 2*100 = 500.
-    expect(next.width).toBe(500);
+    expect(next.width).toBeCloseTo(400);
+    expect(next.startPoint.y).toBeCloseTo(50);
+    expect(next.endPoint.y).toBeCloseTo(50);
   });
 
   it('18. width drag parallel to axis leaves width unchanged (projection = 0)', () => {
@@ -307,17 +310,17 @@ describe('beam-grips (Phase 5.5a)', () => {
 
   // ─── Phase 5.5c — depth dimension grip (out-of-plane indicator) ───────────
 
-  it('20. depth grip position = axis midpoint − perpendicular × (width/2 + DEPTH_GRIP_OFFSET_MM)', () => {
+  it('20. depth is NO LONGER emitted as a grip; the depth-handle helper still resolves (renderer indicator)', () => {
+    // ADR-363 (2026-06-11) — wall parity (7 grips) drops the 2D depth grip; depth
+    // is edited via Properties / 3Δ. The `beamDepthHandlePosition` helper survives
+    // for the renderer's read-only depth indicator (dashed leader + "d=X" label).
     const base = buildDefaultBeamParams({ x: 0, y: 0 }, { x: 4000, y: 0 }, 'straight');
     const params: BeamParams = { ...base, width: 300 };
     const beam = makeBeamEntity(params);
     const grips = getBeamGrips(beam);
-    const depthGrip = grips.find((g) => g.beamGripKind === 'beam-depth');
-    expect(depthGrip).toBeDefined();
+    expect(grips.some((g) => g.beamGripKind === 'beam-depth')).toBe(false);
     // axis horizontal → perp = (0,1). mid = (2000,0). offset = -(150 + 250) = -400.
-    // Handle = mid + offset × perp = (2000, -400).
     const expectedY = -(params.width / 2 + DEPTH_GRIP_OFFSET_MM);
-    expect(depthGrip!.position).toEqual({ x: 2000, y: expectedY });
     expect(beamDepthHandlePosition(params)).toEqual({ x: 2000, y: expectedY });
   });
 
@@ -377,13 +380,16 @@ describe('beam-grips (Phase 5.5a)', () => {
 
   // ─── Phase 5.5d — rotation grip (wall parity) ──────────────────────────────
 
-  it('26. rotation grip stands at axis 0.75 fraction, renders rotation glyph kind', () => {
+  it('26. rotation grip (straight) stands at the +perp edge midpoint (wall parity)', () => {
+    // ADR-363 (2026-06-11) — straight-beam rotation handle mirrors the wall: ON the
+    // body at the +perp face midpoint (coincident with the width-edge grip), not the
+    // old 0.75 axis fraction.
     const beam = makeStraight(); // (0,0)→(4000,0)
     const grips = getBeamGrips(beam);
     const rot = grips.find((g) => g.beamGripKind === 'beam-rotation');
+    const widthEdge = grips.find((g) => g.beamGripKind === 'beam-width');
     expect(rot).toBeDefined();
-    // lerp(start, end, 0.75) of (0,0)→(4000,0) = (3000, 0). Scale-free fraction.
-    expect(rot!.position).toEqual({ x: 3000, y: 0 });
+    expect(rot!.position).toEqual(widthEdge!.position);
     expect(rot!.movesEntity).toBe(false);
   });
 
