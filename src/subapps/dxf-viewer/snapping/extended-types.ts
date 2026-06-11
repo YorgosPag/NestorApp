@@ -41,7 +41,6 @@ export enum ExtendedSnapType {
   CONSTRUCTION_POINT = 'construction_point',  // ADR-189 §3.7-3.16: Construction snap points
   DIM_DEF_POINT = 'dim_def_point',  // ADR-362 I1: snap to dimension def points (AutoCAD DIMSNAP)
   DIM_LINE = 'dim_line',            // ADR-362 I1: snap to dimension line for baseline/continued chains
-  BIM_COLUMN_CENTER  = 'bim_column_center',   // ADR-363 Phase 5.5i: structural column center-axis snap
   // ADR-370: ONE generic BIM structural corner snap (wall/beam/slab/column/opening +
   // foundation/centred-box…). Replaces the 5 per-entity BIM_*_CORNER types — the
   // per-entity label («Γωνία τοίχου»/«δοκαριού») comes from the candidate `description`.
@@ -134,7 +133,6 @@ export const DEFAULT_PRO_SNAP_SETTINGS: ProSnapSettings = {
     ExtendedSnapType.CONSTRUCTION_POINT, // ADR-189: Construction point snap
     ExtendedSnapType.DIM_DEF_POINT,     // ADR-362 I1: dimension def point snap
     ExtendedSnapType.DIM_LINE,          // ADR-362 I1: dimension line snap
-    ExtendedSnapType.BIM_COLUMN_CENTER,   // ADR-363 Phase 5.5i: column center axis snap
     ExtendedSnapType.BIM_CORNER,          // ADR-370: generic BIM structural corner (all entities)
     ExtendedSnapType.BIM_MIDPOINT,        // ADR-370: generic BIM edge/axis midpoint (all entities)
     ExtendedSnapType.BIM_CENTER,          // ADR-370: generic BIM centroid (area entities)
@@ -148,17 +146,22 @@ export const DEFAULT_PRO_SNAP_SETTINGS: ProSnapSettings = {
   showSnapTooltips: true,
   priority: [
     ExtendedSnapType.ROTATION_PIVOT,      // ADR-397: rotation centre — highest precision while rotating
+    // ADR-370: the 3 always-on BIM structural characteristic snaps run FIRST (right after the
+    // rotation pivot), BEFORE the generic discrete engines (INTERSECTION/ENDPOINT/MIDPOINT/NEAREST).
+    // This array is the orchestrator's *iteration* order and is bounded by maxCandidates (8): a
+    // dense DXF's raw endpoints/intersections would otherwise fill the budget and STARVE these
+    // engines (the «Μέσο/Κέντρο never appear» bug). Their negative priority numbers still let the
+    // SnapCandidateProcessor pick the correct winner when points coincide.
     ExtendedSnapType.BIM_CORNER,          // ADR-370: BIM structural corners — highest structural precision
-    ExtendedSnapType.BIM_MEP_CONNECTOR,   // ADR-408 Φ9: MEP attach point — before column centre & endpoint
-    ExtendedSnapType.BIM_COLUMN_CENTER,   // ADR-363 Phase 5.5i: structural precision — before generic endpoint
+    ExtendedSnapType.BIM_MIDPOINT,        // ADR-370: BIM edge/axis midpoint — structural, before generic snaps
+    ExtendedSnapType.BIM_CENTER,          // ADR-370: BIM centroid — structural, before generic snaps
+    ExtendedSnapType.BIM_MEP_CONNECTOR,   // ADR-408 Φ9: MEP attach point — before endpoint
     ExtendedSnapType.INTERSECTION,
     ExtendedSnapType.ENDPOINT,
     ExtendedSnapType.ROTATION_GRIP,       // ADR-397: rotating entity grips — endpoint tier
-    ExtendedSnapType.BIM_MIDPOINT,        // ADR-370: BIM edge/axis midpoint — before generic MIDPOINT
     ExtendedSnapType.MIDPOINT,
     ExtendedSnapType.INSERTION,           // ADR-378 §5: priority 2 — before TEXT (also 2)
     ExtendedSnapType.TEXT,                // ADR-378 Phase 3: text 8-point snap — priority 2 (after INSERTION)
-    ExtendedSnapType.BIM_CENTER,          // ADR-370: BIM centroid — before generic CENTER
     ExtendedSnapType.CENTER,
     ExtendedSnapType.PERPENDICULAR,
     ExtendedSnapType.TANGENT,
@@ -196,7 +199,6 @@ export const DEFAULT_PRO_SNAP_SETTINGS: ProSnapSettings = {
     [ExtendedSnapType.CONSTRUCTION_POINT]: 10,
     [ExtendedSnapType.DIM_DEF_POINT]: 10,      // ADR-362 I1: exact definition point — AutoCAD APERTURE default
     [ExtendedSnapType.DIM_LINE]: 10,            // ADR-362 I1: dim line reference point
-    [ExtendedSnapType.BIM_COLUMN_CENTER]:   10, // ADR-363 Phase 5.5i: column center axis snap
     [ExtendedSnapType.BIM_CORNER]:          10, // ADR-370: generic BIM structural corner
     [ExtendedSnapType.BIM_MIDPOINT]:        10, // ADR-370: generic BIM edge/axis midpoint
     [ExtendedSnapType.BIM_CENTER]:          10, // ADR-370: generic BIM centroid

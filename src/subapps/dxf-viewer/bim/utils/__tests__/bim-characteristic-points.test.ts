@@ -93,19 +93,17 @@ function makeColumn(kind: ColumnKind, overrides: Partial<ColumnParams> = {}): Co
 // ─── Wall ────────────────────────────────────────────────────────────────────
 
 describe('getBimCharacteristicPoints — wall', () => {
-  it('straight wall: 4 corners + 1 axis midpoint + center null + label "wall"', () => {
+  it('straight wall: 4 corners + 4 edge midpoints + centroid + label "wall"', () => {
     const r = getBimCharacteristicPoints(makeWall());
     expect(r.corners).toHaveLength(4);
-    expect(r.midpoints).toHaveLength(1);
-    expect(r.midpoints[0]).toEqual({ x: 500, y: 0 });
-    expect(r.center).toBeNull();
+    expect(r.midpoints).toHaveLength(4);
+    expect(r.center).toEqual({ x: 500, y: 0 });
     expect(r.labelRoot).toBe('wall');
   });
 
-  it('curved wall: corners present, no midpoints, no label (περίεργο σχήμα)', () => {
+  it('curved wall: points present but NO label (περίεργο σχήμα → snap χωρίς κείμενο)', () => {
     const r = getBimCharacteristicPoints(makeWall({}, 'curved'));
     expect(r.corners.length).toBeGreaterThan(0);
-    expect(r.midpoints).toHaveLength(0);
     expect(r.labelRoot).toBeNull();
   });
 
@@ -117,19 +115,17 @@ describe('getBimCharacteristicPoints — wall', () => {
 // ─── Beam ────────────────────────────────────────────────────────────────────
 
 describe('getBimCharacteristicPoints — beam', () => {
-  it('straight beam: 4 corners + axis midpoint + center null + label "beam"', () => {
+  it('straight beam: 4 corners + 4 edge midpoints + centroid + label "beam"', () => {
     const r = getBimCharacteristicPoints(makeBeam());
     expect(r.corners).toHaveLength(4);
-    expect(r.midpoints).toHaveLength(1);
-    expect(r.midpoints[0]).toEqual({ x: 500, y: 0 });
-    expect(r.center).toBeNull();
+    expect(r.midpoints).toHaveLength(4);
+    expect(r.center).toEqual({ x: 500, y: 0 });
     expect(r.labelRoot).toBe('beam');
   });
 
-  it('curved beam: corners only (face-ends), no midpoints, no label', () => {
+  it('curved beam: corners present but no label (περίεργο σχήμα)', () => {
     const r = getBimCharacteristicPoints(makeBeam({ kind: 'curved', curveControl: { x: 500, y: 300 } }));
     expect(r.corners).toHaveLength(4);
-    expect(r.midpoints).toHaveLength(0);
     expect(r.labelRoot).toBeNull();
   });
 });
@@ -165,12 +161,12 @@ describe('getBimCharacteristicPoints — opening', () => {
 // ─── Column ──────────────────────────────────────────────────────────────────
 
 describe('getBimCharacteristicPoints — column', () => {
-  it('rectangular column: 4 corners + 4 cardinal midpoints + label "column"', () => {
+  it('rectangular column: 4 corners + 4 edge midpoints + centroid + label "column"', () => {
     const r = getBimCharacteristicPoints(makeColumn('rectangular'));
     expect(r.corners).toHaveLength(4);
     expect(r.midpoints).toHaveLength(4);
-    // center axis is owned by the legacy ColumnCenterSnapEngine → null here (no duplicate)
-    expect(r.center).toBeNull();
+    expect(r.center).not.toBeNull();
+    expect(r.center).toEqual({ x: 0, y: 0 });
     expect(r.labelRoot).toBe('column');
   });
 
@@ -235,8 +231,8 @@ describe('getBimCharacteristicPointsOfCategory', () => {
   it('returns each category as a flat Point2D[]', () => {
     const wall = makeWall();
     expect(getBimCharacteristicPointsOfCategory(wall, 'corner')).toHaveLength(4);
-    expect(getBimCharacteristicPointsOfCategory(wall, 'midpoint')).toHaveLength(1);
-    expect(getBimCharacteristicPointsOfCategory(wall, 'center')).toHaveLength(0);
+    expect(getBimCharacteristicPointsOfCategory(wall, 'midpoint')).toHaveLength(4);
+    expect(getBimCharacteristicPointsOfCategory(wall, 'center')).toHaveLength(1);
   });
 
   it('center category yields [center] for area entities', () => {

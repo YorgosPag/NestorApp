@@ -71,6 +71,18 @@ Mouse Event → DxfCanvas.onMouseMove
 
 ## Changelog
 
+### 2026-06-11 — Zero-lag associative follow ghost (ADR-441 Slice 3-perf): hosted strips follow a dragged axis frame-for-frame on a dedicated canvas
+
+**Status**: IMPLEMENTED 2026-06-11, εκκρεμεί browser-verify. **Πρόβλημα:** ο reconciler (παρακάτω entry) ακολουθεί τον οδηγό μέσω `setLevelScene` (React state) → re-render → bitmap rebuild = **1-3 frames lag** (Giorgio: ορατό lag οδηγού↔πεδιλοδοκού). Ο οδηγός όμως ζωγραφίζεται imperative από το guide-store snapshot (μηδέν lag) → οι strips «μένουν πίσω».
+
+**Λύση (mirror `ProposalGhostOverlay` / grip-ghost):** όσο σύρεται οδηγός, οι hosted strips ζωγραφίζονται **imperative σε αποκλειστικό canvas** στη live θέση τους, frame-synced με τον οδηγό — μηδέν React, μηδέν bitmap rebuild.
+
+- **NEW `GuideFollowGhostOverlay.tsx`** (dedicated `<canvas>`, z-14, pointer-events-none· mount μόνο όσο σύρεται οδηγός μέσω `guide-drag-store`). Repaint trigger = **guide-store notify** (RAF-coalesced) για τις live κινήσεις + `subscribeImmediateTransformFrame` για pan/zoom· reads `getImmediateTransform()` στο draw-time. Footprints από NEW pure `bim/hosting/guide-follow-ghost.ts` (`deriveFollowGhostFootprints` → reuse SSoT `reconcileHostedFoundations`, only-changed).
+- **NEW `systems/guides/guide-drag-store.ts`** — imperative drag-state SSoT (zero-React, mirror `ImmediatePositionStore`)· set/clear από `useCanvasContainerHandlers` (mousedown/mouseup).
+- **Reconciler suppression** (`useHostingReconciler.tick`): όσο `getDraggingGuideId() !== null` → skip το per-frame `setLevelScene` (μηδέν bitmap rebuild ανά frame). Στο release → un-suppress πρώτα → MoveGuideCommand notify → **ΕΝΑ** committed `setLevelScene` (+persist on settle). Per-strip auto-handoff: το ghost δείχνει strips όπου committed ≠ live-derived· μόλις ο reconciler κάνει commit συγκλίνουν → ghost άδειο· **linger 140ms** κρατά το canvas mounted όσο προσγειώνεται το commit → seamless, μηδέν flash.
+
+Νέα αρχεία ΕΚΤΟΣ bitmap-cache/renderer· `GuideFollowGhostOverlay` = ADR-040 leaf (μόνο low-freq `guide-drag-store` subscription). CHECK 6B/6D safe (καμία αλλαγή σε CanvasSection/CanvasLayerStack/entity renderers). Λεπτομέρεια στο ADR-441 §10.
+
 ### 2026-06-11 — Associative grid hosting reconciler (ADR-441 Slice 3): hosted strips follow a moving axis — imperative, RAF-throttled, μηδέν orchestrator subscription
 
 **Status**: IMPLEMENTED 2026-06-11, εκκρεμεί browser-verify. Όταν ο χρήστης μετακινεί έναν άξονα του κανάβου (guide drag, 60fps), όλα τα **hosted foundation strips** (born-hosted με slot-based `guideBindings`, ADR-441 Slice 2) ακολουθούν αυτόματα (Revit/Tekla associative grid). **High-frequency scene-write path → ADR-040-critical**, υλοποιημένο κατά τους cardinal rules:

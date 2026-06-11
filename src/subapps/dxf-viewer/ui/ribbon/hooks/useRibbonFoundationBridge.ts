@@ -254,6 +254,7 @@ export function useRibbonFoundationBridge(
       EventBus.emit('bim:foundations-from-grid', {
         created: result.created,
         deleted: result.deleted,
+        rehosted: result.rehosted,
       });
     } else {
       EventBus.emit('bim:foundations-from-grid-failed', { reason: result.reason ?? 'empty' });

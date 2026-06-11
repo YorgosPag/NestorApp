@@ -36,6 +36,19 @@ const X3 = [guide('x0', 'X', 0), guide('x1', 'X', 4000), guide('x2', 'X', 8000)]
 const Y3 = [guide('y0', 'Y', 0), guide('y1', 'Y', 4000), guide('y2', 'Y', 8000)];
 const X2Y2 = [guide('x0', 'X', 0), guide('x1', 'X', 4000), guide('y0', 'Y', 0), guide('y1', 'Y', 4000)];
 
+let orphanSeq = 0;
+/** ADR-441 Slice 6b — legacy ορφανός γραμμικός πεδιλοδοκός (ΧΩΡΙΣ guideBindings). */
+const orphanStrip = (start: { x: number; y: number }, end: { x: number; y: number }) =>
+  ({
+    id: `orphan${orphanSeq++}`, type: 'foundation', kind: 'strip', layerId: '0', visible: true,
+    params: {
+      kind: 'strip', start: { x: start.x, y: start.y, z: 0 }, end: { x: end.x, y: end.y, z: 0 },
+      width: 800, topElevationMm: -1000, thicknessMm: 400, sceneUnits: 'mm',
+    },
+  } as unknown as Entity);
+
+const sceneWithEntities = (entities: Entity[]): SceneModel => ({ ...emptyScene(), entities });
+
 describe('commitFoundationGridFromGuides — reconcile', () => {
   it('κενή σκηνή 3×3 → all create (12) σε ΕΝΑ command', () => {
     const executed: ICommand[] = [];
@@ -138,5 +151,56 @@ describe('commitFoundationGridFromGuides — reconcile', () => {
     expect(result.ok).toBe(true);
     expect(scene.entities).toHaveLength(12);
     expect(scene.entities.every((e) => (e as { type?: string }).type === 'foundation')).toBe(true);
+  });
+
+  // ── ADR-441 Slice 6b — re-host legacy ορφανών (Option A) ────────────────────
+  it('ορφανός ευθυγραμμισμένος → rehosted=1, μηδέν διπλό (created μειωμένο)', () => {
+    const scene = sceneWithEntities([orphanStrip({ x: 0, y: 0 }, { x: 0, y: 4000 })]);
+    const executed: ICommand[] = [];
+    const result = commitFoundationGridFromGuides({
+      guideReader: reader([...X3, ...Y3]),
+      getLevelScene: () => scene,
+      setLevelScene: () => {},
+      levelId: '0', sceneUnits: 'mm',
+      executeCommand: (c) => executed.push(c),
+    });
+    expect(result.ok).toBe(true);
+    expect(result.rehosted).toBe(1);
+    // Το φάτνωμα V|x0|y0|y1 το «καλύπτει» ο rehosted → create 11 (όχι 12), 0 διπλό.
+    expect(result.created).toBe(11);
+    expect(result.deleted).toBe(0);
+    expect(executed).toHaveLength(1);
+  });
+
+  it('rehost εκτελείται: ορφανός κρατά id & αποκτά bindings, μηδέν διπλό στη σκηνή', () => {
+    const o = orphanStrip({ x: 0, y: 0 }, { x: 0, y: 4000 });
+    const scene = sceneWithEntities([o]);
+    const result = commitFoundationGridFromGuides({
+      guideReader: reader([...X3, ...Y3]),
+      getLevelScene: () => scene,
+      setLevelScene: (_id, next) => { (scene as { entities: unknown[] }).entities = next.entities; },
+      levelId: '0', sceneUnits: 'mm',
+      executeCommand: (c) => c.execute(),
+    });
+    expect(result.ok).toBe(true);
+    expect(scene.entities).toHaveLength(12); // 11 created + 1 rehosted, ΟΧΙ 13
+    const kept = scene.entities.find((e) => (e as { id: string }).id === o.id);
+    expect(kept).toBeDefined();
+    expect((kept as { guideBindings?: unknown[] }).guideBindings?.length).toBeGreaterThan(0);
+  });
+
+  it('ορφανός εκτός κανάβου (mid-bay) → άθικτος (rehosted=0, ποτέ delete)', () => {
+    const scene = sceneWithEntities([orphanStrip({ x: 2000, y: 0 }, { x: 2000, y: 4000 })]);
+    const executed: ICommand[] = [];
+    const result = commitFoundationGridFromGuides({
+      guideReader: reader([...X3, ...Y3]),
+      getLevelScene: () => scene,
+      setLevelScene: () => {},
+      levelId: '0', sceneUnits: 'mm',
+      executeCommand: (c) => executed.push(c),
+    });
+    expect(result.rehosted).toBe(0);
+    expect(result.created).toBe(12); // πλήρης εσχάρα· ο ορφανός δεν συμμετέχει
+    expect(result.deleted).toBe(0);
   });
 });

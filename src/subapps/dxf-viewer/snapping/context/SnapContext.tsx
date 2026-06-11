@@ -37,8 +37,6 @@ const ALL_MODES: ExtendedSnapType[] = [
   // ADR-362: Dimension snap types
   ExtendedSnapType.DIM_DEF_POINT,
   ExtendedSnapType.DIM_LINE,
-  // ADR-363 Phase 5.5i: column center axis snap
-  ExtendedSnapType.BIM_COLUMN_CENTER,
   // ADR-408 Φ9: MEP connector attach-point snap
   ExtendedSnapType.BIM_MEP_CONNECTOR,
   // NOTE: ROTATION_PIVOT / ROTATION_GRIP (ADR-397) and BIM_CORNER / BIM_MIDPOINT /
@@ -90,7 +88,6 @@ export const SnapProvider: React.FC<SnapProviderProps> = ({ children }) => {
         type === ExtendedSnapType.GRID ||
         type === ExtendedSnapType.DIM_DEF_POINT ||
         type === ExtendedSnapType.DIM_LINE ||
-        type === ExtendedSnapType.BIM_COLUMN_CENTER ||
         type === ExtendedSnapType.BIM_MEP_CONNECTOR // ADR-408 Φ9: enabled by default
         // ADR-370 BIM_CORNER/MIDPOINT/CENTER are always-on (force-enabled in enabledModes)
       );

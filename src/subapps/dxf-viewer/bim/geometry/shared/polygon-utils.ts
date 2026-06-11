@@ -424,6 +424,43 @@ export function polygonCentroid(vertices: readonly Point3D[]): { x: number; y: n
   return { x: sumX / n, y: sumY / n };
 }
 
+/**
+ * CCW order of points around their centroid. Gives perimeter order for a convex footprint
+ * regardless of the input order (grip-emission order, diagonal-anchor order, polygon
+ * winding). For ≤2 points returns them unchanged.
+ */
+export function sortPointsAroundCentroid<T extends { x: number; y: number }>(points: readonly T[]): T[] {
+  if (points.length < 3) return [...points];
+  let cx = 0;
+  let cy = 0;
+  for (const p of points) { cx += p.x; cy += p.y; }
+  cx /= points.length;
+  cy /= points.length;
+  return [...points].sort((a, b) => Math.atan2(a.y - cy, a.x - cx) - Math.atan2(b.y - cy, b.x - cx));
+}
+
+/**
+ * Per-edge midpoints of a footprint from its corner points — a midpoint for EVERY side.
+ * Corners are ordered around the centroid first (via {@link sortPointsAroundCentroid}), so
+ * any corner source (grips, diagonal anchors, polygon vertices) yields the same perimeter
+ * midpoints. SSoT for "midpoints on all sides" of a convex BIM footprint (ADR-370). Exact
+ * for convex footprints (≈ all BIM); z ignored.
+ */
+export function footprintEdgeMidpoints(
+  corners: readonly { x: number; y: number }[],
+): { x: number; y: number }[] {
+  if (corners.length < 2) return [];
+  if (corners.length === 2) {
+    const [a, b] = corners;
+    return [{ x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 }];
+  }
+  const ordered = sortPointsAroundCentroid(corners);
+  return ordered.map((c, i) => {
+    const next = ordered[(i + 1) % ordered.length]!;
+    return { x: (c.x + next.x) / 2, y: (c.y + next.y) / 2 };
+  });
+}
+
 // ─── Axis-aligned hatch (SSoT) ────────────────────────────────────────────────
 //
 // Moved to sibling module `polygon-hatch-utils.ts` (N.7.1 500-line cap).

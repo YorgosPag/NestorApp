@@ -102,6 +102,11 @@ export interface FoundationUpdateInput {
   readonly validation?: BimValidation;
   readonly geometry?: FoundationGeometry;
   readonly layerId?: string;
+  /**
+   * ADR-441 Slice 6b — re-host legacy ορφανών: το update μπορεί να αλλάξει ΜΟΝΟ τα
+   * hosting bindings (χωρίς νέο doc). Persist-άρει σε υπάρχον doc μέσω `updateDoc`.
+   */
+  readonly guideBindings?: readonly GuideBinding[];
 }
 
 // ============================================================================
@@ -182,6 +187,8 @@ export class FoundationFirestoreService {
     if (patch.validation !== undefined) payload.validation = patch.validation;
     if (patch.geometry !== undefined) payload.geometry = patch.geometry;
     if (patch.layerId !== undefined) payload.layerId = patch.layerId;
+    // ADR-441 Slice 6b — persist hosting bindings on re-host (Firestore rejects undefined).
+    if (patch.guideBindings !== undefined) payload.guideBindings = patch.guideBindings;
 
     await updateDoc(ref, payload);
   }

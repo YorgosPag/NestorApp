@@ -20,12 +20,15 @@ import type { SceneModel } from '../../types/scene';
 import { LevelSceneManagerAdapter } from '../../systems/entity-creation/LevelSceneManagerAdapter';
 import { CreateFoundationsCommand } from '../../core/commands/entity-commands/CreateFoundationsCommand';
 import { DeleteFoundationsCommand } from '../../core/commands/entity-commands/DeleteFoundationsCommand';
+import { RehostFoundationsCommand } from '../../core/commands/entity-commands/RehostFoundationsCommand';
 import { CompoundCommand } from '../../core/commands/CompoundCommand';
 import {
   buildStripGridFromGuides,
   type AxisGuideReader,
 } from './foundation-from-grid';
 import { reconcileGridStrips } from './foundation-grid-reconcile';
+import { rehostOrphanStrips, type RehostedStrip } from './foundation-grid-rehost';
+import { hasGuideBindings } from '../hosting/guide-binding-types';
 import { isFoundationEntity } from '../../types/entities';
 import type { FoundationEntity } from '../types/foundation-types';
 import type { FoundationParamOverrides, SceneUnits } from '../../hooks/drawing/foundation-completion';
@@ -51,6 +54,8 @@ export interface FoundationGridCommitResult {
   readonly deleted: number;
   /** Λωρίδες αμετάβλητες (signature σε target & existing). */
   readonly unchanged: number;
+  /** ADR-441 Slice 6b — legacy ορφανές που ξανα-κρεμάστηκαν στον κάναβο. */
+  readonly rehosted: number;
 }
 
 /** Existing grid-managed λωρίδες της σκηνής (ο reconciler φιλτράρει null signatures). */
@@ -61,13 +66,34 @@ function existingFoundations(
   return (getLevelScene(levelId)?.entities ?? []).filter(isFoundationEntity);
 }
 
-/** Χτίσε το atomic reconcile command (delete + create, ή το μοναδικό μη-κενό). */
+/**
+ * ADR-441 Slice 6b — ξανα-κρέμα τους legacy ορφανούς (γραμμικοί χωρίς bindings) στα
+ * target φατνώματα. Επιστρέφει τα re-hosts ώστε ο orchestrator (α) να τα εφαρμόσει
+ * ως command και (β) να τα «δείξει» στον reconciler ως grid-managed (μηδέν διπλοί).
+ */
+function computeRehosts(
+  existing: readonly FoundationEntity[],
+  target: readonly FoundationEntity[],
+  reader: AxisGuideReader,
+): RehostedStrip[] {
+  const orphans = existing.filter(
+    (e) => (e.params.kind === 'strip' || e.params.kind === 'tie-beam') && !hasGuideBindings(e),
+  );
+  if (orphans.length === 0) return [];
+  const xGuides = reader.getGuidesByAxis('X').filter((g) => g.visible);
+  const yGuides = reader.getGuidesByAxis('Y').filter((g) => g.visible);
+  return rehostOrphanStrips(orphans, target, xGuides, yGuides);
+}
+
+/** Χτίσε το atomic command (rehost + delete + create, ή το μοναδικό μη-κενό). */
 function buildReconcileCommand(
+  rehosts: readonly RehostedStrip[],
   toDelete: readonly FoundationEntity[],
   toCreate: readonly FoundationEntity[],
   adapter: LevelSceneManagerAdapter,
 ): ICommand {
   const cmds: ICommand[] = [];
+  if (rehosts.length > 0) cmds.push(new RehostFoundationsCommand(rehosts, adapter));
   if (toDelete.length > 0) cmds.push(new DeleteFoundationsCommand(toDelete, adapter));
   if (toCreate.length > 0) cmds.push(new CreateFoundationsCommand(toCreate, adapter));
   return cmds.length === 1 ? cmds[0] : new CompoundCommand('Reconcile foundation grid', cmds);
@@ -87,19 +113,27 @@ export function commitFoundationGridFromGuides(
     deps.sceneUnits,
   );
   if (!target.ok) {
-    return { ok: false, reason: target.reason ?? 'insufficient-guides', created: 0, deleted: 0, unchanged: 0 };
+    return { ok: false, reason: target.reason ?? 'insufficient-guides', created: 0, deleted: 0, unchanged: 0, rehosted: 0 };
   }
 
   const existing = existingFoundations(deps.getLevelScene, deps.levelId);
-  const { toCreate, toDelete, unchanged } = reconcileGridStrips(target.strips, existing);
 
-  if (toCreate.length === 0 && toDelete.length === 0) {
+  // ADR-441 Slice 6b — re-host ορφανών ΠΡΙΝ το reconcile: ο rehosted υιοθετεί το
+  // signature του target φατνώματος → ο reconciler τον βλέπει ως `unchanged`
+  // (μηδέν διπλοί/διαγραφή). Fold-in στο existing ώστε να μετρηθεί ως grid-managed.
+  const rehosts = computeRehosts(existing, target.strips, deps.guideReader);
+  const rehostedById = new Map(rehosts.map((r) => [r.rehosted.id, r.rehosted]));
+  const existingForReconcile = existing.map((e) => rehostedById.get(e.id) ?? e);
+
+  const { toCreate, toDelete, unchanged } = reconcileGridStrips(target.strips, existingForReconcile);
+
+  if (toCreate.length === 0 && toDelete.length === 0 && rehosts.length === 0) {
     // Idempotent re-run: η εσχάρα είναι ήδη σε συμφωνία με τον κάναβο.
     const reason = unchanged > 0 ? 'up-to-date' : 'empty';
-    return { ok: false, reason, created: 0, deleted: 0, unchanged };
+    return { ok: false, reason, created: 0, deleted: 0, unchanged, rehosted: 0 };
   }
 
   const adapter = new LevelSceneManagerAdapter(deps.getLevelScene, deps.setLevelScene, deps.levelId);
-  deps.executeCommand(buildReconcileCommand(toDelete, toCreate, adapter));
-  return { ok: true, created: toCreate.length, deleted: toDelete.length, unchanged };
+  deps.executeCommand(buildReconcileCommand(rehosts, toDelete, toCreate, adapter));
+  return { ok: true, created: toCreate.length, deleted: toDelete.length, unchanged, rehosted: rehosts.length };
 }

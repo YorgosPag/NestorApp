@@ -276,6 +276,8 @@ export function useFoundationPersistence(
           validation: entity.validation,
           geometry: entity.geometry,
           layerId: entity.layerId,
+          // ADR-441 Slice 6b — re-host writes hosting bindings into the existing doc.
+          guideBindings: entity.guideBindings,
         });
       }
       lastSavedParamsRef.current.set(entity.id, entity.params);

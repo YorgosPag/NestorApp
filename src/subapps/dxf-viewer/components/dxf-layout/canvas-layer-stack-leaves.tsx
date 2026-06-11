@@ -36,6 +36,9 @@ import { ElectricalProposalGhostPreviewMount } from './canvas-layer-stack-electr
 import { HvacProposalGhostPreviewMount } from './canvas-layer-stack-hvac-proposal-ghost';
 import { FireProposalGhostPreviewMount } from './canvas-layer-stack-fire-proposal-ghost';
 import { GasProposalGhostPreviewMount } from './canvas-layer-stack-gas-proposal-ghost';
+// ADR-441 Slice 3-perf — zero-lag associative follow ghost (hosted foundation strips
+// follow a dragged guide frame-for-frame on a dedicated canvas).
+import { GuideFollowGhostPreviewMount } from './GuideFollowGhostOverlay';
 import { ClashOverlayMount } from './canvas-layer-stack-clash-overlay';
 import { SlabOpeningGhostPreviewMount, type SlabOpeningGhostPreviewMountProps } from './canvas-layer-stack-slab-opening-ghost';
 import { OpeningGhostPreviewMount, type OpeningGhostPreviewMountProps } from './canvas-layer-stack-opening-ghost';
@@ -466,6 +469,9 @@ export const PreviewCanvasMounts = React.memo(function PreviewCanvasMounts(
       <FireProposalGhostPreviewMount transform={transform} viewport={viewport} />
       {/* ADR-434 Slice 2 — gas (φυσικό αέριο) auto-design proposal ghost (low-freq store, inert while idle). */}
       <GasProposalGhostPreviewMount transform={transform} viewport={viewport} />
+      {/* ADR-441 Slice 3-perf — zero-lag follow ghost: hosted πεδιλοδοκοί ακολουθούν
+          τον dragged οδηγό frame-for-frame (dedicated canvas, mount μόνο όσο σύρεται). */}
+      <GuideFollowGhostPreviewMount transform={transform} viewport={viewport} levelManager={levelManager} />
       {/* ADR-435 Slice 1 — clash-detection report overlay (low-freq store, inert while idle). */}
       <ClashOverlayMount transform={transform} getCanvas={getCanvas} getViewportElement={getViewportElement} />
       <SlabOpeningGhostPreviewMount {...slabOpeningGhost} transform={transform} getCanvas={getCanvas} getViewportElement={getViewportElement} />

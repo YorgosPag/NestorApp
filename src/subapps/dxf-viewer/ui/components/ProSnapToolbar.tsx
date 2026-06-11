@@ -40,8 +40,6 @@ const SNAP_MODE_KEYS: Record<ExtendedSnapType, string> = {
   [ExtendedSnapType.CONSTRUCTION_POINT]: 'constructionPoint', // ADR-189 §3.7-3.16
   [ExtendedSnapType.DIM_DEF_POINT]: 'dimDefPoint', // ADR-362 I1
   [ExtendedSnapType.DIM_LINE]: 'dimLine',           // ADR-362 I1
-  // ADR-363 Phase 5.5i + ADR-370: BIM structural snaps — nested i18n path
-  [ExtendedSnapType.BIM_COLUMN_CENTER]:  'bim.columnAxis',
   // ADR-370: generic BIM characteristic-point toggles (per-entity label «Γωνία/Μέσο/Κέντρο
   // τοίχου…» comes from the candidate description, not the toolbar toggle).
   [ExtendedSnapType.BIM_CORNER]:         'bim.corner',
@@ -133,7 +131,6 @@ const ADVANCED_MODES = [
 // ADR-363 Phase 5.5i + ADR-370: BIM structural snap modes (column/wall/beam/slab/opening corners).
 // Shown in the advanced panel when at least one BIM entity exists on the canvas.
 const BIM_MODES = [
-  ExtendedSnapType.BIM_COLUMN_CENTER,
   ExtendedSnapType.BIM_MEP_CONNECTOR, // ADR-408 Φ9: MEP connector attach point
   // ADR-370: BIM_CORNER / BIM_MIDPOINT / BIM_CENTER are always-on structural snaps
   // (force-enabled with OSNAP, no per-mode toggle) — see SnapContext.ALWAYS_ON_BIM_SNAPS.

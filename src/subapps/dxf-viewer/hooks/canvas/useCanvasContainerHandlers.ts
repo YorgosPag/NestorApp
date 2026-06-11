@@ -16,6 +16,9 @@ import { getImmediateTransform } from '../../systems/cursor/ImmediateTransformSt
 import type { GridAxis } from '../../systems/guides/guide-types';
 import { MoveGuideCommand } from '../../systems/guides/commands';
 import { getGlobalGuideStore } from '../../systems/guides/guide-store';
+// ADR-441 Slice 3-perf — imperative drag-state SSoT για zero-lag follow ghost +
+// reconciler suppression κατά το guide drag.
+import { setDraggingGuideId } from '../../systems/guides/guide-drag-store';
 import type { Point2D } from '../../rendering/types/Types';
 import {
   getPointerSnapshotFromElement,
@@ -171,6 +174,9 @@ export function useCanvasContainerHandlers(
             originalStartPoint: nearest.startPoint ? { x: nearest.startPoint.x, y: nearest.startPoint.y } : undefined,
             originalEndPoint: nearest.endPoint ? { x: nearest.endPoint.x, y: nearest.endPoint.y } : undefined,
           });
+          // ADR-441 Slice 3-perf — suppress το per-frame React reconciler· οι hosted
+          // strips ακολουθούν live μέσω του GuideFollowGhostOverlay (zero-lag).
+          setDraggingGuideId(nearest.id);
           return;
         }
       }
@@ -198,6 +204,10 @@ export function useCanvasContainerHandlers(
 
     // ADR-189 B5: Guide drag end — create MoveGuideCommand
     if (draggingGuide && containerRef.current) {
+      // ADR-441 Slice 3-perf — un-suppress the reconciler FIRST, so the subsequent
+      // MoveGuideCommand notify triggers the single committed setLevelScene (the
+      // follow-ghost lingers ~140ms until that commit lands → seamless handoff).
+      setDraggingGuideId(null);
       const snap = getPointerSnapshotFromElement(containerRef.current);
       if (snap) {
         const screenPos = getScreenPosFromEvent(e, snap);

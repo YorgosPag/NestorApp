@@ -82,6 +82,49 @@ describe('BIM Corner Snap — priority constants', () => {
     expect(SNAP_ENGINE_PRIORITIES.BIM_CORNER).toBe(-2);
     expect(SNAP_ENGINE_PRIORITIES.BIM_CORNER).toBeLessThan(SNAP_ENGINE_PRIORITIES.ENDPOINT);
   });
+
+  it('BIM_MIDPOINT / BIM_CENTER are negative — they WIN over generic endpoint/midpoint/center', () => {
+    // The «Μέσο/Κέντρο never appear» bug: with positive numbers (0.5 / 2.5) the structural snaps
+    // lost to coincident raw-DXF ENDPOINT (0) / MIDPOINT (1) / CENTER (3). Revit-grade: structural
+    // characteristic points are the precise targets, so they must outrank the generic line snaps.
+    expect(SNAP_ENGINE_PRIORITIES.BIM_MIDPOINT).toBeLessThan(SNAP_ENGINE_PRIORITIES.ENDPOINT);
+    expect(SNAP_ENGINE_PRIORITIES.BIM_MIDPOINT).toBeLessThan(SNAP_ENGINE_PRIORITIES.MIDPOINT);
+    expect(SNAP_ENGINE_PRIORITIES.BIM_CENTER).toBeLessThan(SNAP_ENGINE_PRIORITIES.CENTER);
+    expect(SNAP_ENGINE_PRIORITIES.BIM_CENTER).toBeLessThan(SNAP_ENGINE_PRIORITIES.MIDPOINT);
+    // Corner stays the most precise structural point.
+    expect(SNAP_ENGINE_PRIORITIES.BIM_CORNER).toBeLessThan(SNAP_ENGINE_PRIORITIES.BIM_MIDPOINT);
+    expect(SNAP_ENGINE_PRIORITIES.BIM_CORNER).toBeLessThan(SNAP_ENGINE_PRIORITIES.BIM_CENTER);
+  });
+
+  it('BIM_MIDPOINT and BIM_CENTER share a tier so DISTANCE decides ⊕ vs ▲ (no priority hijack)', () => {
+    // Equal numbers → at a thin member the centroid (⊕) and a face-edge midpoint (▲) are both in
+    // range; the candidate processor falls back to distance and picks the nearer, correct one.
+    expect(SNAP_ENGINE_PRIORITIES.BIM_MIDPOINT).toBe(SNAP_ENGINE_PRIORITIES.BIM_CENTER);
+  });
+});
+
+// ─── Selection: at a wall centroid, ⊕ (center) beats ▲ (face midpoint) by distance ──
+describe('BIM_CENTER vs BIM_MIDPOINT — distance tiebreak at the centroid', () => {
+  it('cursor on the wall centroid → BIM_CENTER wins (equal priority, smaller distance)', () => {
+    // 200mm-thick wall along X; centroid at (500,0), long-face midpoints at (500,±100).
+    const wall = makeWall({ start: { x: 0, y: 0 }, end: { x: 1000, y: 0 }, thickness: 200 }, 'wall_1');
+    const mid = midpointEngine();
+    const center = centerEngine();
+    mid.initialize([wall]);
+    center.initialize([wall]);
+
+    const cursor: Point2D = { x: 500, y: 0 }; // exactly the centroid
+    const ctx = makeContext();
+    const all = [
+      ...mid.findSnapCandidates(cursor, ctx).candidates,
+      ...center.findSnapCandidates(cursor, ctx).candidates,
+    ].sort((a, b) => (a.priority - b.priority) || (a.distance - b.distance));
+
+    expect(all[0]!.type).toBe(ExtendedSnapType.BIM_CENTER);
+
+    mid.dispose();
+    center.dispose();
+  });
 });
 
 // ─── Cross-entity: ONE engine over wall + column + opening ───────────────────
@@ -153,17 +196,18 @@ describe('Generic engine indexes corners across ALL BIM entities at once', () =>
 
 // ─── Midpoint + Center categories (same parametric engine) ───────────────────
 
-describe('BIM_MIDPOINT — wall axis midpoint', () => {
-  it('snaps to the wall axis midpoint with description bim-wall-mid', () => {
+describe('BIM_MIDPOINT — wall edge midpoints (all sides)', () => {
+  it('snaps to a wall edge midpoint with description bim-wall-mid', () => {
     const wall = makeWall({ start: { x: 0, y: 0 }, end: { x: 1000, y: 0 } }, 'wall_1');
+    const mids = getBimCharacteristicPoints(wall).midpoints;
+    expect(mids.length).toBe(4); // ALL sides (Giorgio)
     const engine = midpointEngine();
     engine.initialize([wall]);
-    const hit = engine.findSnapCandidates({ x: 500, y: 0 }, makeContext()).candidates
+    const hit = engine.findSnapCandidates(mids[0]!, makeContext()).candidates
       .find((c) => c.entityId === 'wall_1');
     expect(hit).toBeDefined();
     expect(hit!.type).toBe(ExtendedSnapType.BIM_MIDPOINT);
     expect(hit!.description).toBe('bim-wall-mid');
-    expect(hit!.point.x).toBeCloseTo(500, 6);
     engine.dispose();
   });
 });

@@ -52,10 +52,13 @@ export function useDxfViewerNotifications(): void {
     // ADR-441 Slice 2 «Εσχάρα πεδιλοδοκών από κάναβο» — summary feedback μετά το
     // one-shot batch (πληθυντικότητα μέσω ICU στα locale strings).
     unsubs.push(
-      EventBus.on('bim:foundations-from-grid', ({ created, deleted }) => {
-        if (created === 0 && deleted === 0) {
+      EventBus.on('bim:foundations-from-grid', ({ created, deleted, rehosted }) => {
+        if (created === 0 && deleted === 0 && rehosted === 0) {
           // ADR-441 Slice 6 — idempotent re-run: η εσχάρα ήταν ήδη ενημερωμένη.
           toast.info(t('foundationGrid.upToDate'));
+        } else if (rehosted > 0) {
+          // ADR-441 Slice 6b — legacy ορφανές ξανα-κρεμάστηκαν (Revit migration).
+          toast.success(t('foundationGrid.rehosted', { rehosted, created }));
         } else if (deleted > 0) {
           // managed reconcile: αντικαταστάθηκαν obsolete (split / corner-fill role).
           toast.success(t('foundationGrid.reconciled', { created, deleted }));

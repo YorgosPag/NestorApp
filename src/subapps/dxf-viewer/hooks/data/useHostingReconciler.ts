@@ -31,6 +31,7 @@ import type { AnySceneEntity, SceneModel } from '../../types/scene';
 import { isFoundationEntity } from '../../types/entities';
 import type { FoundationEntity } from '../../bim/types/foundation-types';
 import { getGlobalGuideStore } from '../../systems/guides/guide-store';
+import { getDraggingGuideId } from '../../systems/guides/guide-drag-store';
 import { EventBus } from '../../systems/events/EventBus';
 import {
   buildHostingIndex,
@@ -106,6 +107,12 @@ export function useHostingReconciler({ levelManager }: UseHostingReconcilerParam
 
     const tick = (): void => {
       rafIdRef.current = null;
+      // ADR-441 Slice 3-perf — όσο σύρεται οδηγός, το live follow το αναλαμβάνει το
+      // GuideFollowGhostOverlay (zero-lag, αποκλειστικό canvas). Skip το per-frame
+      // `setLevelScene` (μηδέν React churn / bitmap rebuild ανά frame). Το
+      // `lastOffsetsRef` ΔΕΝ ανανεώνεται → ο πρώτος tick μετά το release ανιχνεύει
+      // το συνολικό offset diff → ΕΝΑ commit (+ persist on settle).
+      if (getDraggingGuideId() !== null) return;
       const lm = levelManagerRef.current;
       const levelId = lm.currentLevelId;
       if (!levelId) return;

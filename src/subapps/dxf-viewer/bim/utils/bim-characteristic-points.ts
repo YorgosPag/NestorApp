@@ -54,10 +54,9 @@ import { getBeamCornerWorldPoints } from '../beams/beam-corner-anchors';
 import { getSlabCornerWorldPoints } from '../slabs/slab-corner-anchors';
 import { getOpeningCornerWorldPoints } from '../walls/opening-corner-anchors';
 import { getColumnCornerWorldPoints } from '../columns/column-corner-anchors';
-import { getBimEntityEdgeMidpoints2D } from './bim-entity-points';
 import { getFoundationGrips } from '../foundations/foundation-grips';
 import { getCentredBoxGrips, type CentredBoxParams } from '../grips/centred-box-grips';
-import { polygonCentroid } from '../geometry/shared/polygon-utils';
+import { polygonCentroid, footprintEdgeMidpoints } from '../geometry/shared/polygon-utils';
 import { isSegmentVertical } from '../types/mep-segment-types';
 
 // ─── Public types ────────────────────────────────────────────────────────────
@@ -168,95 +167,60 @@ export function getBimCharacteristicPointsOfCategory(
 }
 
 // ─── Per-family resolvers ────────────────────────────────────────────────────
+//
+// EVERY footprint entity goes through the SAME `footprintPoints` core (Giorgio: «ίδια
+// συμπεριφορά σε όλα, ενοποιημένος κώδικας, όχι διπλότυπα»): corners → edge-midpoints on
+// ALL sides → centroid. Each family differs ONLY in how it sources its corner points.
 
-/** Wall: 4 face corners + axis midpoint. Linear → center = null. Straight → labelled. */
+/**
+ * The ONE corner→midpoint→center derivation, shared by wall / beam / column / foundation /
+ * centred-box / slab / roof / … Returns a midpoint for ALL sides + a centroid. Always emits
+ * the points; `labelRoot=null` (περίεργα σχήματα) just suppresses the text (req #4).
+ */
+function footprintPoints(corners: Point2D[], labelRoot: string | null): BimCharPoints {
+  return {
+    corners,
+    midpoints: edgeMidpointsFromCorners(corners),
+    center: corners.length >= 3 ? centroid2D(corners) : null,
+    labelRoot,
+  };
+}
+
 function wallPoints(entity: Entity): BimCharPoints {
   if (!isWallEntity(entity)) return EMPTY;
-  const corners = getWallCornerWorldPoints(entity).map((c) => c.point);
-  const straight = entity.kind === 'straight';
-  return {
-    corners,
-    midpoints: straight ? getBimEntityEdgeMidpoints2D(entity) : [],
-    center: null,
-    labelRoot: getBimCharacteristicLabelRoot(entity),
-  };
+  return footprintPoints(getWallCornerWorldPoints(entity).map((c) => c.point), getBimCharacteristicLabelRoot(entity));
 }
 
-/** Beam: 4 face-end corners + axis midpoint. Linear → center = null. Curved → no label. */
 function beamPoints(entity: Entity): BimCharPoints {
   if (!isBeamEntity(entity)) return EMPTY;
-  const corners = getBeamCornerWorldPoints(entity).map((c) => c.point);
-  const curved = entity.params.kind === 'curved';
-  return {
-    corners,
-    midpoints: curved ? [] : getBimEntityEdgeMidpoints2D(entity),
-    center: null,
-    labelRoot: getBimCharacteristicLabelRoot(entity),
-  };
+  return footprintPoints(getBeamCornerWorldPoints(entity).map((c) => c.point), getBimCharacteristicLabelRoot(entity));
 }
 
-/**
- * Column: 4 diagonal perimeter corners + 4 cardinal edge-midpoints + center anchor.
- * Only orthogonal footprints (`rectangular`/`shear-wall`) get a label.
- */
 function columnPoints(entity: Entity): BimCharPoints {
   if (!isColumnEntity(entity)) return EMPTY;
-  const corners = getColumnCornerWorldPoints(entity).map((c) => c.point);
-  // ADR-363 Phase 5.5i — the column CENTER axis is owned by the dedicated
-  // ColumnCenterSnapEngine (⊕ "Επί άξονα κολώνας"), so the generic BIM_CENTER does NOT
-  // re-emit it here (avoids a duplicate centre candidate). Full ColumnCenter→BIM_CENTER
-  // collapse is deferred (ADR-370).
-  return {
-    corners,
-    // SAME edge-midpoint SSoT as every other area entity (4 side midpoints).
-    midpoints: edgeMidpointsFromCorners(corners),
-    center: null,
-    labelRoot: getBimCharacteristicLabelRoot(entity),
-  };
+  return footprintPoints(getColumnCornerWorldPoints(entity).map((c) => c.point), getBimCharacteristicLabelRoot(entity));
 }
 
-/**
- * Foundation: corners + edge-midpoints from the existing 7-grip SSoT (`getFoundationGrips`);
- * pad center = centroid of its corners (rectangle); strip / tie-beam are linear → no center.
- */
 function foundationPoints(entity: Entity): BimCharPoints {
   if (!isFoundationEntity(entity)) return EMPTY;
-  const grips = getFoundationGrips(entity);
-  const corners = grips.filter((g) => isCornerGrip(g.foundationGripKind)).map((g) => g.position);
-  const isPad = entity.params.kind === 'pad';
-  return {
-    corners,
-    // SAME edge-midpoint SSoT as every other area entity → midpoints on ALL sides.
-    midpoints: edgeMidpointsFromCorners(corners),
-    center: isPad && corners.length >= 3 ? centroid2D(corners) : null,
-    labelRoot: getBimCharacteristicLabelRoot(entity),
-  };
+  const corners = getFoundationGrips(entity).filter((g) => isCornerGrip(g.foundationGripKind)).map((g) => g.position);
+  return footprintPoints(corners, getBimCharacteristicLabelRoot(entity));
 }
 
-/**
- * Centre-anchored box (8 point-based fixtures): 4 corners + 4 edge-midpoints + center
- * (`position`). Circular fixtures (mep-fixture) → center only, no corners, no label.
- */
+/** Centre-anchored box (8 fixtures). Circular fixtures → center only (no corners), no label. */
 function centredBoxPoints(entity: Entity): BimCharPoints {
   const box = toCentredBoxParams(entity);
   if (!box) return EMPTY;
-  const center: Point2D = { x: box.position.x, y: box.position.y };
-  const labelRoot = getBimCharacteristicLabelRoot(entity);
-  if (labelRoot === null && isMepFixtureEntity(entity) && entity.params.shape === 'circular') {
-    return { corners: [], midpoints: [], center, labelRoot: null };
+  if (isMepFixtureEntity(entity) && entity.params.shape === 'circular') {
+    return { corners: [], midpoints: [], center: { x: box.position.x, y: box.position.y }, labelRoot: null };
   }
   const corners = getCentredBoxGrips(box).filter((g) => g.role.startsWith('corner-')).map((g) => g.position);
-  return { corners, midpoints: edgeMidpointsFromCorners(corners), center, labelRoot };
+  return footprintPoints(corners, getBimCharacteristicLabelRoot(entity));
 }
 
 /** Polygon-footprint entity (slab / slab-opening / roof / thermal-space / floor-finish / mep-underfloor). */
 function polygonPoints(entity: Entity, vertices: Point2D[]): BimCharPoints {
-  return {
-    corners: vertices,
-    midpoints: edgeMidpointsFromCorners(vertices),
-    center: vertices.length >= 3 ? centroid2D(vertices) : null,
-    labelRoot: getBimCharacteristicLabelRoot(entity),
-  };
+  return footprintPoints(vertices, getBimCharacteristicLabelRoot(entity));
 }
 
 /** Linear entity (mep-segment): endpoints as "corners" + axis midpoint, no center. */
@@ -322,31 +286,9 @@ function isCornerGrip(kind: string | undefined): boolean {
   return !!kind && CORNER_GRIP_RE.test(kind);
 }
 
-/**
- * Per-edge midpoints of a footprint given its corner points — the ONE SSoT used by
- * EVERY area BIM entity (column / foundation / centred-box / slab / roof …). Returns a
- * midpoint for ALL sides (Giorgio: «τα μέσα σε όλες τις πλευρές»). Corners are sorted
- * into perimeter order (by angle about the centroid) FIRST, so a caller's corner order
- * (grip emission order, diagonal-anchor order, polygon winding) does not matter — every
- * footprint yields the same N edge midpoints. Convex footprints (≈all BIM) are exact.
- */
+/** Per-edge midpoints (all sides) — geometry SSoT in `polygon-utils.footprintEdgeMidpoints`. */
 function edgeMidpointsFromCorners(corners: readonly Point2D[]): Point2D[] {
-  if (corners.length < 2) return [];
-  if (corners.length === 2) {
-    const [a, b] = corners;
-    return [{ x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 }];
-  }
-  const ordered = sortPerimeter(corners);
-  return ordered.map((c, i) => {
-    const next = ordered[(i + 1) % ordered.length]!;
-    return { x: (c.x + next.x) / 2, y: (c.y + next.y) / 2 };
-  });
-}
-
-/** Order points counter-clockwise around their centroid (perimeter order for a convex footprint). */
-function sortPerimeter(corners: readonly Point2D[]): Point2D[] {
-  const c = centroid2D(corners);
-  return [...corners].sort((a, b) => Math.atan2(a.y - c.y, a.x - c.x) - Math.atan2(b.y - c.y, b.x - c.x));
+  return footprintEdgeMidpoints(corners);
 }
 
 /** Arithmetic-mean centroid (XY), via the polygon-utils SSoT (z ignored). */

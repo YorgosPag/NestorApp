@@ -196,9 +196,8 @@ function SnapShape({ type, color }: { type: string; color: string }) {
         </svg>
       );
 
-    // ⊕ BIM_COLUMN_CENTER + BIM_CENTER: Circle + crosshair — structural axis / centroid.
-    // Revit/Tekla plan-view convention: center shown as circle with cross (ADR-363/ADR-370).
-    case 'bim_column_center':
+    // ⊕ BIM_CENTER: Circle + crosshair — structural centroid (column/slab/foundation/…).
+    // Revit/Tekla plan-view convention: center shown as circle with cross (ADR-370).
     case 'bim_center':
       return (
         <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>

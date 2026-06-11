@@ -170,6 +170,18 @@ describe('FoundationFirestoreService.updateFoundation / deleteFoundation', () =>
     await svc.deleteFoundation('fnd_1');
     expect(mockDeleteDoc).toHaveBeenCalledTimes(1);
   });
+
+  // ADR-441 Slice 6b — re-host writes hosting bindings into an existing doc.
+  it('update persists guideBindings when provided, omits the key when undefined', async () => {
+    const svc = createFoundationFirestoreService(CONFIG);
+    const bindings = [{ guideId: 'x0', slot: 'start-x' as const }];
+    await svc.updateFoundation('fnd_1', { guideBindings: bindings });
+    expect(mockUpdateDoc.mock.calls[0][1].guideBindings).toEqual(bindings);
+
+    mockUpdateDoc.mockClear();
+    await svc.updateFoundation('fnd_1', { params: PAD_PARAMS });
+    expect(mockUpdateDoc.mock.calls[0][1]).not.toHaveProperty('guideBindings');
+  });
 });
 
 describe('FoundationFirestoreService.subscribeFoundations', () => {

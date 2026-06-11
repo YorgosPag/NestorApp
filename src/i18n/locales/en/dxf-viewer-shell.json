@@ -32,6 +32,7 @@
     "built": "{built, plural, one {Created # footing strip from the grid.} other {Created # footing strips from the grid.}}",
     "builtWithIgnored": "{built, plural, one {Created # footing strip} other {Created # footing strips}}; ignored {ignored} segments.",
     "reconciled": "{created, plural, one {Added # footing strip} other {Added # footing strips}}; {deleted, plural, one {replaced #} other {replaced #}}.",
+    "rehosted": "{rehosted, plural, one {Re-hosted # legacy strip to the grid} other {Re-hosted # legacy strips to the grid}}{created, plural, =0 {.} other {; +# new.}}",
     "upToDate": "The footing grid is already up to date with the guides.",
     "insufficientGuides": "At least 2 grid axes per direction are required (X and Y).",
     "empty": "No valid footing strip from the current grid."
