@@ -10,7 +10,8 @@
  */
 
 import { RotationPivotSnapEngine, RotationGripSnapEngine } from '../RotationSnapEngine';
-import { getGlobalRotationSnapStore } from '../../../bim/grips/rotation-snap-store';
+import { getGlobalRotationSnapStore, getActiveRotationGripSnapKey } from '../../../bim/grips/rotation-snap-store';
+import { setImmediateSnap, clearImmediateSnap } from '../../../systems/cursor/ImmediateSnapStore';
 import { ExtendedSnapType } from '../../extended-types';
 import { SNAP_ENGINE_PRIORITIES } from '../../../config/tolerance-config';
 import { gripKey } from '../../../rendering/grips/grip-temperature';
@@ -22,17 +23,16 @@ function makeContext(radius = 50): SnapEngineContext {
 
 const store = getGlobalRotationSnapStore();
 
-afterEach(() => store.clear());
+afterEach(() => { store.clear(); clearImmediateSnap(); });
 
 describe('RotationSnapStore', () => {
   it('is inactive and empty by default', () => {
     expect(store.isActive()).toBe(false);
     expect(store.getPivot()).toBeNull();
     expect(store.getGrips()).toHaveLength(0);
-    expect(store.snappableKeys().size).toBe(0);
   });
 
-  it('setTargets arms pivot + grips and snappableKeys', () => {
+  it('setTargets arms pivot + grips; keyForPoint maps a point back to its grip', () => {
     store.setTargets({ x: 10, y: 20 }, [
       { entityId: 'wall-1', gripIndex: 0, point: { x: 0, y: 0 } },
       { entityId: 'wall-1', gripIndex: 1, point: { x: 100, y: 0 } },
@@ -40,16 +40,46 @@ describe('RotationSnapStore', () => {
     expect(store.isActive()).toBe(true);
     expect(store.getPivot()).toEqual({ x: 10, y: 20 });
     expect(store.getGrips()).toHaveLength(2);
-    expect(store.snappableKeys().has(gripKey('wall-1', 0))).toBe(true);
-    expect(store.snappableKeys().has(gripKey('wall-1', 1))).toBe(true);
+    expect(store.keyForPoint({ x: 0, y: 0 })).toBe(gripKey('wall-1', 0));
+    expect(store.keyForPoint({ x: 100, y: 0 })).toBe(gripKey('wall-1', 1));
+    expect(store.keyForPoint({ x: 50, y: 50 })).toBeNull();
   });
 
   it('clear empties everything (idempotent)', () => {
     store.setTargets({ x: 1, y: 1 }, [{ entityId: 'e', gripIndex: 0, point: { x: 0, y: 0 } }]);
     store.clear();
     expect(store.isActive()).toBe(false);
-    expect(store.snappableKeys().size).toBe(0);
+    expect(store.keyForPoint({ x: 0, y: 0 })).toBeNull();
     expect(() => store.clear()).not.toThrow();
+  });
+});
+
+describe('getActiveRotationGripSnapKey — cyan only on the snapped grip', () => {
+  beforeEach(() => {
+    store.setTargets(null, [
+      { entityId: 'wall-1', gripIndex: 0, point: { x: 0, y: 0 } },
+      { entityId: 'wall-1', gripIndex: 1, point: { x: 100, y: 0 } },
+    ]);
+  });
+
+  it('null when there is no active snap', () => {
+    clearImmediateSnap();
+    expect(getActiveRotationGripSnapKey()).toBeNull();
+  });
+
+  it('null when the active snap is NOT a rotation grip', () => {
+    setImmediateSnap({ found: true, point: { x: 0, y: 0 }, mode: ExtendedSnapType.ENDPOINT });
+    expect(getActiveRotationGripSnapKey()).toBeNull();
+  });
+
+  it('returns the key of the rotation grip the cursor is snapped to', () => {
+    setImmediateSnap({ found: true, point: { x: 100, y: 0 }, mode: ExtendedSnapType.ROTATION_GRIP });
+    expect(getActiveRotationGripSnapKey()).toBe(gripKey('wall-1', 1));
+  });
+
+  it('null when found is false', () => {
+    setImmediateSnap({ found: false, point: { x: 0, y: 0 }, mode: ExtendedSnapType.ROTATION_GRIP });
+    expect(getActiveRotationGripSnapKey()).toBeNull();
   });
 });
 

@@ -9,8 +9,9 @@ import type { ViewTransform, Point2D, Viewport } from '../types/Types';
 import { CAD_UI_COLORS, resolveGripColors } from '../../config/color-config';
 import type { GripSettings } from '../../types/gripSettings';
 import { PhaseManager } from '../../systems/phase-manager/PhaseManager';
-// 🏢 ADR-397 — rotation snap targets SSoT (event-time read for cyan 'snappable' grips)
-import { getGlobalRotationSnapStore } from '../../bim/grips/rotation-snap-store';
+// 🏢 ADR-397 — rotation snap SSoT: cyan 'snappable' marks ONLY the grip the cursor
+// is currently snapped to (proximity), not the whole set.
+import { getActiveRotationGripSnapKey } from '../../bim/grips/rotation-snap-store';
 import type { EntityModel, RenderOptions, GripInfo } from '../types/Types';
 import type { Entity } from '../../types/entities';
 import { DEFAULT_TOLERANCE } from '../../config/tolerance-config';
@@ -137,14 +138,16 @@ export abstract class BaseEntityRenderer {
     // dragginGrip` → such a grip resolves HOT and stays hot for the whole operation
     // (ADR-397). No need to also stuff it into `dragginGrip` — that was a workaround
     // for the old getGripTemperature that read ONLY `dragginGrip`.
+    // ADR-397 — only the grip the cursor is CURRENTLY snapped to (proximity) renders
+    // cyan; all others stay warm/cold. Event-time read of the live snap result, so
+    // it tracks the cursor exactly like hover. null/empty when not snapped, OSNAP
+    // off, or not rotating.
+    const snappedKey = getActiveRotationGripSnapKey();
     phaseState.gripState = {
       hoveredGrip: this.gripInteraction.hovered,
       selectedGrip: this.gripInteraction.active,
       dragginGrip: undefined,
-      // ADR-397 — event-time read of the rotation snap targets (imperative SSoT,
-      // zero React). During a rotation these grips render cyan ('snappable'); the
-      // set is empty otherwise so cold/warm/hot are unaffected.
-      snappableKeys: getGlobalRotationSnapStore().snappableKeys(),
+      snappableKeys: snappedKey ? new Set([snappedKey]) : undefined,
     };
 
     this.phaseManager.renderPhaseGrips(entity as Entity, grips, phaseState);

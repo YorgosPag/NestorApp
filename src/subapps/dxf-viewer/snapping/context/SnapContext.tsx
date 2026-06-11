@@ -46,9 +46,10 @@ const ALL_MODES: ExtendedSnapType[] = [
   ExtendedSnapType.BIM_OPENING_CORNER,
   // ADR-408 Φ9: MEP connector attach-point snap
   ExtendedSnapType.BIM_MEP_CONNECTOR,
-  // ADR-397: rotation snap (pivot ⊙ + rotating entity grips) — contextual, on by default
-  ExtendedSnapType.ROTATION_PIVOT,
-  ExtendedSnapType.ROTATION_GRIP,
+  // NOTE: ROTATION_PIVOT / ROTATION_GRIP (ADR-397) are intentionally NOT in
+  // ALL_MODES — they are contextual snaps force-enabled with the global OSNAP
+  // toggle (see `enabledModes` below), so they bypass per-mode persistence/UI and
+  // work for existing users without a stored activeTypes entry.
 ];
 
 interface SnapContextType {
@@ -90,9 +91,7 @@ export const SnapProvider: React.FC<SnapProviderProps> = ({ children }) => {
         type === ExtendedSnapType.BIM_SLAB_CORNER ||
         type === ExtendedSnapType.BIM_COLUMN_CORNER ||
         type === ExtendedSnapType.BIM_OPENING_CORNER ||
-        type === ExtendedSnapType.BIM_MEP_CONNECTOR || // ADR-408 Φ9: enabled by default
-        type === ExtendedSnapType.ROTATION_PIVOT ||    // ADR-397: rotation snap on by default
-        type === ExtendedSnapType.ROTATION_GRIP
+        type === ExtendedSnapType.BIM_MEP_CONNECTOR // ADR-408 Φ9: enabled by default
       );
     });
     return initialState;
@@ -110,6 +109,13 @@ export const SnapProvider: React.FC<SnapProviderProps> = ({ children }) => {
           modes.add(mode);
         }
       });
+      // ADR-397: rotation snap is CONTEXTUAL — it only ever produces candidates
+      // while a rotation has armed the RotationSnapStore (empty otherwise → zero
+      // cost). Force-enable it with the global OSNAP toggle so it works for every
+      // user regardless of their stored per-mode preferences, and so it cannot be
+      // accidentally turned off (it has no toolbar button).
+      modes.add(ExtendedSnapType.ROTATION_PIVOT);
+      modes.add(ExtendedSnapType.ROTATION_GRIP);
     }
     return modes;
   }, [snapState, snapEnabled]);

@@ -16,6 +16,11 @@
 
 import type { Point2D } from '../../rendering/types/Types';
 import { gripKey } from '../../rendering/grips/grip-temperature';
+import { getImmediateSnap } from '../../systems/cursor/ImmediateSnapStore';
+import { ExtendedSnapType } from '../../snapping/extended-types';
+
+/** Tolerance (world units) for matching a snapped point back to a grip. */
+const KEY_FOR_POINT_EPS = 0.5;
 
 /** A single rotating-entity grip exposed as a snap target. */
 export interface RotationGripTarget {
@@ -33,7 +38,6 @@ type Listener = () => void;
 export class RotationSnapStore {
   private pivot: Point2D | null = null;
   private grips: readonly RotationGripTarget[] = [];
-  private keySet: ReadonlySet<string> = new Set<string>();
   private listeners = new Set<Listener>();
   private version = 0;
 
@@ -72,7 +76,6 @@ export class RotationSnapStore {
   ): void {
     this.pivot = pivot ? { x: pivot.x, y: pivot.y } : null;
     this.grips = grips.map((g) => ({ key: gripKey(g.entityId, g.gripIndex), point: { x: g.point.x, y: g.point.y } }));
-    this.keySet = new Set(this.grips.map((g) => g.key));
     this.notify();
   }
 
@@ -81,7 +84,6 @@ export class RotationSnapStore {
     if (!this.pivot && this.grips.length === 0) return;
     this.pivot = null;
     this.grips = [];
-    this.keySet = new Set<string>();
     this.notify();
   }
 
@@ -100,9 +102,14 @@ export class RotationSnapStore {
     return this.grips;
   }
 
-  /** The set of grip keys that should render cyan ('snappable'). */
-  snappableKeys(): ReadonlySet<string> {
-    return this.keySet;
+  /** Grip key whose point equals `point` (within tolerance), or null. */
+  keyForPoint(point: Point2D): string | null {
+    for (const g of this.grips) {
+      if (Math.abs(g.point.x - point.x) <= KEY_FOR_POINT_EPS && Math.abs(g.point.y - point.y) <= KEY_FOR_POINT_EPS) {
+        return g.key;
+      }
+    }
+    return null;
   }
 }
 
@@ -118,4 +125,19 @@ export function getGlobalRotationSnapStore(): RotationSnapStore {
     globalInstance = new RotationSnapStore();
   }
   return globalInstance;
+}
+
+/**
+ * The grip key that should currently render cyan ('snappable') — i.e. the rotating
+ * entity's grip the cursor is RIGHT NOW snapped to (proximity), or null. Reads the
+ * live snap result (`ImmediateSnapStore`): cyan appears only while there is an
+ * active ROTATION_GRIP snap, so the grips stay warm/cold otherwise and revert the
+ * moment the cursor leaves — exactly like hover, but cyan (Giorgio). Returns null
+ * with OSNAP off (the pipeline clears the snap result). Zero cyan when not rotating
+ * (store empty → no rotation-grip candidates → no such snap).
+ */
+export function getActiveRotationGripSnapKey(): string | null {
+  const snap = getImmediateSnap();
+  if (!snap?.found || snap.mode !== ExtendedSnapType.ROTATION_GRIP) return null;
+  return getGlobalRotationSnapStore().keyForPoint(snap.point);
 }
