@@ -253,15 +253,16 @@ export const HOME_DRAW_PANEL: RibbonPanelDef = {
     // 2026-06-12): τα «Δομικά Στοιχεία» (φέροντα) μετακινήθηκαν σε ΜΟΝΙΜΗ καρτέλα
     // «Δομικά» (STRUCTURAL_TAB, Revit "Structure") ως μεγάλα flat κουμπιά — το
     // legacy «draw.bim.group» αφαιρέθηκε. ADR-444: ομοίως «Αρχιτεκτονικά»
-    // (draw.arch.group) → ARCHITECTURE_TAB και «ΗΛΜ» (draw.mep.group) → SYSTEMS_TAB
-    // (Revit "Architecture" / "Systems"). Σε αυτή τη σειρά μένει μόνο το «Αντικείμενα»
+    // (draw.arch.group) → ARCHITECTURE_TAB και «ΗΛΜ» (draw.mep.group) → ΕΞΙ discipline
+    // tabs (MEP_DISCIPLINE_TABS: electrical/water/drainage/heating/hvac/fire-gas, μία
+    // ανά Η/Μ μελέτη· clash → «Ανάλυση»). Σε αυτή τη σειρά μένει μόνο το «Αντικείμενα»
     // (επιπλώσεις/σύμβολα — όχι BIM discipline). Keyboard chords remain valid in parallel.
     {
       isInFlyout: false,
       buttons: [
-        // ADR-444 — «Αρχιτεκτονικά» (draw.arch.group) + «ΗΛΜ» (draw.mep.group)
-        // μετακινήθηκαν σε μόνιμες καρτέλες ARCHITECTURE_TAB / SYSTEMS_TAB (Revit
-        // "Architecture" / "Systems"). Εδώ μένει μόνο το «Αντικείμενα» launcher.
+        // ADR-444 — «Αρχιτεκτονικά» (draw.arch.group) → ARCHITECTURE_TAB και «ΗΛΜ»
+        // (draw.mep.group) → 6 discipline tabs (MEP_DISCIPLINE_TABS). Εδώ μένει μόνο
+        // το «Αντικείμενα» launcher.
         // ADR-415 / ADR-410 — «Αντικείμενα»: επιπλώσεις/εξοπλισμός, ΟΧΙ δομικά.
         // Ξεχωριστός launcher από τα «Δομικά Στοιχεία» (Giorgio 2026-06-04): 2D
         // σύμβολα κάτοψης (είδη υγιεινής/κουζίνα/έπιπλα) + 3D mesh έπιπλα. Το ποιο
