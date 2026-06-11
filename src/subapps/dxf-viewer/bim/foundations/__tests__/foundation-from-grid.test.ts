@@ -114,12 +114,12 @@ describe('buildStripGridFromGuides', () => {
     expect(topCorner.params.end).toMatchObject({ x: 0, y: 8300 }); // 8000 + 300
   });
 
-  it('corner-fill: 2×2 → όλες οι λωρίδες γωνιακές (κάθε λωρίδα 1 extend)', () => {
+  it('corner-fill: 2×2 → κάθε λωρίδα ενώνει 2 γωνίες (single bay → 2 extends ανά λωρίδα)', () => {
     const guides = [guide('x0', 'X', 0), guide('x1', 'X', 4000), guide('y0', 'Y', 0), guide('y1', 'Y', 4000)];
     const result = buildStripGridFromGuides(reader(guides), {}, '0', 'mm');
     expect(result.strips).toHaveLength(4);
     for (const s of result.strips) {
-      expect((s.guideBindings ?? []).filter((b) => b.extend !== undefined)).toHaveLength(1);
+      expect((s.guideBindings ?? []).filter((b) => b.extend !== undefined)).toHaveLength(2);
     }
   });
 
