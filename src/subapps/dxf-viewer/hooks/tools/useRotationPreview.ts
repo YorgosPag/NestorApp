@@ -20,6 +20,7 @@ import type { DxfEntityUnion } from '../../canvas-v2/dxf-canvas/dxf-types';
 import type { AnySceneEntity } from '../../types/entities';
 import { rotatePoint } from '../../utils/rotation-math';
 import { CoordinateTransforms } from '../../rendering/core/CoordinateTransforms';
+import { drawRotationPivotMarker } from '../../rendering/ui/rotation-pivot-marker';
 import { degToRad } from '../../rendering/entities/shared/geometry-utils';
 import { useCursorWorldPosition } from '../../systems/cursor/useCursor';
 import type { RotationPhase } from './useRotationTool';
@@ -110,21 +111,13 @@ export function useRotationPreview(props: UseRotationPreviewProps): void {
     const rect = viewportElement.getBoundingClientRect();
     const freshViewport = { width: rect.width, height: rect.height };
 
-    // Convert pivot to screen coords (CSS pixels)
+    // Convert pivot to screen coords (CSS pixels) — used by the rubber band / ref
+    // line / angle arc below.
     const pivotScreen = CoordinateTransforms.worldToScreen(basePoint, transform, freshViewport);
 
-    // === Base point marker (crosshair) — visible in BOTH phases ===
-    const markerSize = 8;
-    ctx.save();
-    ctx.strokeStyle = '#FF4444';
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.moveTo(pivotScreen.x - markerSize, pivotScreen.y);
-    ctx.lineTo(pivotScreen.x + markerSize, pivotScreen.y);
-    ctx.moveTo(pivotScreen.x, pivotScreen.y - markerSize);
-    ctx.lineTo(pivotScreen.x, pivotScreen.y + markerSize);
-    ctx.stroke();
-    ctx.restore();
+    // === Rotation-centre marker (⊙) — visible in BOTH phases. Shared SSoT glyph,
+    // identical to the grip-driven 6-click rotate (useGripGhostPreview). ===
+    drawRotationPivotMarker(ctx, basePoint, transform, freshViewport);
 
     // === Rubber band line: pivot → cursor — visible in BOTH phases ===
     if (cursorWorld) {

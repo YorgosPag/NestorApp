@@ -161,7 +161,13 @@ export function buildRotateReferencePreview(
       rotateAlignLine: { from: alignStart, to: cursor },
     };
   }
-  return null; // await-base / await-ref-start — centre picked but no line yet.
+  // `await-ref-start`: the rotation CENTRE has just been picked but no reference
+  // line exists yet. Return the base preview (zero delta, `rotatePivot` set) so the
+  // pivot ⊙ marker shows the moment the centre is set — the user sees the centre is
+  // locked (Giorgio). No ghost is drawn (delta 0 → `applyEntityPreview` no-op), only
+  // the pivot marker. `await-base` (centre not yet picked → `!pivot`) returns null above.
+  if (step === 'await-ref-start') return base;
+  return null;
 }
 
 export function buildGripInteractionState(
@@ -177,7 +183,14 @@ export function buildGripInteractionState(
       gripIndex: hoveredGrip.gripIndex,
     };
   }
-  if (activeGrip?.source === 'dxf' && phase === 'dragging') {
+  // `hotGrip` = the click-armed rotate/move flow (the rotation handle was PRESSED
+  // but the entity is not being dragged 1:1). Treat it like `dragging` so the
+  // pressed grip stays HOT for the whole operation — the user sees the rotation has
+  // started (Giorgio). This `activeGrip` reaches the renderer as
+  // `BaseEntityRenderer.gripInteraction.active` → `renderGrips` maps it to the
+  // PhaseManager `gripState.dragginGrip`, which `GripPhaseRenderer.getGripTemperature`
+  // reads for the HOT state (overriding the `hovered` → 'warm').
+  if (activeGrip?.source === 'dxf' && (phase === 'dragging' || phase === 'hotGrip')) {
     state.activeGrip = {
       entityId: activeGrip.entityId!,
       gripIndex: activeGrip.gripIndex,

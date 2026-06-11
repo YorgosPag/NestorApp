@@ -9,8 +9,8 @@
 import type { Point2D, ViewTransform, EntityModel, RenderOptions } from '../types/Types';
 import type { Entity } from '../../types/entities';
 import type { PhaseManager } from '../../systems/phase-manager/PhaseManager';
-import { UI_COLORS } from '../../config/color-config';
-import { RENDER_LINE_WIDTHS, RENDER_GEOMETRY, LINE_DASH_PATTERNS, ARC_LABEL_POSITIONING } from '../../config/text-rendering-config';
+import { UI_COLORS, HOVER_HIGHLIGHT } from '../../config/color-config';
+import { RENDER_LINE_WIDTHS, RENDER_GEOMETRY, LINE_DASH_PATTERNS, ARC_LABEL_POSITIONING, buildUIFont } from '../../config/text-rendering-config';
 import { calculateDistance, vectorMagnitude, vectorAngle, getUnitVector, calculateAngle } from './shared/geometry-rendering-utils';
 import { radToDeg, bisectorAngle, calculateMidpoint, normalizeTextAngle } from './shared/geometry-utils';
 import { addArcPath, TAU } from '../primitives/canvasPaths';
@@ -342,4 +342,51 @@ export function drawInternalArcOnCanvas(
   addArcPath(rc.ctx, v, rPx, a1, a2, useCCW);
   rc.ctx.stroke();
   rc.ctx.restore();
+}
+
+// ============================================================
+// TEXT STYLE HELPERS
+// Extracted per ADR-065/N.7.1 (BaseEntityRenderer ≤500 lines).
+// Pure ctx-mutators — the class methods are thin delegators.
+// ============================================================
+
+/**
+ * Style για μετρήσεις γωνιών (μοίρες, radians) — 🏢 ADR-048 centralized fuchsia.
+ */
+export function applyAngleMeasurementTextStyleToCtx(ctx: CanvasRenderingContext2D, baseFontSize: number): void {
+  ctx.fillStyle = UI_COLORS.ANGLE_MEASUREMENT_TEXT;
+  ctx.font = buildUIFont(baseFontSize, 'arial');
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+}
+
+/**
+ * Style για μετρήσεις μηκών ευθύγραμμων τμημάτων — 🏢 ADR-048 centralized white.
+ */
+export function applyDistanceMeasurementTextStyleToCtx(ctx: CanvasRenderingContext2D, baseFontSize: number): void {
+  ctx.fillStyle = UI_COLORS.DISTANCE_MEASUREMENT_TEXT;
+  ctx.font = buildUIFont(baseFontSize, 'arial');
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+}
+
+/**
+ * 🔺 Centralized distance-text χρώμα για preview, με δυναμικό font styling + hover glow.
+ */
+export function applyDistanceTextStyleToCtx(ctx: CanvasRenderingContext2D, isHovered: boolean): void {
+  const textStyle = getTextPreviewStyleWithOverride();
+  ctx.fillStyle = isHovered ? HOVER_HIGHLIGHT.ENTITY.glowColor : UI_COLORS.DISTANCE_MEASUREMENT_TEXT;
+  ctx.font = `${textStyle.fontStyle} ${textStyle.fontWeight} ${textStyle.fontSize} ${textStyle.fontFamily}`;
+  ctx.globalAlpha = textStyle.opacity;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+}
+
+/**
+ * 🎨 Advanced text render με decorations (underline/strikethrough) — save/restore-wrapped.
+ */
+export function renderStyledDistanceTextOnCtx(ctx: CanvasRenderingContext2D, text: string, x: number, y: number): void {
+  ctx.save();
+  renderStyledTextWithOverride(ctx, text, x, y);
+  ctx.restore();
 }

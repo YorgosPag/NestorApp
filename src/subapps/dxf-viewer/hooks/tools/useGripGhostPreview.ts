@@ -32,6 +32,9 @@ import {
   GHOST_DEFAULTS,
 } from '../../rendering/ghost';
 import { CoordinateTransforms } from '../../rendering/core/CoordinateTransforms';
+// ADR-397 — the rotation-centre ⊙ marker is the SAME SSoT glyph the toolbar Rotate
+// tool draws (useRotationPreview), so both rotation flows look identical.
+import { drawRotationPivotMarker } from '../../rendering/ui/rotation-pivot-marker';
 // ADR-408 Φ-C — connected pipe ends follow a moving plumbing host (SSoT builder,
 // shared with the commit + any future 3D pipe ghost), so the run stretches live.
 import { buildConnectedPipeGhosts } from '../../bim/mep-segments/build-connected-pipe-ghosts';
@@ -127,6 +130,13 @@ export function useGripGhostPreview(props: UseGripGhostPreviewProps): void {
     const viewportEl = getViewportElement?.() ?? canvas;
     const rect = viewportEl.getBoundingClientRect();
     const vp = { width: rect.width, height: rect.height };
+
+    // ADR-397 — the picked rotation CENTRE (⊙). Shown for every rotate step once the
+    // centre is set, so the user sees the pivot is locked (Giorgio). Same SSoT glyph
+    // as the toolbar Rotate tool.
+    if (dragPreview.rotatePivot) {
+      drawRotationPivotMarker(ctx, dragPreview.rotatePivot, transform, vp);
+    }
 
     // ADR-408 Φ7 P2 — snapshot→transform map is now the shared SSoT helper, so the
     // ghost and the live home-run wire derive the SAME previewed entity.

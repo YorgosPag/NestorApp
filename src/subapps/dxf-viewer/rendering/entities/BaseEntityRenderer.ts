@@ -14,13 +14,10 @@ import type { Entity } from '../../types/entities';
 import { DEFAULT_TOLERANCE } from '../../config/tolerance-config';
 // 🏢 ADR-119: Centralized Opacity Constants
 import { UI_COLORS, OPACITY, HOVER_HIGHLIGHT } from '../../config/color-config';
-// 🏢 ADR-091: Centralized UI Fonts (buildUIFont for dynamic sizes)
-import { buildUIFont } from '../../config/text-rendering-config';
 // 🏢 ADR-075: Centralized Grip Size Multipliers
 import { GRIP_SIZE_MULTIPLIERS } from '../grips/constants';
 // 🏢 ADR-065: Centralized Distance Calculation
 import { renderSquareGrip, calculateDistance } from './shared/geometry-rendering-utils';
-import { renderStyledTextWithOverride, getTextPreviewStyleWithOverride } from '../../hooks/useTextPreviewStyle';
 // 🏢 ADR-065: Extracted rendering helpers (arc/angle + distance text)
 import {
   type BaseRenderingContext,
@@ -37,6 +34,10 @@ import {
   drawInternalAngleArcImpl,
   renderAngleAtVertexImpl,
   drawInternalArcOnCanvas,
+  applyAngleMeasurementTextStyleToCtx,
+  applyDistanceMeasurementTextStyleToCtx,
+  applyDistanceTextStyleToCtx,
+  renderStyledDistanceTextOnCtx,
 } from './base-entity-rendering-helpers';
 
 // Interfaces moved to PhaseManager to avoid circular dependency
@@ -127,11 +128,16 @@ export abstract class BaseEntityRenderer {
     // 🏢 ENTERPRISE: EntityModel is alias for Entity, type assertion is safe
     const phaseState = this.phaseManager.determinePhase(entity as Entity, options);
     
-    // Set grip interaction state for PhaseManager
+    // Set grip interaction state for PhaseManager. The PRESSED / actively-manipulated
+    // grip (`gripInteraction.active`, set during a drag OR the click-armed hot-grip
+    // rotate/move flow) is the `dragginGrip` — `GripPhaseRenderer.getGripTemperature`
+    // reads ONLY `dragginGrip` for the HOT state, so the pressed rotation handle stays
+    // hot for the whole operation (Giorgio). Was hardcoded `undefined` → no grip ever
+    // went hot through this path.
     phaseState.gripState = {
       hoveredGrip: this.gripInteraction.hovered,
       selectedGrip: this.gripInteraction.active,
-      dragginGrip: undefined // Currently not implementing drag detection
+      dragginGrip: this.gripInteraction.active,
     };
     
     this.phaseManager.renderPhaseGrips(entity as Entity, grips, phaseState);
@@ -147,83 +153,45 @@ export abstract class BaseEntityRenderer {
     return 11; // Σταθερό μέγεθος για consistency
   }
 
-  /**
-   * Style για μετρήσεις γωνιών (μοίρες, radians)
-   * 🏢 ADR-048: Uses centralized ANGLE_MEASUREMENT_TEXT color
-   * 🎯 Φούξια χρώμα - κεντρικοποιημένο
-   */
+  // ─── Text styles (logic in base-entity-rendering-helpers, ADR-065/N.7.1) ─────
+  /** 🏢 ADR-048 centralized fuchsia — γωνίες (μοίρες/radians). */
   protected applyAngleMeasurementTextStyle(): void {
-    this.ctx.fillStyle = UI_COLORS.ANGLE_MEASUREMENT_TEXT;  // 🏢 Centralized fuchsia for angles
-    this.ctx.font = buildUIFont(this.getBaseFontSize(), 'arial');
-    this.ctx.textAlign = 'center';
-    this.ctx.textBaseline = 'middle';
+    applyAngleMeasurementTextStyleToCtx(this.ctx, this.getBaseFontSize());
   }
 
-  /**
-   * @deprecated Χρησιμοποίησε applyAngleMeasurementTextStyle() ή applyDistanceMeasurementTextStyle()
-   * Διατηρείται για backward compatibility
-   */
+  /** @deprecated → applyAngleMeasurementTextStyle / applyDistanceMeasurementTextStyle. */
   protected applyDimensionTextStyle(): void {
-    this.applyAngleMeasurementTextStyle(); // Delegate to new method
+    this.applyAngleMeasurementTextStyle();
   }
 
-  /**
-   * Style για μετρήσεις μηκών ευθύγραμμων τμημάτων
-   * 🏢 ADR-048: Uses centralized DISTANCE_MEASUREMENT_TEXT color
-   * 🎯 Λευκό χρώμα - κεντρικοποιημένο
-   */
+  /** 🏢 ADR-048 centralized white — μήκη ευθύγραμμων τμημάτων. */
   protected applyDistanceMeasurementTextStyle(): void {
-    this.ctx.fillStyle = UI_COLORS.DISTANCE_MEASUREMENT_TEXT;  // 🏢 Centralized white for distances
-    this.ctx.font = buildUIFont(this.getBaseFontSize(), 'arial');
-    this.ctx.textAlign = 'center';
-    this.ctx.textBaseline = 'middle';
+    applyDistanceMeasurementTextStyleToCtx(this.ctx, this.getBaseFontSize());
   }
 
-  /**
-   * 🔺 ΚΕΝΤΡΙΚΟΠΟΙΗΜΈΝΟ ΧΡΏΜΑ DISTANCE TEXT - για preview με δυναμικό styling
-   * Χρώμα για τα κείμενα αποστάσεων στη φάση προεπισκόπησης
-   */
+  /** 🔺 Centralized distance-text με δυναμικό font styling + hover glow (preview). */
   protected applyDistanceTextStyle(): void {
-    // 🏢 ENTERPRISE: Χρήση κεντρικοποιημένου χρώματος, αλλά με δυναμικό font styling
-    const textStyle = getTextPreviewStyleWithOverride();
-    this.ctx.fillStyle = this._currentHovered
-      ? HOVER_HIGHLIGHT.ENTITY.glowColor
-      : UI_COLORS.DISTANCE_MEASUREMENT_TEXT;
-    this.ctx.font = `${textStyle.fontStyle} ${textStyle.fontWeight} ${textStyle.fontSize} ${textStyle.fontFamily}`;
-    this.ctx.globalAlpha = textStyle.opacity;
-    this.ctx.textAlign = 'center';
-    this.ctx.textBaseline = 'middle';
+    applyDistanceTextStyleToCtx(this.ctx, this._currentHovered);
   }
 
-  /**
-   * 🎨 ADVANCED TEXT RENDERING - με πλήρη υποστήριξη decorations
-   * Κάνει render κείμενο με underline, strikethrough, κλπ.
-   */
+  /** 🎨 Advanced text render με decorations (underline/strikethrough). */
   protected renderStyledDistanceText(text: string, x: number, y: number): void {
-    this.ctx.save();
-    renderStyledTextWithOverride(this.ctx, text, x, y);
-    this.ctx.restore();
+    renderStyledDistanceTextOnCtx(this.ctx, text, x, y);
   }
 
-  /**
-   * Style για κεντρικές μετρήσεις (εμβαδόν, περίμετρος) - Χρησιμοποιεί κεντρικοποιημένο χρώμα
-   */
+  /** Κεντρικές μετρήσεις (εμβαδόν/περίμετρος) — fuchsia. */
   protected applyCenterMeasurementTextStyle(): void {
-    this.applyDimensionTextStyle(); // Use centralized fuchsia color and styling
+    this.applyDimensionTextStyle();
   }
 
-  /**
-   * Style για corner/grip μετρήσεις - Χρησιμοποιεί κεντρικοποιημένο χρώμα
-   */
+  /** Corner/grip μετρήσεις — fuchsia. */
   protected applyCornerTextStyle(): void {
-    this.applyDimensionTextStyle(); // Use centralized fuchsia color and styling
+    this.applyDimensionTextStyle();
   }
 
-  /**
-   * Γενική μέθοδος - όλα τα κείμενα
-   */
+  /** Γενική μέθοδος — όλα τα κείμενα. */
   protected applyMeasurementTextStyle(): void {
-    this.applyDimensionTextStyle(); // Default
+    this.applyDimensionTextStyle();
   }
 
   private stateForGrip(entityId: string, idx: number): 'cold'|'warm'|'hot' {
