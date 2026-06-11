@@ -58,8 +58,8 @@ describe('getFurnitureGrips', () => {
   it('places the rotation handle beyond the +Y edge (depth/2 + offset)', () => {
     // ADR-363 Φ1G.5 Slice 2 — move grip gone; rotation is now array index 0 (gripIndex still 1).
     const [rotation] = getFurnitureGrips(entityWith());
-    // depth/2 (300) + ROTATION_HANDLE_OFFSET_MM (200) = 500 above centre.
-    expect(rotation.position).toEqual({ x: 1000, y: 2500 });
+    // depth/2 (300) + ROTATION_HANDLE_OFFSET_MM (0) = 300 above centre (on the face).
+    expect(rotation.position).toEqual({ x: 1000, y: 2300 });
   });
 });
 
@@ -98,8 +98,8 @@ describe('applyFurnitureGripDrag', () => {
   });
 
   it('rotation handle drag sweeps the rotation angle about the centre', () => {
-    // Handle starts at (1000, 2500); move it to (500, 2000) → vector (0,500)→(-500,0) = +90°.
-    const next = applyFurnitureGripDrag('furniture-rotation', { originalParams: baseParams, delta: { x: -500, y: -500 } });
+    // Handle now starts at (1000, 2300) (offset 0); move it to (500, 2000) → vector (0,300)→(-500,0) = +90°.
+    const next = applyFurnitureGripDrag('furniture-rotation', { originalParams: baseParams, delta: { x: -500, y: -300 } });
     expect(next.rotationDeg).toBeCloseTo(90, 5);
   });
 });
@@ -127,7 +127,7 @@ describe('applyFurnitureGripDrag — pivot rotate (hot-grip 6-click)', () => {
     // Position must NOT orbit (no pivot) — only the angle changes (handle-relative).
     const next = applyFurnitureGripDrag('furniture-rotation', {
       originalParams: pivotParams,
-      delta: { x: -500, y: -500 },
+      delta: { x: -500, y: -300 },
     });
     expect(next.position).toEqual({ x: 1000, y: 0, z: 0 });
     expect(next.rotationDeg).toBeCloseTo(90, 5);

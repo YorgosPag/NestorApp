@@ -419,7 +419,7 @@ describe('wall-grips (Phase 1C)', () => {
     expect(wallGripGlyphShape(undefined)).toBe('square');
   });
 
-  it('27. wall-rotation handle stands off the OPPOSITE perp face from the thickness handle (clean separation, Revit-style)', () => {
+  it('27. wall-rotation handle sits ON the OPPOSITE perp face from the thickness handle (clean separation, Revit-style)', () => {
     const grips = getWallGrips(makeStraight());
     const rot = grips.find((g) => g.wallGripKind === 'wall-rotation')!;
     const thickness = grips.find((g) => g.wallGripKind === 'wall-thickness')!;
@@ -429,8 +429,9 @@ describe('wall-grips (Phase 1C)', () => {
     expect(rot.position.x).toBeCloseTo(500, 6);
     // OPPOSITE perp face from the thickness handle (signs differ across the axis).
     expect(Math.sign(rot.position.y)).toBe(-Math.sign(thickness.position.y));
-    // Stands OFF beyond the −perp face: farther from the centreline than the −perp corner.
-    expect(Math.abs(rot.position.y)).toBeGreaterThan(Math.abs(cornerNeg.position.y));
+    // Sits ON the −perp face (offset 0): same perp distance from the centreline as the
+    // −perp corner — Giorgio «πάνω στην παρειά, όχι στον χώρο».
+    expect(Math.abs(rot.position.y)).toBeCloseTo(Math.abs(cornerNeg.position.y), 6);
   });
 
   it('28. wall-rotation spins both endpoints 90° CCW about the midpoint', () => {

@@ -38,7 +38,7 @@ describe('getCentredBoxGrips', () => {
   it('places corners at ±half-extents, rotation beyond +Y (rotation 0); no move grip', () => {
     const byRole = Object.fromEntries(getCentredBoxGrips(base).map((g) => [g.role, g.position]));
     expect(byRole['move']).toBeUndefined();
-    expect(byRole['rotation']).toEqual({ x: 1000, y: 2500 }); // length/2 (300) + offset 200
+    expect(byRole['rotation']).toEqual({ x: 1000, y: 2300 }); // length/2 (300) + offset 0 (on the face)
     expect(byRole['corner-ne']).toEqual({ x: 1300, y: 2300 });
     expect(byRole['corner-nw']).toEqual({ x: 700, y: 2300 });
     expect(byRole['corner-sw']).toEqual({ x: 700, y: 1700 });
@@ -85,7 +85,8 @@ describe('applyCentredBoxGripDrag', () => {
   });
 
   it('legacy rotation sweeps angle about own centre, position unchanged', () => {
-    const p = applyCentredBoxGripDrag('rotation', input({ delta: { x: -500, y: -500 } }))!;
+    // Handle now at (1000, 2300) (offset 0); delta lands cursor at (500, 2000) → +90°.
+    const p = applyCentredBoxGripDrag('rotation', input({ delta: { x: -500, y: -300 } }))!;
     expect(p.rotation).toBeCloseTo(90, 5);
     expect(p.position).toEqual({ x: 1000, y: 2000, z: 0 });
   });

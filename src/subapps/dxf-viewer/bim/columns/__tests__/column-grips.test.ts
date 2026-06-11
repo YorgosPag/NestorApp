@@ -105,11 +105,11 @@ describe('column-grips — getColumnGrips (Phase 4.5)', () => {
     });
     const grips = getColumnGrips(col);
     // ADR-363 Φ1G.5 Slice 2: center grip removed; array shifted down by 1.
-    // rotation handle moved to the face OPPOSITE the depth handle (clean separation
-    // from the πάχος handle, Revit-style): y − (600/2 + 200)*0.001 = 8 − 0.5 = 7.5.
+    // rotation handle sits ON the face OPPOSITE the depth handle (offset 0, clean
+    // separation from the πάχος handle, Revit-style): y − (600/2 + 0)*0.001 = 8 − 0.3 = 7.7.
     expect(grips[0].columnGripKind).toBe('column-rotation');
     expect(grips[0].position.x).toBeCloseTo(10, 6);
-    expect(grips[0].position.y).toBeCloseTo(7.5, 6);
+    expect(grips[0].position.y).toBeCloseTo(7.7, 6);
     // width handle: x + (400/2)*0.001 = 10.2 (not 210).
     expect(grips[1].position.x).toBeCloseTo(10.2, 6);
     expect(grips[1].position.y).toBeCloseTo(8, 6);

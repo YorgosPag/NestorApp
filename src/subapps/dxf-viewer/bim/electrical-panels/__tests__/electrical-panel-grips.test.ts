@@ -56,8 +56,8 @@ describe('getElectricalPanelGrips', () => {
   // ADR-363 Φ1G.5 Slice 2: rotation is now array index 0 (move grip removed); gripIndex field stays 1.
   it('places the rotation handle beyond the +Y edge (length/2 + offset)', () => {
     const [rotation] = getElectricalPanelGrips(entityWith());
-    // length/2 (300) + ROTATION_HANDLE_OFFSET_MM (200) = 500 above centre.
-    expect(rotation.position).toEqual({ x: 1000, y: 2500 });
+    // length/2 (300) + ROTATION_HANDLE_OFFSET_MM (0) = 300 above centre (on the face).
+    expect(rotation.position).toEqual({ x: 1000, y: 2300 });
   });
 });
 
@@ -96,8 +96,8 @@ describe('applyElectricalPanelGripDrag', () => {
   });
 
   it('rotation handle drag sweeps the rotation angle about the centre', () => {
-    // Handle starts at (1000, 2500); move it to (500, 2000) → vector (0,500)→(-500,0) = +90°.
-    const next = applyElectricalPanelGripDrag('electrical-panel-rotation', { originalParams: baseParams, delta: { x: -500, y: -500 } });
+    // Handle now starts at (1000, 2300) (offset 0); move it to (500, 2000) → vector (0,300)→(-500,0) = +90°.
+    const next = applyElectricalPanelGripDrag('electrical-panel-rotation', { originalParams: baseParams, delta: { x: -500, y: -300 } });
     expect(next.rotation).toBeCloseTo(90, 5);
   });
 });
@@ -125,7 +125,7 @@ describe('applyElectricalPanelGripDrag — pivot rotate (hot-grip 6-click)', () 
     // Position must NOT orbit (no pivot) — only the angle changes (handle-relative).
     const next = applyElectricalPanelGripDrag('electrical-panel-rotation', {
       originalParams: pivotParams,
-      delta: { x: -500, y: -500 },
+      delta: { x: -500, y: -300 },
     });
     expect(next.position).toEqual({ x: 1000, y: 0, z: 0 });
     expect(next.rotation).toBeCloseTo(90, 5);

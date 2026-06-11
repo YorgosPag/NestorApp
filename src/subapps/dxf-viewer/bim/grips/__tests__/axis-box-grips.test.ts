@@ -68,9 +68,9 @@ describe('getAxisBoxGrips', () => {
     expect(byRole['corner-start-neg']).toEqual({ x: 0, y: -10 });
     expect(byRole['corner-end-pos']).toEqual({ x: 100, y: 10 });
     expect(byRole['corner-end-neg']).toEqual({ x: 100, y: -10 });
-    // rotation handle stands off the OPPOSITE (−perp) face — clean separation from
-    // width-edge. halfLength 10 + ROTATION_HANDLE_OFFSET_MM 200 → −perp → (50, −210).
-    expect(byRole['rotation']).toEqual({ x: 50, y: -210 });
+    // rotation handle sits ON the OPPOSITE (−perp) face — clean separation from
+    // width-edge. halfLength 10 + ROTATION_HANDLE_OFFSET_MM 0 → −perp → (50, −10).
+    expect(byRole['rotation']).toEqual({ x: 50, y: -10 });
   });
 
   it('honours widthFaceSign (-1 = −perp face) for the single-handle grips', () => {
@@ -78,7 +78,7 @@ describe('getAxisBoxGrips', () => {
       getAxisBoxGrips({ ...horizontalBox(), widthFaceSign: -1 }).map((g) => [g.role, g.position]),
     );
     expect(byRole['width-edge']).toEqual({ x: 50, y: -10 });
-    expect(byRole['rotation']).toEqual({ x: 50, y: 210 }); // stands off the opposite (+perp) face
+    expect(byRole['rotation']).toEqual({ x: 50, y: 10 }); // sits ON the opposite (+perp) face
   });
 
   it('returns no grips on a degenerate (zero-length) axis', () => {

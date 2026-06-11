@@ -54,11 +54,11 @@ describe('getMepFixtureGrips', () => {
     expect(byKind['mep-fixture-corner-se']).toEqual({ x: 1300, y: 1700 });
   });
 
-  it('places the rotation handle beyond the +Y edge (length/2 + offset)', () => {
+  it('places the rotation handle ON the +Y edge (length/2 + offset 0)', () => {
     // ADR-363 Φ1G.5 Slice 2 — move grip gone; rotation is now array index 0.
     const [rotation] = getMepFixtureGrips(entityWith());
-    // length/2 (300) + ROTATION_HANDLE_OFFSET_MM (200) = 500 above centre.
-    expect(rotation.position).toEqual({ x: 1000, y: 2500 });
+    // length/2 (300) + ROTATION_HANDLE_OFFSET_MM (0) = 300 above centre (on the face).
+    expect(rotation.position).toEqual({ x: 1000, y: 2300 });
   });
 
   // ADR-363 Φ1G.5 Slice 2 — move grip removed from circular; only diameter remains.
@@ -110,8 +110,8 @@ describe('applyMepFixtureGripDrag', () => {
   });
 
   it('rotation handle drag sweeps the rotation angle about the centre', () => {
-    // Handle starts at (1000, 2500); move it to (500, 2000) → vector (0,500)→(-500,0) = +90°.
-    const next = applyMepFixtureGripDrag('mep-fixture-rotation', { originalParams: baseParams, delta: { x: -500, y: -500 } });
+    // Handle now starts at (1000, 2300) (offset 0); move it to (500, 2000) → vector (0,300)→(-500,0) = +90°.
+    const next = applyMepFixtureGripDrag('mep-fixture-rotation', { originalParams: baseParams, delta: { x: -500, y: -300 } });
     expect(next.rotation).toBeCloseTo(90, 5);
   });
 
@@ -147,7 +147,7 @@ describe('applyMepFixtureGripDrag — pivot rotate (hot-grip 6-click)', () => {
     // Position must NOT orbit (no pivot) — only the angle changes (handle-relative).
     const next = applyMepFixtureGripDrag('mep-fixture-rotation', {
       originalParams: pivotParams,
-      delta: { x: -500, y: -500 },
+      delta: { x: -500, y: -300 },
     });
     expect(next.position).toEqual({ x: 1000, y: 0, z: 0 });
     expect(next.rotation).toBeCloseTo(90, 5);
