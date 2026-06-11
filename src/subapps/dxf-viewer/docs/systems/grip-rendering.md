@@ -168,7 +168,7 @@ private drawAutoCADHandles(
 |---------|-------------------|----------------------|--------|
 | **Size Calculation** | `calculateGripSize()` | Inline `Math.round(size * dpiScale)` | 🔴 DUPLICATE |
 | **Color Selection** | `getGripFillColor()` | Inline `if/else` state checks | 🔴 DUPLICATE |
-| **Hover Detection** | `getGripTemperature()` | Inline grip index comparison | 🔴 DUPLICATE |
+| **Hover Detection** | `getGripTemperature()` → `resolveGripTemperature()` SSoT | `GripInteractionDetector` now a thin façade over the same SSoT | ✅ UNIFIED (ADR-397, 2026-06-11) |
 | **Square Rendering** | Uses `renderSquareGrip()` | Direct `ctx.rect()` calls | 🔴 DUPLICATE |
 | **DPI Scaling** | Via `getGripPreviewStyleWithOverride()` | `gripSize * dpiScale` | 🔴 DUPLICATE |
 | **Temperature Mapping** | cold/warm/hot | unselected/hot/selected | 🔴 SEMANTIC DUPLICATE |

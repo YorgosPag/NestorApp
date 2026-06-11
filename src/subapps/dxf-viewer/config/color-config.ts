@@ -13,6 +13,10 @@ export const GRIP_COLD_COLOR = '#FF6600' as const;  // TEST orange — will beco
 export const GRIP_WARM_COLOR = '#FF7F00' as const;  // Orange — hover
 export const GRIP_HOT_COLOR  = '#FF0000' as const;  // Red    — selected/active
 export const GRIP_CONTOUR_COLOR = '#000000' as const; // Black — outline
+// ADR-397 — «snappable» grip state: a grip that is an active snap target during a
+// rotation operation. Cyan (= UI_COLORS_BASE.GUIDE_X '#00BCD4', construction/guide
+// family) so it reads as "snap reference", distinct from cold/warm/hot.
+export const GRIP_SNAPPABLE_COLOR = '#00BCD4' as const; // Cyan — snappable-during-rotation
 
 /**
  * Resolved grip colors — all fields are non-null strings, ready for rendering.

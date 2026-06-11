@@ -21,9 +21,9 @@ export type {
   GripSettings,
 } from './types';
 
-// SSoT: grip temperature resolution (cold/warm/hot) — ONE place, all consumers
+// SSoT: grip temperature resolution (cold/warm/hot/snappable) — ONE place, all consumers
 export type { GripRef, GripTemperatureState } from './grip-temperature';
-export { resolveGripTemperature } from './grip-temperature';
+export { resolveGripTemperature, gripKey } from './grip-temperature';
 
 // ============================================================================
 // CONSTANT EXPORTS

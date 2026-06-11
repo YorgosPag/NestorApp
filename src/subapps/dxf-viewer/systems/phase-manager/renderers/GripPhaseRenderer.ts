@@ -122,6 +122,8 @@ export class GripPhaseRenderer {
       hovered: gripState.hoveredGrip,
       active: gripState.selectedGrip ?? gripState.dragginGrip,
       dragging: gripState.dragginGrip,
+      // ADR-397 — rotation snap targets render cyan ('snappable'); hot still wins.
+      snappableKeys: gripState.snappableKeys,
     });
   }
 

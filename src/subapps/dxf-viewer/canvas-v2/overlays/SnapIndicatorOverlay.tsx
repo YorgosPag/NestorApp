@@ -305,6 +305,30 @@ function SnapShape({ type, color }: { type: string; color: string }) {
         </svg>
       );
 
+    // ⊙ ROTATION_PIVOT: Circle + center dot — ADR-397 rotation centre snap.
+    // Echoes the on-canvas pivot ⊙ marker so the snap reads as "the rotation centre".
+    case 'rotation_pivot':
+      return (
+        <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
+          <circle cx={half} cy={half} r={half - strokeWidth} fill="none" stroke={color} strokeWidth={strokeWidth} />
+          <circle cx={half} cy={half} r={getNodeDotRadius()} fill={color} />
+        </svg>
+      );
+
+    // ◇ ROTATION_GRIP: Diamond — ADR-397 rotating entity grip snap.
+    case 'rotation_grip':
+      return (
+        <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
+          <polygon
+            points={`${half},${strokeWidth} ${size - strokeWidth},${half} ${half},${size - strokeWidth} ${strokeWidth},${half}`}
+            fill="none"
+            stroke={color}
+            strokeWidth={strokeWidth}
+            strokeLinejoin="miter"
+          />
+        </svg>
+      );
+
     // Default: X shape (intersection style) - fallback
     default:
       return (

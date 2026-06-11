@@ -54,6 +54,8 @@ import { OpeningCornerSnapEngine } from '../engines/OpeningCornerSnapEngine';
 import { MepConnectorSnapEngine } from '../engines/MepConnectorSnapEngine';
 // ADR-378 Phase 3: Text snap engine (TEXT/MTEXT 8-point snap — completes ADR-344 Phase 6.C)
 import { TextSnapEngine } from '../engines/TextSnapEngine';
+// ADR-397: rotation snap engines (pivot ⊙ + rotating entity grips — contextual, read RotationSnapStore)
+import { RotationPivotSnapEngine, RotationGripSnapEngine } from '../engines/RotationSnapEngine';
 
 interface Viewport {
   worldPerPixelAt(p: Point2D): number;
@@ -110,6 +112,10 @@ export class SnapEngineRegistry {
     this.engines.set(ExtendedSnapType.BIM_MEP_CONNECTOR, new MepConnectorSnapEngine());
     // ADR-378 Phase 3: TEXT/MTEXT 8-point snap (insertion + corners + center + edges)
     this.engines.set(ExtendedSnapType.TEXT, new TextSnapEngine());
+    // ADR-397: rotation snap — pivot ⊙ (priority -2.5) + rotating entity grips (priority 0).
+    // Contextual: both read RotationSnapStore, which is empty outside a rotation op.
+    this.engines.set(ExtendedSnapType.ROTATION_PIVOT, new RotationPivotSnapEngine());
+    this.engines.set(ExtendedSnapType.ROTATION_GRIP, new RotationGripSnapEngine());
   }
 
   initializeEnginesWithEntities(entities: Entity[], settings: ProSnapSettings): void {

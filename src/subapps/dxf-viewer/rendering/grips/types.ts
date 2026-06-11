@@ -30,9 +30,10 @@ export type GripType =
  * Following AutoCAD/BricsCAD standards for visual feedback
  */
 export type GripTemperature =
-  | 'cold'  // Normal state (default color - blue)
-  | 'warm'  // Hover state (highlight color - orange)
-  | 'hot';  // Active/drag state (active color - red)
+  | 'cold'       // Normal state (default color - blue)
+  | 'warm'       // Hover state (highlight color - orange)
+  | 'hot'        // Active/drag state (active color - red)
+  | 'snappable'; // ADR-397 — active snap target during rotation (cyan)
 
 /**
  * Grip shape type

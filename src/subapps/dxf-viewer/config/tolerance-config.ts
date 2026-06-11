@@ -476,6 +476,10 @@ export const SNAP_ENGINE_PRIORITIES = {
   BIM_OPENING_CORNER: -2,
   /** ADR-378 Phase 3: TEXT/MTEXT 8-point snap (insertion + 4 corners + center + 2 edge mids) — same tier as INSERTION */
   TEXT: 2,
+  /** ADR-397: rotation centre ⊙ — highest precision while rotating (beats BIM face corners) */
+  ROTATION_PIVOT: -2.5,
+  /** ADR-397: rotating entity grips — endpoint tier (exact grip points) */
+  ROTATION_GRIP: 0,
 } as const;
 
 // ===== SNAP UI OFFSETS =====

@@ -1,119 +1,49 @@
 /**
- * @fileoverview Grip Interaction Detector - Temperature State Detection
- * @description Detects grip temperature based on interaction state
+ * @fileoverview Grip Interaction Detector — thin façade over the temperature SSoT
+ * @description Detects grip temperature based on interaction state. The priority
+ * logic is NOT implemented here — it lives in the single source of truth
+ * `resolveGripTemperature` (grip-temperature.ts). This class remains only as the
+ * object `UnifiedGripRenderer` instantiates; it forwards to the SSoT so there is
+ * exactly ONE place that decides cold/warm/hot/snappable.
  * @author Enterprise Architecture Team
  * @date 2027-01-27
- * @version 1.0.0
- * @compliance CLAUDE.md Enterprise Standards
+ * @version 2.0.0
+ * @compliance CLAUDE.md Enterprise Standards — FULL SSoT (ADR-397)
  */
 
 import type { GripTemperature, GripInteractionState } from './types';
+import { resolveGripTemperature } from './grip-temperature';
 
 // ============================================================================
 // GRIP INTERACTION DETECTOR CLASS
 // ============================================================================
 
 /**
- * Enterprise Grip Interaction Detector
- * Detects grip temperature (cold/warm/hot) based on interaction state
- *
- * Temperature detection priority:
- * 1. Dragging → hot (highest priority)
- * 2. Active/selected → hot
- * 3. Hovered → warm
- * 4. None → cold (default)
+ * Grip Interaction Detector (façade).
+ * Forwards to `resolveGripTemperature` — the SSoT. `GripInteractionState`
+ * ({hovered, active, dragging}) is structurally a `GripTemperatureState`, so it
+ * passes straight through.
  *
  * @example
  * ```typescript
  * const detector = new GripInteractionDetector();
- * const state: GripInteractionState = {
- *   hovered: { entityId: 'line-1', gripIndex: 0 }
- * };
- *
- * // Hovered grip
- * detector.detectTemperature('line-1', 0, state); // 'warm'
- *
- * // Non-hovered grip
- * detector.detectTemperature('line-1', 1, state); // 'cold'
+ * detector.detectTemperature('line-1', 0, { hovered: { entityId: 'line-1', gripIndex: 0 } }); // 'warm'
  * ```
  */
 export class GripInteractionDetector {
   /**
-   * Detect grip temperature based on interaction state
+   * Detect grip temperature based on interaction state.
    *
    * @param entityId - Entity ID of the grip
    * @param gripIndex - Index of the grip within entity
    * @param interactionState - Optional current interaction state
-   * @returns Grip temperature (cold/warm/hot)
+   * @returns Grip temperature (cold/warm/hot/snappable)
    */
   detectTemperature(
     entityId: string,
     gripIndex: number,
     interactionState?: GripInteractionState
   ): GripTemperature {
-    // No interaction state → cold
-    if (!interactionState) {
-      return 'cold';
-    }
-
-    // Priority 1: Dragging (highest priority) → hot
-    if (this.isDragging(entityId, gripIndex, interactionState)) {
-      return 'hot';
-    }
-
-    // Priority 2: Active/selected → hot
-    if (this.isActive(entityId, gripIndex, interactionState)) {
-      return 'hot';
-    }
-
-    // Priority 3: Hovered → warm
-    if (this.isHovered(entityId, gripIndex, interactionState)) {
-      return 'warm';
-    }
-
-    // Default: cold
-    return 'cold';
-  }
-
-  /**
-   * Check if grip is hovered
-   */
-  private isHovered(
-    entityId: string,
-    gripIndex: number,
-    state: GripInteractionState
-  ): boolean {
-    return (
-      state.hovered?.entityId === entityId &&
-      state.hovered?.gripIndex === gripIndex
-    );
-  }
-
-  /**
-   * Check if grip is active/selected
-   */
-  private isActive(
-    entityId: string,
-    gripIndex: number,
-    state: GripInteractionState
-  ): boolean {
-    return (
-      state.active?.entityId === entityId &&
-      state.active?.gripIndex === gripIndex
-    );
-  }
-
-  /**
-   * Check if grip is being dragged
-   */
-  private isDragging(
-    entityId: string,
-    gripIndex: number,
-    state: GripInteractionState
-  ): boolean {
-    return (
-      state.dragging?.entityId === entityId &&
-      state.dragging?.gripIndex === gripIndex
-    );
+    return resolveGripTemperature(entityId, gripIndex, interactionState);
   }
 }

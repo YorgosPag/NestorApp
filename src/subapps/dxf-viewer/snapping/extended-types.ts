@@ -50,6 +50,8 @@ export enum ExtendedSnapType {
   BIM_OPENING_CORNER = 'bim_opening_corner', // ADR-370: opening (door/window) face corner
   BIM_MEP_CONNECTOR  = 'bim_mep_connector',  // ADR-408 Φ9: MEP connector attach point (segment endpoints / fixture / panel)
   TEXT               = 'text',                // ADR-378 Phase 3: TEXT/MTEXT 8-point snap (insertion + 4 corners + center + 2 edge mids)
+  ROTATION_PIVOT     = 'rotation_pivot',      // ADR-397: rotation centre ⊙ snap (active only during a rotation op)
+  ROTATION_GRIP      = 'rotation_grip',       // ADR-397: rotating entity's grips snap (active only during a rotation op)
   AUTO = 'auto'
 }
 
@@ -140,10 +142,13 @@ export const DEFAULT_PRO_SNAP_SETTINGS: ProSnapSettings = {
     ExtendedSnapType.BIM_OPENING_CORNER,  // ADR-370: opening face corner
     ExtendedSnapType.BIM_MEP_CONNECTOR,   // ADR-408 Φ9: MEP connector attach point
     ExtendedSnapType.TEXT,                // ADR-378 Phase 3: TEXT/MTEXT 8-point snap
+    ExtendedSnapType.ROTATION_PIVOT,      // ADR-397: rotation centre snap (contextual — store empty when idle)
+    ExtendedSnapType.ROTATION_GRIP,       // ADR-397: rotating entity grips snap (contextual)
   ]),
   showSnapMarkers: true,
   showSnapTooltips: true,
   priority: [
+    ExtendedSnapType.ROTATION_PIVOT,      // ADR-397: rotation centre — highest precision while rotating
     ExtendedSnapType.BIM_WALL_CORNER,     // ADR-370: face corners — highest structural precision
     ExtendedSnapType.BIM_BEAM_CORNER,     // ADR-370
     ExtendedSnapType.BIM_SLAB_CORNER,     // ADR-370
@@ -153,6 +158,7 @@ export const DEFAULT_PRO_SNAP_SETTINGS: ProSnapSettings = {
     ExtendedSnapType.BIM_COLUMN_CENTER,   // ADR-363 Phase 5.5i: structural precision — before generic endpoint
     ExtendedSnapType.INTERSECTION,
     ExtendedSnapType.ENDPOINT,
+    ExtendedSnapType.ROTATION_GRIP,       // ADR-397: rotating entity grips — endpoint tier
     ExtendedSnapType.MIDPOINT,
     ExtendedSnapType.INSERTION,           // ADR-378 §5: priority 2 — before TEXT (also 2)
     ExtendedSnapType.TEXT,                // ADR-378 Phase 3: text 8-point snap — priority 2 (after INSERTION)
@@ -202,6 +208,8 @@ export const DEFAULT_PRO_SNAP_SETTINGS: ProSnapSettings = {
     [ExtendedSnapType.BIM_OPENING_CORNER]:  10, // ADR-370
     [ExtendedSnapType.BIM_MEP_CONNECTOR]:   10, // ADR-408 Φ9: MEP connector attach point
     [ExtendedSnapType.TEXT]:                10, // ADR-378 Phase 3: text 8-point snap (insertion/corners/center/edges)
+    [ExtendedSnapType.ROTATION_PIVOT]:      12, // ADR-397: rotation centre — wide grab (easy magnetism to ⊙)
+    [ExtendedSnapType.ROTATION_GRIP]:       10, // ADR-397: rotating entity grips — AutoCAD APERTURE default
   }
 };
 

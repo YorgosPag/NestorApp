@@ -35,6 +35,8 @@ import { useGripRegistry } from './grip-registry';
 import { findNearestGrip } from './grip-hit-testing';
 import type { WallHotGripOp, HotGripStep } from './wall-hot-grip-fsm';
 import { WallRotateHotGripStore } from '../../bim/walls/wall-rotate-hotgrip-store';
+// ADR-397 — rotation snap targets SSoT (arm on centre-pick, clear on reset).
+import { getGlobalRotationSnapStore } from '../../bim/grips/rotation-snap-store';
 import { runGripMouseDown, runGripMouseUp } from './grip-mouse-handlers';
 import type { DxfCommitDeps, OverlayCommitDeps } from './grip-commit-adapters';
 import { GripBasePointStore } from '../../systems/grip/GripBasePointStore';
@@ -219,6 +221,9 @@ export function useUnifiedGripInteraction(
     hotGripRefEndRef.current = null;
     hotGripAlignStartRef.current = null;
     WallRotateHotGripStore.clear();
+    // ADR-397 — disarm the rotation snap targets (pivot ⊙ + grips) so the cursor
+    // stops magnetising and the cyan grips revert once the rotation ends/cancels.
+    getGlobalRotationSnapStore().clear();
     // ADR-363 Phase 1G.5 — disarm the Alt whole-entity move at the end of every
     // grip session so the next drag starts from its natural parametric behaviour.
     GripAltMoveStore.clear();
@@ -307,8 +312,16 @@ export function useUnifiedGripInteraction(
         dxfCommitDeps, overlayCommitDeps, resetToIdle, setCurrentWorldPos, markDragFinished,
         draggingVertices, setDraggingVertices, draggingEdgeMidpoint, setDraggingEdgeMidpoint,
         draggingOverlayBody, setDraggingOverlayBody, setSelectedGrips, setDragPreviewPosition,
+        // ADR-397 — capture the rotating entity's grip world-points so the centre-pick
+        // step can arm the rotation snap targets (pivot ⊙ + grips).
+        rotatingEntityGripsWorld: () =>
+          activeGrip?.source === 'dxf' && activeGrip.entityId
+            ? allGrips
+                .filter((g) => g.source === 'dxf' && g.entityId === activeGrip.entityId)
+                .map((g) => ({ entityId: g.entityId!, gripIndex: g.gripIndex, point: g.position }))
+            : [],
       }),
-    [phase, activeGrip, dxfCommitDeps, overlayCommitDeps, draggingVertices, draggingEdgeMidpoint, draggingOverlayBody, resetToIdle, markDragFinished],
+    [phase, activeGrip, allGrips, dxfCommitDeps, overlayCommitDeps, draggingVertices, draggingEdgeMidpoint, draggingOverlayBody, resetToIdle, markDragFinished],
   );
   // ── ESCAPE ──
   const handleEscape = useCallback((): boolean => {

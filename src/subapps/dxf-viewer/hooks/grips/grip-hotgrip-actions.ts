@@ -15,6 +15,8 @@ import type { Point2D } from '../../rendering/types/Types';
 import type { WallHotGripOp, HotGripStep } from './wall-hot-grip-fsm';
 import type { UnifiedGripInfo, DxfCommitDeps } from './unified-grip-types';
 import { BimRotateHotGripStore } from '../../bim/grips/bim-rotate-hotgrip-store';
+// ADR-397 — arm the rotation snap targets (pivot ⊙ + entity grips) when the centre is picked.
+import { getGlobalRotationSnapStore } from '../../bim/grips/rotation-snap-store';
 import { commitDxfGripDragModeAware } from './grip-commit-adapters';
 import { GripModeStore } from '../../systems/grip/GripModeStore';
 import { GripBasePointStore } from '../../systems/grip/GripBasePointStore';
@@ -37,6 +39,13 @@ export interface HotGripActionCtx {
   setCurrentWorldPos: Dispatch<SetStateAction<Point2D | null>>;
   dxfCommitDeps: DxfCommitDeps;
   resetToIdle: () => void;
+  /**
+   * ADR-397 — world-space grips of the entity being rotated, captured at
+   * centre-pick time to arm the rotation snap targets (pivot ⊙ + grips). Supplied
+   * by the unified grip hook (which owns `allGrips`/`activeGrip`). Optional —
+   * absent for non-rotate flows.
+   */
+  rotatingEntityGripsWorld?: () => ReadonlyArray<{ entityId: string; gripIndex: number; point: Point2D }>;
 }
 
 // ADR-363 Phase 1G.3 — i18n key for the toolbar hint shown during each hot-grip
@@ -92,6 +101,10 @@ export function advanceHotGripPick(worldPos: Point2D, ctx: HotGripActionCtx): vo
       anchorRef.current = null;
       hotGripStepRef.current = 'await-ref-start';
       setCurrentWorldPos(null);
+      // ADR-397 — the rotation CENTRE is now locked. Arm the snap targets: the
+      // pivot ⊙ and the entity's grips become snap candidates (cursor magnetism via
+      // the existing snap pipeline) AND render cyan ('snappable'). Cleared on reset.
+      getGlobalRotationSnapStore().setTargets(p, ctx.rotatingEntityGripsWorld?.() ?? []);
     }
   } else if (step === 'await-ref-start') {
     hotGripRefStartRef.current = p;

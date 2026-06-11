@@ -97,8 +97,12 @@ export type {
 // UNIFIED TYPES
 // ============================================================================
 
-/** Visual temperature of a grip (cold → warm → hot) */
-export type GripTemperature = 'cold' | 'warm' | 'hot';
+/**
+ * Visual temperature of a grip (cold → warm → hot → snappable).
+ * 🏢 SSoT (ADR-397): canonical union in `rendering/grips/types.ts` — re-exported,
+ * NO local duplicate.
+ */
+export type { GripTemperature } from '../../rendering/grips/types';
 
 /** Source system that owns this grip */
 export type GripSource = 'dxf' | 'overlay';

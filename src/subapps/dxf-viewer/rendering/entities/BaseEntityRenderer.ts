@@ -9,6 +9,8 @@ import type { ViewTransform, Point2D, Viewport } from '../types/Types';
 import { CAD_UI_COLORS, resolveGripColors } from '../../config/color-config';
 import type { GripSettings } from '../../types/gripSettings';
 import { PhaseManager } from '../../systems/phase-manager/PhaseManager';
+// 🏢 ADR-397 — rotation snap targets SSoT (event-time read for cyan 'snappable' grips)
+import { getGlobalRotationSnapStore } from '../../bim/grips/rotation-snap-store';
 import type { EntityModel, RenderOptions, GripInfo } from '../types/Types';
 import type { Entity } from '../../types/entities';
 import { DEFAULT_TOLERANCE } from '../../config/tolerance-config';
@@ -139,8 +141,12 @@ export abstract class BaseEntityRenderer {
       hoveredGrip: this.gripInteraction.hovered,
       selectedGrip: this.gripInteraction.active,
       dragginGrip: undefined,
+      // ADR-397 — event-time read of the rotation snap targets (imperative SSoT,
+      // zero React). During a rotation these grips render cyan ('snappable'); the
+      // set is empty otherwise so cold/warm/hot are unaffected.
+      snappableKeys: getGlobalRotationSnapStore().snappableKeys(),
     };
-    
+
     this.phaseManager.renderPhaseGrips(entity as Entity, grips, phaseState);
   }
 
@@ -193,19 +199,6 @@ export abstract class BaseEntityRenderer {
   /** Γενική μέθοδος — όλα τα κείμενα. */
   protected applyMeasurementTextStyle(): void {
     this.applyDimensionTextStyle();
-  }
-
-  private stateForGrip(entityId: string, idx: number): 'cold'|'warm'|'hot' {
-    if (this.gripInteraction.active?.entityId === entityId &&
-        this.gripInteraction.active?.gripIndex === idx) return 'hot';
-    if (this.gripInteraction.hovered?.entityId === entityId &&
-        this.gripInteraction.hovered?.gripIndex === idx) return 'warm';
-    return 'cold';
-  }
-
-  private drawGripAtWorld(worldPt: Point2D, state: 'cold'|'warm'|'hot', gripType?: string) {
-    const screenPoint = CoordinateTransforms.worldToScreen(worldPt, this.transform, this.getViewport());
-    this.drawGrip(screenPoint, state, gripType);
   }
 
   // viewport culling για grips - κερδίζουμε πολλά όταν έχουμε χιλιάδες

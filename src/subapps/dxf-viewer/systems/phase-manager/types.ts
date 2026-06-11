@@ -23,12 +23,12 @@ import type { Entity } from '../../types/entities';
 export type RenderingPhase = 'normal' | 'preview' | 'measurement' | 'highlighted';
 
 /**
- * Grip interaction temperature states (AutoCAD/BricsCAD standard)
- * - cold: Normal state (blue) - grip is visible but not interacted
- * - warm: Hover state (orange) - cursor is over the grip
- * - hot: Active/dragging state (red) - grip is being manipulated
+ * Grip interaction temperature states (AutoCAD/BricsCAD standard).
+ * 🏢 SSoT (ADR-397): the canonical union lives in `rendering/grips/types.ts`
+ * (cold / warm / hot / snappable). Re-exported here for the phase-manager's
+ * backward-compatible surface — NO local duplicate definition.
  */
-export type GripTemperature = 'cold' | 'warm' | 'hot';
+export type { GripTemperature } from '../../rendering/grips/types';
 
 // ============================================================================
 // CONFIGURATION INTERFACES
@@ -104,6 +104,12 @@ export interface GripInteractionState {
   selectedGrip?: GripIdentifier;
   /** Currently dragging grip (mouse down + move) */
   dragginGrip?: GripIdentifier;
+  /**
+   * ADR-397 — grip keys (`${entityId}_${gripIndex}`) that are active snap targets
+   * during a rotation operation → render cyan ('snappable'). Fed from the
+   * RotationSnapStore. Absent/empty outside a rotation.
+   */
+  snappableKeys?: ReadonlySet<string>;
 }
 
 /**

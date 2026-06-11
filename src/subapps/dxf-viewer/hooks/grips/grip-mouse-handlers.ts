@@ -113,6 +113,9 @@ export interface GripMouseUpCtx {
   setDraggingOverlayBody: Dispatch<SetStateAction<DraggingOverlayBodyState | null>>;
   setSelectedGrips: Dispatch<SetStateAction<SelectedGrip[]>>;
   setDragPreviewPosition: Dispatch<SetStateAction<Point2D | null>>;
+  // ADR-397 — rotating entity's grip world-points provider, consumed by
+  // advanceHotGripPick to arm the rotation snap targets at centre-pick.
+  rotatingEntityGripsWorld?: () => ReadonlyArray<{ entityId: string; gripIndex: number; point: Point2D }>;
 }
 
 // ============================================================================

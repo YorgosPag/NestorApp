@@ -42,6 +42,7 @@ export class GripColorManager {
     cold: DEFAULT_GRIP_COLORS.COLD,
     warm: DEFAULT_GRIP_COLORS.WARM,
     hot:  DEFAULT_GRIP_COLORS.HOT,
+    snappable: DEFAULT_GRIP_COLORS.SNAPPABLE, // ADR-397 — cyan rotation snap target
   };
   /**
    * Get grip fill color based on priority system
@@ -75,8 +76,9 @@ export class GripColorManager {
       return EDGE_GRIP_COLOR;
     }
 
-    // Priority 3: Temperature color from settings
-    if (settings?.colors) {
+    // Priority 3: Temperature color from settings (cold/warm/hot only — 'snappable'
+    // has no user-facing override, it falls through to its default cyan).
+    if (settings?.colors && temperature !== 'snappable') {
       const settingsColor = settings.colors[temperature];
       if (settingsColor) {
         return this.validateColor(settingsColor);

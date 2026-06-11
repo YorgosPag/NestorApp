@@ -6,6 +6,7 @@
 
 import {
   resolveGripTemperature,
+  gripKey,
   type GripTemperatureState,
 } from '../grip-temperature';
 
@@ -91,6 +92,49 @@ describe('resolveGripTemperature — SSoT', () => {
         dragging: ref(ENTITY, GRIP),
       };
       expect(resolveGripTemperature(ENTITY, GRIP, state)).toBe('hot');
+    });
+  });
+
+  describe('snappable → cyan (rotation snap targets, ADR-397)', () => {
+    const snappableState = (...keys: string[]): GripTemperatureState => ({
+      snappableKeys: new Set(keys),
+    });
+
+    it('snappable when the grip key is in snappableKeys', () => {
+      const state = snappableState(gripKey(ENTITY, GRIP));
+      expect(resolveGripTemperature(ENTITY, GRIP, state)).toBe('snappable');
+    });
+
+    it('cold when the grip key is NOT in snappableKeys', () => {
+      const state = snappableState(gripKey(ENTITY, OTHER_GRIP));
+      expect(resolveGripTemperature(ENTITY, GRIP, state)).toBe('cold');
+    });
+
+    it('hot wins over snappable (pressed handle stays red among cyan grips)', () => {
+      const state: GripTemperatureState = {
+        active: ref(ENTITY, GRIP),
+        snappableKeys: new Set([gripKey(ENTITY, GRIP)]),
+      };
+      expect(resolveGripTemperature(ENTITY, GRIP, state)).toBe('hot');
+    });
+
+    it('snappable wins over warm (a hovered snap target is cyan, not orange)', () => {
+      const state: GripTemperatureState = {
+        hovered: ref(ENTITY, GRIP),
+        snappableKeys: new Set([gripKey(ENTITY, GRIP)]),
+      };
+      expect(resolveGripTemperature(ENTITY, GRIP, state)).toBe('snappable');
+    });
+
+    it('empty snappableKeys behaves like no snap targets', () => {
+      const state: GripTemperatureState = { snappableKeys: new Set(), hovered: ref(ENTITY, GRIP) };
+      expect(resolveGripTemperature(ENTITY, GRIP, state)).toBe('warm');
+    });
+  });
+
+  describe('gripKey', () => {
+    it('composes a stable entity_index key', () => {
+      expect(gripKey('wall-1', 3)).toBe('wall-1_3');
     });
   });
 

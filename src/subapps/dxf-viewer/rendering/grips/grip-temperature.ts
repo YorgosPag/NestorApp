@@ -51,6 +51,18 @@ export interface GripTemperatureState {
   readonly hovered?: GripRef;
   readonly active?: GripRef;
   readonly dragging?: GripRef;
+  /**
+   * Grips that are currently active SNAP TARGETS (ADR-397) — keyed by
+   * {@link gripKey}. During a rotation operation every visible grip of the
+   * rotated entity is a snap reference, so it renders cyan ('snappable') instead
+   * of its hover/cold colour. Empty / absent → no grip is snappable.
+   */
+  readonly snappableKeys?: ReadonlySet<string>;
+}
+
+/** Canonical key for a grip identity, shared by the snappable-set producers. */
+export function gripKey(entityId: string, gripIndex: number): string {
+  return `${entityId}_${gripIndex}`;
 }
 
 // ============================================================================
@@ -67,8 +79,12 @@ function matches(ref: GripRef | undefined, entityId: string, gripIndex: number):
  *
  * Priority (AutoCAD / BricsCAD / Revit-grade):
  * 1. `dragging` or `active` (the pressed / manipulated grip) → `hot`
- * 2. `hovered` (cursor over the grip)                        → `warm`
- * 3. otherwise                                               → `cold`
+ * 2. grip is in `snappableKeys` (active snap target, ADR-397)→ `snappable` (cyan)
+ * 3. `hovered` (cursor over the grip)                        → `warm`
+ * 4. otherwise                                               → `cold`
+ *
+ * `hot` wins over `snappable` so the pressed rotation handle stays red even while
+ * the entity's other grips show cyan as snap references.
  *
  * @param entityId - Entity owning the grip
  * @param gripIndex - Index of the grip within the entity
@@ -89,7 +105,12 @@ export function resolveGripTemperature(
     return 'hot';
   }
 
-  // Priority 2: hovered grip → warm
+  // Priority 2: active snap target during rotation → snappable (cyan)
+  if (state.snappableKeys?.has(gripKey(entityId, gripIndex))) {
+    return 'snappable';
+  }
+
+  // Priority 3: hovered grip → warm
   if (matches(state.hovered, entityId, gripIndex)) {
     return 'warm';
   }
