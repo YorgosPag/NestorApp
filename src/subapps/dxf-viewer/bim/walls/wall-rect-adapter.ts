@@ -32,18 +32,17 @@
 import type { Point2D } from '../../rendering/types/Types';
 import type { WallGripKind } from '../../hooks/useGripMovement';
 import type { WallParams } from '../types/wall-types';
-import { mmScaleFor } from '../../utils/scene-units';
-import type { RectFrame, RectCorner, RectSign } from '../grips/rect-frame';
+// ADR-363 (2026-06-11) — the WHOLE axis grip pipeline (geometry + corner/edge
+// resize + the axis↔frame mapping) is the shared `axis-box-grips` SSoT — the SAME
+// `applyAxisBoxGripDrag` the beam + foundation strip call. This adapter only maps
+// wall kind↔role and layers the WALL semantics (flip / miter / dna / thickness
+// clamp) on the `{start,end,width}` patch — «παντού ίδιος κώδικας, μηδέν διπλότυπα».
 import {
-  applyRectCornerDrag,
-  applyRectEdgeDrag,
-  type RectResizeLimits,
-} from '../grips/rect-grip-engine';
-// ADR-363 (2026-06-11) — the axis ⇄ RectFrame mapping is now the shared
-// `axis-box-grips` SSoT (the SAME primitives beam + foundation strip use). This
-// adapter only layers the WALL semantics (flip / miter / dna / thickness clamp)
-// on top — «παντού ίδιος κώδικας, μηδέν διπλότυπα» (Giorgio).
-import { axisToRectFrame, rectFrameToAxis } from '../grips/axis-box-grips';
+  applyAxisBoxGripDrag,
+  invertAxisBoxRoleMap,
+  type AxisBoxParams,
+  type AxisBoxGripRole,
+} from '../grips/axis-box-grips';
 import { minThicknessFloorFor, maxThicknessCeilingFor } from './wall-grip-math';
 
 /**
@@ -58,64 +57,68 @@ export function isRectWall(params: WallParams): boolean {
   return true;
 }
 
-/** `wall-corner-*` grip kind → local-axis signs (local +X = end dir, +Y = +perp). */
-const WALL_CORNER_MAP: Partial<Record<WallGripKind, RectCorner>> = {
-  'wall-corner-end-pos': { sx: 1, sy: 1 },
-  'wall-corner-start-pos': { sx: -1, sy: 1 },
-  'wall-corner-start-neg': { sx: -1, sy: -1 },
-  'wall-corner-end-neg': { sx: 1, sy: -1 },
+/**
+ * Wall grip kind ⇄ shared axis-box role. Exported so the wall grip EMISSION
+ * (`getWallGrips`) and the drag both read the SAME mapping (one source). Local
+ * +X = axis (start→end), +Y = +perp; `wall-thickness` = the perpendicular
+ * `width-edge`, `wall-edge-length` = the axial `length-edge`.
+ */
+export const WALL_ROLE_TO_KIND: Readonly<Record<AxisBoxGripRole, WallGripKind>> = {
+  'width-edge': 'wall-thickness',
+  'length-edge': 'wall-edge-length',
+  'corner-start-pos': 'wall-corner-start-pos',
+  'corner-start-neg': 'wall-corner-start-neg',
+  'corner-end-pos': 'wall-corner-end-pos',
+  'corner-end-neg': 'wall-corner-end-neg',
+  rotation: 'wall-rotation',
 };
+const WALL_KIND_TO_ROLE = invertAxisBoxRoleMap(WALL_ROLE_TO_KIND);
 
 /**
- * Straight-wall params → axis-midpoint `RectFrame` (scene units). Delegates to the
- * shared `axisToRectFrame` (thickness = the perpendicular `width`); local +X = axis,
- * +Y = +perp, halfLength = thickness/2 scene.
+ * `WallParams` → the minimal `AxisBoxParams` the shared SSoT reads. `thickness`
+ * is the perpendicular `width`; `flip` chooses which face the single `width-edge`
+ * + `rotation` handles sit on (`widthFaceSign`). Exported so `getWallGrips`
+ * emission and the drag derive the footprint from the SAME mapping.
  */
-function wallToRectFrame(params: WallParams): RectFrame {
-  return axisToRectFrame({
+export function wallAxisBoxParams(params: WallParams): AxisBoxParams {
+  return {
     start: { x: params.start.x, y: params.start.y },
     end: { x: params.end.x, y: params.end.y },
     width: params.thickness,
     sceneUnits: params.sceneUnits,
-  });
+    widthFaceSign: params.flip ? -1 : 1,
+  };
 }
 
 /**
- * `RectFrame` (post-resize) → wall params: the `{start,end,width}` axis rebuild is
- * the shared `rectFrameToAxis` SSoT; this layers the WALL semantics on top — derive
- * + clamp `thickness` (= width), preserve `flip`, clear miters (junctions break on
- * resize) and drop `dna` (manual override).
+ * Shared axis-box `{start,end,width}` patch + WALL semantics → `WallParams`:
+ * derive + clamp `thickness` (= width, scene-aware), preserve `flip`, clear miters
+ * (junctions break on resize) and drop `dna` (manual override).
  */
-function rectFrameToWallParams(frame: RectFrame, params: WallParams): WallParams {
-  const axis = rectFrameToAxis(frame, params.sceneUnits);
+function wallParamsFromPatch(
+  patch: { start: Point2D; end: Point2D; width: number },
+  params: WallParams,
+): WallParams {
   const minT = minThicknessFloorFor(params.thickness);
   const maxT = maxThicknessCeilingFor(params.thickness);
-  const thickness = Math.max(minT, Math.min(maxT, axis.width));
+  const thickness = Math.max(minT, Math.min(maxT, patch.width));
   const { dna: _dropped, ...rest } = params;
   return {
     ...rest,
-    start: { x: axis.start.x, y: axis.start.y, z: params.start.z },
-    end: { x: axis.end.x, y: axis.end.y, z: params.end.z },
+    start: { x: patch.start.x, y: patch.start.y, z: params.start.z },
+    end: { x: patch.end.x, y: patch.end.y, z: params.end.z },
     thickness,
     startMiter: undefined,
     endMiter: undefined,
   };
 }
 
-/** Min half-extents (scene units) = scene-aware thickness floor (length + perp). */
-function wallResizeLimits(params: WallParams): RectResizeLimits {
-  const half = (minThicknessFloorFor(params.thickness) * mmScaleFor(params)) / 2;
-  return { minHalfWidth: half, minHalfLength: half };
-}
-
 /**
  * Apply a straight-wall rect grip (corner / thickness edge / length edge) via the
- * shared engine. Returns `null` when the wall is not a plain rectangle OR the grip
- * kind is not a rect grip — the caller then falls back to the bespoke handlers.
- *
- * `wall-thickness` (perp edge) uses `sign = flip ? -1 : +1` so the dragged face
- * is the one drawn (`getWallGrips` places the handle on the flip-aware +perp face,
- * `posSide`). `wall-edge-length` moves the END short edge (start edge fixed).
+ * shared `applyAxisBoxGripDrag` SSoT. Returns `null` when the wall is not a plain
+ * rectangle, the grip is not a rect grip, OR the grip is `wall-rotation` (rotation
+ * keeps its bespoke `rotateWall` to honour the picked-pivot 6-click flow) — the
+ * caller then falls back to the bespoke handlers.
  */
 export function applyRectWallGrip(
   gripKind: WallGripKind,
@@ -123,17 +126,13 @@ export function applyRectWallGrip(
   delta: Point2D,
 ): WallParams | null {
   if (!isRectWall(params)) return null;
-  const limits = wallResizeLimits(params);
-  const corner = WALL_CORNER_MAP[gripKind];
-  if (corner) {
-    return rectFrameToWallParams(applyRectCornerDrag(wallToRectFrame(params), corner, delta, limits), params);
-  }
-  if (gripKind === 'wall-thickness') {
-    const sign: RectSign = params.flip ? -1 : 1;
-    return rectFrameToWallParams(applyRectEdgeDrag(wallToRectFrame(params), { axis: 'y', sign }, delta, limits), params);
-  }
-  if (gripKind === 'wall-edge-length') {
-    return rectFrameToWallParams(applyRectEdgeDrag(wallToRectFrame(params), { axis: 'x', sign: 1 }, delta, limits), params);
-  }
-  return null;
+  const role = WALL_KIND_TO_ROLE[gripKind];
+  if (!role || role === 'rotation') return null;
+  const patch = applyAxisBoxGripDrag(role, {
+    originalParams: wallAxisBoxParams(params),
+    delta,
+    minWidthMm: minThicknessFloorFor(params.thickness),
+  });
+  if (!patch) return params;
+  return wallParamsFromPatch(patch, params);
 }

@@ -49,6 +49,7 @@ import { project2D, perpUnit, unitVector, rotateAxisPointsAboutPivot } from '../
 import {
   getAxisBoxGrips,
   applyAxisBoxGripDrag,
+  invertAxisBoxRoleMap,
   type AxisBoxParams,
   type AxisBoxGripRole,
 } from '../grips/axis-box-grips';
@@ -64,15 +65,8 @@ const BEAM_ROLE_TO_KIND: Readonly<Record<AxisBoxGripRole, BeamGripKind>> = {
   rotation: 'beam-rotation',
 };
 
-/** Inverse map: corner/edge beam kinds → axis-box role (rotation handled bespoke). */
-const BEAM_KIND_TO_AXIS_ROLE: Partial<Record<BeamGripKind, AxisBoxGripRole>> = {
-  'beam-width': 'width-edge',
-  'beam-edge-length': 'length-edge',
-  'beam-corner-start-pos': 'corner-start-pos',
-  'beam-corner-start-neg': 'corner-start-neg',
-  'beam-corner-end-pos': 'corner-end-pos',
-  'beam-corner-end-neg': 'corner-end-neg',
-};
+/** Inverse (derived ONCE — no hand-written drift). Rotation handled bespoke. */
+const BEAM_KIND_TO_AXIS_ROLE = invertAxisBoxRoleMap(BEAM_ROLE_TO_KIND);
 
 /** `BeamParams` → the minimal `AxisBoxParams` the shared SSoT reads. */
 function beamAxisBoxParams(params: BeamParams): AxisBoxParams {
@@ -275,7 +269,7 @@ function applyBeamRectGrip(
 ): BeamParams | null {
   if (!isRectBeam(input.originalParams)) return null;
   const role = BEAM_KIND_TO_AXIS_ROLE[gripKind];
-  if (!role) return null;
+  if (!role || role === 'rotation') return null; // rotation → bespoke rotateBeam (handles curveControl)
   const patch = applyAxisBoxGripDrag(role, {
     originalParams: beamAxisBoxParams(input.originalParams),
     delta: input.delta,

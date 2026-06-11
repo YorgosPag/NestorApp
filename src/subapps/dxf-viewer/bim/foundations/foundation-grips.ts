@@ -56,6 +56,7 @@ import {
 import {
   getAxisBoxGrips,
   applyAxisBoxGripDrag,
+  invertAxisBoxRoleMap,
   type AxisBoxParams,
   type AxisBoxGripRole,
 } from '../grips/axis-box-grips';
@@ -79,15 +80,8 @@ const FOUNDATION_LINE_ROLE_TO_KIND: Readonly<Record<AxisBoxGripRole, FoundationG
   rotation: 'foundation-rotation',
 };
 
-/** Inverse map: corner/edge line kinds → axis-box role (rotation handled inline). */
-const FOUNDATION_LINE_KIND_TO_ROLE: Partial<Record<FoundationGripKind, AxisBoxGripRole>> = {
-  'foundation-line-width': 'width-edge',
-  'foundation-line-length': 'length-edge',
-  'foundation-corner-start-pos': 'corner-start-pos',
-  'foundation-corner-start-neg': 'corner-start-neg',
-  'foundation-corner-end-pos': 'corner-end-pos',
-  'foundation-corner-end-neg': 'corner-end-neg',
-};
+/** Inverse (derived ONCE — no hand-written drift). Rotation handled inline (line branch). */
+const FOUNDATION_LINE_KIND_TO_ROLE = invertAxisBoxRoleMap(FOUNDATION_LINE_ROLE_TO_KIND);
 
 /** `StripFootingParams`/`TieBeamParams` → the minimal `AxisBoxParams` the SSoT reads. */
 function lineAxisBoxParams(params: LineFoundationParams): AxisBoxParams {

@@ -271,3 +271,19 @@ export function applyAxisBoxGripDrag(
   }
   return null;
 }
+
+/**
+ * Build the inverse `kind → role` lookup from a consumer's `role → kind` map, so
+ * each entity declares the mapping ONCE (no hand-written, drift-prone inverse).
+ * The `rotation` role is intentionally included; consumers that handle rotation
+ * bespoke (e.g. the wall) just omit that kind from their drag dispatch.
+ */
+export function invertAxisBoxRoleMap<K extends string>(
+  roleToKind: Readonly<Record<AxisBoxGripRole, K>>,
+): Partial<Record<K, AxisBoxGripRole>> {
+  const out: Partial<Record<K, AxisBoxGripRole>> = {};
+  (Object.keys(roleToKind) as AxisBoxGripRole[]).forEach((role) => {
+    out[roleToKind[role]] = role;
+  });
+  return out;
+}
