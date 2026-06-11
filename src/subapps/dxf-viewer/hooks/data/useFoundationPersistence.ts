@@ -95,7 +95,7 @@ function isFoundation(entity: AnySceneEntity): entity is FoundationEntity {
  */
 function docToEntity(doc: FoundationDoc): FoundationEntity {
   const validation = doc.validation ?? validateFoundationParams(doc.params).bimValidation;
-  return createFoundation({
+  const entity = createFoundation({
     id: doc.id,
     params: doc.params,
     geometry: doc.geometry ?? computeFoundationGeometry(doc.params),
@@ -103,6 +103,9 @@ function docToEntity(doc: FoundationDoc): FoundationEntity {
     visible: true,
     validation,
   });
+  // ADR-441 Slice 3 — restore grid hosting bindings so follow-on-move survives
+  // reload (createFoundation factory δεν δέχεται bindings → spread μετά).
+  return doc.guideBindings ? { ...entity, guideBindings: doc.guideBindings } : entity;
 }
 
 // ============================================================================

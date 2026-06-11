@@ -41,6 +41,7 @@ import type {
   FoundationParams,
 } from '../types/foundation-types';
 import type { BimValidation } from '../types/bim-base';
+import type { GuideBinding } from '../hosting/guide-binding-types';
 
 // ============================================================================
 // TYPES
@@ -62,6 +63,13 @@ export interface FoundationDoc {
   readonly geometry?: FoundationGeometry;
   readonly floorId?: string;
   readonly layerId?: string;
+  /**
+   * ADR-441 Slice 3 — associative grid hosting. Slot-based bindings σε άξονες
+   * κανάβου· χωρίς αυτά, μετά από reload το follow-on-move θα ήταν νεκρό (η
+   * entity δεν θα ήξερε σε ποιους άξονες είναι «κρεμασμένη»). Plain `{guideId,
+   * slot}` objects → Firestore-safe.
+   */
+  readonly guideBindings?: readonly GuideBinding[];
   readonly createdAt: Timestamp;
   readonly createdBy: string;
   readonly updatedAt: Timestamp;
@@ -85,6 +93,8 @@ export interface FoundationSaveInput {
   readonly geometry?: FoundationGeometry;
   readonly floorId?: string;
   readonly layerId?: string;
+  /** ADR-441 Slice 3 — grid hosting bindings (born-hosted strips from grid). */
+  readonly guideBindings?: readonly GuideBinding[];
 }
 
 export interface FoundationUpdateInput {
@@ -155,6 +165,8 @@ export class FoundationFirestoreService {
     if (input.geometry !== undefined) base.geometry = input.geometry;
     // ADR-420 — floorId is owned by config scope (bimScopeWriteFields above), not input.
     if (input.layerId !== undefined) base.layerId = input.layerId;
+    // ADR-441 Slice 3 — persist hosting bindings (Firestore rejects undefined).
+    if (input.guideBindings !== undefined) base.guideBindings = input.guideBindings;
 
     await setDoc(ref, base);
     return base as unknown as FoundationDoc;
@@ -205,5 +217,7 @@ export function entityToSaveInput(entity: FoundationEntity): FoundationSaveInput
     params: entity.params,
     validation: entity.validation,
     layerId: entity.layerId,
+    // ADR-441 Slice 3 — carry grid hosting bindings into the persisted doc.
+    guideBindings: entity.guideBindings,
   };
 }

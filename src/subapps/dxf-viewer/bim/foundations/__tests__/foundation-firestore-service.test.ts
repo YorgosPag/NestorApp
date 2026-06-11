@@ -195,4 +195,38 @@ describe('entityToSaveInput', () => {
     expect(input).not.toHaveProperty('geometry');
     expect(input).toMatchObject({ id: 'fnd_9', kind: 'pad', params: PAD_PARAMS, layerId: 'FND' });
   });
+
+  // ADR-441 Slice 3 — grid hosting bindings round-trip.
+  it('carries guideBindings when the entity is grid-hosted', () => {
+    const entity = {
+      id: 'fnd_h', type: 'foundation', kind: 'strip', layerId: '0',
+      params: PAD_PARAMS, validation: VALIDATION,
+      guideBindings: [{ guideId: 'x1', slot: 'start-x' }, { guideId: 'y1', slot: 'start-y' }],
+    } as unknown as FoundationEntity;
+    expect(entityToSaveInput(entity).guideBindings).toEqual([
+      { guideId: 'x1', slot: 'start-x' },
+      { guideId: 'y1', slot: 'start-y' },
+    ]);
+  });
+
+  it('leaves guideBindings undefined for an unhosted entity (Firestore-safe omission)', () => {
+    const entity = {
+      id: 'fnd_p', type: 'foundation', kind: 'pad', layerId: '0',
+      params: PAD_PARAMS, validation: VALIDATION,
+    } as unknown as FoundationEntity;
+    expect(entityToSaveInput(entity).guideBindings).toBeUndefined();
+  });
+});
+
+describe('FoundationFirestoreService.saveFoundation — guideBindings (ADR-441 Slice 3)', () => {
+  it('persists guideBindings when present, omits the key when absent', async () => {
+    const svc = createFoundationFirestoreService(CONFIG);
+    const bindings = [{ guideId: 'x1', slot: 'start-x' as const }];
+    await svc.saveFoundation({ kind: 'strip', params: PAD_PARAMS, validation: VALIDATION, guideBindings: bindings });
+    expect(mockSetDoc.mock.calls[0][1].guideBindings).toEqual(bindings);
+
+    mockSetDoc.mockClear();
+    await svc.saveFoundation({ kind: 'pad', params: PAD_PARAMS, validation: VALIDATION });
+    expect(mockSetDoc.mock.calls[0][1]).not.toHaveProperty('guideBindings');
+  });
 });

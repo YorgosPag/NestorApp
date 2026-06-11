@@ -71,6 +71,17 @@ Mouse Event → DxfCanvas.onMouseMove
 
 ## Changelog
 
+### 2026-06-11 — Associative grid hosting reconciler (ADR-441 Slice 3): hosted strips follow a moving axis — imperative, RAF-throttled, μηδέν orchestrator subscription
+
+**Status**: IMPLEMENTED 2026-06-11, εκκρεμεί browser-verify. Όταν ο χρήστης μετακινεί έναν άξονα του κανάβου (guide drag, 60fps), όλα τα **hosted foundation strips** (born-hosted με slot-based `guideBindings`, ADR-441 Slice 2) ακολουθούν αυτόματα (Revit/Tekla associative grid). **High-frequency scene-write path → ADR-040-critical**, υλοποιημένο κατά τους cardinal rules:
+
+- **Καμία `useSyncExternalStore` σε orchestrator/shell** — ο νέος `useHostingReconciler` (μέσω `HostingReconcilerHost`, mounted στο `DxfViewerTopBar`) κάνει **imperative `guide-store.subscribe`** (όχι React) και **RAF-throttled (1×/frame)** coalesce του 60fps drag → ένα scene write ανά frame.
+- **Only-changed writes** — ο pure `reconcileHostedFoundations` (inverted index `Map<guideId,Set<entityId>>`, rebuild μόνο on hosted-set change· per-tick diff των bound-axis offsets) γράφει στη σκηνή ΜΟΝΟ τις strips που όντως μετακινήθηκαν· idle/unrelated guide notify → μηδέν write. Καμία αλλαγή σε bitmap cache-key (foundations = BIM render layer, όχι DXF bitmap).
+- **Loop-free** — ο reconciler ακούει ΜΟΝΟ το guide-store· το `setLevelScene` δεν ξανα-notify-άρει τον κάναβο.
+- **Persist on drag-complete (όχι ανά frame)** — settle-debounce (350ms) → `EventBus.emit('bim:entities-moved', …)` με τις τελικές moved strips → ο υπάρχων `useBimEntityMovedPersistEffect` (ADR-436) τις persist-άρει (non-selected included· grace-period guard ενάντια σε snapshot echo).
+
+Νέα αρχεία ΕΚΤΟΣ των CHECK 6B/6D paths (`bim/hosting/`, `hooks/data/`, `app/`)· καμία αλλαγή σε renderer/cursor/hover/bitmap-cache. Λεπτομέρεια στο ADR-441 §10 + changelog.
+
 ### 2026-06-11 — WYSIWYG placement preview (Τοίχος + Πεδιλοδοκός/Συνδετήρια): real-renderer pass αντί για πράσινες γραμμές (CHECK 6B/6D)
 
 **Status**: IMPLEMENTED 2026-06-11, εκκρεμεί browser-verify. Κατά το 2-click placement, η rubber-band preview των δομικών BIM tools ζωγράφιζε ένα σχηματικό **πράσινο περίγραμμα** (`PolylineEntity` με `UI_COLORS.BRIGHT_GREEN` → `PreviewRenderer.renderPolyline` uniform stroke), ΟΧΙ τον πραγματικό τοίχο/πεδιλοδοκό. **Νέα συμπεριφορά = WYSIWYG**: το preview περνά πλέον από τους **ΙΔΙΟΥΣ πραγματικούς renderers** (`WallRenderer`/`FoundationRenderer`) μέσω του `EntityRendererComposite`, οπότε είναι εξ ορισμού identical με το committed element (category fill / material hatch / lineweight / dashed hidden-line / centerline) — μηδέν duplication.
