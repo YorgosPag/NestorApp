@@ -786,6 +786,8 @@
 | **ADR-439** | Tenant Identity SSoT & Provisioning (per-tenant company profile = legal-identity SSoT) | 🟡 IN PROGRESS | [View](./adrs/ADR-439-tenant-identity-ssot-and-provisioning.md) |
 | **ADR-440** | Accounting Entity-Data SSoT (partners/members/shareholders profile-embedded = SSoT) | 🟢 DONE — pending verify+commit | [View](./adrs/ADR-440-accounting-entity-data-ssot.md) |
 | **ADR-442** | Guides & Grid Contextual Ribbon Tab (Revit-grade, `guide-` tool-active trigger) | 🟢 DONE — pending verify+commit | [View](./adrs/ADR-442-guides-contextual-ribbon-tab.md) |
+| **ADR-443** | Permanent «Δομικά» (Structural) Ribbon Tab (Revit "Structure"· permanent tab avoids property-tab conflict) | 🟢 DONE — pending verify+commit | [View](./adrs/ADR-443-structural-permanent-ribbon-tab.md) |
+| **ADR-444** | Permanent «Αρχιτεκτονικά» & «ΗΛΜ» Ribbon Tabs (Revit "Architecture"/"Systems"· siblings of ADR-443· MEP Boy-Scout re-grouped) | 🟢 DONE — pending verify+commit | [View](./adrs/ADR-444-architecture-systems-permanent-ribbon-tabs.md) |
 | **ADR-UI-001** | Visual Primitive Ownership & Semantic Tokens | ✅ APPROVED | [View](./adrs/ADR-UI-001.md) |
 
 ---

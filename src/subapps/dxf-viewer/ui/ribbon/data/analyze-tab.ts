@@ -75,10 +75,48 @@ export const THERMAL_ENVELOPE_PANEL: RibbonPanelDef = {
   ],
 };
 
+// ADR-444 — Coordination / Clash detection (Revit/Navisworks "Interference Check").
+// A cross-discipline ANALYSIS tool, so it lives here in «Ανάλυση», not in any MEP
+// discipline tab. Read-only `action` buttons (detect / clear), reused verbatim from
+// the legacy `draw.mep.group` clash submenu.
+export const CLASH_COORDINATION_PANEL: RibbonPanelDef = {
+  id: 'coordination',
+  labelKey: 'ribbon.panels.coordination',
+  rows: [
+    {
+      isInFlyout: false,
+      buttons: [
+        {
+          type: 'simple',
+          size: 'large',
+          command: {
+            id: 'analyze.clashDetect',
+            labelKey: 'ribbon.commands.bim.clashDetectionDetect.label',
+            icon: 'bim-pipe',
+            commandKey: 'clashDetection.actions.detect',
+            action: 'clashDetection.actions.detect',
+          },
+        },
+        {
+          type: 'simple',
+          size: 'large',
+          command: {
+            id: 'analyze.clashClear',
+            labelKey: 'ribbon.commands.bim.clashDetectionClear.label',
+            icon: 'bim-pipe',
+            commandKey: 'clashDetection.actions.clear',
+            action: 'clashDetection.actions.clear',
+          },
+        },
+      ],
+    },
+  ],
+};
+
 // ─── Tab ─────────────────────────────────────────────────────────────────────
 
 export const ANALYZE_TAB: RibbonTab = {
   id: 'analyze',
   labelKey: 'ribbon.tabs.analyze',
-  panels: [ANALYZE_SCHEDULE_PANEL, THERMAL_ENVELOPE_PANEL],
+  panels: [ANALYZE_SCHEDULE_PANEL, THERMAL_ENVELOPE_PANEL, CLASH_COORDINATION_PANEL],
 } as const;

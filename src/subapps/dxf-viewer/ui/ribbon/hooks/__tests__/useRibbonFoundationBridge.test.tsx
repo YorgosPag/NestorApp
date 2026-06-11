@@ -18,6 +18,9 @@ import { DEFAULT_STRIP_JUSTIFICATION } from '../../../../bim/types/foundation-ty
 import { resetGlobalCommandHistory } from '../../../../core/commands';
 import { EventBus } from '../../../../systems/events/EventBus';
 import { commitFoundationGridFromGuides } from '../../../../bim/foundations/foundation-grid-commit';
+import { buildStripGridFromGuides, type AxisGuideReader } from '../../../../bim/foundations/foundation-from-grid';
+import type { Guide } from '../../../../systems/guides/guide-types';
+import type { FoundationEntity, StripFootingParams } from '../../../../bim/types/foundation-types';
 
 // ── Mock the grid commit (SSoT reconcile) to capture auto-trigger invocations ──
 jest.mock('../../../../bim/foundations/foundation-grid-commit', () => ({
@@ -279,5 +282,69 @@ describe('useRibbonFoundationBridge — auto reconcile on grid-guides-settled', 
     mount(gridStrip);
     act(() => EventBus.emit('bim:grid-guides-settled', { levelId: 'other-level' }));
     expect(commitMock).not.toHaveBeenCalled();
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// ADR-441 Slice 8 — live junction recompute σε αλλαγή έδρασης (το σενάριο Giorgio)
+// ─────────────────────────────────────────────────────────────────────────────
+
+const gridReader = (guides: readonly Guide[]): AxisGuideReader => ({
+  getGuidesByAxis: (axis) => guides.filter((g) => g.axis === axis),
+});
+const mkGuide = (id: string, axis: Guide['axis'], offset: number): Guide =>
+  ({ id, axis, offset, visible: true, label: null, style: null, locked: false, createdAt: '', parentId: null, groupId: null } as Guide);
+
+function build2x2Grid(): FoundationEntity[] {
+  const r = buildStripGridFromGuides(
+    gridReader([mkGuide('x0', 'X', 0), mkGuide('x1', 'X', 4000), mkGuide('y0', 'Y', 0), mkGuide('y1', 'Y', 8000)]),
+    {}, 'lvl-1', 'mm',
+  );
+  return [...r.strips];
+}
+
+function makeStatefulLevelManager(entities: FoundationEntity[]) {
+  let scene: { entities: FoundationEntity[] } = { entities };
+  return {
+    levelManager: {
+      currentLevelId: 'lvl-1',
+      getLevelScene: jest.fn(() => scene),
+      setLevelScene: jest.fn((_id: string, next: { entities: FoundationEntity[] }) => { scene = next; }),
+    } as unknown as Parameters<typeof useRibbonFoundationBridge>[0]['levelManager'],
+    getScene: () => scene,
+  };
+}
+
+const isVertical = (s: FoundationEntity) => 'start' in s.params && s.params.start.x === s.params.end.x;
+
+describe('useRibbonFoundationBridge — Slice 8 live junction recompute (justification edit)', () => {
+  it('outward έδραση σε περιμετρική → οι κάθετοι γείτονες αποκτούν miter extend (γωνία κλείνει live)', () => {
+    const grid = build2x2Grid();
+    const topH = grid.find((s) => 'start' in s.params && s.params.start.y === s.params.end.y && (s.params as StripFootingParams).start.y === 8000)!;
+    const lm = makeStatefulLevelManager(grid);
+    const { result } = renderHook(() =>
+      useRibbonFoundationBridge({ levelManager: lm.levelManager, universalSelection: makeSelection(topH.id) }),
+    );
+    act(() => result.current.onComboboxChange(JUST_KEY, 'left'));
+
+    // ο edit έγινε (justification='left' στο dispatched params)
+    const next = (UpdateFoundationParamsCommand as jest.Mock).mock.calls.at(-1)?.[1];
+    expect(next.justification).toBe('left');
+    // οι κάθετοι γείτονες ενημερώθηκαν με extend (RehostFoundationsCommand μέσα στο CompoundCommand)
+    const extendedV = lm.getScene().entities.filter(
+      (s) => isVertical(s) && (s.guideBindings ?? []).some((b) => b.extend !== undefined && Math.abs(b.extend) > 0),
+    );
+    expect(extendedV.length).toBeGreaterThan(0);
+  });
+
+  it('μη grid-managed λωρίδα (χωρίς bindings) → μόνο UpdateFoundationParamsCommand, μηδέν junction', () => {
+    const lm = makeStatefulLevelManager([{ ...stripFoundation } as unknown as FoundationEntity]);
+    const { result } = renderHook(() =>
+      useRibbonFoundationBridge({ levelManager: lm.levelManager, universalSelection: makeSelection('found-strip-1') }),
+    );
+    act(() => result.current.onComboboxChange(JUST_KEY, 'left'));
+    expect((UpdateFoundationParamsCommand as jest.Mock).mock.calls.length).toBeGreaterThan(0);
+    const extended = lm.getScene().entities.filter((s) => (s.guideBindings ?? []).some((b) => b.extend !== undefined));
+    expect(extended).toHaveLength(0);
   });
 });

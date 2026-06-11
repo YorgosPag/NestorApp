@@ -28,6 +28,7 @@ import {
 } from './foundation-from-grid';
 import { reconcileGridStrips } from './foundation-grid-reconcile';
 import { rehostOrphanStrips, type RehostedStrip } from './foundation-grid-rehost';
+import { computeGridJunctionExtends } from './foundation-grid-junctions';
 import { hasGuideBindings } from '../hosting/guide-binding-types';
 import { isFoundationEntity } from '../../types/entities';
 import type { FoundationEntity } from '../types/foundation-types';
@@ -106,6 +107,47 @@ function buildReconcileCommand(
 }
 
 /**
+ * Τελικό σύνολο strips μετά το reconcile (rehosts ήδη folded στο existingForReconcile,
+ * reflows εφαρμοσμένα, deletes αφαιρεμένα, creates προστεθειμένα) — input για το
+ * junction-miter post-pass (ADR-441 Slice 8).
+ */
+function buildFinalStripSet(
+  existingForReconcile: readonly FoundationEntity[],
+  reflowUpdates: readonly RehostedStrip[],
+  toDelete: readonly FoundationEntity[],
+  toCreate: readonly FoundationEntity[],
+): FoundationEntity[] {
+  const reflowById = new Map(reflowUpdates.map((r) => [r.rehosted.id, r.rehosted]));
+  const deletedIds = new Set(toDelete.map((d) => d.id));
+  const surviving = existingForReconcile
+    .filter((e) => !deletedIds.has(e.id))
+    .map((e) => reflowById.get(e.id) ?? e);
+  return [...surviving, ...toCreate];
+}
+
+/**
+ * Fold των junction-miter extends (ADR-441 Slice 8) μέσα στα reflow/rehost updates και
+ * στα creates → ΕΝΑ atomic command (1 undo): τα created παίρνουν miter απευθείας, τα
+ * ήδη-updated αντικαθίστανται με τη miter εκδοχή, τα μόνο-miter μπαίνουν ως νέα updates.
+ */
+function foldJunctions(
+  junctions: readonly RehostedStrip[],
+  baseUpdates: readonly RehostedStrip[],
+  toCreate: readonly FoundationEntity[],
+): { readonly updates: RehostedStrip[]; readonly create: FoundationEntity[] } {
+  const jById = new Map(junctions.map((j) => [j.rehosted.id, j.rehosted]));
+  const create = toCreate.map((c) => jById.get(c.id) ?? c);
+  const baseIds = new Set(baseUpdates.map((u) => u.rehosted.id));
+  const createIds = new Set(toCreate.map((c) => c.id));
+  const merged = baseUpdates.map((u) => {
+    const j = jById.get(u.rehosted.id);
+    return j ? { original: u.original, rehosted: j } : u;
+  });
+  const jonly = junctions.filter((j) => !baseIds.has(j.rehosted.id) && !createIds.has(j.rehosted.id));
+  return { updates: [...merged, ...jonly], create };
+}
+
+/**
  * Reconcile-άρισε την εσχάρα με τον τρέχοντα κάναβο. No-op (`up-to-date`) όταν δεν
  * υπάρχει delta· `insufficient-guides` όταν λείπουν άξονες.
  */
@@ -136,16 +178,22 @@ export function commitFoundationGridFromGuides(
   // ADR-441 Slice 5a-grid — οι reflows (auto λωρίδες που ευθυγραμμίζονται στον κανόνα
   // έδρασης όταν αλλάζει ρόλος άξονα) είναι in-place updates → ίδιο command με τα rehosts.
   const reflowUpdates: RehostedStrip[] = toReJustify.map((r) => ({ original: r.original, rehosted: r.rejustified }));
-  const updates = [...rehosts, ...reflowUpdates];
 
-  if (toCreate.length === 0 && toDelete.length === 0 && updates.length === 0) {
+  // ADR-441 Slice 8 — auto-junction-join: post-pass πάνω στο τελικό σύνολο (με τις
+  // πραγματικές εδράσεις) → miter extends ώστε κάθε γωνία/κόμβος να κλείνει για όποια
+  // έδραση. Folded στο ίδιο atomic command (1 undo). Inward → μηδέν extend (no-op).
+  const finalSet = buildFinalStripSet(existingForReconcile, reflowUpdates, toDelete, toCreate);
+  const junctions = computeGridJunctionExtends(finalSet);
+  const { updates, create } = foldJunctions(junctions, [...rehosts, ...reflowUpdates], toCreate);
+
+  if (create.length === 0 && toDelete.length === 0 && updates.length === 0) {
     // Idempotent re-run: η εσχάρα είναι ήδη σε συμφωνία με τον κάναβο.
     const reason = unchanged > 0 ? 'up-to-date' : 'empty';
     return { ok: false, reason, created: 0, deleted: 0, unchanged, rehosted: 0, reJustified: 0 };
   }
 
   const adapter = new LevelSceneManagerAdapter(deps.getLevelScene, deps.setLevelScene, deps.levelId);
-  deps.executeCommand(buildReconcileCommand(updates, toDelete, toCreate, adapter));
+  deps.executeCommand(buildReconcileCommand(updates, toDelete, create, adapter));
   return {
     ok: true,
     created: toCreate.length,

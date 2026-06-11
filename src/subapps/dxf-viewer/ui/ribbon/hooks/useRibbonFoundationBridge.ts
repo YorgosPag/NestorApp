@@ -31,7 +31,13 @@ import {
 } from '../../../bim/types/foundation-types';
 import { useCommandHistory } from '../../../core/commands';
 import { UpdateFoundationParamsCommand } from '../../../core/commands/entity-commands/UpdateFoundationParamsCommand';
+import { RehostFoundationsCommand } from '../../../core/commands/entity-commands/RehostFoundationsCommand';
+import { CompoundCommand } from '../../../core/commands/CompoundCommand';
+import type { ICommand } from '../../../core/commands/interfaces';
 import { LevelSceneManagerAdapter } from '../../../systems/entity-creation/LevelSceneManagerAdapter';
+import { computeGridJunctionExtends } from '../../../bim/foundations/foundation-grid-junctions';
+import { computeFoundationGeometry } from '../../../bim/geometry/foundation-geometry';
+import type { SceneModel } from '../../../types/scene';
 // ADR-441 Slice 2 — «Εσχάρα πεδιλοδοκών από κάναβο» (one-shot ribbon action).
 import { getGlobalGuideStore } from '../../../systems/guides/guide-store';
 import { resolveSceneUnits } from '../../../utils/scene-units';
@@ -97,6 +103,29 @@ const FOUNDATION_OWNED_BADGE_KEYS: ReadonlySet<string> = new Set<string>([
 
 const NULL_TOGGLE: RibbonToggleState = false;
 
+/**
+ * ADR-441 Slice 8 — όταν αλλάζει η έδραση/πλάτος μιας grid-managed λωρίδας, ανα-υπολογίζει
+ * τα junction-miter extends ΟΛΩΝ των λωρίδων του level (με την edited νέα γεωμετρία) και
+ * επιστρέφει command για τους **γείτονες** (η ίδια η edited ενημερώνεται από το
+ * UpdateFoundationParamsCommand). `null` αν δεν είναι grid-managed ή κανείς γείτονας δεν άλλαξε.
+ */
+function junctionNeighborCommand(
+  edited: FoundationEntity,
+  nextParams: FoundationParams,
+  scene: SceneModel,
+  adapter: LevelSceneManagerAdapter,
+): ICommand | null {
+  if (!hasGuideBindings(edited) || !('start' in nextParams)) return null;
+  const editedNext: FoundationEntity = {
+    ...edited, params: nextParams, geometry: computeFoundationGeometry(nextParams),
+  };
+  const set = scene.entities
+    .filter(isFoundationEntity)
+    .map((s) => (s.id === edited.id ? editedNext : s));
+  const neighbors = computeGridJunctionExtends(set).filter((j) => j.rehosted.id !== edited.id);
+  return neighbors.length > 0 ? new RehostFoundationsCommand(neighbors, adapter) : null;
+}
+
 export function useRibbonFoundationBridge(
   props: UseRibbonFoundationBridgeProps,
 ): RibbonFoundationBridge {
@@ -118,15 +147,19 @@ export function useRibbonFoundationBridge(
 
   const dispatchParams = useCallback(
     (foundation: FoundationEntity, nextParams: FoundationParams): void => {
-      if (!levelManager.currentLevelId) return;
+      const levelId = levelManager.currentLevelId;
+      if (!levelId) return;
       const sm = new LevelSceneManagerAdapter(
         levelManager.getLevelScene,
         levelManager.setLevelScene,
-        levelManager.currentLevelId,
+        levelId,
       );
-      executeCommand(
-        new UpdateFoundationParamsCommand(foundation.id, nextParams, foundation.params, sm, false),
-      );
+      const update = new UpdateFoundationParamsCommand(foundation.id, nextParams, foundation.params, sm, false);
+      // ADR-441 Slice 8 — αλλαγή έδρασης/πλάτους grid λωρίδας → ανα-υπολογισμός joins
+      // ώστε οι γειτονικές λωρίδες να κλείσουν/ανοίξουν τις γωνίες live (Revit auto-join).
+      const scene = levelManager.getLevelScene(levelId);
+      const junction = scene ? junctionNeighborCommand(foundation, nextParams, scene, sm) : null;
+      executeCommand(junction ? new CompoundCommand('Update foundation + junctions', [update, junction]) : update);
     },
     [executeCommand, levelManager],
   );

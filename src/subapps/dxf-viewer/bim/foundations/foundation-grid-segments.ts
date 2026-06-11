@@ -23,6 +23,7 @@
 
 import type { GuideBinding, GuideBindingSlot } from '../hosting/guide-binding-types';
 import type { FoundationEntity } from '../types/foundation-types';
+import { mmScaleFor } from '../../utils/scene-units';
 
 /** Slot → guideId map ενός segment (κρατά μόνο τα 4 linear slots). */
 type SlotMap = Partial<Record<GuideBindingSlot, string>>;
@@ -81,11 +82,24 @@ export function segmentKeyFromBindings(
   return null;
 }
 
+/** Bare coordinate ενός endpoint = coord ΜΕΙΟΝ το junction `extend` του slot του. */
+function bareCoord(
+  value: number, slot: GuideBindingSlot, bindings: readonly GuideBinding[], scale: number,
+): number {
+  const ext = bindings.find((b) => b.slot === slot)?.extend ?? 0;
+  return value - ext * scale;
+}
+
 /**
  * Canonical **signature** μιας grid-managed λωρίδας (ADR-441 Slice 6 reconcile):
- * grid-ταυτότητα (`segmentKey`) + rounded γεωμετρία (endpoints). Δύο λωρίδες έχουν
- * ίδιο signature ⟺ ίδιο φάτνωμα **και** ίδια γεωμετρία — οπότε το corner-fill
- * `extend` (ψημένο στα coords) τις ξεχωρίζει (περιμετρική vs εσωτερική).
+ * grid-ταυτότητα (`segmentKey`) + rounded γεωμετρία στους **bare** κόμβους (= άξονες).
+ *
+ * **ADR-441 Slice 8:** τα coords κανονικοποιούνται αφαιρώντας το junction-miter
+ * `extend` κάθε άκρου → το signature ταυτοποιεί το **grid-segment** (θέση κόμβων),
+ * αμετάβλητο στο miter (όπως ήδη και στο justification). Έτσι το reconcile ταιριάζει
+ * fresh target (μηδέν extend) με existing (με miter extends) → μηδέν spurious
+ * delete/create· το miter εφαρμόζεται ως ξεχωριστό reflow (`computeGridJunctionExtends`).
+ * Το `extend` ΔΕΝ είναι πια corner-fill identity (Slice 5a-grid → inward justification).
  *
  * `null` αν η λωρίδα δεν είναι grid-managed (μη γραμμική / χωρίς grid bindings) →
  * ο reconciler την αγνοεί (legacy ορφανές & χειροκίνητες μένουν ανέγγιχτες).
@@ -93,13 +107,15 @@ export function segmentKeyFromBindings(
 export function gridStripSignature(
   strip: Pick<FoundationEntity, 'guideBindings' | 'params'>,
 ): string | null {
-  const key = segmentKeyFromBindings(strip.guideBindings ?? []);
+  const bindings = strip.guideBindings ?? [];
+  const key = segmentKeyFromBindings(bindings);
   if (key === null) return null;
   const p = strip.params;
   if (!('start' in p) || !('end' in p)) return null;
-  const sx = coordBucket(p.start.x);
-  const sy = coordBucket(p.start.y);
-  const ex = coordBucket(p.end.x);
-  const ey = coordBucket(p.end.y);
+  const scale = mmScaleFor(p);
+  const sx = coordBucket(bareCoord(p.start.x, 'start-x', bindings, scale));
+  const sy = coordBucket(bareCoord(p.start.y, 'start-y', bindings, scale));
+  const ex = coordBucket(bareCoord(p.end.x, 'end-x', bindings, scale));
+  const ey = coordBucket(bareCoord(p.end.y, 'end-y', bindings, scale));
   return `${key}|${sx},${sy}|${ex},${ey}`;
 }

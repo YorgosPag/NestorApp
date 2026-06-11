@@ -24,9 +24,21 @@ import { SETTINGS_DEVELOPER_PANEL } from './settings-tab-developer';
 import { SETTINGS_CREDITS_PANEL } from './settings-tab-credits';
 import { INSERT_TAB } from './insert-tab';
 import { ANALYZE_TAB } from './analyze-tab';
+import { STRUCTURAL_TAB } from './structural-tab';
+import { ARCHITECTURE_TAB } from './architecture-tab';
+import { MEP_DISCIPLINE_TABS } from './systems-discipline-tabs';
 
 export const DEFAULT_RIBBON_TAB_ORDER: readonly string[] = [
   'home',
+  'structural',
+  'architecture',
+  // ADR-444 — six MEP discipline tabs (one per Greek Η/Μ μελέτη).
+  'electrical',
+  'water',
+  'drainage',
+  'heating',
+  'hvac',
+  'fire-gas',
   'insert',
   'analyze',
   'view',
@@ -48,6 +60,14 @@ export const DEFAULT_RIBBON_TABS: readonly RibbonTab[] = [
       HOME_AI_PANEL,
     ],
   },
+  // ADR-443/444 — permanent discipline tabs replacing the legacy nested
+  // `draw.bim.group` / `draw.arch.group` / `draw.mep.group` cascading dropdowns in
+  // Home → Draw with large flat buttons. «Δομικά» (Structure) + «Αρχιτεκτονικά»
+  // (Architecture) + SIX MEP discipline tabs (electrical/water/drainage/heating/
+  // hvac/fire-gas — one per Greek Η/Μ μελέτη). Clash moved to «Ανάλυση».
+  STRUCTURAL_TAB,
+  ARCHITECTURE_TAB,
+  ...MEP_DISCIPLINE_TABS,
   INSERT_TAB,
   ANALYZE_TAB,
   {
