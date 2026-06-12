@@ -3,6 +3,7 @@ import { userSettingsRepository, stableHash } from '@/services/user-settings';
 import { useAuth } from '@/auth/contexts/AuthContext';
 import type { CadTogglesSettingsSlice } from '@/services/user-settings/user-settings-schema';
 import { cadToggleState } from '../../systems/constraints/cad-toggle-state';
+import { DEFAULT_GRIP_SNAP_STEP } from '../../bim/grips/grip-step-quantize';
 
 export interface CadToggle {
   on: boolean;
@@ -17,6 +18,9 @@ export interface CadToggles {
   ortho: CadToggle;
   polar: CadToggle;
   dynInput: CadToggle;
+  /** SNAP-MODE (F9) increment step (scene units) + setter. */
+  snapStep: number;
+  setSnapStep: (value: number) => void;
 }
 
 const DEFAULTS: CadTogglesSettingsSlice = {
@@ -28,6 +32,8 @@ const DEFAULTS: CadTogglesSettingsSlice = {
   // ADR-357 §5.1 (revised 2026-05-27): Dynamic Input default OFF — user opt-in via status-bar toggle.
   // Rationale: Giorgio explicit override of original AutoCAD/BricsCAD "always-on" parity preference.
   dynInput: false,
+  // SNAP-MODE step — quantizes the 2D grip-drag delta (move + resize).
+  snapStep: DEFAULT_GRIP_SNAP_STEP,
 };
 
 export const useCadToggles = (): CadToggles => {
@@ -72,6 +78,12 @@ export const useCadToggles = (): CadToggles => {
     cadToggleState.set(state.ortho, state.polar);
   }, [state.ortho, state.polar]);
 
+  // Mirror SNAP-MODE (F9) + step into the same non-React SSoT so the event-time
+  // grip-drag commit/preview path can quantize the displacement synchronously.
+  useEffect(() => {
+    cadToggleState.setSnap(state.snap, state.snapStep ?? DEFAULT_GRIP_SNAP_STEP);
+  }, [state.snap, state.snapStep]);
+
   // Persist state changes to Firestore (debounced 500ms by repository)
   useEffect(() => {
     if (!userId || !companyId) return;
@@ -110,6 +122,11 @@ export const useCadToggles = (): CadToggles => {
   const toggleDynInput = useCallback(() => setState(prev => ({ ...prev, dynInput: !prev.dynInput })), []);
   const setDynInput = useCallback((v: boolean) => setState(prev => ({ ...prev, dynInput: v })), []);
 
+  // SNAP-MODE step — clamp to ≥0; non-finite input falls back to the default.
+  const setSnapStep = useCallback((v: number) => setState(prev => ({
+    ...prev, snapStep: Number.isFinite(v) && v >= 0 ? v : DEFAULT_GRIP_SNAP_STEP,
+  })), []);
+
   return {
     osnap:    { on: state.osnap,    toggle: toggleOsnap,    set: setOsnap    },
     grid:     { on: state.grid,     toggle: toggleGrid,     set: setGrid     },
@@ -117,5 +134,7 @@ export const useCadToggles = (): CadToggles => {
     ortho:    { on: state.ortho,    toggle: toggleOrtho,    set: setOrtho    },
     polar:    { on: state.polar,    toggle: togglePolar,    set: setPolar    },
     dynInput: { on: state.dynInput, toggle: toggleDynInput, set: setDynInput },
+    snapStep: state.snapStep ?? DEFAULT_GRIP_SNAP_STEP,
+    setSnapStep,
   };
 };

@@ -109,6 +109,10 @@ const cadTogglesSchema = z.object({
   ortho: z.boolean(),
   polar: z.boolean(),
   dynInput: z.boolean(),
+  // Snap-mode (F9) increment step in scene units — quantizes the 2D grip-drag
+  // delta (move + resize) so dimension/position changes follow a fixed step.
+  // Optional for back-compat with docs persisted before this field existed.
+  snapStep: z.number().min(0).optional(),
 });
 
 // ─── Top-level document ─────────────────────────────────────────────────────

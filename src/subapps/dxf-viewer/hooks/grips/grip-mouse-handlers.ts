@@ -23,6 +23,7 @@ import {
 import { BimRotateHotGripStore } from '../../bim/grips/bim-rotate-hotgrip-store';
 import { commitDxfGripDragModeAware, type DxfCommitDeps, type OverlayCommitDeps } from './grip-commit-adapters';
 import { commitHotGripCopy } from './grip-parametric-commits';
+import { applyGripStepSnap } from '../../bim/grips/grip-step-quantize';
 import { CtrlKeyTracker } from '../../keyboard/CtrlKeyTracker';
 import {
   commitOverlayVertexDrag,
@@ -382,7 +383,8 @@ export async function runGripMouseUp(worldPos: Point2D, ctx: GripMouseUpCtx): Pr
       // move / corner — needs an anchor (base point / grip position).
       if (!anchorRef.current) return true;
       const effectiveAnchor = GripBasePointStore.getSnapshot().overrideAnchor ?? anchorRef.current;
-      const delta: Point2D = { x: worldPos.x - effectiveAnchor.x, y: worldPos.y - effectiveAnchor.y };
+      // SNAP-MODE (F9) — quantize displacement to the user step (no-op when OFF).
+      const delta: Point2D = applyGripStepSnap({ x: worldPos.x - effectiveAnchor.x, y: worldPos.y - effectiveAnchor.y });
       // ADR-363 Phase 1G.4 + ADR-397 — Ctrl (or ⌘) held at the terminal click of
       // a MOVE hot-grip copies the entity (AutoCAD MOVE→COPY) instead of
       // translating it. Dispatched entity-agnostically (wall-midpoint /
@@ -403,7 +405,8 @@ export async function runGripMouseUp(worldPos: Point2D, ctx: GripMouseUpCtx): Pr
       // re-anchored the drag through the right-click menu, the displacement
       // is measured from the user-picked anchor instead of `grip.position`.
       const effectiveAnchor = GripBasePointStore.getSnapshot().overrideAnchor ?? anchorRef.current;
-      const delta: Point2D = { x: worldPos.x - effectiveAnchor.x, y: worldPos.y - effectiveAnchor.y };
+      // SNAP-MODE (F9) — quantize displacement to the user step (no-op when OFF).
+      const delta: Point2D = applyGripStepSnap({ x: worldPos.x - effectiveAnchor.x, y: worldPos.y - effectiveAnchor.y });
       commitDxfGripDragModeAware(activeGrip, delta, dxfCommitDeps, GripModeStore.getSnapshot());
       // The override is a per-drag modifier — clear it at commit so the
       // next drag starts from the natural grip anchor.
@@ -412,7 +415,7 @@ export async function runGripMouseUp(worldPos: Point2D, ctx: GripMouseUpCtx): Pr
       return true;
     }
     if (draggingVertices && draggingVertices.length > 0) {
-      const delta = { x: worldPos.x - draggingVertices[0].startPoint.x, y: worldPos.y - draggingVertices[0].startPoint.y };
+      const delta = applyGripStepSnap({ x: worldPos.x - draggingVertices[0].startPoint.x, y: worldPos.y - draggingVertices[0].startPoint.y });
       const vertexGrips: UnifiedGripInfo[] = draggingVertices.map((dv) => ({
         id: `overlay_${dv.overlayId}_v${dv.vertexIndex}`, source: 'overlay' as const,
         overlayId: dv.overlayId, gripIndex: dv.vertexIndex, type: 'vertex' as const,
@@ -439,7 +442,7 @@ export async function runGripMouseUp(worldPos: Point2D, ctx: GripMouseUpCtx): Pr
       return true;
     }
     if (draggingOverlayBody) {
-      const delta = { x: worldPos.x - draggingOverlayBody.startPoint.x, y: worldPos.y - draggingOverlayBody.startPoint.y };
+      const delta = applyGripStepSnap({ x: worldPos.x - draggingOverlayBody.startPoint.x, y: worldPos.y - draggingOverlayBody.startPoint.y });
       await commitOverlayBodyDrag(draggingOverlayBody.overlayId, delta, overlayCommitDeps);
       setSelectedGrips([]);
       setDraggingOverlayBody(null); setDragPreviewPosition(null); markDragFinished(); resetToIdle();

@@ -21,6 +21,7 @@ import type {
   OverlayProjection,
 } from './unified-grip-types';
 import type { HotGripStep } from './wall-hot-grip-fsm';
+import { applyGripStepSnap } from '../../bim/grips/grip-step-quantize';
 
 // ── DXF Projection Builders ──
 
@@ -36,7 +37,9 @@ export function buildDxfDragPreview(
   if ((phase !== 'dragging' && phase !== 'hotGrip') || !activeGrip || activeGrip.source !== 'dxf' || !anchorPos || !currentWorldPos) {
     return null;
   }
-  const delta = { x: currentWorldPos.x - anchorPos.x, y: currentWorldPos.y - anchorPos.y };
+  // SNAP-MODE (F9) — quantize the drag displacement to the user step so the
+  // ghost preview matches the committed result (commit applies the SAME helper).
+  const delta = applyGripStepSnap({ x: currentWorldPos.x - anchorPos.x, y: currentWorldPos.y - anchorPos.y });
   // ADR-363 Phase 1G.5 — Alt «move-from-characteristic-point»: emit a parametric-
   // kind-free snapshot with `movesEntity: true` so `applyEntityPreview` translates
   // the WHOLE entity by `delta` (via the move SSoT) instead of running a corner /
@@ -50,10 +53,7 @@ export function buildDxfDragPreview(
   return {
     entityId: activeGrip.entityId!,
     gripIndex: activeGrip.gripIndex,
-    delta: {
-      x: currentWorldPos.x - anchorPos.x,
-      y: currentWorldPos.y - anchorPos.y,
-    },
+    delta,
     movesEntity: activeGrip.movesEntity,
     edgeVertexIndices: activeGrip.edgeVertexIndices,
     // ADR-363 Phase 1G — flag the dashed rubber-band leader for the corner hot-grip.

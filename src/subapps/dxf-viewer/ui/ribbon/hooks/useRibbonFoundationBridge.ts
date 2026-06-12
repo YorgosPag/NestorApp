@@ -289,10 +289,15 @@ export function useRibbonFoundationBridge(
   // άλλαξε κάτι (split/reflow/rehost) → μηδέν spam σε απλή μετακίνηση χωρίς cross.
   useEffect(() => {
     const off = EventBus.on('bim:grid-guides-settled', ({ levelId }) => {
+      // [ADR441-DIAG] TEMP — αφαίρεση πριν commit (Slice 10 crossing investigation)
+      console.debug('[ADR441-DIAG] settle-event', { levelId, current: levelManager.currentLevelId });
       if (levelManager.currentLevelId !== levelId) return;
       const scene = levelManager.getLevelScene(levelId);
+      const gridCount = scene ? scene.entities.filter((e) => isFoundationEntity(e) && hasGuideBindings(e)).length : 0;
+      console.debug('[ADR441-DIAG] settle gate', { hasScene: !!scene, gridCount });
       if (!scene || !scene.entities.some((e) => isFoundationEntity(e) && hasGuideBindings(e))) return;
       const result = runFoundationGridCommit();
+      console.debug('[ADR441-DIAG] auto-commit result', result);
       if (
         result?.ok &&
         result.created + result.deleted + result.reJustified + result.rehosted > 0

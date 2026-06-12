@@ -26,7 +26,7 @@ import {
 import { CommandLineInput } from '../ui/command-line/CommandLineInput';
 
 export default function CadStatusBar() {
-  const { osnap, grid, snap, ortho, polar, dynInput } = useCadToggles();
+  const { osnap, grid, snap, ortho, polar, dynInput, snapStep, setSnapStep } = useCadToggles();
   const { t } = useTranslation('dxf-viewer-panels');
   const { t: tTools } = useTranslation('tool-hints');
   const { displayUnit, setDisplayUnit } = useDisplayUnit();
@@ -87,6 +87,17 @@ export default function CadStatusBar() {
                 toggle={toggle}
                 enabledModes={enabledModes}
                 onToggleMode={toggleMode}
+              />
+            ) : key === 'snap' ? (
+              <SnapToggleWithStep
+                key={key}
+                id="cad-toggle-snap"
+                label={t(labelKey)}
+                fkey={getShortcutDisplayLabel(shortcut)}
+                description={t(descKey)}
+                toggle={toggle}
+                step={snapStep}
+                onStepChange={setSnapStep}
               />
             ) : (
               <CadToggleRow
@@ -269,6 +280,101 @@ function PolarToggleWithPopover({ id, label, fkey, description, toggle }: {
                 ))}
               </div>
             )}
+          </div>
+        </PopoverContent>
+      </Popover>
+    </div>
+  );
+}
+
+const SNAP_STEP_PRESETS = ['10', '20', '25', '50', '100', '200', '500'] as const;
+
+function SnapToggleWithStep({ id, label, fkey, description, toggle, step, onStepChange }: {
+  id: string;
+  label: string;
+  fkey: string;
+  description: string;
+  toggle: CadToggle;
+  step: number;
+  onStepChange: (value: number) => void;
+}) {
+  const { t } = useTranslation('dxf-viewer-panels');
+  const [customInput, setCustomInput] = useState('');
+
+  const commitCustom = () => {
+    const val = parseFloat(customInput);
+    if (isNaN(val) || val < 0) return;
+    onStepChange(val);
+    setCustomInput('');
+  };
+
+  return (
+    <div className="flex items-center gap-0.5 shrink-0">
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <div className="flex items-center gap-1.5">
+            <label htmlFor={id} className="flex items-center gap-1 cursor-pointer select-none">
+              <span className={`text-xs leading-none font-semibold ${toggle.on ? 'text-[hsl(var(--text-success))]' : 'text-muted-foreground'}`}>{label}</span>
+              {fkey && (
+                <span className="text-[10px] text-muted-foreground bg-muted px-1 rounded border border-border leading-none py-0.5">
+                  {fkey}
+                </span>
+              )}
+            </label>
+            <Switch
+              id={id}
+              checked={toggle.on}
+              onCheckedChange={() => toggle.toggle()}
+              className="scale-75 origin-left data-[state=checked]:bg-[hsl(var(--text-success))]"
+            />
+          </div>
+        </TooltipTrigger>
+        <TooltipContent side="top">{`${description} (${fkey})`}</TooltipContent>
+      </Tooltip>
+      <Popover>
+        <PopoverTrigger asChild>
+          <button
+            className="flex items-center justify-center h-4 w-4 rounded text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+            aria-label={t('cadDock.statusBar.snapStepTitle')}
+          >
+            <ChevronUp className="h-3 w-3" />
+          </button>
+        </PopoverTrigger>
+        <PopoverContent side="top" align="center" className="z-[1800] w-56 p-3 space-y-3">
+          <p className="text-xs font-semibold">{t('cadDock.statusBar.snapStepTitle')}</p>
+          <div className="space-y-1">
+            <p className="text-[10px] text-muted-foreground">{t('cadDock.statusBar.snapStepPreset')}</p>
+            <Select value={String(step)} onValueChange={(v) => onStepChange(parseFloat(v))}>
+              <SelectTrigger className="h-7 text-xs">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {SNAP_STEP_PRESETS.map(opt => (
+                  <SelectItem key={opt} value={opt} className="text-xs">{opt}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-1">
+            <p className="text-[10px] text-muted-foreground">{t('cadDock.statusBar.snapStepCustom')}</p>
+            <div className="flex gap-1">
+              <input
+                type="number"
+                value={customInput}
+                onChange={(e) => setCustomInput(e.target.value)}
+                onKeyDown={(e) => { if (e.key === 'Enter') commitCustom(); }}
+                placeholder={String(step)}
+                className="flex-1 h-7 text-xs px-2 rounded border border-border bg-background"
+                min={0}
+                step={1}
+              />
+              <button
+                onClick={commitCustom}
+                className="px-2 h-7 text-xs rounded bg-muted hover:bg-muted/80 border border-border"
+              >
+                {t('cadDock.statusBar.snapStepApply')}
+              </button>
+            </div>
           </div>
         </PopoverContent>
       </Popover>

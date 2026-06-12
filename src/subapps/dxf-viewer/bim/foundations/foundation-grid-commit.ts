@@ -29,6 +29,7 @@ import {
 import { reconcileGridStrips } from './foundation-grid-reconcile';
 import { rehostOrphanStrips, type RehostedStrip } from './foundation-grid-rehost';
 import { computeGridJunctionExtends } from './foundation-grid-junctions';
+import { segmentKeyFromBindings } from './foundation-grid-segments'; // [ADR441-DIAG] TEMP
 import { hasGuideBindings } from '../hosting/guide-binding-types';
 import { isFoundationEntity } from '../../types/entities';
 import type { FoundationEntity } from '../types/foundation-types';
@@ -177,6 +178,13 @@ export function commitFoundationGridFromGuides(
   const existingForReconcile = existing.map((e) => rehostedById.get(e.id) ?? e);
 
   const { toCreate, toDelete, toUpdate, unchanged } = reconcileGridStrips(target.strips, existingForReconcile);
+
+  // [ADR441-DIAG] TEMP — αφαίρεση πριν commit (Slice 10 crossing investigation)
+  console.debug('[ADR441-DIAG] commit reconcile', {
+    targetKeys: target.strips.map((s) => segmentKeyFromBindings(s.guideBindings ?? [])),
+    existingKeys: existingForReconcile.map((s) => segmentKeyFromBindings(s.guideBindings ?? [])),
+    toCreate: toCreate.length, toDelete: toDelete.length, toUpdate: toUpdate.length, unchanged,
+  });
 
   // ADR-441 Slice 9 — managed updates: coordinate-follow (η λωρίδα ακολουθεί τον άξονα
   // που κουνήθηκε, κρατά id + instance overrides) + auto re-justify (5a-grid, αλλαγή
