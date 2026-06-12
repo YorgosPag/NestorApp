@@ -154,9 +154,10 @@ export function findWallsToAutoAttachToHost(
     const end = { x: e.params.end.x, y: e.params.end.y };
     // (2) plan overlap — ο host πρέπει να καλύπτει τμήμα του άξονα.
     if (buildHostUndersidePlans(start, end, [hostInput]).length === 0) continue;
-    // (3) Z gate — host πάνω από τη βάση του τοίχου (οροφή/δοκάρι, όχι πάτωμα).
+    // (3) Z gate — host πάνω από τη ΣΤΑΘΜΗ ΙΣΟΓΕΙΟΥ (FFL), όχι απλώς πάνω από τη βάση:
+    // εδαφόπλακα/δάπεδο (κάτω από FFL) δεν είναι ταβάνι. max(base, FFL) → podium-safe.
     const baseZmm = resolveWallBaseZmm(e.params, { floorElevationMm: ACTIVE_LEVEL_FLOOR_MM });
-    if (hostInput.undersideZmm <= baseZmm + AUTO_ATTACH_Z_GATE_MM) continue;
+    if (hostInput.undersideZmm <= Math.max(baseZmm, ACTIVE_LEVEL_FLOOR_MM) + AUTO_ATTACH_Z_GATE_MM) continue;
     out.push(e.id);
   }
   return out;
@@ -233,8 +234,8 @@ export function findHostsToAttachWallTop(
     if (!hostInput) continue;
     // (2) plan overlap — ο host περνά πάνω από τον άξονα του τοίχου.
     if (buildHostUndersidePlans(start, end, [hostInput]).length === 0) continue;
-    // (3) Z gate — κάτω-παρειά host πάνω από τη βάση του τοίχου (οροφή/δοκάρι).
-    if (hostInput.undersideZmm <= baseZmm + AUTO_ATTACH_Z_GATE_MM) continue;
+    // (3) Z gate — κάτω-παρειά host πάνω από τη ΣΤΑΘΜΗ ΙΣΟΓΕΙΟΥ (max(base, FFL), βλ. forward).
+    if (hostInput.undersideZmm <= Math.max(baseZmm, ACTIVE_LEVEL_FLOOR_MM) + AUTO_ATTACH_Z_GATE_MM) continue;
     out.push(hostInput.hostId);
   }
   return out;

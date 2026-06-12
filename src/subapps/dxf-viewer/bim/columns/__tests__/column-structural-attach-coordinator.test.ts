@@ -77,6 +77,21 @@ describe('findColumnsToAutoAttachToHost (top)', () => {
     expect(findColumnsToAutoAttachToHost(slab as unknown as Entity, [col])).toEqual([]);
   });
 
+  it('ΔΕΝ τραβά κολώνα που φτάνει στη θεμελίωση: floor/ground slab@0 με base −1000 (ADR-441)', () => {
+    // Κολώνα GEN-COL συνέχειας (base −1000). Floor/ground slab top 0, underside −150.
+    // Παλιό gate (underside > base): −150 > −1000 → BUG attach. Νέο (max(base,FFL=0)):
+    // −150 <= 0 → ΟΧΙ. Η εδαφόπλακα/δάπεδο ΔΕΝ αλλοιώνει την κορυφή της κολώνας.
+    const slab = slabAt(0);
+    const col = column('c1', 1000, 1000, 200, { baseOffset: -1000, height: 4000 });
+    expect(findColumnsToAutoAttachToHost(slab as unknown as Entity, [col])).toEqual([]);
+  });
+
+  it('ΕΞΑΚΟΛΟΥΘΕΙ να attach-άρει σε ΟΡΟΦΗ slab παρά το βαθύ base (−1000)', () => {
+    const slab = slabAt(3000); // underside 2850 > FFL 0 → ταβάνι
+    const col = column('c1', 1000, 1000, 200, { baseOffset: -1000, height: 4000 });
+    expect(findColumnsToAutoAttachToHost(slab as unknown as Entity, [col])).toEqual(['c1']);
+  });
+
   it('does NOT attach when the host does not overlap the column footprint', () => {
     const beam = beamOver();
     const col = column('c1', 2000, 5000, 100); // far from beam band

@@ -277,6 +277,11 @@ New `.ssot-registry.json` Tier 3 module `bim-family-types`:
 
 ## 9. Changelog
 
+- **v0.12 (2026-06-12)** — **ADR-447 — Revit wall-type catalog (1→πολλοί τύποι/category).** Νέο SSoT
+  `WALL_TYPE_SEEDS` (`wall-dna-types.ts`) + `getBuiltInWallTypeId(key)` key-based + `getBuiltInWallTypes` iterate
+  seeds (7 τύποι: exterior 25cm / 25cm+θερμοπρόσοψη / 20cm + interior/partition/parapet/fence). PRIMARY key===category
+  → id αμετάβλητο (existing walls resolve)· variants νέα ids. `resolveAutoWallTypeId` matchάρει όλους τους seeds (DNA
+  deep-equal). Default cores = κόκκινο τούβλο (RC-frame infill), όχι RC. Βλ. ADR-447.
 - **v0.11 (2026-06-08)** — **Opening cross-floor BOQ re-feed (ADR-421 SLICE C follow-up (b))** — the all-floors BOQ
   re-feed (Φ5) now covers the **opening** category, completing project-wide type-edit propagation for all 5 categories.
   Unlike wall/slab/roof (per-entity `bimToBoqBridge`, walls live in the `loadFileV2` scene), openings live **only** in

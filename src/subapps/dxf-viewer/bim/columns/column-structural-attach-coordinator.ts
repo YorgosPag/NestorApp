@@ -99,7 +99,12 @@ export function findColumnsToAutoAttachToHost(host: Entity, entities: readonly E
     if (!footprint || footprint.length < 3) continue;
     if (!hostCoversColumn(hostInput.footprint, footprint)) continue;
     const baseZmm = resolveColumnBaseZmm(e.params, { floorElevationMm: ACTIVE_LEVEL_FLOOR_MM });
-    if (hostInput.undersideZmm <= baseZmm + AUTO_ATTACH_Z_GATE_MM) continue;
+    // ADR-441 GEN-COL — top host πρέπει να είναι πάνω από τη ΣΤΑΘΜΗ ΙΣΟΓΕΙΟΥ (FFL), όχι
+    // απλώς πάνω από τη βάση: μια κολώνα που κατεβαίνει στη θεμελίωση (base<FFL) ΔΕΝ
+    // κρεμά την κορυφή της από εδαφόπλακα/δάπεδο (που είναι κάτω από το FFL, ΟΧΙ ταβάνι).
+    // `max(base, FFL)` → και podium-safe (base>FFL → κρατά τη βάση).
+    const topRefZmm = Math.max(baseZmm, ACTIVE_LEVEL_FLOOR_MM);
+    if (hostInput.undersideZmm <= topRefZmm + AUTO_ATTACH_Z_GATE_MM) continue;
     out.push(e.id);
   }
   return out;

@@ -189,6 +189,23 @@ describe('findWallsToAutoAttachToHost (Phase D)', () => {
     expect(findWallsToAutoAttachToHost(slab as unknown as Entity, [wall])).toEqual([]);
   });
 
+  it('ΔΕΝ τραβά τοίχο που κατεβαίνει κάτω από το FFL: floor slab@0 με base −1000 (ADR-441)', () => {
+    // Τοίχος με base −1000 (φτάνει στη θεμελίωση). Floor slab top 0, underside −150.
+    // Παλιό gate (underside > base) θα attach-άρε (−150 > −1000)· νέο (max(base,FFL))
+    // → −150 <= 0 → ΟΧΙ (η εδαφόπλακα/δάπεδο δεν είναι ταβάνι).
+    const slab = slabAt(0);
+    const deepWall = { ...ceilingWall('w1', 1000) } as unknown as { params: Record<string, unknown> };
+    deepWall.params.baseOffset = -1000;
+    expect(findWallsToAutoAttachToHost(slab as unknown as Entity, [deepWall as unknown as Entity])).toEqual([]);
+  });
+
+  it('ΕΞΑΚΟΛΟΥΘΕΙ να attach-άρει σε ΟΡΟΦΗ slab παρά το βαθύ base (−1000): underside 2850 > FFL', () => {
+    const slab = slabAt(3000); // underside 2850 > FFL 0 → ταβάνι, attach
+    const deepWall = { ...ceilingWall('w1', 1000) } as unknown as { params: Record<string, unknown> };
+    deepWall.params.baseOffset = -1000;
+    expect(findWallsToAutoAttachToHost(slab as unknown as Entity, [deepWall as unknown as Entity])).toEqual(['w1']);
+  });
+
   it('does NOT attach when the host does not overlap the wall in plan', () => {
     const beam = beamOverWall();
     const wall = ceilingWall('w1', 5000); // far from beam band
