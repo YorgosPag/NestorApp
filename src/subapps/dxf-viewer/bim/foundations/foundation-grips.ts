@@ -42,15 +42,12 @@ import type {
 import { ANCHOR_OFFSETS, MIN_FOUNDATION_DIMENSION_MM } from '../types/foundation-types';
 import { rotatePoint } from '../../utils/rotation-math';
 import {
-  rotateVector,
   sweptAngleDegAboutPivot,
   farEdgeSign,
 } from '../grips/grip-math';
-import type { RectFrame, RectCorner } from '../grips/rect-frame';
 import {
   applyRectCornerDrag,
   applyRectEdgeDrag,
-  type RectResizeLimits,
 } from '../grips/rect-grip-engine';
 // ADR-436 (2026-06-11) — strip / tie-beam 7-grip wall parity via the shared
 // axis-anchored box grip SSoT (same code as wall straight + beam).
@@ -61,13 +58,18 @@ import {
   type AxisBoxParams,
   type AxisBoxGripRole,
 } from '../grips/axis-box-grips';
-import { mmScaleFor } from '../../utils/scene-units';
-import { rotationHandlePerpOffset } from '../grips/rotation-handle-policy';
+import { stripJustifiedAxis, unjustifyStripAxis } from '../geometry/foundation-geometry';
+// ADR-436 Slice 1c — pad frame/handle geometry adapter SSoT (500-line SRP split).
 import {
-  centredCentroidWorld,
-  centredLocalToWorld,
-  type CentredAnchorFrame,
-} from '../grips/centred-anchor-frame';
+  widthHandleWorld,
+  lengthHandleWorld,
+  rotationHandleWorld,
+  cornerHandleWorld,
+  FOUNDATION_CORNER_MAP,
+  padToRectFrame,
+  rectFrameToPadParams,
+  padResizeLimits,
+} from './foundation-grips-pad-frame';
 
 /** Line-based foundation params (strip / tie-beam) — share start/end/width. */
 type LineFoundationParams = StripFootingParams | TieBeamParams;
@@ -90,126 +92,26 @@ const FOUNDATION_LINE_ROLE_TO_KIND: Readonly<Record<AxisBoxGripRole, FoundationG
 /** Inverse (derived ONCE — no hand-written drift). Rotation handled inline (line branch). */
 const FOUNDATION_LINE_KIND_TO_ROLE = invertAxisBoxRoleMap(FOUNDATION_LINE_ROLE_TO_KIND);
 
-/** `StripFootingParams`/`TieBeamParams` → the minimal `AxisBoxParams` the SSoT reads. */
+/**
+ * `StripFootingParams`/`TieBeamParams` → the minimal `AxisBoxParams` the SSoT reads.
+ *
+ * ADR-441 Slice 5a fix: the axis fed to the grip engine is the JUSTIFIED centerline
+ * (`stripJustifiedAxis`), i.e. the axis the body is actually DRAWN around, not the raw
+ * location-line axis. Otherwise the handles sit half a width off the rendered band for
+ * any `left`/`right`-justified strip (every perimeter strip of a managed grid). `center`
+ * → identical to the raw axis. The drag write-back undoes the shift (`lineFromAxisPatch`).
+ */
 function lineAxisBoxParams(params: LineFoundationParams): AxisBoxParams {
+  const axis = stripJustifiedAxis(params);
   return {
-    start: { x: params.start.x, y: params.start.y },
-    end: { x: params.end.x, y: params.end.y },
+    start: axis.start,
+    end: axis.end,
     width: params.width,
     sceneUnits: params.sceneUnits,
   };
 }
 
 const RAD_TO_DEG = 180 / Math.PI;
-
-// ─── Local-frame helpers (mirror column-grip-utils, pad width×length) ─────────
-// Far-edge face sign = shared `farEdgeSign` SSoT (grip-math), applied to dx (width)
-// or dy (length); was a local `farEdgeSignX`/`farEdgeSignY` duplicate.
-
-/**
- * Pad footprint → shared `CentredAnchorFrame`. Pad is always a `width × length`
- * rectangle (no polygon/circular variants), so `dimX = width`, `dimY = length`.
- */
-function padAnchorFrame(params: PadFootingParams): CentredAnchorFrame {
-  return {
-    position: { x: params.position.x, y: params.position.y },
-    rotationDeg: params.rotation,
-    scale: mmScaleFor(params),
-    anchorOffset: ANCHOR_OFFSETS[params.anchor],
-    dimX: params.width,
-    dimY: params.length,
-  };
-}
-
-/** Centroid (bbox centre) του pad footprint σε world coords — shared SSoT. */
-function computeCentroidWorld(params: PadFootingParams): Point2D {
-  return centredCentroidWorld(padAnchorFrame(params));
-}
-
-/** Local-frame mm point (centered on centroid, no anchor shift) → world — shared SSoT. */
-function localToWorld(local: Point2D, params: PadFootingParams): Point2D {
-  return centredLocalToWorld(padAnchorFrame(params), local);
-}
-
-/** World position της λαβής width (far edge midpoint κατά local X). */
-function widthHandleWorld(params: PadFootingParams): Point2D {
-  const { dx } = ANCHOR_OFFSETS[params.anchor];
-  const signX = farEdgeSign(dx);
-  return localToWorld({ x: (signX * params.width) / 2, y: 0 }, params);
-}
-
-/** World position της λαβής length (far edge midpoint κατά local Y). */
-function lengthHandleWorld(params: PadFootingParams): Point2D {
-  const { dy } = ANCHOR_OFFSETS[params.anchor];
-  const signY = farEdgeSign(dy);
-  return localToWorld({ x: 0, y: (signY * params.length) / 2 }, params);
-}
-
-/**
- * World position της λαβής rotation. Shared `rotation-handle-policy` SSoT: stands
- * off the local-Y face OPPOSITE the `length` edge handle (which sits on `signY`),
- * so rotation is never coincident with the length dimension handle (Revit rule).
- */
-function rotationHandleWorld(params: PadFootingParams): Point2D {
-  const { dy } = ANCHOR_OFFSETS[params.anchor];
-  const signY = farEdgeSign(dy);
-  return localToWorld({ x: 0, y: rotationHandlePerpOffset(params.length / 2, signY) }, params);
-}
-
-/** World position μιας γωνιακής λαβής (local signs `sx`/`sy` × half-extents). */
-function cornerHandleWorld(params: PadFootingParams, sx: number, sy: number): Point2D {
-  return localToWorld({ x: (sx * params.width) / 2, y: (sy * params.length) / 2 }, params);
-}
-
-// ─── RectFrame adapter (ADR-436 Slice 1c — shared rect-grip-engine SSoT) ──────
-
-/** `foundation-corner-*` grip kind → local-axis signs for the engine. */
-const FOUNDATION_CORNER_MAP: Partial<Record<FoundationGripKind, RectCorner>> = {
-  'foundation-corner-ne': { sx: 1, sy: 1 },
-  'foundation-corner-nw': { sx: -1, sy: 1 },
-  'foundation-corner-sw': { sx: -1, sy: -1 },
-  'foundation-corner-se': { sx: 1, sy: -1 },
-};
-
-/**
- * Pad params → centroid `RectFrame` (scene units). The centroid + half-extents
- * are exactly what `computeCentroidWorld` / `mmScaleFor` already derive, so the
- * engine math is unit- and anchor-agnostic.
- */
-function padToRectFrame(pad: PadFootingParams): RectFrame {
-  const s = mmScaleFor(pad);
-  return {
-    center: computeCentroidWorld(pad),
-    rotationDeg: pad.rotation,
-    halfWidth: (pad.width * s) / 2,
-    halfLength: (pad.length * s) / 2,
-  };
-}
-
-/**
- * `RectFrame` (post-resize) → pad params, preserving the anchor: `position` is
- * recomputed as the anchor reference point of the new rectangle
- * (`centroid + R(dx·width, dy·length)`), the inverse of `computeCentroidWorld`.
- */
-function rectFrameToPadParams(frame: RectFrame, pad: PadFootingParams): PadFootingParams {
-  const s = mmScaleFor(pad);
-  const width = (frame.halfWidth * 2) / s;
-  const length = (frame.halfLength * 2) / s;
-  const { dx, dy } = ANCHOR_OFFSETS[pad.anchor];
-  const shift = rotateVector({ x: dx * width * s, y: dy * length * s }, frame.rotationDeg);
-  return {
-    ...pad,
-    width,
-    length,
-    position: { x: frame.center.x + shift.x, y: frame.center.y + shift.y, z: pad.position.z ?? 0 },
-  };
-}
-
-/** Min half-extents (scene units) for the engine clamp = `MIN_FOUNDATION_DIMENSION_MM`. */
-function padResizeLimits(pad: PadFootingParams): RectResizeLimits {
-  const half = (MIN_FOUNDATION_DIMENSION_MM * mmScaleFor(pad)) / 2;
-  return { minHalfWidth: half, minHalfLength: half };
-}
 
 // ─── Grip emission ───────────────────────────────────────────────────────────
 
@@ -479,15 +381,22 @@ function moveLineEnd(line: LineFoundationParams, delta: Point2D): LineFoundation
 /**
  * Apply a shared axis-box `{start,end,width}` patch back onto line-foundation params,
  * preserving Z (corner / edge / rotation resize via the common SSoT, wall/beam parity).
+ *
+ * ADR-441 Slice 5a fix: the patch is expressed on the JUSTIFIED (body) axis — the same
+ * space `lineAxisBoxParams` fed the engine. We un-justify it back to the RAW location-line
+ * axis (using the patch's NEW width) so the entity keeps storing `start`/`end` as the
+ * location line + `justification` separately; the renderer re-justifies on display, so the
+ * round-trip is exact. `center` → identity (no shift).
  */
 function lineFromAxisPatch(
   line: LineFoundationParams,
   patch: { start: Point2D; end: Point2D; width: number },
 ): LineFoundationParams {
+  const raw = unjustifyStripAxis(patch.start, patch.end, patch.width, line.justification, line.sceneUnits);
   return {
     ...line,
-    start: { x: patch.start.x, y: patch.start.y, z: line.start.z ?? 0 },
-    end: { x: patch.end.x, y: patch.end.y, z: line.end.z ?? 0 },
+    start: { x: raw.start.x, y: raw.start.y, z: line.start.z ?? 0 },
+    end: { x: raw.end.x, y: raw.end.y, z: line.end.z ?? 0 },
     width: patch.width,
   };
 }

@@ -341,7 +341,10 @@ function SnapToggleWithStep({ id, label, fkey, description, toggle, step, onStep
           </button>
         </PopoverTrigger>
         <PopoverContent side="top" align="center" className="z-[1800] w-56 p-3 space-y-3">
-          <p className="text-xs font-semibold">{t('cadDock.statusBar.snapStepTitle')}</p>
+          <p className="text-xs font-semibold">
+            {t('cadDock.statusBar.snapStepTitle')}
+            <span className="ml-1 font-normal text-muted-foreground">{`· ${step} mm`}</span>
+          </p>
           <div className="space-y-1">
             <p className="text-[10px] text-muted-foreground">{t('cadDock.statusBar.snapStepPreset')}</p>
             <Select value={String(step)} onValueChange={(v) => onStepChange(parseFloat(v))}>
@@ -350,7 +353,7 @@ function SnapToggleWithStep({ id, label, fkey, description, toggle, step, onStep
               </SelectTrigger>
               <SelectContent>
                 {SNAP_STEP_PRESETS.map(opt => (
-                  <SelectItem key={opt} value={opt} className="text-xs">{opt}</SelectItem>
+                  <SelectItem key={opt} value={opt} className="text-xs">{`${opt} mm`}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -358,16 +361,19 @@ function SnapToggleWithStep({ id, label, fkey, description, toggle, step, onStep
           <div className="space-y-1">
             <p className="text-[10px] text-muted-foreground">{t('cadDock.statusBar.snapStepCustom')}</p>
             <div className="flex gap-1">
-              <input
-                type="number"
-                value={customInput}
-                onChange={(e) => setCustomInput(e.target.value)}
-                onKeyDown={(e) => { if (e.key === 'Enter') commitCustom(); }}
-                placeholder={String(step)}
-                className="flex-1 h-7 text-xs px-2 rounded border border-border bg-background"
-                min={0}
-                step={1}
-              />
+              <div className="relative flex-1">
+                <input
+                  type="number"
+                  value={customInput}
+                  onChange={(e) => setCustomInput(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === 'Enter') commitCustom(); }}
+                  placeholder={String(step)}
+                  className="w-full h-7 text-xs pl-2 pr-8 rounded border border-border bg-background"
+                  min={0}
+                  step={1}
+                />
+                <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-muted-foreground">mm</span>
+              </div>
               <button
                 onClick={commitCustom}
                 className="px-2 h-7 text-xs rounded bg-muted hover:bg-muted/80 border border-border"

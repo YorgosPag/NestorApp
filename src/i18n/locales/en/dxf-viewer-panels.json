@@ -508,9 +508,9 @@
       "polarAdditional": "Additional Angles",
       "polarAddAngle": "Add",
       "polarCustomPlaceholder": "e.g. 33",
-      "snapStepTitle": "Snap step",
-      "snapStepPreset": "Presets",
-      "snapStepCustom": "Custom step",
+      "snapStepTitle": "Snap step (mm)",
+      "snapStepPreset": "Presets (mm)",
+      "snapStepCustom": "Custom step (mm)",
       "snapStepApply": "Apply",
       "displayUnit": "UNIT",
       "displayUnitDesc": "Measurement display unit"

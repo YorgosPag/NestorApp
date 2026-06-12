@@ -8,6 +8,7 @@
  */
 
 import { getFoundationGrips, applyFoundationGripDrag } from '../foundation-grips';
+import { computeFoundationGeometry } from '../../geometry/foundation-geometry';
 import {
   MIN_FOUNDATION_DIMENSION_MM,
   type FoundationEntity,
@@ -139,6 +140,84 @@ describe('getFoundationGrips — line (strip / tie-beam, axis-box 7-grip wall pa
   it('emits no grips on a degenerate (zero-length) axis', () => {
     const grips = getFoundationGrips(stripEntity({ end: { x: 0, y: 0, z: 0 } }));
     expect(grips).toEqual([]);
+  });
+});
+
+// ADR-441 Slice 5a fix — justified (left/right) strip grips must sit on the DRAWN
+// (eccentric) body, not the raw location-line axis. Regression for Giorgio's report
+// «τα χερούλια της πεδιλοδοκού δεν ταυτίζονται με τα μέσα και τις άκρες».
+describe('getFoundationGrips — justified strip grips track the drawn body', () => {
+  const cornerKinds = [
+    'foundation-corner-start-pos',
+    'foundation-corner-start-neg',
+    'foundation-corner-end-pos',
+    'foundation-corner-end-neg',
+  ] as const;
+
+  const cornerSet = (e: FoundationEntity) => {
+    const grips = getFoundationGrips(e);
+    return cornerKinds
+      .map((k) => grips.find((g) => g.foundationGripKind === k)!.position)
+      .map((p) => `${Math.round(p.x)},${Math.round(p.y)}`)
+      .sort();
+  };
+
+  const footprintSet = (params: StripFootingParams) =>
+    computeFoundationGeometry(params).footprint.vertices
+      .map((p) => `${Math.round(p.x)},${Math.round(p.y)}`)
+      .sort();
+
+  it('right-justified: 4 corner grips == the 4 rendered footprint vertices', () => {
+    // axis (0,0)→(2000,0), width 600, right → one face on the axis (y=0), grows −Y.
+    const params = strip({ justification: 'right' });
+    expect(cornerSet(stripEntity({ justification: 'right' }))).toEqual(footprintSet(params));
+  });
+
+  it('left-justified: 4 corner grips == the 4 rendered footprint vertices', () => {
+    const params = strip({ justification: 'left' });
+    expect(cornerSet(stripEntity({ justification: 'left' }))).toEqual(footprintSet(params));
+  });
+
+  it('right-justified: one band face lies on the location-line axis (y=0)', () => {
+    const grips = getFoundationGrips(stripEntity({ justification: 'right' }));
+    const at = (k: string) => grips.find((g) => g.foundationGripKind === k)!.position;
+    // start-pos / end-pos sit on the axis face; start-neg / end-neg on the far face.
+    expect(at('foundation-corner-start-pos')).toEqual({ x: 0, y: 0 });
+    expect(at('foundation-corner-end-pos')).toEqual({ x: 2000, y: 0 });
+    expect(at('foundation-corner-start-neg')).toEqual({ x: 0, y: -600 });
+  });
+
+  it('center-justified grips are unchanged (round-trip identity)', () => {
+    expect(cornerSet(stripEntity())).toEqual(footprintSet(strip()));
+  });
+});
+
+describe('applyFoundationGripDrag — justified strip preserves justification (round-trip)', () => {
+  it('width drag on a right strip keeps justification + re-justifies to the dragged body', () => {
+    const original = strip({ justification: 'right' });
+    const p = applyFoundationGripDrag('foundation-line-width', {
+      originalParams: original,
+      delta: { x: 0, y: 100 }, // perpendicular grow
+    });
+    if (p.kind === 'pad') throw new Error('expected strip');
+    // justification is an engineer property — it must survive the resize.
+    expect(p.justification).toBe('right');
+    // After commit the renderer re-justifies; the new body must contain the dragged
+    // far face. width grew 600→? (opposite-face-fixed engine) and start/end stay raw.
+    expect(p.width).toBeGreaterThan(600);
+    // raw axis stays a valid finite location line (no NaN from the round-trip).
+    expect(Number.isFinite(p.start.x)).toBe(true);
+    expect(Number.isFinite(p.start.y)).toBe(true);
+  });
+
+  it('length drag on a left strip holds the start end and preserves justification', () => {
+    const p = applyFoundationGripDrag('foundation-line-length', {
+      originalParams: strip({ justification: 'left' }),
+      delta: { x: 400, y: 0 },
+    });
+    if (p.kind === 'pad') throw new Error('expected strip');
+    expect(p.justification).toBe('left');
+    expect(p.end.x).toBeCloseTo(2400);
   });
 });
 

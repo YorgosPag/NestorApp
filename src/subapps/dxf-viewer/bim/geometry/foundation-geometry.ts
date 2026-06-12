@@ -28,11 +28,13 @@ import type {
   PadFootingParams,
   StripFootingParams,
   TieBeamParams,
+  StripJustification,
 } from '../types/foundation-types';
 import { ANCHOR_OFFSETS, JUSTIFICATION_NORMAL_SIGN } from '../types/foundation-types';
 import type { Point3D } from '../types/bim-base';
+import type { Point2D } from '../../rendering/types/Types';
 import { polygonArea, polygonBbox } from './shared/polygon-utils';
-import { mmToSceneUnits } from '../../utils/scene-units';
+import { mmToSceneUnits, type SceneUnits } from '../../utils/scene-units';
 
 const MM_TO_M = 1 / 1000;
 const DEG_TO_RAD = Math.PI / 180;
@@ -117,21 +119,88 @@ function transformPad(
 // ─── Band footprint (line-based strip / tie-beam) ────────────────────────────
 
 /**
+ * Canonical CCW unit normal of an axis start→end, ORIENTATION-INVARIANT.
+ *
+ * The justification ('left'/'right') is defined relative to the draw direction
+ * start→end, but that direction is ARBITRARY (the grid builder emits +Y/+X, yet
+ * follow-on-move can reverse it when one axis overtakes another — then a raw CCW
+ * normal would flip and the eccentric band would protrude to the WRONG side).
+ * Canonicalising the tangent here (κατακόρυφη → +Y, οριζόντια → +X) makes every
+ * justification-derived geometry orientation-invariant (Revit Location Line).
+ * Returns `null` on a degenerate (zero-length) axis. ADR-441 Slice 5a-grid.
+ */
+function canonicalAxisNormal(start: Point2D, end: Point2D): { nx: number; ny: number } | null {
+  const dx = end.x - start.x;
+  const dy = end.y - start.y;
+  const len = Math.hypot(dx, dy);
+  if (len < 1e-6) return null;
+  let ux = dx / len, uy = dy / len;
+  if (uy < -1e-9 || (Math.abs(uy) <= 1e-9 && ux < 0)) { ux = -ux; uy = -uy; }
+  // CCW 90° unit normal (rotate tangent (ux,uy) → (-uy,ux)).
+  return { nx: -uy, ny: ux };
+}
+
+/**
+ * The JUSTIFIED centerline of a strip / tie-beam band — i.e. the axis the body is
+ * actually drawn around (raw axis shifted perpendicular by `sign·hw`). This is the
+ * SSoT the grip layer feeds to the axis-box engine so the handles sit on the drawn
+ * body, NOT on the raw (location-line) axis. `center` → identical to the raw axis.
+ *
+ * Pure; canvas units in/out (start/end are canvas units; width is mm → scaled).
+ * @see ../foundations/foundation-grips.ts — consumer (grip emission + drag)
+ */
+export function stripJustifiedAxis(
+  params: StripFootingParams | TieBeamParams,
+): { start: Point2D; end: Point2D } {
+  const s = mmToSceneUnits(params.sceneUnits ?? 'mm');
+  const n = canonicalAxisNormal(params.start, params.end);
+  if (!n) return { start: { x: params.start.x, y: params.start.y }, end: { x: params.end.x, y: params.end.y } };
+  const hw = (params.width * s) / 2;
+  const j = JUSTIFICATION_NORMAL_SIGN[params.justification ?? 'center'] * hw;
+  return {
+    start: { x: params.start.x + n.nx * j, y: params.start.y + n.ny * j },
+    end: { x: params.end.x + n.nx * j, y: params.end.y + n.ny * j },
+  };
+}
+
+/**
+ * Inverse of {@link stripJustifiedAxis}: given a JUSTIFIED centerline (e.g. the
+ * post-resize body axis a grip drag produced) + the new width, recover the RAW
+ * (location-line) axis so the entity keeps storing `start`/`end` as the location
+ * line + `justification` separately. `center` → identity. Pure; canvas units.
+ */
+export function unjustifyStripAxis(
+  effStart: Point2D,
+  effEnd: Point2D,
+  widthMm: number,
+  justification: StripJustification | undefined,
+  sceneUnits: SceneUnits | undefined,
+): { start: Point2D; end: Point2D } {
+  const s = mmToSceneUnits(sceneUnits ?? 'mm');
+  const n = canonicalAxisNormal(effStart, effEnd);
+  if (!n) return { start: { x: effStart.x, y: effStart.y }, end: { x: effEnd.x, y: effEnd.y } };
+  const hw = (widthMm * s) / 2;
+  const j = JUSTIFICATION_NORMAL_SIGN[justification ?? 'center'] * hw;
+  return {
+    start: { x: effStart.x - n.nx * j, y: effStart.y - n.ny * j },
+    end: { x: effEnd.x - n.nx * j, y: effEnd.y - n.ny * j },
+  };
+}
+
+/**
  * Build a band rectangle of `width` centred on the axis start→end. CCW order
  * (left-of-direction first). Degenerate (zero-length) axis → tiny square so the
  * pipeline never produces < 3 vertices (validator blocks such params upstream).
  *
- * Justification (ADR-441 Slice 5a): πριν χτιστεί το band, ο centerline μετατοπίζεται
- * ΚΑΘΕΤΑ κατά `sign·hw` (SSoT `JUSTIFICATION_NORMAL_SIGN`) ώστε η μία παρειά να
- * πέφτει στον άξονα (έκκεντρη ανάπτυξη). `center` → sign 0 → identical footprint.
+ * Justification (ADR-441 Slice 5a): the centerline is shifted perpendicular via
+ * the shared {@link stripJustifiedAxis} SSoT so one face falls on the axis
+ * (eccentric growth). `center` → identical footprint.
  */
 function buildBandFootprint(params: StripFootingParams | TieBeamParams, s: number): Point3D[] {
   const { start, end } = params;
-  const dx = end.x - start.x;
-  const dy = end.y - start.y;
-  const len = Math.hypot(dx, dy);
   const hw = (params.width * s) / 2;
-  if (len < 1e-6) {
+  const n = canonicalAxisNormal(start, end);
+  if (!n) {
     return [
       { x: start.x - hw, y: start.y - hw, z: 0 },
       { x: start.x + hw, y: start.y - hw, z: 0 },
@@ -139,24 +208,14 @@ function buildBandFootprint(params: StripFootingParams | TieBeamParams, s: numbe
       { x: start.x - hw, y: start.y + hw, z: 0 },
     ];
   }
-  // Canonical tangent (κατακόρυφη → +Y, οριζόντια → +X): το justification ('left'/'right')
-  // ορίζεται relative στη φορά start→end, αλλά η φορά είναι ΑΥΘΑΙΡΕΤΗ (ο builder παράγει +Y/+X,
-  // όμως το follow-on-move μπορεί να την αντιστρέψει όταν ένας άξονας προσπεράσει άλλον — τότε
-  // το CCW normal γυρίζει και η έκκεντρη λωρίδα προεξέχει προς τη ΛΑΘΟΣ πλευρά). Κανονικοποιώντας
-  // εδώ, το geometry γίνεται orientation-invariant (Revit Location Line). ADR-441 Slice 5a-grid fix.
-  let ux = dx / len, uy = dy / len;
-  if (uy < -1e-9 || (Math.abs(uy) <= 1e-9 && ux < 0)) { ux = -ux; uy = -uy; }
-  // CCW 90° unit normal (rotate tangent (ux,uy) → (-uy,ux)).
-  const nx = -uy;
-  const ny = ux;
-  // Perpendicular justification shift του centerline (sign·hw κατά τον normal).
-  const j = JUSTIFICATION_NORMAL_SIGN[params.justification ?? 'center'] * hw;
-  const ax = start.x + nx * j, ay = start.y + ny * j;
-  const bx = end.x + nx * j,   by = end.y + ny * j;
+  const { nx, ny } = n;
+  // Justified centerline endpoints (shared SSoT — same shift the grips read).
+  const axis = stripJustifiedAxis(params);
+  const { start: a, end: b } = axis;
   return [
-    { x: ax - nx * hw, y: ay - ny * hw, z: 0 },
-    { x: bx - nx * hw, y: by - ny * hw, z: 0 },
-    { x: bx + nx * hw, y: by + ny * hw, z: 0 },
-    { x: ax + nx * hw, y: ay + ny * hw, z: 0 },
+    { x: a.x - nx * hw, y: a.y - ny * hw, z: 0 },
+    { x: b.x - nx * hw, y: b.y - ny * hw, z: 0 },
+    { x: b.x + nx * hw, y: b.y + ny * hw, z: 0 },
+    { x: a.x + nx * hw, y: a.y + ny * hw, z: 0 },
   ];
 }
