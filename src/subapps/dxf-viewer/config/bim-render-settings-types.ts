@@ -12,19 +12,35 @@
  */
 
 import { DEFAULT_VIEW_RANGE, type ViewRange } from './bim-view-range';
-import { DEFAULT_OBJECT_STYLES, type BimCategory, type ObjectStyle } from './bim-object-styles';
+import {
+  DEFAULT_OBJECT_STYLES, type BimCategory, type ObjectStyle, type SubcategoryStyle,
+} from './bim-object-styles';
 import type { Discipline } from '../bim/discipline/bim-discipline';
 
 // ── Drawing scale constants (re-exported by drawing-scale-store for compat) ──
 export const DEFAULT_DRAWING_SCALE = 100;
 export const DRAWING_SCALE_MIN = 1;
 export const DRAWING_SCALE_MAX = 10000;
+
+/**
+ * ADR-445 — schema version of the persisted `bimRenderSettings`. Bump when a code
+ * default change must reach already-saved levels. `loadForLevel` runs
+ * {@link migrateBimRenderSettings} on any doc whose `settingsVersion` is lower and
+ * persists the healed snapshot once (idempotent). v1 = per-category structural colour
+ * identity (column→blue / beam→amber / foundation→sienna / stair→teal / railing→steel).
+ */
+export const BIM_SETTINGS_VERSION = 1;
 export const DRAWING_SCALE_PRESETS = [10, 20, 50, 100, 200, 500] as const;
 export type DrawingScalePreset = typeof DRAWING_SCALE_PRESETS[number];
 
 // ── Core type ──────────────────────────────────────────────────────────────
 
 export interface BimRenderSettings {
+  /**
+   * ADR-445 — persisted schema version (absent ⇒ pre-versioned, 0). Drives the
+   * one-time colour-refresh migration in {@link migrateBimRenderSettings}.
+   */
+  settingsVersion?: number;
   /** Annotation scale denominator (e.g. 100 → 1:100). */
   drawingScale: number;
   /** Partial ViewRange override (mm). Absent keys fall back to DEFAULT_VIEW_RANGE. */
@@ -88,4 +104,72 @@ export function resolveBimSettings(s?: BimRenderSettings | null): ResolvedBimSet
     // ADR-422 L1 — absent ⇒ false (analytical heat-load overlay off by default).
     showHeatLoad: s?.showHeatLoad ?? false,
   };
+}
+
+// ── ADR-445 colour-refresh migration ─────────────────────────────────────────
+
+/**
+ * Set `obj[key]` to the current default colour, or delete it when the default has
+ * none (so the resolver falls back to the canvas token). Mutates `obj`.
+ */
+function refreshColor(
+  obj: { projectionColor?: string | null; cutColor?: string | null },
+  key: 'projectionColor' | 'cutColor',
+  defColor: string | null | undefined,
+): void {
+  if (typeof defColor === 'string') obj[key] = defColor;
+  else delete obj[key];
+}
+
+/**
+ * Re-derive ONLY the `projectionColor`/`cutColor` (parent + subcategories) of a
+ * persisted ObjectStyles map from the current `DEFAULT_OBJECT_STYLES`, preserving
+ * every user-tweaked NON-colour field (pens, visibility, line patterns). Persisted
+ * docs froze the FULL resolved map, so old default colours shadowed code changes;
+ * this refresh heals them while keeping genuine V/G pen/visibility edits intact.
+ */
+function refreshObjectStyleColors(
+  persisted: Partial<Record<BimCategory, ObjectStyle>>,
+): Partial<Record<BimCategory, ObjectStyle>> {
+  const out: Partial<Record<BimCategory, ObjectStyle>> = {};
+  for (const key of Object.keys(persisted) as BimCategory[]) {
+    const style = persisted[key];
+    if (!style) continue;
+    const def = DEFAULT_OBJECT_STYLES[key];
+    const next: ObjectStyle = { ...style };
+    refreshColor(next, 'projectionColor', def?.projectionColor);
+    refreshColor(next, 'cutColor', def?.cutColor);
+    if (next.subcategories) {
+      const defSubs = def?.subcategories ?? {};
+      const subsOut: Partial<Record<string, SubcategoryStyle>> = {};
+      for (const subKey of Object.keys(next.subcategories)) {
+        const sub = next.subcategories[subKey];
+        if (!sub) continue;
+        const defSub = defSubs[subKey];
+        const subNext: SubcategoryStyle = { ...sub };
+        refreshColor(subNext, 'projectionColor', defSub?.projectionColor);
+        refreshColor(subNext, 'cutColor', defSub?.cutColor);
+        subsOut[subKey] = subNext;
+      }
+      next.subcategories = subsOut;
+    }
+    out[key] = next;
+  }
+  return out;
+}
+
+/**
+ * ADR-445 — one-time colour-refresh migration for persisted `bimRenderSettings`.
+ * Returns the (possibly healed) settings + a `changed` flag the caller uses to
+ * persist the result exactly once. Idempotent: a doc already at
+ * {@link BIM_SETTINGS_VERSION} is returned untouched.
+ */
+export function migrateBimRenderSettings(
+  s: BimRenderSettings | null,
+): { settings: BimRenderSettings | null; changed: boolean } {
+  if (!s) return { settings: s, changed: false };
+  if ((s.settingsVersion ?? 0) >= BIM_SETTINGS_VERSION) return { settings: s, changed: false };
+  const next: BimRenderSettings = { ...s, settingsVersion: BIM_SETTINGS_VERSION };
+  if (s.objectStyles) next.objectStyles = refreshObjectStyleColors(s.objectStyles);
+  return { settings: next, changed: true };
 }

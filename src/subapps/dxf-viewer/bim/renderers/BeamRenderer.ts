@@ -74,19 +74,23 @@ import {
   SECTION_SYMBOL_BEAM_W_RATIO,
 } from '../beams/beam-section-profile';
 
-/** Stroke colour per kind. */
+// ADR-445 — δοκός = amber ταυτότητα κατηγορίας (αντίθεση με μπλε κολώνες· οι δύο
+// γραμμικές οντότητες ξεχωρίζουν τέλεια εκεί που επικαλύπτονται στην κάτοψη). Fallback
+// του resolver (το κανονικό outline έρχεται πλέον από BIM_CATEGORY_LINE_COLORS.beam).
+// Ο πρόβολος κρατά θερμότερη/κοκκινωπή amber απόχρωση ως διακριτικό προειδοποίησης.
+/** Stroke colour per kind (amber family). */
 const KIND_STROKE: Readonly<Record<BeamKind, string>> = {
-  'straight':   '#5b6478',
-  'curved':     '#8a5a2b',
-  'cantilever': '#9a3a3a',
+  'straight':   '#b07d1f',
+  'curved':     '#966a2a',
+  'cantilever': '#c0531f',
 };
 
-/** Translucent fill (rgba) per kind. ~15% opacity — lighter than column/slab
- *  γιατί το beam είναι "hidden above" στο plan view. */
+/** Translucent fill (rgba) per kind, amber family. ~15% opacity — lighter than
+ *  column/slab γιατί το beam είναι "hidden above" στο plan view. */
 const KIND_FILL: Readonly<Record<BeamKind, string>> = {
-  'straight':   'rgba(140, 158, 178, 0.15)',
-  'curved':     'rgba(192, 140, 70, 0.15)',
-  'cantilever': 'rgba(192, 80, 80, 0.15)',
+  'straight':   'rgba(176, 125, 31, 0.15)',
+  'curved':     'rgba(150, 106, 42, 0.15)',
+  'cantilever': 'rgba(192, 83, 31, 0.15)',
 };
 
 const OUTLINE_DASH: readonly [number, number] = [8, 4];

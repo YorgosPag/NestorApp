@@ -788,6 +788,7 @@
 | **ADR-442** | Guides & Grid Contextual Ribbon Tab (Revit-grade, `guide-` tool-active trigger) | 🟢 DONE — pending verify+commit | [View](./adrs/ADR-442-guides-contextual-ribbon-tab.md) |
 | **ADR-443** | Permanent «Δομικά» (Structural) Ribbon Tab (Revit "Structure"· permanent tab avoids property-tab conflict) | 🟢 DONE — pending verify+commit | [View](./adrs/ADR-443-structural-permanent-ribbon-tab.md) |
 | **ADR-444** | Permanent «Αρχιτεκτονικά» & «ΗΛΜ» Ribbon Tabs (Revit "Architecture"/"Systems"· siblings of ADR-443· MEP Boy-Scout re-grouped) | 🟢 DONE — pending verify+commit | [View](./adrs/ADR-444-architecture-systems-permanent-ribbon-tabs.md) |
+| **ADR-445** | Per-Category Structural Colour Identity (κολώνα μπλε/δοκός amber/θεμελίωση sienna/σκάλα teal· working-view convention) | 🟢 DONE — pending verify+commit | [View](./adrs/ADR-445-structural-category-color-identity.md) |
 | **ADR-UI-001** | Visual Primitive Ownership & Semantic Tokens | ✅ APPROVED | [View](./adrs/ADR-UI-001.md) |
 
 ---

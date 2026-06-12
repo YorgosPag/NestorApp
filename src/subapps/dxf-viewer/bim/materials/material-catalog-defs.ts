@@ -59,12 +59,15 @@ export const MATERIAL_DEFS: Record<string, PbrMaterialDef> = {
   // material renders real κεραμίδια in 3D.
   'mat-roof-tile':  { color: 0x9e4a2c, roughness: 0.85, metalness: 0.00 },
   // Element-type fallbacks (when no DNA is present).
-  'elem-column':  { color: 0x8a8a8a, roughness: 0.75, metalness: 0.05 },
-  'elem-beam':    { color: 0x6d4c3d, roughness: 0.75, metalness: 0.05 },
-  'elem-slab':    { color: 0xbdbdbd, roughness: 0.80, metalness: 0.00 },
-  // ADR-436 — θεμελίωση (πέδιλα/πεδιλοδοκοί/συνδετήριες δοκοί): σκυρόδεμα/χώμα,
-  // ελαφρώς πιο γαιώδες & πιο ματ από slab (below-grade RC), μηδέν metalness.
-  'elem-foundation': { color: 0x9a9488, roughness: 0.88, metalness: 0.00 },
+  // ADR-445 — per-category colour identity (muted 3D tones της 2D παλέτας ώστε να μην
+  // φαίνονται cartoonish σε μεγάλη επιφάνεια): κολώνα steel-blue, δοκός amber, πλάκα
+  // taupe, θεμελίωση sienna. Συνέπεια 2D κάτοψης ↔ 3D προβολής.
+  'elem-column':  { color: 0x4a6f8c, roughness: 0.75, metalness: 0.05 },
+  'elem-beam':    { color: 0xa8823a, roughness: 0.75, metalness: 0.05 },
+  'elem-slab':    { color: 0xb2a290, roughness: 0.80, metalness: 0.00 },
+  // ADR-436/445 — θεμελίωση (πέδιλα/πεδιλοδοκοί/συνδετήριες): sienna/γήινο below-grade
+  // RC, ματ, μηδέν metalness.
+  'elem-foundation': { color: 0x8a6048, roughness: 0.88, metalness: 0.00 },
   // ADR-417 — pitched roof «νερά»: terracotta clay-tile tone, matte non-metallic
   // (flat fallback before the CC0 roof-tile PBR set loads).
   'elem-roof':    { color: 0x9e4a2c, roughness: 0.85, metalness: 0.00 },
@@ -84,9 +87,9 @@ export const MATERIAL_DEFS: Record<string, PbrMaterialDef> = {
   // ADR-408 Φ3 — electrical panel default: painted steel enclosure — grey-green
   // (RAL 7035-ish equipment grey), matte, low metalness (powder-coated box).
   'elem-electrical-panel': { color: 0x6b7280, roughness: 0.55, metalness: 0.30 },
-  // ADR-407 — railing (guardrail) default: brushed metal — mid grey, low
-  // roughness, high metalness (steel/aluminium posts, balusters, top rail).
-  'elem-railing':        { color: 0x999999, roughness: 0.30, metalness: 0.85 },
+  // ADR-407/445 — railing (guardrail) default: brushed steel — cool steel-grey
+  // (ευθυγραμμισμένο με την κατηγορία), low roughness, high metalness.
+  'elem-railing':        { color: 0x6b7785, roughness: 0.30, metalness: 0.85 },
   // ADR-408 Φ7 — home-run conduit/wire default. Always tinted by the circuit's
   // system colour (via getSystemTintedMaterial3D), so this base colour is only a
   // fallback; matte plastic-insulation look (low metalness, mid roughness).

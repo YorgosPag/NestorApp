@@ -116,9 +116,10 @@ describe('resolveSubcategoryStyle — parent fallback (no subcategory key)', () 
   });
 
   it('default color is null for a category without a C.9 line color', () => {
-    // ADR-375 C.9: wall/column/slab/opening πλέον έχουν parent χρώμα· το `beam`
-    // (όπως annotation categories) μένει άχρωμο → πέφτει σε canvas token (null).
-    expect(resolveSubcategoryStyle({ category: 'beam', cutState: 'projection', scaleDenominator: 100 }).color).toBeNull();
+    // ADR-375 C.9 / ADR-445: τα δομικά (wall/column/beam/slab/foundation/stair/railing/
+    // opening) πλέον έχουν parent χρώμα· το `ceiling` (annotation-grade category) μένει
+    // άχρωμο → πέφτει σε canvas token (null).
+    expect(resolveSubcategoryStyle({ category: 'ceiling', cutState: 'projection', scaleDenominator: 100 }).color).toBeNull();
   });
 });
 
@@ -223,7 +224,7 @@ describe('resolveSubcategoryStyle — beyond state', () => {
   });
 
   it('beyond state returns null color for a category without a C.9 line color', () => {
-    expect(resolveSubcategoryStyle({ category: 'beam', cutState: 'beyond', scaleDenominator: 100 }).color).toBeNull();
+    expect(resolveSubcategoryStyle({ category: 'ceiling', cutState: 'beyond', scaleDenominator: 100 }).color).toBeNull();
   });
 });
 
@@ -243,7 +244,7 @@ describe('resolveSubcategoryStyle — missing / unknown subcategoryKey', () => {
   });
 
   it('unknown subcategoryKey → color null (category without a C.9 line color)', () => {
-    expect(resolveSubcategoryStyle({ category: 'beam', cutState: 'cut', scaleDenominator: 100, subcategoryKey: 'nonexistent' }).color).toBeNull();
+    expect(resolveSubcategoryStyle({ category: 'ceiling', cutState: 'cut', scaleDenominator: 100, subcategoryKey: 'nonexistent' }).color).toBeNull();
   });
 
   it('parent has no subcategories map → falls back to parent pen (no crash)', () => {
@@ -294,14 +295,14 @@ describe('ADR-375 C.9 — defaults χρώματος μέσω resolveSubcategoryS
     expect(s.color).toBe('#6b7280');
   });
 
-  it('κανονική κολώνα (common-edges) → parent #5b6478', () => {
+  it('κανονική κολώνα (common-edges) → parent #2f6690', () => {
     const s = resolveSubcategoryStyle({ category: 'column', subcategoryKey: 'common-edges', cutState: 'cut', ...base });
-    expect(s.color).toBe('#5b6478');
+    expect(s.color).toBe('#2f6690');
   });
 
-  it('τοιχίο (shear-wall) → #2f3a4a', () => {
+  it('τοιχίο (shear-wall) → #24506b', () => {
     const s = resolveSubcategoryStyle({ category: 'column', subcategoryKey: 'shear-wall', cutState: 'cut', ...base });
-    expect(s.color).toBe('#2f3a4a');
+    expect(s.color).toBe('#24506b');
   });
 
   it('πλάκα (common-edges) → parent #6e6358', () => {

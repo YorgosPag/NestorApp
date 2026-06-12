@@ -23,23 +23,35 @@ import type { LinePatternKey } from './bim-line-patterns';
  * 2D outline (resolveSubcategoryStyle) ΚΑΙ τα 3D edge overlays (resolve3DEdgeStyle)
  * — μηδέν hardcoded χρώμα στους renderers.
  */
+// ADR-445 — Per-category structural colour identity (Giorgio 2026-06-12). Working-view
+// convention (Revit filters / Tekla): each structural CATEGORY gets one distinct, muted,
+// construction-evocative hue so types read apart at a glance instead of all-grey. Walls
+// stay neutral (most numerous = background); columns blue, beams amber, foundation sienna,
+// stairs teal, railings steel-grey. Sub-types are TINTS of the category base (a column
+// always reads blue). These drive 2D outline + 3D edge overlays via resolveSubcategoryStyle.
 export const BIM_CATEGORY_LINE_COLORS = {
-  /** Εξωτερικός τοίχος — σχεδόν μαύρο, βαρύ (parent `wall`). */
+  /** Εξωτερικός τοίχος — σχεδόν μαύρο, βαρύ ουδέτερο (parent `wall`). */
   wallExterior: '#2b2f36',
   /** Εσωτερικός τοίχος — γκρι μεσαίο (subcategory `wall:interior`). */
   wallInterior: '#6b7280',
-  /** Κολώνα — slate (parent `column`). */
-  column: '#5b6478',
-  /** Τοιχίο Ω.Σ. — σκούρο μπλε-RC (subcategory `column:shear-wall`). */
-  shearWall: '#2f3a4a',
-  /** Πλάκα — taupe (parent `slab`). */
+  /** Κολώνα — steel blue, κρίσιμο κατακόρυφο (parent `column`). */
+  column: '#2f6690',
+  /** Τοιχίο Ω.Σ. — βαθύ μπλε-RC, ίδια οικογένεια με κολώνα (subcategory `column:shear-wall`). */
+  shearWall: '#24506b',
+  /** Δοκός — amber, οριζόντιο (αντίθεση με μπλε κολώνες, parent `beam`). */
+  beam: '#b07d1f',
+  /** Πλάκα — taupe, μεγάλη επιφάνεια φόντου (parent `slab`). */
   slab: '#6e6358',
   /** Πόρτα — πορτοκαλί ξύλου (opening door-* subcategories). */
   door: '#c97c2f',
   /** Παράθυρο — μπλε τζαμιού (opening window-* subcategories). */
   window: '#2d72b8',
-  /** Θεμελίωση — γαιώδες γκρι-μπλε (below-grade, parent `foundation`). */
-  foundation: '#6b7a8f',
+  /** Θεμελίωση — sienna/γήινο, κάτω από τη στάθμη (parent `foundation`). */
+  foundation: '#8a5a3c',
+  /** Σκάλα — teal-green, κυκλοφορία (parent `stair`). */
+  stair: '#2f8f6f',
+  /** Κιγκλίδωμα — ψυχρό steel-grey, λεπτό μέταλλο (parent `railing`). */
+  railing: '#607080',
 } as const;
 
 /**
@@ -253,8 +265,11 @@ export const DEFAULT_OBJECT_STYLES: Readonly<Record<BimCategory, ObjectStyle>> =
       },
     },
   },
+  // ADR-445 — δοκός = amber (οριζόντιο φέρον, αντίθεση με μπλε κολώνες).
   beam: {
     projectionPen: 4, cutPen: 6,
+    projectionColor: BIM_CATEGORY_LINE_COLORS.beam,
+    cutColor: BIM_CATEGORY_LINE_COLORS.beam,
     subcategories: { 'hidden-lines': { linePattern: 'dashed' } },
   },
   // ADR-375 C.9 — πλάκα = taupe (μονόχρωμο· οι ανά-kind αποχρώσεις ζουν στο fill SSoT).
@@ -282,8 +297,12 @@ export const DEFAULT_OBJECT_STYLES: Readonly<Record<BimCategory, ObjectStyle>> =
     },
   },
   'slab-opening': { projectionPen: 3,  cutPen: 4  },
+  // ADR-445 — σκάλα = teal-green (κυκλοφορία). Το χρώμα δίνει ΚΑΙ το 2D fill tint
+  // (resolveVgFillTint) — πρώτη φορά που η σκάλα αποκτά διακριτό γέμισμα.
   stair: {
     projectionPen: 3, cutPen: 5,
+    projectionColor: BIM_CATEGORY_LINE_COLORS.stair,
+    cutColor: BIM_CATEGORY_LINE_COLORS.stair,
     subcategories: {
       'walkline':  { linePattern: 'dashed'  },
       'handrails': { linePattern: 'dashed2' },
@@ -311,7 +330,12 @@ export const DEFAULT_OBJECT_STYLES: Readonly<Record<BimCategory, ObjectStyle>> =
   // ADR-408 Εύρος Β #3 — ενδοδαπέδια θέρμανση: λεπτή γραμμή (area hatch overlay, interior plan).
   'mep-underfloor': { projectionPen: 3, cutPen: 4 },
   // ADR-407 — κάγκελο: μεσαία γραμμή προβολής (metal members, plan symbol).
-  railing:        { projectionPen: 4, cutPen: 5 },
+  // ADR-445 — ψυχρό steel-grey ταυτότητα (λεπτό μέταλλο).
+  railing: {
+    projectionPen: 4, cutPen: 5,
+    projectionColor: BIM_CATEGORY_LINE_COLORS.railing,
+    cutColor: BIM_CATEGORY_LINE_COLORS.railing,
+  },
   // ADR-408 Φ7 — καλώδιο κυκλώματος: λεπτή γραμμή annotation (το χρώμα έρχεται
   // per-system από το `systemColor`, όχι από εδώ — η κατηγορία δίνει μόνο V/G).
   'mep-wire':     { projectionPen: 3, cutPen: 3 },

@@ -29,10 +29,12 @@ import { useDrawingScaleStore } from '../../state/drawing-scale-store';
 import { HOVER_HIGHLIGHT } from '../../config/color-config';
 import { getLayer } from '../../stores/LayerStore';
 
-/** Railing palette — metal guardrail (cool grey projection). */
-const RAILING_STROKE = '#475569';
-const RAILING_POST_FILL = 'rgba(71, 85, 105, 0.30)';
-const RAILING_BALUSTER_FILL = 'rgba(71, 85, 105, 0.65)';
+// ADR-445 — κιγκλίδωμα = ψυχρό steel-grey (#607080), ευθυγραμμισμένο με
+// BIM_CATEGORY_LINE_COLORS.railing. Fallback του resolver για το stroke.
+/** Railing palette — metal guardrail (cool steel-grey projection). */
+const RAILING_STROKE = '#607080';
+const RAILING_POST_FILL = 'rgba(96, 112, 128, 0.30)';
+const RAILING_BALUSTER_FILL = 'rgba(96, 112, 128, 0.65)';
 const MIN_BALUSTER_DOT_PX = 1.5;
 
 export class RailingRenderer extends BaseEntityRenderer {

@@ -157,15 +157,15 @@ function makeRectColumn(kind: 'rectangular' | 'shear-wall'): ColumnEntity {
 describe('ColumnRenderer — ADR-375 C.9 default line color', () => {
   beforeEach(() => mockGetState.mockReturnValue(makeStoreState()));
 
-  it('κανονική κολώνα → outline strokeStyle = parent #5b6478', () => {
+  it('κανονική κολώνα → outline strokeStyle = parent #2f6690', () => {
     const { renderer, mock } = makeRenderer();
     renderer.render(makeRectColumn('rectangular') as unknown as EntityModel, {});
-    expect(strokeStyleCalls(mock.calls)).toContain('#5b6478');
+    expect(strokeStyleCalls(mock.calls)).toContain('#2f6690');
   });
 
-  it('τοιχίο (shear-wall) → outline strokeStyle = #2f3a4a (subcategory)', () => {
+  it('τοιχίο (shear-wall) → outline strokeStyle = #24506b (subcategory)', () => {
     const { renderer, mock } = makeRenderer();
     renderer.render(makeRectColumn('shear-wall') as unknown as EntityModel, {});
-    expect(strokeStyleCalls(mock.calls)).toContain('#2f3a4a');
+    expect(strokeStyleCalls(mock.calls)).toContain('#24506b');
   });
 });

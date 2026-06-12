@@ -24,6 +24,7 @@ import {
   DRAWING_SCALE_MIN,
   DRAWING_SCALE_MAX,
   resolveBimSettings,
+  migrateBimRenderSettings,
   type BimRenderSettings,
   type ResolvedBimSettings,
 } from '../config/bim-render-settings-types';
@@ -203,10 +204,15 @@ export const useBimRenderSettingsStore = create<BimRenderSettingsState>((set, ge
     bimVisibilitySnapshot: null,
 
     loadForLevel(levelId, settings) {
-      const resolved = resolveBimSettings(settings ?? null);
+      // ADR-445 — one-time colour-refresh migration: old levels froze the FULL
+      // objectStyles map (incl. default colours), so pre-versioned snapshots
+      // shadow new code defaults. Heal on load (preserving user pen/visibility)
+      // and persist once so it never re-runs for this level.
+      const { settings: migrated, changed } = migrateBimRenderSettings(settings ?? null);
+      const resolved = resolveBimSettings(migrated);
       set({
         currentLevelId: levelId,
-        rawSettings: settings ?? null,
+        rawSettings: migrated,
         drawingScale: resolved.drawingScale,
         viewRange: resolved.viewRange,
         objectStyles: resolved.objectStyles,
@@ -217,6 +223,11 @@ export const useBimRenderSettingsStore = create<BimRenderSettingsState>((set, ge
         lastLocalMutationAt: 0,
         bimVisibilitySnapshot: null,
       });
+      if (changed && migrated && levelId) {
+        saveBimRenderSettings(levelId, migrated).catch(() => {
+          // fire-and-forget: the heal re-runs next load if this write fails
+        });
+      }
     },
 
     setDrawingScale(scale) {

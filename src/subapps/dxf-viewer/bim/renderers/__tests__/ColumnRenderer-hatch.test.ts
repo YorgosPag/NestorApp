@@ -259,27 +259,27 @@ describe('ColumnRenderer + Phase 8 kinds (polygon / shear-wall / I-shape)', () =
     },
   );
 
-  // ADR-375 C.9 — το outline χρώμα οδηγείται πλέον από το Object Styles SSoT
-  // (2-tone: parent κολώνα #5b6478 / subcategory shear-wall #2f3a4a)· οι παλιές
-  // per-kind αποχρώσεις (#5c8a3a/#3a4048/#4a4a52) ζουν μόνο ως fill tint (KIND_FILL).
+  // ADR-375 C.9 / ADR-445 — το outline χρώμα οδηγείται από το Object Styles SSoT
+  // (2-tone: parent κολώνα steel-blue #2f6690 / subcategory τοιχίο shear-wall #24506b)·
+  // οι per-kind αποχρώσεις (blue family) ζουν μόνο ως fill tint (KIND_FILL).
   it('polygon kind → outline = parent column line color (slate)', () => {
     const { renderer, mock } = makeRenderer();
     renderer.render(makeColumn('polygon', 'rc') as unknown as EntityModel, {});
     const strokeStyles = mock.calls.filter((c) => c.fn === 'set:strokeStyle').map((c) => c.args[0]);
-    expect(strokeStyles).toContain('#5b6478');
+    expect(strokeStyles).toContain('#2f6690');
   });
 
   it('shear-wall kind → outline = shear-wall subcategory line color', () => {
     const { renderer, mock } = makeRenderer();
     renderer.render(makeColumn('shear-wall', 'rc') as unknown as EntityModel, {});
     const strokeStyles = mock.calls.filter((c) => c.fn === 'set:strokeStyle').map((c) => c.args[0]);
-    expect(strokeStyles).toContain('#2f3a4a');
+    expect(strokeStyles).toContain('#24506b');
   });
 
   it('I-shape kind → outline = parent column line color (not a τοιχίο kind)', () => {
     const { renderer, mock } = makeRenderer();
     renderer.render(makeColumn('I-shape', 'rc') as unknown as EntityModel, {});
     const strokeStyles = mock.calls.filter((c) => c.fn === 'set:strokeStyle').map((c) => c.args[0]);
-    expect(strokeStyles).toContain('#5b6478');
+    expect(strokeStyles).toContain('#2f6690');
   });
 });
