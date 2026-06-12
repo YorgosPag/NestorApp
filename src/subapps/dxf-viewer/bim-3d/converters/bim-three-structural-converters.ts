@@ -27,6 +27,7 @@ import { buildMultiLayerSlabSolid } from './slab-multilayer-solid-3d';
 import { isMultiLayerSlab } from '../../bim/types/slab-dna-types';
 import { attachEdgesProjection } from './bim-three-edges';
 import { buildColumnFinishSkin, buildBeamFinishSkin } from './structural-finish-3d';
+import { isStructuralFinishVisible } from '../../bim/finishes/structural-finish-visibility';
 import { isWallColumnKind } from '../../bim/columns/column-from-faces';
 import type { ColumnTopProfile, ColumnBaseProfile } from '../../bim/geometry/column-vertical-profile';
 
@@ -93,7 +94,10 @@ export function columnToMesh(
   // ADR-449 Slice 2 — additive σοβάς (per-face band skin) ΕΞΩ από τον στατικό
   // πυρήνα. Ενεργό μόνο όταν η κολόνα έχει ενεργό `finish` ΚΑΙ δόθηκαν walls
   // (απών στο ghost path → πυρήνας-only Mesh, μηδέν regression). Flat-path μόνο.
-  const finishSkin = buildColumnFinishSkin(flatColumn, walls, mesh.position.y, levelId);
+  // ADR-449 Slice 5 — view-level gate «Σοβατισμένη όψη» (showFinishSkin).
+  const finishSkin = isStructuralFinishVisible()
+    ? buildColumnFinishSkin(flatColumn, walls, mesh.position.y, levelId)
+    : null;
   if (finishSkin) {
     const composite = new THREE.Group();
     composite.add(tagged);
@@ -173,7 +177,10 @@ export function beamToMesh(
   // ADR-449 Slice 4 — additive σοβάς (2 πλάγιες όψεις) ΕΞΩ από τον στατικό πυρήνα.
   // Ενεργό μόνο όταν το δοκάρι έχει ενεργό `finish` (απών → πυρήνας-only Mesh, μηδέν
   // regression). `baseY` = κάτω παρειά (ίδιο datum με το box extrude). Flat-path μόνο.
-  const finishSkin = buildBeamFinishSkin(beam, walls, mesh.position.y, levelId);
+  // ADR-449 Slice 5 — view-level gate «Σοβατισμένη όψη» (showFinishSkin).
+  const finishSkin = isStructuralFinishVisible()
+    ? buildBeamFinishSkin(beam, walls, mesh.position.y, levelId)
+    : null;
   if (finishSkin) {
     const composite = new THREE.Group();
     composite.add(tagged);

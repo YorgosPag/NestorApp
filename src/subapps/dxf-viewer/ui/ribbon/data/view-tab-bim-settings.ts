@@ -148,6 +148,19 @@ const HEAT_LOAD_BUTTON: RibbonButton = {
   },
 };
 
+/** ADR-449 Slice 5 — structural finish skin (σοβάς) master toggle (Revit finishes visibility). */
+const FINISH_SKIN_BUTTON: RibbonButton = {
+  type: 'widget',
+  size: 'small',
+  widgetId: 'show-finish-skin-toggle',
+  command: {
+    id: 'view.finishSkin',
+    labelKey: 'ribbon.commands.finishSkin.label',
+    icon: '',
+    commandKey: 'show-finish-skin-toggle',
+  },
+};
+
 /** ADR-422 L3 — pipe-sizing overlay master toggle (Revit "Pipe Sizing" preview). */
 const PIPE_SIZING_BUTTON: RibbonButton = {
   type: 'widget',
@@ -229,7 +242,7 @@ export const BIM_GRAPHICS_PANEL: RibbonPanelDef = {
       isInFlyout: false,
       // ADR-446 — the standalone «Ρεαλιστικά Υλικά» toggle (REALISTIC_MATERIALS_BUTTON)
       // is subsumed by the «Στυλ Προβολής» dropdown (VIEW_VISUAL_STYLES_PANEL).
-      buttons: [VISIBILITY_GRAPHICS_BUTTON, HIDE_BIM_BUTTON, MEP_WIRE_BUTTON, DRAIN_PIPE_BUTTON, COLOR_BY_SYSTEM_BUTTON, HEAT_LOAD_BUTTON, PIPE_SIZING_BUTTON, BALANCING_BUTTON, THERMAL_STUDY_BUTTON, DISCIPLINE_BUTTON],
+      buttons: [VISIBILITY_GRAPHICS_BUTTON, HIDE_BIM_BUTTON, MEP_WIRE_BUTTON, DRAIN_PIPE_BUTTON, COLOR_BY_SYSTEM_BUTTON, HEAT_LOAD_BUTTON, FINISH_SKIN_BUTTON, PIPE_SIZING_BUTTON, BALANCING_BUTTON, THERMAL_STUDY_BUTTON, DISCIPLINE_BUTTON],
     },
   ],
 };

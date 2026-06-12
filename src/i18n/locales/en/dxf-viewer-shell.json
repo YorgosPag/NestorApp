@@ -3235,6 +3235,13 @@
         "tooltipEnable": "Show analytical heat load per space (heat-map + Φ in W)",
         "tooltipDisable": "Hide analytical heat load"
       },
+      "finishSkin": {
+        "label": "Finished Face",
+        "enable": "Show",
+        "disable": "Hide",
+        "tooltipEnable": "Show column/beam plaster finish (perimeter skin per exposed face)",
+        "tooltipDisable": "Hide plaster finish — show bare structural core"
+      },
       "pipeSizing": {
         "label": "Pipe Sizing",
         "enable": "Show",
