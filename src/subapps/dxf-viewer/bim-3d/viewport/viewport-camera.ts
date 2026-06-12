@@ -21,7 +21,7 @@ import {
   TUMBLE_BASE_SPEED,
   ZOOM_SURFACE_MARGIN, ZOOM_WHEEL_BASE, ZOOM_WHEEL_SENSITIVITY,
 } from './viewport-constants';
-import { computeSurfaceDolly, wheelZoomFactor } from './viewport-zoom-surface';
+import { computeSurfaceZoomPose, wheelZoomFactor } from './viewport-zoom-surface';
 import { getAnimationDuration } from '../accessibility/reduced-motion-config';
 
 export interface ViewportCameraOptions {
@@ -101,10 +101,14 @@ export function createViewportCamera(
     e.stopImmediatePropagation();
     animation.cancel();
     const factor = wheelZoomFactor(e.deltaY, ZOOM_WHEEL_BASE, ZOOM_WHEEL_SENSITIVITY, controls.zoomSpeed);
-    activeCamera.position.copy(
-      computeSurfaceDolly(activeCamera.position, hit, factor, ZOOM_SURFACE_MARGIN, PERSP_MAX_DISTANCE),
+    // Revit zoom-to-cursor: dolly along cam→hit AND slide the target by the same
+    // delta → view direction unchanged (no lookAt re-aim → no jump), while the point
+    // under the cursor stays anchored. Snapping target = hit would swing the view.
+    const pose = computeSurfaceZoomPose(
+      activeCamera.position, controls.target, hit, factor, ZOOM_SURFACE_MARGIN, PERSP_MAX_DISTANCE,
     );
-    controls.target.copy(hit);   // Revit: pivot on what the cursor points at
+    activeCamera.position.copy(pose.position);
+    controls.target.copy(pose.target);
     controls.update();           // resync OrbitControls' spherical from the new pose
     onRenderNeeded();
   }

@@ -4,7 +4,7 @@
  */
 
 import * as THREE from 'three';
-import { TUMBLE_BASE_SPEED, TUMBLE_DAMPING } from './viewport-constants';
+import { TUMBLE_BASE_SPEED } from './viewport-constants';
 import { orbitCameraAroundPivot } from './orbit-around-pivot';
 
 export interface TumbleRotation {
@@ -47,7 +47,6 @@ export interface TumbleOptions {
 }
 
 const DRAG_THRESHOLD_SQ = 9;
-const VEL_CUTOFF = 0.01;
 
 export function createTumbleRotation(opts: TumbleOptions): TumbleRotation {
   const { getCamera, getTarget, domElement, onStart, onChange, onEnd, onAltClick, onAltPress } = opts;
@@ -61,9 +60,6 @@ export function createTumbleRotation(opts: TumbleOptions): TumbleRotation {
   let startY = 0;
   let prevX = 0;
   let prevY = 0;
-  let velX = 0;
-  let velY = 0;
-  let damping = false;
 
   /**
    * Rigid orbit around `pivot` (SSoT `orbitCameraAroundPivot`). The pivot stays
@@ -85,11 +81,8 @@ export function createTumbleRotation(opts: TumbleOptions): TumbleRotation {
     if (!enabled || e.button !== 0 || !e.altKey) return;
     pointerDown = true;
     dragActive = false;
-    damping = false;
     startX = prevX = e.clientX;
     startY = prevY = e.clientY;
-    velX = 0;
-    velY = 0;
     // Re-centre the orbit pivot on the cursor point NOW, so the drag that
     // follows orbits around it (not the stale scene centre). applyRotation
     // reads getTarget() live, so this takes effect on the very first move.
@@ -109,8 +102,6 @@ export function createTumbleRotation(opts: TumbleOptions): TumbleRotation {
       dragActive = true;
       onStart();
     }
-    velX = dx;
-    velY = dy;
     applyRotation(dx, dy);
   }
 
@@ -122,26 +113,17 @@ export function createTumbleRotation(opts: TumbleOptions): TumbleRotation {
       onAltClick?.(e.clientX, e.clientY);
       return;
     }
-    if (Math.abs(velX) > 0.5 || Math.abs(velY) > 0.5) {
-      damping = true;
-    } else {
-      onEnd();
-    }
+    // No inertia (Giorgio 2026-06-12): the rotation stops the instant the pointer
+    // is released — the drag fully drives the orbit, release ends it immediately.
+    onEnd();
   }
 
-  function update(): void {
-    if (!damping) return;
-    velX *= 1 - TUMBLE_DAMPING;
-    velY *= 1 - TUMBLE_DAMPING;
-    if (Math.abs(velX) < VEL_CUTOFF && Math.abs(velY) < VEL_CUTOFF) {
-      damping = false;
-      velX = 0;
-      velY = 0;
-      onEnd();
-      return;
-    }
-    applyRotation(velX, velY);
-  }
+  /**
+   * Per-frame hook kept for the render loop / `TumbleRotation` interface. Inertia
+   * was removed (2026-06-12) so there is no decay loop to advance — the orbit is
+   * driven entirely by `onPointerMove`. Intentional no-op.
+   */
+  function update(): void { /* no-op — inertia removed */ }
 
   function setSpeed(s: number): void { speed = s; }
   function setEnabled(e: boolean): void { enabled = e; }

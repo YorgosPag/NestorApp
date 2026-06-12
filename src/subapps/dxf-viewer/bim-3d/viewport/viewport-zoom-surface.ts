@@ -25,8 +25,9 @@ import * as THREE from 'three';
  *    so it can hug the face for detail but can NOT cross into the solid).
  *  - `factor > 1` → zoom OUT (camera recedes from the hit; capped at `maxDistM`).
  *
- * The hit point itself is the pivot (the caller sets `controls.target = hit`), so the
- * surface under the cursor stays put — Revit "zoom to what I'm pointing at".
+ * Pairs with `computeSurfaceZoomPose`, which slides the orbit target by the SAME
+ * translation so the view direction is preserved and the surface under the cursor
+ * stays put — Revit "zoom to what I'm pointing at", with no recenter jump.
  *
  * @param camPos current camera world position
  * @param hit    world point under the cursor (geometry raycast hit)
@@ -50,6 +51,38 @@ export function computeSurfaceDolly(
   const newDist = Math.min(Math.max(dist * factor, marginM), maxDistM);
   // Move forward by (dist − newDist): positive when zooming in, negative when out.
   return camPos.clone().addScaledVector(dir, dist - newDist);
+}
+
+/** Camera pose (position + orbit target) after one surface-anchored wheel step. */
+export interface SurfaceZoomPose {
+  readonly position: THREE.Vector3;
+  readonly target: THREE.Vector3;
+}
+
+/**
+ * Full camera pose for one surface-anchored wheel step. Dollies the camera along
+ * cam→hit (`computeSurfaceDolly`) AND slides the orbit `target` by the SAME
+ * translation, so the camera→target VIEW DIRECTION is unchanged.
+ *
+ * Why slide instead of snapping `target = hit`: snapping re-aims the camera at an
+ * off-axis cursor point on the next `OrbitControls.update()` `lookAt(target)` → the
+ * image swings/jumps on every wheel notch (the 2026-06-10 regression). Sliding keeps
+ * camera→target constant → `lookAt` is a no-op (no jump), while the camera still moves
+ * along the cursor ray so the world point under the cursor stays anchored on screen.
+ *
+ * Returns NEW vectors; inputs are never mutated.
+ */
+export function computeSurfaceZoomPose(
+  camPos: THREE.Vector3,
+  target: THREE.Vector3,
+  hit: THREE.Vector3,
+  factor: number,
+  marginM: number,
+  maxDistM: number,
+): SurfaceZoomPose {
+  const position = computeSurfaceDolly(camPos, hit, factor, marginM, maxDistM);
+  const camDelta = new THREE.Vector3().subVectors(position, camPos);
+  return { position, target: target.clone().add(camDelta) };
 }
 
 /**

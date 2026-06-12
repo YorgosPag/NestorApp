@@ -59,7 +59,6 @@ export const ORTHO_MIN_ZOOM = 0.01;
 export const ORTHO_MAX_ZOOM = 100;
 
 export const TUMBLE_BASE_SPEED = 0.005;
-export const TUMBLE_DAMPING = 0.08;
 
 export const PROJECTION_SWITCH_DURATION_MS = 500;
 export const FRAME_SCENE_DURATION_MS = 500;

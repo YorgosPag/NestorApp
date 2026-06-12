@@ -17,7 +17,7 @@ import type { BimCategory } from '../../config/bim-object-styles';
 import type { Discipline } from '../../bim/discipline/bim-discipline';
 
 type ResolveEntity = (
-  entity: { layerId?: string; discipline?: Discipline },
+  entity: { id?: string; layerId?: string; discipline?: Discipline },
   category: BimCategory,
   ctx: SyncContext,
 ) => EntityResolution | null;

@@ -39,6 +39,7 @@ import type { BuildingRef, FloorRef } from '../../bim/utils/bim-floor-utils';
 import type { BuildingVisMode } from '../utils/building-visibility-state';
 import type { FloorVisMode } from '../utils/floor-visibility-state';
 import { resolveIsEntityVisible } from '../../bim/visibility/visibility-resolver';
+import { getIsolateEffectsSnapshot } from '../../systems/isolate/IsolateEffectsStore';
 import type { Discipline } from '../../bim/discipline/bim-discipline';
 import { useDrawingScaleStore } from '../../state/drawing-scale-store';
 import { useMepSystemStore } from '../../bim/mep-systems/mep-system-store';
@@ -132,10 +133,17 @@ export class BimSceneLayer {
     const systemColorIndex = colorBySystem
       ? buildEntitySystemColorIntIndex(useMepSystemStore.getState().getSystems())
       : new Map<string, number>();
+    // ADR-358 §5.6.bis — entity/category-scope isolate snapshot, captured once per sync.
+    const isolateSnap = getIsolateEffectsSnapshot();
+    const isolate = {
+      active: isolateSnap.active,
+      entityIds: isolateSnap.isolatedEntityIds,
+      categories: isolateSnap.isolatedCategories,
+    };
     return {
       objectStyles, disciplineVisibility, systemColorIndex, colorBySystem, floors, buildings, buildingVisModes,
       floorMode, activeBuildingId, useNewSystem,
-      floorElevationMm, activeLevelId,
+      floorElevationMm, activeLevelId, isolate,
     };
   }
 
@@ -179,7 +187,7 @@ export class BimSceneLayer {
    * or active-building outside-of-view). Single SSoT for ADR-382 intersection.
    */
   private resolveEntity(
-    entity: { layerId?: string; discipline?: Discipline },
+    entity: { id?: string; layerId?: string; discipline?: Discipline },
     category: BimCategory,
     ctx: SyncContext,
   ): EntityResolution | null {
@@ -193,11 +201,12 @@ export class BimSceneLayer {
     const buildingMode = ctx.buildingVisModes.get(buildingId);
 
     if (!resolveIsEntityVisible(
-      { category, layerId: entity.layerId, discipline: entity.discipline },
+      { category, id: entity.id, layerId: entity.layerId, discipline: entity.discipline },
       {
         objectStyles: ctx.objectStyles,
         disciplineVisibility: ctx.disciplineVisibility,
         layer, floorMode: ctx.floorMode, buildingMode,
+        isolate: ctx.isolate,
       },
     )) return null;
 

@@ -3,7 +3,7 @@
  */
 
 import * as THREE from 'three';
-import { computeSurfaceDolly, wheelZoomFactor } from '../viewport-zoom-surface';
+import { computeSurfaceDolly, computeSurfaceZoomPose, wheelZoomFactor } from '../viewport-zoom-surface';
 
 const MARGIN = 0.12;
 const MAX = 500;
@@ -68,6 +68,43 @@ describe('computeSurfaceDolly', () => {
     const cam = new THREE.Vector3(0, 0, 0);
     computeSurfaceDolly(cam, new THREE.Vector3(0, 0, 10), 0.85, MARGIN, MAX);
     expect(cam.equals(new THREE.Vector3(0, 0, 0))).toBe(true);
+  });
+});
+
+describe('computeSurfaceZoomPose (no recenter jump — view direction preserved)', () => {
+  // Off-axis cursor: camera looks down +Z at `target`, but the hit is off to the side.
+  const camPos = () => new THREE.Vector3(0, 0, 0);
+  const target = () => new THREE.Vector3(0, 0, 10);     // view direction = +Z
+  const hit = () => new THREE.Vector3(4, 0, 8);          // off-axis surface point
+
+  it('keeps the camera→target view direction UNCHANGED (no lookAt re-aim → no jump)', () => {
+    const dirBefore = target().sub(camPos()).normalize();
+    const pose = computeSurfaceZoomPose(camPos(), target(), hit(), 0.85, MARGIN, MAX);
+    const dirAfter = pose.target.clone().sub(pose.position).normalize();
+    expect(dirAfter.x).toBeCloseTo(dirBefore.x, 9);
+    expect(dirAfter.y).toBeCloseTo(dirBefore.y, 9);
+    expect(dirAfter.z).toBeCloseTo(dirBefore.z, 9);
+  });
+
+  it('slides the target by exactly the camera translation', () => {
+    const pose = computeSurfaceZoomPose(camPos(), target(), hit(), 0.85, MARGIN, MAX);
+    const camDelta = pose.position.clone().sub(camPos());
+    const tgtDelta = pose.target.clone().sub(target());
+    expect(tgtDelta.distanceTo(camDelta)).toBeCloseTo(0, 9);
+  });
+
+  it('keeps the hit anchored: the camera moves ALONG the cam→hit ray', () => {
+    const pose = computeSurfaceZoomPose(camPos(), target(), hit(), 0.85, MARGIN, MAX);
+    const rayDir = hit().sub(camPos()).normalize();
+    const moveDir = pose.position.clone().sub(camPos()).normalize();
+    expect(moveDir.distanceTo(rayDir)).toBeCloseTo(0, 9); // colinear → hit stays under cursor
+  });
+
+  it('never mutates the input position or target', () => {
+    const p = camPos(); const t = target();
+    computeSurfaceZoomPose(p, t, hit(), 0.85, MARGIN, MAX);
+    expect(p.equals(new THREE.Vector3(0, 0, 0))).toBe(true);
+    expect(t.equals(new THREE.Vector3(0, 0, 10))).toBe(true);
   });
 });
 
