@@ -23,6 +23,8 @@ describe('IsolateEffectsStore — initial state', () => {
     const snap = getIsolateEffectsSnapshot();
     expect(snap.active).toBe(false);
     expect(snap.isolatedLayerIds.size).toBe(0);
+    expect(snap.isolatedEntityIds.size).toBe(0);
+    expect(snap.isolatedCategories.size).toBe(0);
     expect(snap.mode).toBe('dim');
     expect(snap.dimOpacityPercent).toBe(30);
     expect(snap.category).toBeNull();
@@ -80,6 +82,76 @@ describe('IsolateEffectsStore — setIsolateEffects', () => {
     subscribeIsolateEffects(listener);
     setIsolateEffects({ mode: 'dim', isolatedLayerIds: ['lyr_b'], dimOpacityPercent: 30 });
     expect(listener).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('IsolateEffectsStore — entity-scope isolate (ADR-358)', () => {
+  it('activates with isolatedEntityIds (Revit "Isolate Element")', () => {
+    setIsolateEffects({
+      mode: 'freeze',
+      isolatedLayerIds: [],
+      isolatedEntityIds: ['ent_1', 'ent_2'],
+      dimOpacityPercent: 30,
+    });
+    const snap = getIsolateEffectsSnapshot();
+    expect(snap.active).toBe(true);
+    expect(snap.mode).toBe('freeze');
+    expect(snap.isolatedLayerIds.size).toBe(0);
+    expect(snap.isolatedEntityIds.has('ent_1')).toBe(true);
+    expect(snap.isolatedEntityIds.has('ent_2')).toBe(true);
+  });
+
+  it('defaults isolatedEntityIds to empty when omitted (layer-scope)', () => {
+    setIsolateEffects({ mode: 'dim', isolatedLayerIds: ['lyr_a'], dimOpacityPercent: 30 });
+    expect(getIsolateEffectsSnapshot().isolatedEntityIds.size).toBe(0);
+  });
+
+  it('changing isolated entity membership triggers notification', () => {
+    setIsolateEffects({ mode: 'freeze', isolatedLayerIds: [], isolatedEntityIds: ['ent_1'], dimOpacityPercent: 30 });
+    const listener = jest.fn();
+    subscribeIsolateEffects(listener);
+    setIsolateEffects({ mode: 'freeze', isolatedLayerIds: [], isolatedEntityIds: ['ent_2'], dimOpacityPercent: 30 });
+    expect(listener).toHaveBeenCalledTimes(1);
+  });
+
+  it('skip-if-unchanged covers entity membership', () => {
+    setIsolateEffects({ mode: 'freeze', isolatedLayerIds: [], isolatedEntityIds: ['ent_1'], dimOpacityPercent: 30 });
+    const listener = jest.fn();
+    subscribeIsolateEffects(listener);
+    setIsolateEffects({ mode: 'freeze', isolatedLayerIds: [], isolatedEntityIds: ['ent_1'], dimOpacityPercent: 30 });
+    expect(listener).not.toHaveBeenCalled();
+  });
+});
+
+describe('IsolateEffectsStore — category-scope isolate (ADR-358)', () => {
+  it('activates with isolatedCategories (Revit "Isolate Category")', () => {
+    setIsolateEffects({
+      mode: 'freeze',
+      isolatedLayerIds: [],
+      isolatedCategories: ['wall', 'column'],
+      dimOpacityPercent: 30,
+    });
+    const snap = getIsolateEffectsSnapshot();
+    expect(snap.active).toBe(true);
+    expect(snap.isolatedCategories.has('wall')).toBe(true);
+    expect(snap.isolatedCategories.has('column')).toBe(true);
+    expect(snap.isolatedEntityIds.size).toBe(0);
+  });
+
+  it('changing isolated category membership triggers notification', () => {
+    setIsolateEffects({ mode: 'freeze', isolatedLayerIds: [], isolatedCategories: ['wall'], dimOpacityPercent: 30 });
+    const listener = jest.fn();
+    subscribeIsolateEffects(listener);
+    setIsolateEffects({ mode: 'freeze', isolatedLayerIds: [], isolatedCategories: ['slab'], dimOpacityPercent: 30 });
+    expect(listener).toHaveBeenCalledTimes(1);
+  });
+
+  it('skip-if-unchanged covers category membership', () => {
+    setIsolateEffects({ mode: 'freeze', isolatedLayerIds: [], isolatedCategories: ['wall'], dimOpacityPercent: 30 });
+    const listener = jest.fn();
+    subscribeIsolateEffects(listener);
+    setIsolateEffects({ mode: 'freeze', isolatedLayerIds: [], isolatedCategories: ['wall'], dimOpacityPercent: 30 });
+    expect(listener).not.toHaveBeenCalled();
   });
 });
 

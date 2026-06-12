@@ -7,6 +7,8 @@
 
 export { LayerIsolateCommand, type LayerIsolateInput } from './LayerIsolateCommand';
 export { LayerIsolateInverseCommand, type LayerIsolateInverseInput } from './LayerIsolateInverseCommand';
+export { EntityIsolateCommand, type EntityIsolateInput } from './EntityIsolateCommand';
+export { CategoryIsolateCommand, type CategoryIsolateInput } from './CategoryIsolateCommand';
 export { LayerUnisolateCommand } from './LayerUnisolateCommand';
 export { LayerDimCommand, type LayerDimInput } from './LayerDimCommand';
 export { LayerOffCommand, type LayerOffInput } from './LayerOffCommand';

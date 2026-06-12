@@ -287,4 +287,124 @@ describe('ADR-382 resolveIsEntityVisible', () => {
       ).toBe(false);
     });
   });
+
+  // ── ADR-358 §5.6.bis — Entity-scope isolate (Revit "Isolate Element") ──────
+  describe('Entity-scope isolate (strongest hide source)', () => {
+    const isolateOn = (ids: string[]) => ({ active: true, entityIds: new Set(ids) });
+
+    it('keeps the isolated entity visible', () => {
+      expect(
+        resolveIsEntityVisible(
+          { category: 'wall', id: 'ent_keep' },
+          { isolate: isolateOn(['ent_keep']) },
+        ),
+      ).toBe(true);
+    });
+
+    it('hides an entity outside the isolated set', () => {
+      expect(
+        resolveIsEntityVisible(
+          { category: 'wall', id: 'ent_other' },
+          { isolate: isolateOn(['ent_keep']) },
+        ),
+      ).toBe(false);
+    });
+
+    it('hides an entity with no id when isolate is active (e.g. envelope/wires)', () => {
+      expect(
+        resolveIsEntityVisible(
+          { category: 'envelope' },
+          { isolate: isolateOn(['ent_keep']) },
+        ),
+      ).toBe(false);
+    });
+
+    it('no constraint when isolate inactive', () => {
+      expect(
+        resolveIsEntityVisible(
+          { category: 'wall', id: 'ent_other' },
+          { isolate: { active: false, entityIds: new Set(['ent_keep']) } },
+        ),
+      ).toBe(true);
+    });
+
+    it('no constraint when isolated set is empty (layer-scope session)', () => {
+      expect(
+        resolveIsEntityVisible(
+          { category: 'wall', id: 'ent_other' },
+          { isolate: { active: true, entityIds: new Set() } },
+        ),
+      ).toBe(true);
+    });
+
+    it('overrides all other sources — wins even when V/G/layer say show', () => {
+      // The isolated entity stays visible; a non-isolated one is hidden despite
+      // every other source agreeing it should show.
+      expect(
+        resolveIsEntityVisible(
+          { category: 'wall', id: 'ent_other', layerId: 'lyr_a' },
+          {
+            objectStyles: { wall: { projectionPen: 5, cutPen: 7, visible: true } },
+            layer: visibleLayer(),
+            floorMode: 'show',
+            buildingMode: 'show',
+            isolate: isolateOn(['ent_keep']),
+          },
+        ),
+      ).toBe(false);
+    });
+  });
+
+  // ── ADR-358 §5.6.bis — Category-scope isolate (Revit "Isolate Category") ───
+  describe('Category-scope isolate', () => {
+    const catIsolate = (cats: string[]) => ({ active: true, entityIds: new Set<string>(), categories: new Set(cats) });
+
+    it('keeps entities of the isolated category visible', () => {
+      expect(
+        resolveIsEntityVisible({ category: 'wall' }, { isolate: catIsolate(['wall']) }),
+      ).toBe(true);
+    });
+
+    it('hides entities of other categories', () => {
+      expect(
+        resolveIsEntityVisible({ category: 'column' }, { isolate: catIsolate(['wall']) }),
+      ).toBe(false);
+    });
+
+    it('supports multiple isolated categories', () => {
+      expect(
+        resolveIsEntityVisible({ category: 'column' }, { isolate: catIsolate(['wall', 'column']) }),
+      ).toBe(true);
+      expect(
+        resolveIsEntityVisible({ category: 'slab' }, { isolate: catIsolate(['wall', 'column']) }),
+      ).toBe(false);
+    });
+
+    it('no constraint when categories empty', () => {
+      expect(
+        resolveIsEntityVisible({ category: 'slab' }, { isolate: { active: true, entityIds: new Set(), categories: new Set() } }),
+      ).toBe(true);
+    });
+
+    it('no constraint when isolate inactive', () => {
+      expect(
+        resolveIsEntityVisible({ category: 'slab' }, { isolate: { active: false, entityIds: new Set(), categories: new Set(['wall']) } }),
+      ).toBe(true);
+    });
+
+    it('overrides all other sources — hides non-isolated category despite show', () => {
+      expect(
+        resolveIsEntityVisible(
+          { category: 'column', layerId: 'lyr_a' },
+          {
+            objectStyles: { column: { projectionPen: 5, cutPen: 7, visible: true } },
+            layer: visibleLayer(),
+            floorMode: 'show',
+            buildingMode: 'show',
+            isolate: catIsolate(['wall']),
+          },
+        ),
+      ).toBe(false);
+    });
+  });
 });

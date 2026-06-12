@@ -50,6 +50,14 @@ export class LayerUnisolateCommand implements ICommand {
     }
     const snap = readUnisolateSnapshot();
     if (!snap) {
+      // ADR-358 §5.6.bis — entity-scoped isolate (EntityIsolateCommand) leaves no
+      // layer snapshot (it never mutates layer flags). Still tear down the active
+      // session so the same Ctrl+Shift+U / status-badge clears it.
+      const effects = getIsolateEffectsSnapshot();
+      if (effects.active) {
+        this.isolateEffectsAtExecute = effects;
+        clearIsolateEffects();
+      }
       this.wasExecuted = true;
       return;
     }
@@ -63,17 +71,29 @@ export class LayerUnisolateCommand implements ICommand {
   }
 
   undo(): void {
-    if (!this.restoredSnapshot) return;
+    // Entity-scoped teardown leaves no layer snapshot — just re-activate the
+    // isolate session that was torn down at execute time.
+    if (!this.restoredSnapshot) {
+      this.reapplyIsolateEffectsAtExecute();
+      return;
+    }
     if (this.preUndoSnapshot) {
       restoreLayersSnapshot(this.preUndoSnapshot);
     }
     persistUnisolateSnapshot(this.restoredSnapshot);
-    if (this.isolateEffectsAtExecute && this.isolateEffectsAtExecute.active) {
+    this.reapplyIsolateEffectsAtExecute();
+  }
+
+  private reapplyIsolateEffectsAtExecute(): void {
+    const effects = this.isolateEffectsAtExecute;
+    if (effects && effects.active) {
       setIsolateEffects({
-        mode: this.isolateEffectsAtExecute.mode,
-        isolatedLayerIds: this.isolateEffectsAtExecute.isolatedLayerIds,
-        dimOpacityPercent: this.isolateEffectsAtExecute.dimOpacityPercent,
-        category: this.isolateEffectsAtExecute.category
+        mode: effects.mode,
+        isolatedLayerIds: effects.isolatedLayerIds,
+        isolatedEntityIds: effects.isolatedEntityIds,
+        isolatedCategories: effects.isolatedCategories,
+        dimOpacityPercent: effects.dimOpacityPercent,
+        category: effects.category
       });
     }
   }

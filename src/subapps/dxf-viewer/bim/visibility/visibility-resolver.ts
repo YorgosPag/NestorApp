@@ -41,11 +41,25 @@ export interface VisibilityContext {
    * `bim-render-settings-store.disciplineVisibility`.
    */
   readonly disciplineVisibility?: Partial<Record<Discipline, boolean>>;
+  /**
+   * ADR-358 §5.6.bis — entity-scope isolate (Revit "Isolate Element"). When
+   * `active` with a non-empty `entityIds`, ONLY those entities stay visible and
+   * everything else is hidden — the strongest hide source. From
+   * `IsolateEffectsStore` (snapshot threaded once per sync via `SyncContext`).
+   */
+  readonly isolate?: {
+    readonly active: boolean;
+    readonly entityIds: ReadonlySet<string>;
+    /** Category-scope isolate (Revit "Isolate Category"). Non-empty ⇒ only these categories show. */
+    readonly categories?: ReadonlySet<string>;
+  };
 }
 
 export interface EntityVisibilityInput {
   readonly category: BimCategory;
   readonly layerId?: string;
+  /** Entity id — required for entity-scope isolate matching (ADR-358). */
+  readonly id?: string;
   /**
    * ADR-405 — per-instance discipline override. Absent ⇒ discipline is derived
    * from `category` via `DISCIPLINE_BY_CATEGORY` (type-driven default).
@@ -64,6 +78,17 @@ export function resolveIsEntityVisible(
   entity: EntityVisibilityInput,
   ctx: VisibilityContext,
 ): boolean {
+  // ADR-358 §5.6.bis — entity-scope isolate is the strongest hide source: when
+  // active, anything outside the isolated set is hidden (Revit "Isolate Element"
+  // shows only the chosen elements on every view).
+  if (ctx.isolate?.active && ctx.isolate.entityIds.size > 0) {
+    if (!entity.id || !ctx.isolate.entityIds.has(entity.id)) return false;
+  }
+  // Category-scope isolate (Revit "Isolate Category"): only the isolated
+  // categories show; everything else (incl. id-less envelope/wires) is hidden.
+  if (ctx.isolate?.active && ctx.isolate.categories && ctx.isolate.categories.size > 0) {
+    if (!ctx.isolate.categories.has(entity.category)) return false;
+  }
   if (ctx.objectStyles && ctx.objectStyles[entity.category]?.visible === false) {
     return false;
   }
