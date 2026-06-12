@@ -30,7 +30,7 @@ import { SlabRenderer, type SlabOpeningsBySlab } from '../../bim/renderers/SlabR
 // ADR-363 Phase 3.7 — slab-opening leaf (shaft/well/duct/chimney).
 import { SlabOpeningRenderer } from '../../bim/renderers/SlabOpeningRenderer';
 // ADR-363 Phase 4 — column leaf (rectangular/circular/L-shape/T-shape).
-import { ColumnRenderer } from '../../bim/renderers/ColumnRenderer';
+import { ColumnRenderer, type FinishFacesByColumn } from '../../bim/renderers/ColumnRenderer';
 import { FoundationRenderer } from '../../bim/renderers/FoundationRenderer';
 // ADR-363 Phase 5 — beam leaf (straight/curved/cantilever).
 import { BeamRenderer } from '../../bim/renderers/BeamRenderer';
@@ -238,6 +238,18 @@ export class EntityRendererComposite {
     const wall = this.renderers.get('wall');
     if (wall instanceof WallRenderer) {
       wall.setOpeningsByWall(map);
+    }
+  }
+
+  /**
+   * ADR-449 Slice 3 — forward the per-frame finish-faces-by-column index so the
+   * column renderer can draw the 2D finished outline. No-op when the column
+   * renderer is absent (defensive for partial test setups).
+   */
+  setColumnFinishFaces(map: FinishFacesByColumn): void {
+    const column = this.renderers.get('column');
+    if (column instanceof ColumnRenderer) {
+      column.setColumnFinishFaces(map);
     }
   }
 

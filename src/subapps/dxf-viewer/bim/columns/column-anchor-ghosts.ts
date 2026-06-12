@@ -47,6 +47,7 @@ import {
   DEFAULT_COLUMN_TOP_BINDING,
 } from '../types/bim-binding';
 import { computeColumnGeometry } from '../geometry/column-geometry';
+import { resolveStoreyHeightMm } from '../../systems/levels/storey-creation-defaults';
 
 /**
  * Ghost overrides — subset των ribbon-supplied overrides που επηρεάζουν τη
@@ -99,7 +100,8 @@ function buildGhostParams(
     anchor: anchorOverride,
     width: overrides.width ?? DEFAULT_COLUMN_WIDTH_MM,
     depth: overrides.depth ?? DEFAULT_COLUMN_DEPTH_MM,
-    height: overrides.height ?? DEFAULT_COLUMN_HEIGHT_MM,
+    // ADR-448 Phase 2 — storey-aware default so the ghost preview == the committed column.
+    height: resolveStoreyHeightMm(overrides.height, DEFAULT_COLUMN_HEIGHT_MM),
     rotation: overrides.rotation ?? DEFAULT_COLUMN_ROTATION_DEG,
     sceneUnits: overrides.sceneUnits ?? 'mm',
     baseBinding: DEFAULT_COLUMN_BASE_BINDING,

@@ -50,6 +50,7 @@ import type { SceneUnits } from '../../utils/scene-units';
 import type { GuideBinding } from '../../bim/hosting/guide-binding-types';
 import type { AxisGuideReader } from '../../bim/foundations/foundation-from-grid';
 import { resolveAxisBindings } from '../../bim/hosting/resolve-axis-bindings';
+import { resolveStoreyHeightMm } from '../../systems/levels/storey-creation-defaults';
 
 export type { SceneUnits };
 
@@ -136,7 +137,8 @@ export function buildDefaultColumnParams(
   const anchor: ColumnAnchor = overrides.anchor ?? 'center';
   const width = overrides.width ?? dims.width;
   const depth = overrides.depth ?? dims.depth;
-  const height = overrides.height ?? DEFAULT_COLUMN_HEIGHT_MM;
+  // ADR-448 Phase 2 — storey-aware default: override → active storey height → legacy const.
+  const height = resolveStoreyHeightMm(overrides.height, DEFAULT_COLUMN_HEIGHT_MM);
   const rotation = overrides.rotation ?? DEFAULT_COLUMN_ROTATION_DEG;
 
   const position: Point3D = { x: clickPoint.x, y: clickPoint.y, z: 0 };

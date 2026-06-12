@@ -13,6 +13,8 @@ import {
 } from '../column-from-grid';
 import { gridAxesFromReader, type AxisGuideReader } from '../../foundations/foundation-from-grid';
 import type { Guide } from '../../../systems/guides/guide-types';
+import { useActiveStoreyStore } from '../../../systems/levels/active-storey-store';
+import { buildActiveStoreyContext } from '../../../systems/levels/active-storey-context';
 
 const guide = (id: string, axis: Guide['axis'], offset: number, visible = true): Guide =>
   ({
@@ -108,6 +110,38 @@ describe('buildColumnGridFromGuides — στατική συνέχεια στη �
   });
 
   it('σέβεται custom height override (height 2800 → 3800 με βάση −1000)', () => {
+    const result = buildColumnGridFromGuides(reader([...X3, ...Y3]), { height: 2800 }, '0', 'mm', -1000);
+    expect(result.columns[0].params.height).toBe(3800);
+  });
+});
+
+// ADR-448 Phase 2 — storey-aware height combined with GEN-COL foundation continuity.
+describe('buildColumnGridFromGuides — storey-aware height (ADR-448 Phase 2)', () => {
+  const setStorey = (heightM: number) =>
+    useActiveStoreyStore.setState({
+      context: buildActiveStoreyContext(
+        [{ id: 'f1', number: 1, elevation: 0, height: heightM, kind: 'standard' }],
+        'f1',
+      ),
+    });
+  afterEach(() => useActiveStoreyStore.setState({ context: null }));
+
+  it('grid κολώνες κληρονομούν storey height (3.5m → 3500)', () => {
+    setStorey(3.5);
+    const result = buildColumnGridFromGuides(reader([...X3, ...Y3]), {}, '0', 'mm');
+    expect(result.columns[0].params.height).toBe(3500);
+    expect(result.columns[0].params.baseOffset).toBe(0);
+  });
+
+  it('GEN-COL continuity με storey height: 3500 + baseDrop 1000 → height 4500, βάση −1000', () => {
+    setStorey(3.5);
+    const result = buildColumnGridFromGuides(reader([...X3, ...Y3]), {}, '0', 'mm', -1000);
+    expect(result.columns[0].params.baseOffset).toBe(-1000);
+    expect(result.columns[0].params.height).toBe(4500); // top μένει στο storey ceiling 3500
+  });
+
+  it('explicit override υπερισχύει του storey (2800 + drop 1000 → 3800)', () => {
+    setStorey(3.5);
     const result = buildColumnGridFromGuides(reader([...X3, ...Y3]), { height: 2800 }, '0', 'mm', -1000);
     expect(result.columns[0].params.height).toBe(3800);
   });

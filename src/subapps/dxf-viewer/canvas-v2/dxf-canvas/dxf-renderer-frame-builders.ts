@@ -11,12 +11,16 @@
  * relevant composite slot every frame (ADR-040 micro-leaf compliance: the
  * orchestrator drives, the leaves never subscribe).
  */
-import type { DxfEntityUnion, DxfSlabOpening, DxfOpening } from './dxf-types';
+import type { DxfEntityUnion, DxfSlabOpening, DxfOpening, DxfColumn, DxfWall } from './dxf-types';
 import type { DimensionEntity } from '../../types/dimension';
 import type { DimensionLookup } from '../../systems/dimensions/dim-geometry-builder';
 import type { SlabOpeningEntity } from '../../bim/types/slab-opening-types';
 import type { OpeningEntity } from '../../bim/types/opening-types';
 import type { OpeningsByWall } from '../../bim/renderers/WallRenderer';
+import type { FinishFacesByColumn } from '../../bim/renderers/ColumnRenderer';
+import type { StructuralFinishFaces } from '../../bim/finishes/structural-finish-types';
+import { isFinishActive } from '../../bim/finishes/structural-finish-types';
+import { computeColumnFinishFaces } from '../../bim/finishes/structural-finish-scene';
 
 /**
  * ADR-362 Phase C1 — build the per-frame DimensionLookup map for chained
@@ -56,6 +60,28 @@ export function buildOpeningsByWall(entities: readonly DxfEntityUnion[]): Openin
     const arr = m.get(o.params.wallId) ?? [];
     arr.push(o);
     m.set(o.params.wallId, arr);
+  }
+  return m;
+}
+
+/**
+ * ADR-449 Slice 3 — build per-frame Map<columnId, StructuralFinishFaces> για το
+ * 2D finished outline. Μόνο κολόνες με ΕΝΕΡΓΟ σοβά μπαίνουν (default off → κενό Map,
+ * μηδέν κόστος). Οι τοίχοι (obstacles + exterior classifier) μαζεύονται lazily μόνο
+ * όταν υπάρχει ≥1 ενεργή κολόνα. Reuse του SSoT `computeColumnFinishFaces` (κοινό
+ * με BOQ + 3D). DxfColumn/DxfWall = direct entities → δομικά ικανοποιούν τα
+ * `ColumnFinishSource`/`WallFinishObstacle` (μηδέν cast).
+ */
+export function buildFinishFacesByColumn(entities: readonly DxfEntityUnion[]): FinishFacesByColumn {
+  const m = new Map<string, StructuralFinishFaces>();
+  let walls: DxfWall[] | null = null;
+  for (const e of entities) {
+    if (e.type !== 'column') continue;
+    const col: DxfColumn = e;
+    if (!isFinishActive(col.params.finish)) continue;
+    if (walls === null) walls = entities.filter((w): w is DxfWall => w.type === 'wall');
+    const faces = computeColumnFinishFaces(col, col.geometry.footprint.vertices, col.params.height, walls);
+    if (faces && faces.segments.length > 0) m.set(col.id, faces);
   }
   return m;
 }

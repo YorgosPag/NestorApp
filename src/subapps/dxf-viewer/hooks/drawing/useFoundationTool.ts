@@ -47,6 +47,8 @@ import { pickWallEntityAt, buildStripFromWall } from '../../bim/foundations/foun
 import { isWallEntity, type Entity } from '../../types/entities';
 import type { WallEntity } from '../../bim/types/wall-types';
 import { TOLERANCE_CONFIG } from '../../config/tolerance-config';
+import { EventBus } from '../../systems/events/EventBus';
+import { shouldWarnFoundationOnStorey } from '../../systems/levels/storey-creation-defaults';
 
 // ─── State machine types ─────────────────────────────────────────────────────
 
@@ -165,6 +167,11 @@ export function useFoundationTool(options: UseFoundationToolOptions = {}): UseFo
     const phase = activePhaseFor(prev.kind, prev.placementMode);
     syncPreview(prev.kind, prev.placementMode, phase, null, prev.overrides);
     setState({ ...INITIAL_STATE, kind: prev.kind, placementMode: prev.placementMode, anchor: prev.anchor, overrides: prev.overrides, phase });
+    // ADR-448 Phase 2 — soft warning (once per activation): η θεμελίωση ανήκει στον
+    // κατώτατο όροφο. Revit-style — επιτρέπεται, απλώς προειδοποιεί.
+    if (shouldWarnFoundationOnStorey()) {
+      EventBus.emit('bim:foundation-on-upper-storey', { kind: 'foundation' });
+    }
   }, [syncPreview]);
 
   const setKind = useCallback((kind: FoundationKind) => {

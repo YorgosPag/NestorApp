@@ -19,7 +19,7 @@
 
 import type { SceneModel } from '../../types/entities';
 import { isWallEntity } from '../../types/entities';
-import type { ColumnEntity, ColumnGeometry } from '../types/column-types';
+import type { ColumnEntity, ColumnGeometry, ColumnParams } from '../types/column-types';
 import type { WallEntity } from '../types/wall-types';
 import { computeWallGeometry } from '../geometry/wall-geometry';
 import { computeBuildingFootprint } from '../geometry/building-footprint';
@@ -36,8 +36,25 @@ const EXTERIOR_EDGE_TOL_MM = 2;
 
 const toPt2 = (p: { x: number; y: number }): Pt2 => ({ x: p.x, y: p.y });
 
+/**
+ * Minimal structural shape ενός τοίχου-εμποδίου για τον σοβά. Το ικανοποιούν ΚΑΙ
+ * το BIM `WallEntity` ΚΑΙ το canvas `DxfWall` (direct entity· δεν δηλώνει `ifcType`,
+ * άρα δεν είναι assignable στο `WallEntity`). Εξαρτόμαστε από το ελάχιστο που
+ * διαβάζεται (id/kind/params) → μηδέν cast και στους δύο pipelines (3D & 2D).
+ */
+export interface WallFinishObstacle {
+  readonly id: string;
+  readonly kind: WallEntity['kind'];
+  readonly params: WallEntity['params'];
+}
+
+/** Minimal structural shape μιας κολόνας για face-resolution (BIM + Dxf entity). */
+export interface ColumnFinishSource {
+  readonly params: Pick<ColumnParams, 'finish' | 'sceneUnits' | 'envelopeFunction'>;
+}
+
 /** Wall → plan footprint polygon (outer ακμή + αντίστροφη inner). */
-function wallFootprintPolygon(wall: WallEntity): Pt2[] {
+function wallFootprintPolygon(wall: WallFinishObstacle): Pt2[] {
   const g = computeWallGeometry(wall.params, wall.kind);
   const outer = g.outerEdge.points.map(toPt2);
   const inner = [...g.innerEdge.points].reverse().map(toPt2);
@@ -45,7 +62,7 @@ function wallFootprintPolygon(wall: WallEntity): Pt2[] {
 }
 
 /** Εξώτατες ακμές components που περικλείουν χώρο (holes>0) → exterior reference. */
-function collectExteriorEdges(walls: readonly WallEntity[]): Array<[Pt2, Pt2]> {
+function collectExteriorEdges(walls: readonly WallFinishObstacle[]): Array<[Pt2, Pt2]> {
   const fp = computeBuildingFootprint(
     walls.map((w) => ({ id: w.id, kind: w.kind, params: w.params })),
   );
@@ -61,10 +78,13 @@ function collectExteriorEdges(walls: readonly WallEntity[]): Array<[Pt2, Pt2]> {
 }
 
 /** Build classifier για μια κολόνα (override-aware + geometric outer-ring test). */
-function buildColumnClassifier(column: ColumnEntity, walls: readonly WallEntity[], tol: number): FinishEdgeClassifier {
-  const fn = column.params.envelopeFunction;
-  if (fn === 'exterior') return () => 'exterior';
-  if (fn === 'interior') return () => 'interior';
+function buildColumnClassifier(
+  envelopeFunction: ColumnParams['envelopeFunction'],
+  walls: readonly WallFinishObstacle[],
+  tol: number,
+): FinishEdgeClassifier {
+  if (envelopeFunction === 'exterior') return () => 'exterior';
+  if (envelopeFunction === 'interior') return () => 'interior';
   const exteriorEdges = collectExteriorEdges(walls);
   return (mid) => {
     for (const [a, b] of exteriorEdges) {
@@ -86,17 +106,17 @@ function buildColumnClassifier(column: ColumnEntity, walls: readonly WallEntity[
  * BOQ feed να περνά profile-aware effective geometry, ενώ το 3D τα δικά του.
  */
 export function computeColumnFinishFaces(
-  column: ColumnEntity,
+  column: ColumnFinishSource,
   coreFootprint: readonly { x: number; y: number }[],
   heightMm: number,
-  walls: readonly WallEntity[],
+  walls: readonly WallFinishObstacle[],
 ): StructuralFinishFaces | undefined {
   const spec = column.params.finish;
   if (!isFinishActive(spec) || coreFootprint.length < 3) return undefined;
 
   const s = mmToSceneUnits(column.params.sceneUnits ?? 'mm');
   const tol = EXTERIOR_EDGE_TOL_MM * s;
-  const classify = buildColumnClassifier(column, walls, tol);
+  const classify = buildColumnClassifier(column.params.envelopeFunction, walls, tol);
 
   return resolveStructuralFinishFaces({
     coreFootprint: coreFootprint.map(toPt2),

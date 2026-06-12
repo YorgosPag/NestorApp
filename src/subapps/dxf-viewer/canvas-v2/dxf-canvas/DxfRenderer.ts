@@ -19,7 +19,7 @@ import { getIsolateEffectsSnapshot } from '../../systems/isolate/IsolateEffectsS
 import { resolveEntityBimCategory } from '../../bim/visibility/resolve-entity-bim-category';
 import { dimOpacityToTransparency } from '../../services/layer-isolate-resolver';
 // Per-frame index builders (extracted Boy-Scout file-size split, 2026-05-19).
-import { buildDimensionLookup, buildSlabOpeningsBySlab, buildOpeningsByWall, transparencyToAlpha } from './dxf-renderer-frame-builders';
+import { buildDimensionLookup, buildSlabOpeningsBySlab, buildOpeningsByWall, buildFinishFacesByColumn, transparencyToAlpha } from './dxf-renderer-frame-builders';
 // DxfEntityUnion → Entity mapper (extracted file-size split, 2026-05-25).
 import { buildEntityModelFromDxf } from './dxf-renderer-entity-model';
 export class DxfRenderer {
@@ -89,6 +89,9 @@ export class DxfRenderer {
     // ADR-363 Phase 2 (deferred pipeline) — feed per-frame opening→wall index so
     // WallRenderer can punch boolean cutouts through wall fills.
     this.entityComposite.setOpeningsByWall(buildOpeningsByWall(scene.entities));
+    // ADR-449 Slice 3 — feed per-frame finish-faces index so ColumnRenderer can
+    // draw the 2D finished outline (offset σοβά ανά εκτεθειμένη παρειά).
+    this.entityComposite.setColumnFinishFaces(buildFinishFacesByColumn(scene.entities));
     // ADR-362 Round 5 — propagate active scene units so dim text + arrows scale
     // correctly in non-mm DXFs (e.g. meters). Default `'mm'` keeps legacy parity.
     this.entityComposite.setDimensionSceneUnits(scene.units ?? 'mm');

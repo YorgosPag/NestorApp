@@ -68,6 +68,9 @@
     "upToDate": "This floor already has a foundation slab.",
     "noFootprint": "No building footprint found. Create walls, columns or beams first."
   },
+  "storeyGating": {
+    "foundationUpperStorey": "Foundations / ground slabs usually belong on the lowest storey."
+  },
   "perimeterColumn": {
     "built": "Created {built} structural walls from the perimeter.",
     "builtWithIgnored": "Created {built} structural walls; ignored {ignored} shapes.",

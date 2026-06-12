@@ -38,6 +38,7 @@ import { mmToSceneUnits, type SceneUnits } from '../../utils/scene-units';
 import type { GuideBinding } from '../../bim/hosting/guide-binding-types';
 import type { AxisGuideReader } from '../../bim/foundations/foundation-from-grid';
 import { resolveAxisBindings, type AxisCoord } from '../../bim/hosting/resolve-axis-bindings';
+import { resolveStoreyHeightMm } from '../../systems/levels/storey-creation-defaults';
 
 export type { SceneUnits };
 
@@ -89,7 +90,8 @@ export function buildDefaultWallParams(
   alignmentPoint?: Readonly<Point2D> | null,
 ): WallParams {
   const category: WallCategory = overrides.category ?? 'exterior';
-  const height = overrides.height ?? DEFAULT_WALL_HEIGHT_MM;
+  // ADR-448 Phase 2 — storey-aware default: override → active storey height → legacy const.
+  const height = resolveStoreyHeightMm(overrides.height, DEFAULT_WALL_HEIGHT_MM);
   // Thickness resolution (Revit "Generic Wall" pattern, SSoT `resolveWallThicknessMm`):
   //   - Explicit override → manual wall, NO DNA attached (caller owns layers).
   //   - Else → DNA preset SSoT, thickness === dna.totalThickness.

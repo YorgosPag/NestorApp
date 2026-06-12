@@ -94,6 +94,9 @@ export interface BimEventMap {
   // `reason='no-footprint'` = μηδέν δομικά στοιχεία (κενός όροφος).
   'bim:slabs-from-grid': { created: number; skipped: number };
   'bim:slabs-from-grid-failed': { reason: 'no-footprint' | 'insufficient-guides' };
+  // ADR-448 Phase 2 — soft warning: θεμελίωση/εδαφόπλακα δημιουργείται εκτός του
+  // κατώτατου ορόφου (Revit-style: επιτρέπεται αλλά προειδοποιεί, δεν μπλοκάρει).
+  'bim:foundation-on-upper-storey': { kind: 'foundation' | 'ground-slab' };
   // ADR-406 — BIM MEP fixture params + delete events
   'bim:mep-fixture-params-updated': { fixtureId: string };
   'bim:mep-fixture-delete-requested': { fixtureId: string };

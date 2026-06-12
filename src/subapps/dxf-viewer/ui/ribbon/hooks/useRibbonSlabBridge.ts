@@ -41,6 +41,7 @@ import {
   type SlabGridCommitResult,
 } from '../../../bim/slabs/slab-grid-commit';
 import { getGlobalGuideStore } from '../../../systems/guides/guide-store';
+import { shouldWarnFoundationOnStorey } from '../../../systems/levels/storey-creation-defaults';
 import { resolveSceneUnits } from '../../../utils/scene-units';
 import type {
   RibbonComboboxState,
@@ -220,6 +221,10 @@ export function useRibbonSlabBridge(
   const handleFoundationMatFromGrid = useCallback((): void => {
     const levelId = levelManager.currentLevelId;
     if (!levelId) return;
+    // ADR-448 Phase 2 — soft warning: εδαφόπλακα ανήκει στον κατώτατο όροφο (Revit-style).
+    if (shouldWarnFoundationOnStorey()) {
+      EventBus.emit('bim:foundation-on-upper-storey', { kind: 'ground-slab' });
+    }
     const scene = levelManager.getLevelScene(levelId);
     const result = commitFoundationMatFromGuides({
       getLevelScene: levelManager.getLevelScene,

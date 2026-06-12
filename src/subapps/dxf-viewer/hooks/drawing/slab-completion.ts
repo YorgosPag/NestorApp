@@ -36,6 +36,7 @@ import { computeSlabGeometry } from '../../bim/geometry/slab-geometry';
 import { validateSlabParams } from '../../bim/validators/slab-validator';
 import { resolveAutoSlabTypeId } from '../../bim/family-types/slab-type-auto-assign';
 import { createSlab } from '@/services/factories/slab.factory';
+import { resolveStoreyCeilingElevationMm } from '../../systems/levels/storey-creation-defaults';
 import type { SceneUnits } from '../../utils/scene-units';
 
 export type { SceneUnits };
@@ -95,8 +96,15 @@ export function buildDefaultSlabParams(
     overrides.dna?.totalThickness ??
     overrides.thickness ??
     DEFAULT_SLAB_THICKNESS_MM;
+  // ADR-448 Phase 2 — ceiling/roof slabs inherit the active storey ceiling FFL
+  // (floor-relative); floor/ground/foundation keep their per-kind datum (0).
   const levelElevation =
-    overrides.levelElevation ?? SLAB_KIND_DEFAULT_LEVEL_ELEVATION_MM[kind];
+    kind === 'ceiling' || kind === 'roof'
+      ? resolveStoreyCeilingElevationMm(
+          overrides.levelElevation,
+          SLAB_KIND_DEFAULT_LEVEL_ELEVATION_MM[kind],
+        )
+      : overrides.levelElevation ?? SLAB_KIND_DEFAULT_LEVEL_ELEVATION_MM[kind];
   const geometryType = overrides.geometryType ?? DEFAULT_SLAB_GEOMETRY_TYPE;
 
   const lifted: Point3D[] = vertices.map((v) => ({ x: v.x, y: v.y, z: 0 }));

@@ -1,6 +1,6 @@
 # ADR-449 — Structural Finish Skin (σοβάς κολόνας/δοκαριού, per-face adjacency-driven)
 
-**Status:** 🟢 Slice 1 (data model + resolver + BOQ) + Slice 2 (3D band skin κολόνας) implemented, ΚΟΛΟΝΕΣ — pending browser-verify + commit (2026-06-13)
+**Status:** 🟢 Slice 1 (data model + resolver + BOQ) + Slice 2 (3D band skin) + Slice 3 (2D finished outline) implemented, ΚΟΛΟΝΕΣ — pending browser-verify + commit (2026-06-13)
 **Discipline:** DXF Viewer · BIM finishes · BOQ/ΑΤΟΕ · structural columns/beams
 **Related:** ADR-363 (column/beam types + wall DNA), ADR-447 (wall plaster materials/catalog), ADR-396 (ETICS thermal envelope — exterior/interior classification, building footprint), ADR-401 (wall host-plan `coveredIntervals` — εξήχθη εδώ σε shared SSoT), ADR-445 (structural colour identity), ADR-413 (PBR textures), ADR-175/ΑΤΟΕ (BOQ)
 
@@ -82,11 +82,23 @@ Deterministic IDs: `boq_bim_${id}` / `_finish_int` / `_finish_ext`. Hook στο 
 
 **Σημείωση SSoT (απόκλιση από handoff):** χρησιμοποιήθηκε `stripPrismGeometry` αντί `addBandPrism` — το `addBandPrism` δένει `makeEnvelopeMesh` → envelope material/tags (λάθος catalog για σοβά)· το `stripPrismGeometry` είναι ο καθαρός geometry sibling στο ίδιο αρχείο (ίδιο `ROT_X_NEG_90`) → σωστότερο SSoT-reuse.
 
+## 3.ter Files (Slice 3 — 2D finished outline)
+
+**MOD:**
+- `bim/finishes/structural-finish-scene.ts` — `computeColumnFinishFaces` στενεύτηκε σε **structural-subset interfaces** `ColumnFinishSource` / `WallFinishObstacle` (depend-on-minimal-interface) ώστε να το τροφοδοτούν ΚΑΙ τα BIM `ColumnEntity`/`WallEntity` (3D) ΚΑΙ τα canvas `DxfColumn`/`DxfWall` (2D, direct entities χωρίς `ifcType`) — μηδέν cast. `buildColumnClassifier` παίρνει `envelopeFunction` αντί ολόκληρης κολόνας.
+- `bim/renderers/ColumnRenderer.ts` — `FinishFacesByColumn` type + `setColumnFinishFaces()` injection (mirror `WallRenderer.setOpeningsByWall`) + `drawFinishOutline()`: ανά εκτεθειμένη υπο-ακμή → offset «λωρίδα» (CCW outward normal × πάχος, με end-caps) σε plaster flat colour (`getMaterialFlatColorHex`, SSoT). Καλυμμένες παρειές → καμία γραμμή. ADR-040: pure ctx, zero subscriptions.
+- `canvas-v2/dxf-canvas/dxf-renderer-frame-builders.ts` — `buildFinishFacesByColumn(entities)`: per-frame index (μόνο ενεργές κολόνες· walls lazily· reuse `computeColumnFinishFaces`).
+- `canvas-v2/dxf-canvas/DxfRenderer.ts` — inject `buildFinishFacesByColumn(scene.entities)` (δίπλα στο `setOpeningsByWall`· ADR-040 orchestrator-drives pattern).
+- `rendering/core/EntityRendererComposite.ts` — `setColumnFinishFaces()` pass-through.
+- tests: `bim/renderers/__tests__/ColumnRenderer-finish.test.ts` (6).
+
+Πλέον ο **ίδιος** `computeColumnFinishFaces` τροφοδοτεί **BOQ + 3D + 2D** — ΕΝΑ σημείο face-resolution.
+
 ## 4. Roadmap (slices)
 
 - **Slice 1** ✅ — data model + resolver + BOQ (ΚΟΛΟΝΕΣ).
 - **Slice 2** ✅ — 3D render (band skin κολόνας, REUSE `stripPrismGeometry`). Flat-path μόνο· attached/κεκλιμένες κορυφές = μετέπειτα.
-- **Slice 3** — 2D render (finished outline + core, διπλή γραμμή).
+- **Slice 3** ✅ — 2D render (finished outline offset ανά εκτεθειμένη παρειά + core = διπλή γραμμή). Per-frame index injection (mirror openings-by-wall).
 - **Slice 4** — Δοκάρια (resolver beam side-faces + 3D/2D).
 - **Slice 5** — View toggle «Σοβατισμένη όψη» + UI material/thickness override.
 
@@ -98,3 +110,4 @@ Deterministic IDs: `boq_bim_${id}` / `_finish_int` / `_finish_ext`. Hook στο 
 ## 6. Changelog
 - **2026-06-13** — Slice 1: data model + pure resolver (per-face, partial-coverage) + BOQ multi-layer (parent πυρήνας + interior/exterior σοβάς) + scene classifier. `coveredIntervals` εξήχθη σε shared SSoT (N.0.2). 13/13 jest. Pending browser-verify + commit.
 - **2026-06-13** — Slice 2: 3D band skin κολόνας. SSoT core `computeColumnFinishFaces` (κοινό BOQ+3D). `buildColumnFinishSkin` ανά exposed segment → vertical band prism (REUSE `stripPrismGeometry`) με `getMaterial3D`. `columnToMesh` → composite `Group {πυρήνας+σοβάς}` (flat-path)· πυρήνας `width/depth` αμετάβλητος. Ghost guard. 10/10 jest + tsc καθαρό. Pending browser-verify + commit.
+- **2026-06-13** — Slice 3: 2D finished outline. SSoT core στενεύτηκε σε `ColumnFinishSource`/`WallFinishObstacle` (κοινό BOQ+3D+2D, μηδέν cast για DxfColumn/DxfWall). Per-frame `buildFinishFacesByColumn` → `EntityRendererComposite.setColumnFinishFaces` → `ColumnRenderer.drawFinishOutline` (offset «λωρίδα» ανά εκτεθειμένη παρειά, plaster colour SSoT, ADR-040 orchestrator-drives). 6/6 jest + tsc καθαρό. ADR-040 changelog ενημερώθηκε. Pending browser-verify + commit.

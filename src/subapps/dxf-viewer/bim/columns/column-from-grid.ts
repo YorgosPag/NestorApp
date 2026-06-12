@@ -31,6 +31,7 @@ import {
   type ColumnParamOverrides,
 } from '../../hooks/drawing/column-completion';
 import { DEFAULT_COLUMN_HEIGHT_MM } from '../types/column-types';
+import { resolveStoreyHeightMm } from '../../systems/levels/storey-creation-defaults';
 import type { SceneUnits } from '../../utils/scene-units';
 
 /**
@@ -52,7 +53,9 @@ function withFoundationBase(
   if (foundationBaseLevelMm === undefined) return overrides;
   const baseDrop = ACTIVE_LEVEL_FLOOR_MM - foundationBaseLevelMm;
   if (baseDrop <= 0) return overrides; // θεμελίωση όχι κάτω από το δάπεδο
-  const baseHeight = overrides.height ?? DEFAULT_COLUMN_HEIGHT_MM;
+  // ADR-448 Phase 2 — storey-aware nominal height· το GEN-COL continuity (baseOffset +
+  // baseDrop, ADR-441) μένει ανέπαφο: η κορυφή στην οροφή ορόφου, η βάση στη θεμελίωση.
+  const baseHeight = resolveStoreyHeightMm(overrides.height, DEFAULT_COLUMN_HEIGHT_MM);
   return { ...overrides, baseOffset: foundationBaseLevelMm, height: baseHeight + baseDrop };
 }
 

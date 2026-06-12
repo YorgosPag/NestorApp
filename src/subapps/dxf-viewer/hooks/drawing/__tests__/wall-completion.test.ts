@@ -16,6 +16,8 @@ import {
   computeWallAlignmentOffset,
 } from '../wall-completion';
 import { DEFAULT_WALL_HEIGHT_MM } from '../../../bim/types/wall-types';
+import { useActiveStoreyStore } from '../../../systems/levels/active-storey-store';
+import { buildActiveStoreyContext } from '../../../systems/levels/active-storey-context';
 
 describe('buildDefaultWallParams', () => {
   it('returns exterior category + DNA preset by default', () => {
@@ -75,6 +77,38 @@ describe('buildDefaultWallParams', () => {
     expect(params.thickness).toBe(250); // exterior preset, raw mm
     expect(params.dna?.totalThickness).toBe(250);
     expect(params.sceneUnits).toBe('m');
+  });
+});
+
+// ADR-448 Phase 2 — storey-aware default height (via active-storey store).
+describe('buildDefaultWallParams — storey-aware height (ADR-448 Phase 2)', () => {
+  afterEach(() => useActiveStoreyStore.setState({ context: null }));
+
+  it('inherits the active storey height when no override (3.5m floor → 3500)', () => {
+    useActiveStoreyStore.setState({
+      context: buildActiveStoreyContext(
+        [{ id: 'f1', number: 1, elevation: 0, height: 3.5, kind: 'standard' }],
+        'f1',
+      ),
+    });
+    const params = buildDefaultWallParams({ x: 0, y: 0 }, { x: 1000, y: 0 });
+    expect(params.height).toBe(3500);
+  });
+
+  it('explicit height override still wins over the storey default', () => {
+    useActiveStoreyStore.setState({
+      context: buildActiveStoreyContext(
+        [{ id: 'f1', number: 1, elevation: 0, height: 3.5, kind: 'standard' }],
+        'f1',
+      ),
+    });
+    const params = buildDefaultWallParams({ x: 0, y: 0 }, { x: 1000, y: 0 }, { height: 2400 });
+    expect(params.height).toBe(2400);
+  });
+
+  it('falls back to DEFAULT_WALL_HEIGHT_MM when no active storey', () => {
+    const params = buildDefaultWallParams({ x: 0, y: 0 }, { x: 1000, y: 0 });
+    expect(params.height).toBe(DEFAULT_WALL_HEIGHT_MM);
   });
 });
 
