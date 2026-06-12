@@ -32,6 +32,7 @@ import { computeBeamGeometry } from '../../bim/geometry/beam-geometry';
 import { validateBeamParams } from '../../bim/validators/beam-validator';
 import { createBeam } from '@/services/factories/beam.factory';
 import type { SceneUnits } from '../../utils/scene-units';
+import { createDefaultStructuralFinishSpec } from '../../bim/finishes/structural-finish-types';
 
 export type { SceneUnits };
 
@@ -98,6 +99,9 @@ export function buildDefaultBeamParams(
     zOffset,
     supportType,
     sceneUnits,
+    // ADR-449 Slice 5 — κάθε νέο δοκάρι γεννιέται με σοβά (enabled). Η ορατότητα
+    // ελέγχεται view-level από το master toggle «Σοβατισμένη όψη» (showFinishSkin).
+    finish: createDefaultStructuralFinishSpec(),
     ...(overrides.material !== undefined ? { material: overrides.material } : {}),
   };
   return params;

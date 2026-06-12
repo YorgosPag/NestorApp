@@ -91,6 +91,13 @@ export interface BimRenderSettings {
    * space is painted with a cold→hot heat-map + Φ (W) / W/m² label. Per-view.
    */
   showHeatLoad?: boolean;
+  /**
+   * ADR-449 Slice 5 — master view toggle «Σοβατισμένη όψη» (structural finish
+   * skin). Absent ⇒ `true` (ON by default: ο σοβάς προβάλλεται κανονικά, όπως τα
+   * Revit finishes). `false` ⇒ ο σοβάς κρύβεται σε 2D + 3D (καθαρά visual· το BOQ
+   * συνεχίζει να μετράει — schedule = model, όχι view). Per-view.
+   */
+  showFinishSkin?: boolean;
 }
 
 export interface ResolvedBimSettings {
@@ -111,6 +118,8 @@ export interface ResolvedBimSettings {
    */
   realisticMaterials: boolean;
   showHeatLoad: boolean;
+  /** ADR-449 Slice 5 — resolved master toggle «Σοβατισμένη όψη» (default ON). */
+  showFinishSkin: boolean;
 }
 
 /**
@@ -151,6 +160,8 @@ export function resolveBimSettings(s?: BimRenderSettings | null): ResolvedBimSet
     realisticMaterials: axes.faceMode === 'realistic',
     // ADR-422 L1 — absent ⇒ false (analytical heat-load overlay off by default).
     showHeatLoad: s?.showHeatLoad ?? false,
+    // ADR-449 Slice 5 — absent ⇒ true (σοβάς ορατός by default, όπως Revit finishes).
+    showFinishSkin: s?.showFinishSkin ?? true,
   };
 }
 

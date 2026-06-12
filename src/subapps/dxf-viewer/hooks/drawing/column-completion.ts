@@ -51,6 +51,7 @@ import type { GuideBinding } from '../../bim/hosting/guide-binding-types';
 import type { AxisGuideReader } from '../../bim/foundations/foundation-from-grid';
 import { resolveAxisBindings } from '../../bim/hosting/resolve-axis-bindings';
 import { resolveStoreyHeightMm } from '../../systems/levels/storey-creation-defaults';
+import { createDefaultStructuralFinishSpec } from '../../bim/finishes/structural-finish-types';
 
 export type { SceneUnits };
 
@@ -156,6 +157,9 @@ export function buildDefaultColumnParams(
     topBinding: DEFAULT_COLUMN_TOP_BINDING,
     baseOffset: overrides.baseOffset ?? 0,
     topOffset: 0,
+    // ADR-449 Slice 5 — κάθε νέα κολόνα γεννιέται με σοβά (enabled). Η ορατότητα
+    // ελέγχεται view-level από το master toggle «Σοβατισμένη όψη» (showFinishSkin).
+    finish: createDefaultStructuralFinishSpec(),
     ...(overrides.material !== undefined ? { material: overrides.material } : {}),
     ...(overrides.lshape !== undefined ? { lshape: overrides.lshape } : {}),
     ...(overrides.tshape !== undefined ? { tshape: overrides.tshape } : {}),

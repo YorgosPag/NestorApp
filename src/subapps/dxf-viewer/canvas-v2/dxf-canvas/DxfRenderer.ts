@@ -20,6 +20,8 @@ import { resolveEntityBimCategory } from '../../bim/visibility/resolve-entity-bi
 import { dimOpacityToTransparency } from '../../services/layer-isolate-resolver';
 // Per-frame index builders (extracted Boy-Scout file-size split, 2026-05-19).
 import { buildDimensionLookup, buildSlabOpeningsBySlab, buildOpeningsByWall, buildFinishFacesByColumn, buildFinishFacesByBeam, transparencyToAlpha } from './dxf-renderer-frame-builders';
+import { isStructuralFinishVisible } from '../../bim/finishes/structural-finish-visibility';
+import type { StructuralFinishFaces } from '../../bim/finishes/structural-finish-types';
 // DxfEntityUnion → Entity mapper (extracted file-size split, 2026-05-25).
 import { buildEntityModelFromDxf } from './dxf-renderer-entity-model';
 export class DxfRenderer {
@@ -89,11 +91,17 @@ export class DxfRenderer {
     // ADR-363 Phase 2 (deferred pipeline) — feed per-frame opening→wall index so
     // WallRenderer can punch boolean cutouts through wall fills.
     this.entityComposite.setOpeningsByWall(buildOpeningsByWall(scene.entities));
-    // ADR-449 Slice 3 — feed per-frame finish-faces index so ColumnRenderer can
-    // draw the 2D finished outline (offset σοβά ανά εκτεθειμένη παρειά).
-    this.entityComposite.setColumnFinishFaces(buildFinishFacesByColumn(scene.entities));
-    // ADR-449 Slice 4 — same for δοκάρια (2 πλάγιες όψεις· άκρα/πλάκα εκτός).
-    this.entityComposite.setBeamFinishFaces(buildFinishFacesByBeam(scene.entities));
+    // ADR-449 Slice 3/4 — feed per-frame finish-faces index so Column/BeamRenderer
+    // draw the 2D finished outline (offset σοβά ανά εκτεθειμένη παρειά). Slice 5: ο
+    // master toggle «Σοβατισμένη όψη» (showFinishSkin) είναι view-level gate — όταν
+    // OFF, ο orchestrator περνά κενά Maps (οι builders/leaves μένουν pure, ADR-040).
+    const showFinish = isStructuralFinishVisible();
+    this.entityComposite.setColumnFinishFaces(
+      showFinish ? buildFinishFacesByColumn(scene.entities) : new Map<string, StructuralFinishFaces>(),
+    );
+    this.entityComposite.setBeamFinishFaces(
+      showFinish ? buildFinishFacesByBeam(scene.entities) : new Map<string, StructuralFinishFaces>(),
+    );
     // ADR-362 Round 5 — propagate active scene units so dim text + arrows scale
     // correctly in non-mm DXFs (e.g. meters). Default `'mm'` keeps legacy parity.
     this.entityComposite.setDimensionSceneUnits(scene.units ?? 'mm');

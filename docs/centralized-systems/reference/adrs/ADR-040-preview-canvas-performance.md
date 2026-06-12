@@ -71,6 +71,10 @@ Mouse Event → DxfCanvas.onMouseMove
 
 ## Changelog
 
+### 2026-06-13 — ADR-449 Slice 5 master toggle «Σοβατισμένη όψη» (view-level gate στον `DxfRenderer`, CHECK 6B) + N.7.1 split `bim-render-settings-store`
+
+**Status**: IMPLEMENTED 2026-06-13. (i) Νέο per-view master toggle `showFinishSkin` (Revit visibility-only semantics) γίνεται **view-level gate στον `DxfRenderer.render`**: όταν OFF, ο orchestrator περνά **κενά Maps** στα `setColumnFinishFaces`/`setBeamFinishFaces` αντί για τους frame builders — οι builders & τα leaves (`ColumnRenderer`/`BeamRenderer`) μένουν **pure, μηδέν νέο subscription** (η ανάγνωση του flag γίνεται event-time μέσω **NEW SSoT** `bim/finishes/structural-finish-visibility.ts → isStructuralFinishVisible()`, `store.getState()` — **όχι** `useSyncExternalStore`). Καμία αλλαγή σε bitmap-cache key / scheduler. (ii) N.7.1 file-size split (μηδέν αλλαγή συμπεριφοράς): το `interface BimRenderSettingsState` εξήχθη από το `state/bim-render-settings-store.ts` σε **NEW `state/bim-render-settings-store-types.ts`** (pure types) → store 512→384 γρ. Co-staged για CHECK 6B (`DxfRenderer.ts`). Λεπτομέρεια στο ADR-449 changelog.
+
 ### 2026-06-13 — ADR-449 Slice 4 beam finish-faces feed στον `DxfRenderer` (CHECK 6B) + N.7.1 split `BeamRenderer`/`LevelPanel`
 
 **Status**: IMPLEMENTED 2026-06-13. (i) Ο `DxfRenderer` τροφοδοτεί πλέον per-frame και το **beam** finish-faces index (`this.entityComposite.setBeamFinishFaces(buildFinishFacesByBeam(scene.entities))`), byte-identical pattern με το προϋπάρχον `setColumnFinishFaces` (ADR-449 Slice 3): **ο orchestrator/composite χτίζει & εγχέει τον index, το leaf `BeamRenderer` δεν subscribe-άρει** — μηδέν νέο `useSyncExternalStore`, καμία αλλαγή σε bitmap-cache key / scheduler. (ii) N.7.1 file-size split (μηδέν αλλαγή συμπεριφοράς): το steel I/H section-profile drawing εξήχθη από τον `BeamRenderer` σε **NEW `bim/renderers/beam-section-profile-draw.ts`** (pure `drawBeamSectionProfile(ctx, beam, scale, worldToScreen)`, mirror του υπάρχοντος `column-section-symbol.ts`) → `BeamRenderer` 525→387 γρ. Co-staged για CHECK 6B (`DxfRenderer.ts`). Λεπτομέρεια στο ADR-449 changelog.

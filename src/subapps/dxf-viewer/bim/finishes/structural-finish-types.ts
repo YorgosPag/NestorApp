@@ -29,9 +29,14 @@ import type { Point2D } from '../../rendering/types/Types';
 
 // ─── Canonical defaults (REUSE wall plaster catalog, ADR-447) ──────────────────
 // Εσωτ. σοβάς (Knauf) = `mat-plaster-int` (ΑΤΟΕ OIK-4.01 m²)· εξωτ. = `mat-plaster-ext`
-// (OIK-4.03 m²)· default πάχος 15mm (απόφαση Giorgio 2026-06-12). Οι σταθερές +
-// factory `createDefaultStructuralFinishSpec` έρχονται στο Slice 5 (UI ενεργοποίησης),
-// όπου και καταναλώνονται — δεν εισάγονται unused exports στο Slice 1.
+// (OIK-4.03 m²)· default πάχος 15mm (απόφαση Giorgio 2026-06-12).
+
+/** Default υλικό εσωτερικών παρειών (Knauf) — ΑΤΟΕ OIK-4.01. */
+export const STRUCTURAL_FINISH_INTERIOR_MATERIAL = 'mat-plaster-int';
+/** Default υλικό εξωτερικών παρειών (σοβάς/θερμοπρόσοψη) — ΑΤΟΕ OIK-4.03. */
+export const STRUCTURAL_FINISH_EXTERIOR_MATERIAL = 'mat-plaster-ext';
+/** Default περιμετρικό πάχος σοβά σε mm (Giorgio 2026-06-12). */
+export const STRUCTURAL_FINISH_DEFAULT_THICKNESS_MM = 15;
 
 // ─── STORED: per-element πρόθεση σοβατίσματος ──────────────────────────────────
 
@@ -93,4 +98,21 @@ export interface StructuralFinishFaces {
 /** True όταν το spec υπάρχει ΚΑΙ είναι ενεργό ΚΑΙ έχει θετικό πάχος. */
 export function isFinishActive(spec: StructuralFinishSpec | undefined): spec is StructuralFinishSpec {
   return !!spec && spec.enabled && spec.thickness > 0;
+}
+
+// ─── Factory (Slice 5) ────────────────────────────────────────────────────────
+
+/**
+ * ADR-449 Slice 5 — default finish spec για νέα δομικά στοιχεία (κολόνα/δοκάρι).
+ * ΕΝΑ factory — το καλούν ΚΑΙ ο column ΚΑΙ ο beam factory. `enabled:true` πάντα:
+ * η ορατότητα ελέγχεται view-level από το master toggle «Σοβατισμένη όψη»
+ * (`showFinishSkin`), όχι από το data model (Revit visibility-only semantics).
+ */
+export function createDefaultStructuralFinishSpec(): StructuralFinishSpec {
+  return {
+    enabled: true,
+    interiorMaterialId: STRUCTURAL_FINISH_INTERIOR_MATERIAL,
+    exteriorMaterialId: STRUCTURAL_FINISH_EXTERIOR_MATERIAL,
+    thickness: STRUCTURAL_FINISH_DEFAULT_THICKNESS_MM,
+  };
 }
