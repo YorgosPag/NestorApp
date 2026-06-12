@@ -35,7 +35,7 @@ import { BaseEntityRenderer } from '../../rendering/entities/BaseEntityRenderer'
 import type { EntityModel, GripInfo, RenderOptions, Point2D } from '../../rendering/types/Types';
 import type { Entity } from '../../types/entities';
 import { isColumnEntity } from '../../types/entities';
-import type { ColumnEntity, ColumnKind } from '../types/column-types';
+import type { ColumnEntity } from '../types/column-types';
 import { pointInPolygon } from '../geometry/shared/polygon-utils';
 import { RENDER_LINE_WIDTHS } from '../../config/text-rendering-config';
 import { resolveSubcategoryStyle } from '../../config/bim-line-weight-resolver';
@@ -48,32 +48,36 @@ import { getLayer } from '../../stores/LayerStore';
 import { isConcreteLineweight } from '../../config/lineweight-iso-catalog';
 import { getColumnGrips } from '../columns/column-grips';
 import { gripGlyphShape } from '../grips/grip-glyph-registry';
-import {
-  computeHatchPlan,
-  computeCircularHatchPlan,
-  resolveMaterialKey,
-  HATCH_STROKE_RGBA,
-  HATCH_LINE_WIDTH_PX,
-  RC_DOT_RADIUS_PX,
-  type ColumnMaterialKey,
-  type HatchPlan,
-} from '../columns/column-hatch-patterns';
-import {
-  COL_SECTION_OFFSET_PX,
-  COL_SECTION_MIN_SCALE,
-  COL_SECTION_MIN_FOOTPRINT_PX,
-  COL_SECTION_FILL_COLOR,
-  COL_SECTION_STROKE_COLOR,
-  COL_SECTION_LINE_WIDTH_PX,
-} from '../columns/column-section-profile';
-import { resolveColumnSectionOutline } from '../columns/column-section-symbol';
 import { drawEntityDimLabel } from '../labels/bim-dim-labels';
 import { KIND_STROKE, KIND_FILL } from '../columns/column-render-palette';
+import type { StructuralFinishFaces } from '../finishes/structural-finish-types';
 import { isWallColumnKind } from '../columns/column-from-faces';
 import { columnCutPlaneShiftCanvas } from '../geometry/cut-plane-tilt';
 import { drawCutPlaneTiltProjection, cutPlaneShiftScreenDelta } from './cut-plane-tilt-projection';
+import {
+  drawColumnFinishOutline,
+  drawColumnMaterialHatch,
+  drawColumnVariantDimensionLabels,
+  drawColumnSectionProfile,
+} from './column-renderer-overlays';
+
+/**
+ * ADR-449 Slice 3 — per-frame Map<columnId, StructuralFinishFaces> για το 2D
+ * finished outline. Χτίζεται από `buildFinishFacesByColumn(scene.entities)` και
+ * εγχέεται μέσω `EntityRendererComposite.setColumnFinishFaces()` (mirror του
+ * opening-by-wall index· ADR-040 — ο orchestrator οδηγεί, το leaf δεν subscribe-άρει).
+ */
+export type FinishFacesByColumn = ReadonlyMap<string, StructuralFinishFaces>;
 
 export class ColumnRenderer extends BaseEntityRenderer {
+  /** ADR-449 Slice 3 — per-frame finish faces index (κενό = κανένας ενεργός σοβάς). */
+  private columnFinishFaces: FinishFacesByColumn = new Map();
+
+  /** Inject per-frame finish-faces index. Composite calls this once per render. */
+  setColumnFinishFaces(map: FinishFacesByColumn): void {
+    this.columnFinishFaces = map;
+  }
+
   render(entity: EntityModel, options: RenderOptions = {}): void {
     if (!isColumnEntity(entity)) return;
     const column = entity as ColumnEntity;
@@ -140,7 +144,7 @@ export class ColumnRenderer extends BaseEntityRenderer {
     this.ctx.fill();
 
     // Phase 4.5c.2/4.5c.3 — per-material hatch (all kinds, incl. circular).
-    this.drawMaterialHatch(column);
+    drawColumnMaterialHatch(this.ctx, column, this.transform.scale, (p) => this.worldToScreen(p));
 
     const _colLayerOverride = _colLayer ? {
       lineweightMm: isConcreteLineweight(_colLayer.lineweight) ? _colLayer.lineweight : undefined,
@@ -161,10 +165,14 @@ export class ColumnRenderer extends BaseEntityRenderer {
     this.ctx.stroke();
     this.ctx.restore();
 
+    // ADR-449 Slice 3 — σοβατισμένη όψη: λεπτή «διπλή γραμμή» offset προς τα έξω
+    // ανά εκτεθειμένη παρειά (καλυμμένες από τοίχο → καμία γραμμή). Πυρήνας αμετάβλητος.
+    drawColumnFinishOutline(this.ctx, column, this.columnFinishFaces.get(column.id), (p) => this.worldToScreen(p));
+
     // Phase 4.5c.3 + 4.5c.6 — variant labels + section-profile symbol (L/T when highlighted).
     if (phaseState.phase === 'highlighted') {
-      this.drawVariantDimensionLabels(column);
-      this.drawSectionProfile(column);
+      drawColumnVariantDimensionLabels(this.ctx, column, (p) => this.worldToScreen(p));
+      drawColumnSectionProfile(this.ctx, column, this.transform.scale, (p) => this.worldToScreen(p));
     }
 
     // Phase 8F — centred dimension pill (Revit-style): visible when hovered OR selected.
@@ -181,221 +189,6 @@ export class ColumnRenderer extends BaseEntityRenderer {
     }
 
     this.finalizeRender(entity, options);
-  }
-
-  /**
-   * Phase 4.5c.2/4.5c.3 — per-material hatch pattern inside footprint clip.
-   * Mirror του `SlabRenderer.drawReinforcementHatch` pattern.
-   *
-   * Circular kind (Phase 4.5c.3): routes through `computeCircularHatchPlan()`
-   *   which returns concentric arcs for RC, bbox-clipped lines for others.
-   * Non-circular: routes through `computeHatchPlan(bbox, key)` (Phase 4.5c.2).
-   * Skip: `transform.scale < 0.001` (invisible zoom-out, perf saver).
-   */
-  private drawMaterialHatch(column: ColumnEntity): void {
-    if (this.transform.scale < 0.001) return;
-
-    const key: ColumnMaterialKey = resolveMaterialKey(column.params.material);
-    const plan: HatchPlan = column.kind === 'circular'
-      ? computeCircularHatchPlan(
-          { x: column.params.position.x, y: column.params.position.y },
-          column.params.width / 2,
-          key,
-        )
-      : computeHatchPlan(column.geometry.bbox, key);
-
-    if (plan.lines.length === 0 && plan.dots.length === 0 && plan.arcs.length === 0) return;
-
-    this.ctx.save();
-    this.drawPolygonPath(column.geometry.footprint.vertices);
-    this.ctx.clip();
-    this.ctx.strokeStyle = HATCH_STROKE_RGBA;
-    this.ctx.fillStyle = HATCH_STROKE_RGBA;
-    this.ctx.lineWidth = HATCH_LINE_WIDTH_PX[key];
-    this.ctx.setLineDash([]);
-
-    for (const line of plan.lines) {
-      const a = this.worldToScreen(line.start);
-      const b = this.worldToScreen(line.end);
-      this.ctx.beginPath();
-      this.ctx.moveTo(a.x, a.y);
-      this.ctx.lineTo(b.x, b.y);
-      this.ctx.stroke();
-    }
-    for (const dot of plan.dots) {
-      const s = this.worldToScreen(dot.center);
-      this.ctx.beginPath();
-      this.ctx.arc(s.x, s.y, RC_DOT_RADIUS_PX, 0, Math.PI * 2);
-      this.ctx.fill();
-    }
-    for (const arc of plan.arcs) {
-      const s = this.worldToScreen(arc.center);
-      const rPx = arc.radiusMm * this.transform.scale;
-      if (rPx < 0.5) continue;
-      this.ctx.beginPath();
-      this.ctx.arc(s.x, s.y, rPx, 0, Math.PI * 2);
-      this.ctx.stroke();
-    }
-    this.ctx.restore();
-  }
-
-  /**
-   * Phase 4.5c.3 — Draw dimension labels for L-shape (armLength + armWidth)
-   * and T-shape (flangeLength + webThickness) when column is highlighted.
-   *
-   * Uses footprint vertex midpoints to position labels; vertex order matches
-   * `buildLshapeLocal` and `buildTshapeLocal` in `column-geometry.ts`.
-   * Pure canvas draw — ZERO store subscriptions (ADR-040 compliant).
-   */
-  private drawVariantDimensionLabels(column: ColumnEntity): void {
-    if (!hasVariantLabels(column.kind)) return;
-    const verts = column.geometry.footprint.vertices;
-
-    this.ctx.save();
-    this.ctx.font = '8px sans-serif';
-    this.ctx.fillStyle = 'rgba(0, 0, 0, 0.60)';
-    this.ctx.textAlign = 'center';
-    this.ctx.textBaseline = 'middle';
-
-    if (column.kind === 'L-shape' && verts.length === 6) {
-      this.drawDimLabel(verts[3], verts[4], `${Math.round(column.params.depth / 3)} `);
-      this.drawDimLabel(verts[0], verts[3], `${Math.round(column.params.width / 3)} `);
-    } else if (column.kind === 'T-shape' && verts.length === 8) {
-      const fl = column.params.tshape?.flangeLength ?? column.params.width;
-      const wt = column.params.tshape?.webThickness ?? Math.round(column.params.depth / 3);
-      this.drawDimLabel(verts[4], verts[5], `${Math.round(fl)} `);
-      this.drawDimLabel(verts[1], verts[2], `${Math.round(wt)} `);
-    } else if (column.kind === 'polygon' && verts.length >= 3) {
-      this.drawPolygonSideLabel(column, verts);
-    } else if (column.kind === 'I-shape' && verts.length === 12) {
-      this.drawIShapeLabels(column, verts);
-    }
-
-    this.ctx.restore();
-  }
-
-  /**
-   * ADR-363 Phase 8 — polygon `N=k` annotation centred above the top vertex.
-   * `params.polygon.sides` falls back to the rendered vertex count when the
-   * override is absent (clamped already by `column-geometry`).
-   */
-  private drawPolygonSideLabel(
-    column: ColumnEntity,
-    verts: ReadonlyArray<{ x: number; y: number }>,
-  ): void {
-    const sides = column.params.polygon?.sides ?? verts.length;
-    const topIdx = pickTopVertexIndex(verts);
-    const top = verts[topIdx];
-    const s = this.worldToScreen({ x: top.x, y: top.y });
-    this.ctx.fillText(`N=${sides}`, s.x, s.y - 10);
-  }
-
-  /**
-   * ADR-363 Phase 8 — I-shape dimensions. Vertex 0 lives at (-b/2, -h/2) and
-   * vertex 6 at (+b/2, +h/2) for the canonical 12-vertex CCW outline emitted
-   * by `buildIShapeLocal()`. Flange width spans verts[0]↔verts[1]; section
-   * depth spans verts[1]↔verts[6] across the right flange-edge.
-   */
-  private drawIShapeLabels(
-    column: ColumnEntity,
-    verts: ReadonlyArray<{ x: number; y: number }>,
-  ): void {
-    this.drawDimLabel(verts[0], verts[1], `b=${Math.round(column.params.width)} `);
-    this.drawDimLabel(verts[1], verts[6], `h=${Math.round(column.params.depth)} `);
-  }
-
-  /**
-   * Draw a small dimension label at the midpoint of segment [a, b] with a
-   * short perpendicular tick mark.
-   */
-  private drawDimLabel(
-    a: Readonly<{ x: number; y: number }>,
-    b: Readonly<{ x: number; y: number }>,
-    text: string,
-  ): void {
-    const sa = this.worldToScreen(a);
-    const sb = this.worldToScreen(b);
-    const mx = (sa.x + sb.x) / 2;
-    const my = (sa.y + sb.y) / 2;
-    const dx = sb.x - sa.x;
-    const dy = sb.y - sa.y;
-    const len = Math.sqrt(dx * dx + dy * dy);
-    if (len < 6) return;
-    const nx = -dy / len;
-    const ny = dx / len;
-    const OFFSET_PX = 9;
-
-    this.ctx.save();
-    this.ctx.strokeStyle = 'rgba(0, 0, 0, 0.35)';
-    this.ctx.lineWidth = 0.7;
-    this.ctx.setLineDash([2, 2]);
-    this.ctx.beginPath();
-    this.ctx.moveTo(sa.x, sa.y);
-    this.ctx.lineTo(sb.x, sb.y);
-    this.ctx.stroke();
-    this.ctx.restore();
-
-    this.ctx.fillText(text, mx + nx * OFFSET_PX, my + ny * OFFSET_PX);
-  }
-
-  /**
-   * Phase 4.5c.6 / 8 / 2b — section-profile symbol (hover + selection only).
-   *
-   * Draws a fixed-size section symbol to the right of the column bbox, vertically
-   * centred. The per-kind outline + material gate live in the
-   * `resolveColumnSectionOutline` SSoT (∟/⊤ steel L/T, Π/σύνθετο RC τοιχία);
-   * this method owns only canvas placement + styling. ADR-040 compliant: ZERO
-   * new store subscriptions, pure ctx.
-   */
-  private drawSectionProfile(column: ColumnEntity): void {
-    if (this.transform.scale < COL_SECTION_MIN_SCALE) return;
-    const outline = resolveColumnSectionOutline(column);
-    if (!outline || outline.length === 0) return;
-
-    const _spDs = useDrawingScaleStore.getState();
-    const _spLayer = column.layerId ? getLayer(column.layerId) : null;
-    const _spLayerOverride = _spLayer ? {
-      lineweightMm: isConcreteLineweight(_spLayer.lineweight) ? _spLayer.lineweight : undefined,
-      color: _spLayer.color ?? undefined,
-    } : undefined;
-    const _spCutState = resolveCutState(
-      { zBottomMm: column.params.baseOffset ?? 0, zTopMm: (column.params.baseOffset ?? 0) + column.params.height, category: 'column' },
-      _spDs.viewRange,
-    );
-    const { lineWidthPx: _spPx, color: _spCol } = resolveSubcategoryStyle({
-      category: 'column', subcategoryKey: 'section-profile',
-      cutState: _spCutState, scaleDenominator: _spDs.drawingScale,
-      dpi: 96, objectStyles: _spDs.objectStyles,
-      elementOverride: column.styleOverride, layerOverride: _spLayerOverride,
-    });
-
-    const bb = column.geometry.bbox;
-    const minS = this.worldToScreen({ x: bb.min.x, y: bb.min.y });
-    const maxS = this.worldToScreen({ x: bb.max.x, y: bb.max.y });
-    const footprintSpan = Math.max(Math.abs(maxS.x - minS.x), Math.abs(maxS.y - minS.y));
-    if (footprintSpan < COL_SECTION_MIN_FOOTPRINT_PX) return;
-
-    // Symbol centre: to the right of bbox, vertically centred in screen space.
-    const rightX = Math.max(minS.x, maxS.x);
-    const centerY = (minS.y + maxS.y) / 2;
-    const cx = rightX + COL_SECTION_OFFSET_PX;
-    const cy = centerY;
-
-    this.ctx.save();
-    this.ctx.translate(cx, cy);
-    this.ctx.setLineDash([]);
-    this.ctx.beginPath();
-    this.ctx.moveTo(outline[0].x, outline[0].y);
-    for (let i = 1; i < outline.length; i++) {
-      this.ctx.lineTo(outline[i].x, outline[i].y);
-    }
-    this.ctx.closePath();
-    this.ctx.fillStyle = COL_SECTION_FILL_COLOR;
-    this.ctx.fill();
-    this.ctx.strokeStyle = _spCol ?? COL_SECTION_STROKE_COLOR;
-    this.ctx.lineWidth = _spPx;
-    this.ctx.stroke();
-    this.ctx.restore();
   }
 
   /**
@@ -463,25 +256,4 @@ export class ColumnRenderer extends BaseEntityRenderer {
     }
     this.ctx.closePath();
   }
-}
-
-/** Kinds whose highlighted state shows dimension annotations. shear-wall stays
- *  unannotated — its rectangular outline is self-explanatory. */
-function hasVariantLabels(kind: ColumnKind): boolean {
-  return kind === 'L-shape' || kind === 'T-shape' || kind === 'polygon' || kind === 'I-shape';
-}
-
-/** Index of the vertex with the maximum world Y (top of polygon). */
-function pickTopVertexIndex(
-  verts: ReadonlyArray<{ x: number; y: number }>,
-): number {
-  let idx = 0;
-  let topY = verts[0].y;
-  for (let i = 1; i < verts.length; i++) {
-    if (verts[i].y > topY) {
-      topY = verts[i].y;
-      idx = i;
-    }
-  }
-  return idx;
 }
