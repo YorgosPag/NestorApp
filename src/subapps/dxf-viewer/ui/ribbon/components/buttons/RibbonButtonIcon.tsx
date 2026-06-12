@@ -37,6 +37,7 @@ import {
 } from './RibbonButtonIconPaths';
 import { STAIR_PATH_STRAIGHT, STAIR_PATH_SPIRAL, STAIR_PATH_USHAPE } from './stair-kind-icon-paths';
 import { XLINE_PATH, RAY_PATH } from './xline-ray-icon-paths';
+import { StructuralToolIcon } from './StructuralToolIcon';
 
 export type RibbonIconSize = 'large' | 'small';
 
@@ -246,6 +247,33 @@ export const RibbonButtonIcon: React.FC<RibbonButtonIconProps> = ({ icon, size }
     case 'bim-opening-schedule-pdf': return <FileDown width={sizePx[size]} height={sizePx[size]} className={className} />;
     // ADR-396 Phase P6 — Thermal Envelope (ETICS) authoring command
     case 'bim-thermal-envelope': return <Thermometer width={sizePx[size]} height={sizePx[size]} className={className} />;
+    // ADR-443 — Structural «Δομικά» tab: distinct base×method composed icons.
+    // Walls (base=wall × creation method).
+    case 'struct-wall-single': return <StructuralToolIcon base="wall" method="single" className={className} />;
+    case 'struct-wall-on-entity': return <StructuralToolIcon base="wall" method="on-entity" className={className} />;
+    case 'struct-wall-region-lines': return <StructuralToolIcon base="wall" method="region-lines" className={className} />;
+    case 'struct-wall-region-inside': return <StructuralToolIcon base="wall" method="region-inside" className={className} />;
+    case 'struct-wall-region-box': return <StructuralToolIcon base="wall" method="region-box" className={className} />;
+    case 'struct-wall-from-perimeter': return <StructuralToolIcon base="wall" method="from-perimeter" className={className} />;
+    case 'struct-wall-from-grid': return <StructuralToolIcon base="wall" method="from-grid" className={className} />;
+    // Columns & piers (base=column × creation method).
+    case 'struct-col-single': return <StructuralToolIcon base="column" method="single" className={className} />;
+    case 'struct-col-region-lines': return <StructuralToolIcon base="column" method="region-lines" className={className} />;
+    case 'struct-col-region-inside': return <StructuralToolIcon base="column" method="region-inside" className={className} />;
+    case 'struct-col-region-box': return <StructuralToolIcon base="column" method="region-box" className={className} />;
+    case 'struct-col-discrete-from-perimeter': return <StructuralToolIcon base="column" method="discrete-from-perimeter" className={className} />;
+    case 'struct-col-from-perimeter': return <StructuralToolIcon base="column" method="from-perimeter" className={className} />;
+    case 'struct-col-discrete-from-perimeter-walls': return <StructuralToolIcon base="column" method="discrete-from-perimeter-walls" className={className} />;
+    case 'struct-col-from-grid': return <StructuralToolIcon base="column" method="from-grid" className={className} />;
+    // Beams (base=beam × creation method).
+    case 'struct-beam-single': return <StructuralToolIcon base="beam" method="single" className={className} />;
+    case 'struct-beam-on-entity': return <StructuralToolIcon base="beam" method="on-entity" className={className} />;
+    // Foundation (pad / strip × creation method; `tie` keeps tie-beam distinct).
+    case 'struct-found-pad-single': return <StructuralToolIcon base="foundation-pad" method="single" className={className} />;
+    case 'struct-found-strip-single': return <StructuralToolIcon base="foundation-strip" method="single" className={className} />;
+    case 'struct-found-strip-tie': return <StructuralToolIcon base="foundation-strip" method="tie" className={className} />;
+    case 'struct-found-strip-on-entity': return <StructuralToolIcon base="foundation-strip" method="on-entity" className={className} />;
+    case 'struct-found-strip-from-grid': return <StructuralToolIcon base="foundation-strip" method="from-grid" className={className} />;
     default: return inlineSvg(size, <circle cx="12" cy="12" r="2" />);
   }
 };

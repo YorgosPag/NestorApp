@@ -87,11 +87,16 @@ EVERY command is a **LARGE icon-button**; NOTHING is hidden behind a flyout. All
 
 **NEW**
 - `src/subapps/dxf-viewer/ui/ribbon/data/structural-tab.ts`
-- `src/subapps/dxf-viewer/ui/ribbon/data/__tests__/structural-tab.test.ts` (7 tests)
+- `src/subapps/dxf-viewer/ui/ribbon/data/__tests__/structural-tab.test.ts` (9 tests)
+- `src/subapps/dxf-viewer/ui/ribbon/components/buttons/structural-icon-bases.tsx` (icon-distinction pass — 5 base fragments, data)
+- `src/subapps/dxf-viewer/ui/ribbon/components/buttons/structural-icon-methods.tsx` (icon-distinction pass — 10 method-badge fragments, data)
+- `src/subapps/dxf-viewer/ui/ribbon/components/buttons/StructuralToolIcon.tsx` (icon-distinction pass — base×method composer)
+- `src/subapps/dxf-viewer/ui/ribbon/components/buttons/__tests__/StructuralToolIcon.test.tsx` (6 tests)
 
 **MOD**
 - `src/subapps/dxf-viewer/ui/ribbon/data/ribbon-default-tabs.ts` (import + register + tab order)
 - `src/subapps/dxf-viewer/ui/ribbon/data/home-tab-draw.ts` (removed nested `draw.bim.group` dropdown)
+- `src/subapps/dxf-viewer/ui/ribbon/components/buttons/RibbonButtonIcon.tsx` (icon-distinction pass — additive 22 `struct-*` cases)
 - `src/i18n/locales/el/dxf-viewer-shell.json` (1 tab + 6 panel keys)
 - `src/i18n/locales/en/dxf-viewer-shell.json` (1 tab + 6 panel keys)
 
@@ -116,6 +121,24 @@ permanent-tab vs contextual-tab separation. 38/38 ribbon-data tests green.
 
 ## Changelog
 
+- **2026-06-12** — Icon-distinction pass (Opus 4.8). Root bug: every variant of a family
+  shared ONE glyph token (`bim-wall`×7, `bim-column`×9, `bim-beam`×6 incl. borrowed
+  foundation icons) → users could not tell the creation methods apart. Fix = a Revit-grade
+  **base × method composition** icon system (SSoT, no per-icon duplication):
+  - NEW `structural-icon-bases.tsx` (5 plan-view base fragments: wall / column / beam /
+    foundation-pad / foundation-strip), `structural-icon-methods.tsx` (10 bottom-right
+    creation-method badge fragments: single / on-entity / region-lines / region-inside /
+    region-box / from-perimeter / discrete-from-perimeter / discrete-from-perimeter-walls /
+    from-grid / **tie**), `StructuralToolIcon.tsx` (composes base + badge, sizing via
+    caller className like `CircleIcon`), `__tests__/StructuralToolIcon.test.tsx` (6 tests).
+  - **5 bases + 10 methods = 22 distinct icons from 15 fragment defs** (a new base or
+    method is +1 fragment, never N×M). `tie` method keeps the foundation tie-beam distinct
+    from strip-from-wall (`on-entity`), resolving the only would-be re-collision.
+  - MOD `RibbonButtonIcon.tsx` (additive: 22 new `struct-*` cases, zero change to existing
+    cases), `structural-tab.ts` (only the 22 `icon:` tokens → `struct-<family>-<method>`;
+    labels/commandKey/action/shortcut unchanged → zero behaviour change), `structural-tab.test.ts`
+    (+2 tests: unique-icon-token anti-collision + composed-token assertions). Slab / opening /
+    stair / railing tokens untouched (already distinct). Pending browser-verify + commit.
 - **2026-06-12** — v1 created (Opus 4.8). New permanent `STRUCTURAL_TAB` (6 panels, 24
   tools + 1 action, all large) replacing the nested `draw.bim.group` dropdown in
   `home-tab-draw.ts`. 7 new i18n container keys (el+en). 7 unit tests. Permanent-tab road

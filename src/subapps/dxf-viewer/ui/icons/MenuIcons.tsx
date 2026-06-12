@@ -286,3 +286,40 @@ export function FlipArcIcon({ className, color }: IconProps) {
     </svg>
   );
 }
+
+/**
+ * Isolate-element icon — a solid focused object surrounded by dimmed/dashed
+ * neighbours (Revit "Isolate Element"). Used in: EntityContextMenu.
+ */
+export function IsolateEntityIcon({ className, color }: IconProps) {
+  return (
+    <SvgWrapper className={className} color={color}>
+      {/* Focused (kept) object — solid, centred */}
+      <rect x="9" y="9" width="6" height="6" rx="1" />
+      {/* Dimmed neighbours — dashed, low opacity */}
+      <rect x="3" y="3" width="4" height="4" rx="1" strokeDasharray="2,2" opacity="0.45" />
+      <rect x="17" y="3" width="4" height="4" rx="1" strokeDasharray="2,2" opacity="0.45" />
+      <rect x="3" y="17" width="4" height="4" rx="1" strokeDasharray="2,2" opacity="0.45" />
+      <rect x="17" y="17" width="4" height="4" rx="1" strokeDasharray="2,2" opacity="0.45" />
+    </SvgWrapper>
+  );
+}
+
+/**
+ * Isolate-category icon — a solid row of same-kind objects kept, with a dimmed
+ * different-kind row below (Revit "Isolate Category"). Used in: EntityContextMenu.
+ */
+export function IsolateCategoryIcon({ className, color }: IconProps) {
+  return (
+    <SvgWrapper className={className} color={color}>
+      {/* Kept category — solid row of three same objects */}
+      <rect x="3" y="5" width="4" height="4" rx="1" />
+      <rect x="10" y="5" width="4" height="4" rx="1" />
+      <rect x="17" y="5" width="4" height="4" rx="1" />
+      {/* Other categories — dimmed, dashed row */}
+      <rect x="3" y="15" width="4" height="4" rx="1" strokeDasharray="2,2" opacity="0.4" />
+      <rect x="10" y="15" width="4" height="4" rx="1" strokeDasharray="2,2" opacity="0.4" />
+      <rect x="17" y="15" width="4" height="4" rx="1" strokeDasharray="2,2" opacity="0.4" />
+    </SvgWrapper>
+  );
+}

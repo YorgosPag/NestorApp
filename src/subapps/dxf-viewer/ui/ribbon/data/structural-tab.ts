@@ -30,7 +30,7 @@
  * @see docs/centralized-systems/reference/adrs/ADR-443-structural-permanent-ribbon-tab.md
  */
 
-import type { RibbonButton, RibbonTab } from '../types/ribbon-types';
+import type { RibbonButton, RibbonCommand, RibbonTab } from '../types/ribbon-types';
 
 /** Helper: a LARGE tool button (commandKey → onToolChange, optional shortcut). */
 function toolBtn(
@@ -46,6 +46,25 @@ function actionBtn(
   return { type: 'simple', size: 'large', command: { id, labelKey, icon, commandKey, action } };
 }
 
+/** Helper: ONE split-button variant that fires `onAction(action)` (no tool). */
+function actionVariant(id: string, labelKey: string, icon: string, action: string): RibbonCommand {
+  return { id, labelKey, icon, commandKey: action, action };
+}
+
+/**
+ * Helper: a LARGE split-action button — main click fires `mainAction`, the dropdown
+ * lists `variants` (ADR-441 «Εσχάρα από κάναβο» + 3 περιμετρικά modes).
+ */
+function splitActionBtn(
+  id: string, labelKey: string, icon: string, mainAction: string, variants: RibbonCommand[],
+): RibbonButton {
+  return {
+    type: 'split', size: 'large',
+    command: { id, labelKey, icon, commandKey: mainAction, action: mainAction },
+    variants,
+  };
+}
+
 export const STRUCTURAL_TAB: RibbonTab = {
   id: 'structural',
   labelKey: 'ribbon.tabs.structural',
@@ -58,12 +77,14 @@ export const STRUCTURAL_TAB: RibbonTab = {
         {
           isInFlyout: false,
           buttons: [
-            toolBtn('structuralTab.wall', 'ribbon.commands.bim.wall.label', 'bim-wall', 'wall', 'W'),
-            toolBtn('structuralTab.wallOnEntity', 'ribbon.commands.bim.wallOnEntity.label', 'bim-wall', 'wall-on-entity'),
-            toolBtn('structuralTab.wallRegionLines', 'ribbon.commands.bim.wallRegionLines.label', 'bim-wall', 'wall-region-lines'),
-            toolBtn('structuralTab.wallRegionInside', 'ribbon.commands.bim.wallRegionInside.label', 'bim-wall', 'wall-region-inside'),
-            toolBtn('structuralTab.wallRegionBox', 'ribbon.commands.bim.wallRegionBox.label', 'bim-wall', 'wall-region-box'),
-            toolBtn('structuralTab.wallFromPerimeter', 'ribbon.commands.bim.wallFromPerimeter.label', 'bim-wall', 'wall-from-perimeter'),
+            toolBtn('structuralTab.wall', 'ribbon.commands.bim.wall.label', 'struct-wall-single', 'wall', 'W'),
+            toolBtn('structuralTab.wallOnEntity', 'ribbon.commands.bim.wallOnEntity.label', 'struct-wall-on-entity', 'wall-on-entity'),
+            toolBtn('structuralTab.wallRegionLines', 'ribbon.commands.bim.wallRegionLines.label', 'struct-wall-region-lines', 'wall-region-lines'),
+            toolBtn('structuralTab.wallRegionInside', 'ribbon.commands.bim.wallRegionInside.label', 'struct-wall-region-inside', 'wall-region-inside'),
+            toolBtn('structuralTab.wallRegionBox', 'ribbon.commands.bim.wallRegionBox.label', 'struct-wall-region-box', 'wall-region-box'),
+            toolBtn('structuralTab.wallFromPerimeter', 'ribbon.commands.bim.wallFromPerimeter.label', 'struct-wall-from-perimeter', 'wall-from-perimeter'),
+            // ADR-441 Slice GEN-WALL — «Τοίχοι από κάναβο»: one-shot action (στα segments).
+            actionBtn('structuralTab.wallsFromGrid', 'ribbon.commands.bim.wallsFromGrid.label', 'struct-wall-from-grid', 'wall.actions.fromGrid', 'wall.actions.fromGrid'),
           ],
         },
       ],
@@ -76,13 +97,15 @@ export const STRUCTURAL_TAB: RibbonTab = {
         {
           isInFlyout: false,
           buttons: [
-            toolBtn('structuralTab.column', 'ribbon.commands.bim.column.label', 'bim-column', 'column', 'CL'),
-            toolBtn('structuralTab.columnRegionLines', 'ribbon.commands.bim.columnRegionLines.label', 'bim-column', 'column-region-lines'),
-            toolBtn('structuralTab.columnRegionInside', 'ribbon.commands.bim.columnRegionInside.label', 'bim-column', 'column-region-inside'),
-            toolBtn('structuralTab.columnRegionBox', 'ribbon.commands.bim.columnRegionBox.label', 'bim-column', 'column-region-box'),
-            toolBtn('structuralTab.columnDiscreteFromPerimeter', 'ribbon.commands.bim.columnDiscreteFromPerimeter.label', 'bim-column', 'column-discrete-from-perimeter'),
-            toolBtn('structuralTab.columnFromPerimeter', 'ribbon.commands.bim.columnFromPerimeter.label', 'bim-column', 'column-from-perimeter'),
-            toolBtn('structuralTab.columnDiscreteFromPerimeterWalls', 'ribbon.commands.bim.columnDiscreteFromPerimeterWalls.label', 'bim-column', 'column-discrete-from-perimeter-walls'),
+            toolBtn('structuralTab.column', 'ribbon.commands.bim.column.label', 'struct-col-single', 'column', 'CL'),
+            toolBtn('structuralTab.columnRegionLines', 'ribbon.commands.bim.columnRegionLines.label', 'struct-col-region-lines', 'column-region-lines'),
+            toolBtn('structuralTab.columnRegionInside', 'ribbon.commands.bim.columnRegionInside.label', 'struct-col-region-inside', 'column-region-inside'),
+            toolBtn('structuralTab.columnRegionBox', 'ribbon.commands.bim.columnRegionBox.label', 'struct-col-region-box', 'column-region-box'),
+            toolBtn('structuralTab.columnDiscreteFromPerimeter', 'ribbon.commands.bim.columnDiscreteFromPerimeter.label', 'struct-col-discrete-from-perimeter', 'column-discrete-from-perimeter'),
+            toolBtn('structuralTab.columnFromPerimeter', 'ribbon.commands.bim.columnFromPerimeter.label', 'struct-col-from-perimeter', 'column-from-perimeter'),
+            toolBtn('structuralTab.columnDiscreteFromPerimeterWalls', 'ribbon.commands.bim.columnDiscreteFromPerimeterWalls.label', 'struct-col-discrete-from-perimeter-walls', 'column-discrete-from-perimeter-walls'),
+            // ADR-441 Slice GEN-COL — «Κολώνες από κάναβο»: one-shot action (στις τομές).
+            actionBtn('structuralTab.columnsFromGrid', 'ribbon.commands.bim.columnsFromGrid.label', 'struct-col-from-grid', 'column.actions.fromGrid', 'column.actions.fromGrid'),
           ],
         },
       ],
@@ -95,8 +118,10 @@ export const STRUCTURAL_TAB: RibbonTab = {
         {
           isInFlyout: false,
           buttons: [
-            toolBtn('structuralTab.beam', 'ribbon.commands.bim.beam.label', 'bim-beam', 'beam', 'BM'),
-            toolBtn('structuralTab.beamFromWall', 'ribbon.commands.bim.beamFromWall.label', 'bim-beam', 'beam-from-wall'),
+            toolBtn('structuralTab.beam', 'ribbon.commands.bim.beam.label', 'struct-beam-single', 'beam', 'BM'),
+            toolBtn('structuralTab.beamFromWall', 'ribbon.commands.bim.beamFromWall.label', 'struct-beam-on-entity', 'beam-from-wall'),
+            // ADR-441 Slice GEN-BEAM — «Δοκάρια από κάναβο»: one-shot action (στα segments).
+            actionBtn('structuralTab.beamsFromGrid', 'ribbon.commands.bim.beamsFromGrid.label', 'struct-beam-from-grid', 'beam.actions.fromGrid', 'beam.actions.fromGrid'),
           ],
         },
       ],
@@ -124,13 +149,26 @@ export const STRUCTURAL_TAB: RibbonTab = {
         {
           isInFlyout: false,
           buttons: [
-            toolBtn('structuralTab.foundationPad', 'ribbon.commands.bim.foundationPad.label', 'bim-column', 'foundation-pad', 'FP'),
-            toolBtn('structuralTab.foundationStrip', 'ribbon.commands.bim.foundationStrip.label', 'bim-beam', 'foundation-strip', 'FS'),
-            toolBtn('structuralTab.foundationTieBeam', 'ribbon.commands.bim.foundationTieBeam.label', 'bim-beam', 'foundation-tie-beam'),
-            toolBtn('structuralTab.foundationStripFromWall', 'ribbon.commands.bim.foundationStripFromWall.label', 'bim-beam', 'foundation-strip-from-wall'),
-            // ADR-441 — «Εσχάρα πεδιλοδοκών από κάναβο»: one-shot action (fires
-            // onAction, NOT a draw tool), reused verbatim from home-tab-draw.ts.
-            actionBtn('structuralTab.foundationFromGrid', 'ribbon.commands.bim.foundationFromGrid.label', 'bim-beam', 'foundation.actions.fromGrid', 'foundation.actions.fromGrid'),
+            toolBtn('structuralTab.foundationPad', 'ribbon.commands.bim.foundationPad.label', 'struct-found-pad-single', 'foundation-pad', 'FP'),
+            toolBtn('structuralTab.foundationStrip', 'ribbon.commands.bim.foundationStrip.label', 'struct-found-strip-single', 'foundation-strip', 'FS'),
+            toolBtn('structuralTab.foundationTieBeam', 'ribbon.commands.bim.foundationTieBeam.label', 'struct-found-strip-tie', 'foundation-tie-beam'),
+            toolBtn('structuralTab.foundationStripFromWall', 'ribbon.commands.bim.foundationStripFromWall.label', 'struct-found-strip-on-entity', 'foundation-strip-from-wall'),
+            // ADR-441 — «Εσχάρα πεδιλοδοκών από κάναβο»: split-button· main = inner
+            // (default), dropdown = περιμετρική έδραση (Εσωτερικά/Κεντρικά/Εξωτερικά).
+            splitActionBtn(
+              'structuralTab.foundationFromGrid',
+              'ribbon.commands.bim.foundationFromGrid.label',
+              'struct-found-strip-from-grid',
+              'foundation.actions.fromGrid',
+              [
+                actionVariant('structuralTab.foundationFromGridInner', 'ribbon.commands.bim.foundationFromGridInner.label', 'struct-found-strip-from-grid', 'foundation.actions.fromGrid'),
+                actionVariant('structuralTab.foundationFromGridCenter', 'ribbon.commands.bim.foundationFromGridCenter.label', 'struct-found-strip-from-grid', 'foundation.actions.fromGridCenter'),
+                actionVariant('structuralTab.foundationFromGridOuter', 'ribbon.commands.bim.foundationFromGridOuter.label', 'struct-found-strip-from-grid', 'foundation.actions.fromGridOuter'),
+              ],
+            ),
+            // ADR-441 Slice GEN-TIE — «Συνδετήριες δοκοί από κάναβο»: one-shot action
+            // (κεντραρισμένες στα segments· ανεξάρτητο overlay από την εσχάρα).
+            actionBtn('structuralTab.tieBeamsFromGrid', 'ribbon.commands.bim.tieBeamsFromGrid.label', 'struct-found-tie-from-grid', 'foundation.actions.tieBeamsFromGrid', 'foundation.actions.tieBeamsFromGrid'),
           ],
         },
       ],
