@@ -94,20 +94,41 @@ Deterministic IDs: `boq_bim_${id}` / `_finish_int` / `_finish_ext`. Hook στο 
 
 Πλέον ο **ίδιος** `computeColumnFinishFaces` τροφοδοτεί **BOQ + 3D + 2D** — ΕΝΑ σημείο face-resolution.
 
+## 3.quater Files (Slice 4 — ΔΟΚΑΡΙΑ, full mirror)
+
+**Κεντρική απόφαση (Revit-grade):** για το δοκάρι σοβατίζονται **μόνο οι 2 πλάγιες όψεις** (ακμές ∥ άξονα, ύψος = structural depth). Τα **άκρα** (ακμές ⊥ άξονα) είναι δομική σύνδεση/frame-into → **ποτέ σοβατισμένα** — αποκλείονται **σημασιολογικά** (`includeEdge`), όχι μέσω obstacle (το trimmed άκρο είναι *coincident* με την παρειά κολόνας, όχι *μέσα* → η coverage θα ήταν αναξιόπιστη). Η πάνω όψη (πλάκα) + κάτω όψη (soffit/κορυφές τοίχων) είναι ΟΡΙΖΟΝΤΙΕΣ → εκτός του vertical-band μοντέλου του resolver (bottom-coverage = DEFER).
+
+**MOD:**
+- `bim/finishes/structural-finish-resolver.ts` — `+ optional includeEdge?(a,b,i)` (generic, default = όλες οι ακμές → byte-for-byte για κολόνες).
+- `bim/finishes/structural-finish-scene.ts` — `buildColumnClassifier` → **`buildStructuralFinishClassifier`** (entity-agnostic, κοινό κολόνα+δοκάρι) + `+ BeamFinishSource` + `computeBeamFinishFaces` (heightMm=depth, obstacles=walls, includeEdge ∥-άξονα) + `computeBeamFinishContribution`.
+- `bim/types/beam-types.ts` — `+ finish?: StructuralFinishSpec` (mirror column).
+- `bim-3d/converters/structural-finish-3d.ts` — extract pure **`buildFinishSkinFromFaces`** (entity-agnostic core)· `buildColumnFinishSkin` + νέο `buildBeamFinishSkin` το καλούν.
+- `bim-3d/converters/bim-three-structural-converters.ts` — `beamToMesh(+walls)` → composite `Group {πυρήνας+σοβάς}` (flat-path· depth ΑΜΕΤΑΒΛΗΤΟ). *(MIXED αρχείο με ADR-448)*
+- `bim-3d/scene/BimSceneLayer.ts` — περνά `entities.walls` στο beam call.
+- `bim/renderers/structural-finish-outline-2d.ts` *(NEW)* — extract pure SSoT `drawStructuralFinishOutline` (offset «λωρίδα» ανά εκτεθειμένη όψη, plaster colour). `column-renderer-overlays.ts:drawColumnFinishOutline` + `BeamRenderer` το καλούν → μηδέν διπλασιασμός. *(overlays = MIXED· split από άλλο agent)*
+- `bim/renderers/BeamRenderer.ts` — `FinishFacesByBeam` + `setBeamFinishFaces()` + draw call.
+- `canvas-v2/dxf-canvas/dxf-renderer-frame-builders.ts` — `buildFinishFacesByBeam(entities)`.
+- `canvas-v2/dxf-canvas/DxfRenderer.ts` — inject `buildFinishFacesByBeam` (ADR-040 orchestrator-drives).
+- `rendering/core/EntityRendererComposite.ts` — `setBeamFinishFaces()` pass-through.
+- `hooks/data/beam-boq-feed.ts` *(NEW)* — `beamBoqEntity(beam, scene)` (mirror `column-boq-feed`)· `useBeamPersistence` persist/restore wired (finish-inactive → byte-identical single-entry).
+- tests *(NEW)*: `structural-finish-scene-beam` (7) · `structural-finish-3d-beam` (7) · `BeamRenderer-finish` (5) · `beam-boq-feed` (3) — 22/22.
+
 ## 4. Roadmap (slices)
 
 - **Slice 1** ✅ — data model + resolver + BOQ (ΚΟΛΟΝΕΣ).
 - **Slice 2** ✅ — 3D render (band skin κολόνας, REUSE `stripPrismGeometry`). Flat-path μόνο· attached/κεκλιμένες κορυφές = μετέπειτα.
 - **Slice 3** ✅ — 2D render (finished outline offset ανά εκτεθειμένη παρειά + core = διπλή γραμμή). Per-frame index injection (mirror openings-by-wall).
-- **Slice 4** — Δοκάρια (resolver beam side-faces + 3D/2D).
+- **Slice 4** ✅ — Δοκάρια (2 πλάγιες όψεις· άκρα σημασιολογικά εκτός· 3D band skin + 2D outline + BOQ· FULL SSoT reuse). Static depth ΑΜΕΤΑΒΛΗΤΟ.
 - **Slice 5** — View toggle «Σοβατισμένη όψη» + UI material/thickness override.
 
 ## 5. Known / Deferred
 - Stale finish children όταν ο χρήστης απενεργοποιεί τον σοβά (single-entry path δεν τα καθαρίζει — ίδιο με wall multi-layer shrink· deferred re-sync).
-- Beam coverage κάτω-όψης από κορυφές τοίχων = Slice 4 refinement.
+- Beam coverage κάτω-όψης (soffit) από κορυφές τοίχων = refinement (οριζόντια όψη, εκτός vertical-band μοντέλου).
+- Beam obstacle κολόνας mid-span σε πλάγια όψη (rare) + curved-beam ακριβές cap exclusion (chord-based v1) = μετέπειτα.
 - ETICS-grade per-element exterior detection (πέρα από outer-ring proximity) = μετέπειτα slice.
 
 ## 6. Changelog
 - **2026-06-13** — Slice 1: data model + pure resolver (per-face, partial-coverage) + BOQ multi-layer (parent πυρήνας + interior/exterior σοβάς) + scene classifier. `coveredIntervals` εξήχθη σε shared SSoT (N.0.2). 13/13 jest. Pending browser-verify + commit.
 - **2026-06-13** — Slice 2: 3D band skin κολόνας. SSoT core `computeColumnFinishFaces` (κοινό BOQ+3D). `buildColumnFinishSkin` ανά exposed segment → vertical band prism (REUSE `stripPrismGeometry`) με `getMaterial3D`. `columnToMesh` → composite `Group {πυρήνας+σοβάς}` (flat-path)· πυρήνας `width/depth` αμετάβλητος. Ghost guard. 10/10 jest + tsc καθαρό. Pending browser-verify + commit.
 - **2026-06-13** — Slice 3: 2D finished outline. SSoT core στενεύτηκε σε `ColumnFinishSource`/`WallFinishObstacle` (κοινό BOQ+3D+2D, μηδέν cast για DxfColumn/DxfWall). Per-frame `buildFinishFacesByColumn` → `EntityRendererComposite.setColumnFinishFaces` → `ColumnRenderer.drawFinishOutline` (offset «λωρίδα» ανά εκτεθειμένη παρειά, plaster colour SSoT, ADR-040 orchestrator-drives). 6/6 jest + tsc καθαρό. ADR-040 changelog ενημερώθηκε. Pending browser-verify + commit.
+- **2026-06-13** — Slice 4: **ΔΟΚΑΡΙΑ** (full mirror, FULL SSoT). `BeamParams.finish?`· resolver `+ includeEdge` (generic, default no-op)· scene adapter `computeBeamFinishFaces`/`computeBeamFinishContribution` (heightMm=depth· **2 πλάγιες όψεις ∥ άξονα· άκρα ⊥ άξονα σημασιολογικά εκτός**· classifier γενικεύτηκε `buildStructuralFinishClassifier`)· 3D pure core `buildFinishSkinFromFaces` extract + `buildBeamFinishSkin` + `beamToMesh(+walls)` composite (depth ΑΜΕΤΑΒΛΗΤΟ)· 2D pure `drawStructuralFinishOutline` extract (column overlays + beam το καλούν, μηδέν διπλασιασμός) + `buildFinishFacesByBeam` → `setBeamFinishFaces` (ADR-040)· BOQ `beam-boq-feed` wired (finish-inactive → byte-identical). 22/22 jest + 29/29 column regression + tsc καθαρό στα δικά μου. ADR-040 changelog ενημερώθηκε. Pending browser-verify + commit. *(MIXED files με ADR-448: bim-three-structural-converters, BimSceneLayer, column-renderer-overlays)*

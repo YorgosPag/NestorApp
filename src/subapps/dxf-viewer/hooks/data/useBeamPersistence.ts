@@ -39,6 +39,7 @@ import {
 } from '../../bim/beams/beam-firestore-service';
 import { recordBeamChange } from '../../bim/beams/beam-audit-client';
 import { bimToBoqBridge } from '../../bim/services/BimToBoqBridge';
+import { beamBoqEntity } from './beam-boq-feed';
 import { useBimEntityMovedPersistEffect } from './useBimEntityMovedPersistEffect';
 import { useBimEntityRestoredPersistEffect } from './useBimEntityRestoredPersistEffect';
 
@@ -289,9 +290,14 @@ export function useBeamPersistence(
         { prevParams: prevParams ?? undefined },
       );
       if (companyId && projectId && buildingId) {
+        // ADR-449 Slice 4 — feed via beamBoqEntity (adds derived σοβά contribution
+        // όταν ενεργό· αλλιώς minimal payload = byte-identical προ-Slice-4).
+        const lm = levelManagerRef.current;
+        const lvlId = lm.currentLevelId;
+        const scene = lvlId ? lm.getLevelScene(lvlId) : null;
         void bimToBoqBridge.upsertBoqItemForBim(
           'beam',
-          { id: entity.id, kind: entity.kind, geometry: entity.geometry },
+          beamBoqEntity(entity, scene),
           { companyId, projectId, buildingId, floorId: floorId ?? undefined },
           isNew ? 'created' : 'updated',
         );
@@ -394,9 +400,13 @@ export function useBeamPersistence(
       setLastSavedAt(Date.now());
       void recordBeamChange('restored', entity);
       if (companyId && projectId && buildingId) {
+        // ADR-449 Slice 4 — same finish-aware feed για το restore path.
+        const lm = levelManagerRef.current;
+        const lvlId = lm.currentLevelId;
+        const scene = lvlId ? lm.getLevelScene(lvlId) : null;
         void bimToBoqBridge.upsertBoqItemForBim(
           'beam',
-          { id: entity.id, kind: entity.kind, geometry: entity.geometry },
+          beamBoqEntity(entity, scene),
           { companyId, projectId, buildingId, floorId: floorId ?? undefined },
           'created',
         );

@@ -39,6 +39,7 @@ import type {
 import type { SceneUnits } from '../../utils/scene-units';
 import type { IfcEntityMixin } from './ifc-entity-mixin';
 import type { EnvelopeFunction, EnvelopeLayer } from './thermal-envelope-types';
+import type { StructuralFinishSpec } from '../finishes/structural-finish-types';
 
 // ─── Sub-type discriminators (ADR-363 §5.7) ─────────────────────────────────
 
@@ -174,6 +175,16 @@ export interface BeamParams {
    * Set χειροκίνητα (UI Φάση 6).
    */
   readonly envelopeFunction?: EnvelopeFunction;
+  /**
+   * ADR-449 — Structural Finish Skin (σοβάς). Per-element πρόθεση σοβατίσματος.
+   * Absent / `enabled:false` = κανένας σοβάς (back-compat). Ο σοβάς είναι additive
+   * «δέρμα» — ΠΟΤΕ δεν αλλάζει το `width/depth` (στατικός πυρήνας = immutable SSoT).
+   * Για το δοκάρι σοβατίζονται οι **2 πλάγιες όψεις** (μήκος×depth)· τα άκρα είναι
+   * δομική σύνδεση (frame-into) → ποτέ σοβατισμένα, η πάνω όψη πατά στην πλάκα. Οι
+   * εκτεθειμένες παρειές + ποσότητες είναι DERIVED μέσω `structural-finish-resolver`.
+   * Συνυπάρχει με `envelopeLayer` (ETICS). Mirror του `ColumnParams.finish`.
+   */
+  readonly finish?: StructuralFinishSpec;
 }
 
 // ─── Geometry cache (derivable from params; SSoT = params) ──────────────────

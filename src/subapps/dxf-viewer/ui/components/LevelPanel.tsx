@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo, useCallback, useRef } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import { EventBus } from '../../systems/events';
 import { useTranslation } from '@/i18n';
 import { Upload, Download, ChevronDown } from 'lucide-react';
@@ -25,13 +25,13 @@ import type { ToolType } from '../toolbar/types';
 import type { SceneModel } from '../../types/scene';
 import { useLevels } from '../../systems/levels';
 import { findOrCreateLevelForFloor } from '../../systems/levels/level-floor-resolution';
+import { useAllFloorsBackfill, useLevelDeletion } from './level-panel-hooks';
 import { useNotifications } from '../../../../providers/NotificationProvider';
 import { createOverlayHandlers } from '../../overlays/types';
 import { useUniversalSelection } from '../../systems/selection';
 import { isNonEmptyArray } from '@/lib/type-guards';
 import { LevelFloorLink } from './LevelFloorLink';
 import { DeleteConfirmDialog } from '@/components/ui/ConfirmDialog';
-import { FileRecordService } from '@/services/file-record.service';
 import { useAuth } from '@/auth/hooks/useAuth';
 
 interface LevelPanelProps {
@@ -99,6 +99,9 @@ export function LevelPanel({
     updateLevelContext,
   } = useLevels();
 
+  // ADR-448 Phase 3 — «Φόρτωσε ΟΛΟΥΣ τους ορόφους» backfill (decoupled hook).
+  const triggerAllFloorsBackfill = useAllFloorsBackfill({ levels, addLevel, linkLevelToFloor });
+
   const { gripSettings, updateGripSettings } = useGripContext();
   const notifications = useNotifications();
   const { user } = useAuth();
@@ -152,41 +155,14 @@ export function LevelPanel({
       default: return undefined;
     }
   }, []);
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [isLevelsCollapsed, setIsLevelsCollapsed] = useState(false);
-  const pendingDeleteLevelRef = useRef<string | null>(null);
-  const requestDeleteLevel = useCallback((levelId: string) => {
-    pendingDeleteLevelRef.current = levelId;
-    setShowDeleteConfirm(true);
-  }, []);
-  const handleConfirmDelete = useCallback(async () => {
-    const levelId = pendingDeleteLevelRef.current;
-    if (!levelId) return;
-    try {
-      const level = levels.find(l => l.id === levelId);
-      await deleteLevel(levelId);
-      // Trash underlying FileRecord if linked
-      if (level?.sceneFileId && user?.uid) {
-        try {
-          await FileRecordService.moveToTrash(level.sceneFileId, user.uid);
-        } catch {
-          // Non-blocking — level removed, file trash best-effort
-        }
-      }
-    } catch (error) {
-      console.error('Failed to delete level:', error);
-    } finally {
-      setShowDeleteConfirm(false);
-      pendingDeleteLevelRef.current = null;
-    }
-  }, [levels, deleteLevel, user?.uid]);
-  const handleCloseLevel = useCallback(async (levelId: string) => {
-    try {
-      await deleteLevel(levelId);
-    } catch (error) {
-      console.error('Failed to close level:', error);
-    }
-  }, [deleteLevel]);
+  const {
+    showDeleteConfirm,
+    setShowDeleteConfirm,
+    requestDeleteLevel,
+    handleConfirmDelete,
+    handleCloseLevel,
+  } = useLevelDeletion({ levels, deleteLevel, userUid: user?.uid });
 
   const handleAddLevel = async () => {
     if (isAdding) return;
@@ -460,6 +436,15 @@ export function LevelPanel({
                   buildingId: meta.buildingId ?? saveContext.buildingId,
                 });
               }
+            }
+            // ADR-448 Phase 3 — «Φόρτωσε ΟΛΟΥΣ τους ορόφους»: when the toggle is on
+            // and the selection carries a building, open a Level for every storey of
+            // that building (not only the imported floor). Idempotent backfill runs
+            // off the shared FLOORS subscription; the active level stays the import
+            // target set just above.
+            const allFloorsBuilding = meta.buildingId ?? saveContext.buildingId;
+            if (meta.loadAllFloors && allFloorsBuilding) {
+              triggerAllFloorsBackfill(allFloorsBuilding);
             }
             // Raster (PDF / image) is already persisted via /api/floorplan-backgrounds
             // inside the Wizard. The DXF scene importer must NOT run for raster —

@@ -19,14 +19,15 @@
 
 import * as THREE from 'three';
 import type { ColumnEntity } from '../../bim/types/column-types';
+import type { BeamEntity } from '../../bim/types/beam-types';
 import type { WallEntity } from '../../bim/types/wall-types';
 import type { Point3D } from '../../bim/types/bim-base';
 import { stripPrismGeometry } from './envelope-three-mesh';
 import { getMaterial3D } from '../materials/MaterialCatalog3D';
 import { attachEdgesProjection } from './bim-three-edges';
-import { mmToSceneUnits } from '../../utils/scene-units';
-import { computeColumnFinishFaces } from '../../bim/finishes/structural-finish-scene';
-import type { FinishFaceSegment } from '../../bim/finishes/structural-finish-types';
+import { mmToSceneUnits, type SceneUnits } from '../../utils/scene-units';
+import { computeColumnFinishFaces, computeBeamFinishFaces } from '../../bim/finishes/structural-finish-scene';
+import type { FinishFaceSegment, StructuralFinishFaces } from '../../bim/finishes/structural-finish-types';
 
 const MM_TO_M = 0.001;
 const EPS = 1e-9;
@@ -52,6 +53,52 @@ function buildFaceBandQuad(seg: FinishFaceSegment, offCanvas: number): Point3D[]
 }
 
 /**
+ * ADR-449 Slice 4 — pure, entity-agnostic πυρήνας: από έτοιμα `StructuralFinishFaces`
+ * χτίζει ένα `THREE.Group` band prisms (μία λωρίδα ανά εκτεθειμένη παρειά). ΕΝΑ SSoT
+ * για κολόνα ΚΑΙ δοκάρι — διαφέρουν μόνο σε `heightM` (κολόνα ύψος / δοκάρι depth),
+ * `baseY` (datum του πυρήνα) και `bimType` (tag + edges category). `null` όταν δεν
+ * προκύπτει κανένα band.
+ */
+function buildFinishSkinFromFaces(
+  faces: StructuralFinishFaces,
+  sceneUnits: SceneUnits,
+  heightM: number,
+  baseY: number,
+  id: string,
+  bimType: 'column' | 'beam',
+  levelId?: string,
+): THREE.Group | null {
+  if (faces.segments.length === 0 || heightM <= 0) return null;
+  const s = mmToSceneUnits(sceneUnits);
+
+  const group = new THREE.Group();
+  for (const seg of faces.segments) {
+    const quad = buildFaceBandQuad(seg, seg.thickness * s);
+    if (quad.length < 4) continue;
+    const geo = stripPrismGeometry(quad, heightM);
+    if (!geo) continue;
+    const mesh = new THREE.Mesh(geo, getMaterial3D(seg.materialId));
+    mesh.position.y = baseY;
+    mesh.userData['bimId'] = id;
+    mesh.userData['bimType'] = bimType;
+    mesh.userData['structuralFinish'] = true;
+    mesh.userData['matId'] = seg.materialId;
+    mesh.userData['finishClassification'] = seg.classification;
+    if (levelId !== undefined) mesh.userData['levelId'] = levelId;
+    mesh.castShadow = true;
+    mesh.receiveShadow = true;
+    attachEdgesProjection(mesh, bimType);
+    group.add(mesh);
+  }
+  if (group.children.length === 0) return null;
+
+  group.userData['bimId'] = id;
+  group.userData['bimType'] = bimType;
+  group.userData['structuralFinish'] = true;
+  return group;
+}
+
+/**
  * Ομάδα από band prisms σοβά μιας κολόνας — ή `null` όταν ο σοβάς είναι ανενεργός /
  * όλες οι παρειές καλυμμένες. `baseY` = κατακόρυφη βάση του πυρήνα (ίδιο datum →
  * τα bands ευθυγραμμίζονται με την κολόνα). Flat-path μόνο (κεκλιμένες κορυφές =
@@ -67,35 +114,45 @@ export function buildColumnFinishSkin(
   if (!verts || verts.length < 3) return null;
 
   const faces = computeColumnFinishFaces(column, verts, column.params.height, walls);
-  if (!faces || faces.segments.length === 0) return null;
+  if (!faces) return null;
 
-  const s = mmToSceneUnits(column.params.sceneUnits ?? 'mm');
-  const heightM = column.params.height * MM_TO_M;
-  if (heightM <= 0) return null;
+  return buildFinishSkinFromFaces(
+    faces,
+    column.params.sceneUnits ?? 'mm',
+    column.params.height * MM_TO_M,
+    baseY,
+    column.id,
+    'column',
+    levelId,
+  );
+}
 
-  const group = new THREE.Group();
-  for (const seg of faces.segments) {
-    const quad = buildFaceBandQuad(seg, seg.thickness * s);
-    if (quad.length < 4) continue;
-    const geo = stripPrismGeometry(quad, heightM);
-    if (!geo) continue;
-    const mesh = new THREE.Mesh(geo, getMaterial3D(seg.materialId));
-    mesh.position.y = baseY;
-    mesh.userData['bimId'] = column.id;
-    mesh.userData['bimType'] = 'column';
-    mesh.userData['structuralFinish'] = true;
-    mesh.userData['matId'] = seg.materialId;
-    mesh.userData['finishClassification'] = seg.classification;
-    if (levelId !== undefined) mesh.userData['levelId'] = levelId;
-    mesh.castShadow = true;
-    mesh.receiveShadow = true;
-    attachEdgesProjection(mesh, 'column');
-    group.add(mesh);
-  }
-  if (group.children.length === 0) return null;
+/**
+ * ADR-449 Slice 4 — band prisms σοβά **δοκαριού** (2 πλάγιες όψεις, ύψος = structural
+ * depth). Mirror του `buildColumnFinishSkin`: ίδιος πυρήνας `buildFinishSkinFromFaces`,
+ * obstacles = τοίχοι, `includeEdge` (μέσα στο `computeBeamFinishFaces`) αποκλείει τα
+ * άκρα. `baseY` = κάτω παρειά δοκαριού (ίδιο datum με το box extrude). `null` όταν ο
+ * σοβάς είναι ανενεργός / δεν προκύπτει band.
+ */
+export function buildBeamFinishSkin(
+  beam: BeamEntity,
+  walls: readonly WallEntity[],
+  baseY: number,
+  levelId?: string,
+): THREE.Group | null {
+  const verts = beam.geometry?.outline?.vertices;
+  if (!verts || verts.length < 3) return null;
 
-  group.userData['bimId'] = column.id;
-  group.userData['bimType'] = 'column';
-  group.userData['structuralFinish'] = true;
-  return group;
+  const faces = computeBeamFinishFaces(beam, verts, beam.params.depth, walls);
+  if (!faces) return null;
+
+  return buildFinishSkinFromFaces(
+    faces,
+    beam.params.sceneUnits ?? 'mm',
+    beam.params.depth * MM_TO_M,
+    baseY,
+    beam.id,
+    'beam',
+    levelId,
+  );
 }

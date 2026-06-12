@@ -100,6 +100,10 @@
       "loadBuilding": "Load General Building Floorplan",
       "loadFloor": "Load Floor Floorplan"
     },
+    "allFloors": {
+      "label": "Load the entire building",
+      "hint": "Create levels for every floor (foundation → basement → floors), not only the selected one."
+    },
     "storagePicker": {
       "empty": "No saved floorplans found",
       "loading": "Loading...",

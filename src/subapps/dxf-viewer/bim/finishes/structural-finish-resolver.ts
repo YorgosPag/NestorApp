@@ -56,6 +56,14 @@ interface FinishResolveInput {
   readonly unitToMeters: number;
   /** Ελάχιστο εκτεθειμένο μήκος (t-units 0..1) — φιλτράρει αριθμητικό noise. */
   readonly minExposedT?: number;
+  /**
+   * ADR-449 Slice 4 — προαιρετικό φίλτρο ακμής. Όταν επιστρέφει `false` για μια
+   * ακμή `i` (a→b), η ακμή **αγνοείται πλήρως** (μηδέν segment, μηδέν εμβαδό).
+   * Default = όλες οι ακμές μέσα (byte-for-byte για κολόνες). Το **δοκάρι** το
+   * χρησιμοποιεί ώστε να κρατά μόνο τις πλάγιες όψεις (∥ άξονα) και να αποκλείει
+   * σημασιολογικά τα **άκρα** (⊥ άξονα = δομική σύνδεση/frame-into, ποτέ σοβάς).
+   */
+  readonly includeEdge?: (a: Pt2, b: Pt2, index: number) => boolean;
 }
 
 const MM_TO_M = 0.001;
@@ -114,9 +122,11 @@ export function resolveStructuralFinishFaces(input: FinishResolveInput): Structu
   let interiorAreaM2 = 0;
   let exteriorAreaM2 = 0;
   const n = coreFootprint.length;
+  const includeEdge = input.includeEdge;
   for (let i = 0; i < n; i++) {
     const a = coreFootprint[i];
     const b = coreFootprint[(i + 1) % n];
+    if (includeEdge && !includeEdge(a, b, i)) continue; // π.χ. άκρα δοκαριού
     const covered = coveredByObstacles(a, b, obstacles);
     for (const [t0, t1] of exposedComplement(covered, minT)) {
       const seg = buildSegment(a, b, t0, t1, spec, classify, unitToMeters);

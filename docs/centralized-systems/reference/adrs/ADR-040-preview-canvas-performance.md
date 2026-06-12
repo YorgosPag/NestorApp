@@ -71,6 +71,10 @@ Mouse Event → DxfCanvas.onMouseMove
 
 ## Changelog
 
+### 2026-06-13 — ADR-449 Slice 4 beam finish-faces feed στον `DxfRenderer` (CHECK 6B) + N.7.1 split `BeamRenderer`/`LevelPanel`
+
+**Status**: IMPLEMENTED 2026-06-13. (i) Ο `DxfRenderer` τροφοδοτεί πλέον per-frame και το **beam** finish-faces index (`this.entityComposite.setBeamFinishFaces(buildFinishFacesByBeam(scene.entities))`), byte-identical pattern με το προϋπάρχον `setColumnFinishFaces` (ADR-449 Slice 3): **ο orchestrator/composite χτίζει & εγχέει τον index, το leaf `BeamRenderer` δεν subscribe-άρει** — μηδέν νέο `useSyncExternalStore`, καμία αλλαγή σε bitmap-cache key / scheduler. (ii) N.7.1 file-size split (μηδέν αλλαγή συμπεριφοράς): το steel I/H section-profile drawing εξήχθη από τον `BeamRenderer` σε **NEW `bim/renderers/beam-section-profile-draw.ts`** (pure `drawBeamSectionProfile(ctx, beam, scale, worldToScreen)`, mirror του υπάρχοντος `column-section-symbol.ts`) → `BeamRenderer` 525→387 γρ. Co-staged για CHECK 6B (`DxfRenderer.ts`). Λεπτομέρεια στο ADR-449 changelog.
+
 ### 2026-06-12 — Isolate Element/Category render-gate στον `DxfRenderer` (ADR-358 §5.6.bis, CHECK 6B)
 
 **Status**: IMPLEMENTED 2026-06-12. Το shared 2Δ `DxfRenderer` απέκτησε category/entity-scope isolate gating (Revit «Isolate Element» / «Isolate Category»), επιπλέον του υπάρχοντος layer-scope. Επίδραση στα ADR-040-critical paths: το alpha-dim + freeze-hide gate διαβάζει τώρα `getIsolateEffectsSnapshot()` (zero-React store, event-time getter — **όχι** `useSyncExternalStore`) με προτεραιότητα entity → category → layer· οι κατηγορίες προκύπτουν από **NEW SSoT** `bim/visibility/resolve-entity-bim-category.ts` (`resolveEntityBimCategory` / `collectBimCategories`). Καμία αλλαγή σε bitmap-cache key / scheduler / orchestrator subscriptions· `CanvasSection` περνά μόνο pass-through `EntityIsolateCommand`/`CategoryIsolateCommand` (μηδέν νέο leaf subscription, CHECK 6C safe).
@@ -3189,3 +3193,11 @@ Live re-split/reflow στο follow-move (auto, χωρίς κουμπί). Δύο 
 - **`DxfRenderer.render()`**: NEW per-frame injection `entityComposite.setColumnFinishFaces(buildFinishFacesByColumn(scene.entities))`, δίπλα στο `setOpeningsByWall`. Pure O(n) scan (`dxf-renderer-frame-builders.ts`), μόνο κολόνες με ενεργό `finish` (default off → κενό Map· walls lazily). **Καμία νέα `useSyncExternalStore`** στον orchestrator (CHECK 6C safe).
 - **`EntityRendererComposite.setColumnFinishFaces`**: pass-through στο `column` leaf (mirror `setOpeningsByWall`).
 - **`ColumnRenderer`**: NEW `setColumnFinishFaces()` (per-frame index, default κενό Map) + `drawFinishOutline()` — pure ctx draw ανά εκτεθειμένη υπο-ακμή (offset «λωρίδα», plaster colour SSoT). **Zero store subscriptions** στο leaf (ADR-040 §micro-leaf). **Καμία αλλαγή σε bitmap cache key** (rule 3) — ο σοβάς είναι derived από `scene.entities`, ίδιο normal-state όπως τα openings cutouts. Staged για CHECK 6B/6D (canvas drawing file touch). Βλ. ADR-449 §3.ter.
+
+## 2026-06-13: ADR-449 Slice 4 — `BeamRenderer` 2D finished outline (ίδιο per-frame index pattern, CHECK 6B/6D stage)
+
+2Δ σοβάς **δοκαριού** (2 πλάγιες όψεις). **ADR-040-compliant by construction** — πιστό mirror του Slice 3 column path (orchestrator-drives, leaf-never-subscribes):
+
+- **`DxfRenderer.render()`**: NEW `entityComposite.setBeamFinishFaces(buildFinishFacesByBeam(scene.entities))`, δίπλα στο `setColumnFinishFaces`. Pure O(n) scan, μόνο δοκάρια με ενεργό `finish` (default off → κενό Map· walls lazily). **Καμία νέα `useSyncExternalStore`** (CHECK 6C safe).
+- **`EntityRendererComposite.setBeamFinishFaces`**: pass-through στο `beam` leaf (mirror `setColumnFinishFaces`).
+- **`BeamRenderer`**: NEW `setBeamFinishFaces()` (per-frame index, default κενό Map) + draw μέσω του **shared SSoT** `drawStructuralFinishOutline` (ΕΝΑ pure helper, κοινό με το column overlay — μηδέν διπλασιασμός). **Zero store subscriptions** στο leaf· **καμία αλλαγή σε bitmap cache key** (rule 3). Staged για CHECK 6B/6D. Βλ. ADR-449 §3.quater.

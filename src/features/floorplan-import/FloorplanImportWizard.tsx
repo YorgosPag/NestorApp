@@ -21,6 +21,7 @@
 import React, { useCallback, useMemo, useState } from 'react';
 import { FolderKanban, Building2, Layers } from 'lucide-react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { Checkbox } from '@/components/ui/checkbox';
 import {
   Dialog,
   DialogContent,
@@ -68,6 +69,10 @@ export interface WizardCompleteMeta {
   /** ADR-368 — user-specified DXF coordinate units from the upload step unit selector.
    * Absent when user chose 'auto' or uploaded a non-DXF file. */
   userDrawingUnits?: SceneUnits;
+  /** ADR-448 Phase 3 — when true (default), the importer creates viewer Levels for
+   * ALL floors of the selected building, not only the targeted floor. No-op when
+   * there is no building context (project-level imports). */
+  loadAllFloors?: boolean;
 }
 
 interface FloorplanImportWizardProps {
@@ -137,6 +142,9 @@ export function FloorplanImportWizard({
   const [loadingStorage, setLoadingStorage] = useState(false);
   const [corruptFileIds, setCorruptFileIds] = useState<Set<string>>(new Set());
 
+  // ADR-448 Phase 3: import every floor of the selected building (default ON).
+  const [loadAllFloors, setLoadAllFloors] = useState(true);
+
   const stepLabels = useMemo(
     () => [
       ...STEP_LABEL_KEYS.slice(0, 5).map((key) => t(key)),
@@ -164,6 +172,7 @@ export function FloorplanImportWizard({
         fileId,
         format,
         userDrawingUnits,
+        loadAllFloors,
       };
       onComplete(file, meta);
     } else {
@@ -174,15 +183,17 @@ export function FloorplanImportWizard({
         purpose: '',
         format,
         userDrawingUnits,
+        loadAllFloors,
       });
     }
-  }, [onComplete, state.uploadConfig, state.selection.buildingId]);
+  }, [onComplete, state.uploadConfig, state.selection.buildingId, loadAllFloors]);
 
   const handleClose = useCallback(() => {
     state.reset();
     setSelectedStorageFileId(null);
     setLoadingStorage(false);
     setCorruptFileIds(new Set());
+    setLoadAllFloors(true);
     onClose();
   }, [state, onClose]);
 
@@ -267,6 +278,21 @@ export function FloorplanImportWizard({
               shortcutIcon={shortcutEnabled ? shortcutConfig.icon : undefined}
               onShortcutClick={shortcutEnabled ? () => state.jumpToUpload(shortcutConfig.type) : undefined}
             />
+          )}
+
+          {/* ADR-448 Phase 3: building step → import every floor of the building */}
+          {mode === 'import' && state.step === 3 && !!state.selection.buildingId && (
+            <label className="mt-4 flex items-start gap-2 cursor-pointer">
+              <Checkbox
+                checked={loadAllFloors}
+                onCheckedChange={(checked) => setLoadAllFloors(checked === true)}
+                className="mt-0.5"
+              />
+              <span className="flex flex-col gap-0.5">
+                <span className="text-sm font-medium">{t('floorplanImport.allFloors.label')}</span>
+                <span className="text-xs text-muted-foreground">{t('floorplanImport.allFloors.hint')}</span>
+              </span>
+            </label>
           )}
 
           {/* Step 5: Unit selector + levels */}

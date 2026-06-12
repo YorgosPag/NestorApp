@@ -26,7 +26,7 @@ import { buildSweptIBeamGeometry } from './beam-ishape-geometry';
 import { buildMultiLayerSlabSolid } from './slab-multilayer-solid-3d';
 import { isMultiLayerSlab } from '../../bim/types/slab-dna-types';
 import { attachEdgesProjection } from './bim-three-edges';
-import { buildColumnFinishSkin } from './structural-finish-3d';
+import { buildColumnFinishSkin, buildBeamFinishSkin } from './structural-finish-3d';
 import { isWallColumnKind } from '../../bim/columns/column-from-faces';
 import type { ColumnTopProfile, ColumnBaseProfile } from '../../bim/geometry/column-vertical-profile';
 
@@ -142,7 +142,8 @@ export function beamToMesh(
   beam: BeamEntity,
   levelId?: string,
   buildingBaseElevationM = 0,
-): THREE.Mesh | null {
+  walls: readonly WallEntity[] = [],
+): THREE.Mesh | THREE.Group | null {
   const beamDepthM = beam.params.depth * MM_TO_M;
 
   // ADR-363 Φ2 — μεταλλικό δοκάρι Ι/H: πραγματική διατομή σαρωμένη κατά τον άξονα
@@ -168,6 +169,19 @@ export function beamToMesh(
   mesh.position.y = beamTopMm * MM_TO_M - beamDepthM + buildingBaseElevationM;
   const tagged = tagMesh(mesh, beam.id, 'beam', matId, levelId);
   attachEdgesProjection(tagged, 'beam');
+
+  // ADR-449 Slice 4 — additive σοβάς (2 πλάγιες όψεις) ΕΞΩ από τον στατικό πυρήνα.
+  // Ενεργό μόνο όταν το δοκάρι έχει ενεργό `finish` (απών → πυρήνας-only Mesh, μηδέν
+  // regression). `baseY` = κάτω παρειά (ίδιο datum με το box extrude). Flat-path μόνο.
+  const finishSkin = buildBeamFinishSkin(beam, walls, mesh.position.y, levelId);
+  if (finishSkin) {
+    const composite = new THREE.Group();
+    composite.add(tagged);
+    composite.add(finishSkin);
+    composite.userData['bimId'] = beam.id;
+    composite.userData['bimType'] = 'beam';
+    return composite;
+  }
   return tagged;
 }
 

@@ -33,7 +33,7 @@ import { SlabOpeningRenderer } from '../../bim/renderers/SlabOpeningRenderer';
 import { ColumnRenderer, type FinishFacesByColumn } from '../../bim/renderers/ColumnRenderer';
 import { FoundationRenderer } from '../../bim/renderers/FoundationRenderer';
 // ADR-363 Phase 5 — beam leaf (straight/curved/cantilever).
-import { BeamRenderer } from '../../bim/renderers/BeamRenderer';
+import { BeamRenderer, type FinishFacesByBeam } from '../../bim/renderers/BeamRenderer';
 // ADR-406 — MEP fixture leaf (point-based light fixture).
 import { MepFixtureRenderer } from '../../bim/renderers/MepFixtureRenderer';
 // ADR-408 Φ3 — electrical panel leaf (point-based circuit source).
@@ -250,6 +250,18 @@ export class EntityRendererComposite {
     const column = this.renderers.get('column');
     if (column instanceof ColumnRenderer) {
       column.setColumnFinishFaces(map);
+    }
+  }
+
+  /**
+   * ADR-449 Slice 4 — forward the per-frame finish-faces-by-beam index so the beam
+   * renderer can draw the 2D σοβατισμένο outline (πλάγιες όψεις). No-op when the beam
+   * renderer is absent (defensive for partial test setups).
+   */
+  setBeamFinishFaces(map: FinishFacesByBeam): void {
+    const beam = this.renderers.get('beam');
+    if (beam instanceof BeamRenderer) {
+      beam.setBeamFinishFaces(map);
     }
   }
 

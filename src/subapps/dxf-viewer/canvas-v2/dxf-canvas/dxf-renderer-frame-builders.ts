@@ -11,16 +11,17 @@
  * relevant composite slot every frame (ADR-040 micro-leaf compliance: the
  * orchestrator drives, the leaves never subscribe).
  */
-import type { DxfEntityUnion, DxfSlabOpening, DxfOpening, DxfColumn, DxfWall } from './dxf-types';
+import type { DxfEntityUnion, DxfSlabOpening, DxfOpening, DxfColumn, DxfWall, DxfBeam } from './dxf-types';
 import type { DimensionEntity } from '../../types/dimension';
 import type { DimensionLookup } from '../../systems/dimensions/dim-geometry-builder';
 import type { SlabOpeningEntity } from '../../bim/types/slab-opening-types';
 import type { OpeningEntity } from '../../bim/types/opening-types';
 import type { OpeningsByWall } from '../../bim/renderers/WallRenderer';
 import type { FinishFacesByColumn } from '../../bim/renderers/ColumnRenderer';
+import type { FinishFacesByBeam } from '../../bim/renderers/BeamRenderer';
 import type { StructuralFinishFaces } from '../../bim/finishes/structural-finish-types';
 import { isFinishActive } from '../../bim/finishes/structural-finish-types';
-import { computeColumnFinishFaces } from '../../bim/finishes/structural-finish-scene';
+import { computeColumnFinishFaces, computeBeamFinishFaces } from '../../bim/finishes/structural-finish-scene';
 
 /**
  * ADR-362 Phase C1 — build the per-frame DimensionLookup map for chained
@@ -82,6 +83,28 @@ export function buildFinishFacesByColumn(entities: readonly DxfEntityUnion[]): F
     if (walls === null) walls = entities.filter((w): w is DxfWall => w.type === 'wall');
     const faces = computeColumnFinishFaces(col, col.geometry.footprint.vertices, col.params.height, walls);
     if (faces && faces.segments.length > 0) m.set(col.id, faces);
+  }
+  return m;
+}
+
+/**
+ * ADR-449 Slice 4 — build per-frame Map<beamId, StructuralFinishFaces> για το 2D
+ * σοβατισμένο outline δοκαριού. Μόνο δοκάρια με ΕΝΕΡΓΟ σοβά μπαίνουν (default off →
+ * κενό Map, μηδέν κόστος). Walls (obstacles + exterior classifier) lazily μόνο όταν
+ * υπάρχει ≥1 ενεργό δοκάρι. Reuse του SSoT `computeBeamFinishFaces` (κοινό με BOQ + 3D)
+ * — κρατά μόνο τις πλάγιες όψεις (∥ άξονα), αποκλείει τα άκρα. DxfBeam/DxfWall = direct
+ * entities → δομικά ικανοποιούν τα `BeamFinishSource`/`WallFinishObstacle` (μηδέν cast).
+ */
+export function buildFinishFacesByBeam(entities: readonly DxfEntityUnion[]): FinishFacesByBeam {
+  const m = new Map<string, StructuralFinishFaces>();
+  let walls: DxfWall[] | null = null;
+  for (const e of entities) {
+    if (e.type !== 'beam') continue;
+    const beam: DxfBeam = e;
+    if (!isFinishActive(beam.params.finish)) continue;
+    if (walls === null) walls = entities.filter((w): w is DxfWall => w.type === 'wall');
+    const faces = computeBeamFinishFaces(beam, beam.geometry.outline.vertices, beam.params.depth, walls);
+    if (faces && faces.segments.length > 0) m.set(beam.id, faces);
   }
   return m;
 }
