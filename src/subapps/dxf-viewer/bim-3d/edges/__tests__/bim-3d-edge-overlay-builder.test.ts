@@ -217,6 +217,30 @@ describe('ADR-375 C.7 — buildEdgeOverlay', () => {
     });
   });
 
+  // ── ADR-446 — EDGES axis: occlude → depthTest ───────────────────────────────
+  describe('occlude option (Visual Style EDGES axis)', () => {
+    it('default (occlude omitted) → depthTest=true (only-visible edges)', () => {
+      const overlay = buildEdgeOverlay(makeBoxMesh(), {
+        lineWidthPx: 1.0, color: '#000', thresholdAngle: 30, visible: true,
+      });
+      expect((overlay?.material as LineMaterial).depthTest).toBe(true);
+    });
+
+    it('occlude=true → depthTest=true', () => {
+      const overlay = buildEdgeOverlay(makeBoxMesh(), {
+        lineWidthPx: 1.0, color: '#000', thresholdAngle: 30, visible: true, occlude: true,
+      });
+      expect((overlay?.material as LineMaterial).depthTest).toBe(true);
+    });
+
+    it('occlude=false → depthTest=false (x-ray, all edges through faces)', () => {
+      const overlay = buildEdgeOverlay(makeBoxMesh(), {
+        lineWidthPx: 1.0, color: '#000', thresholdAngle: 30, visible: true, occlude: false,
+      });
+      expect((overlay?.material as LineMaterial).depthTest).toBe(false);
+    });
+  });
+
   // ── ADR-377 Phase E — line pattern → dashed LineMaterial ─────────────────────
   describe('linePattern → dashed material (ADR-377 Phase E)', () => {
     it('solid (default) → material.dashed=false', () => {

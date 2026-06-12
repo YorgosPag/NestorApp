@@ -76,3 +76,34 @@ describe('ADR-445 — migrateBimRenderSettings', () => {
     expect(settings?.objectStyles?.ceiling?.projectionPen).toBe(3); // pen preserved
   });
 });
+
+describe('ADR-446 — migrateBimRenderSettings v2 (derive visualStyle)', () => {
+  it('legacy realisticMaterials:false (no visualStyle) → shaded-edges + version 2', () => {
+    const { settings, changed } = migrateBimRenderSettings({ drawingScale: 100, realisticMaterials: false });
+    expect(changed).toBe(true);
+    expect(settings?.visualStyle).toBe('shaded-edges');
+    expect(settings?.settingsVersion).toBe(BIM_SETTINGS_VERSION);
+  });
+
+  it('legacy realisticMaterials:true → realistic-edges', () => {
+    const { settings } = migrateBimRenderSettings({ drawingScale: 100, realisticMaterials: true });
+    expect(settings?.visualStyle).toBe('realistic-edges');
+  });
+
+  it('absent realisticMaterials → realistic-edges (the old default look)', () => {
+    const { settings } = migrateBimRenderSettings({ drawingScale: 100 });
+    expect(settings?.visualStyle).toBe('realistic-edges');
+  });
+
+  it('preserves an already-set visualStyle (does not overwrite)', () => {
+    const { settings } = migrateBimRenderSettings({ drawingScale: 100, visualStyle: 'wireframe', realisticMaterials: true });
+    expect(settings?.visualStyle).toBe('wireframe');
+  });
+
+  it('idempotent at current version (no re-derive)', () => {
+    const s: BimRenderSettings = { settingsVersion: BIM_SETTINGS_VERSION, drawingScale: 100, visualStyle: 'consistent' };
+    const out = migrateBimRenderSettings(s);
+    expect(out.changed).toBe(false);
+    expect(out.settings).toBe(s);
+  });
+});

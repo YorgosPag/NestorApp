@@ -6,8 +6,8 @@
  * A single Radix `@/components/ui/select` (ADR-001 — NOT EnterpriseComboBox /
  * native `<select>`) that picks the per-view {@link VisualStylePreset}. Thin
  * reader/writer of the `visualStyle` field on `useBimRenderSettingsStore` (the
- * SSoT, Firestore-persisted) — mirrors {@link RealisticMaterialsToggle} /
- * {@link BimPatternSelect}. The 3D faces + edges pipelines read the resolved axes
+ * SSoT, Firestore-persisted) — same thin reader/writer shape as the BIM style
+ * dropdowns (`BimStyleSelects`). The 3D faces + edges pipelines read the resolved axes
  * event-time; `useBim3DVgResync` rebuilds the scene when the preset flips.
  */
 
