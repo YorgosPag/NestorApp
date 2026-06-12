@@ -21,6 +21,7 @@
  */
 
 import { buildStripGridFromGuides, type AxisGuideReader } from './foundation-from-grid';
+import { DEFAULT_GRID_PERIMETER_MODE, type GridPerimeterMode } from './foundation-grid-justification';
 import type { FollowGhostFootprint } from '../hosting/guide-follow-ghost';
 import type { FoundationParamOverrides, SceneUnits } from '../../hooks/drawing/foundation-completion';
 
@@ -34,8 +35,9 @@ export function deriveGridFollowGhostFootprints(
   overrides: FoundationParamOverrides,
   levelId: string,
   sceneUnits: SceneUnits,
+  mode: GridPerimeterMode = DEFAULT_GRID_PERIMETER_MODE,
 ): FollowGhostFootprint[] {
-  const result = buildStripGridFromGuides(reader, overrides, levelId, sceneUnits);
+  const result = buildStripGridFromGuides(reader, overrides, levelId, sceneUnits, mode);
   if (!result.ok) return [];
   return result.strips.map((s) => ({
     id: s.id,

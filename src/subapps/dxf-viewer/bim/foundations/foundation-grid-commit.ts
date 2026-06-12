@@ -26,6 +26,10 @@ import {
   buildStripGridFromGuides,
   type AxisGuideReader,
 } from './foundation-from-grid';
+import {
+  DEFAULT_GRID_PERIMETER_MODE,
+  type GridPerimeterMode,
+} from './foundation-grid-justification';
 import { reconcileGridStrips } from './foundation-grid-reconcile';
 import { rehostOrphanStrips, type RehostedStrip } from './foundation-grid-rehost';
 import { computeGridJunctionExtends } from './foundation-grid-junctions';
@@ -44,6 +48,8 @@ export interface FoundationGridCommitDeps {
   readonly executeCommand: (command: ICommand) => void;
   /** Προαιρετικά param overrides (v1: defaults). */
   readonly overrides?: FoundationParamOverrides;
+  /** ADR-441 — έδραση περιμετρικών λωρίδων (center/inner/outer· default inner). */
+  readonly perimeterMode?: GridPerimeterMode;
 }
 
 export interface FoundationGridCommitResult {
@@ -64,12 +70,20 @@ export interface FoundationGridCommitResult {
   readonly reJustified: number;
 }
 
-/** Existing grid-managed λωρίδες της σκηνής (ο reconciler φιλτράρει null signatures). */
+/**
+ * Existing grid-managed **πεδιλοδοκοί** της σκηνής (ο reconciler φιλτράρει null
+ * signatures). **Kind-partition (ADR-441 Slice GEN-TIE):** μόνο `kind='strip'` — οι
+ * συνδετήριες (`tie-beam`) είναι ξεχωριστό overlay (`tie-beam-grid-commit.ts`),
+ * συνυπάρχουν στον ίδιο άξονα → ΠΟΤΕ δεν μπαίνουν στο strip reconcile (αλλιώς
+ * cross-delete λόγω κοινού segmentKey).
+ */
 function existingFoundations(
   getLevelScene: (levelId: string) => SceneModel | null,
   levelId: string,
 ) {
-  return (getLevelScene(levelId)?.entities ?? []).filter(isFoundationEntity);
+  return (getLevelScene(levelId)?.entities ?? [])
+    .filter(isFoundationEntity)
+    .filter((e) => e.params.kind === 'strip');
 }
 
 /**
@@ -82,8 +96,10 @@ function computeRehosts(
   target: readonly FoundationEntity[],
   reader: AxisGuideReader,
 ): RehostedStrip[] {
+  // Kind-partition (ADR-441 Slice GEN-TIE): η «Εσχάρα» ξανα-κρεμά μόνο ορφανές
+  // **πεδιλοδοκούς** — οι συνδετήριες έχουν δικό τους grid overlay.
   const orphans = existing.filter(
-    (e) => (e.params.kind === 'strip' || e.params.kind === 'tie-beam') && !hasGuideBindings(e),
+    (e) => e.params.kind === 'strip' && !hasGuideBindings(e),
   );
   if (orphans.length === 0) return [];
   const xGuides = reader.getGuidesByAxis('X').filter((g) => g.visible);
@@ -162,6 +178,7 @@ export function commitFoundationGridFromGuides(
     deps.overrides ?? {},
     deps.levelId,
     deps.sceneUnits,
+    deps.perimeterMode ?? DEFAULT_GRID_PERIMETER_MODE,
   );
   if (!target.ok) {
     return { ok: false, reason: target.reason ?? 'insufficient-guides', created: 0, deleted: 0, unchanged: 0, rehosted: 0, reJustified: 0 };

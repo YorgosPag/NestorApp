@@ -21,14 +21,18 @@
 
 import type { Point2D } from '../../rendering/types/Types';
 import type { Guide } from '../../systems/guides/guide-types';
-import type { FoundationEntity, StripJustification } from '../types/foundation-types';
+import type { FoundationEntity, FoundationKind, StripJustification } from '../types/foundation-types';
 import type { GuideBinding } from '../hosting/guide-binding-types';
 import {
   completeFoundationFromTwoClicks,
   type FoundationParamOverrides,
   type SceneUnits,
 } from '../../hooks/drawing/foundation-completion';
-import { gridStripJustification } from './foundation-grid-justification';
+import {
+  gridStripJustification,
+  DEFAULT_GRID_PERIMETER_MODE,
+  type GridPerimeterMode,
+} from './foundation-grid-justification';
 
 /**
  * Tolerance (scene units) κάτω από την οποία δύο offsets θεωρούνται ταυτόσημοι →
@@ -102,9 +106,10 @@ function buildBoundStrip(
   levelId: string,
   overrides: FoundationParamOverrides,
   sceneUnits: SceneUnits,
+  kind: FoundationKind,
 ): FoundationEntity | null {
   const merged = justification === 'center' ? overrides : { ...overrides, justification };
-  const result = completeFoundationFromTwoClicks(start, end, levelId, 'strip', merged, sceneUnits);
+  const result = completeFoundationFromTwoClicks(start, end, levelId, kind, merged, sceneUnits);
   if (!result.ok) return null;
   return { ...result.entity, guideBindings: bindings };
 }
@@ -117,10 +122,10 @@ function buildBoundStrip(
  * μηδέν overhang) → η γωνία κλείνει φυσικά, αντικαθιστά το παλιό corner-fill. Εσωτερικές
  * = center. Τα start/end είναι καθαρά axis offsets (μηδέν coord extend).
  */
-function emitVerticalStrips(xs: AxisData, ys: AxisData, push: PushStrip): void {
+function emitVerticalStrips(xs: AxisData, ys: AxisData, push: PushStrip, mode: GridPerimeterMode): void {
   const lastY = ys.offsets.length - 1;
   for (let xi = 0; xi < xs.offsets.length; xi++) {
-    const justification = gridStripJustification('V', xi, xs.offsets.length);
+    const justification = gridStripJustification('V', xi, xs.offsets.length, mode);
     for (let i = 0; i < lastY; i++) {
       push({
         start: { x: xs.offsets[xi], y: ys.offsets[i] },
@@ -138,10 +143,10 @@ function emitVerticalStrips(xs: AxisData, ys: AxisData, push: PushStrip): void {
 }
 
 /** Y-guides (οριζόντιες) → λωρίδες κατά μήκος του X. Auto-justification mirror του vertical. */
-function emitHorizontalStrips(xs: AxisData, ys: AxisData, push: PushStrip): void {
+function emitHorizontalStrips(xs: AxisData, ys: AxisData, push: PushStrip, mode: GridPerimeterMode): void {
   const lastX = xs.offsets.length - 1;
   for (let yi = 0; yi < ys.offsets.length; yi++) {
-    const justification = gridStripJustification('H', yi, ys.offsets.length);
+    const justification = gridStripJustification('H', yi, ys.offsets.length, mode);
     for (let i = 0; i < lastX; i++) {
       push({
         start: { x: xs.offsets[i], y: ys.offsets[yi] },
@@ -164,31 +169,47 @@ function emitHorizontalStrips(xs: AxisData, ys: AxisData, push: PushStrip): void
  * (`buildStripGridFromGuides`) ΚΑΙ από τον live ghost deriver (ADR-441 Slice 7) —
  * μηδέν duplication των loops/justification math.
  */
-export function enumerateGridStrips(axes: GridAxes, cb: PushStrip): void {
-  emitVerticalStrips(axes.xs, axes.ys, cb);
-  emitHorizontalStrips(axes.xs, axes.ys, cb);
+export function enumerateGridStrips(
+  axes: GridAxes,
+  cb: PushStrip,
+  mode: GridPerimeterMode = DEFAULT_GRID_PERIMETER_MODE,
+): void {
+  emitVerticalStrips(axes.xs, axes.ys, cb, mode);
+  emitHorizontalStrips(axes.xs, axes.ys, cb, mode);
 }
 
 /**
  * Sorted+dedup ορατοί άξονες X & Y από τον reader. `null` αν λείπουν άξονες
- * (<2 ανά διεύθυνση) → δεν παράγεται εσχάρα. SSoT input και για builder και ghost.
+ * (κάτω από `minPerAxis` ανά διεύθυνση) → δεν παράγεται εσχάρα. SSoT input και για
+ * builder και ghost.
+ *
+ * `minPerAxis` (default 2): η εσχάρα/τοίχοι χρειάζονται **≥2** άξονες ανά διεύθυνση για
+ * να ορίσουν segment (intersection-to-intersection). Οι κολώνες (ADR-441 Slice GEN-COL,
+ * «στις τομές») χρειάζονται **≥1** ανά διεύθυνση — μία τομή = μία κολώνα.
  */
-export function gridAxesFromReader(reader: AxisGuideReader): GridAxes | null {
+export function gridAxesFromReader(reader: AxisGuideReader, minPerAxis = 2): GridAxes | null {
   const xs = uniqueSortedAxis(reader.getGuidesByAxis('X').filter((g) => g.visible));
   const ys = uniqueSortedAxis(reader.getGuidesByAxis('Y').filter((g) => g.visible));
-  if (xs.offsets.length < 2 || ys.offsets.length < 2) return null;
+  if (xs.offsets.length < minPerAxis || ys.offsets.length < minPerAxis) return null;
   return { xs, ys };
 }
 
 /**
- * Παράγει την εσχάρα πεδιλοδοκών από τους ορατούς άξονες του κανάβου.
+ * Παράγει την εσχάρα γραμμικών θεμελιώσεων από τους ορατούς άξονες του κανάβου.
  * Σύνολο = nX·(nY-1) + nY·(nX-1) λωρίδες (π.χ. 3×3 → 12).
+ *
+ * `kind` (default `'strip'`): πεδιλοδοκοί. Με `'tie-beam'` (ADR-441 Slice GEN-TIE)
+ * παράγει **συνδετήριες δοκούς** στα ίδια segments — ίδιος enumerator/bindings, μόνο
+ * τα kind-defaults (πλάτος/βάθος) αλλάζουν στο `completeFoundationFromTwoClicks`. Οι
+ * συνδετήριες καλούνται με `mode='center'` (κεντραρισμένες στον άξονα, χωρίς overhang).
  */
 export function buildStripGridFromGuides(
   reader: AxisGuideReader,
   overrides: FoundationParamOverrides,
   levelId: string,
   sceneUnits: SceneUnits,
+  mode: GridPerimeterMode = DEFAULT_GRID_PERIMETER_MODE,
+  kind: FoundationKind = 'strip',
 ): BuildStripGridResult {
   const axes = gridAxesFromReader(reader);
   if (!axes) {
@@ -198,10 +219,10 @@ export function buildStripGridFromGuides(
   const strips: FoundationEntity[] = [];
   let ignoredCount = 0;
   enumerateGridStrips(axes, ({ start, end, bindings, justification }) => {
-    const strip = buildBoundStrip(start, end, bindings, justification, levelId, overrides, sceneUnits);
+    const strip = buildBoundStrip(start, end, bindings, justification, levelId, overrides, sceneUnits, kind);
     if (strip) strips.push(strip);
     else ignoredCount++;
-  });
+  }, mode);
 
   return { ok: true, strips, ignoredCount };
 }

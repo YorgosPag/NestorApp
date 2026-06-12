@@ -15,6 +15,7 @@ import type { HostingStrategy } from './hosting-strategy-types';
 import { foundationHostingStrategy } from './foundation-hosting-strategy';
 import { columnHostingStrategy } from './column-hosting-strategy';
 import { wallHostingStrategy } from './wall-hosting-strategy';
+import { beamHostingStrategy } from './beam-hosting-strategy';
 
 type HostedEntityType = AnySceneEntity['type'];
 
@@ -23,6 +24,7 @@ const STRATEGIES: Partial<Record<HostedEntityType, HostingStrategy>> = {
   foundation: foundationHostingStrategy,
   column: columnHostingStrategy,
   wall: wallHostingStrategy,
+  beam: beamHostingStrategy,
 };
 
 /** Η strategy ενός entity type, ή `undefined` αν δεν είναι grid-hosted kind. */

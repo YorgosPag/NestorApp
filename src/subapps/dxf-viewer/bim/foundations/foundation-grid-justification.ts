@@ -32,25 +32,43 @@ import {
 export type GridStripOrientation = 'V' | 'H';
 
 /**
+ * Τρόπος έδρασης ΠΕΡΙΜΕΤΡΙΚΩΝ λωρίδων κατά τη γένεση «Εσχάρα από κάναβο»
+ * (ADR-441, ερώτημα Giorgio 2026-06-12 — οι εσωτερικές μένουν ΠΑΝΤΑ `center`):
+ *   - `center` → ΟΛΕΣ κεντρικές (ο άξονας στο centerline· concentric).
+ *   - `inner`  → περιμετρικές προς τα ΜΕΣΑ (εξωτερική παρειά ΠΑΝΩ στον άξονα·
+ *               μηδέν overhang έξω· **default**, κλείνει γωνίες — Slice 5a-grid).
+ *   - `outer`  → περιμετρικές προς τα ΕΞΩ (εσωτερική παρειά στον άξονα· η λωρίδα
+ *               προεξέχει εκτός του ακραίου οδηγού).
+ */
+export type GridPerimeterMode = 'center' | 'inner' | 'outer';
+
+/** Default περιμετρικό mode — δομικά σωστό inward (μηδέν αλλαγή vs προ-2026-06-12). */
+export const DEFAULT_GRID_PERIMETER_MODE: GridPerimeterMode = 'inner';
+
+/**
  * Η αυτόματη έδραση μιας grid-λωρίδας από τη θέση του **παράλληλου** άξονά της.
- * Περιμετρική (πρώτος/τελευταίος παράλληλος άξονας) → inward· αλλιώς → `center`.
+ * Περιμετρική (πρώτος/τελευταίος παράλληλος άξονας) → inward/outer ανά `mode`·
+ * εσωτερική → ΠΑΝΤΑ `center`.
  *
  * @param orientation   'V' (κατακόρυφη, parallel = X-άξονας) ή 'H' (οριζόντια, parallel = Y-άξονας).
  * @param parallelIndex Index του παράλληλου άξονα στη sorted λίστα (0 = ελάχιστο offset).
  * @param parallelCount Πλήθος παράλληλων αξόνων (≥2 — ο builder το εγγυάται).
+ * @param mode          Περιμετρικός τρόπος έδρασης (default `inner`).
  */
 export function gridStripJustification(
   orientation: GridStripOrientation,
   parallelIndex: number,
   parallelCount: number,
+  mode: GridPerimeterMode = DEFAULT_GRID_PERIMETER_MODE,
 ): StripJustification {
+  if (mode === 'center') return DEFAULT_STRIP_JUSTIFICATION; // όλες κεντρικές
   const isFirst = parallelIndex === 0;
   const isLast = parallelIndex === parallelCount - 1;
   if (!isFirst && !isLast) return DEFAULT_STRIP_JUSTIFICATION; // εσωτερική → center
-  if (orientation === 'V') {
-    // V: φορά +Y, CCW normal = −X. inward της αριστερότερης = +X = sign −1 = 'right'.
-    return isFirst ? 'right' : 'left';
-  }
-  // H: φορά +X, CCW normal = +Y. inward της κάτω = +Y = sign +1 = 'left'.
-  return isFirst ? 'left' : 'right';
+  // inward (φορά +Y για V / +X για H· CCW normal): V αριστερότερη → 'right' (+X)·
+  // H κάτω → 'left' (+Y). Το `outer` είναι το αντίστροφο (περιμετρική προεξέχει).
+  const inwardFirst: StripJustification = orientation === 'V' ? 'right' : 'left';
+  const inwardLast: StripJustification = orientation === 'V' ? 'left' : 'right';
+  if (mode === 'inner') return isFirst ? inwardFirst : inwardLast;
+  return isFirst ? inwardLast : inwardFirst; // outer = flip
 }

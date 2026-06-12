@@ -13,6 +13,7 @@ import {
   type AxisGuideReader,
   type GridStripSpec,
 } from '../foundation-from-grid';
+import { gridStripJustification } from '../foundation-grid-justification';
 import type { Guide } from '../../../systems/guides/guide-types';
 
 const guide = (id: string, axis: Guide['axis'], offset: number, visible = true): Guide =>
@@ -149,6 +150,95 @@ describe('buildStripGridFromGuides', () => {
     const result = buildStripGridFromGuides(reader(guides), {}, '0', 'mm');
     // x0 και x0b dedup → nX=2, nY=3 → 7.
     expect(result.strips).toHaveLength(7);
+  });
+});
+
+// ADR-441 Slice GEN-TIE — kind param: ίδια segments/bindings, διαφορετικό foundation kind.
+describe('buildStripGridFromGuides — kind param (strip default / tie-beam)', () => {
+  it('default kind → όλες οι λωρίδες είναι πεδιλοδοκοί (strip)', () => {
+    const r = buildStripGridFromGuides(reader([...X3, ...Y3]), {}, '0', 'mm');
+    expect(r.strips).toHaveLength(12);
+    for (const s of r.strips) expect(s.params.kind).toBe('strip');
+  });
+
+  it("kind='tie-beam' + mode='center' → συνδετήριες, ίδιο πλήθος/bindings, center έδραση", () => {
+    const r = buildStripGridFromGuides(reader([...X3, ...Y3]), {}, '0', 'mm', 'center', 'tie-beam');
+    expect(r.strips).toHaveLength(12);
+    for (const s of r.strips) {
+      expect(s.params.kind).toBe('tie-beam');
+      if (s.params.kind === 'pad') throw new Error('expected line kind');
+      expect(s.params.justification).toBeUndefined(); // center → Firestore-clean
+    }
+    // Τα bindings είναι ΑΚΡΙΒΩΣ τα ίδια slots με τις πεδιλοδοκούς (ίδιος enumerator).
+    expect(r.strips[0].guideBindings).toEqual([
+      { guideId: 'x0', slot: 'start-x' },
+      { guideId: 'x0', slot: 'end-x' },
+      { guideId: 'y0', slot: 'start-y' },
+      { guideId: 'y1', slot: 'end-y' },
+    ]);
+  });
+
+  it('συνδετήρια ΠΑΝΩ από πεδιλοδοκό: top −500 (κάτω παρειά = άνω παρειά strip −1000), δεν θάβεται', () => {
+    const strips = buildStripGridFromGuides(reader([...X3, ...Y3]), {}, '0', 'mm', 'inner', 'strip');
+    const ties = buildStripGridFromGuides(reader([...X3, ...Y3]), {}, '0', 'mm', 'center', 'tie-beam');
+    const strip = strips.strips[0].params;
+    const tie = ties.strips[0].params;
+    // top παρειές: strip −1000, tie −500 (ψηλότερη → δεν συμπίπτουν).
+    expect(strip.topElevationMm).toBe(-1000);
+    expect(tie.topElevationMm).toBe(-500);
+    expect(tie.topElevationMm).toBeGreaterThan(strip.topElevationMm);
+    // Στοίβαγμα: κάτω παρειά συνδετήριας (top−depth = −500−500 = −1000) = άνω παρειά πεδιλοδοκού.
+    expect(tie.topElevationMm - tie.thicknessMm).toBe(strip.topElevationMm);
+  });
+});
+
+// ADR-441 (Giorgio 2026-06-12) — περιμετρικό mode «Έδραση εσχάρας» (center/inner/outer).
+describe('gridStripJustification — perimeter mode', () => {
+  it('default = inner (περιμετρική προς τα μέσα· zero behavior change)', () => {
+    expect(gridStripJustification('V', 0, 3)).toBe('right'); // αριστερότερη inward
+    expect(gridStripJustification('V', 2, 3)).toBe('left'); // δεξιότερη inward
+    expect(gridStripJustification('H', 0, 3)).toBe('left');
+  });
+
+  it('center → ΟΛΕΣ center (και περιμετρικές)', () => {
+    expect(gridStripJustification('V', 0, 3, 'center')).toBe('center');
+    expect(gridStripJustification('V', 2, 3, 'center')).toBe('center');
+    expect(gridStripJustification('H', 0, 3, 'center')).toBe('center');
+  });
+
+  it('outer → περιμετρικές αντίστροφα από inner (προεξέχουν)', () => {
+    expect(gridStripJustification('V', 0, 3, 'outer')).toBe('left'); // inner ήταν 'right'
+    expect(gridStripJustification('V', 2, 3, 'outer')).toBe('right'); // inner ήταν 'left'
+    expect(gridStripJustification('H', 0, 3, 'outer')).toBe('right');
+  });
+
+  it('εσωτερικές λωρίδες → ΠΑΝΤΑ center σε κάθε mode', () => {
+    for (const m of ['center', 'inner', 'outer'] as const) {
+      expect(gridStripJustification('V', 1, 3, m)).toBe('center');
+    }
+  });
+});
+
+describe('buildStripGridFromGuides — perimeter mode', () => {
+  const just = (s: { params: { kind: string; justification?: string } }): string =>
+    s.params.kind === 'pad' ? 'pad' : (s.params.justification ?? 'center');
+
+  it('center → κάθε λωρίδα center (καμία εκκεντρότητα)', () => {
+    const r = buildStripGridFromGuides(reader([...X3, ...Y3]), {}, '0', 'mm', 'center');
+    for (const s of r.strips) expect(just(s)).toBe('center');
+  });
+
+  it('outer → περιμετρικές flipped vs inner (strips[0] left→ τώρα... outer)', () => {
+    const r = buildStripGridFromGuides(reader([...X3, ...Y3]), {}, '0', 'mm', 'outer');
+    // verticals 0-5: xi=0 → 'left' (outer), xi=1 → 'center', xi=2 → 'right'.
+    expect([just(r.strips[0]), just(r.strips[1])]).toEqual(['left', 'left']);
+    expect([just(r.strips[2]), just(r.strips[3])]).toEqual(['center', 'center']);
+    expect([just(r.strips[4]), just(r.strips[5])]).toEqual(['right', 'right']);
+  });
+
+  it('default (χωρίς mode) = inner (αμετάβλητη συμπεριφορά)', () => {
+    const r = buildStripGridFromGuides(reader([...X3, ...Y3]), {}, '0', 'mm');
+    expect(just(r.strips[0])).toBe('right'); // inner αριστερότερη
   });
 });
 
