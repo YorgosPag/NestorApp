@@ -25,14 +25,36 @@ import {
   isWallEntity,
   isColumnEntity,
   isBeamEntity,
+  isFoundationEntity,
 } from '../../types/entities';
 import { hasGuideBindings } from '../hosting/guide-binding-types';
 import type { AxisGuideReader } from '../foundations/foundation-from-grid';
 import { bayKeyFromBindings } from '../foundations/foundation-grid-segments';
+import { defaultFoundationTopElevationMm } from '../types/foundation-types';
 import type { SlabKind } from '../types/slab-types';
 import type { SlabParamOverrides } from '../../hooks/drawing/slab-completion';
 import type { SceneUnits } from '../../utils/scene-units';
 import { buildFoundationMatSlabs, buildSlabBaysFromGuides } from './slab-from-grid';
+
+/**
+ * Στάθμη άνω παρειάς της εδαφόπλακας = top των **πεδιλών/πεδιλοδοκών** (footings) της
+ * σκηνής, ώστε η γενική κοιτόστρωση να κάθεται στη ΣΤΑΘΜΗ ΘΕΜΕΛΙΩΣΗΣ (κάτω από το
+ * δάπεδο ισογείου, ΟΧΙ coplanar μαζί του). Min topElevationMm = το βαθύτερο footing top.
+ * Οι συνδετήριες (tie-beam, ψηλότερα) εξαιρούνται — η κοιτόστρωση πάει με τα footings.
+ * Fallback (μηδέν footings στη σκηνή): SSoT `defaultFoundationTopElevationMm('strip')`.
+ */
+export function deriveFoundationMatLevelMm(entities: readonly { type: string }[]): number {
+  const footingTops: number[] = [];
+  for (const e of entities) {
+    if (!isFoundationEntity(e)) continue;
+    if (e.params.kind === 'strip' || e.params.kind === 'pad') {
+      footingTops.push(e.params.topElevationMm);
+    }
+  }
+  return footingTops.length > 0
+    ? Math.min(...footingTops)
+    : defaultFoundationTopElevationMm('strip');
+}
 
 export interface SlabGridCommitDeps {
   readonly getLevelScene: (levelId: string) => SceneModel | null;
@@ -75,11 +97,17 @@ export function commitFoundationMatFromGuides(
   const columns = entities.filter(isColumnEntity);
   const beams = entities.filter(isBeamEntity);
 
+  // Η εδαφόπλακα κάθεται στη στάθμη θεμελίωσης (top των footings), όχι στο δάπεδο
+  // ισογείου — εκτός αν ο caller δώσει ρητό override (Revit-grade SSoT, ADR-441).
+  const overrides: SlabParamOverrides = {
+    levelElevation: deriveFoundationMatLevelMm(entities),
+    ...deps.overrides,
+  };
   const target = buildFoundationMatSlabs(
     walls,
     columns,
     beams,
-    deps.overrides ?? {},
+    overrides,
     deps.levelId,
     deps.sceneUnits,
   );

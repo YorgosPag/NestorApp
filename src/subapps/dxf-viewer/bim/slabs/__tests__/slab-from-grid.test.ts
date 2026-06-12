@@ -92,6 +92,11 @@ describe('buildFoundationMatSlabs (εδαφόπλακα)', () => {
     const result = buildFoundationMatSlabs(square('w', 0, 0, 8000), [], [], { thickness: 500 }, '0', 'mm');
     expect(result.slabs[0].params.thickness).toBe(500);
   });
+
+  it('levelElevation override → η εδαφόπλακα κάθεται στη στάθμη θεμελίωσης (όχι 0)', () => {
+    const result = buildFoundationMatSlabs(square('w', 0, 0, 8000), [], [], { levelElevation: -1000 }, '0', 'mm');
+    expect(result.slabs[0].params.levelElevation).toBe(-1000);
+  });
 });
 
 // ─── FLOOR / ROOF bays ────────────────────────────────────────────────────────

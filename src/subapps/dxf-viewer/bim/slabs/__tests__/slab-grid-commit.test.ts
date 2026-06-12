@@ -9,6 +9,7 @@
 import {
   commitFoundationMatFromGuides,
   commitSlabBaysFromGuides,
+  deriveFoundationMatLevelMm,
 } from '../slab-grid-commit';
 import { buildFoundationMatSlabs, buildSlabBaysFromGuides } from '../slab-from-grid';
 import { type AxisGuideReader } from '../../foundations/foundation-from-grid';
@@ -91,6 +92,30 @@ describe('commitFoundationMatFromGuides — idempotent (εδαφόπλακα)', 
     });
     expect(result.ok).toBe(false);
     expect(result.reason).toBe('no-footprint');
+  });
+});
+
+describe('deriveFoundationMatLevelMm — στάθμη θεμελίωσης', () => {
+  const foundation = (kind: 'strip' | 'pad' | 'tie-beam', topMm: number) =>
+    ({ type: 'foundation', params: { kind, topElevationMm: topMm } } as unknown as Entity);
+
+  it('top των πεδιλοδοκών (strip) → η εδαφόπλακα πάει εκεί, όχι στο 0', () => {
+    const entities = [foundation('strip', -1000), foundation('strip', -1000)] as unknown as { type: string }[];
+    expect(deriveFoundationMatLevelMm(entities)).toBe(-1000);
+  });
+
+  it('οι συνδετήριες (tie-beam, ψηλότερα) ΕΞΑΙΡΟΥΝΤΑΙ — κρατά το footing top', () => {
+    const entities = [foundation('strip', -1000), foundation('tie-beam', -500)] as unknown as { type: string }[];
+    expect(deriveFoundationMatLevelMm(entities)).toBe(-1000);
+  });
+
+  it('διαφορετικά βάθη footings → min (βαθύτερο top)', () => {
+    const entities = [foundation('pad', -1200), foundation('strip', -1000)] as unknown as { type: string }[];
+    expect(deriveFoundationMatLevelMm(entities)).toBe(-1200);
+  });
+
+  it('μηδέν footings → SSoT fallback (defaultFoundationTopElevationMm strip = -1000)', () => {
+    expect(deriveFoundationMatLevelMm([])).toBe(-1000);
   });
 });
 
