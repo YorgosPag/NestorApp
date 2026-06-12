@@ -3205,3 +3205,9 @@ Live re-split/reflow στο follow-move (auto, χωρίς κουμπί). Δύο 
 - **`DxfRenderer.render()`**: NEW `entityComposite.setBeamFinishFaces(buildFinishFacesByBeam(scene.entities))`, δίπλα στο `setColumnFinishFaces`. Pure O(n) scan, μόνο δοκάρια με ενεργό `finish` (default off → κενό Map· walls lazily). **Καμία νέα `useSyncExternalStore`** (CHECK 6C safe).
 - **`EntityRendererComposite.setBeamFinishFaces`**: pass-through στο `beam` leaf (mirror `setColumnFinishFaces`).
 - **`BeamRenderer`**: NEW `setBeamFinishFaces()` (per-frame index, default κενό Map) + draw μέσω του **shared SSoT** `drawStructuralFinishOutline` (ΕΝΑ pure helper, κοινό με το column overlay — μηδέν διπλασιασμός). **Zero store subscriptions** στο leaf· **καμία αλλαγή σε bitmap cache key** (rule 3). Staged για CHECK 6B/6D. Βλ. ADR-449 §3.quater.
+
+## 2026-06-13: ADR-449 Slice 5 — `DxfRenderer` master finish-visibility gate (orchestrator-drives, CHECK 6B/6D stage)
+
+Master view toggle «Σοβατισμένη όψη» (`showFinishSkin`, per-view, default ON). **ADR-040-compliant by construction** — ο gate ζει στον **orchestrator**, ΟΧΙ στα leaves/builders:
+
+- **`DxfRenderer.render()`**: event-time `isStructuralFinishVisible()` (SSoT helper, διαβάζει `useBimRenderSettingsStore.getState().showFinishSkin`)· όταν OFF → ο orchestrator περνά **κενά Maps** στα `setColumnFinishFaces`/`setBeamFinishFaces` (skip τους pure builders). **Καμία νέα `useSyncExternalStore`** στον orchestrator (CHECK 6C safe)· οι builders/leaves μένουν pure (μηδέν subscription)· **καμία αλλαγή σε bitmap cache key** (rule 3 — visibility toggle ζωγραφίζει normal-state χωρίς finish, ίδιο με layer hide). Το 3D gate ζει συμμετρικά στον `bim-three-structural-converters` (εκτός ADR-040). Staged για CHECK 6B/6D. Βλ. ADR-449 §3.quinquies.

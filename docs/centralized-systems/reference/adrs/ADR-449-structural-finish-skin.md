@@ -113,15 +113,45 @@ Deterministic IDs: `boq_bim_${id}` / `_finish_int` / `_finish_ext`. Hook στο 
 - `hooks/data/beam-boq-feed.ts` *(NEW)* — `beamBoqEntity(beam, scene)` (mirror `column-boq-feed`)· `useBeamPersistence` persist/restore wired (finish-inactive → byte-identical single-entry).
 - tests *(NEW)*: `structural-finish-scene-beam` (7) · `structural-finish-3d-beam` (7) · `BeamRenderer-finish` (5) · `beam-boq-feed` (3) — 22/22.
 
+## 3.quinquies Files (Slice 5 — toggle + ενεργοποίηση + per-element override)
+
+**Κεντρικές αποφάσεις (Giorgio):** (1) master toggle = **scalar boolean `showFinishSkin`** στο BIM render settings store (mirror `showHeatLoad`/ADR-422), **default ON**· (2) **visibility-only** — το factory δίνει ΠΑΝΤΑ `finish.enabled:true`, ο διακόπτης ελέγχει μόνο εμφάνιση· (3) **BOQ μετράει πάντα** (Revit schedule = model, όχι view) → ο διακόπτης είναι καθαρά visual, μηδέν αλλαγή σε BOQ feeds/persistence.
+
+**SSoT gate:** `bim/finishes/structural-finish-visibility.ts` *(NEW)* `isStructuralFinishVisible()` (event-time `getState().showFinishSkin ?? true`) — ΕΝΑ σημείο, το διαβάζουν ΚΑΙ ο 2D orchestrator ΚΑΙ ο 3D converter (οι pure builders/leaves μένουν ανέγγιχτοι, ADR-040).
+
+**MOD (core/state):**
+- `bim/finishes/structural-finish-types.ts` — `+ STRUCTURAL_FINISH_INTERIOR_MATERIAL/_EXTERIOR/_DEFAULT_THICKNESS_MM` + `createDefaultStructuralFinishSpec()` (enabled:true) + per-element override core `FinishParamField` / `readFinishParamValue` / `applyFinishParam` (entity & UI agnostic).
+- `config/bim-render-settings-types.ts` — `+ showFinishSkin?` (BimRenderSettings) + `showFinishSkin` (ResolvedBimSettings) + resolve `?? true`.
+- `state/bim-render-settings-store.ts` (+`-store-types.ts`) — `setShowFinishSkin` (idempotent + debounceWrite) + buildRaw/loadForLevel/standalone-write wiring.
+- `hooks/drawing/column-completion.ts` + `beam-completion.ts` — factory δίνει `finish: createDefaultStructuralFinishSpec()`.
+
+**MOD (gate — render):**
+- `canvas-v2/dxf-canvas/DxfRenderer.ts` — 2D gate: `isStructuralFinishVisible()` false → κενά finish Maps (ADR-040 orchestrator-drives· changelog ενημερώθηκε).
+- `bim-3d/converters/bim-three-structural-converters.ts` — 3D gate στα `buildColumn/BeamFinishSkin` call sites. *(MIXED αρχείο με ADR-448)*
+
+**NEW/MOD (UI — master toggle):**
+- `ui/ribbon/components/ShowFinishSkinToggle.tsx` *(NEW)* — mirror `ShowHeatLoadToggle` (button + aria-pressed, reactive selector).
+- `ui/ribbon/data/view-tab-bim-settings.ts` — `FINISH_SKIN_BUTTON` στο BIM Graphics panel.
+- `ui/ribbon/components/RibbonPanel.tsx` — dispatcher case `show-finish-skin-toggle`.
+
+**NEW/MOD (UI — per-element override, κοινό SSoT column+beam):**
+- `ui/ribbon/hooks/bridge/finish-param.ts` *(NEW)* — combobox options (enabled/υλικά plaster IDs/πάχος) + generic `resolveFinishComboboxState` / `applyFinishComboboxChange` (πάνω στον pure core).
+- `ui/ribbon/hooks/bridge/{column,beam}-command-keys.ts` — `*_FINISH_KEYS` + `*_FINISH_KEY_TO_FIELD` + `is*FinishKey`.
+- `ui/ribbon/hooks/{useRibbonColumnBridge,useRibbonBeamBridge}.ts` — delegate read/write (≤6 γρ./bridge → <500).
+- `ui/ribbon/data/{contextual-column-tab,contextual-beam-tab}.ts` — panel «Σοβάς» (4 comboboxes).
+- `src/i18n/locales/{el,en}/dxf-viewer-shell.json` — `ribbon.commands.finishSkin.*` (toggle) + `ribbon.commands.finishEditor.*` + `ribbon.panels.{column,beam}FinishSkin`.
+- tests *(NEW)*: `structural-finish-types` (factory+override core) · `structural-finish-visibility` (gate) · `finish-param` (combobox helpers) — 75/75 ADR-449 σύνολο. Slice 1-4 fixtures: ρητό `finish` override (factory πλέον δίνει default).
+
 ## 4. Roadmap (slices)
 
 - **Slice 1** ✅ — data model + resolver + BOQ (ΚΟΛΟΝΕΣ).
 - **Slice 2** ✅ — 3D render (band skin κολόνας, REUSE `stripPrismGeometry`). Flat-path μόνο· attached/κεκλιμένες κορυφές = μετέπειτα.
 - **Slice 3** ✅ — 2D render (finished outline offset ανά εκτεθειμένη παρειά + core = διπλή γραμμή). Per-frame index injection (mirror openings-by-wall).
 - **Slice 4** ✅ — Δοκάρια (2 πλάγιες όψεις· άκρα σημασιολογικά εκτός· 3D band skin + 2D outline + BOQ· FULL SSoT reuse). Static depth ΑΜΕΤΑΒΛΗΤΟ.
-- **Slice 5** — View toggle «Σοβατισμένη όψη» + UI material/thickness override.
+- **Slice 5** ✅ — View toggle «Σοβατισμένη όψη» (`showFinishSkin` per-view, default ON) + ενεργοποίηση στο factory (νέα στοιχεία γεννιούνται με σοβά) + per-element override (enabled/υλικά/πάχος) στα contextual ribbon tabs. Visibility-only semantics (BOQ μετράει πάντα).
 
 ## 5. Known / Deferred
+- Όχι αναδρομικό: υπάρχουσες persisted κολόνες/δοκάρια χωρίς `finish` δεν αποκτούν σοβά (μόνο νέα στοιχεία μετά το Slice 5)· retroactive backfill = DEFER.
 - Stale finish children όταν ο χρήστης απενεργοποιεί τον σοβά (single-entry path δεν τα καθαρίζει — ίδιο με wall multi-layer shrink· deferred re-sync).
 - Beam coverage κάτω-όψης (soffit) από κορυφές τοίχων = refinement (οριζόντια όψη, εκτός vertical-band μοντέλου).
 - Beam obstacle κολόνας mid-span σε πλάγια όψη (rare) + curved-beam ακριβές cap exclusion (chord-based v1) = μετέπειτα.
@@ -131,4 +161,5 @@ Deterministic IDs: `boq_bim_${id}` / `_finish_int` / `_finish_ext`. Hook στο 
 - **2026-06-13** — Slice 1: data model + pure resolver (per-face, partial-coverage) + BOQ multi-layer (parent πυρήνας + interior/exterior σοβάς) + scene classifier. `coveredIntervals` εξήχθη σε shared SSoT (N.0.2). 13/13 jest. Pending browser-verify + commit.
 - **2026-06-13** — Slice 2: 3D band skin κολόνας. SSoT core `computeColumnFinishFaces` (κοινό BOQ+3D). `buildColumnFinishSkin` ανά exposed segment → vertical band prism (REUSE `stripPrismGeometry`) με `getMaterial3D`. `columnToMesh` → composite `Group {πυρήνας+σοβάς}` (flat-path)· πυρήνας `width/depth` αμετάβλητος. Ghost guard. 10/10 jest + tsc καθαρό. Pending browser-verify + commit.
 - **2026-06-13** — Slice 3: 2D finished outline. SSoT core στενεύτηκε σε `ColumnFinishSource`/`WallFinishObstacle` (κοινό BOQ+3D+2D, μηδέν cast για DxfColumn/DxfWall). Per-frame `buildFinishFacesByColumn` → `EntityRendererComposite.setColumnFinishFaces` → `ColumnRenderer.drawFinishOutline` (offset «λωρίδα» ανά εκτεθειμένη παρειά, plaster colour SSoT, ADR-040 orchestrator-drives). 6/6 jest + tsc καθαρό. ADR-040 changelog ενημερώθηκε. Pending browser-verify + commit.
+- **2026-06-13** — Slice 5: **toggle + ενεργοποίηση + per-element override**. Master view toggle `showFinishSkin` (scalar boolean, mirror `showHeatLoad`, **default ON**)· SSoT gate `isStructuralFinishVisible()` (event-time, κοινό 2D orchestrator + 3D converter — pure builders/leaves ανέγγιχτοι, ADR-040)· factory δίνει πλέον `createDefaultStructuralFinishSpec()` (enabled:true, plaster defaults 15mm)· **visibility-only** (BOQ μετράει πάντα — schedule=model)· per-element override (enabled/υλικά/πάχος) στα contextual ribbon tabs μέσω κοινού `finish-param` helper + pure override core (`read/applyFinishParam`)· master toggle UI `ShowFinishSkinToggle` (View tab). i18n el+en ΠΡΩΤΑ (N.11), Radix-free combobox (υπάρχον ribbon SSoT). 75/75 ADR-449 jest + 31/31 store regression. Slice 1-4 fixtures ενημερώθηκαν (ρητό `finish` override). ADR-040 changelog ενημερώθηκε. Pending browser-verify + commit. *(MIXED file με ADR-448: bim-three-structural-converters)*
 - **2026-06-13** — Slice 4: **ΔΟΚΑΡΙΑ** (full mirror, FULL SSoT). `BeamParams.finish?`· resolver `+ includeEdge` (generic, default no-op)· scene adapter `computeBeamFinishFaces`/`computeBeamFinishContribution` (heightMm=depth· **2 πλάγιες όψεις ∥ άξονα· άκρα ⊥ άξονα σημασιολογικά εκτός**· classifier γενικεύτηκε `buildStructuralFinishClassifier`)· 3D pure core `buildFinishSkinFromFaces` extract + `buildBeamFinishSkin` + `beamToMesh(+walls)` composite (depth ΑΜΕΤΑΒΛΗΤΟ)· 2D pure `drawStructuralFinishOutline` extract (column overlays + beam το καλούν, μηδέν διπλασιασμός) + `buildFinishFacesByBeam` → `setBeamFinishFaces` (ADR-040)· BOQ `beam-boq-feed` wired (finish-inactive → byte-identical). 22/22 jest + 29/29 column regression + tsc καθαρό στα δικά μου. ADR-040 changelog ενημερώθηκε. Pending browser-verify + commit. *(MIXED files με ADR-448: bim-three-structural-converters, BimSceneLayer, column-renderer-overlays)*
