@@ -34,6 +34,12 @@ import {
 } from './bridge/slab-command-keys';
 import { PSET_RIBBON_ACTION } from './bridge/pset-action-keys';
 import { EventBus } from '../../../systems/events/EventBus';
+// ADR-441 Slice GEN-SLAB — one-shot «Πλάκες από κάναβο» (εδαφόπλακα ενιαία).
+import {
+  commitFoundationMatFromGuides,
+  type SlabGridCommitResult,
+} from '../../../bim/slabs/slab-grid-commit';
+import { resolveSceneUnits } from '../../../utils/scene-units';
 import type {
   RibbonComboboxState,
   RibbonToggleState,
@@ -72,6 +78,18 @@ const SLAB_OWNED_BADGE_KEYS: ReadonlySet<string> = new Set<string>([
 ]);
 
 const NULL_TOGGLE: RibbonToggleState = false;
+
+/**
+ * ADR-441 Slice GEN-SLAB — toast μετά το «Πλάκες από κάναβο». Το `up-to-date` (υπάρχει
+ * ήδη εδαφόπλακα) ΔΕΝ είναι αποτυχία: εκπέμπεται ως success-style summary με created=0.
+ */
+function emitSlabsFromGridToast(result: SlabGridCommitResult): void {
+  if (result.ok || result.reason === 'up-to-date') {
+    EventBus.emit('bim:slabs-from-grid', { created: result.created, skipped: result.skipped });
+  } else {
+    EventBus.emit('bim:slabs-from-grid-failed', { reason: result.reason ?? 'no-footprint' });
+  }
+}
 
 const NUMBER_KEY_TO_FIELD: Readonly<Record<string, keyof SlabParams>> = {
   [SLAB_RIBBON_KEYS.params.thickness]: 'thickness',
@@ -195,8 +213,26 @@ export function useRibbonSlabBridge(
     return false;
   }, [resolveSlab]);
 
+  // ADR-441 Slice GEN-SLAB — one-shot «Εδαφόπλακα από κάναβο»: ΕΝΑ ενιαίο slab
+  // kind='foundation' σε όλο το αποτύπωμα (idempotent). Δεν θέλει επιλεγμένη πλάκα.
+  const handleFoundationMatFromGrid = useCallback((): void => {
+    const levelId = levelManager.currentLevelId;
+    if (!levelId) return;
+    const scene = levelManager.getLevelScene(levelId);
+    const result = commitFoundationMatFromGuides({
+      getLevelScene: levelManager.getLevelScene,
+      setLevelScene: levelManager.setLevelScene,
+      levelId,
+      sceneUnits: scene ? resolveSceneUnits(scene) : 'mm',
+      executeCommand,
+    });
+    emitSlabsFromGridToast(result);
+  }, [levelManager, executeCommand]);
+
   const onAction = useCallback(
     (action: string): void => {
+      // ADR-441 Slice GEN-SLAB — grid actions: ΔΕΝ θέλουν επιλεγμένη πλάκα (πριν resolveSlab).
+      if (action === SLAB_RIBBON_KEYS_ACTIONS.fromGridMat) { handleFoundationMatFromGrid(); return; }
       if (action === PSET_RIBBON_ACTION) {
         const slab = resolveSlab();
         if (!slab || !levelManager.currentLevelId) return;
@@ -216,7 +252,7 @@ export function useRibbonSlabBridge(
       if (!confirmed) return;
       EventBus.emit('bim:slab-delete-requested', { slabId: slab.id });
     },
-    [resolveSlab, levelManager, t],
+    [resolveSlab, levelManager, t, handleFoundationMatFromGrid],
   );
 
   return useMemo(

@@ -76,6 +76,19 @@ export interface GridAxes {
   readonly ys: AxisData;
 }
 
+/**
+ * Προδιαγραφή ΕΝΟΣ grid **φατνώματος** (2D cell, ADR-441 Slice GEN-SLAB) πριν χτιστεί
+ * πλάκα. Σε αντίθεση με το `GridStripSpec` (1D ακμή για δοκάρια/τοίχους), το φάτνωμα
+ * δένει σε **4 άξονες** (αριστερά/δεξιά X + κάτω/πάνω Y) ώστε η πλάκα να ακολουθεί ως
+ * επιφάνεια όταν κουνηθεί οποιοσδήποτε από τους 4.
+ */
+export interface GridBaySpec {
+  /** 4 κορυφές του ορθογωνίου φατνώματος (CCW): (x0,y0)→(x1,y0)→(x1,y1)→(x0,y1). */
+  readonly corners: readonly Point2D[];
+  /** 4 bindings: start-x=αριστερός X, end-x=δεξιός X, start-y=κάτω Y, end-y=πάνω Y. */
+  readonly bindings: readonly GuideBinding[];
+}
+
 /** Push callback — emit ΕΝΑ segment spec. */
 type PushStrip = (spec: GridStripSpec) => void;
 
@@ -176,6 +189,42 @@ export function enumerateGridStrips(
 ): void {
   emitVerticalStrips(axes.xs, axes.ys, cb, mode);
   emitHorizontalStrips(axes.xs, axes.ys, cb, mode);
+}
+
+/**
+ * SSoT enumeration των grid **φατνωμάτων** (2D cells) με τα 4-axis bindings τους.
+ * Για κάθε ζεύγος διαδοχικών X-αξόνων × διαδοχικών Y-αξόνων εκπέμπει ΕΝΑ ορθογώνιο
+ * φάτνωμα. Σύνολο = (nX-1)·(nY-1) φατνώματα (π.χ. 3×3 → 4). Χρησιμοποιείται από τον
+ * slab bay builder (`buildSlabBaysFromGuides`, ADR-441 Slice GEN-SLAB) — ίδιο πρότυπο
+ * με τον `enumerateGridStrips` αλλά για επιφάνειες αντί ακμών.
+ */
+export function enumerateGridBays(
+  axes: GridAxes,
+  cb: (spec: GridBaySpec) => void,
+): void {
+  const { xs, ys } = axes;
+  for (let xi = 0; xi < xs.offsets.length - 1; xi++) {
+    for (let yi = 0; yi < ys.offsets.length - 1; yi++) {
+      const x0 = xs.offsets[xi];
+      const x1 = xs.offsets[xi + 1];
+      const y0 = ys.offsets[yi];
+      const y1 = ys.offsets[yi + 1];
+      cb({
+        corners: [
+          { x: x0, y: y0 },
+          { x: x1, y: y0 },
+          { x: x1, y: y1 },
+          { x: x0, y: y1 },
+        ],
+        bindings: [
+          { guideId: xs.ids[xi], slot: 'start-x' },
+          { guideId: xs.ids[xi + 1], slot: 'end-x' },
+          { guideId: ys.ids[yi], slot: 'start-y' },
+          { guideId: ys.ids[yi + 1], slot: 'end-y' },
+        ],
+      });
+    }
+  }
 }
 
 /**

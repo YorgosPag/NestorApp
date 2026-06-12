@@ -82,6 +82,30 @@ export function segmentKeyFromBindings(
   return null;
 }
 
+/**
+ * Canonical κλειδί grid-**φατνώματος** (2D cell) από τα 4-axis bindings μιας πλάκας
+ * (ADR-441 Slice GEN-SLAB), ή `null` αν δεν αντιστοιχεί σε φάτνωμα (γραμμικό/σημειακό/
+ * ελλιπές). Σε αντίθεση με το `segmentKeyFromBindings` (ακμή: start-x==end-x), το
+ * φάτνωμα έχει **διακριτούς** X-άξονες (αριστερά/δεξιά) ΚΑΙ Y-άξονες (κάτω/πάνω). Τα
+ * pairKeys κάνουν το κλειδί ανεξάρτητο σειράς → robust idempotent skip (ίδιο φάτνωμα =
+ * ίδιο κλειδί build-time & από persisted πλάκες). Total/pure.
+ */
+export function bayKeyFromBindings(
+  bindings: readonly GuideBinding[],
+): string | null {
+  const slots: SlotMap = {};
+  for (const b of bindings) slots[b.slot] = b.guideId;
+  const { 'start-x': sx, 'end-x': ex, 'start-y': sy, 'end-y': ey } = slots;
+  // Φάτνωμα: 4 διακριτοί άξονες (αριστερά≠δεξιά, κάτω≠πάνω).
+  if (
+    sx !== undefined && ex !== undefined && sx !== ex &&
+    sy !== undefined && ey !== undefined && sy !== ey
+  ) {
+    return `BAY|${pairKey(sx, ex)}|${pairKey(sy, ey)}`;
+  }
+  return null;
+}
+
 /** Bare coordinate ενός endpoint = coord ΜΕΙΟΝ το junction `extend` του slot του. */
 function bareCoord(
   value: number, slot: GuideBindingSlot, bindings: readonly GuideBinding[], scale: number,

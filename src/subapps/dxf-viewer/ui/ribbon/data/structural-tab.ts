@@ -137,6 +137,9 @@ export const STRUCTURAL_TAB: RibbonTab = {
             toolBtn('structuralTab.slab', 'ribbon.commands.bim.slab.label', 'bim-slab', 'slab', 'SL'),
             toolBtn('structuralTab.slabOpening', 'ribbon.commands.bim.slabOpening.label', 'bim-slab-opening', 'slab-opening', 'SO'),
             toolBtn('structuralTab.opening', 'ribbon.commands.bim.opening.label', 'bim-opening', 'opening', 'OP'),
+            // ADR-441 Slice GEN-SLAB — «Εδαφόπλακα από κάναβο»: one-shot action (ενιαία
+            // πλάκα σε όλο το αποτύπωμα). Δάπεδα/οροφές προστίθενται στα επόμενα slices.
+            actionBtn('structuralTab.slabMatFromGrid', 'ribbon.commands.bim.slabMatFromGrid.label', 'bim-slab-mat-from-grid', 'slab.actions.fromGridMat', 'slab.actions.fromGridMat'),
           ],
         },
       ],

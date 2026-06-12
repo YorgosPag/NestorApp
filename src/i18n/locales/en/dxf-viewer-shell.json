@@ -62,6 +62,12 @@
     "upToDate": "Every grid segment already has a beam.",
     "insufficientGuides": "At least 2 grid axes per direction are required (X and Y)."
   },
+  "slabGrid": {
+    "built": "{created, plural, one {Created # slab from the grid.} other {Created # slabs from the grid.}}",
+    "builtWithSkipped": "{created, plural, one {Created # slab} other {Created # slabs}}; {skipped, plural, one {# already existed.} other {# already existed.}}",
+    "upToDate": "This floor already has a foundation slab.",
+    "noFootprint": "No building footprint found. Create walls, columns or beams first."
+  },
   "perimeterColumn": {
     "built": "Created {built} structural walls from the perimeter.",
     "builtWithIgnored": "Created {built} structural walls; ignored {ignored} shapes.",
@@ -1577,6 +1583,10 @@
         "beamsFromGrid": {
           "label": "Beams from grid",
           "tooltip": "Auto beam on every grid axis segment, centerline on the axis and bound so it follows (one command, one undo)."
+        },
+        "slabMatFromGrid": {
+          "label": "Foundation slab from grid",
+          "tooltip": "A single slab-on-grade covering the whole building footprint, from the floor's walls/columns/beams (one command, one undo)."
         },
         "archGroup": {
           "label": "Architectural",
