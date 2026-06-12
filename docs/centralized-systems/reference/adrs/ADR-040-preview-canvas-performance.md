@@ -71,6 +71,10 @@ Mouse Event → DxfCanvas.onMouseMove
 
 ## Changelog
 
+### 2026-06-12 — SRP file-size split (N.7.1): `mouse-handler-up` marquee/point-click → sibling module
+
+**Status**: IMPLEMENTED 2026-06-12. Καθαρά μηχανικό split για file-size (<500 LOC), **μηδέν αλλαγή συμπεριφοράς**. Το `systems/cursor/mouse-handler-up.ts` (518 γρ.) έσπασε: ο hook `useMouseUpHandler` (pan/grip-release/drawing-click/lasso/single-hit-test) μένει στο αρχικό αρχείο (320 γρ.)· οι pure helpers `processMarqueeSelection` + `processPointClick` + το `MarqueeContext` interface μετακινήθηκαν σε **NEW `systems/cursor/mouse-handler-up-marquee.ts`** (216 γρ.), που ο hook εισάγει. Window/crossing + region/crop intercept + ADR-408 circuit marquee λογική **byte-identical** — μόνο μετακινήθηκαν. Καμία αλλαγή σε renderer/bitmap-cache/scheduler/subscriptions (CHECK 6D co-staged ως pure refactor).
+
 ### 2026-06-12 — ADR-441 grid hosting γενικεύεται σε τοίχους/κολώνες (overlay per-kind outline)
 
 **Status**: IMPLEMENTED 2026-06-12, browser-verified (Giorgio: column/wall follow + persistence + negative ✅). Το associative grid hosting (follow-on-move) επεκτάθηκε από foundation-only σε **foundation+wall+column** μέσω `HostingStrategy` registry (ADR-441 Slice GEN/COL/WALL). Επίδραση στα ADR-040-critical paths: (1) `useHostingReconciler` (ο μόνος stateful subscriber) — φίλτρο `isFoundationEntity`→`isGridHosted` (bindings + registered strategy)· RAF-throttle / only-changed `setLevelScene` / drag-suppress / settle-persist **ΑΜΕΤΑΒΛΗΤΑ**· dispatch ανά kind μέσω `reconcileHostedEntities`. (2) `GuideFollowGhostOverlay` (zero-lag dedicated-canvas overlay) — foundations κρατούν το εσχάρα-aware path· τοίχοι/κολώνες ζωγραφίζονται live κατά το guide-drag μέσω του generic `deriveFollowGhostFootprints` + `strategy.outline` (per-kind: foundation/column footprint, wall outer+inner ring). **Leaf-only subscription, μηδέν `useSyncExternalStore` σε orchestrators (CHECK 6C safe)**· καμία αλλαγή σε bitmap-cache/renderer/scheduler.
