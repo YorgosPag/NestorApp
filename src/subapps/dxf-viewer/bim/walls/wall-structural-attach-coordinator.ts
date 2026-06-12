@@ -112,15 +112,36 @@ const ACTIVE_LEVEL_FLOOR_MM = 0;
  *
  * Host που δεν είναι δοκάρι/πλάκα → κενό (early return, O(1)).
  */
+/**
+ * Entity → top-attach `HostFootprintInput` (κάτω-παρειά: δοκάρι/πλάκα/στέγη), αλλιώς
+ * `null`. ΕΝΑΣ τόπος αναγνώρισης host-type — καταναλώνεται και από τη φορά
+ * host→walls (`findWallsToAutoAttachToHost`) και από την αντίστροφη wall→hosts
+ * (`findHostsToAttachWallTop`) ώστε τα δύο paths να μένουν συμμετρικά (N.0.2).
+ */
+function topHostInputFor(entity: Entity): HostFootprintInput | null {
+  if (isBeamEntity(entity)) return beamHostInput(entity);
+  if (isSlabEntity(entity)) return slabHostInput(entity);
+  if (isRoofEntity(entity)) return roofHostInput(entity);
+  return null;
+}
+
+/**
+ * Entity → base-attach `HostFootprintInput` (άνω-παρειά: θεμέλιο δοκάρι/πλάκα),
+ * αλλιώς `null`. Στέγη ΔΕΝ φιλοξενεί βάση (mirror του base-φιλτραρίσματος του
+ * `findWallsToAutoAttachBaseToHost`).
+ */
+function baseHostInputFor(entity: Entity): HostFootprintInput | null {
+  if (isBeamEntity(entity)) return beamHostInput(entity);
+  if (isSlabEntity(entity)) return slabHostInput(entity);
+  return null;
+}
+
 export function findWallsToAutoAttachToHost(
   host: Entity,
   entities: readonly Entity[],
 ): string[] {
-  let hostInput: HostFootprintInput;
-  if (isBeamEntity(host)) hostInput = beamHostInput(host);
-  else if (isSlabEntity(host)) hostInput = slabHostInput(host);
-  else if (isRoofEntity(host)) hostInput = roofHostInput(host);
-  else return [];
+  const hostInput = topHostInputFor(host);
+  if (!hostInput) return [];
 
   const out: string[] = [];
   for (const e of entities) {
@@ -156,11 +177,8 @@ export function findWallsToAutoAttachBaseToHost(
   host: Entity,
   entities: readonly Entity[],
 ): string[] {
-  let hostInput: HostFootprintInput;
-  if (isBeamEntity(host)) hostInput = beamHostInput(host);
-  else if (isSlabEntity(host)) hostInput = slabHostInput(host);
-  else return [];
-  if (hostInput.topsideZmm === undefined) return [];
+  const hostInput = baseHostInputFor(host);
+  if (!hostInput || hostInput.topsideZmm === undefined) return [];
 
   const out: string[] = [];
   for (const e of entities) {
@@ -174,6 +192,76 @@ export function findWallsToAutoAttachBaseToHost(
     const baseZmm = resolveWallBaseZmm(e.params, { floorElevationMm: ACTIVE_LEVEL_FLOOR_MM });
     if (hostInput.topsideZmm >= baseZmm - AUTO_ATTACH_Z_GATE_MM) continue;
     out.push(e.id);
+  }
+  return out;
+}
+
+// ─── ADR-401 Phase D (αντίστροφη φορά) — auto-attach detection (wall → hosts) ──
+
+/**
+ * ADR-401 Phase D (reverse) — όταν δημιουργείται **ΤΟΙΧΟΣ** (manual draw Ή «Τοίχοι
+ * από κάναβο»), βρες τους structural hosts (δοκάρι/πλάκα/στέγη) που τρέχουν ΠΑΝΩ
+ * του ώστε η κορυφή του να «κολλήσει» στην κάτω-παρειά τους (το δοκάρι «κουρώνει»
+ * τον τοίχο). Καθρέφτης/inverse του `findWallsToAutoAttachToHost`: ΙΔΙΑ κάτοψη
+ * (`buildHostUndersidePlans`) + ΙΔΙΟΣ Z-gate — μηδέν duplication των κριτηρίων.
+ *
+ * Λύνει την ασυμμετρία: το host-created path έτρεχε auto-attach μόνο όταν
+ * δημιουργείται ο host· εδώ καλύπτεται και η σειρά host-πρώτα → τοίχος-μετά.
+ *
+ * Pure detection (μηδέν mutation) — ο καλών εκτελεί ένα `AttachWallsTopCommand`
+ * ανά hostId (το command κάνει union στο `attachTopToIds` → σκαλωτή κορυφή).
+ *
+ * Επιστρέφει `[]` αν το entity δεν είναι τοίχος ή ο τοίχος δεν είναι
+ * `topBinding='storey-ceiling'` (idempotent: ήδη-attached → skip).
+ */
+export function findHostsToAttachWallTop(
+  wall: Entity,
+  entities: readonly Entity[],
+): string[] {
+  if (!isWallEntity(wall)) return [];
+  if (wall.params.topBinding !== 'storey-ceiling') return [];
+  const start = { x: wall.params.start.x, y: wall.params.start.y };
+  const end = { x: wall.params.end.x, y: wall.params.end.y };
+  const baseZmm = resolveWallBaseZmm(wall.params, { floorElevationMm: ACTIVE_LEVEL_FLOOR_MM });
+
+  const out: string[] = [];
+  for (const e of entities) {
+    const hostInput = topHostInputFor(e);
+    if (!hostInput) continue;
+    // (2) plan overlap — ο host περνά πάνω από τον άξονα του τοίχου.
+    if (buildHostUndersidePlans(start, end, [hostInput]).length === 0) continue;
+    // (3) Z gate — κάτω-παρειά host πάνω από τη βάση του τοίχου (οροφή/δοκάρι).
+    if (hostInput.undersideZmm <= baseZmm + AUTO_ATTACH_Z_GATE_MM) continue;
+    out.push(hostInput.hostId);
+  }
+  return out;
+}
+
+/**
+ * ADR-401 (γ) (reverse) — mirror του `findHostsToAttachWallTop` για **base**: όταν
+ * δημιουργείται τοίχος πάνω από θεμέλιο δοκάρι/πλάκα, βρες τους hosts στους
+ * οποίους πρέπει να κατέβει η βάση του. ΙΔΙΑ κάτοψη (`buildHostTopsidePlans`) +
+ * ΙΔΙΟΣ inverted Z-gate με το `findWallsToAutoAttachBaseToHost`.
+ */
+export function findHostsToAttachWallBase(
+  wall: Entity,
+  entities: readonly Entity[],
+): string[] {
+  if (!isWallEntity(wall)) return [];
+  if (wall.params.baseBinding !== 'storey-floor') return [];
+  const start = { x: wall.params.start.x, y: wall.params.start.y };
+  const end = { x: wall.params.end.x, y: wall.params.end.y };
+  const baseZmm = resolveWallBaseZmm(wall.params, { floorElevationMm: ACTIVE_LEVEL_FLOOR_MM });
+
+  const out: string[] = [];
+  for (const e of entities) {
+    const hostInput = baseHostInputFor(e);
+    if (!hostInput || hostInput.topsideZmm === undefined) continue;
+    // (2) plan overlap.
+    if (buildHostTopsidePlans(start, end, [hostInput]).length === 0) continue;
+    // (3) inverted Z gate — άνω-παρειά host κάτω από τη βάση του τοίχου (θεμέλιο).
+    if (hostInput.topsideZmm >= baseZmm - AUTO_ATTACH_Z_GATE_MM) continue;
+    out.push(hostInput.hostId);
   }
   return out;
 }

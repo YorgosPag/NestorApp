@@ -23,6 +23,8 @@ import { LevelSceneManagerAdapter } from '../systems/entity-creation/LevelSceneM
 import {
   findWallsToAutoAttachToHost,
   findWallsToAutoAttachBaseToHost,
+  findHostsToAttachWallTop,
+  findHostsToAttachWallBase,
 } from '../bim/walls/wall-structural-attach-coordinator';
 import {
   findColumnsToAutoAttachToHost,
@@ -47,6 +49,7 @@ import {
 } from '../core/commands/entity-commands/AttachStairsCommand';
 import { isWallEntity, isColumnEntity, isStairEntity } from '../types/entities';
 import type { Entity } from '../types/entities';
+import type { ICommand, ISceneManager } from '../core/commands/interfaces';
 import type { SceneModel } from '../types/scene';
 import type { WallEntity } from '../bim/types/wall-types';
 import type { ColumnEntity } from '../bim/types/column-types';
@@ -97,6 +100,76 @@ function buildStairAttachTargets(
   return targets;
 }
 
+type ExecuteFn = (command: ICommand) => void;
+
+/**
+ * ADR-401 Phase D/F.3/G.3 — όταν δημιουργείται structural **host** (δοκάρι/πλάκα/
+ * στέγη), κάνε auto-attach όσους τοίχους/κολώνες/σκάλες κάθονται από κάτω (top)
+ * ή πάνω (base) του. No-op όταν το νέο entity δεν είναι host (π.χ. τοίχος).
+ */
+function attachEntitiesUnderHost(
+  host: Entity, entities: readonly Entity[], sm: ISceneManager, execute: ExecuteFn,
+): void {
+  const hostId = host.id;
+  const topTargets = buildAttachTargets(findWallsToAutoAttachToHost(host, entities), entities);
+  const baseTargets = buildAttachTargets(findWallsToAutoAttachBaseToHost(host, entities), entities);
+  const colTop = buildColumnAttachTargets(findColumnsToAutoAttachToHost(host, entities), entities);
+  const colBase = buildColumnAttachTargets(findColumnsToAutoAttachBaseToHost(host, entities), entities);
+  const stairTop = buildStairAttachTargets(findStairsToAutoAttachToHost(host, entities), entities);
+  const stairBase = buildStairAttachTargets(findStairsToAutoAttachBaseToHost(host, entities), entities);
+  if (topTargets.length > 0) {
+    execute(new AttachWallsTopCommand(hostId, topTargets, sm));
+    EventBus.emit('bim:walls-auto-attached', { wallIds: topTargets.map((t) => t.wallId), hostId });
+  }
+  if (baseTargets.length > 0) {
+    execute(new AttachWallsBaseCommand(hostId, baseTargets, sm));
+    EventBus.emit('bim:walls-auto-attached-base', { wallIds: baseTargets.map((t) => t.wallId), hostId });
+  }
+  if (colTop.length > 0) {
+    execute(new AttachColumnsCommand('top', hostId, colTop, sm));
+    EventBus.emit('bim:columns-auto-attached', { columnIds: colTop.map((t) => t.columnId), hostId });
+  }
+  if (colBase.length > 0) {
+    execute(new AttachColumnsCommand('base', hostId, colBase, sm));
+    EventBus.emit('bim:columns-auto-attached-base', { columnIds: colBase.map((t) => t.columnId), hostId });
+  }
+  if (stairTop.length > 0) {
+    execute(new AttachStairsCommand('top', hostId, stairTop, sm));
+    EventBus.emit('bim:stairs-auto-attached', { stairIds: stairTop.map((t) => t.stairId), hostId });
+  }
+  if (stairBase.length > 0) {
+    execute(new AttachStairsCommand('base', hostId, stairBase, sm));
+    EventBus.emit('bim:stairs-auto-attached-base', { stairIds: stairBase.map((t) => t.stairId), hostId });
+  }
+}
+
+/**
+ * ADR-401 Phase D (αντίστροφη φορά) — όταν δημιουργείται **ΤΟΙΧΟΣ** (manual draw ή
+ * «Τοίχοι από κάναβο»), κάνε auto-attach την κορυφή του στους hosts που τρέχουν
+ * από πάνω (top) και τη βάση του στα θεμέλια από κάτω (base). Ένα command ανά
+ * hostId (το `attachTopToIds` κάνει union → σκαλωτή κορυφή). Λύνει την ασυμμετρία
+ * δοκάρι-πρώτα→τοίχος-μετά. Idempotent: ο detector φιλτράρει το ήδη-attached.
+ */
+function attachWallToSurroundingHosts(
+  wall: Entity, entities: readonly Entity[], sm: ISceneManager, execute: ExecuteFn,
+): void {
+  const kind = (wall as WallEntity).kind;
+  const topHostIds = findHostsToAttachWallTop(wall, entities);
+  for (const hostId of topHostIds) {
+    execute(new AttachWallsTopCommand(hostId, [{ wallId: wall.id, kind }], sm));
+  }
+  if (topHostIds.length > 0) {
+    EventBus.emit('bim:walls-auto-attached', { wallIds: [wall.id], hostId: topHostIds[0] });
+  }
+  const baseHostIds = findHostsToAttachWallBase(wall, entities);
+  for (const hostId of baseHostIds) {
+    execute(new AttachWallsBaseCommand(hostId, [{ wallId: wall.id, kind }], sm));
+  }
+  if (baseHostIds.length > 0) {
+    EventBus.emit('bim:walls-auto-attached-base', { wallIds: [wall.id], hostId: baseHostIds[0] });
+  }
+}
+
 export function useStructuralAutoAttach(props: { levelManager: LevelManagerLike }): void {
   const { levelManager } = props;
   const { execute } = useCommandHistory();
@@ -109,50 +182,16 @@ export function useStructuralAutoAttach(props: { levelManager: LevelManagerLike 
       if (!scene) return;
 
       const entities = scene.entities as unknown as readonly Entity[];
-      const host = entity as unknown as Entity;
-      const topTargets = buildAttachTargets(findWallsToAutoAttachToHost(host, entities), entities);
-      const baseTargets = buildAttachTargets(findWallsToAutoAttachBaseToHost(host, entities), entities);
-      // ADR-401 Phase F.3 — same auto-attach for columns under the new host.
-      const colTopTargets = buildColumnAttachTargets(findColumnsToAutoAttachToHost(host, entities), entities);
-      const colBaseTargets = buildColumnAttachTargets(findColumnsToAutoAttachBaseToHost(host, entities), entities);
-      // ADR-401 Phase G.3 — same auto-attach for stairs under the new host.
-      const stairTopTargets = buildStairAttachTargets(findStairsToAutoAttachToHost(host, entities), entities);
-      const stairBaseTargets = buildStairAttachTargets(findStairsToAutoAttachBaseToHost(host, entities), entities);
-      if (
-        topTargets.length === 0 && baseTargets.length === 0 &&
-        colTopTargets.length === 0 && colBaseTargets.length === 0 &&
-        stairTopTargets.length === 0 && stairBaseTargets.length === 0
-      ) return;
-
+      const created = entity as unknown as Entity;
       const sm = new LevelSceneManagerAdapter(
         levelManager.getLevelScene,
         levelManager.setLevelScene,
         levelId,
       );
-      if (topTargets.length > 0) {
-        execute(new AttachWallsTopCommand(entity.id, topTargets, sm));
-        EventBus.emit('bim:walls-auto-attached', { wallIds: topTargets.map((t) => t.wallId), hostId: entity.id });
-      }
-      if (baseTargets.length > 0) {
-        execute(new AttachWallsBaseCommand(entity.id, baseTargets, sm));
-        EventBus.emit('bim:walls-auto-attached-base', { wallIds: baseTargets.map((t) => t.wallId), hostId: entity.id });
-      }
-      if (colTopTargets.length > 0) {
-        execute(new AttachColumnsCommand('top', entity.id, colTopTargets, sm));
-        EventBus.emit('bim:columns-auto-attached', { columnIds: colTopTargets.map((t) => t.columnId), hostId: entity.id });
-      }
-      if (colBaseTargets.length > 0) {
-        execute(new AttachColumnsCommand('base', entity.id, colBaseTargets, sm));
-        EventBus.emit('bim:columns-auto-attached-base', { columnIds: colBaseTargets.map((t) => t.columnId), hostId: entity.id });
-      }
-      if (stairTopTargets.length > 0) {
-        execute(new AttachStairsCommand('top', entity.id, stairTopTargets, sm));
-        EventBus.emit('bim:stairs-auto-attached', { stairIds: stairTopTargets.map((t) => t.stairId), hostId: entity.id });
-      }
-      if (stairBaseTargets.length > 0) {
-        execute(new AttachStairsCommand('base', entity.id, stairBaseTargets, sm));
-        EventBus.emit('bim:stairs-auto-attached-base', { stairIds: stairBaseTargets.map((t) => t.stairId), hostId: entity.id });
-      }
+      // Φορά 1: νέος host → attach τα entities από κάτω/πάνω του (no-op αν όχι host).
+      attachEntitiesUnderHost(created, entities, sm, execute);
+      // Φορά 2 (αντίστροφη): νέος τοίχος → attach κορυφή/βάση στους γύρω hosts.
+      if (isWallEntity(created)) attachWallToSurroundingHosts(created, entities, sm, execute);
     });
     return () => unsub();
   }, [levelManager, execute]);

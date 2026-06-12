@@ -12,6 +12,8 @@ import {
   notifyWallsOnHostDeletion,
   findWallsToAutoAttachToHost,
   findWallsToAutoAttachBaseToHost,
+  findHostsToAttachWallTop,
+  findHostsToAttachWallBase,
 } from '../wall-structural-attach-coordinator';
 import { findAttachedWalls } from '../../cascade/bim-cascade-resolver';
 import { EventBus, type DrawingEventPayload } from '../../../systems/events/EventBus';
@@ -291,5 +293,79 @@ describe('findWallsToAutoAttachBaseToHost (γ)', () => {
     const line = { id: 'l1', type: 'line', start: { x: 0, y: 0 }, end: { x: 1, y: 1 } } as unknown as Entity;
     const wall = ceilingWall('w1', 0);
     expect(findWallsToAutoAttachBaseToHost(line, [wall])).toEqual([]);
+  });
+});
+
+// ─── ADR-401 Phase D (αντίστροφη φορά) — wall → hosts auto-attach detection ────
+
+describe('findHostsToAttachWallTop (Phase D reverse)', () => {
+  it('attaches a new wall top to a beam already above it (host-first → wall-after)', () => {
+    const beam = beamOverWall(); // underside 2500 > base 0
+    const wall = ceilingWall('w1', 0); // y=0 inside beam band [-125,125]
+    expect(findHostsToAttachWallTop(wall, [beam as unknown as Entity])).toEqual(['beam_1']);
+  });
+
+  it('attaches a new wall top to a CEILING slab above it', () => {
+    const slab = slabAt(3000); // underside 2850 > base 0
+    const wall = ceilingWall('w1', 1000); // inside slab footprint
+    expect(findHostsToAttachWallTop(wall, [slab as unknown as Entity])).toEqual(['slab_1']);
+  });
+
+  it('returns multiple host ids when several hosts cross above (stepped top)', () => {
+    const beam = beamOverWall();
+    const slab = slabAt(3000);
+    const wall = ceilingWall('w1', 0); // y=0 hits beam band AND slab footprint
+    expect(findHostsToAttachWallTop(wall, [beam as unknown as Entity, slab as unknown as Entity]).sort())
+      .toEqual(['beam_1', 'slab_1']);
+  });
+
+  it('does NOT attach to a FLOOR slab below the wall base (Z gate)', () => {
+    const slab = slabAt(0); // underside -150 <= base 0 → skip
+    const wall = ceilingWall('w1', 1000);
+    expect(findHostsToAttachWallTop(wall, [slab as unknown as Entity])).toEqual([]);
+  });
+
+  it('does NOT attach when no host overlaps the wall in plan', () => {
+    const beam = beamOverWall();
+    const wall = ceilingWall('w1', 5000); // far from beam band
+    expect(findHostsToAttachWallTop(wall, [beam as unknown as Entity])).toEqual([]);
+  });
+
+  it('skips a wall whose topBinding is not "storey-ceiling" (already attached → idempotent)', () => {
+    const beam = beamOverWall();
+    const wall = { ...ceilingWall('w1', 0) } as unknown as { params: Record<string, unknown> };
+    wall.params.topBinding = 'attached';
+    expect(findHostsToAttachWallTop(wall as unknown as Entity, [beam as unknown as Entity])).toEqual([]);
+  });
+
+  it('returns [] for a non-wall entity', () => {
+    const beam = beamOverWall();
+    expect(findHostsToAttachWallTop(beam as unknown as Entity, [beam as unknown as Entity])).toEqual([]);
+  });
+});
+
+describe('findHostsToAttachWallBase (γ reverse)', () => {
+  it('attaches a new wall base to a FOUNDATION beam below it', () => {
+    const beam = beamOverWall(-100); // topside -100 < base 0
+    const wall = ceilingWall('w1', 0); // inside beam band
+    expect(findHostsToAttachWallBase(wall, [beam as unknown as Entity])).toEqual(['beam_1']);
+  });
+
+  it('does NOT attach the base to a CEILING slab above the wall base (inverted Z gate)', () => {
+    const slab = slabAt(3000); // topside 3000 > base 0 → skip
+    const wall = ceilingWall('w1', 1000);
+    expect(findHostsToAttachWallBase(wall, [slab as unknown as Entity])).toEqual([]);
+  });
+
+  it('skips a wall whose baseBinding is not "storey-floor"', () => {
+    const beam = beamOverWall(-100);
+    const wall = { ...ceilingWall('w1', 0) } as unknown as { params: Record<string, unknown> };
+    wall.params.baseBinding = 'absolute';
+    expect(findHostsToAttachWallBase(wall as unknown as Entity, [beam as unknown as Entity])).toEqual([]);
+  });
+
+  it('returns [] for a non-wall entity', () => {
+    const beam = beamOverWall(-100);
+    expect(findHostsToAttachWallBase(beam as unknown as Entity, [beam as unknown as Entity])).toEqual([]);
   });
 });
