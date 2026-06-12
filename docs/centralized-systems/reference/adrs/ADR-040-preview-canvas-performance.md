@@ -71,6 +71,10 @@ Mouse Event → DxfCanvas.onMouseMove
 
 ## Changelog
 
+### 2026-06-12 — Isolate Element/Category render-gate στον `DxfRenderer` (ADR-358 §5.6.bis, CHECK 6B)
+
+**Status**: IMPLEMENTED 2026-06-12. Το shared 2Δ `DxfRenderer` απέκτησε category/entity-scope isolate gating (Revit «Isolate Element» / «Isolate Category»), επιπλέον του υπάρχοντος layer-scope. Επίδραση στα ADR-040-critical paths: το alpha-dim + freeze-hide gate διαβάζει τώρα `getIsolateEffectsSnapshot()` (zero-React store, event-time getter — **όχι** `useSyncExternalStore`) με προτεραιότητα entity → category → layer· οι κατηγορίες προκύπτουν από **NEW SSoT** `bim/visibility/resolve-entity-bim-category.ts` (`resolveEntityBimCategory` / `collectBimCategories`). Καμία αλλαγή σε bitmap-cache key / scheduler / orchestrator subscriptions· `CanvasSection` περνά μόνο pass-through `EntityIsolateCommand`/`CategoryIsolateCommand` (μηδέν νέο leaf subscription, CHECK 6C safe).
+
 ### 2026-06-12 — SRP file-size split (N.7.1): `mouse-handler-up` marquee/point-click → sibling module
 
 **Status**: IMPLEMENTED 2026-06-12. Καθαρά μηχανικό split για file-size (<500 LOC), **μηδέν αλλαγή συμπεριφοράς**. Το `systems/cursor/mouse-handler-up.ts` (518 γρ.) έσπασε: ο hook `useMouseUpHandler` (pan/grip-release/drawing-click/lasso/single-hit-test) μένει στο αρχικό αρχείο (320 γρ.)· οι pure helpers `processMarqueeSelection` + `processPointClick` + το `MarqueeContext` interface μετακινήθηκαν σε **NEW `systems/cursor/mouse-handler-up-marquee.ts`** (216 γρ.), που ο hook εισάγει. Window/crossing + region/crop intercept + ADR-408 circuit marquee λογική **byte-identical** — μόνο μετακινήθηκαν. Καμία αλλαγή σε renderer/bitmap-cache/scheduler/subscriptions (CHECK 6D co-staged ως pure refactor).

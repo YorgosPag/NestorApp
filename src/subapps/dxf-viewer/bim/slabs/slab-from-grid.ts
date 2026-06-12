@@ -205,7 +205,15 @@ function bayOutline(bay: GridBaySpec, subs: readonly Subtrahend[]): Point2D[] | 
     if (area > bestArea) { bestArea = area; best = poly[0]; }
   }
   if (!best || bestArea <= 0) return null;
-  return best.map(([x, y]) => ({ x, y }));
+  const pts: Point2D[] = best.map(([x, y]) => ({ x, y }));
+  // polygon-clipping επαναλαμβάνει την πρώτη κορυφή στο τέλος (closing) → αφαίρεσέ
+  // την, αλλιώς ο slab validator απορρίπτει το zero-length edge.
+  if (pts.length >= 2) {
+    const first = pts[0];
+    const last = pts[pts.length - 1];
+    if (first.x === last.x && first.y === last.y) pts.pop();
+  }
+  return pts.length >= 3 ? pts : null;
 }
 
 /**

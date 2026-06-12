@@ -34,11 +34,13 @@ import {
 } from './bridge/slab-command-keys';
 import { PSET_RIBBON_ACTION } from './bridge/pset-action-keys';
 import { EventBus } from '../../../systems/events/EventBus';
-// ADR-441 Slice GEN-SLAB — one-shot «Πλάκες από κάναβο» (εδαφόπλακα ενιαία).
+// ADR-441 Slice GEN-SLAB — one-shot «Πλάκες από κάναβο» (εδαφόπλακα / δάπεδα / οροφές).
 import {
   commitFoundationMatFromGuides,
+  commitSlabBaysFromGuides,
   type SlabGridCommitResult,
 } from '../../../bim/slabs/slab-grid-commit';
+import { getGlobalGuideStore } from '../../../systems/guides/guide-store';
 import { resolveSceneUnits } from '../../../utils/scene-units';
 import type {
   RibbonComboboxState,
@@ -229,10 +231,29 @@ export function useRibbonSlabBridge(
     emitSlabsFromGridToast(result);
   }, [levelManager, executeCommand]);
 
+  // ADR-441 Slice GEN-SLAB — «Δάπεδα/Οροφές από κάναβο»: ΠΟΛΛΑ slab (ένα ανά φάτνωμα),
+  // clipped στα δοκάρια & notched γύρω από κολώνες, born-bound (idempotent). Χωρίς επιλογή.
+  const handleSlabBaysFromGrid = useCallback((kind: 'floor' | 'roof'): void => {
+    const levelId = levelManager.currentLevelId;
+    if (!levelId) return;
+    const scene = levelManager.getLevelScene(levelId);
+    const result = commitSlabBaysFromGuides({
+      guideReader: getGlobalGuideStore(),
+      getLevelScene: levelManager.getLevelScene,
+      setLevelScene: levelManager.setLevelScene,
+      levelId,
+      sceneUnits: scene ? resolveSceneUnits(scene) : 'mm',
+      executeCommand,
+    }, kind);
+    emitSlabsFromGridToast(result);
+  }, [levelManager, executeCommand]);
+
   const onAction = useCallback(
     (action: string): void => {
       // ADR-441 Slice GEN-SLAB — grid actions: ΔΕΝ θέλουν επιλεγμένη πλάκα (πριν resolveSlab).
       if (action === SLAB_RIBBON_KEYS_ACTIONS.fromGridMat) { handleFoundationMatFromGrid(); return; }
+      if (action === SLAB_RIBBON_KEYS_ACTIONS.fromGridFloor) { handleSlabBaysFromGrid('floor'); return; }
+      if (action === SLAB_RIBBON_KEYS_ACTIONS.fromGridRoof) { handleSlabBaysFromGrid('roof'); return; }
       if (action === PSET_RIBBON_ACTION) {
         const slab = resolveSlab();
         if (!slab || !levelManager.currentLevelId) return;
@@ -252,7 +273,7 @@ export function useRibbonSlabBridge(
       if (!confirmed) return;
       EventBus.emit('bim:slab-delete-requested', { slabId: slab.id });
     },
-    [resolveSlab, levelManager, t, handleFoundationMatFromGrid],
+    [resolveSlab, levelManager, t, handleFoundationMatFromGrid, handleSlabBaysFromGrid],
   );
 
   return useMemo(

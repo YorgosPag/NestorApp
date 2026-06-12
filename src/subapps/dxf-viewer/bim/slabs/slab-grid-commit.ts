@@ -26,9 +26,13 @@ import {
   isColumnEntity,
   isBeamEntity,
 } from '../../types/entities';
+import { hasGuideBindings } from '../hosting/guide-binding-types';
+import type { AxisGuideReader } from '../foundations/foundation-from-grid';
+import { bayKeyFromBindings } from '../foundations/foundation-grid-segments';
+import type { SlabKind } from '../types/slab-types';
 import type { SlabParamOverrides } from '../../hooks/drawing/slab-completion';
 import type { SceneUnits } from '../../utils/scene-units';
-import { buildFoundationMatSlabs } from './slab-from-grid';
+import { buildFoundationMatSlabs, buildSlabBaysFromGuides } from './slab-from-grid';
 
 export interface SlabGridCommitDeps {
   readonly getLevelScene: (levelId: string) => SceneModel | null;
@@ -36,13 +40,15 @@ export interface SlabGridCommitDeps {
   readonly levelId: string;
   readonly sceneUnits: SceneUnits;
   readonly executeCommand: (command: ICommand) => void;
+  /** Read-surface του κανάβου — απαραίτητο ΜΟΝΟ για bays (floor/roof). */
+  readonly guideReader?: AxisGuideReader;
   /** Προαιρετικά param overrides (v1: defaults). */
   readonly overrides?: SlabParamOverrides;
 }
 
 export interface SlabGridCommitResult {
   readonly ok: boolean;
-  readonly reason?: 'no-footprint' | 'up-to-date';
+  readonly reason?: 'no-footprint' | 'up-to-date' | 'insufficient-guides';
   /** Νέες πλάκες που δημιουργήθηκαν. */
   readonly created: number;
   /** Components/φατνώματα που παραλείφθηκαν (υπήρχε ήδη grid-managed πλάκα). */
@@ -84,4 +90,64 @@ export function commitFoundationMatFromGuides(
   const adapter = new LevelSceneManagerAdapter(deps.getLevelScene, deps.setLevelScene, deps.levelId);
   deps.executeCommand(new CreateSlabsCommand(target.slabs, adapter));
   return { ok: true, created: target.slabs.length, skipped: 0 };
+}
+
+/** Τα bay-keys των ήδη grid-managed πλακών (floor/roof) του ίδιου kind (idempotent skip). */
+function existingGridBayKeys(
+  entities: readonly { type: string }[],
+  kind: SlabKind,
+): Set<string> {
+  const keys = new Set<string>();
+  for (const e of entities) {
+    if (!isSlabEntity(e) || e.kind !== kind || !hasGuideBindings(e)) continue;
+    const key = bayKeyFromBindings(e.guideBindings);
+    if (key) keys.add(key);
+  }
+  return keys;
+}
+
+/**
+ * Δημιούργησε **per-φάτνωμα** πλάκες (δάπεδα `kind='floor'` ή οροφές `kind='roof'`) από
+ * τον κάναβο, clipped στις παρειές δοκαριών & notched γύρω από κολώνες. Idempotent: skip
+ * φατνωμάτων με ήδη υπάρχουσα grid πλάκα ΙΔΙΟΥ kind (floor & roof συνυπάρχουν στο ίδιο
+ * φάτνωμα). `up-to-date` όταν κάθε φάτνωμα έχει ήδη πλάκα· `insufficient-guides` όταν
+ * λείπουν άξονες.
+ */
+export function commitSlabBaysFromGuides(
+  deps: SlabGridCommitDeps,
+  kind: 'floor' | 'roof',
+): SlabGridCommitResult {
+  if (!deps.guideReader) {
+    return { ok: false, reason: 'insufficient-guides', created: 0, skipped: 0 };
+  }
+  const entities = deps.getLevelScene(deps.levelId)?.entities ?? [];
+  const beams = entities.filter(isBeamEntity);
+  const columns = entities.filter(isColumnEntity);
+
+  const target = buildSlabBaysFromGuides(
+    deps.guideReader,
+    beams,
+    columns,
+    { ...deps.overrides, kind },
+    deps.levelId,
+    deps.sceneUnits,
+  );
+  if (!target.ok || target.slabs.length === 0) {
+    return { ok: false, reason: target.reason ?? 'insufficient-guides', created: 0, skipped: 0 };
+  }
+
+  const existingKeys = existingGridBayKeys(entities, kind);
+  const toCreate = target.slabs.filter((s) => {
+    const key = bayKeyFromBindings(s.guideBindings ?? []);
+    return key !== null && !existingKeys.has(key);
+  });
+  const skipped = target.slabs.length - toCreate.length;
+
+  if (toCreate.length === 0) {
+    return { ok: false, reason: 'up-to-date', created: 0, skipped };
+  }
+
+  const adapter = new LevelSceneManagerAdapter(deps.getLevelScene, deps.setLevelScene, deps.levelId);
+  deps.executeCommand(new CreateSlabsCommand(toCreate, adapter));
+  return { ok: true, created: toCreate.length, skipped };
 }

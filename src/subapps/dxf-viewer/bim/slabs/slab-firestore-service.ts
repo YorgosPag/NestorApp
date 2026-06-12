@@ -40,6 +40,7 @@ import type {
 } from '../types/slab-types';
 import type { SlabTypeParams } from '../types/bim-family-type';
 import type { BimValidation } from '../types/bim-base';
+import type { GuideBinding } from '../hosting/guide-binding-types';
 
 // ============================================================================
 // TYPES
@@ -66,6 +67,8 @@ export interface SlabDoc {
   readonly typeId?: string;
   /** ADR-412 — per-instance overrides of type-level slab params. */
   readonly typeOverrides?: Partial<SlabTypeParams>;
+  /** ADR-441 Slice GEN-SLAB — grid hosting bindings (born-bound πλάκες φατνώματος από κάναβο). */
+  readonly guideBindings?: readonly GuideBinding[];
   readonly createdAt: Timestamp;
   readonly createdBy: string;
   readonly updatedAt: Timestamp;
@@ -93,6 +96,8 @@ export interface SlabSaveInput {
   /** ADR-412 — family-type link (FK + per-instance overrides). */
   readonly typeId?: string;
   readonly typeOverrides?: Partial<SlabTypeParams>;
+  /** ADR-441 Slice GEN-SLAB — grid hosting bindings (born-bound πλάκες φατνώματος). */
+  readonly guideBindings?: readonly GuideBinding[];
 }
 
 export interface SlabUpdateInput {
@@ -100,6 +105,8 @@ export interface SlabUpdateInput {
   readonly validation?: BimValidation;
   readonly geometry?: SlabGeometry;
   readonly layerId?: string;
+  /** ADR-441 Slice GEN-SLAB — re-host bindings update (Firestore rejects undefined). */
+  readonly guideBindings?: readonly GuideBinding[];
 }
 
 // ============================================================================
@@ -168,6 +175,8 @@ export class SlabFirestoreService {
     if (input.layerId !== undefined) base.layerId = input.layerId;
     if (input.typeId !== undefined) base.typeId = input.typeId;
     if (input.typeOverrides !== undefined) base.typeOverrides = input.typeOverrides;
+    // ADR-441 Slice GEN-SLAB — persist grid hosting bindings (Firestore rejects undefined).
+    if (input.guideBindings !== undefined) base.guideBindings = input.guideBindings;
 
     await setDoc(ref, base);
     return base as unknown as SlabDoc;
@@ -183,6 +192,7 @@ export class SlabFirestoreService {
     if (patch.validation !== undefined) payload.validation = patch.validation;
     if (patch.geometry !== undefined) payload.geometry = patch.geometry;
     if (patch.layerId !== undefined) payload.layerId = patch.layerId;
+    if (patch.guideBindings !== undefined) payload.guideBindings = patch.guideBindings;
 
     await updateDoc(ref, payload);
   }
@@ -222,5 +232,7 @@ export function entityToSaveInput(entity: SlabEntity): SlabSaveInput {
     // `typeId`/overrides. Omitted (undefined) for untyped/legacy slabs.
     ...(entity.typeId !== undefined && { typeId: entity.typeId }),
     ...(entity.typeOverrides !== undefined && { typeOverrides: entity.typeOverrides }),
+    // ADR-441 Slice GEN-SLAB — carry grid hosting bindings into the persisted doc.
+    ...(entity.guideBindings !== undefined && { guideBindings: entity.guideBindings }),
   };
 }

@@ -16,6 +16,7 @@ import { lineweightToPx } from '../../config/lineweight-iso-catalog';
 import { resolveEntityLayerName, getLayer as getLayerStoreLayer } from '../../stores/LayerStore';
 // ADR-358 §5.6.bis Phase 10 — Layer Isolate runtime effects (zero-cost passthrough when inactive).
 import { getIsolateEffectsSnapshot } from '../../systems/isolate/IsolateEffectsStore';
+import { resolveEntityBimCategory } from '../../bim/visibility/resolve-entity-bim-category';
 import { dimOpacityToTransparency } from '../../services/layer-isolate-resolver';
 // Per-frame index builders (extracted Boy-Scout file-size split, 2026-05-19).
 import { buildDimensionLookup, buildSlabOpeningsBySlab, buildOpeningsByWall, transparencyToAlpha } from './dxf-renderer-frame-builders';
@@ -345,8 +346,18 @@ export class DxfRenderer {
   ): { colorHex: string; lineWidthPx: number; alpha: number } {
     const isolate = getIsolateEffectsSnapshot();
     if (!isolate.active || isolate.mode !== 'dim') return style;
-    const layerId = entity.layerId;
-    if (layerId && isolate.isolatedLayerIds.has(layerId)) return style;
+    // ADR-358 §5.6.bis — entity-scope isolate (Revit "Isolate Element") takes
+    // precedence; then category-scope ("Isolate Category"); then layer-scope.
+    // Keep the isolated members at full alpha, dim everything else.
+    if (isolate.isolatedEntityIds.size > 0) {
+      if (entity.id && isolate.isolatedEntityIds.has(entity.id)) return style;
+    } else if (isolate.isolatedCategories.size > 0) {
+      const cat = resolveEntityBimCategory(entity);
+      if (cat !== null && isolate.isolatedCategories.has(cat)) return style;
+    } else {
+      const layerId = entity.layerId;
+      if (layerId && isolate.isolatedLayerIds.has(layerId)) return style;
+    }
     const dimAlpha = transparencyToAlpha(dimOpacityToTransparency(isolate.dimOpacityPercent));
     return { ...style, alpha: Math.min(style.alpha, dimAlpha) };
   }
@@ -364,6 +375,19 @@ export class DxfRenderer {
     entity: DxfEntityUnion,
     layersById?: Record<string, SceneLayer>,
   ): boolean {
+    // ADR-358 §5.6.bis — entity-scope isolate in FREEZE mode hides every entity
+    // outside the isolated set. (Layer flags are NOT mutated for entity isolate,
+    // so the freeze must be enforced here.) Dim mode is handled by applyIsolateAlpha.
+    const isolate = getIsolateEffectsSnapshot();
+    if (isolate.active && isolate.mode === 'freeze' && isolate.isolatedEntityIds.size > 0) {
+      return !entity.id || !isolate.isolatedEntityIds.has(entity.id);
+    }
+    // Category-scope freeze: hide entities whose BimCategory ∉ the isolated set
+    // (raw DXF primitives resolve to null → hidden, like Revit "Isolate Category").
+    if (isolate.active && isolate.mode === 'freeze' && isolate.isolatedCategories.size > 0) {
+      const cat = resolveEntityBimCategory(entity);
+      return cat === null || !isolate.isolatedCategories.has(cat);
+    }
     if (!entity.layerId && !layersById) return false;
     const storeLayer = entity.layerId ? getLayerStoreLayer(entity.layerId) : null;
     if (storeLayer) {

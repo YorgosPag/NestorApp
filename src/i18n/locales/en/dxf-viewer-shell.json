@@ -1588,6 +1588,14 @@
           "label": "Foundation slab from grid",
           "tooltip": "A single slab-on-grade covering the whole building footprint, from the floor's walls/columns/beams (one command, one undo)."
         },
+        "slabFloorFromGrid": {
+          "label": "Floors from grid",
+          "tooltip": "One floor slab per grid bay, clipped to the beams' inner faces and notched around columns, bound so it follows (one command, one undo)."
+        },
+        "slabRoofFromGrid": {
+          "label": "Roofs from grid",
+          "tooltip": "One roof slab per grid bay, clipped to the beams' inner faces and notched around columns, bound so it follows (one command, one undo)."
+        },
         "archGroup": {
           "label": "Architectural",
           "tooltip": "Architectural envelope elements: roof and floor finish"

@@ -66,6 +66,34 @@ export function deriveLineSlots(
 }
 
 /**
+ * Re-derive το ορθογώνιο ενός grid-**φατνώματος** (επιφάνεια: slab floor/roof, ADR-441
+ * Slice GEN-SLAB) από τα τρέχοντα guide offsets. Διαβάζει και τα **4** slots (αριστερά/
+ * δεξιά X, κάτω/πάνω Y). Επιστρέφει το πλήρες ορθογώνιο (x0<x1, y0<y1) ή `null` αν
+ * λείπει/δεν επιλύεται κάποιος από τους 4 άξονες (δεν μπορεί να ξαναχτιστεί η επιφάνεια).
+ *
+ * Σε αντίθεση με τα γραμμικά/σημειακά slots, η επιφάνεια χρειάζεται ΟΛΟΥΣ τους άξονες
+ * ταυτόχρονα (δεν υπάρχει «κράτα το παλιό coordinate» — η πλάκα κινείται ως σύνολο).
+ */
+export function deriveRectBaySlots(
+  bindings: readonly GuideBinding[],
+  getOffset: GuideOffsetLookup,
+  scale: number,
+): { readonly x0: number; readonly x1: number; readonly y0: number; readonly y1: number } | null {
+  let sx: number | undefined, ex: number | undefined, sy: number | undefined, ey: number | undefined;
+  for (const b of bindings) {
+    const off = getOffset(b.guideId);
+    if (off === undefined) continue;
+    const target = off + extendInSceneUnits(b, scale);
+    if (b.slot === 'start-x') sx = target;
+    else if (b.slot === 'end-x') ex = target;
+    else if (b.slot === 'start-y') sy = target;
+    else if (b.slot === 'end-y') ey = target;
+  }
+  if (sx === undefined || ex === undefined || sy === undefined || ey === undefined) return null;
+  return { x0: Math.min(sx, ex), x1: Math.max(sx, ex), y0: Math.min(sy, ey), y1: Math.max(sy, ey) };
+}
+
+/**
  * Re-derive το center/position (σημειακά: pad/column) από τα τρέχοντα guide offsets.
  * Επιστρέφει νέα x/y ΜΟΝΟ αν άλλαξε κάτι, αλλιώς `null`.
  */
