@@ -88,9 +88,18 @@ export const MATERIAL_TEXTURE_MAP: Record<string, PbrTextureSlug> = {
   // ADR-417 — clay roof tile DNA material (κεραμίδι) → CC0 roof-tile PBR set.
   'mat-roof-tile':  'roof-tiles',
   // Element-type fallbacks.
+  // ADR-447 — δομικά/θεμελίωση = οπλισμένο σκυρόδεμα → concrete υφή by default
+  // (όπως ήδη οι κολόνες), ώστε στο realistic να μη χρειάζεται ο χρήστης να δηλώνει
+  // υλικό. Το beam ΔΙΟΡΘΩΘΗΚΕ από 'wood' (λάθος για RC δοκάρι) → 'concrete'.
   'elem-column': 'concrete',
-  'elem-beam':   'wood',
+  'elem-beam':   'concrete',
   'elem-slab':   'concrete',
+  // ADR-447 — θεμελίωση (πέδιλα/πεδιλοδοκοί/συνδετήριες + fallback): below-grade RC
+  // → concrete υφή (η εδαφόπλακα render-άρεται ως slab → elem-slab, ADR-436).
+  'elem-foundation':          'concrete',
+  'elem-foundation-pad':      'concrete',
+  'elem-foundation-strip':    'concrete',
+  'elem-foundation-tie-beam': 'concrete',
   // ADR-417 — pitched roof «νερά» render with clay roof tiles.
   'elem-roof':   'roof-tiles',
   // Stair components.

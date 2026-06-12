@@ -2123,8 +2123,10 @@
         "deleteTypeConfirm": "Delete & detach",
         "builtin": {
           "wall": {
-            "exterior": "Exterior",
-            "interior": "Interior",
+            "exterior": "Exterior 25cm",
+            "exterior-eps": "Exterior 25cm with insulation",
+            "exterior-20": "Exterior 20cm",
+            "interior": "Interior 10cm",
             "partition": "Partition",
             "parapet": "Parapet",
             "fence": "Fence"

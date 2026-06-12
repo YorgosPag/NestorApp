@@ -4,11 +4,15 @@
  * Pure builders, mirror του `beam-from-grid.ts`. Δύο εντελώς διαφορετικές
  * γεωμετρικές συμπεριφορές (αποφάσεις Revit-grade, ADR-441 §GEN-SLAB):
  *
- *  - **MAT (εδαφόπλακα / κοιτόστρωση)** → `buildFoundationMatSlabs`: ΕΝΑ ενιαίο
- *    `SlabEntity kind='foundation'` ανά building component, outline = το merged
- *    περίγραμμα κτιρίου (`computeBuildingFootprint().outerRings`). Revit slab-on-grade:
- *    μία κλειστή περίμετρος που καλύπτει όλο το αποτύπωμα — **ΔΕΝ** υποδιαιρείται από
- *    τον κάναβο, **δεν** φέρει grid bindings (ακολουθεί τα δομικά στοιχεία, όχι έναν άξονα).
+ *  - **MAT (εδαφόπλακα / δάπεδο επί εδάφους)** → `buildGroundBearingSlabs`: ΕΝΑ ενιαίο
+ *    **ground-bearing** `SlabEntity kind='ground'` ανά building component, outline = το
+ *    merged περίγραμμα κτιρίου (`computeBuildingFootprint().outerRings`). Revit
+ *    slab-on-grade: άνω παρειά στο **FFL (0)**, layered build-up (`createDefaultGroundBuildup`
+ *    SSoT — επίστρωση πάνω → φέρον σκυρόδεμα → στεγάνωση+κοιτόστρωση που πατά στο μπάζωμα),
+ *    ώστε το φέρον να είναι κάτω από το FFL χωρίς magic offset. Μία κλειστή περίμετρος που
+ *    καλύπτει όλο το αποτύπωμα — **ΔΕΝ** υποδιαιρείται από τον κάναβο, **δεν** φέρει grid
+ *    bindings (ακολουθεί τα δομικά στοιχεία, όχι έναν άξονα). (`kind='foundation'` = ξεχωριστή
+ *    θεμελιόπλακα/radier — ΔΕΝ είναι αυτό το εργαλείο.)
  *
  *  - **FLOOR / ROOF (δάπεδο / οροφή)** → Slice FLOOR (ξεχωριστή συνάρτηση εδώ, επόμενο
  *    slice): ΠΟΛΛΕΣ πλάκες, μία ανά φάτνωμα, born-bound στους 4 άξονες.
@@ -37,6 +41,7 @@ import {
   type SlabParamOverrides,
   type SceneUnits,
 } from '../../hooks/drawing/slab-completion';
+import { getDefaultSlabBuildupForKind } from '../types/slab-dna-types';
 import {
   computeBuildingFootprint,
   type BeamForFootprint,
@@ -64,15 +69,19 @@ export interface BuildSlabMatResult {
 }
 
 /**
- * Παράγει την/τις **ενιαία/ες** εδαφόπλακα/ες από το αποτύπωμα του κτιρίου.
+ * Παράγει την/τις **ενιαία/ες** εδαφόπλακα/ες (ground-bearing slab, δάπεδο επί εδάφους)
+ * από το αποτύπωμα του κτιρίου.
  *
- * Ένα `SlabEntity kind='foundation'` ανά συνεκτικό component του περιγράμματος (ένα για
+ * Ένα `SlabEntity kind='ground'` ανά συνεκτικό component του περιγράμματος (ένα για
  * συνεχόμενο κτίριο, περισσότερα για αποσπασμένα). Outline = το εξώτατο όριο του
- * component (holes → DEFER, βλ. module doc). `levelElevation` default per-kind (0 για
- * foundation) εκτός αν δοθεί override. Δεν φέρει `guideBindings` — η εδαφόπλακα ΔΕΝ
- * κρέμεται σε άξονα (ακολουθεί τα δομικά στοιχεία μέσω επανα-δημιουργίας, όχι follow-move).
+ * component (holes → DEFER, βλ. module doc). **Άνω παρειά στο FFL (0)** (Revit floor
+ * convention: το `levelElevation` default του `ground` = 0) + **SSoT layered build-up**
+ * (`getDefaultSlabBuildupForKind('ground')`: επίστρωση → φέρον → στεγάνωση+κοιτόστρωση)
+ * ώστε το φέρον σκυρόδεμα να κάθεται κάτω από το FFL χωρίς magic offset. Δεν φέρει
+ * `guideBindings` — η εδαφόπλακα ΔΕΝ κρέμεται σε άξονα (ακολουθεί τα δομικά στοιχεία μέσω
+ * επανα-δημιουργίας, όχι follow-move). Ο caller μπορεί να υπερισχύσει DNA/πάχος/στάθμη.
  */
-export function buildFoundationMatSlabs(
+export function buildGroundBearingSlabs(
   walls: readonly WallForEnvelope[],
   columns: readonly ColumnForEnvelope[],
   beams: readonly BeamForFootprint[],
@@ -92,7 +101,8 @@ export function buildFoundationMatSlabs(
     const result = completeSlabFromPolygonClicks(
       vertices,
       layerId,
-      { ...overrides, kind: 'foundation' },
+      // SSoT build-up + kind forced (caller μπορεί να αλλάξει DNA/πάχος/στάθμη πρώτα).
+      { dna: getDefaultSlabBuildupForKind('ground'), ...overrides, kind: 'ground' },
       sceneUnits,
     );
     if (result.ok) slabs.push(result.entity);

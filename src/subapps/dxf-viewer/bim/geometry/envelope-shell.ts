@@ -57,6 +57,7 @@ import {
   type SlabRegionFootprint,
 } from './footprint-region-classifier';
 import type { ColumnForEnvelope, EnvelopeChain, WallForEnvelope } from './envelope-perimeter';
+import { wallHasExteriorInsulation } from '../types/wall-dna-types';
 
 // ============================================================================
 // PUBLIC TYPES
@@ -125,12 +126,18 @@ interface ShellIds {
  * Effective μόνωση μιας ακμής. `'interior'` αφαιρεί (force-off). `'exterior'` ΔΕΝ
  * αγγίζει εδώ (γίνεται orphan wrap — αλλιώς ένας εξωτ. τοίχος θα μόνωνε και την
  * room όψη του). `undefined`/κορυφή τομής (`sourceEntityId===null`) → ρόλος ring.
+ *
+ * ADR-447 — ένας τοίχος που έχει ΗΔΗ μόνωση στο DNA του (τύπος «με θερμοπρόσοψη»)
+ * συμπεριφέρεται σαν `'interior'` force-off: η ETICS shell ΔΕΝ τον ξανατυλίγει
+ * (μηδέν διπλή μόνωση). `extractRuns` χειρίζεται τα κενά → ανοιχτά runs (ασφαλές).
  */
 function resolveEdgeInsulation(
   edge: FootprintEdge,
   ringInsulated: boolean,
   overrides: ReadonlyMap<string, EnvelopeFunction>,
+  selfInsulatedWallIds: ReadonlySet<string>,
 ): boolean {
+  if (edge.sourceEntityId && selfInsulatedWallIds.has(edge.sourceEntityId)) return false;
   if (edge.sourceEntityId && overrides.get(edge.sourceEntityId) === 'interior') return false;
   return ringInsulated;
 }
@@ -138,11 +145,12 @@ function resolveEdgeInsulation(
 function toRingEdges(
   classified: ClassifiedFootprintRing,
   overrides: ReadonlyMap<string, EnvelopeFunction>,
+  selfInsulatedWallIds: ReadonlySet<string>,
 ): ShellEdge[] {
   return classified.ring.edges.map((e) => ({
     a: e.a,
     b: e.b,
-    insulated: resolveEdgeInsulation(e, classified.insulated, overrides),
+    insulated: resolveEdgeInsulation(e, classified.insulated, overrides, selfInsulatedWallIds),
     sourceEntityId: e.sourceEntityId,
     sourceEntityType: e.sourceEntityType,
   }));
@@ -270,12 +278,13 @@ function buildRingChains(
   overrides: ReadonlyMap<string, EnvelopeFunction>,
   thicknessCanvas: number,
   sceneScale: number,
+  selfInsulatedWallIds: ReadonlySet<string>,
 ): EnvelopeChain[] {
   // outer ring → προς τα έξω· τρύπα (αίθριο) → προς το κενό κέντρο της.
   const outward = !classified.ring.isHole;
   const reference = polygonCentroid(classified.ring.points.points);
   const chains: EnvelopeChain[] = [];
-  for (const run of extractRuns(toRingEdges(classified, overrides))) {
+  for (const run of extractRuns(toRingEdges(classified, overrides, selfInsulatedWallIds))) {
     const chain = buildChain(
       runPolyline(run), run.closed, outward, reference, thicknessCanvas, runEntityIds(run.edges), sceneScale,
       runEdgeWallIds(run.edges),
@@ -293,11 +302,12 @@ function buildRingChains(
 function collectInsulatedIds(
   classification: FootprintClassificationResult,
   overrides: ReadonlyMap<string, EnvelopeFunction>,
+  selfInsulatedWallIds: ReadonlySet<string>,
 ): Set<string> {
   const ids = new Set<string>();
   for (const cr of classification.rings) {
     for (const e of cr.ring.edges) {
-      if (e.sourceEntityId && resolveEdgeInsulation(e, cr.insulated, overrides)) {
+      if (e.sourceEntityId && resolveEdgeInsulation(e, cr.insulated, overrides, selfInsulatedWallIds)) {
         ids.add(e.sourceEntityId);
       }
     }
@@ -397,11 +407,19 @@ export function computeEnvelopeShell(
     coverageThreshold: options?.coverageThreshold,
   });
 
+  // ADR-447 — walls whose DNA already carries exterior insulation (τύπος «με
+  // θερμοπρόσοψη») are the SSoT of their own insulation → the ETICS shell skips
+  // them (force-off, like an `'interior'` override) so it never double-insulates.
+  const selfInsulatedWallIds = new Set<string>();
+  for (const w of walls) {
+    if (wallHasExteriorInsulation(w.params.dna)) selfInsulatedWallIds.add(w.id);
+  }
+
   const chains: EnvelopeChain[] = [];
   for (const cr of classification.rings) {
-    chains.push(...buildRingChains(cr, overridesById, thicknessCanvas, sceneScale));
+    chains.push(...buildRingChains(cr, overridesById, thicknessCanvas, sceneScale, selfInsulatedWallIds));
   }
-  const insulatedIds = collectInsulatedIds(classification, overridesById);
+  const insulatedIds = collectInsulatedIds(classification, overridesById, selfInsulatedWallIds);
   chains.push(
     ...buildOrphanExteriorWraps(walls, columns, beams, overridesById, insulatedIds, thicknessCanvas, sceneScale, units),
   );

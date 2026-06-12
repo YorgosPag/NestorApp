@@ -2123,8 +2123,10 @@
         "deleteTypeConfirm": "Διαγραφή & αποσύνδεση",
         "builtin": {
           "wall": {
-            "exterior": "Εξωτερικός",
-            "interior": "Εσωτερικός",
+            "exterior": "Εξωτερικός 25cm",
+            "exterior-eps": "Εξωτερικός 25cm με θερμοπρόσοψη",
+            "exterior-20": "Εξωτερικός 20cm",
+            "interior": "Εσωτερικός 10cm",
             "partition": "Διαχωριστικός",
             "parapet": "Στηθαίο",
             "fence": "Περίφραξη"

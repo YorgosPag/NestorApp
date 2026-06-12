@@ -6,7 +6,7 @@
  * footprint → ok:false no-footprint (όχι throw), και ότι ΔΕΝ φέρει guideBindings.
  */
 
-import { buildFoundationMatSlabs, buildSlabBaysFromGuides } from '../slab-from-grid';
+import { buildGroundBearingSlabs, buildSlabBaysFromGuides } from '../slab-from-grid';
 import { type AxisGuideReader } from '../../foundations/foundation-from-grid';
 import type { Guide } from '../../../systems/guides/guide-types';
 import type { WallForEnvelope } from '../../geometry/envelope-perimeter';
@@ -48,21 +48,30 @@ function square(prefix: string, ox: number, oy: number, size: number): WallForEn
   ];
 }
 
-describe('buildFoundationMatSlabs (εδαφόπλακα)', () => {
-  it('τετράγωνο τοίχων → ΜΙΑ ενιαία πλάκα kind=foundation', () => {
-    const result = buildFoundationMatSlabs(square('w', 0, 0, 8000), [], [], {}, '0', 'mm');
+describe('buildGroundBearingSlabs (εδαφόπλακα = ground-bearing slab)', () => {
+  it('τετράγωνο τοίχων → ΜΙΑ ενιαία πλάκα kind=ground στο FFL (0)', () => {
+    const result = buildGroundBearingSlabs(square('w', 0, 0, 8000), [], [], {}, '0', 'mm');
     expect(result.ok).toBe(true);
     expect(result.slabs).toHaveLength(1);
-    expect(result.slabs[0].kind).toBe('foundation');
-    expect(result.slabs[0].params.kind).toBe('foundation');
-    // levelElevation default για foundation = 0 (ADR-369 §2.1).
+    expect(result.slabs[0].kind).toBe('ground');
+    expect(result.slabs[0].params.kind).toBe('ground');
+    // Άνω παρειά στο FFL (0) — Revit floor convention· το φέρον είναι κάτω (DNA build-up).
     expect(result.slabs[0].params.levelElevation).toBe(0);
     // Δεν κρέμεται σε άξονα — μηδέν grid bindings.
     expect(result.slabs[0].guideBindings).toBeUndefined();
   });
 
+  it('φέρει το SSoT ground build-up (DNA: επίστρωση+φέρον+κοιτόστρωση)', () => {
+    const result = buildGroundBearingSlabs(square('w', 0, 0, 8000), [], [], {}, '0', 'mm');
+    const params = result.slabs[0].params;
+    expect(params.dna).toBeDefined();
+    // Πάχος = dna.totalThickness (SSoT, no double-entry): tile+screed+xps+rc+wp+blinding.
+    expect(params.thickness).toBe(params.dna!.totalThickness);
+    expect(params.thickness).toBeGreaterThan(200); // πολυστρωματικό, παχύτερο από bare RC
+  });
+
   it('outline καλύπτει το αποτύπωμα (≥4 κορυφές, εντός των ορίων)', () => {
-    const result = buildFoundationMatSlabs(square('w', 0, 0, 8000), [], [], {}, '0', 'mm');
+    const result = buildGroundBearingSlabs(square('w', 0, 0, 8000), [], [], {}, '0', 'mm');
     const verts = result.slabs[0].params.outline.vertices;
     expect(verts.length).toBeGreaterThanOrEqual(4);
     for (const v of verts) {
@@ -76,26 +85,21 @@ describe('buildFoundationMatSlabs (εδαφόπλακα)', () => {
 
   it('δύο αποσπασμένα κτίρια → ΔΥΟ ξεχωριστές εδαφόπλακες', () => {
     const buildings = [...square('a', 0, 0, 4000), ...square('b', 20000, 0, 4000)];
-    const result = buildFoundationMatSlabs(buildings, [], [], {}, '0', 'mm');
+    const result = buildGroundBearingSlabs(buildings, [], [], {}, '0', 'mm');
     expect(result.slabs).toHaveLength(2);
-    expect(result.slabs.every((s) => s.kind === 'foundation')).toBe(true);
+    expect(result.slabs.every((s) => s.kind === 'ground')).toBe(true);
   });
 
   it('μηδέν δομικά στοιχεία → ok:false no-footprint (όχι throw)', () => {
-    const result = buildFoundationMatSlabs([], [], [], {}, '0', 'mm');
+    const result = buildGroundBearingSlabs([], [], [], {}, '0', 'mm');
     expect(result.ok).toBe(false);
     expect(result.reason).toBe('no-footprint');
     expect(result.slabs).toHaveLength(0);
   });
 
-  it('thickness override περνά στα params', () => {
-    const result = buildFoundationMatSlabs(square('w', 0, 0, 8000), [], [], { thickness: 500 }, '0', 'mm');
-    expect(result.slabs[0].params.thickness).toBe(500);
-  });
-
-  it('levelElevation override → η εδαφόπλακα κάθεται στη στάθμη θεμελίωσης (όχι 0)', () => {
-    const result = buildFoundationMatSlabs(square('w', 0, 0, 8000), [], [], { levelElevation: -1000 }, '0', 'mm');
-    expect(result.slabs[0].params.levelElevation).toBe(-1000);
+  it('levelElevation override υπερισχύει (caller ελέγχει στάθμη)', () => {
+    const result = buildGroundBearingSlabs(square('w', 0, 0, 8000), [], [], { levelElevation: -250 }, '0', 'mm');
+    expect(result.slabs[0].params.levelElevation).toBe(-250);
   });
 });
 

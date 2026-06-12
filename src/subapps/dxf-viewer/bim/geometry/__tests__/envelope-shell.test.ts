@@ -17,6 +17,7 @@ import type { WallParams } from '../../types/wall-types';
 import type { ColumnParams } from '../../types/column-types';
 import type { BeamParams } from '../../types/beam-types';
 import type { EnvelopeFunction, ThermalEnvelopeSpec } from '../../types/thermal-envelope-types';
+import { createExterior25EpsDna } from '../../types/wall-dna-types';
 
 // ─── Builders ────────────────────────────────────────────────────────────────
 
@@ -195,6 +196,36 @@ describe('computeEnvelopeShell — override interior breaks the band', () => {
     const r = computeEnvelopeShell(walls, [], [], spec(), overrides([['w1', 'interior'], ['w3', 'interior']]), slabs);
     expect(r.chains.length).toBeGreaterThanOrEqual(2);
     expect(r.chains.every((c) => !c.closed)).toBe(true);
+  });
+});
+
+// ─── 5b. ADR-447 — wall with DNA exterior insulation → excluded (dedup) ────────
+
+describe('computeEnvelopeShell — ADR-447 self-insulated wall (DNA-EPS) dedup', () => {
+  const slabs = [coverSlab(0, 0, 10000)];
+
+  /** A square whose wall `w1` carries the «25cm με θερμοπρόσοψη» EPS DNA. */
+  function squareWithInsulatedW1(): WallForEnvelope[] {
+    const walls = square('w', 0, 0, 10000);
+    const epsDna = createExterior25EpsDna();
+    return walls.map((w) =>
+      w.id === 'w1' ? { ...w, params: { ...w.params, dna: epsDna } } : w,
+    );
+  }
+
+  it('the DNA-insulated wall is force-off (like an "interior" override) — no double insulation', () => {
+    // No envelopeFunction overrides at all: the dedup is driven purely by the DNA.
+    const r = computeEnvelopeShell(squareWithInsulatedW1(), [], [], spec(), NO_OVERRIDES, slabs);
+    const wallIds = new Set(r.chains.flatMap((c) => c.wallIds));
+    expect(wallIds.has('w1')).toBe(false); // already insulated via its type → shell skips it
+    expect(r.chains.every((c) => c.closed === false)).toBe(true); // ring split into open runs
+    expect(r.primaryChain).toBeNull();
+  });
+
+  it('a plain (non-insulated) square still wraps fully (control)', () => {
+    const r = computeEnvelopeShell(square('w', 0, 0, 10000), [], [], spec(), NO_OVERRIDES, slabs);
+    expect(r.chains).toHaveLength(1);
+    expect(r.chains[0].closed).toBe(true);
   });
 });
 

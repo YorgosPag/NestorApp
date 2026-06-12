@@ -6,7 +6,11 @@
 
 import { resolveAutoWallTypeId } from '../wall-type-auto-assign';
 import { getBuiltInWallTypeId } from '../built-in-types';
-import { getDefaultDnaForCategory } from '../../types/wall-dna-types';
+import {
+  getDefaultDnaForCategory,
+  createExterior25EpsDna,
+  createExterior20Dna,
+} from '../../types/wall-dna-types';
 import type { WallCategory } from '../../types/wall-types';
 
 const CATEGORIES: readonly WallCategory[] = [
@@ -57,6 +61,21 @@ describe('resolveAutoWallTypeId', () => {
     expect(
       resolveAutoWallTypeId({ category: 'exterior', thickness: dna.totalThickness, dna: customised }),
     ).toBeUndefined();
+  });
+
+  // ── ADR-447 — multi-type-per-category: variant DNAs link to their own built-in ──
+  it('links a «25cm με θερμοπρόσοψη» wall (EPS DNA) to the exterior-eps built-in', () => {
+    const dna = createExterior25EpsDna();
+    expect(
+      resolveAutoWallTypeId({ category: 'exterior', thickness: dna.totalThickness, dna }),
+    ).toBe(getBuiltInWallTypeId('exterior-eps'));
+  });
+
+  it('links a «20cm» exterior wall to the exterior-20 built-in', () => {
+    const dna = createExterior20Dna();
+    expect(
+      resolveAutoWallTypeId({ category: 'exterior', thickness: dna.totalThickness, dna }),
+    ).toBe(getBuiltInWallTypeId('exterior-20'));
   });
 
   it('returns undefined when category is missing (legacy params)', () => {

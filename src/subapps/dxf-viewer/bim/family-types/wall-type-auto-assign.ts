@@ -29,7 +29,7 @@
  */
 
 import { dequal } from 'dequal';
-import { getDefaultDnaForCategory } from '../types/wall-dna-types';
+import { WALL_TYPE_SEEDS } from '../types/wall-dna-types';
 import type { WallParams } from '../types/wall-types';
 import { getBuiltInWallTypeId } from './built-in-types';
 
@@ -47,10 +47,16 @@ export function resolveAutoWallTypeId(
   params: Pick<WallParams, 'category' | 'thickness' | 'dna'>,
 ): string | undefined {
   // Manual wall (explicit thickness → no DNA) or legacy params missing a
-  // category cannot match a category default — leave ad-hoc.
+  // category cannot match a built-in seed — leave ad-hoc.
   if (!params.category || !params.dna) return undefined;
-  const def = getDefaultDnaForCategory(params.category);
-  if (params.thickness !== def.totalThickness) return undefined;
-  if (!dequal(params.dna, def)) return undefined;
-  return getBuiltInWallTypeId(params.category);
+  // ADR-447 — match against ALL built-in wall-type seeds of this category (not
+  // just the category default), so a wall placed from the «25cm με θερμοπρόσοψη»
+  // / «20cm» variants links to its own built-in. First byte-equal seed wins.
+  for (const seed of WALL_TYPE_SEEDS) {
+    if (seed.category !== params.category) continue;
+    if (params.thickness !== seed.dna.totalThickness) continue;
+    if (!dequal(params.dna, seed.dna)) continue;
+    return getBuiltInWallTypeId(seed.key);
+  }
+  return undefined;
 }

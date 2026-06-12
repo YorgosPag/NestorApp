@@ -1,17 +1,16 @@
 /**
  * ADR-441 Slice GEN-SLAB — `slab-grid-commit` orchestrator tests.
  *
- * MAT: κενή σκηνή με footprint → 1 εδαφόπλακα· re-run → up-to-date (υπάρχει ήδη
- * foundation slab). FLOOR bays: κενή → all create· re-run → up-to-date· partial →
- * μόνο τα missing φατνώματα. Idempotent key = `bayKeyFromBindings` (coordinate-free).
+ * MAT: κενή σκηνή με footprint → 1 εδαφόπλακα (ground-bearing)· re-run → up-to-date
+ * (υπάρχει ήδη `kind='ground'`). FLOOR bays: κενή → all create· re-run → up-to-date·
+ * partial → μόνο τα missing φατνώματα. Idempotent key = `bayKeyFromBindings`.
  */
 
 import {
   commitFoundationMatFromGuides,
   commitSlabBaysFromGuides,
-  deriveFoundationMatLevelMm,
 } from '../slab-grid-commit';
-import { buildFoundationMatSlabs, buildSlabBaysFromGuides } from '../slab-from-grid';
+import { buildGroundBearingSlabs, buildSlabBaysFromGuides } from '../slab-from-grid';
 import { type AxisGuideReader } from '../../foundations/foundation-from-grid';
 import type { Guide } from '../../../systems/guides/guide-types';
 import type { WallForEnvelope } from '../../geometry/envelope-perimeter';
@@ -73,7 +72,7 @@ describe('commitFoundationMatFromGuides — idempotent (εδαφόπλακα)', 
   });
 
   it('re-run με υπάρχουσα εδαφόπλακα → up-to-date, 0 commands', () => {
-    const mat = buildFoundationMatSlabs(square(0, 0, 8000), [], [], {}, '0', 'mm');
+    const mat = buildGroundBearingSlabs(square(0, 0, 8000), [], [], {}, '0', 'mm');
     const scene = sceneWith([...(square(0, 0, 8000) as unknown as Entity[]), ...(mat.slabs as unknown as Entity[])]);
     const executed: ICommand[] = [];
     const result = commitFoundationMatFromGuides({
@@ -92,30 +91,6 @@ describe('commitFoundationMatFromGuides — idempotent (εδαφόπλακα)', 
     });
     expect(result.ok).toBe(false);
     expect(result.reason).toBe('no-footprint');
-  });
-});
-
-describe('deriveFoundationMatLevelMm — στάθμη θεμελίωσης', () => {
-  const foundation = (kind: 'strip' | 'pad' | 'tie-beam', topMm: number) =>
-    ({ type: 'foundation', params: { kind, topElevationMm: topMm } } as unknown as Entity);
-
-  it('top των πεδιλοδοκών (strip) → η εδαφόπλακα πάει εκεί, όχι στο 0', () => {
-    const entities = [foundation('strip', -1000), foundation('strip', -1000)] as unknown as { type: string }[];
-    expect(deriveFoundationMatLevelMm(entities)).toBe(-1000);
-  });
-
-  it('οι συνδετήριες (tie-beam, ψηλότερα) ΕΞΑΙΡΟΥΝΤΑΙ — κρατά το footing top', () => {
-    const entities = [foundation('strip', -1000), foundation('tie-beam', -500)] as unknown as { type: string }[];
-    expect(deriveFoundationMatLevelMm(entities)).toBe(-1000);
-  });
-
-  it('διαφορετικά βάθη footings → min (βαθύτερο top)', () => {
-    const entities = [foundation('pad', -1200), foundation('strip', -1000)] as unknown as { type: string }[];
-    expect(deriveFoundationMatLevelMm(entities)).toBe(-1200);
-  });
-
-  it('μηδέν footings → SSoT fallback (defaultFoundationTopElevationMm strip = -1000)', () => {
-    expect(deriveFoundationMatLevelMm([])).toBe(-1000);
   });
 });
 

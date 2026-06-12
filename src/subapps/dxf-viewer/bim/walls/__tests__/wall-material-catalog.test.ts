@@ -10,7 +10,26 @@ import {
   WALL_MATERIAL_CUSTOM_ID,
   classifyWallMaterial,
   defaultWallMaterialCatalog,
+  isInsulationMaterial,
 } from '../wall-material-catalog';
+
+describe('ADR-447 — isInsulationMaterial', () => {
+  it('true for ETICS-class insulation (prefix-tolerant)', () => {
+    expect(isInsulationMaterial('mat-eps')).toBe(true);
+    expect(isInsulationMaterial('mat-eps-graphite')).toBe(true);
+    expect(isInsulationMaterial('mat-xps')).toBe(true);
+    expect(isInsulationMaterial('mat-mineral-wool')).toBe(true);
+    expect(isInsulationMaterial('mat-plaster-thermal')).toBe(true);
+  });
+
+  it('false for structural / finish / plaster materials', () => {
+    expect(isInsulationMaterial('mat-brick-masonry')).toBe(false);
+    expect(isInsulationMaterial('mat-concrete-c25')).toBe(false);
+    expect(isInsulationMaterial('mat-plaster-int')).toBe(false);
+    expect(isInsulationMaterial('mat-plaster-ext')).toBe(false);
+    expect(isInsulationMaterial(undefined)).toBe(false);
+  });
+});
 
 describe('wall-material-catalog (ADR-363 Phase 1D)', () => {
   it('1. exposes all preset IDs in the options list', () => {

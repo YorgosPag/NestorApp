@@ -84,6 +84,34 @@ export function classifyWallMaterial(
 }
 
 // ============================================================================
+// INSULATION CLASSIFICATION — ADR-447 (ETICS dedup vs ADR-396 building envelope)
+// ============================================================================
+
+/**
+ * ADR-447 — ETICS-class insulation material prefixes (διογκωμένη/εξηλασμένη
+ * πολυστερίνη, ορυκτοβάμβακας, θερμομονωτικό επίχρισμα). Prefix-based so `mat-eps`
+ * covers `mat-eps-graphite` too, and custom `mat-eps-*` ids still classify as
+ * insulation. SSoT for {@link isInsulationMaterial}.
+ */
+export const INSULATION_MATERIAL_PREFIXES = [
+  'mat-eps',
+  'mat-xps',
+  'mat-mineral-wool',
+  'mat-plaster-thermal',
+] as const;
+
+/**
+ * ADR-447 — true when `materialId` is an ETICS-class thermal insulation material.
+ * Used by {@link wallHasExteriorInsulation} (wall-dna-types) so a wall whose DNA
+ * already carries exterior insulation is excluded from the ADR-396 auto-envelope
+ * wrap (no double insulation).
+ */
+export function isInsulationMaterial(materialId: string | undefined): boolean {
+  if (!materialId) return false;
+  return INSULATION_MATERIAL_PREFIXES.some((prefix) => materialId.startsWith(prefix));
+}
+
+// ============================================================================
 // THERMAL CONDUCTIVITY (λ) — ADR-396 P8 SSoT (§3.2b)
 // ============================================================================
 

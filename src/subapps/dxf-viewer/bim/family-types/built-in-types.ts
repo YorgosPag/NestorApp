@@ -36,7 +36,7 @@
  * @see docs/centralized-systems/reference/adrs/ADR-412-bim-family-types.md
  */
 
-import { getDefaultDnaForCategory } from '../types/wall-dna-types';
+import { WALL_TYPE_SEEDS, type WallTypeSeed } from '../types/wall-dna-types';
 import { getDefaultSlabBuildupForKind } from '../types/slab-dna-types';
 import { getRoofBuildupForKey, ROOF_BUILDUP_KEYS, type RoofBuildupKey } from '../types/roof-buildup';
 import {
@@ -45,7 +45,6 @@ import {
   isGlazedKind,
   type OpeningKind,
 } from '../types/opening-types';
-import type { WallCategory } from '../types/wall-types';
 import type { SlabKind } from '../types/slab-types';
 import type {
   BimFamilyType,
@@ -65,14 +64,16 @@ import type { SaveTypeInput } from './bim-family-type-service';
 const BUILTIN_ID_PREFIX = 'bimftype-builtin';
 
 /**
- * The deterministic synthetic id of the built-in wall family type for a
- * category. SSoT for the id derivation — the catalog builder
- * ({@link buildWallType}) AND the auto-assign policy
- * (`wall-type-auto-assign.ts`, used at wall creation + load migration) both go
- * through here so the string is declared exactly once (N.0.2).
+ * The deterministic synthetic id of a built-in wall family type for a seed `key`
+ * (ADR-447). SSoT for the id derivation — the catalog builder ({@link buildWallType})
+ * AND the auto-assign policy (`wall-type-auto-assign.ts`) both go through here so
+ * the string is declared exactly once (N.0.2). For a category's PRIMARY seed the
+ * key equals the category (`'exterior'`), so the id is byte-identical to the
+ * pre-ADR-447 single-per-category id → existing persisted walls keep resolving.
+ * Variant seeds use suffixed keys (`'exterior-eps'`, `'exterior-20'`).
  */
-export function getBuiltInWallTypeId(category: WallCategory): string {
-  return `${BUILTIN_ID_PREFIX}-wall-${category}`;
+export function getBuiltInWallTypeId(key: string): string {
+  return `${BUILTIN_ID_PREFIX}-wall-${key}`;
 }
 
 // ─── Built-in stair seed constants (mm) ──────────────────────────────────────
@@ -96,32 +97,19 @@ const RAD_TO_DEG = 180 / Math.PI;
 
 // ─── Wall built-ins ───────────────────────────────────────────────────────────
 
-/**
- * All wall categories in a fixed order — drives the one-built-in-per-category
- * catalog deterministically.
- */
-const WALL_CATEGORIES: readonly WallCategory[] = [
-  'exterior',
-  'interior',
-  'partition',
-  'parapet',
-  'fence',
-] as const;
-
 function buildWallType(
-  category: WallCategory,
+  seed: WallTypeSeed,
   companyId: string,
 ): BimFamilyType<'wall'> {
-  const dna = getDefaultDnaForCategory(category);
   const typeParams: WallTypeParams = {
-    category,
-    thickness: dna.totalThickness,
-    dna,
+    category: seed.category,
+    thickness: seed.dna.totalThickness,
+    dna: seed.dna,
   };
   return {
-    id: getBuiltInWallTypeId(category),
+    id: getBuiltInWallTypeId(seed.key),
     category: 'wall',
-    name: `builtin.wall.${category}`,
+    name: `builtin.wall.${seed.key}`,
     scope: 'company',
     origin: 'built-in',
     typeParams,
@@ -131,14 +119,15 @@ function buildWallType(
 }
 
 /**
- * The factory wall family types — exactly one per {@link WallCategory} (5).
- * Each derives its `thickness` + `dna` from the wall-DNA SSoT, so the built-in
- * can never drift from the default cross-section it is named after.
+ * The factory wall family types — ADR-447 Revit «Basic Wall» catalog: multiple
+ * types per category (exterior 25cm / 25cm+θερμοπρόσοψη / 20cm + interior/partition/
+ * parapet/fence). Each derives its `thickness` + `dna` from the `WALL_TYPE_SEEDS`
+ * SSoT, so a built-in can never drift from the cross-section it is named after.
  */
 export function getBuiltInWallTypes(
   companyId: string,
 ): readonly BimFamilyType<'wall'>[] {
-  return WALL_CATEGORIES.map((category) => buildWallType(category, companyId));
+  return WALL_TYPE_SEEDS.map((seed) => buildWallType(seed, companyId));
 }
 
 // ─── Slab built-ins ───────────────────────────────────────────────────────────

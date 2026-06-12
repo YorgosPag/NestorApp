@@ -4,8 +4,8 @@
  * Γέφυρα ανάμεσα στους pure builders (`slab-from-grid.ts`) και στο command history.
  * **Idempotent create** (ξανα-πάτημα = no-op), mirror του `beam-grid-commit.ts`.
  *
- * MAT (εδαφόπλακα): χτίζει την ενιαία πλάκα από το αποτύπωμα κτιρίου· idempotent skip
- * όταν υπάρχει ήδη `kind='foundation'` πλάκα στον όροφο (μία εδαφόπλακα = ένα slab-on-grade).
+ * MAT (εδαφόπλακα = ground-bearing slab): χτίζει την ενιαία πλάκα από το αποτύπωμα κτιρίου·
+ * idempotent skip όταν υπάρχει ήδη `kind='ground'` πλάκα στον όροφο (μία εδαφόπλακα/όροφο).
  *
  * FLOOR/ROOF bays (per-φάτνωμα): Slice FLOOR — προστίθεται εδώ με `bayKeyFromBindings`
  * idempotent set (4 axis-ids), ίδιο σκελετό με τα δοκάρια.
@@ -29,25 +29,10 @@ import {
 import { hasGuideBindings } from '../hosting/guide-binding-types';
 import type { AxisGuideReader } from '../foundations/foundation-from-grid';
 import { bayKeyFromBindings } from '../foundations/foundation-grid-segments';
-import { sceneFoundationTopMm } from '../foundations/foundation-level';
-import { defaultFoundationTopElevationMm } from '../types/foundation-types';
 import type { SlabKind } from '../types/slab-types';
 import type { SlabParamOverrides } from '../../hooks/drawing/slab-completion';
 import type { SceneUnits } from '../../utils/scene-units';
-import { buildFoundationMatSlabs, buildSlabBaysFromGuides } from './slab-from-grid';
-
-/**
- * Στάθμη άνω παρειάς της εδαφόπλακας = top των **πεδιλών/πεδιλοδοκών** (footings) της
- * σκηνής, ώστε η γενική κοιτόστρωση να κάθεται στη ΣΤΑΘΜΗ ΘΕΜΕΛΙΩΣΗΣ (κάτω από το
- * δάπεδο ισογείου, ΟΧΙ coplanar μαζί του). Min topElevationMm = το βαθύτερο footing top.
- * Οι συνδετήριες (tie-beam, ψηλότερα) εξαιρούνται — η κοιτόστρωση πάει με τα footings.
- * Fallback (μηδέν footings στη σκηνή): SSoT `defaultFoundationTopElevationMm('strip')`.
- */
-export function deriveFoundationMatLevelMm(entities: readonly { type: string }[]): number {
-  // SSoT scene-read (sceneFoundationTopMm)· εδαφόπλακα ΠΑΝΤΑ έχει στάθμη → fallback
-  // στο SSoT default όταν δεν υπάρχουν ακόμη footings στη σκηνή.
-  return sceneFoundationTopMm(entities) ?? defaultFoundationTopElevationMm('strip');
-}
+import { buildGroundBearingSlabs, buildSlabBaysFromGuides } from './slab-from-grid';
 
 export interface SlabGridCommitDeps {
   readonly getLevelScene: (levelId: string) => SceneModel | null;
@@ -71,17 +56,18 @@ export interface SlabGridCommitResult {
 }
 
 /**
- * Δημιούργησε την **ενιαία εδαφόπλακα** από το αποτύπωμα του κτιρίου. No-op
- * (`up-to-date`) όταν υπάρχει ήδη `kind='foundation'` πλάκα· `no-footprint` όταν
- * λείπουν δομικά στοιχεία (μηδέν τοίχοι/κολώνες/δοκάρια).
+ * Δημιούργησε την **ενιαία εδαφόπλακα** (ground-bearing slab, δάπεδο επί εδάφους) από το
+ * αποτύπωμα του κτιρίου. Άνω παρειά στο FFL (0) + layered build-up (SSoT· φέρον κάτω από
+ * το FFL). No-op (`up-to-date`) όταν υπάρχει ήδη `kind='ground'` πλάκα· `no-footprint`
+ * όταν λείπουν δομικά στοιχεία (μηδέν τοίχοι/κολώνες/δοκάρια).
  */
 export function commitFoundationMatFromGuides(
   deps: SlabGridCommitDeps,
 ): SlabGridCommitResult {
   const entities = deps.getLevelScene(deps.levelId)?.entities ?? [];
 
-  // Idempotent: μία εδαφόπλακα ανά όροφο (Revit slab-on-grade). Υπάρχει ήδη → skip.
-  const existingMat = entities.filter(isSlabEntity).some((s) => s.kind === 'foundation');
+  // Idempotent: μία εδαφόπλακα ανά όροφο (ground-bearing). Υπάρχει ήδη → skip.
+  const existingMat = entities.filter(isSlabEntity).some((s) => s.kind === 'ground');
   if (existingMat) {
     return { ok: false, reason: 'up-to-date', created: 0, skipped: 1 };
   }
@@ -90,17 +76,11 @@ export function commitFoundationMatFromGuides(
   const columns = entities.filter(isColumnEntity);
   const beams = entities.filter(isBeamEntity);
 
-  // Η εδαφόπλακα κάθεται στη στάθμη θεμελίωσης (top των footings), όχι στο δάπεδο
-  // ισογείου — εκτός αν ο caller δώσει ρητό override (Revit-grade SSoT, ADR-441).
-  const overrides: SlabParamOverrides = {
-    levelElevation: deriveFoundationMatLevelMm(entities),
-    ...deps.overrides,
-  };
-  const target = buildFoundationMatSlabs(
+  const target = buildGroundBearingSlabs(
     walls,
     columns,
     beams,
-    overrides,
+    deps.overrides ?? {},
     deps.levelId,
     deps.sceneUnits,
   );

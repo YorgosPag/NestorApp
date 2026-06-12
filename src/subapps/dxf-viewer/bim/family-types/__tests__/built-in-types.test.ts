@@ -11,8 +11,9 @@ import {
   getBuiltInSlabTypeId,
   getBuiltInStairTypes,
   getBuiltInWallTypes,
+  getBuiltInOpeningTypes,
 } from '../built-in-types';
-import { getDefaultDnaForCategory } from '../../types/wall-dna-types';
+import { getDefaultDnaForCategory, WALL_TYPE_SEEDS } from '../../types/wall-dna-types';
 import { getDefaultSlabBuildupForKind } from '../../types/slab-dna-types';
 import type { WallCategory } from '../../types/wall-types';
 import type { SlabKind } from '../../types/slab-types';
@@ -29,22 +30,31 @@ const ALL_WALL_CATEGORIES: readonly WallCategory[] = [
 ];
 
 describe('getBuiltInWallTypes', () => {
-  it('produces exactly one built-in per wall category (5)', () => {
+  it('produces one built-in per WALL_TYPE_SEED (ADR-447: 7, multi-type per category)', () => {
     const walls = getBuiltInWallTypes(COMPANY_ID);
-    expect(walls).toHaveLength(5);
+    expect(walls).toHaveLength(WALL_TYPE_SEEDS.length);
+    expect(walls).toHaveLength(7);
 
     const categories = walls.map((w) => w.typeParams.category);
     expect(new Set(categories)).toEqual(new Set(ALL_WALL_CATEGORIES));
   });
 
-  it('derives thickness + dna from the wall-DNA SSoT per category', () => {
+  it('derives thickness + dna from the WALL_TYPE_SEEDS SSoT (ADR-447)', () => {
     const walls = getBuiltInWallTypes(COMPANY_ID);
-    for (const wall of walls) {
-      const expectedDna = getDefaultDnaForCategory(wall.typeParams.category);
+    expect(walls).toHaveLength(WALL_TYPE_SEEDS.length);
+    walls.forEach((wall, i) => {
+      const seed = WALL_TYPE_SEEDS[i];
       expect(wall.typeParams.dna).toBeDefined();
-      expect(wall.typeParams.thickness).toBe(expectedDna.totalThickness);
-      expect(wall.typeParams.dna?.totalThickness).toBe(expectedDna.totalThickness);
-    }
+      expect(wall.typeParams.category).toBe(seed.category);
+      expect(wall.typeParams.thickness).toBe(seed.dna.totalThickness);
+      expect(wall.typeParams.dna?.totalThickness).toBe(seed.dna.totalThickness);
+    });
+  });
+
+  it('the PRIMARY seed per category keeps the legacy category default DNA', () => {
+    // exterior primary (key='exterior') === getDefaultDnaForCategory('exterior').
+    const exterior = getBuiltInWallTypes(COMPANY_ID).find((w) => w.name === 'builtin.wall.exterior');
+    expect(exterior?.typeParams.dna?.totalThickness).toBe(getDefaultDnaForCategory('exterior').totalThickness);
   });
 
   it('marks every wall built-in origin=built-in, scope=company, ownerId=system', () => {
@@ -63,6 +73,8 @@ describe('getBuiltInWallTypes', () => {
     expect(names).toEqual(
       [
         'builtin.wall.exterior',
+        'builtin.wall.exterior-eps',
+        'builtin.wall.exterior-20',
         'builtin.wall.fence',
         'builtin.wall.interior',
         'builtin.wall.parapet',
@@ -154,17 +166,21 @@ describe('getBuiltInStairTypes', () => {
 });
 
 describe('getAllBuiltInTypes', () => {
-  it('concatenates wall + slab + roof + stair built-ins', () => {
+  it('concatenates wall + slab + roof + opening + stair built-ins', () => {
     const all = getAllBuiltInTypes(COMPANY_ID);
     const walls = getBuiltInWallTypes(COMPANY_ID);
     const slabs = getBuiltInSlabTypes(COMPANY_ID);
     const roofs = getBuiltInRoofTypes(COMPANY_ID);
+    const openings = getBuiltInOpeningTypes(COMPANY_ID);
     const stairs = getBuiltInStairTypes(COMPANY_ID);
 
-    expect(all).toHaveLength(walls.length + slabs.length + roofs.length + stairs.length);
+    expect(all).toHaveLength(
+      walls.length + slabs.length + roofs.length + openings.length + stairs.length,
+    );
     expect(all.some((t) => t.category === 'wall')).toBe(true);
     expect(all.some((t) => t.category === 'slab')).toBe(true);
     expect(all.some((t) => t.category === 'roof')).toBe(true);
+    expect(all.some((t) => t.category === 'opening')).toBe(true);
     expect(all.some((t) => t.category === 'stair')).toBe(true);
   });
 
