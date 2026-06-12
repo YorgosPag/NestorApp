@@ -77,6 +77,13 @@ export interface EdgeOverlayOptions {
   thresholdAngle: number;
   /** false → returns null (caller skips attach). */
   visible: boolean;
+  /**
+   * ADR-446 — Visual Style EDGES axis. `true` (default) → `depthTest:true`, edges
+   * are occluded by their own/other faces (Revit «Shaded with Edges» / «visible»
+   * edge mode). `false` → `depthTest:false`, every edge shows through faces (x-ray
+   * — the «all» edge mode used by Wireframe, where there are no occluding faces).
+   */
+  occlude?: boolean;
   /** Pre-resolved devicePixelRatio (test injection). Default: window.devicePixelRatio. */
   devicePixelRatio?: number;
 }
@@ -124,11 +131,14 @@ export function buildEdgeOverlay(
       : 1
   );
 
+  // ADR-446 — EDGES axis: `occlude` (default true) drives depthTest. false ⇒ x-ray
+  // (all edges visible through faces, e.g. Wireframe style).
+  const occlude = opts.occlude ?? true;
   const dash = resolveWorldDash(opts.linePattern);
   const material = new LineMaterial({
     color: new THREE.Color(opts.color ?? DEFAULT_EDGE_COLOR).getHex(),
     linewidth: opts.lineWidthPx * dpr,
-    depthTest: true,
+    depthTest: occlude,
     depthWrite: false,
     transparent: false,
     alphaToCoverage: true,

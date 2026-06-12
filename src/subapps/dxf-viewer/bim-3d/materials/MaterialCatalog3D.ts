@@ -86,6 +86,79 @@ function getFlatMaterial(key: string): THREE.MeshStandardMaterial {
   return mat;
 }
 
+// ── ADR-446 — Visual Style FACES axis (face mode variants) ───────────────────
+// The realistic↔shaded split is already handled below (textured vs flat, gated by
+// the derived `realisticMaterials`). The THREE extra Revit face modes — consistent
+// (unlit), hidden-line (white occluder), none (faces hidden) — are applied here as
+// a post-transform on the resolved lit/flat material, so EVERY entry point inherits
+// them through `withFaceMode`. SSoT: this is the SOLE place face mode is applied.
+
+/** Faces-hidden singleton (Wireframe) — edges (mesh children) still render. */
+let INVISIBLE_FACE_MATERIAL: THREE.MeshStandardMaterial | null = null;
+function getInvisibleFaceMaterial(): THREE.MeshStandardMaterial {
+  if (!INVISIBLE_FACE_MATERIAL) {
+    INVISIBLE_FACE_MATERIAL = new THREE.MeshStandardMaterial({ visible: false });
+  }
+  return INVISIBLE_FACE_MATERIAL;
+}
+
+/**
+ * Hidden-Line singleton — uniform opaque WHITE occluder (Revit «Hidden Line»). The
+ * faces write depth so the back edges are hidden, but read as flat white regardless
+ * of lighting (emissive white). Keeps the face-side polygonOffset so the depth-tested
+ * model edges still win against their own coplanar faces.
+ */
+let HIDDEN_LINE_FACE_MATERIAL: THREE.MeshStandardMaterial | null = null;
+function getHiddenLineFaceMaterial(): THREE.MeshStandardMaterial {
+  if (!HIDDEN_LINE_FACE_MATERIAL) {
+    HIDDEN_LINE_FACE_MATERIAL = new THREE.MeshStandardMaterial({
+      color: 0xffffff,
+      emissive: 0xffffff,
+      emissiveIntensity: 1,
+      roughness: 1,
+      metalness: 0,
+      side: THREE.DoubleSide,
+      polygonOffset: true,
+      polygonOffsetFactor: FACE_POLYGON_OFFSET_FACTOR,
+      polygonOffsetUnits: FACE_POLYGON_OFFSET_UNITS,
+    });
+  }
+  return HIDDEN_LINE_FACE_MATERIAL;
+}
+
+/**
+ * Consistent-Colors variant (Revit «Consistent Colors») — the SAME base colour
+ * rendered UNLIT (emissive=base colour, base colour→black) so it reads uniformly
+ * regardless of orientation/lighting. Cached per source-material uuid.
+ */
+const CONSISTENT_CACHE = new Map<string, THREE.MeshStandardMaterial>();
+function getConsistentVariant(base: THREE.MeshStandardMaterial): THREE.MeshStandardMaterial {
+  let mat = CONSISTENT_CACHE.get(base.uuid);
+  if (!mat) {
+    mat = base.clone();
+    mat.emissive = base.color.clone();
+    mat.emissiveIntensity = 1;
+    mat.color.set(0x000000);
+    mat.needsUpdate = true;
+    CONSISTENT_CACHE.set(base.uuid, mat);
+  }
+  return mat;
+}
+
+/**
+ * ADR-446 — apply the current Visual Style FACES axis to a resolved face material.
+ * `realistic`/`shaded` pass through (the textured-vs-flat split already happened via
+ * the derived `realisticMaterials` read). Idempotent for the singleton modes.
+ */
+function withFaceMode(base: THREE.MeshStandardMaterial): THREE.MeshStandardMaterial {
+  switch (useBimRenderSettingsStore.getState().faceMode) {
+    case 'none': return getInvisibleFaceMaterial();
+    case 'hidden-line': return getHiddenLineFaceMaterial();
+    case 'consistent': return getConsistentVariant(base);
+    default: return base; // 'realistic' | 'shaded'
+  }
+}
+
 /** Attach a loaded PBR texture set onto a flat material def → textured material. */
 function applyTextureSet(def: PbrMaterialDef, set: LoadedTextureSet): THREE.MeshStandardMaterial {
   const mat = buildMat(def);
@@ -205,8 +278,8 @@ function resolveUserMaterial(id: string): THREE.MeshStandardMaterial {
 
 /** Resolve MeshStandardMaterial from a DNA materialId (e.g. 'mat-concrete-c25'). */
 export function getMaterial3D(materialId: string): THREE.MeshStandardMaterial {
-  if (materialId.startsWith(USER_MATERIAL_ID_PREFIX)) return resolveUserMaterial(materialId);
-  return resolveTexturedMaterial(resolveMaterialKey(materialId));
+  if (materialId.startsWith(USER_MATERIAL_ID_PREFIX)) return withFaceMode(resolveUserMaterial(materialId));
+  return withFaceMode(resolveTexturedMaterial(resolveMaterialKey(materialId)));
 }
 
 // ── ADR-417 #6 — Roof tile displacement relief cache ─────────────────────────
@@ -245,14 +318,14 @@ export function getRoofTileMaterial3D(materialId: string, reliefMm: number): THR
     mat.displacementBias = -reliefM / 2; // center the wave around the surface
     RELIEF_CACHE.set(cacheKey, mat);
   }
-  return mat;
+  return withFaceMode(mat);
 }
 
 /** Resolve MeshStandardMaterial for element types without DNA. */
 export function getElementMaterial3D(
   type: 'column' | 'beam' | 'slab' | 'foundation' | 'foundation-pad' | 'foundation-strip' | 'foundation-tie-beam' | 'roof' | 'envelope' | 'mep-fixture' | 'electrical-panel' | 'railing' | 'mep-wire' | 'furniture' | 'mep-duct' | 'mep-pipe' | 'mep-fitting' | 'mep-manifold' | 'mep-radiator' | 'mep-boiler' | 'mep-water-heater' | Stair3DComponent,
 ): THREE.MeshStandardMaterial {
-  return resolveTexturedMaterial(`elem-${type}`);
+  return withFaceMode(resolveTexturedMaterial(`elem-${type}`));
 }
 
 /**
@@ -282,7 +355,7 @@ export function getSystemTintedMaterial3D(
     });
     CACHE.set(cacheKey, mat);
   }
-  return mat;
+  return withFaceMode(mat);
 }
 
 /**
@@ -299,4 +372,11 @@ export function disposeMaterialCatalog3D(): void {
   // ADR-417 #6 — displacement relief variants.
   for (const mat of RELIEF_CACHE.values()) mat.dispose();
   RELIEF_CACHE.clear();
+  // ADR-446 — Visual Style FACES variants (consistent clones + mode singletons).
+  for (const mat of CONSISTENT_CACHE.values()) mat.dispose();
+  CONSISTENT_CACHE.clear();
+  INVISIBLE_FACE_MATERIAL?.dispose();
+  INVISIBLE_FACE_MATERIAL = null;
+  HIDDEN_LINE_FACE_MATERIAL?.dispose();
+  HIDDEN_LINE_FACE_MATERIAL = null;
 }

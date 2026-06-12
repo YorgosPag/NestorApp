@@ -47,7 +47,7 @@ import {
   AttachStairsCommand,
   type StairAttachTarget,
 } from '../core/commands/entity-commands/AttachStairsCommand';
-import { isWallEntity, isColumnEntity, isStairEntity } from '../types/entities';
+import { isWallEntity, isColumnEntity, isStairEntity, isSlabEntity } from '../types/entities';
 import type { Entity } from '../types/entities';
 import type { ICommand, ISceneManager } from '../core/commands/interfaces';
 import type { SceneModel } from '../types/scene';
@@ -188,8 +188,13 @@ export function useStructuralAutoAttach(props: { levelManager: LevelManagerLike 
         levelManager.setLevelScene,
         levelId,
       );
+      // ADR-441 GEN-SLAB — η εδαφόπλακα-θεμελίωσης (raft/κοιτόστρωση, kind='foundation')
+      // ΔΕΝ είναι auto-attach host: κάθεται στη στάθμη θεμελίωσης, οπότε οι βάσεις
+      // τοίχων/κολωνών/σκαλών ισογείου δεν «πέφτουν» αυτόματα πάνω της (Revit: το
+      // foundation slab ΔΕΝ τραβά τα storey-floor στοιχεία· attach σε αυτήν = explicit).
+      const isFoundationRaft = isSlabEntity(created) && created.kind === 'foundation';
       // Φορά 1: νέος host → attach τα entities από κάτω/πάνω του (no-op αν όχι host).
-      attachEntitiesUnderHost(created, entities, sm, execute);
+      if (!isFoundationRaft) attachEntitiesUnderHost(created, entities, sm, execute);
       // Φορά 2 (αντίστροφη): νέος τοίχος → attach κορυφή/βάση στους γύρω hosts.
       if (isWallEntity(created)) attachWallToSurroundingHosts(created, entities, sm, execute);
     });

@@ -16,6 +16,13 @@ import {
   DEFAULT_OBJECT_STYLES, type BimCategory, type ObjectStyle, type SubcategoryStyle,
 } from './bim-object-styles';
 import type { Discipline } from '../bim/discipline/bim-discipline';
+import {
+  DEFAULT_VISUAL_STYLE,
+  resolveVisualStyleAxes,
+  type VisualStylePreset,
+  type FaceMode,
+  type EdgeMode,
+} from './bim-visual-style';
 
 // ── Drawing scale constants (re-exported by drawing-scale-store for compat) ──
 export const DEFAULT_DRAWING_SCALE = 100;
@@ -28,8 +35,11 @@ export const DRAWING_SCALE_MAX = 10000;
  * {@link migrateBimRenderSettings} on any doc whose `settingsVersion` is lower and
  * persists the healed snapshot once (idempotent). v1 = per-category structural colour
  * identity (column→blue / beam→amber / foundation→sienna / stair→teal / railing→steel).
+ * v2 (ADR-446) = derive the per-view `visualStyle` preset from the legacy
+ * `realisticMaterials` bit, so old views keep their exact look under the new
+ * Visual Style SSoT.
  */
-export const BIM_SETTINGS_VERSION = 1;
+export const BIM_SETTINGS_VERSION = 2;
 export const DRAWING_SCALE_PRESETS = [10, 20, 50, 100, 200, 500] as const;
 export type DrawingScalePreset = typeof DRAWING_SCALE_PRESETS[number];
 
@@ -60,9 +70,18 @@ export interface BimRenderSettings {
    */
   colorBySystem?: boolean;
   /**
-   * ADR-413 — realistic PBR materials master toggle (Revit "Realistic" visual
-   * style). Absent ⇒ `true` (textured `MeshStandardMaterial`s with albedo/normal/
-   * roughness/ao maps). `false` ⇒ flat colour materials. Persisted per-view.
+   * ADR-446 — per-view Visual Style preset (Revit «Visual Style»). The SSoT for
+   * the FACES × EDGES appearance axes; resolves to `{faceMode, edgeMode}` via
+   * {@link resolveVisualStyleAxes}. Absent ⇒ derived from the legacy
+   * {@link realisticMaterials} bit (see {@link migrateBimRenderSettings} v2), so
+   * pre-ADR-446 views keep their exact look. Persisted per-view.
+   */
+  visualStyle?: VisualStylePreset;
+  /**
+   * ADR-413 — LEGACY realistic-materials bit. Superseded by {@link visualStyle}
+   * (ADR-446): `realisticMaterials === (faceMode === 'realistic')`. Retained ONLY
+   * to migrate pre-ADR-446 persisted docs; new writes go through `visualStyle`.
+   * @deprecated Use {@link visualStyle}.
    */
   realisticMaterials?: boolean;
   /**
@@ -80,8 +99,29 @@ export interface ResolvedBimSettings {
   objectStyles: Record<BimCategory, ObjectStyle>;
   disciplineVisibility: Partial<Record<Discipline, boolean>>;
   colorBySystem: boolean;
+  /** ADR-446 — resolved Visual Style preset (the per-view SSoT). */
+  visualStyle: VisualStylePreset;
+  /** ADR-446 — FACES axis, derived from {@link visualStyle}. */
+  faceMode: FaceMode;
+  /** ADR-446 — EDGES axis, derived from {@link visualStyle}. */
+  edgeMode: EdgeMode;
+  /**
+   * ADR-413/446 — DERIVED convenience flag `faceMode === 'realistic'`, kept so
+   * existing realistic-only consumers (e.g. roof relief) need no faceMode logic.
+   */
   realisticMaterials: boolean;
   showHeatLoad: boolean;
+}
+
+/**
+ * ADR-446 — derive the Visual Style preset from the legacy `realisticMaterials`
+ * bit (pre-ADR-446 docs / fallback). `false` ⇒ `shaded-edges` (flat lit + edges =
+ * the old OFF look); otherwise ⇒ `realistic-edges` (textured + edges = the old ON
+ * default). Edges are included because pre-ADR-446 always built the model edge
+ * overlay (ADR-375).
+ */
+export function deriveVisualStyleFromLegacy(realisticMaterials?: boolean): VisualStylePreset {
+  return realisticMaterials === false ? 'shaded-edges' : DEFAULT_VISUAL_STYLE;
 }
 
 // ── Resolver ───────────────────────────────────────────────────────────────
@@ -89,6 +129,10 @@ export interface ResolvedBimSettings {
 /** Merge user overrides with defaults — always returns a fully-resolved object. */
 export function resolveBimSettings(s?: BimRenderSettings | null): ResolvedBimSettings {
   const rawScale = s?.drawingScale ?? DEFAULT_DRAWING_SCALE;
+  // ADR-446 — absent visualStyle ⇒ derive from the legacy realisticMaterials bit
+  // (robust even on un-migrated raw docs). Axes drive the FACES/EDGES pipelines.
+  const visualStyle = s?.visualStyle ?? deriveVisualStyleFromLegacy(s?.realisticMaterials);
+  const axes = resolveVisualStyleAxes(visualStyle);
   return {
     drawingScale: Math.max(DRAWING_SCALE_MIN, Math.min(DRAWING_SCALE_MAX, Math.round(rawScale))),
     viewRange: s?.viewRange ? { ...DEFAULT_VIEW_RANGE, ...s.viewRange } : DEFAULT_VIEW_RANGE,
@@ -99,8 +143,12 @@ export function resolveBimSettings(s?: BimRenderSettings | null): ResolvedBimSet
     disciplineVisibility: s?.disciplineVisibility ?? {},
     // ADR-408 Φ7 — absent ⇒ true (colour-by-system on, the legacy behaviour).
     colorBySystem: s?.colorBySystem ?? true,
-    // ADR-413 — absent ⇒ true (realistic PBR materials on, the visible default).
-    realisticMaterials: s?.realisticMaterials ?? true,
+    // ADR-446 — Visual Style axes (the per-view appearance SSoT).
+    visualStyle,
+    faceMode: axes.faceMode,
+    edgeMode: axes.edgeMode,
+    // ADR-413/446 — DERIVED from the face mode (no longer a free-standing bit).
+    realisticMaterials: axes.faceMode === 'realistic',
     // ADR-422 L1 — absent ⇒ false (analytical heat-load overlay off by default).
     showHeatLoad: s?.showHeatLoad ?? false,
   };
@@ -170,6 +218,12 @@ export function migrateBimRenderSettings(
   if (!s) return { settings: s, changed: false };
   if ((s.settingsVersion ?? 0) >= BIM_SETTINGS_VERSION) return { settings: s, changed: false };
   const next: BimRenderSettings = { ...s, settingsVersion: BIM_SETTINGS_VERSION };
+  // v1 — colour-refresh (idempotent: re-derives the same current defaults).
   if (s.objectStyles) next.objectStyles = refreshObjectStyleColors(s.objectStyles);
+  // v2 (ADR-446) — derive the Visual Style preset from the legacy realistic bit,
+  // so the view keeps its exact pre-ADR-446 look. Only when not already set.
+  if (next.visualStyle === undefined) {
+    next.visualStyle = deriveVisualStyleFromLegacy(s.realisticMaterials);
+  }
   return { settings: next, changed: true };
 }

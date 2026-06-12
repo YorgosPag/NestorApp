@@ -3249,6 +3249,19 @@
         "export": "Export PDF",
         "tooltip": "Export the multi-section heating mechanical study (summary + loads + radiators + pipes + balancing) as a PDF for the active floor"
       },
+      "visualStyle": {
+        "label": "Visual Style",
+        "presets": {
+          "wireframe": "Wireframe",
+          "hidden-line": "Hidden Line",
+          "shaded": "Shaded",
+          "shaded-edges": "Shaded with Edges",
+          "consistent": "Consistent Colors",
+          "consistent-edges": "Consistent Colors with Edges",
+          "realistic": "Realistic",
+          "realistic-edges": "Realistic with Edges"
+        }
+      },
       "realisticMaterials": {
         "label": "Realistic Materials",
         "enable": "Enable Materials",

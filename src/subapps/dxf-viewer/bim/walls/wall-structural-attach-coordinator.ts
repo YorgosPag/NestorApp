@@ -132,7 +132,10 @@ function topHostInputFor(entity: Entity): HostFootprintInput | null {
  */
 function baseHostInputFor(entity: Entity): HostFootprintInput | null {
   if (isBeamEntity(entity)) return beamHostInput(entity);
-  if (isSlabEntity(entity)) return slabHostInput(entity);
+  // ADR-441 GEN-SLAB — η εδαφόπλακα-θεμελίωσης (kind='foundation') ΔΕΝ είναι auto
+  // base-host: κάθεται στη στάθμη θεμελίωσης, οι τοίχοι ισογείου δεν «κατεβαίνουν»
+  // αυτόματα πάνω της (explicit/manual attach μόνο). Mirror του hook host-skip.
+  if (isSlabEntity(entity) && entity.kind !== 'foundation') return slabHostInput(entity);
   return null;
 }
 

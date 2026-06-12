@@ -34,7 +34,7 @@ import { ShowHeatLoadToggle } from './ShowHeatLoadToggle';
 import { ShowPipeSizingToggle } from './ShowPipeSizingToggle';
 import { ShowBalancingToggle } from './ShowBalancingToggle';
 import { ExportThermalStudyButton } from './ExportThermalStudyButton';
-import { RealisticMaterialsToggle } from './RealisticMaterialsToggle';
+import { VisualStyleSelect } from './VisualStyleSelect';
 import { DisciplineVisibilityToggle } from './DisciplineVisibilityToggle';
 import { RibbonInsertTokenWidget } from './RibbonInsertTokenWidget';
 import { RibbonStairFloorInfoWidget } from './RibbonStairFloorInfoWidget';
@@ -132,8 +132,8 @@ function renderButton(button: RibbonButton): React.ReactNode {
     if (button.widgetId === 'export-thermal-study') {
       return <ExportThermalStudyButton key="export-thermal-study-widget" />;
     }
-    if (button.widgetId === 'realistic-materials-toggle') {
-      return <RealisticMaterialsToggle key="realistic-materials-toggle-widget" />;
+    if (button.widgetId === 'visual-style-select') {
+      return <VisualStyleSelect key="visual-style-select-widget" />;
     }
     if (button.widgetId === 'discipline-visibility') {
       return <DisciplineVisibilityToggle key="discipline-visibility-widget" />;

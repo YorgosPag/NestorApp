@@ -270,6 +270,14 @@ describe('findWallsToAutoAttachBaseToHost (γ)', () => {
     expect(findWallsToAutoAttachBaseToHost(slab as unknown as Entity, [wall])).toEqual(['w1']);
   });
 
+  it('does NOT attach to a kind="foundation" raft (ADR-441 — εδαφόπλακα δεν τραβά βάσεις)', () => {
+    // Ίδια γεωμετρία/θέση με το παραπάνω (topside κάτω από τη βάση) αλλά kind='foundation'
+    // → η εδαφόπλακα-θεμελίωσης εξαιρείται από auto base-host.
+    const raft = { ...slabAt(-1000), kind: 'foundation', params: { ...slabAt(-1000).params, kind: 'foundation' } } as unknown as Entity;
+    const wall = ceilingWall('w1', 1000);
+    expect(findWallsToAutoAttachBaseToHost(raft, [wall])).toEqual([]);
+  });
+
   it('does NOT attach to a CEILING slab above the wall base (inverted Z gate)', () => {
     const slab = slabAt(3000); // topside 3000 > base 0 → skip
     const wall = ceilingWall('w1', 1000); // overlaps in plan, but host is above

@@ -54,6 +54,12 @@ export function attachEdgesProjection(
   category: BimCategory,
   subcategoryKey?: string,
 ): void {
+  // ADR-446 — Visual Style EDGES axis. `none` → no overlay at all (Shaded /
+  // Realistic without edges). `visible` → occluded (depthTest on). `all` → x-ray
+  // (depthTest off — Wireframe shows every edge through the absent faces).
+  const edgeMode = useBimRenderSettingsStore.getState().edgeMode;
+  if (edgeMode === 'none') return;
+
   const style = resolve3DEdgeStyle({
     category,
     cutState: 'projection',
@@ -64,5 +70,8 @@ export function attachEdgesProjection(
   });
   // v2.22 — uniform near-black silhouette colour for the 3D shaded view (Revit
   // "Shaded with Edges"); width/pattern/visibility stay resolver-driven.
-  attachEdgeOverlay(mesh, buildEdgeOverlay(mesh, { ...style, color: BIM_3D_EDGE_COLOR }));
+  attachEdgeOverlay(
+    mesh,
+    buildEdgeOverlay(mesh, { ...style, color: BIM_3D_EDGE_COLOR, occlude: edgeMode !== 'all' }),
+  );
 }

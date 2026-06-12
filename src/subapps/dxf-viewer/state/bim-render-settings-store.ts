@@ -23,11 +23,13 @@ import {
   DEFAULT_DRAWING_SCALE,
   DRAWING_SCALE_MIN,
   DRAWING_SCALE_MAX,
+  BIM_SETTINGS_VERSION,
   resolveBimSettings,
   migrateBimRenderSettings,
   type BimRenderSettings,
   type ResolvedBimSettings,
 } from '../config/bim-render-settings-types';
+import { resolveVisualStyleAxes, type VisualStylePreset } from '../config/bim-visual-style';
 import { type ViewRange } from '../config/bim-view-range';
 import {
   STRUCTURAL_BIM_CATEGORIES,
@@ -123,10 +125,16 @@ interface BimRenderSettingsState extends ResolvedBimSettings {
    */
   setColorBySystem: (colorBySystem: boolean) => void;
   /**
-   * ADR-413 — toggle the realistic-PBR-materials master switch (Revit
-   * "Realistic" visual style). `false` ⇒ flat colour materials; `true` ⇒ textured
-   * MeshStandardMaterials (albedo/normal/roughness/ao). Single state update +
-   * single debounced write (idempotent).
+   * ADR-446 — set the per-view Visual Style preset (Revit «Visual Style»). Updates
+   * the resolved FACES/EDGES axes + derived `realisticMaterials`. Single state
+   * update + single debounced write (idempotent).
+   */
+  setVisualStyle: (preset: VisualStylePreset) => void;
+  /**
+   * ADR-413/446 — LEGACY alias: maps the realistic boolean onto the equivalent
+   * Visual Style preset (`true`→'realistic-edges', `false`→'shaded-edges'). Kept
+   * for back-compat callers; new UI uses {@link setVisualStyle}.
+   * @deprecated Use {@link setVisualStyle}.
    */
   setRealisticMaterials: (realisticMaterials: boolean) => void;
   /**
@@ -181,12 +189,17 @@ export const useBimRenderSettingsStore = create<BimRenderSettingsState>((set, ge
 
   function buildRaw(state: BimRenderSettingsState): BimRenderSettings {
     return {
+      // ADR-446 — stamp the current schema version so setter writes don't drop it
+      // (otherwise every load would needlessly re-run the idempotent migration).
+      settingsVersion: BIM_SETTINGS_VERSION,
       drawingScale: state.drawingScale,
       viewRange: state.viewRange,
       objectStyles: state.objectStyles,
       disciplineVisibility: state.disciplineVisibility,
       colorBySystem: state.colorBySystem,
-      realisticMaterials: state.realisticMaterials,
+      // ADR-446 — persist the Visual Style preset (the SSoT); `realisticMaterials`
+      // is derived and no longer written.
+      visualStyle: state.visualStyle,
       showHeatLoad: state.showHeatLoad,
     };
   }
@@ -218,6 +231,9 @@ export const useBimRenderSettingsStore = create<BimRenderSettingsState>((set, ge
         objectStyles: resolved.objectStyles,
         disciplineVisibility: resolved.disciplineVisibility,
         colorBySystem: resolved.colorBySystem,
+        visualStyle: resolved.visualStyle,
+        faceMode: resolved.faceMode,
+        edgeMode: resolved.edgeMode,
         realisticMaterials: resolved.realisticMaterials,
         showHeatLoad: resolved.showHeatLoad,
         lastLocalMutationAt: 0,
@@ -321,12 +337,25 @@ export const useBimRenderSettingsStore = create<BimRenderSettingsState>((set, ge
         debounceWrite(state.currentLevelId, buildRaw({ ...get(), colorBySystem }));
     },
 
-    setRealisticMaterials(realisticMaterials) {
+    setVisualStyle(preset) {
       const state = get();
-      if (state.realisticMaterials === realisticMaterials) return; // idempotent — no-op write
-      set({ realisticMaterials, lastLocalMutationAt: Date.now() });
+      if (state.visualStyle === preset) return; // idempotent — no-op write
+      const axes = resolveVisualStyleAxes(preset);
+      const realisticMaterials = axes.faceMode === 'realistic';
+      set({
+        visualStyle: preset,
+        faceMode: axes.faceMode,
+        edgeMode: axes.edgeMode,
+        realisticMaterials,
+        lastLocalMutationAt: Date.now(),
+      });
       if (state.currentLevelId)
-        debounceWrite(state.currentLevelId, buildRaw({ ...get(), realisticMaterials }));
+        debounceWrite(state.currentLevelId, buildRaw(get()));
+    },
+
+    setRealisticMaterials(realisticMaterials) {
+      // ADR-446 — legacy alias onto the equivalent Visual Style preset.
+      get().setVisualStyle(realisticMaterials ? 'realistic-edges' : 'shaded-edges');
     },
 
     setShowHeatLoad(showHeatLoad) {
@@ -415,12 +444,13 @@ function commitObjectStyles(
   const { currentLevelId } = get();
   if (currentLevelId) {
     debounceWrite(currentLevelId, {
+      settingsVersion: BIM_SETTINGS_VERSION,
       drawingScale: get().drawingScale,
       viewRange: get().viewRange,
       objectStyles: nextStyles,
       disciplineVisibility: get().disciplineVisibility,
       colorBySystem: get().colorBySystem,
-      realisticMaterials: get().realisticMaterials,
+      visualStyle: get().visualStyle,
       showHeatLoad: get().showHeatLoad,
     });
   }
