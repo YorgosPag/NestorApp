@@ -40,10 +40,13 @@ import {
   COLUMN_RIBBON_KEYS_ACTIONS,
   COLUMN_RIBBON_BADGE_KEYS,
   COLUMN_RIBBON_VISIBILITY_KEYS,
+  COLUMN_FINISH_KEY_TO_FIELD,
   isColumnRibbonKey,
   isColumnRibbonStringKey,
   isColumnVisibilityKey,
+  isColumnFinishKey,
 } from './bridge/column-command-keys';
+import { resolveFinishComboboxState, applyFinishComboboxChange } from './bridge/finish-param';
 import { columnToolBridgeStore } from './bridge/column-tool-bridge-store';
 import {
   readEnvelopeFunctionValue,
@@ -69,10 +72,8 @@ import { EventBus } from '../../../systems/events/EventBus';
 // ADR-441 Slice GEN-COL — one-shot «Κολώνες από κάναβο» (στις τομές).
 import { getGlobalGuideStore } from '../../../systems/guides/guide-store';
 import { resolveSceneUnits } from '../../../utils/scene-units';
-import {
-  commitColumnGridFromGuides,
-  type ColumnGridCommitResult,
-} from '../../../bim/columns/column-grid-commit';
+import { commitColumnGridFromGuides } from '../../../bim/columns/column-grid-commit';
+import { emitColumnsFromGridToast } from './bridge/column-grid-toast';
 import type {
   RibbonComboboxState,
   RibbonToggleState,
@@ -119,19 +120,6 @@ const COLUMN_OWNED_BADGE_KEYS: ReadonlySet<string> = new Set<string>([
 ]);
 
 const NULL_TOGGLE: RibbonToggleState = false;
-
-/**
- * ADR-441 Slice GEN-COL — toast μετά το «Κολώνες από κάναβο». Το `up-to-date` (κάθε
- * τομή έχει ήδη κολώνα) ΔΕΝ είναι αποτυχία (Revit «ενημερωμένο»): εκπέμπεται ως
- * success-style summary με created=0.
- */
-function emitColumnsFromGridToast(result: ColumnGridCommitResult): void {
-  if (result.ok || result.reason === 'up-to-date') {
-    EventBus.emit('bim:columns-from-grid', { created: result.created, skipped: result.skipped });
-  } else {
-    EventBus.emit('bim:columns-from-grid-failed', { reason: result.reason ?? 'insufficient-guides' });
-  }
-}
 
 export function useRibbonColumnBridge(
   props: UseRibbonColumnBridgeProps,
@@ -190,6 +178,10 @@ export function useRibbonColumnBridge(
         // ADR-396 v2 Φ6a — ETICS override: undefined (απών) → 'auto' sentinel.
         if (commandKey === COLUMN_RIBBON_KEYS.stringParams.envelopeFunction) {
           return { value: readEnvelopeFunctionValue(column.params.envelopeFunction), options: [] };
+        }
+        // ADR-449 Slice 5 — σοβάς per-element override (enabled/υλικά/πάχος).
+        if (isColumnFinishKey(commandKey)) {
+          return resolveFinishComboboxState(column.params.finish, commandKey, COLUMN_FINISH_KEY_TO_FIELD);
         }
         if (isColumnRibbonStringKey(commandKey)) {
           const field = STRING_KEY_TO_FIELD[commandKey];
@@ -260,6 +252,12 @@ export function useRibbonColumnBridge(
           const parsed = parseEnvelopeFunctionValue(value);
           if (!parsed) return;
           dispatchParams(column, { ...column.params, envelopeFunction: parsed.fn });
+          return;
+        }
+        // ADR-449 Slice 5 — σοβάς per-element override (enabled/υλικά/πάχος).
+        if (isColumnFinishKey(commandKey)) {
+          const next = applyFinishComboboxChange(column.params, commandKey, value, COLUMN_FINISH_KEY_TO_FIELD);
+          if (next) dispatchParams(column, next);
           return;
         }
         // ADR-363 Phase 8E — catalog preset: batch-write all preset dims + catalogProfile.

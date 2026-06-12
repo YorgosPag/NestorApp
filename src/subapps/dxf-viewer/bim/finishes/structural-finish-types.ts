@@ -116,3 +116,48 @@ export function createDefaultStructuralFinishSpec(): StructuralFinishSpec {
     thickness: STRUCTURAL_FINISH_DEFAULT_THICKNESS_MM,
   };
 }
+
+// ─── Per-element override core (Slice 5, entity & UI agnostic) ──────────────────
+
+/** Επεξεργάσιμα πεδία του spec μέσω του per-element override UI (Properties/ribbon). */
+export type FinishParamField = 'enabled' | 'interiorMaterialId' | 'exteriorMaterialId' | 'thickness';
+
+/** Spec ή default όταν απών (ώστε το override UI σε παλιό στοιχείο να δείχνει τιμές). */
+function effectiveFinishSpec(spec: StructuralFinishSpec | undefined): StructuralFinishSpec {
+  return spec ?? createDefaultStructuralFinishSpec();
+}
+
+/** Τρέχουσα τιμή ενός finish πεδίου ως string (για combobox state). */
+export function readFinishParamValue(spec: StructuralFinishSpec | undefined, field: FinishParamField): string {
+  const s = effectiveFinishSpec(spec);
+  switch (field) {
+    case 'enabled': return s.enabled ? 'on' : 'off';
+    case 'interiorMaterialId': return s.interiorMaterialId;
+    case 'exteriorMaterialId': return s.exteriorMaterialId;
+    case 'thickness': return String(Math.round(s.thickness));
+  }
+}
+
+/**
+ * Εφαρμόζει νέα τιμή σε ένα finish πεδίο, επιστρέφοντας ΝΕΟ spec. `null` όταν η τιμή
+ * είναι άκυρη (no-op) — π.χ. κενό υλικό ή μη-θετικό πάχος.
+ */
+export function applyFinishParam(
+  spec: StructuralFinishSpec | undefined,
+  field: FinishParamField,
+  value: string,
+): StructuralFinishSpec | null {
+  const base = effectiveFinishSpec(spec);
+  switch (field) {
+    case 'enabled':
+      return { ...base, enabled: value === 'on' };
+    case 'interiorMaterialId':
+      return value ? { ...base, interiorMaterialId: value } : null;
+    case 'exteriorMaterialId':
+      return value ? { ...base, exteriorMaterialId: value } : null;
+    case 'thickness': {
+      const n = Number.parseFloat(value);
+      return Number.isFinite(n) && n > 0 ? { ...base, thickness: n } : null;
+    }
+  }
+}

@@ -22,8 +22,14 @@ import {
   BEAM_RIBBON_KEYS_ACTIONS,
   BEAM_RIBBON_BADGE_KEYS,
   BEAM_RIBBON_VISIBILITY_KEYS,
+  BEAM_FINISH_KEYS,
 } from '../hooks/bridge/beam-command-keys';
 import { ENVELOPE_FUNCTION_OPTIONS } from '../hooks/bridge/envelope-function-param';
+import {
+  FINISH_ENABLED_OPTIONS,
+  FINISH_MATERIAL_OPTIONS,
+  FINISH_THICKNESS_OPTIONS,
+} from '../hooks/bridge/finish-param';
 import { PSET_RIBBON_ACTION } from '../hooks/bridge/pset-action-keys';
 import {
   CATALOG_CUSTOM_SENTINEL,
@@ -339,6 +345,63 @@ export const CONTEXTUAL_BEAM_TAB: RibbonTab = {
                 commandKey: BEAM_RIBBON_KEYS.stringParams.material,
                 comboboxWidthPx: 180,
                 options: BEAM_MATERIAL_OPTIONS,
+              },
+            },
+          ],
+        },
+      ],
+    },
+    {
+      // ADR-449 Slice 5 — σοβάς (structural finish skin) per-element override:
+      // enabled + υλικό εσωτ./εξωτ. + πάχος. Shared SSoT options/helpers με κολόνα.
+      id: 'beam-finish-skin',
+      labelKey: 'ribbon.panels.beamFinishSkin',
+      rows: [
+        {
+          isInFlyout: false,
+          buttons: [
+            {
+              type: 'combobox',
+              size: 'small',
+              command: {
+                id: 'beam.finish.enabled',
+                labelKey: 'ribbon.commands.finishEditor.enabled.section.title',
+                commandKey: BEAM_FINISH_KEYS.enabled,
+                comboboxWidthPx: 110,
+                options: FINISH_ENABLED_OPTIONS,
+              },
+            },
+            {
+              type: 'combobox',
+              size: 'small',
+              command: {
+                id: 'beam.finish.interiorMaterialId',
+                labelKey: 'ribbon.commands.finishEditor.interiorMaterial',
+                commandKey: BEAM_FINISH_KEYS.interiorMaterialId,
+                comboboxWidthPx: 170,
+                options: FINISH_MATERIAL_OPTIONS,
+              },
+            },
+            {
+              type: 'combobox',
+              size: 'small',
+              command: {
+                id: 'beam.finish.exteriorMaterialId',
+                labelKey: 'ribbon.commands.finishEditor.exteriorMaterial',
+                commandKey: BEAM_FINISH_KEYS.exteriorMaterialId,
+                comboboxWidthPx: 170,
+                options: FINISH_MATERIAL_OPTIONS,
+              },
+            },
+            {
+              type: 'combobox',
+              size: 'small',
+              command: {
+                id: 'beam.finish.thickness',
+                labelKey: 'ribbon.commands.finishEditor.thickness',
+                commandKey: BEAM_FINISH_KEYS.thickness,
+                comboboxWidthPx: 110,
+                options: FINISH_THICKNESS_OPTIONS,
               },
             },
           ],

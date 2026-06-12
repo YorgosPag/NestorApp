@@ -6,6 +6,8 @@
  * (`useRibbonBeamBridge`). Mirrors `COLUMN_RIBBON_KEYS` pattern.
  */
 
+import type { FinishParamField } from './finish-param';
+
 export const BEAM_RIBBON_KEYS = {
   stringParams: {
     /** Beam kind selector (3 options: straight/curved/cantilever). */
@@ -136,4 +138,28 @@ export function isBeamRibbonKey(commandKey: string): boolean {
 
 export function isBeamRibbonStringKey(commandKey: string): boolean {
   return BEAM_STRING_KEY_SET.has(commandKey);
+}
+
+// ─── ADR-449 Slice 5 — structural finish (σοβάς) per-element override ──────────
+
+/** Command keys για τα 4 finish πεδία του δοκαριού (enabled/υλικά/πάχος). */
+export const BEAM_FINISH_KEYS = {
+  enabled: 'beam.params.finish.enabled',
+  interiorMaterialId: 'beam.params.finish.interiorMaterialId',
+  exteriorMaterialId: 'beam.params.finish.exteriorMaterialId',
+  thickness: 'beam.params.finish.thickness',
+} as const;
+
+/** commandKey → πεδίο του `StructuralFinishSpec` (καταναλώνεται από finish-param helpers). */
+export const BEAM_FINISH_KEY_TO_FIELD: Readonly<Record<string, FinishParamField>> = {
+  [BEAM_FINISH_KEYS.enabled]: 'enabled',
+  [BEAM_FINISH_KEYS.interiorMaterialId]: 'interiorMaterialId',
+  [BEAM_FINISH_KEYS.exteriorMaterialId]: 'exteriorMaterialId',
+  [BEAM_FINISH_KEYS.thickness]: 'thickness',
+};
+
+const BEAM_FINISH_KEY_SET: ReadonlySet<string> = new Set<string>(Object.keys(BEAM_FINISH_KEY_TO_FIELD));
+
+export function isBeamFinishKey(commandKey: string): boolean {
+  return BEAM_FINISH_KEY_SET.has(commandKey);
 }

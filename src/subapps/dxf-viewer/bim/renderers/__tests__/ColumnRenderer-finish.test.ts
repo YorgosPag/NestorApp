@@ -89,7 +89,8 @@ function makeRenderer() {
 }
 
 function makeColumn(finish?: StructuralFinishSpec): ColumnEntity {
-  const params = { ...buildDefaultColumnParams({ x: 0, y: 0 }, 'rectangular'), ...(finish ? { finish } : {}) };
+  // ADR-449 Slice 5 — ρητό override του factory default finish (undefined χωρίς arg).
+  const params = { ...buildDefaultColumnParams({ x: 0, y: 0 }, 'rectangular'), finish };
   const res = buildColumnEntity(params, '0');
   if (!res.ok) throw new Error('column fixture invalid');
   return res.entity;

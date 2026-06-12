@@ -26,7 +26,8 @@ function beam(
 ): BeamEntity {
   const params = {
     ...buildDefaultBeamParams(start, end, 'straight', { width: 250, depth: 500 }),
-    ...(finish ? { finish } : {}),
+    // ADR-449 Slice 5 — ρητό override του factory default finish (undefined χωρίς arg).
+    finish,
   };
   const res = buildBeamEntity(params, '0');
   if (!res.ok) throw new Error('beam fixture invalid: ' + res.hardErrors.join(','));

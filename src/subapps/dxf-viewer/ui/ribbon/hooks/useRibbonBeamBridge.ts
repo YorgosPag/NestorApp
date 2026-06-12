@@ -43,10 +43,13 @@ import {
   BEAM_RIBBON_KEYS_ACTIONS,
   BEAM_RIBBON_BADGE_KEYS,
   BEAM_RIBBON_VISIBILITY_KEYS,
+  BEAM_FINISH_KEY_TO_FIELD,
   isBeamRibbonKey,
   isBeamRibbonStringKey,
   isBeamVisibilityKey,
+  isBeamFinishKey,
 } from './bridge/beam-command-keys';
+import { resolveFinishComboboxState, applyFinishComboboxChange } from './bridge/finish-param';
 import {
   applyEntityBeamCatalogPreset,
   catalogOwnsDimension,
@@ -183,6 +186,10 @@ export function useRibbonBeamBridge(
       if (commandKey === BEAM_RIBBON_KEYS.stringParams.envelopeFunction) {
         return { value: readEnvelopeFunctionValue(beam.params.envelopeFunction), options: [] };
       }
+      // ADR-449 Slice 5 — σοβάς per-element override (enabled/υλικά/πάχος).
+      if (isBeamFinishKey(commandKey)) {
+        return resolveFinishComboboxState(beam.params.finish, commandKey, BEAM_FINISH_KEY_TO_FIELD);
+      }
       // ADR-363 Φ2 — catalog profile: absent → 'custom' sentinel (Revit-style).
       if (commandKey === BEAM_RIBBON_KEYS.stringParams.catalogProfile) {
         return { value: beam.params.catalogProfile ?? CATALOG_CUSTOM_SENTINEL, options: [] };
@@ -244,6 +251,13 @@ export function useRibbonBeamBridge(
         const parsed = parseEnvelopeFunctionValue(value);
         if (!parsed) return;
         dispatchParams(beam, { ...beam.params, envelopeFunction: parsed.fn });
+        return;
+      }
+
+      // ADR-449 Slice 5 — σοβάς per-element override (enabled/υλικά/πάχος).
+      if (isBeamFinishKey(commandKey)) {
+        const next = applyFinishComboboxChange(beam.params, commandKey, value, BEAM_FINISH_KEY_TO_FIELD);
+        if (next) dispatchParams(beam, next);
         return;
       }
 

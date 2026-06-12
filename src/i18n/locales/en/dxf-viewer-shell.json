@@ -1089,6 +1089,7 @@
       "columnIshape": "I-shape",
       "columnUshape": "U-shape",
       "columnMaterial": "Material",
+      "columnFinishSkin": "Finish",
       "columnActions": "Actions",
       "columnStructuralAttach": "Structural Attach",
       "columnShearWallCatalog": "Concrete Catalog",
@@ -1102,6 +1103,7 @@
       "beamIshapeCatalog": "Profile Catalog",
       "beamGeometry": "Geometry",
       "beamMaterial": "Material",
+      "beamFinishSkin": "Finish",
       "beamActions": "Actions",
       "envelopeFunction": "Thermal Envelope ETICS",
       "ifcProperties": "IFC Properties",
@@ -2274,6 +2276,18 @@
         "exterior": "Exterior (insulated)",
         "interior": "Interior (no insulation)",
         "tooltip": "Manual override of the automatic ETICS envelope classification: Exterior = insulated, Interior = not insulated, Auto = geometry decides."
+      },
+      "finishEditor": {
+        "enabled": {
+          "section": {
+            "title": "Finish"
+          },
+          "on": "Yes",
+          "off": "No"
+        },
+        "interiorMaterial": "Interior Mat.",
+        "exteriorMaterial": "Exterior Mat.",
+        "thickness": "Thickness (mm)"
       },
       "openingEditor": {
         "mark": "Mark",

@@ -7,6 +7,8 @@
  * `OPENING_RIBBON_KEYS` pattern.
  */
 
+import type { FinishParamField } from './finish-param';
+
 export const COLUMN_RIBBON_KEYS = {
   stringParams: {
     /** Column kind selector (7 options: rectangular/circular/L-shape/T-shape/polygon/shear-wall/I-shape). */
@@ -150,4 +152,28 @@ export function isColumnRibbonKey(commandKey: string): boolean {
 
 export function isColumnRibbonStringKey(commandKey: string): boolean {
   return COLUMN_STRING_KEY_SET.has(commandKey);
+}
+
+// ─── ADR-449 Slice 5 — structural finish (σοβάς) per-element override ──────────
+
+/** Command keys για τα 4 finish πεδία της κολόνας (enabled/υλικά/πάχος). */
+export const COLUMN_FINISH_KEYS = {
+  enabled: 'column.params.finish.enabled',
+  interiorMaterialId: 'column.params.finish.interiorMaterialId',
+  exteriorMaterialId: 'column.params.finish.exteriorMaterialId',
+  thickness: 'column.params.finish.thickness',
+} as const;
+
+/** commandKey → πεδίο του `StructuralFinishSpec` (καταναλώνεται από finish-param helpers). */
+export const COLUMN_FINISH_KEY_TO_FIELD: Readonly<Record<string, FinishParamField>> = {
+  [COLUMN_FINISH_KEYS.enabled]: 'enabled',
+  [COLUMN_FINISH_KEYS.interiorMaterialId]: 'interiorMaterialId',
+  [COLUMN_FINISH_KEYS.exteriorMaterialId]: 'exteriorMaterialId',
+  [COLUMN_FINISH_KEYS.thickness]: 'thickness',
+};
+
+const COLUMN_FINISH_KEY_SET: ReadonlySet<string> = new Set<string>(Object.keys(COLUMN_FINISH_KEY_TO_FIELD));
+
+export function isColumnFinishKey(commandKey: string): boolean {
+  return COLUMN_FINISH_KEY_SET.has(commandKey);
 }

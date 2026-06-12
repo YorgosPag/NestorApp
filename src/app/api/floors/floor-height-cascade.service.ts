@@ -12,6 +12,7 @@ export interface CascadeResult {
   readonly wallsUpdated: number;
   readonly columnsUpdated: number;
   readonly slabsUpdated: number;
+  readonly beamsUpdated: number;
   readonly skipped: number;
 }
 
@@ -23,6 +24,10 @@ interface CascadeParams {
   readonly height?: number;
   readonly kind?: string;
   readonly levelElevation?: number;
+  // ── Beam storey linkage (ADR-448 Phase 4b) ──
+  readonly topElevation?: number;
+  readonly topElevationEnd?: number;
+  readonly offsetFromStorey?: number;
 }
 
 interface CascadeDoc {
@@ -59,15 +64,28 @@ interface CascadeTarget {
   readonly readValue: (params: CascadeParams) => number | null;
   /** New value derived from the new floor height (mm). */
   readonly derive: (params: CascadeParams, newHeightMm: number) => number;
+  /**
+   * Optional extra field updates beyond `field`, batched on the same doc when the
+   * primary field changes (ADR-448 Phase 4b — sloped-beam `topElevationEnd`, slope
+   * preserved). `newValue` = the just-derived primary value.
+   */
+  readonly extraUpdates?: (params: CascadeParams, newValue: number) => Record<string, number> | null;
 }
 
 /**
- * Storey-ceiling cascade derivation for vertically-extruded structure
+ * Storey-driven cascade derivation for vertically-extruded structure
  * (walls + columns): `params.height = floor.height*1000 + topOffset − baseOffset`.
+ *
+ * Gate (ADR-448 Phase 4b): cascades both `storey-ceiling` AND `attached` tops —
+ * in grid-first construction (ADR-441/401) columns/walls become `attached` to a
+ * beam/slab host. The derived nominal rises; the render-time lower-envelope then
+ * clips to the host face (which also rose via the beam/slab cascade) → the whole
+ * frame stretches consistently. `absolute`/`unconnected` = user-pinned → skipped.
  */
 const STRETCH_TARGET = {
   field: 'params.height',
-  shouldCascade: (p: CascadeParams) => p.topBinding === 'storey-ceiling',
+  shouldCascade: (p: CascadeParams) =>
+    p.topBinding === 'storey-ceiling' || p.topBinding === 'attached',
   readValue: (p: CascadeParams) => p.height ?? null,
   derive: (p: CascadeParams, mm: number) => mm + (p.topOffset ?? 0) - (p.baseOffset ?? 0),
 } as const;
@@ -75,6 +93,23 @@ const STRETCH_TARGET = {
 const CASCADE_TARGETS: readonly CascadeTarget[] = [
   { collection: COLLECTIONS.FLOORPLAN_WALLS, entityType: 'wall', ...STRETCH_TARGET },
   { collection: COLLECTIONS.FLOORPLAN_COLUMNS, entityType: 'column', ...STRETCH_TARGET },
+  {
+    // ADR-448 Phase 4b — beams define the storey ceiling via `params.topElevation`
+    // (top face, ADR-369 §2.2). All beams are storey-driven (offsetFromStorey,
+    // no pinned/absolute flag today) → cascade all. Sloped beams (topElevationEnd,
+    // ADR-401) keep their slope span via `extraUpdates`. `zOffset` stays untouched
+    // (drop-from-ceiling, applied render-side, ADR-369 §854).
+    collection: COLLECTIONS.FLOORPLAN_BEAMS,
+    entityType: 'beam',
+    field: 'params.topElevation',
+    shouldCascade: () => true,
+    readValue: (p) => p.topElevation ?? null,
+    derive: (p, mm) => mm + (p.offsetFromStorey ?? 0),
+    extraUpdates: (p, newTop) =>
+      p.topElevationEnd === undefined
+        ? null
+        : { 'params.topElevationEnd': newTop + (p.topElevationEnd - (p.topElevation ?? newTop)) },
+  },
   {
     // ADR-448 Phase 4 — ceiling/roof slabs carry the floor-relative storey
     // ceiling FFL in `params.levelElevation` (mirror slab-completion.ts +
@@ -93,20 +128,22 @@ const CASCADE_TARGETS: readonly CascadeTarget[] = [
  * ADR-369 §9 Q5 + ADR-448 Phase 4 — Auto-stretch cascade (service layer).
  *
  * Triggered when `floor.height` changes. Re-stretches every storey-bound entity
- * of that floor so the WHOLE storey follows (Revit «άλλαξε ύψος ορόφου → τοίχοι +
- * κολώνες + οροφή ξανα-τεντώνονται»):
- *   - walls + columns with `topBinding='storey-ceiling'` → `params.height`
+ * of that floor so the WHOLE frame follows (Revit «άλλαξε ύψος ορόφου → τοίχοι +
+ * κολώνες + δοκάρια + οροφή ξανα-τεντώνονται»):
+ *   - walls + columns with `topBinding ∈ {storey-ceiling, attached}` → `params.height`
+ *   - beams → `params.topElevation` (+sloped `topElevationEnd`) (ADR-448 Phase 4b)
  *   - ceiling/roof slabs → `params.levelElevation` (ADR-448 Phase 4)
  *
- * Skipped: `topBinding!=='storey-ceiling'` structure, non-ceiling/roof slabs,
- * and any entity already at the derived value (idempotent no-op).
+ * Skipped: `absolute`/`unconnected` structure, non-ceiling/roof slabs, and any
+ * entity already at the derived value (idempotent no-op). Absolute/self-healing
+ * (not delta) → corrects stale state on the next height change.
  *
  * - Idempotent: same floor.height → same value → no write, no audit.
  * - Belt-and-suspenders: no-op batch when nothing changed.
  * - ADR-195: each updated entity gets an EntityAuditService.recordChange entry.
  *
  * @see docs/centralized-systems/reference/adrs/ADR-369-bim-elevation-convention-revit-alignment.md §9 Q5
- * @see docs/centralized-systems/reference/adrs/ADR-448-storey-aware-dxf-viewer.md §6 Phase 4
+ * @see docs/centralized-systems/reference/adrs/ADR-448-storey-aware-dxf-viewer.md §6 Phase 4 + 4b
  */
 export async function cascadeFloorHeightToEntities(
   db: Firestore,
@@ -169,7 +206,8 @@ function collectCascade(
     const newValue = target.derive(params, newHeightMm);
     const oldValue = target.readValue(params);
     if (oldValue === newValue) { skipped++; continue; }
-    batch.update(doc.ref, { [target.field]: newValue, updatedBy, updatedAt });
+    const extra = target.extraUpdates?.(params, newValue) ?? {};
+    batch.update(doc.ref, { [target.field]: newValue, ...extra, updatedBy, updatedAt });
     entries.push({ docId: doc.id, field: target.field, oldValue, newValue });
   }
   return { entityType: target.entityType, entries, skipped };
@@ -182,6 +220,7 @@ function summarise(perTarget: readonly TargetResult[]): CascadeResult {
     wallsUpdated: count('wall'),
     columnsUpdated: count('column'),
     slabsUpdated: count('slab'),
+    beamsUpdated: count('beam'),
     skipped: perTarget.reduce((n, t) => n + t.skipped, 0),
   };
 }

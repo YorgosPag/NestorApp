@@ -1089,6 +1089,7 @@
       "columnIshape": "Διατομή Ι",
       "columnUshape": "Διατομή Π",
       "columnMaterial": "Υλικό",
+      "columnFinishSkin": "Σοβάς",
       "columnActions": "Ενέργειες",
       "columnStructuralAttach": "Σύνδεση δομικού",
       "columnShearWallCatalog": "Κατάλογος Σκυροδέματος",
@@ -1100,6 +1101,7 @@
       "beamKind": "Τύπος",
       "beamGeometry": "Γεωμετρία",
       "beamMaterial": "Υλικό",
+      "beamFinishSkin": "Σοβάς",
       "beamIshape": "Διατομή Ι",
       "beamIshapeCatalog": "Κατάλογος Προφίλ",
       "beamActions": "Ενέργειες",
@@ -2274,6 +2276,18 @@
         "exterior": "Εξωτερικό (μόνωση)",
         "interior": "Εσωτερικό (χωρίς μόνωση)",
         "tooltip": "Χειροκίνητη παράκαμψη της αυτόματης ταξινόμησης κελύφους ETICS: Εξωτερικό = μονώνεται, Εσωτερικό = δεν μονώνεται, Αυτόματο = αποφασίζει η γεωμετρία."
+      },
+      "finishEditor": {
+        "enabled": {
+          "section": {
+            "title": "Σοβάς"
+          },
+          "on": "Ναι",
+          "off": "Όχι"
+        },
+        "interiorMaterial": "Εσωτ. Υλικό",
+        "exteriorMaterial": "Εξωτ. Υλικό",
+        "thickness": "Πάχος (χιλ.)"
       },
       "openingEditor": {
         "mark": "Mark",

@@ -22,8 +22,14 @@ import {
   COLUMN_RIBBON_KEYS_ACTIONS,
   COLUMN_RIBBON_BADGE_KEYS,
   COLUMN_RIBBON_VISIBILITY_KEYS,
+  COLUMN_FINISH_KEYS,
 } from '../hooks/bridge/column-command-keys';
 import { ENVELOPE_FUNCTION_OPTIONS } from '../hooks/bridge/envelope-function-param';
+import {
+  FINISH_ENABLED_OPTIONS,
+  FINISH_MATERIAL_OPTIONS,
+  FINISH_THICKNESS_OPTIONS,
+} from '../hooks/bridge/finish-param';
 import { PSET_RIBBON_ACTION } from '../hooks/bridge/pset-action-keys';
 import {
   CATALOG_CUSTOM_SENTINEL,
@@ -444,6 +450,63 @@ export const CONTEXTUAL_COLUMN_TAB: RibbonTab = {
                 commandKey: COLUMN_RIBBON_KEYS.stringParams.material,
                 comboboxWidthPx: 180,
                 options: COLUMN_MATERIAL_OPTIONS,
+              },
+            },
+          ],
+        },
+      ],
+    },
+    {
+      // ADR-449 Slice 5 — σοβάς (structural finish skin) per-element override:
+      // enabled + υλικό εσωτ./εξωτ. + πάχος. Shared SSoT options/helpers με δοκάρι.
+      id: 'column-finish-skin',
+      labelKey: 'ribbon.panels.columnFinishSkin',
+      rows: [
+        {
+          isInFlyout: false,
+          buttons: [
+            {
+              type: 'combobox',
+              size: 'small',
+              command: {
+                id: 'column.finish.enabled',
+                labelKey: 'ribbon.commands.finishEditor.enabled.section.title',
+                commandKey: COLUMN_FINISH_KEYS.enabled,
+                comboboxWidthPx: 110,
+                options: FINISH_ENABLED_OPTIONS,
+              },
+            },
+            {
+              type: 'combobox',
+              size: 'small',
+              command: {
+                id: 'column.finish.interiorMaterialId',
+                labelKey: 'ribbon.commands.finishEditor.interiorMaterial',
+                commandKey: COLUMN_FINISH_KEYS.interiorMaterialId,
+                comboboxWidthPx: 170,
+                options: FINISH_MATERIAL_OPTIONS,
+              },
+            },
+            {
+              type: 'combobox',
+              size: 'small',
+              command: {
+                id: 'column.finish.exteriorMaterialId',
+                labelKey: 'ribbon.commands.finishEditor.exteriorMaterial',
+                commandKey: COLUMN_FINISH_KEYS.exteriorMaterialId,
+                comboboxWidthPx: 170,
+                options: FINISH_MATERIAL_OPTIONS,
+              },
+            },
+            {
+              type: 'combobox',
+              size: 'small',
+              command: {
+                id: 'column.finish.thickness',
+                labelKey: 'ribbon.commands.finishEditor.thickness',
+                commandKey: COLUMN_FINISH_KEYS.thickness,
+                comboboxWidthPx: 110,
+                options: FINISH_THICKNESS_OPTIONS,
               },
             },
           ],

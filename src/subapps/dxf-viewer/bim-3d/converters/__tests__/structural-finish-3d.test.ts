@@ -24,7 +24,9 @@ const FINISH: StructuralFinishSpec = {
 };
 
 function column(finish?: StructuralFinishSpec): ColumnEntity {
-  const params = { ...buildDefaultColumnParams({ x: 0, y: 0 }, 'rectangular'), ...(finish ? { finish } : {}) };
+  // ADR-449 Slice 5 — ο factory πλέον δίνει default finish· ρητό override (undefined
+  // χωρίς arg) ώστε τα «απών σοβάς» fixtures να παραμένουν έγκυρα.
+  const params = { ...buildDefaultColumnParams({ x: 0, y: 0 }, 'rectangular'), finish };
   const res = buildColumnEntity(params, '0');
   if (!res.ok) throw new Error('column fixture invalid');
   return res.entity;
