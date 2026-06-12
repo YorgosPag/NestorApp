@@ -290,7 +290,14 @@ export function wallToMesh(
   profile?: WallTopProfile,
   baseProfile?: WallBaseProfile,
   topClip?: WallTopClipContext,
+  nominalHeightMm?: number,
 ): THREE.Object3D | null {
+  // ADR-448 Phase 1b — when `topBinding='storey-ceiling'` resolves a real storey
+  // ceiling, render at that height (Revit «Top: Up to Level»). Stored `params.height`
+  // is the override; without a storey context `nominalHeightMm` === it → no-op.
+  const renderWall = (nominalHeightMm !== undefined && Math.abs(nominalHeightMm - wall.params.height) > 1e-6)
+    ? { ...wall, params: { ...wall.params, height: nominalHeightMm } }
+    : wall;
   const coreLayer = wall.params.dna?.layers.find((l) => l.side === 'core');
   const matId = coreLayer?.materialId ?? CATEGORY_MAT_ID[wall.params.category] ?? 'mat-concrete';
   const material = getMaterial3D(matId);
@@ -316,8 +323,8 @@ export function wallToMesh(
   if (openings.length > 0 || wallTop || wallBase || multiLayerStraight) {
     const group =
       wall.kind === 'straight'
-        ? buildStraightWallWithOpenings(wall, openings, material, floorElevationMm, buildingBaseElevationM, wallTop, wallBase, topClip)
-        : buildWallMeshWithOpenings(wall, openings, material, floorElevationMm, buildingBaseElevationM, wallTop, wallBase);
+        ? buildStraightWallWithOpenings(renderWall, openings, material, floorElevationMm, buildingBaseElevationM, wallTop, wallBase, topClip)
+        : buildWallMeshWithOpenings(renderWall, openings, material, floorElevationMm, buildingBaseElevationM, wallTop, wallBase);
     if (group) {
       group.userData['matId'] = matId;
       if (levelId !== undefined) group.userData['levelId'] = levelId;
@@ -332,7 +339,7 @@ export function wallToMesh(
   // ADR-413 — multi-layer curved/polyline (or defensive fall-through): split the
   // single solid into per-layer band solids via the shared layer helper.
   if (isMultiLayerWall(wall.params.dna)) {
-    const grp = buildMultiLayerSolidWall(wall, floorElevationMm, buildingBaseElevationM);
+    const grp = buildMultiLayerSolidWall(renderWall, floorElevationMm, buildingBaseElevationM);
     if (grp) {
       grp.userData['matId'] = matId;
       if (levelId !== undefined) grp.userData['levelId'] = levelId;
@@ -347,10 +354,10 @@ export function wallToMesh(
   );
   if (!shape) return null;
 
-  const geo = extrudeAndRotate(shape, wall.params.height * MM_TO_M);
+  const geo = extrudeAndRotate(shape, renderWall.params.height * MM_TO_M);
   ensureWorldUvs(geo); // ADR-413 — aoMap uv2 (ExtrudeGeometry auto-UVs in meters).
   // ADR-404 — battered wall: shear το X/Z βάσει ύψους (η κορυφή γέρνει). No-op flat.
-  applyWallTilt(geo, wall.params);
+  applyWallTilt(geo, renderWall.params);
   const mesh = new THREE.Mesh(geo, material);
   // ADR-402 — `baseOffset` (mm, base face from storey FFL) lifts the whole wall so the
   // vertical (axis-Y) move arrow shows in 3D. ONLY on this flat solid path: the

@@ -47,6 +47,12 @@ import {
   type BuiltBoqRow,
   type ExistingCreatedAtMap,
 } from './boq-multi-layer-builder';
+import {
+  buildFinishBoqPayloads,
+  finishChildBoqId,
+  hasFinishContribution,
+  type FinishBoqContribution,
+} from './structural-finish-boq';
 
 const logger = createModuleLogger('BimToBoqBridge');
 
@@ -72,6 +78,13 @@ export interface BimEntityForBoq {
   // ADR-407 — `lengthM` carries the running length for path-length entities
   // (railings → ΑΤΟΕ unit 'm'); area/volume cover surface/solid entities.
   readonly geometry?: Readonly<{ area?: number; volume?: number; lengthM?: number }>;
+  /**
+   * ADR-449 — Καθαρό derived contribution σοβά (κολόνα/δοκάρι). Όταν υπάρχει ΚΑΙ
+   * έχει θετικό εμβαδό, το bridge παράγει parent (στατικός πυρήνας) + finish
+   * children (interior/exterior σοβάς) αντί single-entry. Υπολογίζεται upstream
+   * στο `column-boq-feed` (έχει πρόσβαση στη σκηνή για ανάλυση γειτνίασης).
+   */
+  readonly finishContribution?: FinishBoqContribution;
 }
 
 export interface BimBoqContext {
@@ -265,7 +278,56 @@ class BimToBoqBridgeImpl {
       return;
     }
 
+    if (hasFinishContribution(entity.finishContribution)) {
+      await this.upsertWithFinish(entityType, entity, context, action);
+      return;
+    }
+
     await this.upsertSingleEntry(entityType, entity, context, action);
+  }
+
+  /**
+   * ADR-449 — parent (στατικός πυρήνας, π.χ. column OIK-2.03 m³) + finish children
+   * (interior Knauf OIK-4.01 m² / exterior σοβάς OIK-4.03 m²). Mirror του
+   * `upsertMultiLayerWall`: ένα combined fetch των states (detach guard + createdAt
+   * preservation), per-row upsert. Ο πυρήνας ΔΕΝ αλλάζει — ο σοβάς είναι additive.
+   */
+  private async upsertWithFinish(
+    entityType: BimEntityType,
+    entity: BimEntityForBoq,
+    context: BimBoqContext,
+    action: 'created' | 'updated',
+  ): Promise<void> {
+    const category = entity.params?.category;
+    const rawSectionKind = entity.params?.['sectionKind'];
+    const sectionKind = typeof rawSectionKind === 'string' ? rawSectionKind : undefined;
+    const rawClassification = entity.params?.['classification'];
+    const classification = typeof rawClassification === 'string' ? rawClassification : undefined;
+    const coreMapping = resolveAtoeMapping(entityType, entity.kind, category, sectionKind, classification);
+    if (!coreMapping) return;
+    const finish = entity.finishContribution;
+    if (!hasFinishContribution(finish)) return;
+
+    const coreQuantity = deriveAtoeQuantity(coreMapping.unit, entity.geometry);
+    const candidateIds = [
+      parentBoqId(entity.id),
+      finishChildBoqId(entity.id, 'interior'),
+      finishChildBoqId(entity.id, 'exterior'),
+    ];
+    const states = await fetchRowStates(candidateIds);
+    const existingCreatedAt = buildExistingCreatedAtMap(states);
+
+    const { parent, children } = buildFinishBoqPayloads(
+      { entityId: entity.id, entityType, coreMapping, coreQuantity, finish, context },
+      existingCreatedAt,
+    );
+
+    const parentState = states.get(parent.id) ?? { exists: false, detached: false, createdAt: null };
+    await upsertBoqRow(parent, parentState, action);
+    await Promise.all(children.map((child) => {
+      const state = states.get(child.id) ?? { exists: false, detached: false, createdAt: null };
+      return upsertBoqRow(child, state, action);
+    }));
   }
 
   private async upsertSingleEntry(

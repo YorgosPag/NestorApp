@@ -37,6 +37,7 @@ import {
   resolveBuildingDatumElevationM,
   resolveFloorDatumRelativeElevationMm,
 } from '../../bim-3d/scene/floor-stack-elevation';
+import { buildActiveStoreyContext } from '../../systems/levels/active-storey-context';
 import {
   isWallEntity, isColumnEntity, isBeamEntity, isFoundationEntity, isSlabEntity,
   isSlabOpeningEntity, isOpeningEntity, isStairEntity, isMepFixtureEntity, isElectricalPanelEntity, isRailingEntity, isFurnitureEntity, isMepSegmentEntity, isMepFittingEntity, isMepManifoldEntity, isMepRadiatorEntity, isMepBoilerEntity, isMepWaterHeaterEntity, isRoofEntity, isFloorFinishEntity, isMepUnderfloorEntity,
@@ -48,6 +49,8 @@ interface TargetFloor {
   readonly floorId: string;
   readonly sceneFileId: string | null;
   readonly floorElevationMm: number;
+  /** ADR-448 Phase 1b — datum-relative FFL of the next floor up (storey ceiling). */
+  readonly nextFloorElevationMm?: number;
 }
 
 /** Split a persisted scene into the per-category BIM bundle the 3D layer wants. */
@@ -143,11 +146,15 @@ export function useFloors3DAggregator(active: boolean): void {
       if (lvl.buildingId !== buildingId || !lvl.floorId || seen.has(lvl.floorId)) continue;
       seen.add(lvl.floorId);
       const elevationM = elevByFloorId.get(lvl.floorId) ?? 0;
+      // ADR-448 1b — reuse the storey-context SSoT for the next-floor (ceiling) FFL
+      // so the "all floors" stack matches single-floor storey-ceiling resolution.
+      const storey = buildActiveStoreyContext(buildingFloors, lvl.floorId);
       out.push({
         levelId: lvl.id,
         floorId: lvl.floorId,
         sceneFileId: lvl.sceneFileId ?? null,
         floorElevationMm: resolveFloorDatumRelativeElevationMm(elevationM, datumM),
+        nextFloorElevationMm: storey?.nextFloorElevationMm,
       });
     }
     return out;
@@ -211,7 +218,7 @@ export function useFloors3DAggregator(active: boolean): void {
     for (const t of targets) {
       const entities = resolveEntities(t);
       if (!entities) continue;
-      out.push({ levelId: t.levelId, floorElevationMm: t.floorElevationMm, entities });
+      out.push({ levelId: t.levelId, floorElevationMm: t.floorElevationMm, nextFloorElevationMm: t.nextFloorElevationMm, entities });
     }
     return out;
   }, [active, targets, resolveEntities]);

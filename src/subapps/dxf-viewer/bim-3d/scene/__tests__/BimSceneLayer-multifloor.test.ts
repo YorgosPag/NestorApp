@@ -96,17 +96,18 @@ describe('BimSceneLayer.syncMultiFloor — ADR-399 Phase B', () => {
 
   it('passes each floor its own floorElevationMm + levelId to the converter', () => {
     new BimSceneLayer(new THREE.Scene()).syncMultiFloor(stack);
-    // wallToMesh(wall, openings, floorElevationMm, activeLevelId, baseElevation, profile?, baseProfile?, topClip?)
+    // wallToMesh(wall, openings, floorElevationMm, activeLevelId, baseElevation, profile?, baseProfile?, topClip?, nominalHeightMm?)
     // ADR-401: args 6-8 = WallTopProfile/WallBaseProfile/WallTopClip (all undefined for non-attached walls).
-    expect(wallToMesh).toHaveBeenNthCalledWith(1, expect.objectContaining({ id: 'w1' }), expect.anything(), 0, 'L1', expect.anything(), undefined, undefined, undefined);
-    expect(wallToMesh).toHaveBeenNthCalledWith(2, expect.objectContaining({ id: 'w2' }), expect.anything(), 3000, 'L2', expect.anything(), undefined, undefined, undefined);
+    // ADR-448 1b: arg 9 = storey-ceiling render height (undefined for these param-less fixture walls).
+    expect(wallToMesh).toHaveBeenNthCalledWith(1, expect.objectContaining({ id: 'w1' }), expect.anything(), 0, 'L1', expect.anything(), undefined, undefined, undefined, undefined);
+    expect(wallToMesh).toHaveBeenNthCalledWith(2, expect.objectContaining({ id: 'w2' }), expect.anything(), 3000, 'L2', expect.anything(), undefined, undefined, undefined, undefined);
   });
 
   it('skips a floor whose visibility mode is hide (pre-mesh gate)', () => {
     const floorModes = new Map<string, FloorVisMode>([['L2', 'hide']]);
     new BimSceneLayer(new THREE.Scene()).syncMultiFloor(stack, [], [], null, new Map(), floorModes);
     expect(wallToMesh).toHaveBeenCalledTimes(1);
-    expect(wallToMesh).toHaveBeenCalledWith(expect.objectContaining({ id: 'w1' }), expect.anything(), 0, 'L1', expect.anything(), undefined, undefined, undefined);
+    expect(wallToMesh).toHaveBeenCalledWith(expect.objectContaining({ id: 'w1' }), expect.anything(), 0, 'L1', expect.anything(), undefined, undefined, undefined, undefined);
   });
 
   it('does not accumulate meshes across rebuilds (single clearGroup)', () => {

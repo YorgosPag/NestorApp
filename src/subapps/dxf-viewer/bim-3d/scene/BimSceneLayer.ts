@@ -75,11 +75,12 @@ export class BimSceneLayer {
     activeBuildingId: string | null = null,
     buildingVisModes: ReadonlyMap<string, BuildingVisMode> = new Map(),
     floorVisModes: ReadonlyMap<string, FloorVisMode> = new Map(),
+    nextFloorElevationMm: number | undefined = undefined,
   ): void {
     this.clearGroup();
     const ctx = this.buildContext(
       floorElevationMm, activeLevelId, floors, buildings,
-      activeBuildingId, buildingVisModes, floorVisModes,
+      activeBuildingId, buildingVisModes, floorVisModes, nextFloorElevationMm,
     );
     this.syncFloorEntities(entities, ctx);
     this.recomputeHasMesh();
@@ -106,7 +107,7 @@ export class BimSceneLayer {
     for (const floor of stack) {
       const ctx = this.buildContext(
         floor.floorElevationMm, floor.levelId, floors, buildings,
-        activeBuildingId, buildingVisModes, floorVisModes,
+        activeBuildingId, buildingVisModes, floorVisModes, floor.nextFloorElevationMm,
       );
       this.syncFloorEntities(floor.entities, ctx);
     }
@@ -122,6 +123,7 @@ export class BimSceneLayer {
     activeBuildingId: string | null,
     buildingVisModes: ReadonlyMap<string, BuildingVisMode>,
     floorVisModes: ReadonlyMap<string, FloorVisMode>,
+    nextFloorElevationMm: number | undefined,
   ): SyncContext {
     const { objectStyles, disciplineVisibility, colorBySystem } = useDrawingScaleStore.getState();
     const useNewSystem = buildingVisModes.size > 0;
@@ -143,7 +145,7 @@ export class BimSceneLayer {
     return {
       objectStyles, disciplineVisibility, systemColorIndex, colorBySystem, floors, buildings, buildingVisModes,
       floorMode, activeBuildingId, useNewSystem,
-      floorElevationMm, activeLevelId, isolate,
+      floorElevationMm, nextFloorElevationMm, activeLevelId, isolate,
     };
   }
 

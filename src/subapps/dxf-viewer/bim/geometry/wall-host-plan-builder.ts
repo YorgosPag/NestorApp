@@ -24,19 +24,18 @@
 import type { BeamEntity } from '../types/beam-types';
 import type { SlabEntity } from '../types/slab-types';
 import type { RoofEntity } from '../types/roof-types';
-import { isPointInPolygon } from '../../utils/geometry/GeometryUtils';
 import { computeBeamGeometry } from './beam-geometry';
 import { slabUndersideZmmAt, slabTopZmmAt } from './slab-slope';
 import { beamUndersideZmmAt, beamTopZmmAt, isBeamTilted } from './beam-slope';
 import { resolveEavePlanes, roofZmm } from './roof-lower-envelope';
 import { mmScaleFor } from '../../utils/scene-units';
 import type { HostUndersidePlan, HostTopsidePlan, WallVerticalContext } from './wall-top-profile';
+import { coveredIntervals, type Pt2 } from './shared/segment-polygon-coverage';
 
-/** Ελάχιστο 2D σημείο (plan space). */
-export interface Pt2 {
-  readonly x: number;
-  readonly y: number;
-}
+// `Pt2` + `coveredIntervals` ζουν πλέον στο shared `segment-polygon-coverage`
+// SSoT (ADR-449 N.0.2). Re-export ώστε οι υπάρχοντες importers (column/stair
+// vertical-profile, section-sync, tests κ.λπ.) να μην αλλάξουν path.
+export type { Pt2 };
 
 /**
  * Host έτοιμος για projection: footprint (ίδιες μονάδες με τον άξονα τοίχου) +
@@ -67,66 +66,6 @@ export interface HostFootprintInput {
   readonly topsideZmm?: number;
   /** Κεκλιμένη άνω-παρειά (absolute mm) — υπερισχύει του `topsideZmm` (tilted). */
   readonly topsideZmmAt?: (pt: Pt2) => number;
-}
-
-/** Αριθμητικό όριο για μη-εκφυλισμένο t / non-parallel cross product. */
-const T_EPS = 1e-9;
-
-const clamp01 = (t: number): number => (t < 0 ? 0 : t > 1 ? 1 : t);
-
-/**
- * t-τιμές (0..1, clamped) όπου ο άξονας a→b τέμνει ακμές του πολυγώνου. Standard
- * segment-segment intersection: άξονας `a+t·(b−a)`, ακμή `p+u·(q−p)`· κρατάμε
- * όσα έχουν 0≤u≤1 (η τομή πέφτει πάνω στην ακμή) και 0≤t≤1 (μέσα στον τοίχο).
- */
-function axisPolygonCrossings(a: Pt2, b: Pt2, poly: readonly Pt2[]): number[] {
-  const ts: number[] = [];
-  const dx = b.x - a.x;
-  const dy = b.y - a.y;
-  const n = poly.length;
-  for (let i = 0; i < n; i++) {
-    const p = poly[i];
-    const q = poly[(i + 1) % n];
-    const ex = q.x - p.x;
-    const ey = q.y - p.y;
-    const denom = dx * ey - dy * ex; // (b−a) × (q−p)
-    if (Math.abs(denom) < T_EPS) continue; // parallel / collinear → αγνόησε
-    const apx = p.x - a.x;
-    const apy = p.y - a.y;
-    const t = (apx * ey - apy * ex) / denom; // κατά μήκος άξονα
-    const u = (apx * dy - apy * dx) / denom; // κατά μήκος ακμής
-    if (t >= -T_EPS && t <= 1 + T_EPS && u >= -T_EPS && u <= 1 + T_EPS) {
-      ts.push(clamp01(t));
-    }
-  }
-  return ts;
-}
-
-/**
- * Τα [t0,t1] διαστήματα του άξονα a→b που βρίσκονται **μέσα** στο footprint.
- * Robust για convex + concave: σπάμε στο {0,1}+crossings, κρατάμε όσα sub-spans
- * έχουν midpoint inside (ray-cast SSoT), και merge-άρουμε τα συνεχόμενα.
- */
-function coveredIntervals(a: Pt2, b: Pt2, poly: readonly Pt2[]): Array<[number, number]> {
-  if (poly.length < 3) return [];
-  const polyArr = poly.map((p) => ({ x: p.x, y: p.y }));
-  const bps = new Set<number>([0, 1]);
-  for (const t of axisPolygonCrossings(a, b, polyArr)) bps.add(t);
-  const sorted = [...bps].sort((x, y) => x - y);
-  const out: Array<[number, number]> = [];
-  for (let i = 0; i < sorted.length - 1; i++) {
-    const t0 = sorted[i];
-    const t1 = sorted[i + 1];
-    if (t1 - t0 < T_EPS) continue;
-    const mid = (t0 + t1) / 2;
-    const mx = a.x + mid * (b.x - a.x);
-    const my = a.y + mid * (b.y - a.y);
-    if (!isPointInPolygon({ x: mx, y: my }, polyArr)) continue;
-    const prev = out[out.length - 1];
-    if (prev && Math.abs(prev[1] - t0) < T_EPS) prev[1] = t1;
-    else out.push([t0, t1]);
-  }
-  return out;
 }
 
 /**

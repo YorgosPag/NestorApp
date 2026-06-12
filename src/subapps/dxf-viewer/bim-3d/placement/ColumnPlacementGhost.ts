@@ -61,8 +61,10 @@ export class ColumnPlacementGhost {
     }
     this.entity = entity;
     this.removeMesh();
+    // ADR-449 — columnToMesh επιστρέφει Group όταν υπάρχει σοβάς· το ghost δεν
+    // περνά walls/finish → πάντα απλό Mesh. Guard για το union type.
     const mesh = columnToMesh(entity, floorElevationMm, levelId, 0);
-    if (!mesh) return;
+    if (!mesh || !(mesh instanceof THREE.Mesh)) return;
     mesh.material = this.material;
     // Non-pickable: the ghost must not intercept hover/selection object raycasts.
     mesh.userData = {};

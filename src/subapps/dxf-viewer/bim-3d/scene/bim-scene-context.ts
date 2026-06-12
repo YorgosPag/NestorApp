@@ -39,6 +39,12 @@ export interface SyncContext {
   readonly activeBuildingId: string | null;
   readonly useNewSystem: boolean;
   readonly floorElevationMm: number;
+  /**
+   * ADR-448 Phase 1b — datum-relative FFL of the storey ceiling (next floor up),
+   * for `topBinding='storey-ceiling'` walls/columns. `undefined` → no storey
+   * context → entities fall back to their stored `params.height` (legacy).
+   */
+  readonly nextFloorElevationMm: number | undefined;
   readonly activeLevelId: string | undefined;
 }
 

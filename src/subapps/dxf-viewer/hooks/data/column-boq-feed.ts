@@ -25,6 +25,7 @@ import {
 } from '../../bim/geometry/column-vertical-profile';
 import { buildWallHostInputs } from '../../bim/geometry/wall-host-plan-builder';
 import type { BimEntityForBoq } from '../../bim/services/BimToBoqBridge';
+import { computeColumnFinishContribution } from '../../bim/finishes/structural-finish-scene';
 
 /**
  * ADR-401 F.2 — top + base profiles για `attached` κολώνα (per-corner envelope
@@ -61,10 +62,14 @@ export function columnBoqEntity(entity: ColumnEntity, scene: SceneModel | null):
   const geometry = top !== null || base !== null
     ? computeColumnGeometry(entity.params, top ?? undefined, base ?? undefined)
     : entity.geometry;
+  // ADR-449 — derived σοβάς contribution (interior/exterior εμβαδά, εξαιρώντας
+  // καλυμμένα από τοίχους). `undefined` όταν σοβάς ανενεργός → single-entry path.
+  const finishContribution = computeColumnFinishContribution(entity, geometry, scene);
   return {
     id: entity.id,
     kind: entity.kind,
     params: entity.params as unknown as Readonly<{ category?: string; [key: string]: unknown }>,
     geometry,
+    ...(finishContribution ? { finishContribution } : {}),
   };
 }

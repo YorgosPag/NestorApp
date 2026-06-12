@@ -1,0 +1,100 @@
+# ADR-449 — Structural Finish Skin (σοβάς κολόνας/δοκαριού, per-face adjacency-driven)
+
+**Status:** 🟢 Slice 1 (data model + resolver + BOQ) + Slice 2 (3D band skin κολόνας) implemented, ΚΟΛΟΝΕΣ — pending browser-verify + commit (2026-06-13)
+**Discipline:** DXF Viewer · BIM finishes · BOQ/ΑΤΟΕ · structural columns/beams
+**Related:** ADR-363 (column/beam types + wall DNA), ADR-447 (wall plaster materials/catalog), ADR-396 (ETICS thermal envelope — exterior/interior classification, building footprint), ADR-401 (wall host-plan `coveredIntervals` — εξήχθη εδώ σε shared SSoT), ADR-445 (structural colour identity), ADR-413 (PBR textures), ADR-175/ΑΤΟΕ (BOQ)
+
+---
+
+## 1. Context / Problem
+
+Τα στατικά δίνουν π.χ. κολόνα 50×50cm. Στην πραγματικότητα σοβατίζεται περιμετρικά → αν αλλάξουμε το `width/depth` για να «χωρέσει» ο σοβάς, **αλλοιώνουμε τα στατικά**. Θέλουμε ταυτόχρονα:
+- (α) **αμετάβλητο στατικό πυρήνα** (50×50, ό,τι έδωσε ο μηχανικός),
+- (β) **πραγματική σοβατισμένη όψη**,
+- (γ) **ποσότητες σοβά** για επιμετρήσεις (BOQ).
+
+**Κρίσιμο (Giorgio):** ο σοβάς **ΔΕΝ είναι ομοιόμορφος**. Κάθε παρειά κολόνας/δοκαριού μπορεί να είναι:
+- **εσωτερική** → σοβάς Knauf (`mat-plaster-int`),
+- **εξωτερική** → εξωτ. σοβάς (`mat-plaster-ext`) ή θερμοπρόσοψη (ETICS),
+- **καλυμμένη από τοίχο** → καθόλου σοβάς,
+- **ΜΕΡΙΚΩΣ καλυμμένη**: παρειά 50cm όπου δύο τοίχοι ακουμπάνε 25+25 → σοβατίζεται μόνο το εκτεθειμένο μεσαίο κομμάτι.
+
+Δοκάρια ομοίως: πάνω=πλάκα, κάτω=κορυφές τοίχων, άκρα=κολόνες → συνήθως μένουν 2 πλάγιες όψεις.
+
+**Revit / big-player:** Structural Columns = single-material πυρήνας (immutable· το αναλυτικό μοντέλο ποτέ δεν αλλάζει)· τα finishes είναι **πρόσθετα αρχιτεκτονικά** (additive skin), η «πραγματική» όψη (πυρήνας+2×σοβάς) είναι **derived** (display/BOQ), ΟΧΙ αποθηκευμένη στατική διάσταση.
+
+## 2. Decision
+
+### 2.1 Αρχή SSoT
+- `ColumnParams.width/depth` (& `BeamParams`) = **στατικός πυρήνας, immutable**. Ο σοβάς ΠΟΤΕ δεν τον αλλάζει.
+- Ο σοβάς = additive metadata (`finish?: StructuralFinishSpec`, stored) + **derived** geometry/ποσότητες (resolver, ποτέ stored).
+- **Δεν** επαναχρησιμοποιεί το `envelopeLayer` (ETICS): εκείνο είναι meters/zone/exterior-only — τα δύο **συνυπάρχουν** (εξωτ. όψη = ETICS, εσωτ. = Knauf).
+
+### 2.2 Κεντρικός resolver (ΕΝΑ SSoT για 3D/2D/BOQ)
+`bim/finishes/structural-finish-resolver.ts` — pure. Για κάθε ακμή του footprint:
+1. `covered = ⋃ coveredIntervals(edge, wallFootprint)` (REUSE shared SSoT),
+2. `exposed = exposedComplement(covered)`,
+3. ανά exposed υπο-τμήμα: midpoint + outward normal `(dy,−dx)` (CCW) → injected `classify` → interior/exterior → υλικό από spec → μήκος×scale → m.
+
+Output `StructuralFinishFaces` = εκτεθειμένες υπο-ακμές + `interiorAreaM2`/`exteriorAreaM2`. Η ταξινόμηση εγχέεται ως callback → resolver 100% testable με stub.
+
+### 2.3 Classification (scene adapter)
+`bim/finishes/structural-finish-scene.ts` χτίζει obstacles (footprints τοίχων) + classifier:
+1. ρητό `column.params.envelopeFunction` ('exterior'/'interior') υπερισχύει (Revit Wall-Function-style override),
+2. αλλιώς γεωμετρικά: παρειά **exterior** όταν το midpoint της βρίσκεται στο εξώτατο όριο (outer ring) component που **περικλείει χώρο** (holes>0 = πραγματικό περίγραμμα κτιρίου, REUSE `computeBuildingFootprint`). Μεμονωμένη εσωτερική κολόνα (δικό της component χωρίς holes) → όλες interior (Knauf), σωστά.
+
+### 2.4 BOQ (ξεχωριστές γραμμές, εξαιρώντας καλυμμένα)
+`bim/services/structural-finish-boq.ts` (mirror `boq-multi-layer-builder`):
+- **parent** = στατικός πυρήνας (κολόνα `OIK-2.03` m³ σκυρόδεμα, αμετάβλητο, `isGroupParent:true`),
+- **child interior** = εσωτ. σοβάς (`OIK-4.01` m², `interiorAreaM2`) — αν >0,
+- **child exterior** = εξωτ. σοβάς (`OIK-4.03` m², `exteriorAreaM2`) — αν >0.
+
+Deterministic IDs: `boq_bim_${id}` / `_finish_int` / `_finish_ext`. Hook στο `BimToBoqBridge.upsertWithFinish` (dispatch: opening → multiLayerWall → **finish** → single-entry). Contribution υπολογίζεται upstream στο `column-boq-feed` (έχει πρόσβαση στη σκηνή). Delete cascade ΗΔΗ καλύπτει finish children (parentBoqItemId).
+
+## 3. Files (Slice 1)
+
+**NEW:**
+- `bim/geometry/shared/segment-polygon-coverage.ts` — `coveredIntervals` (εξήχθη από `wall-host-plan-builder`, N.0.2) + `mergeIntervals`/`exposedComplement` + `Pt2`.
+- `bim/finishes/structural-finish-types.ts` — `StructuralFinishSpec` (stored) + `StructuralFinishFaces` (derived) + defaults (15mm, Knauf/σοβάς).
+- `bim/finishes/structural-finish-resolver.ts` — pure resolver.
+- `bim/finishes/structural-finish-scene.ts` — scene adapter (obstacles + classifier).
+- `bim/services/structural-finish-boq.ts` — pure BOQ payload builder.
+- tests: `structural-finish-resolver.test.ts` (8) + `structural-finish-boq.test.ts` (5).
+
+**MOD:**
+- `bim/geometry/wall-host-plan-builder.ts` — import shared `coveredIntervals`, re-export `Pt2` (μηδέν αλλαγή σε importers).
+- `bim/services/boq-multi-layer-builder.ts` — `export buildBaseRow` (SSoT reuse).
+- `bim/services/BimToBoqBridge.ts` — `BimEntityForBoq.finishContribution` + `upsertWithFinish`.
+- `bim/types/column-types.ts` — `finish?: StructuralFinishSpec`.
+- `hooks/data/column-boq-feed.ts` — attach `finishContribution` (μέσω `computeColumnFinishContribution`).
+
+## 3.bis Files (Slice 2 — 3D band skin)
+
+**NEW:**
+- `bim-3d/converters/structural-finish-3d.ts` — `buildColumnFinishSkin(column, walls, baseY, levelId)`: ανά exposed segment → plan band quad (παρειά μετατοπισμένη ΕΞΩ κατά το πάχος, CCW outward normal) → `stripPrismGeometry` (REUSE — ο καθαρός geometry SSoT του `envelope-three-mesh`) → `THREE.Mesh` με `getMaterial3D(seg.materialId)`. Tags `structuralFinish:true` + κοινό `bimId`/`bimType:'column'`.
+- tests: `bim-3d/converters/__tests__/structural-finish-3d.test.ts` (10).
+
+**MOD:**
+- `bim/finishes/structural-finish-scene.ts` — εξαγωγή SSoT core `computeColumnFinishFaces(column, coreFootprint, heightMm, walls)` (obstacles + classifier + resolver). Το `computeColumnFinishContribution` (BOQ) ΚΑΙ το 3D το διαβάζουν → ΕΝΑ σημείο face-resolution.
+- `bim-3d/converters/bim-three-structural-converters.ts` — `columnToMesh` νέα προαιρετική `walls` param + return `THREE.Mesh | THREE.Group | null`· flat-path: αν υπάρχει σοβάς → composite `Group { πυρήνας + finish }`. Attached-prism path = πυρήνας-only (κεκλιμένες κορυφές = μετέπειτα).
+- `bim-3d/scene/bim-scene-attach-syncs.ts` — `syncColumns` περνά `entities.walls`.
+- `bim-3d/placement/ColumnPlacementGhost.ts` — type guard `instanceof THREE.Mesh` (ghost δεν περνά walls → πάντα πυρήνας-only Mesh).
+
+**Σημείωση SSoT (απόκλιση από handoff):** χρησιμοποιήθηκε `stripPrismGeometry` αντί `addBandPrism` — το `addBandPrism` δένει `makeEnvelopeMesh` → envelope material/tags (λάθος catalog για σοβά)· το `stripPrismGeometry` είναι ο καθαρός geometry sibling στο ίδιο αρχείο (ίδιο `ROT_X_NEG_90`) → σωστότερο SSoT-reuse.
+
+## 4. Roadmap (slices)
+
+- **Slice 1** ✅ — data model + resolver + BOQ (ΚΟΛΟΝΕΣ).
+- **Slice 2** ✅ — 3D render (band skin κολόνας, REUSE `stripPrismGeometry`). Flat-path μόνο· attached/κεκλιμένες κορυφές = μετέπειτα.
+- **Slice 3** — 2D render (finished outline + core, διπλή γραμμή).
+- **Slice 4** — Δοκάρια (resolver beam side-faces + 3D/2D).
+- **Slice 5** — View toggle «Σοβατισμένη όψη» + UI material/thickness override.
+
+## 5. Known / Deferred
+- Stale finish children όταν ο χρήστης απενεργοποιεί τον σοβά (single-entry path δεν τα καθαρίζει — ίδιο με wall multi-layer shrink· deferred re-sync).
+- Beam coverage κάτω-όψης από κορυφές τοίχων = Slice 4 refinement.
+- ETICS-grade per-element exterior detection (πέρα από outer-ring proximity) = μετέπειτα slice.
+
+## 6. Changelog
+- **2026-06-13** — Slice 1: data model + pure resolver (per-face, partial-coverage) + BOQ multi-layer (parent πυρήνας + interior/exterior σοβάς) + scene classifier. `coveredIntervals` εξήχθη σε shared SSoT (N.0.2). 13/13 jest. Pending browser-verify + commit.
+- **2026-06-13** — Slice 2: 3D band skin κολόνας. SSoT core `computeColumnFinishFaces` (κοινό BOQ+3D). `buildColumnFinishSkin` ανά exposed segment → vertical band prism (REUSE `stripPrismGeometry`) με `getMaterial3D`. `columnToMesh` → composite `Group {πυρήνας+σοβάς}` (flat-path)· πυρήνας `width/depth` αμετάβλητος. Ghost guard. 10/10 jest + tsc καθαρό. Pending browser-verify + commit.

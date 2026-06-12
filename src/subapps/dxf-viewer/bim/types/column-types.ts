@@ -40,6 +40,7 @@ import type { SceneUnits } from '../../utils/scene-units';
 import type { IfcEntityMixin } from './ifc-entity-mixin';
 import type { ColumnBaseBinding, ColumnTopBinding } from './bim-binding';
 import type { EnvelopeFunction, EnvelopeLayer } from './thermal-envelope-types';
+import type { StructuralFinishSpec } from '../finishes/structural-finish-types';
 
 // ─── Sub-type discriminator (ADR-363 §5.6) ───────────────────────────────────
 
@@ -253,6 +254,14 @@ export interface ColumnParams {
    * Set χειροκίνητα (UI Φάση 6).
    */
   readonly envelopeFunction?: EnvelopeFunction;
+  /**
+   * ADR-449 — Finish skin (σοβάς) πρόθεση. Optional/non-breaking: absent /
+   * `enabled:false` = κανένας σοβάς (back-compat). Ο σοβάς είναι additive
+   * «δέρμα» — ΠΟΤΕ δεν αλλάζει το `width/depth` (στατικός πυρήνας = immutable
+   * SSoT). Οι εκτεθειμένες παρειές + ποσότητες είναι DERIVED μέσω του
+   * `structural-finish-resolver`. Συνυπάρχει με `envelopeLayer` (ETICS).
+   */
+  readonly finish?: StructuralFinishSpec;
   /**
    * DXF canvas coordinate unit. Always stored so `computeColumnGeometry` can
    * convert mm scalars (width/depth) → canvas units for 2D footprint offsets.

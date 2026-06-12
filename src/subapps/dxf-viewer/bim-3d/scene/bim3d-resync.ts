@@ -23,6 +23,7 @@ import {
   type Bim3DEntities,
 } from '../stores/Bim3DEntitiesStore';
 import { getMultiFloorStack } from './multi-floor-3d-source';
+import { useActiveStoreyStore } from '../../systems/levels/active-storey-store';
 import type { ThreeJsSceneManager } from './ThreeJsSceneManager';
 
 export interface ResyncBimSceneOpts {
@@ -68,17 +69,22 @@ export function resyncBimScene(
     return;
   }
 
+  // ADR-448 Phase 1 — storey-aware render datum (real FFL) + storey ceiling for
+  // `storey-ceiling` walls/columns. Read once from the dedicated store; both fall
+  // back (0 / undefined) when no floor is linked, preserving legacy behaviour.
+  const storey = useActiveStoreyStore.getState().context;
   manager.syncBimEntities(
     { walls: s.walls, columns: s.columns, beams: s.beams, foundations: s.foundations, slabs: s.slabs,
       slabOpenings: s.slabOpenings, openings: s.openings, stairs: s.stairs,
       fixtures: s.fixtures, panels: s.panels, manifolds: s.manifolds, radiators: s.radiators, boilers: s.boilers, waterHeaters: s.waterHeaters, railings: s.railings,
       furnitures: s.furnitures, roofs: s.roofs, floorFinishes: s.floorFinishes, underfloors: s.underfloors, mepSegments: s.mepSegments, mepFittings: s.mepFittings },
-    0,
+    storey?.floorElevationMm ?? 0,
     s.activeLevelId ?? undefined,
     s.floors,
     s.buildings,
     s.activeBuildingId,
     s.buildingVisibilityModes,
     floorModes,
+    storey?.nextFloorElevationMm ?? undefined,
   );
 }

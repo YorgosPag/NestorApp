@@ -21,6 +21,8 @@ export interface FloorStackEntry {
   readonly levelId: string;
   /** Vertical offset of this floor, in millimetres (ADR-369 elevation × 1000). */
   readonly floorElevationMm: number;
+  /** ADR-448 Phase 1b — datum-relative FFL of the next floor up (storey ceiling). */
+  readonly nextFloorElevationMm?: number;
   /** The floor's BIM entities (live for the active floor, snapshot otherwise). */
   readonly entities: Bim3DEntities;
 }

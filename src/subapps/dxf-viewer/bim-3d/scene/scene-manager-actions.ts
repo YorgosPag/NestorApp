@@ -36,6 +36,8 @@ export interface SyncBimEntitiesDeps {
 export interface SyncBimEntitiesArgs {
   readonly entities: Bim3DEntities;
   readonly floorElevationMm: number;
+  /** ADR-448 Phase 1b — datum-relative FFL of the storey ceiling (next floor up). */
+  readonly nextFloorElevationMm: number | undefined;
   readonly activeLevelId: string | undefined;
   readonly floors: readonly FloorRef[];
   readonly buildings: readonly BuildingRef[];
@@ -62,6 +64,7 @@ export function syncBimEntitiesIntoScene(
     args.activeBuildingId,
     args.buildingVisModes,
     args.floorVisModes,
+    args.nextFloorElevationMm,
   );
   if (args.buildingVisModes.size > 0) applyBuildingVisibility(deps.bimLayer.group, args.buildingVisModes);
   // ADR-402 Phase C — re-apply the highlight for the whole multi-selection.

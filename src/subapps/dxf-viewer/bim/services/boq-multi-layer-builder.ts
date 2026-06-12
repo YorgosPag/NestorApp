@@ -88,7 +88,12 @@ function deriveLayerQuantity(layer: WallDnaLayer, wallNetArea: number, kind: Mat
   return wallNetArea;
 }
 
-function buildBaseRow(
+/**
+ * Base BOQ row (όλα τα default πεδία πλην category/quantity/grouping). Εξάγεται
+ * ώστε να το μοιράζεται ΚΑΙ ο `structural-finish-boq` (ADR-449 σοβάς) — ΕΝΑ SSoT
+ * για τα ~40 default πεδία (N.0.2, αποφυγή διπλασιασμού).
+ */
+export function buildBaseRow(
   id: string,
   context: MultiLayerBuildContext,
   entityId: string,

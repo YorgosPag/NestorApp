@@ -12,6 +12,7 @@
 
 import * as THREE from 'three';
 import type { ColumnEntity } from '../../bim/types/column-types';
+import type { WallEntity } from '../../bim/types/wall-types';
 import type { BeamEntity } from '../../bim/types/beam-types';
 import type { SlabEntity } from '../../bim/types/slab-types';
 import type { SlabOpeningEntity } from '../../bim/types/slab-opening-types';
@@ -25,6 +26,7 @@ import { buildSweptIBeamGeometry } from './beam-ishape-geometry';
 import { buildMultiLayerSlabSolid } from './slab-multilayer-solid-3d';
 import { isMultiLayerSlab } from '../../bim/types/slab-dna-types';
 import { attachEdgesProjection } from './bim-three-edges';
+import { buildColumnFinishSkin } from './structural-finish-3d';
 import { isWallColumnKind } from '../../bim/columns/column-from-faces';
 import type { ColumnTopProfile, ColumnBaseProfile } from '../../bim/geometry/column-vertical-profile';
 
@@ -39,9 +41,18 @@ export function columnToMesh(
   buildingBaseElevationM = 0,
   topProfile?: ColumnTopProfile,
   baseProfile?: ColumnBaseProfile,
-): THREE.Mesh | null {
+  nominalHeightMm?: number,
+  walls: readonly WallEntity[] = [],
+): THREE.Mesh | THREE.Group | null {
   const verts = column.geometry.footprint.vertices;
   if (verts.length < 3) return null;
+
+  // ADR-448 Phase 1b — storey-ceiling column renders to the real ceiling height
+  // (Revit «Top: Up to Level»). Only the flat (non-attached) path; the attached
+  // prism above already resolves its top via `topProfile`. No-op without context.
+  const flatColumn = (nominalHeightMm !== undefined && Math.abs(nominalHeightMm - column.params.height) > 1e-6)
+    ? { ...column, params: { ...column.params, height: nominalHeightMm } }
+    : column;
 
   const matId = column.params.material ?? 'elem-column';
 
@@ -68,16 +79,29 @@ export function columnToMesh(
   const shape = buildShape(verts);
   if (!shape) return null;
 
-  const geo = extrudeAndRotate(shape, column.params.height * MM_TO_M);
+  const geo = extrudeAndRotate(shape, flatColumn.params.height * MM_TO_M);
   ensureWorldUvs(geo); // ADR-413 — aoMap uv2 (ExtrudeGeometry auto-UVs in meters).
   // ADR-404 — raking column: shear το X/Z βάσει ύψους (η κορυφή γέρνει). No-op flat.
-  applyColumnTilt(geo, column.params);
+  applyColumnTilt(geo, flatColumn.params);
   const mesh = new THREE.Mesh(geo, getElementMaterial3D('column'));
   // ADR-402 — `baseOffset` lifts the whole column (vertical move). ONLY on this flat
   // path: the attached-prism path bakes baseOffset into its profile z. baseOffset=0 → no change.
   mesh.position.y = (floorElevationMm + column.params.baseOffset) * MM_TO_M + buildingBaseElevationM;
   const tagged = tagMesh(mesh, column.id, 'column', matId, levelId);
   attachEdgesProjection(tagged, 'column');
+
+  // ADR-449 Slice 2 — additive σοβάς (per-face band skin) ΕΞΩ από τον στατικό
+  // πυρήνα. Ενεργό μόνο όταν η κολόνα έχει ενεργό `finish` ΚΑΙ δόθηκαν walls
+  // (απών στο ghost path → πυρήνας-only Mesh, μηδέν regression). Flat-path μόνο.
+  const finishSkin = buildColumnFinishSkin(flatColumn, walls, mesh.position.y, levelId);
+  if (finishSkin) {
+    const composite = new THREE.Group();
+    composite.add(tagged);
+    composite.add(finishSkin);
+    composite.userData['bimId'] = column.id;
+    composite.userData['bimType'] = 'column';
+    return composite;
+  }
   return tagged;
 }
 

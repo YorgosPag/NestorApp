@@ -44,6 +44,18 @@ export interface FloorOption {
    * stack height matches the tab, bypassing the lossy ProjectHierarchyContext.
    */
   elevation?: number;
+  /**
+   * ADR-369 floor-to-floor height in **metres** (default DEFAULT_FLOOR_HEIGHT_M = 3.0).
+   * ADR-448: canonical source for the Active Storey Context (storey height of the
+   * single-floor editing scope) — read straight from the FLOORS doc here.
+   */
+  height?: number;
+  /**
+   * ADR-369 finish thickness in **millimetres** — FFL → Top-of-Structural-Slab
+   * (default DEFAULT_FLOOR_FINISH_THICKNESS_MM = 80). ADR-448: feeds the Active
+   * Storey Context for storey-ceiling slab geometry.
+   */
+  finishThickness?: number;
 }
 
 export interface UseFloorsByBuildingResult {
@@ -82,6 +94,8 @@ function mapFloorsResult(documents: ReadonlyArray<Record<string, unknown> & { id
       longName: typeof data.longName === 'string' ? data.longName : undefined,
       kind: isFloorKind(data.kind) ? data.kind : undefined,
       elevation: typeof data.elevation === 'number' ? data.elevation : undefined,
+      height: typeof data.height === 'number' ? data.height : undefined,
+      finishThickness: typeof data.finishThickness === 'number' ? data.finishThickness : undefined,
     }))
     .sort((a, b) => a.number - b.number);
 }

@@ -317,10 +317,11 @@ export class ThreeJsSceneManager {
     activeBuildingId: string | null = null,
     buildingVisModes: ReadonlyMap<string, BuildingVisMode> = new Map(),
     floorVisModes: ReadonlyMap<string, FloorVisMode> = new Map(),
+    nextFloorElevationMm: number | undefined = undefined,
   ): void {
     if (this.disposed) return;
     syncBimEntitiesIntoScene(this.bimSyncDeps(),
-      { entities, floorElevationMm, activeLevelId, floors, buildings, activeBuildingId, buildingVisModes, floorVisModes },
+      { entities, floorElevationMm, nextFloorElevationMm, activeLevelId, floors, buildings, activeBuildingId, buildingVisModes, floorVisModes },
     );
     // Pre-compile SSAO/composer programs once geometry exists (idempotent) — avoids first-idle shader-link stall.
     this.ssaoModulator.warmUp();

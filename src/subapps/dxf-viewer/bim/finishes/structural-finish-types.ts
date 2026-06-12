@@ -1,0 +1,96 @@
+/**
+ * ADR-449 — Structural Finish Skin (σοβάς κολόνας/δοκαριού): types + defaults.
+ *
+ * Πρόβλημα: τα στατικά δίνουν π.χ. κολόνα 50×50cm. Ο σοβάς προστίθεται περιμετρικά
+ * αλλά ΔΕΝ πρέπει να αλλοιώνει τη στατική διάσταση (`width/depth`). Λύση (Revit/
+ * big-player): στατικός πυρήνας = immutable SSoT· σοβάς = additive «δέρμα» (finish
+ * skin) με δικό υλικό+πάχος, BOQ-tracked· η σοβατισμένη όψη (πυρήνας+2×σοβάς) είναι
+ * **derived** (display only, ΠΟΤΕ stored).
+ *
+ * Δύο επίπεδα (mirror του ETICS hybrid DEFINITION/DATA, ADR-396):
+ *   - `StructuralFinishSpec` = per-element ΠΡΟΘΕΣΗ (stored, optional): ποιο υλικό
+ *     εσωτ./εξωτ. + πάχος. Absent = κανένας σοβάς (back-compat).
+ *   - `StructuralFinishFaces` = DERIVED output του resolver (ποτέ stored): οι
+ *     ΕΚΤΕΘΕΙΜΕΝΕΣ υπο-ακμές ανά παρειά (εξαιρώντας καλυμμένα από τοίχους) +
+ *     ταξινόμηση interior/exterior + εμβαδά για BOQ.
+ *
+ * Per-face πραγματικότητα (Giorgio): κάθε παρειά μπορεί να είναι εσωτερική (Knauf),
+ * εξωτερική (σοβάς/θερμοπρόσοψη) ή ΚΑΛΥΜΜΕΝΗ από τοίχο (καθόλου σοβάς) — και μάλιστα
+ * ΜΕΡΙΚΩΣ (παρειά 50cm με τοίχους 25+25 → σοβατίζεται μόνο το εκτεθειμένο μεσαίο).
+ * Γι' αυτό το `StructuralFinishFaces` παράγεται από ανάλυση γειτνίασης, ΟΧΙ σταθερό.
+ *
+ * Δεν επαναχρησιμοποιεί το `envelopeLayer` (ETICS): εκείνο είναι meters/zone/
+ * exterior-only — τα δύο ΣΥΝΥΠΑΡΧΟΥΝ (εξωτ. όψη κολόνας = ETICS, εσωτ. = Knauf).
+ *
+ * @see docs/centralized-systems/reference/adrs/ADR-449-structural-finish-skin.md
+ */
+
+import type { Point2D } from '../../rendering/types/Types';
+
+// ─── Canonical defaults (REUSE wall plaster catalog, ADR-447) ──────────────────
+// Εσωτ. σοβάς (Knauf) = `mat-plaster-int` (ΑΤΟΕ OIK-4.01 m²)· εξωτ. = `mat-plaster-ext`
+// (OIK-4.03 m²)· default πάχος 15mm (απόφαση Giorgio 2026-06-12). Οι σταθερές +
+// factory `createDefaultStructuralFinishSpec` έρχονται στο Slice 5 (UI ενεργοποίησης),
+// όπου και καταναλώνονται — δεν εισάγονται unused exports στο Slice 1.
+
+// ─── STORED: per-element πρόθεση σοβατίσματος ──────────────────────────────────
+
+/**
+ * Per-element πρόθεση finish skin (stored σε `ColumnParams.finish` /
+ * `BeamParams.finish`). Optional — absent / `enabled:false` = κανένας σοβάς.
+ *
+ * Κρατά ΜΟΝΟ την παλέτα (ποιο υλικό εσωτ./εξωτ. + πάχος). Το ΠΟΙΕΣ παρειές /
+ * ΠΟΣΟ εκτεθειμένες είναι DERIVED (resolver) — δεν αποθηκεύεται.
+ */
+export interface StructuralFinishSpec {
+  /** Master on/off. */
+  readonly enabled: boolean;
+  /** Υλικό εσωτερικών παρειών (default `mat-plaster-int`). */
+  readonly interiorMaterialId: string;
+  /** Υλικό εξωτερικών παρειών (default `mat-plaster-ext`). */
+  readonly exteriorMaterialId: string;
+  /** mm. Περιμετρικό πάχος σοβά (default 15). ΠΟΤΕ δεν μπαίνει στο `width/depth`. */
+  readonly thickness: number;
+}
+
+// ─── DERIVED: resolver output (ποτέ stored) ────────────────────────────────────
+
+export type FinishClassification = 'interior' | 'exterior';
+
+/**
+ * Μία εκτεθειμένη υπο-ακμή μιας παρειάς (μετά την αφαίρεση των καλυμμένων από
+ * τοίχους κομματιών). Συντεταγμένες σε **plan space** (ίδιες μονάδες με το
+ * footprint του στοιχείου — canvas units).
+ */
+export interface FinishFaceSegment {
+  readonly a: Point2D;
+  readonly b: Point2D;
+  readonly classification: FinishClassification;
+  /** Resolved υλικό (interior→interiorMaterialId, exterior→exteriorMaterialId). */
+  readonly materialId: string;
+  /** mm — πάχος σοβά (από το spec). */
+  readonly thickness: number;
+  /** m — μήκος της εκτεθειμένης υπο-ακμής στο plan. */
+  readonly lengthM: number;
+}
+
+/**
+ * DERIVED σύνολο finish faces ενός στοιχείου. `interiorAreaM2`/`exteriorAreaM2` =
+ * Σ(lengthM) × heightM ανά ταξινόμηση → τροφοδοτεί το BOQ (ξεχωριστές γραμμές).
+ */
+export interface StructuralFinishFaces {
+  readonly segments: readonly FinishFaceSegment[];
+  /** m — ύψος επιφάνειας σοβά (κολόνα: ύψος· δοκάρι: structural depth). */
+  readonly heightM: number;
+  /** m² — συνολικό εμβαδό εσωτερικού σοβά (Knauf). */
+  readonly interiorAreaM2: number;
+  /** m² — συνολικό εμβαδό εξωτερικού σοβά. */
+  readonly exteriorAreaM2: number;
+}
+
+// ─── Guards ─────────────────────────────────────────────────────────────────────
+
+/** True όταν το spec υπάρχει ΚΑΙ είναι ενεργό ΚΑΙ έχει θετικό πάχος. */
+export function isFinishActive(spec: StructuralFinishSpec | undefined): spec is StructuralFinishSpec {
+  return !!spec && spec.enabled && spec.thickness > 0;
+}
