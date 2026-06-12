@@ -22,6 +22,7 @@ import { CreateColumnsCommand } from '../../core/commands/entity-commands/Create
 import { isColumnEntity } from '../../types/entities';
 import { hasGuideBindings, type GuideBinding } from '../hosting/guide-binding-types';
 import type { AxisGuideReader } from '../foundations/foundation-from-grid';
+import { sceneFoundationTopMm } from '../foundations/foundation-level';
 import type { ColumnParamOverrides } from '../../hooks/drawing/column-completion';
 import type { SceneUnits } from '../../utils/scene-units';
 import { buildColumnGridFromGuides } from './column-from-grid';
@@ -83,11 +84,16 @@ function existingGridColumnKeys(
 export function commitColumnGridFromGuides(
   deps: ColumnGridCommitDeps,
 ): ColumnGridCommitResult {
+  // ADR-441 GEN-COL — στατική συνέχεια: αν υπάρχουν footings (πεδιλοδοκοί/πέδιλα) στη
+  // σκηνή, οι κολώνες κατεβάζουν τη βάση τους στη στάθμη θεμελίωσης (πατούν επ' αυτών).
+  const entities = deps.getLevelScene(deps.levelId)?.entities ?? [];
+  const foundationBaseLevelMm = sceneFoundationTopMm(entities) ?? undefined;
   const target = buildColumnGridFromGuides(
     deps.guideReader,
     deps.overrides ?? {},
     deps.levelId,
     deps.sceneUnits,
+    foundationBaseLevelMm,
   );
   if (!target.ok) {
     return { ok: false, reason: 'insufficient-guides', created: 0, skipped: 0 };

@@ -25,11 +25,11 @@ import {
   isWallEntity,
   isColumnEntity,
   isBeamEntity,
-  isFoundationEntity,
 } from '../../types/entities';
 import { hasGuideBindings } from '../hosting/guide-binding-types';
 import type { AxisGuideReader } from '../foundations/foundation-from-grid';
 import { bayKeyFromBindings } from '../foundations/foundation-grid-segments';
+import { sceneFoundationTopMm } from '../foundations/foundation-level';
 import { defaultFoundationTopElevationMm } from '../types/foundation-types';
 import type { SlabKind } from '../types/slab-types';
 import type { SlabParamOverrides } from '../../hooks/drawing/slab-completion';
@@ -44,16 +44,9 @@ import { buildFoundationMatSlabs, buildSlabBaysFromGuides } from './slab-from-gr
  * Fallback (μηδέν footings στη σκηνή): SSoT `defaultFoundationTopElevationMm('strip')`.
  */
 export function deriveFoundationMatLevelMm(entities: readonly { type: string }[]): number {
-  const footingTops: number[] = [];
-  for (const e of entities) {
-    if (!isFoundationEntity(e)) continue;
-    if (e.params.kind === 'strip' || e.params.kind === 'pad') {
-      footingTops.push(e.params.topElevationMm);
-    }
-  }
-  return footingTops.length > 0
-    ? Math.min(...footingTops)
-    : defaultFoundationTopElevationMm('strip');
+  // SSoT scene-read (sceneFoundationTopMm)· εδαφόπλακα ΠΑΝΤΑ έχει στάθμη → fallback
+  // στο SSoT default όταν δεν υπάρχουν ακόμη footings στη σκηνή.
+  return sceneFoundationTopMm(entities) ?? defaultFoundationTopElevationMm('strip');
 }
 
 export interface SlabGridCommitDeps {

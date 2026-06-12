@@ -70,6 +70,11 @@ export interface ColumnParamOverrides {
   readonly depth?: number;
   /** mm. */
   readonly height?: number;
+  /**
+   * mm. Στάθμη βάσης σχετικά με το `baseBinding` (default 0 = storey-floor). ADR-441
+   * GEN-COL: αρνητικό → η βάση κατεβαίνει στη θεμελίωση (στατική συνέχεια κολώνας).
+   */
+  readonly baseOffset?: number;
   /** Μοίρες CCW. Αγνοείται αν circular. */
   readonly rotation?: number;
   readonly material?: string;
@@ -147,7 +152,7 @@ export function buildDefaultColumnParams(
     sceneUnits,
     baseBinding: DEFAULT_COLUMN_BASE_BINDING,
     topBinding: DEFAULT_COLUMN_TOP_BINDING,
-    baseOffset: 0,
+    baseOffset: overrides.baseOffset ?? 0,
     topOffset: 0,
     ...(overrides.material !== undefined ? { material: overrides.material } : {}),
     ...(overrides.lshape !== undefined ? { lshape: overrides.lshape } : {}),

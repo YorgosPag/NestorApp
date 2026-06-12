@@ -86,6 +86,33 @@ describe('buildColumnGridFromGuides', () => {
   });
 });
 
+describe('buildColumnGridFromGuides — στατική συνέχεια στη θεμελίωση (ADR-441 GEN-COL)', () => {
+  it('foundationBaseLevelMm=-1000 → βάση −1000 + height 4000 (κορυφή μένει 3000)', () => {
+    const result = buildColumnGridFromGuides(reader([...X3, ...Y3]), {}, '0', 'mm', -1000);
+    const c = result.columns[0];
+    expect(c.params.baseOffset).toBe(-1000); // βάση στη θεμελίωση
+    expect(c.params.height).toBe(4000);      // 3000 + 1000 → top = -1000 + 4000 = 3000
+  });
+
+  it('χωρίς foundationBaseLevelMm → καμία αλλαγή (βάση 0, height 3000)', () => {
+    const result = buildColumnGridFromGuides(reader([...X3, ...Y3]), {}, '0', 'mm');
+    const c = result.columns[0];
+    expect(c.params.baseOffset).toBe(0);
+    expect(c.params.height).toBe(3000);
+  });
+
+  it('θεμελίωση στο/πάνω από το δάπεδο (>=0) → no-op (καμία επέκταση)', () => {
+    const result = buildColumnGridFromGuides(reader([...X3, ...Y3]), {}, '0', 'mm', 0);
+    expect(result.columns[0].params.baseOffset).toBe(0);
+    expect(result.columns[0].params.height).toBe(3000);
+  });
+
+  it('σέβεται custom height override (height 2800 → 3800 με βάση −1000)', () => {
+    const result = buildColumnGridFromGuides(reader([...X3, ...Y3]), { height: 2800 }, '0', 'mm', -1000);
+    expect(result.columns[0].params.height).toBe(3800);
+  });
+});
+
 describe('enumerateGridIntersections', () => {
   it('3×3 → 9 specs με σωστά center bindings', () => {
     const axes = gridAxesFromReader(reader([...X3, ...Y3]), 1);

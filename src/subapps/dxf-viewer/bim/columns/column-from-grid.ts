@@ -30,7 +30,31 @@ import {
   buildDefaultColumnParams,
   type ColumnParamOverrides,
 } from '../../hooks/drawing/column-completion';
+import { DEFAULT_COLUMN_HEIGHT_MM } from '../types/column-types';
 import type { SceneUnits } from '../../utils/scene-units';
+
+/**
+ * Active-level datum (mm) — όλα τα entity elevations είναι level-relative με FFL=0
+ * (ίδια σύμβαση με `wall-structural-attach-coordinator` / `slab-grid-commit`).
+ */
+const ACTIVE_LEVEL_FLOOR_MM = 0;
+
+/**
+ * ADR-441 GEN-COL — στατική συνέχεια: αν δοθεί στάθμη θεμελίωσης, η κολώνα κατεβάζει
+ * τη βάση της εκεί (`baseOffset`) και **επιμηκύνεται** ισόποσα ώστε η κορυφή να μείνει
+ * στην οροφή ορόφου (`top = base + height` → height += baseDrop). Foundation στο/πάνω
+ * από το δάπεδο → καμία αλλαγή (no-op). Pure merge των overrides.
+ */
+function withFoundationBase(
+  overrides: ColumnParamOverrides,
+  foundationBaseLevelMm: number | undefined,
+): ColumnParamOverrides {
+  if (foundationBaseLevelMm === undefined) return overrides;
+  const baseDrop = ACTIVE_LEVEL_FLOOR_MM - foundationBaseLevelMm;
+  if (baseDrop <= 0) return overrides; // θεμελίωση όχι κάτω από το δάπεδο
+  const baseHeight = overrides.height ?? DEFAULT_COLUMN_HEIGHT_MM;
+  return { ...overrides, baseOffset: foundationBaseLevelMm, height: baseHeight + baseDrop };
+}
 
 /** Προδιαγραφή ΜΙΑΣ κολώνας σε τομή αξόνων πριν χτιστεί entity/geometry. */
 export interface GridColumnSpec {
@@ -97,16 +121,20 @@ export function buildColumnGridFromGuides(
   overrides: ColumnParamOverrides,
   layerId: string,
   sceneUnits: SceneUnits,
+  foundationBaseLevelMm?: number,
 ): BuildColumnGridResult {
   const axes = gridAxesFromReader(reader, 1);
   if (!axes) {
     return { ok: false, reason: 'insufficient-guides', columns: [], ignoredCount: 0 };
   }
 
+  // ADR-441 GEN-COL — στατική συνέχεια: η βάση κατεβαίνει στη θεμελίωση (αν υπάρχει).
+  const effectiveOverrides = withFoundationBase(overrides, foundationBaseLevelMm);
+
   const columns: ColumnEntity[] = [];
   let ignoredCount = 0;
   enumerateGridIntersections(axes, ({ position, bindings }) => {
-    const col = buildBoundColumn(position, bindings, layerId, overrides, sceneUnits);
+    const col = buildBoundColumn(position, bindings, layerId, effectiveOverrides, sceneUnits);
     if (col) columns.push(col);
     else ignoredCount++;
   });
