@@ -24,6 +24,7 @@ import { BimRotateHotGripStore } from '../../bim/grips/bim-rotate-hotgrip-store'
 import { commitDxfGripDragModeAware, type DxfCommitDeps, type OverlayCommitDeps } from './grip-commit-adapters';
 import { commitHotGripCopy } from './grip-parametric-commits';
 import { applyGripStepSnap } from '../../bim/grips/grip-step-quantize';
+import { applyMoveConstraints } from '../../bim/grips/grip-move-constraints';
 import { CtrlKeyTracker } from '../../keyboard/CtrlKeyTracker';
 import {
   commitOverlayVertexDrag,
@@ -383,8 +384,10 @@ export async function runGripMouseUp(worldPos: Point2D, ctx: GripMouseUpCtx): Pr
       // move / corner — needs an anchor (base point / grip position).
       if (!anchorRef.current) return true;
       const effectiveAnchor = GripBasePointStore.getSnapshot().overrideAnchor ?? anchorRef.current;
-      // SNAP-MODE (F9) — quantize displacement to the user step (no-op when OFF).
-      const delta: Point2D = applyGripStepSnap({ x: worldPos.x - effectiveAnchor.x, y: worldPos.y - effectiveAnchor.y });
+      // ORTHO (F8) locks a "move" hot-grip to the H/V axis; corner reshape keeps its
+      // own geometry. SNAP-MODE (F9) step then quantizes (both no-op when OFF).
+      const rawDelta = { x: worldPos.x - effectiveAnchor.x, y: worldPos.y - effectiveAnchor.y };
+      const delta: Point2D = hotOp === 'move' ? applyMoveConstraints(rawDelta) : applyGripStepSnap(rawDelta);
       // ADR-363 Phase 1G.4 + ADR-397 — Ctrl (or ⌘) held at the terminal click of
       // a MOVE hot-grip copies the entity (AutoCAD MOVE→COPY) instead of
       // translating it. Dispatched entity-agnostically (wall-midpoint /
@@ -405,8 +408,12 @@ export async function runGripMouseUp(worldPos: Point2D, ctx: GripMouseUpCtx): Pr
       // re-anchored the drag through the right-click menu, the displacement
       // is measured from the user-picked anchor instead of `grip.position`.
       const effectiveAnchor = GripBasePointStore.getSnapshot().overrideAnchor ?? anchorRef.current;
-      // SNAP-MODE (F9) — quantize displacement to the user step (no-op when OFF).
-      const delta: Point2D = applyGripStepSnap({ x: worldPos.x - effectiveAnchor.x, y: worldPos.y - effectiveAnchor.y });
+      // ORTHO (F8) locks the displacement to the H/V axis when the WHOLE entity
+      // translates (a `movesEntity` grip or an Alt move-from-base-point); parametric
+      // resize grips skip it. SNAP-MODE (F9) step then quantizes (both no-op when OFF).
+      const rawDelta = { x: worldPos.x - effectiveAnchor.x, y: worldPos.y - effectiveAnchor.y };
+      const movesWhole = activeGrip.movesEntity === true || GripAltMoveStore.getActive();
+      const delta: Point2D = movesWhole ? applyMoveConstraints(rawDelta) : applyGripStepSnap(rawDelta);
       commitDxfGripDragModeAware(activeGrip, delta, dxfCommitDeps, GripModeStore.getSnapshot());
       // The override is a per-drag modifier — clear it at commit so the
       // next drag starts from the natural grip anchor.
@@ -442,6 +449,10 @@ export async function runGripMouseUp(worldPos: Point2D, ctx: GripMouseUpCtx): Pr
       return true;
     }
     if (draggingOverlayBody) {
+      // DEFER (ADR-363): ORTHO (F8) for overlay-body move is intentionally not applied
+      // here — its live ghost is drawn in the polygon renderer (ADR-040 leaf), so
+      // axis-locking only the commit would break WYSIWYG. Overlays stay free until the
+      // ghost is locked in the same pass. SNAP-MODE step still applies.
       const delta = applyGripStepSnap({ x: worldPos.x - draggingOverlayBody.startPoint.x, y: worldPos.y - draggingOverlayBody.startPoint.y });
       await commitOverlayBodyDrag(draggingOverlayBody.overlayId, delta, overlayCommitDeps);
       setSelectedGrips([]);

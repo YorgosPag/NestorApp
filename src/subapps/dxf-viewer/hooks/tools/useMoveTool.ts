@@ -28,6 +28,8 @@ import { toolHintOverrideStore } from '../toolHintOverrideStore';
 import type { useLevels } from '../../systems/levels';
 // ADR-363 Phase 7A — slab→slab-opening cascade for group move.
 import { expandSelectionForMove } from '../../bim/cascade/bim-cascade-resolver';
+// ADR-363 — ORTHO (F8) axis-lock for the AutoCAD MOVE destination (no F9 step here).
+import { applyOrthoToDelta } from '../../bim/grips/grip-move-constraints';
 
 // ============================================================================
 // TYPES
@@ -147,10 +149,12 @@ export function useMoveTool(props: UseMoveToolProps): UseMoveToolReturn {
       }
 
       if (phase === 'awaiting-destination' && basePoint) {
-        const delta: Point2D = {
+        // ORTHO (F8) locks the destination to the H/V axis from the base point
+        // (AutoCAD MOVE+ORTHO). No-op when OFF. Matches the live ghost (useMovePreview).
+        const delta: Point2D = applyOrthoToDelta({
           x: worldPoint.x - basePoint.x,
           y: worldPoint.y - basePoint.y,
-        };
+        });
         if (Math.abs(delta.x) < 0.001 && Math.abs(delta.y) < 0.001) return;
 
         const commands: ICommand[] = [];

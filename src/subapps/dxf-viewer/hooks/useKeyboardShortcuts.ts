@@ -36,6 +36,7 @@ import { useEscapeHandler, ESC_PRIORITY } from '../systems/escape-bus';
 import { isInteractiveTool } from '../systems/tools/ToolStateManager';
 // ADR-391 — Ctrl+L opens AdminLayerManager dialog (toggleLayers shortcut SSoT)
 import { AdminLayerManagerDialogStore } from '../stores/AdminLayerManagerDialogStore';
+import { getActiveDragGrip } from '../systems/cursor/GripDragStore';
 
 // Hook parameters interface
 interface KeyboardShortcutsConfig {
@@ -95,6 +96,13 @@ export const useKeyboardShortcuts = ({
          document.activeElement.getAttribute('contenteditable') === 'true');
 
       // ⌨️ SPECIAL SHORTCUTS - Using centralized matchesShortcut()
+
+      // ADR-363 SNAP-MODE: while a 2D grip is being dragged, `Q` is the momentary
+      // step-snap override (read by `QKeyTracker` in the grip path) — it must NOT
+      // open the command line or the Arc tool here. Bail so QKeyTracker owns it.
+      // Match the PHYSICAL Q key (`e.code`) so a Greek/non-Latin layout (where the
+      // Q key emits ';' as `e.key`) still hands off to QKeyTracker.
+      if ((e.code === 'KeyQ' || e.key === 'q' || e.key === 'Q') && getActiveDragGrip()) return;
 
       // ADR-394: Z → Fit to View to current selection (DXF + BIM). MUST run
       // before the command-line activation gate below — otherwise 'Z' in select

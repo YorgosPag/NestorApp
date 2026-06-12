@@ -21,8 +21,10 @@ import { buildWallFillingRect, type DetectedRectangle } from '../../bim/walls/wa
 import { extendFillingWallToNeighbors } from '../../bim/walls/wall-region-autojoin';
 import type { PerimeterFacesResult } from '../../bim/walls/perimeter-from-faces';
 import { EventBus } from '../../systems/events/EventBus';
-import { buildDefaultWallParams, buildWallEntity, type SceneUnits } from './wall-completion';
+import { buildDefaultWallParams, buildWallEntity, resolveWallGridBindings, type SceneUnits } from './wall-completion';
 import { INITIAL_STATE, type WallToolState } from './wall-tool-types';
+import { getGlobalGuideStore } from '../../systems/guides/guide-store';
+import { axisHostTolScene } from '../../bim/hosting/resolve-axis-bindings';
 
 export interface WallCommitContext {
   readonly currentLevelId: string;
@@ -117,7 +119,19 @@ export function useWallCommit(ctx: WallCommitContext): WallCommitApi {
         setState({ ...s, error: result.hardErrors[0] ?? null });
         return false;
       }
-      onWallCreated?.(result.entity);
+      // ADR-441 Slice WALL — host-on-snap: αν τα άκρα της location-line πέφτουν σε άξονες
+      // κανάβου, «κρέμασε» τον τοίχο ώστε να ακολουθεί (Revit wall-on-grid). Το extend
+      // κρατά τη Finish-Face παρειά στον άξονα.
+      const bindings = resolveWallGridBindings(
+        s.startPoint,
+        endPoint,
+        params,
+        getGlobalGuideStore(),
+        axisHostTolScene(sceneUnits),
+        sceneUnits,
+      );
+      const entity = bindings.length > 0 ? { ...result.entity, guideBindings: bindings } : result.entity;
+      onWallCreated?.(entity);
       setState(continueChain(s));
       return true;
     },

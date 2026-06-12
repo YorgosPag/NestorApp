@@ -32,9 +32,12 @@ import {
 import {
   buildColumnEntity,
   buildDefaultColumnParams,
+  resolveColumnGridBindings,
   type ColumnParamOverrides,
   type SceneUnits,
 } from './column-completion';
+import { getGlobalGuideStore } from '../../systems/guides/guide-store';
+import { axisHostTolScene } from '../../bim/hosting/resolve-axis-bindings';
 import {
   computeAnchorGhostFootprints,
   type AnchorGhost,
@@ -298,7 +301,15 @@ export function useColumnTool(options: UseColumnToolOptions = {}): UseColumnTool
         setState({ ...s, error: result.hardErrors[0] ?? null });
         return false;
       }
-      onColumnCreated?.(result.entity);
+      // ADR-441 Slice COL — host-on-snap: αν το σημείο πέφτει σε άξονα/τομή κανάβου,
+      // «κρέμασε» την κολώνα ώστε να ακολουθεί τον κάναβο (Revit «Column → At Grids»).
+      const bindings = resolveColumnGridBindings(
+        params.position,
+        getGlobalGuideStore(),
+        axisHostTolScene(sceneUnits),
+      );
+      const entity = bindings.length > 0 ? { ...result.entity, guideBindings: bindings } : result.entity;
+      onColumnCreated?.(entity);
       setState({
         ...INITIAL_STATE,
         kind: s.kind,

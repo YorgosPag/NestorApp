@@ -498,7 +498,7 @@
       "dynInput": "DYN",
       "osnapDesc": "Object Snap",
       "gridDesc": "Grid Display",
-      "snapDesc": "Snap to Step (move/resize)",
+      "snapDesc": "Grip step — hold Q while dragging (else free)",
       "orthoDesc": "Orthogonal Mode",
       "polarDesc": "Polar Tracking",
       "dynInputDesc": "Dynamic Input",
@@ -509,9 +509,6 @@
       "polarAddAngle": "Add",
       "polarCustomPlaceholder": "e.g. 33",
       "snapStepTitle": "Snap step (mm)",
-      "snapStepPreset": "Presets (mm)",
-      "snapStepCustom": "Custom step (mm)",
-      "snapStepApply": "Apply",
       "displayUnit": "UNIT",
       "displayUnitDesc": "Measurement display unit"
     },

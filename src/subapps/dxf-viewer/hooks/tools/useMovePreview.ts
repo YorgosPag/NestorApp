@@ -36,6 +36,8 @@ import {
   GHOST_DEFAULTS,
 } from '../../rendering/ghost';
 import { getLayer } from '../../stores/LayerStore';
+// ADR-363 — ORTHO (F8) axis-lock for the live MOVE ghost (no-op when OFF).
+import { applyOrthoToDelta } from '../../bim/grips/grip-move-constraints';
 
 // ============================================================================
 // TYPES
@@ -138,7 +140,12 @@ export function useMovePreview(props: UseMovePreviewProps): void {
 
     if (!cursorWorld) return;
 
-    const cursorScreen = CoordinateTransforms.worldToScreen(cursorWorld, transform, vp);
+    // ORTHO (F8): lock the destination to the H/V axis from the base point so the
+    // rubber band, ghost, and tooltip all match the committed move (useMoveTool).
+    // No-op when ORTHO is OFF (effectiveCursor === cursorWorld).
+    const orthoDelta = applyOrthoToDelta({ x: cursorWorld.x - basePoint.x, y: cursorWorld.y - basePoint.y });
+    const effectiveCursor: Point2D = { x: basePoint.x + orthoDelta.x, y: basePoint.y + orthoDelta.y };
+    const cursorScreen = CoordinateTransforms.worldToScreen(effectiveCursor, transform, vp);
 
     // Rubber band (dashed gold)
     ctx.save();
@@ -155,10 +162,8 @@ export function useMovePreview(props: UseMovePreviewProps): void {
     // Ghost + tooltip only during awaiting-destination
     if (phase !== 'awaiting-destination') return;
 
-    const delta: Point2D = {
-      x: cursorWorld.x - basePoint.x,
-      y: cursorWorld.y - basePoint.y,
-    };
+    // Same ORTHO-locked displacement the rubber band + commit use (WYSIWYG).
+    const delta: Point2D = orthoDelta;
 
     // Displacement tooltip
     const tooltipText = `Δ${delta.x.toFixed(1)}, ${delta.y.toFixed(1)}`;

@@ -498,7 +498,7 @@
       "dynInput": "ΔΥΝ",
       "osnapDesc": "Σημεία Πρόσδεσης",
       "gridDesc": "Εμφάνιση Πλέγματος",
-      "snapDesc": "Πρόσδεση σε Βήμα (μετακίνηση/διαστάσεις)",
+      "snapDesc": "Βήμα σε grip — κράτα Q κατά το σύρσιμο (αλλιώς ελεύθερο)",
       "orthoDesc": "Ορθογώνια Λειτουργία",
       "polarDesc": "Πολική Ιχνηλάτηση",
       "dynInputDesc": "Δυναμική Εισαγωγή",
@@ -509,9 +509,6 @@
       "polarAddAngle": "Προσθήκη",
       "polarCustomPlaceholder": "π.χ. 33",
       "snapStepTitle": "Βήμα πρόσδεσης (mm)",
-      "snapStepPreset": "Έτοιμες τιμές (mm)",
-      "snapStepCustom": "Προσαρμοσμένο βήμα (mm)",
-      "snapStepApply": "Εφαρμογή",
       "displayUnit": "ΜΟΝΑΔΑ",
       "displayUnitDesc": "Μονάδα εμφάνισης μετρήσεων"
     },

@@ -1,45 +1,37 @@
 /**
- * Associative Grid Hosting — Reconciler (ADR-441, Slice 3).
+ * Associative Grid Hosting — Reconciler (ADR-441, Slice 3 + Slice GEN generic).
  *
- * Pure βήμα του follow-on-move: δοθέντος ενός συνόλου hosted foundation entities
- * και των τρεχόντων guide offsets, υπολογίζει την **ελάχιστη** λίστα updates
- * (params + geometry + validation) — μόνο για όσες entities όντως άλλαξαν.
+ * Pure βήμα του follow-on-move: δοθέντος ενός συνόλου hosted entities και των τρεχόντων
+ * guide offsets, υπολογίζει την **ελάχιστη** λίστα updates (params + geometry + validation)
+ * — μόνο για όσες entities όντως άλλαξαν. Slice GEN: **kind-generic** μέσω του
+ * `HostingStrategy` registry (foundation + wall + column) αντί foundation-only branch.
  *
  * ΜΗΔΕΝ side-effects, ΜΗΔΕΝ scene access: το stateful/imperative κομμάτι ζει στον
  * `useHostingReconciler` subscriber (ADR-040). Εδώ μόνο καθαρός υπολογισμός →
  * εύκολα testable + RAF-throttle-friendly.
  *
- * Inverted index (`Map<guideId, Set<entityId>>`): rebuild ΜΟΝΟ όταν αλλάζει το
- * σύνολο των hosted entities (scene add/remove/undo), ΟΧΙ σε κάθε guide move. Ο
- * subscriber το χρησιμοποιεί για να βρει ποιες entities επηρεάζει ένας
- * μετακινημένος άξονας, χωρίς full scan όλης της σκηνής.
+ * Inverted index (`Map<guideId, Set<entityId>>`): rebuild ΜΟΝΟ όταν αλλάζει το σύνολο των
+ * hosted entities (scene add/remove/undo), ΟΧΙ σε κάθε guide move. Kind-agnostic — διαβάζει
+ * μόνο `guideBindings`.
  *
- * @see bim/hosting/derive-params-from-guides.ts — slot→coordinate (pure)
- * @see bim/geometry/foundation-geometry.ts — geometry SSoT
+ * @see bim/hosting/hosting-strategy.ts — per-kind derive + recompute dispatch
  * @see docs/centralized-systems/reference/adrs/ADR-441-foundation-strip-grid-auto-design.md §10
  */
 
-import type { FoundationEntity, FoundationGeometry, FoundationParams } from '../types/foundation-types';
-import type { BimValidation } from '../types/bim-base';
-import { computeFoundationGeometry } from '../geometry/foundation-geometry';
-import { validateFoundationParams } from '../validators/foundation-validator';
+import type { AnySceneEntity } from '../../types/scene';
 import { hasGuideBindings } from './guide-binding-types';
-import { deriveFoundationParamsFromGuides, type GuideOffsetLookup } from './derive-params-from-guides';
+import { getHostingStrategy } from './hosting-strategy';
+import type { HostingUpdate } from './hosting-strategy-types';
+import type { GuideOffsetLookup } from './derive-slots';
 
-/** Ένα έτοιμο-προς-εφαρμογή update για μία hosted entity (re-derived). */
-export interface HostingUpdate {
-  readonly id: string;
-  readonly nextParams: FoundationParams;
-  readonly nextGeometry: FoundationGeometry;
-  readonly nextValidation: BimValidation;
-}
+export type { HostingUpdate } from './hosting-strategy-types';
 
 /**
- * Inverted index `guideId → set of hosted entity ids`. Rebuild όταν το σύνολο
- * των hosted entities αλλάζει (scene add/remove). Pure.
+ * Inverted index `guideId → set of hosted entity ids`. Rebuild όταν το σύνολο των hosted
+ * entities αλλάζει (scene add/remove). Pure, kind-agnostic.
  */
 export function buildHostingIndex(
-  entities: readonly FoundationEntity[],
+  entities: readonly AnySceneEntity[],
 ): Map<string, Set<string>> {
   const index = new Map<string, Set<string>>();
   for (const e of entities) {
@@ -57,31 +49,25 @@ export function buildHostingIndex(
 }
 
 /**
- * Re-derive μία hosted entity → `HostingUpdate` ή `null` αν δεν άλλαξε τίποτα.
- * Geometry + validation recomputed από τις νέες params (SSoT pure functions).
+ * Re-derive μία hosted entity → `HostingUpdate` ή `null`. Dispatch στην per-kind strategy
+ * (foundation/wall/column)· entities χωρίς strategy ή χωρίς bindings → `null`.
  */
 function reconcileOne(
-  entity: FoundationEntity,
+  entity: AnySceneEntity,
   getOffset: GuideOffsetLookup,
 ): HostingUpdate | null {
   if (!hasGuideBindings(entity)) return null;
-  const nextParams = deriveFoundationParamsFromGuides(entity.params, entity.guideBindings, getOffset);
-  if (!nextParams) return null;
-  return {
-    id: entity.id,
-    nextParams,
-    nextGeometry: computeFoundationGeometry(nextParams),
-    nextValidation: validateFoundationParams(nextParams).bimValidation,
-  };
+  const strategy = getHostingStrategy(entity.type);
+  return strategy ? strategy.reconcile(entity, getOffset) : null;
 }
 
 /**
- * Reconcile ένα σύνολο hosted entities ως προς τα τρέχοντα guide offsets.
- * Επιστρέφει ΜΟΝΟ τα updates που πραγματικά άλλαξαν (only-changed) — άδειο array
- * όταν τίποτα δεν μετακινήθηκε (ο subscriber παραλείπει το scene write).
+ * Reconcile ένα σύνολο hosted entities ως προς τα τρέχοντα guide offsets. Επιστρέφει ΜΟΝΟ
+ * τα updates που πραγματικά άλλαξαν (only-changed) — άδειο array όταν τίποτα δεν
+ * μετακινήθηκε (ο subscriber παραλείπει το scene write).
  */
-export function reconcileHostedFoundations(
-  entities: readonly FoundationEntity[],
+export function reconcileHostedEntities(
+  entities: readonly AnySceneEntity[],
   getOffset: GuideOffsetLookup,
 ): HostingUpdate[] {
   const updates: HostingUpdate[] = [];
@@ -91,3 +77,9 @@ export function reconcileHostedFoundations(
   }
   return updates;
 }
+
+/**
+ * Backward-compat alias (ADR-441 Slice 3). Foundation-era callers (follow-ghost, tests)
+ * συνεχίζουν να δουλεύουν — η υλοποίηση είναι πλέον kind-generic.
+ */
+export const reconcileHostedFoundations = reconcileHostedEntities;

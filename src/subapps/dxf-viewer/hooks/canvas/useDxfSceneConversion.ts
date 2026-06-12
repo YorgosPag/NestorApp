@@ -32,7 +32,8 @@ import { registerImportedDimStyles } from '../../systems/dimensions/dim-style-im
 // (scene.units=undefined) get the correct 'm'/'cm' label instead of falling
 // back to DxfRenderer's `?? 'mm'` default, which makes DimensionRenderer apply
 // no mmToSceneUnits conversion and render dim text at 2.5 world-units (= 2.5m).
-import { resolveSceneUnits, type SceneUnits } from '../../utils/scene-units';
+import { resolveSceneUnits, mmToSceneUnits, type SceneUnits } from '../../utils/scene-units';
+import { immediateSceneScale } from '../../systems/cursor/ImmediateSceneScaleStore';
 // Pure per-entity projection SSoT (extracted to keep this file ≤500 LOC).
 import { convertEntity } from './dxf-scene-entity-converter';
 
@@ -191,6 +192,13 @@ export function useDxfSceneConversion({
   useEffect(() => {
     registerImportedDimStyles(currentScene);
   }, [currentScene]);
+
+  // Mirror the resolved mm → scene unit scale into the non-React SSoT so the
+  // event-time grip-drag step snap can convert a user-typed mm step into the
+  // scene units the drag delta lives in (else non-mm drawings never step).
+  useEffect(() => {
+    immediateSceneScale.set(mmToSceneUnits(dxfScene.units));
+  }, [dxfScene.units]);
 
   return { dxfScene };
 }

@@ -61,9 +61,15 @@ export function extractBoundGuideIds(
   return Array.from(new Set(bindings.map((b) => b.guideId)));
 }
 
-/** Type-guard: η entity φέρει τουλάχιστον ένα guide binding. */
-export function hasGuideBindings(
-  entity: HostedEntityMixin,
-): entity is HostedEntityMixin & { readonly guideBindings: readonly GuideBinding[] } {
+/**
+ * Type-guard: η entity φέρει τουλάχιστον ένα guide binding. Generic ώστε (α) να
+ * διατηρεί το input type μετά το narrow (`T & {guideBindings}`, π.χ. `FoundationEntity`)
+ * και (β) να δέχεται ευρείες union scene entities χωρίς weak-type error — το κοινό
+ * `type` property εξασφαλίζει overlap (το `HostedEntityMixin` μόνο του είναι weak type:
+ * όλα optional → ένα DXF `LineEntity` δεν θα είχε «κανένα κοινό property»).
+ */
+export function hasGuideBindings<T extends HostedEntityMixin & { readonly type?: unknown }>(
+  entity: T,
+): entity is T & { readonly guideBindings: readonly GuideBinding[] } {
   return Array.isArray(entity.guideBindings) && entity.guideBindings.length > 0;
 }

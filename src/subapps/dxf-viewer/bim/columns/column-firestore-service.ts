@@ -40,6 +40,7 @@ import type {
   ColumnParams,
 } from '../types/column-types';
 import type { BimValidation } from '../types/bim-base';
+import type { GuideBinding } from '../hosting/guide-binding-types';
 
 // ============================================================================
 // TYPES
@@ -62,6 +63,8 @@ export interface ColumnDoc {
   readonly buildingId?: string;
   readonly floorId?: string;
   readonly layerId?: string;
+  /** ADR-441 Slice COL — associative grid hosting bindings (host-on-snap). */
+  readonly guideBindings?: readonly GuideBinding[];
   readonly createdAt: Timestamp;
   readonly createdBy: string;
   readonly updatedAt: Timestamp;
@@ -86,6 +89,8 @@ export interface ColumnSaveInput {
   readonly buildingId?: string;
   readonly floorId?: string;
   readonly layerId?: string;
+  /** ADR-441 Slice COL — grid hosting bindings (host-on-snap at create). */
+  readonly guideBindings?: readonly GuideBinding[];
 }
 
 export interface ColumnUpdateInput {
@@ -93,6 +98,8 @@ export interface ColumnUpdateInput {
   readonly validation?: BimValidation;
   readonly geometry?: ColumnGeometry;
   readonly layerId?: string;
+  /** ADR-441 Slice COL — grid hosting bindings (update on re-host, if ever). */
+  readonly guideBindings?: readonly GuideBinding[];
 }
 
 // ============================================================================
@@ -157,6 +164,8 @@ export class ColumnFirestoreService {
     if (input.buildingId !== undefined) base.buildingId = input.buildingId;
     // ADR-420 — floorId is owned by config scope (bimScopeWriteFields above), not input.
     if (input.layerId !== undefined) base.layerId = input.layerId;
+    // ADR-441 Slice COL — persist grid hosting bindings (Firestore rejects undefined).
+    if (input.guideBindings !== undefined) base.guideBindings = input.guideBindings;
 
     await setDoc(ref, base);
     return base as unknown as ColumnDoc;
@@ -172,6 +181,8 @@ export class ColumnFirestoreService {
     if (patch.validation !== undefined) payload.validation = patch.validation;
     if (patch.geometry !== undefined) payload.geometry = patch.geometry;
     if (patch.layerId !== undefined) payload.layerId = patch.layerId;
+    // ADR-441 Slice COL — persist grid hosting bindings on update (Firestore rejects undefined).
+    if (patch.guideBindings !== undefined) payload.guideBindings = patch.guideBindings;
 
     await updateDoc(ref, payload);
   }
@@ -207,5 +218,7 @@ export function entityToSaveInput(entity: ColumnEntity): ColumnSaveInput {
     params: entity.params,
     validation: entity.validation,
     layerId: entity.layerId,
+    // ADR-441 Slice COL — carry grid hosting bindings into the persisted doc.
+    guideBindings: entity.guideBindings,
   };
 }

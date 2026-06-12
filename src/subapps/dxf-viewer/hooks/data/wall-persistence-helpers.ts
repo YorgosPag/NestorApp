@@ -148,6 +148,9 @@ export function docToEntity(doc: WallDoc): WallEntity {
     editingBy: doc.editingBy,
     ...(typeId !== undefined && { typeId }),
     ...(doc.typeOverrides !== undefined && { typeOverrides: doc.typeOverrides }),
+    // ADR-441 Slice WALL — restore grid hosting bindings so the reconciler keeps the
+    // wall following its axes after reload.
+    ...(doc.guideBindings !== undefined && { guideBindings: doc.guideBindings }),
   } as WallEntity;
 }
 

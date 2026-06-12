@@ -22,6 +22,7 @@ import type {
 } from './unified-grip-types';
 import type { HotGripStep } from './wall-hot-grip-fsm';
 import { applyGripStepSnap } from '../../bim/grips/grip-step-quantize';
+import { applyMoveConstraints } from '../../bim/grips/grip-move-constraints';
 
 // ── DXF Projection Builders ──
 
@@ -31,15 +32,20 @@ export function buildDxfDragPreview(
   anchorPos: Point2D | null,
   currentWorldPos: Point2D | null,
   altMove = false,
+  hotGripMove = false,
 ): DxfGripDragPreview | null {
   // ADR-363 Phase 1G — `hotGrip` reuses the same preview pipeline as `dragging`
   // (live ghost + delta) so the corner click-click move shows the same wall ghost.
   if ((phase !== 'dragging' && phase !== 'hotGrip') || !activeGrip || activeGrip.source !== 'dxf' || !anchorPos || !currentWorldPos) {
     return null;
   }
-  // SNAP-MODE (F9) — quantize the drag displacement to the user step so the
-  // ghost preview matches the committed result (commit applies the SAME helper).
-  const delta = applyGripStepSnap({ x: currentWorldPos.x - anchorPos.x, y: currentWorldPos.y - anchorPos.y });
+  const rawDelta = { x: currentWorldPos.x - anchorPos.x, y: currentWorldPos.y - anchorPos.y };
+  // ORTHO (F8) applies only when the WHOLE entity translates (Alt move-from-base /
+  // a `movesEntity` grip / a wall "move" hot-grip) — parametric resize grips keep
+  // their own geometry and get only SNAP-MODE step. ORTHO first, then step (the
+  // commit runs the identical `applyMoveConstraints`, so ghost == result).
+  const movesWhole = altMove || activeGrip.movesEntity === true || hotGripMove;
+  const delta = movesWhole ? applyMoveConstraints(rawDelta) : applyGripStepSnap(rawDelta);
   // ADR-363 Phase 1G.5 — Alt «move-from-characteristic-point»: emit a parametric-
   // kind-free snapshot with `movesEntity: true` so `applyEntityPreview` translates
   // the WHOLE entity by `delta` (via the move SSoT) instead of running a corner /

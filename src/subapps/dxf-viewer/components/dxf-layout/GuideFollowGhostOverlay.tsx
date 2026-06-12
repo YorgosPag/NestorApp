@@ -34,6 +34,7 @@ import type { SceneModel } from '../../types/scene';
 import type { FoundationEntity } from '../../bim/types/foundation-types';
 import { isFoundationEntity } from '../../types/entities';
 import { hasGuideBindings } from '../../bim/hosting/guide-binding-types';
+import { getHostingStrategy } from '../../bim/hosting/hosting-strategy';
 import {
   deriveFollowGhostFootprints,
   type FollowGhostFootprint,
@@ -154,11 +155,21 @@ function GuideFollowGhostOverlayInner({
     const levelId = lm.currentLevelId;
     if (!levelId) return;
     const scene = lm.getLevelScene(levelId);
-    const hosted = (scene?.entities ?? []).filter(
+    const entities = scene?.entities ?? [];
+    // ADR-441 Slice GEN/WALL/COL — grid-hosted = bindings + registered strategy.
+    // Foundations κρατούν το εσχάρα-aware path· τοίχοι/κολώνες ακολουθούν live μέσω του
+    // generic coordinate-follow (strategy.outline) — zero-lag κατά το guide-drag.
+    const foundations = entities.filter(
       (e): e is FoundationEntity => isFoundationEntity(e) && hasGuideBindings(e),
     );
-    if (hosted.length === 0) return;
-    const footprints = computeGhostFootprints(hosted, levelId, scene);
+    const others = entities.filter(
+      (e) => !isFoundationEntity(e) && hasGuideBindings(e) && getHostingStrategy(e.type) !== undefined,
+    );
+    if (foundations.length === 0 && others.length === 0) return;
+    const footprints: FollowGhostFootprint[] = [
+      ...computeGhostFootprints(foundations, levelId, scene),
+      ...(others.length > 0 ? deriveFollowGhostFootprints(others, makeOffsetLookup()) : []),
+    ];
     paintFootprints(ctx, footprints, getImmediateTransform(), vp);
   }, []);
 

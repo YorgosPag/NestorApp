@@ -71,6 +71,10 @@ Mouse Event → DxfCanvas.onMouseMove
 
 ## Changelog
 
+### 2026-06-12 — ADR-441 grid hosting γενικεύεται σε τοίχους/κολώνες (overlay per-kind outline)
+
+**Status**: IMPLEMENTED 2026-06-12, browser-verified (Giorgio: column/wall follow + persistence + negative ✅). Το associative grid hosting (follow-on-move) επεκτάθηκε από foundation-only σε **foundation+wall+column** μέσω `HostingStrategy` registry (ADR-441 Slice GEN/COL/WALL). Επίδραση στα ADR-040-critical paths: (1) `useHostingReconciler` (ο μόνος stateful subscriber) — φίλτρο `isFoundationEntity`→`isGridHosted` (bindings + registered strategy)· RAF-throttle / only-changed `setLevelScene` / drag-suppress / settle-persist **ΑΜΕΤΑΒΛΗΤΑ**· dispatch ανά kind μέσω `reconcileHostedEntities`. (2) `GuideFollowGhostOverlay` (zero-lag dedicated-canvas overlay) — foundations κρατούν το εσχάρα-aware path· τοίχοι/κολώνες ζωγραφίζονται live κατά το guide-drag μέσω του generic `deriveFollowGhostFootprints` + `strategy.outline` (per-kind: foundation/column footprint, wall outer+inner ring). **Leaf-only subscription, μηδέν `useSyncExternalStore` σε orchestrators (CHECK 6C safe)**· καμία αλλαγή σε bitmap-cache/renderer/scheduler.
+
 ### 2026-06-11 — Root-cause #2 auto-save storm fix: SSoT `SceneWriteOrigin` gate (transaction-origin pattern)
 
 **Status**: IMPLEMENTED 2026-06-11, εκκρεμεί browser-verify. **Πρόβλημα (Giorgio console):** `DxfFirestore Storage save` version 181→185 σε ~25s (~950KB upload/save) **χωρίς ο χρήστης να αλλάζει τίποτα** — storm αποθηκεύσεων που πίεζε το main thread. **Αιτία (ground-truth):** το `setLevelSceneWithAutoSave` (override του `setLevelScene`) reset-άρει το 2s debounce σε **κάθε** κλήση, ανεξαρτήτως πηγής. Κάθε save → Firestore metadata write → `onSnapshot` echo σε ~23 BIM persistence hooks → ο καθένας diff-merge → `lm.setLevelScene({...scene})` (πάντα νέο object → ο reference guard ΠΟΤΕ δεν πιάνει) → reset debounce → νέο save → loop.

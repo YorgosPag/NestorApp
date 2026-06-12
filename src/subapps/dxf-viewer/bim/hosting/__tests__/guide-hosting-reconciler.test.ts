@@ -80,8 +80,11 @@ describe('reconcileHostedFoundations', () => {
   it('re-derives geometry + validation από τις νέες params', () => {
     const e = strip('s1', stripParams(), bindings);
     const [update] = reconcileHostedFoundations([e], lookup({ xId: 1000, yA: 0, yB: 4000 }));
-    expect(update.nextParams.kind).toBe('strip');
-    expect(update.nextGeometry).toEqual(computeFoundationGeometry(update.nextParams));
+    // Slice GEN: ο reconciler είναι kind-generic → nextParams/nextGeometry τυποποιούνται
+    // ως `unknown` στο boundary· εδώ ξέρουμε ότι ταΐσαμε foundation strip.
+    const nextParams = update.nextParams as StripFootingParams;
+    expect(nextParams.kind).toBe('strip');
+    expect(update.nextGeometry).toEqual(computeFoundationGeometry(nextParams));
     expect(update.nextValidation).toHaveProperty('lastValidatedAt');
   });
 

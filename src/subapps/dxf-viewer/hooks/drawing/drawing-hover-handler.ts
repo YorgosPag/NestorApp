@@ -118,6 +118,13 @@ export function processDrawingHover(p: Pt | null, ctx: DrawingHoverCtx): void {
     // so the ghost follows F8/F10 exactly like the committed geometry will.
     const lastRefPt = tempPoints[tempPoints.length - 1] ?? getBimOrthoReference(activeTool) ?? undefined;
     const afterOrtho = orthoOnRef.current && lastRefPt ? hardOrtho(p, lastRefPt) : p;
+    // TEMP DIAGNOSTIC (2026-06-12 ORTHO debug) — only logs while F8/F10 ON, so no
+    // mousemove flood when off. Remove after root cause found.
+    if (orthoOnRef.current || polarOnRef.current) {
+      console.log('[ORTHO-DBG] hover tool=%s orthoOn=%s polarOn=%s hasRef=%s | in=(%s,%s) out=(%s,%s)',
+        activeTool, orthoOnRef.current, polarOnRef.current, !!lastRefPt,
+        p.x.toFixed(1), p.y.toFixed(1), afterOrtho.x.toFixed(1), afterOrtho.y.toFixed(1));
+    }
     let polarSnapResult: PolarSnapResult | null = null;
     let previewPt = afterOrtho;
     if (!orthoOnRef.current && polarOnRef.current && lastRefPt) {

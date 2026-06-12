@@ -105,6 +105,9 @@ function docToEntity(doc: ColumnDoc): ColumnEntity {
     geometry: doc.geometry ?? computeColumnGeometry(doc.params),
     validation,
     visible: true,
+    // ADR-441 Slice COL — restore grid hosting bindings so the reconciler keeps the
+    // column following its axes after reload.
+    ...(doc.guideBindings !== undefined ? { guideBindings: doc.guideBindings } : {}),
   } as ColumnEntity;
 }
 

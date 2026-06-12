@@ -54,6 +54,7 @@ import type {
 } from '../types/wall-types';
 import type { WallTypeParams } from '../types/bim-family-type';
 import type { BimValidation, SoftLock } from '../types/bim-base';
+import type { GuideBinding } from '../hosting/guide-binding-types';
 
 // ============================================================================
 // TYPES
@@ -81,6 +82,8 @@ export interface WallDoc {
   readonly typeId?: string;
   /** ADR-412 — Per-instance overrides of type-level params. Absent = use type as-is. */
   readonly typeOverrides?: Partial<WallTypeParams>;
+  /** ADR-441 Slice WALL — associative grid hosting bindings (host-on-snap). */
+  readonly guideBindings?: readonly GuideBinding[];
   readonly createdAt: Timestamp;
   readonly createdBy: string;
   readonly updatedAt: Timestamp;
@@ -109,6 +112,8 @@ export interface WallSaveInput {
   readonly typeId?: string;
   /** ADR-412 — Per-instance overrides of type-level params. */
   readonly typeOverrides?: Partial<WallTypeParams>;
+  /** ADR-441 Slice WALL — grid hosting bindings (host-on-snap at create). */
+  readonly guideBindings?: readonly GuideBinding[];
 }
 
 export interface WallUpdateInput {
@@ -125,6 +130,8 @@ export interface WallUpdateInput {
   readonly typeId?: string | null;
   /** ADR-412 — Per-instance overrides; `null` clears the field (`deleteField()`). */
   readonly typeOverrides?: Partial<WallTypeParams> | null;
+  /** ADR-441 Slice WALL — grid hosting bindings (update on re-host, if ever). */
+  readonly guideBindings?: readonly GuideBinding[];
 }
 
 // ============================================================================
@@ -198,6 +205,8 @@ export class WallFirestoreService {
     // ADR-412 — Family-type linkage (optional; omit when absent).
     if (input.typeId !== undefined) base.typeId = input.typeId;
     if (input.typeOverrides !== undefined) base.typeOverrides = stripUndefinedDeep(input.typeOverrides);
+    // ADR-441 Slice WALL — persist grid hosting bindings (Firestore rejects undefined).
+    if (input.guideBindings !== undefined) base.guideBindings = input.guideBindings;
 
     await setDoc(ref, base);
     return base as unknown as WallDoc;
@@ -227,6 +236,8 @@ export class WallFirestoreService {
           ? deleteField()
           : stripUndefinedDeep(patch.typeOverrides);
     }
+    // ADR-441 Slice WALL — persist grid hosting bindings on update (Firestore rejects undefined).
+    if (patch.guideBindings !== undefined) payload.guideBindings = patch.guideBindings;
 
     await updateDoc(ref, payload);
   }
@@ -293,5 +304,7 @@ export function entityToSaveInput(entity: WallEntity): WallSaveInput {
     // ADR-412 — pass through when present; omit when absent (no undefined in output).
     ...(entity.typeId !== undefined && { typeId: entity.typeId }),
     ...(entity.typeOverrides !== undefined && { typeOverrides: entity.typeOverrides }),
+    // ADR-441 Slice WALL — carry grid hosting bindings into the persisted doc.
+    ...(entity.guideBindings !== undefined && { guideBindings: entity.guideBindings }),
   };
 }

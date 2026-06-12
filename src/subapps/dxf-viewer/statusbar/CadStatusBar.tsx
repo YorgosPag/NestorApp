@@ -9,6 +9,7 @@ import { useTranslation } from 'react-i18next';
 import { matchesShortcut, getShortcutDisplayLabel } from '../config/keyboard-shortcuts';
 import { useCadToggles } from '../hooks/common/useCadToggles';
 import type { CadToggle } from '../hooks/common/useCadToggles';
+import { cadToggleState } from '../systems/constraints/cad-toggle-state';
 import { useSnapContext } from '../snapping/context/SnapContext';
 import { ProSnapToolbar } from '../ui/components/ProSnapToolbar';
 import { CurrentLayerPicker } from '../ui/components/layer-picker/CurrentLayerPicker';
@@ -34,6 +35,12 @@ export default function CadStatusBar() {
   // ADR-358 Phase 7b1 — Inline stair prompt left of the toggles.
   const stairStatusKey = useStairStatusKey();
   const stairStatusText = stairStatusKey ? tTools(stairStatusKey) : '';
+
+  // SNAP-MODE (F9) single-writer mirror into the non-React SSoT. CadStatusBar is the
+  // sole always-mounted toggle UI → no multi-instance clobber (see useCadToggles note).
+  useEffect(() => {
+    cadToggleState.setSnap(snap.on, snapStep);
+  }, [snap.on, snapStep]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -287,8 +294,11 @@ function PolarToggleWithPopover({ id, label, fkey, description, toggle }: {
   );
 }
 
-const SNAP_STEP_PRESETS = ['10', '20', '25', '50', '100', '200', '500'] as const;
-
+/**
+ * SNAP-MODE (F9) toggle + inline live step field. OFF → no field, no quantization.
+ * ON → a number input appears; whatever value (mm) you type applies immediately —
+ * no presets, no popover, no Apply button (Giorgio 2026-06-12: «απλό toggle on/off»).
+ */
 function SnapToggleWithStep({ id, label, fkey, description, toggle, step, onStepChange }: {
   id: string;
   label: string;
@@ -299,17 +309,13 @@ function SnapToggleWithStep({ id, label, fkey, description, toggle, step, onStep
   onStepChange: (value: number) => void;
 }) {
   const { t } = useTranslation('dxf-viewer-panels');
-  const [customInput, setCustomInput] = useState('');
-
-  const commitCustom = () => {
-    const val = parseFloat(customInput);
-    if (isNaN(val) || val < 0) return;
-    onStepChange(val);
-    setCustomInput('');
-  };
+  // Local text buffer so mid-typing (empty / partial) never snaps back to a default;
+  // a valid non-negative number applies live on every keystroke.
+  const [text, setText] = useState(String(step));
+  useEffect(() => { setText(String(step)); }, [step]);
 
   return (
-    <div className="flex items-center gap-0.5 shrink-0">
+    <div className="flex items-center gap-1.5 shrink-0">
       <Tooltip>
         <TooltipTrigger asChild>
           <div className="flex items-center gap-1.5">
@@ -331,59 +337,24 @@ function SnapToggleWithStep({ id, label, fkey, description, toggle, step, onStep
         </TooltipTrigger>
         <TooltipContent side="top">{`${description} (${fkey})`}</TooltipContent>
       </Tooltip>
-      <Popover>
-        <PopoverTrigger asChild>
-          <button
-            className="flex items-center justify-center h-4 w-4 rounded text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+      {toggle.on && (
+        <div className="relative">
+          <input
+            type="number"
+            value={text}
+            onChange={(e) => {
+              setText(e.target.value);
+              const n = parseFloat(e.target.value);
+              if (!isNaN(n) && n >= 0) onStepChange(n);
+            }}
             aria-label={t('cadDock.statusBar.snapStepTitle')}
-          >
-            <ChevronUp className="h-3 w-3" />
-          </button>
-        </PopoverTrigger>
-        <PopoverContent side="top" align="center" className="z-[1800] w-56 p-3 space-y-3">
-          <p className="text-xs font-semibold">
-            {t('cadDock.statusBar.snapStepTitle')}
-            <span className="ml-1 font-normal text-muted-foreground">{`· ${step} mm`}</span>
-          </p>
-          <div className="space-y-1">
-            <p className="text-[10px] text-muted-foreground">{t('cadDock.statusBar.snapStepPreset')}</p>
-            <Select value={String(step)} onValueChange={(v) => onStepChange(parseFloat(v))}>
-              <SelectTrigger className="h-7 text-xs">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {SNAP_STEP_PRESETS.map(opt => (
-                  <SelectItem key={opt} value={opt} className="text-xs">{`${opt} mm`}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="space-y-1">
-            <p className="text-[10px] text-muted-foreground">{t('cadDock.statusBar.snapStepCustom')}</p>
-            <div className="flex gap-1">
-              <div className="relative flex-1">
-                <input
-                  type="number"
-                  value={customInput}
-                  onChange={(e) => setCustomInput(e.target.value)}
-                  onKeyDown={(e) => { if (e.key === 'Enter') commitCustom(); }}
-                  placeholder={String(step)}
-                  className="w-full h-7 text-xs pl-2 pr-8 rounded border border-border bg-background"
-                  min={0}
-                  step={1}
-                />
-                <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-muted-foreground">mm</span>
-              </div>
-              <button
-                onClick={commitCustom}
-                className="px-2 h-7 text-xs rounded bg-muted hover:bg-muted/80 border border-border"
-              >
-                {t('cadDock.statusBar.snapStepApply')}
-              </button>
-            </div>
-          </div>
-        </PopoverContent>
-      </Popover>
+            className="h-6 w-24 text-xs pl-2 pr-7 rounded border border-border bg-background"
+            min={0}
+            step={1}
+          />
+          <span className="pointer-events-none absolute right-1.5 top-1/2 -translate-y-1/2 text-[10px] text-muted-foreground">mm</span>
+        </div>
+      )}
     </div>
   );
 }

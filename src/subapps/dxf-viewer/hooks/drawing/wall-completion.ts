@@ -35,6 +35,9 @@ import {
 import { createWall } from '@/services/factories/wall.factory';
 import { resolveAutoWallTypeId } from '../../bim/family-types/wall-type-auto-assign';
 import { mmToSceneUnits, type SceneUnits } from '../../utils/scene-units';
+import type { GuideBinding } from '../../bim/hosting/guide-binding-types';
+import type { AxisGuideReader } from '../../bim/foundations/foundation-from-grid';
+import { resolveAxisBindings, type AxisCoord } from '../../bim/hosting/resolve-axis-bindings';
 
 export type { SceneUnits };
 
@@ -228,6 +231,39 @@ export function buildWallEntity(
   // `typeId` (zero extra wiring downstream).
   const typeId = resolveAutoWallTypeId(params);
   return { ok: true, entity: typeId ? { ...entity, typeId } : entity };
+}
+
+// ─── ADR-441 Slice WALL — host-on-snap grid bindings ─────────────────────────
+
+/** Scene-units κατώφλι κάτω από το οποίο ο τοίχος θεωρείται axis-aligned. */
+const AXIS_ALIGNED_EPS_SCENE = 1e-6;
+
+/**
+ * Resolve τα grid bindings ενός τοίχου (Revit wall-on-grid). Lookup με τα **location-line**
+ * σημεία (`clickStart/clickEnd` = παρειά), extend από τα **axis** params (Finish-Face → η
+ * παρειά μένει στον άξονα). ΜΟΝΟ axis-aligned τοίχοι (οριζόντιοι/κατακόρυφοι) — διαγώνιοι
+ * (μη-ορθογώνιος κάναβος) επιστρέφουν `[]` (η perpendicular μετατόπιση δεν αναπαράγεται από
+ * single-axis slot). Pure (ο `reader` injected) → unit-testable.
+ */
+export function resolveWallGridBindings(
+  clickStart: Readonly<Point2D>,
+  clickEnd: Readonly<Point2D>,
+  params: Pick<WallParams, 'start' | 'end'>,
+  reader: AxisGuideReader,
+  tol: number,
+  sceneUnits: SceneUnits,
+): GuideBinding[] {
+  const isVertical = Math.abs(params.start.x - params.end.x) < AXIS_ALIGNED_EPS_SCENE;
+  const isHorizontal = Math.abs(params.start.y - params.end.y) < AXIS_ALIGNED_EPS_SCENE;
+  if (!isVertical && !isHorizontal) return [];
+  const canvasToMm = 1 / mmToSceneUnits(sceneUnits);
+  const coords: AxisCoord[] = [
+    { axis: 'X', value: clickStart.x, axisValue: params.start.x, slot: 'start-x' },
+    { axis: 'Y', value: clickStart.y, axisValue: params.start.y, slot: 'start-y' },
+    { axis: 'X', value: clickEnd.x, axisValue: params.end.x, slot: 'end-x' },
+    { axis: 'Y', value: clickEnd.y, axisValue: params.end.y, slot: 'end-y' },
+  ];
+  return resolveAxisBindings(coords, reader, tol, canvasToMm);
 }
 
 // ─── Two-click completion helper ─────────────────────────────────────────────

@@ -47,6 +47,9 @@ import {
 } from '../../bim/types/bim-binding';
 import { createColumn } from '@/services/factories/column.factory';
 import type { SceneUnits } from '../../utils/scene-units';
+import type { GuideBinding } from '../../bim/hosting/guide-binding-types';
+import type { AxisGuideReader } from '../../bim/foundations/foundation-from-grid';
+import { resolveAxisBindings } from '../../bim/hosting/resolve-axis-bindings';
 
 export type { SceneUnits };
 
@@ -186,6 +189,29 @@ export function buildColumnEntity(
     validation: validation.bimValidation,
   });
   return { ok: true, entity };
+}
+
+// ─── ADR-441 Slice COL — host-on-snap grid bindings ──────────────────────────
+
+/**
+ * Resolve τα grid bindings μιας κολώνας (Revit «Column → At Grids»): αν το `position`
+ * πέφτει πάνω σε άξονα/τομή κανάβου → center-x/center-y bindings ώστε η κολώνα να
+ * ακολουθεί όταν μετακινηθεί ο άξονας. Pure (ο `reader` injected) → unit-testable.
+ * Άδειο array = ελεύθερη κολώνα (καμία αλλαγή vs σήμερα).
+ */
+export function resolveColumnGridBindings(
+  position: Readonly<Point2D>,
+  reader: AxisGuideReader,
+  tol: number,
+): GuideBinding[] {
+  return resolveAxisBindings(
+    [
+      { axis: 'X', value: position.x, slot: 'center-x' },
+      { axis: 'Y', value: position.y, slot: 'center-y' },
+    ],
+    reader,
+    tol,
+  );
 }
 
 // ─── Single-click completion helper ─────────────────────────────────────────

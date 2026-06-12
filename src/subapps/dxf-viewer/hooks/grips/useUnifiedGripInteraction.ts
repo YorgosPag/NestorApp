@@ -351,7 +351,12 @@ export function useUnifiedGripInteraction(
         );
       }
       // ADR-363 Phase 1G.5 — Alt drag → whole-entity move ghost (base = grabbed grip).
-      return buildDxfDragPreview(phase, activeGrip, anchorRef.current, currentWorldPos, GripAltMoveStore.getActive());
+      // The last flag marks a wall "move" hot-grip so ORTHO (F8) locks its ghost too.
+      return buildDxfDragPreview(
+        phase, activeGrip, anchorRef.current, currentWorldPos,
+        GripAltMoveStore.getActive(),
+        phase === 'hotGrip' && hotGripOpRef.current === 'move',
+      );
     },
     [phase, activeGrip, currentWorldPos],
   );

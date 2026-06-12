@@ -29,18 +29,17 @@
 import { useEffect, useRef } from 'react';
 import type { AnySceneEntity, SceneModel } from '../../types/scene';
 import type { SceneWriteOrigin } from '../scene/scene-write-origin';
-import { isFoundationEntity } from '../../types/entities';
-import type { FoundationEntity } from '../../bim/types/foundation-types';
 import { getGlobalGuideStore } from '../../systems/guides/guide-store';
 import { getDraggingGuideId } from '../../systems/guides/guide-drag-store';
 import { EventBus } from '../../systems/events/EventBus';
 import {
   buildHostingIndex,
-  reconcileHostedFoundations,
+  reconcileHostedEntities,
   type HostingUpdate,
 } from '../../bim/hosting/guide-hosting-reconciler';
 import { hasGuideBindings } from '../../bim/hosting/guide-binding-types';
-import type { GuideOffsetLookup } from '../../bim/hosting/derive-params-from-guides';
+import { getHostingStrategy } from '../../bim/hosting/hosting-strategy';
+import type { GuideOffsetLookup } from '../../bim/hosting/derive-slots';
 
 interface LevelManagerLike {
   readonly currentLevelId: string | null;
@@ -56,8 +55,13 @@ export interface UseHostingReconcilerParams {
 const SETTLE_PERSIST_MS = 350;
 
 /** Stable signature του συνόλου hosted entities — rebuild index μόνο όταν αλλάζει. */
-function hostedSignature(entities: readonly FoundationEntity[]): string {
+function hostedSignature(entities: readonly AnySceneEntity[]): string {
   return entities.map((e) => e.id).join('|');
+}
+
+/** Grid-hosted entity = φέρει bindings ΚΑΙ έχει registered hosting strategy (foundation/wall/column). */
+function isGridHosted(e: AnySceneEntity): boolean {
+  return hasGuideBindings(e) && getHostingStrategy(e.type) !== undefined;
 }
 
 /** Current offset ενός X/Y άξονα (XZ/διαγραμμένος → undefined → slot αγνοείται). */
@@ -120,9 +124,7 @@ export function useHostingReconciler({ levelManager }: UseHostingReconcilerParam
       const scene = lm.getLevelScene(levelId);
       if (!scene) return;
 
-      const hosted = scene.entities.filter(
-        (e): e is FoundationEntity => isFoundationEntity(e) && hasGuideBindings(e),
-      );
+      const hosted = scene.entities.filter(isGridHosted);
       if (hosted.length === 0) return;
 
       // Rebuild inverted index only when the hosted set changes.
@@ -148,7 +150,7 @@ export function useHostingReconciler({ levelManager }: UseHostingReconcilerParam
       if (!movedAxes) return;
 
       const affected = hosted.filter((e) => changedIds.has(e.id));
-      const updates = reconcileHostedFoundations(affected, getOffset);
+      const updates = reconcileHostedEntities(affected, getOffset);
       if (updates.length > 0) applyUpdates(scene, levelId, updates);
     };
 
