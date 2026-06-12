@@ -78,6 +78,26 @@ only the defaults.
 category identity drives 2D + 3D consistently, zero render-pipeline change, colours stay
 user-overridable. Tests updated where they asserted the old hues.
 
+## 7. Persisted-state shadowing — version + migration (v1.1)
+
+**Incident (Giorgio 2026-06-12):** after the palette change, foundations/columns still
+rendered grey. Root cause: `bimRenderSettings.objectStyles` is **persisted per-level** in
+Firestore, and the setters write the **FULL resolved map** (incl. default-valued colours).
+`resolveBimSettings` does `{ ...DEFAULT_OBJECT_STYLES, ...persisted }`, so a level saved
+before ADR-445 has the **old default colours frozen in** and they shadow the new code
+defaults. `FoundationRenderer` reads fill from `resolveVgFillTint(objectStyles.foundation)`
+→ old grey. The new code never reaches already-saved levels.
+
+**Fix — one-time colour-refresh migration (`migrateBimRenderSettings`):**
+- Added `BIM_SETTINGS_VERSION` + optional `settingsVersion` on `BimRenderSettings`.
+- `loadForLevel` runs the migration on any doc below the current version: it re-derives
+  ONLY `projectionColor`/`cutColor` (parent + subcategories) from current
+  `DEFAULT_OBJECT_STYLES`, **preserving** user pen / visibility / line-pattern edits, stamps
+  the version, and persists once (idempotent — never re-runs for that level).
+- Manual escape hatch already exists: View → Object Styles → «Επαναφορά» (`resetToDefaults`).
+
+This auto-heals every level/user on next open without wiping genuine V/G edits.
+
 ## 6. Out of scope / DEFER
 
 - Colour-by-material mode (concrete/steel/masonry/timber) — rejected: most Greek structural
@@ -94,3 +114,8 @@ user-overridable. Tests updated where they asserted the old hues.
   SSoT) + 2D fills (palette modules) + 3D faces (material-catalog) updated. 3 resolver tests
   re-pointed from `beam` to `ceiling` (beam now has a colour); 6 column hex assertions updated.
   89/89 affected tests green. Pending browser-verify + commit.
+- **2026-06-12** — v1.1 (Opus 4.8). Persisted-state fix: `bimRenderSettings` gained
+  `settingsVersion` + `migrateBimRenderSettings` (re-derives structural colours from current
+  defaults on load, preserving pen/visibility, persists once). Wired into store `loadForLevel`.
+  5 migration tests. (Pre-existing unrelated red: `bim-render-settings-subcategory.test.ts` ×2
+  — stale «wall has no default subcategories» premise vs committed `wall.interior`; not touched.)
