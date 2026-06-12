@@ -27,8 +27,11 @@
  * @see docs/centralized-systems/reference/adrs/ADR-441-foundation-strip-grid-auto-design.md §GEN-SLAB
  */
 
+import type { Pair, Polygon, Ring } from 'polygon-clipping';
 import type { Point2D } from '../../rendering/types/Types';
+import type { Point3D } from '../types/bim-base';
 import type { SlabEntity } from '../types/slab-types';
+import type { GuideBinding } from '../hosting/guide-binding-types';
 import {
   completeSlabFromPolygonClicks,
   type SlabParamOverrides,
@@ -38,6 +41,15 @@ import {
   computeBuildingFootprint,
   type BeamForFootprint,
 } from '../geometry/building-footprint';
+import {
+  enumerateGridBays,
+  gridAxesFromReader,
+  type AxisGuideReader,
+  type GridBaySpec,
+} from '../foundations/foundation-from-grid';
+import { computeBeamGeometry } from '../geometry/beam-geometry';
+import { computeColumnGeometry } from '../geometry/column-geometry';
+import { safeDifference } from '../geometry/shared/safe-polygon-boolean';
 import type { WallForEnvelope } from '../geometry/envelope-perimeter';
 import type { ColumnForEnvelope } from '../geometry/envelope-column-bridge';
 
@@ -86,6 +98,146 @@ export function buildFoundationMatSlabs(
     if (result.ok) slabs.push(result.entity);
     else ignoredCount++;
   }
+
+  return { ok: slabs.length > 0, slabs, ignoredCount };
+}
+
+// ─── FLOOR / ROOF — per-φάτνωμα πλάκες (clip στα δοκάρια + notch κολώνων) ───────
+
+export interface BuildSlabBaysResult {
+  readonly ok: boolean;
+  /** Όταν `ok=false`: λιγότεροι από 2 ορατοί άξονες ανά διεύθυνση. */
+  readonly reason?: 'insufficient-guides';
+  /** Οι πλάκες ανά φάτνωμα (born-bound στους 4 άξονες). */
+  readonly slabs: readonly SlabEntity[];
+  /** Πλήθος φατνωμάτων που απορρίφθηκαν (κενά μετά το clip ή degenerate). */
+  readonly ignoredCount: number;
+}
+
+/** Αξονικά-ευθυγραμμισμένο bbox ενός πολυγώνου (scene units). */
+interface Bbox {
+  readonly minX: number; readonly minY: number; readonly maxX: number; readonly maxY: number;
+}
+
+/** Footprint ενός subtrahend (δοκάρι/κολώνα) + bbox για γρήγορο overlap φίλτρο. */
+interface Subtrahend {
+  readonly poly: Polygon;
+  readonly bbox: Bbox;
+}
+
+function bboxOf(pts: readonly Pair[]): Bbox {
+  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+  for (const [x, y] of pts) {
+    if (x < minX) minX = x;
+    if (y < minY) minY = y;
+    if (x > maxX) maxX = x;
+    if (y > maxY) maxY = y;
+  }
+  return { minX, minY, maxX, maxY };
+}
+
+function bboxOverlap(a: Bbox, b: Bbox): boolean {
+  return a.minX < b.maxX && a.maxX > b.minX && a.minY < b.maxY && a.maxY > b.minY;
+}
+
+/** Point3D vertices → closed polygon-clipping Polygon (ένα ring), ή `null` αν degenerate. */
+function vertsToSubtrahend(verts: readonly Point3D[]): Subtrahend | null {
+  if (verts.length < 3) return null;
+  const ring: Ring = verts.map((v): Pair => [v.x, v.y]);
+  return { poly: [ring], bbox: bboxOf(ring) };
+}
+
+/** Shoelace area (unsigned) ενός ring από Pairs. */
+function ringArea(ring: Ring): number {
+  let a = 0;
+  for (let i = 0; i < ring.length; i++) {
+    const [x1, y1] = ring[i];
+    const [x2, y2] = ring[(i + 1) % ring.length];
+    a += x1 * y2 - x2 * y1;
+  }
+  return Math.abs(a) / 2;
+}
+
+/**
+ * Μάζεψε τα footprints δοκαριών + κολωνών (= τα στοιχεία που κόβουν/notch-άρουν την
+ * πλάκα φατνώματος). Τα δοκάρια straddle τον άξονα → η αφαίρεση τα κόβει στην εσωτερική
+ * παρειά· οι κολώνες/τοιχία (shear-wall = ColumnEntity) notch-άρουν τις γωνίες/προεξοχές.
+ * Οι κανονικοί τοίχοι ΔΕΝ μπαίνουν εδώ (κάθονται ΠΑΝΩ στην πλάκα, Revit-grade).
+ */
+function collectSubtrahends(
+  beams: readonly BeamForFootprint[],
+  columns: readonly ColumnForEnvelope[],
+): Subtrahend[] {
+  const out: Subtrahend[] = [];
+  for (const b of beams) {
+    try {
+      const s = vertsToSubtrahend(computeBeamGeometry(b.params).outline.vertices);
+      if (s) out.push(s);
+    } catch { /* skip degenerate beam */ }
+  }
+  for (const c of columns) {
+    try {
+      const s = vertsToSubtrahend(computeColumnGeometry(c.params).footprint.vertices);
+      if (s) out.push(s);
+    } catch { /* skip degenerate column */ }
+  }
+  return out;
+}
+
+/**
+ * Outline ΕΝΟΣ φατνώματος = bay rect ΜΕΙΟΝ τα overlapping footprints (δοκάρια clip +
+ * κολώνες notch). Επιστρέφει το **μεγαλύτερο** outer ring (ένα φάτνωμα = μία πλάκα·
+ * τυχόν διάσπαση/τρύπες → DEFER slab-openings). `null` αν τίποτα δεν απομένει.
+ */
+function bayOutline(bay: GridBaySpec, subs: readonly Subtrahend[]): Point2D[] | null {
+  const rectRing: Ring = bay.corners.map((c): Pair => [c.x, c.y]);
+  const rectBbox = bboxOf(rectRing);
+  const overlapping = subs.filter((s) => bboxOverlap(s.bbox, rectBbox)).map((s) => s.poly);
+  if (overlapping.length === 0) {
+    return bay.corners.map((c) => ({ x: c.x, y: c.y }));
+  }
+  const result = safeDifference([rectRing], ...overlapping);
+  let best: Ring | null = null;
+  let bestArea = 0;
+  for (const poly of result) {
+    if (poly.length === 0) continue;
+    const area = ringArea(poly[0]);
+    if (area > bestArea) { bestArea = area; best = poly[0]; }
+  }
+  if (!best || bestArea <= 0) return null;
+  return best.map(([x, y]) => ({ x, y }));
+}
+
+/**
+ * Παράγει μία born-bound πλάκα ανά φάτνωμα (Slice FLOOR/ROOF). `kind` από τα overrides
+ * (default 'floor'). Κάθε πλάκα clip-άρεται στις εσωτερικές παρειές των δοκαριών &
+ * notch-άρεται γύρω από κολώνες, και φέρει τα 4-axis `guideBindings` → ακολουθεί τον
+ * κάναβο ως επιφάνεια (`slabHostingStrategy`). Σύνολο = (nX-1)·(nY-1) φατνώματα.
+ */
+export function buildSlabBaysFromGuides(
+  reader: AxisGuideReader,
+  beams: readonly BeamForFootprint[],
+  columns: readonly ColumnForEnvelope[],
+  overrides: SlabParamOverrides,
+  layerId: string,
+  sceneUnits: SceneUnits,
+): BuildSlabBaysResult {
+  const axes = gridAxesFromReader(reader);
+  if (!axes) {
+    return { ok: false, reason: 'insufficient-guides', slabs: [], ignoredCount: 0 };
+  }
+  const kind = overrides.kind ?? 'floor';
+  const subs = collectSubtrahends(beams, columns);
+
+  const slabs: SlabEntity[] = [];
+  let ignoredCount = 0;
+  enumerateGridBays(axes, (bay) => {
+    const outline = bayOutline(bay, subs);
+    if (!outline) { ignoredCount++; return; }
+    const result = completeSlabFromPolygonClicks(outline, layerId, { ...overrides, kind }, sceneUnits);
+    if (!result.ok) { ignoredCount++; return; }
+    slabs.push({ ...result.entity, guideBindings: bay.bindings as readonly GuideBinding[] });
+  });
 
   return { ok: slabs.length > 0, slabs, ignoredCount };
 }
