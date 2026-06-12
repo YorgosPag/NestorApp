@@ -57,7 +57,10 @@ export interface FoundationGridCommitResult {
   readonly unchanged: number;
   /** ADR-441 Slice 6b — legacy ορφανές που ξανα-κρεμάστηκαν στον κάναβο. */
   readonly rehosted: number;
-  /** ADR-441 Slice 5a-grid — auto λωρίδες που ευθυγραμμίστηκαν με τον κανόνα έδρασης. */
+  /**
+   * ADR-441 Slice 9 — in-place updates που κράτησαν id: coordinate-follow (η λωρίδα
+   * ακολούθησε άξονα που μετακινήθηκε) + auto re-justify (5a-grid αλλαγή ρόλου άξονα).
+   */
   readonly reJustified: number;
 }
 
@@ -173,11 +176,12 @@ export function commitFoundationGridFromGuides(
   const rehostedById = new Map(rehosts.map((r) => [r.rehosted.id, r.rehosted]));
   const existingForReconcile = existing.map((e) => rehostedById.get(e.id) ?? e);
 
-  const { toCreate, toDelete, toReJustify, unchanged } = reconcileGridStrips(target.strips, existingForReconcile);
+  const { toCreate, toDelete, toUpdate, unchanged } = reconcileGridStrips(target.strips, existingForReconcile);
 
-  // ADR-441 Slice 5a-grid — οι reflows (auto λωρίδες που ευθυγραμμίζονται στον κανόνα
-  // έδρασης όταν αλλάζει ρόλος άξονα) είναι in-place updates → ίδιο command με τα rehosts.
-  const reflowUpdates: RehostedStrip[] = toReJustify.map((r) => ({ original: r.original, rehosted: r.rejustified }));
+  // ADR-441 Slice 9 — managed updates: coordinate-follow (η λωρίδα ακολουθεί τον άξονα
+  // που κουνήθηκε, κρατά id + instance overrides) + auto re-justify (5a-grid, αλλαγή
+  // ρόλου άξονα). Και τα δύο είναι in-place RehostedStrip → ίδιο command με τα rehosts.
+  const reflowUpdates: readonly RehostedStrip[] = toUpdate;
 
   // ADR-441 Slice 8 — auto-junction-join: post-pass πάνω στο τελικό σύνολο (με τις
   // πραγματικές εδράσεις) → miter extends ώστε κάθε γωνία/κόμβος να κλείνει για όποια
@@ -200,6 +204,6 @@ export function commitFoundationGridFromGuides(
     deleted: toDelete.length,
     unchanged,
     rehosted: rehosts.length,
-    reJustified: toReJustify.length,
+    reJustified: toUpdate.length,
   };
 }

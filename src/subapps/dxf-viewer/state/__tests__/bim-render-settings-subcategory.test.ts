@@ -102,23 +102,39 @@ describe('resetCategorySubcategories', () => {
     expect(subs?.['handrails']?.linePattern).toBe('dashed2');
   });
 
-  it('drops subcategories for a category WITHOUT defaults (wall)', () => {
+  it('drops subcategories for a category WITHOUT defaults (slab)', () => {
+    act(() => {
+      get().setSubcategoryStyleField('slab', 'common-edges', 'cutColor', '#ff0000');
+      get().resetCategorySubcategories('slab');
+    });
+    expect(get().objectStyles.slab.subcategories).toBeUndefined();
+  });
+
+  // ADR-375 C.9 — ο τοίχος ΕΧΕΙ default `interior` subcategory (εσωτ./εξωτ. τοίχος
+  // διαφορετικό χρώμα). Reset → επαναφορά στο default interface, ΟΧΙ undefined (SSoT).
+  it('restores default subcategories for a category WITH defaults (wall: interior)', () => {
     act(() => {
       get().setSubcategoryStyleField('wall', 'common-edges', 'cutColor', '#ff0000');
+      get().setSubcategoryStyleField('wall', 'interior', 'cutColor', '#ff0000');
       get().resetCategorySubcategories('wall');
     });
-    expect(get().objectStyles.wall.subcategories).toBeUndefined();
+    // Η σβησμένη ad-hoc subcategory φεύγει· το default `interior` επανέρχεται από το SSoT.
+    expect(get().objectStyles.wall.subcategories?.['common-edges']).toBeUndefined();
+    expect(get().objectStyles.wall.subcategories).toEqual(DEFAULT_OBJECT_STYLES.wall.subcategories);
   });
 });
 
 describe('resetAllSubcategories', () => {
   it('restores every category to defaults', () => {
     act(() => {
+      get().setSubcategoryStyleField('slab', 'common-edges', 'cutColor', '#ff0000');
       get().setSubcategoryStyleField('wall', 'common-edges', 'cutColor', '#ff0000');
       get().setSubcategoryStyleField('stair', 'walkline', 'linePattern', 'solid');
       get().resetAllSubcategories();
     });
-    expect(get().objectStyles.wall.subcategories).toBeUndefined();
+    // slab: χωρίς defaults → undefined· wall: με default `interior` → επανέρχεται (ΟΧΙ undefined).
+    expect(get().objectStyles.slab.subcategories).toBeUndefined();
+    expect(get().objectStyles.wall.subcategories).toEqual(DEFAULT_OBJECT_STYLES.wall.subcategories);
     expect(get().objectStyles.stair.subcategories?.['walkline']?.linePattern).toBe('dashed');
   });
 });
