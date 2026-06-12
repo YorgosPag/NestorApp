@@ -20,6 +20,7 @@ import { BaseSnapEngine, type SnapEngineContext, type SnapEngineResult } from '.
 import { SNAP_ENGINE_PRIORITIES } from '../../config/tolerance-config';
 import { projectPointOnSegment } from '../../systems/guides/guide-types';
 import { getGlobalGuideStore } from '../../systems/guides/guide-store';
+import { isSnapDrawingMode } from '../../systems/cursor/SnapDrawingModeStore';
 import { generateFractalSubdivisions } from '../../systems/guides/guide-advanced-geometry';
 
 /**
@@ -65,6 +66,12 @@ export class GuideSnapEngine extends BaseSnapEngine {
 
     const radius = context.worldRadiusForType(cursorPoint, ExtendedSnapType.GUIDE);
 
+    // ADR-189 (2026-06-12): while DRAWING/placing, guides attract ONLY at their
+    // INTERSECTIONS (✕). The single-guide "slide along the line" snaps (X/Y/XZ line,
+    // midpoint, fractal) are suppressed so the cursor moves freely except at crossings
+    // (Giorgio). Outside drawing mode the full guide snapping stays active.
+    const intersectionOnly = isSnapDrawingMode();
+
     // ADR-189 §3.17 (2026-06-11): Marker policy — a guide *line* snap slides one axis
     // along the guide while the other tracks the cursor, so a floating glyph would glide
     // with the cursor at every pixel (Giorgio: «πολύ κουραστικό, καμία ωφέλεια»). The
@@ -80,6 +87,8 @@ export class GuideSnapEngine extends BaseSnapEngine {
 
       if (guide.axis === 'XZ' && guide.startPoint && guide.endPoint) {
         // ADR-189 §3.3: Diagonal guide — perpendicular snap to segment (slides → silent line).
+        // Suppressed while drawing (intersection-only mode) — a single diagonal is a slide.
+        if (intersectionOnly) continue;
         const result = projectPointOnSegment(cursorPoint, guide.startPoint, guide.endPoint);
         if (result.distance <= radius) {
           candidates.push(this.createCandidate(
@@ -94,13 +103,13 @@ export class GuideSnapEngine extends BaseSnapEngine {
         // Vertical guide — snap X to guide offset, keep cursor Y.
         const dist = Math.abs(cursorPoint.x - guide.offset);
         if (dist <= radius && (!nearestX || dist < nearestX.dist)) {
-          nearestX = { offset: guide.offset, dist, label: guide.label, id: guide.id };
+          nearestX = { offset: guide.offset, dist, label: guide.label ?? undefined, id: guide.id };
         }
       } else {
         // Horizontal guide — snap Y to guide offset, keep cursor X.
         const dist = Math.abs(cursorPoint.y - guide.offset);
         if (dist <= radius && (!nearestY || dist < nearestY.dist)) {
-          nearestY = { offset: guide.offset, dist, label: guide.label, id: guide.id };
+          nearestY = { offset: guide.offset, dist, label: guide.label ?? undefined, id: guide.id };
         }
       }
     }
@@ -118,7 +127,7 @@ export class GuideSnapEngine extends BaseSnapEngine {
         priority: SNAP_ENGINE_PRIORITIES.GUIDE - 0.5,
         entityId: nearestX.id,
       });
-    } else if (nearestX) {
+    } else if (nearestX && !intersectionOnly) {
       // Single vertical guide in range → silent line snap (overlay hides type 'guide').
       candidates.push(this.createCandidate(
         { x: nearestX.offset, y: cursorPoint.y },
@@ -127,7 +136,7 @@ export class GuideSnapEngine extends BaseSnapEngine {
         SNAP_ENGINE_PRIORITIES.GUIDE,
         nearestX.id,
       ));
-    } else if (nearestY) {
+    } else if (nearestY && !intersectionOnly) {
       // Single horizontal guide in range → silent line snap.
       candidates.push(this.createCandidate(
         { x: cursorPoint.x, y: nearestY.offset },
@@ -138,14 +147,15 @@ export class GuideSnapEngine extends BaseSnapEngine {
       ));
     }
 
-    // B12: Midpoint snap between adjacent same-axis guides (slides → silent line snap).
-    if (candidates.length < 6) {
-      this.addMidpointCandidates(candidates, guides, cursorPoint, radius);
-    }
-
-    // B80: Fractal subdivision snap candidates (1/3, 1/4 positions between guides — silent).
-    if (candidates.length < 8) {
-      this.addFractalCandidates(candidates, guides, cursorPoint, radius);
+    // B12/B80: Midpoint + fractal "slide" snaps between adjacent same-axis guides.
+    // Both are single-line slides → suppressed while drawing (intersection-only).
+    if (!intersectionOnly) {
+      if (candidates.length < 6) {
+        this.addMidpointCandidates(candidates, guides, cursorPoint, radius);
+      }
+      if (candidates.length < 8) {
+        this.addFractalCandidates(candidates, guides, cursorPoint, radius);
+      }
     }
 
     return { candidates };

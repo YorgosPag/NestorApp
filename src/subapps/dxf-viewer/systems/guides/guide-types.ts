@@ -217,6 +217,42 @@ export function isDiagonalGuide(guide: Guide): guide is Guide & { readonly start
 }
 
 /**
+ * Screen-space proximity (px) at which a guide highlights AND the crosshair locks
+ * onto its line. SSoT shared by the hover-highlight (`useGuideWorkflowComputed`) and
+ * the crosshair hover-lock (`mouse-handler-move`) so «φωτίζεται ⟺ ο σταυρός κολλάει».
+ */
+export const GUIDE_HIT_TOLERANCE_PX = 30;
+
+/**
+ * Project a point onto a guide's LINE (SSoT for guide line snapping):
+ * - X (vertical)   → lock X to the offset, keep the point's Y (slides vertically)
+ * - Y (horizontal) → lock Y to the offset, keep the point's X (slides horizontally)
+ * - XZ (diagonal)  → perpendicular projection onto the segment
+ * Used by both the GuideSnapEngine single-line snaps and the crosshair hover-lock so
+ * the cursor lands exactly on the same line point in every path.
+ */
+export function projectPointOntoGuide(guide: Guide, point: Point2D): Point2D {
+  if (guide.axis === 'X') return { x: guide.offset, y: point.y };
+  if (guide.axis === 'Y') return { x: point.x, y: guide.offset };
+  if (guide.startPoint && guide.endPoint) {
+    return projectPointOnSegment(point, guide.startPoint, guide.endPoint).snapPoint;
+  }
+  return { x: point.x, y: point.y };
+}
+
+/** Guide tools that ACT ON an existing guide (so it highlights + the crosshair locks
+ * onto its line). Mirrors the `needsToolHighlight` set in `useGuideWorkflowComputed`. */
+const GUIDE_EDIT_TOOLS: ReadonlySet<string> = new Set([
+  'guide-delete', 'guide-move', 'guide-parallel', 'guide-perpendicular',
+  'guide-rotate', 'guide-rotate-group', 'guide-equalize', 'guide-mirror',
+]);
+
+/** True when the active tool edits an existing guide → crosshair should lock to the line. */
+export function isGuideEditTool(tool: string | null | undefined): boolean {
+  return tool != null && GUIDE_EDIT_TOOLS.has(tool);
+}
+
+/**
  * Distance from a point to a line segment (clamped to endpoints).
  * Reused by GuideStore.findNearestGuide() and GuideSnapEngine.
  */

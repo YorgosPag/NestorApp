@@ -40,6 +40,7 @@ import {
   type FollowGhostFootprint,
 } from '../../bim/hosting/guide-follow-ghost';
 import { deriveGridFollowGhostFootprints } from '../../bim/foundations/foundation-grid-ghost';
+import { foundationGridSettingsStore } from '../../ui/ribbon/hooks/bridge/foundation-grid-settings-store';
 import { gridStripSignature } from '../../bim/foundations/foundation-grid-segments';
 import { resolveSceneUnits } from '../../utils/scene-units';
 import type { GuideOffsetLookup } from '../../bim/hosting/derive-params-from-guides';
@@ -94,7 +95,10 @@ function computeGhostFootprints(
   const hasGrid = hosted.some((e) => gridStripSignature(e) !== null);
   if (!hasGrid) return deriveFollowGhostFootprints(hosted, lookup);
   const sceneUnits = scene ? resolveSceneUnits(scene) : 'mm';
-  const gridFootprints = deriveGridFollowGhostFootprints(getGlobalGuideStore(), {}, levelId, sceneUnits);
+  // ADR-441 — ίδιο περιμετρικό mode με το commit (draw-time getter· μηδέν subscription).
+  const gridFootprints = deriveGridFollowGhostFootprints(
+    getGlobalGuideStore(), {}, levelId, sceneUnits, foundationGridSettingsStore.get(),
+  );
   const nonGrid = hosted.filter((e) => gridStripSignature(e) === null);
   return nonGrid.length > 0
     ? [...gridFootprints, ...deriveFollowGhostFootprints(nonGrid, lookup)]

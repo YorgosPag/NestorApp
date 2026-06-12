@@ -5,7 +5,7 @@
  * Extracted from useGuideToolWorkflows.ts (SRP: derived/computed only).
  */
 import { useMemo } from 'react';
-import { pointToSegmentDistance } from '../../systems/guides/guide-types';
+import { pointToSegmentDistance, GUIDE_HIT_TOLERANCE_PX } from '../../systems/guides/guide-types';
 import { getImmediateSnap } from '../../systems/cursor/ImmediateSnapStore';
 import { useCursorWorldPosition } from '../../systems/cursor/useCursor';
 import type { ToolType } from '../../ui/toolbar/types';
@@ -46,7 +46,7 @@ export function useGuideWorkflowComputed(params: UseGuideWorkflowComputedParams)
       activeTool === 'guide-mirror';
 
     if (needsToolHighlight) {
-      const hitToleranceWorld = 30 / transform.scale;
+      const hitToleranceWorld = GUIDE_HIT_TOLERANCE_PX / transform.scale;
       let nearestId: string | null = null;
       let nearestDist = hitToleranceWorld;
       for (const guide of guideState.guides) {
