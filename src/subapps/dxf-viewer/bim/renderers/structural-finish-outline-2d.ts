@@ -21,7 +21,7 @@ import { getMaterialFlatColorHex } from '../materials/material-catalog-defs';
 import { mmToSceneUnits, type SceneUnits } from '../../utils/scene-units';
 
 /** Line width (px) της σοβατισμένης όψης (λεπτή, δευτερεύουσα του πυρήνα). */
-export const FINISH_OUTLINE_LINE_WIDTH_PX = 0.75;
+const FINISH_OUTLINE_LINE_WIDTH_PX = 0.75;
 
 const EPS = 1e-9;
 

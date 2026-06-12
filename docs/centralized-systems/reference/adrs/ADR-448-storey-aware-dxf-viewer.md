@@ -1,6 +1,6 @@
 # ADR-448 — Storey-Aware DXF Viewer (όροφοι → BIM elevations, υπόγειο, θεμελίωση, multi-storey ανέγερση)
 
-- **Status**: 🟡 PROPOSED — Phase 1 recognition complete (code = SoT, 2026-06-12). Phases 1-4 planned, μη υλοποιημένες.
+- **Status**: 🟢 DONE (CLOSED) — Phases 1-4 υλοποιημένες (2026-06-13, uncommitted· 🔴 browser-verify + commit εκκρεμούν). Vertical-continuity validation → DEFER νέο ADR.
 - **Date**: 2026-06-12
 - **Author**: Giorgio Pagonis + Claude (Opus 4.8)
 - **Scope**: DXF Viewer subapp — σύνδεση του single-floor BIM editing με τη δομή ορόφων του κτιρίου (καρτέλα «Όροφοι»).
@@ -145,11 +145,26 @@ interface ActiveStoreyContext {
 - **Order/elevation finding (code = SoT):** το `addLevel` δίνει `order: levels.length` (creation-order)· η storey σειρά οδηγείται από το **linked `floor.elevation`** (ADR-399), όχι από το `level.order` → ο loop χρειάζεται μόνο create + link ανά `floorId` (reuse `floor-stack-elevation`, μηδέν νέα elevation math).
 - 5 jest (`ensure-levels-for-building.test.ts`: per-floor count / basement→roof order / idempotent re-import / pre-existing reuse / floor-less skip) + IDE diagnostics clean σε όλα τα touched.
 
-### Phase 4 — Building structure awareness + κατακόρυφη συνέχεια
+### Phase 4 — Existing-entity height cascade (slab re-stretch) ✅ DONE (2026-06-13, uncommitted)
 
-- Foundation/εδαφόπλακα tools κλειδώνουν στον lowest όροφο· warning σε άνω όροφο.
-- Multi-storey ανέγερση: κολώνες stacking· δάπεδα/οροφές σωστό FFL· «Όλοι οι όροφοι» = πλήρες κτίριο.
-- **Cascade** (decision): αλλαγή `floor.height` → **νέα entities** παίρνουν νέο default (Φ1-2)· re-cascade σε **υπάρχοντα** DXF entities = Φ4 (reuse/extend `floor-height-cascade.service.ts`).
+**Code = SoT reconciliation.** Από τα 3 αρχικά bullets, τα 2 **ήδη υπήρχαν** στον κώδικα:
+
+| Αρχικό bullet | Κατάσταση (code = SoT) |
+|---|---|
+| Foundation/εδαφόπλακα lowest-storey gating + warning | ✅ **DONE στη Φ2** — `shouldWarnFoundationOnStorey` + EventBus `bim:foundation-on-upper-storey` + toast. |
+| `floor.height` αλλαγή → re-cascade σε **υπάρχοντες** τοίχους/κολώνες | ✅ **Προϋπήρχε** (ADR-369 §9 Q5) — `floor-height-cascade.service.ts` `cascadeFloorHeightToEntities`, wired στο `floors.handlers.ts` PUT (trigger όταν αλλάζει `updates.height`). |
+| Multi-storey stacking / σωστό FFL / «όλοι οι όροφοι» | ✅ **Καλύφθηκε** από Φ1 (storey-ceiling render) + Φ3 (all-floors levels). |
+
+**Πραγματικό κενό (το Φ4 deliverable):** ο cascade κάλυπτε walls + columns αλλά **ΟΧΙ slabs** → υπάρχοντα ceiling/roof slabs έμεναν στο παλιό `levelElevation`, ενώ τα νέα (Φ2) έπαιρναν το νέο storey height = **inconsistency**.
+
+**Λύση — slab cascade (SSoT extension, ΟΧΙ rewrite):** ο `floor-height-cascade.service.ts` έγινε **data-driven `CASCADE_TARGETS` registry** (Boy-Scout: walls/columns/slabs = 1 entry έκαστο, μηδέν duplicate per-collection loop). Όταν αλλάζει `floor.height`:
+- walls/columns (`topBinding='storey-ceiling'`) → `params.height` (αμετάβλητη λογική + κοινό `STRETCH_TARGET` spec).
+- **NEW** ceiling/roof slabs (`params.kind==='ceiling'||'roof'`) → `params.levelElevation = floor.height*1000`. floor/ground/foundation slabs → skip.
+- **Idempotent no-op skip** (`oldValue===newValue` → ούτε batch write ούτε audit· νέο, βελτιώνει και walls/columns). EntityAudit ανά entity (`entityType:'slab'` ήδη valid). `CascadeResult` +`slabsUpdated`.
+
+**Live-viewer reactivity (verify-only):** για τον ενεργό όροφο το storey-ceiling **render** (Φ1b) ακολουθεί ήδη δυναμικά το ταβάνι από το `ActiveStoreyContext`· ο cascade αφορά την **persisted αλήθεια** για μη-ενεργές όψεις + BOQ (Firestore subscription των BIM persistence hooks ανανεώνει — δεν χτίστηκε νέα μηχανή).
+
+**Vertical-continuity validation** (λείπει ενδιάμεσος όροφος / κολώνα δεν στοιχίζεται με κάτω) → **DEFER ξεχωριστό ADR** (risk isolation· είναι validation/warnings, όχι cascade).
 
 ---
 
@@ -158,13 +173,14 @@ interface ActiveStoreyContext {
 - **Single-floor datum** → Real FFL via unified SSoT (4.1) — Giorgio «όπως η Revit».
 - **Ceiling/roof slab FFL (Phase 2)** → **floor-relative storey height** (`nextFloorElevationMm − floorElevationMm`), ΟΧΙ raw datum-relative `nextFloorElevationMm`. Λόγος: τα entities στο single-floor scope δημιουργούνται level-relative με FFL=0 (`column-from-grid ACTIVE_LEVEL_FLOOR_MM=0`)· το slab `levelElevation` = «top face = FFL» με ceiling default 3000 = «storey 3.00m» (`slab-types.ts:221`) → είναι floor-relative. Raw datum τιμή θα έσπαζε σε άνω ορόφους (όροφος @7000 → οροφή @10500 αντί 3500).
 - **Wizard all-floors** → toggle με default **ON** (Giorgio: «φόρτωσε όλους τους ορόφους»).
-- **floor.height cascade** → νέα entities πρώτα (Φ1-2)· existing entities re-cascade = Φ4 (risk isolation).
+- **floor.height cascade** → νέα entities πρώτα (Φ1-2)· existing entities re-cascade = Φ4 (risk isolation). **Φ4 cascade value = `floor.height*1000` απευθείας** (= ο ορισμός storey height που άλλαξε ο χρήστης = floor-relative ceiling FFL στο single-floor scope) → ντετερμινιστικό, μηδέν extra floor-stack read server-side.
 - **Mode** → Plan Mode ανά φάση (όχι orchestrator).
 
 ---
 
 ## 8. Changelog
 
+- **2026-06-13** — **Phase 4 DONE → ADR-448 CLOSED** (existing-entity slab cascade, uncommitted). **Code = SoT reconciliation:** από τα 3 αρχικά §6 bullets, 2 προϋπήρχαν (foundation gating=Φ2· wall/column cascade=ADR-369 §9 Q5)· το πραγματικό κενό = ο `floor-height-cascade.service.ts` κάλυπτε walls+columns αλλά ΟΧΙ slabs → υπάρχοντα ceiling/roof slabs έμεναν στο παλιό `levelElevation`. **MOD** `src/app/api/floors/floor-height-cascade.service.ts`: data-driven `CASCADE_TARGETS` registry (Boy-Scout SSoT — walls/columns μοιράζονται `STRETCH_TARGET` spec, slab = 1 entry· μηδέν duplicate loop). NEW slab target → ceiling/roof (`params.kind`) `params.levelElevation = floor.height*1000`· floor/ground/foundation skip· **idempotent no-op skip** (`oldValue===newValue` → ούτε write ούτε audit, βελτιώνει και walls/columns)· EntityAudit `entityType:'slab'` (ήδη valid στο `AuditEntityType`)· `CascadeResult` +`slabsUpdated`. Handler αμετάβλητος (αγνοεί το result). **NEW** `__tests__/floor-height-cascade.service.test.ts` (6 tests: slab ceiling/roof cascade· skip floor/ground/foundation· idempotent no-op· slab audit `entityType:'slab'`· wall/column+offset regression· no-match no-op). 6/6 jest + IDE diagnostics clean (2 αρχεία). **Απόφαση (Revit-grade):** cascade value=`floor.height*1000` απευθείας (ντετερμινιστικό· μηδέν floor-stack read). Vertical-continuity validation → DEFER νέο ADR. 🔴 browser-verify (άλλαξε ύψος ορόφου με ceiling slab → οροφή ξανα-τεντώνεται μαζί με τοίχους/κολώνες) + commit (shared tree· git add ΜΟΝΟ δικά μου hunks). (Opus 4.8)
 - **2026-06-13** — **Phase 3 DONE** (wizard «φόρτωσε ΟΛΟΥΣ τους ορόφους», uncommitted). **NEW** `systems/levels/ensure-levels-for-building.ts` (pure `ensureLevelsForBuilding` = loop reuse `findOrCreateLevelForFloor`· sort basement→roof· σειριακό await· idempotent) + `__tests__/ensure-levels-for-building.test.ts` (5 tests). **MOD** `features/floorplan-import/FloorplanImportWizard.tsx` (`loadAllFloors` state default ON + checkbox building step + `WizardCompleteMeta.loadAllFloors` + handleUploadComplete 2 paths)· `ui/components/LevelPanel.tsx` (reactive backfill: `useFloorsByBuilding(allFloorsBuildingId)` + `runningRef`-guarded effect → `ensureLevelsForBuilding`· onComplete sets building id πίσω από `meta.loadAllFloors`· selected-floor + `setCurrentLevel` αμετάβλητα → no race)· i18n `floorplanImport.allFloors.{label,hint}` (el/en `files-media`). **Code finding (code = SoT):** `addLevel order=levels.length` (creation-order)· storey σειρά οδηγείται από linked `floor.elevation` (ADR-399) → ο loop χρειάζεται μόνο create+link ανά `floorId`. 5 jest + IDE diagnostics clean σε όλα τα touched. 🔴 browser-verify (κτίριο με ≥2 ορόφους + toggle ON → Levels για ΟΛΟΥΣ, σωστό label/σειρά, idempotent στο re-import) + commit (shared tree· git add ΜΟΝΟ δικά μου hunks). DEFER Φ4 existing-entity cascade. (Opus 4.8)
 - **2026-06-13** — **Phase 2 DONE** (per-storey creation defaults + foundation gating, uncommitted). **NEW** `systems/levels/storey-creation-defaults.ts` (SSoT resolvers: `readActiveStoreyContext` non-React `getState()` mirror `bim3d-resync`· `resolveStoreyHeightMm`· `resolveStoreyCeilingElevationMm` floor-relative· `shouldWarnFoundationOnStorey`) + `__tests__/storey-creation-defaults.test.ts`. **MOD seams** (pattern `override ?? storey ?? legacy`): `wall-completion.ts` (height=storeyHeightMm)· `column-completion.ts` (height)· `column-anchor-ghosts.ts` (ghost height = commit)· `column-from-grid.ts` `withFoundationBase` (storey height στο `baseHeight`· **GEN-COL `baseOffset`+`baseDrop` continuity ανέπαφο** — ADR-441)· `slab-completion.ts` (ceiling/roof → **floor-relative** ceiling FFL `nextFloorElevationMm−floorElevationMm`· floor/ground/foundation αμετάβλητα). **Foundation gating** (soft, Revit-style — δεν μπλοκάρει): NEW EventBus `'bim:foundation-on-upper-storey'` (`drawing-event-map-bim.ts`)· emit από `useFoundationTool.activate()` (1×/activation) + ground-slab batch· toast warning (`useDxfViewerNotifications.ts` + i18n key `storeyGating.foundationUpperStorey` el/en). **Safe by construction:** store `context=null` → `storey?.X===undefined` → legacy constant (μηδέν regression· υπάρχοντα suites αμετάβλητα). Code finding (code=SoT): seams b/d δίνουν grid/ghost «δωρεάν» (column-from-grid→buildDefaultColumnParams)· `column-anchor-ghosts` έχει ΔΙΚΟ `buildGhostParams` → ρητό seam για ghost==final. 🔴 browser-verify (floor.height≠3000 → νέος τοίχος/κολώνα γεννιέται στο storey height + render 1b) + commit (shared tree· git add ΜΟΝΟ δικά μου). DEFER Φ3 wizard + Φ4 existing-entity cascade. (Opus 4.8)
 - **2026-06-12** — ADR δημιουργήθηκε. Phase 1 recognition complete (code = SoT, 3 αρχεία gap επαληθευμένα). Απόφαση 4.1 (Revit-faithful unified datum SSoT). Phases 1-4 planned, μη υλοποιημένες. (Opus 4.8)
