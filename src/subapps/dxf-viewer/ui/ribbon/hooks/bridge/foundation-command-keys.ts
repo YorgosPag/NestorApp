@@ -49,8 +49,13 @@ export const FOUNDATION_RIBBON_STRING_KEYS: readonly FoundationRibbonStringComma
 export const FOUNDATION_RIBBON_KEYS_ACTIONS = {
   close: 'foundation.actions.close',
   delete: 'foundation.actions.delete',
-  // ADR-441 Slice 2 — one-shot «Εσχάρα πεδιλοδοκών από κάναβο» (δεν θέλει επιλογή).
+  // ADR-441 Slice 2 — one-shot «Εσχάρα πεδιλοδοκών από κάναβο» (default = inner).
   fromGrid: 'foundation.actions.fromGrid',
+  // ADR-441 — περιμετρική έδραση εσχάρας (split-button variants, Giorgio 2026-06-12).
+  fromGridCenter: 'foundation.actions.fromGridCenter',
+  fromGridOuter: 'foundation.actions.fromGridOuter',
+  // ADR-441 Slice GEN-TIE — one-shot «Συνδετήριες δοκοί από κάναβο» (κεντραρισμένες).
+  tieBeamsFromGrid: 'foundation.actions.tieBeamsFromGrid',
 } as const;
 
 export const FOUNDATION_RIBBON_BADGE_KEYS = {
@@ -71,7 +76,10 @@ export function isFoundationActionKey(action: string): boolean {
   return (
     action === FOUNDATION_RIBBON_KEYS_ACTIONS.close ||
     action === FOUNDATION_RIBBON_KEYS_ACTIONS.delete ||
-    action === FOUNDATION_RIBBON_KEYS_ACTIONS.fromGrid
+    action === FOUNDATION_RIBBON_KEYS_ACTIONS.fromGrid ||
+    action === FOUNDATION_RIBBON_KEYS_ACTIONS.fromGridCenter ||
+    action === FOUNDATION_RIBBON_KEYS_ACTIONS.fromGridOuter ||
+    action === FOUNDATION_RIBBON_KEYS_ACTIONS.tieBeamsFromGrid
   );
 }
 

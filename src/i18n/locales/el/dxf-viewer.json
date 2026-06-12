@@ -35,14 +35,18 @@
       "statusBadge": {
         "dim": "Απομόνωση: {category}",
         "freeze": "Πάγωμα: {category}",
-        "unnamed": "χωρίς όνομα"
+        "unnamed": "χωρίς όνομα",
+        "entityCount": "{count, plural, one {# αντικείμενο} other {# αντικείμενα}}",
+        "categoryCount": "{count, plural, one {# κατηγορία} other {# κατηγορίες}}"
       },
       "tooltipClickToUnisolate": "Κλικ για κατάργηση απομόνωσης",
       "snapshotOverrideWarning": "Η προηγούμενη απομόνωση αντικαταστάθηκε.",
       "contextMenu": {
         "off": "Απόκρυψη επιπέδου",
         "freeze": "Πάγωμα επιπέδου",
-        "lock": "Κλείδωμα επιπέδου"
+        "lock": "Κλείδωμα επιπέδου",
+        "isolateEntity": "Απομόνωση αντικειμένου",
+        "isolateCategory": "Απομόνωση κατηγορίας"
       },
       "commands": {
         "isolate": "Απομόνωση επιπέδων",

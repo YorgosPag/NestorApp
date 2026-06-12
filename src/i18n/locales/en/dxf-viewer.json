@@ -35,14 +35,18 @@
       "statusBadge": {
         "dim": "Isolated: {category}",
         "freeze": "Frozen: {category}",
-        "unnamed": "unnamed"
+        "unnamed": "unnamed",
+        "entityCount": "{count, plural, one {# object} other {# objects}}",
+        "categoryCount": "{count, plural, one {# category} other {# categories}}"
       },
       "tooltipClickToUnisolate": "Click to unisolate",
       "snapshotOverrideWarning": "Previous isolate snapshot was overwritten.",
       "contextMenu": {
         "off": "Off this layer",
         "freeze": "Freeze this layer",
-        "lock": "Lock this layer"
+        "lock": "Lock this layer",
+        "isolateEntity": "Isolate object",
+        "isolateCategory": "Isolate category"
       },
       "commands": {
         "isolate": "Isolate layers",

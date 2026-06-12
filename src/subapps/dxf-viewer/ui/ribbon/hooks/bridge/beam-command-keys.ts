@@ -108,6 +108,8 @@ export const BEAM_RIBBON_STRING_KEYS: readonly BeamRibbonStringCommandKey[] = [
 export const BEAM_RIBBON_KEYS_ACTIONS = {
   close: 'beam.actions.close',
   delete: 'beam.actions.delete',
+  // ADR-441 Slice GEN-BEAM — one-shot «Δοκάρια από κάναβο» (στα segments, δεν θέλει επιλογή).
+  fromGrid: 'beam.actions.fromGrid',
 } as const;
 
 const BEAM_ACTION_KEY_SET: ReadonlySet<string> = new Set<string>(

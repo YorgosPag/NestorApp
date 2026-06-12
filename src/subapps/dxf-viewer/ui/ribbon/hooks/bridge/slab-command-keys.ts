@@ -47,6 +47,13 @@ export const SLAB_RIBBON_STRING_KEYS: readonly SlabRibbonStringCommandKey[] = [
 export const SLAB_RIBBON_KEYS_ACTIONS = {
   close: 'slab.actions.close',
   delete: 'slab.actions.delete',
+  // ADR-441 Slice GEN-SLAB — one-shot «Πλάκες από κάναβο» (δεν θέλουν επιλογή slab).
+  /** Εδαφόπλακα: ΕΝΑ ενιαίο slab kind='foundation' σε όλο το αποτύπωμα. */
+  fromGridMat: 'slab.actions.fromGridMat',
+  /** Δάπεδα: ΠΟΛΛΑ slab kind='floor', ένα ανά φάτνωμα (Slice FLOOR). */
+  fromGridFloor: 'slab.actions.fromGridFloor',
+  /** Οροφές: ΠΟΛΛΑ slab kind='roof', ένα ανά φάτνωμα (Slice ROOF). */
+  fromGridRoof: 'slab.actions.fromGridRoof',
 } as const;
 
 const SLAB_ACTION_KEY_SET: ReadonlySet<string> = new Set<string>(

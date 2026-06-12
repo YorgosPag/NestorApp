@@ -64,6 +64,8 @@ export const WALL_RIBBON_KEYS_ACTIONS = {
   // ADR-401 Phase E.1 — manual detach of wall top/base from a structural host.
   detachTop: 'wall.actions.detachTop',
   detachBase: 'wall.actions.detachBase',
+  // ADR-441 Slice GEN-WALL — one-shot «Τοίχοι από κάναβο» (στα segments, δεν θέλει επιλογή).
+  fromGrid: 'wall.actions.fromGrid',
 } as const;
 
 const WALL_ACTION_KEY_SET: ReadonlySet<string> = new Set<string>(

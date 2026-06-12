@@ -37,6 +37,31 @@
     "insufficientGuides": "At least 2 grid axes per direction are required (X and Y).",
     "empty": "No valid footing strip from the current grid."
   },
+  "columnGrid": {
+    "built": "{created, plural, one {Created # column from the grid.} other {Created # columns from the grid.}}",
+    "builtWithSkipped": "{created, plural, one {Created # column} other {Created # columns}}; {skipped, plural, one {# intersection already had one.} other {# intersections already had one.}}",
+    "upToDate": "Every grid intersection already has a column.",
+    "insufficientGuides": "At least 1 grid axis per direction is required (X and Y)."
+  },
+  "wallGrid": {
+    "built": "{created, plural, one {Created # wall from the grid.} other {Created # walls from the grid.}}",
+    "builtWithSkipped": "{created, plural, one {Created # wall} other {Created # walls}}; {skipped, plural, one {# segment already had one.} other {# segments already had one.}}",
+    "upToDate": "Every grid segment already has a wall.",
+    "insufficientGuides": "At least 2 grid axes per direction are required (X and Y)."
+  },
+  "tieBeamGrid": {
+    "built": "{created, plural, one {Created # tie beam from the grid.} other {Created # tie beams from the grid.}}",
+    "builtWithSkipped": "{created, plural, one {Created # tie beam} other {Created # tie beams}}; {skipped, plural, one {# segment already had one.} other {# segments already had one.}}",
+    "jointed": "{jointed, plural, one {Closed # tie-beam corner.} other {Closed # tie-beam corners.}}",
+    "upToDate": "Every grid segment already has a tie beam.",
+    "insufficientGuides": "At least 2 grid axes per direction are required (X and Y)."
+  },
+  "beamGrid": {
+    "built": "{created, plural, one {Created # beam from the grid.} other {Created # beams from the grid.}}",
+    "builtWithSkipped": "{created, plural, one {Created # beam} other {Created # beams}}; {skipped, plural, one {# segment already had one.} other {# segments already had one.}}",
+    "upToDate": "Every grid segment already has a beam.",
+    "insufficientGuides": "At least 2 grid axes per direction are required (X and Y)."
+  },
   "perimeterColumn": {
     "built": "Created {built} structural walls from the perimeter.",
     "builtWithIgnored": "Created {built} structural walls; ignored {ignored} shapes.",
@@ -1523,7 +1548,35 @@
         },
         "foundationFromGrid": {
           "label": "Footing grid from guides",
-          "tooltip": "Auto strip footings along the existing construction grid lines/intersections (one command, one undo)"
+          "tooltip": "Auto strip footings along the existing construction grid lines/intersections (one command, one undo). Arrow: perimeter alignment."
+        },
+        "foundationFromGridInner": {
+          "label": "Footing grid — inner faces",
+          "tooltip": "Perimeter strips grow INWARD (outer face on the outermost guide; zero overhang)"
+        },
+        "foundationFromGridCenter": {
+          "label": "Footing grid — centered",
+          "tooltip": "ALL strips centered (guide on the centerline; concentric)"
+        },
+        "foundationFromGridOuter": {
+          "label": "Footing grid — outer faces",
+          "tooltip": "Perimeter strips grow OUTWARD (inner face on the outermost guide; they overhang outside)"
+        },
+        "columnsFromGrid": {
+          "label": "Columns from grid",
+          "tooltip": "Auto column at every grid axis intersection, bound so it follows the axis (one command, one undo)"
+        },
+        "wallsFromGrid": {
+          "label": "Walls from grid",
+          "tooltip": "Auto wall on every grid axis segment, bound so it follows the axis (one command, one undo)"
+        },
+        "tieBeamsFromGrid": {
+          "label": "Tie beams from grid",
+          "tooltip": "Auto tie beam on every grid axis segment, centred and bound so it follows the axis (one command, one undo). Independent of the strip-footing grid."
+        },
+        "beamsFromGrid": {
+          "label": "Beams from grid",
+          "tooltip": "Auto beam on every grid axis segment, centerline on the axis and bound so it follows (one command, one undo)."
         },
         "archGroup": {
           "label": "Architectural",
