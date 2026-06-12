@@ -4,7 +4,7 @@
  * consumers' integration tests; here we pin the deterministic math.
  */
 
-import { quantizeValueToStep, quantizeDeltaToStep, applyGripStepSnap } from '../grip-step-quantize';
+import { quantizeValueToStep, quantizeDeltaToStep, applyGripStepSnap, isGripStepActive } from '../grip-step-quantize';
 import { cadToggleState } from '../../../systems/constraints/cad-toggle-state';
 import { immediateSceneScale } from '../../../systems/cursor/ImmediateSceneScaleStore';
 import { QKeyTracker } from '../../../keyboard/QKeyTracker';
@@ -82,5 +82,41 @@ describe('applyGripStepSnap — activation wiring (F9 toggle + Q hold + unit sca
     const r = applyGripStepSnap({ x: 0.137, y: -0.212 });
     expect(r.x).toBeCloseTo(0.1);
     expect(r.y).toBeCloseTo(-0.2);
+  });
+});
+
+describe('isGripStepActive — SSoT gate for ghost + crosshair snap-to-grid', () => {
+  afterEach(() => {
+    cadToggleState.setSnap(false, 0);
+    QKeyTracker._setForTest(false);
+  });
+
+  it('is true only when SNAP (F9) is armed AND Q is held', () => {
+    cadToggleState.setSnap(false, 50);
+    QKeyTracker._setForTest(false);
+    expect(isGripStepActive()).toBe(false);
+
+    cadToggleState.setSnap(true, 50); // F9 on, Q off
+    expect(isGripStepActive()).toBe(false);
+
+    QKeyTracker._setForTest(true); // F9 off path: Q on but SNAP off
+    cadToggleState.setSnap(false, 50);
+    expect(isGripStepActive()).toBe(false);
+
+    cadToggleState.setSnap(true, 50); // both on
+    expect(isGripStepActive()).toBe(true);
+  });
+
+  it('agrees with applyGripStepSnap engagement (lockstep, no disagreement)', () => {
+    immediateSceneScale.set(1);
+    cadToggleState.setSnap(true, 100);
+    QKeyTracker._setForTest(true);
+    // active → both quantize
+    expect(isGripStepActive()).toBe(true);
+    expect(applyGripStepSnap({ x: 137, y: 0 })).toEqual({ x: 100, y: 0 });
+    // release Q → both disengage
+    QKeyTracker._setForTest(false);
+    expect(isGripStepActive()).toBe(false);
+    expect(applyGripStepSnap({ x: 137, y: 0 })).toEqual({ x: 137, y: 0 });
   });
 });

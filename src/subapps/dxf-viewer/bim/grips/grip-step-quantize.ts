@@ -53,6 +53,17 @@ export function quantizeDeltaToStep(delta: Point2D, step: number): Point2D {
 }
 
 /**
+ * Live activation predicate for the grip-drag step snap — SSoT for "is the step
+ * grid currently engaged". True only while the SNAP-MODE (F9) toggle is armed AND
+ * Q is held (the activation model below). The ghost quantization (`applyGripStepSnap`)
+ * and the crosshair snap-to-grid (`mouse-handler-move.ts`) both gate on this, so they
+ * engage/disengage in lockstep and never disagree.
+ */
+export function isGripStepActive(): boolean {
+  return cadToggleState.isSnapOn() && QKeyTracker.getSnapshot();
+}
+
+/**
  * Event-time entry point: quantize a grip-drag displacement to the SNAP-MODE step.
  *
  * Activation model (Giorgio 2026-06-12): movement is FREE by default; the step
@@ -67,25 +78,7 @@ export function quantizeDeltaToStep(delta: Point2D, step: number): Point2D {
  * ~metre delta to multiples of 50 → always 0 → the entity would never move.
  */
 export function applyGripStepSnap(delta: Point2D): Point2D {
-  const snapOn = cadToggleState.isSnapOn();
-  const qHeld = QKeyTracker.getSnapshot();
   const stepScene = cadToggleState.getSnapStep() * immediateSceneScale.getMmToScene();
-  const result = (!snapOn || !qHeld) ? { x: delta.x, y: delta.y } : quantizeDeltaToStep(delta, stepScene);
-  // 🔧 TEMP DEBUG (ADR-363 snap diagnostics — REMOVE after verify). Logs only while
-  // SNAP is armed so it doesn't flood. `changed` bisects the bug: if false while
-  // qHeld → quantization is a no-op (delta magnitude vs stepScene units mismatch);
-  // if true but the entity still moves freely → a downstream path ignores the result.
-  if (snapOn) {
-    // eslint-disable-next-line no-console
-    console.log('[SNAP-Q] applyGripStepSnap', {
-      snapOn, qHeld,
-      stepMm: cadToggleState.getSnapStep(),
-      scale: immediateSceneScale.getMmToScene(),
-      stepScene,
-      deltaIn: { x: delta.x, y: delta.y },
-      deltaOut: { x: result.x, y: result.y },
-      changed: result.x !== delta.x || result.y !== delta.y,
-    });
-  }
+  const result = !isGripStepActive() ? { x: delta.x, y: delta.y } : quantizeDeltaToStep(delta, stepScene);
   return result;
 }

@@ -75,9 +75,6 @@ class QKeyTrackerImpl {
     if (!this.isQ(e)) return;
     this.setPressed(true);
     const dragging = !!getActiveDragGrip();
-    // 🔧 TEMP DEBUG (ADR-363 snap diagnostics — REMOVE after verify).
-    // eslint-disable-next-line no-console
-    console.log('[SNAP-Q] Q keydown', { dragging });
     // Swallow the Arc-tool shortcut ONLY during an active grip drag, so Q acts as
     // the step override there and still opens the Arc tool everywhere else.
     if (dragging) {
@@ -89,9 +86,6 @@ class QKeyTrackerImpl {
   private onKeyUp = (e: KeyboardEvent): void => {
     if (this.isQ(e)) {
       this.setPressed(false);
-      // 🔧 TEMP DEBUG (ADR-363 snap diagnostics — REMOVE after verify).
-      // eslint-disable-next-line no-console
-      console.log('[SNAP-Q] Q keyup');
     }
   };
 

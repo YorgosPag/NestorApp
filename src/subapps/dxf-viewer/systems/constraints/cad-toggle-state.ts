@@ -54,8 +54,6 @@ export const cadToggleState = {
     if (ortho === orthoOn && polar === polarOn) return;
     orthoOn = ortho;
     polarOn = polar;
-    // TEMP DIAGNOSTIC (2026-06-12 ORTHO debug) — remove after root cause found.
-    console.log('[ORTHO-DBG] cadToggleState.set → ortho=%s polar=%s | listeners=%d', ortho, polar, listeners.size);
     notify();
   },
   /**
