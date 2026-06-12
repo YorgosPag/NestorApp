@@ -22,12 +22,9 @@ import { useTranslation } from 'react-i18next';
 import { isFoundationEntity } from '../../../types/entities';
 import { hasGuideBindings } from '../../../bim/hosting/guide-binding-types';
 import {
-  DEFAULT_STRIP_JUSTIFICATION,
-  type FoundationAnchor,
   type FoundationEntity,
   type FoundationKind,
   type FoundationParams,
-  type StripJustification,
 } from '../../../bim/types/foundation-types';
 import { useCommandHistory } from '../../../core/commands';
 import { UpdateFoundationParamsCommand } from '../../../core/commands/entity-commands/UpdateFoundationParamsCommand';
@@ -47,6 +44,12 @@ import {
   type FoundationGridCommitResult,
 } from '../../../bim/foundations/foundation-grid-commit';
 import {
+  commitTieBeamGridFromGuides,
+  type TieBeamGridCommitResult,
+} from '../../../bim/foundations/tie-beam-grid-commit';
+import type { GridPerimeterMode } from '../../../bim/foundations/foundation-grid-justification';
+import { foundationGridSettingsStore } from './bridge/foundation-grid-settings-store';
+import {
   FOUNDATION_RIBBON_KEYS,
   FOUNDATION_RIBBON_KEYS_ACTIONS,
   FOUNDATION_RIBBON_BADGE_KEYS,
@@ -55,7 +58,15 @@ import {
   isFoundationRibbonStringKey,
 } from './bridge/foundation-command-keys';
 import { foundationToolBridgeStore } from './bridge/foundation-tool-bridge-store';
-import type { FoundationToolBridgeHandle } from './bridge/foundation-tool-bridge-store';
+// ADR-436 Slice 1 — pure field read/write helpers (SRP split, N.7.1).
+import {
+  readSelectedStringField,
+  readToolStringField,
+  nextParamsForStringChange,
+  applyStringChangeToHandle,
+  readNumberField,
+  writeNumberField,
+} from './useRibbonFoundationBridge-fields';
 import type {
   RibbonComboboxState,
   RibbonToggleState,
@@ -258,6 +269,8 @@ export function useRibbonFoundationBridge(
       levelId,
       sceneUnits: scene ? resolveSceneUnits(scene) : 'mm',
       executeCommand,
+      // ADR-441 — έδραση περιμετρικών από τον SSoT store (κουμπί ΚΑΙ auto-settle ίδιο mode).
+      perimeterMode: foundationGridSettingsStore.get(),
     });
   }, [levelManager, executeCommand]);
 
@@ -276,11 +289,39 @@ export function useRibbonFoundationBridge(
     }
   }, []);
 
-  // Κουμπί «Εσχάρα» (one-shot): τρέχει το reconcile και **πάντα** δείχνει toast.
-  const handleFromGrid = useCallback((): void => {
+  // Κουμπί «Εσχάρα» (one-shot): θέτει το περιμετρικό mode (SSoT store → το βλέπει ΚΑΙ
+  // το auto-settle ΚΑΙ ο ghost) και τρέχει το reconcile· **πάντα** δείχνει toast.
+  const handleFromGrid = useCallback((mode: GridPerimeterMode): void => {
+    foundationGridSettingsStore.set(mode);
     const result = runFoundationGridCommit();
     if (result) emitFromGridToast(result);
   }, [runFoundationGridCommit, emitFromGridToast]);
+
+  // ADR-441 Slice GEN-TIE — κουμπί «Συνδετήριες από κάναβο» (one-shot create-only).
+  // Ανεξάρτητο overlay από την εσχάρα (kind-partition): κεντραρισμένες συνδετήριες στα
+  // segments. Follow-move δωρεάν μέσω foundationHostingStrategy.
+  const handleTieBeamsFromGrid = useCallback((): void => {
+    const levelId = levelManager.currentLevelId;
+    if (!levelId) return;
+    const scene = levelManager.getLevelScene(levelId);
+    const result: TieBeamGridCommitResult = commitTieBeamGridFromGuides({
+      guideReader: getGlobalGuideStore(),
+      getLevelScene: levelManager.getLevelScene,
+      setLevelScene: levelManager.setLevelScene,
+      levelId,
+      sceneUnits: scene ? resolveSceneUnits(scene) : 'mm',
+      executeCommand,
+    });
+    if (result.ok || result.reason === 'up-to-date') {
+      EventBus.emit('bim:tie-beams-from-grid', {
+        created: result.created,
+        skipped: result.skipped,
+        jointed: result.jointed,
+      });
+    } else {
+      EventBus.emit('bim:tie-beams-from-grid-failed', { reason: result.reason ?? 'insufficient-guides' });
+    }
+  }, [levelManager, executeCommand]);
 
   // ADR-441 Slice 7 — auto re-split/reflow στο follow-move: όταν ένας άξονας «κάθεται»
   // μετά από μετακίνηση (`bim:grid-guides-settled`), τρέχει το ΙΔΙΟ managed reconcile
@@ -291,7 +332,16 @@ export function useRibbonFoundationBridge(
     const off = EventBus.on('bim:grid-guides-settled', ({ levelId }) => {
       if (levelManager.currentLevelId !== levelId) return;
       const scene = levelManager.getLevelScene(levelId);
-      if (!scene || !scene.entities.some((e) => isFoundationEntity(e) && hasGuideBindings(e))) return;
+      // Kind-partition (ADR-441 Slice GEN-TIE): auto re-split μόνο αν υπάρχει grid-managed
+      // **πεδιλοδοκός** — μια born-bound συνδετήρια ΔΕΝ πρέπει να σκανδαλίζει ολόκληρη εσχάρα.
+      if (
+        !scene ||
+        !scene.entities.some(
+          (e) => isFoundationEntity(e) && e.params.kind === 'strip' && hasGuideBindings(e),
+        )
+      ) {
+        return;
+      }
       const result = runFoundationGridCommit();
       if (
         result?.ok &&
@@ -305,7 +355,10 @@ export function useRibbonFoundationBridge(
 
   const onAction = useCallback(
     (action: string): void => {
-      if (action === FOUNDATION_RIBBON_KEYS_ACTIONS.fromGrid) return handleFromGrid();
+      if (action === FOUNDATION_RIBBON_KEYS_ACTIONS.fromGrid) return handleFromGrid('inner');
+      if (action === FOUNDATION_RIBBON_KEYS_ACTIONS.fromGridCenter) return handleFromGrid('center');
+      if (action === FOUNDATION_RIBBON_KEYS_ACTIONS.fromGridOuter) return handleFromGrid('outer');
+      if (action === FOUNDATION_RIBBON_KEYS_ACTIONS.tieBeamsFromGrid) return handleTieBeamsFromGrid();
       if (action !== FOUNDATION_RIBBON_KEYS_ACTIONS.delete) return;
       const foundation = resolveFoundation();
       if (!foundation || !levelManager.currentLevelId) return;
@@ -321,7 +374,7 @@ export function useRibbonFoundationBridge(
         entities: scene.entities.filter((e) => e.id !== foundation.id),
       });
     },
-    [resolveFoundation, levelManager, t, handleFromGrid],
+    [resolveFoundation, levelManager, t, handleFromGrid, handleTieBeamsFromGrid],
   );
 
   // ADR-436 Slice 2 — kind-conditional panels. Resolve the active kind (selected
@@ -342,111 +395,6 @@ export function useRibbonFoundationBridge(
     () => ({ onComboboxChange, getComboboxState, onToggle, getToggleState, getBadgeState, onAction, getPanelVisibility }),
     [onComboboxChange, getComboboxState, onToggle, getToggleState, getBadgeState, onAction, getPanelVisibility],
   );
-}
-
-// ─── String-field read/write helpers (discriminated-union-safe) ──────────────
-
-/** Selected-entity string-combobox value. null = combobox δεν ισχύει για το kind. */
-function readSelectedStringField(params: FoundationParams, commandKey: string): string | null {
-  if (commandKey === FOUNDATION_RIBBON_KEYS.stringParams.kind) return params.kind;
-  if (commandKey === FOUNDATION_RIBBON_KEYS.stringParams.anchor) {
-    return params.kind === 'pad' ? params.anchor : 'center';
-  }
-  if (commandKey === FOUNDATION_RIBBON_KEYS.stringParams.material) return params.material ?? 'rc';
-  // ADR-441 Slice 5a-control — justification μόνο για strip/tie-beam (pad → anchor).
-  if (commandKey === FOUNDATION_RIBBON_KEYS.stringParams.justification) {
-    return params.kind === 'pad' ? null : (params.justification ?? DEFAULT_STRIP_JUSTIFICATION);
-  }
-  return null;
-}
-
-/** Drawing-mode (tool handle) string-combobox value. null = δεν ισχύει για το kind. */
-function readToolStringField(handle: FoundationToolBridgeHandle, commandKey: string): string | null {
-  if (commandKey === FOUNDATION_RIBBON_KEYS.stringParams.kind) return handle.kind;
-  if (commandKey === FOUNDATION_RIBBON_KEYS.stringParams.anchor) return handle.anchor;
-  if (commandKey === FOUNDATION_RIBBON_KEYS.stringParams.material) {
-    return typeof handle.overrides.material === 'string' ? handle.overrides.material : null;
-  }
-  if (commandKey === FOUNDATION_RIBBON_KEYS.stringParams.justification) {
-    return handle.kind === 'pad' ? null : (handle.overrides.justification ?? DEFAULT_STRIP_JUSTIFICATION);
-  }
-  return null;
-}
-
-/** Next params for a string-combobox change on a selected foundation. null = no-op. */
-function nextParamsForStringChange(
-  params: FoundationParams,
-  commandKey: string,
-  value: string,
-): FoundationParams | null {
-  // ADR-436 Slice 2 — kind = DISPLAY-ONLY (pad↔line geometrically invalid). No-op.
-  if (commandKey === FOUNDATION_RIBBON_KEYS.stringParams.kind) return null;
-  if (commandKey === FOUNDATION_RIBBON_KEYS.stringParams.anchor) {
-    return params.kind === 'pad' ? { ...params, anchor: value as FoundationAnchor } : null;
-  }
-  if (commandKey === FOUNDATION_RIBBON_KEYS.stringParams.material) {
-    return { ...params, material: value };
-  }
-  if (commandKey === FOUNDATION_RIBBON_KEYS.stringParams.justification) {
-    // ADR-441 5a-grid — χειροκίνητη υπεροχή: flag ώστε το managed reconcile να μην το επαναφέρει.
-    return params.kind === 'pad'
-      ? null
-      : { ...params, justification: value as StripJustification, justificationManual: true };
-  }
-  return null;
-}
-
-/** Apply a string-combobox change to the active tool handle (drawing-mode overrides). */
-function applyStringChangeToHandle(
-  handle: FoundationToolBridgeHandle,
-  commandKey: string,
-  value: string,
-): void {
-  // ADR-436 Slice 2 — kind fixed by tool id (DISPLAY-ONLY). No-op.
-  if (commandKey === FOUNDATION_RIBBON_KEYS.stringParams.kind) return;
-  if (commandKey === FOUNDATION_RIBBON_KEYS.stringParams.anchor) {
-    handle.setAnchor(value as FoundationAnchor);
-    return;
-  }
-  if (commandKey === FOUNDATION_RIBBON_KEYS.stringParams.material) {
-    handle.setParamOverrides({ material: value });
-    return;
-  }
-  if (commandKey === FOUNDATION_RIBBON_KEYS.stringParams.justification) {
-    handle.setParamOverrides({ justification: value as StripJustification });
-  }
-}
-
-// ─── Number-field read/write helpers (discriminated-union-safe) ──────────────
-
-function readNumberField(params: FoundationParams, commandKey: string): number | null {
-  if (commandKey === FOUNDATION_RIBBON_KEYS.params.width) return params.width;
-  if (commandKey === FOUNDATION_RIBBON_KEYS.params.thickness) return params.thicknessMm;
-  if (commandKey === FOUNDATION_RIBBON_KEYS.params.topElevation) return params.topElevationMm;
-  if (commandKey === FOUNDATION_RIBBON_KEYS.params.length) {
-    return params.kind === 'pad' ? params.length : null;
-  }
-  if (commandKey === FOUNDATION_RIBBON_KEYS.params.rotation) {
-    return params.kind === 'pad' ? params.rotation : null;
-  }
-  return null;
-}
-
-function writeNumberField(
-  params: FoundationParams,
-  commandKey: string,
-  value: number,
-): FoundationParams | null {
-  if (commandKey === FOUNDATION_RIBBON_KEYS.params.width) return { ...params, width: value };
-  if (commandKey === FOUNDATION_RIBBON_KEYS.params.thickness) return { ...params, thicknessMm: value };
-  if (commandKey === FOUNDATION_RIBBON_KEYS.params.topElevation) return { ...params, topElevationMm: value };
-  if (commandKey === FOUNDATION_RIBBON_KEYS.params.length) {
-    return params.kind === 'pad' ? { ...params, length: value } : null;
-  }
-  if (commandKey === FOUNDATION_RIBBON_KEYS.params.rotation) {
-    return params.kind === 'pad' ? { ...params, rotation: value } : null;
-  }
-  return null;
 }
 
 /** Type guards used by `useRibbonCommands` composer. */
