@@ -86,9 +86,17 @@ export function computeDxfEntityGrips(entity: DxfEntityUnion): GripInfo[] {
         position: entity.end, movesEntity: false,
       });
       grips.push({
+        // AutoCAD/Revit parity: the line MIDPOINT grip translates the WHOLE line
+        // (both endpoints move together). `movesEntity: true` makes the grip-drag
+        // paths treat it as a whole-entity move → ORTHO (F8) axis-locks the drag
+        // (grip-projections/grip-mouse-handlers `movesWhole`). `edgeVertexIndices`
+        // is retained so the commit still routes through `gripToVertexRefs`
+        // (→ line-start + line-end `vertexMoves`), keeping the StretchEntityCommand
+        // path byte-identical; the move-vs-edge preview branches are geometrically
+        // equivalent for a line (both offset start+end by `delta`).
         entityId: entity.id, gripIndex: 2, type: 'edge',
         position: calculateMidpoint(entity.start, entity.end),
-        movesEntity: false, edgeVertexIndices: [0, 1],
+        movesEntity: true, edgeVertexIndices: [0, 1],
       });
       break;
     }

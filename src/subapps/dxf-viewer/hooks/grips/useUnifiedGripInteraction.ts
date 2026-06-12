@@ -60,6 +60,9 @@ import { useMoveEntities } from '../useMoveEntities';
 import { useCommandHistory } from '../../core/commands';
 import { useLevels } from '../../systems/levels';
 import { clearActiveDragGrip } from '../../systems/cursor/GripDragStore';
+// ADR-363 — crosshair snap-to-grid: publish the drag anchor so the cursor leaf
+// (`mouse-handler-move`) can quantize the crosshair onto the step grid (F9+Q).
+import { setGripStepAnchor, clearGripStepAnchor } from '../../systems/cursor/GripStepAnchorStore';
 // ADR-040 Phase XXII.A — transform reads from SSoT (orchestrator-decoupling).
 import { getImmediateTransform } from '../../systems/cursor/ImmediateTransformStore';
 // Re-export types for consumers
@@ -172,6 +175,7 @@ export function useUnifiedGripInteraction(
     setActiveGrip(null);
     setCurrentWorldPos(null);
     anchorRef.current = null;
+    clearGripStepAnchor();
     hotGripAwaitingFirstReleaseRef.current = false;
     hotGripMovedRef.current = false;
     hotGripOpRef.current = null;
@@ -212,6 +216,7 @@ export function useUnifiedGripInteraction(
     setHoveredGrip(null);
     setCurrentWorldPos(null);
     anchorRef.current = null;
+    clearGripStepAnchor();
     hotGripAwaitingFirstReleaseRef.current = false;
     hotGripMovedRef.current = false;
     hotGripOpRef.current = null;
@@ -246,6 +251,11 @@ export function useUnifiedGripInteraction(
       throttle.lastWorldPoint = worldPos;
       if (isFollowing && activeGrip) {
         setCurrentWorldPos(worldPos);
+        // ADR-363 — publish the constant drag anchor (same one that feeds the ghost
+        // via `buildDxfDragPreview`) so the cursor leaf can snap the crosshair onto
+        // the step grid with the fresh world pos each frame (zero-lag, WYSIWYG).
+        if (anchorRef.current) setGripStepAnchor(anchorRef.current);
+        else clearGripStepAnchor();
         if (phase === 'hotGrip') {
           // ADR-363 Phase 1G.2/1G.3 — any pick step (waiting for a deliberate
           // click: base/centre/ref/align) marks "moved" on a real mousemove so the

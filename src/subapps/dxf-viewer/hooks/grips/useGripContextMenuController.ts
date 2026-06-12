@@ -146,11 +146,21 @@ export function useGripContextMenuController(
       const entity = scene?.entities.find((ent) => ent.id === grip.entityId);
       if (!entity) return;
 
+      const sectionsMeta = resolveContextMenuSections(entity, grip);
+
+      // ADR-358 §5.6.bis — on plain hover/warm (no active drag) the base grip
+      // modes (Stretch/Move/Rotate/Scale/Mirror) are not actionable, so defer to
+      // the EntityContextMenu: a right-click over a COMPACT entity whose body is
+      // entirely grip-zone (e.g. a column) must open the SAME menu as a wall.
+      // Keep the grip menu on hover only when it carries vertex-ops (slab/roof
+      // add/delete corner), and unconditionally during an active drag.
+      const hasVertexOps = sectionsMeta.some((s) => s.id === 'vertex-ops');
+      if ((d.phase === 'hovering' || d.phase === 'warm') && !hasVertexOps) return;
+
       // Suppress the browser's native context menu — AutoCAD-style menu wins.
       e.preventDefault();
       e.stopPropagation();
 
-      const sectionsMeta = resolveContextMenuSections(entity, grip);
       const sections: GripContextMenuSection[] = [];
       // ADR-357 Phase 12 — session undo delegates to the global CommandHistory.
       const sessionUndo = () => {
