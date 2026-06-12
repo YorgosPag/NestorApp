@@ -143,6 +143,12 @@ describe('ADR-375 C.7 — buildEdgeOverlay', () => {
     it('alphaToCoverage=true (MSAA edge smoothing)', () => {
       expect((overlay?.material as LineMaterial).alphaToCoverage).toBe(true);
     });
+
+    it('renderOrder > 0 (v2.21 — draws after the depthWrite faces, no overdraw)', () => {
+      // The faces keep the default renderOrder 0; the depthWrite:false overlay must
+      // render later or the faces overwrite the painted edge pixels (Shaded with Edges).
+      expect(overlay?.renderOrder).toBeGreaterThan(0);
+    });
   });
 
   describe('resolution uniform sync', () => {

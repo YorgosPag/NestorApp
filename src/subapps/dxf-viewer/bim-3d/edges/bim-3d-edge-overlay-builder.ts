@@ -30,6 +30,26 @@ import { linePatternToDashArray, type LinePatternKey } from '../../config/bim-li
 const DEFAULT_EDGE_COLOR = '#1a1a1a';
 
 /**
+ * ADR-375 Phase C.7 (v2.21) — render the edge overlays AFTER the solid faces
+ * (default renderOrder 0). Required because the overlay uses `depthWrite:false`:
+ * without a later draw order the faces overdraw the edge pixels and the edges
+ * vanish even with a face-side `polygonOffset`. > 0 is enough (faces stay at 0).
+ */
+const EDGE_OVERLAY_RENDER_ORDER = 1;
+
+/**
+ * ADR-375 Phase C.7 (v2.22) — pull the edge lines slightly TOWARD the camera in
+ * the depth buffer so they always win the depth test against their own coplanar
+ * faces (Revit "Shaded with Edges"). `LineSegments2` expands the line in screen
+ * space, which nudges the fragment depth marginally BEHIND the face → under
+ * `depthTest:true` the equal/near-equal edge gets rejected and disappears. A
+ * negative polygonOffset compensates. Magnitude kept modest so edges that sit
+ * behind OTHER solids are still occluded (only-visible edges, no x-ray bleed).
+ */
+const EDGE_POLYGON_OFFSET_FACTOR = -2;
+const EDGE_POLYGON_OFFSET_UNITS = -4;
+
+/**
  * ADR-377 Phase E — px-dash → world-units (meters) conversion for 3D dashes.
  *
  * `linePatternToDashArray` yields canvas px values at the 1:100 / 96-dpi
@@ -112,6 +132,10 @@ export function buildEdgeOverlay(
     depthWrite: false,
     transparent: false,
     alphaToCoverage: true,
+    // v2.22 — pull edges forward so they win depth against their own faces.
+    polygonOffset: true,
+    polygonOffsetFactor: EDGE_POLYGON_OFFSET_FACTOR,
+    polygonOffsetUnits: EDGE_POLYGON_OFFSET_UNITS,
     // ADR-377 Phase E — dashed edges (gaps discarded in the shader via USE_DASH).
     // computeLineDistances() below provides the along-edge distance the dash reads.
     ...(dash ? { dashed: true, dashSize: dash.dashSize, gapSize: dash.gapSize } : null),
@@ -127,6 +151,14 @@ export function buildEdgeOverlay(
   const overlay = new LineSegments2(lineGeo, material);
   overlay.userData['bimEdgeOverlay'] = true;
   overlay.userData['bimEdgeUnsubscribe'] = unsubscribe;
+  // ADR-375 Phase C.7 (v2.21) — "Shaded with Edges" depth-correct draw order.
+  // The overlay has `depthWrite:false`, so it MUST render AFTER the solid faces:
+  // otherwise the faces (drawn later) overwrite the already-painted edge pixels
+  // (the v2.20 polygonOffset alone could not win against this draw-order overdraw).
+  // renderOrder=1 > the faces' default 0 → edges paint on top; combined with the
+  // face-side polygonOffset (MaterialCatalog3D) the depth-test still hides edges
+  // that sit behind OTHER solids → Revit "only visible edges".
+  overlay.renderOrder = EDGE_OVERLAY_RENDER_ORDER;
   overlay.computeLineDistances();
 
   const originalDispose = overlay.geometry.dispose.bind(overlay.geometry);

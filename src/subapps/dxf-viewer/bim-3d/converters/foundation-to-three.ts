@@ -53,7 +53,9 @@ export function foundationToMesh(
   const geo = extrudeAndRotate(shape, thicknessMm * MM_TO_M);
   ensureWorldUvs(geo); // ADR-413 — aoMap uv2 (ExtrudeGeometry auto-UVs in meters).
 
-  const mesh = new THREE.Mesh(geo, getElementMaterial3D('foundation'));
+  // ADR-445 — per-kind sienna face material (pad/strip/tie-beam ΔΙΑΚΡΙΤΑ, ίδια
+  // οικογένεια με την 2Δ κάτοψη). `elem-foundation-${kind}` catalog keys.
+  const mesh = new THREE.Mesh(geo, getElementMaterial3D(`foundation-${foundation.kind}`));
   // Hang-down: top face στο topElevationMm, βάση στο (topElevationMm − thickness).
   mesh.position.y =
     (foundation.params.topElevationMm - thicknessMm) * MM_TO_M + buildingBaseElevationM;

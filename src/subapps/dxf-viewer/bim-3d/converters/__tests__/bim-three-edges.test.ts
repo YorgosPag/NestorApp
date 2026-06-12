@@ -48,7 +48,9 @@ describe('ADR-377 Phase E — attachEdgesProjection (3D edge SSoT)', () => {
       expect((overlay!.material as LineMaterial).dashed).toBe(false);
     });
 
-    it('subcategory projectionColor override → reflected in overlay colour', () => {
+    it('v2.22 — 3D edge uses a UNIFORM silhouette colour, not the V/G projection colour', () => {
+      // Revit "Shaded with Edges" draws one uniform dark line colour; the per-category
+      // 2D projection colour (here #ff0000) must NOT bleed into the 3D edge overlay.
       setObjectStyles({
         wall: {
           projectionPen: 5,
@@ -59,7 +61,7 @@ describe('ADR-377 Phase E — attachEdgesProjection (3D edge SSoT)', () => {
       const mesh = makeBoxMesh();
       attachEdgesProjection(mesh, 'wall', 'common-edges');
       const mat = overlayOf(mesh)!.material as LineMaterial;
-      expect(mat.color.getHex()).toBe(0xff0000);
+      expect(mat.color.getHex()).toBe(0x1a1a1a); // uniform near-black, not 0xff0000
     });
 
     it('subcategory projection pattern override → dashed 3D edge', () => {

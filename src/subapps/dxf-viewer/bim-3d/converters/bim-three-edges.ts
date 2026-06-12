@@ -30,6 +30,18 @@ const EDGE_DEFAULT_SCALE = 100;
 const EDGE_DEFAULT_DPI = 96;
 
 /**
+ * ADR-375 Phase C.7 (v2.22) — uniform "Shaded with Edges" silhouette colour.
+ *
+ * Revit's shaded 3D view draws model edges in ONE uniform dark line colour, not
+ * the per-category 2D projection colours (those drive plan/wireframe line work,
+ * e.g. v2.19 gave columns a blue-grey `#5b6478`). For the 3D solid view Giorgio
+ * wants consistent discreet BLACK edges, so we override the resolver colour here
+ * with a single near-black. The resolver still drives width / pattern / visibility
+ * (pen table, V/G eye toggle, per-element/layer overrides all keep working in 3D).
+ */
+const BIM_3D_EDGE_COLOR = '#1a1a1a';
+
+/**
  * Build + attach the projection edge overlay for a BIM solid mesh.
  *
  * @param subcategoryKey ADR-377 — the geometry sub-pass this mesh represents
@@ -50,5 +62,7 @@ export function attachEdgesProjection(
     subcategoryKey,
     objectStyles: useBimRenderSettingsStore.getState().objectStyles,
   });
-  attachEdgeOverlay(mesh, buildEdgeOverlay(mesh, style));
+  // v2.22 — uniform near-black silhouette colour for the 3D shaded view (Revit
+  // "Shaded with Edges"); width/pattern/visibility stay resolver-driven.
+  attachEdgeOverlay(mesh, buildEdgeOverlay(mesh, { ...style, color: BIM_3D_EDGE_COLOR }));
 }

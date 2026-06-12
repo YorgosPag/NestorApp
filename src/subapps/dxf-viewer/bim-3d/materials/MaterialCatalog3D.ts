@@ -44,6 +44,24 @@ const CACHE = new Map<string, THREE.MeshStandardMaterial>();
 const SYSTEM_TINT_MIN_ROUGHNESS = 0.6;
 const SYSTEM_TINT_MAX_METALNESS = 0.1;
 
+/**
+ * ADR-375 Phase C.7 — "Shaded with Edges" depth bias (Revit-grade visual style).
+ *
+ * The BIM 3D edge overlays (`bim-3d-edge-overlay-builder.ts`) are `LineSegments2`
+ * geometrically COPLANAR with the solid faces at every hard corner, rendered with
+ * `depthTest:true`. Without a face-side depth bias the coplanar faces win the depth
+ * test and the dark "pencil" edges disappear (z-fighting) → flat-shaded look.
+ *
+ * Revit / ArchiCAD "Shaded with Edges" pushes the SHADED FACES slightly back in the
+ * depth buffer so the depth-tested edges always win. A tiny positive offset is
+ * uniform across all faces → the face-to-face relationship is untouched; only the
+ * face-vs-edge contest changes. SSoT: applied here, in the SOLE face-material
+ * factory — every material path (flat, textured, system-tinted, user, relief)
+ * routes through `buildMat`, so all solids inherit it.
+ */
+const FACE_POLYGON_OFFSET_FACTOR = 1;
+const FACE_POLYGON_OFFSET_UNITS = 1;
+
 function buildMat(def: PbrMaterialDef): THREE.MeshStandardMaterial {
   return new THREE.MeshStandardMaterial({
     color: def.color,
@@ -52,6 +70,9 @@ function buildMat(def: PbrMaterialDef): THREE.MeshStandardMaterial {
     transparent: def.transparent ?? false,
     opacity: def.opacity ?? 1,
     side: THREE.DoubleSide,
+    polygonOffset: true,
+    polygonOffsetFactor: FACE_POLYGON_OFFSET_FACTOR,
+    polygonOffsetUnits: FACE_POLYGON_OFFSET_UNITS,
   });
 }
 
@@ -229,7 +250,7 @@ export function getRoofTileMaterial3D(materialId: string, reliefMm: number): THR
 
 /** Resolve MeshStandardMaterial for element types without DNA. */
 export function getElementMaterial3D(
-  type: 'column' | 'beam' | 'slab' | 'foundation' | 'roof' | 'envelope' | 'mep-fixture' | 'electrical-panel' | 'railing' | 'mep-wire' | 'furniture' | 'mep-duct' | 'mep-pipe' | 'mep-fitting' | 'mep-manifold' | 'mep-radiator' | 'mep-boiler' | 'mep-water-heater' | Stair3DComponent,
+  type: 'column' | 'beam' | 'slab' | 'foundation' | 'foundation-pad' | 'foundation-strip' | 'foundation-tie-beam' | 'roof' | 'envelope' | 'mep-fixture' | 'electrical-panel' | 'railing' | 'mep-wire' | 'furniture' | 'mep-duct' | 'mep-pipe' | 'mep-fitting' | 'mep-manifold' | 'mep-radiator' | 'mep-boiler' | 'mep-water-heater' | Stair3DComponent,
 ): THREE.MeshStandardMaterial {
   return resolveTexturedMaterial(`elem-${type}`);
 }
