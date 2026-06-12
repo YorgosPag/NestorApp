@@ -23,7 +23,7 @@ import type { Point3D } from '../../bim/types/bim-base';
 import {
   DEFAULT_FOUNDATION_ANCHOR,
   DEFAULT_FOUNDATION_ROTATION_DEG,
-  DEFAULT_FOUNDATION_TOP_ELEVATION_MM,
+  defaultFoundationTopElevationMm,
   DEFAULT_PAD_LENGTH_MM,
   DEFAULT_PAD_THICKNESS_MM,
   DEFAULT_PAD_WIDTH_MM,
@@ -114,7 +114,7 @@ export function buildDefaultFoundationParams(
   const dims = getKindDimensionDefaults(kind);
   const width = overrides.width ?? dims.width;
   const thicknessMm = overrides.thicknessMm ?? dims.thicknessMm;
-  const topElevationMm = overrides.topElevationMm ?? DEFAULT_FOUNDATION_TOP_ELEVATION_MM;
+  const topElevationMm = overrides.topElevationMm ?? defaultFoundationTopElevationMm(kind);
   const material = overrides.material;
   const catalogProfile = overrides.catalogProfile;
 

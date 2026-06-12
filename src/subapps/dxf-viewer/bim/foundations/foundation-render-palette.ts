@@ -4,26 +4,29 @@
  * Per-kind stroke + translucent fill colours για τον `FoundationRenderer`.
  * Καθαρό config (μηδέν logic) → εκτός size-cap.
  *
- * Convention (ADR-445): η θεμελίωση είναι κάτω από τη στάθμη → sienna/γήινο χρώμα
- * (ευθυγραμμίζεται με `BIM_CATEGORY_LINE_COLORS.foundation = '#8a5a3c'`). Τα 3 kinds
- * = ΔΙΑΚΡΙΤΕΣ αποχρώσεις sienna (light→dark: pad/strip/tie-beam) ώστε να ξεχωρίζουν
- * (πριν ήταν 3 σχεδόν ίδια γκρι-μπλε).
+ * Convention (ADR-445 v1.2): τα 3 kinds θεμελίωσης έχουν ΔΙΑΚΡΙΤΕΣ ΧΡΟΙΕΣ (όχι
+ * αποχρώσεις — οι κοντινές αποχρώσεις sienna φαίνονταν ίδιες, Giorgio 2026-06-12):
+ *   - πέδιλο (pad)        → sienna/καφέ  `#8a5a3c` (η αρχική ταυτότητα θεμελίωσης)
+ *   - πεδιλοδοκός (strip) → teal/πράσινο `#2f7d6a`
+ *   - συνδετήρια (tie)    → κεραμυδί     `#b5651d`
+ * Ίδιες χροιές χρησιμοποιούνται και στα 3Δ faces (`elem-foundation-*`) → συνέπεια
+ * κάτοψης ↔ προβολής.
  *
  * @see docs/centralized-systems/reference/adrs/ADR-436-bim-foundation-discipline.md §4.2
  */
 
 import type { FoundationKind } from '../types/foundation-types';
 
-/** Stroke colour per kind (sienna family, light→dark· περίγραμμα διακεκομμένο). */
+/** Stroke colour per kind (ΔΙΑΚΡΙΤΕΣ χροιές· περίγραμμα/άξονας διακεκομμένος). */
 export const FOUNDATION_KIND_STROKE: Readonly<Record<FoundationKind, string>> = {
-  'pad':      '#8a5a3c',
-  'strip':    '#754a30',
-  'tie-beam': '#5f3c26',
+  'pad':      '#8a5a3c', // sienna/καφέ
+  'strip':    '#2f7d6a', // teal/πράσινο
+  'tie-beam': '#b5651d', // κεραμυδί/πορτοκαλί
 };
 
-/** Translucent fill (rgba) per kind, sienna family. ~18% opacity (κάτω από στάθμη → αχνό). */
+/** Translucent fill (rgba) per kind. 28% opacity ώστε η διακριτή χροιά να διαβάζεται. */
 export const FOUNDATION_KIND_FILL: Readonly<Record<FoundationKind, string>> = {
-  'pad':      'rgba(138, 90, 60, 0.18)',
-  'strip':    'rgba(117, 74, 48, 0.18)',
-  'tie-beam': 'rgba(95, 60, 38, 0.18)',
+  'pad':      'rgba(138, 90, 60, 0.28)',  // #8a5a3c
+  'strip':    'rgba(47, 125, 106, 0.28)', // #2f7d6a
+  'tie-beam': 'rgba(181, 101, 29, 0.28)', // #b5651d
 };

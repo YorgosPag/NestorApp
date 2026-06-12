@@ -65,9 +65,14 @@ export const MATERIAL_DEFS: Record<string, PbrMaterialDef> = {
   'elem-column':  { color: 0x4a6f8c, roughness: 0.75, metalness: 0.05 },
   'elem-beam':    { color: 0xa8823a, roughness: 0.75, metalness: 0.05 },
   'elem-slab':    { color: 0xb2a290, roughness: 0.80, metalness: 0.00 },
-  // ADR-436/445 — θεμελίωση (πέδιλα/πεδιλοδοκοί/συνδετήριες): sienna/γήινο below-grade
-  // RC, ματ, μηδέν metalness.
-  'elem-foundation': { color: 0x8a6048, roughness: 0.88, metalness: 0.00 },
+  // ADR-436/445 v1.2 — θεμελίωση below-grade RC, ματ, μηδέν metalness. Per-kind
+  // ΔΙΑΚΡΙΤΕΣ ΧΡΟΙΕΣ (ίδιες με την 2Δ παλέτα `FOUNDATION_KIND_STROKE` → συνέπεια
+  // κάτοψης ↔ 3D): πέδιλο sienna, πεδιλοδοκός teal, συνδετήρια κεραμυδί.
+  // `elem-foundation` = fallback (pad tone).
+  'elem-foundation':          { color: 0x8a5a3c, roughness: 0.88, metalness: 0.00 },
+  'elem-foundation-pad':      { color: 0x8a5a3c, roughness: 0.88, metalness: 0.00 },
+  'elem-foundation-strip':    { color: 0x2f7d6a, roughness: 0.88, metalness: 0.00 },
+  'elem-foundation-tie-beam': { color: 0xb5651d, roughness: 0.88, metalness: 0.00 },
   // ADR-417 — pitched roof «νερά»: terracotta clay-tile tone, matte non-metallic
   // (flat fallback before the CC0 roof-tile PBR set loads).
   'elem-roof':    { color: 0x9e4a2c, roughness: 0.85, metalness: 0.00 },

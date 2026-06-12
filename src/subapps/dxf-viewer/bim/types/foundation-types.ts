@@ -226,6 +226,14 @@ export const FOUNDATION_IFC_MAP: Readonly<Record<FoundationKind, FoundationPrede
 /** mm. Default στάθμη άνω παρειάς θεμελίωσης (κάτω από στάθμη, ADR-369). */
 export const DEFAULT_FOUNDATION_TOP_ELEVATION_MM = -1000;
 
+/**
+ * mm. Default στάθμη άνω παρειάς **συνδετήριας δοκού**. Η συνδετήρια ΔΕΝ κάθεται στη
+ * στάθμη θεμελίωσης μαζί με την πεδιλοδοκό (αλλιώς θάβεται μέσα της)· κατά Eurocode 8
+ * §5.4.1.2 συνδέει τις κεφαλές των θεμελίων **ψηλότερα** — εδώ κάτω παρειά συνδετήριας
+ * = άνω παρειά πεδιλοδοκού (−1000), βάθος 500 → άνω παρειά −500 → στοιβάζεται ΠΑΝΩ της.
+ */
+export const DEFAULT_TIE_BEAM_TOP_ELEVATION_MM = -500;
+
 /** mm. Default διαστάσεις μεμονωμένου πεδίλου (1.5×1.5×0.5 m typical RC). */
 export const DEFAULT_PAD_WIDTH_MM = 1500;
 export const DEFAULT_PAD_LENGTH_MM = 1500;
@@ -291,11 +299,19 @@ const ORIGIN: Point3D = { x: 0, y: 0, z: 0 };
 const DEFAULT_AXIS_END: Point3D = { x: 1000, y: 0, z: 0 };
 
 /**
+ * SSoT default στάθμης άνω παρειάς ανά kind. Συνδετήρια → ψηλότερα ώστε να κάθεται
+ * ΠΑΝΩ στην πεδιλοδοκό (Eurocode 8)· pad/strip → στάθμη θεμελίωσης.
+ */
+export function defaultFoundationTopElevationMm(kind: FoundationKind): number {
+  return kind === 'tie-beam' ? DEFAULT_TIE_BEAM_TOP_ELEVATION_MM : DEFAULT_FOUNDATION_TOP_ELEVATION_MM;
+}
+
+/**
  * Pure default params ανά kind (mirror `buildDefaultColumnParams`). Δεν παράγει
  * enterprise-id — η οντότητα χτίζεται από το `createFoundationEntity` factory.
  */
 export function buildDefaultFoundationParams(kind: FoundationKind): FoundationParams {
-  const topElevationMm = DEFAULT_FOUNDATION_TOP_ELEVATION_MM;
+  const topElevationMm = defaultFoundationTopElevationMm(kind);
   switch (kind) {
     case 'pad':
       return {

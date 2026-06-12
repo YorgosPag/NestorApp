@@ -56,4 +56,18 @@ describe('MATERIAL_DEFS', () => {
   it('contains the default key', () => {
     expect(MATERIAL_DEFS[DEFAULT_MATERIAL_KEY]).toBeDefined();
   });
+
+  // ADR-445 — foundation kinds (pad/strip/tie-beam) carry DISTINCT sienna faces
+  // (3D consistency with the 2D `FOUNDATION_KIND_STROKE` palette). Read the raw
+  // defs: `getMaterialFlatColorHex`/`resolveMaterialKey` prefix-collapse a DNA
+  // suffix (`-strip`) onto `elem-foundation`, but the 3D element-material path
+  // (`getElementMaterial3D` → exact key) keeps them distinct — see
+  // foundation-to-three.test.ts.
+  it('defines distinct per-kind foundation face colours', () => {
+    const pad = MATERIAL_DEFS['elem-foundation-pad']?.color;
+    const strip = MATERIAL_DEFS['elem-foundation-strip']?.color;
+    const tie = MATERIAL_DEFS['elem-foundation-tie-beam']?.color;
+    expect([pad, strip, tie]).toEqual([0x8a5a3c, 0x2f7d6a, 0xb5651d]);
+    expect(new Set([pad, strip, tie]).size).toBe(3);
+  });
 });

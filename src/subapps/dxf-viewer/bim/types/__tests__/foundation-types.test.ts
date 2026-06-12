@@ -9,8 +9,10 @@
 
 import {
   buildDefaultFoundationParams,
+  defaultFoundationTopElevationMm,
   FOUNDATION_IFC_MAP,
   DEFAULT_FOUNDATION_TOP_ELEVATION_MM,
+  DEFAULT_TIE_BEAM_TOP_ELEVATION_MM,
   DEFAULT_PAD_WIDTH_MM,
   DEFAULT_PAD_LENGTH_MM,
   DEFAULT_STRIP_WIDTH_MM,
@@ -28,9 +30,16 @@ describe('buildDefaultFoundationParams', () => {
   it('below-grade default top elevation (αρνητικό) για όλα τα kinds', () => {
     for (const kind of ALL_KINDS) {
       const p = buildDefaultFoundationParams(kind);
-      expect(p.topElevationMm).toBe(DEFAULT_FOUNDATION_TOP_ELEVATION_MM);
+      expect(p.topElevationMm).toBe(defaultFoundationTopElevationMm(kind));
       expect(p.topElevationMm).toBeLessThan(0);
     }
+  });
+
+  it('συνδετήρια δοκός κάθεται ΨΗΛΟΤΕΡΑ από πεδιλοδοκό (Eurocode 8 — δεν θάβεται μέσα της)', () => {
+    expect(defaultFoundationTopElevationMm('strip')).toBe(DEFAULT_FOUNDATION_TOP_ELEVATION_MM);
+    expect(defaultFoundationTopElevationMm('pad')).toBe(DEFAULT_FOUNDATION_TOP_ELEVATION_MM);
+    expect(defaultFoundationTopElevationMm('tie-beam')).toBe(DEFAULT_TIE_BEAM_TOP_ELEVATION_MM);
+    expect(DEFAULT_TIE_BEAM_TOP_ELEVATION_MM).toBeGreaterThan(DEFAULT_FOUNDATION_TOP_ELEVATION_MM);
   });
 
   it('thickness θετικό για όλα τα kinds', () => {

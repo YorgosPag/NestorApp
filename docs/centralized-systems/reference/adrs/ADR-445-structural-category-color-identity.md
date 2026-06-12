@@ -119,3 +119,23 @@ This auto-heals every level/user on next open without wiping genuine V/G edits.
   defaults on load, preserving pen/visibility, persists once). Wired into store `loadForLevel`.
   5 migration tests. (Pre-existing unrelated red: `bim-render-settings-subcategory.test.ts` ×2
   — stale «wall has no default subcategories» premise vs committed `wall.interior`; not touched.)
+- **2026-06-12** — v1.2 (Opus 4.8). **Foundation per-kind colour — ΔΙΑΚΡΙΤΕΣ ΧΡΟΙΕΣ
+  (Giorgio: «συνδετήριες == πεδιλοδοκοί» — και μετά το 1ο fix «πάλι ίδια»).** Δύο root causes:
+  (1) 2D outline+centerline + 3D material resolved at **category** level → όλα τα kinds ίδιο χρώμα·
+  (2) ΚΡΙΣΙΜΟ: το 2D **fill** (κυρίαρχη επιφάνεια) έπαιρνε `resolveVgFillTint('foundation')` που
+  επιστρέφει ΠΑΝΤΑ το category sienna (frozen στα persisted objectStyles) → το per-kind fill ΔΕΝ
+  χρησιμοποιείτο ποτέ· (3) οι αρχικές 3 αποχρώσεις sienna ήταν πολύ κοντινές για να ξεχωρίσουν →
+  Giorgio επέλεξε **διακριτές ΧΡΟΙΕΣ** (συνειδητή τοπική εξαίρεση στον κανόνα «1 χροιά/κατηγορία»
+  — η ευκρίνεια προέχει). **Palette (`FOUNDATION_KIND_STROKE`/`FOUNDATION_KIND_FILL`):** πέδιλο
+  sienna `#8a5a3c` · πεδιλοδοκός teal `#2f7d6a` · συνδετήρια κεραμυδί `#b5651d`· fill opacity
+  0.18→0.28 ώστε η χροιά να διαβάζεται. **Fix (no migration — palette = code):** (2D)
+  `FoundationRenderer`: outline+centerline via `kindStrokeColor` (`styleOverride.color ?? layer.color
+  ?? FOUNDATION_KIND_STROKE[kind]`, βάρος από resolver)· **fill → `FOUNDATION_KIND_FILL[kind]`
+  απευθείας** (αφαιρέθηκε η category `resolveVgFillTint` που έσβηνε τη διάκριση)· dropped unused
+  import. (3D) `elem-foundation-pad/-strip/-tie-beam` με τις ΙΔΙΕΣ χροιές + `getElementMaterial3D`
+  union + `foundation-to-three` picks `elem-foundation-${kind}`. **4 MOD** (FoundationRenderer,
+  foundation-render-palette, material-catalog-defs, MaterialCatalog3D, foundation-to-three) + **2 test
+  files**. 14/14 affected tests green. ⚠️ `FoundationRenderer` = ADR-040 micro-leaf → STAGE ADR-040.
+  SKIP tsc (small· N.17). ΕΚΤΟΣ adr-index (shared tree). 🔴 browser-verify (πέδιλο καφέ / πεδιλοδοκός
+  teal / συνδετήρια κεραμυδί, 2Δ + 3Δ) + commit (git add ΜΟΝΟ δικά μου). ΣΗΜ: το strip-teal `#2f7d6a`
+  είναι κοντά στο stair-teal `#2f8f6f` — αν μπερδεύει, εύκολο tweak.

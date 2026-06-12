@@ -29,12 +29,11 @@ import { pointInPolygon } from '../geometry/shared/polygon-utils';
 import { RENDER_LINE_WIDTHS } from '../../config/text-rendering-config';
 import { resolveSubcategoryStyle } from '../../config/bim-line-weight-resolver';
 import { resolveIsEntityVisible } from '../visibility/visibility-resolver';
-import { resolveVgFillTint } from '../utils/bim-vg-fill-tint';
 import { useDrawingScaleStore } from '../../state/drawing-scale-store';
 import { HOVER_HIGHLIGHT } from '../../config/color-config';
 import { getLayer } from '../../stores/LayerStore';
 import { isConcreteLineweight } from '../../config/lineweight-iso-catalog';
-import { FOUNDATION_KIND_FILL } from '../foundations/foundation-render-palette';
+import { FOUNDATION_KIND_FILL, FOUNDATION_KIND_STROKE } from '../foundations/foundation-render-palette';
 import { getFoundationGrips } from '../foundations/foundation-grips';
 import { gripGlyphShape } from '../grips/grip-glyph-registry';
 import { drawEntityDimLabel } from '../labels/bim-dim-labels';
@@ -94,7 +93,12 @@ export class FoundationRenderer extends BaseEntityRenderer {
     // Fill first, hatch clipped inside, dashed stroke on top.
     const _styles = useDrawingScaleStore.getState().objectStyles;
     this.ctx.setLineDash([]);
-    this.ctx.fillStyle = resolveVgFillTint('foundation', 'cut', _styles) ?? FOUNDATION_KIND_FILL[foundation.kind];
+    // ADR-445 — per-kind fill (pad/strip/tie-beam ΔΙΑΚΡΙΤΑ). NOTE: the category
+    // V/G tint is intentionally NOT consulted here — it returns ONE sienna for the
+    // whole category (frozen in persisted objectStyles) and would erase the per-kind
+    // distinction (Giorgio: «συνδετήριες == πεδιλοδοκοί»). Per-element/layer overrides
+    // are honoured by the stroke; the fill follows the kind identity.
+    this.ctx.fillStyle = FOUNDATION_KIND_FILL[foundation.kind];
     this.drawPolygonPath(verts);
     this.ctx.fill();
 
@@ -106,14 +110,17 @@ export class FoundationRenderer extends BaseEntityRenderer {
       lineweightMm: isConcreteLineweight(_layer.lineweight) ? _layer.lineweight : undefined,
       color: _layer.color ?? undefined,
     } : undefined;
-    const { lineWidthPx, color } = resolveSubcategoryStyle({
+    // Weight via SSoT resolver; COLOUR via per-kind sienna palette (ADR-445 —
+    // pad/strip/tie-beam must read as DISTINCT shades· explicit element/layer
+    // overrides still win, see kindStrokeColor).
+    const { lineWidthPx } = resolveSubcategoryStyle({
       category: 'foundation', subcategoryKey: 'hidden-lines',
       cutState: 'cut', scaleDenominator: useDrawingScaleStore.getState().drawingScale,
       dpi: 96, objectStyles: _styles,
       elementOverride: foundation.styleOverride, layerOverride: _layerOverride,
     });
     this.ctx.lineWidth = lineWidthPx;
-    if (color !== null) this.ctx.strokeStyle = color;
+    this.ctx.strokeStyle = this.kindStrokeColor(foundation, _layer);
     this.ctx.setLineDash(HIDDEN_LINE_DASH as number[]);
     this.drawPolygonPath(verts);
     this.ctx.stroke();
@@ -205,7 +212,7 @@ export class FoundationRenderer extends BaseEntityRenderer {
     if (params.kind === 'pad') return;
     const a = this.worldToScreen({ x: params.start.x, y: params.start.y });
     const b = this.worldToScreen({ x: params.end.x, y: params.end.y });
-    const { lineWidthPx, color } = resolveSubcategoryStyle({
+    const { lineWidthPx } = resolveSubcategoryStyle({
       category: 'foundation', subcategoryKey: 'centerline',
       cutState: 'cut', scaleDenominator: useDrawingScaleStore.getState().drawingScale,
       dpi: 96, objectStyles: useDrawingScaleStore.getState().objectStyles,
@@ -213,7 +220,7 @@ export class FoundationRenderer extends BaseEntityRenderer {
     });
     this.ctx.save();
     this.ctx.lineWidth = lineWidthPx;
-    if (color !== null) this.ctx.strokeStyle = color;
+    this.ctx.strokeStyle = this.kindStrokeColor(foundation);
     this.ctx.setLineDash(CENTERLINE_DASH_DOT as number[]);
     this.ctx.beginPath();
     this.ctx.moveTo(a.x, a.y);
@@ -259,6 +266,21 @@ export class FoundationRenderer extends BaseEntityRenderer {
   }
 
   // ─── Internal helpers ────────────────────────────────────────────────────
+
+  /**
+   * Per-kind sienna stroke (ADR-445) — pad/strip/tie-beam read as DISTINCT shades
+   * (`FOUNDATION_KIND_STROKE` SSoT). Explicit per-element (`styleOverride.color`)
+   * and Layer colours still win, mirroring the V/G-override precedence; the V/G
+   * *category* colour is intentionally superseded by the per-kind identity.
+   */
+  private kindStrokeColor(
+    foundation: FoundationEntity,
+    layer: ReturnType<typeof getLayer> = foundation.layerId ? getLayer(foundation.layerId) : null,
+  ): string {
+    return foundation.styleOverride?.color
+      ?? layer?.color
+      ?? FOUNDATION_KIND_STROKE[foundation.kind];
+  }
 
   private drawPolygonPath(vertices: ReadonlyArray<{ x: number; y: number }>): void {
     if (vertices.length < 3) return;
