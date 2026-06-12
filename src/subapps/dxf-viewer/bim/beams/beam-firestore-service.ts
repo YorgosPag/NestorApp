@@ -39,6 +39,7 @@ import type {
   BeamParams,
 } from '../types/beam-types';
 import type { BimValidation } from '../types/bim-base';
+import type { GuideBinding } from '../hosting/guide-binding-types';
 
 // ============================================================================
 // TYPES
@@ -61,6 +62,8 @@ export interface BeamDoc {
   readonly buildingId?: string;
   readonly floorId?: string;
   readonly layerId?: string;
+  /** ADR-441 Slice GEN-BEAM — associative grid hosting bindings (born-bound δοκοί). */
+  readonly guideBindings?: readonly GuideBinding[];
   readonly createdAt: Timestamp;
   readonly createdBy: string;
   readonly updatedAt: Timestamp;
@@ -85,6 +88,8 @@ export interface BeamSaveInput {
   readonly buildingId?: string;
   readonly floorId?: string;
   readonly layerId?: string;
+  /** ADR-441 Slice GEN-BEAM — grid hosting bindings (host-on-create). */
+  readonly guideBindings?: readonly GuideBinding[];
 }
 
 export interface BeamUpdateInput {
@@ -92,6 +97,8 @@ export interface BeamUpdateInput {
   readonly validation?: BimValidation;
   readonly geometry?: BeamGeometry;
   readonly layerId?: string;
+  /** ADR-441 Slice GEN-BEAM — grid hosting bindings (round-trip on update). */
+  readonly guideBindings?: readonly GuideBinding[];
 }
 
 // ============================================================================
@@ -155,6 +162,8 @@ export class BeamFirestoreService {
     if (input.buildingId !== undefined) base.buildingId = input.buildingId;
     // ADR-420 — floorId is owned by config scope (bimScopeWriteFields above), not input.
     if (input.layerId !== undefined) base.layerId = input.layerId;
+    // ADR-441 Slice GEN-BEAM — persist grid hosting bindings (Firestore rejects undefined).
+    if (input.guideBindings !== undefined) base.guideBindings = input.guideBindings;
 
     await setDoc(ref, base);
     return base as unknown as BeamDoc;
@@ -170,6 +179,8 @@ export class BeamFirestoreService {
     if (patch.validation !== undefined) payload.validation = patch.validation;
     if (patch.geometry !== undefined) payload.geometry = patch.geometry;
     if (patch.layerId !== undefined) payload.layerId = patch.layerId;
+    // ADR-441 Slice GEN-BEAM — round-trip grid hosting bindings on update.
+    if (patch.guideBindings !== undefined) payload.guideBindings = patch.guideBindings;
 
     await updateDoc(ref, payload);
   }
@@ -205,5 +216,7 @@ export function entityToSaveInput(entity: BeamEntity): BeamSaveInput {
     params: entity.params,
     validation: entity.validation,
     layerId: entity.layerId,
+    // ADR-441 Slice GEN-BEAM — carry grid hosting bindings into the persisted doc.
+    ...(entity.guideBindings !== undefined && { guideBindings: entity.guideBindings }),
   };
 }

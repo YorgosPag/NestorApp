@@ -103,6 +103,9 @@ function docToEntity(doc: BeamDoc): BeamEntity {
     geometry: doc.geometry ?? computeBeamGeometry(doc.params),
     validation,
     visible: true,
+    // ADR-441 Slice GEN-BEAM — restore grid hosting bindings ώστε ο born-bound
+    // δοκός να ξανα-ακολουθεί τον άξονα μετά reload (αλλιώς χάνει το hosting).
+    ...(doc.guideBindings !== undefined && { guideBindings: doc.guideBindings }),
   } as BeamEntity;
 }
 
@@ -270,6 +273,9 @@ export function useBeamPersistence(
           validation: entity.validation,
           geometry: entity.geometry,
           layerId: entity.layerId,
+          // ADR-441 Slice GEN-BEAM — round-trip hosting bindings on every update
+          // (follow-move edits keep the born-bound link persisted).
+          guideBindings: entity.guideBindings,
         });
       }
       lastSavedParamsRef.current.set(entity.id, entity.params);
