@@ -274,10 +274,6 @@ export function useDrawingHandlers(
     // Normal point addition (not closing)
     const lastRef = drawingState.tempPoints[drawingState.tempPoints.length - 1];
     const afterOrtho = orthoOnRef.current && lastRef ? hardOrtho(p, lastRef) : p;
-    // TEMP DIAGNOSTIC (2026-06-12 ORTHO debug) — click path. Remove after fix.
-    console.log('[ORTHO-DBG] commit tool=%s orthoOn=%s polarOn=%s hasRef=%s | in=(%s,%s) out=(%s,%s)',
-      activeTool, orthoOnRef.current, polarOnRef.current, !!lastRef,
-      p.x.toFixed(1), p.y.toFixed(1), afterOrtho.x.toFixed(1), afterOrtho.y.toFixed(1));
     // ADR-357 Phase 1: Polar snap after ortho (mutually exclusive — ensured by useCadToggles)
     const afterPolar = !orthoOnRef.current && polarOnRef.current && lastRef
       ? applyPolar(afterOrtho, lastRef, {

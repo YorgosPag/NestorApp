@@ -17,6 +17,11 @@ import { isPointInPolygon } from '../../utils/geometry/GeometryUtils';
 import { setImmediatePosition } from './ImmediatePositionStore';
 import { setImmediateSnap, clearImmediateSnap, setFullSnapResult } from './ImmediateSnapStore';
 import { getLockedGripWorldPos } from './GripSnapStore';
+import { getGripStepAnchor } from './GripStepAnchorStore';
+import { applyGripStepSnap, isGripStepActive } from '../../bim/grips/grip-step-quantize';
+import { setSnapDrawingMode } from './SnapDrawingModeStore';
+import { getGlobalGuideStore } from '../../systems/guides/guide-store';
+import { projectPointOntoGuide, isGuideEditTool, GUIDE_HIT_TOLERANCE_PX } from '../../systems/guides/guide-types';
 import { setHoveredEntity, setHoveredOverlay } from '../hover/HoverStore';
 import { withPerf, perfTick } from './mouse-handler-perf';
 import { PANEL_LAYOUT } from '../../config/panel-tokens';
@@ -77,9 +82,32 @@ export function useMouseMoveHandler({
     // If hovering over a grip, lock crosshair to grip center (world→screen)
     withPerf('set-immediate-position', () => {
       const gripWorldLock = getLockedGripWorldPos();
+      const stepAnchor = getGripStepAnchor();
       if (gripWorldLock) {
         const gripScreenPos = CoordinateTransforms.worldToScreen(gripWorldLock, transform, freshViewport);
         setImmediatePosition(gripScreenPos);
+      } else if (isGripDragging && stepAnchor && isGripStepActive()) {
+        // ADR-363 — snap-to-grid crosshair (AutoCAD F9 parity). While a grip drag is
+        // active and SNAP-MODE (F9) + Q are held, quantize the FRESH cursor delta
+        // from the drag anchor with the SAME `applyGripStepSnap` the ghost uses, so
+        // the crosshair "clicks" onto the step grid at the identical point as the
+        // ghost (WYSIWYG, zero-lag). Disengaging F9/Q falls through to the raw cursor.
+        const w = CoordinateTransforms.screenToWorld(screenPos, transform, freshViewport);
+        const q = applyGripStepSnap({ x: w.x - stepAnchor.x, y: w.y - stepAnchor.y });
+        const qWorld = { x: stepAnchor.x + q.x, y: stepAnchor.y + q.y };
+        setImmediatePosition(CoordinateTransforms.worldToScreen(qWorld, transform, freshViewport));
+      } else if (isGuideEditTool(activeTool)) {
+        // ADR-189 — guide hover-lock: while a guide-edit tool is active, the moment a
+        // guide is within highlight range the crosshair CENTRE locks onto its line
+        // (Giorgio: «να κολλάει στο σώμα της γραμμής όταν έχει φωτιστεί»). Same
+        // threshold as the highlight (GUIDE_HIT_TOLERANCE_PX) → φωτίζεται ⟺ κολλάει.
+        const w = CoordinateTransforms.screenToWorld(screenPos, transform, freshViewport);
+        const g = getGlobalGuideStore().findNearestGuide(w.x, w.y, GUIDE_HIT_TOLERANCE_PX / transform.scale);
+        if (g) {
+          setImmediatePosition(CoordinateTransforms.worldToScreen(projectPointOntoGuide(g, w), transform, freshViewport));
+        } else {
+          setImmediatePosition(screenPos);
+        }
       } else {
         setImmediatePosition(screenPos);
       }
@@ -232,6 +260,10 @@ export function useMouseMoveHandler({
 
     // Drawing preview callback
     const inDrawingMode = isInDrawingMode(activeTool, overlayMode);
+    // ADR-189 — publish drawing mode for GuideSnapEngine: while drawing, guides snap
+    // ONLY at intersections (✕), not along a single line (Giorgio). Set before the
+    // throttled `findSnapPoint` below reads it via SnapDrawingModeStore.
+    setSnapDrawingMode(inDrawingMode);
     if (debugEnabled) dperf('Performance', `MOUSEMOVE tool=${activeTool} drawing=${inDrawingMode} cb=${!!onDrawingHover}`);
 
     if (onDrawingHover && inDrawingMode) {

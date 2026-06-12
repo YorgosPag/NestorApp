@@ -22,9 +22,15 @@ import { setImmediatePosition } from '../../systems/cursor/ImmediatePositionStor
 import {
   getPointerSnapshotFromElement,
   getScreenPosFromEvent,
-  screenToWorldWithSnapshot
+  screenToWorldWithSnapshot,
+  CoordinateTransforms,
 } from '../../rendering/core/CoordinateTransforms';
 import { getGlobalGuideStore } from '../../systems/guides/guide-store';
+// ADR-189: while moving a guide, lock the crosshair onto the guide's line (Giorgio:
+// «ο κέρσορας κολλημένος πάνω στον οδηγό, γλιστράει κατά μήκος»).
+import { projectPointOnSegment } from '../../systems/guides/guide-types';
+// ADR-189: honour the active OSNAP point while dragging a guide (endpoint/intersection).
+import { resolveGuideDrag } from '../../systems/guides/guide-drag-snap';
 // ADR-040 Phase XXII.A — transform reads from SSoT, not React prop (orchestrator-decoupling).
 import { getImmediateTransform } from '../../systems/cursor/ImmediateTransformStore';
 // 🏢 ADR-065: Extracted types and drag handlers
@@ -166,17 +172,33 @@ export function useCanvasMouse(props: UseCanvasMouseProps): UseCanvasMouseReturn
         const deltaX = worldPoint.x - draggingGuide.startMouseWorld.x;
         const deltaY = worldPoint.y - draggingGuide.startMouseWorld.y;
 
+        // ADR-189: keep the crosshair STUCK on the moving guide's line — the
+        // perpendicular drag moves the guide, but the parallel mouse motion slides
+        // the crosshair ALONG the line without leaving it (Giorgio). Build the locked
+        // world point (projected onto the guide's new position) and write it to the
+        // crosshair SSoT; mouse-handler-move already wrote the raw pos a tick earlier,
+        // so this override wins for the guide-drag frame.
+        let lockedWorld: Point2D | null = null;
         if (draggingGuide.axis === 'XZ' && draggingGuide.originalStartPoint && draggingGuide.originalEndPoint) {
           // Translate entire diagonal segment
           const newStart = { x: draggingGuide.originalStartPoint.x + deltaX, y: draggingGuide.originalStartPoint.y + deltaY };
           const newEnd = { x: draggingGuide.originalEndPoint.x + deltaX, y: draggingGuide.originalEndPoint.y + deltaY };
           store.moveDiagonalGuideById(draggingGuide.guideId, newStart, newEnd);
+          lockedWorld = projectPointOnSegment(worldPoint, newStart, newEnd).snapPoint;
         } else if (draggingGuide.axis === 'X') {
-          store.moveGuideById(draggingGuide.guideId, draggingGuide.originalOffset + deltaX);
+          // Honour the active OSNAP: if a snap point is engaged the vertical line
+          // passes THROUGH it (offset = snap.x); else free delta tracking. When
+          // snapped, lock the crosshair onto the snap point; else slide along Y.
+          const { offset, snapPoint } = resolveGuideDrag('X', worldPoint, draggingGuide.startMouseWorld, draggingGuide.originalOffset);
+          store.moveGuideById(draggingGuide.guideId, offset);
+          lockedWorld = snapPoint ?? { x: offset, y: worldPoint.y };
         } else {
-          // Y axis
-          store.moveGuideById(draggingGuide.guideId, draggingGuide.originalOffset + deltaY);
+          // Y axis — horizontal line; snap → passes through snap point (offset = snap.y).
+          const { offset, snapPoint } = resolveGuideDrag('Y', worldPoint, draggingGuide.startMouseWorld, draggingGuide.originalOffset);
+          store.moveGuideById(draggingGuide.guideId, offset);
+          lockedWorld = snapPoint ?? { x: worldPoint.x, y: offset };
         }
+        setImmediatePosition(CoordinateTransforms.worldToScreen(lockedWorld, getImmediateTransform(), snap.viewport));
       }
     }
   // ADR-040 XXII.A: `transform` removed from deps — reads come from SSoT, not closure.

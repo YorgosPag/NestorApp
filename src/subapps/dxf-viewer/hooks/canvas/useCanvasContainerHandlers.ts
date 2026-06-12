@@ -16,6 +16,9 @@ import { getImmediateTransform } from '../../systems/cursor/ImmediateTransformSt
 import type { GridAxis } from '../../systems/guides/guide-types';
 import { MoveGuideCommand } from '../../systems/guides/commands';
 import { getGlobalGuideStore } from '../../systems/guides/guide-store';
+// ADR-189: snap the committed guide offset to the active OSNAP point (SSoT shared
+// with the live drag in useCanvasMouse) so commit == what the snap marker showed.
+import { resolveGuideDrag } from '../../systems/guides/guide-drag-snap';
 // ADR-441 Slice 3-perf — imperative drag-state SSoT για zero-lag follow ghost +
 // reconciler suppression κατά το guide drag.
 import { setDraggingGuideId } from '../../systems/guides/guide-drag-store';
@@ -229,8 +232,11 @@ export function useCanvasContainerHandlers(
               newStart, newEnd,
             );
           } else {
-            const delta1D = draggingGuide.axis === 'X' ? deltaX : deltaY;
-            const newOffset = draggingGuide.originalOffset + delta1D;
+            // Honour the active OSNAP (same SSoT as the live drag) so the committed
+            // offset matches where the snap (✛) marker showed the line would land.
+            const { offset: newOffset } = resolveGuideDrag(
+              draggingGuide.axis, worldPos, draggingGuide.startMouseWorld, draggingGuide.originalOffset,
+            );
             handleGuideDragComplete(
               draggingGuide.guideId, draggingGuide.axis,
               draggingGuide.originalOffset, newOffset,
