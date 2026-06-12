@@ -76,6 +76,78 @@ export function useDxfViewerNotifications(): void {
       }),
     );
 
+    // ADR-441 Slice GEN-COL «Κολώνες από κάναβο» — summary μετά το one-shot batch
+    // (idempotent· `skipped` = τομές με ήδη υπάρχουσα grid κολώνα). ICU πληθυντικότητα.
+    unsubs.push(
+      EventBus.on('bim:columns-from-grid', ({ created, skipped }) => {
+        if (created === 0) toast.info(t('columnGrid.upToDate'));
+        else if (skipped > 0) toast.success(t('columnGrid.builtWithSkipped', { created, skipped }));
+        else toast.success(t('columnGrid.built', { created }));
+      }),
+    );
+    unsubs.push(
+      EventBus.on('bim:columns-from-grid-failed', () => {
+        toast.warning(t('columnGrid.insufficientGuides'));
+      }),
+    );
+
+    // ADR-441 Slice GEN-WALL «Τοίχοι από κάναβο» — summary μετά το one-shot batch.
+    unsubs.push(
+      EventBus.on('bim:walls-from-grid', ({ created, skipped }) => {
+        if (created === 0) toast.info(t('wallGrid.upToDate'));
+        else if (skipped > 0) toast.success(t('wallGrid.builtWithSkipped', { created, skipped }));
+        else toast.success(t('wallGrid.built', { created }));
+      }),
+    );
+    unsubs.push(
+      EventBus.on('bim:walls-from-grid-failed', () => {
+        toast.warning(t('wallGrid.insufficientGuides'));
+      }),
+    );
+
+    // ADR-441 Slice GEN-TIE «Συνδετήριες από κάναβο» — summary μετά το one-shot batch.
+    unsubs.push(
+      EventBus.on('bim:tie-beams-from-grid', ({ created, skipped, jointed }) => {
+        if (created === 0 && jointed === 0) toast.info(t('tieBeamGrid.upToDate'));
+        else if (created === 0) toast.success(t('tieBeamGrid.jointed', { jointed }));
+        else if (skipped > 0) toast.success(t('tieBeamGrid.builtWithSkipped', { created, skipped }));
+        else toast.success(t('tieBeamGrid.built', { created }));
+      }),
+    );
+    unsubs.push(
+      EventBus.on('bim:tie-beams-from-grid-failed', () => {
+        toast.warning(t('tieBeamGrid.insufficientGuides'));
+      }),
+    );
+
+    // ADR-441 Slice GEN-BEAM «Δοκάρια από κάναβο» — summary μετά το one-shot batch.
+    unsubs.push(
+      EventBus.on('bim:beams-from-grid', ({ created, skipped }) => {
+        if (created === 0) toast.info(t('beamGrid.upToDate'));
+        else if (skipped > 0) toast.success(t('beamGrid.builtWithSkipped', { created, skipped }));
+        else toast.success(t('beamGrid.built', { created }));
+      }),
+    );
+    unsubs.push(
+      EventBus.on('bim:beams-from-grid-failed', () => {
+        toast.warning(t('beamGrid.insufficientGuides'));
+      }),
+    );
+
+    // ADR-441 Slice GEN-SLAB «Πλάκες από κάναβο» — εδαφόπλακα/δάπεδα/οροφές summary.
+    unsubs.push(
+      EventBus.on('bim:slabs-from-grid', ({ created, skipped }) => {
+        if (created === 0) toast.info(t('slabGrid.upToDate'));
+        else if (skipped > 0) toast.success(t('slabGrid.builtWithSkipped', { created, skipped }));
+        else toast.success(t('slabGrid.built', { created }));
+      }),
+    );
+    unsubs.push(
+      EventBus.on('bim:slabs-from-grid-failed', () => {
+        toast.warning(t('slabGrid.noFootprint'));
+      }),
+    );
+
     // ADR-363 Φάση 3 «Τοιχίο από περίγραμμα» — summary feedback (ΕΝΑ τοιχίο/περίμετρο).
     unsubs.push(
       EventBus.on('bim:columns-from-perimeter', ({ built, ignored }) => {

@@ -66,6 +66,13 @@ import {
 } from './bridge/column-bridge-param-routing';
 import { CATALOG_CUSTOM_SENTINEL } from '../../../bim/columns/section-catalog';
 import { EventBus } from '../../../systems/events/EventBus';
+// ADR-441 Slice GEN-COL — one-shot «Κολώνες από κάναβο» (στις τομές).
+import { getGlobalGuideStore } from '../../../systems/guides/guide-store';
+import { resolveSceneUnits } from '../../../utils/scene-units';
+import {
+  commitColumnGridFromGuides,
+  type ColumnGridCommitResult,
+} from '../../../bim/columns/column-grid-commit';
 import type {
   RibbonComboboxState,
   RibbonToggleState,
@@ -112,6 +119,19 @@ const COLUMN_OWNED_BADGE_KEYS: ReadonlySet<string> = new Set<string>([
 ]);
 
 const NULL_TOGGLE: RibbonToggleState = false;
+
+/**
+ * ADR-441 Slice GEN-COL — toast μετά το «Κολώνες από κάναβο». Το `up-to-date` (κάθε
+ * τομή έχει ήδη κολώνα) ΔΕΝ είναι αποτυχία (Revit «ενημερωμένο»): εκπέμπεται ως
+ * success-style summary με created=0.
+ */
+function emitColumnsFromGridToast(result: ColumnGridCommitResult): void {
+  if (result.ok || result.reason === 'up-to-date') {
+    EventBus.emit('bim:columns-from-grid', { created: result.created, skipped: result.skipped });
+  } else {
+    EventBus.emit('bim:columns-from-grid-failed', { reason: result.reason ?? 'insufficient-guides' });
+  }
+}
 
 export function useRibbonColumnBridge(
   props: UseRibbonColumnBridgeProps,
@@ -372,8 +392,26 @@ export function useRibbonColumnBridge(
     [levelManager, universalSelection, executeCommand],
   );
 
+  // ADR-441 Slice GEN-COL — one-shot «Κολώνες από κάναβο»: born-bound κολώνα σε κάθε
+  // τομή ορατών αξόνων (idempotent). Πάντα δείχνει toast (created/skipped ή reason).
+  const handleColumnsFromGrid = useCallback((): void => {
+    const levelId = levelManager.currentLevelId;
+    if (!levelId) return;
+    const scene = levelManager.getLevelScene(levelId);
+    const result = commitColumnGridFromGuides({
+      guideReader: getGlobalGuideStore(),
+      getLevelScene: levelManager.getLevelScene,
+      setLevelScene: levelManager.setLevelScene,
+      levelId,
+      sceneUnits: scene ? resolveSceneUnits(scene) : 'mm',
+      executeCommand,
+    });
+    emitColumnsFromGridToast(result);
+  }, [levelManager, executeCommand]);
+
   const onAction = useCallback(
     (action: string): void => {
+      if (action === COLUMN_RIBBON_KEYS_ACTIONS.fromGrid) { handleColumnsFromGrid(); return; }
       if (action === PSET_RIBBON_ACTION) {
         const column = resolveColumn();
         if (!column || !levelManager.currentLevelId) return;
@@ -395,7 +433,7 @@ export function useRibbonColumnBridge(
       if (!confirmed) return;
       EventBus.emit('bim:column-delete-requested', { columnId: column.id });
     },
-    [resolveColumn, levelManager, t, handleDetach],
+    [resolveColumn, levelManager, t, handleDetach, handleColumnsFromGrid],
   );
 
   /**

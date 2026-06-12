@@ -30,7 +30,7 @@ import {
   DxfMenuLabel,
   DxfMenuShortcut,
 } from './dxf-context-menu';
-import { JoinIcon, DeleteIcon, CancelIcon, SplitWallIcon, SelectSimilarColorIcon } from '../icons/MenuIcons';
+import { JoinIcon, DeleteIcon, CancelIcon, SplitWallIcon, SelectSimilarColorIcon, IsolateEntityIcon, IsolateCategoryIcon } from '../icons/MenuIcons';
 
 // ===== TYPES =====
 
@@ -72,6 +72,20 @@ interface EntityContextMenuProps {
    */
   canSelectSimilar?: boolean;
   onSelectSimilar?: () => void;
+  /**
+   * Revit "Isolate Element" (ADR-358 §5.6.bis) — hide everything except the
+   * selected entity/entities, on both 2D and 3D, in one click. Shown when at
+   * least one entity is selected. Cleared via the status-bar badge or Ctrl+Shift+U.
+   */
+  canIsolateEntity?: boolean;
+  onIsolateEntity?: () => void;
+  /**
+   * Revit "Isolate Category" (ADR-358 §5.6.bis) — hide all OTHER categories,
+   * keep only entities of the selected entity's category (e.g. all walls), in
+   * one click, on both 2D and 3D. Live (newly drawn members appear).
+   */
+  canIsolateCategory?: boolean;
+  onIsolateCategory?: () => void;
 }
 
 // ===== MAIN COMPONENT =====
@@ -92,6 +106,10 @@ const EntityContextMenuInner = forwardRef<EntityContextMenuHandle, EntityContext
   onSplit,
   canSelectSimilar,
   onSelectSimilar,
+  canIsolateEntity,
+  onIsolateEntity,
+  canIsolateCategory,
+  onIsolateCategory,
 }, ref) => {
   const { t } = useTranslation('dxf-viewer');
   const triggerRef = useRef<HTMLSpanElement>(null);
@@ -117,6 +135,8 @@ const EntityContextMenuInner = forwardRef<EntityContextMenuHandle, EntityContext
   const handleLayerLock = useCallback(() => { onLayerLock?.(); setIsOpen(false); }, [onLayerLock]);
   const handleSplit = useCallback(() => { onSplit?.(); setIsOpen(false); }, [onSplit]);
   const handleSelectSimilar = useCallback(() => { onSelectSimilar?.(); setIsOpen(false); }, [onSelectSimilar]);
+  const handleIsolateEntity = useCallback(() => { onIsolateEntity?.(); setIsOpen(false); }, [onIsolateEntity]);
+  const handleIsolateCategory = useCallback(() => { onIsolateCategory?.(); setIsOpen(false); }, [onIsolateCategory]);
 
   const showLayerCommands = !!(canApplyLayerCommands && (onLayerOff || onLayerFreeze || onLayerLock));
   const layerCommandsDisabled = !!isSystemLayer;
@@ -150,6 +170,22 @@ const EntityContextMenuInner = forwardRef<EntityContextMenuHandle, EntityContext
               <DxfMenuIcon><SelectSimilarColorIcon /></DxfMenuIcon>
               <DxfMenuLabel>{t('contextMenu.entity.selectSimilarColor')}</DxfMenuLabel>
             </DxfMenuItem>
+          </>
+        )}
+
+        {canIsolateEntity && onIsolateEntity && (
+          <>
+            <DxfMenuSeparator />
+            <DxfMenuItem onClick={handleIsolateEntity}>
+              <DxfMenuIcon><IsolateEntityIcon /></DxfMenuIcon>
+              <DxfMenuLabel>{t('layer.isolate.contextMenu.isolateEntity')}</DxfMenuLabel>
+            </DxfMenuItem>
+            {canIsolateCategory && onIsolateCategory && (
+              <DxfMenuItem onClick={handleIsolateCategory}>
+                <DxfMenuIcon><IsolateCategoryIcon /></DxfMenuIcon>
+                <DxfMenuLabel>{t('layer.isolate.contextMenu.isolateCategory')}</DxfMenuLabel>
+              </DxfMenuItem>
+            )}
           </>
         )}
 

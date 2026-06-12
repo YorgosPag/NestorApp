@@ -58,6 +58,13 @@ import {
 } from './bridge/envelope-function-param';
 import { PSET_RIBBON_ACTION } from './bridge/pset-action-keys';
 import { EventBus } from '../../../systems/events/EventBus';
+// ADR-441 Slice GEN-BEAM — one-shot «Δοκάρια από κάναβο» (στα segments).
+import { getGlobalGuideStore } from '../../../systems/guides/guide-store';
+import {
+  commitBeamGridFromGuides,
+  type BeamGridCommitResult,
+} from '../../../bim/beams/beam-grid-commit';
+import { resolveSceneUnits } from '../../../utils/scene-units';
 import type {
   RibbonComboboxState,
   RibbonToggleState,
@@ -116,6 +123,19 @@ const STRING_KEY_TO_FIELD: Readonly<Record<string, keyof BeamParams>> = {
   [BEAM_RIBBON_KEYS.stringParams.profileDesignation]:  'profileDesignation',
   [BEAM_RIBBON_KEYS.stringParams.sectionKind]:         'sectionKind',
 };
+
+/**
+ * ADR-441 Slice GEN-BEAM — toast μετά το «Δοκάρια από κάναβο». Το `up-to-date` (κάθε
+ * segment έχει ήδη δοκό) ΔΕΝ είναι αποτυχία: εκπέμπεται ως success-style summary με
+ * created=0.
+ */
+function emitBeamsFromGridToast(result: BeamGridCommitResult): void {
+  if (result.ok || result.reason === 'up-to-date') {
+    EventBus.emit('bim:beams-from-grid', { created: result.created, skipped: result.skipped });
+  } else {
+    EventBus.emit('bim:beams-from-grid-failed', { reason: result.reason ?? 'insufficient-guides' });
+  }
+}
 
 export function useRibbonBeamBridge(
   props: UseRibbonBeamBridgeProps,
@@ -324,6 +344,23 @@ export function useRibbonBeamBridge(
     return false;
   }, [resolveBeam]);
 
+  // ADR-441 Slice GEN-BEAM — one-shot «Δοκάρια από κάναβο»: born-bound δοκός σε κάθε
+  // segment άξονα (idempotent). Πάντα δείχνει toast (created/skipped ή reason).
+  const handleBeamsFromGrid = useCallback((): void => {
+    const levelId = levelManager.currentLevelId;
+    if (!levelId) return;
+    const scene = levelManager.getLevelScene(levelId);
+    const result = commitBeamGridFromGuides({
+      guideReader: getGlobalGuideStore(),
+      getLevelScene: levelManager.getLevelScene,
+      setLevelScene: levelManager.setLevelScene,
+      levelId,
+      sceneUnits: scene ? resolveSceneUnits(scene) : 'mm',
+      executeCommand,
+    });
+    emitBeamsFromGridToast(result);
+  }, [levelManager, executeCommand]);
+
   const onAction = useCallback(
     (action: string): void => {
       if (action === PSET_RIBBON_ACTION) {
@@ -336,6 +373,7 @@ export function useRibbonBeamBridge(
         });
         return;
       }
+      if (action === BEAM_RIBBON_KEYS_ACTIONS.fromGrid) { handleBeamsFromGrid(); return; }
       if (action !== BEAM_RIBBON_KEYS_ACTIONS.delete) return;
       const beam = resolveBeam();
       if (!beam) return;
@@ -345,7 +383,7 @@ export function useRibbonBeamBridge(
       if (!confirmed) return;
       EventBus.emit('bim:beam-delete-requested', { beamId: beam.id });
     },
-    [resolveBeam, levelManager, t],
+    [resolveBeam, levelManager, t, handleBeamsFromGrid],
   );
 
   /**

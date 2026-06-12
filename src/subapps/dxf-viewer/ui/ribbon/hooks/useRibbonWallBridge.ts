@@ -36,6 +36,12 @@ import {
 } from './bridge/wall-command-keys';
 import { PSET_RIBBON_ACTION } from './bridge/pset-action-keys';
 import { EventBus } from '../../../systems/events/EventBus';
+// ADR-441 Slice GEN-WALL — one-shot «Τοίχοι από κάναβο» (στα segments).
+import { getGlobalGuideStore } from '../../../systems/guides/guide-store';
+import {
+  commitWallGridFromGuides,
+  type WallGridCommitResult,
+} from '../../../bim/walls/wall-grid-commit';
 import type {
   RibbonComboboxState,
   RibbonToggleState,
@@ -82,6 +88,19 @@ const WALL_OWNED_BADGE_KEYS: ReadonlySet<string> = new Set<string>([
 ]);
 
 const NULL_TOGGLE: RibbonToggleState = false;
+
+/**
+ * ADR-441 Slice GEN-WALL — toast μετά το «Τοίχοι από κάναβο». Το `up-to-date` (κάθε
+ * segment έχει ήδη τοίχο) ΔΕΝ είναι αποτυχία: εκπέμπεται ως success-style summary
+ * με created=0.
+ */
+function emitWallsFromGridToast(result: WallGridCommitResult): void {
+  if (result.ok || result.reason === 'up-to-date') {
+    EventBus.emit('bim:walls-from-grid', { created: result.created, skipped: result.skipped });
+  } else {
+    EventBus.emit('bim:walls-from-grid-failed', { reason: result.reason ?? 'insufficient-guides' });
+  }
+}
 
 export function useRibbonWallBridge(
   props: UseRibbonWallBridgeProps,
@@ -218,6 +237,23 @@ export function useRibbonWallBridge(
     [levelManager, universalSelection, executeCommand],
   );
 
+  // ADR-441 Slice GEN-WALL — one-shot «Τοίχοι από κάναβο»: born-bound τοίχος σε κάθε
+  // segment άξονα (idempotent). Πάντα δείχνει toast (created/skipped ή reason).
+  const handleWallsFromGrid = useCallback((): void => {
+    const levelId = levelManager.currentLevelId;
+    if (!levelId) return;
+    const scene = levelManager.getLevelScene(levelId);
+    const result = commitWallGridFromGuides({
+      guideReader: getGlobalGuideStore(),
+      getLevelScene: levelManager.getLevelScene,
+      setLevelScene: levelManager.setLevelScene,
+      levelId,
+      sceneUnits: scene ? resolveSceneUnits(scene) : 'mm',
+      executeCommand,
+    });
+    emitWallsFromGridToast(result);
+  }, [levelManager, executeCommand]);
+
   const onAction = useCallback(
     (action: string): void => {
       if (action === PSET_RIBBON_ACTION) {
@@ -230,6 +266,7 @@ export function useRibbonWallBridge(
         });
         return;
       }
+      if (action === WALL_RIBBON_KEYS_ACTIONS.fromGrid) { handleWallsFromGrid(); return; }
       if (action === WALL_RIBBON_KEYS_ACTIONS.detachTop) { handleDetach('top'); return; }
       if (action === WALL_RIBBON_KEYS_ACTIONS.detachBase) { handleDetach('base'); return; }
       if (action !== WALL_RIBBON_KEYS_ACTIONS.delete) return;
@@ -237,7 +274,7 @@ export function useRibbonWallBridge(
       if (!wall) return;
       EventBus.emit('bim:wall-delete-requested', { wallId: wall.id });
     },
-    [resolveWall, levelManager, handleDetach],
+    [resolveWall, levelManager, handleDetach, handleWallsFromGrid],
   );
 
   // Memoize return so RibbonCommandProvider deps stay stable (ADR-040 Phase XIX).
