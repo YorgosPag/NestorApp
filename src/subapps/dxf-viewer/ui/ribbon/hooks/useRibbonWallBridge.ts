@@ -44,6 +44,7 @@ import {
 } from '../../../bim/walls/wall-grid-commit';
 import type { GridPerimeterMode } from '../../../bim/grid/grid-justification';
 import { wallGridSettingsStore } from './bridge/grid-perimeter-mode-stores';
+import { warnIfGridJustificationConflict } from '../../../bim/grid/grid-justification-consistency';
 import type {
   RibbonComboboxState,
   RibbonToggleState,
@@ -256,6 +257,8 @@ export function useRibbonWallBridge(
       perimeterMode: wallGridSettingsStore.get(),
     });
     emitWallsFromGridToast(result);
+    // ADR-441 3-mode — soft warning αν η έδραση ασυνεπεί με υπάρχοντα grid-στοιχεία.
+    warnIfGridJustificationConflict(levelManager.getLevelScene(levelId));
   }, [levelManager, executeCommand]);
 
   const onAction = useCallback(

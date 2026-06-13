@@ -80,4 +80,20 @@ describe('findEntitiesWithSimilarColor', () => {
     expect(findEntitiesWithSimilarColor('ghost', [ent('a', 'line', 'L1')], layersById))
       .toEqual([]);
   });
+
+  // ADR-445 — BIM entities group by structural colour identity, not the DXF
+  // layer cascade (columns blue, beams amber, …).
+  it('groups BIM entities by category colour identity, separate from DXF', () => {
+    const layersById = { L1: layer('L1', ORANGE) };
+    const bim = (id: string, type: string, extra: Record<string, unknown> = {}) =>
+      ({ id, type, ...extra } as unknown as Entity);
+    const entities = [
+      bim('col1', 'column', { kind: 'rectangular' }),
+      bim('col2', 'column', { kind: 'rectangular' }),
+      bim('beam1', 'beam'),
+      ent('orangeLine', 'line', 'L1'), // ByLayer orange — must NOT join columns
+    ];
+    expect(findEntitiesWithSimilarColor('col1', entities, layersById).sort())
+      .toEqual(['col1', 'col2']);
+  });
 });

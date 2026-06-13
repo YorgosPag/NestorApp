@@ -73,6 +73,9 @@
   "storeyGating": {
     "foundationUpperStorey": "Foundations / ground slabs usually belong on the lowest storey."
   },
+  "gridJustification": {
+    "conflict": "Heads up: structural elements on the same perimeter axes have opposite justification — their faces may not align. Check whether this is intentional."
+  },
   "perimeterColumn": {
     "built": "Created {built} structural walls from the perimeter.",
     "builtWithIgnored": "Created {built} structural walls; ignored {ignored} shapes.",

@@ -13,6 +13,7 @@
  */
 
 import type { DxfEntityUnion } from '../../canvas-v2/dxf-canvas/dxf-types';
+import type { Entity } from '../../types/entities';
 import type { BimCategory } from '../../config/bim-object-styles';
 import { resolveFixtureBimCategory } from '../types/mep-fixture-types';
 import { resolveSegmentBimCategory } from '../types/mep-segment-types';
@@ -49,8 +50,15 @@ export function collectBimCategories(
   return [...cats];
 }
 
-/** Resolve a scene entity to its V/G BimCategory, or `null` for raw DXF. */
-export function resolveEntityBimCategory(entity: DxfEntityUnion): BimCategory | null {
+/**
+ * Resolve a scene entity to its V/G BimCategory, or `null` for raw DXF.
+ *
+ * Accepts both the renderer `DxfEntityUnion` and the SceneModel `Entity` union —
+ * the param-driven Dxf wrappers mirror `XEntity['params']`, so the four param
+ * lookups below are shape-identical across both. Lets Entity-world consumers
+ * (e.g. "Select Similar by colour") reuse this SSoT without a conversion pass.
+ */
+export function resolveEntityBimCategory(entity: DxfEntityUnion | Entity): BimCategory | null {
   switch (entity.type) {
     case 'mep-fixture':
       return resolveFixtureBimCategory(entity.params);

@@ -69,6 +69,7 @@ import {
 } from '../../../bim/beams/beam-grid-commit';
 import type { GridPerimeterMode } from '../../../bim/grid/grid-justification';
 import { beamGridSettingsStore } from './bridge/grid-perimeter-mode-stores';
+import { warnIfGridJustificationConflict } from '../../../bim/grid/grid-justification-consistency';
 import { resolveSceneUnits } from '../../../utils/scene-units';
 import type {
   RibbonComboboxState,
@@ -378,6 +379,8 @@ export function useRibbonBeamBridge(
       perimeterMode: beamGridSettingsStore.get(),
     });
     emitBeamsFromGridToast(result);
+    // ADR-441 3-mode — soft warning αν η έδραση ασυνεπεί με υπάρχοντα grid-στοιχεία.
+    warnIfGridJustificationConflict(levelManager.getLevelScene(levelId));
   }, [levelManager, executeCommand]);
 
   const onAction = useCallback(

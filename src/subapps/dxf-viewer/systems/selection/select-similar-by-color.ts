@@ -17,8 +17,13 @@
  */
 
 import type { Entity, SceneLayer } from '../../types/entities';
+import type { BimCategory, ObjectStyle } from '../../config/bim-object-styles';
 import { resolveEntityLayerName } from '../../stores/LayerStore';
 import { resolveRenderedColorHex } from '../properties/resolve-entity-style';
+import { resolveBimEntityColorHex } from './bim-entity-color';
+
+/** Live per-view Object Styles overrides (V/G), keyed by BIM category. */
+type ObjectStylesMap = Partial<Record<BimCategory, ObjectStyle>>;
 
 /**
  * Locate the entity's layer in the id-keyed map. Mirrors DxfRenderer's lookup:
@@ -36,13 +41,22 @@ function findEntityLayer(
 
 /**
  * Resolve the effective (rendered) color hex for a single entity, normalized to
- * lowercase for stable comparison. Returns null only when there is no layer and
- * no explicit color to fall back to.
+ * lowercase for stable comparison.
+ *
+ * BIM entities resolve through the structural colour-identity SSoT (ADR-445) so
+ * "same colour" matches the category/subcategory hue the renderer paints; raw DXF
+ * entities fall back to the layer cascade. Returns null only when neither path
+ * yields a colour.
  */
 export function resolveEntityColorHex(
   entity: Entity,
   layersById: Record<string, SceneLayer>,
+  objectStyles?: ObjectStylesMap,
 ): string | null {
+  // BIM entity → structural colour identity (ADR-445). null ⇒ raw DXF, use cascade.
+  const bimColor = resolveBimEntityColorHex(entity, objectStyles);
+  if (bimColor !== null) return bimColor;
+
   const layer = findEntityLayer(entity, layersById);
   // No layer context → fall back to the explicit color (renderer fallback path).
   if (!layer) return entity.color ? entity.color.toLowerCase() : null;
@@ -73,16 +87,17 @@ export function findEntitiesWithSimilarColor(
   referenceId: string,
   entities: readonly Entity[],
   layersById: Record<string, SceneLayer>,
+  objectStyles?: ObjectStylesMap,
 ): string[] {
   const reference = entities.find(e => e.id === referenceId);
   if (!reference) return [];
-  const targetColor = resolveEntityColorHex(reference, layersById);
+  const targetColor = resolveEntityColorHex(reference, layersById, objectStyles);
   if (!targetColor) return [];
 
   const matches: string[] = [];
   for (const entity of entities) {
     if (entity.visible === false) continue;
-    if (resolveEntityColorHex(entity, layersById) === targetColor) {
+    if (resolveEntityColorHex(entity, layersById, objectStyles) === targetColor) {
       matches.push(entity.id);
     }
   }

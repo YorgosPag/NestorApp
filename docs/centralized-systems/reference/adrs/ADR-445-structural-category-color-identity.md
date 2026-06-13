@@ -108,6 +108,24 @@ This auto-heals every level/user on next open without wiping genuine V/G edits.
 
 ## Changelog
 
+- **2026-06-14** — v1.3 (Opus 4.8). **«Επιλογή Όμοιων Ίδιο Χρώμα» επεκτάθηκε σε ΟΛΕΣ τις
+  BIM οντότητες** (Giorgio request). Πριν: το `findEntitiesWithSimilarColor` (context-menu
+  εντολή, ADR-030) έλυνε χρώμα ΜΟΝΟ από το DXF layer cascade → οι BIM οντότητες έπεφταν σε
+  fallback λευκό → η εντολή δεν έκανε τίποτα (ή θα επέλεγε τα πάντα). Fix = νέος SSoT resolver
+  `systems/selection/bim-entity-color.ts` (`resolveBimEntityColorHex`) που επαναχρησιμοποιεί
+  τη ΔΙΑΝΕΜΗΜΕΝΗ colour-identity (αυτό το ADR): `resolveEntityBimCategory` → `resolveSubcategoryStyle`
+  (projection colour, τιμά V/G category overrides + per-element `styleOverride`), με subcategory
+  μόνο στις χρωματικά διακριτές περιπτώσεις (wall interior/exterior, column shear-wall, opening
+  window/door) μέσω των ΥΠΑΡΧΟΝΤΩΝ helpers (`wallFootprintSubcategory`/`isWallColumnKind`/`isWindowKind`)
+  — μηδέν διπλασιασμός ταξινόμησης. `resolveEntityColorHex` δοκιμάζει πρώτα το BIM resolver,
+  αλλιώς DXF cascade· `findEntitiesWithSimilarColor` + handler (`CanvasSection`) περνούν live
+  `objectStyles` (`useBimRenderSettingsStore.getState()` — ίδια πηγή με τους 2D renderers, event-time
+  getter → ADR-040-safe). `resolveEntityBimCategory` διευρύνθηκε σε `DxfEntityUnion | Entity`
+  (param-driven Dxf wrappers κατοπτρίζουν `XEntity['params']`). 17/17 jest (10 νέα). DEFER: οι 3
+  per-kind αποχρώσεις θεμελίωσης (inline στον FoundationRenderer) → v1 ομαδοποιεί όλες τις
+  θεμελιώσεις στο category sienna (το object-styles outline ΕΙΝΑΙ category-level). 🔴 browser-verify
+  (κλικ σε κολώνα/δοκάρι/πόρτα → δεξί κλικ → «Επιλογή Όμοιων Ίδιο Χρώμα» επιλέγει όλα τα ίδιας
+  ταυτότητας) + commit. ΕΚΤΟΣ ADR-040 (CanvasSection: μόνο getter add). Related: ADR-030.
 - **2026-06-12** — v1 created (Opus 4.8). Per-category structural colour identity:
   column→steel-blue, beam→amber, foundation→sienna (3 shades), stair→teal-green (+ first
   fill), railing→steel-grey; wall/slab kept neutral; opening unchanged. 2D outline (object-styles

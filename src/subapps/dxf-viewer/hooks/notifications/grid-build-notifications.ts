@@ -69,6 +69,12 @@ function registerColumnWallGridToasts(t: TFunction): Array<() => void> {
     EventBus.on('bim:walls-from-grid-failed', () => {
       toast.warning(t('wallGrid.insufficientGuides'));
     }),
+
+    // ADR-441 3-mode — soft warning: ασυνεπής έδραση δομικών στοιχείων στους ίδιους
+    // περιμετρικούς άξονες (π.χ. κολόνες inner + τοίχοι outer). Non-blocking (Revit-style).
+    EventBus.on('bim:grid-justification-conflict', () => {
+      toast.warning(t('gridJustification.conflict'));
+    }),
   ];
 }
 

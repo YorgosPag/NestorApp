@@ -75,6 +75,7 @@ import { resolveSceneUnits } from '../../../utils/scene-units';
 import { commitColumnGridFromGuides } from '../../../bim/columns/column-grid-commit';
 import type { GridPerimeterMode } from '../../../bim/grid/grid-justification';
 import { columnGridSettingsStore } from './bridge/grid-perimeter-mode-stores';
+import { warnIfGridJustificationConflict } from '../../../bim/grid/grid-justification-consistency';
 import { emitColumnsFromGridToast } from './bridge/column-grid-toast';
 import type {
   RibbonComboboxState,
@@ -409,6 +410,8 @@ export function useRibbonColumnBridge(
       perimeterMode: columnGridSettingsStore.get(),
     });
     emitColumnsFromGridToast(result);
+    // ADR-441 3-mode — soft warning αν η έδραση ασυνεπεί με υπάρχοντα grid-στοιχεία.
+    warnIfGridJustificationConflict(levelManager.getLevelScene(levelId));
   }, [levelManager, executeCommand]);
 
   const onAction = useCallback(

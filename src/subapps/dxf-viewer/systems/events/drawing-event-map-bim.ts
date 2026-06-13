@@ -97,6 +97,10 @@ export interface BimEventMap {
   // ADR-448 Phase 2 — soft warning: θεμελίωση/εδαφόπλακα δημιουργείται εκτός του
   // κατώτατου ορόφου (Revit-style: επιτρέπεται αλλά προειδοποιεί, δεν μπλοκάρει).
   'bim:foundation-on-upper-storey': { kind: 'foundation' | 'ground-slab' };
+  // ADR-441 3-mode — soft warning: δομικά στοιχεία διαφορετικού τύπου στον ΙΔΙΟ άξονα με
+  // αντίθετη έδραση (π.χ. κολόνες inner + τοίχοι outer) → παρειές δεν ευθυγραμμίζονται.
+  // Revit-style: μη-blocking. `axisCount` = πόσοι άξονες έχουν ασυνέπεια.
+  'bim:grid-justification-conflict': { axisCount: number };
   // ADR-406 — BIM MEP fixture params + delete events
   'bim:mep-fixture-params-updated': { fixtureId: string };
   'bim:mep-fixture-delete-requested': { fixtureId: string };
