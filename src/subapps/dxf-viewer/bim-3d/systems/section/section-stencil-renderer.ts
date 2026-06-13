@@ -35,7 +35,6 @@ import * as THREE from 'three';
 import { useSelection3DStore } from '../../stores/Selection3DStore';
 import {
   type SectionHatchKey,
-  resolveHatchKey,
   getHatchCapMaterial,
   setHatchRepeat,
   disposeHatchCap,
@@ -48,6 +47,11 @@ import {
   createCutParityMaterial,
   createOpaqueCutCapMaterial,
 } from './section-stencil-materials';
+import {
+  collectColorGroups,
+  collectHatchGroups,
+  getColorCapMaterial,
+} from './section-cut-cap-groups';
 
 export interface StencilRendererDeps {
   /** BIM group reference για bounding sphere calc (cap quad size). */
@@ -79,6 +83,8 @@ export class SectionStencilRenderer {
   private readonly selectedCapScene: THREE.Scene;
   private readonly hatchCapMesh: THREE.Mesh;
   private readonly hatchCapScene: THREE.Scene;
+  /** ADR-452 v2.4 — lazily-built opaque cap materials keyed by material colour hex. */
+  private readonly colorCapCache = new Map<number, THREE.MeshBasicMaterial>();
   private disposed = false;
 
   constructor(deps: StencilRendererDeps) {
@@ -156,13 +162,13 @@ export class SectionStencilRenderer {
       this.cutCapMesh, this.cutCapScene, this.cutCapMat, null,
     );
 
-    // 2) Per-material hatch poché (Revit RC dots / steel / masonry / wood /
-    //    insulation), isolating each material group so its pattern lands only on
-    //    its own cut sections — SSoT reuse of the box's `section-hatch-cap`.
-    const hatchGroups = this.collectHatchGroups(mainScene);
-    for (const [key, meshes] of hatchGroups) {
-      const mat = getHatchCapMaterial(key);
-      setHatchRepeat(key, capSize);
+    // 2) Per-MATERIAL-COLOUR opaque cut faces — each cut section painted in its
+    //    own material colour (concrete core vs plaster finish, etc.) so the layers
+    //    read distinctly and cleanly (a busy hatch looked cheap; the clipped per-
+    //    layer edges + the true material colour are the crisp, Revit-grade signal).
+    const colorGroups = collectColorGroups(mainScene);
+    for (const [hex, meshes] of colorGroups) {
+      const mat = getColorCapMaterial(this.colorCapCache, hex);
       this.hatchCapMesh.material = mat;
       this.capCutSection(
         renderer, mainScene, camera, cutPlane, parityClip, others, capSize,
@@ -250,7 +256,7 @@ export class SectionStencilRenderer {
     if (this.disposed || planes.length === 0) return;
 
     const capSize = this.computeCapSize(sceneBounds);
-    const hatchGroups = this.collectHatchGroups(mainScene);
+    const hatchGroups = collectHatchGroups(mainScene);
     const savedAutoClear = renderer.autoClear;
     const savedAutoClearColor = renderer.autoClearColor;
     const savedAutoClearDepth = renderer.autoClearDepth;
@@ -357,26 +363,6 @@ export class SectionStencilRenderer {
 
     this.positionMesh(this.selectedCapMesh, currentPlane, capSize);
     renderer.render(this.selectedCapScene, camera);
-  }
-
-  /**
-   * Traverse scene once per frame, group BIM meshes by material hatch key.
-   * Meshes with null hatch key (glass/unknown) are excluded — grey cap covers them.
-   */
-  private collectHatchGroups(mainScene: THREE.Scene): Map<SectionHatchKey, THREE.Object3D[]> {
-    const groups = new Map<SectionHatchKey, THREE.Object3D[]>();
-    mainScene.traverse((obj) => {
-      if (!(obj instanceof THREE.Mesh)) return;
-      const bimId = (obj.userData as Record<string, unknown>)['bimId'];
-      if (bimId === undefined) return;
-      const matId = (obj.userData as Record<string, unknown>)['matId'] as string | undefined;
-      const key = resolveHatchKey(matId);
-      if (key === null) return;
-      let arr = groups.get(key);
-      if (!arr) { arr = []; groups.set(key, arr); }
-      arr.push(obj);
-    });
-    return groups;
   }
 
   /** Render one hatch overlay pass per material key (after the grey base cap). */
@@ -489,6 +475,8 @@ export class SectionStencilRenderer {
     for (const scene of [this.capScene, this.cutCapScene, this.selectedCapScene, this.hatchCapScene]) {
       while (scene.children.length > 0) scene.remove(scene.children[0]);
     }
+    for (const mat of this.colorCapCache.values()) mat.dispose();
+    this.colorCapCache.clear();
     disposeHatchCap();
   }
 }

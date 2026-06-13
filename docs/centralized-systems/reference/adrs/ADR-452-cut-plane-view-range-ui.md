@@ -1,6 +1,6 @@
 # ADR-452 — Cut-Plane Slider (Revit View Range UI for the 2D plan)
 
-**Status:** 🟢 Implemented (v2.3 — opaque Revit poché + per-material hatch) — pending browser-verify + commit
+**Status:** 🟢 Implemented (v2.4 — clipped edges + per-material-colour cut faces) — pending browser-verify + commit
 **Date:** 2026-06-13
 **Builds on:** ADR-375 (View Range / cut state), ADR-448/450 (storey elevations & datum), ADR-040 (micro-leaf architecture)
 
@@ -190,5 +190,25 @@ faces), and the cut elevation is unified to a single FFL-relative frame across 2
     box's `section-hatch-cap` + `resolveHatchKey`/`getHatchCapMaterial`. New private `capCutSection`
     shares the back/front parity pass between the base and each hatch group.
   - DEFER (next iteration if needed after verify): crisp dark cut-profile edges between adjacent
-    same-material entities; hiding/clipping the fat-line edge overlay that floats above the cut (the
-    faint phantom lines in the cut-away space — `LineMaterial` clipping throws in this Three build).
+    same-material entities; hiding/clipping the fat-line edge overlay that floats above the cut.
+- **2026-06-13** — v2.4 — clip the edge overlay + per-material-colour cut faces. Browser-verify of v2.3
+  showed two real problems: (a) the fat-line **edge overlay was NOT clipped**, so the wireframe of
+  everything above the cut floated as a phantom "cage" (and wall/column top rims stayed visible above
+  the cut — Giorgio: "things flying", "edges always visible at top"); (b) the dotted RC hatch looked
+  cheap and didn't separate multilayer build-ups (concrete core vs plaster finish both mapped to `rc`).
+  - **Edge suppression above the cut (the key fix):** the fat-line edge overlay can't be clipped —
+    injecting clip planes into `LineMaterial` throws `Fragment shader is not compiled` at RUNTIME on
+    this build (confirmed; the source-level "it has clipping chunks" reasoning did NOT hold — `'LineMaterial'`
+    was added to the allowlist then REVERTED). Instead `SectionSceneController.hideEdgesAboveCut()`
+    geometrically hides, for the duration of each capped frame, every edge overlay whose cached world
+    top-Y sits above the cut plane — then restores. No shader injection, no compile error: the phantom
+    wireframe cage and the top rims disappear, while fully-below entities keep their projection edges.
+  - **Per-material-colour faces:** replaced the dotted hatch poché on the cut with opaque caps painted
+    in each cut mesh's own material colour (`collectColorGroups` + cached `getColorCapMaterial`), so
+    core / finish layers read as distinct clean bands. The box keeps its hatch poché unchanged.
+  - Tests: applicator still skips `LineMaterial` (clipping throws). DEFER: heavy multi-group cap passes
+    during fast slider drag (throttle if needed); a stray/orphan object far from the model that can't be
+    selected (likely a non-entity overlay / mis-placed data — under investigation, not the cut feature);
+    crisp dark cut-profile edges between adjacent same-material entities.
+  - **Lesson:** trust the runtime over source-reading for shader capability — `LineMaterial` *looks*
+    clipping-capable in r0.170 source (chunks + `mvPosition`) but throws when clipped on this build.

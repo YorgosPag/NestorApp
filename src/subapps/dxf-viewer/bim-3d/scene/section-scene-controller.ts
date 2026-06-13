@@ -189,6 +189,12 @@ export class SectionSceneController {
   renderFrameWithCaps(camera: THREE.Camera): void {
     if (this.disposed) return;
     const renderer = this.deps.renderer;
+    // ADR-452 — fat-line edge overlays can't be clipped (LineMaterial clipping throws
+    // a shader compile error on this build), so the wireframe of everything above the
+    // cut would float as a phantom "cage". Suppress it geometrically: hide every edge
+    // overlay that extends above the cut for the duration of this frame, then restore.
+    const restoreEdges = this.cutPlane ? this.hideEdgesAboveCut(this.cutPlane.constant) : null;
+
     renderer.autoClear = true;
     renderer.render(this.deps.scene, camera);
     const bounds = this.computeSceneBounds();
@@ -203,6 +209,35 @@ export class SectionSceneController {
         renderer, this.deps.scene, camera, this.cutPlane, this.sectionPlanes, bounds,
       );
     }
+    restoreEdges?.();
+  }
+
+  /**
+   * ADR-452 — hide every fat-line edge overlay whose top sits above the cut plane,
+   * returning a closure that restores them. The cut clips solid FACES (their
+   * materials accept clip planes) but `LineMaterial` throws when clipped, so its
+   * edges would otherwise persist above the cut as a floating cage / top rims.
+   * Each overlay's world top-Y is cached in `userData` (geometry is static).
+   * `cutWorldY` = the cut plane's `constant` (its world-Y, normal = (0,-1,0)).
+   */
+  private hideEdgesAboveCut(cutWorldY: number): () => void {
+    const EPS = 1e-4;
+    const hidden: THREE.Object3D[] = [];
+    const tmp = new THREE.Box3();
+    this.deps.getBimGroup().traverse((obj) => {
+      if (obj.userData['bimEdgeOverlay'] !== true || !obj.visible) return;
+      let topY = obj.userData['bimEdgeTopY'] as number | undefined;
+      if (topY === undefined) {
+        tmp.setFromObject(obj);
+        topY = tmp.isEmpty() ? -Infinity : tmp.max.y;
+        obj.userData['bimEdgeTopY'] = topY;
+      }
+      if (topY > cutWorldY + EPS) {
+        obj.visible = false;
+        hidden.push(obj);
+      }
+    });
+    return () => { for (const o of hidden) o.visible = true; };
   }
 
   private computeSceneBounds(): THREE.Box3 | null {

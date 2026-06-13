@@ -21,8 +21,10 @@ describe('isClippableMaterial', () => {
     expect(isClippableMaterial(new THREE.MeshBasicMaterial())).toBe(true);
   });
 
-  it('skips fat-line / shader / sprite / points materials (no clipping chunks)', () => {
+  it('skips fat-line / shader / sprite / points materials (clipping injection throws on them)', () => {
     // LineMaterial (three/examples) sets type 'LineMaterial'; emulate via a tagged material.
+    // Confirmed at runtime: injecting clip planes into LineMaterial throws a fragment
+    // shader compile error on this build → it MUST be skipped (edges handled geometrically).
     const fakeLine = new THREE.MeshBasicMaterial();
     Object.defineProperty(fakeLine, 'type', { value: 'LineMaterial' });
     expect(isClippableMaterial(fakeLine)).toBe(false);
@@ -57,7 +59,8 @@ describe('applyClippingPlanes / clearClippingPlanes', () => {
     applyClippingPlanes(scene, [plane]);
 
     expect((solid.material as THREE.MeshStandardMaterial).clippingPlanes).toEqual([plane]);
-    // Fat-line edge stays unclipped (would otherwise throw a shader compile error).
+    // Fat-line edge stays unclipped (clipping injection throws on LineMaterial); the
+    // overlay above the cut is suppressed geometrically by SectionSceneController.
     expect((edgeMat as { clippingPlanes?: unknown }).clippingPlanes ?? null).toBeNull();
     // Section box part excluded (must not clip itself).
     expect((boxPart.material as THREE.MeshBasicMaterial).clippingPlanes ?? null).toBeNull();
