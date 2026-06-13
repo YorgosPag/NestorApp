@@ -115,10 +115,13 @@ export function createBimLights(): SceneLights {
   return { sun, ambient, hemi };
 }
 
-/** Initialize scene with axes helper + lights. Sets noon default sun position (ADR-366 §7.2). */
+/** Initialize scene with lights. Sets noon default sun position (ADR-366 §7.2). */
 export function createBimScene(lights: SceneLights): THREE.Scene {
   const scene = new THREE.Scene();
-  scene.add(new THREE.AxesHelper(2));
+  // ADR-452 — removed the debug `AxesHelper` (R/G/B lines at world origin). It sat
+  // at (0,0,0) — away from the building when the model is offset from origin — and
+  // read as a stray, unselectable "flying" sliver (Giorgio: «σκουπίδι στην αρχή των
+  // αξόνων»). It was a leftover dev helper with no production purpose.
   scene.add(lights.ambient);
   scene.add(lights.sun);
   scene.add(lights.hemi);

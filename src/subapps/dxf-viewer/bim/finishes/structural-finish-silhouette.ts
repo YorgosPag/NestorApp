@@ -57,8 +57,17 @@ export interface SilhouetteInput {
 }
 
 const EPS = 1e-6;
+const MM_TO_M = 0.001;
 /** Ελάχιστο ύψος ζώνης (mm) — φιλτράρει εκφυλισμένες z-breakpoints. */
 const MIN_BAND_MM = 1e-3;
+/**
+ * ADR-449 Slice 7 (A-fix) — μέγιστη απόσταση (mm) όπου μια όψη τοίχου θεωρείται
+ * «η ομοεπίπεδη όψη» μιας δομικής ακμής. Πέρα από αυτό ο τοίχος δεν σχετίζεται.
+ */
+const MAX_COPLANAR_MM = 60;
+/** ADR-449 Slice 7 (A-fix) — μικρό outward bias (mm) ώστε ο σοβάς να μένει μπροστά
+ * από τον πυρήνα/σοβά τοίχου (αποφυγή z-fighting), ανεπαίσθητο. */
+const COPLANAR_BIAS_MM = 0.5;
 
 /** Shoelace signed area· >0 = CCW. */
 function signedArea(fp: readonly Pt2[]): number {
@@ -121,6 +130,87 @@ function membersAt(members: readonly SilhouetteMember[], mid: number): Silhouett
   return members.filter((m) => m.zBotMm - EPS <= mid && mid < m.zTopMm - EPS);
 }
 
+interface Vec2 { x: number; y: number }
+
+/** Όλες οι ακμές (a→b) όλων των wall obstacle πολυγώνων (finished footprints). */
+function wallEdges(wallObstacles: readonly (readonly Pt2[])[]): Array<[Pt2, Pt2]> {
+  const edges: Array<[Pt2, Pt2]> = [];
+  for (const poly of wallObstacles) {
+    if (poly.length < 2) continue;
+    for (let i = 0; i < poly.length; i++) edges.push([poly[i], poly[(i + 1) % poly.length]]);
+  }
+  return edges;
+}
+
+/** Επικάλυψη προβολών δύο συνευθειακών τμημάτων στον κοινό άξονα `u`. */
+function projectionsOverlap(a: Pt2, b: Pt2, p: Pt2, q: Pt2, u: Vec2): boolean {
+  const ta = a.x * u.x + a.y * u.y;
+  const tb = b.x * u.x + b.y * u.y;
+  const tp = p.x * u.x + p.y * u.y;
+  const tq = q.x * u.x + q.y * u.y;
+  return Math.min(ta, tb) <= Math.max(tp, tq) + EPS && Math.min(tp, tq) <= Math.max(ta, tb) + EPS;
+}
+
+/**
+ * ADR-449 Slice 7 (A-fix) — outward απόσταση (canvas) μέχρι την **ομοεπίπεδη** όψη
+ * τοίχου της ακμής `a→b`, ή `null` αν δεν υπάρχει συνευθειακός τοίχος κοντά. Ψάχνει wall
+ * edge **παράλληλη** + με **επικάλυψη προβολής** + perpendicular distance κατά τη φορά της
+ * outward normal στο `[−eps, maxCanvas]`· επιστρέφει τη **κοντινότερη** (min d).
+ */
+function coplanarWallOffset(a: Pt2, b: Pt2, edges: readonly [Pt2, Pt2][], maxCanvas: number): number | null {
+  const dx = b.x - a.x;
+  const dy = b.y - a.y;
+  const len = Math.hypot(dx, dy);
+  if (len < EPS) return null;
+  const u: Vec2 = { x: dx / len, y: dy / len };
+  const n: Vec2 = { x: dy / len, y: -dx / len }; // outward (CCW convention)
+  let best: number | null = null;
+  for (const [p, q] of edges) {
+    const ex = q.x - p.x;
+    const ey = q.y - p.y;
+    const elen = Math.hypot(ex, ey);
+    if (elen < EPS) continue;
+    if (Math.abs((ex / elen) * u.y - (ey / elen) * u.x) > 1e-3) continue; // όχι παράλληλη
+    const d = (p.x - a.x) * n.x + (p.y - a.y) * n.y; // perpendicular outward distance
+    if (d < -EPS || d > maxCanvas) continue;
+    if (!projectionsOverlap(a, b, p, q, u)) continue;
+    if (best === null || d < best) best = d;
+  }
+  return best;
+}
+
+/**
+ * ADR-449 Slice 7 (A-fix· Giorgio «σκαλοπάτι δοκάρι↔τοίχος») — ευθυγραμμίζει τον σοβά κάθε
+ * δομικής ακμής που είναι **collinear με όψη τοίχου** ώστε η **εξωτερική όψη σοβά** να
+ * προσγειώνεται **ΣΤΗΝ πλακοστρωμένη όψη του τοίχου** (όχι core+thickness → coplanar+ορατός).
+ * Μετατοπίζει το segment κατά `wallOffset − thickness (+bias)` κατά την outward normal· ο
+ * downstream `buildFinishSkinFromFaces` το offset-άρει κανονικά κατά `thickness` → outer στην
+ * όψη τοίχου. Ακμές χωρίς συνευθειακό τοίχο → αμετάβλητες (κανονικό outward offset).
+ */
+function alignSegmentsToWallFaces(
+  segments: readonly FinishFaceSegment[],
+  wallObstacles: readonly (readonly Pt2[])[],
+  s: number,
+): FinishFaceSegment[] {
+  if (wallObstacles.length === 0) return [...segments];
+  const edges = wallEdges(wallObstacles);
+  const maxCanvas = MAX_COPLANAR_MM * s;
+  const biasCanvas = COPLANAR_BIAS_MM * s;
+  return segments.map((seg) => {
+    const tCanvas = seg.thickness * s;
+    const d = coplanarWallOffset(seg.a, seg.b, edges, maxCanvas);
+    if (d === null) return seg;
+    const dx = seg.b.x - seg.a.x;
+    const dy = seg.b.y - seg.a.y;
+    const len = Math.hypot(dx, dy);
+    if (len < EPS) return seg;
+    const shift = d - tCanvas + biasCanvas; // outer θα προσγειωθεί στο d (+bias)
+    const nx = (dy / len) * shift;
+    const ny = (-dx / len) * shift;
+    return { ...seg, a: { x: seg.a.x + nx, y: seg.a.y + ny }, b: { x: seg.b.x + nx, y: seg.b.y + ny } };
+  });
+}
+
 /** Ενιαίες faces μιας ζώνης: union outline → resolver ανά πολύγωνο, merged. */
 function resolveBandFaces(input: SilhouetteInput, present: readonly SilhouetteMember[], heightMm: number): StructuralFinishFaces {
   const merged: FinishFaceSegment[] = [];
@@ -141,7 +231,11 @@ function resolveBandFaces(input: SilhouetteInput, present: readonly SilhouetteMe
     interiorAreaM2 += faces.interiorAreaM2;
     exteriorAreaM2 += faces.exteriorAreaM2;
   }
-  return { segments: merged, heightM: heightMm * 0.001, interiorAreaM2, exteriorAreaM2 };
+  // ADR-449 Slice 7 (A-fix) — ευθυγράμμισε τις collinear-με-τοίχο ακμές στην όψη του τοίχου
+  // (coplanar+ορατός σοβάς). s = canvas/mm (από unitToMeters = (1/s)·MM_TO_M).
+  const s = MM_TO_M / input.unitToMeters;
+  const aligned = alignSegmentsToWallFaces(merged, input.wallObstacles, s);
+  return { segments: aligned, heightM: heightMm * MM_TO_M, interiorAreaM2, exteriorAreaM2 };
 }
 
 /**

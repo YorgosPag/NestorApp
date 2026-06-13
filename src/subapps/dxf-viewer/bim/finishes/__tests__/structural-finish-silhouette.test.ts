@@ -134,3 +134,45 @@ describe('computeStructuralSilhouetteBands', () => {
     expect(computeStructuralSilhouetteBands(baseInput([]))).toHaveLength(0);
   });
 });
+
+describe('A-fix: ομοεπιπεδότητα σοβά με όψη τοίχου (coplanar wall-face alignment)', () => {
+  // canvas = mm → s = MM_TO_M/unitToMeters = 0.001/0.001 = 1 (τα thresholds mm δουλεύουν).
+  const mmInput = (members: SilhouetteMember[], wallObstacles: Pt2[][]): SilhouetteInput => ({
+    members, wallObstacles, spec: SPEC, classify: allInterior, unitToMeters: 0.001,
+  });
+  /**
+   * Μέγιστη εξωτερική όψη σοβά των **οριζόντιων** όψεων (top/bottom, |a.y−b.y|≈0) ως
+   * προς το y: max |mid.y + N.y·thickness| (s=1). Αγνοεί τις άκρες (κάθετες όψεις).
+   */
+  const maxOuterFace = (segs: readonly { a: Pt2; b: Pt2; thickness: number }[]): number => {
+    let m = -Infinity;
+    for (const seg of segs) {
+      if (Math.abs(seg.a.y - seg.b.y) > 1e-6) continue; // μόνο οριζόντιες (top/bottom)
+      const dx = seg.b.x - seg.a.x;
+      const N = { y: -dx / Math.abs(dx) }; // outward ±y
+      const midY = (seg.a.y + seg.b.y) / 2;
+      m = Math.max(m, Math.abs(midY + N.y * seg.thickness)); // s=1
+    }
+    return m;
+  };
+
+  it('flush δοκάρι==τοίχος → εξωτερική όψη σοβά ΣΤΗΝ όψη τοίχου (όχι proud core+15)', () => {
+    // Δοκάρι 30-φαρδύ [−15,15] flush με τοίχο ίδιου πλάτους (όψη στο ±15).
+    const beam = rect(0, -15, 200, 15);
+    const wall = [rect(0, -15, 200, 15)];
+    const out = computeStructuralSilhouetteBands(mmInput([member(beam, 0, 500)], wall));
+    expect(out).toHaveLength(1);
+    const maxFace = maxOuterFace(out[0].faces.segments);
+    // Coplanar: ≈ όψη τοίχου 15 (+0.5 bias) — ΟΧΙ proud 15+15=30.
+    expect(maxFace).toBeGreaterThan(14);
+    expect(maxFace).toBeLessThan(17);
+  });
+
+  it('χωρίς τοίχο → κανονικό outward offset (core+thickness, proud)', () => {
+    const beam = rect(0, -15, 200, 15);
+    const out = computeStructuralSilhouetteBands(mmInput([member(beam, 0, 500)], []));
+    expect(out).toHaveLength(1);
+    // Χωρίς τοίχο: εξωτερική όψη = core 15 + thickness 15 = 30.
+    expect(maxOuterFace(out[0].faces.segments)).toBeCloseTo(30, 0);
+  });
+});

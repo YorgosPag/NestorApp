@@ -42,6 +42,19 @@ describe('ADR-375 C.7 — buildEdgeOverlay', () => {
       expect(overlay).toBeInstanceOf(LineSegments2);
     });
 
+    it('returns null for DEGENERATE geometry (a collapsed axis — ADR-452)', () => {
+      // Zero-thickness "solid" (a flat quad) — a mis-placed / default entity.
+      // EdgesGeometry still emits an outline, but there is nothing to outline in 3D.
+      const flat = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), new THREE.MeshBasicMaterial());
+      const overlay = buildEdgeOverlay(flat, {
+        lineWidthPx: 1.5,
+        color: '#000000',
+        thresholdAngle: 30,
+        visible: true,
+      });
+      expect(overlay).toBeNull();
+    });
+
     it('marks userData.bimEdgeOverlay=true', () => {
       const mesh = makeBoxMesh();
       const overlay = buildEdgeOverlay(mesh, {

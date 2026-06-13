@@ -120,6 +120,26 @@ export function buildEdgeOverlay(
     return null;
   }
 
+  // ADR-452 — skip DEGENERATE geometry: a zero-size / default entity (e.g. a
+  // mis-placed solid at the world origin with a collapsed axis — zero thickness /
+  // length / height) renders no real faces (so it can't be picked), yet
+  // `EdgesGeometry` still emits a thin outline that shows up as a stray "flying"
+  // sliver at (0,0,0) the moment edges are enabled. A real BIM solid is extruded in
+  // all three axes (thinnest realistic member ≳ 1 mm); if ANY axis collapses below
+  // 0.1 mm the solid is degenerate → nothing meaningful to outline → no overlay.
+  edges.computeBoundingBox();
+  const bb = edges.boundingBox;
+  const DEGENERATE_M = 1e-4;
+  if (
+    bb &&
+    (bb.max.x - bb.min.x < DEGENERATE_M ||
+      bb.max.y - bb.min.y < DEGENERATE_M ||
+      bb.max.z - bb.min.z < DEGENERATE_M)
+  ) {
+    edges.dispose();
+    return null;
+  }
+
   const positions = new Float32Array(posAttr.array as ArrayLike<number>);
   const lineGeo = new LineSegmentsGeometry();
   lineGeo.setPositions(positions);

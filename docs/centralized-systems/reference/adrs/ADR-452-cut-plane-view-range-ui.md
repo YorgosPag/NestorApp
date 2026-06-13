@@ -1,6 +1,6 @@
 # ADR-452 — Cut-Plane Slider (Revit View Range UI for the 2D plan)
 
-**Status:** 🟢 Implemented (v2.4 — clipped edges + per-material-colour cut faces) — pending browser-verify + commit
+**Status:** 🟢 Implemented (v2.5 — gradual CPU edge trim + per-material-colour cut faces) — pending browser-verify + commit
 **Date:** 2026-06-13
 **Builds on:** ADR-375 (View Range / cut state), ADR-448/450 (storey elevations & datum), ADR-040 (micro-leaf architecture)
 
@@ -212,3 +212,26 @@ faces), and the cut elevation is unified to a single FFL-relative frame across 2
     crisp dark cut-profile edges between adjacent same-material entities.
   - **Lesson:** trust the runtime over source-reading for shader capability — `LineMaterial` *looks*
     clipping-capable in r0.170 source (chunks + `mvPosition`) but throws when clipped on this build.
+- **2026-06-13** — v2.5 — GRADUAL edge clipping (CPU trim). The v2.4 per-frame "hide overlays whose top
+  is above the cut" made an entity's edges vanish abruptly (and all-or-nothing). Giorgio asked for the
+  edges to hide gradually, in lock-step with the faces. Since `LineMaterial` can't be GPU-clipped, the
+  edge line geometry is trimmed on the CPU at the cut plane:
+  - NEW `bim-3d/scene/edge-cut-trim.ts` — pure, transform-correct `clipLineSegmentsToCutY(positions,
+    matrixWorld, worldCutY)` (keep below / drop above / trim crossing segments to the plane) + `worldYRange`.
+    Unit-tested (`edge-cut-trim.test.ts`).
+  - NEW `bim-3d/scene/edge-cut-applicator.ts` — `applyEdgeCutTrim(group, cutWorldY)` / `restoreEdgeCut`:
+    caches each overlay's pristine positions + world-Y extent; fully-below keep geometry, fully-above
+    hidden, **only crossing overlays re-trim + re-upload** (gated on a cached `appliedCutY` so redundant
+    `applyState` calls are cheap). Driven from `SectionSceneController.applyState()` — once per cut
+    change, NOT per frame; restored when the cut turns off.
+  - Result: edges shrink exactly at the cut plane as the slider moves — no phantom cage, no top rims, and
+    fully-below entities keep their projection edges. DEFER: throttle the trim if a dense storey (many
+    crossing entities) lags during a fast drag.
+  - **Stray "flying" object resolved (two causes at the world origin):**
+    1. The leftover `THREE.AxesHelper(2)` in `scene-setup.createBimScene` (R/G/B lines at 0,0,0) — removed
+       (dev helper, no production use). Always-on.
+    2. The sliver that appeared ONLY with edges enabled and could not be picked = a DEGENERATE entity at
+       the origin (a collapsed-axis / default solid): no real faces (so unpickable), but `EdgesGeometry`
+       still emitted a thin outline. `buildEdgeOverlay` now returns null when any geometry axis collapses
+       below 0.1 mm (a real BIM member is extruded in all three axes) — robust guard, not data-specific.
+       Test added.
