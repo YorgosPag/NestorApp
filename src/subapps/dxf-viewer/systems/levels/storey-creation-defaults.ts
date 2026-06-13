@@ -32,44 +32,65 @@ export function readActiveStoreyContext(): ActiveStoreyContext | null {
 }
 
 /**
+ * SSoT — the active storey's floor-to-ceiling clear height (mm), **FLOOR-RELATIVE**
+ * (ADR-450 §2). The single number that BOTH vertically-extruded structure (walls/
+ * columns, stored as `params.height`) AND ceiling-bound structure (beams/slabs,
+ * stored as floor-relative top FFL) resolve to — so a column's top and a beam's
+ * top can never structurally diverge.
+ *
+ * Canonical source = `floor.height` (`storey.storeyHeightMm`), NOT the inter-floor
+ * gap (`nextFloorElevationMm − floorElevationMm`). Rationale (ADR-450):
+ *   1. Robust to a stale upper-floor elevation — the exact dual-source bug that
+ *      produced a beam-top of 3000 while the column was 5000.
+ *   2. Matches the server cascade (`floor-height-cascade.service.ts`), which
+ *      derives beam `topElevation` from `floor.height`, not the gap.
+ *   3. Correct when an intermediate floor is missing — the storey is one height
+ *      tall (gap would wrongly give 2× height).
+ * The ADR-450 floor-elevation cascade keeps `gap === floor.height`, so for
+ * consistent data this equals the old gap formula exactly (μηδέν regression).
+ *
+ * Returns `null` when there is no active storey (degenerate → caller falls back
+ * to its legacy per-entity constant).
+ */
+export function resolveStoreyCeilingRelativeMm(
+  storey: ActiveStoreyContext | null = readActiveStoreyContext(),
+): number | null {
+  return storey?.storeyHeightMm ?? null;
+}
+
+/**
  * Storey-aware entity height (mm) for walls & columns: explicit ribbon override
- * wins, else the active storey's floor-to-floor height, else the legacy
- * per-entity constant. ADR-448 Phase 2.
+ * wins, else the active storey's floor-to-ceiling clear height (SSoT,
+ * {@link resolveStoreyCeilingRelativeMm}), else the legacy per-entity constant.
+ * ADR-448 Phase 2 · ADR-450 §2.
  */
 export function resolveStoreyHeightMm(
   overrideHeight: number | undefined,
   fallbackMm: number,
   storey: ActiveStoreyContext | null = readActiveStoreyContext(),
 ): number {
-  return overrideHeight ?? storey?.storeyHeightMm ?? fallbackMm;
+  return overrideHeight ?? resolveStoreyCeilingRelativeMm(storey) ?? fallbackMm;
 }
 
 /**
- * Storey-aware ceiling/roof slab top-face FFL (mm), **FLOOR-RELATIVE**.
+ * Storey-aware ceiling/roof slab top-face FFL & beam top (mm), **FLOOR-RELATIVE**.
  *
  * Entities in the single-floor editing scope are created level-relative with
  * FFL = 0 (see `column-from-grid.ts` `ACTIVE_LEVEL_FLOOR_MM = 0`), and the slab
  * `levelElevation` is "top face = FFL" with the ceiling default 3000 meaning
- * "storey 3.00m" (`slab-types.ts` `SLAB_KIND_DEFAULT_LEVEL_ELEVATION_MM`). So the
- * storey-derived ceiling must be the floor-to-next-floor HEIGHT
- * (`nextFloorElevationMm − floorElevationMm`), NOT the absolute datum-relative
- * `nextFloorElevationMm` (which would place an upper-storey ceiling at the
- * building-wide elevation, e.g. 10500 instead of 3500).
+ * "storey 3.00m" (`slab-types.ts` `SLAB_KIND_DEFAULT_LEVEL_ELEVATION_MM`).
  *
- * Precedence: explicit override → floor-relative storey ceiling → legacy
- * per-kind constant. Only the active storey with a resolvable next-floor
- * elevation contributes; otherwise the fallback is used.
+ * ADR-450 §2 — unified onto the SAME SSoT as the column/wall height
+ * ({@link resolveStoreyCeilingRelativeMm} = `floor.height`), so beam/slab tops and
+ * column tops resolve to ONE number and cannot diverge. Precedence: explicit
+ * override → floor-relative storey ceiling → legacy per-kind constant.
  */
 export function resolveStoreyCeilingElevationMm(
   overrideElevation: number | undefined,
   fallbackMm: number,
   storey: ActiveStoreyContext | null = readActiveStoreyContext(),
 ): number {
-  if (overrideElevation !== undefined) return overrideElevation;
-  if (storey != null && storey.nextFloorElevationMm != null) {
-    return storey.nextFloorElevationMm - storey.floorElevationMm;
-  }
-  return fallbackMm;
+  return overrideElevation ?? resolveStoreyCeilingRelativeMm(storey) ?? fallbackMm;
 }
 
 /**

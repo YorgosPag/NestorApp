@@ -29,6 +29,7 @@ import {
   sortFloors,
 } from './floors.shared';
 import { cascadeFloorHeightToEntities } from './floor-height-cascade.service';
+import { cascadeFloorElevations } from './floor-elevation-cascade.service';
 
 const logger = createModuleLogger('FloorsRoute');
 
@@ -274,6 +275,14 @@ export async function handleUpdateFloor(
         await cascadeFloorHeightToEntities(
           db, body.floorId, ctx.companyId, updates.height, ctx.uid,
         );
+        // ADR-450 §1 — Revit level-driven floor-elevation cascade: shift the FFL of
+        // every floor ABOVE this one so `elevation[i+1] = elevation[i] + height[i]`
+        // stays true. Keeps floor.elevation consistent with floor.height — the
+        // pre-condition for the ADR-450 §2 storey-ceiling SSoT (columns vs beams).
+        const buildingId = floorData?.buildingId as string | undefined;
+        if (buildingId) {
+          await cascadeFloorElevations(db, buildingId, body.floorId, ctx.companyId, ctx.uid);
+        }
       } catch (cascadeErr) {
         logger.error('[Floors/Update] Cascade failed — floor updated, entities not stretched', {
           floorId: body.floorId,

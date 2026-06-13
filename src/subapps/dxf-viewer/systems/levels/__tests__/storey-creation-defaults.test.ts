@@ -14,6 +14,7 @@ import {
 import { useActiveStoreyStore } from '../active-storey-store';
 import {
   readActiveStoreyContext,
+  resolveStoreyCeilingRelativeMm,
   resolveStoreyHeightMm,
   resolveStoreyCeilingElevationMm,
   shouldWarnFoundationOnStorey,
@@ -65,6 +66,27 @@ describe('resolveStoreyCeilingElevationMm — floor-relative', () => {
   });
   it('legacy fallback when storey null', () => {
     expect(resolveStoreyCeilingElevationMm(undefined, 3000, null)).toBe(3000);
+  });
+});
+
+// ADR-450 §2 — column height & beam/slab ceiling resolve to ONE source.
+describe('resolveStoreyCeilingRelativeMm — SSoT unify (ADR-450)', () => {
+  it('returns the storey height (floor.height) for an upper storey', () => {
+    expect(resolveStoreyCeilingRelativeMm(ctxFor('upr'))).toBe(3500);
+  });
+  it('returns the storey height for the ground storey', () => {
+    expect(resolveStoreyCeilingRelativeMm(ctxFor('grd'))).toBe(3000);
+  });
+  it('returns null when there is no active storey (caller falls back)', () => {
+    expect(resolveStoreyCeilingRelativeMm(null)).toBeNull();
+  });
+  it('column height and beam/slab ceiling resolve to the SAME number — cannot diverge', () => {
+    for (const id of ['grd', 'upr', 'bsm']) {
+      const ctx = ctxFor(id);
+      expect(resolveStoreyHeightMm(undefined, 9999, ctx)).toBe(
+        resolveStoreyCeilingElevationMm(undefined, 9999, ctx),
+      );
+    }
   });
 });
 

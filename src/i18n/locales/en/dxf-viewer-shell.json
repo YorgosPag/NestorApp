@@ -19,6 +19,8 @@
   "attachToStructural": {
     "hostMissing": "Wall lost its top structural support (the supporting element was deleted).",
     "autoAttached": "Walls auto-attached their top to the structural element.",
+    "autoAttachedColumns": "Columns auto-attached their top to the structural element.",
+    "autoAttachedStairs": "Stairs auto-attached their top to the structural element.",
     "pickHostPrompt": "Click a beam or slab to attach to.",
     "attachedManual": "Walls attached to the structural element.",
     "detached": "Walls detached from the structural element."

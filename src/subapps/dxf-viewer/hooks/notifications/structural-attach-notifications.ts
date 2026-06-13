@@ -37,12 +37,13 @@ export function registerStructuralAttachNotifications(t: TFunction): Array<() =>
       toast.info(t('attachToStructural.detached'));
     }),
 
-    // ADR-401 Phase F.3 — column attach mirrors (reuse the generic messages).
+    // ADR-401 Phase F.3 — column attach (ADR-450 §3: column-specific copy — the
+    // generic message says «Οι τοίχοι» which is wrong for grid-born columns).
     EventBus.on('bim:columns-auto-attached', () => {
-      toast.info(t('attachToStructural.autoAttached'));
+      toast.info(t('attachToStructural.autoAttachedColumns'));
     }),
     EventBus.on('bim:columns-auto-attached-base', () => {
-      toast.info(t('attachToStructural.autoAttached'));
+      toast.info(t('attachToStructural.autoAttachedColumns'));
     }),
     EventBus.on('bim:columns-attached-manual', () => {
       toast.info(t('attachToStructural.attachedManual'));
@@ -57,12 +58,13 @@ export function registerStructuralAttachNotifications(t: TFunction): Array<() =>
       toast.success(t('columnAdjacency.merged'));
     }),
 
-    // ADR-401 Phase G.3 — stair attach mirrors (reuse the generic messages).
+    // ADR-401 Phase G.3 — stair attach (ADR-450 §3 Boy-Scout: stair-specific copy,
+    // same latent «Οι τοίχοι» mismatch as columns).
     EventBus.on('bim:stairs-auto-attached', () => {
-      toast.info(t('attachToStructural.autoAttached'));
+      toast.info(t('attachToStructural.autoAttachedStairs'));
     }),
     EventBus.on('bim:stairs-auto-attached-base', () => {
-      toast.info(t('attachToStructural.autoAttached'));
+      toast.info(t('attachToStructural.autoAttachedStairs'));
     }),
     EventBus.on('bim:stairs-attached-manual', () => {
       toast.info(t('attachToStructural.attachedManual'));

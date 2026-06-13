@@ -39,7 +39,7 @@
 Output `StructuralFinishFaces` = εκτεθειμένες υπο-ακμές + `interiorAreaM2`/`exteriorAreaM2`. Η ταξινόμηση εγχέεται ως callback → resolver 100% testable με stub.
 
 ### 2.3 Classification (scene adapter)
-`bim/finishes/structural-finish-scene.ts` χτίζει obstacles (footprints τοίχων) + classifier:
+`bim/finishes/structural-finish-scene.ts` χτίζει obstacles (footprints τοίχων **+ mutual structural obstacles** δοκαριών/κολώνων στη σύνδεση — Slice 6) + classifier:
 1. ρητό `column.params.envelopeFunction` ('exterior'/'interior') υπερισχύει (Revit Wall-Function-style override),
 2. αλλιώς γεωμετρικά: παρειά **exterior** όταν το midpoint της βρίσκεται στο εξώτατο όριο (outer ring) component που **περικλείει χώρο** (holes>0 = πραγματικό περίγραμμα κτιρίου, REUSE `computeBuildingFootprint`). Μεμονωμένη εσωτερική κολόνα (δικό της component χωρίς holes) → όλες interior (Knauf), σωστά.
 
@@ -142,6 +142,23 @@ Deterministic IDs: `boq_bim_${id}` / `_finish_int` / `_finish_ext`. Hook στο 
 - `src/i18n/locales/{el,en}/dxf-viewer-shell.json` — `ribbon.commands.finishSkin.*` (toggle) + `ribbon.commands.finishEditor.*` + `ribbon.panels.{column,beam}FinishSkin`.
 - tests *(NEW)*: `structural-finish-types` (factory+override core) · `structural-finish-visibility` (gate) · `finish-param` (combobox helpers) — 75/75 ADR-449 σύνολο. Slice 1-4 fixtures: ρητό `finish` override (factory πλέον δίνει default).
 
+## 3.sexies Files (Slice 6 — beam↔column junction, mutual structural obstacles)
+
+**Κεντρική απόφαση (Revit-grade):** στη διεπαφή δοκαριού↔κολόνας η σύνδεση είναι **δομική (frame-into)**, όχι σοβατισμένη όψη → ο σοβάς εξαιρείται **και** στην παρειά της κολόνας κάτω από το δοκάρι **και** στο τμήμα της πλάγιας όψης του δοκαριού στη σύνδεση. **MUTUAL STRUCTURAL OBSTACLES** (μηδέν νέα γεωμετρία): ο pure resolver δέχεται ήδη `obstacles` → ο scene adapter περνά πλέον, εκτός από τοίχους, **και** τα footprints των δοκαριών (όταν resolve-άρει κολόνα) / των κολώνων (όταν resolve-άρει δοκάρι). Ρέει αυτόματα σε 2D + 3D + BOQ (ένας resolver).
+
+**Join tolerance (κρίσιμο):** το `coveredIntervals` κρατά sub-spans με midpoint **αυστηρά μέσα** στο obstacle. Η born-from-grid framing (ADR-441 `trimSegmentEndpointsToColumns`) κόβει το δοκάρι **flush** στην παρειά → εφαπτόμενα χωρίς overlap → coverage = 0. Λύση: μικρή **outward dilation** των cross-obstacles (`STRUCTURAL_JOIN_TOL_MM = 10`, tunable) ώστε το flush seam να γεφυρώνεται· καλύπτει ομοιόμορφα flush (framing) **και** overlap (manual). **Οι τοίχοι ΔΕΝ dilate-άρονται** (υπάρχουσα browser-verified συμπεριφορά).
+
+**NEW:**
+- `bim/geometry/shared/polygon-dilate.ts` *(NEW)* — `dilatePolygonOutward(poly, d)` pure geometry SSoT (winding-free convex miter offset, miter-limit clamp). + `__tests__/polygon-dilate.test.ts`.
+- `bim/finishes/__tests__/structural-finish-junction.test.ts` *(NEW)* — column+beam-obstacle / beam+column-obstacle (overlap **και** flush) → μειωμένο exposed length· control (μακρινό στοιχείο) → αμετάβλητο.
+
+**MOD:**
+- `bim/finishes/structural-finish-scene.ts` — `+ BeamFinishObstacle` / `ColumnFinishObstacle` (minimal structural shapes, BIM + Dxf entities, μηδέν cast) + `crossObstaclePolygon` (dilate)· `computeColumnFinishFaces(..., beams = [])` / `computeBeamFinishFaces(..., columns = [])` (obstacles = walls + dilated cross)· `compute{Column,Beam}FinishContribution` βγάζουν beams/columns από `scene.entities` (BOQ μειώνεται αυτόματα, μηδέν αλλαγή σε feeds).
+- `canvas-v2/dxf-canvas/dxf-renderer-frame-builders.ts` — `buildFinishFacesBy{Column,Beam}` μαζεύουν lazily ΚΑΙ τα cross-entities.
+- `bim-3d/converters/structural-finish-3d.ts` — `buildColumnFinishSkin(..., beams, ...)` / `buildBeamFinishSkin(..., columns, ...)`.
+- `bim-3d/converters/bim-three-structural-converters.ts` — `columnToMesh(..., beams = [])` / `beamToMesh(..., columns = [])` (optional defaults → ghost/preview callers ανέγγιχτοι). *(MIXED αρχείο με ADR-448/441)*
+- `bim-3d/scene/{bim-scene-attach-syncs,BimSceneLayer}.ts` — περνούν `entities.beams` / `entities.columns`. *(MIXED αρχεία με ADR-448/441 — μόνο η κλήση)*
+
 ## 4. Roadmap (slices)
 
 - **Slice 1** ✅ — data model + resolver + BOQ (ΚΟΛΟΝΕΣ).
@@ -149,9 +166,9 @@ Deterministic IDs: `boq_bim_${id}` / `_finish_int` / `_finish_ext`. Hook στο 
 - **Slice 3** ✅ — 2D render (finished outline offset ανά εκτεθειμένη παρειά + core = διπλή γραμμή). Per-frame index injection (mirror openings-by-wall).
 - **Slice 4** ✅ — Δοκάρια (2 πλάγιες όψεις· άκρα σημασιολογικά εκτός· 3D band skin + 2D outline + BOQ· FULL SSoT reuse). Static depth ΑΜΕΤΑΒΛΗΤΟ.
 - **Slice 5** ✅ — View toggle «Σοβατισμένη όψη» (`showFinishSkin` per-view, default ON) + ενεργοποίηση στο factory (νέα στοιχεία γεννιούνται με σοβά) + per-element override (enabled/υλικά/πάχος) στα contextual ribbon tabs. Visibility-only semantics (BOQ μετράει πάντα).
+- **Slice 6** ✅ — beam↔column junction: mutual structural obstacles (δοκάρι obstacle στην κολόνα & αντίστροφα) + join-tolerance dilation για flush framing. Ο σοβάς εξαιρείται στη δομική σύνδεση (2D+3D+BOQ).
 
 ## 5. Known / Deferred
-- **beam↔column junction (#2):** ο σοβάς κολώνας εφαρμόζεται σε ΟΛΕΣ τις 4 παρειές, ακόμη κι εκεί που καρφώνεται δοκάρι (το δοκάρι δεν είναι obstacle όπως ο τοίχος). Revit-grade refinement = mutual obstacle column↔beam στη σύνδεση (frame-into δεν σοβατίζεται). Υπό επανέλεγχο μετά το fix #3.
 - Όχι αναδρομικό: υπάρχουσες persisted κολόνες/δοκάρια χωρίς `finish` δεν αποκτούν σοβά (μόνο νέα στοιχεία μετά το Slice 5)· retroactive backfill = DEFER.
 - Stale finish children όταν ο χρήστης απενεργοποιεί τον σοβά (single-entry path δεν τα καθαρίζει — ίδιο με wall multi-layer shrink· deferred re-sync).
 - Beam coverage κάτω-όψης (soffit) από κορυφές τοίχων = refinement (οριζόντια όψη, εκτός vertical-band μοντέλου).
@@ -159,6 +176,7 @@ Deterministic IDs: `boq_bim_${id}` / `_finish_int` / `_finish_ext`. Hook στο 
 - ETICS-grade per-element exterior detection (πέρα από outer-ring proximity) = μετέπειτα slice.
 
 ## 6. Changelog
+- **2026-06-13** — Slice 6: **beam↔column junction** (mutual structural obstacles, FULL SSoT). Επέκταση του υπάρχοντος `obstacles` μηχανισμού του resolver (μηδέν νέα γεωμετρία): ο scene adapter περνά πλέον ΚΑΙ τα footprints δοκαριών (resolve κολόνας) / κολώνων (resolve δοκαριού) ως obstacles → ο σοβάς εξαιρείται στη δομική σύνδεση (frame-into). NEW `polygon-dilate.ts` (`dilatePolygonOutward`, winding-free miter offset) → **join-tolerance dilation** (`STRUCTURAL_JOIN_TOL_MM=10`) ώστε η **flush** σύνδεση (born-from-grid trim, coverage=0 χωρίς dilation) να πιάνεται· οι τοίχοι ΧΩΡΙΣ dilation (αμετάβλητοι). `compute{Column,Beam}FinishFaces(..., cross = [])` + contributions βγάζουν beams/columns από `scene.entities` → BOQ μειώνεται αυτόματα (μηδέν αλλαγή feeds). Ρέει 2D+3D+BOQ (ένας resolver). 69/69 ADR-449-related jest (10 suites, incl. NEW polygon-dilate 6 + junction 5). Pending browser-verify + commit. *(MIXED files με ADR-448/441: bim-three-structural-converters, BimSceneLayer, bim-scene-attach-syncs — μόνο δικές μου γραμμές)*
 - **2026-06-13** — Slice 1: data model + pure resolver (per-face, partial-coverage) + BOQ multi-layer (parent πυρήνας + interior/exterior σοβάς) + scene classifier. `coveredIntervals` εξήχθη σε shared SSoT (N.0.2). 13/13 jest. Pending browser-verify + commit.
 - **2026-06-13** — Slice 2: 3D band skin κολόνας. SSoT core `computeColumnFinishFaces` (κοινό BOQ+3D). `buildColumnFinishSkin` ανά exposed segment → vertical band prism (REUSE `stripPrismGeometry`) με `getMaterial3D`. `columnToMesh` → composite `Group {πυρήνας+σοβάς}` (flat-path)· πυρήνας `width/depth` αμετάβλητος. Ghost guard. 10/10 jest + tsc καθαρό. Pending browser-verify + commit.
 - **2026-06-13** — Slice 3: 2D finished outline. SSoT core στενεύτηκε σε `ColumnFinishSource`/`WallFinishObstacle` (κοινό BOQ+3D+2D, μηδέν cast για DxfColumn/DxfWall). Per-frame `buildFinishFacesByColumn` → `EntityRendererComposite.setColumnFinishFaces` → `ColumnRenderer.drawFinishOutline` (offset «λωρίδα» ανά εκτεθειμένη παρειά, plaster colour SSoT, ADR-040 orchestrator-drives). 6/6 jest + tsc καθαρό. ADR-040 changelog ενημερώθηκε. Pending browser-verify + commit.
