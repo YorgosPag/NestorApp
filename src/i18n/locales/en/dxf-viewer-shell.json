@@ -1579,9 +1579,33 @@
           "label": "Columns from grid",
           "tooltip": "Auto column at every grid axis intersection, bound so it follows the axis (one command, one undo)"
         },
+        "columnsFromGridInner": {
+          "label": "Columns — inner faces",
+          "tooltip": "Perimeter columns flush inward (outer corner/edge on the boundary axis; zero overhang)"
+        },
+        "columnsFromGridCenter": {
+          "label": "Columns — centered",
+          "tooltip": "All columns centered on the intersection (concentric)"
+        },
+        "columnsFromGridOuter": {
+          "label": "Columns — outer faces",
+          "tooltip": "Perimeter columns flush outward (inner corner/edge on the boundary axis; protrude outside)"
+        },
         "wallsFromGrid": {
           "label": "Walls from grid",
           "tooltip": "Auto wall on every grid axis segment, bound so it follows the axis (one command, one undo)"
+        },
+        "wallsFromGridInner": {
+          "label": "Walls — inner face",
+          "tooltip": "Perimeter walls inward (exterior face on the boundary axis; zero overhang)"
+        },
+        "wallsFromGridCenter": {
+          "label": "Walls — centered",
+          "tooltip": "All walls with centerline on the axis (Wall Centerline)"
+        },
+        "wallsFromGridOuter": {
+          "label": "Walls — outer face",
+          "tooltip": "Perimeter walls outward (interior face on the boundary axis; protrude outside)"
         },
         "tieBeamsFromGrid": {
           "label": "Tie beams from grid",
@@ -1590,6 +1614,18 @@
         "beamsFromGrid": {
           "label": "Beams from grid",
           "tooltip": "Auto beam on every grid axis segment, centerline on the axis and bound so it follows (one command, one undo)."
+        },
+        "beamsFromGridInner": {
+          "label": "Beams — inner face",
+          "tooltip": "Perimeter beams inward (exterior face on the boundary axis; zero overhang)"
+        },
+        "beamsFromGridCenter": {
+          "label": "Beams — centered",
+          "tooltip": "All beams with centerline on the axis (concentric)"
+        },
+        "beamsFromGridOuter": {
+          "label": "Beams — outer face",
+          "tooltip": "Perimeter beams outward (interior face on the boundary axis; protrude outside)"
         },
         "slabMatFromGrid": {
           "label": "Foundation slab from grid",

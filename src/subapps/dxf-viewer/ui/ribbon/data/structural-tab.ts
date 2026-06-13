@@ -83,8 +83,19 @@ export const STRUCTURAL_TAB: RibbonTab = {
             toolBtn('structuralTab.wallRegionInside', 'ribbon.commands.bim.wallRegionInside.label', 'struct-wall-region-inside', 'wall-region-inside'),
             toolBtn('structuralTab.wallRegionBox', 'ribbon.commands.bim.wallRegionBox.label', 'struct-wall-region-box', 'wall-region-box'),
             toolBtn('structuralTab.wallFromPerimeter', 'ribbon.commands.bim.wallFromPerimeter.label', 'struct-wall-from-perimeter', 'wall-from-perimeter'),
-            // ADR-441 Slice GEN-WALL — «Τοίχοι από κάναβο»: one-shot action (στα segments).
-            actionBtn('structuralTab.wallsFromGrid', 'ribbon.commands.bim.wallsFromGrid.label', 'struct-wall-from-grid', 'wall.actions.fromGrid', 'wall.actions.fromGrid'),
+            // ADR-441 Slice GEN-WALL / 3-mode — «Τοίχοι από κάναβο»: split-button· main =
+            // inner (default), dropdown = Wall Location Line (Εσωτερικά/Κεντρικά/Εξωτερικά).
+            splitActionBtn(
+              'structuralTab.wallsFromGrid',
+              'ribbon.commands.bim.wallsFromGrid.label',
+              'struct-wall-from-grid',
+              'wall.actions.fromGrid',
+              [
+                actionVariant('structuralTab.wallsFromGridInner', 'ribbon.commands.bim.wallsFromGridInner.label', 'struct-wall-from-grid', 'wall.actions.fromGrid'),
+                actionVariant('structuralTab.wallsFromGridCenter', 'ribbon.commands.bim.wallsFromGridCenter.label', 'struct-wall-from-grid', 'wall.actions.fromGridCenter'),
+                actionVariant('structuralTab.wallsFromGridOuter', 'ribbon.commands.bim.wallsFromGridOuter.label', 'struct-wall-from-grid', 'wall.actions.fromGridOuter'),
+              ],
+            ),
           ],
         },
       ],
@@ -104,8 +115,19 @@ export const STRUCTURAL_TAB: RibbonTab = {
             toolBtn('structuralTab.columnDiscreteFromPerimeter', 'ribbon.commands.bim.columnDiscreteFromPerimeter.label', 'struct-col-discrete-from-perimeter', 'column-discrete-from-perimeter'),
             toolBtn('structuralTab.columnFromPerimeter', 'ribbon.commands.bim.columnFromPerimeter.label', 'struct-col-from-perimeter', 'column-from-perimeter'),
             toolBtn('structuralTab.columnDiscreteFromPerimeterWalls', 'ribbon.commands.bim.columnDiscreteFromPerimeterWalls.label', 'struct-col-discrete-from-perimeter-walls', 'column-discrete-from-perimeter-walls'),
-            // ADR-441 Slice GEN-COL — «Κολώνες από κάναβο»: one-shot action (στις τομές).
-            actionBtn('structuralTab.columnsFromGrid', 'ribbon.commands.bim.columnsFromGrid.label', 'struct-col-from-grid', 'column.actions.fromGrid', 'column.actions.fromGrid'),
+            // ADR-441 Slice GEN-COL / 3-mode — «Κολώνες από κάναβο»: split-button· main =
+            // inner (default), dropdown = περιμετρική έδραση anchor (Εσωτερικά/Κεντρικά/Εξωτερικά).
+            splitActionBtn(
+              'structuralTab.columnsFromGrid',
+              'ribbon.commands.bim.columnsFromGrid.label',
+              'struct-col-from-grid',
+              'column.actions.fromGrid',
+              [
+                actionVariant('structuralTab.columnsFromGridInner', 'ribbon.commands.bim.columnsFromGridInner.label', 'struct-col-from-grid', 'column.actions.fromGrid'),
+                actionVariant('structuralTab.columnsFromGridCenter', 'ribbon.commands.bim.columnsFromGridCenter.label', 'struct-col-from-grid', 'column.actions.fromGridCenter'),
+                actionVariant('structuralTab.columnsFromGridOuter', 'ribbon.commands.bim.columnsFromGridOuter.label', 'struct-col-from-grid', 'column.actions.fromGridOuter'),
+              ],
+            ),
           ],
         },
       ],
@@ -120,8 +142,19 @@ export const STRUCTURAL_TAB: RibbonTab = {
           buttons: [
             toolBtn('structuralTab.beam', 'ribbon.commands.bim.beam.label', 'struct-beam-single', 'beam', 'BM'),
             toolBtn('structuralTab.beamFromWall', 'ribbon.commands.bim.beamFromWall.label', 'struct-beam-on-entity', 'beam-from-wall'),
-            // ADR-441 Slice GEN-BEAM — «Δοκάρια από κάναβο»: one-shot action (στα segments).
-            actionBtn('structuralTab.beamsFromGrid', 'ribbon.commands.bim.beamsFromGrid.label', 'struct-beam-from-grid', 'beam.actions.fromGrid', 'beam.actions.fromGrid'),
+            // ADR-441 Slice GEN-BEAM / 3-mode — «Δοκάρια από κάναβο»: split-button· main =
+            // inner (default), dropdown = περιμετρική έδραση (Εσωτερικά/Κεντρικά/Εξωτερικά).
+            splitActionBtn(
+              'structuralTab.beamsFromGrid',
+              'ribbon.commands.bim.beamsFromGrid.label',
+              'struct-beam-from-grid',
+              'beam.actions.fromGrid',
+              [
+                actionVariant('structuralTab.beamsFromGridInner', 'ribbon.commands.bim.beamsFromGridInner.label', 'struct-beam-from-grid', 'beam.actions.fromGrid'),
+                actionVariant('structuralTab.beamsFromGridCenter', 'ribbon.commands.bim.beamsFromGridCenter.label', 'struct-beam-from-grid', 'beam.actions.fromGridCenter'),
+                actionVariant('structuralTab.beamsFromGridOuter', 'ribbon.commands.bim.beamsFromGridOuter.label', 'struct-beam-from-grid', 'beam.actions.fromGridOuter'),
+              ],
+            ),
           ],
         },
       ],

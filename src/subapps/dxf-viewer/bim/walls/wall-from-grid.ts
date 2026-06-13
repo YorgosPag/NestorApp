@@ -20,14 +20,21 @@ import type { Point2D } from '../../rendering/types/Types';
 import type { WallEntity } from '../types/wall-types';
 import type { ColumnEntity } from '../types/column-types';
 import type { GuideBinding } from '../hosting/guide-binding-types';
+import type { StripJustification } from '../types/foundation-types';
 import {
   enumerateGridStrips,
   gridAxesFromReader,
   type AxisGuideReader,
 } from '../foundations/foundation-from-grid';
 import {
+  DEFAULT_GRID_PERIMETER_MODE,
+  type GridPerimeterMode,
+} from '../grid/grid-justification';
+import { justifyGridSegment } from '../grid/grid-segment-justification';
+import {
   buildDefaultWallParams,
   buildWallEntity,
+  resolveWallThicknessMm,
   type WallParamOverrides,
 } from '../../hooks/drawing/wall-completion';
 import type { SceneUnits } from '../../utils/scene-units';
@@ -54,16 +61,21 @@ function buildBoundWall(
   start: Readonly<Point2D>,
   end: Readonly<Point2D>,
   bindings: readonly GuideBinding[],
+  justification: StripJustification,
   layerId: string,
   overrides: WallParamOverrides,
   sceneUnits: SceneUnits,
   columns: readonly ColumnEntity[],
 ): WallEntity | null {
   const trimmed = trimWallEndpointsToColumns(start, end, bindings, columns, sceneUnits);
-  const params = buildDefaultWallParams(trimmed.start, trimmed.end, overrides, sceneUnits);
+  // ADR-441 3-mode — Revit «Wall Location Line»: center/finish-interior/finish-exterior.
+  // Κάθετη μετατόπιση ±thickness/2 + extend στα perpendicular bindings (follow-move-safe).
+  const thicknessMm = resolveWallThicknessMm(overrides);
+  const justified = justifyGridSegment(trimmed.start, trimmed.end, trimmed.bindings, thicknessMm, justification, sceneUnits);
+  const params = buildDefaultWallParams(justified.start, justified.end, overrides, sceneUnits);
   const result = buildWallEntity(params, layerId, 'straight', sceneUnits);
   if (!result.ok) return null;
-  return { ...result.entity, guideBindings: trimmed.bindings };
+  return { ...result.entity, guideBindings: justified.bindings };
 }
 
 /**
@@ -78,6 +90,7 @@ export function buildWallGridFromGuides(
   layerId: string,
   sceneUnits: SceneUnits,
   columns: readonly ColumnEntity[] = [],
+  mode: GridPerimeterMode = DEFAULT_GRID_PERIMETER_MODE,
 ): BuildWallGridResult {
   const axes = gridAxesFromReader(reader);
   if (!axes) {
@@ -86,11 +99,11 @@ export function buildWallGridFromGuides(
 
   const walls: WallEntity[] = [];
   let ignoredCount = 0;
-  enumerateGridStrips(axes, ({ start, end, bindings }) => {
-    const wall = buildBoundWall(start, end, bindings, layerId, overrides, sceneUnits, columns);
+  enumerateGridStrips(axes, ({ start, end, bindings, justification }) => {
+    const wall = buildBoundWall(start, end, bindings, justification, layerId, overrides, sceneUnits, columns);
     if (wall) walls.push(wall);
     else ignoredCount++;
-  });
+  }, mode);
 
   return { ok: true, walls, ignoredCount };
 }

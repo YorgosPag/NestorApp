@@ -88,8 +88,11 @@ export const COLUMN_RIBBON_KEYS_ACTIONS = {
   // ADR-401 Phase F.3 — manual detach of column top/base from its structural host.
   detachTop: 'column.actions.detachTop',
   detachBase: 'column.actions.detachBase',
-  // ADR-441 Slice GEN-COL — one-shot «Κολώνες από κάναβο» (στις τομές, δεν θέλει επιλογή).
+  // ADR-441 Slice GEN-COL / 3-mode — «Κολώνες από κάναβο». main = inner (default)·
+  // variants = περιμετρική έδραση anchor (Εσωτερικά/Κεντρικά/Εξωτερικά).
   fromGrid: 'column.actions.fromGrid',
+  fromGridCenter: 'column.actions.fromGridCenter',
+  fromGridOuter: 'column.actions.fromGridOuter',
 } as const;
 
 const COLUMN_ACTION_KEY_SET: ReadonlySet<string> = new Set<string>(

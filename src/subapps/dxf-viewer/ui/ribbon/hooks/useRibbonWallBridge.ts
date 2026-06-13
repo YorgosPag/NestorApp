@@ -42,6 +42,8 @@ import {
   commitWallGridFromGuides,
   type WallGridCommitResult,
 } from '../../../bim/walls/wall-grid-commit';
+import type { GridPerimeterMode } from '../../../bim/grid/grid-justification';
+import { wallGridSettingsStore } from './bridge/grid-perimeter-mode-stores';
 import type {
   RibbonComboboxState,
   RibbonToggleState,
@@ -237,11 +239,12 @@ export function useRibbonWallBridge(
     [levelManager, universalSelection, executeCommand],
   );
 
-  // ADR-441 Slice GEN-WALL — one-shot «Τοίχοι από κάναβο»: born-bound τοίχος σε κάθε
-  // segment άξονα (idempotent). Πάντα δείχνει toast (created/skipped ή reason).
-  const handleWallsFromGrid = useCallback((): void => {
+  // ADR-441 Slice GEN-WALL / 3-mode — «Τοίχοι από κάναβο»: born-bound τοίχος σε κάθε
+  // segment άξονα (idempotent), με Wall Location Line (center/inner/outer). Πάντα toast.
+  const handleWallsFromGrid = useCallback((mode: GridPerimeterMode): void => {
     const levelId = levelManager.currentLevelId;
     if (!levelId) return;
+    wallGridSettingsStore.set(mode);
     const scene = levelManager.getLevelScene(levelId);
     const result = commitWallGridFromGuides({
       guideReader: getGlobalGuideStore(),
@@ -250,6 +253,7 @@ export function useRibbonWallBridge(
       levelId,
       sceneUnits: scene ? resolveSceneUnits(scene) : 'mm',
       executeCommand,
+      perimeterMode: wallGridSettingsStore.get(),
     });
     emitWallsFromGridToast(result);
   }, [levelManager, executeCommand]);
@@ -266,7 +270,9 @@ export function useRibbonWallBridge(
         });
         return;
       }
-      if (action === WALL_RIBBON_KEYS_ACTIONS.fromGrid) { handleWallsFromGrid(); return; }
+      if (action === WALL_RIBBON_KEYS_ACTIONS.fromGrid) { handleWallsFromGrid('inner'); return; }
+      if (action === WALL_RIBBON_KEYS_ACTIONS.fromGridCenter) { handleWallsFromGrid('center'); return; }
+      if (action === WALL_RIBBON_KEYS_ACTIONS.fromGridOuter) { handleWallsFromGrid('outer'); return; }
       if (action === WALL_RIBBON_KEYS_ACTIONS.detachTop) { handleDetach('top'); return; }
       if (action === WALL_RIBBON_KEYS_ACTIONS.detachBase) { handleDetach('base'); return; }
       if (action !== WALL_RIBBON_KEYS_ACTIONS.delete) return;

@@ -67,6 +67,8 @@ import {
   commitBeamGridFromGuides,
   type BeamGridCommitResult,
 } from '../../../bim/beams/beam-grid-commit';
+import type { GridPerimeterMode } from '../../../bim/grid/grid-justification';
+import { beamGridSettingsStore } from './bridge/grid-perimeter-mode-stores';
 import { resolveSceneUnits } from '../../../utils/scene-units';
 import type {
   RibbonComboboxState,
@@ -358,11 +360,13 @@ export function useRibbonBeamBridge(
     return false;
   }, [resolveBeam]);
 
-  // ADR-441 Slice GEN-BEAM — one-shot «Δοκάρια από κάναβο»: born-bound δοκός σε κάθε
-  // segment άξονα (idempotent). Πάντα δείχνει toast (created/skipped ή reason).
-  const handleBeamsFromGrid = useCallback((): void => {
+  // ADR-441 Slice GEN-BEAM / 3-mode — «Δοκάρια από κάναβο»: born-bound δοκός σε κάθε
+  // segment άξονα (idempotent), με περιμετρική έδραση (center/inner/outer). Το mode
+  // γράφεται στο SSoT store (το διαβάζει ΚΑΙ future settle) + περνά στο commit. Πάντα toast.
+  const handleBeamsFromGrid = useCallback((mode: GridPerimeterMode): void => {
     const levelId = levelManager.currentLevelId;
     if (!levelId) return;
+    beamGridSettingsStore.set(mode);
     const scene = levelManager.getLevelScene(levelId);
     const result = commitBeamGridFromGuides({
       guideReader: getGlobalGuideStore(),
@@ -371,6 +375,7 @@ export function useRibbonBeamBridge(
       levelId,
       sceneUnits: scene ? resolveSceneUnits(scene) : 'mm',
       executeCommand,
+      perimeterMode: beamGridSettingsStore.get(),
     });
     emitBeamsFromGridToast(result);
   }, [levelManager, executeCommand]);
@@ -387,7 +392,9 @@ export function useRibbonBeamBridge(
         });
         return;
       }
-      if (action === BEAM_RIBBON_KEYS_ACTIONS.fromGrid) { handleBeamsFromGrid(); return; }
+      if (action === BEAM_RIBBON_KEYS_ACTIONS.fromGrid) { handleBeamsFromGrid('inner'); return; }
+      if (action === BEAM_RIBBON_KEYS_ACTIONS.fromGridCenter) { handleBeamsFromGrid('center'); return; }
+      if (action === BEAM_RIBBON_KEYS_ACTIONS.fromGridOuter) { handleBeamsFromGrid('outer'); return; }
       if (action !== BEAM_RIBBON_KEYS_ACTIONS.delete) return;
       const beam = resolveBeam();
       if (!beam) return;

@@ -110,8 +110,11 @@ export const BEAM_RIBBON_STRING_KEYS: readonly BeamRibbonStringCommandKey[] = [
 export const BEAM_RIBBON_KEYS_ACTIONS = {
   close: 'beam.actions.close',
   delete: 'beam.actions.delete',
-  // ADR-441 Slice GEN-BEAM — one-shot «Δοκάρια από κάναβο» (στα segments, δεν θέλει επιλογή).
+  // ADR-441 Slice GEN-BEAM / 3-mode — «Δοκάρια από κάναβο». main = inner (default)·
+  // variants = περιμετρική έδραση (Εσωτερικά/Κεντρικά/Εξωτερικά, Revit Location Line).
   fromGrid: 'beam.actions.fromGrid',
+  fromGridCenter: 'beam.actions.fromGridCenter',
+  fromGridOuter: 'beam.actions.fromGridOuter',
 } as const;
 
 const BEAM_ACTION_KEY_SET: ReadonlySet<string> = new Set<string>(

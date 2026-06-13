@@ -55,8 +55,8 @@ describe('buildBeamGridFromGuides', () => {
     expect(result.beams).toHaveLength(0);
   });
 
-  it('born-bound: η πρώτη κατακόρυφη φέρει καθαρά start/end x/y bindings (μηδέν extend)', () => {
-    const result = buildBeamGridFromGuides(reader([...X3, ...Y3]), {}, '0', 'mm');
+  it("born-bound (mode center): η πρώτη κατακόρυφη φέρει καθαρά start/end x/y bindings (μηδέν extend)", () => {
+    const result = buildBeamGridFromGuides(reader([...X3, ...Y3]), {}, '0', 'mm', [], 'center');
     const first = result.beams[0];
     expect(first.guideBindings).toEqual([
       { guideId: 'x0', slot: 'start-x' },
@@ -74,8 +74,8 @@ describe('buildBeamGridFromGuides', () => {
     expect(result.beams.every((b) => b.kind === 'straight')).toBe(true);
   });
 
-  it('καμία δοκός δεν έχει binding extend (centerline location line)', () => {
-    const result = buildBeamGridFromGuides(reader([...X3, ...Y3]), {}, '0', 'mm');
+  it("mode center: καμία δοκός δεν έχει binding extend (centerline location line)", () => {
+    const result = buildBeamGridFromGuides(reader([...X3, ...Y3]), {}, '0', 'mm', [], 'center');
     for (const b of result.beams) {
       expect((b.guideBindings ?? []).every((bd) => bd.extend === undefined)).toBe(true);
     }
@@ -89,16 +89,17 @@ describe('buildBeamGridFromGuides', () => {
 });
 
 describe('buildBeamGridFromGuides — frame-into column faces (Revit)', () => {
-  it('χωρίς κολώνες → καμία αλλαγή (centerline στον άξονα, μηδέν extend)', () => {
-    const result = buildBeamGridFromGuides(reader([...X3, ...Y3]), {}, '0', 'mm', []);
+  it('mode center, χωρίς κολώνες → καμία αλλαγή (centerline στον άξονα, μηδέν extend)', () => {
+    const result = buildBeamGridFromGuides(reader([...X3, ...Y3]), {}, '0', 'mm', [], 'center');
     expect(result.beams[0].params.startPoint).toMatchObject({ x: 0, y: 0 });
     expect(result.beams[0].params.endPoint).toMatchObject({ x: 0, y: 4000 });
     expect((result.beams[0].guideBindings ?? []).every((b) => b.extend === undefined)).toBe(true);
   });
 
-  it('κολώνες στις τομές → άκρα δοκαριού τραβιούνται στην παρειά (extend ± half-extent)', () => {
-    const cols = buildColumnGridFromGuides(reader([...X3, ...Y3]), {}, '0', 'mm').columns;
-    const result = buildBeamGridFromGuides(reader([...X3, ...Y3]), {}, '0', 'mm', cols);
+  it('mode center, κολώνες στις τομές → άκρα δοκαριού τραβιούνται στην παρειά (extend ± half-extent)', () => {
+    // Centered columns (mode center) → συμμετρικό footprint → καθαρό half-extent.
+    const cols = buildColumnGridFromGuides(reader([...X3, ...Y3]), {}, '0', 'mm', undefined, 'center').columns;
+    const result = buildBeamGridFromGuides(reader([...X3, ...Y3]), {}, '0', 'mm', cols, 'center');
     const first = result.beams[0]; // κατακόρυφος x0, y0→y1
     // half-extent της κολώνας κατά Y (από το πραγματικό footprint).
     const half = Math.max(...cols[0].geometry.footprint.vertices.map((v) => Math.abs(v.y)));
@@ -111,5 +112,29 @@ describe('buildBeamGridFromGuides — frame-into column faces (Revit)', () => {
     expect(endY?.extend).toBeCloseTo(-half);
     // x-bindings (σταθερός άξονας) μένουν χωρίς extend.
     expect(first.guideBindings?.find((b) => b.slot === 'start-x')?.extend).toBeUndefined();
+  });
+});
+
+describe('buildBeamGridFromGuides — 3-mode justification (ADR-441)', () => {
+  it("inner (default): η περιμετρική κατακόρυφη x0 μετατοπίζεται +X & κλειδώνει extend στα x-slots", () => {
+    const result = buildBeamGridFromGuides(reader([...X3, ...Y3]), {}, '0', 'mm', []);
+    const first = result.beams[0]; // x0 = αριστερότερος (perimeter)
+    expect(first.params.startPoint.x).toBeGreaterThan(0);
+    const startX = first.guideBindings?.find((b) => b.slot === 'start-x');
+    expect(startX?.extend).toBeCloseTo(first.params.startPoint.x);
+  });
+
+  it("inner: εσωτερικό δοκάρι (μη-περιμετρικός X) μένει κεντραρισμένο (μηδέν x-extend)", () => {
+    const result = buildBeamGridFromGuides(reader([...X3, ...Y3]), {}, '0', 'mm', []);
+    const midVertical = result.beams.find(
+      (b) => b.guideBindings?.some((bd) => bd.slot === 'start-x' && bd.guideId === 'x1'),
+    );
+    expect(midVertical?.params.startPoint.x).toBeCloseTo(4000);
+    expect(midVertical?.guideBindings?.find((bd) => bd.slot === 'start-x')?.extend).toBeUndefined();
+  });
+
+  it("outer = αντίστροφο του inner (περιμετρική x0 μετατοπίζεται −X)", () => {
+    const result = buildBeamGridFromGuides(reader([...X3, ...Y3]), {}, '0', 'mm', [], 'outer');
+    expect(result.beams[0].params.startPoint.x).toBeLessThan(0);
   });
 });

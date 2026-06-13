@@ -35,6 +35,7 @@ import type { Point3D } from '../types/bim-base';
 import type { Point2D } from '../../rendering/types/Types';
 import { polygonArea, polygonBbox } from './shared/polygon-utils';
 import { mmToSceneUnits, type SceneUnits } from '../../utils/scene-units';
+import { canonicalAxisNormal } from '../grid/axis-normal';
 
 const MM_TO_M = 1 / 1000;
 const DEG_TO_RAD = Math.PI / 180;
@@ -117,28 +118,6 @@ function transformPad(
 }
 
 // ─── Band footprint (line-based strip / tie-beam) ────────────────────────────
-
-/**
- * Canonical CCW unit normal of an axis start→end, ORIENTATION-INVARIANT.
- *
- * The justification ('left'/'right') is defined relative to the draw direction
- * start→end, but that direction is ARBITRARY (the grid builder emits +Y/+X, yet
- * follow-on-move can reverse it when one axis overtakes another — then a raw CCW
- * normal would flip and the eccentric band would protrude to the WRONG side).
- * Canonicalising the tangent here (κατακόρυφη → +Y, οριζόντια → +X) makes every
- * justification-derived geometry orientation-invariant (Revit Location Line).
- * Returns `null` on a degenerate (zero-length) axis. ADR-441 Slice 5a-grid.
- */
-function canonicalAxisNormal(start: Point2D, end: Point2D): { nx: number; ny: number } | null {
-  const dx = end.x - start.x;
-  const dy = end.y - start.y;
-  const len = Math.hypot(dx, dy);
-  if (len < 1e-6) return null;
-  let ux = dx / len, uy = dy / len;
-  if (uy < -1e-9 || (Math.abs(uy) <= 1e-9 && ux < 0)) { ux = -ux; uy = -uy; }
-  // CCW 90° unit normal (rotate tangent (ux,uy) → (-uy,ux)).
-  return { nx: -uy, ny: ux };
-}
 
 /**
  * The JUSTIFIED centerline of a strip / tie-beam band — i.e. the axis the body is

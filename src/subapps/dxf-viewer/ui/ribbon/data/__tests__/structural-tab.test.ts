@@ -29,8 +29,9 @@ const EXPECTED_COMMAND_KEYS = [
   'column.actions.fromGrid',
   // beams (last = ADR-441 «Δοκάρια από κάναβο» action)
   'beam', 'beam-from-wall', 'beam.actions.fromGrid',
-  // floors & openings
+  // floors & openings (+ ADR-441 «Πλάκες από κάναβο» grid actions)
   'slab', 'slab-opening', 'opening',
+  'slab.actions.fromGridMat', 'slab.actions.fromGridFloor', 'slab.actions.fromGridRoof',
   // foundation (last two = «Εσχάρα από κάναβο» + «Συνδετήριες από κάναβο» actions)
   'foundation-pad', 'foundation-strip', 'foundation-tie-beam', 'foundation-strip-from-wall',
   'foundation.actions.fromGrid', 'foundation.actions.tieBeamsFromGrid',
@@ -70,11 +71,18 @@ describe('ADR-443 — STRUCTURAL_TAB (permanent «Δομικά» tab)', () => {
     expect(new Set(keys)).toEqual(new Set(EXPECTED_COMMAND_KEYS));
   });
 
-  it('renders every command as a LARGE button — only «Εσχάρα» is a split (mode dropdown)', () => {
-    // ADR-441 — η «Εσχάρα από κάναβο» είναι split-button (main inner + 3 περιμετρικά
-    // modes στο dropdown)· ΟΛΑ τα υπόλοιπα = simple χωρίς variants.
+  // ADR-441 3-mode — «από κάναβο» foundation/wall/column/beam = split-buttons (main inner
+  // + 3 περιμετρικά modes στο dropdown)· ΟΛΑ τα υπόλοιπα = simple χωρίς variants.
+  const GRID_SPLIT_KEYS: ReadonlySet<string> = new Set([
+    'foundation.actions.fromGrid',
+    'wall.actions.fromGrid',
+    'column.actions.fromGrid',
+    'beam.actions.fromGrid',
+  ]);
+
+  it('renders every command as a LARGE button — οι 4 «από κάναβο» είναι splits (mode dropdown)', () => {
     for (const button of allButtons()) {
-      const isGridSplit = button.command.commandKey === 'foundation.actions.fromGrid';
+      const isGridSplit = GRID_SPLIT_KEYS.has(button.command.commandKey);
       expect(button.size).toBe('large');
       expect(button.type).toBe(isGridSplit ? 'split' : 'simple');
       if (!isGridSplit) expect(button.variants).toBeUndefined();
@@ -86,14 +94,18 @@ describe('ADR-443 — STRUCTURAL_TAB (permanent «Δομικά» tab)', () => {
     }
   });
 
-  it('the «Εσχάρα» split-button lists the 3 περιμετρικά modes as action variants', () => {
-    const grid = allButtons().find((b) => b.command.commandKey === 'foundation.actions.fromGrid');
-    expect(grid?.type).toBe('split');
-    expect(grid?.variants?.map((v) => v.action)).toEqual([
-      'foundation.actions.fromGrid',        // Εσωτερικά (default = main)
-      'foundation.actions.fromGridCenter',  // Κεντρικά
-      'foundation.actions.fromGridOuter',   // Εξωτερικά
-    ]);
+  it('κάθε «από κάναβο» split-button λιστάρει τα 3 περιμετρικά modes ως action variants', () => {
+    const families: ReadonlyArray<[string, readonly string[]]> = [
+      ['foundation.actions.fromGrid', ['foundation.actions.fromGrid', 'foundation.actions.fromGridCenter', 'foundation.actions.fromGridOuter']],
+      ['wall.actions.fromGrid', ['wall.actions.fromGrid', 'wall.actions.fromGridCenter', 'wall.actions.fromGridOuter']],
+      ['column.actions.fromGrid', ['column.actions.fromGrid', 'column.actions.fromGridCenter', 'column.actions.fromGridOuter']],
+      ['beam.actions.fromGrid', ['beam.actions.fromGrid', 'beam.actions.fromGridCenter', 'beam.actions.fromGridOuter']],
+    ];
+    for (const [mainKey, expectedVariants] of families) {
+      const grid = allButtons().find((b) => b.command.commandKey === mainKey);
+      expect(grid?.type).toBe('split');
+      expect(grid?.variants?.map((v) => v.action)).toEqual(expectedVariants);
+    }
   });
 
   it('routes every label through the i18n namespace, no comingSoon, non-empty icon (N.11)', () => {

@@ -26,12 +26,19 @@
 
 import type { BeamEntity } from '../types/beam-types';
 import type { ColumnEntity } from '../types/column-types';
+import { DEFAULT_BEAM_WIDTH_MM } from '../types/beam-types';
 import type { GuideBinding } from '../hosting/guide-binding-types';
+import type { StripJustification } from '../types/foundation-types';
 import {
   enumerateGridStrips,
   gridAxesFromReader,
   type AxisGuideReader,
 } from '../foundations/foundation-from-grid';
+import {
+  DEFAULT_GRID_PERIMETER_MODE,
+  type GridPerimeterMode,
+} from '../grid/grid-justification';
+import { justifyGridSegment } from '../grid/grid-segment-justification';
 import {
   completeBeamFromTwoClicks,
   type BeamParamOverrides,
@@ -53,20 +60,27 @@ export interface BuildBeamGridResult {
  * `guideBindings` tag-άρεται όπως οι τοίχοι/συνδετήριες (`{ ...entity, guideBindings }`).
  * Πάντα 'straight' (segments αξόνων = ευθείες). Αν κάθεται κολώνα σε άκρο, το άκρο
  * τραβιέται στην **παρειά** της (frame-into)· αλλιώς centerline στον άξονα.
+ *
+ * Σειρά: **trim (longitudinal) → justify (perpendicular)**. Διαφορετικά slots (start/end-y vs
+ * start/end-x) → μηδέν σύγκρουση extend· το justification offset επιβιώνει follow-move (ADR-441
+ * 3-mode). `center` justification → no-op (centerline στον άξονα).
  */
 function buildBoundBeam(
   start: { readonly x: number; readonly y: number },
   end: { readonly x: number; readonly y: number },
   bindings: readonly GuideBinding[],
+  justification: StripJustification,
   layerId: string,
   overrides: BeamParamOverrides,
   sceneUnits: SceneUnits,
   columns: readonly ColumnEntity[],
 ): BeamEntity | null {
   const trimmed = trimSegmentEndpointsToColumns(start, end, bindings, columns, sceneUnits);
-  const result = completeBeamFromTwoClicks(trimmed.start, trimmed.end, layerId, 'straight', overrides, sceneUnits);
+  const widthMm = overrides.width ?? DEFAULT_BEAM_WIDTH_MM;
+  const justified = justifyGridSegment(trimmed.start, trimmed.end, trimmed.bindings, widthMm, justification, sceneUnits);
+  const result = completeBeamFromTwoClicks(justified.start, justified.end, layerId, 'straight', overrides, sceneUnits);
   if (!result.ok) return null;
-  return { ...result.entity, guideBindings: trimmed.bindings };
+  return { ...result.entity, guideBindings: justified.bindings };
 }
 
 /**
@@ -82,6 +96,7 @@ export function buildBeamGridFromGuides(
   layerId: string,
   sceneUnits: SceneUnits,
   columns: readonly ColumnEntity[] = [],
+  mode: GridPerimeterMode = DEFAULT_GRID_PERIMETER_MODE,
 ): BuildBeamGridResult {
   const axes = gridAxesFromReader(reader);
   if (!axes) {
@@ -90,11 +105,11 @@ export function buildBeamGridFromGuides(
 
   const beams: BeamEntity[] = [];
   let ignoredCount = 0;
-  enumerateGridStrips(axes, ({ start, end, bindings }) => {
-    const beam = buildBoundBeam(start, end, bindings, layerId, overrides, sceneUnits, columns);
+  enumerateGridStrips(axes, ({ start, end, bindings, justification }) => {
+    const beam = buildBoundBeam(start, end, bindings, justification, layerId, overrides, sceneUnits, columns);
     if (beam) beams.push(beam);
     else ignoredCount++;
-  });
+  }, mode);
 
   return { ok: true, beams, ignoredCount };
 }

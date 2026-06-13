@@ -55,8 +55,8 @@ describe('buildWallGridFromGuides', () => {
     expect(result.walls).toHaveLength(0);
   });
 
-  it('born-bound: η πρώτη κατακόρυφη φέρει καθαρά start/end x/y bindings (μηδέν extend)', () => {
-    const result = buildWallGridFromGuides(reader([...X3, ...Y3]), {}, '0', 'mm');
+  it("born-bound (mode center): η πρώτη κατακόρυφη φέρει καθαρά start/end x/y bindings (μηδέν extend)", () => {
+    const result = buildWallGridFromGuides(reader([...X3, ...Y3]), {}, '0', 'mm', [], 'center');
     const first = result.walls[0];
     expect(first.guideBindings).toEqual([
       { guideId: 'x0', slot: 'start-x' },
@@ -69,8 +69,8 @@ describe('buildWallGridFromGuides', () => {
     expect(first.params.end).toMatchObject({ x: 0, y: 4000 });
   });
 
-  it('κανένας τοίχος δεν έχει binding extend (centerline location line)', () => {
-    const result = buildWallGridFromGuides(reader([...X3, ...Y3]), {}, '0', 'mm');
+  it("mode center: κανένας τοίχος δεν έχει binding extend (centerline location line)", () => {
+    const result = buildWallGridFromGuides(reader([...X3, ...Y3]), {}, '0', 'mm', [], 'center');
     for (const w of result.walls) {
       expect((w.guideBindings ?? []).every((b) => b.extend === undefined)).toBe(true);
     }
@@ -84,15 +84,16 @@ describe('buildWallGridFromGuides', () => {
 });
 
 describe('buildWallGridFromGuides — trim to column faces (Revit face-to-face)', () => {
-  it('χωρίς κολώνες → καμία αλλαγή (centerline στον άξονα)', () => {
-    const result = buildWallGridFromGuides(reader([...X3, ...Y3]), {}, '0', 'mm', []);
+  it('mode center, χωρίς κολώνες → καμία αλλαγή (centerline στον άξονα)', () => {
+    const result = buildWallGridFromGuides(reader([...X3, ...Y3]), {}, '0', 'mm', [], 'center');
     expect(result.walls[0].params.start).toMatchObject({ x: 0, y: 0 });
     expect(result.walls[0].params.end).toMatchObject({ x: 0, y: 4000 });
   });
 
-  it('κολώνες στις τομές → άκρα τοίχου τραβιούνται στην παρειά (extend ± half-extent)', () => {
-    const cols = buildColumnGridFromGuides(reader([...X3, ...Y3]), {}, '0', 'mm').columns;
-    const result = buildWallGridFromGuides(reader([...X3, ...Y3]), {}, '0', 'mm', cols);
+  it('mode center, κολώνες στις τομές → άκρα τοίχου τραβιούνται στην παρειά (extend ± half-extent)', () => {
+    // Centered columns (mode center) → συμμετρικό footprint → καθαρό half-extent.
+    const cols = buildColumnGridFromGuides(reader([...X3, ...Y3]), {}, '0', 'mm', undefined, 'center').columns;
+    const result = buildWallGridFromGuides(reader([...X3, ...Y3]), {}, '0', 'mm', cols, 'center');
     const first = result.walls[0]; // κατακόρυφος x0, y0→y1
     // half-extent της κολώνας κατά Y (από το πραγματικό footprint, ό,τι κι αν είναι το default).
     const half = Math.max(...cols[0].geometry.footprint.vertices.map((v) => Math.abs(v.y)));
@@ -105,5 +106,32 @@ describe('buildWallGridFromGuides — trim to column faces (Revit face-to-face)'
     expect(endY?.extend).toBeCloseTo(-half);
     // x-bindings (constant άξονας) μένουν χωρίς extend.
     expect(first.guideBindings?.find((b) => b.slot === 'start-x')?.extend).toBeUndefined();
+  });
+});
+
+describe('buildWallGridFromGuides — 3-mode justification (ADR-441)', () => {
+  // 250mm default thickness → half = 125 (mm scene units).
+  it("inner (default): η περιμετρική κατακόρυφη x0 μετατοπίζεται +X & κλειδώνει extend στα x-slots", () => {
+    const result = buildWallGridFromGuides(reader([...X3, ...Y3]), {}, '0', 'mm', []);
+    const first = result.walls[0]; // x0 = αριστερότερος (perimeter)
+    // V αριστερότερη → 'right' → σώμα +X κατά half (εξωτερική −X παρειά στον άξονα).
+    expect(first.params.start.x).toBeGreaterThan(0);
+    const startX = first.guideBindings?.find((b) => b.slot === 'start-x');
+    expect(startX?.extend).toBeCloseTo(first.params.start.x); // extend(mm) == offset (sceneUnits mm)
+  });
+
+  it("inner: εσωτερικός τοίχος (μη-περιμετρικός X) μένει κεντραρισμένος (μηδέν x-extend)", () => {
+    const result = buildWallGridFromGuides(reader([...X3, ...Y3]), {}, '0', 'mm', []);
+    // x1 (μεσαίος) κατακόρυφοι: τα segments του x1 ξεκινούν μετά τους 2 του x0.
+    const midVertical = result.walls.find(
+      (w) => w.guideBindings?.some((b) => b.slot === 'start-x' && b.guideId === 'x1'),
+    );
+    expect(midVertical?.params.start.x).toBeCloseTo(4000);
+    expect(midVertical?.guideBindings?.find((b) => b.slot === 'start-x')?.extend).toBeUndefined();
+  });
+
+  it("outer = αντίστροφο του inner (περιμετρική x0 μετατοπίζεται −X)", () => {
+    const result = buildWallGridFromGuides(reader([...X3, ...Y3]), {}, '0', 'mm', [], 'outer');
+    expect(result.walls[0].params.start.x).toBeLessThan(0);
   });
 });

@@ -73,6 +73,8 @@ import { EventBus } from '../../../systems/events/EventBus';
 import { getGlobalGuideStore } from '../../../systems/guides/guide-store';
 import { resolveSceneUnits } from '../../../utils/scene-units';
 import { commitColumnGridFromGuides } from '../../../bim/columns/column-grid-commit';
+import type { GridPerimeterMode } from '../../../bim/grid/grid-justification';
+import { columnGridSettingsStore } from './bridge/grid-perimeter-mode-stores';
 import { emitColumnsFromGridToast } from './bridge/column-grid-toast';
 import type {
   RibbonComboboxState,
@@ -390,11 +392,12 @@ export function useRibbonColumnBridge(
     [levelManager, universalSelection, executeCommand],
   );
 
-  // ADR-441 Slice GEN-COL — one-shot «Κολώνες από κάναβο»: born-bound κολώνα σε κάθε
-  // τομή ορατών αξόνων (idempotent). Πάντα δείχνει toast (created/skipped ή reason).
-  const handleColumnsFromGrid = useCallback((): void => {
+  // ADR-441 Slice GEN-COL / 3-mode — «Κολώνες από κάναβο»: born-bound κολώνα σε κάθε
+  // τομή (idempotent), με περιμετρική έδραση anchor (center/inner/outer). Πάντα toast.
+  const handleColumnsFromGrid = useCallback((mode: GridPerimeterMode): void => {
     const levelId = levelManager.currentLevelId;
     if (!levelId) return;
+    columnGridSettingsStore.set(mode);
     const scene = levelManager.getLevelScene(levelId);
     const result = commitColumnGridFromGuides({
       guideReader: getGlobalGuideStore(),
@@ -403,13 +406,16 @@ export function useRibbonColumnBridge(
       levelId,
       sceneUnits: scene ? resolveSceneUnits(scene) : 'mm',
       executeCommand,
+      perimeterMode: columnGridSettingsStore.get(),
     });
     emitColumnsFromGridToast(result);
   }, [levelManager, executeCommand]);
 
   const onAction = useCallback(
     (action: string): void => {
-      if (action === COLUMN_RIBBON_KEYS_ACTIONS.fromGrid) { handleColumnsFromGrid(); return; }
+      if (action === COLUMN_RIBBON_KEYS_ACTIONS.fromGrid) { handleColumnsFromGrid('inner'); return; }
+      if (action === COLUMN_RIBBON_KEYS_ACTIONS.fromGridCenter) { handleColumnsFromGrid('center'); return; }
+      if (action === COLUMN_RIBBON_KEYS_ACTIONS.fromGridOuter) { handleColumnsFromGrid('outer'); return; }
       if (action === PSET_RIBBON_ACTION) {
         const column = resolveColumn();
         if (!column || !levelManager.currentLevelId) return;

@@ -31,6 +31,10 @@ import type { AxisGuideReader } from '../foundations/foundation-from-grid';
 import { segmentKeyFromBindings } from '../foundations/foundation-grid-segments';
 import type { BeamParamOverrides } from '../../hooks/drawing/beam-completion';
 import type { SceneUnits } from '../../utils/scene-units';
+import {
+  DEFAULT_GRID_PERIMETER_MODE,
+  type GridPerimeterMode,
+} from '../grid/grid-justification';
 import { buildBeamGridFromGuides } from './beam-from-grid';
 
 export interface BeamGridCommitDeps {
@@ -43,6 +47,8 @@ export interface BeamGridCommitDeps {
   readonly executeCommand: (command: ICommand) => void;
   /** Προαιρετικά param overrides (v1: defaults). */
   readonly overrides?: BeamParamOverrides;
+  /** ADR-441 3-mode — περιμετρική έδραση (center/inner/outer)· default `inner`. */
+  readonly perimeterMode?: GridPerimeterMode;
 }
 
 export interface BeamGridCommitResult {
@@ -83,6 +89,7 @@ export function commitBeamGridFromGuides(
     deps.levelId,
     deps.sceneUnits,
     columns,
+    deps.perimeterMode ?? DEFAULT_GRID_PERIMETER_MODE,
   );
   if (!target.ok) {
     return { ok: false, reason: 'insufficient-guides', created: 0, skipped: 0 };

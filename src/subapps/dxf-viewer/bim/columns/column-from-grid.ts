@@ -31,6 +31,11 @@ import {
   type ColumnParamOverrides,
 } from '../../hooks/drawing/column-completion';
 import { DEFAULT_COLUMN_HEIGHT_MM } from '../types/column-types';
+import {
+  DEFAULT_GRID_PERIMETER_MODE,
+  type GridPerimeterMode,
+} from '../grid/grid-justification';
+import { gridColumnJustification } from '../grid/grid-column-justification';
 import { resolveStoreyHeightMm } from '../../systems/levels/storey-creation-defaults';
 import type { SceneUnits } from '../../utils/scene-units';
 
@@ -63,6 +68,12 @@ function withFoundationBase(
 export interface GridColumnSpec {
   readonly position: Point2D;
   readonly bindings: readonly GuideBinding[];
+  /** Index του X-άξονα της τομής (0 = ελάχιστο) + πλήθος X-αξόνων — για justification anchor. */
+  readonly xIndex: number;
+  readonly xCount: number;
+  /** Index του Y-άξονα της τομής + πλήθος Y-αξόνων — για justification anchor. */
+  readonly yIndex: number;
+  readonly yCount: number;
 }
 
 export interface BuildColumnGridResult {
@@ -83,14 +94,20 @@ type PushColumn = (spec: GridColumnSpec) => void;
  * duplication των nested loops.
  */
 export function enumerateGridIntersections(axes: GridAxes, cb: PushColumn): void {
-  for (let xi = 0; xi < axes.xs.offsets.length; xi++) {
-    for (let yi = 0; yi < axes.ys.offsets.length; yi++) {
+  const xCount = axes.xs.offsets.length;
+  const yCount = axes.ys.offsets.length;
+  for (let xi = 0; xi < xCount; xi++) {
+    for (let yi = 0; yi < yCount; yi++) {
       cb({
         position: { x: axes.xs.offsets[xi], y: axes.ys.offsets[yi] },
         bindings: [
           { guideId: axes.xs.ids[xi], slot: 'center-x' },
           { guideId: axes.ys.ids[yi], slot: 'center-y' },
         ],
+        xIndex: xi,
+        xCount,
+        yIndex: yi,
+        yCount,
       });
     }
   }
@@ -125,6 +142,7 @@ export function buildColumnGridFromGuides(
   layerId: string,
   sceneUnits: SceneUnits,
   foundationBaseLevelMm?: number,
+  mode: GridPerimeterMode = DEFAULT_GRID_PERIMETER_MODE,
 ): BuildColumnGridResult {
   const axes = gridAxesFromReader(reader, 1);
   if (!axes) {
@@ -136,8 +154,10 @@ export function buildColumnGridFromGuides(
 
   const columns: ColumnEntity[] = [];
   let ignoredCount = 0;
-  enumerateGridIntersections(axes, ({ position, bindings }) => {
-    const col = buildBoundColumn(position, bindings, layerId, effectiveOverrides, sceneUnits);
+  enumerateGridIntersections(axes, ({ position, bindings, xIndex, xCount, yIndex, yCount }) => {
+    // ADR-441 3-mode — περιμετρική κολώνα flush στη γωνία/ακμή (anchor)· εσωτερική = center.
+    const anchor = gridColumnJustification(xIndex, xCount, yIndex, yCount, mode);
+    const col = buildBoundColumn(position, bindings, layerId, { ...effectiveOverrides, anchor }, sceneUnits);
     if (col) columns.push(col);
     else ignoredCount++;
   });

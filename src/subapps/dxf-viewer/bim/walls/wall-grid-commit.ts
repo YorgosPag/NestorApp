@@ -24,6 +24,10 @@ import { hasGuideBindings, type GuideBinding } from '../hosting/guide-binding-ty
 import type { AxisGuideReader } from '../foundations/foundation-from-grid';
 import type { WallParamOverrides } from '../../hooks/drawing/wall-completion';
 import type { SceneUnits } from '../../utils/scene-units';
+import {
+  DEFAULT_GRID_PERIMETER_MODE,
+  type GridPerimeterMode,
+} from '../grid/grid-justification';
 import { buildWallGridFromGuides } from './wall-from-grid';
 
 export interface WallGridCommitDeps {
@@ -36,6 +40,8 @@ export interface WallGridCommitDeps {
   readonly executeCommand: (command: ICommand) => void;
   /** Προαιρετικά param overrides (v1: defaults). */
   readonly overrides?: WallParamOverrides;
+  /** ADR-441 3-mode — Wall Location Line (center/inner/outer)· default `inner`. */
+  readonly perimeterMode?: GridPerimeterMode;
 }
 
 export interface WallGridCommitResult {
@@ -93,6 +99,7 @@ export function commitWallGridFromGuides(
     deps.levelId,
     deps.sceneUnits,
     columns,
+    deps.perimeterMode ?? DEFAULT_GRID_PERIMETER_MODE,
   );
   if (!target.ok) {
     return { ok: false, reason: 'insufficient-guides', created: 0, skipped: 0 };

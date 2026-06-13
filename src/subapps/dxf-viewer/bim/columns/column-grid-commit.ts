@@ -25,6 +25,10 @@ import type { AxisGuideReader } from '../foundations/foundation-from-grid';
 import { sceneFoundationTopMm } from '../foundations/foundation-level';
 import type { ColumnParamOverrides } from '../../hooks/drawing/column-completion';
 import type { SceneUnits } from '../../utils/scene-units';
+import {
+  DEFAULT_GRID_PERIMETER_MODE,
+  type GridPerimeterMode,
+} from '../grid/grid-justification';
 import { buildColumnGridFromGuides } from './column-from-grid';
 
 export interface ColumnGridCommitDeps {
@@ -37,6 +41,8 @@ export interface ColumnGridCommitDeps {
   readonly executeCommand: (command: ICommand) => void;
   /** Προαιρετικά param overrides (v1: defaults). */
   readonly overrides?: ColumnParamOverrides;
+  /** ADR-441 3-mode — περιμετρική έδραση (center/inner/outer → anchor)· default `inner`. */
+  readonly perimeterMode?: GridPerimeterMode;
 }
 
 export interface ColumnGridCommitResult {
@@ -94,6 +100,7 @@ export function commitColumnGridFromGuides(
     deps.levelId,
     deps.sceneUnits,
     foundationBaseLevelMm,
+    deps.perimeterMode ?? DEFAULT_GRID_PERIMETER_MODE,
   );
   if (!target.ok) {
     return { ok: false, reason: 'insufficient-guides', created: 0, skipped: 0 };
