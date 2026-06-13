@@ -111,6 +111,9 @@ export async function getCompanyDocument(companyId: string): Promise<CompanyDocu
       createdAt: data.createdAt,
       updatedAt: data.updatedAt,
       createdBy: data.createdBy ?? 'system',
+      _lastModifiedBy: data._lastModifiedBy,
+      _lastModifiedByName: data._lastModifiedByName ?? null,
+      _lastModifiedAt: data._lastModifiedAt,
     } as CompanyDocument;
   } catch (error) {
     logger.error('[CompanyDocument] getCompanyDocument failed', {
@@ -152,20 +155,9 @@ export async function ensureCompanyDocument(
   // the identifier fallback — this is what fixes the "Georgios Pagonis" bug.
   const identity = await readCompanyLegalIdentity(companyId);
 
-  let userDisplayName = '';
-  if (!contactData?.name && createdBy && createdBy !== 'system') {
-    try {
-      const userDoc = await db.collection(COLLECTIONS.USERS).doc(createdBy).get();
-      if (userDoc.exists) {
-        userDisplayName = userDoc.data()?.displayName || '';
-      }
-    } catch (lookupError) {
-      logger.warn('[CompanyDocument] User lookup failed, using ID-based fallback', {
-        companyId,
-        error: getErrorMessage(lookupError),
-      });
-    }
-  }
+  // Resolve the performer's display name once — used both as the company-name
+  // last-resort fallback AND for the audit stamp (`_lastModifiedByName`).
+  const actorName = await resolveActorDisplayName(db, createdBy);
 
   // Priority (resolver-enforced): explicit contact name → profile trade name →
   // profile legal name → user displayName → identifier fallback.
@@ -174,7 +166,7 @@ export async function ensureCompanyDocument(
     companyName: contactData?.name || undefined,
     tradeName: identity?.tradeName,
     legalName: identity?.businessName,
-    displayName: userDisplayName || undefined,
+    displayName: actorName ?? undefined,
   });
 
   const now = FieldValue.serverTimestamp();
@@ -187,6 +179,11 @@ export async function ensureCompanyDocument(
     createdAt: now,
     updatedAt: now,
     createdBy,
+    // Entity-audit convention (ADR-210) — mirror buildCommonFields so the
+    // company doc carries the same _lastModified* stamps as entity docs.
+    _lastModifiedBy: createdBy,
+    _lastModifiedByName: actorName,
+    _lastModifiedAt: now,
   };
 
   // Atomic create-if-not-exists — eliminates race condition on concurrent logins
@@ -223,7 +220,7 @@ export async function ensureCompanyDocument(
     action: 'created',
     changes: buildCreationChanges(docData),
     performedBy: createdBy,
-    performedByName: null,
+    performedByName: actorName,
     companyId,
   });
 
@@ -301,9 +298,15 @@ export async function repairCompanyDocument(
     return { name: correctName, wasRepaired: false };
   }
 
+  const repairActorName = await resolveActorDisplayName(db, repairedBy);
+  const repairNow = FieldValue.serverTimestamp();
   await db.collection(COLLECTIONS.COMPANIES).doc(companyId).update({
     name: correctName,
-    updatedAt: FieldValue.serverTimestamp(),
+    updatedAt: repairNow,
+    // Entity-audit convention (ADR-210) — stamp the modifier on every update.
+    _lastModifiedBy: repairedBy,
+    _lastModifiedByName: repairActorName,
+    _lastModifiedAt: repairNow,
   });
 
   companyExistsCache.delete(companyId);
@@ -317,7 +320,7 @@ export async function repairCompanyDocument(
       { field: 'name', oldValue: previousName, newValue: correctName, label: 'name' },
     ],
     performedBy: repairedBy,
-    performedByName: null,
+    performedByName: repairActorName,
     companyId,
   });
 
@@ -340,6 +343,29 @@ function getDefaultSettings(): CompanySettings {
     timezone: 'Europe/Athens',
     features: {},
   };
+}
+
+/**
+ * Resolve a performer's display name for audit stamping (`_lastModifiedByName`
+ * + audit-trail `performedByName`). Returns null for `system`/unknown actors so
+ * the company document follows the same audit convention as entity documents
+ * ({@link buildCommonFields} in `entity-creation.service`).
+ */
+async function resolveActorDisplayName(
+  db: ReturnType<typeof getAdminFirestore>,
+  uid: string,
+): Promise<string | null> {
+  if (!uid || uid === 'system') return null;
+  try {
+    const userDoc = await db.collection(COLLECTIONS.USERS).doc(uid).get();
+    return userDoc.exists ? (userDoc.data()?.displayName || null) : null;
+  } catch (lookupError) {
+    logger.warn('[CompanyDocument] actor name lookup failed', {
+      uid,
+      error: getErrorMessage(lookupError),
+    });
+    return null;
+  }
 }
 
 /**

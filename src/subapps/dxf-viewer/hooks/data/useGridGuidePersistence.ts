@@ -67,6 +67,16 @@ function gridSignature(
   return JSON.stringify({ guides, groups });
 }
 
+/** Restore persisted snapshots back into the live store (groups first). */
+function restoreSnapshotsToStore(
+  store: ReturnType<typeof getGlobalGuideStore>,
+  guides: readonly GuideSnapshot[],
+  groups: readonly GuideGroup[],
+): void {
+  for (const group of groups) store.restoreGroup(group);
+  for (const snap of guides) store.restoreGuide(snapshotToGuide(snap));
+}
+
 // ============================================================================
 // HOOK
 // ============================================================================
@@ -78,6 +88,9 @@ export function useGridGuidePersistence(
 
   const [saveState, setSaveState] = useState<GridSaveState>('idle');
   const [error, setError] = useState<string | null>(null);
+  // Reactive mirror of serviceRef readiness — re-runs the subscribe effect when
+  // the floor scope arrives late (e.g. fileRecordId resolves after floorId).
+  const [serviceReady, setServiceReady] = useState<boolean>(false);
 
   const serviceRef = useRef<GridGuideFirestoreService | null>(null);
   const docIdRef = useRef<string | null>(null);
@@ -96,6 +109,7 @@ export function useGridGuidePersistence(
   useEffect(() => {
     if (!companyId || !projectId || !floorplanId || !userId) {
       serviceRef.current = null;
+      setServiceReady(false);
       return;
     }
     serviceRef.current = createGridGuideFirestoreService({
@@ -105,6 +119,7 @@ export function useGridGuidePersistence(
       floorId: floorId ?? undefined,
       userId,
     });
+    setServiceReady(true);
   }, [companyId, projectId, floorplanId, floorId, userId]);
 
   // Hydrate store από Firestore doc (anti-echo guarded).
@@ -116,30 +131,49 @@ export function useGridGuidePersistence(
     const store = getGlobalGuideStore();
     suppressSaveRef.current = true;
     store.clear();
-    for (const group of doc.groups) store.restoreGroup(group);
-    for (const snap of doc.guides) store.restoreGuide(snapshotToGuide(snap));
+    restoreSnapshotsToStore(store, doc.guides, doc.groups);
     docIdRef.current = doc.id;
     versionRef.current = doc.version;
     lastSavedSigRef.current = incomingSig;
     suppressSaveRef.current = false;
   }, []);
 
-  // Subscribe + per-floor reset.
+  // Subscribe + per-floor reset (+ flush-on-ready for guides placed pre-scope).
   useEffect(() => {
     const svc = serviceRef.current;
     if (!svc || !scopeKey) return;
 
+    const store = getGlobalGuideStore();
+
+    // Guides placed before the floor scope was ready live in the store but were
+    // never persisted (doSave no-op'd on the null service). Capture them before
+    // the per-floor reset so we can flush them once the subscription settles.
+    const pendingGuides = guidesToSnapshots(store.getGuides());
+    const pendingGroups = [...store.getGroups()];
+    const hasPending = pendingGuides.length > 0 || pendingGroups.length > 0;
+
     // Per-floor reset: ξεκίνα από καθαρό grid για τον νέο όροφο.
     suppressSaveRef.current = true;
-    getGlobalGuideStore().clear();
+    store.clear();
     docIdRef.current = null;
     versionRef.current = 0;
     lastSavedSigRef.current = gridSignature([], []);
     suppressSaveRef.current = false;
 
+    let pendingSettled = false;
     const unsubscribe = svc.subscribeGrid(
       (docs) => {
-        if (docs.length > 0) hydrate(docs[0]);
+        if (docs.length > 0) {
+          pendingSettled = true; // remote wins — drop pre-scope pending
+          hydrate(docs[0]);
+          return;
+        }
+        // No remote doc for this floor yet: restore the pre-scope guides (once)
+        // so the debounced save persists them now that the service is ready.
+        if (hasPending && !pendingSettled && docIdRef.current === null) {
+          pendingSettled = true;
+          restoreSnapshotsToStore(store, pendingGuides, pendingGroups);
+        }
       },
       (err) => {
         setError(err.message);
@@ -148,7 +182,7 @@ export function useGridGuidePersistence(
     );
     return () => unsubscribe();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [scopeKey, hydrate]);
+  }, [scopeKey, serviceReady, hydrate]);
 
   // Persist current store state (debounced caller).
   const doSave = useCallback(async () => {

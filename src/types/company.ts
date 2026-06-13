@@ -74,6 +74,12 @@ export interface CompanyDocument {
   readonly updatedAt: Timestamp;
   /** UID of the user who created this document */
   readonly createdBy: string;
+  /** UID of the user who last modified this document (entity-audit convention, ADR-210) */
+  readonly _lastModifiedBy?: string;
+  /** Display name of the last modifier — audit trail (null when unknown/system) */
+  readonly _lastModifiedByName?: string | null;
+  /** Last modification timestamp (entity-audit convention) */
+  readonly _lastModifiedAt?: Timestamp;
 }
 
 // =============================================================================
