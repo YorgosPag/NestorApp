@@ -43,37 +43,59 @@ function segOffsetVec(seg: FinishFaceSegment, offCanvas: number): Vec2 | null {
   return { x: (dy / len) * offCanvas, y: (-dx / len) * offCanvas };
 }
 
-/**
- * Plan quad του band μιας παρειάς: [a, b, b+n·off, a+n·off] όπου n = μοναδιαία
- * outward normal (CCW footprint → (dy,−dx)) και `off` = πάχος σοβά σε canvas units.
- */
-function buildFaceBandQuad(seg: FinishFaceSegment, offCanvas: number): Point3D[] {
-  const n = segOffsetVec(seg, offCanvas);
-  if (!n) return [];
-  const { a, b } = seg;
-  return [
-    { x: a.x, y: a.y, z: 0 },
-    { x: b.x, y: b.y, z: 0 },
-    { x: b.x + n.x, y: b.y + n.y, z: 0 },
-    { x: a.x + n.x, y: a.y + n.y, z: 0 },
-  ];
+/** Τομή δύο ευθειών (p0+t·d0) ∩ (p1+u·d1)· `null` αν ~παράλληλες. */
+function lineIntersect(p0: Vec2, d0: Vec2, p1: Vec2, d1: Vec2): Vec2 | null {
+  const denom = d0.x * d1.y - d0.y * d1.x;
+  if (Math.abs(denom) < EPS) return null;
+  const t = ((p1.x - p0.x) * d1.y - (p1.y - p0.y) * d1.x) / denom;
+  return { x: p0.x + t * d0.x, y: p0.y + t * d0.y };
 }
 
+/** Όριο μήκους miter (× offset) — αιχμηρές γωνίες κρατούν square άκρο, χωρίς spike. */
+const MITER_LIMIT_FACTOR = 4;
+
 /**
- * ADR-449 Slice 5 fix — παραλληλόγραμμο γεμίσματος γωνίας στην κοινή κορυφή `v` δύο
- * διαδοχικών exposed παρειών (offset vectors `n0`,`n1`): [v, v+n1, v+n0+n1, v+n0].
- * Κλείνει το κενό ανάμεσα στα δύο bands (αλλιώς οι γωνίες της κολώνας μένουν ανοιχτές).
+ * ADR-449 Slice 5 fix — outer offset endpoints κάθε exposed παρειάς, **mitered** στις
+ * κοινές κορυφές: το εξωτερικό άκρο επεκτείνεται/κόβεται στην τομή των δύο offset
+ * ευθειών → ΕΝΑ 45° seam, **μηδέν επικάλυψη/κενό** (convex → extend, reflex → trim).
+ * Δοκάρι (2 χωριστές όψεις, άκρα εκτός) → κανένα κοινό vertex → square άκρα (σωστά).
  */
-function buildCornerFillQuad(v: Vec2, n0: Vec2, n1: Vec2): Point3D[] {
-  return [
-    { x: v.x, y: v.y, z: 0 },
-    { x: v.x + n1.x, y: v.y + n1.y, z: 0 },
-    { x: v.x + n0.x + n1.x, y: v.y + n0.y + n1.y, z: 0 },
-    { x: v.x + n0.x, y: v.y + n0.y, z: 0 },
-  ];
+function computeMiteredOuter(
+  segs: readonly FinishFaceSegment[],
+  offsets: readonly (Vec2 | null)[],
+): { aOuter: Vec2[]; bOuter: Vec2[] } {
+  const n = segs.length;
+  const aOuter: Vec2[] = [];
+  const bOuter: Vec2[] = [];
+  for (let i = 0; i < n; i++) {
+    const o = offsets[i] ?? { x: 0, y: 0 };
+    aOuter[i] = { x: segs[i].a.x + o.x, y: segs[i].a.y + o.y };
+    bOuter[i] = { x: segs[i].b.x + o.x, y: segs[i].b.y + o.y };
+  }
+  if (n < 2) return { aOuter, bOuter };
+  for (let k = 0; k < n; k++) {
+    const m = (k + 1) % n;
+    const cur = segs[k];
+    const nxt = segs[m];
+    const ok = offsets[k];
+    const om = offsets[m];
+    if (!ok || !om) continue;
+    const v = cur.b;
+    const tol = 1e-6 * (1 + Math.hypot(v.x, v.y));
+    if (Math.hypot(v.x - nxt.a.x, v.y - nxt.a.y) > tol) continue; // όχι κοινή κορυφή
+    const dCur = { x: cur.b.x - cur.a.x, y: cur.b.y - cur.a.y };
+    const dNxt = { x: nxt.b.x - nxt.a.x, y: nxt.b.y - nxt.a.y };
+    const mPt = lineIntersect({ x: cur.a.x + ok.x, y: cur.a.y + ok.y }, dCur, { x: nxt.a.x + om.x, y: nxt.a.y + om.y }, dNxt);
+    if (!mPt) continue;
+    const offMag = Math.max(Math.hypot(ok.x, ok.y), Math.hypot(om.x, om.y));
+    if (Math.hypot(mPt.x - v.x, mPt.y - v.y) > MITER_LIMIT_FACTOR * offMag) continue; // αιχμηρή → square
+    bOuter[k] = mPt;
+    aOuter[m] = mPt;
+  }
+  return { aOuter, bOuter };
 }
 
-/** Χτίζει ΕΝΑ band/corner prism από plan quad και το προσθέτει στο group (tagged). */
+/** Χτίζει ΕΝΑ band prism από plan quad και το προσθέτει στο group (tagged). */
 function addFinishPrism(
   group: THREE.Group,
   quad: Point3D[],
@@ -84,7 +106,6 @@ function addFinishPrism(
   materialId: string,
   classification: FinishFaceSegment['classification'],
   levelId: string | undefined,
-  isCorner: boolean,
 ): void {
   if (quad.length < 4) return;
   const geo = stripPrismGeometry(quad, heightM);
@@ -96,7 +117,6 @@ function addFinishPrism(
   mesh.userData['structuralFinish'] = true;
   mesh.userData['matId'] = materialId;
   mesh.userData['finishClassification'] = classification;
-  if (isCorner) mesh.userData['finishCorner'] = true;
   if (levelId !== undefined) mesh.userData['levelId'] = levelId;
   mesh.castShadow = true;
   mesh.receiveShadow = true;
@@ -105,43 +125,10 @@ function addFinishPrism(
 }
 
 /**
- * Γεμίσματα γωνίας: για κάθε ζεύγος διαδοχικών exposed segments που μοιράζονται
- * **convex** κορυφή (CCW left-turn), προσθέτει παραλληλόγραμμο που κλείνει το κενό.
- * Σε reflex (concave) γωνίες τα bands ήδη επικαλύπτονται → skip. Δοκάρι (2 χωριστές
- * πλάγιες όψεις, άκρα εκτός) → κανένα κοινό vertex → μηδέν corner fills (σωστά).
- */
-function addFinishCornerFills(
-  group: THREE.Group,
-  segs: readonly FinishFaceSegment[],
-  s: number,
-  heightM: number,
-  baseY: number,
-  id: string,
-  bimType: 'column' | 'beam',
-  levelId: string | undefined,
-): void {
-  const n = segs.length;
-  if (n < 2) return;
-  for (let k = 0; k < n; k++) {
-    const cur = segs[k];
-    const nxt = segs[(k + 1) % n];
-    const tol = 1e-6 * (1 + Math.hypot(cur.b.x, cur.b.y));
-    if (Math.hypot(cur.b.x - nxt.a.x, cur.b.y - nxt.a.y) > tol) continue; // όχι κοινή κορυφή
-    const d0x = cur.b.x - cur.a.x, d0y = cur.b.y - cur.a.y;
-    const d1x = nxt.b.x - nxt.a.x, d1y = nxt.b.y - nxt.a.y;
-    if (d0x * d1y - d0y * d1x <= EPS) continue; // reflex/colinear → bands overlap, μηδέν κενό
-    const n0 = segOffsetVec(cur, cur.thickness * s);
-    const n1 = segOffsetVec(nxt, nxt.thickness * s);
-    if (!n0 || !n1) continue;
-    addFinishPrism(group, buildCornerFillQuad(cur.b, n0, n1), heightM, baseY, id, bimType, cur.materialId, cur.classification, levelId, true);
-  }
-}
-
-/**
- * ADR-449 Slice 4 — pure, entity-agnostic πυρήνας: από έτοιμα `StructuralFinishFaces`
- * χτίζει ένα `THREE.Group` band prisms (μία λωρίδα ανά εκτεθειμένη παρειά) + corner
- * fills (Slice 5) στις convex γωνίες. ΕΝΑ SSoT για κολόνα ΚΑΙ δοκάρι — διαφέρουν
- * μόνο σε `heightM`, `baseY`, `bimType`. `null` όταν δεν προκύπτει κανένα band.
+ * ADR-449 Slice 4/5 — pure, entity-agnostic πυρήνας: από έτοιμα `StructuralFinishFaces`
+ * χτίζει ένα `THREE.Group` με **mitered** band prisms (μία λωρίδα ανά εκτεθειμένη
+ * παρειά· οι γωνίες κλείνουν με 45° miter, μηδέν επικάλυψη). ΕΝΑ SSoT για κολόνα ΚΑΙ
+ * δοκάρι — διαφέρουν μόνο σε `heightM`, `baseY`, `bimType`. `null` αν κανένα band.
  */
 function buildFinishSkinFromFaces(
   faces: StructuralFinishFaces,
@@ -155,12 +142,21 @@ function buildFinishSkinFromFaces(
   if (faces.segments.length === 0 || heightM <= 0) return null;
   const s = mmToSceneUnits(sceneUnits);
   const segs = faces.segments;
+  const offsets = segs.map((seg) => segOffsetVec(seg, seg.thickness * s));
+  const { aOuter, bOuter } = computeMiteredOuter(segs, offsets);
 
   const group = new THREE.Group();
-  for (const seg of segs) {
-    addFinishPrism(group, buildFaceBandQuad(seg, seg.thickness * s), heightM, baseY, id, bimType, seg.materialId, seg.classification, levelId, false);
+  for (let i = 0; i < segs.length; i++) {
+    if (!offsets[i]) continue;
+    const seg = segs[i];
+    const quad: Point3D[] = [
+      { x: seg.a.x, y: seg.a.y, z: 0 },
+      { x: seg.b.x, y: seg.b.y, z: 0 },
+      { x: bOuter[i].x, y: bOuter[i].y, z: 0 },
+      { x: aOuter[i].x, y: aOuter[i].y, z: 0 },
+    ];
+    addFinishPrism(group, quad, heightM, baseY, id, bimType, seg.materialId, seg.classification, levelId);
   }
-  addFinishCornerFills(group, segs, s, heightM, baseY, id, bimType, levelId);
   if (group.children.length === 0) return null;
 
   group.userData['bimId'] = id;
