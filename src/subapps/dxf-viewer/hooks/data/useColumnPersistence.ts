@@ -40,6 +40,7 @@ import {
 import { recordColumnChange } from '../../bim/columns/column-audit-client';
 import { bimToBoqBridge } from '../../bim/services/BimToBoqBridge';
 import { columnBoqEntity } from './column-boq-feed';
+import { createPersistSerializer } from './persist-serializer';
 import { useBimEntityMovedPersistEffect } from './useBimEntityMovedPersistEffect';
 import { useBimEntityRestoredPersistEffect } from './useBimEntityRestoredPersistEffect';
 import { useBimFirestoreWriteGrace } from './useBimFirestoreWriteGrace';
@@ -141,6 +142,9 @@ export function useColumnPersistence(
   const pendingFirstSaveIdsRef = useRef<Set<string>>(new Set());
   const deletedIdsRef = useRef<Set<string>>(new Set());
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // ADR-401 / N.7 — per-id write serializer: a beam-creation cascade re-persists a
+  // column in the same tick it attaches; serializing prevents a duplicate `created`.
+  const persistSerializerRef = useRef(createPersistSerializer());
   const selectedColumnRef = useRef<ColumnEntity | null>(null);
   selectedColumnRef.current = primarySelectedColumn;
 
@@ -264,8 +268,10 @@ export function useColumnPersistence(
     return () => unsubscribe();
   }, [currentLevelId, companyId, projectId, floorplanId, userId]);
 
-  // Immediate persist (used by both auto-save flush and explicit button).
-  const persist = useCallback(async (entity: ColumnEntity) => {
+  // Immediate persist body — one save + one audit per call (used by both
+  // auto-save flush and explicit button). Always invoked through the serialized
+  // `persist` wrapper below so concurrent calls for the same id run in order.
+  const persistOnce = useCallback(async (entity: ColumnEntity) => {
     const svc = serviceRef.current;
     if (!svc) return;
     const prevParams = lastSavedParamsRef.current.get(entity.id) ?? null;
@@ -315,6 +321,15 @@ export function useColumnPersistence(
       setSaveState('error');
     }
   }, [companyId, projectId, buildingId, floorId, levelManager]);
+
+  // Serialized persist (ADR-401 / N.7): chains concurrent saves for the same id so
+  // a beam-cascade auto-attach re-persist sees the committed baseline → emits one
+  // `created` then an `updated` diff, instead of a duplicate `created`.
+  const persist = useCallback(
+    (entity: ColumnEntity) =>
+      persistSerializerRef.current.run(entity.id, () => persistOnce(entity)),
+    [persistOnce],
+  );
 
   // Auto-save debounce σε selected column params change.
   useEffect(() => {

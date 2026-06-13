@@ -53,6 +53,7 @@ import {
 import { wallBoqEntity } from './wall-boq-feed';
 import { useWallTypeReresolution } from './useWallTypeReresolution';
 import { useWallSoftLock } from './useWallSoftLock';
+import { createPersistSerializer } from './persist-serializer';
 
 // ============================================================================
 // TYPES
@@ -126,6 +127,9 @@ export function useWallPersistence(
   // ORs in a type-link change detected against this snapshot.
   const lastSavedTypeRef = useRef<Map<string, WallTypeLink>>(new Map());
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // ADR-401 / N.7 — per-id write serializer: auto-attach re-persists a wall in the
+  // same tick as its creation; serializing prevents a duplicate `created` audit.
+  const persistSerializerRef = useRef(createPersistSerializer());
   const selectedWallRef = useRef<WallEntity | null>(null);
   selectedWallRef.current = primarySelectedWall;
 
@@ -270,8 +274,10 @@ export function useWallPersistence(
     primarySelectedWall,
   );
 
-  // Immediate persist (used by both auto-save flush and explicit button).
-  const persist = useCallback(async (entity: WallEntity) => {
+  // Immediate persist body — one save + one audit per call (used by both
+  // auto-save flush and explicit button). Always invoked through the serialized
+  // `persist` wrapper below so concurrent calls for the same id run in order.
+  const persistOnce = useCallback(async (entity: WallEntity) => {
     const svc = serviceRef.current;
     if (!svc) return;
     const prevParams = lastSavedParamsRef.current.get(entity.id) ?? null;
@@ -320,6 +326,15 @@ export function useWallPersistence(
       setSaveState('error');
     }
   }, [acquireLock, companyId, projectId, buildingId, floorId, levelManager]);
+
+  // Serialized persist (ADR-401 / N.7): chains concurrent saves for the same id so
+  // a create-tick auto-attach re-persist sees the committed baseline → emits one
+  // `created` then an `updated` diff, instead of a duplicate `created`.
+  const persist = useCallback(
+    (entity: WallEntity) =>
+      persistSerializerRef.current.run(entity.id, () => persistOnce(entity)),
+    [persistOnce],
+  );
 
   // Auto-save debounce on selected wall params change.
   useEffect(() => {
