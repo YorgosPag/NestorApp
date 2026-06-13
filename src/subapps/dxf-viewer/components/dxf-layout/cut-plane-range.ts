@@ -1,66 +1,30 @@
 /**
- * ADR-452 — cut-plane slider range math (PURE, no React / no Firebase).
+ * ADR-452 — cut-plane slider range (PURE, no React).
  *
- * Split out from `useCutPlaneRange.ts` so the datum math is unit-testable without
- * pulling the Firestore-backed `useFloorsByBuilding` into the test environment.
- * All values are **mm, datum-relative** (ground = 0), matching the frame the BIM
- * renderers compare against (`ViewRange.cutPlaneMm`).
+ * The cut plane is **FFL-relative to the active storey** (Revit View Range is
+ * per-level): `cutPlaneMm` = mm above the active floor's base, matching both the
+ * 2D entity Z-extents (floor-relative) and the 3D world-Y formula
+ * `(floorElevationMm + cutPlaneMm)`. The slider therefore spans `0 … storeyHeight`.
+ *
+ * Split from the hook so it is unit-testable without React/Firebase.
  */
 
-import type { FloorOption } from '@/components/properties/shared/useFloorsByBuilding';
-import {
-  resolveBuildingDatumElevationM,
-  resolveFloorDatumRelativeElevationMm,
-} from '../../bim-3d/scene/floor-stack-elevation';
-
-/** Fallback storey height (mm) when a floor has no `height` (mirrors DEFAULT_FLOOR_HEIGHT_M). */
-export const FALLBACK_FLOOR_HEIGHT_MM = 3000;
-
-export interface CutPlaneTick {
-  /** Datum-relative elevation (mm). */
-  readonly mm: number;
-  /** Floor label (longName → name → «#n»). */
-  readonly label: string;
-}
-
 export interface CutPlaneRange {
-  /** Lowest slider value (mm) — min floor FFL, never above 0 (ground). */
+  /** Floor base (mm above FFL). Always 0. */
   readonly minMm: number;
-  /** Highest slider value (mm) — top of the uppermost storey. */
+  /** Storey ceiling (mm above FFL) = floor-to-floor height. */
   readonly maxMm: number;
-  /** Sensible default cut elevation (mm) — the active storey ceiling, else `maxMm`. */
+  /** Default cut elevation (mm) = ceiling → full storey visible, then slide down. */
   readonly defaultMm: number;
-  /** Per-floor FFL tick marks, ascending. */
-  readonly ticks: readonly CutPlaneTick[];
 }
 
-/** Build the slider range + ticks from the building's floor list (null = no floors). */
-export function computeCutPlaneRange(
-  floors: readonly FloorOption[],
-  activeCeilingMm: number | null,
-): CutPlaneRange | null {
-  if (floors.length === 0) return null;
-
-  const datumM = resolveBuildingDatumElevationM(floors);
-  const ticks: CutPlaneTick[] = floors.map((f) => ({
-    mm: resolveFloorDatumRelativeElevationMm(f.elevation, datumM),
-    label: f.longName || f.name || `#${f.number}`,
-  }));
-
-  const tickMms = ticks.map((t) => t.mm);
-  const minMm = Math.min(0, ...tickMms);
-  const maxMm = Math.max(
-    ...floors.map(
-      (f) =>
-        resolveFloorDatumRelativeElevationMm(f.elevation, datumM) +
-        (typeof f.height === 'number' ? f.height * 1000 : FALLBACK_FLOOR_HEIGHT_MM),
-    ),
-  );
-
-  const defaultMm =
-    activeCeilingMm !== null && activeCeilingMm > minMm && activeCeilingMm <= maxMm
-      ? activeCeilingMm
-      : maxMm;
-
-  return { minMm, maxMm, defaultMm, ticks };
+/**
+ * Build the slider range for the active storey. Returns `null` when no storey
+ * height is known (no active floor) — the slider then hides.
+ */
+export function computeCutPlaneRange(storeyHeightMm: number | null | undefined): CutPlaneRange | null {
+  if (typeof storeyHeightMm !== 'number' || !Number.isFinite(storeyHeightMm) || storeyHeightMm <= 0) {
+    return null;
+  }
+  return { minMm: 0, maxMm: storeyHeightMm, defaultMm: storeyHeightMm };
 }

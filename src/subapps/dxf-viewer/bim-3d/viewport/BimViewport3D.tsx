@@ -17,6 +17,7 @@ import { clearSceneBboxGetter, setSceneBboxGetter } from '../stores/SceneBboxPro
 import { useBuildingFloors3DSync } from '../../components/dxf-layout/useBuildingFloors3DSync';
 import { QuickProperties3DHoverPopover } from '../properties/QuickProperties3DHoverPopover';
 import { BimEntityCardPanel } from '../properties/BimEntityCardPanel';
+import { CutPlaneSlider3DLeaf } from './CutPlaneSlider3DLeaf';
 import { Section2DPanel } from '../panels/Section2DPanel';
 import { RenderFinalDialog } from '../render/RenderFinalDialog';
 import { RenderProgressOverlay } from '../render/RenderProgressOverlay';
@@ -376,6 +377,9 @@ export function BimViewport3D({ projectId: projectIdProp, readOnly = false, bimE
 
       {/* BIM entity card panel (ADR-366 B.2.Q4) — micro-leaf, absolute right-side panel */}
       <BimEntityCardPanel />
+
+      {/* ADR-452 — cut-plane slider (3D mount); drives the horizontal section clip. */}
+      <CutPlaneSlider3DLeaf />
 
       {/* ADR-435 Slice 1b — 3D clash markers (DOM ⊙ projected via camera; same glyph as 2D). */}
       <ClashMarkers3DOverlay managerRef={managerRef} />

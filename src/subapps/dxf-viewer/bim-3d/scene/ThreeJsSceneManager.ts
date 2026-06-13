@@ -168,7 +168,7 @@ export class ThreeJsSceneManager {
     this.sectionController = new SectionSceneController({
       renderer: this.renderer, scene: this.scene, getCamera: () => this.viewport.camera,
       getBimGroup: () => this.bimLayer.group, getDxfBounds: () => this.dxfConverter.getBounds(),
-      invalidatePathTracer: () => this.pathTracerRenderer.invalidateScene(),
+      invalidatePathTracer: () => this.pathTracerRenderer.invalidateScene(), markDirty: () => this.markSceneDirty(), // ADR-452 cut-plane drag → repaint
     });
     // ADR-366 §C.1.b — waypoint drag-handle sprites. Auto-subscribes σε AnimationStore.
     this.waypointDragHandleRenderer = new WaypointDragHandleRenderer(this.scene);

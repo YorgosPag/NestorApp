@@ -191,6 +191,10 @@ export async function handleUpdateDxfLevel(
       return NextResponse.json({ success: false, error: 'No fields to update' }, { status: 400 });
     }
 
+    // 🔎 TEMP DIAGNOSTIC (2026-06-13 — runaway PATCH loop hunt): log WHICH fields each
+    // PATCH writes so we can identify the remaining ~3-5s writer. REMOVE after diagnosis.
+    logger.info('[DxfLevels/Update] DIAG fields', { levelId, fields: Object.keys(updates) });
+
     const versionResult = await withVersionCheck({
       db,
       collection: COLLECTIONS.DXF_VIEWER_LEVELS,

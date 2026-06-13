@@ -103,6 +103,41 @@ also invalidates.
   no-inline-style rule; current UI shows a live metre readout + min/max bounds).
 - 3D section box.
 
+## 9. v2 — 3D horizontal section (Revit-grade) + reference-frame unify
+
+The same slider now also drives a **real horizontal section in 3D** (geometry clip + solid cut
+faces), and the cut elevation is unified to a single FFL-relative frame across 2D and 3D.
+
+1. **Reference frame fix (FFL-relative).** v1's slider range was datum-relative across the whole
+   building (0/3000/6000…), but `cutPlaneMm` and the 2D entity Z-extents are **FFL-relative**
+   (floor base = 0). It only worked on the ground floor (datum = 0) and silently hid nothing on
+   upper floors. Fixed: `useCutPlaneRange` is now `0 … storeyHeightMm` of the active storey
+   (`useActiveStoreyContext().storeyHeightMm`), matching Revit's per-level View Range. This is the
+   single frame both 2D and 3D use.
+
+2. **3D = the existing Section pipeline, extended (full SSoT).** The 3D view already had a mature
+   Section system whose `SectionSceneController` is the SINGLE owner of the scene's clipping planes
+   (section box + crop, ≤6 planes, `renderer.localClippingEnabled`, stencil caps for solid cut
+   faces). The cut plane is composed there as a **third clip source** — no parallel clip mechanism:
+   - `bim-3d/scene/cut-plane-3d-math.ts` — pure `computeCutPlaneWorldY(floorElevationMm, cutPlaneMm,
+     buildingBaseElevationM)` = `(floorElevationMm + cutPlaneMm)·0.001 + baseM` (Y-up metres) +
+     `buildCutPlane(worldY)` = `Plane((0,-1,0), worldY)` (keeps everything ≤ worldY).
+   - `bim-3d/scene/cut-plane-3d.ts` — `resolveCutPlane()` reads the cut-plane SSoT + active storey
+     FFL + active building base (`useBim3DEntitiesStore`).
+   - `SectionSceneController.applyState()` prepends the cut plane (survives the 6-plane slice),
+     stays active even when the Section Box is off, marks the scene dirty (`markDirty` dep) so the
+     on-demand renderer repaints during slider drag. `isStencilActive()` now also fires for the cut
+     plane → solid Revit-style cut faces.
+
+3. **Cross-mode slider.** `CutPlaneSliderControl` is the shared presentational control; mounted by
+   `CutPlaneSliderLeaf` (2D, mode-gated) and `CutPlaneSlider3DLeaf` (inside `BimViewport3D`, `z-[60]`).
+   One SSoT → the slider position carries across 2D ↔ 3D.
+
+**v2 files:** NEW `cut-plane-3d-math.ts`, `cut-plane-3d.ts`, `CutPlaneSliderControl.tsx`,
+`CutPlaneSlider3DLeaf.tsx`; MOD `cut-plane-range.ts`, `useCutPlaneRange.ts`, `CutPlaneSliderLeaf.tsx`,
+`section-scene-controller.ts`, `ThreeJsSceneManager.ts`, `BimViewport3D.tsx`. Tests: `cut-plane-3d-math`
++ updated `useCutPlaneRange`.
+
 ## 8. Changelog
 
 - **2026-06-13** — v1: SSoT extents + hide gate (default OFF) + 2D cut-plane slider. 18 jest.
@@ -110,3 +145,5 @@ also invalidates.
   (`setImmediatePosition(null)`, mirroring `ViewMode3DToggleButton`) so the crosshair no longer
   freezes over the overlay; explicit `cursor-pointer` / `cursor-grab` classes restore a visible
   grab cursor over the canvas's `cursor-none` region.
+- **2026-06-13** — v2: real 3D horizontal section via the existing Section clip pipeline (single
+  clip owner), FFL-relative frame unify (fixes upper-floor 2D bug), cross-mode slider. 20 jest.

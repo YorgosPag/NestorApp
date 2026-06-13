@@ -21,6 +21,11 @@ import { applyClippingPlanes, clearClippingPlanes } from '../systems/section/sec
 import { SectionStencilRenderer } from '../systems/section/section-stencil-renderer';
 import { useCropRegionStore } from '../render/crop-region/CropRegionStore';
 import { buildCropPlanes } from '../render/crop-region/crop-frustum-builder';
+// ADR-452 — cut-plane (Revit View Range) as a 3rd clip source, composed here so
+// this controller stays the SINGLE owner of the scene's clipping planes.
+import { resolveCutPlane } from './cut-plane-3d';
+import { useBimRenderSettingsStore } from '../../state/bim-render-settings-store';
+import { useActiveStoreyStore } from '../../systems/levels/active-storey-store';
 
 export interface SectionControllerDeps {
   readonly renderer: THREE.WebGLRenderer;
@@ -29,6 +34,8 @@ export interface SectionControllerDeps {
   readonly getBimGroup: () => THREE.Object3D;
   readonly getDxfBounds: () => THREE.Box3 | null;
   readonly invalidatePathTracer: () => void;
+  /** ADR-452 — request an on-demand raster repaint (slider drag drives clip change). */
+  readonly markDirty: () => void;
 }
 
 export class SectionSceneController {
@@ -43,8 +50,10 @@ export class SectionSceneController {
   private initDone = false;
   private disposed = false;
   private cachedPlanes: THREE.Plane[] = [];
-  /** Combined section + crop planes (≤ 6 total, Three.js hard limit). */
+  /** Combined cut-plane + section + crop planes (≤ 6 total, Three.js hard limit). */
   private combinedPlanes: THREE.Plane[] = [];
+  /** ADR-452 — true when any clip source (section box OR cut plane) is active. */
+  private clipActive = false;
 
   constructor(deps: SectionControllerDeps) {
     this.deps = deps;
@@ -92,18 +101,27 @@ export class SectionSceneController {
   applyState(): void {
     if (this.disposed) return;
     const { enabled, mode, boxBounds, planes } = useSectionStore.getState();
-    if (!enabled) {
+    // ADR-452 — cut plane is an independent clip source; it stays active even when
+    // the Section Box is off.
+    const cutPlane = resolveCutPlane();
+    this.clipActive = enabled || cutPlane !== null;
+
+    if (!this.clipActive) {
       clearClippingPlanes(this.deps.scene);
       this.sectionBox.setVisible(false);
       this.cachedPlanes = [];
+      this.combinedPlanes = [];
       this.deps.invalidatePathTracer();
+      this.deps.markDirty();
       return;
     }
-    if (mode === 'box') {
+
+    // Section-box / planes-mode geometry only when the Section feature is enabled.
+    if (enabled && mode === 'box') {
       if (boxBounds) this.sectionBox.setFromBounds(boxBounds);
       this.sectionBox.setVisible(true);
       this.cachedPlanes = this.sectionBox.getPlanes();
-    } else {
+    } else if (enabled) {
       this.sectionBox.setVisible(false);
       this.cachedPlanes = planes
         .filter((p) => p.enabled)
@@ -113,12 +131,21 @@ export class SectionSceneController {
             p.constant,
           ),
         );
+    } else {
+      this.sectionBox.setVisible(false);
+      this.cachedPlanes = [];
     }
+
     const cropPlanes = this.buildCropPlanes();
-    // Enforce Three.js hard limit of 6 clipping planes (section + crop combined).
-    this.combinedPlanes = [...this.cachedPlanes, ...cropPlanes].slice(0, 6);
+    // Cut plane FIRST so it survives the Three.js 6-plane hard limit even when a
+    // full 6-plane section box is also active (rare combo).
+    const all = cutPlane
+      ? [cutPlane, ...this.cachedPlanes, ...cropPlanes]
+      : [...this.cachedPlanes, ...cropPlanes];
+    this.combinedPlanes = all.slice(0, 6);
     applyClippingPlanes(this.deps.scene, this.combinedPlanes);
     this.deps.invalidatePathTracer();
+    this.deps.markDirty();
   }
 
   /**
@@ -128,7 +155,8 @@ export class SectionSceneController {
    */
   isStencilActive(): boolean {
     if (this.disposed) return false;
-    return useSectionStore.getState().enabled && this.combinedPlanes.length > 0;
+    // ADR-452 — caps render whenever any clip source (section box OR cut plane) is live.
+    return this.clipActive && this.combinedPlanes.length > 0;
   }
 
   private buildCropPlanes(): THREE.Plane[] {
@@ -170,7 +198,13 @@ export class SectionSceneController {
     const u2 = useSectionStore.subscribe((s) => s.mode, cb);
     const u3 = useSectionStore.subscribe((s) => s.boxBounds, cb);
     const u4 = useSectionStore.subscribe((s) => s.planes, cb);
-    return () => { u1(); u2(); u3(); u4(); };
+    // ADR-452 — re-compose clip planes when the cut-plane SSoT or the active storey
+    // changes. These stores are plain (no subscribeWithSelector), so we listen to
+    // every change; the cut-plane slider drag only mutates cutPlaneMm, and applyState
+    // is idempotent, so the extra calls are cheap and user-frequency.
+    const u5 = useBimRenderSettingsStore.subscribe(cb);
+    const u6 = useActiveStoreyStore.subscribe(cb);
+    return () => { u1(); u2(); u3(); u4(); u5(); u6(); };
   }
 
   private onPointerDown(e: PointerEvent): void {

@@ -792,7 +792,7 @@
 | **ADR-449** | Structural Finish Skin (σοβάς κολόνας/δοκαριού· per-face adjacency-driven· immutable πυρήνας + derived σοβάς + BOQ ξεχωριστές γραμμές) | 🟢 Slices 1-6 (κολόνες+δοκάρια+toggle+beam↔column junction) — pending browser-verify | [View](./adrs/ADR-449-structural-finish-skin.md) |
 | **ADR-450** | Floor-elevation cascade + SSoT-unify «οροφή ορόφου» (Revit level-driven· height-change → auto-stack upper floors· κολώνα+δοκάρι ΕΝΑ ceiling resolver) | 🟢 Implemented — pending browser-verify + commit | [View](./adrs/ADR-450-floor-elevation-cascade-ssot-unify.md) |
 | **ADR-451** | Building Vertical Setup & Floor SSoT (Revit level-driven· `elevation`=SSoT / `height`=παράγωγο ΕΝΑ server cascade· Quick Setup υπόγεια/ισόγειο/όροφοι + foundation datum· soft continuity warnings· DXF rename→floor propagation) | 🟢 Slices 0-3 + Slice 4 rename — pending browser-verify + commit (Slice 4 create/delete/elev-edit deferred) | [View](./adrs/ADR-451-building-vertical-setup-floor-ssot.md) |
-| **ADR-452** | Cut-Plane Slider (Revit View Range UI για 2Δ κάτοψη· κάθετο slider δεξιά → `cutPlaneMm`· real-time οριζόντια τομή κατά Z· hide gate `zBottomMm > cutPlaneMm` σε ΕΝΑ choke point· default OFF) | 🟢 Implemented — pending browser-verify + commit | [View](./adrs/ADR-452-cut-plane-view-range-ui.md) |
+| **ADR-452** | Cut-Plane Slider (Revit View Range· κάθετο slider δεξιά → `cutPlaneMm`· **2Δ** hide gate + **3Δ** πραγματική οριζόντια τομή/clip+caps μέσω υπάρχοντος Section pipeline· ΕΝΑ SSoT FFL-relative· default OFF) | 🟢 v2 Implemented (2Δ+3Δ) — pending browser-verify + commit | [View](./adrs/ADR-452-cut-plane-view-range-ui.md) |
 | **ADR-UI-001** | Visual Primitive Ownership & Semantic Tokens | ✅ APPROVED | [View](./adrs/ADR-UI-001.md) |
 
 ---
