@@ -469,8 +469,13 @@ export function computeStructuralFinishSilhouette(
   const s = mmToSceneUnits(sceneUnits);
   const tol = EXTERIOR_EDGE_TOL_MM * s;
   const classify = buildStructuralFinishClassifier(undefined, walls, tol);
-  const dCanvas = STRUCTURAL_JOIN_TOL_MM * s;
-  const wallObstacles = walls.map((w) => dilatePolygonOutward(wallFootprintPolygon(w), dCanvas));
+  // ADR-449 Slice 7 — οι τοίχοι ως obstacles **ΧΩΡΙΣ dilation** (browser-verified per-element
+  // συμπεριφορά): ο **κάθετος** τοίχος που διασχίζει την όψη → καλύπτεται (μηδέν σοβάς εκεί)·
+  // ο **collinear** τοίχος κάτω από δοκάρι (ίδιος άξονας, grid framing) → midpoint στο boundary,
+  // ΟΧΙ strictly-inside → ο σοβάς της πλάγιας όψης ΕΜΦΑΝΙΖΕΤΑΙ. Dilation εδώ έκρυβε ΟΛΟ τον
+  // σοβά δοκαριών πάνω σε τοίχους (grid model· Giorgio 2026-06-13). Η σύνδεση κολόνα↔δοκάρι
+  // (Πρόβλημα Β) λύνεται από το ΕΝΙΑΙΟ union, ΟΧΙ από obstacle dilation.
+  const wallObstacles = walls.map((w) => wallFootprintPolygon(w));
 
   return computeStructuralSilhouetteBands({
     members,
