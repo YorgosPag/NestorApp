@@ -75,9 +75,12 @@ export const CutPlaneSliderControl = React.memo(function CutPlaneSliderControl({
         onClick={handleToggle}
         aria-label={active ? t('cutPlane.disable') : t('cutPlane.enable')}
         aria-pressed={active}
-        className={`flex cursor-pointer select-none items-center justify-center rounded border p-1.5 shadow-md backdrop-blur-sm transition-colors ${
+        // Like the ViewCube faces: the active (orange) state rests at ~60% and lifts to full
+        // opacity on hover (the cube goes 0.5 → 1.0). The inactive state keeps its own neutral
+        // hover. `transition-all` so opacity + colours animate together.
+        className={`flex cursor-pointer select-none items-center justify-center rounded border p-1.5 shadow-md backdrop-blur-sm transition-all ${
           active
-            ? 'border-primary bg-primary text-primary-foreground'
+            ? 'border-primary bg-primary text-primary-foreground opacity-60 hover:opacity-100'
             : 'border-border bg-background/80 text-foreground hover:bg-accent hover:text-accent-foreground'
         }`}
       >
@@ -90,10 +93,9 @@ export const CutPlaneSliderControl = React.memo(function CutPlaneSliderControl({
       <Slider
         orientation="vertical"
         aria-label={t('cutPlane.ariaSlider')}
-        // opacity-80 softens the track/range/thumb so the slider's intensity sits closer to the
-        // semi-transparent ViewCube/compass-ring (same #ff8c00 hue). The toggle button keeps full
-        // opacity so the ON/OFF state stays crisp. Scoped here only — the shared Slider is untouched.
-        className="my-1 flex-1 cursor-pointer opacity-80 [&_[role=slider]]:cursor-grab [&_[role=slider]]:active:cursor-grabbing"
+        // `cut-plane-slider` makes the track/range/thumb behave like the ViewCube compass ring:
+        // neutral grey-blue at rest, lighting up to the orange accent on hover (see globals.css).
+        className="cut-plane-slider my-1 flex-1 cursor-pointer [&_[role=slider]]:cursor-grab [&_[role=slider]]:active:cursor-grabbing"
         min={range.minMm}
         max={range.maxMm}
         step={CUT_PLANE_STEP_MM}

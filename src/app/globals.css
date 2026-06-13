@@ -358,6 +358,14 @@
     --primary-foreground: var(--viewcube-accent-foreground);
     --ring: var(--viewcube-accent);
   }
+  /* Slider mimics the ViewCube compass ring: neutral grey-blue at rest (#8899aa = the ring's
+     COMPASS_RING_DEFAULT_COLOR) and lights up to the orange accent on hover. The `--primary`
+     override is local to the slider, so the toggle button keeps the orange accent. */
+  .cut-plane-slider-accent .cut-plane-slider { --primary: 210 17% 60%; }
+  .cut-plane-slider-accent .cut-plane-slider:hover { --primary: var(--viewcube-accent); }
+  .cut-plane-slider-accent .cut-plane-slider :where([role="slider"], span) {
+    transition: background-color 160ms ease, border-color 160ms ease;
+  }
 
   /* ?? ENTERPRISE: Toast severity classes tied to design tokens */
   .toast-status {

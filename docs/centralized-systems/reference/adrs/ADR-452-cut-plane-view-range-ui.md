@@ -463,3 +463,12 @@ faces), and the cut elevation is unified to a single FFL-relative frame across 2
   `section-stencil-materials.ts`, `section-cut-cap-groups.ts`. Section suite green; browser-verified «λειτουργεί
   σωστά» (from below the roof is occluded by the framing). *(ADR-452 reassigned to me after the concurrent agent
   stopped — Giorgio.)*
+- **2026-06-14** — v2.20 — **slider + toggle made hover-driven, mirroring the ViewCube** (Giorgio: make the
+  slider behave like the compass ring and the toggle like the cube — i.e. light up on hover). Supersedes the
+  flat `opacity-80` of v2.18. (a) **Slider = compass ring:** a `cut-plane-slider` class drives a local
+  `--primary` that rests at grey-blue `210 17% 60%` (= the ring's `COMPASS_RING_DEFAULT_COLOR` #8899aa) and
+  swaps to `--viewcube-accent` (orange) on `:hover`, with a 160ms colour transition on the track/range/thumb
+  (the ring lerps similarly). The override is local to the slider so the toggle keeps the orange accent.
+  (b) **Toggle = cube faces:** the active state rests at `opacity-60` and lifts to `opacity-100` on hover
+  (the cube faces go 0.5 → 1.0); `transition-all` animates it. Files: `globals.css` (hover rules under the
+  scoped utility), `CutPlaneSliderControl.tsx` (class + button opacity). Shared `Slider` untouched.
