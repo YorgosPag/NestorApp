@@ -73,7 +73,15 @@ export function columnToMesh(
       mesh.position.y = floorElevationMm * MM_TO_M + buildingBaseElevationM;
       const tagged = tagMesh(mesh, column.id, 'column', matId, levelId);
       attachEdgesProjection(tagged, 'column', isWallColumnKind(column.kind) ? 'shear-wall' : undefined);
-      return tagged;
+      // ADR-449 Slice 6 fix — η attached κολώνα έπαιρνε ΜΟΝΟ πυρήνα (ο σοβάς ήταν flat-only,
+      // DEFER Slice 2) → μόλις τα δοκάρια auto-attach-άρανε τις κολόνες, ο σοβάς εξαφανιζόταν.
+      // Ύψος σοβά = το χαμηλότερο attached top (flat-top approx· per-corner sloped finish = DEFER).
+      const attachedTopMm = topProfile?.cornerTopZmm?.length
+        ? Math.min(...topProfile.cornerTopZmm)
+        : floorElevationMm + flatColumn.params.height;
+      return composeColumnWithFinish(
+        tagged, column, walls, beams, mesh.position.y, levelId, Math.max(0, attachedTopMm - floorElevationMm),
+      );
     }
     // Fall through to flat solid αν το prism εκφυλίζεται (defensive).
   }
@@ -92,22 +100,39 @@ export function columnToMesh(
   const tagged = tagMesh(mesh, column.id, 'column', matId, levelId);
   attachEdgesProjection(tagged, 'column');
 
-  // ADR-449 Slice 2 — additive σοβάς (per-face band skin) ΕΞΩ από τον στατικό
-  // πυρήνα. Ενεργό μόνο όταν η κολόνα έχει ενεργό `finish` ΚΑΙ δόθηκαν walls
-  // (απών στο ghost path → πυρήνας-only Mesh, μηδέν regression). Flat-path μόνο.
-  // ADR-449 Slice 5 — view-level gate «Σοβατισμένη όψη» (showFinishSkin).
-  const finishSkin = isStructuralFinishVisible()
-    ? buildColumnFinishSkin(flatColumn, walls, beams, mesh.position.y, levelId)
-    : null;
-  if (finishSkin) {
-    const composite = new THREE.Group();
-    composite.add(tagged);
-    composite.add(finishSkin);
-    composite.userData['bimId'] = column.id;
-    composite.userData['bimType'] = 'column';
-    return composite;
-  }
-  return tagged;
+  // ADR-449 Slice 2 — additive σοβάς (per-face band skin) ΕΞΩ από τον στατικό πυρήνα.
+  // Ενεργό μόνο όταν η κολόνα έχει ενεργό `finish` ΚΑΙ δόθηκαν walls (απών στο ghost
+  // path → πυρήνας-only). ADR-449 Slice 5 — view-level gate `showFinishSkin`.
+  return composeColumnWithFinish(tagged, column, walls, beams, mesh.position.y, levelId, flatColumn.params.height);
+}
+
+/**
+ * ADR-449 — συνθέτει τον πυρήνα κολόνας με τον additive σοβά (band skin) σε ΕΝΑ
+ * composite Group, ή επιστρέφει σκέτο τον πυρήνα όταν ο σοβάς είναι ανενεργός / κρυμμένος
+ * (view gate) / δεν προκύπτει band. Κοινό SSoT για flat ΚΑΙ attached path (Slice 6 fix:
+ * ο σοβάς έλειπε από το attached path). `skinHeightMm` = effective ύψος κολόνας για τον σοβά.
+ */
+function composeColumnWithFinish(
+  core: THREE.Mesh,
+  column: ColumnEntity,
+  walls: readonly WallEntity[],
+  beams: readonly BeamEntity[],
+  baseY: number,
+  levelId: string | undefined,
+  skinHeightMm: number,
+): THREE.Mesh | THREE.Group {
+  if (!isStructuralFinishVisible()) return core;
+  const colForSkin = Math.abs(skinHeightMm - column.params.height) > 1e-6
+    ? { ...column, params: { ...column.params, height: skinHeightMm } }
+    : column;
+  const finishSkin = buildColumnFinishSkin(colForSkin, walls, beams, baseY, levelId);
+  if (!finishSkin) return core;
+  const composite = new THREE.Group();
+  composite.add(core);
+  composite.add(finishSkin);
+  composite.userData['bimId'] = column.id;
+  composite.userData['bimType'] = 'column';
+  return composite;
 }
 
 /**

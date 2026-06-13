@@ -20,7 +20,7 @@
  */
 
 import type { Point2D } from '../../rendering/types/Types';
-import { formatDistanceLocale } from '../../rendering/entities/shared/distance-label-utils';
+import { formatDistanceLocale, formatAngleLocale } from '../../rendering/entities/shared/distance-label-utils';
 import { sceneUnitsToMeters, type SceneUnits } from '../../utils/scene-units';
 
 /** Decimal places for the live move readout (metre scale → Revit-grade 2 dp). */
@@ -47,4 +47,13 @@ export function sceneDistanceToMeters(distanceSceneUnits: number, units: SceneUn
 /** Midpoint of two points — the readout pill / label anchor. Pure, allocation-light. */
 export function moveReadoutMid(p1: Point2D, p2: Point2D): Point2D {
   return { x: (p1.x + p2.x) / 2, y: (p1.y + p2.y) / 2 };
+}
+
+/**
+ * Locale-formatted angle (degrees) for the endpoint-reshape readout that sits next to the
+ * angular-dimension arc. Wraps `formatAngleLocale` → degree symbol + locale separator, no
+ * other hardcoded text (N.11-safe). Kept here so all readout number formatting is one SSoT.
+ */
+export function formatMoveAngle(angleDeg: number): string {
+  return formatAngleLocale(angleDeg);
 }

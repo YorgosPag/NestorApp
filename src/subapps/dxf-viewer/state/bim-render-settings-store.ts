@@ -79,6 +79,8 @@ export const useBimRenderSettingsStore = create<BimRenderSettingsState>((set, ge
       visualStyle: state.visualStyle,
       showHeatLoad: state.showHeatLoad,
       showFinishSkin: state.showFinishSkin,
+      // ADR-452 — persist the cut-plane hide-gate toggle per-view.
+      cutPlaneActive: state.cutPlaneActive,
     };
   }
 
@@ -115,6 +117,7 @@ export const useBimRenderSettingsStore = create<BimRenderSettingsState>((set, ge
         realisticMaterials: resolved.realisticMaterials,
         showHeatLoad: resolved.showHeatLoad,
         showFinishSkin: resolved.showFinishSkin,
+        cutPlaneActive: resolved.cutPlaneActive,
         lastLocalMutationAt: 0,
         bimVisibilitySnapshot: null,
       });
@@ -253,6 +256,14 @@ export const useBimRenderSettingsStore = create<BimRenderSettingsState>((set, ge
         debounceWrite(state.currentLevelId, buildRaw({ ...get(), showFinishSkin }));
     },
 
+    setCutPlaneActive(cutPlaneActive) {
+      const state = get();
+      if (state.cutPlaneActive === cutPlaneActive) return; // idempotent — no-op write
+      set({ cutPlaneActive, lastLocalMutationAt: Date.now() });
+      if (state.currentLevelId)
+        debounceWrite(state.currentLevelId, buildRaw({ ...get(), cutPlaneActive }));
+    },
+
     setObjectStyleVgColor(category, key, color) {
       const state = get();
       const prev = state.objectStyles[category];
@@ -340,6 +351,7 @@ function commitObjectStyles(
       visualStyle: get().visualStyle,
       showHeatLoad: get().showHeatLoad,
       showFinishSkin: get().showFinishSkin,
+      cutPlaneActive: get().cutPlaneActive,
     });
   }
 }

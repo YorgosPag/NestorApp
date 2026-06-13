@@ -8,6 +8,7 @@ import {
   updateDxfLevelWithPolicy,
   deleteDxfLevelWithPolicy,
 } from '@/services/dxf-level-mutation-gateway';
+import { updateFloorWithPolicy } from '@/services/floor-mutation-gateway';
 import type { DxfLevelCreateResponse } from '@/app/api/dxf-levels/dxf-levels.types';
 import type { Level, FloorplanDoc, LevelSystemSettings, FloorplanType } from '../config';
 
@@ -238,6 +239,19 @@ export function useLevelOperations({
         if (enableFirestore) {
           // 🏢 ENTERPRISE (ADR-286): Route rename through gateway → /api/dxf-levels PATCH
           await updateDxfLevelWithPolicy({ payload: { levelId, name } });
+          // ADR-451 — A Level is a PROJECTION of the Floor SSoT. Propagate the
+          // rename to the linked building floor through the SAME /api/floors API so
+          // the name stays consistent across the «Όροφοι» tab and the viewer. The
+          // server reconcile is untouched (name is not a vertical-stack field).
+          const renamedLevel = levels.find(l => l.id === levelId);
+          if (renamedLevel?.floorId) {
+            try {
+              await updateFloorWithPolicy({ payload: { floorId: renamedLevel.floorId, name } });
+            } catch (floorErr) {
+              // Non-fatal — the level rename already succeeded.
+              console.warn('[Levels] Linked floor name not updated:', getErrorMessage(floorErr));
+            }
+          }
         } else {
           setLevels(prev => LevelOperations.renameLevel(prev, levelId, name));
         }

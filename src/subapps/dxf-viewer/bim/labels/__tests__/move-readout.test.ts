@@ -6,8 +6,8 @@
  * the scene-units table, and the midpoint helper returns the true midpoint.
  */
 
-import { formatMoveDistance, sceneDistanceToMeters, moveReadoutMid } from '../move-readout';
-import { formatDistanceLocale } from '../../../rendering/entities/shared/distance-label-utils';
+import { formatMoveDistance, sceneDistanceToMeters, moveReadoutMid, formatMoveAngle } from '../move-readout';
+import { formatDistanceLocale, formatAngleLocale } from '../../../rendering/entities/shared/distance-label-utils';
 
 describe('formatMoveDistance', () => {
   it('delegates to the locale distance formatter (2 dp, no hardcoded unit)', () => {
@@ -35,6 +35,13 @@ describe('sceneDistanceToMeters', () => {
 
   it('is zero for a zero displacement', () => {
     expect(sceneDistanceToMeters(0, 'mm')).toBe(0);
+  });
+});
+
+describe('formatMoveAngle', () => {
+  it('delegates to the locale angle formatter (degree symbol included)', () => {
+    expect(formatMoveAngle(30)).toBe(formatAngleLocale(30));
+    expect(formatMoveAngle(45)).toContain('°');
   });
 });
 

@@ -62,7 +62,9 @@ function readBimCacheInputs(): { drawingScale: number; bimSettingsHash: string }
   const s = useBimRenderSettingsStore.getState();
   return {
     drawingScale: s.drawingScale,
-    bimSettingsHash: JSON.stringify({ vr: s.viewRange, os: s.objectStyles, ts: getCurrentOpeningTagStyle() }),
+    // ADR-452 — `cpa` (cutPlaneActive) busts the cache when the cut-plane hide
+    // gate toggles; `viewRange.cutPlaneMm` (in `vr`) covers slider drag.
+    bimSettingsHash: JSON.stringify({ vr: s.viewRange, cpa: s.cutPlaneActive, os: s.objectStyles, ts: getCurrentOpeningTagStyle() }),
   };
 }
 

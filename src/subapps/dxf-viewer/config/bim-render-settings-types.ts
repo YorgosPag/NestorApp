@@ -98,6 +98,14 @@ export interface BimRenderSettings {
    * συνεχίζει να μετράει — schedule = model, όχι view). Per-view.
    */
   showFinishSkin?: boolean;
+  /**
+   * ADR-452 — cut-plane (Revit View Range) hide gate master toggle. Absent ⇒
+   * `false` (OFF by default so existing views keep their current look — nothing is
+   * hidden until the user engages the right-edge cut-plane slider). `true` ⇒ BIM
+   * entities whose BASE sits above `viewRange.cutPlaneMm` are hidden in the 2D
+   * plan, giving a real-time horizontal section. Per-view.
+   */
+  cutPlaneActive?: boolean;
 }
 
 export interface ResolvedBimSettings {
@@ -120,6 +128,8 @@ export interface ResolvedBimSettings {
   showHeatLoad: boolean;
   /** ADR-449 Slice 5 — resolved master toggle «Σοβατισμένη όψη» (default ON). */
   showFinishSkin: boolean;
+  /** ADR-452 — resolved cut-plane hide-gate master toggle (default OFF). */
+  cutPlaneActive: boolean;
 }
 
 /**
@@ -163,6 +173,8 @@ export function resolveBimSettings(s?: BimRenderSettings | null): ResolvedBimSet
     showHeatLoad: s?.showHeatLoad ?? false,
     // ADR-449 Slice 5 — absent ⇒ true (σοβάς ορατός by default, όπως Revit finishes).
     showFinishSkin: s?.showFinishSkin ?? true,
+    // ADR-452 — absent ⇒ false (cut-plane hide gate off by default; opt-in slider).
+    cutPlaneActive: s?.cutPlaneActive ?? false,
   };
 }
 

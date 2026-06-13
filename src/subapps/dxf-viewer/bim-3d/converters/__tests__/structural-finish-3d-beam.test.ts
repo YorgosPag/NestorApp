@@ -7,11 +7,11 @@
  */
 
 import * as THREE from 'three';
-import { buildBeamFinishSkin } from '../structural-finish-3d';
+import { buildBeamFinishSkin, computeMiteredOuter } from '../structural-finish-3d';
 import { beamToMesh } from '../BimToThreeConverter';
 import { buildDefaultBeamParams, buildBeamEntity } from '../../../hooks/drawing/beam-completion';
 import type { BeamEntity } from '../../../bim/types/beam-types';
-import type { StructuralFinishSpec } from '../../../bim/finishes/structural-finish-types';
+import type { StructuralFinishSpec, FinishFaceSegment } from '../../../bim/finishes/structural-finish-types';
 
 const PLASTER_HEX = 0xe8e0d0;
 
@@ -81,6 +81,28 @@ describe('buildBeamFinishSkin (ADR-449 Slice 4)', () => {
 
   it('απών σοβάς → null', () => {
     expect(buildBeamFinishSkin(beam(), [], [],0)).toBeNull();
+  });
+});
+
+describe('computeMiteredOuter — chamfer open ends (ADR-449 Slice 6 fix)', () => {
+  // 2 παράλληλες πλάγιες όψεις δοκαριού (μήκος 1000), ΧΩΡΙΣ κοινή κορυφή → ανοιχτά άκρα.
+  const seg = (ax: number, ay: number, bx: number, by: number): FinishFaceSegment => ({
+    a: { x: ax, y: ay }, b: { x: bx, y: by },
+    classification: 'interior', materialId: 'mat-plaster-int', thickness: 15, lengthM: 1,
+  });
+  const segs = [seg(0, 125, 1000, 125), seg(1000, -125, 0, -125)];
+  const offsets = [{ x: 0, y: 15 }, { x: 0, y: -15 }]; // outward
+
+  it('chamferOpenEnds=true → οι εξωτερικές γωνίες τραβιούνται μέσα κατά το πάχος (όχι πτερύγιο)', () => {
+    const { aOuter, bOuter } = computeMiteredOuter(segs, offsets, true);
+    expect(aOuter[0].x).toBeCloseTo(15, 6); // αρχή: 0 → +15 (inset)
+    expect(bOuter[0].x).toBeCloseTo(985, 6); // τέλος: 1000 → −15 (inset)
+  });
+
+  it('chamferOpenEnds=false (κολόνα) → τετράγωνα άκρα στις θέσεις των κορυφών', () => {
+    const { aOuter, bOuter } = computeMiteredOuter(segs, offsets, false);
+    expect(aOuter[0].x).toBeCloseTo(0, 6);
+    expect(bOuter[0].x).toBeCloseTo(1000, 6);
   });
 });
 

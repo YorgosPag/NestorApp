@@ -47,6 +47,10 @@ export interface BuildingUpdatePayload {
   category?: 'mixed' | 'residential' | 'commercial' | 'industrial';
   /** ADR-396 P8: κλιματική ζώνη ΚΕΝΑΚ (ΤΟΤΕΕ 20701-3) — έλεγχος U_max θερμοπρόσοψης. */
   climateZone?: 'A' | 'B' | 'C' | 'D';
+  /** ADR-451 — building has a foundation datum below the lowest storey (default true). */
+  hasFoundation?: boolean;
+  /** ADR-451 — METRES — foundation depth below the lowest storey FFL. */
+  foundationDepth?: number;
 }
 
 /**

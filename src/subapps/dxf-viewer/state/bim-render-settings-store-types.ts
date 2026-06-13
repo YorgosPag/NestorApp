@@ -101,6 +101,13 @@ export interface BimRenderSettingsState extends ResolvedBimSettings {
    * skin visibility). Per-view, debounced write (idempotent).
    */
   setShowFinishSkin: (showFinishSkin: boolean) => void;
+  /**
+   * ADR-452 — master toggle for the cut-plane (Revit View Range) hide gate. `true`
+   * ⇒ the 2D plan hides BIM entities whose base sits above `viewRange.cutPlaneMm`
+   * (real-time horizontal section); `false` ⇒ nothing is hidden (legacy look).
+   * Per-view, debounced write (idempotent).
+   */
+  setCutPlaneActive: (cutPlaneActive: boolean) => void;
   /** Override projection or cut color for a category (null = canvas token). */
   setObjectStyleVgColor: (
     category: BimCategory,

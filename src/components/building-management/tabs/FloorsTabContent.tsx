@@ -9,12 +9,12 @@
 
 'use client';
 
-import { Fragment, useMemo } from 'react';
+import { Fragment, useMemo, useState } from 'react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { Layers, Plus, Pencil, Trash2, Check, X, ChevronDown, ChevronRight, Map, AlertTriangle, Footprints } from 'lucide-react';
+import { Layers, Plus, Pencil, Trash2, Check, X, ChevronDown, ChevronRight, Map, AlertTriangle, Footprints, Building2 } from 'lucide-react';
 import { Spinner } from '@/components/ui/spinner';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { FloorFloorplanInline } from './FloorFloorplanInline';
@@ -28,6 +28,7 @@ import { getStatusColor } from '@/lib/design-system';
 // 🏢 ENTERPRISE: Extracted state hook
 import { useFloorsTabState } from './useFloorsTabState';
 import { FloorInlineCreateForm } from './FloorInlineCreateForm';
+import { BuildingVerticalSetupForm } from './BuildingVerticalSetupForm';
 
 // Re-export for backward compatibility
 export type { FloorRecord } from './useFloorsTabState';
@@ -114,7 +115,7 @@ export function FloorsTabContent({ building, focusFloorId }: FloorsTabContentPro
     editNameMismatch,
     startEdit, cancelEdit, handleSaveEdit,
     deletingId, handleDelete, fetchFloors, formatElevation,
-    floorGaps,
+    continuityWarnings, topFloorId,
     expandedFloorStairs, loadingStairs,
     dialogProps, BlockedDialog,
   } = useFloorsTabState(building.id, building.projectId, focusFloorId);
@@ -123,6 +124,9 @@ export function FloorsTabContent({ building, focusFloorId }: FloorsTabContentPro
     () => new Set(floors.map((f) => f.number)) as ReadonlySet<number>,
     [floors]
   );
+
+  // ADR-451 — Quick Setup (Revit-grade building vertical setup) toggle.
+  const [showQuickSetup, setShowQuickSetup] = useState(false);
 
   if (loading) {
     return (
@@ -152,10 +156,28 @@ export function FloorsTabContent({ building, focusFloorId }: FloorsTabContentPro
           <Layers className="h-5 w-5 text-primary" />
           {t('tabs.floors.title')}
         </h2>
-        <Button variant="default" size="sm" onClick={() => setShowCreateForm(true)} disabled={showCreateForm}>
-          <Plus className="mr-1 h-4 w-4" />{t('tabs.floors.addFloor')}
-        </Button>
+        <nav className="flex items-center gap-1.5">
+          <Button variant="outline" size="sm" onClick={() => setShowQuickSetup((v) => !v)} disabled={showCreateForm}>
+            <Building2 className="mr-1 h-4 w-4" />{t('tabs.floors.quickSetup.cta')}
+          </Button>
+          <Button variant="default" size="sm" onClick={() => setShowCreateForm(true)} disabled={showCreateForm || showQuickSetup}>
+            <Plus className="mr-1 h-4 w-4" />{t('tabs.floors.addFloor')}
+          </Button>
+        </nav>
       </header>
+
+      {showQuickSetup && (
+        <BuildingVerticalSetupForm
+          buildingId={building.id}
+          projectId={building.projectId}
+          hasExistingFloors={floors.length > 0}
+          onComplete={() => {
+            setShowQuickSetup(false);
+            void fetchFloors();
+          }}
+          onCancel={() => setShowQuickSetup(false)}
+        />
+      )}
 
       {showCreateForm && (
         <FloorInlineCreateForm
@@ -200,6 +222,9 @@ export function FloorsTabContent({ building, focusFloorId }: FloorsTabContentPro
                 const isExpanded = expandedFloorId === floor.id;
                 const isEditing = editingId === floor.id;
                 const isHighlighted = highlightedFloorId === floor.id;
+                // ADR-451 — elevation is the SSoT; height is derived (read-only)
+                // for every floor except the topmost, which has no floor above.
+                const isTopFloor = floor.id === topFloorId;
 
                 return (
                   <Fragment key={floor.id}>
@@ -244,7 +269,20 @@ export function FloorsTabContent({ building, focusFloorId }: FloorsTabContentPro
                             )}
                           </td>
                           <td className="px-2 py-2"><Input type="number" step="0.01" value={editElevation} onChange={(e) => handleEditElevationChange(e.target.value)} placeholder="—" className="h-8 w-24" disabled={saving} /></td>
-                          <td className="px-2 py-2"><Input type="number" step="0.01" min="0.1" value={editHeight} onChange={(e) => handleEditHeightChange(e.target.value)} placeholder="3.00" className="h-8 w-20" disabled={saving} /></td>
+                          <td className="px-2 py-2">
+                            {isTopFloor ? (
+                              <Input type="number" step="0.01" min="0.1" value={editHeight} onChange={(e) => handleEditHeightChange(e.target.value)} placeholder="3.00" className="h-8 w-20" disabled={saving} />
+                            ) : (
+                              <TooltipProvider delayDuration={300}>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Input type="number" step="0.01" value={editHeight} readOnly tabIndex={-1} aria-label={t('tabs.floors.derivedHeightHint')} className={cn("h-8 w-20 cursor-help bg-muted/30", colors.text.muted)} />
+                                  </TooltipTrigger>
+                                  <TooltipContent>{t('tabs.floors.derivedHeightHint')}</TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
+                            )}
+                          </td>
                           <td className={cn("px-2 py-2 text-center", colors.text.muted)}>{floor.units ?? 0}</td>
                           <td className="px-2 py-2">
                             <nav className="flex justify-end gap-1">
@@ -343,11 +381,15 @@ export function FloorsTabContent({ building, focusFloorId }: FloorsTabContentPro
               })}
             </tbody>
           </table>
-          {floorGaps.length > 0 && (
-            <p className={cn("flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-xs", getStatusColor('warning', 'border'), getStatusColor('warning', 'text'))}>
-              <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
-              {t('tabs.floors.gapWarning', { levels: floorGaps.join(', ') })}
-            </p>
+          {continuityWarnings.length > 0 && (
+            <ul className="flex flex-col gap-1">
+              {continuityWarnings.map((warning) => (
+                <li key={warning} className={cn("flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-xs", getStatusColor('warning', 'border'), getStatusColor('warning', 'text'))}>
+                  <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
+                  {warning}
+                </li>
+              ))}
+            </ul>
           )}
           <footer className={cn("text-xs", colors.text.muted)}>{t('tabs.floors.total', { count: floors.length })}</footer>
         </>

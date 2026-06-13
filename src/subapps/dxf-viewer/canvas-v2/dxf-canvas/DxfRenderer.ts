@@ -17,6 +17,9 @@ import { resolveEntityLayerName, getLayer as getLayerStoreLayer } from '../../st
 // ADR-358 §5.6.bis Phase 10 — Layer Isolate runtime effects (zero-cost passthrough when inactive).
 import { getIsolateEffectsSnapshot } from '../../systems/isolate/IsolateEffectsStore';
 import { resolveEntityBimCategory } from '../../bim/visibility/resolve-entity-bim-category';
+// ADR-452 — cut-plane (Revit View Range) hide gate SSoT.
+import { isHiddenByCutPlane } from '../../bim/visibility/entity-z-extents';
+import { useBimRenderSettingsStore } from '../../state/bim-render-settings-store';
 import { dimOpacityToTransparency } from '../../services/layer-isolate-resolver';
 // Per-frame index builders (extracted Boy-Scout file-size split, 2026-05-19).
 import { buildDimensionLookup, buildSlabOpeningsBySlab, buildOpeningsByWall, buildFinishFacesByColumn, buildFinishFacesByBeam, transparencyToAlpha } from './dxf-renderer-frame-builders';
@@ -391,6 +394,13 @@ export class DxfRenderer {
     // ADR-358 §5.6.bis — entity-scope isolate in FREEZE mode hides every entity
     // outside the isolated set. (Layer flags are NOT mutated for entity isolate,
     // so the freeze must be enforced here.) Dim mode is handled by applyIsolateAlpha.
+    // ADR-452 — cut-plane hide gate (Revit View Range, single horizontal section).
+    // Hides BIM entities whose base sits above the active cut elevation so the 2D
+    // plan shows only what exists at/below the slider height. No-op when the gate
+    // is off, or for raw DXF / un-gated BIM types (getEntityZExtents → null).
+    const bimSettings = useBimRenderSettingsStore.getState();
+    if (isHiddenByCutPlane(entity, bimSettings.viewRange, bimSettings.cutPlaneActive)) return true;
+
     const isolate = getIsolateEffectsSnapshot();
     if (isolate.active && isolate.mode === 'freeze' && isolate.isolatedEntityIds.size > 0) {
       return !entity.id || !isolate.isolatedEntityIds.has(entity.id);

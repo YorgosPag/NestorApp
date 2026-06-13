@@ -145,6 +145,54 @@ describe('UpdateDxfLevelSchema — bimRenderSettings full contract (ADR-375 v2.1
   });
 });
 
+describe('UpdateDxfLevelSchema — top-level BimRenderSettings fields (incident 2026-06-13 infinite loop)', () => {
+  const baseValidLevel = { levelId: 'lvl_test' };
+
+  // The runaway PATCH loop: the nested schema dropped `settingsVersion`, so the
+  // server persisted an un-versioned doc → `loadForLevel` migration re-heals
+  // (writes v2) → server strips it again → … (~800ms/write, _v past 42k). These
+  // tests pin every field the client persists so it can never be stripped again.
+
+  it('preserves settingsVersion (the loop trigger)', () => {
+    const parsed = UpdateDxfLevelSchema.parse({
+      ...baseValidLevel,
+      bimRenderSettings: { settingsVersion: 2, drawingScale: 100 },
+    });
+    expect(parsed.bimRenderSettings?.settingsVersion).toBe(2);
+  });
+
+  it('preserves visualStyle preset (ADR-446)', () => {
+    const parsed = UpdateDxfLevelSchema.parse({
+      ...baseValidLevel,
+      bimRenderSettings: { drawingScale: 100, visualStyle: 'realistic-edges' as const },
+    });
+    expect(parsed.bimRenderSettings?.visualStyle).toBe('realistic-edges');
+  });
+
+  it('rejects an unknown visualStyle preset', () => {
+    const result = UpdateDxfLevelSchema.safeParse({
+      ...baseValidLevel,
+      bimRenderSettings: { drawingScale: 100, visualStyle: 'cartoon' },
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it('preserves disciplineVisibility / colorBySystem and all master toggles', () => {
+    const settings = {
+      settingsVersion: 2,
+      drawingScale: 100,
+      disciplineVisibility: { structural: false, mechanical: true },
+      colorBySystem: false,
+      realisticMaterials: true,
+      showHeatLoad: true,
+      showFinishSkin: false,
+      cutPlaneActive: true,
+    };
+    const parsed = UpdateDxfLevelSchema.parse({ ...baseValidLevel, bimRenderSettings: settings });
+    expect(parsed.bimRenderSettings).toEqual(settings);
+  });
+});
+
 describe('UpdateDxfLevelSchema — invalid payload rejection', () => {
   it('rejects non-hex projectionColor', () => {
     const result = UpdateDxfLevelSchema.safeParse({

@@ -28,8 +28,7 @@ import {
   resolveTenantCompanyId,
   sortFloors,
 } from './floors.shared';
-import { cascadeFloorHeightToEntities } from './floor-height-cascade.service';
-import { cascadeFloorElevations } from './floor-elevation-cascade.service';
+import { reconcileFloorStackAfterEdit } from './floor-stack-reconcile.service';
 
 const logger = createModuleLogger('FloorsRoute');
 
@@ -268,27 +267,29 @@ export async function handleUpdateFloor(
       });
     }
 
-    // ADR-369 §9 Q5 — Auto-stretch cascade when height changes.
+    // ADR-451 — Unified server-authoritative floor-stack reconcile. `elevation` is
+    // the SSoT (absolute Level truth), `height` its derived projection. Dispatch by
+    // which field the user actually changed (elevation wins when both):
+    //   - elevation edit → re-derive the two adjacent storey heights + re-stretch
+    //     only those storeys' entities (Revit «move a Level» — nobody else moves).
+    //   - height edit → ADR-450 §1 push: re-stretch this floor + shift upper FFLs.
     let cascadeWarning: string | undefined;
-    if (updates.height !== undefined && typeof updates.height === 'number' && ctx.companyId) {
+    const elevationChanged = changes.some((c) => c.field === 'elevation');
+    const heightChanged = changes.some((c) => c.field === 'height');
+    const buildingId = floorData?.buildingId as string | undefined;
+    if ((elevationChanged || heightChanged) && ctx.companyId && buildingId) {
       try {
-        await cascadeFloorHeightToEntities(
-          db, body.floorId, ctx.companyId, updates.height, ctx.uid,
-        );
-        // ADR-450 §1 — Revit level-driven floor-elevation cascade: shift the FFL of
-        // every floor ABOVE this one so `elevation[i+1] = elevation[i] + height[i]`
-        // stays true. Keeps floor.elevation consistent with floor.height — the
-        // pre-condition for the ADR-450 §2 storey-ceiling SSoT (columns vs beams).
-        const buildingId = floorData?.buildingId as string | undefined;
-        if (buildingId) {
-          await cascadeFloorElevations(db, buildingId, body.floorId, ctx.companyId, ctx.uid);
-        }
+        await reconcileFloorStackAfterEdit(db, buildingId, body.floorId, ctx.companyId, ctx.uid, {
+          elevationChanged,
+          heightChanged,
+          newHeightMetres: typeof updates.height === 'number' ? updates.height : null,
+        });
       } catch (cascadeErr) {
-        logger.error('[Floors/Update] Cascade failed — floor updated, entities not stretched', {
+        logger.error('[Floors/Update] Reconcile failed — floor updated, stack not reconciled', {
           floorId: body.floorId,
           error: getErrorMessage(cascadeErr),
         });
-        cascadeWarning = 'Floor height updated but entity auto-stretch failed. Retry or manually adjust wall/column heights.';
+        cascadeWarning = 'Floor updated but vertical-stack reconcile failed. Retry or manually adjust elevations/heights.';
       }
     }
 

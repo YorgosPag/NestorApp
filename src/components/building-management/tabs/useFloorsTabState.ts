@@ -205,6 +205,37 @@ export function useFloorsTabState(buildingId: string, projectId?: string, focusF
     return gaps;
   }, [floors]);
 
+  // =========================================================================
+  // ADR-451 — Soft vertical-continuity warnings (Revit way: warn, never block).
+  // The user is the authority; we only surface gaps / missing ground / no base.
+  // =========================================================================
+  const continuityWarnings = useMemo((): string[] => {
+    if (floors.length === 0) return [];
+    const numbers = floors.map((f) => f.number);
+    const out: string[] = [];
+    if (!numbers.includes(0) && numbers.some((n) => n > 0)) {
+      out.push(t('tabs.floors.continuityMissingGround'));
+    }
+    if (floorGaps.length > 0) {
+      out.push(t('tabs.floors.gapWarning', { levels: floorGaps.join(', ') }));
+    }
+    const lowest = Math.min(...numbers);
+    if (lowest > 0) {
+      out.push(t('tabs.floors.continuityNoBase', { lowest }));
+    }
+    return out;
+  }, [floors, floorGaps, t]);
+
+  /**
+   * ADR-451 — `elevation` is the SSoT, `height` its derived projection. Only the
+   * topmost floor (highest number — no floor above) keeps an explicit, editable
+   * height. `floors` is sorted ascending, so the last entry is the top floor.
+   */
+  const topFloorId = useMemo(
+    () => (floors.length > 0 ? floors[floors.length - 1].id : null),
+    [floors],
+  );
+
   const fetchFloors = useCallback(async () => {
     // ADR-300: Only show spinner on first load — not on re-navigation
     if (!floorsCache.hasLoaded(buildingId)) setLoading(true);
@@ -271,32 +302,12 @@ export function useFloorsTabState(buildingId: string, projectId?: string, focusF
     if (!editingId || !editName.trim()) return;
 
     const editedFloor = floors.find((f) => f.id === editingId);
-    const oldElevation = editedFloor?.elevation ?? null;
     const newElevation = editElevation ? parseFloat(editElevation) : null;
 
-    const elevationDelta =
-      newElevation != null && oldElevation != null && Math.abs(newElevation - oldElevation) > 0.001
-        ? newElevation - oldElevation
-        : null;
-
-    type FloorWithElevation = FloorRecord & { elevation: number };
-    const floorsToShift: FloorWithElevation[] = elevationDelta != null
-      ? (floors.filter((f) => f.id !== editingId && f.elevation != null) as FloorWithElevation[])
-      : [];
-
-    if (floorsToShift.length > 0 && elevationDelta != null) {
-      const sign = elevationDelta > 0 ? '+' : '';
-      const confirmed = await confirm({
-        title: t('tabs.floors.cascadeElevationTitle'),
-        description: t('tabs.floors.cascadeElevationDescription', {
-          delta: `${sign}${elevationDelta.toFixed(2)}`,
-          count: floorsToShift.length,
-        }),
-        confirmText: t('tabs.floors.cascadeElevationConfirm'),
-        variant: 'warning',
-      });
-      if (!confirmed) return;
-    }
+    // ADR-451 — `elevation` is the SSoT, `height` its derived projection. The
+    // client sends ONE floor update; the server reconciles the whole stack
+    // (re-derives adjacent heights on an elevation move, pushes upper FFLs on a
+    // height edit). No client-side uniform-delta shift / cascade confirm anymore.
 
     // ADR-358 Plan B — warn if floor height changes with linked stairs
     const oldHeight = editedFloor?.height ?? null;
@@ -336,20 +347,6 @@ export function useFloorsTabState(buildingId: string, projectId?: string, focusF
         return;
       }
 
-      if (floorsToShift.length > 0 && elevationDelta != null) {
-        await Promise.all(
-          floorsToShift.map((f) =>
-            updateFloorWithPolicy<FloorMutationResponse>({
-              payload: {
-                floorId: f.id,
-                elevation: f.elevation + elevationDelta,
-                ...(f._v !== undefined ? { _v: f._v } : {}),
-              },
-            })
-          )
-        );
-      }
-
       // ADR-358 Plan B — propagate new height to linked stairs
       if (linkedStairs && linkedStairs.linked.length > 0 && newHeight !== null && user?.uid) {
         try {
@@ -360,11 +357,7 @@ export function useFloorsTabState(buildingId: string, projectId?: string, focusF
       }
 
       setEditingId(null);
-      success(
-        floorsToShift.length > 0
-          ? t('tabs.floors.editSuccessCascade', { count: floorsToShift.length })
-          : t('tabs.floors.editSuccess')
-      );
+      success(t('tabs.floors.editSuccess'));
       await fetchFloors();
     } catch (err) {
       if (ApiClientError.isApiClientError(err) && err.statusCode === 409) {
@@ -482,7 +475,7 @@ export function useFloorsTabState(buildingId: string, projectId?: string, focusF
     editNameMismatch,
     startEdit, cancelEdit, handleSaveEdit,
     deletingId, handleDelete, fetchFloors, formatElevation,
-    floorGaps,
+    floorGaps, continuityWarnings, topFloorId,
     expandedFloorStairs, loadingStairs,
     dialogProps, BlockedDialog, confirm,
   };

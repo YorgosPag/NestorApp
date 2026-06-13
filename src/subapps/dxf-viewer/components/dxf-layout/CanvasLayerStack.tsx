@@ -40,7 +40,7 @@ import { ClashReportPanel } from './ClashReportPanel';
 import { RegionPerimeterPreviewOverlay } from './RegionPerimeterPreviewOverlay';
 import { CanvasNumericInputOverlay } from '../../systems/canvas-numeric-input/CanvasNumericInputOverlay'; import { DynamicInputSubscriber } from './DynamicInputSubscriber'; import { CanvasLayerStack3dLeaf } from './canvas-layer-stack-3d-leaf';
 import { ViewMode3DToggleButton } from '../../bim-3d/viewport/ViewMode3DToggleButton'; import { Focus2DOverlayLeaf } from './Focus2DOverlayLeaf'; import { SelectionCursorIcon } from '../../accessibility/SelectionCursorIcon';
-import { useDxfOverlay3DSync } from './useDxfOverlay3DSync'; import { useLevelId3DSync } from './useLevelId3DSync';
+import { CutPlaneSliderLeaf } from './CutPlaneSliderLeaf'; /* ADR-452 cut-plane slider, self-gated 2D */ import { useDxfOverlay3DSync } from './useDxfOverlay3DSync'; import { useLevelId3DSync } from './useLevelId3DSync';
 // ADR-396 P4 — ETICS θερμοπρόσοψη 2D overlay (dedicated floor-overlay micro-leaf).
 import { EnvelopeOverlay } from './EnvelopeOverlay';
 import { HomeRunWiresOverlay } from './HomeRunWiresOverlay';
@@ -488,7 +488,7 @@ export const CanvasLayerStack = React.memo(function CanvasLayerStack({
           <EnvelopeOverlay scene={dxfScene} transform={transform} viewport={viewport} currentLevelId={levelManager.currentLevelId} />
           <HomeRunWiresOverlay scene={dxfScene} transform={transform} viewport={viewport} currentLevelId={levelManager.currentLevelId} gripDragPreview={dxfGripInteraction.dragPreview} />
           <SelectionCursorIcon />
-          <ViewMode3DToggleButton />
+          <ViewMode3DToggleButton /><CutPlaneSliderLeaf />{/* ADR-452 */}
         </div>
       </div>
       <AutoAreaResultPanel />

@@ -1,4 +1,12 @@
 {
+  "cutPlane": {
+    "label": "Cut plane",
+    "ariaSlider": "Plan cut-plane height",
+    "ariaToggle": "Toggle plan cut plane",
+    "enable": "Enable plan cut plane",
+    "disable": "Disable plan cut plane",
+    "unitMeters": "m"
+  },
   "common": {
     "loadingComponent": "Loading..."
   },

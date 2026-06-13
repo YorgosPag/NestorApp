@@ -141,6 +141,12 @@ export type {
     /** Lifecycle phase: planned → permitted → under_construction → completed. */
     phase?: BuildingPhase;
 
+    // ─── ADR-451: Building vertical setup (foundation datum) ───────────────
+    /** Building has a foundation datum below the lowest storey (default true). */
+    hasFoundation?: boolean;
+    /** METRES — foundation depth below the lowest storey FFL (auto-derived datum). */
+    foundationDepth?: number;
+
     // ─── ADR-396 P8: Θερμική απόδοση (ΚΕΝΑΚ) ───────────────────────────────
     /**
      * Κλιματική ζώνη Ελλάδας (ΤΟΤΕΕ 20701-3) — καθορίζει το ανώτατο U_max για

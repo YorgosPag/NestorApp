@@ -71,6 +71,10 @@ Mouse Event → DxfCanvas.onMouseMove
 
 ## Changelog
 
+### 2026-06-13 — ADR-452 Cut-Plane (Revit View Range) slider + ADR-375 line-weight (CHECK 6B)
+
+**Status**: IMPLEMENTED 2026-06-13. (i) **NEW micro-leaf `CutPlaneSliderLeaf`** (right-edge Radix slider, self-gated σε 2D) προστέθηκε στο `CanvasLayerStack` shell ως **καθαρό leaf** — ο shell ΔΕΝ αποκτά νέο `useSyncExternalStore` (CHECK 6C respected), το slider state ζει στο leaf/store. (ii) Ο `DxfRenderer.isEntityLayerSkipped` αποκτά **ΕΝΑ choke-point gate** για το cut-plane hide (`cutPlaneActive && zBottomMm > cutPlaneMm`), με SSoT `bim/visibility/entity-z-extents.ts` — event-time read, **μηδέν νέο subscription**. (iii) `dxf-bitmap-cache.ts`: το cut-plane state μπαίνει στο cache-key ως **low-frequency** πεδίο (αλλάζει μόνο σε slider commit, ΟΧΙ per-frame — δεν παραβιάζει τον κανόνα No.3 για hover/selection 60fps keys). Co-staged για CHECK 6B (`DxfRenderer.ts`, `dxf-bitmap-cache.ts`, `CanvasLayerStack.tsx`). Λεπτομέρεια στο ADR-452 changelog.
+
 ### 2026-06-13 — ADR-449 Slice 5 master toggle «Σοβατισμένη όψη» (view-level gate στον `DxfRenderer`, CHECK 6B) + N.7.1 split `bim-render-settings-store`
 
 **Status**: IMPLEMENTED 2026-06-13. (i) Νέο per-view master toggle `showFinishSkin` (Revit visibility-only semantics) γίνεται **view-level gate στον `DxfRenderer.render`**: όταν OFF, ο orchestrator περνά **κενά Maps** στα `setColumnFinishFaces`/`setBeamFinishFaces` αντί για τους frame builders — οι builders & τα leaves (`ColumnRenderer`/`BeamRenderer`) μένουν **pure, μηδέν νέο subscription** (η ανάγνωση του flag γίνεται event-time μέσω **NEW SSoT** `bim/finishes/structural-finish-visibility.ts → isStructuralFinishVisible()`, `store.getState()` — **όχι** `useSyncExternalStore`). Καμία αλλαγή σε bitmap-cache key / scheduler. (ii) N.7.1 file-size split (μηδέν αλλαγή συμπεριφοράς): το `interface BimRenderSettingsState` εξήχθη από το `state/bim-render-settings-store.ts` σε **NEW `state/bim-render-settings-store-types.ts`** (pure types) → store 512→384 γρ. Co-staged για CHECK 6B (`DxfRenderer.ts`). Λεπτομέρεια στο ADR-449 changelog.

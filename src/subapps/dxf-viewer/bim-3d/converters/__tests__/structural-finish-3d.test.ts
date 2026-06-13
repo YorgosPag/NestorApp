@@ -13,6 +13,7 @@ import { columnToMesh } from '../BimToThreeConverter';
 import { buildDefaultColumnParams, buildColumnEntity } from '../../../hooks/drawing/column-completion';
 import type { ColumnEntity } from '../../../bim/types/column-types';
 import type { StructuralFinishSpec } from '../../../bim/finishes/structural-finish-types';
+import type { ColumnTopProfile } from '../../../bim/geometry/column-vertical-profile';
 
 const PLASTER_HEX = 0xe8e0d0; // MATERIAL_DEFS['mat-plaster'] — όπου resolve τα mat-plaster-int/ext.
 
@@ -110,5 +111,21 @@ describe('columnToMesh integration (ADR-449 Slice 2)', () => {
   it('ανενεργός σοβάς → απλό Mesh (regression: ghost/χωρίς-finish path)', () => {
     const out = columnToMesh(column(), 0, '0', 0);
     expect(out).toBeInstanceOf(THREE.Mesh);
+  });
+
+  it('ADR-449 Slice 6 fix — attached κολώνα (topProfile.hasAttach) ΕΧΕΙ σοβά (όχι μόνο πυρήνας)', () => {
+    // Regression: μόλις τα δοκάρια auto-attach-άρανε τις κολόνες, ο σοβάς εξαφανιζόταν
+    // (ο σοβάς ήταν flat-path-only). Τώρα το attached path συνθέτει επίσης σοβά.
+    const topProfile: ColumnTopProfile = {
+      baseZmm: 0,
+      cornerTopZmm: [2500, 2500, 2500, 2500], // attached top στα 2500 (κάτω από nominal 3000)
+      maxTopZmm: 2500,
+      minTopZmm: 2500,
+      hasAttach: true,
+      missingHostIds: [],
+    };
+    const out = columnToMesh(column(FINISH), 0, '0', 0, topProfile);
+    expect(out).toBeInstanceOf(THREE.Group);
+    expect((out as THREE.Group).children).toHaveLength(2); // attached prism + finish group
   });
 });

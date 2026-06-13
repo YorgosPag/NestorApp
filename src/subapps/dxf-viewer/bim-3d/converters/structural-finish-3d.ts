@@ -55,14 +55,46 @@ function lineIntersect(p0: Vec2, d0: Vec2, p1: Vec2, d1: Vec2): Vec2 | null {
 const MITER_LIMIT_FACTOR = 4;
 
 /**
+ * ADR-449 Slice 6 fix — chamfer (45°) τα **ΑΝΟΙΧΤΑ** άκρα (που δεν mitered-ηκαν με
+ * γειτονική όψη): η εξωτερική γωνία τραβιέται προς τα μέσα κατά το πάχος → το άκρο
+ * της λωρίδας κλείνει με 45° αντί για τετράγωνο «κεφάλι» που προεξέχει. Λύνει το
+ * πτερύγιο σοβά δοκαριού στη συμβολή με κολόνα/τοίχο (mirror clean-corner τοίχου).
+ * Clamp στο μισό μήκος για μικρές όψεις (μηδέν inversion).
+ */
+function chamferOpenOuterEnds(
+  segs: readonly FinishFaceSegment[],
+  offsets: readonly (Vec2 | null)[],
+  aOuter: Vec2[],
+  bOuter: Vec2[],
+  aMit: readonly boolean[],
+  bMit: readonly boolean[],
+): void {
+  for (let i = 0; i < segs.length; i++) {
+    const off = offsets[i];
+    if (!off) continue;
+    const dx = segs[i].b.x - segs[i].a.x;
+    const dy = segs[i].b.y - segs[i].a.y;
+    const len = Math.hypot(dx, dy);
+    if (len < EPS) continue;
+    const ch = Math.min(Math.hypot(off.x, off.y), len / 2);
+    const ux = (dx / len) * ch;
+    const uy = (dy / len) * ch;
+    if (!aMit[i]) aOuter[i] = { x: aOuter[i].x + ux, y: aOuter[i].y + uy };
+    if (!bMit[i]) bOuter[i] = { x: bOuter[i].x - ux, y: bOuter[i].y - uy };
+  }
+}
+
+/**
  * ADR-449 Slice 5 fix — outer offset endpoints κάθε exposed παρειάς, **mitered** στις
  * κοινές κορυφές: το εξωτερικό άκρο επεκτείνεται/κόβεται στην τομή των δύο offset
  * ευθειών → ΕΝΑ 45° seam, **μηδέν επικάλυψη/κενό** (convex → extend, reflex → trim).
- * Δοκάρι (2 χωριστές όψεις, άκρα εκτός) → κανένα κοινό vertex → square άκρα (σωστά).
+ * Slice 6: `chamferOpenEnds` (δοκάρι) → τα μη-mitered άκρα κόβονται 45° αντί για square
+ * (το τετράγωνο «κεφάλι» προεξείχε στη συμβολή δοκαριού↔κολόνας/τοίχου). Κολόνα = false.
  */
-function computeMiteredOuter(
+export function computeMiteredOuter(
   segs: readonly FinishFaceSegment[],
   offsets: readonly (Vec2 | null)[],
+  chamferOpenEnds: boolean,
 ): { aOuter: Vec2[]; bOuter: Vec2[] } {
   const n = segs.length;
   const aOuter: Vec2[] = [];
@@ -72,8 +104,9 @@ function computeMiteredOuter(
     aOuter[i] = { x: segs[i].a.x + o.x, y: segs[i].a.y + o.y };
     bOuter[i] = { x: segs[i].b.x + o.x, y: segs[i].b.y + o.y };
   }
-  if (n < 2) return { aOuter, bOuter };
-  for (let k = 0; k < n; k++) {
+  const aMit = new Array<boolean>(n).fill(false);
+  const bMit = new Array<boolean>(n).fill(false);
+  for (let k = 0; k < n && n >= 2; k++) {
     const m = (k + 1) % n;
     const cur = segs[k];
     const nxt = segs[m];
@@ -91,7 +124,10 @@ function computeMiteredOuter(
     if (Math.hypot(mPt.x - v.x, mPt.y - v.y) > MITER_LIMIT_FACTOR * offMag) continue; // αιχμηρή → square
     bOuter[k] = mPt;
     aOuter[m] = mPt;
+    bMit[k] = true;
+    aMit[m] = true;
   }
+  if (chamferOpenEnds) chamferOpenOuterEnds(segs, offsets, aOuter, bOuter, aMit, bMit);
   return { aOuter, bOuter };
 }
 
@@ -143,7 +179,9 @@ function buildFinishSkinFromFaces(
   const s = mmToSceneUnits(sceneUnits);
   const segs = faces.segments;
   const offsets = segs.map((seg) => segOffsetVec(seg, seg.thickness * s));
-  const { aOuter, bOuter } = computeMiteredOuter(segs, offsets);
+  // ADR-449 Slice 6 fix — δοκάρι: chamfer τα ανοιχτά άκρα (μηδέν προεξέχον πτερύγιο
+  // στη συμβολή). Κολόνα: όχι (οι γωνίες κλείνουν με miter, τα wall-gap άκρα μένουν square).
+  const { aOuter, bOuter } = computeMiteredOuter(segs, offsets, bimType === 'beam');
 
   const group = new THREE.Group();
   for (let i = 0; i < segs.length; i++) {

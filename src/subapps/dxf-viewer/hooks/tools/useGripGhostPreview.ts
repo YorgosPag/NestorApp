@@ -43,8 +43,10 @@ import { toEntityPreviewTransform } from './grip-drag-preview-transform';
 // ADR-363 — live move-distance readout pill at the grip-drag / Alt-drag leader midpoint
 // (SSoT shared with useMovePreview + the 3D overlay).
 import { drawDimPill } from '../../bim/labels/bim-dim-labels';
-import { formatMoveDistance, moveReadoutMid, sceneDistanceToMeters } from '../../bim/labels/move-readout';
+import { formatMoveDistance, moveReadoutMid, sceneDistanceToMeters, formatMoveAngle } from '../../bim/labels/move-readout';
 import { resolveSceneUnits } from '../../utils/scene-units';
+// ADR-363 — line endpoint RESHAPE readout (length + angle, AutoCAD dynamic input).
+import { isLineEntity } from '../../types/entities';
 
 // ── Constants ──────────────────────────────────────────────────────────────────
 
@@ -57,6 +59,11 @@ const HOT_GRIP_RUBBER_BAND_DASH: readonly number[] = [6, 4];
  * (`CANVAS_BACKGROUND #000`) — a black leader would be invisible.
  */
 const MOVE_READOUT_LEADER_COLOR = 'rgba(255,255,255,0.5)';
+
+/** ADR-363 — angular-dimension arc (endpoint reshape readout): screen radius + neutral colour. */
+const ANGLE_ARC_RADIUS_PX = 22;
+const ANGLE_ARC_LABEL_GAP_PX = 12;
+const ANGLE_ARC_COLOR = 'rgba(255,255,255,0.7)';
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -121,6 +128,33 @@ function drawMoveReadoutLeader(
   ctx.lineTo(toS.x, toS.y);
   ctx.stroke();
   ctx.restore();
+}
+
+/**
+ * ADR-363 — AutoCAD-style angular-dimension arc for the endpoint-reshape readout. Draws a
+ * short +X baseline tick at the fixed vertex (`centerS`) and an arc to the segment direction
+ * (`segAngleRad`, SCREEN space so it hugs the visible segment). Returns the label anchor on
+ * the arc bisector so the angle value sits just outside the arc.
+ */
+function drawAngleArc(
+  ctx: CanvasRenderingContext2D,
+  centerS: { x: number; y: number },
+  segAngleRad: number,
+): { x: number; y: number } {
+  ctx.save();
+  ctx.strokeStyle = ANGLE_ARC_COLOR;
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(centerS.x, centerS.y);
+  ctx.lineTo(centerS.x + ANGLE_ARC_RADIUS_PX, centerS.y);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.arc(centerS.x, centerS.y, ANGLE_ARC_RADIUS_PX, 0, segAngleRad, segAngleRad < 0);
+  ctx.stroke();
+  ctx.restore();
+  const bisector = segAngleRad / 2;
+  const r = ANGLE_ARC_RADIUS_PX + ANGLE_ARC_LABEL_GAP_PX;
+  return { x: centerS.x + r * Math.cos(bisector), y: centerS.y + r * Math.sin(bisector) };
 }
 
 // ── Hook ─────────────────────────────────────────────────────────────────────
@@ -223,6 +257,33 @@ export function useGripGhostPreview(props: UseGripGhostPreviewProps): void {
       const meters = sceneDistanceToMeters(Math.hypot(dragPreview.delta.x, dragPreview.delta.y), resolveSceneUnits(scene));
       const mid = moveReadoutMid(fromS, toS);
       drawDimPill(ctx, [formatMoveDistance(meters)], mid.x, mid.y);
+    }
+
+    // ADR-363 — endpoint RESHAPE readout (AutoCAD/Revit angular-dimension style): stretching a
+    // line's endpoint grip shows the resulting segment LENGTH (pill at the midpoint) plus an
+    // ANGLE ARC drawn at the fixed vertex with the degree value beside it — the angle is shown
+    // graphically, not just numerically. The guide line is the ghost itself. The moved endpoint
+    // is the changed one; the fixed end anchors the arc. Excludes move/hot-grip/rotation (above).
+    const origLine = entity as unknown as Entity;
+    const tLine = transformed as unknown as Entity;
+    if (
+      !dragPreview.movesEntity && !dragPreview.hotGrip && !dragPreview.rotatePivot &&
+      transformed !== entity && isLineEntity(origLine) && isLineEntity(tLine)
+    ) {
+      const startMoved = tLine.start.x !== origLine.start.x || tLine.start.y !== origLine.start.y;
+      const fixedW = startMoved ? tLine.end : tLine.start;
+      const movedW = startMoved ? tLine.start : tLine.end;
+      const scene = levelManager.currentLevelId ? levelManager.getLevelScene(levelManager.currentLevelId) : null;
+      const lenMeters = sceneDistanceToMeters(Math.hypot(movedW.x - fixedW.x, movedW.y - fixedW.y), resolveSceneUnits(scene));
+      const fixedS = CoordinateTransforms.worldToScreen(fixedW, transform, vp);
+      const movedS = CoordinateTransforms.worldToScreen(movedW, transform, vp);
+      // Length pill at the segment midpoint.
+      const midS = moveReadoutMid(fixedS, movedS);
+      drawDimPill(ctx, [formatMoveDistance(lenMeters)], midS.x, midS.y);
+      // Angle arc + value at the fixed vertex (screen-space angle → arc & number always agree).
+      const segAngle = Math.atan2(movedS.y - fixedS.y, movedS.x - fixedS.x);
+      const angleLabelS = drawAngleArc(ctx, fixedS, segAngle);
+      drawDimPill(ctx, [formatMoveAngle((Math.abs(segAngle) * 180) / Math.PI)], angleLabelS.x, angleLabelS.y);
     }
 
     // applyEntityPreview returns the *same* reference for zero-delta or

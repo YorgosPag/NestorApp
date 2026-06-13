@@ -66,6 +66,15 @@ export const BuildingElevationPatchSchema = z
     /** DEGREES — building orientation on site (default 0). */
     rotation: z.number().finite().min(-360).max(360).optional(),
     phase: BuildingPhaseSchema.optional(),
+    /**
+     * ADR-451 — building has a foundation datum below the lowest storey (default
+     * true). The foundation is an auto-derived datum, NOT a counted storey; its
+     * structural TYPE (πεδιλοδοκοί/κοιτόστρωση/πέδιλα) lives per-element in the DXF
+     * (`floorplan_foundations`, ADR-436/441), not here.
+     */
+    hasFoundation: z.boolean().optional(),
+    /** ADR-451 — METRES — foundation depth below the lowest storey FFL (≥0). */
+    foundationDepth: z.number().finite().min(0).max(99).optional(),
   })
   .strict();
 export type BuildingElevationPatch = z.infer<typeof BuildingElevationPatchSchema>;
@@ -75,3 +84,7 @@ export type BuildingElevationPatch = z.infer<typeof BuildingElevationPatchSchema
 export const DEFAULT_BUILDING_BASE_ELEVATION_M = 0;
 export const DEFAULT_BUILDING_ROTATION_DEG = 0;
 export const DEFAULT_BUILDING_PHASE: BuildingPhase = 'planned';
+/** ADR-451 — buildings have a foundation by default (Greek construction norm). */
+export const DEFAULT_BUILDING_HAS_FOUNDATION = true;
+/** ADR-451 — METRES — default foundation depth below the lowest storey FFL. */
+export const DEFAULT_BUILDING_FOUNDATION_DEPTH_M = 1.0;
