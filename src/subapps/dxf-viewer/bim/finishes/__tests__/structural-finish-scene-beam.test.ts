@@ -11,6 +11,7 @@ import { computeBeamFinishFaces, wallsOverlappingBeamBand, type WallFinishObstac
 import { buildDefaultBeamParams, buildBeamEntity } from '../../../hooks/drawing/beam-completion';
 import { buildDefaultWallParams } from '../../../hooks/drawing/wall-completion';
 import type { BeamEntity } from '../../types/beam-types';
+import type { WallTopBinding } from '../../types/bim-binding';
 import type { StructuralFinishSpec } from '../structural-finish-types';
 
 const FINISH: StructuralFinishSpec = {
@@ -92,9 +93,13 @@ describe('computeBeamFinishFaces (ADR-449 Slice 4)', () => {
   });
 });
 
-/** Wall obstacle stub με ελεγχόμενο `height`/`baseOffset` (collinear με δοκάρι στον x). */
-function wallObstacle(height: number, baseOffset = 0): WallFinishObstacle {
-  const params = { ...buildDefaultWallParams({ x: 0, y: 0 }, { x: 3000, y: 0 }, { height }), baseOffset };
+/** Wall obstacle stub με ελεγχόμενο `height`/`baseOffset`/`topBinding` (collinear στον x). */
+function wallObstacle(
+  height: number,
+  baseOffset = 0,
+  topBinding: WallTopBinding = 'storey-ceiling',
+): WallFinishObstacle {
+  const params = { ...buildDefaultWallParams({ x: 0, y: 0 }, { x: 3000, y: 0 }, { height }), baseOffset, topBinding };
   return { id: 'w1', kind: 'straight', params };
 }
 
@@ -124,6 +129,19 @@ describe('wallsOverlappingBeamBand — ADR-449 Slice 8 (height-aware wall covera
 
   it('floorElevationMm ανυψώνει τον τοίχο μέσα στη ζώνη (FFL=600 + height 2500 → top 3100) → ΠΑΡΑΜΕΝΕΙ', () => {
     const kept = wallsOverlappingBeamBand([wallObstacle(2500)], beamParams, 600);
+    expect(kept).toHaveLength(1);
+  });
+
+  // ADR-449 Slice 8b — η ΠΡΑΓΜΑΤΙΚΗ αιτία (Giorgio Firestore 2026-06-13): οι born-from-grid
+  // τοίχοι είναι `topBinding:'attached'` (στήριγμα· top κουμπώνει στην κάτω παρειά δοκαριού),
+  // με nominal height 3000 που υπερεκτιμά τον top. Coincident παρειές → ray-casting έτρωγε 1 όψη.
+  it('attached-top τοίχος (στήριγμα) → ΕΞΑΙΡΕΙΤΑΙ ΑΚΟΜΗ κι αν nominal height (3000) επικαλύπτεται', () => {
+    const kept = wallsOverlappingBeamBand([wallObstacle(3000, 0, 'attached')], beamParams, 0);
+    expect(kept).toHaveLength(0);
+  });
+
+  it('μη-attached full-height τοίχος (storey-ceiling, 3000) → ΠΑΡΑΜΕΝΕΙ (γνήσιο crossing)', () => {
+    const kept = wallsOverlappingBeamBand([wallObstacle(3000, 0, 'storey-ceiling')], beamParams, 0);
     expect(kept).toHaveLength(1);
   });
 });

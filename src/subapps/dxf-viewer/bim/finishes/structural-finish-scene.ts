@@ -80,6 +80,13 @@ export function wallsOverlappingBeamBand(
 ): WallFinishObstacle[] {
   const band = beamDepthBandMm(beamParams);
   return walls.filter((w) => {
+    // ADR-449 Slice 8b — **attached-top wall = στήριγμα**: η κορυφή του κουμπώνει στην ΚΑΤΩ
+    // παρειά ενός δοκαριού (`topBinding:'attached'` + `attachTopToIds`), άρα ο πραγματικός
+    // top = beam underside (ΟΧΙ το nominal `baseOffset+height` που το υπερεκτιμά). Το δοκάρι
+    // είναι ΟΛΟΚΛΗΡΟ από πάνω → ΔΕΝ καλύπτει τις πλάγιες όψεις. Χωρίς αυτόν τον έλεγχο, ένας
+    // collinear support wall με ίδιο πλάτος (παρειές συμπίπτουν με του δοκαριού) «έτρωγε»
+    // ασύμμετρα ΤΗ ΜΙΑ όψη (point-in-polygon boundary convention· Giorgio 2026-06-13 Firestore).
+    if (w.params.topBinding === 'attached') return false;
     const wallBotMm = floorElevationMm + (w.params.baseOffset ?? 0);
     const wallTopMm = wallBotMm + w.params.height;
     return wallTopMm > band.zBotMm + WALL_BEAM_BAND_TOL_MM && wallBotMm < band.zTopMm - WALL_BEAM_BAND_TOL_MM;
