@@ -28,6 +28,8 @@ import { Bim3DEditLivePreview } from './bim3d-edit-live-preview';
 import { TempWallMoveDimOverlay } from '../placement/TempWallMoveDimOverlay';
 import { TempAlignmentLineOverlay } from '../placement/TempAlignmentLineOverlay';
 import { TempSnapLabelOverlay } from '../placement/TempSnapLabelOverlay';
+// ADR-363 — live move-distance readout (line base→current + distance label) for any drag.
+import { TempMoveReadoutOverlay } from '../placement/TempMoveReadoutOverlay';
 // ADR-363 Φ1G.5 Slice 2i — snap description/type → i18n label key (SSoT shared with 2D indicator).
 import { resolveSnapLabelText } from '../../snapping/snap-description-keys';
 import type { ExtendedSnapType } from '../../snapping/extended-types';
@@ -77,6 +79,8 @@ export function useBim3DEditInteraction({ managerRef, canvasEl }: UseBim3DEditIn
     // ADR-363 Φ1G.5 Slice 2i — transient dashed alignment line + snap-type label for face magnetism.
     const alignmentLine = new TempAlignmentLineOverlay(manager.scene);
     const snapLabel = new TempSnapLabelOverlay(manager.scene);
+    // ADR-363 — transient move-distance readout for ANY dragged entity (line + distance label).
+    const moveReadout = new TempMoveReadoutOverlay(manager.scene);
     const resolveSnapLabel = (type?: string, description?: string): string => {
       if (!type && !description) return '';
       // ADR-370: composition-aware (BIM characteristic-point «Γωνία/Μέσο/Κέντρο X» labels).
@@ -84,7 +88,7 @@ export function useBim3DEditInteraction({ managerRef, canvasEl }: UseBim3DEditIn
     };
     const ctx: EditInteractionCtx = {
       manager, canvasEl, overlay, controller, preview, wallMoveDim, alignmentLine,
-      snapLabel, resolveSnapLabel,
+      snapLabel, moveReadout, resolveSnapLabel,
       getLevels: () => levelsRef.current,
     };
     let activeAbort: AbortController | null = null;
@@ -95,6 +99,7 @@ export function useBim3DEditInteraction({ managerRef, canvasEl }: UseBim3DEditIn
       wallMoveDim.hide(); // ADR-363 Φ1G.5 Slice 2h — drop transient dims when listeners go.
       alignmentLine.hide(); // ADR-363 Φ1G.5 Slice 2i — drop the alignment line too.
       snapLabel.hide(); // …and the snap-type label.
+      moveReadout.hide(); // ADR-363 — and the move-distance readout.
       if (controller.isDragging()) {
         controller.cancelDrag();
         preview.reset(); // ADR-402 — abort mid-drag: restore the live-preview meshes.
@@ -199,6 +204,7 @@ export function useBim3DEditInteraction({ managerRef, canvasEl }: UseBim3DEditIn
       wallMoveDim.dispose();
       alignmentLine.dispose();
       snapLabel.dispose();
+      moveReadout.dispose();
     };
   }, [canvasEl, managerRef]);
 }

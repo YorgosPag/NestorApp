@@ -26,7 +26,7 @@ import { stripPrismGeometry } from './envelope-three-mesh';
 import { getMaterial3D } from '../materials/MaterialCatalog3D';
 import { attachEdgesProjection } from './bim-three-edges';
 import { mmToSceneUnits, type SceneUnits } from '../../utils/scene-units';
-import { computeColumnFinishFaces, computeBeamFinishFaces } from '../../bim/finishes/structural-finish-scene';
+import { computeColumnFinishBands, computeBeamFinishFaces } from '../../bim/finishes/structural-finish-scene';
 import type { FinishFaceSegment, StructuralFinishFaces } from '../../bim/finishes/structural-finish-types';
 
 const MM_TO_M = 0.001;
@@ -181,19 +181,26 @@ export function buildColumnFinishSkin(
   const verts = column.geometry?.footprint?.vertices;
   if (!verts || verts.length < 3) return null;
 
-  // ADR-449 Slice 6 — δοκάρια ως mutual obstacles (παρειά κάτω από τη σύνδεση κόβεται).
-  const faces = computeColumnFinishFaces(column, verts, column.params.height, walls, beams);
-  if (!faces) return null;
+  // ADR-449 Slice 6 — height-aware junction: η αφαίρεση λόγω δοκαριών ισχύει ΜΟΝΟ στη
+  // ζώνη ύψους του δοκαριού (πάνω), όχι σε όλο το ύψος. Ένα prism set ανά κατακόρυφη ζώνη
+  // (κάτω = πλήρης παρειά· πάνω = junction cut), στοιβαγμένα στο σωστό baseY.
+  const bands = computeColumnFinishBands(column, verts, column.params.height, walls, beams);
+  if (!bands) return null;
 
-  return buildFinishSkinFromFaces(
-    faces,
-    column.params.sceneUnits ?? 'mm',
-    column.params.height * MM_TO_M,
-    baseY,
-    column.id,
-    'column',
-    levelId,
-  );
+  const sceneUnits = column.params.sceneUnits ?? 'mm';
+  const group = new THREE.Group();
+  for (const band of bands) {
+    const hM = (band.zTopMm - band.zBottomMm) * MM_TO_M;
+    const sub = buildFinishSkinFromFaces(
+      band.faces, sceneUnits, hM, baseY + band.zBottomMm * MM_TO_M, column.id, 'column', levelId,
+    );
+    if (sub) while (sub.children.length) group.add(sub.children[0]);
+  }
+  if (group.children.length === 0) return null;
+  group.userData['bimId'] = column.id;
+  group.userData['bimType'] = 'column';
+  group.userData['structuralFinish'] = true;
+  return group;
 }
 
 /**

@@ -62,11 +62,14 @@ export interface WallFinishObstacle {
 
 /**
  * ADR-449 Slice 6 — minimal structural shape ενός **δοκαριού-εμποδίου** για τον σοβά
- * κολόνας: μόνο το plan outline (κορυφές). Το ικανοποιούν ΚΑΙ το BIM `BeamEntity` ΚΑΙ
- * το canvas `DxfBeam` (direct entity) → μηδέν cast σε 2D & 3D & BOQ.
+ * κολόνας: plan outline (κορυφές) + `depth` (structural depth = κατακόρυφη έκταση
+ * της σύνδεσης· καθορίζει τη ζώνη ύψους που αφαιρείται από την παρειά της κολόνας —
+ * height-aware junction). Το ικανοποιούν ΚΑΙ το BIM `BeamEntity` ΚΑΙ το canvas `DxfBeam`
+ * → μηδέν cast σε 3D & BOQ.
  */
 export interface BeamFinishObstacle {
   readonly id: string;
+  readonly params: { readonly depth: number };
   readonly geometry: { readonly outline: { readonly vertices: readonly Point3D[] } };
 }
 
@@ -190,6 +193,107 @@ export function computeColumnFinishFaces(
   });
 }
 
+/**
+ * ADR-449 Slice 6 — μια κατακόρυφη ζώνη σοβά κολόνας: plan faces + το z-διάστημα (mm,
+ * σχετικά με τη βάση της κολόνας) στο οποίο ισχύουν. Επιτρέπει **height-aware junction**:
+ * κάτω ζώνη = πλήρης παρειά (μόνο τοίχοι)· πάνω ζώνη (ζώνη δοκαριού) = junction cut.
+ */
+export interface ColumnFinishBand {
+  readonly faces: StructuralFinishFaces;
+  readonly zBottomMm: number;
+  readonly zTopMm: number;
+}
+
+interface Bbox {
+  minX: number;
+  maxX: number;
+  minY: number;
+  maxY: number;
+}
+
+function bboxOf(pts: readonly { x: number; y: number }[]): Bbox {
+  let minX = Infinity;
+  let maxX = -Infinity;
+  let minY = Infinity;
+  let maxY = -Infinity;
+  for (const p of pts) {
+    if (p.x < minX) minX = p.x;
+    if (p.x > maxX) maxX = p.x;
+    if (p.y < minY) minY = p.y;
+    if (p.y > maxY) maxY = p.y;
+  }
+  return { minX, maxX, minY, maxY };
+}
+
+function bboxOverlap(a: Bbox, b: Bbox, pad: number): boolean {
+  return a.minX - pad <= b.maxX && b.minX <= a.maxX + pad && a.minY - pad <= b.maxY && b.minY <= a.maxY + pad;
+}
+
+/**
+ * Ύψος της ζώνης σύνδεσης (mm) = max structural depth ανάμεσα στα δοκάρια που πραγματικά
+ * αγγίζουν την κολόνα (bbox overlap, με join-tolerance pad). Υπόθεση v1: το δοκάρι κάθεται
+ * στην **κορυφή** της κολόνας (beam top ≈ column top — τυπικό frame) → ζώνη = top `depth`.
+ * Ακριβής elevation-based banding (sloped/offset beams) = DEFER.
+ */
+function junctionBandHeightMm(footprintBbox: Bbox, beams: readonly BeamFinishObstacle[], pad: number): number {
+  let maxDepth = 0;
+  for (const b of beams) {
+    if (bboxOverlap(footprintBbox, bboxOf(b.geometry.outline.vertices), pad)) {
+      maxDepth = Math.max(maxDepth, b.params.depth);
+    }
+  }
+  return maxDepth;
+}
+
+/**
+ * ADR-449 Slice 6 — **height-aware** σοβάς κολόνας ως κατακόρυφες ζώνες. Η αφαίρεση
+ * λόγω δοκαριών ισχύει ΜΟΝΟ στη ζώνη ύψους του δοκαριού (πάνω), όχι σε όλο το ύψος —
+ * αλλιώς η παρειά έμενε γυμνή για 3000mm ενώ το δοκάρι πιάνει μόνο ~500mm. Κάτω ζώνη =
+ * walls-only (πλήρης παρειά)· πάνω ζώνη = walls + beams (junction cut). Το διαβάζουν 3D
+ * (ένα prism ανά ζώνη) + BOQ (banded area). `undefined` όταν ο σοβάς είναι ανενεργός.
+ */
+export function computeColumnFinishBands(
+  column: ColumnFinishSource,
+  coreFootprint: readonly { x: number; y: number }[],
+  heightMm: number,
+  walls: readonly WallFinishObstacle[],
+  beams: readonly BeamFinishObstacle[] = [],
+): ColumnFinishBand[] | undefined {
+  const full = computeColumnFinishFaces(column, coreFootprint, heightMm, walls);
+  if (!full) return undefined;
+  if (beams.length === 0) return [{ faces: full, zBottomMm: 0, zTopMm: heightMm }];
+
+  const s = mmToSceneUnits(column.params.sceneUnits ?? 'mm');
+  const bandHeightMm = junctionBandHeightMm(bboxOf(coreFootprint), beams, STRUCTURAL_JOIN_TOL_MM * s);
+  const bandBottomMm = heightMm - bandHeightMm;
+  // Κανένα framing beam (bandHeight 0) ή δοκάρι ψηλότερο από την κολόνα → πλήρης παρειά.
+  if (bandHeightMm <= 0 || bandBottomMm <= 0) {
+    const junctionFull = computeColumnFinishFaces(column, coreFootprint, heightMm, walls, beams);
+    return [{ faces: junctionFull ?? full, zBottomMm: 0, zTopMm: heightMm }];
+  }
+  const junction = computeColumnFinishFaces(column, coreFootprint, heightMm, walls, beams);
+  if (!junction) return [{ faces: full, zBottomMm: 0, zTopMm: heightMm }];
+  return [
+    { faces: full, zBottomMm: 0, zTopMm: bandBottomMm },
+    { faces: junction, zBottomMm: bandBottomMm, zTopMm: heightMm },
+  ];
+}
+
+/** Σ (plan-length × band-height) ανά classification — banded εμβαδά για BOQ. */
+function bandedFinishAreasM2(bands: readonly ColumnFinishBand[]): { interiorAreaM2: number; exteriorAreaM2: number } {
+  let interiorAreaM2 = 0;
+  let exteriorAreaM2 = 0;
+  for (const band of bands) {
+    const hM = Math.max(0, band.zTopMm - band.zBottomMm) * MM_TO_M;
+    for (const seg of band.faces.segments) {
+      const area = seg.lengthM * hM;
+      if (seg.classification === 'exterior') exteriorAreaM2 += area;
+      else interiorAreaM2 += area;
+    }
+  }
+  return { interiorAreaM2, exteriorAreaM2 };
+}
+
 /** Μοναδιαία κατεύθυνση άξονα δοκαριού στο plan (start→end). `null` αν εκφυλισμένη. */
 function beamAxisUnit(params: BeamFinishSource['params']): Pt2 | null {
   const dx = params.endPoint.x - params.startPoint.x;
@@ -265,14 +369,17 @@ export function computeColumnFinishContribution(
 
   const walls = scene.entities.filter(isWallEntity);
   // ADR-449 Slice 6 — τα δοκάρια ως mutual obstacles → το BOQ δεν μετρά την εμβυθισμένη
-  // διεπαφή κολόνας↔δοκαριού (Revit join). Το ίδιο obstacle set με 2D/3D (ένας resolver).
+  // διεπαφή κολόνας↔δοκαριού (Revit join), αλλά **height-aware**: η αφαίρεση ισχύει μόνο
+  // στη ζώνη ύψους του δοκαριού (κάτω ζώνη = πλήρης παρειά). Ίδιο banding με το 3D.
   const beams = scene.entities.filter(isBeamEntity);
-  const faces = computeColumnFinishFaces(column, geometry.footprint.vertices, geometry.height, walls, beams);
-  if (!faces || (faces.interiorAreaM2 <= 0 && faces.exteriorAreaM2 <= 0)) return undefined;
+  const bands = computeColumnFinishBands(column, geometry.footprint.vertices, geometry.height, walls, beams);
+  if (!bands) return undefined;
+  const { interiorAreaM2, exteriorAreaM2 } = bandedFinishAreasM2(bands);
+  if (interiorAreaM2 <= 0 && exteriorAreaM2 <= 0) return undefined;
 
   return {
-    interiorAreaM2: faces.interiorAreaM2,
-    exteriorAreaM2: faces.exteriorAreaM2,
+    interiorAreaM2,
+    exteriorAreaM2,
     interiorMaterialId: spec.interiorMaterialId,
     exteriorMaterialId: spec.exteriorMaterialId,
   };

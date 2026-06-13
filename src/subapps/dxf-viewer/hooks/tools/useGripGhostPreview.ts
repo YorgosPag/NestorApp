@@ -40,6 +40,11 @@ import { drawRotationPivotMarker } from '../../rendering/ui/rotation-pivot-marke
 import { buildConnectedPipeGhosts } from '../../bim/mep-segments/build-connected-pipe-ghosts';
 // ADR-408 Φ7 P2 — SSoT snapshot→transform map (shared with HomeRunWiresOverlay).
 import { toEntityPreviewTransform } from './grip-drag-preview-transform';
+// ADR-363 — live move-distance readout pill at the grip-drag / Alt-drag leader midpoint
+// (SSoT shared with useMovePreview + the 3D overlay).
+import { drawDimPill } from '../../bim/labels/bim-dim-labels';
+import { formatMoveDistance, moveReadoutMid, sceneDistanceToMeters } from '../../bim/labels/move-readout';
+import { resolveSceneUnits } from '../../utils/scene-units';
 
 // ── Constants ──────────────────────────────────────────────────────────────────
 
@@ -175,6 +180,19 @@ export function useGripGhostPreview(props: UseGripGhostPreviewProps): void {
       const fromW = dragPreview.rotatePivot ?? dragPreview.anchorPos;
       const toW = { x: dragPreview.anchorPos.x + dragPreview.delta.x, y: dragPreview.anchorPos.y + dragPreview.delta.y };
       drawDashedSegment(ctx, fromW, toW, transform, vp);
+
+      // ADR-363 — live move-distance readout pill at the move vector's midpoint, showing
+      // how far the grip / Alt-dragged entity has moved (metres, locale-formatted). The
+      // distance is the displacement magnitude; the anchor is the anchorPos→destination mid.
+      const moveFromW = dragPreview.anchorPos;
+      const moveToW = { x: moveFromW.x + dragPreview.delta.x, y: moveFromW.y + dragPreview.delta.y };
+      const scene = levelManager.currentLevelId ? levelManager.getLevelScene(levelManager.currentLevelId) : null;
+      const meters = sceneDistanceToMeters(Math.hypot(dragPreview.delta.x, dragPreview.delta.y), resolveSceneUnits(scene));
+      const readoutMid = moveReadoutMid(
+        CoordinateTransforms.worldToScreen(moveFromW, transform, vp),
+        CoordinateTransforms.worldToScreen(moveToW, transform, vp),
+      );
+      drawDimPill(ctx, [formatMoveDistance(meters)], readoutMid.x, readoutMid.y);
     }
 
     // applyEntityPreview returns the *same* reference for zero-delta or

@@ -118,6 +118,9 @@ export function applyLivePreview(ctx: EditInteractionCtx): void {
     // ("Παρειά τοίχου" / "Γωνία τοίχου"). Both driven by the live snap result.
     updateAlignmentLine(ctx);
     updateSnapLabel(ctx);
+    // ADR-363 — the live move-distance readout (line from the gizmo anchor to the moved
+    // position + the distance label) for ANY dragged entity, not just walls.
+    updateMoveReadout(ctx, t);
     return;
   }
   if (live.kind === 'rotate') {
@@ -226,6 +229,18 @@ function updateWallMoveDims(ctx: EditInteractionCtx, t: THREE.Vector3): void {
   }
   const worldY = ctx.overlay.getPosition().y;
   ctx.wallMoveDim.update(wall, walls, { x: t.x, y: t.y, z: t.z }, worldY, ctx.manager.getCamera(), ctx.manager.getRendererCanvas());
+}
+
+/**
+ * ADR-363 — drive the live move-distance readout for the gizmo move: a discreet line from
+ * the gizmo anchor (the base point) to the moved position (anchor + the applied, axis-locked
+ * translation `t`) plus the distance label. Works for every dragged entity type; the overlay
+ * hides itself on a (near-)zero move.
+ */
+function updateMoveReadout(ctx: EditInteractionCtx, t: THREE.Vector3): void {
+  const base = ctx.overlay.getPosition();
+  const current = base.clone().add(t);
+  ctx.moveReadout.update(base, current, ctx.manager.getCamera(), ctx.manager.getRendererCanvas());
 }
 
 /**

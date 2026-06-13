@@ -38,6 +38,11 @@ import {
 import { getLayer } from '../../stores/LayerStore';
 // ADR-363 — ORTHO (F8) axis-lock for the live MOVE ghost (no-op when OFF).
 import { applyOrthoToDelta } from '../../bim/grips/grip-move-constraints';
+// ADR-363 — live move-distance readout pill (base → destination), SSoT shared with the
+// grip-drag preview + the 3D overlay (`drawDimPill` is the same Revit-grade dim pill).
+import { drawDimPill } from '../../bim/labels/bim-dim-labels';
+import { formatMoveDistance, moveReadoutMid, sceneDistanceToMeters } from '../../bim/labels/move-readout';
+import { resolveSceneUnits } from '../../utils/scene-units';
 
 // ============================================================================
 // TYPES
@@ -165,13 +170,13 @@ export function useMovePreview(props: UseMovePreviewProps): void {
     // Same ORTHO-locked displacement the rubber band + commit use (WYSIWYG).
     const delta: Point2D = orthoDelta;
 
-    // Displacement tooltip
-    const tooltipText = `Δ${delta.x.toFixed(1)}, ${delta.y.toFixed(1)}`;
-    ctx.save();
-    ctx.font = '12px monospace';
-    ctx.fillStyle = '#FFD700';
-    ctx.fillText(tooltipText, cursorScreen.x + 15, cursorScreen.y - 10);
-    ctx.restore();
+    // Live move-distance readout: a discreet Revit-grade pill at the rubber-band midpoint
+    // showing how far the selection has moved (metres, locale-formatted). Replaces the old
+    // crude `Δx, Δy` tooltip. Scene-unit displacement → metres via the readout SSoT.
+    const scene = levelManager.currentLevelId ? levelManager.getLevelScene(levelManager.currentLevelId) : null;
+    const meters = sceneDistanceToMeters(Math.hypot(delta.x, delta.y), resolveSceneUnits(scene));
+    const readoutMid = moveReadoutMid(pivotScreen, cursorScreen);
+    drawDimPill(ctx, [formatMoveDistance(meters)], readoutMid.x, readoutMid.y);
 
     // Solid preview entities at destination — AutoCAD parity: originals ghost on main
     // canvas (handled by dxf-canvas-renderer movePreviewActive), preview shows solid

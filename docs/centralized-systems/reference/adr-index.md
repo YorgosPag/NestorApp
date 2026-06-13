@@ -790,6 +790,7 @@
 | **ADR-444** | Permanent «Αρχιτεκτονικά» & «ΗΛΜ» Ribbon Tabs (Revit "Architecture"/"Systems"· siblings of ADR-443· MEP Boy-Scout re-grouped) | 🟢 DONE — pending verify+commit | [View](./adrs/ADR-444-architecture-systems-permanent-ribbon-tabs.md) |
 | **ADR-445** | Per-Category Structural Colour Identity (κολώνα μπλε/δοκός amber/θεμελίωση sienna/σκάλα teal· working-view convention) | 🟢 DONE — pending verify+commit | [View](./adrs/ADR-445-structural-category-color-identity.md) |
 | **ADR-449** | Structural Finish Skin (σοβάς κολόνας/δοκαριού· per-face adjacency-driven· immutable πυρήνας + derived σοβάς + BOQ ξεχωριστές γραμμές) | 🟢 Slices 1-6 (κολόνες+δοκάρια+toggle+beam↔column junction) — pending browser-verify | [View](./adrs/ADR-449-structural-finish-skin.md) |
+| **ADR-450** | Floor-elevation cascade + SSoT-unify «οροφή ορόφου» (Revit level-driven· height-change → auto-stack upper floors· κολώνα+δοκάρι ΕΝΑ ceiling resolver) | 🟢 Implemented — pending browser-verify + commit | [View](./adrs/ADR-450-floor-elevation-cascade-ssot-unify.md) |
 | **ADR-UI-001** | Visual Primitive Ownership & Semantic Tokens | ✅ APPROVED | [View](./adrs/ADR-UI-001.md) |
 
 ---

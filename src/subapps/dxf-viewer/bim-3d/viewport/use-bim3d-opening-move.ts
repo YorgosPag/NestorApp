@@ -38,11 +38,13 @@ import { resolveOpeningAltMove, openingRehostToleranceWorld } from '../../bim/wa
 import { mmToSceneUnits } from '../../utils/scene-units';
 import { resolveEntityBuilding } from '../../bim/utils/bim-floor-utils';
 import { resolveActiveFloorElevationMm } from '../placement/raycast-floor-point';
-import { worldToDxfPlan } from './coordinate-transforms';
+import { worldToDxfPlan, dxfPlanToWorld } from './coordinate-transforms';
 import { raycastWorldPoint } from '../systems/raycaster/BimEntityRaycaster';
 import { OpeningHostWallPreview, type OpeningHostWallRebuild } from '../placement/OpeningHostWallPreview';
 import { buildOpeningHostWallPreview } from '../animation/bim3d-preview-rebuild';
 import { TempOpeningDimOverlay } from '../placement/TempOpeningDimOverlay';
+// ADR-363 — live move-distance readout (line base→current + distance label) for the opening drag.
+import { TempMoveReadoutOverlay } from '../placement/TempMoveReadoutOverlay';
 import { getSiblingOpeningsOnWall } from '../../bim/walls/opening-siblings';
 import { resolveEntityLevelId } from '../animation/bim3d-edit-live-preview-apply';
 import { createSceneManagerAdapter } from '../../hooks/grips/grip-commit-adapters';
@@ -127,6 +129,9 @@ export function useBim3DOpeningMove({ managerRef, canvasEl }: UseBim3DOpeningMov
 
     const wallPreview = new OpeningHostWallPreview(manager.bimLayer.group);
     const dimOverlay = new TempOpeningDimOverlay(manager.scene);
+    // ADR-363 — live move-distance readout: a line from the opening's base point to the
+    // current (cursor-on-wall) point plus the distance label, mirroring the 2D readout.
+    const moveReadout = new TempMoveReadoutOverlay(manager.scene);
     let abort: AbortController | null = null;
     let drag: OpeningDrag | null = null;
     let justDragged = false;
@@ -173,7 +178,7 @@ export function useBim3DOpeningMove({ managerRef, canvasEl }: UseBim3DOpeningMov
       // World-space point ON the wall under the cursor (the pure raycaster SSoT, called
       // with the manager's public group/camera/canvas — no extra ThreeJsSceneManager API).
       const point = raycastWorldPoint(manager.bimLayer.group, manager.getCamera(), manager.getRendererCanvas(), e.clientX, e.clientY);
-      if (!point) { wallPreview.cancel(); dimOverlay.hide(); lastPreviewKey = null; manager.markSceneDirty(); return; }
+      if (!point) { wallPreview.cancel(); dimOverlay.hide(); moveReadout.hide(); lastPreviewKey = null; manager.markSceneDirty(); return; }
       const f = mmToSceneUnits(drag.host.params.sceneUnits ?? 'mm');
       const dxf = worldToDxfPlan(point);
       const currentPos = { x: dxf.x * f, y: dxf.y * f };
@@ -199,9 +204,15 @@ export function useBim3DOpeningMove({ managerRef, canvasEl }: UseBim3DOpeningMov
         }
         const siblings = getSiblingOpeningsOnWall(resolved.host.id, useBim3DEntitiesStore.getState().openings, drag.opening.id);
         dimOverlay.update(resolved.params, resolved.host, siblings, drag.floorElevationMm, drag.buildingBaseElevationM, manager.getCamera(), manager.getRendererCanvas(), drag.walls);
+        // ADR-363 — move readout from the base point to the cursor-on-wall point. The base
+        // plan (scene units) → world at the cursor's elevation so the leader stays horizontal.
+        const worldBase = dxfPlanToWorld(drag.basePoint.x / f, drag.basePoint.y / f, 0);
+        worldBase.y = point.y;
+        moveReadout.update(worldBase, point, manager.getCamera(), manager.getRendererCanvas());
       } else {
         wallPreview.cancel();
         dimOverlay.hide();
+        moveReadout.hide();
         lastPreviewKey = null;
       }
       e.preventDefault();
@@ -239,6 +250,7 @@ export function useBim3DOpeningMove({ managerRef, canvasEl }: UseBim3DOpeningMov
       else wallPreview.cancel();
       drag = null;
       dimOverlay.hide();
+      moveReadout.hide();
       lastPreviewKey = null;
       manager.viewport.setControlsEnabled(true);
       manager.markSceneDirty();
@@ -249,6 +261,7 @@ export function useBim3DOpeningMove({ managerRef, canvasEl }: UseBim3DOpeningMov
       wallPreview.cancel();
       drag = null;
       dimOverlay.hide();
+      moveReadout.hide();
       lastPreviewKey = null;
       manager.viewport.setControlsEnabled(true);
       manager.markSceneDirty();
@@ -281,6 +294,7 @@ export function useBim3DOpeningMove({ managerRef, canvasEl }: UseBim3DOpeningMov
       justDragged = false;
       wallPreview.cancel();
       dimOverlay.hide();
+      moveReadout.hide();
       manager.markSceneDirty();
     };
 
@@ -302,6 +316,7 @@ export function useBim3DOpeningMove({ managerRef, canvasEl }: UseBim3DOpeningMov
       teardown();
       wallPreview.dispose();
       dimOverlay.dispose();
+      moveReadout.dispose();
     };
   }, [canvasEl, managerRef]);
 }

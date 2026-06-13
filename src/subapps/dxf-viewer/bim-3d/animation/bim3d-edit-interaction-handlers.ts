@@ -67,6 +67,8 @@ import type { TempWallMoveDimOverlay } from '../placement/TempWallMoveDimOverlay
 // ADR-363 Φ1G.5 Slice 2i — Revit dashed alignment line + snap-type label + wall FACE offsets.
 import type { TempAlignmentLineOverlay } from '../placement/TempAlignmentLineOverlay';
 import type { TempSnapLabelOverlay } from '../placement/TempSnapLabelOverlay';
+// ADR-363 — live move-distance readout (line base→current + distance label).
+import type { TempMoveReadoutOverlay } from '../placement/TempMoveReadoutOverlay';
 import { isWallEntity } from '../../types/entities';
 import { getWallCornerWorldPoints } from '../../bim/walls/wall-corner-anchors';
 
@@ -83,6 +85,8 @@ export interface EditInteractionCtx {
   readonly alignmentLine: TempAlignmentLineOverlay;
   /** ADR-363 Φ1G.5 Slice 2i — transient snap-type label ("Παρειά τοίχου" / "Γωνία τοίχου"). */
   readonly snapLabel: TempSnapLabelOverlay;
+  /** ADR-363 — transient move-distance readout (line base→current + distance label). */
+  readonly moveReadout: TempMoveReadoutOverlay;
   /** ADR-363 Φ1G.5 Slice 2i — localise a snap type+description into a label (React `t` SSoT). */
   readonly resolveSnapLabel: (type?: string, description?: string) => string;
   /** Latest levels context (null = read-only, ADR-371). */
@@ -387,6 +391,7 @@ export function onEditPointerUp(ctx: EditInteractionCtx, e: PointerEvent): void 
   ctx.wallMoveDim.hide(); // ADR-363 Φ1G.5 Slice 2h — transient dims vanish on release.
   ctx.alignmentLine.hide(); // ADR-363 Φ1G.5 Slice 2i — dashed alignment line vanishes too.
   ctx.snapLabel.hide(); // …and the snap-type label.
+  ctx.moveReadout.hide(); // ADR-363 — and the move-distance readout.
   ctx.overlay.restoreConfiguredHandles(); // …and the shape handles come back.
   ctx.manager.viewport.setControlsEnabled(true);
   ctx.manager.markSceneDirty();
@@ -399,6 +404,7 @@ export function onEditPointerCancel(ctx: EditInteractionCtx): void {
   ctx.wallMoveDim.hide(); // ADR-363 Φ1G.5 Slice 2h — transient dims vanish on cancel.
   ctx.alignmentLine.hide(); // ADR-363 Φ1G.5 Slice 2i — dashed alignment line vanishes too.
   ctx.snapLabel.hide(); // …and the snap-type label.
+  ctx.moveReadout.hide(); // ADR-363 — and the move-distance readout.
   ctx.overlay.restoreConfiguredHandles(); // …and the shape handles come back.
   ctx.manager.viewport.setControlsEnabled(true);
   ctx.manager.markSceneDirty();

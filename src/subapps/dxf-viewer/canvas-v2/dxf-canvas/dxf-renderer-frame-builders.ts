@@ -76,15 +76,15 @@ export function buildOpeningsByWall(entities: readonly DxfEntityUnion[]): Openin
 export function buildFinishFacesByColumn(entities: readonly DxfEntityUnion[]): FinishFacesByColumn {
   const m = new Map<string, StructuralFinishFaces>();
   let walls: DxfWall[] | null = null;
-  let beams: DxfBeam[] | null = null;
   for (const e of entities) {
     if (e.type !== 'column') continue;
     const col: DxfColumn = e;
     if (!isFinishActive(col.params.finish)) continue;
     if (walls === null) walls = entities.filter((w): w is DxfWall => w.type === 'wall');
-    // ADR-449 Slice 6 — τα δοκάρια ως mutual obstacles (κόβουν την παρειά στη σύνδεση).
-    if (beams === null) beams = entities.filter((b): b is DxfBeam => b.type === 'beam');
-    const faces = computeColumnFinishFaces(col, col.geometry.footprint.vertices, col.params.height, walls, beams);
+    // ADR-449 Slice 6 — το 2D plan outline δείχνει την ΠΛΗΡΗ παρειά (walls-only): η
+    // beam↔column junction είναι height-aware (top-band) → εφαρμόζεται μόνο στο 3D/BOQ,
+    // όχι στην κάτοψη (το δοκάρι σχεδιάζεται ως ξεχωριστό entity από πάνω).
+    const faces = computeColumnFinishFaces(col, col.geometry.footprint.vertices, col.params.height, walls);
     if (faces && faces.segments.length > 0) m.set(col.id, faces);
   }
   return m;
