@@ -1,6 +1,6 @@
 # ADR-452 — Cut-Plane Slider (Revit View Range UI for the 2D plan)
 
-**Status:** 🟢 Implemented (v2.5 — gradual CPU edge trim + per-material-colour cut faces) — pending browser-verify + commit
+**Status:** 🟢 Implemented (v2.11 — … + slider-drag draft-on-drag + **slider RAF/pointermove violations eliminated: persistent cut-plane fast path + deferred edge-trim**) — pending browser-verify + commit
 **Date:** 2026-06-13
 **Builds on:** ADR-375 (View Range / cut state), ADR-448/450 (storey elevations & datum), ADR-040 (micro-leaf architecture)
 
@@ -235,3 +235,155 @@ faces), and the cut elevation is unified to a single FFL-relative frame across 2
        still emitted a thin outline. `buildEdgeOverlay` now returns null when any geometry axis collapses
        below 0.1 mm (a real BIM member is extruded in all three axes) — robust guard, not data-specific.
        Test added.
+
+- **2026-06-13** — v2.6 — fix WebGL `clear() called with no buffers in bitmask` console flood + RAF jank.
+  `SectionStencilRenderer.renderHorizontalCutCap` / `render` disable `autoClear*` (all false) for the cap
+  parity passes, then render the **main scene** several times per frame. The main BIM scene carries a
+  `THREE.Color` background (set by the envmap generator), so three.js' `WebGLBackground.render` sets
+  `forceClear = true` and calls `renderer.clear(false, false, false)` → `gl.clear(0)` (zero bitmask) on
+  **every** parity pass, every frame → console flood, "WebGL: too many errors", and 145–163 ms RAF stalls.
+  Fix: the caller (`SectionSceneController.renderFrameWithCaps`) already paints the background in its
+  `autoClear=true` pass, so the stencil renderer now nulls `mainScene.background` for the duration of the
+  cap passes (saved/restored alongside the `autoClear*` flags) — the background path is skipped entirely,
+  no `gl.clear(0)`. Applied to both the single-plane cut path and the box-mode loop. No behaviour change to
+  the rendered image (background was already on screen). Localized to `section-stencil-renderer.ts`.
+
+- **2026-06-13** — v2.7 — refine-on-idle for the stencil caps (RAF jank: ~145–163 ms → ~63–94 ms after the
+  v2.6 flood fix, but still ~10–15 fps while dragging the cut slider / orbiting). Root: the cut/box cap
+  passes re-render the whole BIM scene `2×(1 + N_material-colours)` times per frame (each per-colour group
+  also does two scene traversals to isolate its meshes). Doing the full per-material poché on *every* drag
+  frame is the cost. Fix (Revit-style refine-on-idle, mirrors the SSAO modulator):
+  - `renderFrameWithCaps(camera, interacting)` now picks a `quality: 'fast' | 'full'`. `fast` when ANY of:
+    (a) `interacting` (orbit/pan/tumble — the only gestures that set the OrbitControls `start`/`end` flag),
+    (b) the cut-plane constant changed since the last rendered frame (slider-drag per-frame signal), or
+    (c) **the camera pose changed** since the last rendered frame. (c) is essential: **wheel-zoom and
+    animated camera moves call `onRenderNeeded` WITHOUT `onInteractionStart`** (`viewport-camera.ts`
+    `onSurfaceWheel` / `setZoom` / `controls 'change'`), so without a pose check every zoom frame would hit
+    the expensive full-quality cap path — which was the observed RAF jank (67–158 ms) on wheel-zoom over the
+    3D canvas. Pose tracked via cached `position` + `quaternion` + `zoom` (NaN-seeded → first frame = moved).
+  - `SectionStencilRenderer.renderHorizontalCutCap` / `render` take the `quality` flag: `fast` renders only
+    the opaque grey base cap (2 passes) and skips the per-material-colour loop, the box hatch overlays, and
+    the selection-emphasis pass; `full` renders everything as before.
+  - After any `fast` frame the controller arms a one-shot ~150 ms timer that calls `markDirty()` once motion
+    settles → a single `full` frame (not interacting + constant unchanged → `quality === 'full'`). The
+    on-demand scheduler keeps that full frame on screen until the next change, so the steady-state image is
+    unchanged — only the *draft* frames during motion are cheaper. Timer cleared on dispose.
+  - Result: dragging the slider / orbiting now renders ~2 passes/frame instead of `2×(1+N)`; full per-layer
+    detail snaps in ~150 ms after release. No change to the settled image. Localized to
+    `section-stencil-renderer.ts` + `section-scene-controller.ts` (+ `scene-render-frame.ts` passes
+    `interacting`). DEFER: if a single grey-base pass still lags on a very dense storey, cache the parity
+    stencil between frames when only the camera (not the cut) moved.
+  - **Wheel-zoom interaction pulse (the deeper root, `viewport-camera.ts`).** Investigating "jank on
+    wheel-zoom / cursor over the 3D canvas" (67–158 ms, *independent of the slider*) revealed the real
+    cause is broader than the caps: **wheel-zoom marks the scene dirty (`onRenderNeeded`) but NEVER flags
+    interaction** (only orbit/pan/tumble fire OrbitControls `start`/`end`). So the `IdleDetector` sees
+    `interacting === false` every zoom frame → `notifyIdle` → after the threshold it **turns SSAO back on**,
+    and `scene-render-frame` runs the full `ssaoModulator.render()` composer on every zoom frame (heavy) —
+    AND, when a section is active, the caps stay full-quality. Both expensive paths fire during a plain
+    wheel-zoom. Fix: `onSurfaceWheel` now pulses `onInteractionStart()` on every wheel tick (before any
+    early return, so it also covers the ortho / OrbitControls-fallback dolly) and debounces
+    `onInteractionEnd()` by 220 ms. During the zoom gesture every "refine-on-idle" subsystem (SSAO →
+    raster, section caps → grey-base draft, POI) runs its cheap navigation path; ~220 ms after the wheel
+    goes quiet, interaction ends → SSAO + full caps refine once. This is the primary fix for the reported
+    jank and is independent of whether a section is active; the cap `quality` work above still applies on
+    top of it. Timer cleared on dispose.
+
+- **2026-06-13** — v2.8 — **"flying garbage at the world origin" fixed for real (supersedes the v2.5 note
+  above, which was wrong).** Browser-verified. The v2.5 hypotheses (remove `AxesHelper`; degenerate guard in
+  `buildEdgeOverlay`) did NOT fix it — proven with a runtime probe (`origin-object-diagnostic.ts`,
+  `window.__bimDiagnoseOrigin()`): scanning the main scene AND the section cap scenes with live-recomputed
+  bounding boxes found NO `bimId`, NO `bimEdgeOverlay`, and NO `NaN`-positioned object near the origin, and
+  nothing `effectivelyVisible` there except the cap meshes — so the source was the cut-cap stencil pipeline,
+  not a scene-graph object.
+  - **Root cause:** the fat-line edge overlays (ADR-375) are `LineSegments2`, which **extend `THREE.Mesh`**,
+    so they pass every `instanceof THREE.Mesh` guard. The cut-cap stencil parity passes render the whole
+    `mainScene` with a Mesh `overrideMaterial` (`createCutParityMaterial`: `colorWrite=false`,
+    `depthTest=false`, stencil-only). Applied over a `LineSegmentsGeometry`, that material draws the
+    geometry's base `position` template quad (instancing ignored) and writes **stray stencil**; the cap quad
+    — positioned on the cut plane at `(0, cutY, 0)`, i.e. centred on the world origin in X/Z — then fills a
+    **phantom sliver at the origin**. Visible ONLY with edges on (no overlays ⇒ clean stencil) AND a cut /
+    section active (caps only render then) — exactly the reported symptom.
+  - **Fix (Revit-grade, SSoT):** the stencil parity must only see closed solids. New
+    `SectionStencilRenderer.hideEdgeOverlaysForParity(mainScene, hidden)` hides every `bimEdgeOverlay` for
+    the parity render (restored after), applied to ALL four parity passes — `capCutSection` (cut base +
+    per-colour), `renderCapForPlane` (box base), `renderEmphasisCapForPlane` (selection), and
+    `renderHatchGroupForPlane` (box hatch). Each pass also gained a `|| !obj.visible` guard so it only hides
+    currently-visible meshes — restoring sets `visible = true`, so pushing an overlay the edge-cut trim had
+    already hidden (above the cut) would wrongly re-show it as a phantom cage.
+  - **Lesson:** `LineSegments2 extends Mesh`, so fat-line edge overlays leak into every `instanceof Mesh`
+    override/parity pass; a Mesh override material renders their base template quad, not the line. Exclude
+    non-solids from any stencil-parity pass.
+  - Localized to `section-stencil-renderer.ts`. The TEMP runtime probe used to pin this down
+    (`origin-object-diagnostic.ts`, `ThreeJsSceneManager.diagnoseOriginObjects`,
+    `SectionSceneController.getCapDiagnosticScenes`, `SectionStencilRenderer.getCapScenes` + cap-scene names,
+    `BimViewport3D` `window.__bimDiagnoseOrigin` hook) has been **fully removed** — it did its job.
+
+- **2026-06-13** — v2.8b — **"Consistent Colors" cut renders a black top — fixed.** Browser-verified.
+  - **Root cause:** the «Consistent Colors» visual style (`getConsistentVariant` in `MaterialCatalog3D`) fakes
+    an unlit flat look by moving the real colour into `material.emissive` and setting `material.color` to
+    black. The per-material cut-cap grouping (`collectColorGroups`) read `material.color.getHex()` → every
+    consistent-mode mesh grouped under black → the colour cap painted the whole section black (full-quality
+    only, so it «vanished» while orbiting via the v2.7 fast path — masking the bug).
+  - **Fix (SSoT):** new `displayColorHex(mat)` helper in `section-cut-cap-groups.ts` — when `color === 0x000000`
+    and `emissive !== 0`, the emissive IS the display colour → use it; otherwise `.color` (shaded / realistic).
+    `collectColorGroups` routes through it. The cut faces now match the colour the user sees on the solid.
+
+- **2026-06-13** — v2.9 — **keep the coloured section visible during camera motion** (Giorgio: «κράτα τα
+  χρώματα στην κίνηση»). The v2.7 ladder was binary (`fast` grey ↔ `full` colours), and **every** motion
+  signal — including plain orbit / pan / wheel-zoom — dropped the cut to the grey draft, repainting colours
+  only ~150 ms after motion settled. Giorgio wanted the per-material colours to persist while navigating.
+  - **Three-tier quality ladder** (`SectionCapQuality = 'fast' | 'colors' | 'full'`):
+    - `'fast'` — opaque grey base poché only. Used while the **cut slider drags** (`cutMoving`): the sliced
+      geometry changes every frame, the heaviest parity case, so the per-colour loop stays off there.
+    - `'colors'` — grey base **+ per-material colour cut faces**, but no hatch / selection emphasis. Used
+      during **camera motion** (`interacting || camMoved` — orbit / pan / wheel-zoom). Keeps the Revit-grade
+      coloured section on screen while navigating, paying the `2×N` colour-parity renders but skipping the
+      hatch/emphasis passes.
+    - `'full'` — everything (+ box hatch overlays + selection emphasis). Once all motion settles.
+  - `cutMoving` wins over `camMoved` (a slider drag can nudge the camera too). The refine-on-idle timer now
+    arms after **any** non-`full` frame (was: only `fast`), so hatch/emphasis — and, after a slider drag, the
+    colours — snap back ~150 ms after motion stops even though the on-demand scheduler may not paint again.
+  - **Trade-off (browser-verify on target HW):** this intentionally re-introduces the `2×N` colour-parity
+    cost during camera navigation (which v2.7 had deferred to idle) — Giorgio's explicit call, since the grey
+    flash during orbit was the bigger annoyance. The heaviest case (slider drag) stays on the cheap grey path,
+    so the wheel-zoom interaction-pulse fix (v2.7) is preserved for SSAO and for the slider. If orbit FPS on a
+    very dense storey is unacceptable, the fallback is the deferred parity-stencil cache (still open).
+  - Localized to `section-stencil-renderer.ts` (`SectionCapQuality` type + `quality !== 'fast'` gate on the
+    colour loop) + `section-scene-controller.ts` (three-tier decision + refine-arm condition).
+
+- **2026-06-13** — v2.10 — **slider-drag draft = clipped scene only, zero cap passes.** Browser test on
+  Giorgio's (weak) machine: even the `'fast'` grey-base tier left the **cut-slider drag** at ~61–324 ms/frame
+  (≈8–12 fps), because `'fast'` is still `renderer.render(scene)` + the two stencil-parity scene renders +
+  the cap quad ≈ 3–4 full-scene renders every frame. Since the geometry **already slices live** via the clip
+  plane, the cap fill is not essential *during the drag motion*. Fix (`section-scene-controller.ts`
+  `renderFrameWithCaps`): when `cutMoving`, skip BOTH `stencilRenderer.render` and `renderHorizontalCutCap`
+  entirely — render only the clipped scene (1 render/frame). The solid/coloured cut faces refine the instant
+  the slider settles (the `armRefine` one-shot already fires for any draft frame; the condition now includes
+  `cutMoving`). Visual effect: the cut face reads hollow/open *only while actively dragging the slider*, then
+  snaps to the full opaque + per-material-colour poché ~150 ms after release — the standard CAD draft-on-drag
+  trade-off, chosen because the slider drag is the single heaviest case and Giorgio's "keep colours in motion"
+  preference (v2.9) was about **camera** motion (still served by the `'colors'` tier), not the slider.
+- **2026-06-13** — v2.11 — **slider-drag `requestAnimationFrame` violations (`UnifiedFrameScheduler` 50–157 ms)
+  + `pointermove` 357 ms eliminated.** v2.10 trimmed only the *cap passes*; profiling on Giorgio's machine showed
+  the real cost was **two synchronous ops re-run on EVERY slider tick** inside `applyState()` (the Radix slider
+  fires `onValueChange` many times per frame):
+  1. **`applyClippingPlanes` → `material.needsUpdate = true` on every mesh.** Each tick built fresh `THREE.Plane`
+     objects and re-applied them, flipping `needsUpdate` scene-wide → the WebGLRenderer re-set-up every material's
+     program per frame (the 50–157 ms RAF spike). But the renderer reads `plane.constant` as a **uniform** every
+     frame — `needsUpdate` is only required when the plane **count** changes (`#define NUM_CLIPPING_PLANES`).
+  2. **`applyEdgeCutTrim` → CPU re-clip + GPU geometry re-upload** of every crossing fat-line overlay, per tick
+     (the 357 ms `pointermove`).
+  **Fix (`section-scene-controller.ts` + `edge-cut-applicator.ts`):**
+  - **Persistent cut-plane + composition fast path.** The controller keeps ONE `THREE.Plane` instance and a cheap
+    `clipCompositionKey(cutActive)` string of which clip sources are active + their geometry, **excluding** the cut
+    elevation. Identical key across ticks ⇒ only the cut constant moved ⇒ **mutate `cutPlane.constant` in place and
+    return** — no `applyClippingPlanes`, no `needsUpdate`, no traverse. Box drag / crop / mode / enable change ⇒ new
+    key ⇒ full re-apply (rare, correct). The materials keep referencing the same plane object, so the uniform update
+    is automatic.
+  - **Edge trim deferred from `applyState` to the render frame.** While `cutMoving` (drag) → new
+    `cullEdgeCutVisibility()`: a **visibility-only** cull (hide overlays fully above the cut, keep pristine geometry,
+    zero re-upload) — a drag frame now costs a traverse + a boolean per overlay. Once the slider **settles**, the
+    exact `applyEdgeCutTrim` runs **once** (guarded by `lastSettledEdgeCutY`; the cull nulls it so a re-trim is
+    forced even if the slider lands on the previous elevation). Camera-only frames (cut value unchanged) skip edges
+    entirely. The gradual "edges shrink at the plane" result is unchanged — it just lands on release instead of
+    fighting every tick. Tests: `edge-cut-cull.test.ts` (6) + existing `edge-cut-trim` (5) green.

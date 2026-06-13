@@ -331,8 +331,11 @@ export class BimSceneLayer {
       if (!r) continue;
       // ADR-449 Slice 4 — walls = obstacles + exterior classifier για τον σοβά δοκαριού.
       // ADR-449 Slice 6 — columns = mutual obstacles (junction δοκαριού↔κολόνας).
-      // ADR-449 Slice 7 — ο scene-level ενιαίος σοβάς (silhouette) αναλαμβάνει το skin.
-      const mesh = beamToMesh(beam, ctx.activeLevelId, r.baseElevation, entities.walls, entities.columns, true);
+      // ADR-449 Slice 7-revert — per-element σοβάς (αξιόπιστες 2 πλάγιες όψεις)· η scene-level
+      // ενιαία silhouette είναι dormant (boundary-dependent → μία όψη σε ανοιχτή τοπολογία).
+      const mesh = beamToMesh(
+        beam, ctx.activeLevelId, r.baseElevation, entities.walls, entities.columns, false, ctx.floorElevationMm,
+      );
       if (mesh) { mesh.userData['buildingId'] = r.buildingId; this.group.add(mesh); }
     }
   }

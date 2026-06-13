@@ -115,7 +115,7 @@ export function syncColumns(
       column, ctx.floorElevationMm, ctx.activeLevelId, r.baseElevation, topProfile, baseProfile, nominalHeightMm,
       entities.walls, // ADR-449 Slice 2 — obstacles + exterior classifier για τον σοβά
       entities.beams, // ADR-449 Slice 6 — mutual obstacles (junction κολόνας↔δοκαριού)
-      true, // ADR-449 Slice 7 — ο scene-level ενιαίος σοβάς (silhouette) αναλαμβάνει το skin
+      false, // ADR-449 Slice 7-revert — per-element σοβάς· η ενιαία silhouette είναι dormant
     );
     if (mesh) { mesh.userData['buildingId'] = r.buildingId; group.add(mesh); }
   }

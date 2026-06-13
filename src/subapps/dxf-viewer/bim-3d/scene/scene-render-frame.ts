@@ -68,7 +68,7 @@ export function renderSceneFrame(ctx: RenderFrameContext, now: number, delta: nu
       }
     }
   } else if (sectionController.isStencilActive()) {
-    sectionController.renderFrameWithCaps(viewport.camera);
+    sectionController.renderFrameWithCaps(viewport.camera, interacting);
   } else if (ssaoModulator.isSsaoActive()) {
     // Camera settled → full composer pass with SSAO (Revit-style refine-on-idle).
     try {

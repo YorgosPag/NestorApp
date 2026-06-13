@@ -47,6 +47,13 @@ export interface ViewportCameraOptions {
 const _snapDir = new THREE.Vector3();
 const _direction = new THREE.Vector3();
 
+/**
+ * ADR-452 v2.7 — how long after the last wheel tick we keep "interacting" true.
+ * Wheel events arrive in bursts ~50–120 ms apart; this debounce keeps the cheap
+ * navigation path alive across the whole zoom gesture, then lets it settle.
+ */
+const WHEEL_INTERACTION_IDLE_MS = 220;
+
 export function createViewportCamera(
   domElement: HTMLElement,
   options: ViewportCameraOptions,
@@ -94,6 +101,13 @@ export function createViewportCamera(
    * disabled nav we do nothing → OrbitControls' default `zoomToCursor` dolly runs as before.
    */
   function onSurfaceWheel(e: WheelEvent): void {
+    // ADR-452 v2.7 — flag interaction on EVERY wheel tick (before any early return,
+    // so it also covers the ortho / OrbitControls-fallback dolly). Wheel-zoom marks
+    // the scene dirty via `onRenderNeeded` but never fires OrbitControls 'start'/'end',
+    // so without this the IdleDetector keeps SSAO active AND the section caps stay
+    // full-quality on every zoom frame → heavy frames (the observed RAF jank). The
+    // debounced end lets both refine once the wheel goes quiet.
+    pulseWheelInteraction();
     if (currentMode !== 'perspective' || !controls.enabled || !controls.enableZoom) return;
     const hit = options.resolveSurfacePoint?.(e.clientX, e.clientY);
     if (!hit) return;
@@ -113,6 +127,17 @@ export function createViewportCamera(
     onRenderNeeded();
   }
   domElement.addEventListener('wheel', onSurfaceWheel, { capture: true, passive: false });
+
+  // ADR-452 v2.7 — debounced "interacting" pulse for wheel-zoom (see onSurfaceWheel).
+  let wheelIdleTimer: ReturnType<typeof setTimeout> | null = null;
+  function pulseWheelInteraction(): void {
+    onInteractionStart();
+    if (wheelIdleTimer !== null) clearTimeout(wheelIdleTimer);
+    wheelIdleTimer = setTimeout(() => {
+      wheelIdleTimer = null;
+      onInteractionEnd();
+    }, WHEEL_INTERACTION_IDLE_MS);
+  }
 
   const tumble = createTumbleRotation({
     getCamera: () => activeCamera,
@@ -444,6 +469,7 @@ export function createViewportCamera(
     controls.removeEventListener('start', onInteractionStart);
     controls.removeEventListener('end', onInteractionEnd);
     domElement.removeEventListener('wheel', onSurfaceWheel, { capture: true });
+    if (wheelIdleTimer !== null) { clearTimeout(wheelIdleTimer); wheelIdleTimer = null; }
     animation.dispose();
     tumble.dispose();
     controls.dispose();

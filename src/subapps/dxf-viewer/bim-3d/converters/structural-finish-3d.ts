@@ -254,12 +254,15 @@ export function buildBeamFinishSkin(
   columns: readonly ColumnEntity[],
   baseY: number,
   levelId?: string,
+  floorElevationMm = 0,
 ): THREE.Group | null {
   const verts = beam.geometry?.outline?.vertices;
   if (!verts || verts.length < 3) return null;
 
   // ADR-449 Slice 6 — κολόνες ως mutual obstacles (πλάγια όψη στη σύνδεση κόβεται).
-  const faces = computeBeamFinishFaces(beam, verts, beam.params.depth, walls, columns);
+  // ADR-449 Slice 8 — `floorElevationMm` → height-aware wall coverage (τοίχος-στήριγμα
+  // κάτω από το δοκάρι δεν καλύπτει τις πλάγιες όψεις· κρατά σοβά και στις 2 πλευρές).
+  const faces = computeBeamFinishFaces(beam, verts, beam.params.depth, walls, columns, floorElevationMm);
   if (!faces) return null;
 
   return buildFinishSkinFromFaces(

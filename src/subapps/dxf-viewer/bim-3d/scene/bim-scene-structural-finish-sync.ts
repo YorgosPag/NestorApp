@@ -18,6 +18,17 @@ import { isStructuralFinishVisible } from '../../bim/finishes/structural-finish-
 import { computeStructuralFinishSilhouette } from '../../bim/finishes/structural-finish-scene';
 import { buildStructuralSilhouetteSkin } from '../converters/structural-finish-silhouette-3d';
 
+/**
+ * ADR-449 Slice 7-revert — η ενιαία silhouette είναι προσωρινά **ΑΝΕΝΕΡΓΗ**. Σε
+ * **ανοιχτή τοπολογία** (δοκάρια που δεν κλείνουν loop) η `safeUnion` δεν δημιουργεί
+ * τρύπα → μόνο το outer ring → κάθε δοκάρι παίρνει **μία μόνο όψη** (boundary-dependent,
+ * Giorgio 2026-06-13). Ενεργό path = **per-element** (Slice 6, αξιόπιστες 2 πλάγιες όψεις
+ * + mutual-obstacle junction cut + chamfer στις γωνίες). Ο κώδικας της silhouette μένει
+ * ζωντανός (αυτό το module + το pure SSoT) για μελλοντικό **corner-join-only merged-miter**
+ * slice — flip σε `true` όταν υλοποιηθεί robust corner-join. Βλ. ADR-449 §3.septies.
+ */
+const STRUCTURAL_SILHOUETTE_ENABLED: boolean = false;
+
 type ResolveEntity = (
   entity: { id?: string; layerId?: string; discipline?: Discipline },
   category: BimCategory,
@@ -27,10 +38,10 @@ type ResolveEntity = (
 /**
  * ADR-449 Slice 7 — ΕΝΑ scene-level pass για τον ΕΝΙΑΙΟ σοβά (merged silhouette):
  * ενώνει τα δομικά cores (κολόνες+δοκάρια) ανά ζώνη ύψους και offset-άρει ΜΙΑ φορά →
- * coplanar + connected στις συμβολές (αντικαθιστά τα per-element skins, που τα
- * converters παραλείπουν με `suppressFinishSkin`). Group ανά κτίριο (baseElevation =
- * world datum). Walls = obstacles (όλοι, όπως το per-element). No-op όταν ο σοβάς
- * είναι view-hidden ή δεν υπάρχουν ορατά δομικά μέλη.
+ * coplanar + connected στις συμβολές. Group ανά κτίριο (baseElevation = world datum).
+ * Walls = obstacles (όλοι, όπως το per-element). **Slice 7-revert: dormant** πίσω από
+ * `STRUCTURAL_SILHOUETTE_ENABLED` — ενεργό path = per-element (τα converters δίνουν πλέον
+ * `suppressFinishSkin=false`). No-op όταν dormant, view-hidden ή χωρίς ορατά δομικά μέλη.
  */
 export function syncStructuralFinishSkin(
   group: THREE.Group,
@@ -38,7 +49,8 @@ export function syncStructuralFinishSkin(
   ctx: SyncContext,
   resolve: ResolveEntity,
 ): void {
-  if (!isStructuralFinishVisible()) return;
+  // ADR-449 Slice 7-revert — dormant μέχρι robust corner-join-only υλοποίηση (per-element ενεργό).
+  if (!STRUCTURAL_SILHOUETTE_ENABLED || !isStructuralFinishVisible()) return;
   const groups = new Map<string, { baseElevation: number; columns: ColumnEntity[]; beams: BeamEntity[] }>();
   const groupFor = (buildingId: string, baseElevation: number) => {
     let g = groups.get(buildingId);

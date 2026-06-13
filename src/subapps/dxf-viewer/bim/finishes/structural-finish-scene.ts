@@ -29,19 +29,14 @@ import { computeBuildingFootprint } from '../geometry/building-footprint';
 import { pointToSegmentDistance } from '../../systems/guides';
 import { mmToSceneUnits } from '../../utils/scene-units';
 import { resolveStructuralFinishFaces, type FinishEdgeClassifier } from './structural-finish-resolver';
-import { isFinishActive, createDefaultStructuralFinishSpec, type StructuralFinishFaces } from './structural-finish-types';
+import { isFinishActive, type StructuralFinishFaces } from './structural-finish-types';
 import type { FinishBoqContribution } from '../services/structural-finish-boq';
 import type { Pt2 } from '../geometry/shared/segment-polygon-coverage';
 import { dilatePolygonOutward } from '../geometry/shared/polygon-dilate';
-import {
-  computeStructuralSilhouetteBands,
-  type SilhouetteBand,
-  type SilhouetteMember,
-} from './structural-finish-silhouette';
 
-const MM_TO_M = 0.001;
+export const MM_TO_M = 0.001;
 /** Ανοχή (canvas units ανά mm) — 2mm για «πάνω στο εξώτατο όριο». */
-const EXTERIOR_EDGE_TOL_MM = 2;
+export const EXTERIOR_EDGE_TOL_MM = 2;
 /**
  * ADR-449 Slice 6 — Revit join tolerance (mm) για τα cross-structural obstacles
  * (δοκάρι→κολόνα / κολόνα→δοκάρι). Outward dilation του obstacle footprint ώστε μια
@@ -51,7 +46,45 @@ const EXTERIOR_EDGE_TOL_MM = 2;
  */
 export const STRUCTURAL_JOIN_TOL_MM = 10;
 
-const toPt2 = (p: { x: number; y: number }): Pt2 => ({ x: p.x, y: p.y });
+/**
+ * ADR-449 Slice 8 — ανοχή (mm) κατακόρυφης επικάλυψης τοίχου↔ζώνης βάθους δοκαριού.
+ * Ένας τοίχος-στήριγμα κάτω από το δοκάρι έχει κορυφή ≈ κάτω παρειά δοκαριού· με την
+ * ανοχή αυτή θεωρείται «κάτω, όχι μέσα στη ζώνη» → δεν καλύπτει τις πλάγιες όψεις.
+ */
+const WALL_BEAM_BAND_TOL_MM = 1;
+
+export const toPt2 = (p: { x: number; y: number }): Pt2 => ({ x: p.x, y: p.y });
+
+/** Κατακόρυφη ζώνη βάθους δοκαριού (building-relative mm): κρέμεται `depth` κάτω από top. */
+function beamDepthBandMm(
+  params: { readonly topElevation: number; readonly zOffset?: number; readonly depth: number },
+): { zBotMm: number; zTopMm: number } {
+  const zTopMm = params.topElevation + (params.zOffset ?? 0);
+  return { zBotMm: zTopMm - params.depth, zTopMm };
+}
+
+/**
+ * ADR-449 Slice 8 — **height-aware wall coverage** για δοκάρια. Κρατά μόνο τους τοίχους
+ * που επικαλύπτονται **κατακόρυφα** με τη ζώνη βάθους του δοκαριού `[top−depth, top]`. Ένας
+ * τοίχος-**στήριγμα από κάτω** (κορυφή ≤ κάτω παρειά δοκαριού) βρίσκεται **κάτω** από το
+ * δοκάρι → ΟΧΙ obstacle → ο σοβάς εμφανίζεται **και στις 2 πλάγιες όψεις** (η όψη είναι
+ * πάνω από τον τοίχο, ορατή). Ένας τοίχος που **διασταυρώνεται** στο ίδιο ύψος → παραμένει
+ * obstacle (κόβει σωστά, μηδέν διπλο-σοβάτισμα). Η coverage ήταν 2D-only (κάτοψη) → ένας
+ * collinear support wall κάλυπτε ασύμμετρα τη μία όψη (Giorgio 2026-06-13). `floorElevationMm`
+ * = FFL ορόφου (anchor του wall `baseOffset`)· default 0 = active-level scene (BOQ/2D convention).
+ */
+export function wallsOverlappingBeamBand(
+  walls: readonly WallFinishObstacle[],
+  beamParams: { readonly topElevation: number; readonly zOffset?: number; readonly depth: number },
+  floorElevationMm: number,
+): WallFinishObstacle[] {
+  const band = beamDepthBandMm(beamParams);
+  return walls.filter((w) => {
+    const wallBotMm = floorElevationMm + (w.params.baseOffset ?? 0);
+    const wallTopMm = wallBotMm + w.params.height;
+    return wallTopMm > band.zBotMm + WALL_BEAM_BAND_TOL_MM && wallBotMm < band.zTopMm - WALL_BEAM_BAND_TOL_MM;
+  });
+}
 
 /**
  * Minimal structural shape ενός τοίχου-εμποδίου για τον σοβά. Το ικανοποιούν ΚΑΙ
@@ -99,7 +132,10 @@ export interface ColumnFinishSource {
  * `includeEdge` predicate (κρατά μόνο τις πλάγιες όψεις ∥ άξονα).
  */
 export interface BeamFinishSource {
-  readonly params: Pick<BeamParams, 'finish' | 'sceneUnits' | 'envelopeFunction' | 'startPoint' | 'endPoint'>;
+  readonly params: Pick<
+    BeamParams,
+    'finish' | 'sceneUnits' | 'envelopeFunction' | 'startPoint' | 'endPoint' | 'topElevation' | 'depth' | 'zOffset'
+  >;
 }
 
 /** Wall → plan footprint polygon (outer ακμή + αντίστροφη inner). */
@@ -324,6 +360,7 @@ export function computeBeamFinishFaces(
   depthMm: number,
   walls: readonly WallFinishObstacle[],
   columns: readonly ColumnFinishObstacle[] = [],
+  floorElevationMm = 0,
 ): StructuralFinishFaces | undefined {
   const spec = beam.params.finish;
   if (!isFinishActive(spec) || outline.length < 3) return undefined;
@@ -332,6 +369,10 @@ export function computeBeamFinishFaces(
 
   const s = mmToSceneUnits(beam.params.sceneUnits ?? 'mm');
   const tol = EXTERIOR_EDGE_TOL_MM * s;
+  // ADR-449 Slice 8 — height-aware wall coverage: οι τοίχοι-στηρίγματα κάτω από το δοκάρι
+  // (κορυφή ≤ κάτω παρειά) ΔΕΝ καλύπτουν τις πλάγιες όψεις (είναι πάνω τους, ορατές). Ο
+  // classifier τρέχει στο ΠΛΗΡΕΣ wall set (exterior/interior boundary = building footprint).
+  const coveringWalls = wallsOverlappingBeamBand(walls, beam.params, floorElevationMm);
   const classify = buildStructuralFinishClassifier(beam.params.envelopeFunction, walls, tol);
 
   // ADR-449 Slice 6 — mutual obstacles: οι τοίχοι (no dilation) + οι κολόνες (dilated
@@ -343,7 +384,7 @@ export function computeBeamFinishFaces(
     heightMm: depthMm,
     spec,
     obstacles: [
-      ...walls.map(wallFootprintPolygon),
+      ...coveringWalls.map(wallFootprintPolygon),
       ...columns.map((c) => crossObstaclePolygon(c.geometry.footprint.vertices, dCanvas)),
     ],
     classify,
@@ -417,71 +458,6 @@ export function computeBeamFinishContribution(
   };
 }
 
-// ─── ADR-449 Slice 7 — Merged structural silhouette (scene adapter) ─────────────
-
-/** Κατακόρυφη έκταση κολόνας (building-relative mm): βάση = floor + baseOffset. */
-function columnZExtent(column: ColumnEntity, floorElevationMm: number): { zBotMm: number; zTopMm: number } {
-  const zBotMm = floorElevationMm + (column.params.baseOffset ?? 0);
-  return { zBotMm, zTopMm: zBotMm + column.params.height };
-}
-
-/** Κατακόρυφη έκταση δοκαριού (building-relative mm): κρέμεται depth κάτω από topElevation. */
-function beamZExtent(beam: BeamEntity): { zBotMm: number; zTopMm: number } {
-  const zTopMm = beam.params.topElevation + (beam.params.zOffset ?? 0);
-  return { zBotMm: zTopMm - beam.params.depth, zTopMm };
-}
-
-/** Δομικό μέλος → `SilhouetteMember` όταν έχει ενεργό σοβά + έγκυρο footprint. */
-function toMember(
-  finish: ColumnEntity['params']['finish'] | BeamEntity['params']['finish'],
-  vertices: readonly { x: number; y: number }[] | undefined,
-  z: { zBotMm: number; zTopMm: number },
-): SilhouetteMember | null {
-  if (!isFinishActive(finish) || !vertices || vertices.length < 3) return null;
-  return { footprint: vertices.map(toPt2), zBotMm: z.zBotMm, zTopMm: z.zTopMm };
-}
-
-/**
- * ADR-449 Slice 7 — SSoT για την ΕΝΙΑΙΑ σιλουέτα σοβά μιας δομικής ομάδας (κολόνες +
- * δοκάρια ενός κτιρίου/ορόφου). Χτίζει `SilhouetteMember[]` (building-relative z) +
- * wall obstacles (finished footprints dilated κατά join-tol ώστε flush διεπαφές να
- * μετράνε ως καλυμμένες — Πρόβλημα Α) + classifier, και delegate-άρει στον pure
- * `computeStructuralSilhouetteBands`. Το διαβάζει ο 3D builder. `[]` όταν κανένα μέλος.
- */
-export function computeStructuralFinishSilhouette(
-  columns: readonly ColumnEntity[],
-  beams: readonly BeamEntity[],
-  walls: readonly WallFinishObstacle[],
-  floorElevationMm: number,
-): SilhouetteBand[] {
-  const members: SilhouetteMember[] = [];
-  for (const c of columns) {
-    const m = toMember(c.params.finish, c.geometry?.footprint?.vertices, columnZExtent(c, floorElevationMm));
-    if (m) members.push(m);
-  }
-  for (const b of beams) {
-    const m = toMember(b.params.finish, b.geometry?.outline?.vertices, beamZExtent(b));
-    if (m) members.push(m);
-  }
-  if (members.length === 0) return [];
-
-  const sceneUnits = columns[0]?.params.sceneUnits ?? beams[0]?.params.sceneUnits ?? 'mm';
-  const s = mmToSceneUnits(sceneUnits);
-  const tol = EXTERIOR_EDGE_TOL_MM * s;
-  const classify = buildStructuralFinishClassifier(undefined, walls, tol);
-  // ADR-449 Slice 7 — οι τοίχοι ως obstacles **ΧΩΡΙΣ dilation** (browser-verified per-element
-  // συμπεριφορά): ο **κάθετος** τοίχος που διασχίζει την όψη → καλύπτεται (μηδέν σοβάς εκεί)·
-  // ο **collinear** τοίχος κάτω από δοκάρι (ίδιος άξονας, grid framing) → midpoint στο boundary,
-  // ΟΧΙ strictly-inside → ο σοβάς της πλάγιας όψης ΕΜΦΑΝΙΖΕΤΑΙ. Dilation εδώ έκρυβε ΟΛΟ τον
-  // σοβά δοκαριών πάνω σε τοίχους (grid model· Giorgio 2026-06-13). Η σύνδεση κολόνα↔δοκάρι
-  // (Πρόβλημα Β) λύνεται από το ΕΝΙΑΙΟ union, ΟΧΙ από obstacle dilation.
-  const wallObstacles = walls.map((w) => wallFootprintPolygon(w));
-
-  return computeStructuralSilhouetteBands({
-    members,
-    wallObstacles,
-    spec: createDefaultStructuralFinishSpec(),
-    classify,
-    unitToMeters: (1 / s) * MM_TO_M,
-  });
-}
+// ADR-449 Slice 7 — Merged structural silhouette (scene adapter) μετακινήθηκε στο
+// `structural-finish-scene-silhouette.ts` (Google file-size SSoT, N.7.1).
+export { computeStructuralFinishSilhouette } from './structural-finish-scene-silhouette';

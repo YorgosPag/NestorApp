@@ -7,8 +7,9 @@
  * (χωρίς τοίχους-περίβλημα) → όλες οι όψεις interior (Knauf).
  */
 
-import { computeBeamFinishFaces } from '../structural-finish-scene';
+import { computeBeamFinishFaces, wallsOverlappingBeamBand, type WallFinishObstacle } from '../structural-finish-scene';
 import { buildDefaultBeamParams, buildBeamEntity } from '../../../hooks/drawing/beam-completion';
+import { buildDefaultWallParams } from '../../../hooks/drawing/wall-completion';
 import type { BeamEntity } from '../../types/beam-types';
 import type { StructuralFinishSpec } from '../structural-finish-types';
 
@@ -88,5 +89,41 @@ describe('computeBeamFinishFaces (ADR-449 Slice 4)', () => {
 
   it('απών σοβάς → undefined', () => {
     expect(faces(beam({ x: 0, y: 0 }, { x: 3000, y: 0 }))).toBeUndefined();
+  });
+});
+
+/** Wall obstacle stub με ελεγχόμενο `height`/`baseOffset` (collinear με δοκάρι στον x). */
+function wallObstacle(height: number, baseOffset = 0): WallFinishObstacle {
+  const params = { ...buildDefaultWallParams({ x: 0, y: 0 }, { x: 3000, y: 0 }, { height }), baseOffset };
+  return { id: 'w1', kind: 'straight', params };
+}
+
+describe('wallsOverlappingBeamBand — ADR-449 Slice 8 (height-aware wall coverage)', () => {
+  // Δοκάρι: top=3000, depth=500 → ζώνη βάθους [2500, 3000].
+  const beamParams = { topElevation: 3000, zOffset: 0, depth: 500 };
+
+  it('τοίχος-στήριγμα από κάτω (κορυφή=2500 ≈ κάτω παρειά) → ΕΞΑΙΡΕΙΤΑΙ (δεν καλύπτει)', () => {
+    const kept = wallsOverlappingBeamBand([wallObstacle(2500)], beamParams, 0);
+    expect(kept).toHaveLength(0);
+  });
+
+  it('τοίχος που διασταυρώνεται στο ύψος του δοκαριού (κορυφή=3000) → ΠΑΡΑΜΕΝΕΙ obstacle', () => {
+    const kept = wallsOverlappingBeamBand([wallObstacle(3000)], beamParams, 0);
+    expect(kept).toHaveLength(1);
+  });
+
+  it('τοίχος που φτάνει λίγο μέσα στη ζώνη (κορυφή=2700) → ΠΑΡΑΜΕΝΕΙ', () => {
+    const kept = wallsOverlappingBeamBand([wallObstacle(2700)], beamParams, 0);
+    expect(kept).toHaveLength(1);
+  });
+
+  it('τοίχος εντελώς κάτω (κορυφή=2000) → ΕΞΑΙΡΕΙΤΑΙ', () => {
+    const kept = wallsOverlappingBeamBand([wallObstacle(2000)], beamParams, 0);
+    expect(kept).toHaveLength(0);
+  });
+
+  it('floorElevationMm ανυψώνει τον τοίχο μέσα στη ζώνη (FFL=600 + height 2500 → top 3100) → ΠΑΡΑΜΕΝΕΙ', () => {
+    const kept = wallsOverlappingBeamBand([wallObstacle(2500)], beamParams, 600);
+    expect(kept).toHaveLength(1);
   });
 });

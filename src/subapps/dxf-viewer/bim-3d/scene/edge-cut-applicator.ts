@@ -104,6 +104,32 @@ export function applyEdgeCutTrim(group: THREE.Object3D, cutWorldY: number): void
   });
 }
 
+/**
+ * ADR-452 v2.11 — CHEAP draft cull for the slider DRAG: toggle each overlay's
+ * visibility against the cut (fully-above → hidden, otherwise shown) WITHOUT any
+ * per-segment CPU clip or GPU re-upload. Crossing overlays stay pristine — their
+ * edges poke slightly above the cut during the drag, exactly mirroring the grey
+ * draft caps; the precise gradual trim lands the instant the slider settles
+ * (`applyEdgeCutTrim`). Any overlay still carrying a previous exact trim is restored
+ * to pristine ONCE (so it doesn't show a stale cut), then left untouched per frame.
+ *
+ * Reuses the cached world-Y range + pristine positions, so a drag frame costs only a
+ * traverse + a boolean per overlay — the per-tick re-upload jank is gone.
+ */
+export function cullEdgeCutVisibility(group: THREE.Object3D, cutWorldY: number): void {
+  group.traverse((obj) => {
+    if ((obj.userData as EdgeCutUserData).bimEdgeOverlay !== true) return;
+    const overlay = obj as LineSegments2;
+    const orig = getOriginalPositions(overlay);
+    if (!orig) return;
+    const { minY } = getYRange(overlay, orig);
+    // One-shot restore if a prior exact trim is still applied (then stays pristine).
+    if ((overlay.userData as EdgeCutUserData).bimEdgeAppliedCutY != null) restoreOne(overlay);
+    // Hidden only when the whole overlay sits above the cut.
+    overlay.visible = minY < cutWorldY - EPS;
+  });
+}
+
 /** Restore every fat-line edge overlay in `group` to pristine geometry + visible. */
 export function restoreEdgeCut(group: THREE.Object3D): void {
   group.traverse((obj) => {

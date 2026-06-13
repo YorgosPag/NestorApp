@@ -130,49 +130,66 @@ describe('computeStructuralSilhouetteBands', () => {
     expect(internalJunction).toHaveLength(0);
   });
 
+  it('frame δοκαριών/κολώνων (τρύπα=δωμάτιο) → σοβάς ΚΑΙ στις εσωτερικές όψεις, φορά προς το δωμάτιο', () => {
+    // 4 δοκάρια → annulus [0,100]² μείον τρύπα [30,70]². Inner όψεις = όψη δωματίου.
+    const frame = [
+      member(rect(0, 0, 100, 30), 0, 500),   // bottom
+      member(rect(0, 70, 100, 100), 0, 500), // top
+      member(rect(0, 30, 30, 70), 0, 500),   // left
+      member(rect(70, 30, 100, 70), 0, 500), // right
+    ];
+    const out = computeStructuralSilhouetteBands(baseInput(frame));
+    expect(out).toHaveLength(1);
+    const segs = out[0].faces.segments;
+    // Υπάρχουν εσωτερικές όψεις (στο όριο της τρύπας x∈{30,70} ή y∈{30,70}).
+    const innerSegs = segs.filter((s) => {
+      const mx = (s.a.x + s.b.x) / 2, my = (s.a.y + s.b.y) / 2;
+      return (Math.abs(mx - 30) < 1e-6 || Math.abs(mx - 70) < 1e-6 || Math.abs(my - 30) < 1e-6 || Math.abs(my - 70) < 1e-6)
+        && mx > 25 && mx < 75 && my > 25 && my < 75;
+    });
+    expect(innerSegs.length).toBeGreaterThan(0);
+    // Η outward normal (dy,−dx) κάθε inner όψης δείχνει ΠΡΟΣ το κέντρο της τρύπας (50,50).
+    for (const s of innerSegs) {
+      const dx = s.b.x - s.a.x, dy = s.b.y - s.a.y;
+      const mx = (s.a.x + s.b.x) / 2, my = (s.a.y + s.b.y) / 2;
+      const dot = dy * (50 - mx) + (-dx) * (50 - my); // (dy,−dx)·(center−mid)
+      expect(dot).toBeGreaterThan(0); // ο σοβάς πάει ΜΕΣΑ στο δωμάτιο, όχι στο σώμα
+    }
+  });
+
   it('κανένα μέλος → κενό', () => {
     expect(computeStructuralSilhouetteBands(baseInput([]))).toHaveLength(0);
   });
 });
 
-describe('A-fix: ομοεπιπεδότητα σοβά με όψη τοίχου (coplanar wall-face alignment)', () => {
-  // canvas = mm → s = MM_TO_M/unitToMeters = 0.001/0.001 = 1 (τα thresholds mm δουλεύουν).
-  const mmInput = (members: SilhouetteMember[], wallObstacles: Pt2[][]): SilhouetteInput => ({
-    members, wallObstacles, spec: SPEC, classify: allInterior, unitToMeters: 0.001,
-  });
-  /**
-   * Μέγιστη εξωτερική όψη σοβά των **οριζόντιων** όψεων (top/bottom, |a.y−b.y|≈0) ως
-   * προς το y: max |mid.y + N.y·thickness| (s=1). Αγνοεί τις άκρες (κάθετες όψεις).
-   */
-  const maxOuterFace = (segs: readonly { a: Pt2; b: Pt2; thickness: number }[]): number => {
+describe('big-player σύμβαση: additive-outward σοβάς (immutable core, ΟΧΙ recess/bury)', () => {
+  /** Μέγιστη εξωτερική όψη σοβά των **οριζόντιων** όψεων (top/bottom) ως προς το y. */
+  const maxOuterFaceY = (segs: readonly { a: Pt2; b: Pt2; thickness: number }[]): number => {
     let m = -Infinity;
     for (const seg of segs) {
-      if (Math.abs(seg.a.y - seg.b.y) > 1e-6) continue; // μόνο οριζόντιες (top/bottom)
+      if (Math.abs(seg.a.y - seg.b.y) > 1e-6) continue; // μόνο οριζόντιες
       const dx = seg.b.x - seg.a.x;
-      const N = { y: -dx / Math.abs(dx) }; // outward ±y
+      const ny = -dx / Math.abs(dx); // outward ±y
       const midY = (seg.a.y + seg.b.y) / 2;
-      m = Math.max(m, Math.abs(midY + N.y * seg.thickness)); // s=1
+      m = Math.max(m, Math.abs(midY + ny * seg.thickness)); // unitToMeters=1 → thickness=canvas
     }
     return m;
   };
 
-  it('flush δοκάρι==τοίχος → εξωτερική όψη σοβά ΣΤΗΝ όψη τοίχου (όχι proud core+15)', () => {
-    // Δοκάρι 30-φαρδύ [−15,15] flush με τοίχο ίδιου πλάτους (όψη στο ±15).
+  it('δοκάρι ίδιου πλάτους με τοίχο → σοβάς additive ΕΞΩ (core+thickness, ορατός — ΟΧΙ buried)', () => {
+    // Δοκάρι [−15,15] flush με τοίχο ίδιου πλάτους· ο σοβάς ΠΑΡΑΜΕΝΕΙ έξω (15+15=30), ορατός.
     const beam = rect(0, -15, 200, 15);
     const wall = [rect(0, -15, 200, 15)];
-    const out = computeStructuralSilhouetteBands(mmInput([member(beam, 0, 500)], wall));
+    const out = computeStructuralSilhouetteBands(baseInput([member(beam, 0, 500)], wall));
     expect(out).toHaveLength(1);
-    const maxFace = maxOuterFace(out[0].faces.segments);
-    // Coplanar: ≈ όψη τοίχου 15 (+0.5 bias) — ΟΧΙ proud 15+15=30.
-    expect(maxFace).toBeGreaterThan(14);
-    expect(maxFace).toBeLessThan(17);
+    // additive-outward: εξωτερική όψη = core 15 + thickness 15 = 30 (ΟΧΙ θαμμένος <15).
+    expect(maxOuterFaceY(out[0].faces.segments)).toBeCloseTo(30, 0);
   });
 
-  it('χωρίς τοίχο → κανονικό outward offset (core+thickness, proud)', () => {
+  it('χωρίς τοίχο → ίδιο additive-outward (core+thickness)', () => {
     const beam = rect(0, -15, 200, 15);
-    const out = computeStructuralSilhouetteBands(mmInput([member(beam, 0, 500)], []));
+    const out = computeStructuralSilhouetteBands(baseInput([member(beam, 0, 500)]));
     expect(out).toHaveLength(1);
-    // Χωρίς τοίχο: εξωτερική όψη = core 15 + thickness 15 = 30.
-    expect(maxOuterFace(out[0].faces.segments)).toBeCloseTo(30, 0);
+    expect(maxOuterFaceY(out[0].faces.segments)).toBeCloseTo(30, 0);
   });
 });

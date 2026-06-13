@@ -64,6 +64,14 @@ interface FinishResolveInput {
    * σημασιολογικά τα **άκρα** (⊥ άξονα = δομική σύνδεση/frame-into, ποτέ σοβάς).
    */
   readonly includeEdge?: (a: Pt2, b: Pt2, index: number) => boolean;
+  /**
+   * ADR-449 Slice 7 — `true` όταν το `coreFootprint` είναι **τρύπα** (inner ring της
+   * ένωσης = όψη δωματίου ενός δομικού πλαισίου). Τότε ο σοβάς πρέπει να εκτείνεται
+   * **ΜΕΣΑ στο δωμάτιο** (όχι στο σώμα): το ring κρατιέται **CW** (αντί CCW) ώστε το
+   * `(dy,−dx)` να δείχνει προς το εσωτερικό της τρύπας. Default `false` (solid → CCW,
+   * byte-for-byte για κολόνες/δοκάρια/outer rings).
+   */
+  readonly holeRing?: boolean;
 }
 
 const MM_TO_M = 0.001;
@@ -83,13 +91,15 @@ function signedArea(poly: readonly Pt2[]): number {
 }
 
 /**
- * ADR-449 — εγγυάται CCW winding ώστε το `(dy,−dx)` να είναι **outward** για κάθε
- * ακμή (ανεξάρτητα από το πώς χτίστηκε το footprint). Η κολόνα είναι ήδη CCW (no-op)·
- * το **δοκάρι** (`buildOutlineRect` = `[+offset →, −offset ←]`) είναι CW → reverse,
- * αλλιώς ο σοβάς θα έβγαινε ΜΕΣΑ στο σώμα.
+ * ADR-449 — κανονικοποιεί winding ώστε το `(dy,−dx)` να δείχνει στη σωστή φορά.
+ * **Solid** (default): CCW → `(dy,−dx)` = outward (μακριά από το σώμα)· κολόνα ήδη CCW
+ * (no-op), δοκάρι `buildOutlineRect` CW → reverse. **Hole** (`holeRing`): CW → `(dy,−dx)`
+ * = προς το εσωτερικό της τρύπας (μέσα στο δωμάτιο, ο σοβάς της inner όψης πλαισίου).
  */
-function ensureCCW(poly: readonly Pt2[]): readonly Pt2[] {
-  return signedArea(poly) < 0 ? [...poly].reverse() : poly;
+function orientRing(poly: readonly Pt2[], holeRing: boolean): readonly Pt2[] {
+  const area = signedArea(poly);
+  if (holeRing) return area > 0 ? [...poly].reverse() : poly; // ensure CW
+  return area < 0 ? [...poly].reverse() : poly; // ensure CCW
 }
 
 /** Καλυμμένα διαστήματα της ακμής a→b από ΟΛΑ τα obstacles (ένωση πριν complement). */
@@ -139,8 +149,8 @@ export function resolveStructuralFinishFaces(input: FinishResolveInput): Structu
   const empty: StructuralFinishFaces = { segments: [], heightM, interiorAreaM2: 0, exteriorAreaM2: 0 };
   if (!spec.enabled || spec.thickness <= 0 || coreFootprint.length < 3 || heightM <= 0) return empty;
 
-  // ADR-449 — normalise σε CCW ώστε `(dy,−dx)` = outward (κολόνα no-op· δοκάρι CW→reverse).
-  const footprint = ensureCCW(coreFootprint);
+  // ADR-449 — normalise winding (solid→CCW outward· hole→CW προς το δωμάτιο).
+  const footprint = orientRing(coreFootprint, input.holeRing ?? false);
   const segments: FinishFaceSegment[] = [];
   let interiorAreaM2 = 0;
   let exteriorAreaM2 = 0;

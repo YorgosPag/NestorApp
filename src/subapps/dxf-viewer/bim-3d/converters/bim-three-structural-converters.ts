@@ -184,6 +184,7 @@ export function beamToMesh(
   // ADR-449 Slice 7 — ο scene-level ενιαίος σοβάς (silhouette) αναλαμβάνει το skin·
   // το per-element path το παραλείπει (ghosts/previews κρατούν per-element = false).
   suppressFinishSkin = false,
+  floorElevationMm = 0, // ADR-449 Slice 8 — height-aware wall coverage (FFL anchor)
 ): THREE.Mesh | THREE.Group | null {
   const beamDepthM = beam.params.depth * MM_TO_M;
 
@@ -216,7 +217,7 @@ export function beamToMesh(
   // regression). `baseY` = κάτω παρειά (ίδιο datum με το box extrude). Flat-path μόνο.
   // ADR-449 Slice 5 — view-level gate «Σοβατισμένη όψη» (showFinishSkin).
   const finishSkin = (!suppressFinishSkin && isStructuralFinishVisible())
-    ? buildBeamFinishSkin(beam, walls, columns, mesh.position.y, levelId)
+    ? buildBeamFinishSkin(beam, walls, columns, mesh.position.y, levelId, floorElevationMm)
     : null;
   if (finishSkin) {
     const composite = new THREE.Group();
