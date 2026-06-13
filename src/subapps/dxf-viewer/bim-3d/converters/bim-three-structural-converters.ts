@@ -44,6 +44,7 @@ export function columnToMesh(
   baseProfile?: ColumnBaseProfile,
   nominalHeightMm?: number,
   walls: readonly WallEntity[] = [],
+  beams: readonly BeamEntity[] = [], // ADR-449 Slice 6 — mutual obstacles (junction)
 ): THREE.Mesh | THREE.Group | null {
   const verts = column.geometry.footprint.vertices;
   if (verts.length < 3) return null;
@@ -96,7 +97,7 @@ export function columnToMesh(
   // (απών στο ghost path → πυρήνας-only Mesh, μηδέν regression). Flat-path μόνο.
   // ADR-449 Slice 5 — view-level gate «Σοβατισμένη όψη» (showFinishSkin).
   const finishSkin = isStructuralFinishVisible()
-    ? buildColumnFinishSkin(flatColumn, walls, mesh.position.y, levelId)
+    ? buildColumnFinishSkin(flatColumn, walls, beams, mesh.position.y, levelId)
     : null;
   if (finishSkin) {
     const composite = new THREE.Group();
@@ -147,6 +148,7 @@ export function beamToMesh(
   levelId?: string,
   buildingBaseElevationM = 0,
   walls: readonly WallEntity[] = [],
+  columns: readonly ColumnEntity[] = [], // ADR-449 Slice 6 — mutual obstacles (junction)
 ): THREE.Mesh | THREE.Group | null {
   const beamDepthM = beam.params.depth * MM_TO_M;
 
@@ -179,7 +181,7 @@ export function beamToMesh(
   // regression). `baseY` = κάτω παρειά (ίδιο datum με το box extrude). Flat-path μόνο.
   // ADR-449 Slice 5 — view-level gate «Σοβατισμένη όψη» (showFinishSkin).
   const finishSkin = isStructuralFinishVisible()
-    ? buildBeamFinishSkin(beam, walls, mesh.position.y, levelId)
+    ? buildBeamFinishSkin(beam, walls, columns, mesh.position.y, levelId)
     : null;
   if (finishSkin) {
     const composite = new THREE.Group();

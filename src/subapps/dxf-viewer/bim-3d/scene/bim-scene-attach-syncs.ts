@@ -114,6 +114,7 @@ export function syncColumns(
     const mesh = columnToMesh(
       column, ctx.floorElevationMm, ctx.activeLevelId, r.baseElevation, topProfile, baseProfile, nominalHeightMm,
       entities.walls, // ADR-449 Slice 2 — obstacles + exterior classifier για τον σοβά
+      entities.beams, // ADR-449 Slice 6 — mutual obstacles (junction κολόνας↔δοκαριού)
     );
     if (mesh) { mesh.userData['buildingId'] = r.buildingId; group.add(mesh); }
   }

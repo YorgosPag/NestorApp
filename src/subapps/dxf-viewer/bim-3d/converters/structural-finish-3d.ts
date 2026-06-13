@@ -174,13 +174,15 @@ function buildFinishSkinFromFaces(
 export function buildColumnFinishSkin(
   column: ColumnEntity,
   walls: readonly WallEntity[],
+  beams: readonly BeamEntity[],
   baseY: number,
   levelId?: string,
 ): THREE.Group | null {
   const verts = column.geometry?.footprint?.vertices;
   if (!verts || verts.length < 3) return null;
 
-  const faces = computeColumnFinishFaces(column, verts, column.params.height, walls);
+  // ADR-449 Slice 6 — δοκάρια ως mutual obstacles (παρειά κάτω από τη σύνδεση κόβεται).
+  const faces = computeColumnFinishFaces(column, verts, column.params.height, walls, beams);
   if (!faces) return null;
 
   return buildFinishSkinFromFaces(
@@ -204,13 +206,15 @@ export function buildColumnFinishSkin(
 export function buildBeamFinishSkin(
   beam: BeamEntity,
   walls: readonly WallEntity[],
+  columns: readonly ColumnEntity[],
   baseY: number,
   levelId?: string,
 ): THREE.Group | null {
   const verts = beam.geometry?.outline?.vertices;
   if (!verts || verts.length < 3) return null;
 
-  const faces = computeBeamFinishFaces(beam, verts, beam.params.depth, walls);
+  // ADR-449 Slice 6 — κολόνες ως mutual obstacles (πλάγια όψη στη σύνδεση κόβεται).
+  const faces = computeBeamFinishFaces(beam, verts, beam.params.depth, walls, columns);
   if (!faces) return null;
 
   return buildFinishSkinFromFaces(

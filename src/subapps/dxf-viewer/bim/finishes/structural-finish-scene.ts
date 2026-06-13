@@ -18,10 +18,11 @@
  */
 
 import type { SceneModel } from '../../types/entities';
-import { isWallEntity } from '../../types/entities';
+import { isWallEntity, isColumnEntity, isBeamEntity } from '../../types/entities';
 import type { ColumnEntity, ColumnGeometry, ColumnParams } from '../types/column-types';
 import type { BeamEntity, BeamParams } from '../types/beam-types';
 import type { WallEntity } from '../types/wall-types';
+import type { Point3D } from '../types/bim-base';
 import type { EnvelopeFunction } from '../types/thermal-envelope-types';
 import { computeWallGeometry } from '../geometry/wall-geometry';
 import { computeBuildingFootprint } from '../geometry/building-footprint';
@@ -31,10 +32,19 @@ import { resolveStructuralFinishFaces, type FinishEdgeClassifier } from './struc
 import { isFinishActive, type StructuralFinishFaces } from './structural-finish-types';
 import type { FinishBoqContribution } from '../services/structural-finish-boq';
 import type { Pt2 } from '../geometry/shared/segment-polygon-coverage';
+import { dilatePolygonOutward } from '../geometry/shared/polygon-dilate';
 
 const MM_TO_M = 0.001;
 /** Ανοχή (canvas units ανά mm) — 2mm για «πάνω στο εξώτατο όριο». */
 const EXTERIOR_EDGE_TOL_MM = 2;
+/**
+ * ADR-449 Slice 6 — Revit join tolerance (mm) για τα cross-structural obstacles
+ * (δοκάρι→κολόνα / κολόνα→δοκάρι). Outward dilation του obstacle footprint ώστε μια
+ * **flush** διεπαφή (born-from-grid framing: το δοκάρι κόβεται στην παρειά, μηδέν
+ * overlap) να μετράει ως καλυμμένη. Καλύπτει ομοιόμορφα ΚΑΙ flush ΚΑΙ overlap (manual).
+ * Tunable· οι τοίχοι ΔΕΝ dilate-άρονται (υπάρχουσα browser-verified συμπεριφορά).
+ */
+const STRUCTURAL_JOIN_TOL_MM = 10;
 
 const toPt2 = (p: { x: number; y: number }): Pt2 => ({ x: p.x, y: p.y });
 
@@ -48,6 +58,26 @@ export interface WallFinishObstacle {
   readonly id: string;
   readonly kind: WallEntity['kind'];
   readonly params: WallEntity['params'];
+}
+
+/**
+ * ADR-449 Slice 6 — minimal structural shape ενός **δοκαριού-εμποδίου** για τον σοβά
+ * κολόνας: μόνο το plan outline (κορυφές). Το ικανοποιούν ΚΑΙ το BIM `BeamEntity` ΚΑΙ
+ * το canvas `DxfBeam` (direct entity) → μηδέν cast σε 2D & 3D & BOQ.
+ */
+export interface BeamFinishObstacle {
+  readonly id: string;
+  readonly geometry: { readonly outline: { readonly vertices: readonly Point3D[] } };
+}
+
+/**
+ * ADR-449 Slice 6 — minimal structural shape μιας **κολόνας-εμποδίου** για τον σοβά
+ * δοκαριού: μόνο το plan footprint. Ικανοποιείται από BIM `ColumnEntity` + canvas
+ * `DxfColumn`.
+ */
+export interface ColumnFinishObstacle {
+  readonly id: string;
+  readonly geometry: { readonly footprint: { readonly vertices: readonly Point3D[] } };
 }
 
 /** Minimal structural shape μιας κολόνας για face-resolution (BIM + Dxf entity). */
@@ -70,6 +100,15 @@ function wallFootprintPolygon(wall: WallFinishObstacle): Pt2[] {
   const outer = g.outerEdge.points.map(toPt2);
   const inner = [...g.innerEdge.points].reverse().map(toPt2);
   return [...outer, ...inner];
+}
+
+/**
+ * ADR-449 Slice 6 — cross-structural obstacle polygon (δοκάρι/κολόνα) από plan κορυφές,
+ * **dilated προς τα έξω** κατά την join tolerance ώστε μια flush διεπαφή να γεφυρώνεται
+ * (δες `STRUCTURAL_JOIN_TOL_MM`). `dCanvas` = tolerance σε canvas units (mm × scale).
+ */
+function crossObstaclePolygon(vertices: readonly Point3D[], dCanvas: number): Pt2[] {
+  return dilatePolygonOutward(vertices.map(toPt2), dCanvas);
 }
 
 /** Εξώτατες ακμές components που περικλείουν χώρο (holes>0) → exterior reference. */
@@ -125,6 +164,7 @@ export function computeColumnFinishFaces(
   coreFootprint: readonly { x: number; y: number }[],
   heightMm: number,
   walls: readonly WallFinishObstacle[],
+  beams: readonly BeamFinishObstacle[] = [],
 ): StructuralFinishFaces | undefined {
   const spec = column.params.finish;
   if (!isFinishActive(spec) || coreFootprint.length < 3) return undefined;
@@ -133,11 +173,18 @@ export function computeColumnFinishFaces(
   const tol = EXTERIOR_EDGE_TOL_MM * s;
   const classify = buildStructuralFinishClassifier(column.params.envelopeFunction, walls, tol);
 
+  // ADR-449 Slice 6 — mutual obstacles: οι τοίχοι (no dilation) + τα δοκάρια που
+  // καρφώνονται (dilated κατά join tolerance) κόβουν την παρειά κάτω από τη σύνδεση.
+  // Cross-type → κανένα beam δεν είναι «εαυτός» της κολόνας (μηδέν self-filter).
+  const dCanvas = STRUCTURAL_JOIN_TOL_MM * s;
   return resolveStructuralFinishFaces({
     coreFootprint: coreFootprint.map(toPt2),
     heightMm,
     spec,
-    obstacles: walls.map(wallFootprintPolygon),
+    obstacles: [
+      ...walls.map(wallFootprintPolygon),
+      ...beams.map((b) => crossObstaclePolygon(b.geometry.outline.vertices, dCanvas)),
+    ],
     classify,
     unitToMeters: (1 / s) * MM_TO_M,
   });
@@ -167,6 +214,7 @@ export function computeBeamFinishFaces(
   outline: readonly { x: number; y: number }[],
   depthMm: number,
   walls: readonly WallFinishObstacle[],
+  columns: readonly ColumnFinishObstacle[] = [],
 ): StructuralFinishFaces | undefined {
   const spec = beam.params.finish;
   if (!isFinishActive(spec) || outline.length < 3) return undefined;
@@ -177,11 +225,18 @@ export function computeBeamFinishFaces(
   const tol = EXTERIOR_EDGE_TOL_MM * s;
   const classify = buildStructuralFinishClassifier(beam.params.envelopeFunction, walls, tol);
 
+  // ADR-449 Slice 6 — mutual obstacles: οι τοίχοι (no dilation) + οι κολόνες (dilated
+  // κατά join tolerance) κόβουν το τμήμα της πλάγιας όψης μέσα στη σύνδεση. Cross-type
+  // → καμία κολόνα δεν είναι «εαυτός» του δοκαριού (μηδέν self-filter).
+  const dCanvas = STRUCTURAL_JOIN_TOL_MM * s;
   return resolveStructuralFinishFaces({
     coreFootprint: outline.map(toPt2),
     heightMm: depthMm,
     spec,
-    obstacles: walls.map(wallFootprintPolygon),
+    obstacles: [
+      ...walls.map(wallFootprintPolygon),
+      ...columns.map((c) => crossObstaclePolygon(c.geometry.footprint.vertices, dCanvas)),
+    ],
     classify,
     unitToMeters: (1 / s) * MM_TO_M,
     // Κράτα μόνο ακμές ∥ άξονα (πλάγιες όψεις)· απόκλεισε τα άκρα (⊥ άξονα).
@@ -209,7 +264,10 @@ export function computeColumnFinishContribution(
   if (!isFinishActive(spec) || !scene) return undefined;
 
   const walls = scene.entities.filter(isWallEntity);
-  const faces = computeColumnFinishFaces(column, geometry.footprint.vertices, geometry.height, walls);
+  // ADR-449 Slice 6 — τα δοκάρια ως mutual obstacles → το BOQ δεν μετρά την εμβυθισμένη
+  // διεπαφή κολόνας↔δοκαριού (Revit join). Το ίδιο obstacle set με 2D/3D (ένας resolver).
+  const beams = scene.entities.filter(isBeamEntity);
+  const faces = computeColumnFinishFaces(column, geometry.footprint.vertices, geometry.height, walls, beams);
   if (!faces || (faces.interiorAreaM2 <= 0 && faces.exteriorAreaM2 <= 0)) return undefined;
 
   return {
@@ -233,7 +291,10 @@ export function computeBeamFinishContribution(
   if (!isFinishActive(spec) || !scene) return undefined;
 
   const walls = scene.entities.filter(isWallEntity);
-  const faces = computeBeamFinishFaces(beam, beam.geometry.outline.vertices, beam.params.depth, walls);
+  // ADR-449 Slice 6 — οι κολόνες ως mutual obstacles → το BOQ κόβει το τμήμα της πλάγιας
+  // όψης δοκαριού μέσα στη σύνδεση (ίδιο obstacle set με 2D/3D, ένας resolver).
+  const columns = scene.entities.filter(isColumnEntity);
+  const faces = computeBeamFinishFaces(beam, beam.geometry.outline.vertices, beam.params.depth, walls, columns);
   if (!faces || (faces.interiorAreaM2 <= 0 && faces.exteriorAreaM2 <= 0)) return undefined;
 
   return {

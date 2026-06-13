@@ -37,7 +37,7 @@ const matHex = (mesh: THREE.Mesh): number => (mesh.material as THREE.MeshStandar
 
 describe('buildBeamFinishSkin (ADR-449 Slice 4)', () => {
   it('ενεργός σοβάς → 2 bands (2 πλάγιες όψεις, άκρα εκτός)', () => {
-    const group = buildBeamFinishSkin(beam(FINISH), [], 0);
+    const group = buildBeamFinishSkin(beam(FINISH), [], [],0);
     expect(group).not.toBeNull();
     expect(group!.children).toHaveLength(2);
   });
@@ -46,7 +46,7 @@ describe('buildBeamFinishSkin (ADR-449 Slice 4)', () => {
     // ADR-449 Slice 5 regression #3: το beam outline είναι CW → χωρίς normalization
     // ο σοβάς θα έβγαινε ΜΕΣΑ. Άξονας ∥ X → πλάγιες όψεις offset σε Z (perpendicular).
     const core = beamToMesh(beam(), '0', 0) as THREE.Object3D; // χωρίς finish → καθαρός πυρήνας
-    const skin = buildBeamFinishSkin(beam(FINISH), [], 0)!;
+    const skin = buildBeamFinishSkin(beam(FINISH), [], [],0)!;
     const coreBox = new THREE.Box3().setFromObject(core);
     const skinBox = new THREE.Box3().setFromObject(skin);
     expect(skinBox.max.z).toBeGreaterThan(coreBox.max.z);
@@ -55,7 +55,7 @@ describe('buildBeamFinishSkin (ADR-449 Slice 4)', () => {
 
   it('κάθε band = Mesh με plaster material + bimType beam tags', () => {
     const b = beam(FINISH);
-    const group = buildBeamFinishSkin(b, [], 0)!;
+    const group = buildBeamFinishSkin(b, [], [],0)!;
     for (const child of group.children) {
       expect(child).toBeInstanceOf(THREE.Mesh);
       const mesh = child as THREE.Mesh;
@@ -69,18 +69,18 @@ describe('buildBeamFinishSkin (ADR-449 Slice 4)', () => {
   });
 
   it('baseY → κατακόρυφη θέση κάθε band', () => {
-    const group = buildBeamFinishSkin(beam(FINISH), [], 7)!;
+    const group = buildBeamFinishSkin(beam(FINISH), [], [],7)!;
     for (const child of group.children) {
       expect((child as THREE.Mesh).position.y).toBeCloseTo(7, 6);
     }
   });
 
   it('ανενεργός σοβάς → null', () => {
-    expect(buildBeamFinishSkin(beam({ ...FINISH, enabled: false }), [], 0)).toBeNull();
+    expect(buildBeamFinishSkin(beam({ ...FINISH, enabled: false }), [], [],0)).toBeNull();
   });
 
   it('απών σοβάς → null', () => {
-    expect(buildBeamFinishSkin(beam(), [], 0)).toBeNull();
+    expect(buildBeamFinishSkin(beam(), [], [],0)).toBeNull();
   });
 });
 

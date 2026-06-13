@@ -37,7 +37,7 @@ const matHex = (mesh: THREE.Mesh): number => (mesh.material as THREE.MeshStandar
 describe('buildColumnFinishSkin (ADR-449 Slice 2)', () => {
   it('ενεργός σοβάς, μηδέν walls → ένα mitered band ανά παρειά (γωνίες κλείνουν χωρίς overlap)', () => {
     const col = column(FINISH);
-    const group = buildColumnFinishSkin(col, [], 0);
+    const group = buildColumnFinishSkin(col, [], [],0);
     expect(group).not.toBeNull();
     const edges = col.geometry.footprint.vertices.length;
     // ADR-449 Slice 5 — οι γωνίες κλείνουν με 45° miter (extend στο miter point)·
@@ -47,7 +47,7 @@ describe('buildColumnFinishSkin (ADR-449 Slice 2)', () => {
 
   it('κάθε band = Mesh με plaster material + structuralFinish tags', () => {
     const col = column(FINISH);
-    const group = buildColumnFinishSkin(col, [], 0)!;
+    const group = buildColumnFinishSkin(col, [], [],0)!;
     for (const child of group.children) {
       expect(child).toBeInstanceOf(THREE.Mesh);
       const mesh = child as THREE.Mesh;
@@ -62,7 +62,7 @@ describe('buildColumnFinishSkin (ADR-449 Slice 2)', () => {
 
   it('ο σοβάς μετατοπίζεται ΠΡΟΣ ΤΑ ΕΞΩ (CCW outward normal, όχι μέσα στον πυρήνα)', () => {
     const core = columnToMesh(column(), 0, '0', 0); // χωρίς finish → καθαρός πυρήνας Mesh
-    const skin = buildColumnFinishSkin(column(FINISH), [], 0)!;
+    const skin = buildColumnFinishSkin(column(FINISH), [], [],0)!;
     const coreBox = new THREE.Box3().setFromObject(core as THREE.Object3D);
     const skinBox = new THREE.Box3().setFromObject(skin);
     // Το «δέρμα» πρέπει να ξεπερνά τον πυρήνα προς τα έξω σε X και Z (περιμετρικά).
@@ -73,30 +73,30 @@ describe('buildColumnFinishSkin (ADR-449 Slice 2)', () => {
   });
 
   it('μεγαλύτερο πάχος → πιο εξωτερικό δέρμα', () => {
-    const thin = buildColumnFinishSkin(column({ ...FINISH, thickness: 15 }), [], 0)!;
-    const thick = buildColumnFinishSkin(column({ ...FINISH, thickness: 60 }), [], 0)!;
+    const thin = buildColumnFinishSkin(column({ ...FINISH, thickness: 15 }), [], [],0)!;
+    const thick = buildColumnFinishSkin(column({ ...FINISH, thickness: 60 }), [], [],0)!;
     const thinBox = new THREE.Box3().setFromObject(thin);
     const thickBox = new THREE.Box3().setFromObject(thick);
     expect(thickBox.max.x).toBeGreaterThan(thinBox.max.x);
   });
 
   it('baseY → κατακόρυφη θέση κάθε band', () => {
-    const group = buildColumnFinishSkin(column(FINISH), [], 5)!;
+    const group = buildColumnFinishSkin(column(FINISH), [], [],5)!;
     for (const child of group.children) {
       expect((child as THREE.Mesh).position.y).toBeCloseTo(5, 6);
     }
   });
 
   it('ανενεργός σοβάς (enabled:false) → null', () => {
-    expect(buildColumnFinishSkin(column({ ...FINISH, enabled: false }), [], 0)).toBeNull();
+    expect(buildColumnFinishSkin(column({ ...FINISH, enabled: false }), [], [],0)).toBeNull();
   });
 
   it('απών σοβάς → null', () => {
-    expect(buildColumnFinishSkin(column(), [], 0)).toBeNull();
+    expect(buildColumnFinishSkin(column(), [], [],0)).toBeNull();
   });
 
   it('πάχος 0 → null (isFinishActive false)', () => {
-    expect(buildColumnFinishSkin(column({ ...FINISH, thickness: 0 }), [], 0)).toBeNull();
+    expect(buildColumnFinishSkin(column({ ...FINISH, thickness: 0 }), [], [],0)).toBeNull();
   });
 });
 

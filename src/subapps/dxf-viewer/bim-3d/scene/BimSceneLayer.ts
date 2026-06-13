@@ -327,7 +327,8 @@ export class BimSceneLayer {
       const r = this.resolveEntity(beam, 'beam', ctx);
       if (!r) continue;
       // ADR-449 Slice 4 — walls = obstacles + exterior classifier για τον σοβά δοκαριού.
-      const mesh = beamToMesh(beam, ctx.activeLevelId, r.baseElevation, entities.walls);
+      // ADR-449 Slice 6 — columns = mutual obstacles (junction δοκαριού↔κολόνας).
+      const mesh = beamToMesh(beam, ctx.activeLevelId, r.baseElevation, entities.walls, entities.columns);
       if (mesh) { mesh.userData['buildingId'] = r.buildingId; this.group.add(mesh); }
     }
   }
