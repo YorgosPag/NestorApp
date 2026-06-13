@@ -147,3 +147,8 @@ faces), and the cut elevation is unified to a single FFL-relative frame across 2
   grab cursor over the canvas's `cursor-none` region.
 - **2026-06-13** — v2: real 3D horizontal section via the existing Section clip pipeline (single
   clip owner), FFL-relative frame unify (fixes upper-floor 2D bug), cross-mode slider. 20 jest.
+- **2026-06-13** — v2.1 fix: `section-clip-applicator.writeClippingPlanes` now skips `LineMaterial`
+  (fat-line edges `Line2`/`LineSegments2` extend `Mesh`, so `isMesh` caught them) — injecting clipping
+  planes there threw `THREE.WebGLProgram: Shader Error … Fragment shader is not compiled`. Solid faces
+  still cut + cap; edge overlay stays unclipped (cosmetic). Benefits the Section Box too. DEFER: clip
+  the edge overlay above the cut.
