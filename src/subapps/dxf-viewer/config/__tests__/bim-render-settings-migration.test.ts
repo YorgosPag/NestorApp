@@ -90,9 +90,9 @@ describe('ADR-446 — migrateBimRenderSettings v2 (derive visualStyle)', () => {
     expect(settings?.visualStyle).toBe('realistic-edges');
   });
 
-  it('absent realisticMaterials → realistic-edges (the old default look)', () => {
+  it('absent realisticMaterials → shaded-edges (Giorgio default 2026-06-13)', () => {
     const { settings } = migrateBimRenderSettings({ drawingScale: 100 });
-    expect(settings?.visualStyle).toBe('realistic-edges');
+    expect(settings?.visualStyle).toBe('shaded-edges');
   });
 
   it('preserves an already-set visualStyle (does not overwrite)', () => {

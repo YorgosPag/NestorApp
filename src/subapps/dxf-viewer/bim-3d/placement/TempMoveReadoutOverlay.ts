@@ -26,9 +26,13 @@ import { createLabelTexture } from '../dimensions/Dimension3DRenderer';
 import { getPixelWorldSize } from '../viewport/coordinate-transforms';
 import { formatMoveDistance } from '../../bim/labels/move-readout';
 
-/** Discreet neutral leader line — semi-transparent, drawn over the model (Revit annotation). */
-const READOUT_LINE_COLOR = 0x000000;
-const READOUT_LINE_OPACITY = 0.45;
+/**
+ * Discreet neutral leader line — semi-transparent WHITE, drawn over the model (Revit
+ * annotation). White (not black) so it stays visible on the dark 3D scene (clear color
+ * `0x1a1a1a`) while remaining subtle.
+ */
+const READOUT_LINE_COLOR = 0xffffff;
+const READOUT_LINE_OPACITY = 0.5;
 const READOUT_LINE_RENDER_ORDER = 1998;
 /** On-screen height (px) of the label, held CONSTANT across zoom (Revit annotation). */
 const READOUT_TEXT_PX = 40;

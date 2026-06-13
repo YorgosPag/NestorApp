@@ -78,12 +78,12 @@ export interface VisualStyleAxes {
 }
 
 /**
- * Default visual style = the pre-ADR-446 look: realistic PBR materials ON
- * (ADR-413 `realisticMaterials` defaulted to true) + the always-built model edge
- * overlay (ADR-375). Preserving this keeps every existing view visually identical
- * until the user picks another style.
+ * Default visual style = «Shaded with Edges» (Σκιασμένο με Ακμές): lit flat-colour
+ * faces + the always-built visible model edge overlay (ADR-375). Giorgio's chosen
+ * default (2026-06-13) — every NEW view opens shaded-with-edges; views that already
+ * persisted a `visualStyle` keep their explicit pick.
  */
-export const DEFAULT_VISUAL_STYLE: VisualStylePreset = 'realistic-edges';
+export const DEFAULT_VISUAL_STYLE: VisualStylePreset = 'shaded-edges';
 
 /** Preset → fixed `{faceMode, edgeMode}` axes (the SSoT mapping). */
 export const VISUAL_STYLE_AXES: Record<VisualStylePreset, VisualStyleAxes> = {

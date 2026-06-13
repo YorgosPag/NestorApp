@@ -51,6 +51,13 @@ import { resolveSceneUnits } from '../../utils/scene-units';
 /** ADR-363 Phase 1G — dash pattern for the corner hot-grip rubber-band leader. */
 const HOT_GRIP_RUBBER_BAND_DASH: readonly number[] = [6, 4];
 
+/**
+ * ADR-363 — discreet neutral colour for the live move-distance readout leader (Revit-grade).
+ * Semi-transparent WHITE so it stays subtle yet visible on the pure-black AutoCAD canvas
+ * (`CANVAS_BACKGROUND #000`) — a black leader would be invisible.
+ */
+const MOVE_READOUT_LEADER_COLOR = 'rgba(255,255,255,0.5)';
+
 // ── Types ────────────────────────────────────────────────────────────────────
 
 type LevelManagerLike = Pick<
@@ -91,6 +98,23 @@ function drawDashedSegment(
   ctx.save();
   ctx.setLineDash([...HOT_GRIP_RUBBER_BAND_DASH]);
   ctx.strokeStyle = GHOST_DEFAULTS.color;
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(fromS.x, fromS.y);
+  ctx.lineTo(toS.x, toS.y);
+  ctx.stroke();
+  ctx.restore();
+}
+
+/** ADR-363 — draw the discreet neutral base→current leader for the move-distance readout. */
+function drawMoveReadoutLeader(
+  ctx: CanvasRenderingContext2D,
+  fromS: { x: number; y: number },
+  toS: { x: number; y: number },
+): void {
+  ctx.save();
+  ctx.setLineDash([...HOT_GRIP_RUBBER_BAND_DASH]);
+  ctx.strokeStyle = MOVE_READOUT_LEADER_COLOR;
   ctx.lineWidth = 1;
   ctx.beginPath();
   ctx.moveTo(fromS.x, fromS.y);
@@ -180,19 +204,25 @@ export function useGripGhostPreview(props: UseGripGhostPreviewProps): void {
       const fromW = dragPreview.rotatePivot ?? dragPreview.anchorPos;
       const toW = { x: dragPreview.anchorPos.x + dragPreview.delta.x, y: dragPreview.anchorPos.y + dragPreview.delta.y };
       drawDashedSegment(ctx, fromW, toW, transform, vp);
+    }
 
-      // ADR-363 — live move-distance readout pill at the move vector's midpoint, showing
-      // how far the grip / Alt-dragged entity has moved (metres, locale-formatted). The
-      // distance is the displacement magnitude; the anchor is the anchorPos→destination mid.
-      const moveFromW = dragPreview.anchorPos;
-      const moveToW = { x: moveFromW.x + dragPreview.delta.x, y: moveFromW.y + dragPreview.delta.y };
+    // ADR-363 — live move-distance readout for ANY whole-entity TRANSLATE: a plain
+    // center/midpoint move grip (e.g. a line), an Alt move-from-point, or a corner "move"
+    // hot-grip. Draws a discreet base→current leader (skipped when the hot-grip already drew
+    // its own) + a distance pill at the midpoint. Rotation flows (rotatePivot set) excluded.
+    const isTranslate =
+      (dragPreview.movesEntity === true || dragPreview.hotGrip === true) && !dragPreview.rotatePivot;
+    if (isTranslate && dragPreview.anchorPos && (dragPreview.delta.x !== 0 || dragPreview.delta.y !== 0)) {
+      const fromS = CoordinateTransforms.worldToScreen(dragPreview.anchorPos, transform, vp);
+      const toS = CoordinateTransforms.worldToScreen(
+        { x: dragPreview.anchorPos.x + dragPreview.delta.x, y: dragPreview.anchorPos.y + dragPreview.delta.y },
+        transform, vp,
+      );
+      if (!dragPreview.hotGrip) drawMoveReadoutLeader(ctx, fromS, toS);
       const scene = levelManager.currentLevelId ? levelManager.getLevelScene(levelManager.currentLevelId) : null;
       const meters = sceneDistanceToMeters(Math.hypot(dragPreview.delta.x, dragPreview.delta.y), resolveSceneUnits(scene));
-      const readoutMid = moveReadoutMid(
-        CoordinateTransforms.worldToScreen(moveFromW, transform, vp),
-        CoordinateTransforms.worldToScreen(moveToW, transform, vp),
-      );
-      drawDimPill(ctx, [formatMoveDistance(meters)], readoutMid.x, readoutMid.y);
+      const mid = moveReadoutMid(fromS, toS);
+      drawDimPill(ctx, [formatMoveDistance(meters)], mid.x, mid.y);
     }
 
     // applyEntityPreview returns the *same* reference for zero-delta or

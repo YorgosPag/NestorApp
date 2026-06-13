@@ -45,9 +45,9 @@ describe('ADR-446 — Visual Style preset↔axes mapping', () => {
     expect(resolveVisualStyleAxes(preset)).toEqual({ faceMode, edgeMode });
   });
 
-  it('default = realistic-edges (preserves the pre-ADR-446 look)', () => {
-    expect(DEFAULT_VISUAL_STYLE).toBe('realistic-edges');
-    expect(resolveVisualStyleAxes(null)).toEqual({ faceMode: 'realistic', edgeMode: 'visible' });
+  it('default = shaded-edges (Giorgio default 2026-06-13)', () => {
+    expect(DEFAULT_VISUAL_STYLE).toBe('shaded-edges');
+    expect(resolveVisualStyleAxes(null)).toEqual({ faceMode: 'shaded', edgeMode: 'visible' });
   });
 
   it('isVisualStylePreset guards unknown input', () => {
@@ -58,12 +58,12 @@ describe('ADR-446 — Visual Style preset↔axes mapping', () => {
 });
 
 describe('ADR-446 — resolveBimSettings derivation + legacy back-compat', () => {
-  it('null settings → default realistic-edges axes', () => {
+  it('null settings → default shaded-edges axes', () => {
     const r = resolveBimSettings(null);
-    expect(r.visualStyle).toBe('realistic-edges');
-    expect(r.faceMode).toBe('realistic');
+    expect(r.visualStyle).toBe('shaded-edges');
+    expect(r.faceMode).toBe('shaded');
     expect(r.edgeMode).toBe('visible');
-    expect(r.realisticMaterials).toBe(true); // derived
+    expect(r.realisticMaterials).toBe(false); // derived (shaded ⇒ not realistic)
   });
 
   it('explicit visualStyle wins over legacy bit', () => {
@@ -83,6 +83,6 @@ describe('ADR-446 — resolveBimSettings derivation + legacy back-compat', () =>
   it('deriveVisualStyleFromLegacy maps the legacy bit', () => {
     expect(deriveVisualStyleFromLegacy(false)).toBe('shaded-edges');
     expect(deriveVisualStyleFromLegacy(true)).toBe('realistic-edges');
-    expect(deriveVisualStyleFromLegacy(undefined)).toBe('realistic-edges');
+    expect(deriveVisualStyleFromLegacy(undefined)).toBe('shaded-edges');
   });
 });

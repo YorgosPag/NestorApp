@@ -124,13 +124,14 @@ export interface ResolvedBimSettings {
 
 /**
  * ADR-446 — derive the Visual Style preset from the legacy `realisticMaterials`
- * bit (pre-ADR-446 docs / fallback). `false` ⇒ `shaded-edges` (flat lit + edges =
- * the old OFF look); otherwise ⇒ `realistic-edges` (textured + edges = the old ON
- * default). Edges are included because pre-ADR-446 always built the model edge
- * overlay (ADR-375).
+ * bit (pre-ADR-446 docs / fallback). A pre-ADR-446 doc that explicitly carried
+ * `realisticMaterials:true` (the old textured ON look) keeps `realistic-edges`;
+ * everything else (absent bit ⇒ brand-new view, or explicit `false`) falls back to
+ * {@link DEFAULT_VISUAL_STYLE} = `shaded-edges`. Edges are included because
+ * pre-ADR-446 always built the model edge overlay (ADR-375).
  */
 export function deriveVisualStyleFromLegacy(realisticMaterials?: boolean): VisualStylePreset {
-  return realisticMaterials === false ? 'shaded-edges' : DEFAULT_VISUAL_STYLE;
+  return realisticMaterials === true ? 'realistic-edges' : DEFAULT_VISUAL_STYLE;
 }
 
 // ── Resolver ───────────────────────────────────────────────────────────────

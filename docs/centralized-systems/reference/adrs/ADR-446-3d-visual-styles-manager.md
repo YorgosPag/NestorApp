@@ -63,9 +63,11 @@ EdgeMode  = none | visible (occluded, depthTest on) | all (x-ray, depthTest off)
 | Realistic (Ρεαλιστικό) | realistic | none |
 | Realistic with Edges | realistic | visible |
 
-**Default = `realistic-edges`** — exactly the pre-ADR-446 look (ADR-413 realistic ON
-+ ADR-375 always-on edges), so every existing view is visually unchanged until the
-user picks another style.
+**Default = `shaded-edges`** (Σκιασμένο με Ακμές) — Giorgio's chosen default
+(2026-06-13): lit flat-colour faces + ADR-375 always-on edges. Every NEW view opens
+shaded-with-edges; views that already persisted a `visualStyle` keep their explicit
+pick, and pre-ADR-446 docs with an explicit `realisticMaterials:true` still derive
+`realistic-edges` (legacy back-compat).
 
 ## 4. Implementation
 
@@ -140,6 +142,10 @@ etc.). No high-frequency subscriber or bitmap-cache-key change.
 ---
 
 ## Changelog
+- **2026-06-13** — Default changed `realistic-edges` → `shaded-edges` (Σκιασμένο με
+  Ακμές), Giorgio's request. `DEFAULT_VISUAL_STYLE` (SSoT) + `deriveVisualStyleFromLegacy`
+  (absent/`false` legacy bit ⇒ default; explicit `true` still ⇒ `realistic-edges`).
+  Tests updated; 39 jest pass.
 - **2026-06-12** — v1: Visual Style SSoT (`bim-visual-style.ts`) + per-view
   persistence (subsumes ADR-413 `realisticMaterials`) + faceMode/edgeMode render
   pipelines + Radix «Στυλ Προβολής» dropdown (wires up the ADR-345 stub). 8 Revit

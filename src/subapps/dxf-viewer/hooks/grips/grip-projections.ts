@@ -62,6 +62,10 @@ export function buildDxfDragPreview(
     delta,
     movesEntity: activeGrip.movesEntity,
     edgeVertexIndices: activeGrip.edgeVertexIndices,
+    // ADR-363 — the grabbed grip world position = the drag base point. Always emitted so the
+    // live move-distance readout (useGripGhostPreview) can draw base→current even for a plain
+    // whole-entity move grip (e.g. a line's midpoint grip) that carries no parametric kind.
+    anchorPos,
     // ADR-363 Phase 1G — flag the dashed rubber-band leader for the corner hot-grip.
     ...(phase === 'hotGrip' ? { hotGrip: true } : {}),
     // ADR-358 Phase 5d — propagate parametric stair discriminator + anchor
