@@ -71,6 +71,27 @@ const MM_TO_M = 0.001;
 const dist = (a: Pt2, b: Pt2): number => Math.hypot(b.x - a.x, b.y - a.y);
 const lerp = (a: Pt2, b: Pt2, t: number): Pt2 => ({ x: a.x + t * (b.x - a.x), y: a.y + t * (b.y - a.y) });
 
+/** Shoelace signed area· >0 = CCW (το convention όπου `(dy,−dx)` = outward normal). */
+function signedArea(poly: readonly Pt2[]): number {
+  let s = 0;
+  for (let i = 0; i < poly.length; i++) {
+    const a = poly[i];
+    const b = poly[(i + 1) % poly.length];
+    s += a.x * b.y - b.x * a.y;
+  }
+  return s / 2;
+}
+
+/**
+ * ADR-449 — εγγυάται CCW winding ώστε το `(dy,−dx)` να είναι **outward** για κάθε
+ * ακμή (ανεξάρτητα από το πώς χτίστηκε το footprint). Η κολόνα είναι ήδη CCW (no-op)·
+ * το **δοκάρι** (`buildOutlineRect` = `[+offset →, −offset ←]`) είναι CW → reverse,
+ * αλλιώς ο σοβάς θα έβγαινε ΜΕΣΑ στο σώμα.
+ */
+function ensureCCW(poly: readonly Pt2[]): readonly Pt2[] {
+  return signedArea(poly) < 0 ? [...poly].reverse() : poly;
+}
+
 /** Καλυμμένα διαστήματα της ακμής a→b από ΟΛΑ τα obstacles (ένωση πριν complement). */
 function coveredByObstacles(a: Pt2, b: Pt2, obstacles: readonly (readonly Pt2[])[]): Array<[number, number]> {
   const all: Array<[number, number]> = [];
@@ -118,14 +139,16 @@ export function resolveStructuralFinishFaces(input: FinishResolveInput): Structu
   const empty: StructuralFinishFaces = { segments: [], heightM, interiorAreaM2: 0, exteriorAreaM2: 0 };
   if (!spec.enabled || spec.thickness <= 0 || coreFootprint.length < 3 || heightM <= 0) return empty;
 
+  // ADR-449 — normalise σε CCW ώστε `(dy,−dx)` = outward (κολόνα no-op· δοκάρι CW→reverse).
+  const footprint = ensureCCW(coreFootprint);
   const segments: FinishFaceSegment[] = [];
   let interiorAreaM2 = 0;
   let exteriorAreaM2 = 0;
-  const n = coreFootprint.length;
+  const n = footprint.length;
   const includeEdge = input.includeEdge;
   for (let i = 0; i < n; i++) {
-    const a = coreFootprint[i];
-    const b = coreFootprint[(i + 1) % n];
+    const a = footprint[i];
+    const b = footprint[(i + 1) % n];
     if (includeEdge && !includeEdge(a, b, i)) continue; // π.χ. άκρα δοκαριού
     const covered = coveredByObstacles(a, b, obstacles);
     for (const [t0, t1] of exposedComplement(covered, minT)) {

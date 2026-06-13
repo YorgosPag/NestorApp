@@ -146,6 +146,29 @@ function flatTop(baseZmm: number, top: number, n: number, missing: string[]): Co
 }
 
 /**
+ * ADR-441/401 — διαχώρισε τους attached top-hosts:
+ *   - **covering** (πλάκα/ταβάνι): ≥1 γωνία κολώνας πέφτει κάτω από την κάτω-παρειά
+ *     → per-corner lower-envelope soffit (υπάρχουσα συμπεριφορά).
+ *   - **framing** (δοκάρι frame-into): δεν καλύπτει καμία γωνία (κόπηκε στην παρειά)
+ *     αλλά είναι attached → η κολώνα ανεβαίνει στην ΠΑΝΩ-παρειά του (flat beam-top).
+ * Το binding (`attachTopToIds`) κωδικοποιεί την πρόθεση· εδώ απλώς ταξινομούμε με
+ * βάση το αν ο host καλύπτει — μηδέν επιπλέον γεωμετρία (N.0.2).
+ */
+function classifyTopHosts(
+  hosts: readonly HostFootprintInput[],
+  footprint: readonly Pt2[],
+): { framingTops: number[]; coveringHosts: HostFootprintInput[] } {
+  const framingTops: number[] = [];
+  const coveringHosts: HostFootprintInput[] = [];
+  for (const h of hosts) {
+    const covers = footprint.some((pt) => hostUndersideAt(h, pt) !== null);
+    if (covers) coveringHosts.push(h);
+    else if (h.topsideZmm !== undefined) framingTops.push(h.topsideZmm);
+  }
+  return { framingTops, coveringHosts };
+}
+
+/**
  * Resolver SSoT — top profile της κολώνας (lower-envelope ανά γωνία).
  * Μη-`attached` → επίπεδη κορυφή στο nominal top. `attached` → ανά γωνία το
  * χαμηλότερο μεταξύ {nominal, καλύπτουσες κάτω-παρειές}.
@@ -162,11 +185,16 @@ export function resolveColumnTopProfile(
     return flatTop(baseZmm, nominalTop, footprint.length, []);
   }
   const { hosts, missingHostIds } = collectHostFootprints(ids, ctx.resolveHostInput);
+  // ADR-441/401 — framing δοκάρια ανεβάζουν την κορυφή στο beam-top (flat,
+  // associative)· covering πλάκες κλιπάρουν per-corner από κάτω. Χωρίς framing →
+  // baseline = nominal (byte-for-byte η προηγούμενη συμπεριφορά).
+  const { framingTops, coveringHosts } = classifyTopHosts(hosts, footprint);
+  const baselineTop = framingTops.length > 0 ? Math.max(...framingTops) : nominalTop;
 
-  let hasAttach = false;
+  let hasAttach = framingTops.length > 0;
   const cornerTopZmm = footprint.map((pt) => {
-    let top = nominalTop;
-    for (const h of hosts) {
+    let top = baselineTop;
+    for (const h of coveringHosts) {
       const z = hostUndersideAt(h, pt);
       if (z !== null && z < top - COLUMN_Z_EPS) {
         top = z;

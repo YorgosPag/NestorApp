@@ -35,8 +35,13 @@ export interface SegmentColumnTrimResult {
   readonly bindings: readonly GuideBinding[];
 }
 
-/** Max προβολή (scene units) του column footprint στη μοναδιαία διεύθυνση `dir`, από το κέντρο. */
-function columnSupportAlong(column: ColumnEntity, dirX: number, dirY: number): number {
+/**
+ * Max προβολή (scene units) του column footprint στη μοναδιαία διεύθυνση `dir`, από
+ * το κέντρο = η «support distance» (μισό πλάτος κολώνας στη διεύθυνση του στοιχείου).
+ * Exported (N.0.2 SSoT) — το ίδιο κριτήριο frame-into χρησιμοποιεί και ο
+ * `findColumnsFramedByBeam` (column→beam attach detection).
+ */
+export function columnSupportAlong(column: ColumnEntity, dirX: number, dirY: number): number {
   const cx = column.params.position.x;
   const cy = column.params.position.y;
   let best = 0;

@@ -9,6 +9,7 @@
 import {
   findColumnsToAutoAttachToHost,
   findColumnsToAutoAttachBaseToHost,
+  findColumnsFramedByBeam,
 } from '../column-structural-attach-coordinator';
 import type { Entity } from '../../../types/entities';
 import type { BeamEntity } from '../../types/beam-types';
@@ -43,7 +44,7 @@ function column(id: string, cx: number, cy: number, h = 200, overrides: Record<s
     id, type: 'column', kind: 'rectangular',
     params: {
       kind: 'rectangular', topBinding: 'storey-ceiling', baseBinding: 'storey-floor',
-      baseOffset: 0, height: 3000, ...overrides,
+      baseOffset: 0, height: 3000, position: { x: cx, y: cy, z: 0 }, ...overrides,
     },
     geometry: {
       footprint: {
@@ -145,5 +146,48 @@ describe('findColumnsToAutoAttachBaseToHost (base, inverted Z gate)', () => {
   it('returns [] for a non-host entity', () => {
     const line = { id: 'l1', type: 'line' } as unknown as Entity;
     expect(findColumnsToAutoAttachBaseToHost(line, [column('c1', 2000, 0)])).toEqual([]);
+  });
+});
+
+describe('findColumnsFramedByBeam (frame-into column→beam)', () => {
+  it('frames a column sitting at the beam endpoint (center on axis, within span)', () => {
+    const beam = beamOver(); // axis (0,0)→(4000,0), top 3000 > FFL
+    const col = column('c1', 4000, 0, 200); // center at end E, on axis
+    expect(findColumnsFramedByBeam(beam as unknown as Entity, [col])).toEqual(['c1']);
+  });
+
+  it('frames a mid-span column whose center lies on the beam axis', () => {
+    const beam = beamOver();
+    const col = column('c1', 2000, 0, 200);
+    expect(findColumnsFramedByBeam(beam as unknown as Entity, [col])).toEqual(['c1']);
+  });
+
+  it('does NOT frame an off-axis column (perp distance ≫ half-width)', () => {
+    const beam = beamOver();
+    const col = column('c1', 2000, 5000, 200);
+    expect(findColumnsFramedByBeam(beam as unknown as Entity, [col])).toEqual([]);
+  });
+
+  it('does NOT frame a column beyond the span + support distance', () => {
+    const beam = beamOver();
+    const col = column('c1', 4500, 0, 100); // t=4500 > 4000 + support(100) + tol
+    expect(findColumnsFramedByBeam(beam as unknown as Entity, [col])).toEqual([]);
+  });
+
+  it('skips columns whose topBinding is not "storey-ceiling"', () => {
+    const beam = beamOver();
+    const col = column('c1', 4000, 0, 200, { topBinding: 'attached', attachTopToIds: ['x'] });
+    expect(findColumnsFramedByBeam(beam as unknown as Entity, [col])).toEqual([]);
+  });
+
+  it('Z-gate: a foundation beam below FFL does not frame a storey column', () => {
+    const beam = beamOver(-100); // topside -100 <= max(base 0, FFL 0) + gate
+    const col = column('c1', 4000, 0, 200);
+    expect(findColumnsFramedByBeam(beam as unknown as Entity, [col])).toEqual([]);
+  });
+
+  it('returns [] for a non-beam host (slab does not frame)', () => {
+    const slab = slabAt(3000);
+    expect(findColumnsFramedByBeam(slab as unknown as Entity, [column('c1', 1000, 1000)])).toEqual([]);
   });
 });

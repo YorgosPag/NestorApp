@@ -35,12 +35,17 @@ function column(finish?: StructuralFinishSpec): ColumnEntity {
 const matHex = (mesh: THREE.Mesh): number => (mesh.material as THREE.MeshStandardMaterial).color.getHex();
 
 describe('buildColumnFinishSkin (ADR-449 Slice 2)', () => {
-  it('ενεργός σοβάς, μηδέν walls → ένα band ανά παρειά του footprint', () => {
+  it('ενεργός σοβάς, μηδέν walls → ένα band ανά παρειά + corner fills στις convex γωνίες', () => {
     const col = column(FINISH);
     const group = buildColumnFinishSkin(col, [], 0);
     expect(group).not.toBeNull();
     const edges = col.geometry.footprint.vertices.length;
-    expect(group!.children).toHaveLength(edges);
+    // ADR-449 Slice 5 — bands (μη-corner) = ένα ανά παρειά· επιπλέον corner fills
+    // (finishCorner) κλείνουν τις convex γωνίες (ορθογώνια κολώνα → 4 γωνίες).
+    const bands = group!.children.filter((c) => !c.userData['finishCorner']);
+    const corners = group!.children.filter((c) => c.userData['finishCorner']);
+    expect(bands).toHaveLength(edges);
+    expect(corners).toHaveLength(edges); // ορθογώνιο → όλες οι γωνίες convex
   });
 
   it('κάθε band = Mesh με plaster material + structuralFinish tags', () => {

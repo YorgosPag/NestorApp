@@ -29,6 +29,7 @@ import {
 import {
   findColumnsToAutoAttachToHost,
   findColumnsToAutoAttachBaseToHost,
+  findColumnsFramedByBeam,
 } from '../bim/columns/column-structural-attach-coordinator';
 import {
   findStairsToAutoAttachToHost,
@@ -113,7 +114,13 @@ function attachEntitiesUnderHost(
   const hostId = host.id;
   const topTargets = buildAttachTargets(findWallsToAutoAttachToHost(host, entities), entities);
   const baseTargets = buildAttachTargets(findWallsToAutoAttachBaseToHost(host, entities), entities);
-  const colTop = buildColumnAttachTargets(findColumnsToAutoAttachToHost(host, entities), entities);
+  // ADR-441/401 — covering (slab → per-corner soffit) + framing (beam frames-into →
+  // flat beam-top) κολώνες ενώνονται (dedup) στο ίδιο top-attach command.
+  const colTopIds = [...new Set([
+    ...findColumnsToAutoAttachToHost(host, entities),
+    ...findColumnsFramedByBeam(host, entities),
+  ])];
+  const colTop = buildColumnAttachTargets(colTopIds, entities);
   const colBase = buildColumnAttachTargets(findColumnsToAutoAttachBaseToHost(host, entities), entities);
   const stairTop = buildStairAttachTargets(findStairsToAutoAttachToHost(host, entities), entities);
   const stairBase = buildStairAttachTargets(findStairsToAutoAttachBaseToHost(host, entities), entities);

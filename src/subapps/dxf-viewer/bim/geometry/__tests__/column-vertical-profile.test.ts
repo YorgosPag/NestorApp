@@ -181,6 +181,61 @@ describe('resolveColumnTopProfile', () => {
   });
 });
 
+// ─── ADR-441/401 — framing-beam top (frame-into → flat beam-top) ───────────────
+
+/** Host ΕΚΤΟΣ του footprint (frame-into): δεν καλύπτει γωνία, φέρει topsideZmm. */
+function framingHost(id: string, topsideZmm: number): HostFootprintInput {
+  return {
+    hostId: id,
+    hostType: 'beam',
+    footprint: [{ x: 500, y: -1000 }, { x: 2000, y: -1000 }, { x: 2000, y: 2000 }, { x: 500, y: 2000 }],
+    undersideZmm: topsideZmm - 500,
+    topsideZmm,
+  };
+}
+
+describe('resolveColumnTopProfile — framing beam (column→beam attach)', () => {
+  test('framing beam → flat top στο beam-top (αγνοεί nominal), hasAttach=true', () => {
+    const prof = resolveColumnTopProfile(
+      params({ topBinding: 'attached', attachTopToIds: ['b1'], height: 4000 }),
+      FOOTPRINT,
+      ctxWith([framingHost('b1', 5000)]),
+    );
+    expect(prof.cornerTopZmm).toEqual([5000, 5000, 5000, 5000]);
+    expect(prof.maxTopZmm).toBe(5000);
+    expect(prof.hasAttach).toBe(true);
+  });
+
+  test('framing beam ΚΑΤΩ από nominal → η κορυφή ακολουθεί το beam-top (associative)', () => {
+    const prof = resolveColumnTopProfile(
+      params({ topBinding: 'attached', attachTopToIds: ['b1'], height: 4000 }),
+      FOOTPRINT,
+      ctxWith([framingHost('b1', 2500)]),
+    );
+    expect(prof.cornerTopZmm).toEqual([2500, 2500, 2500, 2500]);
+  });
+
+  test('δύο framing beams → η κολώνα φτάνει στο ΨΗΛΟΤΕΡΟ (max)', () => {
+    const prof = resolveColumnTopProfile(
+      params({ topBinding: 'attached', attachTopToIds: ['b1', 'b2'], height: 4000 }),
+      FOOTPRINT,
+      ctxWith([framingHost('b1', 5000), framingHost('b2', 5200)]),
+    );
+    expect(prof.cornerTopZmm).toEqual([5200, 5200, 5200, 5200]);
+  });
+
+  test('framing beam + covering slab → covering κλιπάρει per-corner κάτω από το beam-top', () => {
+    const prof = resolveColumnTopProfile(
+      params({ topBinding: 'attached', attachTopToIds: ['b1', 's1'], height: 4000 }),
+      FOOTPRINT,
+      ctxWith([framingHost('b1', 5000), halfHost('s1', { hostType: 'slab', undersideZmm: 4500 })]),
+    );
+    // baseline 5000· s1 καλύπτει SE/NE (x≥200) → 4500· SW/NW μένουν 5000.
+    expect(prof.cornerTopZmm).toEqual([5000, 4500, 4500, 5000]);
+    expect(prof.hasAttach).toBe(true);
+  });
+});
+
 // ─── Base profile ────────────────────────────────────────────────────────────
 
 describe('resolveColumnBaseProfile', () => {

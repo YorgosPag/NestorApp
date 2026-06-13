@@ -42,6 +42,17 @@ describe('buildBeamFinishSkin (ADR-449 Slice 4)', () => {
     expect(group!.children).toHaveLength(2);
   });
 
+  it('ο σοβάς βγαίνει ΕΞΩ από το σώμα του δοκαριού (CW outline → resolver normalize CCW)', () => {
+    // ADR-449 Slice 5 regression #3: το beam outline είναι CW → χωρίς normalization
+    // ο σοβάς θα έβγαινε ΜΕΣΑ. Άξονας ∥ X → πλάγιες όψεις offset σε Z (perpendicular).
+    const core = beamToMesh(beam(), '0', 0) as THREE.Object3D; // χωρίς finish → καθαρός πυρήνας
+    const skin = buildBeamFinishSkin(beam(FINISH), [], 0)!;
+    const coreBox = new THREE.Box3().setFromObject(core);
+    const skinBox = new THREE.Box3().setFromObject(skin);
+    expect(skinBox.max.z).toBeGreaterThan(coreBox.max.z);
+    expect(skinBox.min.z).toBeLessThan(coreBox.min.z);
+  });
+
   it('κάθε band = Mesh με plaster material + bimType beam tags', () => {
     const b = beam(FINISH);
     const group = buildBeamFinishSkin(b, [], 0)!;

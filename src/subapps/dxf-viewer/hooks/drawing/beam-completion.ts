@@ -33,6 +33,7 @@ import { validateBeamParams } from '../../bim/validators/beam-validator';
 import { createBeam } from '@/services/factories/beam.factory';
 import type { SceneUnits } from '../../utils/scene-units';
 import { createDefaultStructuralFinishSpec } from '../../bim/finishes/structural-finish-types';
+import { resolveStoreyCeilingElevationMm } from '../../systems/levels/storey-creation-defaults';
 
 export type { SceneUnits };
 
@@ -85,7 +86,11 @@ export function buildDefaultBeamParams(
   const end: Point3D = { x: endPoint.x, y: endPoint.y, z: 0 };
   const width = overrides.width ?? DEFAULT_BEAM_WIDTH_MM;
   const depth = overrides.depth ?? DEFAULT_BEAM_DEPTH_MM;
-  const topElevation = overrides.topElevation ?? DEFAULT_BEAM_TOP_ELEVATION_MM;
+  // ADR-448 Phase 2 (beam seam) — top-of-beam = storey ceiling: override → active
+  // storey floor-relative ceiling → legacy const. A beam defines the storey ceiling
+  // (top face at the floor-to-floor height), so it shares the slab-ceiling resolver
+  // rather than a height delta. Safe-by-construction: χωρίς storey context → fallback.
+  const topElevation = resolveStoreyCeilingElevationMm(overrides.topElevation, DEFAULT_BEAM_TOP_ELEVATION_MM);
   const zOffset = overrides.zOffset ?? DEFAULT_BEAM_Z_OFFSET_MM;
   const supportType = overrides.supportType ?? defaultSupportType(kind);
 

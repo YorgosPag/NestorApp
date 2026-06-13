@@ -33,6 +33,10 @@ import {
   type Pt2,
 } from '../geometry/wall-host-plan-builder';
 import { resolveColumnBaseZmm } from '../geometry/column-vertical-profile';
+import { columnSupportAlong } from './column-face-trim';
+import { mmToSceneUnits } from '../../utils/scene-units';
+import type { ColumnEntity } from '../types/column-types';
+import type { BeamEntity } from '../types/beam-types';
 
 /**
  * mm. Ένας host μετράει ως «πάνω/κάτω» από τη βάση της κολώνας μόνο όταν απέχει
@@ -131,6 +135,70 @@ export function findColumnsToAutoAttachBaseToHost(host: Entity, entities: readon
     if (!hostCoversColumn(hostInput.footprint, footprint)) continue;
     const baseZmm = resolveColumnBaseZmm(e.params, { floorElevationMm: ACTIVE_LEVEL_FLOOR_MM });
     if (hostInput.topsideZmm >= baseZmm - AUTO_ATTACH_Z_GATE_MM) continue;
+    out.push(e.id);
+  }
+  return out;
+}
+
+// ─── ADR-441/401 — framing-based column→beam attach (frame-into) ──────────────
+// Διαφορά από `findColumnsToAutoAttachToHost`: ένα δοκάρι «από κάναβο» frame-into-άρει
+// στην ΠΑΡΕΙΑ της κολώνας (`trimSegmentEndpointsToColumns`) → το footprint του δεν
+// ΚΑΛΥΠΤΕΙ την κολώνα (`hostCoversColumn=false`) → το slab-style covering attach είναι
+// αδρανές. Εδώ ανιχνεύουμε «framing»: το κέντρο της κολώνας κάθεται ΠΑΝΩ στον άξονα
+// του δοκαριού (perp≈0), εντός του span + της support distance (το ίδιο κριτήριο με το
+// frame-into trim). Τέτοιες κολώνες υποστηρίζουν το δοκάρι → top = beam-top (flat).
+
+/** mm. Ανοχή collinearity/span-extent (grid κολώνες κάθονται ακριβώς στην τομή). */
+const FRAMING_TOL_MM = 5;
+
+/**
+ * True αν το δοκάρι frame-into-άρει στην κολώνα: το κέντρο της κολώνας προβάλλεται
+ * στον άξονα του δοκαριού με κάθετη απόσταση ≤ (μισό πλάτος δοκαριού) και διαμήκη
+ * θέση εντός [−support, L+support] (η support distance είναι το ίδιο μισό-πλάτος
+ * κολώνας που τραβά το frame-into trim → πιάνει τα trimmed άκρα).
+ */
+function beamFramesColumn(beam: BeamEntity, column: ColumnEntity): boolean {
+  const s = beam.params.startPoint;
+  const e = beam.params.endPoint;
+  const dx = e.x - s.x;
+  const dy = e.y - s.y;
+  const len = Math.hypot(dx, dy);
+  if (len < 1e-6) return false;
+  const ux = dx / len;
+  const uy = dy / len;
+  const perScene = mmToSceneUnits(beam.params.sceneUnits ?? 'mm');
+  const halfWidth = (beam.params.width / 2) * perScene;
+  const tol = FRAMING_TOL_MM * perScene;
+  const rx = column.params.position.x - s.x;
+  const ry = column.params.position.y - s.y;
+  const t = rx * ux + ry * uy;
+  const perp = Math.abs(rx * uy - ry * ux);
+  if (perp > halfWidth + tol) return false;
+  const support = columnSupportAlong(column, ux, uy);
+  return t >= -support - tol && t <= len + support + tol;
+}
+
+/**
+ * ADR-441/401 — όταν δημιουργείται δοκάρι, βρες τις κολώνες που το **υποστηρίζουν**
+ * (frame-into) ώστε να attach-άρουν την κορυφή τους στο beam-top (associative).
+ * Pure detection — ο καλών εκτελεί `AttachColumnsCommand('top', …)`.
+ *
+ * Κριτήρια: (1) `topBinding==='storey-ceiling'` (default — δεν πειράζουμε ήδη-
+ * attached/absolute/unconnected), (2) frame-into (`beamFramesColumn`), (3) Z-gate:
+ * beam-top πάνω από τη ΣΤΑΘΜΗ ΙΣΟΓΕΙΟΥ / βάση κολώνας (όχι δοκάρι κάτω από το πάτωμα).
+ */
+export function findColumnsFramedByBeam(host: Entity, entities: readonly Entity[]): string[] {
+  if (!isBeamEntity(host)) return [];
+  const beamTop = beamHostInput(host).topsideZmm;
+  if (beamTop === undefined) return [];
+
+  const out: string[] = [];
+  for (const e of entities) {
+    if (!isColumnEntity(e)) continue;
+    if (e.params.topBinding !== 'storey-ceiling') continue;
+    if (!beamFramesColumn(host, e)) continue;
+    const baseZmm = resolveColumnBaseZmm(e.params, { floorElevationMm: ACTIVE_LEVEL_FLOOR_MM });
+    if (beamTop <= Math.max(baseZmm, ACTIVE_LEVEL_FLOOR_MM) + AUTO_ATTACH_Z_GATE_MM) continue;
     out.push(e.id);
   }
   return out;
