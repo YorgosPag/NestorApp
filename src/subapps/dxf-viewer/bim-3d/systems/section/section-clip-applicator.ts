@@ -38,6 +38,14 @@ const CLIPPABLE_MATERIAL_TYPES: ReadonlySet<string> = new Set([
   'MeshDepthMaterial',
   'MeshNormalMaterial',
   'ShadowMaterial',
+  // ADR-452 v2.4 — fat-line edge overlays (ADR-375, `LineSegments2` → `isMesh`).
+  // Three r0.170 `LineMaterial` ships full clipping support: `clipping: true` plus
+  // the `<clipping_planes_*>` chunks, and its vertex shader defines `mvPosition`
+  // BEFORE `<clipping_planes_vertex>` (so `vClipPosition` is valid). The earlier
+  // "Fragment shader is not compiled" report was a misdiagnosis. Clipping the edge
+  // overlay is REQUIRED so the wireframe is cut at the plane too — otherwise the
+  // edges of everything above the cut float as a phantom "cage" over the section.
+  'LineMaterial',
 ]);
 
 /** True when the material type is a built-in mesh material that supports clipping planes. */
