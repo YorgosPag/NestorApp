@@ -1,6 +1,6 @@
 # ADR-452 — Cut-Plane Slider (Revit View Range UI for the 2D plan)
 
-**Status:** 🟢 Implemented (v2.2 — 3D solid cut faces fixed) — pending browser-verify + commit
+**Status:** 🟢 Implemented (v2.3 — opaque Revit poché + per-material hatch) — pending browser-verify + commit
 **Date:** 2026-06-13
 **Builds on:** ADR-375 (View Range / cut state), ADR-448/450 (storey elevations & datum), ADR-040 (micro-leaf architecture)
 
@@ -178,3 +178,17 @@ faces), and the cut elevation is unified to a single FFL-relative frame across 2
     plane, which would break the very solid cut faces this delivers.
   - Tests: `section-clip-applicator.test.ts` (safelist + apply/clear). DEFER: per-material hatch
     poché for the cut plane (currently a flat grey cap); edge-overlay clipping above the cut.
+- **2026-06-13** — v2.3 — "pentakathari" Revit poché (de-mud). Browser-verify showed the v2.2 cut faces
+  rendered but **muddy**: `SECTION_CUT_SURFACE.opacity = 0.5` (a section-box token, lets you see inside)
+  made the cap semi-transparent so geometry bled through, and a single flat grey gave no entity
+  distinction. Fix:
+  - NEW `createOpaqueCutCapMaterial()` — fully OPAQUE grey base poché for the View-Range cut (crisp, no
+    bleed-through). The box keeps its semi-transparent cap (you look into a box; you don't look into a
+    horizontal cut).
+  - `renderHorizontalCutCap` now renders the **per-material hatch poché** (RC dots / steel / masonry /
+    wood / insulation) on top of the opaque base, isolating each material group — full SSoT reuse of the
+    box's `section-hatch-cap` + `resolveHatchKey`/`getHatchCapMaterial`. New private `capCutSection`
+    shares the back/front parity pass between the base and each hatch group.
+  - DEFER (next iteration if needed after verify): crisp dark cut-profile edges between adjacent
+    same-material entities; hiding/clipping the fat-line edge overlay that floats above the cut (the
+    faint phantom lines in the cut-away space — `LineMaterial` clipping throws in this Three build).

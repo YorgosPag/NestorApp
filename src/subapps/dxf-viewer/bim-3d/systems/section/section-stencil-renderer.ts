@@ -46,6 +46,7 @@ import {
   createCapMaterial,
   createSelectedCapMaterial,
   createCutParityMaterial,
+  createOpaqueCutCapMaterial,
 } from './section-stencil-materials';
 
 export interface StencilRendererDeps {
@@ -64,6 +65,10 @@ export class SectionStencilRenderer {
   private readonly cutBackStencilMat: THREE.MeshBasicMaterial;
   /** ADR-452 — single horizontal cut-plane cap: front-face DECR parity pass (depthTest off). */
   private readonly cutFrontStencilMat: THREE.MeshBasicMaterial;
+  /** ADR-452 — OPAQUE grey base cap for the horizontal cut (crisp poché, no bleed-through). */
+  private readonly cutCapMat: THREE.MeshBasicMaterial;
+  private readonly cutCapMesh: THREE.Mesh;
+  private readonly cutCapScene: THREE.Scene;
   private readonly singlePassStencilMat: THREE.MeshBasicMaterial;
   private readonly warmupScene: THREE.Scene;
   private readonly capMat: THREE.MeshBasicMaterial;
@@ -80,6 +85,11 @@ export class SectionStencilRenderer {
     this.deps = deps;
     this.cutBackStencilMat = createCutParityMaterial(THREE.BackSide, THREE.IncrementWrapStencilOp);
     this.cutFrontStencilMat = createCutParityMaterial(THREE.FrontSide, THREE.DecrementWrapStencilOp);
+    this.cutCapMat = createOpaqueCutCapMaterial();
+    this.cutCapMesh = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), this.cutCapMat);
+    this.cutCapMesh.frustumCulled = false;
+    this.cutCapScene = new THREE.Scene();
+    this.cutCapScene.add(this.cutCapMesh);
     this.singlePassStencilMat = createSinglePassMaterial();
     this.warmupScene = createWarmupScene(this.singlePassStencilMat);
     this.capMat = createCapMaterial();
@@ -140,8 +150,65 @@ export class SectionStencilRenderer {
     renderer.autoClearDepth = false;
     renderer.autoClearStencil = false;
 
-    renderer.clearStencil();
+    // 1) OPAQUE grey base poché over ALL cut geometry — crisp, no bleed-through.
+    this.capCutSection(
+      renderer, mainScene, camera, cutPlane, parityClip, others, capSize,
+      this.cutCapMesh, this.cutCapScene, this.cutCapMat, null,
+    );
 
+    // 2) Per-material hatch poché (Revit RC dots / steel / masonry / wood /
+    //    insulation), isolating each material group so its pattern lands only on
+    //    its own cut sections — SSoT reuse of the box's `section-hatch-cap`.
+    const hatchGroups = this.collectHatchGroups(mainScene);
+    for (const [key, meshes] of hatchGroups) {
+      const mat = getHatchCapMaterial(key);
+      setHatchRepeat(key, capSize);
+      this.hatchCapMesh.material = mat;
+      this.capCutSection(
+        renderer, mainScene, camera, cutPlane, parityClip, others, capSize,
+        this.hatchCapMesh, this.hatchCapScene, mat, meshes,
+      );
+    }
+
+    renderer.autoClear = savedAutoClear;
+    renderer.autoClearColor = savedAutoClearColor;
+    renderer.autoClearDepth = savedAutoClearDepth;
+    renderer.autoClearStencil = savedAutoClearStencil;
+  }
+
+  /**
+   * ADR-452 — one cut-section cap pass for the horizontal plane: clear stencil,
+   * BACK-increment + FRONT-decrement parity over the (optionally isolated) solids
+   * sliced at the cut plane, then fill the cap quad where stencil != 0. Shared by
+   * the opaque grey base (all geometry) and each per-material hatch overlay
+   * (`isolate` = that material's meshes).
+   */
+  private capCutSection(
+    renderer: THREE.WebGLRenderer,
+    mainScene: THREE.Scene,
+    camera: THREE.Camera,
+    cutPlane: THREE.Plane,
+    parityClip: THREE.Plane[],
+    others: THREE.Plane[],
+    capSize: number,
+    capMesh: THREE.Mesh,
+    capScene: THREE.Scene,
+    capMaterial: THREE.Material,
+    isolate: THREE.Object3D[] | null,
+  ): void {
+    // Isolate a material group by hiding every OTHER BIM mesh during the parity
+    // passes (mirrors the box hatch path), so its pattern caps only its sections.
+    const hidden: THREE.Object3D[] = [];
+    if (isolate) {
+      const keep = new Set(isolate);
+      mainScene.traverse((obj) => {
+        if (!(obj instanceof THREE.Mesh)) return;
+        if ((obj.userData as Record<string, unknown>)['bimId'] === undefined) return;
+        if (!keep.has(obj)) { hidden.push(obj); obj.visible = false; }
+      });
+    }
+
+    renderer.clearStencil();
     // Pass 1: back faces increment, Pass 2: front faces decrement → parity != 0
     // at the cross-section. depthTest is off on both materials (set at creation).
     this.cutBackStencilMat.clippingPlanes = parityClip;
@@ -153,17 +220,13 @@ export class SectionStencilRenderer {
     renderer.render(mainScene, camera);
 
     mainScene.overrideMaterial = null;
+    for (const obj of hidden) obj.visible = true;
 
-    // Solid cap quad on the cut plane, masked to stencil != 0. Bounded by the
-    // section/crop planes but NOT the cut plane itself (it sits on that plane).
-    this.capMat.clippingPlanes = others;
-    this.positionMesh(this.capMesh, cutPlane, capSize);
-    renderer.render(this.capScene, camera);
-
-    renderer.autoClear = savedAutoClear;
-    renderer.autoClearColor = savedAutoClearColor;
-    renderer.autoClearDepth = savedAutoClearDepth;
-    renderer.autoClearStencil = savedAutoClearStencil;
+    // Cap quad ON the cut plane, masked to stencil != 0. Bounded by the section /
+    // crop planes but NOT the cut plane itself (the quad sits on that plane).
+    (capMaterial as THREE.Material & { clippingPlanes: THREE.Plane[] | null }).clippingPlanes = others;
+    this.positionMesh(capMesh, cutPlane, capSize);
+    renderer.render(capScene, camera);
   }
 
   /**
@@ -411,6 +474,8 @@ export class SectionStencilRenderer {
     this.capMesh.geometry.dispose();
     this.cutBackStencilMat.dispose();
     this.cutFrontStencilMat.dispose();
+    this.cutCapMesh.geometry.dispose();
+    this.cutCapMat.dispose();
     this.singlePassStencilMat.dispose();
     this.capMat.dispose();
     this.selectedCapMesh.geometry.dispose();
@@ -421,14 +486,8 @@ export class SectionStencilRenderer {
       warmupMesh.geometry.dispose();
       this.warmupScene.remove(warmupMesh);
     }
-    while (this.capScene.children.length > 0) {
-      this.capScene.remove(this.capScene.children[0]);
-    }
-    while (this.selectedCapScene.children.length > 0) {
-      this.selectedCapScene.remove(this.selectedCapScene.children[0]);
-    }
-    while (this.hatchCapScene.children.length > 0) {
-      this.hatchCapScene.remove(this.hatchCapScene.children[0]);
+    for (const scene of [this.capScene, this.cutCapScene, this.selectedCapScene, this.hatchCapScene]) {
+      while (scene.children.length > 0) scene.remove(scene.children[0]);
     }
     disposeHatchCap();
   }

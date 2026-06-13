@@ -60,9 +60,26 @@ const EPS = 1e-6;
 /** Ελάχιστο ύψος ζώνης (mm) — φιλτράρει εκφυλισμένες z-breakpoints. */
 const MIN_BAND_MM = 1e-3;
 
-/** Pt2[] footprint → κλειστό polygon-clipping `Polygon` (ένα ring). */
+/** Shoelace signed area· >0 = CCW. */
+function signedArea(fp: readonly Pt2[]): number {
+  let s = 0;
+  for (let i = 0; i < fp.length; i++) {
+    const a = fp[i];
+    const b = fp[(i + 1) % fp.length];
+    s += a.x * b.y - b.x * a.y;
+  }
+  return s / 2;
+}
+
+/**
+ * Pt2[] footprint → κλειστό polygon-clipping `Polygon` (ένα ring), **κανονικοποιημένο
+ * σε CCW**. ΚΡΙΣΙΜΟ: η `polygon-clipping` είναι winding-sensitive — ένα **CW** ring (π.χ.
+ * το beam `buildOutlineRect` outline, signed-area<0) ερμηνεύεται ως **τρύπα** → το `safeUnion`
+ * δεν θα ένωνε το δοκάρι με την κολώνα (ο σοβάς έβγαινε λάθος, εντός σώματος). CCW → solid.
+ */
 function footprintToPolygon(fp: readonly Pt2[]): Polygon {
-  const ring: Pair[] = fp.map((p) => [p.x, p.y]);
+  const ccw = signedArea(fp) < 0 ? [...fp].reverse() : fp;
+  const ring: Pair[] = ccw.map((p) => [p.x, p.y]);
   const first = ring[0];
   const last = ring[ring.length - 1];
   if (first && last && (first[0] !== last[0] || first[1] !== last[1])) ring.push([first[0], first[1]]);

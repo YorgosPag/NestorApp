@@ -61,6 +61,33 @@ export function createCapMaterial(): THREE.MeshBasicMaterial {
   return mat;
 }
 
+/**
+ * ADR-452 — OPAQUE grey base cap for the horizontal Revit View-Range cut.
+ *
+ * Unlike the section-box {@link createCapMaterial} (semi-transparent so you can
+ * see into the box), the View-Range cut wants a CRISP, fully opaque poché — the
+ * geometry below must NOT bleed through (that "muddy" look). Per-material hatch
+ * overlays (RC dots, steel, masonry…) are drawn on top of this base, mirroring
+ * the box's `section-hatch-cap` poché (SSoT).
+ */
+export function createOpaqueCutCapMaterial(): THREE.MeshBasicMaterial {
+  const mat = new THREE.MeshBasicMaterial({
+    color: SECTION_CUT_SURFACE.color,
+    opacity: 1,
+    transparent: false,
+    side: THREE.DoubleSide,
+    depthWrite: false,
+    depthTest: false,
+  });
+  mat.stencilWrite = true;
+  mat.stencilRef = 0;
+  mat.stencilFunc = THREE.NotEqualStencilFunc;
+  mat.stencilFail = THREE.ReplaceStencilOp;
+  mat.stencilZFail = THREE.ReplaceStencilOp;
+  mat.stencilZPass = THREE.ReplaceStencilOp;
+  return mat;
+}
+
 export function createSelectedCapMaterial(): THREE.MeshBasicMaterial {
   const mat = new THREE.MeshBasicMaterial({
     color: SECTION_CUT_SURFACE.selectedCapColor,

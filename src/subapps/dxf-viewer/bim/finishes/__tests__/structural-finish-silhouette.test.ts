@@ -29,6 +29,16 @@ const rect = (x0: number, y0: number, x1: number, y1: number): Pt2[] => [
   { x: x0, y: y0 }, { x: x1, y: y0 }, { x: x1, y: y1 }, { x: x0, y: y1 },
 ];
 
+/**
+ * **CW** ορθογώνιο (signed-area<0) — μιμείται το beam `buildOutlineRect` outline. ΚΡΙΣΙΜΟ
+ * regression: η `polygon-clipping` είναι winding-sensitive (CW ring = τρύπα) → το `safeUnion`
+ * δεν θα ένωνε το δοκάρι με την κολώνα αν δεν κανονικοποιούσαμε σε CCW (ο σοβάς έβγαινε
+ * εντός σώματος — Giorgio 2026-06-13).
+ */
+const cwRect = (x0: number, y0: number, x1: number, y1: number): Pt2[] => [
+  { x: x0, y: y1 }, { x: x1, y: y1 }, { x: x1, y: y0 }, { x: x0, y: y0 },
+];
+
 const member = (footprint: Pt2[], zBotMm: number, zTopMm: number): SilhouetteMember => ({ footprint, zBotMm, zTopMm });
 
 const baseInput = (members: SilhouetteMember[], wallObstacles: Pt2[][] = []): SilhouetteInput => ({
@@ -99,6 +109,25 @@ describe('computeStructuralSilhouetteBands', () => {
     // Κάτω ζώνη = μόνο κολόνα (περίμετρος 200)· πάνω ζώνη = union (μεγαλύτερη).
     expect(totalLength(out[0].faces.segments)).toBeCloseTo(200);
     expect(totalLength(out[1].faces.segments)).toBeGreaterThan(200);
+  });
+
+  it('CW δοκάρι (buildOutlineRect winding) ενώνεται με CCW κολώνα — ΟΧΙ εντός σώματος', () => {
+    // Κολώνα [-25,25]² (CCW) + CW δοκάρι x∈[0,200] y∈[-10,10] στη ζώνη κορυφής.
+    // Χωρίς CCW-normalisation η polygon-clipping θεωρεί το CW δοκάρι τρύπα → δεν ενώνει.
+    const out = computeStructuralSilhouetteBands(baseInput([
+      member(rect(-25, -25, 25, 25), 0, 3000),
+      member(cwRect(0, -10, 200, 10), 2500, 3000),
+    ]));
+    expect(out).toHaveLength(2);
+    const junction = out[1].faces.segments; // z 2500..3000 = union κολώνα+δοκάρι
+    // Το δοκάρι ΕΝΩΘΗΚΕ: η μακρινή άκρη του (x=200) εμφανίζεται στο ενιαίο outline.
+    expect(junction.some((s) => Math.abs(s.a.x - 200) < 1e-6 || Math.abs(s.b.x - 200) < 1e-6)).toBe(true);
+    // Η εσωτερική διεπαφή (δεξιά παρειά κολώνας x=25, y∈[-10,10]) ΔΕΝ παίρνει σοβά (internal).
+    const internalJunction = junction.filter(
+      (s) => Math.abs(s.a.x - 25) < 1e-6 && Math.abs(s.b.x - 25) < 1e-6 &&
+        Math.max(s.a.y, s.b.y) <= 10 + 1e-6 && Math.min(s.a.y, s.b.y) >= -10 - 1e-6,
+    );
+    expect(internalJunction).toHaveLength(0);
   });
 
   it('κανένα μέλος → κενό', () => {
