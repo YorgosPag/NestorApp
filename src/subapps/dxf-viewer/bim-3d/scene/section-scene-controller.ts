@@ -24,7 +24,7 @@ import { buildCropPlanes } from '../render/crop-region/crop-frustum-builder';
 // ADR-452 — cut-plane (Revit View Range) as a 3rd clip source, composed here so
 // this controller stays the SINGLE owner of the scene's clipping planes.
 import { resolveCutPlaneWorldY, buildCutPlane } from './cut-plane-3d';
-import { applyEdgeCutTrim, restoreEdgeCut, cullEdgeCutVisibility } from './edge-cut-applicator';
+import { applyEdgeCutTrim, restoreEdgeCut } from './edge-cut-applicator';
 import { useBimRenderSettingsStore } from '../../state/bim-render-settings-store';
 import { useActiveStoreyStore } from '../../systems/levels/active-storey-store';
 
@@ -72,6 +72,18 @@ export class SectionSceneController {
   private refineTimer: ReturnType<typeof setTimeout> | null = null;
   private static readonly REFINE_DELAY_MS = 150;
   /**
+   * ADR-452 v2.12 — throttle for the GPU-heavy EXACT edge trim WHILE the slider is
+   * actively dragging (`cutMoving`). On a dense floor, re-uploading every crossing edge
+   * overlay's geometry on every drag frame can stutter; a ~50 ms cap keeps the edges
+   * following the plane smoothly (≤50 ms lag, imperceptible on normal scenes, still
+   * gradual) while bounding GPU uploads — the Revit-style "regen throttle" for heavy
+   * models. Settled / camera-static frames are NEVER throttled: the per-overlay
+   * `bimEdgeAppliedCutY` guard makes those nearly free, keeps them self-healing, and
+   * guarantees the final exact trim lands the instant the slider settles.
+   */
+  private lastEdgeTrimMs = 0;
+  private static readonly EDGE_TRIM_THROTTLE_MS = 50;
+  /**
    * ADR-452 v2.7 — last rendered camera pose, to treat ANY camera navigation as a
    * draft frame. `isInteracting` only flips for orbit/pan/tumble (OrbitControls
    * `start`/`end`); **wheel-zoom and animated moves call `onRenderNeeded` WITHOUT it**,
@@ -89,12 +101,6 @@ export class SectionSceneController {
    * `needsUpdate` (the 50–157 ms RAF program re-setup). null seed → first call is slow.
    */
   private lastClipCompositionKey: string | null = null;
-  /**
-   * ADR-452 v2.11 — last cut-Y whose EXACT edge trim was committed (settle path). Lets
-   * camera-only frames (cut unchanged) skip edge work entirely, and the drag→settle
-   * transition run the precise gradual trim exactly once.
-   */
-  private lastSettledEdgeCutY: number | null = null;
 
   constructor(deps: SectionControllerDeps) {
     this.deps = deps;
@@ -158,7 +164,6 @@ export class SectionSceneController {
       this.sectionPlanes = [];
       this.cutPlane = null;
       this.lastClipCompositionKey = null;
-      this.lastSettledEdgeCutY = null;
       this.deps.invalidatePathTracer();
       this.deps.markDirty();
       return;
@@ -210,7 +215,6 @@ export class SectionSceneController {
       this.cutPlane = null;
       // Box-only (no cut) → restore any edges the cut had trimmed/hidden.
       restoreEdgeCut(this.deps.getBimGroup());
-      this.lastSettledEdgeCutY = null;
     }
 
     const cropPlanes = this.buildCropPlanes();
@@ -319,21 +323,29 @@ export class SectionSceneController {
         ? 'colors'
         : 'full';
 
-    // ADR-452 v2.11 — fat-line edge overlays follow the cut HERE (deferred from
-    // applyState, which used to re-clip + re-upload geometry on every slider tick →
-    // 357 ms pointermove). While dragging (`cutMoving`) do a CHEAP visibility-only cull
-    // (keep pristine geometry, no GPU upload); once the slider settles, run the EXACT
-    // gradual trim ONCE. Camera-only frames (cut value unchanged) skip edges entirely.
+    // ADR-452 v2.12 — fat-line edge overlays follow the cut HERE, applying the EXACT
+    // gradual trim on EVERY frame the cut is live (drag AND settled). The per-overlay
+    // `bimEdgeAppliedCutY` guard inside `applyEdgeCutTrim` skips redundant GPU re-uploads,
+    // so a camera-static frame costs only a traverse, and a drag re-uploads only the
+    // overlays that actually cross the moving plane. This is the right tradeoff for two
+    // reasons Giorgio hit in v2.11:
+    //  (a) GRADUAL during drag — crossing edges (columns/walls spanning the cut) shrink
+    //      live to the plane instead of staying a full-height "cage" until release.
+    //  (b) SELF-HEALING — any overlay a cap parity pass / rebuild restores to pristine is
+    //      re-trimmed the very next frame, fixing «οι ακμές επανεμφανίζονται μέχρι την
+    //      κορυφή ~150ms μετά το release» (the old `lastSettledEdgeCutY` skip-guard left
+    //      those restored-pristine overlays untrimmed). The per-tick re-upload that was
+    //      the 357 ms pointermove jank is gone because this runs once per FRAME, not per
+    //      slider `onValueChange`.
     if (this.cutPlane) {
-      const cutY = this.cutPlane.constant;
-      if (cutMoving) {
-        cullEdgeCutVisibility(this.deps.getBimGroup(), cutY);
-        // The cull reverts overlays to pristine, so force an exact re-trim on settle
-        // even if the slider lands back on the previously-settled elevation.
-        this.lastSettledEdgeCutY = null;
-      } else if (cutY !== this.lastSettledEdgeCutY) {
-        applyEdgeCutTrim(this.deps.getBimGroup(), cutY);
-        this.lastSettledEdgeCutY = cutY;
+      // Throttle ONLY the active drag (the GPU-upload-heavy case); settled/static frames
+      // always trim (self-healing + final exact position on release). See EDGE_TRIM_THROTTLE_MS.
+      const nowMs = typeof performance !== 'undefined' ? performance.now() : 0;
+      const throttled =
+        cutMoving && nowMs - this.lastEdgeTrimMs < SectionSceneController.EDGE_TRIM_THROTTLE_MS;
+      if (!throttled) {
+        applyEdgeCutTrim(this.deps.getBimGroup(), this.cutPlane.constant);
+        this.lastEdgeTrimMs = nowMs;
       }
     }
 

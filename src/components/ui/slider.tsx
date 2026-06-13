@@ -20,7 +20,9 @@ const Slider = React.forwardRef<
       // Orientation-aware (Radix sets data-orientation). Horizontal = original look.
       "relative flex touch-none select-none",
       "data-[orientation=horizontal]:w-full data-[orientation=horizontal]:items-center",
-      "data-[orientation=vertical]:h-full data-[orientation=vertical]:flex-col data-[orientation=vertical]:justify-center",
+      // items-center is required on the cross axis so the wider thumb (w-5) stays centred
+      // over the narrow track (w-2); without it flex-col aligns both to flex-start → off-centre thumb.
+      "data-[orientation=vertical]:h-full data-[orientation=vertical]:flex-col data-[orientation=vertical]:items-center data-[orientation=vertical]:justify-center",
       className
     )}
     {...props}

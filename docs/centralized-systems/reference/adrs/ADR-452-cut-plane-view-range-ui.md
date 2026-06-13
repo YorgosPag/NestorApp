@@ -407,3 +407,59 @@ faces), and the cut elevation is unified to a single FFL-relative frame across 2
   `CutPlaneSliderLeaf` (2D) keeps `top-14`. Side effect (as Giorgio asked): the 3D track is shorter at the
   top. Files: `CutPlaneSliderControl.tsx` (top removed from base, prop-driven), `CutPlaneSlider3DLeaf.tsx`,
   `CutPlaneSliderLeaf.tsx`.
+- **2026-06-13** — v2.15 — **toggle icon redrawn for legibility** (Giorgio: "I can't tell what it is").
+  The old `CutPlaneIcon` was a faint isometric prism (`strokeOpacity 0.6`) — unreadable at 16px. Replaced
+  with a "plan cut" glyph: a box whose lower half is filled (poché kept below the cut), an empty outline
+  above, and a bold cut line through the middle overshooting both sides. `CutPlaneSliderControl.tsx` only.
+- **2026-06-13** — v2.16 — **vertical Slider thumb off-centre fix (shared primitive).** Giorgio noticed the
+  drag thumb sat off to one side. Root cause in `src/components/ui/slider.tsx`: the horizontal variant has
+  `items-center` but the **vertical** variant only had `flex-col justify-center` — missing the cross-axis
+  `items-center`, so the `w-5` (20px) thumb and the `w-2` (8px) track both aligned to flex-start (left) →
+  the thumb overshot ~6px right. Added `data-[orientation=vertical]:items-center`. ⚠️ Shared component —
+  the fix is unambiguously correct (no vertical slider wants an off-centre thumb) and the horizontal path
+  is untouched (separate `data-orientation` selector).
+- **2026-06-13** — v2.17 — **edge overlays trim gradually DURING the drag + stop reappearing after release**
+  (Giorgio: «όσο κατεβάζω τον slider εξακολουθούν να φαίνονται οι ακμές· μόλις αφήσω εξαφανίζονται, αλλά
+  μετά από λίγο επανεμφανίζονται ΟΛΕΣ μέχρι την κορυφή»). Two coupled defects in the v2.11 edge pipeline:
+  1. **During-drag "cage".** v2.11 ran only the cheap `cullEdgeCutVisibility` while dragging — it hides
+     overlays fully **above** the cut but keeps **crossing** overlays (columns/walls spanning the plane)
+     pristine and full-height, so their wireframe pokes above the cut until release.
+  2. **Post-release reappearance (~150 ms).** After settle, a cap parity pass / refine frame restores an
+     overlay's visibility/geometry toward pristine; the exact re-trim was gated by `lastSettledEdgeCutY`,
+     so once `cutY === lastSettledEdgeCutY` the trim was **skipped** and the restored-pristine overlays
+     showed full-height again — "ΟΛΕΣ μέχρι την κορυφή".
+  **Fix (`section-scene-controller.ts`):** `renderFrameWithCaps` now runs the EXACT `applyEdgeCutTrim` on
+  **every frame the cut is live** (drag AND settled), replacing the cull-then-guarded-settle split. The
+  per-overlay `bimEdgeAppliedCutY` guard inside `applyEdgeCutTrim` skips redundant GPU re-uploads, so this
+  is (a) **gradual during drag** — crossing edges shrink live to the plane — and (b) **self-healing** — any
+  overlay a cap parity pass / rebuild restores is re-trimmed the very next frame → no reappearance. The old
+  357 ms `pointermove` jank does NOT return because this runs once per FRAME, not per slider `onValueChange`.
+  **Revit-style regen throttle:** while actively dragging (`cutMoving`), the exact trim is capped to once per
+  `EDGE_TRIM_THROTTLE_MS = 50 ms` (≤50 ms edge lag, imperceptible on normal scenes, bounds GPU uploads on a
+  dense floor); settled/static frames are never throttled (final exact trim + self-healing stay immediate).
+  Removed the now-superseded `cullEdgeCutVisibility` + `lastSettledEdgeCutY` guard + `edge-cut-cull.test.ts`
+  (dead-code ratchet). `edge-cut-trim` (5) + `cut-plane-3d-math` + `section-clip-applicator` green. *(touched
+  the ADR-452 controller after the concurrent agent stopped — Giorgio reassigned; browser-verified «λύθηκε»)*
+- **2026-06-14** — v2.18 — **slider intensity softened to match the ViewCube** (Giorgio: the slider's orange
+  was much stronger than the cube/compass-ring even though it's the same `#ff8c00`). Cause: the slider paints
+  the hue **solid at opacity 1.0**, whereas the ViewCube is semi-transparent (cube faces `opacity 0.5→1.0`,
+  compass ring `0.4→0.8` and grey `#8899aa` at rest, orange only on hover) — same hue, different alpha/state.
+  Fix: an `opacity-80` class on the `<Slider>` only (track/range/thumb), leaving the toggle button at full
+  opacity so the ON/OFF state stays crisp. Scoped to `CutPlaneSliderControl.tsx`; the shared `Slider` and all
+  other sliders are untouched.
+- **2026-06-14** — v2.19 — **horizontal cut cap is now depth-occluded (stops floating in the foreground)**
+  (Giorgio: cut through the roof slab → "η οροφή φαίνεται πάντα σε πρώτο πλάνο, και από πάνω και από κάτω·
+  από κάτω θα έπρεπε να την καλύπτουν τοίχοι/κολόνες/δοκάρια"). **Root cause:** the VISIBLE cut-cap quad
+  materials (`createOpaqueCutCapMaterial` opaque base + `getColorCapMaterial` per-material colour caps) were
+  created with **`depthTest: false`** — copied from the parity-pass pattern where it is required, but wrong for
+  the *final visible fill*. With depth-test off the cap drew on top of everything regardless of the camera, so
+  a cut slicing the roof kept the whole roof poché in the foreground; from below it covered the geometry that
+  should occlude it. **Fix:** `depthTest: true` on those two VISIBLE cap materials only — the cap passes keep
+  the main-scene depth buffer (`autoClearDepth = false`), so depth-testing the cap against the clipped scene
+  makes nearer walls/columns/beams hide it correctly (standard three.js `webgl_clipping_stencil` cap, which is
+  a normal depth-tested mesh). `depthWrite` stays false (decorative final fill, must not pollute Z). **Untouched
+  (deliberately):** the parity materials `createCutParityMaterial` (need depthTest off to count faces over the
+  whole sliced solid), the Section **Box** cap `createCapMaterial`, and the box hatch. Files:
+  `section-stencil-materials.ts`, `section-cut-cap-groups.ts`. Section suite green; browser-verified «λειτουργεί
+  σωστά» (from below the roof is occluded by the framing). *(ADR-452 reassigned to me after the concurrent agent
+  stopped — Giorgio.)*

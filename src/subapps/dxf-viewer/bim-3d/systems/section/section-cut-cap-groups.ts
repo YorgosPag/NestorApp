@@ -79,7 +79,10 @@ export function getColorCapMaterial(
       color: hex,
       side: THREE.DoubleSide,
       depthWrite: false,
-      depthTest: false,
+      // ADR-452 v2.18 — depth-test the VISIBLE per-material cut cap (same fix as the opaque
+      // base in `createOpaqueCutCapMaterial`): without it the coloured cut faces drew on top
+      // regardless of the camera, so the roof poché stayed in the foreground from below.
+      depthTest: true,
     });
     mat.stencilWrite = true;
     mat.stencilRef = 0;

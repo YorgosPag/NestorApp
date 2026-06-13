@@ -69,6 +69,15 @@ export function createCapMaterial(): THREE.MeshBasicMaterial {
  * geometry below must NOT bleed through (that "muddy" look). Per-material hatch
  * overlays (RC dots, steel, masonry…) are drawn on top of this base, mirroring
  * the box's `section-hatch-cap` poché (SSoT).
+ *
+ * ADR-452 v2.18 — `depthTest: true` (the VISIBLE cap quad must respect depth, unlike
+ * the parity passes). With it `false` the cap drew on top of EVERYTHING regardless of
+ * the camera, so a cut through the roof slab kept the whole roof poché in the
+ * foreground — from below it covered the walls/columns/beams that should occlude it
+ * (Giorgio 2026-06-13). The caller keeps the main-scene depth buffer (cap passes set
+ * `autoClearDepth = false`), so depth-testing the cap against the clipped scene makes
+ * nearer geometry hide it correctly (standard three.js `webgl_clipping_stencil` cap).
+ * `depthWrite` stays false — the cap is a decorative final fill, it must not pollute Z.
  */
 export function createOpaqueCutCapMaterial(): THREE.MeshBasicMaterial {
   const mat = new THREE.MeshBasicMaterial({
@@ -77,7 +86,7 @@ export function createOpaqueCutCapMaterial(): THREE.MeshBasicMaterial {
     transparent: false,
     side: THREE.DoubleSide,
     depthWrite: false,
-    depthTest: false,
+    depthTest: true,
   });
   mat.stencilWrite = true;
   mat.stencilRef = 0;
