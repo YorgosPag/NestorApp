@@ -88,8 +88,9 @@ function chamferOpenOuterEnds(
  * ADR-449 Slice 5 fix — outer offset endpoints κάθε exposed παρειάς, **mitered** στις
  * κοινές κορυφές: το εξωτερικό άκρο επεκτείνεται/κόβεται στην τομή των δύο offset
  * ευθειών → ΕΝΑ 45° seam, **μηδέν επικάλυψη/κενό** (convex → extend, reflex → trim).
- * Slice 6: `chamferOpenEnds` (δοκάρι) → τα μη-mitered άκρα κόβονται 45° αντί για square
- * (το τετράγωνο «κεφάλι» προεξείχε στη συμβολή δοκαριού↔κολόνας/τοίχου). Κολόνα = false.
+ * Slice 6: `chamferOpenEnds` → τα μη-mitered άκρα κόβονται 45° αντί για square (το
+ * τετράγωνο «κεφάλι» προεξείχε στη συμβολή). Slice 9: ενεργό ΚΑΙ για κολόνες (πρώην
+ * μόνο δοκάρι) → ενιαία 45° μεταχείριση δοκαριού↔κολόνας στις συμβολές.
  */
 export function computeMiteredOuter(
   segs: readonly FinishFaceSegment[],
@@ -179,9 +180,13 @@ export function buildFinishSkinFromFaces(
   const s = mmToSceneUnits(sceneUnits);
   const segs = faces.segments;
   const offsets = segs.map((seg) => segOffsetVec(seg, seg.thickness * s));
-  // ADR-449 Slice 6 fix — δοκάρι: chamfer τα ανοιχτά άκρα (μηδέν προεξέχον πτερύγιο
-  // στη συμβολή). Κολόνα: όχι (οι γωνίες κλείνουν με miter, τα wall-gap άκρα μένουν square).
-  const { aOuter, bOuter } = computeMiteredOuter(segs, offsets, bimType === 'beam');
+  // ADR-449 Slice 9 — chamfer τα ανοιχτά άκρα ΚΑΙ για κολόνες ΚΑΙ για δοκάρια (συνεπής
+  // μεταχείριση στη συμβολή δοκαριού↔κολόνας). Πρώην: κολόνα = square, δοκάρι = 45° chamfer
+  // → στην ΙΔΙΑ συμβολή το άκρο remnant κολόνας έκλεινε κάθετα ενώ το άκρο δοκαριού 45° =
+  // ασυνέπεια (Giorgio 2026-06-13, Firestore-verified γωνιακή συμβολή). Οι γωνίες (κοινή
+  // κορυφή) κλείνουν πάντα με miter (αμετάβλητο — ο chamfer αγγίζει ΜΟΝΟ τα μη-mitered άκρα)
+  // → ΟΛΑ τα ανοιχτά άκρα 45°, ίδια με τις miter γωνίες = ενιαία 45° μεταχείριση παντού.
+  const { aOuter, bOuter } = computeMiteredOuter(segs, offsets, true);
 
   const group = new THREE.Group();
   for (let i = 0; i < segs.length; i++) {

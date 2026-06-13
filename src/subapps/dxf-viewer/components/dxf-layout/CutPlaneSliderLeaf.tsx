@@ -21,5 +21,5 @@ const getModeIs2DSSR = () => false;
 export const CutPlaneSliderLeaf = React.memo(function CutPlaneSliderLeaf() {
   const is2D = useSyncExternalStore(subscribeMode, getModeIs2D, getModeIs2DSSR);
   if (!is2D) return null;
-  return <CutPlaneSliderControl className="z-30" />;
+  return <CutPlaneSliderControl className="top-14 z-30" />;
 });

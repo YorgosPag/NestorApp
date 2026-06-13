@@ -60,6 +60,13 @@
     --status-error: 0 72% 51%;        /* Red for error/sold */
     --status-purple: 271 76% 53%;     /* Purple for special states */
 
+    /* 🟧 ViewCube accent — SSoT mirror of `VIEWCUBE_HOVER_COLOR_HEX` (0xff8c00, AutoCAD orange)
+       in bim-3d/viewport/view-cube/view-cube-highlight.ts. Unifies the 3D ViewCube hover colour
+       with the cut-plane slider (which floats over the light-blue 3D background → orange reads
+       clearly). Keep the two in sync. Consumed via `.cut-plane-slider-accent`; no hardcoded hex. */
+    --viewcube-accent: 33 100% 50%;
+    --viewcube-accent-foreground: 222.2 47.4% 11.2%;
+
     /* Additional vivid category hues (theme-aware) — dashboard launchpad tiles (ADR-179) */
     --hue-teal: 173 80% 36%;          /* teal-600 */
     --hue-pink: 330 81% 51%;          /* pink-600 */
@@ -189,6 +196,10 @@
     --hue-teal: 172 66% 50%;          /* teal-400 */
     --hue-pink: 327 87% 68%;          /* pink-400 */
     --hue-indigo: 239 84% 74%;        /* indigo-300/400 */
+
+    /* 🟧 ViewCube accent — Dark Mode (identical #ff8c00; the ViewCube uses one hex for both modes). */
+    --viewcube-accent: 33 100% 50%;
+    --viewcube-accent-foreground: 222 47% 11%;
 
     /* Enterprise Background Variables - Dark Mode */
     --bg-success: 142 45% 15%;        /* dark success background */
@@ -337,6 +348,15 @@
     border-color: hsl(var(--showcase-border));
     /* Scope --muted-foreground so AlertDialogDescription inherits the right muted color */
     --muted-foreground: var(--showcase-muted-fg);
+  }
+
+  /* ✂️ ADR-452 Cut-plane slider — scopes the unified ViewCube orange (--viewcube-accent) onto the
+     shared Slider primitive (which reads --primary) + the toggle button, WITHOUT touching any other
+     slider in the app. SSoT colour lives in --viewcube-accent (globals :root/.dark). */
+  .cut-plane-slider-accent {
+    --primary: var(--viewcube-accent);
+    --primary-foreground: var(--viewcube-accent-foreground);
+    --ring: var(--viewcube-accent);
   }
 
   /* ?? ENTERPRISE: Toast severity classes tied to design tokens */

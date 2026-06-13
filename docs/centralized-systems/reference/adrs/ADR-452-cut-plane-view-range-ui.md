@@ -387,3 +387,23 @@ faces), and the cut elevation is unified to a single FFL-relative frame across 2
     forced even if the slider lands on the previous elevation). Camera-only frames (cut value unchanged) skip edges
     entirely. The gradual "edges shrink at the plane" result is unchanged — it just lands on release instead of
     fighting every tick. Tests: `edge-cut-cull.test.ts` (6) + existing `edge-cut-trim` (5) green.
+- **2026-06-13** — v2.12 / v2.13 — **slider colour de-hardcoded → unified with the ViewCube orange.**
+  The slider looked black because it inherited the app `--primary` token (`222.2 47.4% 11.2%`, near-black
+  navy) — not a hardcoded value, but an unwanted one. The mechanism: a `.cut-plane-slider-accent` utility
+  (mirrors the `.dialog-brand` scoping pattern) maps `--primary`/`--primary-foreground`/`--ring` onto a
+  central accent token ONLY within the cut-plane `<aside>`, so the shared `Slider` primitive + toggle
+  button recolour with **zero** change to any other slider in the app and **zero** hardcoded hex / inline
+  style (N.3-safe). **v2.13 colour decision (Giorgio):** over the light-blue 3D background a teal/cyan did
+  not stand out → use the **same AutoCAD orange (`#ff8c00`) as the 3D ViewCube hover** and *unify* the two.
+  The TS SSoT `VIEWCUBE_HOVER_COLOR_HEX = 0xff8c00` (`view-cube-highlight.ts`) is mirrored on the CSS side
+  as the token `--viewcube-accent: 33 100% 50%` (globals `:root` + `.dark`, identical in both modes like
+  the cube), with cross-reference comments on both sides ("keep in sync"). Files: `globals.css` (token ×2 +
+  utility), `CutPlaneSliderControl.tsx` (one class), `view-cube-highlight.ts` (sync comment). Drives both
+  2D + 3D mounts (single shared control).
+- **2026-06-13** — v2.14 — **3D slider no longer overlaps the ViewCube.** The toggle button + readout sat
+  at `top-14` (56px), inside the 160px ViewCube canvas (`top:12px` → 172px), covering the cube and its
+  compass rings. Fix: the `top-*` offset is now owned by each mount (it was hardcoded in the shared control)
+  because only 3D has a ViewCube. `CutPlaneSlider3DLeaf` → `top-44` (176px, just below the cube canvas);
+  `CutPlaneSliderLeaf` (2D) keeps `top-14`. Side effect (as Giorgio asked): the 3D track is shorter at the
+  top. Files: `CutPlaneSliderControl.tsx` (top removed from base, prop-driven), `CutPlaneSlider3DLeaf.tsx`,
+  `CutPlaneSliderLeaf.tsx`.

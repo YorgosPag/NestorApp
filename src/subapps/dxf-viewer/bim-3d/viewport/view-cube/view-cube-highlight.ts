@@ -74,6 +74,10 @@ export function computeHighlights(
  * SSoT hover/highlight color for the whole ViewCube widget (faces, ring,
  * compass labels, roll arrows, face-nav arrows, home button). AutoCAD-style
  * orange instead of the previous cyan (#88ccee). Hex form for THREE materials.
+ *
+ * Mirrored on the CSS side as `--viewcube-accent` (33 100% 50%) in globals.css,
+ * which recolours the cut-plane slider so the 3D overlay controls share this one
+ * accent. Keep the two in sync (ADR-452 v2.13).
  */
 export const VIEWCUBE_HOVER_COLOR_HEX = 0xff8c00;
 

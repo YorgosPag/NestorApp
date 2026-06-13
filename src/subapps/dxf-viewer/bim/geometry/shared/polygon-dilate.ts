@@ -60,6 +60,30 @@ function outwardNormals(poly: readonly Pt2[], c: Pt2): Pt2[] {
 }
 
 /**
+ * ADR-449 Slice 9 — **directional** dilation: μεγαλώνει το πολύγωνο ΜΟΝΟ κατά τον άξονα
+ * `axis` (±), αφήνοντας την **εγκάρσια** διάσταση ΑΜΕΤΑΒΛΗΤΗ. Κάθε κορυφή σπρώχνεται
+ * `±d·axis` ανάλογα με την προβολή της ως προς το centroid → οι ακμές «άκρα» (⊥ axis)
+ * μετατοπίζονται έξω, οι ακμές «πλευρές» (∥ axis) μένουν στη θέση τους.
+ *
+ * Χρήση (ADR-449): cross-structural obstacle ενός **δοκαριού** που καρφώνεται flush στην
+ * παρειά κολόνας. Το isotropic `dilatePolygonOutward` γεφύρωνε μεν το flush seam αλλά
+ * μεγάλωνε ΚΑΙ εγκάρσια → «έτρωγε» το remnant σοβά της κολόνας ΚΑΘΕ πλευρά → ορατό κενό
+ * στη γωνιακή συμβολή. Η directional εκδοχή γεφυρώνει το flush **μόνο κατά τον άξονα του
+ * δοκαριού** (το άκρο του δοκαριού περνά την παρειά) ΧΩΡΙΣ εγκάρσια συρρίκνωση → το remnant
+ * φτάνει ΑΚΡΙΒΩΣ την παρειά του δοκαριού → μηδέν κενό. `axis` = μοναδιαίο διάνυσμα.
+ */
+export function dilatePolygonAlongAxis(poly: readonly Pt2[], axis: Pt2, d: number): Pt2[] {
+  const n = poly.length;
+  if (n < 3 || d <= 0) return poly.map((p) => ({ x: p.x, y: p.y }));
+  const c = centroidOf(poly);
+  return poly.map((p) => {
+    const proj = (p.x - c.x) * axis.x + (p.y - c.y) * axis.y;
+    const s = proj > EPS ? d : proj < -EPS ? -d : 0;
+    return { x: p.x + s * axis.x, y: p.y + s * axis.y };
+  });
+}
+
+/**
  * Επιστρέφει νέο πολύγωνο μεγεθυμένο προς τα έξω κατά `d`. `d ≤ 0` ή <3 κορυφές →
  * επιστρέφει αντίγραφο αμετάβλητο.
  */

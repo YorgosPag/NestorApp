@@ -30,12 +30,16 @@ function clampToRange(mm: number, range: CutPlaneRange): number {
 }
 
 export interface CutPlaneSliderControlProps {
-  /** z-index / stacking class for the host (`z-30` in 2D, `z-[60]` above the 3D canvas). */
+  /**
+   * Stacking + top-offset class for the host. Each mount owns its `top-*` because the
+   * track length differs per mode: 2D has nothing above-right (`top-14 z-30`); 3D must
+   * clear the 160px ViewCube canvas at `top:12px` so it sits below it (`top-44 z-[60]`).
+   */
   readonly className?: string;
 }
 
 export const CutPlaneSliderControl = React.memo(function CutPlaneSliderControl({
-  className = 'z-30',
+  className = 'top-14 z-30',
 }: CutPlaneSliderControlProps) {
   const { t } = useTranslation('dxf-viewer-panels');
   const active = useBimRenderSettingsStore((s) => s.cutPlaneActive);
@@ -64,7 +68,7 @@ export const CutPlaneSliderControl = React.memo(function CutPlaneSliderControl({
   return (
     <aside
       onMouseEnter={() => setImmediatePosition(null)}
-      className={`pointer-events-auto absolute right-3 top-14 bottom-14 flex w-12 cursor-default flex-col items-center gap-2 ${className}`}
+      className={`cut-plane-slider-accent pointer-events-auto absolute right-3 bottom-14 flex w-12 cursor-default flex-col items-center gap-2 ${className}`}
     >
       <button
         type="button"
@@ -100,12 +104,21 @@ export const CutPlaneSliderControl = React.memo(function CutPlaneSliderControl({
   );
 });
 
-/** Horizontal-section glyph (a plane slicing a box). */
+/**
+ * Horizontal-section glyph: a building/box whose LOWER half is filled (the poché kept
+ * below the cut) while the upper half is an empty outline (removed above the cut), with a
+ * bold cut line through the middle that overshoots both sides — the classic "plan cut"
+ * marker. Reads clearly at 16px, unlike the previous faint isometric prism.
+ */
 function CutPlaneIcon() {
   return (
     <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-      <path d="M3 4.5L8 2L13 4.5V10L8 12.5L3 10V4.5Z" stroke="currentColor" strokeWidth="1.1" strokeLinejoin="round" strokeOpacity="0.6" />
-      <path d="M1.5 7.5H14.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+      {/* Solid lower half — material kept below the cut */}
+      <path d="M3.5 8H12.5V12C12.5 12.83 11.83 13.5 11 13.5H5C4.17 13.5 3.5 12.83 3.5 12V8Z" fill="currentColor" fillOpacity="0.3" />
+      {/* Full box outline */}
+      <rect x="3.5" y="2.5" width="9" height="11" rx="1.2" stroke="currentColor" strokeWidth="1.1" />
+      {/* The horizontal cut plane — bold, overshoots the box on both sides */}
+      <path d="M1.5 8H14.5" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
     </svg>
   );
 }

@@ -99,7 +99,10 @@ describe('computeMiteredOuter — chamfer open ends (ADR-449 Slice 6 fix)', () =
     expect(bOuter[0].x).toBeCloseTo(985, 6); // τέλος: 1000 → −15 (inset)
   });
 
-  it('chamferOpenEnds=false (κολόνα) → τετράγωνα άκρα στις θέσεις των κορυφών', () => {
+  // ADR-449 Slice 9 — το `false` branch κρατιέται ως pure-function option (generic),
+  // αλλά ΚΑΝΕΝΑ structural element δεν το χρησιμοποιεί πλέον: κολόνα + δοκάρι περνούν `true`
+  // (ενιαία 45° μεταχείριση στις συμβολές). Unit guard ότι το branch παραμένει square.
+  it('chamferOpenEnds=false (generic) → τετράγωνα άκρα στις θέσεις των κορυφών', () => {
     const { aOuter, bOuter } = computeMiteredOuter(segs, offsets, false);
     expect(aOuter[0].x).toBeCloseTo(0, 6);
     expect(bOuter[0].x).toBeCloseTo(1000, 6);

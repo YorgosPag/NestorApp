@@ -14,5 +14,7 @@ import React from 'react';
 import { CutPlaneSliderControl } from '../../components/dxf-layout/CutPlaneSliderControl';
 
 export function CutPlaneSlider3DLeaf() {
-  return <CutPlaneSliderControl className="z-[60]" />;
+  // top-44 (176px) clears the 160px ViewCube canvas (top:12px → 172px) so the slider's
+  // toggle button + readout no longer overlap the cube and its compass rings.
+  return <CutPlaneSliderControl className="top-44 z-[60]" />;
 }

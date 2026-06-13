@@ -32,17 +32,27 @@ import { resolveStructuralFinishFaces, type FinishEdgeClassifier } from './struc
 import { isFinishActive, type StructuralFinishFaces } from './structural-finish-types';
 import type { FinishBoqContribution } from '../services/structural-finish-boq';
 import type { Pt2 } from '../geometry/shared/segment-polygon-coverage';
-import { dilatePolygonOutward } from '../geometry/shared/polygon-dilate';
+import { dilatePolygonAlongAxis } from '../geometry/shared/polygon-dilate';
 
 export const MM_TO_M = 0.001;
 /** Ανοχή (canvas units ανά mm) — 2mm για «πάνω στο εξώτατο όριο». */
 export const EXTERIOR_EDGE_TOL_MM = 2;
 /**
  * ADR-449 Slice 6 — Revit join tolerance (mm) για τα cross-structural obstacles
- * (δοκάρι→κολόνα / κολόνα→δοκάρι). Outward dilation του obstacle footprint ώστε μια
- * **flush** διεπαφή (born-from-grid framing: το δοκάρι κόβεται στην παρειά, μηδέν
- * overlap) να μετράει ως καλυμμένη. Καλύπτει ομοιόμορφα ΚΑΙ flush ΚΑΙ overlap (manual).
+ * (δοκάρι→κολόνα). Dilation του obstacle footprint ώστε μια **flush** διεπαφή
+ * (born-from-grid framing: το δοκάρι κόβεται στην παρειά, μηδέν overlap) να μετράει
+ * ως καλυμμένη — το `coveredIntervals` απαιτεί midpoint ΑΥΣΤΗΡΑ μέσα στο obstacle.
  * Tunable· οι τοίχοι ΔΕΝ dilate-άρονται (υπάρχουσα browser-verified συμπεριφορά).
+ *
+ * ADR-449 Slice 9 — **directional**: εφαρμόζεται μόνο στο **δοκάρι-obstacle** και ΜΟΝΟ
+ * κατά τον **άξονά** του (`dilatePolygonAlongAxis`). Το isotropic `dilatePolygonOutward`
+ * μεγάλωνε ΚΑΙ εγκάρσια → «έτρωγε» 10mm από το remnant σοβά της κολόνας ΚΑΘΕ πλευρά → το
+ * chamfer του remnant προσγειωνόταν μακριά από του δοκαριού → ΟΡΑΤΟ ΚΕΝΟ στη γωνιακή
+ * συμβολή (Giorgio 2026-06-13, screenshots· Firestore-verified flush, drift=0). Κατά τον
+ * άξονα μόνο: το άκρο του δοκαριού περνά την παρειά (flush bridge) ΧΩΡΙΣ εγκάρσια
+ * συρρίκνωση → remnant φτάνει ΑΚΡΙΒΩΣ την παρειά → μηδέν κενό. Η **κολόνα-obstacle** στο
+ * δοκάρι = ΧΩΡΙΣ dilation (flush → δεν επικαλύπτει την πλάγια όψη· πραγματικό overlap →
+ * κόβει σωστά χωρίς tolerance). 10mm = robust margin και για ήπια manual near-flush.
  */
 export const STRUCTURAL_JOIN_TOL_MM = 10;
 
@@ -114,7 +124,10 @@ export interface WallFinishObstacle {
  */
 export interface BeamFinishObstacle {
   readonly id: string;
-  readonly params: { readonly depth: number };
+  // ADR-449 Slice 9 — `startPoint`/`endPoint` → άξονας δοκαριού για **directional**
+  // dilation (γεφύρωμα flush μόνο κατά τον άξονα). BIM `BeamEntity` + canvas `DxfBeam`
+  // τα έχουν ήδη (ίδιο pattern με `BeamFinishSource`) → μηδέν cast.
+  readonly params: { readonly depth: number; readonly startPoint: Point3D; readonly endPoint: Point3D };
   readonly geometry: { readonly outline: { readonly vertices: readonly Point3D[] } };
 }
 
@@ -153,13 +166,26 @@ export function wallFootprintPolygon(wall: WallFinishObstacle): Pt2[] {
   return [...outer, ...inner];
 }
 
+/** Μοναδιαία κατεύθυνση άξονα δοκαριού-obstacle (start→end) στο plan. `null` αν εκφυλισμένη. */
+function beamObstacleAxis(beam: BeamFinishObstacle): Pt2 | null {
+  const dx = beam.params.endPoint.x - beam.params.startPoint.x;
+  const dy = beam.params.endPoint.y - beam.params.startPoint.y;
+  const len = Math.hypot(dx, dy);
+  if (len < 1e-9) return null;
+  return { x: dx / len, y: dy / len };
+}
+
 /**
- * ADR-449 Slice 6 — cross-structural obstacle polygon (δοκάρι/κολόνα) από plan κορυφές,
- * **dilated προς τα έξω** κατά την join tolerance ώστε μια flush διεπαφή να γεφυρώνεται
- * (δες `STRUCTURAL_JOIN_TOL_MM`). `dCanvas` = tolerance σε canvas units (mm × scale).
+ * ADR-449 Slice 9 — beam-obstacle polygon για το resolve της κολόνας: το outline του
+ * δοκαριού, **directional-dilated ΜΟΝΟ κατά τον άξονά του** κατά την join tolerance ώστε
+ * το flush άκρο να γεφυρώνεται (η παρειά κολόνας να μετράει καλυμμένη) ΧΩΡΙΣ εγκάρσια
+ * συρρίκνωση του remnant σοβά (δες `STRUCTURAL_JOIN_TOL_MM`). `dCanvas` = tol × scale.
+ * Εκφυλισμένος άξονας → raw outline (μηδέν dilation· degenerate beam = no-op).
  */
-function crossObstaclePolygon(vertices: readonly Point3D[], dCanvas: number): Pt2[] {
-  return dilatePolygonOutward(vertices.map(toPt2), dCanvas);
+function beamObstaclePolygon(beam: BeamFinishObstacle, dCanvas: number): Pt2[] {
+  const pts = beam.geometry.outline.vertices.map(toPt2);
+  const axis = beamObstacleAxis(beam);
+  return axis ? dilatePolygonAlongAxis(pts, axis, dCanvas) : pts;
 }
 
 /** Εξώτατες ακμές components που περικλείουν χώρο (holes>0) → exterior reference. */
@@ -224,8 +250,9 @@ export function computeColumnFinishFaces(
   const tol = EXTERIOR_EDGE_TOL_MM * s;
   const classify = buildStructuralFinishClassifier(column.params.envelopeFunction, walls, tol);
 
-  // ADR-449 Slice 6 — mutual obstacles: οι τοίχοι (no dilation) + τα δοκάρια που
-  // καρφώνονται (dilated κατά join tolerance) κόβουν την παρειά κάτω από τη σύνδεση.
+  // ADR-449 Slice 6/9 — mutual obstacles: οι τοίχοι (no dilation) + τα δοκάρια που
+  // καρφώνονται (**directional**-dilated ΜΟΝΟ κατά τον άξονά τους) κόβουν την παρειά κάτω
+  // από τη σύνδεση ΧΩΡΙΣ εγκάρσια συρρίκνωση του remnant (μηδέν κενό στη γωνιακή συμβολή).
   // Cross-type → κανένα beam δεν είναι «εαυτός» της κολόνας (μηδέν self-filter).
   const dCanvas = STRUCTURAL_JOIN_TOL_MM * s;
   return resolveStructuralFinishFaces({
@@ -234,7 +261,7 @@ export function computeColumnFinishFaces(
     spec,
     obstacles: [
       ...walls.map(wallFootprintPolygon),
-      ...beams.map((b) => crossObstaclePolygon(b.geometry.outline.vertices, dCanvas)),
+      ...beams.map((b) => beamObstaclePolygon(b, dCanvas)),
     ],
     classify,
     unitToMeters: (1 / s) * MM_TO_M,
@@ -382,17 +409,19 @@ export function computeBeamFinishFaces(
   const coveringWalls = wallsOverlappingBeamBand(walls, beam.params, floorElevationMm);
   const classify = buildStructuralFinishClassifier(beam.params.envelopeFunction, walls, tol);
 
-  // ADR-449 Slice 6 — mutual obstacles: οι τοίχοι (no dilation) + οι κολόνες (dilated
-  // κατά join tolerance) κόβουν το τμήμα της πλάγιας όψης μέσα στη σύνδεση. Cross-type
-  // → καμία κολόνα δεν είναι «εαυτός» του δοκαριού (μηδέν self-filter).
-  const dCanvas = STRUCTURAL_JOIN_TOL_MM * s;
+  // ADR-449 Slice 6/9 — mutual obstacles: οι τοίχοι (no dilation) + οι κολόνες (**ΧΩΡΙΣ
+  // dilation**) κόβουν το τμήμα της πλάγιας όψης μέσα στη σύνδεση. Σε flush framing η
+  // κολόνα ΔΕΝ επικαλύπτει την πλάγια όψη (κάθετη, ακουμπά μόνο τη γωνία) → μηδέν trim →
+  // η όψη φτάνει τη γωνία· σε πραγματικό overlap (manual) → coveredIntervals κόβει σωστά
+  // χωρίς tolerance. (Η isotropic dilation εδώ «έτρωγε» 10mm από την όψη → κενό.)
+  // Cross-type → καμία κολόνα δεν είναι «εαυτός» του δοκαριού (μηδέν self-filter).
   return resolveStructuralFinishFaces({
     coreFootprint: outline.map(toPt2),
     heightMm: depthMm,
     spec,
     obstacles: [
       ...coveringWalls.map(wallFootprintPolygon),
-      ...columns.map((c) => crossObstaclePolygon(c.geometry.footprint.vertices, dCanvas)),
+      ...columns.map((c) => c.geometry.footprint.vertices.map(toPt2)),
     ],
     classify,
     unitToMeters: (1 / s) * MM_TO_M,
