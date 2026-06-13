@@ -31,6 +31,7 @@ import {
   type GridPerimeterMode,
 } from '../grid/grid-justification';
 import { justifyGridSegment } from '../grid/grid-segment-justification';
+import { resolveColumnAwareJustification } from '../grid/grid-column-aware-justification';
 import {
   buildDefaultWallParams,
   buildWallEntity,
@@ -71,7 +72,10 @@ function buildBoundWall(
   // ADR-441 3-mode — Revit «Wall Location Line»: center/finish-interior/finish-exterior.
   // Κάθετη μετατόπιση ±thickness/2 + extend στα perpendicular bindings (follow-move-safe).
   const thicknessMm = resolveWallThicknessMm(overrides);
-  const justified = justifyGridSegment(trimmed.start, trimmed.end, trimmed.bindings, thicknessMm, justification, sceneUnits);
+  // ADR-441 column-aware: full bearing — κληρονόμησε την έδραση της κολόνας στήριξης (αν
+  // υπάρχει)· αλλιώς κράτα το mode του χρήστη. Ο τοίχος δεν προεξέχει της κολόνας.
+  const effectiveJustification = resolveColumnAwareJustification(bindings, columns, justification);
+  const justified = justifyGridSegment(trimmed.start, trimmed.end, trimmed.bindings, thicknessMm, effectiveJustification, sceneUnits);
   const params = buildDefaultWallParams(justified.start, justified.end, overrides, sceneUnits);
   const result = buildWallEntity(params, layerId, 'straight', sceneUnits);
   if (!result.ok) return null;

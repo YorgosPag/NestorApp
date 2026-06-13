@@ -44,8 +44,15 @@ describe('detectGridJustificationConflicts', () => {
     expect(detectGridJustificationConflicts([...cols('inner'), ...walls('inner')])).toHaveLength(0);
   });
 
-  it('κολόνες inner + δοκάρια center → ΚΑΜΙΑ ασυνέπεια (center = ουδέτερο)', () => {
-    expect(detectGridJustificationConflicts([...cols('inner'), ...beams('center')])).toHaveLength(0);
+  it('κολόνες inner 40 + δοκάρια center 25 → ΑΣΥΝΕΠΕΙΑ (partial bearing — το παράπονο του χρήστη)', () => {
+    // Το δοκάρι center προεξέχει 12.5cm έξω από την κολόνα inner → δεν περιέχεται.
+    const conflicts = detectGridJustificationConflicts([...cols('inner'), ...beams('center')]);
+    expect(conflicts.length).toBeGreaterThan(0);
+    expect(conflicts[0].kinds.sort()).toEqual(['beam', 'column']);
+  });
+
+  it('κολόνες inner + δοκάρια inner → ΚΑΜΙΑ ασυνέπεια (πλήρης στήριξη, flush)', () => {
+    expect(detectGridJustificationConflicts([...cols('inner'), ...beams('inner')])).toHaveLength(0);
   });
 
   it('μόνο ένα είδος (τοίχοι outer) → ΚΑΜΙΑ ασυνέπεια', () => {

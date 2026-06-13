@@ -39,6 +39,7 @@ import {
   type GridPerimeterMode,
 } from '../grid/grid-justification';
 import { justifyGridSegment } from '../grid/grid-segment-justification';
+import { resolveColumnAwareJustification } from '../grid/grid-column-aware-justification';
 import {
   completeBeamFromTwoClicks,
   type BeamParamOverrides,
@@ -77,7 +78,10 @@ function buildBoundBeam(
 ): BeamEntity | null {
   const trimmed = trimSegmentEndpointsToColumns(start, end, bindings, columns, sceneUnits);
   const widthMm = overrides.width ?? DEFAULT_BEAM_WIDTH_MM;
-  const justified = justifyGridSegment(trimmed.start, trimmed.end, trimmed.bindings, widthMm, justification, sceneUnits);
+  // ADR-441 column-aware: full bearing — κληρονόμησε την έδραση της κολόνας στήριξης
+  // (αν υπάρχει)· αλλιώς κράτα το mode του χρήστη. Εξασφαλίζει ότι το δοκάρι δεν προεξέχει.
+  const effectiveJustification = resolveColumnAwareJustification(bindings, columns, justification);
+  const justified = justifyGridSegment(trimmed.start, trimmed.end, trimmed.bindings, widthMm, effectiveJustification, sceneUnits);
   const result = completeBeamFromTwoClicks(justified.start, justified.end, layerId, 'straight', overrides, sceneUnits);
   if (!result.ok) return null;
   return { ...result.entity, guideBindings: justified.bindings };
