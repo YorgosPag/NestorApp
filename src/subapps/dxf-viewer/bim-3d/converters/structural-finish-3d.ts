@@ -166,7 +166,7 @@ function addFinishPrism(
  * παρειά· οι γωνίες κλείνουν με 45° miter, μηδέν επικάλυψη). ΕΝΑ SSoT για κολόνα ΚΑΙ
  * δοκάρι — διαφέρουν μόνο σε `heightM`, `baseY`, `bimType`. `null` αν κανένα band.
  */
-function buildFinishSkinFromFaces(
+export function buildFinishSkinFromFaces(
   faces: StructuralFinishFaces,
   sceneUnits: SceneUnits,
   heightM: number,

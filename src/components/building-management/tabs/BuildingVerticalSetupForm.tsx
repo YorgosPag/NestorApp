@@ -44,8 +44,8 @@ interface FloorMutationResponse {
 export interface BuildingVerticalSetupFormProps {
   buildingId: string;
   projectId?: string;
-  /** True when the building already has floors — surfaces an overwrite warning. */
-  hasExistingFloors: boolean;
+  /** Existing floor numbers — generation skips these (idempotent, no 409). */
+  existingFloorNumbers: ReadonlySet<number>;
   /** Called after the stack is created so the parent refreshes the list. */
   onComplete: () => void;
   onCancel: () => void;
@@ -59,7 +59,7 @@ function parseCount(value: string): number {
 export function BuildingVerticalSetupForm({
   buildingId,
   projectId,
-  hasExistingFloors,
+  existingFloorNumbers,
   onComplete,
   onCancel,
 }: BuildingVerticalSetupFormProps) {
@@ -83,11 +83,19 @@ export function BuildingVerticalSetupForm({
     [basements, uppers, typicalHeight],
   );
 
+  // Idempotent (Revit-grade): only create storeys that don't already exist —
+  // never crash on a duplicate number, never leave a half-built stack.
+  const newSpecs = useMemo(
+    () => stack.filter((s) => !existingFloorNumbers.has(s.number)),
+    [stack, existingFloorNumbers],
+  );
+  const skippedCount = stack.length - newSpecs.length;
+
   const handleGenerate = useCallback(async () => {
     setBusy(true);
     try {
       // Create storeys low → high so the server reconcile sees a consistent chain.
-      for (const spec of stack) {
+      for (const spec of newSpecs) {
         const floor = createFloor({
           number: spec.number,
           name: formatFloorLabel(spec.number),
@@ -121,7 +129,14 @@ export function BuildingVerticalSetupForm({
         },
       });
 
-      success(t('tabs.floors.quickSetup.success', { count: stack.length }));
+      const created = newSpecs.length;
+      if (created === 0) {
+        success(t('tabs.floors.quickSetup.allExist'));
+      } else if (skippedCount > 0) {
+        success(t('tabs.floors.quickSetup.successSkipped', { created, skipped: skippedCount }));
+      } else {
+        success(t('tabs.floors.quickSetup.success', { count: created }));
+      }
       onComplete();
     } catch (err) {
       const msg = err instanceof Error ? err.message : '';
@@ -129,7 +144,7 @@ export function BuildingVerticalSetupForm({
     } finally {
       setBusy(false);
     }
-  }, [stack, buildingId, projectId, hasFoundation, foundationDepth, t, success, notifyError, onComplete]);
+  }, [newSpecs, skippedCount, buildingId, projectId, hasFoundation, foundationDepth, t, success, notifyError, onComplete]);
 
   return (
     <section className="flex flex-col gap-3 rounded-lg border border-border bg-muted/30 p-3" role="group">
@@ -138,10 +153,10 @@ export function BuildingVerticalSetupForm({
         {t('tabs.floors.quickSetup.title')}
       </header>
 
-      {hasExistingFloors && (
+      {skippedCount > 0 && (
         <p className={cn('flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-xs', getStatusColor('warning', 'border'), getStatusColor('warning', 'text'))}>
           <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
-          {t('tabs.floors.quickSetup.existingWarning')}
+          {t('tabs.floors.quickSetup.existingWarning', { skipped: skippedCount })}
         </p>
       )}
 
@@ -174,9 +189,9 @@ export function BuildingVerticalSetupForm({
       </section>
 
       <footer className="flex items-center justify-between">
-        <p className={cn('text-xs', colors.text.muted)}>{t('tabs.floors.quickSetup.preview', { count: stack.length })}</p>
+        <p className={cn('text-xs', colors.text.muted)}>{t('tabs.floors.quickSetup.preview', { count: newSpecs.length })}</p>
         <nav className="flex gap-1">
-          <Button type="button" size="sm" className="h-9" onClick={handleGenerate} disabled={busy || stack.length === 0}>
+          <Button type="button" size="sm" className="h-9" onClick={handleGenerate} disabled={busy || newSpecs.length === 0}>
             {busy ? <Spinner size="small" color="inherit" /> : <Check className="mr-1 h-4 w-4" />}
             {t('tabs.floors.quickSetup.generate')}
           </Button>

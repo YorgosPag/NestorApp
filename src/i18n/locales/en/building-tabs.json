@@ -143,8 +143,10 @@
         "foundationDepth": "Foundation depth (m)",
         "generate": "Generate stack",
         "preview": "{count} floors will be created",
-        "existingWarning": "This building already has floors. Generating will add new ones — check for overlaps.",
+        "existingWarning": "{skipped} floors already exist — they will be skipped. Only new ones are created.",
         "success": "{count} floors created",
+        "successSkipped": "Created {created} new floors ({skipped} already existed).",
+        "allExist": "All floors already exist — none created.",
         "error": "Quick setup failed"
       },
       "stairs": "Floor Stairs",

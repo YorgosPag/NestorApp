@@ -29,10 +29,15 @@ import { computeBuildingFootprint } from '../geometry/building-footprint';
 import { pointToSegmentDistance } from '../../systems/guides';
 import { mmToSceneUnits } from '../../utils/scene-units';
 import { resolveStructuralFinishFaces, type FinishEdgeClassifier } from './structural-finish-resolver';
-import { isFinishActive, type StructuralFinishFaces } from './structural-finish-types';
+import { isFinishActive, createDefaultStructuralFinishSpec, type StructuralFinishFaces } from './structural-finish-types';
 import type { FinishBoqContribution } from '../services/structural-finish-boq';
 import type { Pt2 } from '../geometry/shared/segment-polygon-coverage';
 import { dilatePolygonOutward } from '../geometry/shared/polygon-dilate';
+import {
+  computeStructuralSilhouetteBands,
+  type SilhouetteBand,
+  type SilhouetteMember,
+} from './structural-finish-silhouette';
 
 const MM_TO_M = 0.001;
 /** Ανοχή (canvas units ανά mm) — 2mm για «πάνω στο εξώτατο όριο». */
@@ -44,7 +49,7 @@ const EXTERIOR_EDGE_TOL_MM = 2;
  * overlap) να μετράει ως καλυμμένη. Καλύπτει ομοιόμορφα ΚΑΙ flush ΚΑΙ overlap (manual).
  * Tunable· οι τοίχοι ΔΕΝ dilate-άρονται (υπάρχουσα browser-verified συμπεριφορά).
  */
-const STRUCTURAL_JOIN_TOL_MM = 10;
+export const STRUCTURAL_JOIN_TOL_MM = 10;
 
 const toPt2 = (p: { x: number; y: number }): Pt2 => ({ x: p.x, y: p.y });
 
@@ -98,7 +103,7 @@ export interface BeamFinishSource {
 }
 
 /** Wall → plan footprint polygon (outer ακμή + αντίστροφη inner). */
-function wallFootprintPolygon(wall: WallFinishObstacle): Pt2[] {
+export function wallFootprintPolygon(wall: WallFinishObstacle): Pt2[] {
   const g = computeWallGeometry(wall.params, wall.kind);
   const outer = g.outerEdge.points.map(toPt2);
   const inner = [...g.innerEdge.points].reverse().map(toPt2);
@@ -135,7 +140,7 @@ function collectExteriorEdges(walls: readonly WallFinishObstacle[]): Array<[Pt2,
  * outer-ring test. Entity-agnostic — μόνο `envelopeFunction` + walls + tol. ΕΝΑ SSoT
  * για κολόνες ΚΑΙ δοκάρια (πρώην `buildColumnClassifier`).
  */
-function buildStructuralFinishClassifier(
+export function buildStructuralFinishClassifier(
   envelopeFunction: EnvelopeFunction | undefined,
   walls: readonly WallFinishObstacle[],
   tol: number,
@@ -410,4 +415,68 @@ export function computeBeamFinishContribution(
     interiorMaterialId: spec.interiorMaterialId,
     exteriorMaterialId: spec.exteriorMaterialId,
   };
+}
+
+// ─── ADR-449 Slice 7 — Merged structural silhouette (scene adapter) ─────────────
+
+/** Κατακόρυφη έκταση κολόνας (building-relative mm): βάση = floor + baseOffset. */
+function columnZExtent(column: ColumnEntity, floorElevationMm: number): { zBotMm: number; zTopMm: number } {
+  const zBotMm = floorElevationMm + (column.params.baseOffset ?? 0);
+  return { zBotMm, zTopMm: zBotMm + column.params.height };
+}
+
+/** Κατακόρυφη έκταση δοκαριού (building-relative mm): κρέμεται depth κάτω από topElevation. */
+function beamZExtent(beam: BeamEntity): { zBotMm: number; zTopMm: number } {
+  const zTopMm = beam.params.topElevation + (beam.params.zOffset ?? 0);
+  return { zBotMm: zTopMm - beam.params.depth, zTopMm };
+}
+
+/** Δομικό μέλος → `SilhouetteMember` όταν έχει ενεργό σοβά + έγκυρο footprint. */
+function toMember(
+  finish: ColumnEntity['params']['finish'] | BeamEntity['params']['finish'],
+  vertices: readonly { x: number; y: number }[] | undefined,
+  z: { zBotMm: number; zTopMm: number },
+): SilhouetteMember | null {
+  if (!isFinishActive(finish) || !vertices || vertices.length < 3) return null;
+  return { footprint: vertices.map(toPt2), zBotMm: z.zBotMm, zTopMm: z.zTopMm };
+}
+
+/**
+ * ADR-449 Slice 7 — SSoT για την ΕΝΙΑΙΑ σιλουέτα σοβά μιας δομικής ομάδας (κολόνες +
+ * δοκάρια ενός κτιρίου/ορόφου). Χτίζει `SilhouetteMember[]` (building-relative z) +
+ * wall obstacles (finished footprints dilated κατά join-tol ώστε flush διεπαφές να
+ * μετράνε ως καλυμμένες — Πρόβλημα Α) + classifier, και delegate-άρει στον pure
+ * `computeStructuralSilhouetteBands`. Το διαβάζει ο 3D builder. `[]` όταν κανένα μέλος.
+ */
+export function computeStructuralFinishSilhouette(
+  columns: readonly ColumnEntity[],
+  beams: readonly BeamEntity[],
+  walls: readonly WallFinishObstacle[],
+  floorElevationMm: number,
+): SilhouetteBand[] {
+  const members: SilhouetteMember[] = [];
+  for (const c of columns) {
+    const m = toMember(c.params.finish, c.geometry?.footprint?.vertices, columnZExtent(c, floorElevationMm));
+    if (m) members.push(m);
+  }
+  for (const b of beams) {
+    const m = toMember(b.params.finish, b.geometry?.outline?.vertices, beamZExtent(b));
+    if (m) members.push(m);
+  }
+  if (members.length === 0) return [];
+
+  const sceneUnits = columns[0]?.params.sceneUnits ?? beams[0]?.params.sceneUnits ?? 'mm';
+  const s = mmToSceneUnits(sceneUnits);
+  const tol = EXTERIOR_EDGE_TOL_MM * s;
+  const classify = buildStructuralFinishClassifier(undefined, walls, tol);
+  const dCanvas = STRUCTURAL_JOIN_TOL_MM * s;
+  const wallObstacles = walls.map((w) => dilatePolygonOutward(wallFootprintPolygon(w), dCanvas));
+
+  return computeStructuralSilhouetteBands({
+    members,
+    wallObstacles,
+    spec: createDefaultStructuralFinishSpec(),
+    classify,
+    unitToMeters: (1 / s) * MM_TO_M,
+  });
 }

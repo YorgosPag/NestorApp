@@ -45,6 +45,9 @@ export function columnToMesh(
   nominalHeightMm?: number,
   walls: readonly WallEntity[] = [],
   beams: readonly BeamEntity[] = [], // ADR-449 Slice 6 — mutual obstacles (junction)
+  // ADR-449 Slice 7 — ο scene-level ενιαίος σοβάς (silhouette) αναλαμβάνει το skin·
+  // το per-element path το παραλείπει (ghosts/previews κρατούν per-element = false).
+  suppressFinishSkin = false,
 ): THREE.Mesh | THREE.Group | null {
   const verts = column.geometry.footprint.vertices;
   if (verts.length < 3) return null;
@@ -81,6 +84,7 @@ export function columnToMesh(
         : floorElevationMm + flatColumn.params.height;
       return composeColumnWithFinish(
         tagged, column, walls, beams, mesh.position.y, levelId, Math.max(0, attachedTopMm - floorElevationMm),
+        suppressFinishSkin,
       );
     }
     // Fall through to flat solid αν το prism εκφυλίζεται (defensive).
@@ -103,7 +107,9 @@ export function columnToMesh(
   // ADR-449 Slice 2 — additive σοβάς (per-face band skin) ΕΞΩ από τον στατικό πυρήνα.
   // Ενεργό μόνο όταν η κολόνα έχει ενεργό `finish` ΚΑΙ δόθηκαν walls (απών στο ghost
   // path → πυρήνας-only). ADR-449 Slice 5 — view-level gate `showFinishSkin`.
-  return composeColumnWithFinish(tagged, column, walls, beams, mesh.position.y, levelId, flatColumn.params.height);
+  return composeColumnWithFinish(
+    tagged, column, walls, beams, mesh.position.y, levelId, flatColumn.params.height, suppressFinishSkin,
+  );
 }
 
 /**
@@ -120,8 +126,9 @@ function composeColumnWithFinish(
   baseY: number,
   levelId: string | undefined,
   skinHeightMm: number,
+  suppressFinishSkin = false,
 ): THREE.Mesh | THREE.Group {
-  if (!isStructuralFinishVisible()) return core;
+  if (suppressFinishSkin || !isStructuralFinishVisible()) return core;
   const colForSkin = Math.abs(skinHeightMm - column.params.height) > 1e-6
     ? { ...column, params: { ...column.params, height: skinHeightMm } }
     : column;
@@ -174,6 +181,9 @@ export function beamToMesh(
   buildingBaseElevationM = 0,
   walls: readonly WallEntity[] = [],
   columns: readonly ColumnEntity[] = [], // ADR-449 Slice 6 — mutual obstacles (junction)
+  // ADR-449 Slice 7 — ο scene-level ενιαίος σοβάς (silhouette) αναλαμβάνει το skin·
+  // το per-element path το παραλείπει (ghosts/previews κρατούν per-element = false).
+  suppressFinishSkin = false,
 ): THREE.Mesh | THREE.Group | null {
   const beamDepthM = beam.params.depth * MM_TO_M;
 
@@ -205,7 +215,7 @@ export function beamToMesh(
   // Ενεργό μόνο όταν το δοκάρι έχει ενεργό `finish` (απών → πυρήνας-only Mesh, μηδέν
   // regression). `baseY` = κάτω παρειά (ίδιο datum με το box extrude). Flat-path μόνο.
   // ADR-449 Slice 5 — view-level gate «Σοβατισμένη όψη» (showFinishSkin).
-  const finishSkin = isStructuralFinishVisible()
+  const finishSkin = (!suppressFinishSkin && isStructuralFinishVisible())
     ? buildBeamFinishSkin(beam, walls, columns, mesh.position.y, levelId)
     : null;
   if (finishSkin) {

@@ -1,6 +1,6 @@
 # ADR-449 — Structural Finish Skin (σοβάς κολόνας/δοκαριού, per-face adjacency-driven)
 
-**Status:** 🟢 Slice 1 (data model + resolver + BOQ) + Slice 2 (3D band skin) + Slice 3 (2D finished outline) implemented, ΚΟΛΟΝΕΣ — pending browser-verify + commit (2026-06-13)
+**Status:** 🟢 Slices 1-7 implemented (data model + resolver + BOQ + 3D/2D skin + δοκάρια + toggle/override + beam↔column junction + **Slice 7 ενιαίος σοβάς στις συμβολές / merged structural silhouette**) — pending browser-verify + commit (2026-06-13)
 **Discipline:** DXF Viewer · BIM finishes · BOQ/ΑΤΟΕ · structural columns/beams
 **Related:** ADR-363 (column/beam types + wall DNA), ADR-447 (wall plaster materials/catalog), ADR-396 (ETICS thermal envelope — exterior/interior classification, building footprint), ADR-401 (wall host-plan `coveredIntervals` — εξήχθη εδώ σε shared SSoT), ADR-445 (structural colour identity), ADR-413 (PBR textures), ADR-175/ΑΤΟΕ (BOQ)
 
@@ -161,6 +161,29 @@ Deterministic IDs: `boq_bim_${id}` / `_finish_int` / `_finish_ext`. Hook στο 
 - `bim-3d/converters/bim-three-structural-converters.ts` — `columnToMesh(..., beams = [])` / `beamToMesh(..., columns = [])` (optional defaults → ghost/preview callers ανέγγιχτοι)· **NEW `composeColumnWithFinish()`** (κοινό SSoT flat + attached path· fix #2: το attached path έκανε `return tagged` χωρίς σοβά). *(MIXED αρχείο με ADR-448/441 — μόνο δικές μου γραμμές)*
 - `bim-3d/scene/{bim-scene-attach-syncs,BimSceneLayer}.ts` — περνούν `entities.beams` / `entities.columns`. *(MIXED αρχεία με ADR-448/441 — μόνο η κλήση)*
 
+## 3.septies Files (Slice 7 — ΕΝΙΑΙΟΣ ΣΟΒΑΣ ΣΤΙΣ ΣΥΜΒΟΛΕΣ, merged structural silhouette)
+
+**Πρόβλημα (Giorgio screenshots 151127 + 151222):** ο σοβάς υπολογιζόταν **per-element** με **τοπική** μεταχείριση γωνίας (κολόνα miter, δοκάρι chamfer) → (Β) στη συμβολή κολόνα↔δοκάρι ο σοβάς **δεν ενώνεται**· (Α) ο σοβάς δοκαριού **προεξέχει** του υποκείμενου τοίχου (σκαλοπάτι). Τα τοπικά fixes (Slice 6 #3 chamfer) δεν αρκούν — θεμελιώδες όριο του per-element μοντέλου.
+
+**Κεντρική απόφαση (Revit-grade, FULL SSOT):** **ΕΝΙΑΙΑ ΣΙΛΟΥΕΤΑ** — ανά **ζώνη ύψους** ενώνουμε (`safeUnion`) τα δομικά cores (κολόνες + δοκάρια) σε ΕΝΑ outline και τρέχουμε τον **ΥΠΑΡΧΟΝΤΑ resolver** πάνω του (τοίχοι = obstacles, dilated κατά join-tol). Λύνει **και τα δύο εγγενώς, μηδέν νέα geometry**:
+- **Β:** ΕΝΑ outline → οι γωνίες κλείνουν με **συνεπή miter** (`computeMiteredOuter`, ίδιο SSoT) → μηδέν ασυνέχεια.
+- **Α:** ο τοίχος ως obstacle αφαιρεί το καλυμμένο τμήμα του outline (flush διεπαφή → dilation) → **μηδέν προεξέχων σοβάς** πάνω από τον τοίχο → η όψη του τοίχου συνεχίζεται ομοεπίπεδα.
+
+**Phasing:** **3D-only** (visual fix Α+Β). Το **BOQ μένει per-element** (`computeColumnFinishBands` / `computeBeamFinishFaces`, banded area) — ξεχωριστές γραμμές interior/exterior ανά στοιχείο ΑΚΕΡΑΙΕΣ. Το per-element 3D skin **αντικαθίσταται** από το scene-level silhouette (τα converters το παραλείπουν με `suppressFinishSkin`)· οι per-element builders μένουν για ghosts/previews + tests.
+
+**NEW:**
+- `bim/finishes/structural-finish-silhouette.ts` *(NEW, pure)* — `computeStructuralSilhouetteBands(input)`: height-band decomposition (sorted unique z-breakpoints) + ανά band `safeUnion` cores → outer ring(s) → `resolveStructuralFinishFaces` (τοίχοι obstacles) → merged faces. REUSE-only (`safeUnion` + resolver), μηδέν νέα boolean/offset. + `__tests__/structural-finish-silhouette.test.ts` (Β union/μηδέν seam, Α wall-obstacle αφαίρεση, band decomposition, regression μεμονωμένου, disabled/empty).
+- `bim-3d/converters/structural-finish-silhouette-3d.ts` *(NEW)* — `buildStructuralSilhouetteSkin(bands, …)`: ανά band → mitered prisms μέσω του ΥΠΑΡΧΟΝΤΟΣ `buildFinishSkinFromFaces` (`bimType:'column'` → καθαρά miters, το outline είναι ήδη ενιαίο). Στοιβάζεται στο σωστό `baseY` (building base + z-bottom).
+
+**MOD:**
+- `bim/finishes/structural-finish-scene.ts` — **export** `buildStructuralFinishClassifier` / `wallFootprintPolygon` / `STRUCTURAL_JOIN_TOL_MM` (reuse)· **NEW `computeStructuralFinishSilhouette(columns, beams, walls, floorElevationMm)`** scene adapter (building-relative z-extents· wall obstacles = finished footprints **dilated** κατά join-tol — Πρόβλημα Α· classifier· default spec → delegate στον pure module).
+- `bim-3d/converters/structural-finish-3d.ts` — **export** `buildFinishSkinFromFaces` (κοινό SSoT silhouette + per-element).
+- `bim-3d/scene/BimSceneLayer.ts` — **NEW `syncStructuralFinishSkin()`** (ΕΝΑ scene-level pass μετά beams/columns· group ανά κτίριο = baseElevation datum· walls = obstacles). *(MIXED — μόνο δικές μου γραμμές)*
+- `bim-3d/converters/bim-three-structural-converters.ts` — `columnToMesh`/`beamToMesh` `+ suppressFinishSkin` (scene silhouette αναλαμβάνει· ghosts/previews = false). *(MIXED — μόνο δικές μου γραμμές)*
+- `bim-3d/scene/bim-scene-attach-syncs.ts` — `syncColumns` περνά `suppressFinishSkin=true`. *(MIXED — μόνο η κλήση)*
+
+**Σχεδιαστικές αποφάσεις (v1):** single πάχος `t` (default 15mm) για το silhouette offset· per-edge wall-plaster-thickness για exact coplanarity σε mismatched πάχη = DEFER· per-element material override στο silhouette skin = DEFER (BOQ ήδη exact)· cache ανά scene-signature = DEFER (union per band per floor-sync, lazy μόνο finish-active).
+
 ## 4. Roadmap (slices)
 
 - **Slice 1** ✅ — data model + resolver + BOQ (ΚΟΛΟΝΕΣ).
@@ -169,6 +192,7 @@ Deterministic IDs: `boq_bim_${id}` / `_finish_int` / `_finish_ext`. Hook στο 
 - **Slice 4** ✅ — Δοκάρια (2 πλάγιες όψεις· άκρα σημασιολογικά εκτός· 3D band skin + 2D outline + BOQ· FULL SSoT reuse). Static depth ΑΜΕΤΑΒΛΗΤΟ.
 - **Slice 5** ✅ — View toggle «Σοβατισμένη όψη» (`showFinishSkin` per-view, default ON) + ενεργοποίηση στο factory (νέα στοιχεία γεννιούνται με σοβά) + per-element override (enabled/υλικά/πάχος) στα contextual ribbon tabs. Visibility-only semantics (BOQ μετράει πάντα).
 - **Slice 6** ✅ — beam↔column junction: mutual structural obstacles (δοκάρι obstacle στην κολόνα & αντίστροφα) + join-tolerance dilation για flush framing. Ο σοβάς εξαιρείται στη δομική σύνδεση (2D+3D+BOQ).
+- **Slice 7** ✅ — **ενιαίος σοβάς στις συμβολές** (merged structural silhouette): `safeUnion` δομικών cores ανά ζώνη ύψους → resolver → coplanar (Α) + connected (Β) εγγενώς. 3D-only· BOQ per-element αμετάβλητο.
 
 ## 5. Known / Deferred
 - Όχι αναδρομικό: υπάρχουσες persisted κολόνες/δοκάρια χωρίς `finish` δεν αποκτούν σοβά (μόνο νέα στοιχεία μετά το Slice 5)· retroactive backfill = DEFER.
@@ -178,6 +202,7 @@ Deterministic IDs: `boq_bim_${id}` / `_finish_int` / `_finish_ext`. Hook στο 
 - ETICS-grade per-element exterior detection (πέρα από outer-ring proximity) = μετέπειτα slice.
 
 ## 6. Changelog
+- **2026-06-13** — Slice 7: **ΕΝΙΑΙΟΣ ΣΟΒΑΣ ΣΤΙΣ ΣΥΜΒΟΛΕΣ** (merged structural silhouette, Revit-grade FULL SSOT, Giorgio screenshots 151127+151222). Root cause = per-element offset με τοπική γωνία → (Β) γωνίες κολόνα↔δοκάρι δεν ενώνονται, (Α) σοβάς δοκαριού προεξέχει τοίχου. Λύση: NEW pure `computeStructuralSilhouetteBands` — ανά ζώνη ύψους `safeUnion` δομικών cores → ΕΝΑ outline → ΥΠΑΡΧΩΝ `resolveStructuralFinishFaces` (τοίχοι obstacles, dilated). **Β** = ΕΝΑ outline → συνεπής miter (μηδέν ασυνέχεια)· **Α** = τοίχος-obstacle αφαιρεί το καλυμμένο τμήμα (μηδέν προεξέχων σοβάς → ομοεπίπεδο). NEW `buildStructuralSilhouetteSkin` (REUSE `buildFinishSkinFromFaces`)· NEW scene adapter `computeStructuralFinishSilhouette` + `syncStructuralFinishSkin` (ΕΝΑ scene-level pass, group ανά κτίριο)· per-element 3D skin αντικαθίσταται (`suppressFinishSkin` flag· ghosts/previews κρατούν per-element). **3D-only· BOQ per-element αμετάβλητο.** 74/74 ADR-449 jest (+6 silhouette suite). Pending browser-verify + commit. *(MIXED files με ADR-448/441/450: bim-three-structural-converters, BimSceneLayer, bim-scene-attach-syncs — μόνο δικές μου γραμμές)*
 - **2026-06-13** — Slice 6 fix #3 (browser-verify, Giorgio screenshot 145401): **πτερύγιο σοβά δοκαριού στη συμβολή με κολόνα/τοίχο**. Η λωρίδα σοβά της πλάγιας όψης (offset 15mm προς τα έξω) τελείωνε με **τετράγωνο «κεφάλι»** → η εξωτερική γωνία προεξείχε ~15mm στη γωνία της συμβολής (δεν είχε πού να κλείσει). Δεν είναι θέμα πάχους πυρήνα (όλα 250+σοβάς=280, ευθυγραμμισμένα)· είναι corner-treatment. FIX: `chamferOpenOuterEnds` — τα **ανοιχτά** άκρα (μη-mitered) κόβονται **45°** (η εξωτερική γωνία τραβιέται μέσα κατά το πάχος, clamp στο μισό μήκος) → clean corner χωρίς πτερύγιο, mirror φαλτσογωνιάς σοβά τοίχων. `computeMiteredOuter(..., chamferOpenEnds)`: δοκάρι=true, κολόνα=false (οι γωνίες κολόνας κλείνουν με miter, τα wall-gap άκρα μένουν square). 74/74 ADR-449 jest (+2 chamfer unit tests). Pending browser-verify + commit.
 - **2026-06-13** — Slice 6 fix #2 (browser-verify, Giorgio screenshot 143918 — **η πραγματική αιτία**): οι κολόνες έμεναν **εντελώς χωρίς σοβά μόλις προστίθεντο δοκάρια**. ROOT CAUSE: τα δοκάρια κάνουν τις κολόνες να **auto-attach** (ADR-441/401 column→beam framing) → η κολόνα περνά στο **attached-prism path** του `columnToMesh`, που έκανε `return tagged` (**πυρήνας-only**, ο σοβάς ήταν flat-path-only — DEFER Slice 2). FIX: extract `composeColumnWithFinish()` (κοινό flat + attached) → το attached path πλέον συνθέτει επίσης σοβά, με ύψος = το χαμηλότερο attached top (flat-top approx· per-corner sloped finish = DEFER). 72/72 ADR-449 jest (+attached-path test). Το height-aware banding (fix #1) ήταν σωστό αλλά δεν καλούνταν καν στο attached path. Pending browser-verify + commit.
 - **2026-06-13** — Slice 6 fix (browser-verify, Giorgio screenshot 131457): **height-aware junction**. Η αρχική Slice 6 αφαιρούσε σοβά για **ΟΛΟ το ύψος** της κολόνας (regression: κολόνες σχεδόν γυμνές, ενώ το δοκάρι πιάνει μόνο το πάνω ~depth). Fix: `computeColumnFinishBands()` → κατακόρυφες ζώνες (κάτω `[0, height−beamDepth]` = walls-only πλήρης παρειά· πάνω = walls+beams junction cut)· 3D = ένα prism set ανά ζώνη στοιβαγμένα· BOQ = banded area (`bandedFinishAreasM2`)· 2D plan = walls-only (πλήρης κάτοψη). `BeamFinishObstacle + depth`· bbox-overlap filter για το band height. Υπόθεση v1: beam top ≈ column top (elevation-based banding = DEFER). 71/71 ADR-449 jest (νέα band regression-guard tests). Pending browser-verify + commit. *(κώδικας Slice 6 v1 + ADR docs έγιναν committed από τον ταυτόχρονο agent με git add -A — 5a05dd79/74419215 — ΟΧΙ από εμένα/Giorgio· το height-aware fix uncommitted)*

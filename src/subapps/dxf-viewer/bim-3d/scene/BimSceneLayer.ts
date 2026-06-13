@@ -17,6 +17,8 @@ import type { Bim3DEntities } from '../stores/Bim3DEntitiesStore';
 import type { FloorStackEntry } from './multi-floor-3d-source';
 import { beamToMesh, slabToMesh, fixtureToMesh, panelToMesh, manifoldToMesh, radiatorToMesh, boilerToMesh, waterHeaterToMesh, foundationToMesh } from '../converters/BimToThreeConverter';
 import { syncWalls, syncColumns } from './bim-scene-attach-syncs';
+// ADR-449 Slice 7 — scene-level ενιαίος σοβάς (merged structural silhouette).
+import { syncStructuralFinishSkin } from './bim-scene-structural-finish-sync';
 import { stairToMeshes } from '../converters/StairToThreeConverter';
 import { railingToMesh } from '../converters/railing-to-three';
 import { roofToMesh } from '../converters/roof-to-three';
@@ -154,6 +156,7 @@ export class BimSceneLayer {
     syncWalls(this.group, entities, ctx, (e, c, cx) => this.resolveEntity(e, c, cx));
     syncColumns(this.group, entities, ctx, (e, c, cx) => this.resolveEntity(e, c, cx));
     this.syncBeams(entities, ctx);
+    syncStructuralFinishSkin(this.group, entities, ctx, (e, c, cx) => this.resolveEntity(e, c, cx));
     this.syncFoundations(entities, ctx);
     this.syncSlabs(entities, ctx);
     this.syncStairs(entities, ctx);
@@ -328,7 +331,8 @@ export class BimSceneLayer {
       if (!r) continue;
       // ADR-449 Slice 4 — walls = obstacles + exterior classifier για τον σοβά δοκαριού.
       // ADR-449 Slice 6 — columns = mutual obstacles (junction δοκαριού↔κολόνας).
-      const mesh = beamToMesh(beam, ctx.activeLevelId, r.baseElevation, entities.walls, entities.columns);
+      // ADR-449 Slice 7 — ο scene-level ενιαίος σοβάς (silhouette) αναλαμβάνει το skin.
+      const mesh = beamToMesh(beam, ctx.activeLevelId, r.baseElevation, entities.walls, entities.columns, true);
       if (mesh) { mesh.userData['buildingId'] = r.buildingId; this.group.add(mesh); }
     }
   }

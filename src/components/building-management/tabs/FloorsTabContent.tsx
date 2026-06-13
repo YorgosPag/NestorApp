@@ -170,7 +170,7 @@ export function FloorsTabContent({ building, focusFloorId }: FloorsTabContentPro
         <BuildingVerticalSetupForm
           buildingId={building.id}
           projectId={building.projectId}
-          hasExistingFloors={floors.length > 0}
+          existingFloorNumbers={existingFloorNumbers}
           onComplete={() => {
             setShowQuickSetup(false);
             void fetchFloors();
