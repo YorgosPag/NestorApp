@@ -218,13 +218,21 @@ export function FloorsTabContent({ building, focusFloorId }: FloorsTabContentPro
               </tr>
             </thead>
             <tbody>
-              {floors.map((floor) => {
+              {floors.map((floor, index) => {
                 const isExpanded = expandedFloorId === floor.id;
                 const isEditing = editingId === floor.id;
                 const isHighlighted = highlightedFloorId === floor.id;
-                // ADR-451 — elevation is the SSoT; height is derived (read-only)
-                // for every floor except the topmost, which has no floor above.
+                // ADR-451 — elevation is the SSoT; height is DERIVED (read-only) for
+                // every floor except the topmost (no floor above). The displayed
+                // height = the gap to the floor above (`next.elevation − elevation`),
+                // never the stored value, so the table can never show a stale height.
                 const isTopFloor = floor.id === topFloorId;
+                const nextFloor = floors[index + 1];
+                const derivedHeight =
+                  nextFloor && floor.elevation != null && nextFloor.elevation != null
+                    ? nextFloor.elevation - floor.elevation
+                    : floor.height ?? null;
+                const displayHeight = isTopFloor ? (floor.height ?? null) : derivedHeight;
 
                 return (
                   <Fragment key={floor.id}>
@@ -276,7 +284,7 @@ export function FloorsTabContent({ building, focusFloorId }: FloorsTabContentPro
                               <TooltipProvider delayDuration={300}>
                                 <Tooltip>
                                   <TooltipTrigger asChild>
-                                    <Input type="number" step="0.01" value={editHeight} readOnly tabIndex={-1} aria-label={t('tabs.floors.derivedHeightHint')} className={cn("h-8 w-20 cursor-help bg-muted/30", colors.text.muted)} />
+                                    <Input type="number" step="0.01" value={derivedHeight != null ? derivedHeight.toFixed(2) : ''} readOnly tabIndex={-1} aria-label={t('tabs.floors.derivedHeightHint')} className={cn("h-8 w-20 cursor-help bg-muted/30", colors.text.muted)} />
                                   </TooltipTrigger>
                                   <TooltipContent>{t('tabs.floors.derivedHeightHint')}</TooltipContent>
                                 </Tooltip>
@@ -320,7 +328,7 @@ export function FloorsTabContent({ building, focusFloorId }: FloorsTabContentPro
                             </div>
                           </td>
                           <td className={cn("px-2 py-2 font-mono text-xs", colors.text.muted)}>{formatElevation(floor.elevation)}</td>
-                          <td className={cn("px-2 py-2 font-mono text-xs", colors.text.muted)}>{floor.height != null ? `${floor.height.toFixed(2)} m` : '—'}</td>
+                          <td className={cn("px-2 py-2 font-mono text-xs", colors.text.muted)}>{displayHeight != null ? `${displayHeight.toFixed(2)} m` : '—'}</td>
                           <td className={cn("px-2 py-2 text-center", colors.text.muted)}>{floor.units ?? 0}</td>
                           <td className="px-2 py-2">
                             <nav className="flex justify-end gap-1">

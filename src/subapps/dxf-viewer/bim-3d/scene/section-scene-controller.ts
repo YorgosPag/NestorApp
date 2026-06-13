@@ -52,6 +52,10 @@ export class SectionSceneController {
   private cachedPlanes: THREE.Plane[] = [];
   /** Combined cut-plane + section + crop planes (≤ 6 total, Three.js hard limit). */
   private combinedPlanes: THREE.Plane[] = [];
+  /** ADR-452 — the horizontal cut plane (Revit View Range), or null when off. Capped via the single-plane path. */
+  private cutPlane: THREE.Plane | null = null;
+  /** ADR-452 — section box / crop planes only (excludes the cut plane). Drives the box stencil-cap loop. */
+  private sectionPlanes: THREE.Plane[] = [];
   /** ADR-452 — true when any clip source (section box OR cut plane) is active. */
   private clipActive = false;
 
@@ -104,6 +108,7 @@ export class SectionSceneController {
     // ADR-452 — cut plane is an independent clip source; it stays active even when
     // the Section Box is off.
     const cutPlane = resolveCutPlane();
+    this.cutPlane = cutPlane;
     this.clipActive = enabled || cutPlane !== null;
 
     if (!this.clipActive) {
@@ -111,6 +116,7 @@ export class SectionSceneController {
       this.sectionBox.setVisible(false);
       this.cachedPlanes = [];
       this.combinedPlanes = [];
+      this.sectionPlanes = [];
       this.deps.invalidatePathTracer();
       this.deps.markDirty();
       return;
@@ -143,6 +149,12 @@ export class SectionSceneController {
       ? [cutPlane, ...this.cachedPlanes, ...cropPlanes]
       : [...this.cachedPlanes, ...cropPlanes];
     this.combinedPlanes = all.slice(0, 6);
+    // Section box / crop planes that survived the 6-plane clip slice, EXCLUDING the
+    // cut plane — these feed the box stencil-cap loop (unchanged) and bound the
+    // single-plane cut cap. The cut plane is capped separately (correct lone-plane
+    // algorithm), so it must not enter the box loop (its depth-parity trick garbles
+    // a lone horizontal plane).
+    this.sectionPlanes = cutPlane ? this.combinedPlanes.slice(1) : this.combinedPlanes;
     applyClippingPlanes(this.deps.scene, this.combinedPlanes);
     this.deps.invalidatePathTracer();
     this.deps.markDirty();
@@ -180,7 +192,17 @@ export class SectionSceneController {
     renderer.autoClear = true;
     renderer.render(this.deps.scene, camera);
     const bounds = this.computeSceneBounds();
-    this.stencilRenderer.render(renderer, this.deps.scene, camera, this.combinedPlanes, bounds);
+    // Box / crop caps via the existing multi-plane loop (cut plane excluded).
+    if (this.sectionPlanes.length > 0) {
+      this.stencilRenderer.render(renderer, this.deps.scene, camera, this.sectionPlanes, bounds);
+    }
+    // ADR-452 — the horizontal cut plane caps via the correct single-plane path,
+    // bounded by the section/crop planes (if any).
+    if (this.cutPlane) {
+      this.stencilRenderer.renderHorizontalCutCap(
+        renderer, this.deps.scene, camera, this.cutPlane, this.sectionPlanes, bounds,
+      );
+    }
   }
 
   private computeSceneBounds(): THREE.Box3 | null {

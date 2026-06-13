@@ -32,7 +32,6 @@
  */
 
 import * as THREE from 'three';
-import { SECTION_CUT_SURFACE } from '../../../config/color-config';
 import { useSelection3DStore } from '../../stores/Selection3DStore';
 import {
   type SectionHatchKey,
@@ -41,6 +40,13 @@ import {
   setHatchRepeat,
   disposeHatchCap,
 } from './section-hatch-cap';
+import {
+  createSinglePassMaterial,
+  createWarmupScene,
+  createCapMaterial,
+  createSelectedCapMaterial,
+  createCutParityMaterial,
+} from './section-stencil-materials';
 
 export interface StencilRendererDeps {
   /** BIM group reference για bounding sphere calc (cap quad size). */
@@ -54,6 +60,10 @@ const FALLBACK_CAP_SIZE = 100;
 
 export class SectionStencilRenderer {
   private readonly deps: StencilRendererDeps;
+  /** ADR-452 — single horizontal cut-plane cap: back-face INCR parity pass (depthTest off). */
+  private readonly cutBackStencilMat: THREE.MeshBasicMaterial;
+  /** ADR-452 — single horizontal cut-plane cap: front-face DECR parity pass (depthTest off). */
+  private readonly cutFrontStencilMat: THREE.MeshBasicMaterial;
   private readonly singlePassStencilMat: THREE.MeshBasicMaterial;
   private readonly warmupScene: THREE.Scene;
   private readonly capMat: THREE.MeshBasicMaterial;
@@ -68,15 +78,17 @@ export class SectionStencilRenderer {
 
   constructor(deps: StencilRendererDeps) {
     this.deps = deps;
-    this.singlePassStencilMat = this.createSinglePassMaterial();
-    this.warmupScene = this.createWarmupScene();
-    this.capMat = this.createCapMaterial();
+    this.cutBackStencilMat = createCutParityMaterial(THREE.BackSide, THREE.IncrementWrapStencilOp);
+    this.cutFrontStencilMat = createCutParityMaterial(THREE.FrontSide, THREE.DecrementWrapStencilOp);
+    this.singlePassStencilMat = createSinglePassMaterial();
+    this.warmupScene = createWarmupScene(this.singlePassStencilMat);
+    this.capMat = createCapMaterial();
     const geom = new THREE.PlaneGeometry(1, 1);
     this.capMesh = new THREE.Mesh(geom, this.capMat);
     this.capMesh.frustumCulled = false;
     this.capScene = new THREE.Scene();
     this.capScene.add(this.capMesh);
-    this.selectedCapMat = this.createSelectedCapMaterial();
+    this.selectedCapMat = createSelectedCapMaterial();
     const selectedGeom = new THREE.PlaneGeometry(1, 1);
     this.selectedCapMesh = new THREE.Mesh(selectedGeom, this.selectedCapMat);
     this.selectedCapMesh.frustumCulled = false;
@@ -88,71 +100,70 @@ export class SectionStencilRenderer {
     this.hatchCapScene.add(this.hatchCapMesh);
   }
 
-  private createSinglePassMaterial(): THREE.MeshBasicMaterial {
-    const mat = new THREE.MeshBasicMaterial();
-    mat.side = THREE.DoubleSide;
-    mat.colorWrite = false;
-    mat.depthWrite = false;
-    mat.depthTest = true;
-    mat.stencilWrite = true;
-    mat.stencilFunc = THREE.AlwaysStencilFunc;
-    mat.stencilFail = THREE.KeepStencilOp;
-    mat.stencilZFail = THREE.KeepStencilOp;
-    // BACK face (entering solid) → IncrementWrap via Three.js material property.
-    // FRONT face (exiting solid) → DecrementWrap via gl.stencilOpSeparate (per-plane override).
-    mat.stencilZPass = THREE.IncrementWrapStencilOp;
-    return mat;
-  }
+  /**
+   * ADR-452 — render the solid cut face for the SINGLE horizontal cut plane
+   * (Revit View-Range section). Caller renders the clipped scene first. Unlike
+   * the box {@link render} loop (which excludes the capped plane and relies on
+   * depth parity), this keeps the cut plane active during the parity passes so a
+   * lone plane caps correctly. `boundPlanes` (the section box / crop planes, if
+   * any) bound the parity geometry AND the cap quad — empty for a pure cut plane.
+   *
+   * @param renderer    Active WebGLRenderer (default framebuffer with stencil)
+   * @param mainScene   BIM + DXF scene (clipped by all planes in the prior pass)
+   * @param camera      Active camera
+   * @param cutPlane    The horizontal cut plane
+   * @param boundPlanes Section/crop planes that bound the cap (excludes the cut plane)
+   * @param sceneBounds Scene extent for cap quad size
+   */
+  renderHorizontalCutCap(
+    renderer: THREE.WebGLRenderer,
+    mainScene: THREE.Scene,
+    camera: THREE.Camera,
+    cutPlane: THREE.Plane,
+    boundPlanes: ReadonlyArray<THREE.Plane>,
+    sceneBounds: THREE.Box3 | null,
+  ): void {
+    if (this.disposed) return;
 
-  private createWarmupScene(): THREE.Scene {
-    // Zero-area plane (scale=0): zero fragments rendered → zero stencil writes.
-    // Sole purpose: trigger Three.js's updateCommonMaterial(singlePassMat) so the
-    // stencil state cache is seeded with IncrementWrap before the real scene pass.
-    const scene = new THREE.Scene();
-    const mesh = new THREE.Mesh(
-      new THREE.PlaneGeometry(1, 1),
-      this.singlePassStencilMat,
-    );
-    mesh.scale.set(0, 0, 1);
-    mesh.frustumCulled = false;
-    scene.add(mesh);
-    return scene;
-  }
+    const capSize = this.computeCapSize(sceneBounds);
+    // Parity geometry: slice the solid at the cut plane (so the cross-section is
+    // an open hole), and bound it to the section box / crop region when present.
+    const parityClip = [cutPlane, ...boundPlanes] as THREE.Plane[];
+    const others = boundPlanes as THREE.Plane[];
 
-  private createCapMaterial(): THREE.MeshBasicMaterial {
-    const mat = new THREE.MeshBasicMaterial({
-      color: SECTION_CUT_SURFACE.color,
-      opacity: SECTION_CUT_SURFACE.opacity,
-      transparent: SECTION_CUT_SURFACE.opacity < 1,
-      side: THREE.DoubleSide,
-      depthWrite: false,
-      depthTest: false,
-    });
-    mat.stencilWrite = true;
-    mat.stencilRef = 0;
-    mat.stencilFunc = THREE.NotEqualStencilFunc;
-    mat.stencilFail = THREE.ReplaceStencilOp;
-    mat.stencilZFail = THREE.ReplaceStencilOp;
-    mat.stencilZPass = THREE.ReplaceStencilOp;
-    return mat;
-  }
+    const savedAutoClear = renderer.autoClear;
+    const savedAutoClearColor = renderer.autoClearColor;
+    const savedAutoClearDepth = renderer.autoClearDepth;
+    const savedAutoClearStencil = renderer.autoClearStencil;
+    renderer.autoClear = false;
+    renderer.autoClearColor = false;
+    renderer.autoClearDepth = false;
+    renderer.autoClearStencil = false;
 
-  private createSelectedCapMaterial(): THREE.MeshBasicMaterial {
-    const mat = new THREE.MeshBasicMaterial({
-      color: SECTION_CUT_SURFACE.selectedCapColor,
-      opacity: SECTION_CUT_SURFACE.selectedCapOpacity,
-      transparent: SECTION_CUT_SURFACE.selectedCapOpacity < 1,
-      side: THREE.DoubleSide,
-      depthWrite: false,
-      depthTest: false,
-    });
-    mat.stencilWrite = true;
-    mat.stencilRef = 0;
-    mat.stencilFunc = THREE.NotEqualStencilFunc;
-    mat.stencilFail = THREE.ReplaceStencilOp;
-    mat.stencilZFail = THREE.ReplaceStencilOp;
-    mat.stencilZPass = THREE.ReplaceStencilOp;
-    return mat;
+    renderer.clearStencil();
+
+    // Pass 1: back faces increment, Pass 2: front faces decrement → parity != 0
+    // at the cross-section. depthTest is off on both materials (set at creation).
+    this.cutBackStencilMat.clippingPlanes = parityClip;
+    mainScene.overrideMaterial = this.cutBackStencilMat;
+    renderer.render(mainScene, camera);
+
+    this.cutFrontStencilMat.clippingPlanes = parityClip;
+    mainScene.overrideMaterial = this.cutFrontStencilMat;
+    renderer.render(mainScene, camera);
+
+    mainScene.overrideMaterial = null;
+
+    // Solid cap quad on the cut plane, masked to stencil != 0. Bounded by the
+    // section/crop planes but NOT the cut plane itself (it sits on that plane).
+    this.capMat.clippingPlanes = others;
+    this.positionMesh(this.capMesh, cutPlane, capSize);
+    renderer.render(this.capScene, camera);
+
+    renderer.autoClear = savedAutoClear;
+    renderer.autoClearColor = savedAutoClearColor;
+    renderer.autoClearDepth = savedAutoClearDepth;
+    renderer.autoClearStencil = savedAutoClearStencil;
   }
 
   /**
@@ -398,6 +409,8 @@ export class SectionStencilRenderer {
     if (this.disposed) return;
     this.disposed = true;
     this.capMesh.geometry.dispose();
+    this.cutBackStencilMat.dispose();
+    this.cutFrontStencilMat.dispose();
     this.singlePassStencilMat.dispose();
     this.capMat.dispose();
     this.selectedCapMesh.geometry.dispose();

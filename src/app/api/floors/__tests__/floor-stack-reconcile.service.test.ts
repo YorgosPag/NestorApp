@@ -157,10 +157,22 @@ describe('deriveAdjacentHeightsFromElevation — elevation-edit (Revit «move a 
     expect(recordChange.mock.calls[0][0].action).toBe('updated');
   });
 
-  it('returns empty when the changed floor is not in the building', async () => {
-    const { result, updates } = await runDerive([floor('f1', 0, 0, 3)], 'missing');
+  it('returns empty for a single-floor building (top keeps explicit height)', async () => {
+    const { result, updates } = await runDerive([floor('f1', 0, 0, 3)], 'f1');
     expect(result.heightsUpdated).toHaveLength(0);
     expect(updates).toHaveLength(0);
+  });
+
+  it('full-stack self-heal: corrects a pre-existing stale height far from the changed floor', async () => {
+    // elevations [0,3,6,8] but f3's stored height is stale (3 vs the real gap 2).
+    // Changing f1 (the bottom) still heals f3 — stored heights can never drift.
+    const { updates } = await runDerive(
+      [floor('f1', 0, 0, 3), floor('f2', 1, 3, 3), floor('f3', 2, 6, 3), floor('f4', 3, 8, 3)],
+      'f1',
+    );
+    const byId = Object.fromEntries(updates.map((u) => [u.ref.id, u.patch.height]));
+    expect(byId.f3).toBeCloseTo(2); // 8 − 6, healed despite f1 being the edited floor
+    expect(byId.f1).toBeUndefined(); // 3 − 0 = 3, already consistent
   });
 });
 

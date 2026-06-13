@@ -82,15 +82,18 @@ async function readBuildingFloors(
 }
 
 /**
- * ADR-451 §«elevation-branch» — Revit «move a Level».
+ * ADR-451 §«elevation-branch» — Revit «move a Level» (FULL-SSoT self-heal).
  *
  * Triggered when `floor.elevation` changes (the SSoT — the absolute Level truth).
  * Because `height[i] = elevation[i+1] − elevation[i]` is a **derived projection**,
- * moving floor k's FFL changes exactly two storey heights:
- *   - the storey BELOW (k−1): height = elev[k] − elev[k−1]
- *   - the storey k itself:    height = elev[k+1] − elev[k]   (only if k has a floor above)
- * No other floor moves (Revit: only the dragged Level shifts; its neighbours just
- * re-span). The topmost floor keeps its **explicit** height (no floor above it).
+ * this normalises the WHOLE stored stack so every persisted `height` equals the
+ * gap to the floor above — never a value that can drift from the elevations the
+ * columns/beams/3D read (ADR-450 §2). In practice only the moved floor's two
+ * adjacent storeys differ; the rest are already consistent and skip (idempotent).
+ * But walking the full stack ALSO self-heals any pre-existing stale heights in one
+ * pass, so the table, the 3D model and the consumers can never disagree.
+ *
+ * The topmost floor keeps its **explicit** height (no floor above to derive from).
  *
  * - Self-healing (absolute, not delta): recomputes from stored elevations.
  * - Idempotent: a storey already at its derived height → no write, no audit.
@@ -109,17 +112,17 @@ export async function deriveAdjacentHeightsFromElevation(
   updatedBy: string,
 ): Promise<ElevationEditReconcileResult> {
   const { rows, refById } = await readBuildingFloors(db, buildingId, companyId);
-  const changedIdx = rows.findIndex((r) => r.id === changedFloorId);
-  if (changedIdx < 0) return { heightsUpdated: [], skipped: 0 };
+  if (rows.length === 0) return { heightsUpdated: [], skipped: 0 };
 
   const derivations: HeightDerivation[] = [];
   const audits: { row: FloorRow; oldValue: number; newValue: number }[] = [];
   let skipped = 0;
 
-  // The two storeys whose span changed: the one below the moved floor, and the
-  // moved floor itself. Each derives from its own FFL → the FFL of the floor above.
-  for (const idx of [changedIdx - 1, changedIdx]) {
-    if (idx < 0 || idx >= rows.length - 1) continue; // no floor above → explicit height stays
+  // Normalise EVERY storey's height to the gap above it (`elev[i+1] − elev[i]`).
+  // Consistent storeys no-op; only the genuinely changed (or stale) ones are
+  // re-written — full-stack self-heal so stored heights can never drift from the
+  // SSoT elevations. The top floor (no floor above) keeps its explicit height.
+  for (let idx = 0; idx < rows.length - 1; idx++) {
     const storey = rows[idx];
     const above = rows[idx + 1];
     if (storey.elevation === null || above.elevation === null) { skipped++; continue; }
@@ -128,6 +131,7 @@ export async function deriveAdjacentHeightsFromElevation(
     audits.push({ row: storey, oldValue: storey.height, newValue: derived });
     derivations.push({ floorId: storey.id, newHeightMetres: derived });
   }
+  void changedFloorId; // kept for caller signature + logging context
 
   if (audits.length > 0) {
     const batch = db.batch();

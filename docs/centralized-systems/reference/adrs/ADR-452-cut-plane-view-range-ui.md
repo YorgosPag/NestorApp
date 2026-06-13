@@ -1,6 +1,6 @@
 # ADR-452 — Cut-Plane Slider (Revit View Range UI for the 2D plan)
 
-**Status:** 🟢 Implemented — pending browser-verify + commit
+**Status:** 🟢 Implemented (v2.2 — 3D solid cut faces fixed) — pending browser-verify + commit
 **Date:** 2026-06-13
 **Builds on:** ADR-375 (View Range / cut state), ADR-448/450 (storey elevations & datum), ADR-040 (micro-leaf architecture)
 
@@ -152,3 +152,29 @@ faces), and the cut elevation is unified to a single FFL-relative frame across 2
   planes there threw `THREE.WebGLProgram: Shader Error … Fragment shader is not compiled`. Solid faces
   still cut + cap; edge overlay stays unclipped (cosmetic). Benefits the Section Box too. DEFER: clip
   the edge overlay above the cut.
+- **2026-06-13** — v2.2 — 3D solid cut faces fixed (Revit-grade), garbage eliminated.
+  - **Root cause of the garbage:** `SectionStencilRenderer` was built for a CLOSED section box
+    (6 planes). Its single-pass cap excludes the capped plane (`others = planes.filter(idx !== index)`)
+    and derives parity from `depthTest` against the already-clipped depth buffer. For a LONE horizontal
+    cut plane `others = []` → the parity pass drew the whole UNCLIPPED solid against a cut depth buffer,
+    so back-faces above the cut (no depth occluder) polluted the stencil → the full-size grey cap quad
+    smeared everywhere (the "garbage").
+  - **Fix (single-plane cap, full SSoT — same renderer owns it):** new
+    `SectionStencilRenderer.renderHorizontalCutCap()` uses the canonical lone-plane algorithm
+    (Revit / three.js `webgl_clipping_stencil`): the cut plane stays ACTIVE in clipping (slices the
+    solid open), two parity passes (BACK `IncrementWrap` / FRONT `DecrementWrap`) with **`depthTest`
+    off** so parity is counted over the sliced solid independent of the depth buffer, then the grey cap
+    quad (`NotEqual(0)`) bounded by the section/crop planes but NOT the cut plane. Reuses the existing
+    cap quad/material (SSoT).
+  - **Controller split:** `SectionSceneController` now tracks `cutPlane` + `sectionPlanes` (box/crop,
+    cut excluded) separately. The visual clip still applies ALL planes; the box stencil loop runs on
+    `sectionPlanes` only (zero box regression), and the cut plane caps via the single-plane path.
+  - **Applicator hardened:** `writeClippingPlanes` now uses an allowlist (`isClippableMaterial`) of
+    built-in mesh material types that ship clipping shader chunks; every other material (fat-line,
+    `ShaderMaterial`, sprites, points) is skipped by default — future-proof, supersedes the
+    `LineMaterial`-only skip. Material audit confirmed solid BIM faces are all `MeshStandardMaterial`.
+  - **Rejected:** the handoff's global `renderer.clippingPlanes` idea — the audit showed only
+    `LineMaterial` was fragile (already skipped), and global clipping cannot self-exclude the capped
+    plane, which would break the very solid cut faces this delivers.
+  - Tests: `section-clip-applicator.test.ts` (safelist + apply/clear). DEFER: per-material hatch
+    poché for the cut plane (currently a flat grey cap); edge-overlay clipping above the cut.

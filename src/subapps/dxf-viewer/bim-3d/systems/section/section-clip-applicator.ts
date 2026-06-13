@@ -13,16 +13,41 @@
 
 import * as THREE from 'three';
 
+/**
+ * ADR-452 — allowlist of Three.js material types that ship clipping shader chunks
+ * and accept `material.clippingPlanes` safely. Built-in mesh materials all include
+ * `<clipping_planes_fragment>` in their fragment shader; non-mesh / custom-shader
+ * materials (`LineMaterial` fat lines, `ShaderMaterial`, `SpriteMaterial`,
+ * `PointsMaterial`, …) do NOT, so injecting clip planes there throws
+ * `THREE.WebGLProgram: Shader Error … Fragment shader is not compiled`.
+ *
+ * Defensive SSoT: we apply clipping ONLY to known-clippable types and skip every
+ * other material (future-proof — any new custom shader is skipped by default, not
+ * broken). Supersedes the earlier `LineMaterial`-only skip. Solid BIM faces are
+ * all `MeshStandardMaterial` (see ADR-452 material audit) → cut + capped; the fat-
+ * line edge overlay stays unclipped (cosmetic, floats above the cut — DEFER).
+ */
+const CLIPPABLE_MATERIAL_TYPES: ReadonlySet<string> = new Set([
+  'MeshStandardMaterial',
+  'MeshPhysicalMaterial',
+  'MeshBasicMaterial',
+  'MeshLambertMaterial',
+  'MeshPhongMaterial',
+  'MeshToonMaterial',
+  'MeshMatcapMaterial',
+  'MeshDepthMaterial',
+  'MeshNormalMaterial',
+  'ShadowMaterial',
+]);
+
+/** True when the material type is a built-in mesh material that supports clipping planes. */
+export function isClippableMaterial(material: THREE.Material): boolean {
+  return CLIPPABLE_MATERIAL_TYPES.has(material.type);
+}
+
 function writeClippingPlanes(material: THREE.Material, planes: THREE.Plane[] | null): void {
-  // ADR-452 — `LineMaterial` (fat lines, `Line2`/`LineSegments2` which extend `Mesh`,
-  // so `isMesh` catches them) throws a fragment-shader compile error when clipping
-  // planes are injected in this Three.js build. Skip it: the edge overlay stays
-  // unclipped (cosmetic), while the solid faces (MeshStandard/Basic) still cut.
-  if ((material as { isLineMaterial?: boolean }).isLineMaterial || material.type === 'LineMaterial') {
-    return;
-  }
-  // Three.js Material exposes clippingPlanes via duck typing for materials that support it
-  // (MeshStandardMaterial, MeshBasicMaterial, etc.). Direct assignment is safe.
+  if (!isClippableMaterial(material)) return;
+  // Built-in mesh material — `clippingPlanes` is a supported, type-safe field.
   (material as THREE.Material & { clippingPlanes: THREE.Plane[] | null }).clippingPlanes = planes;
   material.needsUpdate = true;
 }
