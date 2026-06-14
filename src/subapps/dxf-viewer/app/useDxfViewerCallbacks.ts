@@ -201,6 +201,11 @@ export function useDxfViewerCallbacks(params: DxfViewerCallbacksParams): DxfView
       EventBus.emit('bim:schedule-dialog-requested', {});
       return;
     }
+    // ADR-453: Open Print/Export («Εκτύπωση») dialog (PrintHost listens)
+    if (action === 'open-print-dialog') {
+      EventBus.emit('dxf:print-dialog-requested', {});
+      return;
+    }
     // ADR-345 Fase 6: Import/export dialog actions (migrated from toolbar)
     if (action === 'import-dxf-enhanced') {
       setShowEnhancedImport(true);

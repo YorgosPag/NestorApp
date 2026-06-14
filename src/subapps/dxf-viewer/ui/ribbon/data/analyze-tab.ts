@@ -113,10 +113,37 @@ export const CLASH_COORDINATION_PANEL: RibbonPanelDef = {
   ],
 };
 
+// ADR-453 — Print/Export («Εκτύπωση»): 2D/3D drawing → PDF / printer / plotter.
+// Reporting/output tool → lives in «Ανάλυση» (mirror του Schedule panel:
+// action → wrappedHandleAction → EventBus → PrintHost).
+export const PRINT_PANEL: RibbonPanelDef = {
+  id: 'print',
+  labelKey: 'ribbon.panels.print',
+  rows: [
+    {
+      isInFlyout: false,
+      buttons: [
+        {
+          type: 'simple',
+          size: 'large',
+          command: {
+            id: 'analyze.print',
+            labelKey: 'ribbon.commands.print',
+            icon: 'printer',
+            commandKey: 'open-print-dialog',
+            action: 'open-print-dialog',
+            tooltipKey: 'ribbon.tooltips.print',
+          },
+        },
+      ],
+    },
+  ],
+};
+
 // ─── Tab ─────────────────────────────────────────────────────────────────────
 
 export const ANALYZE_TAB: RibbonTab = {
   id: 'analyze',
   labelKey: 'ribbon.tabs.analyze',
-  panels: [ANALYZE_SCHEDULE_PANEL, THERMAL_ENVELOPE_PANEL, CLASH_COORDINATION_PANEL],
+  panels: [ANALYZE_SCHEDULE_PANEL, THERMAL_ENVELOPE_PANEL, CLASH_COORDINATION_PANEL, PRINT_PANEL],
 } as const;

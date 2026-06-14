@@ -12,6 +12,9 @@ import { DEFAULT_OBJECT_STYLES, type BimCategory, type ObjectStyle, type BimElem
 import { type CutState } from './bim-view-range';
 import { lineweightToPx, isConcreteLineweight, type ConcreteLineweightMm } from './lineweight-iso-catalog';
 import { type LinePatternKey } from './bim-line-patterns';
+// ADR-454 — Print Plot Style: print-DPI lineweights + white-safe colour remap.
+// Singleton is null during interactive render (single boolean branch, zero hot-path cost).
+import { getPrintColorPolicy, applyPlotColor } from './print-color-policy';
 
 /** Map a numeric view scale denominator (e.g., 100 for 1:100) to nearest SCALE_COLUMN index. */
 export function closestScaleColumn(scaleDenominator: number): number {
@@ -130,6 +133,10 @@ const BEYOND_PEN: PenIndex = 3;
 export function resolveSubcategoryStyle(
   ctx: SubcategoryResolutionContext,
 ): ResolvedSubcategoryStyle {
+  // ADR-454 — active only during offscreen print render (null otherwise). When
+  // active: ISO mm → px at the real print DPI and white-safe colour remap.
+  const printPolicy = getPrintColorPolicy();
+  const effectiveDpi = printPolicy ? printPolicy.dpi : (ctx.dpi ?? 96);
   if (ctx.cutState === 'hidden') {
     return { lineWidthPx: 0, linePattern: 'solid', color: null };
   }
@@ -189,7 +196,9 @@ export function resolveSubcategoryStyle(
     ?? parentPatternRaw
     ?? 'solid';
 
-  const color = resolveColor();
+  // ADR-454 — white-safe print colour: null (canvas token) / near-white → black ink.
+  const rawColor = resolveColor();
+  const color = printPolicy ? applyPlotColor(rawColor, null, printPolicy) : rawColor;
   const linePattern = resolvePattern();
   const scaleCol = closestScaleColumn(ctx.scaleDenominator);
 
@@ -201,7 +210,7 @@ export function resolveSubcategoryStyle(
     : null;
   if (elemPen !== null) {
     const mm = _activePenTable[elemPen - 1][scaleCol];
-    const lineWidthPx = lineweightToPx(mm, ctx.dpi ?? 96);
+    const lineWidthPx = lineweightToPx(mm, effectiveDpi);
     return { lineWidthPx, linePattern, color };
   }
 
@@ -213,7 +222,7 @@ export function resolveSubcategoryStyle(
     : undefined;
   if (ctx.cutState !== 'beyond' && subPen !== undefined) {
     const mm = _activePenTable[subPen - 1][scaleCol];
-    const lineWidthPx = lineweightToPx(mm, ctx.dpi ?? 96);
+    const lineWidthPx = lineweightToPx(mm, effectiveDpi);
     return { lineWidthPx, linePattern, color };
   }
 
@@ -221,13 +230,13 @@ export function resolveSubcategoryStyle(
   // Skip for 'beyond' (BEYOND_PEN convention, same as sub pen above).
   if (ctx.cutState !== 'beyond' && userVgPen !== undefined) {
     const mm = _activePenTable[userVgPen - 1][scaleCol];
-    const lineWidthPx = lineweightToPx(mm, ctx.dpi ?? 96);
+    const lineWidthPx = lineweightToPx(mm, effectiveDpi);
     return { lineWidthPx, linePattern, color };
   }
 
   // 4. Layer concrete mm (C.6 — bypasses pen table, wins over DEFAULT).
   if (ctx.cutState !== 'beyond' && ctx.layerOverride?.lineweightMm !== undefined) {
-    const lineWidthPx = lineweightToPx(ctx.layerOverride.lineweightMm, ctx.dpi ?? 96);
+    const lineWidthPx = lineweightToPx(ctx.layerOverride.lineweightMm, effectiveDpi);
     return { lineWidthPx, linePattern, color };
   }
 
@@ -241,7 +250,7 @@ export function resolveSubcategoryStyle(
     penIdx = BEYOND_PEN;
   }
   const mm = _activePenTable[penIdx - 1][scaleCol];
-  const lineWidthPx = lineweightToPx(mm, ctx.dpi ?? 96);
+  const lineWidthPx = lineweightToPx(mm, effectiveDpi);
 
   return { lineWidthPx, linePattern, color };
 }

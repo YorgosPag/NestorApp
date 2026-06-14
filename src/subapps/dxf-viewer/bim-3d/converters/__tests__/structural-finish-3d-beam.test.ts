@@ -107,6 +107,25 @@ describe('computeMiteredOuter — chamfer open ends (ADR-449 Slice 6 fix)', () =
     expect(aOuter[0].x).toBeCloseTo(0, 6);
     expect(bOuter[0].x).toBeCloseTo(1000, 6);
   });
+
+  // ADR-449 Slice 10 — junction άκρο (ακουμπά γείτονα) → **ορθογώνια EXTEND** (core+outer μαζί
+  // έξω → κάθετη τομή, corner-fill, ο σοβάς κλείνει flush χωρίς λοξή ακμή)· ελεύθερο άκρο →
+  // chamfer 45° (μόνο outer μέσα → λοξό end-cap). Giorgio 2026-06-14: v2 outer-only έκανε λοξό
+  // end-cap που διείσδυε στον διπλανό· v3 core+outer = ορθογωνική τομή.
+  it('junction άκρο → ορθογώνια extend (core+outer)· ελεύθερο → chamfer (outer-only)', () => {
+    // seg[0]: a ελεύθερο, b junction.
+    const segsJ: FinishFaceSegment[] = [
+      { ...seg(0, 125, 1000, 125), aJunction: false, bJunction: true },
+      seg(1000, -125, 0, -125),
+    ];
+    const { aOuter, bOuter, aCore, bCore } = computeMiteredOuter(segsJ, offsets, true);
+    // Junction b: core ΚΑΙ outer extended → x=1015 και τα δύο → end-cap κάθετο (ίδιο x).
+    expect(bCore[0].x).toBeCloseTo(1015, 6);
+    expect(bOuter[0].x).toBeCloseTo(1015, 6);
+    // Ελεύθερο a: core αμετάβλητο (0), μόνο outer chamfered (+15) → λοξό end-cap.
+    expect(aCore[0].x).toBeCloseTo(0, 6);
+    expect(aOuter[0].x).toBeCloseTo(15, 6);
+  });
 });
 
 describe('beamToMesh integration (ADR-449 Slice 4)', () => {

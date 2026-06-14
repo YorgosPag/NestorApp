@@ -27,6 +27,8 @@ import {
   resolveBimSettings,
   migrateBimRenderSettings,
   type BimRenderSettings,
+  type AxisCutSetting,
+  type AxisCutKey,
 } from '../config/bim-render-settings-types';
 import { resolveVisualStyleAxes } from '../config/bim-visual-style';
 import { type ViewRange } from '../config/bim-view-range';
@@ -81,6 +83,9 @@ export const useBimRenderSettingsStore = create<BimRenderSettingsState>((set, ge
       showFinishSkin: state.showFinishSkin,
       // ADR-452 — persist the cut-plane hide-gate toggle per-view.
       cutPlaneActive: state.cutPlaneActive,
+      // ADR-455 — persist the vertical X/Y section cuts per-view.
+      xAxisCut: state.xAxisCut,
+      yAxisCut: state.yAxisCut,
     };
   }
 
@@ -118,6 +123,8 @@ export const useBimRenderSettingsStore = create<BimRenderSettingsState>((set, ge
         showHeatLoad: resolved.showHeatLoad,
         showFinishSkin: resolved.showFinishSkin,
         cutPlaneActive: resolved.cutPlaneActive,
+        xAxisCut: resolved.xAxisCut,
+        yAxisCut: resolved.yAxisCut,
         lastLocalMutationAt: 0,
         bimVisibilitySnapshot: null,
       });
@@ -264,6 +271,24 @@ export const useBimRenderSettingsStore = create<BimRenderSettingsState>((set, ge
         debounceWrite(state.currentLevelId, buildRaw({ ...get(), cutPlaneActive }));
     },
 
+    setAxisCutActive(axis, active) {
+      const prev = axis === 'x' ? get().xAxisCut : get().yAxisCut;
+      if (prev.active === active) return; // idempotent — no-op write
+      commitAxisCut(set, get, buildRaw, axis, { ...prev, active });
+    },
+
+    setAxisCutPosition(axis, position) {
+      const prev = axis === 'x' ? get().xAxisCut : get().yAxisCut;
+      if (prev.position === position) return; // idempotent — no-op write
+      commitAxisCut(set, get, buildRaw, axis, { ...prev, position });
+    },
+
+    setAxisCutSign(axis, sign) {
+      const prev = axis === 'x' ? get().xAxisCut : get().yAxisCut;
+      if (prev.sign === sign) return; // idempotent — no-op write
+      commitAxisCut(set, get, buildRaw, axis, { ...prev, sign });
+    },
+
     setObjectStyleVgColor(category, key, color) {
       const state = get();
       const prev = state.objectStyles[category];
@@ -352,8 +377,28 @@ function commitObjectStyles(
       showHeatLoad: get().showHeatLoad,
       showFinishSkin: get().showFinishSkin,
       cutPlaneActive: get().cutPlaneActive,
+      xAxisCut: get().xAxisCut,
+      yAxisCut: get().yAxisCut,
     });
   }
+}
+
+/**
+ * ADR-455 — commit one vertical section cut (X or Y): single immutable state
+ * update + single debounced per-level write. Mirrors the cut-plane setter flow.
+ */
+function commitAxisCut(
+  set: (partial: Partial<BimRenderSettingsState>) => void,
+  get: () => BimRenderSettingsState,
+  buildRaw: (state: BimRenderSettingsState) => BimRenderSettings,
+  axis: AxisCutKey,
+  next: AxisCutSetting,
+): void {
+  const partial: Partial<BimRenderSettingsState> =
+    axis === 'x' ? { xAxisCut: next } : { yAxisCut: next };
+  set({ ...partial, lastLocalMutationAt: Date.now() });
+  const { currentLevelId } = get();
+  if (currentLevelId) debounceWrite(currentLevelId, buildRaw(get()));
 }
 
 /** Immutably transform one subcategory's style under a category. */

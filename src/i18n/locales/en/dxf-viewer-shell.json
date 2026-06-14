@@ -1254,7 +1254,8 @@
       "floorplanSymbolGeometry": "Geometry",
       "mepFixtureLibrary": "Library",
       "mepFixtureLibraryPlacement": "Placement",
-      "mepRiser": "Stack"
+      "mepRiser": "Stack",
+      "print": "Print"
     },
     "minimizeStates": {
       "full": "Full Ribbon",
@@ -3555,11 +3556,13 @@
         "service": {
           "gas": "supply"
         }
-      }
+      },
+      "print": "Print"
     },
     "tooltips": {
       "bimSchedule": "Open BIM Schedule — export structural elements",
-      "thermalEnvelope": "Apply a unified external thermal envelope (ETICS) to the floor"
+      "thermalEnvelope": "Apply a unified external thermal envelope (ETICS) to the floor",
+      "print": "Print the drawing to PDF, printer or plotter (from 2D or 3D)"
     },
     "symbolPicker": {
       "title": "Symbol Picker",
@@ -4225,5 +4228,54 @@
       "no-source": "No gas meter (source) found — network skipped."
     },
     "committed": "Gas network created — networks: {count}, pipes: {segments}."
+  },
+  "print": {
+    "dialogTitle": "Print Drawing",
+    "dialogDescription": "Export the current drawing to PDF, printer or plotter.",
+    "source": {
+      "label": "Source",
+      "2d": "2D Plan",
+      "3d": "3D View"
+    },
+    "paperSize": {
+      "label": "Paper size"
+    },
+    "orientation": {
+      "label": "Orientation",
+      "portrait": "Portrait",
+      "landscape": "Landscape"
+    },
+    "fitMode": {
+      "label": "Fit",
+      "fitToPage": "Fit to page",
+      "drawingScale": "Drawing scale"
+    },
+    "scale": {
+      "label": "Scale"
+    },
+    "plotStyle": {
+      "label": "Plot style",
+      "colour": "Colour (white background)",
+      "monochrome": "Monochrome (black)",
+      "grayscale": "Grayscale",
+      "by-pen": "By pen (CTB)",
+      "hint": "White/by-layer lines become black on white paper; lineweights at the real print DPI."
+    },
+    "target": {
+      "label": "Output",
+      "savePdf": "Save PDF",
+      "openPrint": "Open & Print"
+    },
+    "plotterNote": "For printer/plotter: choose “Open & Print” and select the device in your system print dialog.",
+    "submit": "Print",
+    "cancel": "Cancel",
+    "printing": "Generating…",
+    "error": "Print failed. Please try again.",
+    "titleBlock": {
+      "label": "Title block",
+      "scale": "Scale",
+      "date": "Date",
+      "sheet": "Sheet"
+    }
   }
 }

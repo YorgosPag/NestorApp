@@ -55,15 +55,27 @@ function lineIntersect(p0: Vec2, d0: Vec2, p1: Vec2, d1: Vec2): Vec2 | null {
 const MITER_LIMIT_FACTOR = 4;
 
 /**
- * ADR-449 Slice 6 fix — chamfer (45°) τα **ΑΝΟΙΧΤΑ** άκρα (που δεν mitered-ηκαν με
- * γειτονική όψη): η εξωτερική γωνία τραβιέται προς τα μέσα κατά το πάχος → το άκρο
- * της λωρίδας κλείνει με 45° αντί για τετράγωνο «κεφάλι» που προεξέχει. Λύνει το
- * πτερύγιο σοβά δοκαριού στη συμβολή με κολόνα/τοίχο (mirror clean-corner τοίχου).
- * Clamp στο μισό μήκος για μικρές όψεις (μηδέν inversion).
+ * ADR-449 Slice 6/10 — κλείσιμο των **ΑΝΟΙΧΤΩΝ** άκρων (που δεν mitered-ηκαν με
+ * γειτονική όψη του ΙΔΙΟΥ στοιχείου). Δύο περιπτώσεις, ανάλογα αν το άκρο ακουμπά γείτονα:
+ *
+ *  - **Ελεύθερο** άκρο (open space, `!aJunction`) → **chamfer 45°**: ΜΟΝΟ η εξωτερική γωνία
+ *    τραβιέται **μέσα** κατά το πάχος (το core μένει) → λοξό end-cap (φαλτσογωνιά) αντί για
+ *    τετράγωνο «κεφάλι» που προεξέχει σε ανοιχτό χώρο (Slice 6 #3 — mirror τοίχου).
+ *  - **Junction** άκρο (`seg.aJunction/bJunction` — ακουμπά γειτονικό δομικό στοιχείο, π.χ.
+ *    συμβολή «από κάναβο» ADR-441) → **ορθογώνια EXTEND**: **core ΚΑΙ outer** σπρώχνονται μαζί
+ *    **έξω** κατά το πάχος (κατά τον άξονα) → το end-cap μένει **ΚΑΘΕΤΟ (ορθογωνική τομή)** και
+ *    ακουμπά flush στην εξωτερική παρειά του διπλανού σοβά → **corner-fill** χωρίς λοξή ακμή που
+ *    μπαίνει στο σώμα του όμορου (Giorgio 2026-06-14: v1 square άφηνε κενό· v2 outer-only EXTEND
+ *    έκανε λοξό end-cap που διείσδυε· v3 = core+outer EXTEND = ορθογώνια κάθετη τομή). Γεμίζει
+ *    την κάθετη γωνία ΚΑΙ overlap-άρει σε collinear συνέχεια → ο σοβάς **κλείνει**, μηδέν προεξοχή.
+ *
+ * Clamp στο μισό μήκος για μικρές όψεις (μηδέν inversion στο chamfer/extend).
  */
-function chamferOpenOuterEnds(
+function closeOpenOuterEnds(
   segs: readonly FinishFaceSegment[],
   offsets: readonly (Vec2 | null)[],
+  aCore: Vec2[],
+  bCore: Vec2[],
   aOuter: Vec2[],
   bOuter: Vec2[],
   aMit: readonly boolean[],
@@ -79,8 +91,24 @@ function chamferOpenOuterEnds(
     const ch = Math.min(Math.hypot(off.x, off.y), len / 2);
     const ux = (dx / len) * ch;
     const uy = (dy / len) * ch;
-    if (!aMit[i]) aOuter[i] = { x: aOuter[i].x + ux, y: aOuter[i].y + uy };
-    if (!bMit[i]) bOuter[i] = { x: bOuter[i].x - ux, y: bOuter[i].y - uy };
+    if (!aMit[i]) {
+      if (segs[i].aJunction) {
+        // Ορθογώνια EXTEND έξω (−άξονας): core + outer μαζί → κάθετο end-cap, corner-fill.
+        aCore[i] = { x: aCore[i].x - ux, y: aCore[i].y - uy };
+        aOuter[i] = { x: aOuter[i].x - ux, y: aOuter[i].y - uy };
+      } else {
+        // Chamfer 45°: μόνο outer μέσα (+άξονας) → λοξό end-cap σε ελεύθερο άκρο.
+        aOuter[i] = { x: aOuter[i].x + ux, y: aOuter[i].y + uy };
+      }
+    }
+    if (!bMit[i]) {
+      if (segs[i].bJunction) {
+        bCore[i] = { x: bCore[i].x + ux, y: bCore[i].y + uy };
+        bOuter[i] = { x: bOuter[i].x + ux, y: bOuter[i].y + uy };
+      } else {
+        bOuter[i] = { x: bOuter[i].x - ux, y: bOuter[i].y - uy };
+      }
+    }
   }
 }
 
@@ -88,20 +116,25 @@ function chamferOpenOuterEnds(
  * ADR-449 Slice 5 fix — outer offset endpoints κάθε exposed παρειάς, **mitered** στις
  * κοινές κορυφές: το εξωτερικό άκρο επεκτείνεται/κόβεται στην τομή των δύο offset
  * ευθειών → ΕΝΑ 45° seam, **μηδέν επικάλυψη/κενό** (convex → extend, reflex → trim).
- * Slice 6: `chamferOpenEnds` → τα μη-mitered άκρα κόβονται 45° αντί για square (το
- * τετράγωνο «κεφάλι» προεξείχε στη συμβολή). Slice 9: ενεργό ΚΑΙ για κολόνες (πρώην
- * μόνο δοκάρι) → ενιαία 45° μεταχείριση δοκαριού↔κολόνας στις συμβολές.
+ * Slice 6: `chamferOpenEnds` → κλείνει τα μη-mitered άκρα (βλ. `closeOpenOuterEnds`).
+ * Slice 9: ενεργό ΚΑΙ για κολόνες. Slice 10: per-end — ελεύθερο → chamfer 45° (outer-only)·
+ * junction → ορθογώνια extend (**core+outer**, κάθετο end-cap, corner-fill). Γι' αυτό επιστρέφει
+ * ΚΑΙ τα (πιθανώς επεκταμένα) `aCore/bCore` — το quad διαβάζει αυτά αντί για τα raw `seg.a/b`.
  */
 export function computeMiteredOuter(
   segs: readonly FinishFaceSegment[],
   offsets: readonly (Vec2 | null)[],
   chamferOpenEnds: boolean,
-): { aOuter: Vec2[]; bOuter: Vec2[] } {
+): { aOuter: Vec2[]; bOuter: Vec2[]; aCore: Vec2[]; bCore: Vec2[] } {
   const n = segs.length;
   const aOuter: Vec2[] = [];
   const bOuter: Vec2[] = [];
+  const aCore: Vec2[] = [];
+  const bCore: Vec2[] = [];
   for (let i = 0; i < n; i++) {
     const o = offsets[i] ?? { x: 0, y: 0 };
+    aCore[i] = { x: segs[i].a.x, y: segs[i].a.y };
+    bCore[i] = { x: segs[i].b.x, y: segs[i].b.y };
     aOuter[i] = { x: segs[i].a.x + o.x, y: segs[i].a.y + o.y };
     bOuter[i] = { x: segs[i].b.x + o.x, y: segs[i].b.y + o.y };
   }
@@ -128,8 +161,8 @@ export function computeMiteredOuter(
     bMit[k] = true;
     aMit[m] = true;
   }
-  if (chamferOpenEnds) chamferOpenOuterEnds(segs, offsets, aOuter, bOuter, aMit, bMit);
-  return { aOuter, bOuter };
+  if (chamferOpenEnds) closeOpenOuterEnds(segs, offsets, aCore, bCore, aOuter, bOuter, aMit, bMit);
+  return { aOuter, bOuter, aCore, bCore };
 }
 
 /** Χτίζει ΕΝΑ band prism από plan quad και το προσθέτει στο group (tagged). */
@@ -180,21 +213,20 @@ export function buildFinishSkinFromFaces(
   const s = mmToSceneUnits(sceneUnits);
   const segs = faces.segments;
   const offsets = segs.map((seg) => segOffsetVec(seg, seg.thickness * s));
-  // ADR-449 Slice 9 — chamfer τα ανοιχτά άκρα ΚΑΙ για κολόνες ΚΑΙ για δοκάρια (συνεπής
-  // μεταχείριση στη συμβολή δοκαριού↔κολόνας). Πρώην: κολόνα = square, δοκάρι = 45° chamfer
-  // → στην ΙΔΙΑ συμβολή το άκρο remnant κολόνας έκλεινε κάθετα ενώ το άκρο δοκαριού 45° =
-  // ασυνέπεια (Giorgio 2026-06-13, Firestore-verified γωνιακή συμβολή). Οι γωνίες (κοινή
-  // κορυφή) κλείνουν πάντα με miter (αμετάβλητο — ο chamfer αγγίζει ΜΟΝΟ τα μη-mitered άκρα)
-  // → ΟΛΑ τα ανοιχτά άκρα 45°, ίδια με τις miter γωνίες = ενιαία 45° μεταχείριση παντού.
-  const { aOuter, bOuter } = computeMiteredOuter(segs, offsets, true);
+  // ADR-449 Slice 9/10 — κλείσιμο ανοιχτών άκρων ανά τύπο (βλ. `closeOpenOuterEnds`): ελεύθερα
+  // άκρα → chamfer 45° (outer-only)· **junction** άκρα (`seg.aJunction/bJunction` από τον resolver
+  // — ακουμπούν γείτονα, π.χ. συμβολή «από κάναβο» ADR-441) → ορθογώνια **EXTEND** (core+outer →
+  // κάθετη τομή· ο σοβάς κλείνει flush στον διπλανό χωρίς λοξή ακμή). Γι' αυτό το quad διαβάζει
+  // τα (πιθανώς επεκταμένα) `aCore/bCore`, ΟΧΙ τα raw `seg.a/b`. Γωνίες ΙΔΙΟΥ στοιχείου = miter.
+  const { aOuter, bOuter, aCore, bCore } = computeMiteredOuter(segs, offsets, true);
 
   const group = new THREE.Group();
   for (let i = 0; i < segs.length; i++) {
     if (!offsets[i]) continue;
     const seg = segs[i];
     const quad: Point3D[] = [
-      { x: seg.a.x, y: seg.a.y, z: 0 },
-      { x: seg.b.x, y: seg.b.y, z: 0 },
+      { x: aCore[i].x, y: aCore[i].y, z: 0 },
+      { x: bCore[i].x, y: bCore[i].y, z: 0 },
       { x: bOuter[i].x, y: bOuter[i].y, z: 0 },
       { x: aOuter[i].x, y: aOuter[i].y, z: 0 },
     ];

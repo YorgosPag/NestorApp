@@ -205,6 +205,9 @@ export interface DrawingEventMap extends MepAutoDesignEventMap, BimEventMap {
     worldBounds: { min: { x: number; y: number }; max: { x: number; y: number } };
     viewport: { width: number; height: number };
   };
+  // ADR-453 — Open the Print/Export («Εκτύπωση») dialog (PrintHost listens).
+  // Emitted by the ribbon Output → «Εκτύπωση» action via wrappedHandleAction.
+  'dxf:print-dialog-requested': Record<string, never>;
   // ADR-400 — Restore persisted viewport transform (pan+zoom) without bounds recalc.
   // Emitted by useAutoFitOnFileChange when a valid persisted transform is found on
   // first scene load. Consumed by useFitToView which applies it via setTransform.

@@ -122,3 +122,34 @@ describe('resolveStructuralFinishFaces', () => {
     expect(out.interiorAreaM2).toBeCloseTo(0.6);
   });
 });
+
+describe('resolveStructuralFinishFaces — junction annotation (ADR-449 Slice 10)', () => {
+  it('χωρίς obstacles → κανένα άκρο junction (όλα ελεύθερα)', () => {
+    const out = resolveStructuralFinishFaces({
+      coreFootprint: SQUARE, heightMm: 1000, spec: SPEC,
+      obstacles: [], classify: allInterior, unitToMeters: 1,
+    });
+    for (const s of out.segments) {
+      expect(s.aJunction).toBe(false);
+      expect(s.bJunction).toBe(false);
+    }
+  });
+
+  it('cut endpoint (πάνω στο obstacle) → junction· corner endpoint (μακριά) → ελεύθερο', () => {
+    // obstacle καλύπτει x∈[20,30] της κάτω-παρειάς → exposed [0,20]+[30,50].
+    const out = resolveStructuralFinishFaces({
+      coreFootprint: SQUARE, heightMm: 1000, spec: SPEC,
+      obstacles: [rect(20, -5, 30, 5)], classify: allInterior, unitToMeters: 1,
+    });
+    const bottom = out.segments.filter((s) => Math.abs(s.a.y) < 1e-6 && Math.abs(s.b.y) < 1e-6);
+    expect(bottom).toHaveLength(2);
+    const left = bottom.find((s) => s.a.x < 10)!; // (0,0)→(20,0)
+    const right = bottom.find((s) => s.a.x > 25)!; // (30,0)→(50,0)
+    // Cut άκρα (x=20, x=30) ακουμπούν το obstacle → junction.
+    expect(left.bJunction).toBe(true);
+    expect(right.aJunction).toBe(true);
+    // Corner άκρα (x=0, x=50) μακριά από το obstacle → ελεύθερα.
+    expect(left.aJunction).toBe(false);
+    expect(right.bJunction).toBe(false);
+  });
+});

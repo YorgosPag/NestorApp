@@ -7,6 +7,8 @@ import { useAuth } from '@/auth/hooks/useAuth';
 import { useProjectHierarchyOptional } from '../../contexts/ProjectHierarchyContext';
 import { PerformanceHUD } from '../performance/PerformanceHUD';
 import { ThreeJsSceneManager } from '../scene/ThreeJsSceneManager';
+// ADR-453 — register the live manager so the print engine can snapshot the 3D view.
+import { setActiveSceneManager } from '../scene/active-scene-manager-registry';
 import { useViewMode3DStore, selectIs3D } from '../stores/ViewMode3DStore';
 import type { ReducedMotionOverride } from '../accessibility/use-reduced-motion';
 import { LIGHT_PRESETS } from '../lighting/lighting-presets';
@@ -153,6 +155,8 @@ export function BimViewport3D({ projectId: projectIdProp, readOnly = false, bimE
     );
 
     setCanvasEl(managerRef.current.getRendererCanvas());
+    // ADR-453 — expose this manager to the print engine (cleared on unmount).
+    setActiveSceneManager(managerRef.current);
 
     // ADR-366 §C.1.b — bridge real scene bbox σε `useDxfViewerCallbacks` animation actions.
     setSceneBboxGetter(() => managerRef.current?.getSceneFramingBounds() ?? null);
@@ -191,6 +195,7 @@ export function BimViewport3D({ projectId: projectIdProp, readOnly = false, bimE
       useQuickProperties3DStore.getState().clearHover();
       useSelection3DStore.getState().clearSelection();
       clearSceneBboxGetter();
+      setActiveSceneManager(null); // ADR-453 — print engine can no longer snapshot 3D.
       // ADR-040 Phase XXIII — unregister from scheduler BEFORE disposing the manager
       // so no in-flight tick can race a disposed Three.js renderer.
       unregisterSchedulerRef.current?.();

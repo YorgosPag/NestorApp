@@ -76,8 +76,42 @@ interface FinishResolveInput {
 
 const MM_TO_M = 0.001;
 
+/**
+ * ADR-449 Slice 10 — ανοχή εγγύτητας (mm) για να θεωρηθεί ένα άκρο σοβά **junction**
+ * (ακουμπά γειτονικό δομικό στοιχείο → square butt-join αντί 45° chamfer). Ίδιο μέγεθος
+ * με το `STRUCTURAL_JOIN_TOL_MM` (scene) — flush «από κάναβο» συμβολές: το άκρο κάθεται
+ * πάνω στην παρειά του γείτονα (drift ~sub-mm) → 10mm είναι robust margin.
+ */
+const JUNCTION_TOL_MM = 10;
+
 const dist = (a: Pt2, b: Pt2): number => Math.hypot(b.x - a.x, b.y - a.y);
 const lerp = (a: Pt2, b: Pt2, t: number): Pt2 => ({ x: a.x + t * (b.x - a.x), y: a.y + t * (b.y - a.y) });
+
+/** Απόσταση σημείου `p` από το ευθύγραμμο τμήμα a→b (canvas units). */
+function pointSegDistance(p: Pt2, a: Pt2, b: Pt2): number {
+  const dx = b.x - a.x;
+  const dy = b.y - a.y;
+  const len2 = dx * dx + dy * dy;
+  if (len2 < 1e-18) return dist(p, a);
+  let t = ((p.x - a.x) * dx + (p.y - a.y) * dy) / len2;
+  t = Math.max(0, Math.min(1, t));
+  return Math.hypot(p.x - (a.x + t * dx), p.y - (a.y + t * dy));
+}
+
+/**
+ * ADR-449 Slice 10 — `true` όταν το σημείο `p` βρίσκεται σε απόσταση ≤ `tol` από την
+ * περίμετρο ΕΝΟΣ obstacle (γείτονα). Στις flush «από κάναβο» συμβολές το άκρο σοβά
+ * κάθεται πάνω στην παρειά του γειτονικού στοιχείου → εγγύτητα ⇒ butt-join (square).
+ */
+function pointNearObstacle(p: Pt2, obstacles: readonly (readonly Pt2[])[], tol: number): boolean {
+  if (tol <= 0) return false;
+  for (const poly of obstacles) {
+    for (let i = 0; i < poly.length; i++) {
+      if (pointSegDistance(p, poly[i], poly[(i + 1) % poly.length]) <= tol) return true;
+    }
+  }
+  return false;
+}
 
 /** Shoelace signed area· >0 = CCW (το convention όπου `(dy,−dx)` = outward normal). */
 function signedArea(poly: readonly Pt2[]): number {
@@ -120,6 +154,8 @@ function buildSegment(
   spec: StructuralFinishSpec,
   classify: FinishEdgeClassifier,
   unitToMeters: number,
+  obstacles: readonly (readonly Pt2[])[],
+  junctionTol: number,
 ): FinishFaceSegment {
   const pa = lerp(a, b, t0);
   const pb = lerp(a, b, t1);
@@ -136,6 +172,9 @@ function buildSegment(
     materialId,
     thickness: spec.thickness,
     lengthM: dist(pa, pb) * unitToMeters,
+    // ADR-449 Slice 10 — άκρο που ακουμπά γείτονα (obstacle) → junction → square butt-join.
+    aJunction: pointNearObstacle(pa, obstacles, junctionTol),
+    bJunction: pointNearObstacle(pb, obstacles, junctionTol),
   };
 }
 
@@ -156,13 +195,16 @@ export function resolveStructuralFinishFaces(input: FinishResolveInput): Structu
   let exteriorAreaM2 = 0;
   const n = footprint.length;
   const includeEdge = input.includeEdge;
+  // ADR-449 Slice 10 — junction proximity tol (canvas units). `unitToMeters = (1/s)·MM_TO_M`
+  // → `s = MM_TO_M/unitToMeters` (canvas ανά mm) → `tol = JUNCTION_TOL_MM · s`.
+  const junctionTol = JUNCTION_TOL_MM * (MM_TO_M / Math.max(unitToMeters, 1e-12));
   for (let i = 0; i < n; i++) {
     const a = footprint[i];
     const b = footprint[(i + 1) % n];
     if (includeEdge && !includeEdge(a, b, i)) continue; // π.χ. άκρα δοκαριού
     const covered = coveredByObstacles(a, b, obstacles);
     for (const [t0, t1] of exposedComplement(covered, minT)) {
-      const seg = buildSegment(a, b, t0, t1, spec, classify, unitToMeters);
+      const seg = buildSegment(a, b, t0, t1, spec, classify, unitToMeters, obstacles, junctionTol);
       segments.push(seg);
       const area = seg.lengthM * heightM;
       if (seg.classification === 'exterior') exteriorAreaM2 += area;

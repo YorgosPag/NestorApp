@@ -7,7 +7,7 @@
  * @module state/bim-render-settings-store-types
  */
 
-import type { BimRenderSettings, ResolvedBimSettings } from '../config/bim-render-settings-types';
+import type { BimRenderSettings, ResolvedBimSettings, AxisCutKey } from '../config/bim-render-settings-types';
 import type { VisualStylePreset } from '../config/bim-visual-style';
 import type { ViewRange } from '../config/bim-view-range';
 import type { BimCategory, ObjectStyle, SubcategoryStyle } from '../config/bim-object-styles';
@@ -108,6 +108,15 @@ export interface BimRenderSettingsState extends ResolvedBimSettings {
    * Per-view, debounced write (idempotent).
    */
   setCutPlaneActive: (cutPlaneActive: boolean) => void;
+  /**
+   * ADR-455 — toggle a vertical section cut (world DXF X or Y). `active` ⇒ 3D clips
+   * the cut-away half-space + 2D ghosts it; `false` ⇒ legacy look. Idempotent, debounced.
+   */
+  setAxisCutActive: (axis: AxisCutKey, active: boolean) => void;
+  /** ADR-455 — move a vertical section cut to a world plan position (scene units). Debounced. */
+  setAxisCutPosition: (axis: AxisCutKey, position: number) => void;
+  /** ADR-455 — flip a vertical section cut's viewing side (+1/−1). Idempotent, debounced. */
+  setAxisCutSign: (axis: AxisCutKey, sign: 1 | -1) => void;
   /** Override projection or cut color for a category (null = canvas token). */
   setObjectStyleVgColor: (
     category: BimCategory,

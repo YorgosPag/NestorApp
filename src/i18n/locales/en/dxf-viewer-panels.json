@@ -7,6 +7,15 @@
     "disable": "Disable plan cut plane",
     "unitMeters": "m"
   },
+  "axisCut": {
+    "labelX": "Section X",
+    "labelY": "Section Y",
+    "ariaSlider": "Vertical section position",
+    "flip": "Flip viewing side",
+    "enable": "Enable vertical section",
+    "disable": "Disable vertical section",
+    "unit": "m"
+  },
   "common": {
     "loadingComponent": "Loading..."
   },

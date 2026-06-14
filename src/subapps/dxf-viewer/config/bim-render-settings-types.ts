@@ -43,6 +43,32 @@ export const BIM_SETTINGS_VERSION = 2;
 export const DRAWING_SCALE_PRESETS = [10, 20, 50, 100, 200, 500] as const;
 export type DrawingScalePreset = typeof DRAWING_SCALE_PRESETS[number];
 
+// ── ADR-455 — vertical section cuts (X/Y) ───────────────────────────────────
+
+/**
+ * ADR-455 — one vertical section cut (along world DXF X or Y). Mirrors the
+ * horizontal Z cut (ADR-452) but as an absolute world-space plane the user can
+ * flip. `position` = world plan coordinate of the cut in SCENE/CANVAS units (the
+ * same space as `scene.bounds` and `BoundsCalculator`; for BIM scenes that is
+ * metres, used 1:1 in three.js — NOT mm). `sign` (+1/−1) chooses which side is
+ * KEPT in 3D (the side the arrow points to) / SOLID in 2D (the opposite side
+ * renders as a ghost). Both X and Y default OFF.
+ */
+export interface AxisCutSetting {
+  /** Master toggle for this axis cut. */
+  active: boolean;
+  /** World plan position of the cut plane (scene/canvas units; see interface doc). */
+  position: number;
+  /** Viewing direction: +1 keeps the near (−axis) side, −1 keeps the far (+axis) side. */
+  sign: 1 | -1;
+}
+
+/** ADR-455 — default axis cut: off, at origin, near-side. */
+export const DEFAULT_AXIS_CUT: AxisCutSetting = { active: false, position: 0, sign: 1 };
+
+/** ADR-455 — the two persisted vertical-cut axes (Z is the legacy cutPlane*). */
+export type AxisCutKey = 'x' | 'y';
+
 // ── Core type ──────────────────────────────────────────────────────────────
 
 export interface BimRenderSettings {
@@ -106,6 +132,14 @@ export interface BimRenderSettings {
    * plan, giving a real-time horizontal section. Per-view.
    */
   cutPlaneActive?: boolean;
+  /**
+   * ADR-455 — vertical section cut along world DXF X. Absent ⇒ off (legacy look).
+   * When active, 3D clips the +/−X half-space (like the horizontal cut) and the 2D
+   * plan ghosts the cut-away side + draws a section line. Per-view.
+   */
+  xAxisCut?: Partial<AxisCutSetting>;
+  /** ADR-455 — vertical section cut along world DXF Y. Absent ⇒ off. Per-view. */
+  yAxisCut?: Partial<AxisCutSetting>;
 }
 
 export interface ResolvedBimSettings {
@@ -130,6 +164,19 @@ export interface ResolvedBimSettings {
   showFinishSkin: boolean;
   /** ADR-452 — resolved cut-plane hide-gate master toggle (default OFF). */
   cutPlaneActive: boolean;
+  /** ADR-455 — resolved vertical X-axis section cut (default off). */
+  xAxisCut: AxisCutSetting;
+  /** ADR-455 — resolved vertical Y-axis section cut (default off). */
+  yAxisCut: AxisCutSetting;
+}
+
+/** ADR-455 — merge a persisted partial axis cut with the default (off). */
+export function resolveAxisCut(s?: Partial<AxisCutSetting> | null): AxisCutSetting {
+  return {
+    active: s?.active ?? DEFAULT_AXIS_CUT.active,
+    position: s?.position ?? DEFAULT_AXIS_CUT.position,
+    sign: s?.sign === -1 ? -1 : 1,
+  };
 }
 
 /**
@@ -175,6 +222,9 @@ export function resolveBimSettings(s?: BimRenderSettings | null): ResolvedBimSet
     showFinishSkin: s?.showFinishSkin ?? true,
     // ADR-452 — absent ⇒ false (cut-plane hide gate off by default; opt-in slider).
     cutPlaneActive: s?.cutPlaneActive ?? false,
+    // ADR-455 — absent ⇒ off (vertical X/Y section cuts are opt-in sliders).
+    xAxisCut: resolveAxisCut(s?.xAxisCut),
+    yAxisCut: resolveAxisCut(s?.yAxisCut),
   };
 }
 

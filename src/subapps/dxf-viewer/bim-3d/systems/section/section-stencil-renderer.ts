@@ -148,21 +148,23 @@ export class SectionStencilRenderer {
   }
 
   /**
-   * ADR-452 — render the solid cut face for the SINGLE horizontal cut plane
-   * (Revit View-Range section). Caller renders the clipped scene first. Unlike
-   * the box {@link render} loop (which excludes the capped plane and relies on
-   * depth parity), this keeps the cut plane active during the parity passes so a
-   * lone plane caps correctly. `boundPlanes` (the section box / crop planes, if
-   * any) bound the parity geometry AND the cap quad — empty for a pure cut plane.
+   * ADR-452/455 — render the solid cut face for a SINGLE axis-aligned cut plane
+   * (horizontal Z View-Range section, or a vertical X/Y section). Caller renders the
+   * clipped scene first. Unlike the box {@link render} loop (which excludes the
+   * capped plane and relies on depth parity), this keeps the cut plane active during
+   * the parity passes so a lone plane caps correctly. The parity passes + `positionMesh`
+   * are orientation-agnostic (the cap quad is oriented to the plane normal), so the
+   * same algorithm serves any axis. `boundPlanes` (the OTHER cut planes + section box /
+   * crop, if any) bound the parity geometry AND the cap quad — empty for a lone cut.
    *
    * @param renderer    Active WebGLRenderer (default framebuffer with stencil)
    * @param mainScene   BIM + DXF scene (clipped by all planes in the prior pass)
    * @param camera      Active camera
-   * @param cutPlane    The horizontal cut plane
-   * @param boundPlanes Section/crop planes that bound the cap (excludes the cut plane)
+   * @param cutPlane    The axis-aligned cut plane (any orientation)
+   * @param boundPlanes Other cut + section/crop planes that bound the cap (excludes this plane)
    * @param sceneBounds Scene extent for cap quad size
    */
-  renderHorizontalCutCap(
+  renderAxisCutCap(
     renderer: THREE.WebGLRenderer,
     mainScene: THREE.Scene,
     camera: THREE.Camera,
@@ -325,7 +327,7 @@ export class SectionStencilRenderer {
     renderer.autoClearColor = false;
     renderer.autoClearDepth = false;
     renderer.autoClearStencil = false;
-    // ADR-452 — see renderHorizontalCutCap: null the (already-painted) scene background
+    // ADR-452 — see renderAxisCutCap: null the (already-painted) scene background
     // for the cap passes so three.js' WebGLBackground doesn't force a zero-bitmask
     // gl.clear() ("no buffers in bitmask" warning flood). Restored below.
     mainScene.background = null;

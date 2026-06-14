@@ -21,9 +21,18 @@ import { applyClippingPlanes, clearClippingPlanes } from '../systems/section/sec
 import { SectionStencilRenderer, type SectionCapQuality } from '../systems/section/section-stencil-renderer';
 import { useCropRegionStore } from '../render/crop-region/CropRegionStore';
 import { buildCropPlanes } from '../render/crop-region/crop-frustum-builder';
-// ADR-452 — cut-plane (Revit View Range) as a 3rd clip source, composed here so
-// this controller stays the SINGLE owner of the scene's clipping planes.
-import { resolveCutPlaneWorldY, buildCutPlane } from './cut-plane-3d';
+// ADR-452/455 — axis cut planes (horizontal Z View Range + vertical X/Y sections)
+// as extra clip sources, composed here so this controller stays the SINGLE owner of
+// the scene's clipping planes.
+import { resolveAllAxisCuts, type ResolvedAxisCut } from './cut-plane-3d';
+import {
+  composeCutEntries,
+  axisCutCompositionKey,
+  detectCutMoving,
+  composeClipPlanes,
+  MAX_CLIP_PLANES,
+  type AxisCutEntry,
+} from './axis-cut-composer';
 import { applyEdgeCutTrim, restoreEdgeCut } from './edge-cut-applicator';
 import { useBimRenderSettingsStore } from '../../state/bim-render-settings-store';
 import { useActiveStoreyStore } from '../../systems/levels/active-storey-store';
@@ -53,9 +62,9 @@ export class SectionSceneController {
   private cachedPlanes: THREE.Plane[] = [];
   /** Combined cut-plane + section + crop planes (≤ 6 total, Three.js hard limit). */
   private combinedPlanes: THREE.Plane[] = [];
-  /** ADR-452 — the horizontal cut plane (Revit View Range), or null when off. Capped via the single-plane path. */
-  private cutPlane: THREE.Plane | null = null;
-  /** ADR-452 — section box / crop planes only (excludes the cut plane). Drives the box stencil-cap loop. */
+  /** ADR-452/455 — active axis cut planes (Z horizontal + X/Y vertical), 0–3. Each capped via the single-plane path. */
+  private axisCuts: AxisCutEntry[] = [];
+  /** ADR-452 — section box / crop planes only (excludes the cut planes). Drives the box stencil-cap loop. */
   private sectionPlanes: THREE.Plane[] = [];
   /** ADR-452 — true when any clip source (section box OR cut plane) is active. */
   private clipActive = false;
@@ -68,7 +77,7 @@ export class SectionSceneController {
    * settles (the on-demand scheduler keeps that frame on screen). Mirrors the
    * SSAO "refine-on-idle" pattern already used for the composer path.
    */
-  private lastRenderedCutConstant: number | null = null;
+  private lastRenderedCutConstants: number[] = [];
   private refineTimer: ReturnType<typeof setTimeout> | null = null;
   private static readonly REFINE_DELAY_MS = 150;
   /**
@@ -148,10 +157,10 @@ export class SectionSceneController {
   applyState(): void {
     if (this.disposed) return;
     const { enabled, mode, boxBounds, planes } = useSectionStore.getState();
-    // ADR-452 — cut plane is an independent clip source; it stays active even when
-    // the Section Box is off.
-    const cutWorldY = resolveCutPlaneWorldY();
-    const cutActive = cutWorldY !== null;
+    // ADR-452/455 — axis cuts (Z horizontal + X/Y vertical) are independent clip
+    // sources; they stay active even when the Section Box is off.
+    const resolved = resolveAllAxisCuts();
+    const cutActive = resolved.length > 0;
     this.clipActive = enabled || cutActive;
 
     if (!this.clipActive) {
@@ -162,30 +171,36 @@ export class SectionSceneController {
       this.cachedPlanes = [];
       this.combinedPlanes = [];
       this.sectionPlanes = [];
-      this.cutPlane = null;
+      this.axisCuts = [];
       this.lastClipCompositionKey = null;
       this.deps.invalidatePathTracer();
       this.deps.markDirty();
       return;
     }
 
-    // ADR-452 v2.11 — FAST PATH: when ONLY the cut elevation moved (slider drag), the
-    // plane COMPOSITION is unchanged, so re-running applyClippingPlanes (which flips
-    // `material.needsUpdate` on every mesh → per-frame WebGL program re-setup, the
-    // 50–157 ms RAF jank) is pure waste. The renderer reads `plane.constant` as a
-    // uniform every frame, so mutating the persistent cut-plane object — the SAME
-    // instance the materials already reference — in place is enough. Edge overlays
-    // follow via the cheap cull in the render frame (deferred, no per-tick re-upload).
-    const compositionKey = this.clipCompositionKey(cutActive);
-    if (cutActive && this.cutPlane !== null && compositionKey === this.lastClipCompositionKey) {
-      this.cutPlane.constant = cutWorldY;
+    // ADR-452/455 v2.11 — FAST PATH: when ONLY cut POSITIONS moved (slider drag), the
+    // plane COMPOSITION (active axes/signs + box/crop) is unchanged, so re-running
+    // applyClippingPlanes (which flips `material.needsUpdate` on every mesh → per-frame
+    // WebGL program re-setup, the 50–157 ms RAF jank) is pure waste. The renderer reads
+    // `plane.constant` as a uniform every frame, so mutating each persistent cut-plane
+    // object — the SAME instances the materials already reference — in place is enough.
+    // (resolved order is stable z→x→y, matching this.axisCuts, so index i aligns.)
+    const compositionKey = this.clipCompositionKey(resolved);
+    if (
+      this.axisCuts.length > 0 &&
+      this.axisCuts.length === resolved.length &&
+      compositionKey === this.lastClipCompositionKey
+    ) {
+      for (let i = 0; i < this.axisCuts.length; i++) {
+        this.axisCuts[i].plane.constant = resolved[i].sign * resolved[i].worldCoordM;
+      }
       this.deps.invalidatePathTracer();
       this.deps.markDirty();
       return;
     }
     this.lastClipCompositionKey = compositionKey;
 
-    // SLOW PATH — composition changed (enable/disable, box drag, mode, crop): rebuild.
+    // SLOW PATH — composition changed (enable/disable/flip, box drag, mode, crop): rebuild.
     // Section-box / planes-mode geometry only when the Section feature is enabled.
     if (enabled && mode === 'box') {
       if (boxBounds) this.sectionBox.setFromBounds(boxBounds);
@@ -206,46 +221,46 @@ export class SectionSceneController {
       this.cachedPlanes = [];
     }
 
-    // Reuse the persistent cut-plane instance so the fast path can mutate it in place
-    // (the materials keep referencing the same object across slider ticks).
-    if (cutActive) {
-      if (this.cutPlane) this.cutPlane.constant = cutWorldY;
-      else this.cutPlane = buildCutPlane(cutWorldY);
-    } else {
-      this.cutPlane = null;
-      // Box-only (no cut) → restore any edges the cut had trimmed/hidden.
-      restoreEdgeCut(this.deps.getBimGroup());
-    }
+    // Reuse persistent cut-plane instances when axis+sign unchanged so the fast path
+    // can mutate them in place (materials keep referencing the same objects).
+    this.axisCuts = composeCutEntries(resolved, this.axisCuts);
+    // ADR-455 — only the Z (horizontal) cut runs the fat-line edge trim; restore the
+    // overlays whenever no Z cut is active (X/Y edge trim deferred — see ADR-455).
+    if (!this.axisCuts.some((e) => e.axis === 'z')) restoreEdgeCut(this.deps.getBimGroup());
 
     const cropPlanes = this.buildCropPlanes();
-    // Cut plane FIRST so it survives the Three.js 6-plane hard limit even when a
+    // Cut planes FIRST so they survive the Three.js 6-plane hard limit even when a
     // full 6-plane section box is also active (rare combo).
-    const all = this.cutPlane
-      ? [this.cutPlane, ...this.cachedPlanes, ...cropPlanes]
-      : [...this.cachedPlanes, ...cropPlanes];
-    this.combinedPlanes = all.slice(0, 6);
-    // Section box / crop planes that survived the 6-plane clip slice, EXCLUDING the
-    // cut plane — these feed the box stencil-cap loop (unchanged) and bound the
-    // single-plane cut cap. The cut plane is capped separately (correct lone-plane
-    // algorithm), so it must not enter the box loop (its depth-parity trick garbles
-    // a lone horizontal plane).
-    this.sectionPlanes = this.cutPlane ? this.combinedPlanes.slice(1) : this.combinedPlanes;
+    const cutPlanes = this.axisCuts.map((e) => e.plane);
+    this.combinedPlanes = composeClipPlanes(cutPlanes, this.cachedPlanes, cropPlanes);
+    if (
+      process.env.NODE_ENV !== 'production' &&
+      cutPlanes.length + this.cachedPlanes.length + cropPlanes.length > MAX_CLIP_PLANES
+    ) {
+      // Dev-only: surface silently-dropped box/crop planes (cuts are kept first).
+      // eslint-disable-next-line no-console
+      console.warn('[ADR-455] >6 clip planes active; box/crop surplus dropped (cuts kept first).');
+    }
+    // Section box / crop planes that survived the 6-plane slice, EXCLUDING the cut
+    // planes (which are first) — these feed the box stencil-cap loop and bound each
+    // single-plane cut cap. A cut plane must not enter the box loop (its depth-parity
+    // trick garbles a lone axis plane); it is capped separately per axis.
+    this.sectionPlanes = this.combinedPlanes.slice(this.axisCuts.length);
     applyClippingPlanes(this.deps.scene, this.combinedPlanes);
     // ADR-452 v2.11 — the gradual fat-line edge trim (LineMaterial can't be GPU-clipped
-    // on this build) is now applied in the render frame: a CHEAP visibility cull while
-    // the slider drags, the EXACT trim once it settles. Doing it here per slider tick
-    // was the 357 ms `pointermove` jank (CPU re-clip + GPU geometry re-upload).
+    // on this build) is applied in the render frame for the Z cut: a CHEAP visibility
+    // cull while the slider drags, the EXACT trim once it settles.
     this.deps.invalidatePathTracer();
     this.deps.markDirty();
   }
 
   /**
-   * ADR-452 v2.11 — a cheap string key of the clip-plane COMPOSITION: which sources
-   * are active and their geometry, DELIBERATELY excluding the cut elevation. An
-   * identical key across slider ticks ⇒ only the cut constant moved ⇒ fast path.
-   * Box drag / crop / mode / enable change ⇒ new key ⇒ full re-apply (correct, rare).
+   * ADR-452/455 v2.11 — a cheap string key of the clip-plane COMPOSITION: which sources
+   * are active and their geometry, DELIBERATELY excluding the cut POSITIONS. An identical
+   * key across slider ticks ⇒ only a cut constant moved ⇒ fast path. A flip (sign change),
+   * an axis toggle, box drag / crop / mode / enable change ⇒ new key ⇒ full re-apply.
    */
-  private clipCompositionKey(cutActive: boolean): string {
+  private clipCompositionKey(resolved: ResolvedAxisCut[]): string {
     const { enabled, mode, boxBounds, planes } = useSectionStore.getState();
     const box = enabled && mode === 'box' && boxBounds
       ? `${boxBounds.min.join(',')}|${boxBounds.max.join(',')}`
@@ -257,7 +272,7 @@ export class SectionSceneController {
     const cr = crop.editState === 'committed' && crop.rectangle
       ? (crop.depthRangeEnabled ? `${crop.nearNorm},${crop.farNorm}` : '-')
       : '';
-    return `c${cutActive ? 1 : 0}|e${enabled ? 1 : 0}|m${mode}|b${box}|p${pl}|r${cr}`;
+    return `axes:${axisCutCompositionKey(resolved)}|e${enabled ? 1 : 0}|m${mode}|b${box}|p${pl}|r${cr}`;
   }
 
   /**
@@ -304,9 +319,9 @@ export class SectionSceneController {
     //                                            section visible while navigating).
     //  • settled                     → 'full'   (+ hatch overlays + selection emphasis).
     // cutMoving wins over camMoved (a slider drag may nudge the camera too).
-    const cutConstant = this.cutPlane ? this.cutPlane.constant : null;
-    const cutMoving = cutConstant !== this.lastRenderedCutConstant;
-    this.lastRenderedCutConstant = cutConstant;
+    const cutConstants = this.axisCuts.map((e) => e.plane.constant);
+    const cutMoving = detectCutMoving(cutConstants, this.lastRenderedCutConstants);
+    this.lastRenderedCutConstants = cutConstants;
 
     const camZoom = (camera as THREE.Camera & { zoom?: number }).zoom ?? 1;
     const camMoved =
@@ -337,14 +352,17 @@ export class SectionSceneController {
     //      those restored-pristine overlays untrimmed). The per-tick re-upload that was
     //      the 357 ms pointermove jank is gone because this runs once per FRAME, not per
     //      slider `onValueChange`.
-    if (this.cutPlane) {
+    // ADR-455 — only the Z (horizontal) cut runs the fat-line edge trim; X/Y vertical
+    // edge trim is deferred (see ADR-455 Out-of-scope). `zCut.plane.constant` == worldY.
+    const zCut = this.axisCuts.find((e) => e.axis === 'z');
+    if (zCut) {
       // Throttle ONLY the active drag (the GPU-upload-heavy case); settled/static frames
       // always trim (self-healing + final exact position on release). See EDGE_TRIM_THROTTLE_MS.
       const nowMs = typeof performance !== 'undefined' ? performance.now() : 0;
       const throttled =
         cutMoving && nowMs - this.lastEdgeTrimMs < SectionSceneController.EDGE_TRIM_THROTTLE_MS;
       if (!throttled) {
-        applyEdgeCutTrim(this.deps.getBimGroup(), this.cutPlane.constant);
+        applyEdgeCutTrim(this.deps.getBimGroup(), zCut.plane.constant);
         this.lastEdgeTrimMs = nowMs;
       }
     }
@@ -362,15 +380,20 @@ export class SectionSceneController {
     // cut geometry, which can't be cached, takes the cheapest 1-render draft.
     if (!cutMoving) {
       const bounds = this.computeSceneBounds();
-      // Box / crop caps via the existing multi-plane loop (cut plane excluded).
+      // Box / crop caps via the existing multi-plane loop (cut planes excluded).
       if (this.sectionPlanes.length > 0) {
         this.stencilRenderer.render(renderer, this.deps.scene, camera, this.sectionPlanes, bounds, quality);
       }
-      // ADR-452 — the horizontal cut plane caps via the correct single-plane path,
-      // bounded by the section/crop planes (if any).
-      if (this.cutPlane) {
-        this.stencilRenderer.renderHorizontalCutCap(
-          renderer, this.deps.scene, camera, this.cutPlane, this.sectionPlanes, bounds, quality,
+      // ADR-452/455 — each axis cut plane caps via the correct single-plane path,
+      // bounded by the OTHER cut planes + the section/crop planes (so intersecting
+      // cuts mutually trim their caps). The stencil buffer is cleared between caps.
+      for (const entry of this.axisCuts) {
+        const boundPlanes = [
+          ...this.axisCuts.filter((e) => e !== entry).map((e) => e.plane),
+          ...this.sectionPlanes,
+        ];
+        this.stencilRenderer.renderAxisCutCap(
+          renderer, this.deps.scene, camera, entry.plane, boundPlanes, bounds, quality,
         );
       }
     }

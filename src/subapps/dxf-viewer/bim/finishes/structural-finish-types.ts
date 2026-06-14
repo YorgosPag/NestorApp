@@ -77,6 +77,15 @@ export interface FinishFaceSegment {
   readonly thickness: number;
   /** m — μήκος της εκτεθειμένης υπο-ακμής στο plan. */
   readonly lengthM: number;
+  /**
+   * ADR-449 Slice 10 — το άκρο `a` είναι **junction** (butt-join): ακουμπά γειτονικό
+   * δομικό στοιχείο (obstacle) → ο σοβάς πρέπει να κλείνει **τετράγωνα** (corner-fill,
+   * συνεχής γραμμή), ΟΧΙ 45° chamfer (που αφήνει τριγωνικό κενό στις flush συμβολές
+   * «από κάναβο» — ADR-441). `undefined`/`false` = γνήσιο ελεύθερο άκρο → chamfer.
+   */
+  readonly aJunction?: boolean;
+  /** ADR-449 Slice 10 — το άκρο `b` είναι junction (βλ. {@link aJunction}). */
+  readonly bJunction?: boolean;
 }
 
 /**
