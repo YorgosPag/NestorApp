@@ -18,11 +18,9 @@ import { canvasUI } from '@/styles/design-tokens/canvas';
 import { createCombinedBounds } from '../../systems/zoom/utils/bounds';
 import { isInDrawingMode } from '../../systems/tools/ToolStateManager';
 import { dwarn } from '../../debug';
-import type { ViewTransform, Point2D } from '../../rendering/types/Types';
+import type { Point2D } from '../../rendering/types/Types';
 import { getImmediatePosition } from '../../systems/cursor/ImmediatePositionStore';
 import { setHoveredEntity, setHoveredOverlay } from '../../systems/hover/HoverStore';
-// ADR-408 — circuit wire marquee-select sets the active circuit (mirrors wire click-select).
-import { useMepCircuitEditorStore } from '../../bim/mep-systems/mep-circuit-editor-store';
 import type { PreviewCanvasHandle } from '../../canvas-v2/preview-canvas';
 import type { DxfRenderOptions } from '../../canvas-v2/dxf-canvas/dxf-types';
 import type { CanvasLayerStackProps } from './canvas-layer-stack-types';
@@ -40,13 +38,14 @@ import { ClashReportPanel } from './ClashReportPanel';
 import { RegionPerimeterPreviewOverlay } from './RegionPerimeterPreviewOverlay';
 import { CanvasNumericInputOverlay } from '../../systems/canvas-numeric-input/CanvasNumericInputOverlay'; import { DynamicInputSubscriber } from './DynamicInputSubscriber'; import { CanvasLayerStack3dLeaf } from './canvas-layer-stack-3d-leaf';
 import { ViewMode3DToggleButton } from '../../bim-3d/viewport/ViewMode3DToggleButton'; import { Focus2DOverlayLeaf } from './Focus2DOverlayLeaf'; import { SelectionCursorIcon } from '../../accessibility/SelectionCursorIcon';
-import { CutPlaneSliderLeaf } from './CutPlaneSliderLeaf'; /* ADR-452 cut-plane slider, self-gated 2D */ import { useDxfOverlay3DSync } from './useDxfOverlay3DSync'; import { useLevelId3DSync } from './useLevelId3DSync';
+import { CutPlaneSliderLeaf } from './CutPlaneSliderLeaf'; /* ADR-452 cut-plane slider, self-gated 2D */ import { AxisCutSliderLeaf } from './AxisCutSliderLeaf'; /* ADR-455 vertical X/Y section sliders, self-gated 2D */ import { useDxfOverlay3DSync } from './useDxfOverlay3DSync'; import { useLevelId3DSync } from './useLevelId3DSync';
 // ADR-396 P4 — ETICS θερμοπρόσοψη 2D overlay (dedicated floor-overlay micro-leaf).
 import { EnvelopeOverlay } from './EnvelopeOverlay';
 import { HomeRunWiresOverlay } from './HomeRunWiresOverlay';
 // ADR-399 Phase D — 2D «Όλοι οι όροφοι» read-only underlay (other floors, faded, behind active).
 import { FloorUnderlayOverlay } from './FloorUnderlayOverlay';
 import { CanvasLayerStack2DOverlays } from './canvas-layer-stack-2d-overlays-leaf';
+import { useCanvasLayerStackHandlers } from './useCanvasLayerStackHandlers';
 export type { CanvasLayerStackProps } from './canvas-layer-stack-types';
 const EMPTY_SNAP_RESULTS: readonly never[] = Object.freeze([]);
 export const CanvasLayerStack = React.memo(function CanvasLayerStack({
@@ -86,52 +85,18 @@ export const CanvasLayerStack = React.memo(function CanvasLayerStack({
     draggingEdgeMidpoint !== null ||
     hoveredVertexInfo !== null ||
     hoveredEdgeInfo !== null;
-  // --- Named callbacks ---
-  const handleTransformChange = (newTransform: ViewTransform) => {
-    setTransform(newTransform);
-    zoomSystem.setTransform(newTransform);
-  };
-  const handleDxfEntitiesSelected = (entityIds: string[]) => {
-    universalSelection.replaceEntitySelection(entityIds);
-  };
-  const handleUnifiedMarqueeResult = ({
-    layerIds,
-    entityIds,
-    circuitIds,
-    subtract,
-  }: {
-    layerIds: string[];
-    entityIds: string[];
-    circuitIds?: string[];
-    subtract?: boolean;
-  }) => {
-    // ADR-408 — a window/crossing box that catches circuits' home-run wires selects ALL of
-    // them (Revit multi-select), mutually exclusive with entity selection (clear it, mirroring
-    // wire click-select). Every selected circuit lights its grips; the primary (top-most in
-    // paint order) drives the «Κύκλωμα» properties tab.
-    if (circuitIds && circuitIds.length > 0) {
-      universalSelection.clearAll();
-      useMepCircuitEditorStore.getState().setSelectedCircuits(circuitIds);
-      return;
-    }
-    universalSelection.handleMarqueeResult(layerIds, entityIds, { subtract: !!subtract });
-  };
-  const handleOverlayClickWithEntityClear = (overlayId: string, point: Point2D) => {
-    universalSelection.clearByType('dxf-entity');
-    handleOverlayClick(overlayId, point);
-  };
-  const handleMultiOverlayClickWithEntityClear = (layerIds: string[]) => {
-    universalSelection.clearByType('dxf-entity');
-    handleMultiOverlayClick(layerIds);
-  };
-  const handleDxfEntitySelect = (entityId: string | null, additive?: boolean) => {
-    if (entityId) {
-      universalSelection.handleEntityClick(entityId, { shiftKey: !!additive });
-      entitySelectedOnMouseDownRef.current = true;
-    } else if (!additive) {
-      entitySelectedOnMouseDownRef.current = false;
-    }
-  };
+  // --- Named callbacks (extracted to keep shell <500 lines — N.7.1, ADR-040) ---
+  const {
+    handleTransformChange,
+    handleDxfEntitiesSelected,
+    handleUnifiedMarqueeResult,
+    handleOverlayClickWithEntityClear,
+    handleMultiOverlayClickWithEntityClear,
+    handleDxfEntitySelect,
+  } = useCanvasLayerStackHandlers({
+    setTransform, zoomSystem, universalSelection,
+    handleOverlayClick, handleMultiOverlayClick, entitySelectedOnMouseDownRef,
+  });
   const handleDxfMouseMove = useCallback(
     (screenPos: Point2D, worldPos: Point2D) => {
       if (worldPos) {
@@ -489,6 +454,7 @@ export const CanvasLayerStack = React.memo(function CanvasLayerStack({
           <HomeRunWiresOverlay scene={dxfScene} transform={transform} viewport={viewport} currentLevelId={levelManager.currentLevelId} gripDragPreview={dxfGripInteraction.dragPreview} />
           <SelectionCursorIcon />
           <ViewMode3DToggleButton /><CutPlaneSliderLeaf />{/* ADR-452 */}
+          <AxisCutSliderLeaf bounds={dxfScene?.bounds ?? null} />{/* ADR-455 */}
         </div>
       </div>
       <AutoAreaResultPanel />

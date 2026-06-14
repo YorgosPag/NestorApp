@@ -25,6 +25,8 @@ import { getCursorSettings } from '../../systems/cursor/config';
 import { serviceRegistry } from '../../services';
 import { registerRenderCallback, RENDER_PRIORITIES } from '../../rendering';
 import { getImmediateTransform } from '../../systems/cursor/ImmediateTransformStore';
+// ADR-455 — 2D section-line overlay for the vertical X/Y cuts.
+import { renderAxisCutLines } from '../../systems/axis-cut/axis-cut-line-renderer';
 import { perfStart, perfEnd } from '../../debug/perf-line-profile';
 // ADR-358 §5.6.bis Phase 10 — re-render on isolate state change.
 import { subscribeIsolateEffects } from '../../systems/isolate/IsolateEffectsStore';
@@ -263,6 +265,12 @@ export function useDxfCanvasRenderer(params: DxfCanvasRendererParams) {
             ctx, currentCPs, currentTransform, currentViewport, refs.highlightedPointIdRef.current ?? undefined,
           );
         }
+      }
+
+      // 2.7: ADR-455 — vertical X/Y section lines + direction arrows (above entities,
+      // below rulers). Reads the cut SSoT internally; no-op when both cuts are off.
+      if (ctx) {
+        renderAxisCutLines(ctx, currentTransform, currentViewport);
       }
 
       // 3: Rulers

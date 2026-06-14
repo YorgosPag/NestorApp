@@ -12,6 +12,9 @@ import { CAD_UI_COLORS } from '../../config/color-config';
 // ADR-358 §G7 Phase 4 — ByLayer/ByBlock resolver
 import { resolveEntityStyle, entityToStyleInput } from '../../systems/properties/resolve-entity-style';
 import { lineweightToPx } from '../../config/lineweight-iso-catalog';
+// ADR-454 — Print Plot Style: white-safe colour remap + print-DPI lineweights.
+// Singleton is null during interactive render (single boolean branch, zero hot-path cost).
+import { getPrintColorPolicy, applyPlotColor } from '../../config/print-color-policy';
 // 🏢 ADR-358 Phase 9D-3: id-first reader SSoT
 import { resolveEntityLayerName, getLayer as getLayerStoreLayer } from '../../stores/LayerStore';
 // ADR-358 §5.6.bis Phase 10 — Layer Isolate runtime effects (zero-cost passthrough when inactive).
@@ -19,6 +22,10 @@ import { getIsolateEffectsSnapshot } from '../../systems/isolate/IsolateEffectsS
 import { resolveEntityBimCategory } from '../../bim/visibility/resolve-entity-bim-category';
 // ADR-452 — cut-plane (Revit View Range) hide gate SSoT.
 import { isHiddenByCutPlane } from '../../bim/visibility/entity-z-extents';
+// ADR-455 — vertical X/Y section cut: 2D ghost classification SSoT.
+import { axisCutGhostFactor, anyAxisCutActive } from '../../bim/visibility/axis-cut-plan-side';
+import { BoundsCalculator } from '../../rendering/hitTesting/Bounds';
+import type { AxisCutSetting } from '../../config/bim-render-settings-types';
 import { useBimRenderSettingsStore } from '../../state/bim-render-settings-store';
 import { dimOpacityToTransparency } from '../../services/layer-isolate-resolver';
 // Per-frame index builders (extracted Boy-Scout file-size split, 2026-05-19).
@@ -137,6 +144,9 @@ export class DxfRenderer {
     type LineBatch = { starts: Point2D[]; ends: Point2D[]; lw: number; alpha: number };
     const lineBatches = new Map<string, LineBatch>();
     const batchedIds = new Set<string>();
+    // ADR-455 — hoisted once per frame: ghost raw lines on the cut-away side too
+    // (null = no vertical cut active → the batch keys/alphas are unchanged).
+    const activeAxisCutsForBatch = this.resolveActiveAxisCuts();
 
     for (const entity of scene.entities) {
       if (entity.type !== 'line') continue;
@@ -153,7 +163,19 @@ export class DxfRenderer {
       const resolved = this.resolveStyleForRender(entity, effectiveOptions.layersById);
       const color = resolved.colorHex;
       const lw = resolved.lineWidthPx;
-      const alpha = resolved.alpha;
+      let alpha = resolved.alpha;
+      if (activeAxisCutsForBatch) {
+        alpha *= axisCutGhostFactor(
+          {
+            minX: Math.min(entity.start.x, entity.end.x),
+            maxX: Math.max(entity.start.x, entity.end.x),
+            minY: Math.min(entity.start.y, entity.end.y),
+            maxY: Math.max(entity.start.y, entity.end.y),
+          },
+          activeAxisCutsForBatch.x,
+          activeAxisCutsForBatch.y,
+        );
+      }
       const key = `${color}\0${lw}\0${alpha.toFixed(3)}`;
       let batch = lineBatches.get(key);
       if (!batch) { batch = { starts: [], ends: [], lw, alpha }; lineBatches.set(key, batch); }
@@ -276,6 +298,14 @@ export class DxfRenderer {
 
     const gripsVisible = isSelected && !options.suppressGrips;
     const ghostMult = options.movePreviewActive && isSelected ? GHOST_DEFAULTS.alpha : 1.0;
+    // ADR-455 — vertical X/Y section cut: entities fully on the cut-away side render
+    // as a ghost (reduced alpha) instead of being hidden. Zero cost when no cut active.
+    let axisCutGhostMult = 1;
+    const activeAxisCuts = this.resolveActiveAxisCuts();
+    if (activeAxisCuts) {
+      const bbox = BoundsCalculator.calculateEntityBounds(entityModel);
+      if (bbox) axisCutGhostMult = axisCutGhostFactor(bbox, activeAxisCuts.x, activeAxisCuts.y);
+    }
     const renderOptions: RenderOptions = {
       phase: isSelected ? 'selected' : isHovered ? 'highlighted' : 'normal',
       transform,
@@ -284,7 +314,7 @@ export class DxfRenderer {
       grips: gripsVisible,
       hovered: isHovered,
       selected: isSelected,
-      alpha: (entity.visible ? 1.0 : 0.3) * resolved.alpha * ghostMult,
+      alpha: (entity.visible ? 1.0 : 0.3) * resolved.alpha * ghostMult * axisCutGhostMult,
     };
 
     this.entityComposite.render(entityModel, renderOptions);
@@ -313,8 +343,12 @@ export class DxfRenderer {
     entity: DxfEntityUnion,
     layersById?: Record<string, SceneLayer>,
   ): { colorHex: string; lineWidthPx: number; alpha: number } {
+    // ADR-454 — active only during offscreen print render (null otherwise).
+    const printPolicy = getPrintColorPolicy();
     const fallback = {
-      colorHex: entity.color || CAD_UI_COLORS.entity.default,
+      colorHex: printPolicy
+        ? applyPlotColor(entity.color ?? null, entity.colorAci ?? null, printPolicy)
+        : (entity.color || CAD_UI_COLORS.entity.default),
       lineWidthPx: Math.max(1, entity.lineWidth || 1),
       alpha: 1,
     };
@@ -337,11 +371,16 @@ export class DxfRenderer {
       transparency: entity.transparency,
     });
     const resolved = resolveEntityStyle(styleInput, layer);
-    const px = lineweightToPx(resolved.lineweight, 96);
+    // ADR-454 — print render: convert ISO mm at the real print DPI (not screen 96)
+    // and remap colour to a white-safe print colour. No-op when policy is null.
+    const px = lineweightToPx(resolved.lineweight, printPolicy ? printPolicy.dpi : 96);
+    const colorHex = printPolicy
+      ? applyPlotColor(resolved.color, resolved.colorAci, printPolicy)
+      : resolved.color;
     const baseAlpha = transparencyToAlpha(resolved.transparency);
     return this.applyIsolateAlpha(
       {
-        colorHex: resolved.color,
+        colorHex,
         lineWidthPx: Math.max(1, px || fallback.lineWidthPx),
         alpha: baseAlpha,
       },
@@ -376,6 +415,17 @@ export class DxfRenderer {
     }
     const dimAlpha = transparencyToAlpha(dimOpacityToTransparency(isolate.dimOpacityPercent));
     return { ...style, alpha: Math.min(style.alpha, dimAlpha) };
+  }
+
+  /**
+   * ADR-455 — active vertical section cuts (X/Y), or `null` when both are off
+   * (zero-cost passthrough so the per-entity render path pays nothing unless a cut
+   * is engaged). Hoisted by the line batch + computed per entity in the two-pass loop.
+   */
+  private resolveActiveAxisCuts(): { x: AxisCutSetting | null; y: AxisCutSetting | null } | null {
+    const s = useBimRenderSettingsStore.getState();
+    if (!anyAxisCutActive(s.xAxisCut, s.yAxisCut)) return null;
+    return { x: s.xAxisCut.active ? s.xAxisCut : null, y: s.yAxisCut.active ? s.yAxisCut : null };
   }
 
   /**
