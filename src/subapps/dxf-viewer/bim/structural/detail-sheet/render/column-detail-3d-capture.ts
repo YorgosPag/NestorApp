@@ -29,6 +29,7 @@ import * as THREE from 'three';
 import type { ColumnEntity } from '../../../types/column-types';
 import { computeColumnGeometry } from '../../../geometry/column-geometry';
 import { buildColumnRebarCage } from '../../../../bim-3d/converters/column-rebar-3d';
+import { buildColumnDimAnnotations } from './column-detail-3d-dims';
 
 /** mm → metres (the vertical convention used by `buildColumnRebarCage`). */
 const MM_TO_M = 0.001;
@@ -43,8 +44,8 @@ const SCENE_BG_HEX = 0xffffff;
 const CAMERA_AZIMUTH_RAD = Math.PI / 4;
 const CAMERA_ELEVATION_RAD = (35.264 * Math.PI) / 180;
 const CAMERA_FOV_DEG = 35;
-/** Margin factor applied to the fit distance so the model never touches edges. */
-const FIT_MARGIN = 1.18;
+/** Small margin around the tight projected-bbox fit (headroom for dim labels). */
+const FIT_MARGIN = 1.1;
 
 /** Options controlling the offscreen raster resolution. */
 export interface ColumnDetail3dCaptureOptions {
@@ -93,7 +94,12 @@ function buildConcretePrism(column: ColumnEntity): THREE.Group | null {
 function disposeOwned(group: THREE.Group | null): void {
   if (!group) return;
   group.traverse((obj) => {
-    if (obj instanceof THREE.Mesh || obj instanceof THREE.LineSegments) {
+    if (obj instanceof THREE.Sprite) {
+      obj.material.map?.dispose();
+      obj.material.dispose();
+      return;
+    }
+    if (obj instanceof THREE.Mesh || obj instanceof THREE.LineSegments || obj instanceof THREE.Line) {
       obj.geometry.dispose();
       const mat = obj.material;
       if (Array.isArray(mat)) mat.forEach((m) => m.dispose());
@@ -113,26 +119,53 @@ function disposeCageGeometry(group: THREE.Group): void {
   });
 }
 
-/** Places a perspective camera isometrically framing `box`, fitted to aspect. */
-function frameCamera(box: THREE.Box3, aspect: number): THREE.PerspectiveCamera {
-  const camera = new THREE.PerspectiveCamera(CAMERA_FOV_DEG, aspect, 0.01, 1e6);
-  const sphere = box.getBoundingSphere(new THREE.Sphere());
-  const center = sphere.center;
-  const fovRad = (CAMERA_FOV_DEG * Math.PI) / 180;
-  // Fit to the tighter of the two frustum half-angles (handles portrait aspect).
-  const vFit = sphere.radius / Math.sin(fovRad / 2);
-  const hFovRad = 2 * Math.atan(Math.tan(fovRad / 2) * aspect);
-  const hFit = sphere.radius / Math.sin(hFovRad / 2);
-  const dist = Math.max(vFit, hFit) * FIT_MARGIN;
-
+/** Isometric view direction (camera → model is −dir). */
+function isoDirection(): THREE.Vector3 {
   const cosEl = Math.cos(CAMERA_ELEVATION_RAD);
-  const dir = new THREE.Vector3(
+  return new THREE.Vector3(
     cosEl * Math.sin(CAMERA_AZIMUTH_RAD),
     Math.sin(CAMERA_ELEVATION_RAD),
     cosEl * Math.cos(CAMERA_AZIMUTH_RAD),
   );
-  camera.position.copy(center).addScaledVector(dir, dist);
+}
+
+/**
+ * Places a perspective camera isometrically with a TIGHT fit: the model's eight
+ * box corners are projected into the (distance-independent) view frame and the
+ * camera distance is solved so the projected extent fills both axes. A bounding
+ * sphere would over-pad a slender column (radius ≈ half its height); this fills
+ * the frame instead.
+ */
+function frameCamera(box: THREE.Box3, aspect: number): THREE.PerspectiveCamera {
+  const camera = new THREE.PerspectiveCamera(CAMERA_FOV_DEG, aspect, 0.01, 1e6);
+  const center = box.getCenter(new THREE.Vector3());
+  const dir = isoDirection();
+
+  // Fix the orientation (unit-distance placement); view x/y of a point are
+  // independent of the final distance, so solve the fit from this rotation.
+  camera.position.copy(center).add(dir);
   camera.up.set(0, 1, 0);
+  camera.lookAt(center);
+  camera.updateMatrixWorld();
+  const invQ = camera.quaternion.clone().invert();
+
+  let maxX = 0, maxY = 0, maxZ = 0;
+  const corner = new THREE.Vector3();
+  for (let i = 0; i < 8; i++) {
+    corner.set(
+      i & 1 ? box.max.x : box.min.x,
+      i & 2 ? box.max.y : box.min.y,
+      i & 4 ? box.max.z : box.min.z,
+    ).sub(center).applyQuaternion(invQ);
+    maxX = Math.max(maxX, Math.abs(corner.x));
+    maxY = Math.max(maxY, Math.abs(corner.y));
+    maxZ = Math.max(maxZ, Math.abs(corner.z));
+  }
+  const tanV = Math.tan((CAMERA_FOV_DEG * Math.PI) / 180 / 2);
+  const tanH = tanV * aspect;
+  const dist = Math.max(maxX / tanH, maxY / tanV) * FIT_MARGIN + maxZ;
+
+  camera.position.copy(center).addScaledVector(dir, dist);
   camera.lookAt(center);
   camera.updateProjectionMatrix();
   return camera;
@@ -149,11 +182,13 @@ export function captureColumnDetail3d(
   const cage = buildColumnRebarCage(column, 0, column.params.height);
   if (!cage) return null;
   const prism = buildConcretePrism(column);
+  const dims = buildColumnDimAnnotations(column);
 
   const scene = new THREE.Scene();
   scene.background = new THREE.Color(SCENE_BG_HEX);
   if (prism) scene.add(prism);
   scene.add(cage);
+  if (dims) scene.add(dims);
 
   const { widthPx, heightPx } = options;
   // Guard the whole GPU path: a failed WebGL context (headless / lost context)
@@ -177,6 +212,7 @@ export function captureColumnDetail3d(
   } finally {
     renderer?.dispose();
     disposeOwned(prism);
+    disposeOwned(dims);
     disposeCageGeometry(cage);
   }
 }
