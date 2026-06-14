@@ -49,10 +49,13 @@ import {
   MIN_SHEAR_WALL_THICKNESS_MM,
   SHEAR_WALL_MIN_ASPECT_RATIO,
   MIN_I_PLATE_THICKNESS_MM,
+  MIN_SECTION_CORNER_ANGLE_DEG,
   type ColumnParams,
 } from '../types/column-types';
 import { getColumnSlenderness } from '../geometry/column-geometry';
-import { polygonArea } from '../geometry/shared/polygon-utils';
+import { polygonArea, minPolygonInteriorAngleDeg } from '../geometry/shared/polygon-utils';
+import { resolveStructuralCode, type StructuralCodeId } from '../structural/codes';
+import { computeColumnReinforcementQuantities } from '../structural/reinforcement/column-reinforcement-compute';
 
 /** Result of a column validation pass — hard errors non-empty when invalid. */
 export interface ColumnValidationResult {
@@ -66,8 +69,13 @@ export interface ColumnValidationResult {
 
 /**
  * Validate `ColumnParams`. Operates purely σε params — geometry re-derivable.
+ * `codeId` (ADR-456) επιλέγει τον κανονισμό για τους ελέγχους ποσοστού οπλισμού
+ * (default = Ευρωκώδικες). Όταν δεν έχει οριστεί οπλισμός, ο έλεγχος παραλείπεται.
  */
-export function validateColumnParams(params: ColumnParams): ColumnValidationResult {
+export function validateColumnParams(
+  params: ColumnParams,
+  codeId?: StructuralCodeId,
+): ColumnValidationResult {
   const hardErrors: string[] = [];
   const codeViolations: string[] = [];
 
@@ -75,6 +83,7 @@ export function validateColumnParams(params: ColumnParams): ColumnValidationResu
   validateHeight(params, hardErrors);
   validateVariantParams(params, hardErrors, codeViolations);
   validateSlenderness(params, codeViolations);
+  validateReinforcementRatio(params, codeId, codeViolations);
 
   const bimValidation: BimValidation = {
     hasCodeViolations: codeViolations.length > 0,
@@ -169,7 +178,7 @@ function validateVariantParams(
     validateUshapeParams(params, hardErrors, codeViolations);
   }
   if (params.kind === 'composite') {
-    validateCompositeParams(params, hardErrors);
+    validateCompositeParams(params, hardErrors, codeViolations);
   }
 }
 
@@ -254,13 +263,23 @@ function validateUshapeParams(
 }
 
 /**
- * Composite (αυθαίρετη σύνθετη διατομή) — ADR-363 Phase 2. ΠΑΝΤΑ polygon-backed:
- * έλεγχος ≥3 κορυφών + μη-εκφυλισμένο εμβαδόν (shoelace > 0).
+ * Composite (αυθαίρετη σύνθετη διατομή) — ADR-363 Phase 2 + 449 free reshape. ΠΑΝΤΑ polygon-backed:
+ * hard error αν <3 κορυφές ή εκφυλισμένο εμβαδόν. Code violation (non-blocking) αν το free per-corner
+ * reshape έφτιαξε αιχμηρή «σφήνα» (ελάχιστη γωνία κορυφής < `MIN_SECTION_CORNER_ANGLE_DEG`) —
+ * γεωμετρικά έγκυρη αλλά μη-κατασκευάσιμη (οπλισμός/συμπύκνωση), βλ. απάντηση στατικής.
  */
-function validateCompositeParams(params: ColumnParams, hardErrors: string[]): void {
+function validateCompositeParams(
+  params: ColumnParams,
+  hardErrors: string[],
+  codeViolations: string[],
+): void {
   const poly = params.composite?.polygon;
   if (!poly || poly.length < 3 || Math.abs(polygonArea(poly.map((p) => ({ ...p, z: 0 })))) <= 0) {
     hardErrors.push('column.validation.hardErrors.invalidCompositePolygon');
+    return;
+  }
+  if (minPolygonInteriorAngleDeg(poly) < MIN_SECTION_CORNER_ANGLE_DEG) {
+    codeViolations.push('column.validation.codeViolations.sectionAngleTooAcute');
   }
 }
 
@@ -268,5 +287,34 @@ function validateSlenderness(params: ColumnParams, codeViolations: string[]): vo
   const ratio = getColumnSlenderness(params);
   if (ratio > MAX_SLENDERNESS_RATIO && Number.isFinite(ratio)) {
     codeViolations.push('column.validation.codeViolations.maxSlendernessExceeded');
+  }
+}
+
+/**
+ * ADR-456 — έλεγχος ποσοστού διαμήκους οπλισμού ρ = As/Ac έναντι των ορίων του
+ * επιλεγμένου κανονισμού (ρ_min/ρ_max). Slice 1: μόνο ορθογωνική/τοιχείο (Ac =
+ * width·depth)· άλλες διατομές → DEFER (χρειάζονται geometry.area). No-op όταν
+ * δεν έχει οριστεί οπλισμός.
+ */
+function validateReinforcementRatio(
+  params: ColumnParams,
+  codeId: StructuralCodeId | undefined,
+  codeViolations: string[],
+): void {
+  const r = params.reinforcement;
+  if (!r) return;
+  if (params.kind !== 'rectangular' && params.kind !== 'shear-wall') return;
+  if (params.width <= 0 || params.depth <= 0) return;
+
+  const grossAreaMm2 = params.width * params.depth;
+  const provider = resolveStructuralCode(codeId);
+  const ctx = { widthMm: params.width, depthMm: params.depth, heightMm: params.height, grossAreaMm2 };
+  const { ratio } = computeColumnReinforcementQuantities(ctx, r);
+  const limits = provider.columnReinforcementLimits(ctx, r.longitudinal.diameterMm);
+
+  if (ratio < limits.minRatio) {
+    codeViolations.push('column.validation.codeViolations.reinforcementRatioBelowMin');
+  } else if (ratio > limits.maxRatio) {
+    codeViolations.push('column.validation.codeViolations.reinforcementRatioAboveMax');
   }
 }

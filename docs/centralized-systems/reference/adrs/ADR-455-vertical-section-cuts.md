@@ -143,6 +143,9 @@ side must render as a **GHOST** (semi-transparent), NOT be hidden (explicit choi
   (+ test), the `DxfRenderer` per-entity/line-batch ghost path + `resolveActiveAxisCuts`, and the
   `xc`/`yc` bitmap-cache key (cut moves no longer rebuild the entity bitmap → faster drag).
   Discoverability: the handle tab is 34×16 px and the WHOLE section line is grabbable
-  (`nearSectionLine`, ±7 px — Revit-style), not just the tab. Note: the renderer runs inside a
-  RAF callback captured once at mount, so HMR keeps the old module — a FULL reload is needed to
-  pick up renderer changes during dev.
+  (`nearSectionLine`, ±7 px — Revit-style), not just the tab. **Zoom/pan-aware handle**: the tab's
+  along-line coordinate is **clamped to the visible drawing area** (`getAxisCutGripRect`), so the
+  control stays reachable at any zoom even when the world-anchored line scrolls off-screen — grab
+  the edge-pinned tab and drag to pull the cut back into view (absolute `screenToWorld` mapping).
+  Note: the renderer runs inside a RAF callback captured once at mount, so HMR keeps the old
+  module — a FULL reload is needed to pick up renderer changes during dev.

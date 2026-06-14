@@ -41,6 +41,8 @@ import type { IfcEntityMixin } from './ifc-entity-mixin';
 import type { ColumnBaseBinding, ColumnTopBinding } from './bim-binding';
 import type { EnvelopeFunction, EnvelopeLayer } from './thermal-envelope-types';
 import type { StructuralFinishSpec } from '../finishes/structural-finish-types';
+import type { ConcreteGrade } from '../structural/concrete-grades';
+import type { ColumnReinforcement } from '../structural/reinforcement/column-reinforcement-types';
 
 // ─── Sub-type discriminator (ADR-363 §5.6) ───────────────────────────────────
 
@@ -313,6 +315,20 @@ export interface ColumnParams {
    * Undefined / absent = user-defined ("Custom"). Revit-style pattern.
    */
   readonly catalogProfile?: string;
+  /**
+   * ADR-456 — Κατηγορία σκυροδέματος (EN 1992-1-1 Table 3.1, π.χ. 'C25/30').
+   * Optional/non-breaking: absent → χρησιμοποιείται `DEFAULT_CONCRETE_GRADE` για
+   * το βάρος σκυροδέματος στο BOQ/schedule. Typed πεδίο (όχι string FK υλικού)
+   * ώστε ο στατικός υπολογισμός να διαβάζει fck/Ecm απευθείας.
+   */
+  readonly concreteGrade?: ConcreteGrade;
+  /**
+   * ADR-456 — Οπλισμός κολώνας (διαμήκης + συνδετήρες + επικάλυψη). Optional:
+   * absent → δεν έχει διαστασιολογηθεί οπλισμός (μόνο ποσότητες σκυροδέματος).
+   * Οι παράγωγες ποσότητες (μήκη/τεμάχια/βάρος χάλυβα) υπολογίζονται on-demand
+   * από `column-reinforcement-compute.ts` — ΠΟΤΕ αποθηκεύονται.
+   */
+  readonly reinforcement?: ColumnReinforcement;
 }
 
 // ─── Geometry cache (derivable from params; SSoT = params) ──────────────────
@@ -400,6 +416,14 @@ export const MIN_SHEAR_WALL_THICKNESS_MM = 150;
  * (Eurocode 8 §5.4.2.4 / Eurocode 2 §9.6.1: ratio STRICTLY > 4 → τοιχίο).
  */
 export const SHEAR_WALL_MIN_ASPECT_RATIO = 4;
+
+/**
+ * ADR-363/449 — ελάχιστη γωνία κορυφής (μοίρες) μιας σύνθετης (composite/freeform) διατομής
+ * πριν θεωρηθεί αιχμηρή «σφήνα» (impractical sliver). Free per-corner reshape μπορεί να φτιάξει
+ * οξείες γωνίες όπου ο οπλισμός/η συμπύκνωση σκυροδέματος δεν είναι εφικτή — κάτω από αυτό το
+ * όριο → non-blocking code violation (red badge), όχι hard error (γεωμετρικά παραμένει έγκυρο).
+ */
+export const MIN_SECTION_CORNER_ANGLE_DEG = 20;
 
 /** Default flange width (b) για I-shape (mm). IPE-300 = 150, HEA-300 = 300. Median = 200. */
 export const DEFAULT_I_FLANGE_WIDTH_MM = 200;

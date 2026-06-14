@@ -20,6 +20,7 @@ import { useOverlayStore } from '../overlays/overlay-store';
 import { useUniversalSelection } from '../systems/selection';
 import { useLevelManager } from '../systems/levels/useLevels';
 import { useBimRenderSettingsSync } from '../state/hooks/useBimRenderSettingsSync'; // ADR-375 B.2 — per-level BIM render settings
+import { useStructuralSettingsSync } from '../state/hooks/useStructuralSettingsSync'; // ADR-456 2b — building-level structural code
 // ADR-396 P7 — sync per-level thermal envelope spec into the store
 import { useThermalEnvelopeSync } from '../state/hooks/useThermalEnvelopeSync';
 // ADR-375 Phase C.1 — sync per-company pen table overrides into the resolver
@@ -124,6 +125,12 @@ export const DxfViewerContent = React.memo<DxfViewerAppProps>((props) => {
   useBimRenderSettingsSync({
     currentLevelId: levelManager.currentLevelId,
     levels: levelManager.levels,
+  });
+  // ADR-456 Slice 2b — load building-level structural settings (κανονισμός)
+  useStructuralSettingsSync({
+    currentLevelId: levelManager.currentLevelId,
+    levels: levelManager.levels,
+    saveContext: levelManager.saveContext,
   });
   // ADR-396 P7 — load per-level ThermalEnvelopeSpec on every switch / Firestore push
   useThermalEnvelopeSync({

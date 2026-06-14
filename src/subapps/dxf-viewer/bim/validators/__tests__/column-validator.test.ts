@@ -241,3 +241,35 @@ describe('validateColumnParams — I-shape kind (Phase 8)', () => {
     expect(r.hardErrors).toHaveLength(0);
   });
 });
+
+// ─── ADR-363/449 — composite free-reshape section guards ────────────────────
+
+describe('validateColumnParams — composite section (free per-corner reshape)', () => {
+  const SQUARE = {
+    polygon: [
+      { x: -200, y: -200 }, { x: 200, y: -200 }, { x: 200, y: 200 }, { x: -200, y: 200 },
+    ],
+  };
+  // Αιχμηρή «σφήνα»: στην κορυφή (200,0) η γωνία είναι ~2.9° (< 20°).
+  const SLIVER = {
+    polygon: [
+      { x: -200, y: -10 }, { x: 200, y: 0 }, { x: -200, y: 10 },
+    ],
+  };
+
+  it('square composite (90° γωνίες) → χωρίς sectionAngleTooAcute', () => {
+    const r = validateColumnParams(makeColumn({ kind: 'composite', composite: SQUARE }));
+    expect(r.codeViolations).not.toContain('column.validation.codeViolations.sectionAngleTooAcute');
+  });
+
+  it('flags sectionAngleTooAcute για αιχμηρή σφήνα (< 20°)', () => {
+    const r = validateColumnParams(makeColumn({ kind: 'composite', composite: SLIVER }));
+    expect(r.codeViolations).toContain('column.validation.codeViolations.sectionAngleTooAcute');
+  });
+
+  it('αιχμηρή σφήνα = non-blocking code violation, ΟΧΙ hard error (γεωμετρικά έγκυρη)', () => {
+    const r = validateColumnParams(makeColumn({ kind: 'composite', composite: SLIVER }));
+    expect(r.hardErrors).toHaveLength(0);
+    expect(r.bimValidation.hasCodeViolations).toBe(true);
+  });
+});

@@ -89,8 +89,10 @@ import {
 } from './column-variant-grips';
 import {
   columnPolygon,
-  polyVertexHandlePosition,
-  resizePolyVertex,
+  freeCornerReshapeGrips,
+  freeReshapeRotationWorld,
+  moveColumnEdgeFree,
+  reshapeColumnCornerFree,
 } from './column-poly-vertex-grips';
 // ADR-363 Slice C — rectangular / shear-wall corners + edges via shared
 // `rect-grip-engine` SSoT (wall/foundation parity). Variant/circular/polygon
@@ -134,6 +136,16 @@ import {
  *   circular (2 grips):
  *     0 → center, 1 → width (= diameter, handle στο world +X)
  */
+/**
+ * ADR-363/449 — kinds που παίρνουν **free reshape της στατικής διατομής** (λαβή ανά κορυφή +
+ * λαβή ανά μέσο-πλευράς + rotation σε εσωτερικό σημείο). PHASE 1 παραμετρικό = `L-shape` (→ γίνεται
+ * `composite` στο πρώτο σύρσιμο)· **ΚΑΙ** κάθε ήδη polygon-backed (`composite` / `U-shape`+polygon),
+ * ώστε ένα reshaped στοιχείο να κρατά την ΙΔΙΑ συμπεριφορά σε επόμενες επιλογές. PHASE 2 → T/I/U-παρ/polygon.
+ */
+function usesFreeReshapeGrips(params: Readonly<ColumnParams>): boolean {
+  return params.kind === 'L-shape' || !!columnPolygon(params);
+}
+
 export function getColumnGrips(entity: Readonly<ColumnEntity>): GripInfo[] {
   const { params } = entity;
   const grips: GripInfo[] = [];
@@ -176,31 +188,12 @@ export function getColumnGrips(entity: Readonly<ColumnEntity>): GripInfo[] {
     return grips;
   }
 
-  // ADR-363 Phase 2b — polygon-backed U-shape / composite (από-περίγραμμα):
-  // center + rotation + ΜΙΑ λαβή ανά κορυφή. ΟΧΙ width/depth grips — είναι
-  // no-ops για polygon-backed (`buildUshapeLocal`/`buildCompositeLocal`
-  // αγνοούν width/depth όταν υπάρχει polygon).
-  const backingPoly = columnPolygon(params);
-  if (backingPoly && backingPoly.length >= 3) {
-    grips.push({
-      entityId: entity.id,
-      gripIndex: 1,
-      type: 'vertex',
-      position: rotationHandleWorld(params),
-      movesEntity: false,
-      columnGripKind: 'column-rotation',
-    });
-    backingPoly.forEach((_, i) => {
-      grips.push({
-        entityId: entity.id,
-        gripIndex: 10 + i,
-        type: 'vertex',
-        position: polyVertexHandlePosition(params, i),
-        movesEntity: false,
-        columnGripKind: `column-poly-vertex-${i}`,
-      });
-    });
-    return grips;
+  // ADR-363/449 — free reshape ΤΗΣ ΣΤΑΤΙΚΗΣ ΔΙΑΤΟΜΗΣ: L-shape (PHASE 1) + κάθε polygon-backed
+  // (`composite` / `U-shape` «από περίγραμμα», ΚΑΙ το composite που προκύπτει ΜΕΤΑ από drag) →
+  // rotation (εσωτερικό σημείο) + ΜΙΑ λαβή ανά κορυφή + ΜΙΑ λαβή ανά μέσο-πλευράς. Η emission ζει
+  // στο `column-poly-vertex-grips` (SSoT). Αντικαθιστά το παλιό per-vertex-only polygon-backed branch.
+  if (usesFreeReshapeGrips(params)) {
+    return freeCornerReshapeGrips(entity);
   }
 
   grips.push({
@@ -366,10 +359,14 @@ export function applyColumnGripDrag(
   // ADR-363 Phase 2b — U-shape (Π) parametric + polygon-backed per-vertex grips.
   if (gripKind === 'column-leg-thickness') return resizeLegThickness(input);
   if (gripKind === 'column-base-thickness') return resizeBaseThickness(input);
-  if (gripKind.startsWith('column-poly-vertex-')) {
-    const idx = parseInt(gripKind.slice('column-poly-vertex-'.length), 10);
+  // ADR-363/449 — free section reshape: vertex (γωνία) ή edge (μέσο πλευράς → όλη η πλευρά)·
+  // και τα δύο materialize σε composite αν το kind είναι παραμετρικό (L-shape).
+  if (gripKind.startsWith('column-poly-')) {
+    const isEdge = gripKind.startsWith('column-poly-edge-');
+    const prefix = isEdge ? 'column-poly-edge-' : 'column-poly-vertex-';
+    const idx = parseInt(gripKind.slice(prefix.length), 10);
     if (!Number.isFinite(idx) || idx < 0) return input.originalParams;
-    return resizePolyVertex(input, idx);
+    return isEdge ? moveColumnEdgeFree(input, idx) : reshapeColumnCornerFree(input, idx);
   }
   return input.originalParams;
 }
@@ -391,7 +388,12 @@ function moveCenter(input: Readonly<ColumnGripDragInput>): ColumnParams {
 function rotateAroundPosition(input: Readonly<ColumnGripDragInput>): ColumnParams {
   const { originalParams, delta } = input;
   if (originalParams.kind === 'circular') return originalParams;
-  const oldHandle = rotationHandleWorld(originalParams);
+  // ADR-363/449 — free-reshape στοιχεία εκπέμπουν τη λαβή περιστροφής σε ΕΣΩΤΕΡΙΚΟ σημείο
+  // (`freeReshapeRotationWorld`)· το drag πρέπει να διαβάσει το ΙΔΙΟ σημείο ως oldHandle ώστε να
+  // μην «πηδά» στο πιάσιμο (αλλιώς face-handle vs interior-handle mismatch).
+  const oldHandle = usesFreeReshapeGrips(originalParams)
+    ? freeReshapeRotationWorld(originalParams)
+    : rotationHandleWorld(originalParams);
   const newHandle = { x: oldHandle.x + delta.x, y: oldHandle.y + delta.y };
   const oldVec = {
     x: oldHandle.x - originalParams.position.x,

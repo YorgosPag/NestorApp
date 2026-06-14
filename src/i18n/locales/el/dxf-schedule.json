@@ -172,6 +172,11 @@
     "primaryQuantity": "Κύρια ποσότητα",
     "primaryUnit": "Μονάδα",
     "atoeCategory": "Κατηγορία ΑΤΟΕ",
-    "buildingName": "Κτίριο"
+    "buildingName": "Κτίριο",
+    "concreteGrade": "Κατηγορία σκυροδέματος",
+    "concreteWeight": "Βάρος σκυροδέματος (kg)",
+    "longitudinalRebar": "Διαμήκης οπλισμός",
+    "stirrups": "Συνδετήρες",
+    "steelWeight": "Βάρος χάλυβα (kg)"
   }
 }

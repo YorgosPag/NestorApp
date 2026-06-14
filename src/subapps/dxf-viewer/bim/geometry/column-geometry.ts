@@ -368,3 +368,27 @@ export function getColumnSlenderness(params: ColumnParams): number {
   if (minDim <= 0) return Number.POSITIVE_INFINITY;
   return params.height / minDim;
 }
+
+/**
+ * ADR-363/449 — Υλοποιεί το footprint **οποιουδήποτε** kind ως ρητό polygon σε LOCAL mm
+ * (bbox-centered), μέσω του ΙΔΙΟΥ SSoT (`buildLocalFootprint`) που τρέφει τη γεωμετρία. Το
+ * χρησιμοποιεί το free per-corner reshape (`reshapeColumnCornerFree`) ώστε ένα παραμετρικό
+ * shaped column (L/T/I/…) να μετατραπεί σε `composite` (custom διατομή) όταν ο χρήστης σύρει
+ * ελεύθερα μια γωνία — μηδέν νέα γεωμετρία. canvas units → mm (÷ s), re-center στο bbox-center
+ * (το σύμβολο που περιμένει το `resizePolyVertex`). Η σειρά κορυφών είναι ίδια με το rendered
+ * `geometry.footprint.vertices` (ίδιο `buildLocalFootprint` + order-preserving transform).
+ */
+export function materializeColumnLocalPolygonMm(params: ColumnParams): Point2D[] {
+  const s = mmToSceneUnits(params.sceneUnits ?? 'mm');
+  const mm = buildLocalFootprint(params, s).map((v) => ({ x: v.x / s, y: v.y / s }));
+  let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+  for (const p of mm) {
+    if (p.x < minX) minX = p.x;
+    if (p.x > maxX) maxX = p.x;
+    if (p.y < minY) minY = p.y;
+    if (p.y > maxY) maxY = p.y;
+  }
+  const cx = (minX + maxX) / 2;
+  const cy = (minY + maxY) / 2;
+  return mm.map((p) => ({ x: p.x - cx, y: p.y - cy }));
+}

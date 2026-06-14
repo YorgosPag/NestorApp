@@ -80,8 +80,8 @@ describe('column-grips Phase 2b — emission', () => {
     ]);
   });
 
-  // ADR-363 Φ1G.5 Slice 2: column-center removed → rotation + ΜΙΑ λαβή/κορυφή (ΟΧΙ center/width/depth)
-  it('polygon-backed composite → rotation + ΜΙΑ λαβή/κορυφή (ΟΧΙ center/width/depth)', () => {
+  // ADR-363/449 — free reshape: rotation + ΜΙΑ λαβή/κορυφή + ΜΙΑ λαβή/μέσο-πλευράς (ΟΧΙ center/width/depth)
+  it('polygon-backed composite → rotation + λαβή/κορυφή + λαβή/μέσο-πλευράς', () => {
     const grips = getColumnGrips(makeComposite());
     expect(grips.map((g) => g.columnGripKind)).toEqual([
       'column-rotation',
@@ -89,6 +89,10 @@ describe('column-grips Phase 2b — emission', () => {
       'column-poly-vertex-1',
       'column-poly-vertex-2',
       'column-poly-vertex-3',
+      'column-poly-edge-0',
+      'column-poly-edge-1',
+      'column-poly-edge-2',
+      'column-poly-edge-3',
     ]);
   });
 

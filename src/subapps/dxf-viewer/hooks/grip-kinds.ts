@@ -331,7 +331,10 @@ export type ColumnGripKind =
   // ADR-363 Phase 2b — polygon-backed U-shape/composite per-vertex grips. The
   // vertex index is encoded in the kind string (mirror του `slab-vertex-${n}`
   // pattern) ώστε το dispatch να μη χρειάζεται ξεχωριστό index πεδίο.
-  | `column-poly-vertex-${number}`;
+  | `column-poly-vertex-${number}`
+  // ADR-363/449 — free per-EDGE grip (μέσο πλευράς): σύρσιμο μετακινεί ΟΛΗ την
+  // πλευρά (μετατοπίζει και τις 2 κορυφές της ακμής). Index = ακμή i (κορυφές i, i+1).
+  | `column-poly-edge-${number}`;
 
 /**
  * ADR-436 Slice 1b — Foundation (pad) grip kind (parametric grip type). Routes

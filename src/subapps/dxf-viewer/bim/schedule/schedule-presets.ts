@@ -41,6 +41,12 @@ import {
   type BimEntityType,
 } from '../config/bim-to-atoe-mapping';
 import { computeStairBoqQuantities } from '../stairs/stair-boq-quantities';
+import { concreteWeightKg, DEFAULT_CONCRETE_GRADE } from '../structural/concrete-grades';
+import {
+  computeColumnReinforcementQuantities,
+  formatLongitudinalLabel,
+  formatStirrupsLabel,
+} from '../structural/reinforcement/column-reinforcement-compute';
 import type {
   ScheduleCellValue,
   ScheduleColumnDef,
@@ -237,6 +243,13 @@ function mapColumn(entity: AnyBimEntity, lookups: ScheduleLookups): ScheduleRow[
   if (entity.type !== 'column') return {};
   const p = entity.params;
   const g = entity.geometry;
+  // ADR-456 — Στατικά: βάρος σκυροδέματος (όγκος × ρ) + παράγωγος οπλισμός.
+  const reinforcement = p.reinforcement
+    ? computeColumnReinforcementQuantities(
+        { widthMm: p.width, depthMm: p.depth, heightMm: p.height, grossAreaMm2: g.area * 1e6 },
+        p.reinforcement,
+      )
+    : null;
   return {
     id: entity.id,
     buildingName: lookups.building?.(entity.buildingId)?.name ?? null,
@@ -248,6 +261,11 @@ function mapColumn(entity: AnyBimEntity, lookups: ScheduleLookups): ScheduleRow[
     rotation: safeNumber(p.rotation),
     area: safeNumber(g.area),
     volume: safeNumber(g.volume),
+    concreteGrade: p.concreteGrade ?? DEFAULT_CONCRETE_GRADE,
+    concreteWeight: safeNumber(concreteWeightKg(g.volume)),
+    longitudinalRebar: p.reinforcement ? formatLongitudinalLabel(p.reinforcement) : null,
+    stirrups: p.reinforcement ? formatStirrupsLabel(p.reinforcement) : null,
+    steelWeight: reinforcement ? safeNumber(reinforcement.totalSteelWeightKg) : null,
     material: lookups.material(p.material),
   };
 }

@@ -276,6 +276,8 @@ export const RibbonButtonIcon: React.FC<RibbonButtonIconProps> = ({ icon, size }
     case 'struct-found-strip-tie': return <StructuralToolIcon base="foundation-strip" method="tie" className={className} />;
     case 'struct-found-strip-on-entity': return <StructuralToolIcon base="foundation-strip" method="on-entity" className={className} />;
     case 'struct-found-strip-from-grid': return <StructuralToolIcon base="foundation-strip" method="from-grid" className={className} />;
+    // ADR-456 Slice 2 — «Auto οπλισμός» (code-suggested reinforcement).
+    case 'struct-auto-reinforce': return <Wand2 width={sizePx[size]} height={sizePx[size]} className={className} />;
     default: return inlineSvg(size, <circle cx="12" cy="12" r="2" />);
   }
 };

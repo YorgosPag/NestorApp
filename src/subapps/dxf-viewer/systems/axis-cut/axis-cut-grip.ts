@@ -52,11 +52,20 @@ export function cutScreenCoord(
   return axis === 'x' ? s.x : s.y;
 }
 
+function clampNum(v: number, lo: number, hi: number): number {
+  return Math.min(hi, Math.max(lo, v));
+}
+
 /**
  * The handle's screen rect for one axis cut, or `null` when the viewport is degenerate.
  * X cut → vertical line at screen-x → tab on the bottom edge, centred on the line, wide
  * along the horizontal drag axis. Y cut → horizontal line at screen-y → tab on the left
  * edge, centred on the line, tall along the vertical drag axis.
+ *
+ * The tab's along-line coordinate is **clamped to the visible drawing area** so the handle
+ * stays reachable at any zoom/pan even when the section line itself scrolls off-screen
+ * (the line stays world-anchored; only the handle follows the screen — grab it at the edge
+ * and drag to pull the cut back into view).
  */
 export function getAxisCutGripRect(
   axis: AxisCutKey,
@@ -68,9 +77,11 @@ export function getAxisCutGripRect(
   const { left, bottom } = COORDINATE_LAYOUT.MARGINS;
   if (axis === 'x') {
     const px = cutScreenCoord('x', cut, transform, viewport);
+    // Clamp the tab centre to [left … right] of the drawing area (right ruler width = 0).
+    const cx = clampNum(px, left + AXIS_CUT_GRIP_LONG / 2, viewport.width - AXIS_CUT_GRIP_LONG / 2);
     const cy = viewport.height - bottom - EDGE_GAP - AXIS_CUT_GRIP_SHORT / 2;
     return {
-      x: px - AXIS_CUT_GRIP_LONG / 2,
+      x: cx - AXIS_CUT_GRIP_LONG / 2,
       y: cy - AXIS_CUT_GRIP_SHORT / 2,
       w: AXIS_CUT_GRIP_LONG,
       h: AXIS_CUT_GRIP_SHORT,
@@ -78,9 +89,11 @@ export function getAxisCutGripRect(
   }
   const py = cutScreenCoord('y', cut, transform, viewport);
   const cx = left + EDGE_GAP + AXIS_CUT_GRIP_SHORT / 2;
+  // Clamp the tab centre to [top … bottom] of the drawing area (above the bottom ruler).
+  const cy = clampNum(py, AXIS_CUT_GRIP_LONG / 2, viewport.height - bottom - AXIS_CUT_GRIP_LONG / 2);
   return {
     x: cx - AXIS_CUT_GRIP_SHORT / 2,
-    y: py - AXIS_CUT_GRIP_LONG / 2,
+    y: cy - AXIS_CUT_GRIP_LONG / 2,
     w: AXIS_CUT_GRIP_SHORT,
     h: AXIS_CUT_GRIP_LONG,
   };

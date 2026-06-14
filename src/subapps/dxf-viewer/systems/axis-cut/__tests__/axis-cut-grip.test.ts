@@ -46,6 +46,26 @@ describe('getAxisCutGripRect', () => {
     expect(r.y + r.h).toBeLessThanOrEqual(VIEWPORT.height - COORDINATE_LAYOUT.MARGINS.bottom);
   });
 
+  it('clamps the X handle into the drawing area when the cut line is off-screen right', () => {
+    // position 460 → screenX = 30 + 460*2 + 50 = 1000 (> width 800) → handle pins to the edge.
+    const c = cut(true, 460, 1);
+    const px = CoordinateTransforms.worldToScreen({ x: 460, y: 0 }, TRANSFORM, VIEWPORT).x;
+    expect(px).toBeGreaterThan(VIEWPORT.width); // precondition: line is off-screen
+    const r = getAxisCutGripRect('x', c, TRANSFORM, VIEWPORT)!;
+    expect(r.x).toBeGreaterThanOrEqual(0);
+    expect(r.x + r.w).toBeLessThanOrEqual(VIEWPORT.width); // fully on-screen → grabbable
+  });
+
+  it('clamps the Y handle into the drawing area when the cut line is off-screen', () => {
+    // position −300 → screenY far below the bottom ruler → handle pins to the bottom edge.
+    const c = cut(true, -300, 1);
+    const py = CoordinateTransforms.worldToScreen({ x: 0, y: -300 }, TRANSFORM, VIEWPORT).y;
+    expect(py).toBeGreaterThan(VIEWPORT.height - COORDINATE_LAYOUT.MARGINS.bottom);
+    const r = getAxisCutGripRect('y', c, TRANSFORM, VIEWPORT)!;
+    expect(r.y).toBeGreaterThanOrEqual(0);
+    expect(r.y + r.h).toBeLessThanOrEqual(VIEWPORT.height - COORDINATE_LAYOUT.MARGINS.bottom);
+  });
+
   it('centres the Y handle on the line and rests right of the left ruler', () => {
     const c = cut(true, 7, -1);
     const py = CoordinateTransforms.worldToScreen({ x: 0, y: 7 }, TRANSFORM, VIEWPORT).y;

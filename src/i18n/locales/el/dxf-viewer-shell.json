@@ -1,4 +1,10 @@
 {
+  "structural": {
+    "code": {
+      "eurocode": "Ευρωκώδικες",
+      "greekLegacy": "ΕΚΩΣ/ΕΑΚ"
+    }
+  },
   "constructionMaterials": {
     "mat-concrete": "Σκυρόδεμα",
     "mat-screed": "Τσιμεντοκονία",
@@ -1095,6 +1101,7 @@
       "columnUshape": "Διατομή Π",
       "columnMaterial": "Υλικό",
       "columnFinishSkin": "Σοβάς",
+      "columnStructural": "Στατικά/Οπλισμός",
       "columnActions": "Ενέργειες",
       "columnStructuralAttach": "Σύνδεση δομικού",
       "columnShearWallCatalog": "Κατάλογος Σκυροδέματος",
@@ -2640,6 +2647,22 @@
           "right": "Δεξιά"
         }
       },
+      "columnStructural": {
+        "code": "Κανονισμός",
+        "codeTooltip": "Κανονισμός σχεδιασμού (ανά κτίριο)",
+        "concreteGrade": "Σκυρόδεμα",
+        "longitudinalDiameter": "Διαμήκης Ø",
+        "longitudinalCount": "Πλήθος",
+        "stirrupDiameter": "Συνδετήρες Ø",
+        "stirrupSpacing": "Βήμα",
+        "stirrupCriticalSpacing": "Κρίσιμο βήμα",
+        "cover": "Επικάλυψη",
+        "auto": "Auto οπλισμός",
+        "autoTooltip": "Προτεινόμενος ελάχιστος-έγκυρος οπλισμός κατά τον κανονισμό",
+        "concreteWeight": "Βάρος σκυρ. (kg)",
+        "steelWeight": "Βάρος χάλυβα (kg)",
+        "ratio": "ρ (%)"
+      },
       "columnEditor": {
         "width": "Πλάτος",
         "depth": "Βάθος",
@@ -3805,7 +3828,10 @@
         "depthTooSmall": "Βάθος κάτω από το ελάχιστο Eurocode (250mm)",
         "maxSlendernessExceeded": "Λόγος λυγηρότητας πάνω από 30 — έλεγχος Eurocode",
         "shearWallThicknessTooSmall": "Πάχος τοιχείου κάτω από το ελάχιστο Eurocode 8 (150mm)",
-        "shearWallAspectRatioBelow": "Λόγος μήκους προς πάχος κάτω από 4 — δεν είναι τοιχείο διάτμησης"
+        "shearWallAspectRatioBelow": "Λόγος μήκους προς πάχος κάτω από 4 — δεν είναι τοιχείο διάτμησης",
+        "sectionAngleTooAcute": "Πολύ αιχμηρή γωνία διατομής — δύσκολη όπλιση/σκυροδέτηση",
+        "reinforcementRatioBelowMin": "Ποσοστό διαμήκους οπλισμού κάτω από το ελάχιστο του κανονισμού (ρ_min)",
+        "reinforcementRatioAboveMax": "Ποσοστό διαμήκους οπλισμού πάνω από το μέγιστο του κανονισμού (ρ_max = 4%)"
       }
     }
   },

@@ -172,6 +172,11 @@
     "primaryQuantity": "Primary quantity",
     "primaryUnit": "Unit",
     "atoeCategory": "ATOE category",
-    "buildingName": "Building"
+    "buildingName": "Building",
+    "concreteGrade": "Concrete grade",
+    "concreteWeight": "Concrete weight (kg)",
+    "longitudinalRebar": "Longitudinal rebar",
+    "stirrups": "Stirrups",
+    "steelWeight": "Steel weight (kg)"
   }
 }

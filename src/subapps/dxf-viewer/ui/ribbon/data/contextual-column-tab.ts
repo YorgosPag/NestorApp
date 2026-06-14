@@ -23,6 +23,8 @@ import {
   COLUMN_RIBBON_BADGE_KEYS,
   COLUMN_RIBBON_VISIBILITY_KEYS,
   COLUMN_FINISH_KEYS,
+  COLUMN_STRUCTURAL_KEYS,
+  COLUMN_STRUCTURAL_READOUT_KEYS,
 } from '../hooks/bridge/column-command-keys';
 import { ENVELOPE_FUNCTION_OPTIONS } from '../hooks/bridge/envelope-function-param';
 import {
@@ -30,6 +32,16 @@ import {
   FINISH_MATERIAL_OPTIONS,
   FINISH_THICKNESS_OPTIONS,
 } from '../hooks/bridge/finish-param';
+import {
+  STRUCTURAL_CODE_OPTIONS,
+  CONCRETE_GRADE_OPTIONS,
+  LONGITUDINAL_DIAMETER_OPTIONS,
+  LONGITUDINAL_COUNT_OPTIONS,
+  STIRRUP_DIAMETER_OPTIONS,
+  STIRRUP_SPACING_OPTIONS,
+  STIRRUP_CRITICAL_SPACING_OPTIONS,
+  COVER_OPTIONS,
+} from '../hooks/bridge/structural-param';
 import { PSET_RIBBON_ACTION } from '../hooks/bridge/pset-action-keys';
 import {
   CATALOG_CUSTOM_SENTINEL,
@@ -450,6 +462,167 @@ export const CONTEXTUAL_COLUMN_TAB: RibbonTab = {
                 commandKey: COLUMN_RIBBON_KEYS.stringParams.material,
                 comboboxWidthPx: 180,
                 options: COLUMN_MATERIAL_OPTIONS,
+              },
+            },
+          ],
+        },
+      ],
+    },
+    {
+      // ADR-456 Slice 2 — Στατικά/Οπλισμός: building-level κανονισμός + per-element
+      // κατηγορία σκυροδέματος + διαμήκης/εγκάρσιος οπλισμός + επικάλυψη, με κουμπί
+      // «Auto οπλισμός» (code-suggested) + live readouts (βάρη/ρ%). Visible μόνο για
+      // RC kinds (rectangular/shear-wall) — βλ. getPanelVisibility.
+      id: 'column-structural',
+      labelKey: 'ribbon.panels.columnStructural',
+      visibilityKey: COLUMN_RIBBON_VISIBILITY_KEYS.structural,
+      rows: [
+        {
+          isInFlyout: false,
+          buttons: [
+            {
+              type: 'combobox',
+              size: 'small',
+              command: {
+                id: 'column.structural.code',
+                labelKey: 'ribbon.commands.columnStructural.code',
+                tooltipKey: 'ribbon.commands.columnStructural.codeTooltip',
+                commandKey: COLUMN_STRUCTURAL_KEYS.code,
+                comboboxWidthPx: 150,
+                options: STRUCTURAL_CODE_OPTIONS,
+              },
+            },
+            {
+              type: 'combobox',
+              size: 'small',
+              command: {
+                id: 'column.structural.concreteGrade',
+                labelKey: 'ribbon.commands.columnStructural.concreteGrade',
+                commandKey: COLUMN_STRUCTURAL_KEYS.concreteGrade,
+                comboboxWidthPx: 110,
+                options: CONCRETE_GRADE_OPTIONS,
+              },
+            },
+            {
+              type: 'simple',
+              size: 'small',
+              command: {
+                id: 'column.structural.auto',
+                labelKey: 'ribbon.commands.columnStructural.auto',
+                tooltipKey: 'ribbon.commands.columnStructural.autoTooltip',
+                icon: 'struct-auto-reinforce',
+                commandKey: COLUMN_RIBBON_KEYS_ACTIONS.autoReinforce,
+                action: COLUMN_RIBBON_KEYS_ACTIONS.autoReinforce,
+              },
+            },
+          ],
+        },
+        {
+          isInFlyout: false,
+          buttons: [
+            {
+              type: 'combobox',
+              size: 'small',
+              command: {
+                id: 'column.structural.longitudinalDiameter',
+                labelKey: 'ribbon.commands.columnStructural.longitudinalDiameter',
+                commandKey: COLUMN_STRUCTURAL_KEYS.longitudinalDiameter,
+                comboboxWidthPx: 90,
+                options: LONGITUDINAL_DIAMETER_OPTIONS,
+              },
+            },
+            {
+              type: 'combobox',
+              size: 'small',
+              command: {
+                id: 'column.structural.longitudinalCount',
+                labelKey: 'ribbon.commands.columnStructural.longitudinalCount',
+                commandKey: COLUMN_STRUCTURAL_KEYS.longitudinalCount,
+                comboboxWidthPx: 80,
+                options: LONGITUDINAL_COUNT_OPTIONS,
+              },
+            },
+            {
+              type: 'combobox',
+              size: 'small',
+              command: {
+                id: 'column.structural.stirrupDiameter',
+                labelKey: 'ribbon.commands.columnStructural.stirrupDiameter',
+                commandKey: COLUMN_STRUCTURAL_KEYS.stirrupDiameter,
+                comboboxWidthPx: 90,
+                options: STIRRUP_DIAMETER_OPTIONS,
+              },
+            },
+            {
+              type: 'combobox',
+              size: 'small',
+              command: {
+                id: 'column.structural.stirrupSpacing',
+                labelKey: 'ribbon.commands.columnStructural.stirrupSpacing',
+                commandKey: COLUMN_STRUCTURAL_KEYS.stirrupSpacing,
+                comboboxWidthPx: 90,
+                options: STIRRUP_SPACING_OPTIONS,
+              },
+            },
+            {
+              type: 'combobox',
+              size: 'small',
+              command: {
+                id: 'column.structural.stirrupCriticalSpacing',
+                labelKey: 'ribbon.commands.columnStructural.stirrupCriticalSpacing',
+                commandKey: COLUMN_STRUCTURAL_KEYS.stirrupCriticalSpacing,
+                comboboxWidthPx: 90,
+                options: STIRRUP_CRITICAL_SPACING_OPTIONS,
+              },
+            },
+            {
+              type: 'combobox',
+              size: 'small',
+              command: {
+                id: 'column.structural.cover',
+                labelKey: 'ribbon.commands.columnStructural.cover',
+                commandKey: COLUMN_STRUCTURAL_KEYS.cover,
+                comboboxWidthPx: 80,
+                options: COVER_OPTIONS,
+              },
+            },
+          ],
+        },
+        {
+          isInFlyout: false,
+          buttons: [
+            {
+              // Read-only readout — bridge δίνει value, options:[] (μη επεξεργάσιμο).
+              type: 'combobox',
+              size: 'small',
+              command: {
+                id: 'column.structural.concreteWeight',
+                labelKey: 'ribbon.commands.columnStructural.concreteWeight',
+                commandKey: COLUMN_STRUCTURAL_READOUT_KEYS.concreteWeight,
+                comboboxWidthPx: 110,
+                options: [],
+              },
+            },
+            {
+              type: 'combobox',
+              size: 'small',
+              command: {
+                id: 'column.structural.steelWeight',
+                labelKey: 'ribbon.commands.columnStructural.steelWeight',
+                commandKey: COLUMN_STRUCTURAL_READOUT_KEYS.steelWeight,
+                comboboxWidthPx: 110,
+                options: [],
+              },
+            },
+            {
+              type: 'combobox',
+              size: 'small',
+              command: {
+                id: 'column.structural.ratio',
+                labelKey: 'ribbon.commands.columnStructural.ratio',
+                commandKey: COLUMN_STRUCTURAL_READOUT_KEYS.ratio,
+                comboboxWidthPx: 90,
+                options: [],
               },
             },
           ],

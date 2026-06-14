@@ -1,4 +1,10 @@
 {
+  "structural": {
+    "code": {
+      "eurocode": "Eurocodes",
+      "greekLegacy": "Greek legacy (ΕΚΩΣ/ΕΑΚ)"
+    }
+  },
   "constructionMaterials": {
     "mat-concrete": "Concrete",
     "mat-screed": "Cement Screed",
@@ -1095,6 +1101,7 @@
       "columnUshape": "U-shape",
       "columnMaterial": "Material",
       "columnFinishSkin": "Finish",
+      "columnStructural": "Structural",
       "columnActions": "Actions",
       "columnStructuralAttach": "Structural Attach",
       "columnShearWallCatalog": "Concrete Catalog",
@@ -2640,6 +2647,22 @@
           "right": "Right"
         }
       },
+      "columnStructural": {
+        "code": "Code",
+        "codeTooltip": "Design code (per building)",
+        "concreteGrade": "Concrete",
+        "longitudinalDiameter": "Long. Ø",
+        "longitudinalCount": "Count",
+        "stirrupDiameter": "Stirrup Ø",
+        "stirrupSpacing": "Spacing",
+        "stirrupCriticalSpacing": "Critical sp.",
+        "cover": "Cover",
+        "auto": "Auto rebar",
+        "autoTooltip": "Code-suggested minimum-valid reinforcement",
+        "concreteWeight": "Concrete (kg)",
+        "steelWeight": "Steel (kg)",
+        "ratio": "ρ (%)"
+      },
       "columnEditor": {
         "width": "Width",
         "depth": "Depth",
@@ -3805,7 +3828,10 @@
         "depthTooSmall": "Depth below Eurocode minimum (250mm)",
         "maxSlendernessExceeded": "Slenderness ratio above 30 — Eurocode check",
         "shearWallThicknessTooSmall": "Wall thickness below Eurocode 8 minimum (150mm)",
-        "shearWallAspectRatioBelow": "Length-to-thickness ratio below 4 — not a shear wall"
+        "shearWallAspectRatioBelow": "Length-to-thickness ratio below 4 — not a shear wall",
+        "sectionAngleTooAcute": "Section corner too acute — hard to reinforce/cast",
+        "reinforcementRatioBelowMin": "Longitudinal reinforcement ratio below code minimum (ρ_min)",
+        "reinforcementRatioAboveMax": "Longitudinal reinforcement ratio above code maximum (ρ_max = 4%)"
       }
     }
   },

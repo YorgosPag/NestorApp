@@ -133,6 +133,31 @@ const ColumnTiltSchema = z
   })
   .strict();
 
+// ─── ADR-456 — concrete grade + reinforcement ────────────────────────────────
+
+const ConcreteGradeSchema = z.enum([
+  'C12/15', 'C16/20', 'C20/25', 'C25/30', 'C30/37', 'C35/45', 'C40/50', 'C45/55', 'C50/60',
+]);
+
+const ColumnReinforcementSchema = z
+  .object({
+    longitudinal: z
+      .object({
+        diameterMm: z.number().positive(),
+        count: z.number().int().positive(),
+      })
+      .strict(),
+    stirrups: z
+      .object({
+        diameterMm: z.number().positive(),
+        spacingMm: z.number().positive(),
+        spacingCriticalMm: z.number().positive().optional(),
+      })
+      .strict(),
+    coverMm: z.number().positive(),
+  })
+  .strict();
+
 // ─── Params schema ──────────────────────────────────────────────────────────
 
 const ColumnParamsBaseSchema = z
@@ -169,6 +194,9 @@ const ColumnParamsBaseSchema = z
     envelopeLayer: EnvelopeLayerSchema.optional(),
     // ─── ADR-396 v2 Φάση 4 — ETICS classification override (Στρ.3) ─────────────
     envelopeFunction: EnvelopeFunctionSchema.optional(),
+    // ─── ADR-456 — Στατικά: κατηγορία σκυροδέματος + οπλισμός ──────────────────
+    concreteGrade: ConcreteGradeSchema.optional(),
+    reinforcement: ColumnReinforcementSchema.optional(),
   })
   .strict();
 

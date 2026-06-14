@@ -30,6 +30,7 @@ import {
   webThicknessHandlePosition,
 } from '../column-variant-grips';
 import { buildDefaultColumnParams } from '../../../hooks/drawing/column-completion';
+import { computeColumnGeometry } from '../../geometry/column-geometry';
 import type { ColumnEntity, ColumnKind, ColumnParams } from '../../types/column-types';
 import {
   DEFAULT_I_FLANGE_THICKNESS_MM,
@@ -60,7 +61,11 @@ function makeCircular(): ColumnEntity {
 }
 
 function makeLshape(): ColumnEntity {
-  return makeColumnEntity(buildDefaultColumnParams({ x: 0, y: 0 }, 'L-shape'));
+  // ADR-363/449 — το L-shape παίρνει πλέον free per-corner grips (geometry-driven),
+  // οπότε ο builder χρειάζεται υπολογισμένο footprint.
+  const params = buildDefaultColumnParams({ x: 0, y: 0 }, 'L-shape');
+  const ent = makeColumnEntity(params);
+  return { ...ent, geometry: computeColumnGeometry(params) } as ColumnEntity;
 }
 
 function makeTshape(): ColumnEntity {
@@ -142,17 +147,19 @@ describe('column-grips — getColumnGrips (Phase 4.5)', () => {
     expect(grips[0].columnGripKind).toBe('column-width');
   });
 
-  it('3. L-shape → 5 grips (Phase 4.5b adds arm-length + arm-width) — ADR-363 Φ1G.5 Slice 2', () => {
-    // ADR-363 Φ1G.5 Slice 2: column-center removed; count drops from 6 to 5
-    const grips = getColumnGrips(makeLshape());
-    expect(grips).toHaveLength(5);
+  it('3. L-shape → free reshape: rotation + ΜΙΑ λαβή/κορυφή + ΜΙΑ λαβή/μέσο-πλευράς — ADR-363/449', () => {
+    // ADR-363/449 — το L-shape δεν χρησιμοποιεί πλέον παραμετρικά arm grips· δίνει μία λαβή ανά
+    // κορυφή (corner reshape) + μία στο μέσο κάθε πλευράς (move-whole-side) του footprint.
+    const ent = makeLshape();
+    const verts = ent.geometry.footprint.vertices;
+    const grips = getColumnGrips(ent);
+    expect(grips).toHaveLength(1 + 2 * verts.length); // rotation + N corners + N edges
     expect(grips.map((g) => g.columnGripKind)).toEqual([
       'column-rotation',
-      'column-width',
-      'column-depth',
-      'column-arm-length',
-      'column-arm-width',
+      ...verts.map((_, i) => `column-poly-vertex-${i}`),
+      ...verts.map((_, i) => `column-poly-edge-${i}`),
     ]);
+    expect(grips.map((g) => g.columnGripKind)).not.toContain('column-arm-length');
   });
 
   it('4. T-shape → 5 grips (Phase 4.5b adds flange-length + web-thickness) — ADR-363 Φ1G.5 Slice 2', () => {

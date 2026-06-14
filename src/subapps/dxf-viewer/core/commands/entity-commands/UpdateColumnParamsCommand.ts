@@ -23,6 +23,7 @@ import { computeColumnGeometry } from '../../../bim/geometry/column-geometry';
 import { validateColumnParams } from '../../../bim/validators/column-validator';
 import { generateEntityId } from '../../../systems/entity-creation/utils';
 import { DEFAULT_MERGE_CONFIG } from '../interfaces';
+import { useStructuralSettingsStore } from '../../../state/structural-settings-store';
 
 export class UpdateColumnParamsCommand implements ICommand {
   readonly id: string;
@@ -59,7 +60,11 @@ export class UpdateColumnParamsCommand implements ICommand {
 
   private applyPatch(params: ColumnParams): void {
     const geometry: ColumnGeometry = computeColumnGeometry(params);
-    const validation = validateColumnParams(params).bimValidation;
+    // ADR-456 — ο ρ-έλεγχος οπλισμού χρησιμοποιεί τον building-level ενεργό
+    // κανονισμό (SSoT) ώστε κάθε recompute (ribbon edit / grip-drag) να κρίνεται
+    // με τα ίδια όρια.
+    const { codeId } = useStructuralSettingsStore.getState();
+    const validation = validateColumnParams(params, codeId).bimValidation;
     this.sceneManager.updateEntity(this.columnId, {
       kind: params.kind,
       params,

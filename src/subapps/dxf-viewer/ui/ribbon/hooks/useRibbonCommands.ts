@@ -16,54 +16,42 @@ import { isRoofBadgeKey } from './useRibbonRoofBridge';
 import { isColumnBadgeKey, isColumnPanelVisibilityKey } from './useRibbonColumnBridge';
 import { isBeamBadgeKey, isBeamPanelVisibilityKey } from './useRibbonBeamBridge';
 import { isSlabOpeningBadgeKey } from './useRibbonSlabOpeningBridge';
-import { isMepCircuitActionKey } from './bridge/mep-circuit-command-keys';
-import { isMepPipeNetworkActionKey } from './bridge/mep-pipe-network-command-keys';
-import { isWaterSupplyActionKey } from './bridge/water-auto-supply-command-keys';
-import { isDrainageAutoActionKey } from './bridge/drainage-auto-command-keys';
-import { isHeatingAutoActionKey } from './bridge/heating-auto-command-keys';
-import { isElectricalAutoActionKey } from './bridge/electrical-auto-command-keys';
-import { isElectricalWeakAutoActionKey } from './bridge/electrical-weak-auto-command-keys';
-import { isHvacAutoActionKey } from './bridge/hvac-auto-command-keys';
-import { isFireAutoActionKey } from './bridge/fire-auto-command-keys';
-import { isGasAutoActionKey } from './bridge/gas-auto-command-keys';
-import { isClashDetectionActionKey } from './bridge/clash-detection-command-keys';
 import { isMepFixturePanelVisibilityKey } from './useRibbonMepFixtureBridge';
-import { isMepFixtureRibbonKey, isMepFixtureRibbonStringKey, isMepFixtureActionKey } from './bridge/mep-fixture-command-keys';
+import { isMepFixtureRibbonKey, isMepFixtureRibbonStringKey } from './bridge/mep-fixture-command-keys';
 import { isMepManifoldPanelVisibilityKey } from './useRibbonMepManifoldBridge';
-import { isMepManifoldRibbonKey, isMepManifoldActionKey, isMepManifoldClassificationKey } from './bridge/mep-manifold-command-keys';
+import { isMepManifoldRibbonKey, isMepManifoldClassificationKey } from './bridge/mep-manifold-command-keys';
 import { isElectricalPanelPanelVisibilityKey } from './useRibbonElectricalPanelBridge';
-import { isElectricalPanelRibbonKey, isElectricalPanelActionKey } from './bridge/electrical-panel-command-keys';
-import { isMepRadiatorRibbonKey, isMepRadiatorRibbonStringKey, isMepRadiatorRibbonReadoutKey, isMepRadiatorActionKey } from './bridge/mep-radiator-command-keys';
+import { isElectricalPanelRibbonKey } from './bridge/electrical-panel-command-keys';
+import { isMepRadiatorRibbonKey, isMepRadiatorRibbonStringKey, isMepRadiatorRibbonReadoutKey } from './bridge/mep-radiator-command-keys';
 import { isMepBoilerPanelVisibilityKey } from './useRibbonMepBoilerBridge';
-import { isMepBoilerRibbonKey, isMepBoilerRibbonStringKey, isMepBoilerReadoutKey, isMepBoilerToggleKey, isMepBoilerActionKey } from './bridge/mep-boiler-command-keys';
+import { isMepBoilerRibbonKey, isMepBoilerRibbonStringKey, isMepBoilerReadoutKey, isMepBoilerToggleKey } from './bridge/mep-boiler-command-keys';
 import { isMepWaterHeaterPanelVisibilityKey } from './useRibbonMepWaterHeaterBridge';
-import { isMepWaterHeaterRibbonKey, isMepWaterHeaterActionKey } from './bridge/mep-water-heater-command-keys';
+import { isMepWaterHeaterRibbonKey } from './bridge/mep-water-heater-command-keys';
 import { isMepUnderfloorPanelVisibilityKey } from './useRibbonMepUnderfloorBridge';
-import { isMepUnderfloorRibbonKey, isMepUnderfloorActionKey } from './bridge/mep-underfloor-command-keys';
+import { isMepUnderfloorRibbonKey } from './bridge/mep-underfloor-command-keys';
 import { isMepSegmentPanelVisibilityKey } from './useRibbonMepSegmentBridge';
-import { isMepSegmentRibbonKey, isMepSegmentRibbonStringKey, isMepSegmentActionKey } from './bridge/mep-segment-command-keys';
+import { isMepSegmentRibbonKey, isMepSegmentRibbonStringKey } from './bridge/mep-segment-command-keys';
 import { isFurniturePanelVisibilityKey } from './useRibbonFurnitureBridge';
-import { isFurnitureRibbonKey, isFurnitureRibbonStringKey, isFurnitureActionKey } from './bridge/furniture-command-keys';
+import { isFurnitureRibbonKey, isFurnitureRibbonStringKey } from './bridge/furniture-command-keys';
 import { isFloorplanSymbolPanelVisibilityKey } from './useRibbonFloorplanSymbolBridge';
 import { isFloorplanSymbolRibbonKey, isFloorplanSymbolRibbonStringKey } from './bridge/floorplan-symbol-command-keys';
 import { isMepFixtureLibraryKey, isMepFixtureLibraryStringKey } from './bridge/mep-fixture-library-command-keys';
 import { isMepRiserKey, isMepRiserStringKey } from './bridge/mep-riser-command-keys';
 import { isArrayRibbonKey, isArrayRibbonStringKey, isArrayRibbonToggleKey } from './bridge/array-command-keys';
-import { isStairRibbonKey, isStairRibbonStringKey, isStairActionKey } from './bridge/stair-command-keys';
-import { isWallRibbonKey, isWallRibbonStringKey, isWallRibbonToggleKey, isWallActionKey } from './bridge/wall-command-keys';
-import { isOpeningRibbonKey, isOpeningRibbonStringKey, isOpeningActionKey, isOpeningTagStyleComboboxKey, isOpeningTagStyleToggleKey } from './bridge/opening-command-keys';
-import { isSlabRibbonKey, isSlabRibbonStringKey, isSlabActionKey } from './bridge/slab-command-keys';
-import { isRoofRibbonKey, isRoofRibbonStringKey, isRoofRibbonToggleKey, isRoofActionKey } from './bridge/roof-command-keys';
-import { isFloorFinishActionKey } from './useRibbonFloorFinishBridge';
+import { isStairRibbonKey, isStairRibbonStringKey } from './bridge/stair-command-keys';
+import { isWallRibbonKey, isWallRibbonStringKey, isWallRibbonToggleKey } from './bridge/wall-command-keys';
+import { isOpeningRibbonKey, isOpeningRibbonStringKey, isOpeningTagStyleComboboxKey, isOpeningTagStyleToggleKey } from './bridge/opening-command-keys';
+import { isSlabRibbonKey, isSlabRibbonStringKey } from './bridge/slab-command-keys';
+import { isRoofRibbonKey, isRoofRibbonStringKey, isRoofRibbonToggleKey } from './bridge/roof-command-keys';
 import { isFloorFinishRibbonNumberKey, isFloorFinishRibbonStringKey } from './bridge/floor-finish-command-keys';
-import { isThermalSpaceActionKey } from './useRibbonThermalSpaceBridge';
 import { isThermalSpaceRibbonNumberKey, isThermalSpaceRibbonStringKey } from './bridge/thermal-space-command-keys';
-import { isColumnRibbonKey, isColumnRibbonStringKey, isColumnActionKey } from './bridge/column-command-keys';
-import { isBeamRibbonKey, isBeamRibbonStringKey, isBeamActionKey } from './bridge/beam-command-keys';
-import { isFoundationRibbonKey, isFoundationRibbonStringKey, isFoundationActionKey, isFoundationBadgeKey } from './bridge/foundation-command-keys';
-import { isSlabOpeningRibbonStringKey, isSlabOpeningActionKey } from './bridge/slab-opening-command-keys';
+import { isColumnRibbonKey, isColumnRibbonStringKey, isColumnFinishKey, isColumnStructuralKey, isColumnStructuralReadoutKey } from './bridge/column-command-keys';
+import { isBeamRibbonKey, isBeamRibbonStringKey, isBeamFinishKey } from './bridge/beam-command-keys';
+import { isFoundationRibbonKey, isFoundationRibbonStringKey, isFoundationBadgeKey } from './bridge/foundation-command-keys';
+import { isSlabOpeningRibbonStringKey } from './bridge/slab-opening-command-keys';
 import { isLineToolRibbonKey } from './bridge/line-tool-command-keys';
 import { isXlineRibbonKey } from './bridge/xline-command-keys';
+import { routeRibbonAction } from './useRibbonCommands-action';
 
 export type { UseRibbonCommandsProps };
 
@@ -157,11 +145,14 @@ export function useRibbonCommands({
         thermalSpaceBridge.onComboboxChange(key, value);
         return;
       }
-      if (isColumnRibbonKey(key) || isColumnRibbonStringKey(key)) {
+      // ADR-449 Slice 5 fix — finish keys (`column.params.finish.*`) πρέπει να δρομολογηθούν
+      // ΚΑΙ εδώ στον columnBridge (το bridge τα χειριζόταν, αλλά ο composer τα ξεχνούσε →
+      // έπεφταν στον textEditorBridge → no-op· γι' αυτό το «Σοβάς Ναι/Όχι» δεν άλλαζε).
+      if (isColumnRibbonKey(key) || isColumnRibbonStringKey(key) || isColumnFinishKey(key) || isColumnStructuralKey(key)) {
         columnBridge.onComboboxChange(key, value);
         return;
       }
-      if (isBeamRibbonKey(key) || isBeamRibbonStringKey(key)) {
+      if (isBeamRibbonKey(key) || isBeamRibbonStringKey(key) || isBeamFinishKey(key)) {
         beamBridge.onComboboxChange(key, value);
         return;
       }
@@ -250,8 +241,10 @@ export function useRibbonCommands({
       if (isRoofRibbonKey(key) || isRoofRibbonStringKey(key)) return roofBridge.getComboboxState(key);
       if (isFloorFinishRibbonNumberKey(key) || isFloorFinishRibbonStringKey(key)) return floorFinishBridge.getComboboxState(key);
       if (isThermalSpaceRibbonNumberKey(key) || isThermalSpaceRibbonStringKey(key)) return thermalSpaceBridge.getComboboxState(key);
-      if (isColumnRibbonKey(key) || isColumnRibbonStringKey(key)) return columnBridge.getComboboxState(key);
-      if (isBeamRibbonKey(key) || isBeamRibbonStringKey(key)) return beamBridge.getComboboxState(key);
+      // ADR-449 Slice 5 fix — finish keys δρομολογούνται ΚΑΙ εδώ (αλλιώς το combobox δείχνει
+      // «-»: ο composer τα έστελνε στον textEditorBridge → null → δεν διάβαζε την τιμή του σοβά).
+      if (isColumnRibbonKey(key) || isColumnRibbonStringKey(key) || isColumnFinishKey(key) || isColumnStructuralKey(key) || isColumnStructuralReadoutKey(key)) return columnBridge.getComboboxState(key);
+      if (isBeamRibbonKey(key) || isBeamRibbonStringKey(key) || isBeamFinishKey(key)) return beamBridge.getComboboxState(key);
       if (isFoundationRibbonKey(key) || isFoundationRibbonStringKey(key)) return foundationBridge.getComboboxState(key);
       if (isSlabOpeningRibbonStringKey(key)) return slabOpeningBridge.getComboboxState(key);
       if (isMepFixtureRibbonKey(key) || isMepFixtureRibbonStringKey(key)) return mepFixtureBridge.getComboboxState(key);
@@ -359,131 +352,16 @@ export function useRibbonCommands({
   // falling through to the generic DxfViewerContent action handler.
   const onAction = React.useCallback(
     (action: string, data?: RibbonActionPayload) => {
-      if (isWallActionKey(action)) {
-        wallBridge.onAction(action);
-        return;
-      }
-      if (isOpeningActionKey(action)) {
-        openingBridge.onAction(action);
-        return;
-      }
-      if (isSlabActionKey(action)) {
-        slabBridge.onAction(action);
-        return;
-      }
-      if (isRoofActionKey(action)) {
-        roofBridge.onAction(action);
-        return;
-      }
-      if (isFloorFinishActionKey(action)) {
-        floorFinishBridge.onAction(action);
-        return;
-      }
-      if (isThermalSpaceActionKey(action)) {
-        thermalSpaceBridge.onAction(action);
-        return;
-      }
-      if (isColumnActionKey(action)) {
-        columnBridge.onAction(action);
-        return;
-      }
-      if (isBeamActionKey(action)) {
-        beamBridge.onAction(action);
-        return;
-      }
-      if (isFoundationActionKey(action)) {
-        foundationBridge.onAction(action);
-        return;
-      }
-      if (isSlabOpeningActionKey(action)) {
-        slabOpeningBridge.onAction(action);
-        return;
-      }
-      if (isStairActionKey(action)) {
-        stairBridge.onAction(action);
-        return;
-      }
-      if (isMepCircuitActionKey(action)) {
-        mepCircuitBridge.onAction(action);
-        return;
-      }
-      if (isMepPipeNetworkActionKey(action)) {
-        mepPipeNetworkBridge.onAction(action);
-        return;
-      }
-      if (isWaterSupplyActionKey(action)) {
-        waterAutoSupplyBridge.onAction(action);
-        return;
-      }
-      if (isDrainageAutoActionKey(action)) {
-        drainageAutoBridge.onAction(action);
-        return;
-      }
-      if (isHeatingAutoActionKey(action)) {
-        heatingAutoBridge.onAction(action);
-        return;
-      }
-      if (isElectricalAutoActionKey(action)) {
-        electricalAutoBridge.onAction(action);
-        return;
-      }
-      if (isElectricalWeakAutoActionKey(action)) {
-        electricalWeakAutoBridge.onAction(action);
-        return;
-      }
-      if (isHvacAutoActionKey(action)) {
-        hvacAutoBridge.onAction(action);
-        return;
-      }
-      if (isFireAutoActionKey(action)) {
-        fireAutoBridge.onAction(action);
-        return;
-      }
-      if (isGasAutoActionKey(action)) {
-        gasAutoBridge.onAction(action);
-        return;
-      }
-      if (isClashDetectionActionKey(action)) {
-        clashDetectionBridge.onAction(action);
-        return;
-      }
-      if (isMepFixtureActionKey(action)) {
-        mepFixtureBridge.onAction(action);
-        return;
-      }
-      if (isMepManifoldActionKey(action)) {
-        mepManifoldBridge.onAction(action);
-        return;
-      }
-      if (isElectricalPanelActionKey(action)) {
-        electricalPanelBridge.onAction(action);
-        return;
-      }
-      if (isMepRadiatorActionKey(action)) {
-        mepRadiatorBridge.onAction(action);
-        return;
-      }
-      if (isMepUnderfloorActionKey(action)) {
-        mepUnderfloorBridge.onAction(action);
-        return;
-      }
-      if (isMepBoilerActionKey(action)) {
-        mepBoilerBridge.onAction(action);
-        return;
-      }
-      if (isMepWaterHeaterActionKey(action)) {
-        mepWaterHeaterBridge.onAction(action);
-        return;
-      }
-      if (isMepSegmentActionKey(action)) {
-        mepSegmentBridge.onAction(action);
-        return;
-      }
-      if (isFurnitureActionKey(action)) {
-        furnitureBridge.onAction(action);
-        return;
-      }
-      wrappedHandleAction(action, data);
+      routeRibbonAction(action, data, {
+        wallBridge, openingBridge, slabBridge, roofBridge, floorFinishBridge,
+        thermalSpaceBridge, columnBridge, beamBridge, foundationBridge, slabOpeningBridge,
+        stairBridge, mepCircuitBridge, mepPipeNetworkBridge, waterAutoSupplyBridge,
+        drainageAutoBridge, heatingAutoBridge, electricalAutoBridge, electricalWeakAutoBridge,
+        hvacAutoBridge, fireAutoBridge, gasAutoBridge, clashDetectionBridge, mepFixtureBridge,
+        mepManifoldBridge, electricalPanelBridge, mepRadiatorBridge, mepBoilerBridge,
+        mepWaterHeaterBridge, mepUnderfloorBridge, mepSegmentBridge, furnitureBridge,
+        wrappedHandleAction,
+      });
     },
     [wallBridge, openingBridge, slabBridge, roofBridge, floorFinishBridge, thermalSpaceBridge, columnBridge, beamBridge, foundationBridge, slabOpeningBridge, stairBridge, mepCircuitBridge, mepPipeNetworkBridge, waterAutoSupplyBridge, drainageAutoBridge, heatingAutoBridge, electricalAutoBridge, electricalWeakAutoBridge, hvacAutoBridge, fireAutoBridge, gasAutoBridge, clashDetectionBridge, mepFixtureBridge, mepManifoldBridge, electricalPanelBridge, mepRadiatorBridge, mepBoilerBridge, mepWaterHeaterBridge, mepUnderfloorBridge, mepSegmentBridge, furnitureBridge, wrappedHandleAction],
   );

@@ -155,8 +155,22 @@ export type {
      * `bim/thermal/kenak-thermal-config.ts`.
      */
     climateZone?: 'A' | 'B' | 'C' | 'D';
+
+    // ─── ADR-456: Building structural design settings (Revit code-driven) ──
+    /**
+     * Δομοστατικές ρυθμίσεις κτιρίου: ενεργός κανονισμός σχεδιασμού + προεπιλ.
+     * κατηγορία σκυροδέματος. Building-wide (ένα κτίριο = ένας κανονισμός).
+     * Inline shape (ΟΧΙ import από dxf-viewer subapp — dependency direction)·
+     * ταυτίζεται με `StructuralSettings` στο
+     * `subapps/dxf-viewer/bim/structural/structural-settings.ts` (ο resolver
+     * εκεί επικυρώνει τις τιμές κατά την ανάγνωση).
+     */
+    structuralSettings?: {
+      codeId: 'eurocode' | 'greek-legacy';
+      defaultConcreteGrade: string;
+    };
   }
-  
+
   export interface Floor {
     id: string;
     buildingId: string; // References Building

@@ -90,6 +90,12 @@ export const COLUMN_COLUMNS: readonly ScheduleColumnDef[] = [
   { key: 'rotation',  i18nKey: 'col.rotation',  valueType: 'number',            align: 'right' },
   { key: 'area',      i18nKey: 'col.area',      valueType: 'area-m2',           align: 'right' },
   { key: 'volume',    i18nKey: 'col.volume',    valueType: 'volume-m3',         align: 'right' },
+  // ─── ADR-456 — Στατικά: ποσότητες σκυροδέματος + οπλισμός ────────────────────
+  { key: 'concreteGrade',    i18nKey: 'col.concreteGrade',    valueType: 'text',   align: 'center' },
+  { key: 'concreteWeight',   i18nKey: 'col.concreteWeight',   valueType: 'number', align: 'right'  },
+  { key: 'longitudinalRebar', i18nKey: 'col.longitudinalRebar', valueType: 'text', align: 'center' },
+  { key: 'stirrups',         i18nKey: 'col.stirrups',         valueType: 'text',   align: 'center' },
+  { key: 'steelWeight',      i18nKey: 'col.steelWeight',      valueType: 'number', align: 'right'  },
   { key: 'material',  i18nKey: 'col.material',  valueType: 'text',              align: 'left'  },
 ];
 

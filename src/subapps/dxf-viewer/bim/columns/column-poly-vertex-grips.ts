@@ -20,14 +20,18 @@
  */
 
 import type { Point2D } from '../../rendering/types/Types';
-import type { ColumnParams } from '../types/column-types';
+import type { ColumnEntity, ColumnParams } from '../types/column-types';
+import type { GripInfo } from '../../hooks/useGripMovement';
 import {
   localToWorld,
   polygonBackedBboxMm,
   projectDeltaToLocal,
   rotate,
+  rotationHandleWorld,
 } from './column-grip-utils';
 import { mmScaleFor } from '../../utils/scene-units';
+import { computeColumnGeometry, materializeColumnLocalPolygonMm } from '../geometry/column-geometry';
+import { interiorAnchorPoint } from '../geometry/shared/polygon-interior-point';
 import type { ColumnGripDragInput } from './column-grips';
 
 /**
@@ -51,32 +55,25 @@ export function polyVertexHandlePosition(params: ColumnParams, index: number): P
 }
 
 /**
- * Μετακίνηση μίας κορυφής polygon-backed διατομής (ADR-363 Phase 2b). Σέρνει
- * ΜΟΝΟ τη συγκεκριμένη κορυφή (οι υπόλοιπες μένουν οπτικά στη θέση τους).
- *
- * Pipeline (διατηρεί το invariant «polygon bbox-centered»):
- *   1. patch κορυφή `index` κατά το local mm delta (`projectDeltaToLocal ÷ s`).
- *   2. re-center το polygon στο νέο bbox-center.
- *   3. compensate `position` κατά `rotate(center·s)` ώστε οι μη-συρόμενες
- *      κορυφές να μη «πηδήξουν» (WYSIWYG, ισχύει για κάθε anchor).
- *   4. refresh `width`/`depth` = νέες διαστάσεις bbox (panel truthfulness).
- *
- * Geometry δεν υπολογίζεται εδώ — ο `UpdateColumnParamsCommand` τρέχει το
- * `computeColumnGeometry()`. Non-polygon-backed / out-of-range index: no-op.
+ * ADR-363/449 — world θέση της λαβής περιστροφής ενός free-reshape στοιχείου = ΕΣΩΤΕΡΙΚΟ σημείο
+ * της διατομής (`interiorAnchorPoint` πάνω στο rendered footprint). Params-pure ώστε ΚΑΙ η emission
+ * (`freeCornerReshapeGrips`, που έχει το geometry) ΚΑΙ το rotation **drag** (`rotateAroundPosition`,
+ * που έχει μόνο params) να δίνουν το **ΙΔΙΟ** σημείο (αλλιώς το πιάσιμο της λαβής θα «πηδούσε»).
  */
-export function resizePolyVertex(
-  input: Readonly<ColumnGripDragInput>,
-  index: number,
-): ColumnParams {
-  const { originalParams, delta } = input;
-  const poly = columnPolygon(originalParams);
-  if (!poly || index < 0 || index >= poly.length) return originalParams;
+export function freeReshapeRotationWorld(params: ColumnParams): Point2D {
+  const verts = computeColumnGeometry(params).footprint.vertices;
+  return verts.length >= 3 ? interiorAnchorPoint(verts) : localToWorld({ x: 0, y: 0 }, params);
+}
+
+/**
+ * Κοινό SSoT: δοθέντος του μετακινημένου polygon (LOCAL mm), re-center στο bbox-center,
+ * compensate `position` κατά `rotate(center·s)` ώστε οι μη-θιγμένες κορυφές να μένουν στη
+ * θέση τους (WYSIWYG, κάθε anchor), refresh `width`/`depth` = bbox (panel truthfulness), και
+ * επιστροφή νέων params (composite ή U-shape, ανά kind). Geometry → `UpdateColumnParamsCommand`.
+ * Χρησιμοποιείται ΚΑΙ από vertex-move (`resizePolyVertex`) ΚΑΙ από edge-move (`moveColumnEdgeFree`).
+ */
+function commitPolygonReshape(originalParams: ColumnParams, moved: readonly Point2D[]): ColumnParams {
   const s = mmScaleFor(originalParams);
-  const { dxLocal, dyLocal } = projectDeltaToLocal(delta, originalParams.rotation);
-  const moved: Point2D[] = poly.map((p, i) =>
-    i === index ? { x: p.x + dxLocal / s, y: p.y + dyLocal / s } : { x: p.x, y: p.y },
-  );
-  // Re-center to bbox centre + compensate position so untouched vertices stay put.
   let minX = Number.POSITIVE_INFINITY, maxX = Number.NEGATIVE_INFINITY;
   let minY = Number.POSITIVE_INFINITY, maxY = Number.NEGATIVE_INFINITY;
   for (const p of moved) {
@@ -103,4 +100,126 @@ export function resizePolyVertex(
   return originalParams.kind === 'composite'
     ? { ...next, composite: { polygon: centered } }
     : { ...next, ushape: { ...originalParams.ushape, polygon: centered } };
+}
+
+/**
+ * Επιστρέφει params εγγυημένα **polygon-backed** + το polygon. Αν το kind είναι ήδη
+ * polygon-backed (`composite`/`U-shape`+polygon) → ως έχει· αλλιώς (L/T/I/U-παραμετρικό/polygon)
+ * **materialize** σε `composite` (custom profile, `materializeColumnLocalPolygonMm` — ΙΔΙΟ SSoT
+ * με τη γεωμετρία). `null` αν degenerate (<3 κορυφές). Idempotent (drag-start originalParams).
+ */
+function ensurePolygonBacked(
+  originalParams: ColumnParams,
+): { params: ColumnParams; poly: readonly Point2D[] } | null {
+  const existing = columnPolygon(originalParams);
+  if (existing) return { params: originalParams, poly: existing };
+  const polygon = materializeColumnLocalPolygonMm(originalParams);
+  if (polygon.length < 3) return null;
+  return { params: { ...originalParams, kind: 'composite', composite: { polygon } }, poly: polygon };
+}
+
+/**
+ * Μετακίνηση μίας κορυφής polygon-backed διατομής (ADR-363 Phase 2b). Σέρνει ΜΟΝΟ τη
+ * συγκεκριμένη κορυφή (οι υπόλοιπες μένουν οπτικά στη θέση τους). Non-polygon-backed /
+ * out-of-range index: no-op. Recenter/commit μέσω του κοινού `commitPolygonReshape`.
+ */
+export function resizePolyVertex(
+  input: Readonly<ColumnGripDragInput>,
+  index: number,
+): ColumnParams {
+  const { originalParams, delta } = input;
+  const poly = columnPolygon(originalParams);
+  if (!poly || index < 0 || index >= poly.length) return originalParams;
+  const s = mmScaleFor(originalParams);
+  const { dxLocal, dyLocal } = projectDeltaToLocal(delta, originalParams.rotation);
+  const moved: Point2D[] = poly.map((p, i) =>
+    i === index ? { x: p.x + dxLocal / s, y: p.y + dyLocal / s } : { x: p.x, y: p.y },
+  );
+  return commitPolygonReshape(originalParams, moved);
+}
+
+/**
+ * ADR-363/449 — **free per-corner reshape ΤΗΣ ΣΤΑΤΙΚΗΣ ΔΙΑΤΟΜΗΣ** οποιουδήποτε shaped column.
+ * Όταν το kind είναι ήδη polygon-backed → `resizePolyVertex`. Αλλιώς **materialize** σε
+ * `composite` (custom profile) ΠΡΙΝ τη μετακίνηση κορυφής — μηδέν νέα γεωμετρία· ο σοβάς (ADR-449)
+ * ακολουθεί αυτόματα. Out-of-range index → no-op.
+ */
+export function reshapeColumnCornerFree(
+  input: Readonly<ColumnGripDragInput>,
+  index: number,
+): ColumnParams {
+  const backed = ensurePolygonBacked(input.originalParams);
+  if (!backed || index < 0 || index >= backed.poly.length) return input.originalParams;
+  return resizePolyVertex({ ...input, originalParams: backed.params }, index);
+}
+
+/**
+ * ADR-363/449 — **μετακίνηση ΟΛΗΣ μιας πλευράς** της στατικής διατομής. Σέρνει ΚΑΙ τις δύο
+ * κορυφές της ακμής `edgeIndex` (i, i+1) κατά το ΙΔΙΟ local delta → η πλευρά μετατοπίζεται
+ * (παραμένει παράλληλη/ίδιου μήκους) και οι δύο γειτονικές ακμές προσαρμόζονται. Materialize σε
+ * `composite` αν το kind είναι παραμετρικό (ίδιο pattern με το corner). Recenter μέσω
+ * `commitPolygonReshape`. Out-of-range / degenerate → no-op. Ο σοβάς ακολουθεί αυτόματα.
+ */
+export function moveColumnEdgeFree(
+  input: Readonly<ColumnGripDragInput>,
+  edgeIndex: number,
+): ColumnParams {
+  const backed = ensurePolygonBacked(input.originalParams);
+  if (!backed) return input.originalParams;
+  const n = backed.poly.length;
+  if (edgeIndex < 0 || edgeIndex >= n) return input.originalParams;
+  const s = mmScaleFor(backed.params);
+  const { dxLocal, dyLocal } = projectDeltaToLocal(input.delta, backed.params.rotation);
+  const j = (edgeIndex + 1) % n;
+  const moved: Point2D[] = backed.poly.map((p, i) =>
+    i === edgeIndex || i === j ? { x: p.x + dxLocal / s, y: p.y + dyLocal / s } : { x: p.x, y: p.y },
+  );
+  return commitPolygonReshape(backed.params, moved);
+}
+
+/**
+ * ADR-363/449 — grips για free reshape ΤΗΣ ΣΤΑΤΙΚΗΣ ΔΙΑΤΟΜΗΣ: rotation + ΜΙΑ λαβή ανά **κορυφή**
+ * (corner reshape, `column-poly-vertex-${i}`) + ΜΙΑ λαβή στο **μέσο κάθε πλευράς** (move-whole-side,
+ * `column-poly-edge-${i}`) του rendered footprint (`geometry.footprint.vertices`, world SSoT). Στο
+ * σύρσιμο → composite. Αντικαθιστά τα παραμετρικά arm/width/depth grips (πλήρης έλεγχος γωνιών+πλευρών).
+ */
+export function freeCornerReshapeGrips(entity: Readonly<ColumnEntity>): GripInfo[] {
+  // Προτίμησε το rendered footprint (SSoT)· fallback σε computeColumnGeometry όταν λείπει (robust
+  // ανεξαρτήτως αν ο caller έχει γεμίσει το geometry cache).
+  const verts = entity.geometry?.footprint?.vertices ?? computeColumnGeometry(entity.params).footprint.vertices;
+  const n = verts.length;
+  const grips: GripInfo[] = [{
+    entityId: entity.id,
+    gripIndex: 1,
+    type: 'vertex',
+    // ADR-363/449 — η λαβή περιστροφής σε ΕΣΩΤΕΡΙΚΟ σημείο της διατομής (Giorgio: στο μέσο μεταξύ
+    // εξωτ. & εσωτ. γωνίας του Γ). Για κοίλα σχήματα το bbox-κέντρο πέφτει στην εγκοπή (κενό) →
+    // `interiorAnchorPoint` δίνει σημείο μέσα στο υλικό, μακριά από τις λαβές γωνιών/πλευρών.
+    position: n >= 3 ? interiorAnchorPoint(verts) : rotationHandleWorld(entity.params),
+    movesEntity: false,
+    columnGripKind: 'column-rotation',
+  }];
+  verts.forEach((v, i) => {
+    grips.push({
+      entityId: entity.id,
+      gripIndex: 10 + i,
+      type: 'corner',
+      position: { x: v.x, y: v.y },
+      movesEntity: false,
+      columnGripKind: `column-poly-vertex-${i}`,
+    });
+  });
+  // ADR-363/449 — μέσο κάθε πλευράς: σύρσιμο μετακινεί ΟΛΗ την πλευρά (edge i = κορυφές i, i+1).
+  verts.forEach((v, i) => {
+    const w = verts[(i + 1) % n];
+    grips.push({
+      entityId: entity.id,
+      gripIndex: 100 + i,
+      type: 'edge',
+      position: { x: (v.x + w.x) / 2, y: (v.y + w.y) / 2 },
+      movesEntity: false,
+      columnGripKind: `column-poly-edge-${i}`,
+    });
+  });
+  return grips;
 }

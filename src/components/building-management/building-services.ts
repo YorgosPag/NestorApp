@@ -51,6 +51,15 @@ export interface BuildingUpdatePayload {
   hasFoundation?: boolean;
   /** ADR-451 — METRES — foundation depth below the lowest storey FFL. */
   foundationDepth?: number;
+  /**
+   * ADR-456 — δομοστατικές ρυθμίσεις κτιρίου (κανονισμός + προεπιλ. κατηγορία
+   * σκυροδέματος). Inline shape (όχι import από dxf-viewer subapp — dependency
+   * direction)· ταυτίζεται με `StructuralSettings` στο subapp.
+   */
+  structuralSettings?: {
+    codeId: 'eurocode' | 'greek-legacy';
+    defaultConcreteGrade: string;
+  };
 }
 
 /**

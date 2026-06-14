@@ -93,6 +93,8 @@ export const COLUMN_RIBBON_KEYS_ACTIONS = {
   fromGrid: 'column.actions.fromGrid',
   fromGridCenter: 'column.actions.fromGridCenter',
   fromGridOuter: 'column.actions.fromGridOuter',
+  // ADR-456 Slice 2 — «Auto οπλισμός»: code-suggested ελάχιστος-έγκυρος οπλισμός.
+  autoReinforce: 'column.actions.autoReinforce',
 } as const;
 
 const COLUMN_ACTION_KEY_SET: ReadonlySet<string> = new Set<string>(
@@ -123,6 +125,9 @@ export const COLUMN_RIBBON_VISIBILITY_KEYS = {
   // ADR-363 Phase 2b — visible iff `kind === 'U-shape'` ΚΑΙ δεν υπάρχει polygon
   // (manual παραμετρικό Π· polygon-backed επεξεργάζεται με per-vertex grips).
   ushapeParams:     'column.visibility.ushapeParams',
+  // ADR-456 Slice 2 — δομοστατικά/οπλισμός panel: visible iff RC kind
+  // (rectangular/shear-wall — ο ρ-έλεγχος Slice 1 καλύπτει μόνο αυτές).
+  structural:       'column.visibility.structural',
 } as const;
 
 export type ColumnRibbonVisibilityKey =
@@ -130,7 +135,8 @@ export type ColumnRibbonVisibilityKey =
   | typeof COLUMN_RIBBON_VISIBILITY_KEYS.ishapeParams
   | typeof COLUMN_RIBBON_VISIBILITY_KEYS.shearWallCatalog
   | typeof COLUMN_RIBBON_VISIBILITY_KEYS.ishapeCatalog
-  | typeof COLUMN_RIBBON_VISIBILITY_KEYS.ushapeParams;
+  | typeof COLUMN_RIBBON_VISIBILITY_KEYS.ushapeParams
+  | typeof COLUMN_RIBBON_VISIBILITY_KEYS.structural;
 
 const COLUMN_VISIBILITY_KEY_SET: ReadonlySet<string> = new Set<string>([
   COLUMN_RIBBON_VISIBILITY_KEYS.polygonParams,
@@ -138,6 +144,7 @@ const COLUMN_VISIBILITY_KEY_SET: ReadonlySet<string> = new Set<string>([
   COLUMN_RIBBON_VISIBILITY_KEYS.shearWallCatalog,
   COLUMN_RIBBON_VISIBILITY_KEYS.ishapeCatalog,
   COLUMN_RIBBON_VISIBILITY_KEYS.ushapeParams,
+  COLUMN_RIBBON_VISIBILITY_KEYS.structural,
 ]);
 
 export function isColumnVisibilityKey(key: string): key is ColumnRibbonVisibilityKey {
@@ -179,4 +186,74 @@ const COLUMN_FINISH_KEY_SET: ReadonlySet<string> = new Set<string>(Object.keys(C
 
 export function isColumnFinishKey(commandKey: string): boolean {
   return COLUMN_FINISH_KEY_SET.has(commandKey);
+}
+
+// ─── ADR-456 Slice 2 — δομοστατικά / οπλισμός (reinforcement) ──────────────────
+
+/**
+ * Editable structural command keys. `code` = building-level κανονισμός (γράφει
+ * στο `structuralSettingsStore`, ΟΧΙ στην κολώνα)· `concreteGrade` = per-element·
+ * τα υπόλοιπα 6 = αριθμητικά πεδία οπλισμού (διαμήκης/συνδετήρες/επικάλυψη).
+ */
+export const COLUMN_STRUCTURAL_KEYS = {
+  /** Building-level κανονισμός σχεδιασμού (project setting, ΟΧΙ per-column). */
+  code: 'column.structural.code',
+  /** Κατηγορία σκυροδέματος (per-element, EN 1992-1-1 Table 3.1). */
+  concreteGrade: 'column.structural.concreteGrade',
+  /** Διαμήκης οπλισμός — διάμετρος ράβδου (mm). */
+  longitudinalDiameter: 'column.structural.longitudinalDiameter',
+  /** Διαμήκης οπλισμός — πλήθος ράβδων. */
+  longitudinalCount: 'column.structural.longitudinalCount',
+  /** Συνδετήρες — διάμετρος (mm). */
+  stirrupDiameter: 'column.structural.stirrupDiameter',
+  /** Συνδετήρες — βήμα μεσαίας (μη-κρίσιμης) ζώνης (mm). */
+  stirrupSpacing: 'column.structural.stirrupSpacing',
+  /** Συνδετήρες — κρίσιμο βήμα πύκνωσης άκρων (mm). */
+  stirrupCriticalSpacing: 'column.structural.stirrupCriticalSpacing',
+  /** Επικάλυψη οπλισμού cnom (mm). */
+  cover: 'column.structural.cover',
+} as const;
+
+/** Read-only readout keys — υπολογισμένα βάρη/ρ% (bridge δίνει value, ΟΧΙ write). */
+export const COLUMN_STRUCTURAL_READOUT_KEYS = {
+  /** kg — βάρος σκυροδέματος. */
+  concreteWeight: 'column.structural.readout.concreteWeight',
+  /** kg — βάρος χάλυβα οπλισμού B500C. */
+  steelWeight: 'column.structural.readout.steelWeight',
+  /** % — ποσοστό διαμήκους οπλισμού ρ = As/Ac. */
+  ratio: 'column.structural.readout.ratio',
+} as const;
+
+/** Πεδίο του `ColumnReinforcement` που χειρίζεται ένα αριθμητικό structural key. */
+export type StructuralReinforcementField =
+  | 'longitudinalDiameter'
+  | 'longitudinalCount'
+  | 'stirrupDiameter'
+  | 'stirrupSpacing'
+  | 'stirrupCriticalSpacing'
+  | 'cover';
+
+/** commandKey → πεδίο οπλισμού (καταναλώνεται από structural-param helpers). */
+export const COLUMN_STRUCTURAL_KEY_TO_FIELD: Readonly<Record<string, StructuralReinforcementField>> = {
+  [COLUMN_STRUCTURAL_KEYS.longitudinalDiameter]: 'longitudinalDiameter',
+  [COLUMN_STRUCTURAL_KEYS.longitudinalCount]: 'longitudinalCount',
+  [COLUMN_STRUCTURAL_KEYS.stirrupDiameter]: 'stirrupDiameter',
+  [COLUMN_STRUCTURAL_KEYS.stirrupSpacing]: 'stirrupSpacing',
+  [COLUMN_STRUCTURAL_KEYS.stirrupCriticalSpacing]: 'stirrupCriticalSpacing',
+  [COLUMN_STRUCTURAL_KEYS.cover]: 'cover',
+};
+
+const COLUMN_STRUCTURAL_KEY_SET: ReadonlySet<string> = new Set<string>(
+  Object.values(COLUMN_STRUCTURAL_KEYS),
+);
+const COLUMN_STRUCTURAL_READOUT_KEY_SET: ReadonlySet<string> = new Set<string>(
+  Object.values(COLUMN_STRUCTURAL_READOUT_KEYS),
+);
+
+export function isColumnStructuralKey(commandKey: string): boolean {
+  return COLUMN_STRUCTURAL_KEY_SET.has(commandKey);
+}
+
+export function isColumnStructuralReadoutKey(commandKey: string): boolean {
+  return COLUMN_STRUCTURAL_READOUT_KEY_SET.has(commandKey);
 }
