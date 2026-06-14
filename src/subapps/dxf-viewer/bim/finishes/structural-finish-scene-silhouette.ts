@@ -17,6 +17,7 @@ import {
   computeStructuralSilhouetteBands,
   type SilhouetteBand,
   type SilhouetteMember,
+  type WallObstacle,
 } from './structural-finish-silhouette';
 import {
   toPt2,
@@ -37,6 +38,31 @@ function columnZExtent(column: ColumnEntity, floorElevationMm: number): { zBotMm
 function beamZExtent(beam: BeamEntity): { zBotMm: number; zTopMm: number } {
   const zTopMm = beam.params.topElevation + (beam.params.zOffset ?? 0);
   return { zBotMm: zTopMm - beam.params.depth, zTopMm };
+}
+
+/**
+ * ADR-449 Slice X1 — κατακόρυφη έκταση ενός τοίχου-εμποδίου (building-relative mm) για
+ * height-aware coverage. Ένας **attached-top** τοίχος-στήριγμα έχει resolved top = **κάτω
+ * παρειά** του δοκαριού που κρατά (`attachTopToIds` → `beamZExtent(...).zBotMm`), ΟΧΙ το
+ * nominal `baseOffset+height` (που το υπερεκτιμά). Έτσι ο τοίχος βρίσκεται κάτω από τη ζώνη
+ * του δοκαριού → δεν καλύπτει την πλάγια όψη δοκαριού πάνω του (mirror `wallsOverlappingBeamBand`,
+ * Slice 8b — η αιτία του «μία όψη μόνο» στους grid τοίχους που είναι ταυτόσημοι σε κάτοψη με δοκάρια).
+ */
+function wallObstacleZExtent(
+  wall: WallFinishObstacle,
+  beamUndersideById: ReadonlyMap<string, number>,
+  floorElevationMm: number,
+): { zBotMm: number; zTopMm: number } {
+  const zBotMm = floorElevationMm + (wall.params.baseOffset ?? 0);
+  if (wall.params.topBinding === 'attached' && wall.params.attachTopToIds?.length) {
+    let top = Infinity;
+    for (const id of wall.params.attachTopToIds) {
+      const u = beamUndersideById.get(id);
+      if (u !== undefined && u < top) top = u;
+    }
+    if (Number.isFinite(top)) return { zBotMm, zTopMm: top };
+  }
+  return { zBotMm, zTopMm: zBotMm + wall.params.height };
 }
 
 /** Δομικό μέλος → `SilhouetteMember` όταν έχει ενεργό σοβά + έγκυρο footprint. */
@@ -77,13 +103,20 @@ export function computeStructuralFinishSilhouette(
   const s = mmToSceneUnits(sceneUnits);
   const tol = EXTERIOR_EDGE_TOL_MM * s;
   const classify = buildStructuralFinishClassifier(undefined, walls, tol);
-  // ADR-449 Slice 7 — οι τοίχοι ως obstacles **ΧΩΡΙΣ dilation** (browser-verified per-element
-  // συμπεριφορά): ο **κάθετος** τοίχος που διασχίζει την όψη → καλύπτεται (μηδέν σοβάς εκεί)·
-  // ο **collinear** τοίχος κάτω από δοκάρι (ίδιος άξονας, grid framing) → midpoint στο boundary,
-  // ΟΧΙ strictly-inside → ο σοβάς της πλάγιας όψης ΕΜΦΑΝΙΖΕΤΑΙ. Dilation εδώ έκρυβε ΟΛΟ τον
-  // σοβά δοκαριών πάνω σε τοίχους (grid model· Giorgio 2026-06-13). Η σύνδεση κολόνα↔δοκάρι
-  // (Πρόβλημα Β) λύνεται από το ΕΝΙΑΙΟ union, ΟΧΙ από obstacle dilation.
-  const wallObstacles = walls.map((w) => wallFootprintPolygon(w));
+  // ADR-449 Slice 7/X1 — οι τοίχοι ως obstacles **ΧΩΡΙΣ dilation** (browser-verified per-element
+  // συμπεριφορά): ο **κάθετος** τοίχος που διασχίζει την όψη → καλύπτεται (μηδέν σοβάς εκεί). Η
+  // σύνδεση κολόνα↔δοκάρι (Πρόβλημα Β) λύνεται από το ΕΝΙΑΙΟ union, ΟΧΙ από obstacle dilation.
+  //
+  // ADR-449 Slice X1 — **height-aware** z-extents (port Slice 8/8b): ένας collinear τοίχος-
+  // στήριγμα κάτω από δοκάρι (ταυτόσημος σε κάτοψη, grid framing) είναι `topBinding:'attached'`
+  // → resolved top = κάτω παρειά δοκαριού → ΕΚΤΟΣ της ζώνης ύψους του δοκαριού → δεν καλύπτει
+  // την πλάγια όψη δοκαριού πάνω του (= η αληθινή αιτία του «μία όψη μόνο» bug — ΟΧΙ τοπολογική).
+  const beamUndersideById = new Map<string, number>();
+  for (const b of beams) beamUndersideById.set(b.id, beamZExtent(b).zBotMm);
+  const wallObstacles: WallObstacle[] = walls.map((w) => {
+    const z = wallObstacleZExtent(w, beamUndersideById, floorElevationMm);
+    return { footprint: wallFootprintPolygon(w), zBotMm: z.zBotMm, zTopMm: z.zTopMm };
+  });
 
   return computeStructuralSilhouetteBands({
     members,

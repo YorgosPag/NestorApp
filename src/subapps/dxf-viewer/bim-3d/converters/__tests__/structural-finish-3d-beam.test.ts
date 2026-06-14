@@ -8,9 +8,11 @@
 
 import * as THREE from 'three';
 import { buildBeamFinishSkin, computeMiteredOuter } from '../structural-finish-3d';
+import { buildStructuralSilhouetteSkin } from '../structural-finish-silhouette-3d';
 import { beamToMesh } from '../BimToThreeConverter';
 import { buildDefaultBeamParams, buildBeamEntity } from '../../../hooks/drawing/beam-completion';
 import type { BeamEntity } from '../../../bim/types/beam-types';
+import type { SilhouetteBand } from '../../../bim/finishes/structural-finish-silhouette';
 import type { StructuralFinishSpec, FinishFaceSegment } from '../../../bim/finishes/structural-finish-types';
 
 const PLASTER_HEX = 0xe8e0d0;
@@ -138,5 +140,40 @@ describe('beamToMesh integration (ADR-449 Slice 4)', () => {
   it('ανενεργός σοβάς → απλό Mesh (regression: ghost/χωρίς-finish path)', () => {
     const out = beamToMesh(beam(), '0', 0);
     expect(out).toBeInstanceOf(THREE.Mesh);
+  });
+});
+
+describe('buildStructuralSilhouetteSkin — μη-pickable (ADR-449 Slice X1)', () => {
+  // Ενιαίο silhouette skin = παράγωγη διακόσμηση με synthetic bimId ανά κτίριο → ΟΧΙ
+  // ανεξάρτητα επιλέξιμο (αλλιώς κλικ σε μία όψη επιλέγει ΟΛΟ τον σοβά). Μη-pickable →
+  // το ray περνά μέσα του και χτυπά τον δομικό πυρήνα → επιλέγεται το σωστό στοιχείο.
+  const band: SilhouetteBand = {
+    zBottomMm: 0,
+    zTopMm: 3000,
+    faces: {
+      heightM: 3,
+      interiorAreaM2: 0,
+      exteriorAreaM2: 0,
+      segments: [
+        { a: { x: 0, y: 0 }, b: { x: 400, y: 0 }, classification: 'interior', materialId: 'mat-plaster-int', thickness: 15, lengthM: 0.4 },
+        { a: { x: 400, y: 0 }, b: { x: 400, y: 400 }, classification: 'interior', materialId: 'mat-plaster-int', thickness: 15, lengthM: 0.4 },
+      ],
+    },
+  };
+
+  it('κάθε mesh του skin έχει raycast παρακαμμένο (non-pickable, ≠ default Mesh.raycast)', () => {
+    const skin = buildStructuralSilhouetteSkin([band], 'm', 0);
+    expect(skin).not.toBeNull();
+    let meshCount = 0;
+    skin!.traverse((obj) => {
+      if (!(obj as THREE.Mesh).isMesh) return;
+      meshCount++;
+      // Παρακαμμένο raycast (no-op) → δεν παράγει τομή· κλικ περνά στον πυρήνα πίσω.
+      expect((obj as THREE.Mesh).raycast).not.toBe(THREE.Mesh.prototype.raycast);
+      const intersects: THREE.Intersection[] = [];
+      (obj as THREE.Mesh).raycast(new THREE.Raycaster(), intersects);
+      expect(intersects).toHaveLength(0);
+    });
+    expect(meshCount).toBeGreaterThan(0);
   });
 });

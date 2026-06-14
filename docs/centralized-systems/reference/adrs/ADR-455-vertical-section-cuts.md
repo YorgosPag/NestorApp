@@ -51,10 +51,16 @@ side must render as a **GHOST** (semi-transparent), NOT be hidden (explicit choi
    `GuideRenderer.drawGuideLine`), wired into `dxf-canvas-renderer` step 2.7 (above entities,
    below rulers).
 
-6. **UI** — `AxisCutSliderControl` (parametric «L»: slider long branch + flip-arrow short
-   branch + enable toggle + readout) mounted by `AxisCutSliderLeaf` (2D-gated): X horizontal
-   along the base, Y vertical along the left. Range = model world extent (`scene.bounds`,
-   `axis-cut-range.ts`). The arrow glyph rotates per axis+sign; clicking it flips the kept side.
+6. **UI + appearance SSoT** — a single shared `SectionSliderShell` owns the ONE appearance
+   code path (the ViewCube-accent theme `.cut-plane-slider-accent` + `.cut-plane-slider`,
+   toggle states, readout pill, slider, label) for BOTH the horizontal cut
+   (`CutPlaneSliderControl`, refactored onto the shell) AND the X/Y cuts
+   (`AxisCutSliderControl`). No hardcoded colours — every hue comes from the shared CSS
+   tokens, so all sliders are visually identical (Giorgio feedback 2026-06-14). The 2D
+   section-line colour reads the SAME `--viewcube-accent` token (no hex). `AxisCutSliderControl`
+   adds only the «L» flip-arrow (rotates per axis+sign; click flips the kept side), mounted by
+   `AxisCutSliderLeaf` (2D-gated): X horizontal along the base, Y vertical along the left.
+   Range = model world extent (`scene.bounds`, `axis-cut-range.ts`).
 
 ## 3. Files
 
@@ -72,6 +78,8 @@ side must render as a **GHOST** (semi-transparent), NOT be hidden (explicit choi
 | MOD | `canvas-v2/dxf-canvas/dxf-bitmap-cache.ts` (`xc`/`yc` hash) |
 | NEW | `systems/axis-cut/axis-cut-line-renderer.ts` + MOD `dxf-canvas-renderer.ts` (step 2.7) |
 | NEW | `components/dxf-layout/axis-cut-range.ts`, `AxisCutSliderControl.tsx`, `AxisCutSliderLeaf.tsx` |
+| NEW | `components/dxf-layout/SectionSliderShell.tsx` (shared appearance SSoT for ALL cut sliders) |
+| MOD | `components/dxf-layout/CutPlaneSliderControl.tsx` (refactored onto the shared shell) |
 | MOD | `components/dxf-layout/CanvasLayerStack.tsx` (mount leaf) |
 | MOD | `i18n/locales/{el,en}/dxf-viewer-panels.json` (`axisCut.*`) |
 | TEST | `cut-plane-3d-math.test.ts` (+axis combos), `axis-cut-composer.test.ts`, `axis-cut-range.test.ts`, `axis-cut-plan-side.test.ts` |
@@ -104,3 +112,7 @@ side must render as a **GHOST** (semi-transparent), NOT be hidden (explicit choi
 - **v1 (2026-06-14)** — initial implementation (slices: SSoT, 3D generalisation, 2D ghost +
   section line, «L» UI, tests). ADR number is **455** (453/454 taken by the concurrent
   print-export work).
+- **v1.1 (2026-06-14)** — appearance SSoT unification (Giorgio: the X/Y sliders hardcoded their
+  look instead of reusing the horizontal cut's). Extracted `SectionSliderShell` as the single
+  chrome/theme path; refactored `CutPlaneSliderControl` onto it; the section line now reads the
+  shared `--viewcube-accent` token (removed the hardcoded `#0ea5e9`). Zero behaviour change.

@@ -15,13 +15,10 @@
 
 import React from 'react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
-import { Slider } from '@/components/ui/slider';
 import { useBimRenderSettingsStore } from '../../state/bim-render-settings-store';
 import { useCutPlaneRange, type CutPlaneRange } from './useCutPlaneRange';
-// ADR-366 — the 2D canvas hides its native cursor + tracks an SSoT crosshair; an
-// overlay child swallows onMouseLeave so the crosshair freezes. Clearing on enter
-// fixes it (no-op in 3D, where there is no 2D crosshair).
-import { setImmediatePosition } from '../../systems/cursor/ImmediatePositionStore';
+// ADR-455 — shared appearance SSoT for ALL on-canvas cut sliders (theme + chrome).
+import { SectionSliderShell } from './SectionSliderShell';
 
 const CUT_PLANE_STEP_MM = 10;
 
@@ -66,46 +63,22 @@ export const CutPlaneSliderControl = React.memo(function CutPlaneSliderControl({
   const meters = (value / 1000).toFixed(2);
 
   return (
-    <aside
-      onMouseEnter={() => setImmediatePosition(null)}
-      className={`cut-plane-slider-accent pointer-events-auto absolute right-3 bottom-14 flex w-12 cursor-default flex-col items-center gap-2 ${className}`}
-    >
-      <button
-        type="button"
-        onClick={handleToggle}
-        aria-label={active ? t('cutPlane.disable') : t('cutPlane.enable')}
-        aria-pressed={active}
-        // Like the ViewCube faces: the active (orange) state rests at ~60% and lifts to full
-        // opacity on hover (the cube goes 0.5 → 1.0). The inactive state keeps its own neutral
-        // hover. `transition-all` so opacity + colours animate together.
-        className={`flex cursor-pointer select-none items-center justify-center rounded border p-1.5 shadow-md backdrop-blur-sm transition-all ${
-          active
-            ? 'border-primary bg-primary text-primary-foreground opacity-60 hover:opacity-100'
-            : 'border-border bg-background/80 text-foreground hover:bg-accent hover:text-accent-foreground'
-        }`}
-      >
-        <CutPlaneIcon />
-      </button>
-      <output className="rounded bg-background/80 px-1 py-0.5 text-[10px] font-semibold tabular-nums text-foreground shadow-sm backdrop-blur-sm">
-        {meters}
-        {t('cutPlane.unitMeters')}
-      </output>
-      <Slider
-        orientation="vertical"
-        aria-label={t('cutPlane.ariaSlider')}
-        // `cut-plane-slider` makes the track/range/thumb behave like the ViewCube compass ring:
-        // neutral grey-blue at rest, lighting up to the orange accent on hover (see globals.css).
-        className="cut-plane-slider my-1 flex-1 cursor-pointer [&_[role=slider]]:cursor-grab [&_[role=slider]]:active:cursor-grabbing"
-        min={range.minMm}
-        max={range.maxMm}
-        step={CUT_PLANE_STEP_MM}
-        value={[value]}
-        onValueChange={handleSlider}
-      />
-      <span className="select-none text-[9px] font-medium text-muted-foreground" aria-hidden="true">
-        {t('cutPlane.label')}
-      </span>
-    </aside>
+    <SectionSliderShell
+      orientation="vertical"
+      active={active}
+      onToggle={handleToggle}
+      toggleAriaLabel={active ? t('cutPlane.disable') : t('cutPlane.enable')}
+      icon={<CutPlaneIcon />}
+      readout={`${meters}${t('cutPlane.unitMeters')}`}
+      label={t('cutPlane.label')}
+      min={range.minMm}
+      max={range.maxMm}
+      step={CUT_PLANE_STEP_MM}
+      value={value}
+      ariaSlider={t('cutPlane.ariaSlider')}
+      onValueChange={(v) => handleSlider([v])}
+      positionClassName={`right-3 bottom-14 w-12 ${className}`}
+    />
   );
 });
 

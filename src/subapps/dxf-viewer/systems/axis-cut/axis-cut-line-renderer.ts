@@ -13,12 +13,24 @@ import { CoordinateTransforms } from '../../rendering/core/CoordinateTransforms'
 import { useBimRenderSettingsStore } from '../../state/bim-render-settings-store';
 import type { AxisCutSetting } from '../../config/bim-render-settings-types';
 
-/** Section-line colour — distinct from the orange horizontal cut + guide lines. */
-const SECTION_LINE_COLOR = '#0ea5e9';
 const SECTION_LINE_WIDTH = 1.5;
 const SECTION_LINE_DASH: readonly number[] = [10, 6];
 const ARROW_LEN = 14;
 const ARROW_HALF = 6;
+/** Fallback for SSR / missing token — the ViewCube accent default (globals.css). */
+const SECTION_ACCENT_FALLBACK = 'hsl(33 100% 50%)';
+
+/**
+ * Section-line colour = the SAME ViewCube accent the cut sliders use
+ * (`--viewcube-accent` → `.cut-plane-slider-accent`). Read from the CSS token so the
+ * line and the sliders share ONE source of truth (no hardcoded hex). Resolved only
+ * when a cut is active (the caller early-returns otherwise), so it costs nothing idle.
+ */
+function resolveSectionAccentColor(): string {
+  if (typeof document === 'undefined') return SECTION_ACCENT_FALLBACK;
+  const v = getComputedStyle(document.documentElement).getPropertyValue('--viewcube-accent').trim();
+  return v ? `hsl(${v})` : SECTION_ACCENT_FALLBACK;
+}
 
 /** Render the active X/Y section lines + direction arrows. No-op when both off. */
 export function renderAxisCutLines(
@@ -27,8 +39,10 @@ export function renderAxisCutLines(
   viewport: Viewport,
 ): void {
   const s = useBimRenderSettingsStore.getState();
-  if (s.xAxisCut.active) drawSectionLine(ctx, transform, viewport, 'x', s.xAxisCut);
-  if (s.yAxisCut.active) drawSectionLine(ctx, transform, viewport, 'y', s.yAxisCut);
+  if (!s.xAxisCut.active && !s.yAxisCut.active) return;
+  const color = resolveSectionAccentColor();
+  if (s.xAxisCut.active) drawSectionLine(ctx, transform, viewport, 'x', s.xAxisCut, color);
+  if (s.yAxisCut.active) drawSectionLine(ctx, transform, viewport, 'y', s.yAxisCut, color);
 }
 
 function drawSectionLine(
@@ -37,14 +51,15 @@ function drawSectionLine(
   viewport: Viewport,
   axis: 'x' | 'y',
   cut: AxisCutSetting,
+  color: string,
 ): void {
   // World→screen of the cut position along its axis (the other coord is irrelevant).
   const probe: Point2D = axis === 'x' ? { x: cut.position, y: 0 } : { x: 0, y: cut.position };
   const screen = CoordinateTransforms.worldToScreen(probe, transform, viewport);
 
   ctx.save();
-  ctx.strokeStyle = SECTION_LINE_COLOR;
-  ctx.fillStyle = SECTION_LINE_COLOR;
+  ctx.strokeStyle = color;
+  ctx.fillStyle = color;
   ctx.lineWidth = SECTION_LINE_WIDTH;
   ctx.globalAlpha = 1;
 

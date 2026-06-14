@@ -10,6 +10,7 @@ import {
   computeStructuralSilhouetteBands,
   type SilhouetteInput,
   type SilhouetteMember,
+  type WallObstacle,
 } from '../structural-finish-silhouette';
 import type { FinishEdgeClassifier } from '../structural-finish-resolver';
 import type { StructuralFinishSpec } from '../structural-finish-types';
@@ -41,9 +42,10 @@ const cwRect = (x0: number, y0: number, x1: number, y1: number): Pt2[] => [
 
 const member = (footprint: Pt2[], zBotMm: number, zTopMm: number): SilhouetteMember => ({ footprint, zBotMm, zTopMm });
 
+/** Τοίχοι ως full-range z-extent (επικαλύπτουν όλες τις ζώνες — non-height-aware συμπεριφορά). */
 const baseInput = (members: SilhouetteMember[], wallObstacles: Pt2[][] = []): SilhouetteInput => ({
   members,
-  wallObstacles,
+  wallObstacles: wallObstacles.map((footprint) => ({ footprint, zBotMm: -1e9, zTopMm: 1e9 })),
   spec: SPEC,
   classify: allInterior,
   unitToMeters: 1, // lengthM = canvas length
@@ -191,5 +193,61 @@ describe('big-player σύμβαση: additive-outward σοβάς (immutable core
     const out = computeStructuralSilhouetteBands(baseInput([member(beam, 0, 500)]));
     expect(out).toHaveLength(1);
     expect(maxOuterFaceY(out[0].faces.segments)).toBeCloseTo(30, 0);
+  });
+});
+
+describe('ADR-449 Slice X1 — height-aware walls (grid coincident support, Firestore-shaped)', () => {
+  // Mirror της σκηνής (Firestore): κολόνα 400×400 + κάθετο δοκάρι 250 **center-justified**
+  // (inset 75 κάθε πλευρά) που καρφώνεται από κάτω (z 2500..3000) + τοίχος-στήριγμα
+  // **ΤΑΥΤΟΣΗΜΟΣ σε κάτοψη** με το δοκάρι (grid framing), `topBinding:'attached'` → resolved
+  // top = κάτω παρειά δοκαριού (z=2500). Αυτή ήταν η αιτία του «μία όψη μόνο» (Slice 7-revert).
+  const column = member(rect(0, 0, 400, 400), 0, 3000);
+  const beamTab = member(rect(75, -2000, 325, 0), 2500, 3000); // κρέμεται κάτω από την κολόνα
+  const beamBandOf = (out: ReturnType<typeof computeStructuralSilhouetteBands>) =>
+    out.find((b) => b.zBottomMm === 2500 && b.zTopMm === 3000);
+  const makeInput = (walls: WallObstacle[]): SilhouetteInput => ({
+    members: [column, beamTab],
+    wallObstacles: walls,
+    spec: SPEC,
+    classify: allInterior,
+    unitToMeters: 1,
+  });
+  /** Πλάγια όψη δοκαριού στο x=`fx` υπάρχει στο κάτω τμήμα (y<0). */
+  const hasSideFace = (segs: readonly { a: Pt2; b: Pt2 }[], fx: number): boolean =>
+    segs.some((s) => Math.abs(s.a.x - fx) < 1e-6 && Math.abs(s.b.x - fx) < 1e-6 && Math.min(s.a.y, s.b.y) < -1e-6);
+
+  const supportWall: WallObstacle = { footprint: rect(75, -2000, 325, 0), zBotMm: 0, zTopMm: 2500 };
+
+  it('attached support wall (z ≤ beam underside) ΔΕΝ καλύπτει τις όψεις δοκαριού στη ζώνη του → 2 όψεις', () => {
+    const band = beamBandOf(computeStructuralSilhouetteBands(makeInput([supportWall])));
+    expect(band).toBeDefined();
+    expect(hasSideFace(band!.faces.segments, 75)).toBe(true);  // αριστερή όψη
+    expect(hasSideFace(band!.faces.segments, 325)).toBe(true); // δεξιά όψη
+  });
+
+  it('contrast: full-height coincident wall (height-unaware) ΚΟΒΕΙ → λιγότερος σοβάς (το παλιό bug)', () => {
+    const fullWall: WallObstacle = { footprint: rect(75, -2000, 325, 0), zBotMm: 0, zTopMm: 3000 };
+    const lenOf = (walls: WallObstacle[]): number =>
+      totalLength(beamBandOf(computeStructuralSilhouetteBands(makeInput(walls)))!.faces.segments);
+    // Height-aware (excluded) → ΠΕΡΙΣΣΟΤΕΡΟΣ σοβάς από full-height (active coincident → κόβει όψη).
+    expect(lenOf([supportWall])).toBeGreaterThan(lenOf([fullWall]));
+  });
+
+  it('συμβολή: η εσωτερική διεπαφή (κάτω παρειά κολόνας κάτω από το δοκάρι) ΔΕΝ παίρνει σοβά', () => {
+    const band = beamBandOf(computeStructuralSilhouetteBands(makeInput([supportWall])))!;
+    // y=0, x∈(75,325) = internal (μέσα στο ενιαίο union) → κανένα segment (μηδέν διπλο-σοβάτισμα).
+    const internal = band.faces.segments.filter((s) =>
+      Math.abs(s.a.y) < 1e-6 && Math.abs(s.b.y) < 1e-6 &&
+      Math.min(s.a.x, s.b.x) >= 75 - 1e-6 && Math.max(s.a.x, s.b.x) <= 325 + 1e-6);
+    expect(internal).toHaveLength(0);
+  });
+
+  it('κάτω ζώνη κολόνας (χωρίς δοκάρι): ο support wall ΕΙΝΑΙ ενεργός (καλύπτει όπου είναι μπροστά)', () => {
+    // Στη ζώνη [0,2500] μόνο η κολόνα υπάρχει· ο attached wall (z[0,2500]) επικαλύπτεται →
+    // παραμένει obstacle (height-aware = σωστό ΚΑΙ για το κάτω τμήμα, όχι μόνο εξαίρεση).
+    const out = computeStructuralSilhouetteBands(makeInput([supportWall]));
+    const lower = out.find((b) => b.zBottomMm === 0 && b.zTopMm === 2500);
+    expect(lower).toBeDefined();
+    expect(lower!.faces.segments.length).toBeGreaterThan(0);
   });
 });

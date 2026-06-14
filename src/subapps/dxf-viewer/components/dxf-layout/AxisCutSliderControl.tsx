@@ -4,25 +4,21 @@
 // ✂️ AxisCutSliderControl — ADR-455 vertical section-cut «L» slider (X or Y)
 // ============================================================================
 //
-// Parametric presentational control for ONE vertical section cut (world DXF X or Y).
-// Mirrors CutPlaneSliderControl (ADR-452) but as an absolute world-plan plane the user
-// can FLIP: the «L» short branch is a direction-arrow button that points toward the
-// KEPT (viewed) side and, on click, flips the sign (swaps the kept/ghost sides). Drives
-// the single axis-cut SSoT (`xAxisCut`/`yAxisCut` in the BIM render-settings store):
-// 3D clips the cut-away half-space, 2D ghosts it + draws the section line.
-//
-// Layout: axis 'x' = horizontal slider (mounted along the canvas base); axis 'y' =
-// vertical slider (mounted along the canvas left). Range = model world extent.
+// Parametric control for ONE vertical section cut (world DXF X or Y). Renders through
+// the SHARED SectionSliderShell (ADR-455 appearance SSoT — identical theme/chrome to the
+// horizontal cut, ADR-452), supplying only its data + the type-specific icon and the «L»
+// short branch: a direction-arrow button that points toward the KEPT (viewed) side and,
+// on click, FLIPS the sign (swaps the kept/ghost sides). Drives the axis-cut SSoT
+// (`xAxisCut`/`yAxisCut`): 3D clips the cut-away half-space, 2D ghosts it + draws the
+// section line. Axis 'x' = horizontal slider (canvas base); 'y' = vertical (canvas left).
 // ============================================================================
 
 import React from 'react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
-import { Slider } from '@/components/ui/slider';
 import { useBimRenderSettingsStore } from '../../state/bim-render-settings-store';
 import type { AxisCutKey } from '../../config/bim-render-settings-types';
 import type { AxisCutRange } from './axis-cut-range';
-// ADR-366 — clear the SSoT crosshair on enter so it doesn't freeze under the overlay.
-import { setImmediatePosition } from '../../systems/cursor/ImmediatePositionStore';
+import { SectionSliderShell } from './SectionSliderShell';
 
 export interface AxisCutSliderControlProps {
   readonly axis: AxisCutKey;
@@ -59,7 +55,7 @@ export const AxisCutSliderControl = React.memo(function AxisCutSliderControl({
   const setActive = (a: boolean) => useBimRenderSettingsStore.getState().setAxisCutActive(axis, a);
   const setSign = (sgn: 1 | -1) => useBimRenderSettingsStore.getState().setAxisCutSign(axis, sgn);
 
-  const handleSlider = ([next]: number[]) => {
+  const handleSlider = (next: number) => {
     setPosition(next);
     if (!cut.active) setActive(true);
   };
@@ -73,56 +69,33 @@ export const AxisCutSliderControl = React.memo(function AxisCutSliderControl({
     if (!cut.active) setActive(true);
   };
 
-  const label = horizontal ? t('axisCut.labelX') : t('axisCut.labelY');
-
   return (
-    <aside
-      onMouseEnter={() => setImmediatePosition(null)}
-      className={`pointer-events-auto absolute flex cursor-default items-center gap-2 ${
-        horizontal ? 'flex-row' : 'flex-col'
-      } ${className}`}
-    >
-      <button
-        type="button"
-        onClick={handleToggle}
-        aria-label={cut.active ? t('axisCut.disable') : t('axisCut.enable')}
-        aria-pressed={cut.active}
-        className={`flex cursor-pointer select-none items-center justify-center rounded border p-1.5 shadow-md backdrop-blur-sm transition-all ${
-          cut.active
-            ? 'border-primary bg-primary text-primary-foreground opacity-70 hover:opacity-100'
-            : 'border-border bg-background/80 text-foreground hover:bg-accent hover:text-accent-foreground'
-        }`}
-      >
-        <AxisCutIcon axis={axis} />
-      </button>
-      <button
-        type="button"
-        onClick={handleFlip}
-        aria-label={t('axisCut.flip')}
-        className="flex cursor-pointer select-none items-center justify-center rounded border border-border bg-background/80 p-1.5 text-foreground shadow-sm backdrop-blur-sm transition-colors hover:bg-accent hover:text-accent-foreground"
-      >
-        <ArrowGlyph className={arrowRotationClass(axis, cut.sign)} />
-      </button>
-      <output className="rounded bg-background/80 px-1 py-0.5 text-[10px] font-semibold tabular-nums text-foreground shadow-sm backdrop-blur-sm">
-        {value.toFixed(2)}
-        {t('axisCut.unit')}
-      </output>
-      <Slider
-        orientation={horizontal ? 'horizontal' : 'vertical'}
-        aria-label={t('axisCut.ariaSlider')}
-        className={`flex-1 cursor-pointer [&_[role=slider]]:cursor-grab [&_[role=slider]]:active:cursor-grabbing ${
-          horizontal ? 'mx-1' : 'my-1'
-        }`}
-        min={range.min}
-        max={range.max}
-        step={step}
-        value={[value]}
-        onValueChange={handleSlider}
-      />
-      <span className="select-none text-[9px] font-medium text-muted-foreground" aria-hidden="true">
-        {label}
-      </span>
-    </aside>
+    <SectionSliderShell
+      orientation={horizontal ? 'horizontal' : 'vertical'}
+      active={cut.active}
+      onToggle={handleToggle}
+      toggleAriaLabel={cut.active ? t('axisCut.disable') : t('axisCut.enable')}
+      icon={<AxisCutIcon axis={axis} />}
+      readout={`${value.toFixed(2)}${t('axisCut.unit')}`}
+      label={horizontal ? t('axisCut.labelX') : t('axisCut.labelY')}
+      min={range.min}
+      max={range.max}
+      step={step}
+      value={value}
+      ariaSlider={t('axisCut.ariaSlider')}
+      onValueChange={handleSlider}
+      positionClassName={className}
+      extraControl={
+        <button
+          type="button"
+          onClick={handleFlip}
+          aria-label={t('axisCut.flip')}
+          className="flex cursor-pointer select-none items-center justify-center rounded border border-border bg-background/80 p-1.5 text-foreground shadow-sm backdrop-blur-sm transition-colors hover:bg-accent hover:text-accent-foreground"
+        >
+          <ArrowGlyph className={arrowRotationClass(axis, cut.sign)} />
+        </button>
+      }
+    />
   );
 });
 

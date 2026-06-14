@@ -43,11 +43,28 @@ export interface SilhouetteBand {
   readonly zTopMm: number;
 }
 
+/**
+ * ADR-449 Slice X1 — τοίχος-εμπόδιο με **κατακόρυφη έκταση** (building-relative mm).
+ * Height-aware coverage: ο τοίχος αφαιρεί όψη ΜΟΝΟ στις ζώνες ύψους που επικαλύπτει
+ * κατακόρυφα. Ένας **attached-top** τοίχος-στήριγμα (κορυφή = κάτω παρειά δοκαριού)
+ * ΔΕΝ καλύπτει την πλάγια όψη δοκαριού **πάνω** του — ο adapter δίνει resolved top =
+ * beam underside (ADR-449 Slice 8/8b· χωρίς αυτό οι ταυτόσημοι σε κάτοψη grid τοίχοι
+ * «έτρωγαν» τη μία όψη δοκαριού → το «μία όψη μόνο» bug που νόμιζε ότι ήταν τοπολογικό).
+ */
+export interface WallObstacle {
+  /** Footprint τοίχου (finished outline, plan/canvas units). */
+  readonly footprint: readonly Pt2[];
+  /** mm — κάτω όριο της κατακόρυφης έκτασης (building-relative). */
+  readonly zBotMm: number;
+  /** mm — άνω όριο (building-relative)· attached-top = beam underside (resolved). */
+  readonly zTopMm: number;
+}
+
 export interface SilhouetteInput {
   /** Κολόνες + δοκάρια (core footprints + z-extents). */
   readonly members: readonly SilhouetteMember[];
-  /** Footprints τοίχων (finished outline) — ΗΔΗ dilated κατά join-tol από τον caller. */
-  readonly wallObstacles: readonly (readonly Pt2[])[];
+  /** Τοίχοι-εμπόδια με κατακόρυφη έκταση → height-aware coverage ανά ζώνη. */
+  readonly wallObstacles: readonly WallObstacle[];
   /** Per-element πρόθεση σοβά (υλικά + πάχος) — resolved default για τη σιλουέτα. */
   readonly spec: StructuralFinishSpec;
   /** Ταξινόμηση exposed υπο-ακμής σε interior/exterior (building-footprint based). */
@@ -60,6 +77,8 @@ const EPS = 1e-6;
 const MM_TO_M = 0.001;
 /** Ελάχιστο ύψος ζώνης (mm) — φιλτράρει εκφυλισμένες z-breakpoints. */
 const MIN_BAND_MM = 1e-3;
+/** Ανοχή (mm) κατακόρυφης επικάλυψης τοίχου↔ζώνης (mirror `WALL_BEAM_BAND_TOL_MM`). */
+const WALL_BAND_TOL_MM = 1;
 
 /** Shoelace signed area· >0 = CCW. */
 function signedArea(fp: readonly Pt2[]): number {
@@ -122,8 +141,31 @@ function membersAt(members: readonly SilhouetteMember[], mid: number): Silhouett
   return members.filter((m) => m.zBotMm - EPS <= mid && mid < m.zTopMm - EPS);
 }
 
+/**
+ * ADR-449 Slice X1 — footprints τοίχων που επικαλύπτονται **ΚΑΤΑΚΟΡΥΦΑ** με τη ζώνη
+ * `[zBot, zTop]` (height-aware). Ένας attached-top τοίχος-στήριγμα (resolved top = κάτω
+ * παρειά δοκαριού) βρίσκεται **κάτω** από τη ζώνη του δοκαριού → δεν περιλαμβάνεται →
+ * η πλάγια όψη δοκαριού ΚΡΑΤΑ σοβά και στις 2 πλευρές (mirror `wallsOverlappingBeamBand`).
+ */
+function wallFootprintsInBand(
+  walls: readonly WallObstacle[],
+  zBotMm: number,
+  zTopMm: number,
+): (readonly Pt2[])[] {
+  const out: (readonly Pt2[])[] = [];
+  for (const w of walls) {
+    if (w.zTopMm > zBotMm + WALL_BAND_TOL_MM && w.zBotMm < zTopMm - WALL_BAND_TOL_MM) out.push(w.footprint);
+  }
+  return out;
+}
+
 /** Ενιαίες faces μιας ζώνης: union outline → resolver ανά πολύγωνο, merged. */
-function resolveBandFaces(input: SilhouetteInput, present: readonly SilhouetteMember[], heightMm: number): StructuralFinishFaces {
+function resolveBandFaces(
+  input: SilhouetteInput,
+  present: readonly SilhouetteMember[],
+  heightMm: number,
+  wallFootprints: readonly (readonly Pt2[])[],
+): StructuralFinishFaces {
   const merged: FinishFaceSegment[] = [];
   let interiorAreaM2 = 0;
   let exteriorAreaM2 = 0;
@@ -138,7 +180,7 @@ function resolveBandFaces(input: SilhouetteInput, present: readonly SilhouetteMe
         coreFootprint: ring,
         heightMm,
         spec: input.spec,
-        obstacles: input.wallObstacles,
+        obstacles: wallFootprints,
         classify: input.classify,
         unitToMeters: input.unitToMeters,
         holeRing: ri > 0,
@@ -172,7 +214,10 @@ export function computeStructuralSilhouetteBands(input: SilhouetteInput): Silhou
     if (heightMm <= MIN_BAND_MM) continue;
     const present = membersAt(input.members, (zBottomMm + zTopMm) / 2);
     if (present.length === 0) continue;
-    const faces = resolveBandFaces(input, present, heightMm);
+    // ADR-449 Slice X1 — height-aware walls: μόνο όσοι επικαλύπτονται κατακόρυφα με τη
+    // ζώνη κόβουν όψη (attached-top στήριγμα κάτω από δοκάρι → εκτός ζώνης δοκαριού).
+    const wallFootprints = wallFootprintsInBand(input.wallObstacles, zBottomMm, zTopMm);
+    const faces = resolveBandFaces(input, present, heightMm, wallFootprints);
     if (faces.segments.length === 0) continue;
     bands.push({ faces, zBottomMm, zTopMm });
   }

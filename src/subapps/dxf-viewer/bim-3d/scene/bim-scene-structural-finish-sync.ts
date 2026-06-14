@@ -19,15 +19,19 @@ import { computeStructuralFinishSilhouette } from '../../bim/finishes/structural
 import { buildStructuralSilhouetteSkin } from '../converters/structural-finish-silhouette-3d';
 
 /**
- * ADR-449 Slice 7-revert — η ενιαία silhouette είναι προσωρινά **ΑΝΕΝΕΡΓΗ**. Σε
- * **ανοιχτή τοπολογία** (δοκάρια που δεν κλείνουν loop) η `safeUnion` δεν δημιουργεί
- * τρύπα → μόνο το outer ring → κάθε δοκάρι παίρνει **μία μόνο όψη** (boundary-dependent,
- * Giorgio 2026-06-13). Ενεργό path = **per-element** (Slice 6, αξιόπιστες 2 πλάγιες όψεις
- * + mutual-obstacle junction cut + chamfer στις γωνίες). Ο κώδικας της silhouette μένει
- * ζωντανός (αυτό το module + το pure SSoT) για μελλοντικό **corner-join-only merged-miter**
- * slice — flip σε `true` όταν υλοποιηθεί robust corner-join. Βλ. ADR-449 §3.septies.
+ * ADR-449 Slice X1 — η ενιαία silhouette είναι **ΕΝΕΡΓΗ** (αντικαθιστά το per-element 3D σκιν):
+ * ένα συνεχές δέρμα σοβά τυλίγει τη συνολική σιλουέτα του μπετόν ανά ζώνη ύψους → μηδέν
+ * αλληλοδιείσδυση/overlap (η v3 corner-fill-via-overlap του Slice 10) και μηδέν διπλή γραμμή
+ * στις συμβολές κολόνα↔δοκάρι (Giorgio 2026-06-14). Λύνει ΚΑΙ center-justified (το union των
+ * finish bands δεν τους ένωνε — 75mm inset).
+ *
+ * Το παλιό «μία όψη μόνο» bug (Slice 7-revert) **ΔΕΝ ήταν τοπολογικό**: ήταν naive wall coverage
+ * (un-dilated, height-unaware) — οι grid τοίχοι είναι **ταυτόσημοι σε κάτοψη** με τα δοκάρια
+ * (ίδιος άξονας/πάχος) κι έτρωγαν τη μία όψη. Διορθώθηκε με port των Slice 8/8b: height-aware
+ * `WallObstacle` z-extents (attached-top στήριγμα → resolved top = beam underside → εκτός της
+ * ζώνης δοκαριού). Βλ. `structural-finish-silhouette.ts` + `structural-finish-scene-silhouette.ts`.
  */
-const STRUCTURAL_SILHOUETTE_ENABLED: boolean = false;
+const STRUCTURAL_SILHOUETTE_ENABLED: boolean = true;
 
 type ResolveEntity = (
   entity: { id?: string; layerId?: string; discipline?: Discipline },
@@ -39,9 +43,9 @@ type ResolveEntity = (
  * ADR-449 Slice 7 — ΕΝΑ scene-level pass για τον ΕΝΙΑΙΟ σοβά (merged silhouette):
  * ενώνει τα δομικά cores (κολόνες+δοκάρια) ανά ζώνη ύψους και offset-άρει ΜΙΑ φορά →
  * coplanar + connected στις συμβολές. Group ανά κτίριο (baseElevation = world datum).
- * Walls = obstacles (όλοι, όπως το per-element). **Slice 7-revert: dormant** πίσω από
- * `STRUCTURAL_SILHOUETTE_ENABLED` — ενεργό path = per-element (τα converters δίνουν πλέον
- * `suppressFinishSkin=false`). No-op όταν dormant, view-hidden ή χωρίς ορατά δομικά μέλη.
+ * Walls = height-aware obstacles (Slice X1). **Slice X1: ΕΝΕΡΓΟ** πίσω από
+ * `STRUCTURAL_SILHOUETTE_ENABLED` — αντικαθιστά το per-element 3D σκιν (τα scene converters
+ * δίνουν πλέον `suppressFinishSkin=true`). No-op όταν disabled, view-hidden ή χωρίς δομικά μέλη.
  */
 export function syncStructuralFinishSkin(
   group: THREE.Group,
@@ -49,7 +53,7 @@ export function syncStructuralFinishSkin(
   ctx: SyncContext,
   resolve: ResolveEntity,
 ): void {
-  // ADR-449 Slice 7-revert — dormant μέχρι robust corner-join-only υλοποίηση (per-element ενεργό).
+  // ADR-449 Slice X1 — ΕΝΕΡΓΟ· no-op μόνο όταν ο διακόπτης «Σοβατισμένη όψη» είναι κλειστός.
   if (!STRUCTURAL_SILHOUETTE_ENABLED || !isStructuralFinishVisible()) return;
   const groups = new Map<string, { baseElevation: number; columns: ColumnEntity[]; beams: BeamEntity[] }>();
   const groupFor = (buildingId: string, baseElevation: number) => {
