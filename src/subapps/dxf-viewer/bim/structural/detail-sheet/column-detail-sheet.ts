@@ -24,6 +24,8 @@ import {
 import { buildColumnPlanRegion } from './column-detail-plan';
 import { buildColumnElevationRegion } from './column-detail-elevation';
 import { buildColumnPerspectiveRegion } from './column-detail-perspective';
+import { buildColumnScheduleRegion } from './column-detail-schedule';
+import { buildColumnTitleBlockRegion } from './column-detail-titleblock';
 import type { ColumnDetail3dCapture } from './render/column-detail-3d-capture';
 import type { ColumnParams } from '../../types/column-types';
 import type {
@@ -61,13 +63,15 @@ export function buildColumnDetailSheet(input: ColumnDetailSheetInput): DetailShe
   const plan = buildColumnPlanRegion(input.params, regions.plan);
   const elevation = buildColumnElevationRegion(input.params, regions.elevation);
   const perspective = buildColumnPerspectiveRegion(regions.perspective, input.perspective3d ?? null);
+  const schedule = buildColumnScheduleRegion(input.params, regions.schedule, labels.scheduleTable);
+  const titleBlock = buildColumnTitleBlockRegion(input.params, regions['title-block'], labels.titleFields);
 
   const sheetRegions: readonly SheetRegion[] = [
     { id: 'elevation', rectMm: regions.elevation, title: labels.elevation, caption: elevation.caption, primitives: elevation.primitives },
     { id: 'plan', rectMm: regions.plan, title: labels.plan, caption: plan.caption, primitives: plan.primitives },
-    { id: 'schedule', rectMm: regions.schedule, title: labels.schedule, primitives: [] },
+    { id: 'schedule', rectMm: regions.schedule, title: labels.schedule, primitives: schedule.primitives },
     { id: 'perspective', rectMm: regions.perspective, title: labels.perspective, primitives: perspective.primitives },
-    { id: 'title-block', rectMm: regions['title-block'], title: labels.titleBlock, primitives: [] },
+    { id: 'title-block', rectMm: regions['title-block'], title: labels.titleBlock, primitives: titleBlock.primitives },
   ];
 
   return {

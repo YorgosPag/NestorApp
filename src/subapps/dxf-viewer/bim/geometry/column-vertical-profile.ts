@@ -266,6 +266,33 @@ export function resolveColumnBaseProfile(
 }
 
 /**
+ * ADR-449 — Κατακόρυφη έκταση [zBot, zTop] μιας κολώνας σε απόλυτο mm, υπολογισμένη
+ * από την **ΙΔΙΑ SSoT** με τον rendered πυρήνα (`bim-scene-attach-syncs.syncColumns`):
+ *   - `zBotMm = resolveColumnBaseZmm` (FFL + offset, ή absolute).
+ *   - `zTopMm`: `attached` (με ids) → `resolveColumnTopProfile(...).maxTopZmm` (flat
+ *     approx της κεκλιμένης κορυφής — v1)· αλλιώς → `resolveColumnNominalTopZmm`
+ *     (storey-ceiling → `nextFloorElevationMm − ceilingSlab + topOffset`).
+ * Degenerate params (μη-finite top) → fallback `zBot + params.height` (mirror του
+ * `nominalHeightMm` guard του πυρήνα).
+ *
+ * Ο σοβάς (silhouette + horizontal caps/soffit) **ΠΡΕΠΕΙ** να καλεί αυτό αντί να
+ * ξανα-υπολογίζει από raw `params.height` → σοβάς = πυρήνας πάντα (storey-aware).
+ */
+export function resolveColumnVerticalExtentMm(
+  params: ColumnVerticalParams,
+  footprint: readonly Pt2[],
+  ctx: ColumnVerticalContext,
+): { zBotMm: number; zTopMm: number } {
+  const zBotMm = resolveColumnBaseZmm(params, ctx);
+  const attached = params.topBinding === 'attached' && (params.attachTopToIds?.length ?? 0) > 0;
+  const resolvedTop = attached
+    ? resolveColumnTopProfile(params, footprint, ctx).maxTopZmm
+    : resolveColumnNominalTopZmm(params, ctx);
+  const zTopMm = Number.isFinite(resolvedTop) ? resolvedTop : zBotMm + params.height;
+  return { zBotMm, zTopMm };
+}
+
+/**
  * Convenience: lookup builder από host inputs (mirror `makeResolveHost`).
  * Boy-Scout N.0.2: thin alias του shared `makeHostFootprintResolver` — οι
  * υπάρχοντες consumers (`column-structural-attach-coordinator` κ.λπ.) εισάγουν

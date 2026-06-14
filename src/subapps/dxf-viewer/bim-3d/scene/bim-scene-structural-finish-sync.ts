@@ -16,9 +16,12 @@ import type { BimCategory } from '../../config/bim-object-styles';
 import type { Discipline } from '../../bim/discipline/bim-discipline';
 import { isStructuralFinishVisible } from '../../bim/finishes/structural-finish-visibility';
 import { computeStructuralFinishSilhouette } from '../../bim/finishes/structural-finish-scene';
+import type { ColumnVerticalExtentLookup } from '../../bim/finishes/structural-finish-scene-silhouette';
 import { buildStructuralSilhouetteSkin } from '../converters/structural-finish-silhouette-3d';
 import { computeStructuralHorizontalFinishFaces } from '../../bim/finishes/structural-finish-scene-horizontal';
 import { buildHorizontalFinishSkin } from '../converters/structural-finish-horizontal-3d';
+import { resolveColumnVerticalExtentMm, makeColumnHostResolver } from '../../bim/geometry/column-vertical-profile';
+import { buildWallHostInputs } from '../../bim/geometry/wall-host-plan-builder';
 import type { SceneUnits } from '../../utils/scene-units';
 
 /**
@@ -58,6 +61,10 @@ export function syncStructuralFinishSkin(
 ): void {
   // ADR-449 Slice X1 — ΕΝΕΡΓΟ· no-op μόνο όταν ο διακόπτης «Σοβατισμένη όψη» είναι κλειστός.
   if (!STRUCTURAL_SILHOUETTE_ENABLED || !isStructuralFinishVisible()) return;
+  // ADR-449 height-SSoT — pre-resolved κατακόρυφο εύρος ανά κολώνα, ΙΔΙΑ SSoT με τον
+  // rendered πυρήνα (`syncColumns`): storey-ceiling κολώνα → top = nextFloorElevationMm,
+  // ΟΧΙ raw `params.height`. Έτσι σοβάς (silhouette + caps/soffit) = πυρήνας πάντα.
+  const columnExtents = buildColumnVerticalExtents(entities, ctx);
   const groups = new Map<string, { baseElevation: number; columns: ColumnEntity[]; beams: BeamEntity[] }>();
   const groupFor = (buildingId: string, baseElevation: number) => {
     let g = groups.get(buildingId);
@@ -73,14 +80,43 @@ export function syncStructuralFinishSkin(
     if (r) groupFor(r.buildingId, r.baseElevation).beams.push(beam);
   }
   for (const [buildingId, g] of groups) {
-    const bands = computeStructuralFinishSilhouette(g.columns, g.beams, entities.walls, ctx.floorElevationMm);
+    const bands = computeStructuralFinishSilhouette(g.columns, g.beams, entities.walls, ctx.floorElevationMm, columnExtents);
     const sceneUnits = g.columns[0]?.params.sceneUnits ?? g.beams[0]?.params.sceneUnits ?? 'mm';
     const skin = buildStructuralSilhouetteSkin(
       bands, sceneUnits, g.baseElevation, ctx.activeLevelId, `structural-finish-${buildingId}`,
     );
     if (skin) { skin.userData['buildingId'] = buildingId; group.add(skin); }
-    addHorizontalFinish(group, g, entities, ctx, buildingId, sceneUnits);
+    addHorizontalFinish(group, g, entities, ctx, buildingId, sceneUnits, columnExtents);
   }
+}
+
+/**
+ * ADR-449 height-SSoT — `Map<columnId, {zBotMm,zTopMm}>` υπολογισμένο ΜΙΑ φορά για ΟΛΕΣ
+ * τις κολώνες του ορόφου, με **ακριβώς το ίδιο context** που χρησιμοποιεί ο πυρήνας στο
+ * `bim-scene-attach-syncs.syncColumns` (`{floorElevationMm, nextFloorElevationMm}` +
+ * `resolveHostInput` μόνο όταν υπάρχουν attached). Ο σοβάς κάνει lookup ανά id → ποτέ
+ * δεν ξανα-υπολογίζει από raw `params.height`.
+ */
+function buildColumnVerticalExtents(entities: Bim3DEntities, ctx: SyncContext): ColumnVerticalExtentLookup {
+  const map = new Map<string, { zBotMm: number; zTopMm: number }>();
+  const hasAttached = entities.columns.some(
+    (c) => c.params?.topBinding === 'attached' || c.params?.baseBinding === 'attached',
+  );
+  const resolveHostInput = hasAttached
+    ? makeColumnHostResolver(buildWallHostInputs(entities.beams, entities.slabs))
+    : undefined;
+  const colCtx = {
+    floorElevationMm: ctx.floorElevationMm,
+    nextFloorElevationMm: ctx.nextFloorElevationMm,
+    resolveHostInput,
+  };
+  for (const c of entities.columns) {
+    const verts = c.geometry?.footprint?.vertices;
+    if (!c.id || !verts || verts.length < 3) continue;
+    const footprint = verts.map((v) => ({ x: v.x, y: v.y }));
+    map.set(c.id, resolveColumnVerticalExtentMm(c.params, footprint, colCtx));
+  }
+  return map;
 }
 
 /**
@@ -97,6 +133,7 @@ function addHorizontalFinish(
   ctx: SyncContext,
   buildingId: string,
   sceneUnits: SceneUnits,
+  columnExtents: ColumnVerticalExtentLookup,
 ): void {
   const { columnFaces, beamFaces } = computeStructuralHorizontalFinishFaces({
     columns: g.columns,
@@ -105,6 +142,7 @@ function addHorizontalFinish(
     slabs: entities.slabs,
     beamObstacles: g.beams,
     floorElevationMm: ctx.floorElevationMm,
+    columnExtents,
   });
   const colSkin = buildHorizontalFinishSkin(
     columnFaces, 'column', g.baseElevation, sceneUnits, ctx.activeLevelId, `structural-finish-hcol-${buildingId}`,

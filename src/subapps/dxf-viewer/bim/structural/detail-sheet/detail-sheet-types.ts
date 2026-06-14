@@ -151,6 +151,32 @@ export interface DetailSheetModel {
   readonly regions: readonly SheetRegion[];
 }
 
+/** Pre-resolved reinforcement-schedule table labels (N.11-safe, host-injected). */
+export interface DetailScheduleLabels {
+  readonly mark: string;        // «Στοιχείο» / item column
+  readonly diameter: string;    // «Ø»
+  readonly count: string;       // «Πλήθος» / quantity
+  readonly length: string;      // «Μήκος (m)»
+  readonly weight: string;      // «Βάρος (kg)»
+  readonly longitudinal: string;// «Διαμήκεις» row
+  readonly stirrups: string;    // «Συνδετήρες» row
+  readonly spiral: string;      // «Σπείρα» row (spiral type)
+  readonly total: string;       // «Σύνολο» row
+  readonly ratio: string;       // «ρ» longitudinal ratio
+  readonly confinement: string; // «α» confinement factor
+}
+
+/** Pre-resolved title-block (drawing data) field labels (N.11-safe, host-injected). */
+export interface DetailTitleBlockLabels {
+  readonly section: string;     // «Διατομή»
+  readonly height: string;      // «Ύψος»
+  readonly concrete: string;    // «Σκυρόδεμα»
+  readonly steel: string;       // «Χάλυβας»
+  readonly cover: string;       // «Επικάλυψη»
+  readonly longitudinal: string;// «Διαμήκης οπλισμός»
+  readonly stirrups: string;    // «Συνδετήρες»
+}
+
 /** Pre-resolved region headings injected by the UI host (N.11-safe). */
 export interface DetailSheetLabels {
   readonly plan: string;
@@ -158,4 +184,8 @@ export interface DetailSheetLabels {
   readonly perspective: string;
   readonly schedule: string;
   readonly titleBlock: string;
+  /** Reinforcement-schedule table column/row labels. */
+  readonly scheduleTable: DetailScheduleLabels;
+  /** Title-block (drawing data) field labels. */
+  readonly titleFields: DetailTitleBlockLabels;
 }

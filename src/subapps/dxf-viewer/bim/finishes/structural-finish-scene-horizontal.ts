@@ -31,6 +31,7 @@ import { computeFinishedOutline } from './structural-finish-horizontal';
 import type { Pt2 } from '../geometry/shared/segment-polygon-coverage';
 import { dilatePolygonOutward } from '../geometry/shared/polygon-dilate';
 import { toPt2, wallFootprintPolygon, type WallFinishObstacle } from './structural-finish-scene';
+import type { ColumnVerticalExtentLookup } from './structural-finish-scene-silhouette';
 
 const MM_TO_M = 0.001;
 /** Ανοχή (mm) κατακόρυφης εγγύτητας στο επίπεδο μιας οριζόντιας όψης. */
@@ -39,6 +40,8 @@ const PLANE_TOL_MM = 1;
 // ─── Minimal sources (BIM + Dxf entity· μηδέν cast) ─────────────────────────────
 
 export interface HorizontalColumnSource {
+  /** ADR-449 — id για lookup του pre-resolved (storey-aware) zExtent. Προαιρετικό: tests το παραλείπουν → legacy `params.height`. */
+  readonly id?: string;
   readonly params: Pick<
     ColumnParams,
     'finish' | 'sceneUnits' | 'baseOffset' | 'height' | 'baseBinding' | 'envelopeFunction'
@@ -163,6 +166,8 @@ interface HorizontalFinishInput {
   /** Δοκάρια ως οριζόντια εμπόδια καπακιού κολόνας (συνήθως === beams). */
   readonly beamObstacles: readonly HorizontalBeamObstacle[];
   readonly floorElevationMm: number;
+  /** ADR-449 — pre-resolved (storey-aware) zExtents κολώνας ανά id, ΙΔΙΑ SSoT με τον πυρήνα. */
+  readonly columnExtents?: ColumnVerticalExtentLookup;
 }
 
 /** envelopeFunction → classification (exterior μόνο όταν ρητά εξωτερική όψη). */
@@ -214,7 +219,7 @@ function plasterEnvelope(core: Pt2[] | null, spec: StructuralFinishSpec | undefi
  * ΜΟΝΟ για **γνήσια** οριζόντια κάλυψη (πλάκα από πάνω / τοίχος από κάτω — πραγματικό overlap).
  */
 export function computeStructuralHorizontalFinishFaces(input: HorizontalFinishInput): StructuralHorizontalFinishFaces {
-  const { columns, beams, walls, slabs, beamObstacles, floorElevationMm } = input;
+  const { columns, beams, walls, slabs, beamObstacles, floorElevationMm, columnExtents } = input;
   const sceneUnits = columns[0]?.params.sceneUnits ?? beams[0]?.params.sceneUnits ?? 'mm';
   const s = mmToSceneUnits(sceneUnits);
   const unitToMeters = (1 / s) * MM_TO_M;
@@ -240,7 +245,7 @@ export function computeStructuralHorizontalFinishFaces(input: HorizontalFinishIn
 
   // Finished outline: lateral obstacles = plaster envelopes του ΑΛΛΟΥ δομικού τύπου + τοίχοι.
   const columnFinished = columns.map((c, i) =>
-    finishedObstacleOf(columnCores[i], [...beamEnvelopes, ...wallFps], c.params.finish, s, columnZExtent(c, floorElevationMm)),
+    finishedObstacleOf(columnCores[i], [...beamEnvelopes, ...wallFps], c.params.finish, s, columnZExtent(c, floorElevationMm, columnExtents)),
   );
   const beamFinished = beams.map((b, j) =>
     finishedObstacleOf(beamCores[j], [...columnEnvelopes, ...wallFps], b.params.finish, s, beamZExtent(b.params)),
@@ -259,8 +264,13 @@ export function computeStructuralHorizontalFinishFaces(input: HorizontalFinishIn
   return { columnFaces, beamFaces };
 }
 
-/** Κατακόρυφη έκταση κολόνας (building-relative mm). */
-function columnZExtent(c: HorizontalColumnSource, floorElevationMm: number): ZExtent {
+/**
+ * Κατακόρυφη έκταση κολόνας (building-relative mm). ADR-449: pre-resolved extent
+ * (ΙΔΙΑ SSoT με τον πυρήνα, storey-aware) όταν δίνεται· αλλιώς legacy `params.height`.
+ */
+function columnZExtent(c: HorizontalColumnSource, floorElevationMm: number, extents?: ColumnVerticalExtentLookup): ZExtent {
+  const resolved = c.id ? extents?.get(c.id) : undefined;
+  if (resolved) return resolved;
   const zBotMm = floorElevationMm + (c.params.baseOffset ?? 0);
   return { zBotMm, zTopMm: zBotMm + c.params.height };
 }

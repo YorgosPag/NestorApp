@@ -4285,6 +4285,28 @@
       "perspective": "3Δ ΠΡΟΟΠΤΙΚΟ",
       "schedule": "ΣΤΟΙΧΕΙΑ ΟΠΛΙΣΜΟΥ",
       "titleBlock": "ΣΤΟΙΧΕΙΑ ΣΧΕΔΙΟΥ"
+    },
+    "scheduleTable": {
+      "mark": "Στοιχείο",
+      "diameter": "Ø",
+      "count": "Πλήθος",
+      "length": "Μήκος (m)",
+      "weight": "Βάρος (kg)",
+      "longitudinal": "Διαμήκεις",
+      "stirrups": "Συνδετήρες",
+      "spiral": "Σπείρα",
+      "total": "Σύνολο",
+      "ratio": "ρ",
+      "confinement": "α"
+    },
+    "titleFields": {
+      "section": "Διατομή (mm)",
+      "height": "Ύψος (mm)",
+      "concrete": "Σκυρόδεμα",
+      "steel": "Χάλυβας",
+      "cover": "Επικάλυψη (mm)",
+      "longitudinal": "Διαμήκης οπλισμός",
+      "stirrups": "Συνδετήρες"
     }
   },
   "print": {

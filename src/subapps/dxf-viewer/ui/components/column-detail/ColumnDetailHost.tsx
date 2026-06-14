@@ -112,6 +112,28 @@ export function ColumnDetailHost({
         perspective: t('columnDetail.regions.perspective'),
         schedule: t('columnDetail.regions.schedule'),
         titleBlock: t('columnDetail.regions.titleBlock'),
+        scheduleTable: {
+          mark: t('columnDetail.scheduleTable.mark'),
+          diameter: t('columnDetail.scheduleTable.diameter'),
+          count: t('columnDetail.scheduleTable.count'),
+          length: t('columnDetail.scheduleTable.length'),
+          weight: t('columnDetail.scheduleTable.weight'),
+          longitudinal: t('columnDetail.scheduleTable.longitudinal'),
+          stirrups: t('columnDetail.scheduleTable.stirrups'),
+          spiral: t('columnDetail.scheduleTable.spiral'),
+          total: t('columnDetail.scheduleTable.total'),
+          ratio: t('columnDetail.scheduleTable.ratio'),
+          confinement: t('columnDetail.scheduleTable.confinement'),
+        },
+        titleFields: {
+          section: t('columnDetail.titleFields.section'),
+          height: t('columnDetail.titleFields.height'),
+          concrete: t('columnDetail.titleFields.concrete'),
+          steel: t('columnDetail.titleFields.steel'),
+          cover: t('columnDetail.titleFields.cover'),
+          longitudinal: t('columnDetail.titleFields.longitudinal'),
+          stirrups: t('columnDetail.titleFields.stirrups'),
+        },
       },
     });
   }, [dialogState, levelManager, t, perspective3d]);

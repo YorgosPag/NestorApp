@@ -4285,6 +4285,28 @@
       "perspective": "3D PERSPECTIVE",
       "schedule": "REINFORCEMENT",
       "titleBlock": "TITLE BLOCK"
+    },
+    "scheduleTable": {
+      "mark": "Item",
+      "diameter": "Ø",
+      "count": "Qty",
+      "length": "Length (m)",
+      "weight": "Weight (kg)",
+      "longitudinal": "Longitudinal",
+      "stirrups": "Stirrups",
+      "spiral": "Spiral",
+      "total": "Total",
+      "ratio": "ρ",
+      "confinement": "α"
+    },
+    "titleFields": {
+      "section": "Section (mm)",
+      "height": "Height (mm)",
+      "concrete": "Concrete",
+      "steel": "Steel",
+      "cover": "Cover (mm)",
+      "longitudinal": "Longitudinal bars",
+      "stirrups": "Stirrups"
     }
   },
   "print": {

@@ -34,9 +34,14 @@ import {
  * **χωρίς cast** (ίδιο pattern με τα `ColumnFinishSource`/`BeamFinishSource` του scene).
  */
 export interface SilhouetteColumnSource {
+  /** ADR-449 — id για lookup του pre-resolved (storey-aware) zExtent. Προαιρετικό: το 2Δ plan path & tests το παραλείπουν → legacy `params.height`. */
+  readonly id?: string;
   readonly params: Pick<ColumnParams, 'finish' | 'sceneUnits' | 'baseOffset' | 'height'>;
   readonly geometry?: { readonly footprint?: { readonly vertices?: readonly { x: number; y: number }[] } };
 }
+
+/** ADR-449 — Pre-resolved κατακόρυφη έκταση κολώνας (building-relative mm), ΙΔΙΑ SSoT με τον πυρήνα. */
+export type ColumnVerticalExtentLookup = ReadonlyMap<string, { readonly zBotMm: number; readonly zTopMm: number }>;
 
 export interface SilhouetteBeamSource {
   readonly id: string;
@@ -44,8 +49,18 @@ export interface SilhouetteBeamSource {
   readonly geometry?: { readonly outline?: { readonly vertices?: readonly { x: number; y: number }[] } };
 }
 
-/** Κατακόρυφη έκταση κολόνας (building-relative mm): βάση = floor + baseOffset. */
-function columnZExtent(column: SilhouetteColumnSource, floorElevationMm: number): { zBotMm: number; zTopMm: number } {
+/**
+ * Κατακόρυφη έκταση κολόνας (building-relative mm). ADR-449: όταν δίνεται pre-resolved
+ * extent (ΙΔΙΑ SSoT με τον rendered πυρήνα, storey-aware) → χρησιμοποιείται· αλλιώς
+ * legacy fallback `floor + baseOffset (+height)` (2Δ plan path & tests).
+ */
+function columnZExtent(
+  column: SilhouetteColumnSource,
+  floorElevationMm: number,
+  extents?: ColumnVerticalExtentLookup,
+): { zBotMm: number; zTopMm: number } {
+  const resolved = column.id ? extents?.get(column.id) : undefined;
+  if (resolved) return resolved;
   const zBotMm = floorElevationMm + (column.params.baseOffset ?? 0);
   return { zBotMm, zTopMm: zBotMm + column.params.height };
 }
@@ -103,10 +118,11 @@ export function computeStructuralFinishSilhouette(
   beams: readonly SilhouetteBeamSource[],
   walls: readonly WallFinishObstacle[],
   floorElevationMm: number,
+  columnExtents?: ColumnVerticalExtentLookup,
 ): SilhouetteBand[] {
   const members: SilhouetteMember[] = [];
   for (const c of columns) {
-    const m = toMember(c.params.finish, c.geometry?.footprint?.vertices, columnZExtent(c, floorElevationMm));
+    const m = toMember(c.params.finish, c.geometry?.footprint?.vertices, columnZExtent(c, floorElevationMm, columnExtents));
     if (m) members.push(m);
   }
   for (const b of beams) {
