@@ -2,24 +2,19 @@
  * ADR-457 Slice 3 — Column Reinforcement Detail Sheet · 3D perspective capture.
  *
  * Renders a SELF-CONTAINED offscreen mini-scene (faint concrete prism + crimson
- * rebar cage) to a paper-resolution PNG data URL that is placed as a
- * {@link RasterPrimitive} in the sheet's `perspective` region. The SAME data URL
- * feeds the canvas preview AND the jsPDF export (Slice 5) → preview === PDF.
+ * rebar cage) to a paper-resolution PNG, AND projects the column's dimension /
+ * bar-mark anchor points through the SAME camera into normalised raster space.
+ * The perspective region then draws those projections as ordinary 2D `dim` /
+ * `text` primitives → the 3D annotations share the EXACT dimension SSoT
+ * (`resolveDimGeometry`: identical arrowheads / lines / text) with the plan and
+ * elevation views (FULL SSOT). The raster itself carries ONLY the column image.
  *
- * geometry-is-SSoT: the cage comes from `buildColumnRebarCage` (the live-3D SSoT)
- * and the concrete outline from `computeColumnGeometry().footprint` — both already
- * positioned in the column's WORLD frame and the SAME unit convention (horizontal
- * via `mmScaleFor`, vertical via `MM_TO_M`), so prism and cage are guaranteed to
- * align. No rebar/footprint geometry is re-derived here.
+ * geometry-is-SSoT: cage from `buildColumnRebarCage`, prism from
+ * `computeColumnGeometry().footprint`, dim/mark anchors from the matching spec
+ * helpers — no geometry re-derived here. The render is SYNCHRONOUS (unlit
+ * `MeshBasicMaterial` → reliable one-shot, mirrors `print/capture/capture-3d.ts`).
  *
- * The render is SYNCHRONOUS on purpose: the cage uses an unlit `MeshBasicMaterial`
- * (zero async shader compile) so a single offscreen `render()` is reliably
- * complete in one shot — mirrors `print/capture/capture-3d.ts`. Returns `null`
- * when the column has no buildable cage (non-rectangular / no reinforcement /
- * degenerate height) → the region keeps its heading only.
- *
- * ADR-040: fully offscreen — never touches the live renderer/scene (CHECK 6B/6C/6D
- * safe).
+ * ADR-040: fully offscreen — never touches the live renderer/scene.
  *
  * @module subapps/dxf-viewer/bim/structural/detail-sheet/render/column-detail-3d-capture
  * @see docs/centralized-systems/reference/adrs/ADR-457-column-reinforcement-detail-sheet.md
@@ -27,9 +22,11 @@
 
 import * as THREE from 'three';
 import type { ColumnEntity } from '../../../types/column-types';
+import type { Point2D } from '../../../../rendering/types/Types';
 import { computeColumnGeometry } from '../../../geometry/column-geometry';
 import { buildColumnRebarCage } from '../../../../bim-3d/converters/column-rebar-3d';
-import { buildColumnDimAnnotations } from './column-detail-3d-dims';
+import { computeColumnDimSpecs3d } from './column-detail-3d-dims';
+import { computeColumnBarMarkSpecs3d } from './column-detail-3d-marks';
 
 /** mm → metres (the vertical convention used by `buildColumnRebarCage`). */
 const MM_TO_M = 0.001;
@@ -44,14 +41,39 @@ const SCENE_BG_HEX = 0xffffff;
 const CAMERA_AZIMUTH_RAD = Math.PI / 4;
 const CAMERA_ELEVATION_RAD = (35.264 * Math.PI) / 180;
 const CAMERA_FOV_DEG = 35;
-/** Small margin around the tight projected-bbox fit (headroom for dim labels). */
-const FIT_MARGIN = 1.1;
+/** Small margin around the tight projected-bbox fit (headroom for annotations). */
+const FIT_MARGIN = 1.18;
+
+/** A point in normalised raster space ([0..1], origin top-left, y-down). */
+export type NormPoint = Point2D;
+
+/** A dimension projected to normalised raster space (measured endpoints + text). */
+export interface ProjectedDim {
+  readonly a: NormPoint;
+  readonly b: NormPoint;
+  readonly text: string;
+}
+
+/** A bar mark projected to normalised raster space. */
+export interface ProjectedMark {
+  readonly pos: NormPoint;
+  readonly text: string;
+}
+
+/** The capture result: the column raster + its 2D-overlay annotation projections. */
+export interface ColumnDetail3dCapture {
+  readonly dataUrl: string;
+  readonly widthPx: number;
+  readonly heightPx: number;
+  /** Projected scene centre — used to offset each dimension outward. */
+  readonly centroid: NormPoint;
+  readonly dims: readonly ProjectedDim[];
+  readonly marks: readonly ProjectedMark[];
+}
 
 /** Options controlling the offscreen raster resolution. */
 export interface ColumnDetail3dCaptureOptions {
-  /** Raster width in device pixels. */
   readonly widthPx: number;
-  /** Raster height in device pixels. */
   readonly heightPx: number;
 }
 
@@ -66,9 +88,6 @@ function buildConcretePrism(column: ColumnEntity): THREE.Group | null {
   const heightM = Math.max(0, column.params.height) * MM_TO_M;
   if (heightM <= 0) return null;
 
-  // Footprint (world, scene-horizontal units) → THREE.Shape in (X, Y); extrude
-  // along +Z then rotate −90° about X so depth becomes +Y (matches the cage's
-  // (x, y, −planY) axis convention with the base at y = 0).
   const shape = new THREE.Shape();
   shape.moveTo(verts[0].x, verts[0].y);
   for (let i = 1; i < verts.length; i++) shape.lineTo(verts[i].x, verts[i].y);
@@ -94,11 +113,6 @@ function buildConcretePrism(column: ColumnEntity): THREE.Group | null {
 function disposeOwned(group: THREE.Group | null): void {
   if (!group) return;
   group.traverse((obj) => {
-    if (obj instanceof THREE.Sprite) {
-      obj.material.map?.dispose();
-      obj.material.dispose();
-      return;
-    }
     if (obj instanceof THREE.Mesh || obj instanceof THREE.LineSegments || obj instanceof THREE.Line) {
       obj.geometry.dispose();
       const mat = obj.material;
@@ -132,17 +146,13 @@ function isoDirection(): THREE.Vector3 {
 /**
  * Places a perspective camera isometrically with a TIGHT fit: the model's eight
  * box corners are projected into the (distance-independent) view frame and the
- * camera distance is solved so the projected extent fills both axes. A bounding
- * sphere would over-pad a slender column (radius ≈ half its height); this fills
- * the frame instead.
+ * camera distance is solved so the projected extent fills both axes.
  */
 function frameCamera(box: THREE.Box3, aspect: number): THREE.PerspectiveCamera {
   const camera = new THREE.PerspectiveCamera(CAMERA_FOV_DEG, aspect, 0.01, 1e6);
   const center = box.getCenter(new THREE.Vector3());
   const dir = isoDirection();
 
-  // Fix the orientation (unit-distance placement); view x/y of a point are
-  // independent of the final distance, so solve the fit from this rotation.
   camera.position.copy(center).add(dir);
   camera.up.set(0, 1, 0);
   camera.lookAt(center);
@@ -171,29 +181,31 @@ function frameCamera(box: THREE.Box3, aspect: number): THREE.PerspectiveCamera {
   return camera;
 }
 
+/** Projects a world point to normalised raster space ([0..1], y-down). */
+function projectNorm(v: THREE.Vector3, camera: THREE.Camera): NormPoint {
+  const p = v.clone().project(camera);
+  return { x: (p.x + 1) / 2, y: (1 - p.y) / 2 };
+}
+
 /**
- * Captures the column's reinforcement as an isometric PNG data URL, or `null`
- * when there is no buildable cage. Disposes every GPU resource it creates.
+ * Captures the column reinforcement as an isometric PNG plus the projected
+ * dimension/bar-mark anchors (normalised raster space), or `null` when there is
+ * no buildable cage. Disposes every GPU resource it creates.
  */
 export function captureColumnDetail3d(
   column: ColumnEntity,
   options: ColumnDetail3dCaptureOptions,
-): string | null {
+): ColumnDetail3dCapture | null {
   const cage = buildColumnRebarCage(column, 0, column.params.height);
   if (!cage) return null;
   const prism = buildConcretePrism(column);
-  const dims = buildColumnDimAnnotations(column);
 
   const scene = new THREE.Scene();
   scene.background = new THREE.Color(SCENE_BG_HEX);
   if (prism) scene.add(prism);
   scene.add(cage);
-  if (dims) scene.add(dims);
 
   const { widthPx, heightPx } = options;
-  // Guard the whole GPU path: a failed WebGL context (headless / lost context)
-  // degrades to `null` (region shows its heading only) instead of throwing into
-  // the host effect — and geometry is always disposed via `finally`.
   let renderer: THREE.WebGLRenderer | null = null;
   try {
     renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true, alpha: false });
@@ -206,13 +218,29 @@ export function captureColumnDetail3d(
     if (box.isEmpty()) return null;
     const camera = frameCamera(box, widthPx / heightPx);
     renderer.render(scene, camera);
-    return renderer.domElement.toDataURL('image/png');
+
+    const dims = computeColumnDimSpecs3d(column).map((d) => ({
+      a: projectNorm(d.a, camera),
+      b: projectNorm(d.b, camera),
+      text: d.text,
+    }));
+    const marks = computeColumnBarMarkSpecs3d(column).map((m) => ({
+      pos: projectNorm(m.pos, camera),
+      text: m.text,
+    }));
+    return {
+      dataUrl: renderer.domElement.toDataURL('image/png'),
+      widthPx,
+      heightPx,
+      centroid: projectNorm(box.getCenter(new THREE.Vector3()), camera),
+      dims,
+      marks,
+    };
   } catch {
     return null;
   } finally {
     renderer?.dispose();
     disposeOwned(prism);
-    disposeOwned(dims);
     disposeCageGeometry(cage);
   }
 }

@@ -24,6 +24,7 @@ import type { ColumnParams } from '../../types/column-types';
 import { materializeColumnLocalPolygonMm } from '../../geometry/column-geometry';
 import { computeColumnRebarLayout } from '../reinforcement/column-rebar-layout';
 import { DEFAULT_STIRRUP_TYPE } from '../reinforcement/column-reinforcement-types';
+import { assignColumnBarNumbers } from './column-rebar-bar-marks';
 import { pickScaleDenominator } from './detail-sheet-fit';
 import type { DetailPrimitive, RectMm } from './detail-sheet-types';
 
@@ -36,6 +37,10 @@ const MIN_STIRRUP_WIDTH_MM = 0.3;
 const MIN_BAR_RADIUS_MM = 0.7;
 const DIM_WIDTH_MM = 0.13;
 const DIM_TEXT_HEIGHT_MM = 2.6;
+// Bar-mark labels (#1…#N) — shared SSoT numbering, navy to match the 3D marks.
+const BAR_MARK_HEX = '#14387f';
+const BAR_MARK_TEXT_MM = 2.2;
+const BAR_MARK_GAP_MM = 0.6;
 
 // Padding (sheet-mm) reserved inside the region for heading + dimension lines.
 const TITLE_PAD_MM = 9;
@@ -134,11 +139,24 @@ export function buildColumnPlanRegion(params: ColumnParams, region: RectMm): Col
     }
   }
 
-  // ── Longitudinal bars (filled dots) ──
+  // ── Longitudinal bars (filled dots) + bar marks (#1…#N, shared SSoT order) ──
   const barRadiusMm = Math.max(MIN_BAR_RADIUS_MM, (layout.barDiameterMm / 2) * s);
-  for (const bar of layout.longitudinalBarsMm) {
-    primitives.push({ kind: 'circle', center: toSheet(bar), radiusMm: barRadiusMm, fillHex: REBAR_HEX });
-  }
+  const barNumbers = assignColumnBarNumbers(params);
+  layout.longitudinalBarsMm.forEach((bar, i) => {
+    const center = toSheet(bar);
+    primitives.push({ kind: 'circle', center, radiusMm: barRadiusMm, fillHex: REBAR_HEX });
+    if (barNumbers) {
+      primitives.push({
+        kind: 'text',
+        position: { x: center.x + barRadiusMm + BAR_MARK_GAP_MM, y: center.y + BAR_MARK_TEXT_MM * 0.35 },
+        text: String(barNumbers[i]),
+        heightMm: BAR_MARK_TEXT_MM,
+        colorHex: BAR_MARK_HEX,
+        align: 'left',
+        bold: true,
+      });
+    }
+  });
 
   // ── Dimensions: width (bottom), depth (left), cover (top-left inset) ──
   const tl = toSheet({ x: bbox.minX, y: bbox.minY });
