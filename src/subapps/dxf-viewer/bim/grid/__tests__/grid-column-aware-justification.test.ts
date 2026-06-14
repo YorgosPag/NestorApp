@@ -51,6 +51,18 @@ describe('resolveColumnAwareJustification (pure)', () => {
     const cols = buildColumnGridFromGuides(R(), {}, '0', 'mm', undefined, 'center').columns;
     expect(resolveColumnAwareJustification(vertBindings, cols, 'inner')).toBe('center');
   });
+
+  it('ΟΡΙΖΟΝΤΙΟ segment + κολόνα inner στον κάτω Y-άξονα → κληρονομεί left (όχι right!)', () => {
+    // Regression για το anchor↔justification per-direction bug (Y normal=+1 → αντίστροφο).
+    const horizBindings: GuideBinding[] = [
+      { guideId: 'y0', slot: 'start-y' },
+      { guideId: 'y0', slot: 'end-y' },
+      { guideId: 'x0', slot: 'start-x' },
+      { guideId: 'x1', slot: 'end-x' },
+    ];
+    const cols = buildColumnGridFromGuides(R(), {}, '0', 'mm', undefined, 'inner').columns;
+    expect(resolveColumnAwareJustification(horizBindings, cols, 'center')).toBe('left');
+  });
 });
 
 describe('full bearing — το σενάριο του χρήστη (κολόνες inner → δοκάρια "center")', () => {
@@ -80,5 +92,20 @@ describe('full bearing — το σενάριο του χρήστη (κολόνε
     const firstVertical = walls[0];
     // inner αριστερά → σώμα +X → start.x > 0 (ΟΧΙ <0 που θα έδινε το outer).
     expect(firstVertical.params.start.x).toBeGreaterThan(0);
+  });
+
+  it('ΟΡΙΖΟΝΤΙΑ δοκάρια (μικρές πλευρές) κληρονομούν σωστά → full bearing (regression)', () => {
+    const cols = buildColumnGridFromGuides(R(), {}, '0', 'mm', undefined, 'inner').columns;
+    const beams = buildBeamGridFromGuides(R(), {}, '0', 'mm', cols, 'center').beams;
+    // Οριζόντιο δοκάρι στον κάτω περιμετρικό Y-άξονα (y0).
+    const horizBottom = beams.find((b) => {
+      const sy = b.guideBindings?.find((x) => x.slot === 'start-y');
+      const ey = b.guideBindings?.find((x) => x.slot === 'end-y');
+      return !!sy && !!ey && sy.guideId === ey.guideId && sy.guideId === 'y0';
+    });
+    expect(horizBottom).toBeDefined();
+    // inner κάτω → σώμα +Y → start.y > 0 (ΟΧΙ 0 του center, ΟΧΙ <0 του λάθος mapping).
+    expect(horizBottom!.params.startPoint.y).toBeGreaterThan(0);
+    expect(extendOf(horizBottom!.guideBindings, 'start-y')).toBeGreaterThan(0);
   });
 });

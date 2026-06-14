@@ -63,8 +63,11 @@ export function resolveColumnAwareJustification(
     const onAxis = col.guideBindings.some((b) => b.slot === perp.columnSlot && b.guideId === perp.guideId);
     if (!onAxis) continue;
     const anchor = col.params.anchor ?? 'center';
-    // column justification κατά τη διεύθυνση = sign(anchor offset component) → strip justification.
-    return signToJustification(Math.sign(ANCHOR_OFFSETS[anchor][perp.component]));
+    const comp = ANCHOR_OFFSETS[anchor][perp.component];
+    // Αντίστροφο του gridColumnJustification (canonical normals: V nx=−1 → +sign·
+    // οριζόντιο ny=+1 → −sign). Η σχέση anchor↔justification ΔΙΑΦΕΡΕΙ ανά διεύθυνση.
+    const justSign = perp.component === 'dx' ? Math.sign(comp) : -Math.sign(comp);
+    return signToJustification(justSign);
   }
   return fallback;
 }
