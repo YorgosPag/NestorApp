@@ -39,6 +39,9 @@ import type { ColumnGripKind } from '../../hooks/useGripMovement';
 import { columnToolBridgeStore } from '../../ui/ribbon/hooks/bridge/column-tool-bridge-store';
 import { LassoStore } from './LassoStore';
 import { ZoomWindowStore } from '../zoom-window/ZoomWindowStore';
+// ADR-455 — on-canvas X/Y section-cut handle drag.
+import { getAxisCutDragAxis } from '../axis-cut/axis-cut-drag-store';
+import { useBimRenderSettingsStore } from '../../state/bim-render-settings-store';
 
 interface MouseMoveHandlerDeps {
   props: CentralizedMouseHandlersProps;
@@ -70,6 +73,19 @@ export function useMouseMoveHandler({
 
     const screenPos = withPerf('coord-calc-screen', () => getScreenPosFromEvent(e, pointerSnap));
     const freshViewport = pointerSnap.viewport;
+
+    // ADR-455 — dragging the on-canvas section-cut handle: move the world cut position to
+    // the cursor and short-circuit pan/snap/hover. The 2D overlay (fade + line + handle)
+    // redraws via the bim-render-settings subscription, so it tracks the cursor live.
+    const axisCutDrag = getAxisCutDragAxis();
+    if (axisCutDrag) {
+      const w = CoordinateTransforms.screenToWorld(screenPos, transform, freshViewport);
+      useBimRenderSettingsStore
+        .getState()
+        .setAxisCutPosition(axisCutDrag, axisCutDrag === 'x' ? w.x : w.y);
+      setImmediatePosition(screenPos);
+      return;
+    }
 
     // ADR-374 — ZOOM Window: update rubber-band rect, keep crosshair live, skip snap/hover/pan/lasso.
     if (activeTool === 'zoom-window' && ZoomWindowStore.isActive()) {

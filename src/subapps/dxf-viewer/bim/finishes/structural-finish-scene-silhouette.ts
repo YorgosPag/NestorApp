@@ -9,9 +9,9 @@
  * @see docs/centralized-systems/reference/adrs/ADR-449-structural-finish-skin.md
  */
 
-import type { ColumnEntity } from '../types/column-types';
-import type { BeamEntity } from '../types/beam-types';
-import { isFinishActive, createDefaultStructuralFinishSpec } from './structural-finish-types';
+import type { ColumnParams } from '../types/column-types';
+import type { BeamParams } from '../types/beam-types';
+import { isFinishActive, createDefaultStructuralFinishSpec, type StructuralFinishSpec } from './structural-finish-types';
 import { mmToSceneUnits } from '../../utils/scene-units';
 import {
   computeStructuralSilhouetteBands,
@@ -28,14 +28,30 @@ import {
   type WallFinishObstacle,
 } from './structural-finish-scene';
 
+/**
+ * ADR-449 Slice X2 μέρος Β — minimal source interfaces ώστε η ΙΔΙΑ silhouette SSoT να
+ * τροφοδοτεί ΚΑΙ το 3Δ (`ColumnEntity`/`BeamEntity`) ΚΑΙ το 2Δ (`DxfColumn`/`DxfBeam`)
+ * **χωρίς cast** (ίδιο pattern με τα `ColumnFinishSource`/`BeamFinishSource` του scene).
+ */
+export interface SilhouetteColumnSource {
+  readonly params: Pick<ColumnParams, 'finish' | 'sceneUnits' | 'baseOffset' | 'height'>;
+  readonly geometry?: { readonly footprint?: { readonly vertices?: readonly { x: number; y: number }[] } };
+}
+
+export interface SilhouetteBeamSource {
+  readonly id: string;
+  readonly params: Pick<BeamParams, 'finish' | 'sceneUnits' | 'topElevation' | 'zOffset' | 'depth'>;
+  readonly geometry?: { readonly outline?: { readonly vertices?: readonly { x: number; y: number }[] } };
+}
+
 /** Κατακόρυφη έκταση κολόνας (building-relative mm): βάση = floor + baseOffset. */
-function columnZExtent(column: ColumnEntity, floorElevationMm: number): { zBotMm: number; zTopMm: number } {
+function columnZExtent(column: SilhouetteColumnSource, floorElevationMm: number): { zBotMm: number; zTopMm: number } {
   const zBotMm = floorElevationMm + (column.params.baseOffset ?? 0);
   return { zBotMm, zTopMm: zBotMm + column.params.height };
 }
 
 /** Κατακόρυφη έκταση δοκαριού (building-relative mm): κρέμεται depth κάτω από topElevation. */
-function beamZExtent(beam: BeamEntity): { zBotMm: number; zTopMm: number } {
+function beamZExtent(beam: SilhouetteBeamSource): { zBotMm: number; zTopMm: number } {
   const zTopMm = beam.params.topElevation + (beam.params.zOffset ?? 0);
   return { zBotMm: zTopMm - beam.params.depth, zTopMm };
 }
@@ -67,7 +83,7 @@ function wallObstacleZExtent(
 
 /** Δομικό μέλος → `SilhouetteMember` όταν έχει ενεργό σοβά + έγκυρο footprint. */
 function toMember(
-  finish: ColumnEntity['params']['finish'] | BeamEntity['params']['finish'],
+  finish: StructuralFinishSpec | undefined,
   vertices: readonly { x: number; y: number }[] | undefined,
   z: { zBotMm: number; zTopMm: number },
 ): SilhouetteMember | null {
@@ -83,8 +99,8 @@ function toMember(
  * `computeStructuralSilhouetteBands`. Το διαβάζει ο 3D builder. `[]` όταν κανένα μέλος.
  */
 export function computeStructuralFinishSilhouette(
-  columns: readonly ColumnEntity[],
-  beams: readonly BeamEntity[],
+  columns: readonly SilhouetteColumnSource[],
+  beams: readonly SilhouetteBeamSource[],
   walls: readonly WallFinishObstacle[],
   floorElevationMm: number,
 ): SilhouetteBand[] {

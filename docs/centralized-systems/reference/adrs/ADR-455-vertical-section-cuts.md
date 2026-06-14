@@ -1,9 +1,9 @@
 # ADR-455 — Vertical Section Cuts (X/Y) with «L» slider + direction arrow
 
-**Status:** 🟢 Implemented (v1) — pending browser-verify + commit
+**Status:** 🟢 Implemented (v2 — transform-synced handle + 2D fade-rect) — pending browser-verify + commit
 **Date:** 2026-06-14
 **Builds on:** ADR-452 (horizontal cut-plane / View Range), ADR-366/ADR-040 (section pipeline,
-micro-leaf), ADR-358 (Isolate dim-alpha path reused for the 2D ghost)
+micro-leaf)
 
 ---
 
@@ -39,17 +39,25 @@ side must render as a **GHOST** (semi-transparent), NOT be hidden (explicit choi
    **−Z** (flip), DXF Z(height) → three.js Y. Encoded as `AXIS_FLIP` so a stored DXF position
    lands on the correct three.js half-space. `normal = u·(sign·flip)`, `constant = sign·coord`.
 
-4. **2D = ghost, not hide** — a new alpha path in `DxfRenderer.resolveStyleForRender`/
-   `renderEntityUnified` (and the line batch), mirroring the Isolate `dim` path: an entity
-   fully on the cut-away side gets `alpha ×= AXIS_CUT_GHOST_ALPHA` (0.18). Classification via
-   `axisCutGhostFactor` (`bim/visibility/axis-cut-plan-side.ts`) using `BoundsCalculator`
-   plan bbox. Straddling entities stay solid (mirrors the 3D cross-section). Zero-cost
-   passthrough when both cuts are off. `xc`/`yc` added to the bitmap-cache hash.
+4. **2D = ghost via a fade-rect, not per-entity** (v2 redesign) — `axis-cut-line-renderer`
+   draws ONE translucent rectangle (canvas-bg colour `--canvas-background-dxf` at α=0.82) over
+   the whole cut-away half-plane, clipped to the drawing area (inside the left + bottom rulers).
+   So the entire sectioned side (grid + DXF + BIM, **including entities that straddle the line**)
+   reads uniformly as a ghost — a clean section look with zero per-entity logic. This **replaced**
+   the v1 per-entity ghost (`axis-cut-plan-side.ts` + the `DxfRenderer` alpha path + the `xc`/`yc`
+   bitmap-cache key — all removed). The rect lives ABOVE the bitmap, so cut moves no longer
+   rebuild the (expensive) entity bitmap; the bim-render-settings subscription marks the canvas
+   dirty → only the overlay repaints.
 
-5. **2D section line** — `systems/axis-cut/axis-cut-line-renderer.ts` draws a full-viewport
-   section line at each active cut + a direction arrow toward the KEPT side (mirrors
-   `GuideRenderer.drawGuideLine`), wired into `dxf-canvas-renderer` step 2.7 (above entities,
-   below rulers).
+5. **2D section line + transform-synced handle** (v2) — `systems/axis-cut/axis-cut-line-renderer.ts`
+   draws a full-viewport section line at each active cut + a direction arrow toward the KEPT side,
+   PLUS a draggable **handle tab** on the line at the canvas edge (`axis-cut-grip.ts` = the SSoT
+   for its screen rect, shared by the renderer draw + the pointer hit-test). The handle is
+   world-anchored (`worldToScreen(position)`), so it tracks pan/zoom. Drag pipeline: the mouse
+   handlers (`useCentralizedMouseHandlers` down, `mouse-handler-move`, `mouse-handler-up`) check
+   `hitTestAxisCutGrip` on pointer-down, claim the gesture into `axis-cut-drag-store`, then on
+   move convert `screenToWorld` → `setAxisCutPosition`. This **replaced** the v1 Radix normalized
+   slider for X/Y, whose thumb could never align with a world-anchored line.
 
 6. **UI + appearance SSoT** — a single shared `SectionSliderShell` owns the ONE appearance
    code path (the ViewCube-accent theme `.cut-plane-slider-accent` + `.cut-plane-slider`,
@@ -57,7 +65,9 @@ side must render as a **GHOST** (semi-transparent), NOT be hidden (explicit choi
    (`CutPlaneSliderControl`, refactored onto the shell) AND the X/Y cuts
    (`AxisCutSliderControl`). No hardcoded colours — every hue comes from the shared CSS
    tokens, so all sliders are visually identical (Giorgio feedback 2026-06-14). The 2D
-   section-line colour reads the SAME `--viewcube-accent` token (no hex). `AxisCutSliderControl`
+   section-line colour reads the SAME `--viewcube-accent` token (no hex). In v2 the X/Y controls
+   use the shell in **`compact` mode** (toggle + flip arrow + readout, no Radix track — the drag
+   moved to the on-canvas handle); the horizontal cut keeps its slider. `AxisCutSliderControl`
    adds only the «L» flip-arrow (rotates per axis+sign; click flips the kept side), mounted by
    `AxisCutSliderLeaf` (2D-gated): X horizontal along the base, Y vertical along the left.
    Range = model world extent (`scene.bounds`, `axis-cut-range.ts`).
@@ -73,12 +83,15 @@ side must render as a **GHOST** (semi-transparent), NOT be hidden (explicit choi
 | NEW | `bim-3d/scene/axis-cut-composer.ts` (compose/key/detectMoving/clip — pure) |
 | MOD | `bim-3d/scene/section-scene-controller.ts` (single→N axis cuts; fast path + cap loop) |
 | MOD | `bim-3d/systems/section/section-stencil-renderer.ts` (rename → `renderAxisCutCap`) |
-| NEW | `bim/visibility/axis-cut-plan-side.ts` (2D ghost classification SSoT) |
-| MOD | `canvas-v2/dxf-canvas/DxfRenderer.ts` (ghost alpha path, line batch + entity loop) |
-| MOD | `canvas-v2/dxf-canvas/dxf-bitmap-cache.ts` (`xc`/`yc` hash) |
-| NEW | `systems/axis-cut/axis-cut-line-renderer.ts` + MOD `dxf-canvas-renderer.ts` (step 2.7) |
-| NEW | `components/dxf-layout/axis-cut-range.ts`, `AxisCutSliderControl.tsx`, `AxisCutSliderLeaf.tsx` |
-| NEW | `components/dxf-layout/SectionSliderShell.tsx` (shared appearance SSoT for ALL cut sliders) |
+| DEL | `bim/visibility/axis-cut-plan-side.ts` (+ test) — v1 per-entity ghost, replaced by the v2 fade-rect |
+| MOD | `canvas-v2/dxf-canvas/DxfRenderer.ts` (v2: REMOVED ghost alpha path + `resolveActiveAxisCuts`) |
+| MOD | `canvas-v2/dxf-canvas/dxf-bitmap-cache.ts` (v2: REMOVED `xc`/`yc` — fade is overlay, not baked) |
+| NEW | `systems/axis-cut/axis-cut-grip.ts` (v2 — handle screen-rect SSoT + `hitTestAxisCutGrip`) |
+| NEW | `systems/axis-cut/axis-cut-drag-store.ts` (v2 — imperative handle-drag state, zero React) |
+| MOD | `systems/axis-cut/axis-cut-line-renderer.ts` (v2: + cut-away fade-rect + handle draw) + MOD `dxf-canvas-renderer.ts` (step 2.7) |
+| MOD | `systems/cursor/useCentralizedMouseHandlers.ts` + `mouse-handler-move.ts` + `mouse-handler-up.ts` (v2 — handle drag claim/move/release) |
+| NEW | `components/dxf-layout/axis-cut-range.ts`, `AxisCutSliderControl.tsx` (v2: compact), `AxisCutSliderLeaf.tsx` (v2: corner widgets) |
+| MOD | `components/dxf-layout/SectionSliderShell.tsx` (shared appearance SSoT; v2: + `compact` mode) |
 | MOD | `components/dxf-layout/CutPlaneSliderControl.tsx` (refactored onto the shared shell) |
 | MOD | `components/dxf-layout/CanvasLayerStack.tsx` (mount leaf) |
 | MOD | `i18n/locales/{el,en}/dxf-viewer-panels.json` (`axisCut.*`) |
@@ -86,12 +99,14 @@ side must render as a **GHOST** (semi-transparent), NOT be hidden (explicit choi
 
 ## 4. Verification
 
-1. `npm test` on the four suites — green (26 axis/composer/range/plan-side + math combos).
+1. `npm test` on the axis-cut suites — green (grip geometry/hit-test + drag-store + composer +
+   range). The v1 `axis-cut-plan-side` suite was removed with its feature.
 2. `tsc --noEmit` clean for the touched files.
-3. Browser `/dxf/viewer`, BIM storey: 2D shows X (base) + Y (left) «L» sliders; drag → section
-   line moves + cut-away side ghosts; flip arrow → swaps kept/ghost. 3D → vertical clip with
-   solid caps like the horizontal cut; Z+X+Y simultaneously, no slider-drag jank (fast path).
-   Reload → active/position/sign persist per-Level.
+3. Browser `/dxf/viewer`, BIM storey: 2D shows compact X (base) + Y (left) widgets (toggle + flip
+   + readout). Each active cut draws a section line with a **handle** on it; drag the handle →
+   the line + the uniform cut-away fade follow the cursor at every zoom/pan; flip arrow → swaps
+   kept/ghost side. 3D → vertical clip with solid caps like the horizontal cut; Z+X+Y
+   simultaneously, no slider-drag jank (fast path). Reload → active/position/sign persist per-Level.
 
 ## 5. Out of scope (DEFER)
 
@@ -105,7 +120,9 @@ side must render as a **GHOST** (semi-transparent), NOT be hidden (explicit choi
   `BimViewport3D` — follow-up.
 - 6-plane limit when 3 axis cuts + a full 6-plane section box coexist → box/crop surplus
   dropped (cuts kept first); a dev `console.warn` surfaces it.
-- 2D hit-test suppression of the ghosted side (stays selectable).
+- 2D hit-test suppression of the ghosted (faded) side (stays selectable).
+- Range-clamping the handle drag (currently free — the line follows the cursor past the model
+  extent; harmless, the cut just removes everything / nothing).
 
 ## 6. Changelog
 
@@ -116,3 +133,16 @@ side must render as a **GHOST** (semi-transparent), NOT be hidden (explicit choi
   look instead of reusing the horizontal cut's). Extracted `SectionSliderShell` as the single
   chrome/theme path; refactored `CutPlaneSliderControl` onto it; the section line now reads the
   shared `--viewcube-accent` token (removed the hardcoded `#0ea5e9`). Zero behaviour change.
+- **v2 (2026-06-14)** — transform-synced handle + 2D fade-rect (fixes the two browser-verified v1
+  problems). (A) The X/Y Radix normalized slider is replaced by a **drag handle on the section
+  line** (`axis-cut-grip.ts` SSoT rect + `axis-cut-drag-store.ts` + claims in the three mouse
+  handlers); the thumb now IS the line, so it aligns at every pan/zoom. The corner widget stays as
+  a compact toggle/flip/readout (`SectionSliderShell` gained a `compact` mode). (B) The per-entity
+  2D ghost is replaced by a single **cut-away fade rectangle** in `axis-cut-line-renderer`, so a
+  straddling entity's cut-away part also dims — a clean section read. Removed: `axis-cut-plan-side.ts`
+  (+ test), the `DxfRenderer` per-entity/line-batch ghost path + `resolveActiveAxisCuts`, and the
+  `xc`/`yc` bitmap-cache key (cut moves no longer rebuild the entity bitmap → faster drag).
+  Discoverability: the handle tab is 34×16 px and the WHOLE section line is grabbable
+  (`nearSectionLine`, ±7 px — Revit-style), not just the tab. Note: the renderer runs inside a
+  RAF callback captured once at mount, so HMR keeps the old module — a FULL reload is needed to
+  pick up renderer changes during dev.

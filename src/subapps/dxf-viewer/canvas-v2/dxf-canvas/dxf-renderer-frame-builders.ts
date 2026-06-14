@@ -17,11 +17,11 @@ import type { DimensionLookup } from '../../systems/dimensions/dim-geometry-buil
 import type { SlabOpeningEntity } from '../../bim/types/slab-opening-types';
 import type { OpeningEntity } from '../../bim/types/opening-types';
 import type { OpeningsByWall } from '../../bim/renderers/WallRenderer';
-import type { FinishFacesByColumn } from '../../bim/renderers/ColumnRenderer';
-import type { FinishFacesByBeam } from '../../bim/renderers/BeamRenderer';
-import type { StructuralFinishFaces } from '../../bim/finishes/structural-finish-types';
+import type { SceneUnits } from '../../utils/scene-units';
 import { isFinishActive } from '../../bim/finishes/structural-finish-types';
-import { computeColumnFinishFaces, computeBeamFinishFaces } from '../../bim/finishes/structural-finish-scene';
+// ADR-449 Slice X2 μέρος Β — το 2Δ τρέφεται από την ΙΔΙΑ merged-silhouette SSoT με το 3Δ.
+import { computeStructuralFinishSilhouette } from '../../bim/finishes/structural-finish-scene';
+import type { SilhouetteBand } from '../../bim/finishes/structural-finish-silhouette';
 
 /**
  * ADR-362 Phase C1 — build the per-frame DimensionLookup map for chained
@@ -66,54 +66,43 @@ export function buildOpeningsByWall(entities: readonly DxfEntityUnion[]): Openin
 }
 
 /**
- * ADR-449 Slice 3 — build per-frame Map<columnId, StructuralFinishFaces> για το
- * 2D finished outline. Μόνο κολόνες με ΕΝΕΡΓΟ σοβά μπαίνουν (default off → κενό Map,
- * μηδέν κόστος). Οι τοίχοι (obstacles + exterior classifier) μαζεύονται lazily μόνο
- * όταν υπάρχει ≥1 ενεργή κολόνα. Reuse του SSoT `computeColumnFinishFaces` (κοινό
- * με BOQ + 3D). DxfColumn/DxfWall = direct entities → δομικά ικανοποιούν τα
- * `ColumnFinishSource`/`WallFinishObstacle` (μηδέν cast).
+ * ADR-449 Slice X2 μέρος Β — η ΕΝΙΑΙΑ merged silhouette για το **2Δ** finished outline.
+ * Καταναλώνει την **ΙΔΙΑ** SSoT (`computeStructuralFinishSilhouette`) με το 3Δ scene pass
+ * (`bim-scene-structural-finish-sync`) → ίδιο merged outline, ίδιες γωνίες (μέσω του κοινού
+ * `computeMiteredOuter`), ίδιες συμβολές (junctions εσωτερικά της ένωσης → δεν σχεδιάζονται,
+ * μηδέν διπλή γραμμή). Αντικαθιστά το παλιό per-element `buildFinishFacesByColumn/Beam` (που
+ * ζωγράφιζε κάθε στοιχείο ανεξάρτητα → ασυνεπείς γωνίες/διπλές γραμμές στις συμβολές).
+ *
+ * `floorElevationMm = 0` (active-level convention, ίδιο με το παλιό 2Δ). DxfColumn/DxfBeam/
+ * DxfWall ικανοποιούν δομικά τα `SilhouetteColumnSource`/`SilhouetteBeamSource`/`WallFinishObstacle`
+ * (μηδέν cast). `null` όταν κανένα στοιχείο δεν έχει ενεργό σοβά (default off → μηδέν κόστος).
  */
-export function buildFinishFacesByColumn(entities: readonly DxfEntityUnion[]): FinishFacesByColumn {
-  const m = new Map<string, StructuralFinishFaces>();
-  let walls: DxfWall[] | null = null;
-  for (const e of entities) {
-    if (e.type !== 'column') continue;
-    const col: DxfColumn = e;
-    if (!isFinishActive(col.params.finish)) continue;
-    if (walls === null) walls = entities.filter((w): w is DxfWall => w.type === 'wall');
-    // ADR-449 Slice 6 — το 2D plan outline δείχνει την ΠΛΗΡΗ παρειά (walls-only): η
-    // beam↔column junction είναι height-aware (top-band) → εφαρμόζεται μόνο στο 3D/BOQ,
-    // όχι στην κάτοψη (το δοκάρι σχεδιάζεται ως ξεχωριστό entity από πάνω).
-    const faces = computeColumnFinishFaces(col, col.geometry.footprint.vertices, col.params.height, walls);
-    if (faces && faces.segments.length > 0) m.set(col.id, faces);
-  }
-  return m;
+export interface StructuralFinishSilhouette2D {
+  readonly bands: readonly SilhouetteBand[];
+  /** sceneUnits του πρώτου δομικού μέλους — το `drawStructuralFinishOutline` το χρειάζεται για το offset. */
+  readonly sceneUnits: SceneUnits;
 }
 
-/**
- * ADR-449 Slice 4 — build per-frame Map<beamId, StructuralFinishFaces> για το 2D
- * σοβατισμένο outline δοκαριού. Μόνο δοκάρια με ΕΝΕΡΓΟ σοβά μπαίνουν (default off →
- * κενό Map, μηδέν κόστος). Walls (obstacles + exterior classifier) lazily μόνο όταν
- * υπάρχει ≥1 ενεργό δοκάρι. Reuse του SSoT `computeBeamFinishFaces` (κοινό με BOQ + 3D)
- * — κρατά μόνο τις πλάγιες όψεις (∥ άξονα), αποκλείει τα άκρα. DxfBeam/DxfWall = direct
- * entities → δομικά ικανοποιούν τα `BeamFinishSource`/`WallFinishObstacle` (μηδέν cast).
- */
-export function buildFinishFacesByBeam(entities: readonly DxfEntityUnion[]): FinishFacesByBeam {
-  const m = new Map<string, StructuralFinishFaces>();
-  let walls: DxfWall[] | null = null;
-  let columns: DxfColumn[] | null = null;
+export function buildStructuralFinishSilhouette2D(
+  entities: readonly DxfEntityUnion[],
+): StructuralFinishSilhouette2D | null {
+  const columns: DxfColumn[] = [];
+  const beams: DxfBeam[] = [];
   for (const e of entities) {
-    if (e.type !== 'beam') continue;
-    const beam: DxfBeam = e;
-    if (!isFinishActive(beam.params.finish)) continue;
-    if (walls === null) walls = entities.filter((w): w is DxfWall => w.type === 'wall');
-    // ADR-449 Slice 6 — οι κολόνες ως mutual obstacles (κόβουν την πλάγια όψη στη σύνδεση).
-    if (columns === null) columns = entities.filter((c): c is DxfColumn => c.type === 'column');
-    const faces = computeBeamFinishFaces(beam, beam.geometry.outline.vertices, beam.params.depth, walls, columns);
-    if (faces && faces.segments.length > 0) m.set(beam.id, faces);
+    if (e.type === 'column' && isFinishActive(e.params.finish)) columns.push(e);
+    else if (e.type === 'beam' && isFinishActive(e.params.finish)) beams.push(e);
   }
-  return m;
+  if (columns.length === 0 && beams.length === 0) return null;
+  const walls = entities.filter((w): w is DxfWall => w.type === 'wall');
+  const bands = computeStructuralFinishSilhouette(columns, beams, walls, 0);
+  if (bands.length === 0) return null;
+  const sceneUnits = columns[0]?.params.sceneUnits ?? beams[0]?.params.sceneUnits ?? 'mm';
+  return { bands, sceneUnits };
 }
+
+// ADR-449 Slice X2 μέρος Β — οι παλιοί per-element 2Δ builders (`buildFinishFacesByColumn/Beam`)
+// αφαιρέθηκαν: η ΕΝΙΑΙΑ silhouette (`buildStructuralFinishSilhouette2D` παραπάνω) τους αντικαθιστά.
+// BOQ + 3Δ per-element paths (`computeColumnFinishContribution`, ghosts) ΑΜΕΤΑΒΛΗΤΑ.
 
 /** DXF transparency (0..90) → canvas alpha (0..1). 0 transparency = fully opaque. */
 export function transparencyToAlpha(transparency: number | undefined): number {

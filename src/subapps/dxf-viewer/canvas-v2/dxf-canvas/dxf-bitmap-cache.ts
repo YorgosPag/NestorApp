@@ -64,9 +64,12 @@ function readBimCacheInputs(): { drawingScale: number; bimSettingsHash: string }
     drawingScale: s.drawingScale,
     // ADR-452 — `cpa` (cutPlaneActive) busts the cache when the cut-plane hide
     // gate toggles; `viewRange.cutPlaneMm` (in `vr`) covers slider drag.
-    // ADR-455 — `xc`/`yc` (active+position+sign of the vertical X/Y cuts) bust the
-    // cache so the 2D ghost repaints on drag/flip/toggle.
-    bimSettingsHash: JSON.stringify({ vr: s.viewRange, cpa: s.cutPlaneActive, xc: s.xAxisCut, yc: s.yAxisCut, os: s.objectStyles, ts: getCurrentOpeningTagStyle() }),
+    // ADR-455 — the vertical X/Y cuts are NOT in this key: the cut-away side is faded by a
+    // translucent overlay rect drawn ABOVE the bitmap (axis-cut-line-renderer), not baked
+    // into entity pixels, so the bitmap is identical regardless of cut position. The
+    // bim-render-settings subscription still marks the canvas dirty → the overlay repaints
+    // on drag/flip/toggle without an (expensive) full entity-bitmap rebuild.
+    bimSettingsHash: JSON.stringify({ vr: s.viewRange, cpa: s.cutPlaneActive, os: s.objectStyles, ts: getCurrentOpeningTagStyle() }),
   };
 }
 

@@ -19,11 +19,11 @@ import type { Point2D } from '../../rendering/types/Types';
 import type { StructuralFinishFaces } from '../finishes/structural-finish-types';
 import { getMaterialFlatColorHex } from '../materials/material-catalog-defs';
 import { mmToSceneUnits, type SceneUnits } from '../../utils/scene-units';
+// ADR-449 Slice X2 — γωνιακή γεωμετρία = ΚΟΙΝΟ pure SSoT με το 3Δ skin (μηδέν διπλότυπο).
+import { computeMiteredOuter, segOffsetVec } from '../finishes/structural-finish-outline-geometry';
 
 /** Line width (px) της σοβατισμένης όψης (λεπτή, δευτερεύουσα του πυρήνα). */
 const FINISH_OUTLINE_LINE_WIDTH_PX = 0.75;
-
-const EPS = 1e-9;
 
 /**
  * Ζωγραφίζει τη σοβατισμένη όψη ενός δομικού στοιχείου (κολόνα/δοκάρι). No-op όταν δεν
@@ -37,23 +37,26 @@ export function drawStructuralFinishOutline(
 ): void {
   if (!faces || faces.segments.length === 0) return;
   const s = mmToSceneUnits(sceneUnits);
+  const segs = faces.segments;
+
+  // ADR-449 Slice X2 — γωνιακά endpoints από το ΚΟΙΝΟ SSoT `computeMiteredOuter` (ίδιο
+  // math με το 3Δ skin): κοινές κορυφές → miter (σε 90° = ορθή γωνία)· ανοιχτά άκρα →
+  // chamfer/extend. Έτσι η λωρίδα κάθε όψης διαβάζει τα (mitered) outer + (extended) core
+  // endpoints → οι γωνίες ΚΛΕΙΝΟΥΝ ΠΑΝΟΜΟΙΟΤΥΠΑ με το 3Δ (πρώην: κάθε όψη ανεξάρτητα με
+  // raw offset → τα outer δεν συναντιόνταν → ανοιχτές γωνίες).
+  const offsets = segs.map((seg) => segOffsetVec(seg, seg.thickness * s));
+  const { aOuter, bOuter, aCore, bCore } = computeMiteredOuter(segs, offsets, true);
 
   ctx.save();
   ctx.setLineDash([]);
   ctx.lineWidth = FINISH_OUTLINE_LINE_WIDTH_PX;
-  for (const seg of faces.segments) {
-    const dx = seg.b.x - seg.a.x;
-    const dy = seg.b.y - seg.a.y;
-    const len = Math.hypot(dx, dy);
-    if (len < EPS) continue;
-    const off = seg.thickness * s;
-    const nx = (dy / len) * off;
-    const ny = (-dx / len) * off;
-    const ca = worldToScreen({ x: seg.a.x, y: seg.a.y });
-    const oa = worldToScreen({ x: seg.a.x + nx, y: seg.a.y + ny });
-    const ob = worldToScreen({ x: seg.b.x + nx, y: seg.b.y + ny });
-    const cb = worldToScreen({ x: seg.b.x, y: seg.b.y });
-    ctx.strokeStyle = getMaterialFlatColorHex(seg.materialId);
+  for (let i = 0; i < segs.length; i++) {
+    if (!offsets[i]) continue;
+    const ca = worldToScreen({ x: aCore[i].x, y: aCore[i].y });
+    const oa = worldToScreen({ x: aOuter[i].x, y: aOuter[i].y });
+    const ob = worldToScreen({ x: bOuter[i].x, y: bOuter[i].y });
+    const cb = worldToScreen({ x: bCore[i].x, y: bCore[i].y });
+    ctx.strokeStyle = getMaterialFlatColorHex(segs[i].materialId);
     ctx.beginPath();
     ctx.moveTo(ca.x, ca.y);
     ctx.lineTo(oa.x, oa.y);

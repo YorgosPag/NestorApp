@@ -30,10 +30,10 @@ import { SlabRenderer, type SlabOpeningsBySlab } from '../../bim/renderers/SlabR
 // ADR-363 Phase 3.7 — slab-opening leaf (shaft/well/duct/chimney).
 import { SlabOpeningRenderer } from '../../bim/renderers/SlabOpeningRenderer';
 // ADR-363 Phase 4 — column leaf (rectangular/circular/L-shape/T-shape).
-import { ColumnRenderer, type FinishFacesByColumn } from '../../bim/renderers/ColumnRenderer';
+import { ColumnRenderer } from '../../bim/renderers/ColumnRenderer';
 import { FoundationRenderer } from '../../bim/renderers/FoundationRenderer';
 // ADR-363 Phase 5 — beam leaf (straight/curved/cantilever).
-import { BeamRenderer, type FinishFacesByBeam } from '../../bim/renderers/BeamRenderer';
+import { BeamRenderer } from '../../bim/renderers/BeamRenderer';
 // ADR-406 — MEP fixture leaf (point-based light fixture).
 import { MepFixtureRenderer } from '../../bim/renderers/MepFixtureRenderer';
 // ADR-408 Φ3 — electrical panel leaf (point-based circuit source).
@@ -241,29 +241,9 @@ export class EntityRendererComposite {
     }
   }
 
-  /**
-   * ADR-449 Slice 3 — forward the per-frame finish-faces-by-column index so the
-   * column renderer can draw the 2D finished outline. No-op when the column
-   * renderer is absent (defensive for partial test setups).
-   */
-  setColumnFinishFaces(map: FinishFacesByColumn): void {
-    const column = this.renderers.get('column');
-    if (column instanceof ColumnRenderer) {
-      column.setColumnFinishFaces(map);
-    }
-  }
-
-  /**
-   * ADR-449 Slice 4 — forward the per-frame finish-faces-by-beam index so the beam
-   * renderer can draw the 2D σοβατισμένο outline (πλάγιες όψεις). No-op when the beam
-   * renderer is absent (defensive for partial test setups).
-   */
-  setBeamFinishFaces(map: FinishFacesByBeam): void {
-    const beam = this.renderers.get('beam');
-    if (beam instanceof BeamRenderer) {
-      beam.setBeamFinishFaces(map);
-    }
-  }
+  // ADR-449 Slice X2 μέρος Β — τα `setColumnFinishFaces`/`setBeamFinishFaces` αφαιρέθηκαν:
+  // ο σοβάς (2Δ) σχεδιάζεται πλέον ως ΕΝΑ scene-level pass στον `DxfRenderer` από την ΕΝΙΑΙΑ
+  // merged-silhouette SSoT (κοινή με 3Δ) — όχι per-entity injection.
 
   /**
    * ADR-363 Phase 3.7 — forward the per-frame slab-opening-by-slab index ώστε

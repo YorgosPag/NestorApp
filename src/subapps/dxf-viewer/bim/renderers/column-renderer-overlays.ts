@@ -15,7 +15,6 @@
 
 import type { Point2D } from '../../rendering/types/Types';
 import type { ColumnEntity, ColumnKind } from '../types/column-types';
-import type { StructuralFinishFaces } from '../finishes/structural-finish-types';
 import {
   computeHatchPlan,
   computeCircularHatchPlan,
@@ -39,7 +38,6 @@ import { resolveCutState } from '../../config/bim-view-range';
 import { useDrawingScaleStore } from '../../state/drawing-scale-store';
 import { getLayer } from '../../stores/LayerStore';
 import { isConcreteLineweight } from '../../config/lineweight-iso-catalog';
-import { drawStructuralFinishOutline } from './structural-finish-outline-2d';
 
 /** Projector from world coordinates to screen coordinates (`worldToScreen`). */
 type Projector = (p: Point2D) => Point2D;
@@ -47,19 +45,8 @@ type Projector = (p: Point2D) => Point2D;
 /** Read-only vertex list shape shared across the overlay painters. */
 type Verts = ReadonlyArray<{ x: number; y: number }>;
 
-/**
- * ADR-449 Slice 3/4 — finished-face outline κολόνας. Thin delegate στο
- * entity-agnostic SSoT `drawStructuralFinishOutline` (ΕΝΑ σημείο, κοινό με τον
- * `BeamRenderer` — μηδέν διπλασιασμός μετά το Slice 4). Pure ctx (ADR-040).
- */
-export function drawColumnFinishOutline(
-  ctx: CanvasRenderingContext2D,
-  column: ColumnEntity,
-  faces: StructuralFinishFaces | undefined,
-  worldToScreen: Projector,
-): void {
-  drawStructuralFinishOutline(ctx, faces, column.params.sceneUnits ?? 'mm', worldToScreen);
-}
+// ADR-449 Slice X2 μέρος Β — το `drawColumnFinishOutline` (per-element 2Δ) αφαιρέθηκε: ο σοβάς
+// σχεδιάζεται ως ΕΝΑ scene-level merged-silhouette pass στον `DxfRenderer` (κοινή SSoT με 3Δ).
 
 /**
  * Phase 4.5c.2/4.5c.3 — per-material hatch pattern inside footprint clip.

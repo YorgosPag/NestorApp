@@ -45,8 +45,6 @@ import { getBeamGrips, beamDepthHandlePosition } from '../beams/beam-grips';
 import { gripGlyphShape } from '../grips/grip-glyph-registry';
 import { drawEntityDimLabel } from '../labels/bim-dim-labels';
 import { getBimEntityKeyPoints2D } from '../utils/bim-entity-points';
-import type { StructuralFinishFaces } from '../finishes/structural-finish-types';
-import { drawStructuralFinishOutline } from './structural-finish-outline-2d';
 import { drawBeamSectionProfile } from './beam-section-profile-draw';
 import {
   computeBeamHatchPlan,
@@ -80,13 +78,9 @@ const KIND_FILL: Readonly<Record<BeamKind, string>> = {
 const OUTLINE_DASH: readonly [number, number] = [8, 4];
 const AXIS_DASH: readonly [number, number] = [4, 3];
 
-/**
- * ADR-449 Slice 4 — per-frame Map<beamId, StructuralFinishFaces> για το 2D σοβατισμένο
- * outline του δοκαριού. Χτίζεται από `buildFinishFacesByBeam(scene.entities)` και εγχέεται
- * μέσω `EntityRendererComposite.setBeamFinishFaces()` (mirror column· ADR-040 — ο
- * orchestrator οδηγεί, το leaf δεν subscribe-άρει).
- */
-export type FinishFacesByBeam = ReadonlyMap<string, StructuralFinishFaces>;
+// ADR-449 Slice X2 μέρος Β — το per-element 2Δ finish injection (`setBeamFinishFaces` +
+// `FinishFacesByBeam`) αφαιρέθηκε: ο σοβάς σχεδιάζεται ως ΕΝΑ scene-level merged-silhouette
+// pass στον `DxfRenderer` (κοινή SSoT με 3Δ). Ο πυρήνας του δοκαριού εδώ είναι αμετάβλητος.
 
 // Phase 5.5j — anchor pulse visual constants.
 const ANCHOR_PULSE_HZ = 1.2;
@@ -94,14 +88,6 @@ const ANCHOR_PULSE_RADIUS_PX = 7;
 const ANCHOR_PULSE_LINE_W_PX = 1.5;
 
 export class BeamRenderer extends BaseEntityRenderer {
-  /** ADR-449 Slice 4 — per-frame finish faces index (κενό = κανένας ενεργός σοβάς). */
-  private beamFinishFaces: FinishFacesByBeam = new Map();
-
-  /** Inject per-frame finish-faces index. Composite calls this once per render. */
-  setBeamFinishFaces(map: FinishFacesByBeam): void {
-    this.beamFinishFaces = map;
-  }
-
   render(entity: EntityModel, options: RenderOptions = {}): void {
     if (!isBeamEntity(entity)) return;
     const beam = entity as BeamEntity;
@@ -181,14 +167,8 @@ export class BeamRenderer extends BaseEntityRenderer {
 
     this.ctx.restore();
 
-    // ADR-449 Slice 4 — σοβατισμένη όψη: λεπτή «διπλή γραμμή» offset προς τα έξω ανά
-    // εκτεθειμένη πλάγια όψη (άκρα/καλυμμένα → καμία γραμμή). Πυρήνας αμετάβλητος.
-    drawStructuralFinishOutline(
-      this.ctx,
-      this.beamFinishFaces.get(beam.id),
-      beam.params.sceneUnits ?? 'mm',
-      (p) => this.worldToScreen(p),
-    );
+    // ADR-449 Slice X2 μέρος Β — ο σοβάς (2Δ) σχεδιάζεται ως ΕΝΑ scene-level merged-silhouette
+    // pass στον DxfRenderer (κοινή SSoT με 3Δ) — όχι πλέον per-beam εδώ.
 
     // Phase 5.5c — depth indicator (out-of-plane visual hint) μόνο όταν
     // highlighted. Renderάρει dashed leader line από axis midpoint προς το

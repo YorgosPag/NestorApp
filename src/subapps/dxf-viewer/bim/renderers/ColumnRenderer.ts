@@ -50,34 +50,20 @@ import { getColumnGrips } from '../columns/column-grips';
 import { gripGlyphShape } from '../grips/grip-glyph-registry';
 import { drawEntityDimLabel } from '../labels/bim-dim-labels';
 import { KIND_STROKE, KIND_FILL } from '../columns/column-render-palette';
-import type { StructuralFinishFaces } from '../finishes/structural-finish-types';
 import { isWallColumnKind } from '../columns/column-from-faces';
 import { columnCutPlaneShiftCanvas } from '../geometry/cut-plane-tilt';
 import { drawCutPlaneTiltProjection, cutPlaneShiftScreenDelta } from './cut-plane-tilt-projection';
 import {
-  drawColumnFinishOutline,
   drawColumnMaterialHatch,
   drawColumnVariantDimensionLabels,
   drawColumnSectionProfile,
 } from './column-renderer-overlays';
 
-/**
- * ADR-449 Slice 3 — per-frame Map<columnId, StructuralFinishFaces> για το 2D
- * finished outline. Χτίζεται από `buildFinishFacesByColumn(scene.entities)` και
- * εγχέεται μέσω `EntityRendererComposite.setColumnFinishFaces()` (mirror του
- * opening-by-wall index· ADR-040 — ο orchestrator οδηγεί, το leaf δεν subscribe-άρει).
- */
-export type FinishFacesByColumn = ReadonlyMap<string, StructuralFinishFaces>;
+// ADR-449 Slice X2 μέρος Β — το per-element 2Δ finish injection (`setColumnFinishFaces` +
+// `FinishFacesByColumn`) αφαιρέθηκε: ο σοβάς σχεδιάζεται ως ΕΝΑ scene-level merged-silhouette
+// pass στον `DxfRenderer` (κοινή SSoT με 3Δ). Ο πυρήνας της κολόνας εδώ είναι αμετάβλητος.
 
 export class ColumnRenderer extends BaseEntityRenderer {
-  /** ADR-449 Slice 3 — per-frame finish faces index (κενό = κανένας ενεργός σοβάς). */
-  private columnFinishFaces: FinishFacesByColumn = new Map();
-
-  /** Inject per-frame finish-faces index. Composite calls this once per render. */
-  setColumnFinishFaces(map: FinishFacesByColumn): void {
-    this.columnFinishFaces = map;
-  }
-
   render(entity: EntityModel, options: RenderOptions = {}): void {
     if (!isColumnEntity(entity)) return;
     const column = entity as ColumnEntity;
@@ -165,9 +151,8 @@ export class ColumnRenderer extends BaseEntityRenderer {
     this.ctx.stroke();
     this.ctx.restore();
 
-    // ADR-449 Slice 3 — σοβατισμένη όψη: λεπτή «διπλή γραμμή» offset προς τα έξω
-    // ανά εκτεθειμένη παρειά (καλυμμένες από τοίχο → καμία γραμμή). Πυρήνας αμετάβλητος.
-    drawColumnFinishOutline(this.ctx, column, this.columnFinishFaces.get(column.id), (p) => this.worldToScreen(p));
+    // ADR-449 Slice X2 μέρος Β — ο σοβάς (2Δ) σχεδιάζεται ως ΕΝΑ scene-level merged-silhouette
+    // pass στον DxfRenderer (κοινή SSoT με 3Δ) — όχι πλέον per-column εδώ.
 
     // Phase 4.5c.3 + 4.5c.6 — variant labels + section-profile symbol (L/T when highlighted).
     if (phaseState.phase === 'highlighted') {

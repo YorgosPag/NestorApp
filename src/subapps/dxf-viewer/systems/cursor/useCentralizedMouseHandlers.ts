@@ -26,6 +26,9 @@ import { EventBus } from '../../systems/events';
 import { useSnapContext } from '../../snapping/context/SnapContext';
 import { useSnapManager } from '../../snapping/hooks/useSnapManager';
 import { PANEL_LAYOUT } from '../../config/panel-tokens';
+// ADR-455 — on-canvas X/Y section-cut handle (transform-synced drag).
+import { hitTestAxisCutGrip } from '../axis-cut/axis-cut-grip';
+import { startAxisCutDrag, endAxisCutDrag } from '../axis-cut/axis-cut-drag-store';
 
 // Re-export types for consumers
 export type { SnapResultItem, ZoomConstraints, CentralizedMouseHandlersProps } from './mouse-handler-types';
@@ -158,6 +161,19 @@ export function useCentralizedMouseHandlers(props: CentralizedMouseHandlersProps
       return;
     }
 
+    // ADR-455 — on-canvas section-cut handle: grab it BEFORE pan/select/grip claim the
+    // gesture. Only an ACTIVE cut has a handle; the hit-test (screen space) returns its
+    // axis. Claiming consumes the event so the drag moves the world cut position.
+    if (e.button === 0 && !isInDrawingMode(activeTool, overlayMode)) {
+      const hitAxis = hitTestAxisCutGrip(screenPos, transform, pointerSnap.viewport);
+      if (hitAxis) {
+        startAxisCutDrag(hitAxis);
+        e.preventDefault();
+        e.stopPropagation();
+        return;
+      }
+    }
+
     // Pan initialization
     const isToolInteractive = isInDrawingMode(activeTool, overlayMode);
     // button 1 = middle drag (AutoCAD standard), button 2 = right drag (BricsCAD style)
@@ -215,6 +231,9 @@ export function useCentralizedMouseHandlers(props: CentralizedMouseHandlersProps
     }
     cursor.setMouseDown(false);
     onHoverEntity?.(null);
+
+    // ADR-455 — abort a section-cut handle drag if the pointer leaves the canvas.
+    endAxisCutDrag();
 
     // Cancel any in-progress lasso when pointer leaves canvas.
     lassoDownRef.current = { pos: null, buttonHeld: false };

@@ -28,12 +28,19 @@ export interface SectionSliderShellProps {
   /** Formatted readout (e.g. "2.50m"). */
   readonly readout: string;
   readonly label: string;
-  readonly min: number;
-  readonly max: number;
-  readonly step: number;
-  readonly value: number;
-  readonly ariaSlider: string;
-  readonly onValueChange: (value: number) => void;
+  /**
+   * Compact mode (ADR-455 X/Y cuts): omit the Radix slider and render only the
+   * toggle + extra control + readout + label as a small fixed corner widget. The cut
+   * position is driven by the on-canvas handle (`axis-cut-grip`), not a normalized track,
+   * so the slider props below are unused. The horizontal cut (ADR-452) keeps the slider.
+   */
+  readonly compact?: boolean;
+  readonly min?: number;
+  readonly max?: number;
+  readonly step?: number;
+  readonly value?: number;
+  readonly ariaSlider?: string;
+  readonly onValueChange?: (value: number) => void;
   /** Absolute placement + stacking classes supplied by the mounting leaf. */
   readonly positionClassName?: string;
   /** Optional extra control (e.g. the X/Y flip-arrow button), placed after the toggle. */
@@ -48,6 +55,7 @@ export const SectionSliderShell = React.memo(function SectionSliderShell({
   icon,
   readout,
   label,
+  compact = false,
   min,
   max,
   step,
@@ -84,20 +92,22 @@ export const SectionSliderShell = React.memo(function SectionSliderShell({
       <output className="rounded bg-background/80 px-1 py-0.5 text-[10px] font-semibold tabular-nums text-foreground shadow-sm backdrop-blur-sm">
         {readout}
       </output>
-      <Slider
-        orientation={orientation}
-        aria-label={ariaSlider}
-        // `cut-plane-slider` themes the track/range/thumb like the ViewCube compass ring
-        // (neutral at rest, orange accent on hover — see globals.css). Shared by all cuts.
-        className={`cut-plane-slider flex-1 cursor-pointer [&_[role=slider]]:cursor-grab [&_[role=slider]]:active:cursor-grabbing ${
-          horizontal ? 'mx-1' : 'my-1'
-        }`}
-        min={min}
-        max={max}
-        step={step}
-        value={[value]}
-        onValueChange={(v) => onValueChange(v[0])}
-      />
+      {!compact && value !== undefined && onValueChange && (
+        <Slider
+          orientation={orientation}
+          aria-label={ariaSlider}
+          // `cut-plane-slider` themes the track/range/thumb like the ViewCube compass ring
+          // (neutral at rest, orange accent on hover — see globals.css). Shared by all cuts.
+          className={`cut-plane-slider flex-1 cursor-pointer [&_[role=slider]]:cursor-grab [&_[role=slider]]:active:cursor-grabbing ${
+            horizontal ? 'mx-1' : 'my-1'
+          }`}
+          min={min}
+          max={max}
+          step={step}
+          value={[value]}
+          onValueChange={(v) => onValueChange(v[0])}
+        />
+      )}
       <span className="select-none text-[9px] font-medium text-muted-foreground" aria-hidden="true">
         {label}
       </span>

@@ -33,10 +33,13 @@ export const AxisCutSliderLeaf = React.memo(function AxisCutSliderLeaf({ bounds 
 
   if (!is2D) return null;
 
+  // ADR-455 redesign — compact corner widgets (toggle + flip + readout). The cut
+  // position is dragged on the on-canvas handle that sits on the section line, so these
+  // no longer stretch along the canvas edge as a slider track.
   return (
     <>
-      <AxisCutSliderControl axis="x" range={xRange} className="bottom-[34px] left-[88px] right-[60px] h-12 z-30" />
-      <AxisCutSliderControl axis="y" range={yRange} className="left-[34px] top-16 bottom-[88px] w-12 z-30" />
+      <AxisCutSliderControl axis="x" range={xRange} className="bottom-[34px] left-[88px] z-30" />
+      <AxisCutSliderControl axis="y" range={yRange} className="left-[34px] top-16 z-30" />
     </>
   );
 });

@@ -39,6 +39,8 @@ import { columnToolBridgeStore } from '../../ui/ribbon/hooks/bridge/column-tool-
 import { resolveSnapConnectorElevationMm } from '../../bim/mep-segments/mep-snap-connector-elevation';
 import { LassoStore, computeLassoMode } from './LassoStore';
 import { ZoomWindowStore } from '../zoom-window/ZoomWindowStore';
+// ADR-455 — on-canvas X/Y section-cut handle drag.
+import { isAxisCutDragging, endAxisCutDrag } from '../axis-cut/axis-cut-drag-store';
 
 interface MouseUpHandlerDeps {
   props: CentralizedMouseHandlersProps;
@@ -58,6 +60,12 @@ export function useMouseUpHandler({ props, cursor, refs, snap }: MouseUpHandlerD
 
   return useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
     cursor.setMouseDown(false);
+
+    // ADR-455 — finish a section-cut handle drag; consume the up, skip select/click.
+    if (isAxisCutDragging()) {
+      endAxisCutDrag();
+      return;
+    }
 
     // ADR-374 — ZOOM Window finish: screen rect → world bounds → fit-to-view via EventBus.
     if (activeTool === 'zoom-window' && e.button === 0 && ZoomWindowStore.isActive()) {

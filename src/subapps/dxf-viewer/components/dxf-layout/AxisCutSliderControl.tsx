@@ -49,16 +49,11 @@ export const AxisCutSliderControl = React.memo(function AxisCutSliderControl({
 
   const horizontal = axis === 'x';
   const value = clamp(cut.position, range);
-  const step = Math.max((range.max - range.min) / 1000, 1e-6);
 
   const setPosition = (p: number) => useBimRenderSettingsStore.getState().setAxisCutPosition(axis, p);
   const setActive = (a: boolean) => useBimRenderSettingsStore.getState().setAxisCutActive(axis, a);
   const setSign = (sgn: 1 | -1) => useBimRenderSettingsStore.getState().setAxisCutSign(axis, sgn);
 
-  const handleSlider = (next: number) => {
-    setPosition(next);
-    if (!cut.active) setActive(true);
-  };
   const handleToggle = () => {
     const next = !cut.active;
     setActive(next);
@@ -78,12 +73,9 @@ export const AxisCutSliderControl = React.memo(function AxisCutSliderControl({
       icon={<AxisCutIcon axis={axis} />}
       readout={`${value.toFixed(2)}${t('axisCut.unit')}`}
       label={horizontal ? t('axisCut.labelX') : t('axisCut.labelY')}
-      min={range.min}
-      max={range.max}
-      step={step}
-      value={value}
-      ariaSlider={t('axisCut.ariaSlider')}
-      onValueChange={handleSlider}
+      // ADR-455 redesign — drag happens on the world-anchored on-canvas handle, not a
+      // normalized track, so this is a compact toggle/flip/readout widget (no slider).
+      compact
       positionClassName={className}
       extraControl={
         <button

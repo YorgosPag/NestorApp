@@ -22,16 +22,13 @@ import { getIsolateEffectsSnapshot } from '../../systems/isolate/IsolateEffectsS
 import { resolveEntityBimCategory } from '../../bim/visibility/resolve-entity-bim-category';
 // ADR-452 — cut-plane (Revit View Range) hide gate SSoT.
 import { isHiddenByCutPlane } from '../../bim/visibility/entity-z-extents';
-// ADR-455 — vertical X/Y section cut: 2D ghost classification SSoT.
-import { axisCutGhostFactor, anyAxisCutActive } from '../../bim/visibility/axis-cut-plan-side';
-import { BoundsCalculator } from '../../rendering/hitTesting/Bounds';
-import type { AxisCutSetting } from '../../config/bim-render-settings-types';
 import { useBimRenderSettingsStore } from '../../state/bim-render-settings-store';
 import { dimOpacityToTransparency } from '../../services/layer-isolate-resolver';
 // Per-frame index builders (extracted Boy-Scout file-size split, 2026-05-19).
-import { buildDimensionLookup, buildSlabOpeningsBySlab, buildOpeningsByWall, buildFinishFacesByColumn, buildFinishFacesByBeam, transparencyToAlpha } from './dxf-renderer-frame-builders';
+import { buildDimensionLookup, buildSlabOpeningsBySlab, buildOpeningsByWall, buildStructuralFinishSilhouette2D, transparencyToAlpha } from './dxf-renderer-frame-builders';
 import { isStructuralFinishVisible } from '../../bim/finishes/structural-finish-visibility';
-import type { StructuralFinishFaces } from '../../bim/finishes/structural-finish-types';
+// ADR-449 Slice X2 μέρος Β — ΕΝΑ scene-level pass ζωγραφίζει την ΕΝΙΑΙΑ silhouette (κοινή με 3Δ).
+import { drawStructuralFinishOutline } from '../../bim/renderers/structural-finish-outline-2d';
 // DxfEntityUnion → Entity mapper (extracted file-size split, 2026-05-25).
 import { buildEntityModelFromDxf } from './dxf-renderer-entity-model';
 export class DxfRenderer {
@@ -101,17 +98,10 @@ export class DxfRenderer {
     // ADR-363 Phase 2 (deferred pipeline) — feed per-frame opening→wall index so
     // WallRenderer can punch boolean cutouts through wall fills.
     this.entityComposite.setOpeningsByWall(buildOpeningsByWall(scene.entities));
-    // ADR-449 Slice 3/4 — feed per-frame finish-faces index so Column/BeamRenderer
-    // draw the 2D finished outline (offset σοβά ανά εκτεθειμένη παρειά). Slice 5: ο
-    // master toggle «Σοβατισμένη όψη» (showFinishSkin) είναι view-level gate — όταν
-    // OFF, ο orchestrator περνά κενά Maps (οι builders/leaves μένουν pure, ADR-040).
-    const showFinish = isStructuralFinishVisible();
-    this.entityComposite.setColumnFinishFaces(
-      showFinish ? buildFinishFacesByColumn(scene.entities) : new Map<string, StructuralFinishFaces>(),
-    );
-    this.entityComposite.setBeamFinishFaces(
-      showFinish ? buildFinishFacesByBeam(scene.entities) : new Map<string, StructuralFinishFaces>(),
-    );
+    // ADR-449 Slice X2 μέρος Β — ο σοβάς (2Δ finished outline) σχεδιάζεται πλέον ως
+    // ΕΝΑ scene-level pass (`drawStructuralFinishSkin2D`, πριν το `ctx.restore()`), από την
+    // ΙΔΙΑ merged-silhouette SSoT με το 3Δ — αντικαθιστά το παλιό per-element injection στους
+    // Column/BeamRenderer. Master toggle «Σοβατισμένη όψη» = view-level gate μέσα στο pass.
     // ADR-362 Round 5 — propagate active scene units so dim text + arrows scale
     // correctly in non-mm DXFs (e.g. meters). Default `'mm'` keeps legacy parity.
     this.entityComposite.setDimensionSceneUnits(scene.units ?? 'mm');
@@ -144,9 +134,6 @@ export class DxfRenderer {
     type LineBatch = { starts: Point2D[]; ends: Point2D[]; lw: number; alpha: number };
     const lineBatches = new Map<string, LineBatch>();
     const batchedIds = new Set<string>();
-    // ADR-455 — hoisted once per frame: ghost raw lines on the cut-away side too
-    // (null = no vertical cut active → the batch keys/alphas are unchanged).
-    const activeAxisCutsForBatch = this.resolveActiveAxisCuts();
 
     for (const entity of scene.entities) {
       if (entity.type !== 'line') continue;
@@ -163,19 +150,7 @@ export class DxfRenderer {
       const resolved = this.resolveStyleForRender(entity, effectiveOptions.layersById);
       const color = resolved.colorHex;
       const lw = resolved.lineWidthPx;
-      let alpha = resolved.alpha;
-      if (activeAxisCutsForBatch) {
-        alpha *= axisCutGhostFactor(
-          {
-            minX: Math.min(entity.start.x, entity.end.x),
-            maxX: Math.max(entity.start.x, entity.end.x),
-            minY: Math.min(entity.start.y, entity.end.y),
-            maxY: Math.max(entity.start.y, entity.end.y),
-          },
-          activeAxisCutsForBatch.x,
-          activeAxisCutsForBatch.y,
-        );
-      }
+      const alpha = resolved.alpha;
       const key = `${color}\0${lw}\0${alpha.toFixed(3)}`;
       let batch = lineBatches.get(key);
       if (!batch) { batch = { starts: [], ends: [], lw, alpha }; lineBatches.set(key, batch); }
@@ -225,7 +200,33 @@ export class DxfRenderer {
       if (batchedIds.has(entity.id)) continue;
       this.renderEntityUnified(entity, transform, actualViewport, effectiveOptions);
     }
+    // ADR-449 Slice X2 μέρος Β — ΕΝΑ scene-level pass για τον ΕΝΙΑΙΟ σοβά (mirror του 3Δ
+    // `syncStructuralFinishSkin`): μετά τα entities, ζωγραφίζει το merged-silhouette outline
+    // από την ΙΔΙΑ SSoT με το 3Δ → ίδιες γωνίες/συμβολές, μηδέν διπλή γραμμή.
+    this.drawStructuralFinishSkin2D(scene.entities, transform, actualViewport);
     this.ctx.restore();
+  }
+
+  /**
+   * ADR-449 Slice X2 μέρος Β — ζωγραφίζει τον ΕΝΙΑΙΟ σοβά (2Δ merged silhouette) ως scene-level
+   * overlay μέσα στο cached normal-state bitmap. Καταναλώνει την ΙΔΙΑ `computeStructuralFinishSilhouette`
+   * SSoT με το 3Δ (`bim-scene-structural-finish-sync`) + το κοινό corner-geometry SSoT
+   * (`computeMiteredOuter` μέσω `drawStructuralFinishOutline`). No-op όταν ο διακόπτης «Σοβατισμένη
+   * όψη» είναι κλειστός ή κανένα στοιχείο δεν έχει ενεργό σοβά. ADR-040: pure draw, zero subscriptions.
+   */
+  private drawStructuralFinishSkin2D(
+    entities: readonly DxfEntityUnion[],
+    transform: ViewTransform,
+    actualViewport: Viewport,
+  ): void {
+    if (!isStructuralFinishVisible()) return;
+    const silhouette = buildStructuralFinishSilhouette2D(entities);
+    if (!silhouette) return;
+    const worldToScreen = (p: Point2D): Point2D =>
+      CoordinateTransforms.worldToScreen(p, transform, actualViewport);
+    for (const band of silhouette.bands) {
+      drawStructuralFinishOutline(this.ctx, band.faces, silhouette.sceneUnits, worldToScreen);
+    }
   }
 
   /**
@@ -298,14 +299,6 @@ export class DxfRenderer {
 
     const gripsVisible = isSelected && !options.suppressGrips;
     const ghostMult = options.movePreviewActive && isSelected ? GHOST_DEFAULTS.alpha : 1.0;
-    // ADR-455 — vertical X/Y section cut: entities fully on the cut-away side render
-    // as a ghost (reduced alpha) instead of being hidden. Zero cost when no cut active.
-    let axisCutGhostMult = 1;
-    const activeAxisCuts = this.resolveActiveAxisCuts();
-    if (activeAxisCuts) {
-      const bbox = BoundsCalculator.calculateEntityBounds(entityModel);
-      if (bbox) axisCutGhostMult = axisCutGhostFactor(bbox, activeAxisCuts.x, activeAxisCuts.y);
-    }
     const renderOptions: RenderOptions = {
       phase: isSelected ? 'selected' : isHovered ? 'highlighted' : 'normal',
       transform,
@@ -314,7 +307,7 @@ export class DxfRenderer {
       grips: gripsVisible,
       hovered: isHovered,
       selected: isSelected,
-      alpha: (entity.visible ? 1.0 : 0.3) * resolved.alpha * ghostMult * axisCutGhostMult,
+      alpha: (entity.visible ? 1.0 : 0.3) * resolved.alpha * ghostMult,
     };
 
     this.entityComposite.render(entityModel, renderOptions);
@@ -415,17 +408,6 @@ export class DxfRenderer {
     }
     const dimAlpha = transparencyToAlpha(dimOpacityToTransparency(isolate.dimOpacityPercent));
     return { ...style, alpha: Math.min(style.alpha, dimAlpha) };
-  }
-
-  /**
-   * ADR-455 — active vertical section cuts (X/Y), or `null` when both are off
-   * (zero-cost passthrough so the per-entity render path pays nothing unless a cut
-   * is engaged). Hoisted by the line batch + computed per entity in the two-pass loop.
-   */
-  private resolveActiveAxisCuts(): { x: AxisCutSetting | null; y: AxisCutSetting | null } | null {
-    const s = useBimRenderSettingsStore.getState();
-    if (!anyAxisCutActive(s.xAxisCut, s.yAxisCut)) return null;
-    return { x: s.xAxisCut.active ? s.xAxisCut : null, y: s.yAxisCut.active ? s.yAxisCut : null };
   }
 
   /**
