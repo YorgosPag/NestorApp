@@ -25,9 +25,11 @@
  */
 
 import type { MultiPolygon, Pair, Polygon } from 'polygon-clipping';
-import { safeDifference } from '../geometry/shared/safe-polygon-boolean';
+import { safeDifference, safeUnion } from '../geometry/shared/safe-polygon-boolean';
 import type { Pt2 } from '../geometry/shared/segment-polygon-coverage';
 import type { FinishClassification, StructuralFinishSpec } from './structural-finish-types';
+import { resolveStructuralFinishFaces } from './structural-finish-resolver';
+import { computeMiteredOuter, segOffsetVec } from './structural-finish-outline-geometry';
 
 const MM_TO_M = 0.001;
 
@@ -168,4 +170,52 @@ export function computeHorizontalFinishFace(input: HorizontalFaceInput): Horizon
 /** m³ ισοδύναμο (area × thickness) — βοηθητικό για debugging/BOQ sanity (όχι BOQ μονάδα). */
 export function horizontalFaceVolumeM3(face: HorizontalFinishFace): number {
   return face.areaM2 * face.thicknessMm * MM_TO_M;
+}
+
+/** Outer ring του μεγαλύτερου polygon μιας MultiPolygon. `null` αν κενή. */
+function largestOuterRing(mp: MultiPolygon): Pt2[] | null {
+  let best: Pt2[] | null = null;
+  let bestArea = -Infinity;
+  for (const poly of mp) {
+    if (!poly.length) continue;
+    const ring = ringToPts(poly[0]);
+    const a = Math.abs(signedArea(ring));
+    if (a > bestArea) { bestArea = a; best = ring; }
+  }
+  return best;
+}
+
+/**
+ * ADR-449 Slice 11 — **finished outline** ενός δομικού στοιχείου: το core footprint
+ * μεγεθυμένο προς τα έξω κατά `thicknessMm` **ΜΟΝΟ στις εκτεθειμένες ακμές** (όπως
+ * ακριβώς ο κάθετος σοβάς — ίδιος resolver + `computeMiteredOuter`). Οι ακμές που
+ * καλύπτονται από γείτονα (`obstacles`: κολόνα/δοκάρι/τοίχος στη συμβολή) ΔΕΝ
+ * μετατοπίζονται → η οριζόντια όψη (soffit/cap) σταματά **flush** στο πρόσωπο του
+ * γείτονα αντί να προεξέχει/διεισδύει. Έτσι το οριζόντιο finish ευθυγραμμίζεται
+ * ΑΚΡΙΒΩΣ με το πρόσωπο του κάθετου σοβά σε κάθε εκτεθειμένη πλευρά.
+ *
+ * `s` = mmToSceneUnits (canvas units ανά mm). Κανένα exposed segment (όλα καλυμμένα) →
+ * επιστρέφει το core αυτούσιο.
+ */
+export function computeFinishedOutline(
+  core: readonly Pt2[],
+  obstacles: readonly (readonly Pt2[])[],
+  thicknessMm: number,
+  s: number,
+): Pt2[] {
+  if (core.length < 3 || thicknessMm <= 0) return [...core];
+  const spec: StructuralFinishSpec = {
+    enabled: true, thickness: thicknessMm, interiorMaterialId: '', exteriorMaterialId: '',
+  };
+  const faces = resolveStructuralFinishFaces({
+    coreFootprint: core, heightMm: 1, spec, obstacles,
+    classify: () => 'interior', unitToMeters: 1,
+  });
+  const segs = faces.segments;
+  if (segs.length === 0) return [...core];
+  const offsets = segs.map((seg) => segOffsetVec(seg, seg.thickness * s));
+  const { aOuter, bOuter, aCore, bCore } = computeMiteredOuter(segs, offsets, true);
+  const quads = segs.map((_, i) => [aCore[i], bCore[i], bOuter[i], aOuter[i]]);
+  const merged = safeUnion(footprintToClip(core), ...quads.map((q) => footprintToClip(q)));
+  return largestOuterRing(merged) ?? [...core];
 }

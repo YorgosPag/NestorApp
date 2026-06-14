@@ -30,6 +30,13 @@ const HORIZONTAL_ID = 'structural-finish-horizontal';
 /** no-op raycast — derived διακόσμηση, μη ανεξάρτητα επιλέξιμη (mirror silhouette). */
 const NOOP_RAYCAST: THREE.Mesh['raycast'] = () => {};
 
+/** Κάνει ΟΛΑ τα αντικείμενα του group μη-pickable (mesh + edges overlay) — το ray τα προσπερνά. */
+function makeNonPickable(group: THREE.Group): void {
+  group.traverse((obj) => {
+    (obj as THREE.Mesh).raycast = NOOP_RAYCAST;
+  });
+}
+
 /** THREE.Shape από outer ring + (πολλαπλές) τρύπες (partial coverage). */
 function buildShapeWithHoles(outer: readonly Pt2[], holes: readonly (readonly Pt2[])[]): THREE.Shape | null {
   if (outer.length < 3) return null;
@@ -77,7 +84,6 @@ function buildPolygonSlab(
   if (levelId !== undefined) mesh.userData['levelId'] = levelId;
   mesh.castShadow = true;
   mesh.receiveShadow = true;
-  mesh.raycast = NOOP_RAYCAST;
   attachEdgesProjection(mesh, bimType);
   return mesh;
 }
@@ -109,5 +115,7 @@ export function buildHorizontalFinishSkin(
   group.userData['bimId'] = id;
   group.userData['bimType'] = bimType;
   group.userData['structuralFinish'] = true;
+  // ADR-449 Slice 11 — μη-pickable: κλικ σε σοβατισμένη όψη επιλέγει τον δομικό πυρήνα πίσω.
+  makeNonPickable(group);
   return group;
 }

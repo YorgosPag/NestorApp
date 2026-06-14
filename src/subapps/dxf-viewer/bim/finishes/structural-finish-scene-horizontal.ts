@@ -22,11 +22,12 @@ import type { ColumnParams } from '../types/column-types';
 import type { BeamParams } from '../types/beam-types';
 import type { SlabParams } from '../types/slab-types';
 import { mmToSceneUnits } from '../../utils/scene-units';
-import { isFinishActive } from './structural-finish-types';
+import { isFinishActive, type StructuralFinishSpec } from './structural-finish-types';
 import {
   computeHorizontalFinishFace,
   type HorizontalFinishFace,
 } from './structural-finish-horizontal';
+import { computeFinishedOutline } from './structural-finish-horizontal';
 import type { Pt2 } from '../geometry/shared/segment-polygon-coverage';
 import { toPt2, wallFootprintPolygon, type WallFinishObstacle } from './structural-finish-scene';
 
@@ -47,7 +48,7 @@ export interface HorizontalColumnSource {
 export interface HorizontalBeamSource {
   readonly params: Pick<
     BeamParams,
-    'finish' | 'sceneUnits' | 'topElevation' | 'zOffset' | 'depth' | 'envelopeFunction'
+    'finish' | 'sceneUnits' | 'topElevation' | 'zOffset' | 'depth' | 'envelopeFunction' | 'startPoint' | 'endPoint'
   >;
   readonly geometry?: { readonly outline?: { readonly vertices?: readonly { x: number; y: number }[] } };
 }
@@ -174,9 +175,33 @@ export interface StructuralHorizontalFinishFaces {
   readonly beamFaces: readonly HorizontalFinishFace[];
 }
 
+/** Έγκυρο footprint (≥3 σημεία) ενός μέλους → Pt2[], αλλιώς `null`. */
+function coresOf(verts: readonly { x: number; y: number }[] | undefined): Pt2[] | null {
+  return verts && verts.length >= 3 ? verts.map(toPt2) : null;
+}
+
+/** Finished outline ενός μέλους ως `PlanObstacle` (core + z) — ή `null` αν εκφυλισμένο. */
+function finishedObstacleOf(
+  core: Pt2[] | null,
+  lateralObstacles: readonly (readonly Pt2[])[],
+  spec: StructuralFinishSpec | undefined,
+  s: number,
+  ext: ZExtent,
+): PlanObstacle | null {
+  if (!core) return null;
+  const thick = isFinishActive(spec) ? spec.thickness : 0;
+  const ring = computeFinishedOutline(core, lateralObstacles, thick, s);
+  return { footprint: ring, bbox: bboxOf(ring), ...ext };
+}
+
 /**
  * SSoT: δομικά μέλη + γείτονες → εκτεθειμένες ΟΡΙΖΟΝΤΙΕΣ όψεις σοβά (κολόνα top/base,
  * δοκάρι top/soffit), building-relative z, χωρισμένες ανά τύπο. Κενά arrays όταν τίποτα εκτεθειμένο.
+ *
+ * Κάθε όψη χτίζεται στο **finished outline** του μέλους (offset μόνο εκτεθειμένες ακμές —
+ * ίδια γεωμετρία με τον κάθετο σοβά) ΚΑΙ αφαιρεί τα finished footprints των **δομικών
+ * γειτόνων** (κολόνα↔δοκάρι) → ο σοβάς σταματά flush στο πρόσωπο του γείτονα (μηδέν
+ * διείσδυση/overlap στη συμβολή) και φτάνει το πρόσωπο του κάθετου σοβά στα ελεύθερα άκρα.
  */
 export function computeStructuralHorizontalFinishFaces(input: HorizontalFinishInput): StructuralHorizontalFinishFaces {
   const { columns, beams, walls, slabs, beamObstacles, floorElevationMm } = input;
@@ -185,53 +210,71 @@ export function computeStructuralHorizontalFinishFaces(input: HorizontalFinishIn
   const unitToMeters = (1 / s) * MM_TO_M;
   const tol = PLANE_TOL_MM;
 
-  const slabObs = slabs.map((sl) => toPlanObstacle(sl.params.outline.vertices, slabZExtent(sl.params)));
-  const beamCapObs = beamObstacles
-    .filter((b) => b.geometry?.outline?.vertices && b.geometry.outline.vertices.length >= 3)
-    .map((b) => toPlanObstacle(b.geometry!.outline!.vertices!, beamZExtent(b.params)));
-  const aboveColumnObs = [...slabObs, ...beamCapObs];
+  const wallFps = walls.map((w) => wallFootprintPolygon(w));
+  const columnCores = columns.map((c) => coresOf(c.geometry?.footprint?.vertices));
+  const beamCores = beams.map((b) => coresOf(b.geometry?.outline?.vertices));
+  const validBeamCores = beamCores.filter((c): c is Pt2[] => c !== null);
+  const validColumnCores = columnCores.filter((c): c is Pt2[] => c !== null);
 
+  // z-εμπόδια (κάλυψη). Τοίχοι: attached-top → resolved top = κάτω παρειά δοκαριού (Slice 8b).
   const beamUndersideById = new Map<string, number>();
   for (const b of beamObstacles) beamUndersideById.set(b.id, beamZExtent(b.params).zBotMm);
   const wallObs = walls.map((w) => toPlanObstacle(wallFootprintPolygon(w), wallZExtent(w, beamUndersideById, floorElevationMm)));
+  const slabObs = slabs.map((sl) => toPlanObstacle(sl.params.outline.vertices, slabZExtent(sl.params)));
+
+  // Finished outlines (lateral obstacles = ο ΑΛΛΟΣ δομικός τύπος + τοίχοι) — core των όψεων + cross-subtract.
+  const columnFinished = columns.map((c, i) =>
+    finishedObstacleOf(columnCores[i], [...validBeamCores, ...wallFps], c.params.finish, s, columnZExtent(c, floorElevationMm)),
+  );
+  const beamFinished = beams.map((b, j) =>
+    finishedObstacleOf(beamCores[j], [...validColumnCores, ...wallFps], b.params.finish, s, beamZExtent(b.params)),
+  );
 
   const columnFaces: HorizontalFinishFace[] = [];
   const beamFaces: HorizontalFinishFace[] = [];
-  for (const c of columns) collectColumnFaces(c, floorElevationMm, aboveColumnObs, slabObs, unitToMeters, tol, columnFaces);
-  for (const b of beams) collectBeamFaces(b, slabObs, wallObs, unitToMeters, tol, beamFaces);
+  const colCovers: PlanObstacle[] = [...slabObs, ...wallObs, ...beamFinished.filter((o): o is PlanObstacle => o !== null)];
+  const beamCovers: PlanObstacle[] = [...slabObs, ...wallObs, ...columnFinished.filter((o): o is PlanObstacle => o !== null)];
+  columns.forEach((c, i) => {
+    const fin = columnFinished[i];
+    if (fin) collectColumnFaces(c, fin, colCovers, unitToMeters, tol, columnFaces);
+  });
+  beams.forEach((b, j) => {
+    const fin = beamFinished[j];
+    if (fin) collectBeamFaces(b, fin, beamCovers, unitToMeters, tol, beamFaces);
+  });
   return { columnFaces, beamFaces };
+}
+
+/** Κατακόρυφη έκταση κολόνας (building-relative mm). */
+function columnZExtent(c: HorizontalColumnSource, floorElevationMm: number): ZExtent {
+  const zBotMm = floorElevationMm + (c.params.baseOffset ?? 0);
+  return { zBotMm, zTopMm: zBotMm + c.params.height };
 }
 
 /** Top cap (πάντα candidate) + base cap (μόνο absolute base) μιας κολόνας. */
 function collectColumnFaces(
   c: HorizontalColumnSource,
-  floorElevationMm: number,
-  aboveObs: readonly PlanObstacle[],
-  belowObs: readonly PlanObstacle[],
+  fin: PlanObstacle,
+  covers: readonly PlanObstacle[],
   unitToMeters: number,
   tol: number,
   out: HorizontalFinishFace[],
 ): void {
   const spec = c.params.finish;
-  const fp = c.geometry?.footprint?.vertices;
-  if (!isFinishActive(spec) || !fp || fp.length < 3) return;
-  const core = fp.map(toPt2);
-  const coreBbox = bboxOf(core);
+  if (!isFinishActive(spec)) return;
   const classification = classifyHorizontal(c.params.envelopeFunction);
-  const zBotMm = floorElevationMm + (c.params.baseOffset ?? 0);
-  const zTopMm = zBotMm + c.params.height;
 
   const cap = computeHorizontalFinishFace({
-    coreFootprint: core, coverFootprints: coversAtPlane(aboveObs, zTopMm, coreBbox, tol),
-    zMm: zTopMm, direction: 'up', spec, classification, unitToMeters,
+    coreFootprint: fin.footprint, coverFootprints: coversAtPlane(covers, fin.zTopMm, fin.bbox, tol),
+    zMm: fin.zTopMm, direction: 'up', spec, classification, unitToMeters,
   });
   if (cap) out.push(cap);
 
-  // Βάση: σοβατίζεται ΜΟΝΟ όταν στον αέρα (pilotis = baseBinding 'absolute'). Κάλυψη = πλάκα/πέδιλο κάτω.
+  // Βάση: σοβατίζεται ΜΟΝΟ στον αέρα (pilotis = baseBinding 'absolute'). Κάλυψη = πλάκα/πέδιλο κάτω.
   if (c.params.baseBinding === 'absolute') {
     const base = computeHorizontalFinishFace({
-      coreFootprint: core, coverFootprints: coversAtPlane(belowObs, zBotMm, coreBbox, tol),
-      zMm: zBotMm, direction: 'down', spec, classification, unitToMeters,
+      coreFootprint: fin.footprint, coverFootprints: coversAtPlane(covers, fin.zBotMm, fin.bbox, tol),
+      zMm: fin.zBotMm, direction: 'down', spec, classification, unitToMeters,
     });
     if (base) out.push(base);
   }
@@ -240,29 +283,25 @@ function collectColumnFaces(
 /** Top (κάλυψη = πλάκα πάνω) + soffit (κάλυψη = τοίχος κάτω) ενός δοκαριού. */
 function collectBeamFaces(
   b: HorizontalBeamSource,
-  slabObs: readonly PlanObstacle[],
-  wallObs: readonly PlanObstacle[],
+  fin: PlanObstacle,
+  covers: readonly PlanObstacle[],
   unitToMeters: number,
   tol: number,
   out: HorizontalFinishFace[],
 ): void {
   const spec = b.params.finish;
-  const outline = b.geometry?.outline?.vertices;
-  if (!isFinishActive(spec) || !outline || outline.length < 3) return;
-  const core = outline.map(toPt2);
-  const coreBbox = bboxOf(core);
+  if (!isFinishActive(spec)) return;
   const classification = classifyHorizontal(b.params.envelopeFunction);
-  const { zBotMm, zTopMm } = beamZExtent(b.params);
 
   const top = computeHorizontalFinishFace({
-    coreFootprint: core, coverFootprints: coversAtPlane(slabObs, zTopMm, coreBbox, tol),
-    zMm: zTopMm, direction: 'up', spec, classification, unitToMeters,
+    coreFootprint: fin.footprint, coverFootprints: coversAtPlane(covers, fin.zTopMm, fin.bbox, tol),
+    zMm: fin.zTopMm, direction: 'up', spec, classification, unitToMeters,
   });
   if (top) out.push(top);
 
   const soffit = computeHorizontalFinishFace({
-    coreFootprint: core, coverFootprints: coversAtPlane(wallObs, zBotMm, coreBbox, tol),
-    zMm: zBotMm, direction: 'down', spec, classification, unitToMeters,
+    coreFootprint: fin.footprint, coverFootprints: coversAtPlane(covers, fin.zBotMm, fin.bbox, tol),
+    zMm: fin.zBotMm, direction: 'down', spec, classification, unitToMeters,
   });
   if (soffit) out.push(soffit);
 }

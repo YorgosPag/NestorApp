@@ -34,7 +34,10 @@ const column = (over: Partial<HorizontalColumnSource['params']> = {}): Horizonta
 
 // Δοκάρι: top 3000, depth 500 → soffit 2500· outline 1×0.25 μακριά από την κολόνα.
 const beam = (): HorizontalBeamSource => ({
-  params: { finish: SPEC, sceneUnits: 'm', topElevation: 3000, zOffset: 0, depth: 500, envelopeFunction: undefined },
+  params: {
+    finish: SPEC, sceneUnits: 'm', topElevation: 3000, zOffset: 0, depth: 500, envelopeFunction: undefined,
+    startPoint: { x: 2, y: 0.125, z: 0 }, endPoint: { x: 3, y: 0.125, z: 0 },
+  },
   geometry: { outline: { vertices: [
     { x: 2, y: 0 }, { x: 3, y: 0 }, { x: 3, y: 0.25 }, { x: 2, y: 0.25 },
   ] } },
@@ -63,7 +66,8 @@ describe('computeStructuralHorizontalFinishFaces', () => {
     expect(columnFaces).toHaveLength(1);
     expect(columnFaces[0].direction).toBe('up');
     expect(columnFaces[0].zMm).toBe(3000);
-    expect(columnFaces[0].areaM2).toBeCloseTo(0.25, 5);
+    // ADR-449 Slice 11 — finished outline: core 0.5 + 2×0.015 σοβάς = 0.53 → 0.2809 m².
+    expect(columnFaces[0].areaM2).toBeCloseTo(0.53 * 0.53, 4);
   });
 
   it('δοκάρι (καμία πλάκα/τοίχος) → top + soffit εκτεθειμένα', () => {
@@ -75,6 +79,28 @@ describe('computeStructuralHorizontalFinishFaces', () => {
     const soffit = beamFaces.find((f) => f.direction === 'down')!;
     expect(top.zMm).toBe(3000);
     expect(soffit.zMm).toBe(2500);
+  });
+
+  it('finished outline: ελεύθερο δοκάρι (χωρίς γείτονες) → offset ΣΕ ΟΛΕΣ τις εκτεθειμένες όψεις', () => {
+    // outline 1.0×0.25· καμία γειτονιά → 4 εκτεθειμένες όψεις → +0.015 παντού = 1.03×0.28.
+    const { beamFaces } = run({ beams: [beam()] });
+    for (const f of beamFaces) expect(f.areaM2).toBeCloseTo(1.03 * 0.28, 3);
+  });
+
+  it('finished outline στη ΣΥΜΒΟΛΗ: κολόνα στο δυτικό άκρο → soffit ΔΕΝ προεξέχει μέσα στην κολόνα', () => {
+    // Κολόνα 0.5×0.5 με ανατολική παρειά x=2 (= δυτικό άκρο δοκαριού) → το δυτικό άκρο
+    // καλύπτεται/αφαιρείται → soffit ΜΙΚΡΟΤΕΡΟ από το ελεύθερο (δεν επεκτείνεται δυτικά).
+    const col: HorizontalColumnSource = {
+      params: { finish: SPEC, sceneUnits: 'm', baseOffset: 0, height: 3000, baseBinding: 'storey-floor', envelopeFunction: undefined },
+      geometry: { footprint: { vertices: [
+        { x: 1.5, y: -0.125 }, { x: 2, y: -0.125 }, { x: 2, y: 0.375 }, { x: 1.5, y: 0.375 },
+      ] } },
+    };
+    const free = run({ beams: [beam()] }).beamFaces;
+    const joined = run({ beams: [beam()], columns: [col] }).beamFaces;
+    const freeSoffit = free.find((f) => f.direction === 'down')!.areaM2;
+    const joinedSoffit = joined.find((f) => f.direction === 'down')!.areaM2;
+    expect(joinedSoffit).toBeLessThan(freeSoffit); // κόπηκε στο δυτικό άκρο (μηδέν διείσδυση)
   });
 
   it('πλάκα πάνω από την κολόνα → top cap εξαφανίζεται (associative)', () => {
@@ -102,6 +128,42 @@ describe('computeStructuralHorizontalFinishFaces', () => {
     });
     expect(columnFaces.some((f) => f.direction === 'down')).toBe(false);
     expect(columnFaces.some((f) => f.direction === 'up')).toBe(true); // top παραμένει (πλάκα κάτω, όχι πάνω)
+  });
+
+  it('REAL Firestore geometry (flush col↔beam): soffit ΔΕΝ διεισχωρεί δυτικά του προσώπου σοβά κολόνας', () => {
+    const realCol: HorizontalColumnSource = {
+      params: { finish: SPEC, sceneUnits: 'm', baseOffset: 0, height: 3000, baseBinding: 'storey-floor', envelopeFunction: undefined },
+      geometry: { footprint: { vertices: [
+        { x: 21.38551615846648, y: 3.637711913020941 },
+        { x: 21.88508095646823, y: 3.637711913020941 },
+        { x: 21.88508095646823, y: 4.636841509024424 },
+        { x: 21.38551615846648, y: 4.636841509024424 },
+      ] } },
+    };
+    const realBeam: HorizontalBeamSource = {
+      params: {
+        finish: SPEC, sceneUnits: 'm', topElevation: 3000, zOffset: 0, depth: 500, envelopeFunction: undefined,
+        startPoint: { x: 21.88508095646823, y: 3.762711913020941, z: 0 },
+        endPoint: { x: 23.587993621959576, y: 3.762711913020941, z: 0 },
+      },
+      geometry: { outline: { vertices: [
+        { x: 21.88508095646823, y: 3.887711913020941 },
+        { x: 23.587993621959576, y: 3.887711913020941 },
+        { x: 23.587993621959576, y: 3.637711913020941 },
+        { x: 21.88508095646823, y: 3.637711913020941 },
+      ] } },
+    };
+    const { beamFaces } = run({ beams: [realBeam], columns: [realCol] });
+    const soffit = beamFaces.find((f) => f.direction === 'down')!;
+    const verts = soffit.polygons.flatMap((p) => p.outer);
+    // ΜΗΔΕΝ διείσδυση: στη ζώνη ΠΑΝΩ από την παρειά του δοκαριού (y > 3.8877, όπου η κολόνα
+    // ΕΧΕΙ κάθετο σοβά) ο soffit δεν πάει δυτικά του προσώπου σοβά κολόνας (x ≥ 21.90008).
+    const northMinX = Math.min(...verts.filter((pt) => pt.y > 3.887711913020941 + 1e-4).map((pt) => pt.x));
+    expect(northMinX).toBeGreaterThanOrEqual(21.88508095646823 + 0.015 - 1e-4);
+    // Under-beam: φτάνει το ΠΡΟΣΩΠΟ ΚΟΡΜΟΥ κολόνας (21.88508· εκεί δεν υπάρχει σοβάς, καλυμμένο) — μηδέν κενό.
+    expect(Math.min(...verts.map((pt) => pt.x))).toBeCloseTo(21.88508095646823, 3);
+    // Ελεύθερο ανατολικό άκρο: φτάνει 15mm πέρα από το core (free end → +thickness).
+    expect(Math.max(...verts.map((pt) => pt.x))).toBeGreaterThan(23.587993621959576 + 0.01);
   });
 
   it('inactive finish → κανένα face', () => {
