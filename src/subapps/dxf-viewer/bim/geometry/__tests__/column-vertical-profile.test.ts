@@ -13,6 +13,7 @@ import {
   resolveColumnNominalTopZmm,
   resolveColumnTopProfile,
   resolveColumnBaseProfile,
+  resolveColumnVerticalExtentMm,
   makeColumnHostResolver,
   type ColumnVerticalContext,
   type ColumnVerticalParams,
@@ -284,6 +285,56 @@ describe('resolveColumnBaseProfile', () => {
     );
     expect(prof.cornerBaseZmm).toEqual([250, 250, 250, 250]);
     expect(prof.hasAttach).toBe(false);
+  });
+});
+
+// ─── Vertical extent (ADR-449 σοβάς height-SSoT) ──────────────────────────────
+
+describe('resolveColumnVerticalExtentMm', () => {
+  test('storey-ceiling: zTop = nextFloorElevationMm, ΟΧΙ raw params.height (το bug)', () => {
+    // Firestore repro col_fb3215e9: height=2700 αλλά storey ceiling=3000 → ο σοβάς
+    // ΠΡΕΠΕΙ να φτάνει 3000 (= πυρήνας), όχι 2700.
+    const ext = resolveColumnVerticalExtentMm(
+      params({ height: 2700 }),
+      FOOTPRINT,
+      { floorElevationMm: 0, nextFloorElevationMm: 3000 },
+    );
+    expect(ext).toEqual({ zBotMm: 0, zTopMm: 3000 });
+  });
+
+  test('storey-ceiling με slab ceiling → nextFFL − slab + topOffset', () => {
+    const ext = resolveColumnVerticalExtentMm(
+      params({ height: 2700, topOffset: 50 }),
+      FOOTPRINT,
+      { floorElevationMm: 1000, nextFloorElevationMm: 4000, ceilingSlabThicknessMm: 150 },
+    );
+    expect(ext).toEqual({ zBotMm: 1000, zTopMm: 4000 - 150 + 50 });
+  });
+
+  test('χωρίς storey context → fallback baseZ + params.height (legacy)', () => {
+    const ext = resolveColumnVerticalExtentMm(params({ height: 2850 }), FOOTPRINT, { floorElevationMm: 500 });
+    expect(ext).toEqual({ zBotMm: 500, zTopMm: 500 + 2850 });
+  });
+
+  test('attached top → zTop = maxTopZmm του profile (flat approx)', () => {
+    const ext = resolveColumnVerticalExtentMm(
+      params({ topBinding: 'attached', attachTopToIds: ['b1', 'b2'], height: 3000 }),
+      FOOTPRINT,
+      ctxWith([fullHost('b1'), halfHost('b2')]),
+    );
+    // fullHost underside 2500 καλύπτει όλο, halfHost 2400 μόνο τις x≥200 γωνίες →
+    // cornerTop = [2500, 2400, 2400, 2500] → max = 2500.
+    expect(ext.zBotMm).toBe(0);
+    expect(ext.zTopMm).toBe(2500);
+  });
+
+  test('absolute base → zBot = baseOffset (αγνοεί FFL)', () => {
+    const ext = resolveColumnVerticalExtentMm(
+      params({ baseBinding: 'absolute', baseOffset: 800, topBinding: 'absolute', topOffset: 3500 }),
+      FOOTPRINT,
+      { floorElevationMm: 2000 },
+    );
+    expect(ext).toEqual({ zBotMm: 800, zTopMm: 3500 });
   });
 });
 

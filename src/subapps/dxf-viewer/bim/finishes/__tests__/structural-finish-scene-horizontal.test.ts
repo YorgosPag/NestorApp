@@ -170,4 +170,26 @@ describe('computeStructuralHorizontalFinishFaces', () => {
     const c = column({ finish: { ...SPEC, enabled: false } });
     expect(run({ columns: [c] }).columnFaces).toHaveLength(0);
   });
+
+  it('ADR-449 height-SSoT: columnExtents override → cap στο resolved zTop (3000), ΟΧΙ raw params.height (2700)', () => {
+    // Firestore repro: storey-ceiling κολόνα με raw height=2700 ενώ storey ceiling=3000.
+    // Χωρίς extents → legacy cap στο 2700· με extents (= πυρήνας) → cap στο 3000.
+    const c: HorizontalColumnSource = {
+      id: 'col_fb3215e9',
+      params: { finish: SPEC, sceneUnits: 'm', baseOffset: 0, height: 2700, baseBinding: 'storey-floor', envelopeFunction: undefined },
+      geometry: { footprint: { vertices: [
+        { x: 0, y: 0 }, { x: 0.5, y: 0 }, { x: 0.5, y: 0.5 }, { x: 0, y: 0.5 },
+      ] } },
+    };
+    const legacy = computeStructuralHorizontalFinishFaces({
+      columns: [c], beams: [], walls: [], slabs: [], beamObstacles: [], floorElevationMm: 0,
+    }).columnFaces;
+    expect(legacy[0].zMm).toBe(2700); // legacy fallback (raw height) — η συμπεριφορά του bug
+
+    const resolved = computeStructuralHorizontalFinishFaces({
+      columns: [c], beams: [], walls: [], slabs: [], beamObstacles: [], floorElevationMm: 0,
+      columnExtents: new Map([['col_fb3215e9', { zBotMm: 0, zTopMm: 3000 }]]),
+    }).columnFaces;
+    expect(resolved[0].zMm).toBe(3000); // σοβάς = πυρήνας (storey ceiling)
+  });
 });
