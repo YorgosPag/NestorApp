@@ -17,6 +17,9 @@ import type { Discipline } from '../../bim/discipline/bim-discipline';
 import { isStructuralFinishVisible } from '../../bim/finishes/structural-finish-visibility';
 import { computeStructuralFinishSilhouette } from '../../bim/finishes/structural-finish-scene';
 import { buildStructuralSilhouetteSkin } from '../converters/structural-finish-silhouette-3d';
+import { computeStructuralHorizontalFinishFaces } from '../../bim/finishes/structural-finish-scene-horizontal';
+import { buildHorizontalFinishSkin } from '../converters/structural-finish-horizontal-3d';
+import type { SceneUnits } from '../../utils/scene-units';
 
 /**
  * ADR-449 Slice X1 — η ενιαία silhouette είναι **ΕΝΕΡΓΗ** (αντικαθιστά το per-element 3D σκιν):
@@ -76,5 +79,39 @@ export function syncStructuralFinishSkin(
       bands, sceneUnits, g.baseElevation, ctx.activeLevelId, `structural-finish-${buildingId}`,
     );
     if (skin) { skin.userData['buildingId'] = buildingId; group.add(skin); }
+    addHorizontalFinish(group, g, entities, ctx, buildingId, sceneUnits);
   }
+}
+
+/**
+ * ADR-449 Slice 11 — εκτεθειμένες ΟΡΙΖΟΝΤΙΕΣ όψεις (κολόνα top/base cap, δοκάρι top/soffit)
+ * ως λεπτές per-element πλάκες σοβά. Συμπληρωματικό του ενιαίου (κατακόρυφου) silhouette:
+ * coverage = γεωμετρική (πλάκα/δοκάρι από πάνω, τοίχος από κάτω) → associative (μπει πλάκα
+ * → re-sync → εξαφανίζεται). Μη-pickable (derived διακόσμηση). Walls/slabs = όλου του ορόφου
+ * (geometric bbox+overlap φιλτράρει cross-building).
+ */
+function addHorizontalFinish(
+  group: THREE.Group,
+  g: { baseElevation: number; columns: ColumnEntity[]; beams: BeamEntity[] },
+  entities: Bim3DEntities,
+  ctx: SyncContext,
+  buildingId: string,
+  sceneUnits: SceneUnits,
+): void {
+  const { columnFaces, beamFaces } = computeStructuralHorizontalFinishFaces({
+    columns: g.columns,
+    beams: g.beams,
+    walls: entities.walls,
+    slabs: entities.slabs,
+    beamObstacles: g.beams,
+    floorElevationMm: ctx.floorElevationMm,
+  });
+  const colSkin = buildHorizontalFinishSkin(
+    columnFaces, 'column', g.baseElevation, sceneUnits, ctx.activeLevelId, `structural-finish-hcol-${buildingId}`,
+  );
+  if (colSkin) { colSkin.userData['buildingId'] = buildingId; group.add(colSkin); }
+  const beamSkin = buildHorizontalFinishSkin(
+    beamFaces, 'beam', g.baseElevation, sceneUnits, ctx.activeLevelId, `structural-finish-hbeam-${buildingId}`,
+  );
+  if (beamSkin) { beamSkin.userData['buildingId'] = buildingId; group.add(beamSkin); }
 }

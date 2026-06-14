@@ -168,11 +168,17 @@ function classifyHorizontal(envelopeFunction: string | undefined): 'interior' | 
   return envelopeFunction === 'exterior' ? 'exterior' : 'interior';
 }
 
+/** Εκτεθειμένες οριζόντιες όψεις, χωρισμένες ανά τύπο (για σωστό 3Δ tag/edges). */
+export interface StructuralHorizontalFinishFaces {
+  readonly columnFaces: readonly HorizontalFinishFace[];
+  readonly beamFaces: readonly HorizontalFinishFace[];
+}
+
 /**
  * SSoT: δομικά μέλη + γείτονες → εκτεθειμένες ΟΡΙΖΟΝΤΙΕΣ όψεις σοβά (κολόνα top/base,
- * δοκάρι top/soffit), building-relative z. `[]` όταν κανένα εκτεθειμένο.
+ * δοκάρι top/soffit), building-relative z, χωρισμένες ανά τύπο. Κενά arrays όταν τίποτα εκτεθειμένο.
  */
-export function computeStructuralHorizontalFinishFaces(input: HorizontalFinishInput): HorizontalFinishFace[] {
+export function computeStructuralHorizontalFinishFaces(input: HorizontalFinishInput): StructuralHorizontalFinishFaces {
   const { columns, beams, walls, slabs, beamObstacles, floorElevationMm } = input;
   const sceneUnits = columns[0]?.params.sceneUnits ?? beams[0]?.params.sceneUnits ?? 'mm';
   const s = mmToSceneUnits(sceneUnits);
@@ -189,10 +195,11 @@ export function computeStructuralHorizontalFinishFaces(input: HorizontalFinishIn
   for (const b of beamObstacles) beamUndersideById.set(b.id, beamZExtent(b.params).zBotMm);
   const wallObs = walls.map((w) => toPlanObstacle(wallFootprintPolygon(w), wallZExtent(w, beamUndersideById, floorElevationMm)));
 
-  const faces: HorizontalFinishFace[] = [];
-  for (const c of columns) collectColumnFaces(c, floorElevationMm, aboveColumnObs, slabObs, unitToMeters, tol, faces);
-  for (const b of beams) collectBeamFaces(b, slabObs, wallObs, unitToMeters, tol, faces);
-  return faces;
+  const columnFaces: HorizontalFinishFace[] = [];
+  const beamFaces: HorizontalFinishFace[] = [];
+  for (const c of columns) collectColumnFaces(c, floorElevationMm, aboveColumnObs, slabObs, unitToMeters, tol, columnFaces);
+  for (const b of beams) collectBeamFaces(b, slabObs, wallObs, unitToMeters, tol, beamFaces);
+  return { columnFaces, beamFaces };
 }
 
 /** Top cap (πάντα candidate) + base cap (μόνο absolute base) μιας κολόνας. */
