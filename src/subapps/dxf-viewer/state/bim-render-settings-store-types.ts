@@ -102,6 +102,11 @@ export interface BimRenderSettingsState extends ResolvedBimSettings {
    */
   setShowFinishSkin: (showFinishSkin: boolean) => void;
   /**
+   * ADR-456 Slice 3 — master view toggle «Οπλισμός» (reinforcement rebar
+   * drawing visibility). Per-view, debounced write (idempotent).
+   */
+  setShowReinforcement: (showReinforcement: boolean) => void;
+  /**
    * ADR-452 — master toggle for the cut-plane (Revit View Range) hide gate. `true`
    * ⇒ the 2D plan hides BIM entities whose base sits above `viewRange.cutPlaneMm`
    * (real-time horizontal section); `false` ⇒ nothing is hidden (legacy look).

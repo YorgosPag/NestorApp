@@ -237,7 +237,7 @@ Affected files:
 | **Phase 1** | Event infra + Slab pilot (EventBus type + DeleteEntityCommand.undo + audit-route allowlist + new `useBimEntityRestoredPersistEffect` + full `useSlabPersistence` refactor) | ✅ DONE 2026-05-27 | `f6d81500` |
 | **Phase 2** | Extend στα 6 remaining entities (mechanical apply του ίδιου delta σε wall, opening, slab-opening, column, beam, stair) | ✅ DONE 2026-05-27 | `6e6c3843`, `b40a6607`, `9616cf44`, `4a927853` |
 | **Phase 3** | ADR doc + ΕΚΚΡΕΜΟΤΗΤΕΣ + adr-index + tests (`DeleteEntityCommand.undo` emit, multi-delete fan-out, integration roundtrip) | ✅ DONE 2026-05-27 | pending commit |
-| **Phase 4** | BIM filtering από DXF JSON `autoSaveV2` — orthogonal cleanup | ⏸️ DEFERRED (separate ADR — Bug B fully fixed από Phase 1+2 χωρίς αυτό) | — |
+| **Phase 4** | Active-floor SSoT load: drop the snapshot's (derived-cache) BIM at load, repopulate from per-entity docs (preserve in-memory BIM). Save path unchanged (snapshot keeps BIM for multi-floor ADR-399). + param-edit persistence gap fix (`bim:beam/column-params-updated` → immediate persist). | ✅ DONE 2026-06-14 (active-floor portion) — UNCOMMITTED | pending |
 
 ---
 
@@ -292,7 +292,7 @@ Affected files:
 - **Historical audit data:** prior accidental `'deleted' → 'created'` pairs παραμένουν ως historical artifact. Acceptable — no migration script.
 - **`'restored'` action validator:** flat allowlist addition, backwards-compatible. Existing audit consumers ήδη render `RefreshCw` icon για `restored` (`activity-tab-config.ts:69-74`).
 - **Command serialization:** unchanged — new event emit είναι runtime side effect, δεν επηρεάζει replay/persistence format.
-- **DXF JSON autoSaveV2:** unchanged — Phase 4 (deferred) will filter BIM entities out, αλλά Phase 1+2 fully resolve Bug B χωρίς αυτό.
+- **DXF JSON autoSaveV2:** **save path unchanged** — Phase 4 (2026-06-14) filters BIM **on LOAD of the active floor** (`scene-bim-load-policy.reconcileLoadedSceneBim`), not on save, so the snapshot still carries BIM for multi-floor 3D (ADR-399 `useFloors3DAggregator` reads other floors' BIM from their snapshots). Per-entity docs become authoritative for the active floor's render.
 
 ---
 
@@ -303,3 +303,5 @@ Affected files:
 | 2026-05-27 | Phase 1 | Opus 4.7 | EventBus type + DeleteEntityCommand.undo + audit-route allowlist + `useBimEntityRestoredPersistEffect` + slab pilot. TSC PASS. Commit `f6d81500` (mistagged "ADR-381 Phase A" — see §Historical Note). |
 | 2026-05-27 | Phase 2 | Opus 4.7 | Mechanical apply σε column → wall+beam+slab-opening → opening+stair (4 commits). 6 audit-clients added `'restored'` action. 7/7 BIM entities covered. TSC PASS. Commits `6e6c3843`, `b40a6607`, `9616cf44`, `4a927853` (all mistagged). |
 | 2026-05-27 | Phase 3 | Opus 4.7 | ADR-390 doc written + `local_ΕΚΚΡΕΜΟΤΗΤΕΣ.txt` rebranded (ΑΥΖ → ADR-381 master only, ΑΥΗ → ADR-390 implementation) + adr-index entry + automated tests (DeleteEntityCommand, DeleteMultipleEntitiesCommand, useBimEntityRestoredPersistEffect). Pending commit. |
+| 2026-06-14 | Phase 4 | Opus 4.8 | **Bug 1 (κολόνα κεκλιμένη) — active-floor SSoT load.** The `.scene.json` snapshot (derived cache) held STALE BIM (column `attached` while DB doc `storey-ceiling` → sloped top) and won at load. Fix: NEW `systems/levels/scene-bim-load-policy.ts` (`reconcileLoadedSceneBim` — drop snapshot BIM/stair, keep pure-DXF, preserve in-memory BIM) wired into `useLevelSceneLoader` apply. Save path untouched (multi-floor ADR-399 safe). 7 jest. **Robustness:** beam param-edit immediate-persist listeners (`bim:beam/column-params-updated`) + `persist-serializer` wired into `useBeamPersistence` (mirror column, N.0.2 — same-tick race). UNCOMMITTED. |
+| 2026-06-14 | Phase 4 (Bug 2) | Opus 4.8 | **Bug 2 (δοκάρι «επιστρέφει» μισό-πλάτος στο reload) — ΑΛΗΘΙΝΗ ΑΙΤΙΑ via live Firestore+console diagnostics.** ΟΧΙ render bug: `moveBeam` (`bim/utils/bim-move-geometry.ts`, ADR-363 Φ7A) έβαζε `curveControl: undefined` σε ευθύγραμμο δοκάρι → **Firestore `updateDoc` ΑΠΟΡΡΙΠΤΕΙ explicit `undefined`** ("Unsupported field value: undefined") → η per-entity εγγραφή έσκαγε στο `catch` (σιωπηλά) σε ΚΑΘΕ straight-beam move → DB έμενε στην παλιά θέση. Fix: destructure-omit του `curveControl` από το spread, re-add ΜΟΝΟ όταν υπάρχει (curved). 3 jest [bim-move-geometry: straight no-key / scrub-stale-undefined / curved-shift]. **ΜΑΘΗΜΑ: silent `catch` σε persist έκρυψε το bug· Firestore updateDoc + `undefined` field = throw — ποτέ explicit `undefined` σε params.** Browser-verified (DB axis 3.7627, updatedAt>createdAt, μένει flush μετά hard-refresh). UNCOMMITTED. |

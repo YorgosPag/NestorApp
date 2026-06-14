@@ -32,6 +32,7 @@ import { DrainPipeToggle } from './DrainPipeToggle';
 import { ColorBySystemToggle } from './ColorBySystemToggle';
 import { ShowHeatLoadToggle } from './ShowHeatLoadToggle';
 import { ShowFinishSkinToggle } from './ShowFinishSkinToggle';
+import { ShowReinforcementToggle } from './ShowReinforcementToggle';
 import { ShowPipeSizingToggle } from './ShowPipeSizingToggle';
 import { ShowBalancingToggle } from './ShowBalancingToggle';
 import { ExportThermalStudyButton } from './ExportThermalStudyButton';
@@ -126,6 +127,9 @@ function renderButton(button: RibbonButton): React.ReactNode {
     }
     if (button.widgetId === 'show-finish-skin-toggle') {
       return <ShowFinishSkinToggle key="show-finish-skin-toggle-widget" />;
+    }
+    if (button.widgetId === 'show-reinforcement-toggle') {
+      return <ShowReinforcementToggle key="show-reinforcement-toggle-widget" />;
     }
     if (button.widgetId === 'show-pipe-sizing-toggle') {
       return <ShowPipeSizingToggle key="show-pipe-sizing-toggle-widget" />;

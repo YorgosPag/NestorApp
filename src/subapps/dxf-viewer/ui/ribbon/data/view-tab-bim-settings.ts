@@ -161,6 +161,19 @@ const FINISH_SKIN_BUTTON: RibbonButton = {
   },
 };
 
+/** ADR-456 Slice 3 — reinforcement (οπλισμός) master toggle (Revit "Reinforcement" visibility). */
+const REINFORCEMENT_BUTTON: RibbonButton = {
+  type: 'widget',
+  size: 'small',
+  widgetId: 'show-reinforcement-toggle',
+  command: {
+    id: 'view.reinforcement',
+    labelKey: 'ribbon.commands.reinforcement.label',
+    icon: '',
+    commandKey: 'show-reinforcement-toggle',
+  },
+};
+
 /** ADR-422 L3 — pipe-sizing overlay master toggle (Revit "Pipe Sizing" preview). */
 const PIPE_SIZING_BUTTON: RibbonButton = {
   type: 'widget',
@@ -242,7 +255,7 @@ export const BIM_GRAPHICS_PANEL: RibbonPanelDef = {
       isInFlyout: false,
       // ADR-446 — the standalone «Ρεαλιστικά Υλικά» toggle (REALISTIC_MATERIALS_BUTTON)
       // is subsumed by the «Στυλ Προβολής» dropdown (VIEW_VISUAL_STYLES_PANEL).
-      buttons: [VISIBILITY_GRAPHICS_BUTTON, HIDE_BIM_BUTTON, MEP_WIRE_BUTTON, DRAIN_PIPE_BUTTON, COLOR_BY_SYSTEM_BUTTON, HEAT_LOAD_BUTTON, FINISH_SKIN_BUTTON, PIPE_SIZING_BUTTON, BALANCING_BUTTON, THERMAL_STUDY_BUTTON, DISCIPLINE_BUTTON],
+      buttons: [VISIBILITY_GRAPHICS_BUTTON, HIDE_BIM_BUTTON, MEP_WIRE_BUTTON, DRAIN_PIPE_BUTTON, COLOR_BY_SYSTEM_BUTTON, HEAT_LOAD_BUTTON, FINISH_SKIN_BUTTON, REINFORCEMENT_BUTTON, PIPE_SIZING_BUTTON, BALANCING_BUTTON, THERMAL_STUDY_BUTTON, DISCIPLINE_BUTTON],
     },
   ],
 };

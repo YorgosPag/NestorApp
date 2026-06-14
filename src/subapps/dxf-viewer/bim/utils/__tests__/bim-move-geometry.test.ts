@@ -294,6 +294,39 @@ describe('ADR-363 Phase 7A — calculateBimMovedGeometry', () => {
     expect(patch.params.endPoint).toEqual({ x: 6000, y: 500, z: 3000 });
   });
 
+  it('beam (straight): moved params have NO `curveControl` key (Firestore updateDoc rejects undefined)', () => {
+    // Regression: moveBeam used to set `curveControl: undefined` for straight beams,
+    // which made the per-entity Firestore write throw ("Unsupported field value:
+    // undefined") → every straight-beam move silently failed to persist.
+    const patch = calculateBimMovedGeometry(makeBeam() as unknown as Entity, DELTA) as {
+      params: Record<string, unknown>;
+    };
+    expect('curveControl' in patch.params).toBe(false);
+  });
+
+  it('beam (straight): scrubs a stale `curveControl: undefined` key already in params', () => {
+    const beam = makeBeam();
+    const dirty = {
+      ...beam,
+      params: { ...beam.params, curveControl: undefined },
+    } as unknown as Entity;
+    const patch = calculateBimMovedGeometry(dirty, DELTA) as { params: Record<string, unknown> };
+    expect('curveControl' in patch.params).toBe(false);
+  });
+
+  it('beam (curved): shifts params.curveControl by delta, preserves z', () => {
+    const beam = makeBeam();
+    const curved = {
+      ...beam,
+      kind: 'curved',
+      params: { ...beam.params, kind: 'curved', curveControl: { x: 2500, y: 200, z: 3000 } },
+    } as unknown as Entity;
+    const patch = calculateBimMovedGeometry(curved, DELTA) as {
+      params: { curveControl?: { x: number; y: number; z?: number } };
+    };
+    expect(patch.params.curveControl).toEqual({ x: 3500, y: 700, z: 3000 });
+  });
+
   it('returns null for non-BIM entity types', () => {
     const line = { type: 'line' } as unknown as Entity;
     expect(calculateBimMovedGeometry(line, DELTA)).toBeNull();

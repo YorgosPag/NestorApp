@@ -81,6 +81,8 @@ export const useBimRenderSettingsStore = create<BimRenderSettingsState>((set, ge
       visualStyle: state.visualStyle,
       showHeatLoad: state.showHeatLoad,
       showFinishSkin: state.showFinishSkin,
+      // ADR-456 Slice 3 — persist the reinforcement-drawing toggle per-view.
+      showReinforcement: state.showReinforcement,
       // ADR-452 — persist the cut-plane hide-gate toggle per-view.
       cutPlaneActive: state.cutPlaneActive,
       // ADR-455 — persist the vertical X/Y section cuts per-view.
@@ -122,6 +124,7 @@ export const useBimRenderSettingsStore = create<BimRenderSettingsState>((set, ge
         realisticMaterials: resolved.realisticMaterials,
         showHeatLoad: resolved.showHeatLoad,
         showFinishSkin: resolved.showFinishSkin,
+        showReinforcement: resolved.showReinforcement,
         cutPlaneActive: resolved.cutPlaneActive,
         xAxisCut: resolved.xAxisCut,
         yAxisCut: resolved.yAxisCut,
@@ -261,6 +264,14 @@ export const useBimRenderSettingsStore = create<BimRenderSettingsState>((set, ge
       set({ showFinishSkin, lastLocalMutationAt: Date.now() });
       if (state.currentLevelId)
         debounceWrite(state.currentLevelId, buildRaw({ ...get(), showFinishSkin }));
+    },
+
+    setShowReinforcement(showReinforcement) {
+      const state = get();
+      if (state.showReinforcement === showReinforcement) return; // idempotent — no-op write
+      set({ showReinforcement, lastLocalMutationAt: Date.now() });
+      if (state.currentLevelId)
+        debounceWrite(state.currentLevelId, buildRaw({ ...get(), showReinforcement }));
     },
 
     setCutPlaneActive(cutPlaneActive) {

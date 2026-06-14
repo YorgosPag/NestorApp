@@ -69,7 +69,11 @@ function readBimCacheInputs(): { drawingScale: number; bimSettingsHash: string }
     // into entity pixels, so the bitmap is identical regardless of cut position. The
     // bim-render-settings subscription still marks the canvas dirty → the overlay repaints
     // on drag/flip/toggle without an (expensive) full entity-bitmap rebuild.
-    bimSettingsHash: JSON.stringify({ vr: s.viewRange, cpa: s.cutPlaneActive, os: s.objectStyles, ts: getCurrentOpeningTagStyle() }),
+    // ADR-449/456 — `fs` (showFinishSkin) + `rebar` (showReinforcement) bust the cache:
+    // both overlays are baked into the cached normal-state bitmap (scene-level passes in
+    // `DxfRenderer.render`), so toggling them must rebuild it (they arrive via the store the
+    // cache does NOT subscribe to — they must live in the key, like the ADR-040 Phase D toggles).
+    bimSettingsHash: JSON.stringify({ vr: s.viewRange, cpa: s.cutPlaneActive, os: s.objectStyles, ts: getCurrentOpeningTagStyle(), fs: s.showFinishSkin, rebar: s.showReinforcement }),
   };
 }
 

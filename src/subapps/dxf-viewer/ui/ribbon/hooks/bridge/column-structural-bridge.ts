@@ -25,6 +25,7 @@ import {
 } from '../../../../bim/structural/codes';
 import { isConcreteGrade } from '../../../../bim/structural/concrete-grades';
 import type { ColumnReinforcement } from '../../../../bim/structural/reinforcement/column-reinforcement-types';
+import { DEFAULT_STIRRUP_TYPE, isStirrupType } from '../../../../bim/structural/reinforcement/column-reinforcement-types';
 import {
   COLUMN_STRUCTURAL_KEYS,
   COLUMN_STRUCTURAL_KEY_TO_FIELD,
@@ -68,6 +69,9 @@ export function resolveColumnStructuralState(
   if (commandKey === COLUMN_STRUCTURAL_KEYS.concreteGrade) {
     return { value: column.params.concreteGrade ?? store.defaultConcreteGrade, options: [] };
   }
+  if (commandKey === COLUMN_STRUCTURAL_KEYS.stirrupType) {
+    return { value: effectiveReinforcement(column).stirrups.type ?? DEFAULT_STIRRUP_TYPE, options: [] };
+  }
   const field = COLUMN_STRUCTURAL_KEY_TO_FIELD[commandKey];
   if (!field) return null;
   const eff = effectiveReinforcement(column);
@@ -106,6 +110,16 @@ export function applyColumnStructuralChange(
   }
   if (commandKey === COLUMN_STRUCTURAL_KEYS.concreteGrade) {
     if (isConcreteGrade(value)) dispatchParams({ ...column.params, concreteGrade: value });
+    return true;
+  }
+  if (commandKey === COLUMN_STRUCTURAL_KEYS.stirrupType) {
+    if (isStirrupType(value)) {
+      const eff = effectiveReinforcement(column);
+      dispatchParams({
+        ...column.params,
+        reinforcement: { ...eff, stirrups: { ...eff.stirrups, type: value } },
+      });
+    }
     return true;
   }
   const field = COLUMN_STRUCTURAL_KEY_TO_FIELD[commandKey];

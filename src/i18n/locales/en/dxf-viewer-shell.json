@@ -1102,6 +1102,7 @@
       "columnMaterial": "Material",
       "columnFinishSkin": "Finish",
       "columnStructural": "Structural",
+      "columnDetail": "Detail",
       "columnActions": "Actions",
       "columnStructuralAttach": "Structural Attach",
       "columnShearWallCatalog": "Concrete Catalog",
@@ -2651,6 +2652,12 @@
         "code": "Code",
         "codeTooltip": "Design code (per building)",
         "concreteGrade": "Concrete",
+        "stirrupType": "Stirrup type",
+        "stirrupTypeOption": {
+          "closed-hooked": "Closed, 135° hooks",
+          "closed-welded": "Closed, welded",
+          "spiral": "Spiral (helix)"
+        },
         "longitudinalDiameter": "Long. Ø",
         "longitudinalCount": "Count",
         "stirrupDiameter": "Stirrup Ø",
@@ -2661,7 +2668,8 @@
         "autoTooltip": "Code-suggested minimum-valid reinforcement",
         "concreteWeight": "Concrete (kg)",
         "steelWeight": "Steel (kg)",
-        "ratio": "ρ (%)"
+        "ratio": "ρ (%)",
+        "confinement": "Confinement α"
       },
       "columnEditor": {
         "width": "Width",
@@ -2677,6 +2685,8 @@
         "attachBase": "Attach Base",
         "detachTop": "Detach Top",
         "detachBase": "Detach Base",
+        "reinforcementDetail": "Reinforcement Detail",
+        "reinforcementDetailTooltip": "Open a drawing sheet of the column reinforcement (plan, elevation, 3D, schedule) + export PDF",
         "close": "Close",
         "delete": "Delete",
         "deleteConfirm": "Delete this column? This action cannot be undone.",
@@ -3320,6 +3330,13 @@
         "disable": "Hide",
         "tooltipEnable": "Show column/beam plaster finish (perimeter skin per exposed face)",
         "tooltipDisable": "Hide plaster finish — show bare structural core"
+      },
+      "reinforcement": {
+        "label": "Reinforcement",
+        "enable": "Show",
+        "disable": "Hide",
+        "tooltipEnable": "Show column reinforcement (longitudinal bars + stirrups) in plan, section & 3D",
+        "tooltipDisable": "Hide reinforcement — show bare cross-section"
       },
       "pipeSizing": {
         "label": "Pipe Sizing",
@@ -4254,6 +4271,21 @@
       "no-source": "No gas meter (source) found — network skipped."
     },
     "committed": "Gas network created — networks: {count}, pipes: {segments}."
+  },
+  "columnDetail": {
+    "dialogTitle": "Column Reinforcement Detail",
+    "dialogDescription": "Drawing sheet of the selected column's reinforcement — plan, elevation, 3D perspective, reinforcement schedule and title block, fully dimensioned.",
+    "previewAlt": "Column reinforcement detail sheet preview",
+    "close": "Close",
+    "exportPdf": "Export PDF",
+    "print": "Print",
+    "regions": {
+      "plan": "PLAN",
+      "elevation": "ELEVATION",
+      "perspective": "3D PERSPECTIVE",
+      "schedule": "REINFORCEMENT",
+      "titleBlock": "TITLE BLOCK"
+    }
   },
   "print": {
     "dialogTitle": "Print Drawing",

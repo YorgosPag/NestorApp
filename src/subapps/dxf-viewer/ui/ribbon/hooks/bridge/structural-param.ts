@@ -15,12 +15,14 @@ import {
   concreteWeightKg,
 } from '../../../../bim/structural/concrete-grades';
 import { REBAR_DIAMETERS_MM } from '../../../../bim/structural/rebar-catalog';
+import { STIRRUP_TYPE_ORDER } from '../../../../bim/structural/reinforcement/column-reinforcement-types';
 import {
   STRUCTURAL_CODE_ORDER,
   resolveStructuralCode,
   type ColumnSectionContext,
 } from '../../../../bim/structural/codes';
 import { computeColumnReinforcementQuantities } from '../../../../bim/structural/reinforcement/column-reinforcement-compute';
+import { computeColumnConfinement } from '../../../../bim/structural/reinforcement/column-confinement';
 import type { ColumnReinforcement } from '../../../../bim/structural/reinforcement/column-reinforcement-types';
 import {
   COLUMN_STRUCTURAL_READOUT_KEYS,
@@ -59,6 +61,13 @@ export const LONGITUDINAL_DIAMETER_OPTIONS = numericOptions(REBAR_DIAMETERS_MM);
 
 /** Πλήθος διαμήκων ράβδων (τυπικά ορθογωνικής κολώνας). */
 export const LONGITUDINAL_COUNT_OPTIONS = numericOptions([4, 6, 8, 10, 12]);
+
+/** Τύπος συνδετήρα — i18n labels (κλειστός γάντζων/συγκολλητός/σπειροειδής). */
+export const STIRRUP_TYPE_OPTIONS: readonly ComboboxOption[] = STIRRUP_TYPE_ORDER.map((t) => ({
+  value: t,
+  labelKey: `ribbon.commands.columnStructural.stirrupTypeOption.${t}`,
+  isLiteralLabel: false,
+}));
 
 /** Διάμετροι συνδετήρων (mm). */
 export const STIRRUP_DIAMETER_OPTIONS = numericOptions([6, 8, 10, 12]);
@@ -134,6 +143,9 @@ export function resolveStructuralReadout(
   if (readoutKey === COLUMN_STRUCTURAL_READOUT_KEYS.ratio) {
     const { ratio } = computeColumnReinforcementQuantities(ctx, effectiveReinforcement);
     return (ratio * 100).toFixed(2);
+  }
+  if (readoutKey === COLUMN_STRUCTURAL_READOUT_KEYS.confinement) {
+    return computeColumnConfinement(ctx, effectiveReinforcement).alpha.toFixed(2);
   }
   return null;
 }

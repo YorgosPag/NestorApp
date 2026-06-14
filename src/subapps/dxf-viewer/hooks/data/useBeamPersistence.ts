@@ -40,6 +40,7 @@ import {
 import { recordBeamChange } from '../../bim/beams/beam-audit-client';
 import { bimToBoqBridge } from '../../bim/services/BimToBoqBridge';
 import { beamBoqEntity } from './beam-boq-feed';
+import { createPersistSerializer } from './persist-serializer';
 import { useBimEntityMovedPersistEffect } from './useBimEntityMovedPersistEffect';
 import { useBimEntityRestoredPersistEffect } from './useBimEntityRestoredPersistEffect';
 
@@ -139,6 +140,12 @@ export function useBeamPersistence(
   const pendingFirstSaveIdsRef = useRef<Set<string>>(new Set());
   const deletedIdsRef = useRef<Set<string>>(new Set());
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // ADR-390 Φ4 / N.7 — per-id write serializer (mirror useColumnPersistence). A
+  // freshly-drawn beam moved in the SAME tick races: the create `saveBeam` (setDoc)
+  // and the move `updateBeam` run concurrently; if the create lands LAST it clobbers
+  // the move (observed: updatedAt==createdAt, axis reverted to the drawn position).
+  // Serializing per id chains them → create commits, then move updates → DB = moved.
+  const persistSerializerRef = useRef(createPersistSerializer());
   const selectedBeamRef = useRef<BeamEntity | null>(null);
   selectedBeamRef.current = primarySelectedBeam;
 
@@ -254,8 +261,10 @@ export function useBeamPersistence(
     return () => unsubscribe();
   }, [currentLevelId, companyId, projectId, floorplanId, userId]);
 
-  // Immediate persist (used by both auto-save flush and explicit button).
-  const persist = useCallback(async (entity: BeamEntity) => {
+  // Immediate persist body — one save + one audit per call. Always invoked through
+  // the serialized `persist` wrapper below so concurrent calls for the same id
+  // (e.g. same-tick create + move) run in order instead of clobbering each other.
+  const persistOnce = useCallback(async (entity: BeamEntity) => {
     const svc = serviceRef.current;
     if (!svc) return;
     const prevParams = lastSavedParamsRef.current.get(entity.id) ?? null;
@@ -308,6 +317,16 @@ export function useBeamPersistence(
       setSaveState('error');
     }
   }, [companyId, projectId, buildingId, floorId, floorplanId]);
+
+  // Serialized persist (ADR-390 Φ4 / N.7): chains concurrent saves for the same id
+  // so a same-tick create + move (or grip param-edit) sees the committed baseline →
+  // emits one `created` then an `updated` diff, instead of the create clobbering the
+  // move. Mirror of useColumnPersistence.
+  const persist = useCallback(
+    (entity: BeamEntity) =>
+      persistSerializerRef.current.run(entity.id, () => persistOnce(entity)),
+    [persistOnce],
+  );
 
   // Auto-save debounce σε selected beam params change.
   useEffect(() => {
@@ -427,6 +446,29 @@ export function useBeamPersistence(
       if (!serviceRef.current) return;
       pendingFirstSaveIdsRef.current.add(entity.id);
       dirtyIdsRef.current.add(entity.id);
+      void persist(entity);
+    });
+    return cleanup;
+  }, [persist]);
+
+  // Param-edit persistence (ADR-390 Phase 4 — render==DB SSoT). A beam grip /
+  // ribbon param edit (commitBeamGripDrag etc.) emits `bim:beam-params-updated`
+  // but was persisted ONLY by the fragile 500ms selected-beam debounce — if the
+  // beam was deselected before it fired, the edit landed in the scene + `.scene.json`
+  // snapshot but NEVER in the per-entity doc → on reload the un-edited DB axis
+  // rendered (observed: a face-justified beam snapping back ~half-width). Persist
+  // immediately off the event (entity read from the live scene by id), so the edit
+  // reaches the SSoT regardless of selection/debounce timing. Mirror the first-save
+  // listener; `persist` is idempotent (no-op when params already saved).
+  useEffect(() => {
+    const cleanup = EventBus.on('bim:beam-params-updated', ({ beamId }) => {
+      if (!serviceRef.current) return;
+      const lm = levelManagerRef.current;
+      const levelId = lm.currentLevelId;
+      if (!levelId) return;
+      const entity = lm.getLevelScene(levelId)?.entities.find((e) => e.id === beamId);
+      if (!entity || !isBeam(entity)) return;
+      dirtyIdsRef.current.add(beamId);
       void persist(entity);
     });
     return cleanup;

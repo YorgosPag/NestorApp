@@ -145,13 +145,19 @@ function moveFoundation(entity: FoundationEntity, delta: Point2D): Partial<Scene
 }
 
 function moveBeam(entity: BeamEntity, delta: Point2D): Partial<SceneEntity> {
+  // `curveControl` is OMITTED from the base spread and re-added only when present:
+  // a straight beam has no control point, and Firestore `updateDoc` REJECTS explicit
+  // `undefined` field values ("Unsupported field value: undefined") → the per-entity
+  // beam write failed on EVERY straight-beam move, so the move never persisted
+  // (reverted on reload). Destructuring it out also scrubs a stale `curveControl:
+  // undefined` key left in-memory by a prior (buggy) move. Only a curved beam carries
+  // the shifted control point.
+  const { curveControl, ...rest } = entity.params;
   const newParams: BeamParams = {
-    ...entity.params,
+    ...rest,
     startPoint: shiftPoint3D(entity.params.startPoint, delta),
     endPoint: shiftPoint3D(entity.params.endPoint, delta),
-    curveControl: entity.params.curveControl
-      ? shiftPoint3D(entity.params.curveControl, delta)
-      : undefined,
+    ...(curveControl ? { curveControl: shiftPoint3D(curveControl, delta) } : {}),
   };
   const geometry = computeBeamGeometry(newParams);
   return { params: newParams, geometry } as unknown as Partial<SceneEntity>;

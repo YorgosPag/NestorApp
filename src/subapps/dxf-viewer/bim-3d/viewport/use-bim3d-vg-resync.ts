@@ -80,6 +80,20 @@ export function useBim3DVgResync(
       resync();
     });
 
+    // (g) ADR-456 Slice 3 — «Οπλισμός» master toggle: ο κλωβός οπλισμού χτίζεται στο
+    // `columnToMesh` (scene-build time), άρα το flip του διακόπτη πρέπει να ξανα-χτίσει τη
+    // σκηνή. Boy-Scout: το ΙΔΙΟ ισχύει για «Σοβατισμένη όψη» (ο ενιαίος silhouette σοβάς —
+    // `syncStructuralFinishSkin` — τρέχει στο ίδιο sync pass)· χωρίς αυτό το 3Δ δεν live-update
+    // στο toggle. Idempotent guard ανά πεδίο (mirror visualStyle).
+    let prevRebar = useBimRenderSettingsStore.getState().showReinforcement;
+    let prevFinish = useBimRenderSettingsStore.getState().showFinishSkin;
+    const unsubStructuralOverlays = useBimRenderSettingsStore.subscribe((state) => {
+      if (state.showReinforcement === prevRebar && state.showFinishSkin === prevFinish) return;
+      prevRebar = state.showReinforcement;
+      prevFinish = state.showFinishSkin;
+      resync();
+    });
+
     return () => {
       unsubVg();
       unsubEnvelope();
@@ -87,6 +101,7 @@ export function useBim3DVgResync(
       unsubSystems();
       unsubTextures();
       unsubVisualStyle();
+      unsubStructuralOverlays();
     };
   }, [managerRef, externalEntitiesMode, bimEntities]);
 }

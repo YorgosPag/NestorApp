@@ -70,15 +70,26 @@ function footprintCentroid(verts: readonly Pt2[]): Pt2 {
 }
 
 /**
- * True αν το footprint του host καλύπτει την κολώνα: το κέντρο Ή τουλάχιστον μία
- * γωνία του footprint της κολώνας πέφτει μέσα στο host footprint (ίδιο point-in-
- * polygon που κάνει per-corner ο resolver → η ανίχνευση δεν «attach-άρει» όταν ο
- * resolver δεν θα άλλαζε τίποτα).
+ * True αν το footprint του host καλύπτει την κολώνα.
+ *
+ * - **Πλάκα** (`requireCentroid=false`): κέντρο **Ή** τουλάχιστον μία γωνία μέσα στο host
+ *   footprint. Η πλάκα είναι **επίπεδη** → όλες οι γωνίες παίρνουν το ίδιο soffit → flat
+ *   top, οπότε το corner-overlap είναι ασφαλές (μηδέν κλίση).
+ * - **Δοκάρι** (`requireCentroid=true`): **ΜΟΝΟ** το κέντρο. Το δοκάρι είναι **στενή λωρίδα**·
+ *   ένα απλό corner-graze (το δοκάρι ακουμπά μία γωνία κι «φεύγει») δεν στηρίζει την κολώνα
+ *   από πάνω → ο per-corner resolver θα κατέβαζε ΜΟΝΟ αυτή τη γωνία → **κεκλιμένη κορυφή**
+ *   (ADR-449 wall→beam test 2026-06-14, Giorgio). Η γνήσια στήριξη δοκαριού→κολώνας
+ *   ανιχνεύεται από το `findColumnsFramedByBeam` (framing → flat top), ΟΧΙ από εδώ.
  */
-function hostCoversColumn(hostFootprint: readonly Pt2[], columnFootprint: readonly Pt2[]): boolean {
+function hostCoversColumn(
+  hostFootprint: readonly Pt2[],
+  columnFootprint: readonly Pt2[],
+  requireCentroid: boolean,
+): boolean {
   if (hostFootprint.length < 3 || columnFootprint.length < 3) return false;
   const poly = [...hostFootprint];
   if (isPointInPolygon(footprintCentroid(columnFootprint), poly)) return true;
+  if (requireCentroid) return false; // δοκάρι: corner-graze ΔΕΝ στηρίζει (framing το πιάνει)
   return columnFootprint.some((v) => isPointInPolygon({ x: v.x, y: v.y }, poly));
 }
 
@@ -101,7 +112,7 @@ export function findColumnsToAutoAttachToHost(host: Entity, entities: readonly E
     if (e.params.topBinding !== 'storey-ceiling') continue;
     const footprint = e.geometry?.footprint?.vertices;
     if (!footprint || footprint.length < 3) continue;
-    if (!hostCoversColumn(hostInput.footprint, footprint)) continue;
+    if (!hostCoversColumn(hostInput.footprint, footprint, isBeamEntity(host))) continue;
     const baseZmm = resolveColumnBaseZmm(e.params, { floorElevationMm: ACTIVE_LEVEL_FLOOR_MM });
     // ADR-441 GEN-COL — top host πρέπει να είναι πάνω από τη ΣΤΑΘΜΗ ΙΣΟΓΕΙΟΥ (FFL), όχι
     // απλώς πάνω από τη βάση: μια κολώνα που κατεβαίνει στη θεμελίωση (base<FFL) ΔΕΝ
@@ -132,7 +143,7 @@ export function findColumnsToAutoAttachBaseToHost(host: Entity, entities: readon
     if (e.params.baseBinding !== 'storey-floor') continue;
     const footprint = e.geometry?.footprint?.vertices;
     if (!footprint || footprint.length < 3) continue;
-    if (!hostCoversColumn(hostInput.footprint, footprint)) continue;
+    if (!hostCoversColumn(hostInput.footprint, footprint, isBeamEntity(host))) continue;
     const baseZmm = resolveColumnBaseZmm(e.params, { floorElevationMm: ACTIVE_LEVEL_FLOOR_MM });
     if (hostInput.topsideZmm >= baseZmm - AUTO_ATTACH_Z_GATE_MM) continue;
     out.push(e.id);

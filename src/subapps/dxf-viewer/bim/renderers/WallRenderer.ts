@@ -50,6 +50,7 @@ import {
 } from '../walls/wall-hatch-patterns';
 import { wallCutPlaneShiftCanvas } from '../geometry/cut-plane-tilt';
 import { drawCutPlaneTiltProjection, cutPlaneShiftScreenDelta } from './cut-plane-tilt-projection';
+import { wallLayerBoundaryPolylines } from '../walls/wall-layer-lines-2d';
 
 const AXIS_DASH: readonly [number, number] = [6, 4];
 
@@ -139,6 +140,7 @@ export class WallRenderer extends BaseEntityRenderer {
     } : undefined;
     this.drawFootprint(wall, _wLayerOverride);
     this.drawMaterialHatch(wall, _wLayerOverride);
+    this.drawDnaLayerLines(wall);
     this.drawAxis(wall);
 
     // ADR-404 Phase 3 — κλείσιμο translate (cut σώμα)· βάση λεπτή + connecting lines.
@@ -429,6 +431,30 @@ export class WallRenderer extends BaseEntityRenderer {
       this.ctx.arc(s.x, s.y, RC_DOT_RADIUS_PX, 0, Math.PI * 2);
       this.ctx.fill();
     }
+    this.ctx.restore();
+  }
+
+  /**
+   * ADR-413/447 · ADR-449 — per-layer boundary lines για DNA τοίχους σε κάτοψη.
+   * Συμπληρώνει το `drawMaterialHatch` (που παρακάμπτει DNA τοίχους): ζωγραφίζει τις
+   * εσωτερικές γραμμές διαχωρισμού στρώσεων (σοβάς|πυρήνας|σοβάς) ώστε η ζώνη σοβά να
+   * φαίνεται στην κάτοψη — συνεπές με το finish περίγραμμα της κολόνας στη συμβολή.
+   * REUSE pure SSoT `wallLayerBoundaryPolylines`. Skip σε extreme zoom-out (perf, mirror hatch).
+   */
+  private drawDnaLayerLines(wall: WallEntity): void {
+    if (!wall.params.dna) return;
+    if (this.transform.scale < 0.001) return;
+    const outer = wall.geometry.outerEdge.points;
+    const inner = wall.geometry.innerEdge.points;
+    if (outer.length < 2 || inner.length < 2) return;
+    const lines = wallLayerBoundaryPolylines(outer, inner, wall.params.dna);
+    if (lines.length === 0) return;
+
+    this.ctx.save();
+    this.ctx.strokeStyle = HATCH_STROKE_RGBA;
+    this.ctx.lineWidth = RENDER_LINE_WIDTHS.THIN;
+    this.ctx.setLineDash([]);
+    for (const poly of lines) this.drawPolyline(poly);
     this.ctx.restore();
   }
 

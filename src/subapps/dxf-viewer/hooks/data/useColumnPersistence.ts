@@ -452,6 +452,27 @@ export function useColumnPersistence(
     return cleanup;
   }, [persist]);
 
+  // Param-edit persistence (ADR-390 Phase 4 — render==DB SSoT). A column grip /
+  // ribbon param edit (commitColumnGripDrag etc.) emits `bim:column-params-updated`
+  // but was persisted ONLY by the fragile 500ms selected-column debounce — if the
+  // column was deselected before it fired, the edit landed in the scene + snapshot
+  // but NEVER in the per-entity doc. Persist immediately off the event (entity read
+  // from the live scene by id), so the edit reaches the SSoT regardless of
+  // selection/debounce timing. Mirror beam; `persist` is serialized + idempotent.
+  useEffect(() => {
+    const cleanup = EventBus.on('bim:column-params-updated', ({ columnId }) => {
+      if (!serviceRef.current) return;
+      const lm = levelManagerRef.current;
+      const levelId = lm.currentLevelId;
+      if (!levelId) return;
+      const entity = lm.getLevelScene(levelId)?.entities.find((e) => e.id === columnId);
+      if (!entity || !isColumn(entity)) return;
+      dirtyIdsRef.current.add(columnId);
+      void persist(entity);
+    });
+    return cleanup;
+  }, [persist]);
+
   // Delete-requested listener (bridge emits μετά από confirm).
   useEffect(() => {
     const cleanup = EventBus.on('bim:column-delete-requested', ({ columnId }) => {

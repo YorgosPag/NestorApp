@@ -47,7 +47,7 @@ import { polygonArea, polygonBbox } from './shared/polygon-utils';
 import { buildIShapeProfile } from './shared/i-shape-profile';
 import { mmToSceneUnits } from '../../utils/scene-units';
 import { columnFootprintDims } from '../columns/column-footprint-dims';
-import { centredPolyToWorld, type CentredAnchorFrame } from '../grips/centred-anchor-frame';
+import { centredLocalToWorld, centredPolyToWorld, type CentredAnchorFrame } from '../grips/centred-anchor-frame';
 
 const MM_TO_M = 1 / 1000;
 
@@ -317,6 +317,31 @@ function buildCompositeLocal(s: number, composite?: ColumnCompositeParams): Poin
     ];
   }
   return polygonToLocal(poly, s);
+}
+
+/**
+ * ADR-456 Slice 3 — μεταφέρει LOCAL mm σημεία (κεντραρισμένα στο centroid της
+ * διατομής, ΠΡΙΝ anchor/rotation/scale) σε WORLD (scene units), μέσω του ΙΔΙΟΥ
+ * `centredLocalToWorld` SSoT που χρησιμοποιεί το `transformFootprint`. Έτσι τα
+ * παράγωγα overlays (θέσεις οπλισμού) ακολουθούν ΑΚΡΙΒΩΣ rotation/anchor της
+ * κολώνας — render == footprint, μηδέν per-engine cos/sin. Circular: anchor πάντα
+ * center, μηδέν rotation (όπως ο `transformFootprint`).
+ */
+export function columnLocalMmToWorld(params: ColumnParams, localMm: readonly Point2D[]): Point2D[] {
+  const s = mmToSceneUnits(params.sceneUnits ?? 'mm');
+  if (params.kind === 'circular') {
+    return localMm.map((p) => ({ x: params.position.x + p.x * s, y: params.position.y + p.y * s }));
+  }
+  const { dimX, dimY } = columnFootprintDims(params);
+  const frame: CentredAnchorFrame = {
+    position: params.position,
+    rotationDeg: params.rotation,
+    scale: s,
+    anchorOffset: ANCHOR_OFFSETS[params.anchor],
+    dimX,
+    dimY,
+  };
+  return localMm.map((p) => centredLocalToWorld(frame, p));
 }
 
 // ─── Anchor + rotation transform ────────────────────────────────────────────

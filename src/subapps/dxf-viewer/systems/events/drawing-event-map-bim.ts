@@ -312,6 +312,8 @@ export interface BimEventMap {
   'bim:entities-attached': { entities: ReadonlyArray<AnySceneEntity> };
   /** ADR-369 Q8.2 — ribbon IFC button → open PsetEditorHost dialog. */
   'bim:pset-editor-open': { entityId: string; levelId: string; entityType: string };
+  /** ADR-457 — column contextual «Λεπτομέρεια Οπλισμού» → open ColumnDetailHost dialog. */
+  'bim:column-detail-requested': { columnId: string; levelId: string };
   /** ADR-369 Q8.3 — ribbon IFC Export button → IfcExportHost downloads .ifc file. */
   'bim:ifc-export-requested': {
     /** Scope filter — if omitted, exports every building in project. */

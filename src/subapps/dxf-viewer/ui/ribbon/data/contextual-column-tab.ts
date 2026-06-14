@@ -37,6 +37,7 @@ import {
   CONCRETE_GRADE_OPTIONS,
   LONGITUDINAL_DIAMETER_OPTIONS,
   LONGITUDINAL_COUNT_OPTIONS,
+  STIRRUP_TYPE_OPTIONS,
   STIRRUP_DIAMETER_OPTIONS,
   STIRRUP_SPACING_OPTIONS,
   STIRRUP_CRITICAL_SPACING_OPTIONS,
@@ -480,6 +481,19 @@ export const CONTEXTUAL_COLUMN_TAB: RibbonTab = {
         {
           isInFlyout: false,
           buttons: [
+            // ADR-456 Slice 3 — «Οπλισμός» εμφάνιση/απόκρυψη μέσα στο contextual tab
+            // της κολώνας (ίδιο widget με την καρτέλα Προβολή· κοινό per-view flag).
+            {
+              type: 'widget',
+              size: 'small',
+              widgetId: 'show-reinforcement-toggle',
+              command: {
+                id: 'view.reinforcement',
+                labelKey: 'ribbon.commands.reinforcement.label',
+                icon: '',
+                commandKey: 'show-reinforcement-toggle',
+              },
+            },
             {
               type: 'combobox',
               size: 'small',
@@ -540,6 +554,17 @@ export const CONTEXTUAL_COLUMN_TAB: RibbonTab = {
                 commandKey: COLUMN_STRUCTURAL_KEYS.longitudinalCount,
                 comboboxWidthPx: 80,
                 options: LONGITUDINAL_COUNT_OPTIONS,
+              },
+            },
+            {
+              type: 'combobox',
+              size: 'small',
+              command: {
+                id: 'column.structural.stirrupType',
+                labelKey: 'ribbon.commands.columnStructural.stirrupType',
+                commandKey: COLUMN_STRUCTURAL_KEYS.stirrupType,
+                comboboxWidthPx: 150,
+                options: STIRRUP_TYPE_OPTIONS,
               },
             },
             {
@@ -623,6 +648,44 @@ export const CONTEXTUAL_COLUMN_TAB: RibbonTab = {
                 commandKey: COLUMN_STRUCTURAL_READOUT_KEYS.ratio,
                 comboboxWidthPx: 90,
                 options: [],
+              },
+            },
+            {
+              type: 'combobox',
+              size: 'small',
+              command: {
+                id: 'column.structural.confinement',
+                labelKey: 'ribbon.commands.columnStructural.confinement',
+                commandKey: COLUMN_STRUCTURAL_READOUT_KEYS.confinement,
+                comboboxWidthPx: 110,
+                options: [],
+              },
+            },
+          ],
+        },
+      ],
+    },
+    {
+      // ADR-457 — «Λεπτομέρεια Οπλισμού»: ανοίγει φύλλο σχεδίου (5 ενότητες) με
+      // τον οπλισμό + πλήρη διαστασιολόγηση + εξαγωγή PDF. Visible μόνο για RC
+      // kinds (ίδιο gating με το structural panel — οπλισμός υπάρχει μόνο σε RC).
+      id: 'column-detail',
+      labelKey: 'ribbon.panels.columnDetail',
+      visibilityKey: COLUMN_RIBBON_VISIBILITY_KEYS.structural,
+      rows: [
+        {
+          isInFlyout: false,
+          buttons: [
+            {
+              type: 'simple',
+              size: 'large',
+              command: {
+                id: 'column.reinforcementDetail',
+                labelKey: 'ribbon.commands.columnEditor.reinforcementDetail',
+                tooltipKey: 'ribbon.commands.columnEditor.reinforcementDetailTooltip',
+                icon: 'column-reinforcement-detail',
+                commandKey: COLUMN_RIBBON_KEYS_ACTIONS.reinforcementDetail,
+                action: COLUMN_RIBBON_KEYS_ACTIONS.reinforcementDetail,
               },
             },
           ],

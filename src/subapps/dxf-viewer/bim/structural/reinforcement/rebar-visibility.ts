@@ -1,0 +1,20 @@
+/**
+ * ADR-456 Slice 3 — master view-level gate «Οπλισμός» (rebar visibility).
+ *
+ * ΕΝΑ SSoT σημείο που διαβάζουν ΚΑΙ ο 2D orchestrator (`DxfRenderer.render`) ΚΑΙ ο
+ * 3D converter (`bim-three-structural-converters`): non-React, event-time read του
+ * per-view flag `showReinforcement` (Revit visibility-only — καθαρά display· το
+ * schedule/BOQ μετράει πάντα τον οπλισμό όταν οριστεί). Mirror του
+ * `isStructuralFinishVisible` (ADR-449).
+ *
+ * Opt-in: default OFF (ο οπλισμός είναι λεπτομέρεια — δείχνεται όταν ζητηθεί).
+ *
+ * @see docs/centralized-systems/reference/adrs/ADR-456-structural-quantities-reinforcement.md
+ */
+
+import { useBimRenderSettingsStore } from '../../../state/bim-render-settings-store';
+
+/** True όταν ο οπλισμός πρέπει να προβάλλεται (default OFF). Event-time, μηδέν subscription. */
+export function isReinforcementVisible(): boolean {
+  return useBimRenderSettingsStore.getState().showReinforcement ?? false;
+}

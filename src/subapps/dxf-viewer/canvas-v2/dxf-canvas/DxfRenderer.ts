@@ -29,6 +29,10 @@ import { buildDimensionLookup, buildSlabOpeningsBySlab, buildOpeningsByWall, bui
 import { isStructuralFinishVisible } from '../../bim/finishes/structural-finish-visibility';
 // ADR-449 Slice X2 μέρος Β — ΕΝΑ scene-level pass ζωγραφίζει την ΕΝΙΑΙΑ silhouette (κοινή με 3Δ).
 import { drawStructuralFinishOutline } from '../../bim/renderers/structural-finish-outline-2d';
+// ADR-456 Slice 3 — 2Δ σχεδίαση οπλισμού κολώνας (scene-level pass, gated, κοινό geometry SSoT με 3Δ).
+import { isReinforcementVisible } from '../../bim/structural/reinforcement/rebar-visibility';
+import { drawColumnRebar2D } from '../../bim/renderers/column-rebar-2d';
+import { mmToSceneUnits } from '../../utils/scene-units';
 // DxfEntityUnion → Entity mapper (extracted file-size split, 2026-05-25).
 import { buildEntityModelFromDxf } from './dxf-renderer-entity-model';
 export class DxfRenderer {
@@ -204,7 +208,34 @@ export class DxfRenderer {
     // `syncStructuralFinishSkin`): μετά τα entities, ζωγραφίζει το merged-silhouette outline
     // από την ΙΔΙΑ SSoT με το 3Δ → ίδιες γωνίες/συμβολές, μηδέν διπλή γραμμή.
     this.drawStructuralFinishSkin2D(scene.entities, transform, actualViewport);
+    // ADR-456 Slice 3 — οπλισμός κολώνας (διαμήκεις κουκκίδες + στεφάνι) ως scene-level overlay
+    // μέσα στο cached normal-state bitmap (ίδιο pattern με τον σοβά)· gated από `showReinforcement`.
+    this.drawColumnReinforcement2D(scene.entities, transform, actualViewport);
     this.ctx.restore();
+  }
+
+  /**
+   * ADR-456 Slice 3 — ζωγραφίζει τον οπλισμό ΟΛΩΝ των ορθογωνικών κολώνων με ορισμένο
+   * `reinforcement`, ως scene-level overlay μέσα στο cached normal-state bitmap. Καταναλώνει
+   * το ΙΔΙΟ geometry SSoT (`computeColumnRebarLayout` + `columnLocalMmToWorld`) με το 3Δ →
+   * ίδιες θέσεις ράβδων/στεφανιών. No-op όταν ο διακόπτης «Οπλισμός» είναι κλειστός. ADR-040:
+   * pure draw, zero subscriptions.
+   */
+  private drawColumnReinforcement2D(
+    entities: readonly DxfEntityUnion[],
+    transform: ViewTransform,
+    actualViewport: Viewport,
+  ): void {
+    if (!isReinforcementVisible()) return;
+    const worldToScreen = (p: Point2D): Point2D =>
+      CoordinateTransforms.worldToScreen(p, transform, actualViewport);
+    for (const entity of entities) {
+      if (entity.type !== 'column' || !entity.visible) continue;
+      const p = entity.params;
+      if (p.kind !== 'rectangular' || !p.reinforcement) continue;
+      const pxPerMm = mmToSceneUnits(p.sceneUnits ?? 'mm') * transform.scale;
+      drawColumnRebar2D(this.ctx, p, pxPerMm, worldToScreen);
+    }
   }
 
   /**

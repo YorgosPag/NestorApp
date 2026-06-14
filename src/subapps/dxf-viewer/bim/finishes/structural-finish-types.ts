@@ -78,14 +78,25 @@ export interface FinishFaceSegment {
   /** m — μήκος της εκτεθειμένης υπο-ακμής στο plan. */
   readonly lengthM: number;
   /**
-   * ADR-449 Slice 10 — το άκρο `a` είναι **junction** (butt-join): ακουμπά γειτονικό
-   * δομικό στοιχείο (obstacle) → ο σοβάς πρέπει να κλείνει **τετράγωνα** (corner-fill,
-   * συνεχής γραμμή), ΟΧΙ 45° chamfer (που αφήνει τριγωνικό κενό στις flush συμβολές
-   * «από κάναβο» — ADR-441). `undefined`/`false` = γνήσιο ελεύθερο άκρο → chamfer.
+   * ADR-449 Slice 10 — το άκρο `a` είναι **structural junction** (corner-fill): ακουμπά
+   * γειτονικό **δομικό** στοιχείο (κολόνα/δοκάρι, flush framing «από κάναβο» — ADR-441) →
+   * ο σοβάς **ορθογώνια EXTEND** (core+outer μαζί έξω → κάθετο end-cap, συνεχής γραμμή),
+   * ΟΧΙ 45° chamfer (που αφήνει τριγωνικό κενό). `undefined`/`false` = δεν ακουμπά δομικό
+   * γείτονα. ⚠️ ΜΟΝΟ δομικά στοιχεία — ΟΧΙ τοίχοι (βλ. {@link aSquareEnd}).
    */
   readonly aJunction?: boolean;
-  /** ADR-449 Slice 10 — το άκρο `b` είναι junction (βλ. {@link aJunction}). */
+  /** ADR-449 Slice 10 — το άκρο `b` είναι structural junction (βλ. {@link aJunction}). */
   readonly bJunction?: boolean;
+  /**
+   * ADR-449 Δρόμος Β (wall junction) — το άκρο `a` ακουμπά **τοίχο** (όχι δομικό
+   * στοιχείο): ο σοβάς σταματά **τετράγωνα/καθαρά** πάνω στην παρειά του τοίχου (ο τοίχος
+   * έχει **δικό** του σοβά — layered DNA, ADR-447), ΧΩΡΙΣ chamfer ΚΑΙ ΧΩΡΙΣ junction
+   * EXTEND. Χωρίς αυτό, η Slice 10 corner-fill (σχεδιασμένη για κολόνα↔δοκάρι) **υπερ-
+   * εκτεινόταν μέσα στο σώμα του τοίχου** (#A). `undefined`/`false` = δεν ακουμπά τοίχο.
+   */
+  readonly aSquareEnd?: boolean;
+  /** ADR-449 Δρόμος Β — το άκρο `b` ακουμπά τοίχο → square butt (βλ. {@link aSquareEnd}). */
+  readonly bSquareEnd?: boolean;
 }
 
 /**

@@ -5,6 +5,7 @@ import { DxfFirestoreService } from '../../../services/dxf-firestore.service';
 import { useAutoSaveSceneManager } from '../../../hooks/scene/useAutoSaveSceneManager';
 import { onSuperAdminActiveCompanyChange } from '@/services/firestore/super-admin-active-company';
 import { isCrossFloorSceneLink } from '../cross-floor-link';
+import { reconcileLoadedSceneBim } from '../scene-bim-load-policy';
 import type { Level } from '../config';
 
 // 🔺 FIXED: Helper για ΠΡΑΓΜΑΤΙΚΑ κενή σκηνή χωρίς default layer
@@ -157,7 +158,21 @@ export function useLevelSceneLoader({
         }
 
         if (fileRecord?.scene && Array.isArray(fileRecord.scene.entities) && fileRecord.scene.layersById != null) {
-          sceneManager.setLevelScene(currentLevelId, fileRecord.scene, 'load');
+          // 🏢 ADR-390 Phase 4 — active-floor SSoT load. The `.scene.json` snapshot is
+          // a DERIVED cache (scene-write-origin.ts); its embedded BIM entities can be
+          // STALE vs the authoritative per-entity Firestore docs (e.g. a column saved
+          // `attached` in the snapshot while its `floorplan_columns` doc is reverted to
+          // `storey-ceiling` → snapshot rendered a sloped top). Drop the snapshot BIM;
+          // the per-entity subscriptions (useXPersistence) repopulate it from the DB
+          // (SSoT). Preserve any BIM already merged in-memory (a subscription that
+          // raced ahead of the load) so it is never clobbered/lost. The snapshot is
+          // unchanged on save → multi-floor 3D (ADR-399) keeps reading other floors'
+          // BIM from their snapshots.
+          const reconciled = reconcileLoadedSceneBim(
+            fileRecord.scene,
+            sceneManager.getLevelScene(currentLevelId),
+          );
+          sceneManager.setLevelScene(currentLevelId, reconciled, 'load');
           // Set the filename for auto-save context
           if (fileRecord.fileName && sceneManager.setCurrentFileName) {
             sceneManager.setCurrentFileName(fileRecord.fileName);

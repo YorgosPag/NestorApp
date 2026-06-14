@@ -95,6 +95,8 @@ export const COLUMN_RIBBON_KEYS_ACTIONS = {
   fromGridOuter: 'column.actions.fromGridOuter',
   // ADR-456 Slice 2 — «Auto οπλισμός»: code-suggested ελάχιστος-έγκυρος οπλισμός.
   autoReinforce: 'column.actions.autoReinforce',
+  // ADR-457 — «Λεπτομέρεια Οπλισμού»: ανοίγει το φύλλο σχεδίου (5-region detail sheet).
+  reinforcementDetail: 'column.actions.reinforcementDetail',
 } as const;
 
 const COLUMN_ACTION_KEY_SET: ReadonlySet<string> = new Set<string>(
@@ -200,6 +202,8 @@ export const COLUMN_STRUCTURAL_KEYS = {
   code: 'column.structural.code',
   /** Κατηγορία σκυροδέματος (per-element, EN 1992-1-1 Table 3.1). */
   concreteGrade: 'column.structural.concreteGrade',
+  /** Τύπος συνδετήρα — closed-hooked/closed-welded/spiral (string, per-element). */
+  stirrupType: 'column.structural.stirrupType',
   /** Διαμήκης οπλισμός — διάμετρος ράβδου (mm). */
   longitudinalDiameter: 'column.structural.longitudinalDiameter',
   /** Διαμήκης οπλισμός — πλήθος ράβδων. */
@@ -222,6 +226,8 @@ export const COLUMN_STRUCTURAL_READOUT_KEYS = {
   steelWeight: 'column.structural.readout.steelWeight',
   /** % — ποσοστό διαμήκους οπλισμού ρ = As/Ac. */
   ratio: 'column.structural.readout.ratio',
+  /** α — συντελεστής περίσφιγξης EC8 (αₙ·αₛ, 0..1), εξαρτάται από τύπο συνδετήρα. */
+  confinement: 'column.structural.readout.confinement',
 } as const;
 
 /** Πεδίο του `ColumnReinforcement` που χειρίζεται ένα αριθμητικό structural key. */

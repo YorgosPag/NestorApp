@@ -128,6 +128,19 @@ describe('computeMiteredOuter — chamfer open ends (ADR-449 Slice 6 fix)', () =
     expect(aCore[0].x).toBeCloseTo(0, 6);
     expect(aOuter[0].x).toBeCloseTo(15, 6);
   });
+
+  // ADR-449 Δρόμος Β (#A) — square end (ακουμπά ΤΟΙΧΟ): καθαρό τετράγωνο σταμάτημα — ούτε
+  // chamfer ούτε extend → core ΚΑΙ outer μένουν στη θέση της κορυφής (μηδέν over-reach).
+  it('square άκρο (wall butt) → ούτε chamfer ούτε extend (core+outer αμετάβλητα)', () => {
+    const segsS: FinishFaceSegment[] = [
+      { ...seg(0, 125, 1000, 125), aSquareEnd: false, bSquareEnd: true },
+      seg(1000, -125, 0, -125),
+    ];
+    const { bOuter, bCore } = computeMiteredOuter(segsS, offsets, true);
+    // Square b: ΟΥΤΕ extend (όχι 1015) ΟΥΤΕ chamfer (όχι 985) → μένει 1000.
+    expect(bCore[0].x).toBeCloseTo(1000, 6);
+    expect(bOuter[0].x).toBeCloseTo(1000, 6);
+  });
 });
 
 describe('beamToMesh integration (ADR-449 Slice 4)', () => {

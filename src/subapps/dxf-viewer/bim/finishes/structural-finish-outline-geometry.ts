@@ -47,8 +47,8 @@ function lineIntersect(p0: Vec2, d0: Vec2, p1: Vec2, d1: Vec2): Vec2 | null {
 const MITER_LIMIT_FACTOR = 4;
 
 /**
- * ADR-449 Slice 6/10 — κλείσιμο των **ΑΝΟΙΧΤΩΝ** άκρων (που δεν mitered-ηκαν με
- * γειτονική όψη του ΙΔΙΟΥ στοιχείου). Δύο περιπτώσεις, ανάλογα αν το άκρο ακουμπά γείτονα:
+ * ADR-449 Slice 6/10 + Δρόμος Β — κλείσιμο των **ΑΝΟΙΧΤΩΝ** άκρων (που δεν mitered-ηκαν με
+ * γειτονική όψη του ΙΔΙΟΥ στοιχείου). **Τρεις** περιπτώσεις, ανάλογα με το είδος του γείτονα:
  *
  *  - **Ελεύθερο** άκρο (open space, `!aJunction`) → **chamfer 45°**: ΜΟΝΟ η εξωτερική γωνία
  *    τραβιέται **μέσα** κατά το πάχος (το core μένει) → λοξό end-cap (φαλτσογωνιά) αντί για
@@ -60,6 +60,10 @@ const MITER_LIMIT_FACTOR = 4;
  *    μπαίνει στο σώμα του όμορου (Giorgio 2026-06-14: v1 square άφηνε κενό· v2 outer-only EXTEND
  *    έκανε λοξό end-cap που διείσδυε· v3 = core+outer EXTEND = ορθογώνια κάθετη τομή). Γεμίζει
  *    την κάθετη γωνία ΚΑΙ overlap-άρει σε collinear συνέχεια → ο σοβάς **κλείνει**, μηδέν προεξοχή.
+ *  - **Wall butt** άκρο (`seg.aSquareEnd/bSquareEnd` — ακουμπά **τοίχο**, ΟΧΙ δομικό στοιχείο,
+ *    Δρόμος Β) → **καθαρό τετράγωνο σταμάτημα** (no-op): ούτε chamfer ούτε extend. Ο τοίχος έχει
+ *    **δικό** του σοβά (layered DNA, ADR-447) → ΜΗΝ εκτείνεσαι μέσα του (αλλιώς #A over-reach) ΚΑΙ
+ *    ΜΗΝ κάνεις chamfer (που θα άφηνε τριγωνικό κενό στην collinear flush όψη).
  *
  * Clamp στο μισό μήκος για μικρές όψεις (μηδέν inversion στο chamfer/extend).
  */
@@ -88,6 +92,9 @@ function closeOpenOuterEnds(
         // Ορθογώνια EXTEND έξω (−άξονας): core + outer μαζί → κάθετο end-cap, corner-fill.
         aCore[i] = { x: aCore[i].x - ux, y: aCore[i].y - uy };
         aOuter[i] = { x: aOuter[i].x - ux, y: aOuter[i].y - uy };
+      } else if (segs[i].aSquareEnd) {
+        // Δρόμος Β (wall butt): καθαρό τετράγωνο σταμάτημα στην παρειά του τοίχου — ούτε
+        // chamfer ούτε extend (ο τοίχος έχει δικό του σοβά). Αφήνουμε core/outer ως έχουν.
       } else {
         // Chamfer 45°: μόνο outer μέσα (+άξονας) → λοξό end-cap σε ελεύθερο άκρο.
         aOuter[i] = { x: aOuter[i].x + ux, y: aOuter[i].y + uy };
@@ -97,6 +104,8 @@ function closeOpenOuterEnds(
       if (segs[i].bJunction) {
         bCore[i] = { x: bCore[i].x + ux, y: bCore[i].y + uy };
         bOuter[i] = { x: bOuter[i].x + ux, y: bOuter[i].y + uy };
+      } else if (segs[i].bSquareEnd) {
+        // Δρόμος Β (wall butt): καθαρό τετράγωνο σταμάτημα (βλ. παραπάνω).
       } else {
         bOuter[i] = { x: bOuter[i].x - ux, y: bOuter[i].y - uy };
       }

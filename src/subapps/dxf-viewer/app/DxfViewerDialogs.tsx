@@ -31,7 +31,7 @@ import {
   DxfImportModal, SimpleProjectDialog, FloorplanImportWizard, ConstructionLayerScaffoldDialog,
   DxfFindReplaceHost, DxfSymbolPickerHost, RenumberOpeningsHost, OpeningTagStyleHost,
   OpeningSchedulePdfHost, ThermalEnvelopeHost, BimScheduleHost, AdminLayerManagerDialogHost,
-  DxfAiChatPanel, ColumnPerimeterConfirmDialog, PrintHost,
+  DxfAiChatPanel, ColumnPerimeterConfirmDialog, PrintHost, ColumnDetailHost,
 } from './dxf-viewer-lazy-components';
 
 type LevelManager = ReturnType<typeof useLevels>;
@@ -138,6 +138,8 @@ export function DxfViewerDialogs(props: DxfViewerDialogsProps): React.JSX.Elemen
       <React.Suspense fallback={hiddenFallback}><BimScheduleHost selectionIds={selectionIds} /></React.Suspense>
       {/* ADR-453 — Print/Export («Εκτύπωση») dialog (opened via Analyze → Εκτύπωση). */}
       <React.Suspense fallback={hiddenFallback}><PrintHost /></React.Suspense>
+      {/* ADR-457 — Column Reinforcement Detail Sheet (opened via column contextual tab). */}
+      <React.Suspense fallback={hiddenFallback}><ColumnDetailHost levelManager={levelManager} /></React.Suspense>
       {/* ADR-391 — AdminLayerManager modal (opened via View tab button or Ctrl+L). */}
       <React.Suspense fallback={hiddenFallback}><AdminLayerManagerDialogHost projectId={levelManager.saveContext?.projectId ?? null} /></React.Suspense>
       {USE_AI_DRAWING_ASSISTANT && (

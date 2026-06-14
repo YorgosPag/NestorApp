@@ -255,14 +255,13 @@ export function computeColumnFinishFaces(
   // από τη σύνδεση ΧΩΡΙΣ εγκάρσια συρρίκνωση του remnant (μηδέν κενό στη γωνιακή συμβολή).
   // Cross-type → κανένα beam δεν είναι «εαυτός» της κολόνας (μηδέν self-filter).
   const dCanvas = STRUCTURAL_JOIN_TOL_MM * s;
+  const beamObstacles = beams.map((b) => beamObstaclePolygon(b, dCanvas));
   return resolveStructuralFinishFaces({
     coreFootprint: coreFootprint.map(toPt2),
     heightMm,
     spec,
-    obstacles: [
-      ...walls.map(wallFootprintPolygon),
-      ...beams.map((b) => beamObstaclePolygon(b, dCanvas)),
-    ],
+    obstacles: [...walls.map(wallFootprintPolygon), ...beamObstacles],
+    junctionObstacles: beamObstacles, // ADR-449 Δρόμος Β: ΜΟΝΟ δοκάρια→corner-fill· wall-cut→square butt (#A)
     classify,
     unitToMeters: (1 / s) * MM_TO_M,
   });
@@ -415,14 +414,13 @@ export function computeBeamFinishFaces(
   // η όψη φτάνει τη γωνία· σε πραγματικό overlap (manual) → coveredIntervals κόβει σωστά
   // χωρίς tolerance. (Η isotropic dilation εδώ «έτρωγε» 10mm από την όψη → κενό.)
   // Cross-type → καμία κολόνα δεν είναι «εαυτός» του δοκαριού (μηδέν self-filter).
+  const columnObstacles = columns.map((c) => c.geometry.footprint.vertices.map(toPt2));
   return resolveStructuralFinishFaces({
     coreFootprint: outline.map(toPt2),
     heightMm: depthMm,
     spec,
-    obstacles: [
-      ...coveringWalls.map(wallFootprintPolygon),
-      ...columns.map((c) => c.geometry.footprint.vertices.map(toPt2)),
-    ],
+    obstacles: [...coveringWalls.map(wallFootprintPolygon), ...columnObstacles],
+    junctionObstacles: columnObstacles, // ADR-449 Δρόμος Β: ΜΟΝΟ κολόνες→corner-fill· wall-cut→square (#A)
     classify,
     unitToMeters: (1 / s) * MM_TO_M,
     // Κράτα μόνο ακμές ∥ άξονα (πλάγιες όψεις)· απόκλεισε τα άκρα (⊥ άξονα).

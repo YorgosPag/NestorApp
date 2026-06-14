@@ -24,6 +24,12 @@ import { computeWallOpeningPieces, type WallTopLocalFn, type WallBaseLocalFn, ty
 import { buildSlopedWallPieceGeometry, buildWallLoftBandGeometry } from './wall-piece-geometry';
 import { buildColumnPrismGeometry } from './column-piece-geometry';
 import { isMultiLayerWall, splitPieceByLayers } from './wall-layer-geometry';
+import {
+  pullBackStraightWallEndsFromColumns,
+  WALL_COLUMN_PULLBACK_MM,
+  WALL_COLUMN_BUTT_TOL_MM,
+} from './wall-column-pullback-3d';
+import { mmToSceneUnits } from '../../utils/scene-units';
 import { buildMultiLayerSolidWall } from './wall-multilayer-solid-3d';
 import { ensureWorldUvs } from './bim-uv-helpers';
 import {
@@ -291,12 +297,41 @@ export function wallToMesh(
   baseProfile?: WallBaseProfile,
   topClip?: WallTopClipContext,
   nominalHeightMm?: number,
+  columns: readonly (readonly Point3D[])[] = [],
 ): THREE.Object3D | null {
   // ADR-448 Phase 1b — when `topBinding='storey-ceiling'` resolves a real storey
   // ceiling, render at that height (Revit «Top: Up to Level»). Stored `params.height`
   // is the override; without a storey context `nominalHeightMm` === it → no-op.
-  const renderWall = (nominalHeightMm !== undefined && Math.abs(nominalHeightMm - wall.params.height) > 1e-6)
-    ? { ...wall, params: { ...wall.params, height: nominalHeightMm } }
+  const heightMm = (nominalHeightMm !== undefined && Math.abs(nominalHeightMm - wall.params.height) > 1e-6)
+    ? nominalHeightMm : undefined;
+  // ADR-449 #2/#C — υποχώρησε άκρη ίσιου τοίχου που κουμπώνει σε κολόνα ΜΑΚΡΙΑ της κατά
+  // τον άξονα (3Δ-only, σπάει το coincident end-cap → τέλος z-fight· #C: μηδέν geometry
+  // μέσα στην κολόνα → δεν διαρρέει στο cut-plane fast-path). `null` όταν καμία άκρη δεν
+  // κουμπώνει → renderWall ≡ wall (byte-for-byte). 2Δ/BOQ/finish-obstacle = αρχικό wall.
+  const pullBack = wall.kind === 'straight'
+    ? pullBackStraightWallEndsFromColumns(
+        wall.geometry, wall.params.start, wall.params.end, columns,
+        WALL_COLUMN_PULLBACK_MM * mmToSceneUnits(wall.params.sceneUnits),
+        WALL_COLUMN_BUTT_TOL_MM * mmToSceneUnits(wall.params.sceneUnits),
+      )
+    : null;
+  const renderWall = (heightMm !== undefined || pullBack)
+    ? {
+        ...wall,
+        params: {
+          ...wall.params,
+          ...(heightMm !== undefined ? { height: heightMm } : {}),
+          ...(pullBack ? { start: pullBack.start, end: pullBack.end } : {}),
+        },
+        geometry: pullBack
+          ? {
+              ...wall.geometry,
+              outerEdge: { ...wall.geometry.outerEdge, points: pullBack.outer },
+              innerEdge: { ...wall.geometry.innerEdge, points: pullBack.inner },
+              axisPolyline: { ...wall.geometry.axisPolyline, points: pullBack.axis },
+            }
+          : wall.geometry,
+      }
     : wall;
   const coreLayer = wall.params.dna?.layers.find((l) => l.side === 'core');
   const matId = coreLayer?.materialId ?? CATEGORY_MAT_ID[wall.params.category] ?? 'mat-concrete';
@@ -349,8 +384,8 @@ export function wallToMesh(
   }
 
   const shape = buildWallShape(
-    wall.geometry.outerEdge.points,
-    wall.geometry.innerEdge.points,
+    renderWall.geometry.outerEdge.points,
+    renderWall.geometry.innerEdge.points,
   );
   if (!shape) return null;
 

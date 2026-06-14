@@ -90,6 +90,10 @@ const BimRenderSettingsSchema = z.object({
   showHeatLoad: z.boolean().optional(),
   // ADR-449 Slice 5 — structural finish-skin master toggle «Σοβατισμένη όψη».
   showFinishSkin: z.boolean().optional(),
+  // ADR-456 Slice 3 — reinforcement (οπλισμός) master toggle. Χωρίς αυτό το πεδίο,
+  // το persist gateway έκοβε το `showReinforcement` → ο διακόπτης «επανερχόταν» σε OFF
+  // μετά από κάθε εντολή (το `useBimRenderSettingsSync` ξαναφόρτωνε stale settings).
+  showReinforcement: z.boolean().optional(),
   // ADR-452 — cut-plane (Revit View Range) hide-gate master toggle.
   cutPlaneActive: z.boolean().optional(),
 });

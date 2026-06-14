@@ -45,8 +45,22 @@ interface FinishResolveInput {
   readonly heightMm: number;
   /** Per-element πρόθεση σοβά (υλικά + πάχος). */
   readonly spec: StructuralFinishSpec;
-  /** Footprints τοίχων (ίδιες μονάδες) που καλύπτουν παρειές. */
+  /**
+   * Footprints **coverage obstacles** (ίδιες μονάδες) που καλύπτουν παρειές — τοίχοι ΚΑΙ
+   * (per-element path) δομικοί γείτονες κολόνα/δοκάρι. Κόβουν τα `coveredIntervals`. Για το
+   * πώς κλείνει το ΑΚΡΟ μιας exposed υπο-ακμής (square vs corner-fill) βλ. `junctionObstacles`.
+   */
   readonly obstacles: readonly (readonly Pt2[])[];
+  /**
+   * ADR-449 Δρόμος Β — footprints **ΔΟΜΙΚΩΝ** γειτόνων (κολόνα/δοκάρι) που δικαιολογούν
+   * **corner-fill EXTEND** (Slice 10) στη flush συμβολή «από κάναβο». **ΥΠΟΣΥΝΟΛΟ** των
+   * `obstacles` (τα δομικά κόβουν ΚΑΙ coverage). Άκρο που ακουμπά εδώ → `aJunction`/`bJunction`
+   * (ορθογώνια extend). Άκρο που ακουμπά `obstacle` αλλά ΟΧΙ εδώ (= τοίχος) → `aSquareEnd`/
+   * `bSquareEnd` (καθαρό butt· ο τοίχος έχει δικό του σοβά → ΟΧΙ extend μέσα του, #A fix).
+   * Default `[]` → κανένα structural junction (π.χ. silhouette: δομικά είναι unioned, ΟΧΙ
+   * obstacles → όλα τα wall-cut άκρα = square).
+   */
+  readonly junctionObstacles?: readonly (readonly Pt2[])[];
   /** Ταξινόμηση exposed υπο-ακμής σε interior/exterior. */
   readonly classify: FinishEdgeClassifier;
   /**
@@ -155,6 +169,7 @@ function buildSegment(
   classify: FinishEdgeClassifier,
   unitToMeters: number,
   obstacles: readonly (readonly Pt2[])[],
+  junctionObstacles: readonly (readonly Pt2[])[],
   junctionTol: number,
 ): FinishFaceSegment {
   const pa = lerp(a, b, t0);
@@ -165,6 +180,11 @@ function buildSegment(
   const outwardNormal: Pt2 = { x: dy, y: -dx }; // CCW polygon → outward = (dy,−dx)
   const classification: FinishClassification = classify(mid, outwardNormal);
   const materialId = classification === 'exterior' ? spec.exteriorMaterialId : spec.interiorMaterialId;
+  // ADR-449 — διάκριση ανά είδος γείτονα: δομικό (κολόνα/δοκάρι) → junction (corner-fill
+  // EXTEND)· τοίχος (obstacle αλλά ΟΧΙ junctionObstacle) → square butt (ο τοίχος έχει δικό
+  // του σοβά → ΜΗΝ εκτείνεσαι μέσα του, #A). Το junction υπερισχύει του square.
+  const aJunction = pointNearObstacle(pa, junctionObstacles, junctionTol);
+  const bJunction = pointNearObstacle(pb, junctionObstacles, junctionTol);
   return {
     a: { x: pa.x, y: pa.y },
     b: { x: pb.x, y: pb.y },
@@ -172,9 +192,10 @@ function buildSegment(
     materialId,
     thickness: spec.thickness,
     lengthM: dist(pa, pb) * unitToMeters,
-    // ADR-449 Slice 10 — άκρο που ακουμπά γείτονα (obstacle) → junction → square butt-join.
-    aJunction: pointNearObstacle(pa, obstacles, junctionTol),
-    bJunction: pointNearObstacle(pb, obstacles, junctionTol),
+    aJunction,
+    bJunction,
+    aSquareEnd: !aJunction && pointNearObstacle(pa, obstacles, junctionTol),
+    bSquareEnd: !bJunction && pointNearObstacle(pb, obstacles, junctionTol),
   };
 }
 
@@ -183,6 +204,7 @@ function buildSegment(
  */
 export function resolveStructuralFinishFaces(input: FinishResolveInput): StructuralFinishFaces {
   const { coreFootprint, heightMm, spec, obstacles, classify, unitToMeters } = input;
+  const junctionObstacles = input.junctionObstacles ?? [];
   const minT = input.minExposedT ?? 1e-6;
   const heightM = Math.max(0, heightMm) * MM_TO_M;
   const empty: StructuralFinishFaces = { segments: [], heightM, interiorAreaM2: 0, exteriorAreaM2: 0 };
@@ -204,7 +226,7 @@ export function resolveStructuralFinishFaces(input: FinishResolveInput): Structu
     if (includeEdge && !includeEdge(a, b, i)) continue; // π.χ. άκρα δοκαριού
     const covered = coveredByObstacles(a, b, obstacles);
     for (const [t0, t1] of exposedComplement(covered, minT)) {
-      const seg = buildSegment(a, b, t0, t1, spec, classify, unitToMeters, obstacles, junctionTol);
+      const seg = buildSegment(a, b, t0, t1, spec, classify, unitToMeters, obstacles, junctionObstacles, junctionTol);
       segments.push(seg);
       const area = seg.lengthM * heightM;
       if (seg.classification === 'exterior') exteriorAreaM2 += area;

@@ -13,8 +13,20 @@
 import { barAreaMm2, barMassPerMeterKg } from '../rebar-catalog';
 import type { ColumnSectionContext } from '../codes/structural-code-types';
 import type { ColumnReinforcement } from './column-reinforcement-types';
+import { DEFAULT_STIRRUP_TYPE } from './column-reinforcement-types';
+import {
+  computeStirrupLevelsMm,
+  stirrupCenterlinePerimeterMm,
+  STIRRUP_HOOK_EXTENSION_FACTOR,
+} from './column-rebar-layout';
 
 const MM_TO_M = 0.001;
+
+/**
+ * Επιπλέον στροφές αγκύρωσης σπείρας στα δύο άκρα (× περίμετρος). EC2: ~1.5
+ * επιπλέον στροφές για ανάπτυξη της συνεχούς ράβδου στα άκρα του θώρακα.
+ */
+const SPIRAL_END_ANCHORAGE_TURNS = 1.5;
 
 /**
  * Συντελεστής μήκους ματίσματος/αναμονής διαμήκους ράβδου (× dbL). Τυπικό μάτισμα
@@ -22,8 +34,6 @@ const MM_TO_M = 0.001;
  */
 const LONGITUDINAL_LAP_FACTOR = 50;
 
-/** Μήκος ενός γάντζου συνδετήρα (× dbw). 135° γάντζος EC8 ≥ 10·dbw, ×2 γάντζοι. */
-const STIRRUP_HOOK_FACTOR = 10;
 
 /** Derived takeoff quantities for a column's reinforcement. */
 export interface ColumnReinforcementQuantities {
@@ -64,13 +74,45 @@ function computeStirrupCount(ctx: ColumnSectionContext, r: ColumnReinforcement):
   return Math.ceil(criticalTotal / sCrit) + Math.ceil(midZone / spacingMm) + 1;
 }
 
-/** Μήκος ενός κλειστού συνδετήρα (mm): περίμετρος εσωτ. ορθογωνίου + 2 γάντζοι. */
+/**
+ * Περίμετρος **άξονα** (centerline) συνδετήρα (mm). Geometry-is-SSoT: delegate στο
+ * ΙΔΙΟ `stirrupCenterlinePerimeterMm` του layout (centerline inset = cover + dbw/2 +
+ * στρογγυλεμένες γωνίες EC2) → το βάρος χάλυβα ταιριάζει ΑΚΡΙΒΩΣ με τη σχεδίαση
+ * 2Δ/3Δ (αντί για το παλιό cover-based ορθογώνιο που αγνοούσε Ø_συνδ + κάμψη).
+ */
+function stirrupPerimeterMm(ctx: ColumnSectionContext, r: ColumnReinforcement): number {
+  return stirrupCenterlinePerimeterMm(r, ctx.widthMm, ctx.depthMm);
+}
+
+/**
+ * Μήκος ενός κλειστού συνδετήρα (mm) ανά τύπο: περίμετρος + (γάντζοι 135° μόνο
+ * στον `closed-hooked`). Ο `closed-welded` = περίμετρος μόνο (η ραφή αμελητέα).
+ * Ο `spiral` δεν έχει «μεμονωμένο» μήκος — υπολογίζεται συνολικά αλλού.
+ */
 function stirrupSingleLengthMm(ctx: ColumnSectionContext, r: ColumnReinforcement): number {
-  const innerW = Math.max(0, ctx.widthMm - 2 * r.coverMm);
-  const innerD = Math.max(0, ctx.depthMm - 2 * r.coverMm);
-  const perimeter = 2 * (innerW + innerD);
-  const hooks = 2 * STIRRUP_HOOK_FACTOR * r.stirrups.diameterMm;
+  const perimeter = stirrupPerimeterMm(ctx, r);
+  const type = r.stirrups.type ?? DEFAULT_STIRRUP_TYPE;
+  if (type === 'closed-welded') return perimeter; // χωρίς γάντζους — λιγότερο σίδερο
+  const hooks = 2 * STIRRUP_HOOK_EXTENSION_FACTOR * r.stirrups.diameterMm; // 2 × γάντζος 135° (EC8 10·dbw)
   return perimeter + hooks;
+}
+
+/**
+ * Σπειροειδής (θώρακας): συνολικό μήκος συνεχούς ράβδου = άθροισμα μηκών στροφών
+ * (μία ανά κενό σταθμών — reuse `computeStirrupLevelsMm` ⇒ πύκνωση άκρων) +
+ * αγκύρωση άκρων. Κάθε στροφή ≈ √(περίμετρος² + βήμα²) (ελικοειδές μήκος).
+ */
+function spiralTotals(ctx: ColumnSectionContext, r: ColumnReinforcement): { turns: number; totalMm: number } {
+  const perimeter = stirrupPerimeterMm(ctx, r);
+  if (perimeter <= 0) return { turns: 0, totalMm: 0 };
+  const levels = computeStirrupLevelsMm(r, ctx.widthMm, ctx.depthMm, ctx.heightMm);
+  let totalMm = 0;
+  for (let i = 1; i < levels.length; i++) {
+    const pitch = levels[i] - levels[i - 1];
+    totalMm += Math.hypot(perimeter, pitch);
+  }
+  totalMm += SPIRAL_END_ANCHORAGE_TURNS * perimeter;
+  return { turns: Math.max(0, levels.length - 1), totalMm };
 }
 
 /**
@@ -88,9 +130,13 @@ export function computeColumnReinforcementQuantities(
   const longitudinalLengthM = nBars * barLengthMm * MM_TO_M;
   const longitudinalWeightKg = longitudinalLengthM * barMassPerMeterKg(dbL);
 
-  const stirrupCount = computeStirrupCount(ctx, r);
-  const stirrupSingleLengthM = stirrupSingleLengthMm(ctx, r) * MM_TO_M;
-  const stirrupTotalLengthM = stirrupCount * stirrupSingleLengthM;
+  // Εγκάρσιος οπλισμός ανά τύπο: spiral = συνεχής (turns × ελικοειδές μήκος)·
+  // closed-hooked/welded = N μεμονωμένα κλειστά (με/χωρίς γάντζους).
+  const isSpiral = (r.stirrups.type ?? DEFAULT_STIRRUP_TYPE) === 'spiral';
+  const spiral = isSpiral ? spiralTotals(ctx, r) : null;
+  const stirrupCount = spiral ? spiral.turns : computeStirrupCount(ctx, r);
+  const stirrupTotalLengthM = (spiral ? spiral.totalMm : stirrupCount * stirrupSingleLengthMm(ctx, r)) * MM_TO_M;
+  const stirrupSingleLengthM = stirrupCount > 0 ? stirrupTotalLengthM / stirrupCount : 0;
   const stirrupWeightKg = stirrupTotalLengthM * barMassPerMeterKg(r.stirrups.diameterMm);
 
   const ratio = ctx.grossAreaMm2 > 0 ? (nBars * barAreaMm2(dbL)) / ctx.grossAreaMm2 : 0;

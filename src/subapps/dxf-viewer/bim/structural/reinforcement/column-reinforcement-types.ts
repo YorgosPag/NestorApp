@@ -22,6 +22,29 @@ export interface ColumnLongitudinalRebar {
   readonly count: number;
 }
 
+/**
+ * Τύπος εγκάρσιου οπλισμού (μορφή συνδετήρα). Επηρεάζει ποσότητα χάλυβα, σχεδίαση
+ * 2Δ/3Δ και τον συντελεστή περίσφιγξης (στατική):
+ *   - `closed-hooked`  — κλειστός συνδετήρας με γάντζους 135° + μάτιση/επικάλυψη
+ *                        (πρότυπο αντισεισμικό EC8 §5.4.3 / ΕΑΚ). DEFAULT.
+ *   - `closed-welded`  — κλειστό συγκολλητό δαχτυλίδι (χωρίς γάντζους — λιγότερο
+ *                        σίδερο· η συγκόλληση οπλισμού περιορίζεται αντισεισμικά).
+ *   - `spiral`         — σπειροειδής/συνεχής (θώρακας) — ΜΙΑ ράβδος σαν έλικα·
+ *                        διαφορετικό μήκος + καλύτερη περίσφιγξη.
+ */
+export type StirrupType = 'closed-hooked' | 'closed-welded' | 'spiral';
+
+/** Όλοι οι τύποι, με τη σειρά εμφάνισης στο UI (default πρώτος). */
+export const STIRRUP_TYPE_ORDER: readonly StirrupType[] = ['closed-hooked', 'closed-welded', 'spiral'];
+
+/** Default τύπος όταν `type` απών (back-compat: standard αντισεισμικό). */
+export const DEFAULT_STIRRUP_TYPE: StirrupType = 'closed-hooked';
+
+/** Type guard για persisted/UI τιμές. */
+export function isStirrupType(v: string): v is StirrupType {
+  return v === 'closed-hooked' || v === 'closed-welded' || v === 'spiral';
+}
+
 /** Εγκάρσιος οπλισμός — συνδετήρες/στέφανα (Ø8/100-200). */
 export interface ColumnStirrups {
   /** Διάμετρος συνδετήρα (mm), π.χ. 8. */
@@ -33,6 +56,11 @@ export interface ColumnStirrups {
    * Absent = χωρίς πύκνωση (μη-αντισεισμικός / απλός σχεδιασμός).
    */
   readonly spacingCriticalMm?: number;
+  /**
+   * Μορφή συνδετήρα. Absent ⇒ {@link DEFAULT_STIRRUP_TYPE} (`closed-hooked` —
+   * back-compat: ο υπάρχων οπλισμός είναι το πρότυπο αντισεισμικό).
+   */
+  readonly type?: StirrupType;
 }
 
 /**

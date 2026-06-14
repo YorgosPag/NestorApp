@@ -28,6 +28,9 @@ import { isMultiLayerSlab } from '../../bim/types/slab-dna-types';
 import { attachEdgesProjection } from './bim-three-edges';
 import { buildColumnFinishSkin, buildBeamFinishSkin } from './structural-finish-3d';
 import { isStructuralFinishVisible } from '../../bim/finishes/structural-finish-visibility';
+// ADR-456 Slice 3 — 3Δ/τομή κλωβός οπλισμού (κοινό geometry SSoT με το 2Δ).
+import { buildColumnRebarCage } from './column-rebar-3d';
+import { isReinforcementVisible } from '../../bim/structural/reinforcement/rebar-visibility';
 import { isWallColumnKind } from '../../bim/columns/column-from-faces';
 import type { ColumnTopProfile, ColumnBaseProfile } from '../../bim/geometry/column-vertical-profile';
 
@@ -82,9 +85,12 @@ export function columnToMesh(
       const attachedTopMm = topProfile?.cornerTopZmm?.length
         ? Math.min(...topProfile.cornerTopZmm)
         : floorElevationMm + flatColumn.params.height;
-      return composeColumnWithFinish(
-        tagged, column, walls, beams, mesh.position.y, levelId, Math.max(0, attachedTopMm - floorElevationMm),
-        suppressFinishSkin,
+      return attachColumnRebar(
+        composeColumnWithFinish(
+          tagged, column, walls, beams, mesh.position.y, levelId, Math.max(0, attachedTopMm - floorElevationMm),
+          suppressFinishSkin,
+        ),
+        column, mesh.position.y, Math.max(0, attachedTopMm - floorElevationMm), levelId,
       );
     }
     // Fall through to flat solid αν το prism εκφυλίζεται (defensive).
@@ -107,8 +113,11 @@ export function columnToMesh(
   // ADR-449 Slice 2 — additive σοβάς (per-face band skin) ΕΞΩ από τον στατικό πυρήνα.
   // Ενεργό μόνο όταν η κολόνα έχει ενεργό `finish` ΚΑΙ δόθηκαν walls (απών στο ghost
   // path → πυρήνας-only). ADR-449 Slice 5 — view-level gate `showFinishSkin`.
-  return composeColumnWithFinish(
-    tagged, column, walls, beams, mesh.position.y, levelId, flatColumn.params.height, suppressFinishSkin,
+  return attachColumnRebar(
+    composeColumnWithFinish(
+      tagged, column, walls, beams, mesh.position.y, levelId, flatColumn.params.height, suppressFinishSkin,
+    ),
+    column, mesh.position.y, flatColumn.params.height, levelId,
   );
 }
 
@@ -140,6 +149,39 @@ function composeColumnWithFinish(
   composite.userData['bimId'] = column.id;
   composite.userData['bimType'] = 'column';
   return composite;
+}
+
+/**
+ * ADR-456 Slice 3 — προσθέτει τον κλωβό οπλισμού (διαμήκεις + στεφάνια) στο ήδη
+ * συντεθειμένο column result (πυρήνας ή πυρήνας+σοβάς). Επιστρέφει το ίδιο αντικείμενο
+ * όταν ο οπλισμός είναι ανενεργός (view gate / μη-ορθογωνική / χωρίς `reinforcement`).
+ * `heightMm`/`baseY` = ίδια με τον σοβά → ευθυγράμμιση. Αν το input είναι σκέτο mesh,
+ * το τυλίγει σε Group ώστε να κρατήσει το composite tag.
+ *
+ * ΣΗΜ.: ο οπλισμός είναι **ΑΝΕΞΑΡΤΗΤΟΣ** από το `suppressFinishSkin` — το scene path
+ * το θέτει true (ο ΕΝΙΑΙΟΣ silhouette σοβάς αναλαμβάνει το σκιν, ADR-449 Slice X1),
+ * αλλά αυτό ΔΕΝ αφορά τον οπλισμό. Gate μόνο στον δικό του διακόπτη `showReinforcement`.
+ */
+function attachColumnRebar(
+  composed: THREE.Mesh | THREE.Group,
+  column: ColumnEntity,
+  baseY: number,
+  heightMm: number,
+  levelId: string | undefined,
+): THREE.Mesh | THREE.Group {
+  if (!isReinforcementVisible()) return composed;
+  const cage = buildColumnRebarCage(column, baseY, heightMm, levelId);
+  if (!cage) return composed;
+  if (composed instanceof THREE.Group) {
+    composed.add(cage);
+    return composed;
+  }
+  const group = new THREE.Group();
+  group.add(composed);
+  group.add(cage);
+  group.userData['bimId'] = column.id;
+  group.userData['bimType'] = 'column';
+  return group;
 }
 
 /**

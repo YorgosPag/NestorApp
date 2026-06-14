@@ -26,6 +26,8 @@ export const ThermalEnvelopeHost = React.lazy(() => import('../ui/components/bim
 export const BimScheduleHost = React.lazy(() => import('./BimScheduleHost').then(mod => ({ default: mod.BimScheduleHost })));
 // ADR-453 — Print/Export («Εκτύπωση») dialog host
 export const PrintHost = React.lazy(() => import('./PrintHost').then(mod => ({ default: mod.PrintHost })));
+// ADR-457 — Column Reinforcement Detail Sheet («Λεπτομέρεια Οπλισμού») dialog host
+export const ColumnDetailHost = React.lazy(() => import('../ui/components/column-detail/ColumnDetailHost').then(mod => ({ default: mod.ColumnDetailHost })));
 // ADR-391 — AdminLayerManager dialog host
 export const AdminLayerManagerDialogHost = React.lazy(() => import('./AdminLayerManagerDialogHost').then(mod => ({ default: mod.AdminLayerManagerDialogHost })));
 // ADR-363 Φ3c — «Κολώνα από περίγραμμα» confirm dialog (self-subscribing, zero props)

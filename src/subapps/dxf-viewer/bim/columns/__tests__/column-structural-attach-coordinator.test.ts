@@ -99,11 +99,21 @@ describe('findColumnsToAutoAttachToHost (top)', () => {
     expect(findColumnsToAutoAttachToHost(beam as unknown as Entity, [col])).toEqual([]);
   });
 
-  it('attaches when only a CORNER of the column footprint overlaps the host', () => {
+  it('ΔΕΝ attach-άρει δοκάρι που ακουμπά ΜΟΝΟ γωνία (corner-graze → κεκλιμένη κορυφή· framing το πιάνει)', () => {
+    // ADR-449 Δρόμος Β 2026-06-14 (Giorgio): δοκάρι band [-125,125], centroid (2000,200) ΕΞΩ,
+    // αλλά κάτω-ακμή (y=120) ακουμπά τη λωρίδα. Παλιό covering → attach → per-corner resolver
+    // κατέβαζε ΜΟΝΟ αυτή τη γωνία → κεκλιμένη κορυφή κολώνας. Τώρα: δοκάρι απαιτεί κάλυψη ΚΕΝΤΡΟΥ.
     const beam = beamOver();
-    // centroid (2000, 200) is OUTSIDE band [-125,125], but bottom edge (y=120) overlaps.
     const col = column('c1', 2000, 200, 80);
-    expect(findColumnsToAutoAttachToHost(beam as unknown as Entity, [col])).toEqual(['c1']);
+    expect(findColumnsToAutoAttachToHost(beam as unknown as Entity, [col])).toEqual([]);
+  });
+
+  it('ΕΞΑΚΟΛΟΥΘΕΙ να attach-άρει ΠΛΑΚΑ σε corner-overlap (επίπεδη → flat top, μηδέν κλίση)', () => {
+    // Πλάκα 5000×5000· κολώνα με centroid (5040) ΕΞΩ από την πλάκα αλλά γωνία (4960) ΜΕΣΑ.
+    // Οι πλάκες κρατούν corner-tolerant covering (το soffit είναι επίπεδο → καμία κεκλιμένη κορυφή).
+    const slab = slabAt(3000);
+    const col = column('c1', 5040, 2000, 80);
+    expect(findColumnsToAutoAttachToHost(slab as unknown as Entity, [col])).toEqual(['c1']);
   });
 
   it('ignores columns whose topBinding is not "storey-ceiling"', () => {

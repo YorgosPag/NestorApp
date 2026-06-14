@@ -17,6 +17,7 @@ import type { SyncContext } from './bim-scene-context';
 import type { EntityResolution } from './BimSceneLayer';
 import type { BimCategory } from '../../config/bim-object-styles';
 import type { Discipline } from '../../bim/discipline/bim-discipline';
+import type { Point3D } from '../../bim/types/bim-base';
 
 type ResolveEntity = (
   entity: { id?: string; layerId?: string; discipline?: Discipline },
@@ -36,6 +37,12 @@ export function syncWalls(
   const hostInputs = hasAttached
     ? buildWallHostInputs(entities.beams, entities.slabs, entities.roofs)
     : [];
+
+  // ADR-449 #2 — column footprints για embed άκρης τοίχου που κουμπώνει σε κολόνα
+  // (3Δ-only z-fight fix· wallToMesh βυθίζει την άκρη μέσα στο μπετόν). Render-only.
+  const columnFootprints = entities.columns
+    .map((c) => c.geometry?.footprint?.vertices)
+    .filter((v): v is readonly Point3D[] => !!v && v.length >= 3);
 
   for (const wall of entities.walls) {
     const r = resolveEntity(wall, 'wall', ctx);
@@ -74,6 +81,7 @@ export function syncWalls(
     const nominalHeightMm = Number.isFinite(rawWallTop) ? rawWallTop : undefined;
     const mesh = wallToMesh(
       wall, openingsForWall, ctx.floorElevationMm, ctx.activeLevelId, r.baseElevation, profile, baseProfile, topClip, nominalHeightMm,
+      columnFootprints,
     );
     if (mesh) { mesh.userData['buildingId'] = r.buildingId; group.add(mesh); }
   }

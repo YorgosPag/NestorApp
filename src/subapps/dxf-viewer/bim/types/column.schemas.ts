@@ -152,6 +152,8 @@ const ColumnReinforcementSchema = z
         diameterMm: z.number().positive(),
         spacingMm: z.number().positive(),
         spacingCriticalMm: z.number().positive().optional(),
+        // ADR-456 Slice 3 — μορφή συνδετήρα (absent ⇒ closed-hooked).
+        type: z.enum(['closed-hooked', 'closed-welded', 'spiral']).optional(),
       })
       .strict(),
     coverMm: z.number().positive(),

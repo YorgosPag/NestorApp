@@ -125,6 +125,14 @@ export interface BimRenderSettings {
    */
   showFinishSkin?: boolean;
   /**
+   * ADR-456 Slice 3 — master view toggle «Οπλισμός» (reinforcement rebar
+   * drawing). Absent ⇒ `false` (opt-in: ο οπλισμός είναι λεπτομέρεια — δείχνεται
+   * όταν ζητηθεί, ώστε η κάτοψη να μένει καθαρή). `true` ⇒ διαμήκεις ράβδες +
+   * στεφάνια σε 2D κάτοψη + 3D/τομή (καθαρά visual· το schedule μετράει πάντα όταν
+   * `reinforcement` οριστεί). Per-view.
+   */
+  showReinforcement?: boolean;
+  /**
    * ADR-452 — cut-plane (Revit View Range) hide gate master toggle. Absent ⇒
    * `false` (OFF by default so existing views keep their current look — nothing is
    * hidden until the user engages the right-edge cut-plane slider). `true` ⇒ BIM
@@ -162,6 +170,8 @@ export interface ResolvedBimSettings {
   showHeatLoad: boolean;
   /** ADR-449 Slice 5 — resolved master toggle «Σοβατισμένη όψη» (default ON). */
   showFinishSkin: boolean;
+  /** ADR-456 Slice 3 — resolved master toggle «Οπλισμός» (default OFF, opt-in). */
+  showReinforcement: boolean;
   /** ADR-452 — resolved cut-plane hide-gate master toggle (default OFF). */
   cutPlaneActive: boolean;
   /** ADR-455 — resolved vertical X-axis section cut (default off). */
@@ -220,6 +230,8 @@ export function resolveBimSettings(s?: BimRenderSettings | null): ResolvedBimSet
     showHeatLoad: s?.showHeatLoad ?? false,
     // ADR-449 Slice 5 — absent ⇒ true (σοβάς ορατός by default, όπως Revit finishes).
     showFinishSkin: s?.showFinishSkin ?? true,
+    // ADR-456 Slice 3 — absent ⇒ false (ο οπλισμός είναι opt-in λεπτομέρεια).
+    showReinforcement: s?.showReinforcement ?? false,
     // ADR-452 — absent ⇒ false (cut-plane hide gate off by default; opt-in slider).
     cutPlaneActive: s?.cutPlaneActive ?? false,
     // ADR-455 — absent ⇒ off (vertical X/Y section cuts are opt-in sliders).

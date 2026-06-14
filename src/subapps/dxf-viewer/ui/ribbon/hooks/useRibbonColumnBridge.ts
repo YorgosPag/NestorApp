@@ -233,6 +233,16 @@ export function useRibbonColumnBridge(
         if (column) autoReinforceColumn(column, (next) => dispatchParams(column, next));
         return;
       }
+      // ADR-457 — «Λεπτομέρεια Οπλισμού»: άνοιγμα του φύλλου σχεδίου οπλισμού.
+      if (action === COLUMN_RIBBON_KEYS_ACTIONS.reinforcementDetail) {
+        const column = resolveColumn();
+        if (!column || !levelManager.currentLevelId) return;
+        EventBus.emit('bim:column-detail-requested', {
+          columnId: column.id,
+          levelId: levelManager.currentLevelId,
+        });
+        return;
+      }
       if (action === COLUMN_RIBBON_KEYS_ACTIONS.fromGrid) { handleColumnsFromGrid('inner'); return; }
       if (action === COLUMN_RIBBON_KEYS_ACTIONS.fromGridCenter) { handleColumnsFromGrid('center'); return; }
       if (action === COLUMN_RIBBON_KEYS_ACTIONS.fromGridOuter) { handleColumnsFromGrid('outer'); return; }

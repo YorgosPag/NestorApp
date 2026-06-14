@@ -186,6 +186,7 @@ describe('UpdateDxfLevelSchema — top-level BimRenderSettings fields (incident 
       realisticMaterials: true,
       showHeatLoad: true,
       showFinishSkin: false,
+      showReinforcement: true,
       cutPlaneActive: true,
     };
     const parsed = UpdateDxfLevelSchema.parse({ ...baseValidLevel, bimRenderSettings: settings });

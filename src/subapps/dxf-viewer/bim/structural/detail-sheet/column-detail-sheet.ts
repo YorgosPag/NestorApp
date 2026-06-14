@@ -1,0 +1,70 @@
+/**
+ * ADR-457 — Column Reinforcement Detail Sheet · model orchestrator (SSoT).
+ *
+ * Builds the backend-agnostic {@link DetailSheetModel} for a column's
+ * reinforcement detail from the pure rebar SSoT. ONE model → two backends
+ * (Canvas preview + jsPDF export) so that **preview === PDF**.
+ *
+ * Slice 1-2 (current): the PLAN and ELEVATION regions are filled from
+ * `column-detail-plan` / `column-detail-elevation`. Remaining regions hold
+ * their heading only; subsequent slices fill them:
+ *   - Slice 3 → `column-detail-3d-capture` (perspective raster)
+ *   - Slice 4 → `column-detail-schedule` + `column-detail-titleblock`
+ *
+ * @module subapps/dxf-viewer/bim/structural/detail-sheet/column-detail-sheet
+ * @see docs/centralized-systems/reference/adrs/ADR-457-column-reinforcement-detail-sheet.md
+ */
+
+import {
+  computeDetailSheetLayout,
+  DEFAULT_DETAIL_SHEET_LAYOUT_INPUT,
+  DETAIL_SHEET_PAPER,
+  type DetailSheetLayoutInput,
+} from './detail-sheet-layout';
+import { buildColumnPlanRegion } from './column-detail-plan';
+import { buildColumnElevationRegion } from './column-detail-elevation';
+import type { ColumnParams } from '../../types/column-types';
+import type {
+  DetailSheetLabels,
+  DetailSheetModel,
+  SheetRegion,
+} from './detail-sheet-types';
+
+export interface ColumnDetailSheetInput {
+  /** The column whose reinforcement is detailed (geometry-is-SSoT). */
+  readonly params: ColumnParams;
+  /** Pre-resolved region headings (host injects via i18n — N.11-safe). */
+  readonly labels: DetailSheetLabels;
+  /** Layout override (paper / margin / gutter); defaults to A3 landscape. */
+  readonly layoutInput?: DetailSheetLayoutInput;
+}
+
+/**
+ * Produces the detail-sheet drawing model: five laid-out regions with headings,
+ * the PLAN region populated with the column footprint + reinforcement +
+ * dimensions (Slice 1).
+ */
+export function buildColumnDetailSheet(input: ColumnDetailSheetInput): DetailSheetModel {
+  const layoutInput = input.layoutInput ?? DEFAULT_DETAIL_SHEET_LAYOUT_INPUT;
+  const layout = computeDetailSheetLayout(layoutInput);
+  const { regions } = layout;
+  const { labels } = input;
+
+  const plan = buildColumnPlanRegion(input.params, regions.plan);
+  const elevation = buildColumnElevationRegion(input.params, regions.elevation);
+
+  const sheetRegions: readonly SheetRegion[] = [
+    { id: 'elevation', rectMm: regions.elevation, title: labels.elevation, caption: elevation.caption, primitives: elevation.primitives },
+    { id: 'plan', rectMm: regions.plan, title: labels.plan, caption: plan.caption, primitives: plan.primitives },
+    { id: 'schedule', rectMm: regions.schedule, title: labels.schedule, primitives: [] },
+    { id: 'perspective', rectMm: regions.perspective, title: labels.perspective, primitives: [] },
+    { id: 'title-block', rectMm: regions['title-block'], title: labels.titleBlock, primitives: [] },
+  ];
+
+  return {
+    paper: layoutInput.paper ?? DETAIL_SHEET_PAPER,
+    sheetWidthMm: layout.sheetWidthMm,
+    sheetHeightMm: layout.sheetHeightMm,
+    regions: sheetRegions,
+  };
+}
