@@ -23,6 +23,7 @@ import {
 } from './detail-sheet-layout';
 import { buildColumnPlanRegion } from './column-detail-plan';
 import { buildColumnElevationRegion } from './column-detail-elevation';
+import { buildColumnPerspectiveRegion } from './column-detail-perspective';
 import type { ColumnParams } from '../../types/column-types';
 import type {
   DetailSheetLabels,
@@ -37,6 +38,12 @@ export interface ColumnDetailSheetInput {
   readonly labels: DetailSheetLabels;
   /** Layout override (paper / margin / gutter); defaults to A3 landscape. */
   readonly layoutInput?: DetailSheetLayoutInput;
+  /**
+   * Offscreen 3D capture (PNG data URL) for the perspective region. `undefined`
+   * or `null` while the async capture is pending → region shows its heading only
+   * (Slice 3: host re-builds the model once the capture resolves).
+   */
+  readonly perspectiveDataUrl?: string | null;
 }
 
 /**
@@ -52,12 +59,13 @@ export function buildColumnDetailSheet(input: ColumnDetailSheetInput): DetailShe
 
   const plan = buildColumnPlanRegion(input.params, regions.plan);
   const elevation = buildColumnElevationRegion(input.params, regions.elevation);
+  const perspective = buildColumnPerspectiveRegion(regions.perspective, input.perspectiveDataUrl ?? null);
 
   const sheetRegions: readonly SheetRegion[] = [
     { id: 'elevation', rectMm: regions.elevation, title: labels.elevation, caption: elevation.caption, primitives: elevation.primitives },
     { id: 'plan', rectMm: regions.plan, title: labels.plan, caption: plan.caption, primitives: plan.primitives },
     { id: 'schedule', rectMm: regions.schedule, title: labels.schedule, primitives: [] },
-    { id: 'perspective', rectMm: regions.perspective, title: labels.perspective, primitives: [] },
+    { id: 'perspective', rectMm: regions.perspective, title: labels.perspective, primitives: perspective.primitives },
     { id: 'title-block', rectMm: regions['title-block'], title: labels.titleBlock, primitives: [] },
   ];
 

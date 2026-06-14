@@ -23,10 +23,12 @@
 import type {
   DetailPrimitive,
   DetailSheetModel,
+  RectMm,
   SheetRegion,
   SheetStroke,
 } from '../detail-sheet-types';
 import { resolveDimGeometry } from '../detail-sheet-dim';
+import { containFitRectMm } from './detail-raster-fit';
 
 const SHEET_BG_HEX = '#ffffff';
 const PAGE_BORDER_HEX = '#222222';
@@ -43,6 +45,12 @@ const REGION_BORDER_WIDTH_MM = 0.3;
 export interface DetailCanvasRenderOptions {
   /** Device pixels per sheet-millimetre. */
   readonly pxPerMm: number;
+  /**
+   * Pre-decoded raster images keyed by their `dataUrl`. The dialog decodes all
+   * raster primitives up-front (async) and passes them here so the paint stays
+   * synchronous; a missing/undecoded entry is skipped (region heading only).
+   */
+  readonly rasterImages?: ReadonlyMap<string, CanvasImageSource>;
 }
 
 /** Paints the whole detail sheet (background → page border → regions). */
@@ -52,6 +60,7 @@ export function renderDetailSheet(
   options: DetailCanvasRenderOptions,
 ): void {
   const { pxPerMm } = options;
+  const rasterImages = options.rasterImages;
   ctx.fillStyle = SHEET_BG_HEX;
   ctx.fillRect(0, 0, model.sheetWidthMm * pxPerMm, model.sheetHeightMm * pxPerMm);
   ctx.strokeStyle = PAGE_BORDER_HEX;
@@ -59,11 +68,16 @@ export function renderDetailSheet(
   ctx.setLineDash([]);
   ctx.strokeRect(0, 0, model.sheetWidthMm * pxPerMm, model.sheetHeightMm * pxPerMm);
 
-  for (const region of model.regions) renderRegion(ctx, region, pxPerMm);
+  for (const region of model.regions) renderRegion(ctx, region, pxPerMm, rasterImages);
 }
 
 /** Frame + heading + caption + clipped primitives for one region. */
-function renderRegion(ctx: CanvasRenderingContext2D, region: SheetRegion, pxPerMm: number): void {
+function renderRegion(
+  ctx: CanvasRenderingContext2D,
+  region: SheetRegion,
+  pxPerMm: number,
+  rasterImages?: ReadonlyMap<string, CanvasImageSource>,
+): void {
   const { x, y, w, h } = region.rectMm;
   ctx.strokeStyle = REGION_BORDER_HEX;
   ctx.lineWidth = REGION_BORDER_WIDTH_MM * pxPerMm;
@@ -92,7 +106,7 @@ function renderRegion(ctx: CanvasRenderingContext2D, region: SheetRegion, pxPerM
   ctx.beginPath();
   ctx.rect(x * pxPerMm, y * pxPerMm, w * pxPerMm, h * pxPerMm);
   ctx.clip();
-  for (const prim of region.primitives) renderPrimitive(ctx, prim, pxPerMm);
+  for (const prim of region.primitives) renderPrimitive(ctx, prim, pxPerMm, rasterImages);
   ctx.restore();
 }
 
@@ -102,7 +116,12 @@ function applyStroke(ctx: CanvasRenderingContext2D, stroke: SheetStroke, pxPerMm
   ctx.setLineDash((stroke.dashMm ?? []).map((d) => d * pxPerMm));
 }
 
-function renderPrimitive(ctx: CanvasRenderingContext2D, prim: DetailPrimitive, pxPerMm: number): void {
+function renderPrimitive(
+  ctx: CanvasRenderingContext2D,
+  prim: DetailPrimitive,
+  pxPerMm: number,
+  rasterImages?: ReadonlyMap<string, CanvasImageSource>,
+): void {
   switch (prim.kind) {
     case 'line':
       applyStroke(ctx, prim.stroke, pxPerMm);
@@ -131,8 +150,39 @@ function renderPrimitive(ctx: CanvasRenderingContext2D, prim: DetailPrimitive, p
       renderDim(ctx, prim, pxPerMm);
       return;
     case 'raster':
-      return; // wired in Slice 3 (offscreen WebGL capture)
+      renderRaster(ctx, prim, pxPerMm, rasterImages);
+      return;
   }
+}
+
+/**
+ * Draws a pre-decoded raster image contain-fitted (aspect-preserved, centred)
+ * inside its sheet rect. Skips silently when the image is still pending / absent
+ * (the region keeps its heading only).
+ */
+function renderRaster(
+  ctx: CanvasRenderingContext2D,
+  prim: Extract<DetailPrimitive, { kind: 'raster' }>,
+  pxPerMm: number,
+  rasterImages?: ReadonlyMap<string, CanvasImageSource>,
+): void {
+  if (!prim.dataUrl || !rasterImages) return;
+  const img = rasterImages.get(prim.dataUrl);
+  if (!img) return;
+  const { width, height } = rasterSourceSize(img);
+  const fit: RectMm = containFitRectMm(prim.rect, width, height);
+  if (fit.w <= 0 || fit.h <= 0) return;
+  ctx.drawImage(img, fit.x * pxPerMm, fit.y * pxPerMm, fit.w * pxPerMm, fit.h * pxPerMm);
+}
+
+/** Intrinsic pixel size of a decoded raster source (HTMLImageElement / bitmap). */
+function rasterSourceSize(img: CanvasImageSource): { width: number; height: number } {
+  if (img instanceof HTMLImageElement) return { width: img.naturalWidth, height: img.naturalHeight };
+  if (typeof ImageBitmap !== 'undefined' && img instanceof ImageBitmap) {
+    return { width: img.width, height: img.height };
+  }
+  const sized = img as { width?: number; height?: number };
+  return { width: sized.width ?? 0, height: sized.height ?? 0 };
 }
 
 function renderPolyline(

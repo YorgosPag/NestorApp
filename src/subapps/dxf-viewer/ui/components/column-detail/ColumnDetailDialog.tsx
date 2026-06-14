@@ -14,6 +14,11 @@
  * reads 0 during the dialog open-animation commit and would skip the paint.
  * Redraws on `open`/`model` change and on window resize.
  *
+ * Raster regions (the 3D perspective capture, ADR-457 Slice 3) carry an async
+ * data URL: the dialog paints the vector content immediately, then decodes the
+ * raster images off the main path and repaints once they are ready, so the
+ * `renderDetailSheet` call itself stays synchronous (progressive paint).
+ *
  * State ownership:
  *   - Parent (`ColumnDetailHost`) owns `open` + builds the `model`.
  *   - This dialog owns only the canvas paint side-effect.
@@ -40,6 +45,7 @@ import { Button } from '@/components/ui/button';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import type { DetailSheetModel } from '../../../bim/structural/detail-sheet/detail-sheet-types';
 import { renderDetailSheet } from '../../../bim/structural/detail-sheet/render/detail-canvas-renderer';
+import { decodeModelRasters } from '../../../bim/structural/detail-sheet/render/detail-raster-decode';
 
 /** Fraction of the viewport the preview is allowed to occupy. */
 const PREVIEW_WIDTH_FRACTION = 0.9;
@@ -59,6 +65,8 @@ export function ColumnDetailDialog({
 }: ColumnDetailDialogProps): React.JSX.Element {
   const { t } = useTranslation('dxf-viewer-shell');
   const canvasRef = React.useRef<HTMLCanvasElement | null>(null);
+  // Decoded raster images (3D capture) for the current model — repaint uses them.
+  const rasterImagesRef = React.useRef<ReadonlyMap<string, CanvasImageSource>>(new Map());
 
   const draw = React.useCallback((): void => {
     const canvas = canvasRef.current;
@@ -73,15 +81,25 @@ export function ColumnDetailDialog({
     canvas.width = Math.round(model.sheetWidthMm * pxPerMm);
     canvas.height = Math.round(model.sheetHeightMm * pxPerMm);
     ctx.setTransform(1, 0, 0, 1, 0, 0);
-    renderDetailSheet(ctx, model, { pxPerMm });
+    renderDetailSheet(ctx, model, { pxPerMm, rasterImages: rasterImagesRef.current });
   }, [model]);
 
   React.useEffect(() => {
     if (!open || !model) return;
+    let cancelled = false;
+    // Reset raster cache for the new model, then paint vector content immediately.
+    rasterImagesRef.current = new Map();
     const raf = requestAnimationFrame(draw);
     draw();
     window.addEventListener('resize', draw);
+    // Decode raster (3D) images off the main path, then repaint with them.
+    void decodeModelRasters(model).then((images) => {
+      if (cancelled) return;
+      rasterImagesRef.current = images;
+      draw();
+    });
     return () => {
+      cancelled = true;
       cancelAnimationFrame(raf);
       window.removeEventListener('resize', draw);
     };
