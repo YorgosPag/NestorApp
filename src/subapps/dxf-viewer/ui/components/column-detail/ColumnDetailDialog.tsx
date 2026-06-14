@@ -43,9 +43,14 @@ import {
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { triggerExportDownload, openBlobInNewTab } from '@/lib/exports/trigger-export-download';
 import type { DetailSheetModel } from '../../../bim/structural/detail-sheet/detail-sheet-types';
 import { renderDetailSheet } from '../../../bim/structural/detail-sheet/render/detail-canvas-renderer';
 import { decodeModelRasters } from '../../../bim/structural/detail-sheet/render/detail-raster-decode';
+import { buildColumnDetailPdf } from '../../../bim/structural/detail-sheet/render/detail-pdf-renderer';
+
+/** Export file name for the reinforcement detail PDF (data, not i18n). */
+const PDF_FILENAME = 'column-reinforcement-detail.pdf';
 
 /** Fraction of the viewport the preview is allowed to occupy. */
 const PREVIEW_WIDTH_FRACTION = 0.9;
@@ -105,6 +110,19 @@ export function ColumnDetailDialog({
     };
   }, [open, model, draw]);
 
+  // ── Export / print: SAME model → jsPDF (preview === PDF) ──
+  const handleExportPdf = React.useCallback(async (): Promise<void> => {
+    if (!model) return;
+    const pdf = await buildColumnDetailPdf(model);
+    triggerExportDownload({ blob: pdf.output('blob'), filename: PDF_FILENAME });
+  }, [model]);
+
+  const handlePrint = React.useCallback(async (): Promise<void> => {
+    if (!model) return;
+    const pdf = await buildColumnDetailPdf(model);
+    openBlobInNewTab(pdf.output('blob'), { onLoad: (w) => w.print() });
+  }, [model]);
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent size="fullscreen">
@@ -125,8 +143,8 @@ export function ColumnDetailDialog({
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             {t('columnDetail.close')}
           </Button>
-          <Button disabled>{t('columnDetail.exportPdf')}</Button>
-          <Button disabled>{t('columnDetail.print')}</Button>
+          <Button disabled={!model} onClick={handleExportPdf}>{t('columnDetail.exportPdf')}</Button>
+          <Button disabled={!model} onClick={handlePrint}>{t('columnDetail.print')}</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

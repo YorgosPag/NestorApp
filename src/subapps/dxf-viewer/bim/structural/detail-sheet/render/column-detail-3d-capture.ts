@@ -42,7 +42,7 @@ const CAMERA_AZIMUTH_RAD = Math.PI / 4;
 const CAMERA_ELEVATION_RAD = (35.264 * Math.PI) / 180;
 const CAMERA_FOV_DEG = 35;
 /** Small margin around the tight projected-bbox fit (headroom for annotations). */
-const FIT_MARGIN = 1.18;
+const FIT_MARGIN = 1.06;
 
 /** A point in normalised raster space ([0..1], origin top-left, y-down). */
 export type NormPoint = Point2D;

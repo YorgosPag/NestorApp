@@ -77,7 +77,10 @@ export function buildColumnPerspectiveRegion(
   const toSheet = (n: NormPoint): Point2D => ({ x: fitted.x + n.x * fitted.w, y: fitted.y + n.y * fitted.h });
   const centre = toSheet(capture.centroid);
 
-  const primitives: DetailPrimitive[] = [{ kind: 'raster', rect: rasterRect, dataUrl: capture.dataUrl }];
+  const primitives: DetailPrimitive[] = [{
+    kind: 'raster', rect: rasterRect, dataUrl: capture.dataUrl,
+    widthPx: capture.widthPx, heightPx: capture.heightPx,
+  }];
 
   for (const dim of capture.dims) {
     const p1 = toSheet(dim.a);

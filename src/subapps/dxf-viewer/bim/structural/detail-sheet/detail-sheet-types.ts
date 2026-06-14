@@ -116,6 +116,13 @@ export interface RasterPrimitive {
   readonly rect: RectMm;
   /** PNG data URL (offscreen capture); `null` while still rendering. */
   readonly dataUrl: string | null;
+  /**
+   * Intrinsic pixel width/height of the raster. Lets the PDF backend contain-fit
+   * the image without decoding it (the Canvas backend reads the size from the
+   * already-decoded image instead). Omitted on the pending (null) slot.
+   */
+  readonly widthPx?: number;
+  readonly heightPx?: number;
 }
 
 /** Any drawable element of a region, in sheet-mm. */
