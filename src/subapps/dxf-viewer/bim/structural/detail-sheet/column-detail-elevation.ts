@@ -45,10 +45,17 @@ const LABEL_HEIGHT_MM = 2.4;
 
 const TITLE_PAD_MM = 9;
 const LEFT_DIM_PAD_MM = 15;
-const RIGHT_PAD_MM = 8;
+/** Δεξί περιθώριο — χωράει το stirrup-spacing dim string (B). */
+const RIGHT_DIM_PAD_MM = 16;
 const BOTTOM_LABEL_PAD_MM = 9;
 const HEIGHT_DIM_OFFSET_MM = 7;
+/** Offset της κατακόρυφης σειράς spacing dims, δεξιά της ΟΨΗΣ (θετικό = δεξιά). */
+const SPACING_DIM_OFFSET_MM = 6;
+/** Ύψος κειμένου spacing dim (μικρότερο από το height dim ώστε να χωρά δεξιά). */
+const SPACING_DIM_TEXT_MM = 2;
 const BAR_X_TOL_MM = 5;
+/** Σημεία δειγματοληψίας ανά στροφή σπείρας — λεία ημιτονοειδής έλικα (spring look). */
+const SPIRAL_SAMPLES_PER_TURN = 16;
 
 export interface ColumnElevationResult {
   readonly primitives: readonly DetailPrimitive[];
@@ -82,7 +89,7 @@ export function buildColumnElevationRegion(
   const heightMm = params.height;
   if (widthMm <= 0 || heightMm <= 0) return { primitives: [] };
 
-  const availW = region.w - LEFT_DIM_PAD_MM - RIGHT_PAD_MM;
+  const availW = region.w - LEFT_DIM_PAD_MM - RIGHT_DIM_PAD_MM;
   const availH = region.h - TITLE_PAD_MM - BOTTOM_LABEL_PAD_MM;
   const denom = pickScaleDenominator(widthMm, heightMm, availW, availH);
   const s = 1 / denom;
@@ -121,10 +128,16 @@ export function buildColumnElevationRegion(
   }
 
   // ── Transverse reinforcement (by stirrup type) at the SSoT levels ──
-  const levels = computeStirrupLevelsMm(r, widthMm, params.depth, heightMm);
+  // ALL types (closed & spiral) densify in the EC8 critical end zones (lcr): the
+  // spiral is one continuous tie whose PITCH tightens at the ends, exactly like
+  // closed stirrups — only the drawing differs (helix vs separate rings).
   const type = r.stirrups.type ?? DEFAULT_STIRRUP_TYPE;
+  const levels = computeStirrupLevelsMm(r, widthMm, params.depth, heightMm);
   const stirrupWidthMm = Math.max(MIN_STIRRUP_WIDTH_MM, layout.stirrupDiameterMm * s);
   pushStirrupPrimitives(primitives, levels, coverX, type, stirrupWidthMm, toSheet);
+
+  // ── Stirrup spacing dimensions (right side, so the fixer knows the spacing) ──
+  pushStirrupSpacingDims(primitives, levels, halfW, toSheet);
 
   // ── Overall height dimension (left) ──
   primitives.push({
@@ -155,9 +168,7 @@ function pushStirrupPrimitives(
 ): void {
   const stroke = { colorHex: REBAR_HEX, widthMm };
   if (type === 'spiral') {
-    // One continuous zig-zag helix alternating left/right across the levels.
-    const points = levels.map((z, i) => toSheet(i % 2 === 0 ? -coverX : coverX, z));
-    if (points.length >= 2) out.push({ kind: 'polyline', points, closed: false, stroke });
+    pushSpiralHelix(out, levels, coverX, stroke, toSheet);
     return;
   }
   const hookLenMm = Math.min(coverX * 0.5, 40);
@@ -168,5 +179,69 @@ function pushStirrupPrimitives(
       out.push({ kind: 'line', a: toSheet(-coverX, z), b: toSheet(-coverX + hookLenMm, z + hookLenMm), stroke });
       out.push({ kind: 'line', a: toSheet(coverX, z), b: toSheet(coverX - hookLenMm, z + hookLenMm), stroke });
     }
+  }
+}
+
+/**
+ * Συνεχής λεία ημιτονοειδής έλικα (spiral/φισούνα) ως ΕΝΑ polyline — η μετωπική
+ * προβολή σπείρας σταθερού βήματος. Ανά gap (= μία στροφή, ομοιόμορφο από
+ * `computeSpiralHelixLevelsMm`) δειγματοληπτεί `x = coverX·cos(2π·t)`: cos(0)=cos(2π)=1
+ * → συνεχές στις μεταβάσεις στροφών (κανένα βίαιο άλμα, look «ελατηρίου»).
+ */
+function pushSpiralHelix(
+  out: DetailPrimitive[],
+  levels: readonly number[],
+  coverX: number,
+  stroke: { colorHex: string; widthMm: number },
+  toSheet: (x: number, z: number) => Point2D,
+): void {
+  if (levels.length < 2) return;
+  const points: Point2D[] = [];
+  for (let L = 0; L < levels.length - 1; L++) {
+    const z0 = levels[L];
+    const z1 = levels[L + 1];
+    for (let k = 0; k < SPIRAL_SAMPLES_PER_TURN; k++) {
+      const t = k / SPIRAL_SAMPLES_PER_TURN;
+      points.push(toSheet(coverX * Math.cos(2 * Math.PI * t), z0 + (z1 - z0) * t));
+    }
+  }
+  points.push(toSheet(coverX, levels[levels.length - 1])); // κορυφή (cos(0)=1)
+  out.push({ kind: 'polyline', points, closed: false, stroke });
+}
+
+/**
+ * Spacing dimensions στεφανιών στο **δεξί** πλάι της ΟΨΗΣ (αντίθετα από το height
+ * dim). Ομαδοποιεί διαδοχικά ίσα κενά (round mm) σε ζώνες → `count×gap` (Revit:
+ * πυκνή lcr `5×100`, μέση `@200`, πυκνή lcr `5×100`)· για spiral μία ζώνη `n×pitch`.
+ * Κάθε ζώνη = ΕΝΑ `dim` primitive μέσω του κοινού `resolveDimGeometry` (ίδια
+ * βελάκια/γραμμές με τις υπόλοιπες διαστάσεις). Δεδομένο spacing, ΟΧΙ i18n.
+ */
+function pushStirrupSpacingDims(
+  out: DetailPrimitive[],
+  levels: readonly number[],
+  rightLocalX: number,
+  toSheet: (x: number, z: number) => Point2D,
+): void {
+  if (levels.length < 2) return;
+  const zones: { z0: number; z1: number; gap: number; count: number }[] = [];
+  for (let i = 1; i < levels.length; i++) {
+    const gap = Math.round(levels[i] - levels[i - 1]);
+    const prev = zones[zones.length - 1];
+    if (prev && Math.abs(prev.gap - gap) < 1) {
+      prev.z1 = levels[i];
+      prev.count += 1;
+    } else {
+      zones.push({ z0: levels[i - 1], z1: levels[i], gap, count: 1 });
+    }
+  }
+  const stroke = { colorHex: DIM_HEX, widthMm: DIM_WIDTH_MM };
+  for (const z of zones) {
+    out.push({
+      kind: 'dim',
+      p1: toSheet(rightLocalX, z.z0), p2: toSheet(rightLocalX, z.z1),
+      offsetMm: SPACING_DIM_OFFSET_MM,
+      text: z.count > 1 ? `${z.count}×${z.gap}` : String(z.gap),
+      stroke, textHeightMm: SPACING_DIM_TEXT_MM,
+    });
   }
 }

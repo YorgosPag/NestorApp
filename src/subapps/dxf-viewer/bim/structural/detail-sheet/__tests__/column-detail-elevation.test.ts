@@ -66,6 +66,46 @@ describe('buildColumnElevationRegion (ADR-457)', () => {
     expect(countKind(spiral, 'polyline')).toBe(2); // outline + helix
   });
 
+  it('spiral helix is a smooth continuous rising strand (not a chaotic zig-zag)', () => {
+    const spiral: ColumnParams = {
+      ...BASE,
+      reinforcement: { ...BASE.reinforcement!, stirrups: { ...BASE.reinforcement!.stirrups, type: 'spiral' } },
+    };
+    const polylines = buildColumnElevationRegion(spiral, REGION).primitives
+      .filter((p): p is Extract<typeof p, { kind: 'polyline' }> => p.kind === 'polyline');
+    const helix = polylines[1].points; // [outline, helix]
+    // Finely sampled (≫ the handful of stirrup levels) → smooth curve, not zig-zag.
+    expect(helix.length).toBeGreaterThan(100);
+    // Sheet-y never goes back up → z rises monotonically → a single continuous helix.
+    for (let i = 1; i < helix.length; i++) {
+      expect(helix[i].y).toBeLessThanOrEqual(helix[i - 1].y + 1e-6);
+    }
+  });
+
+  it('emits stirrup spacing-dim zones (lcr 100 / middle 200) on closed stirrups', () => {
+    const dims = buildColumnElevationRegion(BASE, REGION).primitives
+      .filter((p): p is Extract<typeof p, { kind: 'dim' }> => p.kind === 'dim')
+      .map((d) => d.text);
+    // height dim (3000) + spacing zones. The dense end zones read "n×100".
+    expect(dims).toContain('3000');
+    expect(dims.some((t) => /×100$/.test(t))).toBe(true);  // critical end zone @100
+    expect(dims.some((t) => /×200$/.test(t) || t === '200')).toBe(true); // middle @200
+  });
+
+  it('densifies a spiral at the ends too (variable pitch + zones, like closed)', () => {
+    const spiral: ColumnParams = {
+      ...BASE,
+      reinforcement: { ...BASE.reinforcement!, stirrups: { ...BASE.reinforcement!.stirrups, type: 'spiral' } },
+    };
+    const texts = buildColumnElevationRegion(spiral, REGION).primitives
+      .filter((p): p is Extract<typeof p, { kind: 'dim' }> => p.kind === 'dim')
+      .map((d) => d.text)
+      .filter((t) => t !== '3000'); // drop the height dim
+    expect(texts.length).toBeGreaterThan(1);              // multiple zones (densified)
+    expect(texts.some((t) => /×100$/.test(t))).toBe(true); // tight pitch at the ends
+    expect(texts.some((t) => /×200$/.test(t) || t === '200')).toBe(true); // loose middle
+  });
+
   it('returns empty for a non-rectangular column', () => {
     expect(buildColumnElevationRegion({ ...BASE, kind: 'circular' }, REGION).primitives).toHaveLength(0);
   });

@@ -197,6 +197,9 @@ export function buildColumnRebarCage(
   // `stirrupPathMm` με το 2Δ → SSoT· cylinder segments διατρέχουν το τόξο →
   // Revit-grade καμπύλη γωνία, ίδιος προϋπάρχων InstancedMesh αγωγός/υλικό).
   const type = r.stirrups.type ?? DEFAULT_STIRRUP_TYPE;
+  // ΟΛΟΙ οι τύποι (κλειστά & spiral) πυκνώνουν στις κρίσιμες ζώνες lcr (EC8): η
+  // φισούνα = ΕΝΑΣ συνεχής συνδετήρας με βήμα που πυκνώνει στα άκρα, ακριβώς όπως
+  // τα κλειστά στεφάνια — μόνο η σχεδίαση διαφέρει (έλικα vs ξεχωριστά δαχτυλίδια).
   const levels = computeStirrupLevelsMm(r, p.width, p.depth, heightMm);
   const pathXY = columnLocalMmToWorld(p, layout.stirrupPathMm);
   const stirrupSegs: Seg[] =
