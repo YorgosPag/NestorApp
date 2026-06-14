@@ -1,87 +1,68 @@
 /**
- * ADR-457 Slice 3 — perspective region builder + orchestrator wiring tests.
+ * ADR-457 Slice 3 — perspective region builder tests.
  *
  * The 3D raster itself is captured via offscreen WebGL (not runnable in jsdom);
- * these tests cover the PURE wiring: the perspective region always reserves one
- * raster slot, inset below the heading, carrying the (possibly null) data URL,
- * and the orchestrator threads `perspectiveDataUrl` into that region.
+ * these tests cover the PURE region build: an empty raster slot while pending,
+ * and — given a capture — a raster plus the W/D/H dimensions and bar marks as
+ * standard 2D `dim` / `text` primitives (the FULL-SSOT overlay).
  */
 
 import { buildColumnPerspectiveRegion } from '../column-detail-perspective';
-import { buildColumnDetailSheet } from '../column-detail-sheet';
 import { computeDetailSheetLayout } from '../detail-sheet-layout';
-import type { DetailSheetLabels, RasterPrimitive } from '../detail-sheet-types';
-import type { ColumnParams } from '../../../types/column-types';
+import type { DetailPrimitive } from '../detail-sheet-types';
+import type { ColumnDetail3dCapture } from '../render/column-detail-3d-capture';
 
-const LABELS: DetailSheetLabels = {
-  plan: 'ΚΑΤΟΨΗ',
-  elevation: 'ΟΨΗ',
-  perspective: '3Δ',
-  schedule: 'ΧΑΛΥΒΑΣ',
-  titleBlock: 'ΣΧΕΔΙΟ',
+const REGION = computeDetailSheetLayout().regions.perspective;
+
+const CAPTURE: ColumnDetail3dCapture = {
+  dataUrl: 'data:image/png;base64,AAA',
+  widthPx: 800,
+  heightPx: 1200,
+  centroid: { x: 0.5, y: 0.5 },
+  dims: [
+    { a: { x: 0.2, y: 0.8 }, b: { x: 0.8, y: 0.8 }, text: '400' },
+    { a: { x: 0.8, y: 0.8 }, b: { x: 0.8, y: 0.2 }, text: '600' },
+    { a: { x: 0.9, y: 0.8 }, b: { x: 0.9, y: 0.2 }, text: '3000' },
+  ],
+  marks: [
+    { pos: { x: 0.3, y: 0.1 }, text: '1' },
+    { pos: { x: 0.7, y: 0.1 }, text: '2' },
+  ],
 };
 
-const COLUMN: ColumnParams = {
-  kind: 'rectangular',
-  position: { x: 0, y: 0, z: 0 },
-  anchor: 'center',
-  width: 400,
-  depth: 400,
-  height: 3000,
-  rotation: 0,
-  reinforcement: {
-    longitudinal: { diameterMm: 16, count: 8 },
-    stirrups: { diameterMm: 8, spacingMm: 200, spacingCriticalMm: 100, type: 'closed-hooked' },
-    coverMm: 25,
-  },
-};
-
-function rasterOf(prims: readonly { kind: string }[]): RasterPrimitive {
-  const raster = prims.find((p) => p.kind === 'raster');
-  if (!raster) throw new Error('no raster primitive');
-  return raster as RasterPrimitive;
+function byKind<K extends DetailPrimitive['kind']>(
+  prims: readonly DetailPrimitive[],
+  kind: K,
+): Extract<DetailPrimitive, { kind: K }>[] {
+  return prims.filter((p): p is Extract<DetailPrimitive, { kind: K }> => p.kind === kind);
 }
 
 describe('buildColumnPerspectiveRegion (ADR-457 Slice 3)', () => {
-  const region = computeDetailSheetLayout().regions.perspective;
-
-  it('emits exactly one raster primitive carrying the data URL', () => {
-    const { primitives } = buildColumnPerspectiveRegion(region, 'data:image/png;base64,AAA');
-    expect(primitives).toHaveLength(1);
-    expect(rasterOf(primitives).dataUrl).toBe('data:image/png;base64,AAA');
+  it('emits an empty raster slot while the capture is pending (null)', () => {
+    const { primitives } = buildColumnPerspectiveRegion(REGION, null);
+    const rasters = byKind(primitives, 'raster');
+    expect(rasters).toHaveLength(1);
+    expect(rasters[0].dataUrl).toBeNull();
+    expect(byKind(primitives, 'dim')).toHaveLength(0);
   });
 
-  it('still reserves the slot when the capture is pending (null url)', () => {
-    const { primitives } = buildColumnPerspectiveRegion(region, null);
-    expect(primitives).toHaveLength(1);
-    expect(rasterOf(primitives).dataUrl).toBeNull();
+  it('emits the raster + W/D/H dims + bar marks as standard 2D primitives', () => {
+    const { primitives } = buildColumnPerspectiveRegion(REGION, CAPTURE);
+    expect(byKind(primitives, 'raster')[0].dataUrl).toBe('data:image/png;base64,AAA');
+    expect(byKind(primitives, 'dim').map((d) => d.text)).toEqual(['400', '600', '3000']);
+    expect(byKind(primitives, 'text').map((t) => t.text)).toEqual(['1', '2']);
   });
 
-  it('insets the raster rect inside the region (below the heading)', () => {
-    const { rect } = rasterOf(buildColumnPerspectiveRegion(region, null).primitives);
-    expect(rect.x).toBeGreaterThan(region.x);
-    expect(rect.y).toBeGreaterThan(region.y);
-    expect(rect.x + rect.w).toBeLessThanOrEqual(region.x + region.w + 1e-6);
-    expect(rect.y + rect.h).toBeLessThanOrEqual(region.y + region.h + 1e-6);
-    expect(rect.w).toBeGreaterThan(0);
-    expect(rect.h).toBeGreaterThan(0);
-  });
-});
-
-describe('buildColumnDetailSheet — perspective wiring (ADR-457 Slice 3)', () => {
-  function perspective(url?: string | null) {
-    const model = buildColumnDetailSheet({ params: COLUMN, labels: LABELS, perspectiveDataUrl: url });
-    const region = model.regions.find((r) => r.id === 'perspective');
-    if (!region) throw new Error('no perspective region');
-    return region;
-  }
-
-  it('threads the data URL into the perspective region raster', () => {
-    expect(rasterOf(perspective('data:image/png;base64,ZZZ').primitives).dataUrl)
-      .toBe('data:image/png;base64,ZZZ');
+  it('offsets every dimension line off the measured edge (non-zero offset)', () => {
+    const { primitives } = buildColumnPerspectiveRegion(REGION, CAPTURE);
+    for (const dim of byKind(primitives, 'dim')) expect(Math.abs(dim.offsetMm)).toBeGreaterThan(0);
   });
 
-  it('defaults to a null raster when no capture is supplied', () => {
-    expect(rasterOf(perspective().primitives).dataUrl).toBeNull();
+  it('places the raster + overlay inside the region', () => {
+    const { primitives } = buildColumnPerspectiveRegion(REGION, CAPTURE);
+    const raster = byKind(primitives, 'raster')[0];
+    expect(raster.rect.x).toBeGreaterThanOrEqual(REGION.x);
+    expect(raster.rect.y).toBeGreaterThan(REGION.y);
+    expect(raster.rect.x + raster.rect.w).toBeLessThanOrEqual(REGION.x + REGION.w + 1e-6);
   });
 });

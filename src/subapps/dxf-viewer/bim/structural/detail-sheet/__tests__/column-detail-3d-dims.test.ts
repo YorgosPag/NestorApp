@@ -1,14 +1,12 @@
 /**
- * ADR-457 Slice 3 — 3D dimension annotations builder tests.
+ * ADR-457 Slice 3 — 3D dimension spec tests.
  *
- * The offscreen WebGL render is not runnable in jsdom, but the annotation GROUP
- * (dimension lines + label sprites) is plain three.js geometry → unit-testable:
- * a rectangular reinforced column yields W/D/H leaders (3 sprites + a line set),
- * unsupported kinds / degenerate height yield null.
+ * `computeColumnDimSpecs3d` returns the W/D/H measured 3D points + value text
+ * (later projected + drawn as 2D `dim` primitives). Verifies the three specs,
+ * their texts, and empty output for unsupported kinds / degenerate height.
  */
 
-import * as THREE from 'three';
-import { buildColumnDimAnnotations } from '../render/column-detail-3d-dims';
+import { computeColumnDimSpecs3d } from '../render/column-detail-3d-dims';
 import type { ColumnParams, ColumnEntity } from '../../../types/column-types';
 
 function column(params: ColumnParams): ColumnEntity {
@@ -30,27 +28,23 @@ const RECT: ColumnParams = {
   },
 };
 
-function countSprites(group: THREE.Object3D): number {
-  let n = 0;
-  group.traverse((o) => { if (o instanceof THREE.Sprite) n += 1; });
-  return n;
-}
-
-describe('buildColumnDimAnnotations (ADR-457 Slice 3)', () => {
-  it('builds W/D/H leaders (3 labels + a line set) for a rectangular column', () => {
-    const group = buildColumnDimAnnotations(column(RECT));
-    expect(group).not.toBeNull();
-    expect(countSprites(group!)).toBe(3);
-    let lineSets = 0;
-    group!.traverse((o) => { if (o instanceof THREE.LineSegments) lineSets += 1; });
-    expect(lineSets).toBe(1);
+describe('computeColumnDimSpecs3d (ADR-457 Slice 3)', () => {
+  it('returns width / depth / height specs with the raw mm values', () => {
+    const specs = computeColumnDimSpecs3d(column(RECT));
+    expect(specs).toHaveLength(3);
+    expect(specs.map((s) => s.text)).toEqual(['400', '600', '3000']);
   });
 
-  it('returns null for a non-rectangular column', () => {
-    expect(buildColumnDimAnnotations(column({ ...RECT, kind: 'circular' }))).toBeNull();
+  it('spans the full column height in the height spec (base → top in metres)', () => {
+    const height = computeColumnDimSpecs3d(column(RECT))[2];
+    expect(Math.abs(height.b.y - height.a.y)).toBeCloseTo(3000 * 0.001, 6);
   });
 
-  it('returns null for a degenerate (zero) height', () => {
-    expect(buildColumnDimAnnotations(column({ ...RECT, height: 0 }))).toBeNull();
+  it('returns empty for a non-rectangular column', () => {
+    expect(computeColumnDimSpecs3d(column({ ...RECT, kind: 'circular' }))).toHaveLength(0);
+  });
+
+  it('returns empty for a degenerate (zero) height', () => {
+    expect(computeColumnDimSpecs3d(column({ ...RECT, height: 0 }))).toHaveLength(0);
   });
 });

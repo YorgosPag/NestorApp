@@ -27,6 +27,7 @@ import type { ColumnEntity } from '../../../bim/types/column-types';
 import { buildColumnDetailSheet } from '../../../bim/structural/detail-sheet/column-detail-sheet';
 import { computeDetailSheetLayout } from '../../../bim/structural/detail-sheet/detail-sheet-layout';
 import { captureColumnDetail3d } from '../../../bim/structural/detail-sheet/render/column-detail-3d-capture';
+import type { ColumnDetail3dCapture } from '../../../bim/structural/detail-sheet/render/column-detail-3d-capture';
 import type { DetailSheetModel } from '../../../bim/structural/detail-sheet/detail-sheet-types';
 import { ColumnDetailDialog } from './ColumnDetailDialog';
 
@@ -74,7 +75,7 @@ export function ColumnDetailHost({
   const { t } = useTranslation('dxf-viewer-shell');
   const [dialogState, setDialogState] = useState<DialogState>(CLOSED);
   // Offscreen 3D perspective capture (ADR-457 Slice 3) — async, null while pending.
-  const [perspectiveDataUrl, setPerspectiveDataUrl] = useState<string | null>(null);
+  const [perspective3d, setPerspective3d] = useState<ColumnDetail3dCapture | null>(null);
 
   useEffect(() => {
     return EventBus.on('bim:column-detail-requested', ({ columnId, levelId }) => {
@@ -87,15 +88,15 @@ export function ColumnDetailHost({
   // synchronous model build (WebGL render is one-shot; null → no cage).
   useEffect(() => {
     if (!dialogState.open) {
-      setPerspectiveDataUrl(null);
+      setPerspective3d(null);
       return;
     }
     const column = resolveColumn(levelManager, dialogState.levelId, dialogState.columnId);
     if (!column) {
-      setPerspectiveDataUrl(null);
+      setPerspective3d(null);
       return;
     }
-    setPerspectiveDataUrl(captureColumnDetail3d(column, captureSizePx()));
+    setPerspective3d(captureColumnDetail3d(column, captureSizePx()));
   }, [dialogState, levelManager]);
 
   const model = useMemo<DetailSheetModel | null>(() => {
@@ -104,7 +105,7 @@ export function ColumnDetailHost({
     if (!column) return null;
     return buildColumnDetailSheet({
       params: column.params,
-      perspectiveDataUrl,
+      perspective3d,
       labels: {
         plan: t('columnDetail.regions.plan'),
         elevation: t('columnDetail.regions.elevation'),
@@ -113,7 +114,7 @@ export function ColumnDetailHost({
         titleBlock: t('columnDetail.regions.titleBlock'),
       },
     });
-  }, [dialogState, levelManager, t, perspectiveDataUrl]);
+  }, [dialogState, levelManager, t, perspective3d]);
 
   const handleOpenChange = useCallback((next: boolean): void => {
     if (!next) setDialogState(CLOSED);
