@@ -3748,6 +3748,16 @@
       }
     }
   },
+  "columnAdvancedPanel": {
+    "title": "Ιδιότητες Κολώνας",
+    "emptyState": "Επίλεξε μια κολώνα για να δεις τις ιδιότητες.",
+    "sections": {
+      "structural": { "title": "Στατικά / Οπλισμός" },
+      "finish": { "title": "Σοβάς" },
+      "envelope": { "title": "Λειτουργία Κελύφους" },
+      "material": { "title": "Υλικό" }
+    }
+  },
   "wallAdvancedPanel": {
     "title": "Προηγμένες Ιδιότητες Τοίχου",
     "emptyState": "Επίλεξε έναν τοίχο για να δεις τις ιδιότητες.",

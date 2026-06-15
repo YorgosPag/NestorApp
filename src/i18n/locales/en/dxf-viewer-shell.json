@@ -3748,6 +3748,16 @@
       }
     }
   },
+  "columnAdvancedPanel": {
+    "title": "Column Properties",
+    "emptyState": "Select a column to see its properties.",
+    "sections": {
+      "structural": { "title": "Structural / Reinforcement" },
+      "finish": { "title": "Plaster Finish" },
+      "envelope": { "title": "Envelope Function" },
+      "material": { "title": "Material" }
+    }
+  },
   "wallAdvancedPanel": {
     "title": "Wall Advanced Properties",
     "emptyState": "Select a wall to see its properties.",

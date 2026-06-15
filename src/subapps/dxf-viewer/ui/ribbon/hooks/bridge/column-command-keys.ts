@@ -7,6 +7,7 @@
  * `OPENING_RIBBON_KEYS` pattern.
  */
 
+import type { ColumnKind } from '../../../../bim/types/column-types';
 import type { FinishParamField } from './finish-param';
 
 export const COLUMN_RIBBON_KEYS = {
@@ -151,6 +152,40 @@ const COLUMN_VISIBILITY_KEY_SET: ReadonlySet<string> = new Set<string>([
 
 export function isColumnVisibilityKey(key: string): key is ColumnRibbonVisibilityKey {
   return COLUMN_VISIBILITY_KEY_SET.has(key);
+}
+
+/**
+ * Pure SSoT: αποφασίζει αν ένα visibility-gated panel/section πρέπει να φαίνεται,
+ * δεδομένου του `kind` της κολώνας. Καταναλώνεται ΚΑΙ από το ribbon bridge
+ * (`useRibbonColumnBridge.getPanelVisibility`) ΚΑΙ από το docked Properties panel
+ * (`ColumnAdvancedPanel`) — μηδέν διπλή λογική gating.
+ *
+ *   - `hasUshapePolygon` = `true` όταν η Π-κολώνα είναι polygon-backed (per-vertex
+ *     grips)· τότε τα manual leg/base inputs κρύβονται.
+ *   - keys εκτός `COLUMN_RIBBON_VISIBILITY_KEYS` → `true` (no-op, μη-gated).
+ *   - `kind === null` (ούτε επιλογή ούτε ενεργό εργαλείο) → `false`.
+ */
+export function resolveColumnPanelVisibility(
+  visibilityKey: string,
+  kind: ColumnKind | null,
+  hasUshapePolygon: boolean,
+): boolean {
+  if (!isColumnVisibilityKey(visibilityKey)) return true;
+  if (!kind) return false;
+  switch (visibilityKey) {
+    case COLUMN_RIBBON_VISIBILITY_KEYS.polygonParams: return kind === 'polygon';
+    case COLUMN_RIBBON_VISIBILITY_KEYS.ishapeParams: return kind === 'I-shape';
+    case COLUMN_RIBBON_VISIBILITY_KEYS.shearWallCatalog: return kind === 'shear-wall';
+    case COLUMN_RIBBON_VISIBILITY_KEYS.ishapeCatalog: return kind === 'I-shape';
+    // ADR-456 Slice 2 — δομοστατικά/οπλισμός μόνο για RC kinds (ρ-έλεγχος καλύπτει
+    // ορθογωνική + τοιχείο).
+    case COLUMN_RIBBON_VISIBILITY_KEYS.structural:
+      return kind === 'rectangular' || kind === 'shear-wall';
+    // ADR-363 Phase 2b — leg/base thickness μόνο για manual παραμετρικό Π.
+    case COLUMN_RIBBON_VISIBILITY_KEYS.ushapeParams:
+      return kind === 'U-shape' && !hasUshapePolygon;
+    default: return false;
+  }
 }
 
 // ─── Type guards (used by useRibbonCommands composer) ────────────────────────

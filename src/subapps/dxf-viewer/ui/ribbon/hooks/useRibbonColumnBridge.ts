@@ -25,21 +25,19 @@ import { isColumnEntity } from '../../../types/entities';
 import type {
   ColumnEntity,
   ColumnKind,
-  ColumnParams,
 } from '../../../bim/types/column-types';
 import { useCommandHistory } from '../../../core/commands';
-import { UpdateColumnParamsCommand } from '../../../core/commands/entity-commands/UpdateColumnParamsCommand';
 import { DetachColumnsCommand, type ColumnDetachSide } from '../../../core/commands/entity-commands/DetachColumnsCommand';
-import { detachSidesAffectedByVerticalEdit } from '../../../bim/entities/entity-attach-detach';
 import { resolveColumnAttachTargets } from '../../../bim/walls/wall-attach-pick';
 import { LevelSceneManagerAdapter } from '../../../systems/entity-creation/LevelSceneManagerAdapter';
 import {
   COLUMN_RIBBON_KEYS_ACTIONS,
   COLUMN_RIBBON_BADGE_KEYS,
-  COLUMN_RIBBON_VISIBILITY_KEYS,
   isColumnVisibilityKey,
+  resolveColumnPanelVisibility,
 } from './bridge/column-command-keys';
 import { autoReinforceColumn } from './bridge/column-structural-bridge';
+import { useColumnParamsDispatcher } from './bridge/useColumnParamsDispatcher';
 import { columnToolBridgeStore } from './bridge/column-tool-bridge-store';
 import {
   resolveColumnComboboxState,
@@ -125,31 +123,12 @@ export function useRibbonColumnBridge(
   }, [levelManager, universalSelection]);
 
   /**
-   * Dispatch the params patch through `UpdateColumnParamsCommand` so the
-   * change is undoable + geometry/validation recompute atomically (ADR-363
-   * Phase 4.5). `useColumnPersistence` picks up the patched entity via
-   * debounced auto-save.
+   * Dispatch the params patch — SSoT writer shared με το docked Properties panel
+   * (`useColumnParamsDispatcher`): undoable `UpdateColumnParamsCommand` +
+   * geometry/validation recompute atomically· debounced auto-save via
+   * `useColumnPersistence`.
    */
-  const dispatchParams = useCallback(
-    (column: ColumnEntity, nextParams: ColumnParams): void => {
-      if (!levelManager.currentLevelId) return;
-      // ADR-401 Phase F.3 — a manual height/baseOffset edit breaks the matching
-      // top/base structural attach first (Revit «edit breaks attach»), so the
-      // explicit numeric value wins over the host follow. Detach + edit collapse
-      // into one undo step (column.params below restores both).
-      const next = detachSidesAffectedByVerticalEdit(column.params, nextParams);
-      const sm = new LevelSceneManagerAdapter(
-        levelManager.getLevelScene,
-        levelManager.setLevelScene,
-        levelManager.currentLevelId,
-      );
-      executeCommand(
-        new UpdateColumnParamsCommand(column.id, next, column.params, sm, false),
-      );
-      EventBus.emit('bim:column-params-updated', { columnId: column.id });
-    },
-    [executeCommand, levelManager],
-  );
+  const dispatchParams = useColumnParamsDispatcher({ levelManager });
 
   const getComboboxState = useCallback(
     (commandKey: string): RibbonComboboxState | null =>
@@ -279,30 +258,14 @@ export function useRibbonColumnBridge(
    */
   const getPanelVisibility = useCallback(
     (visibilityKey: string): boolean => {
-      if (!isColumnVisibilityKey(visibilityKey)) return true;
       const column = resolveColumn();
       const kind: ColumnKind | null = column
         ? column.params.kind
         : toolHandle?.isActive
           ? toolHandle.kind
           : null;
-      if (!kind) return false;
-      if (visibilityKey === COLUMN_RIBBON_VISIBILITY_KEYS.polygonParams) return kind === 'polygon';
-      if (visibilityKey === COLUMN_RIBBON_VISIBILITY_KEYS.ishapeParams) return kind === 'I-shape';
-      if (visibilityKey === COLUMN_RIBBON_VISIBILITY_KEYS.shearWallCatalog) return kind === 'shear-wall';
-      if (visibilityKey === COLUMN_RIBBON_VISIBILITY_KEYS.ishapeCatalog) return kind === 'I-shape';
-      // ADR-456 Slice 2 — δομοστατικά/οπλισμός panel μόνο για RC kinds (ο ρ-έλεγχος
-      // Slice 1 καλύπτει ορθογωνική + τοιχείο).
-      if (visibilityKey === COLUMN_RIBBON_VISIBILITY_KEYS.structural) {
-        return kind === 'rectangular' || kind === 'shear-wall';
-      }
-      if (visibilityKey === COLUMN_RIBBON_VISIBILITY_KEYS.ushapeParams) {
-        // ADR-363 Phase 2b — leg/base thickness inputs μόνο για manual παραμετρικό
-        // Π· polygon-backed (από-περίγραμμα) επεξεργάζεται με per-vertex grips.
-        const poly = column?.params.ushape?.polygon;
-        return kind === 'U-shape' && !(poly && poly.length >= 3);
-      }
-      return false;
+      const poly = column?.params.ushape?.polygon;
+      return resolveColumnPanelVisibility(visibilityKey, kind, !!(poly && poly.length >= 3));
     },
     [resolveColumn, toolHandle],
   );

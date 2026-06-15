@@ -90,15 +90,16 @@ const FloatingPanelContainerInner = forwardRef<FloatingPanelHandleType, Floating
     primarySelectedId,
   });
 
-  // ADR-358 Phase 8 sidebar dock — auto-switch to the Properties tab when the
-  // user selects a stair (industry pattern: Revit / AutoCAD Properties palette
-  // pops on selection). Stays out of the way for non-stair selections so the
-  // user is not bounced off the Levels tab while doing layer work.
+  // ADR-358 Phase 8 / ADR-363 Phase 4 sidebar dock — auto-switch to the Properties
+  // tab when the user selects a stair or column (industry pattern: Revit / AutoCAD
+  // Properties palette pops on selection). Stays out of the way for other
+  // selections so the user is not bounced off the Levels tab while doing layer work.
   React.useEffect(() => {
     if (!scene || !primarySelectedId) return;
     const entity = scene.entities.find((e) => e.id === primarySelectedId);
     if (!entity) return;
-    if ((entity as { type?: string }).type === 'stair' && activePanel !== 'properties') {
+    const entityType = (entity as { type?: string }).type;
+    if ((entityType === 'stair' || entityType === 'column') && activePanel !== 'properties') {
       setActivePanel('properties');
     }
   }, [primarySelectedId, scene, activePanel, setActivePanel]);

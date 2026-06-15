@@ -22,29 +22,11 @@ import {
   COLUMN_RIBBON_KEYS_ACTIONS,
   COLUMN_RIBBON_BADGE_KEYS,
   COLUMN_RIBBON_VISIBILITY_KEYS,
-  COLUMN_FINISH_KEYS,
-  COLUMN_STRUCTURAL_KEYS,
-  COLUMN_STRUCTURAL_READOUT_KEYS,
 } from '../hooks/bridge/column-command-keys';
 import { STOREY_RIBBON_KEYS } from '../hooks/bridge/storey-command-keys';
-import { ENVELOPE_FUNCTION_OPTIONS } from '../hooks/bridge/envelope-function-param';
-import {
-  FINISH_ENABLED_OPTIONS,
-  FINISH_MATERIAL_OPTIONS,
-  FINISH_THICKNESS_OPTIONS,
-} from '../hooks/bridge/finish-param';
-import {
-  STRUCTURAL_CODE_OPTIONS,
-  CONCRETE_GRADE_OPTIONS,
-  LONGITUDINAL_DIAMETER_OPTIONS,
-  LONGITUDINAL_COUNT_OPTIONS,
-  STIRRUP_TYPE_OPTIONS,
-  CROSS_TIE_PATTERN_OPTIONS,
-  STIRRUP_DIAMETER_OPTIONS,
-  STIRRUP_SPACING_OPTIONS,
-  STIRRUP_CRITICAL_SPACING_OPTIONS,
-  COVER_OPTIONS,
-} from '../hooks/bridge/structural-param';
+// ADR-363 Phase 4 / Properties-palette split — τα αναλυτικά groups (Στατικά/
+// Οπλισμός, Σοβάς, Κέλυφος, Υλικό) μετακινήθηκαν στο docked Properties panel
+// (`ui/column-advanced-panel/`). Το ribbon κρατά συχνά + εργαλεία.
 import { PSET_RIBBON_ACTION } from '../hooks/bridge/pset-action-keys';
 import {
   CATALOG_CUSTOM_SENTINEL,
@@ -177,16 +159,6 @@ const HEIGHT_MM_OPTIONS = [
   { value: '3300', labelKey: '3300', isLiteralLabel: true },
   { value: '3600', labelKey: '3600', isLiteralLabel: true },
   { value: '4000', labelKey: '4000', isLiteralLabel: true },
-] as const;
-
-// ADR-363 Phase 4.5d — material picker (ENABLED). 4 options match the hatch
-// pattern keys consumed by `resolveMaterialKey` + `ColumnRenderer.drawMaterialHatch`
-// (Phase 4.5c.2). Lookup is case-insensitive, unknown → 'rc' fallback.
-const COLUMN_MATERIAL_OPTIONS = [
-  { value: 'rc',      labelKey: 'ribbon.commands.columnEditor.material.rc',      isLiteralLabel: false },
-  { value: 'steel',   labelKey: 'ribbon.commands.columnEditor.material.steel',   isLiteralLabel: false },
-  { value: 'masonry', labelKey: 'ribbon.commands.columnEditor.material.masonry', isLiteralLabel: false },
-  { value: 'wood',    labelKey: 'ribbon.commands.columnEditor.material.wood',    isLiteralLabel: false },
 ] as const;
 
 const ROTATION_DEG_OPTIONS = [
@@ -460,45 +432,19 @@ export const CONTEXTUAL_COLUMN_TAB: RibbonTab = {
       ],
     },
     {
-      // ADR-363 Phase 4.5d — material picker panel. ENABLED — sits between
-      // geometry and actions so the engineer can flip RC ↔ Steel ↔ Masonry ↔
-      // Wood and immediately observe the hatch update from Phase 4.5c.2
-      // (`ColumnRenderer.drawMaterialHatch`).
-      id: 'column-material',
-      labelKey: 'ribbon.panels.columnMaterial',
-      rows: [
-        {
-          isInFlyout: false,
-          buttons: [
-            {
-              type: 'combobox',
-              size: 'small',
-              command: {
-                id: 'column.material',
-                labelKey: 'ribbon.commands.columnEditor.material.section.title',
-                commandKey: COLUMN_RIBBON_KEYS.stringParams.material,
-                comboboxWidthPx: 180,
-                options: COLUMN_MATERIAL_OPTIONS,
-              },
-            },
-          ],
-        },
-      ],
-    },
-    {
-      // ADR-456 Slice 2 — Στατικά/Οπλισμός: building-level κανονισμός + per-element
-      // κατηγορία σκυροδέματος + διαμήκης/εγκάρσιος οπλισμός + επικάλυψη, με κουμπί
-      // «Auto οπλισμός» (code-suggested) + live readouts (βάρη/ρ%). Visible μόνο για
-      // RC kinds (rectangular/shear-wall) — βλ. getPanelVisibility.
-      id: 'column-structural',
+      // ADR-363 Phase 4 / Properties-palette split — lean «Οπλισμός» actions panel.
+      // Οι αναλυτικές παράμετροι (κανονισμός/σκυρόδεμα/διαμήκης/συνδετήρες/readouts)
+      // ζουν πλέον στο docked Properties panel· εδώ κρατάμε ΜΟΝΟ τις συχνές ενέργειες:
+      // show/hide οπλισμού + «Auto οπλισμός». Visible μόνο για RC kinds.
+      id: 'column-reinforcement-actions',
       labelKey: 'ribbon.panels.columnStructural',
       visibilityKey: COLUMN_RIBBON_VISIBILITY_KEYS.structural,
       rows: [
         {
           isInFlyout: false,
           buttons: [
-            // ADR-456 Slice 3 — «Οπλισμός» εμφάνιση/απόκρυψη μέσα στο contextual tab
-            // της κολώνας (ίδιο widget με την καρτέλα Προβολή· κοινό per-view flag).
+            // ADR-456 Slice 3 — «Οπλισμός» εμφάνιση/απόκρυψη (ίδιο widget με την
+            // καρτέλα Προβολή· κοινό per-view flag).
             {
               type: 'widget',
               size: 'small',
@@ -511,29 +457,6 @@ export const CONTEXTUAL_COLUMN_TAB: RibbonTab = {
               },
             },
             {
-              type: 'combobox',
-              size: 'small',
-              command: {
-                id: 'column.structural.code',
-                labelKey: 'ribbon.commands.columnStructural.code',
-                tooltipKey: 'ribbon.commands.columnStructural.codeTooltip',
-                commandKey: COLUMN_STRUCTURAL_KEYS.code,
-                comboboxWidthPx: 150,
-                options: STRUCTURAL_CODE_OPTIONS,
-              },
-            },
-            {
-              type: 'combobox',
-              size: 'small',
-              command: {
-                id: 'column.structural.concreteGrade',
-                labelKey: 'ribbon.commands.columnStructural.concreteGrade',
-                commandKey: COLUMN_STRUCTURAL_KEYS.concreteGrade,
-                comboboxWidthPx: 110,
-                options: CONCRETE_GRADE_OPTIONS,
-              },
-            },
-            {
               type: 'simple',
               size: 'small',
               command: {
@@ -543,171 +466,6 @@ export const CONTEXTUAL_COLUMN_TAB: RibbonTab = {
                 icon: 'struct-auto-reinforce',
                 commandKey: COLUMN_RIBBON_KEYS_ACTIONS.autoReinforce,
                 action: COLUMN_RIBBON_KEYS_ACTIONS.autoReinforce,
-              },
-            },
-          ],
-        },
-        {
-          isInFlyout: false,
-          buttons: [
-            {
-              type: 'combobox',
-              size: 'small',
-              command: {
-                id: 'column.structural.longitudinalDiameter',
-                labelKey: 'ribbon.commands.columnStructural.longitudinalDiameter',
-                commandKey: COLUMN_STRUCTURAL_KEYS.longitudinalDiameter,
-                comboboxWidthPx: 90,
-                options: LONGITUDINAL_DIAMETER_OPTIONS,
-              },
-            },
-            {
-              type: 'combobox',
-              size: 'small',
-              command: {
-                id: 'column.structural.longitudinalCount',
-                labelKey: 'ribbon.commands.columnStructural.longitudinalCount',
-                commandKey: COLUMN_STRUCTURAL_KEYS.longitudinalCount,
-                comboboxWidthPx: 80,
-                options: LONGITUDINAL_COUNT_OPTIONS,
-              },
-            },
-            {
-              type: 'combobox',
-              size: 'small',
-              command: {
-                id: 'column.structural.stirrupType',
-                labelKey: 'ribbon.commands.columnStructural.stirrupType',
-                commandKey: COLUMN_STRUCTURAL_KEYS.stirrupType,
-                comboboxWidthPx: 150,
-                options: STIRRUP_TYPE_OPTIONS,
-              },
-            },
-            {
-              type: 'combobox',
-              size: 'small',
-              command: {
-                id: 'column.structural.crossTiePattern',
-                labelKey: 'ribbon.commands.columnStructural.crossTiePattern',
-                commandKey: COLUMN_STRUCTURAL_KEYS.crossTiePattern,
-                comboboxWidthPx: 130,
-                options: CROSS_TIE_PATTERN_OPTIONS,
-              },
-            },
-            {
-              type: 'combobox',
-              size: 'small',
-              command: {
-                id: 'column.structural.stirrupDiameter',
-                labelKey: 'ribbon.commands.columnStructural.stirrupDiameter',
-                commandKey: COLUMN_STRUCTURAL_KEYS.stirrupDiameter,
-                comboboxWidthPx: 90,
-                options: STIRRUP_DIAMETER_OPTIONS,
-              },
-            },
-            {
-              type: 'combobox',
-              size: 'small',
-              command: {
-                id: 'column.structural.stirrupSpacing',
-                labelKey: 'ribbon.commands.columnStructural.stirrupSpacing',
-                commandKey: COLUMN_STRUCTURAL_KEYS.stirrupSpacing,
-                comboboxWidthPx: 90,
-                options: STIRRUP_SPACING_OPTIONS,
-              },
-            },
-            {
-              type: 'combobox',
-              size: 'small',
-              command: {
-                id: 'column.structural.stirrupCriticalSpacing',
-                labelKey: 'ribbon.commands.columnStructural.stirrupCriticalSpacing',
-                commandKey: COLUMN_STRUCTURAL_KEYS.stirrupCriticalSpacing,
-                comboboxWidthPx: 90,
-                options: STIRRUP_CRITICAL_SPACING_OPTIONS,
-              },
-            },
-            {
-              type: 'combobox',
-              size: 'small',
-              command: {
-                id: 'column.structural.cover',
-                labelKey: 'ribbon.commands.columnStructural.cover',
-                commandKey: COLUMN_STRUCTURAL_KEYS.cover,
-                comboboxWidthPx: 80,
-                options: COVER_OPTIONS,
-              },
-            },
-          ],
-        },
-        {
-          isInFlyout: false,
-          buttons: [
-            {
-              // Read-only readout — bridge δίνει value, options:[] (μη επεξεργάσιμο).
-              type: 'combobox',
-              size: 'small',
-              command: {
-                id: 'column.structural.concreteVolumeGross',
-                labelKey: 'ribbon.commands.columnStructural.concreteVolumeGross',
-                commandKey: COLUMN_STRUCTURAL_READOUT_KEYS.concreteVolumeGross,
-                comboboxWidthPx: 120,
-                options: [],
-              },
-            },
-            {
-              type: 'combobox',
-              size: 'small',
-              command: {
-                id: 'column.structural.concreteVolumeNet',
-                labelKey: 'ribbon.commands.columnStructural.concreteVolumeNet',
-                commandKey: COLUMN_STRUCTURAL_READOUT_KEYS.concreteVolumeNet,
-                comboboxWidthPx: 120,
-                options: [],
-              },
-            },
-            {
-              type: 'combobox',
-              size: 'small',
-              command: {
-                id: 'column.structural.concreteWeight',
-                labelKey: 'ribbon.commands.columnStructural.concreteWeight',
-                commandKey: COLUMN_STRUCTURAL_READOUT_KEYS.concreteWeight,
-                comboboxWidthPx: 110,
-                options: [],
-              },
-            },
-            {
-              type: 'combobox',
-              size: 'small',
-              command: {
-                id: 'column.structural.steelWeight',
-                labelKey: 'ribbon.commands.columnStructural.steelWeight',
-                commandKey: COLUMN_STRUCTURAL_READOUT_KEYS.steelWeight,
-                comboboxWidthPx: 110,
-                options: [],
-              },
-            },
-            {
-              type: 'combobox',
-              size: 'small',
-              command: {
-                id: 'column.structural.ratio',
-                labelKey: 'ribbon.commands.columnStructural.ratio',
-                commandKey: COLUMN_STRUCTURAL_READOUT_KEYS.ratio,
-                comboboxWidthPx: 90,
-                options: [],
-              },
-            },
-            {
-              type: 'combobox',
-              size: 'small',
-              command: {
-                id: 'column.structural.confinement',
-                labelKey: 'ribbon.commands.columnStructural.confinement',
-                commandKey: COLUMN_STRUCTURAL_READOUT_KEYS.confinement,
-                comboboxWidthPx: 110,
-                options: [],
               },
             },
           ],
@@ -735,88 +493,6 @@ export const CONTEXTUAL_COLUMN_TAB: RibbonTab = {
                 icon: 'column-reinforcement-detail',
                 commandKey: COLUMN_RIBBON_KEYS_ACTIONS.reinforcementDetail,
                 action: COLUMN_RIBBON_KEYS_ACTIONS.reinforcementDetail,
-              },
-            },
-          ],
-        },
-      ],
-    },
-    {
-      // ADR-449 Slice 5 — σοβάς (structural finish skin) per-element override:
-      // enabled + υλικό εσωτ./εξωτ. + πάχος. Shared SSoT options/helpers με δοκάρι.
-      id: 'column-finish-skin',
-      labelKey: 'ribbon.panels.columnFinishSkin',
-      rows: [
-        {
-          isInFlyout: false,
-          buttons: [
-            {
-              type: 'combobox',
-              size: 'small',
-              command: {
-                id: 'column.finish.enabled',
-                labelKey: 'ribbon.commands.finishEditor.enabled.section.title',
-                commandKey: COLUMN_FINISH_KEYS.enabled,
-                comboboxWidthPx: 110,
-                options: FINISH_ENABLED_OPTIONS,
-              },
-            },
-            {
-              type: 'combobox',
-              size: 'small',
-              command: {
-                id: 'column.finish.interiorMaterialId',
-                labelKey: 'ribbon.commands.finishEditor.interiorMaterial',
-                commandKey: COLUMN_FINISH_KEYS.interiorMaterialId,
-                comboboxWidthPx: 170,
-                options: FINISH_MATERIAL_OPTIONS,
-              },
-            },
-            {
-              type: 'combobox',
-              size: 'small',
-              command: {
-                id: 'column.finish.exteriorMaterialId',
-                labelKey: 'ribbon.commands.finishEditor.exteriorMaterial',
-                commandKey: COLUMN_FINISH_KEYS.exteriorMaterialId,
-                comboboxWidthPx: 170,
-                options: FINISH_MATERIAL_OPTIONS,
-              },
-            },
-            {
-              type: 'combobox',
-              size: 'small',
-              command: {
-                id: 'column.finish.thickness',
-                labelKey: 'ribbon.commands.finishEditor.thickness',
-                commandKey: COLUMN_FINISH_KEYS.thickness,
-                comboboxWidthPx: 110,
-                options: FINISH_THICKNESS_OPTIONS,
-              },
-            },
-          ],
-        },
-      ],
-    },
-    {
-      // ADR-396 v2 Φ6a — ETICS θερμοπρόσοψη: per-element override της αυτόματης
-      // ταξινόμησης κελύφους (auto / εξωτερικό / εσωτερικό), Revit Wall-Function.
-      id: 'column-envelope',
-      labelKey: 'ribbon.panels.envelopeFunction',
-      rows: [
-        {
-          isInFlyout: false,
-          buttons: [
-            {
-              type: 'combobox',
-              size: 'small',
-              command: {
-                id: 'column.envelopeFunction',
-                labelKey: 'ribbon.commands.envelopeFunction.section.title',
-                tooltipKey: 'ribbon.commands.envelopeFunction.tooltip',
-                commandKey: COLUMN_RIBBON_KEYS.stringParams.envelopeFunction,
-                comboboxWidthPx: 150,
-                options: ENVELOPE_FUNCTION_OPTIONS,
               },
             },
           ],

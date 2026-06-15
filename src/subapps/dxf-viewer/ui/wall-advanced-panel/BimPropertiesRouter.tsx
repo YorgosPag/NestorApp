@@ -5,8 +5,9 @@
  *
  * The sidebar third tab is BIM-entity-aware: depending on the type of the
  * primary selected entity, it mounts the matching advanced panel. Currently
- * supports stair (ADR-358) and wall (ADR-363); future BIM elements (opening
- * Phase 2, slab Phase 3, column Phase 4, beam Phase 5) plug in here.
+ * supports stair (ADR-358), wall (ADR-363) and column (ADR-363 Phase 4 —
+ * ribbon ↔ Properties-palette split); future BIM elements (beam Phase 5) plug
+ * in here.
  *
  * Pure derivation — entity classification reads the scene model already held
  * by the orchestrator; no extra subscriptions (ADR-040 micro-leaf rule).
@@ -17,9 +18,10 @@
 
 import React from 'react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
-import { isWallEntity, isStairEntity } from '../../types/entities';
+import { isWallEntity, isStairEntity, isColumnEntity } from '../../types/entities';
 import { StairPropertiesTab } from '../stair-advanced-panel/StairPropertiesTab';
 import { WallPropertiesTab } from './WallPropertiesTab';
+import { ColumnPropertiesTab } from '../column-advanced-panel/ColumnPropertiesTab';
 import type { SceneModel } from '../../types/scene';
 
 export interface BimPropertiesRouterProps {
@@ -42,6 +44,11 @@ export function BimPropertiesRouter(
 
   if (selected && isWallEntity(selected)) {
     return <WallPropertiesTab {...props} />;
+  }
+
+  // ADR-363 Phase 4 — column Properties palette (ribbon ↔ panel split).
+  if (selected && isColumnEntity(selected)) {
+    return <ColumnPropertiesTab {...props} />;
   }
 
   if (selected && isStairEntity(selected)) {
