@@ -170,6 +170,7 @@ export const DxfViewerContent = React.memo<DxfViewerAppProps>((props) => {
   useAutoFitOnFileChange({
     currentScene,
     fileRecordId: levelManager.fileRecordId ?? null,
+    currentLevelId: levelManager.currentLevelId,
     handleAction,
   });
   // ✅ ADR-065 SRP: Extracted callbacks

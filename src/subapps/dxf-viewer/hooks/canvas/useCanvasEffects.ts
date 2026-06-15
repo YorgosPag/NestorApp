@@ -217,16 +217,19 @@ export function useCanvasEffects({
   hasUnifiedDrawingPointsRef.current = () =>
     (drawingHandlersRef.current?.drawingState?.tempPoints?.length ?? 0) > 0;
 
-  // === DXF auto-fit on scene/level load (NOT on entity creation) ===
-  // Track which level has already been auto-fitted to prevent re-fitting
-  // when the user draws new entities (which also mutates currentScene).
-  const lastFittedLevelRef = useRef<string | null>(null);
+  // === DXF auto-fit ONCE on first content load (NOT on every level switch) ===
+  // ADR-399 — navigating floor→floor must KEEP the viewport (Revit/AutoCAD: the
+  // camera stays put so the user always sees the same area). The transform is a
+  // global singleton (ImmediateTransformStore), so once we stop re-fitting per
+  // level it is preserved automatically across switches. We auto-fit only the FIRST
+  // time a scene with entities appears; the user's manual «Zoom to Fit» still works.
+  // (Also avoids re-fitting when the user draws new entities, which mutates currentScene.)
+  const hasFittedRef = useRef(false);
 
   useEffect(() => {
-    // Only auto-fit when switching to a new level (or initial load)
-    if (currentLevelId && currentLevelId !== lastFittedLevelRef.current &&
+    if (!hasFittedRef.current && currentLevelId &&
         dxfScene && dxfScene.entities.length > 0 && dxfScene.bounds) {
-      lastFittedLevelRef.current = currentLevelId;
+      hasFittedRef.current = true;
 
       const canvas = dxfCanvasRef?.current?.getCanvas?.() ?? overlayCanvasRef.current;
       if (canvas && canvas instanceof HTMLCanvasElement) {
@@ -243,9 +246,10 @@ export function useCanvasEffects({
       }
     }
 
-    // Reset when level is cleared (no scene)
+    // Reset only when the viewer is fully cleared (no active level) — a fresh
+    // open re-fits to its first content; ordinary floor switches never reset.
     if (!currentLevelId) {
-      lastFittedLevelRef.current = null;
+      hasFittedRef.current = false;
     }
   }, [currentScene, currentLevelId]);
 

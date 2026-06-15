@@ -10,12 +10,15 @@ interface UseFloorplanAutoFitProps {
 }
 
 export function useFloorplanAutoFit({ floorplanBg, viewport, zoomSystem, setTransform }: UseFloorplanAutoFitProps) {
-  const lastFittedBgIdRef = useRef<string | null>(null);
+  // ADR-399 — auto-fit the floorplan background only ONCE (first appearance).
+  // Switching floors must keep the viewport stable (same area across levels); a
+  // per-background re-fit would jump the camera on every level change.
+  const hasFittedRef = useRef(false);
 
   useEffect(() => {
     const bg = floorplanBg?.background;
     if (!bg) return;
-    if (lastFittedBgIdRef.current === bg.id) return;
+    if (hasFittedRef.current) return;
     if (viewport.width <= 0 || viewport.height <= 0) return;
     const result = zoomSystem.zoomToFit(
       { min: { x: 0, y: 0 }, max: { x: bg.naturalBounds.width, y: bg.naturalBounds.height } },
@@ -25,7 +28,7 @@ export function useFloorplanAutoFit({ floorplanBg, viewport, zoomSystem, setTran
     if (result?.transform) {
       const { scale, offsetX, offsetY } = result.transform;
       if (!isNaN(scale) && !isNaN(offsetX) && !isNaN(offsetY)) {
-        lastFittedBgIdRef.current = bg.id;
+        hasFittedRef.current = true;
         setTransform(result.transform);
       }
     }

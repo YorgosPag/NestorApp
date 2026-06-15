@@ -15,6 +15,13 @@ interface UseAutoFitOnFileChangeParams {
    * (e.g. wizard re-import after the floor wipe). That's the signal to refit.
    */
   fileRecordId: string | null;
+  /**
+   * ADR-399 — the active level id. A `fileRecordId` change that coincides with a
+   * level change is NAVIGATION (the user switched floors), NOT a re-import: it must
+   * NOT refit, so the viewport stays stable across floors (Revit/AutoCAD). Only a
+   * file change under the SAME level (a genuine re-import) fits to extents.
+   */
+  currentLevelId: string | null;
   handleAction: (action: string, data?: string | number | Record<string, unknown>) => void;
 }
 
@@ -75,16 +82,20 @@ function restoreOrFit(
 export function useAutoFitOnFileChange({
   currentScene,
   fileRecordId,
+  currentLevelId,
   handleAction,
 }: UseAutoFitOnFileChangeParams): void {
   const timerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
   const initialScheduledRef = React.useRef(false);
   const initialDoneRef = React.useRef(false);
   const prevFileRecordIdRef = React.useRef<string | null>(null);
+  const prevLevelIdRef = React.useRef<string | null>(null);
   // Latest fileRecordId read at timer-fire time (not capture time) so the cold-
   // load id that arrives after the scene is the one used for the restore lookup.
   const fileRecordIdRef = React.useRef(fileRecordId);
   fileRecordIdRef.current = fileRecordId;
+  const currentLevelIdRef = React.useRef(currentLevelId);
+  currentLevelIdRef.current = currentLevelId;
   // ADR-418: latest scene read at timer-fire time for the degenerate-restore check.
   const currentSceneRef = React.useRef(currentScene);
   currentSceneRef.current = currentScene;
@@ -100,21 +111,32 @@ export function useAutoFitOnFileChange({
       timerRef.current = setTimeout(() => {
         restoreOrFit(fileRecordIdRef.current, currentSceneRef.current, handleAction);
         prevFileRecordIdRef.current = fileRecordIdRef.current;
+        prevLevelIdRef.current = currentLevelIdRef.current;
         initialDoneRef.current = true;
       }, FIT_DELAY_MS);
       return;
     }
 
-    // After the initial decision: a genuinely new file binding → fit to extents.
+    // After the initial decision: a file binding change. ADR-399 — distinguish a
+    // genuine RE-IMPORT (new file under the SAME level → fit to extents) from
+    // NAVIGATION (the level changed → keep the viewport stable across floors, no
+    // fit). The latter is why the floor with a κάτοψη used to jump while empty
+    // floors stayed put.
     if (initialDoneRef.current) {
       const fid = fileRecordIdRef.current;
-      if (fid && fid !== prevFileRecordIdRef.current) {
+      const lvl = currentLevelIdRef.current;
+      const fileChanged = !!fid && fid !== prevFileRecordIdRef.current;
+      const levelChanged = lvl !== prevLevelIdRef.current;
+      if (fileChanged) {
         prevFileRecordIdRef.current = fid;
-        if (timerRef.current) clearTimeout(timerRef.current);
-        timerRef.current = setTimeout(() => handleAction('fit-to-view'), FIT_DELAY_MS);
+        if (!levelChanged) {
+          if (timerRef.current) clearTimeout(timerRef.current);
+          timerRef.current = setTimeout(() => handleAction('fit-to-view'), FIT_DELAY_MS);
+        }
       }
+      prevLevelIdRef.current = lvl;
     }
-  }, [currentScene, fileRecordId, handleAction]);
+  }, [currentScene, fileRecordId, currentLevelId, handleAction]);
 
   // Clear any pending timer only on unmount — never on a mid-load re-run.
   React.useEffect(() => () => { if (timerRef.current) clearTimeout(timerRef.current); }, []);
