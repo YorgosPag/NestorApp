@@ -23,6 +23,7 @@ import type { Point2D } from '../../../rendering/types/Types';
 import type { ColumnParams } from '../../types/column-types';
 import { materializeColumnLocalPolygonMm } from '../../geometry/column-geometry';
 import { computeColumnRebarLayout } from '../reinforcement/column-rebar-layout';
+import { buildColumnCrossTies } from '../reinforcement/column-cross-ties';
 import { DEFAULT_STIRRUP_TYPE } from '../reinforcement/column-reinforcement-types';
 import { assignColumnBarNumbers } from './column-rebar-bar-marks';
 import { pickScaleDenominator } from './detail-sheet-fit';
@@ -136,6 +137,38 @@ export function buildColumnPlanRegion(params: ColumnParams, region: RectMm): Col
           stroke: { colorHex: REBAR_HEX, widthMm: MIN_STIRRUP_WIDTH_MM },
         });
       }
+    }
+  }
+
+  // ── Cross-ties (internal hoops / diamond) — SAME SSoT as the live 2D canvas &
+  //    the 3D cage (`buildColumnCrossTies`). Without this the plan was missing the
+  //    interior ties shown everywhere else (ADR-456). ──
+  const hooked = (r.stirrups.type ?? DEFAULT_STIRRUP_TYPE) === 'closed-hooked';
+  const crossTieWidthMm = Math.max(MIN_STIRRUP_WIDTH_MM, layout.stirrupDiameterMm * s);
+  const crossTies = buildColumnCrossTies(
+    layout.longitudinalBarsMm,
+    layout.stirrupDiameterMm,
+    layout.barDiameterMm,
+    r.crossTiePattern,
+  );
+  for (const tie of crossTies) {
+    if (tie.pathMm.length >= 2) {
+      primitives.push({
+        kind: 'polyline',
+        points: tie.pathMm.map(toSheet),
+        closed: tie.closed,
+        stroke: { colorHex: REBAR_HEX, widthMm: crossTieWidthMm },
+      });
+    }
+    if (!hooked) continue;
+    for (const end of tie.hookEndsMm) {
+      if (end.length < 2) continue;
+      primitives.push({
+        kind: 'polyline',
+        points: end.map(toSheet),
+        closed: false,
+        stroke: { colorHex: REBAR_HEX, widthMm: MIN_STIRRUP_WIDTH_MM },
+      });
     }
   }
 

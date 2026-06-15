@@ -59,6 +59,24 @@ describe('buildColumnPlanRegion (ADR-457)', () => {
     expect(dimTexts).toContain('25'); // cover
   });
 
+  it('includes the interior cross-ties (diamond) — same SSoT as the live 2D plan', () => {
+    // 8 bars + auto pattern → ONE closed diamond hoop. The plan must show it on
+    // top of the footprint + stirrup ring (3 closed polylines), matching the live
+    // 2D canvas / 3D cage (regression for the missing-diamonds bug).
+    const closedPolys = (params: ColumnParams): number =>
+      buildColumnPlanRegion(params, REGION).primitives.filter(
+        (p) => p.kind === 'polyline' && p.closed,
+      ).length;
+
+    const fourBars: ColumnParams = {
+      ...RECT_REINFORCED,
+      reinforcement: { ...RECT_REINFORCED.reinforcement!, longitudinal: { diameterMm: 16, count: 4 } },
+    };
+
+    expect(closedPolys(RECT_REINFORCED)).toBe(3); // footprint + stirrup + diamond
+    expect(closedPolys(fourBars)).toBe(2); // footprint + stirrup only (no cross-ties)
+  });
+
   it('returns empty for a non-rectangular column', () => {
     const circular: ColumnParams = { ...RECT_REINFORCED, kind: 'circular' };
     const result = buildColumnPlanRegion(circular, REGION);
