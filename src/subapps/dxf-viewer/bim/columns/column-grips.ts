@@ -139,11 +139,13 @@ import {
 /**
  * ADR-363/449 — kinds που παίρνουν **free reshape της στατικής διατομής** (λαβή ανά κορυφή +
  * λαβή ανά μέσο-πλευράς + rotation σε εσωτερικό σημείο). PHASE 1 παραμετρικό = `L-shape` (→ γίνεται
- * `composite` στο πρώτο σύρσιμο)· **ΚΑΙ** κάθε ήδη polygon-backed (`composite` / `U-shape`+polygon),
- * ώστε ένα reshaped στοιχείο να κρατά την ΙΔΙΑ συμπεριφορά σε επόμενες επιλογές. PHASE 2 → T/I/U-παρ/polygon.
+ * `composite` στο πρώτο σύρσιμο)· PHASE 2 += `T-shape` (ΙΔΙΟΣ μηχανισμός — materialize σε `composite`
+ * στο πρώτο drag μέσω `materializeColumnLocalPolygonMm` → `buildTshapeLocal`)· **ΚΑΙ** κάθε ήδη
+ * polygon-backed (`composite` / `U-shape`+polygon), ώστε ένα reshaped στοιχείο να κρατά την ΙΔΙΑ
+ * συμπεριφορά σε επόμενες επιλογές. PHASE 3 → I/U-παρ/polygon.
  */
 function usesFreeReshapeGrips(params: Readonly<ColumnParams>): boolean {
-  return params.kind === 'L-shape' || !!columnPolygon(params);
+  return params.kind === 'L-shape' || params.kind === 'T-shape' || !!columnPolygon(params);
 }
 
 export function getColumnGrips(entity: Readonly<ColumnEntity>): GripInfo[] {

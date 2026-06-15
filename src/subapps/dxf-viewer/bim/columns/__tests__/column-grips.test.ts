@@ -69,7 +69,11 @@ function makeLshape(): ColumnEntity {
 }
 
 function makeTshape(): ColumnEntity {
-  return makeColumnEntity(buildDefaultColumnParams({ x: 0, y: 0 }, 'T-shape'));
+  // ADR-363/449 PHASE 2 — το T-shape παίρνει πλέον free per-corner grips (geometry-driven,
+  // ίδιος μηχανισμός με L-shape), οπότε ο builder χρειάζεται υπολογισμένο footprint.
+  const params = buildDefaultColumnParams({ x: 0, y: 0 }, 'T-shape');
+  const ent = makeColumnEntity(params);
+  return { ...ent, geometry: computeColumnGeometry(params) } as ColumnEntity;
 }
 
 function makeOfKind(kind: ColumnKind, overrides: Partial<ColumnParams> = {}): ColumnEntity {
@@ -162,17 +166,20 @@ describe('column-grips — getColumnGrips (Phase 4.5)', () => {
     expect(grips.map((g) => g.columnGripKind)).not.toContain('column-arm-length');
   });
 
-  it('4. T-shape → 5 grips (Phase 4.5b adds flange-length + web-thickness) — ADR-363 Φ1G.5 Slice 2', () => {
-    // ADR-363 Φ1G.5 Slice 2: column-center removed; count drops from 6 to 5
-    const grips = getColumnGrips(makeTshape());
-    expect(grips).toHaveLength(5);
+  it('4. T-shape → free reshape: rotation + ΜΙΑ λαβή/κορυφή + ΜΙΑ λαβή/μέσο-πλευράς — ADR-363/449 PHASE 2', () => {
+    // ADR-363/449 PHASE 2 — το T-shape ακολουθεί πλέον τον ΙΔΙΟ μηχανισμό με το L-shape (Γ):
+    // μία λαβή ανά κορυφή (corner reshape) + μία στο μέσο κάθε πλευράς, ΟΧΙ παραμετρικά flange/web grips.
+    const ent = makeTshape();
+    const verts = ent.geometry.footprint.vertices;
+    const grips = getColumnGrips(ent);
+    expect(grips).toHaveLength(1 + 2 * verts.length); // rotation + N corners + N edges
     expect(grips.map((g) => g.columnGripKind)).toEqual([
       'column-rotation',
-      'column-width',
-      'column-depth',
-      'column-flange-length',
-      'column-web-thickness',
+      ...verts.map((_, i) => `column-poly-vertex-${i}`),
+      ...verts.map((_, i) => `column-poly-edge-${i}`),
     ]);
+    expect(grips.map((g) => g.columnGripKind)).not.toContain('column-flange-length');
+    expect(grips.map((g) => g.columnGripKind)).not.toContain('column-web-thickness');
   });
 
   it('5. column-center grip is NOT emitted — ADR-363 Φ1G.5 Slice 2', () => {

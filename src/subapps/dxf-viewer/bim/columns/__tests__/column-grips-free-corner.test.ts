@@ -41,6 +41,68 @@ function makeLshape(): ColumnEntity {
   } as unknown as ColumnEntity;
 }
 
+function makeTshape(): ColumnEntity {
+  const params: ColumnParams = {
+    ...buildDefaultColumnParams({ x: 0, y: 0 }, 'T-shape'),
+    position: { x: 0, y: 0, z: 0 },
+    rotation: 0,
+    anchor: 'center',
+    width: 600,
+    depth: 600,
+    sceneUnits: 'mm',
+  };
+  return {
+    id: 'col_T',
+    type: 'column',
+    kind: params.kind,
+    layerId: '0',
+    params,
+    geometry: computeColumnGeometry(params),
+    validation: undefined as never,
+    visible: true,
+  } as unknown as ColumnEntity;
+}
+
+describe('column free per-corner reshape — emission (T-shape) [PHASE 2]', () => {
+  it('T-shape → rotation + ΜΙΑ λαβή/κορυφή + ΜΙΑ λαβή/μέσο-πλευράς (ΙΔΙΟΣ μηχανισμός με Γ)', () => {
+    const ent = makeTshape();
+    const verts = ent.geometry.footprint.vertices;
+    const grips = getColumnGrips(ent);
+    expect(grips[0].columnGripKind).toBe('column-rotation');
+    expect(grips.slice(1).map((g) => g.columnGripKind)).toEqual([
+      ...verts.map((_, i) => `column-poly-vertex-${i}`),
+      ...verts.map((_, i) => `column-poly-edge-${i}`),
+    ]);
+  });
+
+  it('αντικαθιστά τα παραμετρικά T-grips (ΟΧΙ width/depth/flange/web) στο free mode', () => {
+    const kinds = getColumnGrips(makeTshape()).map((g) => g.columnGripKind);
+    expect(kinds).not.toContain('column-width');
+    expect(kinds).not.toContain('column-depth');
+    expect(kinds).not.toContain('column-flange-length');
+    expect(kinds).not.toContain('column-web-thickness');
+    expect(kinds).not.toContain('column-center');
+  });
+
+  it('σύρσιμο γωνίας T → composite με ΙΔΙΟ πλήθος κορυφών (όπως Γ)', () => {
+    const ent = makeTshape();
+    const moved = applyColumnGripDrag('column-poly-vertex-0', {
+      originalParams: ent.params,
+      delta: { x: 40, y: 40 },
+    });
+    expect(moved.kind).toBe('composite');
+    expect(moved.composite?.polygon.length).toBe(ent.geometry.footprint.vertices.length);
+  });
+
+  it('η λαβή περιστροφής κάθεται σε ΕΣΩΤΕΡΙΚΟ σημείο της διατομής T', () => {
+    const ent = makeTshape();
+    const rot = getColumnGrips(ent).find((g) => g.columnGripKind === 'column-rotation');
+    const poly3 = ent.geometry.footprint.vertices.map((v) => ({ x: v.x, y: v.y, z: 0 }));
+    expect(rot).toBeDefined();
+    expect(pointInPolygon(rot!.position, poly3)).toBe(true);
+  });
+});
+
 describe('column free per-corner reshape — emission (L-shape)', () => {
   it('L-shape → rotation + ΜΙΑ λαβή/κορυφή + ΜΙΑ λαβή/μέσο-πλευράς', () => {
     const ent = makeLshape();
