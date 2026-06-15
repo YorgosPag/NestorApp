@@ -117,7 +117,8 @@ export type StructuralDiagnosticCode =
   | 'memberIsolated'
   | 'memberMissingReinforcement'
   | 'ratioOutOfRange'
-  | 'barMismatchAtJoint';
+  | 'barMismatchAtJoint'
+  | 'columnTopAnchorageUnverified';
 
 /**
  * Ένα cross-entity εύρημα. `primaryEntityId` = το μέλος που «φταίει» (οδηγεί το

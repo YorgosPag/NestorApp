@@ -154,17 +154,31 @@ function columnBearingContinuity(
 
 /**
  * `top-attachment` (host από πάνω ↔ κολόνα): **μάτισμα ορόφου** (lap splice) στη
- * στάθμη. Ισχύει μόνο κολόνα↔κολόνα· το μάτισμα προστίθεται στην κορυφή της κάτω
- * κολόνας ΚΑΙ στη βάση της άνω (αμφίδρομα). Host μη-κολόνα → DEFER (flag 4d).
+ * στάθμη — μόνο κολόνα↔κολόνα· το μάτισμα προστίθεται στην κορυφή της κάτω κολόνας
+ * ΚΑΙ στη βάση της άνω (αμφίδρομα). Host μη-κολόνα (δοκάρι/πλάκα) → **αγκύρωση**
+ * των διαμήκων της κολόνας μέσα στον host (ADR-459 Φ4e/E1, EC8 §5.6).
  */
 function topAttachmentContinuity(
   edge: StructuralEdge,
   entityById: ReadonlyMap<string, Entity>,
   provider: StructuralCodeProvider,
 ): EdgeContinuity | null {
+  // supportedId = πάντα η κολόνα (μόνο isColumnEntity παράγει top-attachment ακμή).
   const lower = columnReinforcement(entityById.get(edge.supportedId));
+  if (!lower) return null;
   const upper = columnReinforcement(entityById.get(edge.supportId));
-  if (!lower || !upper) return null;
+  return upper
+    ? columnLapContinuity(edge, lower, upper, provider)
+    : columnTopAnchorageContinuity(edge, lower, provider);
+}
+
+/** Κολόνα↔κολόνα (στάθμη ορόφου): μάτισμα l₀ αμφίδρομα (κορυφή κάτω + βάση άνω). */
+function columnLapContinuity(
+  edge: StructuralEdge,
+  lower: ColumnReinforcement,
+  upper: ColumnReinforcement,
+  provider: StructuralCodeProvider,
+): EdgeContinuity {
   const lowerLap = provider.lapLengthMm(lower.longitudinal.diameterMm);
   const upperLap = provider.lapLengthMm(upper.longitudinal.diameterMm);
   const item: ReinforcementContinuityItem = {
@@ -183,6 +197,33 @@ function topAttachmentContinuity(
       { id: edge.supportedId, addMm: lowerLap },
       { id: edge.supportId, addMm: upperLap },
     ],
+  };
+}
+
+/**
+ * Κολόνα→μη-κολόνα host (δοκάρι/πλάκα από πάνω, ADR-459 Φ4e/E1): οι διαμήκεις
+ * αγκυρώνονται μέσα στον host με lbd αντί για μάτισμα. Reuse `anchorageLengthMm`
+ * (ΕΝΑ SSoT). Η αναπτυξη προστίθεται μόνο στην κολόνα.
+ */
+function columnTopAnchorageContinuity(
+  edge: StructuralEdge,
+  lower: ColumnReinforcement,
+  provider: StructuralCodeProvider,
+): EdgeContinuity {
+  const anchorage = provider.anchorageLengthMm(lower.longitudinal.diameterMm);
+  const item: ReinforcementContinuityItem = {
+    kind: 'anchorage',
+    count: lower.longitudinal.count,
+    diameterMm: lower.longitudinal.diameterMm,
+    lengthMm: anchorage,
+    fromMemberId: edge.supportedId, // κολόνα
+    toMemberId: edge.supportId, // host (δοκάρι/πλάκα)
+    edgeId: edge.id,
+  };
+  return {
+    item,
+    memberIds: [edge.supportedId, edge.supportId],
+    columnDev: [{ id: edge.supportedId, addMm: anchorage }],
   };
 }
 

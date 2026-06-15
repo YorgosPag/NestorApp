@@ -24,11 +24,14 @@ import type { ColumnReinforcement } from '../reinforcement/column-reinforcement-
 import { computeColumnReinforcementQuantities } from '../reinforcement/column-reinforcement-compute';
 import { computeBeamReinforcementQuantities } from '../reinforcement/beam-reinforcement-compute';
 import { computeFootingReinforcementQuantities } from '../reinforcement/footing-reinforcement-compute';
+import { computeSlabFoundationReinforcementQuantities } from '../reinforcement/slab-foundation-reinforcement-compute';
 import type { StructuralCodeProvider } from '../codes/structural-code-types';
 import {
   buildColumnSectionContext,
   buildBeamSectionContext,
   buildFootingSectionContext,
+  buildSlabFoundationSectionContext,
+  isFoundationSlabEntity,
 } from '../section-context';
 import {
   computeOrganismReinforcementContinuity,
@@ -46,9 +49,9 @@ interface RatioBounds {
   readonly maxRatio?: number;
 }
 
-/** Είναι το entity δομικό μέλος που δέχεται οπλισμό; (κολόνα/δοκάρι/πέδιλο). */
+/** Είναι το entity δομικό μέλος που δέχεται οπλισμό; (κολόνα/δοκάρι/πέδιλο/raft). */
 function isReinforceable(e: Entity): boolean {
-  return isColumnEntity(e) || isBeamEntity(e) || isFoundationEntity(e);
+  return isColumnEntity(e) || isBeamEntity(e) || isFoundationEntity(e) || isFoundationSlabEntity(e);
 }
 
 /** Έχει το μέλος persisted reinforcement intent; */
@@ -56,6 +59,7 @@ function hasReinforcement(e: Entity): boolean {
   if (isColumnEntity(e)) return e.params.reinforcement !== undefined;
   if (isBeamEntity(e)) return e.params.reinforcement !== undefined;
   if (isFoundationEntity(e)) return e.params.reinforcement !== undefined;
+  if (isFoundationSlabEntity(e)) return e.params.structuralReinforcement !== undefined;
   return false;
 }
 
@@ -99,6 +103,12 @@ function ratioBoundsOf(e: Entity, provider: StructuralCodeProvider): RatioBounds
     const ctx = buildFootingSectionContext(e);
     const lim = provider.footingReinforcementLimits(ctx);
     return { ratio: computeFootingReinforcementQuantities(ctx, r).ratio, minRatio: lim.minRatio };
+  }
+  if (isFoundationSlabEntity(e) && e.params.structuralReinforcement) {
+    const r = e.params.structuralReinforcement;
+    const ctx = buildSlabFoundationSectionContext(e);
+    const lim = provider.slabFoundationReinforcementLimits(ctx);
+    return { ratio: computeSlabFoundationReinforcementQuantities(ctx, r).ratio, minRatio: lim.minRatio };
   }
   return null;
 }
@@ -163,6 +173,38 @@ function barMismatchFindings(
   return out;
 }
 
+// ─── Check 4: αγκύρωση κορυφής κολόνας σε μη-κολόνα host (warning, Φ4e/E1) ─────
+
+/**
+ * Όταν η κορυφή μιας οπλισμένης κολόνας είναι attached σε host που ΔΕΝ είναι
+ * κολόνα (δοκάρι/πλάκα), οι διαμήκεις αγκυρώνονται μέσα στον host (lbd). Αν ο host
+ * δεν έχει δικό του διαστασιολογημένο οπλισμό, η αγκύρωση δεν επαληθεύεται →
+ * warning (EC8 §5.6 — ο κόμβος πρέπει να αναπτύσσει τις ράβδους).
+ */
+function topAnchorageFindings(
+  graph: StructuralGraph,
+  entities: readonly Entity[],
+): StructuralDiagnostic[] {
+  const entityById = new Map<string, Entity>(entities.map((e) => [e.id, e]));
+  const out: StructuralDiagnostic[] = [];
+  for (const edge of graph.edges) {
+    if (edge.kind !== 'top-attachment') continue;
+    const column = entityById.get(edge.supportedId);
+    const host = entityById.get(edge.supportId);
+    if (!column || !host || !isColumnEntity(column) || !column.params.reinforcement) continue;
+    if (isColumnEntity(host) || hasReinforcement(host)) continue; // lap ή επαληθεύσιμη αγκύρωση
+    out.push({
+      id: `columnTopAnchorageUnverified:${edge.id}`,
+      code: 'columnTopAnchorageUnverified',
+      severity: 'warning',
+      messageKey: `${MSG}.columnTopAnchorageUnverified`,
+      primaryEntityId: edge.supportedId,
+      entityIds: [edge.supportedId, edge.supportId],
+    });
+  }
+  return out;
+}
+
 // ─── Runner ────────────────────────────────────────────────────────────────────
 
 /**
@@ -188,5 +230,6 @@ export function runReinforcementChecks(
     if (ratio) out.push(ratio);
   }
   out.push(...barMismatchFindings(graph, entities, provider));
+  out.push(...topAnchorageFindings(graph, entities));
   return out;
 }

@@ -13,6 +13,7 @@ import { developmentLengthMm, nextRebarDiameterMm } from '../rebar-catalog';
 import type { ColumnReinforcement } from '../reinforcement/column-reinforcement-types';
 import type { BeamReinforcement } from '../reinforcement/beam-reinforcement-types';
 import type { FootingReinforcement } from '../reinforcement/footing-reinforcement-types';
+import type { SlabFoundationReinforcement } from '../reinforcement/slab-foundation-reinforcement-types';
 import type {
   BarDevelopmentContext,
   BeamReinforcementLimits,
@@ -21,12 +22,15 @@ import type {
   ColumnSectionContext,
   FootingReinforcementLimits,
   FootingSectionContext,
+  SlabFoundationReinforcementLimits,
+  SlabFoundationSectionContext,
   StructuralCodeProvider,
 } from './structural-code-types';
 import {
   suggestBeamReinforcementFrom,
   suggestColumnReinforcementFrom,
   suggestFootingReinforcementFrom,
+  suggestSlabFoundationReinforcementFrom,
 } from './suggest-reinforcement';
 
 /** Μελετητική ενεργός διατομή δοκού d ≈ 0.9·h. */
@@ -124,6 +128,25 @@ function eurocodeFootingLimits(ctx: FootingSectionContext): FootingReinforcement
   };
 }
 
+/**
+ * EC2 §9.3.1.1 (slab-like) όρια εδαφόπλακας/raft — δι-διευθυντική σχάρα top+bottom.
+ * Ίδιες αρχές με το πέδιλο (slab-like ρ_min, μεγαλύτερο cover έδρασης σε έδαφος).
+ */
+function eurocodeSlabFoundationLimits(
+  _ctx: SlabFoundationSectionContext,
+): SlabFoundationReinforcementLimits {
+  return {
+    // EC2 §9.3.1.1(1) As,min = 0.26·fctm/fyk·b·d ≈ 0.0013 (C25/30 + B500C).
+    minRatio: 0.0013,
+    // Πρακτική θεμελίωσης — Ø12 κύριος οπλισμός σχάρας.
+    minBarDiameterMm: 12,
+    // EC2 §9.3.1.1(3) smax,slabs = min(3h, 400)· πρακτικό 250 για θεμελίωση.
+    maxBarSpacingMm: 250,
+    // EN 1992-1-1 §4.4.1.3 — έδραση σε προετοιμασμένο έδαφος ~50mm.
+    nominalCoverMm: 50,
+  };
+}
+
 /** EC2 §8.4.4 — βασικός συντελεστής αγκύρωσης lbd ≈ 40·Ø (καλή συνάφεια, εφελκυσμός). */
 const EUROCODE_ANCHORAGE_FACTOR = 40;
 /** EC2 §8.7.3 — βασικός συντελεστής ματίσματος l₀ ≈ 50·Ø (α₆ ≈ 1.25 × lbd). */
@@ -143,6 +166,10 @@ export const EUROCODE_PROVIDER: StructuralCodeProvider = {
   footingReinforcementLimits: eurocodeFootingLimits,
   suggestFootingReinforcement(ctx: FootingSectionContext): FootingReinforcement {
     return suggestFootingReinforcementFrom(this, ctx);
+  },
+  slabFoundationReinforcementLimits: eurocodeSlabFoundationLimits,
+  suggestSlabFoundationReinforcement(ctx: SlabFoundationSectionContext): SlabFoundationReinforcement {
+    return suggestSlabFoundationReinforcementFrom(this, ctx);
   },
   lapLengthMm(diameterMm: number, ctx?: BarDevelopmentContext): number {
     return developmentLengthMm(EUROCODE_LAP_FACTOR, diameterMm, ctx);

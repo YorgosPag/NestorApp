@@ -14,6 +14,7 @@ import { developmentLengthMm, nextRebarDiameterMm } from '../rebar-catalog';
 import type { ColumnReinforcement } from '../reinforcement/column-reinforcement-types';
 import type { BeamReinforcement } from '../reinforcement/beam-reinforcement-types';
 import type { FootingReinforcement } from '../reinforcement/footing-reinforcement-types';
+import type { SlabFoundationReinforcement } from '../reinforcement/slab-foundation-reinforcement-types';
 import type {
   BarDevelopmentContext,
   BeamReinforcementLimits,
@@ -22,12 +23,15 @@ import type {
   ColumnSectionContext,
   FootingReinforcementLimits,
   FootingSectionContext,
+  SlabFoundationReinforcementLimits,
+  SlabFoundationSectionContext,
   StructuralCodeProvider,
 } from './structural-code-types';
 import {
   suggestBeamReinforcementFrom,
   suggestColumnReinforcementFrom,
   suggestFootingReinforcementFrom,
+  suggestSlabFoundationReinforcementFrom,
 } from './suggest-reinforcement';
 
 /** Μελετητική ενεργός διατομή δοκού d ≈ 0.9·h. */
@@ -120,6 +124,25 @@ function greekLegacyFootingLimits(ctx: FootingSectionContext): FootingReinforcem
   };
 }
 
+/**
+ * ΕΚΩΣ 2000 §17 (θεμελιώσεις) όρια εδαφόπλακας/raft — slab-like, ελαφρώς
+ * συντηρητικότερα από EC2 (μεγαλύτερο ρ_min, πυκνότερο μέγιστο βήμα).
+ */
+function greekLegacySlabFoundationLimits(
+  _ctx: SlabFoundationSectionContext,
+): SlabFoundationReinforcementLimits {
+  return {
+    // ΕΚΩΣ 2000 §17 — ελάχιστο ποσοστό σχάρας θεμελίωσης (συντηρητικό).
+    minRatio: 0.0015,
+    // Ø12 κύριος οπλισμός σχάρας.
+    minBarDiameterMm: 12,
+    // Συντηρητικό μέγιστο βήμα σχάρας θεμελίωσης.
+    maxBarSpacingMm: 200,
+    // ΕΚΩΣ 2000 §5 — επικάλυψη θεμελίωσης (έδραση σε έδαφος).
+    nominalCoverMm: 50,
+  };
+}
+
 /** ΕΚΩΣ 2000 §17.2.6 — αγκύρωση συντηρητικότερη από EC2 (~50·Ø). */
 const GREEK_LEGACY_ANCHORAGE_FACTOR = 50;
 /** ΕΚΩΣ 2000 §17.2.7 — μάτισμα συντηρητικότερο από EC2 (~55·Ø). */
@@ -139,6 +162,10 @@ export const GREEK_LEGACY_PROVIDER: StructuralCodeProvider = {
   footingReinforcementLimits: greekLegacyFootingLimits,
   suggestFootingReinforcement(ctx: FootingSectionContext): FootingReinforcement {
     return suggestFootingReinforcementFrom(this, ctx);
+  },
+  slabFoundationReinforcementLimits: greekLegacySlabFoundationLimits,
+  suggestSlabFoundationReinforcement(ctx: SlabFoundationSectionContext): SlabFoundationReinforcement {
+    return suggestSlabFoundationReinforcementFrom(this, ctx);
   },
   lapLengthMm(diameterMm: number, ctx?: BarDevelopmentContext): number {
     return developmentLengthMm(GREEK_LEGACY_LAP_FACTOR, diameterMm, ctx);

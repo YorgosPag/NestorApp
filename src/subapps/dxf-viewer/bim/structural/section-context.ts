@@ -17,19 +17,27 @@
  */
 
 import type { Entity } from '../../types/entities';
-import { isColumnEntity, isBeamEntity, isFoundationEntity } from '../../types/entities';
+import { isColumnEntity, isBeamEntity, isFoundationEntity, isSlabEntity } from '../../types/entities';
 import type { ColumnEntity, ColumnParams } from '../types/column-types';
 import type { BeamEntity, BeamParams } from '../types/beam-types';
 import type { FoundationEntity, FoundationParams } from '../types/foundation-types';
+import type { SlabEntity, SlabParams } from '../types/slab-types';
+import { mmToSceneUnits } from '../../utils/scene-units';
 import { resolveColumnReinforcementSection } from './reinforcement/column-section-outline';
 import type {
   BeamSectionContext,
   ColumnSectionContext,
   FootingSectionContext,
+  SlabFoundationSectionContext,
   StructuralCodeProvider,
 } from './codes/structural-code-types';
 
 const M_TO_MM = 1000;
+
+/** True αν η πλάκα είναι εδαφόπλακα/raft (kind foundation/ground) — δέχεται οπλισμό. */
+export function isFoundationSlabEntity(e: Entity): e is SlabEntity {
+  return isSlabEntity(e) && (e.kind === 'foundation' || e.kind === 'ground');
+}
 
 /** Μήκος άξονα (mm) από δύο σημεία mm-world (πεδιλοδοκός/συνδετήρια). */
 function axisLengthMm(a: { x: number; y: number }, b: { x: number; y: number }): number {
@@ -107,8 +115,33 @@ export function buildFootingSectionContext(footing: FoundationEntity): FootingSe
   }
 }
 
+/**
+ * Εδαφόπλακα/raft → `SlabFoundationSectionContext`. bbox dims από το `outline`
+ * (canvas units → mm μέσω `sceneUnits`, geometry-is-SSoT — όπως ο graph footprint).
+ * Οι σχάρες τρέχουν στο περιβάλλον ορθογώνιο (πλακοειδής σύμβαση).
+ */
+export function buildSlabFoundationSectionContext(slab: SlabEntity): SlabFoundationSectionContext {
+  const perScene = mmToSceneUnits(slab.params.sceneUnits ?? 'mm');
+  const verts = slab.params.outline.vertices;
+  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+  for (const v of verts) {
+    if (v.x < minX) minX = v.x;
+    if (v.x > maxX) maxX = v.x;
+    if (v.y < minY) minY = v.y;
+    if (v.y > maxY) maxY = v.y;
+  }
+  const widthMm = verts.length > 0 ? (maxX - minX) / perScene : 0;
+  const lengthMm = verts.length > 0 ? (maxY - minY) / perScene : 0;
+  return {
+    widthMm,
+    lengthMm,
+    thicknessMm: slab.params.thickness,
+    grossAreaMm2: Math.max(0, widthMm) * Math.max(0, lengthMm),
+  };
+}
+
 /** Params οποιουδήποτε δομικού μέλους που δέχεται οπλισμό. */
-export type ReinforceableParams = ColumnParams | BeamParams | FoundationParams;
+export type ReinforceableParams = ColumnParams | BeamParams | FoundationParams | SlabParams;
 
 /**
  * Patch params ενός μέλους για auto-reinforce. `prev` = τα τρέχοντα params
@@ -141,6 +174,11 @@ export function buildReinforcePatch(
     return { prev: entity.params, next: { ...entity.params, reinforcement: r } };
   }
   if (isFoundationEntity(entity)) return buildFoundationReinforcePatch(entity, provider);
+  if (isFoundationSlabEntity(entity)) {
+    if (entity.params.structuralReinforcement) return null;
+    const r = provider.suggestSlabFoundationReinforcement(buildSlabFoundationSectionContext(entity));
+    return { prev: entity.params, next: { ...entity.params, structuralReinforcement: r } };
+  }
   return null;
 }
 

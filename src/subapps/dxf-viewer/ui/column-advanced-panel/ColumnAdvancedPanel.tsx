@@ -23,6 +23,7 @@ import {
 import {
   resolveColumnPanelVisibility,
   resolveColumnFieldDisabled,
+  resolveColumnFieldOptions,
 } from '../ribbon/hooks/bridge/column-command-keys';
 import type { DispatchColumnParams } from '../ribbon/hooks/bridge/useColumnParamsDispatcher';
 import { COLUMN_PROPERTY_GROUPS } from './column-property-fields';
@@ -66,15 +67,23 @@ export function ColumnAdvancedPanel({
         return (
           <section key={group.id} className="flex flex-col gap-1">
             <h4 className="text-xs font-semibold text-foreground">{t(group.titleKey)}</h4>
-            {group.fields.map((field) => (
-              <ColumnPropertyRow
-                key={field.commandKey}
-                field={field}
-                value={resolveColumnComboboxState(field.commandKey, column, null)?.value ?? null}
-                onChange={handleChange}
-                disabled={resolveColumnFieldDisabled(field.commandKey, column.params)}
-              />
-            ))}
+            {group.fields.map((field) => {
+              // ADR-460 — shape-aware options (π.χ. διαμάντι κρυφό σε Γ/Τ/Π).
+              const allowed = resolveColumnFieldOptions(field.commandKey, column.params);
+              const options = allowed
+                ? field.options.filter((o) => allowed.includes(o.value))
+                : undefined;
+              return (
+                <ColumnPropertyRow
+                  key={field.commandKey}
+                  field={field}
+                  value={resolveColumnComboboxState(field.commandKey, column, null)?.value ?? null}
+                  onChange={handleChange}
+                  disabled={resolveColumnFieldDisabled(field.commandKey, column.params)}
+                  options={options}
+                />
+              );
+            })}
           </section>
         );
       })}

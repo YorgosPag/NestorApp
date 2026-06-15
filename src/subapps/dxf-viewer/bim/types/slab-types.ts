@@ -39,6 +39,7 @@ import type { IfcEntityMixin } from './ifc-entity-mixin';
 import type { EnvelopeLayer } from './thermal-envelope-types';
 import type { SlabDna } from './slab-dna-types';
 import type { SlabTypeParams } from './bim-family-type';
+import type { SlabFoundationReinforcement } from '../structural/reinforcement/slab-foundation-reinforcement-types';
 
 // ─── Sub-type discriminator (ADR-363 §5.5) ───────────────────────────────────
 
@@ -108,8 +109,15 @@ export interface SlabParams {
   readonly slope?: SlabSlope;
   /** Phase 3.5 — foreign keys προς `slab-opening` entities. */
   readonly slabOpeningIds?: readonly string[];
-  /** Structural reinforcement hint. */
+  /** Structural reinforcement hint (BOQ/hatch — one-way/two-way/…). */
   readonly reinforcement?: SlabReinforcement;
+  /**
+   * ADR-459 Φ4e/E3 — ΠΡΑΓΜΑΤΙΚΟ μοντέλο οπλισμού εδαφόπλακας/raft (δι-διευθυντική
+   * σχάρα top+bottom). Present μόνο σε kind foundation/ground, code-suggested μέσω
+   * του οργανισμού (`buildReinforcePatch`). Διακριτό από το `reinforcement` hint —
+   * μηδέν regression στο υπάρχον BOQ. NEVER για non-foundation πλάκες.
+   */
+  readonly structuralReinforcement?: SlabFoundationReinforcement;
   /** Material library ID (Phase 6+). */
   readonly material?: string;
   /**

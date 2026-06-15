@@ -58,10 +58,10 @@ export function resolveColumnRebarLayoutForParams(
 
 /**
  * Εσωτερικά συνδετήρια (cross-ties) ανά mode (SSoT):
- *   - wall (ρητά anchors web front↔back) → `buildTiesFromAnchors`
+ *   - anchors παρόντα (wall web front↔back, **ή** perimeter μη-ορθογ. ενδιάμεσες ↔
+ *     αντικριστές — ADR-460 grid) → `buildTiesFromAnchors`
  *   - rectangular → `buildColumnCrossTies` (diamond/grid)
- *   - perimeter μη-ορθογ. / circular → [] (όλες οι ράβδοι στο περιμετρικό στεφάνι·
- *     ενδιάμεση συγκράτηση = DEFER)
+ *   - circular / perimeter χωρίς ενδιάμεσες → [] (όλες οι ράβδοι σε γωνίες/στεφάνι)
  */
 export function resolveColumnCrossTies(
   layout: ColumnRebarLayout,

@@ -2,7 +2,11 @@
  * ADR-460 — cross-tie pattern control ανενεργό σε κυκλική/τοίχωμα (όχι perimeter).
  */
 
-import { resolveColumnFieldDisabled, COLUMN_STRUCTURAL_KEYS } from '../column-command-keys';
+import {
+  resolveColumnFieldDisabled,
+  resolveColumnFieldOptions,
+  COLUMN_STRUCTURAL_KEYS,
+} from '../column-command-keys';
 import type { ColumnParams } from '../../../../../bim/types/column-types';
 
 function params(over: Partial<ColumnParams> = {}): ColumnParams {
@@ -31,5 +35,23 @@ describe('resolveColumnFieldDisabled — cross-tie pattern', () => {
 
   it('ενεργό για άλλα πεδία (π.χ. cover) ανεξαρτήτως σχήματος', () => {
     expect(resolveColumnFieldDisabled(COLUMN_STRUCTURAL_KEYS.cover, params({ kind: 'circular', width: 500 }))).toBe(false);
+  });
+});
+
+describe('resolveColumnFieldOptions — shape-aware cross-tie options (διαμάντι)', () => {
+  const key = COLUMN_STRUCTURAL_KEYS.crossTiePattern;
+
+  it('ορθογωνική → καμία περιστολή (null = όλα τα options, incl. διαμάντι)', () => {
+    expect(resolveColumnFieldOptions(key, params())).toBeNull();
+  });
+
+  it('Γ (L-shape) → auto/grid χωρίς διαμάντι', () => {
+    const opts = resolveColumnFieldOptions(key, params({ kind: 'L-shape', width: 600, depth: 600 }));
+    expect(opts).toEqual(['auto', 'grid']);
+    expect(opts).not.toContain('diamond');
+  });
+
+  it('άλλα πεδία (π.χ. cover) → null ανεξαρτήτως σχήματος', () => {
+    expect(resolveColumnFieldOptions(COLUMN_STRUCTURAL_KEYS.cover, params({ kind: 'L-shape', width: 600, depth: 600 }))).toBeNull();
   });
 });

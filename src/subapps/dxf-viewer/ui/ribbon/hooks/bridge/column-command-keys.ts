@@ -9,6 +9,7 @@
 
 import type { ColumnKind, ColumnParams } from '../../../../bim/types/column-types';
 import { resolveColumnReinforcementSection } from '../../../../bim/structural/reinforcement/column-section-outline';
+import { CROSS_TIE_PATTERN_ORDER } from '../../../../bim/structural/reinforcement/column-reinforcement-types';
 import type { FinishParamField } from './finish-param';
 
 export const COLUMN_RIBBON_KEYS = {
@@ -201,6 +202,24 @@ export function resolveColumnFieldDisabled(commandKey: string, params: ColumnPar
     return resolveColumnReinforcementSection(params).mode !== 'perimeter';
   }
   return false;
+}
+
+/**
+ * ADR-460 — **shape-aware** applicable option values ανά πεδίο. Το «διαμάντι»
+ * (rotated-square cross-tie) είναι γεωμετρικά **ορθογώνιο-ειδικό** (1 ενδιάμεση ανά
+ * πλευρά)· σε μη-ορθογώνια perimeter (Γ/Τ/Π/πολύγωνο/σύνθετο) δεν έχει νόημα → το
+ * αποκρύπτουμε, αφήνοντας `auto`/`grid`. Επιστρέφει `null` (καμία περιστολή — στατικά
+ * options) για κάθε άλλη περίπτωση. Επιστρέφει **values** (όχι UI τύπους) → μηδέν
+ * layering coupling. SSoT — καταναλώνεται από `ColumnAdvancedPanel`.
+ */
+export function resolveColumnFieldOptions(commandKey: string, params: ColumnParams): readonly string[] | null {
+  if (commandKey === COLUMN_STRUCTURAL_KEYS.crossTiePattern) {
+    const section = resolveColumnReinforcementSection(params);
+    if (section.mode === 'perimeter' && section.kind !== 'rectangular') {
+      return CROSS_TIE_PATTERN_ORDER.filter((p) => p !== 'diamond');
+    }
+  }
+  return null;
 }
 
 // ─── Type guards (used by useRibbonCommands composer) ────────────────────────

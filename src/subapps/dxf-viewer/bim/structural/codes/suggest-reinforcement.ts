@@ -18,12 +18,14 @@ import type {
 } from '../reinforcement/column-reinforcement-types';
 import type { BeamReinforcement } from '../reinforcement/beam-reinforcement-types';
 import type { FootingReinforcement } from '../reinforcement/footing-reinforcement-types';
+import type { SlabFoundationReinforcement } from '../reinforcement/slab-foundation-reinforcement-types';
 import type {
   BeamReinforcementLimits,
   BeamSectionContext,
   ColumnReinforcementLimits,
   ColumnSectionContext,
   FootingSectionContext,
+  SlabFoundationSectionContext,
   StructuralCodeProvider,
 } from './structural-code-types';
 
@@ -268,6 +270,33 @@ export function suggestFootingReinforcementFrom(
     kind: 'strip',
     transverse: { diameterMm: transverse.diameterMm, spacingMm: transverse.spacingMm },
     longitudinal: { diameterMm: longitudinal.diameterMm, count: longitudinal.count },
+    coverMm: limits.nominalCoverMm,
+  };
+}
+
+// ─── Foundation-slab / raft suggester (ADR-459 Φ4e/E3) ───────────────────────
+
+/**
+ * Επιλέγει ελάχιστο-έγκυρο οπλισμό εδαφόπλακας: δι-διευθυντική **κάτω** σχάρα
+ * (strength-governed, ρ ≥ ρ_min ανά μέτρο) + **άνω** σχάρα (hogging — ίδια ελάχιστη
+ * διάταξη, συντηρητικό & πρακτικό). Reuse του SSoT `resolveMatMesh` (μηδέν duplicate,
+ * N.0.2). Καλείται από κάθε provider μέσα στο `suggestSlabFoundationReinforcement`.
+ */
+export function suggestSlabFoundationReinforcementFrom(
+  provider: StructuralCodeProvider,
+  ctx: SlabFoundationSectionContext,
+): SlabFoundationReinforcement {
+  const limits = provider.slabFoundationReinforcementLimits(ctx);
+  const seedDia = nextRebarDiameterMm(limits.minBarDiameterMm);
+  const dEff = footingEffectiveDepthMm(ctx.thicknessMm, limits.nominalCoverMm);
+  const asPerMetre = limits.minRatio * 1000 * dEff;
+  const mesh = resolveMatMesh(asPerMetre, seedDia, limits.maxBarSpacingMm);
+  const layer = { diameterMm: mesh.diameterMm, spacingMm: mesh.spacingMm };
+  return {
+    bottomMeshX: layer,
+    bottomMeshY: layer,
+    topMeshX: layer,
+    topMeshY: layer,
     coverMm: limits.nominalCoverMm,
   };
 }

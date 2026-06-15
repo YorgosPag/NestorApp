@@ -268,16 +268,71 @@ checks + command — μηδέν duplicate.
 `useRibbonFoundationBridge.ts` (`onAction` branch), `contextual-beam-tab.ts` + `contextual-foundation-tab.ts`
 (structural panel· reuse i18n keys). Diagnostics=DERIVED· reinforcement intent=persisted (command).
 
+## 6g. Phase 4e — Ολοκλήρωση οργανικής συνέχειας (E1 + E3)
+
+Συμπλήρωση των κενών που είχε αφήσει το Phase 4c/4d:
+
+- **E1 — αγκύρωση κορυφής κολόνας σε μη-κολόνα host.** Πριν, το `topAttachmentContinuity`
+  επέστρεφε `null` όταν ο host (από πάνω) δεν ήταν κολόνα → καμία προέκταση + κανένα warning.
+  Τώρα διασπάται: κολόνα↔κολόνα → `columnLapContinuity` (μάτισμα, ως πριν)· κολόνα→δοκάρι/πλάκα →
+  NEW `columnTopAnchorageContinuity` (item `kind:'anchorage'`, οι διαμήκεις αγκυρώνονται με `lbd`
+  μέσα στον host — reuse `anchorageLengthMm`, ανάπτυξη μόνο στην κολόνα). NEW diagnostic code
+  **`columnTopAnchorageUnverified`** (warning) στο `reinforcement-checks.ts`: οπλισμένη κολόνα με
+  top σε host **χωρίς** δικό του reinforcement intent → η αγκύρωση δεν επαληθεύεται (EC8 §5.6).
+- **E3 — εδαφόπλακα/raft reinforcement model.** Η `SlabEntity` kind foundation/ground ήταν footing
+  node στον graph αλλά χωρίς πραγματικό μοντέλο ποσοτήτων (`SlabParams.reinforcement` = μόνο hint
+  enum). NEW `SlabFoundationReinforcement` (δι-διευθυντική σχάρα **top+bottom**, reuse `RebarMesh`) +
+  `slab-foundation-reinforcement-compute` (reuse SSoT `meshDirectionTotals`/`footingEffectiveDepthMm`
+  του πεδίλου) + provider `slabFoundationReinforcementLimits`/`suggestSlabFoundationReinforcement`
+  (EC2 §9.3.1.1 + ΕΚΩΣ, reuse `resolveMatMesh`) + NEW persisted πεδίο `SlabParams.structuralReinforcement`
+  (διακριτό από το hint → μηδέν BOQ regression) + ένταξη στο `buildReinforcePatch`
+  (`isFoundationSlabEntity`) + κάλυψη στο `reinforcement-checks` (missing/ratio).
+- **E2 (footing pad own-bar continuity) = SKIP** (Giorgio scope): οριακής αξίας/πιθανό near-no-op —
+  οι mat-ράβδοι πεδίλου είναι detailing, όχι connectivity-driven.
+
+**Files (Phase 4e):** NEW `bim/structural/reinforcement/slab-foundation-reinforcement-types.ts` +
+`-compute.ts` (+`__tests__`)· MOD `organism/reinforcement-continuity.ts` (E1 split),
+`organism/reinforcement-checks.ts` (anchorage check + raft coverage), `organism/structural-organism-types.ts`
+(+1 code), `bim/structural/section-context.ts` (+raft ctx/patch/predicate), `bim/structural/codes/*`
+(+slab-foundation limits/suggester — MIXED με ADR-460), `bim/structural/reinforcement/footing-reinforcement-compute.ts`
+(export mesh SSoT), `bim/types/slab-types.ts` (+`structuralReinforcement`), i18n el+en (+1 warning key).
+
+## 6h. Phase 4f — Manual connectivity UX (ribbon)
+
+Χειροκίνητο attach/detach του αναλυτικού FK `footingId` (Revit Structural «Attach/Detach»). NEW
+`DetachColumnFootingCommand` (mirror `AttachColumnFootingCommand`· **αφαιρεί το κλειδί** `footingId`,
+Firestore-safe — όχι explicit `undefined`· undoable). UX στο **foundation contextual ribbon** (όχι
+στην κολόνα — αποφυγή του MIXED `column-command-keys.ts`): panel «Συνδεσιμότητα» με «Σύνδεση κολόνων»
+(selection-pair: τα ΕΠΙΛΕΓΜΕΝΑ columns → attach στο ενεργό πέδιλο) + «Αποσύνδεση κολόνων» (ΟΛΕΣ οι
+κολόνες που εδράζονται στο πέδιλο → detach). Events `bim:column-footing-attached-manual`/
+`bim:column-footing-detached` → toasts + organism re-derive.
+
+**Files (Phase 4f):** NEW `core/commands/entity-commands/DetachColumnFootingCommand.ts` (+`__tests__`)·
+MOD `foundation-command-keys.ts` (+2 actions), `useRibbonFoundationBridge.ts` (+2 handlers),
+`contextual-foundation-tab.ts` (+connectivity panel), `systems/events/drawing-event-map-bim.ts` (+2 events),
+`hooks/useStructuralOrganism.ts` (+2 ORGANISM_EVENTS), `hooks/notifications/structural-attach-notifications.ts`
+(+2 toasts), i18n el+en (+labels/tooltips/toasts).
+
 ## 7. Known limitations (→ Phase 3+)
 
 - `beamUnsupportedEnd` αγνοεί στήριξη από **τοίχο** (Phase 1 = κολόνες μόνο) → πιθανό false-warn
   σε δοκάρι που πατά σε τοίχο.
-- `footingId` εδραιώνεται **αυτόματα** στη δημιουργία (πέδιλο/κολόνα). Χειροκίνητο
-  attach/detach από ribbon + manual override = DEFER (Phase 3+).
-- Καμία strength/loads ανάλυση (Phase 5).
+- Section adequacy advisory + auto-suggest μεγαλύτερης διατομής (Phase 3) = DEFER.
+- Καμία strength/loads ανάλυση (Phase 5 — ξεχωριστό ADR).
+- E2 (footing pad organism-aware end-anchorage) = DEFER (οριακής αξίας).
 
 ## 8. Changelog
 
+- **2026-06-15 (v6, Opus):** Phase 4e (E1+E3) + Phase 4f implemented. **E1:** `topAttachmentContinuity`
+  split → κολόνα→μη-κολόνα host = anchorage (`lbd`) αντί `null` + NEW warning `columnTopAnchorageUnverified`.
+  **E3:** NEW `SlabFoundationReinforcement` (raft top+bottom δι-διευθυντική σχάρα) + compute + provider
+  (slab-foundation limits/suggester, EC2/ΕΚΩΣ, reuse `resolveMatMesh`/mesh SSoT) + `SlabParams.structuralReinforcement`
+  (διακριτό από hint) + `buildReinforcePatch`/`reinforcement-checks` raft coverage. E2 = SKIP (scope Giorgio).
+  **Phase 4f:** NEW `DetachColumnFootingCommand` (key-removal, undoable) + foundation-ribbon «Συνδεσιμότητα»
+  panel (attach selected / detach all) + 2 events + 2 toasts + organism re-derive. 18 νέα jest
+  (slab-foundation 8 + checks/continuity +6 + DetachCommand 4· 290 structural/bridge σύνολο πράσινα). tsc clean.
+  UNCOMMITTED (browser-verify + commit από Giorgio). ⚠️ `codes/*` MIXED με ADR-460 → git add ΜΟΝΟ δικά μου.
+  DEFER: Phase 3 (section adequacy advisory), Phase 5 (loads — ξεχωριστό ADR), E2.
 - **2026-06-15 (v5, Opus):** Phase 4d (reinforcement διαγνωστικά + auto-apply) implemented. (A) NEW
   `organism/reinforcement-checks.ts` `runReinforcementChecks` (memberMissingReinforcement/ratioOutOfRange/
   barMismatchAtJoint· ξεχωριστή signature από το geometry-only `runOrganismChecks`) + types επέκταση

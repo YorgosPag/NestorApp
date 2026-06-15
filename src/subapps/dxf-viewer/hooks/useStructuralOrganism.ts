@@ -49,6 +49,8 @@ const ORGANISM_EVENTS: readonly DrawingEventType[] = [
   'bim:columns-auto-attached',
   'bim:columns-auto-attached-base',
   'bim:column-footing-attached',
+  'bim:column-footing-attached-manual',
+  'bim:column-footing-detached',
   'bim:structural-auto-reinforced',
 ];
 

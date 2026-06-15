@@ -116,4 +116,66 @@ describe('resolveColumnCrossTies — per mode', () => {
     const layout = resolveColumnRebarLayout(reinf, section)!;
     expect(resolveColumnCrossTies(layout, section, reinf).length).toBeGreaterThan(0);
   });
+
+  it('rectangular layout does NOT carry crossTieAnchorsMm (rect fast-path, zero regression)', () => {
+    const section = resolveColumnReinforcementSection(baseParams({ width: 400, depth: 600 }));
+    const layout = resolveColumnRebarLayout(reinf, section)!;
+    expect(layout.crossTieAnchorsMm).toBeUndefined();
+  });
+
+  it('perimeter Γ (L-shape) με ενδιάμεσες → grid cross-ties (anchors → S-ties)', () => {
+    // count 12 σε L (6 κορυφές) → 6 ενδιάμεσες ράβδοι που θέλουν cross-tie.
+    const reinf12: ColumnReinforcement = { ...reinf, longitudinal: { diameterMm: 16, count: 12 } };
+    const section = resolveColumnReinforcementSection(baseParams({ kind: 'L-shape', width: 600, depth: 600 }));
+    const layout = resolveColumnRebarLayout(reinf12, section)!;
+    expect(layout.crossTieAnchorsMm && layout.crossTieAnchorsMm.length).toBeGreaterThan(0);
+    const ties = resolveColumnCrossTies(layout, section, reinf12);
+    expect(ties.length).toBe(layout.crossTieAnchorsMm!.length);
+  });
+
+  it('reentrant (κοίλη) γωνία Γ → παίρνει cross-tie (EC8 κρίσιμη συγκράτηση)', () => {
+    // L outline (CCW) με κοίλη γωνία στο (250,250).
+    const lOutline = [
+      { x: 0, y: 0 }, { x: 600, y: 0 }, { x: 600, y: 250 },
+      { x: 250, y: 250 }, { x: 250, y: 600 }, { x: 0, y: 600 },
+    ];
+    const reinf16: ColumnReinforcement = { ...reinf, longitudinal: { diameterMm: 16, count: 16 } };
+    const layout = buildPerimeterLayoutFromOutline(reinf16, lOutline)!;
+    expect(layout.crossTieAnchorsMm && layout.crossTieAnchorsMm.length).toBeGreaterThan(0);
+    const nearReentrant = layout.crossTieAnchorsMm!.some(
+      ({ a }) => Math.hypot(a.x - 250, a.y - 250) < 100,
+    );
+    expect(nearReentrant).toBe(true);
+  });
+
+  it('κάθε άκρο cross-tie = ΠΡΑΓΜΑΤΙΚΗ διαμήκης ράβδος (ποτέ γάντζος στο κενό)', () => {
+    const reinf12: ColumnReinforcement = { ...reinf, longitudinal: { diameterMm: 16, count: 12 } };
+    const section = resolveColumnReinforcementSection(baseParams({ kind: 'L-shape', width: 600, depth: 600 }));
+    const layout = resolveColumnRebarLayout(reinf12, section)!;
+    const isBar = (p: { x: number; y: number }): boolean =>
+      layout.longitudinalBarsMm.some((b) => Math.hypot(b.x - p.x, b.y - p.y) < 1e-6);
+    for (const { a, b } of layout.crossTieAnchorsMm!) {
+      expect(isBar(a)).toBe(true);
+      expect(isBar(b)).toBe(true);
+    }
+  });
+
+  it('perimeter cross-ties διασχίζουν το ΠΑΧΟΣ, όχι κατά μήκος (μηδέν ζιγκ-ζαγκ)', () => {
+    // Regression guard: κάθε tie πρέπει να είναι κάθετο (κοντό), όχι διαγώνιο κατά μήκος.
+    const reinf12: ColumnReinforcement = { ...reinf, longitudinal: { diameterMm: 16, count: 12 } };
+    const section = resolveColumnReinforcementSection(baseParams({ kind: 'L-shape', width: 600, depth: 600 }));
+    const layout = resolveColumnRebarLayout(reinf12, section)!;
+    const maxSpan = section.maxDimensionMm * 0.8; // διασχίζει πάχος (≤45°) << μέγιστη διάσταση
+    for (const { a, b } of layout.crossTieAnchorsMm!) {
+      expect(Math.hypot(b.x - a.x, b.y - a.y)).toBeLessThan(maxSpan);
+    }
+  });
+
+  it('perimeter Γ χωρίς ενδιάμεσες (count = κορυφές) → καθόλου cross-ties', () => {
+    const reinf6: ColumnReinforcement = { ...reinf, longitudinal: { diameterMm: 16, count: 6 } };
+    const section = resolveColumnReinforcementSection(baseParams({ kind: 'L-shape', width: 600, depth: 600 }));
+    const layout = resolveColumnRebarLayout(reinf6, section)!;
+    expect(layout.crossTieAnchorsMm).toBeUndefined();
+    expect(resolveColumnCrossTies(layout, section, reinf6)).toEqual([]);
+  });
 });

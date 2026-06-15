@@ -33,6 +33,8 @@ export interface ColumnPropertyRowProps {
   readonly onChange: (commandKey: string, value: string) => void;
   /** ADR-460 — ανενεργό control (π.χ. cross-tie pattern σε κυκλική/τοίχωμα). */
   readonly disabled?: boolean;
+  /** ADR-460 — shape-aware override των `field.options` (π.χ. διαμάντι out σε Γ/Τ/Π). */
+  readonly options?: readonly ColumnPropertyOption[];
 }
 
 export function ColumnPropertyRow({
@@ -40,6 +42,7 @@ export function ColumnPropertyRow({
   value,
   onChange,
   disabled,
+  options: optionsOverride,
 }: ColumnPropertyRowProps): React.ReactElement {
   const { t } = useTranslation('dxf-viewer-shell');
   const label = t(field.labelKey);
@@ -60,11 +63,12 @@ export function ColumnPropertyRow({
   // free-form value as first option ώστε να μη χάνεται (mirror RibbonCombobox).
   // ADR-460 — ανενεργό control (π.χ. cross-tie σε κυκλική): δείξε ουδέτερο «—»
   // (δεν εφαρμόζεται) ΑΝΤΙ της αποθηκευμένης τιμής — non-destructive (η τιμή μένει).
+  const baseOptions = optionsOverride ?? field.options;
   const resolved = disabled || value === '' ? null : value;
-  const inOptions = resolved === null || field.options.some((o) => o.value === resolved);
+  const inOptions = resolved === null || baseOptions.some((o) => o.value === resolved);
   const options: readonly ColumnPropertyOption[] = inOptions
-    ? field.options
-    : [{ value: resolved, labelKey: resolved, isLiteralLabel: true }, ...field.options];
+    ? baseOptions
+    : [{ value: resolved, labelKey: resolved, isLiteralLabel: true }, ...baseOptions];
 
   return (
     <div className="flex items-center justify-between gap-2 py-0.5">

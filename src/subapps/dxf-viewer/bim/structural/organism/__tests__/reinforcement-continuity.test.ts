@@ -131,6 +131,32 @@ describe('computeOrganismReinforcementContinuity — top-attachment (floor lap)'
   });
 });
 
+describe('computeOrganismReinforcementContinuity — top-attachment to non-column host (Φ4e/E1)', () => {
+  const graph: StructuralGraph = {
+    nodes: [node('C1', 'column'), node('B1', 'beam')],
+    edges: [edge('B1', 'C1', 'top-attachment')], // host B1 (beam) ↔ column C1 top
+  };
+  const entities = [colEntity('C1', colReinf(16, 6)), beamEntity('B1', beamReinf(16, 3, 14, 2))];
+  const result = computeOrganismReinforcementContinuity(graph, entities, EUROCODE_PROVIDER);
+
+  it('anchorage item: kind = anchorage, count = column count, length = lbd (40·Ø)', () => {
+    expect(result.items).toHaveLength(1);
+    expect(result.items[0]).toMatchObject({
+      kind: 'anchorage',
+      count: 6,
+      diameterMm: 16,
+      lengthMm: 640, // anchorage 40·16
+      fromMemberId: 'C1',
+      toMemberId: 'B1',
+    });
+  });
+
+  it('only the column receives the anchorage in its development (host gets none)', () => {
+    expect(result.columnDevelopmentMm.get('C1')).toBeCloseTo(640, 6);
+    expect(result.columnDevelopmentMm.get('B1')).toBeUndefined();
+  });
+});
+
 describe('computeOrganismReinforcementContinuity — column-bearing (beam anchorage)', () => {
   const graph: StructuralGraph = {
     nodes: [node('C1', 'column'), node('B1', 'beam')],

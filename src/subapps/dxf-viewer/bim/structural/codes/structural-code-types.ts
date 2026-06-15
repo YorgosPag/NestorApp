@@ -17,6 +17,7 @@
 import type { ColumnReinforcement } from '../reinforcement/column-reinforcement-types';
 import type { BeamReinforcement } from '../reinforcement/beam-reinforcement-types';
 import type { FootingReinforcement } from '../reinforcement/footing-reinforcement-types';
+import type { SlabFoundationReinforcement } from '../reinforcement/slab-foundation-reinforcement-types';
 import type { BeamSupportType } from '../../types/beam-types';
 import type { BarDevelopmentModifiers } from '../rebar-catalog';
 
@@ -186,6 +187,40 @@ export interface FootingReinforcementLimits {
   readonly nominalCoverMm: number;
 }
 
+// ─── Foundation-slab / raft (ADR-459 Φ4e/E3) ─────────────────────────────────
+
+/**
+ * Section context a code provider needs for a FOUNDATION-SLAB (raft / εδαφόπλακα,
+ * `SlabEntity` kind foundation/ground). bbox dims (πλακοειδής σύμβαση — οι σχάρες
+ * τρέχουν στο περιβάλλον ορθογώνιο) + πάχος + ακαθάριστο εμβαδό περιγράμματος.
+ */
+export interface SlabFoundationSectionContext {
+  /** Πλάτος bbox κατά X (mm). */
+  readonly widthMm: number;
+  /** Μήκος bbox κατά Y (mm). */
+  readonly lengthMm: number;
+  /** Πάχος πλάκας (mm). */
+  readonly thicknessMm: number;
+  /** Ακαθάριστο εμβαδό περιγράμματος (mm²). */
+  readonly grossAreaMm2: number;
+}
+
+/**
+ * Code-derived detailing limits για εδαφόπλακα/raft. Τα ρ αναφέρονται στην ενεργό
+ * διατομή ανά μέτρο πλάτους (b=1000, d ≈ thickness−cover), όπως στις πλάκες
+ * (EC2 §9.3.1.1). Lean — η raft είναι δι-διευθυντική σχάρα (μηδέν διαμήκεις διανομής).
+ */
+export interface SlabFoundationReinforcementLimits {
+  /** ρ_min — ελάχιστο ποσοστό κύριου (καμπτικού) οπλισμού (slab-like). */
+  readonly minRatio: number;
+  /** Ελάχιστη διάμετρος ράβδου σχάρας (mm). */
+  readonly minBarDiameterMm: number;
+  /** Μέγιστο βήμα ράβδων σχάρας (mm). */
+  readonly maxBarSpacingMm: number;
+  /** Ονομαστική επικάλυψη cnom (mm) — έδραση σε έδαφος (EC2 §4.4.1.3). */
+  readonly nominalCoverMm: number;
+}
+
 /**
  * A structural design code. Stateless — pure rule functions keyed by section
  * context, so the same instance is shared across all entities.
@@ -224,6 +259,14 @@ export interface StructuralCodeProvider {
   footingReinforcementLimits(ctx: FootingSectionContext): FootingReinforcementLimits;
   /** ADR-459 Phase 4b — προτεινόμενος ελάχιστος-έγκυρος οπλισμός θεμελίωσης. */
   suggestFootingReinforcement(ctx: FootingSectionContext): FootingReinforcement;
+  /** ADR-459 Φ4e/E3 — detailing limits εδαφόπλακας/raft (slab-like, δι-διευθυντική). */
+  slabFoundationReinforcementLimits(
+    ctx: SlabFoundationSectionContext,
+  ): SlabFoundationReinforcementLimits;
+  /** ADR-459 Φ4e/E3 — προτεινόμενος ελάχιστος-έγκυρος οπλισμός εδαφόπλακας (top+bottom σχάρα). */
+  suggestSlabFoundationReinforcement(
+    ctx: SlabFoundationSectionContext,
+  ): SlabFoundationReinforcement;
   /**
    * ADR-459 Phase 4c — μήκος ματίσματος l₀ (mm), EC2 §8.7.3. ΕΝΑ SSoT για τις
    * προεκτάσεις/ματίσεις στις συνδέσεις του οργανισμού (αντικαθιστά το flat 50·Ø).

@@ -26,7 +26,6 @@ import type { CrossTiePattern } from './column-reinforcement-types';
 import {
   buildStirrupHookEndsMm,
   STIRRUP_BEND_ARC_SEGMENTS,
-  STIRRUP_HOOK_EXTENSION_FACTOR,
 } from './column-rebar-layout';
 
 const EPS = 1e-6;
@@ -87,6 +86,15 @@ const HOOK_ARC_LENGTH_MM = 30;
  */
 const HOOK_TAIL_TILT = Math.PI / 4; // 45° → γνήσιος γάντζος 135°
 
+/**
+ * Μήκος ευθύγραμμης ουράς γάντζου **135°** cross-tie (× dbw). EC2 EN1992-1-1 §8.5
+ * Fig 8.5: ο γάντζος 135°/180° απαιτεί προέκταση **≥ 5·dbw** μετά την καμπή (το 10·dbw
+ * αφορά κάμψη 90°). Τα cross-ties έχουν γάντζους 135° → 5·dbw: σωστό κατά EC2 ΚΑΙ
+ * οπτικά καθαρό (το παλιό 10·dbw έβγαζε υπερβολικά μακριές ουρές). Geometry-is-SSoT:
+ * το μήκος που σχεδιάζεται = αυτό που μετριέται στις ποσότητες χάλυβα.
+ */
+const CROSS_TIE_HOOK_EXTENSION_FACTOR = 5;
+
 /** Μοναδικές τιμές (με ανοχή EPS), ταξινομημένες. */
 function uniqueSorted(values: readonly number[]): number[] {
   const out: number[] = [];
@@ -126,7 +134,7 @@ function straightTie(a: Point2D, b: Point2D, dbw: number, dbL: number, seg: numb
   const d = unitVec(a, b); // άξονας a→b (inward στο a)
   if (r <= 0 || len <= 2 * r) return { pathMm: [a, b], closed: false, hookEndsMm: [] };
 
-  const tailLen = STIRRUP_HOOK_EXTENSION_FACTOR * dbw;
+  const tailLen = CROSS_TIE_HOOK_EXTENSION_FACTOR * dbw;
 
   // Γάντζος `a`: σταθερό τόξο τυλίγματος 225° γύρω από τη ράβδο (καθαρός βρόχος που
   // αγκαλιάζει), που ΤΕΛΕΙΩΝΕΙ με την ουρά εφαπτομενικά προς τον πυρήνα (+d). Το

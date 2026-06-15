@@ -25,6 +25,7 @@ import { AutoReinforceOrganismCommand } from '../core/commands/entity-commands/A
 import { resolveStructuralCode } from '../bim/structural/codes';
 import { useStructuralSettingsStore } from '../state/structural-settings-store';
 import { isColumnEntity, isBeamEntity, isFoundationEntity } from '../types/entities';
+import { isFoundationSlabEntity } from '../bim/structural/section-context';
 import type { Entity } from '../types/entities';
 import type { SceneModel } from '../types/scene';
 
@@ -34,9 +35,9 @@ interface LevelManagerLike {
   setLevelScene: (levelId: string, scene: SceneModel) => void;
 }
 
-/** Δομικό μέλος που δέχεται οπλισμό (κολόνα/δοκάρι/πέδιλο). */
+/** Δομικό μέλος που δέχεται οπλισμό (κολόνα/δοκάρι/πέδιλο/εδαφόπλακα — ADR-459 Φ4e/E3). */
 function isReinforceable(e: Entity): boolean {
-  return isColumnEntity(e) || isBeamEntity(e) || isFoundationEntity(e);
+  return isColumnEntity(e) || isBeamEntity(e) || isFoundationEntity(e) || isFoundationSlabEntity(e);
 }
 
 export function useStructuralAutoReinforce(props: { levelManager: LevelManagerLike }): void {

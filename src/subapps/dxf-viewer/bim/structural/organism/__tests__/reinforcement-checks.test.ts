@@ -9,7 +9,7 @@
  */
 
 import { runReinforcementChecks } from '../reinforcement-checks';
-import { buildColumnSectionContext } from '../../section-context';
+import { buildColumnSectionContext, buildSlabFoundationSectionContext } from '../../section-context';
 import { EUROCODE_PROVIDER } from '../../codes/eurocode-provider';
 import type { StructuralGraph, StructuralNode } from '../structural-organism-types';
 import type { ColumnReinforcement } from '../../reinforcement/column-reinforcement-types';
@@ -95,6 +95,29 @@ const padEntity = (id: string, reinforcement?: unknown): Entity =>
       profile: 'flat',
       sceneUnits: 'mm',
       ...(reinforcement ? { reinforcement } : {}),
+    },
+  } as unknown as Entity);
+
+/** Εδαφόπλακα/raft fixture (kind foundation/ground, sceneUnits mm → 6×4 m). */
+const raftEntity = (id: string, kind: 'foundation' | 'ground', structuralReinforcement?: unknown): Entity =>
+  ({
+    id,
+    type: 'slab',
+    kind,
+    ifcType: 'IfcSlab',
+    params: {
+      kind,
+      outline: { vertices: [
+        { x: 0, y: 0, z: 0 },
+        { x: 6000, y: 0, z: 0 },
+        { x: 6000, y: 4000, z: 0 },
+        { x: 0, y: 4000, z: 0 },
+      ] },
+      levelElevation: 0,
+      thickness: 500,
+      geometryType: 'box',
+      sceneUnits: 'mm',
+      ...(structuralReinforcement ? { structuralReinforcement } : {}),
     },
   } as unknown as Entity);
 
@@ -191,6 +214,72 @@ describe('runReinforcementChecks — barMismatchAtJoint', () => {
     const entities = [colEntity('C1', colReinf(16, 6)), colEntity('C2', colReinf(16, 6))];
     const findings = runReinforcementChecks(graph, entities, EUROCODE_PROVIDER);
     expect(codesOf(findings)).not.toContain('barMismatchAtJoint');
+  });
+});
+
+// ─── Check 4: columnTopAnchorageUnverified (warning, Φ4e/E1) ──────────────────
+
+describe('runReinforcementChecks — columnTopAnchorageUnverified', () => {
+  it('flags a reinforced column whose top attaches into an unreinforced beam host', () => {
+    const graph: StructuralGraph = {
+      nodes: [node('C1', 'column'), node('B1', 'beam')],
+      edges: [edge('B1', 'C1', 'top-attachment')], // host B1 ↔ column C1
+    };
+    const findings = runReinforcementChecks(graph, [colEntity('C1', colReinf(16, 8)), beamEntity('B1')], EUROCODE_PROVIDER);
+    const anchor = findings.filter((d) => d.code === 'columnTopAnchorageUnverified');
+    expect(anchor).toHaveLength(1);
+    expect(anchor[0].severity).toBe('warning');
+    expect(anchor[0].entityIds).toEqual(expect.arrayContaining(['C1', 'B1']));
+  });
+
+  it('does NOT flag when the host beam is itself reinforced (anchorage verifiable)', () => {
+    const graph: StructuralGraph = {
+      nodes: [node('C1', 'column'), node('B1', 'beam')],
+      edges: [edge('B1', 'C1', 'top-attachment')],
+    };
+    const findings = runReinforcementChecks(graph, [colEntity('C1', colReinf(16, 8)), beamEntity('B1', beamReinf(16, 3))], EUROCODE_PROVIDER);
+    expect(codesOf(findings)).not.toContain('columnTopAnchorageUnverified');
+  });
+
+  it('does NOT flag a column→column lap (host is a column)', () => {
+    const graph: StructuralGraph = {
+      nodes: [node('C1', 'column'), node('C2', 'column')],
+      edges: [edge('C2', 'C1', 'top-attachment')],
+    };
+    const findings = runReinforcementChecks(graph, [colEntity('C1', colReinf(16, 6)), colEntity('C2', colReinf(16, 6))], EUROCODE_PROVIDER);
+    expect(codesOf(findings)).not.toContain('columnTopAnchorageUnverified');
+  });
+});
+
+// ─── Check E3: foundation-slab / raft reinforcement ───────────────────────────
+
+describe('runReinforcementChecks — foundation-slab (raft)', () => {
+  it('flags a raft with no structural reinforcement as memberMissingReinforcement', () => {
+    const graph: StructuralGraph = { nodes: [node('R1', 'footing')], edges: [] };
+    const findings = runReinforcementChecks(graph, [raftEntity('R1', 'foundation')], EUROCODE_PROVIDER);
+    expect(codesOf(findings)).toContain('memberMissingReinforcement');
+  });
+
+  it('code-suggested raft mesh → ρ within range → no ratio finding', () => {
+    const ctx = buildSlabFoundationSectionContext(raftEntity('R1', 'foundation') as never);
+    const suggestion = EUROCODE_PROVIDER.suggestSlabFoundationReinforcement(ctx);
+    const graph: StructuralGraph = { nodes: [node('R1', 'footing')], edges: [] };
+    const findings = runReinforcementChecks(graph, [raftEntity('R1', 'foundation', suggestion)], EUROCODE_PROVIDER);
+    expect(codesOf(findings)).not.toContain('ratioOutOfRange');
+    expect(codesOf(findings)).not.toContain('memberMissingReinforcement');
+  });
+
+  it('sparse raft mesh → ρ below min → warning', () => {
+    const sparse = {
+      bottomMeshX: { diameterMm: 8, spacingMm: 250 },
+      bottomMeshY: { diameterMm: 8, spacingMm: 250 },
+      topMeshX: { diameterMm: 8, spacingMm: 250 },
+      topMeshY: { diameterMm: 8, spacingMm: 250 },
+      coverMm: 50,
+    };
+    const graph: StructuralGraph = { nodes: [node('R1', 'footing')], edges: [] };
+    const findings = runReinforcementChecks(graph, [raftEntity('R1', 'ground', sparse)], EUROCODE_PROVIDER);
+    expect(codesOf(findings)).toContain('ratioOutOfRange');
   });
 });
 

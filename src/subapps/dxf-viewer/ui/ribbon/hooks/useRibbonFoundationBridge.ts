@@ -19,7 +19,7 @@
 
 import { useCallback, useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { isFoundationEntity } from '../../../types/entities';
+import { isFoundationEntity, isColumnEntity } from '../../../types/entities';
 import { hasGuideBindings } from '../../../bim/hosting/guide-binding-types';
 import {
   type FoundationEntity,
@@ -29,6 +29,9 @@ import {
 import { useCommandHistory } from '../../../core/commands';
 import { UpdateFoundationParamsCommand } from '../../../core/commands/entity-commands/UpdateFoundationParamsCommand';
 import { RehostFoundationsCommand } from '../../../core/commands/entity-commands/RehostFoundationsCommand';
+// ADR-459 Φ4f — manual analytical-FK connectivity (κολόνα↔πέδιλο).
+import { AttachColumnFootingCommand } from '../../../core/commands/entity-commands/AttachColumnFootingCommand';
+import { DetachColumnFootingCommand } from '../../../core/commands/entity-commands/DetachColumnFootingCommand';
 import { CompoundCommand } from '../../../core/commands/CompoundCommand';
 import type { ICommand } from '../../../core/commands/interfaces';
 import { LevelSceneManagerAdapter } from '../../../systems/entity-creation/LevelSceneManagerAdapter';
@@ -353,6 +356,41 @@ export function useRibbonFoundationBridge(
     return off;
   }, [levelManager, runFoundationGridCommit, emitFromGridToast]);
 
+  // ADR-459 Φ4f — «Σύνδεση επιλεγμένων κολόνων»: εδραιώνει το αναλυτικό FK footingId
+  // για τις ΕΠΙΛΕΓΜΕΝΕΣ κολόνες προς το ενεργό πέδιλο (selection-pair, undoable).
+  const handleAttachColumns = useCallback((): void => {
+    const foundation = resolveFoundation();
+    const levelId = levelManager.currentLevelId;
+    if (!foundation || !levelId) return;
+    const scene = levelManager.getLevelScene(levelId);
+    if (!scene) return;
+    const selectedIds = new Set(universalSelection.getSelectedEntityIds());
+    const columnIds = scene.entities
+      .filter((e) => selectedIds.has(e.id) && isColumnEntity(e) && e.params.footingId !== foundation.id)
+      .map((e) => e.id);
+    if (columnIds.length === 0) return; // καμία (μη ήδη-συνδεδεμένη) κολόνα επιλεγμένη
+    const sm = new LevelSceneManagerAdapter(levelManager.getLevelScene, levelManager.setLevelScene, levelId);
+    executeCommand(new AttachColumnFootingCommand(foundation.id, columnIds, sm));
+    EventBus.emit('bim:column-footing-attached-manual', { columnIds, footingId: foundation.id });
+  }, [resolveFoundation, levelManager, universalSelection, executeCommand]);
+
+  // ADR-459 Φ4f — «Αποσύνδεση κολόνων»: σπάει το FK footingId ΟΛΩΝ των κολόνων που
+  // εδράζονται ρητά σε αυτό το πέδιλο (undoable· επιστροφή σε spatial fallback).
+  const handleDetachColumns = useCallback((): void => {
+    const foundation = resolveFoundation();
+    const levelId = levelManager.currentLevelId;
+    if (!foundation || !levelId) return;
+    const scene = levelManager.getLevelScene(levelId);
+    if (!scene) return;
+    const columnIds = scene.entities
+      .filter((e) => isColumnEntity(e) && e.params.footingId === foundation.id)
+      .map((e) => e.id);
+    if (columnIds.length === 0) return;
+    const sm = new LevelSceneManagerAdapter(levelManager.getLevelScene, levelManager.setLevelScene, levelId);
+    executeCommand(new DetachColumnFootingCommand(columnIds, sm));
+    EventBus.emit('bim:column-footing-detached', { columnIds });
+  }, [resolveFoundation, levelManager, executeCommand]);
+
   const onAction = useCallback(
     (action: string): void => {
       if (action === FOUNDATION_RIBBON_KEYS_ACTIONS.fromGrid) return handleFromGrid('inner');
@@ -366,6 +404,8 @@ export function useRibbonFoundationBridge(
         if (foundation) EventBus.emit('bim:auto-reinforce-requested', { entityIds: [foundation.id] });
         return;
       }
+      if (action === FOUNDATION_RIBBON_KEYS_ACTIONS.attachColumns) return handleAttachColumns();
+      if (action === FOUNDATION_RIBBON_KEYS_ACTIONS.detachColumns) return handleDetachColumns();
       if (action !== FOUNDATION_RIBBON_KEYS_ACTIONS.delete) return;
       const foundation = resolveFoundation();
       if (!foundation || !levelManager.currentLevelId) return;
@@ -381,7 +421,7 @@ export function useRibbonFoundationBridge(
         entities: scene.entities.filter((e) => e.id !== foundation.id),
       });
     },
-    [resolveFoundation, levelManager, t, handleFromGrid, handleTieBeamsFromGrid],
+    [resolveFoundation, levelManager, t, handleFromGrid, handleTieBeamsFromGrid, handleAttachColumns, handleDetachColumns],
   );
 
   // ADR-436 Slice 2 — kind-conditional panels. Resolve the active kind (selected

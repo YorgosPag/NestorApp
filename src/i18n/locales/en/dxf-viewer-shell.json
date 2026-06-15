@@ -8,9 +8,12 @@
       "memberMissingReinforcement": "Member has no reinforcement defined.",
       "ratioBelowMin": "Reinforcement ratio ρ={ratio}% is below the minimum {min}%.",
       "ratioAboveMax": "Reinforcement ratio ρ={ratio}% is above the maximum {max}%.",
-      "barMismatchAtJoint": "Reinforcement mismatch at connection joint (differing bar count/diameter or insufficient development length)."
+      "barMismatchAtJoint": "Reinforcement mismatch at connection joint (differing bar count/diameter or insufficient development length).",
+      "columnTopAnchorageUnverified": "Column top anchors into a member with no reinforcement — longitudinal bar development is not verified."
     },
-    "autoReinforced": "{count, plural, =0 {No member needed reinforcement} one {Reinforced # member} other {Reinforced # members}}"
+    "autoReinforced": "{count, plural, =0 {No member needed reinforcement} one {Reinforced # member} other {Reinforced # members}}",
+    "footingAttached": "{count, plural, =0 {No column attached} one {Attached # column to the footing} other {Attached # columns to the footing}}",
+    "footingDetached": "{count, plural, =0 {No column detached} one {Detached # column from the footing} other {Detached # columns from the footing}}"
   },
   "structural": {
     "code": {
@@ -1124,6 +1127,7 @@
       "foundationGeometry": "Geometry",
       "foundationElevation": "Elevation",
       "foundationActions": "Actions",
+      "structuralConnectivity": "Connectivity",
       "beamKind": "Type",
       "beamIshape": "I-Section",
       "beamIshapeCatalog": "Profile Catalog",
@@ -2631,6 +2635,10 @@
         "close": "Close",
         "delete": "Delete",
         "deleteConfirm": "Delete footing? This action cannot be undone.",
+        "attachColumns": "Attach columns",
+        "attachColumnsTooltip": "Attach the selected columns to this footing (analytical support)",
+        "detachColumns": "Detach columns",
+        "detachColumnsTooltip": "Detach all columns supported by this footing",
         "kind": {
           "section": {
             "title": "Type"
@@ -4323,6 +4331,10 @@
     "close": "Close",
     "exportPdf": "Export PDF",
     "print": "Print",
+    "zoomIn": "Zoom in",
+    "zoomOut": "Zoom out",
+    "zoomReset": "Reset zoom",
+    "zoomToolbar": "Preview zoom",
     "regions": {
       "plan": "PLAN",
       "elevation": "ELEVATION",

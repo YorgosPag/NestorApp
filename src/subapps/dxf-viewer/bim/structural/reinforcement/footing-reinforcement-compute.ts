@@ -36,7 +36,8 @@ import type {
   TieBeamSectionContext,
 } from '../codes/structural-code-types';
 
-const MM_TO_M = 0.001;
+/** mm→m (exported SSoT — reuse στο slab-foundation-reinforcement-compute, N.0.2). */
+export const MM_TO_M = 0.001;
 
 /** 90° τελικός γάντζος ανάπτυξης ανά άκρο ράβδου σχάρας (× Ø). */
 const MAT_END_ANCHORAGE_FACTOR = 12;
@@ -96,12 +97,12 @@ function meshBarLengthMm(spanDimMm: number, diameterMm: number, coverMm: number)
 }
 
 /** Ενεργό βάθος θεμελιακού στοιχείου d ≈ thickness − cover. */
-function footingEffectiveDepthMm(thicknessMm: number, coverMm: number): number {
+export function footingEffectiveDepthMm(thicknessMm: number, coverMm: number): number {
   return Math.max(0, thicknessMm - coverMm);
 }
 
 /** Μήκος+βάρος μίας διεύθυνσης σχάρας (ράβδοι // `barDim`, βήμα κατά `perpDim`). */
-function meshDirectionTotals(
+export function meshDirectionTotals(
   mesh: RebarMesh,
   barDimMm: number,
   perpDimMm: number,

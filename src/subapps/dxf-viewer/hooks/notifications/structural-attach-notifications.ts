@@ -52,6 +52,14 @@ export function registerStructuralAttachNotifications(t: TFunction): Array<() =>
       toast.info(t('attachToStructural.detached'));
     }),
 
+    // ADR-459 Φ4f — manual κολόνα↔πέδιλο connectivity από το foundation ribbon.
+    EventBus.on('bim:column-footing-attached-manual', ({ columnIds }) => {
+      toast.info(t('structuralOrganism.footingAttached', { count: columnIds.length }));
+    }),
+    EventBus.on('bim:column-footing-detached', ({ columnIds }) => {
+      toast.info(t('structuralOrganism.footingDetached', { count: columnIds.length }));
+    }),
+
     // ADR-363 Post-Creation Adjacency Merge — N γειτονικές κολόνες συγχωνεύτηκαν σε
     // ΕΝΑ composite τοιχίο (single-undo). Non-blocking success feedback.
     EventBus.on('bim:columns-merged', () => {
