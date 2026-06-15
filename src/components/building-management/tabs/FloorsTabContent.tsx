@@ -13,6 +13,7 @@ import { Fragment, useMemo, useState } from 'react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Badge } from '@/components/ui/badge';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Layers, Plus, Pencil, Trash2, Check, X, ChevronDown, ChevronRight, Map, AlertTriangle, Footprints, Building2 } from 'lucide-react';
 import { Spinner } from '@/components/ui/spinner';
@@ -24,6 +25,7 @@ import { cn } from '@/lib/utils';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { getStatusColor } from '@/lib/design-system';
+import { countBuildingStoreys, isBuildingStorey } from '@/utils/floor-naming';
 
 // 🏢 ENTERPRISE: Extracted state hook
 import { useFloorsTabState } from './useFloorsTabState';
@@ -313,6 +315,11 @@ export function FloorsTabContent({ building, focusFloorId }: FloorsTabContentPro
                               >
                                 {floor.name}
                               </button>
+                              {floor.kind !== undefined && !isBuildingStorey(floor.kind) && (
+                                <Badge variant="info" className="px-1.5 py-0.5 text-[10px] font-medium">
+                                  {t('tabs.floors.specialLevel')}
+                                </Badge>
+                              )}
                               {!floor.hasFloorplan && (
                                 <TooltipProvider delayDuration={300}>
                                   <Tooltip>
@@ -399,7 +406,7 @@ export function FloorsTabContent({ building, focusFloorId }: FloorsTabContentPro
               ))}
             </ul>
           )}
-          <footer className={cn("text-xs", colors.text.muted)}>{t('tabs.floors.total', { count: floors.length })}</footer>
+          <footer className={cn("text-xs", colors.text.muted)}>{t('tabs.floors.total', { count: countBuildingStoreys(floors) })}</footer>
         </>
       )}
     </section>

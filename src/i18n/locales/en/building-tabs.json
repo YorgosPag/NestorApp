@@ -133,6 +133,7 @@
       "continuityNoBase": "The lowest floor is level {lowest} — a ground/basement below is missing.",
       "derivedHeightHint": "Height is computed automatically from the elevations. Editable only on the top floor.",
       "nonContiguousWarning": "Non-sequential level — create the adjacent floor first.",
+      "specialLevel": "Special level",
       "quickSetup": {
         "title": "Quick building setup",
         "cta": "Quick setup",
@@ -141,6 +142,8 @@
         "typicalHeight": "Typical storey height (m)",
         "hasFoundation": "Has foundation",
         "foundationDepth": "Foundation depth (m)",
+        "hasStairPenthouse": "Has stair penthouse",
+        "stairPenthouseHeight": "Stair penthouse height (m)",
         "generate": "Generate stack",
         "preview": "{count} floors will be created",
         "existingWarning": "{skipped} floors already exist — they will be skipped. Only new ones are created.",

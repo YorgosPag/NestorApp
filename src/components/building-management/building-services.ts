@@ -51,6 +51,10 @@ export interface BuildingUpdatePayload {
   hasFoundation?: boolean;
   /** ADR-451 — METRES — foundation depth below the lowest storey FFL. */
   foundationDepth?: number;
+  /** ADR-461 — building has a stair-penthouse special level above the top storey (default true when ≥1 storey). */
+  hasStairPenthouse?: boolean;
+  /** ADR-461 — METRES — stair-penthouse (απόληξη κλιμακοστασίου) storey height (default 2.40). */
+  stairPenthouseHeight?: number;
   /**
    * ADR-456 — δομοστατικές ρυθμίσεις κτιρίου (κανονισμός + προεπιλ. κατηγορία
    * σκυροδέματος). Inline shape (όχι import από dxf-viewer subapp — dependency

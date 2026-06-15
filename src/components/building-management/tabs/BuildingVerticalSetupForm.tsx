@@ -19,6 +19,7 @@
 import { useCallback, useMemo, useState } from 'react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Spinner } from '@/components/ui/spinner';
 import { Check, X, AlertTriangle, Building2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -29,12 +30,16 @@ import { formatFloorLabel } from '@/lib/intl-domain';
 import { createFloorWithPolicy } from '@/services/floor-mutation-gateway';
 import { updateBuildingWithPolicy } from '@/services/building/building-mutation-gateway';
 import { createFloor } from '@/services/factories/floor.factory';
+import { isBuildingStorey } from '@/utils/floor-naming';
 import { useNotifications } from '@/providers/NotificationProvider';
 import {
   generateFloorStack,
   DEFAULT_TYPICAL_STOREY_HEIGHT_M,
 } from './building-vertical-setup';
-import { DEFAULT_BUILDING_FOUNDATION_DEPTH_M } from '@/types/building/elevation.schemas';
+import {
+  DEFAULT_BUILDING_FOUNDATION_DEPTH_M,
+  DEFAULT_BUILDING_STAIR_PENTHOUSE_HEIGHT_M,
+} from '@/types/building/elevation.schemas';
 
 interface FloorMutationResponse {
   floorId?: string;
@@ -72,15 +77,24 @@ export function BuildingVerticalSetupForm({
   const [typicalHeight, setTypicalHeight] = useState(DEFAULT_TYPICAL_STOREY_HEIGHT_M.toFixed(2));
   const [hasFoundation, setHasFoundation] = useState(true);
   const [foundationDepth, setFoundationDepth] = useState(DEFAULT_BUILDING_FOUNDATION_DEPTH_M.toFixed(2));
+  const [hasStairPenthouse, setHasStairPenthouse] = useState(true);
+  const [stairPenthouseHeight, setStairPenthouseHeight] = useState(DEFAULT_BUILDING_STAIR_PENTHOUSE_HEIGHT_M.toFixed(2));
   const [busy, setBusy] = useState(false);
 
+  // ADR-461 — foundation & stair-penthouse are emitted as special levels (own
+  // FloorKind, Revit «Building Story» OFF) so the table can mark them and exclude
+  // them from the «Όροφοι: N» count.
   const stack = useMemo(
     () => generateFloorStack({
       basementCount: parseCount(basements),
       upperCount: parseCount(uppers),
       typicalHeightM: parseFloat(typicalHeight) || DEFAULT_TYPICAL_STOREY_HEIGHT_M,
+      hasFoundation,
+      foundationDepthM: parseFloat(foundationDepth) || DEFAULT_BUILDING_FOUNDATION_DEPTH_M,
+      hasStairPenthouse,
+      stairPenthouseHeightM: parseFloat(stairPenthouseHeight) || DEFAULT_BUILDING_STAIR_PENTHOUSE_HEIGHT_M,
     }),
-    [basements, uppers, typicalHeight],
+    [basements, uppers, typicalHeight, hasFoundation, foundationDepth, hasStairPenthouse, stairPenthouseHeight],
   );
 
   // Idempotent (Revit-grade): only create storeys that don't already exist —
@@ -96,9 +110,15 @@ export function BuildingVerticalSetupForm({
     try {
       // Create storeys low → high so the server reconcile sees a consistent chain.
       for (const spec of newSpecs) {
+        // ADR-461 — special levels (foundation / stair-penthouse) auto-derive their
+        // Greek canonical name from `kind` ("Θεμελίωση" / "Απόληξη Κλιμακοστασίου");
+        // counted storeys keep the locale floor label. `formatFloorLabel(number)`
+        // would mis-label a special level (its number is just lowest−1 / top+1).
+        const isSpecialLevel = !isBuildingStorey(spec.kind);
         const floor = createFloor({
           number: spec.number,
-          name: formatFloorLabel(spec.number),
+          kind: spec.kind,
+          ...(isSpecialLevel ? {} : { name: formatFloorLabel(spec.number) }),
           buildingId,
           elevation: spec.elevation,
           height: spec.height,
@@ -120,12 +140,16 @@ export function BuildingVerticalSetupForm({
         await createFloorWithPolicy<FloorMutationResponse>({ payload });
       }
 
-      // Foundation = auto-derived datum (building-level), NOT a counted storey.
+      // ADR-461 — foundation & stair-penthouse datums (building-level), NOT counted
+      // storeys. Persisted alongside the special-level floor records above so the
+      // building keeps the toggle state for re-runs / downstream DXF levels.
       await updateBuildingWithPolicy({
         buildingId,
         updates: {
           hasFoundation,
           foundationDepth: hasFoundation ? parseFloat(foundationDepth) || 0 : 0,
+          hasStairPenthouse,
+          stairPenthouseHeight: hasStairPenthouse ? parseFloat(stairPenthouseHeight) || 0 : 0,
         },
       });
 
@@ -144,7 +168,7 @@ export function BuildingVerticalSetupForm({
     } finally {
       setBusy(false);
     }
-  }, [newSpecs, skippedCount, buildingId, projectId, hasFoundation, foundationDepth, t, success, notifyError, onComplete]);
+  }, [newSpecs, skippedCount, buildingId, projectId, hasFoundation, foundationDepth, hasStairPenthouse, stairPenthouseHeight, t, success, notifyError, onComplete]);
 
   return (
     <section className="flex flex-col gap-3 rounded-lg border border-border bg-muted/30 p-3" role="group">
@@ -176,14 +200,24 @@ export function BuildingVerticalSetupForm({
       </section>
 
       <section className="flex flex-wrap items-end gap-3">
-        <label className="flex items-center gap-2 text-xs font-medium">
-          <input type="checkbox" checked={hasFoundation} onChange={(e) => setHasFoundation(e.target.checked)} disabled={busy} className="h-4 w-4 accent-[hsl(var(--primary))]" />
+        <label htmlFor="vs-has-foundation" className="flex items-center gap-2 text-xs font-medium cursor-pointer">
+          <Checkbox id="vs-has-foundation" checked={hasFoundation} onCheckedChange={(v) => setHasFoundation(v === true)} disabled={busy} />
           {t('tabs.floors.quickSetup.hasFoundation')}
         </label>
         {hasFoundation && (
           <fieldset className="flex flex-col gap-1">
             <label className={cn('text-xs font-medium', colors.text.muted)}>{t('tabs.floors.quickSetup.foundationDepth')}</label>
             <Input type="number" step="0.01" min="0" value={foundationDepth} onChange={(e) => setFoundationDepth(e.target.value)} className="h-9 w-28" disabled={busy} />
+          </fieldset>
+        )}
+        <label htmlFor="vs-has-stair-penthouse" className="flex items-center gap-2 text-xs font-medium cursor-pointer">
+          <Checkbox id="vs-has-stair-penthouse" checked={hasStairPenthouse} onCheckedChange={(v) => setHasStairPenthouse(v === true)} disabled={busy} />
+          {t('tabs.floors.quickSetup.hasStairPenthouse')}
+        </label>
+        {hasStairPenthouse && (
+          <fieldset className="flex flex-col gap-1">
+            <label className={cn('text-xs font-medium', colors.text.muted)}>{t('tabs.floors.quickSetup.stairPenthouseHeight')}</label>
+            <Input type="number" step="0.01" min="0" value={stairPenthouseHeight} onChange={(e) => setStairPenthouseHeight(e.target.value)} className="h-9 w-28" disabled={busy} />
           </fieldset>
         )}
       </section>

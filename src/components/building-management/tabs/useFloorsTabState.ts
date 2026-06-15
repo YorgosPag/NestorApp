@@ -24,6 +24,7 @@ import {
   type LinkedStairsInfo,
 } from '@/subapps/dxf-viewer/bim/stairs/stair-floor-sync';
 import type { StairDoc } from '@/subapps/dxf-viewer/bim/types/stair-types';
+import type { FloorKind } from '@/utils/floor-naming';
 
 // ============================================================================
 // TYPES
@@ -38,6 +39,12 @@ export interface FloorRecord {
   buildingId: string;
   units?: number;
   hasFloorplan?: boolean;
+  /**
+   * ADR-461 — Revit-style classification. Flows through the list handler
+   * (`{ id, ...doc.data() }`) so the table can mark special levels (foundation /
+   * stair-penthouse) and count only counted storeys via `countBuildingStoreys`.
+   */
+  kind?: FloorKind;
   _v?: number;
 }
 
