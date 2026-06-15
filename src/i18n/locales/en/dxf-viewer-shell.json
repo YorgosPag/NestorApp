@@ -1,4 +1,12 @@
 {
+  "structuralOrganism": {
+    "diagnostics": {
+      "title": "Structural Check",
+      "columnMissingFooting": "Column has no footing — foundation is missing.",
+      "beamUnsupportedEnd": "Beam is unsupported at one or both ends.",
+      "memberIsolated": "Isolated footing — it supports no column."
+    }
+  },
   "structural": {
     "code": {
       "eurocode": "Eurocodes",

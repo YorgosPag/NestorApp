@@ -43,6 +43,7 @@ import { useDxfViewerCallbacks } from './useDxfViewerCallbacks';
 import { useDxfViewerEffects } from './useDxfViewerEffects';
 import { useDxfViewerNotifications } from '../hooks/useDxfViewerNotifications';
 import { useStructuralAutoAttach } from '../hooks/useStructuralAutoAttach';
+import { useStructuralOrganism } from '../hooks/useStructuralOrganism';
 import { useColumnAdjacencyNotification } from '../hooks/useColumnAdjacencyNotification';
 import { useAutoFitOnFileChange } from './useAutoFitOnFileChange';
 import { useViewportUrlSync } from '../hooks/canvas/useViewportUrlSync';
@@ -249,6 +250,7 @@ export const DxfViewerContent = React.memo<DxfViewerAppProps>((props) => {
   // ADR-362 Phase J2 — Dimension associativity observer (auto-follow geometry).
   useDimAssociationObserver(levelManager.getLevelScene, levelManager.setLevelScene, () => levelManager.currentLevelId);
   useStructuralAutoAttach({ levelManager }); // ADR-401 Phase D — auto-attach walls under new beam/slab
+  useStructuralOrganism({ levelManager }); // ADR-459 Phase 1 — cross-entity structural diagnostics («λείπει το πέδιλο»)
   useColumnAdjacencyNotification({ levelManager }); // ADR-363 — post-creation adjacent-columns→shear-wall merge toast
   // ADR-345/353/358/363 — ribbon command assembly (contextual trigger + BIM/array/text bridges).
   const { ribbonCommands, ribbonContextualTabs, activeContextualTrigger } = useDxfViewerRibbon({

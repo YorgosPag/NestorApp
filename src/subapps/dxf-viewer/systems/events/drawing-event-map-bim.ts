@@ -211,6 +211,10 @@ export interface BimEventMap {
   };
   // ADR-363 Phase 5.5i+ — beam persisted → slabs re-compute BOQ deductions
   'bim:beam-persisted': { floorplanId: string };
+  // ADR-459 — Structural Organism re-derived (DERIVED graph + cross-entity checks).
+  // Emitted by `useStructuralOrganism` after each recompute so observers (panels,
+  // future diagnostics dock) can react. `diagnosticCount` = total findings.
+  'bim:structural-organism-updated': { diagnosticCount: number; levelId: string };
   // ADR-395 G6 — opening persisted/deleted → host wall re-computes net BOQ area
   'bim:opening-persisted': { wallId: string };
   // ADR-395 G2 — slab-opening persisted/deleted → host slab re-computes net BOQ volume

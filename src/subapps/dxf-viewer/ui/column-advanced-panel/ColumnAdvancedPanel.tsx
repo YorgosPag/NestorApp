@@ -24,6 +24,7 @@ import { resolveColumnPanelVisibility } from '../ribbon/hooks/bridge/column-comm
 import type { DispatchColumnParams } from '../ribbon/hooks/bridge/useColumnParamsDispatcher';
 import { COLUMN_PROPERTY_GROUPS } from './column-property-fields';
 import { ColumnPropertyRow } from './ColumnPropertyRow';
+import { EntityWarningsSection } from '../structural-warnings/EntityWarningsSection';
 
 export interface ColumnAdvancedPanelProps {
   readonly column: ColumnEntity;
@@ -50,6 +51,8 @@ export function ColumnAdvancedPanel({
 
   return (
     <div className={containerClassName ?? 'flex flex-col gap-3 p-2'}>
+      {/* ADR-459 — στατικός οργανισμός: «λείπει το πέδιλο» κ.λπ. cross-entity warnings */}
+      <EntityWarningsSection entityId={column.id} />
       {COLUMN_PROPERTY_GROUPS.map((group) => {
         if (
           group.visibilityKey &&

@@ -1,4 +1,12 @@
 {
+  "structuralOrganism": {
+    "diagnostics": {
+      "title": "Στατικός Έλεγχος",
+      "columnMissingFooting": "Η κολόνα δεν εδράζεται σε πέδιλο — λείπει η θεμελίωση.",
+      "beamUnsupportedEnd": "Το δοκάρι δεν στηρίζεται σε ένα ή και στα δύο άκρα του.",
+      "memberIsolated": "Μεμονωμένο πέδιλο — δεν στηρίζει καμία κολόνα."
+    }
+  },
   "structural": {
     "code": {
       "eurocode": "Ευρωκώδικες",
