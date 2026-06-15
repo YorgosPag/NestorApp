@@ -38,7 +38,20 @@ import type { Point2D } from '../../rendering/types/Types';
 import { useMouseMoveHandler } from './mouse-handler-move';
 import { useMouseUpHandler } from './mouse-handler-up';
 
-export function useCentralizedMouseHandlers(props: CentralizedMouseHandlersProps) {
+/**
+ * @param options.exposeSnapResultsState  When true, snap detections are mirrored
+ *   into a React `useState` (`snapResults`) so a consumer that renders from it
+ *   (LayerCanvas) re-renders on snap change. DEFAULT false: the snap stream flows
+ *   ONLY through `ImmediateSnapStore` (the SSoT — `setImmediateSnap`/
+ *   `setFullSnapResult`, read by `SnapIndicatorSubscriber`). DxfCanvas never reads
+ *   `snapResults`, so it opts out and stops re-rendering the heavy z-10 canvas
+ *   leaf ~60fps while snapping. ADR-040 cursor-lag Φ9.
+ */
+export function useCentralizedMouseHandlers(
+  props: CentralizedMouseHandlersProps,
+  options?: { exposeSnapResultsState?: boolean },
+) {
+  const exposeSnapResultsState = options?.exposeSnapResultsState ?? false;
   const {
     scene, transform, viewport, activeTool, overlayMode,
     onTransformChange, onEntitySelect, hitTestCallback,
@@ -83,7 +96,15 @@ export function useCentralizedMouseHandlers(props: CentralizedMouseHandlersProps
     onSnapPoint: () => {}
   });
 
-  const [snapResults, setSnapResults] = useState<SnapResultItem[]>([]);
+  // SSoT note (ADR-040 Φ9): every `setSnapResults` call in mouse-handler-move is
+  // paired with a write to `ImmediateSnapStore` (setImmediateSnap/setFullSnapResult).
+  // This React state is therefore a duplicate render-channel kept ONLY for the
+  // LayerCanvas snap draw; gated behind `exposeSnapResultsState` so opted-out
+  // consumers (DxfCanvas) never re-render on snap.
+  const [snapResults, setSnapResultsState] = useState<SnapResultItem[]>([]);
+  const setSnapResults = useCallback((results: SnapResultItem[]) => {
+    if (exposeSnapResultsState) setSnapResultsState(results);
+  }, [exposeSnapResultsState]);
 
   // Shared mutable refs
   const panStateRef = useRef<MouseHandlerRefs['panStateRef']['current']>({

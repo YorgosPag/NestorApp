@@ -173,7 +173,7 @@ export const LayerCanvas = React.memo(React.forwardRef<HTMLCanvasElement, LayerC
     canvasRef: canvasRef,
     isGripDragging,
     onDrawingHover
-  });
+  }, { exposeSnapResultsState: true }); // LayerCanvas is the sole consumer of the React snapResults state (ADR-040 Φ9).
 
   const { snapResults: rawSnapResults } = mouseHandlers;
   const snapResults: SnapResult[] = rawSnapResults
