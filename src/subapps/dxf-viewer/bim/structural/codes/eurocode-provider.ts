@@ -10,6 +10,7 @@
  */
 
 import { developmentLengthMm, nextRebarDiameterMm } from '../rebar-catalog';
+import { MAX_RESTRAINED_BAR_SPACING_MM } from '../reinforcement/column-reinforcement-types';
 import type { ColumnReinforcement } from '../reinforcement/column-reinforcement-types';
 import type { BeamReinforcement } from '../reinforcement/beam-reinforcement-types';
 import type { FootingReinforcement } from '../reinforcement/footing-reinforcement-types';
@@ -58,8 +59,8 @@ function eurocodeColumnLimits(
     maxStirrupSpacingMm: Math.min(20 * longitudinalDiameterMm, bMin, 400),
     // EC8 §5.4.3.2.2(11) DCM κρίσιμη περιοχή: s ≤ min(b0/2, 175, 8·dbL).
     criticalStirrupSpacingMm: Math.min(bMin / 2, 175, 8 * longitudinalDiameterMm),
-    // EC8 §5.4.3.2.2(11)P (DCM): κάθε διαμήκης συγκρατημένη ράβδος ≤200mm απόσταση.
-    maxBarSpacingMm: 200,
+    // EC8 §5.4.3.2.2(11)P (DCM): κάθε διαμήκης συγκρατημένη ράβδος ≤200mm απόσταση (SSoT).
+    maxBarSpacingMm: MAX_RESTRAINED_BAR_SPACING_MM,
     // EN 1992-1-1 §4.4.1 — cnom ~30mm για XC κλάση έκθεσης κτιρίων.
     nominalCoverMm: 30,
   };

@@ -5,8 +5,10 @@
 
 import { decomposeColumnSectionRects } from '../column-rect-decomposition';
 import { buildMultiHoopLayout } from '../column-multihoop-layout';
+import { distributeRectBarsBySpacing } from '../column-rebar-layout';
 import { resolveColumnRebarLayout, resolveColumnCrossTies } from '../column-rebar-layout-resolve';
 import { resolveColumnReinforcementSection } from '../column-section-outline';
+import { MAX_RESTRAINED_BAR_SPACING_MM } from '../column-reinforcement-types';
 import type { ColumnReinforcement } from '../column-reinforcement-types';
 import type { ColumnParams } from '../../../types/column-types';
 
@@ -104,6 +106,34 @@ describe('buildMultiHoopLayout — Τ-shape', () => {
         expect(Math.hypot(a.x - b.x, a.y - b.y)).toBeGreaterThan(1e-6);
       }
     }
+  });
+});
+
+describe('distributeRectBarsBySpacing (code-driven count, Revit/Tekla)', () => {
+  it('βήμα ≤ sMax σε κάθε παρειά (ψηλή παρειά → ενδιάμεσες ράβδοι)', () => {
+    // Σκέλος 80×420 (μισά 40×210) με sMax=200 → η 420 παρειά θέλει ≥2 διαστήματα.
+    const bars = distributeRectBarsBySpacing(40, 210, 200, 4);
+    expect(bars.length).toBeGreaterThan(4); // όχι μόνο γωνίες
+    // Μέγιστο κενό μεταξύ διαδοχικών ράβδων στην ίδια κατακόρυφη παρειά (x≈+40).
+    const right = bars.filter((b) => Math.abs(b.x - 40) < 1e-6).map((b) => b.y).sort((a, b) => a - b);
+    for (let i = 1; i < right.length; i++) expect(right[i] - right[i - 1]).toBeLessThanOrEqual(200 + 1e-6);
+  });
+
+  it('τιμώνται και τα δύο: όριο βήματος ΚΑΙ floor (minTotal)', () => {
+    // Μικρό σκέλος που το spacing θα έδινε 4· floor=10 → ≥10 ράβδοι.
+    const bars = distributeRectBarsBySpacing(50, 50, 200, 10);
+    expect(bars.length).toBeGreaterThanOrEqual(10);
+  });
+});
+
+describe('multihoop spacing-derived — ψηλός κορμός Τ παίρνει ενδιάμεσες', () => {
+  it('count=6 αλλά κορμός 999×502 πυκνώνει ώστε βήμα ≤ όριο κανονισμού', () => {
+    const reinf6: ColumnReinforcement = { ...reinf, longitudinal: { diameterMm: 16, count: 6 } };
+    const section = resolveColumnReinforcementSection(baseParams({ kind: 'T-shape', width: 999, depth: 502 }));
+    const layout = resolveColumnRebarLayout(reinf6, section, MAX_RESTRAINED_BAR_SPACING_MM)!;
+    // Spacing-derived → πολύ περισσότερες από 6 ράβδοι + cross-ties στις ενδιάμεσες.
+    expect(layout.longitudinalBarsMm.length).toBeGreaterThan(6);
+    expect(layout.crossTieAnchorsMm && layout.crossTieAnchorsMm.length).toBeGreaterThan(0);
   });
 });
 

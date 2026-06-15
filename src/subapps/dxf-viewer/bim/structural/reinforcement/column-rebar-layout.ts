@@ -20,6 +20,12 @@
 
 import type { Point2D } from '../../../rendering/types/Types';
 import type { ColumnReinforcement } from './column-reinforcement-types';
+import { distributeBars } from './column-bar-distribution';
+
+// Bar-distribution helpers ζουν στο sibling `column-bar-distribution.ts` (file-size
+// split). Re-export για back-compat — οι εξωτερικοί consumers (column-perimeter-layout,
+// column-multihoop-layout) τα εισάγουν από εδώ.
+export { distributeBarsAlongPolygon, distributeRectBarsBySpacing } from './column-bar-distribution';
 
 /**
  * Συντελεστής ακτίνας **άξονα** (centerline) κάμψης συνδετήρα (× dbw). EC2
@@ -88,78 +94,6 @@ export interface ColumnRebarLayout {
    * diamond/grid). Absent → rectangular path ή κανένα tie.
    */
   readonly crossTieAnchorsMm?: readonly { readonly a: Point2D; readonly b: Point2D }[];
-}
-
-/**
- * Κατανομή `extras` ακέραιων μονάδων σε `weights.length` κάδους ανάλογα με τα
- * βάρη, με μέθοδο μεγαλύτερου υπολοίπου (largest-remainder) → άθροισμα == extras.
- */
-function apportion(extras: number, weights: readonly number[]): number[] {
-  const total = weights.reduce((a, w) => a + Math.max(0, w), 0);
-  if (extras <= 0 || total <= 0) return weights.map(() => 0);
-  const exact = weights.map((w) => (extras * Math.max(0, w)) / total);
-  const floors = exact.map((v) => Math.floor(v));
-  let remaining = extras - floors.reduce((a, v) => a + v, 0);
-  // Μοίρασε τα υπόλοιπα στους κάδους με το μεγαλύτερο κλασματικό μέρος.
-  const order = exact
-    .map((v, i) => ({ i, frac: v - Math.floor(v) }))
-    .sort((a, b) => b.frac - a.frac);
-  for (let k = 0; k < order.length && remaining > 0; k++, remaining--) {
-    floors[order[k].i] += 1;
-  }
-  return floors;
-}
-
-/** Ισαπέχοντα ενδιάμεσα σημεία μεταξύ a→b (exclusive άκρα), `n` τεμάχια. */
-function interiorPoints(a: Point2D, b: Point2D, n: number): Point2D[] {
-  if (n <= 0) return [];
-  const out: Point2D[] = [];
-  for (let k = 1; k <= n; k++) {
-    const t = k / (n + 1);
-    out.push({ x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t });
-  }
-  return out;
-}
-
-/**
- * Θέσεις διαμήκων ράβδων κατά μήκος **οποιουδήποτε** κλειστού πολυγώνου κέντρων
- * ράβδων (CCW): μία ράβδος σε ΚΑΘΕ κορυφή (γωνιακή — δομική απαίτηση, κυρτή ή reflex)
- * + οι υπόλοιπες `count-K` κατανεμημένες ομοιόμορφα στις πλευρές ανάλογα με το μήκος
- * πλευράς (largest-remainder — Revit-grade ομοιόμορφη περίμετρος). SSoT για ορθογ.
- * Γ/Τ/Ι/Π/πολύγωνο/σύνθετο. `count ≤ K` → οι πρώτες `count` κορυφές. Επιστρέφει [] όταν
- * count ≤ 0 ή < 2 κορυφές.
- */
-export function distributeBarsAlongPolygon(vertices: readonly Point2D[], count: number): Point2D[] {
-  const k = vertices.length;
-  if (count <= 0 || k < 2) return [];
-  if (count <= k) return vertices.slice(0, count).map((v) => ({ x: v.x, y: v.y }));
-
-  const edgeLengths = vertices.map((v, i) => {
-    const n = vertices[(i + 1) % k];
-    return Math.hypot(n.x - v.x, n.y - v.y);
-  });
-  const perSide = apportion(count - k, edgeLengths);
-  const bars: Point2D[] = vertices.map((v) => ({ x: v.x, y: v.y }));
-  for (let i = 0; i < k; i++) {
-    bars.push(...interiorPoints(vertices[i], vertices[(i + 1) % k], perSide[i]));
-  }
-  return bars;
-}
-
-/**
- * Ορθογώνια ειδική περίπτωση: 4 γωνίες (CCW BL→BR→TR→TL) + ενδιάμεσες. Delegate στο
- * γενικό {@link distributeBarsAlongPolygon} (μηδέν διπλότυπο). `halfW`/`halfD` = μισές
- * διαστάσεις του ορθογωνίου ΚΕΝΤΡΩΝ ράβδων (μετά το inset).
- */
-function distributeBars(halfW: number, halfD: number, count: number): Point2D[] {
-  if (count <= 0) return [];
-  const corners: Point2D[] = [
-    { x: -halfW, y: -halfD },
-    { x: halfW, y: -halfD },
-    { x: halfW, y: halfD },
-    { x: -halfW, y: halfD },
-  ];
-  return distributeBarsAlongPolygon(corners, count);
 }
 
 /** Μήκος **κλειστής** polyline (mm): άθροισμα ακμών + ακμή last→first. <2 σημεία → 0. */

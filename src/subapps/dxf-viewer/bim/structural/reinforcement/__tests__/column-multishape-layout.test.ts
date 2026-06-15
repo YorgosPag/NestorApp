@@ -171,11 +171,13 @@ describe('resolveColumnCrossTies — per mode', () => {
     }
   });
 
-  it('perimeter Γ χωρίς ενδιάμεσες (count = κορυφές) → καθόλου cross-ties', () => {
+  it('perimeter Γ count=6 → code-driven densification: οι 600mm παρειές παίρνουν ενδιάμεσες + cross-ties', () => {
+    // ADR-460 follow-up 6: το count=6 είναι intent floor· κάθε σκέλος (600mm παρειά)
+    // πυκνώνει ώστε βήμα ≤200mm (EC8) → ενδιάμεσες ράβδοι → cross-ties (Revit-grade).
     const reinf6: ColumnReinforcement = { ...reinf, longitudinal: { diameterMm: 16, count: 6 } };
     const section = resolveColumnReinforcementSection(baseParams({ kind: 'L-shape', width: 600, depth: 600 }));
     const layout = resolveColumnRebarLayout(reinf6, section)!;
-    expect(layout.crossTieAnchorsMm).toBeUndefined();
-    expect(resolveColumnCrossTies(layout, section, reinf6)).toEqual([]);
+    expect(layout.crossTieAnchorsMm && layout.crossTieAnchorsMm.length).toBeGreaterThan(0);
+    expect(resolveColumnCrossTies(layout, section, reinf6).length).toBeGreaterThan(0);
   });
 });

@@ -66,6 +66,17 @@ export function isCrossTiePattern(v: string): v is CrossTiePattern {
   return v === 'auto' || v === 'diamond' || v === 'grid';
 }
 
+/**
+ * **SSoT** μέγιστη απόσταση διαδοχικών **συγκρατημένων** διαμήκων ράβδων (mm) —
+ * EC8 EN1998-1 §5.4.3.2.2(11)P (DCM ≤200· DCH ≤150) / Ελληνικός ΕΑΚ-ΕΚΩΣ §18.4.
+ * **Καθορίζει το ΠΛΗΘΟΣ** των διαμήκων ανά σκέλος (Revit/Tekla: ράβδος κάθε ≤ τόσο),
+ * ΟΧΙ μόνο τη διάμετρο. Ίδια τιμή και στους δύο providers (`columnReinforcementLimits.
+ * maxBarSpacingMm`) → ΕΝΑ literal· το geometry layout το χρησιμοποιεί ως default όταν
+ * δεν περνιέται ρητά (renderers code-free· compute/validator μπορούν να περάσουν την
+ * ακριβή code τιμή για DCH). DCH=150 = DEFER (thread ductility class).
+ */
+export const MAX_RESTRAINED_BAR_SPACING_MM = 200;
+
 /** Εγκάρσιος οπλισμός — συνδετήρες/στέφανα (Ø8/100-200). */
 export interface ColumnStirrups {
   /** Διάμετρος συνδετήρα (mm), π.χ. 8. */

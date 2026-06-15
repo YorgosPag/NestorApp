@@ -19,6 +19,7 @@
 
 import type { ColumnParams } from '../../types/column-types';
 import type { ColumnReinforcement } from './column-reinforcement-types';
+import { MAX_RESTRAINED_BAR_SPACING_MM } from './column-reinforcement-types';
 import { computeColumnRebarLayout, type ColumnRebarLayout } from './column-rebar-layout';
 import { buildPerimeterLayoutFromOutline } from './column-perimeter-layout';
 import { decomposeColumnSectionRects } from './column-rect-decomposition';
@@ -34,10 +35,16 @@ import {
 /**
  * Διάταξη οπλισμού για **οποιοδήποτε** σχήμα διατομής, από προ-υπολογισμένο section.
  * Επιστρέφει `null` για εκφυλισμένη διατομή / απουσία οπλισμού.
+ *
+ * `maxBarSpacingMm` (EC8/ΕΑΚ όριο συγκρατημένων ράβδων) → πλήθος ράβδων ανά σκέλος στο
+ * multihoop. Default = {@link MAX_RESTRAINED_BAR_SPACING_MM} (= η τιμή ΚΑΙ των δύο
+ * providers σήμερα) ώστε οι **pure renderers** να μένουν code-free· compute/validator
+ * (που resolve-άρουν τον ενεργό κανονισμό) μπορούν να περάσουν την ακριβή τιμή (DCH).
  */
 export function resolveColumnRebarLayout(
   r: ColumnReinforcement,
   section: ColumnReinforcementSection,
+  maxBarSpacingMm: number = MAX_RESTRAINED_BAR_SPACING_MM,
 ): ColumnRebarLayout | null {
   switch (section.mode) {
     case 'circular':
@@ -54,7 +61,7 @@ export function resolveColumnRebarLayout(
       // fallback στο outline-driven στεφάνι.
       const rects = decomposeColumnSectionRects(section.outlineMm);
       return rects.length > 0
-        ? buildMultiHoopLayout(r, rects)
+        ? buildMultiHoopLayout(r, rects, maxBarSpacingMm)
         : buildPerimeterLayoutFromOutline(r, section.outlineMm);
     }
   }
@@ -64,8 +71,9 @@ export function resolveColumnRebarLayout(
 export function resolveColumnRebarLayoutForParams(
   r: ColumnReinforcement,
   params: ColumnParams,
+  maxBarSpacingMm: number = MAX_RESTRAINED_BAR_SPACING_MM,
 ): ColumnRebarLayout | null {
-  return resolveColumnRebarLayout(r, resolveColumnReinforcementSection(params));
+  return resolveColumnRebarLayout(r, resolveColumnReinforcementSection(params), maxBarSpacingMm);
 }
 
 /**

@@ -9,6 +9,12 @@
  * γωνία, μηδέν ζιγκ-ζαγκ). Τα στεφάνια **επικαλύπτονται** στη ζώνη συμβολής (τα σκέλη
  * επικαλύπτονται εκ κατασκευής στο decomposition).
  *
+ * **Bar count = Revit/Tekla spacing-derived** (απόφαση Giorgio): ο αριθμός ράβδων ανά
+ * σκέλος προκύπτει από το **όριο κανονισμού** (`maxBarSpacingMm` — EC8 §5.4.3.2.2(11)P
+ * DCM ≤200 / ΕΑΚ-ΕΚΩΣ §18.4· βήμα ≤ όριο σε κάθε παρειά), με το `r.longitudinal.count`
+ * του χρήστη ως **ελάχιστο (intent floor)** μοιρασμένο αναλογικά. Έτσι ένας ψηλός κορμός
+ * Τ/Ι παίρνει αυτόματα ενδιάμεσες ράβδους + cross-ties (δεν μένει μόνο με γωνιακές).
+ *
  * Συγχώνευση σε ΕΝΑ `ColumnRebarLayout`: 1ο σκέλος → `stirrupPathMm` (κύριο)· υπόλοιπα →
  * `extraStirrupPathsMm` (οι renderers ήδη τα ζωγραφίζουν, όπως τα boundary hoops του
  * τοιχώματος)· ράβδοι ενωμένες & dedup στις συμβολές· cross-ties ως `crossTieAnchorsMm`
@@ -22,12 +28,12 @@
 
 import type { Point2D } from '../../../rendering/types/Types';
 import type { ColumnReinforcement } from './column-reinforcement-types';
+import { MAX_RESTRAINED_BAR_SPACING_MM } from './column-reinforcement-types';
 import type { SectionRectMm } from './column-rect-decomposition';
 import {
   buildRoundedStirrupPath,
   buildStirrupHookEndsMm,
-  closedPolylineLengthMm,
-  distributeBarsAlongPolygon,
+  distributeRectBarsBySpacing,
   stirrupCenterlinePerimeterMm,
   STIRRUP_BEND_ARC_SEGMENTS,
   STIRRUP_BEND_CL_FACTOR,
@@ -67,7 +73,12 @@ function apportionBars(rects: readonly SectionRectMm[], total: number): number[]
 }
 
 /** Διάταξη οπλισμού ενός ορθογώνιου σκέλους (μετατοπισμένη στο κέντρο του σκέλους). */
-function buildRectLayout(r: ColumnReinforcement, rect: SectionRectMm, count: number): RectLayout | null {
+function buildRectLayout(
+  r: ColumnReinforcement,
+  rect: SectionRectMm,
+  minCount: number,
+  maxBarSpacingMm: number,
+): RectLayout | null {
   const dbL = Math.max(0, r.longitudinal.diameterMm);
   const dbw = Math.max(0, r.stirrups.diameterMm);
   const cover = Math.max(0, r.coverMm);
@@ -80,10 +91,9 @@ function buildRectLayout(r: ColumnReinforcement, rect: SectionRectMm, count: num
   ];
   const halfWb = Math.max(0, rect.width / 2 - (cover + dbw + dbL / 2));
   const halfDb = Math.max(0, rect.depth / 2 - (cover + dbw + dbL / 2));
-  const barCorners: Point2D[] = [
-    { x: -halfWb, y: -halfDb }, { x: halfWb, y: -halfDb }, { x: halfWb, y: halfDb }, { x: -halfWb, y: halfDb },
-  ];
-  const bars = distributeBarsAlongPolygon(barCorners, Math.max(MIN_BARS_PER_RECT, Math.floor(count)));
+  // Revit/Tekla: ο αριθμός ράβδων ανά σκέλος προκύπτει από το όριο κανονισμού
+  // (βήμα ≤ maxBarSpacingMm σε κάθε παρειά)· `minCount` = intent floor του χρήστη.
+  const bars = distributeRectBarsBySpacing(halfWb, halfDb, maxBarSpacingMm, minCount);
   const cornerRadiusMm = Math.min(STIRRUP_BEND_CL_FACTOR * dbw, halfWs, halfDs);
   const hookBar = bars.length > 0 ? bars[0] : ring[0];
 
@@ -157,10 +167,15 @@ function reconcileAnchors(
 export function buildMultiHoopLayout(
   r: ColumnReinforcement,
   rects: readonly SectionRectMm[],
+  maxBarSpacingMm: number = MAX_RESTRAINED_BAR_SPACING_MM,
 ): ColumnRebarLayout | null {
   if (rects.length === 0) return null;
-  const counts = apportionBars(rects, Math.max(0, Math.floor(r.longitudinal.count)));
-  const legs = rects.map((rect, i) => buildRectLayout(r, rect, counts[i])).filter((l): l is RectLayout => l !== null);
+  // Το `count` του χρήστη = intent floor, μοιρασμένο αναλογικά· το τελικό πλήθος ανά
+  // σκέλος = max(floor, spacing-derived) ώστε βήμα ≤ όριο κανονισμού (EC8/ΕΑΚ).
+  const floors = apportionBars(rects, Math.max(0, Math.floor(r.longitudinal.count)));
+  const legs = rects
+    .map((rect, i) => buildRectLayout(r, rect, floors[i], maxBarSpacingMm))
+    .filter((l): l is RectLayout => l !== null);
   if (legs.length === 0) return null;
 
   const dbL = Math.max(0, r.longitudinal.diameterMm);

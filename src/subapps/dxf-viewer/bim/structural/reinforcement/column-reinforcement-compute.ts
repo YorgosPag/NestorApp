@@ -159,7 +159,10 @@ function longitudinalSteel(
       (nB * barLengthMm * barMassPerMeterKg(dB) + nW * barLengthMm * barMassPerMeterKg(dW)) * MM_TO_M;
     return { areaMm2, lengthM, weightKg };
   }
-  const n = r.longitudinal.count;
+  // Geometry-is-SSoT: μέτρα τις **πραγματικές** ράβδους του layout (multihoop spacing-
+  // derived → πιο πολλές από το intent count)· fallback στο intent count όταν δεν υπάρχει
+  // layout. Ορθογωνικό fast-path: layout bars === floor(count) → ίδιοι αριθμοί (μηδέν regression).
+  const n = layout ? layout.longitudinalBarsMm.length : r.longitudinal.count;
   const d = r.longitudinal.diameterMm;
   const lengthM = n * barLengthMm * MM_TO_M;
   return { areaMm2: n * barAreaMm2(d), lengthM, weightKg: lengthM * barMassPerMeterKg(d) };
