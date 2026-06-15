@@ -50,7 +50,7 @@ FloorKind = 'foundation' | 'basement' | 'ground' | 'standard' | 'roof' | 'mezzan
 - **Foundation:** `number = lowestStoreyNumber − 1`, `elevation = lowestStoreyElevation − foundationDepth`, `height = foundationDepth`.
 - **Stair-penthouse:** `number = topStoreyNumber + 1`, `elevation = topStoreyElevation + topStoreyHeight`, `height = stairPenthouseHeight (2.40)`.
 
-✅ **Edge-case (λύθηκε Phase D/R6):** με 0 υπόγεια η foundation παίρνει `number = −1`. Η `handleCreateFloor` duplicate-check είναι πλέον **kind-aware**: ένα counted number πρέπει να είναι μοναδικό μεταξύ counted· επιτρέπεται ≤1 special ανά kind· foundation(−1) συνυπάρχει με χειροκίνητο υπόγειο(−1) (το `kind` τα ξεχωρίζει). Δεν προκαλείται πλέον 409.
+✅ **Edge-case (λύθηκε Phase D/R6 + follow-up):** με 0 υπόγεια η foundation παίρνει `number = −1`. (α) `handleCreateFloor` duplicate-check **kind-aware** → όχι 409. (β) **Revit-true satellite placement** (`reconcileSpecialLevelPlacement`, μετά από create/delete counted): η θεμελίωση μένει **ΠΑΝΤΑ κάτω** & η απόληξη/δώμα **ΠΑΝΤΑ πάνω** (number+elevation) — πρόσθεση υπογείου → θεμελίωση κατεβαίνει στο −2· πρόσθεση top ορόφου → απόληξη ανεβαίνει. (γ) client create-form counted-only → προτείνει −1 για υπόγειο.
 
 ## 3. Phases
 
