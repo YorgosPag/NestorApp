@@ -11,7 +11,7 @@
  * 🔄 MIGRATED (2025-10-09): Phase 3.1 - Enterprise Adapter
  */
 
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
@@ -20,6 +20,10 @@ import { AnimatedSpinner } from '../../components/modal/ModalLoadingStates';
 import { useDxfSettings } from '../../settings-provider';
 // 🏢 ENTERPRISE: Centralized spacing tokens
 import { PANEL_LAYOUT } from '../../config/panel-tokens';
+// 🚀 ADR-040 cursor-lag Φ6: modal presence via SSoT store (replaces the
+// per-component body-wide MutationObserver that re-scanned the DOM on every
+// crosshair move). See systems/modal/ModalPresenceStore.
+import { useModalPresence } from '../../systems/modal/useModalPresence';
 import { zIndex as enterpriseZIndex } from '@/styles/design-tokens';  // ✅ ENTERPRISE: Centralized z-index hierarchy
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from '@/i18n';
@@ -57,35 +61,9 @@ export function CentralizedAutoSaveStatus() {
   const { radius, getStatusBorder } = useBorderTokens();
   const colors = useSemanticColors();
   const dxfSettings = useDxfSettingsSafe();
-  const [isModalOpen, setIsModalOpen] = useState(false);
-
-  // Detect if any modal is open by checking for modal overlays
-  useEffect(() => {
-    const checkForModals = () => {
-      // Check for modal overlays with high z-index (z-50 or higher)
-      const modalOverlays = document.querySelectorAll('[class*="fixed"][class*="inset-0"]');
-      const hasOpenModal = Array.from(modalOverlays).some(overlay => {
-        const computedStyle = window.getComputedStyle(overlay);
-        const zIndex = parseInt(computedStyle.zIndex || '0');
-        return zIndex >= 50 && computedStyle.display !== 'none';
-      });
-      setIsModalOpen(hasOpenModal);
-    };
-
-    // Check immediately
-    checkForModals();
-
-    // Set up observer for DOM changes (when modals open/close)
-    const observer = new MutationObserver(checkForModals);
-    observer.observe(document.body, {
-      childList: true,
-      subtree: true,
-      attributes: true,
-      attributeFilter: ['class', 'style']
-    });
-
-    return () => observer.disconnect();
-  }, []);
+  // 🚀 ADR-040 cursor-lag Φ6: subscribe to the modal-presence SSoT instead of a
+  // body-wide MutationObserver — re-renders only on real modal open/close.
+  const isModalOpen = useModalPresence();
 
   if (!dxfSettings) return null;
 
@@ -259,31 +237,9 @@ export function CentralizedAutoSaveStatusCompact() {
   const colors = useSemanticColors();
   const { radius } = useBorderTokens();
   const dxfSettings = useDxfSettingsSafe();
-  const [isModalOpen, setIsModalOpen] = useState(false);
-
-  // Same modal detection logic as main component
-  useEffect(() => {
-    const checkForModals = () => {
-      const modalOverlays = document.querySelectorAll('[class*="fixed"][class*="inset-0"]');
-      const hasOpenModal = Array.from(modalOverlays).some(overlay => {
-        const computedStyle = window.getComputedStyle(overlay);
-        const zIndex = parseInt(computedStyle.zIndex || '0');
-        return zIndex >= 50 && computedStyle.display !== 'none';
-      });
-      setIsModalOpen(hasOpenModal);
-    };
-
-    checkForModals();
-    const observer = new MutationObserver(checkForModals);
-    observer.observe(document.body, {
-      childList: true,
-      subtree: true,
-      attributes: true,
-      attributeFilter: ['class', 'style']
-    });
-
-    return () => observer.disconnect();
-  }, []);
+  // 🚀 ADR-040 cursor-lag Φ6: same modal detection as the main component, now via
+  // the shared SSoT store (no per-component body observer).
+  const isModalOpen = useModalPresence();
 
   if (!dxfSettings) return null;
 
