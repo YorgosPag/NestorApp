@@ -40,6 +40,7 @@ import {
   computeArmLength,
   computeSegmentBoxes,
   computeCenterGap,
+  computeBadgeOffset,
   toAreaLocal,
   isWithinArea,
   translate3d,
@@ -69,12 +70,33 @@ interface CrosshairOverlayProps {
   isEntitySelected?: (id: string) => boolean;
 }
 
-/** Base style shared by the 4 line segments — only `transform` changes per move. */
+/**
+ * Base style for the crosshair parts. They are positioned STATICALLY (left/top)
+ * relative to the single moving layer and never change their own `transform`,
+ * so they carry no `will-change` (that lives on the one promoted layer below).
+ */
 const SEGMENT_BASE: React.CSSProperties = {
   position: 'absolute',
   top: 0,
   left: 0,
+  pointerEvents: 'none',
+};
+
+/**
+ * The ONE promoted compositor layer that holds the whole crosshair. It is the
+ * only element that changes `transform` per move — a single `translate3d` to the
+ * cursor — so each move is one compositor translate (one display-list item)
+ * rather than 6-8 independently-moving promoted divs. `isolation: isolate` keeps
+ * it in its own stacking context so its repaints never reach the scene below.
+ */
+const CROSS_LAYER_STYLE: React.CSSProperties = {
+  position: 'absolute',
+  top: 0,
+  left: 0,
+  width: 0,
+  height: 0,
   willChange: 'transform',
+  isolation: 'isolate',
   pointerEvents: 'none',
 };
 
@@ -87,6 +109,7 @@ export default function CrosshairOverlay({
 }: CrosshairOverlayProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const areaRef = useRef<HTMLDivElement>(null);
+  const crossLayerRef = useRef<HTMLDivElement>(null);
   const segLeftRef = useRef<HTMLDivElement>(null);
   const segRightRef = useRef<HTMLDivElement>(null);
   const segTopRef = useRef<HTMLDivElement>(null);
@@ -111,8 +134,10 @@ export default function CrosshairOverlay({
   const { pickBoxSize, showAperture, apertureSize } = gripSettings;
 
   // ============================================================================
-  // STATIC STYLES — sizes/colours/boxes. Runs on settings or size change (rare),
-  // NEVER per mouse move. Mutating left/top/width here is the only layout cost.
+  // STATIC STYLES — sizes/colours/boxes + the gap-baked positions of every part.
+  // Runs on settings / size / pick-box change (rare), NEVER per mouse move. Each
+  // part sits at a fixed offset from the crosshair centre (0,0); the whole cross
+  // is then moved as ONE layer in `applyTransform`.
   // ============================================================================
   const applyStaticStyles = useCallback(() => {
     const cross = settingsRef.current.crosshair;
@@ -120,7 +145,12 @@ export default function CrosshairOverlay({
     const { w: areaW, h: areaH } = areaSizeRef.current;
     const lineWidth = cross.line_width || 1;
     const arm = computeArmLength(areaW, areaH, cross.size_percent ?? 50);
-    const boxes = computeSegmentBoxes(arm, lineWidth);
+    const gap = computeCenterGap({
+      useCursorGap: cross.use_cursor_gap ?? false,
+      centerGapPx: cross.center_gap_px ?? 5,
+      pickBoxSize,
+    });
+    const boxes = computeSegmentBoxes(arm, lineWidth, gap);
     const opacity = String(cross.opacity ?? 1);
     const lineStyle = (cross.line_style ?? 'solid') as CrosshairLineStyle;
 
@@ -175,11 +205,40 @@ export default function CrosshairOverlay({
         ap.style.display = 'none';
       }
     }
-  }, [showAperture, apertureSize]);
+
+    // Selection badge static position (top-right of the centre gap). Its text /
+    // colour / visibility are driven by hover + Shift in `applyBadge`.
+    const badge = badgeRef.current;
+    if (badge) {
+      const offset = computeBadgeOffset(gap);
+      badge.style.left = `${offset}px`;
+      badge.style.top = `${-offset - 11}px`;
+    }
+  }, [showAperture, apertureSize, pickBoxSize]);
 
   // ============================================================================
-  // PER-MOVE TRANSFORM — the ONLY thing called on every mouse move. Writes only
-  // `transform` (+ visibility), so the move is fully GPU-composited.
+  // SELECTION BADGE — AutoCAD-style "+"/"−" at the centre gap. Driven by hover /
+  // Shift changes (low-frequency), NOT per move. Position is static (set above).
+  // ============================================================================
+  const applyBadge = useCallback(() => {
+    const badge = badgeRef.current;
+    if (!badge) return;
+    const hoveredId = hoveredEntityIdRef.current || hoveredOverlayIdRef.current;
+    if (hoveredId) {
+      const add = !shiftHeldRef.current;
+      badge.textContent = add ? '+' : '−';
+      badge.style.color = add ? '#44FF88' : '#FF5555';
+      badge.style.backgroundColor = add ? '#0d2b0d' : '#2b0d0d';
+      badge.style.display = '';
+    } else {
+      badge.style.display = 'none';
+    }
+  }, []);
+
+  // ============================================================================
+  // PER-MOVE TRANSFORM — the ONLY thing called on every mouse move. Writes a
+  // SINGLE `translate3d` to the one promoted layer (+ container visibility), so
+  // the whole cross moves as one GPU composite — one display-list item, not 6-8.
   // ============================================================================
   const applyTransform = useCallback((pos: Point2D | null) => {
     const container = containerRef.current;
@@ -198,36 +257,9 @@ export default function CrosshairOverlay({
     }
     container.style.visibility = 'visible';
 
-    const gap = computeCenterGap({
-      useCursorGap: cross?.use_cursor_gap ?? false,
-      centerGapPx: cross?.center_gap_px ?? 5,
-      pickBoxSize,
-    });
-    const { x, y } = local;
-    if (segLeftRef.current) segLeftRef.current.style.transform = translate3d(x - gap, y);
-    if (segRightRef.current) segRightRef.current.style.transform = translate3d(x + gap, y);
-    if (segTopRef.current) segTopRef.current.style.transform = translate3d(x, y - gap);
-    if (segBottomRef.current) segBottomRef.current.style.transform = translate3d(x, y + gap);
-    if (pickboxRef.current) pickboxRef.current.style.transform = translate3d(x, y);
-    if (apertureRef.current) apertureRef.current.style.transform = translate3d(x, y);
-
-    // AutoCAD-style "+"/"−" badge at the top-right of the centre gap.
-    const badge = badgeRef.current;
-    if (badge) {
-      const hoveredId = hoveredEntityIdRef.current || hoveredOverlayIdRef.current;
-      if (hoveredId) {
-        const add = !shiftHeldRef.current;
-        badge.textContent = add ? '+' : '−';
-        badge.style.color = add ? '#44FF88' : '#FF5555';
-        badge.style.backgroundColor = add ? '#0d2b0d' : '#2b0d0d';
-        const offset = Math.max(gap, 4) + 2;
-        badge.style.transform = translate3d(x + offset, y - offset - 11);
-        badge.style.display = '';
-      } else {
-        badge.style.display = 'none';
-      }
-    }
-  }, [pickBoxSize]);
+    const layer = crossLayerRef.current;
+    if (layer) layer.style.transform = translate3d(local.x, local.y);
+  }, []);
 
   // Recompute drawable-area size (overlay minus ruler margins) + re-apply styles.
   const recompute = useCallback(() => {
@@ -241,8 +273,9 @@ export default function CrosshairOverlay({
       };
     }
     applyStaticStyles();
+    applyBadge();
     applyTransform(getImmediatePosition());
-  }, [applyStaticStyles, applyTransform]);
+  }, [applyStaticStyles, applyBadge, applyTransform]);
 
   // ResizeObserver: react to layout/size changes (ADR-146 intent, element-level).
   useEffect(() => {
@@ -264,17 +297,20 @@ export default function CrosshairOverlay({
     const unsubscribe = subscribeToCursorSettings((newSettings) => {
       settingsRef.current = newSettings;
       applyStaticStyles();
+      applyBadge();
       applyTransform(getImmediatePosition());
     });
     return unsubscribe;
-  }, [applyStaticStyles, applyTransform]);
+  }, [applyStaticStyles, applyBadge, applyTransform]);
 
   // 🚀 DIRECT RENDER: synchronous, zero-latency, compositor-only position update.
   useEffect(() => registerDirectRender((pos) => applyTransform(pos)), [applyTransform]);
 
-  // Selection badge: hover changes + Shift key (low-frequency).
+  // Selection badge: hover changes + Shift key (low-frequency). The badge rides
+  // the moving layer, so only its text/colour/visibility change here — never a
+  // per-move transform.
   useEffect(() => {
-    const trigger = (): void => applyTransform(getImmediatePosition());
+    const trigger = (): void => applyBadge();
     const unsubHover = subscribeHoveredEntity(() => {
       hoveredEntityIdRef.current = getHoveredEntity();
       trigger();
@@ -297,7 +333,7 @@ export default function CrosshairOverlay({
       window.removeEventListener('keydown', onKeyDown);
       window.removeEventListener('keyup', onKeyUp);
     };
-  }, [applyTransform]);
+  }, [applyBadge]);
 
   return (
     <div
@@ -324,26 +360,28 @@ export default function CrosshairOverlay({
           pointerEvents: 'none',
         }}
       >
-        <div ref={segLeftRef} style={SEGMENT_BASE} />
-        <div ref={segRightRef} style={SEGMENT_BASE} />
-        <div ref={segTopRef} style={SEGMENT_BASE} />
-        <div ref={segBottomRef} style={SEGMENT_BASE} />
-        <div ref={apertureRef} style={{ ...SEGMENT_BASE, display: 'none' }} />
-        <div ref={pickboxRef} style={{ ...SEGMENT_BASE, display: 'none' }} />
-        <div
-          ref={badgeRef}
-          style={{
-            ...SEGMENT_BASE,
-            display: 'none',
-            width: 11,
-            height: 11,
-            fontSize: 11,
-            fontFamily: 'monospace',
-            fontWeight: 'bold',
-            lineHeight: '11px',
-            textAlign: 'center',
-          }}
-        />
+        <div ref={crossLayerRef} style={CROSS_LAYER_STYLE}>
+          <div ref={segLeftRef} style={SEGMENT_BASE} />
+          <div ref={segRightRef} style={SEGMENT_BASE} />
+          <div ref={segTopRef} style={SEGMENT_BASE} />
+          <div ref={segBottomRef} style={SEGMENT_BASE} />
+          <div ref={apertureRef} style={{ ...SEGMENT_BASE, display: 'none' }} />
+          <div ref={pickboxRef} style={{ ...SEGMENT_BASE, display: 'none' }} />
+          <div
+            ref={badgeRef}
+            style={{
+              ...SEGMENT_BASE,
+              display: 'none',
+              width: 11,
+              height: 11,
+              fontSize: 11,
+              fontFamily: 'monospace',
+              fontWeight: 'bold',
+              lineHeight: '11px',
+              textAlign: 'center',
+            }}
+          />
+        </div>
       </div>
     </div>
   );

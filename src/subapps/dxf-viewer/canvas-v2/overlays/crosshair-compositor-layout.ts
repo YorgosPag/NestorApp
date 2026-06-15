@@ -45,19 +45,39 @@ export function computeArmLength(areaWidth: number, areaHeight: number, sizePerc
 }
 
 /**
- * Static boxes for the 4 arm segments, positioned so that a single
- * `translate3d(cursorX, cursorY, 0)` (plus the gap offset) centres the cross on
- * the cursor. Left/top segments sit BEFORE the origin (negative offset) so their
- * inner edge lands at the origin; right/bottom sit AT the origin.
+ * Static boxes for the 4 arm segments, positioned relative to the crosshair
+ * centre (0,0). The whole cross lives inside ONE promoted layer that is moved
+ * per frame with a single `translate3d(cursorX, cursorY, 0)`; the segments
+ * themselves never change their `transform`, so the per-move cost is one
+ * compositor translate (one display-list item) instead of 6-8.
+ *
+ * The centre gap is BAKED into the static positions here (not applied per move):
+ * left/top arms sit `gap` px before the origin (their inner edge lands at -gap),
+ * right/bottom arms start `gap` px after it. `gap` changes only on settings /
+ * pick-box changes (rare), never per mouse move.
  */
-export function computeSegmentBoxes(armLength: number, lineWidth: number): CrosshairSegmentBoxes {
+export function computeSegmentBoxes(
+  armLength: number,
+  lineWidth: number,
+  gap = 0,
+): CrosshairSegmentBoxes {
   const halfLw = lineWidth / 2;
   return {
-    left: { width: armLength, height: lineWidth, left: -armLength, top: -halfLw },
-    right: { width: armLength, height: lineWidth, left: 0, top: -halfLw },
-    top: { width: lineWidth, height: armLength, left: -halfLw, top: -armLength },
-    bottom: { width: lineWidth, height: armLength, left: -halfLw, top: 0 },
+    left: { width: armLength, height: lineWidth, left: -armLength - gap, top: -halfLw },
+    right: { width: armLength, height: lineWidth, left: gap, top: -halfLw },
+    top: { width: lineWidth, height: armLength, left: -halfLw, top: -armLength - gap },
+    bottom: { width: lineWidth, height: armLength, left: -halfLw, top: gap },
   };
+}
+
+/**
+ * Static offset (CSS px) of the AutoCAD-style `+`/`−` selection badge from the
+ * crosshair centre: placed just outside the top-right of the centre gap. Baked
+ * into the badge's static `left`/`top` so the badge rides the single moving
+ * layer without a per-move transform.
+ */
+export function computeBadgeOffset(gap: number): number {
+  return Math.max(gap, 4) + 2;
 }
 
 /**

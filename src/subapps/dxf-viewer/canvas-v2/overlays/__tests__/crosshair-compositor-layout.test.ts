@@ -10,6 +10,7 @@ import {
   computeArmLength,
   computeSegmentBoxes,
   computeCenterGap,
+  computeBadgeOffset,
   toAreaLocal,
   isWithinArea,
   translate3d,
@@ -33,7 +34,7 @@ describe('computeArmLength', () => {
 });
 
 describe('computeSegmentBoxes', () => {
-  it('positions left/top segments before the origin and right/bottom at it', () => {
+  it('positions left/top segments before the origin and right/bottom at it (no gap)', () => {
     const b = computeSegmentBoxes(200, 2);
     // Horizontal arms: width = arm, height = lineWidth, centred vertically.
     expect(b.left).toEqual({ width: 200, height: 2, left: -200, top: -1 });
@@ -41,6 +42,26 @@ describe('computeSegmentBoxes', () => {
     // Vertical arms: width = lineWidth, height = arm, centred horizontally.
     expect(b.top).toEqual({ width: 2, height: 200, left: -1, top: -200 });
     expect(b.bottom).toEqual({ width: 2, height: 200, left: -1, top: 0 });
+  });
+
+  it('bakes the centre gap into the static positions (inner edges pulled back by gap)', () => {
+    const b = computeSegmentBoxes(200, 2, 12);
+    // Left/top inner edge lands at -gap; right/bottom start at +gap.
+    expect(b.left).toEqual({ width: 200, height: 2, left: -212, top: -1 });
+    expect(b.right).toEqual({ width: 200, height: 2, left: 12, top: -1 });
+    expect(b.top).toEqual({ width: 2, height: 200, left: -1, top: -212 });
+    expect(b.bottom).toEqual({ width: 2, height: 200, left: -1, top: 12 });
+  });
+});
+
+describe('computeBadgeOffset', () => {
+  it('keeps the badge at least clear of the cross centre (floor of 4 + 2)', () => {
+    expect(computeBadgeOffset(0)).toBe(6);
+    expect(computeBadgeOffset(3)).toBe(6);
+  });
+
+  it('rides outside a larger gap', () => {
+    expect(computeBadgeOffset(12)).toBe(14);
   });
 });
 
