@@ -47,7 +47,6 @@ import { useStructuralAutoReinforce } from '../hooks/useStructuralAutoReinforce'
 import { useStructuralFootingConnect } from '../hooks/useStructuralFootingConnect';
 import { useStructuralOrganism } from '../hooks/useStructuralOrganism';
 import { useColumnAdjacencyNotification } from '../hooks/useColumnAdjacencyNotification';
-import { useAutoFitOnFileChange } from './useAutoFitOnFileChange';
 import { useViewportUrlSync } from '../hooks/canvas/useViewportUrlSync';
 // 📐 ADR-345 Fase 4: i18n for the "Coming Soon" toast on unwired ribbon buttons.
 import { useTranslation } from '@/i18n/hooks/useTranslation';
@@ -166,13 +165,8 @@ export const DxfViewerContent = React.memo<DxfViewerAppProps>((props) => {
   );
   // 🏢 Universal selection primary ID
   const primarySelectedId = universalSelection.getPrimaryId();
-  // Auto fit-to-view on FileRecord transition (extracted hook, ADR-340 Phase 9).
-  useAutoFitOnFileChange({
-    currentScene,
-    fileRecordId: levelManager.fileRecordId ?? null,
-    currentLevelId: levelManager.currentLevelId,
-    handleAction,
-  });
+  // Viewport auto-fit (initial restore/fit, re-import, level-stable navigation) is
+  // owned by the SINGLE `useViewportAutoFit` SSoT controller in CanvasSection (ADR-399).
   // ✅ ADR-065 SRP: Extracted callbacks
   const {
     showCopyableNotification, wrappedHandleAction,

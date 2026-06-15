@@ -9,7 +9,8 @@
  * - Drawing handlers ref sync
  * - Auto-start drawing on tool change
  * - hasUnifiedDrawingPoints bridge ref
- * - DXF auto-fit on scene load
+ *
+ * (Viewport auto-fit moved to the `useViewportAutoFit` SSoT controller — ADR-399.)
  *
  * EXTRACTED FROM: CanvasSection.tsx — ~118 lines
  */
@@ -20,13 +21,11 @@ import React, { useRef, useEffect, useState, type RefObject, type MutableRefObje
 import { globalRulerStore } from '../../settings-provider';
 import { isDrawingTool, isMeasurementTool, isInDrawingMode } from '../../systems/tools/ToolStateManager';
 import { useDrawingHandlers } from '../../hooks/drawing/useDrawingHandlers';
-import { serviceRegistry } from '../../services';
 import type { RulerSettings } from '../../systems/rulers-grid/config';
 import type { OverlayEditorMode } from '../../overlays/types';
 import type { SceneModel } from '../../types/scene';
 import type { Entity } from '../../types/entities';
 import type { PreviewCanvasHandle } from '../../canvas-v2/preview-canvas';
-import type { DxfScene } from '../../canvas-v2/dxf-canvas/dxf-types';
 import type { Point2D } from '../../rendering/types/Types';
 import type { DrawingTool } from '../../hooks/drawing/useUnifiedDrawing';
 import type { ToolType } from '../../ui/toolbar/types';
@@ -39,20 +38,6 @@ import type { SelectedGrip } from './useCanvasMouse';
 /** Minimal interface for universal selection — only what this hook needs */
 interface SelectionChecker {
   isSelected: (id: string) => boolean;
-}
-
-/** Minimal interface for DxfCanvasRef — only what auto-fit needs */
-interface DxfCanvasRefLike {
-  getCanvas?: () => HTMLCanvasElement | null;
-}
-
-/** Minimal interface for zoom system — only what auto-fit needs */
-interface ZoomSystemForAutoFit {
-  zoomToFit: (
-    bounds: { min: Point2D; max: Point2D },
-    viewport: { width: number; height: number },
-    alignToOrigin?: boolean,
-  ) => { transform: { scale: number; offsetX: number; offsetY: number } } | null;
 }
 
 export interface UseCanvasEffectsParams {
@@ -76,16 +61,6 @@ export interface UseCanvasEffectsParams {
   setDragPreviewPosition: (pos: Point2D | null) => void;
   /** Universal selection system (for grip validation) */
   universalSelection: SelectionChecker;
-  /** DXF scene for auto-fit */
-  dxfScene: DxfScene | null;
-  /** DXF canvas ref for auto-fit viewport measurement */
-  dxfCanvasRef: RefObject<DxfCanvasRefLike | null> | undefined;
-  /** Overlay canvas ref for auto-fit viewport fallback */
-  overlayCanvasRef: RefObject<HTMLCanvasElement | null>;
-  /** Zoom system for auto-fit */
-  zoomSystem: ZoomSystemForAutoFit;
-  /** Current level ID — used to reset auto-fit when switching levels */
-  currentLevelId: string | null;
   /** B36 (ADR-189): Called when measurement completes — for "Create Guides" prompt */
   onMeasurementComplete?: (points: ReadonlyArray<{ x: number; y: number }>, tool: ToolType) => void;
 }
@@ -119,11 +94,6 @@ export function useCanvasEffects({
   setSelectedGrips,
   setDragPreviewPosition,
   universalSelection,
-  dxfScene,
-  dxfCanvasRef,
-  overlayCanvasRef,
-  zoomSystem,
-  currentLevelId,
   onMeasurementComplete,
 }: UseCanvasEffectsParams): UseCanvasEffectsReturn {
 
@@ -217,41 +187,9 @@ export function useCanvasEffects({
   hasUnifiedDrawingPointsRef.current = () =>
     (drawingHandlersRef.current?.drawingState?.tempPoints?.length ?? 0) > 0;
 
-  // === DXF auto-fit ONCE on first content load (NOT on every level switch) ===
-  // ADR-399 — navigating floor→floor must KEEP the viewport (Revit/AutoCAD: the
-  // camera stays put so the user always sees the same area). The transform is a
-  // global singleton (ImmediateTransformStore), so once we stop re-fitting per
-  // level it is preserved automatically across switches. We auto-fit only the FIRST
-  // time a scene with entities appears; the user's manual «Zoom to Fit» still works.
-  // (Also avoids re-fitting when the user draws new entities, which mutates currentScene.)
-  const hasFittedRef = useRef(false);
-
-  useEffect(() => {
-    if (!hasFittedRef.current && currentLevelId &&
-        dxfScene && dxfScene.entities.length > 0 && dxfScene.bounds) {
-      hasFittedRef.current = true;
-
-      const canvas = dxfCanvasRef?.current?.getCanvas?.() ?? overlayCanvasRef.current;
-      if (canvas && canvas instanceof HTMLCanvasElement) {
-        const canvasBounds = serviceRegistry.get('canvas-bounds');
-        const rect = canvasBounds.getBounds(canvas);
-        const viewport = { width: rect.width, height: rect.height };
-        zoomSystem.zoomToFit(dxfScene.bounds, viewport, false);
-      } else {
-        const container = document.querySelector('.relative.w-full.h-full.overflow-hidden');
-        if (container) {
-          const rect = container.getBoundingClientRect();
-          zoomSystem.zoomToFit(dxfScene.bounds, { width: rect.width, height: rect.height }, false);
-        }
-      }
-    }
-
-    // Reset only when the viewer is fully cleared (no active level) — a fresh
-    // open re-fits to its first content; ordinary floor switches never reset.
-    if (!currentLevelId) {
-      hasFittedRef.current = false;
-    }
-  }, [currentScene, currentLevelId]);
+  // NOTE: viewport auto-fit moved to the SINGLE SSoT controller `useViewportAutoFit`
+  // (ADR-399) — the DXF-scene, floorplan-background and file-record triggers are now
+  // one place, so floor↔floor navigation keeps the viewport stable.
 
   return {
     globalRulerSettings,

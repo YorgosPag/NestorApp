@@ -142,5 +142,8 @@ export type {
 // === useArrayRepickHandlers === (ADR-353 — polar/path array re-pick, extracted from CanvasSection)
 export { useArrayRepickHandlers } from './useArrayRepickHandlers';
 
-// === useFloorplanAutoFit === (ADR-340 Phase 5 — auto-fit camera to floorplan background)
-export { useFloorplanAutoFit } from './useFloorplanAutoFit';
+// === useViewportAutoFit === (ADR-399 — SINGLE viewport auto-fit SSoT controller:
+// initial restore/fit + re-import fit + level-stable navigation. Replaces the legacy
+// useFloorplanAutoFit / useAutoFitOnFileChange / useCanvasEffects auto-fit triggers.)
+export { useViewportAutoFit } from './useViewportAutoFit';
+export type { UseViewportAutoFitParams } from './useViewportAutoFit';

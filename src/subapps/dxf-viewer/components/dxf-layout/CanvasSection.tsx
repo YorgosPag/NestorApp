@@ -68,7 +68,7 @@ import { buildEntityContextMenuProps } from './canvas-section-entity-menu';
 import type { WallEntity } from '../../bim/types/wall-types';
 import { useTouchGestures } from '../../hooks/gestures/useTouchGestures';
 import { useResponsiveLayout as useResponsiveLayoutForCanvas } from '@/components/contacts/dynamic/hooks/useResponsiveLayout';
-import { useFloorplanAutoFit } from '../../hooks/canvas/useFloorplanAutoFit'; import { useCanvasEditActions } from '../../hooks/canvas/useCanvasEditActions';
+import { useViewportAutoFit } from '../../hooks/canvas/useViewportAutoFit'; import { useCanvasEditActions } from '../../hooks/canvas/useCanvasEditActions';
 import { useCanvasSectionUI } from '../../hooks/canvas/useCanvasSectionUI';
 import { useEntityLayerCommands } from '../../hooks/canvas/useEntityLayerCommands';
 import { useSelectionCycling } from '../../systems/selection/use-selection-cycling';
@@ -259,18 +259,18 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
   });
   const { fitToOverlay } = useFitToView({ dxfScene, colorLayers, zoomSystem, setTransform, containerRef, currentOverlays });
   useCanvasPan({ transformRef, setTransform });
-  // ADR-340 Phase 5 — auto-fit camera to newly-loaded floorplan background.
-  // Replaces legacy useFitToPdf. Tracks the last-fitted background ID to avoid
-  // resetting the user's manual zoom on every re-render.
   const floorplanBg = useFloorplanBackgroundForLevel();
-  useFloorplanAutoFit({ floorplanBg, viewport, zoomSystem, setTransform });
+  // ADR-399 — ΕΝΑ viewport auto-fit controller (SSoT)· λεπτομέρειες: ADR-040 changelog 2026-06-16.
+  useViewportAutoFit({
+    currentScene: props.currentScene ?? null, currentLevelId: levelManager.currentLevelId,
+    fileRecordId: levelManager.fileRecordId ?? null, floorplanBg, viewport, zoomSystem, setTransform,
+  });
   const { globalRulerSettings, drawingHandlers, drawingHandlersRef, hasUnifiedDrawingPointsRef } = useCanvasEffects({
     activeTool, overlayMode, currentScene: props.currentScene ?? null,
     handleSceneChange: props.handleSceneChange, onToolChange: props.onToolChange, previewCanvasRef,
     selectedGrips: unified.selectedGrips, setSelectedGrips: unified.setSelectedGrips,
     setDragPreviewPosition: unified.setDragPreviewPosition,
-    universalSelection, dxfScene, dxfCanvasRef, overlayCanvasRef, zoomSystem,
-    currentLevelId: levelManager.currentLevelId, onMeasurementComplete: guideWorkflows.handleMeasurementComplete,
+    universalSelection, onMeasurementComplete: guideWorkflows.handleMeasurementComplete,
   });
   // === Context menu refs ===
   const drawingMenuRef = useRef<DrawingContextMenuHandle>(null);
