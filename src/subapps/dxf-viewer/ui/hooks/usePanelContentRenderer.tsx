@@ -27,8 +27,8 @@ import type { ToolType } from '../toolbar/types';
 import type { PanelType } from './useFloatingPanelState';
 import type { LayerOperationsCallbacks } from './useLayerOperations';
 import type { DxfSaveContext } from '../../services/dxf-firestore.service';
-// ADR-363 Phase 1D — BIM-aware properties tab router (stair/wall/...).
-import { BimPropertiesRouter } from '../wall-advanced-panel/BimPropertiesRouter';
+// ADR-366 / ADR-363 — BIM properties palette shell (Παράμετροι | ΒΚΕ | Σχόλια | Ιστορικό).
+import { BimPropertiesShell } from '../bim-properties/BimPropertiesShell';
 // ADR-362 Phase F1 — Dimensions style manager tab.
 import { DimensionsTab } from '../panels/dimensions/DimensionsTab';
 // ADR-363 Phase 6.5.B — BIM Material Library panel.
@@ -115,7 +115,7 @@ export function usePanelContentRenderer({
 
       case 'properties':
         return (
-          <BimPropertiesRouter
+          <BimPropertiesShell
             primarySelectedId={primarySelectedId ?? null}
             currentScene={scene}
             projectId={projectId}

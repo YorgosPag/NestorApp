@@ -18,7 +18,6 @@ import { useSelection3DStore } from '../stores/Selection3DStore';
 import { clearSceneBboxGetter, setSceneBboxGetter } from '../stores/SceneBboxProvider';
 import { useBuildingFloors3DSync } from '../../components/dxf-layout/useBuildingFloors3DSync';
 import { QuickProperties3DHoverPopover } from '../properties/QuickProperties3DHoverPopover';
-import { BimEntityCardPanel } from '../properties/BimEntityCardPanel';
 import { CutPlaneSlider3DLeaf } from './CutPlaneSlider3DLeaf';
 import { Section2DPanel } from '../panels/Section2DPanel';
 import { RenderFinalDialog } from '../render/RenderFinalDialog';
@@ -380,8 +379,9 @@ export function BimViewport3D({ projectId: projectIdProp, readOnly = false, bimE
       {/* QuickProperties tooltip (ADR-366 B.2.Q1) — micro-leaf, fixed position */}
       <QuickProperties3DHoverPopover />
 
-      {/* BIM entity card panel (ADR-366 B.2.Q4) — micro-leaf, absolute right-side panel */}
-      <BimEntityCardPanel />
+      {/* ADR-366 — BIM entity card μεταφέρθηκε στο αριστερό Properties palette
+          (BimPropertiesShell: Παράμετροι | ΒΚΕ | Σχόλια | Ιστορικό). Μηδέν
+          δεύτερο panel στον καμβά (Revit-grade single palette). */}
 
       {/* ADR-452 — cut-plane slider (3D mount); drives the horizontal section clip. */}
       <CutPlaneSlider3DLeaf />

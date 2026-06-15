@@ -3748,6 +3748,15 @@
       }
     }
   },
+  "bimProperties": {
+    "title": "Properties",
+    "subtabs": {
+      "parameters": "Parameters",
+      "boq": "BOQ",
+      "comments": "Comments",
+      "audit": "History"
+    }
+  },
   "columnAdvancedPanel": {
     "title": "Column Properties",
     "emptyState": "Select a column to see its properties.",

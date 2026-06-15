@@ -3748,6 +3748,15 @@
       }
     }
   },
+  "bimProperties": {
+    "title": "Ιδιότητες",
+    "subtabs": {
+      "parameters": "Παράμετροι",
+      "boq": "ΒΚΕ",
+      "comments": "Σχόλια",
+      "audit": "Ιστορικό"
+    }
+  },
   "columnAdvancedPanel": {
     "title": "Ιδιότητες Κολώνας",
     "emptyState": "Επίλεξε μια κολώνα για να δεις τις ιδιότητες.",

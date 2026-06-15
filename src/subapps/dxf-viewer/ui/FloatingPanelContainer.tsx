@@ -11,6 +11,7 @@ import { PanelTabs } from './components/PanelTabs';
 // REMOVED: PropertiesPanel - καρτέλα πλέον αφαιρέθηκε εντελώς
 // REMOVED: LayerManagementPanel - replaced with unified overlay system
 import type { SceneModel } from '../types/scene';
+import { isBimEntity, isStairEntity } from '../types/entities';
 import type { ToolType } from '../ui/toolbar/types';
 import type { DxfSaveContext } from '../services/dxf-firestore.service';
 import { useLevels } from '../systems/levels';
@@ -90,16 +91,17 @@ const FloatingPanelContainerInner = forwardRef<FloatingPanelHandleType, Floating
     primarySelectedId,
   });
 
-  // ADR-358 Phase 8 / ADR-363 Phase 4 sidebar dock — auto-switch to the Properties
-  // tab when the user selects a stair or column (industry pattern: Revit / AutoCAD
-  // Properties palette pops on selection). Stays out of the way for other
-  // selections so the user is not bounced off the Levels tab while doing layer work.
+  // ADR-358 Phase 8 / ADR-363 Phase 4 / ADR-366 — auto-switch to the Properties
+  // palette when the user selects any BIM element (industry pattern: Revit /
+  // AutoCAD Properties palette pops on selection). Covers every BIM type so the
+  // merged Παράμετροι/ΒΚΕ/Σχόλια/Ιστορικό sub-tabs surface for 3D selections too.
+  // Stays out of the way for plain DXF/layer selections (not BIM) so the user is
+  // not bounced off the Levels tab while doing layer work.
   React.useEffect(() => {
     if (!scene || !primarySelectedId) return;
     const entity = scene.entities.find((e) => e.id === primarySelectedId);
     if (!entity) return;
-    const entityType = (entity as { type?: string }).type;
-    if ((entityType === 'stair' || entityType === 'column') && activePanel !== 'properties') {
+    if ((isBimEntity(entity) || isStairEntity(entity)) && activePanel !== 'properties') {
       setActivePanel('properties');
     }
   }, [primarySelectedId, scene, activePanel, setActivePanel]);
