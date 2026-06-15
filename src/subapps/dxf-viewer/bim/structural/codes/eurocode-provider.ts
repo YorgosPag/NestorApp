@@ -12,16 +12,20 @@
 import { nextRebarDiameterMm } from '../rebar-catalog';
 import type { ColumnReinforcement } from '../reinforcement/column-reinforcement-types';
 import type { BeamReinforcement } from '../reinforcement/beam-reinforcement-types';
+import type { FootingReinforcement } from '../reinforcement/footing-reinforcement-types';
 import type {
   BeamReinforcementLimits,
   BeamSectionContext,
   ColumnReinforcementLimits,
   ColumnSectionContext,
+  FootingReinforcementLimits,
+  FootingSectionContext,
   StructuralCodeProvider,
 } from './structural-code-types';
 import {
   suggestBeamReinforcementFrom,
   suggestColumnReinforcementFrom,
+  suggestFootingReinforcementFrom,
 } from './suggest-reinforcement';
 
 /** Μελετητική ενεργός διατομή δοκού d ≈ 0.9·h. */
@@ -88,6 +92,36 @@ function eurocodeBeamLimits(
   };
 }
 
+/**
+ * EC2 §9.8.2 (πέδιλα) + §9.3.1.1 (slab-like κάτω σχάρα) όρια θεμελιακού στοιχείου.
+ * `tie-beam` = δοκός → ισοδύναμα beam limits. Cover μεγαλύτερο (EC2 §4.4.1.3 —
+ * έδραση σε προετοιμασμένο έδαφος/blinding).
+ */
+function eurocodeFootingLimits(ctx: FootingSectionContext): FootingReinforcementLimits {
+  if (ctx.kind === 'tie-beam') {
+    const b = eurocodeBeamLimits(ctx, 16);
+    return {
+      minRatio: b.minRatio,
+      minBarDiameterMm: b.minBarDiameterMm,
+      maxBarSpacingMm: b.maxBarSpacingMm,
+      minLongitudinalBarCount: b.minBottomBarCount,
+      nominalCoverMm: b.nominalCoverMm,
+    };
+  }
+  return {
+    // EC2 §9.3.1.1(1) As,min = 0.26·fctm/fyk·b·d ≈ 0.0013 (C25/30 + B500C).
+    minRatio: 0.0013,
+    // Πρακτική θεμελίωσης — Ø12 κύριος οπλισμός σχάρας.
+    minBarDiameterMm: 12,
+    // EC2 §9.3.1.1(3) smax,slabs = min(3h, 400)· πρακτικό 250 για θεμελίωση.
+    maxBarSpacingMm: 250,
+    // ≥4 διαμήκεις ράβδοι διανομής (strip).
+    minLongitudinalBarCount: 4,
+    // EN 1992-1-1 §4.4.1.3 — έδραση σε προετοιμασμένο έδαφος ~50mm.
+    nominalCoverMm: 50,
+  };
+}
+
 export const EUROCODE_PROVIDER: StructuralCodeProvider = {
   id: 'eurocode',
   labelKey: 'structural.code.eurocode',
@@ -98,5 +132,9 @@ export const EUROCODE_PROVIDER: StructuralCodeProvider = {
   beamReinforcementLimits: eurocodeBeamLimits,
   suggestBeamReinforcement(ctx: BeamSectionContext): BeamReinforcement {
     return suggestBeamReinforcementFrom(this, ctx);
+  },
+  footingReinforcementLimits: eurocodeFootingLimits,
+  suggestFootingReinforcement(ctx: FootingSectionContext): FootingReinforcement {
+    return suggestFootingReinforcementFrom(this, ctx);
   },
 };

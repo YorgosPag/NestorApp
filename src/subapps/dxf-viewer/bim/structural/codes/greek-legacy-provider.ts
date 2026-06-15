@@ -13,16 +13,20 @@
 import { nextRebarDiameterMm } from '../rebar-catalog';
 import type { ColumnReinforcement } from '../reinforcement/column-reinforcement-types';
 import type { BeamReinforcement } from '../reinforcement/beam-reinforcement-types';
+import type { FootingReinforcement } from '../reinforcement/footing-reinforcement-types';
 import type {
   BeamReinforcementLimits,
   BeamSectionContext,
   ColumnReinforcementLimits,
   ColumnSectionContext,
+  FootingReinforcementLimits,
+  FootingSectionContext,
   StructuralCodeProvider,
 } from './structural-code-types';
 import {
   suggestBeamReinforcementFrom,
   suggestColumnReinforcementFrom,
+  suggestFootingReinforcementFrom,
 } from './suggest-reinforcement';
 
 /** Μελετητική ενεργός διατομή δοκού d ≈ 0.9·h. */
@@ -85,6 +89,35 @@ function greekLegacyBeamLimits(
   };
 }
 
+/**
+ * ΕΚΩΣ 2000 §17 (θεμελιώσεις) όρια θεμελιακού στοιχείου — ελαφρώς συντηρητικότερα
+ * από EC2 (μεγαλύτερο ρ_min, πυκνότερο μέγιστο βήμα). `tie-beam` = δοκός →
+ * ισοδύναμα beam limits.
+ */
+function greekLegacyFootingLimits(ctx: FootingSectionContext): FootingReinforcementLimits {
+  if (ctx.kind === 'tie-beam') {
+    const b = greekLegacyBeamLimits(ctx, 16);
+    return {
+      minRatio: b.minRatio,
+      minBarDiameterMm: b.minBarDiameterMm,
+      maxBarSpacingMm: b.maxBarSpacingMm,
+      minLongitudinalBarCount: b.minBottomBarCount,
+      nominalCoverMm: b.nominalCoverMm,
+    };
+  }
+  return {
+    // ΕΚΩΣ 2000 §17 — ελάχιστο ποσοστό σχάρας θεμελίωσης (συντηρητικό).
+    minRatio: 0.0015,
+    // Ø12 κύριος οπλισμός σχάρας.
+    minBarDiameterMm: 12,
+    // Συντηρητικό μέγιστο βήμα σχάρας θεμελίωσης.
+    maxBarSpacingMm: 200,
+    minLongitudinalBarCount: 4,
+    // ΕΚΩΣ 2000 §5 — επικάλυψη θεμελίωσης (έδραση σε έδαφος).
+    nominalCoverMm: 50,
+  };
+}
+
 export const GREEK_LEGACY_PROVIDER: StructuralCodeProvider = {
   id: 'greek-legacy',
   labelKey: 'structural.code.greekLegacy',
@@ -95,5 +128,9 @@ export const GREEK_LEGACY_PROVIDER: StructuralCodeProvider = {
   beamReinforcementLimits: greekLegacyBeamLimits,
   suggestBeamReinforcement(ctx: BeamSectionContext): BeamReinforcement {
     return suggestBeamReinforcementFrom(this, ctx);
+  },
+  footingReinforcementLimits: greekLegacyFootingLimits,
+  suggestFootingReinforcement(ctx: FootingSectionContext): FootingReinforcement {
+    return suggestFootingReinforcementFrom(this, ctx);
   },
 };

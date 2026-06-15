@@ -14,11 +14,13 @@ import {
 } from '../rebar-catalog';
 import type { ColumnReinforcement } from '../reinforcement/column-reinforcement-types';
 import type { BeamReinforcement } from '../reinforcement/beam-reinforcement-types';
+import type { FootingReinforcement } from '../reinforcement/footing-reinforcement-types';
 import type {
   BeamReinforcementLimits,
   BeamSectionContext,
   ColumnReinforcementLimits,
   ColumnSectionContext,
+  FootingSectionContext,
   StructuralCodeProvider,
 } from './structural-code-types';
 
@@ -148,6 +150,88 @@ export function suggestBeamReinforcementFrom(
       spacingMm: roundSpacingDown(limits.maxStirrupSpacingMm),
       spacingCriticalMm: roundSpacingDown(limits.criticalStirrupSpacingMm),
     },
+    coverMm: limits.nominalCoverMm,
+  };
+}
+
+// ─── Footing suggester (ADR-459 Phase 4b) ────────────────────────────────────
+
+/** Πρακτικό ελάχιστο βήμα σχάρας θεμελίωσης (mm) — αποφυγή μη-σκυροδετήσιμης πυκνότητας. */
+const MIN_MAT_SPACING_MM = 75;
+
+/**
+ * SSoT spacing-based επιλογή σχάρας (N.0.2 — pad×2 κατευθύνσεις + strip εγκάρσιες):
+ * δεδομένης απαιτούμενης As ανά μέτρο πλάτους, αρχικής διαμέτρου & μέγιστου βήματος,
+ * επιστρέφει {diameter, spacing} ώστε `area(Ø)·(1000/spacing) ≥ asRequiredPerMetre`.
+ * Πρώτα πυκνώνει το βήμα (πιο οικονομικό) μέχρι το πρακτικό ελάχιστο· μετά ανεβάζει
+ * διάμετρο στις εμπορικές τιμές.
+ */
+export function resolveMatMesh(
+  asRequiredPerMetreMm2: number,
+  seedDiameterMm: number,
+  maxSpacingMm: number,
+): { diameterMm: number; spacingMm: number } {
+  let diameterMm = seedDiameterMm;
+  let spacingMm = roundSpacingDown(maxSpacingMm);
+  const asProvided = (): number => barAreaMm2(diameterMm) * (1000 / spacingMm);
+  while (asProvided() < asRequiredPerMetreMm2 && spacingMm > MIN_MAT_SPACING_MM) {
+    spacingMm = Math.max(MIN_MAT_SPACING_MM, spacingMm - 25);
+  }
+  while (asProvided() < asRequiredPerMetreMm2) {
+    const next = nextRebarDiameterMm(diameterMm + 1);
+    if (next === diameterMm) break; // έφτασε στη μέγιστη εμπορική
+    diameterMm = next;
+  }
+  return { diameterMm, spacingMm };
+}
+
+/** Ενεργό βάθος θεμελιακού στοιχείου d ≈ thickness − cover (πλακοειδής σύμβαση). */
+function footingEffectiveDepthMm(thicknessMm: number, coverMm: number): number {
+  return Math.max(0, thicknessMm - coverMm);
+}
+
+/**
+ * Επιλέγει ελάχιστο-έγκυρο οπλισμό θεμελίωσης ανά kind. pad → δι-διευθυντική σχάρα
+ * (reuse `resolveMatMesh`)· strip → εγκάρσια σχάρα + διαμήκεις διανομής (reuse
+ * `resolveBarSet`)· tie-beam → **delegate** στον beam suggester (μηδέν duplicate,
+ * N.0.2). Καλείται από κάθε provider μέσα στο `suggestFootingReinforcement`.
+ */
+export function suggestFootingReinforcementFrom(
+  provider: StructuralCodeProvider,
+  ctx: FootingSectionContext,
+): FootingReinforcement {
+  if (ctx.kind === 'tie-beam') {
+    return { kind: 'tie-beam', ...suggestBeamReinforcementFrom(provider, ctx) };
+  }
+
+  const limits = provider.footingReinforcementLimits(ctx);
+  const seedDia = nextRebarDiameterMm(limits.minBarDiameterMm);
+  const thicknessMm = ctx.thicknessMm;
+  const dEff = footingEffectiveDepthMm(thicknessMm, limits.nominalCoverMm);
+  const asPerMetre = limits.minRatio * 1000 * dEff;
+
+  if (ctx.kind === 'pad') {
+    const mesh = resolveMatMesh(asPerMetre, seedDia, limits.maxBarSpacingMm);
+    return {
+      kind: 'pad',
+      bottomMeshX: { diameterMm: mesh.diameterMm, spacingMm: mesh.spacingMm },
+      bottomMeshY: { diameterMm: mesh.diameterMm, spacingMm: mesh.spacingMm },
+      coverMm: limits.nominalCoverMm,
+    };
+  }
+
+  // strip — ανεστραμμένη δοκός: εγκάρσιες (κύριος) + διαμήκεις διανομής (detailing).
+  const transverse = resolveMatMesh(asPerMetre, seedDia, limits.maxBarSpacingMm);
+  const initialLongCount = Math.max(
+    limits.minLongitudinalBarCount,
+    Math.ceil(ctx.widthMm / limits.maxBarSpacingMm) + 1,
+  );
+  // Διαμήκεις = detailing-governed (όχι strength) → asRequired=0 ⇒ reuse SSoT χωρίς bump.
+  const longitudinal = resolveBarSet(0, initialLongCount, seedDia);
+  return {
+    kind: 'strip',
+    transverse: { diameterMm: transverse.diameterMm, spacingMm: transverse.spacingMm },
+    longitudinal: { diameterMm: longitudinal.diameterMm, count: longitudinal.count },
     coverMm: limits.nominalCoverMm,
   };
 }

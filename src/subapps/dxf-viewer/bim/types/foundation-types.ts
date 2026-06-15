@@ -34,6 +34,11 @@ import type {
 } from './bim-base';
 import type { SceneUnits } from '../../utils/scene-units';
 import type { IfcEntityMixin } from './ifc-entity-mixin';
+import type {
+  PadReinforcement,
+  StripReinforcement,
+  TieBeamReinforcement,
+} from '../structural/reinforcement/footing-reinforcement-types';
 
 // ─── Sub-type discriminators (ADR-436 §3.2) ──────────────────────────────────
 
@@ -134,6 +139,12 @@ export interface PadFootingParams extends FoundationCommonParams {
   readonly stepped?: PadSteppedParams;
   /** Only meaningful όταν profile='sloped'. */
   readonly sloped?: PadSlopedParams;
+  /**
+   * ADR-459 Phase 4b — οπλισμός πεδίλου (δι-διευθυντική σχάρα). Optional/non-breaking:
+   * absent → δεν έχει διαστασιολογηθεί οπλισμός. Derived ποσότητες on-demand από
+   * `footing-reinforcement-compute.ts` — ΠΟΤΕ αποθηκεύονται (geometry-is-SSoT).
+   */
+  readonly reinforcement?: PadReinforcement;
 }
 
 /** Πεδιλοδοκός / συνεχές πέδιλο (line-based, IfcFooting/STRIP_FOOTING). */
@@ -153,6 +164,11 @@ export interface StripFootingParams extends FoundationCommonParams {
    * reconcile) να ΜΗΝ το επαναφέρει στον κανόνα. Absent/false = auto (rule-driven).
    */
   readonly justificationManual?: boolean;
+  /**
+   * ADR-459 Phase 4b — οπλισμός πεδιλοδοκού (ανεστραμμένη δοκός: εγκάρσιες +
+   * διαμήκεις διανομής + προαιρετικοί συνδετήρες). Optional/non-breaking.
+   */
+  readonly reinforcement?: StripReinforcement;
 }
 
 /**
@@ -169,6 +185,11 @@ export interface TieBeamParams extends FoundationCommonParams {
   readonly justification?: StripJustification;
   /** ADR-441 Slice 5a-grid — χειροκίνητη υπεροχή justification (βλ. StripFootingParams). */
   readonly justificationManual?: boolean;
+  /**
+   * ADR-459 Phase 4b — οπλισμός συνδετήριας δοκού. **REUSE** `BeamReinforcement`
+   * (είναι δοκός) + discriminator. Optional/non-breaking.
+   */
+  readonly reinforcement?: TieBeamReinforcement;
 }
 
 /** Discriminated union ανά `kind`. */

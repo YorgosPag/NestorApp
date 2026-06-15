@@ -55,27 +55,31 @@ export const BeamIShapeParamsSchema = z
 export const BeamIfcTypeSchema = z.literal('IfcBeam');
 
 // ─── ADR-459 Phase 4a — οπλισμός δοκού (mirror ColumnReinforcementSchema) ──────
+// Exported (Phase 4b): reuse από `foundation.schemas.ts` — tie-beam = δοκός, strip
+// stirrups/longitudinal = ίδια schemas (μηδέν duplicate, N.0.2).
 
-const BeamRebarLayerSchema = z
+export const BeamRebarLayerSchema = z
   .object({
     diameterMm: z.number().positive(),
     count: z.number().int().positive(),
   })
   .strict();
 
-const BeamReinforcementSchema = z
+export const BeamStirrupsSchema = z
+  .object({
+    diameterMm: z.number().positive(),
+    spacingMm: z.number().positive(),
+    spacingCriticalMm: z.number().positive().optional(),
+    legs: z.number().int().positive().optional(),
+    type: z.enum(['closed-hooked', 'closed-welded', 'spiral']).optional(),
+  })
+  .strict();
+
+export const BeamReinforcementSchema = z
   .object({
     bottom: BeamRebarLayerSchema,
     top: BeamRebarLayerSchema,
-    stirrups: z
-      .object({
-        diameterMm: z.number().positive(),
-        spacingMm: z.number().positive(),
-        spacingCriticalMm: z.number().positive().optional(),
-        legs: z.number().int().positive().optional(),
-        type: z.enum(['closed-hooked', 'closed-welded', 'spiral']).optional(),
-      })
-      .strict(),
+    stirrups: BeamStirrupsSchema,
     coverMm: z.number().positive(),
   })
   .strict();

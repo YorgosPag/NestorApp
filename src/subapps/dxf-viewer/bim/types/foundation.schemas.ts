@@ -17,6 +17,11 @@ import {
   IfcPropertySetSchema,
 } from './ifc-entity-mixin';
 import { GuideBindingsSchema } from './guide-binding.schemas';
+import {
+  BeamRebarLayerSchema,
+  BeamReinforcementSchema,
+  BeamStirrupsSchema,
+} from './beam.schemas';
 
 // ─── Point3D ──────────────────────────────────────────────────────────────────
 
@@ -64,6 +69,43 @@ const PadSlopedParamsSchema = z
   })
   .strict();
 
+// ─── ADR-459 Phase 4b — οπλισμός θεμελίωσης (strict, per-kind) ─────────────────
+
+/** Σχάρα/πλέγμα ράβδων (Ø/βήμα). */
+const RebarMeshSchema = z
+  .object({
+    diameterMm: z.number().positive(),
+    spacingMm: z.number().positive(),
+  })
+  .strict();
+
+/** Οπλισμός πεδίλου — δι-διευθυντική κάτω σχάρα + προαιρετική άνω. */
+const PadReinforcementSchema = z
+  .object({
+    kind: z.literal('pad'),
+    bottomMeshX: RebarMeshSchema,
+    bottomMeshY: RebarMeshSchema,
+    topMesh: RebarMeshSchema.optional(),
+    coverMm: z.number().positive(),
+  })
+  .strict();
+
+/** Οπλισμός πεδιλοδοκού — εγκάρσιες + διαμήκεις διανομής + προαιρετικοί συνδετήρες (reuse beam). */
+const StripReinforcementSchema = z
+  .object({
+    kind: z.literal('strip'),
+    transverse: RebarMeshSchema,
+    longitudinal: BeamRebarLayerSchema,
+    stirrups: BeamStirrupsSchema.optional(),
+    coverMm: z.number().positive(),
+  })
+  .strict();
+
+/** Οπλισμός συνδετήριας δοκού — REUSE BeamReinforcementSchema + discriminator. */
+const TieBeamReinforcementSchema = BeamReinforcementSchema.extend({
+  kind: z.literal('tie-beam'),
+});
+
 // ─── Common params shape (shared across discriminated-union members) ──────────
 
 const CommonParamsShape = {
@@ -90,6 +132,7 @@ const PadFootingParamsSchema = z
     profile: FoundationProfileSchema,
     stepped: PadSteppedParamsSchema.optional(),
     sloped: PadSlopedParamsSchema.optional(),
+    reinforcement: PadReinforcementSchema.optional(),
   })
   .strict();
 
@@ -102,6 +145,7 @@ const StripFootingParamsSchema = z
     width: z.number().positive(),
     justification: StripJustificationSchema.optional(),
     justificationManual: z.boolean().optional(),
+    reinforcement: StripReinforcementSchema.optional(),
   })
   .strict();
 
@@ -114,6 +158,7 @@ const TieBeamParamsSchema = z
     width: z.number().positive(),
     justification: StripJustificationSchema.optional(),
     justificationManual: z.boolean().optional(),
+    reinforcement: TieBeamReinforcementSchema.optional(),
   })
   .strict();
 
