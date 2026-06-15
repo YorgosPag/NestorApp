@@ -162,6 +162,32 @@ export const STRUCTURAL_REINFORCE_PANEL: RibbonPanelDef = {
             tooltipKey: 'ribbon.tooltips.autoReinforceOrganism',
           },
         },
+        // ADR-459 Φ4f — manual κολόνα↔πέδιλο connectivity (selection-driven· εδώ
+        // ώστε να δουλεύει με multi-selection — οι contextual καρτέλες κρύβονται).
+        {
+          type: 'simple',
+          size: 'small',
+          command: {
+            id: 'analyze.footing-attach',
+            labelKey: 'ribbon.commands.footingConnect.attach',
+            tooltipKey: 'ribbon.commands.footingConnect.attachTooltip',
+            icon: 'bim-wall-attach-base',
+            commandKey: 'organism.footing-attach',
+            action: 'organism.footing-attach',
+          },
+        },
+        {
+          type: 'simple',
+          size: 'small',
+          command: {
+            id: 'analyze.footing-detach',
+            labelKey: 'ribbon.commands.footingConnect.detach',
+            tooltipKey: 'ribbon.commands.footingConnect.detachTooltip',
+            icon: 'bim-wall-detach',
+            commandKey: 'organism.footing-detach',
+            action: 'organism.footing-detach',
+          },
+        },
       ],
     },
   ],

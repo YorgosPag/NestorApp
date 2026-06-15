@@ -1127,7 +1127,6 @@
       "foundationGeometry": "Geometry",
       "foundationElevation": "Elevation",
       "foundationActions": "Actions",
-      "structuralConnectivity": "Connectivity",
       "beamKind": "Type",
       "beamIshape": "I-Section",
       "beamIshapeCatalog": "Profile Catalog",
@@ -2635,10 +2634,6 @@
         "close": "Close",
         "delete": "Delete",
         "deleteConfirm": "Delete footing? This action cannot be undone.",
-        "attachColumns": "Attach columns",
-        "attachColumnsTooltip": "Attach the selected columns to this footing (analytical support)",
-        "detachColumns": "Detach columns",
-        "detachColumnsTooltip": "Detach all columns supported by this footing",
         "kind": {
           "section": {
             "title": "Type"
@@ -3629,7 +3624,13 @@
         }
       },
       "print": "Print",
-      "autoReinforceOrganism": "Auto-Reinforce"
+      "autoReinforceOrganism": "Auto-Reinforce",
+      "footingConnect": {
+        "attach": "Attach to footing",
+        "attachTooltip": "Attach the selected columns to the selected footing (select 1 footing + columns)",
+        "detach": "Detach footing",
+        "detachTooltip": "Detach the selected columns (or all columns of the selected footing) from the footing"
+      }
     },
     "tooltips": {
       "bimSchedule": "Open BIM Schedule — export structural elements",

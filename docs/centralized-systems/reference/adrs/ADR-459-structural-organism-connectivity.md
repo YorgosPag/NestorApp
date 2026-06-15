@@ -302,17 +302,22 @@ checks + command — μηδέν duplicate.
 
 Χειροκίνητο attach/detach του αναλυτικού FK `footingId` (Revit Structural «Attach/Detach»). NEW
 `DetachColumnFootingCommand` (mirror `AttachColumnFootingCommand`· **αφαιρεί το κλειδί** `footingId`,
-Firestore-safe — όχι explicit `undefined`· undoable). UX στο **foundation contextual ribbon** (όχι
-στην κολόνα — αποφυγή του MIXED `column-command-keys.ts`): panel «Συνδεσιμότητα» με «Σύνδεση κολόνων»
-(selection-pair: τα ΕΠΙΛΕΓΜΕΝΑ columns → attach στο ενεργό πέδιλο) + «Αποσύνδεση κολόνων» (ΟΛΕΣ οι
-κολόνες που εδράζονται στο πέδιλο → detach). Events `bim:column-footing-attached-manual`/
-`bim:column-footing-detached` → toasts + organism re-derive.
+Firestore-safe — όχι explicit `undefined`· undoable). UX στην **καρτέλα «Ανάλυση»** (STRUCTURAL_REINFORCE_PANEL,
+δίπλα στο «Αυτόματος Οπλισμός»): «Σύνδεση σε πέδιλο» + «Αποσύνδεση πεδίλου». **Selection-driven** (μέσω
+`params.selectedEntityIds`) — η «Ανάλυση» είναι **πάντα διαθέσιμη**, σε αντίθεση με τις contextual
+καρτέλες που το framework **κρύβει** στην πολλαπλή επιλογή («Πολλαπλή Επιλογή» tab)· γι' αυτό το
+selection-pair (πέδιλο + κολόνες) ΔΕΝ μπορεί να ζήσει σε contextual καρτέλα. NEW hook
+`useStructuralFootingConnect` (mirror `useStructuralAutoReinforce`): ακούει τα requests, αναλύει την
+επιλογή (attach = 1 πέδιλο/εδαφόπλακα target + N κολόνες· detach = επιλεγμένες κολόνες με `footingId`
+∪ κολόνες των επιλεγμένων πεδίλων), εκτελεί το undoable command, emit-άρει result events. Events:
+requests `bim:column-footing-attach-requested`/`-detach-requested` → results `bim:column-footing-attached-manual`/
+`-detached` → toasts + organism re-derive.
 
-**Files (Phase 4f):** NEW `core/commands/entity-commands/DetachColumnFootingCommand.ts` (+`__tests__`)·
-MOD `foundation-command-keys.ts` (+2 actions), `useRibbonFoundationBridge.ts` (+2 handlers),
-`contextual-foundation-tab.ts` (+connectivity panel), `systems/events/drawing-event-map-bim.ts` (+2 events),
-`hooks/useStructuralOrganism.ts` (+2 ORGANISM_EVENTS), `hooks/notifications/structural-attach-notifications.ts`
-(+2 toasts), i18n el+en (+labels/tooltips/toasts).
+**Files (Phase 4f):** NEW `core/commands/entity-commands/DetachColumnFootingCommand.ts` (+`__tests__`),
+`hooks/useStructuralFootingConnect.ts`· MOD `systems/events/drawing-event-map-bim.ts` (+4 events),
+`app/useDxfViewerCallbacks.ts` (+2 action handlers), `ui/ribbon/data/analyze-tab.ts` (+2 buttons),
+`app/DxfViewerContent.tsx` (mount hook), `hooks/useStructuralOrganism.ts` (+2 ORGANISM_EVENTS),
+`hooks/notifications/structural-attach-notifications.ts` (+2 toasts), i18n el+en (+labels/tooltips/toasts).
 
 ## 7. Known limitations (→ Phase 3+)
 
@@ -329,8 +334,9 @@ MOD `foundation-command-keys.ts` (+2 actions), `useRibbonFoundationBridge.ts` (+
   **E3:** NEW `SlabFoundationReinforcement` (raft top+bottom δι-διευθυντική σχάρα) + compute + provider
   (slab-foundation limits/suggester, EC2/ΕΚΩΣ, reuse `resolveMatMesh`/mesh SSoT) + `SlabParams.structuralReinforcement`
   (διακριτό από hint) + `buildReinforcePatch`/`reinforcement-checks` raft coverage. E2 = SKIP (scope Giorgio).
-  **Phase 4f:** NEW `DetachColumnFootingCommand` (key-removal, undoable) + foundation-ribbon «Συνδεσιμότητα»
-  panel (attach selected / detach all) + 2 events + 2 toasts + organism re-derive. 18 νέα jest
+  **Phase 4f:** NEW `DetachColumnFootingCommand` (key-removal, undoable) + NEW `useStructuralFootingConnect`
+  hook + «Ανάλυση» κουμπιά «Σύνδεση/Αποσύνδεση πεδίλου» (**selection-driven** — όχι contextual καρτέλα, που
+  κρύβεται στην πολλαπλή επιλογή) + 4 events + 2 toasts + organism re-derive. 18 νέα jest
   (slab-foundation 8 + checks/continuity +6 + DetachCommand 4· 290 structural/bridge σύνολο πράσινα). tsc clean.
   UNCOMMITTED (browser-verify + commit από Giorgio). ⚠️ `codes/*` MIXED με ADR-460 → git add ΜΟΝΟ δικά μου.
   DEFER: Phase 3 (section adequacy advisory), Phase 5 (loads — ξεχωριστό ADR), E2.

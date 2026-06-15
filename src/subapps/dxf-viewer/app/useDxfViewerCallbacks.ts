@@ -213,6 +213,16 @@ export function useDxfViewerCallbacks(params: DxfViewerCallbacksParams): DxfView
       EventBus.emit('bim:auto-reinforce-requested', { entityIds: [...params.selectedEntityIds] });
       return;
     }
+    // ADR-459 Φ4f: manual κολόνα↔πέδιλο connectivity (selection-driven· ο
+    // useStructuralFootingConnect hook αναλύει την επιλογή + εκτελεί το command).
+    if (action === 'organism.footing-attach') {
+      EventBus.emit('bim:column-footing-attach-requested', { entityIds: [...params.selectedEntityIds] });
+      return;
+    }
+    if (action === 'organism.footing-detach') {
+      EventBus.emit('bim:column-footing-detach-requested', { entityIds: [...params.selectedEntityIds] });
+      return;
+    }
     // ADR-345 Fase 6: Import/export dialog actions (migrated from toolbar)
     if (action === 'import-dxf-enhanced') {
       setShowEnhancedImport(true);

@@ -259,6 +259,31 @@ export function buildColumnCrossTies(
 }
 
 /**
+ * ADR-460 (follow-up 6) — Ζεύγη αγκύρωσης cross-ties ΕΝΟΣ **ορθογώνιου σκέλους**
+ * (multihoop): οι ενδιάμεσες (μη-γωνιακές) ράβδοι κάθε πλευράς δένονται με την
+ * **αντικριστή** τους, διασχίζοντας το **πάχος** του σκέλους (bottom↔top / left↔right —
+ * ίδια λογική με το rectangular `straightTies`, αλλά εκφρασμένη ως anchors ώστε ο
+ * dispatcher να τα κάνει S-ties μέσω του ΥΠΑΡΧΟΝΤΟΣ `buildTiesFromAnchors` μονοπατιού).
+ * `bars` σε rect-local mm (κεντραρισμένα στο κέντρο του σκέλους). `[]` για ≤4 ράβδους.
+ */
+export function buildRectCrossTieAnchors(
+  bars: readonly Point2D[],
+  halfWb: number,
+  halfDb: number,
+): { a: Point2D; b: Point2D }[] {
+  if (bars.length <= 4 || halfWb <= 0 || halfDb <= 0) return [];
+  const sides = classifyBars(bars, halfWb, halfDb);
+  const anchors: { a: Point2D; b: Point2D }[] = [];
+  for (const x of uniqueSorted([...sides.bottom, ...sides.top].map((b) => b.x))) {
+    anchors.push({ a: { x, y: -halfDb }, b: { x, y: halfDb } });
+  }
+  for (const y of uniqueSorted([...sides.left, ...sides.right].map((b) => b.y))) {
+    anchors.push({ a: { x: -halfWb, y }, b: { x: halfWb, y } });
+  }
+  return anchors;
+}
+
+/**
  * ADR-460 — Cross-ties από ρητά ζεύγη αγκύρωσης (π.χ. αντικριστές ράβδοι κορμού
  * τοιχώματος front↔back): ΕΝΑ S-tie ανά ζεύγος, ίδια γεωμετρία «S» με τα ευθύγραμμα
  * ties (γάντζοι 135° στα δύο άκρα). Reuse `straightTie` — μηδέν διπλότυπο. `dbw ≤ 0`

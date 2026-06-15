@@ -62,11 +62,12 @@ describe('column-property-fields descriptor (SSoT)', () => {
 describe('resolveColumnPanelVisibility (SSoT gating)', () => {
   const STRUCT = COLUMN_RIBBON_VISIBILITY_KEYS.structural;
 
-  it('structural → ορατό μόνο για RC kinds (rectangular/shear-wall)', () => {
+  it('structural → ορατό για ΟΛΟΥΣ τους τύπους διατομής (ADR-460: οπλισμός παντού)', () => {
     expect(resolveColumnPanelVisibility(STRUCT, 'rectangular', false)).toBe(true);
     expect(resolveColumnPanelVisibility(STRUCT, 'shear-wall', false)).toBe(true);
-    expect(resolveColumnPanelVisibility(STRUCT, 'circular', false)).toBe(false);
-    expect(resolveColumnPanelVisibility(STRUCT, 'I-shape', false)).toBe(false);
+    expect(resolveColumnPanelVisibility(STRUCT, 'circular', false)).toBe(true);
+    expect(resolveColumnPanelVisibility(STRUCT, 'I-shape', false)).toBe(true);
+    expect(resolveColumnPanelVisibility(STRUCT, 'L-shape', false)).toBe(true);
   });
 
   it('kind === null → false (καμία επιλογή)', () => {

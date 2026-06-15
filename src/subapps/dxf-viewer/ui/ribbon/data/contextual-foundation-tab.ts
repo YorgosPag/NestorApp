@@ -312,43 +312,6 @@ export const CONTEXTUAL_FOUNDATION_TAB: RibbonTab = {
       ],
     },
     {
-      // ADR-459 Φ4f — manual analytical-FK connectivity (κολόνα↔πέδιλο). attach =
-      // σύνδεση επιλεγμένων κολόνων· detach = αποσύνδεση όλων των κολόνων του πεδίλου.
-      id: 'foundation-connectivity',
-      labelKey: 'ribbon.panels.structuralConnectivity',
-      rows: [
-        {
-          isInFlyout: false,
-          buttons: [
-            {
-              type: 'simple',
-              size: 'small',
-              command: {
-                id: 'foundation.connectivity.attach',
-                labelKey: 'ribbon.commands.foundationEditor.attachColumns',
-                tooltipKey: 'ribbon.commands.foundationEditor.attachColumnsTooltip',
-                icon: 'bim-wall-attach-base',
-                commandKey: FOUNDATION_RIBBON_KEYS_ACTIONS.attachColumns,
-                action: FOUNDATION_RIBBON_KEYS_ACTIONS.attachColumns,
-              },
-            },
-            {
-              type: 'simple',
-              size: 'small',
-              command: {
-                id: 'foundation.connectivity.detach',
-                labelKey: 'ribbon.commands.foundationEditor.detachColumns',
-                tooltipKey: 'ribbon.commands.foundationEditor.detachColumnsTooltip',
-                icon: 'bim-wall-detach',
-                commandKey: FOUNDATION_RIBBON_KEYS_ACTIONS.detachColumns,
-                action: FOUNDATION_RIBBON_KEYS_ACTIONS.detachColumns,
-              },
-            },
-          ],
-        },
-      ],
-    },
-    {
       id: 'foundation-actions',
       labelKey: 'ribbon.panels.foundationActions',
       rows: [

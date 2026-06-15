@@ -1127,7 +1127,6 @@
       "foundationGeometry": "Γεωμετρία",
       "foundationElevation": "Στάθμη",
       "foundationActions": "Ενέργειες",
-      "structuralConnectivity": "Συνδεσιμότητα",
       "beamKind": "Τύπος",
       "beamGeometry": "Γεωμετρία",
       "beamMaterial": "Υλικό",
@@ -2635,10 +2634,6 @@
         "close": "Κλείσιμο",
         "delete": "Διαγραφή",
         "deleteConfirm": "Διαγραφή πεδίλου; Η ενέργεια δεν μπορεί να αναιρεθεί.",
-        "attachColumns": "Σύνδεση κολόνων",
-        "attachColumnsTooltip": "Σύνδεση των επιλεγμένων κολόνων σε αυτό το πέδιλο (αναλυτική στήριξη)",
-        "detachColumns": "Αποσύνδεση κολόνων",
-        "detachColumnsTooltip": "Αποσύνδεση όλων των κολόνων που εδράζονται σε αυτό το πέδιλο",
         "kind": {
           "section": {
             "title": "Τύπος"
@@ -3629,7 +3624,13 @@
         }
       },
       "print": "Εκτύπωση",
-      "autoReinforceOrganism": "Αυτόματος Οπλισμός"
+      "autoReinforceOrganism": "Αυτόματος Οπλισμός",
+      "footingConnect": {
+        "attach": "Σύνδεση σε πέδιλο",
+        "attachTooltip": "Σύνδεση των επιλεγμένων κολόνων στο επιλεγμένο πέδιλο (επίλεξε 1 πέδιλο + κολόνες)",
+        "detach": "Αποσύνδεση πεδίλου",
+        "detachTooltip": "Αποσύνδεση των επιλεγμένων κολόνων (ή όλων των κολόνων του επιλεγμένου πεδίλου) από το πέδιλο"
+      }
     },
     "tooltips": {
       "bimSchedule": "Άνοιγμα Πίνακα BIM — εξαγωγή δομικών στοιχείων",

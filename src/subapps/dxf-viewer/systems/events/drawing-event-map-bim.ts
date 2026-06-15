@@ -290,9 +290,13 @@ export interface BimEventMap {
   // ΕΝΑ footing element (auto, δημιουργία πεδίλου/κολόνας). Undoable via
   // AttachColumnFootingCommand. Triggers structural-organism recompute.
   'bim:column-footing-attached': { columnIds: string[]; footingId: string };
-  // ADR-459 Φ4f — manual connectivity από το foundation ribbon: σύνδεση επιλεγμένων
-  // κολόνων σε πέδιλο (undoable AttachColumnFootingCommand) / αποσύνδεση όλων των
-  // κολόνων του πεδίλου (DetachColumnFootingCommand). Trigger organism recompute + toast.
+  // ADR-459 Φ4f — manual connectivity requests από την «Ανάλυση» (selection-driven,
+  // δουλεύει με multi-selection). `useStructuralFootingConnect` αναλύει την επιλογή
+  // → undoable Attach/DetachColumnFootingCommand.
+  'bim:column-footing-attach-requested': { entityIds: string[] };
+  'bim:column-footing-detach-requested': { entityIds: string[] };
+  // ADR-459 Φ4f — result events: σύνδεση επιλεγμένων κολόνων σε πέδιλο / αποσύνδεση.
+  // Trigger organism recompute + toast.
   'bim:column-footing-attached-manual': { columnIds: string[]; footingId: string };
   'bim:column-footing-detached': { columnIds: string[] };
   // ADR-401 Phase F.3 — manual attach/detach of column top/base (ribbon pick-host).

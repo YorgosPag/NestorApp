@@ -59,11 +59,6 @@ export const FOUNDATION_RIBBON_KEYS_ACTIONS = {
   // ADR-459 Φ4d — «Αυτόματος Οπλισμός» πεδίλου/πεδιλοδοκού/συνδετήριας (parity με
   // κολόνα): routes στο undoable AutoReinforceOrganismCommand.
   autoReinforce: 'foundation.actions.autoReinforce',
-  // ADR-459 Φ4f — manual connectivity (analytical FK footingId):
-  //   attachColumns = σύνδεση των ΕΠΙΛΕΓΜΕΝΩΝ κολόνων στο πέδιλο (selection-pair).
-  //   detachColumns = αποσύνδεση ΟΛΩΝ των κολόνων που εδράζονται σε αυτό το πέδιλο.
-  attachColumns: 'foundation.actions.attachColumns',
-  detachColumns: 'foundation.actions.detachColumns',
 } as const;
 
 export const FOUNDATION_RIBBON_BADGE_KEYS = {
@@ -88,9 +83,7 @@ export function isFoundationActionKey(action: string): boolean {
     action === FOUNDATION_RIBBON_KEYS_ACTIONS.fromGridCenter ||
     action === FOUNDATION_RIBBON_KEYS_ACTIONS.fromGridOuter ||
     action === FOUNDATION_RIBBON_KEYS_ACTIONS.tieBeamsFromGrid ||
-    action === FOUNDATION_RIBBON_KEYS_ACTIONS.autoReinforce ||
-    action === FOUNDATION_RIBBON_KEYS_ACTIONS.attachColumns ||
-    action === FOUNDATION_RIBBON_KEYS_ACTIONS.detachColumns
+    action === FOUNDATION_RIBBON_KEYS_ACTIONS.autoReinforce
   );
 }
 
