@@ -68,8 +68,8 @@ describe('buildColumnScheduleRegion (ADR-457 Slice 4)', () => {
     expect(t).not.toContain('Συνδετήρες');
   });
 
-  it('returns empty for a non-rectangular column or missing reinforcement', () => {
-    expect(buildColumnScheduleRegion({ ...BASE, kind: 'circular' }, REGION, LABELS).primitives).toHaveLength(0);
+  it('ADR-460 — builds schedule for a non-rectangular (circular) column; empty when reinforcement missing', () => {
+    expect(buildColumnScheduleRegion({ ...BASE, kind: 'circular' }, REGION, LABELS).primitives.length).toBeGreaterThan(0);
     expect(buildColumnScheduleRegion({ ...BASE, reinforcement: undefined }, REGION, LABELS).primitives).toHaveLength(0);
   });
 });

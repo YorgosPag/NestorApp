@@ -17,7 +17,10 @@
 
 import { barAreaMm2, barMassPerMeterKg } from '../rebar-catalog';
 import { STIRRUP_HOOK_EXTENSION_FACTOR } from './column-rebar-layout';
-import { computeBeamReinforcementQuantities } from './beam-reinforcement-compute';
+import {
+  computeBeamReinforcementQuantities,
+  type BeamLongitudinalContinuity,
+} from './beam-reinforcement-compute';
 import { DEFAULT_STIRRUP_TYPE } from './beam-reinforcement-types';
 import type {
   PadReinforcement,
@@ -38,8 +41,26 @@ const MM_TO_M = 0.001;
 /** 90° τελικός γάντζος ανάπτυξης ανά άκρο ράβδου σχάρας (× Ø). */
 const MAT_END_ANCHORAGE_FACTOR = 12;
 
-/** Συντελεστής ματίσματος διαμήκων ράβδων strip (× Ø) — flat, refined Phase 4c. */
+/**
+ * Συντελεστής ματίσματος διαμήκων ράβδων strip (× Ø) — **flat fallback**. Η
+ * οργανική συνέχεια (ADR-459 Φ4c) το αντικαθιστά μέσω {@link FootingLongitudinalContinuity}
+ * (tie-beam: αγκύρωση στους κόμβους· strip: μάτισμα διανομής όπου παρέχεται).
+ */
 const LONGITUDINAL_LAP_FACTOR = 50;
+
+/**
+ * Οργανική συνέχεια διαμήκους οπλισμού θεμελίωσης (ADR-459 Φ4c, DERIVED). Το
+ * `tie-beam` (ΕΙΝΑΙ δοκός) χρησιμοποιεί {@link BeamLongitudinalContinuity}· το
+ * `strip` το `developmentMm` ανά διαμήκη ράβδο διανομής. Το `pad` δεν τροφοδοτείται
+ * (οι αναμονές/dowels που φιλοξενεί είναι ξεχωριστά items του οργανισμού). Absent →
+ * flat fallback (back-compat).
+ */
+export interface FootingLongitudinalContinuity {
+  /** strip: ανάπτυξη ανά διαμήκη ράβδο διανομής (mm). */
+  readonly developmentMm?: number;
+  /** tie-beam: αγκύρωση κάτω/άνω ράβδων στους κόμβους (delegate στον beam compute). */
+  readonly tieBeam?: BeamLongitudinalContinuity;
+}
 
 /** Kind-neutral derived takeoff quantities for a footing's reinforcement. */
 export interface FootingReinforcementQuantities {
@@ -147,12 +168,14 @@ function stripStirrupSingleLengthMm(ctx: StripSectionContext, r: StripReinforcem
 function computeStripQuantities(
   ctx: StripSectionContext,
   r: StripReinforcement,
+  continuity?: FootingLongitudinalContinuity,
 ): FootingReinforcementQuantities {
   const cover = r.coverMm;
   // Εγκάρσιες: ράβδοι // width, βήμα κατά τον άξονα (count από span).
   const transverse = meshDirectionTotals(r.transverse, ctx.widthMm, ctx.spanMm, cover);
 
-  const longSingleMm = ctx.spanMm + LONGITUDINAL_LAP_FACTOR * r.longitudinal.diameterMm;
+  const longDevMm = continuity?.developmentMm ?? LONGITUDINAL_LAP_FACTOR * r.longitudinal.diameterMm;
+  const longSingleMm = ctx.spanMm + longDevMm;
   const secondaryLengthM = r.longitudinal.count * longSingleMm * MM_TO_M;
   const secondaryWeightKg = secondaryLengthM * barMassPerMeterKg(r.longitudinal.diameterMm);
 
@@ -184,8 +207,9 @@ function computeStripQuantities(
 function computeTieBeamQuantities(
   ctx: TieBeamSectionContext,
   r: TieBeamReinforcement,
+  continuity?: FootingLongitudinalContinuity,
 ): FootingReinforcementQuantities {
-  const q = computeBeamReinforcementQuantities(ctx, r);
+  const q = computeBeamReinforcementQuantities(ctx, r, continuity?.tieBeam);
   return {
     mainLengthM: q.bottomLengthM,
     mainWeightKg: q.bottomWeightKg,
@@ -206,10 +230,11 @@ function computeTieBeamQuantities(
 export function computeFootingReinforcementQuantities(
   ctx: FootingSectionContext,
   r: FootingReinforcement,
+  continuity?: FootingLongitudinalContinuity,
 ): FootingReinforcementQuantities {
   if (ctx.kind === 'pad' && r.kind === 'pad') return computePadQuantities(ctx, r);
-  if (ctx.kind === 'strip' && r.kind === 'strip') return computeStripQuantities(ctx, r);
-  if (ctx.kind === 'tie-beam' && r.kind === 'tie-beam') return computeTieBeamQuantities(ctx, r);
+  if (ctx.kind === 'strip' && r.kind === 'strip') return computeStripQuantities(ctx, r, continuity);
+  if (ctx.kind === 'tie-beam' && r.kind === 'tie-beam') return computeTieBeamQuantities(ctx, r, continuity);
   throw new Error(`Footing reinforcement kind mismatch: ctx=${ctx.kind} r=${r.kind}`);
 }
 

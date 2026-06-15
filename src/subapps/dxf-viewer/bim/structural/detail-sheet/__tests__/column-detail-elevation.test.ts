@@ -106,7 +106,7 @@ describe('buildColumnElevationRegion (ADR-457)', () => {
     expect(texts.some((t) => /×200$/.test(t) || t === '200')).toBe(true); // loose middle
   });
 
-  it('returns empty for a non-rectangular column', () => {
-    expect(buildColumnElevationRegion({ ...BASE, kind: 'circular' }, REGION).primitives).toHaveLength(0);
+  it('ADR-460 — draws a non-rectangular (circular) reinforced column', () => {
+    expect(buildColumnElevationRegion({ ...BASE, kind: 'circular' }, REGION).primitives.length).toBeGreaterThan(0);
   });
 });

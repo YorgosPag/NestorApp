@@ -69,6 +69,25 @@ export interface ColumnRebarLayout {
   readonly barDiameterMm: number;
   /** Διάμετρος συνδετήρα (mm) — για πάχος γραμμής στεφανιού. */
   readonly stirrupDiameterMm: number;
+  /**
+   * Μήκος **άξονα** (centerline) ενός κλειστού στεφανιού (mm) — η γεωμετρική αλήθεια
+   * που τρέφει ΚΑΙ τη σχεδίαση ΚΑΙ τις ποσότητες (geometry-is-SSoT). Ορθογ. = αναλυτικός
+   * τύπος (back-compat)· άλλα σχήματα = μήκος του tessellated `stirrupPathMm`.
+   */
+  readonly stirrupCenterlineLengthMm: number;
+  /**
+   * **Επιπλέον** κλειστά στεφάνια (local mm) πέρα από το κύριο `stirrupPathMm` — π.χ.
+   * τα δύο boundary-element hoops ενός τοιχώματος (ADR-460 wall mode). Άδειο/absent
+   * για perimeter/circular. Οι renderers τα σχεδιάζουν όπως το κύριο stirrup path.
+   */
+  readonly extraStirrupPathsMm?: readonly (readonly Point2D[])[];
+  /**
+   * Ζεύγη αγκύρωσης εσωτερικών συνδετηρίων (cross-ties) σε LOCAL mm — π.χ. οι
+   * αντικριστές ράβδοι κορμού τοιχώματος (front↔back) που δένει ένα S-tie. Όταν
+   * παρόν, ο `resolveColumnCrossTies` φτιάχνει τα ties από εδώ (αντί του rectangular
+   * diamond/grid). Absent → rectangular path ή κανένα tie.
+   */
+  readonly crossTieAnchorsMm?: readonly { readonly a: Point2D; readonly b: Point2D }[];
 }
 
 /**
@@ -103,36 +122,57 @@ function interiorPoints(a: Point2D, b: Point2D, n: number): Point2D[] {
 }
 
 /**
- * Θέσεις διαμήκων ράβδων: 4 γωνίες (πάντα, δομική απαίτηση) + οι υπόλοιπες
- * `count-4` κατανεμημένες ομοιόμορφα στις 4 πλευρές του εσωτερικού ορθογωνίου
- * (ανάλογα με το μήκος πλευράς — Revit-grade ομοιόμορφη περίμετρος).
- *
- * `halfW`/`halfD` = μισές διαστάσεις του ορθογωνίου των ΚΕΝΤΡΩΝ ράβδων (μετά το
- * inset). Επιστρέφει [] όταν count ≤ 0.
+ * Θέσεις διαμήκων ράβδων κατά μήκος **οποιουδήποτε** κλειστού πολυγώνου κέντρων
+ * ράβδων (CCW): μία ράβδος σε ΚΑΘΕ κορυφή (γωνιακή — δομική απαίτηση, κυρτή ή reflex)
+ * + οι υπόλοιπες `count-K` κατανεμημένες ομοιόμορφα στις πλευρές ανάλογα με το μήκος
+ * πλευράς (largest-remainder — Revit-grade ομοιόμορφη περίμετρος). SSoT για ορθογ.
+ * Γ/Τ/Ι/Π/πολύγωνο/σύνθετο. `count ≤ K` → οι πρώτες `count` κορυφές. Επιστρέφει [] όταν
+ * count ≤ 0 ή < 2 κορυφές.
+ */
+export function distributeBarsAlongPolygon(vertices: readonly Point2D[], count: number): Point2D[] {
+  const k = vertices.length;
+  if (count <= 0 || k < 2) return [];
+  if (count <= k) return vertices.slice(0, count).map((v) => ({ x: v.x, y: v.y }));
+
+  const edgeLengths = vertices.map((v, i) => {
+    const n = vertices[(i + 1) % k];
+    return Math.hypot(n.x - v.x, n.y - v.y);
+  });
+  const perSide = apportion(count - k, edgeLengths);
+  const bars: Point2D[] = vertices.map((v) => ({ x: v.x, y: v.y }));
+  for (let i = 0; i < k; i++) {
+    bars.push(...interiorPoints(vertices[i], vertices[(i + 1) % k], perSide[i]));
+  }
+  return bars;
+}
+
+/**
+ * Ορθογώνια ειδική περίπτωση: 4 γωνίες (CCW BL→BR→TR→TL) + ενδιάμεσες. Delegate στο
+ * γενικό {@link distributeBarsAlongPolygon} (μηδέν διπλότυπο). `halfW`/`halfD` = μισές
+ * διαστάσεις του ορθογωνίου ΚΕΝΤΡΩΝ ράβδων (μετά το inset).
  */
 function distributeBars(halfW: number, halfD: number, count: number): Point2D[] {
   if (count <= 0) return [];
-  // Γωνίες CCW: BL → BR → TR → TL.
   const corners: Point2D[] = [
     { x: -halfW, y: -halfD },
     { x: halfW, y: -halfD },
     { x: halfW, y: halfD },
     { x: -halfW, y: halfD },
   ];
-  if (count <= 4) return corners.slice(0, count);
+  return distributeBarsAlongPolygon(corners, count);
+}
 
-  const extras = count - 4;
-  // Πλευρές μεταξύ διαδοχικών γωνιών (ίδια σειρά): bottom, right, top, left.
-  const w = 2 * halfW; // μήκος οριζόντιας πλευράς
-  const d = 2 * halfD; // μήκος κατακόρυφης πλευράς
-  const perSide = apportion(extras, [w, d, w, d]);
-  const bars: Point2D[] = [...corners];
-  for (let i = 0; i < 4; i++) {
-    const a = corners[i];
-    const b = corners[(i + 1) % 4];
-    bars.push(...interiorPoints(a, b, perSide[i]));
+/** Μήκος **κλειστής** polyline (mm): άθροισμα ακμών + ακμή last→first. <2 σημεία → 0. */
+export function closedPolylineLengthMm(path: readonly Point2D[]): number {
+  const n = path.length;
+  if (n < 2) return 0;
+  let total = 0;
+  for (let i = 0; i < n; i++) {
+    const a = path[i];
+    const b = path[(i + 1) % n];
+    total += Math.hypot(b.x - a.x, b.y - a.y);
   }
-  return bars;
+  return total;
 }
 
 /** Μέτρο διανύσματος· 0 → 1 (αποφυγή διαίρεσης με μηδέν). */
@@ -141,12 +181,14 @@ function safeLen(dx: number, dy: number): number {
 }
 
 /**
- * Κλειστή tessellated polyline με στρογγυλεμένες γωνίες από κυρτό πολύγωνο γωνιών
- * (CCW). Κάθε γωνία → τεταρτοκύκλιο (γενικά τόξο = π − εσωτ. γωνία) ακτίνας `rMm`,
- * **εφαπτόμενο** στις δύο γειτονικές πλευρές (κέντρο = εσωτερικό offset κατά rMm).
- * Τα ευθύγραμμα τμήματα μεταξύ διαδοχικών τόξων προκύπτουν αυτόματα (consumer
- * κάνει lineTo/segment). `rMm` clamped ≤ μισό της κοντύτερης πλευράς. Fallback στις
- * αιχμηρές γωνίες όταν `rMm ≤ 0` ή εκφυλισμένο πολύγωνο.
+ * Κλειστή tessellated polyline με στρογγυλεμένες γωνίες από πολύγωνο γωνιών (CCW).
+ * Κάθε γωνία → τόξο ακτίνας `rMm`, **εφαπτόμενο** στις δύο γειτονικές πλευρές (κέντρο
+ * = offset κατά rMm προς το **εσωτερικό της στροφής**). **Concave-aware**: σε κυρτή
+ * (αριστερόστροφη) κορυφή το κέντρο πάει αριστερά, σε **reflex** (δεξιόστροφη — π.χ.
+ * εσωτερική γωνία διατομής Γ/Τ/Π) το κέντρο γυρίζει δεξιά, ώστε το στεφάνι να
+ * στρογγυλεύει σωστά και στα δύο. Τα ευθύγραμμα τμήματα μεταξύ διαδοχικών τόξων
+ * προκύπτουν αυτόματα (consumer κάνει lineTo/segment). `rMm` clamped ≤ μισό της
+ * κοντύτερης πλευράς. Fallback στις αιχμηρές γωνίες όταν `rMm ≤ 0` ή εκφυλισμένο.
  */
 export function buildRoundedStirrupPath(
   corners: readonly Point2D[],
@@ -188,9 +230,13 @@ export function buildRoundedStirrupPath(
     const tOutx = curr.x + outx * r;
     const tOuty = curr.y + outy * r;
 
-    // Κέντρο τόξου = tangent + εσωτερικό κάθετο (αριστερά της φοράς, CCW) × r.
-    const cx = tInx + -iny * r;
-    const cy = tIny + inx * r;
+    // Φορά στροφής: cross(in, out) > 0 = αριστερόστροφη (κυρτή σε CCW) → κέντρο
+    // αριστερά· < 0 = δεξιόστροφη (reflex/εσωτερική) → κέντρο δεξιά (sgn flip).
+    const cross = inx * outy - iny * outx;
+    const sgn = cross >= 0 ? 1 : -1;
+    // Κέντρο τόξου = tangent + κάθετο (αριστερά της φοράς) × r × sgn.
+    const cx = tInx + -iny * r * sgn;
+    const cy = tIny + inx * r * sgn;
 
     const a0 = Math.atan2(tIny - cy, tInx - cx);
     const a1 = Math.atan2(tOuty - cy, tOutx - cx);
@@ -373,6 +419,8 @@ export function computeColumnRebarLayout(
     stirrupHookEndsMm,
     barDiameterMm: dbL,
     stirrupDiameterMm: dbw,
+    // Ορθογ.: αναλυτικός τύπος στρογγυλεμένου ορθογωνίου (back-compat με ποσότητες Slice 1).
+    stirrupCenterlineLengthMm: stirrupCenterlinePerimeterMm(r, widthMm, depthMm),
   };
 }
 

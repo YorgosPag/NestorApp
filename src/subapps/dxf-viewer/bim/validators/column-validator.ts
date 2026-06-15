@@ -56,6 +56,7 @@ import { getColumnSlenderness } from '../geometry/column-geometry';
 import { polygonArea, minPolygonInteriorAngleDeg } from '../geometry/shared/polygon-utils';
 import { resolveStructuralCode, type StructuralCodeId } from '../structural/codes';
 import { computeColumnReinforcementQuantities } from '../structural/reinforcement/column-reinforcement-compute';
+import { resolveColumnReinforcementSection } from '../structural/reinforcement/column-section-outline';
 
 /** Result of a column validation pass — hard errors non-empty when invalid. */
 export interface ColumnValidationResult {
@@ -291,10 +292,10 @@ function validateSlenderness(params: ColumnParams, codeViolations: string[]): vo
 }
 
 /**
- * ADR-456 — έλεγχος ποσοστού διαμήκους οπλισμού ρ = As/Ac έναντι των ορίων του
- * επιλεγμένου κανονισμού (ρ_min/ρ_max). Slice 1: μόνο ορθογωνική/τοιχείο (Ac =
- * width·depth)· άλλες διατομές → DEFER (χρειάζονται geometry.area). No-op όταν
- * δεν έχει οριστεί οπλισμός.
+ * ADR-456/460 — έλεγχος ποσοστού διαμήκους οπλισμού ρ = As/Ac έναντι των ορίων του
+ * επιλεγμένου κανονισμού (ρ_min/ρ_max), για **οποιοδήποτε σχήμα** διατομής. Το Ac
+ * (+ χαρακτηριστικά μεγέθη + mode) προκύπτουν shape-correct από το section outline
+ * (ADR-460). No-op όταν δεν έχει οριστεί οπλισμός ή εκφυλισμένη διατομή.
  */
 function validateReinforcementRatio(
   params: ColumnParams,
@@ -303,13 +304,22 @@ function validateReinforcementRatio(
 ): void {
   const r = params.reinforcement;
   if (!r) return;
-  if (params.kind !== 'rectangular' && params.kind !== 'shear-wall') return;
   if (params.width <= 0 || params.depth <= 0) return;
 
-  const grossAreaMm2 = params.width * params.depth;
+  const section = resolveColumnReinforcementSection(params);
+  if (section.grossAreaMm2 <= 0) return;
   const provider = resolveStructuralCode(codeId);
-  const ctx = { widthMm: params.width, depthMm: params.depth, heightMm: params.height, grossAreaMm2 };
-  const { ratio } = computeColumnReinforcementQuantities(ctx, r);
+  const ctx = {
+    widthMm: section.bboxWidthMm,
+    depthMm: section.bboxDepthMm,
+    heightMm: params.height,
+    grossAreaMm2: section.grossAreaMm2,
+    minThicknessMm: section.minThicknessMm,
+    maxDimensionMm: section.maxDimensionMm,
+    perimeterMm: section.perimeterMm,
+    mode: section.mode,
+  };
+  const { ratio } = computeColumnReinforcementQuantities(ctx, r, undefined, section);
   const limits = provider.columnReinforcementLimits(ctx, r.longitudinal.diameterMm);
 
   if (ratio < limits.minRatio) {

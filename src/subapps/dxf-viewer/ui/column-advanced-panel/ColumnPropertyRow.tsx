@@ -31,12 +31,15 @@ export interface ColumnPropertyRowProps {
   /** Τρέχουσα τιμή (από τον κοινό resolver)· `null` = mixed/άγνωστο. */
   readonly value: string | null;
   readonly onChange: (commandKey: string, value: string) => void;
+  /** ADR-460 — ανενεργό control (π.χ. cross-tie pattern σε κυκλική/τοίχωμα). */
+  readonly disabled?: boolean;
 }
 
 export function ColumnPropertyRow({
   field,
   value,
   onChange,
+  disabled,
 }: ColumnPropertyRowProps): React.ReactElement {
   const { t } = useTranslation('dxf-viewer-shell');
   const label = t(field.labelKey);
@@ -55,7 +58,9 @@ export function ColumnPropertyRow({
 
   // Empty-string value → no selection (Radix forbids value=""). Inject current
   // free-form value as first option ώστε να μη χάνεται (mirror RibbonCombobox).
-  const resolved = value === '' ? null : value;
+  // ADR-460 — ανενεργό control (π.χ. cross-tie σε κυκλική): δείξε ουδέτερο «—»
+  // (δεν εφαρμόζεται) ΑΝΤΙ της αποθηκευμένης τιμής — non-destructive (η τιμή μένει).
+  const resolved = disabled || value === '' ? null : value;
   const inOptions = resolved === null || field.options.some((o) => o.value === resolved);
   const options: readonly ColumnPropertyOption[] = inOptions
     ? field.options
@@ -67,6 +72,7 @@ export function ColumnPropertyRow({
       <Select
         value={resolved ?? undefined}
         onValueChange={(next) => onChange(field.commandKey, next)}
+        disabled={disabled}
       >
         <SelectTrigger size="sm" aria-label={label} className="w-36 shrink-0">
           <SelectValue placeholder={MIXED_PLACEHOLDER} />

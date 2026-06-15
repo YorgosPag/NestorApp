@@ -115,6 +115,9 @@ export const BEAM_RIBBON_KEYS_ACTIONS = {
   fromGrid: 'beam.actions.fromGrid',
   fromGridCenter: 'beam.actions.fromGridCenter',
   fromGridOuter: 'beam.actions.fromGridOuter',
+  // ADR-459 Φ4d — «Αυτόματος Οπλισμός» contextual (parity με κολόνα): routes στο
+  // undoable AutoReinforceOrganismCommand μέσω `bim:auto-reinforce-requested`.
+  autoReinforce: 'beam.actions.autoReinforce',
 } as const;
 
 const BEAM_ACTION_KEY_SET: ReadonlySet<string> = new Set<string>(

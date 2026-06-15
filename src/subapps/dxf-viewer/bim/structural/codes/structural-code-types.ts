@@ -18,9 +18,21 @@ import type { ColumnReinforcement } from '../reinforcement/column-reinforcement-
 import type { BeamReinforcement } from '../reinforcement/beam-reinforcement-types';
 import type { FootingReinforcement } from '../reinforcement/footing-reinforcement-types';
 import type { BeamSupportType } from '../../types/beam-types';
+import type { BarDevelopmentModifiers } from '../rebar-catalog';
 
 /** Persisted code identifier (project-level setting). */
 export type StructuralCodeId = 'eurocode' | 'greek-legacy';
+
+/**
+ * Προαιρετικό context ανάπτυξης ράβδου (lap/anchorage) — ADR-459 Φ4c. Οι
+ * τροποποιητές συνάφειας/εφελκυσμού ζουν στο `rebar-catalog` (ΕΝΑ SSoT)· εδώ
+ * προστίθεται μόνο το `concreteGrade` (DEFER — το απλοποιημένο μοντέλο `factor·Ø`
+ * δεν το χρησιμοποιεί ακόμη· κρατιέται για το πλήρες EC2 §8.4.2 μελλοντικά).
+ */
+export interface BarDevelopmentContext extends BarDevelopmentModifiers {
+  /** π.χ. 'C25/30' — αν absent → default code grade. DEFER στο απλοποιημένο μοντέλο. */
+  readonly concreteGrade?: string;
+}
 
 /** Section context a code provider needs to derive detailing limits. */
 export interface ColumnSectionContext {
@@ -32,6 +44,15 @@ export interface ColumnSectionContext {
   readonly heightMm: number;
   /** Εμβαδό διατομής σκυροδέματος Ac (mm²). */
   readonly grossAreaMm2: number;
+  // ─── ADR-460 — shape-aware (όλα optional· absent ⇒ rectangular συμπεριφορά) ──
+  /** Ελάχιστο πάχος διατομής (mm) — όρια βήματος συνδ. Absent ⇒ min(width,depth). */
+  readonly minThicknessMm?: number;
+  /** Μέγιστη διάσταση διατομής (mm) — μήκος τοιχώματος. Absent ⇒ max(width,depth). */
+  readonly maxDimensionMm?: number;
+  /** Περίμετρος outline (mm) — πλήθος περιμετρικών ράβδων. Absent ⇒ 2(width+depth). */
+  readonly perimeterMm?: number;
+  /** Τρόπος διευθέτησης οπλισμού. Absent ⇒ 'perimeter'. */
+  readonly mode?: 'perimeter' | 'circular' | 'wall';
 }
 
 /**
@@ -203,4 +224,16 @@ export interface StructuralCodeProvider {
   footingReinforcementLimits(ctx: FootingSectionContext): FootingReinforcementLimits;
   /** ADR-459 Phase 4b — προτεινόμενος ελάχιστος-έγκυρος οπλισμός θεμελίωσης. */
   suggestFootingReinforcement(ctx: FootingSectionContext): FootingReinforcement;
+  /**
+   * ADR-459 Phase 4c — μήκος ματίσματος l₀ (mm), EC2 §8.7.3. ΕΝΑ SSoT για τις
+   * προεκτάσεις/ματίσεις στις συνδέσεις του οργανισμού (αντικαθιστά το flat 50·Ø).
+   * Eurocode ~50·Ø· legacy συντηρητικότερα.
+   */
+  lapLengthMm(diameterMm: number, ctx?: BarDevelopmentContext): number;
+  /**
+   * ADR-459 Phase 4c — μήκος αγκύρωσης lbd (mm), EC2 §8.4.4. Αγκύρωση ράβδων στους
+   * κόμβους (δοκάρι→κολόνα) & αναμονών (dowels) μέσα στο πέδιλο. Eurocode ~40·Ø·
+   * legacy ~50·Ø.
+   */
+  anchorageLengthMm(diameterMm: number, ctx?: BarDevelopmentContext): number;
 }

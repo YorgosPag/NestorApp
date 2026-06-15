@@ -23,10 +23,9 @@
 
 import type { Point2D } from '../../../rendering/types/Types';
 import type { ColumnParams } from '../../types/column-types';
-import {
-  computeColumnRebarLayout,
-  computeStirrupLevelsMm,
-} from '../reinforcement/column-rebar-layout';
+import { computeStirrupLevelsMm } from '../reinforcement/column-rebar-layout';
+import { resolveColumnRebarLayout } from '../reinforcement/column-rebar-layout-resolve';
+import { resolveColumnReinforcementSection } from '../reinforcement/column-section-outline';
 import { DEFAULT_STIRRUP_TYPE } from '../reinforcement/column-reinforcement-types';
 import { formatStirrupsLabel } from '../reinforcement/column-reinforcement-compute';
 import { pickScaleDenominator } from './detail-sheet-fit';
@@ -81,11 +80,13 @@ export function buildColumnElevationRegion(
   region: RectMm,
 ): ColumnElevationResult {
   const r = params.reinforcement;
-  if (params.kind !== 'rectangular' || !r) return { primitives: [] };
-  const layout = computeColumnRebarLayout(r, params.width, params.depth);
+  if (!r) return { primitives: [] };
+  const section = resolveColumnReinforcementSection(params);
+  const layout = resolveColumnRebarLayout(r, section);
   if (!layout) return { primitives: [] };
 
-  const widthMm = params.width;
+  // ADR-460 — όψη = πλάγια προβολή· πλάτος = bbox κατά X (κάθε σχήμα).
+  const widthMm = section.bboxWidthMm;
   const heightMm = params.height;
   if (widthMm <= 0 || heightMm <= 0) return { primitives: [] };
 
@@ -132,7 +133,7 @@ export function buildColumnElevationRegion(
   // spiral is one continuous tie whose PITCH tightens at the ends, exactly like
   // closed stirrups — only the drawing differs (helix vs separate rings).
   const type = r.stirrups.type ?? DEFAULT_STIRRUP_TYPE;
-  const levels = computeStirrupLevelsMm(r, widthMm, params.depth, heightMm);
+  const levels = computeStirrupLevelsMm(r, section.bboxWidthMm, section.bboxDepthMm, heightMm);
   const stirrupWidthMm = Math.max(MIN_STIRRUP_WIDTH_MM, layout.stirrupDiameterMm * s);
   pushStirrupPrimitives(primitives, levels, coverX, type, stirrupWidthMm, toSheet);
 

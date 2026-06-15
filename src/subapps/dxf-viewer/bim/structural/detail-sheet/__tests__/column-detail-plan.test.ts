@@ -77,11 +77,11 @@ describe('buildColumnPlanRegion (ADR-457)', () => {
     expect(closedPolys(fourBars)).toBe(2); // footprint + stirrup only (no cross-ties)
   });
 
-  it('returns empty for a non-rectangular column', () => {
+  it('ADR-460 — draws a non-rectangular (circular) reinforced column', () => {
     const circular: ColumnParams = { ...RECT_REINFORCED, kind: 'circular' };
     const result = buildColumnPlanRegion(circular, REGION);
-    expect(result.primitives).toHaveLength(0);
-    expect(result.caption).toBeUndefined();
+    expect(result.primitives.length).toBeGreaterThan(0);
+    expect(result.caption).toBeDefined();
   });
 
   it('returns empty when reinforcement is missing', () => {

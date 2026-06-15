@@ -67,7 +67,9 @@ describe('buildColumnTitleBlockRegion (ADR-457 Slice 4)', () => {
     expect(t).not.toContain('8Ø16');    // no longitudinal callout
   });
 
-  it('returns empty for a non-rectangular column', () => {
-    expect(buildColumnTitleBlockRegion({ ...BASE, kind: 'circular' }, REGION, LABELS).primitives).toHaveLength(0);
+  it('ADR-460 — builds title-block for a circular column (Ø label)', () => {
+    const out = buildColumnTitleBlockRegion({ ...BASE, kind: 'circular' }, REGION, LABELS).primitives;
+    expect(out.length).toBeGreaterThan(0);
+    expect(out.some((p) => p.kind === 'text' && p.text.startsWith('Ø'))).toBe(true);
   });
 });

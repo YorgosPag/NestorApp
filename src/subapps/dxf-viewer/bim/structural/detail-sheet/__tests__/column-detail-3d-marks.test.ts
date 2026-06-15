@@ -43,7 +43,7 @@ describe('computeColumnBarMarkSpecs3d (ADR-457 Slice 3)', () => {
     }
   });
 
-  it('returns empty for a non-rectangular column', () => {
-    expect(computeColumnBarMarkSpecs3d(column({ ...RECT, kind: 'circular' }))).toHaveLength(0);
+  it('ADR-460 — emits bar marks for a non-rectangular (circular) column', () => {
+    expect(computeColumnBarMarkSpecs3d(column({ ...RECT, kind: 'circular' })).length).toBeGreaterThan(0);
   });
 });

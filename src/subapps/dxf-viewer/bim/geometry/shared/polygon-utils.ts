@@ -329,6 +329,69 @@ export function insetClosedPolygon(
 }
 
 /**
+ * **Miter inward inset** ενός κλειστού πολυγώνου κατά `d` (winding-aware, concave-safe).
+ * Κάθε ακμή μετατοπίζεται κάθετα προς τα ΜΕΣΑ κατά ΑΚΡΙΒΩΣ `d` και οι κορυφές κλείνουν
+ * στην τομή των μετατοπισμένων ευθειών (γνήσιο miter `m = d·(n1+n2)/(1+n1·n2)`, με
+ * miter-limit clamp). Σε αντίθεση με το {@link insetClosedPolygon} (averaged-normal, που
+ * υπο-εισάγει τις γωνίες ~cos45°), αυτό διατηρεί την κάθετη απόσταση `d` σε κάθε παρειά —
+ * απαραίτητο για centerline στεφανιού/ράβδων (ADR-460). Reflex (εσωτερικές) γωνίες Γ/Τ/Π
+ * χειρίζονται σωστά γιατί τα inward normals προκύπτουν από το CCW winding (left normal),
+ * όχι από centroid. Επιστρέφει `null` αν `< 3` κορυφές ή το inset καταρρέει (≤0 εμβαδόν).
+ * Έξοδος πάντα σε CCW σειρά. `d ≤ 0` → αντίγραφο (CCW).
+ */
+export function insetPolygonMiter(
+  vertices: readonly { readonly x: number; readonly y: number }[],
+  distance: number,
+): { x: number; y: number }[] | null {
+  const n = vertices.length;
+  if (n < 3) return null;
+  // CCW orientation (signed area > 0)· αν CW → reverse ώστε left-normal = inward.
+  let area2 = 0;
+  for (let i = 0; i < n; i++) {
+    const a = vertices[i];
+    const b = vertices[(i + 1) % n];
+    area2 += a.x * b.y - b.x * a.y;
+  }
+  const ring = area2 >= 0 ? vertices.map((p) => ({ x: p.x, y: p.y })) : vertices.map((p) => ({ x: p.x, y: p.y })).reverse();
+  if (distance <= 0) return ring;
+
+  const EPS = 1e-9;
+  const MITER_LIMIT = 4;
+  // Inward unit normal κάθε ακμής i (CCW left normal = rotate dir +90°: (-dy,dx)).
+  const nrm = ring.map((a, i) => {
+    const b = ring[(i + 1) % n];
+    const dx = b.x - a.x;
+    const dy = b.y - a.y;
+    const len = Math.hypot(dx, dy) || 1;
+    return { x: -dy / len, y: dx / len };
+  });
+  const out: { x: number; y: number }[] = [];
+  for (let k = 0; k < n; k++) {
+    const v = ring[k];
+    const n1 = nrm[(k - 1 + n) % n];
+    const n2 = nrm[k];
+    const denom = 1 + (n1.x * n2.x + n1.y * n2.y);
+    let mx: number;
+    let my: number;
+    if (denom < EPS) {
+      mx = distance * n2.x;
+      my = distance * n2.y;
+    } else {
+      mx = (distance * (n1.x + n2.x)) / denom;
+      my = (distance * (n1.y + n2.y)) / denom;
+      const mag = Math.hypot(mx, my);
+      if (mag > MITER_LIMIT * distance) {
+        const s = (MITER_LIMIT * distance) / mag;
+        mx *= s;
+        my *= s;
+      }
+    }
+    out.push({ x: v.x + mx, y: v.y + my });
+  }
+  return polygonArea(out.map((p) => ({ ...p, z: 0 }))) > 0 ? out : null;
+}
+
+/**
  * Μήκος μιας polyline σε ΜΕΤΡΑ. `points` σε canvas units· `sceneScale` =
  * `mmToSceneUnits(units)` (canvas ανά mm). `closed` → προσθέτει την ακμή
  * last→first. SSoT για το ETICS perimeter (ADR-396) — καταναλώνεται και από

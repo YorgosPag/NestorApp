@@ -40,8 +40,8 @@ describe('computeColumnDimSpecs3d (ADR-457 Slice 3)', () => {
     expect(Math.abs(height.b.y - height.a.y)).toBeCloseTo(3000 * 0.001, 6);
   });
 
-  it('returns empty for a non-rectangular column', () => {
-    expect(computeColumnDimSpecs3d(column({ ...RECT, kind: 'circular' }))).toHaveLength(0);
+  it('ADR-460 — emits W/D/H dims for a non-rectangular (circular) column', () => {
+    expect(computeColumnDimSpecs3d(column({ ...RECT, kind: 'circular' }))).toHaveLength(3);
   });
 
   it('returns empty for a degenerate (zero) height', () => {

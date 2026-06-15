@@ -251,6 +251,21 @@ export function buildColumnCrossTies(
 }
 
 /**
+ * ADR-460 — Cross-ties από ρητά ζεύγη αγκύρωσης (π.χ. αντικριστές ράβδοι κορμού
+ * τοιχώματος front↔back): ΕΝΑ S-tie ανά ζεύγος, ίδια γεωμετρία «S» με τα ευθύγραμμα
+ * ties (γάντζοι 135° στα δύο άκρα). Reuse `straightTie` — μηδέν διπλότυπο. `dbw ≤ 0`
+ * → []. LOCAL mm.
+ */
+export function buildTiesFromAnchors(
+  anchors: readonly { readonly a: Point2D; readonly b: Point2D }[],
+  dbw: number,
+  dbL: number,
+): ColumnCrossTie[] {
+  if (dbw <= 0) return [];
+  return anchors.map((p) => straightTie(p.a, p.b, dbw, dbL, STIRRUP_BEND_ARC_SEGMENTS));
+}
+
+/**
  * Μήκος **άξονα** (centerline) ενός cross-tie (mm) — το geometry-is-SSoT μέγεθος που
  * τρέφει τις ποσότητες χάλυβα: άθροισμα όλων των τμημάτων του polyline (συμπεριλ.
  * τόξων τυλίγματος + ουρών, που είναι ΜΕΣΑ στο path) + τυχόν ξεχωριστών hookEnds

@@ -20,7 +20,10 @@ import {
   resolveColumnComboboxState,
   applyColumnComboboxChange,
 } from '../ribbon/hooks/bridge/column-bridge-combobox-resolvers';
-import { resolveColumnPanelVisibility } from '../ribbon/hooks/bridge/column-command-keys';
+import {
+  resolveColumnPanelVisibility,
+  resolveColumnFieldDisabled,
+} from '../ribbon/hooks/bridge/column-command-keys';
 import type { DispatchColumnParams } from '../ribbon/hooks/bridge/useColumnParamsDispatcher';
 import { COLUMN_PROPERTY_GROUPS } from './column-property-fields';
 import { ColumnPropertyRow } from './ColumnPropertyRow';
@@ -69,6 +72,7 @@ export function ColumnAdvancedPanel({
                 field={field}
                 value={resolveColumnComboboxState(field.commandKey, column, null)?.value ?? null}
                 onChange={handleChange}
+                disabled={resolveColumnFieldDisabled(field.commandKey, column.params)}
               />
             ))}
           </section>

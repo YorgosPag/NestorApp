@@ -29,8 +29,24 @@ const MM_TO_M = 0.001;
 /** Μελετητική ενεργός διατομή d ≈ 0.9·h (για το ρ). */
 const BEAM_EFFECTIVE_DEPTH_FACTOR = 0.9;
 
-/** Συντελεστής ματίσματος/αγκύρωσης διαμήκους ράβδου (× dbL) — flat, ανά δοκό. */
+/**
+ * Συντελεστής ματίσματος/αγκύρωσης διαμήκους ράβδου (× dbL) — **flat fallback**
+ * μεμονωμένης δοκού. Όταν τρέχει η οργανική συνέχεια (ADR-459 Φ4c) αντικαθίσταται
+ * από την πραγματική αγκύρωση στις στηρίξεις μέσω {@link BeamLongitudinalContinuity}.
+ */
 const LONGITUDINAL_LAP_FACTOR = 50;
+
+/**
+ * Οργανική συνέχεια διαμήκους οπλισμού δοκού (ADR-459 Φ4c, DERIVED). Η αγκύρωση
+ * κάτω/άνω ράβδων στους κόμβους (δοκάρι→κολόνα, EC8 §5.6.2) αντικαθιστά το flat
+ * 50·Ø ανά στρώση. Absent → flat fallback (back-compat).
+ */
+export interface BeamLongitudinalContinuity {
+  /** Συνολική ανάπτυξη ανά κάτω ράβδο (mm) — άθροισμα αγκυρώσεων στα στηριζόμενα άκρα. */
+  readonly bottomDevelopmentMm: number;
+  /** Συνολική ανάπτυξη ανά άνω ράβδο (mm). */
+  readonly topDevelopmentMm: number;
+}
 
 /** Derived takeoff quantities for a beam's reinforcement. */
 export interface BeamReinforcementQuantities {
@@ -89,9 +105,12 @@ function beamStirrupSingleLengthMm(ctx: BeamSectionContext, r: BeamReinforcement
 export function computeBeamReinforcementQuantities(
   ctx: BeamSectionContext,
   r: BeamReinforcement,
+  continuity?: BeamLongitudinalContinuity,
 ): BeamReinforcementQuantities {
-  const bottomBarMm = ctx.spanMm + LONGITUDINAL_LAP_FACTOR * r.bottom.diameterMm;
-  const topBarMm = ctx.spanMm + LONGITUDINAL_LAP_FACTOR * r.top.diameterMm;
+  const bottomDevMm = continuity ? continuity.bottomDevelopmentMm : LONGITUDINAL_LAP_FACTOR * r.bottom.diameterMm;
+  const topDevMm = continuity ? continuity.topDevelopmentMm : LONGITUDINAL_LAP_FACTOR * r.top.diameterMm;
+  const bottomBarMm = ctx.spanMm + bottomDevMm;
+  const topBarMm = ctx.spanMm + topDevMm;
   const bottomLengthM = r.bottom.count * bottomBarMm * MM_TO_M;
   const topLengthM = r.top.count * topBarMm * MM_TO_M;
   const bottomWeightKg = bottomLengthM * barMassPerMeterKg(r.bottom.diameterMm);

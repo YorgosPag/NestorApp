@@ -58,6 +58,12 @@ export function registerStructuralAttachNotifications(t: TFunction): Array<() =>
       toast.success(t('columnAdjacency.merged'));
     }),
 
+    // ADR-459 Φ4d — «Αυτόματος Οπλισμός»: N μέλη οπλίστηκαν (auto-apply command).
+    // count=0 → κανένα χρειαζόταν (όλα ήδη οπλισμένα). Non-blocking feedback.
+    EventBus.on('bim:structural-auto-reinforced', ({ count }) => {
+      toast.info(t('structuralOrganism.autoReinforced', { count }));
+    }),
+
     // ADR-401 Phase G.3 — stair attach (ADR-450 §3 Boy-Scout: stair-specific copy,
     // same latent «Οι τοίχοι» mismatch as columns).
     EventBus.on('bim:stairs-auto-attached', () => {

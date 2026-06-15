@@ -398,6 +398,13 @@ export function useRibbonBeamBridge(
       if (action === BEAM_RIBBON_KEYS_ACTIONS.fromGrid) { handleBeamsFromGrid('inner'); return; }
       if (action === BEAM_RIBBON_KEYS_ACTIONS.fromGridCenter) { handleBeamsFromGrid('center'); return; }
       if (action === BEAM_RIBBON_KEYS_ACTIONS.fromGridOuter) { handleBeamsFromGrid('outer'); return; }
+      // ADR-459 Φ4d — «Αυτόματος Οπλισμός» του επιλεγμένου δοκαριού (undoable command
+      // μέσω useStructuralAutoReinforce· parity με την κολόνα).
+      if (action === BEAM_RIBBON_KEYS_ACTIONS.autoReinforce) {
+        const beam = resolveBeam();
+        if (beam) EventBus.emit('bim:auto-reinforce-requested', { entityIds: [beam.id] });
+        return;
+      }
       if (action !== BEAM_RIBBON_KEYS_ACTIONS.delete) return;
       const beam = resolveBeam();
       if (!beam) return;

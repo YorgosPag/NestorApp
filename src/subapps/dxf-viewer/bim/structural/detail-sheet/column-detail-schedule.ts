@@ -21,6 +21,8 @@ import type { ColumnParams } from '../../types/column-types';
 import type { ColumnSectionContext } from '../codes/structural-code-types';
 import { computeColumnReinforcementQuantities } from '../reinforcement/column-reinforcement-compute';
 import { computeColumnConfinement } from '../reinforcement/column-confinement';
+import { resolveColumnRebarLayout } from '../reinforcement/column-rebar-layout-resolve';
+import { resolveColumnReinforcementSection } from '../reinforcement/column-section-outline';
 import { DEFAULT_STIRRUP_TYPE } from '../reinforcement/column-reinforcement-types';
 import type { DetailPrimitive, DetailScheduleLabels, RectMm, TextAlign } from './detail-sheet-types';
 
@@ -80,15 +82,19 @@ export function buildColumnScheduleRegion(
   labels: DetailScheduleLabels,
 ): ColumnScheduleResult {
   const r = params.reinforcement;
-  if (params.kind !== 'rectangular' || !r) return { primitives: [] };
+  if (!r) return { primitives: [] };
   if (params.width <= 0 || params.depth <= 0 || params.height <= 0) return { primitives: [] };
 
+  // ADR-460 — shape-correct Ac + χαρακτηριστικά μεγέθη + dispatch ανά σχήμα.
+  const section = resolveColumnReinforcementSection(params);
   const ctx: ColumnSectionContext = {
-    widthMm: params.width, depthMm: params.depth, heightMm: params.height,
-    grossAreaMm2: params.width * params.depth,
+    widthMm: section.bboxWidthMm, depthMm: section.bboxDepthMm, heightMm: params.height,
+    grossAreaMm2: section.grossAreaMm2,
+    minThicknessMm: section.minThicknessMm, maxDimensionMm: section.maxDimensionMm,
+    perimeterMm: section.perimeterMm, mode: section.mode,
   };
-  const q = computeColumnReinforcementQuantities(ctx, r);
-  const conf = computeColumnConfinement(ctx, r);
+  const q = computeColumnReinforcementQuantities(ctx, r, undefined, section);
+  const conf = computeColumnConfinement(ctx, r, resolveColumnRebarLayout(r, section));
   const isSpiral = (r.stirrups.type ?? DEFAULT_STIRRUP_TYPE) === 'spiral';
 
   const cw = region.w - 2 * SIDE_PAD_MM;

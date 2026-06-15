@@ -58,3 +58,37 @@ export function nextRebarDiameterMm(minMm: number): RebarDiameterMm {
   }
   return REBAR_DIAMETERS_MM[REBAR_DIAMETERS_MM.length - 1];
 }
+
+// ─── Μήκη ανάπτυξης (lap / anchorage) — κοινή λογική modifiers (ADR-459 Φ4c) ─────
+
+/**
+ * Τροποποιητές μήκους ανάπτυξης ράβδου (EC2 §8.4/§8.7). Κρατιούνται εδώ ώστε η
+ * λογική των συντελεστών (συνθήκη συνάφειας, εφελκυσμός/θλίψη) να είναι **ΕΝΑ
+ * SSoT** — οι code providers δίνουν ΜΟΝΟ τον βασικό συντελεστή `factor·Ø`.
+ */
+export interface BarDevelopmentModifiers {
+  /** EC2 §8.4.2 συνθήκη συνάφειας. `poor` → δυσμενέστερη ανάπτυξη (default `good`). */
+  readonly bondCondition?: 'good' | 'poor';
+  /** Εφελκυόμενη ράβδος; default `true` (δυσμενέστερο). Θλίψη → μικρότερη ανάπτυξη. */
+  readonly inTension?: boolean;
+}
+
+/** EC2 §8.4.2 — συντελεστής κακής συνάφειας (η₁ = 0.7 → 1/η₁ ≈ 1.4). */
+const POOR_BOND_MULTIPLIER = 1.4;
+/** Απλοποιημένη μείωση για θλιβόμενη ράβδο (ευμενέστερες α-συνθήκες ανάπτυξης). */
+const COMPRESSION_MULTIPLIER = 0.7;
+
+/**
+ * Μήκος ανάπτυξης ράβδου (mm) = `baseFactor·Ø` × modifiers. Απλοποιημένο μοντέλο
+ * `factor·Ø` (το πλήρες `lb,rqd = (Ø/4)(σsd/fbd)` με fbd από fctd, EC2 §8.4.2,
+ * είναι DEFER). Μονότονο στο Ø — εγγυάται ordering στα tests.
+ */
+export function developmentLengthMm(
+  baseFactor: number,
+  diameterMm: number,
+  mods?: BarDevelopmentModifiers,
+): number {
+  const bond = mods?.bondCondition === 'poor' ? POOR_BOND_MULTIPLIER : 1;
+  const tension = mods?.inTension === false ? COMPRESSION_MULTIPLIER : 1;
+  return baseFactor * diameterMm * bond * tension;
+}

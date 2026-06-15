@@ -206,6 +206,13 @@ export function useDxfViewerCallbacks(params: DxfViewerCallbacksParams): DxfView
       EventBus.emit('dxf:print-dialog-requested', {});
       return;
     }
+    // ADR-459 Φ4d: «Αυτόματος Οπλισμός» — auto-apply code-suggested reinforcement.
+    // Scope = τρέχουσα επιλογή (κενή → όλος ο οργανισμός ορόφου· το αποφασίζει ο
+    // useStructuralAutoReinforce hook που εκτελεί το undoable command).
+    if (action === 'organism.auto-reinforce') {
+      EventBus.emit('bim:auto-reinforce-requested', { entityIds: [...params.selectedEntityIds] });
+      return;
+    }
     // ADR-345 Fase 6: Import/export dialog actions (migrated from toolbar)
     if (action === 'import-dxf-enhanced') {
       setShowEnhancedImport(true);

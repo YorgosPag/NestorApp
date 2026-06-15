@@ -22,7 +22,10 @@ import {
   buildStructuralGraph,
   runOrganismChecks,
 } from '../bim/structural/organism/organism-checks';
+import { runReinforcementChecks } from '../bim/structural/organism/reinforcement-checks';
 import { StructuralDiagnosticsStore } from '../bim/structural/organism/structural-diagnostics-store';
+import { resolveStructuralCode } from '../bim/structural/codes';
+import { useStructuralSettingsStore } from '../state/structural-settings-store';
 import type { Entity } from '../types/entities';
 import type { SceneModel } from '../types/scene';
 
@@ -46,6 +49,7 @@ const ORGANISM_EVENTS: readonly DrawingEventType[] = [
   'bim:columns-auto-attached',
   'bim:columns-auto-attached-base',
   'bim:column-footing-attached',
+  'bim:structural-auto-reinforced',
 ];
 
 export function useStructuralOrganism(props: { levelManager: LevelManagerLike }): void {
@@ -63,7 +67,14 @@ export function useStructuralOrganism(props: { levelManager: LevelManagerLike })
         return;
       }
       const entities = scene.entities as unknown as readonly Entity[];
-      const diagnostics = runOrganismChecks(buildStructuralGraph(entities));
+      const graph = buildStructuralGraph(entities);
+      // ADR-459 Φ4d — geometry connectivity (graph-only) + reinforcement διαγνωστικά
+      // (entities + active code provider) σε ΕΝΑ low-freq store write (ADR-040 safe).
+      const provider = resolveStructuralCode(useStructuralSettingsStore.getState().codeId);
+      const diagnostics = [
+        ...runOrganismChecks(graph),
+        ...runReinforcementChecks(graph, entities, provider),
+      ];
       StructuralDiagnosticsStore.set(diagnostics);
       EventBus.emit('bim:structural-organism-updated', {
         diagnosticCount: diagnostics.length,
@@ -78,7 +89,13 @@ export function useStructuralOrganism(props: { levelManager: LevelManagerLike })
     };
 
     const unsubs = ORGANISM_EVENTS.map((ev) => EventBus.on(ev, schedule));
+    // Αλλαγή building-level κανονισμού (Ευρωκώδικες↔ΕΚΩΣ) μεταβάλλει τα ρ-όρια →
+    // re-derive τα reinforcement warnings (low-freq → ADR-040 safe).
+    const unsubSettings = useStructuralSettingsStore.subscribe(schedule);
     schedule(); // initial pass
-    return () => unsubs.forEach((u) => u());
+    return () => {
+      unsubs.forEach((u) => u());
+      unsubSettings();
+    };
   }, [levelManager]);
 }

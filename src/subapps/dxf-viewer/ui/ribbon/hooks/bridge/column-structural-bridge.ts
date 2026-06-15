@@ -21,8 +21,10 @@ import { useStructuralSettingsStore } from '../../../../state/structural-setting
 import {
   resolveStructuralCode,
   isStructuralCodeId,
-  type ColumnSectionContext,
 } from '../../../../bim/structural/codes';
+// ADR-459 Φ4d — SSoT entity→SectionContext builder (πρώην inline εδώ· εξήχθη, N.0.2).
+import { buildColumnSectionContext } from '../../../../bim/structural/section-context';
+import { resolveColumnReinforcementSection } from '../../../../bim/structural/reinforcement/column-section-outline';
 import { isConcreteGrade } from '../../../../bim/structural/concrete-grades';
 import type { ColumnReinforcement } from '../../../../bim/structural/reinforcement/column-reinforcement-types';
 import {
@@ -44,22 +46,12 @@ import type { RibbonComboboxState } from '../../context/RibbonCommandContext';
 
 type DispatchParams = (nextParams: ColumnParams) => void;
 
-/** Section context (mm/mm²) για code-providers + ποσότητες — geometry-is-SSoT. */
-function buildSectionContext(column: ColumnEntity): ColumnSectionContext {
-  const p = column.params;
-  const grossAreaMm2 =
-    column.geometry.area > 0
-      ? column.geometry.area * 1e6
-      : Math.max(0, p.width) * Math.max(0, p.depth);
-  return { widthMm: p.width, depthMm: p.depth, heightMm: p.height, grossAreaMm2 };
-}
-
 /** Ενεργός οπλισμός = ορισμένος ή (αν απών) code-suggested ελάχιστος-έγκυρος. */
 function effectiveReinforcement(column: ColumnEntity): ColumnReinforcement {
   const r = column.params.reinforcement;
   if (r) return r;
   const { codeId } = useStructuralSettingsStore.getState();
-  return resolveStructuralCode(codeId).suggestColumnReinforcement(buildSectionContext(column));
+  return resolveStructuralCode(codeId).suggestColumnReinforcement(buildColumnSectionContext(column));
 }
 
 /** Combobox state ενός editable structural key, ή `null` αν δεν ανήκει εδώ. */
@@ -95,8 +87,9 @@ export function resolveColumnStructuralReadout(
   const value = resolveStructuralReadout(
     readoutKey,
     column.geometry.volume,
-    buildSectionContext(column),
+    buildColumnSectionContext(column),
     eff,
+    resolveColumnReinforcementSection(column.params),
   );
   return value == null ? null : { value, options: [] };
 }
@@ -150,7 +143,7 @@ export function applyColumnStructuralChange(
 export function autoReinforceColumn(column: ColumnEntity, dispatchParams: DispatchParams): void {
   const { codeId } = useStructuralSettingsStore.getState();
   const suggestion = resolveStructuralCode(codeId).suggestColumnReinforcement(
-    buildSectionContext(column),
+    buildColumnSectionContext(column),
   );
   dispatchParams({ ...column.params, reinforcement: suggestion });
 }

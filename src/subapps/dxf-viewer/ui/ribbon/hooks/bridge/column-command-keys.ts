@@ -7,7 +7,8 @@
  * `OPENING_RIBBON_KEYS` pattern.
  */
 
-import type { ColumnKind } from '../../../../bim/types/column-types';
+import type { ColumnKind, ColumnParams } from '../../../../bim/types/column-types';
+import { resolveColumnReinforcementSection } from '../../../../bim/structural/reinforcement/column-section-outline';
 import type { FinishParamField } from './finish-param';
 
 export const COLUMN_RIBBON_KEYS = {
@@ -177,15 +178,29 @@ export function resolveColumnPanelVisibility(
     case COLUMN_RIBBON_VISIBILITY_KEYS.ishapeParams: return kind === 'I-shape';
     case COLUMN_RIBBON_VISIBILITY_KEYS.shearWallCatalog: return kind === 'shear-wall';
     case COLUMN_RIBBON_VISIBILITY_KEYS.ishapeCatalog: return kind === 'I-shape';
-    // ADR-456 Slice 2 — δομοστατικά/οπλισμός μόνο για RC kinds (ρ-έλεγχος καλύπτει
-    // ορθογωνική + τοιχείο).
+    // ADR-460 — δομοστατικά/οπλισμός για ΟΛΟΥΣ τους τύπους διατομής (perimeter/
+    // circular/wall dispatcher· ρ-έλεγχος + Auto shape-aware για κάθε σχήμα).
     case COLUMN_RIBBON_VISIBILITY_KEYS.structural:
-      return kind === 'rectangular' || kind === 'shear-wall';
+      return true;
     // ADR-363 Phase 2b — leg/base thickness μόνο για manual παραμετρικό Π.
     case COLUMN_RIBBON_VISIBILITY_KEYS.ushapeParams:
       return kind === 'U-shape' && !hasUshapePolygon;
     default: return false;
   }
+}
+
+/**
+ * ADR-460 — Πολιτική **ανενεργού** (disabled) control ανά πεδίο/σχήμα. Το μοτίβο
+ * cross-tie (διαμάντι/πλέγμα) αφορά ΜΟΝΟ τις ενδιάμεσες ράβδους περιμετρικής
+ * διάταξης· σε **κυκλική** (δακτύλιος/σπείρα περισφίγγει όλες τις ράβδους) και σε
+ * **τοίχωμα** (web ties auto) ΔΕΝ έχει εφαρμογή → ανενεργό. Επιστρέφει `false`
+ * (ενεργό) για κάθε άλλο πεδίο. SSoT — καταναλώνεται από `ColumnAdvancedPanel`.
+ */
+export function resolveColumnFieldDisabled(commandKey: string, params: ColumnParams): boolean {
+  if (commandKey === COLUMN_STRUCTURAL_KEYS.crossTiePattern) {
+    return resolveColumnReinforcementSection(params).mode !== 'perimeter';
+  }
+  return false;
 }
 
 // ─── Type guards (used by useRibbonCommands composer) ────────────────────────

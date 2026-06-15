@@ -140,10 +140,43 @@ export const PRINT_PANEL: RibbonPanelDef = {
   ],
 };
 
+// ADR-459 Φ4d — Structural «Αυτόματος Οπλισμός»: auto-apply code-suggested
+// reinforcement στα επιλεγμένα μέλη (ή όλον τον οργανισμό ορόφου). Analysis tool →
+// «Ανάλυση» (mirror Schedule: action → wrappedHandleAction → EventBus → command hook).
+export const STRUCTURAL_REINFORCE_PANEL: RibbonPanelDef = {
+  id: 'structural',
+  labelKey: 'ribbon.panels.structural',
+  rows: [
+    {
+      isInFlyout: false,
+      buttons: [
+        {
+          type: 'simple',
+          size: 'large',
+          command: {
+            id: 'analyze.auto-reinforce',
+            labelKey: 'ribbon.commands.autoReinforceOrganism',
+            icon: 'struct-auto-reinforce',
+            commandKey: 'organism.auto-reinforce',
+            action: 'organism.auto-reinforce',
+            tooltipKey: 'ribbon.tooltips.autoReinforceOrganism',
+          },
+        },
+      ],
+    },
+  ],
+};
+
 // ─── Tab ─────────────────────────────────────────────────────────────────────
 
 export const ANALYZE_TAB: RibbonTab = {
   id: 'analyze',
   labelKey: 'ribbon.tabs.analyze',
-  panels: [ANALYZE_SCHEDULE_PANEL, THERMAL_ENVELOPE_PANEL, CLASH_COORDINATION_PANEL, PRINT_PANEL],
+  panels: [
+    ANALYZE_SCHEDULE_PANEL,
+    STRUCTURAL_REINFORCE_PANEL,
+    THERMAL_ENVELOPE_PANEL,
+    CLASH_COORDINATION_PANEL,
+    PRINT_PANEL,
+  ],
 } as const;

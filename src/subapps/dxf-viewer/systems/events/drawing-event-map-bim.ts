@@ -215,6 +215,12 @@ export interface BimEventMap {
   // Emitted by `useStructuralOrganism` after each recompute so observers (panels,
   // future diagnostics dock) can react. `diagnosticCount` = total findings.
   'bim:structural-organism-updated': { diagnosticCount: number; levelId: string };
+  // ADR-459 Φ4d — «Αυτόματος Οπλισμός» request (από ribbon action). `entityIds` =
+  // η τρέχουσα επιλογή· κενό → ο handler οπλίζει όλον τον οργανισμό του ορόφου.
+  'bim:auto-reinforce-requested': { entityIds: string[] };
+  // ADR-459 Φ4d — N μέλη οπλίστηκαν (auto-apply command). `count` = πόσα πράγματι
+  // οπλίστηκαν (idempotent skip). Trigger organism re-derive + toast.
+  'bim:structural-auto-reinforced': { entityIds: string[]; count: number };
   // ADR-395 G6 — opening persisted/deleted → host wall re-computes net BOQ area
   'bim:opening-persisted': { wallId: string };
   // ADR-395 G2 — slab-opening persisted/deleted → host slab re-computes net BOQ volume

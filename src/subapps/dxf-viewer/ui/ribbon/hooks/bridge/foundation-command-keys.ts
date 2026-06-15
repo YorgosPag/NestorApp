@@ -56,6 +56,9 @@ export const FOUNDATION_RIBBON_KEYS_ACTIONS = {
   fromGridOuter: 'foundation.actions.fromGridOuter',
   // ADR-441 Slice GEN-TIE — one-shot «Συνδετήριες δοκοί από κάναβο» (κεντραρισμένες).
   tieBeamsFromGrid: 'foundation.actions.tieBeamsFromGrid',
+  // ADR-459 Φ4d — «Αυτόματος Οπλισμός» πεδίλου/πεδιλοδοκού/συνδετήριας (parity με
+  // κολόνα): routes στο undoable AutoReinforceOrganismCommand.
+  autoReinforce: 'foundation.actions.autoReinforce',
 } as const;
 
 export const FOUNDATION_RIBBON_BADGE_KEYS = {
@@ -79,7 +82,8 @@ export function isFoundationActionKey(action: string): boolean {
     action === FOUNDATION_RIBBON_KEYS_ACTIONS.fromGrid ||
     action === FOUNDATION_RIBBON_KEYS_ACTIONS.fromGridCenter ||
     action === FOUNDATION_RIBBON_KEYS_ACTIONS.fromGridOuter ||
-    action === FOUNDATION_RIBBON_KEYS_ACTIONS.tieBeamsFromGrid
+    action === FOUNDATION_RIBBON_KEYS_ACTIONS.tieBeamsFromGrid ||
+    action === FOUNDATION_RIBBON_KEYS_ACTIONS.autoReinforce
   );
 }
 

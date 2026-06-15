@@ -61,12 +61,15 @@ export function buildColumnTitleBlockRegion(
   region: RectMm,
   labels: DetailTitleBlockLabels,
 ): ColumnTitleBlockResult {
-  if (params.kind !== 'rectangular') return { primitives: [] };
   const r = params.reinforcement;
   const round = (n: number): string => String(Math.round(n));
+  // ADR-460 — ετικέτα διατομής ανά σχήμα: κυκλική → Ø{d}· αλλιώς {W}×{D} (bbox).
+  const sectionLabel = params.kind === 'circular'
+    ? `Ø${round(params.width)}`
+    : `${round(params.width)}×${round(params.depth)}`;
 
   const rows: FieldRow[] = [
-    { label: labels.section, value: `${round(params.width)}×${round(params.depth)}` },
+    { label: labels.section, value: sectionLabel },
     { label: labels.height, value: round(params.height) },
     { label: labels.concrete, value: params.concreteGrade ?? DEFAULT_CONCRETE_GRADE },
     { label: labels.steel, value: REBAR_GRADE },

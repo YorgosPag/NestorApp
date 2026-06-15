@@ -104,18 +104,27 @@ export interface StructuralGraph {
 
 // ─── Diagnostics (Phase 1 — cross-entity validation) ─────────────────────────
 
-export type StructuralDiagnosticSeverity = 'error' | 'warning';
+export type StructuralDiagnosticSeverity = 'error' | 'warning' | 'info';
 
-/** Σταθεροί κωδικοί ελέγχων (map σε i18n keys στο `organism-checks`). */
+/**
+ * Σταθεροί κωδικοί ελέγχων (map σε i18n keys στο `organism-checks` /
+ * `reinforcement-checks`). Phase 0-1 = geometry connectivity· Phase 4d =
+ * reinforcement διαγνωστικά (οπλισμός μέλους / ρ εκτός ορίων / αναντιστοιχία κόμβου).
+ */
 export type StructuralDiagnosticCode =
   | 'columnMissingFooting'
   | 'beamUnsupportedEnd'
-  | 'memberIsolated';
+  | 'memberIsolated'
+  | 'memberMissingReinforcement'
+  | 'ratioOutOfRange'
+  | 'barMismatchAtJoint';
 
 /**
  * Ένα cross-entity εύρημα. `primaryEntityId` = το μέλος που «φταίει» (οδηγεί το
  * per-entity panel surfacing)· `entityIds` = όλα τα εμπλεκόμενα (για highlight).
  * `messageKey` = i18n key (ns `dxf-viewer-shell`) — μηδέν hardcoded strings (N.11).
+ * `messageParams` = προαιρετικά ICU placeholders (π.χ. ρ%/όρια) που περνούν στο
+ * `t(messageKey, params)` — DERIVED τιμές, ΟΧΙ μεταφρασμένα strings (N.11-safe).
  */
 export interface StructuralDiagnostic {
   readonly id: string;
@@ -124,4 +133,5 @@ export interface StructuralDiagnostic {
   readonly messageKey: string;
   readonly primaryEntityId: string;
   readonly entityIds: readonly string[];
+  readonly messageParams?: Readonly<Record<string, string | number>>;
 }

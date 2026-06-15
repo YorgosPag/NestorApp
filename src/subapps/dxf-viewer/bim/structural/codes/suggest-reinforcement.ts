@@ -12,7 +12,10 @@ import {
   barAreaMm2,
   nextRebarDiameterMm,
 } from '../rebar-catalog';
-import type { ColumnReinforcement } from '../reinforcement/column-reinforcement-types';
+import type {
+  ColumnReinforcement,
+  WallReinforcementIntent,
+} from '../reinforcement/column-reinforcement-types';
 import type { BeamReinforcement } from '../reinforcement/beam-reinforcement-types';
 import type { FootingReinforcement } from '../reinforcement/footing-reinforcement-types';
 import type {
@@ -41,6 +44,11 @@ function roundSpacingDown(spacingMm: number): number {
  */
 function spacingBarCount(ctx: ColumnSectionContext, maxBarSpacingMm: number): number {
   if (maxBarSpacingMm <= 0) return 4;
+  // ADR-460 — shape-aware: όταν δίνεται περίμετρος outline (μη-ορθογ./κυκλική),
+  // πλήθος = ⌈περίμετρος/βήμα⌉ (μία ράβδος κάθε ≤ βήμα γύρω από το περίγραμμα).
+  if (ctx.perimeterMm && ctx.perimeterMm > 0) {
+    return Math.max(4, Math.ceil(ctx.perimeterMm / maxBarSpacingMm));
+  }
   const nW = Math.max(1, Math.ceil(ctx.widthMm / maxBarSpacingMm));
   const nD = Math.max(1, Math.ceil(ctx.depthMm / maxBarSpacingMm));
   return 2 * nW + 2 * nD;
@@ -101,7 +109,7 @@ export function suggestColumnReinforcementFrom(
   // Stirrup rules εξαρτώνται από την τελική διάμετρο διαμήκους → δεύτερο call.
   const limits = provider.columnReinforcementLimits(ctx, diameterMm);
 
-  return {
+  const base: ColumnReinforcement = {
     longitudinal: { diameterMm, count },
     stirrups: {
       diameterMm: limits.minStirrupDiameterMm,
@@ -109,6 +117,34 @@ export function suggestColumnReinforcementFrom(
       spacingCriticalMm: roundSpacingDown(limits.criticalStirrupSpacingMm),
     },
     coverMm: limits.nominalCoverMm,
+  };
+  // ADR-460 — τοίχωμα: πρόσθεσε boundary elements + κατανεμημένο κορμό (EC8 §5.4.3.4).
+  if (ctx.mode === 'wall') {
+    return { ...base, wall: suggestWallIntent(ctx, limits) };
+  }
+  return base;
+}
+
+/**
+ * ADR-460 — προτεινόμενος οπλισμός τοιχώματος: κρυφοκολώνα (boundary element) ανά
+ * άκρο διαστασιολογημένη ως μικρή κολώνα στη ζώνη `lc` (EC8 §5.4.3.4.2) + κατανεμημένος
+ * οπλισμός κορμού (κατακόρυφος/οριζόντιος) στο μέγιστο βήμα. Reuse `resolveBarSet`.
+ */
+function suggestWallIntent(
+  ctx: ColumnSectionContext,
+  limits: ColumnReinforcementLimits,
+): WallReinforcementIntent {
+  const lw = ctx.maxDimensionMm ?? Math.max(ctx.widthMm, ctx.depthMm);
+  const bw = ctx.minThicknessMm ?? Math.min(ctx.widthMm, ctx.depthMm);
+  const lc = Math.min(Math.max(0.15 * lw, 1.5 * bw), 0.4 * lw);
+  const asBoundaryMm2 = limits.minRatio * lc * bw;
+  const seedDia = nextRebarDiameterMm(limits.minBarDiameterMm);
+  const boundary = resolveBarSet(asBoundaryMm2, Math.max(6, limits.minBarCount), seedDia);
+  return {
+    boundary: { diameterMm: boundary.diameterMm, count: boundary.count },
+    boundaryTieSpacingMm: roundSpacingDown(limits.criticalStirrupSpacingMm),
+    webVertical: { diameterMm: limits.minBarDiameterMm, spacingMm: roundSpacingDown(limits.maxBarSpacingMm) },
+    webHorizontal: { diameterMm: limits.minStirrupDiameterMm, spacingMm: roundSpacingDown(limits.maxStirrupSpacingMm) },
   };
 }
 

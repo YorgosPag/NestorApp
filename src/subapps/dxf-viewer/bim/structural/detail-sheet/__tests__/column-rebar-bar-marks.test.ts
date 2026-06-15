@@ -52,7 +52,9 @@ describe('assignColumnBarNumbers (ADR-457 Slice 3)', () => {
     expect(assignColumnBarNumbers(RECT)).toEqual(assignColumnBarNumbers(RECT));
   });
 
-  it('returns null for a non-rectangular column', () => {
-    expect(assignColumnBarNumbers({ ...RECT, kind: 'circular' })).toBeNull();
+  it('ADR-460 — numbers bars for a non-rectangular (circular) column', () => {
+    const nums = assignColumnBarNumbers({ ...RECT, kind: 'circular' });
+    expect(nums).not.toBeNull();
+    expect(nums!.length).toBeGreaterThan(0);
   });
 });

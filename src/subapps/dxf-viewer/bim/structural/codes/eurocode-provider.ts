@@ -9,11 +9,12 @@
  * @see ./structural-code-types.ts
  */
 
-import { nextRebarDiameterMm } from '../rebar-catalog';
+import { developmentLengthMm, nextRebarDiameterMm } from '../rebar-catalog';
 import type { ColumnReinforcement } from '../reinforcement/column-reinforcement-types';
 import type { BeamReinforcement } from '../reinforcement/beam-reinforcement-types';
 import type { FootingReinforcement } from '../reinforcement/footing-reinforcement-types';
 import type {
+  BarDevelopmentContext,
   BeamReinforcementLimits,
   BeamSectionContext,
   ColumnReinforcementLimits,
@@ -35,7 +36,8 @@ function eurocodeColumnLimits(
   ctx: ColumnSectionContext,
   longitudinalDiameterMm: number,
 ): ColumnReinforcementLimits {
-  const bMin = Math.min(ctx.widthMm, ctx.depthMm);
+  // ADR-460 — χαρακτηριστικό πάχος: minThicknessMm (shape-aware) ή min(width,depth).
+  const bMin = ctx.minThicknessMm ?? Math.min(ctx.widthMm, ctx.depthMm);
   // EC2 §9.5.3(1): φw ≥ max(6mm, 0.25·dbL,max) → επόμενη εμπορική.
   const minStirrupRaw = Math.max(6, 0.25 * longitudinalDiameterMm);
   return {
@@ -122,6 +124,11 @@ function eurocodeFootingLimits(ctx: FootingSectionContext): FootingReinforcement
   };
 }
 
+/** EC2 §8.4.4 — βασικός συντελεστής αγκύρωσης lbd ≈ 40·Ø (καλή συνάφεια, εφελκυσμός). */
+const EUROCODE_ANCHORAGE_FACTOR = 40;
+/** EC2 §8.7.3 — βασικός συντελεστής ματίσματος l₀ ≈ 50·Ø (α₆ ≈ 1.25 × lbd). */
+const EUROCODE_LAP_FACTOR = 50;
+
 export const EUROCODE_PROVIDER: StructuralCodeProvider = {
   id: 'eurocode',
   labelKey: 'structural.code.eurocode',
@@ -136,5 +143,11 @@ export const EUROCODE_PROVIDER: StructuralCodeProvider = {
   footingReinforcementLimits: eurocodeFootingLimits,
   suggestFootingReinforcement(ctx: FootingSectionContext): FootingReinforcement {
     return suggestFootingReinforcementFrom(this, ctx);
+  },
+  lapLengthMm(diameterMm: number, ctx?: BarDevelopmentContext): number {
+    return developmentLengthMm(EUROCODE_LAP_FACTOR, diameterMm, ctx);
+  },
+  anchorageLengthMm(diameterMm: number, ctx?: BarDevelopmentContext): number {
+    return developmentLengthMm(EUROCODE_ANCHORAGE_FACTOR, diameterMm, ctx);
   },
 };

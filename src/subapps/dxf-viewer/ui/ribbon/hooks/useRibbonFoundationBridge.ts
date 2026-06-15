@@ -359,6 +359,13 @@ export function useRibbonFoundationBridge(
       if (action === FOUNDATION_RIBBON_KEYS_ACTIONS.fromGridCenter) return handleFromGrid('center');
       if (action === FOUNDATION_RIBBON_KEYS_ACTIONS.fromGridOuter) return handleFromGrid('outer');
       if (action === FOUNDATION_RIBBON_KEYS_ACTIONS.tieBeamsFromGrid) return handleTieBeamsFromGrid();
+      // ADR-459 Φ4d — «Αυτόματος Οπλισμός» του επιλεγμένου θεμελιακού στοιχείου
+      // (undoable command μέσω useStructuralAutoReinforce· parity με την κολόνα).
+      if (action === FOUNDATION_RIBBON_KEYS_ACTIONS.autoReinforce) {
+        const foundation = resolveFoundation();
+        if (foundation) EventBus.emit('bim:auto-reinforce-requested', { entityIds: [foundation.id] });
+        return;
+      }
       if (action !== FOUNDATION_RIBBON_KEYS_ACTIONS.delete) return;
       const foundation = resolveFoundation();
       if (!foundation || !levelManager.currentLevelId) return;

@@ -22,8 +22,11 @@
 import type { Point2D } from '../../../rendering/types/Types';
 import type { ColumnParams } from '../../types/column-types';
 import { materializeColumnLocalPolygonMm } from '../../geometry/column-geometry';
-import { computeColumnRebarLayout } from '../reinforcement/column-rebar-layout';
-import { buildColumnCrossTies } from '../reinforcement/column-cross-ties';
+import {
+  resolveColumnRebarLayout,
+  resolveColumnCrossTies,
+} from '../reinforcement/column-rebar-layout-resolve';
+import { resolveColumnReinforcementSection } from '../reinforcement/column-section-outline';
 import { DEFAULT_STIRRUP_TYPE } from '../reinforcement/column-reinforcement-types';
 import { assignColumnBarNumbers } from './column-rebar-bar-marks';
 import { pickScaleDenominator } from './detail-sheet-fit';
@@ -79,8 +82,9 @@ function bboxOf(points: readonly Point2D[]): BBox {
  */
 export function buildColumnPlanRegion(params: ColumnParams, region: RectMm): ColumnPlanResult {
   const r = params.reinforcement;
-  if (params.kind !== 'rectangular' || !r) return { primitives: [] };
-  const layout = computeColumnRebarLayout(r, params.width, params.depth);
+  if (!r) return { primitives: [] };
+  const section = resolveColumnReinforcementSection(params);
+  const layout = resolveColumnRebarLayout(r, section);
   if (!layout) return { primitives: [] };
 
   const footprintLocal = materializeColumnLocalPolygonMm(params);
@@ -145,12 +149,17 @@ export function buildColumnPlanRegion(params: ColumnParams, region: RectMm): Col
   //    interior ties shown everywhere else (ADR-456). ──
   const hooked = (r.stirrups.type ?? DEFAULT_STIRRUP_TYPE) === 'closed-hooked';
   const crossTieWidthMm = Math.max(MIN_STIRRUP_WIDTH_MM, layout.stirrupDiameterMm * s);
-  const crossTies = buildColumnCrossTies(
-    layout.longitudinalBarsMm,
-    layout.stirrupDiameterMm,
-    layout.barDiameterMm,
-    r.crossTiePattern,
-  );
+  // ── Boundary hoops (ADR-460 τοίχωμα) — ίδιο πάχος/χρώμα με το κύριο στεφάνι ──
+  for (const hoop of layout.extraStirrupPathsMm ?? []) {
+    if (hoop.length < 3) continue;
+    primitives.push({
+      kind: 'polyline',
+      points: hoop.map(toSheet),
+      closed: true,
+      stroke: { colorHex: REBAR_HEX, widthMm: crossTieWidthMm },
+    });
+  }
+  const crossTies = resolveColumnCrossTies(layout, section, r);
   for (const tie of crossTies) {
     if (tie.pathMm.length >= 2) {
       primitives.push({

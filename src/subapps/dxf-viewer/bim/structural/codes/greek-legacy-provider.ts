@@ -10,11 +10,12 @@
  * @see ./structural-code-types.ts
  */
 
-import { nextRebarDiameterMm } from '../rebar-catalog';
+import { developmentLengthMm, nextRebarDiameterMm } from '../rebar-catalog';
 import type { ColumnReinforcement } from '../reinforcement/column-reinforcement-types';
 import type { BeamReinforcement } from '../reinforcement/beam-reinforcement-types';
 import type { FootingReinforcement } from '../reinforcement/footing-reinforcement-types';
 import type {
+  BarDevelopmentContext,
   BeamReinforcementLimits,
   BeamSectionContext,
   ColumnReinforcementLimits,
@@ -36,7 +37,8 @@ function greekLegacyColumnLimits(
   ctx: ColumnSectionContext,
   longitudinalDiameterMm: number,
 ): ColumnReinforcementLimits {
-  const bMin = Math.min(ctx.widthMm, ctx.depthMm);
+  // ADR-460 — χαρακτηριστικό πάχος: minThicknessMm (shape-aware) ή min(width,depth).
+  const bMin = ctx.minThicknessMm ?? Math.min(ctx.widthMm, ctx.depthMm);
   // ΕΚΩΣ 2000 §18.3.5: συνδετήρες φw ≥ max(8mm, dbL/3).
   const minStirrupRaw = Math.max(8, longitudinalDiameterMm / 3);
   return {
@@ -118,6 +120,11 @@ function greekLegacyFootingLimits(ctx: FootingSectionContext): FootingReinforcem
   };
 }
 
+/** ΕΚΩΣ 2000 §17.2.6 — αγκύρωση συντηρητικότερη από EC2 (~50·Ø). */
+const GREEK_LEGACY_ANCHORAGE_FACTOR = 50;
+/** ΕΚΩΣ 2000 §17.2.7 — μάτισμα συντηρητικότερο από EC2 (~55·Ø). */
+const GREEK_LEGACY_LAP_FACTOR = 55;
+
 export const GREEK_LEGACY_PROVIDER: StructuralCodeProvider = {
   id: 'greek-legacy',
   labelKey: 'structural.code.greekLegacy',
@@ -132,5 +139,11 @@ export const GREEK_LEGACY_PROVIDER: StructuralCodeProvider = {
   footingReinforcementLimits: greekLegacyFootingLimits,
   suggestFootingReinforcement(ctx: FootingSectionContext): FootingReinforcement {
     return suggestFootingReinforcementFrom(this, ctx);
+  },
+  lapLengthMm(diameterMm: number, ctx?: BarDevelopmentContext): number {
+    return developmentLengthMm(GREEK_LEGACY_LAP_FACTOR, diameterMm, ctx);
+  },
+  anchorageLengthMm(diameterMm: number, ctx?: BarDevelopmentContext): number {
+    return developmentLengthMm(GREEK_LEGACY_ANCHORAGE_FACTOR, diameterMm, ctx);
   },
 };

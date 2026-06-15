@@ -26,11 +26,12 @@ import * as THREE from 'three';
 import type { ColumnEntity } from '../../bim/types/column-types';
 import { columnLocalMmToWorld } from '../../bim/geometry/column-geometry';
 import { mmToSceneUnits } from '../../utils/scene-units';
+import { computeStirrupLevelsMm } from '../../bim/structural/reinforcement/column-rebar-layout';
 import {
-  computeColumnRebarLayout,
-  computeStirrupLevelsMm,
-} from '../../bim/structural/reinforcement/column-rebar-layout';
-import { buildColumnCrossTies } from '../../bim/structural/reinforcement/column-cross-ties';
+  resolveColumnRebarLayout,
+  resolveColumnCrossTies,
+} from '../../bim/structural/reinforcement/column-rebar-layout-resolve';
+import { resolveColumnReinforcementSection } from '../../bim/structural/reinforcement/column-section-outline';
 import { DEFAULT_STIRRUP_TYPE } from '../../bim/structural/reinforcement/column-reinforcement-types';
 import type { Point2D } from '../../rendering/types/Types';
 
@@ -170,10 +171,10 @@ function spiralSegments(ringXY: readonly Point2D[], levels: readonly number[], b
 }
 
 /**
- * Χτίζει τον κλωβό οπλισμού (διαμήκεις + στεφάνια) μιας ορθογωνικής κολώνας ως
- * `THREE.Group`, ή `null` αν δεν είναι ορθογωνική / δεν έχει οπλισμό / εκφυλισμένο
- * ύψος. `baseY` = κατακόρυφη βάση του πυρήνα (ίδιο datum → ευθυγράμμιση).
- * `heightMm` = effective ύψος κολώνας (ίδιο με τον σοβά).
+ * Χτίζει τον κλωβό οπλισμού (διαμήκεις + στεφάνια + boundary hoops/web ties) μιας
+ * κολώνας **οποιουδήποτε σχήματος** (ADR-460, dispatcher) ως `THREE.Group`, ή `null`
+ * αν δεν έχει οπλισμό / εκφυλισμένο ύψος. `baseY` = κατακόρυφη βάση του πυρήνα (ίδιο
+ * datum → ευθυγράμμιση). `heightMm` = effective ύψος κολώνας (ίδιο με τον σοβά).
  */
 export function buildColumnRebarCage(
   column: ColumnEntity,
@@ -182,12 +183,12 @@ export function buildColumnRebarCage(
   levelId?: string,
 ): THREE.Group | null {
   const p = column.params;
-  if (p.kind !== 'rectangular') return null;
   const r = p.reinforcement;
   if (!r) return null;
   const heightM = Math.max(0, heightMm) * MM_TO_M;
   if (heightM <= 0) return null;
-  const layout = computeColumnRebarLayout(r, p.width, p.depth);
+  const section = resolveColumnReinforcementSection(p);
+  const layout = resolveColumnRebarLayout(r, section);
   if (!layout) return null;
 
   const s = mmToSceneUnits(p.sceneUnits ?? 'mm');
@@ -214,7 +215,7 @@ export function buildColumnRebarCage(
   // ΟΛΟΙ οι τύποι (κλειστά & spiral) πυκνώνουν στις κρίσιμες ζώνες lcr (EC8): η
   // φισούνα = ΕΝΑΣ συνεχής συνδετήρας με βήμα που πυκνώνει στα άκρα, ακριβώς όπως
   // τα κλειστά στεφάνια — μόνο η σχεδίαση διαφέρει (έλικα vs ξεχωριστά δαχτυλίδια).
-  const levels = computeStirrupLevelsMm(r, p.width, p.depth, heightMm);
+  const levels = computeStirrupLevelsMm(r, section.bboxWidthMm, section.bboxDepthMm, heightMm);
   const pathXY = columnLocalMmToWorld(p, layout.stirrupPathMm);
   const stirrupSegs: Seg[] =
     type === 'spiral'
@@ -225,13 +226,17 @@ export function buildColumnRebarCage(
     const hookEndsXY = layout.stirrupHookEndsMm.map((end) => columnLocalMmToWorld(p, end));
     stirrupSegs.push(...hookSegments(hookEndsXY, levels, baseY));
   }
+  // ADR-460 — τοίχωμα: boundary hoops (extra κλειστά στεφάνια) ανά στάθμη.
+  for (const hoop of layout.extraStirrupPathsMm ?? []) {
+    stirrupSegs.push(...ringSegments(columnLocalMmToWorld(p, hoop), levels, baseY));
+  }
   const stirrups = buildRods(stirrupSegs, stirrupRadius, material);
   if (stirrups) group.add(stirrups);
 
   // ── Εσωτερικά συνδετήρια (cross-ties / διαμάντι, EC8) ανά στάθμη στεφανιού ──
   // Κλειστό διαμάντι = ring· ανοιχτά ευθύγραμμα = chain. Ίδια ακτίνα/υλικό με τα
   // στεφάνια, ΙΔΙΑ θέση με το 2Δ (geometry-is-SSoT).
-  const crossTies = buildColumnCrossTies(layout.longitudinalBarsMm, layout.stirrupDiameterMm, layout.barDiameterMm, r.crossTiePattern);
+  const crossTies = resolveColumnCrossTies(layout, section, r);
   if (crossTies.length > 0) {
     const tieSegs: Seg[] = [];
     for (const tie of crossTies) {

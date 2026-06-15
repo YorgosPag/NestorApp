@@ -29,10 +29,18 @@ const TONE = {
   error: {
     section: 'border-[hsl(var(--text-error))]/40 bg-[hsl(var(--text-error))]/10',
     text: 'text-[hsl(var(--text-error))]',
+    glyph: '!',
   },
   warning: {
     section: 'border-[hsl(var(--text-warning))]/40 bg-[hsl(var(--text-warning))]/10',
     text: 'text-[hsl(var(--text-warning))]',
+    glyph: '!',
+  },
+  // ADR-459 Φ4d — advisories (π.χ. «λείπει οπλισμός»): ήπιο info styling, όχι κόκκινο.
+  info: {
+    section: 'border-[hsl(var(--text-info))]/40 bg-[hsl(var(--bg-info))]/10',
+    text: 'text-[hsl(var(--text-info))]',
+    glyph: 'i',
   },
 } as const;
 
@@ -43,7 +51,12 @@ export function EntityWarningsSection({
   const diagnostics = useEntityStructuralDiagnostics(entityId);
   if (diagnostics.length === 0) return null;
 
-  const tone = diagnostics.some((d) => d.severity === 'error') ? TONE.error : TONE.warning;
+  // Κυρίαρχος τόνος = υψηλότερη σοβαρότητα παρούσα (error > warning > info).
+  const tone = diagnostics.some((d) => d.severity === 'error')
+    ? TONE.error
+    : diagnostics.some((d) => d.severity === 'warning')
+      ? TONE.warning
+      : TONE.info;
 
   return (
     <section
@@ -53,7 +66,7 @@ export function EntityWarningsSection({
     >
       <header className="flex items-center gap-2">
         <span aria-hidden="true" className={tone.text}>
-          !
+          {tone.glyph}
         </span>
         <h4 className={`text-xs font-semibold uppercase tracking-wide ${tone.text}`}>
           {t('structuralOrganism.diagnostics.title')}
@@ -62,7 +75,7 @@ export function EntityWarningsSection({
       <ul className={`flex flex-col gap-1 text-xs ${tone.text}`}>
         {diagnostics.map((d) => (
           <li key={d.id} className="leading-snug">
-            {t(d.messageKey, { defaultValue: '' }) || d.messageKey}
+            {t(d.messageKey, { defaultValue: '', ...d.messageParams }) || d.messageKey}
           </li>
         ))}
       </ul>

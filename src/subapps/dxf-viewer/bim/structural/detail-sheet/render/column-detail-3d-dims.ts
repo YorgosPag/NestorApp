@@ -45,21 +45,31 @@ export interface ColumnDimSpec3d {
  */
 export function computeColumnDimSpecs3d(column: ColumnEntity): ColumnDimSpec3d[] {
   const { params } = column;
-  if (params.kind !== 'rectangular') return [];
   const verts = computeColumnGeometry(params).footprint.vertices;
-  if (verts.length < 4) return [];
+  if (verts.length < 3) return [];
   const heightM = Math.max(0, params.height) * MM_TO_M;
   if (heightM <= 0) return [];
 
-  // AXIS_FLIP: plan (x, y) → three (x, 0, −y) at the base plane.
-  const base = verts.slice(0, 4).map((v) => new THREE.Vector3(v.x, 0, -v.y));
-  const rightCorner = base.reduce(
+  // ADR-460 — bbox του footprint (κάθε σχήμα) → W/D/H dims στις ακμές του bounding box.
+  let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+  for (const v of verts) {
+    if (v.x < minX) minX = v.x;
+    if (v.x > maxX) maxX = v.x;
+    if (v.y < minY) minY = v.y;
+    if (v.y > maxY) maxY = v.y;
+  }
+  // AXIS_FLIP: plan (x, y) → three (x, 0, −y). Γωνίες bbox στη βάση.
+  const bl = new THREE.Vector3(minX, 0, -minY);
+  const br = new THREE.Vector3(maxX, 0, -minY);
+  const tr = new THREE.Vector3(maxX, 0, -maxY);
+  const tl = new THREE.Vector3(minX, 0, -maxY);
+  const rightCorner = [bl, br, tr, tl].reduce(
     (best, p) => (p.dot(SCREEN_RIGHT) > best.dot(SCREEN_RIGHT) ? p : best),
-    base[0],
+    bl,
   );
   return [
-    { a: base[0], b: base[1], text: String(Math.round(params.width)) },
-    { a: base[1], b: base[2], text: String(Math.round(params.depth)) },
+    { a: bl, b: br, text: String(Math.round(maxX - minX)) },
+    { a: br, b: tr, text: String(Math.round(maxY - minY)) },
     { a: rightCorner.clone(), b: rightCorner.clone().setY(heightM), text: String(Math.round(params.height)) },
   ];
 }

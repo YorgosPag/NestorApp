@@ -15,7 +15,7 @@
 import * as THREE from 'three';
 import type { ColumnEntity } from '../../../types/column-types';
 import { columnLocalMmToWorld } from '../../../geometry/column-geometry';
-import { computeColumnRebarLayout } from '../../reinforcement/column-rebar-layout';
+import { resolveColumnRebarLayoutForParams } from '../../reinforcement/column-rebar-layout-resolve';
 import { assignColumnBarNumbers } from '../column-rebar-bar-marks';
 
 /** mm → metres (the vertical convention shared with `buildColumnRebarCage`). */
@@ -37,8 +37,8 @@ export interface ColumnBarMarkSpec3d {
 export function computeColumnBarMarkSpecs3d(column: ColumnEntity): ColumnBarMarkSpec3d[] {
   const { params } = column;
   const numbers = assignColumnBarNumbers(params);
-  if (params.kind !== 'rectangular' || !params.reinforcement || !numbers) return [];
-  const layout = computeColumnRebarLayout(params.reinforcement, params.width, params.depth);
+  if (!params.reinforcement || !numbers) return [];
+  const layout = resolveColumnRebarLayoutForParams(params.reinforcement, params);
   if (!layout) return [];
   const heightM = Math.max(0, params.height) * MM_TO_M;
   if (heightM <= 0) return [];

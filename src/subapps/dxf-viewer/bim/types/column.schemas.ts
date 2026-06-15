@@ -139,24 +139,44 @@ const ConcreteGradeSchema = z.enum([
   'C12/15', 'C16/20', 'C20/25', 'C25/30', 'C30/37', 'C35/45', 'C40/50', 'C45/55', 'C50/60',
 ]);
 
+const ColumnLongitudinalSchema = z
+  .object({
+    diameterMm: z.number().positive(),
+    count: z.number().int().positive(),
+  })
+  .strict();
+
+const ColumnStirrupsSchema = z
+  .object({
+    diameterMm: z.number().positive(),
+    spacingMm: z.number().positive(),
+    spacingCriticalMm: z.number().positive().optional(),
+    // ADR-456 Slice 3 — μορφή συνδετήρα (absent ⇒ closed-hooked).
+    type: z.enum(['closed-hooked', 'closed-welded', 'spiral']).optional(),
+  })
+  .strict();
+
+// ADR-460 — οπλισμός τοιχώματος (boundary elements + κατανεμημένος κορμός).
+const WallReinforcementSchema = z
+  .object({
+    boundary: ColumnLongitudinalSchema,
+    boundaryTieSpacingMm: z.number().positive(),
+    webVertical: ColumnStirrupsSchema,
+    webHorizontal: ColumnStirrupsSchema,
+  })
+  .strict();
+
 const ColumnReinforcementSchema = z
   .object({
-    longitudinal: z
-      .object({
-        diameterMm: z.number().positive(),
-        count: z.number().int().positive(),
-      })
-      .strict(),
-    stirrups: z
-      .object({
-        diameterMm: z.number().positive(),
-        spacingMm: z.number().positive(),
-        spacingCriticalMm: z.number().positive().optional(),
-        // ADR-456 Slice 3 — μορφή συνδετήρα (absent ⇒ closed-hooked).
-        type: z.enum(['closed-hooked', 'closed-welded', 'spiral']).optional(),
-      })
-      .strict(),
+    longitudinal: ColumnLongitudinalSchema,
+    stirrups: ColumnStirrupsSchema,
     coverMm: z.number().positive(),
+    // ADR-456 — μοτίβο cross-ties (absent ⇒ auto). [ΗΤΑΝ ΚΕΝΟ στο schema — strict
+    // απέρριπτε persisted crossTiePattern· ADR-460 fix].
+    crossTiePattern: z.enum(['auto', 'diamond', 'grid']).optional(),
+    // ADR-460 — σπείρα: βήμα έλικας (mm)· wall: boundary + web οπλισμός.
+    spiralPitchMm: z.number().positive().optional(),
+    wall: WallReinforcementSchema.optional(),
   })
   .strict();
 

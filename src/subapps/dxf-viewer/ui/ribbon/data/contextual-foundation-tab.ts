@@ -287,6 +287,31 @@ export const CONTEXTUAL_FOUNDATION_TAB: RibbonTab = {
       ],
     },
     {
+      // ADR-459 Φ4d — «Αυτόματος Οπλισμός» θεμελιακού στοιχείου (parity με κολόνα):
+      // code-suggested ελάχιστος-έγκυρος οπλισμός (σχάρα/δοκός) μέσω undoable command.
+      id: 'foundation-structural',
+      labelKey: 'ribbon.panels.structural',
+      rows: [
+        {
+          isInFlyout: false,
+          buttons: [
+            {
+              type: 'simple',
+              size: 'small',
+              command: {
+                id: 'foundation.structural.auto',
+                labelKey: 'ribbon.commands.autoReinforceOrganism',
+                tooltipKey: 'ribbon.tooltips.autoReinforceOrganism',
+                icon: 'struct-auto-reinforce',
+                commandKey: FOUNDATION_RIBBON_KEYS_ACTIONS.autoReinforce,
+                action: FOUNDATION_RIBBON_KEYS_ACTIONS.autoReinforce,
+              },
+            },
+          ],
+        },
+      ],
+    },
+    {
       id: 'foundation-actions',
       labelKey: 'ribbon.panels.foundationActions',
       rows: [

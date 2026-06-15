@@ -85,8 +85,26 @@ export interface ColumnStirrups {
 }
 
 /**
- * Πλήρης οπλισμός ορθογωνικής κολώνας. Optional/non-breaking στο `ColumnParams`
- * (absent = δεν έχει οριστεί οπλισμός ακόμα — μόνο ποσότητες σκυροδέματος).
+ * Οπλισμός **τοιχώματος** (ADR-460 — shear-wall / επίμηκες Γ/Τ/Π/σύνθετο, EC8
+ * §5.4.3.4 + §5.5): συγκεντρωμένος οπλισμός στις **κρυφοκολώνες** (boundary elements,
+ * δύο ζώνες άκρων) + **κατανεμημένος οπλισμός κορμού** (κατακόρυφο + οριζόντιο πλέγμα).
+ * Συνυπάρχει με το `longitudinal`/`stirrups` (που εδώ παίζουν ρόλο περιμετρικού
+ * στεφανιού/αναφοράς). Optional — absent ⇒ παράγεται default από τον provider.
+ */
+export interface WallReinforcementIntent {
+  /** Διαμήκεις ράβδοι ΑΝΑ κρυφοκολώνα (ένα άκρο). */
+  readonly boundary: ColumnLongitudinalRebar;
+  /** Βήμα συνδετήρων στη ζώνη κρυφοκολώνας (mm) — πύκνωση περίσφιγξης. */
+  readonly boundaryTieSpacingMm: number;
+  /** Κατακόρυφος κατανεμημένος οπλισμός κορμού (ανά παρειά). */
+  readonly webVertical: ColumnStirrups;
+  /** Οριζόντιος κατανεμημένος οπλισμός κορμού. */
+  readonly webHorizontal: ColumnStirrups;
+}
+
+/**
+ * Πλήρης οπλισμός κολώνας **οποιουδήποτε σχήματος** (ADR-460). Optional/non-breaking
+ * στο `ColumnParams` (absent = δεν έχει οριστεί οπλισμός — μόνο ποσότητες σκυροδέματος).
  */
 export interface ColumnReinforcement {
   readonly longitudinal: ColumnLongitudinalRebar;
@@ -98,4 +116,14 @@ export interface ColumnReinforcement {
    * (`auto` — υβριδικό). Καθαρά detailing/σχεδίαση — δεν αλλάζει διαμήκη/ρ.
    */
   readonly crossTiePattern?: CrossTiePattern;
+  /**
+   * ADR-460 — Σπείρα: βήμα έλικας (mm). Absent ⇒ χρησιμοποιείται `stirrups.spacingMm`.
+   * Μόνο όταν `stirrups.type==='spiral'` (κυκλική/spiral διατομή).
+   */
+  readonly spiralPitchMm?: number;
+  /**
+   * ADR-460 — Οπλισμός τοιχώματος (boundary elements + web). Παρών μόνο όταν η διατομή
+   * διευθετείται ως τοίχωμα (`mode==='wall'`). Absent ⇒ default από τον provider.
+   */
+  readonly wall?: WallReinforcementIntent;
 }

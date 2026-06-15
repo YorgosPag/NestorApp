@@ -26,6 +26,8 @@ import {
 } from '../../../../bim/structural/codes';
 import { computeColumnReinforcementQuantities } from '../../../../bim/structural/reinforcement/column-reinforcement-compute';
 import { computeColumnConfinement } from '../../../../bim/structural/reinforcement/column-confinement';
+import { resolveColumnRebarLayout } from '../../../../bim/structural/reinforcement/column-rebar-layout-resolve';
+import type { ColumnReinforcementSection } from '../../../../bim/structural/reinforcement/column-section-outline';
 import type { ColumnReinforcement } from '../../../../bim/structural/reinforcement/column-reinforcement-types';
 import {
   COLUMN_STRUCTURAL_READOUT_KEYS,
@@ -142,28 +144,30 @@ export function resolveStructuralReadout(
   volumeM3: number,
   ctx: ColumnSectionContext,
   effectiveReinforcement: ColumnReinforcement,
+  section?: ColumnReinforcementSection,
 ): string | null {
+  // ADR-460 — shape-aware ποσότητες/περίσφιγξη όταν δίνεται section (dispatcher).
+  const quantities = (): ReturnType<typeof computeColumnReinforcementQuantities> =>
+    computeColumnReinforcementQuantities(ctx, effectiveReinforcement, undefined, section);
   if (readoutKey === COLUMN_STRUCTURAL_READOUT_KEYS.concreteVolumeGross) {
     return volumeM3.toFixed(3); // μικτός όγκος (συμβατική επιμέτρηση)
   }
   if (readoutKey === COLUMN_STRUCTURAL_READOUT_KEYS.concreteVolumeNet) {
-    const { totalSteelWeightKg } = computeColumnReinforcementQuantities(ctx, effectiveReinforcement);
-    const steelVolumeM3 = totalSteelWeightKg / REBAR_STEEL_DENSITY_KGM3;
+    const steelVolumeM3 = quantities().totalSteelWeightKg / REBAR_STEEL_DENSITY_KGM3;
     return Math.max(0, volumeM3 - steelVolumeM3).toFixed(3); // καθαρός = μικτός − χάλυβας
   }
   if (readoutKey === COLUMN_STRUCTURAL_READOUT_KEYS.concreteWeight) {
     return String(Math.round(concreteWeightKg(volumeM3)));
   }
   if (readoutKey === COLUMN_STRUCTURAL_READOUT_KEYS.steelWeight) {
-    const { totalSteelWeightKg } = computeColumnReinforcementQuantities(ctx, effectiveReinforcement);
-    return String(Math.round(totalSteelWeightKg));
+    return String(Math.round(quantities().totalSteelWeightKg));
   }
   if (readoutKey === COLUMN_STRUCTURAL_READOUT_KEYS.ratio) {
-    const { ratio } = computeColumnReinforcementQuantities(ctx, effectiveReinforcement);
-    return (ratio * 100).toFixed(2);
+    return (quantities().ratio * 100).toFixed(2);
   }
   if (readoutKey === COLUMN_STRUCTURAL_READOUT_KEYS.confinement) {
-    return computeColumnConfinement(ctx, effectiveReinforcement).alpha.toFixed(2);
+    const layout = section ? resolveColumnRebarLayout(effectiveReinforcement, section) : null;
+    return computeColumnConfinement(ctx, effectiveReinforcement, layout).alpha.toFixed(2);
   }
   return null;
 }

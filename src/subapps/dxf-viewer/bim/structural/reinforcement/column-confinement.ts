@@ -22,7 +22,7 @@
 import type { ColumnSectionContext } from '../codes/structural-code-types';
 import type { ColumnReinforcement } from './column-reinforcement-types';
 import { DEFAULT_STIRRUP_TYPE } from './column-reinforcement-types';
-import { computeColumnRebarLayout } from './column-rebar-layout';
+import { computeColumnRebarLayout, type ColumnRebarLayout } from './column-rebar-layout';
 
 /** Αποτέλεσμα υπολογισμού περίσφιγξης. */
 export interface ColumnConfinement {
@@ -58,12 +58,17 @@ function sumGapSquaredMm2(bars: readonly { x: number; y: number }[]): number {
 }
 
 /**
- * Υπολογίζει την αποτελεσματικότητα περίσφιγξης α = αₙ·αₛ της ορθογωνικής κολώνας.
- * Επιστρέφει μηδενικά για εκφυλισμένο πυρήνα.
+ * Υπολογίζει την αποτελεσματικότητα περίσφιγξης α = αₙ·αₛ. Τα `b0`/`h0` (διαστάσεις
+ * περισφιγμένου πυρήνα) προκύπτουν από `ctx.widthMm`/`depthMm` — ο caller τα θέτει
+ * στις διαστάσεις bbox της διατομής (ορθογ.: width×depth· κυκλική: diameter×diameter·
+ * άλλα σχήματα: bbox). Το `layout` (ADR-460 — από τον dispatcher οποιουδήποτε σχήματος)
+ * δίνει τις θέσεις ράβδων για το αₙ· absent → rect layout (back-compat). Επιστρέφει
+ * μηδενικά για εκφυλισμένο πυρήνα.
  */
 export function computeColumnConfinement(
   ctx: ColumnSectionContext,
   r: ColumnReinforcement,
+  layout?: ColumnRebarLayout | null,
 ): ColumnConfinement {
   const type = r.stirrups.type ?? DEFAULT_STIRRUP_TYPE;
   const dbw = Math.max(0, r.stirrups.diameterMm);
@@ -81,8 +86,8 @@ export function computeColumnConfinement(
   }
 
   const alphaS = clamp01((1 - s / (2 * b0)) * (1 - s / (2 * h0)));
-  const layout = computeColumnRebarLayout(r, ctx.widthMm, ctx.depthMm);
-  const sumBi2 = layout ? sumGapSquaredMm2(layout.longitudinalBarsMm) : 0;
+  const effLayout = layout ?? computeColumnRebarLayout(r, ctx.widthMm, ctx.depthMm);
+  const sumBi2 = effLayout ? sumGapSquaredMm2(effLayout.longitudinalBarsMm) : 0;
   const alphaN = clamp01(1 - sumBi2 / (6 * b0 * h0));
   return {
     alphaN,

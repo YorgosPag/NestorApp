@@ -456,6 +456,31 @@ export const CONTEXTUAL_BEAM_TAB: RibbonTab = {
       ],
     },
     {
+      // ADR-459 Φ4d — «Αυτόματος Οπλισμός» δοκαριού (parity με κολόνα): code-suggested
+      // ελάχιστος-έγκυρος οπλισμός του επιλεγμένου μέλους μέσω undoable command.
+      id: 'beam-structural',
+      labelKey: 'ribbon.panels.structural',
+      rows: [
+        {
+          isInFlyout: false,
+          buttons: [
+            {
+              type: 'simple',
+              size: 'small',
+              command: {
+                id: 'beam.structural.auto',
+                labelKey: 'ribbon.commands.autoReinforceOrganism',
+                tooltipKey: 'ribbon.tooltips.autoReinforceOrganism',
+                icon: 'struct-auto-reinforce',
+                commandKey: BEAM_RIBBON_KEYS_ACTIONS.autoReinforce,
+                action: BEAM_RIBBON_KEYS_ACTIONS.autoReinforce,
+              },
+            },
+          ],
+        },
+      ],
+    },
+    {
       id: 'beam-actions',
       labelKey: 'ribbon.panels.beamActions',
       rows: [

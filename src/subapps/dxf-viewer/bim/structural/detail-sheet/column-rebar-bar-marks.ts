@@ -19,7 +19,7 @@
 
 import type { ColumnParams } from '../../types/column-types';
 import { columnLocalMmToWorld } from '../../geometry/column-geometry';
-import { computeColumnRebarLayout } from '../reinforcement/column-rebar-layout';
+import { resolveColumnRebarLayoutForParams } from '../reinforcement/column-rebar-layout-resolve';
 
 /**
  * Returns the bar mark number (1-based) for each longitudinal bar, aligned to the
@@ -29,8 +29,8 @@ import { computeColumnRebarLayout } from '../reinforcement/column-rebar-layout';
  */
 export function assignColumnBarNumbers(params: ColumnParams): number[] | null {
   const r = params.reinforcement;
-  if (params.kind !== 'rectangular' || !r) return null;
-  const layout = computeColumnRebarLayout(r, params.width, params.depth);
+  if (!r) return null;
+  const layout = resolveColumnRebarLayoutForParams(r, params);
   if (!layout || layout.longitudinalBarsMm.length === 0) return null;
 
   const world = columnLocalMmToWorld(params, layout.longitudinalBarsMm);
