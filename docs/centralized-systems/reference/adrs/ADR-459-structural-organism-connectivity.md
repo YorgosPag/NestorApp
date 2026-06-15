@@ -286,7 +286,8 @@ checks + command — μηδέν duplicate.
   του πεδίλου) + provider `slabFoundationReinforcementLimits`/`suggestSlabFoundationReinforcement`
   (EC2 §9.3.1.1 + ΕΚΩΣ, reuse `resolveMatMesh`) + NEW persisted πεδίο `SlabParams.structuralReinforcement`
   (διακριτό από το hint → μηδέν BOQ regression) + ένταξη στο `buildReinforcePatch`
-  (`isFoundationSlabEntity`) + κάλυψη στο `reinforcement-checks` (missing/ratio).
+  (`isFoundationSlabEntity`) + κάλυψη στο `reinforcement-checks` (missing/ratio) + `useStructuralAutoReinforce`
+  whole-floor scope (η εδαφόπλακα μπαίνει πλέον στο «οπλισμός όλου του ορόφου»).
 - **E2 (footing pad own-bar continuity) = SKIP** (Giorgio scope): οριακής αξίας/πιθανό near-no-op —
   οι mat-ράβδοι πεδίλου είναι detailing, όχι connectivity-driven.
 
