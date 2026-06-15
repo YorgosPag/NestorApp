@@ -84,15 +84,18 @@ function makeOfKind(kind: ColumnKind, overrides: Partial<ColumnParams> = {}): Co
 }
 
 describe('column-grips — getColumnGrips (Phase 4.5)', () => {
-  it('1. rectangular → 7 grips: rotation, width, depth, 4 corners — ADR-363 Slice C', () => {
-    // ADR-363 Slice C: rect/shear-wall gain the 4 rect-grip-engine corners (4..7).
+  it('1. rectangular → 10 grips: center, rotation, 4 edges, 4 corners — ADR-363 (Giorgio 2026-06-15)', () => {
+    // Giorgio 2026-06-15: rect gains a center MOVE grip + edge-midpoints on ALL 4
+    // sides (E=width, N=depth, W=edge-w, S=edge-s) + rotation στο μέσο κέντρου↔κάτω.
     const grips = getColumnGrips(makeRect());
-    expect(grips).toHaveLength(7);
-    expect(grips.map((g) => g.columnGripKind)).not.toContain('column-center');
+    expect(grips).toHaveLength(10);
     expect(grips.map((g) => g.columnGripKind)).toEqual([
+      'column-center',
       'column-rotation',
       'column-width',
       'column-depth',
+      'column-edge-w',
+      'column-edge-s',
       'column-corner-ne',
       'column-corner-nw',
       'column-corner-sw',
@@ -113,17 +116,20 @@ describe('column-grips — getColumnGrips (Phase 4.5)', () => {
       anchor: 'center',
     });
     const grips = getColumnGrips(col);
-    // ADR-363 Φ1G.5 Slice 2: center grip removed; array shifted down by 1.
-    // rotation handle sits ON the face OPPOSITE the depth handle (offset 0, clean
-    // separation from the πάχος handle, Revit-style): y − (600/2 + 0)*0.001 = 8 − 0.3 = 7.7.
-    expect(grips[0].columnGripKind).toBe('column-rotation');
+    // ADR-363 (Giorgio 2026-06-15) rect layout: [0]=center, [1]=rotation, [2]=width, [3]=depth.
+    // center sits on the centroid = (10, 8).
+    expect(grips[0].columnGripKind).toBe('column-center');
     expect(grips[0].position.x).toBeCloseTo(10, 6);
-    expect(grips[0].position.y).toBeCloseTo(7.7, 6);
+    expect(grips[0].position.y).toBeCloseTo(8, 6);
+    // rotation handle = midpoint centre↔south edge: y − (600/4)*0.001 = 8 − 0.15 = 7.85.
+    expect(grips[1].columnGripKind).toBe('column-rotation');
+    expect(grips[1].position.x).toBeCloseTo(10, 6);
+    expect(grips[1].position.y).toBeCloseTo(7.85, 6);
     // width handle: x + (400/2)*0.001 = 10.2 (not 210).
-    expect(grips[1].position.x).toBeCloseTo(10.2, 6);
-    expect(grips[1].position.y).toBeCloseTo(8, 6);
+    expect(grips[2].position.x).toBeCloseTo(10.2, 6);
+    expect(grips[2].position.y).toBeCloseTo(8, 6);
     // depth handle: y + (600/2)*0.001 = 8.3 (not 308).
-    expect(grips[2].position.y).toBeCloseTo(8.3, 6);
+    expect(grips[3].position.y).toBeCloseTo(8.3, 6);
   });
 
   it('ADR-397 — width resize tracks cursor 1:1 in a metre scene (scene delta ÷ s → mm)', () => {
@@ -182,29 +188,48 @@ describe('column-grips — getColumnGrips (Phase 4.5)', () => {
     expect(grips.map((g) => g.columnGripKind)).not.toContain('column-web-thickness');
   });
 
-  it('5. column-center grip is NOT emitted — ADR-363 Φ1G.5 Slice 2', () => {
-    // ADR-363 Φ1G.5 Slice 2: center grip no longer pushed; assert absence
-    const grips = getColumnGrips(makeRect());
-    expect(grips.map((g) => g.columnGripKind)).not.toContain('column-center');
-    expect(grips.some((g) => g.movesEntity === true)).toBe(false);
+  it('5. rect emits a center MOVE grip (Giorgio 2026-06-15)· circular/L still do NOT', () => {
+    // ADR-363 (Giorgio 2026-06-15): rect re-gains the center MOVE grip. Other kinds
+    // keep the Φ1G.5 Slice 2 declutter (Alt+drag moves them).
+    const rect = getColumnGrips(makeRect());
+    const center = rect.find((g) => g.columnGripKind === 'column-center');
+    expect(center).toBeDefined();
+    expect(center!.movesEntity).toBe(true);
+    // circular keeps no center grip.
+    expect(getColumnGrips(makeCircular()).map((g) => g.columnGripKind)).not.toContain('column-center');
   });
 
   it('6. width grip on rectangular sits at +width/2 along X (anchor=center, rotation=0)', () => {
     const col = makeRect();
     const grips = getColumnGrips(col);
-    // ADR-363 Φ1G.5 Slice 2: center removed → width grip shifted from array[2] to array[1]
-    expect(grips[1].columnGripKind).toBe('column-width');
-    expect(grips[1].position.x).toBeCloseTo(col.params.width / 2, 6);
-    expect(grips[1].position.y).toBeCloseTo(0, 6);
+    // ADR-363 (Giorgio 2026-06-15) rect layout: [0]=center, [1]=rotation, [2]=width.
+    expect(grips[2].columnGripKind).toBe('column-width');
+    expect(grips[2].position.x).toBeCloseTo(col.params.width / 2, 6);
+    expect(grips[2].position.y).toBeCloseTo(0, 6);
   });
 
   it('7. depth grip on rectangular sits at +depth/2 along Y (anchor=center, rotation=0)', () => {
     const col = makeRect();
     const grips = getColumnGrips(col);
-    // ADR-363 Φ1G.5 Slice 2: center removed → depth grip shifted from array[3] to array[2]
-    expect(grips[2].columnGripKind).toBe('column-depth');
-    expect(grips[2].position.x).toBeCloseTo(0, 6);
-    expect(grips[2].position.y).toBeCloseTo(col.params.depth / 2, 6);
+    // ADR-363 (Giorgio 2026-06-15) rect layout: [3]=depth.
+    expect(grips[3].columnGripKind).toBe('column-depth');
+    expect(grips[3].position.x).toBeCloseTo(0, 6);
+    expect(grips[3].position.y).toBeCloseTo(col.params.depth / 2, 6);
+  });
+
+  it('7b. rect WEST/SOUTH edge grips sit at −width/2 / −depth/2· rotation at −depth/4 (Giorgio 2026-06-15)', () => {
+    const col = makeRect();
+    const grips = getColumnGrips(col);
+    const w = grips.find((g) => g.columnGripKind === 'column-edge-w')!;
+    const s = grips.find((g) => g.columnGripKind === 'column-edge-s')!;
+    const rot = grips.find((g) => g.columnGripKind === 'column-rotation')!;
+    expect(w.position.x).toBeCloseTo(-col.params.width / 2, 6);
+    expect(w.position.y).toBeCloseTo(0, 6);
+    expect(s.position.x).toBeCloseTo(0, 6);
+    expect(s.position.y).toBeCloseTo(-col.params.depth / 2, 6);
+    // rotation = midpoint centre↔south = (0, −depth/4).
+    expect(rot.position.x).toBeCloseTo(0, 6);
+    expect(rot.position.y).toBeCloseTo(-col.params.depth / 4, 6);
   });
 });
 
@@ -584,13 +609,16 @@ describe('column-grips — applyColumnGripDrag T-shape variants (Phase 4.5b)', (
 // ─── Phase 4.5b — non-regression of unaffected kinds ─────────────────────────
 
 describe('column-grips — Phase 4.5b non-regression (rectangular + circular)', () => {
-  it('41. rectangular column emits 7 grips (rotation + width + depth + 4 corners) — ADR-363 Slice C', () => {
+  it('41. rectangular column emits 10 grips (center + rotation + 4 edges + 4 corners) — ADR-363 (Giorgio 2026-06-15)', () => {
     const grips = getColumnGrips(makeRect());
-    expect(grips).toHaveLength(7);
+    expect(grips).toHaveLength(10);
     expect(grips.map((g) => g.columnGripKind)).toEqual([
+      'column-center',
       'column-rotation',
       'column-width',
       'column-depth',
+      'column-edge-w',
+      'column-edge-s',
       'column-corner-ne',
       'column-corner-nw',
       'column-corner-sw',
@@ -735,13 +763,16 @@ describe('column-grips — Phase 8C: polygon kind', () => {
 });
 
 describe('column-grips — Phase 8C: shear-wall kind', () => {
-  it('50. shear-wall → 7 grips (rect parity: rotation, width, depth, 4 corners) — ADR-363 Slice C', () => {
+  it('50. shear-wall → 10 grips (rect parity: center, rotation, 4 edges, 4 corners) — ADR-363 (Giorgio 2026-06-15)', () => {
     const grips = getColumnGrips(makeOfKind('shear-wall', { width: 2000, depth: 200 }));
-    expect(grips).toHaveLength(7);
+    expect(grips).toHaveLength(10);
     expect(grips.map((g) => g.columnGripKind)).toEqual([
+      'column-center',
       'column-rotation',
       'column-width',
       'column-depth',
+      'column-edge-w',
+      'column-edge-s',
       'column-corner-ne',
       'column-corner-nw',
       'column-corner-sw',
@@ -758,6 +789,23 @@ describe('column-grips — Phase 8C: shear-wall kind', () => {
     expect(next.width).toBe(2000);
     // ADR-363 Slice C — opposite-edge-fixed → newDepth = 200 + 50
     expect(next.depth).toBeCloseTo(250, 4);
+  });
+});
+
+describe('column-grips — rect WEST/SOUTH edge drag (Giorgio 2026-06-15, shared rect-grip-engine)', () => {
+  it('column-edge-w resize μεγαλώνει width κρατώντας την ανατολική παρειά σταθερή', () => {
+    const col = makeRect(); // width=depth=400, anchor=center
+    // drag west edge κατά −100 (προς τα αριστερά) → width = 400 + 100 = 500· east edge (+200) σταθερή.
+    const next = applyColumnGripDrag('column-edge-w', { originalParams: col.params, delta: { x: -100, y: 0 } });
+    expect(next.width).toBeCloseTo(500, 4);
+    expect(next.depth).toBeCloseTo(400, 4); // perpendicular dimension untouched
+  });
+
+  it('column-edge-s resize μεγαλώνει depth κρατώντας τη βόρεια παρειά σταθερή', () => {
+    const col = makeRect();
+    const next = applyColumnGripDrag('column-edge-s', { originalParams: col.params, delta: { x: 0, y: -100 } });
+    expect(next.depth).toBeCloseTo(500, 4);
+    expect(next.width).toBeCloseTo(400, 4);
   });
 });
 

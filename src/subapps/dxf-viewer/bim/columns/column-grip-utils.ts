@@ -142,6 +142,15 @@ export function depthHandleWorld(params: ColumnParams): Point2D {
  * actual N-gon bbox dimY (`polygonBboxMm`) αντί για το meaningless `params.depth`.
  */
 export function rotationHandleWorld(params: ColumnParams): Point2D {
+  // ADR-363 — rectangular / shear-wall (Giorgio 2026-06-15): the rotation marker
+  // sits at the MIDPOINT of the imaginary line from the centre to the south
+  // edge-midpoint → local (0, −depth/4). Kept HERE (the single rotation-position
+  // SSoT) so the grip emission AND the rotation drag (`rotateAroundPosition`,
+  // which reads this) agree — otherwise the handle would jump on grab. Inlined
+  // kind check (mirror `isRectColumn`) to avoid a column-rect-adapter import cycle.
+  if (params.kind === 'rectangular' || params.kind === 'shear-wall') {
+    return localToWorld({ x: 0, y: -params.depth / 4 }, params);
+  }
   const dimY = params.kind === 'polygon'
     ? polygonBboxMm(params.width, params.polygon?.sides).dimY
     : params.depth;

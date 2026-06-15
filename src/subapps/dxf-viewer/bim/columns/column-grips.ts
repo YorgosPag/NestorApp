@@ -99,7 +99,7 @@ import {
 // kinds keep their own transforms (this adapter returns null for them).
 import {
   isRectColumn,
-  rectColumnCornerGrips,
+  rectColumnGrips,
   applyRectColumnGrip,
 } from './column-rect-adapter';
 
@@ -198,6 +198,14 @@ export function getColumnGrips(entity: Readonly<ColumnEntity>): GripInfo[] {
     return freeCornerReshapeGrips(entity);
   }
 
+  // ADR-363 — rectangular / shear-wall (Giorgio 2026-06-15): full grip set =
+  // center + rotation(inner) + 4 edge-midpoints (E/N via width/depth + W/S) +
+  // 4 corners. Single SSoT emission lives in `column-rect-adapter.rectColumnGrips`
+  // (shares `rect-grip-engine`). Replaces the old generic-branch + corner-append.
+  if (isRectColumn(params)) {
+    return rectColumnGrips(entity);
+  }
+
   grips.push({
     entityId: entity.id,
     gripIndex: 1,
@@ -294,13 +302,8 @@ export function getColumnGrips(entity: Readonly<ColumnEntity>): GripInfo[] {
       columnGripKind: 'column-base-thickness',
     });
   }
-  // ADR-363 Slice C — rectangular / shear-wall: add the 4 corner grips (indices
-  // 4..7) so the rect column matches the wall/foundation 7-grip layout, sharing
-  // the rect-grip-engine. (Variant kinds already consumed indices 4/5 above and
-  // are excluded by `isRectColumn`.)
-  if (isRectColumn(params)) {
-    grips.push(...rectColumnCornerGrips(entity));
-  }
+  // (rectangular / shear-wall return early via `rectColumnGrips` above — they no
+  // longer fall through here. This branch now serves only I-shape / U-parametric.)
 
   return grips;
 }

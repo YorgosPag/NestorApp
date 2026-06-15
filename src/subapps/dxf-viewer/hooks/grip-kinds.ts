@@ -319,6 +319,12 @@ export type ColumnGripKind =
   | 'column-corner-nw'
   | 'column-corner-sw'
   | 'column-corner-se'
+  // ADR-363 — rectangular / shear-wall edge-midpoint grips on the WEST + SOUTH
+  // faces (Giorgio 2026-06-15: «λαβές και στις άλλες δύο πλευρές»). The EAST/NORTH
+  // edges keep their `column-width` / `column-depth` kinds; these two add the
+  // remaining faces so all 4 sides resize via the shared `rect-grip-engine`.
+  | 'column-edge-w'
+  | 'column-edge-s'
   | 'column-arm-length'
   | 'column-arm-width'
   | 'column-flange-length'
