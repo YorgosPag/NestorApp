@@ -15,10 +15,12 @@ import type { ColumnSectionContext } from '../codes/structural-code-types';
 import type { ColumnReinforcement } from './column-reinforcement-types';
 import { DEFAULT_STIRRUP_TYPE } from './column-reinforcement-types';
 import {
+  computeColumnRebarLayout,
   computeStirrupLevelsMm,
   stirrupCenterlinePerimeterMm,
   STIRRUP_HOOK_EXTENSION_FACTOR,
 } from './column-rebar-layout';
+import { buildColumnCrossTies, crossTieCenterlineLengthMm } from './column-cross-ties';
 
 const MM_TO_M = 0.001;
 
@@ -49,6 +51,12 @@ export interface ColumnReinforcementQuantities {
   readonly stirrupTotalLengthM: number;
   /** Βάρος εγκάρσιου οπλισμού (kg). */
   readonly stirrupWeightKg: number;
+  /** Πλήθος τεμαχίων εσωτερικών συνδετηρίων (cross-ties) σε όλο το ύψος. */
+  readonly crossTieCount: number;
+  /** Συνολικό μήκος εσωτερικών συνδετηρίων (m). */
+  readonly crossTieTotalLengthM: number;
+  /** Βάρος εσωτερικών συνδετηρίων (kg). */
+  readonly crossTieWeightKg: number;
   /** Συνολικό βάρος χάλυβα οπλισμού B500C (kg). */
   readonly totalSteelWeightKg: number;
   /** Ποσοστό διαμήκους οπλισμού ρ = As/Ac. */
@@ -139,6 +147,17 @@ export function computeColumnReinforcementQuantities(
   const stirrupSingleLengthM = stirrupCount > 0 ? stirrupTotalLengthM / stirrupCount : 0;
   const stirrupWeightKg = stirrupTotalLengthM * barMassPerMeterKg(r.stirrups.diameterMm);
 
+  // Εσωτερικά συνδετήρια (cross-ties / διαμάντι, EC8): μία διάταξη ανά στάθμη
+  // στεφανιού (ίδιο πλήθος `stirrupCount`). Geometry-is-SSoT — ΙΔΙΑ γεωμετρία με
+  // τη σχεδίαση 2Δ/3Δ. Διάμετρος = αυτή των συνδετήρων.
+  const dbw = r.stirrups.diameterMm;
+  const layout = computeColumnRebarLayout(r, ctx.widthMm, ctx.depthMm);
+  const crossTies = layout ? buildColumnCrossTies(layout.longitudinalBarsMm, dbw, dbL, r.crossTiePattern) : [];
+  const crossTieSingleSetLengthMm = crossTies.reduce((sum, t) => sum + crossTieCenterlineLengthMm(t), 0);
+  const crossTieCount = crossTies.length * stirrupCount;
+  const crossTieTotalLengthM = crossTieSingleSetLengthMm * stirrupCount * MM_TO_M;
+  const crossTieWeightKg = crossTieTotalLengthM * barMassPerMeterKg(dbw);
+
   const ratio = ctx.grossAreaMm2 > 0 ? (nBars * barAreaMm2(dbL)) / ctx.grossAreaMm2 : 0;
 
   return {
@@ -148,7 +167,10 @@ export function computeColumnReinforcementQuantities(
     stirrupSingleLengthM,
     stirrupTotalLengthM,
     stirrupWeightKg,
-    totalSteelWeightKg: longitudinalWeightKg + stirrupWeightKg,
+    crossTieCount,
+    crossTieTotalLengthM,
+    crossTieWeightKg,
+    totalSteelWeightKg: longitudinalWeightKg + stirrupWeightKg + crossTieWeightKg,
     ratio,
   };
 }

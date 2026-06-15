@@ -8,7 +8,9 @@
 
 import { beamBoqEntity } from '../beam-boq-feed';
 import { buildDefaultBeamParams, buildBeamEntity } from '../../drawing/beam-completion';
+import { buildDefaultColumnParams, buildColumnEntity } from '../../drawing/column-completion';
 import type { BeamEntity } from '../../../bim/types/beam-types';
+import type { ColumnEntity } from '../../../bim/types/column-types';
 import type { SceneModel } from '../../../types/entities';
 import type { StructuralFinishSpec } from '../../../bim/finishes/structural-finish-types';
 
@@ -27,6 +29,13 @@ function beam(finish?: StructuralFinishSpec): BeamEntity {
   };
   const res = buildBeamEntity(params, '0');
   if (!res.ok) throw new Error('beam fixture invalid');
+  return res.entity;
+}
+
+function columnAt(x: number, y: number, width: number, depth: number): ColumnEntity {
+  const params = { ...buildDefaultColumnParams({ x, y }, 'rectangular'), width, depth };
+  const res = buildColumnEntity(params, '0');
+  if (!res.ok) throw new Error('column fixture invalid');
   return res.entity;
 }
 
@@ -54,5 +63,29 @@ describe('beamBoqEntity (ADR-449 Slice 4)', () => {
     const out = beamBoqEntity(beam(FINISH), null);
     expect(out.finishContribution).toBeUndefined();
     expect(out.params).toBeUndefined();
+  });
+
+  // ─── ADR-458 — NET στατικός όγκος (beam-to-column cutback) ──────────────────
+
+  it('κολόνα που τέμνει το δοκάρι → NET area/volume < gross (column wins)', () => {
+    const b = beam(); // gross area = 3.0m × 0.25m = 0.75 m²
+    const grossArea = b.geometry.area;
+    const grossVolume = b.geometry.volume;
+    // Κολόνα 600×600 στην αρχή του άξονα → τέμνει το δυτικό άκρο του δοκαριού.
+    const scene = { entities: [b, columnAt(0, 0, 600, 600)] } as unknown as SceneModel;
+    const out = beamBoqEntity(b, scene);
+    expect(out.geometry!.area).toBeLessThan(grossArea);
+    expect(out.geometry!.volume).toBeLessThan(grossVolume);
+    // overlap ≈ 0.3m × 0.25m = 0.075 m² → net ≈ 0.675 m².
+    expect(out.geometry!.area).toBeCloseTo(0.675, 2);
+    expect(out.geometry!.volume).toBeCloseTo(0.675 * 0.5, 2);
+  });
+
+  it('κολόνα που ΔΕΝ τέμνει → gross αμετάβλητο (zero regression)', () => {
+    const b = beam();
+    const scene = { entities: [b, columnAt(10000, 10000, 600, 600)] } as unknown as SceneModel;
+    const out = beamBoqEntity(b, scene);
+    expect(out.geometry!.area).toBeCloseTo(b.geometry.area, 6);
+    expect(out.geometry!.volume).toBeCloseTo(b.geometry.volume, 6);
   });
 });

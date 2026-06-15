@@ -36,6 +36,8 @@ import { resolveSceneUnits, mmToSceneUnits, type SceneUnits } from '../../utils/
 import { immediateSceneScale } from '../../systems/cursor/ImmediateSceneScaleStore';
 // Pure per-entity projection SSoT (extracted to keep this file ≤500 LOC).
 import { convertEntity } from './dxf-scene-entity-converter';
+// ADR-458 — cross-element post-pass: beam-to-column cutback (column wins) → displayOutline.
+import { applyBeamColumnCutback2D } from './dxf-scene-beam-cutback';
 
 // ============================================================================
 // TYPES
@@ -96,7 +98,9 @@ export function convertSceneToDxf(
   }
 
   return {
-    entities: converted,
+    // ADR-458 — beam-to-column cutback post-pass (column wins). Identity fast-path
+    // όταν δεν υπάρχουν κολόνες/δοκάρια → ίδιο reference, μηδέν κόστος.
+    entities: applyBeamColumnCutback2D(converted),
     layers: Object.keys(layers),
     layersById,
     bounds: scene?.bounds ?? null,
@@ -161,7 +165,9 @@ export function useDxfSceneConversion({
     }
 
     return {
-      entities: converted,
+      // ADR-458 — beam-to-column cutback post-pass πάνω στο converted array (μετά το
+      // per-entity cache → πάντα fresh όταν κινείται κολόνα). Identity fast-path → μηδέν churn.
+      entities: applyBeamColumnCutback2D(converted),
       layers: Object.keys(layers),
       // ADR-358 Phase 9E-5 — id-first primary; name-keyed layers as legacy fallback.
       layersById: currentScene?.layersById,

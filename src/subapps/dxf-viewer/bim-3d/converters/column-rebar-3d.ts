@@ -30,6 +30,7 @@ import {
   computeColumnRebarLayout,
   computeStirrupLevelsMm,
 } from '../../bim/structural/reinforcement/column-rebar-layout';
+import { buildColumnCrossTies } from '../../bim/structural/reinforcement/column-cross-ties';
 import { DEFAULT_STIRRUP_TYPE } from '../../bim/structural/reinforcement/column-reinforcement-types';
 import type { Point2D } from '../../rendering/types/Types';
 
@@ -95,6 +96,19 @@ function buildRods(
 /** plan point (scene units) → three.js διάνυσμα σε στάθμη y (AXIS_FLIP: Z = −sy). */
 function toThree(p: Point2D, y: number): THREE.Vector3 {
   return new THREE.Vector3(p.x, y, -p.y);
+}
+
+/** Ανοιχτή αλυσίδα (cross-tie ευθύγραμμο) ανά στάθμη — segment-προς-segment, ΧΩΡΙΣ
+ *  κλείσιμο last→first (σε αντίθεση με το `ringSegments`). */
+function chainSegments(chainXY: readonly Point2D[], levels: readonly number[], baseY: number): Seg[] {
+  const segs: Seg[] = [];
+  for (const zMm of levels) {
+    const y = baseY + zMm * MM_TO_M;
+    for (let i = 1; i < chainXY.length; i++) {
+      segs.push({ a: toThree(chainXY[i - 1], y), b: toThree(chainXY[i], y) });
+    }
+  }
+  return segs;
 }
 
 /** Κλειστά δαχτυλίδια ανά στάθμη — διατρέχουν την κλειστή (στρογγυλεμένων γωνιών)
@@ -213,6 +227,24 @@ export function buildColumnRebarCage(
   }
   const stirrups = buildRods(stirrupSegs, stirrupRadius, material);
   if (stirrups) group.add(stirrups);
+
+  // ── Εσωτερικά συνδετήρια (cross-ties / διαμάντι, EC8) ανά στάθμη στεφανιού ──
+  // Κλειστό διαμάντι = ring· ανοιχτά ευθύγραμμα = chain. Ίδια ακτίνα/υλικό με τα
+  // στεφάνια, ΙΔΙΑ θέση με το 2Δ (geometry-is-SSoT).
+  const crossTies = buildColumnCrossTies(layout.longitudinalBarsMm, layout.stirrupDiameterMm, layout.barDiameterMm, r.crossTiePattern);
+  if (crossTies.length > 0) {
+    const tieSegs: Seg[] = [];
+    for (const tie of crossTies) {
+      const tieXY = columnLocalMmToWorld(p, tie.pathMm);
+      tieSegs.push(...(tie.closed ? ringSegments(tieXY, levels, baseY) : chainSegments(tieXY, levels, baseY)));
+      if (type === 'closed-hooked') {
+        const hookEndsXY = tie.hookEndsMm.map((end) => columnLocalMmToWorld(p, end));
+        tieSegs.push(...hookSegments(hookEndsXY, levels, baseY));
+      }
+    }
+    const ties = buildRods(tieSegs, stirrupRadius, material);
+    if (ties) group.add(ties);
+  }
 
   if (group.children.length === 0) return null;
   group.userData['bimId'] = column.id;

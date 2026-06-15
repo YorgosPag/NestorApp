@@ -19,6 +19,7 @@ import type { Point2D } from '../../rendering/types/Types';
 import type { ColumnParams } from '../types/column-types';
 import { columnLocalMmToWorld } from '../geometry/column-geometry';
 import { computeColumnRebarLayout } from '../structural/reinforcement/column-rebar-layout';
+import { buildColumnCrossTies } from '../structural/reinforcement/column-cross-ties';
 import { DEFAULT_STIRRUP_TYPE } from '../structural/reinforcement/column-reinforcement-types';
 
 /** Χρώμα οπλισμού (μελετητική σύμβαση — κόκκινο/crimson, αντίθεση με το δομικό μπλε). */
@@ -70,6 +71,31 @@ export function drawColumnRebar2D(
         for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i].x, pts[i].y);
         ctx.stroke();
       }
+    }
+  }
+
+  // ── Εσωτερικά συνδετήρια (cross-ties / διαμάντι) — EC8· ίδιο πάχος/χρώμα με
+  //    το στεφάνι, ΙΔΙΑ θέση με το 3Δ (geometry-is-SSoT) ──
+  const hooked = (r.stirrups.type ?? DEFAULT_STIRRUP_TYPE) === 'closed-hooked';
+  const crossTies = buildColumnCrossTies(layout.longitudinalBarsMm, layout.stirrupDiameterMm, layout.barDiameterMm, r.crossTiePattern);
+  for (const tie of crossTies) {
+    const tp = columnLocalMmToWorld(p, tie.pathMm).map(worldToScreen);
+    if (tp.length >= 2) {
+      ctx.lineWidth = Math.max(MIN_STIRRUP_LINE_PX, layout.stirrupDiameterMm * pxPerMm);
+      ctx.beginPath();
+      ctx.moveTo(tp[0].x, tp[0].y);
+      for (let i = 1; i < tp.length; i++) ctx.lineTo(tp[i].x, tp[i].y);
+      if (tie.closed) ctx.closePath();
+      ctx.stroke();
+    }
+    if (!hooked) continue;
+    for (const end of tie.hookEndsMm) {
+      if (end.length < 2) continue;
+      const pts = columnLocalMmToWorld(p, end).map(worldToScreen);
+      ctx.beginPath();
+      ctx.moveTo(pts[0].x, pts[0].y);
+      for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i].x, pts[i].y);
+      ctx.stroke();
     }
   }
 

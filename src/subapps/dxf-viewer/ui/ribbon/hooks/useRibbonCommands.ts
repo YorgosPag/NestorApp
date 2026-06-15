@@ -46,6 +46,8 @@ import { isRoofRibbonKey, isRoofRibbonStringKey, isRoofRibbonToggleKey } from '.
 import { isFloorFinishRibbonNumberKey, isFloorFinishRibbonStringKey } from './bridge/floor-finish-command-keys';
 import { isThermalSpaceRibbonNumberKey, isThermalSpaceRibbonStringKey } from './bridge/thermal-space-command-keys';
 import { isColumnRibbonKey, isColumnRibbonStringKey, isColumnFinishKey, isColumnStructuralKey, isColumnStructuralReadoutKey } from './bridge/column-command-keys';
+import { isStoreyRibbonKey } from './bridge/storey-command-keys';
+import { getStoreyComboboxState, applyStoreyComboboxChange } from './bridge/storey-height-bridge';
 import { isBeamRibbonKey, isBeamRibbonStringKey, isBeamFinishKey } from './bridge/beam-command-keys';
 import { isFoundationRibbonKey, isFoundationRibbonStringKey, isFoundationBadgeKey } from './bridge/foundation-command-keys';
 import { isSlabOpeningRibbonStringKey } from './bridge/slab-opening-command-keys';
@@ -148,6 +150,11 @@ export function useRibbonCommands({
       // ADR-449 Slice 5 fix — finish keys (`column.params.finish.*`) πρέπει να δρομολογηθούν
       // ΚΑΙ εδώ στον columnBridge (το bridge τα χειριζόταν, αλλά ο composer τα ξεχνούσε →
       // έπεφταν στον textEditorBridge → no-op· γι' αυτό το «Σοβάς Ναι/Όχι» δεν άλλαζε).
+      // ADR-451 Slice 4 — «Ύψος Ορόφου»: γράφει floor.height του ενεργού ορόφου (ΟΧΙ column param).
+      if (isStoreyRibbonKey(key)) {
+        applyStoreyComboboxChange(key, value);
+        return;
+      }
       if (isColumnRibbonKey(key) || isColumnRibbonStringKey(key) || isColumnFinishKey(key) || isColumnStructuralKey(key)) {
         columnBridge.onComboboxChange(key, value);
         return;
@@ -243,6 +250,7 @@ export function useRibbonCommands({
       if (isThermalSpaceRibbonNumberKey(key) || isThermalSpaceRibbonStringKey(key)) return thermalSpaceBridge.getComboboxState(key);
       // ADR-449 Slice 5 fix — finish keys δρομολογούνται ΚΑΙ εδώ (αλλιώς το combobox δείχνει
       // «-»: ο composer τα έστελνε στον textEditorBridge → null → δεν διάβαζε την τιμή του σοβά).
+      if (isStoreyRibbonKey(key)) return getStoreyComboboxState(key);
       if (isColumnRibbonKey(key) || isColumnRibbonStringKey(key) || isColumnFinishKey(key) || isColumnStructuralKey(key) || isColumnStructuralReadoutKey(key)) return columnBridge.getComboboxState(key);
       if (isBeamRibbonKey(key) || isBeamRibbonStringKey(key) || isBeamFinishKey(key)) return beamBridge.getComboboxState(key);
       if (isFoundationRibbonKey(key) || isFoundationRibbonStringKey(key)) return foundationBridge.getComboboxState(key);

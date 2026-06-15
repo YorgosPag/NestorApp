@@ -25,7 +25,12 @@ import {
 } from '../../../../bim/structural/codes';
 import { isConcreteGrade } from '../../../../bim/structural/concrete-grades';
 import type { ColumnReinforcement } from '../../../../bim/structural/reinforcement/column-reinforcement-types';
-import { DEFAULT_STIRRUP_TYPE, isStirrupType } from '../../../../bim/structural/reinforcement/column-reinforcement-types';
+import {
+  DEFAULT_STIRRUP_TYPE,
+  isStirrupType,
+  DEFAULT_CROSS_TIE_PATTERN,
+  isCrossTiePattern,
+} from '../../../../bim/structural/reinforcement/column-reinforcement-types';
 import {
   COLUMN_STRUCTURAL_KEYS,
   COLUMN_STRUCTURAL_KEY_TO_FIELD,
@@ -71,6 +76,9 @@ export function resolveColumnStructuralState(
   }
   if (commandKey === COLUMN_STRUCTURAL_KEYS.stirrupType) {
     return { value: effectiveReinforcement(column).stirrups.type ?? DEFAULT_STIRRUP_TYPE, options: [] };
+  }
+  if (commandKey === COLUMN_STRUCTURAL_KEYS.crossTiePattern) {
+    return { value: effectiveReinforcement(column).crossTiePattern ?? DEFAULT_CROSS_TIE_PATTERN, options: [] };
   }
   const field = COLUMN_STRUCTURAL_KEY_TO_FIELD[commandKey];
   if (!field) return null;
@@ -119,6 +127,13 @@ export function applyColumnStructuralChange(
         ...column.params,
         reinforcement: { ...eff, stirrups: { ...eff.stirrups, type: value } },
       });
+    }
+    return true;
+  }
+  if (commandKey === COLUMN_STRUCTURAL_KEYS.crossTiePattern) {
+    if (isCrossTiePattern(value)) {
+      const eff = effectiveReinforcement(column);
+      dispatchParams({ ...column.params, reinforcement: { ...eff, crossTiePattern: value } });
     }
     return true;
   }

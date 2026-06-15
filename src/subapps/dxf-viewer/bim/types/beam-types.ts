@@ -216,6 +216,14 @@ export interface BeamGeometry {
    * straight/cantilever beams this equals `length`. Phase 3.8.
    */
   readonly maxFreeSpanM: number;
+  /**
+   * ADR-458 — DERIVED (ΠΟΤΕ persisted) trimmed plan outline (beam-to-column cutback,
+   * «η κολόνα νικάει»). Πολλαπλά rings = το δοκάρι χωρίστηκε σε κομμάτια· `[]` = εξ
+   * ολοκλήρου μέσα σε κολόνα (δεν σχεδιάζεται). **Απών** → κανένα cut → render/hit-test
+   * διαβάζει το `outline` (byte-for-byte). Υπολογίζεται στο scene-conversion post-pass
+   * (`applyBeamColumnCutback2D`) από τα live column footprints — μηδέν stale persisted γεωμετρία.
+   */
+  readonly displayOutline?: readonly (readonly Point3D[])[];
 }
 
 // ─── Entity (BIM generic instantiation) ─────────────────────────────────────

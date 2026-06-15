@@ -204,6 +204,8 @@ export const COLUMN_STRUCTURAL_KEYS = {
   concreteGrade: 'column.structural.concreteGrade',
   /** Τύπος συνδετήρα — closed-hooked/closed-welded/spiral (string, per-element). */
   stirrupType: 'column.structural.stirrupType',
+  /** Μοτίβο εσωτερικών συνδετηρίων — auto/diamond/grid (string, per-element). */
+  crossTiePattern: 'column.structural.crossTiePattern',
   /** Διαμήκης οπλισμός — διάμετρος ράβδου (mm). */
   longitudinalDiameter: 'column.structural.longitudinalDiameter',
   /** Διαμήκης οπλισμός — πλήθος ράβδων. */
@@ -220,6 +222,10 @@ export const COLUMN_STRUCTURAL_KEYS = {
 
 /** Read-only readout keys — υπολογισμένα βάρη/ρ% (bridge δίνει value, ΟΧΙ write). */
 export const COLUMN_STRUCTURAL_READOUT_KEYS = {
+  /** m³ — μικτός (gross) όγκος σκυροδέματος (συμβατική επιμέτρηση). */
+  concreteVolumeGross: 'column.structural.readout.concreteVolumeGross',
+  /** m³ — καθαρός (net) όγκος = μικτός − όγκος χάλυβα (βάρος/7850). */
+  concreteVolumeNet: 'column.structural.readout.concreteVolumeNet',
   /** kg — βάρος σκυροδέματος. */
   concreteWeight: 'column.structural.readout.concreteWeight',
   /** kg — βάρος χάλυβα οπλισμού B500C. */

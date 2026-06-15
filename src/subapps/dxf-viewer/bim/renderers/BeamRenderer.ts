@@ -27,6 +27,7 @@
 
 import { BaseEntityRenderer } from '../../rendering/entities/BaseEntityRenderer';
 import type { EntityModel, GripInfo, RenderOptions, Point2D } from '../../rendering/types/Types';
+import type { Point3D } from '../types/bim-base';
 import type { Entity } from '../../types/entities';
 import { isBeamEntity } from '../../types/entities';
 import type { BeamEntity, BeamKind } from '../types/beam-types';
@@ -78,6 +79,16 @@ const KIND_FILL: Readonly<Record<BeamKind, string>> = {
 const OUTLINE_DASH: readonly [number, number] = [8, 4];
 const AXIS_DASH: readonly [number, number] = [4, 3];
 
+/**
+ * ADR-458 — τα plan κομμάτια του δοκαριού: το DERIVED trimmed `displayOutline`
+ * (beam-to-column cutback, «η κολόνα νικάει») όταν υπάρχει· αλλιώς το πλήρες outline ως
+ * ΕΝΑ κομμάτι (byte-for-byte προ-ADR-458). `displayOutline === []` → εξ ολοκλήρου μέσα
+ * σε κολόνα → κανένα κομμάτι (δεν σχεδιάζεται / δεν επιλέγεται).
+ */
+function resolveBeamOutlinePieces(beam: BeamEntity): ReadonlyArray<readonly Point3D[]> {
+  return beam.geometry.displayOutline ?? [beam.geometry.outline.vertices];
+}
+
 // ADR-449 Slice X2 μέρος Β — το per-element 2Δ finish injection (`setBeamFinishFaces` +
 // `FinishFacesByBeam`) αφαιρέθηκε: ο σοβάς σχεδιάζεται ως ΕΝΑ scene-level merged-silhouette
 // pass στον `DxfRenderer` (κοινή SSoT με 3Δ). Ο πυρήνας του δοκαριού εδώ είναι αμετάβλητος.
@@ -106,6 +117,11 @@ export class BeamRenderer extends BaseEntityRenderer {
     if (!beam.geometry || !beam.params) return;
     const verts = beam.geometry.outline.vertices;
     if (verts.length < 3) return;
+    // ADR-458 — beam-to-column cutback: σχεδιάζουμε το DERIVED trimmed outline («η κολόνα
+    // νικάει») όταν υπάρχει· αλλιώς το πλήρες outline ως ΕΝΑ κομμάτι. `[]` (δοκάρι εξ
+    // ολοκλήρου μέσα σε κολόνα) → drawable κενό → δεν σχεδιάζεται.
+    const drawable = resolveBeamOutlinePieces(beam).filter((p) => p.length >= 3);
+    if (drawable.length === 0) return;
 
     const phaseState = this.phaseManager.determinePhase(entity as Entity, options);
 
@@ -116,7 +132,7 @@ export class BeamRenderer extends BaseEntityRenderer {
       this.ctx.lineWidth = RENDER_LINE_WIDTHS.NORMAL + HOVER_HIGHLIGHT.ENTITY.glowExtraWidth;
       this.ctx.globalAlpha = HOVER_HIGHLIGHT.ENTITY.glowOpacity;
       this.ctx.setLineDash([]);
-      this.drawPolygonPath(verts);
+      this.buildPiecesPath(drawable);
       this.ctx.stroke();
       this.ctx.restore();
     }
@@ -133,11 +149,11 @@ export class BeamRenderer extends BaseEntityRenderer {
     );
     // Translucent fill first.
     this.ctx.fillStyle = resolveVgFillTint('beam', _beamCutState, _beamDs.objectStyles) ?? KIND_FILL[beam.kind];
-    this.drawPolygonPath(verts);
+    this.buildPiecesPath(drawable);
     this.ctx.fill();
 
     // Phase 5.5c — per-material hatch clipped inside footprint.
-    this.drawMaterialHatch(beam);
+    this.drawMaterialHatch(beam, drawable);
 
     // ADR-377 C.2 — hidden-lines subcategory (dashed outline convention).
     const _beamLayerOverride = _beamLayer ? {
@@ -154,7 +170,7 @@ export class BeamRenderer extends BaseEntityRenderer {
     this.ctx.lineWidth = _beamPx;
     this.ctx.setLineDash(linePatternToDashArray(_beamPat) as number[]);
     if (_beamCol !== null) this.ctx.strokeStyle = _beamCol;
-    this.drawPolygonPath(verts);
+    this.buildPiecesPath(drawable);
     this.ctx.stroke();
 
     // Axis centerline — thinner dashed.
@@ -195,7 +211,7 @@ export class BeamRenderer extends BaseEntityRenderer {
    * περνάει στο pattern computer ώστε `glulam` grain να ευθυγραμμίζεται με
    * την κατεύθυνση του δοκαριού. Skip σε extreme zoom-out (perf saver).
    */
-  private drawMaterialHatch(beam: BeamEntity): void {
+  private drawMaterialHatch(beam: BeamEntity, pieces: ReadonlyArray<ReadonlyArray<{ x: number; y: number }>>): void {
     if (this.transform.scale < 0.001) return;
 
     const key: BeamMaterialKey = resolveBeamMaterialKey(beam.params.material);
@@ -209,7 +225,9 @@ export class BeamRenderer extends BaseEntityRenderer {
     if (plan.lines.length === 0 && plan.dots.length === 0) return;
 
     this.ctx.save();
-    this.drawPolygonPath(beam.geometry.outline.vertices);
+    // ADR-458 — clip στην ένωση των (κομμένων) κομματιών ώστε το hatch να μην ξεχειλίζει
+    // στην περιοχή της κολόνας.
+    this.buildPiecesPath(pieces);
     this.ctx.clip();
     this.ctx.strokeStyle = BEAM_HATCH_STROKE_RGBA;
     this.ctx.fillStyle = BEAM_HATCH_STROKE_RGBA;
@@ -308,9 +326,10 @@ export class BeamRenderer extends BaseEntityRenderer {
     ) {
       return false;
     }
-    // Detailed point-in-polygon test (ray casting) on outline.
-    const verts = beam.geometry.outline.vertices;
-    return pointInPolygon(point, verts);
+    // Detailed point-in-polygon test (ray casting). ADR-458 — όταν υπάρχει cutback,
+    // ελέγχουμε τα κομμένα κομμάτια (το δοκάρι επιλέγεται μόνο στο σώμα που απομένει).
+    const pieces = resolveBeamOutlinePieces(beam);
+    return pieces.some((p) => p.length >= 3 && pointInPolygon(point, p));
   }
 
   /**
@@ -341,16 +360,23 @@ export class BeamRenderer extends BaseEntityRenderer {
 
   // ─── Internal helpers ────────────────────────────────────────────────────
 
-  private drawPolygonPath(vertices: ReadonlyArray<{ x: number; y: number }>): void {
-    if (vertices.length < 3) return;
+  /**
+   * ADR-458 — χτίζει ΕΝΑ path με ένα closed subpath ανά κομμάτι (πολλαπλά κομμάτια =
+   * cutback που χώρισε το δοκάρι). Έτοιμο για `fill`/`stroke` (όλα τα subpaths) ή `clip`
+   * (ένωση subpaths, nonzero winding). Disjoint CCW κομμάτια → σωστό fill/clip.
+   */
+  private buildPiecesPath(pieces: ReadonlyArray<ReadonlyArray<{ x: number; y: number }>>): void {
     this.ctx.beginPath();
-    const first = this.worldToScreen({ x: vertices[0].x, y: vertices[0].y });
-    this.ctx.moveTo(first.x, first.y);
-    for (let i = 1; i < vertices.length; i++) {
-      const s = this.worldToScreen({ x: vertices[i].x, y: vertices[i].y });
-      this.ctx.lineTo(s.x, s.y);
+    for (const vertices of pieces) {
+      if (vertices.length < 3) continue;
+      const first = this.worldToScreen({ x: vertices[0].x, y: vertices[0].y });
+      this.ctx.moveTo(first.x, first.y);
+      for (let i = 1; i < vertices.length; i++) {
+        const s = this.worldToScreen({ x: vertices[i].x, y: vertices[i].y });
+        this.ctx.lineTo(s.x, s.y);
+      }
+      this.ctx.closePath();
     }
-    this.ctx.closePath();
   }
 
   private drawPolyline(points: ReadonlyArray<{ x: number; y: number }>): void {

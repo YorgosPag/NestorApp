@@ -58,6 +58,7 @@ import {
   columnToolBridgeStore,
   type ColumnToolBridgeHandle,
 } from './column-tool-bridge-store';
+import { deriveStoreyBoundHeightMm, isColumnHeightDerived } from './column-height-display';
 import type { RibbonComboboxState } from '../../context/RibbonCommandContext';
 
 /**
@@ -110,6 +111,13 @@ export function resolveColumnComboboxState(
       const field = NUMBER_KEY_TO_FIELD[commandKey];
       const raw = column.params[field];
       if (typeof raw !== 'number') return null;
+      // ADR-449/451 — storey/level-bound κολώνα: το «Ύψος» είναι derived (storey ceiling),
+      // ΟΧΙ editable· read-only + δείξε τη resolved τιμή (ΙΔΙΑ SSoT με τον πυρήνα). Editable
+      // ΜΟΝΟ σε `unconnected` top (όπου το `params.height` έχει πραγματικό νόημα).
+      if (commandKey === COLUMN_RIBBON_KEYS.params.height && isColumnHeightDerived(column.params.topBinding)) {
+        const derived = deriveStoreyBoundHeightMm(column) ?? raw;
+        return { value: String(Math.round(derived)), options: [], disabled: true };
+      }
       return { value: String(Math.round(raw)), options: [] };
     }
     return null;

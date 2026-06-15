@@ -20,7 +20,7 @@ import type { ColumnVerticalExtentLookup } from '../../bim/finishes/structural-f
 import { buildStructuralSilhouetteSkin } from '../converters/structural-finish-silhouette-3d';
 import { computeStructuralHorizontalFinishFaces } from '../../bim/finishes/structural-finish-scene-horizontal';
 import { buildHorizontalFinishSkin } from '../converters/structural-finish-horizontal-3d';
-import { resolveColumnVerticalExtentMm, makeColumnHostResolver } from '../../bim/geometry/column-vertical-profile';
+import { buildColumnVerticalExtentLookup, makeColumnHostResolver } from '../../bim/geometry/column-vertical-profile';
 import { buildWallHostInputs } from '../../bim/geometry/wall-host-plan-builder';
 import type { SceneUnits } from '../../utils/scene-units';
 
@@ -98,25 +98,18 @@ export function syncStructuralFinishSkin(
  * δεν ξανα-υπολογίζει από raw `params.height`.
  */
 function buildColumnVerticalExtents(entities: Bim3DEntities, ctx: SyncContext): ColumnVerticalExtentLookup {
-  const map = new Map<string, { zBotMm: number; zTopMm: number }>();
   const hasAttached = entities.columns.some(
     (c) => c.params?.topBinding === 'attached' || c.params?.baseBinding === 'attached',
   );
   const resolveHostInput = hasAttached
     ? makeColumnHostResolver(buildWallHostInputs(entities.beams, entities.slabs))
     : undefined;
-  const colCtx = {
+  // ADR-449 — ΕΝΑ SSoT lookup builder (μοιραζόμαστε με το 2Δ silhouette path).
+  return buildColumnVerticalExtentLookup(entities.columns, {
     floorElevationMm: ctx.floorElevationMm,
     nextFloorElevationMm: ctx.nextFloorElevationMm,
     resolveHostInput,
-  };
-  for (const c of entities.columns) {
-    const verts = c.geometry?.footprint?.vertices;
-    if (!c.id || !verts || verts.length < 3) continue;
-    const footprint = verts.map((v) => ({ x: v.x, y: v.y }));
-    map.set(c.id, resolveColumnVerticalExtentMm(c.params, footprint, colCtx));
-  }
-  return map;
+  });
 }
 
 /**

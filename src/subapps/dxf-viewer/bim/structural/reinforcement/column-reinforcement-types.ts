@@ -45,6 +45,27 @@ export function isStirrupType(v: string): v is StirrupType {
   return v === 'closed-hooked' || v === 'closed-welded' || v === 'spiral';
 }
 
+/**
+ * Μοτίβο εσωτερικών συνδετηρίων (cross-ties) για τις ενδιάμεσες διαμήκεις ράβδους
+ * (EC8 §5.4.3.2.2(11)). Επηρεάζει ΜΟΝΟ τη σχεδίαση/ποσότητα του εγκάρσιου οπλισμού:
+ *   - `auto`    — υβριδικό: διαμάντι όταν υπάρχει 1 ενδιάμεση ανά πλευρά, αλλιώς
+ *                 πλέγμα ευθύγραμμων ties (default, Revit-grade).
+ *   - `diamond` — εξαναγκασμένο εσωτερικό διαμαντοειδές στεφάνι (rotated square).
+ *   - `grid`    — εξαναγκασμένο πλέγμα ευθύγραμμων cross-ties.
+ */
+export type CrossTiePattern = 'auto' | 'diamond' | 'grid';
+
+/** Όλα τα μοτίβα, με τη σειρά εμφάνισης στο UI (default πρώτο). */
+export const CROSS_TIE_PATTERN_ORDER: readonly CrossTiePattern[] = ['auto', 'diamond', 'grid'];
+
+/** Default μοτίβο όταν `crossTiePattern` απών (back-compat: υβριδικό auto). */
+export const DEFAULT_CROSS_TIE_PATTERN: CrossTiePattern = 'auto';
+
+/** Type guard για persisted/UI τιμές. */
+export function isCrossTiePattern(v: string): v is CrossTiePattern {
+  return v === 'auto' || v === 'diamond' || v === 'grid';
+}
+
 /** Εγκάρσιος οπλισμός — συνδετήρες/στέφανα (Ø8/100-200). */
 export interface ColumnStirrups {
   /** Διάμετρος συνδετήρα (mm), π.χ. 8. */
@@ -72,4 +93,9 @@ export interface ColumnReinforcement {
   readonly stirrups: ColumnStirrups;
   /** Επικάλυψη οπλισμού cnom (mm), EN 1992-1-1 §4.4.1. Default 30. */
   readonly coverMm: number;
+  /**
+   * Μοτίβο εσωτερικών συνδετηρίων (cross-ties). Absent ⇒ {@link DEFAULT_CROSS_TIE_PATTERN}
+   * (`auto` — υβριδικό). Καθαρά detailing/σχεδίαση — δεν αλλάζει διαμήκη/ρ.
+   */
+  readonly crossTiePattern?: CrossTiePattern;
 }

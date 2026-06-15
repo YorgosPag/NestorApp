@@ -14,7 +14,9 @@ import {
   resolveColumnTopProfile,
   resolveColumnBaseProfile,
   resolveColumnVerticalExtentMm,
+  buildColumnVerticalExtentLookup,
   makeColumnHostResolver,
+  type ColumnExtentSource,
   type ColumnVerticalContext,
   type ColumnVerticalParams,
 } from '../column-vertical-profile';
@@ -345,5 +347,50 @@ describe('makeColumnHostResolver', () => {
     const resolve = makeColumnHostResolver([fullHost('b1'), halfHost('b2')]);
     expect(resolve('b1')?.hostId).toBe('b1');
     expect(resolve('nope')).toBeNull();
+  });
+});
+
+// ─── ADR-449 Slice 12 — shared lookup builder (3Δ + 2Δ SSoT) ──────────────────
+
+/** ColumnExtentSource fixture: id + params + footprint. */
+function extSource(id: string, p: Partial<ColumnVerticalParams> = {}): ColumnExtentSource {
+  return { id, params: params(p), geometry: { footprint: { vertices: FOOTPRINT } } };
+}
+
+describe('buildColumnVerticalExtentLookup', () => {
+  test('storey-ceiling κολώνα height 4000 > ceiling 3000 → zTop = ceiling (ΟΧΙ raw height)', () => {
+    // Αυτό ΑΚΡΙΒΩΣ ήταν ο 2Δ bug: raw height 4000 → λάθος band [3000,4000] κολώνα-μόνο.
+    const map = buildColumnVerticalExtentLookup([extSource('c1', { height: 4000 })], {
+      floorElevationMm: 0,
+      nextFloorElevationMm: 3000,
+    });
+    expect(map.get('c1')).toEqual({ zBotMm: 0, zTopMm: 3000 });
+  });
+
+  test('χωρίς storey ceiling (nextFloorElevationMm undefined) → legacy zTop = base + height', () => {
+    const map = buildColumnVerticalExtentLookup([extSource('c1', { height: 4000 })], {
+      floorElevationMm: 0,
+    });
+    expect(map.get('c1')).toEqual({ zBotMm: 0, zTopMm: 4000 });
+  });
+
+  test('FFL≠0 (όροφος ψηλά): floorElevationMm + storey ceiling → datum-relative extent', () => {
+    const map = buildColumnVerticalExtentLookup([extSource('c1', { height: 4000 })], {
+      floorElevationMm: 3000,
+      nextFloorElevationMm: 6000,
+    });
+    expect(map.get('c1')).toEqual({ zBotMm: 3000, zTopMm: 6000 });
+  });
+
+  test('παραλείπει κολώνες χωρίς id ή με εκφυλισμένο footprint', () => {
+    const noId: ColumnExtentSource = { params: params(), geometry: { footprint: { vertices: FOOTPRINT } } };
+    const degenerate: ColumnExtentSource = { id: 'c2', params: params(), geometry: { footprint: { vertices: [{ x: 0, y: 0 }] } } };
+    const map = buildColumnVerticalExtentLookup([noId, degenerate, extSource('c3')], {
+      floorElevationMm: 0,
+      nextFloorElevationMm: 3000,
+    });
+    expect(map.has('c2')).toBe(false);
+    expect(map.get('c3')).toEqual({ zBotMm: 0, zTopMm: 3000 });
+    expect(map.size).toBe(1);
   });
 });

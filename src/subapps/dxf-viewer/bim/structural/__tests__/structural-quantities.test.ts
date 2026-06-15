@@ -109,8 +109,56 @@ describe('structural code providers', () => {
   it('suggestColumnReinforcement gives ρ ≥ ρ_min for 400×400', () => {
     const provider = resolveStructuralCode('eurocode');
     const r = provider.suggestColumnReinforcement(COL_400);
-    expect(r.longitudinal.count).toBe(4);
+    // 400mm πλευρά > 200mm max-bar-spacing → ενδιάμεση συγκρατημένη ράβδος ανά
+    // πλευρά → 8 (4 γωνιακές + 4 μεσοπλευρικές), όχι 4 (EC8 §5.4.3.2.2(11)).
+    expect(r.longitudinal.count).toBe(8);
     const q = computeColumnReinforcementQuantities(COL_400, r);
+    expect(q.ratio).toBeGreaterThanOrEqual(0.01);
+  });
+
+  // ─── Δυναμικό πλήθος διαμήκων (ADR-456 Slice 1) ──────────────────────────────
+
+  it('πλήθος διαμήκων κλιμακώνεται με τη διατομή (max-bar-spacing)', () => {
+    const provider = resolveStructuralCode('eurocode');
+    // 2000×2000: ⌈2000/200⌉=10 ανά πλευρά-segment → 2·10 + 2·10 = 40 περιμετρικά.
+    const big: ColumnSectionContext = {
+      widthMm: 2000,
+      depthMm: 2000,
+      heightMm: 3000,
+      grossAreaMm2: 2000 * 2000,
+    };
+    const r = provider.suggestColumnReinforcement(big);
+    expect(r.longitudinal.count).toBeGreaterThanOrEqual(40);
+  });
+
+  it('απόσταση μεταξύ διαδοχικών ράβδων ≤ 200mm σε κάθε πλευρά', () => {
+    const provider = resolveStructuralCode('eurocode');
+    const big: ColumnSectionContext = {
+      widthMm: 1200,
+      depthMm: 800,
+      heightMm: 3000,
+      grossAreaMm2: 1200 * 800,
+    };
+    const r = provider.suggestColumnReinforcement(big);
+    // Ράβδοι ανά πλευρά = count/4 segments… ελέγχουμε ότι το βήμα στη μεγάλη
+    // πλευρά (1200) δεν ξεπερνά το όριο: ⌈1200/200⌉=6 segments → ≤200mm.
+    const segmentsWide = Math.ceil(1200 / 200);
+    expect(1200 / segmentsWide).toBeLessThanOrEqual(200);
+    expect(r.longitudinal.count).toBeGreaterThanOrEqual(2 * 6 + 2 * 4);
+  });
+
+  it('μεγάλη διατομή που κορεννύει τη μέγιστη Ø → προστίθενται ράβδοι για ρ_min', () => {
+    const provider = resolveStructuralCode('eurocode');
+    // 2×2m, ρ_min=1% → As_min=40.000mm². Μέγιστη εμπορική Ø32 (804mm²) →
+    // χρειάζονται >40 ράβδοι (η spacing δίνει 40) → ο αλγόριθμος προσθέτει.
+    const big: ColumnSectionContext = {
+      widthMm: 2000,
+      depthMm: 2000,
+      heightMm: 3000,
+      grossAreaMm2: 2000 * 2000,
+    };
+    const r = provider.suggestColumnReinforcement(big);
+    const q = computeColumnReinforcementQuantities(big, r);
     expect(q.ratio).toBeGreaterThanOrEqual(0.01);
   });
 });

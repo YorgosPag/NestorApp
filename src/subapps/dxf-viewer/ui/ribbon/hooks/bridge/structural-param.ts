@@ -14,8 +14,11 @@ import {
   CONCRETE_GRADE_ORDER,
   concreteWeightKg,
 } from '../../../../bim/structural/concrete-grades';
-import { REBAR_DIAMETERS_MM } from '../../../../bim/structural/rebar-catalog';
-import { STIRRUP_TYPE_ORDER } from '../../../../bim/structural/reinforcement/column-reinforcement-types';
+import { REBAR_DIAMETERS_MM, REBAR_STEEL_DENSITY_KGM3 } from '../../../../bim/structural/rebar-catalog';
+import {
+  STIRRUP_TYPE_ORDER,
+  CROSS_TIE_PATTERN_ORDER,
+} from '../../../../bim/structural/reinforcement/column-reinforcement-types';
 import {
   STRUCTURAL_CODE_ORDER,
   resolveStructuralCode,
@@ -66,6 +69,13 @@ export const LONGITUDINAL_COUNT_OPTIONS = numericOptions([4, 6, 8, 10, 12]);
 export const STIRRUP_TYPE_OPTIONS: readonly ComboboxOption[] = STIRRUP_TYPE_ORDER.map((t) => ({
   value: t,
   labelKey: `ribbon.commands.columnStructural.stirrupTypeOption.${t}`,
+  isLiteralLabel: false,
+}));
+
+/** Μοτίβο εσωτερικών συνδετηρίων — i18n labels (Αυτόματο/Διαμάντι/Πλέγμα). */
+export const CROSS_TIE_PATTERN_OPTIONS: readonly ComboboxOption[] = CROSS_TIE_PATTERN_ORDER.map((p) => ({
+  value: p,
+  labelKey: `ribbon.commands.columnStructural.crossTiePatternOption.${p}`,
   isLiteralLabel: false,
 }));
 
@@ -133,6 +143,14 @@ export function resolveStructuralReadout(
   ctx: ColumnSectionContext,
   effectiveReinforcement: ColumnReinforcement,
 ): string | null {
+  if (readoutKey === COLUMN_STRUCTURAL_READOUT_KEYS.concreteVolumeGross) {
+    return volumeM3.toFixed(3); // μικτός όγκος (συμβατική επιμέτρηση)
+  }
+  if (readoutKey === COLUMN_STRUCTURAL_READOUT_KEYS.concreteVolumeNet) {
+    const { totalSteelWeightKg } = computeColumnReinforcementQuantities(ctx, effectiveReinforcement);
+    const steelVolumeM3 = totalSteelWeightKg / REBAR_STEEL_DENSITY_KGM3;
+    return Math.max(0, volumeM3 - steelVolumeM3).toFixed(3); // καθαρός = μικτός − χάλυβας
+  }
   if (readoutKey === COLUMN_STRUCTURAL_READOUT_KEYS.concreteWeight) {
     return String(Math.round(concreteWeightKg(volumeM3)));
   }

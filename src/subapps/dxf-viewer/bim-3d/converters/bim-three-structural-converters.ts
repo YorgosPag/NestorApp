@@ -18,7 +18,8 @@ import type { SlabEntity } from '../../bim/types/slab-types';
 import type { SlabOpeningEntity } from '../../bim/types/slab-opening-types';
 import type { Point3D } from '../../bim/types/bim-base';
 import { getElementMaterial3D } from '../materials/MaterialCatalog3D';
-import { buildShape, extrudeAndRotate, tagMesh, pushHoles } from './bim-three-shape-helpers';
+import { buildShape, extrudeAndRotate, extrudeShapesAndRotate, tagMesh, pushHoles } from './bim-three-shape-helpers';
+import { computeBeamCutbackOutline } from '../../bim/geometry/beam-column-cutback';
 import { ensureWorldUvs } from './bim-uv-helpers';
 import { applyBeamSlope, applySlabSlope, applyColumnTilt } from './mesh-slope-shear';
 import { buildColumnPrismGeometry } from './column-piece-geometry';
@@ -238,9 +239,30 @@ export function beamToMesh(
   if (!geo) {
     const verts = beam.geometry.outline.vertices;
     if (verts.length < 3) return null;
-    const shape = buildShape(verts);
-    if (!shape) return null;
-    geo = extrudeAndRotate(shape, beamDepthM);
+    // ADR-458 — beam-to-column cutback (Revit join, «η κολόνα νικάει»): κόβει τον πυρήνα
+    // του δοκαριού στις παρειές των κολωνών που το τέμνουν → net volume, μηδέν εμβύθιση.
+    // DERIVED (ποτέ persisted)· τα column footprints είναι ήδη rotated/composite-baked.
+    // `null` → καμία τομή → ίσιο box extrude (byte-for-byte). Πολλά κομμάτια → ένα geometry.
+    const trimmed = computeBeamCutbackOutline(
+      verts.map((v) => ({ x: v.x, y: v.y })),
+      columns
+        .map((c) => c.geometry?.footprint?.vertices)
+        .filter((f): f is NonNullable<typeof f> => !!f && f.length >= 3)
+        .map((f) => f.map((v) => ({ x: v.x, y: v.y }))),
+    );
+    if (trimmed === null) {
+      const shape = buildShape(verts);
+      if (!shape) return null;
+      geo = extrudeAndRotate(shape, beamDepthM);
+    } else {
+      // `[]` = δοκάρι εξ ολοκλήρου μέσα στην κολόνα → δεν σχεδιάζεται.
+      const shapes = trimmed
+        .map((ring) => buildShape(ring.map((p) => ({ x: p.x, y: p.y, z: 0 }))))
+        .filter((s): s is NonNullable<typeof s> => s !== null);
+      const trimmedGeo = extrudeShapesAndRotate(shapes, beamDepthM);
+      if (!trimmedGeo) return null;
+      geo = trimmedGeo;
+    }
   }
 
   ensureWorldUvs(geo); // ADR-413 — box-extrude auto-UVs OR planar for swept-I custom geo.

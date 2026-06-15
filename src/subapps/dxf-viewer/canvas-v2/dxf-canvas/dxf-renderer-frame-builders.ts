@@ -22,6 +22,9 @@ import { isFinishActive } from '../../bim/finishes/structural-finish-types';
 // ADR-449 Slice X2 μέρος Β — το 2Δ τρέφεται από την ΙΔΙΑ merged-silhouette SSoT με το 3Δ.
 import { computeStructuralFinishSilhouette } from '../../bim/finishes/structural-finish-scene';
 import type { SilhouetteBand } from '../../bim/finishes/structural-finish-silhouette';
+// ADR-449 Slice 12 (2Δ) — storey-aware columnExtents, ΙΔΙΟ SSoT lookup με το 3Δ scene pass.
+import { buildColumnVerticalExtentLookup } from '../../bim/geometry/column-vertical-profile';
+import { useActiveStoreyStore } from '../../systems/levels/active-storey-store';
 
 /**
  * ADR-362 Phase C1 — build the per-frame DimensionLookup map for chained
@@ -73,9 +76,18 @@ export function buildOpeningsByWall(entities: readonly DxfEntityUnion[]): Openin
  * μηδέν διπλή γραμμή). Αντικαθιστά το παλιό per-element `buildFinishFacesByColumn/Beam` (που
  * ζωγράφιζε κάθε στοιχείο ανεξάρτητα → ασυνεπείς γωνίες/διπλές γραμμές στις συμβολές).
  *
- * `floorElevationMm = 0` (active-level convention, ίδιο με το παλιό 2Δ). DxfColumn/DxfBeam/
- * DxfWall ικανοποιούν δομικά τα `SilhouetteColumnSource`/`SilhouetteBeamSource`/`WallFinishObstacle`
- * (μηδέν cast). `null` όταν κανένα στοιχείο δεν έχει ενεργό σοβά (default off → μηδέν κόστος).
+ * ADR-449 Slice 12 (2Δ completion) — storey-aware `columnExtents`: μια `storey-ceiling`
+ * κολώνα με `height` > storey ceiling (π.χ. height 4000, ceiling 3000) έπαιρνε raw 4000
+ * (legacy `columnZExtent` fallback) → λάθος band grouping ([3000,4000] κολώνα-μόνο) →
+ * αποκλίνον 2Δ outline vs 3Δ. Fix: χτίζουμε το ΙΔΙΟ `ColumnVerticalExtentLookup` με το 3Δ
+ * (`buildColumnVerticalExtentLookup`) από το active-storey context + περνάμε το πραγματικό
+ * `floorElevationMm`. Χωρίς storey context (π.χ. unit tests) → fallback `0`/`undefined` →
+ * legacy `params.height` (μηδέν regression). Attached per-corner soffit clip στο 2Δ = DEFER
+ * (resolveHostInput undefined· ο σοβάς storey-ceiling/nominal είναι το reported issue).
+ *
+ * DxfColumn/DxfBeam/DxfWall ικανοποιούν δομικά τα `SilhouetteColumnSource`/`SilhouetteBeamSource`/
+ * `WallFinishObstacle` (μηδέν cast). `null` όταν κανένα στοιχείο δεν έχει ενεργό σοβά
+ * (default off → μηδέν κόστος).
  */
 export interface StructuralFinishSilhouette2D {
   readonly bands: readonly SilhouetteBand[];
@@ -94,7 +106,18 @@ export function buildStructuralFinishSilhouette2D(
   }
   if (columns.length === 0 && beams.length === 0) return null;
   const walls = entities.filter((w): w is DxfWall => w.type === 'wall');
-  const bands = computeStructuralFinishSilhouette(columns, beams, walls, 0);
+  // ADR-449 Slice 12 — storey-aware columnExtents (ΙΔΙΟ SSoT lookup με το 3Δ). Το
+  // active-storey context είναι zero-React store → ασφαλές read από τον DxfRenderer.
+  const storey = useActiveStoreyStore.getState().context;
+  const floorElevationMm = storey?.floorElevationMm ?? 0;
+  const columnExtents = buildColumnVerticalExtentLookup(columns, {
+    floorElevationMm,
+    nextFloorElevationMm: storey?.nextFloorElevationMm ?? undefined,
+  });
+  // ADR-449/458 — 2Δ κάτοψη: `dropPlanHiddenFaces=true` → κρύβει τις junction-όψεις που η
+  // plan-προβολή σκεπάζει (π.χ. όψη κολόνας κάτω από δοκάρι) → καθαρό συνεπές outline (miter),
+  // χωρίς τις λοξές γραμμούλες της επικαλυπτόμενης z-band στη συμβολή κολόνας↔δοκαριού.
+  const bands = computeStructuralFinishSilhouette(columns, beams, walls, floorElevationMm, columnExtents, true);
   if (bands.length === 0) return null;
   const sceneUnits = columns[0]?.params.sceneUnits ?? beams[0]?.params.sceneUnits ?? 'mm';
   return { bands, sceneUnits };

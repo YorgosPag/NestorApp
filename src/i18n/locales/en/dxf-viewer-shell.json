@@ -2658,6 +2658,12 @@
           "closed-welded": "Closed, welded",
           "spiral": "Spiral (helix)"
         },
+        "crossTiePattern": "Cross-ties",
+        "crossTiePatternOption": {
+          "auto": "Auto",
+          "diamond": "Diamond",
+          "grid": "Grid"
+        },
         "longitudinalDiameter": "Long. Ø",
         "longitudinalCount": "Count",
         "stirrupDiameter": "Stirrup Ø",
@@ -2666,6 +2672,8 @@
         "cover": "Cover",
         "auto": "Auto rebar",
         "autoTooltip": "Code-suggested minimum-valid reinforcement",
+        "concreteVolumeGross": "Concrete gross (m³)",
+        "concreteVolumeNet": "Concrete net (m³)",
         "concreteWeight": "Concrete (kg)",
         "steelWeight": "Steel (kg)",
         "ratio": "ρ (%)",
@@ -2675,6 +2683,7 @@
         "width": "Width",
         "depth": "Depth",
         "height": "Height",
+        "storeyHeight": "Storey Height",
         "rotation": "Rotation",
         "sides": "Sides",
         "flangeThickness": "Flange thickness",

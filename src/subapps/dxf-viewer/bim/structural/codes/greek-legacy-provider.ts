@@ -39,6 +39,8 @@ function greekLegacyColumnLimits(
     maxStirrupSpacingMm: Math.min(15 * longitudinalDiameterMm, bMin, 300),
     // ΕΑΚ 2003 §18.4.6 — κρίσιμες περιοχές: s ≤ min(b/2, 100, 8·dbL).
     criticalStirrupSpacingMm: Math.min(bMin / 2, 100, 8 * longitudinalDiameterMm),
+    // ΕΑΚ 2003 §18.4.5 — κάθε διαμήκης συγκρατημένη ράβδος ≤200mm απόσταση.
+    maxBarSpacingMm: 200,
     // ΕΚΩΣ 2000 §5 — επικάλυψη ~25mm για στοιχεία εσωτερικού περιβάλλοντος.
     nominalCoverMm: 25,
   };

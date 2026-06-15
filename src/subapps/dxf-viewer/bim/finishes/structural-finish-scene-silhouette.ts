@@ -27,6 +27,85 @@ import {
   MM_TO_M,
   type WallFinishObstacle,
 } from './structural-finish-scene';
+import { segOffsetVec } from './structural-finish-outline-geometry';
+import type { FinishFaceSegment } from './structural-finish-types';
+import type { Pt2 } from '../geometry/shared/segment-polygon-coverage';
+
+/** Ray-cast point-in-polygon (Pt2 ring, ανοιχτό ή κλειστό). */
+function pointInRing(px: number, py: number, ring: readonly Pt2[]): boolean {
+  let inside = false;
+  for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+    const yi = ring[i].y;
+    const yj = ring[j].y;
+    if ((yi > py) !== (yj > py) && px < ((ring[j].x - ring[i].x) * (py - yi)) / (yj - yi) + ring[i].x) {
+      inside = !inside;
+    }
+  }
+  return inside;
+}
+
+/**
+ * ADR-449/458 (2Δ κάτοψη μόνο) — μια εκτεθειμένη όψη είναι **κρυμμένη junction-όψη** όταν η
+ * outward πλευρά της (εκεί που θα πήγαινε ο σοβάς) πέφτει ΜΕΣΑ σε ΑΛΛΟ δομικό member. Σε
+ * plan top-down η όψη αυτή κρύβεται πίσω από το member που βρίσκεται από πάνω (π.χ. η όψη
+ * κολόνας προς το δοκάρι, ορατή ΜΟΝΟ κάτω από το δοκάρι σε z<beamBot) → ΔΕΝ σχεδιάζεται.
+ *
+ * Γιατί 2Δ-only: στο 3Δ η ίδια όψη ΠΑΡΑΜΕΝΕΙ (είναι γνήσια εκτεθειμένη κάτω από το δοκάρι,
+ * στη δική της z-band)· μόνο η plan-προβολή την κρύβει. Χωρίς το φίλτρο, το 2Δ ζωγράφιζε
+ * επικαλυπτόμενες z-bands → λοξές γραμμούλες/«κοπή» στη συμβολή κολόνας↔δοκαριού.
+ */
+function isPlanHiddenJunctionFace(
+  seg: FinishFaceSegment,
+  memberFootprints: readonly (readonly Pt2[])[],
+  s: number,
+): boolean {
+  const off = segOffsetVec(seg, Math.max(seg.thickness * s, 1e-6));
+  if (!off) return false;
+  const px = (seg.a.x + seg.b.x) / 2 + off.x;
+  const py = (seg.a.y + seg.b.y) / 2 + off.y;
+  return memberFootprints.some((fp) => fp.length >= 3 && pointInRing(px, py, fp));
+}
+
+/** Δύο σημεία ταυτίζονται (σχετική ανοχή, ίδια με `computeMiteredOuter`). */
+function samePoint(p: { x: number; y: number }, q: { x: number; y: number }): boolean {
+  const tol = 1e-6 * (1 + Math.hypot(q.x, q.y));
+  return Math.hypot(p.x - q.x, p.y - q.y) <= tol;
+}
+
+/**
+ * ADR-449/458 — 2Δ-only φίλτρο κάτοψης. Δύο βήματα ανά band:
+ *  1. **Αφαιρεί** τις κρυμμένες junction-όψεις (βλ. {@link isPlanHiddenJunctionFace}).
+ *  2. **Μαρκάρει** τα άκρα των ΕΝΑΠΟΜΕΙΝΑΝΤΩΝ όψεων που ακουμπούσαν αφαιρεθείσα όψη ως
+ *     `aJunction`/`bJunction` → ο `computeMiteredOuter` κάνει **ορθογώνια EXTEND** (Slice 10
+ *     corner-fill, κάθετο end-cap που κλείνει flush με τον σοβά του δοκαριού) αντί για **chamfer
+ *     45°** (= οι «λοξές γραμμούλες» που έμεναν στις γωνίες εκατέρωθεν του δοκαριού).
+ * Έτσι η κάτοψη δείχνει ΕΝΑ συνεπές, κλειστό outline. Κενά bands απορρίπτονται.
+ */
+export function dropPlanHiddenJunctionFaces(
+  bands: readonly SilhouetteBand[],
+  memberFootprints: readonly (readonly Pt2[])[],
+  s: number,
+): SilhouetteBand[] {
+  const out: SilhouetteBand[] = [];
+  for (const band of bands) {
+    const dropped: FinishFaceSegment[] = [];
+    const kept: FinishFaceSegment[] = [];
+    for (const seg of band.faces.segments) {
+      (isPlanHiddenJunctionFace(seg, memberFootprints, s) ? dropped : kept).push(seg);
+    }
+    if (dropped.length === 0) { out.push(band); continue; }
+    if (kept.length === 0) continue;
+    // Τα άκρα των αφαιρεθεισών όψεων → τα γειτονικά kept άκρα γίνονται structural junctions.
+    const droppedEnds = dropped.flatMap((d) => [d.a, d.b]);
+    const segments = kept.map((seg) => {
+      const aJ = seg.aJunction || droppedEnds.some((p) => samePoint(p, seg.a));
+      const bJ = seg.bJunction || droppedEnds.some((p) => samePoint(p, seg.b));
+      return aJ === !!seg.aJunction && bJ === !!seg.bJunction ? seg : { ...seg, aJunction: aJ, bJunction: bJ };
+    });
+    out.push({ ...band, faces: { ...band.faces, segments } });
+  }
+  return out;
+}
 
 /**
  * ADR-449 Slice X2 μέρος Β — minimal source interfaces ώστε η ΙΔΙΑ silhouette SSoT να
@@ -119,6 +198,12 @@ export function computeStructuralFinishSilhouette(
   walls: readonly WallFinishObstacle[],
   floorElevationMm: number,
   columnExtents?: ColumnVerticalExtentLookup,
+  /**
+   * ADR-449/458 — 2Δ κάτοψη ΜΟΝΟ: αφαιρεί τις κρυμμένες junction-όψεις (όψεις που η
+   * plan-προβολή κρύβει πίσω από member από πάνω). Το 3Δ ΔΕΝ το περνά (false) → οι όψεις
+   * παραμένουν στις δικές τους z-bands.
+   */
+  dropPlanHiddenFaces = false,
 ): SilhouetteBand[] {
   const members: SilhouetteMember[] = [];
   for (const c of columns) {
@@ -150,11 +235,16 @@ export function computeStructuralFinishSilhouette(
     return { footprint: wallFootprintPolygon(w), zBotMm: z.zBotMm, zTopMm: z.zTopMm };
   });
 
-  return computeStructuralSilhouetteBands({
+  const bands = computeStructuralSilhouetteBands({
     members,
     wallObstacles,
     spec: createDefaultStructuralFinishSpec(),
     classify,
     unitToMeters: (1 / s) * MM_TO_M,
   });
+  // ADR-449/458 — 2Δ κάτοψη: κρύψε junction-όψεις που η plan-προβολή σκεπάζει (δες
+  // `dropPlanHiddenJunctionFaces`)· το 3Δ τις κρατά (δικές τους z-bands → ορατές κάτω από
+  // το γειτονικό member). Default off → μηδέν αλλαγή στο 3Δ.
+  if (!dropPlanHiddenFaces) return bands;
+  return dropPlanHiddenJunctionFaces(bands, members.map((m) => m.footprint), s);
 }

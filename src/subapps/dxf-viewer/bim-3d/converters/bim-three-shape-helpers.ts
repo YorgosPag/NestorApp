@@ -47,6 +47,18 @@ export function extrudeAndRotate(shape: THREE.Shape, depthM: number): THREE.Buff
   return geo;
 }
 
+/**
+ * ADR-458 — extrude ΠΟΛΛΑΠΛΩΝ disjoint shapes σε ΕΝΑ geometry (THREE.ExtrudeGeometry
+ * δέχεται array of shapes → ένα BufferGeometry, ένα mesh, ένα material). Χρήση: το
+ * beam-to-column cutback που χωρίζει ένα δοκάρι σε ≥1 κομμάτια. Άδειο array → null.
+ */
+export function extrudeShapesAndRotate(shapes: readonly THREE.Shape[], depthM: number): THREE.BufferGeometry | null {
+  if (shapes.length === 0) return null;
+  const geo = new THREE.ExtrudeGeometry([...shapes], { depth: depthM, bevelEnabled: false });
+  geo.applyMatrix4(ROT_X_NEG_90);
+  return geo;
+}
+
 export function tagMesh(mesh: THREE.Mesh, id: string, type: string, matId: string, levelId?: string): THREE.Mesh {
   mesh.userData['bimId'] = id;
   mesh.userData['bimType'] = type;

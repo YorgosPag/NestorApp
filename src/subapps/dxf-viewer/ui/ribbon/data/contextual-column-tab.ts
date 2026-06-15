@@ -26,6 +26,7 @@ import {
   COLUMN_STRUCTURAL_KEYS,
   COLUMN_STRUCTURAL_READOUT_KEYS,
 } from '../hooks/bridge/column-command-keys';
+import { STOREY_RIBBON_KEYS } from '../hooks/bridge/storey-command-keys';
 import { ENVELOPE_FUNCTION_OPTIONS } from '../hooks/bridge/envelope-function-param';
 import {
   FINISH_ENABLED_OPTIONS,
@@ -38,6 +39,7 @@ import {
   LONGITUDINAL_DIAMETER_OPTIONS,
   LONGITUDINAL_COUNT_OPTIONS,
   STIRRUP_TYPE_OPTIONS,
+  CROSS_TIE_PATTERN_OPTIONS,
   STIRRUP_DIAMETER_OPTIONS,
   STIRRUP_SPACING_OPTIONS,
   STIRRUP_CRITICAL_SPACING_OPTIONS,
@@ -277,6 +279,20 @@ export const CONTEXTUAL_COLUMN_TAB: RibbonTab = {
                 labelKey: 'ribbon.commands.columnEditor.height',
                 commandKey: COLUMN_RIBBON_KEYS.params.height,
                 comboboxWidthPx: 80,
+                options: HEIGHT_MM_OPTIONS,
+              },
+            },
+            // ADR-451 Slice 4 — «Ύψος Ορόφου»: γράφει το ύψος του ΕΝΕΡΓΟΥ ορόφου (ΙΔΙΟ
+            // SSoT με Κτίρια→Όροφοι). Storey-bound κολώνα ακολουθεί (το διπλανό «Ύψος»
+            // είναι read-only/derived). ΟΧΙ column param — storey key.
+            {
+              type: 'combobox',
+              size: 'small',
+              command: {
+                id: 'storey.height',
+                labelKey: 'ribbon.commands.columnEditor.storeyHeight',
+                commandKey: STOREY_RIBBON_KEYS.height,
+                comboboxWidthPx: 90,
                 options: HEIGHT_MM_OPTIONS,
               },
             },
@@ -571,6 +587,17 @@ export const CONTEXTUAL_COLUMN_TAB: RibbonTab = {
               type: 'combobox',
               size: 'small',
               command: {
+                id: 'column.structural.crossTiePattern',
+                labelKey: 'ribbon.commands.columnStructural.crossTiePattern',
+                commandKey: COLUMN_STRUCTURAL_KEYS.crossTiePattern,
+                comboboxWidthPx: 130,
+                options: CROSS_TIE_PATTERN_OPTIONS,
+              },
+            },
+            {
+              type: 'combobox',
+              size: 'small',
+              command: {
                 id: 'column.structural.stirrupDiameter',
                 labelKey: 'ribbon.commands.columnStructural.stirrupDiameter',
                 commandKey: COLUMN_STRUCTURAL_KEYS.stirrupDiameter,
@@ -618,6 +645,28 @@ export const CONTEXTUAL_COLUMN_TAB: RibbonTab = {
           buttons: [
             {
               // Read-only readout — bridge δίνει value, options:[] (μη επεξεργάσιμο).
+              type: 'combobox',
+              size: 'small',
+              command: {
+                id: 'column.structural.concreteVolumeGross',
+                labelKey: 'ribbon.commands.columnStructural.concreteVolumeGross',
+                commandKey: COLUMN_STRUCTURAL_READOUT_KEYS.concreteVolumeGross,
+                comboboxWidthPx: 120,
+                options: [],
+              },
+            },
+            {
+              type: 'combobox',
+              size: 'small',
+              command: {
+                id: 'column.structural.concreteVolumeNet',
+                labelKey: 'ribbon.commands.columnStructural.concreteVolumeNet',
+                commandKey: COLUMN_STRUCTURAL_READOUT_KEYS.concreteVolumeNet,
+                comboboxWidthPx: 120,
+                options: [],
+              },
+            },
+            {
               type: 'combobox',
               size: 'small',
               command: {

@@ -2658,6 +2658,12 @@
           "closed-welded": "Κλειστός συγκολλητός",
           "spiral": "Σπειροειδής (θώρακας)"
         },
+        "crossTiePattern": "Εσωτερικά συνδετήρια",
+        "crossTiePatternOption": {
+          "auto": "Αυτόματο",
+          "diamond": "Διαμάντι",
+          "grid": "Πλέγμα"
+        },
         "longitudinalDiameter": "Διαμήκης Ø",
         "longitudinalCount": "Πλήθος",
         "stirrupDiameter": "Συνδετήρες Ø",
@@ -2666,6 +2672,8 @@
         "cover": "Επικάλυψη",
         "auto": "Auto οπλισμός",
         "autoTooltip": "Προτεινόμενος ελάχιστος-έγκυρος οπλισμός κατά τον κανονισμό",
+        "concreteVolumeGross": "Όγκος σκυρ. μικτός (m³)",
+        "concreteVolumeNet": "Όγκος σκυρ. καθαρός (m³)",
         "concreteWeight": "Βάρος σκυρ. (kg)",
         "steelWeight": "Βάρος χάλυβα (kg)",
         "ratio": "ρ (%)",
@@ -2675,6 +2683,7 @@
         "width": "Πλάτος",
         "depth": "Βάθος",
         "height": "Ύψος",
+        "storeyHeight": "Ύψος Ορόφου",
         "rotation": "Στροφή",
         "sides": "Πλευρές",
         "flangeThickness": "Πάχος πέλματος",

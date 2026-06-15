@@ -299,3 +299,36 @@ export function resolveColumnVerticalExtentMm(
  * `makeColumnHostResolver` αμετάβλητα.
  */
 export const makeColumnHostResolver = makeHostFootprintResolver;
+
+/**
+ * Ελάχιστο δομικό σχήμα μιας κολώνας για το lookup κατακόρυφης έκτασης: `id` +
+ * `params` (assignable από `ColumnParams`) + plan footprint. Το ικανοποιούν ΚΑΙ
+ * το BIM `ColumnEntity` ΚΑΙ το canvas `DxfColumn` → μηδέν cast σε 3Δ & 2Δ.
+ */
+export interface ColumnExtentSource {
+  readonly id?: string;
+  readonly params: ColumnVerticalParams;
+  readonly geometry?: { readonly footprint?: { readonly vertices?: readonly { x: number; y: number }[] } };
+}
+
+/**
+ * ADR-449 — SSoT για το `Map<columnId, {zBotMm,zTopMm}>` (storey-aware κατακόρυφη
+ * έκταση) ΟΛΩΝ των κολωνών ενός ορόφου, με την ΙΔΙΑ `resolveColumnVerticalExtentMm`
+ * που χρησιμοποιεί ο rendered πυρήνας. Ένα σημείο — το καλούν ΚΑΙ το 3Δ scene pass
+ * (`bim-scene-structural-finish-sync`) ΚΑΙ το 2Δ silhouette builder
+ * (`dxf-renderer-frame-builders`) → σοβάς 2Δ == 3Δ πάντα. Ο καλών χτίζει το
+ * `resolveHostInput` (host footprints, attached κολώνες)· degenerate footprint /
+ * χωρίς id → παραλείπεται.
+ */
+export function buildColumnVerticalExtentLookup(
+  columns: readonly ColumnExtentSource[],
+  ctx: ColumnVerticalContext,
+): ReadonlyMap<string, { readonly zBotMm: number; readonly zTopMm: number }> {
+  const map = new Map<string, { zBotMm: number; zTopMm: number }>();
+  for (const c of columns) {
+    const verts = c.geometry?.footprint?.vertices;
+    if (!c.id || !verts || verts.length < 3) continue;
+    map.set(c.id, resolveColumnVerticalExtentMm(c.params, verts.map((v) => ({ x: v.x, y: v.y })), ctx));
+  }
+  return map;
+}

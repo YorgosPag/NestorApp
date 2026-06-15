@@ -50,6 +50,12 @@ export interface ColumnReinforcementLimits {
   readonly maxStirrupSpacingMm: number;
   /** Βήμα πύκνωσης συνδετήρων στις κρίσιμες περιοχές άκρων (mm). */
   readonly criticalStirrupSpacingMm: number;
+  /**
+   * Μέγιστη απόσταση μεταξύ διαδοχικών **συγκρατημένων** διαμήκων ράβδων (mm)
+   * περιμετρικά — EC8 §5.4.3.2.2(11)P (DCM ≤200, DCH ≤150) / ΕΑΚ. Καθορίζει το
+   * ΠΛΗΘΟΣ των διαμήκων (ράβδος κάθε ≤ τόσο), όχι μόνο τη διάμετρο.
+   */
+  readonly maxBarSpacingMm: number;
   /** Ονομαστική επικάλυψη cnom (mm). */
   readonly nominalCoverMm: number;
 }
