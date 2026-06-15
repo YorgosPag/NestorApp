@@ -54,6 +54,32 @@ export const BeamIShapeParamsSchema = z
 /** Beam-specific IFC4 class. */
 export const BeamIfcTypeSchema = z.literal('IfcBeam');
 
+// ─── ADR-459 Phase 4a — οπλισμός δοκού (mirror ColumnReinforcementSchema) ──────
+
+const BeamRebarLayerSchema = z
+  .object({
+    diameterMm: z.number().positive(),
+    count: z.number().int().positive(),
+  })
+  .strict();
+
+const BeamReinforcementSchema = z
+  .object({
+    bottom: BeamRebarLayerSchema,
+    top: BeamRebarLayerSchema,
+    stirrups: z
+      .object({
+        diameterMm: z.number().positive(),
+        spacingMm: z.number().positive(),
+        spacingCriticalMm: z.number().positive().optional(),
+        legs: z.number().int().positive().optional(),
+        type: z.enum(['closed-hooked', 'closed-welded', 'spiral']).optional(),
+      })
+      .strict(),
+    coverMm: z.number().positive(),
+  })
+  .strict();
+
 // ─── Params schema ──────────────────────────────────────────────────────────
 
 export const BeamParamsSchema = z
@@ -83,6 +109,8 @@ export const BeamParamsSchema = z
     envelopeLayer: EnvelopeLayerSchema.optional(),
     // ─── ADR-396 v2 Φάση 4 — ETICS classification override (Στρ.3) ─────────────
     envelopeFunction: EnvelopeFunctionSchema.optional(),
+    // ─── ADR-459 Phase 4a — οπλισμός δοκού ────────────────────────────────────
+    reinforcement: BeamReinforcementSchema.optional(),
   })
   .strict();
 

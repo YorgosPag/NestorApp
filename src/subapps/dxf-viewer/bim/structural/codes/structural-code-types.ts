@@ -15,6 +15,8 @@
  */
 
 import type { ColumnReinforcement } from '../reinforcement/column-reinforcement-types';
+import type { BeamReinforcement } from '../reinforcement/beam-reinforcement-types';
+import type { BeamSupportType } from '../../types/beam-types';
 
 /** Persisted code identifier (project-level setting). */
 export type StructuralCodeId = 'eurocode' | 'greek-legacy';
@@ -60,6 +62,49 @@ export interface ColumnReinforcementLimits {
   readonly nominalCoverMm: number;
 }
 
+// ─── Beam (ADR-459 Phase 4a) ─────────────────────────────────────────────────
+
+/** Section context a code provider needs to derive BEAM detailing limits. */
+export interface BeamSectionContext {
+  /** Πλάτος διατομής b (mm). */
+  readonly widthMm: number;
+  /** Δομικό βάθος διατομής h (mm). */
+  readonly depthMm: number;
+  /** Καθαρό άνοιγμα / μήκος δοκαριού (mm). */
+  readonly spanMm: number;
+  /** Εμβαδό διατομής σκυροδέματος Ac = b·h (mm²). */
+  readonly grossAreaMm2: number;
+  /** Συνθήκη στήριξης (cantilever ⇒ κρίσιμη ζώνη μόνο στο πακτωμένο άκρο). */
+  readonly supportType: BeamSupportType;
+}
+
+/**
+ * Code-derived detailing limits για ορθογωνική RC δοκό. Τα ρ αναφέρονται στην
+ * **ενεργό** διατομή b·d (d ≈ 0.9·h, μελετητική σύμβαση) — όχι στο μικτό Ac.
+ */
+export interface BeamReinforcementLimits {
+  /** ρ_min — ελάχιστο ποσοστό εφελκυόμενου (κάτω) οπλισμού (As/(b·d)). */
+  readonly minRatio: number;
+  /** ρ_max — μέγιστο ποσοστό εφελκυόμενου οπλισμού. */
+  readonly maxRatio: number;
+  /** Ελάχιστο πλήθος κάτω ράβδων (2 — γωνιακές). */
+  readonly minBottomBarCount: number;
+  /** Ελάχιστο πλήθος άνω ράβδων (2 — αναρτήρες συνδετήρων). */
+  readonly minTopBarCount: number;
+  /** Ελάχιστη διάμετρος διαμήκους ράβδου (mm). */
+  readonly minBarDiameterMm: number;
+  /** Ελάχιστη διάμετρος συνδετήρα (mm). */
+  readonly minStirrupDiameterMm: number;
+  /** Μέγιστο βήμα συνδετήρων στη μεσαία ζώνη ανοίγματος (mm). */
+  readonly maxStirrupSpacingMm: number;
+  /** Βήμα πύκνωσης συνδετήρων στις κρίσιμες περιοχές άκρων (mm). */
+  readonly criticalStirrupSpacingMm: number;
+  /** Μέγιστη απόσταση μεταξύ διαδοχικών διαμήκων ράβδων (mm). */
+  readonly maxBarSpacingMm: number;
+  /** Ονομαστική επικάλυψη cnom (mm). */
+  readonly nominalCoverMm: number;
+}
+
 /**
  * A structural design code. Stateless — pure rule functions keyed by section
  * context, so the same instance is shared across all entities.
@@ -81,4 +126,14 @@ export interface StructuralCodeProvider {
    * Εγγυάται ρ ≥ ρ_min ανεβάζοντας τη διάμετρο στις εμπορικές τιμές.
    */
   suggestColumnReinforcement(ctx: ColumnSectionContext): ColumnReinforcement;
+  /**
+   * ADR-459 Phase 4a — beam detailing limits για δεδομένη διατομή + διάμετρο
+   * διαμήκους (επηρεάζει βήμα συνδετήρων).
+   */
+  beamReinforcementLimits(
+    ctx: BeamSectionContext,
+    longitudinalDiameterMm: number,
+  ): BeamReinforcementLimits;
+  /** ADR-459 Phase 4a — προτεινόμενος ελάχιστος-έγκυρος οπλισμός δοκαριού. */
+  suggestBeamReinforcement(ctx: BeamSectionContext): BeamReinforcement;
 }

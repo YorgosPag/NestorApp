@@ -12,12 +12,21 @@
 
 import { nextRebarDiameterMm } from '../rebar-catalog';
 import type { ColumnReinforcement } from '../reinforcement/column-reinforcement-types';
+import type { BeamReinforcement } from '../reinforcement/beam-reinforcement-types';
 import type {
+  BeamReinforcementLimits,
+  BeamSectionContext,
   ColumnReinforcementLimits,
   ColumnSectionContext,
   StructuralCodeProvider,
 } from './structural-code-types';
-import { suggestColumnReinforcementFrom } from './suggest-reinforcement';
+import {
+  suggestBeamReinforcementFrom,
+  suggestColumnReinforcementFrom,
+} from './suggest-reinforcement';
+
+/** Μελετητική ενεργός διατομή δοκού d ≈ 0.9·h. */
+const BEAM_EFFECTIVE_DEPTH_FACTOR = 0.9;
 
 function greekLegacyColumnLimits(
   ctx: ColumnSectionContext,
@@ -46,11 +55,45 @@ function greekLegacyColumnLimits(
   };
 }
 
+/**
+ * ΕΚΩΣ 2000 §17 (διαστασιολόγηση/λεπτομέρειες) + ΕΑΚ 2003 (αντισεισμικά) όρια
+ * ορθογωνικής RC δοκού. Ελαφρώς συντηρητικότερα από EC2/EC8.
+ */
+function greekLegacyBeamLimits(
+  ctx: BeamSectionContext,
+  longitudinalDiameterMm: number,
+): BeamReinforcementLimits {
+  const dEff = BEAM_EFFECTIVE_DEPTH_FACTOR * ctx.depthMm;
+  // ΕΚΩΣ 2000 §18.3.5 πρακτική — συνδετήρες φw ≥ max(8mm, dbL/4).
+  const minStirrup = nextRebarDiameterMm(Math.max(8, longitudinalDiameterMm / 4));
+  return {
+    // ΕΚΩΣ 2000 §17.5 — ελάχιστο εφελκυόμενο ποσοστό (συντηρητικό).
+    minRatio: 0.0030,
+    maxRatio: 0.04,
+    minBottomBarCount: 2,
+    minTopBarCount: 2,
+    // ΕΚΩΣ 2000 §17.x — Ø ≥ 14mm κύριος οπλισμός δοκού.
+    minBarDiameterMm: 14,
+    minStirrupDiameterMm: minStirrup,
+    // ΕΚΩΣ 2000 — βήμα συνδετήρων εκτός κρισίμων (συντηρητικό 0.75·d, cap 250).
+    maxStirrupSpacingMm: Math.min(0.75 * dEff, 250),
+    // ΕΑΚ 2003 §18.4.6 — κρίσιμη ζώνη: s ≤ min(hw/4, 100, 8·dbL, 24·dbw).
+    criticalStirrupSpacingMm: Math.min(ctx.depthMm / 4, 100, 8 * longitudinalDiameterMm, 24 * minStirrup),
+    maxBarSpacingMm: 200,
+    // ΕΚΩΣ 2000 §5 — επικάλυψη ~25mm εσωτερικού περιβάλλοντος.
+    nominalCoverMm: 25,
+  };
+}
+
 export const GREEK_LEGACY_PROVIDER: StructuralCodeProvider = {
   id: 'greek-legacy',
   labelKey: 'structural.code.greekLegacy',
   columnReinforcementLimits: greekLegacyColumnLimits,
   suggestColumnReinforcement(ctx: ColumnSectionContext): ColumnReinforcement {
     return suggestColumnReinforcementFrom(this, ctx);
+  },
+  beamReinforcementLimits: greekLegacyBeamLimits,
+  suggestBeamReinforcement(ctx: BeamSectionContext): BeamReinforcement {
+    return suggestBeamReinforcementFrom(this, ctx);
   },
 };

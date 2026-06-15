@@ -13,7 +13,10 @@ import {
   nextRebarDiameterMm,
 } from '../rebar-catalog';
 import type { ColumnReinforcement } from '../reinforcement/column-reinforcement-types';
+import type { BeamReinforcement } from '../reinforcement/beam-reinforcement-types';
 import type {
+  BeamReinforcementLimits,
+  BeamSectionContext,
   ColumnReinforcementLimits,
   ColumnSectionContext,
   StructuralCodeProvider,
@@ -42,30 +45,42 @@ function spacingBarCount(ctx: ColumnSectionContext, maxBarSpacingMm: number): nu
 }
 
 /**
+ * SSoT bar-selection core (N.0.2 — μοιράζεται κολόνα + δοκάρι): δεδομένης
+ * απαιτούμενης As, αρχικού πλήθους & seed διαμέτρου, επιστρέφει {count, diameter}
+ * ώστε `count·area(diameter) ≥ asRequired`. Πρώτα ανεβαίνει η διάμετρος στις
+ * εμπορικές τιμές· αν κορεστεί η μέγιστη, προστίθενται ράβδοι ανά `addStep`.
+ */
+export function resolveBarSet(
+  asRequiredMm2: number,
+  initialCount: number,
+  seedDiameterMm: number,
+  addStep = 2,
+): { count: number; diameterMm: number } {
+  let count = initialCount;
+  let diameterMm = seedDiameterMm;
+  while (count * barAreaMm2(diameterMm) < asRequiredMm2) {
+    const next = nextRebarDiameterMm(diameterMm + 1);
+    if (next === diameterMm) break; // έφτασε στη μέγιστη εμπορική
+    diameterMm = next;
+  }
+  while (count * barAreaMm2(diameterMm) < asRequiredMm2 && count < MAX_LONGITUDINAL_BARS) {
+    count += addStep;
+  }
+  return { count, diameterMm };
+}
+
+/**
  * Επιλέγει πλήθος + εμπορική διάμετρο διαμήκων ώστε να ικανοποιούνται ΤΑΥΤΟΧΡΟΝΑ:
- * (α) απόσταση ≤ max-bar-spacing, (β) ρ ≥ ρ_min, (γ) ≥ minBarCount. Στρατηγική
- * Revit-grade: το πλήθος ξεκινά από την περίσφιγξη (spacing) → ανεβαίνει η
- * διάμετρος για το ρ_min → αν κορεστεί η μέγιστη εμπορική, προστίθενται ράβδοι
- * (ανά 2, συμμετρικά) μέχρι το ρ_min.
+ * (α) απόσταση ≤ max-bar-spacing, (β) ρ ≥ ρ_min, (γ) ≥ minBarCount. Το πλήθος
+ * ξεκινά από την περίσφιγξη (spacing) → reuse `resolveBarSet`.
  */
 function resolveLongitudinalDesign(
   seed: ColumnReinforcementLimits,
   ctx: ColumnSectionContext,
 ): { count: number; diameterMm: number } {
   const asRequiredMm2 = ctx.grossAreaMm2 * seed.minRatio;
-  let count = Math.max(seed.minBarCount, spacingBarCount(ctx, seed.maxBarSpacingMm));
-  let diameterMm = nextRebarDiameterMm(seed.minBarDiameterMm);
-  // (1) Ανέβασε τη διάμετρο μέχρι As = count·area ≥ ρ_min·Ac.
-  while (count * barAreaMm2(diameterMm) < asRequiredMm2) {
-    const next = nextRebarDiameterMm(diameterMm + 1);
-    if (next === diameterMm) break; // έφτασε στη μέγιστη εμπορική
-    diameterMm = next;
-  }
-  // (2) Η μέγιστη εμπορική δεν φτάνει → πρόσθεσε ράβδους (ανά 2 για συμμετρία).
-  while (count * barAreaMm2(diameterMm) < asRequiredMm2 && count < MAX_LONGITUDINAL_BARS) {
-    count += 2;
-  }
-  return { count, diameterMm };
+  const initialCount = Math.max(seed.minBarCount, spacingBarCount(ctx, seed.maxBarSpacingMm));
+  return resolveBarSet(asRequiredMm2, initialCount, nextRebarDiameterMm(seed.minBarDiameterMm));
 }
 
 /**
@@ -86,6 +101,48 @@ export function suggestColumnReinforcementFrom(
 
   return {
     longitudinal: { diameterMm, count },
+    stirrups: {
+      diameterMm: limits.minStirrupDiameterMm,
+      spacingMm: roundSpacingDown(limits.maxStirrupSpacingMm),
+      spacingCriticalMm: roundSpacingDown(limits.criticalStirrupSpacingMm),
+    },
+    coverMm: limits.nominalCoverMm,
+  };
+}
+
+// ─── Beam suggester (ADR-459 Phase 4a) ───────────────────────────────────────
+
+/** Μελετητική ενεργός διατομή d ≈ 0.9·h (cover/bar-agnostic seed για ρ). */
+const BEAM_EFFECTIVE_DEPTH_FACTOR = 0.9;
+
+/** EC8 §5.4.3.1.2(5) — ο άνω οπλισμός κατά μήκος ≥ 0.25·κάτω (αναρτήρες). */
+const BEAM_TOP_TO_BOTTOM_RATIO = 0.25;
+
+/**
+ * Επιλέγει ελάχιστο-έγκυρο διαμήκη (κάτω/άνω) + εγκάρσιο οπλισμό δοκαριού,
+ * εγγυώμενος ρ_κάτω ≥ ρ_min επί της ενεργού διατομής b·d (d ≈ 0.9h). Reuse του
+ * SSoT `resolveBarSet` (μηδέν duplicate). Καλείται από κάθε provider.
+ */
+export function suggestBeamReinforcementFrom(
+  provider: StructuralCodeProvider,
+  ctx: BeamSectionContext,
+): BeamReinforcement {
+  const seed = provider.beamReinforcementLimits(ctx, 16);
+  const effectiveDepthMm = BEAM_EFFECTIVE_DEPTH_FACTOR * ctx.depthMm;
+  const asBottomMm2 = seed.minRatio * ctx.widthMm * effectiveDepthMm;
+  const seedDia = nextRebarDiameterMm(seed.minBarDiameterMm);
+
+  const bottom = resolveBarSet(asBottomMm2, Math.max(seed.minBottomBarCount, 2), seedDia);
+  const top = resolveBarSet(
+    BEAM_TOP_TO_BOTTOM_RATIO * bottom.count * barAreaMm2(bottom.diameterMm),
+    Math.max(seed.minTopBarCount, 2),
+    seedDia,
+  );
+
+  const limits = provider.beamReinforcementLimits(ctx, bottom.diameterMm);
+  return {
+    bottom: { diameterMm: bottom.diameterMm, count: bottom.count },
+    top: { diameterMm: top.diameterMm, count: top.count },
     stirrups: {
       diameterMm: limits.minStirrupDiameterMm,
       spacingMm: roundSpacingDown(limits.maxStirrupSpacingMm),

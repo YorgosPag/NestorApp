@@ -40,6 +40,7 @@ import type { SceneUnits } from '../../utils/scene-units';
 import type { IfcEntityMixin } from './ifc-entity-mixin';
 import type { EnvelopeFunction, EnvelopeLayer } from './thermal-envelope-types';
 import type { StructuralFinishSpec } from '../finishes/structural-finish-types';
+import type { BeamReinforcement } from '../structural/reinforcement/beam-reinforcement-types';
 
 // ─── Sub-type discriminators (ADR-363 §5.7) ─────────────────────────────────
 
@@ -185,6 +186,13 @@ export interface BeamParams {
    * Συνυπάρχει με `envelopeLayer` (ETICS). Mirror του `ColumnParams.finish`.
    */
   readonly finish?: StructuralFinishSpec;
+  /**
+   * ADR-459 Phase 4a — Οπλισμός δοκού (κάτω/άνω διαμήκης + συνδετήρες + cover).
+   * Optional/non-breaking: absent → δεν έχει διαστασιολογηθεί οπλισμός (μόνο
+   * ποσότητες σκυροδέματος). Οι παράγωγες ποσότητες υπολογίζονται on-demand από
+   * `beam-reinforcement-compute.ts` — ΠΟΤΕ αποθηκεύονται (mirror κολόνας).
+   */
+  readonly reinforcement?: BeamReinforcement;
 }
 
 // ─── Geometry cache (derivable from params; SSoT = params) ──────────────────
