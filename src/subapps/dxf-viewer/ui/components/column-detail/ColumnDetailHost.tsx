@@ -24,6 +24,10 @@ import { EventBus } from '../../../systems/events/EventBus';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { isColumnEntity } from '../../../types/entities';
 import type { ColumnEntity } from '../../../bim/types/column-types';
+// ADR-456/460 (Giorgio 2026-06-16) — the detail sheet must show the ACTIVE reinforcement:
+// auto-mode columns re-derive a fresh code design from the current geometry. Resolved ONCE
+// here (SSoT) so every pure leaf builder + the 3D capture stay unchanged and consistent.
+import { resolveActiveColumnReinforcementForParams } from '../../../bim/structural/active-reinforcement';
 import { buildColumnDetailSheet } from '../../../bim/structural/detail-sheet/column-detail-sheet';
 import { computeDetailSheetLayout } from '../../../bim/structural/detail-sheet/detail-sheet-layout';
 import { captureColumnDetail3d } from '../../../bim/structural/detail-sheet/render/column-detail-3d-capture';
@@ -58,6 +62,19 @@ function resolveColumn(
   const scene = levelManager.getLevelScene(levelId);
   const entity = scene?.entities.find((e) => e.id === columnId);
   return entity && isColumnEntity(entity) ? entity : null;
+}
+
+/**
+ * ADR-456/460 — the column with its ACTIVE reinforcement baked into `params`:
+ * auto-mode → fresh code-suggested design from the current geometry; manual →
+ * the stored design unchanged (fast-path returns the SAME column reference). One
+ * resolution point keeps the 2Δ plan/elevation, the schedule and the 3D capture
+ * all consistent without touching the pure leaf builders.
+ */
+function toEffectiveColumn(column: ColumnEntity): ColumnEntity {
+  const reinforcement = resolveActiveColumnReinforcementForParams(column.params);
+  if (reinforcement === column.params.reinforcement) return column;
+  return { ...column, params: { ...column.params, reinforcement } };
 }
 
 /** Offscreen 3D capture resolution, derived from the perspective region aspect. */
@@ -96,7 +113,7 @@ export function ColumnDetailHost({
       setPerspective3d(null);
       return;
     }
-    setPerspective3d(captureColumnDetail3d(column, captureSizePx()));
+    setPerspective3d(captureColumnDetail3d(toEffectiveColumn(column), captureSizePx()));
   }, [dialogState, levelManager]);
 
   const model = useMemo<DetailSheetModel | null>(() => {
@@ -104,7 +121,7 @@ export function ColumnDetailHost({
     const column = resolveColumn(levelManager, dialogState.levelId, dialogState.columnId);
     if (!column) return null;
     return buildColumnDetailSheet({
-      params: column.params,
+      params: toEffectiveColumn(column).params,
       perspective3d,
       labels: {
         plan: t('columnDetail.regions.plan'),

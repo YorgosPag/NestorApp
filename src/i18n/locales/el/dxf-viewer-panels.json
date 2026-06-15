@@ -51,6 +51,7 @@
       "newLevelPlaceholder": "Όνομα νέου επιπέδου...",
       "linkFloor": "Σύνδεση ορόφου",
       "linkedFloor": "Όροφος: {floorName}",
+      "specialLevel": "Ειδική στάθμη",
       "noFloorLinked": "Χωρίς σύνδεση ορόφου",
       "selectFloorPlaceholder": "-- Επιλέξτε όροφο --",
       "noBuildingSelected": "Επιλέξτε κτίριο στην Ιεραρχία",

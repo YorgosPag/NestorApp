@@ -25,6 +25,7 @@ import { useMemo } from 'react';
 import { useLevelsOptional } from '../../systems/levels/useLevels';
 import { useFirestoreBuildings } from '@/hooks/useFirestoreBuildings';
 import { useFloorsByBuilding } from '@/components/properties/shared/useFloorsByBuilding';
+import { isBuildingStorey, type FloorKind } from '@/utils/floor-naming';
 import {
   isWallEntity,
   isOpeningEntity,
@@ -98,14 +99,20 @@ function resolveApertureBaseElevationM(
   return base + floorElev;
 }
 
-/** Θέση ορόφου: floors ταξινομημένα αύξοντα (basement→up) → lowest/highest/middle. */
+/**
+ * Θέση ορόφου: floors ταξινομημένα αύξοντα (basement→up) → lowest/highest/middle.
+ * ADR-461 — ΜΟΝΟ οι counted storeys ορίζουν το θερμικό lowest/highest (εξωτερικό
+ * δάπεδο / στέγη). Foundation/roof/stair-penthouse εξαιρούνται, αλλιώς το θερμικό
+ * μοντέλο θα χρησιμοποιούσε λάθος εξωτερικές επιφάνειες (π.χ. foundation→'lowest').
+ */
 function resolveStoreyPosition(
-  floors: ReadonlyArray<{ id: string }>,
+  floors: ReadonlyArray<{ id: string; kind?: FloorKind }>,
   activeFloorId: string | null,
 ): StoreyPosition {
-  if (!activeFloorId || floors.length <= 1) return 'only';
-  if (floors[0].id === activeFloorId) return 'lowest';
-  if (floors[floors.length - 1].id === activeFloorId) return 'highest';
+  const counted = floors.filter((f) => f.kind === undefined || isBuildingStorey(f.kind));
+  if (!activeFloorId || counted.length <= 1) return 'only';
+  if (counted[0].id === activeFloorId) return 'lowest';
+  if (counted[counted.length - 1].id === activeFloorId) return 'highest';
   return 'middle';
 }
 

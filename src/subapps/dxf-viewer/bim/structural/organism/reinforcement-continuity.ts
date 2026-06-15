@@ -24,6 +24,10 @@ import { isColumnEntity, isBeamEntity } from '../../../types/entities';
 import type { StructuralCodeProvider } from '../codes/structural-code-types';
 import type { ColumnReinforcement } from '../reinforcement/column-reinforcement-types';
 import type { BeamReinforcement } from '../reinforcement/beam-reinforcement-types';
+// ADR-456/460 (Giorgio 2026-06-16) — auto-mode columns re-derive from current geometry, so
+// the organism's lap/anchorage continuity must read the ACTIVE design (pure resolver: provider
+// arg, zero store). Manual columns fast-path to the stored design unchanged.
+import { resolveActiveColumnReinforcement } from '../section-context';
 import type { StructuralEdge, StructuralGraph, StructuralNode } from './structural-organism-types';
 
 /** Είδος οργανικής συνέχειας. */
@@ -66,8 +70,11 @@ export interface OrganismContinuityResult {
 
 // ─── Reinforcement readers (pure — από τα persisted params) ───────────────────
 
-function columnReinforcement(e: Entity | undefined): ColumnReinforcement | undefined {
-  return e && isColumnEntity(e) ? e.params.reinforcement : undefined;
+function columnReinforcement(
+  e: Entity | undefined,
+  provider: StructuralCodeProvider,
+): ColumnReinforcement | undefined {
+  return e && isColumnEntity(e) ? resolveActiveColumnReinforcement(e.params, provider) : undefined;
 }
 
 function beamReinforcement(e: Entity | undefined): BeamReinforcement | undefined {
@@ -101,7 +108,7 @@ function footingBearingContinuity(
   entityById: ReadonlyMap<string, Entity>,
   provider: StructuralCodeProvider,
 ): EdgeContinuity | null {
-  const col = columnReinforcement(entityById.get(edge.supportedId));
+  const col = columnReinforcement(entityById.get(edge.supportedId), provider);
   if (!col) return null;
   const diameterMm = col.longitudinal.diameterMm;
   const lap = provider.lapLengthMm(diameterMm);
@@ -164,9 +171,9 @@ function topAttachmentContinuity(
   provider: StructuralCodeProvider,
 ): EdgeContinuity | null {
   // supportedId = πάντα η κολόνα (μόνο isColumnEntity παράγει top-attachment ακμή).
-  const lower = columnReinforcement(entityById.get(edge.supportedId));
+  const lower = columnReinforcement(entityById.get(edge.supportedId), provider);
   if (!lower) return null;
-  const upper = columnReinforcement(entityById.get(edge.supportId));
+  const upper = columnReinforcement(entityById.get(edge.supportId), provider);
   return upper
     ? columnLapContinuity(edge, lower, upper, provider)
     : columnTopAnchorageContinuity(edge, lower, provider);

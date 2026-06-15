@@ -3,7 +3,7 @@ import type { Firestore } from 'firebase-admin/firestore';
 
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { FIELDS } from '@/config/firestore-field-constants';
-import { DEFAULT_FLOOR_HEIGHT_M } from '@/utils/floor-naming';
+import { DEFAULT_FLOOR_HEIGHT_M, isBuildingStorey, type FloorKind } from '@/utils/floor-naming';
 import { createModuleLogger } from '@/lib/telemetry';
 import { EntityAuditService } from '@/services/entity-audit.service';
 import { ENTITY_TYPES } from '@/config/domain-constants';
@@ -47,6 +47,13 @@ interface FloorRow {
   readonly number: number;
   readonly elevation: number | null;
   readonly height: number;
+  /** ADR-461 — Revit-style classification; special levels keep explicit heights. */
+  readonly kind?: FloorKind;
+}
+
+/** True when this floor is a special level (foundation/roof/stair-penthouse). */
+function isSpecial(row: FloorRow): boolean {
+  return row.kind !== undefined && !isBuildingStorey(row.kind);
 }
 
 function finite(value: unknown, fallback: number): number {
@@ -55,6 +62,17 @@ function finite(value: unknown, fallback: number): number {
 
 function finiteOrNull(value: unknown): number | null {
   return typeof value === 'number' && Number.isFinite(value) ? value : null;
+}
+
+/** Round to millimetre precision (normalising −0 → 0) to avoid float drift. */
+function roundM(value: number): number {
+  const r = Math.round(value * 1000) / 1000;
+  return r === 0 ? 0 : r;
+}
+
+function approxEqOrNull(a: number | null, b: number | null): boolean {
+  if (a === null || b === null) return a === b;
+  return Math.abs(a - b) <= RECONCILE_EPSILON_M;
 }
 
 async function readBuildingFloors(
@@ -75,6 +93,7 @@ async function readBuildingFloors(
       number: finite(d.data().number, 0),
       elevation: finiteOrNull(d.data().elevation),
       height: finite(d.data().height, DEFAULT_FLOOR_HEIGHT_M),
+      kind: d.data().kind as FloorKind | undefined,
     }))
     .sort((a, b) => a.number - b.number);
 
@@ -118,13 +137,25 @@ export async function deriveAdjacentHeightsFromElevation(
   const audits: { row: FloorRow; oldValue: number; newValue: number }[] = [];
   let skipped = 0;
 
-  // Normalise EVERY storey's height to the gap above it (`elev[i+1] − elev[i]`).
-  // Consistent storeys no-op; only the genuinely changed (or stale) ones are
-  // re-written — full-stack self-heal so stored heights can never drift from the
-  // SSoT elevations. The top floor (no floor above) keeps its explicit height.
-  for (let idx = 0; idx < rows.length - 1; idx++) {
+  // Normalise every COUNTED storey's height to the gap up to the next COUNTED
+  // storey (`elev[next] − elev[i]`). Consistent storeys no-op; only the genuinely
+  // changed (or stale) ones are re-written — full-stack self-heal so stored heights
+  // can never drift from the SSoT elevations.
+  //
+  // ADR-461 — special levels (foundation depth, stair-penthouse / roof height) keep
+  // their EXPLICIT height: a foundation depth is not a derived inter-floor gap, so
+  // it is never overwritten here. The derivation also reaches OVER an intervening
+  // special level to the next counted storey, so a penthouse between two counted
+  // storeys would not distort the lower storey's derived height. The top counted
+  // storey (no counted floor above) keeps its explicit height.
+  for (let idx = 0; idx < rows.length; idx++) {
     const storey = rows[idx];
-    const above = rows[idx + 1];
+    if (isSpecial(storey)) { skipped++; continue; }
+    let above: FloorRow | null = null;
+    for (let j = idx + 1; j < rows.length; j++) {
+      if (!isSpecial(rows[j])) { above = rows[j]; break; }
+    }
+    if (above === null) { skipped++; continue; }
     if (storey.elevation === null || above.elevation === null) { skipped++; continue; }
     const derived = above.elevation - storey.elevation;
     if (Math.abs(storey.height - derived) <= RECONCILE_EPSILON_M) { skipped++; continue; }
@@ -216,4 +247,97 @@ export async function reconcileFloorStackAfterEdit(
   }
 
   return { mode: 'none', elevationsPushed: 0, heightsDerived: [] };
+}
+
+/**
+ * ADR-461 — Revit-true SATELLITE PLACEMENT: special levels always sit at the
+ * extremes of the counted backbone, in BOTH `number` and `elevation`.
+ *   - foundation → ΠΑΝΤΑ κάτω: `number = lowestCounted.number − 1`,
+ *     `elevation = lowestCounted.elevation − depth (its own height)`.
+ *   - roof / stair-penthouse → ΠΑΝΤΑ πάνω: stacked above `topCounted`
+ *     (`number = prev.number + 1`, `elevation = prev.elevation + prev.height`).
+ *
+ * Idempotent: a special already in place → no write. Called after a counted storey
+ * is created/deleted so adding a basement pushes the foundation further down, and
+ * adding a top floor pushes the penthouse further up — the special never ends up
+ * sandwiched inside the occupied stack. Multiple specials on a side are stacked in
+ * their current relative order.
+ *
+ * All metres (ADR-369). Returns how many special levels were re-placed.
+ */
+export async function reconcileSpecialLevelPlacement(
+  db: Firestore,
+  buildingId: string,
+  companyId: string,
+  updatedBy: string,
+): Promise<number> {
+  const { rows, refById } = await readBuildingFloors(db, buildingId, companyId);
+  const counted = rows.filter((r) => !isSpecial(r));
+  if (counted.length === 0) return 0; // nothing to anchor against (degenerate)
+
+  const minCounted = counted[0];
+  const maxCounted = counted[counted.length - 1];
+
+  interface Placement { row: FloorRow; number: number; elevation: number | null; }
+  const placements: Placement[] = [];
+
+  // Below-grade specials (foundation) — stacked UNDER minCounted, deepest last.
+  const below = rows.filter((r) => r.kind === 'foundation').sort((a, b) => b.number - a.number);
+  let belowNum = minCounted.number;
+  let belowElev = minCounted.elevation;
+  for (const f of below) {
+    const num = belowNum - 1;
+    const elev = belowElev !== null ? roundM(belowElev - f.height) : null;
+    if (f.number !== num || !approxEqOrNull(f.elevation, elev)) placements.push({ row: f, number: num, elevation: elev });
+    belowNum = num;
+    belowElev = elev;
+  }
+
+  // Above specials (roof, stair-penthouse) — stacked ABOVE maxCounted, in order.
+  const above = rows
+    .filter((r) => r.kind === 'roof' || r.kind === 'stair-penthouse')
+    .sort((a, b) => a.number - b.number);
+  let topNum = maxCounted.number;
+  let topElev = maxCounted.elevation;
+  let topHeight = maxCounted.height;
+  for (const s of above) {
+    const num = topNum + 1;
+    const elev = topElev !== null ? roundM(topElev + topHeight) : null;
+    if (s.number !== num || !approxEqOrNull(s.elevation, elev)) placements.push({ row: s, number: num, elevation: elev });
+    topNum = num;
+    topElev = elev;
+    topHeight = s.height;
+  }
+
+  if (placements.length === 0) return 0;
+
+  const batch = db.batch();
+  const updatedAt = FieldValue.serverTimestamp();
+  for (const p of placements) {
+    const ref = refById.get(p.row.id);
+    if (ref) batch.update(ref, { number: p.number, elevation: p.elevation, updatedBy, updatedAt });
+  }
+  await batch.commit();
+
+  await Promise.all(
+    placements.map((p) => {
+      const changes: AuditFieldChange[] = [
+        { field: 'number', oldValue: p.row.number, newValue: p.number, label: 'number' },
+        { field: 'elevation', oldValue: p.row.elevation, newValue: p.elevation, label: 'elevation' },
+      ];
+      return EntityAuditService.recordChange({
+        entityType: ENTITY_TYPES.FLOOR,
+        entityId: p.row.id,
+        entityName: p.row.name,
+        action: 'updated',
+        changes,
+        performedBy: updatedBy,
+        performedByName: null,
+        companyId,
+      });
+    }),
+  );
+
+  logger.info('[FloorStackReconcile] Re-placed special levels', { buildingId, placed: placements.length });
+  return placements.length;
 }

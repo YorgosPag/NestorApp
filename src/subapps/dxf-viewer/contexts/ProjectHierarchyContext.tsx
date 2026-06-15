@@ -17,88 +17,29 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { formatBuildingLabel } from '@/lib/entity-formatters';
 // 🏢 ENTERPRISE: Centralized real-time service for cross-page sync
 import { RealtimeService, type ProjectUpdatedPayload, type ContactCreatedPayload } from '@/services/realtime';
-import type { ParkingSpot as CanonicalParkingSpot } from '@/types/parking';
+import { isFloorKind } from '@/utils/floor-naming';
+import type {
+  Floor,
+  Building,
+  Project,
+  ProjectHierarchy,
+  DestinationOption,
+  ProjectHierarchyContextType,
+} from './project-hierarchy-types';
+
+// Public hierarchy types live in `project-hierarchy-types.ts` (file-size split).
+// Re-export ΟΛΟΥΣ για back-compat — εξωτερικοί consumers τους εισάγουν από εδώ.
+export type {
+  Unit,
+  Floor,
+  Building,
+  Project,
+  ParkingSpot,
+  ProjectHierarchy,
+  ProjectHierarchyActions,
+  DestinationOption,
+} from './project-hierarchy-types';
 import { applyUpdates } from '@/lib/utils';
-
-export interface Unit {
-  id: string;
-  name: string;
-  type: 'studio' | 'apartment' | 'maisonette' | 'commercial';
-  floor: number;
-  area: number;
-  status: 'owner' | 'sold' | 'forRent' | 'forSale' | 'reserved';
-  // ✅ ENTERPRISE FIX: Missing Unit properties for SimpleProjectDialog TS2339 errors
-  buildingId: string;                // Building ID reference (required)
-  building: string;                  // Building name/identifier (required)
-  unitName?: string;                 // Optional unit name for backward compatibility
-}
-
-export interface Floor {
-  id: string;
-  number: number;
-  name: string;
-  elevation?: number;
-  units: Unit[];
-}
-
-export interface Building {
-  id: string;
-  name: string;
-  code?: string;
-  companyId?: string; // 🏢 ENTERPRISE: Inherited from Firestore — used for FileRecord save companyId resolution
-  floors: Floor[];
-  storageAreas?: Unit[]; // Αποθήκες (συνήθως υπόγεια)
-}
-
-export interface Project {
-  id: string;
-  name: string;
-  company: string;
-  buildings: Building[];
-  parkingSpots?: ParkingSpot[];
-}
-
-// ADR-191: Re-export canonical ParkingSpot (was local divergent type)
-export type ParkingSpot = CanonicalParkingSpot;
-
-export interface ProjectHierarchy {
-  companies: CompanyContact[];
-  selectedCompany: CompanyContact | null;
-  projects: Project[];
-  selectedProject: Project | null;
-  selectedBuilding: Building | null;
-  selectedFloor: Floor | null;
-  loading: boolean;
-  error: string | null;
-}
-
-export interface ProjectHierarchyActions {
-  loadCompanies: (forceRefresh?: boolean) => Promise<void>;
-  selectCompany: (companyId: string) => void;
-  loadProjects: () => Promise<void>;
-  loadProjectsForCompany: (companyId: string) => Promise<void>;
-  selectProject: (projectId: string) => void;
-  selectBuilding: (buildingId: string) => void;
-  selectFloor: (floorId: string) => void;
-  /** Direct setter — bypasses lookup, sets building object directly (e.g. from SimpleProjectDialog) */
-  setBuildingDirect: (building: Building | null) => void;
-  /** Direct setter — bypasses lookup, sets floor object directly (e.g. from SimpleProjectDialog) */
-  setFloorDirect: (floor: Floor | null) => void;
-  getAvailableDestinations: () => DestinationOption[];
-}
-
-export interface DestinationOption {
-  id: string;
-  label: string;
-  type: 'project' | 'building' | 'floor' | 'property' | 'storage' | 'parking';
-  parentId?: string;
-  metadata?: {
-    floorNumber?: number;
-    category?: 'parking' | 'storage' | 'general';
-  };
-}
-
-interface ProjectHierarchyContextType extends ProjectHierarchy, ProjectHierarchyActions {}
 
 const ProjectHierarchyContext = createContext<ProjectHierarchyContextType | null>(null);
 
@@ -260,6 +201,7 @@ export function ProjectHierarchyProvider({ children }: { children: React.ReactNo
                 name,
                 number: typeof floorRecord.number === 'number' ? floorRecord.number : 0,
                 elevation: typeof floorRecord.elevation === 'number' ? floorRecord.elevation : undefined, // ADR-399: keep storey elevation (else 3D stacks floors at Y=0)
+                kind: isFloorKind(floorRecord.kind) ? floorRecord.kind : undefined, // ADR-461 — special-level flag (undefined when data lacks it → no badge)
                 units: []
               });
               return acc;

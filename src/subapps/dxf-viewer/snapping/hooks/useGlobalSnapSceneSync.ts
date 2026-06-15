@@ -29,7 +29,13 @@ import {
   getGlobalSnapEngine,
   getLastSnapEntityFingerprint,
   setLastSnapEntityFingerprint,
+  // ADR-040 (Giorgio 2026-06-16) — geometry-aware invalidation so in-place
+  // move/resize/rotate forces a snap re-initialize (the id/length fingerprint
+  // alone is blind to position changes).
+  getSnapSceneEpoch,
+  invalidateSnapScene,
 } from '../global-snap-engine';
+import { getGlobalCommandHistory } from '../../core/commands/CommandHistory';
 import type { Entity } from '../extended-types';
 import { isArrayEntity } from '../../types/entities';
 import type { PathParams } from '../../systems/array/types';
@@ -105,7 +111,10 @@ export function useGlobalSnapSceneSync({
       : [];
     const allEntities: Entity[] = [...dxfEnts, ...overlayEnts];
 
-    const fingerprint = computeFingerprint(allEntities);
+    // Fold the snap-scene epoch into the fingerprint: an in-place geometry edit
+    // (move/resize/rotate) keeps the same length/ids but bumps the epoch via the
+    // CommandHistory subscription below, so the guard no longer skips re-init.
+    const fingerprint = `${computeFingerprint(allEntities)}|e${getSnapSceneEpoch()}`;
     if (fingerprint === getLastSnapEntityFingerprint()) {
       return;
     }
@@ -134,6 +143,17 @@ export function useGlobalSnapSceneSync({
     // already handled by the cancel-before-schedule block above; final teardown is
     // handled by the unmount-only effect below.
   }, [dxfLen, overlayLen, scene, overlays, scheduler]);
+
+  // ADR-040 (Giorgio 2026-06-16) — geometry-aware re-init trigger. Every command
+  // (execute / undo / redo) bumps the snap-scene epoch, so the next scene-sync run
+  // sees a changed fingerprint and re-`initialize()`s the engine with fresh
+  // positions. This covers ALL in-place mutations (grip move/resize/rotate, panel
+  // edits, undo/redo) at the single SSoT — the command history — instead of one
+  // per mutation site. The command also rebuilds the scene object → this effect's
+  // primary effect re-runs and reads the bumped epoch. Subscribed once (sole owner).
+  useEffect(() => {
+    return getGlobalCommandHistory().subscribe(() => invalidateSnapScene());
+  }, []);
 
   // Cancel a still-pending init only when the owner unmounts (a fire-after-unmount
   // would harmlessly re-initialize the singleton, but we avoid the wasted work).

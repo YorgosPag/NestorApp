@@ -3,7 +3,7 @@ import type { Firestore } from 'firebase-admin/firestore';
 
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { FIELDS } from '@/config/firestore-field-constants';
-import { DEFAULT_FLOOR_HEIGHT_M } from '@/utils/floor-naming';
+import { DEFAULT_FLOOR_HEIGHT_M, isBuildingStorey, type FloorKind } from '@/utils/floor-naming';
 import { createModuleLogger } from '@/lib/telemetry';
 import { EntityAuditService } from '@/services/entity-audit.service';
 import { ENTITY_TYPES } from '@/config/domain-constants';
@@ -27,6 +27,13 @@ interface FloorRow {
   readonly number: number;
   elevation: number | null;
   readonly height: number;
+  /** ADR-461 — Revit-style classification; special levels are stacking satellites. */
+  readonly kind?: FloorKind;
+}
+
+/** True when this floor is a special level (foundation/roof/stair-penthouse). */
+function isSpecial(row: FloorRow): boolean {
+  return row.kind !== undefined && !isBuildingStorey(row.kind);
 }
 
 interface ShiftEntry {
@@ -89,11 +96,43 @@ export async function cascadeFloorElevations(
       number: finite(d.data().number, 0),
       elevation: finiteOrNull(d.data().elevation),
       height: finite(d.data().height, DEFAULT_FLOOR_HEIGHT_M),
+      kind: d.data().kind as FloorKind | undefined,
     }))
     .sort((a, b) => a.number - b.number);
 
   const changedIdx = rows.findIndex((r) => r.id === changedFloorId);
-  if (changedIdx < 0 || changedIdx === rows.length - 1) {
+  if (changedIdx < 0) {
+    return { floorsUpdated: 0, skipped: 0 };
+  }
+
+  // ADR-461 — a below-grade special level (foundation) is a SATELLITE that hangs
+  // under the lowest counted storey: its elevation = lowestCounted.elevation −
+  // depth (its height). Editing its depth must DEEPEN it, never lift the building.
+  // Re-anchor it downward and stop — the counted backbone never moves.
+  const changedRow = rows[changedIdx];
+  const lowestCounted = rows.find((r) => !isSpecial(r)) ?? null;
+  if (isSpecial(changedRow) && lowestCounted && changedRow.number < lowestCounted.number) {
+    if (lowestCounted.elevation === null) return { floorsUpdated: 0, skipped: 1 };
+    const derived = lowestCounted.elevation - changedRow.height;
+    if (changedRow.elevation !== null && Math.abs(changedRow.elevation - derived) <= ELEVATION_EPSILON_M) {
+      return { floorsUpdated: 0, skipped: 1 };
+    }
+    const ref = refById.get(changedRow.id);
+    if (ref) {
+      const batch = db.batch();
+      batch.update(ref, { elevation: derived, updatedBy, updatedAt: FieldValue.serverTimestamp() });
+      await batch.commit();
+      await recordCascadeAudit(
+        [{ id: changedRow.id, name: nameById.get(changedRow.id) ?? changedRow.id, oldValue: changedRow.elevation, newValue: derived }],
+        companyId,
+        updatedBy,
+      );
+    }
+    logger.info('[FloorElevationCascade] Re-anchored below-grade special', { buildingId, changedFloorId });
+    return { floorsUpdated: 1, skipped: 0 };
+  }
+
+  if (changedIdx === rows.length - 1) {
     return { floorsUpdated: 0, skipped: 0 };
   }
 

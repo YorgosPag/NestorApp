@@ -83,6 +83,19 @@ describe('buildActiveStoreyContext — lowest occupied storey (foundation exclud
     expect(buildActiveStoreyContext(MAISONETTE, 'f1')?.isLowestOccupiedStorey).toBe(true);
     expect(buildActiveStoreyContext(MAISONETTE, 'f2')?.isLowestOccupiedStorey).toBe(false);
   });
+
+  // ADR-461 — ALL special levels (not just foundation) are excluded from «lowest
+  // occupied»: a stair-penthouse / roof can never report itself as lowest, and they
+  // are never candidates when computing the minimum occupied storey number.
+  it('a stair-penthouse is never the lowest occupied storey', () => {
+    const stack: StoreyFloorRef[] = [
+      ...MAISONETTE,
+      { id: 'pent', number: 3, elevation: 9, height: 2.4, kind: 'stair-penthouse' },
+    ];
+    expect(buildActiveStoreyContext(stack, 'pent')?.isLowestOccupiedStorey).toBe(false);
+    // f1 stays the lowest occupied even with the penthouse present.
+    expect(buildActiveStoreyContext(stack, 'f1')?.isLowestOccupiedStorey).toBe(true);
+  });
 });
 
 describe('buildActiveStoreyContext — basement detection + finish thickness', () => {

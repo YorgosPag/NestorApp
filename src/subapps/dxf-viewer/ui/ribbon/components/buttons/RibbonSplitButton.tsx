@@ -38,7 +38,7 @@ const RibbonSplitButtonInner: React.FC<RibbonSplitButtonProps> = ({
   button,
 }) => {
   const { t } = useTranslation('dxf-viewer-shell');
-  const { onToolChange, onComingSoon, onAction, splitLastUsed, activeTool } = useRibbonCommand();
+  const { onToolChange, onComingSoon, onAction, splitLastUsed, activeTool, getCommandRecommendation } = useRibbonCommand();
   const [open, setOpen] = useState(false);
   const wrapperRef = useRef<HTMLDivElement>(null);
 
@@ -72,9 +72,13 @@ const RibbonSplitButtonInner: React.FC<RibbonSplitButtonProps> = ({
   if (!active) return null;
 
   const isLarge = button.size === 'large';
-  const wrapperClass = isLarge
+  // ADR-461 Phase C4 — advisory de-emphasis on storey kinds where this tool's
+  // discipline does not belong (counted storeys → recommended → no change).
+  const recommended = getCommandRecommendation(button.command.commandKey);
+  const baseWrapperClass = isLarge
     ? 'dxf-ribbon-btn-split dxf-ribbon-btn-split-large'
     : 'dxf-ribbon-btn-split dxf-ribbon-btn-split-small';
+  const wrapperClass = recommended ? baseWrapperClass : `${baseWrapperClass} opacity-40`;
 
   const label = t(active.labelKey);
 
@@ -85,6 +89,7 @@ const RibbonSplitButtonInner: React.FC<RibbonSplitButtonProps> = ({
       data-command-id={button.command.id}
       data-coming-soon={active.comingSoon ? 'true' : undefined}
       data-active={isActive ? 'true' : undefined}
+      data-storey-recommended={recommended ? undefined : 'false'}
     >
       <Tooltip>
       <TooltipTrigger asChild>

@@ -93,6 +93,14 @@ export interface RibbonCommandsApi {
    * Default behavior when no bridge owns the key: panel always visible.
    */
   getPanelVisibility?: (visibilityKey: string) => boolean;
+  /**
+   * ADR-461 Phase C4 — Revit-style ADVISORY recommendation: returns `false` when a
+   * creation tool's discipline does not belong on the active storey kind (foundation
+   * level → only foundation/beam/slab tools recommended, etc.), so tool buttons can
+   * de-emphasise it WITHOUT disabling it («warn, don't block»). Default `true` for
+   * every command when no bridge supplies it → μηδέν regression on counted storeys.
+   */
+  getCommandRecommendation?: (commandKey: string) => boolean;
 }
 
 interface RibbonCommandContextValue {
@@ -109,6 +117,7 @@ interface RibbonCommandContextValue {
   getComboboxState: (commandKey: string) => RibbonComboboxState | null;
   getBadgeState: (badgeKey: string) => boolean;
   getPanelVisibility: (visibilityKey: string) => boolean;
+  getCommandRecommendation: (commandKey: string) => boolean;
   splitLastUsed: Record<string, string>;
   setSplitLastUsed: (commandId: string, variantId: string) => void;
 }
@@ -121,6 +130,9 @@ const NOOP_BADGE_STATE = (): boolean => false;
 // ADR-358 Phase 7b2b-β Stream F — default = always visible (no breaking
 // change for existing panels without `visibilityKey`).
 const DEFAULT_PANEL_VISIBILITY = (): boolean => true;
+// ADR-461 Phase C4 — default = every command recommended (no breaking change for
+// counted storeys / when no bridge owns the active-storey kind).
+const DEFAULT_COMMAND_RECOMMENDATION = (): boolean => true;
 
 const RibbonCommandContext = createContext<RibbonCommandContextValue | null>(
   null,
@@ -151,6 +163,7 @@ export const RibbonCommandProvider: React.FC<RibbonCommandProviderProps> = ({
       getComboboxState: commands.getComboboxState ?? NOOP_COMBOBOX_STATE,
       getBadgeState: commands.getBadgeState ?? NOOP_BADGE_STATE,
       getPanelVisibility: commands.getPanelVisibility ?? DEFAULT_PANEL_VISIBILITY,
+      getCommandRecommendation: commands.getCommandRecommendation ?? DEFAULT_COMMAND_RECOMMENDATION,
       splitLastUsed,
       setSplitLastUsed,
     }),
@@ -167,6 +180,7 @@ export const RibbonCommandProvider: React.FC<RibbonCommandProviderProps> = ({
       commands.getComboboxState,
       commands.getBadgeState,
       commands.getPanelVisibility,
+      commands.getCommandRecommendation,
       splitLastUsed,
       setSplitLastUsed,
     ],

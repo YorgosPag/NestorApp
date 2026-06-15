@@ -22,16 +22,31 @@
  * @see docs/centralized-systems/reference/adrs/ADR-369-bim-elevation-convention-revit-alignment.md §9
  */
 
+import type { FloorKind } from '@/utils/floor-naming';
+import { SPECIAL_LEVEL_KINDS } from '@/utils/floor-naming';
+
 /** Minimal floor shape needed to resolve the stacking datum. */
 export interface FloorElevationRef {
   /** Signed storey index: negative = basement, 0 = ground (Ισόγειο), positive = upper. */
   readonly number: number;
   /** METRES — floor elevation above the building base (ADR-369). May be absent. */
   readonly elevation?: number | null;
+  /**
+   * ADR-461 — Revit-style classification. Special levels (foundation / roof /
+   * stair-penthouse) must NOT become the stacking datum: a foundation has the
+   * lowest elevation, so without this the fallback-min would pick it and lift the
+   * whole 3D model by `foundationDepth`. Counted storeys only drive the datum.
+   */
+  readonly kind?: FloorKind;
 }
 
 /** Storey number that denotes the ground floor (Ισόγειο) — the preferred datum. */
 const GROUND_FLOOR_NUMBER = 0;
+
+/** True when this floor is a special level (foundation/roof/stair-penthouse) — never a datum. */
+function isSpecialLevel(ref: FloorElevationRef): boolean {
+  return ref.kind !== undefined && (SPECIAL_LEVEL_KINDS as readonly string[]).includes(ref.kind);
+}
 
 /**
  * Resolves the building's stacking datum elevation (metres): the ground floor's
@@ -43,15 +58,27 @@ export function resolveBuildingDatumElevationM(
 ): number {
   if (floors.length === 0) return 0;
 
-  const ground = floors.find((f) => f.number === GROUND_FLOOR_NUMBER);
+  const ground = floors.find(
+    (f) => f.number === GROUND_FLOOR_NUMBER && !isSpecialLevel(f),
+  );
   if (ground && typeof ground.elevation === 'number' && Number.isFinite(ground.elevation)) {
     return ground.elevation;
   }
 
+  // ADR-461 — fallback to the lowest **counted** storey: a foundation/roof must
+  // never become the datum, else the model lifts by foundationDepth. If a building
+  // somehow has only special levels, fall back to all floors (degenerate).
   let min = Infinity;
   for (const f of floors) {
+    if (isSpecialLevel(f)) continue;
     const e = typeof f.elevation === 'number' && Number.isFinite(f.elevation) ? f.elevation : 0;
     if (e < min) min = e;
+  }
+  if (!Number.isFinite(min)) {
+    for (const f of floors) {
+      const e = typeof f.elevation === 'number' && Number.isFinite(f.elevation) ? f.elevation : 0;
+      if (e < min) min = e;
+    }
   }
   return Number.isFinite(min) ? min : 0;
 }

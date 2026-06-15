@@ -117,7 +117,7 @@ export function FloorsTabContent({ building, focusFloorId }: FloorsTabContentPro
     editNameMismatch,
     startEdit, cancelEdit, handleSaveEdit,
     deletingId, handleDelete, fetchFloors, formatElevation,
-    continuityWarnings, topFloorId,
+    continuityWarnings, heightDerivedFloorIds,
     expandedFloorStairs, loadingStairs,
     dialogProps, BlockedDialog,
   } = useFloorsTabState(building.id, building.projectId, focusFloorId);
@@ -125,6 +125,19 @@ export function FloorsTabContent({ building, focusFloorId }: FloorsTabContentPro
   const existingFloorNumbers = useMemo(
     () => new Set(floors.map((f) => f.number)) as ReadonlySet<number>,
     [floors]
+  );
+
+  // ADR-461 — the manual create form reasons over COUNTED storeys only: a basement
+  // may take −1 even when a foundation special occupies −1, and the elevation
+  // suggestion must not anchor on a special level. The server satellite reconcile
+  // then keeps the foundation always below / the penthouse always above.
+  const countedFloors = useMemo(
+    () => floors.filter((f) => f.kind === undefined || isBuildingStorey(f.kind)),
+    [floors]
+  );
+  const countedFloorNumbers = useMemo(
+    () => new Set(countedFloors.map((f) => f.number)) as ReadonlySet<number>,
+    [countedFloors]
   );
 
   // ADR-451 — Quick Setup (Revit-grade building vertical setup) toggle.
@@ -185,8 +198,8 @@ export function FloorsTabContent({ building, focusFloorId }: FloorsTabContentPro
         <FloorInlineCreateForm
           buildingId={building.id}
           projectId={building.projectId}
-          existingFloorNumbers={existingFloorNumbers}
-          existingFloors={floors}
+          existingFloorNumbers={countedFloorNumbers}
+          existingFloors={countedFloors}
           onCreated={() => {
             setShowCreateForm(false);
             void fetchFloors();
@@ -224,17 +237,18 @@ export function FloorsTabContent({ building, focusFloorId }: FloorsTabContentPro
                 const isExpanded = expandedFloorId === floor.id;
                 const isEditing = editingId === floor.id;
                 const isHighlighted = highlightedFloorId === floor.id;
-                // ADR-451 — elevation is the SSoT; height is DERIVED (read-only) for
-                // every floor except the topmost (no floor above). The displayed
-                // height = the gap to the floor above (`next.elevation − elevation`),
-                // never the stored value, so the table can never show a stale height.
-                const isTopFloor = floor.id === topFloorId;
+                // ADR-451 / ADR-461 — elevation is the SSoT; height is DERIVED
+                // (read-only, = gap to the floor above) for every intermediate
+                // counted storey. The top counted storey AND special levels
+                // (foundation depth / penthouse height) keep an EXPLICIT, editable
+                // height, so the table never shows a stale or wrong-source height.
+                const isHeightDerived = heightDerivedFloorIds.has(floor.id);
                 const nextFloor = floors[index + 1];
                 const derivedHeight =
                   nextFloor && floor.elevation != null && nextFloor.elevation != null
                     ? nextFloor.elevation - floor.elevation
                     : floor.height ?? null;
-                const displayHeight = isTopFloor ? (floor.height ?? null) : derivedHeight;
+                const displayHeight = isHeightDerived ? derivedHeight : (floor.height ?? null);
 
                 return (
                   <Fragment key={floor.id}>
@@ -280,7 +294,7 @@ export function FloorsTabContent({ building, focusFloorId }: FloorsTabContentPro
                           </td>
                           <td className="px-2 py-2"><Input type="number" step="0.01" value={editElevation} onChange={(e) => handleEditElevationChange(e.target.value)} placeholder="—" className="h-8 w-24" disabled={saving} /></td>
                           <td className="px-2 py-2">
-                            {isTopFloor ? (
+                            {!isHeightDerived ? (
                               <Input type="number" step="0.01" min="0.1" value={editHeight} onChange={(e) => handleEditHeightChange(e.target.value)} placeholder="3.00" className="h-8 w-20" disabled={saving} />
                             ) : (
                               <TooltipProvider delayDuration={300}>

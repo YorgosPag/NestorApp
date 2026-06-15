@@ -20,6 +20,7 @@ import type {
   FloorUpdateResponse,
 } from './floors.types';
 import { FLOORPLAN_PURPOSES, ENTITY_TYPES } from '@/config/domain-constants';
+import { isBuildingStorey, type FloorKind } from '@/utils/floor-naming';
 import { EntityAuditService } from '@/services/entity-audit.service';
 import type { AuditFieldChange } from '@/types/audit-trail';
 import {
@@ -28,7 +29,7 @@ import {
   resolveTenantCompanyId,
   sortFloors,
 } from './floors.shared';
-import { reconcileFloorStackAfterEdit } from './floor-stack-reconcile.service';
+import { reconcileFloorStackAfterEdit, reconcileSpecialLevelPlacement } from './floor-stack-reconcile.service';
 
 const logger = createModuleLogger('FloorsRoute');
 
@@ -170,16 +171,35 @@ export async function handleCreateFloor(
     if (body.projectId) entitySpecificFields.projectId = String(body.projectId);
     if (body.projectName) entitySpecificFields.projectName = body.projectName;
 
-    const duplicateCheck = await db
+    // ADR-461 — kind-aware uniqueness (Revit «Building Story» OFF for special levels).
+    // Counted storeys must keep UNIQUE numbers among themselves; a special level
+    // (foundation/roof/stair-penthouse) may legitimately share a number with a
+    // counted storey (e.g. a foundation auto-numbered −1 co-existing with a manual
+    // basement −1). The only special-level constraint is at most ONE per kind.
+    // Read the building's floors by a single-field query (no new composite index)
+    // and decide in memory — buildings hold few floors.
+    const siblingsSnap = await db
       .collection(COLLECTIONS.FLOORS)
       .where(FIELDS.BUILDING_ID, '==', body.buildingId)
-      .where('number', '==', body.number)
-      .select()
-      .limit(1)
+      .select('number', 'kind')
       .get();
+    const siblings = siblingsSnap.docs.map((d) => ({
+      number: d.data().number as number,
+      kind: d.data().kind as FloorKind | undefined,
+    }));
 
-    if (!duplicateCheck.empty) {
-      throw new ApiError(409, `Floor number ${body.number} already exists in building ${body.buildingId}`);
+    const newIsSpecial = body.kind !== undefined && !isBuildingStorey(body.kind);
+    if (newIsSpecial) {
+      if (siblings.some((s) => s.kind === body.kind)) {
+        throw new ApiError(409, `A ${body.kind} special level already exists in building ${body.buildingId}`);
+      }
+    } else {
+      const clashesCounted = siblings.some(
+        (s) => s.number === body.number && (s.kind === undefined || isBuildingStorey(s.kind)),
+      );
+      if (clashesCounted) {
+        throw new ApiError(409, `Floor number ${body.number} already exists in building ${body.buildingId}`);
+      }
     }
 
     const result = await createEntity('floor', {
@@ -199,6 +219,20 @@ export async function handleCreateFloor(
         },
       },
     });
+
+    // ADR-461 — Revit-true satellite placement: keep foundation always at the
+    // bottom & roof/stair-penthouse always at the top after this create. Adding a
+    // basement pushes the foundation further down; adding a top floor pushes the
+    // penthouse further up. Non-fatal — the floor is already created.
+    if (ctx.companyId) {
+      try {
+        await reconcileSpecialLevelPlacement(db, body.buildingId, ctx.companyId, ctx.uid);
+      } catch (placeErr) {
+        logger.warn('[Floors/Create] Special-level placement reconcile failed (floor created)', {
+          buildingId: body.buildingId, error: getErrorMessage(placeErr),
+        });
+      }
+    }
 
     return apiSuccess<FloorCreateResponse>(
       { floorId: result.id },
@@ -350,11 +384,21 @@ export async function handleDeleteFloor(
     const siblingsSnap = await db.collection(COLLECTIONS.FLOORS)
       .where(FIELDS.BUILDING_ID, '==', floorData?.buildingId)
       .get();
-    const siblingNumbers = siblingsSnap.docs
+    // ADR-461 — only COUNTED storeys sandwich a floor. A special level (foundation
+    // at −1, roof, stair-penthouse) never makes a counted storey "intermediate",
+    // and a special level is itself always deletable (it is outside the stack).
+    const targetFloor = floorData as FloorDocument;
+    const targetIsSpecial = targetFloor.kind !== undefined && !isBuildingStorey(targetFloor.kind);
+    const countedSiblingNumbers = siblingsSnap.docs
       .filter((d) => d.id !== floorId)
-      .map((d) => (d.data() as FloorDocument).number);
-    const targetNumber = (floorData as FloorDocument).number;
-    const isIntermediate = siblingNumbers.some((n) => n < targetNumber) && siblingNumbers.some((n) => n > targetNumber);
+      .map((d) => d.data() as FloorDocument)
+      .filter((f) => f.kind === undefined || isBuildingStorey(f.kind))
+      .map((f) => f.number);
+    const targetNumber = targetFloor.number;
+    const isIntermediate =
+      !targetIsSpecial &&
+      countedSiblingNumbers.some((n) => n < targetNumber) &&
+      countedSiblingNumbers.some((n) => n > targetNumber);
     if (isIntermediate) {
       return NextResponse.json({
         success: false,
@@ -364,6 +408,20 @@ export async function handleDeleteFloor(
 
     await executeDeletion(db, 'floor', floorId, ctx.uid, ctx.companyId);
     logger.info('[Floors/Delete] Floor deleted', { floorId, userId: ctx.uid });
+
+    // ADR-461 — re-place special levels after a counted storey is removed, so the
+    // foundation rises back up under the new lowest counted storey (and the
+    // penthouse drops onto the new top). Non-fatal — the floor is already deleted.
+    const deletedBuildingId = floorData?.buildingId as string | undefined;
+    if (ctx.companyId && deletedBuildingId) {
+      try {
+        await reconcileSpecialLevelPlacement(db, deletedBuildingId, ctx.companyId, ctx.uid);
+      } catch (placeErr) {
+        logger.warn('[Floors/Delete] Special-level placement reconcile failed (floor deleted)', {
+          buildingId: deletedBuildingId, error: getErrorMessage(placeErr),
+        });
+      }
+    }
 
     return NextResponse.json({ success: true, message: `Floor "${floorId}" deleted` });
   } catch (error) {

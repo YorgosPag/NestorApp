@@ -32,6 +32,10 @@ import {
   buildFootingSectionContext,
   buildSlabFoundationSectionContext,
   isFoundationSlabEntity,
+  // ADR-456/460 (Giorgio 2026-06-16) — auto columns re-derive from current geometry, so the
+  // ρ-check + joint mismatch must read the ACTIVE design (else a stale stored snapshot triggers
+  // a false `ratioOutOfRange`/`barMismatchAtJoint`). Pure resolver (provider arg, zero store).
+  resolveActiveColumnReinforcement,
 } from '../section-context';
 import {
   computeOrganismReinforcementContinuity,
@@ -63,9 +67,12 @@ function hasReinforcement(e: Entity): boolean {
   return false;
 }
 
-/** ColumnReinforcement ενός entity (ή undefined). */
-function columnReinforcementOf(e: Entity | undefined): ColumnReinforcement | undefined {
-  return e && isColumnEntity(e) ? e.params.reinforcement : undefined;
+/** ColumnReinforcement ενός entity (ή undefined) — ΕΝΕΡΓΟ design (auto→re-derive). */
+function columnReinforcementOf(
+  e: Entity | undefined,
+  provider: StructuralCodeProvider,
+): ColumnReinforcement | undefined {
+  return e && isColumnEntity(e) ? resolveActiveColumnReinforcement(e.params, provider) : undefined;
 }
 
 // ─── Check 1: μέλος χωρίς οπλισμό (info) ──────────────────────────────────────
@@ -87,7 +94,8 @@ function missingReinforcementFinding(e: Entity): StructuralDiagnostic | null {
 /** ρ + όρια του μέλους (από compute + provider limits), ή null αν δεν οπλισμένο. */
 function ratioBoundsOf(e: Entity, provider: StructuralCodeProvider): RatioBounds | null {
   if (isColumnEntity(e) && e.params.reinforcement) {
-    const r = e.params.reinforcement;
+    // ADR-456/460 — auto → φρέσκο design από την τρέχουσα γεωμετρία· manual → stored.
+    const r = resolveActiveColumnReinforcement(e.params, provider) ?? e.params.reinforcement;
     const ctx = buildColumnSectionContext(e);
     const lim = provider.columnReinforcementLimits(ctx, r.longitudinal.diameterMm);
     return { ratio: computeColumnReinforcementQuantities(ctx, r).ratio, minRatio: lim.minRatio, maxRatio: lim.maxRatio };
@@ -135,11 +143,15 @@ function ratioFinding(e: Entity, provider: StructuralCodeProvider): StructuralDi
  * ή (β) μάτισμα κολόνας↔κολόνας με διαφορετικό πλήθος/διάμετρο διαμήκων ράβδων
  * (EC2 §8.7 — οι ματιζόμενες ράβδοι πρέπει να είναι συμβατές).
  */
-function jointHasMismatch(item: ReinforcementContinuityItem, entityById: ReadonlyMap<string, Entity>): boolean {
+function jointHasMismatch(
+  item: ReinforcementContinuityItem,
+  entityById: ReadonlyMap<string, Entity>,
+  provider: StructuralCodeProvider,
+): boolean {
   if (item.lengthMm <= 0) return true;
   if (item.kind !== 'lap') return false;
-  const lower = columnReinforcementOf(entityById.get(item.fromMemberId));
-  const upper = columnReinforcementOf(entityById.get(item.toMemberId));
+  const lower = columnReinforcementOf(entityById.get(item.fromMemberId), provider);
+  const upper = columnReinforcementOf(entityById.get(item.toMemberId), provider);
   if (!lower || !upper) return false;
   return (
     lower.longitudinal.count !== upper.longitudinal.count ||
@@ -157,7 +169,7 @@ function barMismatchFindings(
   const out: StructuralDiagnostic[] = [];
   const seen = new Set<string>();
   for (const item of continuity.items) {
-    if (!jointHasMismatch(item, entityById)) continue;
+    if (!jointHasMismatch(item, entityById, provider)) continue;
     const id = `barMismatchAtJoint:${item.edgeId}`;
     if (seen.has(id)) continue;
     seen.add(id);

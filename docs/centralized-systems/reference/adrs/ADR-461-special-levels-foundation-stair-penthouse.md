@@ -1,6 +1,6 @@
 # ADR-461 — Special Levels: Foundation + Stair Penthouse (Revit Building-Story OFF)
 
-**Status:** 🟢 Phase A + Phase B Implemented (model + generation + «Όροφοι» UI/server persistence + tests) — pending browser-verify + commit · Phases C/D pending
+**Status:** 🟢 Phase A + B + C + D Implemented (model + generation + «Όροφοι» UI/server + DXF levels + kind-aware elevation cascade + advisory tool-gating + tests, tsc clean) — pending browser-verify + commit
 **Discipline:** Floor kind SSoT (`floor-naming`) · Building setup UI · DXF Viewer levels · BIM storey datum
 **Related:** ADR-451 (building vertical setup & floor SSoT — master· επεκτείνεται εδώ), ADR-448 (storey-aware DXF), ADR-450 (floor-elevation cascade), ADR-369 (elevation convention §9 / FloorKind), ADR-436/441 (foundation discipline — ο ΤΥΠΟΣ θεμελίωσης per-element)
 **Model:** Opus 4.8
@@ -50,7 +50,7 @@ FloorKind = 'foundation' | 'basement' | 'ground' | 'standard' | 'roof' | 'mezzan
 - **Foundation:** `number = lowestStoreyNumber − 1`, `elevation = lowestStoreyElevation − foundationDepth`, `height = foundationDepth`.
 - **Stair-penthouse:** `number = topStoreyNumber + 1`, `elevation = topStoreyElevation + topStoreyHeight`, `height = stairPenthouseHeight (2.40)`.
 
-⚠️ **Γνωστό edge-case (Phase B/D):** με 0 υπόγεια η foundation παίρνει `number = −1`, που θα μπορούσε αργότερα να συγκρουστεί με χειροκίνητη προσθήκη υπογείου (−1). Το `kind` τα ξεχωρίζει σημασιολογικά· ο idempotent number-skip του `BuildingVerticalSetupForm` αποτρέπει διπλά κατά τη re-generation. Οριστική επίλυση (αν χρειαστεί) στο Phase D (elevation cascade).
+✅ **Edge-case (λύθηκε Phase D/R6):** με 0 υπόγεια η foundation παίρνει `number = −1`. Η `handleCreateFloor` duplicate-check είναι πλέον **kind-aware**: ένα counted number πρέπει να είναι μοναδικό μεταξύ counted· επιτρέπεται ≤1 special ανά kind· foundation(−1) συνυπάρχει με χειροκίνητο υπόγειο(−1) (το `kind` τα ξεχωρίζει). Δεν προκαλείται πλέον 409.
 
 ## 3. Phases
 
@@ -96,8 +96,28 @@ PHASE 1 finding (κώδικας = αλήθεια — δύο διορθώσεις
 - ✅ ΕΝΑ SSoT για το «είδος στάθμης» (`FloorKind`)· κανένα διπλό `role`.
 - ✅ Foundation/penthouse = πλήρεις στάθμες (drawable) χωρίς να μολύνουν το count.
 - ✅ Back-compat: floors χωρίς `kind` = storeys· κτήρια χωρίς `hasStairPenthouse` = καμία απόληξη.
-- ⚠️ Numbering edge-case 0-υπογείων (§2.2) — Phase D.
+- ✅ Numbering edge-case 0-υπογείων (§2.2) λύθηκε (Phase D/R6 kind-aware duplicate-check).
+- ✅ Satellite model: foundation re-anchors κάτω (edit βάθους ≠ ανύψωση κτηρίου)· datum εξαιρεί special levels· thermal/delete/top-height kind-aware.
 
 ## 6. Changelog
 - **2026-06-15 (Opus 4.8):** ADR δημιουργήθηκε. Phase A implemented (reuse `FloorKind` αντί `role`· `'stair-penthouse'` + `isBuildingStorey`/`countBuildingStoreys` SSoT· building `hasStairPenthouse`/`stairPenthouseHeight`· `generateFloorStack` foundation+penthouse specs· tests). Phases B/C/D pending.
 - **2026-06-15 (Opus 4.8):** Phase B implemented — «Όροφοι» UI + server persistence. Boy-scout fix: `handleCreateFloor` threadάρει πλέον `kind` (+ συνοδά ADR-369 πεδία) που πριν χάνονταν. `BuildingVerticalSetupForm` toggle απόληξης + 4 πεδία στο `generateFloorStack` + `kind`-aware `createFloor`. Πίνακας: special badge + count = `countBuildingStoreys`. List handler & building PATCH χωρίς αλλαγή (passthrough). +5 jest. **SSoT cleanup (audit Giorgio):** badge → κεντρικό `Badge`· checkboxes (foundation + penthouse) → κεντρικό `Checkbox`. Phases C/D pending.
+- **2026-06-16 (Opus 4.8):** **Phase C + D implemented** (kind-aware stack + DXF levels). Numbering απόφαση = **Πρόταση Α refined (Revit-true)**: `kind`/`isBuildingStorey` οδηγεί ΟΛΗ την ταξινόμηση (counted vs special)· το `number` μένει iteration-order (δεν ταξινομείς κατά το elevation που θεραπεύεις).
+  - **Phase D — kind-aware stack (satellite model):**
+    - **R1** `FloorRow` (+`kind`) σε `floor-stack-reconcile.service` & `floor-elevation-cascade.service`. Special levels = **satellites** του counted backbone: foundation = `lowestCounted.elev − depth` (re-anchor **κάτω** — edit βάθους ΔΕΝ σηκώνει το κτήριο)· penthouse/roof rides up. `deriveAdjacentHeightsFromElevation` παράγει ύψη **μόνο** counted storeys (foundation depth / penthouse height = explicit), φτάνοντας στον επόμενο counted (αγνοεί ενδιάμεσο special).
+    - **R5** `resolveBuildingDatumElevationM` (`floor-stack-elevation.ts`, +`kind` στο `FloorElevationRef`) εξαιρεί `SPECIAL_LEVEL_KINDS` από το fallback-min → το 3D δεν ανεβαίνει κατά `foundationDepth`.
+    - **R2** `useFloorsTabState`: `topFloorId` → `heightDerivedFloorIds` (top counted + special levels = editable height· υπόλοιπα counted = derived). Consumer `FloorsTabContent` ενημερωμένος.
+    - **R3** intermediate-delete (server `floors.handlers.ts` + client `useFloorsTabState`): μόνο counted storeys «σάντουιτς»· special level πάντα διαγράψιμο → foundation(−1) δεν μπλοκάρει το ισόγειο (422 λύθηκε).
+    - **R4** `resolveStoreyPosition` (`useHeatLoadInputs`) φιλτράρει counted storeys → foundation/penthouse δεν γίνονται thermal lowest/highest.
+    - **R6** `handleCreateFloor` kind-aware duplicate-check (single-field query, χωρίς νέο composite index): counted number unique μεταξύ counted· ≤1 ανά special kind· foundation(−1) συνυπάρχει με χειροκίνητο υπόγειο(−1) (409 λύθηκε).
+  - **Phase C — DXF Levels (pipeline ήδη kind-agnostic → εμφανίζονται αυτόματα):**
+    - **C2** boy-scout: `active-storey-context.resolveIsLowestOccupied` `=== 'foundation'` → `SPECIAL_LEVEL_KINDS` (ενιαίο SSoT).
+    - **C1** NEW `resolveStoreyDefaultEntityTypes(kind)` + `BimToolCategory` (`storey-creation-defaults.ts`): advisory recommended disciplines ανά kind (counted→all· foundation→foundation/beam/slab· penthouse→stair/slab/wall/railing· roof→slab/roof/railing).
+    - **C3** badge «Ειδική στάθμη» στο DXF level switcher (`LevelFloorLink` + `kind` στο ProjectHierarchyContext `Floor`, guarded)· FloorsTabContent badge ήδη υπήρχε.
+    - **C4** Revit-style **ADVISORY** tool-gating («warn, don't block»): NEW `storey-tool-gating.ts` (`resolveBimToolCategory` + `isCommandRecommendedForStorey`) + `getCommandRecommendation` στο `RibbonCommandsApi` (default→true, μηδέν regression) wired στο `useRibbonCommands` (active storey kind)· `RibbonLargeButton`/`RibbonSplitButton` dim (opacity) + tooltip hint τα μη-σχετικά tools.
+  - +tests: cascade satellite (foundation re-anchor/penthouse rides), reconcile counted-only derive, datum special-exclusion, C1 descriptor, C4 gating, lowest-occupied special-exclusion. tsc clean.
+  - 🔴 **Εκκρεμεί:** browser-verify (foundation/penthouse → DXF Levels ορατά+σχεδιάσιμα· cascade συνεπές· delete ισόγειο με foundation· numbering co-existence· ribbon dim σε special level) + commit.
+- **2026-06-16 (Opus 4.8) — follow-up R6+ (browser-verify finding, απόφαση Giorgio «Θεμελίωση πάντα κάτω / Απόληξη πάντα πάνω»):** Το server fix δεν αρκούσε — η client create-form πρότεινε −2 για χειροκίνητο υπόγειο (έβλεπε τη θεμελίωση −1 ως κατειλημμένο) → υπόγειο κάτω από τη θεμελίωση. **Revit-true satellite placement:**
+  - NEW `reconcileSpecialLevelPlacement(db, buildingId, …)` (`floor-stack-reconcile.service`): οι ειδικές στάθμες ξανατοποθετούνται ΠΑΝΤΑ στα άκρα του counted backbone σε **number + elevation** — foundation κάτω (`minCounted.number−1`, `minCounted.elev−depth`), roof/penthouse πάνω (stacked above `maxCounted`). Idempotent· audit number+elevation· multiple specials ανά πλευρά stack-άρονται κατά σειρά. Καλείται μετά από **create & delete** counted ορόφου στους `floors.handlers` (non-fatal). → πρόσθεση υπογείου σπρώχνει τη θεμελίωση πιο κάτω· πρόσθεση top ορόφου σπρώχνει την απόληξη πιο πάνω· διαγραφή τα επαναφέρει.
+  - Client `FloorsTabContent`: η create-form δέχεται **counted-only** `existingFloorNumbers`+`existingFloors` (NEW `countedFloors`/`countedFloorNumbers`) → ο stepper προτείνει −1 για υπόγειο (όχι −2)· το elevation-suggest δεν αγκυρώνεται σε ειδική στάθμη. Quick Setup αμετάβλητο (παίρνει όλα).
+  - +4 jest (`reconcileSpecialLevelPlacement`: foundation κάτω, penthouse πάνω, idempotent, no-counted). tsc clean.

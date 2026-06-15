@@ -23,11 +23,15 @@ export const RibbonLargeButton: React.FC<RibbonLargeButtonProps> = ({
 }) => {
   const { t } = useTranslation('dxf-viewer-shell');
   const ribbonCtx = useRibbonCommand();
-  const { onToolChange, onComingSoon, onAction, activeTool } = ribbonCtx;
+  const { onToolChange, onComingSoon, onAction, activeTool, getCommandRecommendation } = ribbonCtx;
 
   const label = t(command.labelKey);
   const shortcut = command.shortcut ? ` (${command.shortcut})` : '';
   const isActive = isCommandActive(command, activeTool);
+  // ADR-461 Phase C4 — Revit-style ADVISORY de-emphasis: a tool whose discipline
+  // does not belong on the active storey kind is dimmed (still clickable). Counted
+  // storeys → always recommended → no change.
+  const recommended = getCommandRecommendation(command.commandKey);
 
   const handleClick = useCallback(() => {
     if (command.comingSoon) {
@@ -55,12 +59,13 @@ export const RibbonLargeButton: React.FC<RibbonLargeButtonProps> = ({
       <TooltipTrigger asChild>
         <button
           type="button"
-          className="dxf-ribbon-btn dxf-ribbon-btn-large"
+          className={recommended ? 'dxf-ribbon-btn dxf-ribbon-btn-large' : 'dxf-ribbon-btn dxf-ribbon-btn-large opacity-40'}
           onClick={handleClick}
           aria-pressed={isActive || undefined}
           data-command-id={command.id}
           data-coming-soon={command.comingSoon ? 'true' : undefined}
           data-active={isActive ? 'true' : undefined}
+          data-storey-recommended={recommended ? undefined : 'false'}
         >
           <span className="dxf-ribbon-btn-icon-wrap">
             <RibbonButtonIcon icon={command.icon} size="large" />
@@ -68,7 +73,9 @@ export const RibbonLargeButton: React.FC<RibbonLargeButtonProps> = ({
           <span className="dxf-ribbon-btn-label">{label}</span>
         </button>
       </TooltipTrigger>
-      <TooltipContent>{`${label}${shortcut}`}</TooltipContent>
+      <TooltipContent>
+        {recommended ? `${label}${shortcut}` : `${label}${shortcut} — ${t('ribbon.storeyGating.notRecommended')}`}
+      </TooltipContent>
     </Tooltip>
   );
 };

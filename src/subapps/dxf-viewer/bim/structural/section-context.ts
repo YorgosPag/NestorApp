@@ -24,6 +24,7 @@ import type { FoundationEntity, FoundationParams } from '../types/foundation-typ
 import type { SlabEntity, SlabParams } from '../types/slab-types';
 import { mmToSceneUnits } from '../../utils/scene-units';
 import { resolveColumnReinforcementSection } from './reinforcement/column-section-outline';
+import type { ColumnReinforcement } from './reinforcement/column-reinforcement-types';
 import type {
   BeamSectionContext,
   ColumnSectionContext,
@@ -51,16 +52,48 @@ function axisLengthMm(a: { x: number; y: number }, b: { x: number; y: number }):
  * `column-structural-bridge`· εξήχθη εδώ, N.0.2.)
  */
 export function buildColumnSectionContext(column: ColumnEntity): ColumnSectionContext {
-  const section = resolveColumnReinforcementSection(column.params);
+  return buildColumnSectionContextFromParams(column.params);
+}
+
+/** Params-based variant (το context εξαρτάται ΜΟΝΟ από params — geometry-is-SSoT). */
+export function buildColumnSectionContextFromParams(params: ColumnParams): ColumnSectionContext {
+  const section = resolveColumnReinforcementSection(params);
   return {
     widthMm: section.bboxWidthMm,
     depthMm: section.bboxDepthMm,
-    heightMm: column.params.height,
+    heightMm: params.height,
     grossAreaMm2: section.grossAreaMm2,
     minThicknessMm: section.minThicknessMm,
     maxDimensionMm: section.maxDimensionMm,
     perimeterMm: section.perimeterMm,
     mode: section.mode,
+  };
+}
+
+/**
+ * ADR-456/460 (Giorgio 2026-06-16) — **ο «ενεργός» οπλισμός μιας κολόνας** = το design
+ * που πρέπει να σχεδιαστεί/μετρηθεί/ελεγχθεί ΤΩΡΑ:
+ *   - absent           → `undefined` (δεν έχει οριστεί οπλισμός· κανείς δεν ζωγραφίζει).
+ *   - manual (`!auto`) → το stored design ως έχει (κλειδωμένο, ο χρήστης το όρισε).
+ *   - auto (`auto`)    → **φρέσκο code-suggested design από την ΤΡΕΧΟΥΣΑ γεωμετρία** →
+ *                        αλλαγή διαστάσεων ⇒ real-time επανυπολογισμός (Revit «by code»).
+ *
+ * Διατηρεί τις καθαρά-detailing προτιμήσεις (τύπος συνδετήρα + μοτίβο cross-tie) που δεν
+ * αλλάζουν διαμήκη/ρ — ώστε η περιστροφή/resize να μην τις «σβήνει». Pure (provider arg)
+ * ⇒ unit-testable· οι renderers χρησιμοποιούν το `…ForParams` convenience παρακάτω.
+ */
+export function resolveActiveColumnReinforcement(
+  params: ColumnParams,
+  provider: StructuralCodeProvider,
+): ColumnReinforcement | undefined {
+  const r = params.reinforcement;
+  if (!r || !r.auto) return r;
+  const fresh = provider.suggestColumnReinforcement(buildColumnSectionContextFromParams(params));
+  return {
+    ...fresh,
+    auto: true,
+    stirrups: { ...fresh.stirrups, type: r.stirrups.type },
+    ...(r.crossTiePattern ? { crossTiePattern: r.crossTiePattern } : {}),
   };
 }
 
@@ -165,8 +198,9 @@ export function buildReinforcePatch(
 ): ReinforcePatch | null {
   if (isColumnEntity(entity)) {
     if (entity.params.reinforcement) return null;
+    // ADR-456/460 — `auto:true` ⇒ real-time re-derive σε αλλαγή διαστάσεων (Giorgio 2026-06-16).
     const r = provider.suggestColumnReinforcement(buildColumnSectionContext(entity));
-    return { prev: entity.params, next: { ...entity.params, reinforcement: r } };
+    return { prev: entity.params, next: { ...entity.params, reinforcement: { ...r, auto: true } } };
   }
   if (isBeamEntity(entity)) {
     if (entity.params.reinforcement) return null;

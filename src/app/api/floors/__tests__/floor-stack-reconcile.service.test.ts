@@ -36,6 +36,7 @@ jest.mock('../floor-height-cascade.service', () => ({
 import {
   deriveAdjacentHeightsFromElevation,
   reconcileFloorStackAfterEdit,
+  reconcileSpecialLevelPlacement,
 } from '../floor-stack-reconcile.service';
 import { cascadeFloorElevations } from '../floor-elevation-cascade.service';
 import { cascadeFloorHeightToEntities } from '../floor-height-cascade.service';
@@ -86,6 +87,13 @@ async function runDerive(floors: SeedDoc[], changedFloorId: string) {
 const floor = (id: string, number: number, elevation: number | null, height: number): SeedDoc => ({
   id,
   data: { companyId: COMPANY, buildingId: BUILDING, name: id, number, elevation, height },
+});
+
+const floorK = (
+  id: string, number: number, elevation: number | null, height: number, kind: string,
+): SeedDoc => ({
+  id,
+  data: { companyId: COMPANY, buildingId: BUILDING, name: id, number, elevation, height, kind },
 });
 
 beforeEach(() => {
@@ -142,9 +150,10 @@ describe('deriveAdjacentHeightsFromElevation — elevation-edit (Revit «move a 
       [floor('f1', 0, 0, 3), floor('f2', 1, 3.5, 3), floor('f3', 2, null, 3)],
       'f2',
     );
-    // below f1 derives (3.5−0); self f2 cannot derive (above f3 elevation null).
+    // below f1 derives (3.5−0); self f2 cannot derive (above f3 elevation null);
+    // f3 is the top counted storey (no counted above) → also skipped (explicit height).
     expect(result.heightsUpdated.map((h) => h.floorId)).toEqual(['f1']);
-    expect(result.skipped).toBe(1);
+    expect(result.skipped).toBe(2);
   });
 
   it('records one audit entry per re-derived storey (field height)', async () => {
@@ -163,6 +172,26 @@ describe('deriveAdjacentHeightsFromElevation — elevation-edit (Revit «move a 
     expect(updates).toHaveLength(0);
   });
 
+  // ADR-461 — special levels keep EXPLICIT heights; derivation walks counted-only.
+  it('skips foundation & stair-penthouse heights, derives counted storeys only', async () => {
+    // fnd(depth 1) · grd · up(top counted) · pent(2.4) — up's elevation moved 3 → 3.5.
+    const { result, updates } = await runDerive(
+      [
+        floorK('fnd', -1, -1, 1, 'foundation'),
+        floorK('grd', 0, 0, 3, 'ground'),
+        floorK('up', 1, 3.5, 3, 'standard'),
+        floorK('pent', 2, 6, 2.4, 'stair-penthouse'),
+      ],
+      'up',
+    );
+    const byId = Object.fromEntries(updates.map((u) => [u.ref.id, u.patch.height]));
+    expect(byId.grd).toBeCloseTo(3.5);  // 3.5 − 0 (counted, derived)
+    expect(byId.fnd).toBeUndefined();   // foundation depth is explicit — never derived
+    expect(byId.up).toBeUndefined();    // top counted (no counted above) keeps explicit
+    expect(byId.pent).toBeUndefined();  // penthouse height is explicit
+    expect(result.heightsUpdated.map((h) => h.floorId)).toEqual(['grd']);
+  });
+
   it('full-stack self-heal: corrects a pre-existing stale height far from the changed floor', async () => {
     // elevations [0,3,6,8] but f3's stored height is stale (3 vs the real gap 2).
     // Changing f1 (the bottom) still heals f3 — stored heights can never drift.
@@ -173,6 +202,66 @@ describe('deriveAdjacentHeightsFromElevation — elevation-edit (Revit «move a 
     const byId = Object.fromEntries(updates.map((u) => [u.ref.id, u.patch.height]));
     expect(byId.f3).toBeCloseTo(2); // 8 − 6, healed despite f1 being the edited floor
     expect(byId.f1).toBeUndefined(); // 3 − 0 = 3, already consistent
+  });
+});
+
+describe('reconcileSpecialLevelPlacement — ADR-461 Revit-true satellite placement', () => {
+  async function runPlacement(floors: SeedDoc[]) {
+    const updates: Update[] = [];
+    const db = makeDb(floors, updates);
+    const placed = await reconcileSpecialLevelPlacement(
+      db as unknown as Parameters<typeof reconcileSpecialLevelPlacement>[0],
+      BUILDING,
+      COMPANY,
+      'user_1',
+    );
+    return { placed, updates };
+  }
+
+  it('pushes the foundation DOWN below a newly-added basement (foundation always at the bottom)', async () => {
+    // User just created a basement at −1; foundation still sits at −1 (collision).
+    const { placed, updates } = await runPlacement([
+      floorK('bsm', -1, -3, 3, 'basement'),
+      floorK('fnd', -1, -1, 1, 'foundation'),
+      floorK('grd', 0, 0, 3, 'ground'),
+      floorK('up', 1, 3, 3, 'standard'),
+    ]);
+    expect(placed).toBe(1);
+    expect(updates).toHaveLength(1);
+    expect(updates[0].ref.id).toBe('fnd');
+    expect(updates[0].patch.number).toBe(-2);     // below the new lowest counted (−1)
+    expect(updates[0].patch.elevation).toBe(-4);  // basement(−3) − depth(1)
+  });
+
+  it('pushes the stair-penthouse UP above a newly-added top floor (penthouse always on top)', async () => {
+    // User just added a 2nd upper floor at number 2; penthouse still at 2 (collision).
+    const { placed, updates } = await runPlacement([
+      floorK('grd', 0, 0, 3, 'ground'),
+      floorK('up', 1, 3, 3, 'standard'),
+      floorK('up2', 2, 6, 3, 'standard'),
+      floorK('pent', 2, 6, 2.4, 'stair-penthouse'),
+    ]);
+    expect(placed).toBe(1);
+    expect(updates[0].ref.id).toBe('pent');
+    expect(updates[0].patch.number).toBe(3);      // above the new top counted (2)
+    expect(updates[0].patch.elevation).toBe(9);   // top(6) + top height(3)
+  });
+
+  it('is idempotent — specials already at the extremes → no write', async () => {
+    const { placed, updates } = await runPlacement([
+      floorK('fnd', -1, -1, 1, 'foundation'),
+      floorK('grd', 0, 0, 3, 'ground'),
+      floorK('up', 1, 3, 3, 'standard'),
+      floorK('pent', 2, 6, 2.4, 'stair-penthouse'),
+    ]);
+    expect(placed).toBe(0);
+    expect(updates).toHaveLength(0);
+    expect(recordChange).not.toHaveBeenCalled();
+  });
+
+  it('no-op when there are no counted storeys to anchor against', async () => {
+    const { placed } = await runPlacement([floorK('fnd', -1, -1, 1, 'foundation')]);
+    expect(placed).toBe(0);
   });
 });
 

@@ -32,6 +32,7 @@ import {
   resolveColumnCrossTies,
 } from '../../bim/structural/reinforcement/column-rebar-layout-resolve';
 import { resolveColumnReinforcementSection } from '../../bim/structural/reinforcement/column-section-outline';
+import { resolveActiveColumnReinforcementForParams } from '../../bim/structural/active-reinforcement';
 import { DEFAULT_STIRRUP_TYPE } from '../../bim/structural/reinforcement/column-reinforcement-types';
 import type { Point2D } from '../../rendering/types/Types';
 
@@ -183,7 +184,8 @@ export function buildColumnRebarCage(
   levelId?: string,
 ): THREE.Group | null {
   const p = column.params;
-  const r = p.reinforcement;
+  // ADR-456/460 (Giorgio 2026-06-16) — auto-mode ⇒ real-time re-derive από γεωμετρία· ΕΝΑ SSoT.
+  const r = resolveActiveColumnReinforcementForParams(p);
   if (!r) return null;
   const heightM = Math.max(0, heightMm) * MM_TO_M;
   if (heightM <= 0) return null;

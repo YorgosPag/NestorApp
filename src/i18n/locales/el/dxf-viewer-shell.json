@@ -997,6 +997,9 @@
     }
   },
   "ribbon": {
+    "storeyGating": {
+      "notRecommended": "Δεν συνηθίζεται σε αυτή τη στάθμη"
+    },
     "tabs": {
       "home": "Αρχική",
       "insert": "Εισαγωγή",

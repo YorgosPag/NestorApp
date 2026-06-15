@@ -54,6 +54,8 @@ import { isSlabOpeningRibbonStringKey } from './bridge/slab-opening-command-keys
 import { isLineToolRibbonKey } from './bridge/line-tool-command-keys';
 import { isXlineRibbonKey } from './bridge/xline-command-keys';
 import { routeRibbonAction } from './useRibbonCommands-action';
+import { useActiveStoreyContext } from '../../../systems/levels/useActiveStoreySync';
+import { isCommandRecommendedForStorey } from './bridge/storey-tool-gating';
 
 export type { UseRibbonCommandsProps };
 
@@ -106,6 +108,10 @@ export function useRibbonCommands({
   // ADR-366 §C.1.b snap-to-grid — subscribe so ribbon re-renders on snap change.
   const snapEnabled = useAnimationStore((s) => s.snapEnabled);
   const snapStepUnits = useAnimationStore((s) => s.snapStepUnits);
+
+  // ADR-461 Phase C4 — active storey kind drives the Revit-style ADVISORY tool
+  // recommendation (foundation level → foundation/beam/slab recommended, etc.).
+  const activeStoreyKind = useActiveStoreyContext()?.storeyKind ?? null;
 
   // Compose: stair-prefixed keys → stairBridge; array-prefixed → arrayBridge;
   // everything else falls through to the text-editor bridge. All bridges
@@ -356,6 +362,13 @@ export function useRibbonCommands({
     [stairBridge, columnBridge, beamBridge, mepFixtureBridge, mepManifoldBridge, electricalPanelBridge, mepBoilerBridge, mepWaterHeaterBridge, mepUnderfloorBridge, mepSegmentBridge, furnitureBridge, floorplanSymbolBridge],
   );
 
+  // ADR-461 Phase C4 — Revit-style advisory recommendation per active storey kind.
+  // Counted / null kind → always `true` (handled inside the pure SSoT) → no change.
+  const getCommandRecommendation = React.useCallback(
+    (commandKey: string): boolean => isCommandRecommendedForStorey(commandKey, activeStoreyKind),
+    [activeStoreyKind],
+  );
+
   // ADR-363 Phase 1E — Wall action keys (delete) handled by bridge before
   // falling through to the generic DxfViewerContent action handler.
   const onAction = React.useCallback(
@@ -388,6 +401,7 @@ export function useRibbonCommands({
       getComboboxState,
       getBadgeState,
       getPanelVisibility,
+      getCommandRecommendation,
     }),
     [
       activeTool,
@@ -402,6 +416,7 @@ export function useRibbonCommands({
       getComboboxState,
       getBadgeState,
       getPanelVisibility,
+      getCommandRecommendation,
     ],
   );
 }

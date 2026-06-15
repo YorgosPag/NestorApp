@@ -24,12 +24,36 @@ import { ProSnapEngineV2 } from './ProSnapEngineV2';
 
 let _instance: ProSnapEngineV2 | null = null;
 let _lastEntityFingerprint = '';
+let _snapSceneEpoch = 0;
 
 export function getGlobalSnapEngine(): ProSnapEngineV2 {
   if (!_instance) {
     _instance = new ProSnapEngineV2();
   }
   return _instance;
+}
+
+/**
+ * ADR-040 — snap-scene invalidation counter (Giorgio 2026-06-16).
+ *
+ * The fingerprint guard in `useGlobalSnapSceneSync` skips `initialize()` when the
+ * cheap O(1) sample (length + first/last ids) is unchanged. That sample is BLIND
+ * to in-place GEOMETRY edits — moving/resizing/rotating an entity keeps the same
+ * count/ids, so the snap index froze at the OLD position after the first move
+ * (no snap/label on the 2nd grip-move until a hard refresh). This monotonic epoch
+ * is bumped on every CommandHistory change (execute/undo/redo → covers grip
+ * move/resize/rotate, panel edits, undo/redo) and folded into the fingerprint, so
+ * a genuine mutation forces exactly one re-`initialize()`. Benign re-renders
+ * (Firestore echo, React rebuild) are NOT commands → epoch unchanged → the
+ * fingerprint optimization is preserved (zero idle cost).
+ */
+export function invalidateSnapScene(): void {
+  _snapSceneEpoch++;
+}
+
+/** Current snap-scene epoch — folded into the scene-sync fingerprint. */
+export function getSnapSceneEpoch(): number {
+  return _snapSceneEpoch;
 }
 
 /**
@@ -53,4 +77,5 @@ export function __resetGlobalSnapEngineForTests(): void {
     _instance = null;
   }
   _lastEntityFingerprint = '';
+  _snapSceneEpoch = 0;
 }

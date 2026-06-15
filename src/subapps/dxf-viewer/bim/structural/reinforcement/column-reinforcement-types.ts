@@ -137,4 +137,12 @@ export interface ColumnReinforcement {
    * διευθετείται ως τοίχωμα (`mode==='wall'`). Absent ⇒ default από τον provider.
    */
   readonly wall?: WallReinforcementIntent;
+  /**
+   * ADR-456/460 (Giorgio 2026-06-16) — «Αυτόματος οπλισμός» mode. `true` ⇒ το design
+   * (Ø/πλήθος/συνδετήρες) είναι code-suggested και **DERIVED σε πραγματικό χρόνο** από
+   * την τρέχουσα γεωμετρία: κάθε αλλαγή διαστάσεων ξανα-υπολογίζει αυτόματα τον οπλισμό
+   * (μέσω `resolveActiveColumnReinforcement`). Χειροκίνητη αλλαγή design πεδίου ⇒ `false`
+   * (το stored design «κλειδώνει», Revit «by code vs manual»). Absent ⇒ manual (back-compat).
+   */
+  readonly auto?: boolean;
 }

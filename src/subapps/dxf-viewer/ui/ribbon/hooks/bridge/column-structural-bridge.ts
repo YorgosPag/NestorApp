@@ -23,7 +23,11 @@ import {
   isStructuralCodeId,
 } from '../../../../bim/structural/codes';
 // ADR-459 Φ4d — SSoT entity→SectionContext builder (πρώην inline εδώ· εξήχθη, N.0.2).
-import { buildColumnSectionContext } from '../../../../bim/structural/section-context';
+// ADR-456/460 — resolveActiveColumnReinforcement = auto-derive SSoT (Giorgio 2026-06-16).
+import {
+  buildColumnSectionContext,
+  resolveActiveColumnReinforcement,
+} from '../../../../bim/structural/section-context';
 import { resolveColumnReinforcementSection } from '../../../../bim/structural/reinforcement/column-section-outline';
 import { isConcreteGrade } from '../../../../bim/structural/concrete-grades';
 import type { ColumnReinforcement } from '../../../../bim/structural/reinforcement/column-reinforcement-types';
@@ -46,12 +50,16 @@ import type { RibbonComboboxState } from '../../context/RibbonCommandContext';
 
 type DispatchParams = (nextParams: ColumnParams) => void;
 
-/** Ενεργός οπλισμός = ορισμένος ή (αν απών) code-suggested ελάχιστος-έγκυρος. */
+/**
+ * Ενεργός οπλισμός = (auto ⇒ φρέσκο code-suggested από την τρέχουσα γεωμετρία· manual ⇒
+ * το stored) ή, αν απών, code-suggested ελάχιστος-έγκυρος ως live default. Δρομολογείται
+ * μέσω του SSoT `resolveActiveColumnReinforcement` ώστε ο πίνακας να δείχνει τον ΙΔΙΟ
+ * (real-time) οπλισμό με 2Δ/3Δ.
+ */
 function effectiveReinforcement(column: ColumnEntity): ColumnReinforcement {
-  const r = column.params.reinforcement;
-  if (r) return r;
-  const { codeId } = useStructuralSettingsStore.getState();
-  return resolveStructuralCode(codeId).suggestColumnReinforcement(buildColumnSectionContext(column));
+  const provider = resolveStructuralCode(useStructuralSettingsStore.getState().codeId);
+  const active = resolveActiveColumnReinforcement(column.params, provider);
+  return active ?? provider.suggestColumnReinforcement(buildColumnSectionContext(column));
 }
 
 /** Combobox state ενός editable structural key, ή `null` αν δεν ανήκει εδώ. */
@@ -134,16 +142,22 @@ export function applyColumnStructuralChange(
   if (!field) return false;
   const numeric = Number.parseFloat(value);
   if (Number.isNaN(numeric)) return true;
+  // Χειροκίνητη αλλαγή design πεδίου (Ø/πλήθος/βήμα/επικάλυψη) → ΚΛΕΙΔΩΝΕΙ το design
+  // (`auto:false`): από εδώ και πέρα δεν ξανα-υπολογίζεται αυτόματα στο resize (Revit «manual»).
   const next = patchReinforcementField(effectiveReinforcement(column), field, numeric);
-  dispatchParams({ ...column.params, reinforcement: next });
+  dispatchParams({ ...column.params, reinforcement: { ...next, auto: false } });
   return true;
 }
 
-/** «Auto οπλισμός» — code-suggested ελάχιστος-έγκυρος οπλισμός → dispatch. */
+/**
+ * «Αυτόματος Οπλισμός» — code-suggested ελάχιστος-έγκυρος οπλισμός με `auto:true` ⇒
+ * από εδώ και πέρα ο οπλισμός **DERIVED σε πραγματικό χρόνο** σε κάθε αλλαγή διαστάσεων
+ * (`resolveActiveColumnReinforcement`). Δεν χρειάζεται επανάκληση του κουμπιού.
+ */
 export function autoReinforceColumn(column: ColumnEntity, dispatchParams: DispatchParams): void {
   const { codeId } = useStructuralSettingsStore.getState();
   const suggestion = resolveStructuralCode(codeId).suggestColumnReinforcement(
     buildColumnSectionContext(column),
   );
-  dispatchParams({ ...column.params, reinforcement: suggestion });
+  dispatchParams({ ...column.params, reinforcement: { ...suggestion, auto: true } });
 }

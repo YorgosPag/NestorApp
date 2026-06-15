@@ -51,6 +51,7 @@
       "newLevelPlaceholder": "New level name...",
       "linkFloor": "Link floor",
       "linkedFloor": "Floor: {floorName}",
+      "specialLevel": "Special level",
       "noFloorLinked": "No floor linked",
       "selectFloorPlaceholder": "-- Select floor --",
       "noBuildingSelected": "Select a building in Hierarchy",

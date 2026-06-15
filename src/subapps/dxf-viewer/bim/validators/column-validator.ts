@@ -55,6 +55,7 @@ import {
 import { getColumnSlenderness } from '../geometry/column-geometry';
 import { polygonArea, minPolygonInteriorAngleDeg } from '../geometry/shared/polygon-utils';
 import { resolveStructuralCode, type StructuralCodeId } from '../structural/codes';
+import { resolveActiveColumnReinforcement } from '../structural/section-context';
 import { computeColumnReinforcementQuantities } from '../structural/reinforcement/column-reinforcement-compute';
 import { resolveColumnReinforcementSection } from '../structural/reinforcement/column-section-outline';
 
@@ -302,13 +303,15 @@ function validateReinforcementRatio(
   codeId: StructuralCodeId | undefined,
   codeViolations: string[],
 ): void {
-  const r = params.reinforcement;
-  if (!r) return;
   if (params.width <= 0 || params.depth <= 0) return;
+  const provider = resolveStructuralCode(codeId);
+  // ADR-456/460 (Giorgio 2026-06-16) — auto-mode ⇒ ο έλεγχος ρ τρέχει στο φρέσκο
+  // (real-time) design της τρέχουσας γεωμετρίας, όχι σε παγωμένο stored.
+  const r = resolveActiveColumnReinforcement(params, provider);
+  if (!r) return;
 
   const section = resolveColumnReinforcementSection(params);
   if (section.grossAreaMm2 <= 0) return;
-  const provider = resolveStructuralCode(codeId);
   const ctx = {
     widthMm: section.bboxWidthMm,
     depthMm: section.bboxDepthMm,

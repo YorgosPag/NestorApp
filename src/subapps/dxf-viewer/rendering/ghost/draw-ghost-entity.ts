@@ -21,7 +21,14 @@
 import type { Point2D, ViewTransform, Viewport } from '../types/Types';
 import type { DxfEntityUnion } from '../../canvas-v2/dxf-canvas/dxf-types';
 import type { OpeningEntity } from '../../bim/types/opening-types';
+import type { ColumnParams } from '../../bim/types/column-types';
 import { drawOpeningPlanOverlay } from '../../bim/renderers/opening-overlay-drawing';
+// ADR-456/460 (Giorgio 2026-06-16) — live ghost rebar during column grip-drag/resize.
+// Reuses the SAME pure 2Δ rebar SSoT as the committed cache pass (drawColumnRebar2D),
+// gated by the same visibility toggle, so the preview matches the commit 1:1.
+import { drawColumnRebar2D } from '../../bim/renderers/column-rebar-2d';
+import { isReinforcementVisible } from '../../bim/structural/reinforcement/rebar-visibility';
+import { mmToSceneUnits } from '../../utils/scene-units';
 import { CoordinateTransforms } from '../core/CoordinateTransforms';
 
 function drawPolygon(
@@ -270,10 +277,21 @@ export function drawGhostEntity(
     case 'column': {
       const col = entity as unknown as {
         geometry?: { footprint?: { vertices: ReadonlyArray<{ x: number; y: number }> } };
+        params?: ColumnParams;
       };
       const verts = col.geometry?.footprint?.vertices ?? [];
       if (verts.length < 2) return;
       drawPolygon(ctx, verts, toScreen);
+      // ADR-456/460 (Giorgio 2026-06-16) — LIVE ghost rebar during the drag. The preview
+      // entity carries auto-aware `params` (applyEntityPreview → applyColumnGripDrag), so
+      // `drawColumnRebar2D` re-derives a fresh code design from the DRAGGED geometry in
+      // real-time (auto) — or paints the locked stored design (manual). Same pure SSoT +
+      // visibility gate as the committed cache pass (DxfRenderer.drawColumnReinforcement2D);
+      // inherits the ghost's translucent alpha (no style override → reads as a ghost).
+      if (col.params && isReinforcementVisible()) {
+        const pxPerMm = mmToSceneUnits(col.params.sceneUnits ?? 'mm') * transform.scale;
+        drawColumnRebar2D(ctx, col.params, pxPerMm, toScreen);
+      }
       return;
     }
 

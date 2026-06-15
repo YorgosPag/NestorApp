@@ -24,43 +24,12 @@ import {
   type LinkedStairsInfo,
 } from '@/subapps/dxf-viewer/bim/stairs/stair-floor-sync';
 import type { StairDoc } from '@/subapps/dxf-viewer/bim/types/stair-types';
-import type { FloorKind } from '@/utils/floor-naming';
+import { isBuildingStorey } from '@/utils/floor-naming';
+import type { FloorRecord, FloorsApiResponse, FloorMutationResponse } from './useFloorsTabState.types';
 
-// ============================================================================
-// TYPES
-// ============================================================================
-
-export interface FloorRecord {
-  id: string;
-  number: number;
-  name: string;
-  elevation?: number | null;
-  height?: number | null;
-  buildingId: string;
-  units?: number;
-  hasFloorplan?: boolean;
-  /**
-   * ADR-461 — Revit-style classification. Flows through the list handler
-   * (`{ id, ...doc.data() }`) so the table can mark special levels (foundation /
-   * stair-penthouse) and count only counted storeys via `countBuildingStoreys`.
-   */
-  kind?: FloorKind;
-  _v?: number;
-}
-
-interface FloorsApiResponse {
-  success: boolean;
-  floors: FloorRecord[];
-  stats: { totalFloors: number };
-}
-
-interface FloorMutationResponse {
-  success: boolean;
-  floorId?: string;
-  floor?: FloorRecord;
-  message?: string;
-  error?: string;
-}
+// Types live in `useFloorsTabState.types.ts` (file-size split). Re-export
+// FloorRecord για back-compat — εξωτερικοί consumers το εισάγουν από εδώ.
+export type { FloorRecord } from './useFloorsTabState.types';
 
 // ADR-300: Module-level cache — keyed by buildingId, survives re-navigation
 const floorsCache = createStaleCache<FloorRecord[]>('building-floors');
@@ -234,14 +203,20 @@ export function useFloorsTabState(buildingId: string, projectId?: string, focusF
   }, [floors, floorGaps, t]);
 
   /**
-   * ADR-451 — `elevation` is the SSoT, `height` its derived projection. Only the
-   * topmost floor (highest number — no floor above) keeps an explicit, editable
-   * height. `floors` is sorted ascending, so the last entry is the top floor.
+   * ADR-451 / ADR-461 — `elevation` is the SSoT, `height` its derived projection.
+   * A floor's height is DERIVED (read-only, = gap to the next counted storey) for
+   * every counted storey EXCEPT the topmost counted one (no counted floor above).
+   * Special levels (foundation depth / stair-penthouse / roof height) keep an
+   * EXPLICIT, editable height — never a derived gap — so they are excluded from
+   * this set. `floors` is sorted ascending, so the last counted entry is the top.
    */
-  const topFloorId = useMemo(
-    () => (floors.length > 0 ? floors[floors.length - 1].id : null),
-    [floors],
-  );
+  const heightDerivedFloorIds = useMemo<ReadonlySet<string>>(() => {
+    const counted = floors.filter((f) => f.kind === undefined || isBuildingStorey(f.kind));
+    const topCountedId = counted.length > 0 ? counted[counted.length - 1].id : null;
+    const set = new Set<string>();
+    for (const f of counted) if (f.id !== topCountedId) set.add(f.id);
+    return set;
+  }, [floors]);
 
   const fetchFloors = useCallback(async () => {
     // ADR-300: Only show spinner on first load — not on re-navigation
@@ -381,8 +356,17 @@ export function useFloorsTabState(buildingId: string, projectId?: string, focusF
   };
 
   const handleDelete = async (floor: FloorRecord) => {
-    const nums = floors.map((f) => f.number);
-    const isIntermediate = nums.some((n) => n < floor.number) && nums.some((n) => n > floor.number);
+    // ADR-461 — only COUNTED storeys sandwich a floor. A special level (foundation
+    // at −1, roof, stair-penthouse) never makes a counted storey "intermediate",
+    // and a special level is itself always deletable (mirrors the server guard).
+    const targetIsSpecial = floor.kind !== undefined && !isBuildingStorey(floor.kind);
+    const countedNums = floors
+      .filter((f) => f.kind === undefined || isBuildingStorey(f.kind))
+      .map((f) => f.number);
+    const isIntermediate =
+      !targetIsSpecial &&
+      countedNums.some((n) => n < floor.number) &&
+      countedNums.some((n) => n > floor.number);
     if (isIntermediate) {
       await confirm({
         title: t('tabs.floors.deleteIntermediateTitle'),
@@ -482,7 +466,7 @@ export function useFloorsTabState(buildingId: string, projectId?: string, focusF
     editNameMismatch,
     startEdit, cancelEdit, handleSaveEdit,
     deletingId, handleDelete, fetchFloors, formatElevation,
-    floorGaps, continuityWarnings, topFloorId,
+    floorGaps, continuityWarnings, heightDerivedFloorIds,
     expandedFloorStairs, loadingStairs,
     dialogProps, BlockedDialog, confirm,
   };

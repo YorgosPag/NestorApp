@@ -15,7 +15,11 @@
  */
 
 import type { FloorKind } from '@/utils/floor-naming';
-import { DEFAULT_FLOOR_HEIGHT_M, DEFAULT_FLOOR_FINISH_THICKNESS_MM } from '@/utils/floor-naming';
+import {
+  DEFAULT_FLOOR_HEIGHT_M,
+  DEFAULT_FLOOR_FINISH_THICKNESS_MM,
+  SPECIAL_LEVEL_KINDS,
+} from '@/utils/floor-naming';
 import {
   resolveBuildingDatumElevationM,
   resolveFloorDatumRelativeElevationMm,
@@ -75,15 +79,25 @@ function pickNextFloorAbove(
   return best;
 }
 
-/** Whether `active` is the lowest **occupied** storey (foundation kind excluded). */
+/** True when this floor is a special level (foundation/roof/stair-penthouse). */
+function isSpecialLevelKind(kind: FloorKind | undefined): boolean {
+  return kind !== undefined && (SPECIAL_LEVEL_KINDS as readonly string[]).includes(kind);
+}
+
+/**
+ * Whether `active` is the lowest **occupied** (counted) storey. ADR-461 — ALL
+ * special levels (foundation/roof/stair-penthouse) are excluded, not just
+ * foundation, so a foundation never counts as a candidate and a special level can
+ * never report itself as the lowest occupied storey (SSoT `SPECIAL_LEVEL_KINDS`).
+ */
 function resolveIsLowestOccupied(
   floors: readonly StoreyFloorRef[],
   active: StoreyFloorRef,
 ): boolean {
-  if (active.kind === 'foundation') return false;
+  if (isSpecialLevelKind(active.kind)) return false;
   let minOccupied = Infinity;
   for (const f of floors) {
-    if (f.kind === 'foundation') continue;
+    if (isSpecialLevelKind(f.kind)) continue;
     if (f.number < minOccupied) minOccupied = f.number;
   }
   return Number.isFinite(minOccupied) && active.number === minOccupied;

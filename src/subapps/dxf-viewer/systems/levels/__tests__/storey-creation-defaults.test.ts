@@ -18,6 +18,7 @@ import {
   resolveStoreyHeightMm,
   resolveStoreyCeilingElevationMm,
   shouldWarnFoundationOnStorey,
+  resolveStoreyDefaultEntityTypes,
 } from '../storey-creation-defaults';
 
 // Full stack with ground (datum 0) + basement + foundation below + upper @3m.
@@ -116,5 +117,41 @@ describe('store-backed default argument (readActiveStoreyContext)', () => {
     expect(resolveStoreyHeightMm(undefined, 3000)).toBe(3500);
     expect(resolveStoreyCeilingElevationMm(undefined, 3000)).toBe(3500);
     expect(shouldWarnFoundationOnStorey()).toBe(true);
+  });
+});
+
+// ADR-461 Phase C1 — per-kind creation-tool recommendation SSoT.
+describe('resolveStoreyDefaultEntityTypes', () => {
+  it('counted storeys recommend everything (mode = all)', () => {
+    for (const kind of ['ground', 'standard', 'basement', 'mezzanine'] as const) {
+      const r = resolveStoreyDefaultEntityTypes(kind);
+      expect(r.mode).toBe('all');
+      expect(r.categories.has('wall')).toBe(true);
+      expect(r.categories.has('foundation')).toBe(true);
+    }
+  });
+
+  it('null/unknown kind collapses to all (zero regression)', () => {
+    expect(resolveStoreyDefaultEntityTypes(null).mode).toBe('all');
+  });
+
+  it('foundation → foundation/beam/slab only', () => {
+    const r = resolveStoreyDefaultEntityTypes('foundation');
+    expect(r.mode).toBe('subset');
+    expect([...r.categories].sort()).toEqual(['beam', 'foundation', 'slab']);
+    expect(r.categories.has('wall')).toBe(false);
+    expect(r.categories.has('column')).toBe(false);
+  });
+
+  it('stair-penthouse → stair/slab/wall/railing', () => {
+    const r = resolveStoreyDefaultEntityTypes('stair-penthouse');
+    expect(r.mode).toBe('subset');
+    expect([...r.categories].sort()).toEqual(['railing', 'slab', 'stair', 'wall']);
+    expect(r.categories.has('foundation')).toBe(false);
+  });
+
+  it('roof → slab/roof/railing', () => {
+    const r = resolveStoreyDefaultEntityTypes('roof');
+    expect([...r.categories].sort()).toEqual(['railing', 'roof', 'slab']);
   });
 });

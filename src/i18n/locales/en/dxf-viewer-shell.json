@@ -997,6 +997,9 @@
     }
   },
   "ribbon": {
+    "storeyGating": {
+      "notRecommended": "Not typical on this level"
+    },
     "tabs": {
       "home": "Home",
       "insert": "Insert",

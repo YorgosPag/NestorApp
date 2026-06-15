@@ -283,6 +283,26 @@ describe('runReinforcementChecks — foundation-slab (raft)', () => {
   });
 });
 
+// ─── Auto-mode routing (ADR-456/460, Giorgio 2026-06-16) ──────────────────────
+
+describe('runReinforcementChecks — auto-mode re-derive', () => {
+  it('auto column: a STALE sparse stored design does NOT trigger ratioOutOfRange (re-derived from geometry)', () => {
+    // Sparse 4Ø12 in a 600×600 column would be ρ < ρ_min as a *manual* design…
+    const staleSparse: ColumnReinforcement = { ...colReinf(12, 4), auto: true };
+    const graph: StructuralGraph = { nodes: [node('C1', 'column')], edges: [] };
+    const findings = runReinforcementChecks(graph, [colEntity('C1', staleSparse)], EUROCODE_PROVIDER);
+    // …but auto ⇒ the check reads the fresh code-suggested design ⇒ within range.
+    expect(codesOf(findings)).not.toContain('ratioOutOfRange');
+    expect(codesOf(findings)).not.toContain('memberMissingReinforcement');
+  });
+
+  it('manual column: the same sparse stored design IS flagged (contrast)', () => {
+    const graph: StructuralGraph = { nodes: [node('C1', 'column')], edges: [] };
+    const findings = runReinforcementChecks(graph, [colEntity('C1', colReinf(12, 4))], EUROCODE_PROVIDER);
+    expect(codesOf(findings)).toContain('ratioOutOfRange');
+  });
+});
+
 // ─── DERIVED invariant ────────────────────────────────────────────────────────
 
 describe('runReinforcementChecks — DERIVED invariant', () => {

@@ -19,6 +19,7 @@
  * @see docs/centralized-systems/reference/adrs/ADR-448-storey-aware-dxf-viewer.md §6 Phase 2
  */
 
+import type { FloorKind } from '@/utils/floor-naming';
 import { useActiveStoreyStore } from './active-storey-store';
 import type { ActiveStoreyContext } from './active-storey-context';
 
@@ -104,4 +105,62 @@ export function shouldWarnFoundationOnStorey(
   storey: ActiveStoreyContext | null = readActiveStoreyContext(),
 ): boolean {
   return storey !== null && storey.isLowestOccupiedStorey === false;
+}
+
+// ─── ADR-461 Phase C — per-kind creation-tool recommendation (SSoT) ──────────
+
+/**
+ * Discipline-level BIM tool category. Deliberately decoupled from the ribbon's
+ * giant `ToolType` union: this stays a small, stable vocabulary so the per-storey
+ * recommendation has zero dependency on the ribbon. The ribbon-side gating hook
+ * (ADR-461 C4) maps each `commandKey` onto one of these categories.
+ */
+export type BimToolCategory =
+  | 'wall'
+  | 'column'
+  | 'beam'
+  | 'slab'
+  | 'opening'
+  | 'foundation'
+  | 'stair'
+  | 'railing'
+  | 'roof'
+  | 'finish';
+
+/** Recommendation for which BIM disciplines are relevant on the active storey. */
+export interface StoreyToolRecommendation {
+  /** 'all' → every tool is relevant (counted storeys); 'subset' → only `categories`. */
+  readonly mode: 'all' | 'subset';
+  /** The recommended categories for this storey kind. */
+  readonly categories: ReadonlySet<BimToolCategory>;
+}
+
+const ALL_BIM_TOOL_CATEGORIES: readonly BimToolCategory[] = [
+  'wall', 'column', 'beam', 'slab', 'opening', 'foundation', 'stair', 'railing', 'roof', 'finish',
+];
+
+/**
+ * SSoT — which BIM disciplines a storey of the given kind is primarily for, so the
+ * UI can surface the right creation tools per active level (ADR-461 Phase C).
+ * Counted storeys recommend everything ('all'); special levels narrow to their own
+ * discipline:
+ *   foundation       → πέδιλα / πεδιλοδοκοί / κοιτόστρωση  (foundation, beam, slab)
+ *   stair-penthouse  → σκάλα / πλάκα-δώματος / τοίχοι       (stair, slab, wall, railing)
+ *   roof             → πλάκα στέγης / στηθαίο               (slab, roof, railing)
+ *
+ * Revit-style ADVISORY — «warn, don't block» (mirrors {@link shouldWarnFoundationOnStorey}):
+ * the recommendation drives emphasis/hints, never a hard restriction. Unknown/`null`
+ * kind collapses to 'all' so existing behaviour is unchanged (μηδέν regression).
+ */
+export function resolveStoreyDefaultEntityTypes(kind: FloorKind | null): StoreyToolRecommendation {
+  switch (kind) {
+    case 'foundation':
+      return { mode: 'subset', categories: new Set<BimToolCategory>(['foundation', 'beam', 'slab']) };
+    case 'stair-penthouse':
+      return { mode: 'subset', categories: new Set<BimToolCategory>(['stair', 'slab', 'wall', 'railing']) };
+    case 'roof':
+      return { mode: 'subset', categories: new Set<BimToolCategory>(['slab', 'roof', 'railing']) };
+    default:
+      return { mode: 'all', categories: new Set<BimToolCategory>(ALL_BIM_TOOL_CATEGORIES) };
+  }
 }

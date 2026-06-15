@@ -23,6 +23,7 @@ import {
   resolveColumnCrossTies,
 } from '../structural/reinforcement/column-rebar-layout-resolve';
 import { resolveColumnReinforcementSection } from '../structural/reinforcement/column-section-outline';
+import { resolveActiveColumnReinforcementForParams } from '../structural/active-reinforcement';
 import { DEFAULT_STIRRUP_TYPE } from '../structural/reinforcement/column-reinforcement-types';
 
 /** Χρώμα οπλισμού (μελετητική σύμβαση — κόκκινο/crimson, αντίθεση με το δομικό μπλε). */
@@ -59,7 +60,9 @@ export function drawColumnRebar2D(
   pxPerMm: number,
   worldToScreen: (p: Point2D) => Point2D,
 ): void {
-  const r = p.reinforcement;
+  // ADR-456/460 (Giorgio 2026-06-16) — auto-mode ⇒ φρέσκο design από την τρέχουσα γεωμετρία
+  // (real-time στο resize)· manual ⇒ stored. ΕΝΑ SSoT (resolveActiveColumnReinforcement).
+  const r = resolveActiveColumnReinforcementForParams(p);
   if (!r) return;
   const section = resolveColumnReinforcementSection(p);
   const layout = resolveColumnRebarLayout(r, section);

@@ -72,6 +72,13 @@ const floor = (id: string, number: number, elevation: number | null, height: num
   data: { companyId: COMPANY, buildingId: BUILDING, name: id, number, elevation, height },
 });
 
+const floorK = (
+  id: string, number: number, elevation: number | null, height: number, kind: string,
+): SeedDoc => ({
+  id,
+  data: { companyId: COMPANY, buildingId: BUILDING, name: id, number, elevation, height, kind },
+});
+
 beforeEach(() => recordChange.mockClear());
 
 describe('cascadeFloorElevations — ADR-450 §1', () => {
@@ -131,5 +138,30 @@ describe('cascadeFloorElevations — ADR-450 §1', () => {
     const call = recordChange.mock.calls[0][0];
     expect(call.changes[0].field).toBe('elevation');
     expect(call.action).toBe('updated');
+  });
+
+  // ADR-461 — special-level satellite behaviour.
+  it('editing the foundation depth re-anchors it DOWN, never lifts the building', async () => {
+    // foundation depth just changed 1 → 1.5; ground stays the datum at 0.
+    const { result, updates } = await run(
+      [floorK('fnd', -1, -1, 1.5, 'foundation'), floorK('grd', 0, 0, 3, 'ground')],
+      'fnd',
+    );
+    expect(result.floorsUpdated).toBe(1);
+    expect(updates).toHaveLength(1);
+    expect(updates[0].ref.id).toBe('fnd');
+    expect(updates[0].patch.elevation).toBe(-1.5); // ground(0) − depth(1.5)
+    // The counted ground storey is NEVER pushed.
+    expect(updates.some((u) => u.ref.id === 'grd')).toBe(false);
+  });
+
+  it('a stair-penthouse rides up when the top counted storey grows', async () => {
+    const { updates } = await run(
+      [floorK('grd', 0, 0, 3.5, 'ground'), floorK('pent', 1, 3, 2.4, 'stair-penthouse')],
+      'grd',
+    );
+    expect(updates).toHaveLength(1);
+    expect(updates[0].ref.id).toBe('pent');
+    expect(updates[0].patch.elevation).toBe(3.5); // ground(0) + new height(3.5)
   });
 });

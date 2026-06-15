@@ -12,6 +12,8 @@
 
 import React, { useCallback } from 'react';
 import { useTranslation } from '@/i18n';
+import { Badge } from '@/components/ui/badge';
+import { isBuildingStorey } from '@/utils/floor-naming';
 import { useProjectHierarchy } from '../../contexts/ProjectHierarchyContext';
 import { PANEL_TOKENS } from '../../config/panel-tokens';
 
@@ -42,8 +44,11 @@ export function LevelFloorLink({ levelId, floorId, onLink }: LevelFloorLinkProps
   }
 
   const linkedFloor = floors.find(f => f.id === floorId);
+  // ADR-461 — flag a special level (foundation / roof / stair-penthouse) so the DXF
+  // level switcher mirrors the «Όροφοι» table badge. Undefined kind → no badge.
+  const isSpecialLevel = linkedFloor?.kind !== undefined && !isBuildingStorey(linkedFloor.kind);
 
-  return (
+  const select = (
     <select
       value={floorId ?? ''}
       onChange={handleChange}
@@ -58,5 +63,16 @@ export function LevelFloorLink({ levelId, floorId, onLink }: LevelFloorLinkProps
         </option>
       ))}
     </select>
+  );
+
+  if (!isSpecialLevel) return select;
+
+  return (
+    <span className="flex items-center gap-1.5">
+      {select}
+      <Badge variant="info" className="shrink-0 px-1.5 py-0.5 text-[10px] font-medium">
+        {t('panels.levels.specialLevel')}
+      </Badge>
+    </span>
   );
 }

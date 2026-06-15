@@ -50,6 +50,34 @@ describe('resolveBuildingDatumElevationM', () => {
   it('returns 0 for an empty building', () => {
     expect(resolveBuildingDatumElevationM([])).toBe(0);
   });
+
+  // ADR-461 — special levels (foundation/roof/stair-penthouse) must never be the datum.
+  it('ignores a foundation special level when falling back to the lowest counted storey', () => {
+    const floors: FloorElevationRef[] = [
+      { number: -1, elevation: -1, kind: 'foundation' }, // lowest elevation, but NOT a datum
+      { number: 1, elevation: 3 },
+      { number: 2, elevation: 6 },
+    ];
+    // Without the kind-guard the foundation (−1) would lift the model by foundationDepth.
+    expect(resolveBuildingDatumElevationM(floors)).toBe(3);
+  });
+
+  it('still prefers the ground floor even with a foundation present', () => {
+    const floors: FloorElevationRef[] = [
+      { number: -1, elevation: -1, kind: 'foundation' },
+      { number: 0, elevation: 0, kind: 'ground' },
+      { number: 1, elevation: 3, kind: 'standard' },
+    ];
+    expect(resolveBuildingDatumElevationM(floors)).toBe(0);
+  });
+
+  it('degenerate building of only special levels falls back to their min (never NaN)', () => {
+    const floors: FloorElevationRef[] = [
+      { number: -1, elevation: -1, kind: 'foundation' },
+      { number: 99, elevation: 9, kind: 'stair-penthouse' },
+    ];
+    expect(resolveBuildingDatumElevationM(floors)).toBe(-1);
+  });
 });
 
 describe('resolveFloorDatumRelativeElevationMm', () => {
