@@ -257,8 +257,10 @@ export const FloatingPanelsSection = React.memo<FloatingPanelsSectionProps>(({
         />
       )}
 
-      {/* PROFESSIONAL LAYOUT DEBUG SYSTEM */}
-      {isFeatureEnabled('ENTERPRISE_SETTINGS_SHADOW_MODE') && <LazyFullLayoutDebug />}
+      {/* PROFESSIONAL LAYOUT DEBUG SYSTEM — gated by its OWN dedicated flag
+          (was mis-wired to ENTERPRISE_SETTINGS_SHADOW_MODE → shipped to everyone +
+          ran a per-mousemove debug overlay; ADR-040 cursor-lag Φ7). */}
+      {isFeatureEnabled('LAYOUT_DEBUG_SYSTEM') && <LazyFullLayoutDebug />}
 
       {/* TEST RESULTS MODAL */}
       <TestResultsModal
