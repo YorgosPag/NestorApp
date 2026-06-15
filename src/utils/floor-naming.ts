@@ -26,7 +26,10 @@ export type FloorKind =
   | 'ground'
   | 'standard'
   | 'roof'
-  | 'mezzanine';
+  | 'mezzanine'
+  // ADR-461 — απόληξη κλιμακοστασίου (κλειστός χώρος πάνω από το δώμα: stair head /
+  // μηχανοστάσιο). Special level (Revit «Building Story» OFF), διακριτό από 'roof'.
+  | 'stair-penthouse';
 
 export const FLOOR_KIND_VALUES: readonly FloorKind[] = [
   'foundation',
@@ -35,10 +38,39 @@ export const FLOOR_KIND_VALUES: readonly FloorKind[] = [
   'standard',
   'roof',
   'mezzanine',
+  'stair-penthouse',
 ] as const;
 
 export function isFloorKind(value: unknown): value is FloorKind {
   return typeof value === 'string' && (FLOOR_KIND_VALUES as readonly string[]).includes(value);
+}
+
+// ─── Special levels SSoT (ADR-461 — Revit «Building Story» OFF) ───────────────
+
+/**
+ * Στάθμες που ΔΕΝ μετρώνται ως όροφοι («Όροφοι: N»): θεμελίωση, δώμα, απόληξη
+ * κλιμακοστασίου. Έχουν δικό τους DXF Level (σχεδιάσιμες) αλλά είναι εκτός count.
+ */
+export const SPECIAL_LEVEL_KINDS: readonly FloorKind[] = [
+  'foundation',
+  'roof',
+  'stair-penthouse',
+] as const;
+
+/**
+ * True όταν ο όροφος αυτού του είδους μετράει ως «Building Story» (counted storey).
+ * Special levels (foundation/roof/stair-penthouse) → false. SSoT για το «Όροφοι: N».
+ */
+export function isBuildingStorey(kind: FloorKind): boolean {
+  return !(SPECIAL_LEVEL_KINDS as readonly string[]).includes(kind);
+}
+
+/**
+ * Μετράει μόνο τους counted storeys μιας λίστας ορόφων (special levels εξαιρούνται).
+ * Floors χωρίς `kind` (legacy) θεωρούνται storeys (back-compat). SSoT για «Όροφοι: N».
+ */
+export function countBuildingStoreys(floors: ReadonlyArray<{ kind?: FloorKind }>): number {
+  return floors.reduce((n, f) => (f.kind === undefined || isBuildingStorey(f.kind) ? n + 1 : n), 0);
 }
 
 // ─── Short name (locale-independent — engineering code) ──────────────────────
@@ -70,6 +102,8 @@ export function generateAutoShortName(kind: FloorKind, number: number): string {
     }
     case 'standard':
       return `L${number}`;
+    case 'stair-penthouse':
+      return 'SP';
   }
 }
 
@@ -104,6 +138,8 @@ export function generateAutoLongName(kind: FloorKind, number: number): string {
     }
     case 'standard':
       return `${number}ος Όροφος`;
+    case 'stair-penthouse':
+      return 'Απόληξη Κλιμακοστασίου';
   }
 }
 
@@ -115,8 +151,8 @@ export function generateAutoLongName(kind: FloorKind, number: number): string {
  *   number  >  0  → 'standard'
  *   number  <  0  → 'basement'
  *
- * Σημείωση: 'foundation' / 'roof' / 'mezzanine' είναι user-explicit kinds —
- * δεν προκύπτουν από το νούμερο. Ο caller πρέπει να τα ορίσει ρητά.
+ * Σημείωση: 'foundation' / 'roof' / 'mezzanine' / 'stair-penthouse' είναι
+ * user-explicit kinds — δεν προκύπτουν από το νούμερο. Ο caller τα ορίζει ρητά.
  */
 export function inferKindFromNumber(number: number): FloorKind {
   if (number === 0) return 'ground';

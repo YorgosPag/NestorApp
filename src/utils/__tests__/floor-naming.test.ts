@@ -7,7 +7,10 @@ import {
   generateAutoLongName,
   inferKindFromNumber,
   isFloorKind,
+  isBuildingStorey,
+  countBuildingStoreys,
   FLOOR_KIND_VALUES,
+  SPECIAL_LEVEL_KINDS,
   type FloorKind,
 } from '../floor-naming';
 
@@ -142,6 +145,46 @@ describe('floor-naming', () => {
       expect(isFloorKind(null)).toBe(false);
       expect(isFloorKind(undefined)).toBe(false);
       expect(isFloorKind({})).toBe(false);
+    });
+  });
+
+  // ─── ADR-461 special levels ─────────────────────────────────────────────────
+
+  describe('stair-penthouse kind', () => {
+    it('is a recognised FloorKind with Greek auto-names', () => {
+      expect(isFloorKind('stair-penthouse')).toBe(true);
+      expect(generateAutoShortName('stair-penthouse', 3)).toBe('SP');
+      expect(generateAutoLongName('stair-penthouse', 3)).toBe('Απόληξη Κλιμακοστασίου');
+    });
+  });
+
+  describe('isBuildingStorey', () => {
+    it('counts ground/basement/standard/mezzanine as storeys', () => {
+      expect(isBuildingStorey('ground')).toBe(true);
+      expect(isBuildingStorey('basement')).toBe(true);
+      expect(isBuildingStorey('standard')).toBe(true);
+      expect(isBuildingStorey('mezzanine')).toBe(true);
+    });
+
+    it.each(SPECIAL_LEVEL_KINDS)('excludes special level "%s"', (kind: FloorKind) => {
+      expect(isBuildingStorey(kind)).toBe(false);
+    });
+  });
+
+  describe('countBuildingStoreys', () => {
+    it('counts only counted storeys (special levels excluded)', () => {
+      const floors = [
+        { kind: 'foundation' as const },
+        { kind: 'ground' as const },
+        { kind: 'standard' as const },
+        { kind: 'standard' as const },
+        { kind: 'stair-penthouse' as const },
+      ];
+      expect(countBuildingStoreys(floors)).toBe(3);
+    });
+
+    it('treats floors without a kind as storeys (back-compat)', () => {
+      expect(countBuildingStoreys([{}, {}, { kind: 'roof' as const }])).toBe(2);
     });
   });
 });

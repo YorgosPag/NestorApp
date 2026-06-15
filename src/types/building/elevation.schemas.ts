@@ -75,6 +75,14 @@ export const BuildingElevationPatchSchema = z
     hasFoundation: z.boolean().optional(),
     /** ADR-451 — METRES — foundation depth below the lowest storey FFL (≥0). */
     foundationDepth: z.number().finite().min(0).max(99).optional(),
+    /**
+     * ADR-461 — building has a stair penthouse (απόληξη κλιμακοστασίου) special
+     * level above the top storey (default true when ≥1 storey). Like the
+     * foundation it is a special level (Revit «Building Story» OFF), NOT counted.
+     */
+    hasStairPenthouse: z.boolean().optional(),
+    /** ADR-461 — METRES — stair-penthouse storey height (default 2.40, ≥0). */
+    stairPenthouseHeight: z.number().finite().min(0).max(99).optional(),
   })
   .strict();
 export type BuildingElevationPatch = z.infer<typeof BuildingElevationPatchSchema>;
@@ -88,3 +96,7 @@ export const DEFAULT_BUILDING_PHASE: BuildingPhase = 'planned';
 export const DEFAULT_BUILDING_HAS_FOUNDATION = true;
 /** ADR-451 — METRES — default foundation depth below the lowest storey FFL. */
 export const DEFAULT_BUILDING_FOUNDATION_DEPTH_M = 1.0;
+/** ADR-461 — buildings with ≥1 storey have a stair penthouse by default (Greek norm). */
+export const DEFAULT_BUILDING_HAS_STAIR_PENTHOUSE = true;
+/** ADR-461 — METRES — default stair-penthouse (απόληξη κλιμακοστασίου) height. */
+export const DEFAULT_BUILDING_STAIR_PENTHOUSE_HEIGHT_M = 2.4;

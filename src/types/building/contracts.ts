@@ -147,6 +147,12 @@ export type {
     /** METRES — foundation depth below the lowest storey FFL (auto-derived datum). */
     foundationDepth?: number;
 
+    // ─── ADR-461: Stair penthouse special level (απόληξη κλιμακοστασίου) ────
+    /** Building has a stair-penthouse special level above the top storey (default true when ≥1 storey). */
+    hasStairPenthouse?: boolean;
+    /** METRES — stair-penthouse storey height (default 2.40). */
+    stairPenthouseHeight?: number;
+
     // ─── ADR-396 P8: Θερμική απόδοση (ΚΕΝΑΚ) ───────────────────────────────
     /**
      * Κλιματική ζώνη Ελλάδας (ΤΟΤΕΕ 20701-3) — καθορίζει το ανώτατο U_max για
