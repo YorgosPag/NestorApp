@@ -25,8 +25,9 @@
  */
 
 import type { Pair, Polygon } from 'polygon-clipping';
+import type { Point3D } from '../types/bim-base';
 import { safeDifference } from './shared/safe-polygon-boolean';
-import { multiPolygonArea } from './shared/polygon-utils';
+import { multiPolygonArea, pointInPolygon } from './shared/polygon-utils';
 import type { Pt2 } from './shared/segment-polygon-coverage';
 
 /** Σχετικό εμβαδικό όριο: αν αφαιρεθεί λιγότερο από αυτό → «μηδέν τομή» (identity). */
@@ -146,4 +147,104 @@ export function computeBeamCutbackNetAreaM2(
   const netArea = multiPolygonArea(diff);
   if (beamArea <= 0 || netArea >= beamArea * (1 - AREA_EPS_REL)) return null;
   return Math.max(0, netArea) * canvasToM2;
+}
+
+// ─── Axis-to-column contact (centerline) ────────────────────────────────────
+
+/** Αριθμητικό όριο για μη-εκφυλισμένο t / non-parallel cross product. */
+const AXIS_T_EPS = 1e-9;
+/**
+ * Μέγιστο t για επέκταση άκρου (anti-spurious-extend guard): t≤1.5 → ο άξονας
+ * επεκτείνεται το πολύ κατά 50% του μήκους του για να φτάσει σε παρειά κολόνας.
+ * Κολόνα που πλαισιώνει άκρο δοκαριού είναι πάντα πολύ πιο κοντά από αυτό.
+ */
+const AXIS_EXT_CAP = 1.5;
+
+const lerp2 = (a: Pt2, b: Pt2, t: number): Pt2 => ({ x: a.x + t * (b.x - a.x), y: a.y + t * (b.y - a.y) });
+
+/**
+ * Unclamped παράμετρος `t` κατά μήκος της ευθείας `a→b` (μπορεί <0 ή >1) όπου τέμνει
+ * την ακμή `p→q` (κρατάμε μόνο 0≤u≤1, η τομή πέφτει πάνω στην ακμή)· `null` όταν
+ * παράλληλες/collinear ή η τομή πέφτει εκτός ακμής.
+ */
+function lineEdgeT(a: Pt2, b: Pt2, p: Point3D, q: Point3D): number | null {
+  const dx = b.x - a.x;
+  const dy = b.y - a.y;
+  const ex = q.x - p.x;
+  const ey = q.y - p.y;
+  const denom = dx * ey - dy * ex;
+  if (Math.abs(denom) < AXIS_T_EPS) return null;
+  const apx = p.x - a.x;
+  const apy = p.y - a.y;
+  const u = (apx * dy - apy * dx) / denom; // κατά μήκος ακμής
+  if (u < -AXIS_T_EPS || u > 1 + AXIS_T_EPS) return null;
+  return (apx * ey - apy * ex) / denom; // κατά μήκος άξονα (unclamped)
+}
+
+/** Όλα τα crossings (unclamped t) της ευθείας `a→b` με τις ακμές ΟΛΩΝ των cutters. */
+function allLineCrossings(a: Pt2, b: Pt2, cutters: readonly (readonly Point3D[])[]): number[] {
+  const ts: number[] = [];
+  for (const poly of cutters) {
+    const n = poly.length;
+    for (let i = 0; i < n; i++) {
+      const t = lineEdgeT(a, b, poly[i], poly[(i + 1) % n]);
+      if (t !== null) ts.push(t);
+    }
+  }
+  return ts;
+}
+
+/**
+ * Νέα παράμετρος `t` του άκρου `b` (t=1) ώστε ο άξονας `a→b` να καταλήγει στην παρειά
+ * της κολόνας που πλαισιώνει αυτό το άκρο. `null` → καμία προσαρμογή.
+ *  - `b` ΜΕΣΑ σε κολόνα → pull-back στην εσωτερική παρειά (μεγαλύτερο crossing με t<1).
+ *  - `b` έξω, κολόνα πιο πέρα → extend στην κοντινή παρειά (μικρότερο crossing με t>1,
+ *    εντός `AXIS_EXT_CAP`).
+ */
+function contactT(a: Pt2, b: Pt2, cutters: readonly (readonly Point3D[])[]): number | null {
+  const ts = allLineCrossings(a, b, cutters);
+  if (ts.length === 0) return null;
+  const bInside = cutters.some((poly) => pointInPolygon(b, poly));
+  if (bInside) {
+    let best = -Infinity;
+    for (const t of ts) if (t < 1 - AXIS_T_EPS && t > best) best = t;
+    return best > -Infinity ? best : null;
+  }
+  let best = Infinity;
+  for (const t of ts) if (t > 1 + AXIS_T_EPS && t < best) best = t;
+  return best <= AXIS_EXT_CAP ? best : null;
+}
+
+/**
+ * Προσαρμόζει τα άκρα του straight-beam centerline ώστε όποιο πλαισιώνεται από κολόνα να
+ * καταλήγει ΑΚΡΙΒΩΣ στην παρειά της (σημείο επαφής δοκαριού-κολόνας, Revit location-line).
+ *
+ * DERIVED — ίδια column footprints με το cutback outline· τα footprints είναι ήδη
+ * world-rotated/composite-baked (`computeColumnGeometry`) → λοξά/περιστραμμένα δοκάρια
+ * δουλεύουν χωρίς ειδική μεταχείριση. Cheap reject: μόνο κολόνες με bbox που επικαλύπτει
+ * το beam outline. Split (κολόνα στη ΜΕΣΗ → 2 ελεύθερα άκρα) → κανένα crossing κοντά σε
+ * άκρο → identity (DEFER axis-split).
+ *
+ * @returns `[newStart, newEnd]` ή `null` (καμία προσαρμογή → ο caller κρατά τον αρχικό άξονα).
+ */
+export function computeBeamAxisToColumnContact(
+  axisStart: Pt2,
+  axisEnd: Pt2,
+  beamOutline: readonly Pt2[],
+  columnFootprints: readonly (readonly Point3D[])[],
+): [Pt2, Pt2] | null {
+  if (beamOutline.length < 3 || columnFootprints.length === 0) return null;
+  const beamBbox = bboxOf(beamOutline);
+  const cutters = columnFootprints.filter((fp) => fp.length >= 3 && bboxOverlap(beamBbox, bboxOf(fp)));
+  if (cutters.length === 0) return null;
+
+  // Άκρο end (t=1): a=start,b=end. Άκρο start: συμμετρικά με a=end,b=start.
+  const tEnd = contactT(axisStart, axisEnd, cutters);
+  const tStart = contactT(axisEnd, axisStart, cutters);
+  if (tEnd === null && tStart === null) return null;
+
+  return [
+    tStart !== null ? lerp2(axisEnd, axisStart, tStart) : axisStart,
+    tEnd !== null ? lerp2(axisStart, axisEnd, tEnd) : axisEnd,
+  ];
 }

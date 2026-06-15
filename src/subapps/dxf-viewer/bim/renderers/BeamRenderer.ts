@@ -173,8 +173,9 @@ export class BeamRenderer extends BaseEntityRenderer {
     this.buildPiecesPath(drawable);
     this.ctx.stroke();
 
-    // Axis centerline — thinner dashed.
-    const axis = beam.geometry.axisPolyline.points;
+    // Axis centerline — thinner dashed. ADR-458: αν υπάρχει DERIVED `displayAxisPolyline`
+    // (άκρο προσαρμοσμένο στην παρειά κολόνας) → αυτό· αλλιώς ο αρχικός άξονας αυτούσιος.
+    const axis = (beam.geometry.displayAxisPolyline ?? beam.geometry.axisPolyline).points;
     if (axis.length >= 2) {
       this.ctx.setLineDash(AXIS_DASH as unknown as number[]);
       this.ctx.lineWidth = RENDER_LINE_WIDTHS.THIN;

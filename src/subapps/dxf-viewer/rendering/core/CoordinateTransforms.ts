@@ -12,6 +12,7 @@
 
 import type { Point2D, ViewTransform, Viewport } from '../types/Types';
 import { createModuleLogger } from '@/lib/telemetry';
+import { getCachedClientRect } from './pointer-rect-cache';
 
 const logger = createModuleLogger('CoordinateTransforms');
 
@@ -287,7 +288,9 @@ export interface PointerSnapshot {
  * CRITICAL: This is the ONLY way to get bounds/viewport for transforms!
  * - rect and viewport come from the SAME element at the SAME moment
  * - viewport is derived from rect (not clientWidth) for 1:1 consistency
- * - No caching, no service calls - fresh read every time
+ * - rect is served from `getCachedClientRect` (ADR-040 cursor-lag Φ5): the cache
+ *   re-reads getBoundingClientRect ONLY on resize / scroll / mousedown, so the
+ *   high-frequency mousemove path no longer forces a sync reflow per event.
  *
  * @param element - The event target element (typically e.currentTarget)
  * @returns PointerSnapshot with rect and viewport, or null if invalid
@@ -298,8 +301,9 @@ export function getPointerSnapshotFromElement(element: HTMLElement | null): Poin
     return null;
   }
 
-  // 🎯 CRITICAL: Fresh rect from DOM - no caching!
-  const rect = element.getBoundingClientRect();
+  // ADR-040 cursor-lag Φ5: cached rect (re-read only on resize/scroll/mousedown)
+  // instead of a forced reflow on every mousemove.
+  const rect = getCachedClientRect(element);
 
   // 🏢 ENTERPRISE: Strict validation - fail-fast
   if (rect.width <= 0 || rect.height <= 0) {

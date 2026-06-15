@@ -224,6 +224,15 @@ export interface BeamGeometry {
    * (`applyBeamColumnCutback2D`) από τα live column footprints — μηδέν stale persisted γεωμετρία.
    */
   readonly displayOutline?: readonly (readonly Point3D[])[];
+  /**
+   * ADR-458 — DERIVED (ΠΟΤΕ persisted) άξονας (centerline) προσαρμοσμένος ώστε κάθε άκρο
+   * που πλαισιώνεται από κολόνα να καταλήγει ΑΚΡΙΒΩΣ στην παρειά της (σημείο επαφής —
+   * Revit location-line σύμβαση): pull-back όταν ο άξονας μπαίνει μέσα, extend όταν
+   * σταματά πριν. **Απών** → κανένα cut → render διαβάζει το `axisPolyline` (αυτούσιο).
+   * Υπολογίζεται στο ίδιο scene-conversion post-pass με το `displayOutline`
+   * (`applyBeamColumnCutback2D`) από τα live column footprints — μηδέν stale persisted.
+   */
+  readonly displayAxisPolyline?: Polyline3D;
 }
 
 // ─── Entity (BIM generic instantiation) ─────────────────────────────────────
