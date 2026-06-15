@@ -45,11 +45,19 @@
 - Γιατί post-pass (όχι `convertEntity`): το trim εξαρτάται από ΑΛΛΑ entities (τις κολόνες) → δεν χωράει στο per-entity cache (κλειδώνει στο beam ref· κολόνα κινείται, beam ref ίδιο → stale). Wired και στις δύο διαδρομές (`convertSceneToDxf` + hook `useMemo`).
 - `BeamRenderer` διαβάζει `geometry.displayOutline ?? [outline.vertices]` σε **fill / stroke / hover / hatch-clip / hit-test** (multi-piece μέσω `buildPiecesPath`) → ίδια γεωμετρία σε bitmap pass, interactive overlay ΚΑΙ hit-test (ένα entity, μία αλήθεια). **ADR-040-safe** (pure draw, zero subscriptions· CHECK 6D — ADR-040 staged).
 
+### 3.5 Άξονας στο σημείο επαφής (centerline-to-column-contact, Revit location-line)
+
+Ο διακεκομμένος **κεντρικός άξονας** του δοκαριού πρέπει να καταλήγει ΑΚΡΙΒΩΣ στην παρειά της κολόνας που πλαισιώνει το άκρο του (σημείο επαφής), όχι να μπαίνει μέσα ούτε να σταματά πριν — Revit location-line σύμβαση.
+
+- Pure SSoT `computeBeamAxisToColumnContact(axisStart, axisEnd, beamOutline, columnFootprints) → [Pt2,Pt2] | null` (στο `beam-column-cutback.ts`). Ανά άκρο: **pull-back** (άκρο μέσα σε κολόνα → εσωτερική παρειά = μεγαλύτερο crossing με t<1) ή **extend** (άκρο έξω, κολόνα πιο πέρα με body-overlap → κοντινή παρειά = μικρότερο crossing με t>1, εντός `AXIS_EXT_CAP=1.5`). Unclamped line-edge `t` + `pointInPolygon` (SSoT `polygon-utils`). Cheap bbox-reject (ίδιο με το outline cutback). `null` → identity (ο caller κρατά τον αρχικό άξονα).
+- **DERIVED `geometry.displayAxisPolyline?: Polyline3D`** (mirror του `displayOutline`, ΠΟΤΕ persisted). Το ίδιο post-pass `applyBeamColumnCutback2D` το θέτει μαζί με το `displayOutline` (μόνο straight 2-σημείων άξονας + κομμάτια>0· curved/split → αυτούσιος, DEFER axis-split).
+- `BeamRenderer` line 177: `(geometry.displayAxisPolyline ?? geometry.axisPolyline).points`. **ADR-040-safe** (pure read). 2Δ-only — 3Δ/BOQ αμετάβλητα. +5 jest.
+
 ---
 
 ## 4. Persistence
 
-`BeamGeometry.displayOutline?` είναι **optional + DERIVED**. Ο beam serializer παραλείπει το `geometry` (re-derivable). Το trimmed outline **ΔΕΝ persist-άρεται ΠΟΤΕ** — re-derived client-side από persisted `params` + live column footprints σε κάθε scene reconcile. Συνεπές με σοβά (ADR-449) + foundation net (ADR-441 Slice 4).
+`BeamGeometry.displayOutline?` / `displayAxisPolyline?` είναι **optional + DERIVED**. Ο beam serializer παραλείπει το `geometry` (re-derivable). Το trimmed outline **ΔΕΝ persist-άρεται ΠΟΤΕ** — re-derived client-side από persisted `params` + live column footprints σε κάθε scene reconcile. Συνεπές με σοβά (ADR-449) + foundation net (ADR-441 Slice 4).
 
 ---
 
@@ -60,9 +68,11 @@
 - Hole-aware 2Δ rendering (κολόνα εξ ολοκλήρου μέσα σε δοκάρι → το net **area** είναι σωστό· το rendered outline παραλείπει το hole — δεν προκύπτει σε τυπικά πλαίσια όπου η κολόνα είναι φαρδύτερη).
 - Curved beam cutback (straight/cantilever rectangular v1).
 - Priority overrides (πάντα στήλες > δοκάρια· user-defined join order = μετέπειτα).
+- **Axis-split** (διαμπερής κολόνα στο ΜΕΣΟ → ο άξονας μένει ενιαίος αντί να σπάει σε 2 κομμάτια· τα 2 ελεύθερα άκρα δεν χρειάζονται προσαρμογή — μόνο τα framed-into-column).
 
 ---
 
 ## 6. Changelog
 
+- **2026-06-15** — **v2 axis-to-contact IMPLEMENTED (Opus, UNCOMMITTED).** Ο διακεκομμένος κεντρικός άξονας του δοκαριού δεν κατέληγε στην παρειά της κολόνας (έμπαινε μέσα ή σταματούσε πριν). NEW pure `computeBeamAxisToColumnContact` (pull-back/extend ανά άκρο, `AXIS_EXT_CAP=1.5`, unclamped line-edge t + SSoT `pointInPolygon`) + DERIVED `BeamGeometry.displayAxisPolyline` (mirror `displayOutline`, ΠΟΤΕ persisted) που το ίδιο post-pass `applyBeamColumnCutback2D` θέτει + `BeamRenderer` reads `displayAxisPolyline ?? axisPolyline`. 2Δ-only (3Δ/BOQ αμετάβλητα). +5 jest (σύνολο 18). ADR-040-safe. DEFER axis-split (διαμπερής μεσαία κολόνα). 🔴 browser-verify (άξονας καταλήγει στην παρειά κολόνας σε περιστραμμένο δοκάρι) + commit. ΣΗΜ: τα grips ΠΑΡΑΜΕΝΟΥΝ στο ορθογώνιο (Revit-correct — location-line editable geometry, όχι το visual cut· συνειδητή απόφαση Giorgio 2026-06-15).
 - **2026-06-15** — **v1 (Slices B1-B4) IMPLEMENTED (Opus, UNCOMMITTED).** Firestore-first repro (`col_fb3215e9…` Γ-shape rotation 15° height 4000 storey-ceiling 3000· `beam_d9d8da55…` straight top 3000): το δυτικό ~47mm του δοκαριού έμπαινε στη λοξή παρειά της κολόνας χωρίς κοπή. B1 pure SSoT `beam-column-cutback.ts` (`computeBeamCutbackOutline`/`computeBeamCutbackNetAreaM2`, safeDifference, fast-path identity, 7 jest). B2 3Δ `beamToMesh` (per-piece `extrudeShapesAndRotate`). B3 BOQ net core (`beamNetCoreGeometry`, mirror foundation net, +2 jest). B4 2Δ post-pass `applyBeamColumnCutback2D` → `BeamGeometry.displayOutline` → `BeamRenderer` multi-piece (fill/stroke/hover/hatch/hit-test, +4 jest). Σύνολο 13 νέα jest. ΜΑΘΗΜΑ: cross-element derived geometry δεν χωράει στο per-entity cache → post-pass πάνω στο converted array. 🔴 browser-verify (2Δ+3Δ κοπή στη λοξή παρειά· BOQ net) + tsc(Giorgio) + commit.
