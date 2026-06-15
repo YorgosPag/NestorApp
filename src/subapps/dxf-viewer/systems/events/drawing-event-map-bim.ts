@@ -280,6 +280,10 @@ export interface BimEventMap {
   // AttachColumnsCommand. UI surfaces a non-blocking info toast (Revit parity).
   'bim:columns-auto-attached': { columnIds: string[]; hostId: string };
   'bim:columns-auto-attached-base': { columnIds: string[]; hostId: string };
+  // ADR-459 Phase 2 — N κολόνες εδραίωσαν το αναλυτικό FK πεδίλου (footingId) προς
+  // ΕΝΑ footing element (auto, δημιουργία πεδίλου/κολόνας). Undoable via
+  // AttachColumnFootingCommand. Triggers structural-organism recompute.
+  'bim:column-footing-attached': { columnIds: string[]; footingId: string };
   // ADR-401 Phase F.3 — manual attach/detach of column top/base (ribbon pick-host).
   'bim:columns-attached-manual': { side: 'top' | 'base'; columnIds: string[]; hostId: string };
   'bim:columns-detached': { side: 'top' | 'base'; columnIds: string[] };

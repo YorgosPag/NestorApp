@@ -31,6 +31,13 @@ import {
   findColumnsToAutoAttachBaseToHost,
   findColumnsFramedByBeam,
 } from '../bim/columns/column-structural-attach-coordinator';
+// ADR-459 Phase 2 — αναλυτικό FK πεδίλου↔κολόνας (Structural Connectivity).
+import {
+  findColumnsOnFooting,
+  findFootingForColumn,
+} from '../bim/foundations/foundation-column-attach-coordinator';
+import { isFootingElement } from '../bim/foundations/footing-element-summary';
+import { AttachColumnFootingCommand } from '../core/commands/entity-commands/AttachColumnFootingCommand';
 import {
   findStairsToAutoAttachToHost,
   findStairsToAutoAttachBaseToHost,
@@ -177,6 +184,34 @@ function attachWallToSurroundingHosts(
   }
 }
 
+/**
+ * ADR-459 Phase 2 (αμφίδρομα) — εδραίωση του αναλυτικού FK `footingId`:
+ *   (α) νέο **footing element** (πέδιλο/πεδιλοδοκός/εδαφόπλακα) → attach όσες
+ *       κολόνες (χωρίς footingId) εδράζονται από πάνω.
+ *   (β) νέα **κολόνα** πάνω σε υπάρχον footing → attach στο footing από κάτω.
+ * Geometry-neutral (αναλυτική σύνδεση)· detection στον foundation-column-attach-
+ * coordinator. No-op όταν το νέο entity δεν είναι footing/κολόνα.
+ */
+function attachFootingColumnFK(
+  created: Entity, entities: readonly Entity[], sm: ISceneManager, execute: ExecuteFn,
+): void {
+  if (isFootingElement(created)) {
+    const columnIds = findColumnsOnFooting(created, entities);
+    if (columnIds.length > 0) {
+      execute(new AttachColumnFootingCommand(created.id, columnIds, sm));
+      EventBus.emit('bim:column-footing-attached', { columnIds, footingId: created.id });
+    }
+    return;
+  }
+  if (isColumnEntity(created)) {
+    const footingId = findFootingForColumn(created, entities);
+    if (footingId) {
+      execute(new AttachColumnFootingCommand(footingId, [created.id], sm));
+      EventBus.emit('bim:column-footing-attached', { columnIds: [created.id], footingId });
+    }
+  }
+}
+
 export function useStructuralAutoAttach(props: { levelManager: LevelManagerLike }): void {
   const { levelManager } = props;
   const { execute } = useCommandHistory();
@@ -204,6 +239,8 @@ export function useStructuralAutoAttach(props: { levelManager: LevelManagerLike 
       if (!isFoundationRaft) attachEntitiesUnderHost(created, entities, sm, execute);
       // Φορά 2 (αντίστροφη): νέος τοίχος → attach κορυφή/βάση στους γύρω hosts.
       if (isWallEntity(created)) attachWallToSurroundingHosts(created, entities, sm, execute);
+      // ADR-459 Phase 2 — αναλυτικό FK πεδίλου↔κολόνας (αμφίδρομα).
+      attachFootingColumnFK(created, entities, sm, execute);
     });
     return () => unsub();
   }, [levelManager, execute]);

@@ -310,6 +310,18 @@ export interface ColumnParams {
    */
   readonly attachBaseToIds?: readonly string[];
   /**
+   * ADR-459 Phase 2 — Αναλυτικό FK προς το πέδιλο που στηρίζει τη ΒΑΣΗ της κολόνας
+   * (Revit Structural Connectivity). Δείχνει σε `FoundationEntity.id` (pad/strip)
+   * **ή** σε εδαφόπλακα-θεμελίωσης (`SlabEntity` kind foundation/ground) — ό,τι
+   * αποτελεί «footing node» στον στατικό οργανισμό. **Αμιγώς αναλυτικό**: ΔΕΝ
+   * μετακινεί τη βάση της κολόνας (το φυσικό base-attach είναι ξεχωριστό —
+   * `attachBaseToIds`/ADR-401). Optional/non-breaking: absent = καμία ρητή έδραση
+   * (ο οργανισμός πέφτει σε spatial-coincidence fallback). Set από τον
+   * `AttachColumnFootingCommand` (auto/manual). Το reverse (πέδιλο→κολόνες) μένει
+   * DERIVED στον graph (αποφυγή drift).
+   */
+  readonly footingId?: string;
+  /**
    * ADR-363 Phase 8E — Catalog profile ID (e.g. 'IPE-300', 'C25/30').
    * Persisted so BOQ and re-opened drawings show the standard section name.
    * Undefined / absent = user-defined ("Custom"). Revit-style pattern.

@@ -54,3 +54,30 @@ describe('buildStructuralGraph', () => {
     expect(missing.map((d) => d.primaryEntityId)).toEqual(['C2']);
   });
 });
+
+const columnWithFooting = (id: string, cx: number, footingId: string): Entity =>
+  ({
+    id,
+    type: 'column',
+    params: { baseBinding: 'storey-floor', baseOffset: 0, height: 3000, attachTopToIds: [], footingId },
+    geometry: { footprint: squareFootprint(cx, 0, 0.25) },
+  } as unknown as Entity);
+
+describe('buildStructuralGraph — explicit-FK-wins (ADR-459 Phase 2)', () => {
+  it('uses the explicit footingId edge even when the column is off the footprint', () => {
+    // C1 κάθεται στο cx=5 (ΕΚΤΟΣ pad), αλλά footingId='F1' → authoritative ακμή.
+    const graph = buildStructuralGraph([pad, columnWithFooting('C1', 5, 'F1')]);
+    const bearing = graph.edges.filter((e) => e.kind === 'footing-bearing');
+    expect(bearing).toMatchObject([{ supportId: 'F1', supportedId: 'C1' }]);
+    expect(runOrganismChecks(graph).filter((d) => d.code === 'columnMissingFooting')).toHaveLength(0);
+  });
+
+  it('a stale footingId (no matching node) yields no edge → «λείπει το πέδιλο»', () => {
+    // C1 κάθεται ΠΑΝΩ στο pad (cx=0), αλλά footingId δείχνει σε ανύπαρκτο node →
+    // explicit FK authoritative → καμία ακμή → error (spatial fallback ΔΕΝ τρέχει).
+    const graph = buildStructuralGraph([pad, columnWithFooting('C1', 0, 'ghost')]);
+    expect(graph.edges.filter((e) => e.kind === 'footing-bearing')).toHaveLength(0);
+    const missing = runOrganismChecks(graph).filter((d) => d.code === 'columnMissingFooting');
+    expect(missing.map((d) => d.primaryEntityId)).toEqual(['C1']);
+  });
+});

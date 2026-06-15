@@ -17,33 +17,24 @@
  */
 
 import type { Entity } from '../../../types/entities';
+import { isColumnEntity, isBeamEntity } from '../../../types/entities';
 import {
-  isColumnEntity,
-  isBeamEntity,
-  isFoundationEntity,
-  isSlabEntity,
-} from '../../../types/entities';
-import { isPointInPolygon } from '../../../utils/geometry/GeometryUtils';
+  footingSupportsColumnBase,
+  polygonCentroid,
+} from '../../foundations/footing-column-coverage';
+import { isFootingElement, resolveFootingSummary } from '../../foundations/footing-element-summary';
 import { mmToSceneUnits } from '../../../utils/scene-units';
 import { resolveColumnBaseZmm } from '../../geometry/column-vertical-profile';
-import { beamHostInput, slabHostInput } from '../../geometry/wall-host-plan-builder';
+import { beamHostInput } from '../../geometry/wall-host-plan-builder';
 import { findColumnsFramedByBeam } from '../../columns/column-structural-attach-coordinator';
 import type { ColumnEntity } from '../../types/column-types';
 import type { BeamEntity } from '../../types/beam-types';
-import type { FoundationEntity } from '../../types/foundation-types';
-import type { SlabEntity } from '../../types/slab-types';
 import type {
   OrganismPoint,
   StructuralEdge,
   StructuralGraph,
   StructuralNode,
 } from './structural-organism-types';
-
-/**
- * mm. Ένα πέδιλο στηρίζει τη βάση κολόνας μόνο όταν η άνω παρειά του δεν είναι
- * ΠΑΝΩ από τη βάση της κολόνας (ίδια λογική με τον AUTO_ATTACH_Z_GATE_MM).
- */
-const FOOTING_Z_GATE_MM = 1;
 
 /** Point3D[] (ή Pt2[]) → plan polygon (canvas units, x/y μόνο). */
 function toPlan(vertices: readonly { x: number; y: number }[]): OrganismPoint[] {
@@ -52,32 +43,17 @@ function toPlan(vertices: readonly { x: number; y: number }[]): OrganismPoint[] 
 
 // ─── Node builders ───────────────────────────────────────────────────────────
 
-function foundationNode(f: FoundationEntity): StructuralNode | null {
-  const verts = f.geometry?.footprint?.vertices;
-  if (!verts || verts.length < 3) return null;
-  const topZmm = f.params.topElevationMm;
+/** Footing node (πέδιλο/πεδιλοδοκός/συνδετήρια ή εδαφόπλακα) μέσω SSoT summary. */
+function footingNode(e: Entity): StructuralNode | null {
+  const s = resolveFootingSummary(e);
+  if (!s) return null;
   return {
-    id: f.id,
+    id: e.id,
     memberKind: 'footing',
-    entityType: 'foundation',
-    footprint: toPlan(verts),
-    baseZmm: topZmm - f.params.thicknessMm,
-    topZmm,
-  };
-}
-
-/** Foundation/ground πλάκα (raft/εδαφόπλακα) = footing node (έδραση από κάτω). */
-function foundationSlabNode(s: SlabEntity): StructuralNode | null {
-  const input = slabHostInput(s);
-  if (input.footprint.length < 3) return null;
-  const topZmm = input.topsideZmm ?? input.undersideZmm;
-  return {
-    id: s.id,
-    memberKind: 'footing',
-    entityType: 'foundation-slab',
-    footprint: toPlan(input.footprint),
-    baseZmm: input.undersideZmm,
-    topZmm,
+    entityType: s.entityType,
+    footprint: s.footprint,
+    baseZmm: s.baseZmm,
+    topZmm: s.topZmm,
   };
 }
 
@@ -90,6 +66,7 @@ function columnNode(c: ColumnEntity): StructuralNode | null {
     memberKind: 'column',
     entityType: 'column',
     footprint: toPlan(verts),
+    footingId: c.params.footingId,
     baseZmm,
     topZmm: baseZmm + c.params.height,
   };
@@ -113,16 +90,11 @@ function beamNode(b: BeamEntity): StructuralNode {
   };
 }
 
-function isFoundationSlab(e: Entity): e is SlabEntity {
-  return isSlabEntity(e) && (e.kind === 'foundation' || e.kind === 'ground');
-}
-
 function buildNodes(entities: readonly Entity[]): StructuralNode[] {
   const nodes: StructuralNode[] = [];
   for (const e of entities) {
     let node: StructuralNode | null = null;
-    if (isFoundationEntity(e)) node = foundationNode(e);
-    else if (isFoundationSlab(e)) node = foundationSlabNode(e);
+    if (isFootingElement(e)) node = footingNode(e);
     else if (isColumnEntity(e)) node = columnNode(e);
     else if (isBeamEntity(e)) node = beamNode(e);
     if (node) nodes.push(node);
@@ -134,32 +106,36 @@ function buildNodes(entities: readonly Entity[]): StructuralNode[] {
 
 const edgeId = (s: string, t: string, k: string): string => `${s}->${t}:${k}`;
 
-/** Plan-centroid ενός footprint (μέσος όρος κορυφών). */
-function centroid(poly: readonly OrganismPoint[]): OrganismPoint {
-  let x = 0;
-  let y = 0;
-  for (const p of poly) {
-    x += p.x;
-    y += p.y;
-  }
-  return { x: x / poly.length, y: y / poly.length };
-}
+const footingEdge = (footingId: string, columnId: string): StructuralEdge => ({
+  id: edgeId(footingId, columnId, 'footing-bearing'),
+  supportId: footingId,
+  supportedId: columnId,
+  kind: 'footing-bearing',
+});
 
 /**
- * footing-bearing ακμές: για κάθε κολόνα, βρες footing nodes (πέδιλο/εδαφόπλακα)
- * που (α) καλύπτουν στο plan το κέντρο της βάσης της και (β) έχουν άνω παρειά
- * όχι ψηλότερα από τη βάση της κολόνας.
+ * footing-bearing ακμές (ADR-459 Phase 2 — explicit-FK-wins):
+ *   - Αν η κολόνα έχει ρητό `footingId` που δείχνει σε υπαρκτό footing node →
+ *     ΜΟΝΟ αυτή η ακμή (authoritative)· stale FK → καμία ακμή → `columnMissingFooting`.
+ *   - Αλλιώς (legacy/μη-attached): spatial-coincidence fallback μέσω του SSoT
+ *     κριτηρίου `footingSupportsColumnBase` (πέδιλα/εδαφόπλακες που καλύπτουν στο
+ *     plan το κέντρο βάσης + άνω παρειά όχι ψηλότερα από τη βάση).
  */
 function buildFootingEdges(nodes: readonly StructuralNode[]): StructuralEdge[] {
   const footings = nodes.filter((n) => n.memberKind === 'footing' && n.footprint);
+  const footingIds = new Set(footings.map((f) => f.id));
   const columns = nodes.filter((n) => n.memberKind === 'column' && n.footprint);
   const edges: StructuralEdge[] = [];
   for (const col of columns) {
-    const base = centroid(col.footprint!);
+    if (col.footingId !== undefined) {
+      if (footingIds.has(col.footingId)) edges.push(footingEdge(col.footingId, col.id));
+      continue; // ρητό FK = authoritative → δεν πέφτουμε σε spatial
+    }
+    const baseCentroid = polygonCentroid(col.footprint!);
     for (const f of footings) {
-      if (f.topZmm > col.baseZmm + FOOTING_Z_GATE_MM) continue;
-      if (!isPointInPolygon(base, [...f.footprint!])) continue;
-      edges.push({ id: edgeId(f.id, col.id, 'footing-bearing'), supportId: f.id, supportedId: col.id, kind: 'footing-bearing' });
+      if (footingSupportsColumnBase({ footprint: f.footprint!, topZmm: f.topZmm }, { baseCentroid, baseZmm: col.baseZmm })) {
+        edges.push(footingEdge(f.id, col.id));
+      }
     }
   }
   return edges;

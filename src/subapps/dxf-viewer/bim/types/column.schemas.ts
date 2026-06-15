@@ -192,6 +192,8 @@ const ColumnParamsBaseSchema = z
     // ─── ADR-401 Phase F — Attach-to-structural (mirror wall.schemas.ts) ───────
     attachTopToIds: z.array(z.string().min(1)).optional(),
     attachBaseToIds: z.array(z.string().min(1)).optional(),
+    // ─── ADR-459 Phase 2 — αναλυτικό FK πεδίλου (Structural Connectivity) ───────
+    footingId: z.string().min(1).optional(),
     // ─── ADR-396 P7 — ETICS exterior insulation layer (Z1) ───────────────────
     envelopeLayer: EnvelopeLayerSchema.optional(),
     // ─── ADR-396 v2 Φάση 4 — ETICS classification override (Στρ.3) ─────────────

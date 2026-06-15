@@ -60,6 +60,13 @@ export interface StructuralNode {
   readonly axis?: StructuralMemberAxis;
   /** Beam-only: support condition (cantilever ⇒ θεμιτό ελεύθερο άκρο). */
   readonly supportType?: 'simple' | 'fixed' | 'cantilever';
+  /**
+   * Column-only (ADR-459 Phase 2): αναλυτικό FK προς το footing node που στηρίζει
+   * τη βάση (`ColumnParams.footingId`). Όταν υπάρχει & δείχνει σε υπαρκτό footing
+   * node → η `footing-bearing` ακμή παράγεται ΑΠΟ ΑΥΤΟ (explicit-FK-wins)· αλλιώς
+   * spatial-coincidence fallback. Absent = legacy/μη-attached.
+   */
+  readonly footingId?: string;
   /** Absolute mm — κάτω παρειά (base) του μέλους. */
   readonly baseZmm: number;
   /** Absolute mm — άνω παρειά (top) του μέλους. */

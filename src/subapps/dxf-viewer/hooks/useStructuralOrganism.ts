@@ -45,6 +45,7 @@ const ORGANISM_EVENTS: readonly DrawingEventType[] = [
   'bim:beams-from-grid',
   'bim:columns-auto-attached',
   'bim:columns-auto-attached-base',
+  'bim:column-footing-attached',
 ];
 
 export function useStructuralOrganism(props: { levelManager: LevelManagerLike }): void {
