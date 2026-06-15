@@ -41,10 +41,11 @@ import { markSystemsDirty } from '../../rendering/core/UnifiedFrameScheduler';
 // by registerDirectRender below), and the live layer-canvas no longer draws any
 // cursor-frequency content (snap → SnapIndicatorSubscriber; selection box →
 // dxf-canvas; overlay-hover/draft → own `layers`-prop dirty path). So a plain
-// mousemove must NOT force a full layer-canvas repaint. ('crosshair-overlay' was
-// never a registered scheduler system — the entry was a no-op since Phase 2.)
+// mousemove must NOT force a full layer-canvas repaint. (ADR-040 Φ10: the dead
+// 'crosshair-overlay' id — never a registered scheduler system, a no-op since
+// Phase 2 — was removed; the compositor crosshair updates via registerDirectRender.)
 // Pan still repaints layer-canvas via PAN_SYNC_CANVAS_IDS (transform changes).
-const PAN_SYNC_CANVAS_IDS = ['dxf-canvas', 'layer-canvas', 'crosshair-overlay'];
+const PAN_SYNC_CANVAS_IDS = ['dxf-canvas', 'layer-canvas'];
 
 type PositionListener = (position: Point2D | null) => void;
 type DirectRenderCallback = (position: Point2D | null) => void;

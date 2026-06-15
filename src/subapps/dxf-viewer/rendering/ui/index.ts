@@ -36,8 +36,8 @@ export type {
 export { DEFAULT_CROSSHAIR_SETTINGS } from './crosshair/CrosshairTypes';
 
 // === CURSOR RENDERING ===
-export { CursorRenderer } from './cursor/CursorRenderer';
-export { LegacyCursorAdapter } from './cursor/LegacyCursorAdapter';
+// ADR-040 Φ10: CursorRenderer + LegacyCursorAdapter deleted (dead — the compositor
+// <CrosshairOverlay> owns the cursor/pickbox). Types kept (UICursorSettings used by CanvasSettings).
 export type {
   UICursorSettings,
   CursorRenderData,

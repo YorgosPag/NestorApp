@@ -3,15 +3,13 @@
  * ADR-065: Extracted from LayerRenderer.ts for SRP compliance
  */
 
-import type { CrosshairSettings } from '../../rendering/ui/crosshair/CrosshairTypes';
-import type { CursorSettings } from '../../systems/cursor/config';
 import type { SnapSettings, GridSettings, RulerSettings, SelectionSettings, LayerRenderOptions } from './layer-types';
 import type { UIElementSettings } from '../../rendering/ui/core/UIRenderer';
 
 /** Parameters for UI settings creation */
+// ADR-040 Φ10: crosshairSettings/cursorSettings removed — the canvas crosshair/cursor
+// are gone (compositor <CrosshairOverlay> owns them); only snap/grid/ruler/selection remain.
 interface UISettingsParams {
-  crosshairSettings: CrosshairSettings;
-  cursorSettings: CursorSettings;
   snapSettings: SnapSettings;
   gridSettings: GridSettings;
   rulerSettings: RulerSettings;
@@ -25,8 +23,6 @@ interface UISettingsParams {
  */
 export function createLayerUISettings(params: UISettingsParams): Map<string, UIElementSettings> {
   const {
-    crosshairSettings,
-    cursorSettings,
     snapSettings,
     gridSettings,
     rulerSettings,
@@ -56,25 +52,7 @@ export function createLayerUISettings(params: UISettingsParams): Map<string, UIE
     } as UIElementSettings);
   }
 
-  // Crosshair settings
-  if (options.showCrosshair && crosshairSettings.enabled && options.crosshairPosition) {
-    settings.set('crosshair', {
-      ...crosshairSettings,
-      enabled: true,
-      visible: true,
-      opacity: 1.0
-    } as UIElementSettings);
-  }
-
-  // Cursor settings
-  if (options.showCursor && cursorSettings.cursor.enabled && options.cursorPosition) {
-    settings.set('cursor', {
-      ...cursorSettings,
-      enabled: true,
-      visible: true,
-      opacity: 1.0
-    } as UIElementSettings);
-  }
+  // ADR-040 Φ10: dead canvas crosshair + cursor branches removed (compositor owns them).
 
   // Snap settings
   if (options.showSnapIndicators && snapSettings.enabled && options.snapResults?.length) {

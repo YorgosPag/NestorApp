@@ -16,6 +16,7 @@
 import { useEffect, useRef } from 'react';
 import type { ViewTransform, Point2D } from '../../rendering/types/Types';
 import { CoordinateTransforms } from '../../rendering/core/CoordinateTransforms';
+import { getCachedClientRect } from '../../rendering/core/pointer-rect-cache';
 import { TrimToolStore } from '../../systems/trim/TrimToolStore';
 
 /** Screen-space pixel threshold for click-vs-drag discrimination. */
@@ -40,7 +41,7 @@ export function useTrimDragCapture(props: UseTrimDragCaptureProps): void {
     if (!el) return;
 
     function screenToWorld(screenX: number, screenY: number): Point2D {
-      const rect = el!.getBoundingClientRect();
+      const rect = getCachedClientRect(el!); // Φ5 cache — no per-move reflow (ADR-040 Φ10)
       const viewport = { width: rect.width, height: rect.height };
       return CoordinateTransforms.screenToWorld(
         { x: screenX - rect.left, y: screenY - rect.top },

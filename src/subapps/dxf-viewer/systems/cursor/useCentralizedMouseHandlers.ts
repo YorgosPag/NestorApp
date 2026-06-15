@@ -4,7 +4,7 @@
  * ADR-065 SRP split: 988 lines -> 4 files (types, move, up, main)
  */
 
-import { useCallback, useRef, useState, useMemo } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { LassoStore } from './LassoStore';
 import { ZoomWindowStore } from '../zoom-window/ZoomWindowStore';
 import { useCursor } from './CursorSystem';
@@ -16,7 +16,6 @@ import {
   screenToWorldWithSnapshot,
 } from '../../rendering/core/CoordinateTransforms';
 import { canvasEventBus } from '../../rendering/canvas/core/CanvasEventSystem';
-import type { Entity } from '../../types/entities';
 import { isInDrawingMode } from '../tools/ToolStateManager';
 import { isRegionBoxSelectTool } from '../tools/region-tool-ids';
 import { clamp } from '../../rendering/entities/shared/geometry-utils';
@@ -68,32 +67,12 @@ export function useCentralizedMouseHandlers(
   // Snap system
   const { snapEnabled } = useSnapContext();
 
-  // Convert color layer polygons to snap-compatible entities
-  const overlaySnapEntities = useMemo<Entity[]>(() => {
-    if (!colorLayers || colorLayers.length === 0) return [];
-    const entities: Entity[] = [];
-    for (const layer of colorLayers) {
-      if (!layer.visible || layer.isDraft) continue;
-      for (const polygon of layer.polygons) {
-        if (polygon.vertices.length < 2) continue;
-        entities.push({
-          id: `overlay_${layer.id}_${polygon.id}`,
-          type: 'lwpolyline' as const,
-          vertices: polygon.vertices,
-          closed: true,
-          layerId: layer.id,
-          color: layer.color,
-        } satisfies Entity);
-      }
-    }
-    return entities;
-  }, [colorLayers]);
-
+  // ADR-040 Φ10: removed the dead `overlaySnapEntities` useMemo (O(n) over all
+  // overlay polygons on every colorLayers change) — it fed `useSnapManager`'s
+  // `overlayEntities` arg, which is @deprecated/no-op (scene-init is owned by
+  // `useGlobalSnapSceneSync`, ADR-040). `useSnapManager` reads only `scale`.
   const { findSnapPoint } = useSnapManager(activeCanvasRef, {
-    scene: scene as import('../../types/scene').SceneModel | null,
-    overlayEntities: overlaySnapEntities,
     scale: transform.scale,
-    onSnapPoint: () => {}
   });
 
   // SSoT note (ADR-040 Φ9): every `setSnapResults` call in mouse-handler-move is

@@ -166,14 +166,12 @@ export interface SelectionBox {
 import type { GripSettings } from '../../types/gripSettings';
 
 export interface LayerRenderOptions {
-  showCrosshair: boolean;
-  showCursor: boolean;
+  // ADR-040 Φ10: showCrosshair/showCursor/crosshairPosition/cursorPosition removed —
+  // the compositor <CrosshairOverlay> is the sole crosshair/cursor renderer.
   showSnapIndicators: boolean;
   showGrid: boolean;
   showRulers: boolean;
   showSelectionBox: boolean;
-  crosshairPosition: Point2D | null;
-  cursorPosition: Point2D | null;
   snapResults: SnapResult[];
   selectionBox: SelectionBox | null;
   // 🏢 ENTERPRISE (2026-01-25): Centralized grip settings for vertex/edge grips

@@ -4,6 +4,7 @@ import WebSocketService from '../../../services/websocket/WebSocketService';
 import type { WebSocketMessage } from '../../../services/websocket/WebSocketService';
 import type { Point2D } from '../rendering/types/Types';
 import { SIMPLE_COLORS } from '../config/color-config';
+import { PANEL_LAYOUT } from '../config/panel-tokens';
 import { generateAnnotationId, generateEventId } from '@/services/enterprise-id.service';
 
 // DXF Viewer Collaboration Manager
@@ -140,7 +141,7 @@ class DXFCollaborationManager {
 
     // Throttle cursor updates to avoid spam
     const now = Date.now();
-    if (now - this.lastCursorUpdate < 50) return; // Max 20 FPS
+    if (now - this.lastCursorUpdate < PANEL_LAYOUT.TIMING.COLLAB_CURSOR_THROTTLE_MS) return; // Max 20 FPS
 
     this.currentUser.cursor = { x, y };
     this.lastCursorUpdate = now;

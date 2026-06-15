@@ -69,7 +69,7 @@ import { getImmediateTransform } from '../../systems/cursor/ImmediateTransformSt
 export type { UseUnifiedGripInteractionParams, UseUnifiedGripInteractionReturn, DxfProjection };
 export type { OverlayProjection } from './unified-grip-types';
 const WARM_DELAY_MS = 1000;
-const GRIP_HOVER_THROTTLE_MS = 100;
+const GRIP_HOVER_THROTTLE_MS = PANEL_LAYOUT.TIMING.GRIP_HOVER_THROTTLE_MS; // SSoT (ADR-040 Φ10)
 // ADR-363 Phase 1G — squared world-distance threshold above which the hot-grip
 // cursor counts as "moved from the anchor". Tiny (essentially "moved at all"):
 // any real cursor move dwarfs it, while an exact same-spot release stays below.

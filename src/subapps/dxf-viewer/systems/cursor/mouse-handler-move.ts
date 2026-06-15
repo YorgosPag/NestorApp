@@ -32,11 +32,12 @@ import { findWallFaceCornerSnap } from './wall-face-corner-snap';
 import { isWallEntity, isColumnEntity } from '../../types/entities';
 import {
   findColumnGripCornerSnap,
-  findColumnDrawCornerSnap,
   isColumnCornerSnapGrip,
 } from '../../bim/columns/column-corner-snap';
 import type { ColumnGripKind } from '../../hooks/useGripMovement';
-import { columnToolBridgeStore } from '../../ui/ribbon/hooks/bridge/column-tool-bridge-store';
+// ADR-040 Φ11: draw-snap (column-draw corner snap + columnToolBridgeStore) moved to the
+// decoupled snap-scheduler; this handler only arms it.
+import { requestSnapDetection, clearSnapDetection } from './snap-scheduler';
 import { LassoStore } from './LassoStore';
 import { ZoomWindowStore } from '../zoom-window/ZoomWindowStore';
 // ADR-455 — on-canvas X/Y section-cut handle drag.
@@ -129,6 +130,12 @@ export function useMouseMoveHandler({
       }
     });
 
+    // ADR-040 Φ10: ONE screenToWorld per move (SSoT) — reused by the throttled
+    // React-context update, the eventbus emit, snap, hover and drawing-hover below.
+    const worldPos = withPerf('world-coord-calc', () =>
+      CoordinateTransforms.screenToWorld(screenPos, transform, freshViewport),
+    );
+
     // Throttled React Context updates (~20fps)
     const CURSOR_UPDATE_THROTTLE_MS = PANEL_LAYOUT.TIMING.CURSOR_UPDATE_THROTTLE;
     const now = performance.now();
@@ -136,24 +143,16 @@ export function useMouseMoveHandler({
     if (now - refs.cursorThrottleRef.current.lastUpdateTime >= CURSOR_UPDATE_THROTTLE_MS) {
       refs.cursorThrottleRef.current.lastUpdateTime = now;
       withPerf('cursor-update-pos', () => cursor.updatePosition(screenPos));
-
-      const throttledWorldPos = withPerf('cursor-screen-to-world', () =>
-        CoordinateTransforms.screenToWorld(screenPos, transform, freshViewport),
-      );
-      withPerf('cursor-update-world', () => cursor.updateWorldPosition(throttledWorldPos));
+      withPerf('cursor-update-world', () => cursor.updateWorldPosition(worldPos));
 
       if (freshViewport.width !== cursor.viewport.width || freshViewport.height !== cursor.viewport.height) {
         withPerf('cursor-update-viewport', () => cursor.updateViewport(freshViewport));
       }
 
       withPerf('eventbus-emit', () =>
-        canvasEventBus.emit(CANVAS_EVENTS.MOUSE_MOVE, { screenPos, worldPos: throttledWorldPos, canvas: 'dxf' }),
+        canvasEventBus.emit(CANVAS_EVENTS.MOUSE_MOVE, { screenPos, worldPos, canvas: 'dxf' }),
       );
     }
-
-    const worldPos = withPerf('world-coord-calc', () =>
-      CoordinateTransforms.screenToWorld(screenPos, transform, freshViewport),
-    );
 
     if (debugEnabled) {
       console.log('[MouseHandlers] COORDS', {
@@ -287,94 +286,16 @@ export function useMouseMoveHandler({
       withPerf('drawing-hover-callback', () => onDrawingHover(worldPos));
     }
 
-    // Throttled snap detection (~60fps)
-    const SNAP_THROTTLE_MS = PANEL_LAYOUT.TIMING.SNAP_DETECTION_THROTTLE;
-    const snapThrottle = refs.snapThrottleRef.current;
-    const snapNow = performance.now();
-
+    // ADR-040 Φ11: draw-snap detection is DECOUPLED from this synchronous handler.
+    // Arming the scheduler is cheap (store latest + flag); the heavy `findSnapPoint`
+    // runs in the RAF slot (snap-scheduler, on the UnifiedFrameScheduler SSoT), so
+    // the crosshair compositor frame is never blocked by snap work → cursor 1:1.
+    // The scheduler keeps the ~30fps snap throttle + the corner-snap (ADR-398) logic.
+    // Grip-drag snap stays SYNCHRONOUS above (it needs a 1:1 ghost).
     if (snapEnabled && findSnapPoint && !isGripDragging) {
-      snapThrottle.pendingWorldPos = worldPos;
-
-      if (snapNow - snapThrottle.lastSnapTime >= SNAP_THROTTLE_MS) {
-        snapThrottle.lastSnapTime = snapNow;
-
-        try {
-          // ADR-398 — Column draw: project the would-be column's corners; a
-          // corner match wins over the plain center-cursor snap. The indicator
-          // shows the target corner; the ghost anchor (ImmediateSnap.point) is
-          // shifted to `adjustedCursorPos` so the corner lands on the target.
-          const colHandle = activeTool === 'column' ? columnToolBridgeStore.get() : null;
-          const drawCorner = colHandle?.isActive
-            ? findColumnDrawCornerSnap(
-                worldPos,
-                { ...colHandle.overrides, kind: colHandle.kind, anchor: colHandle.anchor },
-                colHandle.getSceneUnits(),
-                findSnapPoint,
-              )
-            : null;
-
-          const snapResult = drawCorner
-            ? drawCorner.snapResult
-            : withPerf('snap-find', () => findSnapPoint(worldPos.x, worldPos.y));
-
-          if (snapResult && snapResult.found && snapResult.snappedPoint) {
-            const sx = snapResult.snappedPoint.x;
-            const sy = snapResult.snappedPoint.y;
-            const snapMoved = Math.abs(sx - snapThrottle.lastSnapX) > 0.001
-              || Math.abs(sy - snapThrottle.lastSnapY) > 0.001;
-
-            if (snapMoved || !snapThrottle.lastSnapFound) {
-              snapThrottle.lastSnapX = sx;
-              snapThrottle.lastSnapY = sy;
-              withPerf('snap-results-set', () => {
-                setSnapResults([{
-                  point: snapResult.snappedPoint!,
-                  type: snapResult.activeMode || 'default',
-                  entityId: snapResult.snapPoint?.entityId || null,
-                  distance: snapResult.snapPoint?.distance || 0,
-                  priority: 0,
-                }]);
-                setFullSnapResult(snapResult);
-                setImmediateSnap({
-                  found: true,
-                  // ADR-398 — ghost anchor follows the corner-aligned cursor.
-                  point: drawCorner ? drawCorner.adjustedCursorPos : snapResult.snappedPoint!,
-                  mode: snapResult.activeMode || 'endpoint',
-                  entityId: snapResult.snapPoint?.entityId,
-                });
-              });
-            }
-            snapThrottle.lastSnapFound = true;
-          } else {
-            if (snapThrottle.lastSnapFound) {
-              setSnapResults([]);
-              setFullSnapResult(null);
-              clearImmediateSnap();
-              snapThrottle.lastSnapFound = false;
-              snapThrottle.lastSnapX = NaN;
-              snapThrottle.lastSnapY = NaN;
-            }
-          }
-        } catch {
-          if (snapThrottle.lastSnapFound) {
-            setSnapResults([]);
-            setFullSnapResult(null);
-            clearImmediateSnap();
-            snapThrottle.lastSnapFound = false;
-            snapThrottle.lastSnapX = NaN;
-            snapThrottle.lastSnapY = NaN;
-          }
-        }
-      }
+      requestSnapDetection({ worldPos, activeTool, findSnapPoint, setSnapResults });
     } else if (!isGripDragging) {
-      if (snapThrottle.lastSnapFound) {
-        setSnapResults([]);
-        setFullSnapResult(null);
-        clearImmediateSnap();
-        snapThrottle.lastSnapFound = false;
-        snapThrottle.lastSnapX = NaN;
-        snapThrottle.lastSnapY = NaN;
-      }
+      clearSnapDetection(setSnapResults);
     }
 
     // Unified hover highlighting — DXF entities > overlay priority
@@ -383,9 +304,8 @@ export function useMouseMoveHandler({
       setHoveredEntity(null);
       setHoveredOverlay(null);
     } else if ((activeTool === 'select' || entityPickingActive) && !refs.panStateRef.current.isPanning && !cursor.isSelecting) {
-      const HOVER_THROTTLE_MS = 50;
       const hoverNow = performance.now();
-      if (hoverNow - refs.hoverThrottleRef.current >= HOVER_THROTTLE_MS) {
+      if (hoverNow - refs.hoverThrottleRef.current >= PANEL_LAYOUT.TIMING.HOVER_THROTTLE_MS) {
         refs.hoverThrottleRef.current = hoverNow;
 
         let hitEntityId: string | null = null;

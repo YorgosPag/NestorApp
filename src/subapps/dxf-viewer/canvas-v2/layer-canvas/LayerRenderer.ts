@@ -236,8 +236,6 @@ export class LayerRenderer {
 
     // ADR-065: Delegated to layer-ui-settings.ts
     const uiSettings = createLayerUISettings({
-      crosshairSettings,
-      cursorSettings,
       snapSettings,
       gridSettings,
       rulerSettings,

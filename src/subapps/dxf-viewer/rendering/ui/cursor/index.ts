@@ -3,8 +3,8 @@
  * ✅ ΦΑΣΗ 6: Centralized exports για cursor rendering
  */
 
-// Main cursor renderer
-export { CursorRenderer } from './CursorRenderer';
+// ADR-040 Φ10: CursorRenderer + LegacyCursorAdapter deleted (dead code — the
+// compositor <CrosshairOverlay> is the sole cursor/pickbox renderer). Types kept.
 
 // Types και configurations
 export type {
@@ -16,5 +16,3 @@ export type {
 } from './CursorTypes';
 
 export { DEFAULT_UI_CURSOR_SETTINGS } from './CursorTypes';
-
-// ✅ REMOVED: Περιττή wrapper function - χρησιμοποιήστε απευθείας new CursorRenderer()

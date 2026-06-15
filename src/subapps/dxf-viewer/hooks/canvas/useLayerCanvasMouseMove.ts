@@ -29,6 +29,7 @@ import {
   setImmediatePosition,
   setImmediateWorldPosition,
 } from '../../systems/cursor/ImmediatePositionStore';
+import { PANEL_LAYOUT } from '../../config/panel-tokens';
 
 // ============================================================================
 // TYPES & INTERFACES
@@ -131,9 +132,8 @@ export function useLayerCanvasMouseMove(
       // 🚀 PERFORMANCE (2026-01-27): 100ms throttle (10fps) for grip work only.
       // IMPORTANT: Apply this throttle ONLY in grip modes; drawing tools need full-rate hover updates
       // for smooth preview rendering (line/rectangle/circle rubber-band feedback).
-      const GRIP_HOVER_THROTTLE_MS = 100;
       const shouldThrottleGripWork =
-        isGripMode && (now - throttle.lastCheckTime < GRIP_HOVER_THROTTLE_MS);
+        isGripMode && (now - throttle.lastCheckTime < PANEL_LAYOUT.TIMING.GRIP_HOVER_THROTTLE_MS);
 
       if (shouldThrottleGripWork) {
         return;

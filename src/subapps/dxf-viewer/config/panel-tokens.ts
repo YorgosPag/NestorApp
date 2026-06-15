@@ -939,6 +939,9 @@ export const PANEL_LAYOUT = {
     DRAG_THRESHOLD_PX: 5,                // Pixels to move before drag starts
     CURSOR_UPDATE_THROTTLE: 50,          // Cursor context update throttle (20fps - sufficient for UI)
     SNAP_DETECTION_THROTTLE: 32,         // Snap detection throttle (30fps — balanced: smooth feel + low CPU)
+    HOVER_THROTTLE_MS: 50,               // Entity/overlay hover hit-test throttle (20fps) — was inline in mouse-handler-move (ADR-040 Φ10 SSoT)
+    GRIP_HOVER_THROTTLE_MS: 100,         // Grip hover detection throttle (10fps) — was duplicated in useLayerCanvasMouseMove + useUnifiedGripInteraction (ADR-040 Φ10 SSoT)
+    COLLAB_CURSOR_THROTTLE_MS: 50,       // Collaboration cursor broadcast inner throttle — was raw literal in CollaborationManager (ADR-040 Φ10 SSoT)
 
     // ─────────────────────────────────────────────────────────────────────────
     // MICRO DELAYS (10-50ms) - Focus/DOM updates

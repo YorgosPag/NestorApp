@@ -219,7 +219,7 @@ class UnifiedFrameSchedulerImpl {
     // move would defeat the cache and reintroduce the 150ms mousemove violation.
     // Pan still marks it dirty explicitly via PAN_SYNC_CANVAS_IDS in
     // ImmediatePositionStore.updateTransform().
-    const canvasIds = ['layer-canvas', 'crosshair-overlay'];
+    const canvasIds = ['layer-canvas']; // ADR-040 Φ10: dropped dead 'crosshair-overlay' (never a registered system; compositor crosshair uses registerDirectRender)
     const immediateSyncedIds = ['dxf-canvas', 'layer-canvas'];
     const wasImmediateRenderedThisFrame = this.immediateRenderFrame === this.frameNumber;
 

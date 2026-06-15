@@ -179,20 +179,14 @@ export const CanvasLayerStack = React.memo(function CanvasLayerStack({
   );
   const layerRenderOptions = useMemo(
     () => ({
-      // ADR-040 Phase E (2026-06-04, cursor-lag Φ4): the crosshair + cursor pickbox
-      // are now owned exclusively by the compositor <CrosshairOverlay> (translate3d,
-      // off-main-thread). Drawing them here too forced a full layer-canvas repaint on
-      // every mouse move (via ImmediatePositionStore cursor-sync) for redundant pixels.
-      // Disabled here so the layer-canvas no longer has ANY cursor-frequency content —
-      // it now repaints only when its real content changes (layers/grips/transform).
-      showCrosshair: false,
-      showCursor: false,
+      // ADR-040 Φ4/Φ10: the crosshair + cursor pickbox are owned exclusively by the
+      // compositor <CrosshairOverlay> (translate3d, off-main-thread). The canvas
+      // crosshair/cursor prop surface was deleted in Φ10 (dead) — the layer-canvas
+      // has NO cursor-frequency content; it repaints only on real content change.
       showSnapIndicators: true,
       showGrid: false,
       showRulers: false,
       showSelectionBox: false,
-      crosshairPosition: null,
-      cursorPosition: null,
       snapResults: EMPTY_SNAP_RESULTS as never[],
       selectionBox: null,
       gripSettings,

@@ -100,14 +100,11 @@ export const LayerCanvas = React.memo(React.forwardRef<HTMLCanvasElement, LayerC
   rulerSettings,
   selectionSettings,
   renderOptions = {
-    showCrosshair: true,
-    showCursor: true,
+    // ADR-040 Φ10: showCrosshair/showCursor/crosshairPosition/cursorPosition removed (compositor owns crosshair).
     showSnapIndicators: true,
     showGrid: true,
     showRulers: true,
     showSelectionBox: true,
-    crosshairPosition: null,
-    cursorPosition: null,
     snapResults: [],
     selectionBox: null
   },

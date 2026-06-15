@@ -232,7 +232,7 @@ export class DxfRenderer {
     for (const entity of entities) {
       if (entity.type !== 'column' || !entity.visible) continue;
       const p = entity.params;
-      if (p.kind !== 'rectangular' || !p.reinforcement) continue;
+      if (!p.reinforcement) continue; // ADR-460 — κάθε σχήμα (όχι μόνο ορθογωνική)
       const pxPerMm = mmToSceneUnits(p.sceneUnits ?? 'mm') * transform.scale;
       drawColumnRebar2D(this.ctx, p, pxPerMm, worldToScreen);
     }

@@ -28,6 +28,7 @@ import {
   getScreenPosFromEvent,
   screenToWorldWithSnapshot,
 } from '../../rendering/core/CoordinateTransforms';
+import { getCachedClientRect } from '../../rendering/core/pointer-rect-cache';
 import type { ICommand } from '../../core/commands/interfaces';
 import type { DraggingGuideState } from './useCanvasMouse';
 
@@ -108,7 +109,7 @@ export function useCanvasContainerHandlers(
     if (!el || activeTool !== 'lasso-crop') return;
     const onMove = (e: PointerEvent) => {
       if (!LassoFreehandStore.isActive()) return;
-      const rect = el.getBoundingClientRect();
+      const rect = getCachedClientRect(el); // Φ5 cache — no per-move reflow (ADR-040 Φ10)
       const sx = e.clientX - rect.left;
       const sy = e.clientY - rect.top;
 

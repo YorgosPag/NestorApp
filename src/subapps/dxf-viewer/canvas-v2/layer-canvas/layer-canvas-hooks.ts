@@ -173,7 +173,6 @@ export function useLayerCanvasRenderer(params: LayerCanvasRendererParams) {
             } as const)
           : null;
 
-      const centralizedPosition = ImmediatePositionStore.getPosition();
       const isPanToolActive = current.activeTool === 'pan';
 
       let filteredLayers = current.layersVisible
@@ -207,10 +206,7 @@ export function useLayerCanvasRenderer(params: LayerCanvasRendererParams) {
 
       const finalRenderOptions = {
         ...current.renderOptions,
-        showCrosshair: current.renderOptions.showCrosshair && !isPanToolActive,
-        showCursor: current.renderOptions.showCursor && !isPanToolActive,
-        crosshairPosition: isPanToolActive ? null : centralizedPosition,
-        cursorPosition: isPanToolActive ? null : centralizedPosition,
+        // ADR-040 Φ10: canvas crosshair/cursor removed — the compositor <CrosshairOverlay> owns them.
         showSelectionBox: !isPanToolActive && sel.isSelecting && currentSelectionBox !== null,
         selectionBox: isPanToolActive ? null : currentSelectionBox,
         snapResults: layerSnapResults,
