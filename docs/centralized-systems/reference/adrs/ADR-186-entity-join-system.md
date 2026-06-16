@@ -96,3 +96,19 @@ User selects 2+ entities → Right-click / Press J
 - Full undo/redo support via Command Pattern
 - Type-aware output: collinear lines stay as lines, same-center arcs stay as arcs
 - Clean separation: service (logic) + command (undo) + hook (orchestration) + UI (menu)
+
+## Changelog
+
+### 2026-06-16 — Perf guard on reactive join-preview (FPS-1 fix)
+
+**Problem:** `useCanvasEditActions.entityJoinState` recomputed `getJoinPreview(selectedEntityIds)`
+on *every* selection change. `getJoinPreview` runs `chainSegmentsDetailed` (O(n²) greedy chain +
+force-connect). Marquee-selecting a whole floorplan (~300 entities / 375 segments) before a
+mass-delete ran this synchronously on the main thread per pointer-move → **FPS dropped to ~1**,
+which starved the auto-save `POST /api/cad-files` fetch into a 60s client timeout.
+
+**Fix:** Gate the preview by selection size — `JOIN_PREVIEW_MAX_SELECTION = 64` in
+`hooks/canvas/useCanvasEditActions.ts`. Above the threshold the menu stays enabled (cheap
+`canJoin` type-check) but the result-type label (only meaningful for the small "join these few
+segments" case) is skipped. The actual `joinEntities` command is unchanged (user-invoked,
+one-shot). See `HANDOFFS/HANDOFF_2026-06-16_adr420-autosave-filedoc-corruption_perf-fps1.md` §2.

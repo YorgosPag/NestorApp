@@ -19,6 +19,17 @@ import { ReorderEntityCommand } from '../../core/commands/entity-commands';
 // paper-mm default lands in world units regardless of DXF unit system.
 import { resolveSceneUnits } from '../../utils/scene-units';
 
+/**
+ * Perf guard — `getJoinPreview` runs an O(n²) segment-chain (force-connect) just
+ * to derive a context-menu label. On large selections (e.g. marquee-selecting a
+ * whole floorplan before a mass-delete) that chaining saturates the main thread
+ * and drops FPS to ~1, which in turn starves the auto-save fetch into a 60s
+ * timeout. The label is only meaningful for the small "join these few segments"
+ * case, so above this size we keep the menu enabled (cheap `canJoin`) but skip
+ * the preview. See HANDOFF 2026-06-16 perf FPS-1 + ADR-186.
+ */
+const JOIN_PREVIEW_MAX_SELECTION = 64;
+
 interface Params {
   activeTool: ToolType;
   overlayMode: OverlayEditorMode;
@@ -67,7 +78,12 @@ export function useCanvasEditActions({
   const entityJoinHook = useEntityJoin({ levelManager, executeCommand, setSelectedEntityIds, onWarning: notifyWarning, onSuccess: notifySuccess });
   const entityJoinState = useMemo(() => {
     const canJoin = entityJoinHook.canJoin(selectedEntityIds);
-    const preview = canJoin ? entityJoinHook.getJoinPreview(selectedEntityIds) : null;
+    // Perf: skip the expensive O(n²) join-preview chain on large selections —
+    // it only produces a context-menu label and otherwise starves the main
+    // thread (FPS-1) during marquee-select before a mass-delete.
+    const preview = canJoin && selectedEntityIds.length <= JOIN_PREVIEW_MAX_SELECTION
+      ? entityJoinHook.getJoinPreview(selectedEntityIds)
+      : null;
     return { canJoin, joinResultLabel: preview?.resultType !== 'not-joinable' ? preview?.resultType : undefined };
   }, [entityJoinHook, selectedEntityIds]);
   const handleExitDrawMode = useCallback(() => {
