@@ -21,6 +21,7 @@ import { useCallback, useEffect, useRef } from 'react';
 
 import type { WallEntity } from '../../bim/types/wall-types';
 import type { OpeningUpdate } from '../../bim/walls/wall-split';
+import { resolveBimPersistenceScope } from '../../bim/persistence/bim-floor-scope';
 import {
   createWallFirestoreService,
   entityToSaveInput as wallEntityToSaveInput,
@@ -69,15 +70,24 @@ export function useWallSplitPersistence(params: UseWallSplitPersistenceParams): 
   floorIdRef.current = floorId;
 
   useEffect(() => {
-    if (!companyId || !projectId || !floorplanId || !userId) {
+    const scope = resolveBimPersistenceScope({ companyId, projectId, userId, floorId, floorplanId });
+    if (!scope) {
       wallSvcRef.current = null;
       openingSvcRef.current = null;
       return;
     }
-    const cfg = { companyId, projectId, floorplanId, userId };
+    // ADR-420 — include the durable floorId in scope (parity with useWallPersistence)
+    // so split-produced walls/openings persist under the stable floor key.
+    const cfg = {
+      companyId: scope.companyId,
+      projectId: scope.projectId,
+      floorplanId: scope.floorplanId,
+      floorId: scope.floorId,
+      userId: scope.userId,
+    };
     wallSvcRef.current = createWallFirestoreService(cfg);
     openingSvcRef.current = createOpeningFirestoreService(cfg);
-  }, [companyId, projectId, floorplanId, userId]);
+  }, [companyId, projectId, floorplanId, floorId, userId]);
 
   const persistSplit = useCallback(async (
     originalWallId: string,

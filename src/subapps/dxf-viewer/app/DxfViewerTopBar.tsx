@@ -83,6 +83,14 @@ export function DxfViewerTopBar({
   // Level → FLOORS doc μέσω useFloorMetadata) + floorId για per-floor grouping.
   const currentLevel = levelManager.levels?.find((l) => l.id === levelManager.currentLevelId);
   const floorId = levelManager.saveContext?.floorId ?? currentLevel?.floorId ?? undefined;
+  // 🛡️ ADR-420 / ADR-399 (incident 2026-06-16) — derive `projectId` from the DURABLE
+  // Level identity, not only the volatile DXF save target. The cross-floor guard
+  // (`useLevelSceneLoader.resetDxfAutoSaveTarget`) nulls `saveContext`, which used to
+  // drop `projectId` → every BIM persistence service de-instantiated → entities drawn
+  // on that floor were never saved. The `Level` doc carries a durable `projectId`
+  // (wizard-set, ADR-309), so a floor whose own DXF file is missing/cross-linked keeps
+  // a valid persistence scope. Pairs with the SSoT gate `resolveBimPersistenceScope`.
+  const projectId = levelManager.saveContext?.projectId ?? currentLevel?.projectId ?? undefined;
   const floorMeta = useFloorMetadata(floorId ?? null);
   const buildingId =
     levelManager.saveContext?.buildingId
@@ -108,7 +116,7 @@ export function DxfViewerTopBar({
         primarySelectedId={primarySelectedId}
         currentScene={currentScene}
         levelManager={levelManager}
-        projectId={levelManager.saveContext?.projectId ?? undefined}
+        projectId={projectId}
         floorplanId={levelManager.fileRecordId ?? undefined}
         buildingId={buildingId}
         floorId={floorId}
@@ -117,7 +125,7 @@ export function DxfViewerTopBar({
         primarySelectedId={primarySelectedId}
         currentScene={currentScene}
         levelManager={levelManager}
-        projectId={levelManager.saveContext?.projectId ?? undefined}
+        projectId={projectId}
         floorplanId={levelManager.fileRecordId ?? undefined}
         buildingId={buildingId}
         floorId={floorId}
@@ -126,7 +134,7 @@ export function DxfViewerTopBar({
         primarySelectedId={primarySelectedId}
         currentScene={currentScene}
         levelManager={levelManager}
-        projectId={levelManager.saveContext?.projectId ?? undefined}
+        projectId={projectId}
         floorplanId={levelManager.fileRecordId ?? undefined}
         buildingId={buildingId}
         floorId={floorId}
@@ -135,7 +143,7 @@ export function DxfViewerTopBar({
         primarySelectedId={primarySelectedId}
         currentScene={currentScene}
         levelManager={levelManager}
-        projectId={levelManager.saveContext?.projectId ?? undefined}
+        projectId={projectId}
         floorplanId={levelManager.fileRecordId ?? undefined}
         buildingId={buildingId}
         floorId={floorId}
@@ -144,12 +152,12 @@ export function DxfViewerTopBar({
         primarySelectedId={primarySelectedId}
         currentScene={currentScene}
         levelManager={levelManager}
-        projectId={levelManager.saveContext?.projectId ?? undefined}
+        projectId={projectId}
         floorplanId={levelManager.fileRecordId ?? undefined}
         floorId={floorId}
       />
       <GridGuidePersistenceHost
-        projectId={levelManager.saveContext?.projectId ?? undefined}
+        projectId={projectId}
         floorplanId={levelManager.fileRecordId ?? undefined}
         floorId={floorId}
       />
@@ -158,7 +166,7 @@ export function DxfViewerTopBar({
         primarySelectedId={primarySelectedId}
         currentScene={currentScene}
         levelManager={levelManager}
-        projectId={levelManager.saveContext?.projectId ?? undefined}
+        projectId={projectId}
         floorplanId={levelManager.fileRecordId ?? undefined}
         buildingId={buildingId}
         floorId={floorId}
@@ -167,7 +175,7 @@ export function DxfViewerTopBar({
         primarySelectedId={primarySelectedId}
         currentScene={currentScene}
         levelManager={levelManager}
-        projectId={levelManager.saveContext?.projectId ?? undefined}
+        projectId={projectId}
         floorplanId={levelManager.fileRecordId ?? undefined}
         floorId={floorId}
       />
@@ -175,7 +183,7 @@ export function DxfViewerTopBar({
         primarySelectedId={primarySelectedId}
         currentScene={currentScene}
         levelManager={levelManager}
-        projectId={levelManager.saveContext?.projectId ?? undefined}
+        projectId={projectId}
         floorplanId={levelManager.fileRecordId ?? undefined}
         floorId={floorId}
       />
@@ -183,7 +191,7 @@ export function DxfViewerTopBar({
         primarySelectedId={primarySelectedId}
         currentScene={currentScene}
         levelManager={levelManager}
-        projectId={levelManager.saveContext?.projectId ?? undefined}
+        projectId={projectId}
         floorplanId={levelManager.fileRecordId ?? undefined}
         floorId={floorId}
       />
@@ -191,7 +199,7 @@ export function DxfViewerTopBar({
         primarySelectedId={primarySelectedId}
         currentScene={currentScene}
         levelManager={levelManager}
-        projectId={levelManager.saveContext?.projectId ?? undefined}
+        projectId={projectId}
         floorplanId={levelManager.fileRecordId ?? undefined}
         floorId={floorId}
       />
@@ -199,7 +207,7 @@ export function DxfViewerTopBar({
         primarySelectedId={primarySelectedId}
         currentScene={currentScene}
         levelManager={levelManager}
-        projectId={levelManager.saveContext?.projectId ?? undefined}
+        projectId={projectId}
         floorplanId={levelManager.fileRecordId ?? undefined}
         floorId={floorId}
         buildingId={buildingId}
@@ -208,7 +216,7 @@ export function DxfViewerTopBar({
         primarySelectedId={primarySelectedId}
         currentScene={currentScene}
         levelManager={levelManager}
-        projectId={levelManager.saveContext?.projectId ?? undefined}
+        projectId={projectId}
         floorplanId={levelManager.fileRecordId ?? undefined}
         floorId={floorId}
         buildingId={buildingId}
@@ -217,7 +225,7 @@ export function DxfViewerTopBar({
         primarySelectedId={primarySelectedId}
         currentScene={currentScene}
         levelManager={levelManager}
-        projectId={levelManager.saveContext?.projectId ?? undefined}
+        projectId={projectId}
         floorplanId={levelManager.fileRecordId ?? undefined}
         floorId={floorId}
         buildingId={buildingId}
@@ -226,7 +234,7 @@ export function DxfViewerTopBar({
         primarySelectedId={primarySelectedId}
         currentScene={currentScene}
         levelManager={levelManager}
-        projectId={levelManager.saveContext?.projectId ?? undefined}
+        projectId={projectId}
         floorplanId={levelManager.fileRecordId ?? undefined}
         floorId={floorId}
         buildingId={buildingId}
@@ -235,7 +243,7 @@ export function DxfViewerTopBar({
         primarySelectedId={primarySelectedId}
         currentScene={currentScene}
         levelManager={levelManager}
-        projectId={levelManager.saveContext?.projectId ?? undefined}
+        projectId={projectId}
         floorplanId={levelManager.fileRecordId ?? undefined}
         floorId={floorId}
         buildingId={buildingId}
@@ -244,7 +252,7 @@ export function DxfViewerTopBar({
         primarySelectedId={primarySelectedId}
         currentScene={currentScene}
         levelManager={levelManager}
-        projectId={levelManager.saveContext?.projectId ?? undefined}
+        projectId={projectId}
         floorplanId={levelManager.fileRecordId ?? undefined}
         floorId={floorId}
         buildingId={buildingId}
@@ -253,12 +261,12 @@ export function DxfViewerTopBar({
         primarySelectedId={primarySelectedId}
         currentScene={currentScene}
         levelManager={levelManager}
-        projectId={levelManager.saveContext?.projectId ?? undefined}
+        projectId={projectId}
         floorplanId={levelManager.fileRecordId ?? undefined}
         floorId={floorId}
       />
       <MepSystemPersistenceHost
-        projectId={levelManager.saveContext?.projectId ?? undefined}
+        projectId={projectId}
         floorplanId={levelManager.fileRecordId ?? undefined}
         floorId={floorId}
         currentScene={currentScene}
@@ -269,7 +277,7 @@ export function DxfViewerTopBar({
         primarySelectedId={primarySelectedId}
         currentScene={currentScene}
         levelManager={levelManager}
-        projectId={levelManager.saveContext?.projectId ?? undefined}
+        projectId={projectId}
         floorplanId={levelManager.fileRecordId ?? undefined}
         buildingId={buildingId}
         floorId={floorId}
@@ -278,7 +286,7 @@ export function DxfViewerTopBar({
         primarySelectedId={primarySelectedId}
         currentScene={currentScene}
         levelManager={levelManager}
-        projectId={levelManager.saveContext?.projectId ?? undefined}
+        projectId={projectId}
         floorplanId={levelManager.fileRecordId ?? undefined}
         buildingId={buildingId}
         floorId={floorId}
@@ -287,7 +295,7 @@ export function DxfViewerTopBar({
         primarySelectedId={primarySelectedId}
         currentScene={currentScene}
         levelManager={levelManager}
-        projectId={levelManager.saveContext?.projectId ?? undefined}
+        projectId={projectId}
         floorplanId={levelManager.fileRecordId ?? undefined}
         buildingId={buildingId}
         floorId={floorId}
@@ -296,7 +304,7 @@ export function DxfViewerTopBar({
         primarySelectedId={primarySelectedId}
         currentScene={currentScene}
         levelManager={levelManager}
-        projectId={levelManager.saveContext?.projectId ?? undefined}
+        projectId={projectId}
         floorplanId={levelManager.fileRecordId ?? undefined}
         buildingId={buildingId}
         floorId={floorId}
@@ -305,7 +313,7 @@ export function DxfViewerTopBar({
         primarySelectedId={primarySelectedId}
         currentScene={currentScene}
         levelManager={levelManager}
-        projectId={levelManager.saveContext?.projectId ?? undefined}
+        projectId={projectId}
         floorplanId={levelManager.fileRecordId ?? undefined}
         buildingId={buildingId}
         floorId={floorId}
@@ -314,7 +322,7 @@ export function DxfViewerTopBar({
         primarySelectedId={primarySelectedId}
         currentScene={currentScene}
         levelManager={levelManager}
-        projectId={levelManager.saveContext?.projectId ?? undefined}
+        projectId={projectId}
         floorplanId={levelManager.fileRecordId ?? undefined}
         buildingId={buildingId}
         floorId={floorId}
@@ -324,13 +332,13 @@ export function DxfViewerTopBar({
         primarySelectedId={primarySelectedId}
         currentScene={currentScene}
         levelManager={levelManager}
-        projectId={levelManager.saveContext?.projectId ?? undefined}
+        projectId={projectId}
         floorplanId={levelManager.fileRecordId ?? undefined}
         buildingId={buildingId}
         floorId={floorId}
       />
       <UserMaterialRegistryHost
-        projectId={levelManager.saveContext?.projectId ?? undefined}
+        projectId={projectId}
       />
       <PsetEditorHost levelManager={levelManager} />
       <IfcExportHost />

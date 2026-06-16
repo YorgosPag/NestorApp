@@ -29,6 +29,7 @@ import type { AnySceneEntity, SceneModel } from '../../types/entities';
 import type { SceneWriteOrigin } from '../scene/scene-write-origin';
 import type { SlabEntity } from '../../bim/types/slab-types';
 import { EventBus } from '../../systems/events/EventBus';
+import { resolveBimPersistenceScope } from '../../bim/persistence/bim-floor-scope';
 import {
   createSlabFirestoreService,
   entityToSaveInput,
@@ -135,16 +136,17 @@ export function useSlabPersistence(
 
   // Instantiate service όταν auth + scope ready.
   useEffect(() => {
-    if (!companyId || !projectId || !floorplanId || !userId) {
+    const scope = resolveBimPersistenceScope({ companyId, projectId, userId, floorId, floorplanId });
+    if (!scope) {
       serviceRef.current = null;
       return;
     }
     serviceRef.current = createSlabFirestoreService({
-      companyId,
-      projectId,
-      floorplanId,
-      floorId: floorId ?? undefined,
-      userId,
+      companyId: scope.companyId,
+      projectId: scope.projectId,
+      floorplanId: scope.floorplanId,
+      floorId: scope.floorId,
+      userId: scope.userId,
     });
   }, [companyId, projectId, floorplanId, floorId, userId]);
 

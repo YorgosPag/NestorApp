@@ -33,6 +33,7 @@ import { computeFoundationGeometry } from '../../bim/geometry/foundation-geometr
 import { validateFoundationParams } from '../../bim/validators/foundation-validator';
 import { createFoundation } from '@/services/factories/foundation.factory';
 import { EventBus } from '../../systems/events/EventBus';
+import { resolveBimPersistenceScope } from '../../bim/persistence/bim-floor-scope';
 import {
   createFoundationFirestoreService,
   entityToSaveInput,
@@ -150,16 +151,17 @@ export function useFoundationPersistence(
 
   // Instantiate service όταν auth + scope ready.
   useEffect(() => {
-    if (!companyId || !projectId || !floorplanId || !userId) {
+    const scope = resolveBimPersistenceScope({ companyId, projectId, userId, floorId, floorplanId });
+    if (!scope) {
       serviceRef.current = null;
       return;
     }
     serviceRef.current = createFoundationFirestoreService({
-      companyId,
-      projectId,
-      floorplanId,
-      floorId: floorId ?? undefined,
-      userId,
+      companyId: scope.companyId,
+      projectId: scope.projectId,
+      floorplanId: scope.floorplanId,
+      floorId: scope.floorId,
+      userId: scope.userId,
     });
   }, [companyId, projectId, floorplanId, floorId, userId]);
 

@@ -26,6 +26,7 @@ import {
   validateFloorplanSymbolParams,
 } from '../../bim/floorplan-symbols/floorplan-symbol-geometry';
 import { EventBus } from '../../systems/events/EventBus';
+import { resolveBimPersistenceScope } from '../../bim/persistence/bim-floor-scope';
 import {
   createFloorplanSymbolFirestoreService,
   entityToSaveInput,
@@ -136,16 +137,17 @@ export function useFloorplanSymbolPersistence(
 
   // Instantiate service when auth + scope ready.
   useEffect(() => {
-    if (!companyId || !projectId || !floorplanId || !userId) {
+    const scope = resolveBimPersistenceScope({ companyId, projectId, userId, floorId, floorplanId });
+    if (!scope) {
       serviceRef.current = null;
       return;
     }
     serviceRef.current = createFloorplanSymbolFirestoreService({
-      companyId,
-      projectId,
-      floorplanId,
-      floorId: floorId ?? undefined,
-      userId,
+      companyId: scope.companyId,
+      projectId: scope.projectId,
+      floorplanId: scope.floorplanId,
+      floorId: scope.floorId,
+      userId: scope.userId,
     });
   }, [companyId, projectId, floorplanId, floorId, userId]);
 

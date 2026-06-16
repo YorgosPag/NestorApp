@@ -21,6 +21,7 @@ import type { SceneWriteOrigin } from '../scene/scene-write-origin';
 import type { FloorFinishEntity } from '../../bim/types/floor-finish-types';
 import { isFloorFinishEntity } from '../../types/entities';
 import { EventBus } from '../../systems/events/EventBus';
+import { resolveBimPersistenceScope } from '../../bim/persistence/bim-floor-scope';
 import {
   createFloorFinishFirestoreService,
   floorFinishEntityToSaveInput,
@@ -102,16 +103,17 @@ export function useFloorFinishPersistence(
 
   // Instantiate service when auth + scope ready.
   useEffect(() => {
-    if (!companyId || !projectId || !floorplanId || !userId) {
+    const scope = resolveBimPersistenceScope({ companyId, projectId, userId, floorId, floorplanId });
+    if (!scope) {
       serviceRef.current = null;
       return;
     }
     serviceRef.current = createFloorFinishFirestoreService({
-      companyId,
-      projectId,
-      floorplanId,
-      floorId: floorId ?? undefined,
-      userId,
+      companyId: scope.companyId,
+      projectId: scope.projectId,
+      floorplanId: scope.floorplanId,
+      floorId: scope.floorId,
+      userId: scope.userId,
     });
   }, [companyId, projectId, floorplanId, floorId, userId]);
 

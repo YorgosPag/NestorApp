@@ -29,6 +29,7 @@ import {
   resolveBimScope,
   buildBimScopeConstraints,
   bimScopeWriteFields,
+  resolveBimPersistenceScope,
 } from '../bim-floor-scope';
 
 const asWhere = (c: unknown): MockWhere => c as unknown as MockWhere;
@@ -86,5 +87,38 @@ describe('bimScopeWriteFields', () => {
     expect(bimScopeWriteFields({ projectId: 'p1', floorplanId: 'file_x' })).toEqual({
       floorplanId: 'file_x',
     });
+  });
+});
+
+describe('resolveBimPersistenceScope (ADR-420 SSoT gate — incident 2026-06-16)', () => {
+  const base = { companyId: 'c1', projectId: 'p1', userId: 'u1' };
+
+  it('resolves with both floorId and floorplanId (normal floor with a DXF file)', () => {
+    expect(
+      resolveBimPersistenceScope({ ...base, floorId: 'flr_1', floorplanId: 'file_x' }),
+    ).toEqual({ companyId: 'c1', projectId: 'p1', userId: 'u1', floorId: 'flr_1', floorplanId: 'file_x' });
+  });
+
+  it('resolves on a file-less floor (durable floorId only) — the core fix: mirrors floorId into the provenance slot so the service config stays valid', () => {
+    expect(
+      resolveBimPersistenceScope({ ...base, floorId: 'flr_1', floorplanId: null }),
+    ).toEqual({ companyId: 'c1', projectId: 'p1', userId: 'u1', floorId: 'flr_1', floorplanId: 'flr_1' });
+  });
+
+  it('resolves on a floor-less canvas via the legacy floorplanId fallback (no floorId)', () => {
+    expect(
+      resolveBimPersistenceScope({ ...base, floorplanId: 'file_x' }),
+    ).toEqual({ companyId: 'c1', projectId: 'p1', userId: 'u1', floorplanId: 'file_x' });
+  });
+
+  it('returns null when no scope key at all (neither floorId nor floorplanId)', () => {
+    expect(resolveBimPersistenceScope({ ...base })).toBeNull();
+    expect(resolveBimPersistenceScope({ ...base, floorId: '', floorplanId: '' })).toBeNull();
+  });
+
+  it('returns null when any identity field is missing', () => {
+    expect(resolveBimPersistenceScope({ companyId: null, projectId: 'p1', userId: 'u1', floorId: 'flr_1' })).toBeNull();
+    expect(resolveBimPersistenceScope({ companyId: 'c1', projectId: undefined, userId: 'u1', floorId: 'flr_1' })).toBeNull();
+    expect(resolveBimPersistenceScope({ companyId: 'c1', projectId: 'p1', userId: null, floorId: 'flr_1' })).toBeNull();
   });
 });

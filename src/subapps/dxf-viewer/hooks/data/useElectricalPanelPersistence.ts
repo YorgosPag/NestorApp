@@ -22,6 +22,7 @@ import {
   validateElectricalPanelParams,
 } from '../../bim/electrical-panels/electrical-panel-geometry';
 import { EventBus } from '../../systems/events/EventBus';
+import { resolveBimPersistenceScope } from '../../bim/persistence/bim-floor-scope';
 import {
   createElectricalPanelFirestoreService,
   entityToSaveInput,
@@ -133,16 +134,17 @@ export function useElectricalPanelPersistence(
 
   // Instantiate service when auth + scope ready.
   useEffect(() => {
-    if (!companyId || !projectId || !floorplanId || !userId) {
+    const scope = resolveBimPersistenceScope({ companyId, projectId, userId, floorId, floorplanId });
+    if (!scope) {
       serviceRef.current = null;
       return;
     }
     serviceRef.current = createElectricalPanelFirestoreService({
-      companyId,
-      projectId,
-      floorplanId,
-      floorId: floorId ?? undefined,
-      userId,
+      companyId: scope.companyId,
+      projectId: scope.projectId,
+      floorplanId: scope.floorplanId,
+      floorId: scope.floorId,
+      userId: scope.userId,
     });
   }, [companyId, projectId, floorplanId, floorId, userId]);
 

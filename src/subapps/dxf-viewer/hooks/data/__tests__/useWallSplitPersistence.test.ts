@@ -117,11 +117,14 @@ beforeEach(() => {
 describe('useWallSplitPersistence — service init', () => {
   it('creates wall + opening services when all params provided', () => {
     renderHook(() => useWallSplitPersistence(PARAMS));
+    // ADR-420 (2026-06-16) — split now routes through resolveBimPersistenceScope and
+    // passes the durable `floorId` (parity with useWallPersistence) so split-produced
+    // walls/openings persist under the stable floor scope key.
     expect(mockCreateWall).toHaveBeenCalledWith({
-      companyId: 'co-1', projectId: 'proj-1', floorplanId: 'fp-1', userId: 'user-1',
+      companyId: 'co-1', projectId: 'proj-1', floorplanId: 'fp-1', floorId: 'floor-1', userId: 'user-1',
     });
     expect(mockCreateOpening).toHaveBeenCalledWith({
-      companyId: 'co-1', projectId: 'proj-1', floorplanId: 'fp-1', userId: 'user-1',
+      companyId: 'co-1', projectId: 'proj-1', floorplanId: 'fp-1', floorId: 'floor-1', userId: 'user-1',
     });
   });
 

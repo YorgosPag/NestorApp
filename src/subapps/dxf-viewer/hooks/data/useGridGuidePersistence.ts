@@ -21,6 +21,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { getGlobalGuideStore } from '../../systems/guides/guide-store';
+import { resolveBimPersistenceScope } from '../../bim/persistence/bim-floor-scope';
 import {
   createGridGuideFirestoreService,
   GridGuideFirestoreService,
@@ -107,17 +108,18 @@ export function useGridGuidePersistence(
 
   // Instantiate service when scope ready.
   useEffect(() => {
-    if (!companyId || !projectId || !floorplanId || !userId) {
+    const scope = resolveBimPersistenceScope({ companyId, projectId, userId, floorId, floorplanId });
+    if (!scope) {
       serviceRef.current = null;
       setServiceReady(false);
       return;
     }
     serviceRef.current = createGridGuideFirestoreService({
-      companyId,
-      projectId,
-      floorplanId,
-      floorId: floorId ?? undefined,
-      userId,
+      companyId: scope.companyId,
+      projectId: scope.projectId,
+      floorplanId: scope.floorplanId,
+      floorId: scope.floorId,
+      userId: scope.userId,
     });
     setServiceReady(true);
   }, [companyId, projectId, floorplanId, floorId, userId]);

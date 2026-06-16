@@ -33,6 +33,7 @@ import type { OpeningEntity } from '../../bim/types/opening-types';
 import type { WallEntity } from '../../bim/types/wall-types';
 import type { Level } from '../../systems/levels/config';
 import { EventBus } from '../../systems/events/EventBus';
+import { resolveBimPersistenceScope } from '../../bim/persistence/bim-floor-scope';
 import {
   createOpeningFirestoreService,
   entityToSaveInput,
@@ -157,16 +158,17 @@ export function useOpeningPersistence(
 
   // Instantiate service όταν auth + scope ready.
   useEffect(() => {
-    if (!companyId || !projectId || !floorplanId || !userId) {
+    const scope = resolveBimPersistenceScope({ companyId, projectId, userId, floorId, floorplanId });
+    if (!scope) {
       serviceRef.current = null;
       return;
     }
     serviceRef.current = createOpeningFirestoreService({
-      companyId,
-      projectId,
-      floorplanId,
-      floorId: floorId ?? undefined,
-      userId,
+      companyId: scope.companyId,
+      projectId: scope.projectId,
+      floorplanId: scope.floorplanId,
+      floorId: scope.floorId,
+      userId: scope.userId,
     });
   }, [companyId, projectId, floorplanId, floorId, userId]);
 

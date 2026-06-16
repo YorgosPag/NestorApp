@@ -28,9 +28,8 @@ import { dequal } from 'dequal';
 import type { AnySceneEntity, SceneModel } from '../../types/entities';
 import type { SceneWriteOrigin } from '../scene/scene-write-origin';
 import type { BeamEntity } from '../../bim/types/beam-types';
-import { computeBeamGeometry } from '../../bim/geometry/beam-geometry';
-import { validateBeamParams } from '../../bim/validators/beam-validator';
 import { EventBus } from '../../systems/events/EventBus';
+import { resolveBimPersistenceScope } from '../../bim/persistence/bim-floor-scope';
 import {
   createBeamFirestoreService,
   entityToSaveInput,
@@ -90,26 +89,7 @@ function isBeam(entity: AnySceneEntity): entity is BeamEntity {
   return (entity as { type?: string }).type === 'beam';
 }
 
-/**
- * Build scene-side `BeamEntity` από persisted `BeamDoc`. Geometry +
- * validation recomputed via SSoT pure functions.
- */
-function docToEntity(doc: BeamDoc): BeamEntity {
-  const validation = doc.validation ?? validateBeamParams(doc.params).bimValidation;
-  return {
-    id: doc.id,
-    type: 'beam',
-    kind: doc.kind,
-    layerId: doc.layerId ?? '0',
-    params: doc.params,
-    geometry: doc.geometry ?? computeBeamGeometry(doc.params),
-    validation,
-    visible: true,
-    // ADR-441 Slice GEN-BEAM — restore grid hosting bindings ώστε ο born-bound
-    // δοκός να ξανα-ακολουθεί τον άξονα μετά reload (αλλιώς χάνει το hosting).
-    ...(doc.guideBindings !== undefined && { guideBindings: doc.guideBindings }),
-  } as BeamEntity;
-}
+// docToEntity → beamDocToEntity μετακινήθηκε στο './beam-persistence-helpers' (file-size split).
 
 // ============================================================================
 // HOOK
@@ -159,16 +139,17 @@ export function useBeamPersistence(
 
   // Instantiate service όταν auth + scope ready.
   useEffect(() => {
-    if (!companyId || !projectId || !floorplanId || !userId) {
+    const scope = resolveBimPersistenceScope({ companyId, projectId, userId, floorId, floorplanId });
+    if (!scope) {
       serviceRef.current = null;
       return;
     }
     serviceRef.current = createBeamFirestoreService({
-      companyId,
-      projectId,
-      floorplanId,
-      floorId: floorId ?? undefined,
-      userId,
+      companyId: scope.companyId,
+      projectId: scope.projectId,
+      floorplanId: scope.floorplanId,
+      floorId: scope.floorId,
+      userId: scope.userId,
     });
   }, [companyId, projectId, floorplanId, floorId, userId]);
 
@@ -209,7 +190,7 @@ export function useBeamPersistence(
           const existing = sceneBeams.get(doc.id);
           if (!existing) {
             if (!dirty.has(doc.id)) {
-              nextBeams.push(docToEntity(doc));
+              nextBeams.push(beamDocToEntity(doc));
               mutated = true;
             }
             continue;
@@ -219,7 +200,7 @@ export function useBeamPersistence(
             continue;
           }
           if (!dequal(existing.params, doc.params)) {
-            nextBeams.push(docToEntity(doc));
+            nextBeams.push(beamDocToEntity(doc));
             mutated = true;
           } else {
             nextBeams.push(existing);
