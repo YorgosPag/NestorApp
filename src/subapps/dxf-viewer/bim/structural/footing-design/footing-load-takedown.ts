@@ -5,7 +5,8 @@
  * παράγει το προτεινόμενο service φορτίο **ανά πέδιλο (pad)** μέσω της στηρίζουσας
  * κολώνας (organism FK `ColumnParams.footingId`, ίδια χαρτογράφηση με
  * `resolveSupportingColumnDims`) + grid half-spacing tributary area. Καθαρό —
- * επιστρέφει patches· η εφαρμογή/undo γίνεται στο `ComputeTakedownLoadsCommand`.
+ * επιστρέφει patches. **ADR-466:** το production μονοπάτι το γενίκευσε ο
+ * `computeLoadPathPatches` (όλα τα μέλη)· εδώ μένει ως pure footing oracle (jest).
  *
  * ΚΑΝΟΝΑΣ (manual vs auto): γράφει ΜΟΝΟ όπου `isTakedownWritable` — ΠΟΤΕ δεν
  * αντικαθιστά χειροκίνητο φορτίο (mirror auto-reinforce). Self-weight κατακόρυφου
@@ -20,7 +21,6 @@
 
 import type { Entity } from '../../../types/entities';
 import { isColumnEntity, isFoundationEntity } from '../../../types/entities';
-import type { ColumnEntity } from '../../types/column-types';
 import type { AppliedMemberLoad } from '../loads/structural-loads-types';
 import { isTakedownWritable } from '../loads/structural-loads-types';
 import {
@@ -28,49 +28,16 @@ import {
   computeMemberTakedown,
   toAppliedTakedownLoad,
   type TributaryColumn,
+  type TakedownSettings,
 } from '../loads/load-takedown';
-import { buildColumnSectionContext } from '../section-context';
-import { concreteWeightKg } from '../concrete-grades';
-import { mmToSceneUnits } from '../../../utils/scene-units';
+import { columnCenterM, columnSelfWeightPerStoreyKn } from '../loads/member-load-geometry';
 
-/** Επιτάχυνση βαρύτητας (m/s²) — μάζα σκυροδέματος → φορτίο. */
-const GRAVITY_MS2 = 9.81;
-const MM2_MM_TO_M3 = 1 / 1e9;
-
-/** Building-level παράμετροι takedown (storey count + area loads). */
-export interface TakedownSettings {
-  readonly storeyCount: number;
-  readonly deadAreaLoadKpa: number;
-  readonly liveAreaLoadKpa: number;
-}
+export type { TakedownSettings };
 
 /** Προτεινόμενο φορτίο πεδίλου (source='takedown') έτοιμο για persist. */
 export interface FootingTakedownLoad {
   readonly footingId: string;
   readonly appliedLoad: AppliedMemberLoad;
-}
-
-/** Κέντρο διατομής κολώνας (m) από το bbox του footprint (canvas units → m). */
-function columnCenterM(c: ColumnEntity): TributaryColumn | null {
-  const verts = c.geometry?.footprint?.vertices;
-  if (!verts || verts.length === 0) return null;
-  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-  for (const v of verts) {
-    if (v.x < minX) minX = v.x;
-    if (v.x > maxX) maxX = v.x;
-    if (v.y < minY) minY = v.y;
-    if (v.y > maxY) maxY = v.y;
-  }
-  const perScene = mmToSceneUnits(c.params.sceneUnits ?? 'mm');
-  const toM = (canvas: number): number => canvas / perScene / 1000;
-  return { id: c.id, xM: toM((minX + maxX) / 2), yM: toM((minY + maxY) / 2) };
-}
-
-/** Ίδιο βάρος μίας κολώνας ανά όροφο (kN) από τη διατομή × ύψος της. */
-function columnSelfWeightPerStoreyKn(c: ColumnEntity): number {
-  const s = buildColumnSectionContext(c);
-  const volumeM3 = Math.max(0, s.grossAreaMm2) * Math.max(0, s.heightMm) * MM2_MM_TO_M3;
-  return (concreteWeightKg(volumeM3) * GRAVITY_MS2) / 1000;
 }
 
 /**

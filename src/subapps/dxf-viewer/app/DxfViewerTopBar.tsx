@@ -82,7 +82,18 @@ export function DxfViewerTopBar({
   // καρτέλα «Επιμετρήσεις» έμενε κενή. 3-tier fallback (saveContext → linked
   // Level → FLOORS doc μέσω useFloorMetadata) + floorId για per-floor grouping.
   const currentLevel = levelManager.levels?.find((l) => l.id === levelManager.currentLevelId);
-  const floorId = levelManager.saveContext?.floorId ?? currentLevel?.floorId ?? undefined;
+  // 🛡️ ADR-420 (cross-floor scope leak, incident 2026-06-17) — derive the BIM
+  // persistence `floorId` from the DURABLE `Level.floorId`, which TRACKS floor
+  // navigation, NOT the volatile `saveContext.floorId` (the DXF save-target of
+  // the last import/save, sticky across level switches). Preferring saveContext
+  // pinned every floor's BIM scope to the last-imported floor → columns/footings
+  // drawn on floor B were queried/written under floor A's `floorId` → they
+  // appeared on ALL floors as the same doc (shared delete/undo). Import-σε-όροφο
+  // stays correct: `findOrCreateLevelForFloor` links+switches the Level, so
+  // `currentLevel.floorId === saveContext.floorId` at import time. A level with
+  // no linked floor (manual/project-level) falls back to `saveContext`. Mirrors
+  // the durable-first precedence already used for `projectId` below.
+  const floorId = currentLevel?.floorId ?? levelManager.saveContext?.floorId ?? undefined;
   // 🛡️ ADR-420 / ADR-399 (incident 2026-06-16) — derive `projectId` from the DURABLE
   // Level identity, not only the volatile DXF save target. The cross-floor guard
   // (`useLevelSceneLoader.resetDxfAutoSaveTarget`) nulls `saveContext`, which used to

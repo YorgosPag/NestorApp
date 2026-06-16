@@ -86,6 +86,13 @@ export function computeGridTributaryAreas(
   return out;
 }
 
+/** Building-level παράμετροι takedown (storey count + area loads G/Q). */
+export interface TakedownSettings {
+  readonly storeyCount: number;
+  readonly deadAreaLoadKpa: number;
+  readonly liveAreaLoadKpa: number;
+}
+
 /** Χαρακτηριστικές συνιστώσες (G/Q) μιας επιφορτιζόμενης επιφάνειας. */
 export interface AreaLoadResultant {
   readonly deadAxialKn: number;
