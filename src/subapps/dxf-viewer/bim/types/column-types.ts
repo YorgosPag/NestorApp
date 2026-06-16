@@ -43,6 +43,7 @@ import type { EnvelopeFunction, EnvelopeLayer } from './thermal-envelope-types';
 import type { StructuralFinishSpec } from '../finishes/structural-finish-types';
 import type { ConcreteGrade } from '../structural/concrete-grades';
 import type { ColumnReinforcement } from '../structural/reinforcement/column-reinforcement-types';
+import type { AppliedMemberLoad } from '../structural/loads/structural-loads-types';
 
 // ─── Sub-type discriminator (ADR-363 §5.6) ───────────────────────────────────
 
@@ -341,6 +342,14 @@ export interface ColumnParams {
    * από `column-reinforcement-compute.ts` — ΠΟΤΕ αποθηκεύονται.
    */
   readonly reinforcement?: ColumnReinforcement;
+  /**
+   * ADR-464 — Χειροκίνητο analytical service φορτίο κολώνας (χαρακτηριστικές G/Q
+   * συνιστώσες). Revit-style (loads ανατίθενται στο αναλυτικό μοντέλο). Optional/
+   * non-breaking: absent → ο σχεδιασμός θεμελίωσης (`footing-design`) παραμένει
+   * αδρανής (advisory). Η FK κολώνα→πέδιλο (`footingId`) μεταφέρει το φορτίο στο
+   * πέδιλο για τον έλεγχο έδρασης/κάμψης/διάτρησης. ΠΟΤΕ derived — μόνο input.
+   */
+  readonly appliedLoad?: AppliedMemberLoad;
 }
 
 // ─── Geometry cache (derivable from params; SSoT = params) ──────────────────

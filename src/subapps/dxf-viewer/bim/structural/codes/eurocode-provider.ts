@@ -21,6 +21,7 @@ import type {
   BeamSectionContext,
   ColumnReinforcementLimits,
   ColumnSectionContext,
+  FootingDesignFactors,
   FootingReinforcementLimits,
   FootingSectionContext,
   SlabFoundationReinforcementLimits,
@@ -148,6 +149,11 @@ function eurocodeSlabFoundationLimits(
   };
 }
 
+/** EN1990 Πίνακας A1.2(B) — θεμελιώδης συνδυασμός ULS: γ_G=1.35, γ_Q=1.50. */
+const EUROCODE_FOOTING_DESIGN_FACTORS: FootingDesignFactors = {
+  combination: { gammaG: 1.35, gammaQ: 1.5 },
+};
+
 /** EC2 §8.4.4 — βασικός συντελεστής αγκύρωσης lbd ≈ 40·Ø (καλή συνάφεια, εφελκυσμός). */
 const EUROCODE_ANCHORAGE_FACTOR = 40;
 /** EC2 §8.7.3 — βασικός συντελεστής ματίσματος l₀ ≈ 50·Ø (α₆ ≈ 1.25 × lbd). */
@@ -171,6 +177,9 @@ export const EUROCODE_PROVIDER: StructuralCodeProvider = {
   slabFoundationReinforcementLimits: eurocodeSlabFoundationLimits,
   suggestSlabFoundationReinforcement(ctx: SlabFoundationSectionContext): SlabFoundationReinforcement {
     return suggestSlabFoundationReinforcementFrom(this, ctx);
+  },
+  footingDesignFactors(): FootingDesignFactors {
+    return EUROCODE_FOOTING_DESIGN_FACTORS;
   },
   lapLengthMm(diameterMm: number, ctx?: BarDevelopmentContext): number {
     return developmentLengthMm(EUROCODE_LAP_FACTOR, diameterMm, ctx);

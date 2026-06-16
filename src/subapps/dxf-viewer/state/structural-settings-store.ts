@@ -70,7 +70,14 @@ export interface StructuralSettingsState extends StructuralSettings {
 
 export const useStructuralSettingsStore = create<StructuralSettingsState>((set, get) => {
   function raw(state: StructuralSettingsState): StructuralSettings {
-    return { codeId: state.codeId, defaultConcreteGrade: state.defaultConcreteGrade };
+    const base: StructuralSettings = {
+      codeId: state.codeId,
+      defaultConcreteGrade: state.defaultConcreteGrade,
+    };
+    // ADR-464 — μετέφερε το σ_allow αυτούσιο (omit-when-absent → Firestore-safe).
+    return state.soilBearingCapacityKpa !== undefined && state.soilBearingCapacityKpa > 0
+      ? { ...base, soilBearingCapacityKpa: state.soilBearingCapacityKpa }
+      : base;
   }
 
   return {
@@ -84,6 +91,8 @@ export const useStructuralSettingsStore = create<StructuralSettingsState>((set, 
         currentBuildingId: buildingId,
         codeId: resolved.codeId,
         defaultConcreteGrade: resolved.defaultConcreteGrade,
+        // ADR-464 — σ_allow building setting (absent → undefined, in-memory only).
+        soilBearingCapacityKpa: resolved.soilBearingCapacityKpa,
         lastLocalMutationAt: 0,
       });
     },

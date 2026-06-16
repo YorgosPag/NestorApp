@@ -22,6 +22,7 @@ import type {
   BeamSectionContext,
   ColumnReinforcementLimits,
   ColumnSectionContext,
+  FootingDesignFactors,
   FootingReinforcementLimits,
   FootingSectionContext,
   SlabFoundationReinforcementLimits,
@@ -144,6 +145,11 @@ function greekLegacySlabFoundationLimits(
   };
 }
 
+/** ΕΑΚ 2003 §3.2.3 — θεμελιώδης συνδυασμός: γ_G=1.35, γ_Q=1.50 (ίδιοι με EN1990). */
+const GREEK_LEGACY_FOOTING_DESIGN_FACTORS: FootingDesignFactors = {
+  combination: { gammaG: 1.35, gammaQ: 1.5 },
+};
+
 /** ΕΚΩΣ 2000 §17.2.6 — αγκύρωση συντηρητικότερη από EC2 (~50·Ø). */
 const GREEK_LEGACY_ANCHORAGE_FACTOR = 50;
 /** ΕΚΩΣ 2000 §17.2.7 — μάτισμα συντηρητικότερο από EC2 (~55·Ø). */
@@ -167,6 +173,9 @@ export const GREEK_LEGACY_PROVIDER: StructuralCodeProvider = {
   slabFoundationReinforcementLimits: greekLegacySlabFoundationLimits,
   suggestSlabFoundationReinforcement(ctx: SlabFoundationSectionContext): SlabFoundationReinforcement {
     return suggestSlabFoundationReinforcementFrom(this, ctx);
+  },
+  footingDesignFactors(): FootingDesignFactors {
+    return GREEK_LEGACY_FOOTING_DESIGN_FACTORS;
   },
   lapLengthMm(diameterMm: number, ctx?: BarDevelopmentContext): number {
     return developmentLengthMm(GREEK_LEGACY_LAP_FACTOR, diameterMm, ctx);

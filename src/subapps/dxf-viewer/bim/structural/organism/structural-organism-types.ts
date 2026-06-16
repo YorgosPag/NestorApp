@@ -118,7 +118,9 @@ export type StructuralDiagnosticCode =
   | 'memberMissingReinforcement'
   | 'ratioOutOfRange'
   | 'barMismatchAtJoint'
-  | 'columnTopAnchorageUnverified';
+  | 'columnTopAnchorageUnverified'
+  // ADR-464 — footing design checks (loads model).
+  | 'bearingInadequate';
 
 /**
  * Ένα cross-entity εύρημα. `primaryEntityId` = το μέλος που «φταίει» (οδηγεί το

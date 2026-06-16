@@ -23,6 +23,7 @@ import {
   runOrganismChecks,
 } from '../bim/structural/organism/organism-checks';
 import { runReinforcementChecks } from '../bim/structural/organism/reinforcement-checks';
+import { runFootingDesignChecks } from '../bim/structural/footing-design/footing-design-checks';
 import { StructuralDiagnosticsStore } from '../bim/structural/organism/structural-diagnostics-store';
 import { resolveStructuralCode } from '../bim/structural/codes';
 import { useStructuralSettingsStore } from '../state/structural-settings-store';
@@ -72,10 +73,13 @@ export function useStructuralOrganism(props: { levelManager: LevelManagerLike })
       const graph = buildStructuralGraph(entities);
       // ADR-459 Φ4d — geometry connectivity (graph-only) + reinforcement διαγνωστικά
       // (entities + active code provider) σε ΕΝΑ low-freq store write (ADR-040 safe).
-      const provider = resolveStructuralCode(useStructuralSettingsStore.getState().codeId);
+      const settings = useStructuralSettingsStore.getState();
+      const provider = resolveStructuralCode(settings.codeId);
       const diagnostics = [
         ...runOrganismChecks(graph),
         ...runReinforcementChecks(graph, entities, provider),
+        // ADR-464 — έλεγχος έδρασης πεδίλου (αδρανές χωρίς σ_allow / φορτίο).
+        ...runFootingDesignChecks(graph, entities, provider, settings.soilBearingCapacityKpa),
       ];
       StructuralDiagnosticsStore.set(diagnostics);
       EventBus.emit('bim:structural-organism-updated', {

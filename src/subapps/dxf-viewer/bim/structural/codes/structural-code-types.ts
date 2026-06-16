@@ -20,6 +20,7 @@ import type { FootingReinforcement } from '../reinforcement/footing-reinforcemen
 import type { SlabFoundationReinforcement } from '../reinforcement/slab-foundation-reinforcement-types';
 import type { BeamSupportType } from '../../types/beam-types';
 import type { BarDevelopmentModifiers } from '../rebar-catalog';
+import type { LoadCombinationFactors } from '../loads/load-combinations';
 
 /** Persisted code identifier (project-level setting). */
 export type StructuralCodeId = 'eurocode' | 'greek-legacy';
@@ -187,6 +188,17 @@ export interface FootingReinforcementLimits {
   readonly nominalCoverMm: number;
 }
 
+// ─── Footing design (ADR-464) ────────────────────────────────────────────────
+
+/**
+ * Code-specific factors για τον σχεδιασμό θεμελίωσης (loads model + design engine,
+ * ADR-464). Slice 1 = συντελεστές συνδυασμού· διάτρηση/άλλα προστίθενται additive.
+ */
+export interface FootingDesignFactors {
+  /** Συντελεστές θεμελιώδους συνδυασμού ULS (EN1990 / ΕΑΚ). */
+  readonly combination: LoadCombinationFactors;
+}
+
 // ─── Foundation-slab / raft (ADR-459 Φ4e/E3) ─────────────────────────────────
 
 /**
@@ -267,6 +279,11 @@ export interface StructuralCodeProvider {
   suggestSlabFoundationReinforcement(
     ctx: SlabFoundationSectionContext,
   ): SlabFoundationReinforcement;
+  /**
+   * ADR-464 — code-specific factors σχεδιασμού θεμελίωσης (συνδυασμοί δράσεων ULS,
+   * + διάτρηση σε επόμενα slices). Stateless — ίδιες τιμές για όλο το κτίριο.
+   */
+  footingDesignFactors(): FootingDesignFactors;
   /**
    * ADR-459 Phase 4c — μήκος ματίσματος l₀ (mm), EC2 §8.7.3. ΕΝΑ SSoT για τις
    * προεκτάσεις/ματίσεις στις συνδέσεις του οργανισμού (αντικαθιστά το flat 50·Ø).
