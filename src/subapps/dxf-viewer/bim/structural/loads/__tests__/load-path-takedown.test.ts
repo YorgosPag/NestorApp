@@ -173,6 +173,63 @@ describe('REGRESSION — no-beam footing loads == computeFootingTakedownLoads (A
   });
 });
 
+// ─── Grid-anchored tributary (ADR-467 Revit-grade) ───────────────────────────
+
+/** Κολώνα 400×400 αγκυρωμένη με γωνία στην τομή αξόνων (gx,gy)· σώμα προς dirX/dirY. */
+function gridColumn(
+  id: string, gx: number, gy: number, gxId: string, gyId: string, dirX: number, dirY: number,
+): Entity {
+  const x0 = dirX > 0 ? gx : gx - 400;
+  const y0 = dirY > 0 ? gy : gy - 400;
+  return {
+    id, type: 'column', kind: 'rectangular',
+    params: {
+      kind: 'rectangular', position: { x: gx, y: gy, z: 0 }, anchor: 'center',
+      width: 400, depth: 400, height: 3000, rotation: 0, sceneUnits: 'mm',
+    },
+    guideBindings: [
+      { guideId: gxId, slot: 'center-x' }, { guideId: gyId, slot: 'center-y' },
+    ],
+    geometry: {
+      area: 0.16,
+      footprint: { vertices: [
+        { x: x0, y: y0 }, { x: x0 + 400, y: y0 },
+        { x: x0 + 400, y: y0 + 400 }, { x: x0, y: y0 + 400 },
+      ] },
+    },
+  } as unknown as Entity;
+}
+
+describe('grid-anchored tributary (corner-anchored 5×5 columns)', () => {
+  // Άξονες 5×5· κολώνες αγκυρωμένες με τη γωνία στις τομές → κεντροειδή 4.6m μεταξύ τους.
+  const OFFS = new Map([['gx0', 9440], ['gx1', 14440], ['gy0', 6250], ['gy1', 11250]]);
+  const getOffset = (id: string): number | undefined => OFFS.get(id);
+  const entities = [
+    gridColumn('c1', 9440, 6250, 'gx0', 'gy0', 1, 1),
+    gridColumn('c2', 14440, 6250, 'gx1', 'gy0', -1, 1),
+    gridColumn('c3', 9440, 11250, 'gx0', 'gy1', 1, -1),
+    gridColumn('c4', 14440, 11250, 'gx1', 'gy1', -1, -1),
+  ];
+  const graph: StructuralGraph = {
+    nodes: ['c1', 'c2', 'c3', 'c4'].map((id) => gNode(id, 'column')), edges: [],
+  };
+  const selfKn4 = 0.48 * 2400 * 9.81 / 1000 * 4; // ίδιο βάρος × 4 όροφοι
+
+  it('ΜΕ getOffset → tributary βάσει αξόνων (5×5=25 m²), ΟΧΙ κεντροειδούς', () => {
+    const patches = computeLoadPathPatches(entities, graph, SETTINGS, getOffset);
+    const c = patchById(patches, 'c1');
+    expect(c?.liveAxialKn).toBeCloseTo(25 * 4 * 2, 1);           // 200 (grid)
+    expect(c?.deadAxialKn).toBeCloseTo(25 * 4 * 6 + selfKn4, 1); // 645.2 (grid)
+  });
+
+  it('ΧΩΡΙΣ getOffset → fallback στο κεντροειδές (4.6×4.6=21.16 m², μικρότερο φορτίο)', () => {
+    const patches = computeLoadPathPatches(entities, graph, SETTINGS);
+    const c = patchById(patches, 'c1');
+    expect(c?.liveAxialKn).toBeCloseTo(21.16 * 4 * 2, 0);        // ~169.3 (centroid)
+    expect(c!.liveAxialKn).toBeLessThan(200);                    // < grid → fallback ενεργό
+  });
+});
+
 describe('isLoadPathMember', () => {
   it('αναγνωρίζει κολώνα/δοκάρι/πλάκα/pad πέδιλο, απορρίπτει άγνωστα', () => {
     expect(isLoadPathMember(column('c', 0, 0))).toBe(true);

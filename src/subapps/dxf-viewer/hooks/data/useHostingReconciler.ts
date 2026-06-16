@@ -39,7 +39,7 @@ import {
 } from '../../bim/hosting/guide-hosting-reconciler';
 import { hasGuideBindings } from '../../bim/hosting/guide-binding-types';
 import { getHostingStrategy } from '../../bim/hosting/hosting-strategy';
-import type { GuideOffsetLookup } from '../../bim/hosting/derive-slots';
+import { makeGuideOffsetLookup } from '../../bim/hosting/guide-store-offset-lookup';
 
 interface LevelManagerLike {
   readonly currentLevelId: string | null;
@@ -62,15 +62,6 @@ function hostedSignature(entities: readonly AnySceneEntity[]): string {
 /** Grid-hosted entity = φέρει bindings ΚΑΙ έχει registered hosting strategy (foundation/wall/column). */
 function isGridHosted(e: AnySceneEntity): boolean {
   return hasGuideBindings(e) && getHostingStrategy(e.type) !== undefined;
-}
-
-/** Current offset ενός X/Y άξονα (XZ/διαγραμμένος → undefined → slot αγνοείται). */
-function makeOffsetLookup(): GuideOffsetLookup {
-  const store = getGlobalGuideStore();
-  return (id) => {
-    const g = store.getGuideById(id);
-    return g && g.axis !== 'XZ' ? g.offset : undefined;
-  };
 }
 
 export function useHostingReconciler({ levelManager }: UseHostingReconcilerParams): void {
@@ -135,7 +126,7 @@ export function useHostingReconciler({ levelManager }: UseHostingReconcilerParam
       }
 
       // Which bound axes actually moved since last tick? (skip unrelated notifies)
-      const getOffset = makeOffsetLookup();
+      const getOffset = makeGuideOffsetLookup();
       const changedIds = new Set<string>();
       const nextOffsets = new Map<string, number>();
       for (const guideId of indexRef.current.keys()) {

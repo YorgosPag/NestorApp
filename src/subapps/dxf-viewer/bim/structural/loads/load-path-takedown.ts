@@ -15,6 +15,11 @@
  * κρατά tributary. Πραγματικό chained reaction tree = DEFER (FEM ADR). Pure: επιστρέφει
  * patches· η εφαρμογή/undo γίνεται στο `ComputeLoadPathCommand`.
  *
+ * **Grid-anchored tributary (Revit-grade):** όταν δοθεί `getOffset` (guide store), ο
+ * αναλυτικός κόμβος κάθε hosted κολώνας είναι η **τομή των αξόνων κανάβου** (ΟΧΙ το
+ * γεωμετρικό κεντροειδές) — μια γωνιακά-αγκυρωμένη κολώνα 5×5 δίνει tributary 25 m², όχι
+ * 4.6×4.6. Χωρίς guides → κεντροειδές (μηδέν regression).
+ *
  * @see ./load-path-walk.ts — topological order + edge resolvers
  * @see ./member-load-geometry.ts — κέντρα/ίδιο βάρος SSoT
  * @see docs/centralized-systems/reference/adrs/ADR-467-load-path-engine.md
@@ -51,6 +56,7 @@ import {
   footingColumnId,
 } from './load-path-walk';
 import type { StructuralGraph } from '../organism/structural-organism-types';
+import type { GuideOffsetLookup } from '../../hosting/derive-slots';
 
 /** Μέλος της διαδρομής φορτίων που μπορεί να φέρει `appliedLoad`. */
 export type LoadPathMember = ColumnEntity | BeamEntity | SlabEntity | FoundationEntity;
@@ -80,10 +86,12 @@ function writablePatch(e: LoadPathMember, load: MemberLoad): MemberLoadPatch | n
 }
 
 /** Tributary area (m²) ανά κολώνα — ΕΝΑ grid pass για όλη τη σκηνή. */
-function buildColumnTributary(entities: readonly Entity[]): Map<string, number> {
+function buildColumnTributary(
+  entities: readonly Entity[], getOffset?: GuideOffsetLookup,
+): Map<string, number> {
   const centres = entities
     .filter(isColumnEntity)
-    .map(columnCenterM)
+    .map((c) => columnCenterM(c, getOffset))
     .filter((c): c is TributaryColumn => c !== null);
   return computeGridTributaryAreas(centres);
 }
@@ -136,12 +144,13 @@ export function computeLoadPathPatches(
   entities: readonly Entity[],
   graph: StructuralGraph,
   settings: TakedownSettings,
+  getOffset?: GuideOffsetLookup,
 ): MemberLoadPatch[] {
   const { storeyCount, deadAreaLoadKpa, liveAreaLoadKpa } = settings;
   if (storeyCount <= 0 || (deadAreaLoadKpa <= 0 && liveAreaLoadKpa <= 0)) return [];
 
   const byId = new Map(entities.map((e) => [e.id, e]));
-  const tributary = buildColumnTributary(entities);
+  const tributary = buildColumnTributary(entities, getOffset);
   const columnLoadById = new Map<string, MemberLoad>();
   const patches: MemberLoadPatch[] = [];
 

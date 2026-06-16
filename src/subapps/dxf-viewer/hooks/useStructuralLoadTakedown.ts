@@ -28,6 +28,7 @@ import { LevelSceneManagerAdapter } from '../systems/entity-creation/LevelSceneM
 import { ComputeLoadPathCommand } from '../core/commands/entity-commands/ComputeLoadPathCommand';
 import { computeLoadPathPatches } from '../bim/structural/loads/load-path-takedown';
 import { buildStructuralGraph } from '../bim/structural/organism/structural-graph';
+import { makeGuideOffsetLookup } from '../bim/hosting/guide-store-offset-lookup';
 import { useStructuralSettingsStore } from '../state/structural-settings-store';
 import { useBuildingStoreyCount } from './useBuildingStoreyCount';
 import type { Entity } from '../types/entities';
@@ -61,7 +62,7 @@ export function useStructuralLoadTakedown(props: { levelManager: LevelManagerLik
         storeyCount: storeyCountRef.current,
         deadAreaLoadKpa: settings.deadAreaLoadKpa ?? 0,
         liveAreaLoadKpa: settings.liveAreaLoadKpa ?? 0,
-      });
+      }, makeGuideOffsetLookup());
       if (loads.length === 0) {
         EventBus.emit('bim:structural-loads-computed', { entityIds: [], count: 0 });
         return;
