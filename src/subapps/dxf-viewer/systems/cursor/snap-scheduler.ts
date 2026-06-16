@@ -36,7 +36,8 @@ import type { Point2D } from '../../rendering/types/Types';
 /** Inputs the scheduler needs to compute one snap detection pass. */
 export interface SnapDetectionInput {
   readonly worldPos: Point2D;
-  readonly activeTool: string;
+  /** Active tool id; optional to mirror `CentralizedMouseHandlersProps.activeTool` (only `=== 'column'` is read). */
+  readonly activeTool: string | undefined;
   readonly findSnapPoint: (x: number, y: number) => ProSnapResult | null;
   /** Gated React snap-state setter (LayerCanvas draw); a no-op for opted-out consumers. */
   readonly setSnapResults: (results: SnapResultItem[]) => void;

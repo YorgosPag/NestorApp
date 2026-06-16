@@ -178,6 +178,25 @@ export const LayerCanvas = React.memo(React.forwardRef<HTMLCanvasElement, LayerC
       s.type === 'endpoint' || s.type === 'midpoint' || s.type === 'center' || s.type === 'intersection')
     .map((s) => ({ point: s.point, type: s.type, entityId: s.entityId ?? undefined }));
 
+  // ─────────────────────────────────────────────────────────────────────────
+  // 🟣 ADR-040 Φ11 / Phase 3.2a PROBE — TEMPORARY, DO NOT COMMIT. REMOVE after sign-off.
+  // Goal: prove the LayerCanvas interactive handlers NEVER fire because the DxfCanvas
+  // (z-10) intercepts every pointer event (see hooks/canvas/useCanvasMouse.ts:152-155).
+  // If this holds, the handler is dead code and can be neutralized in 3.2b.
+  // HOW TO TEST (Giorgio): open the 2D viewer, then for EACH tool — select, layering,
+  // marquee (box-select), lasso, grip-drag, guide-edit — move/click/drag over geometry
+  // and overlays. Watch the console. Logs once per (handler, tool) pair so it stays
+  // readable. EXPECTED: nothing logs (or only handlers we keep). Anything that logs =
+  // that handler is ALIVE for that tool → it must NOT be removed in 3.2b.
+  const probe32aSeen = useRef<Set<string>>(new Set());
+  const probe32a = useCallback((handler: string) => {
+    const key = `${handler}|${activeTool}`;
+    if (probe32aSeen.current.has(key)) return;
+    probe32aSeen.current.add(key);
+    // eslint-disable-next-line no-console -- temporary 3.2a diagnostic, removed after sign-off
+    console.warn(`🟣[3.2a-PROBE] LayerCanvas.${handler} FIRED — tool=${activeTool}`);
+  }, [activeTool]);
+
   // ── Unified canvas system state ────────────────────────────────────
   const [_canvasManager, setCanvasManager] = useState<CanvasManager | null>(null);
   const [_canvasInstance, setCanvasInstance] = useState<CanvasInstance | null>(null);
@@ -337,9 +356,11 @@ export const LayerCanvas = React.memo(React.forwardRef<HTMLCanvasElement, LayerC
         ...style
       }}
       onPointerDown={() => {
+        probe32a('onPointerDown'); // 🟣 3.2a PROBE — REMOVE after sign-off
         // Allow events to flow to centralized handler for selection
       }}
       onPointerUp={(e) => {
+        probe32a('onPointerUp'); // 🟣 3.2a PROBE — REMOVE after sign-off
         if (activeTool === 'layering') {
           e.preventDefault();
           e.stopPropagation();
@@ -364,16 +385,18 @@ export const LayerCanvas = React.memo(React.forwardRef<HTMLCanvasElement, LayerC
         }
       }}
       onMouseEnter={() => {
+        probe32a('onMouseEnter'); // 🟣 3.2a PROBE — REMOVE after sign-off
         // Handled by mouse handlers
       }}
-      onMouseMove={(e) => mouseHandlers.handleMouseMove(e)}
-      onMouseLeave={(e) => mouseHandlers.handleMouseLeave(e)}
+      onMouseMove={(e) => { probe32a('onMouseMove'); mouseHandlers.handleMouseMove(e); }}
+      onMouseLeave={(e) => { probe32a('onMouseLeave'); mouseHandlers.handleMouseLeave(e); }}
       onClick={() => {
+        probe32a('onClick'); // 🟣 3.2a PROBE — REMOVE after sign-off
         // Handled by mouse handlers
       }}
-      onMouseDown={(e) => mouseHandlers.handleMouseDown(e)}
-      onMouseUp={(e) => mouseHandlers.handleMouseUp(e)}
-      onWheel={(e) => mouseHandlers.handleWheel(e)}
+      onMouseDown={(e) => { probe32a('onMouseDown'); mouseHandlers.handleMouseDown(e); }}
+      onMouseUp={(e) => { probe32a('onMouseUp'); mouseHandlers.handleMouseUp(e); }}
+      onWheel={(e) => { probe32a('onWheel'); mouseHandlers.handleWheel(e); }}
       onAuxClick={(e) => e.preventDefault()}
       onContextMenu={onContextMenu}
     />
