@@ -196,3 +196,43 @@ export interface DetailSheetLabels {
   /** Title-block (drawing data) field labels. */
   readonly titleFields: DetailTitleBlockLabels;
 }
+
+// ─── ADR-463 — Footing detail labels (kind-neutral rows: pad/strip/tie-beam) ──
+
+/** Pre-resolved footing reinforcement-schedule table labels (N.11-safe). */
+export interface FootingScheduleLabels {
+  readonly item: string;        // «Στοιχείο» / item column
+  readonly description: string; // «Οπλισμός» (Ø/βήμα ή nØd)
+  readonly length: string;      // «Μήκος (m)»
+  readonly weight: string;      // «Βάρος (kg)»
+  readonly main: string;        // «Κύριος» row (κάτω σχάρα / εγκάρσιες / κάτω ράβδοι)
+  readonly secondary: string;   // «Δευτερεύων» row (άνω σχάρα / διαμήκεις / άνω ράβδοι)
+  readonly stirrups: string;    // «Συνδετήρες» row (strip / tie-beam)
+  readonly total: string;       // «Σύνολο» row
+  readonly ratio: string;       // «ρ» κύριος (καμπτικός) λόγος οπλισμού
+}
+
+/** Pre-resolved footing title-block (drawing data) field labels (N.11-safe). */
+export interface FootingTitleBlockLabels {
+  readonly kind: string;        // «Τύπος» (πέδιλο/πεδιλοδοκός/συνδετήρια)
+  readonly section: string;     // «Διατομή» (W×L ή W×H band)
+  readonly thickness: string;   // «Πάχος/Ύψος»
+  readonly concrete: string;    // «Σκυρόδεμα»
+  readonly steel: string;       // «Χάλυβας»
+  readonly cover: string;       // «Επικάλυψη»
+  readonly main: string;        // «Κύριος οπλισμός»
+  readonly secondary: string;   // «Δευτερεύων οπλισμός»
+}
+
+/** Pre-resolved footing detail-sheet region headings + table/field labels. */
+export interface FootingDetailSheetLabels {
+  readonly plan: string;
+  readonly elevation: string;
+  readonly perspective: string;
+  readonly schedule: string;
+  readonly titleBlock: string;
+  readonly scheduleTable: FootingScheduleLabels;
+  readonly titleFields: FootingTitleBlockLabels;
+  /** Pre-resolved kind values («Πέδιλο» / «Πεδιλοδοκός» / «Συνδετήρια δοκός»). */
+  readonly kindValues: Readonly<Record<'pad' | 'strip' | 'tie-beam', string>>;
+}

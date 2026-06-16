@@ -340,6 +340,8 @@ export interface BimEventMap {
   'bim:pset-editor-open': { entityId: string; levelId: string; entityType: string };
   /** ADR-457 — column contextual «Λεπτομέρεια Οπλισμού» → open ColumnDetailHost dialog. */
   'bim:column-detail-requested': { columnId: string; levelId: string };
+  /** ADR-463 — foundation contextual «Λεπτομέρεια Οπλισμού» → open FoundationDetailHost dialog. */
+  'bim:foundation-detail-requested': { foundationId: string; levelId: string };
   /** ADR-369 Q8.3 — ribbon IFC Export button → IfcExportHost downloads .ifc file. */
   'bim:ifc-export-requested': {
     /** Scope filter — if omitted, exports every building in project. */

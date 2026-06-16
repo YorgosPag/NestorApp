@@ -4412,6 +4412,51 @@
       "stirrups": "Stirrups"
     }
   },
+  "foundationDetail": {
+    "dialogTitle": "Foundation Reinforcement Detail",
+    "dialogDescription": "Drawing sheet of the selected footing's reinforcement — plan, section, 3D perspective, reinforcement schedule and title block, fully dimensioned.",
+    "previewAlt": "Foundation reinforcement detail sheet preview",
+    "close": "Close",
+    "exportPdf": "Export PDF",
+    "print": "Print",
+    "zoomIn": "Zoom in",
+    "zoomOut": "Zoom out",
+    "zoomReset": "Reset zoom",
+    "zoomToolbar": "Preview zoom",
+    "regions": {
+      "plan": "PLAN",
+      "elevation": "SECTION",
+      "perspective": "3D PERSPECTIVE",
+      "schedule": "REINFORCEMENT",
+      "titleBlock": "TITLE BLOCK"
+    },
+    "scheduleTable": {
+      "item": "Item",
+      "description": "Reinforcement",
+      "length": "Length (m)",
+      "weight": "Weight (kg)",
+      "main": "Main",
+      "secondary": "Secondary",
+      "stirrups": "Stirrups",
+      "total": "Total",
+      "ratio": "ρ"
+    },
+    "titleFields": {
+      "kind": "Type",
+      "section": "Section (mm)",
+      "thickness": "Depth/Height (mm)",
+      "concrete": "Concrete",
+      "steel": "Steel",
+      "cover": "Cover (mm)",
+      "main": "Main reinforcement",
+      "secondary": "Secondary reinforcement"
+    },
+    "kindValues": {
+      "pad": "Pad footing",
+      "strip": "Strip footing",
+      "tieBeam": "Tie beam"
+    }
+  },
   "print": {
     "dialogTitle": "Print Drawing",
     "dialogDescription": "Export the current drawing to PDF, printer or plotter.",

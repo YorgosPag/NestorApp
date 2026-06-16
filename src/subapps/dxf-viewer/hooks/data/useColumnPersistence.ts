@@ -453,7 +453,20 @@ export function useColumnPersistence(
       if (payload.tool !== 'column') return;
       const entity = payload.entity as ColumnEntity | undefined;
       if (!entity || (entity as { type?: string }).type !== 'column') return;
-      if (!serviceRef.current) return;
+      if (!serviceRef.current) {
+        // DIAGNOSTIC (ADR-363): a column was drawn but the Firestore service is
+        // null — scope (companyId/projectId/floorplanId/userId) is missing → the
+        // column is NEVER persisted and lost on reload. Surface it (was silent).
+        logger.warn('Column created but persistence service NOT ready — column will NOT persist', {
+          columnId: entity.id,
+          hasCompanyId: !!companyId,
+          projectId: projectId ?? null,
+          floorplanId: floorplanId ?? null,
+          hasUserId: !!userId,
+        });
+        return;
+      }
+      logger.warn('Column created → scheduling first save', { columnId: entity.id });
       pendingFirstSaveIdsRef.current.add(entity.id);
       dirtyIdsRef.current.add(entity.id);
       void persist(entity);

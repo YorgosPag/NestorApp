@@ -366,6 +366,16 @@ export function useRibbonFoundationBridge(
         if (foundation) EventBus.emit('bim:auto-reinforce-requested', { entityIds: [foundation.id] });
         return;
       }
+      // ADR-463 — «Λεπτομέρεια Οπλισμού»: άνοιγμα του φύλλου σχεδίου οπλισμού (parity κολόνας).
+      if (action === FOUNDATION_RIBBON_KEYS_ACTIONS.reinforcementDetail) {
+        const foundation = resolveFoundation();
+        if (!foundation || !levelManager.currentLevelId) return;
+        EventBus.emit('bim:foundation-detail-requested', {
+          foundationId: foundation.id,
+          levelId: levelManager.currentLevelId,
+        });
+        return;
+      }
       if (action !== FOUNDATION_RIBBON_KEYS_ACTIONS.delete) return;
       const foundation = resolveFoundation();
       if (!foundation || !levelManager.currentLevelId) return;

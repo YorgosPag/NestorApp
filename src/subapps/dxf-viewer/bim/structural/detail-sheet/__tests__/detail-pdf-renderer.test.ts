@@ -6,7 +6,7 @@
  * matching jsPDF call (line / polyline / circle / text / dim / raster).
  */
 
-import { buildColumnDetailPdf } from '../render/detail-pdf-renderer';
+import { buildDetailSheetPdf } from '../render/detail-pdf-renderer';
 import { registerGreekFont } from '@/services/pdf/greek-font-loader';
 import type { DetailSheetModel } from '../detail-sheet-types';
 
@@ -63,26 +63,26 @@ const MODEL: DetailSheetModel = {
   ],
 };
 
-describe('buildColumnDetailPdf (ADR-457 Slice 5)', () => {
+describe('buildDetailSheetPdf (ADR-457 Slice 5)', () => {
   beforeEach(() => {
     ctorArgs.length = 0;
     (registerGreekFont as jest.Mock).mockClear();
   });
 
   it('creates an A3-landscape mm document and registers the Greek font', async () => {
-    await buildColumnDetailPdf(MODEL);
+    await buildDetailSheetPdf(MODEL);
     expect(ctorArgs[0]).toEqual({ orientation: 'landscape', unit: 'mm', format: 'a3' });
     expect(registerGreekFont).toHaveBeenCalledTimes(1);
   });
 
   it('draws the page frame plus one frame rect per region', async () => {
-    await buildColumnDetailPdf(MODEL);
+    await buildDetailSheetPdf(MODEL);
     // page border + 2 region frames = 3 stroked rects.
     expect(lastPdf.rect).toHaveBeenCalledTimes(3);
   });
 
   it('routes every primitive kind to its jsPDF call', async () => {
-    await buildColumnDetailPdf(MODEL);
+    await buildDetailSheetPdf(MODEL);
     expect(lastPdf.line).toHaveBeenCalled();      // line + dim extension/dimension lines
     expect(lastPdf.lines).toHaveBeenCalled();     // polyline
     expect(lastPdf.circle).toHaveBeenCalled();    // circle
@@ -99,12 +99,12 @@ describe('buildColumnDetailPdf (ADR-457 Slice 5)', () => {
         { kind: 'raster', rect: { x: 0, y: 0, w: 10, h: 10 }, dataUrl: null },
       ] }],
     };
-    await buildColumnDetailPdf(pending);
+    await buildDetailSheetPdf(pending);
     expect(lastPdf.addImage).not.toHaveBeenCalled();
   });
 
   it('returns a Blob via output("blob")', async () => {
-    const pdf = await buildColumnDetailPdf(MODEL);
+    const pdf = await buildDetailSheetPdf(MODEL);
     expect(pdf.output('blob')).toBeInstanceOf(Blob);
   });
 });

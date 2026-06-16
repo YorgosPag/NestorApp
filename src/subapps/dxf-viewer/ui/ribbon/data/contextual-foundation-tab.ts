@@ -295,6 +295,19 @@ export const CONTEXTUAL_FOUNDATION_TAB: RibbonTab = {
         {
           isInFlyout: false,
           buttons: [
+            // ADR-463 — «Οπλισμός» εμφάνιση/απόκρυψη (ίδιο widget/flag με την κολώνα
+            // & την καρτέλα Προβολή· χωρίς αυτό ο 2Δ/3Δ οπλισμός μένει κρυφός [default OFF]).
+            {
+              type: 'widget',
+              size: 'small',
+              widgetId: 'show-reinforcement-toggle',
+              command: {
+                id: 'view.reinforcement.foundation',
+                labelKey: 'ribbon.commands.reinforcement.label',
+                icon: '',
+                commandKey: 'show-reinforcement-toggle',
+              },
+            },
             {
               type: 'simple',
               size: 'small',
@@ -305,6 +318,19 @@ export const CONTEXTUAL_FOUNDATION_TAB: RibbonTab = {
                 icon: 'struct-auto-reinforce',
                 commandKey: FOUNDATION_RIBBON_KEYS_ACTIONS.autoReinforce,
                 action: FOUNDATION_RIBBON_KEYS_ACTIONS.autoReinforce,
+              },
+            },
+            {
+              // ADR-463 — «Λεπτομέρεια Οπλισμού»: φύλλο σχεδίου (κάτοψη/τομή/3Δ/στοιχεία) + PDF.
+              type: 'simple',
+              size: 'small',
+              command: {
+                id: 'foundation.structural.reinforcementDetail',
+                labelKey: 'ribbon.commands.foundationStructural.reinforcementDetail',
+                tooltipKey: 'ribbon.commands.foundationStructural.reinforcementDetailTooltip',
+                icon: 'column-reinforcement-detail',
+                commandKey: FOUNDATION_RIBBON_KEYS_ACTIONS.reinforcementDetail,
+                action: FOUNDATION_RIBBON_KEYS_ACTIONS.reinforcementDetail,
               },
             },
           ],

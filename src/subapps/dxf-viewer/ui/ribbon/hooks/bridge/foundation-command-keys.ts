@@ -59,6 +59,8 @@ export const FOUNDATION_RIBBON_KEYS_ACTIONS = {
   // ADR-459 Φ4d — «Αυτόματος Οπλισμός» πεδίλου/πεδιλοδοκού/συνδετήριας (parity με
   // κολόνα): routes στο undoable AutoReinforceOrganismCommand.
   autoReinforce: 'foundation.actions.autoReinforce',
+  // ADR-463 — «Λεπτομέρεια Οπλισμού»: άνοιγμα φύλλου σχεδίου οπλισμού (parity κολόνας).
+  reinforcementDetail: 'foundation.actions.reinforcementDetail',
 } as const;
 
 export const FOUNDATION_RIBBON_BADGE_KEYS = {
@@ -83,7 +85,8 @@ export function isFoundationActionKey(action: string): boolean {
     action === FOUNDATION_RIBBON_KEYS_ACTIONS.fromGridCenter ||
     action === FOUNDATION_RIBBON_KEYS_ACTIONS.fromGridOuter ||
     action === FOUNDATION_RIBBON_KEYS_ACTIONS.tieBeamsFromGrid ||
-    action === FOUNDATION_RIBBON_KEYS_ACTIONS.autoReinforce
+    action === FOUNDATION_RIBBON_KEYS_ACTIONS.autoReinforce ||
+    action === FOUNDATION_RIBBON_KEYS_ACTIONS.reinforcementDetail
   );
 }
 

@@ -164,7 +164,7 @@ function renderRegion(pdf: jsPDF, region: SheetRegion): void {
  * Async only because the Greek font registers lazily. The caller exports it via
  * `pdf.output('blob')` (download / print).
  */
-export async function buildColumnDetailPdf(model: DetailSheetModel): Promise<jsPDF> {
+export async function buildDetailSheetPdf(model: DetailSheetModel): Promise<jsPDF> {
   const pdf = new jsPDF({
     orientation: model.paper.orientation,
     unit: 'mm',
