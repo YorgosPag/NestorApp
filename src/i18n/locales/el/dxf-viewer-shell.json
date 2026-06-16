@@ -2676,6 +2676,12 @@
         "mainLabel": "Κύριος οπλισμός",
         "steelWeight": "Βάρος χάλυβα (kg)",
         "ratio": "ρ (%)",
+        "soilBearing": "σ_επιτρ εδάφους (kPa)",
+        "padAxialLoad": "Αξονικό φορτίο N (kN)",
+        "padMomentX": "Ροπή Mx (kNm)",
+        "padMomentY": "Ροπή My (kNm)",
+        "bearingPMax": "p_max έδρασης (kPa)",
+        "bearingUtilization": "Αξιοποίηση έδρασης (%)",
         "toggle": {
           "on": "Ναι",
           "off": "Όχι"
@@ -3836,6 +3842,7 @@
     "emptyState": "Επίλεξε ένα θεμελιακό στοιχείο για να δεις τις ιδιότητες.",
     "sections": {
       "structural": { "title": "Στατικά / Οπλισμός" },
+      "loads": { "title": "Φορτία & Έδραση" },
       "readouts": { "title": "Ποσότητες" }
     }
   },

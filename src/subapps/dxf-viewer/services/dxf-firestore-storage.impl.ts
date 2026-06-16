@@ -15,6 +15,7 @@ import { dxfLogger, isExpectedError } from './dxf-firestore-logger';
 import type { DxfSaveContext, DxfFileMetadata, DxfFileRecord } from './dxf-firestore.types';
 import { mapFileRecordToDxfMetadata } from './dxf-firestore.types';
 import type { FileRecord } from '@/types/file-record';
+import { countSceneLayers } from '../utils/scene-entity-count';
 
 // =============================================================================
 // 🏢 ENTERPRISE STORAGE IMPLEMENTATION MODULE
@@ -37,7 +38,7 @@ import type { FileRecord } from '@/types/file-record';
 export function generateSceneChecksum(scene: SceneModel): string {
   const data = {
     entityCount: scene.entities.length,
-    layerCount: Object.keys(scene.layersById ?? {}).length,
+    layerCount: countSceneLayers(scene),
     bounds: scene.bounds,
     units: scene.units,
   };
@@ -204,6 +205,7 @@ export async function saveToStorageImpl(
       storagePath,
       sizeBytes: sceneBytes.length,
       entityCount: scene.entities.length,
+      layerCount: countSceneLayers(scene),
       checksum: generateSceneChecksum(scene),
       securityValidation: {
         validationResults: validation.validationResults as unknown as Array<{

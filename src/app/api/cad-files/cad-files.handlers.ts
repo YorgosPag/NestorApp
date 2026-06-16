@@ -98,6 +98,7 @@ export async function handleUpsertCadFile(
       downloadUrl: body.storageUrl,
       sizeBytes: body.sizeBytes,
       entityCount: body.entityCount,
+      layerCount: body.layerCount,
       version: newVersion,
       companyId: ctx.companyId,
       createdBy: ctx.uid,

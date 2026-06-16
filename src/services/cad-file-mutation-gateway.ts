@@ -40,6 +40,8 @@ export interface UpsertCadFilePayload {
   storagePath: string;
   sizeBytes: number;
   entityCount: number;
+  /** Number of layers in the scene — recorded in processedData.sceneStats.layerCount. */
+  layerCount?: number;
   checksum?: string;
   securityValidation?: CadFileSecurityValidationPayload;
   context?: CadFileContextPayload;

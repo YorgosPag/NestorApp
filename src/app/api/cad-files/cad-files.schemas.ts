@@ -52,6 +52,7 @@ export const UpsertCadFileSchema = z.object({
   storagePath: z.string().min(1).max(1000),
   sizeBytes: z.number().int().min(0).max(5_000_000_000),
   entityCount: z.number().int().min(0).max(10_000_000),
+  layerCount: z.number().int().min(0).max(1_000_000).optional(),
   checksum: z.string().max(64).optional(),
   securityValidation: SecurityValidationSchema.optional(),
   context: FilesContextSchema,

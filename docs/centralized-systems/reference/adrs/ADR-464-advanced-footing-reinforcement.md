@@ -1,6 +1,6 @@
 # ADR-464 — Advanced Footing Reinforcement & Design (full loads model, Revit-without-Robot)
 
-**Status:** 🟡 Slices 0-1 IMPLEMENTED 2026-06-16 (Opus) — UNCOMMITTED. Slice 0 = doc/types/soil-setting· Slice 1 = loads model + bearing engine (EC7) + bearingInadequate diagnostic (19 jest GREEN). UI input/readouts = Slice 1b. Slices 2-5 PENDING.
+**Status:** 🟡 Slices 0-1-1b IMPLEMENTED 2026-06-16 (Opus) — UNCOMMITTED. Slice 0 = doc/types/soil-setting· Slice 1 = loads model + bearing engine (EC7) + bearingInadequate diagnostic (19 jest GREEN)· Slice 1b = foundation panel UI (σ_allow + φορτία + bearing readouts, browser-testable). Slices 2-5 PENDING.
 **Discipline:** Δομοστατικά / Structural Engineering — Θεμελίωση (substructure)
 **Builds on:** ADR-436 (foundation discipline), ADR-456 (στατικά/κανονισμοί), ADR-459 (στατικός οργανισμός), ADR-463 (foundation reinforcement UX).
 **Scope:** Οι **προηγμένες περιπτώσεις οπλισμού/σχεδιασμού θεμελίωσης** που λείπουν από το ADR-463: **άνω σχάρα πεδίλου** (top mesh) code-driven, **έκκεντρα πέδιλα**, **κοιτοστρώσεις/raft parity**, **εδαφικές συνθήκες** (σ_allow) — με ένα πραγματικό **loads model + design engine** (bearing/flexure/punching) όπως οι μεγάλοι παίκτες (Revit). FULL ENTERPRISE + FULL SSoT.
@@ -72,7 +72,7 @@
 |---|---|---|
 | **0** | ADR + types + `soilBearingCapacityKpa` setting + resolver + jest | 🟢 **DONE** (UNCOMMITTED) |
 | **1** | Loads model (`loads/`) + bearing engine (EC7, `footing-design/`) + provider `footingDesignFactors()` + `ColumnParams.appliedLoad?` + `bearingInadequate` diagnostic (wired στο `useStructuralOrganism`) + jest | 🟢 **DONE** (UNCOMMITTED) |
-| **1b** | UI: σ_allow building setting input + column `appliedLoad` input fields + bearing readouts στο foundation panel | PENDING |
+| **1b** | UI (foundation panel «Φορτία & Έδραση», pad-only): σ_allow building combobox + `appliedLoad` (N/Mx/My) presets + bearing readouts (p_max/αξιοποίηση). Warning auto-surface μέσω `EntityWarningsSection`. `appliedLoad` μετακινήθηκε `ColumnParams`→`PadFootingParams` (single-SSoT). | 🟢 **DONE** (UNCOMMITTED) |
 | **2** | Flexure + ενοποιημένος top-mesh κανόνας + `padEccentricHogging` + auto top-mesh | PENDING |
 | **3** | Punching + one-way shear + diagnostics | PENDING |
 | **4** | Tributary load takedown + load combinations (auto loads) | PENDING |
@@ -92,5 +92,6 @@
 ---
 
 ## 5. Changelog
+- **2026-06-16 (Opus) — Slice 1b (UI):** Foundation panel group «Φορτία & Έδραση» (pad-only): σ_allow building combobox (store) + service φορτίο N/Mx/My presets (`PadFootingParams.appliedLoad`) + bearing readouts p_max/αξιοποίηση. **`appliedLoad` μετακινήθηκε `ColumnParams`→`PadFootingParams`** (single-SSoT πεδίλου· ο runner iterate-άρει foundations χωρίς graph — πιο robust). Νέο `footing-design-input.ts` (κοινό input-builder runner+readout, μηδέν duplicate). Store setter `setSoilBearingCapacityKpa`. Bridge: soilBearing→store, load→params, bearing readouts→computeFootingDesign. Descriptor+command-keys+param-options+i18n el/en. Warning ανεπάρκειας surface-άρει μέσω `EntityWarningsSection`. Free-numeric input = DEFER (panel=combobox-only). UNCOMMITTED.
 - **2026-06-16 (Opus) — Slice 1:** Loads model `bim/structural/loads/` (`structural-loads-types` [AppliedMemberLoad/MemberLoad/CombinedLoad + resolvers] + `load-combinations` [EN1990 ULS/SLS]) + footing-design engine `bim/structural/footing-design/` (`footing-design-types` + `footing-bearing` [EC7 rigid-footing pressure: concentric/εντός-kern ακριβές, μονοαξονική αποκόλληση ακριβής τριγωνική, διαξονική συντηρητική] + `footing-design` orchestrator + `footing-design-checks` runner). Provider `footingDesignFactors()` (interface + EC + ΕΚΩΣ). `ColumnParams.appliedLoad?` (persisted manual analytical load). Diagnostic `bearingInadequate` (error) wired στο `useStructuralOrganism` (αδρανές χωρίς σ_allow/φορτίο) + i18n el/en. Store `structural-settings-store` μεταφέρει σ_allow (round-trip). 19 jest (bearing+combinations+resolver) GREEN. UNCOMMITTED.
 - **2026-06-16 (Opus) — Slice 0:** ADR δημιουργήθηκε. `StructuralSettings.soilBearingCapacityKpa?` + `resolveStructuralSettings` validation (omit-when-invalid, Firestore-safe) + jest (`__tests__/structural-settings.test.ts`). Μηδέν behavior change. UNCOMMITTED.

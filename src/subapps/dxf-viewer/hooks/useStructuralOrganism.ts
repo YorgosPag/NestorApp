@@ -79,7 +79,7 @@ export function useStructuralOrganism(props: { levelManager: LevelManagerLike })
         ...runOrganismChecks(graph),
         ...runReinforcementChecks(graph, entities, provider),
         // ADR-464 — έλεγχος έδρασης πεδίλου (αδρανές χωρίς σ_allow / φορτίο).
-        ...runFootingDesignChecks(graph, entities, provider, settings.soilBearingCapacityKpa),
+        ...runFootingDesignChecks(entities, provider, settings.soilBearingCapacityKpa),
       ];
       StructuralDiagnosticsStore.set(diagnostics);
       EventBus.emit('bim:structural-organism-updated', {

@@ -110,3 +110,42 @@ describe('writeToFilesCollection — write-once entity identity', () => {
     ).rejects.toThrow(/canonicalScenePath/);
   });
 });
+
+describe('writeToFilesCollection — write-once createdAt & displayName, real layerCount', () => {
+  beforeEach(() => { captured.length = 0; });
+
+  it('writes createdAt + displayName ONLY on create', async () => {
+    await writeToFilesCollection({ ...baseParams, isCreate: true });
+    const { payload } = captured[0];
+    expect(payload.createdAt).toBe('__TS__');
+    expect(payload.displayName).toBe('display');
+    expect(payload.updatedAt).toBe('__TS__');
+  });
+
+  it('does NOT write createdAt or displayName on update — preserves creation-time values', async () => {
+    await writeToFilesCollection({ ...baseParams, isCreate: false, version: 3 });
+    const { payload } = captured[0];
+    expect(payload.createdAt).toBeUndefined();
+    expect(payload.displayName).toBeUndefined();
+    // updatedAt still tracks the latest save.
+    expect(payload.updatedAt).toBe('__TS__');
+  });
+
+  it('records the real layerCount in sceneStats when provided', async () => {
+    await writeToFilesCollection({ ...baseParams, isCreate: false, layerCount: 7 });
+    const { payload } = captured[0];
+    const sceneStats = (payload.processedData as { sceneStats: Record<string, unknown> }).sceneStats;
+    expect(sceneStats.entityCount).toBe(5);
+    expect(sceneStats.layerCount).toBe(7);
+    // parseTimeMs is omitted so merge preserves the wizard's value (never zeroed).
+    expect(sceneStats.parseTimeMs).toBeUndefined();
+  });
+
+  it('omits layerCount when not provided so merge preserves the existing value', async () => {
+    await writeToFilesCollection({ ...baseParams, isCreate: false });
+    const { payload } = captured[0];
+    const sceneStats = (payload.processedData as { sceneStats: Record<string, unknown> }).sceneStats;
+    expect(sceneStats.entityCount).toBe(5);
+    expect(sceneStats.layerCount).toBeUndefined();
+  });
+});

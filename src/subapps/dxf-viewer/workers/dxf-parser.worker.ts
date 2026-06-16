@@ -2,6 +2,7 @@
 import type { DxfImportResult } from '../types/scene';
 import type { SceneUnits } from '../utils/scene-units';
 import { DxfSceneBuilder } from '../utils/dxf-scene-builder';
+import { countSceneLayers } from '../utils/scene-entity-count';
 
 interface WorkerMessage {
   type: 'parse-dxf';
@@ -33,7 +34,7 @@ function parseDxfContent(content: string, filename: string, unitsOverride?: Scen
       scene,
       stats: {
         entityCount: scene.entities.length,
-        layerCount: Object.keys(scene.layersById ?? {}).length,
+        layerCount: countSceneLayers(scene),
         parseTimeMs
       }
     };

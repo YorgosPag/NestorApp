@@ -115,6 +115,16 @@ export const FOUNDATION_STRUCTURAL_KEYS = {
   code: 'foundation.structural.code',
   /** Επικάλυψη οπλισμού cnom (mm) — κοινό σε όλα τα kinds. */
   cover: 'foundation.structural.cover',
+  // ADR-464 — φορτία & έδραση (pad). `soilBearing` = building-level σ_allow (store)·
+  // axial/moment = per-foundation service φορτίο σχεδιασμού (`params.appliedLoad`).
+  /** Building-level επιτρεπόμενη τάση έδρασης εδάφους σ_allow (kPa). */
+  soilBearing: 'foundation.structural.soilBearing',
+  /** Service αξονικό φορτίο πεδίλου N (kN) — απλοποιημένο (G+Q ως G). */
+  padAxialLoad: 'foundation.structural.pad.axialLoad',
+  /** Service ροπή → εκκεντρότητα κατά X (kNm). */
+  padMomentX: 'foundation.structural.pad.momentX',
+  /** Service ροπή → εκκεντρότητα κατά Y (kNm). */
+  padMomentY: 'foundation.structural.pad.momentY',
   // pad — δι-διευθυντική κάτω σχάρα + προαιρετική άνω σχάρα.
   padBottomXDiameter: 'foundation.structural.pad.bottomXDiameter',
   padBottomXSpacing: 'foundation.structural.pad.bottomXSpacing',
@@ -149,6 +159,11 @@ export const FOUNDATION_STRUCTURAL_READOUT_KEYS = {
   steelWeight: 'foundation.structural.readout.steelWeight',
   /** % — ποσοστό κύριου (καμπτικού) οπλισμού ρ. */
   ratio: 'foundation.structural.readout.ratio',
+  // ADR-464 — readouts σχεδιασμού έδρασης (pad, όταν έχει οριστεί σ_allow + φορτίο).
+  /** kPa — μέγιστη πίεση εδάφους p_max. */
+  bearingPMax: 'foundation.structural.readout.bearingPMax',
+  /** % — αξιοποίηση έδρασης p_max/σ_allow. */
+  bearingUtilization: 'foundation.structural.readout.bearingUtilization',
 } as const;
 
 /** String/select structural keys (κανονισμός + on/off toggles). */

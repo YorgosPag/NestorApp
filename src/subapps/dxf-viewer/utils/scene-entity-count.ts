@@ -30,3 +30,15 @@ import type { SceneModel } from '../types/scene';
 export function countSceneEntities(scene: SceneModel | null | undefined): number {
   return scene?.entities?.length ?? 0;
 }
+
+/**
+ * Number of layers in a scene, or 0 for a missing/empty scene.
+ *
+ * ONE place answers "how many layers does this scene contain", ending the
+ * scattered inline `Object.keys(scene.layersById ?? {}).length` tally
+ * (checksum, sceneStats persistence, security validator, importer, worker).
+ * Pure + layer-neutral, sibling to `countSceneEntities`.
+ */
+export function countSceneLayers(scene: SceneModel | null | undefined): number {
+  return Object.keys(scene?.layersById ?? {}).length;
+}

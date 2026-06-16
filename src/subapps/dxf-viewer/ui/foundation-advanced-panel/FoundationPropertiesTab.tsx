@@ -39,6 +39,8 @@ export function FoundationPropertiesTab({
   // Reactive: re-render όταν αλλάζει ο building-level κανονισμός (combo «κανονισμός»
   // + readouts βάρους/ρ που εξαρτώνται από τον provider).
   useStructuralSettingsStore((s) => s.codeId);
+  // ADR-464 — re-render όταν αλλάζει το σ_allow (combo «έδραση» + bearing readouts).
+  useStructuralSettingsStore((s) => s.soilBearingCapacityKpa);
 
   const footing = React.useMemo<FoundationEntity | null>(() => {
     if (!primarySelectedId || !currentScene) return null;

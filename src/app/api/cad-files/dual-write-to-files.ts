@@ -46,6 +46,13 @@ export interface DualWriteParams {
   downloadUrl: string;
   sizeBytes: number;
   entityCount: number;
+  /**
+   * Number of layers in the scene. Threaded from the save call site
+   * (`Object.keys(scene.layersById).length`) so auto-saves record the REAL
+   * count instead of the old hardcoded `0`. Omit → the field is not written and
+   * `merge: true` preserves the wizard's value.
+   */
+  layerCount?: number;
   version: number;
   companyId: string;
   createdBy: string;
@@ -107,6 +114,7 @@ export async function writeToFilesCollection(params: DualWriteParams): Promise<v
     downloadUrl,
     sizeBytes,
     entityCount,
+    layerCount,
     version,
     companyId,
     createdBy,
@@ -140,16 +148,23 @@ export async function writeToFilesCollection(params: DualWriteParams): Promise<v
     const resolvedCategory = context?.filesCategory ?? 'drawings';
 
     const cleanedFileName = fileName.replace(/\.dxf$/i, '').trim();
-    const { displayName: generatedDisplayName } = buildFileDisplayName({
-      entityType: resolvedEntityType as EntityType,
-      entityId: resolvedEntityId,
-      domain: 'construction' as FileDomain,
-      category: resolvedCategory as FileCategory,
-      entityLabel: context?.entityLabel || cleanedFileName,
-      purpose: context?.purpose,
-      ext: 'dxf',
-      originalFilename: fileName,
-    });
+    // 🛡️ displayName is WRITE-ONCE (only generated/written on create). On a
+    // merge-update the auto-save context falls back to category 'drawings' +
+    // entityLabel=fileName, which regenerated "drawings - <file>" and clobbered
+    // the wizard's "Κατόψεις Ορόφου - <label>" (and any user rename). Generate it
+    // only on create; later saves omit the field so `merge: true` preserves it.
+    const generatedDisplayName = isCreate
+      ? buildFileDisplayName({
+          entityType: resolvedEntityType as EntityType,
+          entityId: resolvedEntityId,
+          domain: 'construction' as FileDomain,
+          category: resolvedCategory as FileCategory,
+          entityLabel: context?.entityLabel || cleanedFileName,
+          purpose: context?.purpose,
+          ext: 'dxf',
+          originalFilename: fileName,
+        }).displayName
+      : undefined;
 
     const fileRecord = {
       id: fileId,
@@ -174,7 +189,8 @@ export async function writeToFilesCollection(params: DualWriteParams): Promise<v
       // storagePath: intentionally NOT included — merge: true preserves original DXF file path.
       // Auto-save writes the scene JSON path to processedData.processedDataPath only.
       // Overwriting storagePath with .scene.json breaks deriveScenePath on the next session reload.
-      displayName: generatedDisplayName,
+      // 🛡️ displayName WRITE-ONCE (see above): omitted on update → merge preserves it.
+      ...(isCreate ? { displayName: generatedDisplayName } : {}),
       originalFilename: fileName,
       ext: 'dxf',
       contentType: 'application/dxf',
@@ -185,12 +201,21 @@ export async function writeToFilesCollection(params: DualWriteParams): Promise<v
       downloadUrl,
       revision: version,
       hash: null,
+      // 🛡️ createdAt is WRITE-ONCE — with `merge: true` an unconditional
+      // serverTimestamp() overwrote the creation time on EVERY auto-save. Write
+      // it only on create; `updatedAt` always tracks the latest save.
       createdBy,
-      createdAt: FieldValue.serverTimestamp(),
+      ...(isCreate ? { createdAt: FieldValue.serverTimestamp() } : {}),
       updatedAt: FieldValue.serverTimestamp(),
       processedData: {
         fileType: 'dxf' as const,
-        sceneStats: { entityCount, layerCount: 0, parseTimeMs: 0 },
+        // Real layerCount threaded from the scene (was hardcoded 0). parseTimeMs
+        // is intentionally omitted on auto-save (no parse happens) so `merge: true`
+        // preserves the wizard's original value instead of zeroing it.
+        sceneStats: {
+          entityCount,
+          ...(typeof layerCount === 'number' ? { layerCount } : {}),
+        },
         processedDataPath: scenePath,
         processedDataUrl: downloadUrl,
         processedAt: Date.now(),

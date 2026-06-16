@@ -66,6 +66,11 @@ export interface StructuralSettingsState extends StructuralSettings {
   setCodeId(codeId: StructuralCodeId): void;
   /** Όρισε την προεπιλεγμένη κατηγορία σκυροδέματος (persist αν υπάρχει building). */
   setDefaultConcreteGrade(grade: ConcreteGrade): void;
+  /**
+   * ADR-464 — Όρισε την επιτρεπόμενη τάση έδρασης εδάφους σ_allow (kPa). `undefined`/
+   * μη-θετικό → καθαρίζει τη ρύθμιση (advisory off). Persist αν υπάρχει building.
+   */
+  setSoilBearingCapacityKpa(kpa: number | undefined): void;
 }
 
 export const useStructuralSettingsStore = create<StructuralSettingsState>((set, get) => {
@@ -107,6 +112,15 @@ export const useStructuralSettingsStore = create<StructuralSettingsState>((set, 
     setDefaultConcreteGrade(grade) {
       if (get().defaultConcreteGrade === grade) return; // idempotent — no-op write
       set({ defaultConcreteGrade: grade, lastLocalMutationAt: Date.now() });
+      const { currentBuildingId } = get();
+      if (currentBuildingId) debounceWrite(currentBuildingId, raw(get()));
+    },
+
+    setSoilBearingCapacityKpa(kpa) {
+      // Normalize: μη-θετικό/μη-πεπερασμένο → undefined (clear).
+      const next = typeof kpa === 'number' && Number.isFinite(kpa) && kpa > 0 ? kpa : undefined;
+      if (get().soilBearingCapacityKpa === next) return; // idempotent — no-op write
+      set({ soilBearingCapacityKpa: next, lastLocalMutationAt: Date.now() });
       const { currentBuildingId } = get();
       if (currentBuildingId) debounceWrite(currentBuildingId, raw(get()));
     },

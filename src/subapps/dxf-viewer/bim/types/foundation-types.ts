@@ -39,6 +39,7 @@ import type {
   StripReinforcement,
   TieBeamReinforcement,
 } from '../structural/reinforcement/footing-reinforcement-types';
+import type { AppliedMemberLoad } from '../structural/loads/structural-loads-types';
 
 // ─── Sub-type discriminators (ADR-436 §3.2) ──────────────────────────────────
 
@@ -145,6 +146,14 @@ export interface PadFootingParams extends FoundationCommonParams {
    * `footing-reinforcement-compute.ts` — ΠΟΤΕ αποθηκεύονται (geometry-is-SSoT).
    */
   readonly reinforcement?: PadReinforcement;
+  /**
+   * ADR-464 — Χειροκίνητο service φορτίο σχεδιασμού πεδίλου (χαρακτηριστικές G/Q
+   * συνιστώσες — η αντίδραση της φιλοξενούμενης κολώνας). Single SSoT για τον
+   * σχεδιασμό αυτού του πεδίλου (έδραση/κάμψη/διάτρηση). Optional/non-breaking:
+   * absent → ο σχεδιασμός παραμένει αδρανής (advisory). Το tributary takedown
+   * (Slice 4) θα το παράγει αυτόματα από τον οργανισμό. ΠΟΤΕ derived — μόνο input.
+   */
+  readonly appliedLoad?: AppliedMemberLoad;
 }
 
 /** Πεδιλοδοκός / συνεχές πέδιλο (line-based, IfcFooting/STRIP_FOOTING). */

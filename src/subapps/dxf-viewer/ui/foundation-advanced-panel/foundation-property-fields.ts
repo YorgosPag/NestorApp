@@ -29,6 +29,9 @@ import {
   FOUNDATION_STIRRUP_CRITICAL_SPACING_OPTIONS,
   FOUNDATION_COVER_OPTIONS,
   FOUNDATION_TOGGLE_OPTIONS,
+  FOUNDATION_SOIL_BEARING_OPTIONS,
+  FOUNDATION_AXIAL_LOAD_OPTIONS,
+  FOUNDATION_MOMENT_OPTIONS,
 } from '../ribbon/hooks/bridge/foundation-structural-param';
 import {
   FOUNDATION_STRUCTURAL_KEYS as K,
@@ -92,6 +95,24 @@ const READOUTS_GROUP: ColumnPropertyGroup = {
   ],
 };
 
+/**
+ * ADR-464 — Φορτία & έδραση (pad μόνο): σ_allow (building) + service φορτίο
+ * (αξονικό/ροπές) + readouts έδρασης (p_max / αξιοποίηση). Το warning ανεπάρκειας
+ * surface-άρει αυτόματα μέσω του `EntityWarningsSection` (organism diagnostics).
+ */
+const PAD_LOADS_GROUP: ColumnPropertyGroup = {
+  id: 'loads',
+  titleKey: 'foundationAdvancedPanel.sections.loads.title',
+  fields: [
+    field(K.soilBearing, 'soilBearing', FOUNDATION_SOIL_BEARING_OPTIONS),
+    field(K.padAxialLoad, 'padAxialLoad', FOUNDATION_AXIAL_LOAD_OPTIONS),
+    field(K.padMomentX, 'padMomentX', FOUNDATION_MOMENT_OPTIONS),
+    field(K.padMomentY, 'padMomentY', FOUNDATION_MOMENT_OPTIONS),
+    readout(RK.bearingPMax, 'bearingPMax'),
+    readout(RK.bearingUtilization, 'bearingUtilization'),
+  ],
+};
+
 function kindFields(kind: FoundationKind): readonly ColumnPropertyField[] {
   switch (kind) {
     case 'pad': return PAD_FIELDS;
@@ -107,5 +128,8 @@ export function resolveFoundationPropertyGroups(kind: FoundationKind): readonly 
     titleKey: 'foundationAdvancedPanel.sections.structural.title',
     fields: [CODE_FIELD, ...kindFields(kind), COVER_FIELD],
   };
-  return [structural, READOUTS_GROUP];
+  // ADR-464 — «Φορτία & Έδραση» μόνο για μεμονωμένο πέδιλο (Slice 1· strip/raft → επόμενα).
+  return kind === 'pad'
+    ? [structural, PAD_LOADS_GROUP, READOUTS_GROUP]
+    : [structural, READOUTS_GROUP];
 }

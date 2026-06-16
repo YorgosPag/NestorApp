@@ -12,6 +12,7 @@ import type { DxfImportResult, SceneModel } from '../types/scene';
 import type { SceneUnits } from '../utils/scene-units';
 import { encodingService, type SupportedEncoding } from './encoding-service';
 import { calculateTightBounds } from '../utils/bounds-utils';
+import { countSceneLayers } from '../utils/scene-entity-count';
 import { PANEL_LAYOUT } from '../config/panel-tokens';
 
 export class DxfImportService {
@@ -186,7 +187,7 @@ export class DxfImportService {
         scene,
         stats: {
           entityCount: scene.entities.length,
-          layerCount: Object.keys(scene.layersById ?? {}).length,
+          layerCount: countSceneLayers(scene),
           parseTimeMs
         }
       };

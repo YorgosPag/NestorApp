@@ -23,6 +23,8 @@ import type {
   StripReinforcement,
   TieBeamReinforcement,
 } from '../../../../bim/structural/reinforcement/footing-reinforcement-types';
+import type { FoundationParams } from '../../../../bim/types/foundation-types';
+import type { AppliedMemberLoad } from '../../../../bim/structural/loads/structural-loads-types';
 import { FOUNDATION_STRUCTURAL_KEYS } from './foundation-command-keys';
 
 interface ComboboxOption {
@@ -61,6 +63,17 @@ export const FOUNDATION_TOGGLE_OPTIONS: readonly ComboboxOption[] = [
   { value: 'off', labelKey: 'ribbon.commands.foundationStructural.toggle.off', isLiteralLabel: false },
   { value: 'on', labelKey: 'ribbon.commands.foundationStructural.toggle.on', isLiteralLabel: false },
 ];
+
+// ─── ADR-464 — φορτία & έδραση (presets· free-numeric input = DEFER polish) ────
+
+/** Επιτρεπόμενη τάση έδρασης εδάφους σ_allow (kPa) — τυπικές γεωτεχνικές τιμές. */
+export const FOUNDATION_SOIL_BEARING_OPTIONS = numericOptions([100, 150, 200, 250, 300, 400, 500]);
+
+/** Service αξονικό φορτίο πεδίλου N (kN). */
+export const FOUNDATION_AXIAL_LOAD_OPTIONS = numericOptions([0, 250, 500, 750, 1000, 1500, 2000, 3000]);
+
+/** Service ροπή (kNm) → εκκεντρότητα. */
+export const FOUNDATION_MOMENT_OPTIONS = numericOptions([0, 25, 50, 100, 200, 400]);
 
 // ─── Defaults για ενεργοποίηση προαιρετικών μερών ─────────────────────────────
 
@@ -216,5 +229,50 @@ export function patchFoundationStructuralField(
     case 'pad': return patchPad(r, commandKey, value);
     case 'strip': return patchStrip(r, commandKey, value);
     case 'tie-beam': return patchTieBeam(r, commandKey, value);
+  }
+}
+
+// ─── ADR-464 — φορτία σχεδιασμού πεδίλου (params.appliedLoad, pad) ─────────────
+
+/** True αν το key είναι πεδίο φορτίου πεδίλου (axial/momentX/momentY). */
+export function isFoundationLoadKey(commandKey: string): boolean {
+  return (
+    commandKey === KEYS.padAxialLoad ||
+    commandKey === KEYS.padMomentX ||
+    commandKey === KEYS.padMomentY
+  );
+}
+
+/** Τρέχουσα τιμή πεδίου φορτίου (string), ή `null` (μη-pad / άγνωστο key). */
+export function readFoundationLoadField(params: FoundationParams, commandKey: string): string | null {
+  if (params.kind !== 'pad') return null;
+  const a = params.appliedLoad;
+  switch (commandKey) {
+    case KEYS.padAxialLoad: return String(Math.round(a?.deadAxialKn ?? 0));
+    case KEYS.padMomentX: return String(Math.round(a?.deadMomentXKnm ?? 0));
+    case KEYS.padMomentY: return String(Math.round(a?.deadMomentYKnm ?? 0));
+    default: return null;
+  }
+}
+
+/**
+ * Νέα `FoundationParams` με ενημερωμένο πεδίο φορτίου (immutable). Το χειροκίνητο
+ * service φορτίο αποθηκεύεται ως **μόνιμο (G)** συνιστώσα (Q=0· πλήρης G/Q split =
+ * DEFER) — η SLS έδραση χρησιμοποιεί G+Q, άρα ισοδυναμεί με την εισαγόμενη τιμή.
+ */
+export function patchFoundationLoadField(
+  params: FoundationParams,
+  commandKey: string,
+  value: string,
+): FoundationParams | null {
+  if (params.kind !== 'pad') return null;
+  const n = Number.parseFloat(value);
+  if (Number.isNaN(n)) return null;
+  const base: AppliedMemberLoad = params.appliedLoad ?? { deadAxialKn: 0, liveAxialKn: 0 };
+  switch (commandKey) {
+    case KEYS.padAxialLoad: return { ...params, appliedLoad: { ...base, deadAxialKn: n } };
+    case KEYS.padMomentX: return { ...params, appliedLoad: { ...base, deadMomentXKnm: n } };
+    case KEYS.padMomentY: return { ...params, appliedLoad: { ...base, deadMomentYKnm: n } };
+    default: return null;
   }
 }

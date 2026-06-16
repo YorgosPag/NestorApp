@@ -31,6 +31,9 @@ import {
   formatFootingMainLabel,
 } from '../../../../bim/structural/reinforcement/footing-reinforcement-compute';
 import type { FootingReinforcement } from '../../../../bim/structural/reinforcement/footing-reinforcement-types';
+import { computeFootingDesign } from '../../../../bim/structural/footing-design/footing-design';
+import { buildPadFootingDesignInput } from '../../../../bim/structural/footing-design/footing-design-input';
+import type { BearingResult } from '../../../../bim/structural/footing-design/footing-design-types';
 import {
   FOUNDATION_STRUCTURAL_KEYS,
   FOUNDATION_STRUCTURAL_READOUT_KEYS,
@@ -38,6 +41,9 @@ import {
 import {
   readFoundationStructuralField,
   patchFoundationStructuralField,
+  readFoundationLoadField,
+  patchFoundationLoadField,
+  isFoundationLoadKey,
 } from './foundation-structural-param';
 import type { RibbonComboboxState } from '../../context/RibbonCommandContext';
 
@@ -71,6 +77,18 @@ function withFootingReinforcement(
   }
 }
 
+/**
+ * ADR-464 — αποτέλεσμα έδρασης πεδίλου, ή `null` (μη-pad / μηδέν φορτίο / χωρίς
+ * σ_allow). Κοινό input-builder με τον diagnostics runner (SSoT).
+ */
+function resolveBearingResult(footing: FoundationEntity): BearingResult | null {
+  const settings = useStructuralSettingsStore.getState();
+  if (!settings.soilBearingCapacityKpa) return null;
+  const provider = resolveStructuralCode(settings.codeId);
+  const input = buildPadFootingDesignInput(footing, provider, settings.soilBearingCapacityKpa);
+  return input ? computeFootingDesign(input).bearing : null;
+}
+
 /** Combobox state ενός editable structural key, ή `null` αν δεν εφαρμόζεται. */
 export function resolveFoundationStructuralState(
   footing: FoundationEntity,
@@ -78,6 +96,14 @@ export function resolveFoundationStructuralState(
 ): RibbonComboboxState | null {
   if (commandKey === FOUNDATION_STRUCTURAL_KEYS.code) {
     return { value: useStructuralSettingsStore.getState().codeId, options: [] };
+  }
+  if (commandKey === FOUNDATION_STRUCTURAL_KEYS.soilBearing) {
+    const v = useStructuralSettingsStore.getState().soilBearingCapacityKpa;
+    return { value: v != null ? String(v) : '', options: [] };
+  }
+  if (isFoundationLoadKey(commandKey)) {
+    const v = readFoundationLoadField(footing.params, commandKey);
+    return v === null ? null : { value: v, options: [] };
   }
   const v = readFoundationStructuralField(effectiveReinforcement(footing), commandKey);
   return v === null ? null : { value: v, options: [] };
@@ -98,6 +124,15 @@ export function resolveFoundationStructuralReadout(
   }
   if (readoutKey === FOUNDATION_STRUCTURAL_READOUT_KEYS.ratio) {
     return { value: (q.ratio * 100).toFixed(2), options: [] };
+  }
+  // ADR-464 — readouts έδρασης (p_max / αξιοποίηση)· «—» όταν δεν εφαρμόζεται.
+  if (readoutKey === FOUNDATION_STRUCTURAL_READOUT_KEYS.bearingPMax) {
+    const b = resolveBearingResult(footing);
+    return { value: b && Number.isFinite(b.pMaxKpa) ? String(Math.round(b.pMaxKpa)) : '—', options: [] };
+  }
+  if (readoutKey === FOUNDATION_STRUCTURAL_READOUT_KEYS.bearingUtilization) {
+    const b = resolveBearingResult(footing);
+    return { value: b && Number.isFinite(b.check.utilization) ? (b.check.utilization * 100).toFixed(0) : '—', options: [] };
   }
   return null;
 }
@@ -140,6 +175,16 @@ export function applyFoundationStructuralChange(
 ): boolean {
   if (commandKey === FOUNDATION_STRUCTURAL_KEYS.code) {
     if (isStructuralCodeId(value)) useStructuralSettingsStore.getState().setCodeId(value);
+    return true;
+  }
+  if (commandKey === FOUNDATION_STRUCTURAL_KEYS.soilBearing) {
+    const n = Number.parseFloat(value);
+    useStructuralSettingsStore.getState().setSoilBearingCapacityKpa(Number.isNaN(n) ? undefined : n);
+    return true;
+  }
+  if (isFoundationLoadKey(commandKey)) {
+    const nextParams = patchFoundationLoadField(footing.params, commandKey, value);
+    if (nextParams) dispatchParams(nextParams);
     return true;
   }
   const patched = patchFoundationStructuralField(effectiveReinforcement(footing), commandKey, value);
