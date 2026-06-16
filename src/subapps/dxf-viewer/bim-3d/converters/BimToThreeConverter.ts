@@ -45,6 +45,7 @@ import { evaluateWallBaseAt, type WallBaseProfile } from '../../bim/geometry/wal
 import { applyWallTilt } from './mesh-slope-shear';
 // File-private geometry primitives (N.7.1 file-size split, 2026-06-01).
 import { buildShape, extrudeAndRotate, tagMesh, buildWallShape } from './bim-three-shape-helpers';
+import { scalePoints } from '../../rendering/entities/shared/geometry-vector-utils';
 // Shared 3D edge overlay + point-based converters (N.7.1 file-size split, 2026-06-02).
 import { attachEdgesProjection } from './bim-three-edges';
 import { wallFootprintSubcategory } from '../../bim/walls/wall-render-palette';
@@ -204,10 +205,7 @@ export function buildStraightWallWithOpenings(
     if (!effTopClip) return false;
     // ADR-462 — `quad` arrives in metres (scaled by the caller); scale the host
     // footprints to the SAME metre space so the boolean clip is consistent.
-    const hosts = effTopClip.hosts.map((h) => ({
-      ...h,
-      footprint: h.footprint.map((p) => ({ x: p.x * sceneToM, y: p.y * sceneToM })),
-    }));
+    const hosts = effTopClip.hosts.map((h) => ({ ...h, footprint: scalePoints(h.footprint, sceneToM) }));
     if (isWallTilted(wall.params)) {
       const { prisms, lofts } = clipWallBandTopRegionsTilted(
         quad, hosts, effTopClip.nominalTopMm, floorElevationMm, pc.zBotAM, wall.params,
@@ -233,8 +231,7 @@ export function buildStraightWallWithOpenings(
   ): void => {
     // ADR-462 — plan quad (canvas units) → world metres ΠΡΙΝ τη γεωμετρία· τα z-fields
     // του `pc` (zBotAM/zTopAM…) είναι ήδη μέτρα (από wallTop/wallBase `.at()` × MM_TO_M).
-    const quadM = quad.map((p) => ({ x: p.x * sceneToM, y: p.y * sceneToM, z: p.z })) as
-      [Point3D, Point3D, Point3D, Point3D];
+    const quadM = scalePoints(quad, sceneToM) as [Point3D, Point3D, Point3D, Point3D];
     const flatBase = Math.abs(pc.zBotAM - pc.zBotBM) < 1e-6;
     if (pc.topFollowsProfile && flatBase && tryEmitClip(pc, quadM, mat, layerId)) return;
 
@@ -400,8 +397,8 @@ export function wallToMesh(
 
   // ADR-462 — outer/inner edge points (canvas units) → world metres.
   const shape = buildWallShape(
-    renderWall.geometry.outerEdge.points.map((p) => ({ x: p.x * sceneToM, y: p.y * sceneToM, z: p.z })),
-    renderWall.geometry.innerEdge.points.map((p) => ({ x: p.x * sceneToM, y: p.y * sceneToM, z: p.z })),
+    scalePoints(renderWall.geometry.outerEdge.points, sceneToM),
+    scalePoints(renderWall.geometry.innerEdge.points, sceneToM),
   );
   if (!shape) return null;
 

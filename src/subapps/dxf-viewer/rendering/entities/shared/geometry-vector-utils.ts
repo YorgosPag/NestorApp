@@ -141,6 +141,16 @@ export function scalePoint(point: Point2D, scalar: number): Point2D {
 }
 
 /**
+ * Scale an ARRAY of points/vectors by a scalar, preserving each element's extra
+ * fields (e.g. `z` on a Point3D). The array sibling of {@link scalePoint}.
+ * SSoT for the `pts.map(p => ({ ...p, x: p.x*k, y: p.y*k }))` idiom — e.g. the
+ * ADR-462 canvas-units → world-metres plan scaling across the BIM 3D converters.
+ */
+export function scalePoints<T extends Point2D>(points: readonly T[], scalar: number): T[] {
+  return points.map((p) => ({ ...p, x: p.x * scalar, y: p.y * scalar }));
+}
+
+/**
  * Offset a point by a direction vector scaled by distance.
  * Equivalent to: point + direction * distance.
  */

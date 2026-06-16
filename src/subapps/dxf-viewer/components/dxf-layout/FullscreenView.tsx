@@ -14,6 +14,7 @@ import { CanvasSection } from './CanvasSection';
 import { PANEL_LAYOUT } from '../../config/panel-tokens';
 import { StandaloneStatusBar } from '../../ui/toolbar/StandaloneStatusBar';
 import { useSelection } from '../../systems/selection';
+import { countSceneEntities } from '../../utils/scene-entity-count';
 
 export const FullscreenView: React.FC<DXFViewerLayoutProps> = (props) => {
   const iconSizes = useIconSizes();
@@ -54,7 +55,7 @@ export const FullscreenView: React.FC<DXFViewerLayoutProps> = (props) => {
         {props.currentScene && (
           <CommonBadge
             status="company"
-            customLabel={`✅ DXF Active (${props.currentScene.entities.length} entities)`}
+            customLabel={`✅ DXF Active (${countSceneEntities(props.currentScene)} entities)`}
             variant="secondary"
             className={`${colors.bg.primary} ${colors.text.inverted}`}
           />

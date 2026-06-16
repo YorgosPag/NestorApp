@@ -39,7 +39,7 @@ import type { GripSettings } from '../../types/gripSettings';
 
 // ===== ADR-065: Delegated modules =====
 import { renderPolygonToCanvas } from './layer-polygon-renderer';
-import { renderGrid, renderRulers } from './layer-grid-ruler-renderer';
+import { renderGrid } from './layer-grid-ruler-renderer';
 import { createLayerUISettings } from './layer-ui-settings';
 
 export class LayerRenderer {

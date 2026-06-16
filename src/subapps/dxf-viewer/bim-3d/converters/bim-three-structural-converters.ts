@@ -19,6 +19,7 @@ import type { SlabOpeningEntity } from '../../bim/types/slab-opening-types';
 import type { Point3D } from '../../bim/types/bim-base';
 import { getElementMaterial3D } from '../materials/MaterialCatalog3D';
 import { buildShape, extrudeAndRotate, extrudeShapesAndRotate, tagMesh, pushHoles } from './bim-three-shape-helpers';
+import { scalePoints } from '../../rendering/entities/shared/geometry-vector-utils';
 import { computeBeamCutbackOutline } from '../../bim/geometry/beam-column-cutback';
 import { ensureWorldUvs } from './bim-uv-helpers';
 import { applyBeamSlope, applySlabSlope, applyColumnTilt } from './mesh-slope-shear';
@@ -63,7 +64,7 @@ export function columnToMesh(
   if (rawVerts.length < 3) return null;
   // ADR-462 — footprint XY (canvas units) → world metres.
   const sceneToM = sceneUnitsToMeters(column.params.sceneUnits ?? 'mm');
-  const verts = rawVerts.map((v) => ({ x: v.x * sceneToM, y: v.y * sceneToM, z: v.z }));
+  const verts = scalePoints(rawVerts, sceneToM);
 
   // ADR-448 Phase 1b — storey-ceiling column renders to the real ceiling height
   // (Revit «Top: Up to Level»). Only the flat (non-attached) path; the attached
@@ -250,7 +251,7 @@ export function beamToMesh(
   if (!geo) {
     const rawVerts = beam.geometry.outline.vertices;
     if (rawVerts.length < 3) return null;
-    const verts = rawVerts.map((v) => ({ x: v.x * sceneToM, y: v.y * sceneToM, z: v.z }));
+    const verts = scalePoints(rawVerts, sceneToM);
     // ADR-458 — beam-to-column cutback (Revit join, «η κολόνα νικάει»): κόβει τον πυρήνα
     // του δοκαριού στις παρειές των κολωνών που το τέμνουν → net volume, μηδέν εμβύθιση.
     // DERIVED (ποτέ persisted)· τα column footprints είναι ήδη rotated/composite-baked.
@@ -261,7 +262,7 @@ export function beamToMesh(
       columns
         .map((c) => c.geometry?.footprint?.vertices)
         .filter((f): f is NonNullable<typeof f> => !!f && f.length >= 3)
-        .map((f) => f.map((v) => ({ x: v.x * sceneToM, y: v.y * sceneToM }))),
+        .map((f) => scalePoints(f, sceneToM)),
     );
     if (trimmed === null) {
       const shape = buildShape(verts);
@@ -328,7 +329,7 @@ export function slabToMesh(
 
   // ADR-462 — outline + opening holes (canvas units) → world metres.
   const sceneToM = sceneUnitsToMeters(slab.params.sceneUnits ?? 'mm');
-  const verts = rawVerts.map((v) => ({ x: v.x * sceneToM, y: v.y * sceneToM, z: v.z }));
+  const verts = scalePoints(rawVerts, sceneToM);
   const shape = buildShape(verts);
   if (!shape) return null;
   pushHoles(shape, openings, sceneToM);

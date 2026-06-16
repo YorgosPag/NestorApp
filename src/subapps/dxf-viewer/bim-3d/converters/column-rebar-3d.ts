@@ -26,6 +26,7 @@ import * as THREE from 'three';
 import type { ColumnEntity } from '../../bim/types/column-types';
 import { columnLocalMmToWorld } from '../../bim/geometry/column-geometry';
 import { sceneUnitsToMeters } from '../../utils/scene-units';
+import { scalePoints } from '../../rendering/entities/shared/geometry-vector-utils';
 import { computeStirrupLevelsMm } from '../../bim/structural/reinforcement/column-rebar-layout';
 import {
   resolveColumnRebarLayout,
@@ -200,7 +201,7 @@ export function buildColumnRebarCage(
   const barRadius = Math.max(MIN_RADIUS, (layout.barDiameterMm / 2) * MM_TO_M);
   const stirrupRadius = Math.max(MIN_RADIUS, (layout.stirrupDiameterMm / 2) * MM_TO_M);
   const worldXY = (local: readonly Point2D[]): Point2D[] =>
-    columnLocalMmToWorld(p, local).map((q) => ({ x: q.x * sceneToM, y: q.y * sceneToM }));
+    scalePoints(columnLocalMmToWorld(p, local), sceneToM);
 
   const group = new THREE.Group();
   const material = REBAR_MATERIAL; // ΚΟΙΝΟ άφωτο υλικό (βλ. σχόλιο ορισμού)

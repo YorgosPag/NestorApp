@@ -19,6 +19,7 @@ import { sceneUnitsToMeters, type SceneUnits } from '../../utils/scene-units';
 import type { Pt2 } from '../../bim/geometry/shared/segment-polygon-coverage';
 import type { HorizontalFinishFace, HorizontalFinishPolygon } from '../../bim/finishes/structural-finish-horizontal';
 import { extrudeAndRotate } from './bim-three-shape-helpers';
+import { scalePoints } from '../../rendering/entities/shared/geometry-vector-utils';
 import { getMaterial3D } from '../materials/MaterialCatalog3D';
 import { attachEdgesProjection } from './bim-three-edges';
 
@@ -47,15 +48,17 @@ function buildShapeWithHoles(
   sceneToM: number,
 ): THREE.Shape | null {
   if (outer.length < 3) return null;
+  const o = scalePoints(outer, sceneToM); // ADR-462 canvas units → world metres (SSoT)
   const shape = new THREE.Shape();
-  shape.moveTo(outer[0].x * sceneToM, outer[0].y * sceneToM);
-  for (let i = 1; i < outer.length; i++) shape.lineTo(outer[i].x * sceneToM, outer[i].y * sceneToM);
+  shape.moveTo(o[0].x, o[0].y);
+  for (let i = 1; i < o.length; i++) shape.lineTo(o[i].x, o[i].y);
   shape.closePath();
   for (const hole of holes) {
     if (hole.length < 3) continue;
+    const h = scalePoints(hole, sceneToM);
     const path = new THREE.Path();
-    path.moveTo(hole[0].x * sceneToM, hole[0].y * sceneToM);
-    for (let i = 1; i < hole.length; i++) path.lineTo(hole[i].x * sceneToM, hole[i].y * sceneToM);
+    path.moveTo(h[0].x, h[0].y);
+    for (let i = 1; i < h.length; i++) path.lineTo(h[i].x, h[i].y);
     path.closePath();
     shape.holes.push(path);
   }

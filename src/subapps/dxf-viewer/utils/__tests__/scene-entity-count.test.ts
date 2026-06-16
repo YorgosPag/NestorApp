@@ -1,5 +1,5 @@
 import { countSceneEntities } from '../scene-entity-count';
-import type { SceneModel } from '../../../types/scene';
+import type { SceneModel } from '../../types/scene';
 
 /**
  * Build a minimal SceneModel with `n` entities. Only `entities.length` matters

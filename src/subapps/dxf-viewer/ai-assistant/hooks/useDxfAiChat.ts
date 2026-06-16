@@ -28,6 +28,7 @@ import type {
 } from '../types';
 import type { SceneModel } from '../../types/entities';
 import { executeDxfAiToolCalls } from '../dxf-ai-tool-executor';
+import { countSceneEntities } from '../../utils/scene-entity-count';
 import { generateEntityId } from '../../systems/entity-creation/utils';
 import { DXF_AI_API, DXF_AI_LIMITS, DXF_AI_DEFAULTS } from '../../config/ai-assistant-config';
 import { nowISO } from '@/lib/date-local';
@@ -82,7 +83,7 @@ function buildCanvasContext(
   const layerNames = Object.values(scene.layersById ?? {}).map((l) => l.name);
 
   return {
-    entityCount: scene.entities.length,
+    entityCount: countSceneEntities(scene),
     layers: layerNames,
     bounds: {
       min: { x: scene.bounds.min.x, y: scene.bounds.min.y },

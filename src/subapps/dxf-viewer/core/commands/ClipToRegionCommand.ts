@@ -13,6 +13,7 @@ import type { ICommand, SerializedCommand } from './interfaces';
 import type { SceneModel } from '../../types/scene';
 import type { Overlay } from '../../overlays/types';
 import { generateEntityId } from '../../systems/entity-creation/utils';
+import { countSceneEntities } from '../../utils/scene-entity-count';
 
 // ── Minimal overlay-store interface (only what we need) ────────────────────────
 
@@ -94,7 +95,7 @@ export class ClipToRegionCommand implements ICommand {
       timestamp: this.timestamp,
       data: {
         levelId: this.levelId,
-        entityCount: this.clippedScene.entities.length,
+        entityCount: countSceneEntities(this.clippedScene),
         overlayChanges: this.overlayChanges.length,
       },
       version: 1,

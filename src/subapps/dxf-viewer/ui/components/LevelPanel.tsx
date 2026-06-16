@@ -24,7 +24,7 @@ import { AnnotationsSection } from './AnnotationsSection';
 import type { ToolType } from '../toolbar/types';
 import type { SceneModel } from '../../types/scene';
 import { useLevels } from '../../systems/levels';
-import { countSceneEntities } from '../../hooks/scene/scene-entity-count';
+import { countSceneEntities } from '../../utils/scene-entity-count';
 import { findOrCreateLevelForFloor } from '../../systems/levels/level-floor-resolution';
 import { useAllFloorsBackfill, useLevelDeletion } from './level-panel-hooks';
 import { useNotifications } from '../../../../providers/NotificationProvider';

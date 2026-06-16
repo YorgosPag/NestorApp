@@ -16,13 +16,6 @@ export interface RenderingCalculationsHook {
   calculateRulerTicks: (type: 'horizontal' | 'vertical', bounds: GridBounds, transform: ViewTransform, canvasRect: { width: number; height: number }) => RulerTick[];
   calculateLayout: (canvasRect: { width: number; height: number }) => RulersLayoutInfo;
   renderGrid: (ctx: CanvasRenderingContext2D, bounds: GridBounds, transform: ViewTransform) => void;
-  renderRulers: (
-    horizontalCtx: CanvasRenderingContext2D | null,
-    verticalCtx: CanvasRenderingContext2D | null,
-    layout: RulersLayoutInfo,
-    bounds: GridBounds,
-    transform: ViewTransform
-  ) => void;
 }
 
 export function useRenderingCalculations(
@@ -61,31 +54,10 @@ export function useRenderingCalculations(
     RulersGridRendering.renderGridLines(ctx, lines, transform);
   }, [grid, calculateGridLines]);
 
-  const renderRulers = useCallback((
-    horizontalCtx: CanvasRenderingContext2D | null,
-    verticalCtx: CanvasRenderingContext2D | null,
-    layout: RulersLayoutInfo,
-    bounds: GridBounds,
-    transform: ViewTransform
-  ) => {
-    if (horizontalCtx && rulers.horizontal.enabled) {
-      const canvasRect = { width: horizontalCtx.canvas.width, height: horizontalCtx.canvas.height };
-      const ticks = calculateRulerTicks('horizontal', bounds, transform, canvasRect);
-      RulersGridRendering.renderRuler(horizontalCtx, ticks, rulers.horizontal, 'horizontal', transform);
-    }
-
-    if (verticalCtx && rulers.vertical.enabled) {
-      const canvasRect = { width: verticalCtx.canvas.width, height: verticalCtx.canvas.height };
-      const ticks = calculateRulerTicks('vertical', bounds, transform, canvasRect);
-      RulersGridRendering.renderRuler(verticalCtx, ticks, rulers.vertical, 'vertical', transform);
-    }
-  }, [rulers, calculateRulerTicks]);
-
   return {
     calculateGridLines,
     calculateRulerTicks,
     calculateLayout,
-    renderGrid,
-    renderRulers
+    renderGrid
   };
 }

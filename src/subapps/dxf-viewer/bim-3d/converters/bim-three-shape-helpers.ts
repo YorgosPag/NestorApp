@@ -14,6 +14,7 @@
 import * as THREE from 'three';
 import type { Point3D } from '../../bim/types/bim-base';
 import type { SlabOpeningEntity } from '../../bim/types/slab-opening-types';
+import { scalePoints } from '../../rendering/entities/shared/geometry-vector-utils';
 
 // ── Shared rotation matrix: shape XY → Three.js Y-up ─────────────────────────
 const ROT_X_NEG_90 = new THREE.Matrix4().makeRotationX(-Math.PI / 2);
@@ -88,11 +89,11 @@ export function pushHoles(
   for (const op of openings) {
     const verts = op.params.outline.vertices;
     if (verts.length < 3) continue;
+    const v = scalePoints(verts, sceneToM); // ADR-462 canvas units → world metres (SSoT)
     const path = new THREE.Path();
     // CCW → CW: traverse vertices in reverse.
-    const last = verts[verts.length - 1];
-    path.moveTo(last.x * sceneToM, last.y * sceneToM);
-    for (let i = verts.length - 2; i >= 0; i--) path.lineTo(verts[i].x * sceneToM, verts[i].y * sceneToM);
+    path.moveTo(v[v.length - 1].x, v[v.length - 1].y);
+    for (let i = v.length - 2; i >= 0; i--) path.lineTo(v[i].x, v[i].y);
     path.closePath();
     shape.holes.push(path);
   }

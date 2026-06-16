@@ -34,6 +34,7 @@ import { isMultiLayerSlab } from '../../bim/types/slab-dna-types';
 import { buildupBoundaryFractions } from '../../bim/types/layered-buildup';
 import { getMaterial3D } from '../materials/MaterialCatalog3D';
 import { buildShape, extrudeAndRotate, tagMesh, pushHoles } from './bim-three-shape-helpers';
+import { scalePoints } from '../../rendering/entities/shared/geometry-vector-utils';
 import { attachEdgesProjection } from './bim-three-edges';
 import { applySlabSlope } from './mesh-slope-shear';
 import { ensureWorldUvs } from './bim-uv-helpers';
@@ -94,9 +95,7 @@ function addSlabLayerBand(
   sceneToM: number,
 ): void {
   // ADR-462 — outline XY (canvas units) → world metres.
-  const shape = buildShape(
-    slab.params.outline.vertices.map((v) => ({ x: v.x * sceneToM, y: v.y * sceneToM, z: v.z })),
-  );
+  const shape = buildShape(scalePoints(slab.params.outline.vertices, sceneToM));
   if (!shape) return;
   pushHoles(shape, openings, sceneToM); // all layers share the slab footprint → same openings.
   const geo = extrudeAndRotate(shape, layerThicknessM);

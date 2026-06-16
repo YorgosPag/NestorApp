@@ -21,6 +21,7 @@ import * as THREE from 'three';
 import type { FoundationEntity } from '../../bim/types/foundation-types';
 import { getElementMaterial3D } from '../materials/MaterialCatalog3D';
 import { buildShape, extrudeAndRotate, tagMesh } from './bim-three-shape-helpers';
+import { scalePoints } from '../../rendering/entities/shared/geometry-vector-utils';
 import { ensureWorldUvs } from './bim-uv-helpers';
 import { attachEdgesProjection } from './bim-three-edges';
 import { sceneUnitsToMeters } from '../../utils/scene-units';
@@ -49,7 +50,7 @@ export function foundationToMesh(
 
   // ADR-462 — footprint XY (canvas units) → world metres.
   const sceneToM = sceneUnitsToMeters(foundation.params.sceneUnits ?? 'mm');
-  const verts = rawVerts.map((v) => ({ x: v.x * sceneToM, y: v.y * sceneToM, z: v.z }));
+  const verts = scalePoints(rawVerts, sceneToM);
   const shape = buildShape(verts);
   if (!shape) return null;
 

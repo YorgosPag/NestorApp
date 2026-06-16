@@ -1,7 +1,7 @@
 import { useState, useCallback, useRef, useMemo } from 'react';
 import type { SceneModel } from '../../types/scene';
 import type { SceneWriteOrigin } from './scene-write-origin';
-import { countSceneEntities } from './scene-entity-count';
+import { countSceneEntities } from '../../utils/scene-entity-count';
 
 export interface SceneManagerState {
   levelScenes: Record<string, SceneModel>;

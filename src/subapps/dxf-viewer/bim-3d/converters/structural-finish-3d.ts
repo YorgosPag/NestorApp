@@ -23,6 +23,7 @@ import type { BeamEntity } from '../../bim/types/beam-types';
 import type { WallEntity } from '../../bim/types/wall-types';
 import type { Point3D } from '../../bim/types/bim-base';
 import { stripPrismGeometry } from './envelope-three-mesh';
+import { scalePoints } from '../../rendering/entities/shared/geometry-vector-utils';
 import { getMaterial3D } from '../materials/MaterialCatalog3D';
 import { attachEdgesProjection } from './bim-three-edges';
 import { mmToSceneUnits, sceneUnitsToMeters, type SceneUnits } from '../../utils/scene-units';
@@ -92,18 +93,22 @@ export function buildFinishSkinFromFaces(
   const { aOuter, bOuter, aCore, bCore } = computeMiteredOuter(segs, offsets, true);
 
   // ADR-462 — τα band coords (core/outer) είναι canvas units (ίδιος χώρος με το
-  // footprint) → world metres με sceneToM. Τα offsets (× s) είναι ήδη στον ίδιο
-  // canvas χώρο, οπότε όλο το quad κλιμακώνεται μαζί.
+  // footprint) → world metres με sceneToM (SSoT `scalePoints`). Τα offsets (× s) είναι
+  // ήδη στον ίδιο canvas χώρο, οπότε όλο το quad κλιμακώνεται μαζί.
   const sceneToM = sceneUnitsToMeters(sceneUnits);
+  const aCoreM = scalePoints(aCore, sceneToM);
+  const bCoreM = scalePoints(bCore, sceneToM);
+  const aOuterM = scalePoints(aOuter, sceneToM);
+  const bOuterM = scalePoints(bOuter, sceneToM);
   const group = new THREE.Group();
   for (let i = 0; i < segs.length; i++) {
     if (!offsets[i]) continue;
     const seg = segs[i];
     const quad: Point3D[] = [
-      { x: aCore[i].x * sceneToM, y: aCore[i].y * sceneToM, z: 0 },
-      { x: bCore[i].x * sceneToM, y: bCore[i].y * sceneToM, z: 0 },
-      { x: bOuter[i].x * sceneToM, y: bOuter[i].y * sceneToM, z: 0 },
-      { x: aOuter[i].x * sceneToM, y: aOuter[i].y * sceneToM, z: 0 },
+      { x: aCoreM[i].x, y: aCoreM[i].y, z: 0 },
+      { x: bCoreM[i].x, y: bCoreM[i].y, z: 0 },
+      { x: bOuterM[i].x, y: bOuterM[i].y, z: 0 },
+      { x: aOuterM[i].x, y: aOuterM[i].y, z: 0 },
     ];
     addFinishPrism(group, quad, heightM, baseY, id, bimType, seg.materialId, seg.classification, levelId);
   }
