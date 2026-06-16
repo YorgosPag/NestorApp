@@ -321,8 +321,8 @@ export function wallToMesh(
   const pullBack = wall.kind === 'straight'
     ? pullBackStraightWallEndsFromColumns(
         wall.geometry, wall.params.start, wall.params.end, columns,
-        WALL_COLUMN_PULLBACK_MM * mmToSceneUnits(wall.params.sceneUnits),
-        WALL_COLUMN_BUTT_TOL_MM * mmToSceneUnits(wall.params.sceneUnits),
+        WALL_COLUMN_PULLBACK_MM * mmToSceneUnits(wall.params.sceneUnits ?? 'mm'),
+        WALL_COLUMN_BUTT_TOL_MM * mmToSceneUnits(wall.params.sceneUnits ?? 'mm'),
       )
     : null;
   const renderWall = (heightMm !== undefined || pullBack)

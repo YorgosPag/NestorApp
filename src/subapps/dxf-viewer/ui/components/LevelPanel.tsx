@@ -25,6 +25,8 @@ import type { ToolType } from '../toolbar/types';
 import type { SceneModel } from '../../types/scene';
 import { useLevels } from '../../systems/levels';
 import { countSceneEntities } from '../../utils/scene-entity-count';
+import { orderLevelsForPanel } from '../../systems/levels/level-display-order';
+import { useProjectHierarchy } from '../../contexts/ProjectHierarchyContext';
 import { findOrCreateLevelForFloor } from '../../systems/levels/level-floor-resolution';
 import { useAllFloorsBackfill, useLevelDeletion } from './level-panel-hooks';
 import { useNotifications } from '../../../../providers/NotificationProvider';
@@ -107,6 +109,7 @@ export function LevelPanel({
   const notifications = useNotifications();
   const { user } = useAuth();
   const overlayStore = useOverlayStore();
+  const { selectedBuilding } = useProjectHierarchy();
   const universalSelection = useUniversalSelection();
   const selectedEntityIds = universalSelection.getSelectedEntityIds();
   const { handleOverlaySelect, handleOverlayEdit, handleOverlayDelete } =
@@ -138,6 +141,15 @@ export function LevelPanel({
     }
     return scenes;
   }, [levels, getLevelScene]);
+  // ADR-461 — order the cards physically (Επίπεδο 1 top, Θεμελίωση bottom, storeys by
+  // number DESC, stair-penthouse/roof under «Επίπεδο 1») instead of creation order.
+  // Kind/number live on the linked building floor (same source as LevelFloorLink).
+  const orderedLevels = useMemo(() => {
+    const byId = new Map((selectedBuilding?.floors ?? []).map(f => [f.id, f]));
+    return orderLevelsForPanel(levels, (level) =>
+      level.floorId ? byId.get(level.floorId) : undefined
+    );
+  }, [levels, selectedBuilding]);
   const [newLevelName, setNewLevelName] = useState('');
   const [isAdding, setIsAdding] = useState(false);
   const [editingLevelId, setEditingLevelId] = useState<string | null>(null);
@@ -257,7 +269,7 @@ export function LevelPanel({
 
       {!isLevelsCollapsed && (isNonEmptyArray(levels) ? (
         <div className={PANEL_TOKENS.LEVEL_PANEL.CONTAINER.SECTION}>
-          {levels.map((level) => {
+          {orderedLevels.map((level) => {
             const levelScene = levelScenes[level.id];
             // ADR-309/399/462: for the ACTIVE level the live `scene` prop is the
             // authoritative rendered scene — it tracks DXF + BIM additions in real
