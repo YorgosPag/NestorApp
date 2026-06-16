@@ -43,6 +43,7 @@ import type { EnvelopeFunction, EnvelopeLayer } from './thermal-envelope-types';
 import type { StructuralFinishSpec } from '../finishes/structural-finish-types';
 import type { ConcreteGrade } from '../structural/concrete-grades';
 import type { ColumnReinforcement } from '../structural/reinforcement/column-reinforcement-types';
+import type { AppliedMemberLoad } from '../structural/loads/structural-loads-types';
 
 // ─── Sub-type discriminator (ADR-363 §5.6) ───────────────────────────────────
 
@@ -341,6 +342,14 @@ export interface ColumnParams {
    * από `column-reinforcement-compute.ts` — ΠΟΤΕ αποθηκεύονται.
    */
   readonly reinforcement?: ColumnReinforcement;
+  /**
+   * ADR-466 — Φορτίο σχεδιασμού κολώνας από τη διαδρομή φορτίων (tributary load
+   * takedown: tributary area × όροφοι × επιφανειακά φορτία + ίδιο βάρος). source=
+   * 'takedown' → παράγεται αυτόματα από τον οργανισμό· source='manual' → χειροκίνητο
+   * (ο takedown ΔΕΝ το αντικαθιστά, `isTakedownWritable`). Optional/non-breaking:
+   * absent → δεν έχει υπολογιστεί. ΠΟΤΕ derived state — μόνο input για checks.
+   */
+  readonly appliedLoad?: AppliedMemberLoad;
 }
 
 // ─── Geometry cache (derivable from params; SSoT = params) ──────────────────

@@ -40,6 +40,7 @@ import type { EnvelopeLayer } from './thermal-envelope-types';
 import type { SlabDna } from './slab-dna-types';
 import type { SlabTypeParams } from './bim-family-type';
 import type { SlabFoundationReinforcement } from '../structural/reinforcement/slab-foundation-reinforcement-types';
+import type { AppliedMemberLoad } from '../structural/loads/structural-loads-types';
 
 // ─── Sub-type discriminator (ADR-363 §5.5) ───────────────────────────────────
 
@@ -118,6 +119,13 @@ export interface SlabParams {
    * μηδέν regression στο υπάρχον BOQ. NEVER για non-foundation πλάκες.
    */
   readonly structuralReinforcement?: SlabFoundationReinforcement;
+  /**
+   * ADR-466 — Φορτίο βαρύτητας πλάκας από τη διαδρομή φορτίων (panel area ×
+   * επιφανειακά φορτία G/Q). source='takedown' → αυτόματο από οργανισμό· source=
+   * 'manual' → χειροκίνητο (προστατευμένο, `isTakedownWritable`). Optional/
+   * non-breaking. ΠΟΤΕ derived state — πληροφοριακό / slab design input.
+   */
+  readonly appliedLoad?: AppliedMemberLoad;
   /** Material library ID (Phase 6+). */
   readonly material?: string;
   /**

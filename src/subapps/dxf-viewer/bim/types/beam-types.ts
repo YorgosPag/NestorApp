@@ -41,6 +41,7 @@ import type { IfcEntityMixin } from './ifc-entity-mixin';
 import type { EnvelopeFunction, EnvelopeLayer } from './thermal-envelope-types';
 import type { StructuralFinishSpec } from '../finishes/structural-finish-types';
 import type { BeamReinforcement } from '../structural/reinforcement/beam-reinforcement-types';
+import type { AppliedMemberLoad } from '../structural/loads/structural-loads-types';
 
 // ─── Sub-type discriminators (ADR-363 §5.7) ─────────────────────────────────
 
@@ -193,6 +194,13 @@ export interface BeamParams {
    * `beam-reinforcement-compute.ts` — ΠΟΤΕ αποθηκεύονται (mirror κολόνας).
    */
   readonly reinforcement?: BeamReinforcement;
+  /**
+   * ADR-466 — Φορτίο βαρύτητας δοκαριού από τη διαδρομή φορτίων (tributary strip
+   * πλάκας πάνω στο δοκάρι + ίδιο βάρος). source='takedown' → αυτόματο από οργανισμό·
+   * source='manual' → χειροκίνητο (προστατευμένο, `isTakedownWritable`). Optional/
+   * non-breaking. ΠΟΤΕ derived state — input για beam gravity design.
+   */
+  readonly appliedLoad?: AppliedMemberLoad;
 }
 
 // ─── Geometry cache (derivable from params; SSoT = params) ──────────────────
