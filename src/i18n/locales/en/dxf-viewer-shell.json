@@ -10,7 +10,8 @@
       "ratioAboveMax": "Reinforcement ratio ρ={ratio}% is above the maximum {max}%.",
       "barMismatchAtJoint": "Reinforcement mismatch at connection joint (differing bar count/diameter or insufficient development length).",
       "columnTopAnchorageUnverified": "Column top anchors into a member with no reinforcement — longitudinal bar development is not verified.",
-      "bearingInadequate": "Soil bearing pressure p_max={pMax} kPa exceeds the allowable σ_all={capacity} kPa (utilization {utilization}%)."
+      "bearingInadequate": "Soil bearing pressure p_max={pMax} kPa exceeds the allowable σ_all={capacity} kPa (utilization {utilization}%).",
+      "padEccentricHogging": "Eccentric footing (e/L={ratio}% > {kern}% kern) — partial base uplift; a top mesh (hogging) is required."
     },
     "autoReinforced": "{count, plural, =0 {No member needed reinforcement} one {Reinforced # member} other {Reinforced # members}}",
     "footingAttached": "{count, plural, =0 {No column attached} one {Attached # column to the footing} other {Attached # columns to the footing}}",

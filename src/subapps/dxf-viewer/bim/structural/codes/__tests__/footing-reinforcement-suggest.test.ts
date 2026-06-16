@@ -64,4 +64,43 @@ describe.each([
     // Συνδετήρια = εναέρια δοκός → beam cover (όχι θεμελίωσης).
     expect(r.coverMm).toBe(provider.beamReinforcementLimits(tieBeamCtx, r.bottom.diameterMm).nominalCoverMm);
   });
+
+  // ─── ADR-464 Slice 2 — κανόνας άνω σχάρας (top mesh) ────────────────────────
+
+  it('default πέδιλο (0.5m, κεντρικό) → ΚΑΜΙΑ άνω σχάρα (μηδέν regression)', () => {
+    const r = provider.suggestFootingReinforcement(padCtx);
+    if (r.kind !== 'pad') throw new Error('expected pad reinforcement');
+    expect(r.topMesh).toBeUndefined();
+  });
+
+  it('χονδρό πέδιλο (≥ padTopMeshMinThicknessMm) → άνω σχάρα = κάτω σχάρα', () => {
+    const limits = provider.footingReinforcementLimits(padCtx);
+    const thick: PadSectionContext = { ...padCtx, thicknessMm: limits.padTopMeshMinThicknessMm };
+    const r = provider.suggestFootingReinforcement(thick);
+    if (r.kind !== 'pad') throw new Error('expected pad reinforcement');
+    expect(r.topMesh).toBeDefined();
+    expect(r.topMesh).toEqual(r.bottomMeshX);
+  });
+
+  it('έκκεντρο πέδιλο (e/L > kern) → άνω σχάρα παρότι λεπτό', () => {
+    const limits = provider.footingReinforcementLimits(padCtx);
+    const eccentric: PadSectionContext = {
+      ...padCtx,
+      eccentricityRatio: limits.padTopMeshKernRatio + 0.05,
+    };
+    const r = provider.suggestFootingReinforcement(eccentric);
+    if (r.kind !== 'pad') throw new Error('expected pad reinforcement');
+    expect(r.topMesh).toBeDefined();
+  });
+
+  it('μικρή εκκεντρότητα εντός πυρήνα + λεπτό → ΚΑΜΙΑ άνω σχάρα', () => {
+    const limits = provider.footingReinforcementLimits(padCtx);
+    const slight: PadSectionContext = {
+      ...padCtx,
+      eccentricityRatio: limits.padTopMeshKernRatio - 0.02,
+    };
+    const r = provider.suggestFootingReinforcement(slight);
+    if (r.kind !== 'pad') throw new Error('expected pad reinforcement');
+    expect(r.topMesh).toBeUndefined();
+  });
 });

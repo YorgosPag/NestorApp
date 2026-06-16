@@ -25,7 +25,9 @@ import type {
   BeamSectionContext,
   ColumnReinforcementLimits,
   ColumnSectionContext,
+  FootingReinforcementLimits,
   FootingSectionContext,
+  PadSectionContext,
   SlabFoundationSectionContext,
   StructuralCodeProvider,
 } from './structural-code-types';
@@ -230,6 +232,17 @@ function footingEffectiveDepthMm(thicknessMm: number, coverMm: number): number {
 }
 
 /**
+ * ADR-464 — απαιτείται άνω σχάρα πεδίλου; (κανόνας code-driven, μηδέν φορτίο
+ * απαραίτητο): (α) χονδρό πέδιλο `thickness ≥ padTopMeshMinThicknessMm` (επιδερμικός
+ * οπλισμός, EC2 §9.7/§7.3.3) **ή** (β) έκκεντρο `eccentricityRatio > padTopMeshKernRatio`
+ * (kern → αποκόλληση/hogging). Default πέδιλο (0.5m, κεντρικό) ⇒ false (μηδέν regression).
+ */
+function padNeedsTopMesh(ctx: PadSectionContext, limits: FootingReinforcementLimits): boolean {
+  if (ctx.thicknessMm >= limits.padTopMeshMinThicknessMm) return true;
+  return (ctx.eccentricityRatio ?? 0) > limits.padTopMeshKernRatio;
+}
+
+/**
  * Επιλέγει ελάχιστο-έγκυρο οπλισμό θεμελίωσης ανά kind. pad → δι-διευθυντική σχάρα
  * (reuse `resolveMatMesh`)· strip → εγκάρσια σχάρα + διαμήκεις διανομής (reuse
  * `resolveBarSet`)· tie-beam → **delegate** στον beam suggester (μηδέν duplicate,
@@ -251,10 +264,15 @@ export function suggestFootingReinforcementFrom(
 
   if (ctx.kind === 'pad') {
     const mesh = resolveMatMesh(asPerMetre, seedDia, limits.maxBarSpacingMm);
+    const layer = { diameterMm: mesh.diameterMm, spacingMm: mesh.spacingMm };
+    // ADR-464 — άνω σχάρα όταν την απαιτεί ο κώδικας (επιδερμικός/kern)· ίδια
+    // ελάχιστη διάταξη με την κάτω (mirror raft, συντηρητικό & πρακτικό).
+    const topMesh = padNeedsTopMesh(ctx, limits) ? layer : undefined;
     return {
       kind: 'pad',
-      bottomMeshX: { diameterMm: mesh.diameterMm, spacingMm: mesh.spacingMm },
-      bottomMeshY: { diameterMm: mesh.diameterMm, spacingMm: mesh.spacingMm },
+      bottomMeshX: layer,
+      bottomMeshY: layer,
+      ...(topMesh ? { topMesh } : {}),
       coverMm: limits.nominalCoverMm,
     };
   }

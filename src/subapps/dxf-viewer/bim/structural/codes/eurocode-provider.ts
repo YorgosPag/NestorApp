@@ -114,6 +114,9 @@ function eurocodeFootingLimits(ctx: FootingSectionContext): FootingReinforcement
       maxBarSpacingMm: b.maxBarSpacingMm,
       minLongitudinalBarCount: b.minBottomBarCount,
       nominalCoverMm: b.nominalCoverMm,
+      // Δεν διαβάζονται για tie-beam (δοκός)· τιμές για πληρότητα τύπου.
+      padTopMeshMinThicknessMm: EUROCODE_PAD_TOP_MESH_MIN_THICKNESS_MM,
+      padTopMeshKernRatio: EUROCODE_PAD_TOP_MESH_KERN_RATIO,
     };
   }
   return {
@@ -127,8 +130,16 @@ function eurocodeFootingLimits(ctx: FootingSectionContext): FootingReinforcement
     minLongitudinalBarCount: 4,
     // EN 1992-1-1 §4.4.1.3 — έδραση σε προετοιμασμένο έδαφος ~50mm.
     nominalCoverMm: 50,
+    // ADR-464 — άνω σχάρα: επιδερμικός οπλισμός σε χονδρά πέδιλα + kern εκκεντρότητας.
+    padTopMeshMinThicknessMm: EUROCODE_PAD_TOP_MESH_MIN_THICKNESS_MM,
+    padTopMeshKernRatio: EUROCODE_PAD_TOP_MESH_KERN_RATIO,
   };
 }
+
+/** EC2 §7.3.3/§9.7 — χονδρά πέδιλα (≥600mm) χρειάζονται επιδερμικό οπλισμό (άνω σχάρα). */
+const EUROCODE_PAD_TOP_MESH_MIN_THICKNESS_MM = 600;
+/** Πυρήνας ορθογωνικής βάσης — e/dim > 1/6 ⇒ αποκόλληση ⇒ άνω σχάρα (hogging). */
+const EUROCODE_PAD_TOP_MESH_KERN_RATIO = 1 / 6;
 
 /**
  * EC2 §9.3.1.1 (slab-like) όρια εδαφόπλακας/raft — δι-διευθυντική σχάρα top+bottom.

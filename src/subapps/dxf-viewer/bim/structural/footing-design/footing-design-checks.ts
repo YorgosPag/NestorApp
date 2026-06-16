@@ -18,6 +18,7 @@
 import type { Entity } from '../../../types/entities';
 import { isFoundationEntity } from '../../../types/entities';
 import type { StructuralCodeProvider } from '../codes/structural-code-types';
+import { KERN_RATIO } from './footing-bearing';
 import { computeFootingDesign } from './footing-design';
 import { buildPadFootingDesignInput } from './footing-design-input';
 import type { StructuralDiagnostic } from '../organism/structural-organism-types';
@@ -26,6 +27,7 @@ import type { StructuralDiagnostic } from '../organism/structural-organism-types
 const MSG = 'structuralOrganism.diagnostics';
 
 const pct = (x: number): string => (x * 100).toFixed(0);
+const pct1 = (x: number): string => (x * 100).toFixed(1);
 const round = (x: number): string => (Number.isFinite(x) ? x.toFixed(0) : '∞');
 
 /**
@@ -44,21 +46,37 @@ export function runFootingDesignChecks(
     if (!isFoundationEntity(footing)) continue;
     const input = buildPadFootingDesignInput(footing, provider, soilBearingCapacityKpa);
     if (!input) continue;
-    const { bearing } = computeFootingDesign(input);
-    if (bearing.check.adequate) continue;
-    out.push({
-      id: `bearingInadequate:${footing.id}`,
-      code: 'bearingInadequate',
-      severity: 'error',
-      messageKey: `${MSG}.bearingInadequate`,
-      primaryEntityId: footing.id,
-      entityIds: [footing.id],
-      messageParams: {
-        pMax: round(bearing.pMaxKpa),
-        capacity: round(bearing.check.capacity),
-        utilization: pct(bearing.check.utilization),
-      },
-    });
+    const { bearing, flexure } = computeFootingDesign(input);
+
+    if (!bearing.check.adequate) {
+      out.push({
+        id: `bearingInadequate:${footing.id}`,
+        code: 'bearingInadequate',
+        severity: 'error',
+        messageKey: `${MSG}.bearingInadequate`,
+        primaryEntityId: footing.id,
+        entityIds: [footing.id],
+        messageParams: {
+          pMax: round(bearing.pMaxKpa),
+          capacity: round(bearing.check.capacity),
+          utilization: pct(bearing.check.utilization),
+        },
+      });
+    }
+
+    // ADR-464 Slice 2 — έκκεντρο πέδιλο (e>kern, ULS): απαιτείται άνω σχάρα (hogging).
+    if (flexure.hoggingGoverns) {
+      const ratio = Math.max(flexure.eccentricityRatioX, flexure.eccentricityRatioY);
+      out.push({
+        id: `padEccentricHogging:${footing.id}`,
+        code: 'padEccentricHogging',
+        severity: 'warning',
+        messageKey: `${MSG}.padEccentricHogging`,
+        primaryEntityId: footing.id,
+        entityIds: [footing.id],
+        messageParams: { ratio: pct1(ratio), kern: pct1(KERN_RATIO) },
+      });
+    }
   }
   return out;
 }

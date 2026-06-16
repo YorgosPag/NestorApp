@@ -20,9 +20,11 @@ import type { Entity } from '../../types/entities';
 import { isColumnEntity, isBeamEntity, isFoundationEntity, isSlabEntity } from '../../types/entities';
 import type { ColumnEntity, ColumnParams } from '../types/column-types';
 import type { BeamEntity, BeamParams } from '../types/beam-types';
-import type { FoundationEntity, FoundationParams } from '../types/foundation-types';
+import type { FoundationEntity, FoundationParams, PadFootingParams } from '../types/foundation-types';
 import type { SlabEntity, SlabParams } from '../types/slab-types';
 import { mmToSceneUnits } from '../../utils/scene-units';
+import { combineSls } from './loads/load-combinations';
+import { resolveAppliedMemberLoad } from './loads/structural-loads-types';
 import { resolveColumnReinforcementSection } from './reinforcement/column-section-outline';
 import type { ColumnReinforcement } from './reinforcement/column-reinforcement-types';
 import type {
@@ -43,6 +45,19 @@ export function isFoundationSlabEntity(e: Entity): e is SlabEntity {
 /** Μήκος άξονα (mm) από δύο σημεία mm-world (πεδιλοδοκός/συνδετήρια). */
 function axisLengthMm(a: { x: number; y: number }, b: { x: number; y: number }): number {
   return Math.hypot(b.x - a.x, b.y - a.y);
+}
+
+/**
+ * ADR-464 — λόγος εκκεντρότητας SLS e/dim (max κατά X/Y) ενός πεδίλου από το
+ * εφαρμοζόμενο φορτίο. e = M/N (χαρακτηριστικός συνδυασμός). 0 όταν δεν υπάρχει
+ * καθαρό θλιπτικό φορτίο. Καθορίζει αν ο suggester προτείνει άνω σχάρα (kern).
+ */
+function padEccentricityRatio(params: PadFootingParams): number {
+  const load = combineSls(resolveAppliedMemberLoad(params.appliedLoad));
+  if (load.axialKn <= 0) return 0;
+  const rx = params.width > 0 ? (Math.abs(load.momentXKnm) / load.axialKn) * M_TO_MM / params.width : 0;
+  const ry = params.length > 0 ? (Math.abs(load.momentYKnm) / load.axialKn) * M_TO_MM / params.length : 0;
+  return Math.max(rx, ry);
 }
 
 /**
@@ -128,6 +143,7 @@ export function buildFootingSectionContext(footing: FoundationEntity): FootingSe
         lengthMm: p.length,
         thicknessMm: p.thicknessMm,
         grossAreaMm2: Math.max(0, p.width) * Math.max(0, p.length),
+        eccentricityRatio: padEccentricityRatio(p),
       };
     case 'strip':
       return {

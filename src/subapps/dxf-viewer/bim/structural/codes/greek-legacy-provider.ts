@@ -111,6 +111,9 @@ function greekLegacyFootingLimits(ctx: FootingSectionContext): FootingReinforcem
       maxBarSpacingMm: b.maxBarSpacingMm,
       minLongitudinalBarCount: b.minBottomBarCount,
       nominalCoverMm: b.nominalCoverMm,
+      // Δεν διαβάζονται για tie-beam (δοκός)· τιμές για πληρότητα τύπου.
+      padTopMeshMinThicknessMm: GREEK_LEGACY_PAD_TOP_MESH_MIN_THICKNESS_MM,
+      padTopMeshKernRatio: GREEK_LEGACY_PAD_TOP_MESH_KERN_RATIO,
     };
   }
   return {
@@ -123,8 +126,16 @@ function greekLegacyFootingLimits(ctx: FootingSectionContext): FootingReinforcem
     minLongitudinalBarCount: 4,
     // ΕΚΩΣ 2000 §5 — επικάλυψη θεμελίωσης (έδραση σε έδαφος).
     nominalCoverMm: 50,
+    // ADR-464 — άνω σχάρα: επιδερμικός οπλισμός σε χονδρά πέδιλα + kern εκκεντρότητας.
+    padTopMeshMinThicknessMm: GREEK_LEGACY_PAD_TOP_MESH_MIN_THICKNESS_MM,
+    padTopMeshKernRatio: GREEK_LEGACY_PAD_TOP_MESH_KERN_RATIO,
   };
 }
+
+/** ΕΚΩΣ — χονδρά πέδιλα (≥600mm) χρειάζονται επιδερμικό οπλισμό (άνω σχάρα). */
+const GREEK_LEGACY_PAD_TOP_MESH_MIN_THICKNESS_MM = 600;
+/** Πυρήνας ορθογωνικής βάσης — e/dim > 1/6 ⇒ αποκόλληση ⇒ άνω σχάρα (hogging). */
+const GREEK_LEGACY_PAD_TOP_MESH_KERN_RATIO = 1 / 6;
 
 /**
  * ΕΚΩΣ 2000 §17 (θεμελιώσεις) όρια εδαφόπλακας/raft — slab-like, ελαφρώς

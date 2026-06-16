@@ -81,6 +81,7 @@ function input(overrides: Partial<FootingDesignInput> = {}): FootingDesignInput 
     ulsLoad: { axialKn: 1080, momentXKnm: 0, momentYKnm: 0 },
     soilBearingCapacityKpa: 300,
     footingSelfWeightKn: 0,
+    coverMm: 50,
     ...overrides,
   };
 }

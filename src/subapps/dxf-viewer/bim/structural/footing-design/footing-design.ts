@@ -13,11 +13,13 @@
  */
 
 import { computeFootingBearing } from './footing-bearing';
+import { computeFootingFlexure } from './footing-flexure';
 import type { FootingDesignInput, FootingDesignResult } from './footing-design-types';
 
 /** Συνθέτει το αποτέλεσμα σχεδιασμού πεδίλου από την είσοδο (DERIVED). */
 export function computeFootingDesign(input: FootingDesignInput): FootingDesignResult {
   return {
     bearing: computeFootingBearing(input),
+    flexure: computeFootingFlexure(input),
   };
 }

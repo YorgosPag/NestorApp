@@ -152,6 +152,11 @@ export interface PadSectionContext {
   readonly thicknessMm: number;
   /** Εμβαδό ίχνους width·length (mm²). */
   readonly grossAreaMm2: number;
+  /**
+   * ADR-464 — λόγος εκκεντρότητας SLS e/dim (max κατά X/Y) από το εφαρμοζόμενο
+   * φορτίο· καθορίζει αν χρειάζεται άνω σχάρα (kern). Absent/0 ⇒ κεντρικό φορτίο.
+   */
+  readonly eccentricityRatio?: number;
 }
 
 /** Πεδιλοδοκός/συνεχές πέδιλο (strip) — band πλάτους width, βάθος thickness, μήκος span. */
@@ -186,6 +191,16 @@ export interface FootingReinforcementLimits {
   readonly minLongitudinalBarCount: number;
   /** Ονομαστική επικάλυψη cnom (mm) — μεγαλύτερη (έδραση σε έδαφος, EC2 §4.4.1.3). */
   readonly nominalCoverMm: number;
+  /**
+   * ADR-464 — ελάχιστο πάχος (mm) πάνω από το οποίο ΑΠΑΙΤΕΙΤΑΙ άνω σχάρα πεδίλου
+   * για επιδερμικό/συστολικό οπλισμό (skin, EC2 §9.7/§7.3.3), ανεξάρτητα φορτίου.
+   */
+  readonly padTopMeshMinThicknessMm: number;
+  /**
+   * ADR-464 — όριο λόγου εκκεντρότητας e/dim (kern, 1/6 ορθογ.) πάνω από το οποίο
+   * εμφανίζεται αποκόλληση/αντιστροφή ⇒ ΑΠΑΙΤΕΙΤΑΙ άνω σχάρα (hogging).
+   */
+  readonly padTopMeshKernRatio: number;
 }
 
 // ─── Footing design (ADR-464) ────────────────────────────────────────────────

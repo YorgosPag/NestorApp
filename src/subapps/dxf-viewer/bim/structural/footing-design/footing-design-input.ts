@@ -16,6 +16,7 @@ import { concreteWeightKg } from '../concrete-grades';
 import type { StructuralCodeProvider } from '../codes/structural-code-types';
 import { combineSls, combineUls } from '../loads/load-combinations';
 import { isZeroMemberLoad, resolveAppliedMemberLoad } from '../loads/structural-loads-types';
+import { buildFootingSectionContext } from '../section-context';
 import type { FootingDesignInput } from './footing-design-types';
 
 /** Επιτάχυνση βαρύτητας (m/s²) — μετατροπή μάζας σκυροδέματος σε φορτίο. */
@@ -40,6 +41,8 @@ export function buildPadFootingDesignInput(
   const memberLoad = resolveAppliedMemberLoad(footing.params.appliedLoad);
   if (isZeroMemberLoad(memberLoad)) return null;
   const factors = provider.footingDesignFactors();
+  // cnom από τα code limits (SSoT) — ενεργό βάθος d της κάμψης (Slice 2).
+  const coverMm = provider.footingReinforcementLimits(buildFootingSectionContext(footing)).nominalCoverMm;
   return {
     widthMm: footing.params.width,
     lengthMm: footing.params.length,
@@ -50,5 +53,6 @@ export function buildPadFootingDesignInput(
     ulsLoad: combineUls(memberLoad, factors.combination),
     soilBearingCapacityKpa,
     footingSelfWeightKn: footingSelfWeightKn(footing),
+    coverMm,
   };
 }
