@@ -4,10 +4,8 @@ import React, { useState, useMemo, useCallback } from 'react';
 import { EventBus } from '../../systems/events';
 import { useTranslation } from '@/i18n';
 import { Upload, Download, ChevronDown } from 'lucide-react';
-import { FloorplanImportWizard } from '@/features/floorplan-import';
-import { DxfFirestoreService, type DxfSaveContext } from '../../services/dxf-firestore.service';
-import type { FloorplanType } from '../../systems/levels/config';
-import { ENTITY_TYPES, type EntityType } from '@/config/domain-constants';
+import { FloorplanImportWizard, DuplicateFloorplanDialog } from '@/features/floorplan-import';
+import { DxfFirestoreService } from '../../services/dxf-firestore.service';
 import { Button } from '@/components/ui/button';
 import { NAVIGATION_ENTITIES } from '@/components/navigation/config/navigation-entities';
 import { LevelListCard } from '@/domain/cards';
@@ -22,13 +20,13 @@ import { SceneInfoSection } from './SceneInfoSection';
 import { LayersSection } from './LayersSection';
 import { AnnotationsSection } from './AnnotationsSection';
 import type { LevelPanelProps, EditingMode } from './level-panel-types';
+import { entityTypeToFloorplanType, buildDuplicateDestinations } from './level-panel-helpers';
 import type { SceneModel } from '../../types/scene';
 import { useLevels } from '../../systems/levels';
 import { countSceneEntities } from '../../utils/scene-entity-count';
 import { orderLevelsForPanel } from '../../systems/levels/level-display-order';
 import { useFloorsByBuilding } from '@/components/properties/shared/useFloorsByBuilding';
-import { findOrCreateLevelForFloor } from '../../systems/levels/level-floor-resolution';
-import { useAllFloorsBackfill, useLevelDeletion } from './level-panel-hooks';
+import { useAllFloorsBackfill, useLevelDeletion, useFloorplanImportComplete } from './level-panel-hooks';
 import { useNotifications } from '../../../../providers/NotificationProvider';
 import { createOverlayHandlers } from '../../overlays/types';
 import { useUniversalSelection } from '../../systems/selection';
@@ -139,16 +137,9 @@ export function LevelPanel({
   const [showToolbox, setShowToolbox] = useState(false);
   const [showImportWizard, setShowImportWizard] = useState(false);
   const [showLoadWizard, setShowLoadWizard] = useState(false);
+  // ADR-465 — «Αντιγραφή κάτοψης σε όροφο»: source floor for the duplicate dialog.
+  const [duplicateSource, setDuplicateSource] = useState<{ floorId: string; name: string } | null>(null);
 
-  const entityTypeToFloorplanType = useCallback((entityType: EntityType): FloorplanType | undefined => {
-    switch (entityType) {
-      case ENTITY_TYPES.PROJECT: return 'project';
-      case ENTITY_TYPES.BUILDING: return 'building';
-      case ENTITY_TYPES.FLOOR: return 'floor';
-      case ENTITY_TYPES.PROPERTY: return 'unit';
-      default: return undefined;
-    }
-  }, []);
   const [isLevelsCollapsed, setIsLevelsCollapsed] = useState(false);
   const {
     showDeleteConfirm,
@@ -219,6 +210,24 @@ export function LevelPanel({
     });
     return cleanup;
   }, [handleLayeringActivation]);
+
+  // ADR-420/465 — SSoT import-complete handler (extracted to level-panel-hooks),
+  // reused by BOTH the import wizard and the cross-floor duplicate dialog.
+  const handleImportComplete = useFloorplanImportComplete({
+    resolver: { levels, addLevel, linkLevelToFloor },
+    currentLevelId,
+    setCurrentLevel,
+    updateLevelContext,
+    entityTypeToFloorplanType,
+    triggerAllFloorsBackfill,
+    onSceneImported,
+  });
+
+  // ADR-465 — destination floors for the cross-floor duplicate dialog (SSoT helper).
+  const duplicateDestinations = useMemo(
+    () => buildDuplicateDestinations(buildingFloors, duplicateSource?.floorId ?? null, t),
+    [buildingFloors, duplicateSource, t],
+  );
 
   return (
     <div className={`${PANEL_TOKENS.LEVEL_PANEL.CONTAINER.BASE} ${PANEL_TOKENS.LEVEL_PANEL.CONTAINER.PADDING} ${PANEL_TOKENS.LEVEL_PANEL.CONTAINER.SECTION}`}>
@@ -314,6 +323,13 @@ export function LevelPanel({
                     e.stopPropagation();
                     handleCloseLevel(level.id);
                   }}
+                  onDuplicate={onSceneImported && level.floorId ? (e) => {
+                    e.stopPropagation();
+                    setDuplicateSource({
+                      floorId: level.floorId!,
+                      name: level.entityLabel || level.name,
+                    });
+                  } : undefined}
                   compact
                 />
                 <LevelFloorLink
@@ -396,69 +412,21 @@ export function LevelPanel({
         <FloorplanImportWizard
           isOpen={showImportWizard}
           onClose={() => setShowImportWizard(false)}
-          onComplete={async (file, meta) => {
+          onComplete={(file, meta) => {
             setShowImportWizard(false);
-            const entityType = meta.entityType as DxfSaveContext['entityType'];
-            const saveContext: DxfSaveContext = {
-              companyId: meta.companyId,
-              projectId: meta.projectId,
-              ...(entityType === 'building' && meta.entityId ? { buildingId: meta.entityId } : {}),
-              ...(entityType === 'floor' && meta.entityId ? { floorId: meta.entityId } : {}),
-              entityType,
-              filesCategory: 'floorplans',
-              purpose: meta.purpose || undefined,
-              entityLabel: meta.entityLabel,
-              fileRecordId: meta.fileId,
-            };
-            // ADR-420 — resolve the Level that OWNS the wizard-selected floor
-            // (find-or-create + switch). Root-cause fix: the import previously
-            // targeted whatever level was *active* (`currentLevelId`), so importing
-            // onto floor B while floor A's tab was active overwrote floor A. Now the
-            // selected `floorId` deterministically maps to its own level. Falls back
-            // to the active level for project/building-level imports (no floorId).
-            const targetLevelId = await findOrCreateLevelForFloor(
-              { levels, addLevel, linkLevelToFloor },
-              {
-                floorId: saveContext.floorId,
-                buildingId: meta.buildingId ?? saveContext.buildingId,
-                entityLabel: meta.entityLabel,
-                currentLevelId,
-              },
-            );
-            // ADR-340 Phase 4 reborn FOLLOW-UP — context update is safe for any
-            // payload (writes only floorId/buildingId/entityLabel, NOT sceneFileId).
-            // Lets `useFloorplanBackgroundForLevel` resolve the real floor for raster.
-            if (targetLevelId) {
-              setCurrentLevel(targetLevelId);
-              const floorplanType = entityTypeToFloorplanType(meta.entityType);
-              if (floorplanType) {
-                updateLevelContext(targetLevelId, {
-                  floorplanType,
-                  entityLabel: meta.entityLabel,
-                  projectId: meta.projectId,
-                  floorId: saveContext.floorId,
-                  // ADR-399: building comes from the wizard selection (saveContext only
-                  // carries buildingId for 'building' imports, not for 'floor').
-                  buildingId: meta.buildingId ?? saveContext.buildingId,
-                });
-              }
-            }
-            // ADR-448 Phase 3 — «Φόρτωσε ΟΛΟΥΣ τους ορόφους»: when the toggle is on
-            // and the selection carries a building, open a Level for every storey of
-            // that building (not only the imported floor). Idempotent backfill runs
-            // off the shared FLOORS subscription; the active level stays the import
-            // target set just above.
-            const allFloorsBuilding = meta.buildingId ?? saveContext.buildingId;
-            if (meta.loadAllFloors && allFloorsBuilding) {
-              triggerAllFloorsBackfill(allFloorsBuilding);
-            }
-            // Raster (PDF / image) is already persisted via /api/floorplan-backgrounds
-            // inside the Wizard. The DXF scene importer must NOT run for raster —
-            // it would push the raw bytes through the cadFiles processor and
-            // wire `dxf_viewer_levels.sceneFileId` to a non-DXF file.
-            if (meta.format && meta.format !== 'dxf') return;
-            onSceneImported(file, undefined, saveContext, targetLevelId ?? undefined);
+            return handleImportComplete(file, meta);
           }}
+        />
+      )}
+      {onSceneImported && duplicateSource && (
+        <DuplicateFloorplanDialog
+          isOpen={!!duplicateSource}
+          onClose={() => setDuplicateSource(null)}
+          source={duplicateSource}
+          projectId={currentLevel?.projectId}
+          buildingId={buildingId ?? undefined}
+          destinations={duplicateDestinations}
+          onComplete={handleImportComplete}
         />
       )}
       <DeleteConfirmDialog

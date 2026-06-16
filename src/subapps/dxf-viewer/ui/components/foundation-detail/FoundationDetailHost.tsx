@@ -19,9 +19,15 @@ import type { useLevels } from '../../../systems/levels';
 import { EventBus } from '../../../systems/events/EventBus';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { isFoundationEntity } from '../../../types/entities';
+import type { Entity } from '../../../types/entities';
 import type { FoundationEntity } from '../../../bim/types/foundation-types';
 import { buildFootingDetailSheet } from '../../../bim/structural/detail-sheet/footing-detail-sheet';
 import { computeDetailSheetLayout } from '../../../bim/structural/detail-sheet/detail-sheet-layout';
+import { useStructuralSettingsStore } from '../../../state/structural-settings-store';
+import { resolveStructuralCode } from '../../../bim/structural/codes';
+import { buildPadFootingDesignInput } from '../../../bim/structural/footing-design/footing-design-input';
+import { computeFootingDesign } from '../../../bim/structural/footing-design/footing-design';
+import type { FootingDesignResult } from '../../../bim/structural/footing-design/footing-design-types';
 import {
   captureFootingDetail3d,
   type FootingDetail3dCapture,
@@ -75,6 +81,9 @@ export function FoundationDetailHost({
   const { t } = useTranslation('dxf-viewer-shell');
   const [dialogState, setDialogState] = useState<DialogState>(CLOSED);
   const [perspective3d, setPerspective3d] = useState<FootingDetail3dCapture | null>(null);
+  // ADR-464 Slice 5 — building-level σ_allow + κανονισμός για τον πίνακα ελέγχων σχεδιασμού.
+  const codeId = useStructuralSettingsStore((s) => s.codeId);
+  const soilBearingCapacityKpa = useStructuralSettingsStore((s) => s.soilBearingCapacityKpa);
 
   useEffect(() => {
     return EventBus.on('bim:foundation-detail-requested', ({ foundationId, levelId }) => {
@@ -97,9 +106,17 @@ export function FoundationDetailHost({
     if (!dialogState.open) return null;
     const footing = resolveFooting(levelManager, dialogState.levelId, dialogState.foundationId);
     if (!footing) return null;
+    // ADR-464 Slice 5 — DERIVED έλεγχοι σχεδιασμού (αδρανές χωρίς σ_allow / φορτίο).
+    let design: FootingDesignResult | null = null;
+    if (soilBearingCapacityKpa && dialogState.levelId) {
+      const entities = (levelManager.getLevelScene(dialogState.levelId)?.entities ?? []) as unknown as readonly Entity[];
+      const input = buildPadFootingDesignInput(footing, resolveStructuralCode(codeId), soilBearingCapacityKpa, entities);
+      if (input) design = computeFootingDesign(input);
+    }
     return buildFootingDetailSheet({
       foundation: footing,
       perspective3d,
+      design,
       labels: {
         plan: t('foundationDetail.regions.plan'),
         elevation: t('foundationDetail.regions.elevation'),
@@ -132,9 +149,21 @@ export function FoundationDetailHost({
           'strip': t('foundationDetail.kindValues.strip'),
           'tie-beam': t('foundationDetail.kindValues.tieBeam'),
         },
+        designSummary: {
+          check: t('foundationDetail.designSummary.check'),
+          demand: t('foundationDetail.designSummary.demand'),
+          capacity: t('foundationDetail.designSummary.capacity'),
+          utilization: t('foundationDetail.designSummary.utilization'),
+          bearing: t('foundationDetail.designSummary.bearing'),
+          punching: t('foundationDetail.designSummary.punching'),
+          oneWayShear: t('foundationDetail.designSummary.oneWayShear'),
+          topMeshNote: t('foundationDetail.designSummary.topMeshNote'),
+          ok: t('foundationDetail.designSummary.ok'),
+          fail: t('foundationDetail.designSummary.fail'),
+        },
       },
     });
-  }, [dialogState, levelManager, t, perspective3d]);
+  }, [dialogState, levelManager, t, perspective3d, codeId, soilBearingCapacityKpa]);
 
   const handleOpenChange = useCallback((next: boolean): void => {
     if (!next) setDialogState(CLOSED);

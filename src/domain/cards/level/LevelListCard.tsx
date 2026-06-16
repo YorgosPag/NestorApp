@@ -20,7 +20,7 @@ import React, { useMemo } from 'react';
 // 🏢 ENTERPRISE: All icons from centralized NAVIGATION_ENTITIES
 import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
 // 🏢 Action icons
-import { Edit, Trash2, Layers, X } from 'lucide-react';
+import { Edit, Trash2, Layers, X, Copy } from 'lucide-react';
 // 🏢 ENTERPRISE: Centralized action icon colors
 import { HOVER_TEXT_EFFECTS } from '@/components/ui/effects';
 
@@ -57,6 +57,8 @@ export interface LevelListCardProps {
   onDelete?: (event: React.MouseEvent) => void;
   /** Close handler (unloads floorplan from canvas without trashing file) */
   onClose?: (event: React.MouseEvent) => void;
+  /** Duplicate handler — copy this floor's floorplan to another floor (ADR-465) */
+  onDuplicate?: (event: React.MouseEvent) => void;
   /** Compact mode */
   compact?: boolean;
   /** Additional className */
@@ -95,6 +97,7 @@ export function LevelListCard({
   onEdit,
   onDelete,
   onClose,
+  onDuplicate,
   compact = false,
   className,
 }: LevelListCardProps) {
@@ -184,6 +187,17 @@ export function LevelListCard({
       });
     }
 
+    // Duplicate action — copy this floor's floorplan to another floor (ADR-465)
+    if (onDuplicate) {
+      items.push({
+        id: 'duplicate',
+        label: t('panels.levels.duplicateFloorplan.action'),
+        icon: Copy,
+        onClick: onDuplicate,
+        className: HOVER_TEXT_EFFECTS.BLUE,
+      });
+    }
+
     // Close action — unloads floorplan from canvas without trashing file
     if (onClose) {
       items.push({
@@ -196,7 +210,7 @@ export function LevelListCard({
     }
 
     return items;
-  }, [onEdit, onDelete, onClose, isOnlyLevel, t]);
+  }, [onEdit, onDelete, onClose, onDuplicate, isOnlyLevel, t]);
 
   // ==========================================================================
   // 🏢 HANDLERS

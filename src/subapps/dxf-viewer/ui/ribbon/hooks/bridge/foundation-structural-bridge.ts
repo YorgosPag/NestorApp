@@ -101,6 +101,15 @@ export function resolveFoundationStructuralState(
     const v = useStructuralSettingsStore.getState().soilBearingCapacityKpa;
     return { value: v != null ? String(v) : '', options: [] };
   }
+  // ADR-464 Slice 4 — building-level area loads (G/Q) για το tributary takedown.
+  if (commandKey === FOUNDATION_STRUCTURAL_KEYS.areaDeadLoad) {
+    const v = useStructuralSettingsStore.getState().deadAreaLoadKpa;
+    return { value: v != null ? String(v) : '', options: [] };
+  }
+  if (commandKey === FOUNDATION_STRUCTURAL_KEYS.areaLiveLoad) {
+    const v = useStructuralSettingsStore.getState().liveAreaLoadKpa;
+    return { value: v != null ? String(v) : '', options: [] };
+  }
   if (isFoundationLoadKey(commandKey)) {
     const v = readFoundationLoadField(footing.params, commandKey);
     return v === null ? null : { value: v, options: [] };
@@ -180,6 +189,17 @@ export function applyFoundationStructuralChange(
   if (commandKey === FOUNDATION_STRUCTURAL_KEYS.soilBearing) {
     const n = Number.parseFloat(value);
     useStructuralSettingsStore.getState().setSoilBearingCapacityKpa(Number.isNaN(n) ? undefined : n);
+    return true;
+  }
+  // ADR-464 Slice 4 — building-level area loads → store (mirror σ_allow).
+  if (commandKey === FOUNDATION_STRUCTURAL_KEYS.areaDeadLoad) {
+    const n = Number.parseFloat(value);
+    useStructuralSettingsStore.getState().setDeadAreaLoadKpa(Number.isNaN(n) ? undefined : n);
+    return true;
+  }
+  if (commandKey === FOUNDATION_STRUCTURAL_KEYS.areaLiveLoad) {
+    const n = Number.parseFloat(value);
+    useStructuralSettingsStore.getState().setLiveAreaLoadKpa(Number.isNaN(n) ? undefined : n);
     return true;
   }
   if (isFoundationLoadKey(commandKey)) {

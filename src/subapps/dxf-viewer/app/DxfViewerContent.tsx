@@ -44,6 +44,7 @@ import { useDxfViewerEffects } from './useDxfViewerEffects';
 import { useDxfViewerNotifications } from '../hooks/useDxfViewerNotifications';
 import { useStructuralAutoAttach } from '../hooks/useStructuralAutoAttach';
 import { useStructuralAutoReinforce } from '../hooks/useStructuralAutoReinforce';
+import { useStructuralLoadTakedown } from '../hooks/useStructuralLoadTakedown';
 import { useStructuralFootingConnect } from '../hooks/useStructuralFootingConnect';
 import { useStructuralOrganism } from '../hooks/useStructuralOrganism';
 import { useColumnAdjacencyNotification } from '../hooks/useColumnAdjacencyNotification';
@@ -248,6 +249,7 @@ export const DxfViewerContent = React.memo<DxfViewerAppProps>((props) => {
   useDimAssociationObserver(levelManager.getLevelScene, levelManager.setLevelScene, () => levelManager.currentLevelId);
   useStructuralAutoAttach({ levelManager }); // ADR-401 Phase D — auto-attach walls under new beam/slab
   useStructuralAutoReinforce({ levelManager }); // ADR-459 Φ4d — «Αυτόματος Οπλισμός» (auto-apply command)
+  useStructuralLoadTakedown({ levelManager }); // ADR-464 Φ4 — «Υπολογισμός Φορτίων» (tributary takedown)
   useStructuralFootingConnect({ levelManager }); // ADR-459 Φ4f — manual κολόνα↔πέδιλο connectivity (Ανάλυση)
   useStructuralOrganism({ levelManager }); // ADR-459 Phase 1 — cross-entity structural diagnostics («λείπει το πέδιλο»)
   useColumnAdjacencyNotification({ levelManager }); // ADR-363 — post-creation adjacent-columns→shear-wall merge toast

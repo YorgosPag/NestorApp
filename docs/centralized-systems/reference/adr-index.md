@@ -446,6 +446,7 @@
 | **ADR-462** | Canonical-mm Units (ΕΝΑ unit system, πάντα χιλιοστά) | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-462-canonical-mm-units.md) |
 | **ADR-463** | Foundation Reinforcement UX (mirror Column: Ribbon → Properties → 2Δ/3Δ → PDF → Auto) | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-463-foundation-reinforcement-ux.md) |
 | **ADR-464** | Advanced Footing Reinforcement & Design (full loads model, Revit-without-Robot) | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-464-advanced-footing-reinforcement.md) |
+| **ADR-465** | Cross-Floor Floorplan Duplicate (copy DXF floorplan to another floor, pipeline reuse) | ✅ APPROVED | 2026-06-16 | Uncategorized | [📄](./adrs/ADR-465-cross-floor-floorplan-duplicate.md) |
 | **ADR-UI-001** | Visual Primitive Ownership & Semantic Tokens | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-UI-001.md) |
 
 ---
@@ -876,6 +877,7 @@
 | **ADR-462** | Canonical-mm Units (ΕΝΑ unit system, πάντα χιλιοστά) | ✅ APPROVED | [View](./adrs/ADR-462-canonical-mm-units.md) |
 | **ADR-463** | Foundation Reinforcement UX (mirror Column: Ribbon → Properties → 2Δ/3Δ → PDF → Auto) | ✅ APPROVED | [View](./adrs/ADR-463-foundation-reinforcement-ux.md) |
 | **ADR-464** | Advanced Footing Reinforcement & Design (full loads model, Revit-without-Robot) | ✅ APPROVED | [View](./adrs/ADR-464-advanced-footing-reinforcement.md) |
+| **ADR-465** | Cross-Floor Floorplan Duplicate (copy DXF floorplan to another floor, pipeline reuse) | ✅ APPROVED | [View](./adrs/ADR-465-cross-floor-floorplan-duplicate.md) |
 | **ADR-UI-001** | Visual Primitive Ownership & Semantic Tokens | ✅ APPROVED | [View](./adrs/ADR-UI-001.md) |
 
 ---

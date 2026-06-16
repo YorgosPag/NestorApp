@@ -21,7 +21,19 @@ import type { StructuralCodeProvider } from '../codes/structural-code-types';
 import { KERN_RATIO } from './footing-bearing';
 import { computeFootingDesign } from './footing-design';
 import { buildPadFootingDesignInput } from './footing-design-input';
+import { computeRaftBearing } from './raft-bearing';
+import { isFoundationSlabEntity } from '../section-context';
 import type { StructuralDiagnostic } from '../organism/structural-organism-types';
+
+/**
+ * ADR-464 Slice 5 — building-level παράμετροι του raft bearing (tributary area-load
+ * model: όροφοι + κατανεμημένα φορτία). Absent → ο raft έλεγχος αδρανεί (advisory).
+ */
+export interface RaftLoadContext {
+  readonly storeyCount: number;
+  readonly deadAreaLoadKpa: number;
+  readonly liveAreaLoadKpa: number;
+}
 
 /** i18n key prefix (ns `dxf-viewer-shell`) — κοινό με τα reinforcement διαγνωστικά. */
 const MSG = 'structuralOrganism.diagnostics';
@@ -30,6 +42,29 @@ const pct = (x: number): string => (x * 100).toFixed(0);
 const pct1 = (x: number): string => (x * 100).toFixed(1);
 const round = (x: number): string => (Number.isFinite(x) ? x.toFixed(0) : '∞');
 const mpa = (x: number): string => (Number.isFinite(x) ? x.toFixed(2) : '∞');
+
+interface BearingLike {
+  readonly pMaxKpa: number;
+  readonly check: { readonly adequate: boolean; readonly capacity: number; readonly utilization: number };
+}
+
+/** Push `bearingInadequate` αν η έδραση (πέδιλο ή raft) υπερβαίνει το σ_allow. SSoT. */
+function pushBearingInadequate(out: StructuralDiagnostic[], entityId: string, bearing: BearingLike): void {
+  if (bearing.check.adequate) return;
+  out.push({
+    id: `bearingInadequate:${entityId}`,
+    code: 'bearingInadequate',
+    severity: 'error',
+    messageKey: `${MSG}.bearingInadequate`,
+    primaryEntityId: entityId,
+    entityIds: [entityId],
+    messageParams: {
+      pMax: round(bearing.pMaxKpa),
+      capacity: round(bearing.check.capacity),
+      utilization: pct(bearing.check.utilization),
+    },
+  });
+}
 
 /**
  * Τρέξε τους ελέγχους σχεδιασμού θεμελίωσης πάνω στα entities της σκηνής. Pure —
@@ -40,6 +75,7 @@ export function runFootingDesignChecks(
   entities: readonly Entity[],
   provider: StructuralCodeProvider,
   soilBearingCapacityKpa: number | undefined,
+  raftLoad?: RaftLoadContext,
 ): StructuralDiagnostic[] {
   if (!soilBearingCapacityKpa || soilBearingCapacityKpa <= 0) return [];
   const out: StructuralDiagnostic[] = [];
@@ -49,21 +85,7 @@ export function runFootingDesignChecks(
     if (!input) continue;
     const { bearing, flexure, punching, oneWayShear } = computeFootingDesign(input);
 
-    if (!bearing.check.adequate) {
-      out.push({
-        id: `bearingInadequate:${footing.id}`,
-        code: 'bearingInadequate',
-        severity: 'error',
-        messageKey: `${MSG}.bearingInadequate`,
-        primaryEntityId: footing.id,
-        entityIds: [footing.id],
-        messageParams: {
-          pMax: round(bearing.pMaxKpa),
-          capacity: round(bearing.check.capacity),
-          utilization: pct(bearing.check.utilization),
-        },
-      });
-    }
+    pushBearingInadequate(out, footing.id, bearing);
 
     // ADR-464 Slice 2 — έκκεντρο πέδιλο (e>kern, ULS): απαιτείται άνω σχάρα (hogging).
     if (flexure.hoggingGoverns) {
@@ -111,6 +133,16 @@ export function runFootingDesignChecks(
           utilization: pct(oneWayShear.check.utilization),
         },
       });
+    }
+  }
+
+  // ADR-464 Slice 5 — raft/εδαφόπλακα μέση έδραση (uniform pressure vs σ_allow).
+  // Αδρανές χωρίς area-load context (advisory — δεν υπάρχει πηγή φορτίου).
+  if (raftLoad) {
+    for (const slab of entities) {
+      if (!isFoundationSlabEntity(slab)) continue;
+      const bearing = computeRaftBearing(slab, { ...raftLoad, soilBearingCapacityKpa });
+      if (bearing) pushBearingInadequate(out, slab.id, bearing);
     }
   }
   return out;

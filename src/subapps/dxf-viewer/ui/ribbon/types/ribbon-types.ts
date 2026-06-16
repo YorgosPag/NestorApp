@@ -25,6 +25,25 @@ export interface RibbonComboboxOption {
   imageUrl?: string;
 }
 
+/**
+ * ADR-345 §4.5 — Editable numeric combobox override (Revit type-to-enter).
+ * RibbonCombobox auto-renders an EDITABLE field for any all-numeric option list
+ * (presets in the dropdown + free typing). This config overrides the inferred
+ * behaviour for a specific field. All fields optional → zero breaking change.
+ */
+export interface RibbonNumericInputConfig {
+  /** `true` forces editing even without a numeric preset list; `false` forces a plain Select. */
+  editable?: boolean;
+  /** Allow a leading minus. Default: inferred (true when any preset is negative). */
+  allowNegative?: boolean;
+  /** Allow a decimal separator. Default: inferred (true when any preset is non-integer). */
+  allowDecimal?: boolean;
+  /** Reject committed values below this (typed input reverts). */
+  min?: number;
+  /** Reject committed values above this (typed input reverts). */
+  max?: number;
+}
+
 export interface RibbonCommand {
   id: string;
   labelKey: string;
@@ -59,6 +78,14 @@ export interface RibbonCommand {
    * Applied as a CSS variable on the trigger element. Defaults to 140.
    */
   comboboxWidthPx?: number;
+  /**
+   * ADR-345 §4.5 — Per-field override for the editable numeric combobox. When
+   * omitted, RibbonCombobox infers everything from the option list (numeric
+   * presets → editable; negative preset → allow minus; decimal preset → allow
+   * dot). Set this only to override (e.g. allow negative rotation/offset whose
+   * presets happen to be all-positive). @see ribbon-combobox-numeric.ts
+   */
+  numericInput?: RibbonNumericInputConfig;
   /**
    * ADR-419 §ribbon-hierarchy (Revit-style cascading menu) — When present,
    * this command is a SUBMENU HEADER (not a leaf tool). The split dropdown

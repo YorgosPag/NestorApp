@@ -162,6 +162,20 @@ export const STRUCTURAL_REINFORCE_PANEL: RibbonPanelDef = {
             tooltipKey: 'ribbon.tooltips.autoReinforceOrganism',
           },
         },
+        // ADR-464 Slice 4 — «Υπολογισμός Φορτίων»: tributary load takedown σε όλα τα
+        // πέδιλα του ορόφου (αυτόματα service φορτία από area loads × ορόφους × ευθύνη).
+        {
+          type: 'simple',
+          size: 'large',
+          command: {
+            id: 'analyze.compute-loads',
+            labelKey: 'ribbon.commands.computeTakedownLoads',
+            icon: 'struct-auto-reinforce',
+            commandKey: 'organism.compute-loads',
+            action: 'organism.compute-loads',
+            tooltipKey: 'ribbon.tooltips.computeTakedownLoads',
+          },
+        },
         // ADR-459 Φ4f — manual κολόνα↔πέδιλο connectivity (selection-driven· εδώ
         // ώστε να δουλεύει με multi-selection — οι contextual καρτέλες κρύβονται).
         {

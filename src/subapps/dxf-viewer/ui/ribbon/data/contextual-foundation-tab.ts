@@ -209,6 +209,8 @@ export const CONTEXTUAL_FOUNDATION_TAB: RibbonTab = {
                 commandKey: FOUNDATION_RIBBON_KEYS.params.rotation,
                 comboboxWidthPx: 80,
                 options: ROTATION_DEG_OPTIONS,
+                // Presets are all-positive but rotation may be CW (negative); allow typing it.
+                numericInput: { allowNegative: true, allowDecimal: true },
               },
             },
           ],

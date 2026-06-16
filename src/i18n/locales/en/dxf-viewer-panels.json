@@ -63,6 +63,21 @@
         "loadButton": "Load",
         "cancel": "Cancel",
         "error": "Load error"
+      },
+      "duplicateFloorplan": {
+        "action": "Copy floorplan to floor…",
+        "title": "Copy floorplan to another floor",
+        "description": "Copy the DXF floorplan of floor \"{source}\" to another floor. The destination floor will be re-drawn from the original DXF.",
+        "destinationLabel": "Destination floor",
+        "destinationPlaceholder": "Select a floor…",
+        "confirm": "Copy",
+        "cancel": "Cancel",
+        "running": "Copying…",
+        "noSourceFloorplan": "The source floor has no saved DXF floorplan.",
+        "noDestinations": "No other floor available as destination.",
+        "wipeWarning": "The destination floor already contains {polygons} polygons and will be replaced.",
+        "success": "Floorplan copied to floor \"{destination}\".",
+        "error": "Floorplan copy failed."
       }
     },
     "hierarchy": {

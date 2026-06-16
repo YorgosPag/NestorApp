@@ -69,6 +69,9 @@ export const FOUNDATION_TOGGLE_OPTIONS: readonly ComboboxOption[] = [
 /** Επιτρεπόμενη τάση έδρασης εδάφους σ_allow (kPa) — τυπικές γεωτεχνικές τιμές. */
 export const FOUNDATION_SOIL_BEARING_OPTIONS = numericOptions([100, 150, 200, 250, 300, 400, 500]);
 
+/** Κατανεμημένο φορτίο ορόφου G/Q (kPa) — τυπικές τιμές RC κτιρίου (EN1991-1-1). */
+export const FOUNDATION_AREA_LOAD_OPTIONS = numericOptions([0, 1, 2, 3, 4, 5, 7.5, 10]);
+
 /** Service αξονικό φορτίο πεδίλου N (kN). */
 export const FOUNDATION_AXIAL_LOAD_OPTIONS = numericOptions([0, 250, 500, 750, 1000, 1500, 2000, 3000]);
 
@@ -259,6 +262,9 @@ export function readFoundationLoadField(params: FoundationParams, commandKey: st
  * Νέα `FoundationParams` με ενημερωμένο πεδίο φορτίου (immutable). Το χειροκίνητο
  * service φορτίο αποθηκεύεται ως **μόνιμο (G)** συνιστώσα (Q=0· πλήρης G/Q split =
  * DEFER) — η SLS έδραση χρησιμοποιεί G+Q, άρα ισοδυναμεί με την εισαγόμενη τιμή.
+ *
+ * ADR-464 Slice 4 — σφραγίζει `source:'manual'`: μόλις ο μηχανικός αγγίξει το φορτίο,
+ * το tributary takedown ΔΕΝ το αντικαθιστά πλέον (mirror manual vs auto reinforcement).
  */
 export function patchFoundationLoadField(
   params: FoundationParams,
@@ -268,7 +274,7 @@ export function patchFoundationLoadField(
   if (params.kind !== 'pad') return null;
   const n = Number.parseFloat(value);
   if (Number.isNaN(n)) return null;
-  const base: AppliedMemberLoad = params.appliedLoad ?? { deadAxialKn: 0, liveAxialKn: 0 };
+  const base: AppliedMemberLoad = { ...(params.appliedLoad ?? { deadAxialKn: 0, liveAxialKn: 0 }), source: 'manual' };
   switch (commandKey) {
     case KEYS.padAxialLoad: return { ...params, appliedLoad: { ...base, deadAxialKn: n } };
     case KEYS.padMomentX: return { ...params, appliedLoad: { ...base, deadMomentXKnm: n } };

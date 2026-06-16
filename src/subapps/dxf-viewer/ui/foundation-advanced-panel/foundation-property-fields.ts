@@ -30,6 +30,7 @@ import {
   FOUNDATION_COVER_OPTIONS,
   FOUNDATION_TOGGLE_OPTIONS,
   FOUNDATION_SOIL_BEARING_OPTIONS,
+  FOUNDATION_AREA_LOAD_OPTIONS,
   FOUNDATION_AXIAL_LOAD_OPTIONS,
   FOUNDATION_MOMENT_OPTIONS,
 } from '../ribbon/hooks/bridge/foundation-structural-param';
@@ -105,6 +106,9 @@ const PAD_LOADS_GROUP: ColumnPropertyGroup = {
   titleKey: 'foundationAdvancedPanel.sections.loads.title',
   fields: [
     field(K.soilBearing, 'soilBearing', FOUNDATION_SOIL_BEARING_OPTIONS),
+    // ADR-464 Slice 4 — building-level area loads (G/Q) → tributary takedown.
+    field(K.areaDeadLoad, 'areaDeadLoad', FOUNDATION_AREA_LOAD_OPTIONS),
+    field(K.areaLiveLoad, 'areaLiveLoad', FOUNDATION_AREA_LOAD_OPTIONS),
     field(K.padAxialLoad, 'padAxialLoad', FOUNDATION_AXIAL_LOAD_OPTIONS),
     field(K.padMomentX, 'padMomentX', FOUNDATION_MOMENT_OPTIONS),
     field(K.padMomentY, 'padMomentY', FOUNDATION_MOMENT_OPTIONS),

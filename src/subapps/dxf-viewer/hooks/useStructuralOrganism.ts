@@ -16,8 +16,9 @@
  * @see docs/centralized-systems/reference/adrs/ADR-459-structural-organism-connectivity.md
  */
 
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { EventBus, type DrawingEventType } from '../systems/events/EventBus';
+import { useBuildingStoreyCount } from './useBuildingStoreyCount';
 import {
   buildStructuralGraph,
   runOrganismChecks,
@@ -53,10 +54,16 @@ const ORGANISM_EVENTS: readonly DrawingEventType[] = [
   'bim:column-footing-attached-manual',
   'bim:column-footing-detached',
   'bim:structural-auto-reinforced',
+  // ADR-464 Slice 4 — αυτόματα φορτία πεδίλων υπολογίστηκαν → re-derive έδραση.
+  'bim:structural-loads-computed',
 ];
 
 export function useStructuralOrganism(props: { levelManager: LevelManagerLike }): void {
   const { levelManager } = props;
+  // ADR-464 Slice 5 — μετρούμενοι όροφοι για τον raft bearing (ref → no re-subscribe).
+  const storeyCount = useBuildingStoreyCount();
+  const storeyCountRef = useRef(storeyCount);
+  storeyCountRef.current = storeyCount;
 
   useEffect(() => {
     let scheduled = false;
@@ -78,8 +85,12 @@ export function useStructuralOrganism(props: { levelManager: LevelManagerLike })
       const diagnostics = [
         ...runOrganismChecks(graph),
         ...runReinforcementChecks(graph, entities, provider),
-        // ADR-464 — έλεγχος έδρασης πεδίλου (αδρανές χωρίς σ_allow / φορτίο).
-        ...runFootingDesignChecks(entities, provider, settings.soilBearingCapacityKpa),
+        // ADR-464 — έλεγχος έδρασης πεδίλου + raft (αδρανές χωρίς σ_allow / φορτίο).
+        ...runFootingDesignChecks(entities, provider, settings.soilBearingCapacityKpa, {
+          storeyCount: storeyCountRef.current,
+          deadAreaLoadKpa: settings.deadAreaLoadKpa ?? 0,
+          liveAreaLoadKpa: settings.liveAreaLoadKpa ?? 0,
+        }),
       ];
       StructuralDiagnosticsStore.set(diagnostics);
       EventBus.emit('bim:structural-organism-updated', {

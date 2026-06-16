@@ -39,6 +39,13 @@ export interface AppliedMemberLoad {
   readonly deadMomentYKnm?: number;
   /** Μεταβλητή ροπή → e_y (kNm). */
   readonly liveMomentYKnm?: number;
+  /**
+   * ADR-464 Slice 4 — προέλευση του φορτίου: `manual` (μηχανικός το όρισε στο panel)
+   * ή `takedown` (αυτόματο tributary). Absent → manual (legacy/default). Ο tributary
+   * takedown ΠΟΤΕ δεν αντικαθιστά χειροκίνητο φορτίο (source≠'takedown'). Persisted
+   * literal (Firestore-safe) — omit-when-manual upstream ώστε να μη γράφεται explicit.
+   */
+  readonly source?: MemberLoadSource;
 }
 
 /**
@@ -109,6 +116,19 @@ export function resolveAppliedMemberLoad(
     liveMomentXKnm: num(applied.liveMomentXKnm),
     deadMomentYKnm: num(applied.deadMomentYKnm),
     liveMomentYKnm: num(applied.liveMomentYKnm),
-    source,
+    // Η αποθηκευμένη προέλευση υπερισχύει· absent → ο default (manual).
+    source: applied.source ?? source,
   };
+}
+
+/**
+ * ADR-464 Slice 4 — Επιτρέπεται στο tributary takedown να (επαν)γράψει το φορτίο
+ * αυτού του πεδίλου; ΟΧΙ αν ο μηχανικός το όρισε χειροκίνητα (manual) με μη-μηδενικό
+ * φορτίο. Επιτρέπεται όταν: απών, μηδενικό, ή ήδη takedown-derived (idempotent refresh).
+ */
+export function isTakedownWritable(applied: AppliedMemberLoad | undefined | null): boolean {
+  if (!applied) return true;
+  if (applied.source === 'takedown') return true;
+  // source απών/'manual' → manual μόνο αν έχει ουσιαστικό φορτίο (αλλιώς ελεύθερο).
+  return isZeroMemberLoad(resolveAppliedMemberLoad(applied));
 }

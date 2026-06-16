@@ -119,6 +119,10 @@ export const FOUNDATION_STRUCTURAL_KEYS = {
   // axial/moment = per-foundation service φορτίο σχεδιασμού (`params.appliedLoad`).
   /** Building-level επιτρεπόμενη τάση έδρασης εδάφους σ_allow (kPa). */
   soilBearing: 'foundation.structural.soilBearing',
+  /** Building-level μόνιμο κατανεμημένο φορτίο ορόφου G (kPa) — tributary takedown. */
+  areaDeadLoad: 'foundation.structural.areaDeadLoad',
+  /** Building-level μεταβλητό κατανεμημένο φορτίο ορόφου Q (kPa) — tributary takedown. */
+  areaLiveLoad: 'foundation.structural.areaLiveLoad',
   /** Service αξονικό φορτίο πεδίλου N (kN) — απλοποιημένο (G+Q ως G). */
   padAxialLoad: 'foundation.structural.pad.axialLoad',
   /** Service ροπή → εκκεντρότητα κατά X (kNm). */

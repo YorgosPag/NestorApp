@@ -8,11 +8,15 @@
  */
 
 import { useState, useRef, useEffect, useCallback } from 'react';
-import type { Level } from '../../systems/levels/config';
+import type { EntityType } from '@/config/domain-constants';
+import type { Level, FloorplanType } from '../../systems/levels/config';
 import type { LevelFloorResolver } from '../../systems/levels/level-floor-resolution';
+import { findOrCreateLevelForFloor } from '../../systems/levels/level-floor-resolution';
 import { ensureLevelsForBuilding } from '../../systems/levels/ensure-levels-for-building';
 import { useFloorsByBuilding } from '@/components/properties/shared/useFloorsByBuilding';
 import { FileRecordService } from '@/services/file-record.service';
+import type { DxfSaveContext } from '../../services/dxf-firestore.service';
+import type { WizardCompleteMeta } from '@/features/floorplan-import';
 
 /** Fire-and-forget trigger: pass the building id to backfill all its storeys. */
 export type TriggerAllFloorsBackfill = (buildingId: string) => void;
@@ -55,6 +59,103 @@ export function useAllFloorsBackfill(resolver: LevelFloorResolver): TriggerAllFl
   }, [allFloorsBuildingId, buildingFloors, buildingFloorsLoading, levels, addLevel, linkLevelToFloor]);
 
   return useCallback((buildingId: string) => setAllFloorsBuildingId(buildingId), []);
+}
+
+/** Scene-import callback shape (matches `LevelPanelProps.onSceneImported`). */
+export type OnSceneImported = (
+  file: File,
+  encoding?: string,
+  saveContext?: DxfSaveContext,
+  targetLevelId?: string,
+) => void;
+
+/** Subset of `useLevels` context writers needed by the import-complete flow. */
+export interface FloorplanImportCompleteDeps {
+  readonly resolver: LevelFloorResolver;
+  readonly currentLevelId: string | null;
+  readonly setCurrentLevel: (levelId: string) => void;
+  readonly updateLevelContext: (
+    levelId: string,
+    context: { floorplanType?: FloorplanType; entityLabel?: string; projectId?: string; floorId?: string; buildingId?: string },
+  ) => Promise<void> | void;
+  readonly entityTypeToFloorplanType: (entityType: EntityType) => FloorplanType | undefined;
+  readonly triggerAllFloorsBackfill: TriggerAllFloorsBackfill;
+  readonly onSceneImported?: OnSceneImported;
+}
+
+/**
+ * ADR-420/465 — SSoT import-complete handler. Returns the SAME callback the
+ * Floorplan Import Wizard fires AND the cross-floor duplicate dialog reuses, so
+ * scene rendering + level wiring live in ONE place (no copy-paste, N.0.2). The
+ * duplicate dialog hands the SAME `WizardCompleteMeta` shape after re-feeding the
+ * source DXF through `uploadSmart`.
+ */
+export function useFloorplanImportComplete(deps: FloorplanImportCompleteDeps) {
+  const {
+    resolver, currentLevelId, setCurrentLevel, updateLevelContext,
+    entityTypeToFloorplanType, triggerAllFloorsBackfill, onSceneImported,
+  } = deps;
+  const { levels, addLevel, linkLevelToFloor } = resolver;
+
+  return useCallback(
+    async (file: File, meta: WizardCompleteMeta) => {
+      if (!onSceneImported) return;
+      const entityType = meta.entityType as DxfSaveContext['entityType'];
+      const saveContext: DxfSaveContext = {
+        companyId: meta.companyId,
+        projectId: meta.projectId,
+        ...(entityType === 'building' && meta.entityId ? { buildingId: meta.entityId } : {}),
+        ...(entityType === 'floor' && meta.entityId ? { floorId: meta.entityId } : {}),
+        entityType,
+        filesCategory: 'floorplans',
+        purpose: meta.purpose || undefined,
+        entityLabel: meta.entityLabel,
+        fileRecordId: meta.fileId,
+      };
+      // ADR-420 — resolve the Level that OWNS the selected floor (find-or-create
+      // + switch), so the import targets that floor's own level rather than the
+      // active level. Falls back to the active level for project/building imports.
+      const targetLevelId = await findOrCreateLevelForFloor(
+        { levels, addLevel, linkLevelToFloor },
+        {
+          floorId: saveContext.floorId,
+          buildingId: meta.buildingId ?? saveContext.buildingId,
+          entityLabel: meta.entityLabel,
+          currentLevelId,
+        },
+      );
+      if (targetLevelId) {
+        setCurrentLevel(targetLevelId);
+        const floorplanType = entityTypeToFloorplanType(meta.entityType);
+        if (floorplanType) {
+          void updateLevelContext(targetLevelId, {
+            floorplanType,
+            entityLabel: meta.entityLabel,
+            projectId: meta.projectId,
+            floorId: saveContext.floorId,
+            // ADR-399: building comes from the selection (saveContext only carries
+            // buildingId for 'building' imports, not for 'floor').
+            buildingId: meta.buildingId ?? saveContext.buildingId,
+          });
+        }
+      }
+      // ADR-448 Phase 3 — open a Level for every storey of the building when
+      // requested (idempotent backfill).
+      const allFloorsBuilding = meta.buildingId ?? saveContext.buildingId;
+      if (meta.loadAllFloors && allFloorsBuilding) {
+        triggerAllFloorsBackfill(allFloorsBuilding);
+      }
+      // Raster (PDF / image) is already persisted via /api/floorplan-backgrounds.
+      // The DXF scene importer must NOT run for raster.
+      if (meta.format && meta.format !== 'dxf') return;
+      onSceneImported(file, undefined, saveContext, targetLevelId ?? undefined);
+    },
+    [
+      onSceneImported, levels, addLevel, linkLevelToFloor, currentLevelId,
+      setCurrentLevel, entityTypeToFloorplanType, updateLevelContext,
+      triggerAllFloorsBackfill,
+    ],
+  );
 }
 
 export interface LevelDeletionDeps {

@@ -812,6 +812,60 @@ html[data-dxf-header-hidden="true"] header.sticky.top-0 {
   font-style: italic;
 }
 
+/* ─── ADR-345 §4.5 — Editable numeric combobox (Revit type-to-enter) ─── */
+/* Background-color is SSoT via `useSemanticColors().bg.primary`, applied as a
+   className (same as the Radix Select triggers) — NOT here. */
+.dxf-ribbon-editable-combobox {
+  display: inline-flex;
+  align-items: stretch;
+  height: 24px;
+}
+
+.dxf-ribbon-editable-combobox-input {
+  width: var(--ribbon-combobox-width, 140px);
+  min-width: 48px;
+  height: 24px;
+  padding: 2px 6px;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  color: var(--ribbon-text);
+  border: 1px solid var(--ribbon-border, transparent);
+  border-radius: 3px 0 0 3px;
+}
+
+.dxf-ribbon-editable-combobox-input:focus-visible {
+  outline: 2px solid var(--ribbon-focus, currentColor);
+  outline-offset: 1px;
+}
+
+.dxf-ribbon-editable-combobox-input:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.dxf-ribbon-editable-combobox[data-mixed="true"] .dxf-ribbon-editable-combobox-input {
+  border-style: dashed;
+}
+
+.dxf-ribbon-editable-combobox-trigger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  padding: 0;
+  font-size: 9px;
+  line-height: 1;
+  color: var(--ribbon-text-muted);
+  border: 1px solid var(--ribbon-border, transparent);
+  border-left: none;
+  border-radius: 0 3px 3px 0;
+  cursor: pointer;
+}
+
+.dxf-ribbon-editable-combobox-trigger:hover {
+  color: var(--ribbon-text);
+}
+
 /* ─── ADR-345 Fase 6 — Widget compact wrapper ─── */
 /* Forces the direct-child trigger button to ribbon-combobox height (24px).
    Scoped to direct child only so dropdown list buttons are unaffected. */

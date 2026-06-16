@@ -28,12 +28,16 @@ import { buildFootingPlanRegion } from './footing-detail-plan';
 import { buildFootingElevationRegion } from './footing-detail-elevation';
 import { buildColumnPerspectiveRegion } from './column-detail-perspective';
 import { buildFootingScheduleRegion } from './footing-detail-schedule';
+import { buildFootingDesignSummaryRegion } from './footing-detail-design-summary';
 import { buildFootingTitleBlockRegion } from './footing-detail-titleblock';
 import type { FootingDetail3dCapture } from './render/footing-detail-3d-capture';
 import type { FoundationEntity } from '../../types/foundation-types';
+import type { FootingDesignResult } from '../footing-design/footing-design-types';
 import type {
+  DetailPrimitive,
   DetailSheetModel,
   FootingDetailSheetLabels,
+  RectMm,
   SheetRegion,
 } from './detail-sheet-types';
 
@@ -46,6 +50,21 @@ export interface FootingDetailSheetInput {
   readonly layoutInput?: DetailSheetLayoutInput;
   /** Offscreen 3D capture for the perspective region; `null` while pending. */
   readonly perspective3d?: FootingDetail3dCapture | null;
+  /**
+   * ADR-464 Slice 5 — DERIVED αποτέλεσμα σχεδιασμού (έδραση/κάμψη/διάτρηση/τέμνουσα).
+   * Όταν δοθεί ΚΑΙ υπάρχει `labels.designSummary` → προστίθεται πίνακας ελέγχων στο
+   * κάτω μέρος της ζώνης οπλισμού. Absent/null → χωρίς πίνακα (back-compat).
+   */
+  readonly design?: FootingDesignResult | null;
+}
+
+/** Fraction της ζώνης οπλισμού που δεσμεύεται για τον πίνακα ελέγχων (κάτω μέρος). */
+const DESIGN_SUMMARY_HEIGHT_FRACTION = 0.42;
+
+/** Υπο-ορθογώνιο (κάτω μέρος της schedule ζώνης) για τον πίνακα ελέγχων σχεδιασμού. */
+function designSummaryRect(schedule: RectMm): RectMm {
+  const h = schedule.h * DESIGN_SUMMARY_HEIGHT_FRACTION;
+  return { x: schedule.x, y: schedule.y + schedule.h - h, w: schedule.w, h };
 }
 
 /**
@@ -66,10 +85,19 @@ export function buildFootingDetailSheet(input: FootingDetailSheetInput): DetailS
     foundation, regions['title-block'], labels.titleFields, labels.kindValues[foundation.kind],
   );
 
+  // ADR-464 Slice 5 — πίνακας ελέγχων σχεδιασμού στο κάτω μέρος της ζώνης οπλισμού.
+  const summaryPrimitives: DetailPrimitive[] = [];
+  if (input.design && labels.designSummary) {
+    const { primitives } = buildFootingDesignSummaryRegion(
+      input.design, designSummaryRect(regions.schedule), labels.designSummary,
+    );
+    summaryPrimitives.push(...primitives);
+  }
+
   const sheetRegions: readonly SheetRegion[] = [
     { id: 'elevation', rectMm: regions.elevation, title: labels.elevation, caption: elevation.caption, primitives: elevation.primitives },
     { id: 'plan', rectMm: regions.plan, title: labels.plan, caption: plan.caption, primitives: plan.primitives },
-    { id: 'schedule', rectMm: regions.schedule, title: labels.schedule, primitives: schedule.primitives },
+    { id: 'schedule', rectMm: regions.schedule, title: labels.schedule, primitives: [...schedule.primitives, ...summaryPrimitives] },
     { id: 'perspective', rectMm: regions.perspective, title: labels.perspective, primitives: perspective.primitives },
     { id: 'title-block', rectMm: regions['title-block'], title: labels.titleBlock, primitives: titleBlock.primitives },
   ];

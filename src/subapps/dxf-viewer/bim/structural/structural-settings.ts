@@ -41,6 +41,19 @@ export interface StructuralSettings {
    * absent → δεν έχει οριστεί έδαφος → ο bearing check παραμένει αδρανής (advisory).
    */
   readonly soilBearingCapacityKpa?: number;
+  /**
+   * ADR-464 Slice 4 — Μόνιμο κατανεμημένο φορτίο ορόφου G (kPa, χαρακτηριστικό):
+   * ίδιο βάρος πλάκας + επικαλύψεις + μόνιμες δράσεις ανά m². Building-level παραδοχή
+   * (Revit: Structural Loads → area load) — input για το tributary load takedown
+   * (`load-takedown`). Optional: absent → ο takedown παραμένει αδρανής (advisory).
+   */
+  readonly deadAreaLoadKpa?: number;
+  /**
+   * ADR-464 Slice 4 — Μεταβλητό (ωφέλιμο) κατανεμημένο φορτίο ορόφου Q (kPa,
+   * χαρακτηριστικό) ανά χρήση (EN1991-1-1). Building-level παραδοχή· input για το
+   * tributary takedown. Optional: absent → 0 (μόνο μόνιμα φορτία).
+   */
+  readonly liveAreaLoadKpa?: number;
 }
 
 /** Default settings όταν δεν έχει οριστεί τίποτα (standalone DXF χωρίς building). */
@@ -49,28 +62,36 @@ export const DEFAULT_STRUCTURAL_SETTINGS: StructuralSettings = {
   defaultConcreteGrade: DEFAULT_CONCRETE_GRADE,
 };
 
-/** True όταν η τιμή σ_allow είναι έγκυρη (πεπερασμένη θετική kPa). */
-function isValidBearingCapacityKpa(value: number | undefined): value is number {
+/** True όταν μια τιμή είναι έγκυρη πεπερασμένη θετική (kPa) — σ_allow & area loads. */
+export function isValidPositiveKpa(value: number | undefined): value is number {
   return typeof value === 'number' && Number.isFinite(value) && value > 0;
 }
 
 /**
  * Κανονικοποίησε raw (πιθανώς μερικά / legacy) building settings σε πλήρες
- * έγκυρο `StructuralSettings` — άγνωστες/απούσες τιμές πέφτουν στα defaults. Το
- * `soilBearingCapacityKpa` παραμένει **απόν** όταν είναι μη-έγκυρο/absent (ΟΧΙ
- * explicit `undefined`) — ώστε το persist να μη σπάει το Firestore (ADR-390 Φ4).
+ * έγκυρο `StructuralSettings` — άγνωστες/απούσες τιμές πέφτουν στα defaults. Τα
+ * optional kPa πεδία (σ_allow / area loads) παραμένουν **απόντα** όταν είναι μη-
+ * έγκυρα/absent (ΟΧΙ explicit `undefined`) — ώστε το persist να μη σπάει το
+ * Firestore (ADR-390 Φ4).
  */
 export function resolveStructuralSettings(
   raw: Partial<StructuralSettings> | null | undefined,
 ): StructuralSettings {
   if (!raw) return DEFAULT_STRUCTURAL_SETTINGS;
-  const base: StructuralSettings = {
+  let base: StructuralSettings = {
     codeId: isStructuralCodeId(raw.codeId) ? raw.codeId : DEFAULT_STRUCTURAL_CODE,
     defaultConcreteGrade: isConcreteGrade(raw.defaultConcreteGrade)
       ? raw.defaultConcreteGrade
       : DEFAULT_CONCRETE_GRADE,
   };
-  return isValidBearingCapacityKpa(raw.soilBearingCapacityKpa)
-    ? { ...base, soilBearingCapacityKpa: raw.soilBearingCapacityKpa }
-    : base;
+  if (isValidPositiveKpa(raw.soilBearingCapacityKpa)) {
+    base = { ...base, soilBearingCapacityKpa: raw.soilBearingCapacityKpa };
+  }
+  if (isValidPositiveKpa(raw.deadAreaLoadKpa)) {
+    base = { ...base, deadAreaLoadKpa: raw.deadAreaLoadKpa };
+  }
+  if (isValidPositiveKpa(raw.liveAreaLoadKpa)) {
+    base = { ...base, liveAreaLoadKpa: raw.liveAreaLoadKpa };
+  }
+  return base;
 }

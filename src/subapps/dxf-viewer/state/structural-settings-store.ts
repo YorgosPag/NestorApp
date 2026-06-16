@@ -71,18 +71,37 @@ export interface StructuralSettingsState extends StructuralSettings {
    * μη-θετικό → καθαρίζει τη ρύθμιση (advisory off). Persist αν υπάρχει building.
    */
   setSoilBearingCapacityKpa(kpa: number | undefined): void;
+  /**
+   * ADR-464 Slice 4 — Όρισε το μόνιμο κατανεμημένο φορτίο ορόφου G (kPa). `undefined`/
+   * μη-θετικό → καθαρίζει (takedown advisory off). Persist αν υπάρχει building.
+   */
+  setDeadAreaLoadKpa(kpa: number | undefined): void;
+  /** ADR-464 Slice 4 — Όρισε το μεταβλητό κατανεμημένο φορτίο ορόφου Q (kPa). */
+  setLiveAreaLoadKpa(kpa: number | undefined): void;
 }
 
 export const useStructuralSettingsStore = create<StructuralSettingsState>((set, get) => {
   function raw(state: StructuralSettingsState): StructuralSettings {
-    const base: StructuralSettings = {
+    let base: StructuralSettings = {
       codeId: state.codeId,
       defaultConcreteGrade: state.defaultConcreteGrade,
     };
-    // ADR-464 — μετέφερε το σ_allow αυτούσιο (omit-when-absent → Firestore-safe).
-    return state.soilBearingCapacityKpa !== undefined && state.soilBearingCapacityKpa > 0
-      ? { ...base, soilBearingCapacityKpa: state.soilBearingCapacityKpa }
-      : base;
+    // ADR-464 — μετέφερε σ_allow + area loads αυτούσια (omit-when-absent → Firestore-safe).
+    if (state.soilBearingCapacityKpa !== undefined && state.soilBearingCapacityKpa > 0) {
+      base = { ...base, soilBearingCapacityKpa: state.soilBearingCapacityKpa };
+    }
+    if (state.deadAreaLoadKpa !== undefined && state.deadAreaLoadKpa > 0) {
+      base = { ...base, deadAreaLoadKpa: state.deadAreaLoadKpa };
+    }
+    if (state.liveAreaLoadKpa !== undefined && state.liveAreaLoadKpa > 0) {
+      base = { ...base, liveAreaLoadKpa: state.liveAreaLoadKpa };
+    }
+    return base;
+  }
+
+  /** Normalize μια kPa τιμή → θετική πεπερασμένη ή undefined (clear). */
+  function normKpa(kpa: number | undefined): number | undefined {
+    return typeof kpa === 'number' && Number.isFinite(kpa) && kpa > 0 ? kpa : undefined;
   }
 
   return {
@@ -96,8 +115,10 @@ export const useStructuralSettingsStore = create<StructuralSettingsState>((set, 
         currentBuildingId: buildingId,
         codeId: resolved.codeId,
         defaultConcreteGrade: resolved.defaultConcreteGrade,
-        // ADR-464 — σ_allow building setting (absent → undefined, in-memory only).
+        // ADR-464 — σ_allow + area loads building settings (absent → undefined).
         soilBearingCapacityKpa: resolved.soilBearingCapacityKpa,
+        deadAreaLoadKpa: resolved.deadAreaLoadKpa,
+        liveAreaLoadKpa: resolved.liveAreaLoadKpa,
         lastLocalMutationAt: 0,
       });
     },
@@ -117,10 +138,25 @@ export const useStructuralSettingsStore = create<StructuralSettingsState>((set, 
     },
 
     setSoilBearingCapacityKpa(kpa) {
-      // Normalize: μη-θετικό/μη-πεπερασμένο → undefined (clear).
-      const next = typeof kpa === 'number' && Number.isFinite(kpa) && kpa > 0 ? kpa : undefined;
+      const next = normKpa(kpa);
       if (get().soilBearingCapacityKpa === next) return; // idempotent — no-op write
       set({ soilBearingCapacityKpa: next, lastLocalMutationAt: Date.now() });
+      const { currentBuildingId } = get();
+      if (currentBuildingId) debounceWrite(currentBuildingId, raw(get()));
+    },
+
+    setDeadAreaLoadKpa(kpa) {
+      const next = normKpa(kpa);
+      if (get().deadAreaLoadKpa === next) return; // idempotent — no-op write
+      set({ deadAreaLoadKpa: next, lastLocalMutationAt: Date.now() });
+      const { currentBuildingId } = get();
+      if (currentBuildingId) debounceWrite(currentBuildingId, raw(get()));
+    },
+
+    setLiveAreaLoadKpa(kpa) {
+      const next = normKpa(kpa);
+      if (get().liveAreaLoadKpa === next) return; // idempotent — no-op write
+      set({ liveAreaLoadKpa: next, lastLocalMutationAt: Date.now() });
       const { currentBuildingId } = get();
       if (currentBuildingId) debounceWrite(currentBuildingId, raw(get()));
     },

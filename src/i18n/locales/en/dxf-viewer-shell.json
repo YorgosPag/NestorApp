@@ -2680,6 +2680,8 @@
         "steelWeight": "Steel weight (kg)",
         "ratio": "ρ (%)",
         "soilBearing": "Soil σ_allow (kPa)",
+        "areaDeadLoad": "Dead area load G (kPa)",
+        "areaLiveLoad": "Live area load Q (kPa)",
         "padAxialLoad": "Axial load N (kN)",
         "padMomentX": "Moment Mx (kNm)",
         "padMomentY": "Moment My (kNm)",
@@ -3673,6 +3675,7 @@
       },
       "print": "Print",
       "autoReinforceOrganism": "Auto-Reinforce",
+      "computeTakedownLoads": "Compute Loads",
       "footingConnect": {
         "attach": "Attach to footing",
         "attachTooltip": "Attach the selected columns to the selected footing (select 1 footing + columns)",
@@ -3684,7 +3687,8 @@
       "bimSchedule": "Open BIM Schedule — export structural elements",
       "thermalEnvelope": "Apply a unified external thermal envelope (ETICS) to the floor",
       "print": "Print the drawing to PDF, printer or plotter (from 2D or 3D)",
-      "autoReinforceOrganism": "Auto-reinforce the selected structural members (or the whole floor) with the minimum valid reinforcement per the active code"
+      "autoReinforceOrganism": "Auto-reinforce the selected structural members (or the whole floor) with the minimum valid reinforcement per the active code",
+      "computeTakedownLoads": "Auto footing loads: column tributary area × storeys × area loads (G/Q) → service design load (never overwrites manual loads)"
     },
     "symbolPicker": {
       "title": "Symbol Picker",
@@ -4466,6 +4470,18 @@
       "pad": "Pad footing",
       "strip": "Strip footing",
       "tieBeam": "Tie beam"
+    },
+    "designSummary": {
+      "check": "Check",
+      "demand": "Demand",
+      "capacity": "Capacity",
+      "utilization": "Util.",
+      "bearing": "Bearing (kPa)",
+      "punching": "Punching (MPa)",
+      "oneWayShear": "One-way shear (MPa)",
+      "topMeshNote": "Top mesh required (flexure)",
+      "ok": "OK",
+      "fail": "!"
     }
   },
   "print": {

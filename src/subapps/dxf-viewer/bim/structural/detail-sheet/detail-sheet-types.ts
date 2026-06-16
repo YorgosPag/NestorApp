@@ -224,6 +224,20 @@ export interface FootingTitleBlockLabels {
   readonly secondary: string;   // «Δευτερεύων οπλισμός»
 }
 
+/** ADR-464 Slice 5 — pre-resolved design-checks summary labels (N.11-safe). */
+export interface FootingDesignSummaryLabels {
+  readonly check: string;        // «Έλεγχος» (header)
+  readonly demand: string;       // «Απαίτηση»
+  readonly capacity: string;     // «Αντοχή»
+  readonly utilization: string;  // «Αξιοπ.»
+  readonly bearing: string;      // «Έδραση (kPa)»
+  readonly punching: string;     // «Διάτρηση (MPa)»
+  readonly oneWayShear: string;  // «Τέμνουσα (MPa)»
+  readonly topMeshNote: string;  // «Απαιτείται άνω σχάρα (κάμψη)»
+  readonly ok: string;           // «OK»
+  readonly fail: string;         // «!»
+}
+
 /** Pre-resolved footing detail-sheet region headings + table/field labels. */
 export interface FootingDetailSheetLabels {
   readonly plan: string;
@@ -235,4 +249,6 @@ export interface FootingDetailSheetLabels {
   readonly titleFields: FootingTitleBlockLabels;
   /** Pre-resolved kind values («Πέδιλο» / «Πεδιλοδοκός» / «Συνδετήρια δοκός»). */
   readonly kindValues: Readonly<Record<'pad' | 'strip' | 'tie-beam', string>>;
+  /** ADR-464 Slice 5 — design-checks summary labels (optional· absent → χωρίς πίνακα). */
+  readonly designSummary?: FootingDesignSummaryLabels;
 }

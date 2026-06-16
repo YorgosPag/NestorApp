@@ -36,6 +36,8 @@ import type {
   RibbonComboboxOption,
 } from '../../types/ribbon-types';
 import { useRibbonCommand } from '../../context/RibbonCommandContext';
+import { RibbonEditableCombobox } from './RibbonEditableCombobox';
+import { resolveNumericConfig } from './ribbon-combobox-numeric';
 
 const DEFAULT_WIDTH_PX = 140;
 const MIXED_PLACEHOLDER = '—';
@@ -104,6 +106,28 @@ export const RibbonCombobox: React.FC<RibbonComboboxProps> = ({ command }) => {
     },
     [onComboboxChange, onComingSoon, command.commandKey, command.comingSoon, ariaLabel],
   );
+
+  // ADR-345 §4.5 — Revit-grade editable numeric combobox. When the option list is
+  // purely numeric (resolveNumericConfig ≠ null), render a type-to-enter input with
+  // preset dropdown instead of the read-only Radix Select. Non-numeric enum combos
+  // (kind/justification/anchor/scale/fonts) and Coming-Soon fields keep the Select.
+  const numericConfig = command.comingSoon
+    ? null
+    : resolveNumericConfig(command, baseOptions);
+  if (numericConfig) {
+    return (
+      <RibbonEditableCombobox
+        command={command}
+        options={baseOptions}
+        value={value}
+        disabled={dynamicState?.disabled === true}
+        config={numericConfig}
+        ariaLabel={ariaLabel}
+        widthPx={widthPx}
+        onCommit={handleValueChange}
+      />
+    );
+  }
 
   return (
     <div className="dxf-ribbon-combobox-row">

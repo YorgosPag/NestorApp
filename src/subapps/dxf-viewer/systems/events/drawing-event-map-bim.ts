@@ -224,6 +224,12 @@ export interface BimEventMap {
   // ADR-459 Φ4d — N μέλη οπλίστηκαν (auto-apply command). `count` = πόσα πράγματι
   // οπλίστηκαν (idempotent skip). Trigger organism re-derive + toast.
   'bim:structural-auto-reinforced': { entityIds: string[]; count: number };
+  // ADR-464 Slice 4 — «Υπολογισμός Φορτίων» request (από ribbon action). Tributary
+  // load takedown σε όλα τα εγγράψιμα πέδιλα του ενεργού ορόφου (χωρίς scope επιλογής).
+  'bim:compute-loads-requested': Record<string, never>;
+  // ADR-464 Slice 4 — N πέδιλα έλαβαν αυτόματο φορτίο (takedown command). `count` =
+  // πόσα πράγματι (skip χειροκίνητων). Trigger organism re-derive (έδραση) + toast.
+  'bim:structural-loads-computed': { entityIds: string[]; count: number };
   // ADR-395 G6 — opening persisted/deleted → host wall re-computes net BOQ area
   'bim:opening-persisted': { wallId: string };
   // ADR-395 G2 — slab-opening persisted/deleted → host slab re-computes net BOQ volume

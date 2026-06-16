@@ -213,6 +213,12 @@ export function useDxfViewerCallbacks(params: DxfViewerCallbacksParams): DxfView
       EventBus.emit('bim:auto-reinforce-requested', { entityIds: [...params.selectedEntityIds] });
       return;
     }
+    // ADR-464 Slice 4: «Υπολογισμός Φορτίων» — tributary load takedown σε όλα τα
+    // εγγράψιμα πέδιλα του ορόφου (ο useStructuralLoadTakedown hook εκτελεί το command).
+    if (action === 'organism.compute-loads') {
+      EventBus.emit('bim:compute-loads-requested', {});
+      return;
+    }
     // ADR-459 Φ4f: manual κολόνα↔πέδιλο connectivity (selection-driven· ο
     // useStructuralFootingConnect hook αναλύει την επιλογή + εκτελεί το command).
     if (action === 'organism.footing-attach') {
