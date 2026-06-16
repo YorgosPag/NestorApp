@@ -17,8 +17,8 @@ import { renderStyledTextWithOverride } from '../../hooks/useTextPreviewStyle';
 import { TAU } from '../primitives/canvasPaths';
 // 🏢 ADR-067: Centralized Radians/Degrees Conversion
 import { degToRad } from './shared/geometry-utils';
-// 🏢 ADR-090: Centralized Number Formatting
-import { formatDistance } from './shared/distance-label-utils';
+// 🏢 ADR-462: display-unit SSoT — axes/perimeter (length) + area follow the selector
+import { formatLengthForDisplay, formatAreaForDisplay } from '../../config/display-length-format';
 // 🏢 ADR-091: Centralized Text Label Offsets, ADR-124: Dot Radius
 import { TEXT_LABEL_OFFSETS, RENDER_GEOMETRY } from '../../config/text-rendering-config';
 
@@ -107,10 +107,10 @@ export class EllipseRenderer extends BaseEntityRenderer {
     this.ctx.save();
     this.applyCenterMeasurementTextStyle();
     // 🏢 ADR-091: Χρήση κεντρικοποιημένων text label offsets
-    renderStyledTextWithOverride(this.ctx, `Ma: ${formatDistance(majorAxis)}`, screenCenter.x, screenCenter.y - TEXT_LABEL_OFFSETS.MULTI_LINE_OUTER);
-    renderStyledTextWithOverride(this.ctx, `Mi: ${formatDistance(minorAxis)}`, screenCenter.x, screenCenter.y - TEXT_LABEL_OFFSETS.TWO_LINE);
-    renderStyledTextWithOverride(this.ctx, `Ε: ${formatDistance(area)}`, screenCenter.x, screenCenter.y + TEXT_LABEL_OFFSETS.TWO_LINE);
-    renderStyledTextWithOverride(this.ctx, `Περ: ${formatDistance(perimeter)}`, screenCenter.x, screenCenter.y + TEXT_LABEL_OFFSETS.MULTI_LINE_OUTER);
+    renderStyledTextWithOverride(this.ctx, `Ma: ${formatLengthForDisplay(majorAxis)}`, screenCenter.x, screenCenter.y - TEXT_LABEL_OFFSETS.MULTI_LINE_OUTER);
+    renderStyledTextWithOverride(this.ctx, `Mi: ${formatLengthForDisplay(minorAxis)}`, screenCenter.x, screenCenter.y - TEXT_LABEL_OFFSETS.TWO_LINE);
+    renderStyledTextWithOverride(this.ctx, `Ε: ${formatAreaForDisplay(area)}`, screenCenter.x, screenCenter.y + TEXT_LABEL_OFFSETS.TWO_LINE);
+    renderStyledTextWithOverride(this.ctx, `Περ: ${formatLengthForDisplay(perimeter)}`, screenCenter.x, screenCenter.y + TEXT_LABEL_OFFSETS.MULTI_LINE_OUTER);
     this.ctx.restore();
   }
 

@@ -125,6 +125,10 @@ export function calculateWorldDistance(worldP1: Point2D, worldP2: Point2D): numb
  * @param decimals - Number of decimal places (default: 2)
  * @returns Formatted string (e.g., "123.45")
  *
+ * @deprecated For READ-ONLY length DISPLAY use the display-measurement SSoT
+ * `formatLengthForDisplay(mm)` (config/display-length-format.ts) — it converts
+ * canonical-mm → the user-selected unit + locale + label and follows the status-bar
+ * selector. This raw helper neither converts units nor follows the selector (ADR-462).
  * @see formatDistanceLocale - For locale-aware formatting
  */
 export function formatDistance(distance: number, decimals: number = 2): string {
@@ -239,6 +243,9 @@ export function formatPercent(value: number, includeSymbol: boolean = true): str
  * @param decimals - Number of decimal places (default: 4 for CAD precision)
  * @returns Formatted string (e.g., "-123.4567" or "456.7890")
  *
+ * @deprecated For READ-ONLY coordinate DISPLAY use the display-measurement SSoT
+ * `formatCoordinateForDisplay(mm)` (config/display-length-format.ts) — it converts
+ * canonical-mm → the user-selected unit + locale and follows the selector (ADR-462).
  * @see formatDistance - For distance values (always positive)
  */
 export function formatCoordinate(value: number, decimals: number = 4): string {

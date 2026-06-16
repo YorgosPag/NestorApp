@@ -23,7 +23,6 @@
 import React, { useRef, useEffect, useState, useCallback } from 'react';
 import { useCanvasResize } from '../../hooks/canvas';
 import { LayerRenderer } from './LayerRenderer';
-import { useCentralizedMouseHandlers } from '../../systems/cursor/useCentralizedMouseHandlers';
 import { useCursor } from '../../systems/cursor/CursorSystem';
 import { SelectionStore } from '../../systems/cursor/SelectionStore';
 import type { SelectionState } from '../../systems/cursor/SelectionStore';
@@ -36,10 +35,10 @@ import { canvasUI } from '@/styles/design-tokens/canvas';
 import { CANVAS_THEME } from '../../config/color-config';
 import { getDevicePixelRatio } from '../../systems/cursor/utils';
 import { subscribeToTransformChanges } from '../../rendering/canvas/core/CanvasEventSystem';
-import { useLayerHitTest, useLayerCanvasRenderer } from './layer-canvas-hooks';
+import { useLayerCanvasRenderer } from './layer-canvas-hooks';
 import type { ViewTransform, Viewport, Point2D, CanvasConfig } from '../../rendering/types/Types';
 import type { SnapResult } from './layer-types';
-import type { DxfScene } from '../dxf-canvas/dxf-types';
+import { EMPTY_SNAP_RESULTS } from './layer-types';
 import type {
   ColorLayer,
   LayerRenderOptions,
@@ -51,14 +50,17 @@ import type {
 import type { CrosshairSettings } from '../../rendering/ui/crosshair/CrosshairTypes';
 import type { CursorSettings } from '../../systems/cursor/config';
 
+// ADR-040 Φ12 / Phase 3.2c — LayerCanvas is a READ-ONLY render layer. The DxfCanvas
+// (zIndex.docked) is the SOLE authoritative pointer handler; every interaction prop
+// (selection/click/mousemove/wheel/transform/drawing-hover/context-menu) was removed
+// because it routed through the dead LayerCanvas handler. Drawing-hover + unified-move
+// run via DxfCanvas → handleDxfMouseMove. SSoT: ONE handler.
 interface LayerCanvasProps {
   layers: ColorLayer[];
   transform: ViewTransform;
   viewport?: Viewport;
   activeTool?: string;
-  overlayMode?: 'select' | 'draw' | 'edit';
   layersVisible?: boolean;
-  dxfScene?: DxfScene | null;
   crosshairSettings: CrosshairSettings;
   cursorSettings: CursorSettings;
   snapSettings: SnapSettings;
@@ -68,21 +70,12 @@ interface LayerCanvasProps {
   renderOptions?: LayerRenderOptions;
   className?: string;
   style?: React.CSSProperties;
-  onLayerClick?: (layerId: string, point: Point2D) => void;
-  onMultiLayerClick?: (layerIds: string[]) => void;
-  onCanvasClick?: (point: Point2D, shiftKey?: boolean) => void;
-  isGripDragging?: boolean;
-  onMouseMove?: (screenPos: Point2D, worldPos: Point2D) => void;
-  onTransformChange?: (transform: ViewTransform) => void;
-  onWheelZoom?: (wheelDelta: number, center: Point2D) => void;
-  onDrawingHover?: (worldPos: Point2D) => void;
   draggingOverlay?: {
     overlayId: string;
     delta: Point2D;
   } | null;
   useUnifiedUIRendering?: boolean;
   enableUnifiedCanvas?: boolean;
-  onContextMenu?: (e: React.MouseEvent) => void;
 }
 
 export const LayerCanvas = React.memo(React.forwardRef<HTMLCanvasElement, LayerCanvasProps>(({
@@ -90,9 +83,7 @@ export const LayerCanvas = React.memo(React.forwardRef<HTMLCanvasElement, LayerC
   transform,
   viewport: viewportProp,
   activeTool,
-  overlayMode,
   layersVisible = true,
-  dxfScene,
   crosshairSettings,
   cursorSettings,
   snapSettings,
@@ -110,18 +101,9 @@ export const LayerCanvas = React.memo(React.forwardRef<HTMLCanvasElement, LayerC
   },
   className = '',
   style,
-  onLayerClick,
-  onMultiLayerClick,
-  onCanvasClick,
-  isGripDragging = false,
-  onMouseMove,
-  onTransformChange,
-  onWheelZoom,
-  onDrawingHover,
   draggingOverlay = null,
   useUnifiedUIRendering = false,
   enableUnifiedCanvas = false,
-  onContextMenu,
   ...props
 }, ref) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -143,59 +125,12 @@ export const LayerCanvas = React.memo(React.forwardRef<HTMLCanvasElement, LayerC
   // 🚀 PERF (2026-05-10 Phase III corrected): selection ref updated imperatively.
   const selectionRef = useRef<SelectionState>(SelectionStore.getSnapshot());
 
-  // ── Hit testing + selection (extracted hook) ───────────────────────
-  const { layerHitTestCallback, handleLayerSelection } = useLayerHitTest({
-    layers,
-    activeTool,
-    rendererRef,
-    onLayerClick,
-  });
-
-  // ── Centralized mouse handlers ─────────────────────────────────────
-  const mouseHandlers = useCentralizedMouseHandlers({
-    scene: dxfScene || null,
-    transform,
-    viewport,
-    activeTool,
-    overlayMode,
-    onTransformChange,
-    onEntitySelect: handleLayerSelection,
-    onMouseMove,
-    onWheelZoom,
-    onCanvasClick,
-    hitTestCallback: layerHitTestCallback,
-    colorLayers: layers,
-    onLayerSelected: onLayerClick,
-    onMultiLayerSelected: onMultiLayerClick,
-    canvasRef: canvasRef,
-    isGripDragging,
-    onDrawingHover
-  }, { exposeSnapResultsState: true }); // LayerCanvas is the sole consumer of the React snapResults state (ADR-040 Φ9).
-
-  const { snapResults: rawSnapResults } = mouseHandlers;
-  const snapResults: SnapResult[] = rawSnapResults
-    .filter((s): s is typeof s & { type: 'endpoint' | 'midpoint' | 'center' | 'intersection' } =>
-      s.type === 'endpoint' || s.type === 'midpoint' || s.type === 'center' || s.type === 'intersection')
-    .map((s) => ({ point: s.point, type: s.type, entityId: s.entityId ?? undefined }));
-
-  // ─────────────────────────────────────────────────────────────────────────
-  // 🟣 ADR-040 Φ11 / Phase 3.2a PROBE — TEMPORARY, DO NOT COMMIT. REMOVE after sign-off.
-  // Goal: prove the LayerCanvas interactive handlers NEVER fire because the DxfCanvas
-  // (z-10) intercepts every pointer event (see hooks/canvas/useCanvasMouse.ts:152-155).
-  // If this holds, the handler is dead code and can be neutralized in 3.2b.
-  // HOW TO TEST (Giorgio): open the 2D viewer, then for EACH tool — select, layering,
-  // marquee (box-select), lasso, grip-drag, guide-edit — move/click/drag over geometry
-  // and overlays. Watch the console. Logs once per (handler, tool) pair so it stays
-  // readable. EXPECTED: nothing logs (or only handlers we keep). Anything that logs =
-  // that handler is ALIVE for that tool → it must NOT be removed in 3.2b.
-  const probe32aSeen = useRef<Set<string>>(new Set());
-  const probe32a = useCallback((handler: string) => {
-    const key = `${handler}|${activeTool}`;
-    if (probe32aSeen.current.has(key)) return;
-    probe32aSeen.current.add(key);
-    // eslint-disable-next-line no-console -- temporary 3.2a diagnostic, removed after sign-off
-    console.warn(`🟣[3.2a-PROBE] LayerCanvas.${handler} FIRED — tool=${activeTool}`);
-  }, [activeTool]);
+  // ── Snap results (ADR-040 Φ12/3.2c) ────────────────────────────────
+  // LayerCanvas is a read-only render layer (DxfCanvas is the sole pointer handler),
+  // so it never armed the snap-scheduler → its per-instance snap channel was always
+  // empty. The live snap marker is owned by SnapIndicatorSubscriber (z-30). The
+  // renderer keeps the param for signature stability; it always draws nothing here.
+  const snapResults: SnapResult[] = EMPTY_SNAP_RESULTS;
 
   // ── Unified canvas system state ────────────────────────────────────
   const [_canvasManager, setCanvasManager] = useState<CanvasManager | null>(null);
@@ -355,50 +290,8 @@ export const LayerCanvas = React.memo(React.forwardRef<HTMLCanvasElement, LayerC
         userSelect: 'none',
         ...style
       }}
-      onPointerDown={() => {
-        probe32a('onPointerDown'); // 🟣 3.2a PROBE — REMOVE after sign-off
-        // Allow events to flow to centralized handler for selection
-      }}
-      onPointerUp={(e) => {
-        probe32a('onPointerUp'); // 🟣 3.2a PROBE — REMOVE after sign-off
-        if (activeTool === 'layering') {
-          e.preventDefault();
-          e.stopPropagation();
-
-          if (canvasRef.current) {
-            const canvasPos = CanvasUtils.screenToCanvas(
-              { x: e.clientX, y: e.clientY },
-              canvasRef.current
-            );
-
-            if (layerHitTestCallback) {
-              try {
-                const hitResult = layerHitTestCallback(null, canvasPos, transform, viewport);
-                if (hitResult && handleLayerSelection) {
-                  handleLayerSelection(hitResult);
-                }
-              } catch (error) {
-                console.error('POINTER UP: Hit-test failed:', error);
-              }
-            }
-          }
-        }
-      }}
-      onMouseEnter={() => {
-        probe32a('onMouseEnter'); // 🟣 3.2a PROBE — REMOVE after sign-off
-        // Handled by mouse handlers
-      }}
-      onMouseMove={(e) => { probe32a('onMouseMove'); mouseHandlers.handleMouseMove(e); }}
-      onMouseLeave={(e) => { probe32a('onMouseLeave'); mouseHandlers.handleMouseLeave(e); }}
-      onClick={() => {
-        probe32a('onClick'); // 🟣 3.2a PROBE — REMOVE after sign-off
-        // Handled by mouse handlers
-      }}
-      onMouseDown={(e) => { probe32a('onMouseDown'); mouseHandlers.handleMouseDown(e); }}
-      onMouseUp={(e) => { probe32a('onMouseUp'); mouseHandlers.handleMouseUp(e); }}
-      onWheel={(e) => { probe32a('onWheel'); mouseHandlers.handleWheel(e); }}
-      onAuxClick={(e) => e.preventDefault()}
-      onContextMenu={onContextMenu}
+      // ADR-040 Φ12/3.2c — NO pointer handlers: this canvas is `pointerEvents:'none'`
+      // (read-only render layer). All interaction is owned by the DxfCanvas above.
     />
   );
 }));

@@ -15,7 +15,7 @@
 import React, { useSyncExternalStore } from 'react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useDisplayUnit } from '../../hooks/common/useDisplayUnit';
-import { formatDisplayValue, DISPLAY_UNIT_LABELS } from '../../config/units';
+import { formatLengthForDisplay } from '../../config/display-length-format';
 import { QuickPropertiesStore } from './QuickPropertiesStore';
 import { resolveEntityLayerName } from '../../stores/LayerStore';
 import type { DxfScene, DxfEntity, DxfLine } from '../../canvas-v2/dxf-canvas/dxf-types';
@@ -69,7 +69,8 @@ export function QuickPropertiesHoverPopover({ dxfScene, activeTool }: Props) {
     const dx = line.end.x - line.start.x;
     const dy = line.end.y - line.start.y;
     const lengthMm = Math.hypot(dx, dy);
-    lengthStr = `${formatDisplayValue(lengthMm, displayUnit)} ${DISPLAY_UNIT_LABELS[displayUnit]}`;
+    // ADR-462 display SSoT: read-only length → locale + unit label, follows selector.
+    lengthStr = formatLengthForDisplay(lengthMm, { unit: displayUnit });
     // Y-up coordinate system: 0° = East, positive = counter-clockwise
     let angle = Math.atan2(-dy, dx) * (180 / Math.PI);
     if (angle < 0) angle += 360;

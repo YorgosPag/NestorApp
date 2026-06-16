@@ -94,6 +94,14 @@ export interface SnapResult {
   entityId?: string;
 }
 
+/**
+ * ADR-040 — SSoT frozen empty snap-result list. Single shared reference used wherever
+ * "no snaps" must be passed (LayerCanvas read-only render layer, CanvasLayerStack
+ * renderOptions), so consumers never allocate a fresh `[]` per render. Frozen → safe to
+ * share. Do NOT re-declare a local `EMPTY_SNAP_RESULTS` — import this one.
+ */
+export const EMPTY_SNAP_RESULTS: SnapResult[] = Object.freeze<SnapResult[]>([]) as SnapResult[];
+
 // === GRID TYPES ===
 // 🏢 ENTERPRISE: Single Source of Truth = GridTypes.ts (eliminates duplication)
 // Mutable version for Canvas V2 API consumers (GridTypes.ts has readonly properties)

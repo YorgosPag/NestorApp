@@ -14,7 +14,8 @@ import type { Guide } from './guide-types';
 import type { GridAxis } from '../../ai-assistant/grid-types';
 import { GUIDE_COLORS } from './guide-types';
 import { pixelPerfect } from '../../rendering/entities/shared/geometry-rendering-utils';
-import { formatDistance } from '../../rendering/entities/shared/distance-label-utils';
+// 🏢 ADR-462: display-unit SSoT — guide dimension labels follow the status-bar unit
+import { formatLengthForDisplay } from '../../config/display-length-format';
 
 // ============================================================================
 // CONSTANTS
@@ -127,7 +128,7 @@ function renderAxisDimensions(
     if (gap < minGap) continue;
 
     const worldDistance = Math.abs(sortedGuides[i + 1].offset - sortedGuides[i].offset);
-    const text = formatDistance(worldDistance, 2);
+    const text = formatLengthForDisplay(worldDistance);
     const mid = (pos1 + pos2) / 2;
 
     if (axis === 'X') {

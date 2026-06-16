@@ -98,20 +98,14 @@ export function useCentralizedMouseHandlers(
     clickCount: 0
   });
 
-  const snapThrottleRef = useRef<MouseHandlerRefs['snapThrottleRef']['current']>({
-    lastSnapTime: 0,
-    pendingWorldPos: null,
-    rafId: null,
-    lastSnapFound: false,
-    lastSnapX: NaN,
-    lastSnapY: NaN
-  });
-
+  // ADR-040 Φ12/3.2c — snapThrottleRef removed: snap throttle + dedup state (lastSnapX/Y/
+  // Found) moved to the decoupled snap-scheduler in Φ11. The handler no longer holds any
+  // snap state, so this ref became write-only dead state.
   const cursorThrottleRef = useRef<{ lastUpdateTime: number }>({ lastUpdateTime: 0 });
   const hoverThrottleRef = useRef<number>(0);
   const lassoDownRef = useRef<{ pos: Point2D | null; buttonHeld: boolean }>({ pos: null, buttonHeld: false });
 
-  const refs: MouseHandlerRefs = { panStateRef, snapThrottleRef, cursorThrottleRef, hoverThrottleRef, lassoDownRef };
+  const refs: MouseHandlerRefs = { panStateRef, cursorThrottleRef, hoverThrottleRef, lassoDownRef };
   const snap = { snapEnabled, findSnapPoint };
 
   // Apply pending transform (rAF callback)

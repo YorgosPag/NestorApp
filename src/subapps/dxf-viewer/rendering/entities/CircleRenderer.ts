@@ -29,7 +29,8 @@ import { renderStyledTextWithOverride } from '../../hooks/useTextPreviewStyle';
 // 🏢 ADR-091: Centralized UI Fonts, ADR-124: Centralized Label Offsets
 import { buildUIFont, TEXT_LABEL_OFFSETS } from '../../config/text-rendering-config';
 // 🏢 ADR-090: Centralized Number Formatting
-import { formatDistance } from './shared/distance-label-utils';
+// 🏢 ADR-462: display-unit SSoT — diameter/radius follow the status-bar unit selector
+import { formatLengthForDisplay } from '../../config/display-length-format';
 // 🏢 ADR-124: Centralized Text Gap Calculation
 import { calculateTextGap } from './shared/geometry-rendering-utils';
 // 🏢 ADR-109: Centralized Distance Calculation
@@ -130,8 +131,8 @@ export class CircleRenderer extends BaseEntityRenderer {
       const diameter = radius * 2;
       // 🏢 ADR-090: Centralized number formatting
       const label = isTwoPointDiameter
-        ? `Διάμετρος: ${formatDistance(diameter)} (2P)`
-        : `D: ${formatDistance(diameter)}`;
+        ? `Διάμετρος: ${formatLengthForDisplay(diameter)} (2P)`
+        : `D: ${formatLengthForDisplay(diameter)}`;
       
       // 🔺 Phase-aware text positioning - inline for preview, offset for measurements
       this.renderDistanceTextPhaseAware(leftPoint, rightPoint, screenLeft, screenRight, entity, options);
@@ -227,7 +228,7 @@ export class CircleRenderer extends BaseEntityRenderer {
       // 🏢 ADR-124: Centralized circle label offset
       const labelY = screenCenter.y - TEXT_LABEL_OFFSETS.CIRCLE_LABEL; // Πάνω από το κέντρο
       // 🏢 ADR-090: Centralized number formatting
-      const label = `Διάμετρος: ${formatDistance(diameter)} (2P)`;
+      const label = `Διάμετρος: ${formatLengthForDisplay(diameter)} (2P)`;
       // Use centralized styling instead of hardcoded green
       this.ctx.save();
       this.applyDimensionTextStyle();
@@ -249,7 +250,7 @@ export class CircleRenderer extends BaseEntityRenderer {
       // 🏢 ADR-124: Centralized circle label offset
       const labelY = screenCenter.y - TEXT_LABEL_OFFSETS.CIRCLE_LABEL; // Move above line to avoid collision
       // 🏢 ADR-090: Centralized number formatting
-      const label = `D: ${formatDistance(radius * 2)}`;
+      const label = `D: ${formatLengthForDisplay(radius * 2)}`;
       // Use centralized styling instead of hardcoded green
       this.ctx.save();
       this.applyDimensionTextStyle();
@@ -298,7 +299,7 @@ export class CircleRenderer extends BaseEntityRenderer {
       const labelX = (gapStart + gapEnd) / 2;
       const labelY = screenCenter.y;
       // 🏢 ADR-090: Centralized number formatting
-      const label = `R: ${formatDistance(radius)}`;
+      const label = `R: ${formatLengthForDisplay(radius)}`;
       // Use centralized styling instead of hardcoded green
       this.ctx.save();
       this.applyDimensionTextStyle();

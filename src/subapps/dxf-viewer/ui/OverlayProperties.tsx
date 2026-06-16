@@ -26,7 +26,8 @@ import { STATUS_COLORS, STATUS_LABELS, type Overlay, type UpdateOverlayData, typ
 import { PANEL_LAYOUT } from '../config/panel-tokens';
 import { calculatePolygonArea, calculatePolygonPerimeter } from '../rendering/entities/shared/geometry-utils';
 import { overlayVertexToPoint2D } from '../utils/entity-conversion';
-import { formatDistance } from '../rendering/entities/shared/distance-label-utils';
+// 🏢 ADR-462: display-unit SSoT — overlay area/perimeter follow the status-bar unit
+import { formatLengthForDisplay, formatAreaForDisplay } from '../config/display-length-format';
 import { useFloorEntitiesForLinking } from '../hooks/useFloorEntitiesForLinking';
 import { useLevels } from '../systems/levels/useLevels';
 import { useProjectHierarchy } from '../contexts/ProjectHierarchyContext';
@@ -286,8 +287,8 @@ export const OverlayProperties: React.FC<OverlayPropertiesProps> = ({ overlay, o
         <Label className={PANEL_LAYOUT.TYPOGRAPHY.XS}>{t('overlayProperties.geometry')}</Label>
         <div className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.muted} leading-tight`}>
           <div>{t('overlayProperties.points')} {overlay.polygon ? overlay.polygon.length : 0}</div>
-          <div>{t('overlayProperties.area')} {formatDistance(area)} m²</div>
-          <div>{t('overlayProperties.perimeter')} {formatDistance(perimeter)} m</div>
+          <div>{t('overlayProperties.area')} {formatAreaForDisplay(area)}</div>
+          <div>{t('overlayProperties.perimeter')} {formatLengthForDisplay(perimeter)}</div>
         </div>
       </div>
     </div>

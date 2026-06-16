@@ -6,11 +6,11 @@
 import { HOVER_CONFIG } from './config';
 import type { Point2D } from '../../rendering/types/Types';
 import { UI_COLORS } from '../../config/color-config';
-// 🏢 ADR-090: Centralized Number Formatting
-import { formatDistance } from '../../rendering/entities/shared/distance-label-utils';
+// 🏢 ADR-462: display-unit SSoT — area label follows the status-bar unit selector
+import { formatAreaForDisplay } from '../../config/display-length-format';
 
 export function renderAreaLabel(ctx: CanvasRenderingContext2D, x: number, y: number, area: number): void {
-  const text = formatDistance(area);
+  const text = formatAreaForDisplay(area);
   
   ctx.save();
   ctx.translate(x, y);

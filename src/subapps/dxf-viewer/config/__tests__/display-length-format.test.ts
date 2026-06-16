@@ -6,7 +6,13 @@
  * store notifies subscribers on change (and not on a no-op write).
  */
 
-import { formatLengthMm, currentDisplayUnitLabel } from '../display-length-format';
+import {
+  formatLengthMm,
+  formatLengthForDisplay,
+  formatAreaForDisplay,
+  formatCoordinateForDisplay,
+  currentDisplayUnitLabel,
+} from '../display-length-format';
 import { displayUnitState } from '../display-unit-state';
 import { DEFAULT_DISPLAY_UNIT } from '../units';
 
@@ -53,6 +59,56 @@ describe('formatLengthMm', () => {
 
   it('uses the absolute value (negative input reads the same)', () => {
     expect(formatLengthMm(-9750, { unit: 'm' })).toBe(formatLengthMm(9750, { unit: 'm' }));
+  });
+});
+
+describe('formatLengthForDisplay', () => {
+  it('is the canonical impl that formatLengthMm aliases', () => {
+    expect(formatLengthForDisplay(9750, { unit: 'm' })).toBe(formatLengthMm(9750, { unit: 'm' }));
+    expect(formatLengthForDisplay(250, { unit: 'cm' })).toBe(formatLengthMm(250, { unit: 'cm' }));
+  });
+
+  it('follows the active store selection by default', () => {
+    displayUnitState.setUnit('cm');
+    expect(formatLengthForDisplay(5000)).toBe(formatLengthForDisplay(5000, { unit: 'cm' }));
+  });
+});
+
+describe('formatAreaForDisplay', () => {
+  it('converts mm² → the unit squared with a squared label', () => {
+    // 25 m² = 25_000_000 mm²
+    const m2 = formatAreaForDisplay(25_000_000, { unit: 'm' });
+    expect(numOf(m2)).toBeCloseTo(25, 3);
+    expect(labelOf(m2)).toBe('m²');
+
+    // same area in cm²: 25 m² = 250_000 cm²
+    const cm2 = formatAreaForDisplay(25_000_000, { unit: 'cm' });
+    expect(numOf(cm2)).toBeCloseTo(250_000, 0);
+    expect(labelOf(cm2)).toBe('cm²');
+  });
+
+  it('omits the squared label when withUnit:false', () => {
+    expect(labelOf(formatAreaForDisplay(25_000_000, { unit: 'm', withUnit: false }))).toBe('');
+  });
+
+  it('follows the active store selection by default', () => {
+    displayUnitState.setUnit('m');
+    expect(formatAreaForDisplay(1_000_000)).toBe(formatAreaForDisplay(1_000_000, { unit: 'm' }));
+  });
+});
+
+describe('formatCoordinateForDisplay', () => {
+  it('keeps the sign (coordinates can be negative)', () => {
+    const neg = formatCoordinateForDisplay(-1200, { unit: 'm' });
+    expect(numOf(neg)).toBeCloseTo(-1.2, 3);
+    expect(labelOf(neg)).toBe('m');
+
+    const pos = formatCoordinateForDisplay(1200, { unit: 'm' });
+    expect(numOf(pos)).toBeCloseTo(1.2, 3);
+  });
+
+  it('omits the label when withUnit:false', () => {
+    expect(labelOf(formatCoordinateForDisplay(-1200, { unit: 'm', withUnit: false }))).toBe('');
   });
 });
 

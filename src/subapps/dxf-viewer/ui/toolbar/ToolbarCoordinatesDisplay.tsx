@@ -18,7 +18,12 @@ import {
   getImmediateWorldPosition,
   subscribeToImmediateWorldPosition,
 } from '../../systems/cursor/ImmediatePositionStore';
-import { formatCoordinate } from '../../rendering/entities/shared/distance-label-utils';
+// 🏢 ADR-462: display-unit SSoT — cursor X/Y readout follows the status-bar unit
+import {
+  formatCoordinateForDisplay,
+  currentDisplayUnitLabel,
+} from '../../config/display-length-format';
+import { displayUnitState } from '../../config/display-unit-state';
 
 interface ToolbarCoordinatesDisplayProps {
   precision: number;
@@ -42,11 +47,22 @@ export const ToolbarCoordinatesDisplay: React.FC<ToolbarCoordinatesDisplayProps>
         const x = wp?.x ?? 0;
         const y = wp?.y ?? 0;
         if (ref.current) {
-          ref.current.textContent = `X: ${formatCoordinate(x, precision)}, Y: ${formatCoordinate(y, precision)}`;
+          // ADR-462: convert canonical-mm → active display unit + locale; a single
+          // unit label trails both axes (Revit/AutoCAD status-bar convention).
+          const fx = formatCoordinateForDisplay(x, { precision, withUnit: false });
+          const fy = formatCoordinateForDisplay(y, { precision, withUnit: false });
+          ref.current.textContent = `X: ${fx}, Y: ${fy} ${currentDisplayUnitLabel()}`;
         }
       };
       render();
-      return subscribeToImmediateWorldPosition(render);
+      const offPosition = subscribeToImmediateWorldPosition(render);
+      // Live unit switch: repaint the readout the moment the selector changes,
+      // not only on the next mousemove.
+      const offUnit = displayUnitState.subscribe(render);
+      return () => {
+        offPosition();
+        offUnit();
+      };
     }, [precision]);
 
     return <strong ref={ref} className={className} />;

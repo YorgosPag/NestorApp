@@ -81,7 +81,14 @@ export const canvasUI = {
         width: '100%',
         height: '100%',
         zIndex: zIndex.base,
-        pointerEvents: 'auto', // Layer canvas always captures events
+        // ADR-040 Φ12 / Phase 3.2b — Layer canvas is a READ-ONLY render layer. The
+        // DxfCanvas (zIndex.docked, always pointerEvents:'auto') sits on top and is the
+        // SOLE authoritative pointer handler for EVERY tool (entity/layer/marquee/lasso/
+        // grip/guide selection all route through its useCentralizedMouseHandlers). The
+        // LayerCanvas interactive handlers therefore never fired (proven: empty 3.2a probe
+        // + zIndex.base < zIndex.docked). 'none' enforces that structurally so a future
+        // z-order change cannot silently revive the dead handler. SSoT: ONE handler.
+        pointerEvents: 'none',
         // 🏢 FIX (2026-01-04): Select tool uses 'none' cursor - crosshair overlay is the only cursor
         // Το σταυρόνημα εμφανίζεται μόνο από το CrosshairOverlay component
         cursor: activeTool === 'pan' ? 'grab' :

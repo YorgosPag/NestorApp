@@ -15,7 +15,8 @@ import { drawVerticesPath } from './shared/geometry-rendering-utils';
 import { getRectangleVertices } from '../../systems/selection/utils';
 import { renderStyledTextWithOverride } from '../../hooks/useTextPreviewStyle';
 // 🏢 ADR-090: Centralized Number Formatting
-import { formatDistance } from './shared/distance-label-utils';
+// 🏢 ADR-462: display-unit SSoT — area + perimeter follow the status-bar unit selector
+import { formatLengthForDisplay, formatAreaForDisplay } from '../../config/display-length-format';
 // 🏢 ADR-091: Centralized Text Label Offsets
 import { TEXT_LABEL_OFFSETS } from '../../config/text-rendering-config';
 
@@ -87,8 +88,8 @@ export class RectangleRenderer extends BaseEntityRenderer {
     const centerY = (vertices[0].y + vertices[2].y) / 2;
     const screenCenter = this.worldToScreen({ x: centerX, y: centerY });
     // 🏢 ADR-091: Χρήση κεντρικοποιημένων text label offsets
-    renderStyledTextWithOverride(this.ctx, `Ε: ${formatDistance(area)}`, screenCenter.x, screenCenter.y - TEXT_LABEL_OFFSETS.TWO_LINE);
-    renderStyledTextWithOverride(this.ctx, `Περ: ${formatDistance(perimeter)}`, screenCenter.x, screenCenter.y + TEXT_LABEL_OFFSETS.TWO_LINE);
+    renderStyledTextWithOverride(this.ctx, `Ε: ${formatAreaForDisplay(area)}`, screenCenter.x, screenCenter.y - TEXT_LABEL_OFFSETS.TWO_LINE);
+    renderStyledTextWithOverride(this.ctx, `Περ: ${formatLengthForDisplay(perimeter)}`, screenCenter.x, screenCenter.y + TEXT_LABEL_OFFSETS.TWO_LINE);
     
     // 🔺 ΔΙΑΣΤΑΣΕΙΣ ΠΛΕΥΡΩΝ - Εσωτερικές στο ορθογώνιο (αρνητικό offset)
     

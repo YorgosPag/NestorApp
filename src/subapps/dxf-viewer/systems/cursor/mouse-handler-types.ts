@@ -61,14 +61,6 @@ export interface MouseHandlerRefs {
     pendingTransform: ViewTransform | null;
     animationId: number | null;
   }>;
-  snapThrottleRef: React.MutableRefObject<{
-    lastSnapTime: number;
-    pendingWorldPos: Point2D | null;
-    rafId: number | null;
-    lastSnapFound: boolean;
-    lastSnapX: number;
-    lastSnapY: number;
-  }>;
   cursorThrottleRef: React.MutableRefObject<{ lastUpdateTime: number }>;
   hoverThrottleRef: React.MutableRefObject<number>;
   /** Tracks mouse button held state for lasso drag detection. */

@@ -19,7 +19,8 @@ import { hitTestLineSegments, createEdgeGrips, calculatePerimeter } from './shar
 import { drawVerticesPath, vectorMagnitude, dotProduct, subtractPoints } from './shared/geometry-rendering-utils';
 import { renderStyledTextWithOverride } from '../../hooks/useTextPreviewStyle';
 // 🏢 ADR-090: Centralized Number Formatting
-import { formatDistance } from './shared/distance-label-utils';
+// 🏢 ADR-462: display-unit SSoT — area + perimeter follow the status-bar unit selector
+import { formatLengthForDisplay, formatAreaForDisplay } from '../../config/display-length-format';
 // 🏢 ADR-091: Centralized Text Label Offsets
 import { TEXT_LABEL_OFFSETS } from '../../config/text-rendering-config';
 
@@ -126,8 +127,8 @@ export class PolylineRenderer extends BaseEntityRenderer {
       this.ctx.save();
       this.applyCenterMeasurementTextStyle();
       // 🏢 ADR-091: Χρήση κεντρικοποιημένων text label offsets
-      renderStyledTextWithOverride(this.ctx, `Ε: ${formatDistance(area)}`, screenCentroid.x, screenCentroid.y - TEXT_LABEL_OFFSETS.TWO_LINE);
-      renderStyledTextWithOverride(this.ctx, `Περ: ${formatDistance(perimeter)}`, screenCentroid.x, screenCentroid.y + TEXT_LABEL_OFFSETS.TWO_LINE);
+      renderStyledTextWithOverride(this.ctx, `Ε: ${formatAreaForDisplay(area)}`, screenCentroid.x, screenCentroid.y - TEXT_LABEL_OFFSETS.TWO_LINE);
+      renderStyledTextWithOverride(this.ctx, `Περ: ${formatLengthForDisplay(perimeter)}`, screenCentroid.x, screenCentroid.y + TEXT_LABEL_OFFSETS.TWO_LINE);
       this.ctx.restore();
     }
   }

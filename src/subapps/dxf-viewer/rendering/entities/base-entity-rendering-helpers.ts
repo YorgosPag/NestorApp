@@ -14,7 +14,9 @@ import { RENDER_LINE_WIDTHS, RENDER_GEOMETRY, LINE_DASH_PATTERNS, ARC_LABEL_POSI
 import { calculateDistance, vectorMagnitude, vectorAngle, getUnitVector, calculateAngle } from './shared/geometry-rendering-utils';
 import { radToDeg, bisectorAngle, calculateMidpoint, normalizeTextAngle } from './shared/geometry-utils';
 import { addArcPath, TAU } from '../primitives/canvasPaths';
-import { formatDistance, formatAngle } from './shared/distance-label-utils';
+import { formatAngle } from './shared/distance-label-utils';
+// 🏢 ADR-462: display-unit SSoT — distance label follows the status-bar unit selector
+import { formatLengthForDisplay } from '../../config/display-length-format';
 import { renderStyledTextWithOverride, getTextPreviewStyleWithOverride } from '../../hooks/useTextPreviewStyle';
 import { getLinePreviewStyleWithOverride } from '../../hooks/useLinePreviewStyle';
 import {
@@ -82,7 +84,7 @@ export function renderDistanceTextCommonImpl(
   // 🏢 ADR-078: Use centralized calculateAngle
   const angle = calculateAngle(screenStart, screenEnd);
   // 🏢 ADR-090: Centralized number formatting
-  const text = formatDistance(worldDistance);
+  const text = formatLengthForDisplay(worldDistance);
 
   rc.ctx.save();
   rc.ctx.translate(textPosition.x, textPosition.y);

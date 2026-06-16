@@ -9,7 +9,9 @@ import type { ExtendedLineEntity, ExtendedCircleEntity, ExtendedPolylineEntity, 
 import type { AngleMeasurementEntity } from '../../types/scene';
 import type { PreviewRenderOptions, ArcPreviewEntity, PreviewRenderHelpers } from './preview-renderer-types';
 import { CoordinateTransforms } from '../../rendering/core/CoordinateTransforms';
-import { formatDistance, calculateWorldDistance } from '../../rendering/entities/shared/distance-label-utils';
+import { calculateWorldDistance } from '../../rendering/entities/shared/distance-label-utils';
+// 🏢 ADR-462: display-unit SSoT — preview length + area labels follow the selector
+import { formatLengthForDisplay, formatAreaForDisplay } from '../../config/display-length-format';
 import { RENDER_LINE_WIDTHS, UI_FONTS, LINE_DASH_PATTERNS, RENDER_GEOMETRY } from '../../config/text-rendering-config';
 import { calculateAngle, rectFromTwoPoints } from '../../rendering/entities/shared/geometry-rendering-utils';
 import { bisectorAngle, TAU, degToRad } from '../../rendering/entities/shared/geometry-utils';
@@ -88,8 +90,8 @@ export function renderCircle(
     const circumference = TAU * entity.radius;
     const area = Math.PI * entity.radius * entity.radius;
     h.renderInfoLabel(ctx, center, [
-      `Περ: ${formatDistance(circumference)}`,
-      `Ε: ${formatDistance(area)}`,
+      `Περ: ${formatLengthForDisplay(circumference)}`,
+      `Ε: ${formatAreaForDisplay(area)}`,
     ]);
   }
 }
@@ -139,8 +141,8 @@ export function renderPolyline(
       const cy = verts.reduce((s, v) => s + v.y, 0) / verts.length;
       const centroidScreen = CoordinateTransforms.worldToScreen({ x: cx, y: cy }, transform, h.viewport);
       h.renderInfoLabel(ctx, centroidScreen, [
-        `Περ: ${formatDistance(perimeter)}`,
-        `Ε: ${formatDistance(area)}`,
+        `Περ: ${formatLengthForDisplay(perimeter)}`,
+        `Ε: ${formatAreaForDisplay(area)}`,
       ]);
     }
   }
@@ -185,8 +187,8 @@ export function renderRectangle(
     const area = worldWidth * worldHeight;
     const centerScreen: Point2D = { x: x + width / 2, y: y + height / 2 };
     h.renderInfoLabel(ctx, centerScreen, [
-      `Περ: ${formatDistance(perimeter)}`,
-      `Ε: ${formatDistance(area)}`,
+      `Περ: ${formatLengthForDisplay(perimeter)}`,
+      `Ε: ${formatAreaForDisplay(area)}`,
     ]);
   }
 }
@@ -307,8 +309,8 @@ export function renderArc(
       const arcLength = entity.radius * absSweep;
       const sectorArea = 0.5 * entity.radius * entity.radius * absSweep;
       h.renderInfoLabel(ctx, center, [
-        `L: ${formatDistance(arcLength)}`,
-        `Ε: ${formatDistance(sectorArea)}`,
+        `L: ${formatLengthForDisplay(arcLength)}`,
+        `Ε: ${formatAreaForDisplay(sectorArea)}`,
       ]);
     }
   }

@@ -39,6 +39,36 @@ export const DEFAULT_DISPLAY_PRECISION: Record<DisplayUnit, number> = {
   ft: 3,
 };
 
+/**
+ * Short symbol for AREA values — the linear unit squared. Not an i18n string
+ * (same rationale as the "°" degree glyph): a physical unit symbol, locale-free.
+ */
+export const DISPLAY_AREA_LABELS: Record<DisplayUnit, string> = {
+  mm: 'mm²',
+  cm: 'cm²',
+  m: 'm²',
+  in: 'in²',
+  ft: 'ft²',
+};
+
+/** Default decimal places for AREA per unit (mm² stays whole — sub-mm² is noise). */
+export const DEFAULT_AREA_PRECISION: Record<DisplayUnit, number> = {
+  mm: 0,
+  cm: 2,
+  m: 3,
+  in: 2,
+  ft: 3,
+};
+
+/** Default decimal places for X/Y COORDINATE readouts per unit (CAD status bar). */
+export const DEFAULT_COORDINATE_PRECISION: Record<DisplayUnit, number> = {
+  mm: 0,
+  cm: 2,
+  m: 3,
+  in: 3,
+  ft: 3,
+};
+
 export function isValidDisplayUnit(value: string | null | undefined): value is DisplayUnit {
   return value === 'mm' || value === 'cm' || value === 'm' || value === 'in' || value === 'ft';
 }
@@ -60,6 +90,18 @@ export function toDisplay(mm: number, unit: DisplayUnit): { value: number; label
  */
 export function fromDisplay(value: number, unit: DisplayUnit): number {
   return value / mmToSceneUnits(unit);
+}
+
+/**
+ * Convert a mm² area to the display unit (the linear factor is SQUARED).
+ * `toDisplayArea(1_000_000, 'm') → { value: 1, label: 'm²' }`  (1 m² = 1e6 mm²)
+ */
+export function toDisplayArea(mm2: number, unit: DisplayUnit): { value: number; label: string } {
+  const linear = mmToSceneUnits(unit);
+  return {
+    value: mm2 * linear * linear,
+    label: DISPLAY_AREA_LABELS[unit],
+  };
 }
 
 /**

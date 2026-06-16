@@ -9,8 +9,8 @@ import { UI_COLORS } from '../../config/color-config';
 // 🏢 ADR-065: Centralized Distance, Angle & Vector Operations
 // 🏢 ADR-090: Centralized Point Vector Operations
 import { calculateDistance, calculateAngle, calculateMidpoint, getPerpendicularUnitVector, offsetPoint } from '../../rendering/entities/shared/geometry-rendering-utils';
-// 🏢 ADR-090: Centralized Number Formatting
-import { formatDistance } from '../../rendering/entities/shared/distance-label-utils';
+// 🏢 ADR-462: display-unit SSoT — edge distance label follows the status-bar unit
+import { formatLengthForDisplay } from '../../config/display-length-format';
 // 🏢 ADR-112: Centralized Text Rotation Pattern
 import { withTextRotation } from '../../rendering/entities/shared/geometry-utils';
 
@@ -100,5 +100,5 @@ export function renderEdgeDistanceLabel(
   // 🏢 ADR-086: Use centralized distance calculation (already imported!)
   const distance = calculateDistance(worldStart, worldEnd);
 
-  renderTextAtEdgePosition(ctx, formatDistance(distance), screenStart, screenEnd, offsetDistance, true);
+  renderTextAtEdgePosition(ctx, formatLengthForDisplay(distance), screenStart, screenEnd, offsetDistance, true);
 }

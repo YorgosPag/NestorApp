@@ -46,8 +46,9 @@ import { HomeRunWiresOverlay } from './HomeRunWiresOverlay';
 import { FloorUnderlayOverlay } from './FloorUnderlayOverlay';
 import { CanvasLayerStack2DOverlays } from './canvas-layer-stack-2d-overlays-leaf';
 import { useCanvasLayerStackHandlers } from './useCanvasLayerStackHandlers';
+// ADR-040 — SSoT empty snap list (was a local duplicate here; centralized in layer-types).
+import { EMPTY_SNAP_RESULTS } from '../../canvas-v2/layer-canvas/layer-types';
 export type { CanvasLayerStackProps } from './canvas-layer-stack-types';
-const EMPTY_SNAP_RESULTS: readonly never[] = Object.freeze([]);
 export const CanvasLayerStack = React.memo(function CanvasLayerStack({
   transform, viewport, activeTool, overlayMode, showLayers,
   showDxfCanvas, showLayerCanvas,
@@ -187,7 +188,7 @@ export const CanvasLayerStack = React.memo(function CanvasLayerStack({
       showGrid: false,
       showRulers: false,
       showSelectionBox: false,
-      snapResults: EMPTY_SNAP_RESULTS as never[],
+      snapResults: EMPTY_SNAP_RESULTS,
       selectionBox: null,
       gripSettings,
     }),
@@ -200,10 +201,6 @@ export const CanvasLayerStack = React.memo(function CanvasLayerStack({
     () => canvasUI.positioning.layers.layerCanvasWithTools(activeTool, crosshairSettings.enabled),
     [activeTool, crosshairSettings.enabled],
   );
-  const onMouseMoveStable = useCallback(
-    (screenPos: Point2D, worldPos: Point2D) => handleUnifiedMouseMove(worldPos, screenPos),
-    [handleUnifiedMouseMove],
-  );
   // Shared getters consumed by all 3 PreviewCanvas mounts (Rotation / Move / GripDrag).
   const getPreviewCanvas = useCallback(
     () => previewCanvasRef.current?.getCanvas() ?? null,
@@ -214,18 +211,16 @@ export const CanvasLayerStack = React.memo(function CanvasLayerStack({
     return canvas instanceof HTMLElement ? canvas : null;
   }, [dxfCanvasRef]);
   // --- LayerCanvas passthrough props (ref and layers excluded — injected by DraftLayerSubscriber) ---
+  // ADR-040 Φ12/3.2c — LayerCanvas is a read-only render layer. Interaction props
+  // (selection/click/mousemove/wheel/transform/drawing-hover/context-menu) are NOT
+  // passed: the DxfCanvas above owns every pointer path (the same handlers are wired
+  // to it below). Only render-relevant state reaches the LayerCanvas.
   const layerCanvasPassthroughProps: LayerCanvasPassthroughProps = useMemo(() => ({
     transform,
     viewport,
     activeTool,
-    overlayMode,
     layersVisible: showLayers,
-    dxfScene,
     enableUnifiedCanvas: true,
-    isGripDragging,
-    onContextMenu: handleDrawingContextMenu,
-    onTransformChange: handleTransformChange,
-    onWheelZoom: zoomSystem.handleWheelZoom,
     crosshairSettings,
     cursorSettings: cursorCanvasSettings,
     snapSettings,
@@ -235,22 +230,14 @@ export const CanvasLayerStack = React.memo(function CanvasLayerStack({
     rulerSettings: rulerSettingsDisabled,
     selectionSettings,
     renderOptions: layerRenderOptions,
-    onLayerClick: handleOverlayClickWithEntityClear,
-    onMultiLayerClick: handleMultiOverlayClickWithEntityClear,
-    onCanvasClick: handleCanvasClick,
-    onDrawingHover: drawingHandlersRef.current?.onDrawingHover,
     draggingOverlay: draggingOverlayDelta,
-    onMouseMove: onMouseMoveStable,
     className: layerClassName,
     style: layerStyle,
   }), [
-    transform, viewport, activeTool, overlayMode, showLayers, dxfScene,
-    isGripDragging, handleDrawingContextMenu, handleTransformChange,
-    zoomSystem.handleWheelZoom, crosshairSettings, cursorCanvasSettings,
+    transform, viewport, activeTool, showLayers,
+    crosshairSettings, cursorCanvasSettings,
     snapSettings, gridSettingsDisabled, rulerSettingsDisabled, selectionSettings,
-    layerRenderOptions, handleOverlayClickWithEntityClear,
-    handleMultiOverlayClickWithEntityClear, handleCanvasClick,
-    draggingOverlayDelta, onMouseMoveStable, layerClassName, layerStyle,
+    layerRenderOptions, draggingOverlayDelta, layerClassName, layerStyle,
   ]);
   // DxfCanvas renderOptions base (hoveredEntityId injected by DxfCanvasSubscriber).
   // Phase D RE-IMPLEMENT (ADR-040, 2026-05-09): memoized for stable identity so

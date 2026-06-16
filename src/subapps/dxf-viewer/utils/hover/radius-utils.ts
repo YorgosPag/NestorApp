@@ -6,8 +6,8 @@
 import { HOVER_CONFIG } from './config';
 import type { Point2D } from '../../rendering/types/Types';
 import { UI_COLORS } from '../../config/color-config';
-// 🏢 ADR-090: Centralized Number Formatting
-import { formatDistance } from '../../rendering/entities/shared/distance-label-utils';
+// 🏢 ADR-462: display-unit SSoT — radius follows the status-bar unit selector
+import { formatLengthForDisplay } from '../../config/display-length-format';
 
 export function renderRadiusWithMeasurement(
   ctx: CanvasRenderingContext2D,
@@ -38,7 +38,7 @@ export function renderRadiusWithMeasurement(
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
 
-  const radiusText = `R=${formatDistance(worldRadius)}`;
+  const radiusText = `R=${formatLengthForDisplay(worldRadius)}`;
   ctx.fillText(radiusText, midX, textY);
   ctx.restore();
 }

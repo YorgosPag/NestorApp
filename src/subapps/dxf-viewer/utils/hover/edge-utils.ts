@@ -7,8 +7,8 @@ import { HOVER_CONFIG } from './config';
 import type { Point2D } from '../../rendering/types/Types';
 import { calculateEdgeTextPosition } from './text-labeling-utils';
 import { renderStyledTextWithOverride } from '../../hooks/useTextPreviewStyle';
-// 🏢 ADR-090: Centralized Number Formatting
-import { formatDistance } from '../../rendering/entities/shared/distance-label-utils';
+// 🏢 ADR-462: display-unit SSoT — edge distance follows the status-bar unit selector
+import { formatLengthForDisplay } from '../../config/display-length-format';
 // 🏢 ADR-112: Centralized Text Rotation Pattern
 import { withTextRotation } from '../../rendering/entities/shared/geometry-utils';
 // 🏢 ADR-109: Centralized Distance Calculation
@@ -38,7 +38,7 @@ export function renderHoverEdgeWithDistance(
   // 🏢 ADR-110: Use centralized text rotation pattern
   withTextRotation(ctx, textPos, () => {
     // Χρήση δυναμικού styling με πλήρη υποστήριξη decorations
-    const distanceText = formatDistance(distance);
+    const distanceText = formatLengthForDisplay(distance);
     renderStyledTextWithOverride(ctx, distanceText, 0, 0);
   });
 }

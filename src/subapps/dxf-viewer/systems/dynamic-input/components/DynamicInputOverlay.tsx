@@ -9,6 +9,8 @@ import { PANEL_LAYOUT } from '../../../config/panel-tokens';
 import { useTranslation } from 'react-i18next';
 // 🏢 ENTERPRISE ADR-082: Centralized number formatting (replaces .toFixed())
 import { getFormatter } from '../../../formatting';
+// 🏢 ADR-462: display-unit SSoT — read-only multi-point distances follow the selector
+import { formatLengthForDisplay } from '../../../config/display-length-format';
 // ADR-357 Phase 2a: SSoT toggle for Dynamic Input (status bar / Firestore-backed) —
 // replaces legacy `settings.behavior.dynamic_input` cursor flag.
 import { useCadToggles } from '../../../hooks/common/useCadToggles';
@@ -475,7 +477,7 @@ export default function DynamicInputOverlay({
         {multiPointInfo.shouldShowMultiPoint && (
           <div className={`${PANEL_LAYOUT.MARGIN.TOP_SM} ${PANEL_LAYOUT.PADDING.TOP_SM} ${getDirectionalBorder('muted', 'top')} ${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.tertiary}`}>
             {multiPointInfo.lastPointDistance !== null && (
-              <div>{t('dynamicInput.multiPoint.distance')} {getFormatter().formatDistance(multiPointInfo.lastPointDistance, 3)}</div>
+              <div>{t('dynamicInput.multiPoint.distance')} {formatLengthForDisplay(multiPointInfo.lastPointDistance)}</div>
             )}
             {multiPointInfo.segmentAngle !== null && (
               <div>{t('dynamicInput.multiPoint.angle')} {getFormatter().formatAngle(multiPointInfo.segmentAngle, 1)}</div>
@@ -484,7 +486,7 @@ export default function DynamicInputOverlay({
               <div>{t('dynamicInput.multiPoint.segments')} {multiPointInfo.segments.length}</div>
             )}
             {multiPointInfo.totalDistance > 0 && (
-              <div>{t('dynamicInput.multiPoint.total')} {getFormatter().formatDistance(multiPointInfo.totalDistance, 3)}</div>
+              <div>{t('dynamicInput.multiPoint.total')} {formatLengthForDisplay(multiPointInfo.totalDistance)}</div>
             )}
           </div>
         )}
