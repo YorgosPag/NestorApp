@@ -29,8 +29,6 @@ import { createModuleLogger } from '@/lib/telemetry';
 import type { AnySceneEntity, SceneModel } from '../../types/entities';
 import type { SceneWriteOrigin } from '../scene/scene-write-origin';
 import type { ColumnEntity } from '../../bim/types/column-types';
-import { computeColumnGeometry } from '../../bim/geometry/column-geometry';
-import { validateColumnParams } from '../../bim/validators/column-validator';
 import { EventBus } from '../../systems/events/EventBus';
 import {
   createColumnFirestoreService,
@@ -41,6 +39,7 @@ import {
 import { recordColumnChange } from '../../bim/columns/column-audit-client';
 import { bimToBoqBridge } from '../../bim/services/BimToBoqBridge';
 import { columnBoqEntity } from './column-boq-feed';
+import { isColumn, mergeColumnDocsIntoScene } from './column-persistence-helpers';
 import { createPersistSerializer } from './persist-serializer';
 import { resolveBimPersistenceScope } from '../../bim/persistence/bim-floor-scope';
 import { useBimEntityMovedPersistEffect } from './useBimEntityMovedPersistEffect';
@@ -95,30 +94,9 @@ const logger = createModuleLogger('useColumnPersistence');
 // HELPERS
 // ============================================================================
 
-function isColumn(entity: AnySceneEntity): entity is ColumnEntity {
-  return (entity as { type?: string }).type === 'column';
-}
-
-/**
- * Build scene-side `ColumnEntity` από persisted `ColumnDoc`. Geometry +
- * validation recomputed via SSoT pure functions.
- */
-function docToEntity(doc: ColumnDoc): ColumnEntity {
-  const validation = doc.validation ?? validateColumnParams(doc.params).bimValidation;
-  return {
-    id: doc.id,
-    type: 'column',
-    kind: doc.kind,
-    layerId: doc.layerId ?? '0',
-    params: doc.params,
-    geometry: doc.geometry ?? computeColumnGeometry(doc.params),
-    validation,
-    visible: true,
-    // ADR-441 Slice COL — restore grid hosting bindings so the reconciler keeps the
-    // column following its axes after reload.
-    ...(doc.guideBindings !== undefined ? { guideBindings: doc.guideBindings } : {}),
-  } as ColumnEntity;
-}
+// isColumn / mergeColumnDocsIntoScene imported from './column-persistence-helpers'
+// (file-size split, behavior-preserving; columnDocToEntity is used internally by
+// mergeColumnDocsIntoScene, not directly here).
 
 // ============================================================================
 // HOOK
@@ -193,84 +171,13 @@ export function useColumnPersistence(
     if (!svc || !levelId) return;
 
     const unsubscribe = svc.subscribeColumns(
-      (docs) => {
-        const lm = levelManagerRef.current;
-        const scene = lm.getLevelScene(levelId);
-        if (!scene) return;
-
-        const docsById = new Map<string, ColumnDoc>();
-        for (const d of docs) docsById.set(d.id, d);
-
-        const dirty = dirtyIdsRef.current;
-        const sceneColumns = new Map<string, ColumnEntity>();
-        const nonColumns: AnySceneEntity[] = [];
-        for (const e of scene.entities) {
-          if (isColumn(e)) sceneColumns.set(e.id, e);
-          else nonColumns.push(e);
-        }
-
-        const nextColumns: ColumnEntity[] = [];
-        let mutated = false;
-
-        const deleted = deletedIdsRef.current;
-        const pending = pendingFirstSaveIdsRef.current;
-
-        for (const doc of docs) {
-          if (deleted.has(doc.id)) continue;
-          const existing = sceneColumns.get(doc.id);
-          if (!existing) {
-            if (!dirty.has(doc.id)) {
-              nextColumns.push(docToEntity(doc));
-              mutated = true;
-            }
-            continue;
-          }
-          if (dirty.has(doc.id)) {
-            nextColumns.push(existing);
-            continue;
-          }
-          // Grace-period guard (useBimFirestoreWriteGrace SSoT).
-          if (isWithinGrace(doc.id)) {
-            nextColumns.push(existing);
-            continue;
-          }
-          if (!dequal(existing.params, doc.params)) {
-            nextColumns.push(docToEntity(doc));
-            mutated = true;
-          } else {
-            nextColumns.push(existing);
-          }
-        }
-
-        // ADR-397 — seed the "known/last-saved" baseline for every Firestore doc
-        // so a subsequently edited column (loaded this session, not freshly drawn)
-        // passes the auto-save gate (`lastSavedParamsRef.has(id)`) and its dirty
-        // flag protects the local edit from this snapshot. Without this, edits to
-        // pre-existing columns were silently skipped → snapshot reverted the
-        // rotation/move (snap-back). Mirror of useWallPersistence.
-        for (const doc of docs) {
-          if (!lastSavedParamsRef.current.has(doc.id)) {
-            lastSavedParamsRef.current.set(doc.id, doc.params);
-          }
-        }
-
-        // ADR-390 — replaces buggy `neverSaved` guard.
-        for (const [id, entity] of sceneColumns) {
-          if (docsById.has(id)) continue;
-          if (dirty.has(id) || pending.has(id)) {
-            nextColumns.push(entity);
-          } else {
-            mutated = true;
-          }
-        }
-
-        if (mutated) {
-          lm.setLevelScene(levelId, {
-            ...scene,
-            entities: [...nonColumns, ...nextColumns],
-          }, 'remote-echo');
-        }
-      },
+      (docs) => mergeColumnDocsIntoScene(docs, levelId, levelManagerRef.current, {
+        dirty: dirtyIdsRef.current,
+        deleted: deletedIdsRef.current,
+        pending: pendingFirstSaveIdsRef.current,
+        lastSavedParams: lastSavedParamsRef.current,
+        isWithinGrace,
+      }),
       (err: Error) => {
         setError(err.message);
         setSaveState('error');
@@ -278,7 +185,7 @@ export function useColumnPersistence(
     );
 
     return () => unsubscribe();
-  }, [currentLevelId, companyId, projectId, floorplanId, userId]);
+  }, [currentLevelId, companyId, projectId, floorplanId, floorId, userId]);
 
   // Immediate persist body — one save + one audit per call (used by both
   // auto-save flush and explicit button). Always invoked through the serialized

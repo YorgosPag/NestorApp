@@ -27,10 +27,9 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { dequal } from 'dequal';
 
-import type { AnySceneEntity, SceneModel } from '../../types/entities';
+import type { SceneModel } from '../../types/entities';
 import type { SceneWriteOrigin } from '../scene/scene-write-origin';
 import type { OpeningEntity } from '../../bim/types/opening-types';
-import type { WallEntity } from '../../bim/types/wall-types';
 import type { Level } from '../../systems/levels/config';
 import { EventBus } from '../../systems/events/EventBus';
 import { resolveBimPersistenceScope } from '../../bim/persistence/bim-floor-scope';
@@ -38,7 +37,6 @@ import {
   createOpeningFirestoreService,
   entityToSaveInput,
   OpeningFirestoreService,
-  type OpeningDoc,
 } from '../../bim/walls/opening-firestore-service';
 import { recordOpeningChange } from '../../bim/walls/opening-audit-client';
 import { useBimEntityRestoredPersistEffect } from './useBimEntityRestoredPersistEffect';
@@ -46,11 +44,10 @@ import {
   deleteOpeningFromGroup,
   upsertOpeningGroupForOpening,
 } from '../../bim/services/opening-boq-sync';
-import { isOpening, isWall, openingDocToEntity } from '../../bim/walls/opening-doc-hydration';
+import { isOpening, mergeOpeningDocsIntoScene } from '../../bim/walls/opening-doc-hydration';
 import { allocateMarkAndPatchScene, syncMarkToKindAndPatchScene } from '../../bim/walls/opening-mark-allocator';
 // ADR-421 SLICE C — Family/Type link persistence + re-resolution.
 import {
-  openingEntityDiffersFromDoc,
   openingTypeLinkChanged,
   openingUpdateLinkPatch,
   type OpeningTypeLink,
@@ -182,102 +179,13 @@ export function useOpeningPersistence(
     if (!svc || !levelId) return;
 
     const unsubscribe = svc.subscribeOpenings(
-      (docs) => {
-        const lm = levelManagerRef.current;
-        const scene = lm.getLevelScene(levelId);
-        if (!scene) return;
-
-        const docsById = new Map<string, OpeningDoc>();
-        for (const d of docs) docsById.set(d.id, d);
-
-        const dirty = dirtyIdsRef.current;
-        const wallsById = new Map<string, WallEntity>();
-        const sceneOpenings = new Map<string, OpeningEntity>();
-        const nonOpenings: AnySceneEntity[] = [];
-
-        for (const e of scene.entities) {
-          if (isWall(e)) {
-            wallsById.set(e.id, e);
-            nonOpenings.push(e);
-          } else if (isOpening(e)) {
-            sceneOpenings.set(e.id, e);
-          } else {
-            nonOpenings.push(e);
-          }
-        }
-
-        const nextOpenings: OpeningEntity[] = [];
-        let mutated = false;
-
-        for (const doc of docs) {
-          const existing = sceneOpenings.get(doc.id);
-          const host = wallsById.get(doc.params.wallId) ?? null;
-          if (!existing) {
-            if (!dirty.has(doc.id)) {
-              const entity = openingDocToEntity(doc, host);
-              if (entity) {
-                nextOpenings.push(entity);
-                mutated = true;
-              }
-            }
-            continue;
-          }
-          if (dirty.has(doc.id)) {
-            nextOpenings.push(existing);
-            continue;
-          }
-          // ADR-421 SLICE C — compare against the EFFECTIVE («type wins») state of
-          // the doc + its type-link, not the raw cached params, so a re-flowed
-          // entity is not spuriously re-hydrated by its own drift-tolerant cache.
-          if (openingEntityDiffersFromDoc(existing, doc)) {
-            const entity = openingDocToEntity(doc, host);
-            if (entity) {
-              nextOpenings.push(entity);
-              mutated = true;
-            } else {
-              nextOpenings.push(existing);
-            }
-          } else {
-            nextOpenings.push(existing);
-          }
-        }
-
-        // Mark all Firestore docs as "exists in DB" so the retry-save path
-        // never calls saveOpening() (setDoc) on already-persisted openings,
-        // which would violate the UPDATE rule (createdAt immutability check).
-        for (const doc of docs) {
-          if (!lastSavedParamsRef.current.has(doc.id)) {
-            lastSavedParamsRef.current.set(doc.id, doc.params);
-          }
-          // ADR-421 SLICE C — track the persisted Family/Type link too.
-          if (!lastSavedLinkRef.current.has(doc.id)) {
-            lastSavedLinkRef.current.set(doc.id, {
-              typeId: doc.typeId,
-              typeOverrides: doc.typeOverrides,
-            });
-          }
-        }
-
-        const pending = pendingFirstSaveIdsRef.current;
-        for (const [id, entity] of sceneOpenings) {
-          if (docsById.has(id)) continue;
-          // Explicitly deleted — never re-add regardless of save state.
-          if (deletedIdsRef.current.has(id)) { mutated = true; continue; }
-          // ADR-390 — replaces buggy `neverSaved` guard.
-          if (dirty.has(id) || pending.has(id)) {
-            nextOpenings.push(entity);
-          } else {
-            mutated = true;
-          }
-        }
-
-        if (mutated) {
-          lm.setLevelScene(levelId, {
-            ...scene,
-            entities: [...nonOpenings, ...nextOpenings],
-          }, 'remote-echo');
-        }
-      },
+      (docs) => mergeOpeningDocsIntoScene(docs, levelId, levelManagerRef.current, {
+        dirty: dirtyIdsRef.current,
+        deleted: deletedIdsRef.current,
+        pending: pendingFirstSaveIdsRef.current,
+        lastSavedParams: lastSavedParamsRef.current,
+        lastSavedLink: lastSavedLinkRef.current,
+      }),
       (err: Error) => {
         setError(err.message);
         setSaveState('error');
@@ -285,7 +193,7 @@ export function useOpeningPersistence(
     );
 
     return () => unsubscribe();
-  }, [currentLevelId, companyId, projectId, floorplanId, userId]);
+  }, [currentLevelId, companyId, projectId, floorplanId, floorId, userId]);
 
   const persist = useCallback(async (entity: OpeningEntity) => {
     const svc = serviceRef.current;

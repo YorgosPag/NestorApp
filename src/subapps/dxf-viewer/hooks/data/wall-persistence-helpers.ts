@@ -11,6 +11,7 @@
 
 import { dequal } from 'dequal';
 import type { AnySceneEntity, SceneModel } from '../../types/entities';
+import type { SceneWriteOrigin } from '../scene/scene-write-origin';
 import type { WallEntity, WallParams } from '../../bim/types/wall-types';
 import { computeWallGeometry } from '../../bim/geometry/wall-geometry';
 import { validateWallParams } from '../../bim/validators/wall-validator';
@@ -252,4 +253,104 @@ export function reresolveSceneWalls(
     return resolved;
   });
   return mutated ? { ...scene, entities: nextEntities } : scene;
+}
+
+/** Minimal level-manager surface used by the wall snapshot merge. */
+export interface WallMergeLevelManager {
+  getLevelScene(levelId: string): SceneModel | null;
+  setLevelScene(levelId: string, scene: SceneModel, origin?: SceneWriteOrigin): void;
+}
+
+/** Mutable bookkeeping the wall snapshot merge consults (owned by the hook refs). */
+export interface WallMergeRefs {
+  readonly dirty: Set<string>;
+  readonly deleted: Set<string>;
+  readonly pending: Set<string>;
+  readonly lastSavedParams: Map<string, WallEntity['params']>;
+  readonly lastSavedType: Map<string, { typeId: WallDoc['typeId']; typeOverrides: WallDoc['typeOverrides'] }>;
+  readonly isWithinGrace: (id: string) => boolean;
+}
+
+/**
+ * Diff-merge a Firestore wall snapshot into the active scene (selective skip of
+ * dirty/pending/grace walls + ADR-412 family-type baseline seed). Mutates via
+ * `lm.setLevelScene` only when the merged set differs. Behavior-identical to the
+ * former inline subscribe handler (file-size split).
+ */
+export function mergeWallDocsIntoScene(
+  docs: readonly WallDoc[],
+  levelId: string,
+  lm: WallMergeLevelManager,
+  refs: WallMergeRefs,
+): void {
+  const scene = lm.getLevelScene(levelId);
+  if (!scene) return;
+
+  const docsById = new Map<string, WallDoc>();
+  for (const d of docs) docsById.set(d.id, d);
+
+  const { dirty, deleted, pending, lastSavedParams, lastSavedType, isWithinGrace } = refs;
+  const nonWalls: AnySceneEntity[] = [];
+  const sceneWalls = new Map<string, WallEntity>();
+  for (const e of scene.entities) {
+    if (isWall(e)) sceneWalls.set(e.id, e);
+    else nonWalls.push(e);
+  }
+
+  const nextWalls: WallEntity[] = [];
+  let mutated = false;
+
+  for (const doc of docs) {
+    const existing = sceneWalls.get(doc.id);
+    if (!existing) {
+      if (!dirty.has(doc.id) && !deleted.has(doc.id)) {
+        nextWalls.push(docToEntity(doc));
+        mutated = true;
+      }
+      continue;
+    }
+    if (dirty.has(doc.id)) {
+      nextWalls.push(existing);
+      continue;
+    }
+    // Grace period (useBimFirestoreWriteGrace SSoT).
+    if (isWithinGrace(doc.id)) {
+      nextWalls.push(existing);
+      continue;
+    }
+    // ADR-412 — diff vs EFFECTIVE (type-resolved) params (see helper).
+    if (wallEntityDiffersFromDoc(existing, doc)) {
+      nextWalls.push(docToEntity(doc));
+      mutated = true;
+    } else {
+      nextWalls.push(existing);
+    }
+  }
+
+  // Seed last-saved baselines so loaded walls route through UPDATE (not setDoc).
+  for (const doc of docs) {
+    if (!lastSavedParams.has(doc.id)) lastSavedParams.set(doc.id, doc.params);
+    // ADR-412 — seed the family-type link so a later detach is detectable.
+    if (!lastSavedType.has(doc.id)) {
+      lastSavedType.set(doc.id, { typeId: doc.typeId, typeOverrides: doc.typeOverrides });
+    }
+  }
+
+  for (const [id, entity] of sceneWalls) {
+    if (docsById.has(id)) continue;
+    if (deleted.has(id)) { mutated = true; continue; }
+    // ADR-390 — preserve only dirty / pendingFirstSave walls.
+    if (dirty.has(id) || pending.has(id)) {
+      nextWalls.push(entity);
+    } else {
+      mutated = true;
+    }
+  }
+
+  if (mutated) {
+    lm.setLevelScene(levelId, {
+      ...scene,
+      entities: [...nonWalls, ...nextWalls],
+    }, 'remote-echo');
+  }
 }

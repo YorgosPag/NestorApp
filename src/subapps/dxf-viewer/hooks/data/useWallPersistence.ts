@@ -27,7 +27,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { dequal } from 'dequal';
 import { recomputeWallTrimsAfterDelete } from '../../bim/walls/add-wall-to-scene';
 
-import type { AnySceneEntity, SceneModel } from '../../types/entities';
+import type { SceneModel } from '../../types/entities';
 import type { SceneWriteOrigin } from '../scene/scene-write-origin';
 import type { WallEntity } from '../../bim/types/wall-types';
 import { EventBus } from '../../systems/events/EventBus';
@@ -36,7 +36,6 @@ import {
   createWallFirestoreService,
   entityToSaveInput,
   WallFirestoreService,
-  type WallDoc,
 } from '../../bim/walls/wall-firestore-service';
 import { recordWallChange } from '../../bim/walls/wall-audit-client';
 import { bimToBoqBridge } from '../../bim/services/BimToBoqBridge';
@@ -44,9 +43,8 @@ import { useBimEntityMovedPersistEffect } from './useBimEntityMovedPersistEffect
 import { useBimEntityRestoredPersistEffect } from './useBimEntityRestoredPersistEffect';
 import { useBimFirestoreWriteGrace } from './useBimFirestoreWriteGrace';
 import {
-  docToEntity,
   isWall,
-  wallEntityDiffersFromDoc,
+  mergeWallDocsIntoScene,
   wallUpdatePatch,
   wallTypeLinkChanged,
   type WallTypeLink,
@@ -167,97 +165,14 @@ export function useWallPersistence(
     if (!svc || !levelId) return;
 
     const unsubscribe = svc.subscribeWalls(
-      (docs) => {
-        const lm = levelManagerRef.current;
-        const scene = lm.getLevelScene(levelId);
-        if (!scene) return;
-
-        const docsById = new Map<string, WallDoc>();
-        for (const d of docs) docsById.set(d.id, d);
-
-        const dirty = dirtyIdsRef.current;
-        const nonWalls: AnySceneEntity[] = [];
-        const sceneWalls = new Map<string, WallEntity>();
-        for (const e of scene.entities) {
-          if (isWall(e)) sceneWalls.set(e.id, e);
-          else nonWalls.push(e);
-        }
-
-        const nextWalls: WallEntity[] = [];
-        let mutated = false;
-
-        const deleted = deletedIdsRef.current;
-        for (const doc of docs) {
-          const existing = sceneWalls.get(doc.id);
-          if (!existing) {
-            if (!dirty.has(doc.id) && !deleted.has(doc.id)) {
-              nextWalls.push(docToEntity(doc));
-              mutated = true;
-            }
-            continue;
-          }
-          if (dirty.has(doc.id)) {
-            nextWalls.push(existing);
-            continue;
-          }
-          // Grace period (useBimFirestoreWriteGrace SSoT): ignore Firestore
-          // snapshots for WRITE_GRACE_MS after our last write. Firebase ca9
-          // assertion errors reset the Watch stream and deliver a stale pre-undo
-          // snapshot exactly when dirty has just been cleared — this guard keeps
-          // the scene stable during that window.
-          if (isWithinGrace(doc.id)) {
-            nextWalls.push(existing);
-            continue;
-          }
-          // ADR-412 — diff vs EFFECTIVE (type-resolved) params (see helper).
-          if (wallEntityDiffersFromDoc(existing, doc)) {
-            nextWalls.push(docToEntity(doc));
-            mutated = true;
-          } else {
-            nextWalls.push(existing);
-          }
-        }
-
-        // Mark every Firestore doc as "exists in DB" (mirror useOpeningPersistence)
-        // so the auto-save gate treats loaded walls as `known` and `persist`
-        // routes through `updateWall` (UPDATE) instead of `saveWall` (setDoc,
-        // resets createdAt → rejected by the immutability rule). Without this,
-        // editing a wall loaded from a previous session was silently never
-        // persisted, and the next snapshot reverted it to the stored position.
-        for (const doc of docs) {
-          if (!lastSavedParamsRef.current.has(doc.id)) {
-            lastSavedParamsRef.current.set(doc.id, doc.params);
-          }
-          // ADR-412 — seed the family-type link so a later detach is detectable.
-          if (!lastSavedTypeRef.current.has(doc.id)) {
-            lastSavedTypeRef.current.set(doc.id, {
-              typeId: doc.typeId,
-              typeOverrides: doc.typeOverrides,
-            });
-          }
-        }
-
-        const pending = pendingFirstSaveIdsRef.current;
-        for (const [id, entity] of sceneWalls) {
-          if (docsById.has(id)) continue;
-          // Explicitly deleted — never re-add regardless of save state.
-          if (deleted.has(id)) { mutated = true; continue; }
-          // ADR-390 — replaces buggy `neverSaved` guard. Preserve walls only αν
-          // είναι dirty ή pendingFirstSave (just drawn / restored via undo).
-          if (dirty.has(id) || pending.has(id)) {
-            nextWalls.push(entity);
-          } else {
-            mutated = true;
-          }
-        }
-
-        if (mutated) {
-          lm.setLevelScene(levelId, {
-            ...scene,
-            entities: [...nonWalls, ...nextWalls],
-          }, 'remote-echo');
-        }
-      },
+      (docs) => mergeWallDocsIntoScene(docs, levelId, levelManagerRef.current, {
+        dirty: dirtyIdsRef.current,
+        deleted: deletedIdsRef.current,
+        pending: pendingFirstSaveIdsRef.current,
+        lastSavedParams: lastSavedParamsRef.current,
+        lastSavedType: lastSavedTypeRef.current,
+        isWithinGrace,
+      }),
       (err: Error) => {
         setError(err.message);
         setSaveState('error');
@@ -265,7 +180,7 @@ export function useWallPersistence(
     );
 
     return () => unsubscribe();
-  }, [currentLevelId, companyId, projectId, floorplanId, userId]);
+  }, [currentLevelId, companyId, projectId, floorplanId, floorId, userId]);
 
   // ADR-412 «type always wins» — re-resolve typed walls on catalog change.
   useWallTypeReresolution(levelManager, dirtyIdsRef);
