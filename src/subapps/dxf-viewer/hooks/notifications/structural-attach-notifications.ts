@@ -72,6 +72,13 @@ export function registerStructuralAttachNotifications(t: TFunction): Array<() =>
       toast.info(t('structuralOrganism.autoReinforced', { count }));
     }),
 
+    // ADR-464 Slice 4 — «Υπολογισμός Φορτίων»: N πέδιλα έλαβαν tributary φορτίο.
+    // count=0 → καμία πηγή (χωρίς κολώνες σε πέδιλα / ορόφους) → οδηγία διάγνωσης.
+    EventBus.on('bim:structural-loads-computed', ({ count }) => {
+      if (count > 0) toast.success(t('structuralOrganism.loadsComputed', { count }));
+      else toast.info(t('structuralOrganism.loadsComputedEmpty'));
+    }),
+
     // ADR-401 Phase G.3 — stair attach (ADR-450 §3 Boy-Scout: stair-specific copy,
     // same latent «Οι τοίχοι» mismatch as columns).
     EventBus.on('bim:stairs-auto-attached', () => {

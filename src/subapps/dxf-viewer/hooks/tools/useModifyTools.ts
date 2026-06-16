@@ -20,6 +20,7 @@ import { useArrayPathTool } from './useArrayPathTool';
 import { useWallSplitTool } from './useWallSplitTool';
 import { useWallAttachTool } from './useWallAttachTool';
 import { useBimCopyTool } from './useBimCopyTool';
+import { useEntityClipboard } from './useEntityClipboard';
 import { MoveOverlayCommand, MoveMultipleOverlaysCommand } from '../../core/commands';
 import { subscribeToImmediateWorldPosition } from '../../systems/cursor/ImmediatePositionStore';
 import { distanceToEntity } from '../../utils/entity-distance';
@@ -98,6 +99,14 @@ export function useModifyTools({
     levelManager,
     executeCommand,
     onToolChange,
+  });
+
+  // ADR-466 — Entity Clipboard (Revit Ctrl+C / Ctrl+V, cross-floor paste-in-place)
+  const entityClipboard = useEntityClipboard({
+    selectedEntityIds,
+    levelManager,
+    executeCommand,
+    selectEntities: (ids) => universalSelection.replaceEntitySelection(ids),
   });
 
   // ADR-363 Phase 5.6 — Wall Split Tool (Revit Split Element pattern)
@@ -238,6 +247,7 @@ export function useModifyTools({
     wallSplitTool,
     wallAttachTool,
     bimCopyTool,
+    entityClipboard,
     handleRotationAnglePrompt,
   };
 }

@@ -72,6 +72,10 @@
     "zoom": {
       "fitToView": "Fit all to view",
       "fitToViewSelected": "Fit selection to view"
+    },
+    "actions": {
+      "copy": "Copy to clipboard",
+      "paste": "Paste to current floor"
     }
   },
   "calibration": {

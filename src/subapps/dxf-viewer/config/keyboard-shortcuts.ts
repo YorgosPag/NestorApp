@@ -455,12 +455,19 @@ export const DXF_CTRL_SHORTCUTS: Record<string, ShortcutDefinition> = {
     category: 'action',
   },
 
-  // Clipboard
+  // Clipboard (ADR-466 — Revit/AutoCAD COPYCLIP / PASTECLIP)
   copy: {
     key: 'C',
     modifier: 'ctrl',
     descriptionKey: 'shortcuts.actions.copy',
-    action: 'action:copy-selected',
+    action: 'action:clipboard-copy',
+    category: 'action',
+  },
+  paste: {
+    key: 'V',
+    modifier: 'ctrl',
+    descriptionKey: 'shortcuts.actions.paste',
+    action: 'action:clipboard-paste',
     category: 'action',
   },
   selectAll: {

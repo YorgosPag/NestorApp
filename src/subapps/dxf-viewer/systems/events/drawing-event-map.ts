@@ -16,6 +16,11 @@ import type { BimEventMap } from './drawing-event-map-bim';
 // BIM entity events (params/delete, grid-generation, attach, 3D placement, IFC) live
 // in `BimEventMap` (SRP split, N.7.1).
 export interface DrawingEventMap extends MepAutoDesignEventMap, BimEventMap {
+  // ADR-466 — Entity clipboard (Revit Ctrl+C / Ctrl+V, cross-floor paste-in-place).
+  // Emitted by the keyboard-shortcut → onAction pipeline; consumed by
+  // useEntityClipboard (so the shortcut SSoT stays the single binding source).
+  'clipboard:copy-requested': Record<string, never>;
+  'clipboard:paste-requested': Record<string, never>;
   'dynamic-input-coordinate-submit': {
     tool: string;
     coordinates: Point2D;

@@ -17,7 +17,9 @@
     },
     "autoReinforced": "{count, plural, =0 {No member needed reinforcement} one {Reinforced # member} other {Reinforced # members}}",
     "footingAttached": "{count, plural, =0 {No column attached} one {Attached # column to the footing} other {Attached # columns to the footing}}",
-    "footingDetached": "{count, plural, =0 {No column detached} one {Detached # column from the footing} other {Detached # columns from the footing}}"
+    "footingDetached": "{count, plural, =0 {No column detached} one {Detached # column from the footing} other {Detached # columns from the footing}}",
+    "loadsComputed": "{count, plural, one {# footing received an automatic load} other {# footings received automatic loads}}",
+    "loadsComputedEmpty": "No footing was loaded — make sure columns sit on (and are attached to) footings, the building has storeys, and area loads G/Q are set."
   },
   "structural": {
     "code": {

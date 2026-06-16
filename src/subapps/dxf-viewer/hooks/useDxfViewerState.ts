@@ -407,9 +407,17 @@ export function useDxfViewerState() {
       case 'toggle-guide-analysis-panel':
         toolbarState.toggleGuideAnalysisPanel();
         break;
-      // ADR-363 R1: BIM Copy tool activation (CO chord → AutoCAD COPY pattern)
+      // ADR-363 R1: BIM Copy tool activation (C+O chord → AutoCAD COPY pattern)
       case 'copy-selected':
         handleToolChange('bim-copy');
+        break;
+      // ADR-466: Entity clipboard — bridge to useEntityClipboard via EventBus so
+      // the keyboard-shortcut SSoT stays the single binding source.
+      case 'clipboard-copy':
+        EventBus.emit('clipboard:copy-requested', {});
+        break;
+      case 'clipboard-paste':
+        EventBus.emit('clipboard:paste-requested', {});
         break;
       // ADR-345 Fase 5.5 — Find & Replace dialog from ribbon text editor tab
       case 'text-find-replace':

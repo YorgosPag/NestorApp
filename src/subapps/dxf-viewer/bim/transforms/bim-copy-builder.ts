@@ -120,35 +120,38 @@ function rewireHost(
 // ─── Top-level builder ──────────────────────────────────────────────────────
 
 /**
- * Builds clone entities for the given source IDs by applying `transform` and
- * regenerating kind-specific enterprise IDs. Host references (wallId / slabId)
- * are rewired when their hosts are also in the source set.
+ * Builds clone entities from already-resolved BIM source entities by applying
+ * `transform` and regenerating kind-specific enterprise IDs. Host references
+ * (wallId / slabId) are rewired when their hosts are also in the source set.
  *
- * The clones are NOT added to the scene by this function — caller's choice
- * (typically wrapped in a `BimCopyCommand` for undo/redo).
+ * This is the pure clone SSoT — it does NOT read from any scene. Both the
+ * in-floor BIM Copy tool ({@link buildBimCopyClones}, resolves ids from the live
+ * scene) and the cross-floor clipboard paste (ADR-466, passes frozen snapshots
+ * captured at copy time) share THIS function, so re-id + host-rewire logic lives
+ * in one place (N.0.2). Non-BIM sources (DXF geometry) return `null` identity →
+ * `skipped`; clipboard paste clones those separately.
+ *
+ * The clones are NOT added to any scene by this function — caller's choice
+ * (typically wrapped in a command for undo/redo).
  */
-export function buildBimCopyClones(
-  ids: readonly string[],
+export function buildClonesFromEntities(
+  sources: readonly SceneEntity[],
   transform: BimCopyTransform,
-  sceneManager: ISceneManager,
 ): BimCopyResult {
   const clones: SceneEntity[] = [];
   const sourceToCloneId = new Map<string, string>();
   const skipped: string[] = [];
 
   // Pass 1 — build clones with new IDs. Build source→clone map for pass 2.
-  for (const id of ids) {
-    const source = sceneManager.getEntity(id);
-    if (!source) { skipped.push(id); continue; }
-
+  for (const source of sources) {
     // Fresh per-type enterprise ID + NEW IFC GlobalId (null ⇒ non-BIM → skip).
     const identity = mintBimCloneIdentity(source.type);
-    if (identity === null) { skipped.push(id); continue; }
+    if (identity === null) { skipped.push(source.id); continue; }
 
     const patch = applyTransform(source as unknown as Entity, transform);
-    if (patch === null) { skipped.push(id); continue; }
+    if (patch === null) { skipped.push(source.id); continue; }
 
-    sourceToCloneId.set(id, identity.id);
+    sourceToCloneId.set(source.id, identity.id);
 
     const clone: SceneEntity = {
       ...source,
@@ -163,9 +166,34 @@ export function buildBimCopyClones(
   // hosts are also in the selection.
   const rewired = clones.map((c) => rewireHost(c, sourceToCloneId));
 
+  return { clones: rewired, sourceToCloneId, skipped };
+}
+
+/**
+ * Builds clone entities for the given source IDs by resolving them from the live
+ * scene and delegating to {@link buildClonesFromEntities}. Missing IDs are
+ * reported in `skipped`.
+ *
+ * The clones are NOT added to the scene by this function — caller's choice
+ * (typically wrapped in a `BimCopyCommand` for undo/redo).
+ */
+export function buildBimCopyClones(
+  ids: readonly string[],
+  transform: BimCopyTransform,
+  sceneManager: ISceneManager,
+): BimCopyResult {
+  const sources: SceneEntity[] = [];
+  const missing: string[] = [];
+  for (const id of ids) {
+    const source = sceneManager.getEntity(id);
+    if (source) sources.push(source);
+    else missing.push(id);
+  }
+
+  const result = buildClonesFromEntities(sources, transform);
   return {
-    clones: rewired,
-    sourceToCloneId,
-    skipped,
+    clones: result.clones,
+    sourceToCloneId: result.sourceToCloneId,
+    skipped: [...missing, ...result.skipped],
   };
 }

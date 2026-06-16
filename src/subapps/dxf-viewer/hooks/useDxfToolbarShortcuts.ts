@@ -21,6 +21,7 @@ const BIM_CHORDS: readonly ChordDefinition[] = [
   { firstKey: 'S', secondKey: 'L', action: 'tool:slab' },        // S+L → slab      (ADR-363)
   { firstKey: 'O', secondKey: 'P', action: 'tool:opening' },     // O+P → opening   (ADR-363)
   { firstKey: 'C', secondKey: 'L', action: 'tool:column' },      // C+L → column    (ADR-363)
+  { firstKey: 'C', secondKey: 'O', action: 'tool:bim-copy' },    // C+O → BIM copy  (ADR-466: frees Ctrl+C for clipboard)
   { firstKey: 'B', secondKey: 'M', action: 'tool:beam' },        // B+M → beam      (ADR-363)
   // ADR-363 Phase 7B — wall variant chords: W+n activates wall tool + sets kind
   { firstKey: 'W', secondKey: '1', action: 'tool:wall:straight' }, // W+1 → wall straight
@@ -161,7 +162,9 @@ export function useDxfToolbarShortcuts(
       if (matchesShortcut(e, 'undo')) { e.preventDefault(); onAction('undo'); return; }
       if (matchesShortcut(e, 'redo')) { e.preventDefault(); onAction('redo'); return; }
       if (matchesShortcut(e, 'redoAlt')) { e.preventDefault(); onAction('redo'); return; }
-      if (matchesShortcut(e, 'copy') && activeTool === 'select') { e.preventDefault(); onAction('copy-selected'); return; }
+      // ADR-466 — Ctrl+C / Ctrl+V clipboard (works in selection-capable tools).
+      if (matchesShortcut(e, 'copy') && (activeTool === 'select' || activeTool === 'grip-edit')) { e.preventDefault(); onAction('clipboard-copy'); return; }
+      if (matchesShortcut(e, 'paste')) { e.preventDefault(); onAction('clipboard-paste'); return; }
       if (matchesShortcut(e, 'selectAll')) { e.preventDefault(); onAction('select-all'); return; }
       if (matchesShortcut(e, 'toggleLayers')) { e.preventDefault(); onAction('toggle-layers'); return; }
       if (matchesShortcut(e, 'toggleProperties')) { e.preventDefault(); onAction('toggle-properties'); return; }
