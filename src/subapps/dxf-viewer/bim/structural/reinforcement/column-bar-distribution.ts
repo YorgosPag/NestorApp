@@ -12,6 +12,19 @@
  */
 
 import type { Point2D } from '../../../rendering/types/Types';
+import { rectRestrainedBarIntervals } from './column-reinforcement-types';
+
+/**
+ * **SSoT** canonical order-agnostic κλειδί ζεύγους σημείων (στρογγυλοποίηση 0.1mm) για
+ * dedup cross-tie anchors B↔B'. Δύο σχεδόν-ταυτόσημα σημεία → ίδιο κλειδί. Καλείται ΚΑΙ
+ * από το perimeter ΚΑΙ από το multihoop layout (μηδέν διπλότυπο).
+ */
+export function pointPairKey(a: Point2D, b: Point2D): string {
+  const r = (v: number): number => Math.round(v * 10) / 10;
+  const p1 = `${r(a.x)},${r(a.y)}`;
+  const p2 = `${r(b.x)},${r(b.y)}`;
+  return p1 < p2 ? `${p1}|${p2}` : `${p2}|${p1}`;
+}
 
 /**
  * Κατανομή `extras` ακέραιων μονάδων σε `weights.length` κάδους ανάλογα με τα
@@ -70,22 +83,6 @@ export function distributeBarsAlongPolygon(vertices: readonly Point2D[], count: 
 }
 
 /**
- * Ορθογώνια ειδική περίπτωση: 4 γωνίες (CCW BL→BR→TR→TL) + ενδιάμεσες. Delegate στο
- * γενικό {@link distributeBarsAlongPolygon} (μηδέν διπλότυπο). `halfW`/`halfD` = μισές
- * διαστάσεις του ορθογωνίου ΚΕΝΤΡΩΝ ράβδων (μετά το inset).
- */
-export function distributeBars(halfW: number, halfD: number, count: number): Point2D[] {
-  if (count <= 0) return [];
-  const corners: Point2D[] = [
-    { x: -halfW, y: -halfD },
-    { x: halfW, y: -halfD },
-    { x: halfW, y: halfD },
-    { x: -halfW, y: halfD },
-  ];
-  return distributeBarsAlongPolygon(corners, count);
-}
-
-/**
  * **Spacing-derived** θέσεις διαμήκων ράβδων ορθογωνίου (κέντρο=origin) — ο αριθμός
  * προκύπτει από το **όριο κανονισμού** `sMaxMm` (Revit/Tekla: ράβδος κάθε ≤ sMax σε
  * κάθε παρειά, EC8 §5.4.3.2.2(11)P), ΟΧΙ σταθερό count· `minTotal` = κατώφλι (intent
@@ -101,9 +98,10 @@ export function distributeRectBarsBySpacing(
 ): Point2D[] {
   const wFace = 2 * Math.max(0, halfWb);
   const dFace = 2 * Math.max(0, halfDb);
-  const s = sMaxMm > 0 ? sMaxMm : Infinity;
-  let nW = Math.max(1, Math.ceil(wFace / s)); // διαστήματα στις οριζόντιες παρειές
-  let nD = Math.max(1, Math.ceil(dFace / s)); // διαστήματα στις κατακόρυφες παρειές
+  // ΚΟΙΝΟΣ κανόνας βήματος (SSoT) — ίδιος με τον suggester (intent count).
+  const intervals = rectRestrainedBarIntervals(wFace, dFace, sMaxMm);
+  let nW = intervals.nW; // διαστήματα στις οριζόντιες παρειές
+  let nD = intervals.nD; // διαστήματα στις κατακόρυφες παρειές
   const floor = Math.max(4, Math.floor(minTotal));
   let guard = 0;
   // Ανέβασε διαστήματα στην παρειά με το μεγαλύτερο τρέχον βήμα ώσπου total ≥ floor.

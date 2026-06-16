@@ -106,3 +106,20 @@ describe('ADR-462 — slab in canonical mm renders in metres + slope stays corre
     }
   });
 });
+
+// ── ADR-448 §4.1 — floor-relative vertical datum (foundation/non-ground floors) ───
+describe('ADR-448 — slab & column honour the storey FFL (floorElevationMm)', () => {
+  it('slab on the foundation FFL (−1000mm) sits exactly 1m below the same slab on the ground floor', () => {
+    const ground = slabToMesh(mmSlab(), [], '0', 0, 0) as THREE.Mesh;
+    const foundation = slabToMesh(mmSlab(), [], '0', 0, -1000) as THREE.Mesh;
+    expect(foundation.position.y - ground.position.y).toBeCloseTo(-1, 6);
+  });
+
+  it('column (already floor-aware) keeps the same FFL behaviour — regression guard', () => {
+    const ground = columnToMesh(mmColumn(), 0, '0', 0) as THREE.Mesh;
+    const foundation = columnToMesh(mmColumn(), -1000, '0', 0) as THREE.Mesh;
+    const gBox = new THREE.Box3().setFromObject(ground);
+    const fBox = new THREE.Box3().setFromObject(foundation);
+    expect(fBox.min.y - gBox.min.y).toBeCloseTo(-1, 6);
+  });
+});

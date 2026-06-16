@@ -43,6 +43,12 @@ function registerFoundationGridToasts(t: TFunction): Array<() => void> {
     EventBus.on('bim:foundation-on-upper-storey', () => {
       toast.warning(t('storeyGating.foundationUpperStorey'));
     }),
+
+    // ADR-461 — soft warning: κανονικό δοκάρι σε στάθμη θεμελίωσης → πρόταση πεδιλοδοκού/
+    // συνδετήριας δοκού. Non-blocking (Revit-style «επιτρέπεται, αλλά προτείνει»).
+    EventBus.on('bim:beam-on-foundation-storey', () => {
+      toast.warning(t('storeyGating.beamOnFoundation'));
+    }),
   ];
 }
 

@@ -32,6 +32,7 @@ import { db } from '@/lib/firebase';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { generateColumnId } from '@/services/enterprise-id-convenience';
 import { firestoreQueryService } from '@/services/firestore';
+import { stripUndefinedDeep } from '@/utils/firestore-sanitize';
 import { buildBimScopeConstraints, bimScopeWriteFields } from '../persistence/bim-floor-scope';
 import type {
   ColumnEntity,
@@ -151,8 +152,14 @@ export class ColumnFirestoreService {
       // ADR-420 — floorplanId (provenance) + floorId (stable scope), from config SSoT.
       ...bimScopeWriteFields(this.config),
       kind: input.kind,
-      params: input.params,
-      validation: input.validation,
+      // Firestore rejects nested `undefined` (e.g. `params.tilt`/`finish`/
+      // `reinforcement` left unset on a plain column) — deep-strip the pure-data
+      // sub-objects. Without this `setDoc` THREW «Unsupported field value:
+      // undefined» → silent catch in useColumnPersistence → the column was NEVER
+      // persisted (floorplan_columns stayed empty → lost on reload). Mirror of
+      // saveWall (SSoT: firestore-sanitize). serverTimestamp() sentinels stay untouched.
+      params: stripUndefinedDeep(input.params),
+      validation: stripUndefinedDeep(input.validation),
       createdBy: this.config.userId,
       createdAt: serverTimestamp(),
       updatedBy: this.config.userId,
@@ -160,7 +167,7 @@ export class ColumnFirestoreService {
     };
 
     // Firestore rejects `undefined` — include optional fields μόνο όταν set.
-    if (input.geometry !== undefined) base.geometry = input.geometry;
+    if (input.geometry !== undefined) base.geometry = stripUndefinedDeep(input.geometry);
     if (input.buildingId !== undefined) base.buildingId = input.buildingId;
     // ADR-420 — floorId is owned by config scope (bimScopeWriteFields above), not input.
     if (input.layerId !== undefined) base.layerId = input.layerId;
@@ -177,9 +184,12 @@ export class ColumnFirestoreService {
       updatedBy: this.config.userId,
       updatedAt: serverTimestamp(),
     };
-    if (patch.params !== undefined) payload.params = patch.params;
-    if (patch.validation !== undefined) payload.validation = patch.validation;
-    if (patch.geometry !== undefined) payload.geometry = patch.geometry;
+    // Deep-strip nested `undefined` from the pure-data sub-objects (Firestore
+    // rejects undefined, e.g. `params.tilt` cleared on un-tilt). serverTimestamp()
+    // sentinels above are left untouched (SSoT: firestore-sanitize, mirror updateWall).
+    if (patch.params !== undefined) payload.params = stripUndefinedDeep(patch.params);
+    if (patch.validation !== undefined) payload.validation = stripUndefinedDeep(patch.validation);
+    if (patch.geometry !== undefined) payload.geometry = stripUndefinedDeep(patch.geometry);
     if (patch.layerId !== undefined) payload.layerId = patch.layerId;
     // ADR-441 Slice COL — persist grid hosting bindings on update (Firestore rejects undefined).
     if (patch.guideBindings !== undefined) payload.guideBindings = patch.guideBindings;

@@ -24,6 +24,7 @@ import {
   buildStirrupHookEndsMm,
   closedPolylineLengthMm,
   distributeBarsAlongPolygon,
+  pointPairKey,
   STIRRUP_BEND_ARC_SEGMENTS,
   STIRRUP_BEND_CL_FACTOR,
   type ColumnRebarLayout,
@@ -119,14 +120,6 @@ function rayForwardDepth(bar: Point2D, d: Point2D, polygon: readonly Point2D[]):
   return Number.isFinite(best) ? best : null;
 }
 
-/** Canonical κλειδί ζεύγους (order-agnostic) για dedup ties B↔B'. */
-function pairKey(a: Point2D, b: Point2D): string {
-  const r = (v: number): number => Math.round(v * 10) / 10;
-  const p1 = `${r(a.x)},${r(a.y)}`;
-  const p2 = `${r(b.x)},${r(b.y)}`;
-  return p1 < p2 ? `${p1}|${p2}` : `${p2}|${p1}`;
-}
-
 /**
  * Η πιο **ευθυγραμμισμένη ΠΡΑΓΜΑΤΙΚΗ** ράβδος πάνω στην απέναντι παρειά (βάθος ≈ `depthFace`
  * κατά `nIn`), με πλευρική απόκλιση ≤ `maxLat` (≤45° tie). `null` αν καμία — έτσι το tie
@@ -184,7 +177,7 @@ function pushPerpTie(
   if (depthFace === null || depthFace > edgeLenMm * TIE_DEPTH_TO_EDGE_FACTOR) return;
   const partner = alignedOppositeBar(bar, nIn, bars, depthFace, Math.max(2, 2 * dbL), depthFace);
   if (!partner) return;
-  const key = pairKey(bar, partner);
+  const key = pointPairKey(bar, partner);
   if (seen.has(key)) return;
   seen.add(key);
   anchors.push({ a: bar, b: partner });

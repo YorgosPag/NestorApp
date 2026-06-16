@@ -93,7 +93,8 @@
     "noFootprint": "No building footprint found. Create walls, columns or beams first."
   },
   "storeyGating": {
-    "foundationUpperStorey": "Foundations / ground slabs usually belong on the lowest storey."
+    "foundationUpperStorey": "Foundations / ground slabs usually belong on the lowest storey.",
+    "beamOnFoundation": "Beam on a foundation level — did you mean a foundation tie-beam / grade beam? (allowed)"
   },
   "gridJustification": {
     "conflict": "Heads up: structural elements on the same perimeter axes have opposite justification — their faces may not align. Check whether this is intentional."
@@ -2668,6 +2669,40 @@
           "right": "Right"
         }
       },
+      "foundationStructural": {
+        "code": "Code",
+        "cover": "Cover (mm)",
+        "mainLabel": "Main reinforcement",
+        "steelWeight": "Steel weight (kg)",
+        "ratio": "ρ (%)",
+        "toggle": {
+          "on": "Yes",
+          "off": "No"
+        },
+        "padBottomXDiameter": "Bottom mesh X — Ø",
+        "padBottomXSpacing": "Bottom mesh X — spacing",
+        "padBottomYDiameter": "Bottom mesh Y — Ø",
+        "padBottomYSpacing": "Bottom mesh Y — spacing",
+        "padTopEnabled": "Top mesh",
+        "padTopDiameter": "Top mesh — Ø",
+        "padTopSpacing": "Top mesh — spacing",
+        "stripTransverseDiameter": "Transverse — Ø",
+        "stripTransverseSpacing": "Transverse — spacing",
+        "stripLongitudinalDiameter": "Longitudinal — Ø",
+        "stripLongitudinalCount": "Longitudinal — count",
+        "stripStirrupEnabled": "Stirrups",
+        "stripStirrupDiameter": "Stirrups — Ø",
+        "stripStirrupSpacing": "Stirrups — spacing",
+        "tieBottomDiameter": "Bottom bars — Ø",
+        "tieBottomCount": "Bottom bars — count",
+        "tieTopDiameter": "Top bars — Ø",
+        "tieTopCount": "Top bars — count",
+        "tieStirrupDiameter": "Stirrups — Ø",
+        "tieStirrupSpacing": "Stirrups — spacing",
+        "tieStirrupCriticalSpacing": "Stirrups — critical spacing",
+        "reinforcementDetail": "Reinforcement Detail",
+        "reinforcementDetailTooltip": "Open the foundation reinforcement detail sheet + PDF export"
+      },
       "columnStructural": {
         "code": "Code",
         "codeTooltip": "Design code (per building)",
@@ -3793,6 +3828,14 @@
       "finish": { "title": "Plaster Finish" },
       "envelope": { "title": "Envelope Function" },
       "material": { "title": "Material" }
+    }
+  },
+  "foundationAdvancedPanel": {
+    "title": "Foundation Properties",
+    "emptyState": "Select a foundation element to see its properties.",
+    "sections": {
+      "structural": { "title": "Structural / Reinforcement" },
+      "readouts": { "title": "Quantities" }
     }
   },
   "wallAdvancedPanel": {

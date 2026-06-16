@@ -206,15 +206,16 @@ describe('compute integration — continuity-aware vs flat fallback', () => {
   it('column: flat fallback (no continuity) keeps the legacy 50·Ø length', () => {
     const r = colReinf(16, 4);
     const flat = computeColumnReinforcementQuantities(colCtx, r);
-    // 4 × (3000 + 50·16) / 1000 = 4 × 3.8 = 15.2 m
-    expect(flat.longitudinalLengthM).toBeCloseTo(15.2, 3);
+    // ADR-460 f7: 400mm παρειά (>200) → code-driven 8 ράβδοι (όχι 4).
+    // 8 × (3000 + 50·16) / 1000 = 8 × 3.8 = 30.4 m
+    expect(flat.longitudinalLengthM).toBeCloseTo(30.4, 3);
   });
 
   it('column: continuity development override replaces the flat factor', () => {
     const r = colReinf(16, 4);
     const withCont = computeColumnReinforcementQuantities(colCtx, r, { developmentMm: 1600 });
-    // 4 × (3000 + 1600) / 1000 = 18.4 m  (> flat 15.2)
-    expect(withCont.longitudinalLengthM).toBeCloseTo(18.4, 3);
+    // 8 × (3000 + 1600) / 1000 = 36.8 m  (> flat 30.4)
+    expect(withCont.longitudinalLengthM).toBeCloseTo(36.8, 3);
     expect(withCont.longitudinalLengthM).toBeGreaterThan(computeColumnReinforcementQuantities(colCtx, r).longitudinalLengthM);
   });
 

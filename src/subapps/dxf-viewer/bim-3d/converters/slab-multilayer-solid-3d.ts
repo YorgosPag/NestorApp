@@ -33,7 +33,7 @@ import type { SlabDnaLayer } from '../../bim/types/slab-dna-types';
 import { isMultiLayerSlab } from '../../bim/types/slab-dna-types';
 import { buildupBoundaryFractions } from '../../bim/types/layered-buildup';
 import { getMaterial3D } from '../materials/MaterialCatalog3D';
-import { buildShape, extrudeAndRotate, tagMesh, pushHoles } from './bim-three-shape-helpers';
+import { buildShape, extrudeAndRotate, tagMesh, pushHoles, hangDownMeshY } from './bim-three-shape-helpers';
 import { scalePoints } from '../../rendering/entities/shared/geometry-vector-utils';
 import { attachEdgesProjection } from './bim-three-edges';
 import { applySlabSlope } from './mesh-slope-shear';
@@ -51,6 +51,7 @@ export function buildMultiLayerSlabSolid(
   openings: readonly SlabOpeningEntity[],
   levelId: string | undefined,
   buildingBaseElevationM: number,
+  floorElevationMm = 0, // ADR-448 §4.1 — storey FFL (datum-relative) for floor-aware placement
 ): THREE.Group | null {
   const dna = slab.params.dna;
   if (!isMultiLayerSlab(dna)) return null;
@@ -65,8 +66,10 @@ export function buildMultiLayerSlabSolid(
   // so the stack fills exactly the same envelope as the single-extrude path.
   const totalThicknessM = slab.params.thickness * MM_TO_M;
   // World Y of the slab's BOTTOM face (top face = FFL, hangs down by thickness).
+  // ADR-448 §4.1 — add the storey FFL via the SSoT `hangDownMeshY` (mirror the
+  // single-extrude path); 0 on the ground floor → zero regression.
   const slabTopMm = slab.params.levelElevation + (slab.params.heightOffsetFromLevel ?? 0);
-  const slabBottomY = (slabTopMm - slab.params.thickness) * MM_TO_M + buildingBaseElevationM;
+  const slabBottomY = hangDownMeshY(floorElevationMm, slabTopMm, slab.params.thickness * MM_TO_M, buildingBaseElevationM);
 
   const group = new THREE.Group();
   for (let i = 0; i < dna.layers.length; i++) {

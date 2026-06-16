@@ -47,6 +47,9 @@ import {
   formatLongitudinalLabel,
   formatStirrupsLabel,
 } from '../structural/reinforcement/column-reinforcement-compute';
+// ADR-463 — βάρος χάλυβα θεμελίωσης στο BOQ (mirror της κολώνας).
+import { computeFootingReinforcementQuantities } from '../structural/reinforcement/footing-reinforcement-compute';
+import { buildFootingSectionContext } from '../structural/section-context';
 import type {
   ScheduleCellValue,
   ScheduleColumnDef,
@@ -342,6 +345,10 @@ function mapFoundation(entity: AnyBimEntity, lookups: ScheduleLookups): Schedule
   if (entity.type !== 'foundation') return {};
   const p = entity.params;
   const g = entity.geometry;
+  // ADR-463 — παράγωγο βάρος χάλυβα οπλισμού (ίδιο compute SSoT με panel/detail-sheet).
+  const reinforcement = p.reinforcement
+    ? computeFootingReinforcementQuantities(buildFootingSectionContext(entity), p.reinforcement)
+    : null;
   return {
     id: entity.id,
     buildingName: lookups.building?.(entity.buildingId)?.name ?? null,
@@ -353,6 +360,7 @@ function mapFoundation(entity: AnyBimEntity, lookups: ScheduleLookups): Schedule
     elevation: safeNumber(p.topElevationMm),
     area: safeNumber(g.area),
     volume: safeNumber(g.volume),
+    steelWeight: reinforcement ? safeNumber(reinforcement.totalSteelWeightKg) : null,
     material: lookups.material(p.material),
   };
 }

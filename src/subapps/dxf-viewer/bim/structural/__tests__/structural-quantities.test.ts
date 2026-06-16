@@ -178,18 +178,24 @@ describe('column-reinforcement-compute', () => {
     expect(q.longitudinalWeightKg).toBeGreaterThan(0);
     expect(q.stirrupCount).toBeGreaterThan(0);
     expect(q.stirrupWeightKg).toBeGreaterThan(0);
-    expect(q.totalSteelWeightKg).toBeCloseTo(q.longitudinalWeightKg + q.stirrupWeightKg, 6);
+    // ADR-460 f7: 400mm παρειά → code-driven 8 ράβδοι → υπάρχουν & cross-ties (diamond).
+    expect(q.totalSteelWeightKg).toBeCloseTo(
+      q.longitudinalWeightKg + q.stirrupWeightKg + q.crossTieWeightKg,
+      6,
+    );
   });
 
-  it('longitudinal length = count × (height + 50·Ø) / 1000', () => {
+  it('longitudinal length = (code-driven bar count) × (height + 50·Ø) / 1000', () => {
     const q = computeColumnReinforcementQuantities(COL_400, R);
-    const expected = 4 * (3000 + 50 * 16) * 0.001;
+    // ADR-460 f7: count=4 intent αλλά 400×400 → 8 ράβδοι (βήμα ≤200mm, EC8). geometry-is-SSoT.
+    const expected = 8 * (3000 + 50 * 16) * 0.001;
     expect(q.longitudinalLengthM).toBeCloseTo(expected, 6);
   });
 
-  it('ρ for 4Ø16 in 400×400 ≈ 0.5%', () => {
+  it('ρ for code-driven 8Ø16 in 400×400 ≈ 1.0%', () => {
     const q = computeColumnReinforcementQuantities(COL_400, R);
-    expect(q.ratio).toBeCloseTo((4 * barAreaMm2(16)) / 160000, 6);
+    // 400mm παρειά → 8 ράβδοι (4 γωνιακές + 4 μεσοπλευρικές, EC8 §5.4.3.2.2(11)).
+    expect(q.ratio).toBeCloseTo((8 * barAreaMm2(16)) / 160000, 6);
   });
 
   it('degenerate section → zero quantities', () => {

@@ -20,12 +20,13 @@
 
 import type { Point2D } from '../../../rendering/types/Types';
 import type { ColumnReinforcement } from './column-reinforcement-types';
-import { distributeBars } from './column-bar-distribution';
+import { MAX_RESTRAINED_BAR_SPACING_MM } from './column-reinforcement-types';
+import { distributeRectBarsBySpacing } from './column-bar-distribution';
 
 // Bar-distribution helpers ζουν στο sibling `column-bar-distribution.ts` (file-size
 // split). Re-export για back-compat — οι εξωτερικοί consumers (column-perimeter-layout,
 // column-multihoop-layout) τα εισάγουν από εδώ.
-export { distributeBarsAlongPolygon, distributeRectBarsBySpacing } from './column-bar-distribution';
+export { distributeBarsAlongPolygon, distributeRectBarsBySpacing, pointPairKey } from './column-bar-distribution';
 
 /**
  * Συντελεστής ακτίνας **άξονα** (centerline) κάμψης συνδετήρα (× dbw). EC2
@@ -83,10 +84,18 @@ export interface ColumnRebarLayout {
   readonly stirrupCenterlineLengthMm: number;
   /**
    * **Επιπλέον** κλειστά στεφάνια (local mm) πέρα από το κύριο `stirrupPathMm` — π.χ.
-   * τα δύο boundary-element hoops ενός τοιχώματος (ADR-460 wall mode). Άδειο/absent
-   * για perimeter/circular. Οι renderers τα σχεδιάζουν όπως το κύριο stirrup path.
+   * τα δύο boundary-element hoops ενός τοιχώματος (ADR-460 wall mode) ή τα στεφάνια
+   * των υπόλοιπων σκελών (multihoop Γ/Τ/Π/Ι). Άδειο/absent για rect/circular. Οι
+   * renderers τα σχεδιάζουν όπως το κύριο stirrup path.
    */
   readonly extraStirrupPathsMm?: readonly (readonly Point2D[])[];
+  /**
+   * ADR-460 follow-up 6 — Άκρα γάντζου 135° **ανά** `extraStirrupPathsMm` hoop
+   * (index-aligned): κάθε σκέλος-στεφάνι του multihoop κλείνει με τον δικό του γάντζο
+   * (πλήρες Revit detailing). Ίδια σύμβαση με `stirrupHookEndsMm` (array πολυγραμμών
+   * ανά hoop). Absent για wall (boundary hoops χωρίς γάντζο — αμετάβλητο) / circular.
+   */
+  readonly extraStirrupHookEndsMm?: readonly (readonly (readonly Point2D[])[])[];
   /**
    * Ζεύγη αγκύρωσης εσωτερικών συνδετηρίων (cross-ties) σε LOCAL mm — π.χ. οι
    * αντικριστές ράβδοι κορμού τοιχώματος (front↔back) που δένει ένα S-tie. Όταν
@@ -306,11 +315,17 @@ export function stirrupCenterlinePerimeterMm(
 /**
  * Υπολογίζει τη διάταξη οπλισμού ορθογωνικής διατομής σε LOCAL mm. Επιστρέφει
  * `null` αν η διατομή είναι εκφυλισμένη (≤0) ή δεν υπάρχει οπλισμός να σχεδιαστεί.
+ *
+ * ADR-460 follow-up 7 (B) — Revit/Tekla: ο αριθμός διαμήκων προκύπτει από το **όριο
+ * κανονισμού** (βήμα ≤ `maxBarSpacingMm` σε κάθε παρειά, EC8 §5.4.3.2.2(11)P), με το
+ * `r.longitudinal.count` ως **ελάχιστο (intent floor)** — μια παρειά 400mm (>200)
+ * παίρνει αυτόματα ενδιάμεση ράβδο (όπως οι μεγάλοι παίχτες). Default = code value.
  */
 export function computeColumnRebarLayout(
   r: ColumnReinforcement,
   widthMm: number,
   depthMm: number,
+  maxBarSpacingMm: number = MAX_RESTRAINED_BAR_SPACING_MM,
 ): ColumnRebarLayout | null {
   if (widthMm <= 0 || depthMm <= 0) return null;
   const dbL = Math.max(0, r.longitudinal.diameterMm);
@@ -332,7 +347,7 @@ export function computeColumnRebarLayout(
   const barInset = cover + dbw + dbL / 2;
   const halfWb = Math.max(0, widthMm / 2 - barInset);
   const halfDb = Math.max(0, depthMm / 2 - barInset);
-  const longitudinalBarsMm = distributeBars(halfWb, halfDb, Math.max(0, Math.floor(r.longitudinal.count)));
+  const longitudinalBarsMm = distributeRectBarsBySpacing(halfWb, halfDb, maxBarSpacingMm, Math.max(0, Math.floor(r.longitudinal.count)));
 
   if (longitudinalBarsMm.length === 0 && (halfWs <= 0 || halfDs <= 0)) return null;
 

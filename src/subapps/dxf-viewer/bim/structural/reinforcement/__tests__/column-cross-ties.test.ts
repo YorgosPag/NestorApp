@@ -19,9 +19,13 @@ function reinforcement(count: number): ColumnReinforcement {
   };
 }
 
-/** Ράβδοι (local mm) για διατομή width×depth και δεδομένο πλήθος. */
+/**
+ * Ράβδοι (local mm) για διατομή width×depth και **ακριβές** πλήθος — περνάμε huge
+ * maxBarSpacing ώστε να ΜΗΝ ενεργοποιηθεί το code-driven densification (ADR-460 f7),
+ * για να ελέγχουμε τη λογική των cross-ties με ελεγχόμενη διάταξη (4/8/16 ράβδοι).
+ */
 function bars(count: number, w = 600, d = 600) {
-  return computeColumnRebarLayout(reinforcement(count), w, d)!.longitudinalBarsMm;
+  return computeColumnRebarLayout(reinforcement(count), w, d, Number.MAX_SAFE_INTEGER)!.longitudinalBarsMm;
 }
 
 describe('buildColumnCrossTies — hybrid strategy', () => {

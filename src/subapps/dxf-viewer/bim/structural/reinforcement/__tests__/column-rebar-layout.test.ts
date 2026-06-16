@@ -38,24 +38,25 @@ const R_4x16: ColumnReinforcement = {
   coverMm: 30,
 };
 
-describe('computeColumnRebarLayout — longitudinal bars', () => {
-  it('returns exactly `count` bars', () => {
+describe('computeColumnRebarLayout — longitudinal bars (ADR-460 f7: code-driven count)', () => {
+  it('400×400 count=8 → 8 ράβδοι (βήμα ≤200mm ικανοποιείται με 4 γωνίες + 4 μέσες)', () => {
     const layout = computeColumnRebarLayout(R_8x16, 400, 400)!;
     expect(layout.longitudinalBarsMm).toHaveLength(8);
   });
 
-  it('places the 4 corners at width/2 − inset (inset = cover + dbw + dbL/2)', () => {
+  it('οι 4 γωνίες κάθονται στο width/2 − inset (inset = cover + dbw + dbL/2 = 46 → 154)', () => {
     const layout = computeColumnRebarLayout(R_4x16, 400, 400)!;
-    // inset = 30 + 8 + 16/2 = 46 → half = 200 − 46 = 154
-    const xs = layout.longitudinalBarsMm.map((p) => Math.abs(p.x)).sort();
-    const ys = layout.longitudinalBarsMm.map((p) => Math.abs(p.y)).sort();
-    expect(xs.every((v) => Math.abs(v - 154) < 1e-6)).toBe(true);
-    expect(ys.every((v) => Math.abs(v - 154) < 1e-6)).toBe(true);
+    // Spacing-derived: 400mm παρειά (>200) → 4 γωνίες (±154,±154) + μέσες στους άξονες.
+    const corners = layout.longitudinalBarsMm.filter(
+      (p) => Math.abs(Math.abs(p.x) - 154) < 1e-6 && Math.abs(Math.abs(p.y) - 154) < 1e-6,
+    );
+    expect(corners).toHaveLength(4);
   });
 
-  it('count ≤ 4 returns only corner subset', () => {
+  it('count κάτω από το code-min → πυκνώνει σε βήμα ≤200mm (Revit-grade, όχι μόνο γωνίες)', () => {
+    // 400mm παρειά (>200) → κάθε παρειά παίρνει ≥1 ενδιάμεση → 8 ράβδοι (όχι 3).
     const layout = computeColumnRebarLayout({ ...R_4x16, longitudinal: { diameterMm: 16, count: 3 } }, 400, 400)!;
-    expect(layout.longitudinalBarsMm).toHaveLength(3);
+    expect(layout.longitudinalBarsMm.length).toBeGreaterThanOrEqual(8);
   });
 
   it('extras are distributed symmetrically on a square section', () => {
@@ -67,10 +68,10 @@ describe('computeColumnRebarLayout — longitudinal bars', () => {
     expect(onAxis).toHaveLength(4);
   });
 
-  it('more extras go to the longer side of a rectangular section', () => {
-    // 10 bars, 800×400 → top/bottom (long) get more interior bars than left/right.
+  it('μεγαλύτερη πλευρά → περισσότερες ενδιάμεσες (800×400, βήμα ≤200mm)', () => {
+    // 800×400: η 800 παρειά θέλει ≥4 διαστήματα (βήμα ≤200) → περισσότερες από την 400.
     const layout = computeColumnRebarLayout({ ...R_8x16, longitudinal: { diameterMm: 16, count: 10 } }, 800, 400)!;
-    expect(layout.longitudinalBarsMm).toHaveLength(10);
+    expect(layout.longitudinalBarsMm.length).toBeGreaterThan(10); // code densifies πάνω από το intent
     const interiorTopBottom = layout.longitudinalBarsMm.filter(
       (p) => Math.abs(p.x) > 1e-6 && Math.abs(p.x) < 300 && Math.abs(Math.abs(p.y) - (400 / 2 - 46)) < 1e-6,
     );

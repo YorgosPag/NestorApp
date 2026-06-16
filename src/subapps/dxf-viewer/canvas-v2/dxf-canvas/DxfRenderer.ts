@@ -32,6 +32,7 @@ import { drawStructuralFinishOutline } from '../../bim/renderers/structural-fini
 // ADR-456 Slice 3 — 2Δ σχεδίαση οπλισμού κολώνας (scene-level pass, gated, κοινό geometry SSoT με 3Δ).
 import { isReinforcementVisible } from '../../bim/structural/reinforcement/rebar-visibility';
 import { drawColumnRebar2D } from '../../bim/renderers/column-rebar-2d';
+import { drawFoundationReinforcement2D } from './dxf-foundation-reinforcement-overlay';
 import { mmToSceneUnits } from '../../utils/scene-units';
 // DxfEntityUnion → Entity mapper (extracted file-size split, 2026-05-25).
 import { buildEntityModelFromDxf } from './dxf-renderer-entity-model';
@@ -211,6 +212,9 @@ export class DxfRenderer {
     // ADR-456 Slice 3 — οπλισμός κολώνας (διαμήκεις κουκκίδες + στεφάνι) ως scene-level overlay
     // μέσα στο cached normal-state bitmap (ίδιο pattern με τον σοβά)· gated από `showReinforcement`.
     this.drawColumnReinforcement2D(scene.entities, transform, actualViewport);
+    // ADR-463 — οπλισμός θεμελίωσης (πέδιλο/πεδιλοδοκός/συνδετήρια) ως scene-level overlay,
+    // ίδιο pattern/gate με την κολώνα (mirror του drawColumnReinforcement2D).
+    drawFoundationReinforcement2D(this.ctx, scene.entities, transform, actualViewport);
     this.ctx.restore();
   }
 

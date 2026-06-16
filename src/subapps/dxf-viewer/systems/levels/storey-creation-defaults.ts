@@ -100,11 +100,38 @@ export function resolveStoreyCeilingElevationMm(
  * one. Revit-style: foundations belong at the lowest level, but the engineer is
  * allowed to place them anywhere (warn, don't block). Returns `false` when there
  * is no active storey (degenerate → no opinion → no warning).
+ *
+ * 🔑 The dedicated **foundation level** (kind `'foundation'`) is the *correct* home
+ * for footings / ground slabs, so it NEVER warns. Without this guard it would
+ * mis-fire: a foundation is a SPECIAL level and `isLowestOccupiedStorey` is `false`
+ * for every special level by design ({@link resolveIsLowestOccupied}), so being
+ * literally on the foundation level used to trip the «belongs on the lowest storey»
+ * warning — exactly where it belongs (incident 2026-06-16, Giorgio). ADR-461.
  */
 export function shouldWarnFoundationOnStorey(
   storey: ActiveStoreyContext | null = readActiveStoreyContext(),
 ): boolean {
-  return storey !== null && storey.isLowestOccupiedStorey === false;
+  if (storey === null) return false;
+  if (storey.storeyKind === 'foundation') return false;
+  return storey.isLowestOccupiedStorey === false;
+}
+
+/**
+ * Whether placing a regular (floor-framing) beam on the active storey deserves a soft
+ * hint: true ONLY on the dedicated **foundation** level. A horizontal structural member
+ * there is almost always a foundation tie-beam / grade beam (πεδιλοδοκός / συνδετήρια
+ * δοκός) — a Structural Foundation member — rather than a storey-framing beam.
+ *
+ * Revit-style ADVISORY — «warn, don't block»: beams ARE allowed on the foundation
+ * ({@link resolveStoreyDefaultEntityTypes}('foundation') includes 'beam', e.g. grade
+ * beams), so this NEVER blocks; it only suggests the tie-beam classification. Returns
+ * `false` for every other storey kind and when there is no active storey (degenerate →
+ * no opinion). ADR-461.
+ */
+export function shouldWarnBeamOnFoundation(
+  storey: ActiveStoreyContext | null = readActiveStoreyContext(),
+): boolean {
+  return storey?.storeyKind === 'foundation';
 }
 
 // ─── ADR-461 Phase C — per-kind creation-tool recommendation (SSoT) ──────────

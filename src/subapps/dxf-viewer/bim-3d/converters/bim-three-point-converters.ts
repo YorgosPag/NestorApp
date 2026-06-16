@@ -19,7 +19,7 @@ import type { Point3D } from '../../bim/types/bim-base';
 import { sceneUnitsToMeters } from '../../utils/scene-units';
 import { getElementMaterial3D, getSystemTintedMaterial3D } from '../materials/MaterialCatalog3D';
 import { buildDrainageGratingStrokes } from '../../bim/mep-manifolds/mep-manifold-symbol';
-import { buildShape, extrudeAndRotate, tagMesh } from './bim-three-shape-helpers';
+import { buildShape, extrudeAndRotate, tagMesh, hangDownMeshY, floorBaseMeshY, centeredMeshY } from './bim-three-shape-helpers';
 import { attachEdgesProjection } from './bim-three-edges';
 import { isSanitaryKind } from '../../bim/sanitary/sanitary-symbol-spec';
 import { isElectricalDeviceKind } from '../../bim/types/mep-fixture-types';
@@ -100,8 +100,8 @@ export function fixtureToMesh(
     const matId = fixture.params.material ?? 'elem-mep-fixture';
     const mesh = new THREE.Mesh(geo, getSystemTintedMaterial3D('mep-fixture', systemColor ?? DRAINAGE_TINT_HEX));
     // Top face flush with the floor (mountingElevation = FFL = 0); basin recessed DOWN.
-    const topMm = floorElevationMm + fixture.params.mountingElevationMm;
-    mesh.position.y = topMm * MM_TO_M - bodyHeightM + buildingBaseElevationM;
+    // ADR-448 §4.1 — floor-relative anchor via the SSoT `hangDownMeshY`.
+    mesh.position.y = hangDownMeshY(floorElevationMm, fixture.params.mountingElevationMm, bodyHeightM, buildingBaseElevationM);
     const tagged = tagMesh(mesh, fixture.id, 'mep-fixture', matId, levelId);
     attachEdgesProjection(tagged, 'light-fixture');
     // Grating on the TOP face: the extrusion spans local y 0→bodyHeightM, so the top
@@ -126,8 +126,8 @@ export function fixtureToMesh(
     const matId = fixture.params.material ?? 'elem-mep-fixture';
     const mesh = new THREE.Mesh(geo, getSystemTintedMaterial3D('mep-fixture', systemColor ?? DRAINAGE_TINT_HEX));
     // Floor-standing: bottom face at FFL; the extrusion (local y 0→bodyHeightM) grows UP.
-    const bottomMm = floorElevationMm + fixture.params.mountingElevationMm;
-    mesh.position.y = bottomMm * MM_TO_M + buildingBaseElevationM;
+    // ADR-448 §4.1 — floor-relative anchor via the SSoT `floorBaseMeshY`.
+    mesh.position.y = floorBaseMeshY(floorElevationMm, fixture.params.mountingElevationMm, buildingBaseElevationM);
     const tagged = tagMesh(mesh, fixture.id, 'mep-fixture', matId, levelId);
     attachEdgesProjection(tagged, 'light-fixture');
     return tagged;
@@ -151,8 +151,8 @@ export function fixtureToMesh(
         ? getSystemTintedMaterial3D('mep-fixture', systemColor)
         : getElementMaterial3D('mep-fixture');
     const socketMesh = new THREE.Mesh(socketGeo, socketMat);
-    const bottomMm = floorElevationMm + fixture.params.mountingElevationMm;
-    socketMesh.position.y = bottomMm * MM_TO_M + buildingBaseElevationM;
+    // ADR-448 §4.1 — floor-relative anchor via the SSoT `floorBaseMeshY`.
+    socketMesh.position.y = floorBaseMeshY(floorElevationMm, fixture.params.mountingElevationMm, buildingBaseElevationM);
     const socketTagged = tagMesh(socketMesh, fixture.id, 'mep-fixture', socketMatId, levelId);
     attachEdgesProjection(socketTagged, 'light-fixture');
     return socketTagged;
@@ -176,8 +176,8 @@ export function fixtureToMesh(
     : getElementMaterial3D('mep-fixture');
   const mesh = new THREE.Mesh(geo, material);
   // Top face at the mounting elevation; body hangs DOWN by bodyHeight.
-  const topMm = floorElevationMm + fixture.params.mountingElevationMm;
-  mesh.position.y = topMm * MM_TO_M - bodyHeightM + buildingBaseElevationM;
+  // ADR-448 §4.1 — floor-relative anchor via the SSoT `hangDownMeshY`.
+  mesh.position.y = hangDownMeshY(floorElevationMm, fixture.params.mountingElevationMm, bodyHeightM, buildingBaseElevationM);
   const tagged = tagMesh(mesh, fixture.id, 'mep-fixture', matId, levelId);
   attachEdgesProjection(tagged, 'light-fixture');
   return tagged;
@@ -212,8 +212,8 @@ export function panelToMesh(
   const mesh = new THREE.Mesh(geo, getElementMaterial3D('electrical-panel'));
   // Box centred vertically on the mounting elevation (wall-mounted): the extrusion
   // grows UP from mesh.position.y, so the bottom sits at centre − bodyHeight/2.
-  const centerMm = floorElevationMm + panel.params.mountingElevationMm;
-  mesh.position.y = centerMm * MM_TO_M - bodyHeightM / 2 + buildingBaseElevationM;
+  // ADR-448 §4.1 — floor-relative anchor via the SSoT `centeredMeshY`.
+  mesh.position.y = centeredMeshY(floorElevationMm, panel.params.mountingElevationMm, bodyHeightM, buildingBaseElevationM);
   const tagged = tagMesh(mesh, panel.id, 'electrical-panel', matId, levelId);
   attachEdgesProjection(tagged, 'electrical-panel');
   return tagged;
@@ -250,8 +250,8 @@ export function manifoldToMesh(
     : new THREE.Mesh(geo, getElementMaterial3D('mep-manifold'));
   // Box centred vertically on the mounting elevation (floor-mounted): the extrusion
   // grows UP from mesh.position.y, so the bottom sits at centre − bodyHeight/2.
-  const centerMm = floorElevationMm + manifold.params.mountingElevationMm;
-  mesh.position.y = centerMm * MM_TO_M - bodyHeightM / 2 + buildingBaseElevationM;
+  // ADR-448 §4.1 — floor-relative anchor via the SSoT `centeredMeshY`.
+  mesh.position.y = centeredMeshY(floorElevationMm, manifold.params.mountingElevationMm, bodyHeightM, buildingBaseElevationM);
   const tagged = tagMesh(mesh, manifold.id, 'mep-manifold', matId, levelId);
   attachEdgesProjection(tagged, 'mep-manifold');
   // ADR-408 Φ14 — a drainage collector (φρεάτιο) shows its grating on the TOP face
@@ -291,8 +291,8 @@ export function radiatorToMesh(
   const mesh = new THREE.Mesh(geo, getElementMaterial3D('mep-radiator'));
   // Box centred vertically on the mounting elevation (wall-mounted): the extrusion
   // grows UP from mesh.position.y, so the bottom sits at centre − bodyHeight/2.
-  const centerMm = floorElevationMm + radiator.params.mountingElevationMm;
-  mesh.position.y = centerMm * MM_TO_M - bodyHeightM / 2 + buildingBaseElevationM;
+  // ADR-448 §4.1 — floor-relative anchor via the SSoT `centeredMeshY`.
+  mesh.position.y = centeredMeshY(floorElevationMm, radiator.params.mountingElevationMm, bodyHeightM, buildingBaseElevationM);
   const tagged = tagMesh(mesh, radiator.id, 'mep-radiator', matId, levelId);
   attachEdgesProjection(tagged, 'mep-radiator');
   return tagged;
@@ -324,8 +324,8 @@ export function boilerToMesh(
   const mesh = new THREE.Mesh(geo, getElementMaterial3D('mep-boiler'));
   // Box centred vertically on the mounting elevation: the extrusion
   // grows UP from mesh.position.y, so the bottom sits at centre − bodyHeight/2.
-  const centerMm = floorElevationMm + boiler.params.mountingElevationMm;
-  mesh.position.y = centerMm * MM_TO_M - bodyHeightM / 2 + buildingBaseElevationM;
+  // ADR-448 §4.1 — floor-relative anchor via the SSoT `centeredMeshY`.
+  mesh.position.y = centeredMeshY(floorElevationMm, boiler.params.mountingElevationMm, bodyHeightM, buildingBaseElevationM);
   const tagged = tagMesh(mesh, boiler.id, 'mep-boiler', matId, levelId);
   attachEdgesProjection(tagged, 'mep-boiler');
   return tagged;
@@ -357,8 +357,8 @@ export function waterHeaterToMesh(
   const mesh = new THREE.Mesh(geo, getElementMaterial3D('mep-water-heater'));
   // Box centred vertically on the mounting elevation: the extrusion
   // grows UP from mesh.position.y, so the bottom sits at centre − bodyHeight/2.
-  const centerMm = floorElevationMm + waterHeater.params.mountingElevationMm;
-  mesh.position.y = centerMm * MM_TO_M - bodyHeightM / 2 + buildingBaseElevationM;
+  // ADR-448 §4.1 — floor-relative anchor via the SSoT `centeredMeshY`.
+  mesh.position.y = centeredMeshY(floorElevationMm, waterHeater.params.mountingElevationMm, bodyHeightM, buildingBaseElevationM);
   const tagged = tagMesh(mesh, waterHeater.id, 'mep-water-heater', matId, levelId);
   attachEdgesProjection(tagged, 'mep-water-heater');
   return tagged;

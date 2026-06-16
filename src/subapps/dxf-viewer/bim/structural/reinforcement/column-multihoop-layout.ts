@@ -34,6 +34,7 @@ import {
   buildRoundedStirrupPath,
   buildStirrupHookEndsMm,
   distributeRectBarsBySpacing,
+  pointPairKey,
   stirrupCenterlinePerimeterMm,
   STIRRUP_BEND_ARC_SEGMENTS,
   STIRRUP_BEND_CL_FACTOR,
@@ -130,14 +131,6 @@ function snapToBar(p: Point2D, bars: readonly Point2D[], tol: number): Point2D |
   return best;
 }
 
-/** Canonical κλειδί ζεύγους (order-agnostic) για dedup ties. */
-function pairKey(a: Point2D, b: Point2D): string {
-  const q = (v: number): number => Math.round(v * 10) / 10;
-  const p1 = `${q(a.x)},${q(a.y)}`;
-  const p2 = `${q(b.x)},${q(b.y)}`;
-  return p1 < p2 ? `${p1}|${p2}` : `${p2}|${p1}`;
-}
-
 /** Snap κάθε άκρο anchor σε πραγματική ράβδο + dedup (ποτέ γάντζος στο κενό). */
 function reconcileAnchors(
   groups: readonly { a: Point2D; b: Point2D }[][],
@@ -151,7 +144,7 @@ function reconcileAnchors(
       const sa = snapToBar(a, bars, tol);
       const sb = snapToBar(b, bars, tol);
       if (!sa || !sb) continue;
-      const key = pairKey(sa, sb);
+      const key = pointPairKey(sa, sb);
       if (seen.has(key)) continue;
       seen.add(key);
       out.push({ a: sa, b: sb });
@@ -194,6 +187,8 @@ export function buildMultiHoopLayout(
     stirrupDiameterMm: Math.max(0, r.stirrups.diameterMm),
     stirrupCenterlineLengthMm: main.centerlineLengthMm,
     extraStirrupPathsMm: legs.slice(1).map((l) => l.pathMm),
+    // Κάθε επιπλέον σκέλος-στεφάνι κλείνει με τον δικό του γάντζο 135° (A — Revit detailing).
+    extraStirrupHookEndsMm: legs.slice(1).map((l) => l.hookEndsMm),
     ...(crossTieAnchorsMm.length > 0 ? { crossTieAnchorsMm } : {}),
   };
 }

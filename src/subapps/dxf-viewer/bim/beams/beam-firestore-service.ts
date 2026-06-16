@@ -31,6 +31,7 @@ import { db } from '@/lib/firebase';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { generateBeamId } from '@/services/enterprise-id-convenience';
 import { firestoreQueryService } from '@/services/firestore';
+import { stripUndefinedDeep } from '@/utils/firestore-sanitize';
 import { buildBimScopeConstraints, bimScopeWriteFields } from '../persistence/bim-floor-scope';
 import type {
   BeamEntity,
@@ -150,15 +151,18 @@ export class BeamFirestoreService {
       // ADR-420 — floorplanId (provenance) + floorId (stable scope), from config SSoT.
       ...bimScopeWriteFields(this.config),
       kind: input.kind,
-      params: input.params,
-      validation: input.validation,
+      // Firestore rejects nested `undefined` (e.g. `params.curveControl`/`tilt`
+      // unset on a straight beam) — deep-strip the pure-data sub-objects (SSoT:
+      // firestore-sanitize, mirror saveWall/saveColumn). serverTimestamp() untouched.
+      params: stripUndefinedDeep(input.params),
+      validation: stripUndefinedDeep(input.validation),
       createdBy: this.config.userId,
       createdAt: serverTimestamp(),
       updatedBy: this.config.userId,
       updatedAt: serverTimestamp(),
     };
 
-    if (input.geometry !== undefined) base.geometry = input.geometry;
+    if (input.geometry !== undefined) base.geometry = stripUndefinedDeep(input.geometry);
     if (input.buildingId !== undefined) base.buildingId = input.buildingId;
     // ADR-420 — floorId is owned by config scope (bimScopeWriteFields above), not input.
     if (input.layerId !== undefined) base.layerId = input.layerId;
@@ -175,9 +179,10 @@ export class BeamFirestoreService {
       updatedBy: this.config.userId,
       updatedAt: serverTimestamp(),
     };
-    if (patch.params !== undefined) payload.params = patch.params;
-    if (patch.validation !== undefined) payload.validation = patch.validation;
-    if (patch.geometry !== undefined) payload.geometry = patch.geometry;
+    // Deep-strip nested `undefined` (Firestore rejects it; SSoT firestore-sanitize, mirror updateWall/updateColumn).
+    if (patch.params !== undefined) payload.params = stripUndefinedDeep(patch.params);
+    if (patch.validation !== undefined) payload.validation = stripUndefinedDeep(patch.validation);
+    if (patch.geometry !== undefined) payload.geometry = stripUndefinedDeep(patch.geometry);
     if (patch.layerId !== undefined) payload.layerId = patch.layerId;
     // ADR-441 Slice GEN-BEAM — round-trip grid hosting bindings on update.
     if (patch.guideBindings !== undefined) payload.guideBindings = patch.guideBindings;

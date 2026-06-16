@@ -54,7 +54,7 @@ export function resolveColumnRebarLayout(
     case 'perimeter':
     default: {
       if (section.kind === 'rectangular') {
-        return computeColumnRebarLayout(r, section.bboxWidthMm, section.bboxDepthMm);
+        return computeColumnRebarLayout(r, section.bboxWidthMm, section.bboxDepthMm, maxBarSpacingMm);
       }
       // Γ/Τ/Π/Ι/composite-ορθογώνιο → επικαλυπτόμενα ορθογώνια στεφάνια ανά σκέλος.
       // Μη-rectilinear (N-gon polygon, διαγώνιο composite) → decomposition `[]` →

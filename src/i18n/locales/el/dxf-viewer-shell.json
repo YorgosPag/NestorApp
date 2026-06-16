@@ -93,7 +93,8 @@
     "noFootprint": "Δεν βρέθηκε αποτύπωμα κτιρίου. Δημιούργησε πρώτα τοίχους, κολώνες ή δοκάρια."
   },
   "storeyGating": {
-    "foundationUpperStorey": "Η θεμελίωση/εδαφόπλακα τοποθετείται συνήθως στον κατώτατο όροφο."
+    "foundationUpperStorey": "Η θεμελίωση/εδαφόπλακα τοποθετείται συνήθως στον κατώτατο όροφο.",
+    "beamOnFoundation": "Δοκάρι σε στάθμη θεμελίωσης — μήπως εννοείς πεδιλοδοκό/συνδετήρια δοκό; (επιτρέπεται)"
   },
   "gridJustification": {
     "conflict": "Προσοχή: δομικά στοιχεία στους ίδιους περιμετρικούς άξονες έχουν αντίθετη έδραση — οι παρειές ίσως δεν ευθυγραμμίζονται. Έλεγξε αν είναι σκόπιμο."
@@ -2668,6 +2669,40 @@
           "right": "Δεξιά"
         }
       },
+      "foundationStructural": {
+        "code": "Κανονισμός",
+        "cover": "Επικάλυψη (mm)",
+        "mainLabel": "Κύριος οπλισμός",
+        "steelWeight": "Βάρος χάλυβα (kg)",
+        "ratio": "ρ (%)",
+        "toggle": {
+          "on": "Ναι",
+          "off": "Όχι"
+        },
+        "padBottomXDiameter": "Κάτω σχάρα X — Ø",
+        "padBottomXSpacing": "Κάτω σχάρα X — βήμα",
+        "padBottomYDiameter": "Κάτω σχάρα Y — Ø",
+        "padBottomYSpacing": "Κάτω σχάρα Y — βήμα",
+        "padTopEnabled": "Άνω σχάρα",
+        "padTopDiameter": "Άνω σχάρα — Ø",
+        "padTopSpacing": "Άνω σχάρα — βήμα",
+        "stripTransverseDiameter": "Εγκάρσιες — Ø",
+        "stripTransverseSpacing": "Εγκάρσιες — βήμα",
+        "stripLongitudinalDiameter": "Διαμήκεις — Ø",
+        "stripLongitudinalCount": "Διαμήκεις — πλήθος",
+        "stripStirrupEnabled": "Συνδετήρες",
+        "stripStirrupDiameter": "Συνδετήρες — Ø",
+        "stripStirrupSpacing": "Συνδετήρες — βήμα",
+        "tieBottomDiameter": "Κάτω ράβδοι — Ø",
+        "tieBottomCount": "Κάτω ράβδοι — πλήθος",
+        "tieTopDiameter": "Άνω ράβδοι — Ø",
+        "tieTopCount": "Άνω ράβδοι — πλήθος",
+        "tieStirrupDiameter": "Συνδετήρες — Ø",
+        "tieStirrupSpacing": "Συνδετήρες — βήμα",
+        "tieStirrupCriticalSpacing": "Συνδετήρες — κρίσιμο βήμα",
+        "reinforcementDetail": "Λεπτομέρεια Οπλισμού",
+        "reinforcementDetailTooltip": "Άνοιγμα φύλλου σχεδίου με τον οπλισμό του θεμελιακού στοιχείου + εξαγωγή PDF"
+      },
       "columnStructural": {
         "code": "Κανονισμός",
         "codeTooltip": "Κανονισμός σχεδιασμού (ανά κτίριο)",
@@ -3793,6 +3828,14 @@
       "finish": { "title": "Σοβάς" },
       "envelope": { "title": "Λειτουργία Κελύφους" },
       "material": { "title": "Υλικό" }
+    }
+  },
+  "foundationAdvancedPanel": {
+    "title": "Ιδιότητες Θεμελίωσης",
+    "emptyState": "Επίλεξε ένα θεμελιακό στοιχείο για να δεις τις ιδιότητες.",
+    "sections": {
+      "structural": { "title": "Στατικά / Οπλισμός" },
+      "readouts": { "title": "Ποσότητες" }
     }
   },
   "wallAdvancedPanel": {

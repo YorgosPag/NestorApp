@@ -75,13 +75,18 @@ export function drawColumnRebar2D(
   const stirrupLineWidth = Math.max(MIN_STIRRUP_LINE_PX, layout.stirrupDiameterMm * pxPerMm);
   const hooked = (r.stirrups.type ?? DEFAULT_STIRRUP_TYPE) === 'closed-hooked';
 
-  // ── Στεφάνι + τυχόν boundary hoops (τοίχωμα) — ΙΔΙΟ path με το 3Δ (SSoT) ──
+  // ── Στεφάνι + επιπλέον στεφάνια (boundary τοιχώματος / σκέλη multihoop) — ΙΔΙΟ path με 3Δ ──
   ctx.lineWidth = stirrupLineWidth;
   strokePath(ctx, p, layout.stirrupPathMm, worldToScreen, true);
-  for (const hoop of layout.extraStirrupPathsMm ?? []) {
-    strokePath(ctx, p, hoop, worldToScreen, true);
+  const extraHoops = layout.extraStirrupPathsMm ?? [];
+  for (let i = 0; i < extraHoops.length; i++) {
+    strokePath(ctx, p, extraHoops[i], worldToScreen, true);
+    // Γάντζος 135° ανά σκέλος-στεφάνι (multihoop)· wall boundary hoops → absent (αμετάβλητο).
+    if (hooked && layout.extraStirrupHookEndsMm?.[i]) {
+      for (const end of layout.extraStirrupHookEndsMm[i]) strokePath(ctx, p, end, worldToScreen, false);
+    }
   }
-  // Γάντζος 135° μόνο στον τύπο `closed-hooked`. ΔΥΟ άκρα (precomputed SSoT).
+  // Γάντζος 135° κύριου στεφανιού μόνο στον τύπο `closed-hooked`. ΔΥΟ άκρα (precomputed SSoT).
   if (hooked) {
     for (const end of layout.stirrupHookEndsMm) strokePath(ctx, p, end, worldToScreen, false);
   }

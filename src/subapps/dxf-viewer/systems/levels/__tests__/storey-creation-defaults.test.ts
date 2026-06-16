@@ -18,6 +18,7 @@ import {
   resolveStoreyHeightMm,
   resolveStoreyCeilingElevationMm,
   shouldWarnFoundationOnStorey,
+  shouldWarnBeamOnFoundation,
   resolveStoreyDefaultEntityTypes,
 } from '../storey-creation-defaults';
 
@@ -96,6 +97,9 @@ describe('shouldWarnFoundationOnStorey', () => {
     // FULL_STACK: foundation(-2) εξαιρείται → lowest occupied = basement(-1).
     expect(shouldWarnFoundationOnStorey(ctxFor('bsm'))).toBe(false);
   });
+  it('false on the dedicated FOUNDATION level — the correct home for footings (incident 2026-06-16)', () => {
+    expect(shouldWarnFoundationOnStorey(ctxFor('fnd'))).toBe(false);
+  });
   it('true on the ground storey when a basement is below it', () => {
     expect(shouldWarnFoundationOnStorey(ctxFor('grd'))).toBe(true);
   });
@@ -104,6 +108,20 @@ describe('shouldWarnFoundationOnStorey', () => {
   });
   it('false (no opinion) when storey is null', () => {
     expect(shouldWarnFoundationOnStorey(null)).toBe(false);
+  });
+});
+
+describe('shouldWarnBeamOnFoundation', () => {
+  it('true ONLY on the dedicated foundation level (suggest tie-beam — never blocks)', () => {
+    expect(shouldWarnBeamOnFoundation(ctxFor('fnd'))).toBe(true);
+  });
+  it('false on ground / upper / basement storeys (regular beams are normal there)', () => {
+    expect(shouldWarnBeamOnFoundation(ctxFor('grd'))).toBe(false);
+    expect(shouldWarnBeamOnFoundation(ctxFor('upr'))).toBe(false);
+    expect(shouldWarnBeamOnFoundation(ctxFor('bsm'))).toBe(false);
+  });
+  it('false (no opinion) when storey is null', () => {
+    expect(shouldWarnBeamOnFoundation(null)).toBe(false);
   });
 });
 

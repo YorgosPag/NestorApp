@@ -21,12 +21,12 @@ import { useGripContext } from '../../providers/GripProvider';
 import { SceneInfoSection } from './SceneInfoSection';
 import { LayersSection } from './LayersSection';
 import { AnnotationsSection } from './AnnotationsSection';
-import type { ToolType } from '../toolbar/types';
+import type { LevelPanelProps, EditingMode } from './level-panel-types';
 import type { SceneModel } from '../../types/scene';
 import { useLevels } from '../../systems/levels';
 import { countSceneEntities } from '../../utils/scene-entity-count';
 import { orderLevelsForPanel } from '../../systems/levels/level-display-order';
-import { useProjectHierarchy } from '../../contexts/ProjectHierarchyContext';
+import { useFloorsByBuilding } from '@/components/properties/shared/useFloorsByBuilding';
 import { findOrCreateLevelForFloor } from '../../systems/levels/level-floor-resolution';
 import { useAllFloorsBackfill, useLevelDeletion } from './level-panel-hooks';
 import { useNotifications } from '../../../../providers/NotificationProvider';
@@ -36,32 +36,6 @@ import { isNonEmptyArray } from '@/lib/type-guards';
 import { LevelFloorLink } from './LevelFloorLink';
 import { DeleteConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { useAuth } from '@/auth/hooks/useAuth';
-
-interface LevelPanelProps {
-  currentTool?: ToolType;
-  onToolChange?: (tool: ToolType) => void;
-  scene?: SceneModel | null;
-  onSceneImported?: (file: File, encoding?: string, saveContext?: DxfSaveContext, targetLevelId?: string) => void;
-  expandedKeys?: Set<string>;
-  onExpandChange?: React.Dispatch<React.SetStateAction<Set<string>>>;
-  onLayerToggle?: (layerName: string, visible: boolean) => void;
-  onLayerDelete?: (layerName: string) => void;
-  onLayerColorChange?: (layerName: string, color: string) => void;
-  onLayerRename?: (oldName: string, newName: string) => void;
-  onLayerCreate?: (name: string, color: string) => void;
-  onEntityToggle?: (entityId: string, visible: boolean) => void;
-  onEntityDelete?: (entityId: string) => void;
-  onEntityColorChange?: (entityId: string, color: string) => void;
-  onEntityRename?: (entityId: string, newName: string) => void;
-  onColorGroupToggle?: (colorGroupName: string, layersInGroup: string[], visible: boolean) => void;
-  onColorGroupDelete?: (colorGroupName: string, layersInGroup: string[]) => void;
-  onColorGroupColorChange?: (colorGroupName: string, layersInGroup: string[], color: string) => void;
-  onEntitiesMerge?: (targetEntityId: string, sourceEntityIds: string[]) => void;
-  onLayersMerge?: (targetLayerName: string, sourceLayerNames: string[]) => void;
-  onColorGroupsMerge?: (targetColorGroup: string, sourceColorGroups: string[]) => void;
-}
-
-type EditingMode = 'selection' | 'drawing' | 'editing' | 'status' | 'types' | null;
 
 export function LevelPanel({
   currentTool,
@@ -109,7 +83,6 @@ export function LevelPanel({
   const notifications = useNotifications();
   const { user } = useAuth();
   const overlayStore = useOverlayStore();
-  const { selectedBuilding } = useProjectHierarchy();
   const universalSelection = useUniversalSelection();
   const selectedEntityIds = universalSelection.getSelectedEntityIds();
   const { handleOverlaySelect, handleOverlayEdit, handleOverlayDelete } =
@@ -143,13 +116,21 @@ export function LevelPanel({
   }, [levels, getLevelScene]);
   // ADR-461 — order the cards physically (Επίπεδο 1 top, Θεμελίωση bottom, storeys by
   // number DESC, stair-penthouse/roof under «Επίπεδο 1») instead of creation order.
-  // Kind/number live on the linked building floor (same source as LevelFloorLink).
+  // Kind/number live on the linked building FLOOR. Source the floors by the levels'
+  // own `buildingId` (every linked level carries it) — NOT via ProjectHierarchy's
+  // `selectedBuilding`, which is driven by the properties navigator and is typically
+  // unset inside the DXF viewer (root cause of «η σειρά δεν άλλαξε», 2026-06-16).
+  const buildingId = useMemo(
+    () => levels.find(l => l.buildingId)?.buildingId ?? null,
+    [levels]
+  );
+  const { floors: buildingFloors } = useFloorsByBuilding(buildingId, Boolean(buildingId));
   const orderedLevels = useMemo(() => {
-    const byId = new Map((selectedBuilding?.floors ?? []).map(f => [f.id, f]));
+    const byId = new Map(buildingFloors.map(f => [f.id, f]));
     return orderLevelsForPanel(levels, (level) =>
       level.floorId ? byId.get(level.floorId) : undefined
     );
-  }, [levels, selectedBuilding]);
+  }, [levels, buildingFloors]);
   const [newLevelName, setNewLevelName] = useState('');
   const [isAdding, setIsAdding] = useState(false);
   const [editingLevelId, setEditingLevelId] = useState<string | null>(null);

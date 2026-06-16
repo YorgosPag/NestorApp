@@ -77,6 +77,26 @@ export function isCrossTiePattern(v: string): v is CrossTiePattern {
  */
 export const MAX_RESTRAINED_BAR_SPACING_MM = 200;
 
+/**
+ * **SSoT** πλήθος **διαστημάτων** συγκρατημένων ράβδων ανά ζεύγος παρειών ορθογωνίου
+ * ώστε το βήμα να ΜΗΝ ξεπερνά `sMaxMm` (EC8 §5.4.3.2.2(11)P / ΕΑΚ): `nW` στις παρειές
+ * πλάτους `wMm`, `nD` στις παρειές βάθους `dMm`. Περιμετρικό πλήθος ράβδων = 2·nW + 2·nD
+ * (γωνίες μετρημένες μία φορά). Καλείται ΚΑΙ από τον suggester (intent count, gross dims)
+ * ΚΑΙ από το geometry layout (`distributeRectBarsBySpacing`, inset dims) → ΕΝΑ κανόνας,
+ * μηδέν διπλότυπο. `sMaxMm ≤ 0` → {1,1} (μόνο γωνίες).
+ */
+export function rectRestrainedBarIntervals(
+  wMm: number,
+  dMm: number,
+  sMaxMm: number,
+): { readonly nW: number; readonly nD: number } {
+  const s = sMaxMm > 0 ? sMaxMm : Infinity;
+  return {
+    nW: Math.max(1, Math.ceil(Math.max(0, wMm) / s)),
+    nD: Math.max(1, Math.ceil(Math.max(0, dMm) / s)),
+  };
+}
+
 /** Εγκάρσιος οπλισμός — συνδετήρες/στέφανα (Ø8/100-200). */
 export interface ColumnStirrups {
   /** Διάμετρος συνδετήρα (mm), π.χ. 8. */

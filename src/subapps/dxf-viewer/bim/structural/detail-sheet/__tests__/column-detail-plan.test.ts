@@ -68,8 +68,12 @@ describe('buildColumnPlanRegion (ADR-457)', () => {
         (p) => p.kind === 'polyline' && p.closed,
       ).length;
 
+    // Μικρή διατομή 200×200: η παρειά (≤200mm) ΔΕΝ θέλει ενδιάμεση (ADR-460 f7
+    // code-driven) → μένει 4 γωνιακές ράβδοι → κανένα cross-tie.
     const fourBars: ColumnParams = {
       ...RECT_REINFORCED,
+      width: 200,
+      depth: 200,
       reinforcement: { ...RECT_REINFORCED.reinforcement!, longitudinal: { diameterMm: 16, count: 4 } },
     };
 

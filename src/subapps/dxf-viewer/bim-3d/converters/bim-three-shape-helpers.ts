@@ -19,6 +19,57 @@ import { scalePoints } from '../../rendering/entities/shared/geometry-vector-uti
 // ── Shared rotation matrix: shape XY → Three.js Y-up ─────────────────────────
 const ROT_X_NEG_90 = new THREE.Matrix4().makeRotationX(-Math.PI / 2);
 
+/** mm → metres — matches every converter's local `MM_TO_M` (ADR-009). */
+const MM_TO_M = 0.001;
+
+// ── Vertical render-datum SSoT (ADR-448 §4.1) ────────────────────────────────
+// Every BIM solid is positioned FLOOR-RELATIVE: its stored anchor elevation
+// (top / bottom / centre) is measured from the active storey FFL, and the storey
+// FFL itself sits at `floorElevationMm` above the building datum — the SAME value
+// walls & columns add (`columnToMesh`/`wallToMesh`). Centralising the three
+// vertical-anchor formulas here guarantees beam / slab / MEP all resolve to ONE
+// datum, so a beam can never silently diverge from the column beside it.
+//
+// Incident (2026-06-16, Giorgio): a foundation tie-beam's floor-relative top
+// (1000 mm) was placed at the building datum (world 0) instead of the foundation
+// FFL (world −1000 mm) → 1 m too high → clipped by the foundation View-Range cut
+// plane (world 0) → invisible in 3D, while the footings (absolute elevation) showed.
+// The fix = route the structural hang-down solids through `hangDownMeshY`, exactly
+// like the MEP converters already do.
+//
+// `relMm` = the element's FFL-relative anchor elevation (mm); `floorElevationMm` =
+// the storey FFL above the building datum (mm); `buildingBaseElevationM` = the
+// building base above the site datum (m). All return a Three.js world-Y in metres.
+
+/** Top face at `floorElevationMm + relTopMm`; the body hangs DOWN by `bodyHeightM`. */
+export function hangDownMeshY(
+  floorElevationMm: number,
+  relTopMm: number,
+  bodyHeightM: number,
+  buildingBaseElevationM = 0,
+): number {
+  return (floorElevationMm + relTopMm) * MM_TO_M - bodyHeightM + buildingBaseElevationM;
+}
+
+/** Bottom face at `floorElevationMm + relBottomMm`; the body grows UP from there. */
+export function floorBaseMeshY(
+  floorElevationMm: number,
+  relBottomMm: number,
+  buildingBaseElevationM = 0,
+): number {
+  return (floorElevationMm + relBottomMm) * MM_TO_M + buildingBaseElevationM;
+}
+
+/** Box centred on `floorElevationMm + relCentreMm`; bottom at centre − bodyHeight/2. */
+export function centeredMeshY(
+  floorElevationMm: number,
+  relCentreMm: number,
+  bodyHeightM: number,
+  buildingBaseElevationM = 0,
+): number {
+  return (floorElevationMm + relCentreMm) * MM_TO_M - bodyHeightM / 2 + buildingBaseElevationM;
+}
+
 export function toShapePoints(pts: readonly Point3D[]): { x: number; y: number }[] {
   return pts.map((p) => ({ x: p.x, y: p.y }));
 }

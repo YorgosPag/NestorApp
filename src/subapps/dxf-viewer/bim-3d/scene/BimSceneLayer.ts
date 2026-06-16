@@ -361,7 +361,7 @@ export class BimSceneLayer {
       const openingsForSlab = filterHostedSlabOpenings(
         entities.slabOpenings, slab.id, r.buildingMode, ctx,
       );
-      const mesh = slabToMesh(slab, openingsForSlab, ctx.activeLevelId, r.baseElevation);
+      const mesh = slabToMesh(slab, openingsForSlab, ctx.activeLevelId, r.baseElevation, ctx.floorElevationMm);
       if (mesh) { mesh.userData['buildingId'] = r.buildingId; this.group.add(mesh); }
     }
   }

@@ -24,6 +24,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { dequal } from 'dequal';
+import { createModuleLogger } from '@/lib/telemetry';
 
 import type { AnySceneEntity, SceneModel } from '../../types/entities';
 import type { SceneWriteOrigin } from '../scene/scene-write-origin';
@@ -82,6 +83,12 @@ export interface UseColumnPersistenceResult {
 // ============================================================================
 
 const AUTO_SAVE_DEBOUNCE_MS = 500;
+
+// ADR-363 — surface persistence failures. A swallowed Firestore reject (e.g.
+// «Unsupported field value: undefined») previously left columns NEVER persisted
+// and silently lost on reload — no console trace. Log the cause (server-side
+// telemetry; not a hardcoded UI string, N.11-exempt).
+const logger = createModuleLogger('useColumnPersistence');
 
 // ============================================================================
 // HELPERS
@@ -317,6 +324,7 @@ export function useColumnPersistence(
         );
       }
     } catch (err) {
+      logger.error('Column persist failed', { columnId: entity.id, isNew, error: err });
       setError(err instanceof Error ? err.message : 'COLUMN_SAVE_ERROR');
       setSaveState('error');
     }
@@ -433,6 +441,7 @@ export function useColumnPersistence(
         );
       }
     } catch (err) {
+      logger.error('Column restore failed', { columnId: entity.id, error: err });
       setError(err instanceof Error ? err.message : 'COLUMN_RESTORE_ERROR');
       setSaveState('error');
     }

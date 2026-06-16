@@ -36,70 +36,8 @@ import { resolveColumnReinforcementSection } from '../../bim/structural/reinforc
 import { resolveActiveColumnReinforcementForParams } from '../../bim/structural/active-reinforcement';
 import { DEFAULT_STIRRUP_TYPE } from '../../bim/structural/reinforcement/column-reinforcement-types';
 import type { Point2D } from '../../rendering/types/Types';
-
-const MM_TO_M = 0.001;
-/** Χρώμα οπλισμού (crimson — αντίθεση με το δομικό μπλε, ίδιο με το 2Δ). */
-const REBAR_COLOR = 0xc0392b;
-/**
- * ΚΟΙΝΟ άφωτο υλικό (module singleton). `MeshBasicMaterial` (ΟΧΙ Standard):
- * α) δεν εξαρτάται από φώτα/envmap/SSAO → ζωγραφίζεται **αξιόπιστα στο πρώτο frame**
- *    (το Standard ήθελε async shader compile → ο κλωβός «δεν ξεσκάλωνε» στο μπες-στο-3Δ
- *    μέχρι ένα 2ο frame από slider/toggle)· β) compiled μία φορά, reused σε όλες τις
- *    κολώνες (μηδέν per-column shader). Mirror του παλιού working `LineBasicMaterial`.
- */
-const REBAR_MATERIAL = new THREE.MeshBasicMaterial({ color: REBAR_COLOR });
-/** Πλευρές κυλίνδρου ράβδου (χαμηλό — λεπτή ράβδος, ελάχιστο geometry). */
-const ROD_RADIAL_SEGMENTS = 6;
-/** Ελάχιστη ακτίνα (scene units) ώστε εκφυλισμένο Ø να μη δίνει μηδενικό geometry. */
-const MIN_RADIUS = 1e-4;
-
-interface Seg { a: THREE.Vector3; b: THREE.Vector3 }
-
-const UP = new THREE.Vector3(0, 1, 0);
-
-/**
- * InstancedMesh από unit κύλινδρο (ύψος 1, άξονας +Y), τοποθετημένος ανά segment:
- * κάθε instance = translate στο μέσο + rotate (Y→διεύθυνση) + scale.y = μήκος. Για
- * κατακόρυφες ράβδες η διεύθυνση είναι +Y (μηδέν rotation).
- */
-function buildRods(
-  segments: readonly Seg[],
-  radius: number,
-  material: THREE.Material,
-): THREE.InstancedMesh | null {
-  if (segments.length === 0 || radius <= 0) return null;
-  const geo = new THREE.CylinderGeometry(radius, radius, 1, ROD_RADIAL_SEGMENTS);
-  const mesh = new THREE.InstancedMesh(geo, material, segments.length);
-  const m = new THREE.Matrix4();
-  const q = new THREE.Quaternion();
-  const pos = new THREE.Vector3();
-  const scl = new THREE.Vector3();
-  const dir = new THREE.Vector3();
-  for (let i = 0; i < segments.length; i++) {
-    const { a, b } = segments[i];
-    const len = a.distanceTo(b);
-    pos.addVectors(a, b).multiplyScalar(0.5);
-    dir.subVectors(b, a);
-    if (len > 1e-9) dir.divideScalar(len);
-    q.setFromUnitVectors(UP, len > 1e-9 ? dir : UP);
-    scl.set(1, Math.max(len, 1e-6), 1);
-    m.compose(pos, q, scl);
-    mesh.setMatrixAt(i, m);
-  }
-  mesh.instanceMatrix.needsUpdate = true;
-  mesh.castShadow = true;
-  // ΚΡΙΣΙΜΟ: το bounding sphere του InstancedMesh βγαίνει από το unit geometry στο
-  // origin (ΟΧΙ από τα instance matrices) → το frustum culling έκοβε όλο τον κλωβό
-  // όταν η κολώνα ήταν μακριά από το origin (φαινόταν «μόνο μετά τον slider τομής»).
-  // Ο κλωβός είναι μικρός/φθηνός → απενεργοποιούμε το culling (όπως πρακτικά τα LineSegments).
-  mesh.frustumCulled = false;
-  return mesh;
-}
-
-/** plan point (scene units) → three.js διάνυσμα σε στάθμη y (AXIS_FLIP: Z = −sy). */
-function toThree(p: Point2D, y: number): THREE.Vector3 {
-  return new THREE.Vector3(p.x, y, -p.y);
-}
+// ADR-463 — shared 3Δ rebar primitives (SSoT κολώνα+θεμελίωση· pure, μηδέν store import).
+import { MM_TO_M, MIN_RADIUS, REBAR_MATERIAL, buildRods, toThree, type Seg } from './rebar-3d-shared';
 
 /** Ανοιχτή αλυσίδα (cross-tie ευθύγραμμο) ανά στάθμη — segment-προς-segment, ΧΩΡΙΣ
  *  κλείσιμο last→first (σε αντίθεση με το `ringSegments`). */
@@ -234,9 +172,15 @@ export function buildColumnRebarCage(
     const hookEndsXY = layout.stirrupHookEndsMm.map((end) => worldXY(end));
     stirrupSegs.push(...hookSegments(hookEndsXY, levels, baseY));
   }
-  // ADR-460 — τοίχωμα: boundary hoops (extra κλειστά στεφάνια) ανά στάθμη.
-  for (const hoop of layout.extraStirrupPathsMm ?? []) {
-    stirrupSegs.push(...ringSegments(worldXY(hoop), levels, baseY));
+  // ADR-460 — επιπλέον στεφάνια (boundary τοιχώματος / σκέλη multihoop) ανά στάθμη.
+  const extraHoops = layout.extraStirrupPathsMm ?? [];
+  for (let i = 0; i < extraHoops.length; i++) {
+    stirrupSegs.push(...ringSegments(worldXY(extraHoops[i]), levels, baseY));
+    // Γάντζος 135° ανά σκέλος-στεφάνι (multihoop)· wall boundary hoops → absent.
+    if (type === 'closed-hooked' && layout.extraStirrupHookEndsMm?.[i]) {
+      const hookEndsXY = layout.extraStirrupHookEndsMm[i].map((end) => worldXY(end));
+      stirrupSegs.push(...hookSegments(hookEndsXY, levels, baseY));
+    }
   }
   const stirrups = buildRods(stirrupSegs, stirrupRadius, material);
   if (stirrups) group.add(stirrups);

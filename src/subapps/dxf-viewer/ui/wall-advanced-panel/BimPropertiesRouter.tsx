@@ -18,10 +18,11 @@
 
 import React from 'react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
-import { isWallEntity, isStairEntity, isColumnEntity } from '../../types/entities';
+import { isWallEntity, isStairEntity, isColumnEntity, isFoundationEntity } from '../../types/entities';
 import { StairPropertiesTab } from '../stair-advanced-panel/StairPropertiesTab';
 import { WallPropertiesTab } from './WallPropertiesTab';
 import { ColumnPropertiesTab } from '../column-advanced-panel/ColumnPropertiesTab';
+import { FoundationPropertiesTab } from '../foundation-advanced-panel/FoundationPropertiesTab';
 import type { SceneModel } from '../../types/scene';
 
 export interface BimPropertiesRouterProps {
@@ -49,6 +50,11 @@ export function BimPropertiesRouter(
   // ADR-363 Phase 4 — column Properties palette (ribbon ↔ panel split).
   if (selected && isColumnEntity(selected)) {
     return <ColumnPropertiesTab {...props} />;
+  }
+
+  // ADR-463 — foundation Properties palette (πέδιλο/πεδιλοδοκός/συνδετήρια οπλισμός).
+  if (selected && isFoundationEntity(selected)) {
+    return <FoundationPropertiesTab {...props} />;
   }
 
   if (selected && isStairEntity(selected)) {

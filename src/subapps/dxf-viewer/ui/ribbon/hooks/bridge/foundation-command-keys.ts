@@ -98,3 +98,78 @@ export function isFoundationRibbonStringKey(commandKey: string): boolean {
 export function isFoundationBadgeKey(badgeKey: string): boolean {
   return badgeKey === FOUNDATION_RIBBON_BADGE_KEYS.violations;
 }
+
+// ─── ADR-463 — δομοστατικά / οπλισμός (reinforcement) ──────────────────────────
+
+/**
+ * Editable structural command keys (kind-aware). `code` = building-level
+ * κανονισμός (γράφει στο `structuralSettingsStore`)· `cover` = κοινό σε όλα τα
+ * kinds· τα υπόλοιπα είναι kind-specific πεδία οπλισμού (το Properties descriptor
+ * εμφανίζει μόνο τα κατάλληλα ανά `params.kind`). Mirror του `COLUMN_STRUCTURAL_KEYS`.
+ */
+export const FOUNDATION_STRUCTURAL_KEYS = {
+  /** Building-level κανονισμός σχεδιασμού (project setting, ΟΧΙ per-foundation). */
+  code: 'foundation.structural.code',
+  /** Επικάλυψη οπλισμού cnom (mm) — κοινό σε όλα τα kinds. */
+  cover: 'foundation.structural.cover',
+  // pad — δι-διευθυντική κάτω σχάρα + προαιρετική άνω σχάρα.
+  padBottomXDiameter: 'foundation.structural.pad.bottomXDiameter',
+  padBottomXSpacing: 'foundation.structural.pad.bottomXSpacing',
+  padBottomYDiameter: 'foundation.structural.pad.bottomYDiameter',
+  padBottomYSpacing: 'foundation.structural.pad.bottomYSpacing',
+  padTopEnabled: 'foundation.structural.pad.topEnabled',
+  padTopDiameter: 'foundation.structural.pad.topDiameter',
+  padTopSpacing: 'foundation.structural.pad.topSpacing',
+  // strip — εγκάρσιες (κύριος) + διαμήκεις διανομής + προαιρετικοί συνδετήρες.
+  stripTransverseDiameter: 'foundation.structural.strip.transverseDiameter',
+  stripTransverseSpacing: 'foundation.structural.strip.transverseSpacing',
+  stripLongitudinalDiameter: 'foundation.structural.strip.longitudinalDiameter',
+  stripLongitudinalCount: 'foundation.structural.strip.longitudinalCount',
+  stripStirrupEnabled: 'foundation.structural.strip.stirrupEnabled',
+  stripStirrupDiameter: 'foundation.structural.strip.stirrupDiameter',
+  stripStirrupSpacing: 'foundation.structural.strip.stirrupSpacing',
+  // tie-beam — κάτω/άνω διαμήκης + συνδετήρες (είναι δοκός).
+  tieBottomDiameter: 'foundation.structural.tieBeam.bottomDiameter',
+  tieBottomCount: 'foundation.structural.tieBeam.bottomCount',
+  tieTopDiameter: 'foundation.structural.tieBeam.topDiameter',
+  tieTopCount: 'foundation.structural.tieBeam.topCount',
+  tieStirrupDiameter: 'foundation.structural.tieBeam.stirrupDiameter',
+  tieStirrupSpacing: 'foundation.structural.tieBeam.stirrupSpacing',
+  tieStirrupCriticalSpacing: 'foundation.structural.tieBeam.stirrupCriticalSpacing',
+} as const;
+
+/** Read-only readout keys — υπολογισμένα (bridge δίνει value, ΟΧΙ write). */
+export const FOUNDATION_STRUCTURAL_READOUT_KEYS = {
+  /** Σύντομη ετικέτα κύριου οπλισμού (π.χ. «Ø12/200» ή «4Ø16»). */
+  mainLabel: 'foundation.structural.readout.mainLabel',
+  /** kg — βάρος χάλυβα οπλισμού B500C. */
+  steelWeight: 'foundation.structural.readout.steelWeight',
+  /** % — ποσοστό κύριου (καμπτικού) οπλισμού ρ. */
+  ratio: 'foundation.structural.readout.ratio',
+} as const;
+
+/** String/select structural keys (κανονισμός + on/off toggles). */
+const FOUNDATION_STRUCTURAL_STRING_KEY_SET: ReadonlySet<string> = new Set<string>([
+  FOUNDATION_STRUCTURAL_KEYS.code,
+  FOUNDATION_STRUCTURAL_KEYS.padTopEnabled,
+  FOUNDATION_STRUCTURAL_KEYS.stripStirrupEnabled,
+]);
+
+const FOUNDATION_STRUCTURAL_KEY_SET: ReadonlySet<string> = new Set<string>(
+  Object.values(FOUNDATION_STRUCTURAL_KEYS),
+);
+const FOUNDATION_STRUCTURAL_READOUT_KEY_SET: ReadonlySet<string> = new Set<string>(
+  Object.values(FOUNDATION_STRUCTURAL_READOUT_KEYS),
+);
+
+export function isFoundationStructuralKey(commandKey: string): boolean {
+  return FOUNDATION_STRUCTURAL_KEY_SET.has(commandKey);
+}
+
+export function isFoundationStructuralStringKey(commandKey: string): boolean {
+  return FOUNDATION_STRUCTURAL_STRING_KEY_SET.has(commandKey);
+}
+
+export function isFoundationStructuralReadoutKey(commandKey: string): boolean {
+  return FOUNDATION_STRUCTURAL_READOUT_KEY_SET.has(commandKey);
+}

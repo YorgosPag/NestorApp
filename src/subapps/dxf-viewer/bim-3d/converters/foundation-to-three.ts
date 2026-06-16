@@ -25,8 +25,34 @@ import { scalePoints } from '../../rendering/entities/shared/geometry-vector-uti
 import { ensureWorldUvs } from './bim-uv-helpers';
 import { attachEdgesProjection } from './bim-three-edges';
 import { sceneUnitsToMeters } from '../../utils/scene-units';
+import { isReinforcementVisible } from '../../bim/structural/reinforcement/rebar-visibility';
+import { buildFootingRebarCage } from './footing-rebar-3d';
 
 const MM_TO_M = 0.001;
+
+/**
+ * ADR-463 — προσαρτά τον κλωβό οπλισμού (αν ορατός + ορισμένος) σε ΕΝΑ wrapper
+ * group δίπλα στο στερεό (mirror του `attachColumnRebar`). `bottomY` = absolute
+ * world Y της βάσης του στερεού (= `mesh.position.y`). No-op όταν ο διακόπτης
+ * «Οπλισμός» είναι κλειστός ή δεν υπάρχει οπλισμός.
+ */
+function attachFoundationRebar(
+  mesh: THREE.Mesh,
+  foundation: FoundationEntity,
+  bottomY: number,
+  levelId: string | undefined,
+): THREE.Object3D {
+  if (!isReinforcementVisible()) return mesh;
+  const cage = buildFootingRebarCage(foundation, bottomY, levelId);
+  if (!cage) return mesh;
+  const group = new THREE.Group();
+  group.add(mesh);
+  group.add(cage);
+  group.userData['bimId'] = foundation.id;
+  group.userData['bimType'] = 'foundation';
+  if (levelId !== undefined) group.userData['levelId'] = levelId;
+  return group;
+}
 
 /**
  * Build the 3Δ mesh για ένα `FoundationEntity`. Returns `null` για εκφυλισμένο
@@ -42,7 +68,7 @@ export function foundationToMesh(
   _floorElevationMm = 0,
   levelId?: string,
   buildingBaseElevationM = 0,
-): THREE.Mesh | null {
+): THREE.Object3D | null {
   const rawVerts = foundation.geometry.footprint.vertices;
   if (rawVerts.length < 3) return null;
 
@@ -67,5 +93,6 @@ export function foundationToMesh(
 
   const tagged = tagMesh(mesh, foundation.id, 'foundation', matId, levelId);
   attachEdgesProjection(tagged, 'foundation');
-  return tagged;
+  // ADR-463 — οπλισμός 3Δ ως sibling cage (mirror κολώνας)· no-op όταν κρυφός/απών.
+  return attachFoundationRebar(tagged, foundation, mesh.position.y, levelId);
 }

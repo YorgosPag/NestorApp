@@ -12,6 +12,7 @@ import {
   barAreaMm2,
   nextRebarDiameterMm,
 } from '../rebar-catalog';
+import { rectRestrainedBarIntervals } from '../reinforcement/column-reinforcement-types';
 import type {
   ColumnReinforcement,
   WallReinforcementIntent,
@@ -51,8 +52,8 @@ function spacingBarCount(ctx: ColumnSectionContext, maxBarSpacingMm: number): nu
   if (ctx.perimeterMm && ctx.perimeterMm > 0) {
     return Math.max(4, Math.ceil(ctx.perimeterMm / maxBarSpacingMm));
   }
-  const nW = Math.max(1, Math.ceil(ctx.widthMm / maxBarSpacingMm));
-  const nD = Math.max(1, Math.ceil(ctx.depthMm / maxBarSpacingMm));
+  // ΚΟΙΝΟΣ κανόνας βήματος (SSoT) — ίδιος με το geometry layout (distributeRectBarsBySpacing).
+  const { nW, nD } = rectRestrainedBarIntervals(ctx.widthMm, ctx.depthMm, maxBarSpacingMm);
   return 2 * nW + 2 * nD;
 }
 

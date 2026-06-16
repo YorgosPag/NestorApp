@@ -97,6 +97,9 @@ export interface BimEventMap {
   // ADR-448 Phase 2 — soft warning: θεμελίωση/εδαφόπλακα δημιουργείται εκτός του
   // κατώτατου ορόφου (Revit-style: επιτρέπεται αλλά προειδοποιεί, δεν μπλοκάρει).
   'bim:foundation-on-upper-storey': { kind: 'foundation' | 'ground-slab' };
+  // ADR-461 — soft warning: κανονικό (floor-framing) δοκάρι σε στάθμη ΘΕΜΕΛΙΩΣΗΣ·
+  // πιθανώς εννοείται πεδιλοδοκός/συνδετήρια δοκός (Revit-style: επιτρέπεται, προτείνει).
+  'bim:beam-on-foundation-storey': Record<string, never>;
   // ADR-441 3-mode — soft warning: δομικά στοιχεία διαφορετικού τύπου στον ΙΔΙΟ άξονα με
   // αντίθετη έδραση (π.χ. κολόνες inner + τοίχοι outer) → παρειές δεν ευθυγραμμίζονται.
   // Revit-style: μη-blocking. `axisCount` = πόσοι άξονες έχουν ασυνέπεια.

@@ -159,6 +159,8 @@ export const FOUNDATION_COLUMNS: readonly ScheduleColumnDef[] = [
   { key: 'elevation',    i18nKey: 'col.elevation',    valueType: 'dimension-mm-to-m', align: 'right' },
   { key: 'area',         i18nKey: 'col.area',         valueType: 'area-m2',           align: 'right' },
   { key: 'volume',       i18nKey: 'col.volume',       valueType: 'volume-m3',         align: 'right' },
+  // ADR-463 — βάρος χάλυβα οπλισμού (kg), όπως στην κολώνα.
+  { key: 'steelWeight',  i18nKey: 'col.steelWeight',  valueType: 'number',            align: 'right' },
   { key: 'material',     i18nKey: 'col.material',     valueType: 'text',              align: 'left'  },
 ];
 

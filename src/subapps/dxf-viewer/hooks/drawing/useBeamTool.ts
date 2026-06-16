@@ -42,6 +42,7 @@ import { pickWallEntityAt, buildBeamFromWall } from '../../bim/beams/beam-from-w
 import { beamToolBridgeStore } from '../../bim/beams/beam-tool-bridge-store';
 import { TOLERANCE_CONFIG } from '../../config/tolerance-config';
 import { EventBus } from '../../systems/events/EventBus';
+import { shouldWarnBeamOnFoundation } from '../../systems/levels/storey-creation-defaults';
 
 // ─── State machine types ─────────────────────────────────────────────────────
 
@@ -138,6 +139,12 @@ export function useBeamTool(options: UseBeamToolOptions = {}): UseBeamToolResult
     const prev = stateRef.current;
     beamPreviewStore.set({ startPoint: null, endPoint: null, kind: prev.kind, overrides: prev.overrides });
     setState({ ...INITIAL_STATE, kind: prev.kind, placementMode: prev.placementMode, overrides: prev.overrides, phase: 'awaitingStart' });
+    // ADR-461 — soft warning (once per activation): ένα κανονικό δοκάρι στη στάθμη
+    // θεμελίωσης είναι μάλλον πεδιλοδοκός/συνδετήρια δοκός. Revit-style — επιτρέπεται,
+    // απλώς προτείνει· δεν μπλοκάρει (mirror του useFoundationTool.activate).
+    if (shouldWarnBeamOnFoundation()) {
+      EventBus.emit('bim:beam-on-foundation-storey', {});
+    }
   }, []);
 
   const setKind = useCallback((kind: BeamKind) => {

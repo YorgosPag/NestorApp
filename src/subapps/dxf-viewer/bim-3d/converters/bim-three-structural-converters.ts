@@ -18,7 +18,7 @@ import type { SlabEntity } from '../../bim/types/slab-types';
 import type { SlabOpeningEntity } from '../../bim/types/slab-opening-types';
 import type { Point3D } from '../../bim/types/bim-base';
 import { getElementMaterial3D } from '../materials/MaterialCatalog3D';
-import { buildShape, extrudeAndRotate, extrudeShapesAndRotate, tagMesh, pushHoles } from './bim-three-shape-helpers';
+import { buildShape, extrudeAndRotate, extrudeShapesAndRotate, tagMesh, pushHoles, hangDownMeshY } from './bim-three-shape-helpers';
 import { scalePoints } from '../../rendering/entities/shared/geometry-vector-utils';
 import { computeBeamCutbackOutline } from '../../bim/geometry/beam-column-cutback';
 import { ensureWorldUvs } from './bim-uv-helpers';
@@ -284,9 +284,12 @@ export function beamToMesh(
   const matId = beam.params.material ?? 'elem-beam';
   const mesh = new THREE.Mesh(geo, getElementMaterial3D('beam'));
   // ADR-369 §2.2: topElevation = top of beam; extrusion goes from y=0 → y=depthM.
-  // beam hangs DOWN from (topElevation + zOffset) by depth.
+  // beam hangs DOWN from (topElevation + zOffset) by depth. ADR-448 §4.1 — the
+  // beam top is FLOOR-RELATIVE, so the storey FFL (`floorElevationMm`) must be added
+  // (SSoT `hangDownMeshY`, mirroring column/wall). Without it a foundation beam (FFL
+  // world −1m) landed 1m too high and was clipped by the View-Range cut plane.
   const beamTopMm = beam.params.topElevation + (beam.params.zOffset ?? 0);
-  mesh.position.y = beamTopMm * MM_TO_M - beamDepthM + buildingBaseElevationM;
+  mesh.position.y = hangDownMeshY(floorElevationMm, beamTopMm, beamDepthM, buildingBaseElevationM);
   const tagged = tagMesh(mesh, beam.id, 'beam', matId, levelId);
   attachEdgesProjection(tagged, 'beam');
 
@@ -315,6 +318,7 @@ export function slabToMesh(
   openings: readonly SlabOpeningEntity[] = [],
   levelId?: string,
   buildingBaseElevationM = 0,
+  floorElevationMm = 0, // ADR-448 §4.1 — storey FFL (datum-relative) for floor-aware placement
 ): THREE.Mesh | THREE.Group | null {
   const rawVerts = slab.params.outline.vertices;
   if (rawVerts.length < 3) return null;
@@ -324,7 +328,7 @@ export function slabToMesh(
   // IfcMaterialLayerSet). Single-layer / untyped slabs keep the legacy single
   // extrude below (byte-for-byte — zero regression for the existing ~30 tests).
   if (isMultiLayerSlab(slab.params.dna)) {
-    return buildMultiLayerSlabSolid(slab, openings, levelId, buildingBaseElevationM);
+    return buildMultiLayerSlabSolid(slab, openings, levelId, buildingBaseElevationM, floorElevationMm);
   }
 
   // ADR-462 — outline + opening holes (canvas units) → world metres.
@@ -342,8 +346,10 @@ export function slabToMesh(
   const mesh = new THREE.Mesh(geo, getElementMaterial3D('slab'));
   // ADR-369 §2.1: levelElevation = top face (FFL). Slab hangs DOWN by thickness.
   // floor:0 → -0.20..0m, ceiling/roof:3000 → 2.80..3.00m, foundation:0 → -0.50..0m.
+  // ADR-448 §4.1 — levelElevation is FLOOR-RELATIVE, so add the storey FFL via the
+  // SSoT `hangDownMeshY` (mirror beam/column); 0 on the ground floor → zero regression.
   const slabTopMm = slab.params.levelElevation + (slab.params.heightOffsetFromLevel ?? 0);
-  mesh.position.y = (slabTopMm - slab.params.thickness) * MM_TO_M + buildingBaseElevationM;
+  mesh.position.y = hangDownMeshY(floorElevationMm, slabTopMm, slab.params.thickness * MM_TO_M, buildingBaseElevationM);
   const tagged = tagMesh(mesh, slab.id, 'slab', matId, levelId);
   attachEdgesProjection(tagged, 'slab', 'common-edges');
   return tagged;

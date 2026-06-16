@@ -16,8 +16,8 @@ function makeKind(kind: FoundationKind, topElevationMm = -1000, thicknessMm = 50
 const makePad = (topElevationMm: number, thicknessMm: number) => makeKind('pad', topElevationMm, thicknessMm);
 
 /** Hex of the mesh's (single) MeshStandardMaterial face colour. */
-function meshColorHex(mesh: THREE.Mesh | null): string {
-  const mat = mesh!.material as THREE.MeshStandardMaterial;
+function meshColorHex(mesh: THREE.Object3D | null): string {
+  const mat = (mesh as THREE.Mesh).material as THREE.MeshStandardMaterial;
   return mat.color.getHexString();
 }
 
