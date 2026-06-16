@@ -82,6 +82,8 @@ function input(overrides: Partial<FootingDesignInput> = {}): FootingDesignInput 
     soilBearingCapacityKpa: 300,
     footingSelfWeightKn: 0,
     coverMm: 50,
+    concreteGrade: 'C25/30',
+    flexuralRatioL: 0.0013,
     ...overrides,
   };
 }

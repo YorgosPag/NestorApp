@@ -14,6 +14,8 @@
 
 import { computeFootingBearing } from './footing-bearing';
 import { computeFootingFlexure } from './footing-flexure';
+import { computeFootingPunching } from './footing-punching';
+import { computeFootingOneWayShear } from './footing-shear';
 import type { FootingDesignInput, FootingDesignResult } from './footing-design-types';
 
 /** Συνθέτει το αποτέλεσμα σχεδιασμού πεδίλου από την είσοδο (DERIVED). */
@@ -21,5 +23,7 @@ export function computeFootingDesign(input: FootingDesignInput): FootingDesignRe
   return {
     bearing: computeFootingBearing(input),
     flexure: computeFootingFlexure(input),
+    punching: computeFootingPunching(input),
+    oneWayShear: computeFootingOneWayShear(input),
   };
 }

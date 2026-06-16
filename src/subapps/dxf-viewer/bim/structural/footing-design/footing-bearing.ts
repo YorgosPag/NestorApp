@@ -30,6 +30,20 @@ const MM_TO_M = 1 / 1000;
 /** Όριο πυρήνα (kern) — e/dim πέραν του οποίου εμφανίζεται αποκόλληση (1/6 ορθογ.). */
 export const KERN_RATIO = 1 / 6;
 
+/**
+ * ΕΝΑ SSoT για τον έλεγχο επάρκειας demand/capacity (έδραση/κάμψη/διάτρηση/τέμνουσα,
+ * N.0.2). `adequate` όταν δεν υπάρχει απαίτηση (demand ≤ 0) ή demand ≤ capacity με
+ * έγκυρη capacity· `utilization` = demand/capacity (∞ αν capacity=0 με demand>0).
+ */
+export function makeDesignCheck(demand: number, capacity: number): DesignCheck {
+  return {
+    demand,
+    capacity,
+    utilization: capacity > 0 ? demand / capacity : demand > 0 ? Number.POSITIVE_INFINITY : 0,
+    adequate: demand <= 0 || (capacity > 0 && demand <= capacity),
+  };
+}
+
 /** Μηδενική (no-demand) κατανομή πίεσης όταν δεν υπάρχει καθαρό θλιπτικό φορτίο/εμβαδό. */
 const ZERO_PRESSURE: BasePressure = {
   pMaxKpa: 0,
@@ -125,13 +139,5 @@ export function computeFootingBearing(input: FootingDesignInput): BearingResult 
     input.lengthMm,
   );
 
-  const check: DesignCheck = {
-    demand: pressure.pMaxKpa,
-    capacity: soilBearingCapacityKpa,
-    utilization:
-      soilBearingCapacityKpa > 0 ? pressure.pMaxKpa / soilBearingCapacityKpa : pressure.pMaxKpa > 0 ? Number.POSITIVE_INFINITY : 0,
-    adequate: pressure.pMaxKpa <= 0 || (soilBearingCapacityKpa > 0 && pressure.pMaxKpa <= soilBearingCapacityKpa),
-  };
-
-  return { ...pressure, check };
+  return { ...pressure, check: makeDesignCheck(pressure.pMaxKpa, soilBearingCapacityKpa) };
 }

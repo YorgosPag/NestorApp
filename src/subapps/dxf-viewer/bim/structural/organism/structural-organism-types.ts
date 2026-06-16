@@ -121,7 +121,9 @@ export type StructuralDiagnosticCode =
   | 'columnTopAnchorageUnverified'
   // ADR-464 — footing design checks (loads model).
   | 'bearingInadequate'
-  | 'padEccentricHogging';
+  | 'padEccentricHogging'
+  | 'punchingInadequate'
+  | 'oneWayShearInadequate';
 
 /**
  * Ένα cross-entity εύρημα. `primaryEntityId` = το μέλος που «φταίει» (οδηγεί το

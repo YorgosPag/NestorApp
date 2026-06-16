@@ -16,6 +16,7 @@
  * @see docs/centralized-systems/reference/adrs/ADR-464-advanced-footing-reinforcement.md
  */
 
+import type { ConcreteGrade } from '../concrete-grades';
 import type { CombinedLoad } from '../loads/structural-loads-types';
 
 /**
@@ -40,6 +41,10 @@ export interface FootingDesignInput {
   readonly footingSelfWeightKn: number;
   /** Ονομαστική επικάλυψη cnom (mm) — για το ενεργό βάθος d της κάμψης (Slice 2). */
   readonly coverMm: number;
+  /** Κατηγορία σκυροδέματος πεδίλου — fck για διάτρηση/τέμνουσα (Slice 3). */
+  readonly concreteGrade: ConcreteGrade;
+  /** Ποσοστό εφελκυόμενου (κάτω) οπλισμού ρl — αντοχή v_Rd,c (Slice 3). */
+  readonly flexuralRatioL: number;
 }
 
 /**
@@ -103,8 +108,43 @@ export interface FlexureResult {
   readonly eccentricityRatioY: number;
 }
 
-/** Πλήρες αποτέλεσμα σχεδιασμού πεδίλου (DERIVED). Slices 1-2 = bearing + flexure. */
+/**
+ * Αποτέλεσμα ελέγχου διάτρησης (EC2 §6.4, ULS). Η κολώνα τείνει να «τρυπήσει» το
+ * πέδιλο σε κωνική επιφάνεια· η διατμητική τάση v_Ed στο βασικό κρίσιμο περίγραμμα
+ * (2d από την παρειά) συγκρίνεται με την αντοχή χωρίς συνδετήρες v_Rd,c. `check`
+ * αδρανές (adequate, μηδέν demand) όταν δεν υπάρχει διαστασιολογημένη κολώνα.
+ */
+export interface PunchingResult {
+  /** Διατμητική τάση διάτρησης v_Ed (MPa) στο βασικό περίγραμμα. */
+  readonly vEdMpa: number;
+  /** Αντοχή σε διάτρηση χωρίς οπλισμό v_Rd,c (MPa). */
+  readonly vRdcMpa: number;
+  /** Μήκος βασικού κρίσιμου περιγράμματος u1 (mm). */
+  readonly controlPerimeterMm: number;
+  /** v_Ed vs v_Rd,c. */
+  readonly check: DesignCheck;
+}
+
+/**
+ * Αποτέλεσμα ελέγχου τέμνουσας μονής διεύθυνσης (one-way / beam shear, EC2 §6.2.2,
+ * ULS) στην κρίσιμη διατομή d από την παρειά κολώνας, ανά διεύθυνση. Το δυσμενέστερο
+ * (max v_Ed) οδηγεί το `check`. Αδρανές όταν δεν υπάρχει διαστασιολογημένη κολώνα.
+ */
+export interface OneWayShearResult {
+  /** v_Ed κρίσιμης διατομής κάθετα στον άξονα X (MPa). */
+  readonly vEdXMpa: number;
+  /** v_Ed κρίσιμης διατομής κάθετα στον άξονα Y (MPa). */
+  readonly vEdYMpa: number;
+  /** Αντοχή σε τέμνουσα χωρίς οπλισμό v_Rd,c (MPa). */
+  readonly vRdcMpa: number;
+  /** max(v_Ed) vs v_Rd,c. */
+  readonly check: DesignCheck;
+}
+
+/** Πλήρες αποτέλεσμα σχεδιασμού πεδίλου (DERIVED). Slices 1-3. */
 export interface FootingDesignResult {
   readonly bearing: BearingResult;
   readonly flexure: FlexureResult;
+  readonly punching: PunchingResult;
+  readonly oneWayShear: OneWayShearResult;
 }
