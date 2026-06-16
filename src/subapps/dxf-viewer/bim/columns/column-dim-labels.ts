@@ -28,6 +28,7 @@
 
 import type { ColumnParams } from '../types/column-types';
 import { DEFAULT_POLYGON_SIDES } from '../types/column-types';
+import { formatLengthMm } from '../../config/display-length-format';
 
 /** Hide label when the screen bounding-box span is smaller than this (px). */
 export const COLUMN_LABEL_MIN_FOOTPRINT_PX = 20;
@@ -45,7 +46,7 @@ export function formatColumnDimLabels(params: ColumnParams): string[] {
   switch (params.kind) {
     case 'rectangular': return [...prefix, `w=${w}  d=${d}`];
     case 'circular':    return [...prefix, `Ø=${w}`];
-    case 'shear-wall':  return [...prefix, `L=${w}  t=${d}`];
+    case 'shear-wall':  return [...prefix, `L=${formatLengthMm(w)}  t=${d}`];
     case 'I-shape':     return [...prefix, `b=${w}  h=${d}`];
     case 'polygon': {
       const sides = params.polygon?.sides ?? DEFAULT_POLYGON_SIDES;

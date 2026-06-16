@@ -23,7 +23,9 @@ import { calculateDistance as centralizedCalculateDistance, calculateAngle as ce
 // 🏢 ADR-067: Centralized Radians/Degrees Conversion
 import { radToDeg } from '../../../rendering/entities/shared/geometry-utils';
 // 🏢 ADR-090: Centralized Number Formatting
-import { formatDistance, formatAngle } from '../../../rendering/entities/shared/distance-label-utils';
+import { formatAngle } from '../../../rendering/entities/shared/distance-label-utils';
+// 🏢 ADR-462: display-unit-aware length formatter (mm → status-bar unit selector)
+import { formatLengthMm } from '../../../config/display-length-format';
 
 // ============================================================================
 // CONFIGURATION CONSTANTS
@@ -137,8 +139,9 @@ export abstract class BaseDragMeasurementRenderer {
       // Angle formatting (includes the ° symbol)
       return `${measurement.label}: ${formatAngle(measurement.value, 1)}`;
     } else {
-      // Distance/length formatting
-      return `${measurement.label}: ${formatDistance(measurement.value)}${unit}`;
+      // Distance/length: value is canonical mm (ADR-462) → display-unit selector
+      // owns the conversion + unit label (replaces the raw-mm `formatDistance`).
+      return `${measurement.label}: ${formatLengthMm(measurement.value)}`;
     }
   }
 

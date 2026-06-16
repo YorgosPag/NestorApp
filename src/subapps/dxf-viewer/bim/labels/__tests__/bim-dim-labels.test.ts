@@ -13,6 +13,7 @@ import {
   drawDimPill,
 } from '../bim-dim-labels';
 import { PILL_DIM_FONT } from '../../../rendering/utils/canvas-pill';
+import { formatLengthMm } from '../../../config/display-length-format';
 import type { Entity } from '../../../types/entities';
 
 // Minimal entity factories — only the fields the formatters read. Cast through
@@ -29,9 +30,10 @@ describe('formatBimDimLabels', () => {
       .toEqual(['Ø=500']);
   });
 
-  it('formats a wall as L (mm) × t — geometry.length is metres', () => {
+  it('formats a wall as L (display unit) × t (mm) — geometry.length is metres', () => {
+    // L follows the display-unit selector (ADR-462); t stays mm.
     expect(formatBimDimLabels(ent({ type: 'wall', params: { thickness: 200 }, geometry: { length: 3 } })))
-      .toEqual(['L=3000  t=200']);
+      .toEqual([`L=${formatLengthMm(3000)}  t=200`]);
   });
 
   it('returns [] for a wall without geometry / zero length', () => {
@@ -58,15 +60,15 @@ describe('formatBimDimLabels', () => {
       .toEqual(['C25/30', 'w=1200  l=1500']);
   });
 
-  it('formats a strip/tie-beam foundation as axis-length × width (scene mm)', () => {
+  it('formats a strip/tie-beam foundation as axis-length (display unit) × width (mm)', () => {
     expect(formatBimDimLabels(ent({
       type: 'foundation',
       params: { kind: 'strip', start: { x: 0, y: 0 }, end: { x: 2400, y: 0 }, width: 600, sceneUnits: 'mm' },
-    }))).toEqual(['L=2400  w=600']);
+    }))).toEqual([`L=${formatLengthMm(2400)}  w=600`]);
     expect(formatBimDimLabels(ent({
       type: 'foundation',
       params: { kind: 'tie-beam', start: { x: 0, y: 0 }, end: { x: 0, y: 1800 }, width: 300, sceneUnits: 'mm' },
-    }))).toEqual(['L=1800  w=300']);
+    }))).toEqual([`L=${formatLengthMm(1800)}  w=300`]);
   });
 
   it('returns [] for unsupported entity types', () => {

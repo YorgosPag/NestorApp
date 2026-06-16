@@ -36,6 +36,7 @@ declare global {
   }
 }
 import { RulersGridCalculations, PerformanceUtilities, UnitConversion } from './utils';
+import { formatLengthMm } from '../../config/display-length-format';
 // 🏢 ADR-125: Types imported from types.ts to prevent circular dependencies
 import type { RulersGridHookReturn, RulersGridContextType } from './types';
 import { RulersGridSystemProps, DEFAULT_ORIGIN } from './types';
@@ -141,9 +142,12 @@ function useRulersGridSystemIntegration({
     []
   );
 
+  // ADR-462 — display formatting is the SSoT `formatLengthMm` (one unit selector +
+  // locale). The legacy `units`/`precision` args are accepted for back-compat but
+  // ignored: the live display unit owns both, Revit-style.
   const formatValue = useCallback(
-    (value: number, units: UnitType, precision?: number): string =>
-      UnitConversion.format(value, units, precision),
+    (value: number, _units?: UnitType, _precision?: number): string =>
+      formatLengthMm(value),
     []
   );
 

@@ -172,12 +172,33 @@ export function EnterpriseDxfSettingsProvider({
   // ========================================================================
   // DEBUG: Render counter
   // ========================================================================
+  // Rate-based loop detector: count renders within a sliding burst window.
+  // The counter resets once RENDER_LOOP_WINDOW_MS elapses without a burst, so
+  // legitimate long-session re-renders never accumulate into a false positive.
+  // Only a genuine tight loop reaches the threshold before the window resets.
   const renderCountRef = useRef(0);
+  const renderWindowStartRef = useRef(0);
+  const renderNow = typeof performance !== 'undefined' ? performance.now() : 0;
+
   renderCountRef.current++;
+  if (renderWindowStartRef.current === 0) {
+    renderWindowStartRef.current = renderNow;
+  } else if (renderNow - renderWindowStartRef.current > ENTERPRISE_CONSTANTS.RENDER_LOOP_WINDOW_MS) {
+    // Window elapsed without a burst → normal usage; restart the window.
+    renderCountRef.current = 1;
+    renderWindowStartRef.current = renderNow;
+  }
 
   if (renderCountRef.current > ENTERPRISE_CONSTANTS.RENDER_LOOP_THRESHOLD) {
-    derr('[Enterprise] INFINITE LOOP DETECTED! Render count:', renderCountRef.current);
+    derr(
+      '[Enterprise] INFINITE LOOP DETECTED! Render count:',
+      renderCountRef.current,
+      `within ${ENTERPRISE_CONSTANTS.RENDER_LOOP_WINDOW_MS}ms`
+    );
     console.trace('[Enterprise] Stack trace:');
+    // Reset so a single transient burst does not re-fire on every render.
+    renderCountRef.current = 1;
+    renderWindowStartRef.current = renderNow;
   } else {
     dlog('[Enterprise] Render #', renderCountRef.current);
   }

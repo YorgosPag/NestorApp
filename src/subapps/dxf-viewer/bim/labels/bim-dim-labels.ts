@@ -11,8 +11,11 @@
  *
  * ⚠️ UNIT-SAFETY: `WallGeometry.length` / `BeamGeometry.length` are in **metres**;
  * `params.width/depth/thickness/height` are in **mm**. Foundation has no cached
- * axis length → derived from start/end via the scene-unit scale. All label tokens
- * are integer mm.
+ * axis length → derived from start/end via the scene-unit scale.
+ *
+ * DISPLAY UNITS (ADR-462): the run-LENGTH token `L=` follows the status-bar unit
+ * selector via `formatLengthMm` (e.g. "L=9,75 m"); cross-section tokens
+ * (`t/w/d/h`, pad footprint) stay integer **mm** (engineering convention, Revit-style).
  *
  * Pure module: zero React / stores / DOM. ADR-040 micro-leaf safe (no subscriptions,
  * no per-frame allocation beyond the small `lines` array).
@@ -36,6 +39,7 @@ import type { OpeningEntity } from '../types/opening-types';
 import type { FoundationEntity, FoundationParams } from '../types/foundation-types';
 import type { BoundingBox3D } from '../types/bim-base';
 import { mmScaleFor } from '../../utils/scene-units';
+import { formatLengthMm } from '../../config/display-length-format';
 import { formatColumnDimLabels } from '../columns/column-dim-labels';
 import {
   PILL_DIM_FONT,
@@ -73,7 +77,7 @@ export function formatBimDimLabels(entity: Entity): string[] {
 function formatWallDimLabels(wall: WallEntity): string[] {
   const lenMm = wall.geometry ? r(wall.geometry.length * 1000) : 0;
   if (lenMm <= 0) return [];
-  return [`L=${lenMm}  t=${r(wall.params.thickness)}`];
+  return [`L=${formatLengthMm(lenMm)}  t=${r(wall.params.thickness)}`];
 }
 
 /** Beam → optional profile prefix + `w=…  d=…` (section dims, mm). */
@@ -94,7 +98,7 @@ function formatFoundationDimLabels(foundation: FoundationEntity): string[] {
   if (p.kind === 'pad') return [...prefix, `w=${r(p.width)}  l=${r(p.length)}`];
   const lenMm = r(foundationAxisLengthMm(p));
   if (lenMm <= 0) return [];
-  return [...prefix, `L=${lenMm}  w=${r(p.width)}`];
+  return [...prefix, `L=${formatLengthMm(lenMm)}  w=${r(p.width)}`];
 }
 
 /**

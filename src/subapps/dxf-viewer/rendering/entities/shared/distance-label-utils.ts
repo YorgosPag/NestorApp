@@ -34,6 +34,8 @@ import { getTextPreviewStyleWithOverride, renderStyledTextWithOverride } from '.
 import { calculateDistance, calculateAngle } from './geometry-rendering-utils';
 // 🏢 ADR-082: Enterprise Number Formatting
 import { FormatterRegistry, type Precision } from '../../../formatting';
+// 🏢 ADR-462: display-unit SSoT — entity distance labels follow the status-bar unit
+import { formatLengthMm } from '../../../config/display-length-format';
 // 🏢 ADR-112: Centralized Text Rotation Pattern
 import { normalizeTextAngle } from './geometry-utils';
 // 🏢 ADR-XXX: Centralized Overlay Colors
@@ -296,7 +298,9 @@ export function renderDistanceLabel(
 
   // Calculate distance from WORLD coordinates
   const distance = calculateWorldDistance(worldP1, worldP2);
-  const text = formatDistance(distance, opts.decimals);
+  // ADR-462: distance is a canonical-mm world length → display-unit SSoT owns the
+  // unit + locale + label (replaces the raw `formatDistance`). Follows the selector.
+  const text = formatLengthMm(distance);
 
   // Calculate midpoint for label positioning (screen coordinates)
   const midX = (screenP1.x + screenP2.x) / 2;
@@ -384,7 +388,9 @@ export function renderDistanceLabelStyled(
 
   // Calculate distance from WORLD coordinates
   const distance = calculateWorldDistance(worldP1, worldP2);
-  const text = formatDistance(distance, opts.decimals);
+  // ADR-462: distance is a canonical-mm world length → display-unit SSoT owns the
+  // unit + locale + label (replaces the raw `formatDistance`). Follows the selector.
+  const text = formatLengthMm(distance);
 
   // Calculate midpoint
   const midX = (screenP1.x + screenP2.x) / 2;

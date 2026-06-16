@@ -17,11 +17,20 @@
  * Enterprise provider configuration constants
  */
 export const ENTERPRISE_CONSTANTS = {
-  /** Maximum render count before infinite loop warning.
-   * React 18 StrictMode + deep provider nesting can legitimately reach 50+
-   * renders on init (2× StrictMode × N state transitions). Use 100 to catch
-   * true loops (which would be 1000+ renders). */
+  /** Maximum render count *within a single burst window* before the infinite
+   * loop warning fires. React 18 StrictMode + deep provider nesting can
+   * legitimately reach 50+ renders on init (2× StrictMode × N state
+   * transitions). A true loop produces >100 renders inside one
+   * RENDER_LOOP_WINDOW_MS window; normal interaction spreads renders across
+   * many windows and never trips. */
   RENDER_LOOP_THRESHOLD: 100,
+
+  /** Burst window (ms) for the render-loop detector. The render counter is
+   * reset whenever this window elapses without crossing RENDER_LOOP_THRESHOLD,
+   * so legitimate long-session re-renders (floor changes, settings edits,
+   * hydration) never accumulate into a false "INFINITE LOOP DETECTED". Only a
+   * genuine tight loop can reach the threshold before the window resets. */
+  RENDER_LOOP_WINDOW_MS: 2000,
 
   /** Auto-save debounce delay in milliseconds */
   AUTO_SAVE_DEBOUNCE_MS: 500,

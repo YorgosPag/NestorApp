@@ -1,26 +1,35 @@
 /**
- * ADR-363 — move-readout SSoT tests.
+ * ADR-363 / ADR-462 — move-readout SSoT tests.
  *
- * Verifies the live move-distance readout helpers: the formatter delegates to the
- * locale distance SSoT (no hardcoded unit), the scene-unit→metre conversion matches
- * the scene-units table, and the midpoint helper returns the true midpoint.
+ * Verifies the live move-distance readout helpers: the formatter routes through the
+ * display-length SSoT (display unit + label, ADR-462), the scene-unit→metre
+ * conversion matches the scene-units table, and the midpoint helper returns the
+ * true midpoint.
  */
 
 import { formatMoveDistance, sceneDistanceToMeters, moveReadoutMid, formatMoveAngle } from '../move-readout';
-import { formatDistanceLocale, formatAngleLocale } from '../../../rendering/entities/shared/distance-label-utils';
+import { formatAngleLocale } from '../../../rendering/entities/shared/distance-label-utils';
+import { formatLengthMm } from '../../../config/display-length-format';
+import { displayUnitState } from '../../../config/display-unit-state';
 
 describe('formatMoveDistance', () => {
-  it('delegates to the locale distance formatter (2 dp, no hardcoded unit)', () => {
-    expect(formatMoveDistance(1.5)).toBe(formatDistanceLocale(1.5, 2));
-    expect(formatMoveDistance(0)).toBe(formatDistanceLocale(0, 2));
+  afterEach(() => displayUnitState.setUnit('cm')); // restore default
+
+  it('routes the metre input through the display-length SSoT (mm-based)', () => {
+    // 1.5 m → 1500 mm → formatLengthMm in the active display unit.
+    expect(formatMoveDistance(1.5)).toBe(formatLengthMm(1500));
+    expect(formatMoveDistance(0)).toBe(formatLengthMm(0));
   });
 
   it('uses the absolute value (a negative displacement reads the same)', () => {
     expect(formatMoveDistance(-2.34)).toBe(formatMoveDistance(2.34));
   });
 
-  it('never embeds a unit token (N.11-safe — separator/digits only)', () => {
-    expect(formatMoveDistance(1.23)).not.toMatch(/[a-zα-ω]/i);
+  it('follows the selected display unit (compared to the SSoT formatter)', () => {
+    displayUnitState.setUnit('m');
+    expect(formatMoveDistance(9.75)).toBe(formatLengthMm(9750, { unit: 'm' }));
+    displayUnitState.setUnit('cm');
+    expect(formatMoveDistance(9.75)).toBe(formatLengthMm(9750, { unit: 'cm' }));
   });
 });
 

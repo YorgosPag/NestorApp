@@ -8,9 +8,10 @@
  * anchor midpoint (`moveReadoutMid`). The 2D pill, the 3D line+label, and any future
  * readout therefore cannot visually diverge.
  *
- * The number goes through the locale-aware distance formatter SSoT
- * (`formatDistanceLocale`) so there is NO hardcoded unit string (N.11-safe) and the
- * decimal separator follows the user locale (1,23 in el-GR / 1.23 in en-US).
+ * The number goes through the display-length formatter SSoT (`formatLengthMm`),
+ * so it follows the status-bar unit selector (m / cm / mm / …) in real time and
+ * the locale decimal separator (1,23 in el-GR / 1.23 in en-US). Internal geometry
+ * stays canonical mm (ADR-462) — only the displayed string changes.
  *
  * Pure module: zero React / stores / DOM (ADR-040 micro-leaf safe; no per-frame
  * allocation beyond the small midpoint object).
@@ -20,19 +21,18 @@
  */
 
 import type { Point2D } from '../../rendering/types/Types';
-import { formatDistanceLocale, formatAngleLocale } from '../../rendering/entities/shared/distance-label-utils';
+import { formatAngleLocale } from '../../rendering/entities/shared/distance-label-utils';
+import { formatLengthMm } from '../../config/display-length-format';
 import { sceneUnitsToMeters, type SceneUnits } from '../../utils/scene-units';
 
-/** Decimal places for the live move readout (metre scale → Revit-grade 2 dp). */
-const MOVE_READOUT_DECIMALS = 2;
-
 /**
- * Locale-formatted move distance for a displacement of `meters`. Wraps the distance
- * formatter SSoT → no hardcoded unit, locale-correct decimal separator. Identical
- * string in 2D & 3D. `Math.abs` guards a (theoretical) negative input.
+ * Move distance for a displacement of `meters`, formatted in the user-selected
+ * display unit (status-bar selector) with locale-correct separator + unit label.
+ * Routes through the display-length SSoT (`formatLengthMm`, which works in mm) →
+ * identical string in 2D & 3D. `Math.abs` guards a (theoretical) negative input.
  */
 export function formatMoveDistance(meters: number): string {
-  return formatDistanceLocale(Math.abs(meters), MOVE_READOUT_DECIMALS);
+  return formatLengthMm(Math.abs(meters) * 1000);
 }
 
 /**

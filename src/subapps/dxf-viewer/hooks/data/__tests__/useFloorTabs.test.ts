@@ -2,7 +2,7 @@
  * ADR-399 — useFloorTabs reconciliation hook tests.
  *
  * Coverage:
- *  - visibility gating (floorplanType==='floor' + buildingId required)
+ *  - visibility gating (buildingId required — any building-bound level, ADR-399 §3.4 rev. 2026-06-16)
  *  - floor↔level mapping (linked level vs virtual tab)
  *  - hasFloorplan flag (sceneFileId / scene entities)
  *  - label fallback via generateAutoLongName (no longName/name)
@@ -57,19 +57,21 @@ function floor(id: string, number: number, extra: Partial<FloorOption> = {}): Fl
 afterEach(() => jest.clearAllMocks());
 
 describe('useFloorTabs — visibility', () => {
-  it('hidden when current level is not a floor plan', () => {
+  it('visible for an empty building storey (buildingId, no floorplanType) — the 2026-06-16 fix', () => {
+    // Building-setup levels (findOrCreateLevelForFloor) carry buildingId+floorId
+    // but NO floorplanType:'floor'. They belong to a building → strip must show.
     mockUseLevelsContext.mockReturnValue(
-      makeCtx({ levels: [{ id: 'L1', buildingId: 'b1', floorplanType: 'building' }], currentLevelId: 'L1' }),
+      makeCtx({ levels: [{ id: 'L1', floorId: 'f1', buildingId: 'b1' }], currentLevelId: 'L1' }),
     );
-    mockUseFloorsByBuilding.mockReturnValue({ floors: [], loading: false });
+    mockUseFloorsByBuilding.mockReturnValue({ floors: [floor('f1', 1)], loading: false });
 
     const { result } = renderHook(() => useFloorTabs());
-    expect(result.current.visible).toBe(false);
+    expect(result.current.visible).toBe(true);
   });
 
-  it('hidden when floor plan has no buildingId', () => {
+  it('hidden for the building-less default level («Επίπεδο 1»)', () => {
     mockUseLevelsContext.mockReturnValue(
-      makeCtx({ levels: [{ id: 'L1', floorplanType: 'floor' }], currentLevelId: 'L1' }),
+      makeCtx({ levels: [{ id: 'L1' }], currentLevelId: 'L1' }),
     );
     mockUseFloorsByBuilding.mockReturnValue({ floors: [], loading: false });
 

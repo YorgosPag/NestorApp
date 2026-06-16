@@ -17,7 +17,8 @@ import {
 import type { Point2D, ViewTransform } from './config';
 import type { SnapResult } from './config';
 import { AXIS_DETECTION, UI_POSITIONING } from '../../config/tolerance-config';
-import { UnitConversion, GridCalculations } from './grid-calculations';
+import { GridCalculations } from './grid-calculations';
+import { formatLengthMm } from '../../config/display-length-format';
 
 // ============================================================================
 // RULER CALCULATIONS
@@ -77,7 +78,7 @@ export const RulerCalculations = {
         position: pos,
         type: isMajor ? 'major' : 'minor',
         length: isMajor ? settings[type].majorTickLength : settings[type].minorTickLength,
-        label: isMajor ? UnitConversion.format(pos, settings.units, settings[type].precision) : undefined,
+        label: isMajor ? formatLengthMm(pos) : undefined,
         value: pos
       });
 

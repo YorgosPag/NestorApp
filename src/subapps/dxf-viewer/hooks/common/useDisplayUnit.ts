@@ -1,12 +1,9 @@
 'use client';
 
-import { useState, useCallback } from 'react';
-import {
-  type DisplayUnit,
-  DEFAULT_DISPLAY_UNIT,
-  DISPLAY_UNIT_STORAGE_KEY,
-  isValidDisplayUnit,
-} from '../../config/units';
+import { useCallback, useSyncExternalStore } from 'react';
+import { type DisplayUnit } from '../../config/units';
+import { displayUnitState } from '../../config/display-unit-state';
+import { markAllCanvasDirty } from '../../rendering/core/UnifiedFrameScheduler';
 
 export interface UseDisplayUnitResult {
   displayUnit: DisplayUnit;
@@ -14,19 +11,29 @@ export interface UseDisplayUnitResult {
 }
 
 /**
- * ADR-357 Phase 2b: React hook for the user-selected display unit.
- * Persists in localStorage (key: dxf:displayUnit), defaults to 'cm'.
+ * ADR-357 Phase 2b: React binding for the user-selected display unit.
+ *
+ * Subscribes to the non-React `displayUnitState` SSoT (single live truth shared
+ * with the canvas render-path formatter `formatLengthMm`). Writes go through the
+ * store, which persists to localStorage (key: dxf:displayUnit) and notifies every
+ * subscriber synchronously → the status-bar selector and all readouts stay in
+ * lock-step. Defaults to 'cm'.
+ *
+ * @see config/display-unit-state.ts — the store this binds to
  */
 export function useDisplayUnit(): UseDisplayUnitResult {
-  const [displayUnit, setDisplayUnitState] = useState<DisplayUnit>(() => {
-    if (typeof window === 'undefined') return DEFAULT_DISPLAY_UNIT;
-    const stored = localStorage.getItem(DISPLAY_UNIT_STORAGE_KEY);
-    return isValidDisplayUnit(stored) ? stored : DEFAULT_DISPLAY_UNIT;
-  });
+  const displayUnit = useSyncExternalStore(
+    displayUnitState.subscribe,
+    displayUnitState.getUnit,
+    displayUnitState.getUnit,
+  );
 
   const setDisplayUnit = useCallback((unit: DisplayUnit) => {
-    localStorage.setItem(DISPLAY_UNIT_STORAGE_KEY, unit);
-    setDisplayUnitState(unit);
+    displayUnitState.setUnit(unit);
+    // Live refresh: the canvas readouts (ruler ticks, dimension pills, move /
+    // drag-measurement labels) are drawn on-demand (ADR-040) — repaint all canvas
+    // layers so every label switches to the new unit immediately, Revit-style.
+    markAllCanvasDirty();
   }, []);
 
   return { displayUnit, setDisplayUnit };

@@ -12,6 +12,7 @@
 
 import { formatColumnDimLabels, COLUMN_LABEL_MIN_FOOTPRINT_PX } from '../column-dim-labels';
 import { buildDefaultColumnParams } from '../../../hooks/drawing/column-completion';
+import { formatLengthMm } from '../../../config/display-length-format';
 import type { ColumnParams, ColumnKind } from '../../types/column-types';
 
 function makeParams(kind: ColumnKind, overrides: Partial<ColumnParams> = {}): ColumnParams {
@@ -49,14 +50,15 @@ describe('formatColumnDimLabels', () => {
   });
 
   describe('shear-wall', () => {
-    it('produces L= t= format', () => {
+    // L (wall length) follows the display-unit selector (ADR-462); t stays mm.
+    it('produces L= (display unit) t= (mm) format', () => {
       const params = makeParams('shear-wall', { width: 2000, depth: 200 });
-      expect(formatColumnDimLabels(params)).toEqual(['L=2000  t=200']);
+      expect(formatColumnDimLabels(params)).toEqual([`L=${formatLengthMm(2000)}  t=200`]);
     });
 
     it('prepends catalogProfile when present', () => {
       const params = makeParams('shear-wall', { width: 2000, depth: 200, catalogProfile: 'C30/37' });
-      expect(formatColumnDimLabels(params)).toEqual(['C30/37', 'L=2000  t=200']);
+      expect(formatColumnDimLabels(params)).toEqual(['C30/37', `L=${formatLengthMm(2000)}  t=200`]);
     });
   });
 

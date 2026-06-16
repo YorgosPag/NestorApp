@@ -16,6 +16,7 @@ import {
 import type { ViewTransform } from './config';
 import { AXIS_DETECTION } from '../../config/tolerance-config';
 import { clamp01 } from '../../rendering/entities/shared/geometry-utils';
+import { formatLengthMm } from '../../config/display-length-format';
 
 // ============================================================================
 // HELPERS (private to this module)
@@ -87,11 +88,16 @@ export const UnitConversion = {
     return (value * fromFactor) / toFactor;
   },
 
-  format: (value: number, units: UnitType, precision?: number): string => {
-    const defaultPrecision = units === 'mm' ? 1 : units === 'cm' ? 2 : units === 'm' ? 3 : 2;
-    const actualPrecision = precision ?? defaultPrecision;
-    const formatted = value.toFixed(actualPrecision);
-    return `${formatted}${units}`;
+  /**
+   * @deprecated Display formatting is now the SSoT `formatLengthMm` (ADR-462):
+   * ONE unit source of truth (the status-bar selector) + locale-aware separator,
+   * exactly like Revit/AutoCAD where ruler + dimensions + measurements all follow
+   * one project unit. This thin adapter delegates to it and IGNORES the legacy
+   * `units`/`precision` args so every ruler tick follows the live display unit.
+   * `value` is a canonical-mm world coordinate.
+   */
+  format: (value: number, _units?: UnitType, _precision?: number): string => {
+    return formatLengthMm(value);
   },
 
   getStepForUnit: (units: UnitType, baseStep: number = 10): number => {

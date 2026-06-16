@@ -9,8 +9,11 @@
  *   - Δεν υπάρχει → **virtual** καρτέλα (κενός όροφος)· κλικ = lazy provision
  *     ενός level μέσω του ADR-286 SSoT gateway (`addLevel`) + `updateLevelContext`.
  *
- * Ορατότητα: μόνο όταν ο τρέχων όροφος είναι κάτοψη **ορόφου**
- * (`floorplanType === 'floor'`) με γνωστό `buildingId` (απόφαση Giorgio #3).
+ * Ορατότητα: όταν ο τρέχων level **ανήκει σε συγκεκριμένο κτίριο** (`buildingId`).
+ * Δείκτης = `buildingId`, ΟΧΙ `floorplanType` — τα κενά building-storeys (που
+ * φτιάχνονται από το building setup μέσω `findOrCreateLevelForFloor` και ΔΕΝ
+ * φέρουν `floorplanType:'floor'`) ανήκουν εξίσου σε κτίριο και πρέπει να δείχνουν
+ * τη strip. Το default «Επίπεδο 1» (χωρίς `buildingId`) δεν τη δείχνει.
  *
  * @module subapps/dxf-viewer/hooks/data/useFloorTabs
  * @see docs/centralized-systems/reference/adrs/ADR-399-dxf-floor-navigation-tabs.md
@@ -78,7 +81,11 @@ export function useFloorTabs(): UseFloorTabsResult {
   );
 
   const buildingId = currentLevel?.buildingId ?? null;
-  const visible = currentLevel?.floorplanType === 'floor' && !!buildingId;
+  // Show the strip whenever the active level belongs to a building. Gating on
+  // `buildingId` (not `floorplanType`) keeps empty building storeys — created via
+  // `findOrCreateLevelForFloor` without a `floorplanType:'floor'` tag — visible,
+  // while the building-less default «Επίπεδο 1» stays hidden.
+  const visible = !!buildingId;
 
   // Subscribe to the building's floors only while the strip is relevant.
   const { floors } = useFloorsByBuilding(buildingId, visible);
