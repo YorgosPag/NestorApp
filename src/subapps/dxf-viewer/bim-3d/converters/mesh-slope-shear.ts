@@ -29,6 +29,7 @@ import { slabSlopeOffsetZmm } from '../../bim/geometry/slab-slope';
 import { beamSlopeOffsetZmm, isBeamTilted } from '../../bim/geometry/beam-slope';
 import { columnTiltShearAt, isColumnTilted } from '../../bim/geometry/column-tilt';
 import { wallTiltShearAt, isWallTilted } from '../../bim/geometry/wall-tilt';
+import { sceneUnitsToMeters } from '../../utils/scene-units';
 
 /** mm → world-metres (ίδιο factor με `BimToThreeConverter`). */
 const MM_TO_M = 0.001;
@@ -108,6 +109,9 @@ export function applyWallTilt(
  */
 export function applyBeamSlope(geo: THREE.BufferGeometry, params: BeamEntity['params']): void {
   if (!isBeamTilted(params)) return;
+  // ADR-462 — δεν χρειάζεται μετατροπή των plan coords: το `beamSlopeOffsetZmm` είναι
+  // scale-invariant (αδιάστατο κλάσμα κατά μήκος του άξονα), άρα δουλεύει είτε το XZ
+  // είναι σε μέτρα είτε σε canvas units. (Αντίθετα το slab-slope — δες `applySlabSlope`.)
   const pos = geo.getAttribute('position') as THREE.BufferAttribute;
   for (let i = 0; i < pos.count; i++) {
     const sx = pos.getX(i);
@@ -136,10 +140,16 @@ export function applyBeamSlope(geo: THREE.BufferGeometry, params: BeamEntity['pa
  */
 export function applySlabSlope(geo: THREE.BufferGeometry, params: SlabParams): void {
   if (params.geometryType !== 'tilted' || !params.slope) return;
+  // ADR-462 — μετά το canonical-mm scaling το geometry XZ είναι σε ΜΕΤΡΑ. Το
+  // `slabSlopeOffsetZmm` ΔΕΝ είναι scale-invariant (περιμένει plan coords στις
+  // μονάδες του `params.outline` = canvas/mm)· οπότε μετατρέπουμε πίσω σε canvas
+  // units (÷ sceneToM) ΠΡΙΝ το lookup. (Αντίθετα το `beamSlopeOffsetZmm` είναι
+  // scale-invariant — δες `applyBeamSlope`.)
+  const sceneToM = sceneUnitsToMeters(params.sceneUnits ?? 'mm');
   const pos = geo.getAttribute('position') as THREE.BufferAttribute;
   for (let i = 0; i < pos.count; i++) {
-    const sx = pos.getX(i);
-    const sy = -pos.getZ(i);
+    const sx = pos.getX(i) / sceneToM;
+    const sy = -pos.getZ(i) / sceneToM;
     const offsetM = slabSlopeOffsetZmm(params, { x: sx, y: sy }) * MM_TO_M;
     pos.setY(i, pos.getY(i) + offsetM);
   }

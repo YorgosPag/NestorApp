@@ -25,7 +25,7 @@ import type { Point3D } from '../../bim/types/bim-base';
 import { stripPrismGeometry } from './envelope-three-mesh';
 import { getMaterial3D } from '../materials/MaterialCatalog3D';
 import { attachEdgesProjection } from './bim-three-edges';
-import { mmToSceneUnits, type SceneUnits } from '../../utils/scene-units';
+import { mmToSceneUnits, sceneUnitsToMeters, type SceneUnits } from '../../utils/scene-units';
 import { computeColumnFinishBands, computeBeamFinishFaces } from '../../bim/finishes/structural-finish-scene';
 import type { FinishFaceSegment, StructuralFinishFaces } from '../../bim/finishes/structural-finish-types';
 // ADR-449 Slice X2 — γωνιακή γεωμετρία = pure SSoT (κοινή με το 2Δ outline· πρώην εδώ).
@@ -91,15 +91,19 @@ export function buildFinishSkinFromFaces(
   // τα (πιθανώς επεκταμένα) `aCore/bCore`, ΟΧΙ τα raw `seg.a/b`. Γωνίες ΙΔΙΟΥ στοιχείου = miter.
   const { aOuter, bOuter, aCore, bCore } = computeMiteredOuter(segs, offsets, true);
 
+  // ADR-462 — τα band coords (core/outer) είναι canvas units (ίδιος χώρος με το
+  // footprint) → world metres με sceneToM. Τα offsets (× s) είναι ήδη στον ίδιο
+  // canvas χώρο, οπότε όλο το quad κλιμακώνεται μαζί.
+  const sceneToM = sceneUnitsToMeters(sceneUnits);
   const group = new THREE.Group();
   for (let i = 0; i < segs.length; i++) {
     if (!offsets[i]) continue;
     const seg = segs[i];
     const quad: Point3D[] = [
-      { x: aCore[i].x, y: aCore[i].y, z: 0 },
-      { x: bCore[i].x, y: bCore[i].y, z: 0 },
-      { x: bOuter[i].x, y: bOuter[i].y, z: 0 },
-      { x: aOuter[i].x, y: aOuter[i].y, z: 0 },
+      { x: aCore[i].x * sceneToM, y: aCore[i].y * sceneToM, z: 0 },
+      { x: bCore[i].x * sceneToM, y: bCore[i].y * sceneToM, z: 0 },
+      { x: bOuter[i].x * sceneToM, y: bOuter[i].y * sceneToM, z: 0 },
+      { x: aOuter[i].x * sceneToM, y: aOuter[i].y * sceneToM, z: 0 },
     ];
     addFinishPrism(group, quad, heightM, baseY, id, bimType, seg.materialId, seg.classification, levelId);
   }

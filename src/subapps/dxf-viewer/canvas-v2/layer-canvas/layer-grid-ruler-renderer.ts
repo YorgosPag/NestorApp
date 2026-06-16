@@ -17,6 +17,10 @@ import { RIGHT_ANGLE } from '../../rendering/entities/shared/geometry-utils';
 import { RULER_CONFIG } from '../../config/tolerance-config';
 // 🏢 ADR-127: Centralized Ruler Dimensions
 import { RULERS_GRID_CONFIG } from '../../systems/rulers-grid/config';
+// 🏢 ADR-462: display-measurement SSoT — ruler ticks follow the status-bar unit
+// selector (the active canvas ruler; the legacy ruler-specific `settings.unit` no
+// longer wins — Revit-style ONE project unit). Tick positions are coordinates.
+import { formatCoordinateForDisplay, currentDisplayUnitLabel } from '../../config/display-length-format';
 
 /**
  * Render grid (lines or dots style)
@@ -151,7 +155,7 @@ function renderHorizontalRuler(
 
     // Labels
     if (settings.showLabels !== false) {
-      const numberText = worldX.toFixed(0);
+      const numberText = formatCoordinateForDisplay(worldX, { withUnit: false });
 
       ctx.fillStyle = settings.textColor ?? settings.color ?? UI_COLORS.BLACK;
       ctx.font = buildUIFont(settings.fontSize ?? UI_SIZE_DEFAULTS.RULER_FONT_SIZE, 'arial');
@@ -162,7 +166,7 @@ function renderHorizontalRuler(
         const numberWidth = ctx.measureText(numberText).width;
         ctx.fillStyle = settings.unitsColor ?? settings.textColor ?? settings.color ?? UI_COLORS.BLACK;
         ctx.font = buildUIFont(settings.unitsFontSize ?? settings.fontSize ?? UI_SIZE_DEFAULTS.RULER_UNITS_FONT_SIZE, 'arial');
-        ctx.fillText(settings.unit ?? '', x + numberWidth / 2 + 5, yPosition + rulerHeight / 2);
+        ctx.fillText(currentDisplayUnitLabel(),x + numberWidth / 2 + 5, yPosition + rulerHeight / 2);
       }
     }
 
@@ -221,7 +225,7 @@ function renderVerticalRuler(
 
     // Labels
     if (settings.showLabels !== false) {
-      const numberText = worldY.toFixed(0);
+      const numberText = formatCoordinateForDisplay(worldY, { withUnit: false });
 
       // 🏢 ADR-XXX: Use centralized RIGHT_ANGLE constant
       ctx.save();
@@ -237,7 +241,7 @@ function renderVerticalRuler(
         const numberWidth = ctx.measureText(numberText).width;
         ctx.fillStyle = settings.unitsColor ?? settings.textColor ?? settings.color ?? UI_COLORS.BLACK;
         ctx.font = buildUIFont(settings.unitsFontSize ?? settings.fontSize ?? UI_SIZE_DEFAULTS.RULER_UNITS_FONT_SIZE, 'arial');
-        ctx.fillText(settings.unit ?? '', numberWidth / 2 + 5, 0);
+        ctx.fillText(currentDisplayUnitLabel(),numberWidth / 2 + 5, 0);
       }
 
       ctx.restore();

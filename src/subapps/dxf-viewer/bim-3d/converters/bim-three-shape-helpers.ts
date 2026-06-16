@@ -77,15 +77,22 @@ export function tagMesh(mesh: THREE.Mesh, id: string, type: string, matId: strin
 // voiding IfcSlab (Revit Floor + Opening family pattern). Extracted from
 // BimToThreeConverter (N.7.1 SSoT) so the single- AND multi-layer slab builders
 // share one hole-cutting routine.
-export function pushHoles(shape: THREE.Shape, openings: readonly SlabOpeningEntity[]): void {
+// ADR-462 — `sceneToM` scales the opening outline (canvas units) into world metres,
+// matching the outer slab ring. Defaults to 1 for callers that already pass metre-space
+// geometry. Must equal the slab's `sceneUnitsToMeters(sceneUnits)`.
+export function pushHoles(
+  shape: THREE.Shape,
+  openings: readonly SlabOpeningEntity[],
+  sceneToM = 1,
+): void {
   for (const op of openings) {
     const verts = op.params.outline.vertices;
     if (verts.length < 3) continue;
     const path = new THREE.Path();
     // CCW → CW: traverse vertices in reverse.
     const last = verts[verts.length - 1];
-    path.moveTo(last.x, last.y);
-    for (let i = verts.length - 2; i >= 0; i--) path.lineTo(verts[i].x, verts[i].y);
+    path.moveTo(last.x * sceneToM, last.y * sceneToM);
+    for (let i = verts.length - 2; i >= 0; i--) path.lineTo(verts[i].x * sceneToM, verts[i].y * sceneToM);
     path.closePath();
     shape.holes.push(path);
   }

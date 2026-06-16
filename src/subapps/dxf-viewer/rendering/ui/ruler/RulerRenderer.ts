@@ -21,12 +21,18 @@ import { COORDINATE_LAYOUT } from '../../core/CoordinateTransforms';
 // 🏢 ADR-044: Centralized line widths
 // 🏢 ADR-091: Centralized UI Fonts (buildUIFont for dynamic sizes)
 import { RENDER_LINE_WIDTHS, buildUIFont } from '../../../config/text-rendering-config';
-// 🏢 ADR-119: Centralized Opacity Constants
-import { OPACITY } from '../../../config/color-config';
+// Corner-box draw helper extracted for file-size compliance (<500).
+import { drawRulerCornerBox } from './ruler-corner-box';
 // 🏢 ADR-XXX: Centralized Angular Constants
 import { RIGHT_ANGLE } from '../../entities/shared/geometry-utils';
 // 🏢 ADR-118: Centralized Zero Point Pattern
 import { WORLD_ORIGIN } from '../../../config/geometry-constants';
+// 🏢 ADR-462: display-measurement SSoT — the VISIBLE canvas ruler (this renderer,
+// instantiated by DxfCanvas → drawn by dxf-canvas-renderer) follows the status-bar
+// unit selector. Tick numbers are world COORDINATES (signed); the unit suffix is the
+// live display-unit label. The legacy per-ruler `settings.unit` no longer wins —
+// Revit-style ONE project unit, shared with the status-bar X/Y readout.
+import { formatCoordinateForDisplay, currentDisplayUnitLabel } from '../../../config/display-length-format';
 
 /**
  * 🔺 CENTRALIZED RULER RENDERER
@@ -84,18 +90,6 @@ export class RulerRenderer implements UIRenderer {
   }
 
   /**
-   * Derive the decimal precision a label needs for a given interval.
-   *   interval ≥ 1   → 0 decimals  (10, 20, 100 …)
-   *   interval ≥ 0.1 → 1 decimal   (0.1, 0.2, 0.5)
-   *   interval < 0.1 → 2 decimals  (0.01, 0.02, 0.05)
-   */
-  private calculateLabelPrecision(interval: number): number {
-    if (interval >= 1) return 0;
-    if (interval >= 0.1) return 1;
-    return 2;
-  }
-
-  /**
    * Main render method - Implements UIRenderer interface
    */
   render(
@@ -129,7 +123,7 @@ export class RulerRenderer implements UIRenderer {
     );
 
     // ✅ CAD-GRADE: Render corner box where rulers meet (AutoCAD/Revit/Blender standard)
-    this.renderCornerBox(context.ctx, viewport, rulerSettings);
+    drawRulerCornerBox(context.ctx, viewport, rulerSettings);
   }
 
   /**
@@ -148,7 +142,7 @@ export class RulerRenderer implements UIRenderer {
     this.renderRuler(ctx, viewport, settings, transform, 'vertical', 'left');
 
     // ✅ CAD-GRADE: Render corner box where rulers meet
-    this.renderCornerBox(ctx, viewport, settings);
+    drawRulerCornerBox(ctx, viewport, settings);
   }
 
   /**
@@ -239,63 +233,6 @@ export class RulerRenderer implements UIRenderer {
    * Renders the square at the intersection of horizontal and vertical rulers
    * This prevents visual overlap and provides origin indicator
    */
-  private renderCornerBox(
-    ctx: CanvasRenderingContext2D,
-    viewport: Viewport,
-    settings: RulerSettings
-  ): void {
-    if (!settings.enabled || !settings.visible) return;
-
-    const verticalRulerWidth = settings.width;
-    const horizontalRulerHeight = settings.height;
-
-    // Corner box position: bottom-left where rulers meet
-    const cornerRect = {
-      x: 0,
-      y: viewport.height - horizontalRulerHeight,
-      width: verticalRulerWidth,
-      height: horizontalRulerHeight
-    };
-
-    ctx.save();
-
-    // Background - same as rulers for visual consistency
-    ctx.fillStyle = settings.backgroundColor;
-    ctx.fillRect(cornerRect.x, cornerRect.y, cornerRect.width, cornerRect.height);
-
-    // Border - matches ruler borders
-    if (settings.borderWidth > 0) {
-      ctx.strokeStyle = settings.borderColor;
-      ctx.lineWidth = settings.borderWidth;
-      ctx.strokeRect(cornerRect.x, cornerRect.y, cornerRect.width, cornerRect.height);
-    }
-
-    // ✅ CAD-GRADE: Origin indicator (small crosshair or icon)
-    // Draw a subtle origin marker in the center of the corner box
-    const centerX = cornerRect.x + cornerRect.width / 2;
-    const centerY = cornerRect.y + cornerRect.height / 2;
-    const markerSize = Math.min(cornerRect.width, cornerRect.height) * 0.3;
-
-    ctx.strokeStyle = settings.textColor || settings.color;
-    ctx.lineWidth = RENDER_LINE_WIDTHS.RULER_TICK;
-    ctx.globalAlpha = OPACITY.SUBTLE; // 🏢 ADR-119: Centralized opacity
-
-    // Horizontal line of origin marker
-    ctx.beginPath();
-    ctx.moveTo(centerX - markerSize, centerY);
-    ctx.lineTo(centerX + markerSize, centerY);
-    ctx.stroke();
-
-    // Vertical line of origin marker
-    ctx.beginPath();
-    ctx.moveTo(centerX, centerY - markerSize);
-    ctx.lineTo(centerX, centerY + markerSize);
-    ctx.stroke();
-
-    ctx.globalAlpha = OPACITY.OPAQUE; // 🏢 ADR-119: Centralized opacity
-    ctx.restore();
-  }
-
   /**
    * Render horizontal ruler
    * ✅ ADR-186: Adaptive tick spacing — ticks & labels adapt to zoom level
@@ -311,7 +248,6 @@ export class RulerRenderer implements UIRenderer {
     // ─── ADR-186: Adaptive interval calculation ──────────────────────
     const adaptiveInterval = this.calculateAdaptiveInterval(transform.scale);
     const step = adaptiveInterval * transform.scale;
-    const labelPrecision = this.calculateLabelPrecision(adaptiveInterval);
 
     // Safety: skip if step is somehow degenerate
     if (step < 1) return;
@@ -344,7 +280,8 @@ export class RulerRenderer implements UIRenderer {
 
       // Labels
       if (settings.showLabels && x >= 30) { // Avoid overlap with vertical ruler
-        const numberText = worldX.toFixed(labelPrecision);
+        // 🏢 ADR-462: number + unit follow the status-bar display-unit selector.
+        const numberText = formatCoordinateForDisplay(worldX, { withUnit: false });
 
         // Number
         ctx.fillStyle = settings.textColor;
@@ -356,7 +293,7 @@ export class RulerRenderer implements UIRenderer {
           const numberWidth = ctx.measureText(numberText).width;
           ctx.fillStyle = settings.unitsColor;
           ctx.font = buildUIFont(settings.unitsFontSize, 'arial');
-          ctx.fillText(settings.unit, x + numberWidth / 2 + 5, rect.y + rect.height / 2);
+          ctx.fillText(currentDisplayUnitLabel(), x + numberWidth / 2 + 5, rect.y + rect.height / 2);
         }
       }
 
@@ -396,7 +333,6 @@ export class RulerRenderer implements UIRenderer {
     // ─── ADR-186: Adaptive interval calculation ──────────────────────
     const adaptiveInterval = this.calculateAdaptiveInterval(transform.scale);
     const step = adaptiveInterval * transform.scale;
-    const labelPrecision = this.calculateLabelPrecision(adaptiveInterval);
 
     // Safety: skip if step is somehow degenerate
     if (step < 1) return;
@@ -431,7 +367,8 @@ export class RulerRenderer implements UIRenderer {
 
       // Labels (rotated for vertical ruler)
       if (settings.showLabels && y >= minY) {
-        const numberText = worldY.toFixed(labelPrecision);
+        // 🏢 ADR-462: number + unit follow the status-bar display-unit selector.
+        const numberText = formatCoordinateForDisplay(worldY, { withUnit: false });
 
         ctx.save();
         ctx.translate(rect.x + rect.width / 2, y);
@@ -447,7 +384,7 @@ export class RulerRenderer implements UIRenderer {
           const numberWidth = ctx.measureText(numberText).width;
           ctx.fillStyle = settings.unitsColor;
           ctx.font = buildUIFont(settings.unitsFontSize, 'arial');
-          ctx.fillText(settings.unit, numberWidth / 2 + 5, 0);
+          ctx.fillText(currentDisplayUnitLabel(), numberWidth / 2 + 5, 0);
         }
 
         ctx.restore();

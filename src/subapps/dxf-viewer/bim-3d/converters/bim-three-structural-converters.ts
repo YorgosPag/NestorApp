@@ -34,8 +34,14 @@ import { buildColumnRebarCage } from './column-rebar-3d';
 import { isReinforcementVisible } from '../../bim/structural/reinforcement/rebar-visibility';
 import { isWallColumnKind } from '../../bim/columns/column-from-faces';
 import type { ColumnTopProfile, ColumnBaseProfile } from '../../bim/geometry/column-vertical-profile';
+import { sceneUnitsToMeters } from '../../utils/scene-units';
 
 const MM_TO_M = 0.001;
+
+// ADR-462 canonical-mm — plan vertices (footprint/outline) are CANVAS UNITS (mm under
+// canonical-mm), NOT meters. Convert plan XY → Three.js world metres with `× sceneToM`
+// where `sceneToM = sceneUnitsToMeters(params.sceneUnits ?? 'mm')`. Vertical scalars (mm)
+// keep `× MM_TO_M`. Invariant: `mmToSceneUnits(u) × sceneUnitsToMeters(u) = MM_TO_M`.
 
 // ── Column ────────────────────────────────────────────────────────────────────
 
@@ -53,8 +59,11 @@ export function columnToMesh(
   // το per-element path το παραλείπει (ghosts/previews κρατούν per-element = false).
   suppressFinishSkin = false,
 ): THREE.Mesh | THREE.Group | null {
-  const verts = column.geometry.footprint.vertices;
-  if (verts.length < 3) return null;
+  const rawVerts = column.geometry.footprint.vertices;
+  if (rawVerts.length < 3) return null;
+  // ADR-462 — footprint XY (canvas units) → world metres.
+  const sceneToM = sceneUnitsToMeters(column.params.sceneUnits ?? 'mm');
+  const verts = rawVerts.map((v) => ({ x: v.x * sceneToM, y: v.y * sceneToM, z: v.z }));
 
   // ADR-448 Phase 1b — storey-ceiling column renders to the real ceiling height
   // (Revit «Top: Up to Level»). Only the flat (non-attached) path; the attached
@@ -230,6 +239,8 @@ export function beamToMesh(
   floorElevationMm = 0, // ADR-449 Slice 8 — height-aware wall coverage (FFL anchor)
 ): THREE.Mesh | THREE.Group | null {
   const beamDepthM = beam.params.depth * MM_TO_M;
+  // ADR-462 — outline + cutback host footprints (canvas units) → world metres.
+  const sceneToM = sceneUnitsToMeters(beam.params.sceneUnits ?? 'mm');
 
   // ADR-363 Φ2 — μεταλλικό δοκάρι Ι/H: πραγματική διατομή σαρωμένη κατά τον άξονα
   // (όχι κουτί). Curved/degenerate → null ⇒ fallback στο ίσιο box extrude παρακάτω.
@@ -237,18 +248,20 @@ export function beamToMesh(
     beam.params.sectionKind === 'I-shape' ? buildSweptIBeamGeometry(beam) : null;
 
   if (!geo) {
-    const verts = beam.geometry.outline.vertices;
-    if (verts.length < 3) return null;
+    const rawVerts = beam.geometry.outline.vertices;
+    if (rawVerts.length < 3) return null;
+    const verts = rawVerts.map((v) => ({ x: v.x * sceneToM, y: v.y * sceneToM, z: v.z }));
     // ADR-458 — beam-to-column cutback (Revit join, «η κολόνα νικάει»): κόβει τον πυρήνα
     // του δοκαριού στις παρειές των κολωνών που το τέμνουν → net volume, μηδέν εμβύθιση.
     // DERIVED (ποτέ persisted)· τα column footprints είναι ήδη rotated/composite-baked.
     // `null` → καμία τομή → ίσιο box extrude (byte-for-byte). Πολλά κομμάτια → ένα geometry.
+    // ADR-462 — outline ΚΑΙ host footprints κλιμακώνονται με ΤΟ ΙΔΙΟ sceneToM (κοινός χώρος μέτρων).
     const trimmed = computeBeamCutbackOutline(
       verts.map((v) => ({ x: v.x, y: v.y })),
       columns
         .map((c) => c.geometry?.footprint?.vertices)
         .filter((f): f is NonNullable<typeof f> => !!f && f.length >= 3)
-        .map((f) => f.map((v) => ({ x: v.x, y: v.y }))),
+        .map((f) => f.map((v) => ({ x: v.x * sceneToM, y: v.y * sceneToM }))),
     );
     if (trimmed === null) {
       const shape = buildShape(verts);
@@ -302,8 +315,8 @@ export function slabToMesh(
   levelId?: string,
   buildingBaseElevationM = 0,
 ): THREE.Mesh | THREE.Group | null {
-  const verts = slab.params.outline.vertices;
-  if (verts.length < 3) return null;
+  const rawVerts = slab.params.outline.vertices;
+  if (rawVerts.length < 3) return null;
 
   // ADR-416 — composite Floor/Slab Type: a slab carrying a multi-layer DNA renders
   // as a vertical stack of per-layer sub-solids (Revit Compound Structure / IFC
@@ -313,9 +326,12 @@ export function slabToMesh(
     return buildMultiLayerSlabSolid(slab, openings, levelId, buildingBaseElevationM);
   }
 
+  // ADR-462 — outline + opening holes (canvas units) → world metres.
+  const sceneToM = sceneUnitsToMeters(slab.params.sceneUnits ?? 'mm');
+  const verts = rawVerts.map((v) => ({ x: v.x * sceneToM, y: v.y * sceneToM, z: v.z }));
   const shape = buildShape(verts);
   if (!shape) return null;
-  pushHoles(shape, openings);
+  pushHoles(shape, openings, sceneToM);
 
   const thicknessM = slab.params.thickness * MM_TO_M;
   const geo = extrudeAndRotate(shape, thicknessM);

@@ -15,7 +15,7 @@
  */
 
 import * as THREE from 'three';
-import type { SceneUnits } from '../../utils/scene-units';
+import { sceneUnitsToMeters, type SceneUnits } from '../../utils/scene-units';
 import type { Pt2 } from '../../bim/geometry/shared/segment-polygon-coverage';
 import type { HorizontalFinishFace, HorizontalFinishPolygon } from '../../bim/finishes/structural-finish-horizontal';
 import { extrudeAndRotate } from './bim-three-shape-helpers';
@@ -37,18 +37,25 @@ function makeNonPickable(group: THREE.Group): void {
   });
 }
 
-/** THREE.Shape από outer ring + (πολλαπλές) τρύπες (partial coverage). */
-function buildShapeWithHoles(outer: readonly Pt2[], holes: readonly (readonly Pt2[])[]): THREE.Shape | null {
+/**
+ * THREE.Shape από outer ring + (πολλαπλές) τρύπες (partial coverage).
+ * ADR-462 — `sceneToM` κλιμακώνει τα plan coords (canvas units) → world metres.
+ */
+function buildShapeWithHoles(
+  outer: readonly Pt2[],
+  holes: readonly (readonly Pt2[])[],
+  sceneToM: number,
+): THREE.Shape | null {
   if (outer.length < 3) return null;
   const shape = new THREE.Shape();
-  shape.moveTo(outer[0].x, outer[0].y);
-  for (let i = 1; i < outer.length; i++) shape.lineTo(outer[i].x, outer[i].y);
+  shape.moveTo(outer[0].x * sceneToM, outer[0].y * sceneToM);
+  for (let i = 1; i < outer.length; i++) shape.lineTo(outer[i].x * sceneToM, outer[i].y * sceneToM);
   shape.closePath();
   for (const hole of holes) {
     if (hole.length < 3) continue;
     const path = new THREE.Path();
-    path.moveTo(hole[0].x, hole[0].y);
-    for (let i = 1; i < hole.length; i++) path.lineTo(hole[i].x, hole[i].y);
+    path.moveTo(hole[0].x * sceneToM, hole[0].y * sceneToM);
+    for (let i = 1; i < hole.length; i++) path.lineTo(hole[i].x * sceneToM, hole[i].y * sceneToM);
     path.closePath();
     shape.holes.push(path);
   }
@@ -70,8 +77,9 @@ function buildPolygonSlab(
   id: string,
   bimType: 'column' | 'beam',
   levelId: string | undefined,
+  sceneToM: number,
 ): THREE.Mesh | null {
-  const shape = buildShapeWithHoles(poly.outer, poly.holes);
+  const shape = buildShapeWithHoles(poly.outer, poly.holes, sceneToM);
   if (!shape) return null;
   const geo = extrudeAndRotate(shape, face.thicknessMm * MM_TO_M);
   const mesh = new THREE.Mesh(geo, getMaterial3D(face.materialId));
@@ -101,13 +109,14 @@ export function buildHorizontalFinishSkin(
   levelId?: string,
   id: string = HORIZONTAL_ID,
 ): THREE.Group | null {
-  void sceneUnits; // footprint ΗΔΗ σε scene units· vertical = thickness × MM_TO_M (mirror slabToMesh)
   if (faces.length === 0) return null;
+  // ADR-462 — plan footprints (canvas units) → world metres· vertical = thickness × MM_TO_M.
+  const sceneToM = sceneUnitsToMeters(sceneUnits);
   const group = new THREE.Group();
   for (const face of faces) {
     const baseY = slabBaseY(face, buildingBaseElevationM);
     for (const poly of face.polygons) {
-      const mesh = buildPolygonSlab(poly, face, baseY, id, bimType, levelId);
+      const mesh = buildPolygonSlab(poly, face, baseY, id, bimType, levelId, sceneToM);
       if (mesh) group.add(mesh);
     }
   }

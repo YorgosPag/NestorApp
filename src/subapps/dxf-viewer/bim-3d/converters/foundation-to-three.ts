@@ -23,6 +23,7 @@ import { getElementMaterial3D } from '../materials/MaterialCatalog3D';
 import { buildShape, extrudeAndRotate, tagMesh } from './bim-three-shape-helpers';
 import { ensureWorldUvs } from './bim-uv-helpers';
 import { attachEdgesProjection } from './bim-three-edges';
+import { sceneUnitsToMeters } from '../../utils/scene-units';
 
 const MM_TO_M = 0.001;
 
@@ -41,11 +42,14 @@ export function foundationToMesh(
   levelId?: string,
   buildingBaseElevationM = 0,
 ): THREE.Mesh | null {
-  const verts = foundation.geometry.footprint.vertices;
-  if (verts.length < 3) return null;
+  const rawVerts = foundation.geometry.footprint.vertices;
+  if (rawVerts.length < 3) return null;
 
   const matId = foundation.params.material ?? 'elem-foundation';
 
+  // ADR-462 — footprint XY (canvas units) → world metres.
+  const sceneToM = sceneUnitsToMeters(foundation.params.sceneUnits ?? 'mm');
+  const verts = rawVerts.map((v) => ({ x: v.x * sceneToM, y: v.y * sceneToM, z: v.z }));
   const shape = buildShape(verts);
   if (!shape) return null;
 

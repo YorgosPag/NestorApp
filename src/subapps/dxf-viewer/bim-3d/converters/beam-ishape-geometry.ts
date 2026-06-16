@@ -23,6 +23,7 @@
 import * as THREE from 'three';
 import type { BeamEntity } from '../../bim/types/beam-types';
 import { buildIShapeProfile } from '../../bim/geometry/shared/i-shape-profile';
+import { sceneUnitsToMeters } from '../../utils/scene-units';
 
 /** mm → world-metres (ίδιο factor με `BimToThreeConverter`). */
 const MM_TO_M = 0.001;
@@ -38,11 +39,13 @@ export function buildSweptIBeamGeometry(beam: BeamEntity): THREE.BufferGeometry 
 
   const pts = beam.geometry.axisPolyline.points;
   if (pts.length < 2) return null;
-  const start = pts[0];
-  const end = pts[pts.length - 1];
+  // ADR-462 — axis vertices are CANVAS UNITS → world metres via sceneToM.
+  const sceneToM = sceneUnitsToMeters(beam.params.sceneUnits ?? 'mm');
+  const start = { x: pts[0].x * sceneToM, y: pts[0].y * sceneToM };
+  const end = { x: pts[pts.length - 1].x * sceneToM, y: pts[pts.length - 1].y * sceneToM };
   const dxp = end.x - start.x;
   const dyp = end.y - start.y;
-  const lenPlan = Math.hypot(dxp, dyp); // axis vertices = ήδη σε μέτρα (canvas world)
+  const lenPlan = Math.hypot(dxp, dyp); // μέτρα (μετά το sceneToM scaling)
   if (lenPlan < 1e-9) return null;
 
   const hM = beam.params.depth * MM_TO_M;

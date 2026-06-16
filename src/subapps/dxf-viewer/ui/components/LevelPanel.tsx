@@ -24,6 +24,7 @@ import { AnnotationsSection } from './AnnotationsSection';
 import type { ToolType } from '../toolbar/types';
 import type { SceneModel } from '../../types/scene';
 import { useLevels } from '../../systems/levels';
+import { countSceneEntities } from '../../hooks/scene/scene-entity-count';
 import { findOrCreateLevelForFloor } from '../../systems/levels/level-floor-resolution';
 import { useAllFloorsBackfill, useLevelDeletion } from './level-panel-hooks';
 import { useNotifications } from '../../../../providers/NotificationProvider';
@@ -257,8 +258,20 @@ export function LevelPanel({
       {!isLevelsCollapsed && (isNonEmptyArray(levels) ? (
         <div className={PANEL_TOKENS.LEVEL_PANEL.CONTAINER.SECTION}>
           {levels.map((level) => {
-            const scene = levelScenes[level.id];
-            const entityCount = scene?.entities?.length || 0;
+            const levelScene = levelScenes[level.id];
+            // ADR-309/399/462: for the ACTIVE level the live `scene` prop is the
+            // authoritative rendered scene — it tracks DXF + BIM additions in real
+            // time, whereas `levelScene` comes from a [levels]-keyed useMemo that is
+            // ref-stable and therefore FROZEN after mount (it never recomputes when
+            // a wall/column is drawn → setLevelScene only, no `levels` change). So
+            // for the active level the live prop MUST win over the cached snapshot,
+            // otherwise the count stays stuck at the DXF-only mount value (BUG A
+            // 2026-06-16). Inactive levels can't gain entities while not on canvas,
+            // so their frozen snapshot is correct.
+            const effectiveScene = level.id === currentLevelId ? (scene ?? levelScene ?? null) : levelScene;
+            // ADR-462: BIM entities live in the same `scene.entities` array as DXF,
+            // so this single count already covers both — via the SSoT counter.
+            const entityCount = countSceneEntities(effectiveScene);
             const isEditing = editingLevelId === level.id;
             const isOnlyLevel = levels.length === 1;
             const isSelected = currentLevelId === level.id;

@@ -37,6 +37,7 @@ import { buildShape, extrudeAndRotate, tagMesh, pushHoles } from './bim-three-sh
 import { attachEdgesProjection } from './bim-three-edges';
 import { applySlabSlope } from './mesh-slope-shear';
 import { ensureWorldUvs } from './bim-uv-helpers';
+import { sceneUnitsToMeters } from '../../utils/scene-units';
 
 const MM_TO_M = 0.001;
 
@@ -54,6 +55,8 @@ export function buildMultiLayerSlabSolid(
   if (!isMultiLayerSlab(dna)) return null;
   const verts = slab.params.outline.vertices;
   if (verts.length < 3) return null;
+  // ADR-462 — outline + opening holes (canvas units) → world metres (shared by every band).
+  const sceneToM = sceneUnitsToMeters(slab.params.sceneUnits ?? 'mm');
 
   // Cumulative boundary fractions [0, f1, …, 1] measured from the TOP layer.
   const fracs = buildupBoundaryFractions(dna);
@@ -71,7 +74,7 @@ export function buildMultiLayerSlabSolid(
     // Distance of THIS layer's bottom above the slab bottom: fractions run top→bottom,
     // so the bottom boundary of layer i is `fracs[i+1]` from the top.
     const layerBottomY = slabBottomY + totalThicknessM * (1 - fracs[i + 1]);
-    addSlabLayerBand(group, slab, openings, layerThicknessM, layerBottomY, dna.layers[i], levelId);
+    addSlabLayerBand(group, slab, openings, layerThicknessM, layerBottomY, dna.layers[i], levelId, sceneToM);
   }
   if (group.children.length === 0) return null;
   group.userData['bimId'] = slab.id;
@@ -88,10 +91,14 @@ function addSlabLayerBand(
   bottomY: number,
   layer: SlabDnaLayer,
   levelId: string | undefined,
+  sceneToM: number,
 ): void {
-  const shape = buildShape(slab.params.outline.vertices);
+  // ADR-462 — outline XY (canvas units) → world metres.
+  const shape = buildShape(
+    slab.params.outline.vertices.map((v) => ({ x: v.x * sceneToM, y: v.y * sceneToM, z: v.z })),
+  );
   if (!shape) return;
-  pushHoles(shape, openings); // all layers share the slab footprint → same openings.
+  pushHoles(shape, openings, sceneToM); // all layers share the slab footprint → same openings.
   const geo = extrudeAndRotate(shape, layerThicknessM);
   ensureWorldUvs(geo); // ADR-413 — aoMap uv2 (ExtrudeGeometry auto-UVs in meters).
   applySlabSlope(geo, slab.params); // plan-position shear → same plane for every band.

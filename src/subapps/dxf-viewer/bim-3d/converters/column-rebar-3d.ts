@@ -25,7 +25,7 @@
 import * as THREE from 'three';
 import type { ColumnEntity } from '../../bim/types/column-types';
 import { columnLocalMmToWorld } from '../../bim/geometry/column-geometry';
-import { mmToSceneUnits } from '../../utils/scene-units';
+import { sceneUnitsToMeters } from '../../utils/scene-units';
 import { computeStirrupLevelsMm } from '../../bim/structural/reinforcement/column-rebar-layout';
 import {
   resolveColumnRebarLayout,
@@ -193,15 +193,20 @@ export function buildColumnRebarCage(
   const layout = resolveColumnRebarLayout(r, section);
   if (!layout) return null;
 
-  const s = mmToSceneUnits(p.sceneUnits ?? 'mm');
-  const barRadius = Math.max(MIN_RADIUS, (layout.barDiameterMm / 2) * s);
-  const stirrupRadius = Math.max(MIN_RADIUS, (layout.stirrupDiameterMm / 2) * s);
+  // ADR-462 — οι ράβδες/στεφάνια ζουν στον ίδιο canvas-unit χώρο με το footprint·
+  // (α) ακτίνες = mm Ø → world metres με MM_TO_M· (β) θέσεις (canvas units από το
+  // `columnLocalMmToWorld`) → world metres με sceneToM (helper `worldXY`).
+  const sceneToM = sceneUnitsToMeters(p.sceneUnits ?? 'mm');
+  const barRadius = Math.max(MIN_RADIUS, (layout.barDiameterMm / 2) * MM_TO_M);
+  const stirrupRadius = Math.max(MIN_RADIUS, (layout.stirrupDiameterMm / 2) * MM_TO_M);
+  const worldXY = (local: readonly Point2D[]): Point2D[] =>
+    columnLocalMmToWorld(p, local).map((q) => ({ x: q.x * sceneToM, y: q.y * sceneToM }));
 
   const group = new THREE.Group();
   const material = REBAR_MATERIAL; // ΚΟΙΝΟ άφωτο υλικό (βλ. σχόλιο ορισμού)
 
   // ── Διαμήκεις ράβδες: κατακόρυφοι κύλινδροι baseY → baseY + heightM ──
-  const barsXY = columnLocalMmToWorld(p, layout.longitudinalBarsMm);
+  const barsXY = worldXY(layout.longitudinalBarsMm);
   const barSegs = barsXY.map((b) => ({
     a: new THREE.Vector3(b.x, baseY, -b.y),
     b: new THREE.Vector3(b.x, baseY + heightM, -b.y),
@@ -218,19 +223,19 @@ export function buildColumnRebarCage(
   // φισούνα = ΕΝΑΣ συνεχής συνδετήρας με βήμα που πυκνώνει στα άκρα, ακριβώς όπως
   // τα κλειστά στεφάνια — μόνο η σχεδίαση διαφέρει (έλικα vs ξεχωριστά δαχτυλίδια).
   const levels = computeStirrupLevelsMm(r, section.bboxWidthMm, section.bboxDepthMm, heightMm);
-  const pathXY = columnLocalMmToWorld(p, layout.stirrupPathMm);
+  const pathXY = worldXY(layout.stirrupPathMm);
   const stirrupSegs: Seg[] =
     type === 'spiral'
       ? spiralSegments(pathXY, levels, baseY)
       : ringSegments(pathXY, levels, baseY);
   if (type === 'closed-hooked') {
     // Δύο άκρα γάντζου 135° (precomputed SSoT· τόξο κάμψης + ουρά) → world ανά άκρο.
-    const hookEndsXY = layout.stirrupHookEndsMm.map((end) => columnLocalMmToWorld(p, end));
+    const hookEndsXY = layout.stirrupHookEndsMm.map((end) => worldXY(end));
     stirrupSegs.push(...hookSegments(hookEndsXY, levels, baseY));
   }
   // ADR-460 — τοίχωμα: boundary hoops (extra κλειστά στεφάνια) ανά στάθμη.
   for (const hoop of layout.extraStirrupPathsMm ?? []) {
-    stirrupSegs.push(...ringSegments(columnLocalMmToWorld(p, hoop), levels, baseY));
+    stirrupSegs.push(...ringSegments(worldXY(hoop), levels, baseY));
   }
   const stirrups = buildRods(stirrupSegs, stirrupRadius, material);
   if (stirrups) group.add(stirrups);
@@ -242,10 +247,10 @@ export function buildColumnRebarCage(
   if (crossTies.length > 0) {
     const tieSegs: Seg[] = [];
     for (const tie of crossTies) {
-      const tieXY = columnLocalMmToWorld(p, tie.pathMm);
+      const tieXY = worldXY(tie.pathMm);
       tieSegs.push(...(tie.closed ? ringSegments(tieXY, levels, baseY) : chainSegments(tieXY, levels, baseY)));
       if (type === 'closed-hooked') {
-        const hookEndsXY = tie.hookEndsMm.map((end) => columnLocalMmToWorld(p, end));
+        const hookEndsXY = tie.hookEndsMm.map((end) => worldXY(end));
         tieSegs.push(...hookSegments(hookEndsXY, levels, baseY));
       }
     }

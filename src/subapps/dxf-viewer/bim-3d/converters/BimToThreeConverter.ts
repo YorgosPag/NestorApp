@@ -29,7 +29,7 @@ import {
   WALL_COLUMN_PULLBACK_MM,
   WALL_COLUMN_BUTT_TOL_MM,
 } from './wall-column-pullback-3d';
-import { mmToSceneUnits } from '../../utils/scene-units';
+import { mmToSceneUnits, sceneUnitsToMeters } from '../../utils/scene-units';
 import { buildMultiLayerSolidWall } from './wall-multilayer-solid-3d';
 import { ensureWorldUvs } from './bim-uv-helpers';
 import {
@@ -58,10 +58,12 @@ export { columnToMesh, beamToMesh, slabToMesh } from './bim-three-structural-con
 // ADR-436 — structural foundation converter (own module, file-size SSoT N.7.1).
 export { foundationToMesh } from './foundation-to-three';
 
-// BIM shape vertices (outerEdge, innerEdge, footprint, outline) are already in meters
-// (canvas world coordinates). Scalar params — slab thickness/elevation, beam depth/elevation,
-// column height, floorElevationMm — are stored in raw mm and MUST be multiplied by MM_TO_M.
-// Exception: wall.params.height is already in meters (wall-completion.ts applies mmToSceneUnits).
+// ADR-462 canonical-mm — BIM plan vertices (outerEdge, innerEdge, footprint, outline,
+// axisPolyline) are CANVAS UNITS (mm under canonical-mm), NOT meters. Convert plan XY →
+// Three.js world metres with `× sceneToM` where `sceneToM = sceneUnitsToMeters(params.sceneUnits ?? 'mm')`.
+// Scalar params — slab thickness/elevation, beam depth/elevation, column/wall height,
+// floorElevationMm — are stored in raw mm and MUST be multiplied by MM_TO_M.
+// Invariant: `mmToSceneUnits(u) × sceneUnitsToMeters(u) = MM_TO_M`.
 const MM_TO_M = 0.001;
 
 // ── Wall material: DNA core layer → catalog, else category fallback ───────────
@@ -136,6 +138,7 @@ export function buildStraightWallWithOpenings(
   material: THREE.Material,
   floorElevationMm: number,
   buildingBaseElevationM: number,
+  sceneToM = 1, // ADR-462 — canvas units → world metres for plan XY (quad + host footprints)
   wallTop?: WallTopLocalFn,
   wallBase?: WallBaseLocalFn,
   topClip?: WallTopClipContext,
@@ -199,16 +202,22 @@ export function buildStraightWallWithOpenings(
     layerId?: string,
   ): boolean => {
     if (!effTopClip) return false;
+    // ADR-462 — `quad` arrives in metres (scaled by the caller); scale the host
+    // footprints to the SAME metre space so the boolean clip is consistent.
+    const hosts = effTopClip.hosts.map((h) => ({
+      ...h,
+      footprint: h.footprint.map((p) => ({ x: p.x * sceneToM, y: p.y * sceneToM })),
+    }));
     if (isWallTilted(wall.params)) {
       const { prisms, lofts } = clipWallBandTopRegionsTilted(
-        quad, effTopClip.hosts, effTopClip.nominalTopMm, floorElevationMm, pc.zBotAM, wall.params,
+        quad, hosts, effTopClip.nominalTopMm, floorElevationMm, pc.zBotAM, wall.params,
       );
       if (prisms.length === 0 && lofts.length === 0) return false;
       for (const r of prisms) { const g = buildColumnPrismGeometry(r.footprint, r.baseLocalM, r.topLocalM); if (g) emit(g, floorY, mat, layerId); }
       for (const band of lofts) { const g = buildWallLoftBandGeometry(band); if (g) emit(g, floorY, mat, layerId); }
       return true;
     }
-    const regions = clipWallBandTopRegions(quad, effTopClip.hosts, effTopClip.nominalTopMm, floorElevationMm, pc.zBotAM);
+    const regions = clipWallBandTopRegions(quad, hosts, effTopClip.nominalTopMm, floorElevationMm, pc.zBotAM);
     if (regions.length === 0) return false;
     for (const r of regions) { const g = buildColumnPrismGeometry(r.footprint, r.baseLocalM, r.topLocalM); if (g) emit(g, floorY, mat, layerId); }
     return true;
@@ -222,19 +231,23 @@ export function buildStraightWallWithOpenings(
     mat: THREE.Material,
     layerId?: string,
   ): void => {
+    // ADR-462 — plan quad (canvas units) → world metres ΠΡΙΝ τη γεωμετρία· τα z-fields
+    // του `pc` (zBotAM/zTopAM…) είναι ήδη μέτρα (από wallTop/wallBase `.at()` × MM_TO_M).
+    const quadM = quad.map((p) => ({ x: p.x * sceneToM, y: p.y * sceneToM, z: p.z })) as
+      [Point3D, Point3D, Point3D, Point3D];
     const flatBase = Math.abs(pc.zBotAM - pc.zBotBM) < 1e-6;
-    if (pc.topFollowsProfile && flatBase && tryEmitClip(pc, quad, mat, layerId)) return;
+    if (pc.topFollowsProfile && flatBase && tryEmitClip(pc, quadM, mat, layerId)) return;
 
     if (Math.abs(pc.zTopAM - pc.zTopBM) < 1e-6 && flatBase) {
       // Επίπεδη κορυφή ΚΑΙ επίπεδος πάτος → extrude κατά (zTop − zBot).
       const depth = pc.zTopAM - pc.zBotAM;
       if (depth <= 1e-6) return;
-      const shape = buildShape(quad);
+      const shape = buildShape(quadM);
       if (!shape) return;
       emit(extrudeAndRotate(shape, depth), floorY + pc.zBotAM, mat, layerId);
     } else {
       // Κεκλιμένη κορυφή ή/και πάτος → wedge από ΑΥΤΟ το quad (full piece ή layer sub-quad).
-      const wedge = buildSlopedWallPieceGeometry({ ...pc, quad });
+      const wedge = buildSlopedWallPieceGeometry({ ...pc, quad: quadM });
       if (wedge) emit(wedge, floorY, mat, layerId);
     }
   };
@@ -336,6 +349,8 @@ export function wallToMesh(
   const coreLayer = wall.params.dna?.layers.find((l) => l.side === 'core');
   const matId = coreLayer?.materialId ?? CATEGORY_MAT_ID[wall.params.category] ?? 'mat-concrete';
   const material = getMaterial3D(matId);
+  // ADR-462 — plan XY (canvas units) → world metres. Threaded into every wall path.
+  const sceneToM = sceneUnitsToMeters(wall.params.sceneUnits ?? 'mm');
 
   // ADR-401 Phase B2 — μεταβλητή κορυφή (σκαλωτή/κεκλιμένη) μόνο σε `attached`
   // τοίχους· flat τοίχος → undefined → fast solid path (μηδέν regression).
@@ -358,7 +373,7 @@ export function wallToMesh(
   if (openings.length > 0 || wallTop || wallBase || multiLayerStraight) {
     const group =
       wall.kind === 'straight'
-        ? buildStraightWallWithOpenings(renderWall, openings, material, floorElevationMm, buildingBaseElevationM, wallTop, wallBase, topClip)
+        ? buildStraightWallWithOpenings(renderWall, openings, material, floorElevationMm, buildingBaseElevationM, sceneToM, wallTop, wallBase, topClip)
         : buildWallMeshWithOpenings(renderWall, openings, material, floorElevationMm, buildingBaseElevationM, wallTop, wallBase);
     if (group) {
       group.userData['matId'] = matId;
@@ -383,9 +398,10 @@ export function wallToMesh(
     // Degenerate → fall through to single-mesh solid (defensive).
   }
 
+  // ADR-462 — outer/inner edge points (canvas units) → world metres.
   const shape = buildWallShape(
-    renderWall.geometry.outerEdge.points,
-    renderWall.geometry.innerEdge.points,
+    renderWall.geometry.outerEdge.points.map((p) => ({ x: p.x * sceneToM, y: p.y * sceneToM, z: p.z })),
+    renderWall.geometry.innerEdge.points.map((p) => ({ x: p.x * sceneToM, y: p.y * sceneToM, z: p.z })),
   );
   if (!shape) return null;
 
