@@ -1,16 +1,16 @@
 /**
  * Member load geometry — SSoT για τα γεωμετρικά μεγέθη που τροφοδοτούν το tributary
- * load takedown (ADR-466). Δύο concerns, μία πηγή (N.0.2):
+ * load takedown (ADR-467). Δύο concerns, μία πηγή (N.0.2):
  *
  *   1. Κέντρο διατομής κολώνας (m) → tributary grid (`computeGridTributaryAreas`).
  *   2. Ίδιο βάρος κατακόρυφου/γραμμικού μέλους (kN) → extra μόνιμο φορτίο.
  *
- * Pure — zero React/DOM/Firestore. Μονάδες: μήκη m, φορτία kN. Πριν το ADR-466 αυτά
+ * Pure — zero React/DOM/Firestore. Μονάδες: μήκη m, φορτία kN. Πριν το ADR-467 αυτά
  * ζούσαν private μέσα στο `footing-design/footing-load-takedown.ts`· εξήχθησαν εδώ
  * (loads/ = κάτω layer) ώστε να τα μοιράζονται footing takedown ΚΑΙ load-path walk.
  *
  * @see ./load-takedown.ts — TributaryColumn / computeGridTributaryAreas
- * @see docs/centralized-systems/reference/adrs/ADR-466-load-path-engine.md
+ * @see docs/centralized-systems/reference/adrs/ADR-467-load-path-engine.md
  */
 
 import type { ColumnEntity } from '../../types/column-types';

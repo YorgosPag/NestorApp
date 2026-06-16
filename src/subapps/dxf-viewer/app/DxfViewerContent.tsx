@@ -17,7 +17,7 @@ import { useOverlayState } from '../hooks/state/useOverlayState';
 import { useCanvasTransformState } from '../hooks/state/useCanvasTransformState';
 import { useColorMenuState } from '../hooks/state/useColorMenuState';
 import { useOverlayStore } from '../overlays/overlay-store';
-import { useUniversalSelection } from '../systems/selection';
+import { useUniversalSelection, useSelectionLevelReset } from '../systems/selection';
 import { useLevelManager } from '../systems/levels/useLevels';
 import { useBimRenderSettingsSync } from '../state/hooks/useBimRenderSettingsSync'; // ADR-375 B.2 — per-level BIM render settings
 import { useStructuralSettingsSync } from '../state/hooks/useStructuralSettingsSync'; // ADR-456 2b — building-level structural code
@@ -146,6 +146,10 @@ export const DxfViewerContent = React.memo<DxfViewerAppProps>((props) => {
   // selection so 3D gizmo edits engage the existing per-type persistence
   // auto-save (otherwise the optimistic 3D edit reverts on the next snapshot).
   use3DSelectionUniversalBridge();
+  // ADR-420 — clear the 2D selection on floor navigation. Without this, a
+  // selection (e.g. Ctrl+A) made on one floor carried over to the next as
+  // stale "selected" entities — the UI mirror of the cross-floor scope leak.
+  useSelectionLevelReset(levelManager.currentLevelId);
   const { updateGripSettings } = useGripContext();
   // 🏢 ADR-055: Entity Creation Manager
   useEntityCreationManager({

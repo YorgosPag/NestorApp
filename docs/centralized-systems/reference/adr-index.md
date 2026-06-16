@@ -448,6 +448,7 @@
 | **ADR-464** | Advanced Footing Reinforcement & Design (full loads model, Revit-without-Robot) | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-464-advanced-footing-reinforcement.md) |
 | **ADR-465** | Cross-Floor Floorplan Duplicate (copy DXF floorplan to another floor, pipeline reuse) | ✅ APPROVED | 2026-06-16 | Uncategorized | [📄](./adrs/ADR-465-cross-floor-floorplan-duplicate.md) |
 | **ADR-466** | Cross-Floor Entity Clipboard (Revit Ctrl+C / Ctrl+V, paste-in-place) | ✅ APPROVED | 2026-06-17 | Uncategorized | [📄](./adrs/ADR-466-cross-floor-entity-clipboard.md) |
+| **ADR-467** | Load Path Engine (slab→beam→column→footing tributary takedown, FEM-free) | ✅ APPROVED | 2026-06-17 | Uncategorized | [📄](./adrs/ADR-467-load-path-engine.md) |
 | **ADR-UI-001** | Visual Primitive Ownership & Semantic Tokens | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-UI-001.md) |
 
 ---
@@ -880,6 +881,7 @@
 | **ADR-464** | Advanced Footing Reinforcement & Design (full loads model, Revit-without-Robot) | ✅ APPROVED | [View](./adrs/ADR-464-advanced-footing-reinforcement.md) |
 | **ADR-465** | Cross-Floor Floorplan Duplicate (copy DXF floorplan to another floor, pipeline reuse) | ✅ APPROVED | [View](./adrs/ADR-465-cross-floor-floorplan-duplicate.md) |
 | **ADR-466** | Cross-Floor Entity Clipboard (Revit Ctrl+C / Ctrl+V, paste-in-place) | ✅ APPROVED | [View](./adrs/ADR-466-cross-floor-entity-clipboard.md) |
+| **ADR-467** | Load Path Engine (slab→beam→column→footing tributary takedown, FEM-free) | ✅ APPROVED | [View](./adrs/ADR-467-load-path-engine.md) |
 | **ADR-UI-001** | Visual Primitive Ownership & Semantic Tokens | ✅ APPROVED | [View](./adrs/ADR-UI-001.md) |
 
 ---

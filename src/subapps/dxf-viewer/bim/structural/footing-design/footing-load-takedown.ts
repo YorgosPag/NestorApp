@@ -5,7 +5,7 @@
  * παράγει το προτεινόμενο service φορτίο **ανά πέδιλο (pad)** μέσω της στηρίζουσας
  * κολώνας (organism FK `ColumnParams.footingId`, ίδια χαρτογράφηση με
  * `resolveSupportingColumnDims`) + grid half-spacing tributary area. Καθαρό —
- * επιστρέφει patches. **ADR-466:** το production μονοπάτι το γενίκευσε ο
+ * επιστρέφει patches. **ADR-467:** το production μονοπάτι το γενίκευσε ο
  * `computeLoadPathPatches` (όλα τα μέλη)· εδώ μένει ως pure footing oracle (jest).
  *
  * ΚΑΝΟΝΑΣ (manual vs auto): γράφει ΜΟΝΟ όπου `isTakedownWritable` — ΠΟΤΕ δεν

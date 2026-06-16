@@ -1,5 +1,5 @@
 /**
- * COMPUTE LOAD PATH COMMAND — ADR-466 (full structural load path).
+ * COMPUTE LOAD PATH COMMAND — ADR-467 (full structural load path).
  *
  * Γενίκευση του `ComputeTakedownLoadsCommand` (ADR-464) σε **ΟΛΑ τα μέλη** της
  * διαδρομής φορτίων (πλάκα/δοκάρι/κολώνα/πέδιλο): batch, undoable εγγραφή του DERIVED
@@ -13,7 +13,7 @@
  *
  * @see bim/structural/loads/load-path-takedown.ts — pure computation + type guards
  * @see core/commands/entity-commands/AutoReinforceOrganismCommand.ts — το mirror pattern
- * @see docs/centralized-systems/reference/adrs/ADR-466-load-path-engine.md
+ * @see docs/centralized-systems/reference/adrs/ADR-467-load-path-engine.md
  */
 
 import type { ICommand, ISceneManager, SceneEntity, SerializedCommand } from '../interfaces';

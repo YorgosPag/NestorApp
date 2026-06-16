@@ -343,7 +343,7 @@ export interface ColumnParams {
    */
   readonly reinforcement?: ColumnReinforcement;
   /**
-   * ADR-466 — Φορτίο σχεδιασμού κολώνας από τη διαδρομή φορτίων (tributary load
+   * ADR-467 — Φορτίο σχεδιασμού κολώνας από τη διαδρομή φορτίων (tributary load
    * takedown: tributary area × όροφοι × επιφανειακά φορτία + ίδιο βάρος). source=
    * 'takedown' → παράγεται αυτόματα από τον οργανισμό· source='manual' → χειροκίνητο
    * (ο takedown ΔΕΝ το αντικαθιστά, `isTakedownWritable`). Optional/non-breaking:

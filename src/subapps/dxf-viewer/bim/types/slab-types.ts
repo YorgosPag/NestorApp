@@ -120,7 +120,7 @@ export interface SlabParams {
    */
   readonly structuralReinforcement?: SlabFoundationReinforcement;
   /**
-   * ADR-466 — Φορτίο βαρύτητας πλάκας από τη διαδρομή φορτίων (panel area ×
+   * ADR-467 — Φορτίο βαρύτητας πλάκας από τη διαδρομή φορτίων (panel area ×
    * επιφανειακά φορτία G/Q). source='takedown' → αυτόματο από οργανισμό· source=
    * 'manual' → χειροκίνητο (προστατευμένο, `isTakedownWritable`). Optional/
    * non-breaking. ΠΟΤΕ derived state — πληροφοριακό / slab design input.

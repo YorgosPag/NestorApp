@@ -1,5 +1,5 @@
 /**
- * ADR-466 — load-path graph traversal (pure).
+ * ADR-467 — load-path graph traversal (pure).
  *
  * Καλύπτει: reverse-topological σειρά (beams→columns→footings), αποκλεισμό των
  * `top-attachment` ακμών, graceful cycle fallback, και τους edge resolvers.

@@ -43,6 +43,9 @@ export {
   useOverlaySelection,    // 🆕 NEW: Backward compatible overlay selection hook
 } from './SelectionSystem';
 
+// ADR-420 — reset 2D selection on floor navigation (cross-floor selection leak)
+export { useSelectionLevelReset } from './useSelectionLevelReset';
+
 // Types re-export
 export type { SelectionContextType, UniversalSelectionHook } from './SelectionSystem';
 

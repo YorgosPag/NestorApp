@@ -1,5 +1,5 @@
 /**
- * Load-path takedown — entity-aware orchestration (ADR-466).
+ * Load-path takedown — entity-aware orchestration (ADR-467).
  *
  * Γενικεύει το footing tributary takedown (ADR-464) σε **ΟΛΗ τη διαδρομή φορτίων**:
  * κάθε δομικό μέλος (πλάκα/δοκάρι/κολώνα/πέδιλο) αποκτά `appliedLoad` (source=
@@ -17,7 +17,7 @@
  *
  * @see ./load-path-walk.ts — topological order + edge resolvers
  * @see ./member-load-geometry.ts — κέντρα/ίδιο βάρος SSoT
- * @see docs/centralized-systems/reference/adrs/ADR-466-load-path-engine.md
+ * @see docs/centralized-systems/reference/adrs/ADR-467-load-path-engine.md
  */
 
 import type { Entity } from '../../../types/entities';

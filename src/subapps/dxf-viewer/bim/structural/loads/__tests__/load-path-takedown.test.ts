@@ -1,5 +1,5 @@
 /**
- * ADR-466 — load-path takedown orchestration + ComputeLoadPathCommand + regression.
+ * ADR-467 — load-path takedown orchestration + ComputeLoadPathCommand + regression.
  *
  * Καλύπτει: φορτίο κολώνας/πεδίλου (= ADR-464, footing==column), δοκαριού (tributary
  * strip + ίδιο βάρος), πλάκας (area load), manual-guard, αδρανές χωρίς area loads, την

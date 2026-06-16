@@ -1,5 +1,5 @@
 /**
- * Load-path graph traversal — pure SSoT (ADR-466).
+ * Load-path graph traversal — pure SSoT (ADR-467).
  *
  * Διασχίζει τον στατικό οργανισμό (ADR-459 `StructuralGraph`) κατά τη **διαδρομή
  * φορτίων** (slab→beam→column→footing→soil), παράγοντας:
@@ -16,7 +16,7 @@
  *
  * @see ../organism/structural-organism-types.ts — StructuralGraph / edge kinds
  * @see ./load-path-takedown.ts — entity-aware orchestration (member assembly)
- * @see docs/centralized-systems/reference/adrs/ADR-466-load-path-engine.md
+ * @see docs/centralized-systems/reference/adrs/ADR-467-load-path-engine.md
  */
 
 import type {

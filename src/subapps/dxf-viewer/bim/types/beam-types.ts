@@ -195,7 +195,7 @@ export interface BeamParams {
    */
   readonly reinforcement?: BeamReinforcement;
   /**
-   * ADR-466 — Φορτίο βαρύτητας δοκαριού από τη διαδρομή φορτίων (tributary strip
+   * ADR-467 — Φορτίο βαρύτητας δοκαριού από τη διαδρομή φορτίων (tributary strip
    * πλάκας πάνω στο δοκάρι + ίδιο βάρος). source='takedown' → αυτόματο από οργανισμό·
    * source='manual' → χειροκίνητο (προστατευμένο, `isTakedownWritable`). Optional/
    * non-breaking. ΠΟΤΕ derived state — input για beam gravity design.

@@ -1,7 +1,7 @@
 'use client';
 
 /**
- * useStructuralLoadTakedown — ADR-466 (διαδρομή φορτίων: slab→beam→column→footing).
+ * useStructuralLoadTakedown — ADR-467 (διαδρομή φορτίων: slab→beam→column→footing).
  *
  * Thin shell hook (mirror του `useStructuralAutoReinforce`): ακούει το ribbon
  * request `bim:compute-loads-requested`, χτίζει τον στατικό οργανισμό
@@ -18,7 +18,7 @@
  * Mounted ΜΙΑ φορά από το viewer shell (δίπλα στο `useStructuralAutoReinforce`).
  *
  * @see core/commands/entity-commands/ComputeLoadPathCommand.ts — το command
- * @see docs/centralized-systems/reference/adrs/ADR-466-load-path-engine.md
+ * @see docs/centralized-systems/reference/adrs/ADR-467-load-path-engine.md
  */
 
 import { useEffect, useRef } from 'react';
