@@ -187,7 +187,7 @@ export function useFloorFinishPersistence(
       (err: Error) => { setError(err.message); setSaveState('error'); },
     );
     return () => unsubscribe();
-  }, [currentLevelId, companyId, projectId, floorplanId, userId]);
+  }, [currentLevelId, companyId, projectId, floorplanId, floorId, userId]);
 
   // Immediate persist.
   const persist = useCallback(async (entity: FloorFinishEntity) => {

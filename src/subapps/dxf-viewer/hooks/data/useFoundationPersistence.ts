@@ -256,7 +256,7 @@ export function useFoundationPersistence(
     );
 
     return () => unsubscribe();
-  }, [currentLevelId, companyId, projectId, floorplanId, userId]);
+  }, [currentLevelId, companyId, projectId, floorplanId, floorId, userId]);
 
   // Immediate persist (used by both auto-save flush and explicit button).
   const persist = useCallback(async (entity: FoundationEntity) => {

@@ -39,6 +39,8 @@ import {
 import { recordBeamChange } from '../../bim/beams/beam-audit-client';
 import { bimToBoqBridge } from '../../bim/services/BimToBoqBridge';
 import { beamBoqEntity } from './beam-boq-feed';
+// docToEntity → beamDocToEntity moved here on the file-size split (see line ~92 note).
+import { beamDocToEntity } from './beam-persistence-helpers';
 import { createPersistSerializer } from './persist-serializer';
 import { useBimEntityMovedPersistEffect } from './useBimEntityMovedPersistEffect';
 import { useBimEntityRestoredPersistEffect } from './useBimEntityRestoredPersistEffect';
@@ -240,7 +242,7 @@ export function useBeamPersistence(
     );
 
     return () => unsubscribe();
-  }, [currentLevelId, companyId, projectId, floorplanId, userId]);
+  }, [currentLevelId, companyId, projectId, floorplanId, floorId, userId]);
 
   // Immediate persist body — one save + one audit per call. Always invoked through
   // the serialized `persist` wrapper below so concurrent calls for the same id

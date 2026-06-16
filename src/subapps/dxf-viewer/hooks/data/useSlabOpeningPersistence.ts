@@ -239,7 +239,7 @@ export function useSlabOpeningPersistence(
     );
 
     return () => unsubscribe();
-  }, [currentLevelId, companyId, projectId, floorplanId, userId]);
+  }, [currentLevelId, companyId, projectId, floorplanId, floorId, userId]);
 
   const persist = useCallback(async (entity: SlabOpeningEntity) => {
     const svc = serviceRef.current;
