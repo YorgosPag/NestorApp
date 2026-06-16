@@ -96,7 +96,11 @@ const remoteDoc = (id: string, guides: readonly Guide[]): GridGuideDoc => ({
 });
 
 const FULL = { companyId: 'comp_x', projectId: 'proj_x', floorplanId: 'file_x', floorId: 'flr_x', userId: 'u' };
-const NO_FLOORPLAN = { ...FULL, floorplanId: null };
+// ADR-420 (2026-06-16) — "not ready" now means NO scope key at all. A floor with a
+// durable `floorId` but no `floorplanId` IS a valid scope (the resilience fix:
+// resolveBimPersistenceScope), so null-ing only floorplanId no longer blocks the
+// service. Withhold both scope keys to genuinely simulate an unbound canvas.
+const NO_SCOPE = { ...FULL, floorplanId: null, floorId: null };
 
 const flushTimers = async () => {
   await act(async () => {
@@ -123,7 +127,7 @@ describe('useGridGuidePersistence — flush-on-ready', () => {
   it('οδηγοί πριν ετοιμαστεί το scope persistάρονται μόλις δέσει (empty remote → flush → create)', async () => {
     mockService = makeService([]); // καμία remote εγγραφή
 
-    const { rerender } = renderHook((p) => useGridGuidePersistence(p), { initialProps: NO_FLOORPLAN });
+    const { rerender } = renderHook((p) => useGridGuidePersistence(p), { initialProps: NO_SCOPE });
 
     // Τοποθέτηση 4 οδηγών ΟΣΟ το scope είναι ελλιπές → service null → debounced save no-op.
     act(() => {
@@ -143,7 +147,7 @@ describe('useGridGuidePersistence — flush-on-ready', () => {
   it('remote-wins: αν υπάρχει remote doc, τα pending απορρίπτονται (no create, hydrate από remote)', async () => {
     mockService = makeService([remoteDoc('grd_remote', [guide('r1', 'X', 100), guide('r2', 'Y', 200)])]);
 
-    const { rerender } = renderHook((p) => useGridGuidePersistence(p), { initialProps: NO_FLOORPLAN });
+    const { rerender } = renderHook((p) => useGridGuidePersistence(p), { initialProps: NO_SCOPE });
     act(() => { mockGuideStore.__place([guide('gx1', 'X', 10)]); });
     await flushTimers();
 
@@ -170,5 +174,15 @@ describe('useGridGuidePersistence — flush-on-ready', () => {
 
     expect(mockService.createGrid).toHaveBeenCalledTimes(1);
     expect(mockService.createGrid.mock.calls[0][0].guides).toHaveLength(1);
+  });
+
+  it('ADR-420 resilience: durable floorId χωρίς floorplanId ΕΙΝΑΙ έγκυρο scope → service ready + persist', async () => {
+    mockService = makeService([]);
+    // File-less floor (cross-floor guard nulled fileRecordId) — used to block persistence.
+    renderHook((p) => useGridGuidePersistence(p), { initialProps: { ...FULL, floorplanId: null } });
+    act(() => { mockGuideStore.__place([guide('gx1', 'X', 10)]); });
+    await flushTimers();
+
+    expect(mockService.createGrid).toHaveBeenCalledTimes(1);
   });
 });
