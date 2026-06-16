@@ -9,6 +9,7 @@
  */
 
 import type { DxfImportResult, SceneModel } from '../types/scene';
+import type { SceneUnits } from '../utils/scene-units';
 import { encodingService, type SupportedEncoding } from './encoding-service';
 import { calculateTightBounds } from '../utils/bounds-utils';
 import { PANEL_LAYOUT } from '../config/panel-tokens';
@@ -30,14 +31,16 @@ export class DxfImportService {
    *
    * @param file - The DXF file to import
    * @param encoding - Optional encoding (auto-detected if not provided)
+   * @param unitsOverride - ADR-462: user-selected source units (wizard). Drives the
+   *        canonical-mm scale at parse. When omitted, $INSUNITS/heuristic decide.
    * @returns DXF import result with scene and stats
    */
-  async importDxfFile(file: File, encoding?: string): Promise<DxfImportResult> {
+  async importDxfFile(file: File, encoding?: string, unitsOverride?: SceneUnits): Promise<DxfImportResult> {
 
     // 🏢 ENTERPRISE: Direct parse first (reliable, encoding-aware)
     // Worker fallback kept for future use but direct parse is primary path
     try {
-      const result = await this.directParseFileWithEncoding(file, encoding);
+      const result = await this.directParseFileWithEncoding(file, encoding, unitsOverride);
       if (result.success) {
         return result;
       }
@@ -96,10 +99,11 @@ export class DxfImportService {
             });
           };
           
-          worker.postMessage({ 
+          worker.postMessage({
             type: 'parse-dxf',
             fileContent: content,
-            filename: file.name
+            filename: file.name,
+            unitsOverride, // ADR-462 — canonical-mm scale at parse
           });
         } catch (workerError) {
           clearTimeout(timeout);
@@ -132,7 +136,7 @@ export class DxfImportService {
    * Uses centralized encodingService for file reading.
    * Uses centralized calculateTightBounds for bounds normalization.
    */
-  private async directParseFileWithEncoding(file: File, encoding?: string): Promise<DxfImportResult> {
+  private async directParseFileWithEncoding(file: File, encoding?: string, unitsOverride?: SceneUnits): Promise<DxfImportResult> {
     try {
       // 🏢 ENTERPRISE: Use centralized encoding service
       const preferredEncoding = encoding as SupportedEncoding | undefined;
@@ -151,7 +155,7 @@ export class DxfImportService {
       const { DxfSceneBuilder } = await import('../utils/dxf-scene-builder');
       const startTime = performance.now();
 
-      const scene = DxfSceneBuilder.buildScene(content);
+      const scene = DxfSceneBuilder.buildScene(content, unitsOverride);
 
       if (!scene) {
         return {

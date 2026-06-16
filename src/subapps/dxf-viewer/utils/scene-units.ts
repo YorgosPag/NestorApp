@@ -101,18 +101,41 @@ export function detectSceneUnits(bounds: {
 }
 
 /**
+ * ADR-462 CANONICAL-mm — resolve the SOURCE units of an imported DXF (what the file
+ * was authored in), used to scale geometry to millimetres at import time.
+ *
+ * Priority: `$INSUNITS` is trusted EXCEPT when it claims `'mm'` while the coordinate
+ * magnitude is far too small to be a real mm drawing — the classic Greek-DXF lie
+ * (`$INSUNITS = 4` but coordinates are in metres). There the bounds heuristic wins,
+ * because coordinate magnitude is the ground truth of scale. Files with no
+ * `$INSUNITS` fall back to the heuristic. The wizard's explicit user override (when
+ * present) takes precedence over this at the call site.
+ */
+export function resolveImportSourceUnits(
+  insunitsUnit: SceneUnits | null,
+  bounds: { min: { x: number; y: number }; max: { x: number; y: number } } | null | undefined,
+): SceneUnits {
+  const heuristic = bounds ? detectSceneUnits(bounds) : null;
+  if (!insunitsUnit) return heuristic ?? 'mm';
+  // $INSUNITS says mm, but the geometry is too small to be real millimetres
+  // (a whole floorplan under ~50 cm) → the declaration lies; trust the magnitude.
+  if (insunitsUnit === 'mm' && heuristic && heuristic !== 'mm') return heuristic;
+  return insunitsUnit;
+}
+
+/**
  * Preferred entry point for consumers needing the effective scene units.
  *
- * Strategy:
- *   1. If `scene.units` is a real unit other than the legacy `'mm'` default,
- *      trust it (the dxf-scene-builder ADR-358 hotfix now propagates the
- *      real `$INSUNITS`).
- *   2. If `scene.units` is `'mm'` (potentially legacy hardcode) and the
- *      bounds diagonal does NOT look like millimeters, fall back to
- *      `detectSceneUnits(bounds)` to recover.
- *   3. If `scene.units` is missing / unknown, run the heuristic.
+ * ADR-462 CANONICAL-mm: scenes now store geometry in millimetres by construction
+ * (the unit scale is baked at import in `DxfSceneBuilder.buildScene`). So we **trust
+ * the declared unit** — including `'mm'` — and NO LONGER second-guess it with the
+ * bounds heuristic. The heuristic survives ONLY as a last resort for legacy/unitless
+ * scenes that carry no declaration at all (back-compat).
  *
- * Returns `'mm'` when no other signal is available (back-compat default).
+ * This removed the root cause of the «κολώνα μικροσκοπική στο Ισόγειο» bug: a real
+ * mm scene whose small bounds were mis-detected as metres.
+ *
+ * Returns `'mm'` when no signal is available (back-compat default).
  */
 export function resolveSceneUnits(scene: {
   units?: string | null;
@@ -120,12 +143,13 @@ export function resolveSceneUnits(scene: {
 } | null | undefined): SceneUnits {
   if (!scene) return 'mm';
   const declared = normalizeDeclaredUnits(scene.units);
-  if (declared && declared !== 'mm') return declared;
+  if (declared) return declared; // ADR-462 — trust the canonical declaration (incl. 'mm')
+  // Legacy fallback only: no declared unit at all → infer from coordinate magnitude.
   if (scene.bounds) {
     const heuristic = detectSceneUnits(scene.bounds);
     if (heuristic !== 'mm') return heuristic;
   }
-  return declared ?? 'mm';
+  return 'mm';
 }
 
 /**

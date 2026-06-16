@@ -1,22 +1,30 @@
 import type { SceneModel, AnySceneEntity, SceneLayer } from '../types/scene';
-import { DxfEntityParser, type DxfHeaderData, type LayerColorMap } from './dxf-entity-parser';
+import type { Entity } from '../types/entities';
+import { DxfEntityParser, type LayerColorMap } from './dxf-entity-parser';
 import { DEFAULT_LAYER_COLOR, getLayerColor } from '../config/color-config';
 import { getAciColor } from '../settings/standards/aci';
 // ADR-130: Centralized Default Layer Name
 import { getLayerNameOrDefault, DXF_DEFAULT_LAYER } from '../config/layer-config';
 // ADR-358 Phase 9C/9D — SceneLayer construction SSoT (auto-gens `lyr_<UUID-v4>` id).
 import { createSceneLayer } from '../types/entities';
-// 🏢 ADR-142: Centralized Default Font Size
-import { TEXT_SIZE_LIMITS } from '../config/text-rendering-config';
 // 🏢 ADR-158: Centralized Infinity Bounds Initialization
 import { createInfinityBounds } from '../config/geometry-constants';
-// 🏢 ADR-163: Centralized Vector Magnitude (replaces inline Math.sqrt patterns)
-import { vectorMagnitude } from '../rendering/entities/shared/geometry-rendering-utils';
 // ADR-358 Phase 8 — propagate real $INSUNITS to SceneModel.units via SSoT.
-import { detectSceneUnits, insunitsCodeToSceneUnits } from './scene-units';
+// ADR-462 canonical-mm — scale source units → mm at import (mmToSceneUnits inverse).
+import { insunitsCodeToSceneUnits, mmToSceneUnits, resolveImportSourceUnits, type SceneUnits } from './scene-units';
+// ADR-348 SSoT — per-entity scale transform (reused for the import unit-scale pass).
+import { scaleEntity } from '../systems/scale/scale-entity-transform';
 
 export class DxfSceneBuilder {
-  static buildScene(content: string): SceneModel {
+  /**
+   * ADR-462 — CANONICAL-mm: a DXF is imported in WHATEVER units it was authored,
+   * but the SceneModel always stores geometry in **millimetres**. The source unit
+   * (`unitsOverride` from the wizard → `$INSUNITS` → bounds heuristic) drives a
+   * one-shot scale of every coordinate, so all floors of a building share ONE unit
+   * and BIM entities (authored in mm) align with the underlay. After this, the whole
+   * app reads `units: 'mm'` — no per-floor unit guessing downstream.
+   */
+  static buildScene(content: string, unitsOverride?: SceneUnits): SceneModel {
 
     const lines = content.split('\n').map(line => line.trim()).filter(line => line.length > 0);
 
@@ -169,11 +177,29 @@ export class DxfSceneBuilder {
     // ║ Τα entities περνάνε απευθείας χωρίς text height normalization.        ║
     // ╚════════════════════════════════════════════════════════════════════════╝
 
-    // ADR-358 Phase 8 — propagate the real $INSUNITS to SceneModel.units.
-    // Was hardcoded `'mm'` regardless of source file, breaking every
-    // consumer that builds geometry from mm-baked defaults (stair tool).
+    // ADR-462 CANONICAL-mm — resolve the SOURCE unit (what the DXF was authored in),
+    // then scale every coordinate to millimetres so the stored scene is always mm.
+    // Priority: explicit wizard override → $INSUNITS → bounds heuristic (ADR-368 order,
+    // now applied as a SCALE instead of a render-time label).
     const fromInsunits = insunitsCodeToSceneUnits(header.insunits);
-    const resolvedUnits = fromInsunits ?? detectSceneUnits(bounds);
+    const sourceUnits: SceneUnits = unitsOverride ?? resolveImportSourceUnits(fromInsunits, bounds);
+
+    // mmToSceneUnits('m') = 0.001 → a value in metres × (1/0.001)=1000 becomes mm.
+    const mmFactor = 1 / mmToSceneUnits(sourceUnits);
+
+    let finalEntities = entities;
+    let finalBounds = bounds;
+    if (Number.isFinite(mmFactor) && mmFactor > 0 && Math.abs(mmFactor - 1) > 1e-9) {
+      // Uniform scale around the origin (0,0) → reuses the ADR-348 per-entity SSoT
+      // (`scaleEntity`), so every entity type (line/arc/circle/text/dimension/hatch…)
+      // scales correctly without re-implementing per-type math. Coordinates, radii
+      // and text heights all become mm.
+      const origin = { x: 0, y: 0 };
+      finalEntities = entities.map(
+        (e) => ({ ...e, ...scaleEntity(e as unknown as Entity, origin, mmFactor, mmFactor) }) as AnySceneEntity,
+      );
+      finalBounds = DxfSceneBuilder.calculateBounds(finalEntities);
+    }
 
     // ADR-358 Phase 9E-1: build id-keyed mirror alongside name-keyed `layers`.
     const layersById: Record<string, SceneLayer> = Object.fromEntries(
@@ -181,10 +207,11 @@ export class DxfSceneBuilder {
     );
 
     return {
-      entities,
+      entities: finalEntities,
       layersById,
-      bounds,
-      units: resolvedUnits,
+      bounds: finalBounds,
+      // ADR-462 — geometry is now millimetres by construction; downstream stops guessing.
+      units: 'mm',
       dimStyles: Object.keys(dimStyles).length > 0 ? dimStyles : undefined,
       headerDimscale: header.dimscale, // ADR-362 R10 — annotative-style resolution in dim-style-importer
     };
@@ -282,197 +309,6 @@ export class DxfSceneBuilder {
       min: { x: bounds.minX, y: bounds.minY },
       max: { x: bounds.maxX, y: bounds.maxY }
     };
-  }
-
-  /**
-   * 🔧 TEXT HEIGHT NORMALIZATION (Enterprise-Grade)
-   *
-   * Κανονικοποιεί text/mtext entities που έχουν δυσανάλογα μεγάλο fontSize
-   * σε σχέση με το μέγεθος της κάτοψης.
-   *
-   * Πρόβλημα: Διαφορετικά DXF αρχεία χρησιμοποιούν:
-   * - Διαφορετικά INSUNITS (mm, cm, m, inches)
-   * - Annotation scaling ενσωματωμένο στο text height
-   * - DIMSCALE factors
-   *
-   * Λύση: Συνδυασμός 3 στρατηγικών:
-   * 1. Εφαρμογή INSUNITS scaling
-   * 2. Sanity clamp βάσει διαγωνίου κάτοψης
-   * 3. Ανίχνευση annotation scale patterns
-   *
-   * @param entities - Τα entities προς έλεγχο
-   * @param bounds - Τα bounds της κάτοψης
-   * @param header - Parsed HEADER data (INSUNITS, DIMSCALE)
-   * @returns Entities με κανονικοποιημένα text heights
-   */
-  private static normalizeTextHeights(
-    entities: AnySceneEntity[],
-    bounds: { min: { x: number; y: number }; max: { x: number; y: number } },
-    header: DxfHeaderData
-  ): AnySceneEntity[] {
-    // Υπολογισμός διαγωνίου κάτοψης
-    const width = bounds.max.x - bounds.min.x;
-    const height = bounds.max.y - bounds.min.y;
-    // 🏢 ADR-163: Centralized vectorMagnitude (replaces inline Math.sqrt)
-    const diagonal = vectorMagnitude({ x: width, y: height });
-
-    // Guard: Αν η διαγώνιος είναι πολύ μικρή, μην κάνεις τίποτα
-    if (diagonal < 1) {
-      return entities;
-    }
-
-    // ╔════════════════════════════════════════════════════════════════════════╗
-    // ║ 🏢 ENTERPRISE: Text height normalization strategy                      ║
-    // ╚════════════════════════════════════════════════════════════════════════╝
-
-    // ╔═══════════════════════════════════════════════════════════════════════╗
-    // ║ 🔴 CRITICAL FIX: Detect METERS without HEADER                         ║
-    // ║ Πολλά αρχεία DXF είναι σε METERS αλλά χωρίς HEADER/$INSUNITS.        ║
-    // ║ Αν η διαγώνιος είναι 10-100 units και τα text heights είναι <1,      ║
-    // ║ είναι πιθανότατα σε meters. Τα κείμενα πρέπει να κλιμακωθούν.       ║
-    // ╚═══════════════════════════════════════════════════════════════════════╝
-    const isLikelyMeters =
-      header.insunits === 0 && // Unitless (no HEADER)
-      diagonal >= 10 &&         // Diagonal suggests meters (10m+)
-      diagonal <= 500;          // But not too large (under 500m = reasonable building)
-
-    if (isLikelyMeters) {
-      console.warn('⚠️ DXF UNIT DETECTION: File appears to be in METERS without HEADER!', {
-        diagonal: diagonal.toFixed(2),
-        hint: 'Text heights will be scaled for better visibility'
-      });
-    }
-
-    // Strategy 1: INSUNITS-based detection
-    // Αν INSUNITS = 6 (meters), τα text heights είναι πιθανώς σε m
-    // οπότε πρέπει να τα μετατρέψουμε σε mm
-    const unitScale = DxfEntityParser.getUnitScale(header.insunits);
-
-    // Strategy 2: Annotation scale detection
-    // Κοινά annotation scales: 1, 10, 25, 50, 100
-    const commonAnnoScales = [1, 10, 20, 25, 50, 100, 200, 500];
-
-    // Strategy 3: Sanity clamp based on bounds
-    // Αν fontSize > 5% της διαγωνίου → θεωρείται "τεράστιο"
-    const MAX_TEXT_HEIGHT_RATIO = 0.05; // 5% of diagonal
-    const TARGET_TEXT_HEIGHT_RATIO = 0.008; // 0.8% of diagonal (τυπικό readable μέγεθος)
-
-    const maxAllowedHeight = diagonal * MAX_TEXT_HEIGHT_RATIO;
-    const targetHeight = diagonal * TARGET_TEXT_HEIGHT_RATIO;
-
-    // Statistics για logging
-    let normalizedCount = 0;
-    let unitScaledCount = 0;
-    let annoScaleDetectedCount = 0;
-
-    const result = entities.map(entity => {
-      // Μόνο για text entities
-      if (entity.type !== 'text') {
-        return entity;
-      }
-
-      // Type guard για fontSize
-      const textEntity = entity as typeof entity & { fontSize?: number; height?: number };
-      // 🏢 ADR-142: Use centralized DEFAULT_FONT_SIZE for fallback
-      let currentHeight = textEntity.fontSize || textEntity.height || TEXT_SIZE_LIMITS.DEFAULT_FONT_SIZE;
-      let appliedFix = '';
-
-      // ╔═══════════════════════════════════════════════════════════════════════╗
-      // ║ FIX 1: METERS WITHOUT HEADER - Critical scaling fix                  ║
-      // ║                                                                       ║
-      // ║ Πρόβλημα: Αρχεία σε meters χωρίς HEADER έχουν text heights 0.1-0.5m ║
-      // ║ που είναι ~26x μεγαλύτερα σε ratio από κανονικά αρχεία σε mm.       ║
-      // ║ Όταν γίνει zoom, τα κείμενα διαστάσεων εμφανίζονται ΤΕΡΑΣΤΙΑ.       ║
-      // ║                                                                       ║
-      // ║ Λύση: ΜΕΙΩΣΗ text heights κατά factor ~20x για να έχουν σωστό ratio ║
-      // ║ Κανονικά αρχεία (mm): text/diagonal ≈ 0.01%                          ║
-      // ║ Αρχεία σε meters: text/diagonal ≈ 0.26% → πρέπει να γίνει 0.01%     ║
-      // ╚═══════════════════════════════════════════════════════════════════════╝
-      if (isLikelyMeters && currentHeight > 0.01 && currentHeight < 2) {
-        // Text heights 0.01-2 σε αρχείο meters → ΜΕΙΩΣΗ για σωστό ratio
-        const originalHeight = currentHeight;
-        // Διαίρεση με 20 για να φέρουμε το ratio από 0.26% σε ~0.013%
-        const METERS_SCALE_FACTOR = 20;
-        currentHeight = currentHeight / METERS_SCALE_FACTOR;
-        unitScaledCount++;
-        appliedFix = `METERS÷${METERS_SCALE_FACTOR} (${originalHeight.toFixed(3)} → ${currentHeight.toFixed(4)})`;
-      }
-
-      // Standard INSUNITS=6 (explicit meters) handling - same logic
-      if (header.insunits === 6 && currentHeight < 10 && currentHeight > 0.001 && !appliedFix) {
-        const originalHeight = currentHeight;
-        const METERS_SCALE_FACTOR = 20;
-        currentHeight = currentHeight / METERS_SCALE_FACTOR;
-        unitScaledCount++;
-        appliedFix = `INSUNITS=6÷${METERS_SCALE_FACTOR} (${originalHeight.toFixed(3)} → ${currentHeight.toFixed(4)})`;
-      }
-
-      // ╔═══════════════════════════════════════════════════════════════════════╗
-      // ║ FIX 2: Annotation scale detection                                    ║
-      // ║ Αν το height είναι ακριβές πολλαπλάσιο ενός common annotation scale  ║
-      // ║ και το αποτέλεσμα θα ήταν reasonable, εφάρμοσε το scale              ║
-      // ╚═══════════════════════════════════════════════════════════════════════╝
-      if (currentHeight > maxAllowedHeight) {
-        for (const scale of commonAnnoScales) {
-          const normalized = currentHeight / scale;
-          // Αν το normalized είναι reasonable (1-50 units), χρησιμοποίησέ το
-          if (normalized >= 1 && normalized <= 50 && normalized < maxAllowedHeight) {
-            currentHeight = normalized;
-            annoScaleDetectedCount++;
-            appliedFix = `AnnoScale (÷${scale})`;
-            break;
-          }
-        }
-      }
-
-      // ╔═══════════════════════════════════════════════════════════════════════╗
-      // ║ FIX 3: Sanity clamp (fallback)                                       ║
-      // ║ Αν μετά από όλα τα fixes το height είναι ακόμα τεράστιο, clamp it   ║
-      // ╚═══════════════════════════════════════════════════════════════════════╝
-      if (currentHeight > maxAllowedHeight) {
-        normalizedCount++;
-        const originalHeight = currentHeight;
-        currentHeight = targetHeight;
-        appliedFix = appliedFix ? `${appliedFix} + Clamp` : 'Clamp';
-
-        return {
-          ...entity,
-          fontSize: currentHeight,
-          height: currentHeight,
-          _originalFontSize: originalHeight,
-          _normalizationFix: appliedFix
-        };
-      }
-
-      // Αν εφαρμόστηκε fix χωρίς clamp
-      if (appliedFix) {
-        return {
-          ...entity,
-          fontSize: currentHeight,
-          height: currentHeight,
-          _normalizationFix: appliedFix
-        };
-      }
-
-      return entity;
-    });
-
-    // Log για debugging
-    const totalFixed = normalizedCount + unitScaledCount + annoScaleDetectedCount;
-    if (totalFixed > 0) {
-      console.debug(`📏 TEXT NORMALIZATION COMPLETE:`, {
-        totalFixed,
-        unitScaled: unitScaledCount,
-        annoScaleDetected: annoScaleDetectedCount,
-        clamped: normalizedCount,
-        diagonal: diagonal.toFixed(2),
-        maxAllowed: maxAllowedHeight.toFixed(2),
-        targetHeight: targetHeight.toFixed(2),
-        insunits: DxfEntityParser.getUnitsName(header.insunits)
-      });
-    }
-
-    return result;
   }
 
   static validateScene(scene: SceneModel): boolean {

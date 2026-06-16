@@ -1,21 +1,24 @@
 // DXF Parser Web Worker - Working Implementation
 import type { DxfImportResult } from '../types/scene';
+import type { SceneUnits } from '../utils/scene-units';
 import { DxfSceneBuilder } from '../utils/dxf-scene-builder';
 
 interface WorkerMessage {
   type: 'parse-dxf';
   fileContent: string;
   filename: string;
+  // ADR-462 — user-selected source units (canonical-mm scale at parse).
+  unitsOverride?: SceneUnits;
 }
 
 // Main DXF content parser using working DxfSceneBuilder
-function parseDxfContent(content: string, filename: string): DxfImportResult {
+function parseDxfContent(content: string, filename: string, unitsOverride?: SceneUnits): DxfImportResult {
   const startTime = performance.now();
   console.debug('🔧 Worker: Received parse request for:', filename);
-  
+
   try {
     // Build scene using working DxfSceneBuilder (not broken npm parser)
-    const scene = DxfSceneBuilder.buildScene(content);
+    const scene = DxfSceneBuilder.buildScene(content, unitsOverride);
     
     // Validate the built scene
     if (!DxfSceneBuilder.validateScene(scene)) {
@@ -53,7 +56,7 @@ function parseDxfContent(content: string, filename: string): DxfImportResult {
 
 // Enhanced worker message handler
 self.onmessage = async (e: MessageEvent<WorkerMessage>) => {
-  const { type, fileContent, filename } = e.data;
+  const { type, fileContent, filename, unitsOverride } = e.data;
   
   if (type !== 'parse-dxf') {
     console.warn('⚠️ Worker: Unknown message type:', type);
@@ -82,7 +85,7 @@ self.onmessage = async (e: MessageEvent<WorkerMessage>) => {
 
   try {
     // Parse the DXF content using working method
-    const result = parseDxfContent(fileContent, filename || 'unknown.dxf');
+    const result = parseDxfContent(fileContent, filename || 'unknown.dxf', unitsOverride);
     
     // Send result back to main thread
     self.postMessage(result);
