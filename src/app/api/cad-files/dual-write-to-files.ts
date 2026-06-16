@@ -50,6 +50,20 @@ export interface DualWriteParams {
   companyId: string;
   createdBy: string;
   context?: DualWriteContext;
+  /**
+   * 🛡️ ADR-420 / ADR-399 data-integrity fix (incident 2026-06-16 — cross-floor
+   * `entityId` drift): `true` only on the FIRST write of this fileId. The
+   * entity-linking identity fields (`entityType`/`entityId`/`projectId`) are
+   * creation-time identity and MUST be write-once — never re-derived from the
+   * volatile per-save `context.floorId` on a later merge-update. A stale
+   * `saveContext.floorId` (sticky across level switches) otherwise overwrote a
+   * floor file's `entityId` with ANOTHER floor's id while `storagePath` (the
+   * immutable canonical location, never re-written on merge — see below) stayed
+   * correct → `isCrossFloorSceneLink` false-positived → the level's save target
+   * was nulled → every BIM entity on that floor silently failed to persist.
+   * When omitted/`false` the identity fields are preserved by `merge: true`.
+   */
+  isCreate?: boolean;
 }
 
 /**
@@ -97,6 +111,7 @@ export async function writeToFilesCollection(params: DualWriteParams): Promise<v
     companyId,
     createdBy,
     context,
+    isCreate,
   } = params;
 
   try {
@@ -139,10 +154,15 @@ export async function writeToFilesCollection(params: DualWriteParams): Promise<v
     const fileRecord = {
       id: fileId,
       companyId,
-      // projectId: only write if explicitly provided (don't null-out wizard value on auto-save)
-      ...(context?.projectId ? { projectId: context.projectId } : {}),
-      // entityType/entityId: only write if wizard provided them (don't default to building/standalone)
-      ...(context?.entityType ? {
+      // 🛡️ ADR-420 — entity-linking identity is WRITE-ONCE (only on the create write).
+      // On a merge-update `isCreate` is false → these are omitted so `merge: true`
+      // preserves the creation-time values. Re-deriving them from the volatile
+      // per-save `context.floorId`/`projectId` on every auto-save is exactly how a
+      // stale `saveContext.floorId` drifted a floor file's `entityId` to ANOTHER
+      // floor (storagePath stayed correct → cross-floor false-positive → BIM never
+      // persisted). The wizard create carries the correct context; later saves keep it.
+      ...(isCreate && context?.projectId ? { projectId: context.projectId } : {}),
+      ...(isCreate && context?.entityType ? {
         entityType: resolvedEntityType,
         entityId: resolvedEntityId,
       } : {}),

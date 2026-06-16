@@ -95,3 +95,81 @@ export function bimScopeWriteFields(cfg: BimScopeConfig): Record<string, string>
     ...(cfg.floorId ? { floorId: cfg.floorId } : {}),
   };
 }
+
+// ============================================================================
+// PERSISTENCE-READY GATE (ADR-420 SSoT — incident 2026-06-16)
+// ============================================================================
+
+/**
+ * Raw scope inputs a BIM persistence hook holds before it can instantiate its
+ * Firestore service. Mirrors the props threaded by `DxfViewerTopBar`. All
+ * fields are nullable because they originate from optional context.
+ */
+export interface BimPersistenceScopeInput {
+  readonly companyId: string | null | undefined;
+  readonly projectId: string | null | undefined;
+  readonly userId: string | null | undefined;
+  /** Durable building-storey id (`flr_*`) — the PREFERRED scope key (ADR-420). */
+  readonly floorId?: string | null;
+  /** Volatile source DXF FileRecord id — provenance / legacy fallback scope key. */
+  readonly floorplanId?: string | null;
+}
+
+/**
+ * A validated scope, shaped to drop straight into any `*FirestoreServiceConfig`.
+ * `floorplanId` is GUARANTEED present (mirrors `floorId` when no DXF file is
+ * bound) so the per-entity service configs (`floorplanId: string`) stay valid
+ * unchanged; the Firestore query still keys on `floorId` whenever it exists
+ * (`buildBimScopeConstraints` → `resolveBimScope`).
+ */
+export interface ResolvedBimPersistenceScope {
+  readonly companyId: string;
+  readonly projectId: string;
+  readonly userId: string;
+  readonly floorId?: string;
+  readonly floorplanId: string;
+}
+
+/**
+ * Single source of truth for the "is this BIM persistence service allowed to
+ * instantiate?" gate — replaces the 26× copy-pasted
+ * `if (!companyId || !projectId || !floorplanId || !userId) …` guard.
+ *
+ * 🛡️ ROOT-CAUSE FIX (incident 2026-06-16 — column/BIM not persisting on a floor
+ * whose own DXF file was cross-linked): the old gate required `floorplanId`
+ * (= `levelManager.fileRecordId`), a VOLATILE value the cross-floor guard nulls
+ * out (`useLevelSceneLoader.resetDxfAutoSaveTarget`). Per ADR-420 the durable
+ * BIM scope key is the building-storey `floorId`, which lives on the `Level`
+ * doc and survives the save-target reset. So the gate now requires a valid
+ * identity (`companyId`/`projectId`/`userId`) plus AT LEAST ONE scope key —
+ * `floorId` (preferred) OR `floorplanId` (legacy/project-level fallback). A
+ * floor with a durable `floorId` but no DXF file therefore keeps persisting
+ * its BIM entities (Revit: every storey is its own drawing space).
+ *
+ * @returns the resolved scope, or `null` when the service must stay un-instantiated.
+ */
+export function resolveBimPersistenceScope(
+  input: BimPersistenceScopeInput,
+): ResolvedBimPersistenceScope | null {
+  const companyId = input.companyId || undefined;
+  const projectId = input.projectId || undefined;
+  const userId = input.userId || undefined;
+  const floorId = input.floorId || undefined;
+  const fileProvenance = input.floorplanId || undefined;
+
+  if (!companyId || !projectId || !userId) return null;
+  // ADR-420 — floorId is the preferred durable scope key; floorplanId is the
+  // legacy/project-level fallback. Need at least one.
+  const scopeKey = floorId ?? fileProvenance;
+  if (!scopeKey) return null;
+
+  return {
+    companyId,
+    projectId,
+    userId,
+    ...(floorId ? { floorId } : {}),
+    // Mirror floorId into the provenance slot for a file-less floor so the
+    // service config stays valid; with a real file, keep the file id.
+    floorplanId: fileProvenance ?? scopeKey,
+  };
+}

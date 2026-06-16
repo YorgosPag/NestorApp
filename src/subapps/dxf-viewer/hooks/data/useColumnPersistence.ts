@@ -42,6 +42,7 @@ import { recordColumnChange } from '../../bim/columns/column-audit-client';
 import { bimToBoqBridge } from '../../bim/services/BimToBoqBridge';
 import { columnBoqEntity } from './column-boq-feed';
 import { createPersistSerializer } from './persist-serializer';
+import { resolveBimPersistenceScope } from '../../bim/persistence/bim-floor-scope';
 import { useBimEntityMovedPersistEffect } from './useBimEntityMovedPersistEffect';
 import { useBimEntityRestoredPersistEffect } from './useBimEntityRestoredPersistEffect';
 import { useBimFirestoreWriteGrace } from './useBimFirestoreWriteGrace';
@@ -163,18 +164,22 @@ export function useColumnPersistence(
   levelManagerRef.current = levelManager;
   const currentLevelId = levelManager.currentLevelId;
 
-  // Instantiate service όταν auth + scope ready.
+  // Instantiate service όταν auth + scope ready. ADR-420 SSoT gate — durable
+  // `floorId` is sufficient scope even when the DXF save target (`floorplanId` =
+  // volatile fileRecordId) was nulled by the cross-floor guard, so BIM keeps
+  // persisting on a floor whose own DXF file is missing/cross-linked.
   useEffect(() => {
-    if (!companyId || !projectId || !floorplanId || !userId) {
+    const scope = resolveBimPersistenceScope({ companyId, projectId, userId, floorId, floorplanId });
+    if (!scope) {
       serviceRef.current = null;
       return;
     }
     serviceRef.current = createColumnFirestoreService({
-      companyId,
-      projectId,
-      floorplanId,
-      floorId: floorId ?? undefined,
-      userId,
+      companyId: scope.companyId,
+      projectId: scope.projectId,
+      floorplanId: scope.floorplanId,
+      floorId: scope.floorId,
+      userId: scope.userId,
     });
   }, [companyId, projectId, floorplanId, floorId, userId]);
 

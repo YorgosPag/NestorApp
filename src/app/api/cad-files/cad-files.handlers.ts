@@ -102,6 +102,9 @@ export async function handleUpsertCadFile(
       companyId: ctx.companyId,
       createdBy: ctx.uid,
       context: body.context,
+      // 🛡️ ADR-420 — write entity identity (entityType/entityId/projectId) ONLY on
+      // create so a later auto-save's stale context.floorId can't drift `entityId`.
+      isCreate: created,
     });
 
     // Audit trail (best-effort)

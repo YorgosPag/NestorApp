@@ -160,7 +160,8 @@ describe('FoundationFirestoreService.updateFoundation / deleteFoundation', () =>
     await svc.updateFoundation('fnd_1', { params: PAD_PARAMS });
     const payload = mockUpdateDoc.mock.calls[0][1];
     expect(payload.updatedBy).toBe('u1');
-    expect(payload.params).toBe(PAD_PARAMS);
+    // ADR-463 — params now sanitized via stripUndefinedDeep (new object) → deep-equal.
+    expect(payload.params).toEqual(PAD_PARAMS);
     expect(payload).not.toHaveProperty('companyId');
     expect(payload).not.toHaveProperty('createdAt');
   });

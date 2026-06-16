@@ -33,6 +33,7 @@ import { db } from '@/lib/firebase';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { generateFoundationId } from '@/services/enterprise-id-convenience';
 import { firestoreQueryService } from '@/services/firestore';
+import { stripUndefinedDeep } from '@/utils/firestore-sanitize';
 import { buildBimScopeConstraints, bimScopeWriteFields } from '../persistence/bim-floor-scope';
 import type {
   FoundationEntity,
@@ -158,8 +159,11 @@ export class FoundationFirestoreService {
       // ADR-420 — floorplanId (provenance) + floorId (stable scope), from config SSoT.
       ...bimScopeWriteFields(this.config),
       kind: input.kind,
-      params: input.params,
-      validation: input.validation,
+      // ADR-463 — sanitize nested `undefined` (π.χ. pad χωρίς topMesh / strip χωρίς
+      // stirrups): Firestore πετά «Unsupported field value: undefined» → silent catch →
+      // ο οπλισμός ΔΕΝ persist-άρεται σε reload. SSoT `stripUndefinedDeep` (mirror κολώνας).
+      params: stripUndefinedDeep(input.params),
+      validation: stripUndefinedDeep(input.validation),
       createdBy: this.config.userId,
       createdAt: serverTimestamp(),
       updatedBy: this.config.userId,
@@ -167,7 +171,7 @@ export class FoundationFirestoreService {
     };
 
     // Firestore rejects `undefined` — include optional fields μόνο όταν set.
-    if (input.geometry !== undefined) base.geometry = input.geometry;
+    if (input.geometry !== undefined) base.geometry = stripUndefinedDeep(input.geometry);
     // ADR-420 — floorId is owned by config scope (bimScopeWriteFields above), not input.
     if (input.layerId !== undefined) base.layerId = input.layerId;
     // ADR-441 Slice 3 — persist hosting bindings (Firestore rejects undefined).
@@ -183,9 +187,9 @@ export class FoundationFirestoreService {
       updatedBy: this.config.userId,
       updatedAt: serverTimestamp(),
     };
-    if (patch.params !== undefined) payload.params = patch.params;
-    if (patch.validation !== undefined) payload.validation = patch.validation;
-    if (patch.geometry !== undefined) payload.geometry = patch.geometry;
+    if (patch.params !== undefined) payload.params = stripUndefinedDeep(patch.params);
+    if (patch.validation !== undefined) payload.validation = stripUndefinedDeep(patch.validation);
+    if (patch.geometry !== undefined) payload.geometry = stripUndefinedDeep(patch.geometry);
     if (patch.layerId !== undefined) payload.layerId = patch.layerId;
     // ADR-441 Slice 6b — persist hosting bindings on re-host (Firestore rejects undefined).
     if (patch.guideBindings !== undefined) payload.guideBindings = patch.guideBindings;
