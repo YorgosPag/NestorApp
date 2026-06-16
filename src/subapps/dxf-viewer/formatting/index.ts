@@ -22,7 +22,18 @@
  * }
  * ```
  *
+ * SCOPE: this is the GENERIC locale/precision/template engine (DXF-agnostic). It
+ * does NOT convert to the user-selected display unit nor follow the status-bar
+ * selector. For READ-ONLY DXF readouts that must follow the cm/m/mm selector
+ * (lengths, areas, coordinates) use the display-measurement SSoT
+ * `config/display-length-format.ts` (`formatLengthForDisplay` /
+ * `formatAreaForDisplay` / `formatCoordinateForDisplay`) — it is the binding layer
+ * built ON TOP of this engine (ADR-462). The registry's `formatArea` /
+ * `formatCoordinate` / `formatRadius` / `formatDiameter` are @deprecated for that
+ * use. Editable INPUTS stay parseable via `config/units.ts` `formatDisplayValue`.
+ *
  * @see docs/centralized-systems/reference/adr-index.md#adr-082
+ * @see config/display-length-format.ts — DXF display-unit binding layer (ADR-462)
  * @created 2026-01-31
  */
 

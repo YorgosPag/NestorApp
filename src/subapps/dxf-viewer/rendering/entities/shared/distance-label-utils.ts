@@ -153,6 +153,10 @@ export function formatDistance(distance: number, decimals: number = 2): string {
  *
  * // In English locale:
  * formatDistanceLocale(1234.56) // → "1,234.56"
+ *
+ * @deprecated Locale-only (no unit conversion / selector). For DXF read-only length
+ * readouts use the display-measurement SSoT `formatLengthForDisplay`
+ * (config/display-length-format.ts, ADR-462).
  */
 export function formatDistanceLocale(distance: number, decimals: number = 2): string {
   if (distance < Math.pow(10, -decimals)) {
@@ -262,6 +266,10 @@ export function formatCoordinate(value: number, decimals: number = 4): string {
  * @param value - Coordinate value (X or Y)
  * @param decimals - Number of decimal places (default: 2)
  * @returns Locale-formatted coordinate string
+ *
+ * @deprecated Locale-only (no unit conversion / selector). For DXF read-only X/Y
+ * readouts use the display-measurement SSoT `formatCoordinateForDisplay`
+ * (config/display-length-format.ts, ADR-462).
  */
 export function formatCoordinateLocale(value: number, decimals: number = 2): string {
   const registry = FormatterRegistry.getInstance();

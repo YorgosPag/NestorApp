@@ -27,8 +27,21 @@
  *   formatAreaForDisplay(25_000_000, { unit:'m' })  → "25,000 m²"
  *   formatCoordinateForDisplay(-1200, { unit:'m' }) → "-1,200 m"
  *
+ * RELATION TO `formatting/FormatterRegistry` (ADR-082): that registry is the
+ * GENERIC locale/precision/template engine (AutoCAD rtos equivalent) and stays
+ * DXF-agnostic — it knows nothing about the display-unit selector. THIS module is
+ * the DXF binding LAYER on top of it: it owns the canonical-mm → selected-unit
+ * conversion + the dynamic unit label, and delegates the final locale number to the
+ * registry (`localeNumber` → `FormatterRegistry.formatDistance`). So there is ONE
+ * locale engine and ONE display-unit home — not two. The registry's own
+ * `formatArea`/`formatCoordinate`/`formatRadius`/`formatDiameter` convenience
+ * methods are @deprecated for DXF readouts (static template, no selector); always
+ * reach for `formatLengthForDisplay` / `formatAreaForDisplay` /
+ * `formatCoordinateForDisplay` here instead.
+ *
  * @see config/display-unit-state.ts — the non-React unit store this reads
  * @see config/units.ts — mm ↔ unit conversion + default precision (pure)
+ * @see formatting/FormatterRegistry.ts — the generic locale engine underneath
  */
 
 import {

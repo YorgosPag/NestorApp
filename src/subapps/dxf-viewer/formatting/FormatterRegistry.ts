@@ -126,14 +126,32 @@ export class FormatterRegistry {
     return this.formatLinear(value, { precision, template: this.config.templates.distance });
   }
 
+  /**
+   * @deprecated Generic locale/template formatter — does NOT convert to the
+   * user-selected display unit nor follow the status-bar selector. For DXF
+   * read-only length readouts use the display-measurement SSoT
+   * `formatLengthForDisplay` (config/display-length-format.ts), which owns the
+   * canonical-mm → display-unit conversion on top of this engine (ADR-462).
+   */
   formatRadius(value: number, precision?: Precision): string {
     return this.formatLinear(value, { precision, template: this.config.templates.radius });
   }
 
+  /**
+   * @deprecated Use `formatLengthForDisplay` (config/display-length-format.ts) for
+   * DXF read-only readouts — this generic helper does not follow the unit selector.
+   */
   formatDiameter(value: number, precision?: Precision): string {
     return this.formatLinear(value, { precision, template: this.config.templates.diameter });
   }
 
+  /**
+   * @deprecated Generic area formatter with a STATIC `templates.area` suffix
+   * (e.g. " m²") — it neither converts mm² → the selected unit² nor follows the
+   * selector. For DXF read-only area readouts use the display-measurement SSoT
+   * `formatAreaForDisplay` (config/display-length-format.ts), which renders the
+   * dynamic mm²/cm²/m² label and follows the status-bar selector (ADR-462).
+   */
   formatArea(value: number, precision?: Precision): string {
     const p = precision ?? this.config.precision.area;
     let result = this.formatDecimal(value, p);
@@ -145,6 +163,13 @@ export class FormatterRegistry {
     return this.formatAngular(value, { precision, template: this.config.templates.angle });
   }
 
+  /**
+   * @deprecated Generic coordinate formatter — no display-unit conversion, does
+   * not follow the selector. For DXF read-only X/Y readouts use the
+   * display-measurement SSoT `formatCoordinateForDisplay`
+   * (config/display-length-format.ts), which converts canonical-mm → the selected
+   * unit (signed) and follows the status-bar selector (ADR-462).
+   */
   formatCoordinate(value: number, precision?: Precision): string {
     const p = precision ?? this.config.precision.coordinate;
     let result = this.formatDecimal(value, p);

@@ -116,16 +116,19 @@ export function useFormatter(): UseFormatterResult {
     [registry]
   );
 
+  /** @deprecated DXF readouts → `formatLengthForDisplay` (config/display-length-format.ts, ADR-462). */
   const formatRadius = useCallback(
     (value: number, precision?: Precision) => registry.formatRadius(value, precision),
     [registry]
   );
 
+  /** @deprecated DXF readouts → `formatLengthForDisplay` (config/display-length-format.ts, ADR-462). */
   const formatDiameter = useCallback(
     (value: number, precision?: Precision) => registry.formatDiameter(value, precision),
     [registry]
   );
 
+  /** @deprecated DXF readouts → `formatAreaForDisplay` (config/display-length-format.ts, ADR-462). */
   const formatArea = useCallback(
     (value: number, precision?: Precision) => registry.formatArea(value, precision),
     [registry]
@@ -136,6 +139,7 @@ export function useFormatter(): UseFormatterResult {
     [registry]
   );
 
+  /** @deprecated DXF readouts → `formatCoordinateForDisplay` (config/display-length-format.ts, ADR-462). */
   const formatCoordinate = useCallback(
     (value: number, precision?: Precision) => registry.formatCoordinate(value, precision),
     [registry]
