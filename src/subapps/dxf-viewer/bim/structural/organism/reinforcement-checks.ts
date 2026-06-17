@@ -32,10 +32,11 @@ import {
   buildFootingSectionContext,
   buildSlabFoundationSectionContext,
   isFoundationSlabEntity,
-  // ADR-456/460 (Giorgio 2026-06-16) — auto columns re-derive from current geometry, so the
-  // ρ-check + joint mismatch must read the ACTIVE design (else a stale stored snapshot triggers
-  // a false `ratioOutOfRange`/`barMismatchAtJoint`). Pure resolver (provider arg, zero store).
-  resolveActiveColumnReinforcement,
+  // ADR-456/460/471 — auto μέλη re-derive από την τρέχουσα γεωμετρία, οπότε ο ρ-check +
+  // joint mismatch ΠΡΕΠΕΙ να διαβάζουν το ACTIVE design (αλλιώς stale stored snapshot →
+  // false `ratioOutOfRange`/`barMismatchAtJoint`). ADR-471 §2 facade: ΕΝΑ entry για
+  // κολόνα ΚΑΙ δοκάρι (πριν το δοκάρι διάβαζε raw stored — bug). Pure (provider arg).
+  resolveActiveMemberReinforcement,
 } from '../section-context';
 import {
   computeOrganismReinforcementContinuity,
@@ -72,7 +73,7 @@ function columnReinforcementOf(
   e: Entity | undefined,
   provider: StructuralCodeProvider,
 ): ColumnReinforcement | undefined {
-  return e && isColumnEntity(e) ? resolveActiveColumnReinforcement(e.params, provider) : undefined;
+  return e && isColumnEntity(e) ? resolveActiveMemberReinforcement(e, provider) : undefined;
 }
 
 // ─── Check 1: μέλος χωρίς οπλισμό (info) ──────────────────────────────────────
@@ -95,13 +96,15 @@ function missingReinforcementFinding(e: Entity): StructuralDiagnostic | null {
 function ratioBoundsOf(e: Entity, provider: StructuralCodeProvider): RatioBounds | null {
   if (isColumnEntity(e) && e.params.reinforcement) {
     // ADR-456/460 — auto → φρέσκο design από την τρέχουσα γεωμετρία· manual → stored.
-    const r = resolveActiveColumnReinforcement(e.params, provider) ?? e.params.reinforcement;
+    const r = resolveActiveMemberReinforcement(e, provider) ?? e.params.reinforcement;
     const ctx = buildColumnSectionContext(e);
     const lim = provider.columnReinforcementLimits(ctx, r.longitudinal.diameterMm);
     return { ratio: computeColumnReinforcementQuantities(ctx, r).ratio, minRatio: lim.minRatio, maxRatio: lim.maxRatio };
   }
   if (isBeamEntity(e) && e.params.reinforcement) {
-    const r = e.params.reinforcement;
+    // ADR-471 — parity με κολόνα: auto → φρέσκο design από την τρέχουσα γεωμετρία/φορτίο·
+    // manual → stored (πριν διάβαζε πάντα stored → false ρ-warning σε auto δοκάρι μετά resize).
+    const r = resolveActiveMemberReinforcement(e, provider) ?? e.params.reinforcement;
     const ctx = buildBeamSectionContext(e);
     const lim = provider.beamReinforcementLimits(ctx, r.bottom.diameterMm);
     return { ratio: computeBeamReinforcementQuantities(ctx, r).ratio, minRatio: lim.minRatio, maxRatio: lim.maxRatio };

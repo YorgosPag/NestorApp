@@ -90,20 +90,67 @@ export function resolveBarSet(
 /** kN → N (φορτίο context σε kN, αντοχές υλικών σε N/mm² = MPa). */
 const KN_TO_N = 1000;
 
+/** EC2 §6.1(4) — κατώφλι ονομαστικής εκκεντρότητας e₀ (mm): e₀ ≥ 20 mm. */
+export const NOMINAL_ECCENTRICITY_FLOOR_MM = 20;
+
+/** EC2 §6.1(4) — διαιρέτης βάθους για e₀ ≥ h/30. */
+const NOMINAL_ECCENTRICITY_DEPTH_DIVISOR = 30;
+
+/** Κολόνα: ενεργό βάθος d ≈ factor·h (cover-agnostic seed, mirror δοκού). */
+const COLUMN_EFFECTIVE_DEPTH_FACTOR = 0.9;
+
+/** Κολόνα: μοχλοβραχίονας z ≈ factor·d (απλοποιημένο EC2 §6.1 κάμψη). */
+const COLUMN_LEVER_ARM_FACTOR = 0.9;
+
 /**
- * ADR-472 — απαιτούμενη As διαμήκους κολόνας από **αξονική αντοχή** (EC2 §6.1,
- * καθαρή θλίψη): inversion του N_Rd = α_cc·f_cd·A_c + f_yd·A_s ⇒
- * A_s = (N_Ed − α_cc·f_cd·A_c) / f_yd. α_cc=1.0 (Ελληνικό ΕΠ, ήδη ενσωματωμένο στο
- * `concreteFcdMpa`). Επιστρέφει 0 όταν το σκυρόδεμα επαρκεί μόνο του ⇒ ο ρ_min
- * κυριαρχεί (μηδέν regression χωρίς φορτίο). Biaxial / λυγηρότητα (§5.8) /
- * ικανοτικός σεισμικός = DEFER (ADR-472 §4).
+ * ADR-472 S4 — EC2 §6.1(4) ονομαστική (ελάχιστη) εκκεντρότητα `e₀ = max(h/30, 20mm)`
+ * (mm). Καλύπτει ατέλειες κατασκευής + ελάχιστη σχεδιαστική ροπή· `h` = βάθος διατομής
+ * στο επίπεδο κάμψης. Pure — ΕΝΑ SSoT (το μοιράζονται builder + όποιος consumer).
+ */
+export function nominalColumnEccentricityMm(sectionDepthMm: number): number {
+  const h = sectionDepthMm > 0 ? sectionDepthMm : 0;
+  return Math.max(h / NOMINAL_ECCENTRICITY_DEPTH_DIVISOR, NOMINAL_ECCENTRICITY_FLOOR_MM);
+}
+
+/**
+ * ADR-472 S4 — **αυτόματη** ονομαστική ροπή σχεδιασμού `M_Ed = N_Ed·e₀` (kNm), μηδέν
+ * input μηχανικού (Revit-grade). `e₀` από {@link nominalColumnEccentricityMm}. ≤0
+ * αξονικό ⇒ 0 (μηδέν regression). Preliminary uniaxial — biaxial/λυγηρότητα = DEFER (§4).
+ */
+export function nominalColumnMomentKnm(nEdKn: number, sectionDepthMm: number): number {
+  if (nEdKn <= 0) return 0;
+  return (nEdKn * nominalColumnEccentricityMm(sectionDepthMm)) / 1000; // kN·mm → kNm
+}
+
+/**
+ * ADR-472 S4 — πρόσθετη As από **καμπτική** συνιστώσα κολόνας (steel couple): A_s,M =
+ * M_Ed / (z·f_yd), `z ≈ 0.81·h` (= 0.9·d, d=0.9·h). `h` = ελάχιστο πάχος (ασθενής άξονας
+ * — conservative). Additive στην αξονική As (preliminary M-N· ΟΧΙ πλήρες interaction
+ * diagram, ADR-472 §4). 0 χωρίς ροπή ⇒ μηδέν regression στον καθαρά-αξονικό σχεδιασμό.
+ */
+function asMomentColumnMm2(ctx: ColumnSectionContext): number {
+  const mEdKnm = ctx.designMomentKnm ?? 0;
+  if (mEdKnm <= 0) return 0;
+  const hMm = ctx.minThicknessMm ?? Math.min(ctx.widthMm, ctx.depthMm);
+  const zMm = COLUMN_LEVER_ARM_FACTOR * COLUMN_EFFECTIVE_DEPTH_FACTOR * hMm;
+  if (zMm <= 0) return 0;
+  return (mEdKnm * 1e6) / (zMm * rebarFydMpa());
+}
+
+/**
+ * ADR-472 — απαιτούμενη As διαμήκους κολόνας από **αντοχή** (EC2 §6.1): αξονική
+ * συνιστώσα `(N_Ed − α_cc·f_cd·A_c)/f_yd` (inversion του N_Rd· α_cc=1.0 ήδη στο
+ * `concreteFcdMpa`) **+ καμπτική** συνιστώσα (S4, ονομαστική ροπή M_Ed). Επιστρέφει
+ * ~0 όταν σκυρόδεμα+ελάχιστη ροπή επαρκούν ⇒ ο ρ_min κυριαρχεί (μηδέν regression χωρίς
+ * φορτίο). Biaxial / λυγηρότητα (§5.8) / ικανοτικός σεισμικός = DEFER (ADR-472 §4).
  */
 function asStrengthColumnMm2(ctx: ColumnSectionContext): number {
   const nEdKn = ctx.designAxialKn ?? 0;
   if (nEdKn <= 0) return 0;
   const fcd = concreteFcdMpa(ctx.concreteGrade ?? DEFAULT_CONCRETE_GRADE); // N/mm²
   const concreteCapacityN = fcd * ctx.grossAreaMm2;
-  return Math.max(0, (nEdKn * KN_TO_N - concreteCapacityN) / rebarFydMpa());
+  const asAxialMm2 = Math.max(0, (nEdKn * KN_TO_N - concreteCapacityN) / rebarFydMpa());
+  return asAxialMm2 + asMomentColumnMm2(ctx);
 }
 
 /**

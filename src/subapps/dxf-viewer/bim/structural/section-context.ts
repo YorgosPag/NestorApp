@@ -26,6 +26,7 @@ import { mmToSceneUnits } from '../../utils/scene-units';
 import { combineSls, combineUls, EN1990_ULS_FACTORS } from './loads/load-combinations';
 import { isZeroMemberLoad, resolveAppliedMemberLoad } from './loads/structural-loads-types';
 import { DEFAULT_CONCRETE_GRADE } from './concrete-grades';
+import { nominalColumnMomentKnm } from './codes/suggest-reinforcement';
 import { resolveColumnReinforcementSection } from './reinforcement/column-section-outline';
 import type { ColumnReinforcement } from './reinforcement/column-reinforcement-types';
 import type { BeamReinforcement } from './reinforcement/beam-reinforcement-types';
@@ -84,7 +85,7 @@ export function buildColumnSectionContextFromParams(params: ColumnParams): Colum
     maxDimensionMm: section.maxDimensionMm,
     perimeterMm: section.perimeterMm,
     mode: section.mode,
-    ...resolveColumnDesignLoad(params),
+    ...resolveColumnDesignLoad(params, section.minThicknessMm),
   };
 }
 
@@ -93,15 +94,22 @@ export function buildColumnSectionContextFromParams(params: ColumnParams): Colum
  * (μηδενικό/απών ⇒ κενό ⇒ ο suggester μένει min-detailing, μηδέν regression). ULS
  * αξονικό N_Ed μέσω του SSoT `EN1990_ULS_FACTORS` (params-is-SSoT — ο builder είναι
  * provider-agnostic, οι συντελεστές είναι ΕΝΑ standard για όλους τους κώδικες).
+ *
+ * ADR-472 S4 — επιπλέον **αυτόματη** ονομαστική ροπή `M_Ed = N_Ed·e₀` (EC2 §6.1(4),
+ * SSoT `nominalColumnMomentKnm`)· `e₀` από το βάθος διατομής (ασθενής άξονας =
+ * `minThicknessMm`, conservative). Μηδέν input μηχανικού (Revit-grade auto-sizing).
  */
 function resolveColumnDesignLoad(
   params: ColumnParams,
-): Pick<ColumnSectionContext, 'designAxialKn' | 'concreteGrade'> {
+  sectionDepthMm: number,
+): Pick<ColumnSectionContext, 'designAxialKn' | 'concreteGrade' | 'designMomentKnm'> {
   const load = resolveAppliedMemberLoad(params.appliedLoad);
   if (isZeroMemberLoad(load)) return {};
+  const designAxialKn = combineUls(load, EN1990_ULS_FACTORS).axialKn;
   return {
-    designAxialKn: combineUls(load, EN1990_ULS_FACTORS).axialKn,
+    designAxialKn,
     concreteGrade: params.concreteGrade ?? DEFAULT_CONCRETE_GRADE,
+    designMomentKnm: nominalColumnMomentKnm(designAxialKn, sectionDepthMm),
   };
 }
 

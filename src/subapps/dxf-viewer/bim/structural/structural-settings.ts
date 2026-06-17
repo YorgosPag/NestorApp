@@ -24,6 +24,15 @@ import {
   isConcreteGrade,
   type ConcreteGrade,
 } from './concrete-grades';
+import type { OccupancyCategory } from './loads/occupancy-loads';
+
+// Inline guard — αποφεύγει εξάρτηση σε value import από νέο module (Turbopack isolatedModules).
+const OCCUPANCY_CATEGORIES: ReadonlySet<string> = new Set([
+  'residential', 'office', 'congregation', 'shopping', 'storage',
+]);
+function isOccupancyCategory(v: string | undefined): v is OccupancyCategory {
+  return typeof v === 'string' && OCCUPANCY_CATEGORIES.has(v);
+}
 
 /**
  * Building-level structural settings. Persisted verbatim στο building doc
@@ -51,9 +60,16 @@ export interface StructuralSettings {
   /**
    * ADR-464 Slice 4 — Μεταβλητό (ωφέλιμο) κατανεμημένο φορτίο ορόφου Q (kPa,
    * χαρακτηριστικό) ανά χρήση (EN1991-1-1). Building-level παραδοχή· input για το
-   * tributary takedown. Optional: absent → 0 (μόνο μόνιμα φορτία).
+   * tributary takedown. Optional: absent → auto από `occupancy` (ADR-474).
    */
   readonly liveAreaLoadKpa?: number;
+  /**
+   * ADR-474 — Κατηγορία χρήσης κτιρίου (EN1991-1-1). Οδηγεί τα **αυτόματα** area
+   * loads όταν δεν υπάρχουν ρητά kPa: q_k από την κατηγορία, g_k από τη γεωμετρία
+   * πλάκας. Optional: absent → {@link DEFAULT_OCCUPANCY} (κατοικία· πλήρης
+   * αυτοματισμός χωρίς επιλογή). Ρητά kPa πάντα υπερισχύουν (Revit-grade override).
+   */
+  readonly occupancy?: OccupancyCategory;
 }
 
 /** Default settings όταν δεν έχει οριστεί τίποτα (standalone DXF χωρίς building). */
@@ -92,6 +108,9 @@ export function resolveStructuralSettings(
   }
   if (isValidPositiveKpa(raw.liveAreaLoadKpa)) {
     base = { ...base, liveAreaLoadKpa: raw.liveAreaLoadKpa };
+  }
+  if (isOccupancyCategory(raw.occupancy)) {
+    base = { ...base, occupancy: raw.occupancy };
   }
   return base;
 }

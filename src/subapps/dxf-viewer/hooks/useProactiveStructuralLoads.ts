@@ -43,6 +43,7 @@ import { EventBus, type DrawingEventType } from '../systems/events/EventBus';
 import { useCommandHistory } from '../core/commands/useCommandHistory';
 import { makeGuideOffsetLookup } from '../bim/hosting/guide-store-offset-lookup';
 import { useStructuralSettingsStore } from '../state/structural-settings-store';
+import { resolveEffectiveAreaLoads } from '../bim/structural/loads/occupancy-loads';
 import { useBuildingStoreyCount } from './useBuildingStoreyCount';
 import { runStructuralLoadTakedown, type LoadTakedownLevelManager } from './structural-load-takedown-core';
 
@@ -90,13 +91,15 @@ export function useProactiveStructuralLoads(props: { levelManager: LoadTakedownL
       const shouldGroup = groupable;
       groupable = false;
       const settings = useStructuralSettingsStore.getState();
+      // ADR-474 — explicit kPa κερδίζει· αλλιώς auto από occupancy + γεωμετρία πλάκας.
+      const areaLoads = resolveEffectiveAreaLoads({
+        explicitDeadKpa: settings.deadAreaLoadKpa,
+        explicitLiveKpa: settings.liveAreaLoadKpa,
+        occupancy: settings.occupancy,
+      });
       runStructuralLoadTakedown(
         levelManager,
-        {
-          storeyCount: storeyCountRef.current,
-          deadAreaLoadKpa: settings.deadAreaLoadKpa ?? 0,
-          liveAreaLoadKpa: settings.liveAreaLoadKpa ?? 0,
-        },
+        { storeyCount: storeyCountRef.current, ...areaLoads },
         makeGuideOffsetLookup(),
         shouldGroup ? executeGrouped : execute,
       );

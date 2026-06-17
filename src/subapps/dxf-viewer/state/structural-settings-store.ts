@@ -27,6 +27,7 @@ import {
 } from '../bim/structural/structural-settings';
 import type { StructuralCodeId } from '../bim/structural/codes';
 import type { ConcreteGrade } from '../bim/structural/concrete-grades';
+import type { OccupancyCategory } from '../bim/structural/loads/occupancy-loads';
 import { saveStructuralSettings } from '../services/structural-settings.service';
 
 // ── Debounce helper (per building) ──────────────────────────────────────────
@@ -78,6 +79,11 @@ export interface StructuralSettingsState extends StructuralSettings {
   setDeadAreaLoadKpa(kpa: number | undefined): void;
   /** ADR-464 Slice 4 — Όρισε το μεταβλητό κατανεμημένο φορτίο ορόφου Q (kPa). */
   setLiveAreaLoadKpa(kpa: number | undefined): void;
+  /**
+   * ADR-474 — Όρισε την κατηγορία χρήσης κτιρίου (auto area loads όταν λείπουν ρητά
+   * kPa). Persist αν υπάρχει building. `undefined` → καθαρίζει (πέφτει σε default).
+   */
+  setOccupancy(occupancy: OccupancyCategory | undefined): void;
 }
 
 export const useStructuralSettingsStore = create<StructuralSettingsState>((set, get) => {
@@ -95,6 +101,10 @@ export const useStructuralSettingsStore = create<StructuralSettingsState>((set, 
     }
     if (state.liveAreaLoadKpa !== undefined && state.liveAreaLoadKpa > 0) {
       base = { ...base, liveAreaLoadKpa: state.liveAreaLoadKpa };
+    }
+    // ADR-474 — κατηγορία χρήσης (omit-when-absent → Firestore-safe· default σιωπηρό).
+    if (state.occupancy !== undefined) {
+      base = { ...base, occupancy: state.occupancy };
     }
     return base;
   }
@@ -119,6 +129,7 @@ export const useStructuralSettingsStore = create<StructuralSettingsState>((set, 
         soilBearingCapacityKpa: resolved.soilBearingCapacityKpa,
         deadAreaLoadKpa: resolved.deadAreaLoadKpa,
         liveAreaLoadKpa: resolved.liveAreaLoadKpa,
+        occupancy: resolved.occupancy,
         lastLocalMutationAt: 0,
       });
     },
@@ -157,6 +168,13 @@ export const useStructuralSettingsStore = create<StructuralSettingsState>((set, 
       const next = normKpa(kpa);
       if (get().liveAreaLoadKpa === next) return; // idempotent — no-op write
       set({ liveAreaLoadKpa: next, lastLocalMutationAt: Date.now() });
+      const { currentBuildingId } = get();
+      if (currentBuildingId) debounceWrite(currentBuildingId, raw(get()));
+    },
+
+    setOccupancy(occupancy) {
+      if (get().occupancy === occupancy) return; // idempotent — no-op write
+      set({ occupancy, lastLocalMutationAt: Date.now() });
       const { currentBuildingId } = get();
       if (currentBuildingId) debounceWrite(currentBuildingId, raw(get()));
     },

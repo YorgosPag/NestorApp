@@ -68,6 +68,13 @@ export interface ColumnSectionContext {
    * code grade. Χρησιμοποιείται ΜΟΝΟ όταν υπάρχει `designAxialKn`.
    */
   readonly concreteGrade?: ConcreteGrade;
+  /**
+   * ADR-472 S4 — Ροπή σχεδιασμού M_Ed (kNm) για M-N σχεδιασμό. Παράγεται **αυτόματα**
+   * ως ονομαστική εκκεντρότητα EC2 §6.1(4): `M_Ed = N_Ed·e₀`, `e₀ = max(h/30, 20mm)`
+   * (preliminary, χωρίς πλαισιακή ανάλυση/biaxial — βλ. ADR-472 §4). Absent/≤0 ⇒
+   * καθαρά αξονικός σχεδιασμός (μηδέν regression). Χρησιμοποιείται ΜΟΝΟ με `designAxialKn`.
+   */
+  readonly designMomentKnm?: number;
 }
 
 /**

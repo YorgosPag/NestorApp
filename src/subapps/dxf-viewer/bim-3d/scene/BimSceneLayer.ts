@@ -20,6 +20,8 @@ import { isBeamTilted } from '../../bim/geometry/beam-slope';
 import { syncWalls, syncColumns } from './bim-scene-attach-syncs';
 // ADR-449 Slice 7 — scene-level ενιαίος σοβάς (merged structural silhouette).
 import { syncStructuralFinishSkin } from './bim-scene-structural-finish-sync';
+// ADR-473 — joint rebar post-pass (dowels / laps / anchorages at structural joints).
+import { syncJointRebar, buildStructuralEntitySet } from './bim-scene-joint-rebar-sync';
 import { stairToMeshes } from '../converters/StairToThreeConverter';
 import { railingToMesh } from '../converters/railing-to-three';
 import { roofToMesh } from '../converters/roof-to-three';
@@ -49,6 +51,7 @@ import { useMepSystemStore } from '../../bim/mep-systems/mep-system-store';
 import { buildEntitySystemColorIntIndex } from '../../bim/mep-systems/mep-system-color';
 import { getLayer } from '../../stores/LayerStore';
 import { filterHostedSlabOpenings } from './bim-scene-hosted-opening-filters';
+import { syncPointEntities } from './bim-scene-point-syncs';
 import type { BimCategory } from '../../config/bim-object-styles';
 import type { SceneLayer } from '../../types/entities';
 
@@ -86,6 +89,10 @@ export class BimSceneLayer {
       activeBuildingId, buildingVisModes, floorVisModes, nextFloorElevationMm,
     );
     this.syncFloorEntities(entities, ctx);
+    // ADR-473 — joint rebar: single-floor path. buildStructuralEntitySet passes the
+    // correct floorElevationMm so graph nodes get proper absolute Z coordinates.
+    const { structural, floorElevationByEntityId } = buildStructuralEntitySet([entities], [floorElevationMm]);
+    syncJointRebar(this.group, structural, floorElevationByEntityId);
     this.recomputeHasMesh();
   }
 
@@ -114,6 +121,13 @@ export class BimSceneLayer {
       );
       this.syncFloorEntities(floor.entities, ctx);
     }
+    // ADR-473 — joint rebar: multi-floor path. Aggregates ALL floors so the graph
+    // can find cross-floor connections (e.g. footing Θεμελίωσης ↔ column Ισογείου).
+    const { structural, floorElevationByEntityId } = buildStructuralEntitySet(
+      stack.map((f) => f.entities),
+      stack.map((f) => f.floorElevationMm),
+    );
+    syncJointRebar(this.group, structural, floorElevationByEntityId);
     this.recomputeHasMesh();
   }
 
@@ -244,86 +258,46 @@ export class BimSceneLayer {
     }
   }
 
-  /** ADR-408 Φ3 — point-based electrical panels (circuit sources). */
+  /** ADR-408 Φ3/Φ5 — electrical panels: circuit sources, excluded from colour-by-system. */
   private syncPanels(entities: Bim3DEntities, ctx: SyncContext): void {
-    // Defensive: legacy floor-stack entries predating ADR-408 Φ3 carry no `panels`
-    // array — never crash the whole floor sync over a missing slice.
-    for (const panel of entities.panels ?? []) {
-      const r = this.resolveEntity(panel, 'electrical-panel', ctx);
-      if (!r) continue;
-      // ADR-408 Φ5 — panels are circuit sources, not members: not coloured by
-      // system (only the member fixtures are; the index excludes panels).
-      const mesh = panelToMesh(panel, ctx.floorElevationMm, ctx.activeLevelId, r.baseElevation);
-      if (mesh) { mesh.userData['buildingId'] = r.buildingId; this.group.add(mesh); }
-    }
+    syncPointEntities(this.group, entities.panels, 'electrical-panel', ctx, this.resolveEntity.bind(this),
+      (p, c, r) => panelToMesh(p, c.floorElevationMm, c.activeLevelId, r.baseElevation));
   }
 
-  /** ADR-408 Φ12 — point-based plumbing manifolds (distribution sources). */
+  /** ADR-408 Φ12 — plumbing manifolds: distribution sources, excluded from colour-by-system. */
   private syncManifolds(entities: Bim3DEntities, ctx: SyncContext): void {
-    // Defensive: legacy floor-stack entries predating ADR-408 Φ12 carry no `manifolds`
-    // array — never crash the whole floor sync over a missing slice.
-    for (const manifold of entities.manifolds ?? []) {
-      const r = this.resolveEntity(manifold, 'mep-manifold', ctx);
-      if (!r) continue;
-      // ADR-408 Φ12 — manifolds are plumbing system sources, not members: not
-      // coloured by system (mirrors the panel convention for circuit sources).
-      const mesh = manifoldToMesh(manifold, ctx.floorElevationMm, ctx.activeLevelId, r.baseElevation);
-      if (mesh) { mesh.userData['buildingId'] = r.buildingId; this.group.add(mesh); }
-    }
+    syncPointEntities(this.group, entities.manifolds, 'mep-manifold', ctx, this.resolveEntity.bind(this),
+      (m, c, r) => manifoldToMesh(m, c.floorElevationMm, c.activeLevelId, r.baseElevation));
   }
 
-  /** ADR-408 Εύρος Β — point-based heating radiators (hydronic terminals); fixed warm-red material, `?? []` guards legacy floor-stack entries. */
+  /** ADR-408 Εύρος Β — heating radiators (hydronic terminals). */
   private syncRadiators(entities: Bim3DEntities, ctx: SyncContext): void {
-    for (const radiator of entities.radiators ?? []) {
-      const r = this.resolveEntity(radiator, 'mep-radiator', ctx);
-      if (!r) continue;
-      const mesh = radiatorToMesh(radiator, ctx.floorElevationMm, ctx.activeLevelId, r.baseElevation);
-      if (mesh) { mesh.userData['buildingId'] = r.buildingId; this.group.add(mesh); }
-    }
+    syncPointEntities(this.group, entities.radiators, 'mep-radiator', ctx, this.resolveEntity.bind(this),
+      (rad, c, r) => radiatorToMesh(rad, c.floorElevationMm, c.activeLevelId, r.baseElevation));
   }
 
-  /** ADR-408 Εύρος Β — point-based heating boilers (hydronic source); fixed warm-red material, `?? []` guards legacy floor-stack entries. */
+  /** ADR-408 Εύρος Β — heating boilers (hydronic source). */
   private syncBoilers(entities: Bim3DEntities, ctx: SyncContext): void {
-    for (const boiler of entities.boilers ?? []) {
-      const r = this.resolveEntity(boiler, 'mep-boiler', ctx);
-      if (!r) continue;
-      const mesh = boilerToMesh(boiler, ctx.floorElevationMm, ctx.activeLevelId, r.baseElevation);
-      if (mesh) { mesh.userData['buildingId'] = r.buildingId; this.group.add(mesh); }
-    }
+    syncPointEntities(this.group, entities.boilers, 'mep-boiler', ctx, this.resolveEntity.bind(this),
+      (b, c, r) => boilerToMesh(b, c.floorElevationMm, c.activeLevelId, r.baseElevation));
   }
 
-  /** ADR-408 DHW — point-based domestic hot water heaters (DHW source); fixed domestic-blue material, `?? []` guards legacy floor-stack entries. */
+  /** ADR-408 DHW — domestic hot water heaters (DHW source). */
   private syncWaterHeaters(entities: Bim3DEntities, ctx: SyncContext): void {
-    for (const wh of entities.waterHeaters ?? []) {
-      const r = this.resolveEntity(wh, 'mep-water-heater', ctx);
-      if (!r) continue;
-      const mesh = waterHeaterToMesh(wh, ctx.floorElevationMm, ctx.activeLevelId, r.baseElevation);
-      if (mesh) { mesh.userData['buildingId'] = r.buildingId; this.group.add(mesh); }
-    }
+    syncPointEntities(this.group, entities.waterHeaters, 'mep-water-heater', ctx, this.resolveEntity.bind(this),
+      (wh, c, r) => waterHeaterToMesh(wh, c.floorElevationMm, c.activeLevelId, r.baseElevation));
   }
 
   /** ADR-407 — standalone path-based railings (posts + balusters + rails). */
   private syncRailings(entities: Bim3DEntities, ctx: SyncContext): void {
-    // Defensive: legacy floor-stack entries predating ADR-407 carry no `railings`
-    // array — never crash the whole floor sync over a missing slice.
-    for (const railing of entities.railings ?? []) {
-      const r = this.resolveEntity(railing, 'railing', ctx);
-      if (!r) continue;
-      const mesh = railingToMesh(railing, ctx.floorElevationMm, ctx.activeLevelId, r.baseElevation);
-      if (mesh) { mesh.userData['buildingId'] = r.buildingId; this.group.add(mesh); }
-    }
+    syncPointEntities(this.group, entities.railings, 'railing', ctx, this.resolveEntity.bind(this),
+      (rail, c, r) => railingToMesh(rail, c.floorElevationMm, c.activeLevelId, r.baseElevation));
   }
 
   /** ADR-410 — mesh-based CC0 furniture (glTF cache; bbox placeholder on miss). */
   private syncFurnitures(entities: Bim3DEntities, ctx: SyncContext): void {
-    // Defensive: legacy floor-stack entries predating ADR-410 carry no `furnitures`
-    // array — never crash the whole floor sync over a missing slice.
-    for (const furniture of entities.furnitures ?? []) {
-      const r = this.resolveEntity(furniture, 'furniture', ctx);
-      if (!r) continue;
-      const obj = furnitureToObject3D(furniture, ctx.floorElevationMm, ctx.activeLevelId, r.baseElevation);
-      if (obj) { obj.userData['buildingId'] = r.buildingId; this.group.add(obj); }
-    }
+    syncPointEntities(this.group, entities.furnitures, 'furniture', ctx, this.resolveEntity.bind(this),
+      (f, c, r) => furnitureToObject3D(f, c.floorElevationMm, c.activeLevelId, r.baseElevation));
   }
 
   private syncBeams(entities: Bim3DEntities, ctx: SyncContext): void {
@@ -349,12 +323,8 @@ export class BimSceneLayer {
    * entries predating ADR-436.
    */
   private syncFoundations(entities: Bim3DEntities, ctx: SyncContext): void {
-    for (const foundation of entities.foundations ?? []) {
-      const r = this.resolveEntity(foundation, 'foundation', ctx);
-      if (!r) continue;
-      const mesh = foundationToMesh(foundation, ctx.floorElevationMm, ctx.activeLevelId, r.baseElevation);
-      if (mesh) { mesh.userData['buildingId'] = r.buildingId; this.group.add(mesh); }
-    }
+    syncPointEntities(this.group, entities.foundations, 'foundation', ctx, this.resolveEntity.bind(this),
+      (f, c, r) => foundationToMesh(f, c.floorElevationMm, c.activeLevelId, r.baseElevation));
   }
 
   private syncSlabs(entities: Bim3DEntities, ctx: SyncContext): void {
@@ -375,12 +345,8 @@ export class BimSceneLayer {
    * from slab (Revit-parity). buildingBaseElevation passed through like slab/railing.
    */
   private syncRoofs(entities: Bim3DEntities, ctx: SyncContext): void {
-    for (const roof of entities.roofs ?? []) {
-      const r = this.resolveEntity(roof, 'roof', ctx);
-      if (!r) continue;
-      const mesh = roofToMesh(roof, ctx.activeLevelId, r.baseElevation);
-      if (mesh) { mesh.userData['buildingId'] = r.buildingId; this.group.add(mesh); }
-    }
+    syncPointEntities(this.group, entities.roofs, 'roof', ctx, this.resolveEntity.bind(this),
+      (roof, c, r) => roofToMesh(roof, c.activeLevelId, r.baseElevation));
   }
 
   /**
@@ -388,12 +354,8 @@ export class BimSceneLayer {
    * per room, sits at FFL. Own V/G category `'floor-finish'` (architectural).
    */
   private syncFloorFinishes(entities: Bim3DEntities, ctx: SyncContext): void {
-    for (const ff of entities.floorFinishes ?? []) {
-      const r = this.resolveEntity(ff, 'floor-finish', ctx);
-      if (!r) continue;
-      const mesh = floorFinishToMesh(ff, ctx.floorElevationMm, ctx.activeLevelId, r.baseElevation);
-      if (mesh) { mesh.userData['buildingId'] = r.buildingId; this.group.add(mesh); }
-    }
+    syncPointEntities(this.group, entities.floorFinishes, 'floor-finish', ctx, this.resolveEntity.bind(this),
+      (ff, c, r) => floorFinishToMesh(ff, c.floorElevationMm, c.activeLevelId, r.baseElevation));
   }
 
   /**
@@ -402,12 +364,8 @@ export class BimSceneLayer {
    * band, at FFL + screedOffset. Own V/G category `'mep-underfloor'` (plumbing).
    */
   private syncUnderfloors(entities: Bim3DEntities, ctx: SyncContext): void {
-    for (const uf of entities.underfloors ?? []) {
-      const r = this.resolveEntity(uf, 'mep-underfloor', ctx);
-      if (!r) continue;
-      const obj = underfloorToObject3D(uf, ctx.floorElevationMm, ctx.activeLevelId, r.baseElevation);
-      if (obj) { obj.userData['buildingId'] = r.buildingId; this.group.add(obj); }
-    }
+    syncPointEntities(this.group, entities.underfloors, 'mep-underfloor', ctx, this.resolveEntity.bind(this),
+      (uf, c, r) => underfloorToObject3D(uf, c.floorElevationMm, c.activeLevelId, r.baseElevation));
   }
 
   private syncStairs(entities: Bim3DEntities, ctx: SyncContext): void {

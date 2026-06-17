@@ -1,6 +1,6 @@
 # ADR-472 — Load-Aware Strength Reinforcement Design (As από N/M)
 
-**Status:** 🟡 IN PROGRESS — **S2 DONE** (load-aware suggester) · **S3 DONE** (stale-intent invalidation + re-study orchestration) — UNCOMMITTED 2026-06-17 Opus
+**Status:** 🟡 IN PROGRESS — **S2 DONE** (load-aware suggester) · **S3 DONE** (stale-intent + re-study) · **S4 DONE** (auto nominal moment M_Ed + M-N column design) — UNCOMMITTED 2026-06-17 Opus
 **Ημ/νία:** 2026-06-17 · **Σχετικά:** ADR-459 (Στατικός Οργανισμός Φ9), ADR-467 (Load Path Engine), ADR-456/460/471 (reinforcement engines), ADR-464 (footing strength design).
 
 ---
@@ -89,6 +89,7 @@ events). Χρειάζεται μόνο: (α) ο πυρήνας `runOrganismAutoR
 |---|---|---|---|
 | **S2** | Load-aware suggester: SectionContext += φορτίο· providers strength design (κολόνα N, δοκός M)· `max(strength, ρ_min)`· combination SSoT. jest-heavy (EC2 reference cases). | structural codes | 🟡 engineering-grade |
 | **S3** | Stale-intent invalidation (`auto:true` re-derive on load change)· convergence guard· `bim:structural-loads-computed` → re-reinforce με loop-guard. | organism orchestration | 🔴 oscillation risk |
+| **S4** | Auto ονομαστική ροπή M_Ed (EC2 §6.1(4) e₀=max(h/30,20mm))· M-N σχεδιασμός κολόνας (axial + steel-couple)· μηδέν input μηχανικού. | structural codes | 🟡 preliminary uniaxial |
 
 Κάθε slice ανεξάρτητα verifiable· κάθε provider αλλαγή έχει EC2 reference jest.
 
@@ -178,8 +179,34 @@ events). Χρειάζεται μόνο: (α) ο πυρήνας `runOrganismAutoR
 `bim/structural/__tests__/section-context-stale-intent.test.ts` (NEW, 14 tests).
 **Tests:** 14 stale-intent GREEN + 54 reinforce-consumers sweep GREEN (μηδέν regression). tsc = Giorgio (N.17).
 
+## 6γ. Υλοποίηση S4 (2026-06-17, UNCOMMITTED) — auto nominal moment + M-N
+
+100% ειλικρίνεια — τι έγινε ΑΚΡΙΒΩΣ:
+
+1. **`ColumnSectionContext += designMomentKnm?`** (`structural-code-types.ts`) — το deferred πεδίο του
+   §2.1 ενεργοποιήθηκε.
+2. **Auto ονομαστική ροπή (μηδέν input):** NEW SSoT `nominalColumnEccentricityMm` (EC2 §6.1(4)
+   `e₀=max(h/30, 20mm)`) + `nominalColumnMomentKnm(N_Ed, h)` (`M_Ed=N_Ed·e₀`) στο
+   `codes/suggest-reinforcement.ts`· καλείται από τον builder `resolveColumnDesignLoad`
+   (`section-context.ts`) με `h = minThicknessMm` (ασθενής άξονας, conservative).
+3. **M-N σχεδιασμός:** το `asStrengthColumnMm2` = αξονική συνιστώσα **+** καμπτική
+   `asMomentColumnMm2` (steel-couple `As,M = M_Ed/(z·f_yd)`, `z≈0.81·h`). Additive preliminary
+   (ΟΧΙ πλήρες interaction diagram).
+4. **Backward-compat:** `designMomentKnm` absent/0 ⇒ `asMomentColumnMm2=0` ⇒ ταυτόσημο με S2
+   (καθαρά αξονικό). Ελαφρώς φορτισμένες κολόνες: η ονομαστική ροπή δίνει μικρή As ≪ ρ_min ⇒
+   μένει ρ_min (όπως Revit «by code»). 450 structural jest GREEN, μηδέν regression.
+
+**Όρια (DEFER, §4):** πλήρες M-N interaction diagram, biaxial, λυγηρότητα (§5.8), ικανοτικός
+σεισμικός — θέλουν FEM (ξεχωριστό ADR). Ούτε η Revit τα κάνει χωρίς Robot.
+
+**Αρχεία S4:** `codes/structural-code-types.ts` (M), `codes/suggest-reinforcement.ts` (M),
+`section-context.ts` (M), `codes/__tests__/suggest-reinforcement-moment.test.ts` (NEW, 12 tests).
+
 ## 7. Changelog
 
+- **2026-06-17 (S4 υλοποίηση, UNCOMMITTED):** Auto ονομαστική ροπή M_Ed (EC2 §6.1(4)) + M-N
+  σχεδιασμός κολόνας (axial + steel-couple). Zero-input (Revit-grade). Output types αμετάβλητα.
+  Συνεργάζεται με ADR-474 (auto φορτία) → πλήρως αυτόματος δομικός σχεδιασμός. Λεπτομέρειες §6γ.
 - **2026-06-17 (S3 υλοποίηση, UNCOMMITTED):** Stale-intent invalidation — `buildReinforcePatch` re-derive
   `auto:true` σε load change (manual locked)· convergence guard (`materiallyDiffers`, anti-oscillation)·
   `bim:structural-loads-computed` → re-reinforce (terminal chain, loop-safe). Λεπτομέρειες §6β.
