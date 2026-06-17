@@ -16,7 +16,7 @@
 
 import type { SettingsState, StorageMode } from './core/types';
 import { ACI_PALETTE } from './standards/aci';
-import { UI_COLORS, GRIP_COLD_COLOR } from '../config/color-config';
+import { UI_COLORS, GRIP_COLD_COLOR, GRIP_WARM_COLOR } from '../config/color-config';
 // 🏢 ADR-101: Centralized deep clone utility
 import { deepClone } from '../utils/clone-utils';
 
@@ -35,7 +35,7 @@ import { deepClone } from '../utils/clone-utils';
  * ✅ FIX v4: Complete grip colors (add missing cold/warm/hot/contour for selection/completion)
  * ✅ FIX v6: Revit-style null sentinel — cold: null means "use GRIP_COLD_COLOR SSoT at render"
  */
-export const CURRENT_VERSION = 6;
+export const CURRENT_VERSION = 7;
 
 // ============================================================================
 // LINE SETTINGS DEFAULTS
@@ -159,12 +159,12 @@ const GRIP_DEFAULTS = {
   gripSize: 14,                 // 14px = comfortable CAD grip (AutoCAD GRIPSIZE 7 equivalent)
   size: 14,                     // ✅ ENTERPRISE FIX: Add backward compatibility
   color: GRIP_COLD_COLOR,                  // SSOT → color-config.ts
-  hoverColor: ACI_PALETTE[4] as string,   // ✅ ENTERPRISE FIX: Add backward compatibility
+  hoverColor: GRIP_WARM_COLOR,            // SSOT → color-config.ts (orange hover, Giorgio 2026-06-17)
   pickBoxSize: 3,               // ✅ FIX: Added pickBoxSize (AutoCAD PICKBOX default: 3 DIP)
   apertureSize: 10,             // ✅ FIX: Added apertureSize (AutoCAD APERTURE default: 10 pixels)
   colors: {                     // ✅ FIX: changed from flat color/hoverColor to nested structure
     cold: null,                           // Sentinel: null → GRIP_COLD_COLOR at render time
-    warm: ACI_PALETTE[4] as string,       // Cyan (ACI 4) on hover
+    warm: GRIP_WARM_COLOR,                // SSOT → color-config.ts (orange, hover)
     hot: ACI_PALETTE[1] as string,        // Red (ACI 1) on selection
     contour: UI_COLORS.BLACK              // Black contour
   },
@@ -193,7 +193,7 @@ const GRIP_HOVER_DEFAULTS = {
 const GRIP_SELECTION_DEFAULTS = {
   colors: {                     // ✅ ENTERPRISE FIX: All colors required by GripColorsSchema
     cold: null,                           // Sentinel: null → GRIP_COLD_COLOR at render time
-    warm: ACI_PALETTE[4] as string,       // Cyan (ACI 4) - hover
+    warm: GRIP_WARM_COLOR,                // SSOT → color-config.ts (orange, hover)
     hot: ACI_PALETTE[1] as string,        // Red (ACI 1) - selected
     contour: UI_COLORS.BLACK              // Black contour
   },

@@ -58,11 +58,11 @@ export const EDGE_GRIP_SIZE_MULTIPLIERS = {
  * - CONTOUR: Black - Grip outline
  */
 export const DEFAULT_GRIP_COLORS = {
-  COLD: GRIP_COLD_COLOR,  // SSOT → color-config.ts
-  WARM: '#FF7F00',   // Orange (hover feedback)
-  HOT: '#FF0000',    // Red (AutoCAD ACI 1)
+  COLD: GRIP_COLD_COLOR,  // SSOT → color-config.ts (σιελ)
+  WARM: GRIP_WARM_COLOR,  // SSOT → color-config.ts (orange, hover) — was hardcoded
+  HOT: GRIP_HOT_COLOR,    // SSOT → color-config.ts (red, selected) — was hardcoded
   SNAPPABLE: GRIP_SNAPPABLE_COLOR, // Cyan — snap target during rotation (ADR-397)
-  CONTOUR: '#000000', // Black outline
+  CONTOUR: GRIP_CONTOUR_COLOR, // SSOT → color-config.ts (black outline) — was hardcoded
 } as const;
 
 // ============================================================================

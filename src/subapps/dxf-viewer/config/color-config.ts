@@ -9,9 +9,9 @@
 // Change here → changes everywhere (constants.ts, panel-tokens.ts,
 // FACTORY_DEFAULTS.ts, types/gripSettings.ts, stores/GripStyleStore.ts, CAD_UI_COLORS)
 // ============================================================================
-export const GRIP_COLD_COLOR = '#FF6600' as const;  // TEST orange — will become #007FFF
-export const GRIP_WARM_COLOR = '#FF7F00' as const;  // Orange — hover
-export const GRIP_HOT_COLOR  = '#FF0000' as const;  // Red    — selected/active
+export const GRIP_COLD_COLOR = '#007FFF' as const;  // Σιελ/azure — normal (cold). Distinct from snappable cyan #00BCD4 (Giorgio 2026-06-17)
+export const GRIP_WARM_COLOR = '#FF7F00' as const;  // Orange — hover (warm)
+export const GRIP_HOT_COLOR  = '#FF0000' as const;  // Red    — selected/active (hot)
 export const GRIP_CONTOUR_COLOR = '#000000' as const; // Black — outline
 // ADR-397 — «snappable» grip state: a grip that is an active snap target during a
 // rotation operation. Cyan (= UI_COLORS_BASE.GUIDE_X '#00BCD4', construction/guide

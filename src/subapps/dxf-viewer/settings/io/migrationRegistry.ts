@@ -25,7 +25,7 @@ import {
   revertLinePropertyNames, revertTextPropertyNames, revertGripPropertyNames,
   renameField,
 } from './migration-helpers';
-import { migration_v4_to_v5, migration_v5_to_v6 } from './grip-cold-color-migrations';
+import { migration_v4_to_v5, migration_v5_to_v6, migration_v6_to_v7 } from './grip-cold-color-migrations';
 
 // ============================================================================
 // MIGRATION TYPES
@@ -277,9 +277,10 @@ export const migrations: Migration[] = [
     }
   },
 
-  // Versions 4→5 and 5→6 extracted to ./grip-cold-color-migrations.ts (SRP / 500-line ratchet)
+  // Versions 4→5, 5→6, 6→7 extracted to ./grip-cold-color-migrations.ts (SRP / 500-line ratchet)
   migration_v4_to_v5,
   migration_v5_to_v6,
+  migration_v6_to_v7,
 ];
 
 // ============================================================================

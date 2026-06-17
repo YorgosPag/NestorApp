@@ -13,7 +13,7 @@ import type {
   DxfSettings,
   LayerIsolateSettings
 } from './types';
-import { UI_COLORS } from '../config/color-config';
+import { UI_COLORS, GRIP_WARM_COLOR } from '../config/color-config';
 
 // ============================================================================
 // LINE DEFAULTS - ISO 128 Standards
@@ -106,7 +106,7 @@ export const DEFAULT_GRIP_SETTINGS: GripSettings = {
   opacity: 1.0,                // Full opacity
   colors: {
     cold: null,                            // Sentinel: null → GRIP_COLD_COLOR at render time
-    warm: UI_COLORS.SNAP_INTERSECTION,     // AutoCAD: Hot Pink - hover grips
+    warm: GRIP_WARM_COLOR,                 // SSOT → color-config.ts (orange, hover) — was Hot Pink
     hot: UI_COLORS.SNAP_ENDPOINT,          // AutoCAD: Red (ACI 1) - selected grips
     contour: UI_COLORS.BLACK               // AutoCAD: Black contour
   },
