@@ -1,33 +1,36 @@
 'use client';
 
 /**
- * useStructuralOrganismNotification — ADR-459 Phase 4 (proactive «ενιαίος οπλισμός»).
+ * useStructuralOrganismNotification — ADR-459 Phase 7 (ΑΥΤΟΜΑΤΟΣ ενιαίος οπλισμός).
  *
  * Όταν μια κολόνα συνδεθεί με πέδιλο (`bim:column-footing-attached` /
- * `-attached-manual`), προτείνει non-blocking τον υπολογισμό του **ενιαίου
- * οπλισμού** του οργανισμού (κολόνα + πέδιλο) — οι συνδέσεις (αναμονές/αγκυρώσεις/
- * ματίσεις) προκύπτουν αυτόματα DERIVED από τον cross-level οργανισμό μόλις και τα
- * δύο μέλη αποκτήσουν οπλισμό.
+ * `-attached-manual`), υπολογίζει **πάντα & αυτόματα** (χωρίς ερώτηση) τον **ενιαίο
+ * οπλισμό** του οργανισμού (κολόνα + πέδιλο) — οι συνδέσεις (αναμονές/αγκυρώσεις/
+ * ματίσεις) προκύπτουν DERIVED από τον cross-level οργανισμό μόλις και τα δύο μέλη
+ * αποκτήσουν οπλισμό. Idempotent: αν όλα τα μέλη είναι ήδη οπλισμένα → no-op (γι'
+ * αυτό η εκτέλεση μετά το `ApplyFoundationLayoutCommand` —που ήδη όπλισε— δεν διπλο-
+ * οπλίζει· belt-and-suspenders για τα υπόλοιπα attach paths, π.χ. cross-floor copy).
  *
- * Δύο μονοπάτια στο confirm:
+ * Δύο μονοπάτια:
  *   · πέδιλο στον ίδιο όροφο → emit `bim:auto-reinforce-requested` (υπάρχον hook).
  *   · πέδιλο στον όροφο Θεμελίωσης → `ReinforceColumnFootingCommand` (κολόνα active +
- *     πέδιλο cross-level). Το πέδιλο επιλύεται στο confirm-time (ο foundation-level
- *     store έχει συγχρονιστεί μέχρι ο χρήστης να πατήσει).
+ *     πέδιλο cross-level).
+ *
+ * Phase 7: μετάβαση από «ερώτηση» (ConfirmationToast) → **αυτόματη ενέργεια + info
+ * toast** (mirror του `useAutoFoundationDesign`).
  *
  * @see core/commands/entity-commands/ReinforceColumnFootingCommand.ts
  * @see hooks/useStructuralAutoReinforce.ts — το single-level reinforce path
- * @see docs/centralized-systems/reference/adrs/ADR-459-structural-organism-connectivity.md §Phase 4
+ * @see docs/centralized-systems/reference/adrs/ADR-459-structural-organism-connectivity.md §Phase 7
  */
 
-import React, { useEffect } from 'react';
+import { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { useAuth } from '@/auth/hooks/useAuth';
 import { EventBus } from '../systems/events/EventBus';
 import { useCommandHistory } from '../core/commands/useCommandHistory';
 import { LevelSceneManagerAdapter } from '../systems/entity-creation/LevelSceneManagerAdapter';
-import { ConfirmationToast } from '../ui/components/layers/components/ConfirmationToast';
 import { useFoundationLevelStore } from '../state/foundation-level-store';
 import { useStructuralSettingsStore } from '../state/structural-settings-store';
 import { resolveStructuralCode } from '../bim/structural/codes';
@@ -99,7 +102,9 @@ export function useStructuralOrganismNotification(props: { levelManager: LevelMa
             columnIds, footing.entity as FoundationEntity, writer, adapterFor(levelId), provider,
           );
           execute(cmd);
-          EventBus.emit('bim:structural-auto-reinforced', { entityIds: [...columnIds, footingId], count: cmd.reinforcedCount() });
+          const count = cmd.reinforcedCount();
+          EventBus.emit('bim:structural-auto-reinforced', { entityIds: [...columnIds, footingId], count });
+          if (count > 0) toast.success(t('structuralOrganism.autoReinforced', { count }));
           return;
         }
       }
@@ -107,6 +112,10 @@ export function useStructuralOrganismNotification(props: { levelManager: LevelMa
       EventBus.emit('bim:auto-reinforce-requested', { entityIds: [...columnIds] });
     };
 
+    /**
+     * Phase 7 — ΑΥΤΟΜΑΤΟΣ οπλισμός στη σύνδεση (χωρίς ερώτηση). Idempotent: τρέχει
+     * μόνο όταν τουλάχιστον ένα μέλος χρειάζεται οπλισμό (αλλιώς silent no-op).
+     */
     const handleAttached = ({ columnIds, footingId }: { columnIds: string[]; footingId: string }): void => {
       const levelId = levelManager.currentLevelId;
       if (!levelId || columnIds.length === 0) return;
@@ -117,23 +126,7 @@ export function useStructuralOrganismNotification(props: { levelManager: LevelMa
       const columns = columnIds.map((id) => activeEntities.find((e) => e.id === id));
       const footing = resolveFooting(footingId, activeEntities)?.entity;
       if (!anyNeedsReinforcement([...columns, footing], provider)) return; // όλα ήδη οπλισμένα
-
-      toast.custom(
-        (id) => (
-          <ConfirmationToast
-            title={t('structuralOrganism.reinforceOrganismTitle')}
-            message={t('structuralOrganism.reinforceOrganismMessage')}
-            confirmText={t('structuralOrganism.reinforceOrganismConfirm')}
-            cancelText={t('structuralOrganism.proactiveCancel')}
-            onConfirm={() => {
-              onConfirm(columnIds, footingId, levelId);
-              toast.dismiss(id);
-            }}
-            onCancel={() => toast.dismiss(id)}
-          />
-        ),
-        { duration: Infinity },
-      );
+      onConfirm(columnIds, footingId, levelId);
     };
 
     const unsubA = EventBus.on('bim:column-footing-attached', handleAttached);

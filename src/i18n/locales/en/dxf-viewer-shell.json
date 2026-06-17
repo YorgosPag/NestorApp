@@ -31,6 +31,9 @@
     "reinforceOrganismMessage": "The footing was connected to the column — compute the unified reinforcement (dowels/anchorages/laps)?",
     "reinforceOrganismConfirm": "Compute reinforcement"
   },
+  "autoFoundation": {
+    "applied": "Auto foundation design — new footings: {created} (combined: {combined}, removed: {removed})"
+  },
   "structural": {
     "code": {
       "eurocode": "Eurocodes",

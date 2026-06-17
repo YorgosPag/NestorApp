@@ -31,6 +31,9 @@
     "reinforceOrganismMessage": "Το πέδιλο συνδέθηκε με την κολόνα — να υπολογιστεί ο ενιαίος οπλισμός (αναμονές/αγκυρώσεις/ματίσεις);",
     "reinforceOrganismConfirm": "Υπολογισμός οπλισμού"
   },
+  "autoFoundation": {
+    "applied": "Αυτόματος σχεδιασμός θεμελίωσης — νέα πέδιλα: {created} (combined: {combined}, αφαιρέθηκαν: {removed})"
+  },
   "structural": {
     "code": {
       "eurocode": "Ευρωκώδικες",

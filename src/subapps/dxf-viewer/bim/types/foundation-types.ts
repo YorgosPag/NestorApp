@@ -117,6 +117,14 @@ export interface FoundationCommonParams {
   readonly offsetFromStorey?: number;
   /** Catalog profile ID (π.χ. 'C20/25', τυπικό πέδιλο). Slice 4. */
   readonly catalogProfile?: string;
+  /**
+   * ADR-459 Phase 7 — provenance flag: `true` όταν το πέδιλο δημιουργήθηκε από τον
+   * Αυτόματο Σχεδιασμό Θεμελίωσης (`auto-foundation-layout` reconciler). Ο reconciler
+   * διαχειρίζεται (επανα-διαστασιολογεί / ενώνει / αφαιρεί) **μόνο** auto πέδιλα — τα
+   * χειροκίνητα (absent flag) τα σέβεται απόλυτα. Optional/non-breaking, Firestore-safe
+   * (omit-when-absent → ΠΟΤΕ explicit `undefined`). ΠΟΤΕ επηρεάζει geometry.
+   */
+  readonly autoDesigned?: boolean;
 }
 
 // ─── Per-kind params (discriminated union members) ───────────────────────────

@@ -1,6 +1,6 @@
 # ADR-459 — Structural Organism / Analytical Connectivity Model
 
-**Status:** ACTIVE (Phase 0 + 1 + 2 + 4a + 4b + 4c + 4d + 4e + 4f implemented 2026-06-15· **Phase 6 proactive + cross-level 2026-06-17**)
+**Status:** ACTIVE (Phase 0 + 1 + 2 + 4a + 4b + 4c + 4d + 4e + 4f implemented 2026-06-15· Phase 6 proactive + cross-level 2026-06-17· **Phase 7 Αυτόματος Σχεδιασμός Θεμελίωσης 2026-06-17**)
 **Discipline:** BIM / Structural (DXF Viewer subapp)
 **Σχετικά:** ADR-401 (auto-attach), ADR-436 (foundation discipline), ADR-456 (structural quantities), ADR-458 (beam-column cutback)
 
@@ -377,6 +377,49 @@ bbox). Foundation scene write fire-and-forget (Firestore-first· scene sync στ
 κοινό frame μεταξύ ορόφων (ίδια υπόθεση με τον 3D multi-floor stacker). cross-level footing reinforce
 δεν είναι ξεχωριστό undo entry από το column reinforce όταν δίνεται μέσω auto-reinforce request.
 
+## 6j. Phase 7 — Αυτόματος Σχεδιασμός Θεμελίωσης (auto-decide isolated vs combined)
+
+**Όραμα Giorgio:** η εφαρμογή **αποφασίζει αυτόματα** (διεθνής πρακτική στατικών — φορτία, τάσεις εδάφους
+σ_allow, οπλισμένο σκυρόδεμα) αν τα πέδιλα μένουν **μεμονωμένα** ή ενώνονται σε **combined**, τα διαστασιολογεί
+από φορτία/τάσεις, και **πάντα** οπλίζει στη σύνδεση — **χωρίς ερώτηση** (μετάβαση από «ερώτησης» toasts →
+**αυτόματη απόφαση + info feedback**). Αντικαθιστά τη Phase 6 detection (σταθερό όριο 3 m) με **engineering
+reconciler** πάνω στην ίδια cross-level υποδομή.
+
+**Engine (pure, DERIVED, ΠΟΤΕ persisted):**
+- NEW `bim/foundations/auto-foundation-layout.ts` — `planFoundationLayout(columns, σ_allow, sceneUnits)`:
+  (1) απαιτούμενο μεμονωμένο pad κάθε κολώνας (SSoT `suggestPadDimensions`: A_req=N/σ + γεωμετρικό min)·
+  (2) **κανόνας ένωσης** = τα απαιτούμενα pads επικαλύπτονται ή καθαρό κενό < `MIN_PAD_CLEARANCE_MM` (100 mm)·
+  grouping **transitive** μέσω **union-find**· (3) ομάδα ≥2 → **combined** ορθογώνιο κεντραρισμένο στο
+  **κέντρο βάρους φορτίων** (ομοιόμορφη πίεση → μηδέν καθαρή ροπή), εμβαδόν ≥ ΣN/σ_allow.
+- NEW `bim/foundations/auto-foundation-reconcile.ts` — `reconcileFoundationLayout(plan, existingAutoFootings,
+  columns, sceneUnits)` → `{ creates, removeFootingIds }`. Match = ίδιο σύνολο κολωνών (FK key) + γεωμετρία
+  εντός ανοχής (50 mm pos/dim) → **idempotent** (καμία αλλαγή → κενό diff· μικρές μετακινήσεις → no-op).
+
+**Apply (auto, ΟΧΙ ερώτηση):**
+- NEW `core/commands/entity-commands/ApplyFoundationLayoutCommand.ts` — ΕΝΑ undoable batch: cross-level
+  writer `remove`/`create` + FK attach (`AttachColumnFootingCommand`) + **πάντα** οπλισμός
+  (`ReinforceColumnFootingCommand`). Συνθέτει αποκλειστικά υπάρχοντα commands (μηδέν νέα μηχανική).
+- REWRITE `hooks/useColumnFootingNotification.tsx` → NEW `hooks/useAutoFoundationDesign.tsx`: level-wide,
+  coalesced microtask σε `drawing:entity-created` / `bim:column-params-updated` / `-delete-requested` /
+  `bim:structural-loads-computed` → plan → reconcile → batch → **info toast** (`autoFoundation.applied`).
+  Gate: τρέχει μόνο όταν υπάρχει διακριτός όροφος Θεμελίωσης (`fl.target`).
+- REWRITE `hooks/useStructuralOrganismNotification.tsx` → **αυτόματος** οπλισμός στη σύνδεση (χωρίς
+  ConfirmationToast)· idempotent (belt-and-suspenders για άλλα attach paths, π.χ. cross-floor copy).
+
+**Ownership (κρίσιμο):** NEW optional `FoundationCommonParams.autoDesigned` flag (Firestore-safe omit-when-absent).
+Ο reconciler διαχειρίζεται **μόνο** auto πέδιλα· κολώνες πάνω σε **χειροκίνητο** πέδιλο (FK ή spatial coverage)
+εξαιρούνται απόλυτα. Τα ADR-441 grid foundations (strip/tie-beam, μη-auto) μετρούν ως χειροκίνητα → οι κολώνες
+τους δεν παίρνουν διπλό auto pad.
+
+**Καθαρή αντικατάσταση (deleted, superseded):** `column-footing-suggestion.ts` (3 m detection), `pad-extend.ts`
+(1→1 combine, γενικεύτηκε σε N στο layout engine), `CreateColumnFootingCommand`, `ExtendFootingToColumnCommand`,
+`useColumnFootingNotification.tsx` + τα tests τους. 13 νέα jest (layout 8 + reconcile 5).
+
+**Όρια Phase 7 (DEFER):** combined footing axis-aligned ορθογώνιο (rotated-axis / μη grid-aligned, trapezoidal
+για πολύ άνισα φορτία = DEFER)· λεπτομερής combined punching/flexure (v1 bearing-governed)· eccentric/strap
+footing (όριο οικοπέδου — δεν υπάρχουν property lines)· integration με ADR-441 grid-foundation flow (σήμερα
+συνυπάρχουν: grid → χειροκίνητα, manual κολώνες → auto).
+
 ## 7. Known limitations (→ Phase 3+)
 
 - `beamUnsupportedEnd` αγνοεί στήριξη από **τοίχο** (Phase 1 = κολόνες μόνο) → πιθανό false-warn
@@ -387,6 +430,20 @@ bbox). Foundation scene write fire-and-forget (Firestore-first· scene sync στ
 
 ## 8. Changelog
 
+- **2026-06-17 (v8, Opus):** **Phase 7 — Αυτόματος Σχεδιασμός Θεμελίωσης (§6j).** Decision Giorgio: η εφαρμογή
+  αποφασίζει αυτόματα μεμονωμένο vs combined + διαστάσεις + οπλισμός (διεθνής πρακτική), χωρίς ερώτηση → info.
+  **Engine:** NEW pure `auto-foundation-layout.ts` (union-find overlap/clearance 100 mm + combined load-centroid,
+  εμβαδόν ≥ ΣN/σ· reuse `suggestPadDimensions`) + `auto-foundation-reconcile.ts` (diff vs existing-auto, key=FK
+  set + geom tol 50 mm, idempotent). **Apply:** NEW `ApplyFoundationLayoutCommand` (undoable batch: writer
+  remove/create + attach + πάντα reinforce, συνθέτει υπάρχοντα). **Hooks:** `useColumnFootingNotification` →
+  REWRITE `useAutoFoundationDesign` (level-wide, coalesced, info toast)· `useStructuralOrganismNotification` →
+  αυτόματος reinforce (no prompt). **Ownership:** NEW `FoundationCommonParams.autoDesigned` (reconciler αγγίζει
+  μόνο auto πέδιλα· χειροκίνητα/grid → εξαίρεση κολωνών). **Deleted (superseded):** `column-footing-suggestion`,
+  `pad-extend`, `CreateColumnFootingCommand`, `ExtendFootingToColumnCommand` + tests. 13 νέα jest πράσινα
+  (layout 8 + reconcile 5· +498 entity-command/foundation/organism αμετάβλητα). i18n el+en `autoFoundation.applied`.
+  UNCOMMITTED (browser-verify + commit + tsc από Giorgio· shared tree → git add ΜΟΝΟ δικά μου). ⚠️ 2 pre-existing
+  failures (`AssignWallTypeCommand`/`UpdateColumnParamsCommand` — firebase `fetch`-in-node infra, άσχετα).
+  DEFER: rotated/trapezoidal combined, combined punching/flexure, strap/eccentric, ADR-441 grid integration.
 - **2026-06-17 (v7, Opus):** **Phase 6 — Proactive on-create + cross-level organism.** Decision Giorgio:
   πέδιλο στον όροφο Θεμελίωσης (Revit-canonical) + non-blocking ConfirmationToast. **6.0 cross-level READ:**
   NEW `building-foundation-level.ts` + `cross-level-organism-scene.ts` + `foundation-level-store.ts` +
@@ -401,6 +458,13 @@ bbox). Foundation scene write fire-and-forget (Firestore-first· scene sync στ
   tsc από Giorgio· shared tree → git add ΜΟΝΟ δικά μου). ⚠️ 2 pre-existing failures στο
   `foundation-preview-helpers.test.ts` (άσχετα — δεν αγγίχτηκε). Όρια: combined footing axis-aligned·
   foundation write fire-and-forget· κοινό plan XY frame μεταξύ ορόφων.
+  **Bugfix (browser-verify 2026-06-17, Giorgio «πέδιλο μέσα στην κολόνα»):** το `FoundationEntity.topElevationMm`
+  είναι **ΑΠΟΛΥΤΟ** (datum-relative· `foundation-to-three` αγνοεί σκόπιμα το floorElevationMm, ADR-369),
+  σε αντίθεση με column/beam/slab (floor-relative). Είχα (α) αφαιρέσει το foundation FFL στη δημιουργία
+  → πέδιλο +|FFL| ψηλά μέσα στην κολόνα, και (β) προσθέσει floorElevationMm στο footingNode → double-count.
+  FIX: NEW SSoT `footingAbsoluteZ(summary, floorElevationMm)` (foundation=+0· foundation-slab=+floorElev)
+  στο `footing-element-summary.ts`· wired graph footingNode + column-footing-suggestion· creation
+  `topElevationMm = columnBaseAbs` (όχι −foundationFFL). ΜΑΘΗΜΑ: foundation Z = absolute· slab/column/beam = floor-relative.
 - **2026-06-15 (v6, Opus):** Phase 4e (E1+E3) + Phase 4f implemented. **E1:** `topAttachmentContinuity`
   split → κολόνα→μη-κολόνα host = anchorage (`lbd`) αντί `null` + NEW warning `columnTopAnchorageUnverified`.
   **E3:** NEW `SlabFoundationReinforcement` (raft top+bottom δι-διευθυντική σχάρα) + compute + provider

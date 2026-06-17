@@ -7,7 +7,7 @@
  * Ένας low-freq Zustand store που τροφοδοτείται από ΕΝΑΝ owner hook
  * (`useFoundationLevelSync`, mounted στο viewer shell) και καταναλώνεται από:
  *   · `useStructuralOrganism` — merge foundation πεδίλων στον cross-level graph.
- *   · `useColumnFootingNotification` — detection «λείπει πέδιλο» + cross-level write target.
+ *   · `useAutoFoundationDesign` — level-wide auto-design + cross-level write target.
  *
  * Γράφεται ΜΟΝΟ σε αλλαγή ορόφου/κτιρίου ή σε δομική μεταβολή της Θεμελίωσης →
  * ADR-040 safe (μηδέν 60fps writes). Non-React consumers διαβάζουν με

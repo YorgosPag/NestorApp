@@ -49,6 +49,27 @@ const toPlan = (verts: readonly { x: number; y: number }[]): CoveragePoint[] =>
   verts.map((v) => ({ x: v.x, y: v.y }));
 
 /**
+ * Absolute (datum-relative) Z extents ενός footing summary, δεδομένου του FFL του
+ * ορόφου που ζει (ADR-459 Phase 6 — cross-level).
+ *
+ * 🔑 Σύμβαση υψομέτρων (ADR-369, επιβεβαιωμένη στους 3D converters):
+ *   · `FoundationEntity` (entityType 'foundation') → το `topElevationMm` είναι ΗΔΗ
+ *     **ΑΠΟΛΥΤΟ** (το `foundation-to-three` αγνοεί σκόπιμα το floorElevationMm) → +0.
+ *   · foundation/ground SLAB (entityType 'foundation-slab') → **floor-relative**
+ *     (το `slab-multilayer-solid-3d` προσθέτει floorElevationMm) → +floorElevationMm.
+ *
+ * Single-level (floorElevationMm = 0) → +0 και στις δύο → byte-for-byte η παλιά
+ * συμπεριφορά.
+ */
+export function footingAbsoluteZ(
+  summary: FootingSummary,
+  floorElevationMm: number,
+): { readonly topZmm: number; readonly baseZmm: number } {
+  const offset = summary.entityType === 'foundation' ? 0 : floorElevationMm;
+  return { topZmm: summary.topZmm + offset, baseZmm: summary.baseZmm + offset };
+}
+
+/**
  * Geometry summary ενός footing element, ή `null` αν δεν είναι footing / έχει
  * εκφυλισμένο footprint (< 3 κορυφές).
  */

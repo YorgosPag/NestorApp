@@ -22,7 +22,7 @@ import {
   footingSupportsColumnBase,
   polygonCentroid,
 } from '../../foundations/footing-column-coverage';
-import { isFootingElement, resolveFootingSummary } from '../../foundations/footing-element-summary';
+import { isFootingElement, resolveFootingSummary, footingAbsoluteZ } from '../../foundations/footing-element-summary';
 import { mmToSceneUnits } from '../../../utils/scene-units';
 import { resolveColumnBaseZmm } from '../../geometry/column-vertical-profile';
 import { beamHostInput } from '../../geometry/wall-host-plan-builder';
@@ -63,13 +63,16 @@ function elevationFor(options: BuildGraphOptions | undefined, id: string): numbe
 function footingNode(e: Entity, floorElevationMm: number): StructuralNode | null {
   const s = resolveFootingSummary(e);
   if (!s) return null;
+  // ADR-459 Phase 6 — type-aware absolute Z: FoundationEntity=ΑΠΟΛΥΤΟ (+0),
+  // foundation/ground slab=floor-relative (+floorElevationMm). SSoT footingAbsoluteZ.
+  const z = footingAbsoluteZ(s, floorElevationMm);
   return {
     id: e.id,
     memberKind: 'footing',
     entityType: s.entityType,
     footprint: s.footprint,
-    baseZmm: s.baseZmm + floorElevationMm,
-    topZmm: s.topZmm + floorElevationMm,
+    baseZmm: z.baseZmm,
+    topZmm: z.topZmm,
   };
 }
 

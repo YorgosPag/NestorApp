@@ -21,11 +21,12 @@ function squareFootprint(cx: number, cy: number, half: number) {
   };
 }
 
-// Πέδιλο: top 1000mm πάνω από το FFL της Θεμελίωσης (pedestal που φτάνει το ισόγειο).
+// Πέδιλο: top στο ΑΠΟΛΥΤΟ +3000 (φτάνει τη βάση κολόνας 1ου ορόφου). FoundationEntity
+// αποθηκεύει ΑΠΟΛΥΤΟ topElevationMm (3D αγνοεί το FFL Θεμελίωσης, ADR-369).
 const pad = {
   id: 'F1',
   type: 'foundation',
-  params: { kind: 'pad', topElevationMm: 1000, thicknessMm: 500 },
+  params: { kind: 'pad', topElevationMm: 3000, thicknessMm: 500 },
   geometry: { footprint: squareFootprint(0, 0, 1) },
 } as unknown as Entity;
 
@@ -61,26 +62,26 @@ describe('buildOrganismScene', () => {
   });
 });
 
-describe('buildStructuralGraph — absolute-Z offset (cross-level)', () => {
-  it('offsets node Z by the per-entity floor elevation', () => {
-    const map = new Map<string, number>([['F1', -1000], ['C1', 0]]);
+describe('buildStructuralGraph — type-aware absolute Z (cross-level)', () => {
+  it('foundation Z is ABSOLUTE (ignores the map); column Z is floor-relative (offset)', () => {
+    const map = new Map<string, number>([['F1', -1000], ['C1', 3000]]);
     const graph = buildStructuralGraph([pad, column], { floorElevationByEntityId: map });
     const footing = graph.nodes.find((n) => n.id === 'F1');
     const col = graph.nodes.find((n) => n.id === 'C1');
-    // footing top = 1000 + (−1000) = 0 ; column base = 0 + 0 = 0.
-    expect(footing?.topZmm).toBe(0);
-    expect(col?.baseZmm).toBe(0);
+    // footing top = 3000 (absolute, map IGNORED) ; column base = 3000 + 0 (floor-relative).
+    expect(footing?.topZmm).toBe(3000);
+    expect(col?.baseZmm).toBe(3000);
   });
 
-  it('derives a footing-bearing edge ONLY with the cross-level offset', () => {
-    // Without offset: footing top 1000 > column base 0 → gate fails → no edge.
+  it('derives a footing-bearing edge ONLY with the column floor-relative offset', () => {
+    // Without offset: column base 0, footing top 3000 → gate fails → no edge.
     const flat = buildStructuralGraph([pad, column]);
     expect(flat.edges.filter((e) => e.kind === 'footing-bearing')).toHaveLength(0);
 
-    // With offset: footing top 0 ≤ column base 0 → edge.
+    // Column on upper floor (FFL 3000) → base 3000 == footing top 3000 → edge.
     const merged = buildOrganismScene({
       activeEntities: [column],
-      activeFloorElevationMm: 0,
+      activeFloorElevationMm: 3000,
       foundationEntities: [pad],
       foundationFloorElevationMm: -1000,
     });

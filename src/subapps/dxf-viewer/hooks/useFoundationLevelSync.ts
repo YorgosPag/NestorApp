@@ -6,8 +6,8 @@
  * ΕΝΑ σημείο που επιλύει — για το κτίριο του ενεργού ορόφου — τον όροφο Θεμελίωσης
  * (`resolveBuildingFoundationLevel`) + τα entities του (πέδιλα), και τα δημοσιεύει
  * στο low-freq `foundation-level-store`. Τα καταναλώνουν cross-level ο
- * `useStructuralOrganism` (merge στον graph) και ο `useColumnFootingNotification`
- * (detection «λείπει πέδιλο» + write target).
+ * `useStructuralOrganism` (merge στον graph) και ο `useAutoFoundationDesign`
+ * (level-wide auto-design + write target).
  *
  * Resolution των foundation entities — mirror του `useFloors3DAggregator`:
  *   1. in-memory `getLevelScene(foundationLevelId)` (αν ο χρήστης το επισκέφθηκε).

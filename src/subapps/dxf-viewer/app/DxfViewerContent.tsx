@@ -49,7 +49,7 @@ import { useStructuralFootingConnect } from '../hooks/useStructuralFootingConnec
 import { useStructuralOrganism } from '../hooks/useStructuralOrganism';
 import { useFoundationLevelSync } from '../hooks/useFoundationLevelSync';
 import { useColumnAdjacencyNotification } from '../hooks/useColumnAdjacencyNotification';
-import { useColumnFootingNotification } from '../hooks/useColumnFootingNotification';
+import { useAutoFoundationDesign } from '../hooks/useAutoFoundationDesign';
 import { useStructuralOrganismNotification } from '../hooks/useStructuralOrganismNotification';
 import { useViewportUrlSync } from '../hooks/canvas/useViewportUrlSync';
 // 📐 ADR-345 Fase 4: i18n for the "Coming Soon" toast on unwired ribbon buttons.
@@ -261,8 +261,8 @@ export const DxfViewerContent = React.memo<DxfViewerAppProps>((props) => {
   useFoundationLevelSync({ levelManager }); // ADR-459 Phase 0 — foundation-level SSoT (cross-level organism)
   useStructuralOrganism({ levelManager }); // ADR-459 Phase 1 — cross-entity structural diagnostics («λείπει το πέδιλο»)
   useColumnAdjacencyNotification({ levelManager }); // ADR-363 — post-creation adjacent-columns→shear-wall merge toast
-  useColumnFootingNotification({ levelManager }); // ADR-459 Φ2/3 — proactive «βάλε/επέκτεινε πέδιλο» (cross-level)
-  useStructuralOrganismNotification({ levelManager }); // ADR-459 Φ4 — proactive «ενιαίος οπλισμός οργανισμού»
+  useAutoFoundationDesign({ levelManager }); // ADR-459 Φ7 — Αυτόματος Σχεδιασμός Θεμελίωσης (level-wide auto + info)
+  useStructuralOrganismNotification({ levelManager }); // ADR-459 Φ7 — αυτόματος ενιαίος οπλισμός οργανισμού (no prompt)
   // ADR-345/353/358/363 — ribbon command assembly (contextual trigger + BIM/array/text bridges).
   const { ribbonCommands, ribbonContextualTabs, activeContextualTrigger } = useDxfViewerRibbon({
     levelManager, universalSelection, activeTool,
