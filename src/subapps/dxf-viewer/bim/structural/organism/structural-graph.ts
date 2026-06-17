@@ -6,7 +6,7 @@
  * structural αλλαγή — ΠΟΤΕ persisted. SSoT = τα params των entities.
  *
  * REUSE (N.0.2 Boy Scout — μηδέν duplicate detection logic):
- *   · `findColumnsFramedByBeam` (column-structural-attach-coordinator) → framing edges
+ *   · `findColumnsFramedByBeamForGraph` (column-structural-attach-coordinator) → framing edges (χωρίς topBinding filter — organism connectivity)
  *   · `resolveColumnBaseZmm` (column-vertical-profile) → column base Z
  *   · `beamHostInput` / `slabHostInput` (wall-host-plan-builder) → footprint + Z extents
  *   · `attachTopToIds` (ColumnParams) → top-attachment edges
@@ -26,7 +26,7 @@ import { isFootingElement, resolveFootingSummary, footingAbsoluteZ } from '../..
 import { mmToSceneUnits } from '../../../utils/scene-units';
 import { resolveColumnBaseZmm } from '../../geometry/column-vertical-profile';
 import { beamHostInput } from '../../geometry/wall-host-plan-builder';
-import { findColumnsFramedByBeam } from '../../columns/column-structural-attach-coordinator';
+import { findColumnsFramedByBeamForGraph } from '../../columns/column-structural-attach-coordinator';
 import type { ColumnEntity } from '../../types/column-types';
 import type { BeamEntity } from '../../types/beam-types';
 import type {
@@ -163,7 +163,7 @@ function buildFootingEdges(nodes: readonly StructuralNode[]): StructuralEdge[] {
 
 /**
  * column-bearing (framing) + top-attachment ακμές. Framing reuse του SSoT
- * `findColumnsFramedByBeam`· top-attachment από το persisted `attachTopToIds`.
+ * `findColumnsFramedByBeamForGraph`· top-attachment από το persisted `attachTopToIds`.
  */
 function buildFramingAndAttachEdges(
   entities: readonly Entity[],
@@ -172,7 +172,7 @@ function buildFramingAndAttachEdges(
   const edges: StructuralEdge[] = [];
   for (const e of entities) {
     if (isBeamEntity(e)) {
-      for (const colId of findColumnsFramedByBeam(e, entities)) {
+      for (const colId of findColumnsFramedByBeamForGraph(e, entities)) {
         edges.push({ id: edgeId(colId, e.id, 'column-bearing'), supportId: colId, supportedId: e.id, kind: 'column-bearing' });
       }
     } else if (isColumnEntity(e)) {

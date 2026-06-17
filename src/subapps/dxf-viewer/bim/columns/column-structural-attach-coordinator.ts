@@ -214,3 +214,23 @@ export function findColumnsFramedByBeam(host: Entity, entities: readonly Entity[
   }
   return out;
 }
+
+/**
+ * Organism-graph variant — pure geometric framing check WITHOUT the `topBinding`
+ * filter. Used ONLY by `buildStructuralGraph` to detect column-bearing edges.
+ *
+ * `findColumnsFramedByBeam` skips columns whose `topBinding !== 'storey-ceiling'`,
+ * which is correct for auto-attach (avoids re-attaching already-attached columns)
+ * but WRONG for connectivity: a column attached to this beam (`topBinding='beam'`)
+ * IS structurally supported by it and must appear as a `column-bearing` edge.
+ */
+export function findColumnsFramedByBeamForGraph(beam: Entity, entities: readonly Entity[]): string[] {
+  if (!isBeamEntity(beam)) return [];
+  const out: string[] = [];
+  for (const e of entities) {
+    if (!isColumnEntity(e)) continue;
+    if (!beamFramesColumn(beam, e)) continue;
+    out.push(e.id);
+  }
+  return out;
+}
