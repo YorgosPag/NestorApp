@@ -8,12 +8,14 @@
  * half-width on reload despite clean per-entity docs" divergence.
  */
 
-import { reconcileLoadedSceneBim, isBimOrStairEntity } from '../scene-bim-load-policy';
+import { reconcileLoadedSceneBim, isBimOrStairEntity, stripForeignFloorBim } from '../scene-bim-load-policy';
 import type { SceneModel } from '../../../types/scene';
 import type { Entity } from '../../../types/entities';
 
 // Minimal entity stubs — the policy only reads `type` + `id`.
 const ent = (id: string, type: string): Entity => ({ id, type } as unknown as Entity);
+const entF = (id: string, type: string, floorId?: string): Entity =>
+  ({ id, type, ...(floorId ? { floorId } : {}) } as unknown as Entity);
 
 const scene = (entities: Entity[]): SceneModel =>
   ({ entities, layersById: {}, bounds: { min: { x: 0, y: 0 }, max: { x: 0, y: 0 } }, units: 'mm' } as unknown as SceneModel);
@@ -72,5 +74,40 @@ describe('reconcileLoadedSceneBim', () => {
     const result = reconcileLoadedSceneBim(loaded, existing);
     expect(result.entities).toHaveLength(1);
     expect(result.entities[0].type).toBe('line');
+  });
+});
+
+describe('stripForeignFloorBim', () => {
+  it('drops BIM whose floorId differs from the saved floor (cross-level leak)', () => {
+    // πέδιλο του ορόφου «F» που διέρρευσε στη σκηνή του Ισογείου ('floorGround').
+    const s = scene([
+      ent('line1', 'line'),
+      entF('col_own', 'column', 'floorGround'),
+      entF('fnd_foreign', 'foundation', 'floorF'),
+    ]);
+    const result = stripForeignFloorBim(s, 'floorGround');
+    expect(result.entities.map((e) => e.id).sort()).toEqual(['col_own', 'line1']);
+  });
+
+  it('keeps own-floor BIM, BIM without floorId, and pure-DXF', () => {
+    const s = scene([
+      ent('line1', 'line'),
+      entF('col_own', 'column', 'floorGround'),
+      ent('beam_nofloor', 'beam'),
+    ]);
+    const result = stripForeignFloorBim(s, 'floorGround');
+    expect(result.entities).toHaveLength(3);
+    expect(result).toBe(s); // no foreign → same reference (idempotent no-op)
+  });
+
+  it('is a safe no-op when the saved floor is unknown', () => {
+    const s = scene([entF('fnd_foreign', 'foundation', 'floorF')]);
+    expect(stripForeignFloorBim(s, undefined)).toBe(s);
+    expect(stripForeignFloorBim(s, null)).toBe(s);
+  });
+
+  it('does NOT strip a foreign-floor pure-DXF entity (only BIM is floor-scoped)', () => {
+    const s = scene([entF('line_x', 'line', 'floorF')]);
+    expect(stripForeignFloorBim(s, 'floorGround').entities).toHaveLength(1);
   });
 });

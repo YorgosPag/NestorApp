@@ -10,6 +10,9 @@ import {
 import { DxfFirestoreService } from '../../services/dxf-firestore.service';
 import type { DxfSaveContext } from '../../services/dxf-firestore.service';
 import type { SceneModel } from '../../types/scene';
+// ADR-459 Φ7 — ένα floor snapshot κρατά ΜΟΝΟ τα δικά του entities (foreign-floor BIM
+// guard· αποτρέπει cross-level πέδιλα να «ψηθούν» στο snapshot λάθος ορόφου).
+import { stripForeignFloorBim } from '../../systems/levels/scene-bim-load-policy';
 import { useAuth } from '@/auth/hooks/useAuth';
 
 export interface AutoSaveSceneManagerState extends SceneManagerState {
@@ -273,8 +276,11 @@ export function useAutoSaveSceneManager(): AutoSaveSceneManagerState {
             createdBy: injectedCtx.createdBy ?? user?.uid ?? undefined,
             ...(canonicalScenePath ? { canonicalScenePath } : {}),
           };
+          // ADR-459 Φ7 — strip foreign-floor BIM πριν το persist: το snapshot αυτού
+          // του ορόφου δεν πρέπει να περιέχει BIM άλλου ορόφου (cross-level πέδιλο).
+          const sceneToPersist = stripForeignFloorBim(scene, saveContext.floorId);
           const success = await DxfFirestoreService.autoSaveV2(
-            fileId!, fileName, scene,
+            fileId!, fileName, sceneToPersist,
             Object.keys(saveContext).length > 0 ? saveContext : undefined
           );
 

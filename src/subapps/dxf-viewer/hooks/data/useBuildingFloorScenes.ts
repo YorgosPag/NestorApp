@@ -35,6 +35,10 @@ import { useEffect, useMemo, useState } from 'react';
 import { useLevelsOptional } from '../../systems/levels/useLevels';
 import { DxfFirestoreService } from '../../services/dxf-firestore.service';
 import { useViewMode3DStore } from '../../bim-3d/stores/ViewMode3DStore';
+// ADR-459 Φ7 — read-side foreign-floor BIM guard: ένα floor model δείχνει ΜΟΝΟ τα
+// δικά του entities· legacy cross-level πέδιλο (floorId άλλου ορόφου baked στο
+// snapshot) δεν εμφανίζεται πια ως «φάντασμα» στο all-floors view.
+import { stripForeignFloorBim } from '../../systems/levels/scene-bim-load-policy';
 import type { SceneModel } from '../../types/scene';
 
 /** One non-active building floor, as its raw (unconverted) SceneModel. */
@@ -129,8 +133,11 @@ export function useBuildingFloorScenes(active: boolean): readonly BuildingFloorS
     if (!active) return [];
     const out: BuildingFloorScene[] = [];
     for (const t of targets) {
-      const model = resolveScene(t);
-      if (!model || model.entities.length === 0) continue;
+      const raw = resolveScene(t);
+      if (!raw || raw.entities.length === 0) continue;
+      // Strip foreign-floor BIM (cross-level leak) so a floor's underlay shows only
+      // its own entities (ADR-459 Φ7 — defense-in-depth vs legacy baked snapshots).
+      const model = stripForeignFloorBim(raw, t.floorId);
       out.push({ levelId: t.levelId, floorId: t.floorId, model });
     }
     return out;

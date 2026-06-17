@@ -58,3 +58,32 @@ export function reconcileLoadedSceneBim(
   const preserved = preservedBim.filter((e) => !dxfIds.has(e.id));
   return { ...loaded, entities: [...dxfOnly, ...preserved] };
 }
+
+/**
+ * ADR-459 Phase 7 — Foreign-floor BIM guard (η write-side συμπληρωματική του
+ * `reconcileLoadedSceneBim`). Ένα floor snapshot πρέπει να περιέχει ΜΟΝΟ τα δικά
+ * του entities. Cross-level BIM (π.χ. πέδιλο του ορόφου Θεμελίωσης που διέρρευσε
+ * προσωρινά στην ενεργή σκηνή) ΔΕΝ πρέπει να «ψηθεί» στο snapshot **άλλου** ορόφου —
+ * αλλιώς το multi-floor 3Δ (`useFloors3DAggregator`, που διαβάζει το BIM κάθε ορόφου
+ * από το snapshot του) το δείχνει ως «φάντασμα» στον λάθος όροφο, και ο per-entity
+ * SSoT (`floorplan_*`) δεν μπορεί να το διαγράψει από εκεί.
+ *
+ * Αφαιρεί BIM/stair entities με **ορισμένο** `floorId` που **διαφέρει** από τον
+ * αποθηκευόμενο όροφο. Κρατά: pure-DXF, own-floor BIM (`floorId === ownFloorId` ή
+ * χωρίς `floorId`). **No-op** όταν ο όροφος είναι άγνωστος (`ownFloorId` κενό) ή
+ * δεν υπάρχει foreign entity → επιστρέφει το ίδιο reference. Pure + idempotent.
+ *
+ * @param scene      Το scene προς persist (snapshot).
+ * @param ownFloorId Το `Floor.id` του ορόφου που αποθηκεύεται (από το save context).
+ */
+export function stripForeignFloorBim(
+  scene: SceneModel,
+  ownFloorId: string | null | undefined,
+): SceneModel {
+  if (!ownFloorId) return scene;
+  const entities = scene.entities.filter((e) => {
+    const floorId = (e as { floorId?: string }).floorId;
+    return !(isBimOrStairEntity(e) && typeof floorId === 'string' && floorId !== ownFloorId);
+  });
+  return entities.length === scene.entities.length ? scene : { ...scene, entities };
+}

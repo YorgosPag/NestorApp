@@ -38,6 +38,9 @@ import {
   resolveFloorDatumRelativeElevationMm,
 } from '../../bim-3d/scene/floor-stack-elevation';
 import { buildActiveStoreyContext } from '../../systems/levels/active-storey-context';
+// ADR-459 Φ7 — foreign-floor BIM guard: το stack entry κάθε ορόφου περιέχει ΜΟΝΟ τα
+// δικά του entities (cross-level πέδιλο baked σε λάθος snapshot δεν εμφανίζεται 3Δ).
+import { stripForeignFloorBim } from '../../systems/levels/scene-bim-load-policy';
 import {
   isWallEntity, isColumnEntity, isBeamEntity, isFoundationEntity, isSlabEntity,
   isSlabOpeningEntity, isOpeningEntity, isStairEntity, isMepFixtureEntity, isElectricalPanelEntity, isRailingEntity, isFurnitureEntity, isMepSegmentEntity, isMepFittingEntity, isMepManifoldEntity, isMepRadiatorEntity, isMepBoilerEntity, isMepWaterHeaterEntity, isRoofEntity, isFloorFinishEntity, isMepUnderfloorEntity,
@@ -165,7 +168,7 @@ export function useFloors3DAggregator(active: boolean): void {
     (t: TargetFloor): Bim3DEntities | null => {
       if (t.levelId === activeLevelId) return liveActive;
       const scene = getLevelScene?.(t.levelId);
-      if (scene && scene.entities.length > 0) return extractBim3DEntities(scene);
+      if (scene && scene.entities.length > 0) return extractBim3DEntities(stripForeignFloorBim(scene, t.floorId));
       return loaded.get(t.levelId) ?? null;
     },
     [activeLevelId, liveActive, getLevelScene, loaded],
@@ -193,7 +196,7 @@ export function useFloors3DAggregator(active: boolean): void {
           entries.push([
             t.levelId,
             rec?.scene && Array.isArray(rec.scene.entities)
-              ? extractBim3DEntities(rec.scene as SceneModel)
+              ? extractBim3DEntities(stripForeignFloorBim(rec.scene as SceneModel, t.floorId))
               : EMPTY_BIM_ENTITIES,
           ]);
         } catch {

@@ -461,6 +461,16 @@ footing (όριο οικοπέδου — δεν υπάρχουν property lines)
   **Feature (3Δ delete cross-level πεδίλου):** NEW `DeleteCrossLevelFootingsCommand` + `useSmartDelete` branch —
   επιλογή πεδίλου στο 3Δ + Delete (ενώ ενεργός όροφος = άλλος) διαγράφει πλέον το cross-level πέδιλο (writer
   remove + DetachColumnFootingCommand FK + clear selection· undoable). Πριν: silent fail (level-scoped adapter).
+  **Stabilization (ghost footing — DB audit MCP):** Firestore audit έδειξε `floorplan_foundations` **άδειο**·
+  το πέδιλο ήταν baked μέσα στο **scene.json του ΕΝΕΡΓΟΥ ορόφου** με `floorId`=Θεμελίωση/`floorplanId`=ενεργός
+  (scope drift από προηγ. iteration)· εμφανιζόταν ΜΟΝΟ στο all-floors view γιατί οι aggregators διαβάζουν raw
+  snapshots. **Root principle (Revit-grade SSoT):** ένα floor snapshot περιέχει ΜΟΝΟ τα δικά του entities. NEW
+  SSoT `stripForeignFloorBim(scene, ownFloorId)` (write-side companion του `reconcileLoadedSceneBim`, reuse
+  `isBimOrStairEntity`) εφαρμοσμένο σε: (α) **autosave** (`useAutoSaveSceneManager` — δεν ψήνεται ποτέ ξανά
+  cross-level BIM σε λάθος snapshot), (β) **read-side** all-floors aggregators (`useBuildingFloorScenes` 2Δ +
+  `useFloors3DAggregator` 3Δ — legacy ghosts εξαφανίζονται αμέσως στο reload). ΜΑΘΗΜΑ: dual-persistence
+  (per-entity collection = SSoT· scene snapshot = cache ΑΛΛΑ κρατά own-floor BIM για το multi-floor 3Δ) → ο
+  guard πρέπει να είναι **per-floor** (own vs foreign floorId), ΟΧΙ blanket BIM strip.
 - **2026-06-17 (v7, Opus):** **Phase 6 — Proactive on-create + cross-level organism.** Decision Giorgio:
   πέδιλο στον όροφο Θεμελίωσης (Revit-canonical) + non-blocking ConfirmationToast. **6.0 cross-level READ:**
   NEW `building-foundation-level.ts` + `cross-level-organism-scene.ts` + `foundation-level-store.ts` +
