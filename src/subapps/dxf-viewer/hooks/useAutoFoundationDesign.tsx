@@ -51,6 +51,7 @@ import {
   resolveFootingSummary,
   footingAbsoluteZ,
 } from '../bim/foundations/footing-element-summary';
+import { collectFoundationFootings } from '../bim/foundations/foundation-footing-candidates';
 import { footingSupportsColumnBase, polygonCentroid } from '../bim/foundations/footing-column-coverage';
 import { resolveColumnBaseZmm } from '../bim/geometry/column-vertical-profile';
 import { buildDefaultFoundationParams, buildFoundationEntity } from './drawing/foundation-completion';
@@ -230,14 +231,12 @@ export function useAutoFoundationDesign(props: { levelManager: LevelManagerLike 
 
       const activeEntities = activeScene.entities as unknown as readonly Entity[];
       const foundationFloorElev = fl.target.floorElevationMm;
-      // Προτίμησε τη live foundation scene (ο writer τη μεταλλάσσει σύγχρονα) — αλλιώς
-      // το store snapshot (optimistically ενημερωμένο από τον writer). Αποφεύγει stale read.
+      // Foundation-floor πέδιλα: model SSoT (store) ∪ live scene (dedup, store wins) —
+      // ώστε ένα υπάρχον auto πέδιλο να ΜΗΝ χάνεται ποτέ από το reconcile (βλ. helper).
       const foundationScene = levelManager.getLevelScene(fl.target.levelId);
-      const foundationEntities = foundationScene
-        ? (foundationScene.entities as unknown as readonly Entity[])
-        : fl.entities;
+      const foundationFootings = collectFoundationFootings(fl.entities, foundationScene);
       const candidates: CandidateFooting[] = [
-        ...foundationEntities.filter(isFootingElement).map((e) => ({ entity: e, floorElevationMm: foundationFloorElev })),
+        ...foundationFootings.map((e) => ({ entity: e, floorElevationMm: foundationFloorElev })),
         ...activeEntities.filter(isFootingElement).map((e) => ({ entity: e, floorElevationMm: fl.activeFloorElevationMm })),
       ];
       const existingAutoFootings = candidates.map((c) => c.entity).filter(isAutoPad);
