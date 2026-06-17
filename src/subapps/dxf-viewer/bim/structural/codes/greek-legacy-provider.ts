@@ -33,8 +33,8 @@ import {
   suggestBeamReinforcementFrom,
   suggestColumnReinforcementFrom,
   suggestFootingReinforcementFrom,
-  suggestSlabFoundationReinforcementFrom,
 } from './suggest-reinforcement';
+import { suggestSlabFoundationReinforcementFrom } from './suggest-slab-reinforcement';
 import { EN1990_ULS_FACTORS } from '../loads/load-combinations';
 
 /** Μελετητική ενεργός διατομή δοκού d ≈ 0.9·h. */

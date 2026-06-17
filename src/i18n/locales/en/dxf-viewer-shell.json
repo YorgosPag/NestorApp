@@ -2705,6 +2705,7 @@
         "padMomentY": "Moment My (kNm)",
         "bearingPMax": "Bearing p_max (kPa)",
         "bearingUtilization": "Bearing utilization (%)",
+        "tieSeismicForce": "Seismic tie force N_tie (kN)",
         "toggle": {
           "on": "Yes",
           "off": "No"
@@ -3942,6 +3943,7 @@
     "sections": {
       "structural": { "title": "Structural / Reinforcement" },
       "loads": { "title": "Loads & Bearing" },
+      "seismic": { "title": "Seismic" },
       "readouts": { "title": "Quantities" }
     }
   },

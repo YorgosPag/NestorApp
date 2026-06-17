@@ -2705,6 +2705,7 @@
         "padMomentY": "Ροπή My (kNm)",
         "bearingPMax": "p_max έδρασης (kPa)",
         "bearingUtilization": "Αξιοποίηση έδρασης (%)",
+        "tieSeismicForce": "Σεισμική δύναμη σύνδεσης N_tie (kN)",
         "toggle": {
           "on": "Ναι",
           "off": "Όχι"
@@ -3942,6 +3943,7 @@
     "sections": {
       "structural": { "title": "Στατικά / Οπλισμός" },
       "loads": { "title": "Φορτία & Έδραση" },
+      "seismic": { "title": "Σεισμός" },
       "readouts": { "title": "Ποσότητες" }
     }
   },

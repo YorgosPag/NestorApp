@@ -168,6 +168,9 @@ export const FOUNDATION_STRUCTURAL_READOUT_KEYS = {
   bearingPMax: 'foundation.structural.readout.bearingPMax',
   /** % — αξιοποίηση έδρασης p_max/σ_allow. */
   bearingUtilization: 'foundation.structural.readout.bearingUtilization',
+  // ADR-477 Slice 3 — readout σεισμικής δύναμης σύνδεσης (tie-beam, EN1998-5 §5.4.1.2).
+  /** kN — σεισμική αξονική δύναμη σύνδεσης N_tie· «—» όταν δεν έχει υπολογιστεί. */
+  tieSeismicForce: 'foundation.structural.readout.tieSeismicForce',
 } as const;
 
 /** String/select structural keys (κανονισμός + on/off toggles). */

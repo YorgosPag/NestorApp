@@ -117,6 +117,17 @@ const PAD_LOADS_GROUP: ColumnPropertyGroup = {
   ],
 };
 
+/**
+ * ADR-477 Slice 3 — «Σεισμός» (tie-beam μόνο): readout της σεισμικής αξονικής δύναμης
+ * σύνδεσης N_tie (EN1998-5 §5.4.1.2), υπολογισμένης αυτόματα από τα φορτία των
+ * συνδεόμενων υποστυλωμάτων + τις building-level σεισμικές παραδοχές (a_gR/ground type).
+ */
+const TIE_BEAM_SEISMIC_GROUP: ColumnPropertyGroup = {
+  id: 'seismic',
+  titleKey: 'foundationAdvancedPanel.sections.seismic.title',
+  fields: [readout(RK.tieSeismicForce, 'tieSeismicForce')],
+};
+
 function kindFields(kind: FoundationKind): readonly ColumnPropertyField[] {
   switch (kind) {
     case 'pad': return PAD_FIELDS;
@@ -132,8 +143,8 @@ export function resolveFoundationPropertyGroups(kind: FoundationKind): readonly 
     titleKey: 'foundationAdvancedPanel.sections.structural.title',
     fields: [CODE_FIELD, ...kindFields(kind), COVER_FIELD],
   };
-  // ADR-464 — «Φορτία & Έδραση» μόνο για μεμονωμένο πέδιλο (Slice 1· strip/raft → επόμενα).
-  return kind === 'pad'
-    ? [structural, PAD_LOADS_GROUP, READOUTS_GROUP]
-    : [structural, READOUTS_GROUP];
+  // ADR-464 — «Φορτία & Έδραση» μόνο για μεμονωμένο πέδιλο· ADR-477 — «Σεισμός» μόνο tie-beam.
+  if (kind === 'pad') return [structural, PAD_LOADS_GROUP, READOUTS_GROUP];
+  if (kind === 'tie-beam') return [structural, TIE_BEAM_SEISMIC_GROUP, READOUTS_GROUP];
+  return [structural, READOUTS_GROUP];
 }

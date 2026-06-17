@@ -9,6 +9,7 @@
 import { EUROCODE_PROVIDER } from '../eurocode-provider';
 import { GREEK_LEGACY_PROVIDER } from '../greek-legacy-provider';
 import { computeFootingReinforcementQuantities } from '../../reinforcement/footing-reinforcement-compute';
+import { barAreaMm2, rebarFydMpa } from '../../rebar-catalog';
 import type {
   PadSectionContext,
   StripSectionContext,
@@ -63,6 +64,25 @@ describe.each([
     expect(r.top.count).toBeGreaterThanOrEqual(2);
     // Συνδετήρια = εναέρια δοκός → beam cover (όχι θεμελίωσης).
     expect(r.coverMm).toBe(provider.beamReinforcementLimits(tieBeamCtx, r.bottom.diameterMm).nominalCoverMm);
+  });
+
+  // ─── ADR-477 Slice 3 — σεισμική δύναμη σύνδεσης (EN1998-5 §5.4.1.2) ──────────
+
+  it('tie-beam χωρίς N_tie → καθαρά δοκός (μηδέν regression)', () => {
+    const withZero = provider.suggestFootingReinforcement({ ...tieBeamCtx, designAxialTieKn: 0 });
+    expect(withZero).toEqual(provider.suggestFootingReinforcement(tieBeamCtx));
+  });
+
+  it('tie-beam με N_tie → As,tie αυξάνει συμμετρικά κάτω+άνω', () => {
+    const base = provider.suggestFootingReinforcement(tieBeamCtx);
+    const withTie = provider.suggestFootingReinforcement({ ...tieBeamCtx, designAxialTieKn: 400 });
+    if (base.kind !== 'tie-beam' || withTie.kind !== 'tie-beam') throw new Error('expected tie-beam');
+    const asTiePerFace = (400 * 1000) / rebarFydMpa() / 2;
+    const bottomAs = barAreaMm2(withTie.bottom.diameterMm) * withTie.bottom.count;
+    const topAs = barAreaMm2(withTie.top.diameterMm) * withTie.top.count;
+    expect(bottomAs).toBeGreaterThanOrEqual(asTiePerFace);
+    expect(topAs).toBeGreaterThanOrEqual(asTiePerFace);
+    expect(bottomAs).toBeGreaterThanOrEqual(barAreaMm2(base.bottom.diameterMm) * base.bottom.count);
   });
 
   // ─── ADR-464 Slice 2 — κανόνας άνω σχάρας (top mesh) ────────────────────────

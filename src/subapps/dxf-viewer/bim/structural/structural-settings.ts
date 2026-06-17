@@ -25,6 +25,7 @@ import {
   type ConcreteGrade,
 } from './concrete-grades';
 import type { OccupancyCategory } from './loads/occupancy-loads';
+import { isSeismicGroundType, isValidGroundAccelRatio, type SeismicGroundType } from './loads/seismic-params';
 
 // Inline guard — αποφεύγει εξάρτηση σε value import από νέο module (Turbopack isolatedModules).
 const OCCUPANCY_CATEGORIES: ReadonlySet<string> = new Set([
@@ -70,6 +71,20 @@ export interface StructuralSettings {
    * αυτοματισμός χωρίς επιλογή). Ρητά kPa πάντα υπερισχύουν (Revit-grade override).
    */
   readonly occupancy?: OccupancyCategory;
+  /**
+   * ADR-477 Slice 3 — Κατηγορία εδάφους EC8 (A–E, EN1998-1 §3.1.2). Building-level
+   * σεισμική παραδοχή (Revit: Project → Seismic). Καθορίζει συντελεστή εδάφους S +
+   * συντελεστή ε της δύναμης σύνδεσης συνδετήριων δοκών. Optional: absent →
+   * {@link DEFAULT_SEISMIC_GROUND_TYPE} (B) — πλήρης αυτοματισμός χωρίς επιλογή.
+   */
+  readonly seismicGroundType?: SeismicGroundType;
+  /**
+   * ADR-477 Slice 3 — Λόγος επιτάχυνσης αναφοράς εδάφους a_gR/g (EN1998-1, π.χ. 0.16
+   * για Ελληνική Ζώνη Ζ1). Building-level σεισμική παραδοχή· input για τη δύναμη
+   * σύνδεσης `N_tie = ε·(a_gR/g)·S·N_Ed,mean`. Optional: absent →
+   * {@link DEFAULT_SEISMIC_GROUND_ACCEL_RATIO}. Ρητή τιμή πάντα υπερισχύει.
+   */
+  readonly seismicGroundAccelRatio?: number;
 }
 
 /** Default settings όταν δεν έχει οριστεί τίποτα (standalone DXF χωρίς building). */
@@ -111,6 +126,13 @@ export function resolveStructuralSettings(
   }
   if (isOccupancyCategory(raw.occupancy)) {
     base = { ...base, occupancy: raw.occupancy };
+  }
+  // ADR-477 Slice 3 — σεισμικά building-level (omit-when-absent → Firestore-safe).
+  if (isSeismicGroundType(raw.seismicGroundType)) {
+    base = { ...base, seismicGroundType: raw.seismicGroundType };
+  }
+  if (isValidGroundAccelRatio(raw.seismicGroundAccelRatio)) {
+    base = { ...base, seismicGroundAccelRatio: raw.seismicGroundAccelRatio };
   }
   return base;
 }

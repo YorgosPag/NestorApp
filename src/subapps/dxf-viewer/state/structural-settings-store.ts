@@ -116,6 +116,13 @@ export const useStructuralSettingsStore = create<StructuralSettingsState>((set, 
     if (state.occupancy !== undefined) {
       base = { ...base, occupancy: state.occupancy };
     }
+    // ADR-477 Slice 3 — σεισμικά building-level (omit-when-absent → Firestore-safe).
+    if (state.seismicGroundType !== undefined) {
+      base = { ...base, seismicGroundType: state.seismicGroundType };
+    }
+    if (state.seismicGroundAccelRatio !== undefined && state.seismicGroundAccelRatio > 0) {
+      base = { ...base, seismicGroundAccelRatio: state.seismicGroundAccelRatio };
+    }
     return base;
   }
 
@@ -140,6 +147,9 @@ export const useStructuralSettingsStore = create<StructuralSettingsState>((set, 
         deadAreaLoadKpa: resolved.deadAreaLoadKpa,
         liveAreaLoadKpa: resolved.liveAreaLoadKpa,
         occupancy: resolved.occupancy,
+        // ADR-477 Slice 3 — σεισμικά building settings (absent → undefined → default at read).
+        seismicGroundType: resolved.seismicGroundType,
+        seismicGroundAccelRatio: resolved.seismicGroundAccelRatio,
         lastLocalMutationAt: 0,
       });
     },

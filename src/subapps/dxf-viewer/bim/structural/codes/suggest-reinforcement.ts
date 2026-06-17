@@ -20,9 +20,8 @@ import type {
   ColumnReinforcement,
   WallReinforcementIntent,
 } from '../reinforcement/column-reinforcement-types';
-import type { BeamReinforcement } from '../reinforcement/beam-reinforcement-types';
+import type { BeamRebarLayer, BeamReinforcement } from '../reinforcement/beam-reinforcement-types';
 import type { FootingReinforcement } from '../reinforcement/footing-reinforcement-types';
-import type { SlabFoundationReinforcement } from '../reinforcement/slab-foundation-reinforcement-types';
 import type {
   BeamReinforcementLimits,
   BeamSectionContext,
@@ -31,8 +30,8 @@ import type {
   FootingReinforcementLimits,
   FootingSectionContext,
   PadSectionContext,
-  SlabFoundationSectionContext,
   StructuralCodeProvider,
+  TieBeamSectionContext,
 } from './structural-code-types';
 
 /** Άνω φράγμα ασφαλείας πλήθους διαμήκων (αποφυγή runaway σε εκφυλισμένη είσοδο). */
@@ -334,7 +333,7 @@ export function resolveMatMesh(
 }
 
 /** Ενεργό βάθος θεμελιακού στοιχείου d ≈ thickness − cover (πλακοειδής σύμβαση). */
-function footingEffectiveDepthMm(thicknessMm: number, coverMm: number): number {
+export function footingEffectiveDepthMm(thicknessMm: number, coverMm: number): number {
   return Math.max(0, thicknessMm - coverMm);
 }
 
@@ -355,12 +354,46 @@ function padNeedsTopMesh(ctx: PadSectionContext, limits: FootingReinforcementLim
  * `resolveBarSet`)· tie-beam → **delegate** στον beam suggester (μηδέν duplicate,
  * N.0.2). Καλείται από κάθε provider μέσα στο `suggestFootingReinforcement`.
  */
+/**
+ * EN1998-5 §5.4.1.2 — αναβάθμιση μιας παρειάς (κάτω/άνω) ώστε να φέρει το μερίδιό της
+ * της σεισμικής δύναμης σύνδεσης: αν ο υπάρχων (καμπτικός/ελάχιστος) οπλισμός υπολείπεται
+ * του `asTiePerFaceMm2`, ξανα-επιλέγεται με reuse του SSoT `resolveBarSet` (μηδέν duplicate).
+ */
+function upgradeFaceForTie(layer: BeamRebarLayer, asTiePerFaceMm2: number): BeamRebarLayer {
+  if (layer.count * barAreaMm2(layer.diameterMm) >= asTiePerFaceMm2) return layer;
+  const set = resolveBarSet(asTiePerFaceMm2, layer.count, layer.diameterMm);
+  return { diameterMm: set.diameterMm, count: set.count };
+}
+
+/**
+ * Συνδετήρια δοκός: ΕΙΝΑΙ δοκός → πρώτα delegate στον beam suggester (καμπτικός +
+ * detailing + EC8 συνδετήρες, μηδέν duplicate). Έπειτα, αν υπάρχει σεισμική δύναμη
+ * σύνδεσης (EN1998-5 §5.4.1.2(7)), προστίθεται `As,tie = N_tie/f_yd` κατανεμημένο
+ * **συμμετρικά** (μισό κάτω, μισό άνω — αξονικός σύνδεσμος εφελκυσμού/θλίψης):
+ * κάθε παρειά = max(καμπτικό/ελάχιστο, μερίδιο tie). Absent/≤0 N_tie → καθαρά δοκός.
+ */
+function suggestTieBeamReinforcementFrom(
+  provider: StructuralCodeProvider,
+  ctx: TieBeamSectionContext,
+): FootingReinforcement {
+  const beam = suggestBeamReinforcementFrom(provider, ctx);
+  const nTieKn = ctx.designAxialTieKn ?? 0;
+  if (nTieKn <= 0) return { kind: 'tie-beam', ...beam };
+  const asTiePerFaceMm2 = (nTieKn * KN_TO_N) / rebarFydMpa() / 2;
+  return {
+    kind: 'tie-beam',
+    ...beam,
+    bottom: upgradeFaceForTie(beam.bottom, asTiePerFaceMm2),
+    top: upgradeFaceForTie(beam.top, asTiePerFaceMm2),
+  };
+}
+
 export function suggestFootingReinforcementFrom(
   provider: StructuralCodeProvider,
   ctx: FootingSectionContext,
 ): FootingReinforcement {
   if (ctx.kind === 'tie-beam') {
-    return { kind: 'tie-beam', ...suggestBeamReinforcementFrom(provider, ctx) };
+    return suggestTieBeamReinforcementFrom(provider, ctx);
   }
 
   const limits = provider.footingReinforcementLimits(ctx);
@@ -401,71 +434,6 @@ export function suggestFootingReinforcementFrom(
 }
 
 // ─── Slab suggester — universal (ADR-459 Φ4e/E3 + ADR-476) ───────────────────
-
-/** Μοχλοβραχίονας πλάκας z ≈ 0.9·d (απλοποιημένο EC2 §6.1 κάμψη, mirror δοκού). */
-const SLAB_LEVER_ARM_FACTOR = 0.9;
-
-/**
- * ADR-476 — απαιτούμενη As ανά μέτρο πλάτους **αναρτημένης** πλάκας από καμπτική
- * αντοχή (EC2 §6.1, μοχλοβραχίονας z=0.9·d): λωρίδα 1m υπό ομοιόμορφο επιφανειακό
- * φορτίο q_Ed (kPa = kN/m²) → M_Ed = q_Ed·L²/8 (kNm/m), A_s = M_Ed/(z·f_yd).
- * Επιστρέφει 0 χωρίς φορτίο/άνοιγμα ⇒ ο ρ_min κυριαρχεί (μηδέν regression). Συντηρητικό
- * αμφιέρειστο μοντέλο (÷8)· συνέχεια/δι-διευθυντική κατανομή = DEFER (ADR-476 §4).
- */
-function asStrengthSlabPerMetreMm2(
-  ctx: SlabFoundationSectionContext,
-  dEffMm: number,
-): number {
-  const qEd = ctx.designLoadKpa ?? 0;
-  const spanMm = ctx.maxFreeSpanMm ?? 0;
-  if (qEd <= 0 || spanMm <= 0 || dEffMm <= 0) return 0;
-  const spanM = spanMm / 1000;
-  const mEdNmmPerM = ((qEd * spanM * spanM) / 8) * 1e6; // kNm/m → N·mm/m
-  return mEdNmmPerM / (SLAB_LEVER_ARM_FACTOR * dEffMm * rebarFydMpa());
-}
-
-/**
- * Επιλέγει ελάχιστο-έγκυρο οπλισμό πλάκας (ΟΛΑ τα είδη — kind-aware, ADR-476). Reuse
- * του SSoT `resolveMatMesh` (μηδέν duplicate, N.0.2). Καλείται από κάθε provider.
- *
- *   - **εδαφόπλακα/raft** (`kind` foundation/absent): δι-διευθυντική **κάτω** + **άνω**
- *     σχάρα, ίδια ελάχιστη διάταξη (ρ ≥ ρ_min ανά μέτρο· EC2 §9.8.2 — soil push-up).
- *   - **αναρτημένη** (`kind` suspended): **κάτω** σχάρα ανοίγματος = max(ρ_min, strength
- *     από q·L²/8)· **άνω** σχάρα στηρίξεων = ελάχιστη διάταξη (detailing/anti-crack,
- *     preliminary — συνέχεια/hogging από ανάλυση = DEFER ADR-476 §4).
- */
-export function suggestSlabFoundationReinforcementFrom(
-  provider: StructuralCodeProvider,
-  ctx: SlabFoundationSectionContext,
-): SlabFoundationReinforcement {
-  const limits = provider.slabFoundationReinforcementLimits(ctx);
-  const seedDia = nextRebarDiameterMm(limits.minBarDiameterMm);
-  const dEff = footingEffectiveDepthMm(ctx.thicknessMm, limits.nominalCoverMm);
-  const asMinPerMetre = limits.minRatio * 1000 * dEff;
-
-  if (ctx.kind === 'suspended') {
-    const asBottomPerMetre = Math.max(asMinPerMetre, asStrengthSlabPerMetreMm2(ctx, dEff));
-    const bottom = resolveMatMesh(asBottomPerMetre, seedDia, limits.maxBarSpacingMm);
-    const top = resolveMatMesh(asMinPerMetre, seedDia, limits.maxBarSpacingMm);
-    const bottomLayer = { diameterMm: bottom.diameterMm, spacingMm: bottom.spacingMm };
-    const topLayer = { diameterMm: top.diameterMm, spacingMm: top.spacingMm };
-    return {
-      bottomMeshX: bottomLayer,
-      bottomMeshY: bottomLayer,
-      topMeshX: topLayer,
-      topMeshY: topLayer,
-      coverMm: limits.nominalCoverMm,
-    };
-  }
-
-  // foundation/ground — δι-διευθυντική top+bottom, ίδια ελάχιστη διάταξη.
-  const mesh = resolveMatMesh(asMinPerMetre, seedDia, limits.maxBarSpacingMm);
-  const layer = { diameterMm: mesh.diameterMm, spacingMm: mesh.spacingMm };
-  return {
-    bottomMeshX: layer,
-    bottomMeshY: layer,
-    topMeshX: layer,
-    topMeshY: layer,
-    coverMm: limits.nominalCoverMm,
-  };
-}
+// Moved to ./suggest-slab-reinforcement.ts (N.7.1 file-size). Providers import
+// `suggestSlabFoundationReinforcementFrom` directly from there to keep a
+// one-directional dependency (it reuses the SSoT helpers exported above).

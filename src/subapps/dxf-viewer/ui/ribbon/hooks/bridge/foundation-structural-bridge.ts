@@ -146,6 +146,11 @@ export function resolveFoundationStructuralReadout(
     const b = resolveBearingResult(footing);
     return { value: b && Number.isFinite(b.check.utilization) ? (b.check.utilization * 100).toFixed(0) : '—', options: [] };
   }
+  // ADR-477 Slice 3 — σεισμική δύναμη σύνδεσης N_tie (tie-beam)· «—» όταν δεν έχει υπολογιστεί.
+  if (readoutKey === FOUNDATION_STRUCTURAL_READOUT_KEYS.tieSeismicForce) {
+    const n = footing.params.kind === 'tie-beam' ? footing.params.seismicTieForceKn : undefined;
+    return { value: n && n > 0 ? String(Math.round(n)) : '—', options: [] };
+  }
   return null;
 }
 

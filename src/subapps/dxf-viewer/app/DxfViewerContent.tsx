@@ -48,6 +48,7 @@ import { useProactiveOrganismReinforce } from '../hooks/useProactiveOrganismRein
 import { useProactiveMemberSizing } from '../hooks/useProactiveMemberSizing';
 import { useStructuralLoadTakedown } from '../hooks/useStructuralLoadTakedown';
 import { useProactiveStructuralLoads } from '../hooks/useProactiveStructuralLoads';
+import { useProactiveTieBeamTieForce } from '../hooks/useProactiveTieBeamTieForce';
 import { useStructuralFootingConnect } from '../hooks/useStructuralFootingConnect';
 import { useStructuralComponentOverride } from '../hooks/useStructuralComponentOverride';
 import { useStructuralOrganism } from '../hooks/useStructuralOrganism';
@@ -267,6 +268,7 @@ export const DxfViewerContent = React.memo<DxfViewerAppProps>((props) => {
   // από organism/auto-foundation ⇒ ο load handler τρέχει+emit-άρει πρώτος στο microtask
   // flush, ώστε το foundation re-sizing να διαβάσει το φρέσκο appliedLoad (ΕΝΑ pass).
   useProactiveStructuralLoads({ levelManager });
+  useProactiveTieBeamTieForce({ levelManager }); // ADR-477 Slice 3 — PROACTIVE σεισμική δύναμη σύνδεσης (μετά τα φορτία κολονών → N_tie συνδετήριας)
   useStructuralFootingConnect({ levelManager }); // ADR-459 Φ4f — manual κολόνα↔πέδιλο connectivity (Ανάλυση)
   useStructuralComponentOverride({ levelManager }); // ADR-470 — per-element σώμα/σοβάς/οπλισμός visibility override
   useFoundationLevelSync({ levelManager }); // ADR-459 Phase 0 — foundation-level SSoT (cross-level organism)

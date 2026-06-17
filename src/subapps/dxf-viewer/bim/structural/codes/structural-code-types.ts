@@ -205,6 +205,12 @@ export interface StripSectionContext {
 /** Συνδετήρια δοκός (tie-beam) — ΕΙΝΑΙ δοκός → reuse {@link BeamSectionContext}. */
 export interface TieBeamSectionContext extends BeamSectionContext {
   readonly kind: 'tie-beam';
+  /**
+   * ADR-477 Slice 3 — σεισμική αξονική δύναμη σύνδεσης N_tie (kN, EN1998-5 §5.4.1.2).
+   * Παρόν ⇒ ο suggester προσθέτει As,tie = N_tie/f_yd κατανεμημένο συμμετρικά (κάτω+άνω)
+   * πάνω από τον καμπτικό/ελάχιστο οπλισμό. Absent/≤0 ⇒ καθαρά δοκός (μηδέν regression).
+   */
+  readonly designAxialTieKn?: number;
 }
 
 /**

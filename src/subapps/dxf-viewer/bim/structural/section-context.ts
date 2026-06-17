@@ -356,6 +356,10 @@ export function buildFootingSectionContextFromParams(p: FoundationParams): Footi
         spanMm: axisLengthMm(p.start, p.end),
         grossAreaMm2: Math.max(0, p.width) * Math.max(0, p.thicknessMm),
         supportType: 'simple',
+        // ADR-477 Slice 3 — η σεισμική δύναμη σύνδεσης τροφοδοτεί As,tie στον suggester.
+        ...(p.seismicTieForceKn && p.seismicTieForceKn > 0
+          ? { designAxialTieKn: p.seismicTieForceKn }
+          : {}),
       };
   }
 }

@@ -207,6 +207,14 @@ export interface TieBeamParams extends FoundationCommonParams {
    * (είναι δοκός) + discriminator. Optional/non-breaking.
    */
   readonly reinforcement?: TieBeamReinforcement;
+  /**
+   * ADR-477 Slice 3 — DERIVED σεισμική αξονική δύναμη σύνδεσης N_tie (kN, EN1998-5
+   * §5.4.1.2(7) = ε·(a_gR/g)·S·N_Ed,mean των συνδεόμενων υποστυλωμάτων). Υπολογίζεται
+   * scene-level (`tie-beam-tie-force`) μετά το load takedown και τροφοδοτεί τον
+   * suggester (`As,tie = N_tie/f_yd`). Optional: absent/≤0 → μόνο ελάχιστος οπλισμός
+   * δοκού (μηδέν regression). Persisted literal (Firestore-safe).
+   */
+  readonly seismicTieForceKn?: number;
 }
 
 /** Discriminated union ανά `kind`. */
