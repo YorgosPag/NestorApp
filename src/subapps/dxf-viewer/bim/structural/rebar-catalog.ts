@@ -14,6 +14,16 @@
 /** Πυκνότητα χάλυβα οπλισμού (kg/m³). EN 1991-1-1 — ίδια με δομικό χάλυβα. */
 export const REBAR_STEEL_DENSITY_KGM3 = 7850;
 
+/**
+ * Χρώμα-ταυτότητα οπλισμού (κόκκινο) — ΕΝΑ SSoT για ΟΛΑ τα rendering contexts
+ * (2Δ canvas renderers, PDF detail-sheet builders, 3Δ THREE.js materials).
+ * Πριν το ADR-471 Slice 6 το ίδιο literal ήταν σκορπισμένο σε 10 αρχεία.
+ * `REBAR_COLOR_HEX` = CSS/PDF string· `REBAR_COLOR_INT` = το ίδιο ως 0xRRGGBB
+ * integer για `THREE.MeshBasicMaterial({ color })`.
+ */
+export const REBAR_COLOR_HEX = '#c0392b';
+export const REBAR_COLOR_INT = 0xc0392b;
+
 /** Ποιότητα χάλυβα οπλισμού (ductility class C — υποχρεωτική σε σεισμικές ζώνες). */
 export const REBAR_GRADE = 'B500C';
 

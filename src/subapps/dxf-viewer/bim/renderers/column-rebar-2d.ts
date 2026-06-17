@@ -25,9 +25,8 @@ import {
 import { resolveColumnReinforcementSection } from '../structural/reinforcement/column-section-outline';
 import { resolveActiveColumnReinforcementForParams } from '../structural/active-reinforcement';
 import { DEFAULT_STIRRUP_TYPE } from '../structural/reinforcement/column-reinforcement-types';
-
-/** Χρώμα οπλισμού (μελετητική σύμβαση — κόκκινο/crimson, αντίθεση με το δομικό μπλε). */
-const REBAR_COLOR = '#c0392b';
+// ADR-471 Slice 6 — χρώμα οπλισμού από το ΕΝΑ SSoT (μελετητική σύμβαση — κόκκινο/crimson).
+import { REBAR_COLOR_HEX as REBAR_COLOR } from '../structural/rebar-catalog';
 /** Ελάχιστο πάχος γραμμής στεφανιού (px) ώστε να φαίνεται σε μικρό zoom. */
 const MIN_STIRRUP_LINE_PX = 0.6;
 /** Ελάχιστη ακτίνα κουκκίδας ράβδου (px). */

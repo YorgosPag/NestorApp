@@ -38,6 +38,11 @@ import {
   MIN_RAILING_DIMENSION_MM,
 } from '../types/railing-types';
 import { mmToSceneUnits } from '../../utils/scene-units';
+// ADR-471 Slice 6 — arc-length sampling από το ΕΝΑ SSoT (`polyline-frame`)· πρώην
+// private `pathLength`/`pointAtDistance`/`angleAtDistance` εδώ (ratchet item — δες
+// pending-ratchet-work). Το railing δουλεύει σε Point3D (xy + datum z): ο sampler
+// τρέχει στην xy προβολή (Point3D ⊂ Point2D) και ο caller ξαναβάζει το z.
+import { samplePolylineFrame, polylineLength } from '../geometry/shared/polyline-frame';
 
 const MM_TO_M = 1 / 1000;
 const RAD_TO_DEG = 180 / Math.PI;
@@ -56,15 +61,9 @@ function resolveRailingPath(
   return params.pathSource.path.map((p) => ({ x: p.x, y: p.y, z }));
 }
 
-/** Running length of a path in canvas units. */
+/** Running length of a path in canvas units (SSoT `polylineLength`). */
 function pathLength(path: RailingPath): number {
-  let total = 0;
-  for (let i = 1; i < path.length; i++) {
-    const dx = path[i].x - path[i - 1].x;
-    const dy = path[i].y - path[i - 1].y;
-    total += Math.sqrt(dx * dx + dy * dy);
-  }
-  return total;
+  return polylineLength(path);
 }
 
 /** Plan angle (deg CCW) of the segment a→b. */
@@ -72,35 +71,18 @@ function segmentAngleDeg(a: Point3D, b: Point3D): number {
   return Math.atan2(b.y - a.y, b.x - a.x) * RAD_TO_DEG;
 }
 
-/** Point at running distance `d` (canvas units) along the path. */
+/** Point at running distance `d` (canvas units) along the path, at elevation `z`. */
 function pointAtDistance(path: RailingPath, d: number, z: number): Point3D {
-  let acc = 0;
-  for (let i = 1; i < path.length; i++) {
-    const dx = path[i].x - path[i - 1].x;
-    const dy = path[i].y - path[i - 1].y;
-    const segLen = Math.sqrt(dx * dx + dy * dy);
-    if (acc + segLen >= d || i === path.length - 1) {
-      const t = segLen === 0 ? 0 : Math.min(1, (d - acc) / segLen);
-      return { x: path[i - 1].x + dx * t, y: path[i - 1].y + dy * t, z };
-    }
-    acc += segLen;
-  }
-  return { ...path[path.length - 1], z };
+  const frame = samplePolylineFrame(path, d);
+  if (!frame) return { ...path[path.length - 1], z };
+  return { x: frame.point.x, y: frame.point.y, z };
 }
 
-/** Angle (deg) of the path at running distance `d`. */
+/** Angle (deg) of the path at running distance `d` (SSoT frame tangent → deg). */
 function angleAtDistance(path: RailingPath, d: number): number {
-  let acc = 0;
-  for (let i = 1; i < path.length; i++) {
-    const dx = path[i].x - path[i - 1].x;
-    const dy = path[i].y - path[i - 1].y;
-    const segLen = Math.sqrt(dx * dx + dy * dy);
-    if (acc + segLen >= d || i === path.length - 1) {
-      return segmentAngleDeg(path[i - 1], path[i]);
-    }
-    acc += segLen;
-  }
-  return 0;
+  const frame = samplePolylineFrame(path, d);
+  if (!frame) return 0;
+  return Math.atan2(frame.tangent.y, frame.tangent.x) * RAD_TO_DEG;
 }
 
 // ─── Posts ───────────────────────────────────────────────────────────────────

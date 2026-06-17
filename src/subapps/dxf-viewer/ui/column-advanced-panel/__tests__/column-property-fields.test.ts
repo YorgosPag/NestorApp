@@ -13,10 +13,19 @@ import {
 } from '../../ribbon/hooks/bridge/column-command-keys';
 
 describe('column-property-fields descriptor (SSoT)', () => {
-  it('έχει τα 4 αναμενόμενα groups με μοναδικά ids', () => {
+  it('έχει τα 5 αναμενόμενα groups με μοναδικά ids', () => {
     const ids = COLUMN_PROPERTY_GROUPS.map((g) => g.id);
-    expect(ids).toEqual(['structural', 'finish', 'envelope', 'material']);
+    expect(ids).toEqual(['structural', 'loads', 'finish', 'envelope', 'material']);
     expect(new Set(ids).size).toBe(ids.length);
+  });
+
+  it('το loads group (ADR-467) δεν είναι gated και είναι όλα read-only readouts', () => {
+    const loads = COLUMN_PROPERTY_GROUPS.find((g) => g.id === 'loads');
+    expect(loads?.visibilityKey).toBeUndefined();
+    for (const field of loads!.fields) {
+      expect(field.readOnly).toBe(true);
+      expect(field.options).toHaveLength(0);
+    }
   });
 
   it('όλα τα fields έχουν μη-κενό commandKey + labelKey, μοναδικά commandKeys', () => {

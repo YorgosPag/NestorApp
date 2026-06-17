@@ -14,16 +14,17 @@
 
 import * as THREE from 'three';
 import type { Point2D } from '../../rendering/types/Types';
+// ADR-471 Slice 6 — χρώμα οπλισμού (crimson) από το ΕΝΑ SSoT· `rebar-catalog` =
+// pure constants/math (ZERO store/Firestore import) → δεν σπάει την purity του module.
+import { REBAR_COLOR_INT } from '../../bim/structural/rebar-catalog';
 
 export const MM_TO_M = 0.001;
-/** Χρώμα οπλισμού (crimson — αντίθεση με το δομικό μπλε, ίδιο με το 2Δ). */
-const REBAR_COLOR = 0xc0392b;
 /**
  * ΚΟΙΝΟ άφωτο υλικό (module singleton). `MeshBasicMaterial` (ΟΧΙ Standard) ⇒
  * ζωγραφίζεται αξιόπιστα στο πρώτο frame (μηδέν async shader compile) + compiled
  * μία φορά, reused σε όλες τις κολώνες ΚΑΙ θεμελιώσεις (μηδέν per-element shader).
  */
-export const REBAR_MATERIAL = new THREE.MeshBasicMaterial({ color: REBAR_COLOR });
+export const REBAR_MATERIAL = new THREE.MeshBasicMaterial({ color: REBAR_COLOR_INT });
 /** Πλευρές κυλίνδρου ράβδου (χαμηλό — λεπτή ράβδος, ελάχιστο geometry). */
 const ROD_RADIAL_SEGMENTS = 6;
 /** Ελάχιστη ακτίνα (scene units) ώστε εκφυλισμένο Ø να μη δίνει μηδενικό geometry. */

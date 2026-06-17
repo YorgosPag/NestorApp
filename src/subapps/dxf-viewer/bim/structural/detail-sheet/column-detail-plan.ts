@@ -31,10 +31,11 @@ import { DEFAULT_STIRRUP_TYPE } from '../reinforcement/column-reinforcement-type
 import { assignColumnBarNumbers } from './column-rebar-bar-marks';
 import { pickScaleDenominator } from './detail-sheet-fit';
 import type { DetailPrimitive, RectMm } from './detail-sheet-types';
+// ADR-471 Slice 6 — χρώμα οπλισμού από το ΕΝΑ SSoT (πρώην inline literal σε 10 αρχεία).
+import { REBAR_COLOR_HEX as REBAR_HEX } from '../rebar-catalog';
 
 // ─── Visual constants (sheet-mm / hex) ───────────────────────────────────────
 const CONCRETE_OUTLINE_HEX = '#b0b0b0';
-const REBAR_HEX = '#c0392b';
 const DIM_HEX = '#333333';
 const CONCRETE_OUTLINE_WIDTH_MM = 0.18;
 const MIN_STIRRUP_WIDTH_MM = 0.3;

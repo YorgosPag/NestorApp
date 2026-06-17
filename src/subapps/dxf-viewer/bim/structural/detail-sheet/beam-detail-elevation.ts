@@ -28,9 +28,10 @@ import { formatBeamStirrupsLabel } from '../reinforcement/beam-reinforcement-com
 import { pickScaleDenominator } from './detail-sheet-fit';
 import { groupSpacingZones, formatSpacingZoneLabel } from './detail-sheet-spacing';
 import type { DetailPrimitive, RectMm } from './detail-sheet-types';
+// ADR-471 Slice 6 — χρώμα οπλισμού από το ΕΝΑ SSoT (πρώην inline literal σε 10 αρχεία).
+import { REBAR_COLOR_HEX as REBAR_HEX } from '../rebar-catalog';
 
 const CONCRETE_OUTLINE_HEX = '#b0b0b0';
-const REBAR_HEX = '#c0392b';
 const DIM_HEX = '#333333';
 const LABEL_HEX = '#444444';
 const CONCRETE_OUTLINE_WIDTH_MM = 0.18;

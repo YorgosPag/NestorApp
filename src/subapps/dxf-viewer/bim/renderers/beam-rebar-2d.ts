@@ -31,9 +31,8 @@ import { resolveActiveBeamReinforcementForEntity } from '../structural/active-re
 import { resolveBeamRebarLayout } from '../structural/reinforcement/beam-rebar-layout';
 import { DEFAULT_STIRRUP_TYPE } from '../structural/reinforcement/beam-reinforcement-types';
 import { samplePolylineFrame } from '../geometry/shared/polyline-frame';
-
-/** Χρώμα οπλισμού (crimson — ίδιο με `column-rebar-2d`· SSoT consolidation → Slice 6). */
-const REBAR_COLOR = '#c0392b';
+// ADR-471 Slice 6 — χρώμα οπλισμού από το ΕΝΑ SSoT (πρώην inline literal σε 10 αρχεία).
+import { REBAR_COLOR_HEX as REBAR_COLOR } from '../structural/rebar-catalog';
 /** Ελάχιστο πάχος γραμμής συνδετήρα (px) ώστε να φαίνεται σε μικρό zoom. */
 const MIN_STIRRUP_LINE_PX = 0.6;
 /** Ελάχιστο πάχος γραμμής διαμήκους ράβδου (px). */

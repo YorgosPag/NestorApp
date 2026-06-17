@@ -25,9 +25,8 @@ import type {
 import { computeFoundationGeometry } from '../geometry/foundation-geometry';
 import { mmToSceneUnits } from '../../utils/scene-units';
 import { resolveActiveFootingReinforcementForParams } from '../structural/active-footing-reinforcement';
-
-/** Χρώμα οπλισμού (ίδια σύμβαση με κολώνα — crimson). */
-const REBAR_COLOR = '#c0392b';
+// ADR-471 Slice 6 — χρώμα οπλισμού από το ΕΝΑ SSoT (ίδια σύμβαση με κολώνα — crimson).
+import { REBAR_COLOR_HEX as REBAR_COLOR } from '../structural/rebar-catalog';
 const MIN_LINE_PX = 0.6;
 
 interface Vec {

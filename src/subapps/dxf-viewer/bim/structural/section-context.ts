@@ -201,6 +201,38 @@ export function resolveActiveBeamReinforcement(
 }
 
 /**
+ * ADR-471 §2 — member-agnostic facade: ο ΕΝΕΡΓΟΣ οπλισμός ΟΠΟΙΟΥΔΗΠΟΤΕ δομικού
+ * μέλους (κολόνα/δοκάρι) με ΜΙΑ κλήση — δρομολογεί στο type-specific
+ * `resolveActive{Column,Beam}Reinforcement`. Function overloads (N.2 — μηδέν cast):
+ * ο caller παίρνει τον ακριβή τύπο (ColumnReinforcement για κολόνα, BeamReinforcement
+ * για δοκάρι) μετά από type-guard narrow. Μη-οπλίσιμο/άλλο μέλος → `undefined`.
+ *
+ * Consumer: organism `reinforcement-checks` (ρ-check/continuity) — ώστε ΟΛΑ τα μέλη
+ * να διαβάζουν το ACTIVE design ομοιόμορφα (auto → φρέσκο code-suggested από την
+ * τρέχουσα γεωμετρία, ΟΧΙ stored snapshot). Pure (provider arg) ⇒ unit-testable.
+ */
+export function resolveActiveMemberReinforcement(
+  entity: ColumnEntity,
+  provider: StructuralCodeProvider,
+): ColumnReinforcement | undefined;
+export function resolveActiveMemberReinforcement(
+  entity: BeamEntity,
+  provider: StructuralCodeProvider,
+): BeamReinforcement | undefined;
+export function resolveActiveMemberReinforcement(
+  entity: Entity,
+  provider: StructuralCodeProvider,
+): ColumnReinforcement | BeamReinforcement | undefined;
+export function resolveActiveMemberReinforcement(
+  entity: Entity,
+  provider: StructuralCodeProvider,
+): ColumnReinforcement | BeamReinforcement | undefined {
+  if (isColumnEntity(entity)) return resolveActiveColumnReinforcement(entity.params, provider);
+  if (isBeamEntity(entity)) return resolveActiveBeamReinforcement(entity, provider);
+  return undefined;
+}
+
+/**
  * Πέδιλο/πεδιλοδοκός/συνδετήρια → discriminated `FootingSectionContext`. pad =
  * ορθογώνιο ίχνος width×length· strip/tie-beam = band πλάτους width κατά τον
  * άξονα start→end (tie-beam ΕΙΝΑΙ δοκός → reuse beam ctx fields).
