@@ -20,8 +20,8 @@ import type { Entity } from '../../types/entities';
 import { isColumnEntity, isBeamEntity, isFoundationEntity, isSlabEntity } from '../../types/entities';
 import type { ColumnEntity, ColumnParams } from '../types/column-types';
 import type { BeamEntity, BeamParams } from '../types/beam-types';
-import type { FoundationEntity, FoundationParams, PadFootingParams } from '../types/foundation-types';
-import type { SlabEntity, SlabParams } from '../types/slab-types';
+import type { FoundationEntity, FoundationParams, PadFootingParams, TieBeamParams } from '../types/foundation-types';
+import type { SlabEntity } from '../types/slab-types';
 import { mmToSceneUnits } from '../../utils/scene-units';
 import { combineSls, combineUls, EN1990_ULS_FACTORS } from './loads/load-combinations';
 import { isZeroMemberLoad, resolveAppliedMemberLoad } from './loads/structural-loads-types';
@@ -30,19 +30,35 @@ import { nominalColumnMomentKnm } from './codes/suggest-reinforcement';
 import { resolveColumnReinforcementSection } from './reinforcement/column-section-outline';
 import type { ColumnReinforcement } from './reinforcement/column-reinforcement-types';
 import type { BeamReinforcement } from './reinforcement/beam-reinforcement-types';
+import type { SlabFoundationReinforcement } from './reinforcement/slab-foundation-reinforcement-types';
+import type { TieBeamReinforcement } from './reinforcement/footing-reinforcement-types';
 import type {
   BeamSectionContext,
   ColumnSectionContext,
   FootingSectionContext,
   SlabFoundationSectionContext,
+  SlabReinforcementKind,
   StructuralCodeProvider,
 } from './codes/structural-code-types';
 
 const M_TO_MM = 1000;
 
-/** True αν η πλάκα είναι εδαφόπλακα/raft (kind foundation/ground) — δέχεται οπλισμό. */
+/** True αν η πλάκα είναι εδαφόπλακα/raft (kind foundation/ground). */
 export function isFoundationSlabEntity(e: Entity): e is SlabEntity {
   return isSlabEntity(e) && (e.kind === 'foundation' || e.kind === 'ground');
+}
+
+/** ADR-476 — True αν η πλάκα είναι **αναρτημένη** (kind floor/ceiling/roof). */
+export function isSuspendedSlabEntity(e: Entity): e is SlabEntity {
+  return isSlabEntity(e) && (e.kind === 'floor' || e.kind === 'ceiling' || e.kind === 'roof');
+}
+
+/**
+ * ADR-476 — δομική οικογένεια οπλισμού της πλάκας: foundation/ground → 'foundation'
+ * (raft, EC2 §9.8.2)· floor/ceiling/roof → 'suspended' (EC2 §9.3.1). ΕΝΑ SSoT mapping.
+ */
+export function resolveSlabReinforcementKind(slab: SlabEntity): SlabReinforcementKind {
+  return slab.kind === 'foundation' || slab.kind === 'ground' ? 'foundation' : 'suspended';
 }
 
 /** Μήκος άξονα (mm) από δύο σημεία mm-world (πεδιλοδοκός/συνδετήρια). */
@@ -209,11 +225,29 @@ export function resolveActiveBeamReinforcement(
 }
 
 /**
+ * ADR-476 (parity με κολόνα/δοκάρι) — **ο «ενεργός» οπλισμός μιας πλάκας**:
+ *   - absent           → `undefined` (δεν έχει οριστεί· κανείς δεν ζωγραφίζει).
+ *   - manual (`!auto`) → το stored design ως έχει (κλειδωμένο, ο χρήστης το όρισε).
+ *   - auto (`auto`)    → **φρέσκο code-suggested design από την ΤΡΕΧΟΥΣΑ γεωμετρία**
+ *                        (πάχος/outline/span/φορτίο) → resize ⇒ real-time re-study.
+ * Διατηρεί το `auto:true` flag. Pure (provider arg) ⇒ unit-testable· οι renderers
+ * χρησιμοποιούν το store-coupled `resolveActiveSlabReinforcementForEntity`.
+ */
+export function resolveActiveSlabReinforcement(
+  slab: SlabEntity,
+  provider: StructuralCodeProvider,
+): SlabFoundationReinforcement | undefined {
+  const r = slab.params.structuralReinforcement;
+  if (!r || !r.auto) return r;
+  const fresh = provider.suggestSlabFoundationReinforcement(buildSlabFoundationSectionContext(slab));
+  return { ...fresh, auto: true };
+}
+
+/**
  * ADR-471 §2 — member-agnostic facade: ο ΕΝΕΡΓΟΣ οπλισμός ΟΠΟΙΟΥΔΗΠΟΤΕ δομικού
- * μέλους (κολόνα/δοκάρι) με ΜΙΑ κλήση — δρομολογεί στο type-specific
- * `resolveActive{Column,Beam}Reinforcement`. Function overloads (N.2 — μηδέν cast):
- * ο caller παίρνει τον ακριβή τύπο (ColumnReinforcement για κολόνα, BeamReinforcement
- * για δοκάρι) μετά από type-guard narrow. Μη-οπλίσιμο/άλλο μέλος → `undefined`.
+ * μέλους (κολόνα/δοκάρι/πλάκα) με ΜΙΑ κλήση — δρομολογεί στο type-specific
+ * `resolveActive{Column,Beam,Slab}Reinforcement`. Function overloads (N.2 — μηδέν cast):
+ * ο caller παίρνει τον ακριβή τύπο μετά από type-guard narrow. Μη-οπλίσιμο μέλος → `undefined`.
  *
  * Consumer: organism `reinforcement-checks` (ρ-check/continuity) — ώστε ΟΛΑ τα μέλη
  * να διαβάζουν το ACTIVE design ομοιόμορφα (auto → φρέσκο code-suggested από την
@@ -228,16 +262,58 @@ export function resolveActiveMemberReinforcement(
   provider: StructuralCodeProvider,
 ): BeamReinforcement | undefined;
 export function resolveActiveMemberReinforcement(
-  entity: Entity,
+  entity: SlabEntity,
   provider: StructuralCodeProvider,
-): ColumnReinforcement | BeamReinforcement | undefined;
+): SlabFoundationReinforcement | undefined;
 export function resolveActiveMemberReinforcement(
   entity: Entity,
   provider: StructuralCodeProvider,
-): ColumnReinforcement | BeamReinforcement | undefined {
+): ColumnReinforcement | BeamReinforcement | SlabFoundationReinforcement | undefined;
+export function resolveActiveMemberReinforcement(
+  entity: Entity,
+  provider: StructuralCodeProvider,
+): ColumnReinforcement | BeamReinforcement | SlabFoundationReinforcement | undefined {
   if (isColumnEntity(entity)) return resolveActiveColumnReinforcement(entity.params, provider);
   if (isBeamEntity(entity)) return resolveActiveBeamReinforcement(entity, provider);
+  if (isSlabEntity(entity)) return resolveActiveSlabReinforcement(entity, provider);
+  // ADR-477 — συνδετήρια δοκός = δοκός: ENΕΡΓΟΣ οπλισμός (auto-aware, parity κολόνας/δοκού)·
+  // επιστρέφει `TieBeamReinforcement` (⊂ BeamReinforcement → assignable στο union).
+  if (isFoundationEntity(entity) && entity.params.kind === 'tie-beam') {
+    return resolveActiveTieBeamReinforcement(entity.params, provider);
+  }
   return undefined;
+}
+
+/**
+ * ADR-477 (parity με δοκάρι) — **ο «ενεργός» οπλισμός μιας συνδετήριας δοκού** = το design
+ * που πρέπει να σχεδιαστεί/μετρηθεί/ελεγχθεί ΤΩΡΑ:
+ *   - absent / non-auto → το stored design ως έχει (απών → undefined· manual → κλειδωμένο).
+ *   - auto (`auto`)     → **φρέσκο code-suggested design από την ΤΡΕΧΟΥΣΑ γεωμετρία** (άνοιγμα =
+ *                         derived axis start→end) → resize ⇒ real-time επανυπολογισμός (Revit «by code»).
+ *
+ * Μια συνδετήρια δοκός ΕΙΝΑΙ δοκός → ο suggester delegate-άρει στο beam· εδώ διατηρούμε τις
+ * καθαρά-detailing προτιμήσεις (τύπος συνδετήρα + σκέλη) ώστε το resize να μην τις σβήνει.
+ * Pure (provider arg) ⇒ unit-testable· οι renderers χρησιμοποιούν το store-coupled
+ * `resolveActiveFootingReinforcementForParams` (active-footing-reinforcement.ts).
+ */
+export function resolveActiveTieBeamReinforcement(
+  params: TieBeamParams,
+  provider: StructuralCodeProvider,
+): TieBeamReinforcement | undefined {
+  const r = params.reinforcement;
+  if (!r || r.kind !== 'tie-beam') return undefined;
+  if (!r.auto) return r;
+  const fresh = provider.suggestFootingReinforcement(buildFootingSectionContextFromParams(params));
+  if (fresh.kind !== 'tie-beam') return r;
+  return {
+    ...fresh,
+    auto: true,
+    stirrups: {
+      ...fresh.stirrups,
+      type: r.stirrups.type,
+      ...(r.stirrups.legs ? { legs: r.stirrups.legs } : {}),
+    },
+  };
 }
 
 /**
@@ -246,7 +322,15 @@ export function resolveActiveMemberReinforcement(
  * άξονα start→end (tie-beam ΕΙΝΑΙ δοκός → reuse beam ctx fields).
  */
 export function buildFootingSectionContext(footing: FoundationEntity): FootingSectionContext {
-  const p = footing.params;
+  return buildFootingSectionContextFromParams(footing.params);
+}
+
+/**
+ * Params-based variant (το context εξαρτάται ΜΟΝΟ από params — geometry-is-SSoT· ο
+ * άξονας start→end φέρει το άνοιγμα). Το χρησιμοποιεί ο tie-beam active resolver
+ * (render path) που δεν κρατά entity. Mirror του `buildColumnSectionContextFromParams`.
+ */
+export function buildFootingSectionContextFromParams(p: FoundationParams): FootingSectionContext {
   switch (p.kind) {
     case 'pad':
       return {
@@ -277,9 +361,11 @@ export function buildFootingSectionContext(footing: FoundationEntity): FootingSe
 }
 
 /**
- * Εδαφόπλακα/raft → `SlabFoundationSectionContext`. bbox dims από το `outline`
- * (canvas units → mm μέσω `sceneUnits`, geometry-is-SSoT — όπως ο graph footprint).
- * Οι σχάρες τρέχουν στο περιβάλλον ορθογώνιο (πλακοειδής σύμβαση).
+ * Πλάκα → `SlabFoundationSectionContext` (universal, ADR-459 Φ4e/E3 + ADR-476). bbox
+ * dims από το `outline` (canvas units → mm μέσω `sceneUnits`, geometry-is-SSoT — όπως ο
+ * graph footprint). Οι σχάρες τρέχουν στο περιβάλλον ορθογώνιο (πλακοειδής σύμβαση).
+ * kind-aware: foundation vs suspended· οι αναρτημένες παίρνουν span (από
+ * `geometry.maxFreeSpanM`) + φορτίο σχεδιασμού (q_Ed) για strength-driven κάτω σχάρα.
  */
 export function buildSlabFoundationSectionContext(slab: SlabEntity): SlabFoundationSectionContext {
   const perScene = mmToSceneUnits(slab.params.sceneUnits ?? 'mm');
@@ -293,123 +379,35 @@ export function buildSlabFoundationSectionContext(slab: SlabEntity): SlabFoundat
   }
   const widthMm = verts.length > 0 ? (maxX - minX) / perScene : 0;
   const lengthMm = verts.length > 0 ? (maxY - minY) / perScene : 0;
+  const grossAreaMm2 = Math.max(0, widthMm) * Math.max(0, lengthMm);
+  const kind = resolveSlabReinforcementKind(slab);
   return {
     widthMm,
     lengthMm,
     thicknessMm: slab.params.thickness,
-    grossAreaMm2: Math.max(0, widthMm) * Math.max(0, lengthMm),
+    grossAreaMm2,
+    kind,
+    maxFreeSpanMm: Math.max(0, slab.geometry.maxFreeSpanM) * M_TO_MM,
+    concreteGrade: slab.params.concreteGrade ?? DEFAULT_CONCRETE_GRADE,
+    ...resolveSlabDesignLoad(slab, grossAreaMm2),
   };
 }
 
-/** Params οποιουδήποτε δομικού μέλους που δέχεται οπλισμό. */
-export type ReinforceableParams = ColumnParams | BeamParams | FoundationParams | SlabParams;
-
 /**
- * Patch params ενός μέλους για auto-reinforce. `prev` = τα τρέχοντα params
- * (ΧΩΡΙΣ κλειδί `reinforcement` — idempotent skip το εγγυάται)· `next` = με το
- * code-suggested `reinforcement`. Το `prev` κρατιέται αυτούσιο (ΟΧΙ explicit
- * `reinforcement: undefined`) ώστε το undo→persist να μη σπάει το Firestore.
+ * ADR-476 — φορτίο σχεδιασμού επιφανείας q_Ed (kPa = kN/m², ULS) μιας **αναρτημένης**
+ * πλάκας από το tributary `appliedLoad` (ADR-467): q_Ed = W_Ed(ULS)[kN] / area[m²].
+ * Μηδενικό/απών φορτίο ή μη-θετικό εμβαδό ⇒ κενό ⇒ min-detailing (μηδέν regression,
+ * όπως κολόνα/δοκάρι). Οι εδαφόπλακες αγνοούν το q (raft = εδαφική αντίδραση, §9.8.2).
  */
-export interface ReinforcePatch {
-  readonly prev: ReinforceableParams;
-  readonly next: ReinforceableParams;
-}
-
-/**
- * ADR-472 S3 — Convergence guard: αλλάζει **ουσιωδώς** ο διαμήκης οπλισμός κολόνας;
- * Σύγκριση των discrete πεδίων που οδηγεί η strength design (πλήθος + διάμετρος ράβδων)
- * — exact, μηδέν float tolerance (η As είναι derived count·area, άρα count+Ø = ΑΚΡΙΒΗΣ
- * ταυτότητα της πρότασης). Ίδιο φορτίο → ίδια πρόταση → `false` → μηδέν patch → μηδέν
- * undo entry → μηδέν event storm (anti-oscillation). Καθαρά-detailing prefs (τύπος
- * συνδετήρα/cross-tie) ΔΕΝ θεωρούνται «ουσιώδης» αλλαγή — δεν προκαλούν re-study.
- */
-export function columnReinforcementMateriallyDiffers(
-  a: ColumnReinforcement,
-  b: ColumnReinforcement,
-): boolean {
-  return (
-    a.longitudinal.count !== b.longitudinal.count ||
-    a.longitudinal.diameterMm !== b.longitudinal.diameterMm
-  );
-}
-
-/**
- * ADR-472 S3 — όπως το column variant, για δοκάρι: σύγκριση κάτω+άνω στρώσης (πλήθος +
- * διάμετρος). Η κάμψη `M_Ed = w·L²/c` οδηγεί το `bottom`/`top` count·Ø — exact compare.
- */
-export function beamReinforcementMateriallyDiffers(
-  a: BeamReinforcement,
-  b: BeamReinforcement,
-): boolean {
-  return (
-    a.bottom.count !== b.bottom.count ||
-    a.bottom.diameterMm !== b.bottom.diameterMm ||
-    a.top.count !== b.top.count ||
-    a.top.diameterMm !== b.top.diameterMm
-  );
-}
-
-/**
- * Code-suggested οπλισμός → `{prev, next}` patch (SSoT dispatcher κολόνα/δοκάρι/πέδιλο).
- * Επιστρέφει `null` αν το entity δεν είναι δομικό μέλος. Geometry-neutral — additive,
- * δεν αλλάζει διαστάσεις.
- *
- * ADR-472 S3 (stale-intent invalidation) — κολόνα/δοκάρι:
- *   - absent             → νέα code-suggested πρόταση (`auto:true`).
- *   - manual (`!auto`)   → `null` (Revit: χειροκίνητη υπέρβαση κλειδωμένη, user wins).
- *   - `auto:true`        → re-derive από ΤΡΕΧΟΥΣΑ γεωμετρία+φορτίο (SSoT `resolveActive*`)·
- *                          patch ΜΟΝΟ αν `materiallyDiffers` (convergence guard).
- * Πέδιλα/εδαφόπλακα: αμετάβλητο idempotent skip (re-size μέσω ADR-464).
- */
-export function buildReinforcePatch(
-  entity: Entity,
-  provider: StructuralCodeProvider,
-): ReinforcePatch | null {
-  if (isColumnEntity(entity)) {
-    const stored = entity.params.reinforcement;
-    if (stored && !stored.auto) return null; // manual override → ΠΟΤΕ overwrite
-    const fresh: ColumnReinforcement = stored
-      ? resolveActiveColumnReinforcement(entity.params, provider) ?? stored
-      : { ...provider.suggestColumnReinforcement(buildColumnSectionContext(entity)), auto: true };
-    if (stored && !columnReinforcementMateriallyDiffers(stored, fresh)) return null;
-    return { prev: entity.params, next: { ...entity.params, reinforcement: fresh } };
-  }
-  if (isBeamEntity(entity)) {
-    const stored = entity.params.reinforcement;
-    if (stored && !stored.auto) return null; // manual override → ΠΟΤΕ overwrite (parity με κολόνα)
-    const fresh: BeamReinforcement = stored
-      ? resolveActiveBeamReinforcement(entity, provider) ?? stored
-      : { ...provider.suggestBeamReinforcement(buildBeamSectionContext(entity)), auto: true };
-    if (stored && !beamReinforcementMateriallyDiffers(stored, fresh)) return null;
-    return { prev: entity.params, next: { ...entity.params, reinforcement: fresh } };
-  }
-  if (isFoundationEntity(entity)) return buildFoundationReinforcePatch(entity, provider);
-  if (isFoundationSlabEntity(entity)) {
-    if (entity.params.structuralReinforcement) return null;
-    const r = provider.suggestSlabFoundationReinforcement(buildSlabFoundationSectionContext(entity));
-    return { prev: entity.params, next: { ...entity.params, structuralReinforcement: r } };
-  }
-  return null;
-}
-
-/**
- * Foundation per-kind narrowing — το `suggestFootingReinforcement` επιστρέφει
- * discriminated `FootingReinforcement`· ο discriminator ταιριάζει με το ctx (άρα
- * με το `params.kind`), αλλά ο compiler το διασφαλίζει ρητά (μηδέν cast, N.2).
- */
-function buildFoundationReinforcePatch(
-  footing: FoundationEntity,
-  provider: StructuralCodeProvider,
-): ReinforcePatch | null {
-  const p = footing.params;
-  if (p.reinforcement) return null;
-  const r = provider.suggestFootingReinforcement(buildFootingSectionContext(footing));
-  switch (p.kind) {
-    case 'pad':
-      return r.kind === 'pad' ? { prev: p, next: { ...p, reinforcement: r } } : null;
-    case 'strip':
-      return r.kind === 'strip' ? { prev: p, next: { ...p, reinforcement: r } } : null;
-    case 'tie-beam':
-      return r.kind === 'tie-beam' ? { prev: p, next: { ...p, reinforcement: r } } : null;
-  }
+function resolveSlabDesignLoad(
+  slab: SlabEntity,
+  grossAreaMm2: number,
+): Pick<SlabFoundationSectionContext, 'designLoadKpa'> {
+  if (slab.kind === 'foundation' || slab.kind === 'ground') return {};
+  const areaM2 = grossAreaMm2 / 1e6;
+  if (areaM2 <= 0) return {};
+  const load = resolveAppliedMemberLoad(slab.params.appliedLoad);
+  if (isZeroMemberLoad(load)) return {};
+  const totalUlsKn = combineUls(load, EN1990_ULS_FACTORS).axialKn;
+  return { designLoadKpa: totalUlsKn / areaM2 };
 }

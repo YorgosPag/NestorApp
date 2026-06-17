@@ -108,10 +108,7 @@ export function commitStairGripDrag(
   if (candidate.type !== 'stair' || !candidate.params) return;
   const stair = candidate as StairEntity;
   const originalParams = stair.params;
-  const currentPos: Point2D = {
-    x: grip.position.x + delta.x,
-    y: grip.position.y + delta.y,
-  };
+  const currentPos: Point2D = { x: grip.position.x + delta.x, y: grip.position.y + delta.y };
   const newParams = applyStairGripDrag(grip.stairGripKind, {
     originalParams,
     delta,
@@ -329,9 +326,14 @@ export function commitBeamGripDrag(
     ...(useRotatePivot ? { pivot: rotateCtx.pivot! } : {}),
   });
   if (newParams === originalParams) return;
+  // ADR-475 — grip resize ΔΙΑΤΟΜΗΣ (depth/width) = override → lock της auto-size
+  // (Revit). Endpoint/rotation grips (span) κρατούν το auto-size ενεργό (re-size on span).
+  const sectionChanged =
+    newParams.width !== originalParams.width || newParams.depth !== originalParams.depth;
+  const finalParams = sectionChanged ? { ...newParams, autoSized: false } : newParams;
   const command = new UpdateBeamParamsCommand(
     grip.entityId,
-    newParams,
+    finalParams,
     originalParams,
     sceneManager,
     true,

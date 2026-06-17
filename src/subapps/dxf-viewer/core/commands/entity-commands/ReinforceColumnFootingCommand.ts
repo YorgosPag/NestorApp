@@ -21,7 +21,7 @@ import type { ICommand, ISceneManager, SerializedCommand } from '../interfaces';
 import type { StructuralCodeProvider } from '../../../bim/structural/codes/structural-code-types';
 import type { FoundationCrossLevelWriter } from '../../../bim/foundations/foundation-cross-level-writer';
 import type { FoundationEntity, FoundationParams } from '../../../bim/types/foundation-types';
-import { buildReinforcePatch } from '../../../bim/structural/section-context';
+import { buildReinforcePatch } from '../../../bim/structural/reinforce-patch';
 import { AutoReinforceOrganismCommand } from './AutoReinforceOrganismCommand';
 import { generateEntityId } from '../../../systems/entity-creation/utils';
 

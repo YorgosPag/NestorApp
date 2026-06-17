@@ -225,20 +225,21 @@ function suggestWallIntent(
 
 // ─── Beam suggester (ADR-459 Phase 4a) ───────────────────────────────────────
 
-/** Μελετητική ενεργός διατομή d ≈ 0.9·h (cover/bar-agnostic seed για ρ). */
-const BEAM_EFFECTIVE_DEPTH_FACTOR = 0.9;
+/** Μελετητική ενεργός διατομή d ≈ 0.9·h (cover/bar-agnostic seed για ρ). SSoT — reuse ADR-475 member-sizing. */
+export const BEAM_EFFECTIVE_DEPTH_FACTOR = 0.9;
 
 /** EC8 §5.4.3.1.2(5) — ο άνω οπλισμός κατά μήκος ≥ 0.25·κάτω (αναρτήρες). */
 const BEAM_TOP_TO_BOTTOM_RATIO = 0.25;
 
-/** Μοχλοβραχίονας εσωτερικών δυνάμεων z ≈ 0.9·d (απλοποιημένο EC2 §6.1 κάμψη). */
-const BEAM_LEVER_ARM_FACTOR = 0.9;
+/** Μοχλοβραχίονας εσωτερικών δυνάμεων z ≈ 0.9·d (απλοποιημένο EC2 §6.1 κάμψη). SSoT — reuse ADR-475. */
+export const BEAM_LEVER_ARM_FACTOR = 0.9;
 
 /**
  * Συντελεστής ροπής ανοίγματος M_Ed = w·L²/c υπό ομοιόμορφο φορτίο (UDL), ανά
  * συνθήκη στήριξης: αμφιέρειστη 8· αμφίπακτη 12 (ροπή στήριξης)· πρόβολος 2 (πάκτωση).
+ * SSoT — reuse ADR-475 member-sizing (καμπτική επάρκεια διατομής).
  */
-function spanMomentDivisor(supportType: BeamSupportType): number {
+export function spanMomentDivisor(supportType: BeamSupportType): number {
   switch (supportType) {
     case 'cantilever':
       return 2;
@@ -399,13 +400,39 @@ export function suggestFootingReinforcementFrom(
   };
 }
 
-// ─── Foundation-slab / raft suggester (ADR-459 Φ4e/E3) ───────────────────────
+// ─── Slab suggester — universal (ADR-459 Φ4e/E3 + ADR-476) ───────────────────
+
+/** Μοχλοβραχίονας πλάκας z ≈ 0.9·d (απλοποιημένο EC2 §6.1 κάμψη, mirror δοκού). */
+const SLAB_LEVER_ARM_FACTOR = 0.9;
 
 /**
- * Επιλέγει ελάχιστο-έγκυρο οπλισμό εδαφόπλακας: δι-διευθυντική **κάτω** σχάρα
- * (strength-governed, ρ ≥ ρ_min ανά μέτρο) + **άνω** σχάρα (hogging — ίδια ελάχιστη
- * διάταξη, συντηρητικό & πρακτικό). Reuse του SSoT `resolveMatMesh` (μηδέν duplicate,
- * N.0.2). Καλείται από κάθε provider μέσα στο `suggestSlabFoundationReinforcement`.
+ * ADR-476 — απαιτούμενη As ανά μέτρο πλάτους **αναρτημένης** πλάκας από καμπτική
+ * αντοχή (EC2 §6.1, μοχλοβραχίονας z=0.9·d): λωρίδα 1m υπό ομοιόμορφο επιφανειακό
+ * φορτίο q_Ed (kPa = kN/m²) → M_Ed = q_Ed·L²/8 (kNm/m), A_s = M_Ed/(z·f_yd).
+ * Επιστρέφει 0 χωρίς φορτίο/άνοιγμα ⇒ ο ρ_min κυριαρχεί (μηδέν regression). Συντηρητικό
+ * αμφιέρειστο μοντέλο (÷8)· συνέχεια/δι-διευθυντική κατανομή = DEFER (ADR-476 §4).
+ */
+function asStrengthSlabPerMetreMm2(
+  ctx: SlabFoundationSectionContext,
+  dEffMm: number,
+): number {
+  const qEd = ctx.designLoadKpa ?? 0;
+  const spanMm = ctx.maxFreeSpanMm ?? 0;
+  if (qEd <= 0 || spanMm <= 0 || dEffMm <= 0) return 0;
+  const spanM = spanMm / 1000;
+  const mEdNmmPerM = ((qEd * spanM * spanM) / 8) * 1e6; // kNm/m → N·mm/m
+  return mEdNmmPerM / (SLAB_LEVER_ARM_FACTOR * dEffMm * rebarFydMpa());
+}
+
+/**
+ * Επιλέγει ελάχιστο-έγκυρο οπλισμό πλάκας (ΟΛΑ τα είδη — kind-aware, ADR-476). Reuse
+ * του SSoT `resolveMatMesh` (μηδέν duplicate, N.0.2). Καλείται από κάθε provider.
+ *
+ *   - **εδαφόπλακα/raft** (`kind` foundation/absent): δι-διευθυντική **κάτω** + **άνω**
+ *     σχάρα, ίδια ελάχιστη διάταξη (ρ ≥ ρ_min ανά μέτρο· EC2 §9.8.2 — soil push-up).
+ *   - **αναρτημένη** (`kind` suspended): **κάτω** σχάρα ανοίγματος = max(ρ_min, strength
+ *     από q·L²/8)· **άνω** σχάρα στηρίξεων = ελάχιστη διάταξη (detailing/anti-crack,
+ *     preliminary — συνέχεια/hogging από ανάλυση = DEFER ADR-476 §4).
  */
 export function suggestSlabFoundationReinforcementFrom(
   provider: StructuralCodeProvider,
@@ -414,8 +441,25 @@ export function suggestSlabFoundationReinforcementFrom(
   const limits = provider.slabFoundationReinforcementLimits(ctx);
   const seedDia = nextRebarDiameterMm(limits.minBarDiameterMm);
   const dEff = footingEffectiveDepthMm(ctx.thicknessMm, limits.nominalCoverMm);
-  const asPerMetre = limits.minRatio * 1000 * dEff;
-  const mesh = resolveMatMesh(asPerMetre, seedDia, limits.maxBarSpacingMm);
+  const asMinPerMetre = limits.minRatio * 1000 * dEff;
+
+  if (ctx.kind === 'suspended') {
+    const asBottomPerMetre = Math.max(asMinPerMetre, asStrengthSlabPerMetreMm2(ctx, dEff));
+    const bottom = resolveMatMesh(asBottomPerMetre, seedDia, limits.maxBarSpacingMm);
+    const top = resolveMatMesh(asMinPerMetre, seedDia, limits.maxBarSpacingMm);
+    const bottomLayer = { diameterMm: bottom.diameterMm, spacingMm: bottom.spacingMm };
+    const topLayer = { diameterMm: top.diameterMm, spacingMm: top.spacingMm };
+    return {
+      bottomMeshX: bottomLayer,
+      bottomMeshY: bottomLayer,
+      topMeshX: topLayer,
+      topMeshY: topLayer,
+      coverMm: limits.nominalCoverMm,
+    };
+  }
+
+  // foundation/ground — δι-διευθυντική top+bottom, ίδια ελάχιστη διάταξη.
+  const mesh = resolveMatMesh(asMinPerMetre, seedDia, limits.maxBarSpacingMm);
   const layer = { diameterMm: mesh.diameterMm, spacingMm: mesh.spacingMm };
   return {
     bottomMeshX: layer,

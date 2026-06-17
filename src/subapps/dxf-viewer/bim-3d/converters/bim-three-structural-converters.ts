@@ -36,6 +36,8 @@ import { applyStructuralCoreVisibility3D } from './structural-core-visibility-3d
 import { buildColumnRebarCage } from './column-rebar-3d';
 // ADR-471 Slice 3 — 3Δ κλωβός οπλισμού δοκού (longitudinal· κοινό geometry SSoT με το 2Δ).
 import { buildBeamRebarCage } from './beam-rebar-3d';
+// ADR-476 — 3Δ κλωβός οπλισμού πλάκας (δι-διευθυντική σχάρα κάτω+άνω· κοινό SSoT με το 2Δ).
+import { buildSlabRebarCage } from './slab-rebar-3d';
 import { isWallColumnKind } from '../../bim/columns/column-from-faces';
 import type { ColumnTopProfile, ColumnBaseProfile } from '../../bim/geometry/column-vertical-profile';
 import { sceneUnitsToMeters } from '../../utils/scene-units';
@@ -365,6 +367,34 @@ export function beamToMesh(
 
 // ── Slab ──────────────────────────────────────────────────────────────────────
 
+/**
+ * ADR-476 — προσθέτει τον κλωβό οπλισμού πλάκας (δι-διευθυντική σχάρα κάτω+άνω) στο ήδη
+ * συντεθειμένο slab result. Mirror του `attachBeamRebar`: επιστρέφει το ίδιο αντικείμενο
+ * όταν ο οπλισμός είναι ανενεργός (view gate / χωρίς `structuralReinforcement`).
+ * `bottomFaceY` = κάτω παρειά πλάκας (= `mesh.position.y` → ίδιο datum, ευθυγράμμιση).
+ * Gate μόνο στον δικό του διακόπτη `showReinforcement` (ADR-470 precedence).
+ */
+function attachSlabRebar(
+  composed: THREE.Mesh | THREE.Group,
+  slab: SlabEntity,
+  bottomFaceY: number,
+  levelId: string | undefined,
+): THREE.Mesh | THREE.Group {
+  if (!isStructuralComponentVisible('reinforcement', slab)) return composed;
+  const cage = buildSlabRebarCage(slab, bottomFaceY, levelId);
+  if (!cage) return composed;
+  if (composed instanceof THREE.Group) {
+    composed.add(cage);
+    return composed;
+  }
+  const group = new THREE.Group();
+  group.add(composed);
+  group.add(cage);
+  group.userData['bimId'] = slab.id;
+  group.userData['bimType'] = 'slab';
+  return group;
+}
+
 export function slabToMesh(
   slab: SlabEntity,
   openings: readonly SlabOpeningEntity[] = [],
@@ -404,6 +434,9 @@ export function slabToMesh(
   mesh.position.y = hangDownMeshY(floorElevationMm, slabTopMm, slab.params.thickness * MM_TO_M, buildingBaseElevationM);
   const tagged = tagMesh(mesh, slab.id, 'slab', matId, levelId);
   attachEdgesProjection(tagged, 'slab', 'common-edges');
-  // ADR-470 — core gate: κρύβει το σώμα πλάκας αν ανενεργό.
-  return applyStructuralCoreVisibility3D(tagged, tagged, slab);
+  // ADR-470 — core gate: κρύβει το σώμα πλάκας αν ανενεργό (ο οπλισμός μένει ορατός).
+  // ADR-476 — κλωβός σχάρας (κάτω+άνω) στην κάτω παρειά (mesh.position.y), gated `showReinforcement`.
+  return applyStructuralCoreVisibility3D(
+    attachSlabRebar(tagged, slab, mesh.position.y, levelId), tagged, slab,
+  );
 }

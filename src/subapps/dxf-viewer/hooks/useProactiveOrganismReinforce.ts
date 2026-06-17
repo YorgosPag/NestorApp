@@ -40,6 +40,7 @@ const PROACTIVE_REINFORCE_EVENTS: readonly DrawingEventType[] = [
   'bim:column-params-updated',
   'bim:beam-params-updated',
   'bim:foundation-params-updated',
+  'bim:slab-params-updated', // ADR-476 — αλλαγή πάχους/outline πλάκας → re-study σχάρας
   'bim:entities-moved',
   'bim:columns-from-grid',
   'bim:beams-from-grid',
@@ -63,6 +64,7 @@ const GEOMETRY_EDIT_TRIGGERS: ReadonlySet<DrawingEventType> = new Set([
   'bim:column-params-updated',
   'bim:beam-params-updated',
   'bim:foundation-params-updated',
+  'bim:slab-params-updated', // ADR-476 — grip/ribbon edit πλάκας = atomic undo group
   'bim:entities-moved',
 ]);
 

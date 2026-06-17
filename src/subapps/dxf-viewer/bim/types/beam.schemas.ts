@@ -115,6 +115,8 @@ export const BeamParamsSchema = z
     envelopeFunction: EnvelopeFunctionSchema.optional(),
     // ─── ADR-459 Phase 4a — οπλισμός δοκού ────────────────────────────────────
     reinforcement: BeamReinforcementSchema.optional(),
+    // ─── ADR-475 — auto διαστασιολόγηση διατομής (lock flag) ──────────────────
+    autoSized: z.boolean().optional(),
   })
   .strict();
 

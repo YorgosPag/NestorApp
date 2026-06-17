@@ -49,8 +49,15 @@ export function useBeamParamsDispatcher(
         levelManager.setLevelScene,
         levelManager.currentLevelId,
       );
+      // ADR-475 — χειροκίνητη αλλαγή ΔΙΑΤΟΜΗΣ (depth/width) = override → lock της auto-size
+      // (Revit). Άλλες αλλαγές (supportType/material/…) κρατούν το auto-size ενεργό.
+      const sectionChanged =
+        nextParams.width !== beam.params.width || nextParams.depth !== beam.params.depth;
+      const finalParams: BeamParams = sectionChanged
+        ? { ...nextParams, autoSized: false }
+        : nextParams;
       executeCommand(
-        new UpdateBeamParamsCommand(beam.id, nextParams, beam.params, sm, false),
+        new UpdateBeamParamsCommand(beam.id, finalParams, beam.params, sm, false),
       );
       EventBus.emit('bim:beam-params-updated', { beamId: beam.id });
     },

@@ -27,8 +27,7 @@ import type { ICommand } from '../core/commands/interfaces';
 import { EventBus } from '../systems/events/EventBus';
 import { LevelSceneManagerAdapter } from '../systems/entity-creation/LevelSceneManagerAdapter';
 import { AutoReinforceOrganismCommand } from '../core/commands/entity-commands/AutoReinforceOrganismCommand';
-import { isColumnEntity, isBeamEntity, isFoundationEntity } from '../types/entities';
-import { isFoundationSlabEntity } from '../bim/structural/section-context';
+import { isColumnEntity, isBeamEntity, isFoundationEntity, isSlabEntity } from '../types/entities';
 import type { Entity } from '../types/entities';
 import type { SceneModel } from '../types/scene';
 import type { StructuralCodeProvider } from '../bim/structural/codes/structural-code-types';
@@ -39,9 +38,9 @@ export interface ReinforceLevelManager {
   setLevelScene: (levelId: string, scene: SceneModel) => void;
 }
 
-/** Δομικό μέλος που δέχεται οπλισμό (κολόνα/δοκάρι/πέδιλο/εδαφόπλακα — ADR-459 Φ4e/E3). */
+/** Δομικό μέλος που δέχεται οπλισμό (κολόνα/δοκάρι/πέδιλο/πλάκα — ADR-459 Φ4e/E3 + ADR-476). */
 export function isReinforceable(e: Entity): boolean {
-  return isColumnEntity(e) || isBeamEntity(e) || isFoundationEntity(e) || isFoundationSlabEntity(e);
+  return isColumnEntity(e) || isBeamEntity(e) || isFoundationEntity(e) || isSlabEntity(e);
 }
 
 /**

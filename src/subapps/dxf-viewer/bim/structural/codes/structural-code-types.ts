@@ -126,6 +126,12 @@ export interface BeamSectionContext {
    * συμπεριφορά). Παρόν ⇒ `As,κάτω = max(ρ_min·b·d, strength(M_Ed))`, M_Ed = w·L²/c.
    */
   readonly designLineLoadKnM?: number;
+  /**
+   * ADR-475 — κατηγορία σκυροδέματος (για f_cd στον έλεγχο διάτμησης V_Rd,max κατά
+   * την αυτόματη διαστασιολόγηση διατομής). Absent ⇒ default code grade. Δεν αφορά
+   * τον οπλισμό (ο οπλισμός είναι steel-driven) — μόνο το member-sizing.
+   */
+  readonly concreteGrade?: ConcreteGrade;
 }
 
 /**
@@ -243,9 +249,19 @@ export interface FootingDesignFactors {
 // ─── Foundation-slab / raft (ADR-459 Φ4e/E3) ─────────────────────────────────
 
 /**
- * Section context a code provider needs for a FOUNDATION-SLAB (raft / εδαφόπλακα,
- * `SlabEntity` kind foundation/ground). bbox dims (πλακοειδής σύμβαση — οι σχάρες
- * τρέχουν στο περιβάλλον ορθογώνιο) + πάχος + ακαθάριστο εμβαδό περιγράμματος.
+ * ADR-476 — δομική «οικογένεια» οπλισμού πλάκας: `foundation` (raft/εδαφόπλακα, EC2
+ * §9.8.2 — top+bottom πλήρης) ή `suspended` (αναρτημένη floor/ceiling/roof, EC2 §9.3.1
+ * — κάτω ανοίγματος + άνω στηρίξεων). Καθορίζει τα όρια (cover/βήμα) + τη λογική As.
+ */
+export type SlabReinforcementKind = 'foundation' | 'suspended';
+
+/**
+ * Section context a code provider needs for a SLAB (εδαφόπλακα ή αναρτημένη,
+ * ADR-459 Φ4e/E3 + ADR-476). bbox dims (πλακοειδής σύμβαση — οι σχάρες τρέχουν στο
+ * περιβάλλον ορθογώνιο) + πάχος + ακαθάριστο εμβαδό. Τα load-aware πεδία είναι
+ * optional (absent ⇒ min-detailing μόνο, μηδέν regression — όπως κολόνα/δοκάρι).
+ *
+ * Όνομα `SlabFoundationSectionContext` διατηρείται ιστορικά (callers· βλ. ADR-476).
  */
 export interface SlabFoundationSectionContext {
   /** Πλάτος bbox κατά X (mm). */
@@ -256,6 +272,15 @@ export interface SlabFoundationSectionContext {
   readonly thicknessMm: number;
   /** Ακαθάριστο εμβαδό περιγράμματος (mm²). */
   readonly grossAreaMm2: number;
+  // ─── ADR-476 — kind-aware (όλα optional· absent ⇒ foundation behavior) ────────
+  /** Δομική οικογένεια πλάκας. Absent ⇒ 'foundation' (μηδέν regression). */
+  readonly kind?: SlabReinforcementKind;
+  /** Ελεύθερο άνοιγμα L (mm) — strength As αναρτημένης (M_Ed = q·L²/8). Absent ⇒ min-detailing. */
+  readonly maxFreeSpanMm?: number;
+  /** Φορτίο σχεδιασμού επιφανείας q_Ed (kPa = kN/m², ULS) — strength As αναρτημένης. Absent ⇒ min. */
+  readonly designLoadKpa?: number;
+  /** Κατηγορία σκυροδέματος (DEFER — για μελλοντικό f_cd σε strength). Absent ⇒ default code grade. */
+  readonly concreteGrade?: ConcreteGrade;
 }
 
 /**
@@ -305,6 +330,13 @@ export interface StructuralCodeProvider {
   ): BeamReinforcementLimits;
   /** ADR-459 Phase 4a — προτεινόμενος ελάχιστος-έγκυρος οπλισμός δοκαριού. */
   suggestBeamReinforcement(ctx: BeamSectionContext): BeamReinforcement;
+  /**
+   * ADR-475 — μέγιστος επιτρεπτός λόγος ανοίγματος/**ενεργού** βάθους L/d για έλεγχο
+   * λειτουργικότητας (βέλος, EC2 §7.4.2 Table 7.4N). Εξαρτάται από τη συνθήκη στήριξης
+   * (basic l/d × structural-system factor K): αμφιέρειστη > αμφίπακτη > πρόβολος. ΕΝΑ
+   * SSoT ανά κώδικα — το `member-sizing` το χρησιμοποιεί για d_req = span / limit.
+   */
+  beamSpanDepthLimit(ctx: BeamSectionContext): number;
   /**
    * ADR-459 Phase 4b — footing detailing limits (mat/strip). Για `tie-beam` ctx
    * επιστρέφει τα ισοδύναμα beam limits (είναι δοκός).

@@ -26,6 +26,7 @@ import {
   isStructuralCodeId,
 } from '../../../../bim/structural/codes';
 import { buildFootingSectionContext } from '../../../../bim/structural/section-context';
+import { resolveActiveFootingReinforcementForParams } from '../../../../bim/structural/active-footing-reinforcement';
 import {
   computeFootingReinforcementQuantities,
   formatFootingMainLabel,
@@ -55,8 +56,10 @@ type DispatchParams = (nextParams: FoundationParams) => void;
  * (το ctx χτίζεται από το ίδιο params) → ο πίνακας δείχνει τον ΙΔΙΟ οπλισμό με 2Δ/3Δ.
  */
 function effectiveReinforcement(footing: FoundationEntity): FootingReinforcement {
-  const stored = footing.params.reinforcement;
-  if (stored) return stored;
+  // ADR-477 — auto tie-beam → live code-suggested από την τρέχουσα γεωμετρία (ο πίνακας
+  // δείχνει ΟΤΙ και τα 2Δ/3Δ)· manual/pad/strip → stored· absent → suggested live default.
+  const active = resolveActiveFootingReinforcementForParams(footing.params);
+  if (active) return active;
   const provider = resolveStructuralCode(useStructuralSettingsStore.getState().codeId);
   return provider.suggestFootingReinforcement(buildFootingSectionContext(footing));
 }
@@ -209,7 +212,10 @@ export function applyFoundationStructuralChange(
   }
   const patched = patchFoundationStructuralField(effectiveReinforcement(footing), commandKey, value);
   if (!patched) return false;
-  const nextParams = withFootingReinforcement(footing.params, patched);
+  // ADR-477 — χειροκίνητη επεξεργασία συνδετήριας δοκού → κλείδωσε (`auto:false`) ώστε το
+  // proactive re-study (resize) να μη σβήνει την υπέρβαση του μηχανικού (parity κολόνας/δοκού).
+  const locked: FootingReinforcement = patched.kind === 'tie-beam' ? { ...patched, auto: false } : patched;
+  const nextParams = withFootingReinforcement(footing.params, locked);
   if (nextParams) dispatchParams(nextParams);
   return true;
 }

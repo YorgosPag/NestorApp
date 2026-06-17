@@ -24,7 +24,7 @@
 import type { ICommand, ISceneManager, SceneEntity, SerializedCommand } from '../interfaces';
 import type { Entity } from '../../../types/entities';
 import type { StructuralCodeProvider } from '../../../bim/structural/codes/structural-code-types';
-import { buildReinforcePatch, type ReinforceableParams } from '../../../bim/structural/section-context';
+import { buildReinforcePatch, type ReinforceableParams } from '../../../bim/structural/reinforce-patch';
 import { generateEntityId } from '../../../systems/entity-creation/utils';
 import { signalEntitiesAttached } from './attach-persist-signal';
 

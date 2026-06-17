@@ -99,6 +99,29 @@ function greekLegacyBeamLimits(
 }
 
 /**
+ * ΕΚΩΣ 2000 §16.4 (περιορισμός βέλους) — βασικός λόγος l/d ελαφρώς συντηρητικότερος
+ * από EC2 (13 vs 14), συνεπές με τη γενικά πιο συντηρητική φιλοσοφία του παλαιού κανονισμού.
+ */
+const GREEK_LEGACY_BASIC_SPAN_DEPTH = 13;
+
+/** ΕΚΩΣ §16.4 — συντελεστής δομικού συστήματος K (όπως EC2 Table 7.4N). */
+function greekLegacySpanDepthSystemFactor(ctx: BeamSectionContext): number {
+  switch (ctx.supportType) {
+    case 'cantilever':
+      return 0.4;
+    case 'fixed':
+      return 1.5;
+    default:
+      return 1.0;
+  }
+}
+
+/** ADR-475 — μέγιστο επιτρεπτό L/d_eff = K · basic (ΕΚΩΣ §16.4). */
+function greekLegacyBeamSpanDepthLimit(ctx: BeamSectionContext): number {
+  return greekLegacySpanDepthSystemFactor(ctx) * GREEK_LEGACY_BASIC_SPAN_DEPTH;
+}
+
+/**
  * ΕΚΩΣ 2000 §17 (θεμελιώσεις) όρια θεμελιακού στοιχείου — ελαφρώς συντηρητικότερα
  * από EC2 (μεγαλύτερο ρ_min, πυκνότερο μέγιστο βήμα). `tie-beam` = δοκός →
  * ισοδύναμα beam limits.
@@ -139,12 +162,24 @@ const GREEK_LEGACY_PAD_TOP_MESH_MIN_THICKNESS_MM = 600;
 const GREEK_LEGACY_PAD_TOP_MESH_KERN_RATIO = 1 / 6;
 
 /**
- * ΕΚΩΣ 2000 §17 (θεμελιώσεις) όρια εδαφόπλακας/raft — slab-like, ελαφρώς
- * συντηρητικότερα από EC2 (μεγαλύτερο ρ_min, πυκνότερο μέγιστο βήμα).
+ * ΕΚΩΣ 2000 όρια οπλισμού πλάκας — kind-aware (ADR-476), ελαφρώς συντηρητικότερα από EC2:
+ *   - εδαφόπλακα/raft (`foundation`, §17 θεμελιώσεις): Ø12 κύριος· βήμα 200· cover 50.
+ *   - αναρτημένη (`suspended`, §18 πλάκες): Ø8 ελάχιστο· smax = min(2h, 300) (πυκνότερο
+ *     από EC2)· cover 25 (εσωτερικό).
  */
 function greekLegacySlabFoundationLimits(
-  _ctx: SlabFoundationSectionContext,
+  ctx: SlabFoundationSectionContext,
 ): SlabFoundationReinforcementLimits {
+  if (ctx.kind === 'suspended') {
+    const h = ctx.thicknessMm > 0 ? ctx.thicknessMm : 0;
+    return {
+      // ΕΚΩΣ 2000 §18 — ελάχιστο ποσοστό πλάκας (συντηρητικό).
+      minRatio: 0.0015,
+      minBarDiameterMm: 8,
+      maxBarSpacingMm: h > 0 ? Math.min(2 * h, 300) : 300,
+      nominalCoverMm: 25,
+    };
+  }
   return {
     // ΕΚΩΣ 2000 §17 — ελάχιστο ποσοστό σχάρας θεμελίωσης (συντηρητικό).
     minRatio: 0.0015,
@@ -178,6 +213,7 @@ export const GREEK_LEGACY_PROVIDER: StructuralCodeProvider = {
   suggestBeamReinforcement(ctx: BeamSectionContext): BeamReinforcement {
     return suggestBeamReinforcementFrom(this, ctx);
   },
+  beamSpanDepthLimit: greekLegacyBeamSpanDepthLimit,
   footingReinforcementLimits: greekLegacyFootingLimits,
   suggestFootingReinforcement(ctx: FootingSectionContext): FootingReinforcement {
     return suggestFootingReinforcementFrom(this, ctx);

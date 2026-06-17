@@ -15,7 +15,7 @@ import {
   buildReinforcePatch,
   columnReinforcementMateriallyDiffers,
   beamReinforcementMateriallyDiffers,
-} from '../section-context';
+} from '../reinforce-patch';
 import { EUROCODE_PROVIDER } from '../codes/eurocode-provider';
 import { barAreaMm2 } from '../rebar-catalog';
 import {

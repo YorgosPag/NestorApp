@@ -201,6 +201,16 @@ export interface BeamParams {
    * non-breaking. ΠΟΤΕ derived state — input για beam gravity design.
    */
   readonly appliedLoad?: AppliedMemberLoad;
+  /**
+   * ADR-475 — Αυτόματη διαστασιολόγηση διατομής (Revit-grade, serviceability-driven).
+   *   - `undefined` / `true` → **AUTO**: το `depth` ξανα-υπολογίζεται από span+φορτίο
+   *     (EC2 §7.4.2 βέλος + ULS κάμψη/διάτμηση) όποτε αλλάζει ο οργανισμός.
+   *   - `false` → **LOCKED**: ο μηχανικός όρισε χειροκίνητα τη διατομή (override) →
+   *     η auto-size σταματά για αυτό το μέλος (ανεπαρκές ⇒ code-violation, validator).
+   * Default = AUTO (πλήρης αυτοματοποίηση· lock μόνο σε χειροκίνητη αλλαγή depth/width).
+   * Mirror του `FoundationParams.autoDesigned` (auto-sized πέδιλο).
+   */
+  readonly autoSized?: boolean;
 }
 
 // ─── Geometry cache (derivable from params; SSoT = params) ──────────────────
@@ -286,16 +296,15 @@ export const MIN_BEAM_DEPTH_MM = 200;
 export const MIN_BEAM_LENGTH_MM = 200;
 
 /**
- * Maximum span/depth ratio. Πάνω από 20 → code violation (slender beam
- * warning). Cantilever-specific threshold halved (10) στον validator.
+ * ADR-475 — EC2 §7.4.2 βασικό όριο λόγου ανοίγματος/**ενεργού** βάθους L/d_eff για
+ * έλεγχο βέλους (serviceability). Ο validator το πολλαπλασιάζει με τον structural-
+ * system factor K ανά συνθήκη στήριξης (αμφιέρειστη 1.0 / αμφίπακτη 1.5 / πρόβολος
+ * 0.4) και συγκρίνει με `span/d_eff` (d_eff = 0.9·h). Conservative, code-agnostic
+ * belt-and-suspenders — αντικατέστησε το παλιό flat `span/h > 20` (που σιωπούσε σε
+ * οριακά ανεπαρκείς διατομές). Η auto-διαστασιολόγηση (member-sizing) χρησιμοποιεί τα
+ * code-specific `provider.beamSpanDepthLimit`.
  */
-export const MAX_SPAN_DEPTH_RATIO = 20;
-
-/**
- * Cantilever-specific max span/depth ratio. Cantilevers (πρόβολοι) έχουν
- * μικρότερο stiffness contribution → πιο αυστηρό όριο.
- */
-export const MAX_CANTILEVER_SPAN_DEPTH_RATIO = 10;
+export const BASIC_SPAN_EFFECTIVE_DEPTH_LIMIT = 14;
 
 /**
  * Default top elevation (mm) — top-of-slab για typical Greek residential

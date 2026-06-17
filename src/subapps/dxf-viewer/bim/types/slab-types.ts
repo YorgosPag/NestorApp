@@ -41,6 +41,7 @@ import type { SlabDna } from './slab-dna-types';
 import type { SlabTypeParams } from './bim-family-type';
 import type { SlabFoundationReinforcement } from '../structural/reinforcement/slab-foundation-reinforcement-types';
 import type { AppliedMemberLoad } from '../structural/loads/structural-loads-types';
+import type { ConcreteGrade } from '../structural/concrete-grades';
 
 // ─── Sub-type discriminator (ADR-363 §5.5) ───────────────────────────────────
 
@@ -113,12 +114,17 @@ export interface SlabParams {
   /** Structural reinforcement hint (BOQ/hatch — one-way/two-way/…). */
   readonly reinforcement?: SlabReinforcement;
   /**
-   * ADR-459 Φ4e/E3 — ΠΡΑΓΜΑΤΙΚΟ μοντέλο οπλισμού εδαφόπλακας/raft (δι-διευθυντική
-   * σχάρα top+bottom). Present μόνο σε kind foundation/ground, code-suggested μέσω
-   * του οργανισμού (`buildReinforcePatch`). Διακριτό από το `reinforcement` hint —
-   * μηδέν regression στο υπάρχον BOQ. NEVER για non-foundation πλάκες.
+   * ADR-459 Φ4e/E3 + ADR-476 — ΠΡΑΓΜΑΤΙΚΟ μοντέλο οπλισμού πλάκας (δι-διευθυντική
+   * σχάρα top+bottom). Code-suggested μέσω του οργανισμού (`buildReinforcePatch`),
+   * kind-aware: εδαφόπλακα (EC2 §9.8.2) ή αναρτημένη floor/ceiling/roof (EC2 §9.3.1).
+   * Διακριτό από το `reinforcement` hint — μηδέν regression στο υπάρχον BOQ.
    */
   readonly structuralReinforcement?: SlabFoundationReinforcement;
+  /**
+   * ADR-476 — κατηγορία σκυροδέματος πλάκας (π.χ. 'C25/30'), mirror κολόνας. Absent ⇒
+   * default code grade. Τροφοδοτεί τα στατικά (f_cd) + το Properties panel.
+   */
+  readonly concreteGrade?: ConcreteGrade;
   /**
    * ADR-467 — Φορτίο βαρύτητας πλάκας από τη διαδρομή φορτίων (panel area ×
    * επιφανειακά φορτία G/Q). source='takedown' → αυτόματο από οργανισμό· source=

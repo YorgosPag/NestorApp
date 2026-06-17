@@ -45,6 +45,7 @@ import { useDxfViewerNotifications } from '../hooks/useDxfViewerNotifications';
 import { useStructuralAutoAttach } from '../hooks/useStructuralAutoAttach';
 import { useStructuralAutoReinforce } from '../hooks/useStructuralAutoReinforce';
 import { useProactiveOrganismReinforce } from '../hooks/useProactiveOrganismReinforce';
+import { useProactiveMemberSizing } from '../hooks/useProactiveMemberSizing';
 import { useStructuralLoadTakedown } from '../hooks/useStructuralLoadTakedown';
 import { useProactiveStructuralLoads } from '../hooks/useProactiveStructuralLoads';
 import { useStructuralFootingConnect } from '../hooks/useStructuralFootingConnect';
@@ -259,6 +260,7 @@ export const DxfViewerContent = React.memo<DxfViewerAppProps>((props) => {
   useDimAssociationObserver(levelManager.getLevelScene, levelManager.setLevelScene, () => levelManager.currentLevelId);
   useStructuralAutoAttach({ levelManager }); // ADR-401 Phase D — auto-attach walls under new beam/slab
   useStructuralAutoReinforce({ levelManager }); // ADR-459 Φ4d — «Αυτόματος Οπλισμός» (ribbon manual trigger)
+  useProactiveMemberSizing({ levelManager }); // ADR-475 — PROACTIVE auto-size διατομής (ΠΡΙΝ τον οπλισμό ⇒ οπλίζεται στη νέα διατομή)
   useProactiveOrganismReinforce({ levelManager }); // ADR-459 Φ8 — PROACTIVE auto-reinforce (organism grows → οπλίζεται μόνο του)
   useStructuralLoadTakedown({ levelManager }); // ADR-464 Φ4 — «Υπολογισμός Φορτίων» (ribbon manual trigger)
   // ADR-459 Φ9 — PROACTIVE φορτία (το ΠΡΩΤΟ σκαλί της αλυσίδας). ΣΕΙΡΑ: mounted ΠΡΙΝ

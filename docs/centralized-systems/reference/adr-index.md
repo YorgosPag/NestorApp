@@ -456,6 +456,9 @@
 | **ADR-472** | Load-Aware Strength Reinforcement Design (As από N/M, EC2 §6.1 — πραγματικό re-design ήδη-οπλισμένων· FEM-free Revit-without-Robot· Slices 2/3 του ADR-459 Φ9) | 🟡 IN PROGRESS (S2+S3+S4 done, UNCOMMITTED) | 2026-06-17 | Uncategorized | [📄](./adrs/ADR-472-load-aware-strength-reinforcement.md) |
 | **ADR-473** | Joint Reinforcement 3D Render + BOQ Takeoff (dowel/lap/anchorage κόμβοι — ορατότητα 3Δ + discrete BOQ items· orphaned continuity model wired) | 🟢 DONE (Slices 0-2, UNCOMMITTED) | 2026-06-17 | Uncategorized | [📄](./adrs/ADR-473-joint-reinforcement-render-takeoff.md) |
 | **ADR-474** | Occupancy-Driven Auto Structural Loads (EN1991-1-1 q_k ανά χρήση + auto g_k από πλάκα· explicit-wins· zero-input — ο μηχανικός δεν πληκτρολογεί kPa) | 🟢 DONE (UNCOMMITTED) | 2026-06-17 | Uncategorized | [📄](./adrs/ADR-474-occupancy-driven-auto-loads.md) |
+| **ADR-475** | Auto Member Sizing (serviceability-driven — το δοκάρι αυτο-διαστασιολογεί ύψος από span+φορτίο: EC2 §7.4.2 βέλος + ULS κάμψη/διάτμηση· autoSized lock override· proactive pipeline· belt-and-suspenders validator) | 🟢 DONE (UNCOMMITTED) | 2026-06-18 | Uncategorized | [📄](./adrs/ADR-475-auto-member-sizing.md) |
+| **ADR-476** | Unified Slab Reinforcement (οπλισμός ΟΛΩΝ των πλακών: εδαφόπλακα + δάπεδο/οροφή· kind-aware suggester EC2 §9.3.1/§9.8.2· auto re-study· 2Δ polygon-clipped σχάρες + 3Δ κλωβός — full SSoT με κολόνα/δοκό/πέδιλο) | 🟡 IN PROGRESS (Slices 0-3 DONE, UNCOMMITTED· S4-5 pending) | 2026-06-18 | Uncategorized | [📄](./adrs/ADR-476-unified-slab-reinforcement.md) |
+| **ADR-477** | Tie-Beam Reinforcement Unification (συνδετήρια δοκός θεμελίωσης: live auto re-study σε resize, parity κολόνας/δοκού + facade· DEFER ενοποίηση render/EC8 δύναμη σύνδεσης) | 🟡 PARTIAL (Slice 1 DONE, UNCOMMITTED· S2-3 pending) | 2026-06-18 | Uncategorized | [📄](./adrs/ADR-477-tie-beam-reinforcement-unification.md) |
 | **ADR-UI-001** | Visual Primitive Ownership & Semantic Tokens | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-UI-001.md) |
 
 ---
@@ -896,6 +899,9 @@
 | **ADR-472** | Load-Aware Strength Reinforcement Design (As από N/M — re-design ήδη-οπλισμένων) | 🟡 IN PROGRESS (S2+S3+S4) | [View](./adrs/ADR-472-load-aware-strength-reinforcement.md) |
 | **ADR-473** | Joint Reinforcement 3D Render + BOQ Takeoff (dowel/lap/anchorage κόμβοι) | 🟢 DONE (UNCOMMITTED) | [View](./adrs/ADR-473-joint-reinforcement-render-takeoff.md) |
 | **ADR-474** | Occupancy-Driven Auto Structural Loads (zero-input area loads — EN1991-1-1) | 🟢 DONE (UNCOMMITTED) | [View](./adrs/ADR-474-occupancy-driven-auto-loads.md) |
+| **ADR-475** | Auto Member Sizing (serviceability-driven beam depth — EC2 §7.4.2 βέλος + ULS· autoSized lock· proactive· belt-and-suspenders validator) | 🟢 DONE (UNCOMMITTED) | [View](./adrs/ADR-475-auto-member-sizing.md) |
+| **ADR-476** | Unified Slab Reinforcement (οπλισμός πλακών: εδαφόπλακα/δάπεδο/οροφή — kind-aware suggester + auto re-study + 2Δ/3Δ render, full SSoT) | 🟡 IN PROGRESS (Slices 0-3 DONE, UNCOMMITTED) | [View](./adrs/ADR-476-unified-slab-reinforcement.md) |
+| **ADR-477** | Tie-Beam Reinforcement Unification (συνδετήρια δοκός — live auto re-study σε resize, parity κολόνας/δοκού + facade· DEFER render-dedup/EC8) | 🟡 PARTIAL (Slice 1 DONE, UNCOMMITTED) | [View](./adrs/ADR-477-tie-beam-reinforcement-unification.md) |
 | **ADR-UI-001** | Visual Primitive Ownership & Semantic Tokens | ✅ APPROVED | [View](./adrs/ADR-UI-001.md) |
 
 ---

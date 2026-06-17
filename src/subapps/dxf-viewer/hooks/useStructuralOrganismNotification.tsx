@@ -34,7 +34,7 @@ import { LevelSceneManagerAdapter } from '../systems/entity-creation/LevelSceneM
 import { useFoundationLevelStore } from '../state/foundation-level-store';
 import { useStructuralSettingsStore } from '../state/structural-settings-store';
 import { resolveStructuralCode } from '../bim/structural/codes';
-import { buildReinforcePatch } from '../bim/structural/section-context';
+import { buildReinforcePatch } from '../bim/structural/reinforce-patch';
 import { createFoundationCrossLevelWriter, type FoundationWriteScope } from '../bim/foundations/foundation-cross-level-writer';
 import { ReinforceColumnFootingCommand } from '../core/commands/entity-commands/ReinforceColumnFootingCommand';
 import { isFoundationEntity, type Entity } from '../types/entities';

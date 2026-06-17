@@ -53,6 +53,7 @@ const PROACTIVE_LOAD_EVENTS: readonly DrawingEventType[] = [
   'drawing:entity-created', // νέα κολόνα/δοκάρι/πλάκα
   'bim:column-params-updated', // grip-resize / ribbon edit (διατομή → tributary)
   'bim:beam-params-updated',
+  'bim:slab-params-updated', // ADR-476 — αλλαγή πλάκας → re-derive tributary/area load
   'bim:entities-moved', // drag-move → re-derive tributary
   'bim:column-delete-requested',
   'bim:beam-delete-requested',

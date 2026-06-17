@@ -1,11 +1,15 @@
 /**
- * Foundation-slab (raft / εδαφόπλακα) reinforcement data model (ADR-459 Φ4e/E3).
+ * Slab structural reinforcement data model — **universal** (ADR-459 Φ4e/E3 + ADR-476).
  *
- * Η εδαφόπλακα/κοιτόστρωση (`SlabEntity` kind `foundation`/`ground`) οπλίζεται ως
- * **δι-διευθυντική πλάκα με ΔΥΟ σχάρες** — κάτω (sagging, στο φάτνωμα) ΚΑΙ άνω
- * (hogging, πάνω από στηρίξεις) — σε αντίθεση με το μεμονωμένο πέδιλο όπου η άνω
- * σχάρα είναι προαιρετική (EC2 §9.3.1 / §9.8.2). Reuse του `RebarMesh` (ΕΝΑ SSoT
- * πλέγματος, μηδέν duplicate — N.0.2).
+ * ΕΝΑ μοντέλο σχάρας για ΟΛΑ τα είδη πλάκας (ADR-476 — full SSoT, μηδέν duplicate):
+ *   - **εδαφόπλακα/raft** (`kind` foundation/ground): δι-διευθυντική κάτω (sagging,
+ *     φάτνωμα) + άνω (hogging, πάνω από στηρίξεις) — EC2 §9.8.2.
+ *   - **αναρτημένη** (`kind` floor/ceiling/roof): κάτω σχάρα ανοίγματος (κύρια) + άνω
+ *     σχάρα στηρίξεων (detailing/hogging) — EC2 §9.3.1.
+ * Το σχήμα (4 σχάρες + cover) είναι κοινό· διαφέρει ΜΟΝΟ ο kind-aware suggester
+ * (όρια/As ανά είδος). Το όνομα `SlabFoundationReinforcement` διατηρείται ιστορικά
+ * (22 callers, μηδέν disruptive rename) — βλ. ADR-476 §Naming. Reuse του `RebarMesh`
+ * (ΕΝΑ SSoT πλέγματος, μηδέν duplicate — N.0.2).
  *
  * Διακριτό από το `SlabParams.reinforcement` (hint enum one-way/two-way/…) που
  * τροφοδοτεί BOQ/hatch — αυτό είναι το ΠΡΑΓΜΑΤΙΚΟ μοντέλο ποσοτήτων, persisted στο
@@ -42,6 +46,13 @@ export interface SlabFoundationReinforcement {
   readonly topMeshY: RebarMesh;
   /** Επικάλυψη οπλισμού cnom (mm) — θεμελίωση: μεγαλύτερη (έδραση σε έδαφος). */
   readonly coverMm: number;
+  /**
+   * ADR-476 — `true` ⇒ code-suggested design που **ξαναϋπολογίζεται** σε κάθε αλλαγή
+   * γεωμετρίας/φορτίου (Revit «by code», parity με κολόνα/δοκάρι). `false`/absent ⇒
+   * χειροκίνητη υπέρβαση (κλειδωμένη, ο χρήστης το όρισε — ο οργανισμός δεν το αγγίζει).
+   * Παλιό stored foundation reinforcement (χωρίς flag) ⇒ manual (μηδέν regression).
+   */
+  readonly auto?: boolean;
 }
 
 /** Σύντομη ετικέτα κύριου (κάτω) οπλισμού raft — π.χ. «Ø14/200». */

@@ -27,6 +27,7 @@ import { dimOpacityToTransparency } from '../../services/layer-isolate-resolver'
 // Per-frame index builders (extracted Boy-Scout file-size split, 2026-05-19).
 import { buildDimensionLookup, buildSlabOpeningsBySlab, buildOpeningsByWall, transparencyToAlpha } from './dxf-renderer-frame-builders';
 import { drawFoundationReinforcement2D } from './dxf-foundation-reinforcement-overlay';
+import { drawSlabReinforcement2D } from './dxf-slab-reinforcement-overlay';
 // Scene-level structural overlay passes (Boy-Scout file-size split, 2026-06-17 —
 // mirror του foundation overlay· ADR-449 σοβάς + ADR-456/471 οπλισμός μελών κολώνα+δοκάρι).
 import { drawMemberReinforcement2D, drawStructuralFinishSkin2D } from './dxf-renderer-structural-overlays';
@@ -212,6 +213,9 @@ export class DxfRenderer {
     // ADR-463 — οπλισμός θεμελίωσης (πέδιλο/πεδιλοδοκός/συνδετήρια) ως scene-level overlay,
     // ίδιο pattern/gate με την κολώνα (mirror του drawColumnReinforcement2D).
     drawFoundationReinforcement2D(this.ctx, scene.entities, transform, actualViewport);
+    // ADR-476 — οπλισμός πλακών (εδαφόπλακα + αναρτημένη): δι-διευθυντικές σχάρες κάτω
+    // (συμπαγείς) + άνω (διακεκομμένες), clip στο outline· ίδιο pattern/gate με το πέδιλο.
+    drawSlabReinforcement2D(this.ctx, scene.entities, transform, actualViewport);
     this.ctx.restore();
   }
 

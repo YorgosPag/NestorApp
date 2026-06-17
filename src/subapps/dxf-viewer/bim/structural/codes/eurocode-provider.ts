@@ -102,6 +102,33 @@ function eurocodeBeamLimits(
 }
 
 /**
+ * EC2 §7.4.2 Table 7.4N — βασικός λόγος l/d για έλεγχο βέλους χωρίς ρητό υπολογισμό,
+ * σκυρόδεμα **ισχυρά καταπονούμενο** (ρ ≈ 1.5%, conservative preliminary). Ο τελικός
+ * πίνακας κυμαίνεται 14→20 ανάλογα με το ρ· κρατάμε το ασφαλές κάτω άκρο (14).
+ */
+const EUROCODE_BASIC_SPAN_DEPTH = 14;
+
+/**
+ * EC2 §7.4.2 Table 7.4N — συντελεστής δομικού συστήματος K επί του basic l/d:
+ * αμφιέρειστη 1.0 · αμφίπακτη (εσωτερικό φάτνωμα) 1.5 · πρόβολος 0.4.
+ */
+function eurocodeSpanDepthSystemFactor(ctx: BeamSectionContext): number {
+  switch (ctx.supportType) {
+    case 'cantilever':
+      return 0.4;
+    case 'fixed':
+      return 1.5;
+    default:
+      return 1.0;
+  }
+}
+
+/** ADR-475 — μέγιστο επιτρεπτό L/d_eff = K · basic (EC2 §7.4.2). */
+function eurocodeBeamSpanDepthLimit(ctx: BeamSectionContext): number {
+  return eurocodeSpanDepthSystemFactor(ctx) * EUROCODE_BASIC_SPAN_DEPTH;
+}
+
+/**
  * EC2 §9.8.2 (πέδιλα) + §9.3.1.1 (slab-like κάτω σχάρα) όρια θεμελιακού στοιχείου.
  * `tie-beam` = δοκός → ισοδύναμα beam limits. Cover μεγαλύτερο (EC2 §4.4.1.3 —
  * έδραση σε προετοιμασμένο έδαφος/blinding).
@@ -143,20 +170,29 @@ const EUROCODE_PAD_TOP_MESH_MIN_THICKNESS_MM = 600;
 const EUROCODE_PAD_TOP_MESH_KERN_RATIO = 1 / 6;
 
 /**
- * EC2 §9.3.1.1 (slab-like) όρια εδαφόπλακας/raft — δι-διευθυντική σχάρα top+bottom.
- * Ίδιες αρχές με το πέδιλο (slab-like ρ_min, μεγαλύτερο cover έδρασης σε έδαφος).
+ * EC2 §9.3.1.1 (slab-like) όρια οπλισμού πλάκας — kind-aware (ADR-476):
+ *   - εδαφόπλακα/raft (`foundation`): δι-διευθυντική top+bottom· Ø12 κύριος· βήμα 250·
+ *     cover 50 (έδραση σε έδαφος, §4.4.1.3).
+ *   - αναρτημένη (`suspended` floor/ceiling/roof): Ø8 ελάχιστο· smax = min(3h, 400)
+ *     (§9.3.1.1(3))· cover 25 (εσωτερικό XC1, §4.4.1).
  */
 function eurocodeSlabFoundationLimits(
-  _ctx: SlabFoundationSectionContext,
+  ctx: SlabFoundationSectionContext,
 ): SlabFoundationReinforcementLimits {
+  // EC2 §9.3.1.1(1) As,min = 0.26·fctm/fyk·b·d ≈ 0.0013 (C25/30 + B500C) — κοινό.
+  if (ctx.kind === 'suspended') {
+    const h = ctx.thicknessMm > 0 ? ctx.thicknessMm : 0;
+    return {
+      minRatio: 0.0013,
+      minBarDiameterMm: 8,
+      maxBarSpacingMm: h > 0 ? Math.min(3 * h, 400) : 400,
+      nominalCoverMm: 25,
+    };
+  }
   return {
-    // EC2 §9.3.1.1(1) As,min = 0.26·fctm/fyk·b·d ≈ 0.0013 (C25/30 + B500C).
     minRatio: 0.0013,
-    // Πρακτική θεμελίωσης — Ø12 κύριος οπλισμός σχάρας.
     minBarDiameterMm: 12,
-    // EC2 §9.3.1.1(3) smax,slabs = min(3h, 400)· πρακτικό 250 για θεμελίωση.
     maxBarSpacingMm: 250,
-    // EN 1992-1-1 §4.4.1.3 — έδραση σε προετοιμασμένο έδαφος ~50mm.
     nominalCoverMm: 50,
   };
 }
@@ -182,6 +218,7 @@ export const EUROCODE_PROVIDER: StructuralCodeProvider = {
   suggestBeamReinforcement(ctx: BeamSectionContext): BeamReinforcement {
     return suggestBeamReinforcementFrom(this, ctx);
   },
+  beamSpanDepthLimit: eurocodeBeamSpanDepthLimit,
   footingReinforcementLimits: eurocodeFootingLimits,
   suggestFootingReinforcement(ctx: FootingSectionContext): FootingReinforcement {
     return suggestFootingReinforcementFrom(this, ctx);

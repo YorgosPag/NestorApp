@@ -14,9 +14,10 @@
  *       · degenerate axis (start ≡ end για straight/cantilever)
  *   - **Code violations** (non-blocking):
  *       · width < MIN_BEAM_WIDTH_MM (150mm Eurocode minimum)
- *       · span/depth ratio > MAX_SPAN_DEPTH_RATIO (20 — slender beam)
- *       · cantilever-specific: span/depth ratio > MAX_CANTILEVER_SPAN_DEPTH_RATIO
- *         (10 — halved threshold για cantilevers)
+ *       · ADR-475 — βέλος (serviceability): span/d_eff > K · basic (EC2 §7.4.2,
+ *         d_eff = 0.9·h), K ανά συνθήκη στήριξης (αμφιέρειστη 1.0 / αμφίπακτη 1.5 /
+ *         πρόβολος 0.4). Πιάνει οριακά ανεπαρκείς διατομές που το παλιό flat span/h
+ *         άφηνε σιωπηλές. Με auto-διαστασιολόγηση (ADR-475) μόνο LOCKED ανεπαρκή.
  *
  * @see docs/centralized-systems/reference/adrs/ADR-363-bim-drawing-mode.md §5.7
  */
@@ -24,13 +25,13 @@
 import { nowTimestamp } from '@/lib/firestore-now';
 import type { BimValidation } from '../types/bim-base';
 import {
-  MAX_CANTILEVER_SPAN_DEPTH_RATIO,
-  MAX_SPAN_DEPTH_RATIO,
+  BASIC_SPAN_EFFECTIVE_DEPTH_LIMIT,
   MIN_BEAM_LENGTH_MM,
   MIN_BEAM_WIDTH_MM,
   type BeamParams,
 } from '../types/beam-types';
 import { getBeamSpanDepthRatio } from '../geometry/beam-geometry';
+import { BEAM_EFFECTIVE_DEPTH_FACTOR } from '../structural/codes/suggest-reinforcement';
 import { MIN_I_PLATE_THICKNESS_MM } from '../types/column-types';
 import { mmToSceneUnits, type SceneUnits } from '../../utils/scene-units';
 
@@ -132,15 +133,36 @@ function validateIShapeParams(params: BeamParams, hardErrors: string[]): void {
   }
 }
 
+/**
+ * ADR-475 — EC2 §7.4.2 Table 7.4N structural-system factor K (conservative,
+ * code-agnostic): αμφιέρειστη 1.0 · αμφίπακτη 1.5 · πρόβολος 0.4.
+ */
+function slendernessSystemFactor(params: BeamParams): number {
+  switch (params.supportType) {
+    case 'cantilever':
+      return 0.4;
+    case 'fixed':
+      return 1.5;
+    default:
+      return 1.0;
+  }
+}
+
+/**
+ * ADR-475 — έλεγχος βέλους (serviceability) σε βάση ΕΝΕΡΓΟΥ βάθους d (=0.9·h), όχι
+ * συνολικού h: `span/d_eff > K · basic` ⇒ code-violation. Πιάνει διατομές που το
+ * παλιό flat `span/h > 20` άφηνε σιωπηλά ανεπαρκείς (π.χ. 500mm σε άνοιγμα 10m →
+ * L/d=21.3). Με ενεργή auto-διαστασιολόγηση μόνο τα LOCKED ανεπαρκή φτάνουν εδώ.
+ */
 function validateSlenderness(params: BeamParams, codeViolations: string[]): void {
   if (params.depth <= 0) return;
-  const ratio = getBeamSpanDepthRatio(params);
-  if (!Number.isFinite(ratio)) return;
-  const isCantilever = params.kind === 'cantilever';
-  const threshold = isCantilever ? MAX_CANTILEVER_SPAN_DEPTH_RATIO : MAX_SPAN_DEPTH_RATIO;
-  if (ratio > threshold) {
+  const ratioH = getBeamSpanDepthRatio(params); // span / h
+  if (!Number.isFinite(ratioH)) return;
+  const lOverDeff = ratioH / BEAM_EFFECTIVE_DEPTH_FACTOR; // span / d_eff
+  const limit = BASIC_SPAN_EFFECTIVE_DEPTH_LIMIT * slendernessSystemFactor(params);
+  if (lOverDeff > limit) {
     codeViolations.push(
-      isCantilever
+      params.kind === 'cantilever'
         ? 'beam.validation.codeViolations.cantileverSpanDepthExceeded'
         : 'beam.validation.codeViolations.spanDepthExceeded',
     );
