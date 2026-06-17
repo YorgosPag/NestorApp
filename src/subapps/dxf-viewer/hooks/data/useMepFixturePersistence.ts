@@ -18,10 +18,6 @@ import { dequal } from 'dequal';
 import type { AnySceneEntity, SceneModel } from '../../types/entities';
 import type { SceneWriteOrigin } from '../scene/scene-write-origin';
 import type { MepFixtureEntity } from '../../bim/types/mep-fixture-types';
-import {
-  computeMepFixtureGeometry,
-  validateMepFixtureParams,
-} from '../../bim/mep-fixtures/mep-fixture-geometry';
 import { EventBus } from '../../systems/events/EventBus';
 import { resolveBimPersistenceScope } from '../../bim/persistence/bim-floor-scope';
 import {
@@ -31,6 +27,7 @@ import {
   type MepFixtureDoc,
 } from '../../bim/mep-fixtures/mep-fixture-firestore-service';
 import { recordMepFixtureChange } from '../../bim/mep-fixtures/mep-fixture-audit-client';
+import { mepFixtureDocToEntity as docToEntity } from './mep-fixture-persistence-helpers';
 import { projectConnectorSystemIds } from '../../bim/mep-systems/mep-system-coordinator';
 import { useBimEntityMovedPersistEffect } from './useBimEntityMovedPersistEffect';
 import { useBimEntityRestoredPersistEffect } from './useBimEntityRestoredPersistEffect';
@@ -78,21 +75,6 @@ const AUTO_SAVE_DEBOUNCE_MS = 500;
 
 function isFixture(entity: AnySceneEntity): entity is MepFixtureEntity {
   return (entity as { type?: string }).type === 'mep-fixture';
-}
-
-/** Build scene-side `MepFixtureEntity` from a persisted `MepFixtureDoc`. */
-function docToEntity(doc: MepFixtureDoc): MepFixtureEntity {
-  const validation = doc.validation ?? validateMepFixtureParams(doc.params).bimValidation;
-  return {
-    id: doc.id,
-    type: 'mep-fixture',
-    kind: doc.kind,
-    layerId: doc.layerId ?? '0',
-    params: doc.params,
-    geometry: doc.geometry ?? computeMepFixtureGeometry(doc.params),
-    validation,
-    visible: true,
-  } as MepFixtureEntity;
 }
 
 // ============================================================================

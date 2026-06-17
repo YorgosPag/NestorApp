@@ -18,10 +18,6 @@ import { dequal } from 'dequal';
 import type { AnySceneEntity, SceneModel } from '../../types/entities';
 import type { SceneWriteOrigin } from '../scene/scene-write-origin';
 import type { RailingEntity } from '../../bim/types/railing-types';
-import {
-  computeRailingGeometry,
-  validateRailingParams,
-} from '../../bim/railings/railing-geometry';
 import { EventBus } from '../../systems/events/EventBus';
 import { resolveBimPersistenceScope } from '../../bim/persistence/bim-floor-scope';
 import {
@@ -31,6 +27,7 @@ import {
   type RailingDoc,
 } from '../../bim/railings/railing-firestore-service';
 import { recordRailingChange } from '../../bim/railings/railing-audit-client';
+import { railingDocToEntity as docToEntity } from './railing-persistence-helpers';
 import { bimToBoqBridge } from '../../bim/services/BimToBoqBridge';
 import { useBimEntityMovedPersistEffect } from './useBimEntityMovedPersistEffect';
 import { useBimEntityRestoredPersistEffect } from './useBimEntityRestoredPersistEffect';
@@ -79,21 +76,6 @@ const AUTO_SAVE_DEBOUNCE_MS = 500;
 
 function isRailing(entity: AnySceneEntity): entity is RailingEntity {
   return (entity as { type?: string }).type === 'railing';
-}
-
-/** Build scene-side `RailingEntity` from a persisted `RailingDoc`. */
-function docToEntity(doc: RailingDoc): RailingEntity {
-  const validation = doc.validation ?? validateRailingParams(doc.params).bimValidation;
-  return {
-    id: doc.id,
-    type: 'railing',
-    kind: doc.kind,
-    layerId: doc.layerId ?? '0',
-    params: doc.params,
-    geometry: doc.geometry ?? computeRailingGeometry(doc.params),
-    validation,
-    visible: true,
-  } as RailingEntity;
 }
 
 // ============================================================================

@@ -18,10 +18,6 @@ import { dequal } from 'dequal';
 import type { AnySceneEntity, SceneModel } from '../../types/entities';
 import type { SceneWriteOrigin } from '../scene/scene-write-origin';
 import type { FurnitureEntity } from '../../bim/types/furniture-types';
-import {
-  computeFurnitureGeometry,
-  validateFurnitureParams,
-} from '../../bim/furniture/furniture-geometry';
 import { EventBus } from '../../systems/events/EventBus';
 import { resolveBimPersistenceScope } from '../../bim/persistence/bim-floor-scope';
 import {
@@ -31,6 +27,7 @@ import {
   type FurnitureDoc,
 } from '../../bim/furniture/furniture-firestore-service';
 import { recordFurnitureChange } from '../../bim/furniture/furniture-audit-client';
+import { furnitureDocToEntity as docToEntity } from './furniture-persistence-helpers';
 import { useBimEntityMovedPersistEffect } from './useBimEntityMovedPersistEffect';
 import { useBimEntityRestoredPersistEffect } from './useBimEntityRestoredPersistEffect';
 
@@ -77,21 +74,6 @@ const AUTO_SAVE_DEBOUNCE_MS = 500;
 
 function isFurniture(entity: AnySceneEntity): entity is FurnitureEntity {
   return (entity as { type?: string }).type === 'furniture';
-}
-
-/** Build scene-side `FurnitureEntity` from a persisted `FurnitureDoc`. */
-function docToEntity(doc: FurnitureDoc): FurnitureEntity {
-  const validation = doc.validation ?? validateFurnitureParams(doc.params).bimValidation;
-  return {
-    id: doc.id,
-    type: 'furniture',
-    kind: doc.kind,
-    layerId: doc.layerId ?? '0',
-    params: doc.params,
-    geometry: doc.geometry ?? computeFurnitureGeometry(doc.params),
-    validation,
-    visible: true,
-  } as FurnitureEntity;
 }
 
 // ============================================================================

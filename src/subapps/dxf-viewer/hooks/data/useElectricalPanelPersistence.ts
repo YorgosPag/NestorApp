@@ -17,10 +17,6 @@ import { dequal } from 'dequal';
 import type { AnySceneEntity, SceneModel } from '../../types/entities';
 import type { SceneWriteOrigin } from '../scene/scene-write-origin';
 import type { ElectricalPanelEntity } from '../../bim/types/electrical-panel-types';
-import {
-  computeElectricalPanelGeometry,
-  validateElectricalPanelParams,
-} from '../../bim/electrical-panels/electrical-panel-geometry';
 import { EventBus } from '../../systems/events/EventBus';
 import { resolveBimPersistenceScope } from '../../bim/persistence/bim-floor-scope';
 import {
@@ -30,6 +26,7 @@ import {
   type ElectricalPanelDoc,
 } from '../../bim/electrical-panels/electrical-panel-firestore-service';
 import { recordElectricalPanelChange } from '../../bim/electrical-panels/electrical-panel-audit-client';
+import { electricalPanelDocToEntity as docToEntity } from './electrical-panel-persistence-helpers';
 import { projectConnectorSystemIds } from '../../bim/mep-systems/mep-system-coordinator';
 import { useBimEntityMovedPersistEffect } from './useBimEntityMovedPersistEffect';
 import { useBimEntityRestoredPersistEffect } from './useBimEntityRestoredPersistEffect';
@@ -77,21 +74,6 @@ const AUTO_SAVE_DEBOUNCE_MS = 500;
 
 function isPanel(entity: AnySceneEntity): entity is ElectricalPanelEntity {
   return (entity as { type?: string }).type === 'electrical-panel';
-}
-
-/** Build scene-side `ElectricalPanelEntity` from a persisted `ElectricalPanelDoc`. */
-function docToEntity(doc: ElectricalPanelDoc): ElectricalPanelEntity {
-  const validation = doc.validation ?? validateElectricalPanelParams(doc.params).bimValidation;
-  return {
-    id: doc.id,
-    type: 'electrical-panel',
-    kind: doc.kind,
-    layerId: doc.layerId ?? '0',
-    params: doc.params,
-    geometry: doc.geometry ?? computeElectricalPanelGeometry(doc.params),
-    validation,
-    visible: true,
-  } as ElectricalPanelEntity;
 }
 
 // ============================================================================

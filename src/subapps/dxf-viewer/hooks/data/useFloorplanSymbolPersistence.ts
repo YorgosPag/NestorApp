@@ -21,10 +21,6 @@ import { dequal } from 'dequal';
 import type { AnySceneEntity, SceneModel } from '../../types/entities';
 import type { SceneWriteOrigin } from '../scene/scene-write-origin';
 import type { FloorplanSymbolEntity } from '../../bim/types/floorplan-symbol-types';
-import {
-  computeFloorplanSymbolGeometry,
-  validateFloorplanSymbolParams,
-} from '../../bim/floorplan-symbols/floorplan-symbol-geometry';
 import { EventBus } from '../../systems/events/EventBus';
 import { resolveBimPersistenceScope } from '../../bim/persistence/bim-floor-scope';
 import {
@@ -34,6 +30,7 @@ import {
   type FloorplanSymbolDoc,
 } from '../../bim/floorplan-symbols/floorplan-symbol-firestore-service';
 import { recordFloorplanSymbolChange } from '../../bim/floorplan-symbols/floorplan-symbol-audit-client';
+import { floorplanSymbolDocToEntity as docToEntity } from './floorplan-symbol-persistence-helpers';
 import { useBimEntityMovedPersistEffect } from './useBimEntityMovedPersistEffect';
 import { useBimEntityRestoredPersistEffect } from './useBimEntityRestoredPersistEffect';
 
@@ -80,21 +77,6 @@ const AUTO_SAVE_DEBOUNCE_MS = 500;
 
 function isFloorplanSymbol(entity: AnySceneEntity): entity is FloorplanSymbolEntity {
   return (entity as { type?: string }).type === 'floorplan-symbol';
-}
-
-/** Build scene-side `FloorplanSymbolEntity` from a persisted doc. */
-function docToEntity(doc: FloorplanSymbolDoc): FloorplanSymbolEntity {
-  const validation = doc.validation ?? validateFloorplanSymbolParams(doc.params).bimValidation;
-  return {
-    id: doc.id,
-    type: 'floorplan-symbol',
-    kind: doc.kind,
-    layerId: doc.layerId ?? '0',
-    params: doc.params,
-    geometry: doc.geometry ?? computeFloorplanSymbolGeometry(doc.params),
-    validation,
-    visible: true,
-  } as FloorplanSymbolEntity;
 }
 
 // ============================================================================
