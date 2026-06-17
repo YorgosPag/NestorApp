@@ -77,6 +77,12 @@ export interface UseCanvasEscapeRegistrationsParams {
   readonly bimCopyIsActive: boolean;
   readonly handleRotationEscape?: () => void;
   readonly rotationIsActive: boolean;
+  /**
+   * ADR-397 — true while a hot-grip click-flow (move / corner / rotate, incl. the
+   * rotate reference sub-steps) is active. Gives that grip op ESC priority over any
+   * tool / numeric handler, so the multi-click rotate is always cancellable.
+   */
+  readonly hotGripActive?: boolean;
 }
 
 export function useCanvasEscapeRegistrations(p: UseCanvasEscapeRegistrationsParams): void {
@@ -115,6 +121,26 @@ export function useCanvasEscapeRegistrations(p: UseCanvasEscapeRegistrationsPara
   useEscapeHandler(buildModifyHandler('wall-attach', p.handleWallAttachEscape, () => p.wallAttachIsActive));
   useEscapeHandler(buildModifyHandler('bim-copy', p.handleBimCopyEscape, () => p.bimCopyIsActive));
   useEscapeHandler(buildModifyHandler('rotation', p.handleRotationEscape, () => p.rotationIsActive));
+
+  // P975 — Active hot-grip op (ADR-397). Above every tool/numeric handler so the
+  // multi-click move/rotate (incl. the «R» reference sub-steps, where `activeTool`
+  // stays 'select') is always cancellable — a tool/numeric handler must never win
+  // the ESC mid-flow. Same `handleGripEscape` reset as the low-priority GRIP_DRAG.
+  //
+  // `allowWhenEditable: true` — with a BIM entity selected the ribbon shows editable
+  // numeric comboboxes (RibbonEditableCombobox), and clicking the canvas does NOT
+  // blur them (the canvas is not focusable), so `document.activeElement` stays an
+  // INPUT for the whole grip flow. Without this opt-in the editable-focus guard
+  // skips the handler and ESC never cancels the rotate (Giorgio repro 2026-06-17:
+  // open+close a dialog → focus resets → ESC works again). Same pattern as the dim
+  // tool / dynamic input. The grip op is the active modal context → it owns ESC.
+  useEscapeHandler({
+    id: 'canvas/hot-grip-op-cancel',
+    priority: ESC_PRIORITY.HOT_GRIP_OP,
+    allowWhenEditable: true,
+    canHandle: () => p.hotGripActive === true,
+    handle: () => p.dxfGripInteraction.handleGripEscape(),
+  });
 
   // P450 — Grip drag (handleGripEscape returns its own consumed boolean)
   useEscapeHandler({

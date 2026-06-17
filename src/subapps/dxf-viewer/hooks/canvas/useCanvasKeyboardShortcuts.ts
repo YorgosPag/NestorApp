@@ -350,6 +350,8 @@ export function useCanvasKeyboardShortcuts({
     bimCopyIsActive,
     handleRotationEscape,
     rotationIsActive,
+    // ADR-397 — active hot-grip op owns ESC at HOT_GRIP_OP priority.
+    hotGripActive: hotGripKeyIsActive,
   });
 
   // ADR-350 B2: SHIFT keyup → immediately reset inverseMode when trim is active

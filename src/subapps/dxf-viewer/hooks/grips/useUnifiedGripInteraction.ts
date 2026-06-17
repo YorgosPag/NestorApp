@@ -328,6 +328,9 @@ export function useUnifiedGripInteraction(
   // Refs are read at call time (closure), so only `phase` needs to be a dep.
   const handleHotGripKeyDown = useCallback((key: string): boolean => {
     if (phase !== 'hotGrip' || hotGripOpRef.current !== 'rotate') return false;
+    // NB: ESC is NOT handled here — it routes through the escape-bus SSoT at
+    // `ESC_PRIORITY.HOT_GRIP_OP` (registered in useCanvasEscapeRegistrations), so an
+    // active grip op owns ESC over every tool/numeric handler (ADR-397 ESC fix).
     if (hotGripStepRef.current !== 'rotate-free') return false;
     // «R» → opt into the 6-click reference flow (drop any typed angle).
     if (isReferenceFlowKey(key)) {

@@ -22,6 +22,17 @@ export const ESC_PRIORITY = {
   MODAL_DIALOG: 1000,
 
   /**
+   * P975 — Active hot-grip operation (ADR-397).
+   *
+   * While the user is mid hot-grip (the AutoCAD click-flow move / corner / rotate,
+   * including the rotate FREE spin AND the «R» 6-click reference sub-steps), ESC
+   * cancels THAT operation before any tool / numeric handler can claim it. The
+   * grip flow spans multiple clicks with `activeTool` still 'select', so a stray
+   * tool handler must never win the ESC. Second only to a hard modal dialog.
+   */
+  HOT_GRIP_OP: 975,
+
+  /**
    * P950 — Canvas Numeric Input (ADR-189).
    *
    * Floating numeric entry that intercepts digits during drag/measure flows.
