@@ -5,7 +5,12 @@
  * declaration (`contextual-slab-tab.ts`) και bridge mappings
  * (`useRibbonSlabBridge`). Mirrors `WALL_RIBBON_KEYS` / `OPENING_RIBBON_KEYS`
  * pattern.
+ *
+ * ADR-476 — οι δομοστατικές/οπλισμού κλειδιά της πλάκας (Properties palette +
+ * structural ribbon panel) ζουν επίσης εδώ (mirror `beam-command-keys.ts`).
  */
+
+import type { SlabParams } from '../../../../bim/types/slab-types';
 
 export const SLAB_RIBBON_KEYS = {
   stringParams: {
@@ -54,6 +59,9 @@ export const SLAB_RIBBON_KEYS_ACTIONS = {
   fromGridFloor: 'slab.actions.fromGridFloor',
   /** Οροφές: ΠΟΛΛΑ slab kind='roof', ένα ανά φάτνωμα (Slice ROOF). */
   fromGridRoof: 'slab.actions.fromGridRoof',
+  // ADR-476 — «Αυτόματος Οπλισμός» contextual (parity με κολόνα/δοκάρι/πέδιλο):
+  // routes στο undoable organism pipeline μέσω `bim:auto-reinforce-requested`.
+  autoReinforce: 'slab.actions.autoReinforce',
 } as const;
 
 const SLAB_ACTION_KEY_SET: ReadonlySet<string> = new Set<string>(
@@ -80,4 +88,114 @@ export function isSlabRibbonKey(commandKey: string): boolean {
 
 export function isSlabRibbonStringKey(commandKey: string): boolean {
   return SLAB_STRING_KEY_SET.has(commandKey);
+}
+
+// ─── ADR-476 — δομοστατικά / οπλισμός πλάκας (reinforcement) ───────────────────
+
+/**
+ * Editable structural command keys πλάκας (mirror `BEAM_STRUCTURAL_KEYS`). `code`
+ * = building-level κανονισμός (γράφει στο `structuralSettingsStore`, ΟΧΙ στην πλάκα)·
+ * `concreteGrade` = per-element· τα υπόλοιπα = αριθμητικά πεδία οπλισμού (κάτω/άνω
+ * σχάρα Ø+βήμα + επικάλυψη). Η πλάκα οπλίζεται με **σχάρες** (ΟΧΙ διαμήκεις+συνδετήρες
+ * όπως δοκός/κολόνα): ένα ζεύγος combos κάτω + ένα άνω (X/Y ίδια στο default UI).
+ */
+export const SLAB_STRUCTURAL_KEYS = {
+  /** Building-level κανονισμός σχεδιασμού (project setting, ΟΧΙ per-slab). */
+  code: 'slab.structural.code',
+  /** Κατηγορία σκυροδέματος (per-element, EN 1992-1-1 Table 3.1). */
+  concreteGrade: 'slab.structural.concreteGrade',
+  /** Κάτω σχάρα (κύρια καμπτική, φάτνωμα) — διάμετρος ράβδου (mm). */
+  bottomMeshDiameter: 'slab.structural.bottomMeshDiameter',
+  /** Κάτω σχάρα — βήμα ράβδων (mm). */
+  bottomMeshSpacing: 'slab.structural.bottomMeshSpacing',
+  /** Άνω σχάρα (στηρίξεις/hogging) — διάμετρος ράβδου (mm). */
+  topMeshDiameter: 'slab.structural.topMeshDiameter',
+  /** Άνω σχάρα — βήμα ράβδων (mm). */
+  topMeshSpacing: 'slab.structural.topMeshSpacing',
+  /** Επικάλυψη οπλισμού cnom (mm). */
+  cover: 'slab.structural.cover',
+} as const;
+
+/** Read-only readout keys πλάκας — labels σχάρας / βάρος / ρ% / φορτία (bridge δίνει value). */
+export const SLAB_STRUCTURAL_READOUT_KEYS = {
+  /** Ετικέτα κάτω σχάρας — π.χ. «Ø12/200». */
+  bottomLabel: 'slab.structural.readout.bottomLabel',
+  /** Ετικέτα άνω σχάρας — π.χ. «Ø10/250». */
+  topLabel: 'slab.structural.readout.topLabel',
+  /** kg — συνολικό βάρος χάλυβα οπλισμού B500C (κάτω + άνω σχάρα). */
+  steelWeight: 'slab.structural.readout.steelWeight',
+  /** % — ποσοστό κύριου (κάτω) οπλισμού ρ = As/(b·d). */
+  ratio: 'slab.structural.readout.ratio',
+  // ADR-467 — επιφανειακό φορτίο σχεδιασμού από τη διαδρομή φορτίων (`params.appliedLoad`,
+  // tributary ÷ εμβαδό). Read-only mirror του δοκαριού «Φορτίο Σχεδιασμού».
+  /** kN/m² — μόνιμο επιφανειακό φορτίο g (χαρακτηριστικό). */
+  loadDeadArea: 'slab.structural.readout.loadDeadArea',
+  /** kN/m² — μεταβλητό επιφανειακό φορτίο q (χαρακτηριστικό). */
+  loadLiveArea: 'slab.structural.readout.loadLiveArea',
+  /** kN/m² — φορτίο σχεδιασμού ULS q_Ed = γ_G·g + γ_Q·q (EN1990 6.10). */
+  loadUlsArea: 'slab.structural.readout.loadUlsArea',
+} as const;
+
+/** Πεδίο της `SlabFoundationReinforcement` που χειρίζεται ένα αριθμητικό structural key. */
+export type SlabStructuralReinforcementField =
+  | 'bottomMeshDiameter'
+  | 'bottomMeshSpacing'
+  | 'topMeshDiameter'
+  | 'topMeshSpacing'
+  | 'cover';
+
+/** commandKey → λογικό πεδίο σχάρας (καταναλώνεται από slab-structural-bridge). */
+export const SLAB_STRUCTURAL_KEY_TO_FIELD: Readonly<Record<string, SlabStructuralReinforcementField>> = {
+  [SLAB_STRUCTURAL_KEYS.bottomMeshDiameter]: 'bottomMeshDiameter',
+  [SLAB_STRUCTURAL_KEYS.bottomMeshSpacing]: 'bottomMeshSpacing',
+  [SLAB_STRUCTURAL_KEYS.topMeshDiameter]: 'topMeshDiameter',
+  [SLAB_STRUCTURAL_KEYS.topMeshSpacing]: 'topMeshSpacing',
+  [SLAB_STRUCTURAL_KEYS.cover]: 'cover',
+};
+
+const SLAB_STRUCTURAL_KEY_SET: ReadonlySet<string> = new Set<string>(
+  Object.values(SLAB_STRUCTURAL_KEYS),
+);
+const SLAB_STRUCTURAL_READOUT_KEY_SET: ReadonlySet<string> = new Set<string>(
+  Object.values(SLAB_STRUCTURAL_READOUT_KEYS),
+);
+
+export function isSlabStructuralKey(commandKey: string): boolean {
+  return SLAB_STRUCTURAL_KEY_SET.has(commandKey);
+}
+
+export function isSlabStructuralReadoutKey(commandKey: string): boolean {
+  return SLAB_STRUCTURAL_READOUT_KEY_SET.has(commandKey);
+}
+
+/**
+ * Panel visibility keys πλάκας (Properties palette + structural ribbon panel gating).
+ * `structural` = ορατό μόνο σε **οπλισμένο-σκυρόδεμα** πλάκα (όχι σύμμικτη/ξύλινη —
+ * εκεί ο οπλισμός σχάρας δεν έχει νόημα). Mirror του `BEAM_STRUCTURAL_VISIBILITY_KEYS`.
+ */
+export const SLAB_STRUCTURAL_VISIBILITY_KEYS = {
+  structural: 'slab.visibility.structural',
+} as const;
+
+const SLAB_STRUCTURAL_VISIBILITY_KEY_SET: ReadonlySet<string> = new Set<string>(
+  Object.values(SLAB_STRUCTURAL_VISIBILITY_KEYS),
+);
+
+export function isSlabStructuralVisibilityKey(key: string): boolean {
+  return SLAB_STRUCTURAL_VISIBILITY_KEY_SET.has(key);
+}
+
+/**
+ * Pure SSoT: αποφασίζει αν ένα visibility-gated section/panel της πλάκας πρέπει να
+ * φαίνεται. `structural` = ΜΟΝΟ για RC πλάκα (σκυρόδεμα)· σε σύμμικτη/ξύλινη ο
+ * οπλισμός κρύβεται. keys εκτός set → `true` (no-op). `params === null` → `false`.
+ */
+export function resolveSlabPanelVisibility(visibilityKey: string, params: SlabParams | null): boolean {
+  if (!isSlabStructuralVisibilityKey(visibilityKey)) return true;
+  if (!params) return false;
+  if (visibilityKey === SLAB_STRUCTURAL_VISIBILITY_KEYS.structural) {
+    // material undefined → default RC (οι περισσότερες πλάκες)· composite/wood → κρυφό.
+    return params.material === undefined || params.material === 'rc';
+  }
+  return false;
 }

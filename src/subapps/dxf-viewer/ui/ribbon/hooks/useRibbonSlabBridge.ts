@@ -31,6 +31,8 @@ import {
   SLAB_RIBBON_BADGE_KEYS,
   isSlabRibbonKey,
   isSlabRibbonStringKey,
+  isSlabStructuralVisibilityKey,
+  resolveSlabPanelVisibility,
 } from './bridge/slab-command-keys';
 import { PSET_RIBBON_ACTION } from './bridge/pset-action-keys';
 import { EventBus } from '../../../systems/events/EventBus';
@@ -72,8 +74,10 @@ export interface RibbonSlabBridge {
   readonly getToggleState: (commandKey: string) => RibbonToggleState;
   /** Returns `true` όταν το currently selected slab έχει code violations. */
   readonly getBadgeState: (badgeKey: string) => boolean;
-  /** Handles ribbon simple-button actions (close / delete). */
+  /** Handles ribbon simple-button actions (close / delete / autoReinforce). */
   readonly onAction: (action: string) => void;
+  /** ADR-476 — panel visibility (structural reinforcement panel = RC slab μόνο). */
+  readonly getPanelVisibility: (visibilityKey: string) => boolean;
 }
 
 const SLAB_OWNED_BADGE_KEYS: ReadonlySet<string> = new Set<string>([
@@ -259,6 +263,13 @@ export function useRibbonSlabBridge(
       if (action === SLAB_RIBBON_KEYS_ACTIONS.fromGridMat) { handleFoundationMatFromGrid(); return; }
       if (action === SLAB_RIBBON_KEYS_ACTIONS.fromGridFloor) { handleSlabBaysFromGrid('floor'); return; }
       if (action === SLAB_RIBBON_KEYS_ACTIONS.fromGridRoof) { handleSlabBaysFromGrid('roof'); return; }
+      // ADR-476 — «Αυτόματος Οπλισμός» (parity με κολόνα/δοκάρι/πέδιλο): δρομολογεί στο
+      // ΥΠΑΡΧΟΝ undoable organism pipeline (ήδη χειρίζεται πλάκες — `isReinforceable`).
+      if (action === SLAB_RIBBON_KEYS_ACTIONS.autoReinforce) {
+        const slab = resolveSlab();
+        if (slab) EventBus.emit('bim:auto-reinforce-requested', { entityIds: [slab.id] });
+        return;
+      }
       if (action === PSET_RIBBON_ACTION) {
         const slab = resolveSlab();
         if (!slab || !levelManager.currentLevelId) return;
@@ -281,15 +292,30 @@ export function useRibbonSlabBridge(
     [resolveSlab, levelManager, t, handleFoundationMatFromGrid, handleSlabBaysFromGrid],
   );
 
+  // ADR-476 — structural reinforcement panel: ορατό μόνο για RC πλάκα (όχι σύμμικτη/
+  // ξύλινη). Κανένα slab επιλεγμένο → κρυφό (false). keys εκτός set → true (no-op).
+  const getPanelVisibility = useCallback(
+    (visibilityKey: string): boolean => {
+      if (!isSlabStructuralVisibilityKey(visibilityKey)) return true;
+      return resolveSlabPanelVisibility(visibilityKey, resolveSlab()?.params ?? null);
+    },
+    [resolveSlab],
+  );
+
   return useMemo(
-    () => ({ onComboboxChange, getComboboxState, onToggle, getToggleState, getBadgeState, onAction }),
-    [onComboboxChange, getComboboxState, onToggle, getToggleState, getBadgeState, onAction],
+    () => ({ onComboboxChange, getComboboxState, onToggle, getToggleState, getBadgeState, onAction, getPanelVisibility }),
+    [onComboboxChange, getComboboxState, onToggle, getToggleState, getBadgeState, onAction, getPanelVisibility],
   );
 }
 
 /** Type guard used by `useRibbonCommands` composer. */
 export function isSlabBadgeKey(badgeKey: string): boolean {
   return SLAB_OWNED_BADGE_KEYS.has(badgeKey);
+}
+
+/** Type guard used by `useRibbonCommands` composer (ADR-476 panel visibility routing). */
+export function isSlabPanelVisibilityKey(visibilityKey: string): boolean {
+  return isSlabStructuralVisibilityKey(visibilityKey);
 }
 
 /** Exposed so action interceptor μπορεί να αναγνωρίσει `slab.actions.close`. */

@@ -21,6 +21,7 @@ import {
   SLAB_RIBBON_KEYS,
   SLAB_RIBBON_KEYS_ACTIONS,
   SLAB_RIBBON_BADGE_KEYS,
+  SLAB_STRUCTURAL_VISIBILITY_KEYS,
 } from '../hooks/bridge/slab-command-keys';
 import { PSET_RIBBON_ACTION } from '../hooks/bridge/pset-action-keys';
 
@@ -187,6 +188,43 @@ export const CONTEXTUAL_SLAB_TAB: RibbonTab = {
                 commandKey: SLAB_RIBBON_KEYS.stringParams.material,
                 comboboxWidthPx: 180,
                 options: SLAB_MATERIAL_OPTIONS,
+              },
+            },
+          ],
+        },
+      ],
+    },
+    {
+      // ADR-476 — δομοστατικά: show/hide οπλισμού (κοινό per-view flag/widget με την
+      // καρτέλα Προβολή· default OFF) + «Αυτόματος Οπλισμός». Visible μόνο για RC πλάκα.
+      id: 'slab-reinforcement-actions',
+      labelKey: 'ribbon.panels.slabStructural',
+      visibilityKey: SLAB_STRUCTURAL_VISIBILITY_KEYS.structural,
+      rows: [
+        {
+          isInFlyout: false,
+          buttons: [
+            {
+              type: 'widget',
+              size: 'small',
+              widgetId: 'show-reinforcement-toggle',
+              command: {
+                id: 'view.reinforcement.slab',
+                labelKey: 'ribbon.commands.reinforcement.label',
+                icon: '',
+                commandKey: 'show-reinforcement-toggle',
+              },
+            },
+            {
+              type: 'simple',
+              size: 'small',
+              command: {
+                id: 'slab.structural.auto',
+                labelKey: 'ribbon.commands.autoReinforceOrganism',
+                tooltipKey: 'ribbon.tooltips.autoReinforceOrganism',
+                icon: 'struct-auto-reinforce',
+                commandKey: SLAB_RIBBON_KEYS_ACTIONS.autoReinforce,
+                action: SLAB_RIBBON_KEYS_ACTIONS.autoReinforce,
               },
             },
           ],

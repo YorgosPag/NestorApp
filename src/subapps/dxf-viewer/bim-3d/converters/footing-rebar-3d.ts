@@ -6,7 +6,8 @@
  *   - `pad`      → κάτω σχάρα (X+Y bars, στάθμη bottom+cover) + προαιρετική άνω σχάρα.
  *   - `strip`    → εγκάρσιες + διαμήκεις διανομής (bottom) + προαιρετικοί κάθετοι
  *                  συνδετήρες (vertical rings ανά βήμα).
- *   - `tie-beam` → κάτω + άνω διαμήκεις ράβδοι + κάθετοι συνδετήρες.
+ *   - `tie-beam` → ΕΙΝΑΙ δοκός (ADR-477): delegate στο beam rebar cage core
+ *                  (`buildLinearMemberRebarCage`) → EC8 κρίσιμες ζώνες συνδετήρων.
  *
  * ΕΠΑΝΑΧΡΗΣΙΜΟΠΟΙΕΙ τα shared primitives του column cage (`buildRods` InstancedMesh,
  * `REBAR_MATERIAL` singleton, `toThree` AXIS_FLIP, `MM_TO_M`) — μηδέν duplicate
@@ -19,15 +20,19 @@
  */
 
 import * as THREE from 'three';
-import type { FoundationEntity } from '../../bim/types/foundation-types';
+import type { FoundationEntity, TieBeamParams } from '../../bim/types/foundation-types';
 import type {
   PadReinforcement,
   StripReinforcement,
   TieBeamReinforcement,
 } from '../../bim/structural/reinforcement/footing-reinforcement-types';
+import { DEFAULT_STIRRUP_TYPE } from '../../bim/structural/reinforcement/beam-reinforcement-types';
 import { sceneUnitsToMeters } from '../../utils/scene-units';
 import { scalePoints } from '../../rendering/entities/shared/geometry-vector-utils';
 import { resolveActiveFootingReinforcementForParams } from '../../bim/structural/active-footing-reinforcement';
+// ADR-477 Slice 2 — η συνδετήρια δοκός τροφοδοτεί το ΙΔΙΟ beam rebar cage core (EC8 ζώνες).
+import { buildLinearMemberRebarCage } from './linear-member-rebar-3d';
+import { tieBeamRebarLayout, tieBeamAxisPoints } from '../../bim/structural/reinforcement/tie-beam-linear-member';
 import type { Point2D } from '../../rendering/types/Types';
 import {
   MM_TO_M,
@@ -158,13 +163,25 @@ function buildStripCage(group: THREE.Group, f: Frame, r: StripReinforcement, bot
   }
 }
 
-function buildTieBeamCage(group: THREE.Group, f: Frame, r: TieBeamReinforcement, bottomY: number, topY: number): void {
-  const cover = r.coverMm * MM_TO_M;
-  // Κάτω + άνω διαμήκεις ράβδοι // άξονα.
-  addRods(group, distributedSegs(f, bottomY + cover, r.bottom.count, cover), radiusOf(r.bottom.diameterMm));
-  addRods(group, distributedSegs(f, topY - cover, r.top.count, cover), radiusOf(r.top.diameterMm));
-  // Κάθετοι συνδετήρες ανά βήμα.
-  addRods(group, stirrupRingSegs(f, bottomY, topY, cover, r.stirrups.spacingMm * MM_TO_M), radiusOf(r.stirrups.diameterMm));
+/**
+ * ADR-477 Slice 2 — η συνδετήρια δοκός ΕΙΝΑΙ δοκός: χτίζει τον κλωβό μέσω του ΙΔΙΟΥ
+ * beam rebar core (`buildLinearMemberRebarCage`) → EC8 κρίσιμες ζώνες συνδετήρων +
+ * layered διαμήκεις (πρώην bespoke ομοιόμορφο βήμα — διαγράφηκε, μηδέν duplicate). Ο
+ * core παράγει absolute world metres (axisPts canvas × sceneToM) — ίδιο datum με τα
+ * pad/strip cages· `bottomY` = κάτω παρειά (centerY = bottomY + βάθος/2). Ο `r` είναι
+ * footing-resolved (μεγαλύτερο cover) — δεν ξανα-resolve-άρεται μέσω beam suggester.
+ */
+function buildTieBeamCage(group: THREE.Group, p: TieBeamParams, r: TieBeamReinforcement, bottomY: number): void {
+  const layout = tieBeamRebarLayout(p, r);
+  if (!layout) return;
+  const cage = buildLinearMemberRebarCage({
+    axisPts: tieBeamAxisPoints(p),
+    sceneUnits: p.sceneUnits,
+    layout,
+    stirrupType: r.stirrups.type ?? DEFAULT_STIRRUP_TYPE,
+    bottomFaceY: bottomY,
+  });
+  if (cage) group.add(cage);
 }
 
 /**
@@ -189,7 +206,7 @@ export function buildFootingRebarCage(
   const group = new THREE.Group();
   if (p.kind === 'pad' && r.kind === 'pad') buildPadCage(group, f, r, bottomY, topY);
   else if (p.kind === 'strip' && r.kind === 'strip') buildStripCage(group, f, r, bottomY, topY);
-  else if (p.kind === 'tie-beam' && r.kind === 'tie-beam') buildTieBeamCage(group, f, r, bottomY, topY);
+  else if (p.kind === 'tie-beam' && r.kind === 'tie-beam') buildTieBeamCage(group, p, r, bottomY);
 
   if (group.children.length === 0) return null;
   group.userData['bimId'] = foundation.id;

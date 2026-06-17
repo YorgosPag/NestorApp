@@ -18,7 +18,7 @@
  */
 
 import type { Point2D } from '../../../rendering/types/Types';
-import type { FoundationEntity } from '../../types/foundation-types';
+import type { FoundationEntity, TieBeamParams } from '../../types/foundation-types';
 import { buildFootingSectionContext } from '../section-context';
 import { resolveActiveFootingReinforcementForParams } from '../active-footing-reinforcement';
 import type {
@@ -26,6 +26,9 @@ import type {
   StripReinforcement,
   TieBeamReinforcement,
 } from '../reinforcement/footing-reinforcement-types';
+// ADR-477 Slice 2 — οι συνδετήρες της συνδετήριας αντλούν τις EC8 ζώνες από το ΙΔΙΟ
+// beam layout SSoT (ίδιες θέσεις με 2Δ/3Δ) — αντικατέστησε το ομοιόμορφο βήμα.
+import { tieBeamRebarLayout } from '../reinforcement/tie-beam-linear-member';
 import { pickScaleDenominator } from './detail-sheet-fit';
 import type { DetailPrimitive, RectMm } from './detail-sheet-types';
 // ADR-471 Slice 6 — χρώμα οπλισμού από το ΕΝΑ SSoT (πρώην inline literal σε 10 αρχεία).
@@ -141,13 +144,30 @@ function pushStripRebar(out: DetailPrimitive[], r: StripReinforcement, d: PlanDi
   if (r.stirrups) pushInsetRect(out, cover, barWidthMm(r.stirrups.diameterMm, s), d, toSheet);
 }
 
-function pushTieBeamRebar(out: DetailPrimitive[], r: TieBeamReinforcement, d: PlanDims, s: number, toSheet: (p: Point2D) => Point2D): void {
+/**
+ * ADR-477 Slice 2 — η συνδετήρια ΕΙΝΑΙ δοκός: οι συνδετήρες σχεδιάζονται στις **EC8
+ * κρίσιμες ζώνες** (πύκνωση στα άκρα), αντλώντας τις θέσεις από το ΙΔΙΟ beam layout
+ * SSoT (`tieBeamRebarLayout` → `stirrupLevelsMm`) που τροφοδοτεί 2Δ/3Δ — αντί
+ * ομοιόμορφου βήματος (bespoke duplicate, διαγράφηκε). Fallback σε ομοιόμορφο μόνο αν
+ * το layout είναι εκφυλισμένο (degenerate διατομή).
+ */
+function pushTieBeamRebar(out: DetailPrimitive[], p: TieBeamParams, r: TieBeamReinforcement, d: PlanDims, s: number, toSheet: (q: Point2D) => Point2D): void {
   const cover = r.coverMm;
   // Διαμήκεις (κάτω+άνω σε κάτοψη συμπίπτουν): bottom.count ράβδοι // X.
   pushDistributedBars(out, r.bottom.count, cover, barWidthMm(r.bottom.diameterMm, s), d, toSheet);
-  // Συνδετήρες: εγκάρσια ticks (// Y) με βήμα κατά X + περίγραμμα inset.
-  pushSpacedBars(out, false, r.stirrups.spacingMm, cover, barWidthMm(r.stirrups.diameterMm, s), d, toSheet);
-  pushInsetRect(out, cover, barWidthMm(r.stirrups.diameterMm, s), d, toSheet);
+  // Συνδετήρες: εγκάρσιες γραμμές (// Y) στις EC8 στάθμες κατά X + περίγραμμα inset.
+  const widthMm = barWidthMm(r.stirrups.diameterMm, s);
+  const levels = tieBeamRebarLayout(p, r)?.stirrupLevelsMm;
+  if (levels && levels.length > 0) {
+    const stroke = { colorHex: REBAR_HEX, widthMm };
+    for (const u of levels) {
+      if (u < 0 || u > d.planWMm) continue;
+      out.push({ kind: 'line', a: toSheet({ x: u, y: cover }), b: toSheet({ x: u, y: d.planHMm - cover }), stroke });
+    }
+  } else {
+    pushSpacedBars(out, false, r.stirrups.spacingMm, cover, widthMm, d, toSheet);
+  }
+  pushInsetRect(out, cover, widthMm, d, toSheet);
 }
 
 /**
@@ -185,7 +205,7 @@ export function buildFootingPlanRegion(foundation: FoundationEntity, region: Rec
   // ── Reinforcement (kind-aware) ──
   if (foundation.params.kind === 'pad' && r.kind === 'pad') pushPadRebar(out, r, d, s, toSheet);
   else if (foundation.params.kind === 'strip' && r.kind === 'strip') pushStripRebar(out, r, d, s, toSheet);
-  else if (foundation.params.kind === 'tie-beam' && r.kind === 'tie-beam') pushTieBeamRebar(out, r, d, s, toSheet);
+  else if (foundation.params.kind === 'tie-beam' && r.kind === 'tie-beam') pushTieBeamRebar(out, foundation.params, r, d, s, toSheet);
 
   // ── Dimensions: width-X (bottom), length/span-Y (left), cover (top-left inset) ──
   const dimStroke = { colorHex: DIM_HEX, widthMm: DIM_WIDTH_MM };

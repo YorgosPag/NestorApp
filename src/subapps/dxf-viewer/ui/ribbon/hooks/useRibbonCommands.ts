@@ -11,7 +11,7 @@ import type { UseRibbonCommandsProps } from './useRibbonCommands-types';
 import { isStairBadgeKey, isStairPanelVisibilityKey } from '../../../bim/hooks/use-ribbon-stair-bridge';
 import { isWallBadgeKey } from './useRibbonWallBridge';
 import { isOpeningBadgeKey } from './useRibbonOpeningBridge';
-import { isSlabBadgeKey } from './useRibbonSlabBridge';
+import { isSlabBadgeKey, isSlabPanelVisibilityKey } from './useRibbonSlabBridge';
 import { isRoofBadgeKey } from './useRibbonRoofBridge';
 import { isColumnBadgeKey, isColumnPanelVisibilityKey } from './useRibbonColumnBridge';
 import { isBeamBadgeKey, isBeamPanelVisibilityKey } from './useRibbonBeamBridge';
@@ -349,6 +349,7 @@ export function useRibbonCommands({
       if (isStairPanelVisibilityKey(visibilityKey)) return stairBridge.getPanelVisibility(visibilityKey);
       if (isColumnPanelVisibilityKey(visibilityKey)) return columnBridge.getPanelVisibility(visibilityKey);
       if (isBeamPanelVisibilityKey(visibilityKey)) return beamBridge.getPanelVisibility(visibilityKey);
+      if (isSlabPanelVisibilityKey(visibilityKey)) return slabBridge.getPanelVisibility(visibilityKey);
       if (isMepFixturePanelVisibilityKey(visibilityKey)) return mepFixtureBridge.getPanelVisibility(visibilityKey);
       if (isMepManifoldPanelVisibilityKey(visibilityKey)) return mepManifoldBridge.getPanelVisibility(visibilityKey);
       if (isElectricalPanelPanelVisibilityKey(visibilityKey)) return electricalPanelBridge.getPanelVisibility(visibilityKey);
@@ -360,7 +361,7 @@ export function useRibbonCommands({
       if (isFloorplanSymbolPanelVisibilityKey(visibilityKey)) return floorplanSymbolBridge.getPanelVisibility(visibilityKey);
       return true;
     },
-    [stairBridge, columnBridge, beamBridge, mepFixtureBridge, mepManifoldBridge, electricalPanelBridge, mepBoilerBridge, mepWaterHeaterBridge, mepUnderfloorBridge, mepSegmentBridge, furnitureBridge, floorplanSymbolBridge],
+    [stairBridge, columnBridge, beamBridge, slabBridge, mepFixtureBridge, mepManifoldBridge, electricalPanelBridge, mepBoilerBridge, mepWaterHeaterBridge, mepUnderfloorBridge, mepSegmentBridge, furnitureBridge, floorplanSymbolBridge],
   );
 
   // ADR-461 Phase C4 / ADR-467 — Revit-style advisory recommendation per active

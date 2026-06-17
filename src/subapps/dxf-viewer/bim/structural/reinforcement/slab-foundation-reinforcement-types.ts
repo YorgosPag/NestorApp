@@ -59,3 +59,8 @@ export interface SlabFoundationReinforcement {
 export function formatSlabFoundationMainLabel(r: SlabFoundationReinforcement): string {
   return `Ø${r.bottomMeshX.diameterMm}/${r.bottomMeshX.spacingMm}`;
 }
+
+/** Σύντομη ετικέτα άνω (στηρίξεων/hogging) σχάρας — π.χ. «Ø10/250». */
+export function formatSlabFoundationTopLabel(r: SlabFoundationReinforcement): string {
+  return `Ø${r.topMeshX.diameterMm}/${r.topMeshX.spacingMm}`;
+}

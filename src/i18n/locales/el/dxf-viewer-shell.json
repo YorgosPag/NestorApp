@@ -1129,6 +1129,7 @@
       "slabGeometry": "Γεωμετρία",
       "slabMaterial": "Υλικό",
       "slabActions": "Ενέργειες",
+      "slabStructural": "Στατικά/Οπλισμός",
       "roofType": "Τύπος Στέγης",
       "roofShapeSlope": "Μορφή & Κλίση",
       "roofGeometry": "Γεωμετρία",
@@ -2789,6 +2790,23 @@
         "loadLiveLine": "Μεταβλητό q (kN/m)",
         "loadUlsLine": "Φορτίο σχεδ. w_Ed (kN/m)"
       },
+      "slabStructural": {
+        "code": "Κανονισμός",
+        "codeTooltip": "Κανονισμός σχεδιασμού (ανά κτίριο)",
+        "concreteGrade": "Σκυρόδεμα",
+        "bottomMeshDiameter": "Κάτω σχάρα Ø",
+        "bottomMeshSpacing": "Κάτω βήμα",
+        "topMeshDiameter": "Άνω σχάρα Ø",
+        "topMeshSpacing": "Άνω βήμα",
+        "cover": "Επικάλυψη",
+        "bottomLabel": "Κάτω σχάρα",
+        "topLabel": "Άνω σχάρα",
+        "steelWeight": "Βάρος χάλυβα (kg)",
+        "ratio": "ρ (%)",
+        "loadDeadArea": "Μόνιμο g (kN/m²)",
+        "loadLiveArea": "Μεταβλητό q (kN/m²)",
+        "loadUlsArea": "Φορτίο σχεδ. q_Ed (kN/m²)"
+      },
       "columnEditor": {
         "width": "Πλάτος",
         "depth": "Βάθος",
@@ -3903,6 +3921,14 @@
   "beamAdvancedPanel": {
     "title": "Ιδιότητες Δοκαριού",
     "emptyState": "Επίλεξε ένα δοκάρι για να δεις τις ιδιότητες.",
+    "sections": {
+      "structural": { "title": "Στατικά / Οπλισμός" },
+      "loads": { "title": "Φορτίο Σχεδιασμού" }
+    }
+  },
+  "slabAdvancedPanel": {
+    "title": "Ιδιότητες Πλάκας",
+    "emptyState": "Επίλεξε μια πλάκα για να δεις τις ιδιότητες.",
     "sections": {
       "structural": { "title": "Στατικά / Οπλισμός" },
       "loads": { "title": "Φορτίο Σχεδιασμού" }

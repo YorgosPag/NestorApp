@@ -1,6 +1,6 @@
 # ADR-476 — Unified Slab Reinforcement (Οπλισμός Πλακών: εδαφόπλακα / δάπεδο / οροφή)
 
-**Status:** 🟡 IN PROGRESS 2026-06-18 (Opus) — **Slices 0-3 DONE (UNCOMMITTED)** [data unification + kind-aware suggester + auto re-study + 2Δ overlay + 3Δ κλωβός, ΟΛΑ τα slab kinds]. **Slices 4-5 PENDING** [Properties panel + Ribbon· PDF detail sheet]. 🔴 tsc(Giorgio full) + browser-verify + commit.
+**Status:** 🟡 IN PROGRESS 2026-06-18 (Opus) — **Slices 0-4 DONE (UNCOMMITTED)** [data unification + kind-aware suggester + auto re-study + 2Δ overlay + 3Δ κλωβός + Properties panel & structural ribbon, ΟΛΑ τα slab kinds]. **Slice 5 PENDING** [PDF detail sheet]. tsc-clean (πλην 4 προϋπαρχόντων beam WIP errors άλλου agent). 🔴 browser-verify + commit.
 **Discipline:** Δομοστατικά / Structural Engineering
 **Scope:** Πλήρως **ενοποιημένος** (full SSoT, μηδέν διπλότυπα) οπλισμός **ΟΛΩΝ** των ειδών πλάκας (εδαφόπλακα/raft + αναρτημένη δάπεδο/οροφή), Revit-grade. Επαναχρησιμοποιεί ΟΛΗ την υποδομή κολόνας/δοκαριού/πεδίλου: ίδιο μοντέλο σχάρας, ίδιο rebar χρώμα/υλικό, ίδιο visibility gating, ίδιο auto-reinforce pipeline, ίδιο detail-sheet engine. Επεκτείνει ADR-456/459/463/464 (structural), ADR-470 (component visibility), ADR-471 (member facade), ADR-472 (load-aware).
 
@@ -59,8 +59,13 @@
 - `attachSlabRebar` (mirror `attachBeamRebar`) στο `slabToMesh` μετά το `applyStructuralCoreVisibility3D`· `bottomY = mesh.position.y` (= κάτω παρειά μέσω `hangDownMeshY`)· gate `showReinforcement`. — `bim-three-structural-converters.ts`
 - DEFER: multilayer-DNA slab path (`buildMultiLayerSlabSolid`) — μόνο single-extrude wired (οι περισσότερες πλάκες).
 
-### S4 — UI: Properties panel + Ribbon 🔴 PENDING
-- NEW `ui/slab-advanced-panel/{slab-property-fields, SlabAdvancedPanel, SlabPropertiesTab}` (reuse generic `bim-property-types`/`BimPropertyRow`) + `slab-structural-bridge` + `useSlabParamsDispatcher` + `isSlabEntity` branch στο `BimPropertiesRouter` + ribbon `slab-reinforcement-actions` (toggle + «Auto Οπλισμός») στο `contextual-slab-tab`. Νέα i18n keys (el+en).
+### S4 — UI: Properties panel + Ribbon ✅ DONE
+- NEW `ui/slab-advanced-panel/{slab-property-fields, SlabAdvancedPanel, SlabPropertiesTab}` (reuse generic `bim-property-types`/`BimPropertyRow` — μηδέν νέο row component) + `slab-structural-bridge` (resolve/apply state + readouts· `auto:false` lock στο edit· `effectiveReinforcement` = SSoT `resolveActiveSlabReinforcement` → πίνακας δείχνει ΙΔΙΟ design με 2Δ/3Δ) + `useSlabParamsDispatcher` (wrap **υπάρχον** `UpdateSlabParamsCommand` + emit `bim:slab-params-updated` → re-study) + `isSlabEntity` branch στο `BimPropertiesRouter`.
+- Structural keys προστέθηκαν στο **υπάρχον** `slab-command-keys.ts` (mirror `beam-command-keys`): `SLAB_STRUCTURAL_KEYS` (code/concreteGrade/bottom·topMeshDiameter·Spacing/cover) + `SLAB_STRUCTURAL_READOUT_KEYS` (bottom/top label, βάρος, ρ%, g/q/q_Ed) + `SLAB_STRUCTURAL_VISIBILITY_KEYS` + `SLAB_STRUCTURAL_KEY_TO_FIELD` + guards + `resolveSlabPanelVisibility` (RC-only gating) + `autoReinforce` action.
+- **Πεδία σχάρας:** ένα ζεύγος combos κάτω + ένα άνω (Ø+βήμα· X/Y ίδια στο default UI — DEFER ξεχωριστά X/Y)· options reuse `FOUNDATION_*` (ίδιο μοντέλο σχάρας με πέδιλο, μηδέν νέα options) + `STRUCTURAL_CODE_OPTIONS`/`CONCRETE_GRADE_OPTIONS`.
+- **Ribbon `slab-reinforcement-actions`** (RC-gated μέσω `getPanelVisibility` wired στο `useRibbonSlabBridge` + `useRibbonCommands`): widget `show-reinforcement-toggle` (κοινό per-view flag) + κουμπί «Αυτόματος Οπλισμός» → emit `bim:auto-reinforce-requested` → **υπάρχον** undoable organism pipeline (ήδη χειρίζεται slabs, S1). Boy-scout SSoT: `formatSlabFoundationTopLabel` δίπλα στο main label.
+- i18n: `slabAdvancedPanel.*` + `ribbon.commands.slabStructural.*` + `ribbon.panels.slabStructural` (el+en)· reuse `reinforcement.label`/`autoReinforceOrganism`.
+- Tests: `slab-structural-keys.test.ts` (8 — KEY_TO_FIELD completeness, guards, RC gating, action key, labels). tsc-clean (δικά μας).
 
 ### S5 — PDF detail sheet 🔴 PENDING (αναβλητέο)
 - NEW `bim/structural/detail-sheet/slab-detail-*` → `buildSlabDetailSheet` (reuse `DetailSheetModel`/layout/canvas+pdf renderers/`DetailSheetDialog`/`detail-3d-capture-core`) + `SlabDetailHost`.

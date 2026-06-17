@@ -1129,6 +1129,7 @@
       "slabGeometry": "Geometry",
       "slabMaterial": "Material",
       "slabActions": "Actions",
+      "slabStructural": "Structural",
       "roofType": "Roof Type",
       "roofShapeSlope": "Shape & Slope",
       "roofGeometry": "Geometry",
@@ -2789,6 +2790,23 @@
         "loadLiveLine": "Live q (kN/m)",
         "loadUlsLine": "Design load w_Ed (kN/m)"
       },
+      "slabStructural": {
+        "code": "Code",
+        "codeTooltip": "Design code (per building)",
+        "concreteGrade": "Concrete",
+        "bottomMeshDiameter": "Bottom mesh Ø",
+        "bottomMeshSpacing": "Bottom spacing",
+        "topMeshDiameter": "Top mesh Ø",
+        "topMeshSpacing": "Top spacing",
+        "cover": "Cover",
+        "bottomLabel": "Bottom mesh",
+        "topLabel": "Top mesh",
+        "steelWeight": "Steel (kg)",
+        "ratio": "ρ (%)",
+        "loadDeadArea": "Dead g (kN/m²)",
+        "loadLiveArea": "Live q (kN/m²)",
+        "loadUlsArea": "Design load q_Ed (kN/m²)"
+      },
       "columnEditor": {
         "width": "Width",
         "depth": "Depth",
@@ -3903,6 +3921,14 @@
   "beamAdvancedPanel": {
     "title": "Beam Properties",
     "emptyState": "Select a beam to see its properties.",
+    "sections": {
+      "structural": { "title": "Structural / Reinforcement" },
+      "loads": { "title": "Design Load" }
+    }
+  },
+  "slabAdvancedPanel": {
+    "title": "Slab Properties",
+    "emptyState": "Select a slab to see its properties.",
     "sections": {
       "structural": { "title": "Structural / Reinforcement" },
       "loads": { "title": "Design Load" }

@@ -42,7 +42,7 @@ import type { BeamSectionContext, StructuralCodeProvider } from '../codes/struct
 import { MIN_BEAM_DEPTH_MM } from '../../types/beam-types';
 
 /** Constructible module στρογγυλοποίησης ύψους (mm). */
-export const BEAM_DEPTH_MODULE_MM = 50;
+const BEAM_DEPTH_MODULE_MM = 50;
 
 /** Πρακτικό άνω φράγμα ύψους δοκαριού (mm) — guard έναντι εκφυλισμένης εισόδου. */
 export const BEAM_MAX_PRACTICAL_DEPTH_MM = 1500;

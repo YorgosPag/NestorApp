@@ -5,7 +5,8 @@
  *   - `pad`      → δι-διευθυντική κάτω σχάρα (γραμμές // X και // Y, inset cover).
  *   - `strip`    → εγκάρσιες ράβδοι (// πλάτος, βήμα κατά τον άξονα) + διαμήκεις
  *                  διανομής (// άξονας) + προαιρετικοί συνδετήρες (περίγραμμα inset).
- *   - `tie-beam` → διαμήκεις ράβδοι (// άξονας) + συνδετήρες (εγκάρσια ticks).
+ *   - `tie-beam` → ΕΙΝΑΙ δοκός (ADR-477): delegate στο beam rebar core
+ *                  (`drawLinearMemberRebar2D`) → EC8 κρίσιμες ζώνες συνδετήρων.
  *
  * Η γεωμετρία υπολογίζεται από τις γωνίες του footprint (canvas units, SSoT
  * `computeFoundationGeometry`) → ακολουθεί rotation/anchor/justification. Pure ctx,
@@ -16,7 +17,7 @@
  */
 
 import type { Point2D } from '../../rendering/types/Types';
-import type { FoundationParams } from '../types/foundation-types';
+import type { FoundationParams, TieBeamParams } from '../types/foundation-types';
 import type {
   PadReinforcement,
   StripReinforcement,
@@ -25,6 +26,10 @@ import type {
 import { computeFoundationGeometry } from '../geometry/foundation-geometry';
 import { mmToSceneUnits } from '../../utils/scene-units';
 import { resolveActiveFootingReinforcementForParams } from '../structural/active-footing-reinforcement';
+import { DEFAULT_STIRRUP_TYPE } from '../structural/reinforcement/beam-reinforcement-types';
+// ADR-477 Slice 2 — η συνδετήρια δοκός τροφοδοτεί το ΙΔΙΟ beam rebar core (EC8 ζώνες).
+import { drawLinearMemberRebar2D } from './linear-member-rebar-2d';
+import { tieBeamRebarLayout, tieBeamAxisPoints } from '../structural/reinforcement/tie-beam-linear-member';
 // ADR-471 Slice 6 — χρώμα οπλισμού από το ΕΝΑ SSoT (ίδια σύμβαση με κολώνα — crimson).
 import { REBAR_COLOR_HEX as REBAR_COLOR } from '../structural/rebar-catalog';
 const MIN_LINE_PX = 0.6;
@@ -170,25 +175,32 @@ function drawStrip(
   }
 }
 
+/**
+ * ADR-477 Slice 2 — η συνδετήρια δοκός ΕΙΝΑΙ δοκός: τροφοδοτεί το ΙΔΙΟ beam rebar core
+ * (`drawLinearMemberRebar2D`) μέσω του adapter → κερδίζει τις EC8 κρίσιμες ζώνες
+ * συνδετήρων + layered διαμήκεις (πρώην bespoke ομοιόμορφο βήμα — διαγράφηκε, μηδέν
+ * duplicate). Ο `r` είναι footing-resolved (μεγαλύτερο cover) — δεν ξανα-resolve-άρεται.
+ */
 function drawTieBeam(
   ctx: CanvasRenderingContext2D,
-  worldToScreen: (q: Point2D) => Point2D,
-  f: RectFrame,
+  p: TieBeamParams,
   r: TieBeamReinforcement,
-  s: number,
   pxPerMm: number,
+  worldToScreen: (q: Point2D) => Point2D,
 ): void {
-  const cover = r.coverMm * s;
-  // Διαμήκεις (κάτω+άνω σε κάτοψη συμπίπτουν): bottom.count ράβδοι // άξονα.
-  ctx.lineWidth = lineWidthFor(r.bottom.diameterMm, pxPerMm);
-  strokeDistributed(ctx, worldToScreen, f, r.bottom.count, cover);
-  // Συνδετήρες: εγκάρσια ticks (// across) με βήμα κατά τον άξονα + περίγραμμα inset.
-  ctx.lineWidth = lineWidthFor(r.stirrups.diameterMm, pxPerMm);
-  const fStirrup: RectFrame = {
-    origin: f.origin, along: f.across, across: f.along,
-    lenAlong: f.lenAcross, lenAcross: f.lenAlong,
-  };
-  strokeBars(ctx, worldToScreen, fStirrup, r.stirrups.spacingMm * s, cover);
+  const layout = tieBeamRebarLayout(p, r);
+  if (!layout) return;
+  drawLinearMemberRebar2D(
+    ctx,
+    {
+      axisPts: tieBeamAxisPoints(p),
+      sceneUnits: p.sceneUnits,
+      layout,
+      stirrupType: r.stirrups.type ?? DEFAULT_STIRRUP_TYPE,
+    },
+    pxPerMm,
+    worldToScreen,
+  );
 }
 
 /** `count` ράβδοι // along, ισοκατανεμημένες κατά across (inset cover). */
@@ -233,7 +245,7 @@ export function drawFootingRebar2D(
 
   if (p.kind === 'pad' && r.kind === 'pad') drawPad(ctx, worldToScreen, f, r, s, pxPerMm);
   else if (p.kind === 'strip' && r.kind === 'strip') drawStrip(ctx, worldToScreen, f, r, s, pxPerMm);
-  else if (p.kind === 'tie-beam' && r.kind === 'tie-beam') drawTieBeam(ctx, worldToScreen, f, r, s, pxPerMm);
+  else if (p.kind === 'tie-beam' && r.kind === 'tie-beam') drawTieBeam(ctx, p, r, pxPerMm, worldToScreen);
 
   ctx.restore();
 }

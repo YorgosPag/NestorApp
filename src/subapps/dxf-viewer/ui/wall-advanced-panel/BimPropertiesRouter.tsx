@@ -18,12 +18,13 @@
 
 import React from 'react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
-import { isWallEntity, isStairEntity, isColumnEntity, isBeamEntity, isFoundationEntity } from '../../types/entities';
+import { isWallEntity, isStairEntity, isColumnEntity, isBeamEntity, isFoundationEntity, isSlabEntity } from '../../types/entities';
 import { StairPropertiesTab } from '../stair-advanced-panel/StairPropertiesTab';
 import { WallPropertiesTab } from './WallPropertiesTab';
 import { ColumnPropertiesTab } from '../column-advanced-panel/ColumnPropertiesTab';
 import { BeamPropertiesTab } from '../beam-advanced-panel/BeamPropertiesTab';
 import { FoundationPropertiesTab } from '../foundation-advanced-panel/FoundationPropertiesTab';
+import { SlabPropertiesTab } from '../slab-advanced-panel/SlabPropertiesTab';
 import type { SceneModel } from '../../types/scene';
 
 export interface BimPropertiesRouterProps {
@@ -61,6 +62,11 @@ export function BimPropertiesRouter(
   // ADR-463 — foundation Properties palette (πέδιλο/πεδιλοδοκός/συνδετήρια οπλισμός).
   if (selected && isFoundationEntity(selected)) {
     return <FoundationPropertiesTab {...props} />;
+  }
+
+  // ADR-476 — slab Properties palette (δομοστατικά/οπλισμός σχάρας πλάκας).
+  if (selected && isSlabEntity(selected)) {
+    return <SlabPropertiesTab {...props} />;
   }
 
   if (selected && isStairEntity(selected)) {
