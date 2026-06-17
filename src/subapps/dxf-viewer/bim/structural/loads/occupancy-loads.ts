@@ -62,6 +62,41 @@ export function isOccupancyCategory(v: string | undefined): v is OccupancyCatego
   );
 }
 
+// ─── Κληρονομικότητα από γενική κατηγορία κτιρίου (full SSoT) ─────────────────
+
+/** Γενική κατηγορία κτιρίου (project-level `Building.category`) — η δηλωμένη χρήση. */
+export type BuildingCategory = 'residential' | 'commercial' | 'mixed' | 'industrial';
+
+/**
+ * **SSoT** αντιστοίχιση γενικής κατηγορίας κτιρίου → structural occupancy (EN1991-1-1).
+ * Το `Building.category` είναι το ΕΝΑ «τι κτίριο είναι» — η structural occupancy
+ * **κληρονομεί** από εκεί (μηδέν διπλότυπο), με προαιρετικό per-building override μέσω
+ * `structuralSettings.occupancy`. Default τιμές (ο μηχανικός υπερβαίνει αν διαφέρει):
+ *   residential→A(2.0)· commercial→D εμπορικό(5.0, conservative)· mixed→B μέση(3.0)·
+ *   industrial→E αποθήκη(7.5).
+ */
+const OCCUPANCY_BY_BUILDING_CATEGORY: Record<BuildingCategory, OccupancyCategory> = {
+  residential: 'residential',
+  commercial: 'shopping',
+  mixed: 'office',
+  industrial: 'storage',
+};
+
+function isBuildingCategory(v: string | undefined): v is BuildingCategory {
+  return v === 'residential' || v === 'commercial' || v === 'mixed' || v === 'industrial';
+}
+
+/**
+ * ADR-474 — structural occupancy ΑΠΟ τη γενική κατηγορία κτιρίου (SSoT inheritance).
+ * Άγνωστη/absent → `undefined` (ο caller πέφτει στο `structuralSettings.occupancy`
+ * override ή στο {@link DEFAULT_OCCUPANCY}). Μηδέν διπλασιασμός της «χρήσης κτιρίου».
+ */
+export function resolveOccupancyFromBuildingCategory(
+  category: string | undefined,
+): OccupancyCategory | undefined {
+  return isBuildingCategory(category) ? OCCUPANCY_BY_BUILDING_CATEGORY[category] : undefined;
+}
+
 // ─── Μόνιμο φορτίο g_k (auto από γεωμετρία πλάκας) ────────────────────────────
 
 /** kN/m³ — ίδιο βάρος οπλισμένου σκυροδέματος (EN1991-1-1 Table A.1). */

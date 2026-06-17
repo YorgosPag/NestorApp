@@ -15,6 +15,7 @@ import {
   resolveDefaultDeadLoadKpa,
   resolveEffectiveAreaLoads,
   resolveImposedLoadKpa,
+  resolveOccupancyFromBuildingCategory,
 } from '../occupancy-loads';
 
 describe('ADR-474 — imposed load q_k (EN1991-1-1)', () => {
@@ -62,5 +63,22 @@ describe('ADR-474 — resolveEffectiveAreaLoads (explicit-wins, αλλιώς aut
   it('μη-έγκυρα explicit (≤0) ⇒ πέφτει σε auto', () => {
     const out = resolveEffectiveAreaLoads({ explicitDeadKpa: 0, explicitLiveKpa: -1, occupancy: 'office' });
     expect(out).toEqual({ deadAreaLoadKpa: 7.5, liveAreaLoadKpa: 3.0 });
+  });
+});
+
+describe('ADR-474 — occupancy κληρονομικότητα από building.category (SSoT)', () => {
+  it('αντιστοίχιση ανά κατηγορία κτιρίου', () => {
+    expect(resolveOccupancyFromBuildingCategory('residential')).toBe('residential');
+    expect(resolveOccupancyFromBuildingCategory('commercial')).toBe('shopping');
+    expect(resolveOccupancyFromBuildingCategory('mixed')).toBe('office');
+    expect(resolveOccupancyFromBuildingCategory('industrial')).toBe('storage');
+  });
+  it('άγνωστη/absent κατηγορία → undefined (πέφτει σε override/default)', () => {
+    expect(resolveOccupancyFromBuildingCategory('bogus')).toBeUndefined();
+    expect(resolveOccupancyFromBuildingCategory(undefined)).toBeUndefined();
+  });
+  it('end-to-end: commercial κτίριο χωρίς override → q_k=5.0 (shopping)', () => {
+    const occ = resolveOccupancyFromBuildingCategory('commercial');
+    expect(resolveEffectiveAreaLoads({ occupancy: occ }).liveAreaLoadKpa).toBe(5.0);
   });
 });

@@ -45,6 +45,7 @@ import { makeGuideOffsetLookup } from '../bim/hosting/guide-store-offset-lookup'
 import { useStructuralSettingsStore } from '../state/structural-settings-store';
 import { resolveEffectiveAreaLoads } from '../bim/structural/loads/occupancy-loads';
 import { useBuildingStoreyCount } from './useBuildingStoreyCount';
+import { useBuildingOccupancy } from './useBuildingOccupancy';
 import { runStructuralLoadTakedown, type LoadTakedownLevelManager } from './structural-load-takedown-core';
 
 /** Στατικές μεταβολές που αλλάζουν τη διαδρομή φορτίων → recompute. */
@@ -79,6 +80,10 @@ export function useProactiveStructuralLoads(props: { levelManager: LoadTakedownL
   // Ref ώστε ο event callback να διαβάζει το τρέχον storeyCount χωρίς re-subscribe.
   const storeyCountRef = useRef(storeyCount);
   storeyCountRef.current = storeyCount;
+  // ADR-474 — structural occupancy κληρονομημένη από building.category (SSoT).
+  const occupancy = useBuildingOccupancy();
+  const occupancyRef = useRef(occupancy);
+  occupancyRef.current = occupancy;
 
   useEffect(() => {
     let scheduled = false;
@@ -95,7 +100,7 @@ export function useProactiveStructuralLoads(props: { levelManager: LoadTakedownL
       const areaLoads = resolveEffectiveAreaLoads({
         explicitDeadKpa: settings.deadAreaLoadKpa,
         explicitLiveKpa: settings.liveAreaLoadKpa,
-        occupancy: settings.occupancy,
+        occupancy: settings.occupancy ?? occupancyRef.current, // override → building category → default
       });
       runStructuralLoadTakedown(
         levelManager,
