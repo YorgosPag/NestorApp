@@ -145,7 +145,7 @@ export interface BimElementStyleOverride {
   /** Line pattern override. */
   linePattern?: LinePatternKey;
   /**
-   * ADR-469 — per-element structural component visibility override (Revit-grade,
+   * ADR-470 — per-element structural component visibility override (Revit-grade,
    * wins over the per-view `showStructuralCore`/`showFinishSkin`/`showReinforcement`
    * flags). Absent component key ⇒ fall back to the view-level flag. Resolved by
    * `bim/visibility/structural-component-visibility.ts → isStructuralComponentVisible`.

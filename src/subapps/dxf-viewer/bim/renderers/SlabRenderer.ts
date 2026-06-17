@@ -107,7 +107,7 @@ export class SlabRenderer extends BaseEntityRenderer {
     const verts = slab.geometry.polygon.vertices;
     if (verts.length < 3) return;
 
-    // ADR-469 — core (σώμα πλάκας) component gate. Κρυμμένο → παραλείπουμε το σχέδιο.
+    // ADR-470 — core (σώμα πλάκας) component gate. Κρυμμένο → παραλείπουμε το σχέδιο.
     if (!isStructuralComponentVisible('core', slab)) {
       this.finalizeRender(entity, options);
       return;

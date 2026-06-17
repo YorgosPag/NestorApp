@@ -1,5 +1,5 @@
 /**
- * SET COMPONENT VISIBILITY COMMAND — ADR-469 (per-element override writer).
+ * SET COMPONENT VISIBILITY COMMAND — ADR-470 (per-element override writer).
  *
  * Batch, undoable per-element override του structural component visibility
  * (Revit «Override Graphics in View by Element»). Για N επιλεγμένα δομικά
@@ -14,7 +14,7 @@
  *
  * @see config/bim-structural-components.ts — StructuralComponent SSoT
  * @see bim/visibility/structural-component-visibility.ts — ο resolver που το διαβάζει
- * @see docs/centralized-systems/reference/adrs/ADR-469-structural-component-visibility.md
+ * @see docs/centralized-systems/reference/adrs/ADR-470-structural-component-visibility.md
  */
 
 import type { ICommand, ISceneManager, SceneEntity, SerializedCommand } from '../interfaces';

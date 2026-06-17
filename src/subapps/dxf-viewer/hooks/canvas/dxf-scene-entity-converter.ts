@@ -26,7 +26,7 @@ import type { BeamEntity } from '../../bim/types/beam-types';
 // ADR-363 Phase 4 — column direct entity for DXF render pipeline.
 import type { ColumnEntity } from '../../bim/types/column-types';
 import type { FoundationEntity } from '../../bim/types/foundation-types';
-// ADR-469 — per-element structural component visibility override.
+// ADR-470 — per-element structural component visibility override.
 import type { BimElementStyleOverride } from '../../config/bim-object-styles';
 // ADR-406 — MEP fixture direct entity for DXF render pipeline.
 import type { MepFixtureEntity } from '../../bim/types/mep-fixture-types';
@@ -86,7 +86,7 @@ function buildBase(entity: SceneEntity, layers: SceneLayers, layersById?: SceneL
     measurement?: boolean;
     showEdgeDistances?: boolean;
   };
-  // ADR-469 — per-element structural component visibility override (BIM entities only).
+  // ADR-470 — per-element structural component visibility override (BIM entities only).
   const so = entity as typeof entity & { styleOverride?: BimElementStyleOverride };
 
   const colorByLayer = entity.colorMode === 'ByLayer' || entity.colorMode === 'ByBlock';
@@ -119,7 +119,7 @@ function buildBase(entity: SceneEntity, layers: SceneLayers, layersById?: SceneL
     ...(entity.transparency !== undefined && { transparency: entity.transparency }),
     ...(m.measurement !== undefined && { measurement: m.measurement }),
     ...(m.showEdgeDistances !== undefined && { showEdgeDistances: m.showEdgeDistances }),
-    // ADR-469 — forward the per-element structural component visibility override so
+    // ADR-470 — forward the per-element structural component visibility override so
     // the scene-level overlay passes (σοβάς/οπλισμός) honour per-element toggles too.
     ...(so.styleOverride !== undefined && { styleOverride: so.styleOverride }),
   };

@@ -43,7 +43,7 @@ function attachFoundationRebar(
   bottomY: number,
   levelId: string | undefined,
 ): THREE.Object3D {
-  // ADR-469 — per-element οπλισμός override → per-view flag (Revit precedence).
+  // ADR-470 — per-element οπλισμός override → per-view flag (Revit precedence).
   if (!isStructuralComponentVisible('reinforcement', foundation)) return mesh;
   const cage = buildFootingRebarCage(foundation, bottomY, levelId);
   if (!cage) return mesh;
@@ -96,7 +96,7 @@ export function foundationToMesh(
   const tagged = tagMesh(mesh, foundation.id, 'foundation', matId, levelId);
   attachEdgesProjection(tagged, 'foundation');
   // ADR-463 — οπλισμός 3Δ ως sibling cage (mirror κολώνας)· no-op όταν κρυφός/απών.
-  // ADR-469 — core gate: κρύβει το σώμα πεδίλου αν ανενεργό (οπλισμός μένει ορατός).
+  // ADR-470 — core gate: κρύβει το σώμα πεδίλου αν ανενεργό (οπλισμός μένει ορατός).
   return applyStructuralCoreVisibility3D(
     attachFoundationRebar(tagged, foundation, mesh.position.y, levelId),
     tagged, foundation,

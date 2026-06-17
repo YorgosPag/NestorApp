@@ -74,7 +74,7 @@ export class FoundationRenderer extends BaseEntityRenderer {
     const verts = foundation.geometry.footprint.vertices;
     if (verts.length < 3) return;
 
-    // ADR-469 — core (σώμα πεδίλου) component gate. Κρυμμένο → παραλείπουμε το σχέδιο
+    // ADR-470 — core (σώμα πεδίλου) component gate. Κρυμμένο → παραλείπουμε το σχέδιο
     // του σώματος· ο οπλισμός θεμελίωσης (scene-level overlay) προβάλλεται ανεξάρτητα.
     if (!isStructuralComponentVisible('core', foundation)) {
       this.finalizeRender(entity, options);

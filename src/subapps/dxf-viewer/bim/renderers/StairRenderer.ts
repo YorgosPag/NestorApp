@@ -79,7 +79,7 @@ export class StairRenderer extends BaseEntityRenderer {
     // hit-testing via the matching guard in HitTestingService.
     if (!stair.geometry || !stair.params) return;
 
-    // ADR-469 — core (σώμα σκάλας) component gate. Κρυμμένο → παραλείπουμε το σχέδιο.
+    // ADR-470 — core (σώμα σκάλας) component gate. Κρυμμένο → παραλείπουμε το σχέδιο.
     if (!isStructuralComponentVisible('core', stair)) {
       this.finalizeRender(entity, options);
       return;

@@ -14,7 +14,7 @@ import { isStructuralComponentVisible } from '../visibility/structural-component
 /**
  * True όταν ο σοβάς πρέπει να προβάλλεται (default ON). Event-time, μηδέν subscription.
  *
- * ADR-469 — thin alias του ενοποιημένου resolver (`component='plaster'`, view-level):
+ * ADR-470 — thin alias του ενοποιημένου resolver (`component='plaster'`, view-level):
  * διατηρείται για back-compat στα ~6 call-sites. Για per-element ορατότητα οι callers
  * καλούν απευθείας `isStructuralComponentVisible('plaster', entity)`.
  */

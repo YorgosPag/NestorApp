@@ -1,7 +1,7 @@
 'use client';
 
 /**
- * useStructuralComponentOverride — ADR-469 (per-element component visibility writer).
+ * useStructuralComponentOverride — ADR-470 (per-element component visibility writer).
  *
  * Thin shell hook (mirror του `useStructuralFootingConnect`): ακούει το ribbon
  * request «Ορατότητα στοιχείων → επιλεγμένο» από το
@@ -13,7 +13,7 @@
  * Mounted ΜΙΑ φορά από το viewer shell (δίπλα στο `useStructuralFootingConnect`).
  *
  * @see core/commands/entity-commands/SetComponentVisibilityCommand.ts
- * @see docs/centralized-systems/reference/adrs/ADR-469-structural-component-visibility.md
+ * @see docs/centralized-systems/reference/adrs/ADR-470-structural-component-visibility.md
  */
 
 import { useEffect } from 'react';
@@ -33,7 +33,7 @@ interface LevelManagerLike {
   setLevelScene: (levelId: string, scene: SceneModel) => void;
 }
 
-/** True για τα δομικά στοιχεία που έχουν σώμα/σοβά/οπλισμό (ADR-469 scope). */
+/** True για τα δομικά στοιχεία που έχουν σώμα/σοβά/οπλισμό (ADR-470 scope). */
 function isStructuralEntity(e: Entity): boolean {
   return (
     isColumnEntity(e) || isBeamEntity(e) || isWallEntity(e) ||

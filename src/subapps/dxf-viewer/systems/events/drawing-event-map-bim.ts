@@ -343,7 +343,7 @@ export interface BimEventMap {
   // diff-merge reverts the in-memory binding. Fires on execute/undo/redo.
   'bim:entities-attached': { entities: ReadonlyArray<AnySceneEntity> };
   /**
-   * ADR-469 — ribbon «Ορατότητα στοιχείων» per-element override request. Το widget
+   * ADR-470 — ribbon «Ορατότητα στοιχείων» per-element override request. Το widget
    * (StructuralComponentElementOverride) emit-άρει το current selection + component +
    * value· ο `useStructuralComponentOverride` hook ακούει, χτίζει τον sceneManager
    * και εκτελεί `SetComponentVisibilityCommand` (undoable + persist). `value=null`

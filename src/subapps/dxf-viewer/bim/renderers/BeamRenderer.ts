@@ -124,7 +124,7 @@ export class BeamRenderer extends BaseEntityRenderer {
     const drawable = resolveBeamOutlinePieces(beam).filter((p) => p.length >= 3);
     if (drawable.length === 0) return;
 
-    // ADR-469 — core (σώμα σκυροδέματος) component gate. Κρυμμένο → παραλείπουμε το
+    // ADR-470 — core (σώμα σκυροδέματος) component gate. Κρυμμένο → παραλείπουμε το
     // σχέδιο του σώματος· ο σοβάς (scene-level silhouette) προβάλλεται ανεξάρτητα.
     if (!isStructuralComponentVisible('core', beam)) {
       this.finalizeRender(entity, options);

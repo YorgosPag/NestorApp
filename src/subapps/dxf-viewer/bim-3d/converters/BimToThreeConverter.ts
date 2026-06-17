@@ -32,7 +32,7 @@ import {
 import { mmToSceneUnits, sceneUnitsToMeters } from '../../utils/scene-units';
 import { buildMultiLayerSolidWall } from './wall-multilayer-solid-3d';
 import { ensureWorldUvs } from './bim-uv-helpers';
-// ADR-469 — core (σώμα τοίχου) component gate (single-solid path).
+// ADR-470 — core (σώμα τοίχου) component gate (single-solid path).
 import { applyStructuralCoreVisibility3D } from './structural-core-visibility-3d';
 import {
   clipWallBandTopRegions,
@@ -417,7 +417,7 @@ export function wallToMesh(
   const tagged = tagMesh(mesh, wall.id, 'wall', matId, levelId);
   // ADR-375 C.9 — 3D ακμές ακολουθούν το ίδιο function subcat με το 2D (εσωτ./εξωτ.).
   attachEdgesProjection(tagged, 'wall', wallFootprintSubcategory(wall.params.category));
-  // ADR-469 — core gate (single-solid path). Τα group paths (κουφώματα/πολυστρωματικά,
+  // ADR-470 — core gate (single-solid path). Τα group paths (κουφώματα/πολυστρωματικά,
   // returns 381/393) είναι DEFER: το group περιέχει ΚΑΙ κουφώματα → blanket hide θα τα
   // έκρυβε. Ο σοβάς τοίχου είναι scene-level silhouette (ανεξάρτητος του core gate).
   return applyStructuralCoreVisibility3D(tagged, tagged, wall);

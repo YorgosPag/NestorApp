@@ -118,7 +118,7 @@ export interface BimRenderSettings {
    */
   showHeatLoad?: boolean;
   /**
-   * ADR-469 — master view toggle «Σώμα σκυροδέματος» (structural concrete core).
+   * ADR-470 — master view toggle «Σώμα σκυροδέματος» (structural concrete core).
    * Absent ⇒ `true` (ON by default: ο στατικός πυρήνας προβάλλεται κανονικά).
    * `false` ⇒ το σώμα κρύβεται σε 2D + 3D ώστε να φαίνεται μόνο ο σοβάς ή/και ο
    * οπλισμός (Revit «Parts»). Per-view· per-element override μέσω
@@ -176,7 +176,7 @@ export interface ResolvedBimSettings {
    */
   realisticMaterials: boolean;
   showHeatLoad: boolean;
-  /** ADR-469 — resolved master toggle «Σώμα σκυροδέματος» (default ON). */
+  /** ADR-470 — resolved master toggle «Σώμα σκυροδέματος» (default ON). */
   showStructuralCore: boolean;
   /** ADR-449 Slice 5 — resolved master toggle «Σοβατισμένη όψη» (default ON). */
   showFinishSkin: boolean;
@@ -238,7 +238,7 @@ export function resolveBimSettings(s?: BimRenderSettings | null): ResolvedBimSet
     realisticMaterials: axes.faceMode === 'realistic',
     // ADR-422 L1 — absent ⇒ false (analytical heat-load overlay off by default).
     showHeatLoad: s?.showHeatLoad ?? false,
-    // ADR-469 — absent ⇒ true (στατικός πυρήνας ορατός by default).
+    // ADR-470 — absent ⇒ true (στατικός πυρήνας ορατός by default).
     showStructuralCore: s?.showStructuralCore ?? true,
     // ADR-449 Slice 5 — absent ⇒ true (σοβάς ορατός by default, όπως Revit finishes).
     showFinishSkin: s?.showFinishSkin ?? true,

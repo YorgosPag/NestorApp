@@ -84,7 +84,7 @@ export class ColumnRenderer extends BaseEntityRenderer {
     const verts = column.geometry.footprint.vertices;
     if (verts.length < 3) return;
 
-    // ADR-469 — core (σώμα σκυροδέματος) component gate. Όταν κρυμμένο (per-view ή
+    // ADR-470 — core (σώμα σκυροδέματος) component gate. Όταν κρυμμένο (per-view ή
     // per-element override), παραλείπουμε ΟΛΟ το σχέδιο του σώματος (fill/hatch/
     // outline). Ο σοβάς + ο οπλισμός είναι ΑΝΕΞΑΡΤΗΤΑ scene-level passes στον
     // DxfRenderer, ώστε «μόνο οπλισμός» / «μόνο σοβάς» να προβάλλεται κανονικά.

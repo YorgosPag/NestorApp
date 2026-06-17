@@ -1,7 +1,7 @@
 'use client';
 
 /**
- * ADR-469 — Structural Component Visibility multi-toggle (Revit-grade «Parts»).
+ * ADR-470 — Structural Component Visibility multi-toggle (Revit-grade «Parts»).
  *
  * Ένα chip ανά visual component ενός δομικού στοιχείου — Σώμα σκυροδέματος / Σοβάς
  * / Οπλισμός — δίπλα στο «Στυλ Προβολής». Κάθε chip ανάβει/σβήνει το αντίστοιχο
@@ -15,7 +15,7 @@
  * από το {@link StructuralComponentElementOverride} κάτω από τα view chips όταν
  * υπάρχει επιλεγμένο δομικό στοιχείο.
  *
- * @see docs/centralized-systems/reference/adrs/ADR-469-structural-component-visibility.md
+ * @see docs/centralized-systems/reference/adrs/ADR-470-structural-component-visibility.md
  */
 
 import React, { useCallback } from 'react';
@@ -97,7 +97,7 @@ export const StructuralComponentVisibilitySelect: React.FC = () => {
       {STRUCTURAL_COMPONENTS.map((component) => (
         <ComponentChip key={component} component={component} />
       ))}
-      {/* ADR-469 — per-element override row (εμφανίζεται μόνο με επιλεγμένο δομικό). */}
+      {/* ADR-470 — per-element override row (εμφανίζεται μόνο με επιλεγμένο δομικό). */}
       <StructuralComponentElementOverride />
     </span>
   );

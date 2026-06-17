@@ -1,5 +1,5 @@
 /**
- * ADR-469 — Structural Component Visibility resolver (σώμα/σοβάς/οπλισμός).
+ * ADR-470 — Structural Component Visibility resolver (σώμα/σοβάς/οπλισμός).
  *
  * Επαληθεύει την Revit precedence: per-element override → per-view flag → default,
  * για τα 3 components, + ότι τα legacy aliases (isStructuralFinishVisible /
@@ -14,7 +14,7 @@ import { useBimRenderSettingsStore } from '../../../state/bim-render-settings-st
 const show = (cv: Partial<Record<'core' | 'plaster' | 'reinforcement', boolean>>) =>
   ({ styleOverride: { componentVisibility: cv } });
 
-describe('ADR-469 — isStructuralComponentVisible', () => {
+describe('ADR-470 — isStructuralComponentVisible', () => {
   afterEach(() => {
     const s = useBimRenderSettingsStore.getState();
     s.setShowStructuralCore(true);

@@ -99,7 +99,7 @@ export class WallRenderer extends BaseEntityRenderer {
 
     if (!wall.geometry || !wall.params) return;
 
-    // ADR-469 — core (σώμα τοίχου) component gate. Κρυμμένο → παραλείπουμε το σχέδιο
+    // ADR-470 — core (σώμα τοίχου) component gate. Κρυμμένο → παραλείπουμε το σχέδιο
     // του σώματος· ο σοβάς (scene-level silhouette) προβάλλεται ανεξάρτητα.
     if (!isStructuralComponentVisible('core', wall)) {
       this.finalizeRender(entity, options);

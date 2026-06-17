@@ -29,7 +29,7 @@ import { buildMultiLayerSlabSolid } from './slab-multilayer-solid-3d';
 import { isMultiLayerSlab } from '../../bim/types/slab-dna-types';
 import { attachEdgesProjection } from './bim-three-edges';
 import { buildColumnFinishSkin, buildBeamFinishSkin } from './structural-finish-3d';
-// ADR-469 — per-component visibility resolver SSoT (σώμα/σοβάς/οπλισμός· per-element + per-view).
+// ADR-470 — per-component visibility resolver SSoT (σώμα/σοβάς/οπλισμός· per-element + per-view).
 import { isStructuralComponentVisible } from '../../bim/visibility/structural-component-visibility';
 import { applyStructuralCoreVisibility3D } from './structural-core-visibility-3d';
 // ADR-456 Slice 3 — 3Δ/τομή κλωβός οπλισμού (κοινό geometry SSoT με το 2Δ).
@@ -97,7 +97,7 @@ export function columnToMesh(
       const attachedTopMm = topProfile?.cornerTopZmm?.length
         ? Math.min(...topProfile.cornerTopZmm)
         : floorElevationMm + flatColumn.params.height;
-      // ADR-469 — core gate: κρύβει το σώμα της attached κολώνας αν ανενεργό
+      // ADR-470 — core gate: κρύβει το σώμα της attached κολώνας αν ανενεργό
       // (σοβάς/οπλισμός μένουν ορατά).
       return applyStructuralCoreVisibility3D(
         attachColumnRebar(
@@ -130,7 +130,7 @@ export function columnToMesh(
   // ADR-449 Slice 2 — additive σοβάς (per-face band skin) ΕΞΩ από τον στατικό πυρήνα.
   // Ενεργό μόνο όταν η κολόνα έχει ενεργό `finish` ΚΑΙ δόθηκαν walls (απών στο ghost
   // path → πυρήνας-only). ADR-449 Slice 5 — view-level gate `showFinishSkin`.
-  // ADR-469 — core gate: κρύβει το σώμα της κολώνας αν ανενεργό (σοβάς/οπλισμός μένουν).
+  // ADR-470 — core gate: κρύβει το σώμα της κολώνας αν ανενεργό (σοβάς/οπλισμός μένουν).
   return applyStructuralCoreVisibility3D(
     attachColumnRebar(
       composeColumnWithFinish(
@@ -158,7 +158,7 @@ function composeColumnWithFinish(
   skinHeightMm: number,
   suppressFinishSkin = false,
 ): THREE.Mesh | THREE.Group {
-  // ADR-469 — per-element σοβάς override → per-view flag (Revit precedence).
+  // ADR-470 — per-element σοβάς override → per-view flag (Revit precedence).
   if (suppressFinishSkin || !isStructuralComponentVisible('plaster', column)) return core;
   const colForSkin = Math.abs(skinHeightMm - column.params.height) > 1e-6
     ? { ...column, params: { ...column.params, height: skinHeightMm } }
@@ -191,7 +191,7 @@ function attachColumnRebar(
   heightMm: number,
   levelId: string | undefined,
 ): THREE.Mesh | THREE.Group {
-  // ADR-469 — per-element οπλισμός override → per-view flag (Revit precedence).
+  // ADR-470 — per-element οπλισμός override → per-view flag (Revit precedence).
   if (!isStructuralComponentVisible('reinforcement', column)) return composed;
   const cage = buildColumnRebarCage(column, baseY, heightMm, levelId);
   if (!cage) return composed;
@@ -309,7 +309,7 @@ export function beamToMesh(
   // Ενεργό μόνο όταν το δοκάρι έχει ενεργό `finish` (απών → πυρήνας-only Mesh, μηδέν
   // regression). `baseY` = κάτω παρειά (ίδιο datum με το box extrude). Flat-path μόνο.
   // ADR-449 Slice 5 — view-level gate «Σοβατισμένη όψη» (showFinishSkin).
-  // ADR-469 — per-element σοβάς override → per-view flag (Revit precedence).
+  // ADR-470 — per-element σοβάς override → per-view flag (Revit precedence).
   const finishSkin = (!suppressFinishSkin && isStructuralComponentVisible('plaster', beam))
     ? buildBeamFinishSkin(beam, walls, columns, mesh.position.y, levelId, floorElevationMm)
     : null;
@@ -319,10 +319,10 @@ export function beamToMesh(
     composite.add(finishSkin);
     composite.userData['bimId'] = beam.id;
     composite.userData['bimType'] = 'beam';
-    // ADR-469 — core gate: κρύβει το σώμα δοκαριού αν ανενεργό (κρατά σοβά).
+    // ADR-470 — core gate: κρύβει το σώμα δοκαριού αν ανενεργό (κρατά σοβά).
     return applyStructuralCoreVisibility3D(composite, tagged, beam);
   }
-  // ADR-469 — core gate (χωρίς σοβά → όλο αόρατο αν το σώμα κρυφτεί).
+  // ADR-470 — core gate (χωρίς σοβά → όλο αόρατο αν το σώμα κρυφτεί).
   return applyStructuralCoreVisibility3D(tagged, tagged, beam);
 }
 
@@ -367,6 +367,6 @@ export function slabToMesh(
   mesh.position.y = hangDownMeshY(floorElevationMm, slabTopMm, slab.params.thickness * MM_TO_M, buildingBaseElevationM);
   const tagged = tagMesh(mesh, slab.id, 'slab', matId, levelId);
   attachEdgesProjection(tagged, 'slab', 'common-edges');
-  // ADR-469 — core gate: κρύβει το σώμα πλάκας αν ανενεργό.
+  // ADR-470 — core gate: κρύβει το σώμα πλάκας αν ανενεργό.
   return applyStructuralCoreVisibility3D(tagged, tagged, slab);
 }

@@ -1,5 +1,5 @@
 /**
- * ADR-469 — Structural Component Visibility resolver SSoT (2D + 3D).
+ * ADR-470 — Structural Component Visibility resolver SSoT (2D + 3D).
  *
  * ΕΝΑ σημείο που αποφασίζει αν ένα visual component (σώμα/σοβάς/οπλισμός) ενός
  * δομικού στοιχείου πρέπει να προβάλλεται. Revit precedence:
@@ -16,7 +16,7 @@
  * (ADR-456) είναι πλέον thin aliases αυτού του resolver (component='plaster' /
  * 'reinforcement', χωρίς element) → μηδέν αλλαγή στα υπάρχοντα call-sites.
  *
- * @see docs/centralized-systems/reference/adrs/ADR-469-structural-component-visibility.md
+ * @see docs/centralized-systems/reference/adrs/ADR-470-structural-component-visibility.md
  */
 
 import { useBimRenderSettingsStore } from '../../state/bim-render-settings-store';

@@ -1,5 +1,5 @@
 /**
- * ADR-469 — Structural Component Visibility SSoT (Revit-grade per-component display).
+ * ADR-470 — Structural Component Visibility SSoT (Revit-grade per-component display).
  *
  * Κάθε δομικό στοιχείο (κολώνα/δοκός/τοίχος/θεμελίωση/πλάκα/σκάλα) αποτελείται από
  * τρία ΑΝΕΞΑΡΤΗΤΑ visual components που μπορούν να εμφανίζονται/κρύβονται σε κάθε
@@ -14,7 +14,7 @@
  *   - `bim/visibility/structural-component-visibility.ts` (ο resolver SSoT)
  *   - `ui/ribbon/components/StructuralComponentVisibilitySelect.tsx` (το UI)
  *
- * @see docs/centralized-systems/reference/adrs/ADR-469-structural-component-visibility.md
+ * @see docs/centralized-systems/reference/adrs/ADR-470-structural-component-visibility.md
  */
 
 /** Τα τρία visual components ενός δομικού στοιχείου. */

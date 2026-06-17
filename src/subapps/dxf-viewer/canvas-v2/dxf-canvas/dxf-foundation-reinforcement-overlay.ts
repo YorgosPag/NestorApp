@@ -28,7 +28,7 @@ export function drawFoundationReinforcement2D(
   transform: ViewTransform,
   actualViewport: Viewport,
 ): void {
-  // ADR-469 — gate ανά entity (per-element override → per-view flag), όχι early-return.
+  // ADR-470 — gate ανά entity (per-element override → per-view flag), όχι early-return.
   const bimSettings = useBimRenderSettingsStore.getState();
   const worldToScreen = (p: Point2D): Point2D =>
     CoordinateTransforms.worldToScreen(p, transform, actualViewport);
@@ -36,7 +36,7 @@ export function drawFoundationReinforcement2D(
     if (entity.type !== 'foundation' || !entity.visible) continue;
     const p = entity.params;
     if (!p.reinforcement) continue;
-    // ADR-469 — per-element reinforcement visibility + cut-plane parity.
+    // ADR-470 — per-element reinforcement visibility + cut-plane parity.
     if (!isStructuralComponentVisible('reinforcement', entity)) continue;
     if (isHiddenByCutPlane(entity, bimSettings.viewRange, bimSettings.cutPlaneActive)) continue;
     const pxPerMm = mmToSceneUnits(p.sceneUnits ?? 'mm') * transform.scale;

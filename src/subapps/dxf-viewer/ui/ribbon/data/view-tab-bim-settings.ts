@@ -148,7 +148,7 @@ const HEAT_LOAD_BUTTON: RibbonButton = {
   },
 };
 
-// ADR-469 — FINISH_SKIN_BUTTON + REINFORCEMENT_BUTTON αφαιρέθηκαν: subsumed από το
+// ADR-470 — FINISH_SKIN_BUTTON + REINFORCEMENT_BUTTON αφαιρέθηκαν: subsumed από το
 // ενοποιημένο «Ορατότητα στοιχείων» control (VIEW_VISUAL_STYLES_PANEL). Τα widgets
 // `show-finish-skin-toggle` / `show-reinforcement-toggle` παραμένουν διαθέσιμα ως
 // quick-access στα contextual column/foundation tabs (δεν αφαιρέθηκαν από εκεί).
@@ -234,7 +234,7 @@ export const BIM_GRAPHICS_PANEL: RibbonPanelDef = {
       isInFlyout: false,
       // ADR-446 — the standalone «Ρεαλιστικά Υλικά» toggle (REALISTIC_MATERIALS_BUTTON)
       // is subsumed by the «Στυλ Προβολής» dropdown (VIEW_VISUAL_STYLES_PANEL).
-      // ADR-469 — τα «Σοβατισμένη όψη» (FINISH_SKIN_BUTTON) + «Οπλισμός»
+      // ADR-470 — τα «Σοβατισμένη όψη» (FINISH_SKIN_BUTTON) + «Οπλισμός»
       // (REINFORCEMENT_BUTTON) subsumed από το ενοποιημένο «Ορατότητα στοιχείων»
       // control στο VIEW_VISUAL_STYLES_PANEL (σώμα/σοβάς/οπλισμός + per-element).
       buttons: [VISIBILITY_GRAPHICS_BUTTON, HIDE_BIM_BUTTON, MEP_WIRE_BUTTON, DRAIN_PIPE_BUTTON, COLOR_BY_SYSTEM_BUTTON, HEAT_LOAD_BUTTON, PIPE_SIZING_BUTTON, BALANCING_BUTTON, THERMAL_STUDY_BUTTON, DISCIPLINE_BUTTON],

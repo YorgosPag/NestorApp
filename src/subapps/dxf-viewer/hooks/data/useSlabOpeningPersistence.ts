@@ -28,8 +28,6 @@ import { dequal } from 'dequal';
 import type { AnySceneEntity, SceneModel } from '../../types/entities';
 import type { SceneWriteOrigin } from '../scene/scene-write-origin';
 import type { SlabOpeningEntity } from '../../bim/types/slab-opening-types';
-import { computeSlabOpeningGeometry } from '../../bim/geometry/slab-opening-geometry';
-import { validateSlabOpeningParams } from '../../bim/validators/slab-opening-validator';
 import { EventBus } from '../../systems/events/EventBus';
 import { resolveBimPersistenceScope } from '../../bim/persistence/bim-floor-scope';
 import {
@@ -39,6 +37,7 @@ import {
   type SlabOpeningDoc,
 } from '../../bim/slab-openings/slab-opening-firestore-service';
 import { recordSlabOpeningChange } from '../../bim/slab-openings/slab-opening-audit-client';
+import { slabOpeningDocToEntity as docToEntity } from './slab-opening-persistence-helpers';
 import { useBimEntityMovedPersistEffect } from './useBimEntityMovedPersistEffect';
 import { useBimEntityRestoredPersistEffect } from './useBimEntityRestoredPersistEffect';
 
@@ -86,24 +85,6 @@ const AUTO_SAVE_DEBOUNCE_MS = 500;
 
 function isSlabOpening(entity: AnySceneEntity): entity is SlabOpeningEntity {
   return (entity as { type?: string }).type === 'slab-opening';
-}
-
-/**
- * Build scene-side `SlabOpeningEntity` από persisted `SlabOpeningDoc`.
- * Geometry + validation recomputed via SSoT pure functions.
- */
-function docToEntity(doc: SlabOpeningDoc): SlabOpeningEntity {
-  const validation = doc.validation ?? validateSlabOpeningParams(doc.params, null).bimValidation;
-  return {
-    id: doc.id,
-    type: 'slab-opening',
-    kind: doc.kind,
-    layerId: doc.layerId ?? '0',
-    params: doc.params,
-    geometry: doc.geometry ?? computeSlabOpeningGeometry(doc.params),
-    validation,
-    visible: true,
-  } as SlabOpeningEntity;
 }
 
 // ============================================================================

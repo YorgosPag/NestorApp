@@ -1,5 +1,5 @@
 /**
- * ADR-469 — 3Δ core (σώμα σκυροδέματος) visibility helper SSoT.
+ * ADR-470 — 3Δ core (σώμα σκυροδέματος) visibility helper SSoT.
  *
  * Όταν το `core` component ενός δομικού στοιχείου είναι κρυμμένο (per-view ή
  * per-element override), κρύβουμε ΜΟΝΟ το core mesh (`visible = false`) και
@@ -10,7 +10,7 @@
  * επιλογή/υπολογισμοί να μη σπάσουν — απλώς δεν αποδίδεται. Κοινό σημείο για
  * column/beam/slab/foundation/wall converters (μηδέν διπλότυπο).
  *
- * @see docs/centralized-systems/reference/adrs/ADR-469-structural-component-visibility.md
+ * @see docs/centralized-systems/reference/adrs/ADR-470-structural-component-visibility.md
  */
 
 import type { Object3D } from 'three';

@@ -17,7 +17,7 @@ import { isStructuralComponentVisible } from '../../visibility/structural-compon
 /**
  * True όταν ο οπλισμός πρέπει να προβάλλεται (default OFF). Event-time, μηδέν subscription.
  *
- * ADR-469 — thin alias του ενοποιημένου resolver (`component='reinforcement'`,
+ * ADR-470 — thin alias του ενοποιημένου resolver (`component='reinforcement'`,
  * view-level): διατηρείται για back-compat. Για per-element ορατότητα οι callers
  * καλούν απευθείας `isStructuralComponentVisible('reinforcement', entity)`.
  */

@@ -29,7 +29,7 @@ export const VIEW_VISUAL_STYLES_PANEL: RibbonPanelDef = {
             commandKey: 'visual-style-select',
           },
         },
-        // ADR-469 — per-component visibility (σώμα/σοβάς/οπλισμός) + per-element override,
+        // ADR-470 — per-component visibility (σώμα/σοβάς/οπλισμός) + per-element override,
         // δίπλα στο «Στυλ Προβολής» (Revit-grade «Parts» control). Subsumes τα παλιά
         // standalone «Σοβατισμένη όψη» / «Οπλισμός» κουμπιά από το «Ορατότητα/Γραφικά».
         {

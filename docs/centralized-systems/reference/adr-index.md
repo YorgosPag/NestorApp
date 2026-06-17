@@ -451,6 +451,7 @@
 | **ADR-467** | Load Path Engine (slab→beam→column→footing tributary takedown, FEM-free) | ✅ APPROVED | 2026-06-17 | Uncategorized | [📄](./adrs/ADR-467-load-path-engine.md) |
 | **ADR-468** | Floor/Elevation management from the DXF Viewer (FloorsTabContent in modal) | ✅ APPROVED | 2026-06-17 | Uncategorized | [📄](./adrs/ADR-468-floor-management-from-viewer.md) |
 | **ADR-469** | Cross-Floor Per-Entity BIM Load (file-less / orphaned floors — anti-vanish + ADR-293 suppress + per-entity aggregation) | ✅ APPROVED | 2026-06-17 | Uncategorized | [📄](./adrs/ADR-469-cross-floor-per-entity-bim-load.md) |
+| **ADR-470** | Structural Component Visibility (core/plaster/reinforcement — per-view + per-element + cut-plane parity, 2D+3D) | ✅ APPROVED | 2026-06-17 | Uncategorized | [📄](./adrs/ADR-470-structural-component-visibility.md) |
 | **ADR-UI-001** | Visual Primitive Ownership & Semantic Tokens | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-UI-001.md) |
 
 ---
@@ -886,6 +887,7 @@
 | **ADR-467** | Load Path Engine (slab→beam→column→footing tributary takedown, FEM-free) | ✅ APPROVED | [View](./adrs/ADR-467-load-path-engine.md) |
 | **ADR-468** | Floor/Elevation management from the DXF Viewer (FloorsTabContent in modal) | ✅ APPROVED | [View](./adrs/ADR-468-floor-management-from-viewer.md) |
 | **ADR-469** | Cross-Floor Per-Entity BIM Load (file-less / orphaned floors) | ✅ APPROVED | [View](./adrs/ADR-469-cross-floor-per-entity-bim-load.md) |
+| **ADR-470** | Structural Component Visibility (core/plaster/reinforcement, per-view + per-element) | ✅ APPROVED | [View](./adrs/ADR-470-structural-component-visibility.md) |
 | **ADR-UI-001** | Visual Primitive Ownership & Semantic Tokens | ✅ APPROVED | [View](./adrs/ADR-UI-001.md) |
 
 ---
