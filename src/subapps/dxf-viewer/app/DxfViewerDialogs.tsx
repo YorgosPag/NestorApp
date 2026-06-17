@@ -23,6 +23,7 @@ import { USE_AI_DRAWING_ASSISTANT } from '../config/feature-flags';
 import { PerformanceCategory } from '@/core/performance/types/performance.types';
 import { ClientOnlyPerformanceDashboard } from '@/core/performance/components/ClientOnlyPerformanceDashboard';
 import { useLevels } from '../systems/levels';
+import { resolveActiveBuildingId } from '../systems/levels/level-floor-resolution';
 import { buildDxfImportSaveContext } from './dxf-import-save-context';
 import type { DxfViewerCallbacksReturn } from './useDxfViewerCallbacks';
 import type { DxfViewerUiState } from './useDxfViewerUiState';
@@ -69,9 +70,9 @@ export function DxfViewerDialogs(props: DxfViewerDialogsProps): React.JSX.Elemen
 
   const projectId = levelManager.saveContext?.projectId ?? undefined;
   const floorplanId = levelManager.fileRecordId ?? undefined;
-  // Ενεργό buildingId από τα levels (ίδια canonical πηγή με το LevelPanel) — για το
-  // Floor Management modal που ανοίγει την καρτέλα «Όροφοι» μέσα στον viewer.
-  const buildingId = levelManager.levels?.find((l) => l.buildingId)?.buildingId ?? null;
+  // Ενεργό buildingId από τα levels (SSoT helper, ίδια πηγή με το LevelPanel) — για
+  // το Floor Management modal που ανοίγει την καρτέλα «Όροφοι» μέσα στον viewer.
+  const buildingId = resolveActiveBuildingId(levelManager.levels);
 
   return (
     <>

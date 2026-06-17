@@ -15,6 +15,7 @@
 import * as THREE from 'three';
 import type { ColumnEntity } from '../../../types/column-types';
 import { columnLocalMmToWorld } from '../../../geometry/column-geometry';
+import { sceneUnitsToMeters } from '../../../../utils/scene-units';
 import { resolveColumnRebarLayoutForParams } from '../../reinforcement/column-rebar-layout-resolve';
 import { assignColumnBarNumbers } from '../column-rebar-bar-marks';
 
@@ -43,16 +44,19 @@ export function computeColumnBarMarkSpecs3d(column: ColumnEntity): ColumnBarMark
   const heightM = Math.max(0, params.height) * MM_TO_M;
   if (heightM <= 0) return [];
 
+  // `world` σε canvas units· κλιμάκωση σε world metres (ίδιο `sceneToM` με τον κλωβό)
+  // ώστε οι σημάνσεις να κάθονται πάνω στις πραγματικές ράβδες, όχι ~1000× μακριά.
+  const sceneToM = sceneUnitsToMeters(params.sceneUnits ?? 'mm');
   const world = columnLocalMmToWorld(params, layout.longitudinalBarsMm);
   let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
   for (const p of world) {
     if (p.x < minX) minX = p.x; if (p.x > maxX) maxX = p.x;
     if (p.y < minY) minY = p.y; if (p.y > maxY) maxY = p.y;
   }
-  const lift = Math.max(maxX - minX, maxY - minY, 1e-4) * MARK_LIFT_FRACTION;
-  // AXIS_FLIP: plan (x, y) → three (x, height, −y); lift slightly above the top.
+  const lift = Math.max(maxX - minX, maxY - minY, 1e-4) * MARK_LIFT_FRACTION * sceneToM;
+  // AXIS_FLIP: plan (x, y) → three (x, height, −y) σε world metres· lift πάνω από την κορυφή.
   return world.map((p, i) => ({
-    pos: new THREE.Vector3(p.x, heightM + lift, -p.y),
+    pos: new THREE.Vector3(p.x * sceneToM, heightM + lift, -p.y * sceneToM),
     text: String(numbers[i]),
   }));
 }

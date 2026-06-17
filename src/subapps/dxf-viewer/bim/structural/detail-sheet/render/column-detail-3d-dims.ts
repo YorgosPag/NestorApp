@@ -18,6 +18,7 @@
 import * as THREE from 'three';
 import type { ColumnEntity } from '../../../types/column-types';
 import { computeColumnGeometry } from '../../../geometry/column-geometry';
+import { sceneUnitsToMeters } from '../../../../utils/scene-units';
 
 /** mm → metres (the vertical convention shared with `buildColumnRebarCage`). */
 const MM_TO_M = 0.001;
@@ -51,6 +52,9 @@ export function computeColumnDimSpecs3d(column: ColumnEntity): ColumnDimSpec3d[]
   if (heightM <= 0) return [];
 
   // ADR-460 — bbox του footprint (κάθε σχήμα) → W/D/H dims στις ακμές του bounding box.
+  // Vertices σε canvas units· οι ΘΕΣΕΙΣ κλιμακώνονται σε world metres (ίδιο `sceneToM`
+  // με τον κλωβό/πρίσμα), αλλιώς οι διαστάσεις ζουν ~1000× μακριά από τον κλωβό.
+  const sceneToM = sceneUnitsToMeters(params.sceneUnits ?? 'mm');
   let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
   for (const v of verts) {
     if (v.x < minX) minX = v.x;
@@ -58,11 +62,11 @@ export function computeColumnDimSpecs3d(column: ColumnEntity): ColumnDimSpec3d[]
     if (v.y < minY) minY = v.y;
     if (v.y > maxY) maxY = v.y;
   }
-  // AXIS_FLIP: plan (x, y) → three (x, 0, −y). Γωνίες bbox στη βάση.
-  const bl = new THREE.Vector3(minX, 0, -minY);
-  const br = new THREE.Vector3(maxX, 0, -minY);
-  const tr = new THREE.Vector3(maxX, 0, -maxY);
-  const tl = new THREE.Vector3(minX, 0, -maxY);
+  // AXIS_FLIP: plan (x, y) → three (x, 0, −y). Γωνίες bbox στη βάση (world metres).
+  const bl = new THREE.Vector3(minX * sceneToM, 0, -minY * sceneToM);
+  const br = new THREE.Vector3(maxX * sceneToM, 0, -minY * sceneToM);
+  const tr = new THREE.Vector3(maxX * sceneToM, 0, -maxY * sceneToM);
+  const tl = new THREE.Vector3(minX * sceneToM, 0, -maxY * sceneToM);
   const rightCorner = [bl, br, tr, tl].reduce(
     (best, p) => (p.dot(SCREEN_RIGHT) > best.dot(SCREEN_RIGHT) ? p : best),
     bl,

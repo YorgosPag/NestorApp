@@ -49,3 +49,14 @@ export async function findOrCreateLevelForFloor(
   }
   return newId;
 }
+
+/**
+ * SSoT — το **ενεργό buildingId** του viewer = το `buildingId` του πρώτου linked
+ * level. Κάθε linked Level φέρει το ίδιο `buildingId` (ADR-237, link-time), οπότε
+ * ο πρώτος αρκεί. Καταναλωτές: `LevelPanel` (φόρτωση floors) + Floor Management
+ * modal (ADR-468). ΟΧΙ μέσω `useProjectHierarchy().selectedBuilding` (τυπικά null
+ * στον viewer). Αντικαθιστά το διπλο-γραμμένο `levels.find(l => l.buildingId)`.
+ */
+export function resolveActiveBuildingId(levels: readonly Level[] | null | undefined): string | null {
+  return levels?.find((l) => l.buildingId)?.buildingId ?? null;
+}

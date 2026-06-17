@@ -24,6 +24,7 @@ import * as THREE from 'three';
 import type { ColumnEntity } from '../../../types/column-types';
 import type { Point2D } from '../../../../rendering/types/Types';
 import { computeColumnGeometry } from '../../../geometry/column-geometry';
+import { sceneUnitsToMeters } from '../../../../utils/scene-units';
 import { buildColumnRebarCage } from '../../../../bim-3d/converters/column-rebar-3d';
 import { computeColumnDimSpecs3d } from './column-detail-3d-dims';
 import { computeColumnBarMarkSpecs3d } from './column-detail-3d-marks';
@@ -88,9 +89,14 @@ function buildConcretePrism(column: ColumnEntity): THREE.Group | null {
   const heightM = Math.max(0, column.params.height) * MM_TO_M;
   if (heightM <= 0) return null;
 
+  // ADR-462 — footprint vertices live in canvas units; scale plan X/Y to world
+  // metres (the SAME `sceneToM` the cage applies) so prism + cage share one frame.
+  // Without this the prism is ~1000× too large → it dominates the camera box and
+  // the cage shrinks to a dot (the «μικροσκοπικές διαστάσεις» bug).
+  const sceneToM = sceneUnitsToMeters(column.params.sceneUnits ?? 'mm');
   const shape = new THREE.Shape();
-  shape.moveTo(verts[0].x, verts[0].y);
-  for (let i = 1; i < verts.length; i++) shape.lineTo(verts[i].x, verts[i].y);
+  shape.moveTo(verts[0].x * sceneToM, verts[0].y * sceneToM);
+  for (let i = 1; i < verts.length; i++) shape.lineTo(verts[i].x * sceneToM, verts[i].y * sceneToM);
   shape.closePath();
   const geo = new THREE.ExtrudeGeometry(shape, { depth: heightM, bevelEnabled: false });
   geo.rotateX(-Math.PI / 2);

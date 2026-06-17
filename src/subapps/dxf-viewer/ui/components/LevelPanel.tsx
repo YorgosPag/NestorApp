@@ -26,6 +26,7 @@ import type { SceneModel } from '../../types/scene';
 import { useLevels } from '../../systems/levels';
 import { countSceneEntities } from '../../utils/scene-entity-count';
 import { orderLevelsForPanel } from '../../systems/levels/level-display-order';
+import { resolveActiveBuildingId } from '../../systems/levels/level-floor-resolution';
 import { useFloorsByBuilding } from '@/components/properties/shared/useFloorsByBuilding';
 import { useAllFloorsBackfill, useLevelDeletion, useFloorplanImportComplete } from './level-panel-hooks';
 import { useNotifications } from '../../../../providers/NotificationProvider';
@@ -119,10 +120,7 @@ export function LevelPanel({
   // own `buildingId` (every linked level carries it) — NOT via ProjectHierarchy's
   // `selectedBuilding`, which is driven by the properties navigator and is typically
   // unset inside the DXF viewer (root cause of «η σειρά δεν άλλαξε», 2026-06-16).
-  const buildingId = useMemo(
-    () => levels.find(l => l.buildingId)?.buildingId ?? null,
-    [levels]
-  );
+  const buildingId = useMemo(() => resolveActiveBuildingId(levels), [levels]);
   const { floors: buildingFloors } = useFloorsByBuilding(buildingId, Boolean(buildingId));
   const orderedLevels = useMemo(() => {
     const byId = new Map(buildingFloors.map(f => [f.id, f]));

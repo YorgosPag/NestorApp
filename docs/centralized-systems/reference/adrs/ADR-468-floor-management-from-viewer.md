@@ -52,6 +52,12 @@ standalone. Γράφει στα **ΙΔΙΑ** FLOORS docs → οι στάθμες
   ζητήθηκε)· per-level δεξί κλικ actions στις κάρτες του LevelPanel.
 
 ## 5. Changelog
+- **2026-06-17 (Opus) — SSoT audit fixes (Giorgio):** (Α) εξήχθη `resolveActiveBuildingId(levels)` στο
+  `systems/levels/level-floor-resolution.ts` — το `levels.find(l => l.buildingId)?.buildingId` ήταν
+  γραμμένο 2× (LevelPanel + DxfViewerDialogs)· πλέον ΕΝΑ SSoT, 2 callers. (Β) NEW `createToggleStore()`
+  factory (`stores/createToggleStore.ts`) — το `FloorManagementDialogStore` ήταν το 12ο copy-paste του
+  ίδιου `{ isOpen }` singleton boilerplate· πλέον one-liner `createToggleStore()`. Τα υπόλοιπα 11
+  προϋπάρχοντα stores → pending-ratchet (migrate-on-touch).
 - **2026-06-17 (Opus) — Slices 1-9 DONE (UNCOMMITTED):** νέο modal `FloorManagementDialog` που
   επαναχρησιμοποιεί το `FloorsTabContent` (SSoT), `useBuildingById` hook, store, host, mount, ⚙️ trigger
   στο LevelPanel + δεξί-κλικ trigger στο FloorTabBar, i18n el/en. 🔴 browser-verify + commit.
