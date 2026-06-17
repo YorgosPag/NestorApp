@@ -13,6 +13,7 @@ import { LineMaterial } from 'three/examples/jsm/lines/LineMaterial';
 import { attachEdgesProjection } from '../bim-three-edges';
 import { bimEdgeResolutionStore } from '../../edges/bim-edge-resolution-store';
 import { useBimRenderSettingsStore } from '../../../state/bim-render-settings-store';
+import { DEFAULT_OBJECT_STYLES } from '../../../config/bim-object-styles';
 import type { BimCategory, ObjectStyle } from '../../../config/bim-object-styles';
 
 function makeBoxMesh(): THREE.Mesh {
@@ -20,7 +21,9 @@ function makeBoxMesh(): THREE.Mesh {
 }
 
 function setObjectStyles(styles: Partial<Record<BimCategory, ObjectStyle>>): void {
-  useBimRenderSettingsStore.setState({ objectStyles: styles });
+  useBimRenderSettingsStore.setState({
+    objectStyles: { ...DEFAULT_OBJECT_STYLES, ...styles } as Record<BimCategory, ObjectStyle>,
+  });
 }
 
 function overlayOf(mesh: THREE.Mesh): LineSegments2 | undefined {

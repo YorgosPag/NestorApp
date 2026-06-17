@@ -474,7 +474,7 @@ describe('resolveEffectiveOpeningParams', () => {
 describe('resolveEffectiveParams — generic core', () => {
   it('returns params reference unchanged when typeParams is null', () => {
     const params = { a: 1, b: 2 };
-    const result = resolveEffectiveParams(params, null, { a: 9 });
+    const result = resolveEffectiveParams<typeof params, { a: number }>(params, null, { a: 9 });
 
     expect(result).toBe(params);
   });

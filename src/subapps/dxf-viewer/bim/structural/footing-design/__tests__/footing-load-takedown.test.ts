@@ -6,7 +6,7 @@
  */
 
 import { computeFootingTakedownLoads } from '../footing-load-takedown';
-import type { Entity } from '../../../types/entities';
+import type { Entity } from '../../../../types/entities';
 import type { AppliedMemberLoad } from '../../loads/structural-loads-types';
 import { DEFAULT_BAY_SPAN_M } from '../../loads/load-takedown';
 

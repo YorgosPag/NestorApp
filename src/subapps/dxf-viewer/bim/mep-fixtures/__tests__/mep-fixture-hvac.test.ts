@@ -106,7 +106,9 @@ describe('airTerminalRecognizer (flow-aware: terminal yes, AHU no)', () => {
     const ctx: RecognitionContext = {
       entities: [fixtureEntity('air-terminal', 'at-1'), fixtureEntity('ahu', 'ahu-1')],
       storeyId: 'storey-1',
-    } as RecognitionContext;
+      sceneUnits: 'mm',
+      spaces: [],
+    };
     const terminals = airTerminalRecognizer.recognize(ctx);
     expect(terminals).toHaveLength(1);
     expect(terminals[0]!.elementId).toBe('term:at-1');

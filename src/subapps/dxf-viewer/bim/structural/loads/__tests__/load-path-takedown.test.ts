@@ -13,7 +13,7 @@ import {
 } from '../load-path-takedown';
 import { ComputeLoadPathCommand } from '../../../../core/commands/entity-commands/ComputeLoadPathCommand';
 import { computeFootingTakedownLoads } from '../../footing-design/footing-load-takedown';
-import type { Entity } from '../../../../types/entities';
+import { isColumnEntity, type Entity } from '../../../../types/entities';
 import type { AppliedMemberLoad } from '../structural-loads-types';
 import { DEFAULT_BAY_SPAN_M } from '../load-takedown';
 import type {
@@ -261,11 +261,15 @@ describe('ComputeLoadPathCommand', () => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const cmd = new ComputeLoadPathCommand(loads, sm as any);
     cmd.execute();
-    expect((sm.getEntity('c1') as Entity).params).toMatchObject({
+    const afterExec = sm.getEntity('c1') as Entity;
+    if (!isColumnEntity(afterExec)) throw new Error('Expected column entity');
+    expect(afterExec.params).toMatchObject({
       appliedLoad: { deadAxialKn: 300, source: 'takedown' },
     });
     cmd.undo();
-    expect((sm.getEntity('c1') as Entity).params).not.toHaveProperty('appliedLoad');
+    const afterUndo = sm.getEntity('c1') as Entity;
+    if (!isColumnEntity(afterUndo)) throw new Error('Expected column entity');
+    expect(afterUndo.params).not.toHaveProperty('appliedLoad');
   });
 
   it('getLoadedMemberIds → μόνο τα εγγράψιμα μέλη (skip χειροκίνητο)', () => {

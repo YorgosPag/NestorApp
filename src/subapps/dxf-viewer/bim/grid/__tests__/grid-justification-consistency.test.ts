@@ -27,17 +27,17 @@ const Y3 = [guide('y0', 'Y', 0), guide('y1', 'Y', 4000), guide('y2', 'Y', 8000)]
 const R = () => reader([...X3, ...Y3]);
 
 const cols = (mode: 'center' | 'inner' | 'outer'): Entity[] =>
-  buildColumnGridFromGuides(R(), {}, '0', 'mm', undefined, mode).columns;
+  [...buildColumnGridFromGuides(R(), {}, '0', 'mm', undefined, mode).columns];
 const walls = (mode: 'center' | 'inner' | 'outer'): Entity[] =>
-  buildWallGridFromGuides(R(), {}, '0', 'mm', [], mode).walls;
+  [...buildWallGridFromGuides(R(), {}, '0', 'mm', [], mode).walls];
 const beams = (mode: 'center' | 'inner' | 'outer'): Entity[] =>
-  buildBeamGridFromGuides(R(), {}, '0', 'mm', [], mode).beams;
+  [...buildBeamGridFromGuides(R(), {}, '0', 'mm', [], mode).beams];
 
 describe('detectGridJustificationConflicts', () => {
   it('κολόνες inner + τοίχοι outer → ΑΣΥΝΕΠΕΙΑ (το σενάριο του χρήστη)', () => {
     const conflicts = detectGridJustificationConflicts([...cols('inner'), ...walls('outer')]);
     expect(conflicts.length).toBeGreaterThan(0);
-    expect(conflicts[0].kinds.sort()).toEqual(['column', 'wall']);
+    expect([...conflicts[0].kinds].sort()).toEqual(['column', 'wall']);
   });
 
   it('κολόνες inner + τοίχοι inner → ΚΑΜΙΑ ασυνέπεια (ίδια φορά)', () => {
@@ -48,7 +48,7 @@ describe('detectGridJustificationConflicts', () => {
     // Το δοκάρι center προεξέχει 12.5cm έξω από την κολόνα inner → δεν περιέχεται.
     const conflicts = detectGridJustificationConflicts([...cols('inner'), ...beams('center')]);
     expect(conflicts.length).toBeGreaterThan(0);
-    expect(conflicts[0].kinds.sort()).toEqual(['beam', 'column']);
+    expect([...conflicts[0].kinds].sort()).toEqual(['beam', 'column']);
   });
 
   it('κολόνες inner + δοκάρια inner → ΚΑΜΙΑ ασυνέπεια (πλήρης στήριξη, flush)', () => {
@@ -67,7 +67,7 @@ describe('detectGridJustificationConflicts', () => {
   it('δοκάρια inner + τοίχοι outer → ΑΣΥΝΕΠΕΙΑ (γραμμικό vs γραμμικό)', () => {
     const conflicts = detectGridJustificationConflicts([...beams('inner'), ...walls('outer')]);
     expect(conflicts.length).toBeGreaterThan(0);
-    expect(conflicts[0].kinds.sort()).toEqual(['beam', 'wall']);
+    expect([...conflicts[0].kinds].sort()).toEqual(['beam', 'wall']);
   });
 
   it('κενή σκηνή → ΚΑΜΙΑ ασυνέπεια', () => {

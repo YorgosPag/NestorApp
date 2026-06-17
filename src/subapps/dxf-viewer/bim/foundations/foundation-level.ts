@@ -17,14 +17,14 @@
  * @see ../columns/column-from-grid.ts — κολώνες consumer
  */
 
-import { isFoundationEntity } from '../../types/entities';
+import { isFoundationEntity, type Entity } from '../../types/entities';
 
 /**
  * Στάθμη άνω παρειάς (mm) των φερόντων footings (strip/pad) της σκηνής, ή `null` αν
  * δεν υπάρχει κανένα. Total/pure — μηδέν side-effects. Ο caller αποφασίζει το fallback
  * (εδαφόπλακα → SSoT default· κολώνες → καμία επέκταση).
  */
-export function sceneFoundationTopMm(entities: readonly { type: string }[]): number | null {
+export function sceneFoundationTopMm(entities: readonly Entity[]): number | null {
   let top: number | null = null;
   for (const e of entities) {
     if (!isFoundationEntity(e)) continue;

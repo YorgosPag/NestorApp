@@ -12,7 +12,7 @@ import { computeOpeningGeometry } from '../geometry/opening-geometry';
 import { validateOpeningParams } from '../validators/opening-validator';
 import { inferOpeningIfcType } from '@/services/factories/opening.factory';
 // ADR-421 SLICE C — «type always wins» resolution at hydrate time.
-import { resolveOpeningEffective, openingEntityDiffersFromDoc } from '../family-types/opening-type-resolution';
+import { resolveOpeningEffective, openingEntityDiffersFromDoc, type OpeningTypeLink } from '../family-types/opening-type-resolution';
 import { resolveAutoOpeningTypeId } from '../family-types/auto-opening-type';
 import type { OpeningDoc } from './opening-firestore-service';
 
@@ -91,7 +91,7 @@ export interface OpeningMergeRefs {
   readonly deleted: Set<string>;
   readonly pending: Set<string>;
   readonly lastSavedParams: Map<string, OpeningEntity['params']>;
-  readonly lastSavedLink: Map<string, { typeId: OpeningDoc['typeId']; typeOverrides: OpeningDoc['typeOverrides'] }>;
+  readonly lastSavedLink: Map<string, OpeningTypeLink>;
 }
 
 /**

@@ -33,12 +33,15 @@ beforeEach(() => updateMock.mockClear());
 describe('mergeSubcategoriesInto', () => {
   it('copies source subcategories onto a null target', () => {
     const merged = mergeSubcategoriesInto(null, sourceWithWallOverride());
-    expect(merged.objectStyles.wall.subcategories?.['common-edges']?.cutColor).toBe('#ff0000');
+    expect(merged.objectStyles).toBeDefined();
+    expect(merged.objectStyles!.wall).toBeDefined();
+    expect(merged.objectStyles!.wall!.subcategories?.['common-edges']?.cutColor).toBe('#ff0000');
   });
 
   it('drops subcategories for categories the source has none', () => {
     const merged = mergeSubcategoriesInto(null, sourceWithWallOverride());
-    expect(merged.objectStyles.column.subcategories).toBeUndefined();
+    expect(merged.objectStyles).toBeDefined();
+    expect(merged.objectStyles!.column?.subcategories).toBeUndefined();
   });
 
   it('preserves the target level\'s own drawingScale', () => {

@@ -108,6 +108,18 @@ export const COLUMN_PROPERTY_GROUPS: readonly ColumnPropertyGroup[] = [
     ],
   },
   {
+    // ADR-467 — διαδρομή φορτίων: αξονικό φορτίο σχεδιασμού (G/Q/N_Ed) από το
+    // `params.appliedLoad` (tributary takedown). Read-only — mirror του foundation
+    // «Φορτία & Έδραση». «—» όταν δεν έχει υπολογιστεί φορτίο (Revit-grade).
+    id: 'loads',
+    titleKey: 'columnAdvancedPanel.sections.loads.title',
+    fields: [
+      { commandKey: COLUMN_STRUCTURAL_READOUT_KEYS.loadDeadAxial, labelKey: 'ribbon.commands.columnStructural.loadDeadAxial', options: [], readOnly: true },
+      { commandKey: COLUMN_STRUCTURAL_READOUT_KEYS.loadLiveAxial, labelKey: 'ribbon.commands.columnStructural.loadLiveAxial', options: [], readOnly: true },
+      { commandKey: COLUMN_STRUCTURAL_READOUT_KEYS.loadUlsAxial, labelKey: 'ribbon.commands.columnStructural.loadUlsAxial', options: [], readOnly: true },
+    ],
+  },
+  {
     // ADR-449 — σοβάς (structural finish skin) per-element override.
     id: 'finish',
     titleKey: 'columnAdvancedPanel.sections.finish.title',

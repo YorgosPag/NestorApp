@@ -37,7 +37,9 @@ const MM_TO_M = 0.001;
 export class BeamFromWallGhost {
   private readonly scene: THREE.Scene;
   private readonly material: THREE.MeshStandardMaterial;
-  private mesh: THREE.Mesh | null = null;
+  // beamToMesh returns a multi-piece Group when the beam is cut by columns
+  // (ADR-458 cutback), or a single Mesh otherwise — hold the Object3D root.
+  private mesh: THREE.Object3D | null = null;
   /** Wall the current ghost was built for — rebuild only when the ref changes. */
   private wall: WallEntity | null = null;
   private disposed = false;
@@ -80,10 +82,22 @@ export class BeamFromWallGhost {
       this.hide();
       return;
     }
-    mesh.material = this.material;
-    // Non-pickable: the ghost must not intercept hover/selection object raycasts.
-    mesh.userData = {};
-    mesh.raycast = () => {};
+    // Swap in the translucent ghost material + make non-pickable on every mesh
+    // (a multi-piece cutback Group has one child mesh per segment).
+    mesh.traverse((child) => {
+      if (child instanceof THREE.Mesh) {
+        const prev = child.material;
+        child.material = this.material;
+        // The converter built a fresh material per piece — dispose it so the
+        // override doesn't leak (the shared ghost material is disposed once).
+        if (prev && prev !== this.material) {
+          (Array.isArray(prev) ? prev : [prev]).forEach((m) => m.dispose());
+        }
+      }
+      // Non-pickable: the ghost must not intercept hover/selection object raycasts.
+      child.userData = {};
+      child.raycast = () => {};
+    });
     this.mesh = mesh;
     this.wall = wall;
     this.scene.add(mesh);
@@ -105,7 +119,9 @@ export class BeamFromWallGhost {
   private removeMesh(): void {
     if (!this.mesh) return;
     this.scene.remove(this.mesh);
-    this.mesh.geometry.dispose();
+    this.mesh.traverse((child) => {
+      if (child instanceof THREE.Mesh) child.geometry.dispose();
+    });
     this.mesh = null;
     this.wall = null;
   }

@@ -72,7 +72,7 @@ function makeSpaceLoads(spaces: ThermalSpaceEntity[]): SpaceHeatLoads {
   );
   let totalW = 0;
   for (const r of results.values()) totalW += r.totalW;
-  return { results, minWperM2: 50, maxWperM2: 51, totalW, spaces };
+  return { results, minWperM2: 50, maxWperM2: 51, totalW, spaces, climateZone: 'B' as const };
 }
 
 function radiator(id: string, spaceId: string, catalogueW: number | null): RadiatorSizingViewResult {

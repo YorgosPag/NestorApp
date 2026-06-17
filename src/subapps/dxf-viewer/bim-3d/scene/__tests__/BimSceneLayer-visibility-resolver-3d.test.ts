@@ -40,6 +40,7 @@ jest.mock('../../../state/drawing-scale-store', () => ({
 
 import { useDrawingScaleStore } from '../../../state/drawing-scale-store';
 import { BimSceneLayer } from '../BimSceneLayer';
+import { EMPTY_BIM_ENTITIES } from '../../stores/Bim3DEntitiesStore';
 import type { Bim3DEntities } from '../../stores/Bim3DEntitiesStore';
 import type { FloorVisMode } from '../../utils/floor-visibility-state';
 import type { BuildingVisMode } from '../../utils/building-visibility-state';
@@ -81,6 +82,7 @@ function setBuildingResolution(map: Record<string, string>): void {
 
 function makeEntities(): Bim3DEntities {
   return {
+    ...EMPTY_BIM_ENTITIES,
     walls:        [{ id: 'w1', layerId: 'walls-layer' } as unknown as Bim3DEntities['walls'][number]],
     columns:      [{ id: 'c1', layerId: 'cols-layer' } as unknown as Bim3DEntities['columns'][number]],
     beams:        [{ id: 'b1', layerId: 'beams-layer' } as unknown as Bim3DEntities['beams'][number]],
@@ -88,9 +90,6 @@ function makeEntities(): Bim3DEntities {
     slabOpenings: [{ id: 'so1', layerId: 'so-layer', params: { slabId: 's1' } } as unknown as Bim3DEntities['slabOpenings'][number]],
     openings:     [{ id: 'o1', layerId: 'op-layer', params: { wallId: 'w1' } } as unknown as Bim3DEntities['openings'][number]],
     stairs:       [{ id: 'st1', layerId: 'stairs-layer' } as unknown as Bim3DEntities['stairs'][number]],
-    fixtures:     [],
-    panels:       [],
-    railings:     [],
   };
 }
 

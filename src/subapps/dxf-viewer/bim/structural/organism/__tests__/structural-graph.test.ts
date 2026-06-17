@@ -7,7 +7,7 @@
  */
 
 import { buildStructuralGraph, runOrganismChecks } from '../organism-checks';
-import type { Entity } from '../../../types/entities';
+import type { Entity } from '../../../../types/entities';
 
 function squareFootprint(cx: number, cy: number, half: number): { vertices: { x: number; y: number; z: number }[] } {
   return {

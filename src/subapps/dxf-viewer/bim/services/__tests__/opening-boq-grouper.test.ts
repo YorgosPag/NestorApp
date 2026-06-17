@@ -431,7 +431,7 @@ function docRow(args: {
  * snapshot — keeps these tests pure (no family-type store). Untyped/unknown-type
  * → cached unchanged (legacy fast-path). Order: cached → typeParams → overrides.
  */
-function makeResolver(catalog: Record<string, Partial<OpeningTypeParams>>): OpeningEffectiveResolver {
+function makeResolver(catalog: Record<string, Partial<OpeningParams>>): OpeningEffectiveResolver {
   return (cached, link) => {
     if (!link.typeId) return cached;
     const typeParams = catalog[link.typeId];

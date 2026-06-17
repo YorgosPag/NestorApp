@@ -42,6 +42,8 @@ const TUBE_RADIAL_SEGMENTS = 6;
 const CONDUIT_RADIUS_MM = 8;
 /** Neutral tint when a segment carries no resolvable classification colour. */
 const DEFAULT_GHOST_HEX = '#9ca3af';
+/** Neutral tint as a THREE colour int — fallback when a hex fails to parse. */
+const DEFAULT_GHOST_INT = hexToThreeInt(DEFAULT_GHOST_HEX) ?? 0x9ca3af;
 
 /** A normalized proposed run (one pipe/duct/fuel segment) the 3D ghost sweeps to a tube. */
 export interface ProposalGhostTube {
@@ -144,7 +146,7 @@ export function buildElectricalGhost3D(
     const pts = buildWirePolyline(path).map(
       (p) => new THREE.Vector3(p.x * sceneToM, p.zMm * MM_TO_M, -p.y * sceneToM),
     );
-    const mesh = tubeFromPoints(pts, radiusM, ghostMaterial(hexToThreeInt(path.colorHex)));
+    const mesh = tubeFromPoints(pts, radiusM, ghostMaterial(hexToThreeInt(path.colorHex) ?? DEFAULT_GHOST_INT));
     if (mesh) out.push(mesh);
   }
   return out;
@@ -164,7 +166,7 @@ export function buildSegmentGhost3D(
   const matByColour = new Map<number, THREE.MeshStandardMaterial>();
   const out: THREE.Object3D[] = [];
   for (const tube of tubes) {
-    const colorInt = hexToThreeInt(tube.colorHex ?? DEFAULT_GHOST_HEX);
+    const colorInt = hexToThreeInt(tube.colorHex ?? DEFAULT_GHOST_HEX) ?? DEFAULT_GHOST_INT;
     let mat = matByColour.get(colorInt);
     if (!mat) {
       mat = ghostMaterial(colorInt);

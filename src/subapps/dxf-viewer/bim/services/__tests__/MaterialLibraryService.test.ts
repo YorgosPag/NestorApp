@@ -144,6 +144,8 @@ function seedDoc(partial: Partial<BimMaterial> & { id: string }): void {
     brand: partial.brand ?? null,
     brandModel: partial.brandModel ?? null,
     notes: partial.notes ?? null,
+    thumbnailUrl: partial.thumbnailUrl ?? null,
+    pbrTextures: partial.pbrTextures ?? null,
     builtin: partial.builtin ?? false,
     companyId: partial.companyId ?? null,
     projectId: partial.projectId ?? null,

@@ -93,13 +93,13 @@ describe('buildDrainageCommit', () => {
     expect(plan.segmentEntities).toHaveLength(2);
     for (const e of plan.segmentEntities) {
       // distinct snapped z ⇒ "real connected run": the network geometry wins (no re-projection).
-      expect(e.params.startPoint.z).toBeLessThan(e.params.endPoint.z);
+      expect(e.params.startPoint.z!).toBeLessThan(e.params.endPoint.z!);
       expect(e.params.slopePercent).toBe(2);
     }
     // First run sits at the collector invert datum (100 → 120).
     const first = plan.segmentEntities[0]!;
-    expect(first.params.startPoint.z).toBe(100);
-    expect(first.params.endPoint.z).toBe(120);
+    expect(first.params.startPoint.z!).toBe(100);
+    expect(first.params.endPoint.z!).toBe(120);
   });
 
   it('skips an invalid (zero-length) run without aborting the network', () => {

@@ -303,6 +303,14 @@ export const COLUMN_STRUCTURAL_READOUT_KEYS = {
   ratio: 'column.structural.readout.ratio',
   /** α — συντελεστής περίσφιγξης EC8 (αₙ·αₛ, 0..1), εξαρτάται από τύπο συνδετήρα. */
   confinement: 'column.structural.readout.confinement',
+  // ADR-467 — αξονικό φορτίο σχεδιασμού από τη διαδρομή φορτίων (`params.appliedLoad`,
+  // tributary takedown). Read-only mirror του foundation `bearingPMax`/«Φορτία & Έδραση».
+  /** kN — μόνιμο αξονικό φορτίο G (χαρακτηριστικό). */
+  loadDeadAxial: 'column.structural.readout.loadDeadAxial',
+  /** kN — μεταβλητό αξονικό φορτίο Q (χαρακτηριστικό). */
+  loadLiveAxial: 'column.structural.readout.loadLiveAxial',
+  /** kN — αξονικό φορτίο σχεδιασμού ULS N_Ed = γ_G·G + γ_Q·Q (EN1990 6.10). */
+  loadUlsAxial: 'column.structural.readout.loadUlsAxial',
 } as const;
 
 /** Πεδίο του `ColumnReinforcement` που χειρίζεται ένα αριθμητικό structural key. */

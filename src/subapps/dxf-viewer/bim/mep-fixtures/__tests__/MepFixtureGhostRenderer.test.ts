@@ -31,7 +31,7 @@ function makeCtx() {
   };
 }
 
-const TRANSFORM: ViewTransform = { x: 0, y: 0, scale: 1 } as ViewTransform;
+const TRANSFORM: ViewTransform = { scale: 1, offsetX: 0, offsetY: 0 };
 const VIEWPORT = { width: 800, height: 600 };
 const SQUARE = [
   { x: 0, y: 0 }, { x: 10, y: 0 }, { x: 10, y: 10 }, { x: 0, y: 10 },

@@ -203,7 +203,7 @@ export function useDxfSceneConversion({
   // event-time grip-drag step snap can convert a user-typed mm step into the
   // scene units the drag delta lives in (else non-mm drawings never step).
   useEffect(() => {
-    immediateSceneScale.set(mmToSceneUnits(dxfScene.units));
+    immediateSceneScale.set(mmToSceneUnits(dxfScene.units ?? 'mm'));
   }, [dxfScene.units]);
 
   return { dxfScene };

@@ -2746,7 +2746,10 @@
         "concreteWeight": "Concrete (kg)",
         "steelWeight": "Steel (kg)",
         "ratio": "ρ (%)",
-        "confinement": "Confinement α"
+        "confinement": "Confinement α",
+        "loadDeadAxial": "Dead G (kN)",
+        "loadLiveAxial": "Live Q (kN)",
+        "loadUlsAxial": "Design load N_Ed (kN)"
       },
       "columnEditor": {
         "width": "Width",
@@ -3841,6 +3844,7 @@
     "emptyState": "Select a column to see its properties.",
     "sections": {
       "structural": { "title": "Structural / Reinforcement" },
+      "loads": { "title": "Design Load" },
       "finish": { "title": "Plaster Finish" },
       "envelope": { "title": "Envelope Function" },
       "material": { "title": "Material" }

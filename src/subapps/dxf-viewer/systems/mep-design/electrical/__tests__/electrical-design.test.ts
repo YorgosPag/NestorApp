@@ -111,7 +111,7 @@ describe('groupIntoCircuits', () => {
     const demands = Array.from({ length: 13 }, (_, i) => demand('lighting', 100, i, 0));
     const groups = groupIntoCircuits(demands, HD384_GROUPING_STANDARD);
     expect(groups).toHaveLength(2);
-    expect(groups[0].memberCount ?? groups[0].members.length).toBe(12);
+    expect(groups[0].members.length).toBe(12);
     expect(groups[1].members.length).toBe(1);
   });
 

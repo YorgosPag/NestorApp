@@ -9,10 +9,16 @@
  *   - wall-consistency: κάτω παρειά === `beamUndersideZmmAt` (ο τοίχος εφάπτεται)
  */
 
+import * as THREE from 'three';
 import { beamToMesh } from '../BimToThreeConverter';
 import { beamSlopeOffsetZmm, beamUndersideZmmAt } from '../../../bim/geometry/beam-slope';
 import { computeBeamGeometry } from '../../../bim/geometry/beam-geometry';
 import type { BeamEntity, BeamParams } from '../../../bim/types/beam-types';
+
+function asMesh(o: THREE.Object3D | null): THREE.Mesh {
+  if (!(o instanceof THREE.Mesh)) throw new Error('expected a THREE.Mesh');
+  return o;
+}
 
 const MM_TO_M = 0.001;
 const TOL = 6;
@@ -50,7 +56,7 @@ function positions(mesh: { geometry: { getAttribute(n: string): { count: number;
 
 describe('beamToMesh — flat back-compat', () => {
   it('οριζόντια δοκός → πάνω παρειά οριζόντια (σταθερό geo Y)', () => {
-    const mesh = beamToMesh(makeBeam())!;
+    const mesh = asMesh(beamToMesh(makeBeam()));
     expect(mesh).not.toBeNull();
     const ys = positions(mesh).map((p) => p.y);
     // ExtrudeGeometry: bottom @0, top @depthM=0.4 (πριν το mesh.position.y).
@@ -63,8 +69,8 @@ describe('beamToMesh — tilted (shear === slope plane)', () => {
   const tilted: Partial<BeamParams> = { topElevationEnd: 3500 }; // Δ = 500mm
 
   it('per-vertex shear ταιριάζει με το beamSlopeOffsetZmm SSoT', () => {
-    const flat = positions(beamToMesh(makeBeam())!);
-    const tilt = positions(beamToMesh(makeBeam(tilted))!);
+    const flat = positions(asMesh(beamToMesh(makeBeam())));
+    const tilt = positions(asMesh(beamToMesh(makeBeam(tilted))));
     expect(tilt.length).toBe(flat.length);
     const params = makeBeam(tilted).params;
     for (let i = 0; i < flat.length; i++) {
@@ -77,7 +83,7 @@ describe('beamToMesh — tilted (shear === slope plane)', () => {
   });
 
   it('σταθερό βάθος — top/bottom γέρνουν ίσα (vertical extent 0.4 παντού)', () => {
-    const tilt = positions(beamToMesh(makeBeam(tilted))!);
+    const tilt = positions(asMesh(beamToMesh(makeBeam(tilted))));
     const byCol = new Map<string, number[]>();
     for (const p of tilt) {
       const k = `${p.x.toFixed(3)}|${p.z.toFixed(3)}`;
@@ -93,7 +99,7 @@ describe('beamToMesh — tilted (shear === slope plane)', () => {
     const params = makeBeam(tilted).params;
     // mesh.position.y = (topElevation + zOffset − depth)·MM_TO_M (start nominal).
     const positionY = (params.topElevation + (params.zOffset ?? 0) - params.depth) * MM_TO_M;
-    const tilt = positions(beamToMesh(makeBeam(tilted))!);
+    const tilt = positions(asMesh(beamToMesh(makeBeam(tilted))));
     for (const p of tilt) {
       const offsetM = beamSlopeOffsetZmm(params, { x: p.x, y: -p.z }) * MM_TO_M;
       const flatY = p.y - offsetM; // 0 (bottom) ή 0.4 (top)

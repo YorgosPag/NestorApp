@@ -64,7 +64,7 @@ describe('UpdateWallFamilyTypeCommand (ADR-412 Φ5)', () => {
     const cmd = new UpdateWallFamilyTypeCommand(TYPE_ID, NEXT, PREV, h.deps);
     cmd.execute();
 
-    expect(h.catalog.find((t) => t.id === TYPE_ID)?.typeParams.thickness).toBe(250);
+    expect((h.catalog.find((t) => t.id === TYPE_ID) as BimFamilyType<'wall'> | undefined)?.typeParams.thickness).toBe(250);
     expect(h.persisted).toEqual([NEXT]);
     expect(h.audits).toEqual([{ from: PREV, to: NEXT }]);
     expect(h.notifyCount).toBe(1);
@@ -76,7 +76,7 @@ describe('UpdateWallFamilyTypeCommand (ADR-412 Φ5)', () => {
     cmd.execute();
     cmd.undo();
 
-    expect(h.catalog.find((t) => t.id === TYPE_ID)?.typeParams.thickness).toBe(100);
+    expect((h.catalog.find((t) => t.id === TYPE_ID) as BimFamilyType<'wall'> | undefined)?.typeParams.thickness).toBe(100);
     expect(h.persisted).toEqual([NEXT, PREV]);
     expect(h.audits[1]).toEqual({ from: NEXT, to: PREV });
     expect(h.notifyCount).toBe(2);
@@ -87,7 +87,7 @@ describe('UpdateWallFamilyTypeCommand (ADR-412 Φ5)', () => {
     const cmd = new UpdateWallFamilyTypeCommand(TYPE_ID, NEXT, PREV, h.deps);
     cmd.execute();
     cmd.execute();
-    expect(h.catalog.find((t) => t.id === TYPE_ID)?.typeParams.thickness).toBe(250);
+    expect((h.catalog.find((t) => t.id === TYPE_ID) as BimFamilyType<'wall'> | undefined)?.typeParams.thickness).toBe(250);
   });
 
   it('4. redo re-applies the next params after undo', () => {
@@ -96,7 +96,7 @@ describe('UpdateWallFamilyTypeCommand (ADR-412 Φ5)', () => {
     cmd.execute();
     cmd.undo();
     cmd.redo();
-    expect(h.catalog.find((t) => t.id === TYPE_ID)?.typeParams.thickness).toBe(250);
+    expect((h.catalog.find((t) => t.id === TYPE_ID) as BimFamilyType<'wall'> | undefined)?.typeParams.thickness).toBe(250);
   });
 
   it('5. leaves OTHER types untouched (replaces only the target id)', () => {
@@ -104,7 +104,7 @@ describe('UpdateWallFamilyTypeCommand (ADR-412 Φ5)', () => {
     const other: BimFamilyType = { ...(makeType(300) as BimFamilyType), id: 'bimftype-wall-2' };
     h.catalog = [...h.catalog, other];
     new UpdateWallFamilyTypeCommand(TYPE_ID, NEXT, PREV, h.deps).execute();
-    expect(h.catalog.find((t) => t.id === 'bimftype-wall-2')?.typeParams.thickness).toBe(300);
+    expect((h.catalog.find((t) => t.id === 'bimftype-wall-2') as BimFamilyType<'wall'> | undefined)?.typeParams.thickness).toBe(300);
   });
 
   it('6. validate rejects empty id + non-positive thickness', () => {

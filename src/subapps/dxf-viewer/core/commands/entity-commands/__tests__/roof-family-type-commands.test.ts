@@ -195,7 +195,7 @@ describe('UpdateRoofFamilyTypeCommand', () => {
   it('execute: optimistic store replace + persist + audit + notify', () => {
     const h = makeHarness();
     new UpdateRoofFamilyTypeCommand(TYPE_ID, NEXT, PREV, h.deps).execute();
-    expect(h.catalog.find((t) => t.id === TYPE_ID)?.typeParams.thickness).toBe(295);
+    expect((h.catalog.find((t) => t.id === TYPE_ID) as BimFamilyType<'roof'> | undefined)?.typeParams.thickness).toBe(295);
     expect(h.persisted).toEqual([NEXT]);
     expect(h.audits).toEqual([{ from: PREV, to: NEXT }]);
     expect(h.notifyCount).toBe(1);
@@ -206,7 +206,7 @@ describe('UpdateRoofFamilyTypeCommand', () => {
     const cmd = new UpdateRoofFamilyTypeCommand(TYPE_ID, NEXT, PREV, h.deps);
     cmd.execute();
     cmd.undo();
-    expect(h.catalog.find((t) => t.id === TYPE_ID)?.typeParams.thickness).toBe(200);
+    expect((h.catalog.find((t) => t.id === TYPE_ID) as BimFamilyType<'roof'> | undefined)?.typeParams.thickness).toBe(200);
     expect(h.audits[1]).toEqual({ from: NEXT, to: PREV });
     expect(h.notifyCount).toBe(2);
   });
@@ -218,8 +218,8 @@ describe('UpdateRoofFamilyTypeCommand', () => {
     const cmd = new UpdateRoofFamilyTypeCommand(TYPE_ID, NEXT, PREV, h.deps);
     cmd.execute();
     cmd.execute();
-    expect(h.catalog.find((t) => t.id === TYPE_ID)?.typeParams.thickness).toBe(295);
-    expect(h.catalog.find((t) => t.id === 'bimftype-roof-2')?.typeParams.thickness).toBe(999);
+    expect((h.catalog.find((t) => t.id === TYPE_ID) as BimFamilyType<'roof'> | undefined)?.typeParams.thickness).toBe(295);
+    expect((h.catalog.find((t) => t.id === 'bimftype-roof-2') as BimFamilyType<'roof'> | undefined)?.typeParams.thickness).toBe(999);
   });
 
   it('validate rejects empty id + non-positive thickness; no scene entities affected', () => {

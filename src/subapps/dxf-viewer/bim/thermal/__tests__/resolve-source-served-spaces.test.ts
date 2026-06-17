@@ -32,6 +32,7 @@ function makeBoiler(id: string): MepBoilerEntity {
   return {
     id,
     type: 'mep-boiler',
+    ifcGuid: '0123456789abcdefABCDEF',
     ifcType: 'IfcBoiler',
     layerId: 'lyr_test',
     kind: 'wall-boiler',
@@ -65,6 +66,7 @@ function makeRadiator(id: string, posX: number, posY: number): MepRadiatorEntity
   return {
     id,
     type: 'mep-radiator',
+    ifcGuid: '0123456789abcdefABCDEF',
     ifcType: 'IfcSpaceHeater',
     layerId: 'lyr_test',
     kind: 'panel-radiator',
@@ -104,6 +106,7 @@ function makeUnderfloor(
   return {
     id,
     type: 'mep-underfloor',
+    ifcGuid: '0123456789abcdefABCDEF',
     ifcType: 'IfcSpaceHeater',
     layerId: 'lyr_test',
     kind: 'hydronic-loop',
@@ -150,6 +153,7 @@ function makeSpace(
   return {
     id,
     type: 'thermal-space',
+    ifcGuid: '0123456789abcdefABCDEF',
     ifcType: 'IfcSpace',
     layerId: 'lyr_test',
     kind: 'generic',

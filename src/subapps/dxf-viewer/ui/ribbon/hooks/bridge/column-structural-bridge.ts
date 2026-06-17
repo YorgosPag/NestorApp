@@ -40,12 +40,20 @@ import {
 import {
   COLUMN_STRUCTURAL_KEYS,
   COLUMN_STRUCTURAL_KEY_TO_FIELD,
+  COLUMN_STRUCTURAL_READOUT_KEYS,
 } from './column-command-keys';
 import {
   readReinforcementField,
   patchReinforcementField,
   resolveStructuralReadout,
 } from './structural-param';
+// ADR-467 — διαδρομή φορτίων: αξονικό φορτίο σχεδιασμού (G/Q/ULS) από το persisted
+// `params.appliedLoad`. Συνδυασμός μέσω του κοινού EN1990 SSoT (μηδέν inline math).
+import {
+  resolveAppliedMemberLoad,
+  isZeroMemberLoad,
+} from '../../../../bim/structural/loads/structural-loads-types';
+import { combineUls } from '../../../../bim/structural/loads/load-combinations';
 import type { RibbonComboboxState } from '../../context/RibbonCommandContext';
 
 type DispatchParams = (nextParams: ColumnParams) => void;
@@ -86,11 +94,46 @@ export function resolveColumnStructuralState(
   return { value: String(Math.round(readReinforcementField(eff, field))), options: [] };
 }
 
-/** Read-only readout state (βάρη/ρ%), ή `null` αν δεν είναι readout key. */
+/**
+ * ADR-467 — Read-only readout του αξονικού φορτίου σχεδιασμού (G/Q/N_Ed) από το
+ * persisted `params.appliedLoad`. Επιστρέφει `null` αν το key δεν ανήκει εδώ· «—»
+ * όταν δεν έχει υπολογιστεί φορτίο (μηδενικό/απών) — Revit-grade πάντα-έγκυρη ένδειξη.
+ */
+function resolveColumnLoadReadout(
+  column: ColumnEntity,
+  readoutKey: string,
+): RibbonComboboxState | null {
+  const K = COLUMN_STRUCTURAL_READOUT_KEYS;
+  if (
+    readoutKey !== K.loadDeadAxial &&
+    readoutKey !== K.loadLiveAxial &&
+    readoutKey !== K.loadUlsAxial
+  ) {
+    return null;
+  }
+  const load = resolveAppliedMemberLoad(column.params.appliedLoad);
+  if (isZeroMemberLoad(load)) return { value: '—', options: [] };
+  if (readoutKey === K.loadDeadAxial) {
+    return { value: String(Math.round(load.deadAxialKn)), options: [] };
+  }
+  if (readoutKey === K.loadLiveAxial) {
+    return { value: String(Math.round(load.liveAxialKn)), options: [] };
+  }
+  // N_Ed — γ_G·G + γ_Q·Q με τους code-specific συντελεστές του ενεργού κανονισμού
+  // (EN1990 fundamental combination, κοινός SSoT με τον σχεδιασμό θεμελίωσης).
+  const factors = resolveStructuralCode(
+    useStructuralSettingsStore.getState().codeId,
+  ).footingDesignFactors().combination;
+  return { value: String(Math.round(combineUls(load, factors).axialKn)), options: [] };
+}
+
+/** Read-only readout state (βάρη/ρ% + ADR-467 φορτίο), ή `null` αν δεν είναι readout key. */
 export function resolveColumnStructuralReadout(
   column: ColumnEntity,
   readoutKey: string,
 ): RibbonComboboxState | null {
+  const loadState = resolveColumnLoadReadout(column, readoutKey);
+  if (loadState) return loadState;
   const eff = effectiveReinforcement(column);
   const value = resolveStructuralReadout(
     readoutKey,

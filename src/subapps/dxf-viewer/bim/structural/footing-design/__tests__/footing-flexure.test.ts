@@ -11,7 +11,7 @@ import { EUROCODE_PROVIDER } from '../../codes/eurocode-provider';
 import { computeFootingFlexure } from '../footing-flexure';
 import { runFootingDesignChecks } from '../footing-design-checks';
 import type { FootingDesignInput } from '../footing-design-types';
-import type { Entity } from '../../../types/entities';
+import type { Entity } from '../../../../types/entities';
 
 function input(overrides: Partial<FootingDesignInput> = {}): FootingDesignInput {
   return {

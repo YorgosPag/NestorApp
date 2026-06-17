@@ -14,7 +14,8 @@ import { commitTieBeamGridFromGuides } from '../tie-beam-grid-commit';
 import { commitFoundationGridFromGuides } from '../foundation-grid-commit';
 import { buildStripGridFromGuides, type AxisGuideReader } from '../foundation-from-grid';
 import { computeGridJunctionExtends } from '../foundation-grid-junctions';
-import type { FoundationEntity } from '../types/foundation-types';
+import type { FoundationEntity } from '../../types/foundation-types';
+import type { GuideBinding } from '../../hosting/guide-binding-types';
 import type { Guide } from '../../../systems/guides/guide-types';
 import type { ICommand } from '../../../core/commands/interfaces';
 import type { SceneModel } from '../../../types/scene';
@@ -127,7 +128,7 @@ describe('GEN-TIE junction-miter — γωνίες κλείνουν (όχι κε�
   it('οι περιμετρικές συνδετήριες παίρνουν extend στα terminus bindings (γωνία κλείνει)', () => {
     // Το command output = builder + junction-miter· οι γωνιακές αποκτούν extend≠undefined.
     const mitered = miteredTieBeams([...X3, ...Y3]);
-    const withExtend = mitered.filter((t) => (t.guideBindings ?? []).some((b) => b.extend !== undefined));
+    const withExtend = mitered.filter((t) => (t.guideBindings ?? []).some((b: GuideBinding) => b.extend !== undefined));
     expect(withExtend.length).toBeGreaterThan(0);
   });
 

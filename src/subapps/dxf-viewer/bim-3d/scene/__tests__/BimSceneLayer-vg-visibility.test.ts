@@ -34,6 +34,7 @@ jest.mock('../../../state/drawing-scale-store', () => ({
 
 import { useDrawingScaleStore } from '../../../state/drawing-scale-store';
 import { BimSceneLayer } from '../BimSceneLayer';
+import { EMPTY_BIM_ENTITIES } from '../../stores/Bim3DEntitiesStore';
 import type { Bim3DEntities } from '../../stores/Bim3DEntitiesStore';
 
 const mockGetState = useDrawingScaleStore.getState as jest.Mock;
@@ -44,6 +45,7 @@ function setObjectStyles(styles: Record<string, { visible?: boolean }>): void {
 
 function makeEntities(): Bim3DEntities {
   return {
+    ...EMPTY_BIM_ENTITIES,
     walls:        [{ id: 'w1' } as unknown as Bim3DEntities['walls'][number]],
     columns:      [{ id: 'c1' } as unknown as Bim3DEntities['columns'][number]],
     beams:        [{ id: 'b1' } as unknown as Bim3DEntities['beams'][number]],
@@ -51,9 +53,6 @@ function makeEntities(): Bim3DEntities {
     slabOpenings: [{ id: 'so1', params: { slabId: 's1' } } as unknown as Bim3DEntities['slabOpenings'][number]],
     openings:     [{ id: 'o1', params: { wallId: 'w1' } } as unknown as Bim3DEntities['openings'][number]],
     stairs:       [{ id: 'st1' } as unknown as Bim3DEntities['stairs'][number]],
-    fixtures:     [],
-    panels:       [],
-    railings:     [],
   };
 }
 

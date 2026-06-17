@@ -15,7 +15,7 @@ import {
   getBimCharacteristicPointsOfCategory,
 } from '../bim-characteristic-points';
 import type { Entity } from '../../../types/entities';
-import type { WallEntity, WallParams } from '../../types/wall-types';
+import type { WallEntity, WallParams, WallKind } from '../../types/wall-types';
 import type { BeamEntity, BeamParams } from '../../types/beam-types';
 import type { SlabEntity } from '../../types/slab-types';
 import type { OpeningEntity } from '../../types/opening-types';
@@ -25,7 +25,7 @@ import { buildDefaultColumnParams } from '../../../hooks/drawing/column-completi
 
 // ─── Fixtures (mirror the per-anchor test factories) ─────────────────────────
 
-function makeWall(overrides: Partial<WallParams> = {}, kind: WallParams['kind'] = 'straight'): WallEntity {
+function makeWall(overrides: Partial<WallParams> = {}, kind: WallKind = 'straight'): WallEntity {
   const params: WallParams = {
     category: 'exterior',
     start: { x: 0, y: 0 },

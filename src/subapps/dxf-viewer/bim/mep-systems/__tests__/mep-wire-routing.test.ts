@@ -14,7 +14,7 @@ import {
   type CircuitWirePath,
 } from '../mep-wire-routing';
 import { buildSegmentKey, endpointKey, type WireWaypointMap } from '../mep-wire-waypoints';
-import { DEFAULT_CONDUCTORS, type MepSystemEntity, type MepSystemParams } from '../../types/mep-system-types';
+import { DEFAULT_CONDUCTORS, type MepElectricalSystemParams, type MepSystemEntity, type MepSystemParams } from '../../types/mep-system-types';
 
 function sys(id: string, color: string | undefined, members: string[], source: string): MepSystemEntity {
   const params: MepSystemParams = {
@@ -32,7 +32,7 @@ function sys(id: string, color: string | undefined, members: string[], source: s
 /** A system carrying an explicit per-circuit wire style. */
 function sysWithStyle(id: string, wireStyle: WireStyle, members: string[], source: string): MepSystemEntity {
   const base = sys(id, undefined, members, source);
-  return { ...base, params: { ...base.params, wireStyle } };
+  return { ...base, params: { ...base.params, wireStyle } as MepElectricalSystemParams };
 }
 
 /** A resolver backed by a fixed id→point map (null for anything absent). */
@@ -230,7 +230,7 @@ describe('buildWirePolyline', () => {
 describe('computeCircuitWirePaths (waypoints — Φ7 FU#3)', () => {
   /** Attach a waypoint map (keyed by host pair) to a system's params. */
   function withWaypoints(s: MepSystemEntity, map: WireWaypointMap): MepSystemEntity {
-    return { ...s, params: { ...s.params, wireWaypoints: map } };
+    return { ...s, params: { ...s.params, wireWaypoints: map } as MepElectricalSystemParams };
   }
 
   it('splices a per-segment waypoint between the two hosts', () => {
@@ -342,7 +342,7 @@ describe('computeCircuitWirePaths (conductors — Φ7)', () => {
     const base = sys('s1', undefined, ['fx1'], 'pnl');
     const withConductors: MepSystemEntity = {
       ...base,
-      params: { ...base.params, conductors: { hot: 2, neutral: 1, ground: 1 } },
+      params: { ...base.params, conductors: { hot: 2, neutral: 1, ground: 1 } } as MepElectricalSystemParams,
     };
     const paths = computeCircuitWirePaths(
       [withConductors],

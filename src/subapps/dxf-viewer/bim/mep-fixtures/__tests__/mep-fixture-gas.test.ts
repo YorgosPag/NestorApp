@@ -106,7 +106,9 @@ describe('gasRecognizer (flow-aware: cooker yes, meter no)', () => {
     const ctx: RecognitionContext = {
       entities: [fixtureEntity('gas-cooker', 'cooker-1'), fixtureEntity('gas-meter', 'meter-1')],
       storeyId: 'storey-1',
-    } as RecognitionContext;
+      sceneUnits: 'mm',
+      spaces: [],
+    };
     const terminals = gasRecognizer.recognize(ctx);
     expect(terminals).toHaveLength(1);
     expect(terminals[0]!.elementId).toBe('term:cooker-1');

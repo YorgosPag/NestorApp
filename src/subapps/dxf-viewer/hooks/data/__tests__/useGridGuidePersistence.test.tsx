@@ -14,9 +14,10 @@
 
 import { renderHook, act } from '@testing-library/react';
 
-import { useGridGuidePersistence } from '../useGridGuidePersistence';
+import { useGridGuidePersistence, type UseGridGuidePersistenceParams } from '../useGridGuidePersistence';
 import { guidesToSnapshots } from '../../../systems/guides/guide-persistence-types';
 import type { GridGuideDoc } from '../../../systems/guides/guide-persistence-types';
+import type { GridGuideSaveInput } from '../../../systems/guides/guide-firestore-service';
 import type { Guide } from '../../../systems/guides/guide-types';
 
 // `mock`-prefixed vars are allowed inside jest.mock factories (hoisting rule).
@@ -74,7 +75,7 @@ function makeService(remoteDocs: readonly GridGuideDoc[] = []) {
       onChange(remoteDocs);
       return () => {};
     }),
-    createGrid: jest.fn(async () => 'grd_test_created'),
+    createGrid: jest.fn(async (_input: GridGuideSaveInput) => 'grd_test_created'),
     updateGrid: jest.fn(async () => {}),
     deleteGrid: jest.fn(async () => {}),
   };
@@ -127,7 +128,10 @@ describe('useGridGuidePersistence — flush-on-ready', () => {
   it('οδηγοί πριν ετοιμαστεί το scope persistάρονται μόλις δέσει (empty remote → flush → create)', async () => {
     mockService = makeService([]); // καμία remote εγγραφή
 
-    const { rerender } = renderHook((p) => useGridGuidePersistence(p), { initialProps: NO_SCOPE });
+    const { rerender } = renderHook<ReturnType<typeof useGridGuidePersistence>, UseGridGuidePersistenceParams>(
+      (p) => useGridGuidePersistence(p),
+      { initialProps: NO_SCOPE },
+    );
 
     // Τοποθέτηση 4 οδηγών ΟΣΟ το scope είναι ελλιπές → service null → debounced save no-op.
     act(() => {
@@ -141,13 +145,18 @@ describe('useGridGuidePersistence — flush-on-ready', () => {
     await flushTimers();
 
     expect(mockService.createGrid).toHaveBeenCalledTimes(1);
-    expect(mockService.createGrid.mock.calls[0][0].guides).toHaveLength(4);
+    const firstCreateCall = mockService.createGrid.mock.calls[0];
+    expect(firstCreateCall).toBeDefined();
+    expect(firstCreateCall![0].guides).toHaveLength(4);
   });
 
   it('remote-wins: αν υπάρχει remote doc, τα pending απορρίπτονται (no create, hydrate από remote)', async () => {
     mockService = makeService([remoteDoc('grd_remote', [guide('r1', 'X', 100), guide('r2', 'Y', 200)])]);
 
-    const { rerender } = renderHook((p) => useGridGuidePersistence(p), { initialProps: NO_SCOPE });
+    const { rerender } = renderHook<ReturnType<typeof useGridGuidePersistence>, UseGridGuidePersistenceParams>(
+      (p) => useGridGuidePersistence(p),
+      { initialProps: NO_SCOPE },
+    );
     act(() => { mockGuideStore.__place([guide('gx1', 'X', 10)]); });
     await flushTimers();
 
@@ -173,7 +182,9 @@ describe('useGridGuidePersistence — flush-on-ready', () => {
     await flushTimers();
 
     expect(mockService.createGrid).toHaveBeenCalledTimes(1);
-    expect(mockService.createGrid.mock.calls[0][0].guides).toHaveLength(1);
+    const happyPathCall = mockService.createGrid.mock.calls[0];
+    expect(happyPathCall).toBeDefined();
+    expect(happyPathCall![0].guides).toHaveLength(1);
   });
 
   it('ADR-420 resilience: durable floorId χωρίς floorplanId ΕΙΝΑΙ έγκυρο scope → service ready + persist', async () => {

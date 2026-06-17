@@ -267,7 +267,7 @@ export interface WallMergeRefs {
   readonly deleted: Set<string>;
   readonly pending: Set<string>;
   readonly lastSavedParams: Map<string, WallEntity['params']>;
-  readonly lastSavedType: Map<string, { typeId: WallDoc['typeId']; typeOverrides: WallDoc['typeOverrides'] }>;
+  readonly lastSavedType: Map<string, WallTypeLink>;
   readonly isWithinGrace: (id: string) => boolean;
 }
 

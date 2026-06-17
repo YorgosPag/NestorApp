@@ -2746,7 +2746,10 @@
         "concreteWeight": "Βάρος σκυρ. (kg)",
         "steelWeight": "Βάρος χάλυβα (kg)",
         "ratio": "ρ (%)",
-        "confinement": "Περίσφιγξη α"
+        "confinement": "Περίσφιγξη α",
+        "loadDeadAxial": "Μόνιμο G (kN)",
+        "loadLiveAxial": "Μεταβλητό Q (kN)",
+        "loadUlsAxial": "Φορτίο σχεδ. N_Ed (kN)"
       },
       "columnEditor": {
         "width": "Πλάτος",
@@ -3841,6 +3844,7 @@
     "emptyState": "Επίλεξε μια κολώνα για να δεις τις ιδιότητες.",
     "sections": {
       "structural": { "title": "Στατικά / Οπλισμός" },
+      "loads": { "title": "Φορτίο Σχεδιασμού" },
       "finish": { "title": "Σοβάς" },
       "envelope": { "title": "Λειτουργία Κελύφους" },
       "material": { "title": "Υλικό" }

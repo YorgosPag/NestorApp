@@ -154,7 +154,7 @@ export function useFloors3DAggregator(active: boolean): void {
         floorId: lvl.floorId,
         sceneFileId: lvl.sceneFileId ?? null,
         floorElevationMm: resolveFloorDatumRelativeElevationMm(elevationM, datumM),
-        nextFloorElevationMm: storey?.nextFloorElevationMm,
+        nextFloorElevationMm: storey?.nextFloorElevationMm ?? undefined,
       });
     }
     return out;

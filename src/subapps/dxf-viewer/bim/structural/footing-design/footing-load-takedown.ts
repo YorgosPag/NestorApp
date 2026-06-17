@@ -53,7 +53,7 @@ export function computeFootingTakedownLoads(
   if (storeyCount <= 0 || (deadAreaLoadKpa <= 0 && liveAreaLoadKpa <= 0)) return [];
 
   const columns = entities.filter(isColumnEntity);
-  const tributaryColumns = columns.map(columnCenterM).filter((c): c is TributaryColumn => c !== null);
+  const tributaryColumns = columns.map((c) => columnCenterM(c)).filter((c): c is TributaryColumn => c !== null);
   const tributaryById = computeGridTributaryAreas(tributaryColumns);
 
   const out: FootingTakedownLoad[] = [];

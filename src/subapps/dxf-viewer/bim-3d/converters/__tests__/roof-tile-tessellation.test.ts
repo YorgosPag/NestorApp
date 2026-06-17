@@ -24,6 +24,7 @@ function makeFace(pts: { x: number; y: number; z?: number }[], slopeRatio = 0.5)
   return {
     outline: pts.map((p) => ({ x: p.x, y: p.y, z: p.z ?? 0 })),
     slopeRatio,
+    projectedAreaM2: 1,
     grossAreaM2: 1,
   };
 }

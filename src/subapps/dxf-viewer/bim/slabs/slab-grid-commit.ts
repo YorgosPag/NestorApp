@@ -25,6 +25,7 @@ import {
   isWallEntity,
   isColumnEntity,
   isBeamEntity,
+  type Entity,
 } from '../../types/entities';
 import { hasGuideBindings } from '../hosting/guide-binding-types';
 import type { AxisGuideReader } from '../foundations/foundation-from-grid';
@@ -95,7 +96,7 @@ export function commitFoundationMatFromGuides(
 
 /** Τα bay-keys των ήδη grid-managed πλακών (floor/roof) του ίδιου kind (idempotent skip). */
 function existingGridBayKeys(
-  entities: readonly { type: string }[],
+  entities: readonly Entity[],
   kind: SlabKind,
 ): Set<string> {
   const keys = new Set<string>();

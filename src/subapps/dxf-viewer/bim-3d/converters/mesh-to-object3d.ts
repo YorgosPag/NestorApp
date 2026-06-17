@@ -30,7 +30,7 @@
 
 import * as THREE from 'three';
 import { sceneUnitsToMeters, type SceneUnits } from '../../utils/scene-units';
-import { getElementMaterial3D } from '../materials/MaterialCatalog3D';
+import { getMaterial3D } from '../materials/MaterialCatalog3D';
 import { bimMeshCache } from '../library/bim-mesh-library/bim-mesh-cache';
 
 const MM_TO_M = 0.001;
@@ -121,7 +121,7 @@ function buildPlaceholder(
     heightMm * MM_TO_M * scale,
     depthMm * MM_TO_M * scale,
   );
-  const mesh = new THREE.Mesh(geo, getElementMaterial3D(matId));
+  const mesh = new THREE.Mesh(geo, getMaterial3D(matId));
   mesh.castShadow = true;
   mesh.receiveShadow = true;
   return mesh;

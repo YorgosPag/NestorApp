@@ -49,7 +49,7 @@ describe('resolveColumnAwareJustification (pure)', () => {
 
   it('κολόνα center → center (καμία εκκεντρότητα)', () => {
     const cols = buildColumnGridFromGuides(R(), {}, '0', 'mm', undefined, 'center').columns;
-    expect(resolveColumnAwareJustification(vertBindings, cols, 'inner')).toBe('center');
+    expect(resolveColumnAwareJustification(vertBindings, cols, 'right')).toBe('center');
   });
 
   it('ΟΡΙΖΟΝΤΙΟ segment + κολόνα inner στον κάτω Y-άξονα → κληρονομεί left (όχι right!)', () => {

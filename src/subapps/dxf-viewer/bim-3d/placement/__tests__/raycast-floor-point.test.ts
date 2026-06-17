@@ -8,19 +8,17 @@
  */
 
 import * as THREE from 'three';
+import { EMPTY_BIM_ENTITIES } from '../../stores/Bim3DEntitiesStore';
 
 const viewState = { floor3DScope: 'single' as 'single' | 'all' };
 const entitiesState = { activeLevelId: null as string | null };
-const EMPTY_BIM_ENTITIES = {
-  walls: [], columns: [], beams: [], foundations: [], slabs: [], slabOpenings: [], openings: [], stairs: [],
-  fixtures: [], panels: [], railings: [],
-};
 
 jest.mock('../../stores/ViewMode3DStore', () => ({
   useViewMode3DStore: { getState: () => viewState },
 }));
 jest.mock('../../stores/Bim3DEntitiesStore', () => ({
   useBim3DEntitiesStore: { getState: () => entitiesState },
+  EMPTY_BIM_ENTITIES: jest.requireActual('../../stores/Bim3DEntitiesStore').EMPTY_BIM_ENTITIES,
 }));
 
 import { raycastFloorPoint, resolveActiveFloorElevationMm } from '../raycast-floor-point';

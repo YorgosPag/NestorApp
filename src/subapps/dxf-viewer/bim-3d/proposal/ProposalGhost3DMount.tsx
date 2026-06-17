@@ -52,8 +52,20 @@ export function ProposalGhost3DMount({ managerRef }: ProposalGhost3DMountProps):
 
   const objects = useMemo<THREE.Object3D[] | null>(() => {
     if (electrical) return buildElectricalGhost3D(electrical.wirePaths, electrical.sceneUnits);
-    // Exactly one discipline is ever active; the six pipe/duct/fuel reviews share one shape.
-    const pipe = water ?? drainage ?? heating ?? hvac ?? fire ?? gas;
+    // Drainage roots at the collector invert (gravity sink), not a pressurised source
+    // outlet — normalize its network datum (`outfallInvertElevationMm`) to the shared
+    // ghost-network shape so it flattens through the same SSoT as the other disciplines.
+    if (drainage) {
+      const networks = drainage.proposal.networks.map((n) => ({
+        sourceElevationMm: n.outfallInvertElevationMm,
+        classification: n.classification,
+        segments: n.segments,
+      }));
+      return buildSegmentGhost3D(pipeNetworksToGhostTubes(networks), drainage.sceneUnits);
+    }
+    // Exactly one discipline is ever active; the five pressurised pipe/duct/fuel reviews
+    // share one shape (flat source datum).
+    const pipe = water ?? heating ?? hvac ?? fire ?? gas;
     if (pipe) return buildSegmentGhost3D(pipeNetworksToGhostTubes(pipe.proposal.networks), pipe.sceneUnits);
     return null;
   }, [water, drainage, heating, hvac, fire, gas, electrical]);

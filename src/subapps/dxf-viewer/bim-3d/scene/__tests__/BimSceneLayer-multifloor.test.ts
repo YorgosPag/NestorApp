@@ -38,6 +38,7 @@ jest.mock('../../../state/drawing-scale-store', () => ({
 
 import { useDrawingScaleStore } from '../../../state/drawing-scale-store';
 import { BimSceneLayer } from '../BimSceneLayer';
+import { EMPTY_BIM_ENTITIES } from '../../stores/Bim3DEntitiesStore';
 import type { Bim3DEntities } from '../../stores/Bim3DEntitiesStore';
 import type { FloorStackEntry } from '../multi-floor-3d-source';
 import type { FloorVisMode } from '../../utils/floor-visibility-state';
@@ -53,13 +54,12 @@ const FAKE_MESH = (): THREE.Mesh => new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1
  */
 function wallFloor(wallId: string): Bim3DEntities {
   return {
+    ...EMPTY_BIM_ENTITIES,
     walls: [{
       id: wallId,
       kind: 'straight',
       params: { start: { x: 0, y: 0 }, end: { x: 1, y: 0 } },
     } as unknown as Bim3DEntities['walls'][number]],
-    columns: [], beams: [], foundations: [], slabs: [], slabOpenings: [], openings: [], stairs: [],
-    fixtures: [], panels: [], railings: [],
   };
 }
 

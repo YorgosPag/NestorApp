@@ -20,6 +20,7 @@ function makeHandle(overrides: Partial<MepSegmentToolBridgeHandle> = {}): MepSeg
     startPoint: null,
     startElevationMm: null,
     getSceneUnits: () => 'mm',
+    setParamOverrides: () => undefined,
     ...overrides,
   };
 }

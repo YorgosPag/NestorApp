@@ -153,7 +153,7 @@ const STAIR_TYPE_PARAMS = {
   riserType: 'closed' as const,
   antiskidNosing: false,
   adaContrastStrip: false,
-  variant: { kind: 'straight' },
+  variant: { kind: 'straight' as const },
   walklineOffset: 300,
   handrails: { inner: false, outer: true, height: 900 },
   upDirection: 'forward' as const,

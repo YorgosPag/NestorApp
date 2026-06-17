@@ -1,6 +1,6 @@
 # ADR-467 — Load Path Engine (διαδρομή φορτίων, FEM-free)
 
-**Status:** 🟢 Slices 1-5 DONE 2026-06-17 (Opus, UNCOMMITTED — browser-verify + commit).
+**Status:** 🟢 Slices 1-7 DONE 2026-06-17 (Opus, UNCOMMITTED — browser-verify + commit).
 **Discipline:** Δομοστατικά / Structural Engineering — ανάλυση φορτίων (όλος ο φορέας).
 **Builds on:** ADR-459 (στατικός οργανισμός / graph), ADR-464 (footing tributary takedown + design engines).
 **Scope:** Γενίκευση του footing tributary takedown του ADR-464 σε **ΟΛΗ τη διαδρομή φορτίων**
@@ -90,6 +90,7 @@ fallback κεντροειδές (μηδέν regression· οι μη-hosted κολ
 | **3** | `load-path-takedown` orchestrator + `ComputeLoadPathCommand` + 9 jest (incl. command) | 🟢 DONE |
 | **4** | wire `useStructuralLoadTakedown` + i18n «N μέλη» + delete superseded command | 🟢 DONE |
 | **5** | regression jest: no-beam footing loads == `computeFootingTakedownLoads` (ADR-464) | 🟢 DONE |
+| **7** | column load readout UI — group «Φορτίο Σχεδιασμού» (G/Q/N_Ed) στην καρτέλα Ιδιότητες | 🟢 DONE |
 
 ---
 
@@ -102,6 +103,17 @@ fallback κεντροειδές (μηδέν regression· οι μη-hosted κολ
 ---
 
 ## 5. Changelog
+- **2026-06-17 (Opus) — Slice 7 (column load readout UI):** Το αξονικό φορτίο σχεδιασμού
+  (`params.appliedLoad`) εμφανίζεται πλέον **read-only** στην καρτέλα Ιδιότητες της κολώνας — νέο group
+  «Φορτίο Σχεδιασμού» με 3 readouts: **G** (μόνιμο), **Q** (μεταβλητό), **N_Ed** (= γ_G·G + γ_Q·Q, EN1990
+  6.10). Parity με το foundation «Φορτία & Έδραση» (ADR-464 Slice 1b)· λύνει το gap «το πέδιλο δείχνει
+  φορτίο, η κολώνα όχι». SSoT reuse: `resolveAppliedMemberLoad` + `combineUls` (γ από
+  `footingDesignFactors().combination`, κοινός EN1990 fundamental combination)· μηδέν inline math. «—» όταν
+  δεν έχει υπολογιστεί φορτίο (Revit-grade). Αρχεία: `column-command-keys.ts` (+3 readout keys στο
+  `COLUMN_STRUCTURAL_READOUT_KEYS` → αυτόματα στο `isColumnStructuralReadoutKey` set)·
+  `column-structural-bridge.ts` (νέα `resolveColumnLoadReadout` πριν το reinforcement readout)·
+  `column-property-fields.ts` (NEW `COLUMN_LOADS_GROUP`, ungated — φορτίο βαρύτητας ανεξάρτητο υλικού)·
+  i18n el/en. **DEFER:** ίδιο group σε δοκάρι + πλάκα. UNCOMMITTED.
 - **2026-06-17 (Opus) — Slice 6 (Grid-anchored tributary, Revit-grade):** Το tributary node κολώνας =
   **τομή αξόνων κανάβου** (αναλυτικός κόμβος) αντί γεωμετρικού κεντροειδούς όταν η κολώνα είναι hosted
   (`guideBindings`). **Αιτία (browser-verify):** οι «κολώνες από κάναβο» αγκυρώνονται **γωνιακά** στις

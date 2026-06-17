@@ -329,6 +329,13 @@ export const ENTITY_TYPE_MAPPING: Record<EntityType, EzdxfEntityType | null> = {
   'mep-radiator': null,   // ADR-408 Εύρος Β BIM heating radiator — exported via composite
   'floorplan-symbol': null, // ADR-415 BIM 2D floorplan symbol — exported via composite
   'roof': null,           // ADR-417 BIM pitched roof — exported via composite
+  'foundation': null,     // ADR-436 BIM structural foundation — exported via composite
+  'mep-boiler': null,     // ADR-408 Εύρος Β BIM heating boiler — exported via composite
+  'mep-water-heater': null, // ADR-408 DHW BIM water heater — exported via composite
+  'mep-underfloor': null, // ADR-408 Εύρος Β BIM radiant floor loop — exported via composite
+  'floor-finish': null,   // ADR-419 BIM floor covering — exported via composite
+  'thermal-space': null,  // ADR-422 analytical thermal space — not exported
+  'space-separator': null, // ADR-437 space separator — not exported
 } as const;
 
 /**

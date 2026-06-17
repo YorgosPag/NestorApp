@@ -25,6 +25,10 @@ const BASE: ColumnParams = {
   depth: 600,
   height: 3000,
   rotation: 0,
+  baseBinding: 'storey-floor',
+  topBinding: 'storey-ceiling',
+  baseOffset: 0,
+  topOffset: 0,
   concreteGrade: 'C30/37',
   reinforcement: {
     longitudinal: { diameterMm: 16, count: 8 },

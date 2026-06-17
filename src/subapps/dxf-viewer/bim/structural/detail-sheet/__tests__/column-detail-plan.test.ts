@@ -20,6 +20,10 @@ const RECT_REINFORCED: ColumnParams = {
   depth: 400,
   height: 3000,
   rotation: 0,
+  baseBinding: 'storey-floor',
+  topBinding: 'storey-ceiling',
+  baseOffset: 0,
+  topOffset: 0,
   reinforcement: {
     longitudinal: { diameterMm: 16, count: 8 },
     stirrups: { diameterMm: 8, spacingMm: 200, spacingCriticalMm: 100, type: 'closed-hooked' },

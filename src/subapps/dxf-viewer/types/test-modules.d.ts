@@ -60,6 +60,10 @@ declare module 'three/examples/jsm/lines/LineMaterial' {
     color: any;
     resolution: Vector2;
     dashed: boolean;
+    dashSize: number;
+    gapSize: number;
+    dashOffset: number;
+    dashScale: number;
     dispose(): void;
   }
 }

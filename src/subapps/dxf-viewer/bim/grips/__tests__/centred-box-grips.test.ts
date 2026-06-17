@@ -11,6 +11,7 @@ import {
   getCentredBoxGrips,
   applyCentredBoxGripDrag,
   type CentredBoxParams,
+  type CentredBoxGripDragInput,
 } from '../centred-box-grips';
 
 const base: CentredBoxParams = {
@@ -52,7 +53,11 @@ describe('getCentredBoxGrips', () => {
 });
 
 describe('applyCentredBoxGripDrag', () => {
-  const input = (extra: object) => ({ originalParams: base, minDimensionMm: 20, ...extra });
+  const input = (extra: Pick<CentredBoxGripDragInput, 'delta'> & Omit<Partial<CentredBoxGripDragInput>, 'delta'>): CentredBoxGripDragInput => ({
+    originalParams: base,
+    minDimensionMm: 20,
+    ...extra,
+  });
 
   it('returns null (no-op) for a zero delta', () => {
     expect(applyCentredBoxGripDrag('corner-ne', input({ delta: { x: 0, y: 0 } }))).toBeNull();

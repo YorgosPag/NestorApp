@@ -108,7 +108,9 @@ describe('sprinklerRecognizer (flow-aware: terminal yes, riser no)', () => {
     const ctx: RecognitionContext = {
       entities: [fixtureEntity('sprinkler', 'sk-1'), fixtureEntity('fire-riser', 'fr-1')],
       storeyId: 'storey-1',
-    } as RecognitionContext;
+      sceneUnits: 'mm',
+      spaces: [],
+    };
     const terminals = sprinklerRecognizer.recognize(ctx);
     expect(terminals).toHaveLength(1);
     expect(terminals[0]!.elementId).toBe('term:sk-1');

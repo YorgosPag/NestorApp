@@ -34,7 +34,7 @@ describe('GuideSnapEngine — intersection-only while drawing', () => {
   });
 
   it('drawing OFF: a single vertical guide produces a line slide snap', () => {
-    store.addGuide({ axis: 'X', offset: 0, label: null });
+    store.addGuide({ axis: 'X', offset: 0, label: null, group_id: null });
     const { candidates } = engine.findSnapCandidates({ x: 5, y: 100 }, makeContext());
     const line = candidates.find((c) => c.type === ExtendedSnapType.GUIDE);
     expect(line).toBeDefined();
@@ -43,15 +43,15 @@ describe('GuideSnapEngine — intersection-only while drawing', () => {
   });
 
   it('drawing ON: a single guide produces NO line snap (suppressed)', () => {
-    store.addGuide({ axis: 'X', offset: 0, label: null });
+    store.addGuide({ axis: 'X', offset: 0, label: null, group_id: null });
     setSnapDrawingMode(true);
     const { candidates } = engine.findSnapCandidates({ x: 5, y: 100 }, makeContext());
     expect(candidates).toHaveLength(0);
   });
 
   it('drawing ON: a vertical+horizontal crossing still emits the ✕ INTERSECTION', () => {
-    store.addGuide({ axis: 'X', offset: 0, label: null });
-    store.addGuide({ axis: 'Y', offset: 0, label: null });
+    store.addGuide({ axis: 'X', offset: 0, label: null, group_id: null });
+    store.addGuide({ axis: 'Y', offset: 0, label: null, group_id: null });
     setSnapDrawingMode(true);
     const { candidates } = engine.findSnapCandidates({ x: 5, y: 5 }, makeContext());
     const cross = candidates.find((c) => c.type === ExtendedSnapType.INTERSECTION);
@@ -63,14 +63,14 @@ describe('GuideSnapEngine — intersection-only while drawing', () => {
   });
 
   it('drawing OFF: the crossing still emits the ✕ INTERSECTION (unchanged in both modes)', () => {
-    store.addGuide({ axis: 'X', offset: 0, label: null });
-    store.addGuide({ axis: 'Y', offset: 0, label: null });
+    store.addGuide({ axis: 'X', offset: 0, label: null, group_id: null });
+    store.addGuide({ axis: 'Y', offset: 0, label: null, group_id: null });
     const { candidates } = engine.findSnapCandidates({ x: 5, y: 5 }, makeContext());
     expect(candidates.some((c) => c.type === ExtendedSnapType.INTERSECTION)).toBe(true);
   });
 
   it('drawing ON: a single diagonal (XZ) guide produces no slide snap', () => {
-    store.addGuide({ axis: 'XZ', offset: 0, label: null });
+    store.addGuide({ axis: 'XZ', offset: 0, label: null, group_id: null });
     // XZ guides need endpoints; the store may not set them via addGuide — guard by
     // asserting the intersection-only path never emits a GUIDE candidate regardless.
     setSnapDrawingMode(true);

@@ -72,7 +72,7 @@ describe('useMepConnectorReconciliation', () => {
     renderHook(() => useMepConnectorReconciliation({ currentScene: scene, levelManager: lm }));
 
     expect(lm.setLevelScene).toHaveBeenCalledTimes(1);
-    const written = lm.getScene().entities[0] as ReturnType<typeof fixture>;
+    const written = lm.getScene().entities[0] as unknown as ReturnType<typeof fixture>;
     expect(written.params.connectors[0].systemId).toBe('sys1');
   });
 
@@ -94,7 +94,7 @@ describe('useMepConnectorReconciliation', () => {
     renderHook(() => useMepConnectorReconciliation({ currentScene: scene, levelManager: lm }));
 
     expect(lm.setLevelScene).toHaveBeenCalledTimes(1);
-    const written = lm.getScene().entities[0] as ReturnType<typeof fixture>;
+    const written = lm.getScene().entities[0] as unknown as ReturnType<typeof fixture>;
     expect(written.params.connectors[0].systemId).toBeUndefined();
   });
 
@@ -106,7 +106,7 @@ describe('useMepConnectorReconciliation', () => {
     renderHook(() => useMepConnectorReconciliation({ currentScene: scene, levelManager: lm }));
 
     expect(lm.setLevelScene).toHaveBeenCalledTimes(1);
-    const written = lm.getScene().entities[0] as ReturnType<typeof fixture>;
+    const written = lm.getScene().entities[0] as unknown as ReturnType<typeof fixture>;
     expect(written.params.connectors).toHaveLength(1);
     expect(written.params.connectors[0].connectorId).toBe('c1');
     expect(written.params.connectors[0].systemId).toBe('sys1');
@@ -120,7 +120,7 @@ describe('useMepConnectorReconciliation', () => {
     renderHook(() => useMepConnectorReconciliation({ currentScene: scene, levelManager: lm }));
 
     expect(lm.setLevelScene).toHaveBeenCalledTimes(1);
-    const written = lm.getScene().entities[0] as { params: { connectors: Array<{ connectorId: string; flow: string; systemId?: string }> } };
+    const written = lm.getScene().entities[0] as unknown as { params: { connectors: Array<{ connectorId: string; flow: string; systemId?: string }> } };
     expect(written.params.connectors).toHaveLength(1);
     expect(written.params.connectors[0].flow).toBe('out');
     expect(written.params.connectors[0].systemId).toBeUndefined();

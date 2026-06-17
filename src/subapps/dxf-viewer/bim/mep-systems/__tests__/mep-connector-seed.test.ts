@@ -29,13 +29,13 @@ const legacySanitary = (kind = 'washbasin', id = 'wb1'): Entity =>
   ({ type: 'mep-fixture', id, params: { kind, sceneUnits: 'mm' } } as unknown as Entity);
 
 const classesOf = (seeded: Entity): Array<string | undefined> =>
-  (seeded as { params: { connectors: Array<{ pipe?: { systemClassification: string } }> } })
+  (seeded as unknown as { params: { connectors: Array<{ pipe?: { systemClassification: string } }> } })
     .params.connectors.map((c) => c.pipe?.systemClassification);
 
 describe('seedDefaultConnectors', () => {
   it('seeds a legacy fixture with the default lighting power-in connector', () => {
     const seeded = seedDefaultConnectors(legacyFixture());
-    const connectors = (seeded as { params: { connectors: Array<{ connectorId: string; flow: string; domain: string }> } }).params.connectors;
+    const connectors = (seeded as unknown as { params: { connectors: Array<{ connectorId: string; flow: string; domain: string }> } }).params.connectors;
     expect(connectors).toHaveLength(1);
     expect(connectors[0].connectorId).toBe(FIXTURE_POWER_CONNECTOR_ID);
     expect(connectors[0].flow).toBe('in');
@@ -57,7 +57,7 @@ describe('seedDefaultConnectors', () => {
 
   it('seeds a legacy electrical panel with the default power-out connector', () => {
     const seeded = seedDefaultConnectors(legacyPanel());
-    const connectors = (seeded as { params: { connectors: Array<{ connectorId: string; flow: string }> } }).params.connectors;
+    const connectors = (seeded as unknown as { params: { connectors: Array<{ connectorId: string; flow: string }> } }).params.connectors;
     expect(connectors).toHaveLength(1);
     expect(connectors[0].connectorId).toBe(PANEL_OUT_CONNECTOR_ID);
     expect(connectors[0].flow).toBe('out');
@@ -65,7 +65,7 @@ describe('seedDefaultConnectors', () => {
 
   it('seeds a legacy pipe segment with start + end endpoint connectors', () => {
     const seeded = seedDefaultConnectors(legacySegment('pipe'));
-    const connectors = (seeded as { params: { connectors: Array<{ connectorId: string; flow: string; domain: string }> } }).params.connectors;
+    const connectors = (seeded as unknown as { params: { connectors: Array<{ connectorId: string; flow: string; domain: string }> } }).params.connectors;
     expect(connectors).toHaveLength(2);
     expect(connectors.map((c) => c.connectorId)).toEqual([
       SEGMENT_START_CONNECTOR_ID,
@@ -78,7 +78,7 @@ describe('seedDefaultConnectors', () => {
 
   it('seeds a duct segment with connector domain "duct"', () => {
     const seeded = seedDefaultConnectors(legacySegment('duct'));
-    const connectors = (seeded as { params: { connectors: Array<{ domain: string }> } }).params.connectors;
+    const connectors = (seeded as unknown as { params: { connectors: Array<{ domain: string }> } }).params.connectors;
     expect(connectors.every((c) => c.domain === 'duct')).toBe(true);
   });
 

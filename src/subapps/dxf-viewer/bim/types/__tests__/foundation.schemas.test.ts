@@ -63,7 +63,7 @@ describe('FoundationParamsSchema — discriminated union', () => {
   });
 
   it('rejects strip params χωρίς end (wrong shape για το kind)', () => {
-    const base = buildDefaultFoundationParams('strip') as Record<string, unknown>;
+    const base = buildDefaultFoundationParams('strip') as unknown as Record<string, unknown>;
     const { end: _omit, ...invalid } = base;
     void _omit;
     expect(() => FoundationParamsSchema.parse(invalid)).toThrow();

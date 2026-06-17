@@ -50,7 +50,8 @@ let getContextSpy: jest.SpyInstance;
 beforeAll(() => {
   getContextSpy = jest
     .spyOn(HTMLCanvasElement.prototype, 'getContext')
-    .mockReturnValue({ setTransform: jest.fn() } as unknown as CanvasRenderingContext2D);
+    // Cast to the full getContext return union (includes GPUCanvasContext via @webgpu/types overload).
+    .mockReturnValue({ setTransform: jest.fn() } as unknown as ReturnType<HTMLCanvasElement['getContext']>);
 });
 
 afterAll(() => getContextSpy.mockRestore());

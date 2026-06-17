@@ -9,9 +9,15 @@
  *   - wall-consistency: κάτω παρειά === `slabUndersideZmmAt` (ο τοίχος εφάπτεται)
  */
 
+import * as THREE from 'three';
 import { slabToMesh } from '../BimToThreeConverter';
 import { slabSlopeOffsetZmm, slabUndersideZmmAt } from '../../../bim/geometry/slab-slope';
 import type { SlabEntity, SlabParams } from '../../../bim/types/slab-types';
+
+function asMesh(o: THREE.Object3D | null): THREE.Mesh {
+  if (!(o instanceof THREE.Mesh)) throw new Error('expected a THREE.Mesh');
+  return o;
+}
 
 const MM_TO_M = 0.001;
 
@@ -53,7 +59,7 @@ const TOL = 6;
 
 describe('slabToMesh — flat (box) back-compat', () => {
   it('επίπεδη πλάκα → πάνω παρειά οριζόντια (σταθερό geo Y)', () => {
-    const mesh = slabToMesh(makeSlab())!;
+    const mesh = asMesh(slabToMesh(makeSlab()));
     expect(mesh).not.toBeNull();
     const ys = positions(mesh).map((p) => p.y);
     const top = Math.max(...ys);
@@ -69,8 +75,8 @@ describe('slabToMesh — tilted (shear === slope plane)', () => {
   const tiltedParams = { geometryType: 'tilted' as const, slope };
 
   it('per-vertex shear ταιριάζει ακριβώς με το slabSlopeOffsetZmm SSoT', () => {
-    const flat = positions(slabToMesh(makeSlab())!);
-    const tilted = positions(slabToMesh(makeSlab(tiltedParams))!);
+    const flat = positions(asMesh(slabToMesh(makeSlab())));
+    const tilted = positions(asMesh(slabToMesh(makeSlab(tiltedParams))));
     expect(tilted.length).toBe(flat.length);
     for (let i = 0; i < flat.length; i++) {
       // X/Z αμετάβλητα
@@ -86,7 +92,7 @@ describe('slabToMesh — tilted (shear === slope plane)', () => {
   });
 
   it('σταθερό πάχος — top/bottom face γέρνουν ίσα (vertical extent 0.2 παντού)', () => {
-    const tilted = positions(slabToMesh(makeSlab(tiltedParams))!);
+    const tilted = positions(asMesh(slabToMesh(makeSlab(tiltedParams))));
     // group ανά (x,z) στήλη
     const byCol = new Map<string, number[]>();
     for (const p of tilted) {
@@ -102,7 +108,7 @@ describe('slabToMesh — tilted (shear === slope plane)', () => {
   it('wall-consistency: κάτω παρειά (geo + position.y) === slabUndersideZmmAt·MM_TO_M', () => {
     const params = makeSlab(tiltedParams).params;
     const positionY = (params.levelElevation - params.thickness) * MM_TO_M; // mesh.position.y
-    const tilted = positions(slabToMesh(makeSlab(tiltedParams))!);
+    const tilted = positions(asMesh(slabToMesh(makeSlab(tiltedParams))));
     // κάτω παρειά = vertices με το χαμηλότερο flat-Y component (geoY − offset ≈ 0)
     for (const p of tilted) {
       const offsetM = slabSlopeOffsetZmm(params, { x: p.x, y: -p.z }) * MM_TO_M;
