@@ -19,6 +19,7 @@ import {
   advanceHotGripStep,
   resolveHotGripMouseDown,
   resolveHotGripMouseUp,
+  isReferenceFlowKey,
 } from '../wall-hot-grip-fsm';
 import type { WallGripKind } from '../../useGripMovement';
 import type { UnifiedGripInfo, UnifiedGripPhase } from '../unified-grip-types';
@@ -270,12 +271,29 @@ describe('advanceHotGripStep', () => {
     expect(advanceHotGripStep('move', 'tracking')).toBe('tracking');
   });
 
-  it("rotate: 6-click chain await-base → … → await-align-end (terminal)", () => {
-    expect(advanceHotGripStep('rotate', 'await-base')).toBe('await-ref-start');
+  it("rotate: await-base → rotate-free (terminal — ADR-397 free rotate default)", () => {
+    expect(advanceHotGripStep('rotate', 'await-base')).toBe('rotate-free');
+    expect(advanceHotGripStep('rotate', 'rotate-free')).toBe('rotate-free');
+  });
+
+  it("rotate «R» reference flow: await-ref-start → … → await-align-end (terminal)", () => {
     expect(advanceHotGripStep('rotate', 'await-ref-start')).toBe('await-ref-end');
     expect(advanceHotGripStep('rotate', 'await-ref-end')).toBe('await-align-start');
     expect(advanceHotGripStep('rotate', 'await-align-start')).toBe('await-align-end');
     expect(advanceHotGripStep('rotate', 'await-align-end')).toBe('await-align-end');
+  });
+});
+
+describe('ADR-397 Σ2 — isReferenceFlowKey («R» → reference flow)', () => {
+  it('true για «r» / «R»', () => {
+    expect(isReferenceFlowKey('r')).toBe(true);
+    expect(isReferenceFlowKey('R')).toBe(true);
+  });
+
+  it('false για κάθε άλλο πλήκτρο', () => {
+    for (const k of ['a', 'Enter', 'Escape', '4', '-', '.', 'Backspace', '']) {
+      expect(isReferenceFlowKey(k)).toBe(false);
+    }
   });
 });
 
@@ -319,6 +337,14 @@ describe('resolveHotGripMouseUp', () => {
 
   it("rotate: await-align-end + moved → 'commit' (terminal)", () => {
     expect(resolveHotGripMouseUp('rotate', 'hotGrip', false, 'await-align-end', true)).toBe('commit');
+  });
+
+  it("rotate: rotate-free + moved → 'commit' (ADR-397 free rotate terminal)", () => {
+    expect(resolveHotGripMouseUp('rotate', 'hotGrip', false, 'rotate-free', true)).toBe('commit');
+  });
+
+  it("rotate: rotate-free + !moved → 'stay' (stray same-tick release)", () => {
+    expect(resolveHotGripMouseUp('rotate', 'hotGrip', false, 'rotate-free', false)).toBe('stay');
   });
 
   it("op=null + moved → 'commit' (defensive)", () => {

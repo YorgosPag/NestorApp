@@ -425,6 +425,14 @@ export interface UseUnifiedGripInteractionReturn {
   draggingOverlayBody: DraggingOverlayBodyState | null;
   draggingVertices: DraggingVertexState[] | null;
   draggingEdgeMidpoint: DraggingEdgeMidpointState | null;
+  /**
+   * ADR-397 Σ2 — rotate-free keyboard handler. Called by `useCanvasKeyboardShortcuts`
+   * for each keydown while `hotGripIsActive`; returns true when the key is consumed
+   * (e.g. «R» → 6-click reference flow), so the caller can `preventDefault`.
+   */
+  handleHotGripKeyDown: (key: string) => boolean;
+  /** ADR-397 Σ2 — true while a hot-grip flow is live (coarse gate for the keyboard hook). */
+  hotGripIsActive: boolean;
 }
 
 /** Dependencies needed for DXF grip commits */

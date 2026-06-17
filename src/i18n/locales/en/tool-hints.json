@@ -850,6 +850,7 @@
       "pickMoveBase": "Click the move base point",
       "moveOrCopy": "Click to place · Ctrl = copy",
       "pickRotateCentre": "Click the rotation centre",
+      "rotateFree": "Drag or type an angle · click/Enter to set · R = reference",
       "pickRefLineStart": "Reference line: click the 1st point",
       "pickRefLineEnd": "Reference line: click the 2nd point",
       "pickAlignStart": "Alignment line: click the 1st point",

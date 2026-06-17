@@ -18,6 +18,8 @@ import { BimRotateHotGripStore } from '../../bim/grips/bim-rotate-hotgrip-store'
 // ADR-397 — arm the rotation snap targets (pivot ⊙ + entity grips) when the centre is picked.
 import { getGlobalRotationSnapStore } from '../../bim/grips/rotation-snap-store';
 import { commitDxfGripDragModeAware } from './grip-commit-adapters';
+// ADR-397 Σ3 — typed-angle → world delta (pure SSoT, shared with the live preview).
+import { rotateDeltaForAngleDeg } from './grip-projections';
 import { GripModeStore } from '../../systems/grip/GripModeStore';
 import { GripBasePointStore } from '../../systems/grip/GripBasePointStore';
 import { setActiveDragGripAnchor } from '../../systems/cursor/GripDragStore';
@@ -35,6 +37,13 @@ export interface HotGripActionCtx {
   hotGripRefStartRef: MutableRefObject<Point2D | null>;
   hotGripRefEndRef: MutableRefObject<Point2D | null>;
   hotGripAlignStartRef: MutableRefObject<Point2D | null>;
+  /**
+   * ADR-397 — FREE rotate baseline: the cursor world-point at the first move after
+   * the centre is picked (at centre-pick the cursor sits ON the pivot, so the angle
+   * is undefined). The sweep is measured relative to this point, so the rotation
+   * starts at 0 with no jump. Null until that first move; reset on every new flow.
+   */
+  hotGripRotateBaseRef: MutableRefObject<Point2D | null>;
   anchorRef: MutableRefObject<Point2D | null>;
   setCurrentWorldPos: Dispatch<SetStateAction<Point2D | null>>;
   dxfCommitDeps: DxfCommitDeps;
@@ -46,6 +55,12 @@ export interface HotGripActionCtx {
    * absent for non-rotate flows.
    */
   rotatingEntityGripsWorld?: () => ReadonlyArray<{ entityId: string; gripIndex: number; point: Point2D }>;
+  /**
+   * ADR-397 Σ3 — the typed rotation angle (signed deg, +CCW) if the user keyed one
+   * in, else null. When set, a terminal CLICK commits this exact value instead of
+   * the cursor sweep (parity with the Enter commit). Null → cursor free rotate.
+   */
+  typedRotateDeg?: number | null;
 }
 
 // ADR-363 Phase 1G.3 — i18n key for the toolbar hint shown during each hot-grip
@@ -58,6 +73,8 @@ function hotGripHintKey(op: WallHotGripOp | null, step: HotGripStep): string | n
   if (op === 'rotate') {
     switch (step) {
       case 'await-base': return 'tool-hints:gripContextMenu.prompts.pickRotateCentre';
+      // ADR-397 — free rotate: drag to spin, click to commit. «R» = reference flow.
+      case 'rotate-free': return 'tool-hints:gripContextMenu.prompts.rotateFree';
       case 'await-ref-start': return 'tool-hints:gripContextMenu.prompts.pickRefLineStart';
       case 'await-ref-end': return 'tool-hints:gripContextMenu.prompts.pickRefLineEnd';
       case 'await-align-start': return 'tool-hints:gripContextMenu.prompts.pickAlignStart';
@@ -98,12 +115,16 @@ export function advanceHotGripPick(worldPos: Point2D, ctx: HotGripActionCtx): vo
       // can compute the proposed footprint (cursor − base = translation delta).
       setActiveDragGripAnchor(p);
     } else {
+      // ADR-397 — rotate: the CENTRE is now locked → FREE rotate by default
+      // (Revit/AutoCAD). The entity spins live with the cursor; «R» opts into the
+      // 6-click reference flow. `rotate-free` is terminal (next click commits).
       anchorRef.current = null;
-      hotGripStepRef.current = 'await-ref-start';
+      hotGripStepRef.current = 'rotate-free';
+      ctx.hotGripRotateBaseRef.current = null;       // baseline set on the first move
       setCurrentWorldPos(null);
-      // ADR-397 — the rotation CENTRE is now locked. Arm the snap targets: the
-      // pivot ⊙ and the entity's grips become snap candidates (cursor magnetism via
-      // the existing snap pipeline) AND render cyan ('snappable'). Cleared on reset.
+      // Arm the snap targets: the pivot ⊙ and the entity's grips become snap
+      // candidates (cursor magnetism via the existing snap pipeline) AND render cyan
+      // ('snappable'). Cleared on reset.
       getGlobalRotationSnapStore().setTargets(p, ctx.rotatingEntityGripsWorld?.() ?? []);
     }
   } else if (step === 'await-ref-start') {
@@ -144,4 +165,83 @@ export function commitRotateReference(worldPos: Point2D, grip: UnifiedGripInfo, 
   commitDxfGripDragModeAware(grip, delta, dxfCommitDeps, GripModeStore.getSnapshot());
   GripBasePointStore.clear();
   resetToIdle();
+}
+
+/**
+ * ADR-397 — finalize a FREE rotate (Revit/AutoCAD default). The entity has been
+ * spinning live since the centre was picked. `refDir = baseline − pivot` (the
+ * cursor at the first move after the centre), `alignDir = cursor − pivot`; the
+ * `delta = alignDir − refDir` is placed at the centre so the generic commit's
+ * `currentPos = anchor + delta = pivot + alignDir` and `rotateWall` (via
+ * `BimRotateHotGripStore.pivot`) sweeps `angle(align) − angle(ref)` = the cursor
+ * sweep around the centre. Identical math to {@link commitRotateReference} — only
+ * the reference/alignment SOURCE differs (cursor-derived vs the 6 picked points).
+ *
+ * No baseline (the cursor never left the centre) → zero sweep, just reset.
+ */
+export function commitFreeRotate(worldPos: Point2D, grip: UnifiedGripInfo, ctx: HotGripActionCtx): void {
+  const { hotGripBaseRef, hotGripRotateBaseRef, dxfCommitDeps, resetToIdle } = ctx;
+  const pivot = hotGripBaseRef.current;
+  if (!pivot) { GripBasePointStore.clear(); resetToIdle(); return; }
+  // ADR-397 Σ3 — a keyed-in angle wins over the cursor sweep (click == Enter).
+  if (ctx.typedRotateDeg != null) {
+    commitTypedRotate(grip, pivot, ctx.typedRotateDeg, dxfCommitDeps);
+    resetToIdle();
+    return;
+  }
+  const baseline = hotGripRotateBaseRef.current;
+  if (!baseline) { GripBasePointStore.clear(); resetToIdle(); return; }
+  const refDir = { x: baseline.x - pivot.x, y: baseline.y - pivot.y };
+  const alignDir = { x: worldPos.x - pivot.x, y: worldPos.y - pivot.y };
+  const delta: Point2D = { x: alignDir.x - refDir.x, y: alignDir.y - refDir.y };
+  BimRotateHotGripStore.set(pivot, { x: pivot.x + refDir.x, y: pivot.y + refDir.y });
+  commitDxfGripDragModeAware(grip, delta, dxfCommitDeps, GripModeStore.getSnapshot());
+  GripBasePointStore.clear();
+  resetToIdle();
+}
+
+// ============================================================================
+// ADR-397 — rotate-free KEYBOARD (Σ2 «R» → reference · Σ3 typed angle)
+// ============================================================================
+
+/** Narrow ref context for the rotate-free key handlers (no setters/commit). */
+export interface RotateFreeKeyCtx {
+  hotGripStepRef: MutableRefObject<HotGripStep>;
+  hotGripRotateBaseRef: MutableRefObject<Point2D | null>;
+  hotGripRefStartRef: MutableRefObject<Point2D | null>;
+  hotGripRefEndRef: MutableRefObject<Point2D | null>;
+  hotGripAlignStartRef: MutableRefObject<Point2D | null>;
+}
+
+/**
+ * ADR-397 Σ2 — «R» during free rotate: leave the live cursor sweep and jump to the
+ * 6-click AutoCAD ROTATE→Reference flow, starting at `await-ref-start`. Drops the
+ * free baseline + clears the reference/alignment slots so the user picks them fresh.
+ * The centre (`hotGripBaseRef`) and armed snap targets stay — only the angle SOURCE
+ * changes. Pure ref mutation; the caller resets `moved` + repaints + re-hints.
+ */
+export function enterReferenceFromFree(ctx: RotateFreeKeyCtx): void {
+  ctx.hotGripStepRef.current = 'await-ref-start';
+  ctx.hotGripRotateBaseRef.current = null;
+  ctx.hotGripRefStartRef.current = null;
+  ctx.hotGripRefEndRef.current = null;
+  ctx.hotGripAlignStartRef.current = null;
+  applyHotGripHint('rotate', 'await-ref-start');
+}
+
+/**
+ * ADR-397 Σ3 — commit a FREE rotate at an EXACT typed angle (signed deg, +CCW). Uses
+ * the same `BimRotateHotGripStore` + generic commit as the cursor free rotate, with a
+ * unit East reference (`rotateDeltaForAngleDeg`) so the sweep is precisely `angleDeg`.
+ * The caller resets afterwards. Reuses `commitDxfGripDragModeAware` — no new command.
+ */
+export function commitTypedRotate(
+  grip: UnifiedGripInfo,
+  pivot: Point2D,
+  angleDeg: number,
+  deps: DxfCommitDeps,
+): void {
+  BimRotateHotGripStore.set(pivot, { x: pivot.x + 1, y: pivot.y });
+  commitDxfGripDragModeAware(grip, rotateDeltaForAngleDeg(angleDeg), deps, GripModeStore.getSnapshot());
+  GripBasePointStore.clear();
 }

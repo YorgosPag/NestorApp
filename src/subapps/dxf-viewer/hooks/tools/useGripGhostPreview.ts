@@ -60,6 +60,9 @@ const HOT_GRIP_RUBBER_BAND_DASH: readonly number[] = [6, 4];
  */
 const MOVE_READOUT_LEADER_COLOR = 'rgba(255,255,255,0.5)';
 
+/** ADR-397 Σ3 — screen offset of the free-rotate angle readout pill from the cursor. */
+const ROTATE_READOUT_OFFSET_PX = 18;
+
 /** ADR-363 — angular-dimension arc (endpoint reshape readout): screen radius + neutral colour. */
 const ANGLE_ARC_RADIUS_PX = 22;
 const ANGLE_ARC_LABEL_GAP_PX = 12;
@@ -199,6 +202,14 @@ export function useGripGhostPreview(props: UseGripGhostPreviewProps): void {
     // as the toolbar Rotate tool.
     if (dragPreview.rotatePivot) {
       drawRotationPivotMarker(ctx, dragPreview.rotatePivot, transform, vp);
+    }
+
+    // ADR-397 Σ3 — live angle readout (°) on the cursor during a FREE rotate. Shows the
+    // signed sweep (+CCW/−CW), or the typed angle while the user is keying one in, so
+    // the rotation is VISIBLE (not blind typing). Same pill SSoT as the move readout.
+    if (dragPreview.rotateSweepDeg !== undefined && dragPreview.rotateReadoutAnchor) {
+      const anchorS = CoordinateTransforms.worldToScreen(dragPreview.rotateReadoutAnchor, transform, vp);
+      drawDimPill(ctx, [formatMoveAngle(dragPreview.rotateSweepDeg)], anchorS.x + ROTATE_READOUT_OFFSET_PX, anchorS.y - ROTATE_READOUT_OFFSET_PX);
     }
 
     // ADR-408 Φ7 P2 — snapshot→transform map is now the shared SSoT helper, so the

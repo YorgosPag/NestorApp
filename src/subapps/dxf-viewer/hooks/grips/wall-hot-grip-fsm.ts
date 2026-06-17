@@ -144,8 +144,13 @@ export function hotGripKindOf(grip: UnifiedGripInfo | null | undefined): string 
  *                            centre (rotate). No preview yet.
  *  - `'tracking'`          → move/corner terminal: anchor established, cursor
  *                            moves drive the live ghost + leader; next click commits.
- *  - `'await-ref-start'`   → rotate-reference: pick the 1st point of the existing
- *                            (reference) line.
+ *  - `'rotate-free'`       → rotate terminal (ADR-397, Revit/AutoCAD default): the
+ *                            centre is locked, the entity spins live with the cursor
+ *                            (rubber-band sweep measured from the first move so it
+ *                            starts at 0, no jump); next click commits. Pressing «R»
+ *                            opts into the 6-click reference flow below.
+ *  - `'await-ref-start'`   → rotate-reference (opt-in via «R»): pick the 1st point of
+ *                            the existing (reference) line.
  *  - `'await-ref-end'`     → rotate-reference: pick the 2nd point of the reference
  *                            line (rubber-band start→cursor). Fixes the reference angle.
  *  - `'await-align-start'` → rotate-reference: pick the 1st point of the alignment
@@ -154,13 +159,15 @@ export function hotGripKindOf(grip: UnifiedGripInfo | null | undefined): string 
  *                            point (wall rotates live: align angle − reference
  *                            angle, around the centre). Next click commits.
  *
- * Rotate uses the AutoCAD "ROTATE → Reference" flow (6 clicks total): glyph →
- * centre → reference line (2 clicks) → alignment line (2 clicks). The wall spins
- * so the reference direction maps onto the alignment direction.
+ * Rotate (ADR-397) defaults to the Revit/AutoCAD FREE rotate (glyph → centre →
+ * spin live → click): `await-base → rotate-free` (terminal). Pressing «R» during
+ * `rotate-free` jumps to the legacy "ROTATE → Reference" flow (glyph → centre →
+ * reference line 2 clicks → alignment line 2 clicks) — opt-in, never lost.
  */
 export type HotGripStep =
   | 'await-base'
   | 'tracking'
+  | 'rotate-free'
   | 'await-ref-start'
   | 'await-ref-end'
   | 'await-align-start'
@@ -172,18 +179,31 @@ export function initialHotGripStep(op: WallHotGripOp): HotGripStep {
 }
 
 /**
+ * ADR-397 — «R» during free rotate opts into the 6-click AutoCAD ROTATE→Reference
+ * flow. Pure predicate (no heavy deps), so the keyboard wiring stays testable here
+ * alongside the rest of the hot-grip decision SSoT.
+ */
+export function isReferenceFlowKey(key: string): boolean {
+  return key === 'r' || key === 'R';
+}
+
+/**
  * Next step after a deliberate (moved) click during `step` for operation `op`.
  * Returns the SAME step when `step` is the terminal step for that op (the click
  * is a commit, not an advance). Pure table:
  *   corner: tracking (terminal)
  *   move:   await-base → tracking (terminal)
- *   rotate: await-base → await-ref-start → await-ref-end → await-align-start
- *           → await-align-end (terminal)
+ *   rotate: await-base → rotate-free (terminal — Revit/AutoCAD free rotate default).
+ *           «R» re-routes to: await-ref-start → await-ref-end → await-align-start
+ *           → await-align-end (terminal — opt-in 6-click reference flow).
  */
 export function advanceHotGripStep(op: WallHotGripOp, step: HotGripStep): HotGripStep {
   if (op === 'rotate') {
     switch (step) {
-      case 'await-base': return 'await-ref-start';
+      // ADR-397 — centre picked → FREE rotate by default (terminal: click commits).
+      // The «R» key handler re-routes to 'await-ref-start' for the reference flow.
+      case 'await-base': return 'rotate-free';
+      case 'rotate-free': return 'rotate-free';     // terminal (Revit/AutoCAD free rotate)
       case 'await-ref-start': return 'await-ref-end';
       case 'await-ref-end': return 'await-align-start';
       case 'await-align-start': return 'await-align-end';

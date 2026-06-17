@@ -147,6 +147,14 @@ export interface DxfGripDragPreview {
    */
   rotateRefLine?: { from: Point2D; to: Point2D };
   rotateAlignLine?: { from: Point2D; to: Point2D };
+  /**
+   * ADR-397 Σ3 — signed sweep angle (degrees, +CCW/−CW) of a FREE rotate, for the
+   * live ON-CURSOR angle readout drawn by `useGripGhostPreview`. Set from the cursor
+   * sweep, or overridden by the typed angle while the user is keying one in.
+   */
+  rotateSweepDeg?: number;
+  /** ADR-397 Σ3 — world anchor (the cursor) for the rotate angle readout pill. */
+  rotateReadoutAnchor?: Point2D;
 }
 
 /** Grip interaction state for rendering pipeline */

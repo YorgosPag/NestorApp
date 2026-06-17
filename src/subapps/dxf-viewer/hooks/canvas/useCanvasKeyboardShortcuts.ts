@@ -15,11 +15,9 @@
  * @see ADR-357: DXF Line Tool Google-Level (Phase 3 — Direct Distance Entry)
  */
 'use client';
-import { useEffect, useRef, type Dispatch, type SetStateAction } from 'react';
+import { useEffect, useRef } from 'react';
 import { CanvasNumericInputStore } from '../../systems/canvas-numeric-input/CanvasNumericInputStore';
 import { PolygonCropStore } from '../../systems/lasso/LassoCropStore';
-import type { SelectedGrip } from '../grips/unified-grip-types';
-import type { Point2D } from '../../rendering/types/Types';
 // ADR-357 Phase 3: DDE — cursor world position + unit conversion
 import { getImmediateWorldPosition } from '../../systems/cursor/ImmediatePositionStore';
 import { fromDisplay } from '../../config/units';
@@ -27,130 +25,14 @@ import type { DisplayUnit } from '../../config/units';
 // ADR-364 — Escape Command Bus SSoT (priority chain extracted to registrations module)
 import { useCanvasEscapeRegistrations } from './useCanvasEscapeRegistrations';
 // ============================================================================
-// TYPES
+// TYPES — extracted to ./useCanvasKeyboardShortcuts.types for file-size compliance
 // ============================================================================
-/** Subset of useDxfGripInteraction return — only the methods used by this hook */
-interface DxfGripInteractionLike {
-  handleGripEscape: () => boolean;
-}
-export interface UseCanvasKeyboardShortcutsParams {
-  /** Context-aware delete handler */
-  handleSmartDelete: () => Promise<boolean>;
-  /** DXF grip interaction for Escape handling */
-  dxfGripInteraction: DxfGripInteractionLike;
-  /** Setter for draft polygon state */
-  setDraftPolygon: Dispatch<SetStateAction<Array<[number, number]>>>;
-  /** Current draft polygon points */
-  draftPolygon: Array<[number, number]>;
-  /** Currently selected grip vertices */
-  selectedGrips: SelectedGrip[];
-  /** Clear grip selection */
-  setSelectedGrips: (grips: SelectedGrip[]) => void;
-  /** Active tool name */
-  activeTool: string;
-  /** Finish handler for continuous drawing tools */
-  handleDrawingFinish: () => void;
-  /** Flip arc direction handler */
-  handleFlipArc: () => void;
-  /** Legacy finish drawing for overlay polygons */
-  finishDrawing: () => Promise<void>;
-  /** ADR-161: Selected entity IDs for join shortcut */
-  selectedEntityIds?: string[];
-  /** ADR-161: Join handler (J key) */
-  handleEntityJoin?: () => void;
-  /** ADR-161: Check if join is possible */
-  canEntityJoin?: boolean;
-  /** Callback to exit overlay draw mode on Escape (resets overlayMode to 'select') */
-  onExitDrawMode?: () => void;
-  /** ADR-188: Rotation tool cancel handler */
-  handleRotationEscape?: () => void;
-  /** ADR-188: Whether the rotation tool is active */
-  rotationIsActive?: boolean;
-  /** ADR-049: Move tool cancel handler */
-  handleMoveEscape?: () => void;
-  /** ADR-049: Whether the move tool is active and collecting input */
-  moveIsActive?: boolean;
-  /** Mirror tool cancel handler */
-  handleMirrorEscape?: () => void;
-  /** Whether the mirror tool is active and collecting axis points */
-  mirrorIsActive?: boolean;
-  /** Mirror tool Y/N confirm handler (keepOriginals: true = keep, false = discard) */
-  handleMirrorConfirm?: (keepOriginals: boolean) => void;
-  /** True when mirror tool is in awaiting-keep-originals phase */
-  mirrorAwaitingConfirm?: boolean;
-  /** ADR-348: Scale tool cancel handler */
-  handleScaleEscape?: () => void;
-  /** ADR-348: Scale tool key handler — returns true if key was consumed */
-  handleScaleKeyDown?: (key: string) => boolean;
-  /** ADR-348: Whether the scale tool is active and collecting input */
-  scaleIsActive?: boolean;
-  /** ADR-349: Stretch / MStretch tool cancel handler */
-  handleStretchEscape?: () => void;
-  /** ADR-349: Stretch / MStretch tool key handler — returns true if key was consumed */
-  handleStretchKeyDown?: (key: string) => boolean;
-  /** ADR-349: Whether the stretch / mstretch tool is active and collecting input */
-  stretchIsActive?: boolean;
-  /** ADR-350: Trim tool cancel handler */
-  handleTrimEscape?: () => void;
-  /** ADR-350: Trim tool key handler — returns true if key was consumed */
-  handleTrimKeyDown?: (key: string, shiftKey: boolean) => boolean;
-  /** ADR-350: Whether the trim tool is active and in pick/edges phase */
-  trimIsActive?: boolean;
-  /** ADR-353: Extend tool cancel handler */
-  handleExtendEscape?: () => void;
-  /** ADR-353: Extend tool key handler — returns true if key was consumed */
-  handleExtendKeyDown?: (key: string, shiftKey: boolean) => boolean;
-  /** ADR-353: Whether the extend tool is active and in pick/edges phase */
-  extendIsActive?: boolean;
-  /** ADR-353 Phase B: Polar Array centre-pick cancel handler */
-  handleArrayPolarEscape?: () => void;
-  /** ADR-353 Phase B: Whether the polar Array tool is awaiting centre pick */
-  arrayPolarIsActive?: boolean;
-  /** ADR-353 Phase C: Path Array path-entity-pick cancel handler */
-  handleArrayPathEscape?: () => void;
-  /** ADR-353 Phase C: Whether the path Array tool is awaiting path-entity pick */
-  arrayPathIsActive?: boolean;
-  /** ADR-363 Phase 5.6: Wall Split ESC handler */
-  handleWallSplitEscape?: () => void;
-  /** ADR-363 Phase 5.6: Whether the wall-split tool is active */
-  wallSplitIsActive?: boolean;
-  /** ADR-401 Phase E.1: Wall Attach Top/Base ESC handler */
-  handleWallAttachEscape?: () => void;
-  /** ADR-401 Phase E.1: Whether the wall-attach pick-host tool is active */
-  wallAttachIsActive?: boolean;
-  /** ADR-363 R1: BIM Copy ESC handler */
-  handleBimCopyEscape?: () => void;
-  /** ADR-363 R1: Whether the bim-copy tool is active */
-  bimCopyIsActive?: boolean;
-  /** SSoT deselect-all callback — clears local entity state + UniversalSelection */
-  clearEntitySelection?: () => void;
-  /** True when any non-DXF entity is selected (e.g. overlays) — widens the Escape guard */
-  hasAnySelection?: boolean;
-  /**
-   * Event-time getter — true when a MEP circuit is wire-selected (`activeSystemId`,
-   * no scene entity). Widens the Escape deselect guard so ESC clears a circuit-only
-   * selection. Getter (not snapshot) → no orchestrator subscription (ADR-040).
-   */
-  hasActiveCircuit?: () => boolean;
-  /** PageUp/PageDown: bring selected entity to front / send to back */
-  handleReorderEntity?: (direction: 'front' | 'back') => void;
-  /**
-   * ADR-357 Phase 3: Direct Distance Entry.
-   * Temp points of the active drawing (line). Length >= 1 = COLLECTING_POINTS.
-   * DDE activates when tool='line', tempPoints.length >= 1, no input focused.
-   */
-  drawingTempPoints?: Point2D[];
-  /** ADR-357 Phase 3: DDE callback — called with the computed world point. */
-  onDirectDistanceEntry?: (pt: { x: number; y: number }) => void;
-  /** ADR-357 Phase 5: Undo last chain vertex (U / Ctrl+Z during line chain mode). */
-  onUndoChainVertex?: () => void;
-  /** ADR-357 Phase 5: Finish chain (Enter during chain, no DDE pending) — exits chain, tool deselects. */
-  onChainFinish?: () => void;
-  /** ADR-357 Phase 7: Shift+Right-click snap override — open snap override menu at (x, y). */
-  onSnapOverrideMenuRequest?: (x: number, y: number) => void;
-  /** ADR-357 Phase 7: Number of drawing temp points — needed to gate Shift+Right-click. */
-  drawingTempPointCount?: number;
-}
+import type { UseCanvasKeyboardShortcutsParams } from './useCanvasKeyboardShortcuts.types';
+export type {
+  UseCanvasKeyboardShortcutsParams,
+  DxfGripInteractionLike,
+} from './useCanvasKeyboardShortcuts.types';
+
 // ============================================================================
 // HOOK
 // ============================================================================
@@ -193,6 +75,8 @@ export function useCanvasKeyboardShortcuts({
   arrayPolarIsActive = false,
   handleArrayPathEscape,
   arrayPathIsActive = false,
+  handleHotGripKeyDown,
+  hotGripKeyIsActive = false,
   handleWallSplitEscape,
   wallSplitIsActive = false,
   handleWallAttachEscape,
@@ -246,6 +130,14 @@ export function useCanvasKeyboardShortcuts({
       if (extendIsActive && handleExtendKeyDown) {
         const consumed = handleExtendKeyDown(e.key, e.shiftKey);
         if (consumed) { e.preventDefault(); return; }
+      }
+
+      // ADR-397 Σ2: rotate-free hot-grip — intercept «R» (reference flow) before any
+      // global shortcut steals it. stopImmediatePropagation so a global rotate-tool
+      // bind never fires while the entity is spinning under the cursor.
+      if (hotGripKeyIsActive && handleHotGripKeyDown) {
+        const consumed = handleHotGripKeyDown(e.key);
+        if (consumed) { e.preventDefault(); e.stopImmediatePropagation(); return; }
       }
 
       // ADR-357 Phase 5: Ctrl+Z intercept during line chain mode → undo chain vertex.
@@ -411,7 +303,7 @@ export function useCanvasKeyboardShortcuts({
     // 🏢 ENTERPRISE: Use capture: true to handle Delete before other handlers
     window.addEventListener('keydown', handleKeyDown, { capture: true });
     return () => window.removeEventListener('keydown', handleKeyDown, { capture: true });
-  }, [draftPolygon, finishDrawing, handleSmartDelete, activeTool, handleFlipArc, handleDrawingFinish, canEntityJoin, handleEntityJoin, selectedEntityIds, handleMirrorConfirm, mirrorAwaitingConfirm, handleScaleKeyDown, scaleIsActive, handleStretchKeyDown, stretchIsActive, handleTrimKeyDown, trimIsActive, handleExtendKeyDown, extendIsActive, handleReorderEntity, drawingTempPoints, onDirectDistanceEntry, onUndoChainVertex, onChainFinish]);
+  }, [draftPolygon, finishDrawing, handleSmartDelete, activeTool, handleFlipArc, handleDrawingFinish, canEntityJoin, handleEntityJoin, selectedEntityIds, handleMirrorConfirm, mirrorAwaitingConfirm, handleScaleKeyDown, scaleIsActive, handleStretchKeyDown, stretchIsActive, handleTrimKeyDown, trimIsActive, handleExtendKeyDown, extendIsActive, handleHotGripKeyDown, hotGripKeyIsActive, handleReorderEntity, drawingTempPoints, onDirectDistanceEntry, onUndoChainVertex, onChainFinish]);
 
   // ADR-364 — auto-clear DDE buffer when the active drawing flow resets
   // (tempPoints empties on cancel / commit). Replaces the legacy ESC fall-through.

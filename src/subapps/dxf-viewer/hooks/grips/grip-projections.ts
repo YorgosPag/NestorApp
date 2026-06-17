@@ -24,6 +24,30 @@ import type { HotGripStep } from './wall-hot-grip-fsm';
 import { applyGripStepSnap } from '../../bim/grips/grip-step-quantize';
 import { applyMoveConstraints } from '../../bim/grips/grip-move-constraints';
 
+// ── ADR-397 Σ3 — pure rotate-angle helpers (typed angle ⇄ world delta) ──
+
+/**
+ * World delta for a typed rotation of `deg` (signed, +CCW) about a pivot, using a
+ * unit East reference: `anchor = pivot + (1,0)`, so `anchor + delta = pivot +
+ * (cos,sin)`. `apply*GripDrag` then sweeps EXACTLY `deg` around the pivot.
+ */
+export function rotateDeltaForAngleDeg(deg: number): Point2D {
+  const rad = (deg * Math.PI) / 180;
+  return { x: Math.cos(rad) - 1, y: Math.sin(rad) };
+}
+
+/**
+ * Signed sweep (degrees, +CCW/−CW) from the reference arm to the align arm,
+ * normalized to (−180, 180]. Both vectors are pivot-relative (refDir, alignDir).
+ */
+export function rotateSweepDegFromDirs(refDir: Point2D, alignDir: Point2D): number {
+  const a = Math.atan2(alignDir.y, alignDir.x) - Math.atan2(refDir.y, refDir.x);
+  let deg = (a * 180) / Math.PI;
+  while (deg > 180) deg -= 360;
+  while (deg <= -180) deg += 360;
+  return deg;
+}
+
 // ── DXF Projection Builders ──
 
 export function buildDxfDragPreview(
@@ -125,6 +149,12 @@ export function buildRotateReferencePreview(
   refEnd: Point2D | null,
   alignStart: Point2D | null,
   cursor: Point2D | null,
+  // ADR-397 — FREE rotate baseline (cursor at the first move after the centre).
+  // Drives the `rotate-free` live ghost; null until that first move (pivot ⊙ only).
+  freeBaseline: Point2D | null = null,
+  // ADR-397 Σ3 — typed angle (signed deg, +CCW). When set it OVERRIDES the cursor
+  // sweep so the ghost snaps to the keyed-in value; null → live cursor rotate.
+  typedAngleDeg: number | null = null,
 ): DxfGripDragPreview | null {
   if (!activeGrip || activeGrip.source !== 'dxf' || !pivot) return null;
   const base = {
@@ -154,6 +184,34 @@ export function buildRotateReferencePreview(
     delta: { x: 0, y: 0 },
     anchorPos: pivot,
   };
+  // ADR-397 — FREE rotate live ghost (Revit/AutoCAD default). Same identity as the
+  // reference flow: anchor = pivot + refDir, delta = alignDir − refDir, so
+  // `apply*GripDrag('*-rotation', …)` sweeps `angle(align) − angle(ref)` = the cursor
+  // sweep around the centre. refDir = baseline − pivot, alignDir = cursor − pivot.
+  // No baseline yet → centre is locked but no sweep (pivot ⊙ only).
+  if (step === 'rotate-free') {
+    // ADR-397 Σ3 — a typed angle overrides the cursor sweep (exact, signed +CCW).
+    // Anchor on a unit East reference so the ghost rotates by EXACTLY the typed deg.
+    if (typedAngleDeg != null) {
+      return {
+        ...base,
+        anchorPos: { x: pivot.x + 1, y: pivot.y },
+        delta: rotateDeltaForAngleDeg(typedAngleDeg),
+        rotateSweepDeg: typedAngleDeg,
+        rotateReadoutAnchor: cursor ?? pivot,
+      };
+    }
+    if (!freeBaseline || !cursor) return base;
+    const refDir = { x: freeBaseline.x - pivot.x, y: freeBaseline.y - pivot.y };
+    const alignDir = { x: cursor.x - pivot.x, y: cursor.y - pivot.y };
+    return {
+      ...base,
+      anchorPos: { x: pivot.x + refDir.x, y: pivot.y + refDir.y },
+      delta: { x: alignDir.x - refDir.x, y: alignDir.y - refDir.y },
+      rotateSweepDeg: rotateSweepDegFromDirs(refDir, alignDir),
+      rotateReadoutAnchor: cursor,
+    };
+  }
   if (step === 'await-ref-end' && refStart && cursor) {
     return { ...base, rotateRefLine: { from: refStart, to: cursor } };
   }

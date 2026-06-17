@@ -46,6 +46,8 @@ export interface GripMouseDownCtx {
   hotGripRefStartRef: MutableRefObject<Point2D | null>;
   hotGripRefEndRef: MutableRefObject<Point2D | null>;
   hotGripAlignStartRef: MutableRefObject<Point2D | null>;
+  // ADR-397 — FREE rotate baseline (cursor at the first move after the centre).
+  hotGripRotateBaseRef: MutableRefObject<Point2D | null>;
   warmTimerRef: MutableRefObject<ReturnType<typeof setTimeout> | null>;
   universalSelection: UseUnifiedGripInteractionParams['universalSelection'];
   setDraggingVertices: Dispatch<SetStateAction<DraggingVertexState[] | null>>;
@@ -74,6 +76,8 @@ export interface GripMouseUpCtx {
   hotGripRefStartRef: MutableRefObject<Point2D | null>;
   hotGripRefEndRef: MutableRefObject<Point2D | null>;
   hotGripAlignStartRef: MutableRefObject<Point2D | null>;
+  // ADR-397 — FREE rotate baseline (cursor at the first move after the centre).
+  hotGripRotateBaseRef: MutableRefObject<Point2D | null>;
   activeGrip: UnifiedGripInfo | null;
   anchorRef: MutableRefObject<Point2D | null>;
   dxfCommitDeps: DxfCommitDeps;
@@ -92,4 +96,7 @@ export interface GripMouseUpCtx {
   // ADR-397 — rotating entity's grip world-points provider, consumed by
   // advanceHotGripPick to arm the rotation snap targets at centre-pick.
   rotatingEntityGripsWorld?: () => ReadonlyArray<{ entityId: string; gripIndex: number; point: Point2D }>;
+  // ADR-397 Σ3 — typed rotation angle (signed deg) so a terminal click commits the
+  // keyed-in value (parity with Enter). Null → cursor free rotate.
+  typedRotateDeg?: number | null;
 }

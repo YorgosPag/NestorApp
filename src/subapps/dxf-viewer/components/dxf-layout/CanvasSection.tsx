@@ -31,15 +31,11 @@ import type { PreviewCanvasHandle } from '../../canvas-v2/preview-canvas';
 import { useZoom } from '../../systems/zoom';
 import { dwarn, derr } from '../../debug';
 import { useFloorplanBackgroundForLevel } from '../../floorplan-background';
-import { useEventBus } from '../../systems/events';
-import { useUniversalSelection } from '../../systems/selection';
+import { useEventBus } from '../../systems/events'; import { useUniversalSelection } from '../../systems/selection';
 import { useMepCircuitEditorStore } from '../../bim/mep-systems/mep-circuit-editor-store';
 import { useCommandHistory, useCommandHistoryKeyboard } from '../../core/commands';
 import {
-  useCanvasSettings, useCanvasMouse, useViewportManager, useDxfSceneConversion,
-  useCanvasContextMenu, useDrawingUIHandlers, useCanvasClickHandler,
-  useFitToView, useCanvasPan, usePolygonCompletion, useCanvasKeyboardShortcuts,
-  useCanvasEffects, useOverlayInteraction, useCanvasContainerHandlers,
+  useCanvasSettings, useCanvasMouse, useViewportManager, useDxfSceneConversion, useCanvasContextMenu, useDrawingUIHandlers, useCanvasClickHandler, useFitToView, useCanvasPan, usePolygonCompletion, useCanvasKeyboardShortcuts, useCanvasEffects, useOverlayInteraction, useCanvasContainerHandlers,
 } from '../../hooks/canvas';
 import { useGuideToolWorkflows, useEntityCompleteGuideListener } from '../../hooks/guides';
 import { useOverlayLayers } from '../../hooks/layers';
@@ -55,8 +51,7 @@ import { useGuideActions } from '../../hooks/state/useGuideActions';
 import { getGlobalGuideStore } from '../../systems/guides/guide-store';
 import { useConstructionPointState } from '../../hooks/state/useConstructionPointState';
 import { usePromptDialog } from '../../systems/prompt-dialog';
-import { useNotifications } from '../../../../providers/NotificationProvider';
-import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { useNotifications } from '../../../../providers/NotificationProvider'; import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { type DrawingContextMenuHandle } from '../../ui/components/DrawingContextMenu';
 import { SnapOverrideOrchestrator } from '../../snapping/overrides/SnapOverrideOrchestrator';
 import { type EntityContextMenuHandle } from '../../ui/components/EntityContextMenu';
@@ -393,7 +388,10 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
     handleTrimEscape: trimTool.handleTrimEscape, handleTrimKeyDown: trimTool.handleTrimKeyDown, trimIsActive: trimTool.isActive,
     handleExtendEscape: extendTool.handleExtendEscape, handleExtendKeyDown: extendTool.handleExtendKeyDown, extendIsActive: extendTool.isActive,
     handleArrayPolarEscape: arrayPolarTool.handleArrayPolarEscape, arrayPolarIsActive: arrayPolarTool.isActive,
-    handleArrayPathEscape: arrayPathTool.handleArrayPathEscape, arrayPathIsActive: arrayPathTool.isActive, handleWallSplitEscape: wallSplitTool.handleWallSplitEscape, wallSplitIsActive: wallSplitTool.isActive, handleWallAttachEscape: wallAttachTool.handleWallAttachEscape, wallAttachIsActive: wallAttachTool.isActive, handleBimCopyEscape: bimCopyTool.handleBimCopyEscape, bimCopyIsActive: bimCopyTool.isActive,
+    handleArrayPathEscape: arrayPathTool.handleArrayPathEscape, arrayPathIsActive: arrayPathTool.isActive,
+    // ADR-397 Σ2 — rotate-free hot-grip keyboard («R» → reference flow).
+    handleHotGripKeyDown: unified.handleHotGripKeyDown, hotGripKeyIsActive: unified.hotGripIsActive,
+    handleWallSplitEscape: wallSplitTool.handleWallSplitEscape, wallSplitIsActive: wallSplitTool.isActive, handleWallAttachEscape: wallAttachTool.handleWallAttachEscape, wallAttachIsActive: wallAttachTool.isActive, handleBimCopyEscape: bimCopyTool.handleBimCopyEscape, bimCopyIsActive: bimCopyTool.isActive,
     hasAnySelection: universalSelection.count() > selectedEntityIds.length,
     // Canonical deselect (Escape): clear the entity selection AND the active
     // circuit (Revit wire-select has no entity, so the sync no longer clears it —

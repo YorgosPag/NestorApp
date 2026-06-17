@@ -52,7 +52,7 @@ import type {
   SelectedGrip,
   DraggingVertexState,
 } from './unified-grip-types';
-import { applyHotGripHint, advanceHotGripPick, commitRotateReference } from './grip-hotgrip-actions';
+import { applyHotGripHint, advanceHotGripPick, commitRotateReference, commitFreeRotate } from './grip-hotgrip-actions';
 import type { GripMouseDownCtx, GripMouseUpCtx } from './grip-mouse-handlers.types';
 
 // Ctx types live in `grip-mouse-handlers.types.ts` (file-size split). Re-export
@@ -112,7 +112,7 @@ export function runGripMouseDown(worldPos: Point2D, isShift: boolean, ctx: GripM
     isGripMode, allGrips, phase, effectiveTolerance, hoveredGrip, selectedGrips,
     setSelectedGrips, setActiveGrip, setPhase, setCurrentWorldPos,
     hotGripOpRef, hotGripStepRef, hotGripAwaitingFirstReleaseRef, hotGripMovedRef, hotGripBaseRef,
-    hotGripRefStartRef, hotGripRefEndRef, hotGripAlignStartRef,
+    hotGripRefStartRef, hotGripRefEndRef, hotGripAlignStartRef, hotGripRotateBaseRef,
     warmTimerRef, universalSelection, setDraggingVertices, setDragPreviewPosition,
     overlayStoreRef, currentOverlays, setDraggingEdgeMidpoint,
     dxfCommitDeps, gripSizePx, markDragFinished,
@@ -233,6 +233,7 @@ export function runGripMouseDown(worldPos: Point2D, isShift: boolean, ctx: GripM
       hotGripRefStartRef.current = null;
       hotGripRefEndRef.current = null;
       hotGripAlignStartRef.current = null;
+      hotGripRotateBaseRef.current = null;
       BimRotateHotGripStore.clear();
       if (op === 'corner') {
         // Corner: the grip itself is the anchor (2-click flow).
@@ -381,7 +382,12 @@ export async function runGripMouseUp(worldPos: Point2D, ctx: GripMouseUpCtx): Pr
       }
       // commit (terminal step).
       if (hotOp === 'rotate') {
-        commitRotateReference(worldPos, activeGrip, ctx);
+        // ADR-397 — free rotate (default) vs the opt-in 6-click reference flow.
+        if (hotGripStepRef.current === 'rotate-free') {
+          commitFreeRotate(worldPos, activeGrip, ctx);
+        } else {
+          commitRotateReference(worldPos, activeGrip, ctx);
+        }
         return true;
       }
       // move / corner — needs an anchor (base point / grip position).

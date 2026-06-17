@@ -15,8 +15,6 @@
 import { useState, useCallback, useRef, useMemo, useEffect } from 'react';
 import type { Point2D } from '../../rendering/types/Types';
 import type { Overlay } from '../../overlays/types';
-import { lockGripSnapPosition, unlockGripSnapPosition } from '../../systems/cursor/GripSnapStore';
-import { gripStyleStore } from '../../stores/GripStyleStore';
 import { GRIP_CONFIG } from '../useGripMovement';
 import { PANEL_LAYOUT } from '../../config/panel-tokens';
 import type {
@@ -32,12 +30,12 @@ import type {
   GripHoverThrottle,
 } from './unified-grip-types';
 import { useGripRegistry } from './grip-registry';
-import { findNearestGrip } from './grip-hit-testing';
-import type { WallHotGripOp, HotGripStep } from './wall-hot-grip-fsm';
+import { isReferenceFlowKey, type WallHotGripOp, type HotGripStep } from './wall-hot-grip-fsm';
 import { WallRotateHotGripStore } from '../../bim/walls/wall-rotate-hotgrip-store';
 // ADR-397 — rotation snap targets SSoT (arm on centre-pick, clear on reset).
 import { getGlobalRotationSnapStore } from '../../bim/grips/rotation-snap-store';
 import { runGripMouseDown, runGripMouseUp } from './grip-mouse-handlers';
+import { runGripMouseMove } from './grip-mouse-move-handler';
 import type { DxfCommitDeps, OverlayCommitDeps } from './grip-commit-adapters';
 import { GripBasePointStore } from '../../systems/grip/GripBasePointStore';
 import { GripAltMoveStore } from '../../systems/grip/GripAltMoveStore';
@@ -46,6 +44,10 @@ import { GripReferenceStore } from '../../systems/grip/GripReferenceStore';
 import { GripSessionUndoStore } from '../../systems/grip/GripSessionUndoStore';
 import { getGlobalCommandHistory } from '../../core/commands/CommandHistory';
 import { useGripSpacebarCycle } from './useGripSpacebarCycle';
+// ADR-397 Σ2/Σ3 — rotate-free keyboard: «R» → reference flow, typed-angle commit.
+import { enterReferenceFromFree, commitTypedRotate } from './grip-hotgrip-actions';
+// ADR-397 Σ3 — typed-angle digit buffer SSoT (ADR-344, «angle for rotation»).
+import { DirectDistanceEntry } from '../../text-engine/interaction/DirectDistanceEntry';
 import {
   buildDxfDragPreview,
   buildRotateReferencePreview,
@@ -62,23 +64,15 @@ import { useLevels } from '../../systems/levels';
 import { clearActiveDragGrip } from '../../systems/cursor/GripDragStore';
 // ADR-363 — crosshair snap-to-grid: publish the drag anchor so the cursor leaf
 // (`mouse-handler-move`) can quantize the crosshair onto the step grid (F9+Q).
-import { setGripStepAnchor, clearGripStepAnchor } from '../../systems/cursor/GripStepAnchorStore';
+import { clearGripStepAnchor } from '../../systems/cursor/GripStepAnchorStore';
 // ADR-040 Phase XXII.A — transform reads from SSoT (orchestrator-decoupling).
-import { getImmediateTransform } from '../../systems/cursor/ImmediateTransformStore';
 // ADR-397 Φ2 — per-arm MOVE-glyph hover highlight (Giorgio 2026-06-17): classify the
 // cursor into a move arm (world frame) and publish it so the renderer lights only it.
 import { MoveGlyphZoneStore } from '../../bim/grips/move-glyph-zone-store';
-import { resolveMoveGlyphZoneForGrip } from '../../bim/grips/move-glyph-zones';
 import { markSystemsDirty } from '../../rendering/core/UnifiedFrameScheduler';
 // Re-export types for consumers
 export type { UseUnifiedGripInteractionParams, UseUnifiedGripInteractionReturn, DxfProjection };
 export type { OverlayProjection } from './unified-grip-types';
-const WARM_DELAY_MS = 1000;
-const GRIP_HOVER_THROTTLE_MS = PANEL_LAYOUT.TIMING.GRIP_HOVER_THROTTLE_MS; // SSoT (ADR-040 Φ10)
-// ADR-363 Phase 1G — squared world-distance threshold above which the hot-grip
-// cursor counts as "moved from the anchor". Tiny (essentially "moved at all"):
-// any real cursor move dwarfs it, while an exact same-spot release stays below.
-const HOT_GRIP_MOVE_EPS_SQ = 1e-12;
 // ============================================================================
 // HOOK
 // ============================================================================
@@ -145,6 +139,15 @@ export function useUnifiedGripInteraction(
   const hotGripRefStartRef = useRef<Point2D | null>(null);
   const hotGripRefEndRef = useRef<Point2D | null>(null);
   const hotGripAlignStartRef = useRef<Point2D | null>(null);
+  // ADR-397 — FREE rotate baseline: cursor world-point at the first move after the
+  // centre is picked. The live sweep is measured relative to it (starts at 0, no
+  // jump). Null until that first move; reset on selection change / idle.
+  const hotGripRotateBaseRef = useRef<Point2D | null>(null);
+  // ADR-397 Σ3 — typed rotation angle: digit buffer (DirectDistanceEntry SSoT, signed)
+  // + a React snapshot that re-triggers the preview memo so the typed ghost updates
+  // (keystrokes don't move the cursor). `deg` null while the buffer is partial.
+  const rotateDdeRef = useRef(new DirectDistanceEntry());
+  const [typedRotate, setTypedRotate] = useState<{ buffer: string; deg: number | null } | null>(null);
   // ── Overlay grip state (backward compat) ──
   const [selectedGrips, setSelectedGrips] = useState<SelectedGrip[]>([]);
   const [draggingVertices, setDraggingVertices] = useState<DraggingVertexState[] | null>(null);
@@ -189,6 +192,7 @@ export function useUnifiedGripInteraction(
     hotGripRefStartRef.current = null;
     hotGripRefEndRef.current = null;
     hotGripAlignStartRef.current = null;
+    hotGripRotateBaseRef.current = null;
     WallRotateHotGripStore.clear();
     if (warmTimerRef.current) { clearTimeout(warmTimerRef.current); warmTimerRef.current = null; }
     // ADR-357 Phase 12 — selection change ends the grip-hot session: clear
@@ -197,6 +201,9 @@ export function useUnifiedGripInteraction(
     GripCopyModeStore.clear();
     GripReferenceStore.clear();
     GripSessionUndoStore.clear();
+    // ADR-397 Σ3 — selection change ends any in-progress typed rotation angle.
+    rotateDdeRef.current.reset();
+    setTypedRotate(null);
   }, [entitySelectionKey, overlaySelectionKey]);
   // ADR-357 Phase 12 — keep `GripSessionUndoStore.currentSize` synced with the
   // global CommandHistory so the right-click `Undo` extra knows whether any
@@ -230,6 +237,7 @@ export function useUnifiedGripInteraction(
     hotGripRefStartRef.current = null;
     hotGripRefEndRef.current = null;
     hotGripAlignStartRef.current = null;
+    hotGripRotateBaseRef.current = null;
     WallRotateHotGripStore.clear();
     // ADR-397 — disarm the rotation snap targets (pivot ⊙ + grips) so the cursor
     // stops magnetising and the cyan grips revert once the rotation ends/cancels.
@@ -241,97 +249,25 @@ export function useUnifiedGripInteraction(
     // flow does not leave a stale "click alignment point" prompt in the status bar.
     toolHintOverrideStore.setOverride(null);
     clearActiveDragGrip();
+    // ADR-397 Σ3 — drop any typed rotation angle so the next flow starts clean.
+    rotateDdeRef.current.reset();
+    setTypedRotate(null);
   }, []);
   // ADR-397 Φ2 — classify the cursor into a MOVE-glyph arm (entity WORLD frame) and
   // publish it to `MoveGlyphZoneStore`; repaint the DXF canvas only on change so the
   // per-arm highlight tracks the cursor. Clears (and repaints) for non-move grips.
-  const updateMoveGlyphHoverZone = useCallback(
-    (grip: UnifiedGripInfo, worldPos: Point2D) => {
-      const frame = grip.moveGlyphFrame;
-      if (!frame || !grip.entityId) {
-        if (MoveGlyphZoneStore.clear()) markSystemsDirty(['dxf-canvas']);
-        return;
-      }
-      const zone = resolveMoveGlyphZoneForGrip({
-        cursorWorld: worldPos,
-        centerWorld: grip.position,
-        frame,
-        gripSizePx: (gripSettings.gripSize ?? 5) * (gripSettings.dpiScale ?? 1),
-        scale: getImmediateTransform().scale,
-      });
-      const changed = zone
-        ? MoveGlyphZoneStore.set(grip.entityId, grip.gripIndex, zone)
-        : MoveGlyphZoneStore.clear();
-      if (changed) markSystemsDirty(['dxf-canvas']);
-    },
-    [gripSettings.gripSize, gripSettings.dpiScale],
-  );
-  // ── MOUSE MOVE ──
+  // ── MOUSE MOVE (logic extracted → grip-mouse-move-handler.ts for file-size) ──
   const handleMouseMove = useCallback(
-    (worldPos: Point2D, _screenPos: Point2D) => {
-      if (!isGripMode || allGrips.length === 0) return;
-      const now = performance.now();
-      const throttle = gripHoverThrottleRef.current;
-      // ADR-363 Phase 1G — hotGrip follows the cursor at full rate like dragging
-      // (no hover throttle), so the rubber-band + ghost track smoothly.
-      const isFollowing = phase === 'dragging' || phase === 'hotGrip';
-      if (!isFollowing && now - throttle.lastCheckTime < GRIP_HOVER_THROTTLE_MS) return;
-      if (!isFollowing) throttle.lastCheckTime = now;
-      throttle.lastWorldPoint = worldPos;
-      if (isFollowing && activeGrip) {
-        setCurrentWorldPos(worldPos);
-        // ADR-363 — publish the constant drag anchor (same one that feeds the ghost
-        // via `buildDxfDragPreview`) so the cursor leaf can snap the crosshair onto
-        // the step grid with the fresh world pos each frame (zero-lag, WYSIWYG).
-        if (anchorRef.current) setGripStepAnchor(anchorRef.current);
-        else clearGripStepAnchor();
-        if (phase === 'hotGrip') {
-          // ADR-363 Phase 1G.2/1G.3 — any pick step (waiting for a deliberate
-          // click: base/centre/ref/align) marks "moved" on a real mousemove so the
-          // next click advances/commits. The same-tick double mouseup (canvas+
-          // container) produces NO mousemove, so its stray fire2 stays moved=false
-          // → 'stay', and a single click can never burn two steps. The terminal
-          // 'tracking' step (move/corner) uses the anchor-distance check below.
-          if (hotGripStepRef.current !== 'tracking') {
-            hotGripMovedRef.current = true;
-          }
-          // Tracking (move/corner): once the cursor leaves the anchor, mark moved
-          // so the next deliberate click commits (a stray same-spot release stays hot).
-          if (anchorRef.current) {
-            const adx = worldPos.x - anchorRef.current.x;
-            const ady = worldPos.y - anchorRef.current.y;
-            if (adx * adx + ady * ady > HOT_GRIP_MOVE_EPS_SQ) hotGripMovedRef.current = true;
-          }
-        }
-        if (activeGrip.source === 'overlay') setDragPreviewPosition(worldPos);
-        return;
-      }
-      // ADR-040 XXII.A: live SSoT read — no stale-closure on rapid zoom.
-      const nearGrip = findNearestGrip(worldPos, allGrips, effectiveTolerance, getImmediateTransform().scale);
-      if (nearGrip) {
-        if (!hoveredGrip || hoveredGrip.id !== nearGrip.id) {
-          setHoveredGrip(nearGrip);
-          if (gripStyleStore.get().snapToGrips) lockGripSnapPosition(nearGrip.position);
-          setPhase('hovering');
-          if (warmTimerRef.current) clearTimeout(warmTimerRef.current);
-          warmTimerRef.current = setTimeout(() => { setPhase('warm'); warmTimerRef.current = null; }, WARM_DELAY_MS);
-        }
-        // ADR-397 Φ2 — per-arm hover highlight. Runs even when the grip id is
-        // unchanged (cursor moving BETWEEN arms of the same MOVE handle), so the lit
-        // arm tracks the cursor. Only MOVE grips carry a frame; classify in the
-        // entity's WORLD frame and publish + repaint on change (the grip id alone
-        // would not re-trigger React, and a plain cursor move marks no canvas dirty).
-        updateMoveGlyphHoverZone(nearGrip, worldPos);
-      } else if (hoveredGrip && phase !== 'dragging') {
-        setHoveredGrip(null);
-        unlockGripSnapPosition();
-        setPhase('idle');
-        if (warmTimerRef.current) { clearTimeout(warmTimerRef.current); warmTimerRef.current = null; }
-        if (MoveGlyphZoneStore.clear()) markSystemsDirty(['dxf-canvas']);
-      }
-    },
+    (worldPos: Point2D, _screenPos: Point2D) =>
+      runGripMouseMove(worldPos, {
+        isGripMode, allGrips, phase, activeGrip, hoveredGrip, effectiveTolerance,
+        gripSizePx: (gripSettings.gripSize ?? 5) * (gripSettings.dpiScale ?? 1),
+        gripHoverThrottleRef, anchorRef, hotGripStepRef, hotGripMovedRef,
+        hotGripRotateBaseRef, hotGripBaseRef, warmTimerRef,
+        setCurrentWorldPos, setDragPreviewPosition, setHoveredGrip, setPhase,
+      }),
     // ADR-040 XXII.A: scale removed from deps — SSoT read at event time.
-    [isGripMode, allGrips, phase, activeGrip, hoveredGrip, effectiveTolerance, updateMoveGlyphHoverZone],
+    [isGripMode, allGrips, phase, activeGrip, hoveredGrip, effectiveTolerance, gripSettings.gripSize, gripSettings.dpiScale],
   );
   // ── MOUSE DOWN ──
   const handleMouseDown = useCallback(
@@ -341,7 +277,7 @@ export function useUnifiedGripInteraction(
         isGripMode, allGrips, phase, effectiveTolerance, hoveredGrip, selectedGrips,
         setSelectedGrips, setActiveGrip, setPhase, setCurrentWorldPos,
         hotGripOpRef, hotGripStepRef, hotGripAwaitingFirstReleaseRef, hotGripMovedRef, hotGripBaseRef,
-        hotGripRefStartRef, hotGripRefEndRef, hotGripAlignStartRef,
+        hotGripRefStartRef, hotGripRefEndRef, hotGripAlignStartRef, hotGripRotateBaseRef,
         warmTimerRef, universalSelection, setDraggingVertices, setDragPreviewPosition,
         overlayStoreRef, currentOverlays, setDraggingEdgeMidpoint,
         // ADR-397 Φ2 — directional move-by-value: deps for the click→prompt→commit path.
@@ -357,7 +293,7 @@ export function useUnifiedGripInteraction(
       runGripMouseUp(worldPos, {
         mouseUpInProgressRef, phase, hotGripAwaitingFirstReleaseRef, hotGripStepRef,
         hotGripMovedRef, hotGripBaseRef, hotGripOpRef, activeGrip, anchorRef,
-        hotGripRefStartRef, hotGripRefEndRef, hotGripAlignStartRef,
+        hotGripRefStartRef, hotGripRefEndRef, hotGripAlignStartRef, hotGripRotateBaseRef,
         dxfCommitDeps, overlayCommitDeps, resetToIdle, setCurrentWorldPos, markDragFinished,
         draggingVertices, setDraggingVertices, draggingEdgeMidpoint, setDraggingEdgeMidpoint,
         draggingOverlayBody, setDraggingOverlayBody, setSelectedGrips, setDragPreviewPosition,
@@ -369,8 +305,10 @@ export function useUnifiedGripInteraction(
                 .filter((g) => g.source === 'dxf' && g.entityId === activeGrip.entityId)
                 .map((g) => ({ entityId: g.entityId!, gripIndex: g.gripIndex, point: g.position }))
             : [],
+        // ADR-397 Σ3 — a terminal click commits the typed angle if one was keyed in.
+        typedRotateDeg: typedRotate?.deg ?? null,
       }),
-    [phase, activeGrip, allGrips, dxfCommitDeps, overlayCommitDeps, draggingVertices, draggingEdgeMidpoint, draggingOverlayBody, resetToIdle, markDragFinished],
+    [phase, activeGrip, allGrips, dxfCommitDeps, overlayCommitDeps, draggingVertices, draggingEdgeMidpoint, draggingOverlayBody, resetToIdle, markDragFinished, typedRotate],
   );
   // ── ESCAPE ──
   const handleEscape = useCallback((): boolean => {
@@ -383,6 +321,62 @@ export function useUnifiedGripInteraction(
     }
     return false;
   }, [phase, resetToIdle]);
+  // ── ADR-397 Σ2 — ROTATE-FREE KEYBOARD ──
+  // Window-level key during the free rotate (`phase==='hotGrip'`, op rotate, step
+  // rotate-free). Σ2: «R» jumps to the 6-click reference flow. Returns true when the
+  // key is consumed so the canvas keyboard hook can `preventDefault` + block globals.
+  // Refs are read at call time (closure), so only `phase` needs to be a dep.
+  const handleHotGripKeyDown = useCallback((key: string): boolean => {
+    if (phase !== 'hotGrip' || hotGripOpRef.current !== 'rotate') return false;
+    if (hotGripStepRef.current !== 'rotate-free') return false;
+    // «R» → opt into the 6-click reference flow (drop any typed angle).
+    if (isReferenceFlowKey(key)) {
+      enterReferenceFromFree({
+        hotGripStepRef, hotGripRotateBaseRef,
+        hotGripRefStartRef, hotGripRefEndRef, hotGripAlignStartRef,
+      });
+      hotGripMovedRef.current = false;        // require a fresh move before the 1st ref pick
+      setCurrentWorldPos(null);               // drop the free-rotate ghost until ref picked
+      rotateDdeRef.current.reset();
+      setTypedRotate(null);
+      markSystemsDirty(['dxf-canvas']);        // repaint: hint switch + ghost cleared
+      return true;
+    }
+    const dde = rotateDdeRef.current;
+    // Enter → commit the typed angle (exact). Swallowed even when empty so a stray
+    // Enter never reaches the drawing-finish path while the entity is spinning.
+    if (key === 'Enter') {
+      const { value } = dde.snapshot();
+      if (value != null && hotGripBaseRef.current && activeGrip?.source === 'dxf') {
+        commitTypedRotate(activeGrip, hotGripBaseRef.current, value, dxfCommitDeps);
+        resetToIdle();                         // clears refs + typed buffer
+      }
+      return true;
+    }
+    // Digit alphabet (0-9 / - / .) → buffer the signed angle (DirectDistanceEntry SSoT).
+    if (/^[\d.-]$/.test(key)) {
+      if (dde.snapshot().status !== 'buffering') dde.begin();
+      dde.pressKey(key);                       // rejects illegal keystrokes internally
+      const s = dde.snapshot();
+      setTypedRotate({ buffer: s.buffer, deg: s.value });
+      markSystemsDirty(['dxf-canvas']);
+      return true;
+    }
+    // Backspace → edit the buffer (swallowed during rotate so it never smart-deletes).
+    if (key === 'Backspace') {
+      if (dde.snapshot().status === 'buffering') {
+        dde.pressKey('Backspace');
+        const s = dde.snapshot();
+        setTypedRotate({ buffer: s.buffer, deg: s.value });
+        markSystemsDirty(['dxf-canvas']);
+      }
+      return true;
+    }
+    return false;
+  }, [phase, activeGrip, dxfCommitDeps, resetToIdle]);
+  // True while a hot-grip flow is live — coarse reactive gate for the canvas keyboard
+  // hook; the fine op/step check happens inside `handleHotGripKeyDown` (refs).
+  const hotGripIsActive = phase === 'hotGrip';
   // ── PROJECTIONS (from grip-projections.ts) ──
   const dxfDragPreview = useMemo(
     () => {
@@ -397,6 +391,8 @@ export function useUnifiedGripInteraction(
           hotGripRefEndRef.current,
           hotGripAlignStartRef.current,
           currentWorldPos,
+          hotGripRotateBaseRef.current,
+          typedRotate?.deg ?? null,
         );
       }
       // ADR-363 Phase 1G.5 — Alt drag → whole-entity move ghost (base = grabbed grip).
@@ -407,7 +403,9 @@ export function useUnifiedGripInteraction(
         phase === 'hotGrip' && hotGripOpRef.current === 'move',
       );
     },
-    [phase, activeGrip, currentWorldPos],
+    // ADR-397 Σ3 — typedRotate re-triggers the memo so the typed ghost updates
+    // (keystrokes don't change currentWorldPos).
+    [phase, activeGrip, currentWorldPos, typedRotate],
   );
   const gripInteractionState = useMemo(
     () => buildGripInteractionState(hoveredGrip, activeGrip, phase),
@@ -464,11 +462,14 @@ export function useUnifiedGripInteraction(
     selectedGrips, setSelectedGrips, setDragPreviewPosition,
     isDragging, gripHoverThrottleRef, justFinishedDragRef, markDragFinished,
     setDraggingOverlayBody, draggingOverlayBody, draggingVertices, draggingEdgeMidpoint,
+    // ADR-397 Σ2 — rotate-free keyboard API for the canvas keyboard hook.
+    handleHotGripKeyDown, hotGripIsActive,
   }), [
     handleMouseMove, handleMouseDown, handleMouseUp, handleEscape,
     hoveredGrip, activeGrip, phase,
     dxfProjection, overlayProjection, gripStateForStack,
     selectedGrips, isDragging, markDragFinished,
     draggingOverlayBody, draggingVertices, draggingEdgeMidpoint,
+    handleHotGripKeyDown, hotGripIsActive,
   ]);
 }
