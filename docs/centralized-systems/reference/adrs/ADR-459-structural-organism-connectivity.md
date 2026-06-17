@@ -406,6 +406,12 @@ reconciler** πάνω στην ίδια cross-level υποδομή.
   Gate: τρέχει μόνο όταν υπάρχει διακριτός όροφος Θεμελίωσης (`fl.target`).
 - REWRITE `hooks/useStructuralOrganismNotification.tsx` → **αυτόματος** οπλισμός στη σύνδεση (χωρίς
   ConfirmationToast)· idempotent (belt-and-suspenders για άλλα attach paths, π.χ. cross-floor copy).
+- NEW `core/commands/entity-commands/DeleteCrossLevelFootingsCommand.ts` + branch στο `hooks/canvas/useSmartDelete.ts`:
+  **3Δ delete cross-level πεδίλου**. Επιλογή πεδίλου στο 3Δ (ζει στον όροφο Θεμελίωσης) + Delete ενώ ο ενεργός
+  όροφος είναι άλλος → ο level-scoped adapter δεν το έβρισκε → **silent fail**. FIX: ο smart-delete εντοπίζει
+  selected ids που λείπουν από τον ενεργό όροφο αλλά υπάρχουν ως foundation στο `foundation-level-store` →
+  διαγραφή cross-level (writer remove: scene + Firestore + store) + `DetachColumnFootingCommand` (clear FK) +
+  clear 2Δ/3Δ selection· undoable.
 
 **Ownership (κρίσιμο):** NEW optional `FoundationCommonParams.autoDesigned` flag (Firestore-safe omit-when-absent).
 Ο reconciler διαχειρίζεται **μόνο** auto πέδιλα· κολώνες πάνω σε **χειροκίνητο** πέδιλο (FK ή spatial coverage)
@@ -452,6 +458,9 @@ footing (όριο οικοπέδου — δεν υπάρχουν property lines)
   διαβάζει τη **live foundation scene** (`getLevelScene(target.levelId)`) όταν είναι φορτωμένη, αλλιώς το
   (πλέον σύγχρονο) store· (γ) NEW `autoDesigned` στο foundation Zod schema (CommonParamsShape) για πληρότητα.
   ΜΑΘΗΜΑ: cross-level reconcile χρειάζεται **σύγχρονη** εικόνα των υπαρχόντων — ο async sync hook δεν αρκεί.
+  **Feature (3Δ delete cross-level πεδίλου):** NEW `DeleteCrossLevelFootingsCommand` + `useSmartDelete` branch —
+  επιλογή πεδίλου στο 3Δ + Delete (ενώ ενεργός όροφος = άλλος) διαγράφει πλέον το cross-level πέδιλο (writer
+  remove + DetachColumnFootingCommand FK + clear selection· undoable). Πριν: silent fail (level-scoped adapter).
 - **2026-06-17 (v7, Opus):** **Phase 6 — Proactive on-create + cross-level organism.** Decision Giorgio:
   πέδιλο στον όροφο Θεμελίωσης (Revit-canonical) + non-blocking ConfirmationToast. **6.0 cross-level READ:**
   NEW `building-foundation-level.ts` + `cross-level-organism-scene.ts` + `foundation-level-store.ts` +

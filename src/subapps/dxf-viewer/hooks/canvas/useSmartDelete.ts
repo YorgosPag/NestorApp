@@ -29,6 +29,19 @@ import {
   type ICommand,
 } from '../../core/commands';
 import { LevelSceneManagerAdapter } from '../../systems/entity-creation/LevelSceneManagerAdapter';
+import { collectBimDeleteIds, emitBimDeleteEvents } from './smart-delete-bim-events';
+// ADR-459 Φ7 — cross-level (Θεμελίωση) footing delete: επιλογή πεδίλου στο 3Δ + Delete
+// ενώ ο ενεργός όροφος είναι άλλος → ο level-scoped adapter δεν το βρίσκει.
+import { DeleteCrossLevelFootingsCommand } from '../../core/commands/entity-commands/DeleteCrossLevelFootingsCommand';
+import { useFoundationLevelStore } from '../../state/foundation-level-store';
+import {
+  createFoundationCrossLevelWriter,
+  type FoundationWriteScope,
+} from '../../bim/foundations/foundation-cross-level-writer';
+import { useSelection3DStore } from '../../bim-3d/stores/Selection3DStore';
+import { isFoundationEntity, type Entity } from '../../types/entities';
+import type { FoundationEntity } from '../../bim/types/foundation-types';
+import { useAuth } from '@/auth/hooks/useAuth';
 import { requestWallCascadeDelete } from '../../bim/walls/wall-cascade-delete-store';
 // ADR-408 Φ4 — MEP cascade: dissolve circuits whose source is deleted + drop
 // deleted members from surviving circuits, bundled with the entity delete into
@@ -106,6 +119,7 @@ export function useSmartDelete({
   eventBus,
   hoveredDxfGrip,
 }: UseSmartDeleteParams): UseSmartDeleteReturn {
+  const { user } = useAuth();
 
   const handleSmartDelete = useCallback(async () => {
     const overlayStoreInstance = overlayStoreRef.current;
@@ -214,6 +228,52 @@ export function useSmartDelete({
       return true;
     }
 
+    // PRIORITY 2.7: ADR-459 Φ7 — cross-level foundation (πέδιλο) delete. Επιλογή
+    // πεδίλου στο 3Δ (ζει στον όροφο Θεμελίωσης) + Delete ενώ ο ενεργός όροφος είναι
+    // άλλος → ο level-scoped adapter (PRIORITY 3) δεν το βρίσκει → silent fail. Εδώ το
+    // διαγράφουμε cross-level (writer) + αποσυνδέουμε τα FK των κολωνών (undoable).
+    {
+      const fl = useFoundationLevelStore.getState();
+      const selIds = universalSelectionRef.current.getSelectedEntityIds();
+      if (fl.target && selIds.length > 0 && levelManager.currentLevelId) {
+        const activeScene = levelManager.getLevelScene(levelManager.currentLevelId);
+        const activeEntities = (activeScene?.entities ?? []) as unknown as readonly Entity[];
+        const activeIds = new Set(activeEntities.map((e) => e.id));
+        const crossFootings = selIds
+          .filter((id) => !activeIds.has(id))
+          .map((id) => fl.entities.find((e) => e.id === id))
+          .filter((e): e is FoundationEntity => e !== undefined && isFoundationEntity(e));
+        if (crossFootings.length > 0) {
+          const scope: FoundationWriteScope = {
+            companyId: user?.companyId,
+            projectId: levelManager.levels.find((l) => l.id === levelManager.currentLevelId)?.projectId,
+            userId: user?.uid,
+          };
+          const writer = createFoundationCrossLevelWriter(scope, fl.target, levelManager);
+          if (writer) {
+            const footingIds = new Set(crossFootings.map((f) => f.id));
+            const adapter = new LevelSceneManagerAdapter(
+              levelManager.getLevelScene, levelManager.setLevelScene, levelManager.currentLevelId,
+            );
+            const detachColumnIds = activeEntities
+              .filter((e) => e.type === 'column' && footingIds.has(
+                (e as { params?: { footingId?: string } }).params?.footingId ?? '',
+              ))
+              .map((e) => e.id);
+            executeCommand(new DeleteCrossLevelFootingsCommand(crossFootings, detachColumnIds, writer, adapter));
+            if (detachColumnIds.length > 0) {
+              eventBus.emit('bim:column-footing-detached', { columnIds: detachColumnIds });
+            }
+            const remaining = selIds.filter((id) => !footingIds.has(id));
+            universalSelectionRef.current.replaceEntitySelection(remaining);
+            setSelectedEntityIds(remaining);
+            useSelection3DStore.getState().clearSelection();
+            if (remaining.length === 0) return true;
+          }
+        }
+      }
+    }
+
     // PRIORITY 3: Delete selected DXF entities with UNDO SUPPORT
     const selectedDxfEntityIds = universalSelectionRef.current.getSelectedEntityIds();
     if (selectedDxfEntityIds.length > 0 && levelManager.currentLevelId) {
@@ -233,12 +293,6 @@ export function useSmartDelete({
       );
       const deletingSlabIds = new Set(
         selectedDxfEntityIds.filter((id) => adapter.getEntity(id)?.type === 'slab'),
-      );
-      const deletingColumnIds = new Set(
-        selectedDxfEntityIds.filter((id) => adapter.getEntity(id)?.type === 'column'),
-      );
-      const deletingBeamIds = new Set(
-        selectedDxfEntityIds.filter((id) => adapter.getEntity(id)?.type === 'beam'),
       );
       const needsScene = deletingWallIds.size > 0 || deletingSlabIds.size > 0;
       const scene = needsScene
@@ -262,72 +316,9 @@ export function useSmartDelete({
         idsToDelete = [...idsToDelete, ...orphanedSlabOpeningIds];
       }
 
-      // Collect BIM IDs BEFORE executeCommand removes them from scene.
-      const wallIdsInBatch = [...deletingWallIds];
-      const slabIdsInBatch = [...deletingSlabIds];
-      const columnIdsInBatch = [...deletingColumnIds];
-      const beamIdsInBatch = [...deletingBeamIds];
-      const stairIdsInBatch = idsToDelete.filter(
-        (id) => adapter.getEntity(id)?.type === 'stair',
-      );
-      const openingIdsInBatch = idsToDelete.filter(
-        (id) => adapter.getEntity(id)?.type === 'opening',
-      );
-      const slabOpeningIdsInBatch = idsToDelete.filter(
-        (id) => adapter.getEntity(id)?.type === 'slab-opening',
-      );
-      // ADR-436 — collect foundation IDs so we can trigger Firestore deleteDoc.
-      const foundationIdsInBatch = idsToDelete.filter(
-        (id) => adapter.getEntity(id)?.type === 'foundation',
-      );
-      // ADR-406 — collect MEP fixture IDs so we can trigger Firestore deleteDoc.
-      const fixtureIdsInBatch = idsToDelete.filter(
-        (id) => adapter.getEntity(id)?.type === 'mep-fixture',
-      );
-      // ADR-408 Φ3 — collect electrical panel IDs so we can trigger Firestore deleteDoc.
-      const panelIdsInBatch = idsToDelete.filter(
-        (id) => adapter.getEntity(id)?.type === 'electrical-panel',
-      );
-      // ADR-410 — collect furniture IDs so we can trigger Firestore deleteDoc.
-      const furnitureIdsInBatch = idsToDelete.filter(
-        (id) => adapter.getEntity(id)?.type === 'furniture',
-      );
-      // ADR-408 Φ8 — collect MEP segment IDs so we can trigger Firestore deleteDoc.
-      const mepSegmentIdsInBatch = idsToDelete.filter(
-        (id) => adapter.getEntity(id)?.type === 'mep-segment',
-      );
-      // ADR-408 Φ12 — collect plumbing manifold IDs so we can trigger Firestore deleteDoc.
-      const manifoldIdsInBatch = idsToDelete.filter(
-        (id) => adapter.getEntity(id)?.type === 'mep-manifold',
-      );
-      // ADR-408 Εύρος Β — collect heating radiator IDs so we can trigger Firestore deleteDoc.
-      const radiatorIdsInBatch = idsToDelete.filter(
-        (id) => adapter.getEntity(id)?.type === 'mep-radiator',
-      );
-      // ADR-408 Εύρος Β #2 — collect heating boiler IDs so we can trigger Firestore deleteDoc.
-      const boilerIdsInBatch = idsToDelete.filter(
-        (id) => adapter.getEntity(id)?.type === 'mep-boiler',
-      );
-      // ADR-408 — collect DHW water heater IDs so we can trigger Firestore deleteDoc.
-      const waterHeaterIdsInBatch = idsToDelete.filter(
-        (id) => adapter.getEntity(id)?.type === 'mep-water-heater',
-      );
-      // ADR-417 — collect roof IDs so we can trigger Firestore deleteDoc.
-      const roofIdsInBatch = idsToDelete.filter(
-        (id) => adapter.getEntity(id)?.type === 'roof',
-      );
-      // ADR-419 — collect floor-finish IDs so we can trigger Firestore deleteDoc.
-      const floorFinishIdsInBatch = idsToDelete.filter(
-        (id) => adapter.getEntity(id)?.type === 'floor-finish',
-      );
-      // ADR-408 Εύρος Β #3 — collect underfloor IDs so we can trigger Firestore deleteDoc.
-      const underfloorIdsInBatch = idsToDelete.filter(
-        (id) => adapter.getEntity(id)?.type === 'mep-underfloor',
-      );
-      // ADR-437 — collect space-separator IDs so we can trigger Firestore deleteDoc.
-      const spaceSeparatorIdsInBatch = idsToDelete.filter(
-        (id) => adapter.getEntity(id)?.type === 'space-separator',
-      );
+      // Collect BIM IDs by type BEFORE executeCommand removes them from scene
+      // (SSoT: smart-delete-bim-events.ts).
+      const collected = collectBimDeleteIds(idsToDelete, adapter);
 
       const deleteCommand: ICommand = idsToDelete.length === 1
         ? new DeleteEntityCommand(idsToDelete[0], adapter)
@@ -337,7 +328,7 @@ export function useSmartDelete({
       // fixtures (the only entities that can be a circuit source or member) and
       // bundle the dissolve / member-removal commands with the entity delete so
       // a single Ctrl+Z reverses everything.
-      const deletedMepIds = new Set<string>([...panelIdsInBatch, ...fixtureIdsInBatch]);
+      const deletedMepIds = new Set<string>([...collected.panelIds, ...collected.fixtureIds]);
       const cascade = deletedMepIds.size > 0
         ? resolveMepCascadeOnDelete(deletedMepIds, useMepSystemStore.getState().getSystems())
         : { dissolve: [], memberRemovals: [] };
@@ -356,82 +347,9 @@ export function useSmartDelete({
       universalSelectionRef.current.clearByType('dxf-entity');
       setSelectedEntityIds([]);
 
-      // Trigger Firestore deleteDoc for each deleted BIM entity type.
-      for (const wallId of wallIdsInBatch) {
-        eventBus.emit('bim:wall-delete-requested', { wallId });
-      }
-      for (const slabId of slabIdsInBatch) {
-        eventBus.emit('bim:slab-delete-requested', { slabId });
-      }
-      for (const columnId of columnIdsInBatch) {
-        eventBus.emit('bim:column-delete-requested', { columnId });
-      }
-      for (const beamId of beamIdsInBatch) {
-        eventBus.emit('bim:beam-delete-requested', { beamId });
-      }
-      // ADR-436 — trigger Firestore deleteDoc + prevent subscription re-add for each foundation.
-      for (const foundationId of foundationIdsInBatch) {
-        eventBus.emit('bim:foundation-delete-requested', { foundationId });
-      }
-      // ADR-358 Phase 9C-3 — trigger Firestore deleteDoc for each deleted stair.
-      for (const stairId of stairIdsInBatch) {
-        eventBus.emit('bim:stair-delete-requested', { stairId });
-      }
-      // Trigger Firestore deleteDoc + prevent subscription re-add for each deleted opening.
-      for (const openingId of openingIdsInBatch) {
-        eventBus.emit('bim:opening-delete-requested', { openingId });
-      }
-      for (const slabOpeningId of slabOpeningIdsInBatch) {
-        eventBus.emit('bim:slab-opening-delete-requested', { slabOpeningId });
-      }
-      // ADR-406 — trigger Firestore deleteDoc + prevent subscription re-add for each fixture.
-      for (const fixtureId of fixtureIdsInBatch) {
-        eventBus.emit('bim:mep-fixture-delete-requested', { fixtureId });
-      }
-      // ADR-408 Φ3 — trigger Firestore deleteDoc + prevent subscription re-add for each panel.
-      for (const panelId of panelIdsInBatch) {
-        eventBus.emit('bim:electrical-panel-delete-requested', { panelId });
-      }
-      // ADR-410 — trigger Firestore deleteDoc + prevent subscription re-add for each furniture.
-      for (const furnitureId of furnitureIdsInBatch) {
-        eventBus.emit('bim:furniture-delete-requested', { furnitureId });
-      }
-      // ADR-408 Φ8 — trigger Firestore deleteDoc + prevent subscription re-add for each segment.
-      for (const segmentId of mepSegmentIdsInBatch) {
-        eventBus.emit('bim:mep-segment-delete-requested', { segmentId });
-      }
-      // ADR-408 Φ12 — trigger Firestore deleteDoc + prevent subscription re-add for each manifold.
-      for (const manifoldId of manifoldIdsInBatch) {
-        eventBus.emit('bim:mep-manifold-delete-requested', { manifoldId });
-      }
-      // ADR-408 Εύρος Β — trigger Firestore deleteDoc + prevent subscription re-add for each radiator.
-      for (const radiatorId of radiatorIdsInBatch) {
-        eventBus.emit('bim:mep-radiator-delete-requested', { radiatorId });
-      }
-      // ADR-408 Εύρος Β #2 — trigger Firestore deleteDoc + prevent subscription re-add for each boiler.
-      for (const boilerId of boilerIdsInBatch) {
-        eventBus.emit('bim:mep-boiler-delete-requested', { boilerId });
-      }
-      // ADR-408 — trigger Firestore deleteDoc + prevent subscription re-add for each water heater.
-      for (const waterHeaterId of waterHeaterIdsInBatch) {
-        eventBus.emit('bim:mep-water-heater-delete-requested', { waterHeaterId });
-      }
-      // ADR-417 — trigger Firestore deleteDoc + prevent subscription re-add for each roof.
-      for (const roofId of roofIdsInBatch) {
-        eventBus.emit('bim:roof-delete-requested', { roofId });
-      }
-      // ADR-419 — trigger Firestore deleteDoc + prevent subscription re-add for each floor finish.
-      for (const floorFinishId of floorFinishIdsInBatch) {
-        eventBus.emit('bim:floor-finish-delete-requested', { id: floorFinishId });
-      }
-      // ADR-408 Εύρος Β #3 — trigger Firestore deleteDoc + prevent subscription re-add for each underfloor.
-      for (const underfloorId of underfloorIdsInBatch) {
-        eventBus.emit('bim:mep-underfloor-delete-requested', { underfloorId });
-      }
-      // ADR-437 — trigger Firestore deleteDoc + prevent subscription re-add for each space separator.
-      for (const spaceSeparatorId of spaceSeparatorIdsInBatch) {
-        eventBus.emit('bim:space-separator-delete-requested', { id: spaceSeparatorId });
-      }
+      // Trigger Firestore deleteDoc (+ subscription re-add prevention) for each
+      // deleted BIM entity type (SSoT: smart-delete-bim-events.ts).
+      emitBimDeleteEvents(collected, eventBus);
 
       return true;
     }
@@ -464,7 +382,7 @@ export function useSmartDelete({
     }
 
     return false;
-  }, [selectedGrips, executeCommand, levelManager, overlayStoreRef, universalSelectionRef, setSelectedGrips, setSelectedEntityIds, hoveredDxfGrip]);
+  }, [selectedGrips, executeCommand, levelManager, overlayStoreRef, universalSelectionRef, setSelectedGrips, setSelectedEntityIds, hoveredDxfGrip, user]);
 
   // Listen for delete command from floating toolbar
   useEffect(() => {
