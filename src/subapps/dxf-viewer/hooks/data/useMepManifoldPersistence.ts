@@ -17,10 +17,6 @@ import { dequal } from 'dequal';
 import type { AnySceneEntity, SceneModel } from '../../types/entities';
 import type { SceneWriteOrigin } from '../scene/scene-write-origin';
 import type { MepManifoldEntity } from '../../bim/types/mep-manifold-types';
-import {
-  computeMepManifoldGeometry,
-  validateMepManifoldParams,
-} from '../../bim/mep-manifolds/mep-manifold-geometry';
 import { EventBus } from '../../systems/events/EventBus';
 import { resolveBimPersistenceScope } from '../../bim/persistence/bim-floor-scope';
 import {
@@ -30,6 +26,7 @@ import {
   type MepManifoldDoc,
 } from '../../bim/mep-manifolds/mep-manifold-firestore-service';
 import { recordMepManifoldChange } from '../../bim/mep-manifolds/mep-manifold-audit-client';
+import { mepManifoldDocToEntity as docToEntity } from './mep-manifold-persistence-helpers';
 import { projectConnectorSystemIds } from '../../bim/mep-systems/mep-system-coordinator';
 import { bimToBoqBridge } from '../../bim/services/BimToBoqBridge';
 import { useBimEntityMovedPersistEffect } from './useBimEntityMovedPersistEffect';
@@ -80,21 +77,6 @@ const AUTO_SAVE_DEBOUNCE_MS = 500;
 
 function isManifold(entity: AnySceneEntity): entity is MepManifoldEntity {
   return (entity as { type?: string }).type === 'mep-manifold';
-}
-
-/** Build scene-side `MepManifoldEntity` from a persisted `MepManifoldDoc`. */
-function docToEntity(doc: MepManifoldDoc): MepManifoldEntity {
-  const validation = doc.validation ?? validateMepManifoldParams(doc.params).bimValidation;
-  return {
-    id: doc.id,
-    type: 'mep-manifold',
-    kind: doc.kind,
-    layerId: doc.layerId ?? '0',
-    params: doc.params,
-    geometry: doc.geometry ?? computeMepManifoldGeometry(doc.params),
-    validation,
-    visible: true,
-  } as MepManifoldEntity;
 }
 
 // ============================================================================

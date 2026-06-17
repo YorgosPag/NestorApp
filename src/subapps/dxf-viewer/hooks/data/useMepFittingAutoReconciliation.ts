@@ -45,12 +45,9 @@ import type { AnySceneEntity, SceneModel } from '../../types/entities';
 import type { SceneWriteOrigin } from '../scene/scene-write-origin';
 import type { MepFittingEntity, MepFittingDraft } from '../../bim/types/mep-fitting-types';
 import { applySceneOps, buildPipeTopologySignature } from './mep-fitting-reconcile-ops';
-import { mepFittingIfcType } from '../../bim/types/mep-fitting-types';
-import { computeMepFittingGeometry } from '../../bim/geometry/mep-fitting-geometry';
 import { resolveDesiredFittings } from '../../bim/mep-fittings/mep-fitting-resolve';
 import { resolveSegmentTrims } from '../../bim/mep-fittings/mep-segment-trim';
 import { useMepSegmentTrimStore } from '../../bim/mep-fittings/mep-segment-trim-store';
-import { makeBimValidation } from '../../bim/types/bim-base';
 import { resolveBimPersistenceScope } from '../../bim/persistence/bim-floor-scope';
 import {
   createMepFittingFirestoreService,
@@ -59,6 +56,7 @@ import {
   type MepFittingDoc,
 } from '../../bim/mep-fittings/mep-fitting-firestore-service';
 import { recordMepFittingChange } from '../../bim/mep-fittings/mep-fitting-audit-client';
+import { mepFittingDocToEntity as docToEntity } from './mep-fitting-persistence-helpers';
 import { createMepFitting } from '@/services/factories/mep-fitting.factory';
 
 // ============================================================================
@@ -94,24 +92,6 @@ const RECONCILE_DEBOUNCE_MS = 500;
 
 function isFitting(entity: AnySceneEntity): entity is MepFittingEntity {
   return (entity as { type?: string }).type === 'mep-fitting';
-}
-
-/** Build a scene-side `MepFittingEntity` from a persisted `MepFittingDoc`. */
-function docToEntity(d: MepFittingDoc): MepFittingEntity {
-  return {
-    id: d.id,
-    type: 'mep-fitting',
-    kind: d.kind,
-    layerId: d.layerId ?? '0',
-    params: d.params,
-    // ALWAYS recompute — geometry is a pure cache of params and the bend body
-    // shape evolves with the renderer (a persisted square from an older build must
-    // not pin a stale footprint). Cheap + idempotent.
-    geometry: computeMepFittingGeometry(d.params),
-    validation: d.validation ?? makeBimValidation(),
-    visible: true,
-    ifcType: mepFittingIfcType(d.params.domain),
-  } as MepFittingEntity;
 }
 
 /**

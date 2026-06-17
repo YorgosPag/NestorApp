@@ -17,10 +17,6 @@ import { dequal } from 'dequal';
 import type { AnySceneEntity, SceneModel } from '../../types/entities';
 import type { SceneWriteOrigin } from '../scene/scene-write-origin';
 import type { MepRadiatorEntity } from '../../bim/types/mep-radiator-types';
-import {
-  computeMepRadiatorGeometry,
-  validateMepRadiatorParams,
-} from '../../bim/mep-radiators/mep-radiator-geometry';
 import { EventBus } from '../../systems/events/EventBus';
 import { resolveBimPersistenceScope } from '../../bim/persistence/bim-floor-scope';
 import {
@@ -30,6 +26,7 @@ import {
   type MepRadiatorDoc,
 } from '../../bim/mep-radiators/mep-radiator-firestore-service';
 import { recordMepRadiatorChange } from '../../bim/mep-radiators/mep-radiator-audit-client';
+import { mepRadiatorDocToEntity as docToEntity } from './mep-radiator-persistence-helpers';
 import { projectConnectorSystemIds } from '../../bim/mep-systems/mep-system-coordinator';
 import { bimToBoqBridge } from '../../bim/services/BimToBoqBridge';
 import { useBimEntityMovedPersistEffect } from './useBimEntityMovedPersistEffect';
@@ -80,21 +77,6 @@ const AUTO_SAVE_DEBOUNCE_MS = 500;
 
 function isRadiator(entity: AnySceneEntity): entity is MepRadiatorEntity {
   return (entity as { type?: string }).type === 'mep-radiator';
-}
-
-/** Build scene-side `MepRadiatorEntity` from a persisted `MepRadiatorDoc`. */
-function docToEntity(doc: MepRadiatorDoc): MepRadiatorEntity {
-  const validation = doc.validation ?? validateMepRadiatorParams(doc.params).bimValidation;
-  return {
-    id: doc.id,
-    type: 'mep-radiator',
-    kind: doc.kind,
-    layerId: doc.layerId ?? '0',
-    params: doc.params,
-    geometry: doc.geometry ?? computeMepRadiatorGeometry(doc.params),
-    validation,
-    visible: true,
-  } as MepRadiatorEntity;
 }
 
 // ============================================================================

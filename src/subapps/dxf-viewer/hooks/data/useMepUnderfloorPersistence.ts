@@ -17,10 +17,6 @@ import { dequal } from 'dequal';
 import type { AnySceneEntity, SceneModel } from '../../types/entities';
 import type { SceneWriteOrigin } from '../scene/scene-write-origin';
 import type { MepUnderfloorEntity } from '../../bim/types/mep-underfloor-types';
-import {
-  computeMepUnderfloorGeometry,
-  validateMepUnderfloorParams,
-} from '../../bim/mep-underfloor/mep-underfloor-geometry';
 import { EventBus } from '../../systems/events/EventBus';
 import { resolveBimPersistenceScope } from '../../bim/persistence/bim-floor-scope';
 import {
@@ -30,6 +26,7 @@ import {
   type MepUnderfloorDoc,
 } from '../../bim/mep-underfloor/mep-underfloor-firestore-service';
 import { recordMepUnderfloorChange } from '../../bim/mep-underfloor/mep-underfloor-audit-client';
+import { mepUnderfloorDocToEntity as docToEntity } from './mep-underfloor-persistence-helpers';
 import { projectConnectorSystemIds } from '../../bim/mep-systems/mep-system-coordinator';
 import { bimToBoqBridge } from '../../bim/services/BimToBoqBridge';
 import { useBimEntityRestoredPersistEffect } from './useBimEntityRestoredPersistEffect';
@@ -79,21 +76,6 @@ const AUTO_SAVE_DEBOUNCE_MS = 500;
 
 function isUnderfloor(entity: AnySceneEntity): entity is MepUnderfloorEntity {
   return (entity as { type?: string }).type === 'mep-underfloor';
-}
-
-/** Build scene-side `MepUnderfloorEntity` from a persisted `MepUnderfloorDoc`. */
-function docToEntity(doc: MepUnderfloorDoc): MepUnderfloorEntity {
-  const validation = doc.validation ?? validateMepUnderfloorParams(doc.params).bimValidation;
-  return {
-    id: doc.id,
-    type: 'mep-underfloor',
-    kind: doc.kind,
-    layerId: doc.layerId ?? '0',
-    params: doc.params,
-    geometry: doc.geometry ?? computeMepUnderfloorGeometry(doc.params),
-    validation,
-    visible: true,
-  } as MepUnderfloorEntity;
 }
 
 // ============================================================================

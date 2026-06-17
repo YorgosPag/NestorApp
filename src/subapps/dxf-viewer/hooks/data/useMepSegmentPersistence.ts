@@ -17,8 +17,6 @@ import { dequal } from 'dequal';
 import type { AnySceneEntity, SceneModel } from '../../types/entities';
 import type { SceneWriteOrigin } from '../scene/scene-write-origin';
 import type { MepSegmentEntity } from '../../bim/types/mep-segment-types';
-import { computeMepSegmentGeometry } from '../../bim/geometry/mep-segment-geometry';
-import { makeBimValidation } from '../../bim/types/bim-base';
 import { EventBus } from '../../systems/events/EventBus';
 import { resolveBimPersistenceScope } from '../../bim/persistence/bim-floor-scope';
 import {
@@ -28,6 +26,7 @@ import {
   type MepSegmentDoc,
 } from '../../bim/mep-segments/mep-segment-firestore-service';
 import { recordMepSegmentChange } from '../../bim/mep-segments/mep-segment-audit-client';
+import { mepSegmentDocToEntity as docToEntity } from './mep-segment-persistence-helpers';
 import { bimToBoqBridge } from '../../bim/services/BimToBoqBridge';
 import { useBimEntityMovedPersistEffect } from './useBimEntityMovedPersistEffect';
 import { useBimEntityRestoredPersistEffect } from './useBimEntityRestoredPersistEffect';
@@ -77,22 +76,6 @@ const AUTO_SAVE_DEBOUNCE_MS = 500;
 
 function isSegment(entity: AnySceneEntity): entity is MepSegmentEntity {
   return (entity as { type?: string }).type === 'mep-segment';
-}
-
-/** Build scene-side `MepSegmentEntity` from a persisted `MepSegmentDoc`. */
-function docToEntity(d: MepSegmentDoc): MepSegmentEntity {
-  return {
-    id: d.id,
-    type: 'mep-segment',
-    kind: d.kind,
-    layerId: d.layerId ?? '0',
-    params: d.params,
-    geometry: d.geometry ?? computeMepSegmentGeometry(d.params),
-    validation: d.validation ?? makeBimValidation(),
-    visible: true,
-    // IFC mixin fields — derived from domain; older docs may not persist them.
-    ifcType: d.params.domain === 'pipe' ? 'IfcPipeSegment' : 'IfcDuctSegment',
-  } as MepSegmentEntity;
 }
 
 // ============================================================================

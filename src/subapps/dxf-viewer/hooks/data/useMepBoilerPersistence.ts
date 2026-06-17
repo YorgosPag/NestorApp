@@ -17,10 +17,6 @@ import { dequal } from 'dequal';
 import type { AnySceneEntity, SceneModel } from '../../types/entities';
 import type { SceneWriteOrigin } from '../scene/scene-write-origin';
 import type { MepBoilerEntity } from '../../bim/types/mep-boiler-types';
-import {
-  computeMepBoilerGeometry,
-  validateMepBoilerParams,
-} from '../../bim/mep-boilers/mep-boiler-geometry';
 import { EventBus } from '../../systems/events/EventBus';
 import { resolveBimPersistenceScope } from '../../bim/persistence/bim-floor-scope';
 import {
@@ -30,6 +26,7 @@ import {
   type MepBoilerDoc,
 } from '../../bim/mep-boilers/mep-boiler-firestore-service';
 import { recordMepBoilerChange } from '../../bim/mep-boilers/mep-boiler-audit-client';
+import { mepBoilerDocToEntity as docToEntity } from './mep-boiler-persistence-helpers';
 import { projectConnectorSystemIds } from '../../bim/mep-systems/mep-system-coordinator';
 import { bimToBoqBridge } from '../../bim/services/BimToBoqBridge';
 import { useBimEntityMovedPersistEffect } from './useBimEntityMovedPersistEffect';
@@ -80,21 +77,6 @@ const AUTO_SAVE_DEBOUNCE_MS = 500;
 
 function isBoiler(entity: AnySceneEntity): entity is MepBoilerEntity {
   return (entity as { type?: string }).type === 'mep-boiler';
-}
-
-/** Build scene-side `MepBoilerEntity` from a persisted `MepBoilerDoc`. */
-function docToEntity(doc: MepBoilerDoc): MepBoilerEntity {
-  const validation = doc.validation ?? validateMepBoilerParams(doc.params).bimValidation;
-  return {
-    id: doc.id,
-    type: 'mep-boiler',
-    kind: doc.kind,
-    layerId: doc.layerId ?? '0',
-    params: doc.params,
-    geometry: doc.geometry ?? computeMepBoilerGeometry(doc.params),
-    validation,
-    visible: true,
-  } as MepBoilerEntity;
 }
 
 // ============================================================================
