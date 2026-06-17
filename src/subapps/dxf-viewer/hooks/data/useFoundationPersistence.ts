@@ -29,14 +29,12 @@ import { dequal } from 'dequal';
 import type { AnySceneEntity, SceneModel } from '../../types/entities';
 import type { SceneWriteOrigin } from '../scene/scene-write-origin';
 import type { FoundationEntity } from '../../bim/types/foundation-types';
-import { computeFoundationGeometry } from '../../bim/geometry/foundation-geometry';
-import { validateFoundationParams } from '../../bim/validators/foundation-validator';
-import { createFoundation } from '@/services/factories/foundation.factory';
 import { EventBus } from '../../systems/events/EventBus';
 import { resolveBimPersistenceScope } from '../../bim/persistence/bim-floor-scope';
 import {
   createFoundationFirestoreService,
   entityToSaveInput,
+  foundationDocToEntity,
   FoundationFirestoreService,
   type FoundationDoc,
 } from '../../bim/foundations/foundation-firestore-service';
@@ -88,26 +86,6 @@ const AUTO_SAVE_DEBOUNCE_MS = 500;
 
 function isFoundation(entity: AnySceneEntity): entity is FoundationEntity {
   return (entity as { type?: string }).type === 'foundation';
-}
-
-/**
- * Build scene-side `FoundationEntity` από persisted `FoundationDoc`. Geometry +
- * validation recomputed via SSoT pure functions· IFC mixin auto-filled από το
- * `createFoundation` factory (predefinedType ντετερμινιστικά από kind).
- */
-function docToEntity(doc: FoundationDoc): FoundationEntity {
-  const validation = doc.validation ?? validateFoundationParams(doc.params).bimValidation;
-  const entity = createFoundation({
-    id: doc.id,
-    params: doc.params,
-    geometry: doc.geometry ?? computeFoundationGeometry(doc.params),
-    layerId: doc.layerId ?? '0',
-    visible: true,
-    validation,
-  });
-  // ADR-441 Slice 3 — restore grid hosting bindings so follow-on-move survives
-  // reload (createFoundation factory δεν δέχεται bindings → spread μετά).
-  return doc.guideBindings ? { ...entity, guideBindings: doc.guideBindings } : entity;
 }
 
 // ============================================================================
@@ -200,7 +178,7 @@ export function useFoundationPersistence(
           const existing = sceneFoundations.get(doc.id);
           if (!existing) {
             if (!dirty.has(doc.id)) {
-              nextFoundations.push(docToEntity(doc));
+              nextFoundations.push(foundationDocToEntity(doc));
               mutated = true;
             }
             continue;
@@ -215,7 +193,7 @@ export function useFoundationPersistence(
             continue;
           }
           if (!dequal(existing.params, doc.params)) {
-            nextFoundations.push(docToEntity(doc));
+            nextFoundations.push(foundationDocToEntity(doc));
             mutated = true;
           } else {
             nextFoundations.push(existing);

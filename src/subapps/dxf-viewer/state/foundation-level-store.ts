@@ -21,6 +21,11 @@ import { create } from 'zustand';
 import type { Entity } from '../types/entities';
 import type { FoundationLevelTarget } from '../systems/levels/building-foundation-level';
 
+/** True για foundation entities (πέδιλα) — minimal type-tag check (zero deps). */
+function isFootingEntity(entity: Entity): boolean {
+  return (entity as { type?: string }).type === 'foundation';
+}
+
 export interface FoundationLevelState {
   /** Στόχος ορόφου Θεμελίωσης (null = κανένας / ίδιος με τον ενεργό → single-level). */
   readonly target: FoundationLevelTarget | null;
@@ -32,6 +37,20 @@ export interface FoundationLevelState {
   setFoundationLevel(
     target: FoundationLevelTarget | null,
     entities: readonly Entity[],
+    activeFloorElevationMm: number,
+  ): void;
+  /**
+   * ADR-459 Φ7 — model-SSoT publish: συνθέτει τα entities του ορόφου Θεμελίωσης από
+   * `baseEntities` (snapshot non-footings) + `modelFootings` (authoritative από το
+   * `floorplan_foundations`) + τυχόν **pending** optimistic footings (footings ήδη
+   * στον store που δεν εμφανίστηκαν ακόμη στο model — π.χ. ένα fresh cross-level
+   * create του writer που δεν επιβεβαιώθηκε ακόμη από Firestore). Anti-race με τον
+   * `foundation-cross-level-writer` (optimistic `upsertEntity`).
+   */
+  publishFoundationLevel(
+    target: FoundationLevelTarget | null,
+    baseEntities: readonly Entity[],
+    modelFootings: readonly Entity[],
     activeFloorElevationMm: number,
   ): void;
   /**
@@ -52,6 +71,20 @@ export const useFoundationLevelStore = create<FoundationLevelState>((set) => ({
   activeFloorElevationMm: 0,
   setFoundationLevel(target, entities, activeFloorElevationMm) {
     set({ target, entities, activeFloorElevationMm });
+  },
+  publishFoundationLevel(target, baseEntities, modelFootings, activeFloorElevationMm) {
+    set((s) => {
+      const modelIds = new Set(modelFootings.map((f) => f.id));
+      // Pending = optimistic footings (writer.upsert) που δεν είναι ακόμη στο model.
+      const pending = s.entities.filter(
+        (e) => isFootingEntity(e) && !modelIds.has(e.id),
+      );
+      return {
+        target,
+        entities: [...baseEntities, ...modelFootings, ...pending],
+        activeFloorElevationMm,
+      };
+    });
   },
   upsertEntity(entity) {
     set((s) => {

@@ -60,6 +60,8 @@ jest.mock('@/services/enterprise-id-convenience', () => ({
     mockIdCounter += 1;
     return `fnd_test${String(mockIdCounter).padStart(20, '0')}`;
   },
+  // ADR-459 Φ7 — foundationDocToEntity → createFoundation factory needs an IFC GUID.
+  generateIfcGuid: () => 'ifc_test_guid',
 }));
 
 // SUT import AFTER mocks
@@ -67,6 +69,8 @@ import {
   FoundationFirestoreService,
   createFoundationFirestoreService,
   entityToSaveInput,
+  foundationDocToEntity,
+  type FoundationDoc,
 } from '../foundation-firestore-service';
 import type { FoundationParams, FoundationEntity } from '../../types/foundation-types';
 import type { BimValidation } from '../../types/bim-base';
@@ -228,6 +232,53 @@ describe('entityToSaveInput', () => {
       params: PAD_PARAMS, validation: VALIDATION,
     } as unknown as FoundationEntity;
     expect(entityToSaveInput(entity).guideBindings).toBeUndefined();
+  });
+});
+
+describe('foundationDocToEntity (ADR-459 Φ7 — model-SSoT hydrate)', () => {
+  const baseDoc = (over: Partial<FoundationDoc> = {}): FoundationDoc =>
+    ({
+      id: 'fnd_x',
+      companyId: 'c1',
+      projectId: 'p1',
+      floorplanId: 'file_isogeio', // drifted provenance — must still ride along untouched
+      kind: 'pad',
+      params: PAD_PARAMS,
+      validation: VALIDATION,
+      floorId: 'flr_foundation',
+      ...over,
+    } as unknown as FoundationDoc);
+
+  it('hydrates a foundation entity (id + type) and re-derives geometry from params', () => {
+    const entity = foundationDocToEntity(baseDoc());
+    expect(entity.id).toBe('fnd_x');
+    expect(entity.type).toBe('foundation');
+    expect(entity.geometry).toBeDefined();
+  });
+
+  it('carries the durable floorId + (provenance) floorplanId onto the entity (ADR-420)', () => {
+    const entity = foundationDocToEntity(baseDoc());
+    expect(entity.floorId).toBe('flr_foundation');
+    expect(entity.floorplanId).toBe('file_isogeio');
+  });
+
+  it('uses the persisted geometry when present (no recompute)', () => {
+    const geometry = { area: 9.99 } as unknown as FoundationDoc['geometry'];
+    const entity = foundationDocToEntity(baseDoc({ geometry }));
+    expect(entity.geometry).toBe(geometry);
+  });
+
+  it('spreads grid hosting bindings when present (follow-on-move survives reload)', () => {
+    const guideBindings = [{ guideId: 'x1', slot: 'start-x' as const }];
+    const entity = foundationDocToEntity(
+      baseDoc({ guideBindings } as Partial<FoundationDoc>),
+    );
+    expect(entity.guideBindings).toEqual(guideBindings);
+  });
+
+  it('omits floorId when the doc has none (project/building-level fallback)', () => {
+    const entity = foundationDocToEntity(baseDoc({ floorId: undefined }));
+    expect(entity.floorId).toBeUndefined();
   });
 });
 

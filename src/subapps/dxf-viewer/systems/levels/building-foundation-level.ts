@@ -28,6 +28,8 @@ export interface FoundationLevelRef {
   readonly floorId?: string;
   readonly buildingId?: string;
   readonly sceneFileId?: string;
+  /** ADR-459 Φ7 — project scope για το cross-level `floorplan_foundations` subscription. */
+  readonly projectId?: string;
 }
 
 /** Στόχος εγγραφής/ανάγνωσης του ορόφου Θεμελίωσης (cross-level write/read). */

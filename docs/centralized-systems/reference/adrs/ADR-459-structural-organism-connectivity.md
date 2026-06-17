@@ -1,6 +1,6 @@
 # ADR-459 — Structural Organism / Analytical Connectivity Model
 
-**Status:** ACTIVE (Phase 0 + 1 + 2 + 4a + 4b + 4c + 4d + 4e + 4f implemented 2026-06-15· Phase 6 proactive + cross-level 2026-06-17· **Phase 7 Αυτόματος Σχεδιασμός Θεμελίωσης 2026-06-17**)
+**Status:** ACTIVE (Phase 0 + 1 + 2 + 4a + 4b + 4c + 4d + 4e + 4f implemented 2026-06-15· Phase 6 proactive + cross-level 2026-06-17· **Phase 7 Αυτόματος Σχεδιασμός Θεμελίωσης 2026-06-17· Phase 7 cross-level footing rendering all-floors + drift resilience 2026-06-17 (v8.1)**)
 **Discipline:** BIM / Structural (DXF Viewer subapp)
 **Σχετικά:** ADR-401 (auto-attach), ADR-436 (foundation discipline), ADR-456 (structural quantities), ADR-458 (beam-column cutback)
 
@@ -437,6 +437,39 @@ footing (όριο οικοπέδου — δεν υπάρχουν property lines)
 
 ## 8. Changelog
 
+- **2026-06-17 (v8.1, Opus):** **Phase 7 — Cross-level footing rendering (all-floors) + scope-drift resilience.**
+  Πρόβλημα (μετά τη v8 ghost stabilization): τα cross-level auto πέδιλα persist σωστά στο
+  `floorplan_foundations` (keyed-by-`floorId`, ADR-420) ΑΛΛΑ (α) **δεν φαίνονται** στο 3Δ «Όλοι οι όροφοι»
+  και (β) **flicker** στον όροφο Θεμελίωσης. **Root cause A (αρχιτεκτονικό):** οι all-floors aggregators
+  (`useFloors3DAggregator` 3Δ + `useBuildingFloorScenes` 2Δ) αντλούσαν το BIM κάθε ορόφου **μόνο** από το
+  scene snapshot — όπου τα cross-level auto πέδιλα δεν υπάρχουν ποτέ (το `stripForeignFloorBim` της v8
+  αφαίρεσε σωστά το λανθασμένο baking → αποκάλυψε ότι το model-sourcing path δεν υπήρξε ποτέ). **Root cause B
+  (data drift):** το πέδιλο doc είχε `floorplanId`=αρχείο **άλλου** ορόφου (corrupted level↔file του test
+  project). **Fix (Full SSoT, Revit-grade):** τα cross-level πέδιλα αντλούνται παντού από το **model SSoT
+  keyed-by-`floorId`** (το drift γίνεται inert — `floorplanId` = απλό provenance). NEW shared
+  `foundationDocToEntity` (SSoT hydrate· reuse στο `useFoundationPersistence`, dedup local `docToEntity`).
+  `useFoundationLevelSync` → realtime subscription στο `floorplan_foundations` (scoped `target.floorId`) +
+  snapshot base (footings αφαιρεμένα) → NEW store action `publishFoundationLevel` (base + model footings +
+  pending optimistic, anti-race με τον writer). NEW pure `replaceFootingsFromModel` (`scene-bim-load-policy`,
+  δίπλα στο `stripForeignFloorBim`) — οι aggregators κάνουν override την κατηγορία `foundations` του ορόφου
+  Θεμελίωσης με τα model footings (3Δ override `Bim3DEntities.foundations` + synthetic entry· 2Δ
+  `replaceFootingsFromModel` + synthetic minimal scene με `EMPTY_BOUNDS`). `FoundationLevelRef` += `projectId`
+  (subscription scope). **Fix B guard:** το floorId-keyed sourcing **είναι** το guard (το drift αδρανές)·
+  ο πραγματικός καθαρισμός των corrupted level docs = καθαρό test project (browser-verify). 11 νέα jest
+  (policy `replaceFootingsFromModel` 6 + `foundationDocToEntity` 5· υπάρχοντα policy/level/auto πράσινα).
+  UNCOMMITTED (browser-verify σε καθαρό project + commit + tsc από Giorgio· shared tree → git add ΜΟΝΟ δικά μου).
+  ΜΑΘΗΜΑ: cross-level rendering πρέπει να αντλεί από το model SSoT keyed-by-durable-id, ΠΟΤΕ από scene
+  snapshot ή volatile provenance — αλλιώς ένα σωστά persisted entity μένει αόρατο.
+  **Bugfix (browser-verify «rotation κολώνας → νέο πέδιλο follow αλλά το παλιό δεν διαγράφεται»):** ο
+  reconciler (`reconcileFoundationLayout`) είναι σωστός (rotation diff → create new + remove old — locked
+  στο reconcile test), αλλά το `useAutoFoundationDesign.recompute` διάβαζε τα existing footings προτιμώντας
+  τη **live foundation scene** (`getLevelScene`)· όταν αυτή είναι φορτωμένη αλλά **stale** (τα auto πέδιλα
+  ΔΕΝ μπαίνουν ποτέ σε scene snapshot) σκίαζε το model-backed store → το παλιό auto πέδιλο έλειπε από το
+  `existingAutoFootings` → 0 removes. FIX: NEW pure `bim/foundations/foundation-footing-candidates.ts`
+  `collectFoundationFootings(storeEntities, foundationScene)` — **model SSoT (store) πρωταρχικό** ∪ live scene
+  (dedup-by-id, store wins)· ο reconciler βλέπει πλέον πάντα το υπάρχον auto πέδιλο → το διαγράφει στο rotate/
+  move. +5 jest. ΜΑΘΗΜΑ: μετά τη μετάβαση σε model-SSoT sourcing, η προτίμηση «live scene first» έγινε
+  επικίνδυνη (stale snapshot σκιάζει το SSoT) — το store είναι πλέον το authoritative read.
 - **2026-06-17 (v8, Opus):** **Phase 7 — Αυτόματος Σχεδιασμός Θεμελίωσης (§6j).** Decision Giorgio: η εφαρμογή
   αποφασίζει αυτόματα μεμονωμένο vs combined + διαστάσεις + οπλισμός (διεθνής πρακτική), χωρίς ερώτηση → info.
   **Engine:** NEW pure `auto-foundation-layout.ts` (union-find overlap/clearance 100 mm + combined load-centroid,

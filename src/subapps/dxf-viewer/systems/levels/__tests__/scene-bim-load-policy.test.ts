@@ -8,7 +8,12 @@
  * half-width on reload despite clean per-entity docs" divergence.
  */
 
-import { reconcileLoadedSceneBim, isBimOrStairEntity, stripForeignFloorBim } from '../scene-bim-load-policy';
+import {
+  reconcileLoadedSceneBim,
+  isBimOrStairEntity,
+  stripForeignFloorBim,
+  replaceFootingsFromModel,
+} from '../scene-bim-load-policy';
 import type { SceneModel } from '../../../types/scene';
 import type { Entity } from '../../../types/entities';
 
@@ -109,5 +114,46 @@ describe('stripForeignFloorBim', () => {
   it('does NOT strip a foreign-floor pure-DXF entity (only BIM is floor-scoped)', () => {
     const s = scene([entF('line_x', 'line', 'floorF')]);
     expect(stripForeignFloorBim(s, 'floorGround').entities).toHaveLength(1);
+  });
+});
+
+describe('replaceFootingsFromModel', () => {
+  it('replaces stale scene footings with the authoritative model footings', () => {
+    // snapshot έχει ένα stale πέδιλο· το model SSoT έχει δύο (auto-designed).
+    const s = scene([ent('line1', 'line'), ent('fnd_stale', 'foundation')]);
+    const modelFootings = [ent('fnd_a', 'foundation'), ent('fnd_b', 'foundation')];
+    const result = replaceFootingsFromModel(s, modelFootings);
+    expect(result.entities.map((e) => e.id).sort()).toEqual(['fnd_a', 'fnd_b', 'line1']);
+  });
+
+  it('keeps non-foundation entities (pure-DXF + other BIM) untouched', () => {
+    const s = scene([ent('l1', 'line'), ent('c1', 'column'), ent('w1', 'wall')]);
+    const result = replaceFootingsFromModel(s, [ent('fnd_a', 'foundation')]);
+    expect(result.entities.map((e) => e.id).sort()).toEqual(['c1', 'fnd_a', 'l1', 'w1']);
+  });
+
+  it('drops scene footings when the model has none (auto-design removed them)', () => {
+    const s = scene([ent('l1', 'line'), ent('fnd_stale', 'foundation')]);
+    const result = replaceFootingsFromModel(s, []);
+    expect(result.entities.map((e) => e.id)).toEqual(['l1']);
+  });
+
+  it('dedup-by-id: a model footing colliding with a non-foundation id is dropped', () => {
+    const s = scene([ent('dup', 'column')]);
+    const result = replaceFootingsFromModel(s, [ent('dup', 'foundation')]);
+    expect(result.entities).toHaveLength(1);
+    expect(result.entities[0].type).toBe('column');
+  });
+
+  it('is a same-reference no-op when no scene footings and no model footings', () => {
+    const s = scene([ent('l1', 'line'), ent('c1', 'column')]);
+    expect(replaceFootingsFromModel(s, [])).toBe(s);
+  });
+
+  it('keeps non-entity scene fields (spread) when injecting', () => {
+    const s = scene([ent('l1', 'line')]);
+    const result = replaceFootingsFromModel(s, [ent('fnd_a', 'foundation')]);
+    expect(result.units).toBe('mm');
+    expect(result.layersById).toBe(s.layersById);
   });
 });

@@ -34,7 +34,10 @@ import { COLLECTIONS } from '@/config/firestore-collections';
 import { generateFoundationId } from '@/services/enterprise-id-convenience';
 import { firestoreQueryService } from '@/services/firestore';
 import { stripUndefinedDeep } from '@/utils/firestore-sanitize';
+import { createFoundation } from '@/services/factories/foundation.factory';
 import { buildBimScopeConstraints, bimScopeWriteFields } from '../persistence/bim-floor-scope';
+import { computeFoundationGeometry } from '../geometry/foundation-geometry';
+import { validateFoundationParams } from '../validators/foundation-validator';
 import type {
   FoundationEntity,
   FoundationGeometry,
@@ -215,6 +218,37 @@ export function createFoundationFirestoreService(
 // ============================================================================
 // HELPERS
 // ============================================================================
+
+/**
+ * Build a scene-side `FoundationEntity` από persisted `FoundationDoc` (SSoT
+ * hydrate). Geometry + validation recomputed via pure functions· IFC mixin
+ * auto-filled από το `createFoundation` factory (predefinedType ντετερμινιστικά
+ * από kind). Reused by `useFoundationPersistence` (active-floor subscription) +
+ * `useFoundationLevelSync` (cross-level foundation-floor model sourcing, ADR-459 Φ7).
+ *
+ * Carries the durable floor scope (`floorId`/`floorplanId`) onto the entity so the
+ * cross-level association guards (`stripForeignFloorBim` / `replaceFootingsFromModel`)
+ * key correctly on the building-storey id (ADR-420), independent of any provenance drift.
+ */
+export function foundationDocToEntity(doc: FoundationDoc): FoundationEntity {
+  const validation = doc.validation ?? validateFoundationParams(doc.params).bimValidation;
+  const entity = createFoundation({
+    id: doc.id,
+    params: doc.params,
+    geometry: doc.geometry ?? computeFoundationGeometry(doc.params),
+    layerId: doc.layerId ?? '0',
+    visible: true,
+    validation,
+  });
+  // ADR-441 Slice 3 — restore grid hosting bindings (createFoundation factory δεν
+  // δέχεται bindings → spread μετά) so follow-on-move survives reload.
+  const hosted = doc.guideBindings ? { ...entity, guideBindings: doc.guideBindings } : entity;
+  return {
+    ...hosted,
+    ...(doc.floorId ? { floorId: doc.floorId } : {}),
+    floorplanId: doc.floorplanId,
+  };
+}
 
 /**
  * Convert a scene-side `FoundationEntity` σε `FoundationSaveInput`. Re-derivable

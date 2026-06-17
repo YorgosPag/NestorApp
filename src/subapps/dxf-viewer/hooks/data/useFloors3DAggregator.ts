@@ -41,6 +41,7 @@ import { buildActiveStoreyContext } from '../../systems/levels/active-storey-con
 // ADR-459 Φ7 — foreign-floor BIM guard: το stack entry κάθε ορόφου περιέχει ΜΟΝΟ τα
 // δικά του entities (cross-level πέδιλο baked σε λάθος snapshot δεν εμφανίζεται 3Δ).
 import { stripForeignFloorBim } from '../../systems/levels/scene-bim-load-policy';
+import { useFoundationLevelStore } from '../../state/foundation-level-store';
 import {
   isWallEntity, isColumnEntity, isBeamEntity, isFoundationEntity, isSlabEntity,
   isSlabOpeningEntity, isOpeningEntity, isStairEntity, isMepFixtureEntity, isElectricalPanelEntity, isRailingEntity, isFurnitureEntity, isMepSegmentEntity, isMepFittingEntity, isMepManifoldEntity, isMepRadiatorEntity, isMepBoilerEntity, isMepWaterHeaterEntity, isRoofEntity, isFloorFinishEntity, isMepUnderfloorEntity,
@@ -91,6 +92,16 @@ export function useFloors3DAggregator(active: boolean): void {
   const getLevelScene = levelsCtx?.getLevelScene;
 
   const activeLevelId = useBim3DEntitiesStore((s) => s.activeLevelId);
+
+  // ADR-459 Φ7 — ο όροφος Θεμελίωσης + τα πέδιλά του από το model SSoT
+  // (foundation-level-store). `target` null ⇒ ο όροφος Θεμελίωσης είναι ο ενεργός
+  // (τα πέδιλα έρχονται live) ή single-level → μηδέν injection.
+  const foundationLevelId = useFoundationLevelStore((s) => s.target?.levelId ?? null);
+  const foundationStoreEntities = useFoundationLevelStore((s) => s.entities);
+  const modelFootings = useMemo(
+    () => foundationStoreEntities.filter(isFoundationEntity),
+    [foundationStoreEntities],
+  );
 
   // ADR-399 Phase B — building of the active level. Drives the canonical floor
   // elevation lookup below.
@@ -168,10 +179,19 @@ export function useFloors3DAggregator(active: boolean): void {
     (t: TargetFloor): Bim3DEntities | null => {
       if (t.levelId === activeLevelId) return liveActive;
       const scene = getLevelScene?.(t.levelId);
-      if (scene && scene.entities.length > 0) return extractBim3DEntities(stripForeignFloorBim(scene, t.floorId));
-      return loaded.get(t.levelId) ?? null;
+      const base =
+        scene && scene.entities.length > 0
+          ? extractBim3DEntities(stripForeignFloorBim(scene, t.floorId))
+          : loaded.get(t.levelId) ?? null;
+      // ADR-459 Φ7 — ο όροφος Θεμελίωσης (non-active): τα cross-level auto πέδιλα δεν
+      // είναι ποτέ στο scene snapshot· έρχονται από το model SSoT (floorplan_foundations).
+      // Override της κατηγορίας `foundations` με τα authoritative model footings· synthetic
+      // entry όταν δεν υπάρχει καθόλου snapshot αλλά υπάρχουν πέδιλα.
+      if (t.levelId !== foundationLevelId) return base;
+      if (!base && modelFootings.length === 0) return null;
+      return { ...(base ?? EMPTY_BIM_ENTITIES), foundations: modelFootings };
     },
-    [activeLevelId, liveActive, getLevelScene, loaded],
+    [activeLevelId, liveActive, getLevelScene, loaded, foundationLevelId, modelFootings],
   );
 
   // Lazily fetch snapshots for unvisited, file-linked floors.

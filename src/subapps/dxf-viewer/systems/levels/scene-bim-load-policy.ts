@@ -87,3 +87,37 @@ export function stripForeignFloorBim(
   });
   return entities.length === scene.entities.length ? scene : { ...scene, entities };
 }
+
+/** True για foundation entities (πέδιλα) — minimal type-tag check. */
+function isFoundationLike(entity: Entity): boolean {
+  return (entity as { type?: string }).type === 'foundation';
+}
+
+/**
+ * ADR-459 Φ7 — αντικαθιστά τα foundation entities (πέδιλα) ενός scene με τα
+ * authoritative `modelFootings` που αντλούνται από το model SSoT
+ * (`floorplan_foundations`, keyed-by-`floorId`). Τα cross-level auto πέδιλα ΔΕΝ
+ * είναι ποτέ στο scene snapshot του ορόφου Θεμελίωσης — άρα οι all-floors aggregators
+ * πρέπει να τα ενώσουν από το model ώστε να εμφανιστούν στο «Όλοι οι όροφοι».
+ *
+ * Πετά ΟΛΑ τα υπάρχοντα foundation entities του scene (stale / drifted-then-stripped)
+ * και προσθέτει τα `modelFootings` (dedup-by-id έναντι των non-foundation entities,
+ * για να μη διπλασιαστεί ποτέ ένα id). Pure + idempotent· same-reference no-op όταν
+ * δεν υπάρχουν footings να αλλάξουν.
+ *
+ * @param scene         Το scene του ορόφου Θεμελίωσης (μετά από `stripForeignFloorBim`).
+ * @param modelFootings Τα πέδιλα από το `floorplan_foundations` (ως scene entities).
+ */
+export function replaceFootingsFromModel(
+  scene: SceneModel,
+  modelFootings: readonly Entity[],
+): SceneModel {
+  const nonFoundations = scene.entities.filter((e) => !isFoundationLike(e));
+  // No-op fast-path: κανένα πέδιλο στο scene και κανένα στο model.
+  if (nonFoundations.length === scene.entities.length && modelFootings.length === 0) {
+    return scene;
+  }
+  const takenIds = new Set(nonFoundations.map((e) => e.id));
+  const footings = modelFootings.filter((f) => !takenIds.has(f.id));
+  return { ...scene, entities: [...nonFoundations, ...footings] };
+}

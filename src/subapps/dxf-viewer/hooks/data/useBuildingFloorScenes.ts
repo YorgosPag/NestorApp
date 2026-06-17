@@ -35,10 +35,16 @@ import { useEffect, useMemo, useState } from 'react';
 import { useLevelsOptional } from '../../systems/levels/useLevels';
 import { DxfFirestoreService } from '../../services/dxf-firestore.service';
 import { useViewMode3DStore } from '../../bim-3d/stores/ViewMode3DStore';
-// ADR-459 Φ7 — read-side foreign-floor BIM guard: ένα floor model δείχνει ΜΟΝΟ τα
-// δικά του entities· legacy cross-level πέδιλο (floorId άλλου ορόφου baked στο
-// snapshot) δεν εμφανίζεται πια ως «φάντασμα» στο all-floors view.
-import { stripForeignFloorBim } from '../../systems/levels/scene-bim-load-policy';
+// ADR-459 Φ7 — read-side foreign-floor BIM guard + model-SSoT footing injection:
+// ένα floor model δείχνει ΜΟΝΟ τα δικά του entities, και ο όροφος Θεμελίωσης παίρνει
+// τα cross-level πέδιλα από το `floorplan_foundations` (όχι από το snapshot).
+import {
+  stripForeignFloorBim,
+  replaceFootingsFromModel,
+} from '../../systems/levels/scene-bim-load-policy';
+import { useFoundationLevelStore } from '../../state/foundation-level-store';
+import { isFoundationEntity, type Entity } from '../../types/entities';
+import { EMPTY_BOUNDS } from '../../config/geometry-constants';
 import type { SceneModel } from '../../types/scene';
 
 /** One non-active building floor, as its raw (unconverted) SceneModel. */
@@ -62,6 +68,14 @@ export function useBuildingFloorScenes(active: boolean): readonly BuildingFloorS
 
   // SSoT visibility (shared with 3D / Floor3DPanel) — 'hide' excludes the floor.
   const floorVisibilityModes = useViewMode3DStore((s) => s.floorVisibilityModes);
+
+  // ADR-459 Φ7 — ο όροφος Θεμελίωσης + τα πέδιλά του από το model SSoT.
+  const foundationLevelId = useFoundationLevelStore((s) => s.target?.levelId ?? null);
+  const foundationStoreEntities = useFoundationLevelStore((s) => s.entities);
+  const modelFootings = useMemo<readonly Entity[]>(
+    () => foundationStoreEntities.filter(isFoundationEntity),
+    [foundationStoreEntities],
+  );
 
   // Firestore snapshots for floors not visited this session.
   const [loaded, setLoaded] = useState<ReadonlyMap<string, SceneModel | null>>(new Map());
@@ -133,15 +147,33 @@ export function useBuildingFloorScenes(active: boolean): readonly BuildingFloorS
     if (!active) return [];
     const out: BuildingFloorScene[] = [];
     for (const t of targets) {
+      const isFoundationFloor = t.levelId === foundationLevelId;
       const raw = resolveScene(t);
-      if (!raw || raw.entities.length === 0) continue;
+      if (!raw || raw.entities.length === 0) {
+        // ADR-459 Φ7 — ο όροφος Θεμελίωσης χωρίς (έγκυρο) snapshot: synthetic scene με
+        // μόνο τα model footings, ώστε το 2Δ underlay να τα δείχνει.
+        if (isFoundationFloor && modelFootings.length > 0) {
+          const model = {
+            entities: modelFootings,
+            layersById: {},
+            bounds: { ...EMPTY_BOUNDS },
+            units: 'mm',
+          } as unknown as SceneModel;
+          out.push({ levelId: t.levelId, floorId: t.floorId, model });
+        }
+        continue;
+      }
       // Strip foreign-floor BIM (cross-level leak) so a floor's underlay shows only
       // its own entities (ADR-459 Φ7 — defense-in-depth vs legacy baked snapshots).
-      const model = stripForeignFloorBim(raw, t.floorId);
+      const stripped = stripForeignFloorBim(raw, t.floorId);
+      // ο όροφος Θεμελίωσης παίρνει τα cross-level auto πέδιλα από το model SSoT.
+      const model = isFoundationFloor
+        ? replaceFootingsFromModel(stripped, modelFootings)
+        : stripped;
       out.push({ levelId: t.levelId, floorId: t.floorId, model });
     }
     return out;
     // resolveScene closes over getLevelScene + loaded; both are deps.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [active, targets, getLevelScene, loaded]);
+  }, [active, targets, getLevelScene, loaded, foundationLevelId, modelFootings]);
 }
