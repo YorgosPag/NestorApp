@@ -32,6 +32,23 @@ jest.mock('../../foundations/foundation-firestore-service', () => ({ foundationD
 jest.mock('../../floor-finishes/floor-finish-firestore-service', () => ({ floorFinishDocToEntity: (d: unknown) => d }));
 jest.mock('../../thermal-spaces/thermal-space-firestore-service', () => ({ thermalSpaceDocToEntity: (d: unknown) => d }));
 jest.mock('../../space-separators/space-separator-firestore-service', () => ({ spaceSeparatorDocToEntity: (d: unknown) => d }));
+jest.mock('../../../hooks/data/slab-opening-persistence-helpers', () => ({ slabOpeningDocToEntity: (d: unknown) => d }));
+jest.mock('../../../hooks/data/railing-persistence-helpers', () => ({ railingDocToEntity: (d: unknown) => d }));
+jest.mock('../../../hooks/data/furniture-persistence-helpers', () => ({ furnitureDocToEntity: (d: unknown) => d }));
+jest.mock('../../../hooks/data/floorplan-symbol-persistence-helpers', () => ({ floorplanSymbolDocToEntity: (d: unknown) => d }));
+jest.mock('../../../hooks/data/electrical-panel-persistence-helpers', () => ({ electricalPanelDocToEntity: (d: unknown) => d }));
+jest.mock('../../../hooks/data/mep-fixture-persistence-helpers', () => ({ mepFixtureDocToEntity: (d: unknown) => d }));
+jest.mock('../../../hooks/data/mep-segment-persistence-helpers', () => ({ mepSegmentDocToEntity: (d: unknown) => d }));
+jest.mock('../../../hooks/data/mep-fitting-persistence-helpers', () => ({ mepFittingDocToEntity: (d: unknown) => d }));
+jest.mock('../../../hooks/data/mep-manifold-persistence-helpers', () => ({ mepManifoldDocToEntity: (d: unknown) => d }));
+jest.mock('../../../hooks/data/mep-radiator-persistence-helpers', () => ({ mepRadiatorDocToEntity: (d: unknown) => d }));
+jest.mock('../../../hooks/data/mep-boiler-persistence-helpers', () => ({ mepBoilerDocToEntity: (d: unknown) => d }));
+jest.mock('../../../hooks/data/mep-water-heater-persistence-helpers', () => ({ mepWaterHeaterDocToEntity: (d: unknown) => d }));
+jest.mock('../../../hooks/data/mep-underfloor-persistence-helpers', () => ({ mepUnderfloorDocToEntity: (d: unknown) => d }));
+// opening — host-aware converter: returns null when the host wall is absent.
+jest.mock('../../walls/opening-doc-hydration', () => ({
+  openingDocToEntity: (d: { id: string }, host: unknown) => (host ? d : null),
+}));
 
 import { loadFloorBimEntities } from '../cross-floor-bim-loader';
 import { buildBimScopeConstraints } from '../bim-floor-scope';
@@ -55,9 +72,10 @@ describe('loadFloorBimEntities', () => {
   it('issues one getAll per registered kind, under the scope constraints (no companyId in constraints)', async () => {
     getAll.mockResolvedValue({ documents: [] });
     await loadFloorBimEntities(scope);
-    // 10 covered kinds (column, wall, beam, slab, roof, stair, foundation,
-    // floor-finish, thermal-space, space-separator).
-    expect(getAll).toHaveBeenCalledTimes(10);
+    // 24 getAll: 22 registry kinds + walls (explicit) + openings (host-aware).
+    // ADR-469 v1.1 added slab-opening, railing, furniture, floorplan-symbol,
+    // electrical-panel, opening, and the full MEP equipment set.
+    expect(getAll).toHaveBeenCalledTimes(24);
     for (const call of getAll.mock.calls) {
       expect(call[1]).toEqual({ constraints: SENTINEL_CONSTRAINTS });
     }
@@ -99,5 +117,24 @@ describe('loadFloorBimEntities', () => {
   it('returns [] for a floor with no persisted BIM', async () => {
     getAll.mockResolvedValue({ documents: [] });
     expect(await loadFloorBimEntities(scope)).toEqual([]);
+  });
+
+  it('hydrates openings against their host wall and drops host-less openings', async () => {
+    // One wall (w1) is the only host present. The opening keyed to w1 hydrates;
+    // the opening pointing at a missing wall hydrates to null and is dropped.
+    const hosted = { id: 'op1', params: { wallId: 'w1' } };
+    const orphan = { id: 'op2', params: { wallId: 'missing' } };
+    getAll.mockImplementation((key: string) =>
+      Promise.resolve({
+        documents:
+          key === 'FLOORPLAN_WALLS'
+            ? [ent('w1', 'wall')]
+            : key === 'FLOORPLAN_OPENINGS'
+              ? [hosted, orphan]
+              : [],
+      }),
+    );
+    const result = await loadFloorBimEntities(scope);
+    expect(result.map((e) => e.id).sort()).toEqual(['op1', 'w1']);
   });
 });
