@@ -787,7 +787,6 @@
   },
   "gripMenu": {
     "ariaLabel": "Μενού επεξεργασίας λαβής",
-    "stretch": "Έλξη",
     "lengthen": "Μήκος",
     "addVertex": "Προσθήκη κορυφής",
     "removeVertex": "Διαγραφή κορυφής",

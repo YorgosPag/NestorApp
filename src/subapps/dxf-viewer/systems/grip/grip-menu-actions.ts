@@ -171,9 +171,6 @@ export function bindMenuAction(
   ctx: GripMenuActionContext,
 ): (() => void) | null {
   switch (actionId) {
-    case 'stretch':
-      return () => { ctx.onAfterDispatch(); };
-
     case 'lengthen':
       if (entity.type !== 'line' && entity.type !== 'arc') return null;
       return () => { void actionLengthen(entity, grip, ctx); };

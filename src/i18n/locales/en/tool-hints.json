@@ -815,7 +815,6 @@
   },
   "gripMenu": {
     "ariaLabel": "Grip edit menu",
-    "stretch": "Stretch",
     "lengthen": "Lengthen",
     "addVertex": "Add Vertex",
     "removeVertex": "Remove Vertex",
