@@ -113,10 +113,10 @@ describe('computeLoadPathPatches', () => {
     };
     const patches = computeLoadPathPatches(entities, graph, SETTINGS);
     const b = patchById(patches, 'b1');
-    // tributary κάθε κολώνας = 25 m² (5m bay) → μ.ό. 25· 1 όροφος.
+    // ADR-474: 2 γωνιακές κολώνες 5m, καμία mirror → tributary 2.5(half-bay)×5(default y)=12.5 m² → μ.ό. 12.5· 1 όροφος.
     const selfKn = 0.5 * 2400 * 9.81 / 1000; // ≈ 11.77 kN
-    expect(b?.liveAxialKn).toBeCloseTo(25 * 1 * 2, 1); // 50
-    expect(b?.deadAxialKn).toBeCloseTo(25 * 1 * 6 + selfKn, 1); // 150 + self
+    expect(b?.liveAxialKn).toBeCloseTo(12.5 * 1 * 2, 1); // 25
+    expect(b?.deadAxialKn).toBeCloseTo(12.5 * 1 * 6 + selfKn, 1); // 75 + self
   });
 
   it('πλάκα → εμβαδόν panel × area-loads (1 όροφος)', () => {
@@ -215,18 +215,20 @@ describe('grid-anchored tributary (corner-anchored 5×5 columns)', () => {
   };
   const selfKn4 = 0.48 * 2400 * 9.81 / 1000 * 4; // ίδιο βάρος × 4 όροφοι
 
-  it('ΜΕ getOffset → tributary βάσει αξόνων (5×5=25 m²), ΟΧΙ κεντροειδούς', () => {
+  it('ΜΕ getOffset → tributary βάσει αξόνων (γωνία ¼: 2.5×2.5=6.25 m²), ΟΧΙ κεντροειδούς', () => {
     const patches = computeLoadPathPatches(entities, graph, SETTINGS, getOffset);
     const c = patchById(patches, 'c1');
-    expect(c?.liveAxialKn).toBeCloseTo(25 * 4 * 2, 1);           // 200 (grid)
-    expect(c?.deadAxialKn).toBeCloseTo(25 * 4 * 6 + selfKn4, 1); // 645.2 (grid)
+    // ADR-474: γωνιακή, grid 5m → half-bay 2.5 ανά άξονα (εξωτερικά 0) → 6.25 m².
+    expect(c?.liveAxialKn).toBeCloseTo(6.25 * 4 * 2, 1);           // 50 (grid)
+    expect(c?.deadAxialKn).toBeCloseTo(6.25 * 4 * 6 + selfKn4, 1); // 195.2 (grid)
   });
 
-  it('ΧΩΡΙΣ getOffset → fallback στο κεντροειδές (4.6×4.6=21.16 m², μικρότερο φορτίο)', () => {
+  it('ΧΩΡΙΣ getOffset → fallback στο κεντροειδές (μικρότερο: 2.3×2.3=5.29 m²)', () => {
     const patches = computeLoadPathPatches(entities, graph, SETTINGS);
     const c = patchById(patches, 'c1');
-    expect(c?.liveAxialKn).toBeCloseTo(21.16 * 4 * 2, 0);        // ~169.3 (centroid)
-    expect(c!.liveAxialKn).toBeLessThan(200);                    // < grid → fallback ενεργό
+    // Κεντροειδή 4.6m μεταξύ τους → γωνιακό half-bay 2.3 ανά άξονα → 5.29 m².
+    expect(c?.liveAxialKn).toBeCloseTo(5.29 * 4 * 2, 0);         // ~42.3 (centroid)
+    expect(c!.liveAxialKn).toBeLessThan(6.25 * 4 * 2);           // < grid → fallback ενεργό
   });
 });
 

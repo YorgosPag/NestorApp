@@ -25,14 +25,26 @@ describe('computeGridTributaryAreas (grid half-spacing)', () => {
     expect(areas.get('1-1')).toBeCloseTo(25, 6);
   });
 
-  it('γωνιακή (edge) κολώνα → mirror του εσωτερικού half-spacing (5×5=25 m²)', () => {
+  it('γωνιακή κολώνα ενός φατνώματος → πραγματικό ¼ (καμία mirror, ADR-474)', () => {
     const cols: TributaryColumn[] = [
       { id: 'a', xM: 0, yM: 0 }, { id: 'b', xM: 6, yM: 0 },
       { id: 'c', xM: 0, yM: 4 }, { id: 'd', xM: 6, yM: 4 },
     ];
     const areas = computeGridTributaryAreas(cols);
-    // a: X mirror 3+3=6, Y mirror 2+2=4 → 24 m².
-    expect(areas.get('a')).toBeCloseTo(24, 6);
+    // a: X half-bay μόνο εσωτερικά 3, εξωτερικά 0 → 3· Y → 2 → 3×2 = 6 m² (= ¼ του 6×4 bay).
+    expect(areas.get('a')).toBeCloseTo(6, 6);
+    // Και οι 4 γωνίες ίσες· σύνολο = ολόκληρο το φάτνωμα (6×4=24), όχι 4×.
+    const total = ['a', 'b', 'c', 'd'].reduce((s, id) => s + (areas.get(id) ?? 0), 0);
+    expect(total).toBeCloseTo(24, 6);
+  });
+
+  it('Revit ratios σε 3×3 κάναβο 5m → γωνία 6.25 : ακμή 12.5 : εσωτερική 25 (1:2:4)', () => {
+    const cols: TributaryColumn[] = [];
+    for (let i = 0; i < 3; i++) for (let j = 0; j < 3; j++) cols.push({ id: `${i}-${j}`, xM: i * 5, yM: j * 5 });
+    const areas = computeGridTributaryAreas(cols);
+    expect(areas.get('0-0')).toBeCloseTo(6.25, 6); // γωνία = ¼
+    expect(areas.get('1-0')).toBeCloseTo(12.5, 6); // ακμή = ½
+    expect(areas.get('1-1')).toBeCloseTo(25, 6); // εσωτερική = πλήρες
   });
 
   it('μεμονωμένη κολώνα → DEFAULT_BAY_SPAN_M² (κανένας γείτονας)', () => {

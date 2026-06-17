@@ -44,6 +44,23 @@ store `setOccupancy` + `loadForBuilding`· οι 2 hooks (`useProactiveStructural
 - Ο επανυπολογισμός είναι ντετερμινιστικός (μηδέν feedback) → καμία αλληλεπίδραση με τον
   S3 convergence guard (ADR-472).
 
+## 3β. Edge tributary realism (Revit-grade, 2026-06-17) — καμία mirror στην περίμετρο
+
+Παρατήρηση Giorgio σε browser-verify: 4 κολώνες σε φάτνωμα 10×10 → υπερβολικά μεγάλα πέδιλα
+(3.15×3.15 m). Ρίζα: το `tributaryWidth` (`load-takedown.ts`, ADR-464) **καθρέφτιζε** (mirror) το
+half-spacing στις ακραίες κολώνες → κάθε γωνιακή έπαιρνε **ολόκληρο** φάτνωμα (100 m²) αντί του
+πραγματικού **¼** (25 m²) → 4× φορτίο → 4× μεγαλύτερα πέδιλα. Η διαστασιολόγηση πεδίλου (A=N/σ) ήταν
+**σωστή** — το **φορτίο** ήταν υπερ-συντηρητικό (πιο πολύ από τη Revit).
+
+**Fix (Revit-grade):** half-bay **μόνο** προς υπαρκτό γείτονα· εξωτερική πλευρά ακραίας = **0** (slab
+edge στον άξονα). Αποτέλεσμα ratios 1:2:4 (γωνία : ακμή : εσωτερική) — όπως η κλασική tributary
+μέθοδος. Μεμονωμένος άξονας → `DEFAULT_BAY_SPAN_M` (αμετάβλητο). `storeyCount` ανέγγιχτο (= σωστός
+πολλαπλασιαστής δηλωμένου κτιρίου). Slab overhang/πρόβολος = DEFER.
+
+**Επίδραση:** για 4-κολώνο φάτνωμα 10×10, 3 όροφοι → κάθε κολώνα 25 m²×3 → πέδιλα ~1.6×1.6 m
+(ρεαλιστικά). Το `computeFootingTakedownLoads` (ADR-464 oracle) χρησιμοποιεί το ίδιο tributary →
+regression test παραμένει συνεπές (αλλάζουν μαζί). 76 loads/footing jest GREEN.
+
 ## 4. Όρια / DEFER (100% ειλικρίνεια)
 
 - **Occupancy UI selector:** δεν υπάρχει σήμερα structural-settings panel στον viewer που να
@@ -70,6 +87,10 @@ invalid-falls-to-auto. Regression: structural-settings-store + takedown suites G
 
 ## 7. Changelog
 
+- **2026-06-17 (edge tributary realism, UNCOMMITTED):** `tributaryWidth` (`load-takedown.ts`) — καμία
+  mirror στην περίμετρο· ακραία/γωνιακή κολώνα παίρνει πραγματικό ¼/½ φάτνωμα (ratios 1:2:4). Έλυσε
+  υπερμεγέθη πέδιλα σε γωνιακές κολώνες (4× φορτίο). `storeyCount` αμετάβλητο. Βλ. §3β. (ADR-464/467
+  shared tributary· cross-ref στα changelogs τους.)
 - **2026-06-17 (υλοποίηση, UNCOMMITTED):** NEW `occupancy-loads.ts` SSoT (q_k EN1991-1-1 + auto g_k +
   `resolveEffectiveAreaLoads`)· `StructuralSettings += occupancy`· store `setOccupancy`· 2 hooks wired
   (boy-scout dedupe `?? 0`). Default residential → zero-input φορτία. UI selector = follow-up (§4).

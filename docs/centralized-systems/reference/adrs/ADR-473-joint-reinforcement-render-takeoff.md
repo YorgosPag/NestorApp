@@ -123,3 +123,5 @@ computeJointReinforcementQuantities(OrganismContinuityResult)
 | Ημερομηνία | Φάση | Περιγραφή |
 |---|---|---|
 | 2026-06-17 | Slice 0-2 | Initial: Workstream A (3Δ render) + Workstream B (BOQ data). UNCOMMITTED. |
+| 2026-06-17 | Fix | `anchorageBeamSegs` L-shape: οριζόντιο σκέλος κόβεται στην απέναντι παρειά κολόνας (`footprintFarReach`) + κατακόρυφος κάμπτης — δεν προεξέχει έξω από την κολόνα. UNCOMMITTED. |
+| 2026-06-17 | Fix | **Dowel anchorage ΕΝΤΟΣ πεδίλου (Revit starter bars).** `dowelSegs` clamp κατακόρυφου σκέλους σε `max(topZmm−lbd, baseZmm+cover)` + οριζόντιος L-foot στη βάση (`dowelFootSeg`, προς κέντρο footprint, capped via `footprintFarReach`) για το υπόλοιπο lbd. Footing cover μέσω `resolveActiveFootingReinforcementForParams` (SSoT). Έλυσε «αναμονές προεξέχουν κάτω από το πέδιλο στο χώμα». UNCOMMITTED. |

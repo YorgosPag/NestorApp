@@ -10,9 +10,10 @@
  *
  * **Επιφάνεια ευθύνης (tributary area)** = grid half-spacing ανά άξονα (Revit-grade):
  * το ορθογώνιο ευθύνης μιας κολώνας έχει πλευρές = μισή απόσταση προς τις γειτονικές
- * κολώνες ανά διεύθυνση (X, Y). Edge κολώνες (γείτονας μόνο στη μία μεριά) καθρεφτίζουν
- * το εσωτερικό half-spacing. Μεμονωμένος άξονας (κανένας γείτονας) → `DEFAULT_BAY_SPAN_M`.
- * Ακανόνιστη Voronoi κατανομή = DEFER (ξεχωριστό ADR).
+ * κολώνες ανά διεύθυνση (X, Y). Ακραίες/γωνιακές κολώνες παίρνουν half-bay **μόνο** προς
+ * την εσωτερική (υπαρκτή) πλευρά — η εξωτερική (slab edge) δίνει 0 (ADR-474: καμία mirror
+ * → η γωνιακή παίρνει το πραγματικό ¼, όχι ολόκληρο φάτνωμα). Μεμονωμένος άξονας (κανένας
+ * γείτονας) → `DEFAULT_BAY_SPAN_M`. Slab overhang/πρόβολος + ακανόνιστη Voronoi = DEFER.
  *
  * Pure — zero React/DOM/Firestore. Μονάδες: μήκη m, area loads kPa (=kN/m²), φορτία kN.
  *
@@ -47,9 +48,13 @@ function gridLines(values: readonly number[]): number[] {
 }
 
 /**
- * Tributary πλάτος (m) γύρω από θέση `p` μέσα στους άξονες `lines`: άθροισμα των
- * half-spacings προς τους δύο γείτονες. Edge → mirror του υπάρχοντος· μεμονωμένος
- * άξονας → `DEFAULT_BAY_SPAN_M`.
+ * Tributary πλάτος (m) γύρω από θέση `p` μέσα στους άξονες `lines` — **Revit-grade**:
+ * half-spacing ΜΟΝΟ προς υπαρκτό γείτονα ανά πλευρά· **καμία mirror** στην περίμετρο.
+ * Η εξωτερική πλευρά μιας ακραίας/γωνιακής κολώνας ΔΕΝ φέρει πλάκα (slab edge πάνω στον
+ * άξονα) → συνεισφορά 0. Έτσι η γωνιακή κολώνα ενός φατνώματος παίρνει το πραγματικό ¼,
+ * ΟΧΙ ολόκληρο (ADR-474 — πρώην mirror υπερεκτιμούσε 2× ανά ακραίο άξονα). Όταν δεν
+ * υπάρχει γείτονας σε ΚΑΜΙΑ πλευρά (μεμονωμένος άξονας) → `DEFAULT_BAY_SPAN_M` (παραδοχή
+ * τυπικού φατνώματος, αφού λείπει γεωμετρία κανάβου). Slab overhang/πρόβολος = DEFER.
  */
 function tributaryWidth(p: number, lines: readonly number[]): number {
   if (lines.length === 0) return DEFAULT_BAY_SPAN_M;
@@ -61,11 +66,12 @@ function tributaryWidth(p: number, lines: readonly number[]): number {
   }
   const prev = idx > 0 ? lines[idx - 1] : null;
   const next = idx < lines.length - 1 ? lines[idx + 1] : null;
-  const halfRight = next != null ? (next - lines[idx]) / 2
-    : prev != null ? (lines[idx] - prev) / 2 : DEFAULT_BAY_SPAN_M / 2;
-  const halfLeft = prev != null ? (lines[idx] - prev) / 2
-    : next != null ? (next - lines[idx]) / 2 : DEFAULT_BAY_SPAN_M / 2;
-  return halfLeft + halfRight;
+  // Half-bay προς κάθε ΥΠΑΡΚΤΟ γείτονα· ακραία πλευρά (null) → 0 (καμία mirror).
+  const halfRight = next != null ? (next - lines[idx]) / 2 : 0;
+  const halfLeft = prev != null ? (lines[idx] - prev) / 2 : 0;
+  const width = halfLeft + halfRight;
+  // Μεμονωμένος σε αυτόν τον άξονα (κανένας γείτονας εκατέρωθεν) → τυπικό φάτνωμα.
+  return width > 0 ? width : DEFAULT_BAY_SPAN_M;
 }
 
 /**

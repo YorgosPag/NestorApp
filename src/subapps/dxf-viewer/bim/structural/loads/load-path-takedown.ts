@@ -17,8 +17,9 @@
  *
  * **Grid-anchored tributary (Revit-grade):** όταν δοθεί `getOffset` (guide store), ο
  * αναλυτικός κόμβος κάθε hosted κολώνας είναι η **τομή των αξόνων κανάβου** (ΟΧΙ το
- * γεωμετρικό κεντροειδές) — μια γωνιακά-αγκυρωμένη κολώνα 5×5 δίνει tributary 25 m², όχι
- * 4.6×4.6. Χωρίς guides → κεντροειδές (μηδέν regression).
+ * γεωμετρικό κεντροειδές) → ακριβές grid spacing (π.χ. 5.0m bay αντί 4.6m κεντροειδούς).
+ * Χωρίς guides → κεντροειδές (μηδέν regression). Edge/γωνιακές κολώνες παίρνουν το
+ * πραγματικό ¼/½ φάτνωμα (ADR-474 — καμία mirror· βλ. `tributaryWidth`).
  *
  * @see ./load-path-walk.ts — topological order + edge resolvers
  * @see ./member-load-geometry.ts — κέντρα/ίδιο βάρος SSoT

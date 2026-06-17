@@ -22,7 +22,7 @@
 
 import * as THREE from 'three';
 import type { Entity } from '../../types/entities';
-import { isColumnEntity, isBeamEntity } from '../../types/entities';
+import { isColumnEntity, isBeamEntity, isFoundationEntity } from '../../types/entities';
 import type { StructuralCodeProvider } from '../../bim/structural/codes/structural-code-types';
 import type {
   OrganismContinuityResult,
@@ -35,6 +35,7 @@ import { columnLocalMmToWorld } from '../../bim/geometry/column-geometry';
 import { scalePoints } from '../../rendering/entities/shared/geometry-vector-utils';
 import { sceneUnitsToMeters } from '../../utils/scene-units';
 import { resolveActiveColumnReinforcementForParams } from '../../bim/structural/active-reinforcement';
+import { resolveActiveFootingReinforcementForParams } from '../../bim/structural/active-footing-reinforcement';
 import { resolveColumnReinforcementSection } from '../../bim/structural/reinforcement/column-section-outline';
 import { resolveColumnRebarLayout } from '../../bim/structural/reinforcement/column-rebar-layout-resolve';
 import { MM_TO_M, MIN_RADIUS, REBAR_MATERIAL, buildRods, toThree, type Seg } from './rebar-3d-shared';
@@ -61,6 +62,24 @@ function planDir(from: { x: number; y: number }, to: { x: number; y: number }): 
   return l > 1e-9 ? { x: dx / l, y: dy / l } : { x: 1, y: 0 };
 }
 
+/**
+ * Μέγιστη προβολή του footprint πάνω στην κατεύθυνση `dir` μετρημένη από το `fromPt`
+ * (canvas units) → η απόσταση ως την ΑΠΕΝΑΝΤΙ παρειά της κολόνας κατά τον άξονα του
+ * δοκαριού. Χρησιμεύει για να κόβεται το οριζόντιο σκέλος αγκύρωσης μέσα στην κολόνα.
+ */
+function footprintFarReach(
+  footprint: readonly { x: number; y: number }[],
+  fromPt: { x: number; y: number },
+  dir: { x: number; y: number },
+): number {
+  let max = 0;
+  for (const v of footprint) {
+    const proj = (v.x - fromPt.x) * dir.x + (v.y - fromPt.y) * dir.y;
+    if (proj > max) max = proj;
+  }
+  return max;
+}
+
 // ─── Column bar positions helper (shared by dowel / lap / top-anchorage) ─────
 
 function columnBarPositions(
@@ -78,32 +97,78 @@ function columnBarPositions(
 
 // ─── Dowels: vertical rods straddling footing↔column interface ───────────────
 
+/** Footing nominal cover (mm) — SSoT από τον stored οπλισμό πεδίλου· 0 αν απών. */
+function footingCoverMm(ftgEntity: Entity | undefined): number {
+  if (!ftgEntity || !isFoundationEntity(ftgEntity)) return 0;
+  return resolveActiveFootingReinforcementForParams(ftgEntity.params)?.coverMm ?? 0;
+}
+
 /**
- * Vertical rods at EXACT column bar positions (cage parity): anchored inside
- * footing (lbd) and lapping with column bars (l₀).
+ * Οριζόντιος κάμπτης (L-foot) αναμονής στη βάση του πεδίλου: το υπόλοιπο μήκος
+ * αγκύρωσης (`footMm`) που δεν χώρεσε κατακόρυφα, σχεδιασμένο προς το κέντρο του
+ * πεδίλου ώστε να παραμένει ΕΝΤΟΣ του footprint (capped στην απέναντι παρειά —
+ * ίδιο pattern με `footprintFarReach` του `anchorageBeamSegs`). Όλα σε μέτρα.
+ */
+function dowelFootSeg(
+  pt: { x: number; y: number },
+  bottomY: number,
+  footMm: number,
+  footprintM: readonly { x: number; y: number }[],
+  centreM: { x: number; y: number },
+): Seg | null {
+  if (footMm <= 1e-6) return null;
+  const dir = planDir(pt, centreM);
+  const reachCap = footprintFarReach(footprintM, pt, dir);
+  const wantM = footMm * MM_TO_M;
+  const reach = reachCap > 1e-6 ? Math.min(wantM, reachCap) : wantM;
+  const end = { x: pt.x + dir.x * reach, y: pt.y + dir.y * reach };
+  return { a: toThree(pt, bottomY), b: toThree(end, bottomY) };
+}
+
+/**
+ * Vertical rods at EXACT column bar positions (cage parity): το κατακόρυφο σκέλος
+ * είναι **clamped ΕΝΤΟΣ του πεδίλου** (Revit starter bars: top−lbd αλλά ποτέ κάτω
+ * από την κάτω σχάρα = base+cover) και ματίζει με τις ράβδους της κολόνας (l₀). Το
+ * υπόλοιπο μήκος αγκύρωσης που δεν χωρά κατακόρυφα σχεδιάζεται ως οριζόντιος κάμπτης
+ * (L-foot) στη βάση — οι αναμονές ΔΕΝ προεξέχουν πια κάτω από το πέδιλο στο χώμα.
  */
 function dowelSegs(
   item: ReinforcementContinuityItem,
   colNode: StructuralNode,
   ftgNode: StructuralNode,
   colEntity: ColumnEntity,
+  ftgEntity: Entity | undefined,
   provider: StructuralCodeProvider,
 ): Seg[] {
   const bars = columnBarPositions(colEntity);
   if (!bars) return [];
   const anchorMm = provider.anchorageLengthMm(item.diameterMm);
   const lapMm = provider.lapLengthMm(item.diameterMm);
-  const bottomY = (ftgNode.topZmm - anchorMm) * MM_TO_M;
+  const coverMm = footingCoverMm(ftgEntity);
+  const bottomZmm = Math.max(ftgNode.topZmm - anchorMm, ftgNode.baseZmm + coverMm);
+  const bottomY = bottomZmm * MM_TO_M;
   const topY = (colNode.baseZmm + lapMm) * MM_TO_M;
   if (topY <= bottomY) return [];
-  return bars.map((pt) => ({ a: toThree(pt, bottomY), b: toThree(pt, topY) }));
+  const footMm = Math.max(0, anchorMm - (ftgNode.topZmm - bottomZmm));
+  const sceneToM = sceneUnitsToMeters(colEntity.params.sceneUnits ?? 'mm');
+  const footprintM = (ftgNode.footprint ?? []).map((v) => ({ x: v.x * sceneToM, y: v.y * sceneToM }));
+  const centreM = centroid(footprintM);
+  const segs: Seg[] = [];
+  for (const pt of bars) {
+    segs.push({ a: toThree(pt, bottomY), b: toThree(pt, topY) });
+    const foot = footprintM.length ? dowelFootSeg(pt, bottomY, footMm, footprintM, centreM) : null;
+    if (foot) segs.push(foot);
+  }
+  return segs;
 }
 
 // ─── Anchorage: beam bars entering column horizontally ───────────────────────
 
 /**
- * Short horizontal rods at the beam end nearest to the column, pointing INTO
- * the column. Bars stacked vertically across the beam depth (bottom→top).
+ * Beam-bar anchorage at the column joint (Revit-grade, L-shape): a HORIZONTAL leg
+ * running from the beam end through the column (capped at the FAR column face — never
+ * pokes out the back) + a VERTICAL hook (bend-down) carrying the remaining anchorage
+ * length inside the column. Bars stacked vertically across the beam depth (bottom→top).
  */
 function anchorageBeamSegs(
   item: ReinforcementContinuityItem,
@@ -114,12 +179,17 @@ function anchorageBeamSegs(
   const axis = beamEntity.geometry.axisPolyline.points;
   if (axis.length < 2) return [];
   const sceneToM = sceneUnitsToMeters(beamEntity.params.sceneUnits ?? 'mm');
-  const colCx = centroid(colNode.footprint ?? []);
+  const footprint = colNode.footprint ?? [];
+  const colCx = centroid(footprint);
   const endPt = dist2(axis[0], colCx) <= dist2(axis[axis.length - 1], colCx)
     ? axis[0]
     : axis[axis.length - 1];
   const dir = planDir(endPt, colCx);
-  const anchorLenCanvas = item.lengthMm; // mm = canvas units under canonical-mm
+  // Οριζόντιο σκέλος: κόβεται στην απέναντι παρειά της κολόνας (canvas units = mm).
+  const farReach = footprintFarReach(footprint, endPt, dir);
+  const horizCanvas = Math.min(item.lengthMm, farReach > 1e-6 ? farReach : item.lengthMm);
+  // Κατακόρυφος κάμπτης (hook): υπόλοιπο μήκος αγκύρωσης προς τα κάτω μέσα στην κολόνα.
+  const hookMm = Math.max(0, item.lengthMm - horizCanvas);
   const count = Math.min(item.count, MAX_JOINT_RODS);
   const depthM = beamEntity.params.depth * MM_TO_M;
   const segs: Seg[] = [];
@@ -128,9 +198,13 @@ function anchorageBeamSegs(
     const worldY = beamNode.baseZmm * MM_TO_M + depthM * 0.1 + depthM * 0.8 * frac;
     const ax = endPt.x * sceneToM;
     const az = -(endPt.y * sceneToM);
-    const bx = (endPt.x + dir.x * anchorLenCanvas) * sceneToM;
-    const bz = -((endPt.y + dir.y * anchorLenCanvas) * sceneToM);
-    segs.push({ a: new THREE.Vector3(ax, worldY, az), b: new THREE.Vector3(bx, worldY, bz) });
+    const cornerX = (endPt.x + dir.x * horizCanvas) * sceneToM;
+    const cornerZ = -((endPt.y + dir.y * horizCanvas) * sceneToM);
+    const corner = new THREE.Vector3(cornerX, worldY, cornerZ);
+    segs.push({ a: new THREE.Vector3(ax, worldY, az), b: corner });
+    if (hookMm > 1e-6) {
+      segs.push({ a: corner, b: new THREE.Vector3(cornerX, worldY - hookMm * MM_TO_M, cornerZ) });
+    }
   }
   return segs;
 }
@@ -179,12 +253,13 @@ function segsForItem(
   fromNode: StructuralNode,
   toNode: StructuralNode,
   fromEntity: Entity | undefined,
+  toEntity: Entity | undefined,
   provider: StructuralCodeProvider,
 ): Seg[] {
   switch (item.kind) {
     case 'dowel':
       if (fromEntity && isColumnEntity(fromEntity)) {
-        return dowelSegs(item, fromNode, toNode, fromEntity, provider);
+        return dowelSegs(item, fromNode, toNode, fromEntity, toEntity, provider);
       }
       return [];
     case 'anchorage':
@@ -227,7 +302,8 @@ export function buildJointRebarGroup(
     if (!fromNode || !toNode) continue;
 
     const newSegs = segsForItem(
-      item, fromNode, toNode, entityById.get(item.fromMemberId), provider,
+      item, fromNode, toNode,
+      entityById.get(item.fromMemberId), entityById.get(item.toMemberId), provider,
     );
     if (newSegs.length === 0) continue;
 
