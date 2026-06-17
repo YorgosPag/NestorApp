@@ -82,7 +82,8 @@ interface LevelManagerLike {
 /** Στατικές μεταβολές που επανα-διαστασιολογούν τη θεμελίωση. */
 const AUTO_DESIGN_EVENTS: readonly DrawingEventType[] = [
   'drawing:entity-created',
-  'bim:column-params-updated',
+  'bim:column-params-updated', // grip-resize / ribbon edit / γεωμετρική αλλαγή
+  'bim:entities-moved', // drag-move κολόνας (MoveEntityCommand) → re-derive layout
   'bim:column-delete-requested',
   'bim:structural-loads-computed',
 ];
@@ -223,8 +224,14 @@ export function useAutoFoundationDesign(props: { levelManager: LevelManagerLike 
 
       const activeEntities = activeScene.entities as unknown as readonly Entity[];
       const foundationFloorElev = fl.target.floorElevationMm;
+      // Προτίμησε τη live foundation scene (ο writer τη μεταλλάσσει σύγχρονα) — αλλιώς
+      // το store snapshot (optimistically ενημερωμένο από τον writer). Αποφεύγει stale read.
+      const foundationScene = levelManager.getLevelScene(fl.target.levelId);
+      const foundationEntities = foundationScene
+        ? (foundationScene.entities as unknown as readonly Entity[])
+        : fl.entities;
       const candidates: CandidateFooting[] = [
-        ...fl.entities.filter(isFootingElement).map((e) => ({ entity: e, floorElevationMm: foundationFloorElev })),
+        ...foundationEntities.filter(isFootingElement).map((e) => ({ entity: e, floorElevationMm: foundationFloorElev })),
         ...activeEntities.filter(isFootingElement).map((e) => ({ entity: e, floorElevationMm: fl.activeFloorElevationMm })),
       ];
       const existingAutoFootings = candidates.map((c) => c.entity).filter(isAutoPad);

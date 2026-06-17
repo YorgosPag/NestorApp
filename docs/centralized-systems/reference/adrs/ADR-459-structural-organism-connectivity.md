@@ -400,8 +400,9 @@ reconciler** πάνω στην ίδια cross-level υποδομή.
   writer `remove`/`create` + FK attach (`AttachColumnFootingCommand`) + **πάντα** οπλισμός
   (`ReinforceColumnFootingCommand`). Συνθέτει αποκλειστικά υπάρχοντα commands (μηδέν νέα μηχανική).
 - REWRITE `hooks/useColumnFootingNotification.tsx` → NEW `hooks/useAutoFoundationDesign.tsx`: level-wide,
-  coalesced microtask σε `drawing:entity-created` / `bim:column-params-updated` / `-delete-requested` /
-  `bim:structural-loads-computed` → plan → reconcile → batch → **info toast** (`autoFoundation.applied`).
+  coalesced microtask σε `drawing:entity-created` / `bim:column-params-updated` / **`bim:entities-moved`**
+  (drag-move) / `-delete-requested` / `bim:structural-loads-computed` → plan → reconcile → batch → **info
+  toast** (`autoFoundation.applied`). (Το `useStructuralOrganism` ακούει πλέον κι αυτό το `bim:entities-moved`.)
   Gate: τρέχει μόνο όταν υπάρχει διακριτός όροφος Θεμελίωσης (`fl.target`).
 - REWRITE `hooks/useStructuralOrganismNotification.tsx` → **αυτόματος** οπλισμός στη σύνδεση (χωρίς
   ConfirmationToast)· idempotent (belt-and-suspenders για άλλα attach paths, π.χ. cross-floor copy).
@@ -444,6 +445,13 @@ footing (όριο οικοπέδου — δεν υπάρχουν property lines)
   UNCOMMITTED (browser-verify + commit + tsc από Giorgio· shared tree → git add ΜΟΝΟ δικά μου). ⚠️ 2 pre-existing
   failures (`AssignWallTypeCommand`/`UpdateColumnParamsCommand` — firebase `fetch`-in-node infra, άσχετα).
   DEFER: rotated/trapezoidal combined, combined punching/flexure, strap/eccentric, ADR-441 grid integration.
+  **Bugfix (browser-verify «νέο πέδιλο δημιουργήθηκε αλλά τα 2 παλιά δεν σβήστηκαν»):** ο reconciler διάβαζε
+  τα existing footings από το `foundation-level-store` που ενημερώνεται **async** (event-driven refresh) →
+  stale/empty read → `existingAutoFootings=[]` → καμία αφαίρεση. FIX: (α) ο `foundation-cross-level-writer`
+  ενημερώνει **optimistically** το store (NEW `upsertEntity`/`removeEntity`)· (β) ο `useAutoFoundationDesign`
+  διαβάζει τη **live foundation scene** (`getLevelScene(target.levelId)`) όταν είναι φορτωμένη, αλλιώς το
+  (πλέον σύγχρονο) store· (γ) NEW `autoDesigned` στο foundation Zod schema (CommonParamsShape) για πληρότητα.
+  ΜΑΘΗΜΑ: cross-level reconcile χρειάζεται **σύγχρονη** εικόνα των υπαρχόντων — ο async sync hook δεν αρκεί.
 - **2026-06-17 (v7, Opus):** **Phase 6 — Proactive on-create + cross-level organism.** Decision Giorgio:
   πέδιλο στον όροφο Θεμελίωσης (Revit-canonical) + non-blocking ConfirmationToast. **6.0 cross-level READ:**
   NEW `building-foundation-level.ts` + `cross-level-organism-scene.ts` + `foundation-level-store.ts` +

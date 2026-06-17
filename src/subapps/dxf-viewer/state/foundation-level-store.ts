@@ -34,6 +34,14 @@ export interface FoundationLevelState {
     entities: readonly Entity[],
     activeFloorElevationMm: number,
   ): void;
+  /**
+   * ADR-459 Phase 7 — optimistic upsert ενός foundation entity (ο cross-level writer
+   * το καλεί αμέσως μετά το create/update ώστε ο reconciler να βλέπει την τρέχουσα
+   * κατάσταση χωρίς να περιμένει τον async event-driven refresh του sync hook).
+   */
+  upsertEntity(entity: Entity): void;
+  /** ADR-459 Phase 7 — optimistic remove (ο writer το καλεί μετά το delete). */
+  removeEntity(entityId: string): void;
   /** Καθαρισμός (single-level / unmount). */
   clear(): void;
 }
@@ -44,6 +52,19 @@ export const useFoundationLevelStore = create<FoundationLevelState>((set) => ({
   activeFloorElevationMm: 0,
   setFoundationLevel(target, entities, activeFloorElevationMm) {
     set({ target, entities, activeFloorElevationMm });
+  },
+  upsertEntity(entity) {
+    set((s) => {
+      const exists = s.entities.some((e) => e.id === entity.id);
+      return {
+        entities: exists
+          ? s.entities.map((e) => (e.id === entity.id ? entity : e))
+          : [...s.entities, entity],
+      };
+    });
+  },
+  removeEntity(entityId) {
+    set((s) => ({ entities: s.entities.filter((e) => e.id !== entityId) }));
   },
   clear() {
     set({ target: null, entities: [], activeFloorElevationMm: 0 });

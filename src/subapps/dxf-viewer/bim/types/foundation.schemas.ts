@@ -116,6 +116,8 @@ const CommonParamsShape = {
   storeyId: z.string().min(1).optional(),
   offsetFromStorey: z.number().finite().optional(),
   catalogProfile: z.string().min(1).optional(),
+  // ADR-459 Phase 7 — provenance flag (auto-foundation reconciler ownership).
+  autoDesigned: z.boolean().optional(),
 };
 
 // ─── Per-kind param schemas (plain objects — required by discriminatedUnion) ──

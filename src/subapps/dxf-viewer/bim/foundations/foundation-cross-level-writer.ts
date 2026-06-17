@@ -28,8 +28,10 @@ import {
   type FoundationFirestoreService,
 } from './foundation-firestore-service';
 import { resolveBimPersistenceScope } from '../persistence/bim-floor-scope';
+import { useFoundationLevelStore } from '../../state/foundation-level-store';
 import type { FoundationLevelTarget } from '../../systems/levels/building-foundation-level';
 import type { FoundationEntity } from '../types/foundation-types';
+import type { Entity } from '../../types/entities';
 import type { SceneModel } from '../../types/scene';
 import type { AnySceneEntity } from '../../types/scene';
 
@@ -95,6 +97,9 @@ export function createFoundationCrossLevelWriter(
   return {
     create(entity) {
       mutateFoundationScene(io, target.levelId, (es) => [...es, entity as unknown as AnySceneEntity]);
+      // ADR-459 Phase 7 — optimistic store sync ώστε ο reconciler να βλέπει το νέο
+      // πέδιλο αμέσως (χωρίς να περιμένει τον async refresh του useFoundationLevelSync).
+      useFoundationLevelStore.getState().upsertEntity(entity as unknown as Entity);
       void svc.saveFoundation(entityToSaveInput(entity)).catch(() => {
         /* μη-κρίσιμο: heal στο επόμενο edit / επίσκεψη ορόφου */
       });
@@ -103,6 +108,7 @@ export function createFoundationCrossLevelWriter(
       mutateFoundationScene(io, target.levelId, (es) =>
         es.map((e) => (e.id === entity.id ? (entity as unknown as AnySceneEntity) : e)),
       );
+      useFoundationLevelStore.getState().upsertEntity(entity as unknown as Entity);
       void svc
         .updateFoundation(entity.id, {
           params: entity.params,
@@ -116,6 +122,7 @@ export function createFoundationCrossLevelWriter(
     },
     remove(foundationId) {
       mutateFoundationScene(io, target.levelId, (es) => es.filter((e) => e.id !== foundationId));
+      useFoundationLevelStore.getState().removeEntity(foundationId);
       void svc.deleteFoundation(foundationId).catch(() => {
         /* μη-κρίσιμο */
       });

@@ -42,6 +42,7 @@ interface LevelManagerLike {
 const ORGANISM_EVENTS: readonly DrawingEventType[] = [
   'drawing:entity-created',
   'bim:column-params-updated',
+  'bim:entities-moved', // ADR-459 Φ7 — drag-move μέλους → re-derive organism (bearing edge follows)
   'bim:column-delete-requested',
   'bim:beam-params-updated',
   'bim:beam-delete-requested',
