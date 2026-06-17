@@ -450,6 +450,7 @@
 | **ADR-466** | Cross-Floor Entity Clipboard (Revit Ctrl+C / Ctrl+V, paste-in-place) | ✅ APPROVED | 2026-06-17 | Uncategorized | [📄](./adrs/ADR-466-cross-floor-entity-clipboard.md) |
 | **ADR-467** | Load Path Engine (slab→beam→column→footing tributary takedown, FEM-free) | ✅ APPROVED | 2026-06-17 | Uncategorized | [📄](./adrs/ADR-467-load-path-engine.md) |
 | **ADR-468** | Floor/Elevation management from the DXF Viewer (FloorsTabContent in modal) | ✅ APPROVED | 2026-06-17 | Uncategorized | [📄](./adrs/ADR-468-floor-management-from-viewer.md) |
+| **ADR-469** | Cross-Floor Per-Entity BIM Load (file-less / orphaned floors — anti-vanish + ADR-293 suppress + per-entity aggregation) | ✅ APPROVED | 2026-06-17 | Uncategorized | [📄](./adrs/ADR-469-cross-floor-per-entity-bim-load.md) |
 | **ADR-UI-001** | Visual Primitive Ownership & Semantic Tokens | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-UI-001.md) |
 
 ---
@@ -884,6 +885,7 @@
 | **ADR-466** | Cross-Floor Entity Clipboard (Revit Ctrl+C / Ctrl+V, paste-in-place) | ✅ APPROVED | [View](./adrs/ADR-466-cross-floor-entity-clipboard.md) |
 | **ADR-467** | Load Path Engine (slab→beam→column→footing tributary takedown, FEM-free) | ✅ APPROVED | [View](./adrs/ADR-467-load-path-engine.md) |
 | **ADR-468** | Floor/Elevation management from the DXF Viewer (FloorsTabContent in modal) | ✅ APPROVED | [View](./adrs/ADR-468-floor-management-from-viewer.md) |
+| **ADR-469** | Cross-Floor Per-Entity BIM Load (file-less / orphaned floors) | ✅ APPROVED | [View](./adrs/ADR-469-cross-floor-per-entity-bim-load.md) |
 | **ADR-UI-001** | Visual Primitive Ownership & Semantic Tokens | ✅ APPROVED | [View](./adrs/ADR-UI-001.md) |
 
 ---

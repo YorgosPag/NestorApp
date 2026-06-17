@@ -29,6 +29,7 @@ import { pointInPolygon } from '../geometry/shared/polygon-utils';
 import { RENDER_LINE_WIDTHS } from '../../config/text-rendering-config';
 import { resolveSubcategoryStyle } from '../../config/bim-line-weight-resolver';
 import { resolveIsEntityVisible } from '../visibility/visibility-resolver';
+import { isStructuralComponentVisible } from '../visibility/structural-component-visibility';
 import { useDrawingScaleStore } from '../../state/drawing-scale-store';
 import { HOVER_HIGHLIGHT } from '../../config/color-config';
 import { getLayer } from '../../stores/LayerStore';
@@ -72,6 +73,13 @@ export class FoundationRenderer extends BaseEntityRenderer {
     if (!foundation.geometry || !foundation.params) return;
     const verts = foundation.geometry.footprint.vertices;
     if (verts.length < 3) return;
+
+    // ADR-469 — core (σώμα πεδίλου) component gate. Κρυμμένο → παραλείπουμε το σχέδιο
+    // του σώματος· ο οπλισμός θεμελίωσης (scene-level overlay) προβάλλεται ανεξάρτητα.
+    if (!isStructuralComponentVisible('core', foundation)) {
+      this.finalizeRender(entity, options);
+      return;
+    }
 
     const phaseState = this.phaseManager.determinePhase(entity as Entity, options);
 

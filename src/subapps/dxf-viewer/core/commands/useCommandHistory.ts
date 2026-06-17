@@ -39,6 +39,15 @@ export interface UseCommandHistoryReturn extends CommandHistoryState {
   /** Execute a new command */
   execute: (command: ICommand) => void;
 
+  /**
+   * Execute a **derived** command and group it with the immediately-preceding
+   * entry into ONE atomic undo step (Revit transaction group). Use for
+   * associative reactions (e.g. auto-foundation re-derive after a column edit)
+   * so a single undo reverts both. Falls back to a standalone entry when there
+   * is no recent companion command.
+   */
+  executeGrouped: (command: ICommand) => void;
+
   /** Undo the last command */
   undo: () => boolean;
 
@@ -114,6 +123,13 @@ export function useCommandHistory(options: UseCommandHistoryOptions = {}): UseCo
     [history]
   );
 
+  const executeGrouped = useCallback(
+    (command: ICommand) => {
+      history.appendToLast(command);
+    },
+    [history]
+  );
+
   const undo = useCallback(() => {
     return history.undo();
   }, [history]);
@@ -137,6 +153,7 @@ export function useCommandHistory(options: UseCommandHistoryOptions = {}): UseCo
   return {
     ...state,
     execute,
+    executeGrouped,
     undo,
     redo,
     clear,

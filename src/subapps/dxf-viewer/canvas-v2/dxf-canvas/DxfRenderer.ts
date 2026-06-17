@@ -25,15 +25,11 @@ import { isHiddenByCutPlane } from '../../bim/visibility/entity-z-extents';
 import { useBimRenderSettingsStore } from '../../state/bim-render-settings-store';
 import { dimOpacityToTransparency } from '../../services/layer-isolate-resolver';
 // Per-frame index builders (extracted Boy-Scout file-size split, 2026-05-19).
-import { buildDimensionLookup, buildSlabOpeningsBySlab, buildOpeningsByWall, buildStructuralFinishSilhouette2D, transparencyToAlpha } from './dxf-renderer-frame-builders';
-import { isStructuralFinishVisible } from '../../bim/finishes/structural-finish-visibility';
-// ADR-449 Slice X2 μέρος Β — ΕΝΑ scene-level pass ζωγραφίζει την ΕΝΙΑΙΑ silhouette (κοινή με 3Δ).
-import { drawStructuralFinishOutline } from '../../bim/renderers/structural-finish-outline-2d';
-// ADR-456 Slice 3 — 2Δ σχεδίαση οπλισμού κολώνας (scene-level pass, gated, κοινό geometry SSoT με 3Δ).
-import { isReinforcementVisible } from '../../bim/structural/reinforcement/rebar-visibility';
-import { drawColumnRebar2D } from '../../bim/renderers/column-rebar-2d';
+import { buildDimensionLookup, buildSlabOpeningsBySlab, buildOpeningsByWall, transparencyToAlpha } from './dxf-renderer-frame-builders';
 import { drawFoundationReinforcement2D } from './dxf-foundation-reinforcement-overlay';
-import { mmToSceneUnits } from '../../utils/scene-units';
+// Scene-level structural overlay passes (Boy-Scout file-size split, 2026-06-17 —
+// mirror του foundation overlay· ADR-449 σοβάς + ADR-456 οπλισμός κολώνας).
+import { drawColumnReinforcement2D, drawStructuralFinishSkin2D } from './dxf-renderer-structural-overlays';
 // DxfEntityUnion → Entity mapper (extracted file-size split, 2026-05-25).
 import { buildEntityModelFromDxf } from './dxf-renderer-entity-model';
 export class DxfRenderer {
@@ -208,60 +204,14 @@ export class DxfRenderer {
     // ADR-449 Slice X2 μέρος Β — ΕΝΑ scene-level pass για τον ΕΝΙΑΙΟ σοβά (mirror του 3Δ
     // `syncStructuralFinishSkin`): μετά τα entities, ζωγραφίζει το merged-silhouette outline
     // από την ΙΔΙΑ SSoT με το 3Δ → ίδιες γωνίες/συμβολές, μηδέν διπλή γραμμή.
-    this.drawStructuralFinishSkin2D(scene.entities, transform, actualViewport);
+    drawStructuralFinishSkin2D(this.ctx, scene.entities, transform, actualViewport);
     // ADR-456 Slice 3 — οπλισμός κολώνας (διαμήκεις κουκκίδες + στεφάνι) ως scene-level overlay
     // μέσα στο cached normal-state bitmap (ίδιο pattern με τον σοβά)· gated από `showReinforcement`.
-    this.drawColumnReinforcement2D(scene.entities, transform, actualViewport);
+    drawColumnReinforcement2D(this.ctx, scene.entities, transform, actualViewport);
     // ADR-463 — οπλισμός θεμελίωσης (πέδιλο/πεδιλοδοκός/συνδετήρια) ως scene-level overlay,
     // ίδιο pattern/gate με την κολώνα (mirror του drawColumnReinforcement2D).
     drawFoundationReinforcement2D(this.ctx, scene.entities, transform, actualViewport);
     this.ctx.restore();
-  }
-
-  /**
-   * ADR-456 Slice 3 — ζωγραφίζει τον οπλισμό ΟΛΩΝ των ορθογωνικών κολώνων με ορισμένο
-   * `reinforcement`, ως scene-level overlay μέσα στο cached normal-state bitmap. Καταναλώνει
-   * το ΙΔΙΟ geometry SSoT (`computeColumnRebarLayout` + `columnLocalMmToWorld`) με το 3Δ →
-   * ίδιες θέσεις ράβδων/στεφανιών. No-op όταν ο διακόπτης «Οπλισμός» είναι κλειστός. ADR-040:
-   * pure draw, zero subscriptions.
-   */
-  private drawColumnReinforcement2D(
-    entities: readonly DxfEntityUnion[],
-    transform: ViewTransform,
-    actualViewport: Viewport,
-  ): void {
-    if (!isReinforcementVisible()) return;
-    const worldToScreen = (p: Point2D): Point2D =>
-      CoordinateTransforms.worldToScreen(p, transform, actualViewport);
-    for (const entity of entities) {
-      if (entity.type !== 'column' || !entity.visible) continue;
-      const p = entity.params;
-      if (!p.reinforcement) continue; // ADR-460 — κάθε σχήμα (όχι μόνο ορθογωνική)
-      const pxPerMm = mmToSceneUnits(p.sceneUnits ?? 'mm') * transform.scale;
-      drawColumnRebar2D(this.ctx, p, pxPerMm, worldToScreen);
-    }
-  }
-
-  /**
-   * ADR-449 Slice X2 μέρος Β — ζωγραφίζει τον ΕΝΙΑΙΟ σοβά (2Δ merged silhouette) ως scene-level
-   * overlay μέσα στο cached normal-state bitmap. Καταναλώνει την ΙΔΙΑ `computeStructuralFinishSilhouette`
-   * SSoT με το 3Δ (`bim-scene-structural-finish-sync`) + το κοινό corner-geometry SSoT
-   * (`computeMiteredOuter` μέσω `drawStructuralFinishOutline`). No-op όταν ο διακόπτης «Σοβατισμένη
-   * όψη» είναι κλειστός ή κανένα στοιχείο δεν έχει ενεργό σοβά. ADR-040: pure draw, zero subscriptions.
-   */
-  private drawStructuralFinishSkin2D(
-    entities: readonly DxfEntityUnion[],
-    transform: ViewTransform,
-    actualViewport: Viewport,
-  ): void {
-    if (!isStructuralFinishVisible()) return;
-    const silhouette = buildStructuralFinishSilhouette2D(entities);
-    if (!silhouette) return;
-    const worldToScreen = (p: Point2D): Point2D =>
-      CoordinateTransforms.worldToScreen(p, transform, actualViewport);
-    for (const band of silhouette.bands) {
-      drawStructuralFinishOutline(this.ctx, band.faces, silhouette.sceneUnits, worldToScreen);
-    }
   }
 
   /**

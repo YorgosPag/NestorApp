@@ -32,7 +32,7 @@
     "reinforceOrganismConfirm": "Υπολογισμός οπλισμού"
   },
   "autoFoundation": {
-    "applied": "Αυτόματος σχεδιασμός θεμελίωσης — νέα πέδιλα: {created} (combined: {combined}, αφαιρέθηκαν: {removed})"
+    "applied": "Αυτόματος σχεδιασμός θεμελίωσης — νέα πέδιλα: {created} (combined: {combined}, ενημερώθηκαν: {updated}, αφαιρέθηκαν: {removed})"
   },
   "structural": {
     "code": {
@@ -3431,6 +3431,18 @@
         "disable": "Απόκρυψη",
         "tooltipEnable": "Εμφάνιση οπλισμού κολόνας (διαμήκεις ράβδες + στεφάνια) σε κάτοψη, τομή & 3Δ",
         "tooltipDisable": "Απόκρυψη οπλισμού — προβολή γυμνής διατομής"
+      },
+      "componentVisibility": {
+        "label": "Ορατότητα στοιχείων",
+        "core": "Σώμα",
+        "plaster": "Σοβάς",
+        "reinforcement": "Οπλισμός",
+        "tooltipShow": "Εμφάνιση αυτού του στοιχείου (σώμα/σοβάς/οπλισμός) σε 2Δ & 3Δ",
+        "tooltipHide": "Απόκρυψη αυτού του στοιχείου σε 2Δ & 3Δ",
+        "selectedLabel": "Επιλεγμένο",
+        "overrideShow": "Εμφάνιση μόνο στο επιλεγμένο",
+        "overrideHide": "Απόκρυψη μόνο στο επιλεγμένο",
+        "overrideReset": "Επαναφορά στην προβολή"
       },
       "pipeSizing": {
         "label": "Διαστασιολόγηση Σωληνώσεων",

@@ -148,31 +148,10 @@ const HEAT_LOAD_BUTTON: RibbonButton = {
   },
 };
 
-/** ADR-449 Slice 5 — structural finish skin (σοβάς) master toggle (Revit finishes visibility). */
-const FINISH_SKIN_BUTTON: RibbonButton = {
-  type: 'widget',
-  size: 'small',
-  widgetId: 'show-finish-skin-toggle',
-  command: {
-    id: 'view.finishSkin',
-    labelKey: 'ribbon.commands.finishSkin.label',
-    icon: '',
-    commandKey: 'show-finish-skin-toggle',
-  },
-};
-
-/** ADR-456 Slice 3 — reinforcement (οπλισμός) master toggle (Revit "Reinforcement" visibility). */
-const REINFORCEMENT_BUTTON: RibbonButton = {
-  type: 'widget',
-  size: 'small',
-  widgetId: 'show-reinforcement-toggle',
-  command: {
-    id: 'view.reinforcement',
-    labelKey: 'ribbon.commands.reinforcement.label',
-    icon: '',
-    commandKey: 'show-reinforcement-toggle',
-  },
-};
+// ADR-469 — FINISH_SKIN_BUTTON + REINFORCEMENT_BUTTON αφαιρέθηκαν: subsumed από το
+// ενοποιημένο «Ορατότητα στοιχείων» control (VIEW_VISUAL_STYLES_PANEL). Τα widgets
+// `show-finish-skin-toggle` / `show-reinforcement-toggle` παραμένουν διαθέσιμα ως
+// quick-access στα contextual column/foundation tabs (δεν αφαιρέθηκαν από εκεί).
 
 /** ADR-422 L3 — pipe-sizing overlay master toggle (Revit "Pipe Sizing" preview). */
 const PIPE_SIZING_BUTTON: RibbonButton = {
@@ -255,7 +234,10 @@ export const BIM_GRAPHICS_PANEL: RibbonPanelDef = {
       isInFlyout: false,
       // ADR-446 — the standalone «Ρεαλιστικά Υλικά» toggle (REALISTIC_MATERIALS_BUTTON)
       // is subsumed by the «Στυλ Προβολής» dropdown (VIEW_VISUAL_STYLES_PANEL).
-      buttons: [VISIBILITY_GRAPHICS_BUTTON, HIDE_BIM_BUTTON, MEP_WIRE_BUTTON, DRAIN_PIPE_BUTTON, COLOR_BY_SYSTEM_BUTTON, HEAT_LOAD_BUTTON, FINISH_SKIN_BUTTON, REINFORCEMENT_BUTTON, PIPE_SIZING_BUTTON, BALANCING_BUTTON, THERMAL_STUDY_BUTTON, DISCIPLINE_BUTTON],
+      // ADR-469 — τα «Σοβατισμένη όψη» (FINISH_SKIN_BUTTON) + «Οπλισμός»
+      // (REINFORCEMENT_BUTTON) subsumed από το ενοποιημένο «Ορατότητα στοιχείων»
+      // control στο VIEW_VISUAL_STYLES_PANEL (σώμα/σοβάς/οπλισμός + per-element).
+      buttons: [VISIBILITY_GRAPHICS_BUTTON, HIDE_BIM_BUTTON, MEP_WIRE_BUTTON, DRAIN_PIPE_BUTTON, COLOR_BY_SYSTEM_BUTTON, HEAT_LOAD_BUTTON, PIPE_SIZING_BUTTON, BALANCING_BUTTON, THERMAL_STUDY_BUTTON, DISCIPLINE_BUTTON],
     },
   ],
 };

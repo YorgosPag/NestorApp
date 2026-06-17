@@ -60,6 +60,7 @@ import { linearEndpointHandleWorld } from '../gizmo/linear-endpoint-world';
 import { resolveEntityBuilding } from '../../bim/utils/bim-floor-utils';
 // ADR-404 — drag outcome → view-agnostic command (extracted for file size, N.7.1).
 import { buildEditCommand } from './bim3d-edit-command-builders';
+import { emitStructuralChangeAfterEdit } from './bim3d-edit-structural-emit';
 // ADR-408 — Ctrl+click relocatable base point / rotation centre (snap-pick SSoT).
 import { pickEntityBasePoint } from './bim3d-base-point';
 // ADR-363 Φ1G.5 Slice 2h — Revit temporary dimensions while a wall is dragged.
@@ -457,6 +458,11 @@ function dispatchOutcome(ctx: EditInteractionCtx, outcome: BridgeOutcome, picked
   // BEFORE execute so the entity-resync re-anchors the gizmo on the centroid.
   if (outcome.kind !== 'rotate') useBim3DEditStore.getState().setBasePointOverride(null);
   getGlobalCommandHistory().execute(cmd);
+  // ADR-459 Φ7 — announce the edit as a structural-change event (mirror the 2D grip
+  // commit layer) so the auto-foundation designer / organism / persistence react. Must
+  // run AFTER execute so the edited command is the last on the stack when the coalesced
+  // reactor microtask groups the derived footing update into the same atomic undo step.
+  emitStructuralChangeAfterEdit(cmd, entityIds, sm);
   useBim3DEditStore.getState().setTargetLevel(levelId);
   return true;
 }

@@ -97,6 +97,11 @@ export interface BimRenderSettingsState extends ResolvedBimSettings {
    */
   setShowHeatLoad: (showHeatLoad: boolean) => void;
   /**
+   * ADR-469 — master view toggle «Σώμα σκυροδέματος» (structural concrete core
+   * visibility). Per-view, debounced write (idempotent).
+   */
+  setShowStructuralCore: (showStructuralCore: boolean) => void;
+  /**
    * ADR-449 Slice 5 — master view toggle «Σοβατισμένη όψη» (structural finish
    * skin visibility). Per-view, debounced write (idempotent).
    */

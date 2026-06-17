@@ -32,7 +32,7 @@
     "reinforceOrganismConfirm": "Compute reinforcement"
   },
   "autoFoundation": {
-    "applied": "Auto foundation design — new footings: {created} (combined: {combined}, removed: {removed})"
+    "applied": "Auto foundation design — new footings: {created} (combined: {combined}, updated: {updated}, removed: {removed})"
   },
   "structural": {
     "code": {
@@ -3431,6 +3431,18 @@
         "disable": "Hide",
         "tooltipEnable": "Show column reinforcement (longitudinal bars + stirrups) in plan, section & 3D",
         "tooltipDisable": "Hide reinforcement — show bare cross-section"
+      },
+      "componentVisibility": {
+        "label": "Element visibility",
+        "core": "Core",
+        "plaster": "Plaster",
+        "reinforcement": "Reinforcement",
+        "tooltipShow": "Show this component (core/plaster/reinforcement) in 2D & 3D",
+        "tooltipHide": "Hide this component in 2D & 3D",
+        "selectedLabel": "Selected",
+        "overrideShow": "Show on selected only",
+        "overrideHide": "Hide on selected only",
+        "overrideReset": "Reset to view"
       },
       "pipeSizing": {
         "label": "Pipe Sizing",

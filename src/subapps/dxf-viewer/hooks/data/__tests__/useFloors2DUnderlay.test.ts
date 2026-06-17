@@ -19,6 +19,18 @@ import type { FloorVisMode } from '../../../bim-3d/utils/floor-visibility-state'
 const mockUseLevelsOptional = jest.fn();
 const mockLoadFileV2 = jest.fn();
 
+// ADR-469 — neutralize the per-entity cross-floor fallback in unit scope (its
+// orchestration is covered by cross-floor-bim-loader.test.ts); keeps assertions on
+// the snapshot aggregation path + avoids firebase/auth + firestore import chains.
+jest.mock('@/auth/hooks/useAuth', () => ({
+  useAuth: () => ({ user: { uid: 'u1', companyId: 'co1' } }),
+}));
+jest.mock('../../../bim/persistence/cross-floor-bim-loader', () => ({
+  loadFloorBimEntities: jest.fn(async () => []),
+}));
+jest.mock('../../../bim/persistence/bim-floor-scope', () => ({
+  resolveBimPersistenceScope: jest.fn(() => null),
+}));
 jest.mock('../../../systems/levels/useLevels', () => ({
   useLevelsOptional: () => mockUseLevelsOptional(),
 }));

@@ -25,7 +25,8 @@ import { scalePoints } from '../../rendering/entities/shared/geometry-vector-uti
 import { ensureWorldUvs } from './bim-uv-helpers';
 import { attachEdgesProjection } from './bim-three-edges';
 import { sceneUnitsToMeters } from '../../utils/scene-units';
-import { isReinforcementVisible } from '../../bim/structural/reinforcement/rebar-visibility';
+import { isStructuralComponentVisible } from '../../bim/visibility/structural-component-visibility';
+import { applyStructuralCoreVisibility3D } from './structural-core-visibility-3d';
 import { buildFootingRebarCage } from './footing-rebar-3d';
 
 const MM_TO_M = 0.001;
@@ -42,7 +43,8 @@ function attachFoundationRebar(
   bottomY: number,
   levelId: string | undefined,
 ): THREE.Object3D {
-  if (!isReinforcementVisible()) return mesh;
+  // ADR-469 — per-element οπλισμός override → per-view flag (Revit precedence).
+  if (!isStructuralComponentVisible('reinforcement', foundation)) return mesh;
   const cage = buildFootingRebarCage(foundation, bottomY, levelId);
   if (!cage) return mesh;
   const group = new THREE.Group();
@@ -94,5 +96,9 @@ export function foundationToMesh(
   const tagged = tagMesh(mesh, foundation.id, 'foundation', matId, levelId);
   attachEdgesProjection(tagged, 'foundation');
   // ADR-463 — οπλισμός 3Δ ως sibling cage (mirror κολώνας)· no-op όταν κρυφός/απών.
-  return attachFoundationRebar(tagged, foundation, mesh.position.y, levelId);
+  // ADR-469 — core gate: κρύβει το σώμα πεδίλου αν ανενεργό (οπλισμός μένει ορατός).
+  return applyStructuralCoreVisibility3D(
+    attachFoundationRebar(tagged, foundation, mesh.position.y, levelId),
+    tagged, foundation,
+  );
 }

@@ -10,7 +10,9 @@
 import type { ViewTransform, Viewport, Point2D } from '../../rendering/types/Types';
 import type { DxfEntityUnion } from './dxf-types';
 import { CoordinateTransforms } from '../../rendering/core/CoordinateTransforms';
-import { isReinforcementVisible } from '../../bim/structural/reinforcement/rebar-visibility';
+import { isStructuralComponentVisible } from '../../bim/visibility/structural-component-visibility';
+import { isHiddenByCutPlane } from '../../bim/visibility/entity-z-extents';
+import { useBimRenderSettingsStore } from '../../state/bim-render-settings-store';
 import { mmToSceneUnits } from '../../utils/scene-units';
 import { drawFootingRebar2D } from '../../bim/renderers/footing-rebar-2d';
 
@@ -26,13 +28,17 @@ export function drawFoundationReinforcement2D(
   transform: ViewTransform,
   actualViewport: Viewport,
 ): void {
-  if (!isReinforcementVisible()) return;
+  // ADR-469 — gate ανά entity (per-element override → per-view flag), όχι early-return.
+  const bimSettings = useBimRenderSettingsStore.getState();
   const worldToScreen = (p: Point2D): Point2D =>
     CoordinateTransforms.worldToScreen(p, transform, actualViewport);
   for (const entity of entities) {
     if (entity.type !== 'foundation' || !entity.visible) continue;
     const p = entity.params;
     if (!p.reinforcement) continue;
+    // ADR-469 — per-element reinforcement visibility + cut-plane parity.
+    if (!isStructuralComponentVisible('reinforcement', entity)) continue;
+    if (isHiddenByCutPlane(entity, bimSettings.viewRange, bimSettings.cutPlaneActive)) continue;
     const pxPerMm = mmToSceneUnits(p.sceneUnits ?? 'mm') * transform.scale;
     drawFootingRebar2D(ctx, p, pxPerMm, worldToScreen);
   }

@@ -5,9 +5,11 @@
  * Ο `planFoundationLayout` παράγει το επιθυμητό layout· αυτό το module το συγκρίνει
  * με τα auto πέδιλα που ήδη ζουν στον όροφο Θεμελίωσης και βγάζει τις ελάχιστες
  * ενέργειες:
- *   · `creates`  — σχεδιασμένα πέδιλα που δεν υπάρχουν ακόμη (ο caller χτίζει entity).
- *   · `removeFootingIds` — auto πέδιλα που δεν αντιστοιχούν πλέον σε καμία ομάδα
- *      (κολώνα διαγράφηκε/μετακινήθηκε/άλλαξε ομάδα → re-derive καθαρά, χωρίς stale).
+ *   · `creates`  — νέες ομάδες κολωνών χωρίς υπάρχον πέδιλο (ο caller χτίζει entity).
+ *   · `updates`  — ίδια ομάδα κολωνών, αλλαγμένη γεωμετρία → **in-place update** του
+ *      υπάρχοντος πεδίλου (σταθερό id, Revit hosted-element regeneration· ΟΧΙ delete+create).
+ *   · `removeFootingIds` — auto πέδιλα που δεν αντιστοιχούν πλέον σε **καμία** ομάδα
+ *      (κολώνα διαγράφηκε / ομάδα διαλύθηκε combined↔isolated → νέα ταυτότητα).
  *
  * Matching: ένα auto πέδιλο **ταιριάζει** με σχεδιασμένο όταν στηρίζει **ακριβώς το
  * ίδιο σύνολο κολωνών** (key) **ΚΑΙ** η γεωμετρία του είναι ~ίδια (θέση/διαστάσεις
@@ -38,9 +40,22 @@ export interface ReconcileColumn {
   readonly footingId?: string;
 }
 
-/** Ενέργειες reconcile — ο caller χτίζει τα create entities & εκτελεί batch command. */
+/**
+ * In-place ενημέρωση υπάρχοντος auto πεδίλου (ADR-459 Φ7 — Revit stable-identity):
+ * ίδιο σύνολο κολωνών, αλλαγμένη γεωμετρία (rotation/resize/move) → το πέδιλο
+ * **περιστρέφεται/προσαρμόζεται επί τόπου** διατηρώντας το `existingId`, αντί για
+ * delete+create (id churn). Mirror του Revit hosted-element regeneration.
+ */
+export interface FoundationUpdate {
+  readonly existingId: string;
+  readonly planned: PlannedFooting;
+}
+
+/** Ενέργειες reconcile — ο caller χτίζει τα create/update entities & εκτελεί batch command. */
 export interface FoundationReconcilePlan {
   readonly creates: readonly PlannedFooting[];
+  /** In-place updates (ίδιο σύνολο κολωνών, νέα γεωμετρία → σταθερό id). */
+  readonly updates: readonly FoundationUpdate[];
   readonly removeFootingIds: readonly string[];
 }
 
@@ -101,19 +116,29 @@ export function reconcileFoundationLayout(
   }
 
   const creates: PlannedFooting[] = [];
+  const updates: FoundationUpdate[] = [];
   const matchedFootingIds = new Set<string>();
   for (const planned of plan.footings) {
     const existing = existingByKey.get(columnSetKey(planned.columnIds));
-    if (existing && geometryMatches(existing, planned, s)) {
-      matchedFootingIds.add(existing.id); // no-op (idempotent)
-    } else {
+    if (!existing) {
+      // Νέα ομάδα κολωνών χωρίς υπάρχον πέδιλο → δημιουργία (νέα ταυτότητα).
       creates.push(planned);
+      continue;
     }
+    // Ίδιο σύνολο κολωνών → claim το υπάρχον (δεν αφαιρείται)· in-place ή no-op.
+    matchedFootingIds.add(existing.id);
+    if (!geometryMatches(existing, planned, s)) {
+      // ADR-459 Φ7 — Revit stable-identity: περιστροφή/resize/move → in-place update.
+      updates.push({ existingId: existing.id, planned });
+    }
+    // else: ίδια γεωμετρία → idempotent no-op.
   }
 
+  // Remove ΜΟΝΟ τα auto πέδιλα που καμία ομάδα δεν διεκδίκησε (διαλυμένη ομάδα:
+  // combined↔isolated, διαγραφή κολώνας) — εκεί η ταυτότητα όντως αλλάζει.
   const removeFootingIds = existingAutoFootings
     .filter((f) => !matchedFootingIds.has(f.id))
     .map((f) => f.id);
 
-  return { creates, removeFootingIds };
+  return { creates, updates, removeFootingIds };
 }

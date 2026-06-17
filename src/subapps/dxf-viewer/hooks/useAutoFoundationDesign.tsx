@@ -63,6 +63,7 @@ import {
 import {
   ApplyFoundationLayoutCommand,
   type FoundationCreateStep,
+  type FoundationUpdateStep,
 } from '../core/commands/entity-commands/ApplyFoundationLayoutCommand';
 import { DXF_DEFAULT_LAYER } from '../config/layer-config';
 import { resolveSceneUnits, type SceneUnits } from '../utils/scene-units';
@@ -88,6 +89,18 @@ const AUTO_DESIGN_EVENTS: readonly DrawingEventType[] = [
   'bim:column-delete-requested',
   'bim:structural-loads-computed',
 ];
+
+/**
+ * Triggers που είναι **άμεσες geometry edits** του χρήστη (έχουν δικό τους command
+ * στο undo stack) → το παράγωγο footing re-derive ομαδοποιείται στο **ίδιο** atomic
+ * undo step (Revit transaction group). Τα υπόλοιπα (π.χ. αυτόματα φορτία) πάνε
+ * standalone — δεν αντιστοιχούν σε ένα μοναδικό προηγούμενο user command.
+ */
+const GEOMETRY_EDIT_TRIGGERS: ReadonlySet<DrawingEventType> = new Set([
+  'drawing:entity-created',
+  'bim:column-params-updated',
+  'bim:entities-moved',
+]);
 
 /** Footing candidate (cross-level): foundation-level πέδιλα + active-scene πέδιλα. */
 interface CandidateFooting {
@@ -201,12 +214,15 @@ function buildAutoFooting(
 
 export function useAutoFoundationDesign(props: { levelManager: LevelManagerLike }): void {
   const { levelManager } = props;
-  const { execute } = useCommandHistory();
+  const { execute, executeGrouped } = useCommandHistory();
   const { t } = useTranslation('dxf-viewer-shell');
   const { user } = useAuth();
 
   useEffect(() => {
     let scheduled = false;
+    // ADR-459 Φ7 — αν το batch περιέχει geometry-edit trigger, ομαδοποίησε το footing
+    // re-derive στο ίδιο undo step με το column command (atomic, Revit-grade).
+    let groupable = false;
 
     const adapterFor = (levelId: string): LevelSceneManagerAdapter =>
       new LevelSceneManagerAdapter(levelManager.getLevelScene, levelManager.setLevelScene, levelId);
@@ -222,6 +238,8 @@ export function useAutoFoundationDesign(props: { levelManager: LevelManagerLike 
 
     const recompute = (): void => {
       scheduled = false;
+      const shouldGroup = groupable;
+      groupable = false;
       const levelId = levelManager.currentLevelId;
       if (!levelId) return;
       const activeScene = levelManager.getLevelScene(levelId);
@@ -255,7 +273,9 @@ export function useAutoFoundationDesign(props: { levelManager: LevelManagerLike 
       const plan = planFoundationLayout(layoutColumns, soil, sceneUnits);
       const reconcileColumns: ReconcileColumn[] = columns.map((c) => ({ id: c.id, footingId: c.params.footingId }));
       const diff = reconcileFoundationLayout(plan, existingAutoFootings, reconcileColumns, sceneUnits);
-      if (diff.creates.length === 0 && diff.removeFootingIds.length === 0) return; // idempotent no-op
+      if (diff.creates.length === 0 && diff.updates.length === 0 && diff.removeFootingIds.length === 0) {
+        return; // idempotent no-op
+      }
 
       const writer = writerFor(fl.target);
       if (!writer) return;
@@ -264,31 +284,46 @@ export function useAutoFoundationDesign(props: { levelManager: LevelManagerLike 
         const footing = buildAutoFooting(planned, columnsById, fl.target, sceneUnits);
         if (footing) createSteps.push({ footing, columnIds: planned.columnIds });
       }
+      // ADR-459 Φ7 — in-place updates (Revit stable-identity): νέα γεωμετρία στο ΙΔΙΟ id.
+      const updateSteps: FoundationUpdateStep[] = [];
+      for (const upd of diff.updates) {
+        const prev = existingAutoFootings.find((f) => f.id === upd.existingId);
+        const built = buildAutoFooting(upd.planned, columnsById, fl.target, sceneUnits);
+        if (!prev || !built) continue;
+        updateSteps.push({ prev, next: { ...built, id: upd.existingId }, columnIds: upd.planned.columnIds });
+      }
       const removes = existingAutoFootings.filter((f) => diff.removeFootingIds.includes(f.id));
-      if (createSteps.length === 0 && removes.length === 0) return;
+      if (createSteps.length === 0 && updateSteps.length === 0 && removes.length === 0) return;
 
       const provider = resolveStructuralCode(useStructuralSettingsStore.getState().codeId);
-      const cmd = new ApplyFoundationLayoutCommand(createSteps, removes, writer, adapterFor(levelId), provider);
-      execute(cmd);
+      const cmd = new ApplyFoundationLayoutCommand(createSteps, updateSteps, removes, writer, adapterFor(levelId), provider);
+      // Geometry edit → atomic με το column command· αλλιώς standalone.
+      if (shouldGroup) executeGrouped(cmd);
+      else execute(cmd);
       for (const step of createSteps) {
         EventBus.emit('bim:column-footing-attached', { columnIds: [...step.columnIds], footingId: step.footing.id });
+      }
+      for (const step of updateSteps) {
+        EventBus.emit('bim:column-footing-attached', { columnIds: [...step.columnIds], footingId: step.next.id });
       }
       toast.success(
         t('autoFoundation.applied', {
           created: cmd.createdCount(),
           combined: cmd.combinedCount(),
+          updated: cmd.updatedCount(),
           removed: cmd.removedCount(),
         }),
       );
     };
 
-    const schedule = (): void => {
+    const schedule = (ev: DrawingEventType): void => {
+      if (GEOMETRY_EDIT_TRIGGERS.has(ev)) groupable = true;
       if (scheduled) return;
       scheduled = true;
       queueMicrotask(recompute);
     };
 
-    const unsubs = AUTO_DESIGN_EVENTS.map((ev) => EventBus.on(ev, schedule));
+    const unsubs = AUTO_DESIGN_EVENTS.map((ev) => EventBus.on(ev, () => schedule(ev)));
     return () => unsubs.forEach((u) => u());
-  }, [levelManager, execute, t, user]);
+  }, [levelManager, execute, executeGrouped, t, user]);
 }

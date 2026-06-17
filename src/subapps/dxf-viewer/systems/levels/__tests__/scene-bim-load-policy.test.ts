@@ -82,6 +82,31 @@ describe('reconcileLoadedSceneBim', () => {
   });
 });
 
+describe('reconcileLoadedSceneBim — empty loaded scene (FIX Α load-time preservation)', () => {
+  // The exact call `useLevelSceneLoader.setEmptyScenePreservingBim()` now makes on
+  // every "empty scene" branch (no-file / dup / cross-floor / scene-not-found /
+  // catch): a bare empty scene reconciled against the live in-memory scene. Locks
+  // the anti-vanish invariant — a late "scene not found" must NOT wipe columns that
+  // a per-entity subscription already merged in-memory.
+  const emptyScene = (): SceneModel => scene([]);
+
+  it('preserves in-memory BIM when the loaded scene is empty (orphaned/missing file)', () => {
+    const existing = scene([ent('col_db', 'column'), ent('fnd_db', 'foundation')]);
+    const result = reconcileLoadedSceneBim(emptyScene(), existing);
+    expect(result.entities.map((e) => e.id).sort()).toEqual(['col_db', 'fnd_db']);
+  });
+
+  it('preserves stairs (per-entity persisted) on an empty load', () => {
+    const existing = scene([ent('s1', 'stair')]);
+    expect(reconcileLoadedSceneBim(emptyScene(), existing).entities.map((e) => e.id)).toEqual(['s1']);
+  });
+
+  it('yields an empty scene when there is no in-memory BIM (true first load)', () => {
+    expect(reconcileLoadedSceneBim(emptyScene(), null).entities).toHaveLength(0);
+    expect(reconcileLoadedSceneBim(emptyScene(), scene([ent('l1', 'line')])).entities).toHaveLength(0);
+  });
+});
+
 describe('stripForeignFloorBim', () => {
   it('drops BIM whose floorId differs from the saved floor (cross-level leak)', () => {
     // πέδιλο του ορόφου «F» που διέρρευσε στη σκηνή του Ισογείου ('floorGround').

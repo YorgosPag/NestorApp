@@ -24,7 +24,7 @@ import { applySlabGripDrag } from '../../bim/slabs/slab-grips';
 import { applySlabOpeningGripDrag } from '../../bim/slab-openings/slab-opening-grips';
 import { applyRoofGripDrag } from '../../bim/roofs/roof-grips';
 import { applyFloorFinishGripDrag } from '../../bim/floor-finishes/floor-finish-grips';
-import { EventBus } from '../../systems/events/EventBus';
+import { emitBimEntityParamsUpdated } from '../../systems/events/emit-bim-entity-params-updated';
 import { ShiftKeyTracker } from '../../keyboard/ShiftKeyTracker';
 import { createSceneManagerAdapter } from './grip-commit-adapters';
 
@@ -70,7 +70,7 @@ export function commitSlabGripDrag(
   );
   if (command.validate() !== null) return;
   deps.execute(command);
-  EventBus.emit('bim:slab-params-updated', { slabId: grip.entityId });
+  emitBimEntityParamsUpdated('slab', grip.entityId);
 }
 
 /**
@@ -115,7 +115,7 @@ export function commitRoofGripDrag(
   );
   if (command.validate() !== null) return;
   deps.execute(command);
-  EventBus.emit('bim:roof-params-updated', { roofId: grip.entityId });
+  emitBimEntityParamsUpdated('roof', grip.entityId);
 }
 
 /**
@@ -158,7 +158,7 @@ export function commitSlabOpeningGripDrag(
   );
   if (command.validate() !== null) return;
   deps.execute(command);
-  EventBus.emit('bim:slab-opening-params-updated', { slabOpeningId: grip.entityId });
+  emitBimEntityParamsUpdated('slab-opening', grip.entityId);
 }
 
 /**
@@ -199,5 +199,5 @@ export function commitFloorFinishGripDrag(
   );
   if (command.validate() !== null) return;
   deps.execute(command);
-  EventBus.emit('bim:floor-finish-params-updated', { floorFinishId: grip.entityId });
+  emitBimEntityParamsUpdated('floor-finish', grip.entityId);
 }

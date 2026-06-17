@@ -21,6 +21,8 @@ import type { WallEntity } from '../../bim/types/wall-types';
 import type { BeamEntity } from '../../bim/types/beam-types';
 // ADR-363 Phase 4 — column direct entity for DXF render pipeline.
 import type { ColumnEntity } from '../../bim/types/column-types';
+// ADR-469 — per-element structural component visibility override.
+import type { BimElementStyleOverride } from '../../config/bim-object-styles';
 import type { FoundationEntity } from '../../bim/types/foundation-types';
 // ADR-406 — MEP fixture direct entity for DXF render pipeline.
 import type { MepFixtureEntity } from '../../bim/types/mep-fixture-types';
@@ -97,6 +99,13 @@ export interface DxfEntity {
   lineweightMm?: LineweightMm;
   /** Transparency 0-90 — DXF group 1071. 0 = opaque. */
   transparency?: number;
+  /**
+   * ADR-469 — per-element structural component visibility override (forwarded από
+   * το BIM entity μέσω `buildBase`). Διαβάζεται από τα scene-level overlay passes
+   * (σοβάς/οπλισμός) ώστε το per-element override να ισχύει ΚΑΙ εκεί, όχι μόνο
+   * στους leaf renderers. Absent ⇒ μόνο το per-view flag ισχύει.
+   */
+  styleOverride?: BimElementStyleOverride;
 }
 
 export interface DxfLine extends DxfEntity {

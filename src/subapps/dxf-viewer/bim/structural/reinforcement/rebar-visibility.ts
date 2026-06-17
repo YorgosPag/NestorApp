@@ -12,9 +12,15 @@
  * @see docs/centralized-systems/reference/adrs/ADR-456-structural-quantities-reinforcement.md
  */
 
-import { useBimRenderSettingsStore } from '../../../state/bim-render-settings-store';
+import { isStructuralComponentVisible } from '../../visibility/structural-component-visibility';
 
-/** True όταν ο οπλισμός πρέπει να προβάλλεται (default OFF). Event-time, μηδέν subscription. */
+/**
+ * True όταν ο οπλισμός πρέπει να προβάλλεται (default OFF). Event-time, μηδέν subscription.
+ *
+ * ADR-469 — thin alias του ενοποιημένου resolver (`component='reinforcement'`,
+ * view-level): διατηρείται για back-compat. Για per-element ορατότητα οι callers
+ * καλούν απευθείας `isStructuralComponentVisible('reinforcement', entity)`.
+ */
 export function isReinforcementVisible(): boolean {
-  return useBimRenderSettingsStore.getState().showReinforcement ?? false;
+  return isStructuralComponentVisible('reinforcement');
 }

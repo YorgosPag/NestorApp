@@ -9,9 +9,15 @@
  * @see docs/centralized-systems/reference/adrs/ADR-449-structural-finish-skin.md
  */
 
-import { useBimRenderSettingsStore } from '../../state/bim-render-settings-store';
+import { isStructuralComponentVisible } from '../visibility/structural-component-visibility';
 
-/** True όταν ο σοβάς πρέπει να προβάλλεται (default ON). Event-time, μηδέν subscription. */
+/**
+ * True όταν ο σοβάς πρέπει να προβάλλεται (default ON). Event-time, μηδέν subscription.
+ *
+ * ADR-469 — thin alias του ενοποιημένου resolver (`component='plaster'`, view-level):
+ * διατηρείται για back-compat στα ~6 call-sites. Για per-element ορατότητα οι callers
+ * καλούν απευθείας `isStructuralComponentVisible('plaster', entity)`.
+ */
 export function isStructuralFinishVisible(): boolean {
-  return useBimRenderSettingsStore.getState().showFinishSkin ?? true;
+  return isStructuralComponentVisible('plaster');
 }

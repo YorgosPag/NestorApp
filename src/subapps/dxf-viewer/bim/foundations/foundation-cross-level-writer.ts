@@ -34,6 +34,7 @@ import type { FoundationEntity } from '../types/foundation-types';
 import type { Entity } from '../../types/entities';
 import type { SceneModel } from '../../types/scene';
 import type { AnySceneEntity } from '../../types/scene';
+import type { SceneWriteOrigin } from '../../hooks/scene/scene-write-origin';
 
 /** Auth/project scope (το κτίριο είναι κοινό — αλλάζει μόνο ο όροφος). */
 export interface FoundationWriteScope {
@@ -44,7 +45,7 @@ export interface FoundationWriteScope {
 
 interface LevelSceneIO {
   getLevelScene(levelId: string): SceneModel | null;
-  setLevelScene(levelId: string, scene: SceneModel): void;
+  setLevelScene(levelId: string, scene: SceneModel, origin?: SceneWriteOrigin): void;
 }
 
 /** Cross-level εγγραφή πεδίλων στον όροφο Θεμελίωσης (Firestore + scene). */
@@ -57,7 +58,17 @@ export interface FoundationCrossLevelWriter {
   remove(foundationId: string): void;
 }
 
-/** Μετάλλαξη της σκηνής Θεμελίωσης ΟΤΑΝ είναι φορτωμένη (αλλιώς no-op). */
+/**
+ * Μετάλλαξη της σκηνής Θεμελίωσης ΟΤΑΝ είναι φορτωμένη (αλλιώς no-op).
+ *
+ * Origin = `'system-reconcile'`: αυτή είναι ΠΑΡΑΓΩΓΗ (derived) εγγραφή — η
+ * αυθεντική persistence του πεδίλου γίνεται μέσω `svc.saveFoundation()`
+ * (foundation collection). Άρα ΔΕΝ πρέπει να πυροδοτεί το γενικό DXF-scene
+ * autosave του ορόφου Θεμελίωσης: ένας special level (ADR-461) χωρίς ανεβασμένο
+ * DXF δεν έχει `canonicalScenePath` → ADR-293 error θόρυβος σε κάθε cross-level
+ * εγγραφή. Η σκηνή ενημερώνεται μόνο για live εμφάνιση· όταν ο χρήστης
+ * επεξεργαστεί ο ίδιος τον όροφο, παίζει το κανονικό `'local-edit'` autosave.
+ */
 function mutateFoundationScene(
   io: LevelSceneIO,
   levelId: string,
@@ -65,7 +76,7 @@ function mutateFoundationScene(
 ): void {
   const scene = io.getLevelScene(levelId);
   if (!scene) return;
-  io.setLevelScene(levelId, { ...scene, entities: mutate(scene.entities) });
+  io.setLevelScene(levelId, { ...scene, entities: mutate(scene.entities) }, 'system-reconcile');
 }
 
 /**

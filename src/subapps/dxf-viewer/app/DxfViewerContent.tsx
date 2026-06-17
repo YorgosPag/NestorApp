@@ -46,6 +46,7 @@ import { useStructuralAutoAttach } from '../hooks/useStructuralAutoAttach';
 import { useStructuralAutoReinforce } from '../hooks/useStructuralAutoReinforce';
 import { useStructuralLoadTakedown } from '../hooks/useStructuralLoadTakedown';
 import { useStructuralFootingConnect } from '../hooks/useStructuralFootingConnect';
+import { useStructuralComponentOverride } from '../hooks/useStructuralComponentOverride';
 import { useStructuralOrganism } from '../hooks/useStructuralOrganism';
 import { useFoundationLevelSync } from '../hooks/useFoundationLevelSync';
 import { useColumnAdjacencyNotification } from '../hooks/useColumnAdjacencyNotification';
@@ -258,6 +259,7 @@ export const DxfViewerContent = React.memo<DxfViewerAppProps>((props) => {
   useStructuralAutoReinforce({ levelManager }); // ADR-459 Φ4d — «Αυτόματος Οπλισμός» (auto-apply command)
   useStructuralLoadTakedown({ levelManager }); // ADR-464 Φ4 — «Υπολογισμός Φορτίων» (tributary takedown)
   useStructuralFootingConnect({ levelManager }); // ADR-459 Φ4f — manual κολόνα↔πέδιλο connectivity (Ανάλυση)
+  useStructuralComponentOverride({ levelManager }); // ADR-469 — per-element σώμα/σοβάς/οπλισμός visibility override
   useFoundationLevelSync({ levelManager }); // ADR-459 Phase 0 — foundation-level SSoT (cross-level organism)
   useStructuralOrganism({ levelManager }); // ADR-459 Phase 1 — cross-entity structural diagnostics («λείπει το πέδιλο»)
   useColumnAdjacencyNotification({ levelManager }); // ADR-363 — post-creation adjacent-columns→shear-wall merge toast

@@ -83,6 +83,22 @@ export function useLevelSceneLoader({
       sceneManager.setCurrentFileName?.(null);
     };
 
+    // 🛡️ FIX (Α) — anti-vanish BIM load (incident 2026-06-17 «η κολώνα εμφανίζεται
+    // και εξαφανίζεται»). Every load-time "empty scene" write MUST go through the
+    // BIM-preservation SSoT (`reconcileLoadedSceneBim`), never a bare
+    // `createEmptyScene()`. Otherwise a late, async "scene not found" / orphaned-file
+    // result clobbers BIM that a per-entity subscription (`useXPersistence`, keyed by
+    // floorId) already merged into the in-memory scene — the columns flash, then the
+    // empty write wipes them. The reconcile keeps the loaded scene's DXF-only entities
+    // (here: none) + the existing in-memory BIM. No-op when nothing is in memory yet.
+    const setEmptyScenePreservingBim = () => {
+      sceneManager.setLevelScene(
+        currentLevelId,
+        reconcileLoadedSceneBim(createEmptyScene(), sceneManager.getLevelScene(currentLevelId)),
+        'load',
+      );
+    };
+
     // 🛡️ ROOT-CAUSE FIX (incident 2026-06-08 — repeated cross-floor data loss):
     // Re-point the auto-save target at the CURRENT level's file on EVERY level change,
     // BEFORE the fast-path / already-loaded early-returns below. Previously the target
@@ -111,7 +127,7 @@ export function useLevelSceneLoader({
     if (!sceneFileId) {
       // No DXF linked to this level yet — create empty scene (target already reset above)
       if (!existingScene) {
-        sceneManager.setLevelScene(currentLevelId, createEmptyScene(), 'load');
+        setEmptyScenePreservingBim();
       }
       return;
     }
@@ -119,7 +135,7 @@ export function useLevelSceneLoader({
     // Prevent duplicate loads for the same level
     if (loadedSceneLevelsRef.current.has(currentLevelId)) {
       if (!existingScene) {
-        sceneManager.setLevelScene(currentLevelId, createEmptyScene(), 'load');
+        setEmptyScenePreservingBim();
       }
       return;
     }
@@ -152,8 +168,8 @@ export function useLevelSceneLoader({
             `[LevelsSystem] sceneFileId ${sceneFileId} belongs to floor ${fileRecord?.entityId} ` +
             `but level ${currentLevelId} is floor ${level?.floorId} — skipping cross-floor load.`,
           );
-          sceneManager.setLevelScene(currentLevelId, createEmptyScene(), 'load');
           resetDxfAutoSaveTarget();
+          setEmptyScenePreservingBim();
           return;
         }
 
@@ -208,14 +224,23 @@ export function useLevelSceneLoader({
           }
           loadedSceneLevelsRef.current.add(currentLevelId);
         } else {
-          // File exists in Firestore but scene couldn't be loaded (corrupted/deleted)
-          console.warn(`[LevelsSystem] Scene not found for fileId: ${sceneFileId}`);
-          sceneManager.setLevelScene(currentLevelId, createEmptyScene(), 'load');
+          // File record/scene missing (orphaned sceneFileId, corrupted, or deleted).
+          // 🛡️ FIX (Β) — graceful suppress (incident 2026-06-17 ADR-293 error spam):
+          // the level points at a `sceneFileId` whose `files`/`cadFiles` doc no longer
+          // exists, so `getFileStoragePath` returns null and every local edit threw
+          // "canonicalScenePath is required (ADR-293)". Reset the auto-save target
+          // (like the cross-floor branch above) so this file-less floor never attempts
+          // a DXF scene-blob save → zero ADR-293 throw. BIM persists independently via
+          // its floorId-keyed per-entity collections. Preserve any in-memory BIM.
+          console.warn(`[LevelsSystem] Scene not found for fileId: ${sceneFileId} — suppressing DXF auto-save (orphaned/missing file).`);
+          resetDxfAutoSaveTarget();
+          setEmptyScenePreservingBim();
         }
       } catch (err) {
         if (!abortController.signal.aborted) {
           console.error('[LevelsSystem] Failed to load scene:', err);
-          sceneManager.setLevelScene(currentLevelId, createEmptyScene(), 'load');
+          resetDxfAutoSaveTarget();
+          setEmptyScenePreservingBim();
         }
       } finally {
         if (!abortController.signal.aborted) {

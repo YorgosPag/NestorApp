@@ -35,6 +35,7 @@ import { pointInPolygon } from '../geometry/shared/polygon-utils';
 import { RENDER_LINE_WIDTHS } from '../../config/text-rendering-config';
 import { resolveSubcategoryStyle } from '../../config/bim-line-weight-resolver';
 import { resolveIsEntityVisible } from '../visibility/visibility-resolver';
+import { isStructuralComponentVisible } from '../visibility/structural-component-visibility';
 import { resolveVgFillTint } from '../utils/bim-vg-fill-tint';
 import { linePatternToDashArray } from '../../config/bim-line-patterns';
 import { resolveCutState } from '../../config/bim-view-range';
@@ -122,6 +123,13 @@ export class BeamRenderer extends BaseEntityRenderer {
     // ολοκλήρου μέσα σε κολόνα) → drawable κενό → δεν σχεδιάζεται.
     const drawable = resolveBeamOutlinePieces(beam).filter((p) => p.length >= 3);
     if (drawable.length === 0) return;
+
+    // ADR-469 — core (σώμα σκυροδέματος) component gate. Κρυμμένο → παραλείπουμε το
+    // σχέδιο του σώματος· ο σοβάς (scene-level silhouette) προβάλλεται ανεξάρτητα.
+    if (!isStructuralComponentVisible('core', beam)) {
+      this.finalizeRender(entity, options);
+      return;
+    }
 
     const phaseState = this.phaseManager.determinePhase(entity as Entity, options);
 

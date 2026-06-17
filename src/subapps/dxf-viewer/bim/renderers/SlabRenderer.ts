@@ -40,6 +40,7 @@ import { pointInPolygon } from '../geometry/shared/polygon-utils';
 import { RENDER_LINE_WIDTHS } from '../../config/text-rendering-config';
 import { resolveSubcategoryStyle } from '../../config/bim-line-weight-resolver';
 import { resolveIsEntityVisible } from '../visibility/visibility-resolver';
+import { isStructuralComponentVisible } from '../visibility/structural-component-visibility';
 import { resolveVgFillTint } from '../utils/bim-vg-fill-tint';
 import { linePatternToDashArray } from '../../config/bim-line-patterns';
 import { resolveCutState } from '../../config/bim-view-range';
@@ -105,6 +106,12 @@ export class SlabRenderer extends BaseEntityRenderer {
     if (!slab.geometry || !slab.params) return;
     const verts = slab.geometry.polygon.vertices;
     if (verts.length < 3) return;
+
+    // ADR-469 — core (σώμα πλάκας) component gate. Κρυμμένο → παραλείπουμε το σχέδιο.
+    if (!isStructuralComponentVisible('core', slab)) {
+      this.finalizeRender(entity, options);
+      return;
+    }
 
     const phaseState = this.phaseManager.determinePhase(entity as Entity, options);
 

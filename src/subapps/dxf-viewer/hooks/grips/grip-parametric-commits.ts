@@ -35,7 +35,7 @@ import { applyColumnGripDrag } from '../../bim/columns/column-grips';
 import { applyFoundationGripDrag } from '../../bim/foundations/foundation-grips';
 import { applyMepSegmentGripDrag } from '../../bim/mep-segments/mep-segment-grips';
 import { executeSegmentMoveWithConnectedPipes } from '../../bim/mep-segments/build-connectivity-host-update';
-import { EventBus } from '../../systems/events/EventBus';
+import { emitBimEntityParamsUpdated } from '../../systems/events/emit-bim-entity-params-updated';
 import { createSceneManagerAdapter } from './grip-commit-adapters';
 
 // ADR-397 — MOVE→COPY hot-grip handlers live in grip-parametric-copy.ts
@@ -185,7 +185,7 @@ export function commitWallGripDrag(
   // ADR-363 §5.4 — hosted-opening cascade now lives inside UpdateWallParamsCommand
   // (covers every param path uniformly, same offsetFromStart). No wrapper needed.
   deps.execute(wallCmd);
-  EventBus.emit('bim:wall-params-updated', { wallId: grip.entityId });
+  emitBimEntityParamsUpdated('wall', grip.entityId);
 }
 
 /**
@@ -234,7 +234,7 @@ export function commitOpeningGripDrag(
   );
   if (command.validate() !== null) return;
   deps.execute(command);
-  EventBus.emit('bim:opening-params-updated', { openingId: grip.entityId });
+  emitBimEntityParamsUpdated('opening', grip.entityId);
 }
 
 /**
@@ -285,7 +285,7 @@ export function commitOpeningAltMove(
   );
   if (command.validate() !== null) return;
   deps.execute(command);
-  EventBus.emit('bim:opening-params-updated', { openingId: grip.entityId });
+  emitBimEntityParamsUpdated('opening', grip.entityId);
 }
 
 /**
@@ -338,7 +338,7 @@ export function commitBeamGripDrag(
   );
   if (command.validate() !== null) return;
   deps.execute(command);
-  EventBus.emit('bim:beam-params-updated', { beamId: grip.entityId });
+  emitBimEntityParamsUpdated('beam', grip.entityId);
 }
 
 /**
@@ -443,7 +443,7 @@ export function commitColumnGripDrag(
   );
   if (command.validate() !== null) return;
   deps.execute(command);
-  EventBus.emit('bim:column-params-updated', { columnId: grip.entityId });
+  emitBimEntityParamsUpdated('column', grip.entityId);
 }
 
 /**
@@ -491,5 +491,5 @@ export function commitFoundationGripDrag(
   );
   if (command.validate() !== null) return;
   deps.execute(command);
-  EventBus.emit('bim:foundation-params-updated', { foundationId: grip.entityId });
+  emitBimEntityParamsUpdated('foundation', grip.entityId);
 }

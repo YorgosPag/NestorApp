@@ -32,6 +32,7 @@ import { getStairGrips, stairGripGlyphShape } from '../stairs/stair-grips';
 import { DEFAULT_CUT_PLANE_HEIGHT } from '../geometry/stairs/stair-geometry-shared';
 import { resolveSubcategoryStyle } from '../../config/bim-line-weight-resolver';
 import { resolveIsEntityVisible } from '../visibility/visibility-resolver';
+import { isStructuralComponentVisible } from '../visibility/structural-component-visibility';
 import { resolveVgFillTint } from '../utils/bim-vg-fill-tint';
 import { linePatternToDashArray, type LinePatternKey } from '../../config/bim-line-patterns';
 import { resolveCutState } from '../../config/bim-view-range';
@@ -77,6 +78,12 @@ export class StairRenderer extends BaseEntityRenderer {
     // rest of the scene renders normally; the entity is also dropped from
     // hit-testing via the matching guard in HitTestingService.
     if (!stair.geometry || !stair.params) return;
+
+    // ADR-469 — core (σώμα σκάλας) component gate. Κρυμμένο → παραλείπουμε το σχέδιο.
+    if (!isStructuralComponentVisible('core', stair)) {
+      this.finalizeRender(entity, options);
+      return;
+    }
     // ADR-401 Phase G.2 — attach-to-structural NO-OP στο 2D (mirror `ColumnRenderer`
     // F.2). Ο 2D renderer είναι ADR-040 leaf — ΔΕΝ σκανάρει hosts (δοκάρια/πλάκες).
     // Το re-step μιας `attached` σκάλας (resolved `stepCount`/`rise`) εφαρμόζεται

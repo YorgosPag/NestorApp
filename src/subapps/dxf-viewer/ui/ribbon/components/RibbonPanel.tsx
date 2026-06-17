@@ -37,6 +37,7 @@ import { ShowPipeSizingToggle } from './ShowPipeSizingToggle';
 import { ShowBalancingToggle } from './ShowBalancingToggle';
 import { ExportThermalStudyButton } from './ExportThermalStudyButton';
 import { VisualStyleSelect } from './VisualStyleSelect';
+import { StructuralComponentVisibilitySelect } from './StructuralComponentVisibilitySelect';
 import { DisciplineVisibilityToggle } from './DisciplineVisibilityToggle';
 import { RibbonInsertTokenWidget } from './RibbonInsertTokenWidget';
 import { RibbonStairFloorInfoWidget } from './RibbonStairFloorInfoWidget';
@@ -142,6 +143,9 @@ function renderButton(button: RibbonButton): React.ReactNode {
     }
     if (button.widgetId === 'visual-style-select') {
       return <VisualStyleSelect key="visual-style-select-widget" />;
+    }
+    if (button.widgetId === 'structural-component-visibility') {
+      return <StructuralComponentVisibilitySelect key="structural-component-visibility-widget" />;
     }
     if (button.widgetId === 'discipline-visibility') {
       return <DisciplineVisibilityToggle key="discipline-visibility-widget" />;

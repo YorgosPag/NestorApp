@@ -31,12 +31,30 @@ export interface FoundationCreateStep {
   readonly columnIds: readonly string[];
 }
 
+/**
+ * In-place ενημέρωση υπάρχοντος πεδίλου (ADR-459 Φ7 — Revit stable-identity):
+ * `next` = ίδιο id, νέα γεωμετρία (rotation/resize/move)· `prev` = το υπάρχον entity
+ * (για ακριβές undo — επαναφορά γεωμετρίας + παλιού οπλισμού).
+ */
+export interface FoundationUpdateStep {
+  readonly prev: FoundationEntity;
+  readonly next: FoundationEntity;
+  readonly columnIds: readonly string[];
+}
+
 /** Internal: create step + τα συντιθέμενα commands (FK attach + reinforce). */
 interface CompiledCreate {
   readonly footing: FoundationEntity;
   readonly attach: AttachColumnFootingCommand;
   readonly reinforce: ReinforceColumnFootingCommand;
   readonly combined: boolean;
+}
+
+/** Internal: update step + το συντιθέμενο reinforce (re-derive στη νέα γεωμετρία). */
+interface CompiledUpdate {
+  readonly prev: FoundationEntity;
+  readonly next: FoundationEntity;
+  readonly reinforce: ReinforceColumnFootingCommand;
 }
 
 export class ApplyFoundationLayoutCommand implements ICommand {
@@ -46,9 +64,11 @@ export class ApplyFoundationLayoutCommand implements ICommand {
   readonly timestamp: number;
 
   private readonly compiledCreates: CompiledCreate[];
+  private readonly compiledUpdates: CompiledUpdate[];
 
   constructor(
     creates: readonly FoundationCreateStep[],
+    updates: readonly FoundationUpdateStep[],
     private readonly removes: readonly FoundationEntity[],
     private readonly writer: FoundationCrossLevelWriter,
     sceneManager: ISceneManager,
@@ -62,6 +82,14 @@ export class ApplyFoundationLayoutCommand implements ICommand {
       ),
       combined: c.columnIds.length > 1,
     }));
+    // ADR-459 Φ7 — in-place updates: re-derive οπλισμού στη νέα γεωμετρία (mirror create).
+    this.compiledUpdates = updates.map((u) => ({
+      prev: u.prev,
+      next: u.next,
+      reinforce: new ReinforceColumnFootingCommand(
+        u.columnIds, u.next, this.writer, sceneManager, provider,
+      ),
+    }));
     this.id = generateEntityId();
     this.timestamp = Date.now();
   }
@@ -73,9 +101,20 @@ export class ApplyFoundationLayoutCommand implements ICommand {
       c.attach.execute();
       c.reinforce.execute();
     }
+    // In-place update: σταθερό id, νέα γεωμετρία + re-derive οπλισμού.
+    for (const u of this.compiledUpdates) {
+      this.writer.update(u.next);
+      u.reinforce.execute();
+    }
   }
 
   undo(): void {
+    // Αντίστροφη σειρά: πρώτα τα updates (έτρεξαν τελευταία στο execute).
+    for (let i = this.compiledUpdates.length - 1; i >= 0; i--) {
+      const u = this.compiledUpdates[i];
+      u.reinforce.undo();
+      this.writer.update(u.prev); // πλήρης επαναφορά γεωμετρίας + παλιού οπλισμού
+    }
     for (let i = this.compiledCreates.length - 1; i >= 0; i--) {
       const c = this.compiledCreates[i];
       c.reinforce.undo();
@@ -92,6 +131,10 @@ export class ApplyFoundationLayoutCommand implements ICommand {
       c.attach.redo();
       c.reinforce.redo();
     }
+    for (const u of this.compiledUpdates) {
+      this.writer.update(u.next);
+      u.reinforce.redo();
+    }
   }
 
   /** Πλήθος νέων πεδίλων (για info toast). */
@@ -102,6 +145,11 @@ export class ApplyFoundationLayoutCommand implements ICommand {
   /** Πλήθος combined πεδίλων (≥2 κολώνες) — για info toast. */
   combinedCount(): number {
     return this.compiledCreates.filter((c) => c.combined).length;
+  }
+
+  /** Πλήθος πεδίλων που ενημερώθηκαν in-place (rotation/resize follow) — για info toast. */
+  updatedCount(): number {
+    return this.compiledUpdates.length;
   }
 
   /** Πλήθος πεδίλων που αφαιρέθηκαν (re-derive) — για info toast. */
@@ -119,19 +167,24 @@ export class ApplyFoundationLayoutCommand implements ICommand {
   }
 
   getDescription(): string {
-    return `Apply foundation layout: +${this.createdCount()} (combined ${this.combinedCount()}), -${this.removedCount()}`;
+    return `Apply foundation layout: +${this.createdCount()} (combined ${this.combinedCount()}), ~${this.updatedCount()}, -${this.removedCount()}`;
   }
 
   getAffectedEntityIds(): string[] {
     return [
       ...this.compiledCreates.flatMap((c) => [c.footing.id, ...c.attach.getAffectedEntityIds()]),
+      ...this.compiledUpdates.map((u) => u.next.id),
       ...this.removes.map((f) => f.id),
     ];
   }
 
   validate(): string | null {
-    if (this.compiledCreates.length === 0 && this.removes.length === 0) {
-      return 'No-op foundation layout (nothing to create or remove)';
+    if (
+      this.compiledCreates.length === 0 &&
+      this.compiledUpdates.length === 0 &&
+      this.removes.length === 0
+    ) {
+      return 'No-op foundation layout (nothing to create, update or remove)';
     }
     return null;
   }
@@ -144,6 +197,7 @@ export class ApplyFoundationLayoutCommand implements ICommand {
       timestamp: this.timestamp,
       data: {
         createFootingIds: this.compiledCreates.map((c) => c.footing.id),
+        updateFootingIds: this.compiledUpdates.map((u) => u.next.id),
         removeFootingIds: this.removes.map((f) => f.id),
       },
       version: 1,

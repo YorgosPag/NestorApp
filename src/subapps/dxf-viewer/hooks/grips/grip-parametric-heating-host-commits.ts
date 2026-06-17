@@ -29,7 +29,7 @@ import { UpdateMepWaterHeaterParamsCommand } from '../../core/commands/entity-co
 import { executeHostMoveWithConnectedPipes } from '../../bim/mep-segments/build-connectivity-host-update';
 import { BimRotateHotGripStore } from '../../bim/grips/bim-rotate-hotgrip-store';
 import { cadToggleState } from '../../systems/constraints/cad-toggle-state';
-import { EventBus } from '../../systems/events/EventBus';
+import { emitBimEntityParamsUpdated } from '../../systems/events/emit-bim-entity-params-updated';
 import { createSceneManagerAdapter } from './grip-commit-adapters';
 
 /**
@@ -82,7 +82,7 @@ export function commitMepRadiatorGripDrag(
     hostCommand,
     sceneManager,
     execute: deps.execute,
-    emitHost: () => EventBus.emit('bim:mep-radiator-params-updated', { radiatorId: entityId }),
+    emitHost: () => emitBimEntityParamsUpdated('mep-radiator', entityId),
   });
 }
 
@@ -136,7 +136,7 @@ export function commitMepBoilerGripDrag(
     hostCommand,
     sceneManager,
     execute: deps.execute,
-    emitHost: () => EventBus.emit('bim:mep-boiler-params-updated', { boilerId: entityId }),
+    emitHost: () => emitBimEntityParamsUpdated('mep-boiler', entityId),
   });
 }
 
@@ -190,6 +190,6 @@ export function commitMepWaterHeaterGripDrag(
     hostCommand,
     sceneManager,
     execute: deps.execute,
-    emitHost: () => EventBus.emit('bim:mep-water-heater-params-updated', { waterHeaterId: entityId }),
+    emitHost: () => emitBimEntityParamsUpdated('mep-water-heater', entityId),
   });
 }

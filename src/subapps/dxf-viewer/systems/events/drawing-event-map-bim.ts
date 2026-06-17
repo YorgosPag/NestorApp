@@ -342,6 +342,18 @@ export interface BimEventMap {
   // common auto-attach case) never persists and the next Firestore snapshot's
   // diff-merge reverts the in-memory binding. Fires on execute/undo/redo.
   'bim:entities-attached': { entities: ReadonlyArray<AnySceneEntity> };
+  /**
+   * ADR-469 — ribbon «Ορατότητα στοιχείων» per-element override request. Το widget
+   * (StructuralComponentElementOverride) emit-άρει το current selection + component +
+   * value· ο `useStructuralComponentOverride` hook ακούει, χτίζει τον sceneManager
+   * και εκτελεί `SetComponentVisibilityCommand` (undoable + persist). `value=null`
+   * ⇒ καθάρισε το override (επιστροφή στο per-view flag).
+   */
+  'bim:set-component-visibility': {
+    entityIds: readonly string[];
+    component: 'core' | 'plaster' | 'reinforcement';
+    value: boolean | null;
+  };
   /** ADR-369 Q8.2 — ribbon IFC button → open PsetEditorHost dialog. */
   'bim:pset-editor-open': { entityId: string; levelId: string; entityType: string };
   /** ADR-457 — column contextual «Λεπτομέρεια Οπλισμού» → open ColumnDetailHost dialog. */

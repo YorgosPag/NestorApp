@@ -10,6 +10,7 @@
  */
 import type { PenIndex } from './bim-pen-table';
 import type { LinePatternKey } from './bim-line-patterns';
+import type { StructuralComponent } from './bim-structural-components';
 
 /**
  * ADR-375 Phase C.9 — Revit-grade προκαθορισμένα ΧΡΩΜΑΤΑ γραμμής ανά κατηγορία.
@@ -143,6 +144,13 @@ export interface BimElementStyleOverride {
   color?: string | null;
   /** Line pattern override. */
   linePattern?: LinePatternKey;
+  /**
+   * ADR-469 — per-element structural component visibility override (Revit-grade,
+   * wins over the per-view `showStructuralCore`/`showFinishSkin`/`showReinforcement`
+   * flags). Absent component key ⇒ fall back to the view-level flag. Resolved by
+   * `bim/visibility/structural-component-visibility.ts → isStructuralComponentVisible`.
+   */
+  componentVisibility?: Partial<Record<StructuralComponent, boolean>>;
 }
 
 export interface ObjectStyle {

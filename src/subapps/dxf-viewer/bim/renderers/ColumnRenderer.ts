@@ -40,6 +40,7 @@ import { pointInPolygon } from '../geometry/shared/polygon-utils';
 import { RENDER_LINE_WIDTHS } from '../../config/text-rendering-config';
 import { resolveSubcategoryStyle } from '../../config/bim-line-weight-resolver';
 import { resolveIsEntityVisible } from '../visibility/visibility-resolver';
+import { isStructuralComponentVisible } from '../visibility/structural-component-visibility';
 import { resolveCutState } from '../../config/bim-view-range';
 import { resolveVgFillTint } from '../utils/bim-vg-fill-tint';
 import { useDrawingScaleStore } from '../../state/drawing-scale-store';
@@ -82,6 +83,16 @@ export class ColumnRenderer extends BaseEntityRenderer {
     if (!column.geometry || !column.params) return;
     const verts = column.geometry.footprint.vertices;
     if (verts.length < 3) return;
+
+    // ADR-469 — core (σώμα σκυροδέματος) component gate. Όταν κρυμμένο (per-view ή
+    // per-element override), παραλείπουμε ΟΛΟ το σχέδιο του σώματος (fill/hatch/
+    // outline). Ο σοβάς + ο οπλισμός είναι ΑΝΕΞΑΡΤΗΤΑ scene-level passes στον
+    // DxfRenderer, ώστε «μόνο οπλισμός» / «μόνο σοβάς» να προβάλλεται κανονικά.
+    // finalizeRender κρατά grips/selection (το στοιχείο παραμένει επιλέξιμο).
+    if (!isStructuralComponentVisible('core', column)) {
+      this.finalizeRender(entity, options);
+      return;
+    }
 
     const phaseState = this.phaseManager.determinePhase(entity as Entity, options);
 

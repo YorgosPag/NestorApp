@@ -31,6 +31,7 @@ import type { Point3D } from '../types/bim-base';
 import { RENDER_LINE_WIDTHS } from '../../config/text-rendering-config';
 import { resolveSubcategoryStyle, type BimLayerOverride } from '../../config/bim-line-weight-resolver';
 import { resolveIsEntityVisible } from '../visibility/visibility-resolver';
+import { isStructuralComponentVisible } from '../visibility/structural-component-visibility';
 import { resolveVgFillTint } from '../utils/bim-vg-fill-tint';
 import { linePatternToDashArray } from '../../config/bim-line-patterns';
 import { resolveCutState } from '../../config/bim-view-range';
@@ -97,6 +98,13 @@ export class WallRenderer extends BaseEntityRenderer {
     )) return;
 
     if (!wall.geometry || !wall.params) return;
+
+    // ADR-469 — core (σώμα τοίχου) component gate. Κρυμμένο → παραλείπουμε το σχέδιο
+    // του σώματος· ο σοβάς (scene-level silhouette) προβάλλεται ανεξάρτητα.
+    if (!isStructuralComponentVisible('core', wall)) {
+      this.finalizeRender(entity, options);
+      return;
+    }
 
     // ADR-404 Phase 3 — Revit cut-plane προβολή του battered τοίχου. Το πλήρες σώμα
     // (cut στυλ) μεταφέρεται στο **cut plane** (⟂ run)· η **βάση** ζωγραφίζεται λεπτή

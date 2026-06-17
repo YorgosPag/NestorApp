@@ -17,7 +17,7 @@ import type { MepUnderfloorEntity } from '../../bim/types/mep-underfloor-types';
 import { applyMepUnderfloorGripDrag } from '../../bim/mep-underfloor/mep-underfloor-grips';
 import { UpdateMepUnderfloorParamsCommand } from '../../core/commands/entity-commands/UpdateMepUnderfloorParamsCommand';
 import { ShiftKeyTracker } from '../../keyboard/ShiftKeyTracker';
-import { EventBus } from '../../systems/events/EventBus';
+import { emitBimEntityParamsUpdated } from '../../systems/events/emit-bim-entity-params-updated';
 import { createSceneManagerAdapter } from './grip-commit-adapters';
 
 /**
@@ -58,5 +58,5 @@ export function commitMepUnderfloorGripDrag(
   );
   if (command.validate() !== null) return;
   deps.execute(command);
-  EventBus.emit('bim:mep-underfloor-params-updated', { underfloorId: grip.entityId });
+  emitBimEntityParamsUpdated('mep-underfloor', grip.entityId);
 }

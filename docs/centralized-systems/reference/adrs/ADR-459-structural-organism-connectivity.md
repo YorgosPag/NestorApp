@@ -1,6 +1,6 @@
 # ADR-459 — Structural Organism / Analytical Connectivity Model
 
-**Status:** ACTIVE (Phase 0 + 1 + 2 + 4a + 4b + 4c + 4d + 4e + 4f implemented 2026-06-15· Phase 6 proactive + cross-level 2026-06-17· **Phase 7 Αυτόματος Σχεδιασμός Θεμελίωσης 2026-06-17· Phase 7 cross-level footing rendering all-floors + drift resilience 2026-06-17 (v8.1)**)
+**Status:** ACTIVE (Phase 0 + 1 + 2 + 4a + 4b + 4c + 4d + 4e + 4f implemented 2026-06-15· Phase 6 proactive + cross-level 2026-06-17· **Phase 7 Αυτόματος Σχεδιασμός Θεμελίωσης 2026-06-17· Phase 7 cross-level footing rendering all-floors + drift resilience 2026-06-17 (v8.1)· cross-level autosave-origin fix 2026-06-17 (v8.2)· Revit-grade footing in-place update + atomic undo 2026-06-17 (v8.3)· **3Δ rotate/resize→footing follow via kind→event emit SSoT 2026-06-17 (v8.4)**)
 **Discipline:** BIM / Structural (DXF Viewer subapp)
 **Σχετικά:** ADR-401 (auto-attach), ADR-436 (foundation discipline), ADR-456 (structural quantities), ADR-458 (beam-column cutback)
 
@@ -437,6 +437,48 @@ footing (όριο οικοπέδου — δεν υπάρχουν property lines)
 
 ## 8. Changelog
 
+- **2026-06-17 (v8.4, Opus):** **3Δ rotate/resize κολώνας → η θεμελίωση ΔΕΝ ακολουθούσε (το 2Δ δούλευε).**
+  **Root cause:** ο `useAutoFoundationDesign` ξανα-υπολογίζει σε structural events (`AUTO_DESIGN_EVENTS`).
+  Το 3Δ gizmo commit (`bim3d-edit-interaction-handlers.dispatchOutcome` → `getGlobalCommandHistory().execute(cmd)`)
+  **δεν εξέπεμπε κανένα** structural event. Το 3Δ **move** δούλευε ΜΟΝΟ επειδή το `MoveEntityCommand`
+  **αυτο-εκπέμπει** `bim:entities-moved`· το `RotateEntityCommand` / `Update*ParamsCommand` (rotate/resize/tilt/
+  vertical) **δεν αυτο-εκπέμπουν τίποτα** → ο auto-designer δεν πυροδοτούνταν → πέδιλο ακίνητο. (Το 2Δ rotate
+  δουλεύει γιατί το hot-grip commit εκπέμπει `bim:column-params-updated`.) **Fix (Επιλογή A — full SSoT):**
+  **(1)** NEW SSoT `systems/events/emit-bim-entity-params-updated.ts` — ΕΝΑ kind→event mapper
+  (`emitBimEntityParamsUpdated(type,id)`, 21 BIM types → σωστό `*-params-updated` event + payload key,
+  type-checked closures, μηδέν `any`· `stair`=no-op). **(2)** NEW `bim-3d/animation/bim3d-edit-structural-emit.ts`
+  (`emitStructuralChangeAfterEdit`) — μετά το `execute(cmd)` εκπέμπει ανά edited entity· **skip** όταν ο command
+  αυτο-εκπέμπει `bim:entities-moved` (οριζόντιο `MoveEntityCommand`/`MoveMultiple`/Compound-with-move-base) ώστε
+  να μην διπλο-ανακοινώνεται. Wired στο `dispatchOutcome` μετά το execute → συνεργάζεται αυτόματα με v8.3 atomic
+  undo (microtask `executeGrouped` τυλίγει rotate+footing σε ΕΝΑ Ctrl+Z). **Καλύπτει ΟΛΑ τα 3Δ edits** (rotate +
+  resize + tilt + vertical-move follow, όχι μόνο rotate). **(3) Boy-scout SSoT (N.0.2):** τα 2Δ inline emits ανά
+  kind (8 grip-commit σημεία: parametric/footprint/centred-box/polygon/heating-host) δε-διπλασιάστηκαν → όλα μέσω
+  του ΙΔΙΟΥ helper. 28 jest (kind→event ×21 + skip-logic). ΜΑΘΗΜΑ: μια γεωμετρική αλλαγή δομικού μέλους
+  ανακοινώνεται **μία φορά, ΕΝΑ SSoT**, ανεξαρτήτως surface (2Δ grip / 3Δ gizmo / ribbon). 🔴 tsc(Giorgio) +
+  browser-verify (3Δ rotate κολώνας → πέδιλο περιστρέφεται in-place· 3Δ move regression) + commit (git add ΜΟΝΟ
+  δικά μου· ADR-459 shared tree).
+- **2026-06-17 (v8.3, Opus):** **Revit-grade footing follow — in-place update + atomic undo.** Δύο μη-Revit
+  συμπεριφορές στο rotation/move κολώνας: (1) ο reconciler **έσβηνε** το παλιό πέδιλο και **δημιουργούσε νέο**
+  (delete+create, id churn) αντί να το περιστρέφει επί τόπου· (2) **split undo** — μία ενέργεια χρήστη =
+  δύο undo entries (column edit + footing re-derive) → 1η αναίρεση άφηνε **λοξή κολώνα σε ίσιο πέδιλο**
+  (ασυνεπής ενδιάμεση κατάσταση). **Τι κάνουν οι μεγάλοι (Revit/AutoCAD):** hosted/associative elements
+  έχουν **σταθερή ταυτότητα** (regen γεωμετρίας in-place, ΟΧΙ recreate)· η ενέργεια χρήστη + οι παράγωγες
+  ενημερώσεις = **ΕΝΑ transaction** (ένα Ctrl+Z τα αναιρεί μαζί). **Fix (full SSoT):**
+  **(Part 1)** `auto-foundation-reconcile` += `updates: FoundationUpdate[]` — ίδιο σύνολο κολωνών + αλλαγμένη
+  γεωμετρία → **in-place update** (σταθερό id)· delete+create μένει ΜΟΝΟ για διαλυμένη ομάδα (combined↔isolated,
+  νέα ταυτότητα). **(Part 2)** `ApplyFoundationLayoutCommand` += update branch (reuse `writer.update` +
+  `ReinforceColumnFootingCommand` — mirror create, create→update· `prev` captured για ακριβές undo).
+  **(Part 3)** NEW `core/commands/CompositeCommand.ts` (υλοποιεί το υπάρχον `ICompoundCommand`· execute/redo
+  forward, undo reverse) + NEW **additive** `CommandHistory.appendToLast(cmd)` (τυλίγει last+derived σε ΕΝΑ
+  atomic undo entry, time-window guard `mergeTimeWindow`) + `useCommandHistory.executeGrouped`. ΔΕΝ αλλάζει
+  execute/undo/redo (χαμηλό ρίσκο undo πυρήνα). **(Part 4)** `useAutoFoundationDesign` χτίζει `updateSteps`
+  (next = ίδιο existingId, νέα params) + `executeGrouped` για geometry-edit triggers
+  (created/params-updated/entities-moved), standalone για loads-computed· i18n el+en += `updated`. 17 jest
+  (reconcile updates 2 ανανεωμένα + CompositeCommand 2 + CommandHistory.appendToLast 4 + regression).
+  ΜΑΘΗΜΑ: derived/associative entity = stable identity (Revit hosted regen, ΟΧΙ delete+create)· derived
+  command = ίδιο transaction με τον trigger (atomic undo). 🔴 tsc(Giorgio) + browser-verify (rotate→πέδιλο
+  in-place ίδιο id· ΕΝΑ Ctrl+Z αναιρεί κολώνα+πέδιλο μαζί) + commit (git add ΜΟΝΟ δικά μου).
+- **2026-06-17 (v8.2, Opus):** **Fix — cross-level foundation write θόρυβος autosave (ADR-293).** Σύμπτωμα (Giorgio): σε ΚΑΘΕ τοποθέτηση κολώνας → console ERROR `canonicalScenePath is required for DXF scene saves (ADR-293)`. **Root cause:** ο `foundation-cross-level-writer.mutateFoundationScene` καλούσε `io.setLevelScene(foundationLevelId, …)` **χωρίς origin** → default `'local-edit'` → προγραμμάτιζε DXF-scene autosave για τον όροφο Θεμελίωσης· αυτός είναι special level (ADR-461) χωρίς ανεβασμένο DXF → `getFileStoragePath` null → κανένα `canonicalScenePath` → ADR-293 throw (caught, μη-fatal, αλλά θορυβώδες). Τα δεδομένα πεδίλου ΔΕΝ χάνονταν — persist μέσω `svc.saveFoundation()`. **Fix (1 αρχείο, SSoT):** η cross-level εγγραφή είναι DERIVED reconcile write → περνά `origin: 'system-reconcile'` (το `LevelSceneIO.setLevelScene` πήρε optional `origin?: SceneWriteOrigin`· ο `LevelsSystem` forwarder + `useAutoSaveSceneManager` ήδη το τιμούν μέσω `originSchedulesAutoSave`=false). Καλύπτει και τους 3 consumers (`useAutoFoundationDesign`/`useSmartDelete`/`useStructuralOrganismNotification`, όλοι derived). Η σκηνή Θεμελίωσης ενημερώνεται live για εμφάνιση· το κανονικό `'local-edit'` autosave παίζει μόνο όταν ο χρήστης επεξεργαστεί ο ίδιος τον όροφο. 🔴 browser-verify (τοποθέτησε κολώνα → μηδέν ADR-293 error) + commit.
 - **2026-06-17 (v8.1, Opus):** **Phase 7 — Cross-level footing rendering (all-floors) + scope-drift resilience.**
   Πρόβλημα (μετά τη v8 ghost stabilization): τα cross-level auto πέδιλα persist σωστά στο
   `floorplan_foundations` (keyed-by-`floorId`, ADR-420) ΑΛΛΑ (α) **δεν φαίνονται** στο 3Δ «Όλοι οι όροφοι»
@@ -470,6 +512,17 @@ footing (όριο οικοπέδου — δεν υπάρχουν property lines)
   (dedup-by-id, store wins)· ο reconciler βλέπει πλέον πάντα το υπάρχον auto πέδιλο → το διαγράφει στο rotate/
   move. +5 jest. ΜΑΘΗΜΑ: μετά τη μετάβαση σε model-SSoT sourcing, η προτίμηση «live scene first» έγινε
   επικίνδυνη (stale snapshot σκιάζει το SSoT) — το store είναι πλέον το authoritative read.
+  **Bugfix #2 (η ΠΡΑΓΜΑΤΙΚΗ αιτία — Firestore MCP audit: `floorplan_foundations` είχε ΜΟΝΟ 1 doc, το νέο
+  περιστραμμένο):** το παλιό πέδιλο **διαγραφόταν σωστά από το Firestore** — ήταν **ghost στο
+  `foundation-level-store`**. Το `pending` logic του `publishFoundationLevel` (v8.1) διατηρούσε ΟΠΟΙΟΔΗΠΟΤΕ
+  store footing απόν από το model ως «optimistic create»· ένα **stale realtime echo** (πριν διαδοθεί το
+  Firestore delete) ξανα-πρόσθετε το OLD από το model, και μετά το pending το κρατούσε **αθάνατο** → render
+  ghost. FIX: **tombstone tracking** (mirror του `deletedIdsRef` του `useFoundationPersistence`): NEW
+  `pendingRemovedIds` set στο store· `removeEntity` → tombstone· `publishFoundationLevel` εξαιρεί tombstoned
+  ids από model+pending ώστε stale echo να ΜΗΝ τα ανασταίνει· tombstone καθαρίζεται μόλις ο id λείψει από το
+  model (delete διαδόθηκε)· `upsertEntity` (re-create) αίρει το tombstone. +6 jest. ΜΑΘΗΜΑ: optimistic delete
+  σε realtime-synced store ΧΡΕΙΑΖΕΤΑΙ tombstone — αλλιώς stale echo + naive «keep-if-not-in-model» pending =
+  αθάνατο ghost. Το «δεν σβήνεται» ήταν render-state, ΟΧΙ persistence (το Firestore ήταν σωστό).
 - **2026-06-17 (v8, Opus):** **Phase 7 — Αυτόματος Σχεδιασμός Θεμελίωσης (§6j).** Decision Giorgio: η εφαρμογή
   αποφασίζει αυτόματα μεμονωμένο vs combined + διαστάσεις + οπλισμός (διεθνής πρακτική), χωρίς ερώτηση → info.
   **Engine:** NEW pure `auto-foundation-layout.ts` (union-find overlap/clearance 100 mm + combined load-centroid,

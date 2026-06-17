@@ -33,6 +33,13 @@ export interface FoundationLevelState {
   readonly entities: readonly Entity[];
   /** Datum-relative απόλυτο FFL του ενεργού ορόφου (mm) — για cross-level Z offset. */
   readonly activeFloorElevationMm: number;
+  /**
+   * ADR-459 Φ7 — tombstones: footing ids που ο writer διέγραψε optimistically αλλά
+   * το Firestore delete δεν έχει διαδοθεί ακόμη στο realtime model. Κρατά το πέδιλο
+   * **έξω** από τα entities ώστε ένα stale model echo (που ακόμη το περιέχει) να μην
+   * το «ανασταίνει» ως ghost. Καθαρίζεται μόλις ο id λείψει από το model (delete διαδόθηκε).
+   */
+  readonly pendingRemovedIds: ReadonlySet<string>;
   /** Δημοσίευση του τρέχοντος foundation-level snapshot (owner only). */
   setFoundationLevel(
     target: FoundationLevelTarget | null,
@@ -42,10 +49,11 @@ export interface FoundationLevelState {
   /**
    * ADR-459 Φ7 — model-SSoT publish: συνθέτει τα entities του ορόφου Θεμελίωσης από
    * `baseEntities` (snapshot non-footings) + `modelFootings` (authoritative από το
-   * `floorplan_foundations`) + τυχόν **pending** optimistic footings (footings ήδη
-   * στον store που δεν εμφανίστηκαν ακόμη στο model — π.χ. ένα fresh cross-level
-   * create του writer που δεν επιβεβαιώθηκε ακόμη από Firestore). Anti-race με τον
-   * `foundation-cross-level-writer` (optimistic `upsertEntity`).
+   * `floorplan_foundations`) + τυχόν **pending** optimistic creates (footings ήδη
+   * στον store που δεν εμφανίστηκαν ακόμη στο model). **Tombstone-aware**: footings
+   * που έχουν διαγραφεί optimistically (`pendingRemovedIds`) εξαιρούνται από το model
+   * ΚΑΙ από το pending → ένα stale echo δεν τα ανασταίνει· το tombstone καθαρίζεται
+   * μόλις ο id λείψει από το model (delete διαδόθηκε).
    */
   publishFoundationLevel(
     target: FoundationLevelTarget | null,
@@ -59,47 +67,66 @@ export interface FoundationLevelState {
    * κατάσταση χωρίς να περιμένει τον async event-driven refresh του sync hook).
    */
   upsertEntity(entity: Entity): void;
-  /** ADR-459 Phase 7 — optimistic remove (ο writer το καλεί μετά το delete). */
+  /** ADR-459 Phase 7 — optimistic remove (ο writer το καλεί μετά το delete) + tombstone. */
   removeEntity(entityId: string): void;
   /** Καθαρισμός (single-level / unmount). */
   clear(): void;
 }
 
+const EMPTY_REMOVED: ReadonlySet<string> = new Set();
+
 export const useFoundationLevelStore = create<FoundationLevelState>((set) => ({
   target: null,
   entities: [],
   activeFloorElevationMm: 0,
+  pendingRemovedIds: EMPTY_REMOVED,
   setFoundationLevel(target, entities, activeFloorElevationMm) {
-    set({ target, entities, activeFloorElevationMm });
+    // Owner re-seed (αλλαγή ορόφου/κτιρίου) → καθαρές tombstones.
+    set({ target, entities, activeFloorElevationMm, pendingRemovedIds: EMPTY_REMOVED });
   },
   publishFoundationLevel(target, baseEntities, modelFootings, activeFloorElevationMm) {
     set((s) => {
-      const modelIds = new Set(modelFootings.map((f) => f.id));
-      // Pending = optimistic footings (writer.upsert) που δεν είναι ακόμη στο model.
+      const incomingIds = new Set(modelFootings.map((f) => f.id));
+      // Καθάρισε όσα tombstones έχουν διαδοθεί (id απών από το fresh model).
+      const removed = new Set<string>();
+      for (const id of s.pendingRemovedIds) if (incomingIds.has(id)) removed.add(id);
+      // Authoritative model footings, μείον όσα είναι ακόμη tombstoned (stale echo).
+      const model = modelFootings.filter((f) => !removed.has(f.id));
+      const keptModelIds = new Set(model.map((f) => f.id));
+      // Pending = optimistic creates (στον store, εκτός model, μη-tombstoned).
       const pending = s.entities.filter(
-        (e) => isFootingEntity(e) && !modelIds.has(e.id),
+        (e) => isFootingEntity(e) && !keptModelIds.has(e.id) && !removed.has(e.id),
       );
       return {
         target,
-        entities: [...baseEntities, ...modelFootings, ...pending],
+        entities: [...baseEntities, ...model, ...pending],
         activeFloorElevationMm,
+        pendingRemovedIds: removed.size === s.pendingRemovedIds.size ? s.pendingRemovedIds : removed,
       };
     });
   },
   upsertEntity(entity) {
     set((s) => {
+      // Re-create → άρε το τυχόν tombstone.
+      const removed = s.pendingRemovedIds.has(entity.id)
+        ? new Set([...s.pendingRemovedIds].filter((id) => id !== entity.id))
+        : s.pendingRemovedIds;
       const exists = s.entities.some((e) => e.id === entity.id);
       return {
         entities: exists
           ? s.entities.map((e) => (e.id === entity.id ? entity : e))
           : [...s.entities, entity],
+        pendingRemovedIds: removed,
       };
     });
   },
   removeEntity(entityId) {
-    set((s) => ({ entities: s.entities.filter((e) => e.id !== entityId) }));
+    set((s) => ({
+      entities: s.entities.filter((e) => e.id !== entityId),
+      pendingRemovedIds: new Set([...s.pendingRemovedIds, entityId]),
+    }));
   },
   clear() {
-    set({ target: null, entities: [], activeFloorElevationMm: 0 });
+    set({ target: null, entities: [], activeFloorElevationMm: 0, pendingRemovedIds: EMPTY_REMOVED });
   },
 }));

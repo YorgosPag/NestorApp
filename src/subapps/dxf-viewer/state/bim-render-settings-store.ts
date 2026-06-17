@@ -80,6 +80,8 @@ export const useBimRenderSettingsStore = create<BimRenderSettingsState>((set, ge
       // is derived and no longer written.
       visualStyle: state.visualStyle,
       showHeatLoad: state.showHeatLoad,
+      // ADR-469 — persist the concrete-core toggle per-view.
+      showStructuralCore: state.showStructuralCore,
       showFinishSkin: state.showFinishSkin,
       // ADR-456 Slice 3 — persist the reinforcement-drawing toggle per-view.
       showReinforcement: state.showReinforcement,
@@ -123,6 +125,7 @@ export const useBimRenderSettingsStore = create<BimRenderSettingsState>((set, ge
         edgeMode: resolved.edgeMode,
         realisticMaterials: resolved.realisticMaterials,
         showHeatLoad: resolved.showHeatLoad,
+        showStructuralCore: resolved.showStructuralCore,
         showFinishSkin: resolved.showFinishSkin,
         showReinforcement: resolved.showReinforcement,
         cutPlaneActive: resolved.cutPlaneActive,
@@ -256,6 +259,14 @@ export const useBimRenderSettingsStore = create<BimRenderSettingsState>((set, ge
       set({ showHeatLoad, lastLocalMutationAt: Date.now() });
       if (state.currentLevelId)
         debounceWrite(state.currentLevelId, buildRaw({ ...get(), showHeatLoad }));
+    },
+
+    setShowStructuralCore(showStructuralCore) {
+      const state = get();
+      if (state.showStructuralCore === showStructuralCore) return; // idempotent — no-op write
+      set({ showStructuralCore, lastLocalMutationAt: Date.now() });
+      if (state.currentLevelId)
+        debounceWrite(state.currentLevelId, buildRaw({ ...get(), showStructuralCore }));
     },
 
     setShowFinishSkin(showFinishSkin) {

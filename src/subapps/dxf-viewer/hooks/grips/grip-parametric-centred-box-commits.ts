@@ -34,7 +34,7 @@ import { applyFloorplanSymbolGripDrag } from '../../bim/floorplan-symbols/floorp
 import { UpdateFloorplanSymbolParamsCommand } from '../../core/commands/entity-commands/UpdateFloorplanSymbolParamsCommand';
 import { BimRotateHotGripStore } from '../../bim/grips/bim-rotate-hotgrip-store';
 import { cadToggleState } from '../../systems/constraints/cad-toggle-state';
-import { EventBus } from '../../systems/events/EventBus';
+import { emitBimEntityParamsUpdated } from '../../systems/events/emit-bim-entity-params-updated';
 import { createSceneManagerAdapter } from './grip-commit-adapters';
 
 /**
@@ -95,7 +95,7 @@ export function commitMepFixtureGripDrag(
     hostCommand,
     sceneManager,
     execute: deps.execute,
-    emitHost: () => EventBus.emit('bim:mep-fixture-params-updated', { fixtureId: entityId }),
+    emitHost: () => emitBimEntityParamsUpdated('mep-fixture', entityId),
   });
 }
 
@@ -150,7 +150,7 @@ export function commitElectricalPanelGripDrag(
   );
   if (command.validate() !== null) return;
   deps.execute(command);
-  EventBus.emit('bim:electrical-panel-params-updated', { panelId: grip.entityId });
+  emitBimEntityParamsUpdated('electrical-panel', grip.entityId);
 }
 
 /**
@@ -213,7 +213,7 @@ export function commitMepManifoldGripDrag(
     hostCommand,
     sceneManager,
     execute: deps.execute,
-    emitHost: () => EventBus.emit('bim:mep-manifold-params-updated', { manifoldId: entityId }),
+    emitHost: () => emitBimEntityParamsUpdated('mep-manifold', entityId),
   });
 }
 
@@ -255,9 +255,9 @@ export function commitMepManifoldOutletCountGrip(
   const entities = (sceneManager.getEntities?.() ?? []) as unknown as readonly Entity[];
   const { command, segmentIds } = buildManifoldParamUpdate(entities, manifold, nextParams, sceneManager);
   deps.execute(command);
-  EventBus.emit('bim:mep-manifold-params-updated', { manifoldId: grip.entityId });
+  emitBimEntityParamsUpdated('mep-manifold', grip.entityId);
   for (const segmentId of segmentIds) {
-    EventBus.emit('bim:mep-segment-params-updated', { segmentId });
+    emitBimEntityParamsUpdated('mep-segment', segmentId);
   }
 }
 
@@ -311,7 +311,7 @@ export function commitFurnitureGripDrag(
   );
   if (command.validate() !== null) return;
   deps.execute(command);
-  EventBus.emit('bim:furniture-params-updated', { furnitureId: grip.entityId });
+  emitBimEntityParamsUpdated('furniture', grip.entityId);
 }
 
 /**

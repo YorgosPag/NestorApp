@@ -19,6 +19,7 @@ import type {
   CommandHistoryConfig,
 } from './interfaces';
 import { DEFAULT_HISTORY_CONFIG } from './interfaces';
+import { CompositeCommand } from './CompositeCommand';
 
 /**
  * Command History Manager
@@ -67,6 +68,42 @@ export class CommandHistory implements ICommandHistory {
 
     // Notify listeners
     this.notifyListeners('execute', command);
+  }
+
+  /**
+   * Execute a command and GROUP it with the immediately-preceding entry into a
+   * single atomic undo step (Revit transaction group). Used for **derived /
+   * associative** reactions — e.g. the auto-foundation re-derive that follows a
+   * column rotation: one Ctrl+Z reverts column + footing together, so the user
+   * never sees an inconsistent intermediate state.
+   *
+   * Additive — does NOT alter execute/undo/redo. Falls back to a standalone push
+   * when there is no recent previous entry (outside the merge time window), so an
+   * unrelated trigger never glues onto the wrong command.
+   */
+  appendToLast(command: ICommand): void {
+    // Run the (derived) command now — its children-effects apply immediately.
+    command.execute();
+
+    const last = this.undoStack[this.undoStack.length - 1];
+    const withinWindow =
+      !!last && command.timestamp - last.timestamp < this.config.mergeConfig.mergeTimeWindow;
+
+    if (last && withinWindow) {
+      if (last instanceof CompositeCommand) {
+        last.add(command); // already on top — extend in place
+      } else {
+        this.undoStack.pop();
+        this.undoStack.push(new CompositeCommand([last, command]));
+      }
+    } else {
+      // No recent companion → behave like a normal execute (standalone entry).
+      this.undoStack.push(command);
+      this.trimUndoStack();
+    }
+
+    this.redoStack = [];
+    this.notifyListeners('execute', this.undoStack[this.undoStack.length - 1]);
   }
 
   /**
