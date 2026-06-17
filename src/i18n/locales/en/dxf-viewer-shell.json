@@ -4109,6 +4109,12 @@
     "title": "Layer Manager",
     "description": "Manage layer visibility, color and properties (Ctrl+L)."
   },
+  "floorManagementDialog": {
+    "title": "Building Floors",
+    "description": "Manage floors, elevations and foundation — changes update the drawing levels automatically.",
+    "loading": "Loading building...",
+    "noBuilding": "No building is linked to this drawing."
+  },
   "furniture": {
     "catalog": {
       "diningChair02": "Dining chair",

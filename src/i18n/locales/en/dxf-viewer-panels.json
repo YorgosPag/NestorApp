@@ -34,6 +34,7 @@
       "description": "Management Levels",
       "loading": "Loading levels...",
       "projectLevels": "Project Levels",
+      "manageFloors": "Floor / Elevation Settings",
       "defaultLevelName": "Level {number}",
       "emptyNameWarning": "Name cannot be empty.",
       "selectLevel": "Select level {name}",

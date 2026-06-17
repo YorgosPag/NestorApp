@@ -33,11 +33,24 @@ import {
   resolveColumnCrossTies,
 } from '../../bim/structural/reinforcement/column-rebar-layout-resolve';
 import { resolveColumnReinforcementSection } from '../../bim/structural/reinforcement/column-section-outline';
+// ADR-404 Bug A — point-shear SSoT (reuse· ΟΧΙ ξανα-υλοποίηση της σύμβασης shear).
+import { applyColumnTiltToPoints } from './mesh-slope-shear';
 import { resolveActiveColumnReinforcementForParams } from '../../bim/structural/active-reinforcement';
 import { DEFAULT_STIRRUP_TYPE } from '../../bim/structural/reinforcement/column-reinforcement-types';
 import type { Point2D } from '../../rendering/types/Types';
 // ADR-463 — shared 3Δ rebar primitives (SSoT κολώνα+θεμελίωση· pure, μηδέν store import).
 import { MM_TO_M, MIN_RADIUS, REBAR_MATERIAL, buildRods, toThree, type Seg } from './rebar-3d-shared';
+
+/**
+ * ADR-404 Bug A — κεκλιμένη κολώνα: shear ΟΛΩΝ των rebar segment endpoints ΙΔΙΑ με τον
+ * πυρήνα/σοβά, ΠΡΙΝ το `buildRods` (ο κλωβός είναι InstancedMesh από segment endpoints —
+ * δεν shear-άρεται per-vertex όπως ένα solid). Delegate στον **SSoT** `applyColumnTiltToPoints`
+ * (`mesh-slope-shear`) — ΙΔΙΑ shear math (`columnTiltShearAt`) + dedup-by-reference (κοινά
+ * spiral endpoints shear-άρονται μία φορά). No-op flat fast-path.
+ */
+function shearRebarSegsForTilt(segs: readonly Seg[], params: ColumnEntity['params'], baseY: number): void {
+  applyColumnTiltToPoints(segs.flatMap((s) => [s.a, s.b]), params, baseY);
+}
 
 /** Ανοιχτή αλυσίδα (cross-tie ευθύγραμμο) ανά στάθμη — segment-προς-segment, ΧΩΡΙΣ
  *  κλείσιμο last→first (σε αντίθεση με το `ringSegments`). */
@@ -150,6 +163,7 @@ export function buildColumnRebarCage(
     a: new THREE.Vector3(b.x, baseY, -b.y),
     b: new THREE.Vector3(b.x, baseY + heightM, -b.y),
   }));
+  shearRebarSegsForTilt(barSegs, p, baseY); // ADR-404 Bug A — διαμήκεις γέρνουν με την κολώνα
   const bars = buildRods(barSegs, barRadius, material);
   if (bars) group.add(bars);
 
@@ -182,6 +196,7 @@ export function buildColumnRebarCage(
       stirrupSegs.push(...hookSegments(hookEndsXY, levels, baseY));
     }
   }
+  shearRebarSegsForTilt(stirrupSegs, p, baseY); // ADR-404 Bug A — στεφάνια ακολουθούν την κλίση
   const stirrups = buildRods(stirrupSegs, stirrupRadius, material);
   if (stirrups) group.add(stirrups);
 
@@ -199,6 +214,7 @@ export function buildColumnRebarCage(
         tieSegs.push(...hookSegments(hookEndsXY, levels, baseY));
       }
     }
+    shearRebarSegsForTilt(tieSegs, p, baseY); // ADR-404 Bug A — cross-ties ακολουθούν την κλίση
     const ties = buildRods(tieSegs, stirrupRadius, material);
     if (ties) group.add(ties);
   }

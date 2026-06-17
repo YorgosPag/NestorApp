@@ -81,6 +81,35 @@ export function applyColumnTilt(
 }
 
 /**
+ * ADR-404 Bug A — εφαρμόζει το ΙΔΙΟ raking-column shear σε ένα σύνολο 3Δ **σημείων**
+ * (`THREE.Vector3`), αντί για BufferGeometry. Το χρειάζονται meshes που ΔΕΝ έχουν
+ * shearable position buffer — π.χ. ο κλωβός οπλισμού (`column-rebar-3d`), που είναι
+ * InstancedMesh χτισμένος από segment endpoints. Καταναλώνει τον ΙΔΙΟ shear SSoT
+ * (`columnTiltShearAt`) + την ίδια ROT_X_NEG_90 σύμβαση (`worldX += dx`, `worldZ += −dy`)
+ * με το `applyHorizontalTiltShear` — μηδέν διπλή μαθηματική πηγή.
+ *
+ * `baseY` = world-Y datum της βάσης της κολώνας → ύψος-πάνω-από-βάση = `p.y − baseY`
+ * (world metres, ίδια μονάδα με το shift → unit-safe). **Dedup by reference**: κοινά
+ * endpoints (π.χ. αλυσίδα `spiralSegments` όπου `seg[i].b === seg[i+1].a`) shear-άρονται
+ * ΜΙΑ φορά. No-op fast-path όταν η κολώνα δεν είναι κεκλιμένη.
+ */
+export function applyColumnTiltToPoints(
+  points: Iterable<THREE.Vector3>,
+  params: ColumnEntity['params'],
+  baseY: number,
+): void {
+  if (!isColumnTilted(params)) return;
+  const seen = new Set<THREE.Vector3>();
+  for (const p of points) {
+    if (seen.has(p)) continue;
+    seen.add(p);
+    const { dx, dy } = columnTiltShearAt(params, p.y - baseY);
+    p.x += dx;
+    p.z -= dy;
+  }
+}
+
+/**
  * Battered wall shear. `baseHeightM` (default 0 = solid path· >0 = piece το οποίο
  * ξεκινά ψηλότερα στο floor-local Y, π.χ. πρέκι/wedge, βλ. `applyHorizontalTiltShear`).
  */

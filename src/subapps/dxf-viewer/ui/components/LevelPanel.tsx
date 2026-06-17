@@ -3,7 +3,8 @@
 import React, { useState, useMemo, useCallback } from 'react';
 import { EventBus } from '../../systems/events';
 import { useTranslation } from '@/i18n';
-import { Upload, Download, ChevronDown } from 'lucide-react';
+import { Upload, Download, ChevronDown, Settings } from 'lucide-react';
+import { FloorManagementDialogStore } from '../../stores/FloorManagementDialogStore';
 import { FloorplanImportWizard, DuplicateFloorplanDialog } from '@/features/floorplan-import';
 import { DxfFirestoreService } from '../../services/dxf-firestore.service';
 import { Button } from '@/components/ui/button';
@@ -243,19 +244,30 @@ export function LevelPanel({
           <Download className={iconSizes.sm} />{t('panels.levels.loadFromStorage')}
         </Button>
       )}
-      <button
-        type="button"
-        onClick={() => setIsLevelsCollapsed(prev => !prev)}
-        className={`w-full flex items-center justify-between cursor-pointer rounded ${PANEL_LAYOUT.PADDING.XS} hover:opacity-80 transition-opacity`}
-      >
-        <h3 className={PANEL_TOKENS.LEVEL_PANEL.HEADER.TEXT}>
-          <NAVIGATION_ENTITIES.building.icon className={PANEL_TOKENS.LEVEL_PANEL.HEADER.ICON} />
-          {t('panels.levels.projectLevels')}
-        </h3>
-        <ChevronDown
-          className={`${iconSizes.sm} transition-transform duration-200 ${isLevelsCollapsed ? '-rotate-90' : ''}`}
-        />
-      </button>
+      <div className="w-full flex items-center gap-1">
+        <button
+          type="button"
+          onClick={() => setIsLevelsCollapsed(prev => !prev)}
+          className={`flex-1 flex items-center justify-between cursor-pointer rounded ${PANEL_LAYOUT.PADDING.XS} hover:opacity-80 transition-opacity`}
+        >
+          <h3 className={PANEL_TOKENS.LEVEL_PANEL.HEADER.TEXT}>
+            <NAVIGATION_ENTITIES.building.icon className={PANEL_TOKENS.LEVEL_PANEL.HEADER.ICON} />
+            {t('panels.levels.projectLevels')}
+          </h3>
+          <ChevronDown
+            className={`${iconSizes.sm} transition-transform duration-200 ${isLevelsCollapsed ? '-rotate-90' : ''}`}
+          />
+        </button>
+        {/* «Ρυθμίσεις Ορόφων / Υψομέτρων» — ανοίγει την καρτέλα «Όροφοι» σε modal. */}
+        <button
+          type="button"
+          onClick={() => FloorManagementDialogStore.open()}
+          aria-label={t('panels.levels.manageFloors')}
+          className={`shrink-0 rounded ${PANEL_LAYOUT.PADDING.XS} hover:opacity-80 transition-opacity`}
+        >
+          <Settings className={iconSizes.sm} />
+        </button>
+      </div>
 
       {!isLevelsCollapsed && (isNonEmptyArray(levels) ? (
         <div className={PANEL_TOKENS.LEVEL_PANEL.CONTAINER.SECTION}>

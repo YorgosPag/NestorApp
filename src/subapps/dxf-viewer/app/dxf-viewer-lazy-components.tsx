@@ -32,6 +32,8 @@ export const ColumnDetailHost = React.lazy(() => import('../ui/components/column
 export const FoundationDetailHost = React.lazy(() => import('../ui/components/foundation-detail/FoundationDetailHost').then(mod => ({ default: mod.FoundationDetailHost })));
 // ADR-391 — AdminLayerManager dialog host
 export const AdminLayerManagerDialogHost = React.lazy(() => import('./AdminLayerManagerDialogHost').then(mod => ({ default: mod.AdminLayerManagerDialogHost })));
+// Floor management («Όροφοι Κτιρίου») dialog host — open from Levels panel ⚙️ / floor-tab right-click
+export const FloorManagementDialogHost = React.lazy(() => import('./FloorManagementDialogHost').then(mod => ({ default: mod.FloorManagementDialogHost })));
 // ADR-363 Φ3c — «Κολώνα από περίγραμμα» confirm dialog (self-subscribing, zero props)
 export const ColumnPerimeterConfirmDialog = React.lazy(() => import('../ui/dialogs/ColumnPerimeterConfirmDialog').then(mod => ({ default: mod.ColumnPerimeterConfirmDialog })));
 export const DxfImportModal = React.lazy(() => import('../components/DxfImportModal'));

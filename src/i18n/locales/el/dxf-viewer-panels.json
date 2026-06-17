@@ -34,6 +34,7 @@
       "description": "Επίπεδα διαχείρισης",
       "loading": "Φόρτωση επιπέδων...",
       "projectLevels": "Επίπεδα Έργου",
+      "manageFloors": "Ρυθμίσεις Ορόφων / Υψομέτρων",
       "defaultLevelName": "Επίπεδο {number}",
       "emptyNameWarning": "Το όνομα δεν μπορεί να είναι κενό.",
       "selectLevel": "Επιλογή επιπέδου {name}",

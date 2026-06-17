@@ -32,6 +32,7 @@ import {
   DxfFindReplaceHost, DxfSymbolPickerHost, RenumberOpeningsHost, OpeningTagStyleHost,
   OpeningSchedulePdfHost, ThermalEnvelopeHost, BimScheduleHost, AdminLayerManagerDialogHost,
   DxfAiChatPanel, ColumnPerimeterConfirmDialog, PrintHost, ColumnDetailHost, FoundationDetailHost,
+  FloorManagementDialogHost,
 } from './dxf-viewer-lazy-components';
 
 type LevelManager = ReturnType<typeof useLevels>;
@@ -68,6 +69,9 @@ export function DxfViewerDialogs(props: DxfViewerDialogsProps): React.JSX.Elemen
 
   const projectId = levelManager.saveContext?.projectId ?? undefined;
   const floorplanId = levelManager.fileRecordId ?? undefined;
+  // Ενεργό buildingId από τα levels (ίδια canonical πηγή με το LevelPanel) — για το
+  // Floor Management modal που ανοίγει την καρτέλα «Όροφοι» μέσα στον viewer.
+  const buildingId = levelManager.levels?.find((l) => l.buildingId)?.buildingId ?? null;
 
   return (
     <>
@@ -144,6 +148,8 @@ export function DxfViewerDialogs(props: DxfViewerDialogsProps): React.JSX.Elemen
       <React.Suspense fallback={hiddenFallback}><FoundationDetailHost levelManager={levelManager} /></React.Suspense>
       {/* ADR-391 — AdminLayerManager modal (opened via View tab button or Ctrl+L). */}
       <React.Suspense fallback={hiddenFallback}><AdminLayerManagerDialogHost projectId={levelManager.saveContext?.projectId ?? null} /></React.Suspense>
+      {/* «Όροφοι Κτιρίου» modal (opened from Levels panel ⚙️ or floor-tab right-click). */}
+      <React.Suspense fallback={hiddenFallback}><FloorManagementDialogHost buildingId={buildingId} /></React.Suspense>
       {USE_AI_DRAWING_ASSISTANT && (
         <React.Suspense fallback={hiddenFallback}>
           <DxfAiChatPanel

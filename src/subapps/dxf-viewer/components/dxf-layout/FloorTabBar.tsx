@@ -26,6 +26,7 @@ import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { PANEL_LAYOUT } from '../../config/panel-tokens';
 import { useFloorTabs, type FloorTab } from '../../hooks/data/useFloorTabs';
+import { FloorManagementDialogStore } from '../../stores/FloorManagementDialogStore';
 
 const TAB_BASE_CLASS =
   `flex items-center ${PANEL_LAYOUT.GAP.XS} ${PANEL_LAYOUT.SPACING.COMPACT} ${PANEL_LAYOUT.ROUNDED.TOP} ` +
@@ -123,6 +124,11 @@ export const FloorTabBar: React.FC = () => {
     <nav
       role="tablist"
       aria-label={t('floorTabs.ariaLabel')}
+      // Δεξί κλικ στη γραμμή σταθμών → ανοίγει την καρτέλα «Όροφοι» σε modal (Revit-style).
+      onContextMenu={(e) => {
+        e.preventDefault();
+        FloorManagementDialogStore.open();
+      }}
       className={`shrink-0 ${getDirectionalBorder('muted', 'top')} ${colors.bg.backgroundSecondary} ${PANEL_LAYOUT.SPACING.HORIZONTAL_SM} ${PANEL_LAYOUT.PADDING.VERTICAL_XS} flex items-center ${PANEL_LAYOUT.GAP.XS} ${PANEL_LAYOUT.OVERFLOW.X_AUTO}`}
     >
       {/* Phase B — «Όλοι οι όροφοι», πρώτη αριστερά. */}

@@ -51,10 +51,16 @@ function addFinishPrism(
   materialId: string,
   classification: FinishFaceSegment['classification'],
   levelId: string | undefined,
+  // ADR-404 Bug A — optional per-vertex tilt/slope shear applied to the prism
+  // geometry BEFORE the edge overlay is built, so the σοβάς faces AND their
+  // perimeter edge lines both follow the lean (the LineSegments2 overlay is a
+  // separate interleaved geometry that cannot be re-sheared after the fact).
+  shearGeo?: (geo: THREE.BufferGeometry) => void,
 ): void {
   if (quad.length < 4) return;
   const geo = stripPrismGeometry(quad, heightM);
   if (!geo) return;
+  shearGeo?.(geo);
   const mesh = new THREE.Mesh(geo, getMaterial3D(materialId));
   mesh.position.y = baseY;
   mesh.userData['bimId'] = id;
@@ -83,6 +89,8 @@ export function buildFinishSkinFromFaces(
   id: string,
   bimType: 'column' | 'beam',
   levelId?: string,
+  // ADR-404 Bug A — per-prism shear (applied before edges); flat/silhouette callers omit it.
+  shearGeo?: (geo: THREE.BufferGeometry) => void,
 ): THREE.Group | null {
   if (faces.segments.length === 0 || heightM <= 0) return null;
   const s = mmToSceneUnits(sceneUnits);
@@ -113,7 +121,7 @@ export function buildFinishSkinFromFaces(
       { x: bOuterM[i].x, y: bOuterM[i].y, z: 0 },
       { x: aOuterM[i].x, y: aOuterM[i].y, z: 0 },
     ];
-    addFinishPrism(group, quad, heightM, baseY, id, bimType, seg.materialId, seg.classification, levelId);
+    addFinishPrism(group, quad, heightM, baseY, id, bimType, seg.materialId, seg.classification, levelId, shearGeo);
   }
   if (group.children.length === 0) return null;
 
@@ -149,18 +157,16 @@ export function buildColumnFinishSkin(
   const group = new THREE.Group();
   for (const band of bands) {
     const hM = (band.zTopMm - band.zBottomMm) * MM_TO_M;
+    // ADR-404 Bug A — κεκλιμένη κολώνα: shear κάθε finish prism (faces + edges) ΙΔΙΑ με
+    // τον πυρήνα, ΠΡΙΝ χτιστούν οι ακμές. Το prism ζει σε floor-local Y με βάση στο band
+    // bottom → `baseHeightM = zBottom` ώστε το ύψος πάνω από τη βάση της κολώνας (= datum
+    // του core) να ταιριάζει 1:1. No-op flat fast-path (μηδέν regression για ίσιες κολώνες).
+    const baseHeightM = band.zBottomMm * MM_TO_M;
     const sub = buildFinishSkinFromFaces(
       band.faces, sceneUnits, hM, baseY + band.zBottomMm * MM_TO_M, column.id, 'column', levelId,
+      (geo) => applyColumnTilt(geo, column.params, baseHeightM),
     );
-    if (!sub) continue;
-    // ADR-404 Bug A — κεκλιμένη κολώνα: shear το finish band ΙΔΙΑ με τον πυρήνα. Το prism
-    // ζει σε floor-local Y με βάση στο band bottom → `baseHeightM = zBottom` ώστε το ύψος
-    // πάνω από τη βάση της κολώνας (= datum του core) να ταιριάζει 1:1. No-op flat fast-path.
-    const baseHeightM = band.zBottomMm * MM_TO_M;
-    for (const child of sub.children) {
-      applyColumnTilt((child as THREE.Mesh).geometry as THREE.BufferGeometry, column.params, baseHeightM);
-    }
-    while (sub.children.length) group.add(sub.children[0]);
+    if (sub) while (sub.children.length) group.add(sub.children[0]);
   }
   if (group.children.length === 0) return null;
   group.userData['bimId'] = column.id;
@@ -193,7 +199,9 @@ export function buildBeamFinishSkin(
   const faces = computeBeamFinishFaces(beam, verts, beam.params.depth, walls, columns, floorElevationMm);
   if (!faces) return null;
 
-  const skin = buildFinishSkinFromFaces(
+  // ADR-401/404 Bug A — κεκλιμένη δοκός (sloped): shear κάθε finish prism (faces + edges)
+  // ΠΡΙΝ τις ακμές, ΙΔΙΑ με τον πυρήνα (plan-based world-Y slope· no-op fast-path όταν επίπεδη).
+  return buildFinishSkinFromFaces(
     faces,
     beam.params.sceneUnits ?? 'mm',
     beam.params.depth * MM_TO_M,
@@ -201,12 +209,6 @@ export function buildBeamFinishSkin(
     beam.id,
     'beam',
     levelId,
+    (geo) => applyBeamSlope(geo, beam.params),
   );
-  if (!skin) return null;
-  // ADR-401/404 Bug A — κεκλιμένη δοκός (sloped): shear το finish ΙΔΙΑ με τον πυρήνα
-  // (plan-based world-Y slope· no-op fast-path όταν επίπεδη). Μηδέν νέα μαθηματικά.
-  for (const child of skin.children) {
-    applyBeamSlope((child as THREE.Mesh).geometry as THREE.BufferGeometry, beam.params);
-  }
-  return skin;
 }
