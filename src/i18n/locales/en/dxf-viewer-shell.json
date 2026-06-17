@@ -2766,6 +2766,29 @@
         "loadLiveAxial": "Live Q (kN)",
         "loadUlsAxial": "Design load N_Ed (kN)"
       },
+      "beamStructural": {
+        "code": "Code",
+        "codeTooltip": "Design code (per building)",
+        "concreteGrade": "Concrete",
+        "stirrupType": "Stirrup type",
+        "bottomDiameter": "Bottom Ø",
+        "bottomCount": "Bottom count",
+        "topDiameter": "Top Ø",
+        "topCount": "Top count",
+        "stirrupDiameter": "Stirrup Ø",
+        "stirrupSpacing": "Spacing",
+        "stirrupCriticalSpacing": "Critical sp.",
+        "stirrupLegs": "Legs",
+        "cover": "Cover",
+        "concreteVolumeGross": "Concrete gross (m³)",
+        "concreteVolumeNet": "Concrete net (m³)",
+        "concreteWeight": "Concrete (kg)",
+        "steelWeight": "Steel (kg)",
+        "ratio": "ρ (%)",
+        "loadDeadLine": "Dead g (kN/m)",
+        "loadLiveLine": "Live q (kN/m)",
+        "loadUlsLine": "Design load w_Ed (kN/m)"
+      },
       "columnEditor": {
         "width": "Width",
         "depth": "Depth",
@@ -3875,6 +3898,14 @@
       "finish": { "title": "Plaster Finish" },
       "envelope": { "title": "Envelope Function" },
       "material": { "title": "Material" }
+    }
+  },
+  "beamAdvancedPanel": {
+    "title": "Beam Properties",
+    "emptyState": "Select a beam to see its properties.",
+    "sections": {
+      "structural": { "title": "Structural / Reinforcement" },
+      "loads": { "title": "Design Load" }
     }
   },
   "foundationAdvancedPanel": {

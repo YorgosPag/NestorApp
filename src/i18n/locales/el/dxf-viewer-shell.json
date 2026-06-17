@@ -2766,6 +2766,29 @@
         "loadLiveAxial": "Μεταβλητό Q (kN)",
         "loadUlsAxial": "Φορτίο σχεδ. N_Ed (kN)"
       },
+      "beamStructural": {
+        "code": "Κανονισμός",
+        "codeTooltip": "Κανονισμός σχεδιασμού (ανά κτίριο)",
+        "concreteGrade": "Σκυρόδεμα",
+        "stirrupType": "Τύπος συνδετήρα",
+        "bottomDiameter": "Κάτω Ø",
+        "bottomCount": "Κάτω πλήθος",
+        "topDiameter": "Άνω Ø",
+        "topCount": "Άνω πλήθος",
+        "stirrupDiameter": "Συνδετήρες Ø",
+        "stirrupSpacing": "Βήμα",
+        "stirrupCriticalSpacing": "Κρίσιμο βήμα",
+        "stirrupLegs": "Σκέλη",
+        "cover": "Επικάλυψη",
+        "concreteVolumeGross": "Όγκος σκυρ. μικτός (m³)",
+        "concreteVolumeNet": "Όγκος σκυρ. καθαρός (m³)",
+        "concreteWeight": "Βάρος σκυρ. (kg)",
+        "steelWeight": "Βάρος χάλυβα (kg)",
+        "ratio": "ρ (%)",
+        "loadDeadLine": "Μόνιμο g (kN/m)",
+        "loadLiveLine": "Μεταβλητό q (kN/m)",
+        "loadUlsLine": "Φορτίο σχεδ. w_Ed (kN/m)"
+      },
       "columnEditor": {
         "width": "Πλάτος",
         "depth": "Βάθος",
@@ -3875,6 +3898,14 @@
       "finish": { "title": "Σοβάς" },
       "envelope": { "title": "Λειτουργία Κελύφους" },
       "material": { "title": "Υλικό" }
+    }
+  },
+  "beamAdvancedPanel": {
+    "title": "Ιδιότητες Δοκαριού",
+    "emptyState": "Επίλεξε ένα δοκάρι για να δεις τις ιδιότητες.",
+    "sections": {
+      "structural": { "title": "Στατικά / Οπλισμός" },
+      "loads": { "title": "Φορτίο Σχεδιασμού" }
     }
   },
   "foundationAdvancedPanel": {

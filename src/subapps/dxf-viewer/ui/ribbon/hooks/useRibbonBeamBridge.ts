@@ -36,8 +36,7 @@ import {
 } from '../../../bim/types/column-types';
 import { CATALOG_CUSTOM_SENTINEL } from '../../../bim/columns/section-catalog';
 import { useCommandHistory } from '../../../core/commands';
-import { UpdateBeamParamsCommand } from '../../../core/commands/entity-commands/UpdateBeamParamsCommand';
-import { LevelSceneManagerAdapter } from '../../../systems/entity-creation/LevelSceneManagerAdapter';
+import { useBeamParamsDispatcher } from './bridge/useBeamParamsDispatcher';
 import {
   BEAM_RIBBON_KEYS,
   BEAM_RIBBON_KEYS_ACTIONS,
@@ -160,26 +159,9 @@ export function useRibbonBeamBridge(
     return e;
   }, [levelManager, universalSelection]);
 
-  /**
-   * Dispatch the params patch through `UpdateBeamParamsCommand` so the change
-   * is undoable + geometry/validation recompute atomically (ADR-363 Phase 5.5a).
-   * `useBeamPersistence` picks up the patched entity via debounced auto-save.
-   */
-  const dispatchParams = useCallback(
-    (beam: BeamEntity, nextParams: BeamParams): void => {
-      if (!levelManager.currentLevelId) return;
-      const sm = new LevelSceneManagerAdapter(
-        levelManager.getLevelScene,
-        levelManager.setLevelScene,
-        levelManager.currentLevelId,
-      );
-      executeCommand(
-        new UpdateBeamParamsCommand(beam.id, nextParams, beam.params, sm, false),
-      );
-      EventBus.emit('bim:beam-params-updated', { beamId: beam.id });
-    },
-    [executeCommand, levelManager],
-  );
+  // ADR-471 — κοινός SSoT writer (μοιράζεται με το BeamPropertiesTab· undoable
+  // command + geometry/validation recompute + emit `bim:beam-params-updated`).
+  const dispatchParams = useBeamParamsDispatcher({ levelManager });
 
   const getComboboxState = useCallback(
     (commandKey: string): RibbonComboboxState | null => {

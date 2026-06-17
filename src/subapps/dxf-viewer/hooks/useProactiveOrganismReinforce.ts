@@ -44,6 +44,12 @@ const PROACTIVE_REINFORCE_EVENTS: readonly DrawingEventType[] = [
   'bim:columns-from-grid',
   'bim:beams-from-grid',
   'bim:foundations-from-grid',
+  // ADR-472 S3 — φρέσκα tributary φορτία (από useProactiveStructuralLoads/Φ9) → re-study
+  // του strength-driven οπλισμού των `auto:true` μελών. Loop-safe: ο reinforce εκπέμπει
+  // `bim:structural-auto-reinforced` + (persist) `bim:entities-attached`, που το load
+  // takedown ΔΕΝ ακούει → η αλυσίδα loads→reinforce είναι terminal (μηδέν oscillation).
+  // Διπλό δίχτυ: `buildReinforcePatch` convergence guard (ίδιο φορτίο → μηδέν patch).
+  'bim:structural-loads-computed',
 ];
 
 /**

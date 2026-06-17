@@ -37,33 +37,22 @@ import {
   FINISH_THICKNESS_OPTIONS,
 } from '../ribbon/hooks/bridge/finish-param';
 import { ENVELOPE_FUNCTION_OPTIONS } from '../ribbon/hooks/bridge/envelope-function-param';
+// ADR-471 (boy-scout, N.0.2) — οι row/field τύποι ενοποιήθηκαν στο member-agnostic
+// `bim-property-types` (κοινά κολόνα + δοκάρι). Εδώ μένουν ως aliases (μηδέν διπλότυπο).
+import type {
+  BimPropertyOption,
+  BimPropertyField,
+  BimPropertyGroup,
+} from '../bim-properties/bim-property-types';
 
-/** Combobox option για row του panel (structural συμβατό με RibbonComboboxOption). */
-export interface ColumnPropertyOption {
-  readonly value: string;
-  readonly labelKey: string;
-  readonly isLiteralLabel?: boolean;
-}
+/** Combobox option για row του panel (alias του {@link BimPropertyOption}). */
+export type ColumnPropertyOption = BimPropertyOption;
 
-/** Ένα editable πεδίο ή read-only readout μέσα σε group. */
-export interface ColumnPropertyField {
-  /** Κοινό commandKey με το ribbon bridge (read via resolver, write via apply). */
-  readonly commandKey: string;
-  readonly labelKey: string;
-  readonly tooltipKey?: string;
-  readonly options: readonly ColumnPropertyOption[];
-  /** `true` = readout (μη επεξεργάσιμο — bridge δίνει value, ΟΧΙ write). */
-  readonly readOnly?: boolean;
-}
+/** Ένα editable πεδίο ή read-only readout μέσα σε group (alias του {@link BimPropertyField}). */
+export type ColumnPropertyField = BimPropertyField;
 
-/** Λογικό group (= section) μέσα στο panel. */
-export interface ColumnPropertyGroup {
-  readonly id: string;
-  readonly titleKey: string;
-  /** Αν οριστεί, gated μέσω `resolveColumnPanelVisibility` (π.χ. structural=RC only). */
-  readonly visibilityKey?: string;
-  readonly fields: readonly ColumnPropertyField[];
-}
+/** Λογικό group (= section) μέσα στο panel (alias του {@link BimPropertyGroup}). */
+export type ColumnPropertyGroup = BimPropertyGroup;
 
 // ── Υλικό (μετακινήθηκε από contextual-column-tab.ts — μόνο εδώ πλέον) ──────────
 

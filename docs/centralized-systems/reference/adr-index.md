@@ -453,7 +453,7 @@
 | **ADR-469** | Cross-Floor Per-Entity BIM Load (file-less / orphaned floors — anti-vanish + ADR-293 suppress + per-entity aggregation) | ✅ APPROVED | 2026-06-17 | Uncategorized | [📄](./adrs/ADR-469-cross-floor-per-entity-bim-load.md) |
 | **ADR-470** | Structural Component Visibility (core/plaster/reinforcement — per-view + per-element + cut-plane parity, 2D+3D) | ✅ APPROVED | 2026-06-17 | Uncategorized | [📄](./adrs/ADR-470-structural-component-visibility.md) |
 | **ADR-471** | Unified Member Reinforcement (κολόνα+δοκάρι — member-agnostic SSoT facade + πλήρης Revit-grade οπλισμός δοκού: layout/2Δ/3Δ/PDF/panel/auto) | 🟡 IN PROGRESS (Slices 0-4) | 2026-06-17 | Uncategorized | [📄](./adrs/ADR-471-unified-member-reinforcement.md) |
-| **ADR-472** | Load-Aware Strength Reinforcement Design (As από N/M, EC2 §6.1 — πραγματικό re-design ήδη-οπλισμένων· FEM-free Revit-without-Robot· Slices 2/3 του ADR-459 Φ9) | 🟡 IN PROGRESS (S2 done, S3 gated) | 2026-06-17 | Uncategorized | [📄](./adrs/ADR-472-load-aware-strength-reinforcement.md) |
+| **ADR-472** | Load-Aware Strength Reinforcement Design (As από N/M, EC2 §6.1 — πραγματικό re-design ήδη-οπλισμένων· FEM-free Revit-without-Robot· Slices 2/3 του ADR-459 Φ9) | 🟡 IN PROGRESS (S2+S3 done, UNCOMMITTED) | 2026-06-17 | Uncategorized | [📄](./adrs/ADR-472-load-aware-strength-reinforcement.md) |
 | **ADR-UI-001** | Visual Primitive Ownership & Semantic Tokens | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-UI-001.md) |
 
 ---
@@ -891,7 +891,7 @@
 | **ADR-469** | Cross-Floor Per-Entity BIM Load (file-less / orphaned floors) | ✅ APPROVED | [View](./adrs/ADR-469-cross-floor-per-entity-bim-load.md) |
 | **ADR-470** | Structural Component Visibility (core/plaster/reinforcement, per-view + per-element) | ✅ APPROVED | [View](./adrs/ADR-470-structural-component-visibility.md) |
 | **ADR-471** | Unified Member Reinforcement (κολόνα+δοκάρι — SSoT facade + πλήρης οπλισμός δοκού) | 🟡 IN PROGRESS (Slices 0-4) | [View](./adrs/ADR-471-unified-member-reinforcement.md) |
-| **ADR-472** | Load-Aware Strength Reinforcement Design (As από N/M — re-design ήδη-οπλισμένων) | 🟡 IN PROGRESS (S2) | [View](./adrs/ADR-472-load-aware-strength-reinforcement.md) |
+| **ADR-472** | Load-Aware Strength Reinforcement Design (As από N/M — re-design ήδη-οπλισμένων) | 🟡 IN PROGRESS (S2+S3) | [View](./adrs/ADR-472-load-aware-strength-reinforcement.md) |
 | **ADR-UI-001** | Visual Primitive Ownership & Semantic Tokens | ✅ APPROVED | [View](./adrs/ADR-UI-001.md) |
 
 ---

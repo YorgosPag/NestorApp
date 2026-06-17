@@ -276,25 +276,72 @@ export interface ReinforcePatch {
 }
 
 /**
- * Code-suggested ελάχιστος-έγκυρος οπλισμός → `{prev, next}` patch (SSoT dispatcher
- * κολόνα/δοκάρι/πέδιλο). Επιστρέφει `null` αν το entity δεν είναι δομικό μέλος **ή**
- * έχει ήδη οπλισμό (idempotent). Geometry-neutral — additive, δεν αλλάζει διαστάσεις.
+ * ADR-472 S3 — Convergence guard: αλλάζει **ουσιωδώς** ο διαμήκης οπλισμός κολόνας;
+ * Σύγκριση των discrete πεδίων που οδηγεί η strength design (πλήθος + διάμετρος ράβδων)
+ * — exact, μηδέν float tolerance (η As είναι derived count·area, άρα count+Ø = ΑΚΡΙΒΗΣ
+ * ταυτότητα της πρότασης). Ίδιο φορτίο → ίδια πρόταση → `false` → μηδέν patch → μηδέν
+ * undo entry → μηδέν event storm (anti-oscillation). Καθαρά-detailing prefs (τύπος
+ * συνδετήρα/cross-tie) ΔΕΝ θεωρούνται «ουσιώδης» αλλαγή — δεν προκαλούν re-study.
+ */
+export function columnReinforcementMateriallyDiffers(
+  a: ColumnReinforcement,
+  b: ColumnReinforcement,
+): boolean {
+  return (
+    a.longitudinal.count !== b.longitudinal.count ||
+    a.longitudinal.diameterMm !== b.longitudinal.diameterMm
+  );
+}
+
+/**
+ * ADR-472 S3 — όπως το column variant, για δοκάρι: σύγκριση κάτω+άνω στρώσης (πλήθος +
+ * διάμετρος). Η κάμψη `M_Ed = w·L²/c` οδηγεί το `bottom`/`top` count·Ø — exact compare.
+ */
+export function beamReinforcementMateriallyDiffers(
+  a: BeamReinforcement,
+  b: BeamReinforcement,
+): boolean {
+  return (
+    a.bottom.count !== b.bottom.count ||
+    a.bottom.diameterMm !== b.bottom.diameterMm ||
+    a.top.count !== b.top.count ||
+    a.top.diameterMm !== b.top.diameterMm
+  );
+}
+
+/**
+ * Code-suggested οπλισμός → `{prev, next}` patch (SSoT dispatcher κολόνα/δοκάρι/πέδιλο).
+ * Επιστρέφει `null` αν το entity δεν είναι δομικό μέλος. Geometry-neutral — additive,
+ * δεν αλλάζει διαστάσεις.
+ *
+ * ADR-472 S3 (stale-intent invalidation) — κολόνα/δοκάρι:
+ *   - absent             → νέα code-suggested πρόταση (`auto:true`).
+ *   - manual (`!auto`)   → `null` (Revit: χειροκίνητη υπέρβαση κλειδωμένη, user wins).
+ *   - `auto:true`        → re-derive από ΤΡΕΧΟΥΣΑ γεωμετρία+φορτίο (SSoT `resolveActive*`)·
+ *                          patch ΜΟΝΟ αν `materiallyDiffers` (convergence guard).
+ * Πέδιλα/εδαφόπλακα: αμετάβλητο idempotent skip (re-size μέσω ADR-464).
  */
 export function buildReinforcePatch(
   entity: Entity,
   provider: StructuralCodeProvider,
 ): ReinforcePatch | null {
   if (isColumnEntity(entity)) {
-    if (entity.params.reinforcement) return null;
-    // ADR-456/460 — `auto:true` ⇒ real-time re-derive σε αλλαγή διαστάσεων (Giorgio 2026-06-16).
-    const r = provider.suggestColumnReinforcement(buildColumnSectionContext(entity));
-    return { prev: entity.params, next: { ...entity.params, reinforcement: { ...r, auto: true } } };
+    const stored = entity.params.reinforcement;
+    if (stored && !stored.auto) return null; // manual override → ΠΟΤΕ overwrite
+    const fresh: ColumnReinforcement = stored
+      ? resolveActiveColumnReinforcement(entity.params, provider) ?? stored
+      : { ...provider.suggestColumnReinforcement(buildColumnSectionContext(entity)), auto: true };
+    if (stored && !columnReinforcementMateriallyDiffers(stored, fresh)) return null;
+    return { prev: entity.params, next: { ...entity.params, reinforcement: fresh } };
   }
   if (isBeamEntity(entity)) {
-    if (entity.params.reinforcement) return null;
-    // ADR-471 — `auto:true` ⇒ real-time re-derive σε αλλαγή διαστάσεων (parity με κολόνα).
-    const r = provider.suggestBeamReinforcement(buildBeamSectionContext(entity));
-    return { prev: entity.params, next: { ...entity.params, reinforcement: { ...r, auto: true } } };
+    const stored = entity.params.reinforcement;
+    if (stored && !stored.auto) return null; // manual override → ΠΟΤΕ overwrite (parity με κολόνα)
+    const fresh: BeamReinforcement = stored
+      ? resolveActiveBeamReinforcement(entity, provider) ?? stored
+      : { ...provider.suggestBeamReinforcement(buildBeamSectionContext(entity)), auto: true };
+    if (stored && !beamReinforcementMateriallyDiffers(stored, fresh)) return null;
+    return { prev: entity.params, next: { ...entity.params, reinforcement: fresh } };
   }
   if (isFoundationEntity(entity)) return buildFoundationReinforcePatch(entity, provider);
   if (isFoundationSlabEntity(entity)) {

@@ -1,6 +1,6 @@
 # ADR-472 — Load-Aware Strength Reinforcement Design (As από N/M)
 
-**Status:** 🟡 IN PROGRESS — **S2 DONE** (load-aware suggester, UNCOMMITTED 2026-06-17 Opus) · **S3 PENDING** (gated, μετά browser-verify + έγκριση)
+**Status:** 🟡 IN PROGRESS — **S2 DONE** (load-aware suggester) · **S3 DONE** (stale-intent invalidation + re-study orchestration) — UNCOMMITTED 2026-06-17 Opus
 **Ημ/νία:** 2026-06-17 · **Σχετικά:** ADR-459 (Στατικός Οργανισμός Φ9), ADR-467 (Load Path Engine), ADR-456/460/471 (reinforcement engines), ADR-464 (footing strength design).
 
 ---
@@ -149,8 +149,40 @@ events). Χρειάζεται μόνο: (α) ο πυρήνας `runOrganismAutoR
 `codes/__tests__/suggest-reinforcement-load-aware.test.ts` (NEW, 7 tests). **Tests:** 33 codes-suggest GREEN +
 253 structural sweep GREEN (μηδέν regression). tsc = Giorgio (N.17).
 
+## 6β. Υλοποίηση S3 (2026-06-17, UNCOMMITTED) — stale-intent invalidation + re-study
+
+100% ειλικρίνεια — τι έγινε ΑΚΡΙΒΩΣ vs §2.3:
+
+1. **`buildReinforcePatch` (`section-context.ts`) — νέα triage κολόνα/δοκάρι** (foundation/slab
+   αμετάβλητα, re-size μέσω ADR-464): `absent` → suggest (`auto:true`)· `manual` (`auto` falsy) →
+   `null` (Revit user override locked)· `auto:true` → re-derive από ΤΡΕΧΟΥΣΑ γεωμετρία+φορτίο μέσω
+   **REUSE** του SSoT merge `resolveActiveColumn/BeamReinforcement` (κρατά detailing prefs — μηδέν
+   ξαναγραμμένη λογική).
+2. **Convergence guard (anti-oscillation)** — NEW pure exported helpers `columnReinforcementMateriallyDiffers`
+   (longitudinal count+Ø) / `beamReinforcementMateriallyDiffers` (bottom+top count+Ø): exact compare,
+   **μηδέν float tolerance** (As=count·area → count+Ø = ΑΚΡΙΒΗΣ ταυτότητα πρότασης). Ίδιο φορτίο →
+   ίδια πρόταση → μηδέν diff → μηδέν patch → μηδέν undo entry → μηδέν event storm. Detailing prefs
+   (τύπος συνδετήρα/cross-tie/legs) ΔΕΝ θεωρούνται «ουσιώδης» αλλαγή.
+3. **Re-study trigger (`useProactiveOrganismReinforce.ts`)** — προστέθηκε `bim:structural-loads-computed`
+   στα `PROACTIVE_REINFORCE_EVENTS`. Διορθώνει ΚΑΙ το ordering race (αν ο reinforce τρέξει με stale
+   load στο geometry-edit microtask, το επόμενο `loads-computed` τον ξανα-τρέχει με φρέσκο φορτίο).
+4. **Loop-safety (επιβεβαιωμένο με grep — terminal chain):** ο reinforce εκπέμπει
+   `bim:structural-auto-reinforced` + (persist) `bim:entities-attached`· ο `useProactiveStructuralLoads`
+   (Φ9) ΔΕΝ ακούει κανένα από τα δύο → loads→reinforce είναι terminal, **μηδέν oscillation**. Διπλό
+   δίχτυ: ο convergence guard (#2). Self-weight feedback αμελητέο → πρακτική σύγκλιση σε 1 iteration.
+5. **`designMomentKnm` / M-N interaction παραμένουν DEFER** (§4) — το axial-governed As δεν τα χρειάζεται,
+   ο tributary takedown δίνει αξονικά-μόνο φορτία. Wall boundary δεν συγκρίνεται στο S3 (η load-aware
+   strength οδηγεί το longitudinal). Output types αμετάβλητα → μηδέν αλλαγή σε render/PDF/auto.
+
+**Αρχεία S3:** `section-context.ts` (M), `hooks/useProactiveOrganismReinforce.ts` (M),
+`bim/structural/__tests__/section-context-stale-intent.test.ts` (NEW, 14 tests).
+**Tests:** 14 stale-intent GREEN + 54 reinforce-consumers sweep GREEN (μηδέν regression). tsc = Giorgio (N.17).
+
 ## 7. Changelog
 
+- **2026-06-17 (S3 υλοποίηση, UNCOMMITTED):** Stale-intent invalidation — `buildReinforcePatch` re-derive
+  `auto:true` σε load change (manual locked)· convergence guard (`materiallyDiffers`, anti-oscillation)·
+  `bim:structural-loads-computed` → re-reinforce (terminal chain, loop-safe). Λεπτομέρειες §6β.
 - **2026-06-17 (S2 υλοποίηση, UNCOMMITTED):** Load-aware suggester — κολόνα (αξονική EC2 §6.1) + δοκός (κάμψη
   `w·L²/c`), `max(strength, ρ_min)`, output types αμετάβλητα. SSoT `EN1990_ULS_FACTORS` + providers dedupe.
   `designMomentKnm` → S3. Λεπτομέρειες §6. S3 (stale-intent re-study) gated μετά browser-verify + έγκριση.

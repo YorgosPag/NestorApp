@@ -6,6 +6,7 @@
  * (`useRibbonBeamBridge`). Mirrors `COLUMN_RIBBON_KEYS` pattern.
  */
 
+import type { BeamParams } from '../../../bim/types/beam-types';
 import type { FinishParamField } from './finish-param';
 
 export const BEAM_RIBBON_KEYS = {
@@ -171,4 +172,136 @@ const BEAM_FINISH_KEY_SET: ReadonlySet<string> = new Set<string>(Object.keys(BEA
 
 export function isBeamFinishKey(commandKey: string): boolean {
   return BEAM_FINISH_KEY_SET.has(commandKey);
+}
+
+// ─── ADR-471 — δομοστατικά / οπλισμός δοκού (reinforcement) ────────────────────
+
+/**
+ * Editable structural command keys δοκού (mirror `COLUMN_STRUCTURAL_KEYS`). `code`
+ * = building-level κανονισμός (γράφει στο `structuralSettingsStore`, ΟΧΙ στη δοκό)·
+ * `concreteGrade` = per-element· τα υπόλοιπα = αριθμητικά/string πεδία οπλισμού
+ * (κάτω/άνω διαμήκης + συνδετήρες + επικάλυψη). Το δοκάρι έχει ΔΥΟ στρώσεις
+ * διαμήκων (κάτω/άνω) — γι' αυτό bottom/top αντί ενιαίου longitudinal.
+ */
+export const BEAM_STRUCTURAL_KEYS = {
+  /** Building-level κανονισμός σχεδιασμού (project setting, ΟΧΙ per-beam). */
+  code: 'beam.structural.code',
+  /** Κατηγορία σκυροδέματος (per-element, EN 1992-1-1 Table 3.1). */
+  concreteGrade: 'beam.structural.concreteGrade',
+  /** Τύπος συνδετήρα — closed-hooked/closed-welded/spiral (string, per-element). */
+  stirrupType: 'beam.structural.stirrupType',
+  /** Κάτω διαμήκης (εφελκυσμός ανοίγματος) — διάμετρος ράβδου (mm). */
+  bottomDiameter: 'beam.structural.bottomDiameter',
+  /** Κάτω διαμήκης — πλήθος ράβδων. */
+  bottomCount: 'beam.structural.bottomCount',
+  /** Άνω διαμήκης (στηρίξεις/αναρτήρες) — διάμετρος ράβδου (mm). */
+  topDiameter: 'beam.structural.topDiameter',
+  /** Άνω διαμήκης — πλήθος ράβδων. */
+  topCount: 'beam.structural.topCount',
+  /** Συνδετήρες — διάμετρος (mm). */
+  stirrupDiameter: 'beam.structural.stirrupDiameter',
+  /** Συνδετήρες — βήμα μεσαίας (μη-κρίσιμης) ζώνης (mm). */
+  stirrupSpacing: 'beam.structural.stirrupSpacing',
+  /** Συνδετήρες — κρίσιμο βήμα πύκνωσης άκρων (mm, EC8 §5.4.3.1.2). */
+  stirrupCriticalSpacing: 'beam.structural.stirrupCriticalSpacing',
+  /** Συνδετήρες — πλήθος σκελών (δίτμητος/τρίτμητος…). */
+  stirrupLegs: 'beam.structural.stirrupLegs',
+  /** Επικάλυψη οπλισμού cnom (mm). */
+  cover: 'beam.structural.cover',
+} as const;
+
+/** Read-only readout keys δοκού — υπολογισμένα βάρη/ρ%/φορτία (bridge δίνει value). */
+export const BEAM_STRUCTURAL_READOUT_KEYS = {
+  /** m³ — μικτός (gross) όγκος σκυροδέματος (b·h·span). */
+  concreteVolumeGross: 'beam.structural.readout.concreteVolumeGross',
+  /** m³ — καθαρός (net) όγκος = μικτός − όγκος χάλυβα (βάρος/7850). */
+  concreteVolumeNet: 'beam.structural.readout.concreteVolumeNet',
+  /** kg — βάρος σκυροδέματος. */
+  concreteWeight: 'beam.structural.readout.concreteWeight',
+  /** kg — βάρος χάλυβα οπλισμού B500C (διαμήκη + συνδετήρες). */
+  steelWeight: 'beam.structural.readout.steelWeight',
+  /** % — ποσοστό εφελκυόμενου (κάτω) οπλισμού ρ = As,bottom/(b·d). */
+  ratio: 'beam.structural.readout.ratio',
+  // ADR-467 — γραμμικό φορτίο σχεδιασμού από τη διαδρομή φορτίων (`params.appliedLoad`,
+  // tributary takedown). Read-only mirror του column «Φορτίο Σχεδιασμού».
+  /** kN/m — μόνιμο γραμμικό φορτίο g (χαρακτηριστικό). */
+  loadDeadLine: 'beam.structural.readout.loadDeadLine',
+  /** kN/m — μεταβλητό γραμμικό φορτίο q (χαρακτηριστικό). */
+  loadLiveLine: 'beam.structural.readout.loadLiveLine',
+  /** kN/m — γραμμικό φορτίο σχεδιασμού ULS w_Ed = γ_G·g + γ_Q·q (EN1990 6.10). */
+  loadUlsLine: 'beam.structural.readout.loadUlsLine',
+} as const;
+
+/** Πεδίο του `BeamReinforcement` που χειρίζεται ένα αριθμητικό structural key. */
+export type BeamStructuralReinforcementField =
+  | 'bottomDiameter'
+  | 'bottomCount'
+  | 'topDiameter'
+  | 'topCount'
+  | 'stirrupDiameter'
+  | 'stirrupSpacing'
+  | 'stirrupCriticalSpacing'
+  | 'stirrupLegs'
+  | 'cover';
+
+/** commandKey → πεδίο οπλισμού (καταναλώνεται από beam-structural-param helpers). */
+export const BEAM_STRUCTURAL_KEY_TO_FIELD: Readonly<Record<string, BeamStructuralReinforcementField>> = {
+  [BEAM_STRUCTURAL_KEYS.bottomDiameter]: 'bottomDiameter',
+  [BEAM_STRUCTURAL_KEYS.bottomCount]: 'bottomCount',
+  [BEAM_STRUCTURAL_KEYS.topDiameter]: 'topDiameter',
+  [BEAM_STRUCTURAL_KEYS.topCount]: 'topCount',
+  [BEAM_STRUCTURAL_KEYS.stirrupDiameter]: 'stirrupDiameter',
+  [BEAM_STRUCTURAL_KEYS.stirrupSpacing]: 'stirrupSpacing',
+  [BEAM_STRUCTURAL_KEYS.stirrupCriticalSpacing]: 'stirrupCriticalSpacing',
+  [BEAM_STRUCTURAL_KEYS.stirrupLegs]: 'stirrupLegs',
+  [BEAM_STRUCTURAL_KEYS.cover]: 'cover',
+};
+
+const BEAM_STRUCTURAL_KEY_SET: ReadonlySet<string> = new Set<string>(
+  Object.values(BEAM_STRUCTURAL_KEYS),
+);
+const BEAM_STRUCTURAL_READOUT_KEY_SET: ReadonlySet<string> = new Set<string>(
+  Object.values(BEAM_STRUCTURAL_READOUT_KEYS),
+);
+
+export function isBeamStructuralKey(commandKey: string): boolean {
+  return BEAM_STRUCTURAL_KEY_SET.has(commandKey);
+}
+
+export function isBeamStructuralReadoutKey(commandKey: string): boolean {
+  return BEAM_STRUCTURAL_READOUT_KEY_SET.has(commandKey);
+}
+
+/**
+ * Panel visibility keys δοκού (Properties palette gating). `structural` = ορατό
+ * μόνο σε **οπλισμένο-σκυρόδεμα** δοκό (όχι μεταλλική Ι / glulam — εκεί ο οπλισμός
+ * δεν έχει νόημα). Mirror του `COLUMN_RIBBON_VISIBILITY_KEYS.structural` pattern.
+ */
+export const BEAM_STRUCTURAL_VISIBILITY_KEYS = {
+  structural: 'beam.visibility.structural',
+} as const;
+
+const BEAM_STRUCTURAL_VISIBILITY_KEY_SET: ReadonlySet<string> = new Set<string>(
+  Object.values(BEAM_STRUCTURAL_VISIBILITY_KEYS),
+);
+
+export function isBeamStructuralVisibilityKey(key: string): boolean {
+  return BEAM_STRUCTURAL_VISIBILITY_KEY_SET.has(key);
+}
+
+/**
+ * Pure SSoT: αποφασίζει αν ένα visibility-gated section του beam Properties panel
+ * πρέπει να φαίνεται. `structural` = ΜΟΝΟ για RC δοκό (rectangular σκυρόδεμα)· σε
+ * μεταλλική Ι / glulam ο οπλισμός κρύβεται. keys εκτός set → `true` (no-op).
+ * `params === null` (καμία επιλογή) → `false`.
+ */
+export function resolveBeamPanelVisibility(visibilityKey: string, params: BeamParams | null): boolean {
+  if (!isBeamStructuralVisibilityKey(visibilityKey)) return true;
+  if (!params) return false;
+  if (visibilityKey === BEAM_STRUCTURAL_VISIBILITY_KEYS.structural) {
+    const isSteelOrTimber =
+      params.sectionKind === 'I-shape' || params.material === 'steel' || params.material === 'glulam';
+    return !isSteelOrTimber;
+  }
+  return false;
 }
