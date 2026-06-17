@@ -458,7 +458,7 @@
 | **ADR-474** | Occupancy-Driven Auto Structural Loads (EN1991-1-1 q_k ανά χρήση + auto g_k από πλάκα· explicit-wins· zero-input — ο μηχανικός δεν πληκτρολογεί kPa) | 🟢 DONE (UNCOMMITTED) | 2026-06-17 | Uncategorized | [📄](./adrs/ADR-474-occupancy-driven-auto-loads.md) |
 | **ADR-475** | Auto Member Sizing (serviceability-driven — το δοκάρι αυτο-διαστασιολογεί ύψος από span+φορτίο: EC2 §7.4.2 βέλος + ULS κάμψη/διάτμηση· autoSized lock override· proactive pipeline· belt-and-suspenders validator) | 🟢 DONE (UNCOMMITTED) | 2026-06-18 | Uncategorized | [📄](./adrs/ADR-475-auto-member-sizing.md) |
 | **ADR-476** | Unified Slab Reinforcement (οπλισμός ΟΛΩΝ των πλακών: εδαφόπλακα + δάπεδο/οροφή· kind-aware suggester EC2 §9.3.1/§9.8.2· auto re-study· 2Δ polygon-clipped σχάρες + 3Δ κλωβός + Properties panel & ribbon — full SSoT με κολόνα/δοκό/πέδιλο) | 🟡 IN PROGRESS (Slices 0-4 DONE, UNCOMMITTED· S5 PDF pending) | 2026-06-18 | Uncategorized | [📄](./adrs/ADR-476-unified-slab-reinforcement.md) |
-| **ADR-477** | Tie-Beam Reinforcement Unification (συνδετήρια δοκός θεμελίωσης: live auto re-study σε resize, parity κολόνας/δοκού + facade· DEFER ενοποίηση render/EC8 δύναμη σύνδεσης) | 🟡 PARTIAL (Slice 1 DONE, UNCOMMITTED· S2-3 pending) | 2026-06-18 | Uncategorized | [📄](./adrs/ADR-477-tie-beam-reinforcement-unification.md) |
+| **ADR-477** | Tie-Beam Reinforcement Unification (συνδετήρια δοκός θεμελίωσης: live auto re-study + ενοποίηση render με beam pipeline → EC8 ζώνες, no-dup· DEFER EC8 δύναμη σύνδεσης) | 🟡 PARTIAL (Slice 1 COMMITTED· Slice 2 DONE UNCOMMITTED· S2b/S3 pending) | 2026-06-18 | Uncategorized | [📄](./adrs/ADR-477-tie-beam-reinforcement-unification.md) |
 | **ADR-UI-001** | Visual Primitive Ownership & Semantic Tokens | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-UI-001.md) |
 
 ---
@@ -901,7 +901,7 @@
 | **ADR-474** | Occupancy-Driven Auto Structural Loads (zero-input area loads — EN1991-1-1) | 🟢 DONE (UNCOMMITTED) | [View](./adrs/ADR-474-occupancy-driven-auto-loads.md) |
 | **ADR-475** | Auto Member Sizing (serviceability-driven beam depth — EC2 §7.4.2 βέλος + ULS· autoSized lock· proactive· belt-and-suspenders validator) | 🟢 DONE (UNCOMMITTED) | [View](./adrs/ADR-475-auto-member-sizing.md) |
 | **ADR-476** | Unified Slab Reinforcement (οπλισμός πλακών: εδαφόπλακα/δάπεδο/οροφή — kind-aware suggester + auto re-study + 2Δ/3Δ render + Properties panel & ribbon, full SSoT) | 🟡 IN PROGRESS (Slices 0-4 DONE, UNCOMMITTED) | [View](./adrs/ADR-476-unified-slab-reinforcement.md) |
-| **ADR-477** | Tie-Beam Reinforcement Unification (συνδετήρια δοκός — live auto re-study σε resize, parity κολόνας/δοκού + facade· DEFER render-dedup/EC8) | 🟡 PARTIAL (Slice 1 DONE, UNCOMMITTED) | [View](./adrs/ADR-477-tie-beam-reinforcement-unification.md) |
+| **ADR-477** | Tie-Beam Reinforcement Unification (συνδετήρια δοκός — live auto re-study + ενοποίηση render με beam pipeline → EC8 ζώνες, no-dup· DEFER EC8 δύναμη σύνδεσης) | 🟡 PARTIAL (Slice 1 COMMITTED· Slice 2 DONE UNCOMMITTED· S2b/S3) | [View](./adrs/ADR-477-tie-beam-reinforcement-unification.md) |
 | **ADR-UI-001** | Visual Primitive Ownership & Semantic Tokens | ✅ APPROVED | [View](./adrs/ADR-UI-001.md) |
 
 ---
