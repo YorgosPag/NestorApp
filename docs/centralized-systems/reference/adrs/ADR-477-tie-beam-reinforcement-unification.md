@@ -81,14 +81,14 @@ EN1998-5 §5.4.1.2(7): οι συνδετήριες δοκοί σχεδιάζον
 | Αλλαγή | Αρχείο | Τι κάνει |
 |---|---|---|
 | **NEW** EC8 πίνακες (S, ε) + `seismicTieForceFactor(groundType, a_gR/g)` + ground-type guards | `bim/structural/loads/seismic-params.ts` | ΕΝΑ SSoT των EC8 σεισμικών συντελεστών· defaults a_gR=0.16g (Ζ1), ground B |
-| **NEW** scene-level `computeTieBeamTieForces(entities, groundType, accelRatio)` → patches | `bim/structural/loads/tie-beam-tie-force.ts` | εύρεση συνδεόμενων υποστυλωμάτων στα άκρα (spatial, tol 0.75m) → `N_Ed,mean` (SLS από `appliedLoad`) → `N_tie` |
+| **NEW** scene-level `computeTieBeamTieForces(entities, groundType, accelRatio)` → patches | `bim/structural/loads/tie-beam-tie-force.ts` | συνδεσιμότητα = **ΕΠΑΝΑΧΡΗΣΗ organism SSoT** (N.0.2): άκρο → πέδιλο που το περιέχει (`resolveFootingSummary` footprint + `isPointInPolygon` coverage) → στηρίζουσα κολώνα (`footingId` FK, ίδιο pattern με `footing-load-takedown`) → `N_Ed,mean` (SLS από `appliedLoad`)· καμία ad-hoc απόσταση/ανοχή |
 | `StructuralSettings += seismicGroundType?/seismicGroundAccelRatio?` + resolver + store round-trip | `structural-settings.ts` + `state/structural-settings-store.ts` | building-level σεισμικές παραδοχές (persist/load)· defaults στο read |
 | `TieBeamParams += seismicTieForceKn?` (DERIVED) + `TieBeamSectionContext += designAxialTieKn?` + wiring | `foundation-types.ts` + `structural-code-types.ts` + `section-context.ts` | το N_tie τροφοδοτεί τον suggester |
 | suggester tie-beam branch → `suggestTieBeamReinforcementFrom` + `upgradeFaceForTie`: `As,tie = N_tie/f_yd` συμμετρικά (κάτω+άνω), `max(καμπτικό/min, tie share)` (reuse `resolveBarSet`) | `codes/suggest-reinforcement.ts` | αξονικός σύνδεσμος· absent N_tie → καθαρά δοκός (μηδέν regression) |
 | **NEW** `ComputeTieBeamTieForcesCommand` (batch, undoable, idempotent) + proactive `useProactiveTieBeamTieForce` (ακούει `bim:structural-loads-computed`) + mount | `core/commands/.../ComputeTieBeamTieForcesCommand.ts` + `hooks/useProactiveTieBeamTieForce.ts` + `app/DxfViewerContent.tsx` | re-study chain: φορτία κολονών → N_tie συνδετήριας → As,tie (auto re-derive)· loop-guard· skip-when-unchanged |
 | Readout `N_tie` στην καρτέλα Ιδιότητες (νέα ομάδα «Σεισμός», tie-beam μόνο) | `foundation-property-fields.ts` + `foundation-command-keys.ts` + `foundation-structural-bridge.ts` + i18n | `tieSeismicForce` readout key (auto-routed μέσω `Object.values` set)· «—» όταν 0 |
 
-**Αρχή:** η σεισμική αξονική ΔΕΝ είναι βαρυτικό tributary → ΟΧΙ μέλος του gravity `isLoadPathMember`· χωριστή scene-level pass μετά το takedown.
+**Αρχή:** η σεισμική αξονική ΔΕΝ είναι βαρυτικό tributary → ΟΧΙ μέλος του gravity `isLoadPathMember`· χωριστή scene-level pass μετά το takedown. **SSoT connectivity:** η εύρεση συνδεόμενων υποστυλωμάτων ΔΕΝ είναι ad-hoc spatial heuristic — επαναχρησιμοποιεί το ΙΔΙΟ κριτήριο coverage (`isPointInPolygon` + footprint) και FK (`footingId`) με τον structural-graph / footing-takedown.
 
 ### Task A — Store layering root-cause fix [✅ DONE, enterprise]
 
