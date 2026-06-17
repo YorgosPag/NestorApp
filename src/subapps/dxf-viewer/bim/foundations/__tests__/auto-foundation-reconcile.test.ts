@@ -7,12 +7,13 @@ import type { FoundationLayoutPlan, PlannedFooting } from '../auto-foundation-la
 import type { FoundationEntity } from '../../types/foundation-types';
 
 /** Minimal planned footing. */
-function planned(columnIds: string[], x: number, w: number): PlannedFooting {
+function planned(columnIds: string[], x: number, w: number, rotationDeg = 0): PlannedFooting {
   return {
     columnIds: [...columnIds].sort(),
     position: { x, y: 0 },
     widthMm: w,
     lengthMm: w,
+    rotationDeg,
     topElevationMm: -1000,
     axialServiceKn: 0,
     combined: columnIds.length > 1,
@@ -20,11 +21,11 @@ function planned(columnIds: string[], x: number, w: number): PlannedFooting {
 }
 
 /** Minimal auto pad FoundationEntity. */
-function autoPad(id: string, x: number, w: number): FoundationEntity {
+function autoPad(id: string, x: number, w: number, rotation = 0): FoundationEntity {
   return {
     id,
     type: 'foundation',
-    params: { kind: 'pad', position: { x, y: 0, z: 0 }, width: w, length: w, autoDesigned: true },
+    params: { kind: 'pad', position: { x, y: 0, z: 0 }, width: w, length: w, rotation, autoDesigned: true },
   } as unknown as FoundationEntity;
 }
 
@@ -73,6 +74,19 @@ describe('reconcileFoundationLayout', () => {
     );
     expect(diff.removeFootingIds).toEqual(['F1']);
     expect(diff.creates).toHaveLength(2);
+  });
+
+  it('column rotation changed → footing re-derives (same key, rotated geometry)', () => {
+    const existing = autoPad('F1', 0, 1000, 0); // πέδιλο rotation 0
+    const diff = reconcileFoundationLayout(
+      plan([planned(['c1'], 0, 1000, 30)]), // κολώνα περιστράφηκε 30°
+      [existing],
+      cols([['c1', 'F1']]),
+      'mm',
+    );
+    expect(diff.creates).toHaveLength(1);
+    expect(diff.creates[0].rotationDeg).toBe(30);
+    expect(diff.removeFootingIds).toEqual(['F1']);
   });
 
   it('within position tolerance → still matched (small column nudge = no churn)', () => {

@@ -29,6 +29,8 @@ import type { FoundationLayoutPlan, PlannedFooting } from './auto-foundation-lay
 export const RECONCILE_POSITION_TOL_MM = 50;
 /** Ανοχή ταύτισης διάστασης πεδίλου (mm) — module detailing. */
 export const RECONCILE_DIMENSION_TOL_MM = 50;
+/** Ανοχή ταύτισης περιστροφής πεδίλου (μοίρες) — follow κολώνας. */
+export const RECONCILE_ROTATION_TOL_DEG = 0.5;
 
 /** Κολώνα ως είσοδος του reconciler — μόνο id + τρέχον FK. */
 export interface ReconcileColumn {
@@ -71,7 +73,9 @@ function geometryMatches(existing: FoundationEntity, planned: PlannedFooting, s:
     Math.abs(existing.params.position.x - planned.position.x) <= posTol &&
     Math.abs(existing.params.position.y - planned.position.y) <= posTol &&
     Math.abs(existing.params.width - planned.widthMm) <= dimTol &&
-    Math.abs(existing.params.length - planned.lengthMm) <= dimTol
+    Math.abs(existing.params.length - planned.lengthMm) <= dimTol &&
+    // ADR-459 Φ7 — follow περιστροφής κολώνας: αλλαγή rotation → re-derive πεδίλου.
+    Math.abs(existing.params.rotation - planned.rotationDeg) <= RECONCILE_ROTATION_TOL_DEG
   );
 }
 

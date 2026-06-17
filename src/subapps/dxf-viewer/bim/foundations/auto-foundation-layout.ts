@@ -46,6 +46,8 @@ export interface LayoutColumnInput {
   readonly axialServiceKn?: number;
   /** Absolute mm — βάση κολώνας (= άνω παρειά πεδίλου). */
   readonly baseZmm: number;
+  /** Μοίρες CCW περιστροφής κολώνας — το μεμονωμένο πέδιλο την κληρονομεί (Revit hosted). */
+  readonly rotationDeg: number;
 }
 
 /** Ένα σχεδιασμένο πέδιλο (μεμονωμένο ή combined) — DERIVED. */
@@ -56,6 +58,8 @@ export interface PlannedFooting {
   readonly position: CoveragePoint;
   readonly widthMm: number;
   readonly lengthMm: number;
+  /** Μοίρες CCW — μεμονωμένο: rotation κολώνας· combined: 0 (axis-aligned, v1). */
+  readonly rotationDeg: number;
   /** Absolute mm — άνω παρειά (= βάση κολώνας/-ων). */
   readonly topElevationMm: number;
   /** Άθροισμα χαρακτηριστικού service φορτίου των μελών (kN). */
@@ -145,6 +149,7 @@ function isolatedFooting(col: LayoutColumnInput, pad: PadRect, s: number): Plann
     position: { x: pad.cx, y: pad.cy },
     widthMm: (pad.halfW * 2) / s,
     lengthMm: (pad.halfL * 2) / s,
+    rotationDeg: col.rotationDeg, // μεμονωμένο πέδιλο ευθυγραμμίζεται με την κολώνα
     topElevationMm: col.baseZmm,
     axialServiceKn: col.axialServiceKn ?? 0,
     combined: false,
@@ -204,6 +209,7 @@ function combinedFooting(
     position: { x: cx, y: cy },
     widthMm: (halfW * 2) / s,
     lengthMm: (halfL * 2) / s,
+    rotationDeg: 0, // combined: axis-aligned v1 (rotation κατά τη γραμμή κολωνών = DEFER)
     topElevationMm: Math.min(...members.map((m) => m.baseZmm)),
     axialServiceKn: sumN,
     combined: true,

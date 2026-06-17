@@ -8,8 +8,8 @@ import {
   type LayoutColumnInput,
 } from '../auto-foundation-layout';
 
-function col(id: string, x: number, y: number, axialServiceKn?: number): LayoutColumnInput {
-  return { id, centroid: { x, y }, widthMm: 400, depthMm: 400, axialServiceKn, baseZmm: -1000 };
+function col(id: string, x: number, y: number, axialServiceKn?: number, rotationDeg = 0): LayoutColumnInput {
+  return { id, centroid: { x, y }, widthMm: 400, depthMm: 400, axialServiceKn, baseZmm: -1000, rotationDeg };
 }
 
 describe('planFoundationLayout', () => {
@@ -72,5 +72,20 @@ describe('planFoundationLayout', () => {
 
   it('clearance constant is the construction gap below which pads merge', () => {
     expect(MIN_PAD_CLEARANCE_MM).toBe(100);
+  });
+
+  it('isolated footing inherits the column rotation (Revit hosted follow)', () => {
+    const plan = planFoundationLayout([col('A', 0, 0, undefined, 30)], undefined, 'mm');
+    expect(plan.footings[0].rotationDeg).toBe(30);
+  });
+
+  it('combined footing is axis-aligned (rotation 0) regardless of column rotation', () => {
+    const plan = planFoundationLayout(
+      [col('A', 0, 0, undefined, 30), col('B', 600, 0, undefined, 45)],
+      undefined,
+      'mm',
+    );
+    expect(plan.footings[0].combined).toBe(true);
+    expect(plan.footings[0].rotationDeg).toBe(0);
   });
 });

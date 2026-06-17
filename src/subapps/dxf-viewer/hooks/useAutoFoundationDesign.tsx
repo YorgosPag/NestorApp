@@ -146,6 +146,7 @@ function toLayoutColumn(
     depthMm: column.params.depth,
     axialServiceKn: serviceAxialKn(column.params.appliedLoad),
     baseZmm,
+    rotationDeg: column.params.rotation, // μεμονωμένο πέδιλο ακολουθεί την κολώνα
   };
 }
 
@@ -177,7 +178,12 @@ function buildAutoFooting(
   const base = buildDefaultFoundationParams(
     { x: planned.position.x, y: planned.position.y },
     'pad',
-    { width: planned.widthMm, length: planned.lengthMm, topElevationMm: planned.topElevationMm },
+    {
+      width: planned.widthMm,
+      length: planned.lengthMm,
+      topElevationMm: planned.topElevationMm,
+      rotation: planned.rotationDeg, // follow περιστροφής κολώνας (Revit hosted)
+    },
     sceneUnits,
   );
   if (base.kind !== 'pad') return null; // narrow για το pad-only appliedLoad

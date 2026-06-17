@@ -471,6 +471,11 @@ footing (όριο οικοπέδου — δεν υπάρχουν property lines)
   `useFloors3DAggregator` 3Δ — legacy ghosts εξαφανίζονται αμέσως στο reload). ΜΑΘΗΜΑ: dual-persistence
   (per-entity collection = SSoT· scene snapshot = cache ΑΛΛΑ κρατά own-floor BIM για το multi-floor 3Δ) → ο
   guard πρέπει να είναι **per-floor** (own vs foreign floorId), ΟΧΙ blanket BIM strip.
+  **Feature (rotation follow):** το **μεμονωμένο** πέδιλο κληρονομεί την περιστροφή της κολώνας (Revit hosted).
+  `LayoutColumnInput`/`PlannedFooting` += `rotationDeg` (isolated = `column.rotation`, combined = 0· rotation κατά
+  τη γραμμή κολωνών = DEFER)· `reconcileFoundationLayout` συγκρίνει πλέον και rotation (tol 0.5°) → περιστροφή
+  κολώνας → re-derive πεδίλου με τη νέα γωνία. Πριν: το reconcile αγνοούσε rotation → τετράγωνη κολώνα = ίδιο
+  centroid/dims → no-op → το πέδιλο δεν ακολουθούσε. Manual πέδιλα = εκτός auto-follow (DEFER).
 - **2026-06-17 (v7, Opus):** **Phase 6 — Proactive on-create + cross-level organism.** Decision Giorgio:
   πέδιλο στον όροφο Θεμελίωσης (Revit-canonical) + non-blocking ConfirmationToast. **6.0 cross-level READ:**
   NEW `building-foundation-level.ts` + `cross-level-organism-scene.ts` + `foundation-level-store.ts` +
