@@ -30,7 +30,7 @@ import { INTERACTIVE_PATTERNS, HOVER_TEXT_EFFECTS, HOVER_BACKGROUND_EFFECTS, TRA
 
 // 🏢 ENTERPRISE: Import enterprise semantic colors (SINGLE SOURCE OF TRUTH)
 import { COLOR_BRIDGE } from '@/design-system/color-bridge';
-import { GRIP_COLD_COLOR } from './color-config';
+import { GRIP_COLD_COLOR, GRIP_WARM_COLOR, GRIP_HOT_COLOR } from './color-config';
 import type { UseSemanticColorsReturn } from '@/ui-adapters/react/useSemanticColors';
 
 // ============================================================================
@@ -885,8 +885,8 @@ export const PANEL_LAYOUT = {
     LINE_INFO: '#0000FF',                // Pure blue - info/secondary selection
     // Grip colors (AutoCAD standard)
     GRIP_COLD: GRIP_COLD_COLOR,          // SSOT → color-config.ts
-    GRIP_WARM: '#FF69B4',                // Hot Pink - hover grips
-    GRIP_HOT: '#FF0000',                 // Red - selected grips
+    GRIP_WARM: GRIP_WARM_COLOR,          // SSOT → color-config.ts (orange hover) — was '#FF69B4' hot-pink
+    GRIP_HOT: GRIP_HOT_COLOR,            // SSOT → color-config.ts (red selected) — was '#FF0000' hardcoded
     // Text colors
     TEXT_DEFAULT: '#000000',             // Black - default text on light bg
     TEXT_INVERTED: '#FFFFFF',            // White - text on dark bg

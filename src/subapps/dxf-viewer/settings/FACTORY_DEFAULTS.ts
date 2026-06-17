@@ -16,7 +16,7 @@
 
 import type { SettingsState, StorageMode } from './core/types';
 import { ACI_PALETTE } from './standards/aci';
-import { UI_COLORS, GRIP_COLD_COLOR, GRIP_WARM_COLOR } from '../config/color-config';
+import { UI_COLORS, GRIP_COLD_COLOR, GRIP_WARM_COLOR, GRIP_HOT_COLOR } from '../config/color-config';
 // 🏢 ADR-101: Centralized deep clone utility
 import { deepClone } from '../utils/clone-utils';
 
@@ -165,7 +165,7 @@ const GRIP_DEFAULTS = {
   colors: {                     // ✅ FIX: changed from flat color/hoverColor to nested structure
     cold: null,                           // Sentinel: null → GRIP_COLD_COLOR at render time
     warm: GRIP_WARM_COLOR,                // SSOT → color-config.ts (orange, hover)
-    hot: ACI_PALETTE[1] as string,        // Red (ACI 1) on selection
+    hot: GRIP_HOT_COLOR,                  // SSOT → color-config.ts (red, selected) — was ACI_PALETTE[1]
     contour: UI_COLORS.BLACK              // Black contour
   },
   shape: 'square' as const,     // Square (CAD standard)
@@ -194,7 +194,7 @@ const GRIP_SELECTION_DEFAULTS = {
   colors: {                     // ✅ ENTERPRISE FIX: All colors required by GripColorsSchema
     cold: null,                           // Sentinel: null → GRIP_COLD_COLOR at render time
     warm: GRIP_WARM_COLOR,                // SSOT → color-config.ts (orange, hover)
-    hot: ACI_PALETTE[1] as string,        // Red (ACI 1) - selected
+    hot: GRIP_HOT_COLOR,                  // SSOT → color-config.ts (red, selected) — was ACI_PALETTE[1]
     contour: UI_COLORS.BLACK              // Black contour
   },
   gripSize: 12,                 // Selection state (proportional to new base 10px)

@@ -266,7 +266,7 @@ export const UI_COLORS_BASE = {
   OVERLAY_SELECTION: '#00ff00',  // Green for selection
   OVERLAY_HOVER: '#ffff00',     // Yellow for hover
   OVERLAY_SNAP_POINT: '#ff00ff', // Magenta for snap points
-  OVERLAY_GRIP_HOT: '#ff0000',  // Red for hot grips
+  OVERLAY_GRIP_HOT: GRIP_HOT_COLOR,  // SSOT → GRIP_HOT_COLOR (red hot grips) — was '#ff0000'
   OVERLAY_GRIP_COLD: GRIP_COLD_COLOR, // SSOT → GRIP_COLD_COLOR
   OVERLAY_AXIS_X: '#ff0000',    // Red for X axis
   OVERLAY_AXIS_Y: '#00ff00',    // Green for Y axis

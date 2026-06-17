@@ -35,16 +35,16 @@ export interface GripStyle {
 }
 
 import { useSyncExternalStore } from 'react';
-import { UI_COLORS, GRIP_COLD_COLOR, GRIP_WARM_COLOR, GRIP_HOT_COLOR, GRIP_CONTOUR_COLOR, resolveGripColors } from '../config/color-config';
+import { GRIP_COLD_COLOR, GRIP_WARM_COLOR, GRIP_HOT_COLOR, GRIP_CONTOUR_COLOR, resolveGripColors } from '../config/color-config';
 
 type Listener = () => void;
 let current: GripStyle = {
   enabled: true,
   colors: {
     cold: GRIP_COLD_COLOR,               // Resolved at init — resolveGripColors() applied on write
-    warm: UI_COLORS.SNAP_INTERSECTION,   // ✅ AutoCAD standard: Hot Pink - hover grips
-    hot: UI_COLORS.SNAP_ENDPOINT,    // ✅ AutoCAD standard: Red (ACI 1) - selected grips
-    contour: UI_COLORS.BLACK // ✅ AutoCAD standard: Black contour
+    warm: GRIP_WARM_COLOR,               // SSOT → color-config.ts (orange hover) — was SNAP_INTERSECTION hot-pink
+    hot: GRIP_HOT_COLOR,                 // SSOT → color-config.ts (red selected) — was SNAP_ENDPOINT
+    contour: GRIP_CONTOUR_COLOR // SSOT → color-config.ts (black) — was UI_COLORS.BLACK
   },
   gripSize: 14,
   pickBoxSize: 3,
