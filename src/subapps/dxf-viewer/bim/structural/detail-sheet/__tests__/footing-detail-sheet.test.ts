@@ -11,6 +11,10 @@ import { buildFootingDetailSheet } from '../footing-detail-sheet';
 import { buildFootingScheduleRegion } from '../footing-detail-schedule';
 import { buildFootingPlanRegion } from '../footing-detail-plan';
 import { buildFootingElevationRegion } from '../footing-detail-elevation';
+// ADR-477 Slice 2b — parity με τα linear-member cores που χρησιμοποιεί ο orchestrator.
+import { buildLinearMemberElevationRegion } from '../beam-detail-elevation';
+import { buildLinearMemberSectionRegion } from '../beam-detail-section';
+import { tieBeamRebarLayout } from '../../reinforcement/tie-beam-linear-member';
 import { computeDetailSheetLayout } from '../detail-sheet-layout';
 import { buildFootingSectionContext } from '../../section-context';
 import { computeFootingReinforcementQuantities } from '../../reinforcement/footing-reinforcement-compute';
@@ -132,6 +136,42 @@ describe('buildFootingDetailSheet — layout & regions', () => {
     expect(buildFootingPlanRegion(padEntity(), regions.plan).primitives).toHaveLength(0);
     expect(buildFootingElevationRegion(padEntity(), regions.elevation).primitives).toHaveLength(0);
     expect(buildFootingScheduleRegion(padEntity(), regions.schedule, LABELS.scheduleTable).primitives).toHaveLength(0);
+  });
+});
+
+describe('buildFootingDetailSheet — tie-beam beam-style views (ADR-477 Slice 2b)', () => {
+  const TIE_LABELS: FootingDetailSheetLabels = {
+    ...LABELS,
+    tieBeamRegions: { elevation: 'ELEV-VIEW', section: 'XSEC' },
+  };
+
+  it('routes elevation→longitudinal & plan→cross-section, parity με τα linear-member cores', () => {
+    const foundation = tieEntity(TIE_R);
+    const model = buildFootingDetailSheet({ foundation, labels: TIE_LABELS });
+    const elevation = model.regions.find((r) => r.id === 'elevation');
+    const plan = model.regions.find((r) => r.id === 'plan');
+    expect(elevation?.title).toBe('ELEV-VIEW');
+    expect(plan?.title).toBe('XSEC');
+
+    const layout = tieBeamRebarLayout(foundation.params as TieBeamParams, TIE_R);
+    expect(layout).not.toBeNull();
+    if (!layout) return;
+    expect(elevation?.primitives).toEqual(buildLinearMemberElevationRegion(layout, TIE_R, regions.elevation).primitives);
+    expect(plan?.primitives).toEqual(buildLinearMemberSectionRegion(layout, regions.plan).primitives);
+  });
+
+  it('elevation longitudinal view draws EC8-densified stirrups (vertical lines κατά μήκος)', () => {
+    const layout = tieBeamRebarLayout(tieEntity(TIE_R).params as TieBeamParams, TIE_R);
+    expect(layout).not.toBeNull();
+    if (!layout) return;
+    // Πύκνωση άκρων → περισσότερες στάθμες από ομοιόμορφο βήμα 200 σε άνοιγμα 3000.
+    expect(layout.stirrupLevelsMm.length).toBeGreaterThan(Math.floor(3000 / 200));
+  });
+
+  it('falls back to footing views when beam-style labels are absent (back-compat)', () => {
+    const model = buildFootingDetailSheet({ foundation: tieEntity(TIE_R), labels: LABELS });
+    expect(model.regions.find((r) => r.id === 'elevation')?.title).toBe(LABELS.elevation);
+    expect(model.regions.find((r) => r.id === 'plan')?.title).toBe(LABELS.plan);
   });
 });
 

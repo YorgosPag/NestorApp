@@ -19,7 +19,7 @@
 import type { Point2D } from '../../../rendering/types/Types';
 import type { BeamEntity } from '../../types/beam-types';
 import { buildBeamSectionContext } from '../section-context';
-import { resolveBeamRebarLayout, type BeamRebarBar } from '../reinforcement/beam-rebar-layout';
+import { resolveBeamRebarLayout, type BeamRebarBar, type BeamRebarLayout } from '../reinforcement/beam-rebar-layout';
 import type { BeamReinforcement } from '../reinforcement/beam-reinforcement-types';
 import { pickScaleDenominator } from './detail-sheet-fit';
 import type { DetailPrimitive, RectMm } from './detail-sheet-types';
@@ -61,7 +61,8 @@ function distinctBarPositions(bars: readonly BeamRebarBar[]): BeamRebarBar[] {
 /**
  * Builds the section-region primitives for a reinforced beam. The active
  * reinforcement is injected (host resolves it store-aware → PDF === live).
- * Returns empty primitives for missing reinforcement / degenerate geometry.
+ * Returns empty primitives for missing reinforcement / degenerate geometry. Thin
+ * wrapper: resolves the rebar layout → {@link buildLinearMemberSectionRegion}.
  */
 export function buildBeamSectionRegion(
   beam: BeamEntity,
@@ -71,7 +72,19 @@ export function buildBeamSectionRegion(
   if (!r) return { primitives: [] };
   const layout = resolveBeamRebarLayout(buildBeamSectionContext(beam), r);
   if (!layout) return { primitives: [] };
+  return buildLinearMemberSectionRegion(layout, region);
+}
 
+/**
+ * ADR-477 — pure **linear-member** section core (entity-free): δέχεται έτοιμο
+ * {@link BeamRebarLayout} (ίδιο SSoT) και παράγει την εγκάρσια διατομή σε sheet-mm.
+ * Reuse από δοκό (wrapper παραπάνω) ΚΑΙ συνδετήρια δοκό (`footing-detail-sheet`) —
+ * μηδέν duplicate, μηδέν fake-BeamEntity (η θεμελίωση φέρνει footing-resolved layout).
+ */
+export function buildLinearMemberSectionRegion(
+  layout: BeamRebarLayout,
+  region: RectMm,
+): BeamSectionResult {
   const widthMm = layout.widthMm;
   const depthMm = layout.depthMm;
   if (widthMm <= 0 || depthMm <= 0) return { primitives: [] };

@@ -30,8 +30,14 @@ import { buildColumnPerspectiveRegion } from './column-detail-perspective';
 import { buildFootingScheduleRegion } from './footing-detail-schedule';
 import { buildFootingDesignSummaryRegion } from './footing-detail-design-summary';
 import { buildFootingTitleBlockRegion } from './footing-detail-titleblock';
+// ADR-477 Slice 2b — η συνδετήρια δοκός ΕΙΝΑΙ δοκός → beam-style όψη(longitudinal)+τομή
+// μέσω των ΙΔΙΩΝ linear-member cores (μηδέν duplicate, μηδέν fake-BeamEntity).
+import { buildLinearMemberElevationRegion } from './beam-detail-elevation';
+import { buildLinearMemberSectionRegion } from './beam-detail-section';
+import { resolveActiveFootingReinforcementForParams } from '../active-footing-reinforcement';
+import { tieBeamRebarLayout } from '../reinforcement/tie-beam-linear-member';
 import type { FootingDetail3dCapture } from './render/footing-detail-3d-capture';
-import type { FoundationEntity } from '../../types/foundation-types';
+import type { FoundationEntity, TieBeamParams } from '../../types/foundation-types';
 import type { FootingDesignResult } from '../footing-design/footing-design-types';
 import type {
   DetailPrimitive,
@@ -67,6 +73,59 @@ function designSummaryRect(schedule: RectMm): RectMm {
   return { x: schedule.x, y: schedule.y + schedule.h - h, w: schedule.w, h };
 }
 
+/** Μία όψη του φύλλου (heading + caption + primitives) — διαμοιραζόμενη μορφή. */
+interface DetailView {
+  readonly title: string;
+  readonly caption?: string;
+  readonly primitives: readonly DetailPrimitive[];
+}
+
+/**
+ * ADR-477 Slice 2b — beam-style όψεις της συνδετήριας δοκού (longitudinal «ΟΨΗ» στο
+ * slot 'elevation' + εγκάρσια «ΔΙΑΤΟΜΗ» στο slot 'plan') από τα ΙΔΙΑ linear-member
+ * cores που τροφοδοτούν τη δοκό — footing-resolved layout/cover (EC2 §4.4.1), μηδέν
+ * fake-BeamEntity. `null` → degenerate/absent οπλισμός (caller πέφτει σε footing όψεις).
+ */
+function buildTieBeamLinearViews(
+  p: TieBeamParams,
+  elevationRect: RectMm,
+  planRect: RectMm,
+  tieLabels: { readonly elevation: string; readonly section: string },
+): { elevation: DetailView; plan: DetailView } | null {
+  const r = resolveActiveFootingReinforcementForParams(p);
+  if (!r || r.kind !== 'tie-beam') return null;
+  const layout = tieBeamRebarLayout(p, r);
+  if (!layout) return null;
+  const elevation = buildLinearMemberElevationRegion(layout, r, elevationRect);
+  const section = buildLinearMemberSectionRegion(layout, planRect);
+  return {
+    elevation: { title: tieLabels.elevation, caption: elevation.caption, primitives: elevation.primitives },
+    plan: { title: tieLabels.section, caption: section.caption, primitives: section.primitives },
+  };
+}
+
+/**
+ * Επιλέγει τις όψεις 'elevation' + 'plan': συνδετήρια δοκός → beam-style (όψη/τομή)·
+ * πέδιλο/πεδιλοδοκός (ή tie-beam χωρίς beam-style labels) → footing (κάτοψη/διατομή).
+ */
+function resolvePlanAndElevation(
+  input: FootingDetailSheetInput,
+  elevationRect: RectMm,
+  planRect: RectMm,
+): { elevation: DetailView; plan: DetailView } {
+  const { foundation, labels } = input;
+  if (foundation.params.kind === 'tie-beam' && labels.tieBeamRegions) {
+    const views = buildTieBeamLinearViews(foundation.params, elevationRect, planRect, labels.tieBeamRegions);
+    if (views) return views;
+  }
+  const plan = buildFootingPlanRegion(foundation, planRect);
+  const elevation = buildFootingElevationRegion(foundation, elevationRect);
+  return {
+    elevation: { title: labels.elevation, caption: elevation.caption, primitives: elevation.primitives },
+    plan: { title: labels.plan, caption: plan.caption, primitives: plan.primitives },
+  };
+}
+
 /**
  * Produces the footing detail-sheet drawing model: five laid-out regions with
  * headings, populated from the per-region builders (geometry-is-SSoT).
@@ -77,8 +136,8 @@ export function buildFootingDetailSheet(input: FootingDetailSheetInput): DetailS
   const { regions } = layout;
   const { labels, foundation } = input;
 
-  const plan = buildFootingPlanRegion(foundation, regions.plan);
-  const elevation = buildFootingElevationRegion(foundation, regions.elevation);
+  // ADR-477 Slice 2b — kind-aware όψεις: tie-beam → beam-style (όψη/τομή)· αλλιώς footing.
+  const { elevation, plan } = resolvePlanAndElevation(input, regions.elevation, regions.plan);
   const perspective = buildColumnPerspectiveRegion(regions.perspective, input.perspective3d ?? null);
   const schedule = buildFootingScheduleRegion(foundation, regions.schedule, labels.scheduleTable);
   const titleBlock = buildFootingTitleBlockRegion(
@@ -95,8 +154,8 @@ export function buildFootingDetailSheet(input: FootingDetailSheetInput): DetailS
   }
 
   const sheetRegions: readonly SheetRegion[] = [
-    { id: 'elevation', rectMm: regions.elevation, title: labels.elevation, caption: elevation.caption, primitives: elevation.primitives },
-    { id: 'plan', rectMm: regions.plan, title: labels.plan, caption: plan.caption, primitives: plan.primitives },
+    { id: 'elevation', rectMm: regions.elevation, title: elevation.title, caption: elevation.caption, primitives: elevation.primitives },
+    { id: 'plan', rectMm: regions.plan, title: plan.title, caption: plan.caption, primitives: plan.primitives },
     { id: 'schedule', rectMm: regions.schedule, title: labels.schedule, primitives: [...schedule.primitives, ...summaryPrimitives] },
     { id: 'perspective', rectMm: regions.perspective, title: labels.perspective, primitives: perspective.primitives },
     { id: 'title-block', rectMm: regions['title-block'], title: labels.titleBlock, primitives: titleBlock.primitives },

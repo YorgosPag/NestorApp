@@ -227,6 +227,19 @@ export const CONTEXTUAL_SLAB_TAB: RibbonTab = {
                 action: SLAB_RIBBON_KEYS_ACTIONS.autoReinforce,
               },
             },
+            {
+              // ADR-476 Slice 5 — «Λεπτομέρεια Οπλισμού»: φύλλο σχεδίου (κάτοψη/τομή/3Δ/στοιχεία) + PDF.
+              type: 'simple',
+              size: 'small',
+              command: {
+                id: 'slab.structural.reinforcementDetail',
+                labelKey: 'ribbon.commands.slabStructural.reinforcementDetail',
+                tooltipKey: 'ribbon.commands.slabStructural.reinforcementDetailTooltip',
+                icon: 'column-reinforcement-detail',
+                commandKey: SLAB_RIBBON_KEYS_ACTIONS.reinforcementDetail,
+                action: SLAB_RIBBON_KEYS_ACTIONS.reinforcementDetail,
+              },
+            },
           ],
         },
       ],

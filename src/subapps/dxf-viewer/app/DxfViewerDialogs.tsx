@@ -33,7 +33,7 @@ import {
   DxfFindReplaceHost, DxfSymbolPickerHost, RenumberOpeningsHost, OpeningTagStyleHost,
   OpeningSchedulePdfHost, ThermalEnvelopeHost, BimScheduleHost, AdminLayerManagerDialogHost,
   DxfAiChatPanel, ColumnPerimeterConfirmDialog, PrintHost, ColumnDetailHost, FoundationDetailHost, BeamDetailHost,
-  FloorManagementDialogHost,
+  SlabDetailHost, FloorManagementDialogHost,
 } from './dxf-viewer-lazy-components';
 
 type LevelManager = ReturnType<typeof useLevels>;
@@ -149,6 +149,8 @@ export function DxfViewerDialogs(props: DxfViewerDialogsProps): React.JSX.Elemen
       <React.Suspense fallback={hiddenFallback}><FoundationDetailHost levelManager={levelManager} /></React.Suspense>
       {/* ADR-471 — Beam Reinforcement Detail Sheet (opened via beam contextual tab). */}
       <React.Suspense fallback={hiddenFallback}><BeamDetailHost levelManager={levelManager} /></React.Suspense>
+      {/* ADR-476 — Slab Reinforcement Detail Sheet (opened via slab contextual tab). */}
+      <React.Suspense fallback={hiddenFallback}><SlabDetailHost levelManager={levelManager} /></React.Suspense>
       {/* ADR-391 — AdminLayerManager modal (opened via View tab button or Ctrl+L). */}
       <React.Suspense fallback={hiddenFallback}><AdminLayerManagerDialogHost projectId={levelManager.saveContext?.projectId ?? null} /></React.Suspense>
       {/* «Όροφοι Κτιρίου» modal (opened from Levels panel ⚙️ or floor-tab right-click). */}

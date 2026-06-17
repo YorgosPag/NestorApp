@@ -149,6 +149,11 @@ export function FoundationDetailHost({
           'strip': t('foundationDetail.kindValues.strip'),
           'tie-beam': t('foundationDetail.kindValues.tieBeam'),
         },
+        // ADR-477 Slice 2b — beam-style όψεις για τη συνδετήρια δοκό (όψη/τομή).
+        tieBeamRegions: {
+          elevation: t('foundationDetail.tieBeamRegions.elevation'),
+          section: t('foundationDetail.tieBeamRegions.section'),
+        },
         designSummary: {
           check: t('foundationDetail.designSummary.check'),
           demand: t('foundationDetail.designSummary.demand'),

@@ -251,6 +251,12 @@ export interface FootingDetailSheetLabels {
   readonly kindValues: Readonly<Record<'pad' | 'strip' | 'tie-beam', string>>;
   /** ADR-464 Slice 5 — design-checks summary labels (optional· absent → χωρίς πίνακα). */
   readonly designSummary?: FootingDesignSummaryLabels;
+  /**
+   * ADR-477 Slice 2b — beam-style region headings για τη **συνδετήρια δοκό** (η οποία
+   * ΕΙΝΑΙ δοκός): slot 'elevation' → longitudinal «ΟΨΗ», slot 'plan' → εγκάρσια «ΔΙΑΤΟΜΗ».
+   * Absent → fallback στις footing όψεις/labels (back-compat· π.χ. tests χωρίς αυτά).
+   */
+  readonly tieBeamRegions?: { readonly elevation: string; readonly section: string };
 }
 
 // ─── ADR-471 — Beam detail labels (κάτω/άνω διαμήκεις + συνδετήρες) ────────────
@@ -289,3 +295,47 @@ export interface BeamDetailSheetLabels {
   readonly scheduleTable: BeamScheduleLabels;
   readonly titleFields: BeamTitleBlockLabels;
 }
+
+// ─── ADR-476 — Slab detail labels (mesh-model: κάτω/άνω σχάρα, χωρίς συνδετήρες) ──
+
+/** Pre-resolved slab reinforcement-schedule table labels (N.11-safe). */
+export interface SlabScheduleLabels {
+  readonly item: string;        // «Στοιχείο» / item column
+  readonly description: string; // «Οπλισμός» (Ø/βήμα σχάρας)
+  readonly length: string;      // «Μήκος (m)»
+  readonly weight: string;      // «Βάρος (kg)»
+  readonly bottomMesh: string;  // «Κάτω σχάρα» row (κύρια καμπτική / ανοίγματος)
+  readonly topMesh: string;     // «Άνω σχάρα» row (στηρίξεων / hogging)
+  readonly total: string;       // «Σύνολο» row
+  readonly ratio: string;       // «ρ» κύριος (κάτω) λόγος οπλισμού
+}
+
+/** Pre-resolved slab title-block (drawing data) field labels (N.11-safe). */
+export interface SlabTitleBlockLabels {
+  readonly kind: string;        // «Τύπος» (δάπεδο/οροφή/στέγη/εδαφόπλακα)
+  readonly section: string;     // «Διάσταση κάτοψης» (W×L bbox)
+  readonly thickness: string;   // «Πάχος»
+  readonly concrete: string;    // «Σκυρόδεμα»
+  readonly steel: string;       // «Χάλυβας»
+  readonly cover: string;       // «Επικάλυψη»
+  readonly bottomMesh: string;  // «Κάτω σχάρα»
+  readonly topMesh: string;     // «Άνω σχάρα»
+  readonly span: string;        // «Άνοιγμα L» (μόνο αναρτημένη — suspended)
+  readonly designLoad: string;  // «Φορτίο q_Ed» (μόνο αναρτημένη — suspended)
+}
+
+/** Pre-resolved slab detail-sheet region headings + table/field labels. */
+export interface SlabDetailSheetLabels {
+  readonly plan: string;        // slot 'plan' → «ΚΑΤΟΨΗ»
+  readonly section: string;     // slot 'elevation' → «ΤΟΜΗ»
+  readonly perspective: string;
+  readonly schedule: string;
+  readonly titleBlock: string;
+  readonly scheduleTable: SlabScheduleLabels;
+  readonly titleFields: SlabTitleBlockLabels;
+  /** Pre-resolved kind values («Δάπεδο» / «Οροφή» / «Στέγη» / «Εδαφόπλακα» …). */
+  readonly kindValues: Readonly<Record<SlabKindForDetail, string>>;
+}
+
+/** The 5 slab kinds (mirror `SlabKind`) — kept local to avoid a runtime import. */
+export type SlabKindForDetail = 'floor' | 'ceiling' | 'roof' | 'ground' | 'foundation';

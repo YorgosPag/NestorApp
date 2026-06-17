@@ -2805,7 +2805,9 @@
         "ratio": "ρ (%)",
         "loadDeadArea": "Μόνιμο g (kN/m²)",
         "loadLiveArea": "Μεταβλητό q (kN/m²)",
-        "loadUlsArea": "Φορτίο σχεδ. q_Ed (kN/m²)"
+        "loadUlsArea": "Φορτίο σχεδ. q_Ed (kN/m²)",
+        "reinforcementDetail": "Λεπτομέρεια Οπλισμού",
+        "reinforcementDetailTooltip": "Άνοιγμα φύλλου σχεδίου με τον οπλισμό της πλάκας (κάτοψη, τομή, 3Δ, στοιχεία) + εξαγωγή PDF"
       },
       "columnEditor": {
         "width": "Πλάτος",
@@ -4541,6 +4543,10 @@
       "schedule": "ΣΤΟΙΧΕΙΑ ΟΠΛΙΣΜΟΥ",
       "titleBlock": "ΣΤΟΙΧΕΙΑ ΣΧΕΔΙΟΥ"
     },
+    "tieBeamRegions": {
+      "elevation": "ΟΨΗ",
+      "section": "ΔΙΑΤΟΜΗ"
+    },
     "scheduleTable": {
       "item": "Στοιχείο",
       "description": "Οπλισμός",
@@ -4578,6 +4584,54 @@
       "topMeshNote": "Απαιτείται άνω σχάρα (κάμψη)",
       "ok": "OK",
       "fail": "!"
+    }
+  },
+  "slabDetail": {
+    "dialogTitle": "Λεπτομέρεια Οπλισμού Πλάκας",
+    "dialogDescription": "Φύλλο σχεδίου με τον οπλισμό της επιλεγμένης πλάκας — κάτοψη, τομή, 3Δ προοπτικό, στοιχεία οπλισμού και στοιχεία σχεδίου, με πλήρη διαστασιολόγηση.",
+    "previewAlt": "Προεπισκόπηση φύλλου σχεδίου οπλισμού πλάκας",
+    "close": "Κλείσιμο",
+    "exportPdf": "Εξαγωγή PDF",
+    "print": "Εκτύπωση",
+    "zoomIn": "Μεγέθυνση",
+    "zoomOut": "Σμίκρυνση",
+    "zoomReset": "Επαναφορά ζουμ",
+    "zoomToolbar": "Ζουμ προεπισκόπησης",
+    "regions": {
+      "plan": "ΚΑΤΟΨΗ",
+      "section": "ΤΟΜΗ",
+      "perspective": "3Δ ΠΡΟΟΠΤΙΚΟ",
+      "schedule": "ΣΤΟΙΧΕΙΑ ΟΠΛΙΣΜΟΥ",
+      "titleBlock": "ΣΤΟΙΧΕΙΑ ΣΧΕΔΙΟΥ"
+    },
+    "scheduleTable": {
+      "item": "Στοιχείο",
+      "description": "Οπλισμός",
+      "length": "Μήκος (m)",
+      "weight": "Βάρος (kg)",
+      "bottomMesh": "Κάτω σχάρα",
+      "topMesh": "Άνω σχάρα",
+      "total": "Σύνολο",
+      "ratio": "ρ"
+    },
+    "titleFields": {
+      "kind": "Τύπος",
+      "section": "Διάσταση κάτοψης (mm)",
+      "thickness": "Πάχος (mm)",
+      "concrete": "Σκυρόδεμα",
+      "steel": "Χάλυβας",
+      "cover": "Επικάλυψη (mm)",
+      "bottomMesh": "Κάτω σχάρα",
+      "topMesh": "Άνω σχάρα",
+      "span": "Άνοιγμα L (mm)",
+      "designLoad": "Φορτίο q_Ed (kN/m²)"
+    },
+    "kindValues": {
+      "floor": "Δάπεδο",
+      "ceiling": "Οροφή",
+      "roof": "Στέγη",
+      "ground": "Εδαφόπλακα",
+      "foundation": "Εδαφόπλακα θεμελίωσης"
     }
   },
   "beamDetail": {

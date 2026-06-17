@@ -21,6 +21,16 @@ function reset(): void {
   mockedSave.mockClear();
 }
 
+/**
+ * Flush της microtask ουράς: η debounced persistence φορτώνει lazy το service
+ * (`void import('../../services/structural-settings.service')`) → το `saveStructuralSettings`
+ * καλείται σε microtask ΜΕΤΑ το `advanceTimersByTime` (το import resolve + `.then`). Τα
+ * fake timers δεν μπλοκάρουν τη native microtask ουρά, οπότε λίγα awaits την αδειάζουν.
+ */
+async function flushMicrotasks(times = 5): Promise<void> {
+  for (let i = 0; i < times; i += 1) await Promise.resolve();
+}
+
 describe('structural-settings-store', () => {
   beforeEach(reset);
 
@@ -55,21 +65,23 @@ describe('structural-settings-store', () => {
     expect(mockedSave).not.toHaveBeenCalled();
   });
 
-  it('setCodeId με building → persist (debounced) + stamp mutation', () => {
+  it('setCodeId με building → persist (debounced) + stamp mutation', async () => {
     jest.useFakeTimers();
     useStructuralSettingsStore.getState().loadForBuilding('bld-2', null);
     useStructuralSettingsStore.getState().setCodeId('greek-legacy');
     expect(useStructuralSettingsStore.getState().lastLocalMutationAt).toBeGreaterThan(0);
     jest.advanceTimersByTime(600);
+    await flushMicrotasks(); // lazy import() → save σε microtask
     expect(mockedSave).toHaveBeenCalledWith('bld-2', expect.objectContaining({ codeId: 'greek-legacy' }));
     jest.useRealTimers();
   });
 
-  it('setCodeId ίδια τιμή = no-op (idempotent)', () => {
+  it('setCodeId ίδια τιμή = no-op (idempotent)', async () => {
     jest.useFakeTimers();
     useStructuralSettingsStore.getState().loadForBuilding('bld-3', { codeId: 'eurocode' });
     useStructuralSettingsStore.getState().setCodeId('eurocode');
     jest.advanceTimersByTime(600);
+    await flushMicrotasks();
     expect(mockedSave).not.toHaveBeenCalled();
     jest.useRealTimers();
   });

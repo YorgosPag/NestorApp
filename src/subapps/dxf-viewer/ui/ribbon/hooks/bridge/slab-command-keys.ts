@@ -62,6 +62,9 @@ export const SLAB_RIBBON_KEYS_ACTIONS = {
   // ADR-476 — «Αυτόματος Οπλισμός» contextual (parity με κολόνα/δοκάρι/πέδιλο):
   // routes στο undoable organism pipeline μέσω `bim:auto-reinforce-requested`.
   autoReinforce: 'slab.actions.autoReinforce',
+  // ADR-476 Slice 5 — «Λεπτομέρεια Οπλισμού»: άνοιγμα φύλλου σχεδίου (κάτοψη/τομή/3Δ/
+  // στοιχεία) + PDF μέσω `bim:slab-detail-requested` (parity κολόνας/πεδίλου/δοκού).
+  reinforcementDetail: 'slab.actions.reinforcementDetail',
 } as const;
 
 const SLAB_ACTION_KEY_SET: ReadonlySet<string> = new Set<string>(

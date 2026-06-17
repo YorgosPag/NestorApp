@@ -270,6 +270,17 @@ export function useRibbonSlabBridge(
         if (slab) EventBus.emit('bim:auto-reinforce-requested', { entityIds: [slab.id] });
         return;
       }
+      // ADR-476 Slice 5 — «Λεπτομέρεια Οπλισμού»: άνοιγμα φύλλου σχεδίου οπλισμού πλάκας
+      // (parity κολόνας/πεδίλου/δοκού). Ο SlabDetailHost ακούει το event.
+      if (action === SLAB_RIBBON_KEYS_ACTIONS.reinforcementDetail) {
+        const slab = resolveSlab();
+        if (!slab || !levelManager.currentLevelId) return;
+        EventBus.emit('bim:slab-detail-requested', {
+          slabId: slab.id,
+          levelId: levelManager.currentLevelId,
+        });
+        return;
+      }
       if (action === PSET_RIBBON_ACTION) {
         const slab = resolveSlab();
         if (!slab || !levelManager.currentLevelId) return;

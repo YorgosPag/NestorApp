@@ -1,6 +1,6 @@
 # ADR-476 — Unified Slab Reinforcement (Οπλισμός Πλακών: εδαφόπλακα / δάπεδο / οροφή)
 
-**Status:** 🟡 IN PROGRESS 2026-06-18 (Opus) — **Slices 0-4 DONE (UNCOMMITTED)** [data unification + kind-aware suggester + auto re-study + 2Δ overlay + 3Δ κλωβός + Properties panel & structural ribbon, ΟΛΑ τα slab kinds]. **Slice 5 PENDING** [PDF detail sheet]. tsc-clean (πλην 4 προϋπαρχόντων beam WIP errors άλλου agent). 🔴 browser-verify + commit.
+**Status:** 🟡 IN PROGRESS 2026-06-18 (Opus) — **Slices 0-5 DONE (UNCOMMITTED)** [data unification + kind-aware suggester + auto re-study + 2Δ overlay + 3Δ κλωβός + Properties panel & structural ribbon + **PDF detail sheet**, ΟΛΑ τα slab kinds]. tsc-clean (πλην 4 προϋπαρχόντων beam WIP errors άλλου agent). 🔴 browser-verify + commit.
 **Discipline:** Δομοστατικά / Structural Engineering
 **Scope:** Πλήρως **ενοποιημένος** (full SSoT, μηδέν διπλότυπα) οπλισμός **ΟΛΩΝ** των ειδών πλάκας (εδαφόπλακα/raft + αναρτημένη δάπεδο/οροφή), Revit-grade. Επαναχρησιμοποιεί ΟΛΗ την υποδομή κολόνας/δοκαριού/πεδίλου: ίδιο μοντέλο σχάρας, ίδιο rebar χρώμα/υλικό, ίδιο visibility gating, ίδιο auto-reinforce pipeline, ίδιο detail-sheet engine. Επεκτείνει ADR-456/459/463/464 (structural), ADR-470 (component visibility), ADR-471 (member facade), ADR-472 (load-aware).
 
@@ -67,8 +67,19 @@
 - i18n: `slabAdvancedPanel.*` + `ribbon.commands.slabStructural.*` + `ribbon.panels.slabStructural` (el+en)· reuse `reinforcement.label`/`autoReinforceOrganism`.
 - Tests: `slab-structural-keys.test.ts` (8 — KEY_TO_FIELD completeness, guards, RC gating, action key, labels). tsc-clean (δικά μας).
 
-### S5 — PDF detail sheet 🔴 PENDING (αναβλητέο)
-- NEW `bim/structural/detail-sheet/slab-detail-*` → `buildSlabDetailSheet` (reuse `DetailSheetModel`/layout/canvas+pdf renderers/`DetailSheetDialog`/`detail-3d-capture-core`) + `SlabDetailHost`.
+### S5 — PDF detail sheet ✅ DONE
+ΕΝΑ pure `DetailSheetModel` (sheet-mm) → 2 backends (Canvas preview + jsPDF) ώστε **preview === PDF**. Πέντε ζώνες (mirror beam — **ΧΩΡΙΣ** design-summary· η πλάκα δεν έχει bearing/punching):
+- NEW `detail-sheet/slab-detail-plan.ts` → `buildSlabPlanRegion`: **outline-based** footprint (πραγματικό πολύγωνο, bbox-fit) + δι-διευθυντική κάτω σχάρα (συμπαγής) + άνω σχάρα (διακεκομμένη, Revit «top mark»)· σχάρες στο bbox−cover (συνεπές με 3Δ cage). Reuse `pickScaleDenominator`+`REBAR_COLOR_HEX`.
+- NEW `detail-sheet/slab-detail-section.ts` → `buildSlabSectionRegion`: τυπική τομή = αντιπροσωπευτικό **1m strip** × πάχος· κάτω+άνω σχάρα ως κουκκίδες (στο cover / thickness−cover) + dims. Mirror `footing-detail-elevation`.
+- NEW `detail-sheet/slab-detail-schedule.ts` → `buildSlabScheduleRegion`: mesh-only πίνακας (κάτω σχάρα / άνω σχάρα / σύνολο / ρ%) από `computeSlabFoundationReinforcementQuantities` (SSoT — ίδιο compute με Properties panel).
+- NEW `detail-sheet/slab-detail-titleblock.ts` → `buildSlabTitleBlockRegion`: kind/διάσταση κάτοψης/πάχος/σκυρόδεμα/χάλυβας/cover/κάτω+άνω σχάρα· **span + q_Ed μόνο για suspended** (η εδαφόπλακα αγνοεί q).
+- NEW `detail-sheet/render/slab-detail-3d-capture.ts` → `captureSlabDetail3d`: offscreen WebGL iso (reuse `detail-3d-capture-core` + `buildSlabRebarCage(slab,0)`)· prism από `outline.vertices` (absolute metre) + ύψος=thickness· projected W/L/H dims. 🚨 dispose: geometry-only στον cage (shared `REBAR_MATERIAL`), full στον prism.
+- NEW `detail-sheet/slab-detail-sheet.ts` → `buildSlabDetailSheet` orchestrator (5 ζώνες· plan→slot 'plan', section→slot 'elevation').
+- NEW `ui/components/slab-detail/SlabDetailHost.tsx`: dialog lifecycle· subscribe `bim:slab-detail-requested`· async 3D capture· generic `DetailSheetDialog`· lazy-mounted (ADR-040: zero high-freq subs).
+- NEW types: `SlabScheduleLabels`/`SlabTitleBlockLabels`/`SlabDetailSheetLabels` (`detail-sheet-types.ts`).
+- Wiring: `bim:slab-detail-requested` event· `SLAB_RIBBON_KEYS_ACTIONS.reinforcementDetail`· `useRibbonSlabBridge.onAction` emit· 3ο κουμπί «Λεπτομέρεια Οπλισμού» στο RC-gated `slab-reinforcement-actions` panel· lazy `SlabDetailHost` mounted στο `DxfViewerDialogs`· i18n `slabDetail.*` + `slabStructural.reinforcementDetail` (el+en).
+- Tests: `slab-detail-sheet.test.ts` (9 — 5 ζώνες, primitives non-empty, schedule SSoT match, no-mutation, kind-aware span/load). GREEN.
+- **DEFER:** true polygon-clip mesh στο detail plan (bbox v1, συνεπές με 3Δ)· serviceability/deflection check summary· ξεχωριστά X/Y mesh στο schedule.
 
 ---
 
@@ -87,5 +98,6 @@
 ---
 
 ## 6. Changelog
+- **2026-06-18 (Opus) — S5:** Slab PDF detail sheet DONE (UNCOMMITTED). NEW `bim/structural/detail-sheet/{slab-detail-plan, slab-detail-section, slab-detail-schedule, slab-detail-titleblock, slab-detail-sheet}` + `detail-sheet/render/slab-detail-3d-capture` + `ui/components/slab-detail/SlabDetailHost` + `slab-detail-sheet.test.ts` (9 jest). MOD `detail-sheet-types` (SlabScheduleLabels/SlabTitleBlockLabels/SlabDetailSheetLabels) + `drawing-event-map-bim` (bim:slab-detail-requested) + `slab-command-keys` (reinforcementDetail action) + `useRibbonSlabBridge` (emit) + `contextual-slab-tab` (3ο κουμπί) + `dxf-viewer-lazy-components` + `DxfViewerDialogs` (lazy mount) + i18n el/en. Full SSoT (reuse DetailSheetModel/layout/dim/fit/DetailSheetDialog/detail-3d-capture-core/buildColumnPerspectiveRegion + computeSlabFoundationReinforcementQuantities + buildSlabRebarCage + resolveActiveSlabReinforcementForEntity· preview === PDF). Mirror beam detail (5 ζώνες, no design-summary). PLAN outline-based, SECTION 1m strip. 9 jest GREEN· tsc-clean (δικά μας). **ADR-476 ΟΛΟΚΛΗΡΩΘΗΚΕ** (Slices 0-5). 🔴 browser-verify + commit.
 - **2026-06-18 (Opus) — S4:** Slab Properties panel + structural ribbon DONE (UNCOMMITTED). NEW `ui/slab-advanced-panel/{slab-property-fields, SlabAdvancedPanel, SlabPropertiesTab}` + `slab-structural-bridge` + `useSlabParamsDispatcher` + `slab-structural-keys.test.ts`. MOD `slab-command-keys` (structural keys + RC visibility + autoReinforce action) + `useRibbonSlabBridge` (getPanelVisibility + autoReinforce) + `useRibbonCommands` (slab panel-visibility branch) + `BimPropertiesRouter` (slab branch) + `contextual-slab-tab` (RC-gated reinforcement panel) + `slab-foundation-reinforcement-types` (formatSlabFoundationTopLabel) + i18n el/en. Full SSoT (reuse generic BimPropertyRow + FOUNDATION_* options + existing UpdateSlabParamsCommand + organism auto-reinforce pipeline). 8 jest GREEN· tsc-clean (πλην 4 προϋπαρχόντων beam WIP errors άλλου agent). S5 (PDF) pending.
 - **2026-06-18 (Opus):** Slices 0-3 DONE (UNCOMMITTED). Universal slab reinforcement (foundation + suspended): kind-aware suggester (EC2 §9.3.1/§9.8.2), auto re-study, 2Δ polygon-clipped mesh overlay, 3Δ bbox mesh cage. ~14 αρχεία (8 mod + 3 new src + 1 new ADR + 2 proactive). S4-S5 pending.

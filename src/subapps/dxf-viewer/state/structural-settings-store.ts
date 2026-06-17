@@ -28,21 +28,31 @@ import {
 import type { StructuralCodeId } from '../bim/structural/codes';
 import type { ConcreteGrade } from '../bim/structural/concrete-grades';
 import type { OccupancyCategory } from '../bim/structural/loads/occupancy-loads';
-import { saveStructuralSettings } from '../services/structural-settings.service';
 
 // ── Debounce helper (per building) ──────────────────────────────────────────
 
 type Timer = ReturnType<typeof setTimeout>;
 const pendingTimers: Map<string, Timer> = new Map();
 
+/**
+ * Persist debounced (500 ms). Το `structural-settings.service` (Firestore/Firebase
+ * stack) φορτώνεται **lazy** μέσα στο `setTimeout` ώστε αυτό το store module να μένει
+ * pure στο import-graph (zero Firebase at module-init). Έτσι κάθε καθαρός consumer
+ * (renderers / converters / validators / section-context) που διαβάζει
+ * `getState().codeId` παραμένει testable χωρίς `fetch`/Firebase landmine. Το save ήταν
+ * ήδη deferred + fire-and-forget → μηδέν behavior change. Pattern ήδη καθιερωμένο
+ * (12+ αρχεία με `await import()` για heavy persistence deps).
+ */
 function debounceWrite(buildingId: string, settings: StructuralSettings, delayMs = 500): void {
   const existing = pendingTimers.get(buildingId);
   if (existing) clearTimeout(existing);
   const t = setTimeout(() => {
     pendingTimers.delete(buildingId);
-    saveStructuralSettings(buildingId, settings).catch(() => {
-      // fire-and-forget: transient failures are non-critical (heal next edit)
-    });
+    void import('../services/structural-settings.service')
+      .then((m) => m.saveStructuralSettings(buildingId, settings))
+      .catch(() => {
+        // fire-and-forget: transient failures are non-critical (heal next edit)
+      });
   }, delayMs);
   pendingTimers.set(buildingId, t);
 }

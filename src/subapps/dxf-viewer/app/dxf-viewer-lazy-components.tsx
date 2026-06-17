@@ -32,6 +32,8 @@ export const ColumnDetailHost = React.lazy(() => import('../ui/components/column
 export const FoundationDetailHost = React.lazy(() => import('../ui/components/foundation-detail/FoundationDetailHost').then(mod => ({ default: mod.FoundationDetailHost })));
 // ADR-471 — Beam Reinforcement Detail Sheet («Λεπτομέρεια Οπλισμού») dialog host
 export const BeamDetailHost = React.lazy(() => import('../ui/components/beam-detail/BeamDetailHost').then(mod => ({ default: mod.BeamDetailHost })));
+// ADR-476 — Slab Reinforcement Detail Sheet («Λεπτομέρεια Οπλισμού») dialog host
+export const SlabDetailHost = React.lazy(() => import('../ui/components/slab-detail/SlabDetailHost').then(mod => ({ default: mod.SlabDetailHost })));
 // ADR-391 — AdminLayerManager dialog host
 export const AdminLayerManagerDialogHost = React.lazy(() => import('./AdminLayerManagerDialogHost').then(mod => ({ default: mod.AdminLayerManagerDialogHost })));
 // Floor management («Όροφοι Κτιρίου») dialog host — open from Levels panel ⚙️ / floor-tab right-click

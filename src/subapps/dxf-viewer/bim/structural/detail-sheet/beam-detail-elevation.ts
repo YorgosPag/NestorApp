@@ -22,7 +22,7 @@
 import type { Point2D } from '../../../rendering/types/Types';
 import type { BeamEntity } from '../../types/beam-types';
 import { buildBeamSectionContext } from '../section-context';
-import { resolveBeamRebarLayout, type BeamRebarBar } from '../reinforcement/beam-rebar-layout';
+import { resolveBeamRebarLayout, type BeamRebarBar, type BeamRebarLayout } from '../reinforcement/beam-rebar-layout';
 import { DEFAULT_STIRRUP_TYPE, type BeamReinforcement } from '../reinforcement/beam-reinforcement-types';
 import { formatBeamStirrupsLabel } from '../reinforcement/beam-reinforcement-compute';
 import { pickScaleDenominator } from './detail-sheet-fit';
@@ -72,7 +72,8 @@ function stirrupHalfDepthMm(pathMm: readonly Point2D[]): number {
 
 /**
  * Builds the longitudinal-elevation primitives for a reinforced beam. Returns
- * empty primitives for missing reinforcement / degenerate geometry.
+ * empty primitives for missing reinforcement / degenerate geometry. Thin wrapper:
+ * resolves the rebar layout (store-aware) → {@link buildLinearMemberElevationRegion}.
  */
 export function buildBeamElevationRegion(
   beam: BeamEntity,
@@ -82,7 +83,21 @@ export function buildBeamElevationRegion(
   if (!r) return { primitives: [] };
   const layout = resolveBeamRebarLayout(buildBeamSectionContext(beam), r);
   if (!layout) return { primitives: [] };
+  return buildLinearMemberElevationRegion(layout, r, region);
+}
 
+/**
+ * ADR-477 — pure **linear-member** elevation core (entity-free): δέχεται έτοιμο
+ * {@link BeamRebarLayout} (ίδιο SSoT 2Δ/3Δ/διατομή) + τον οπλισμό `r` (για μορφή
+ * συνδετήρα + ετικέτα) και παράγει τη longitudinal όψη σε sheet-mm. Reuse από δοκό
+ * (wrapper παραπάνω) ΚΑΙ συνδετήρια δοκό (`footing-detail-sheet`) — μηδέν duplicate,
+ * μηδέν fake-BeamEntity (η θεμελίωση φέρνει footing-resolved layout/cover, EC2 §4.4.1).
+ */
+export function buildLinearMemberElevationRegion(
+  layout: BeamRebarLayout,
+  r: BeamReinforcement,
+  region: RectMm,
+): BeamElevationResult {
   const spanMm = layout.spanMm;
   const depthMm = layout.depthMm;
   if (spanMm <= 0 || depthMm <= 0) return { primitives: [] };

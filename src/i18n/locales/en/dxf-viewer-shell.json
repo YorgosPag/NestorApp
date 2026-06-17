@@ -2805,7 +2805,9 @@
         "ratio": "ρ (%)",
         "loadDeadArea": "Dead g (kN/m²)",
         "loadLiveArea": "Live q (kN/m²)",
-        "loadUlsArea": "Design load q_Ed (kN/m²)"
+        "loadUlsArea": "Design load q_Ed (kN/m²)",
+        "reinforcementDetail": "Reinforcement Detail",
+        "reinforcementDetailTooltip": "Open the slab reinforcement drawing sheet (plan, section, 3D, schedule) + export PDF"
       },
       "columnEditor": {
         "width": "Width",
@@ -4541,6 +4543,10 @@
       "schedule": "REINFORCEMENT",
       "titleBlock": "TITLE BLOCK"
     },
+    "tieBeamRegions": {
+      "elevation": "ELEVATION",
+      "section": "SECTION"
+    },
     "scheduleTable": {
       "item": "Item",
       "description": "Reinforcement",
@@ -4578,6 +4584,54 @@
       "topMeshNote": "Top mesh required (flexure)",
       "ok": "OK",
       "fail": "!"
+    }
+  },
+  "slabDetail": {
+    "dialogTitle": "Slab Reinforcement Detail",
+    "dialogDescription": "Drawing sheet of the selected slab's reinforcement — plan, section, 3D perspective, reinforcement schedule and title block, fully dimensioned.",
+    "previewAlt": "Slab reinforcement detail sheet preview",
+    "close": "Close",
+    "exportPdf": "Export PDF",
+    "print": "Print",
+    "zoomIn": "Zoom in",
+    "zoomOut": "Zoom out",
+    "zoomReset": "Reset zoom",
+    "zoomToolbar": "Preview zoom",
+    "regions": {
+      "plan": "PLAN",
+      "section": "SECTION",
+      "perspective": "3D PERSPECTIVE",
+      "schedule": "REINFORCEMENT",
+      "titleBlock": "TITLE BLOCK"
+    },
+    "scheduleTable": {
+      "item": "Item",
+      "description": "Reinforcement",
+      "length": "Length (m)",
+      "weight": "Weight (kg)",
+      "bottomMesh": "Bottom mesh",
+      "topMesh": "Top mesh",
+      "total": "Total",
+      "ratio": "ρ"
+    },
+    "titleFields": {
+      "kind": "Type",
+      "section": "Plan size (mm)",
+      "thickness": "Thickness (mm)",
+      "concrete": "Concrete",
+      "steel": "Steel",
+      "cover": "Cover (mm)",
+      "bottomMesh": "Bottom mesh",
+      "topMesh": "Top mesh",
+      "span": "Span L (mm)",
+      "designLoad": "Load q_Ed (kN/m²)"
+    },
+    "kindValues": {
+      "floor": "Floor",
+      "ceiling": "Ceiling",
+      "roof": "Roof",
+      "ground": "Ground slab",
+      "foundation": "Foundation slab"
     }
   },
   "beamDetail": {
