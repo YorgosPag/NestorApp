@@ -12,6 +12,7 @@ import {
   resolveColumnBaseZmm,
   makeColumnHostResolver,
 } from '../../bim/geometry/column-vertical-profile';
+import { isColumnTilted } from '../../bim/geometry/column-tilt';
 import { filterHostedOpenings } from './bim-scene-hosted-opening-filters';
 import type { SyncContext } from './bim-scene-context';
 import type { EntityResolution } from './BimSceneLayer';
@@ -123,7 +124,10 @@ export function syncColumns(
       column, ctx.floorElevationMm, ctx.activeLevelId, r.baseElevation, topProfile, baseProfile, nominalHeightMm,
       entities.walls, // ADR-449 Slice 2 — obstacles + exterior classifier για τον σοβά
       entities.beams, // ADR-449 Slice 6 — mutual obstacles (junction κολόνας↔δοκαριού)
-      true, // ADR-449 Slice X1 — suppress per-element· η ΕΝΙΑΙΑ silhouette αναλαμβάνει το σκιν
+      // ADR-449 Slice X1 — suppress per-element· η ΕΝΙΑΙΑ silhouette αναλαμβάνει το σκιν.
+      // ADR-404 Bug A — ΕΞΑΙΡΕΣΗ: κεκλιμένη κολώνα ΔΕΝ μπαίνει στο flat union (δεν shear-άρεται
+      // ως merged) → παίρνει per-element σοβά (suppress=false) που ακολουθεί την κλίση.
+      !isColumnTilted(column.params),
     );
     if (mesh) { mesh.userData['buildingId'] = r.buildingId; group.add(mesh); }
   }

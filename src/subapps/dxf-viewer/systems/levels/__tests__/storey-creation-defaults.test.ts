@@ -20,6 +20,7 @@ import {
   shouldWarnFoundationOnStorey,
   shouldWarnBeamOnFoundation,
   resolveStoreyDefaultEntityTypes,
+  isFoundationDisciplineInContext,
 } from '../storey-creation-defaults';
 
 // Full stack with ground (datum 0) + basement + foundation below + upper @3m.
@@ -89,6 +90,38 @@ describe('resolveStoreyCeilingRelativeMm — SSoT unify (ADR-450)', () => {
         resolveStoreyCeilingElevationMm(undefined, 9999, ctx),
       );
     }
+  });
+});
+
+describe('isFoundationDisciplineInContext (ADR-467)', () => {
+  it('in-context on the foundation level + every basement', () => {
+    expect(isFoundationDisciplineInContext(ctxFor('fnd'))).toBe(true);
+    expect(isFoundationDisciplineInContext(ctxFor('bsm'))).toBe(true);
+  });
+  it('ground: in-context only when it is the lowest storey (no basement below)', () => {
+    expect(isFoundationDisciplineInContext(ctxFor('grd'))).toBe(false); // basement below
+    const noBasement: StoreyFloorRef[] = [
+      { id: 'g', number: 0, elevation: 0, height: 3, kind: 'ground' },
+      { id: 'u', number: 1, elevation: 3, height: 3, kind: 'standard' },
+    ];
+    const grdCtx = buildActiveStoreyContext(noBasement, 'g');
+    expect(grdCtx && isFoundationDisciplineInContext(grdCtx)).toBe(true);
+  });
+  it('out of context on upper / penthouse storeys', () => {
+    expect(isFoundationDisciplineInContext(ctxFor('upr'))).toBe(false);
+  });
+  it('every basement is in-context even with a foundation level below (multi-basement)', () => {
+    const twoBasements: StoreyFloorRef[] = [
+      { id: 'f', number: -3, elevation: -6, height: 1, kind: 'foundation' },
+      { id: 'b2', number: -2, elevation: -5, height: 3, kind: 'basement' },
+      { id: 'b1', number: -1, elevation: -2, height: 3, kind: 'basement' },
+      { id: 'g', number: 0, elevation: 0, height: 3, kind: 'ground' },
+    ];
+    const upperBasement = buildActiveStoreyContext(twoBasements, 'b1');
+    expect(upperBasement && isFoundationDisciplineInContext(upperBasement)).toBe(true);
+  });
+  it('null storey → in-context (no opinion, zero regression)', () => {
+    expect(isFoundationDisciplineInContext(null)).toBe(true);
   });
 });
 

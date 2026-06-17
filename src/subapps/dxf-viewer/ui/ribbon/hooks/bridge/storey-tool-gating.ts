@@ -15,11 +15,12 @@
  * @see systems/levels/storey-creation-defaults.ts — resolveStoreyDefaultEntityTypes (the kind→categories SSoT)
  */
 
-import type { FloorKind } from '@/utils/floor-naming';
 import {
   resolveStoreyDefaultEntityTypes,
+  isFoundationDisciplineInContext,
   type BimToolCategory,
 } from '../../../../systems/levels/storey-creation-defaults';
+import type { ActiveStoreyContext } from '../../../../systems/levels/active-storey-context';
 
 /**
  * Maps a ribbon `commandKey` (Structural / Architecture creation tools, incl. the
@@ -44,18 +45,26 @@ export function resolveBimToolCategory(commandKey: string): BimToolCategory | nu
 }
 
 /**
- * Whether a creation tool is RECOMMENDED on the active storey of the given kind.
- * Counted / unknown / `null` kind → always `true` (μηδέν regression). A non-BIM
- * command (category `null`) → always `true`. Special levels → only their own
- * discipline's tools are recommended.
+ * Whether a creation tool is RECOMMENDED on the active storey. A non-BIM command
+ * (category `null`) → always `true` (never gated). `null` storey → always `true`
+ * (μηδέν regression).
+ *
+ * ADR-467 — the FOUNDATION discipline is **graduated**: it is recommended on the
+ * foundation level + basements (+ the lowest ground), and de-emphasised on every
+ * upper storey / penthouse / roof — even though those are counted storeys that
+ * otherwise recommend everything. All other disciplines keep the per-kind
+ * recommendation (counted → everything; special levels → their own discipline).
  */
 export function isCommandRecommendedForStorey(
   commandKey: string,
-  kind: FloorKind | null,
+  storey: ActiveStoreyContext | null,
 ): boolean {
-  const recommendation = resolveStoreyDefaultEntityTypes(kind);
-  if (recommendation.mode === 'all') return true;
   const category = resolveBimToolCategory(commandKey);
   if (category === null) return true;
+  // ADR-467 — θεμελίωση: διαβαθμισμένο πλαίσιο (κατώτατες/υπόγειες στάθμες μόνο),
+  // ανεξάρτητα από το αν ο όροφος είναι counted (που αλλιώς συστήνει τα πάντα).
+  if (category === 'foundation') return isFoundationDisciplineInContext(storey);
+  const recommendation = resolveStoreyDefaultEntityTypes(storey?.storeyKind ?? null);
+  if (recommendation.mode === 'all') return true;
   return recommendation.categories.has(category);
 }

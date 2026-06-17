@@ -95,25 +95,53 @@ export function resolveStoreyCeilingElevationMm(
 }
 
 /**
- * Whether creating a foundation / ground-bearing slab on the active storey
- * deserves a soft warning — i.e. the active storey is NOT the lowest occupied
- * one. Revit-style: foundations belong at the lowest level, but the engineer is
- * allowed to place them anywhere (warn, don't block). Returns `false` when there
- * is no active storey (degenerate → no opinion → no warning).
+ * ADR-467 — Διαβαθμισμένο SSoT: έχει η ΘΕΜΕΛΙΩΣΗ (πέδιλα/πεδιλοδοκοί/συνδετήριες/
+ * εδαφόπλακες) στατικό νόημα στην ενεργή στάθμη; Η θεμελίωση ανήκει στις κατώτατες/
+ * υπόγειες στάθμες — όχι σε υπέργειους ορόφους:
+ *   - `foundation`            → ✅ ο φυσικός χώρος των θεμελιακών στοιχείων
+ *   - `basement` (υπόγειο)    → ✅ βαθμιδωτή θεμελίωση / περιμετρικές πεδιλοδοκοί /
+ *                                  εδαφόπλακα υπογείου (υπαρκτή πραγματική περίπτωση)
+ *   - `ground` (ισόγειο)      → ✅ ΜΟΝΟ αν είναι ο κατώτατος όροφος (δεν υπάρχει
+ *                                  υπόγειο/θεμελίωση από κάτω)
+ *   - `standard`/`mezzanine`/`roof`/`stair-penthouse` → ❌ υπέργειες στάθμες, η
+ *                                  θεμελίωση δεν έχει στατικό νόημα εκεί
+ * `null` storey → καμία άποψη (degenerate → in-context, μηδέν regression).
  *
- * 🔑 The dedicated **foundation level** (kind `'foundation'`) is the *correct* home
- * for footings / ground slabs, so it NEVER warns. Without this guard it would
- * mis-fire: a foundation is a SPECIAL level and `isLowestOccupiedStorey` is `false`
- * for every special level by design ({@link resolveIsLowestOccupied}), so being
- * literally on the foundation level used to trip the «belongs on the lowest storey»
- * warning — exactly where it belongs (incident 2026-06-16, Giorgio). ADR-461.
+ * Κοινό SSoT για ΚΑΙ τον dim (ribbon gating, {@link import('../../ui/ribbon/hooks/bridge/storey-tool-gating').isCommandRecommendedForStorey})
+ * ΚΑΙ το warning ({@link shouldWarnFoundationOnStorey}) — μία πηγή αλήθειας.
+ */
+export function isFoundationDisciplineInContext(
+  storey: ActiveStoreyContext | null = readActiveStoreyContext(),
+): boolean {
+  if (storey === null) return true;
+  switch (storey.storeyKind) {
+    case 'foundation':
+    case 'basement':
+      return true;
+    case 'ground':
+      return storey.isLowestOccupiedStorey !== false;
+    default:
+      return false; // standard / mezzanine / roof / stair-penthouse / null kind
+  }
+}
+
+/**
+ * Whether creating a foundation / ground-bearing slab on the active storey
+ * deserves a soft warning — i.e. the foundation discipline is OUT of context on
+ * this storey ({@link isFoundationDisciplineInContext}). Revit-style: foundations
+ * belong at foundation/basement levels (and the lowest ground when there is no
+ * basement), but the engineer is allowed to place them anywhere (warn, don't
+ * block). Returns `false` when there is no active storey (degenerate → no opinion).
+ *
+ * 🔑 The dedicated **foundation level** + every **basement** are the *correct* home
+ * for footings / ground slabs, so they NEVER warn (incident 2026-06-16, Giorgio +
+ * ADR-467 graduated gating). ADR-461.
  */
 export function shouldWarnFoundationOnStorey(
   storey: ActiveStoreyContext | null = readActiveStoreyContext(),
 ): boolean {
   if (storey === null) return false;
-  if (storey.storeyKind === 'foundation') return false;
-  return storey.isLowestOccupiedStorey === false;
+  return !isFoundationDisciplineInContext(storey);
 }
 
 /**

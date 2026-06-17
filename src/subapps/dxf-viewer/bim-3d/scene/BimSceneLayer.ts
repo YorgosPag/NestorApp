@@ -16,6 +16,7 @@ import * as THREE from 'three';
 import type { Bim3DEntities } from '../stores/Bim3DEntitiesStore';
 import type { FloorStackEntry } from './multi-floor-3d-source';
 import { beamToMesh, slabToMesh, fixtureToMesh, panelToMesh, manifoldToMesh, radiatorToMesh, boilerToMesh, waterHeaterToMesh, foundationToMesh } from '../converters/BimToThreeConverter';
+import { isBeamTilted } from '../../bim/geometry/beam-slope';
 import { syncWalls, syncColumns } from './bim-scene-attach-syncs';
 // ADR-449 Slice 7 — scene-level ενιαίος σοβάς (merged structural silhouette).
 import { syncStructuralFinishSkin } from './bim-scene-structural-finish-sync';
@@ -332,8 +333,10 @@ export class BimSceneLayer {
       // ADR-449 Slice X1 — suppress per-element σοβάς δοκαριού· η scene-level ΕΝΙΑΙΑ
       // silhouette (`syncStructuralFinishSkin`) αναλαμβάνει το συνεχές δέρμα → μηδέν overlap/
       // διπλή γραμμή στις συμβολές. (Το BOQ μένει per-element, σε ξεχωριστό path — αμετάβλητο.)
+      // ADR-404 Bug A — κεκλιμένη (sloped) δοκός ΕΞΑΙΡΕΙΤΑΙ από το flat union → per-element
+      // σοβάς (suppress=false) που ακολουθεί την κλίση· επίπεδη → suppress (silhouette).
       const mesh = beamToMesh(
-        beam, ctx.activeLevelId, r.baseElevation, entities.walls, entities.columns, true, ctx.floorElevationMm,
+        beam, ctx.activeLevelId, r.baseElevation, entities.walls, entities.columns, !isBeamTilted(beam.params), ctx.floorElevationMm,
       );
       if (mesh) { mesh.userData['buildingId'] = r.buildingId; this.group.add(mesh); }
     }

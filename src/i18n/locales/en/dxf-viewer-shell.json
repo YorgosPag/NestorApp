@@ -99,7 +99,7 @@
     "noFootprint": "No building footprint found. Create walls, columns or beams first."
   },
   "storeyGating": {
-    "foundationUpperStorey": "Foundations / ground slabs usually belong on the lowest storey.",
+    "foundationUpperStorey": "Foundations belong on a foundation or basement level — they have no structural meaning on an upper storey. (allowed)",
     "beamOnFoundation": "Beam on a foundation level — did you mean a foundation tie-beam / grade beam? (allowed)"
   },
   "gridJustification": {

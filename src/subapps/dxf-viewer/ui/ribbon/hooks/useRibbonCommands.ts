@@ -109,9 +109,10 @@ export function useRibbonCommands({
   const snapEnabled = useAnimationStore((s) => s.snapEnabled);
   const snapStepUnits = useAnimationStore((s) => s.snapStepUnits);
 
-  // ADR-461 Phase C4 — active storey kind drives the Revit-style ADVISORY tool
-  // recommendation (foundation level → foundation/beam/slab recommended, etc.).
-  const activeStoreyKind = useActiveStoreyContext()?.storeyKind ?? null;
+  // ADR-461 Phase C4 / ADR-467 — active storey context drives the Revit-style
+  // ADVISORY tool recommendation (foundation level → foundation/beam/slab; the
+  // foundation discipline is graduated by storey, needing `isLowestOccupiedStorey`).
+  const activeStorey = useActiveStoreyContext() ?? null;
 
   // Compose: stair-prefixed keys → stairBridge; array-prefixed → arrayBridge;
   // everything else falls through to the text-editor bridge. All bridges
@@ -362,11 +363,11 @@ export function useRibbonCommands({
     [stairBridge, columnBridge, beamBridge, mepFixtureBridge, mepManifoldBridge, electricalPanelBridge, mepBoilerBridge, mepWaterHeaterBridge, mepUnderfloorBridge, mepSegmentBridge, furnitureBridge, floorplanSymbolBridge],
   );
 
-  // ADR-461 Phase C4 — Revit-style advisory recommendation per active storey kind.
-  // Counted / null kind → always `true` (handled inside the pure SSoT) → no change.
+  // ADR-461 Phase C4 / ADR-467 — Revit-style advisory recommendation per active
+  // storey. Null storey → always `true` (handled inside the pure SSoT) → no change.
   const getCommandRecommendation = React.useCallback(
-    (commandKey: string): boolean => isCommandRecommendedForStorey(commandKey, activeStoreyKind),
-    [activeStoreyKind],
+    (commandKey: string): boolean => isCommandRecommendedForStorey(commandKey, activeStorey),
+    [activeStorey],
   );
 
   // ADR-363 Phase 1E — Wall action keys (delete) handled by bridge before

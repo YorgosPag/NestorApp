@@ -15,6 +15,8 @@ import type { BeamEntity } from '../../bim/types/beam-types';
 import type { BimCategory } from '../../config/bim-object-styles';
 import type { Discipline } from '../../bim/discipline/bim-discipline';
 import { isStructuralFinishVisible } from '../../bim/finishes/structural-finish-visibility';
+import { isColumnTilted } from '../../bim/geometry/column-tilt';
+import { isBeamTilted } from '../../bim/geometry/beam-slope';
 import { computeStructuralFinishSilhouette } from '../../bim/finishes/structural-finish-scene';
 import type { ColumnVerticalExtentLookup } from '../../bim/finishes/structural-finish-scene-silhouette';
 import { buildStructuralSilhouetteSkin } from '../converters/structural-finish-silhouette-3d';
@@ -71,11 +73,17 @@ export function syncStructuralFinishSkin(
     if (!g) { g = { baseElevation, columns: [], beams: [] }; groups.set(buildingId, g); }
     return g;
   };
+  // ADR-404 Bug A — τα κεκλιμένα μέλη ΕΞΑΙΡΟΥΝΤΑΙ από το flat merged union: ένας ενιαίος
+  // silhouette δεν μπορεί να shear-αριστεί ανά μέλος, οπότε ένα tilted μέλος θα έμενε
+  // κάθετο. Παίρνουν per-element σοβά (που ακολουθεί την κλίση) στο column/beam sync —
+  // εκεί το `suppressFinishSkin` είναι false ακριβώς για τα tilted. Επίπεδα → union (μηδέν regression).
   for (const column of entities.columns) {
+    if (isColumnTilted(column.params)) continue;
     const r = resolve(column, 'column', ctx);
     if (r) groupFor(r.buildingId, r.baseElevation).columns.push(column);
   }
   for (const beam of entities.beams) {
+    if (isBeamTilted(beam.params)) continue;
     const r = resolve(beam, 'beam', ctx);
     if (r) groupFor(r.buildingId, r.baseElevation).beams.push(beam);
   }

@@ -31,6 +31,9 @@ import { computeColumnFinishBands, computeBeamFinishFaces } from '../../bim/fini
 import type { FinishFaceSegment, StructuralFinishFaces } from '../../bim/finishes/structural-finish-types';
 // ADR-449 Slice X2 — γωνιακή γεωμετρία = pure SSoT (κοινή με το 2Δ outline· πρώην εδώ).
 import { computeMiteredOuter, segOffsetVec } from '../../bim/finishes/structural-finish-outline-geometry';
+// ADR-404 / ADR-449 Bug A — ο σοβάς κεκλιμένου μέλους ακολουθεί τον πυρήνα: ΙΔΙΟΣ shear
+// SSoT consumer με τον core (no-op fast-path όταν δεν υπάρχει κλίση). Μηδέν νέα μαθηματικά.
+import { applyColumnTilt, applyBeamSlope } from './mesh-slope-shear';
 
 // Re-export ώστε importers/tests (`structural-finish-3d-beam.test.ts`) να μην σπάσουν.
 export { computeMiteredOuter } from '../../bim/finishes/structural-finish-outline-geometry';
@@ -149,7 +152,15 @@ export function buildColumnFinishSkin(
     const sub = buildFinishSkinFromFaces(
       band.faces, sceneUnits, hM, baseY + band.zBottomMm * MM_TO_M, column.id, 'column', levelId,
     );
-    if (sub) while (sub.children.length) group.add(sub.children[0]);
+    if (!sub) continue;
+    // ADR-404 Bug A — κεκλιμένη κολώνα: shear το finish band ΙΔΙΑ με τον πυρήνα. Το prism
+    // ζει σε floor-local Y με βάση στο band bottom → `baseHeightM = zBottom` ώστε το ύψος
+    // πάνω από τη βάση της κολώνας (= datum του core) να ταιριάζει 1:1. No-op flat fast-path.
+    const baseHeightM = band.zBottomMm * MM_TO_M;
+    for (const child of sub.children) {
+      applyColumnTilt((child as THREE.Mesh).geometry as THREE.BufferGeometry, column.params, baseHeightM);
+    }
+    while (sub.children.length) group.add(sub.children[0]);
   }
   if (group.children.length === 0) return null;
   group.userData['bimId'] = column.id;
@@ -182,7 +193,7 @@ export function buildBeamFinishSkin(
   const faces = computeBeamFinishFaces(beam, verts, beam.params.depth, walls, columns, floorElevationMm);
   if (!faces) return null;
 
-  return buildFinishSkinFromFaces(
+  const skin = buildFinishSkinFromFaces(
     faces,
     beam.params.sceneUnits ?? 'mm',
     beam.params.depth * MM_TO_M,
@@ -191,4 +202,11 @@ export function buildBeamFinishSkin(
     'beam',
     levelId,
   );
+  if (!skin) return null;
+  // ADR-401/404 Bug A — κεκλιμένη δοκός (sloped): shear το finish ΙΔΙΑ με τον πυρήνα
+  // (plan-based world-Y slope· no-op fast-path όταν επίπεδη). Μηδέν νέα μαθηματικά.
+  for (const child of skin.children) {
+    applyBeamSlope((child as THREE.Mesh).geometry as THREE.BufferGeometry, beam.params);
+  }
+  return skin;
 }
