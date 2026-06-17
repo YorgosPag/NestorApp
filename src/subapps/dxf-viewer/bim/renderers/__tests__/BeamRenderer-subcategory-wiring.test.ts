@@ -149,4 +149,29 @@ describe('BeamRenderer — hidden-lines subcategory wiring (Phase C.2)', () => {
     renderer.render(makeBeam() as unknown as EntityModel, {});
     expect(strokeStyleCalls(mock.calls)).not.toContain('#BEEF00');
   });
+
+  // ── ADR-363 §5.7 (2026-06-17) — δοκάρι «hidden above floor» → overhead dashed ──
+  // Default δοκάρι (top 3000 / depth 500 → zBottom 2500 > topMm 2300) κατατάσσεται
+  // 'hidden' από το view range. Ο BeamRenderer το χαρτογραφεί σε 'projection' ώστε
+  // να δείχνει το πορτοκαλί DASHED outline αντί για lineWidthPx:0 (αόρατο). Κλειδώνει
+  // το fix του Giorgio: το preview/committed δοκάρι στην οροφή φαίνεται με περίγραμμα.
+  function makeOverheadBeam(): BeamEntity {
+    return {
+      ...makeBeam(),
+      params: {
+        ...(makeBeam().params),
+        topElevation: 3000, depth: 500,
+        startPoint: { x: 0, y: 0, z: 3000 },
+        endPoint: { x: 5000, y: 0, z: 3000 },
+      },
+    } as unknown as BeamEntity;
+  }
+
+  it('6. overhead-hidden beam (zBottom > topMm) → dashed [8,4] outline (όχι αόρατο solid)', () => {
+    const { renderer, mock } = makeRenderer();
+    renderer.render(makeOverheadBeam() as unknown as EntityModel, {});
+    // 'projection' mapping → 'hidden-lines' sub default dashed· χωρίς το fix το
+    // cutState='hidden' θα έδινε linePattern:'solid' → setLineDash([]) + lineWidthPx:0.
+    expect(lineDashCalls(mock.calls)).toContain('[8,4]');
+  });
 });

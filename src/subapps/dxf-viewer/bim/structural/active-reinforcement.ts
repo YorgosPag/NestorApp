@@ -15,8 +15,10 @@
  */
 
 import type { ColumnParams } from '../types/column-types';
+import type { BeamEntity } from '../types/beam-types';
 import type { ColumnReinforcement } from './reinforcement/column-reinforcement-types';
-import { resolveActiveColumnReinforcement } from './section-context';
+import type { BeamReinforcement } from './reinforcement/beam-reinforcement-types';
+import { resolveActiveColumnReinforcement, resolveActiveBeamReinforcement } from './section-context';
 import { resolveStructuralCode } from './codes';
 import { useStructuralSettingsStore } from '../../state/structural-settings-store';
 
@@ -30,4 +32,17 @@ export function resolveActiveColumnReinforcementForParams(
   if (!params.reinforcement?.auto) return params.reinforcement;
   const provider = resolveStructuralCode(useStructuralSettingsStore.getState().codeId);
   return resolveActiveColumnReinforcement(params, provider);
+}
+
+/**
+ * ADR-471 — `resolveActiveBeamReinforcement` με τον ενεργό κανονισμό από το settings store.
+ * Fast-path: manual/absent → επιστρέφει το stored χωρίς να αγγίξει τον provider. Δέχεται
+ * `BeamEntity` (όχι params) γιατί το άνοιγμα = derived `geometry.length` (geometry-is-SSoT).
+ */
+export function resolveActiveBeamReinforcementForEntity(
+  beam: Pick<BeamEntity, 'params' | 'geometry'>,
+): BeamReinforcement | undefined {
+  if (!beam.params.reinforcement?.auto) return beam.params.reinforcement;
+  const provider = resolveStructuralCode(useStructuralSettingsStore.getState().codeId);
+  return resolveActiveBeamReinforcement(beam, provider);
 }

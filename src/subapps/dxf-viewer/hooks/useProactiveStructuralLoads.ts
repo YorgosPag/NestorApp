@@ -1,0 +1,115 @@
+'use client';
+
+/**
+ * useProactiveStructuralLoads — ADR-459 Phase 9 (PROACTIVE real-time φορτία).
+ *
+ * Καθρεφτίζει το `useProactiveOrganismReinforce` (Φ8): μόλις ο στατικός οργανισμός
+ * **δημιουργείται ή μεγαλώνει** (νέα/μετακινημένη/διαγραμμένη κολώνα/δοκάρι, from-grid),
+ * ξανα-τρέχει αυτόματα — χωρίς κουμπί — τη διαδρομή φορτίων μέσω του SSoT πυρήνα
+ * `runStructuralLoadTakedown`. Σενάριο-στόχος: ενώνεις 2 κολόνες με δοκάρι → το δοκάρι
+ * μεταφέρει αντιδράσεις στις κολόνες → η αξονική τους ανανεώνεται → τα πέδιλα
+ * ξανα-διαστασιολογούνται (`useAutoFoundationDesign` reagisce στο emit).
+ *
+ * **Το ΠΡΩΤΟ σκαλί της αλυσίδας** `φορτία → sizing πεδίλων → διαγνωστικά`: το
+ * `bim:structural-loads-computed` ανήκει ήδη στα `AUTO_DESIGN_EVENTS` (Φ7) και
+ * `ORGANISM_EVENTS` (Φ1), οπότε τα downstream στάδια αλυσιδώνονται μόνα τους.
+ *
+ * **Ντετερμινιστική σειρά (κρίσιμο):** mounted ΠΡΙΝ από το `useAutoFoundationDesign`
+ * στο shell ⇒ ο load handler καλείται πρώτος, εκτελεί+emit-άρει **σύγχρονα** μέσα στο
+ * microtask, και το ήδη-προγραμματισμένο foundation microtask διαβάζει το φρέσκο
+ * `appliedLoad` → ΕΝΑ pass, σωστή σειρά (όχι 2-pass flicker).
+ *
+ * **Loop guard:** ΔΕΝ ακούει το δικό του `bim:structural-loads-computed`, ούτε τα
+ * παράγωγα `bim:column-footing-attached` / `bim:structural-auto-reinforced` /
+ * `bim:foundation-params-updated` (αλλιώς κύκλος φορτία→πέδιλο→φορτία). Ο πυρήνας/
+ * command είναι ούτως ή άλλως idempotent (re-run ίδιας τοπολογίας → ίδια φορτία).
+ *
+ * **Σιωπηλός (Revit-grade):** καμία ειδοποίηση — αυτόματη background συμπεριφορά (το
+ * ribbon path κρατά το ρητό «Υπολογισμός Φορτίων»).
+ *
+ * **Atomic undo:** geometry-edit triggers (έχουν δικό τους command στο stack) → τα
+ * παράγωγα φορτία ομαδοποιούνται στο ΙΔΙΟ undo step (`executeGrouped`) μαζί με
+ * πέδιλο+οπλισμό → ΕΝΑ Ctrl+Z· τα batch (from-grid) → standalone.
+ *
+ * ADR-040 safe: low-freq, coalesced ανά microtask (mirror `useStructuralOrganism`).
+ *
+ * @see hooks/structural-load-takedown-core.ts — runStructuralLoadTakedown (SSoT)
+ * @see hooks/useProactiveOrganismReinforce.ts — το proactive πρότυπο (Φ8)
+ * @see docs/centralized-systems/reference/adrs/ADR-459-structural-organism-connectivity.md §Phase 9
+ */
+
+import { useEffect, useRef } from 'react';
+import { EventBus, type DrawingEventType } from '../systems/events/EventBus';
+import { useCommandHistory } from '../core/commands/useCommandHistory';
+import { makeGuideOffsetLookup } from '../bim/hosting/guide-store-offset-lookup';
+import { useStructuralSettingsStore } from '../state/structural-settings-store';
+import { useBuildingStoreyCount } from './useBuildingStoreyCount';
+import { runStructuralLoadTakedown, type LoadTakedownLevelManager } from './structural-load-takedown-core';
+
+/** Στατικές μεταβολές που αλλάζουν τη διαδρομή φορτίων → recompute. */
+const PROACTIVE_LOAD_EVENTS: readonly DrawingEventType[] = [
+  'drawing:entity-created', // νέα κολόνα/δοκάρι/πλάκα
+  'bim:column-params-updated', // grip-resize / ribbon edit (διατομή → tributary)
+  'bim:beam-params-updated',
+  'bim:entities-moved', // drag-move → re-derive tributary
+  'bim:column-delete-requested',
+  'bim:beam-delete-requested',
+  'bim:columns-from-grid',
+  'bim:beams-from-grid',
+  'bim:foundations-from-grid',
+];
+
+/**
+ * Triggers που είναι **άμεσες geometry edits** του χρήστη (έχουν δικό τους command
+ * στο undo stack) → τα παράγωγα φορτία ομαδοποιούνται στο **ίδιο** atomic undo step
+ * (Revit transaction group). Τα batch/from-grid πάνε standalone.
+ */
+const GEOMETRY_EDIT_TRIGGERS: ReadonlySet<DrawingEventType> = new Set([
+  'drawing:entity-created',
+  'bim:column-params-updated',
+  'bim:beam-params-updated',
+  'bim:entities-moved',
+]);
+
+export function useProactiveStructuralLoads(props: { levelManager: LoadTakedownLevelManager }): void {
+  const { levelManager } = props;
+  const { execute, executeGrouped } = useCommandHistory();
+  const storeyCount = useBuildingStoreyCount();
+  // Ref ώστε ο event callback να διαβάζει το τρέχον storeyCount χωρίς re-subscribe.
+  const storeyCountRef = useRef(storeyCount);
+  storeyCountRef.current = storeyCount;
+
+  useEffect(() => {
+    let scheduled = false;
+    // Αν το batch περιέχει geometry-edit trigger, ομαδοποίησε τα φορτία στο ίδιο
+    // undo step με το user command (atomic, Revit-grade).
+    let groupable = false;
+
+    const recompute = (): void => {
+      scheduled = false;
+      const shouldGroup = groupable;
+      groupable = false;
+      const settings = useStructuralSettingsStore.getState();
+      runStructuralLoadTakedown(
+        levelManager,
+        {
+          storeyCount: storeyCountRef.current,
+          deadAreaLoadKpa: settings.deadAreaLoadKpa ?? 0,
+          liveAreaLoadKpa: settings.liveAreaLoadKpa ?? 0,
+        },
+        makeGuideOffsetLookup(),
+        shouldGroup ? executeGrouped : execute,
+      );
+    };
+
+    const schedule = (ev: DrawingEventType): void => {
+      if (GEOMETRY_EDIT_TRIGGERS.has(ev)) groupable = true;
+      if (scheduled) return;
+      scheduled = true;
+      queueMicrotask(recompute);
+    };
+
+    const unsubs = PROACTIVE_LOAD_EVENTS.map((ev) => EventBus.on(ev, () => schedule(ev)));
+    return () => unsubs.forEach((u) => u());
+  }, [levelManager, execute, executeGrouped]);
+}

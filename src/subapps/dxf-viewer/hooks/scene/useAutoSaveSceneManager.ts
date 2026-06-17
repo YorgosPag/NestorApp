@@ -44,6 +44,17 @@ export interface AutoSaveSceneManagerState extends SceneManagerState {
   /** 🏢 ENTERPRISE: Set loading guard to prevent auto-save during scene load from Storage */
   setIsLoadingFromFirestore: (loading: boolean) => void;
   /**
+   * 🛡️ ADR-469 v1.2 — SSoT orphaned-target latch (writer). Marks a `fileId` whose
+   * backing `files`/`cadFiles` doc is gone (orphaned / file-less floor) so DXF scene
+   * auto-save is permanently suppressed for it this session. The DXF floorplan blob
+   * no longer exists to overwrite; the floor's BIM persists independently via its
+   * floorId-keyed per-entity collections (ADR-420/469). Prevents the ADR-293
+   * `canonicalScenePath is required` throw on every local edit of such a floor.
+   */
+  markFileTargetOrphaned: (fileId: string) => void;
+  /** 🛡️ ADR-469 v1.2 — orphaned-target latch (reader). See `markFileTargetOrphaned`. */
+  isFileTargetOrphaned: (fileId: string | null | undefined) => boolean;
+  /**
    * 🏢 ADR-354 Phase B Part 1: full session reset for super admin company switch.
    * Cancels pending debounced auto-save, clears scenes + saveContext + fileRecordId +
    * currentFileName + per-file caches, and engages the loading guard so any subsequent
@@ -94,6 +105,11 @@ export function useAutoSaveSceneManager(): AutoSaveSceneManagerState {
   const [saveContext, setSaveContextState] = useState<DxfSaveContext | null>(null);
   // 🏢 ENTERPRISE: Callback after successful save — LevelsSystem uses this to persist level→DXF link
   const onSceneSavedRef = useRef<((fileId: string, fileName: string) => void) | null>(null);
+  // 🛡️ ADR-469 v1.2 — SSoT orphaned-target latch: fileIds whose backing files/cadFiles doc
+  // is gone. DXF scene auto-save is suppressed for them this session (BIM persists
+  // independently via floorId-keyed per-entity collections). A ref/Set — NOT React state —
+  // so marking never triggers a re-render (ADR-040 micro-leaf / auto-save-storm safe).
+  const orphanedFileTargetsRef = useRef<Set<string>>(new Set());
 
   /** Stable setter — updates ref (sync) and state (triggers re-render for consumers). */
   const setCurrentFileName = useCallback((fileName: string | null) => {
@@ -132,6 +148,18 @@ export function useAutoSaveSceneManager(): AutoSaveSceneManagerState {
     isLoadingFromFirestoreRef.current = loading;
   }, []);
 
+  /** 🛡️ ADR-469 v1.2 — latch a fileId as orphaned (its backing file doc is gone). */
+  const markFileTargetOrphaned = useCallback((fileId: string) => {
+    if (fileId) orphanedFileTargetsRef.current.add(fileId);
+  }, []);
+
+  /** 🛡️ ADR-469 v1.2 — true when the fileId's backing file is known-orphaned. */
+  const isFileTargetOrphaned = useCallback(
+    (fileId: string | null | undefined): boolean =>
+      !!fileId && orphanedFileTargetsRef.current.has(fileId),
+    [],
+  );
+
   /**
    * 🏢 ADR-354 Phase B Part 1: hard reset of every piece of session state that could
    * cause an auto-save to write the new tenant's empty scene into the previous tenant's
@@ -155,6 +183,7 @@ export function useAutoSaveSceneManager(): AutoSaveSceneManagerState {
     fileIdCacheRef.current.clear();
     scenePathCacheRef.current.clear();
     loadedFilesRef.current.clear();
+    orphanedFileTargetsRef.current.clear();
     setSaveStatus('idle');
     requestAnimationFrame(() => {
       isLoadingFromFirestoreRef.current = false;
@@ -197,7 +226,11 @@ export function useAutoSaveSceneManager(): AutoSaveSceneManagerState {
     // lives in `originSchedulesAutoSave` (no scattered suppress flags).
     if (
       originSchedulesAutoSave(origin) &&
-      autoSaveEnabled && fileName && !isLoadingFromFirestoreRef.current && !isEmptyScene
+      autoSaveEnabled && fileName && !isLoadingFromFirestoreRef.current && !isEmptyScene &&
+      // 🛡️ ADR-469 v1.2 — belt #1: never schedule a save for a known-orphaned target.
+      // Its backing files/cadFiles doc is gone → there is no canonicalScenePath to write
+      // → autoSaveV2 would throw ADR-293. BIM persists via floorId-keyed collections.
+      !orphanedFileTargetsRef.current.has(injectedFileRecordIdRef.current ?? '')
     ) {
       // Clear existing timeout
       if (saveTimeoutRef.current) {
@@ -241,8 +274,19 @@ export function useAutoSaveSceneManager(): AutoSaveSceneManagerState {
               const storagePath = await DxfFirestoreService.getFileStoragePath(fileId);
               if (storagePath) {
                 canonicalScenePath = DxfFirestoreService.deriveScenePath(storagePath);
+                fileIdCacheRef.current.set(fileName, fileId);
+              } else {
+                // 🛡️ ADR-469 v1.2 — belt #2 safety net: the backing file doc is gone
+                // (orphaned target). Latch it so the gate suppresses future saves, then
+                // SKIP this save instead of throwing ADR-293 (no canonicalScenePath).
+                // BIM persists independently via floorId-keyed per-entity collections.
+                // Narrow by design: only fires when fileId is KNOWN (injected) yet has no
+                // storagePath — never on the legit new-standalone path (fileId unknown →
+                // generateFileId), so a genuine first save is never suppressed.
+                markFileTargetOrphaned(fileId);
+                setSaveStatus('idle');
+                return;
               }
-              fileIdCacheRef.current.set(fileName, fileId);
             } else if (lookupCompanyId) {
               // fileId unknown — fall back to name-based lookup or generate new ID
               const existing = await DxfFirestoreService.findExistingFileRecord(lookupCompanyId, fileName);
@@ -352,6 +396,8 @@ export function useAutoSaveSceneManager(): AutoSaveSceneManagerState {
     saveContext,
     setOnSceneSaved,
     setIsLoadingFromFirestore,
+    markFileTargetOrphaned,
+    isFileTargetOrphaned,
     resetSceneSession,
   }), [
     sceneManager, setLevelSceneWithAutoSave, currentFileName,

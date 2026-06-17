@@ -28,6 +28,7 @@ import type {
   BeamKind,
 } from '../../bim/types/beam-types';
 import {
+  buildAnchoredBeamParams,
   buildBeamEntity,
   buildDefaultBeamParams,
   type BeamParamOverrides,
@@ -204,7 +205,13 @@ export function useBeamTool(options: UseBeamToolOptions = {}): UseBeamToolResult
     (s: BeamToolState, endPoint: Readonly<Point2D>): boolean => {
       if (s.startPoint === null) return false;
       const sceneUnits = getSceneUnits?.() ?? 'mm';
-      const params = buildDefaultBeamParams(s.startPoint, endPoint, s.kind, s.overrides, sceneUnits);
+      // ADR-363 §5.7 — edge-anchored placement (location line = παρειά, Revit-style)
+      // + side-face auto-flush. Τα column footprints διαβάζονται από το preview store
+      // (συγχρονισμένα στο 1ο κλικ μέσω `syncColumnsToStore`) ώστε το justification να
+      // είναι ΤΑΥΤΟΣΗΜΟ με το preview WYSIWYG ghost (preview === commit).
+      // Straight/cantilever μόνο· curved κρατά centerline (commitCurvedFromState).
+      const cols = beamPreviewStore.get().columnFootprints;
+      const params = buildAnchoredBeamParams(s.startPoint, endPoint, s.kind, s.overrides, sceneUnits, cols);
       const result = buildBeamEntity(params, currentLevelId, sceneUnits);
       if (!result.ok) {
         setState({ ...s, error: result.hardErrors[0] ?? null });
@@ -290,6 +297,22 @@ export function useBeamTool(options: UseBeamToolOptions = {}): UseBeamToolResult
     [getSceneEntities, commitForWall],
   );
 
+  // ADR-458 (2026-06-17) — κατέγραψε τα column footprints της σκηνής στο preview
+  // store ώστε το WYSIWYG rubber-band να εφαρμόζει το ΙΔΙΟ beam-to-column cutback
+  // (frame-into) με το committed δοκάρι. Καλείται στο πρώτο κλικ (awaitingStart):
+  // οι κολόνες αλλάζουν σπάνια κατά τη διάρκεια ενός placement.
+  const syncColumnsToStore = useCallback(() => {
+    const entities = getSceneEntities?.() ?? [];
+    const footprints: Point2D[][] = [];
+    for (const e of entities) {
+      if (e.type !== 'column') continue;
+      const verts = (e as { geometry?: { footprint?: { vertices?: readonly { x: number; y: number }[] } } })
+        .geometry?.footprint?.vertices;
+      if (verts && verts.length >= 3) footprints.push(verts.map((v) => ({ x: v.x, y: v.y })));
+    }
+    beamPreviewStore.setColumns(footprints);
+  }, [getSceneEntities]);
+
   // ── click pipeline ───────────────────────────────────────────────────────
   const onCanvasClick = useCallback(
     (point: Readonly<Point2D>): boolean => {
@@ -304,6 +327,7 @@ export function useBeamTool(options: UseBeamToolOptions = {}): UseBeamToolResult
       if (s.kind === 'curved') {
         if (s.phase === 'awaitingStart') {
           const startPoint = { x: point.x, y: point.y };
+          syncColumnsToStore();
           // Sync before setState: next mousemove reads correct startPoint immediately.
           beamPreviewStore.set({ startPoint, endPoint: null, kind: s.kind, overrides: s.overrides });
           setState({ ...s, phase: 'awaitingEnd', startPoint, endPoint: null, error: null });
@@ -324,6 +348,7 @@ export function useBeamTool(options: UseBeamToolOptions = {}): UseBeamToolResult
       // Straight / cantilever — 2-click chain
       if (s.phase === 'awaitingStart') {
         const startPoint = { x: point.x, y: point.y };
+        syncColumnsToStore();
         // Sync before setState: next mousemove reads correct startPoint immediately,
         // no useEffect-delay window where stale null would produce a cursor-dot flash.
         beamPreviewStore.set({ startPoint, endPoint: null, kind: s.kind, overrides: s.overrides });
@@ -335,7 +360,7 @@ export function useBeamTool(options: UseBeamToolOptions = {}): UseBeamToolResult
       }
       return false;
     },
-    [commitTwoClickFromState, commitCurvedFromState, commitFromWall],
+    [commitTwoClickFromState, commitCurvedFromState, commitFromWall, syncColumnsToStore],
   );
 
   // ── ADR-363 «Δοκάρι από τοίχο» — 3D pick bridge ───────────────────────────

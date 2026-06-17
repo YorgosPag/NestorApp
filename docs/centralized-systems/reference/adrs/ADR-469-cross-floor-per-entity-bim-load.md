@@ -51,6 +51,42 @@ null disables the auto-save gate → **zero ADR-293 throw**. BIM persists indepe
 `floorId`-keyed per-entity collections. No fake file is fabricated (rejected the "heal cadFile"
 road — wrong abstraction for a file-less floor).
 
+> ⚠️ **v1.2 supersedes the reset-only approach below** — see §2.5. The bare reset proved
+> **incomplete**: the load effect re-runs on every `levels` onSnapshot and re-opened the target
+> (sync set) *after* the async reset, leaving a window where an edit still threw ADR-293.
+
+### 2.5 FIX (Β v1.2) — orphaned-target latch (SSoT, idempotent)
+**Incident 2026-06-17 (follow-up):** ADR-293 `canonicalScenePath is required` still fired for the
+same `file_80efad96…` floor. Root cause of the residual throw: the FIX (Β) reset is **transient**,
+but the auto-save target is **re-opened synchronously** at the top of the load effect (`if
+(sceneFileId) setFileRecordId/setCurrentFileName`) **before** the async `loadFileV2` proves the
+file is orphaned — and that effect re-runs on each `levels` snapshot. So the target keeps
+re-pointing at the orphaned `fileRecordId`, and the resolve block fabricates a new id with no
+canonical path → throw.
+
+**Decision — a single source of truth for "this fileId has no DXF scene target":**
+- New SSoT latch in `useAutoSaveSceneManager`: a `Set<fileId>` ref (`orphanedFileTargetsRef`)
+  with `markFileTargetOrphaned(fileId)` (writer) + `isFileTargetOrphaned(fileId)` (reader). A
+  **ref, not state** → marking never re-renders (ADR-040 auto-save-storm / micro-leaf safe).
+- **Belt #1 (gate):** the auto-save gate adds
+  `&& !orphanedFileTargetsRef.has(injectedFileRecordIdRef ?? '')` — a latched target never
+  schedules a save.
+- **Belt #2 (resolve safety net):** when the debounced resolve has a **known** `fileId` but
+  `getFileStoragePath(fileId)` → null (backing doc gone), it `markFileTargetOrphaned(fileId)` +
+  `setSaveStatus('idle')` + **returns** (skip) instead of falling through to the ADR-293 throw.
+  Narrow by design: only fires for an injected id with no storagePath — never the legit
+  new-standalone path (`fileId` unknown → `generateFileId`), so a genuine first save is never
+  suppressed.
+- **Loader primary fix (`useLevelSceneLoader`):** the sync set re-opens the target only when
+  `sceneFileId && !isFileTargetOrphaned(sceneFileId)`; a known-orphaned floor short-circuits to
+  the file-less branch (empty-scene-preserving-BIM) — no re-open, no wasteful repeat
+  `loadFileV2`. The async "scene not found" branch calls `markFileTargetOrphaned(sceneFileId)`
+  **before** the reset, so the latch is set the first time and every later re-run is suppressed.
+
+**Belt-and-suspenders (N.7.2):** primary = an orphaned floor never acquires a DXF auto-save
+target; safety net = the resolve dead-ends to skip+latch, not throw. Idempotent, zero race.
+The latch is session-scoped and cleared by `resetSceneSession` (super-admin tenant switch).
+
 ### 2.3 FIX (Γ) — per-entity cross-floor BIM source (file-less / orphaned floors)
 New SSoT `bim/persistence/cross-floor-bim-loader.ts`:
 - A **registry** of per-kind one-shot loaders, each reusing the kind's already-exported
@@ -69,44 +105,99 @@ The existing `foundation-level-store` (realtime, ADR-459 Φ7) is untouched; foun
 are still overridden authoritatively downstream.
 
 ### 2.4 Covered kinds (extensible registry)
-Kinds with an already-exported, self-contained converter that are scene `Entity`s (10):
-`column, wall, beam, slab, roof, stair, foundation, floor-finish, thermal-space,
-space-separator`.
+**v1.1 (2026-06-17)** — coverage extended to **all** renderable BIM kinds. The registry now
+holds **22** kinds, plus `wall` + `opening` as a co-located special case = **24** one-shot
+`getAll` per snapshot-less floor:
+`column, beam, slab, roof, stair, foundation, floor-finish, thermal-space, space-separator,
+slab-opening, railing, furniture, floorplan-symbol, electrical-panel, mep-fixture, mep-segment,
+mep-fitting, mep-manifold, mep-radiator, mep-boiler, mep-water-heater, mep-underfloor` (registry)
+\+ `wall` + `opening` (special case).
 
-**Deferred** (require refactoring before inclusion — each is a 1-line registry add once done):
-- `opening` — converter needs the host wall entity (cross-doc dependency).
-- `slab-opening, railing, furniture, floorplan-symbol, electrical-panel,
-  mep-fixture/segment/fitting/manifold/radiator/boiler/water-heater/underfloor` — converters are
-  private inside their persistence hooks (need exporting).
-- `mep-system` — a logical network entity, not a scene `Entity` (never rendered); excluded by design.
+**How the v1.0 «deferred» kinds were unblocked:**
+- The 13 private converters (slab-opening, railing, furniture, floorplan-symbol,
+  electrical-panel, the full MEP equipment set) were **extracted** from their persistence hooks
+  into co-located pure modules `hooks/data/<kind>-persistence-helpers.ts` (mirror of the
+  structural `column/beam/slab/roof` helper splits). Each hook re-imports its converter (call
+  sites unchanged) — behavior-preserving. Then a 1-line `makeLoader(...)` registry add.
+- `opening` is a **special case** (host-wall dependency, `params.wallId`): `wall` is pulled out
+  of the registry and fetched explicitly by `loadFloorWalls` so the same wall set serves both as
+  scene entities AND as the host lookup for `loadFloorOpenings` (no duplicate `getAll`). An
+  opening whose host wall is absent hydrates to `null` (converter contract) and is dropped.
+
+**Still excluded by design:**
+- `mep-system` — a logical network entity, not a scene `Entity` (never rendered).
 
 ## 3. Consequences
 
-- ✅ Columns (and all covered kinds) on a file-less / orphaned floor render in «all floors» 2Δ
-  & 3Δ even when never visited this session.
+- ✅ **All** renderable BIM kinds (structural + openings + MEP equipment + decorative) on a
+  file-less / orphaned floor render in «all floors» 2Δ & 3Δ even when never visited this session
+  (v1.1 — was structural-only in v1.0).
 - ✅ No vanishing on reload; no ADR-293 error spam.
 - ✅ No new realtime subscriptions; cost only on snapshot-less floors, cached.
-- ⚠️ Deferred kinds (openings, MEP equipment, decorative) still rely on the snapshot for unvisited
-  snapshot-less floors — tracked for follow-up (export converters + registry add).
+- ✅ The 13 converter extractions are pure SSoT splits — the persistence hooks shrink, the
+  converter logic is now reusable by both the hook and the cross-floor loader (zero duplication).
 - ⚠️ Snapshot floors keep snapshot-sourced (possibly stale) BIM — unchanged behavior; the
   per-entity-SSoT-for-snapshot-floors path is out of scope.
 
 ## 4. Files
 
 **Modified**
-- `src/subapps/dxf-viewer/systems/levels/hooks/useLevelSceneLoader.ts` — FIX (Α)+(Β).
+- `src/subapps/dxf-viewer/systems/levels/hooks/useLevelSceneLoader.ts` — FIX (Α)+(Β)+(Β v1.2 latch).
 - `src/subapps/dxf-viewer/hooks/data/useFloors3DAggregator.ts` — FIX (Γ) 3Δ wiring.
 - `src/subapps/dxf-viewer/hooks/data/useBuildingFloorScenes.ts` — FIX (Γ) 2Δ wiring.
 
+**Modified (v1.2 — orphaned-target latch SSoT)**
+- `src/subapps/dxf-viewer/hooks/scene/useAutoSaveSceneManager.ts` — `orphanedFileTargetsRef`
+  Set + `markFileTargetOrphaned`/`isFileTargetOrphaned`, gate belt #1, resolve belt #2,
+  `resetSceneSession` clears the latch.
+
+**New (v1.2)**
+- `src/subapps/dxf-viewer/hooks/scene/__tests__/useAutoSaveSceneManager-orphaned-target.test.ts`
+  — 3 jest (gate belt, resolve safety-net, file-linked regression).
+
 **New**
 - `src/subapps/dxf-viewer/bim/persistence/cross-floor-bim-loader.ts` — loader SSoT + registry.
-- `src/subapps/dxf-viewer/bim/persistence/__tests__/cross-floor-bim-loader.test.ts` — 4 jest.
+- `src/subapps/dxf-viewer/bim/persistence/__tests__/cross-floor-bim-loader.test.ts` — 5 jest.
+
+**New (v1.1 — extracted pure converters, co-located with their hooks)**
+- `hooks/data/slab-opening-persistence-helpers.ts`, `railing-persistence-helpers.ts`,
+  `furniture-persistence-helpers.ts`, `floorplan-symbol-persistence-helpers.ts`,
+  `electrical-panel-persistence-helpers.ts`, `mep-fixture-persistence-helpers.ts`,
+  `mep-segment-persistence-helpers.ts`, `mep-fitting-persistence-helpers.ts`,
+  `mep-manifold-persistence-helpers.ts`, `mep-radiator-persistence-helpers.ts`,
+  `mep-boiler-persistence-helpers.ts`, `mep-water-heater-persistence-helpers.ts`,
+  `mep-underfloor-persistence-helpers.ts` — 13 `<kind>DocToEntity` pure converters.
+
+**Modified (v1.1 — re-import the extracted converter, remove the local one)**
+- `cross-floor-bim-loader.ts` — +13 registry loaders + `wall`/`opening` special case.
+- `hooks/data/useSlabOpeningPersistence.ts`, `useRailingPersistence.ts`,
+  `useFurniturePersistence.ts`, `useFloorplanSymbolPersistence.ts`,
+  `useElectricalPanelPersistence.ts`, `useMepFixturePersistence.ts`,
+  `useMepSegmentPersistence.ts`, `useMepFittingAutoReconciliation.ts`,
+  `useMepManifoldPersistence.ts`, `useMepRadiatorPersistence.ts`,
+  `useMepBoilerPersistence.ts`, `useMepWaterHeaterPersistence.ts`,
+  `useMepUnderfloorPersistence.ts` — 13 hooks.
 
 **Tests touched**
 - `systems/levels/__tests__/scene-bim-load-policy.test.ts` — +3 (empty-load preservation).
 - `hooks/data/__tests__/useFloors{3DAggregator,2DUnderlay}.test.ts` — useAuth + loader mocks.
 
 ## 5. Changelog
+- **v1.2 (2026-06-17)** — Orphaned-target **latch SSoT** (residual ADR-293 throw on the same
+  `file_80efad96…` floor). FIX (Β) reset-only was incomplete: the load effect re-opened the
+  auto-save target synchronously on every `levels` snapshot before the async orphaned-detection.
+  New `orphanedFileTargetsRef` Set in `useAutoSaveSceneManager` + `markFileTargetOrphaned`/
+  `isFileTargetOrphaned`; gate belt #1 (latched id never schedules), resolve belt #2 (known id
+  with no storagePath → skip+latch, not throw); loader re-opens target only when not-latched +
+  short-circuits known-orphaned floors + latches in the async branch. Ref/Set → no re-render
+  (ADR-040-safe). +3 jest (8 total in the two autosave suites). UNCOMMITTED.
+- **v1.1 (2026-06-17)** — Coverage extended to **all** renderable BIM kinds. Extracted the 13
+  private `docToEntity` converters (slab-opening, railing, furniture, floorplan-symbol,
+  electrical-panel, full MEP equipment set) into co-located pure
+  `hooks/data/<kind>-persistence-helpers.ts` modules (each hook re-imports — behavior-preserving)
+  + 13 registry loaders. Added `opening` as a host-aware special case (`wall` fetched explicitly,
+  reused as host lookup → no duplicate `getAll`). Registry 10 → 24 covered kinds. Loader test
+  4 → 5 (added opening host-filter). UNCOMMITTED.
 - **v1.0 (2026-06-17)** — Initial: FIX (Α) anti-vanish load, FIX (Β) ADR-293 suppress, FIX (Γ)
   per-entity cross-floor loader (10 kinds) + both aggregators. 24 jest GREEN (20 policy + 4
   loader) + aggregator regressions. UNCOMMITTED.

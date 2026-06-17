@@ -45,41 +45,69 @@ export function applyBeamColumnCutback2D(entities: DxfEntityUnion[]): DxfEntityU
   return entities.map((e) => {
     if (e.type !== 'beam') return e;
     const beam = e as DxfBeam;
-    const outline = beam.geometry?.outline?.vertices;
-    if (!outline || outline.length < 3) return e;
-    const pieces = computeBeamCutbackOutline(
-      outline.map((v) => ({ x: v.x, y: v.y })),
+    const display = buildBeamCutbackDisplay(
+      beam.geometry?.outline?.vertices ?? [],
+      beam.geometry?.axisPolyline?.points ?? [],
       columnFootprints,
     );
-    if (pieces === null) return e; // καμία τομή → αυτούσιο (zero regression)
-    const displayOutline: Point3D[][] = pieces.map((ring) => ring.map((p) => ({ x: p.x, y: p.y, z: 0 })));
-
-    // ADR-458 — DERIVED axis-to-contact: ο centerline καταλήγει στην παρειά της κολόνας
-    // (Revit location-line). Μόνο straight 2-σημείων άξονας + κομμάτια>0 (όχι εξ ολοκλήρου
-    // μέσα). Curved/split → αυτούσιος (DEFER). Ίδια column footprints με το outline cutback.
-    let displayAxisPolyline: Polyline3D | undefined;
-    const axisPts = beam.geometry?.axisPolyline?.points;
-    if (pieces.length > 0 && axisPts && axisPts.length === 2) {
-      const adj = computeBeamAxisToColumnContact(
-        { x: axisPts[0].x, y: axisPts[0].y },
-        { x: axisPts[1].x, y: axisPts[1].y },
-        outline.map((v) => ({ x: v.x, y: v.y })),
-        columnFootprints,
-      );
-      if (adj) {
-        displayAxisPolyline = {
-          points: [
-            { x: adj[0].x, y: adj[0].y, z: axisPts[0].z },
-            { x: adj[1].x, y: adj[1].y, z: axisPts[1].z },
-          ],
-          closed: false,
-        };
-      }
-    }
-
+    if (!display) return e; // καμία τομή → αυτούσιο (zero regression)
     return {
       ...beam,
-      geometry: { ...beam.geometry, displayOutline, ...(displayAxisPolyline ? { displayAxisPolyline } : {}) },
+      geometry: {
+        ...beam.geometry,
+        displayOutline: display.displayOutline,
+        ...(display.displayAxisPolyline ? { displayAxisPolyline: display.displayAxisPolyline } : {}),
+      },
     } as DxfEntityUnion;
   });
+}
+
+// ─── Shared SSoT orchestration (committed scene-pass ΚΑΙ WYSIWYG preview) ─────
+
+/** DERIVED beam display geometry μετά το beam-to-column cutback (ADR-458). */
+export interface BeamCutbackDisplay {
+  /** Κομμένο outline (outer rings)· `[]` = δοκάρι εξ ολοκλήρου μέσα σε κολόνα. */
+  readonly displayOutline: Point3D[][];
+  /** Άξονας προσαρμοσμένος στην παρειά κολόνας (location-line contact). */
+  readonly displayAxisPolyline?: Polyline3D;
+}
+
+/**
+ * Pure SSoT: beam outline + axis + column footprints → DERIVED display geometry
+ * (cutback outline pieces + axis-to-column-face contact). `null` = καμία ουσιαστική
+ * τομή (ο caller κρατά το αρχικό outline/axis). Κοινό από το scene post-pass
+ * (committed beams) ΚΑΙ το WYSIWYG preview (ghost) → μηδέν διπλότυπο της ADR-458
+ * orchestration. Μόνο straight 2-σημείων άξονας προσαρμόζεται (curved/split → axis
+ * αυτούσιος, DEFER).
+ */
+export function buildBeamCutbackDisplay(
+  beamOutline: readonly { readonly x: number; readonly y: number }[],
+  axisPts: readonly { readonly x: number; readonly y: number; readonly z?: number }[],
+  columnFootprints: readonly (readonly { readonly x: number; readonly y: number }[])[],
+): BeamCutbackDisplay | null {
+  if (beamOutline.length < 3 || columnFootprints.length === 0) return null;
+  const outline2D = beamOutline.map((v) => ({ x: v.x, y: v.y }));
+  const pieces = computeBeamCutbackOutline(outline2D, columnFootprints);
+  if (pieces === null) return null;
+  const displayOutline: Point3D[][] = pieces.map((ring) => ring.map((p) => ({ x: p.x, y: p.y, z: 0 })));
+
+  let displayAxisPolyline: Polyline3D | undefined;
+  if (pieces.length > 0 && axisPts.length === 2) {
+    const adj = computeBeamAxisToColumnContact(
+      { x: axisPts[0].x, y: axisPts[0].y },
+      { x: axisPts[1].x, y: axisPts[1].y },
+      outline2D,
+      columnFootprints,
+    );
+    if (adj) {
+      displayAxisPolyline = {
+        points: [
+          { x: adj[0].x, y: adj[0].y, z: axisPts[0].z ?? 0 },
+          { x: adj[1].x, y: adj[1].y, z: axisPts[1].z ?? 0 },
+        ],
+        closed: false,
+      };
+    }
+  }
+  return { displayOutline, displayAxisPolyline };
 }

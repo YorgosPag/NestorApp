@@ -44,7 +44,9 @@ import { useDxfViewerEffects } from './useDxfViewerEffects';
 import { useDxfViewerNotifications } from '../hooks/useDxfViewerNotifications';
 import { useStructuralAutoAttach } from '../hooks/useStructuralAutoAttach';
 import { useStructuralAutoReinforce } from '../hooks/useStructuralAutoReinforce';
+import { useProactiveOrganismReinforce } from '../hooks/useProactiveOrganismReinforce';
 import { useStructuralLoadTakedown } from '../hooks/useStructuralLoadTakedown';
+import { useProactiveStructuralLoads } from '../hooks/useProactiveStructuralLoads';
 import { useStructuralFootingConnect } from '../hooks/useStructuralFootingConnect';
 import { useStructuralComponentOverride } from '../hooks/useStructuralComponentOverride';
 import { useStructuralOrganism } from '../hooks/useStructuralOrganism';
@@ -256,8 +258,13 @@ export const DxfViewerContent = React.memo<DxfViewerAppProps>((props) => {
   // ADR-362 Phase J2 — Dimension associativity observer (auto-follow geometry).
   useDimAssociationObserver(levelManager.getLevelScene, levelManager.setLevelScene, () => levelManager.currentLevelId);
   useStructuralAutoAttach({ levelManager }); // ADR-401 Phase D — auto-attach walls under new beam/slab
-  useStructuralAutoReinforce({ levelManager }); // ADR-459 Φ4d — «Αυτόματος Οπλισμός» (auto-apply command)
-  useStructuralLoadTakedown({ levelManager }); // ADR-464 Φ4 — «Υπολογισμός Φορτίων» (tributary takedown)
+  useStructuralAutoReinforce({ levelManager }); // ADR-459 Φ4d — «Αυτόματος Οπλισμός» (ribbon manual trigger)
+  useProactiveOrganismReinforce({ levelManager }); // ADR-459 Φ8 — PROACTIVE auto-reinforce (organism grows → οπλίζεται μόνο του)
+  useStructuralLoadTakedown({ levelManager }); // ADR-464 Φ4 — «Υπολογισμός Φορτίων» (ribbon manual trigger)
+  // ADR-459 Φ9 — PROACTIVE φορτία (το ΠΡΩΤΟ σκαλί της αλυσίδας). ΣΕΙΡΑ: mounted ΠΡΙΝ
+  // από organism/auto-foundation ⇒ ο load handler τρέχει+emit-άρει πρώτος στο microtask
+  // flush, ώστε το foundation re-sizing να διαβάσει το φρέσκο appliedLoad (ΕΝΑ pass).
+  useProactiveStructuralLoads({ levelManager });
   useStructuralFootingConnect({ levelManager }); // ADR-459 Φ4f — manual κολόνα↔πέδιλο connectivity (Ανάλυση)
   useStructuralComponentOverride({ levelManager }); // ADR-470 — per-element σώμα/σοβάς/οπλισμός visibility override
   useFoundationLevelSync({ levelManager }); // ADR-459 Phase 0 — foundation-level SSoT (cross-level organism)

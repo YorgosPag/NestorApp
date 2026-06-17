@@ -4,16 +4,29 @@
  * Mirror of `wall-preview-helpers.ts` (ADR-363 Phase 1C).
  *
  * Exported: generateBeamPreview()
+ *
+ * WYSIWYG placement (2026-06-17): η rubber-band επιστρέφει ΠΛΗΡΕΣ `BeamEntity`
+ * (μέσω του SSoT `buildBeamEntity` — ίδιος builder με το commit) flagged
+ * `wysiwygPreview`, οπότε ο PreviewCanvas το ζωγραφίζει μέσω του πραγματικού
+ * `BeamRenderer` (amber fill / material hatch / lineweight / axis) αντί για
+ * πράσινο outline με δυναμικές αποστάσεις + εμβαδόν. Το ghost ΕΙΝΑΙ το τελικό
+ * δοκάρι. Επιπλέον το placement είναι edge-anchored (location line = παρειά)
+ * μέσω του `buildAnchoredBeamParams` (straight/cantilever· curved → centerline).
  */
 
 import type { Point2D } from '../../rendering/types/Types';
-import type { PolylineEntity } from '../../types/scene';
-import type { ExtendedSceneEntity, ExtendedPolylineEntity, PreviewPoint } from './drawing-types';
+import type { ExtendedSceneEntity, PreviewPoint } from './drawing-types';
 import { beamPreviewStore } from '../../bim/beams/beam-preview-store';
-import { buildDefaultBeamParams, type BeamParamOverrides, type SceneUnits } from './beam-completion';
-import { computeBeamGeometry } from '../../bim/geometry/beam-geometry';
-import { LINEWEIGHT_SPECIAL } from '../../config/lineweight-iso-catalog';
-import { UI_COLORS } from '../../config/color-config';
+import {
+  buildAnchoredBeamParams,
+  buildBeamEntity,
+  buildDefaultBeamParams,
+  type BeamParamOverrides,
+  type SceneUnits,
+} from './beam-completion';
+import type { BeamKind, BeamParams } from '../../bim/types/beam-types';
+import type { Point3D } from '../../bim/types/bim-base';
+import { buildBeamCutbackDisplay } from '../canvas/dxf-scene-beam-cutback';
 import { DXF_DEFAULT_LAYER } from '../../config/layer-config';
 import { getLayer } from '../../stores/LayerStore';
 
@@ -22,11 +35,12 @@ const defaultLayerId = (): string => getLayer(DXF_DEFAULT_LAYER)?.id ?? '';
 /**
  * Build a beam preview entity from `tempPoints` + cursor. State machine map:
  *   - [] (awaitingStart) → cursor start marker
- *   - [start] → beam footprint ghost start→cursor (WYSIWYG outline rectangle)
- *   - [start, end] → footprint ghost + construction arm end→cursor (curved control)
+ *   - [start] → WYSIWYG beam ghost start→cursor (real `BeamRenderer`)
+ *   - [start, end] → WYSIWYG curved beam ghost (cursor = Bezier control)
  *
- * Returns a green translucent polyline tracing the beam outline.
- * WYSIWYG: uses `computeBeamGeometry` so the ghost matches the committed entity.
+ * WYSIWYG: returns a full `BeamEntity` (flagged `wysiwygPreview`) so the ghost
+ * matches the committed entity byte-for-byte. Returns `null` on a degenerate /
+ * invalid frame so the preview simply clears that frame.
  */
 export function generateBeamPreview(
   tempPoints: readonly Point2D[],
@@ -50,63 +64,69 @@ export function generateBeamPreview(
   const startPt = tempPoints[0];
 
   if (tempPoints.length === 1) {
-    return makeBeamFootprintGhost('preview_beam_footprint', startPt, cursorPoint, preview.kind, preview.overrides, sceneUnits);
+    // awaitingEnd: straight/cantilever rectangle (curved χωρίς control = ευθεία).
+    return makeBeamWysiwygGhost('preview_beam_footprint', startPt, cursorPoint, preview.kind, preview.overrides, sceneUnits, null, preview.columnFootprints);
   }
 
+  // awaitingCurveControl (curved): cursor = quadratic Bezier control point.
   const endPt = tempPoints[1];
-  return makeBeamCurveConstructionGhost('preview_beam_curve', startPt, endPt, cursorPoint, preview.overrides, sceneUnits);
+  return makeBeamWysiwygGhost('preview_beam_curve', startPt, endPt, 'curved', preview.overrides, sceneUnits, cursorPoint, preview.columnFootprints);
 }
 
-function makeBeamFootprintGhost(
+/**
+ * Build a full `BeamEntity` preview via the SSoT `buildBeamEntity` (same builder
+ * as commit). Straight/cantilever → edge-anchored params (Revit location-line,
+ * `buildAnchoredBeamParams`)· curved → centerline params (anchor ambiguous on a
+ * curve). Returns `null` on a degenerate/invalid frame.
+ */
+function makeBeamWysiwygGhost(
   id: string,
   startPt: Readonly<Point2D>,
   endPt: Readonly<Point2D>,
-  kind: 'straight' | 'curved' | 'cantilever',
+  kind: BeamKind,
   overrides: BeamParamOverrides,
   sceneUnits: SceneUnits,
-): ExtendedPolylineEntity {
-  const params = buildDefaultBeamParams(startPt, endPt, kind, overrides, sceneUnits);
-  const geometry = computeBeamGeometry(params);
-  const vertices: Point2D[] = geometry.outline.vertices.map((p) => ({ x: p.x, y: p.y }));
-  const polyline: PolylineEntity = {
-    id,
-    type: 'polyline',
-    vertices,
-    closed: true,
-    visible: true,
-    layerId: defaultLayerId(),
-    color: UI_COLORS.BRIGHT_GREEN,
-    lineweight: LINEWEIGHT_SPECIAL.BYLAYER,
-    opacity: 0.6,
-    lineType: 'solid' as const,
-  };
-  return { ...polyline, preview: true, showEdgeDistances: true, showPreviewGrips: false } as ExtendedPolylineEntity;
-}
+  curveControl: Point2D | null,
+  columnFootprints: readonly (readonly Point2D[])[],
+): ExtendedSceneEntity | null {
+  let params: BeamParams;
+  if (kind === 'curved') {
+    const base = buildDefaultBeamParams(startPt, endPt, 'curved', overrides, sceneUnits);
+    params = curveControl
+      ? { ...base, kind: 'curved', curveControl: { x: curveControl.x, y: curveControl.y, z: 0 } as Point3D }
+      : base;
+  } else {
+    // ADR-363 §5.7 — ίδια column footprints με το commit (store SSoT) → side-face
+    // auto-flush identical σε preview & committed (preview === commit).
+    params = buildAnchoredBeamParams(startPt, endPt, kind, overrides, sceneUnits, columnFootprints);
+  }
+  const built = buildBeamEntity(params, defaultLayerId(), sceneUnits);
+  if (!built.ok) return null;
+  const entity = built.entity;
 
-function makeBeamCurveConstructionGhost(
-  id: string,
-  startPt: Readonly<Point2D>,
-  endPt: Readonly<Point2D>,
-  cursorPoint: Point2D,
-  overrides: BeamParamOverrides,
-  sceneUnits: SceneUnits,
-): ExtendedPolylineEntity {
-  const params = buildDefaultBeamParams(startPt, endPt, 'curved', overrides, sceneUnits);
-  const geometry = computeBeamGeometry(params);
-  const outline: Point2D[] = geometry.outline.vertices.map((p) => ({ x: p.x, y: p.y }));
-  // Append cursor as extra construction vertex — shows the control handle direction
-  const vertices: Point2D[] = [...outline, cursorPoint];
-  const polyline: PolylineEntity = {
-    id,
-    type: 'polyline',
-    vertices,
-    closed: false,
-    visible: true,
-    layerId: defaultLayerId(),
-    color: UI_COLORS.BRIGHT_GREEN,
-    lineweight: LINEWEIGHT_SPECIAL.BYLAYER,
-    opacity: 0.5,
-    lineType: 'dashed' as const,
-  };
-  return { ...polyline, preview: true, showPreviewGrips: true } as ExtendedPolylineEntity;
+  // ADR-458 — εφάρμοσε το ΙΔΙΟ beam-to-column cutback (frame-into) με το committed
+  // δοκάρι (κοινό SSoT `buildBeamCutbackDisplay`), ώστε το preview να δείχνει την
+  // οντότητα να «μπαίνει» στις κολόνες αντί να τις υπερκαλύπτει. straight/cantilever
+  // μόνο (το displayAxisPolyline προσαρμόζεται σε 2-σημείων άξονα).
+  if (kind !== 'curved' && columnFootprints.length > 0) {
+    const display = buildBeamCutbackDisplay(
+      entity.geometry.outline.vertices,
+      entity.geometry.axisPolyline.points,
+      columnFootprints,
+    );
+    if (display) {
+      return {
+        ...entity,
+        geometry: {
+          ...entity.geometry,
+          displayOutline: display.displayOutline,
+          ...(display.displayAxisPolyline ? { displayAxisPolyline: display.displayAxisPolyline } : {}),
+        },
+        id,
+        preview: true,
+        wysiwygPreview: true,
+      } as unknown as ExtendedSceneEntity;
+    }
+  }
+  return { ...entity, id, preview: true, wysiwygPreview: true } as unknown as ExtendedSceneEntity;
 }

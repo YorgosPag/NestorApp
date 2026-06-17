@@ -2571,6 +2571,8 @@
         "close": "Close",
         "delete": "Delete",
         "deleteConfirm": "Delete this beam? This action cannot be undone.",
+        "reinforcementDetail": "Reinforcement Detail",
+        "reinforcementDetailTooltip": "Open the beam reinforcement detail sheet (elevation, section, 3D, rebar schedule).",
         "kind": {
           "section": {
             "title": "Form"
@@ -4519,6 +4521,45 @@
       "topMeshNote": "Top mesh required (flexure)",
       "ok": "OK",
       "fail": "!"
+    }
+  },
+  "beamDetail": {
+    "dialogTitle": "Beam Reinforcement Detail",
+    "dialogDescription": "Drawing sheet of the selected beam's reinforcement — elevation, section, 3D perspective, rebar schedule and drawing data, fully dimensioned.",
+    "previewAlt": "Beam reinforcement detail sheet preview",
+    "close": "Close",
+    "exportPdf": "Export PDF",
+    "print": "Print",
+    "zoomIn": "Zoom in",
+    "zoomOut": "Zoom out",
+    "zoomReset": "Reset zoom",
+    "zoomToolbar": "Preview zoom",
+    "regions": {
+      "plan": "SECTION",
+      "elevation": "ELEVATION",
+      "perspective": "3D PERSPECTIVE",
+      "schedule": "REINFORCEMENT SCHEDULE",
+      "titleBlock": "DRAWING DATA"
+    },
+    "scheduleTable": {
+      "item": "Item",
+      "description": "Reinforcement",
+      "length": "Length (m)",
+      "weight": "Weight (kg)",
+      "bottomLongitudinal": "Bottom longitudinal",
+      "topLongitudinal": "Top longitudinal",
+      "stirrups": "Stirrups",
+      "total": "Total",
+      "ratio": "ρ"
+    },
+    "titleFields": {
+      "section": "Section (mm)",
+      "span": "Span (mm)",
+      "concrete": "Concrete",
+      "steel": "Steel",
+      "cover": "Cover (mm)",
+      "longitudinal": "Longitudinal reinforcement",
+      "stirrups": "Stirrups"
     }
   },
   "print": {

@@ -23,10 +23,12 @@ import type { BeamEntity, BeamParams } from '../types/beam-types';
 import type { FoundationEntity, FoundationParams, PadFootingParams } from '../types/foundation-types';
 import type { SlabEntity, SlabParams } from '../types/slab-types';
 import { mmToSceneUnits } from '../../utils/scene-units';
-import { combineSls } from './loads/load-combinations';
-import { resolveAppliedMemberLoad } from './loads/structural-loads-types';
+import { combineSls, combineUls, EN1990_ULS_FACTORS } from './loads/load-combinations';
+import { isZeroMemberLoad, resolveAppliedMemberLoad } from './loads/structural-loads-types';
+import { DEFAULT_CONCRETE_GRADE } from './concrete-grades';
 import { resolveColumnReinforcementSection } from './reinforcement/column-section-outline';
 import type { ColumnReinforcement } from './reinforcement/column-reinforcement-types';
+import type { BeamReinforcement } from './reinforcement/beam-reinforcement-types';
 import type {
   BeamSectionContext,
   ColumnSectionContext,
@@ -82,6 +84,24 @@ export function buildColumnSectionContextFromParams(params: ColumnParams): Colum
     maxDimensionMm: section.maxDimensionMm,
     perimeterMm: section.perimeterMm,
     mode: section.mode,
+    ...resolveColumnDesignLoad(params),
+  };
+}
+
+/**
+ * ADR-472 — load-aware συνιστώσες του ColumnSectionContext από το `appliedLoad`
+ * (μηδενικό/απών ⇒ κενό ⇒ ο suggester μένει min-detailing, μηδέν regression). ULS
+ * αξονικό N_Ed μέσω του SSoT `EN1990_ULS_FACTORS` (params-is-SSoT — ο builder είναι
+ * provider-agnostic, οι συντελεστές είναι ΕΝΑ standard για όλους τους κώδικες).
+ */
+function resolveColumnDesignLoad(
+  params: ColumnParams,
+): Pick<ColumnSectionContext, 'designAxialKn' | 'concreteGrade'> {
+  const load = resolveAppliedMemberLoad(params.appliedLoad);
+  if (isZeroMemberLoad(load)) return {};
+  return {
+    designAxialKn: combineUls(load, EN1990_ULS_FACTORS).axialKn,
+    concreteGrade: params.concreteGrade ?? DEFAULT_CONCRETE_GRADE,
   };
 }
 
@@ -115,8 +135,12 @@ export function resolveActiveColumnReinforcement(
 /**
  * Δοκάρι → `BeamSectionContext`. Το άνοιγμα = γεωμετρικό μήκος άξονα (m→mm,
  * curve-aware). `supportType` default 'simple' (απών = αμφιέρειστη).
+ *
+ * ADR-471 — δέχεται `Pick<…,'params'|'geometry'>` (geometry-is-SSoT: εξαρτάται ΜΟΝΟ
+ * από params + geometry.length) ώστε να καλείται και με το DXF beam wrapper των 2Δ/3Δ
+ * renderers (που δεν φέρει IFC mixin) χωρίς cast. Full `BeamEntity` ικανοποιεί το Pick.
  */
-export function buildBeamSectionContext(beam: BeamEntity): BeamSectionContext {
+export function buildBeamSectionContext(beam: Pick<BeamEntity, 'params' | 'geometry'>): BeamSectionContext {
   const p = beam.params;
   const spanMm = beam.geometry.length * M_TO_MM;
   return {
@@ -125,6 +149,54 @@ export function buildBeamSectionContext(beam: BeamEntity): BeamSectionContext {
     spanMm,
     grossAreaMm2: Math.max(0, p.width) * Math.max(0, p.depth),
     supportType: p.supportType ?? 'simple',
+    ...resolveBeamDesignLoad(p, spanMm),
+  };
+}
+
+/**
+ * ADR-472 — γραμμικό φορτίο σχεδιασμού w_Ed (kN/m) του δοκαριού από το tributary
+ * `appliedLoad`. Το load-path (ADR-467) αποθηκεύει το ΣΥΝΟΛΙΚΟ tributary φορτίο της
+ * δοκού ως αξονικές G/Q συνιστώσες (kN)· w_Ed = W_Ed(ULS) / άνοιγμα. Μηδενικό φορτίο
+ * ή μη-θετικό άνοιγμα ⇒ κενό ⇒ min-detailing (μηδέν regression).
+ */
+function resolveBeamDesignLoad(
+  params: BeamParams,
+  spanMm: number,
+): Pick<BeamSectionContext, 'designLineLoadKnM'> {
+  if (spanMm <= 0) return {};
+  const load = resolveAppliedMemberLoad(params.appliedLoad);
+  if (isZeroMemberLoad(load)) return {};
+  const totalUlsKn = combineUls(load, EN1990_ULS_FACTORS).axialKn;
+  return { designLineLoadKnM: totalUlsKn / (spanMm / M_TO_MM) };
+}
+
+/**
+ * ADR-471 (parity με κολόνα) — **ο «ενεργός» οπλισμός μιας δοκού** = το design που πρέπει
+ * να σχεδιαστεί/μετρηθεί/ελεγχθεί ΤΩΡΑ:
+ *   - absent           → `undefined` (δεν έχει οριστεί οπλισμός· κανείς δεν ζωγραφίζει).
+ *   - manual (`!auto`) → το stored design ως έχει (κλειδωμένο, ο χρήστης το όρισε).
+ *   - auto (`auto`)    → **φρέσκο code-suggested design από την ΤΡΕΧΟΥΣΑ γεωμετρία** (span =
+ *                        derived `beam.geometry.length`) → resize ⇒ real-time επανυπολογισμός.
+ *
+ * Διατηρεί τις καθαρά-detailing προτιμήσεις (τύπος συνδετήρα + σκέλη) που δεν αλλάζουν
+ * διαμήκη/ρ. Pure (provider arg) ⇒ unit-testable· οι renderers χρησιμοποιούν το
+ * store-coupled `resolveActiveBeamReinforcementForEntity` (active-reinforcement.ts).
+ */
+export function resolveActiveBeamReinforcement(
+  beam: Pick<BeamEntity, 'params' | 'geometry'>,
+  provider: StructuralCodeProvider,
+): BeamReinforcement | undefined {
+  const r = beam.params.reinforcement;
+  if (!r || !r.auto) return r;
+  const fresh = provider.suggestBeamReinforcement(buildBeamSectionContext(beam));
+  return {
+    ...fresh,
+    auto: true,
+    stirrups: {
+      ...fresh.stirrups,
+      type: r.stirrups.type,
+      ...(r.stirrups.legs ? { legs: r.stirrups.legs } : {}),
+    },
   };
 }
 
@@ -220,8 +292,9 @@ export function buildReinforcePatch(
   }
   if (isBeamEntity(entity)) {
     if (entity.params.reinforcement) return null;
+    // ADR-471 — `auto:true` ⇒ real-time re-derive σε αλλαγή διαστάσεων (parity με κολόνα).
     const r = provider.suggestBeamReinforcement(buildBeamSectionContext(entity));
-    return { prev: entity.params, next: { ...entity.params, reinforcement: r } };
+    return { prev: entity.params, next: { ...entity.params, reinforcement: { ...r, auto: true } } };
   }
   if (isFoundationEntity(entity)) return buildFoundationReinforcePatch(entity, provider);
   if (isFoundationSlabEntity(entity)) {

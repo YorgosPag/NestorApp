@@ -360,6 +360,8 @@ export interface BimEventMap {
   'bim:column-detail-requested': { columnId: string; levelId: string };
   /** ADR-463 — foundation contextual «Λεπτομέρεια Οπλισμού» → open FoundationDetailHost dialog. */
   'bim:foundation-detail-requested': { foundationId: string; levelId: string };
+  /** ADR-471 — beam contextual «Λεπτομέρεια Οπλισμού» → open BeamDetailHost dialog. */
+  'bim:beam-detail-requested': { beamId: string; levelId: string };
   /** ADR-369 Q8.3 — ribbon IFC Export button → IfcExportHost downloads .ifc file. */
   'bim:ifc-export-requested': {
     /** Scope filter — if omitted, exports every building in project. */

@@ -29,6 +29,7 @@ import { resolveColumnReinforcementSection } from '../reinforcement/column-secti
 import { DEFAULT_STIRRUP_TYPE } from '../reinforcement/column-reinforcement-types';
 import { formatStirrupsLabel } from '../reinforcement/column-reinforcement-compute';
 import { pickScaleDenominator } from './detail-sheet-fit';
+import { groupSpacingZones, formatSpacingZoneLabel } from './detail-sheet-spacing';
 import type { DetailPrimitive, RectMm } from './detail-sheet-types';
 
 const CONCRETE_OUTLINE_HEX = '#b0b0b0';
@@ -223,25 +224,13 @@ function pushStirrupSpacingDims(
   rightLocalX: number,
   toSheet: (x: number, z: number) => Point2D,
 ): void {
-  if (levels.length < 2) return;
-  const zones: { z0: number; z1: number; gap: number; count: number }[] = [];
-  for (let i = 1; i < levels.length; i++) {
-    const gap = Math.round(levels[i] - levels[i - 1]);
-    const prev = zones[zones.length - 1];
-    if (prev && Math.abs(prev.gap - gap) < 1) {
-      prev.z1 = levels[i];
-      prev.count += 1;
-    } else {
-      zones.push({ z0: levels[i - 1], z1: levels[i], gap, count: 1 });
-    }
-  }
   const stroke = { colorHex: DIM_HEX, widthMm: DIM_WIDTH_MM };
-  for (const z of zones) {
+  for (const zone of groupSpacingZones(levels)) {
     out.push({
       kind: 'dim',
-      p1: toSheet(rightLocalX, z.z0), p2: toSheet(rightLocalX, z.z1),
+      p1: toSheet(rightLocalX, zone.start), p2: toSheet(rightLocalX, zone.end),
       offsetMm: SPACING_DIM_OFFSET_MM,
-      text: z.count > 1 ? `${z.count}×${z.gap}` : String(z.gap),
+      text: formatSpacingZoneLabel(zone),
       stroke, textHeightMm: SPACING_DIM_TEXT_MM,
     });
   }

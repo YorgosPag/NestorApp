@@ -21,6 +21,7 @@ import type { SlabFoundationReinforcement } from '../reinforcement/slab-foundati
 import type { BeamSupportType } from '../../types/beam-types';
 import type { BarDevelopmentModifiers } from '../rebar-catalog';
 import type { LoadCombinationFactors } from '../loads/load-combinations';
+import type { ConcreteGrade } from '../concrete-grades';
 
 /** Persisted code identifier (project-level setting). */
 export type StructuralCodeId = 'eurocode' | 'greek-legacy';
@@ -55,6 +56,18 @@ export interface ColumnSectionContext {
   readonly perimeterMm?: number;
   /** Τρόπος διευθέτησης οπλισμού. Absent ⇒ 'perimeter'. */
   readonly mode?: 'perimeter' | 'circular' | 'wall';
+  // ─── ADR-472 — load-aware strength (όλα optional· absent ⇒ min-detailing μόνο) ──
+  /**
+   * Αξονικό σχεδιασμού N_Ed (kN, θλίψη θετική) — ULS συνδυασμός του `appliedLoad`
+   * (EN1990 6.10). Absent/≤0 ⇒ ο suggester δίνει μόνο ελάχιστο ρ_min (σημερινή
+   * συμπεριφορά, μηδέν regression). Παρόν ⇒ `As = max(ρ_min·Ac, strength(N_Ed))`.
+   */
+  readonly designAxialKn?: number;
+  /**
+   * Κατηγορία σκυροδέματος (για f_cd στον strength υπολογισμό). Absent ⇒ default
+   * code grade. Χρησιμοποιείται ΜΟΝΟ όταν υπάρχει `designAxialKn`.
+   */
+  readonly concreteGrade?: ConcreteGrade;
 }
 
 /**
@@ -100,6 +113,12 @@ export interface BeamSectionContext {
   readonly grossAreaMm2: number;
   /** Συνθήκη στήριξης (cantilever ⇒ κρίσιμη ζώνη μόνο στο πακτωμένο άκρο). */
   readonly supportType: BeamSupportType;
+  /**
+   * ADR-472 — γραμμικό φορτίο σχεδιασμού w_Ed (kN/m) — ULS συνδυασμός του tributary
+   * `appliedLoad` διαιρεμένο με το άνοιγμα. Absent/≤0 ⇒ μόνο ελάχιστο ρ_min (σημερινή
+   * συμπεριφορά). Παρόν ⇒ `As,κάτω = max(ρ_min·b·d, strength(M_Ed))`, M_Ed = w·L²/c.
+   */
+  readonly designLineLoadKnM?: number;
 }
 
 /**

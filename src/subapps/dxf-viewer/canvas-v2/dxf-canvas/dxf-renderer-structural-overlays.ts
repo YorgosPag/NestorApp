@@ -10,6 +10,8 @@ import { isHiddenByCutPlane } from '../../bim/visibility/entity-z-extents';
 import { drawStructuralFinishOutline } from '../../bim/renderers/structural-finish-outline-2d';
 // ADR-456 Slice 3 — 2Δ σχεδίαση οπλισμού κολώνας (scene-level pass, gated, κοινό geometry SSoT με 3Δ).
 import { drawColumnRebar2D } from '../../bim/renderers/column-rebar-2d';
+// ADR-471 Slice 2 — 2Δ σχεδίαση οπλισμού δοκού (longitudinal· ίδιο pass/gate με την κολώνα).
+import { drawBeamRebar2D } from '../../bim/renderers/beam-rebar-2d';
 import { mmToSceneUnits } from '../../utils/scene-units';
 import { buildStructuralFinishSilhouette2D } from './dxf-renderer-frame-builders';
 
@@ -21,13 +23,14 @@ import { buildStructuralFinishSilhouette2D } from './dxf-renderer-frame-builders
  */
 
 /**
- * ADR-456 Slice 3 — ζωγραφίζει τον οπλισμό ΟΛΩΝ των ορθογωνικών κολώνων με ορισμένο
- * `reinforcement`, ως scene-level overlay μέσα στο cached normal-state bitmap. Καταναλώνει
- * το ΙΔΙΟ geometry SSoT (`computeColumnRebarLayout` + `columnLocalMmToWorld`) με το 3Δ →
- * ίδιες θέσεις ράβδων/στεφανιών. No-op όταν ο διακόπτης «Οπλισμός» είναι κλειστός. ADR-040:
- * pure draw, zero subscriptions.
+ * ADR-471 Slice 2 (γενίκευση του ADR-456 column overlay) — ζωγραφίζει τον οπλισμό ΟΛΩΝ
+ * των **δομικών μελών** (κολώνα + δοκάρι) με ορισμένο `reinforcement`, ως scene-level
+ * overlay μέσα στο cached normal-state bitmap. Dispatch ανά `entity.type` → κολώνα
+ * (`drawColumnRebar2D`, cross-section) / δοκάρι (`drawBeamRebar2D`, longitudinal). Κάθε
+ * μέλος καταναλώνει το ΙΔΙΟ geometry SSoT με το 3Δ → ίδιες θέσεις. No-op όταν ο διακόπτης
+ * «Οπλισμός» είναι κλειστός (per-element gate). ADR-040: pure draw, zero subscriptions.
  */
-export function drawColumnReinforcement2D(
+export function drawMemberReinforcement2D(
   ctx: CanvasRenderingContext2D,
   entities: readonly DxfEntityUnion[],
   transform: ViewTransform,
@@ -40,16 +43,22 @@ export function drawColumnReinforcement2D(
   const worldToScreen = (p: Point2D): Point2D =>
     CoordinateTransforms.worldToScreen(p, transform, actualViewport);
   for (const entity of entities) {
-    if (entity.type !== 'column' || !entity.visible) continue;
-    const p = entity.params;
-    if (!p.reinforcement) continue; // ADR-460 — κάθε σχήμα (όχι μόνο ορθογωνική)
-    // ADR-470 — per-element reinforcement visibility (override → view-level).
-    if (!isStructuralComponentVisible('reinforcement', entity)) continue;
-    // ADR-470 — cut-plane parity: στο ενεργό υψόμετρο τομής δείχνουμε μόνο όσα
-    // υπάρχουν στο/κάτω από το επίπεδο (όπως ήδη κάνει το σώμα της κολώνας).
-    if (isHiddenByCutPlane(entity, bimSettings.viewRange, bimSettings.cutPlaneActive)) continue;
-    const pxPerMm = mmToSceneUnits(p.sceneUnits ?? 'mm') * transform.scale;
-    drawColumnRebar2D(ctx, p, pxPerMm, worldToScreen);
+    if (!entity.visible) continue;
+    // ADR-470 — per-element reinforcement visibility (override → view-level) + cut-plane
+    // parity: στο ενεργό υψόμετρο τομής δείχνουμε μόνο όσα υπάρχουν στο/κάτω από το επίπεδο.
+    if (entity.type === 'column') {
+      if (!entity.params.reinforcement) continue; // ADR-460 — κάθε σχήμα (όχι μόνο ορθογωνική)
+      if (!isStructuralComponentVisible('reinforcement', entity)) continue;
+      if (isHiddenByCutPlane(entity, bimSettings.viewRange, bimSettings.cutPlaneActive)) continue;
+      const pxPerMm = mmToSceneUnits(entity.params.sceneUnits ?? 'mm') * transform.scale;
+      drawColumnRebar2D(ctx, entity.params, pxPerMm, worldToScreen);
+    } else if (entity.type === 'beam') {
+      if (!entity.params.reinforcement) continue; // ADR-471 — δοκάρι με ορισμένο/auto οπλισμό
+      if (!isStructuralComponentVisible('reinforcement', entity)) continue;
+      if (isHiddenByCutPlane(entity, bimSettings.viewRange, bimSettings.cutPlaneActive)) continue;
+      const pxPerMm = mmToSceneUnits(entity.params.sceneUnits ?? 'mm') * transform.scale;
+      drawBeamRebar2D(ctx, entity, pxPerMm, worldToScreen);
+    }
   }
 }
 

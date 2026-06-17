@@ -111,7 +111,16 @@ export function useLevelSceneLoader({
     // cross-floor / empty levels fall through to the full load path where
     // `isCrossFloorSceneLink` still guards. File-less levels clear the target so they
     // never write a DXF scene (BIM persists independently via floorId).
-    if (sceneFileId) {
+    // 🛡️ ADR-469 v1.2 — orphaned-target latch (SSoT in useAutoSaveSceneManager).
+    // Once a previous load discovered this `sceneFileId` is orphaned (its files/cadFiles
+    // doc is gone), it is latched. EVERY subsequent re-run of this effect (fires on each
+    // `levels` onSnapshot) must then treat the level as file-less: it must NOT re-open the
+    // DXF auto-save target — otherwise a local edit would schedule a save that throws
+    // ADR-293 (`canonicalScenePath is required`). The throw's root cause was exactly this:
+    // the sync set below re-pointed the target after the async reset had cleared it.
+    const isOrphaned = !!sceneFileId && (sceneManager.isFileTargetOrphaned?.(sceneFileId) ?? false);
+
+    if (sceneFileId && !isOrphaned) {
       sceneManager.setFileRecordId?.(sceneFileId);
       sceneManager.setCurrentFileName?.(level?.sceneFileName ?? null);
     } else {
@@ -124,8 +133,11 @@ export function useLevelSceneLoader({
     const existingScene = sceneManager.getLevelScene(currentLevelId);
     if (existingScene && existingScene.entities.length > 0) return;
 
-    if (!sceneFileId) {
-      // No DXF linked to this level yet — create empty scene (target already reset above)
+    if (!sceneFileId || isOrphaned) {
+      // No DXF linked (or a known-orphaned/file-less floor) — create empty scene (target
+      // already reset above). Short-circuiting on `isOrphaned` avoids a wasteful repeat
+      // loadFileV2 fetch on every `levels` snapshot for a floor we already know has no
+      // backing file. BIM persists independently via floorId-keyed per-entity collections.
       if (!existingScene) {
         setEmptyScenePreservingBim();
       }
@@ -225,14 +237,17 @@ export function useLevelSceneLoader({
           loadedSceneLevelsRef.current.add(currentLevelId);
         } else {
           // File record/scene missing (orphaned sceneFileId, corrupted, or deleted).
-          // 🛡️ FIX (Β) — graceful suppress (incident 2026-06-17 ADR-293 error spam):
-          // the level points at a `sceneFileId` whose `files`/`cadFiles` doc no longer
-          // exists, so `getFileStoragePath` returns null and every local edit threw
-          // "canonicalScenePath is required (ADR-293)". Reset the auto-save target
-          // (like the cross-floor branch above) so this file-less floor never attempts
-          // a DXF scene-blob save → zero ADR-293 throw. BIM persists independently via
-          // its floorId-keyed per-entity collections. Preserve any in-memory BIM.
-          console.warn(`[LevelsSystem] Scene not found for fileId: ${sceneFileId} — suppressing DXF auto-save (orphaned/missing file).`);
+          // 🛡️ FIX (Β v1.2 — ADR-469) — graceful suppress (incident 2026-06-17 ADR-293
+          // error spam): the level points at a `sceneFileId` whose `files`/`cadFiles` doc
+          // no longer exists, so `getFileStoragePath` returns null and every local edit
+          // threw "canonicalScenePath is required (ADR-293)". v1.1 only reset the target
+          // here, but each `levels` snapshot re-ran this effect and re-opened it (sync set
+          // above) before the async reset — leaving a window where an edit still threw.
+          // v1.2: LATCH the orphaned fileId in the auto-save SSoT so the sync set above
+          // never re-opens it and the gate hard-suppresses any save. Then reset + preserve
+          // in-memory BIM. BIM persists independently via floorId-keyed per-entity colls.
+          console.warn(`[LevelsSystem] Scene not found for fileId: ${sceneFileId} — latching orphaned target + suppressing DXF auto-save (missing file).`);
+          sceneManager.markFileTargetOrphaned?.(sceneFileId);
           resetDxfAutoSaveTarget();
           setEmptyScenePreservingBim();
         }

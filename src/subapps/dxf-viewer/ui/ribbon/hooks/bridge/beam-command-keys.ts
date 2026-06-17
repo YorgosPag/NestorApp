@@ -118,6 +118,9 @@ export const BEAM_RIBBON_KEYS_ACTIONS = {
   // ADR-459 Φ4d — «Αυτόματος Οπλισμός» contextual (parity με κολόνα): routes στο
   // undoable AutoReinforceOrganismCommand μέσω `bim:auto-reinforce-requested`.
   autoReinforce: 'beam.actions.autoReinforce',
+  // ADR-471 — «Λεπτομέρεια Οπλισμού» contextual (parity με κολόνα/πέδιλο): emits
+  // `bim:beam-detail-requested` → BeamDetailHost (PDF detail sheet).
+  reinforcementDetail: 'beam.actions.reinforcementDetail',
 } as const;
 
 const BEAM_ACTION_KEY_SET: ReadonlySet<string> = new Set<string>(

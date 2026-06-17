@@ -28,8 +28,8 @@ import { dimOpacityToTransparency } from '../../services/layer-isolate-resolver'
 import { buildDimensionLookup, buildSlabOpeningsBySlab, buildOpeningsByWall, transparencyToAlpha } from './dxf-renderer-frame-builders';
 import { drawFoundationReinforcement2D } from './dxf-foundation-reinforcement-overlay';
 // Scene-level structural overlay passes (Boy-Scout file-size split, 2026-06-17 —
-// mirror του foundation overlay· ADR-449 σοβάς + ADR-456 οπλισμός κολώνας).
-import { drawColumnReinforcement2D, drawStructuralFinishSkin2D } from './dxf-renderer-structural-overlays';
+// mirror του foundation overlay· ADR-449 σοβάς + ADR-456/471 οπλισμός μελών κολώνα+δοκάρι).
+import { drawMemberReinforcement2D, drawStructuralFinishSkin2D } from './dxf-renderer-structural-overlays';
 // DxfEntityUnion → Entity mapper (extracted file-size split, 2026-05-25).
 import { buildEntityModelFromDxf } from './dxf-renderer-entity-model';
 export class DxfRenderer {
@@ -205,9 +205,10 @@ export class DxfRenderer {
     // `syncStructuralFinishSkin`): μετά τα entities, ζωγραφίζει το merged-silhouette outline
     // από την ΙΔΙΑ SSoT με το 3Δ → ίδιες γωνίες/συμβολές, μηδέν διπλή γραμμή.
     drawStructuralFinishSkin2D(this.ctx, scene.entities, transform, actualViewport);
-    // ADR-456 Slice 3 — οπλισμός κολώνας (διαμήκεις κουκκίδες + στεφάνι) ως scene-level overlay
-    // μέσα στο cached normal-state bitmap (ίδιο pattern με τον σοβά)· gated από `showReinforcement`.
-    drawColumnReinforcement2D(this.ctx, scene.entities, transform, actualViewport);
+    // ADR-456/471 — οπλισμός δομικών μελών (κολώνα: διαμήκεις κουκκίδες+στεφάνι· δοκάρι:
+    // διαμήκεις γραμμές+εγκάρσιοι συνδετήρες) ως scene-level overlay μέσα στο cached
+    // normal-state bitmap (ίδιο pattern με τον σοβά)· gated από `showReinforcement`.
+    drawMemberReinforcement2D(this.ctx, scene.entities, transform, actualViewport);
     // ADR-463 — οπλισμός θεμελίωσης (πέδιλο/πεδιλοδοκός/συνδετήρια) ως scene-level overlay,
     // ίδιο pattern/gate με την κολώνα (mirror του drawColumnReinforcement2D).
     drawFoundationReinforcement2D(this.ctx, scene.entities, transform, actualViewport);

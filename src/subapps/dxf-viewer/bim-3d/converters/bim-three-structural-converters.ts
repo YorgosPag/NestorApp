@@ -34,6 +34,8 @@ import { isStructuralComponentVisible } from '../../bim/visibility/structural-co
 import { applyStructuralCoreVisibility3D } from './structural-core-visibility-3d';
 // ADR-456 Slice 3 — 3Δ/τομή κλωβός οπλισμού (κοινό geometry SSoT με το 2Δ).
 import { buildColumnRebarCage } from './column-rebar-3d';
+// ADR-471 Slice 3 — 3Δ κλωβός οπλισμού δοκού (longitudinal· κοινό geometry SSoT με το 2Δ).
+import { buildBeamRebarCage } from './beam-rebar-3d';
 import { isWallColumnKind } from '../../bim/columns/column-from-faces';
 import type { ColumnTopProfile, ColumnBaseProfile } from '../../bim/geometry/column-vertical-profile';
 import { sceneUnitsToMeters } from '../../utils/scene-units';
@@ -238,6 +240,35 @@ function buildAttachedColumnPrism(
   );
 }
 
+/**
+ * ADR-471 Slice 3 — προσθέτει τον κλωβό οπλισμού (διαμήκεις + συνδετήρες) στο ήδη
+ * συντεθειμένο beam result (πυρήνας ή πυρήνας+σοβάς). Mirror του `attachColumnRebar`:
+ * επιστρέφει το ίδιο αντικείμενο όταν ο οπλισμός είναι ανενεργός (view gate / χωρίς
+ * `reinforcement`). `bottomFaceY` = κάτω παρειά πυρήνα (ίδιο datum → ευθυγράμμιση).
+ * Gate μόνο στον δικό του διακόπτη `showReinforcement` — ΑΝΕΞΑΡΤΗΤΟΣ από `suppressFinishSkin`.
+ */
+function attachBeamRebar(
+  composed: THREE.Mesh | THREE.Group,
+  beam: BeamEntity,
+  bottomFaceY: number,
+  levelId: string | undefined,
+): THREE.Mesh | THREE.Group {
+  // ADR-470 — per-element οπλισμός override → per-view flag (Revit precedence).
+  if (!isStructuralComponentVisible('reinforcement', beam)) return composed;
+  const cage = buildBeamRebarCage(beam, bottomFaceY, levelId);
+  if (!cage) return composed;
+  if (composed instanceof THREE.Group) {
+    composed.add(cage);
+    return composed;
+  }
+  const group = new THREE.Group();
+  group.add(composed);
+  group.add(cage);
+  group.userData['bimId'] = beam.id;
+  group.userData['bimType'] = 'beam';
+  return group;
+}
+
 // ── Beam ──────────────────────────────────────────────────────────────────────
 
 export function beamToMesh(
@@ -313,17 +344,23 @@ export function beamToMesh(
   const finishSkin = (!suppressFinishSkin && isStructuralComponentVisible('plaster', beam))
     ? buildBeamFinishSkin(beam, walls, columns, mesh.position.y, levelId, floorElevationMm)
     : null;
+  // ADR-471 — additive κλωβός οπλισμού (διαμήκεις + συνδετήρες) ΕΞΩ από τον πυρήνα,
+  // gated από τον δικό του `showReinforcement`. `bottomFaceY = mesh.position.y` (κάτω παρειά).
   if (finishSkin) {
     const composite = new THREE.Group();
     composite.add(tagged);
     composite.add(finishSkin);
     composite.userData['bimId'] = beam.id;
     composite.userData['bimType'] = 'beam';
-    // ADR-470 — core gate: κρύβει το σώμα δοκαριού αν ανενεργό (κρατά σοβά).
-    return applyStructuralCoreVisibility3D(composite, tagged, beam);
+    // ADR-470 — core gate: κρύβει το σώμα δοκαριού αν ανενεργό (κρατά σοβά+οπλισμό).
+    return applyStructuralCoreVisibility3D(
+      attachBeamRebar(composite, beam, mesh.position.y, levelId), tagged, beam,
+    );
   }
-  // ADR-470 — core gate (χωρίς σοβά → όλο αόρατο αν το σώμα κρυφτεί).
-  return applyStructuralCoreVisibility3D(tagged, tagged, beam);
+  // ADR-470 — core gate (χωρίς σοβά → σώμα αόρατο, ο οπλισμός μένει ορατός).
+  return applyStructuralCoreVisibility3D(
+    attachBeamRebar(tagged, beam, mesh.position.y, levelId), tagged, beam,
+  );
 }
 
 // ── Slab ──────────────────────────────────────────────────────────────────────

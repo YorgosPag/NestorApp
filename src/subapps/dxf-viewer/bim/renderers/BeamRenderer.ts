@@ -38,7 +38,7 @@ import { resolveIsEntityVisible } from '../visibility/visibility-resolver';
 import { isStructuralComponentVisible } from '../visibility/structural-component-visibility';
 import { resolveVgFillTint } from '../utils/bim-vg-fill-tint';
 import { linePatternToDashArray } from '../../config/bim-line-patterns';
-import { resolveCutState } from '../../config/bim-view-range';
+import { resolveCutState, type CutState } from '../../config/bim-view-range';
 import { useDrawingScaleStore } from '../../state/drawing-scale-store';
 import { HOVER_HIGHLIGHT } from '../../config/color-config';
 import { getLayer } from '../../stores/LayerStore';
@@ -155,8 +155,15 @@ export class BeamRenderer extends BaseEntityRenderer {
       { zBottomMm: _beamZTop - beam.params.depth, zTopMm: _beamZTop, category: 'beam' },
       _beamDs.viewRange,
     );
+    // ADR-363 §5.7 (Giorgio 2026-06-17) — ένα δοκάρι «κρυμμένο πάνω από το πάτωμα»
+    // είναι ο ΣΚΟΠΟΣ αυτού του renderer (βλ. docstring: «hidden above floor — dashed
+    // stroke»), ΟΧΙ αόρατο. Το default δοκάρι (top 3000 / depth 500 → zBottom 2500)
+    // ξεπερνά το view-range topMm (2300) → ο resolver το κατατάσσει 'hidden' →
+    // lineWidthPx:0 → fill ΧΩΡΙΣ πορτοκαλί outline. Το χαρτογραφούμε σε 'projection'
+    // (overhead dashed) ώστε το outline να φαίνεται — preview ΚΑΙ committed parity.
+    const _beamStyleCut: CutState = _beamCutState === 'hidden' ? 'projection' : _beamCutState;
     // Translucent fill first.
-    this.ctx.fillStyle = resolveVgFillTint('beam', _beamCutState, _beamDs.objectStyles) ?? KIND_FILL[beam.kind];
+    this.ctx.fillStyle = resolveVgFillTint('beam', _beamStyleCut, _beamDs.objectStyles) ?? KIND_FILL[beam.kind];
     this.buildPiecesPath(drawable);
     this.ctx.fill();
 
@@ -170,7 +177,7 @@ export class BeamRenderer extends BaseEntityRenderer {
     } : undefined;
     const { lineWidthPx: _beamPx, linePattern: _beamPat, color: _beamCol } = resolveSubcategoryStyle({
       category: 'beam', subcategoryKey: 'hidden-lines',
-      cutState: _beamCutState, scaleDenominator: _beamDs.drawingScale,
+      cutState: _beamStyleCut, scaleDenominator: _beamDs.drawingScale,
       dpi: 96, objectStyles: _beamDs.objectStyles,
       elementOverride: beam.styleOverride, layerOverride: _beamLayerOverride,
     });

@@ -476,6 +476,19 @@ export const CONTEXTUAL_BEAM_TAB: RibbonTab = {
                 action: BEAM_RIBBON_KEYS_ACTIONS.autoReinforce,
               },
             },
+            {
+              // ADR-471 — «Λεπτομέρεια Οπλισμού» δοκού (parity κολόνα/πέδιλο): PDF detail sheet.
+              type: 'simple',
+              size: 'small',
+              command: {
+                id: 'beam.structural.reinforcementDetail',
+                labelKey: 'ribbon.commands.beamEditor.reinforcementDetail',
+                tooltipKey: 'ribbon.commands.beamEditor.reinforcementDetailTooltip',
+                icon: 'column-reinforcement-detail',
+                commandKey: BEAM_RIBBON_KEYS_ACTIONS.reinforcementDetail,
+                action: BEAM_RIBBON_KEYS_ACTIONS.reinforcementDetail,
+              },
+            },
           ],
         },
       ],

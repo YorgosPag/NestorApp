@@ -11,8 +11,11 @@
 import {
   barAreaMm2,
   nextRebarDiameterMm,
+  rebarFydMpa,
 } from '../rebar-catalog';
+import { concreteFcdMpa, DEFAULT_CONCRETE_GRADE } from '../concrete-grades';
 import { rectRestrainedBarIntervals } from '../reinforcement/column-reinforcement-types';
+import type { BeamSupportType } from '../../types/beam-types';
 import type {
   ColumnReinforcement,
   WallReinforcementIntent,
@@ -84,16 +87,36 @@ export function resolveBarSet(
   return { count, diameterMm };
 }
 
+/** kN → N (φορτίο context σε kN, αντοχές υλικών σε N/mm² = MPa). */
+const KN_TO_N = 1000;
+
+/**
+ * ADR-472 — απαιτούμενη As διαμήκους κολόνας από **αξονική αντοχή** (EC2 §6.1,
+ * καθαρή θλίψη): inversion του N_Rd = α_cc·f_cd·A_c + f_yd·A_s ⇒
+ * A_s = (N_Ed − α_cc·f_cd·A_c) / f_yd. α_cc=1.0 (Ελληνικό ΕΠ, ήδη ενσωματωμένο στο
+ * `concreteFcdMpa`). Επιστρέφει 0 όταν το σκυρόδεμα επαρκεί μόνο του ⇒ ο ρ_min
+ * κυριαρχεί (μηδέν regression χωρίς φορτίο). Biaxial / λυγηρότητα (§5.8) /
+ * ικανοτικός σεισμικός = DEFER (ADR-472 §4).
+ */
+function asStrengthColumnMm2(ctx: ColumnSectionContext): number {
+  const nEdKn = ctx.designAxialKn ?? 0;
+  if (nEdKn <= 0) return 0;
+  const fcd = concreteFcdMpa(ctx.concreteGrade ?? DEFAULT_CONCRETE_GRADE); // N/mm²
+  const concreteCapacityN = fcd * ctx.grossAreaMm2;
+  return Math.max(0, (nEdKn * KN_TO_N - concreteCapacityN) / rebarFydMpa());
+}
+
 /**
  * Επιλέγει πλήθος + εμπορική διάμετρο διαμήκων ώστε να ικανοποιούνται ΤΑΥΤΟΧΡΟΝΑ:
- * (α) απόσταση ≤ max-bar-spacing, (β) ρ ≥ ρ_min, (γ) ≥ minBarCount. Το πλήθος
- * ξεκινά από την περίσφιγξη (spacing) → reuse `resolveBarSet`.
+ * (α) απόσταση ≤ max-bar-spacing, (β) ρ ≥ ρ_min, (γ) ≥ minBarCount, (δ) ADR-472 —
+ * As ≥ απαίτηση αντοχής όταν δίνεται αξονικό σχεδιασμού. Το πλήθος ξεκινά από την
+ * περίσφιγξη (spacing) → reuse `resolveBarSet`.
  */
 function resolveLongitudinalDesign(
   seed: ColumnReinforcementLimits,
   ctx: ColumnSectionContext,
 ): { count: number; diameterMm: number } {
-  const asRequiredMm2 = ctx.grossAreaMm2 * seed.minRatio;
+  const asRequiredMm2 = Math.max(ctx.grossAreaMm2 * seed.minRatio, asStrengthColumnMm2(ctx));
   const initialCount = Math.max(seed.minBarCount, spacingBarCount(ctx, seed.maxBarSpacingMm));
   return resolveBarSet(asRequiredMm2, initialCount, nextRebarDiameterMm(seed.minBarDiameterMm));
 }
@@ -161,6 +184,38 @@ const BEAM_EFFECTIVE_DEPTH_FACTOR = 0.9;
 /** EC8 §5.4.3.1.2(5) — ο άνω οπλισμός κατά μήκος ≥ 0.25·κάτω (αναρτήρες). */
 const BEAM_TOP_TO_BOTTOM_RATIO = 0.25;
 
+/** Μοχλοβραχίονας εσωτερικών δυνάμεων z ≈ 0.9·d (απλοποιημένο EC2 §6.1 κάμψη). */
+const BEAM_LEVER_ARM_FACTOR = 0.9;
+
+/**
+ * Συντελεστής ροπής ανοίγματος M_Ed = w·L²/c υπό ομοιόμορφο φορτίο (UDL), ανά
+ * συνθήκη στήριξης: αμφιέρειστη 8· αμφίπακτη 12 (ροπή στήριξης)· πρόβολος 2 (πάκτωση).
+ */
+function spanMomentDivisor(supportType: BeamSupportType): number {
+  switch (supportType) {
+    case 'cantilever':
+      return 2;
+    case 'fixed':
+      return 12;
+    default:
+      return 8;
+  }
+}
+
+/**
+ * ADR-472 — απαιτούμενη As κάτω οπλισμού δοκαριού από **καμπτική αντοχή** (EC2 §6.1,
+ * απλοποιημένος μοχλοβραχίονας z=0.9·d): M_Ed = w_Ed·L²/c, A_s = M_Ed/(z·f_yd).
+ * Επιστρέφει 0 χωρίς γραμμικό φορτίο/άνοιγμα ⇒ ο ρ_min κυριαρχεί (μηδέν regression).
+ * Χωρίς ανακατανομή ροπών / έλεγχο θλιβόμενης ζώνης (ADR-472 §4).
+ */
+function asStrengthBeamMm2(ctx: BeamSectionContext, effectiveDepthMm: number): number {
+  const wEd = ctx.designLineLoadKnM ?? 0;
+  if (wEd <= 0 || ctx.spanMm <= 0 || effectiveDepthMm <= 0) return 0;
+  const spanM = ctx.spanMm / 1000;
+  const mEdNmm = ((wEd * spanM * spanM) / spanMomentDivisor(ctx.supportType)) * 1e6; // kNm→N·mm
+  return mEdNmm / (BEAM_LEVER_ARM_FACTOR * effectiveDepthMm * rebarFydMpa());
+}
+
 /**
  * Επιλέγει ελάχιστο-έγκυρο διαμήκη (κάτω/άνω) + εγκάρσιο οπλισμό δοκαριού,
  * εγγυώμενος ρ_κάτω ≥ ρ_min επί της ενεργού διατομής b·d (d ≈ 0.9h). Reuse του
@@ -172,7 +227,11 @@ export function suggestBeamReinforcementFrom(
 ): BeamReinforcement {
   const seed = provider.beamReinforcementLimits(ctx, 16);
   const effectiveDepthMm = BEAM_EFFECTIVE_DEPTH_FACTOR * ctx.depthMm;
-  const asBottomMm2 = seed.minRatio * ctx.widthMm * effectiveDepthMm;
+  // ADR-472 — max(ελάχιστο ρ_min επί b·d, απαίτηση καμπτικής αντοχής).
+  const asBottomMm2 = Math.max(
+    seed.minRatio * ctx.widthMm * effectiveDepthMm,
+    asStrengthBeamMm2(ctx, effectiveDepthMm),
+  );
   const seedDia = nextRebarDiameterMm(seed.minBarDiameterMm);
 
   const bottom = resolveBarSet(asBottomMm2, Math.max(seed.minBottomBarCount, 2), seedDia);

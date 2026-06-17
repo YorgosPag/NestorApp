@@ -252,3 +252,40 @@ export interface FootingDetailSheetLabels {
   /** ADR-464 Slice 5 — design-checks summary labels (optional· absent → χωρίς πίνακα). */
   readonly designSummary?: FootingDesignSummaryLabels;
 }
+
+// ─── ADR-471 — Beam detail labels (κάτω/άνω διαμήκεις + συνδετήρες) ────────────
+
+/** Pre-resolved beam reinforcement-schedule table labels (N.11-safe). */
+export interface BeamScheduleLabels {
+  readonly item: string;             // «Στοιχείο» / item column
+  readonly description: string;      // «Οπλισμός» (nØd ή Ø/βήμα)
+  readonly length: string;           // «Μήκος (m)»
+  readonly weight: string;           // «Βάρος (kg)»
+  readonly bottomLongitudinal: string;// «Κάτω διαμήκεις» row
+  readonly topLongitudinal: string;  // «Άνω διαμήκεις» row
+  readonly stirrups: string;         // «Συνδετήρες» row
+  readonly total: string;            // «Σύνολο» row
+  readonly ratio: string;            // «ρ» εφελκυόμενου (κάτω) λόγου οπλισμού
+}
+
+/** Pre-resolved beam title-block (drawing data) field labels (N.11-safe). */
+export interface BeamTitleBlockLabels {
+  readonly section: string;      // «Διατομή» (b×h)
+  readonly span: string;         // «Άνοιγμα»
+  readonly concrete: string;     // «Σκυρόδεμα»
+  readonly steel: string;        // «Χάλυβας»
+  readonly cover: string;        // «Επικάλυψη»
+  readonly longitudinal: string; // «Διαμήκης οπλισμός»
+  readonly stirrups: string;     // «Συνδετήρες»
+}
+
+/** Pre-resolved beam detail-sheet region headings + table/field labels. */
+export interface BeamDetailSheetLabels {
+  readonly plan: string;        // slot 'plan' → «ΔΙΑΤΟΜΗ»
+  readonly elevation: string;   // slot 'elevation' → «ΟΨΗ»
+  readonly perspective: string;
+  readonly schedule: string;
+  readonly titleBlock: string;
+  readonly scheduleTable: BeamScheduleLabels;
+  readonly titleFields: BeamTitleBlockLabels;
+}

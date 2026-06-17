@@ -31,6 +31,9 @@ import {
 import { computeBeamGeometry } from '../../bim/geometry/beam-geometry';
 import { validateBeamParams } from '../../bim/validators/beam-validator';
 import { createBeam } from '@/services/factories/beam.factory';
+import { justifyGridSegment } from '../../bim/grid/grid-segment-justification';
+import { resolveBeamColumnFlushJustification } from '../../bim/beams/beam-column-flush';
+import type { StripJustification } from '../../bim/types/foundation-types';
 import type { SceneUnits } from '../../utils/scene-units';
 import { createDefaultStructuralFinishSpec } from '../../bim/finishes/structural-finish-types';
 import { resolveStoreyCeilingElevationMm } from '../../systems/levels/storey-creation-defaults';
@@ -110,6 +113,67 @@ export function buildDefaultBeamParams(
     ...(overrides.material !== undefined ? { material: overrides.material } : {}),
   };
   return params;
+}
+
+// ─── Placement anchor (Revit "Location Line" — γραμμή κλικ = παρειά) ──────────
+
+/**
+ * ADR-363 §5.7 — Default placement anchor για το freehand δοκάρι. Η γραμμή των
+ * δύο κλικ ταυτίζεται με ΜΙΑ ΠΑΡΕΙΑ (location line) του δοκαριού, ΟΧΙ με τον
+ * άξονα/κέντρο (Revit "Location Line"). Το σώμα εκτείνεται προς τη μία πλευρά:
+ * `'left'` → σώμα προς το +canonical-normal (πάνω πλευρά οθόνης σε σχεδίαση
+ * αριστερά→δεξιά), ώστε με το πρώτο κλικ το δοκάρι να εμφανίζεται «από την πάνω
+ * πλευρά» του σταυρονήματος.
+ */
+export const DEFAULT_BEAM_PLACEMENT_JUSTIFICATION: StripJustification = 'left';
+
+/**
+ * Bake το placement justification στα clicked points: μετατοπίζει **κάθετα** τα
+ * start/end κατά ±width/2 ώστε η γραμμή των κλικ να γίνει παρειά αντί άξονας.
+ *
+ * SSoT: reuses `justifyGridSegment` — το ΙΔΙΟ path με «εσχάρα από κάναβο»
+ * (`beam-from-grid.ts`). Στο freehand δεν υπάρχουν grid bindings (`[]`), οπότε
+ * επιστρέφεται μόνο το μετατοπισμένο start/end. Το stored centerline μένει
+ * centerline (μετατοπισμένο) → grips/geometry/persistence ΑΜΕΤΑΒΛΗΤΑ.
+ * `center` → identity. Degenerate (μηδενικού μήκους) άξονας → identity.
+ */
+export function anchorBeamPlacementAxis(
+  start: Readonly<Point2D>,
+  end: Readonly<Point2D>,
+  widthMm: number,
+  sceneUnits: SceneUnits = 'mm',
+  justification: StripJustification = DEFAULT_BEAM_PLACEMENT_JUSTIFICATION,
+): { start: Point2D; end: Point2D } {
+  const justified = justifyGridSegment(start, end, [], widthMm, justification, sceneUnits);
+  return { start: justified.start, end: justified.end };
+}
+
+/**
+ * `buildDefaultBeamParams` με το placement anchor εφαρμοσμένο (location-line =
+ * παρειά). Χρησιμοποιείται από το freehand εργαλείο (preview + commit) για
+ * straight/cantilever. Το πλάτος προκύπτει από τα overrides (ίδιο default με τον
+ * builder) ώστε το offset να ταιριάζει byte-for-byte με το τελικό δοκάρι.
+ *
+ * ADR-363 §5.7 — **side-face auto-flush:** όταν δοθούν `columnFootprints` (από το
+ * `beamPreviewStore`, ίδια σε preview ΚΑΙ commit), το justification επιλέγεται
+ * γεωμετρικά (`resolveBeamColumnFlushJustification`) ώστε η πλευρική παρειά να
+ * πατά flush στην κολόνα που πλαισιώνει άκρο του δοκαριού (full bearing)· χωρίς
+ * κολόνα-αναφορά → σταθερό default `'left'`. Preview === commit (ίδια footprints).
+ */
+export function buildAnchoredBeamParams(
+  startPoint: Readonly<Point2D>,
+  endPoint: Readonly<Point2D>,
+  kindArg?: BeamKind,
+  overrides: BeamParamOverrides = {},
+  sceneUnits: SceneUnits = 'mm',
+  columnFootprints: readonly (readonly Point2D[])[] = [],
+): BeamParams {
+  const widthMm = overrides.width ?? DEFAULT_BEAM_WIDTH_MM;
+  const justification = resolveBeamColumnFlushJustification(
+    startPoint, endPoint, columnFootprints, DEFAULT_BEAM_PLACEMENT_JUSTIFICATION,
+  );
+  const anchored = anchorBeamPlacementAxis(startPoint, endPoint, widthMm, sceneUnits, justification);
+  return buildDefaultBeamParams(anchored.start, anchored.end, kindArg, overrides, sceneUnits);
 }
 
 // ─── Entity builder ──────────────────────────────────────────────────────────

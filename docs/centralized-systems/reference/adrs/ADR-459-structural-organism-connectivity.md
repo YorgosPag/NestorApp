@@ -1,6 +1,6 @@
 # ADR-459 — Structural Organism / Analytical Connectivity Model
 
-**Status:** ACTIVE (Phase 0 + 1 + 2 + 4a + 4b + 4c + 4d + 4e + 4f implemented 2026-06-15· Phase 6 proactive + cross-level 2026-06-17· **Phase 7 Αυτόματος Σχεδιασμός Θεμελίωσης 2026-06-17· Phase 7 cross-level footing rendering all-floors + drift resilience 2026-06-17 (v8.1)· cross-level autosave-origin fix 2026-06-17 (v8.2)· Revit-grade footing in-place update + atomic undo 2026-06-17 (v8.3)· **3Δ rotate/resize→footing follow via kind→event emit SSoT 2026-06-17 (v8.4)**)
+**Status:** ACTIVE (Phase 0 + 1 + 2 + 4a + 4b + 4c + 4d + 4e + 4f implemented 2026-06-15· Phase 6 proactive + cross-level 2026-06-17· **Phase 7 Αυτόματος Σχεδιασμός Θεμελίωσης 2026-06-17· Phase 7 cross-level footing rendering all-floors + drift resilience 2026-06-17 (v8.1)· cross-level autosave-origin fix 2026-06-17 (v8.2)· Revit-grade footing in-place update + atomic undo 2026-06-17 (v8.3)· **3Δ rotate/resize→footing follow via kind→event emit SSoT 2026-06-17 (v8.4)· **Phase 8 PROACTIVE auto-reinforce οργανισμού 2026-06-17 (v9)· **Phase 9 Slice 1 PROACTIVE real-time φορτία 2026-06-17 (v10)**)
 **Discipline:** BIM / Structural (DXF Viewer subapp)
 **Σχετικά:** ADR-401 (auto-attach), ADR-436 (foundation discipline), ADR-456 (structural quantities), ADR-458 (beam-column cutback)
 
@@ -427,6 +427,82 @@ reconciler** πάνω στην ίδια cross-level υποδομή.
 footing (όριο οικοπέδου — δεν υπάρχουν property lines)· integration με ADR-441 grid-foundation flow (σήμερα
 συνυπάρχουν: grid → χειροκίνητα, manual κολώνες → auto).
 
+## 6k. Phase 8 — PROACTIVE αυτόματος οπλισμός οργανισμού (organism grows → οπλίζεται μόνο του)
+
+**Όραμα Giorgio:** ο αυτόματος οπλισμός του οργανισμού (Φ4d) έτρεχε **ΜΟΝΟ με κουμπί** («Αυτόματος Οπλισμός»,
+καρτέλα Ανάλυση → `bim:auto-reinforce-requested`). Να γίνεται **proactive** — να υπολογίζεται **αυτόματα** μόλις
+ο οργανισμός **δημιουργείται/μεγαλώνει** (π.χ. ενώνεις 2 κολόνες με δοκάρι → ο ενιαίος οργανισμός οπλίζεται
+μόνος του), **όπως το Φ7 auto-foundation design**. Ο πυρήνας (`AutoReinforceOrganismCommand` idempotent +
+`buildReinforcePatch` SSoT) **υπήρχε ολόκληρος** — έλειπε **μόνο** ο proactive trigger.
+
+**SSoT extraction (μηδέν διπλότυπο):**
+- NEW `hooks/structural-auto-reinforce-core.ts` — light module (σκόπιμα **χωρίς** firebase/store imports →
+  jest-clean): `isReinforceable(e)` + `runOrganismAutoReinforce(levelManager, entityIds, provider, exec)` =
+  resolve scope (επιλεγμένα ids → επιλεγμένα μέλη· κενό → όλος ο reinforceable οργανισμός ορόφου) → build ΕΝΑ
+  `AutoReinforceOrganismCommand` → `exec(cmd)` (`execute` ή `executeGrouped`, αποφασίζει ο caller) → emit
+  `bim:structural-auto-reinforced`. Ο `provider` περνιέται **injected** (ο caller διαβάζει `structural-settings-store`).
+- `useStructuralAutoReinforce` (ribbon) → καλεί τον πυρήνα με `entityIds` (selection) + `execute`. Μηδέν αλλαγή
+  συμπεριφοράς. Ο **ίδιος** πυρήνας τροφοδοτεί και τον proactive trigger.
+
+**Proactive trigger (mirror `useAutoFoundationDesign`):**
+- NEW `hooks/useProactiveOrganismReinforce.ts` — ακούει geometry-growth events
+  (`drawing:entity-created`, `bim:{column,beam,foundation}-params-updated`, `bim:entities-moved`,
+  `bim:{columns,beams,foundations}-from-grid`) → coalesced microtask → πυρήνας με scope **«όλος ο οργανισμός
+  ορόφου»** (`[]`). **Atomic undo:** geometry-edit triggers → `executeGrouped` (ΕΝΑ Ctrl+Z αναιρεί δοκάρι+οπλισμό
+  μαζί)· batch/from-grid → standalone `execute`. **Σιωπηλός (Revit-grade):** καμία ειδοποίηση (το ribbon path
+  ούτε αυτό κάνει toast). Mounted στο `DxfViewerContent` δίπλα στα structural hooks.
+- **Loop guard (κρίσιμο):** ΔΕΝ ακούει `bim:structural-auto-reinforced` (αλλιώς κύκλος)· ΔΕΝ ακούει
+  `bim:column-footing-attached` (ανήκει στο cross-level path του `useStructuralOrganismNotification` Φ7 →
+  αποφυγή διπλού trigger). Idempotent → re-run = no-op.
+
+**Race με Φ7 auto-foundation (ίδιο event batch):** το πέδιλο δημιουργείται **ΚΑΙ** οπλίζεται μέσα στο
+`ApplyFoundationLayoutCommand`. Αν ο proactive reinforce τρέξει μετά → ήδη οπλισμένο → skip (idempotent). Αβλαβές
+και από τις δύο σειρές microtask (cross-level πέδιλο = εκτός active scene → ο proactive δεν το αγγίζει καθόλου).
+
+**Όρια Phase 8 (DEFER):** οπλίζει **νέα/μη-οπλισμένα** μέλη· **ΔΕΝ** ξανα-διαστασιολογεί τον οπλισμό μιας **ήδη
+οπλισμένης** κολόνας όταν αλλάξει η διατομή της (resize) — το «re-design on stale reinforcement intent» = ξεχωριστό
+θέμα. Η **συνέχεια οπλισμού στους κόμβους** (dowels/anchorage/lap) είναι ήδη DERIVED diagnostic (Φ4c) proactive.
+
+**Files Phase 8:** NEW `hooks/structural-auto-reinforce-core.ts` · NEW `hooks/useProactiveOrganismReinforce.ts` ·
+NEW `hooks/__tests__/structural-auto-reinforce-core.test.ts` (7 jest) · MOD `hooks/useStructuralAutoReinforce.ts`
+(→ core) · MOD `app/DxfViewerContent.tsx` (mount).
+
+## 6l. Phase 9 — PROACTIVE real-time φορτία (το ΠΡΩΤΟ σκαλί της αλυσίδας)
+
+**Όραμα (Slice 1 του Φ9):** ο μηχανικός σχεδιάζει σταδιακά και η εφαρμογή είναι ο στατικός του βοηθός σε
+πραγματικό χρόνο. Ο load-path engine (ADR-467) υπολόγιζε τα φορτία **μόνο με κουμπί** («Υπολογισμός Φορτίων»)·
+έτσι η αλυσίδα `φορτία → sizing πεδίλων → διαγνωστικά` δεν έτρεχε ποτέ αυτόματα. Το Φ9 Slice 1 κάνει τα **φορτία
+proactive** — mirror του Φ7 (auto-foundation) / Φ8 (auto-reinforce).
+
+**SSoT extraction:** NEW `hooks/structural-load-takedown-core.ts` (light, jest-clean — `settings` + `getOffset`
+injected, καμία firebase/store chain) με `runStructuralLoadTakedown(levelManager, settings, getOffset, exec)` →
+χτίζει graph, `computeLoadPathPatches`, εκτελεί `ComputeLoadPathCommand`, emit `bim:structural-loads-computed`.
+Ο ribbon `useStructuralLoadTakedown` τον καλεί → **μηδέν διπλότυπο**.
+
+**Proactive trigger:** NEW `hooks/useProactiveStructuralLoads.ts` (mirror `useProactiveOrganismReinforce`) —
+load-topology events (κολόνα/δοκάρι create/move/delete/from-grid) → coalesced microtask → core. `executeGrouped`
+(atomic undo: μέλος+φορτία+πέδιλο+οπλισμός σε ΕΝΑ Ctrl+Z) για geometry-edit triggers, `execute` standalone για
+from-grid· **σιωπηλός**.
+
+**Ντετερμινιστική σειρά (κρίσιμο):** mounted **ΠΡΙΝ** από `useStructuralOrganism`/`useAutoFoundationDesign` στο
+shell ⇒ ο load handler καλείται πρώτος στο microtask flush, εκτελεί+emit-άρει **σύγχρονα**, και το
+ήδη-προγραμματισμένο foundation microtask διαβάζει το φρέσκο `appliedLoad` → **ΕΝΑ pass** (όχι 2-pass flicker).
+Το `bim:structural-loads-computed` ανήκει ήδη στα `AUTO_DESIGN_EVENTS` (Φ7) + `ORGANISM_EVENTS` (Φ1) → τα
+downstream στάδια αλυσιδώνονται μόνα τους.
+
+**Loop guard:** ο proactive loads hook **δεν** ακούει το δικό του `loads-computed`, ούτε τα παράγωγα
+`column-footing-attached` / `structural-auto-reinforced` / `foundation-params-updated` (αλλιώς κύκλος). Ο
+command είναι ούτως ή άλλως idempotent (manual-override guard `isTakedownWritable`).
+
+**Όρια Phase 9 Slice 1 (DEFER → Slice 2/3, ξεχωριστό spec):** ο suggester οπλισμού είναι **geometry-based**
+(ρ_min·Ac, καμία αξονική) → ο οπλισμός κολόνας/δοκαριού **ΔΕΝ** αλλάζει με τα φορτία. Μόνο τα **πέδιλα** (ήδη
+load-aware: A_req=N/σ) ξανα-διαστασιολογούνται proactively. Το **load-aware strength design** (As από N/M, EC2 §6.1
+— πραγματικό «re-design ήδη-οπλισμένων») = Slice 2/3, βλ. ADR-472.
+
+**Files Phase 9 Slice 1:** NEW `hooks/structural-load-takedown-core.ts` · NEW `hooks/useProactiveStructuralLoads.ts` ·
+NEW `hooks/__tests__/structural-load-takedown-core.test.ts` (6 jest) · MOD `hooks/useStructuralLoadTakedown.ts`
+(→ core) · MOD `app/DxfViewerContent.tsx` (mount, σειρά πριν organism/foundation).
+
 ## 7. Known limitations (→ Phase 3+)
 
 - `beamUnsupportedEnd` αγνοεί στήριξη από **τοίχο** (Phase 1 = κολόνες μόνο) → πιθανό false-warn
@@ -437,6 +513,29 @@ footing (όριο οικοπέδου — δεν υπάρχουν property lines)
 
 ## 8. Changelog
 
+- **2026-06-17 (v10, Opus):** **Phase 9 Slice 1 — PROACTIVE real-time φορτία (§6l).** Ο load-path engine
+  (ADR-467) έτρεχε ΜΟΝΟ με ribbon κουμπί· τώρα τα φορτία γίνονται **proactive** σε κάθε load-topology μεταβολή
+  (mirror Φ7/Φ8) → η αλυσίδα `φορτία → sizing πεδίλων → διαγνωστικά` τρέχει αυτόματα. **SSoT extraction:** NEW
+  `hooks/structural-load-takedown-core.ts` (light, jest-clean — `settings`+`getOffset` injected) με
+  `runStructuralLoadTakedown`· ο ribbon `useStructuralLoadTakedown` τον καλεί → μηδέν διπλότυπο. **Proactive
+  trigger:** NEW `hooks/useProactiveStructuralLoads.ts` (mirror `useProactiveOrganismReinforce`) με loop-guard +
+  atomic-undo grouping. **Ντετερμινιστική σειρά:** mounted πριν organism/auto-foundation → ΕΝΑ pass (το foundation
+  microtask διαβάζει φρέσκο `appliedLoad`). 6 νέα jest. **DEFER (ADR-472):** load-aware strength suggester (As από
+  N/M — πραγματικό re-design ήδη-οπλισμένων κολόνων/δοκών).
+- **2026-06-17 (v9, Opus):** **Phase 8 — PROACTIVE αυτόματος οπλισμός οργανισμού (§6k).** Ο auto-reinforce έτρεχε
+  ΜΟΝΟ με ribbon κουμπί· τώρα γίνεται **αυτόματα** μόλις ο οργανισμός μεγαλώνει (κολόνα/δοκάρι/from-grid), όπως το
+  Φ7 auto-foundation. **SSoT extraction:** NEW `hooks/structural-auto-reinforce-core.ts` (light, jest-clean —
+  `provider` injected, καμία firebase chain) με `runOrganismAutoReinforce(levelManager, entityIds, provider, exec)`
+  + `isReinforceable`· ο ribbon `useStructuralAutoReinforce` τον καλεί (selection-scope) → **μηδέν διπλότυπο**.
+  **Proactive trigger:** NEW `hooks/useProactiveOrganismReinforce.ts` (mirror `useAutoFoundationDesign`) — geometry-
+  growth events → coalesced microtask → core με level-wide scope· `executeGrouped` (atomic undo δοκάρι+οπλισμός σε
+  ΕΝΑ Ctrl+Z) για geometry-edit triggers, `execute` standalone για from-grid· **σιωπηλός** (Revit-grade). **Loop
+  guard:** δεν ακούει `bim:structural-auto-reinforced` (κύκλος) ούτε `bim:column-footing-attached` (το έχει το
+  cross-level path Φ7 → no double trigger)· idempotent → re-run no-op. Race με Φ7: πέδιλο ήδη οπλισμένο μέσα στο
+  `ApplyFoundationLayoutCommand` → skip. Mount στο `DxfViewerContent`. 7 jest (scope/idempotency/empty-emit/no-level).
+  ΜΑΘΗΜΑ: ο οπλισμός είναι **παράγωγο τοπολογίας** → ανανεώνεται proactively, μία φορά, από ΕΝΑ SSoT, ανεξαρτήτως αν
+  πατήθηκε κουμπί. 🔴 tsc(Giorgio) + browser-verify (2 κολόνες + δοκάρι ένωσης → οπλίζεται αυτόματα· ΕΝΑ Ctrl+Z
+  αναιρεί δοκάρι+οπλισμό· πέδιλο δεν διπλο-οπλίζεται) + commit (git add ΜΟΝΟ δικά μου· ADR-459 shared tree).
 - **2026-06-17 (v8.4, Opus):** **3Δ rotate/resize κολώνας → η θεμελίωση ΔΕΝ ακολουθούσε (το 2Δ δούλευε).**
   **Root cause:** ο `useAutoFoundationDesign` ξανα-υπολογίζει σε structural events (`AUTO_DESIGN_EVENTS`).
   Το 3Δ gizmo commit (`bim3d-edit-interaction-handlers.dispatchOutcome` → `getGlobalCommandHistory().execute(cmd)`)

@@ -34,6 +34,7 @@ import {
   suggestFootingReinforcementFrom,
   suggestSlabFoundationReinforcementFrom,
 } from './suggest-reinforcement';
+import { EN1990_ULS_FACTORS } from '../loads/load-combinations';
 
 /** Μελετητική ενεργός διατομή δοκού d ≈ 0.9·h. */
 const BEAM_EFFECTIVE_DEPTH_FACTOR = 0.9;
@@ -160,9 +161,9 @@ function eurocodeSlabFoundationLimits(
   };
 }
 
-/** EN1990 Πίνακας A1.2(B) — θεμελιώδης συνδυασμός ULS: γ_G=1.35, γ_Q=1.50. */
+/** EN1990 Πίνακας A1.2(B) — θεμελιώδης συνδυασμός ULS (SSoT `EN1990_ULS_FACTORS`). */
 const EUROCODE_FOOTING_DESIGN_FACTORS: FootingDesignFactors = {
-  combination: { gammaG: 1.35, gammaQ: 1.5 },
+  combination: EN1990_ULS_FACTORS,
 };
 
 /** EC2 §8.4.4 — βασικός συντελεστής αγκύρωσης lbd ≈ 40·Ø (καλή συνάφεια, εφελκυσμός). */

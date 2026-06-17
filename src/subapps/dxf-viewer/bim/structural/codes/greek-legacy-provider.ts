@@ -35,6 +35,7 @@ import {
   suggestFootingReinforcementFrom,
   suggestSlabFoundationReinforcementFrom,
 } from './suggest-reinforcement';
+import { EN1990_ULS_FACTORS } from '../loads/load-combinations';
 
 /** Μελετητική ενεργός διατομή δοκού d ≈ 0.9·h. */
 const BEAM_EFFECTIVE_DEPTH_FACTOR = 0.9;
@@ -156,9 +157,9 @@ function greekLegacySlabFoundationLimits(
   };
 }
 
-/** ΕΑΚ 2003 §3.2.3 — θεμελιώδης συνδυασμός: γ_G=1.35, γ_Q=1.50 (ίδιοι με EN1990). */
+/** ΕΑΚ 2003 §3.2.3 — θεμελιώδης συνδυασμός (ίδιοι με EN1990 → SSoT `EN1990_ULS_FACTORS`). */
 const GREEK_LEGACY_FOOTING_DESIGN_FACTORS: FootingDesignFactors = {
-  combination: { gammaG: 1.35, gammaQ: 1.5 },
+  combination: EN1990_ULS_FACTORS,
 };
 
 /** ΕΚΩΣ 2000 §17.2.6 — αγκύρωση συντηρητικότερη από EC2 (~50·Ø). */

@@ -25,6 +25,15 @@ export interface LoadCombinationFactors {
   readonly gammaQ: number;
 }
 
+/**
+ * SSoT θεμελιώδους συνδυασμού ULS (EN1990 Πίνακας A1.2(B), εξ. 6.10): γ_G=1.35,
+ * γ_Q=1.50. ΕΝΑ μέρος για τους συντελεστές — Eurocode ΚΑΙ ΕΚΩΣ/ΕΑΚ 2003 §3.2.3
+ * χρησιμοποιούν τους ίδιους (το ΕΑΚ τους υιοθετεί ρητά). Τα `footingDesignFactors()`
+ * των providers + ο load-aware suggester (ADR-472) τον καταναλώνουν — μηδέν διπλότυπο
+ * literal 1.35/1.5 (N.0.2). Αν μελλοντικός κώδικας διαφοροποιηθεί → provider override.
+ */
+export const EN1990_ULS_FACTORS: LoadCombinationFactors = { gammaG: 1.35, gammaQ: 1.5 };
+
 /** Συνδυασμός μιας τριάδας G/Q συνιστωσών με δοθέντες συντελεστές. */
 function combine(
   deadKn: number,

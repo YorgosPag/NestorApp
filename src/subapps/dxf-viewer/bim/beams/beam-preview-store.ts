@@ -27,6 +27,13 @@ export interface BeamPreviewState {
   readonly endPoint: Point2D | null;
   readonly kind: BeamKind;
   readonly overrides: BeamParamOverrides;
+  /**
+   * ADR-458 (2026-06-17) — column footprints (2Δ) της σκηνής, ώστε το WYSIWYG
+   * preview να εφαρμόζει το ΙΔΙΟ beam-to-column cutback (frame-into) με το committed
+   * δοκάρι. Γράφεται από το `useBeamTool` (`setColumns`, on activate)· διατηρείται
+   * μέσα από τα `set()` transitions (αλλάζει σπάνια). `[]` = καμία κολόνα.
+   */
+  readonly columnFootprints: readonly (readonly Point2D[])[];
 }
 
 const EMPTY: BeamPreviewState = Object.freeze({
@@ -34,6 +41,7 @@ const EMPTY: BeamPreviewState = Object.freeze({
   endPoint: null,
   kind: 'straight' as BeamKind,
   overrides: Object.freeze({}) as BeamParamOverrides,
+  columnFootprints: Object.freeze([]) as readonly (readonly Point2D[])[],
 });
 
 type Listener = () => void;
@@ -68,8 +76,12 @@ function overridesEqual(a: BeamParamOverrides, b: BeamParamOverrides): boolean {
 }
 
 export const beamPreviewStore = {
-  /** Writer — called by `useBeamTool` on every state transition. */
-  set(next: BeamPreviewState): void {
+  /**
+   * Writer — called by `useBeamTool` on every state transition. Το
+   * `columnFootprints` ΔΕΝ περνά εδώ (αλλάζει σπάνια) — διατηρείται από το
+   * `currentState` (set via `setColumns`).
+   */
+  set(next: Omit<BeamPreviewState, 'columnFootprints'>): void {
     if (
       pointsEqual(currentState.startPoint, next.startPoint) &&
       pointsEqual(currentState.endPoint, next.endPoint) &&
@@ -83,7 +95,17 @@ export const beamPreviewStore = {
       endPoint: next.endPoint ? { x: next.endPoint.x, y: next.endPoint.y } : null,
       kind: next.kind,
       overrides: { ...next.overrides },
+      columnFootprints: currentState.columnFootprints,
     };
+    for (const l of listeners) l();
+  },
+  /**
+   * ADR-458 — set the scene column footprints για το preview cutback. Idempotent
+   * επί ίδιου reference· notify μόνο όταν αλλάζει. Called από `useBeamTool` on activate.
+   */
+  setColumns(footprints: readonly (readonly Point2D[])[]): void {
+    if (currentState.columnFootprints === footprints) return;
+    currentState = { ...currentState, columnFootprints: footprints };
     for (const l of listeners) l();
   },
   /** Reset to empty (tool deactivated / committed / idle). */

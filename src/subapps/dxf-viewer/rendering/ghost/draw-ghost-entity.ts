@@ -27,6 +27,9 @@ import { drawOpeningPlanOverlay } from '../../bim/renderers/opening-overlay-draw
 // Reuses the SAME pure 2Δ rebar SSoT as the committed cache pass (drawColumnRebar2D),
 // gated by the same visibility toggle, so the preview matches the commit 1:1.
 import { drawColumnRebar2D } from '../../bim/renderers/column-rebar-2d';
+// ADR-471 — live ghost rebar (δοκάρι) κατά το grip-drag/resize (mirror της κολώνας).
+import { drawBeamRebar2D } from '../../bim/renderers/beam-rebar-2d';
+import type { BeamEntity, BeamParams } from '../../bim/types/beam-types';
 import { isReinforcementVisible } from '../../bim/structural/reinforcement/rebar-visibility';
 import { mmToSceneUnits } from '../../utils/scene-units';
 import { CoordinateTransforms } from '../core/CoordinateTransforms';
@@ -214,11 +217,23 @@ export function drawGhostEntity(
     // ADR-363 Phase 5.5 — beam ghost: plan-view outline (closed polygon).
     case 'beam': {
       const beam = entity as unknown as {
-        geometry?: { outline?: { vertices: ReadonlyArray<{ x: number; y: number }> } };
+        geometry?: {
+          outline?: { vertices: ReadonlyArray<{ x: number; y: number }> };
+          axisPolyline?: { points: ReadonlyArray<{ x: number; y: number }> };
+        };
+        params?: BeamParams;
       };
       const verts = beam.geometry?.outline?.vertices ?? [];
       if (verts.length < 2) return;
       drawPolygon(ctx, verts, toScreen);
+      // ADR-471 (parity με κολόνα) — LIVE ghost rebar κατά το drag. Το preview entity φέρει
+      // auto-aware `params` (applyEntityPreview → applyBeamGripDrag), ώστε το `drawBeamRebar2D`
+      // να re-derive-άρει φρέσκο design από την ΤΡΑΒΗΓΜΕΝΗ γεωμετρία (auto) ή το stored (manual).
+      // Ίδιο pure SSoT + visibility gate με το committed cache pass (drawMemberReinforcement2D).
+      if (beam.params && beam.geometry?.axisPolyline && isReinforcementVisible()) {
+        const pxPerMm = mmToSceneUnits(beam.params.sceneUnits ?? 'mm') * transform.scale;
+        drawBeamRebar2D(ctx, entity as unknown as Pick<BeamEntity, 'params' | 'geometry'>, pxPerMm, toScreen);
+      }
       return;
     }
 

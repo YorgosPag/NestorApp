@@ -60,6 +60,12 @@ export interface BeamReinforcement {
   readonly stirrups: BeamStirrups;
   /** Επικάλυψη οπλισμού cnom (mm), EN 1992-1-1 §4.4.1. */
   readonly coverMm: number;
+  /**
+   * ADR-471 — auto-mode (parity με κολόνα): όταν `true`, ο **ενεργός** οπλισμός
+   * re-derived από την ΤΡΕΧΟΥΣΑ γεωμετρία (real-time σε resize, Revit «by code»)·
+   * absent/`false` = stored design ως έχει (manual lock). Βλ. `resolveActiveBeamReinforcement`.
+   */
+  readonly auto?: boolean;
 }
 
 /** Default σκέλη συνδετήρα δοκού όταν `legs` απών (δίτμητος — back-compat). */

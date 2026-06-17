@@ -405,6 +405,13 @@ export function useRibbonBeamBridge(
         if (beam) EventBus.emit('bim:auto-reinforce-requested', { entityIds: [beam.id] });
         return;
       }
+      // ADR-471 — «Λεπτομέρεια Οπλισμού»: open the beam reinforcement detail sheet.
+      if (action === BEAM_RIBBON_KEYS_ACTIONS.reinforcementDetail) {
+        const beam = resolveBeam();
+        if (!beam || !levelManager.currentLevelId) return;
+        EventBus.emit('bim:beam-detail-requested', { beamId: beam.id, levelId: levelManager.currentLevelId });
+        return;
+      }
       if (action !== BEAM_RIBBON_KEYS_ACTIONS.delete) return;
       const beam = resolveBeam();
       if (!beam) return;
