@@ -13,6 +13,10 @@ import { PhaseManager } from '../../systems/phase-manager/PhaseManager';
 // is currently snapped to (proximity), not the whole set.
 import { getActiveRotationGripSnapKey } from '../../bim/grips/rotation-snap-store';
 import { withMoveGlyphRotation } from '../../bim/grips/move-glyph-frame';
+// 🏢 ADR-397 Φ2 — per-arm MOVE-glyph hover highlight: the hovered arm SSoT + the
+// world→drawn-local-arm mapping (canvas Y-flip).
+import { MoveGlyphZoneStore } from '../../bim/grips/move-glyph-zone-store';
+import { worldZoneToLocalArm } from '../../bim/grips/move-glyph-zones';
 import type { EntityModel, RenderOptions, GripInfo } from '../types/Types';
 import type { Entity } from '../../types/entities';
 import { DEFAULT_TOLERANCE } from '../../config/tolerance-config';
@@ -128,11 +132,30 @@ export abstract class BaseEntityRenderer {
       // return; // ✅ Commented out για να δουλέψουν τα grips
     }
 
-    const grips = withMoveGlyphRotation(
+    let grips = withMoveGlyphRotation(
       this.getGrips(entity),
       entity as Entity,
       this.worldToScreen.bind(this),
     );
+    // 🏢 ADR-397 Φ2 — per-arm hover highlight: if the cursor is over ONE arm of
+    // this entity's MOVE glyph (and that grip is NOT the actively-pressed one),
+    // tag that grip with the drawn-local arm so only it lights warm. The hovered
+    // zone is tracked in WORLD space by `MoveGlyphZoneStore` and mapped to the
+    // drawn local arm here (canvas Y-flip via `worldZoneToLocalArm`).
+    const hov = this.gripInteraction.hovered;
+    const act = this.gripInteraction.active;
+    if (hov && hov.entityId === entity.id &&
+        !(act && act.entityId === entity.id && act.gripIndex === hov.gripIndex)) {
+      const worldZone = MoveGlyphZoneStore.getHoveredZone(entity.id, hov.gripIndex);
+      const localArm = worldZone ? worldZoneToLocalArm(worldZone) : null;
+      if (localArm) {
+        grips = grips.map((g) =>
+          g.shape === 'move' && (g.gripIndex ?? -1) === hov.gripIndex
+            ? { ...g, moveHoveredZone: localArm }
+            : g,
+        );
+      }
+    }
     // 🏢 ENTERPRISE: EntityModel is alias for Entity, type assertion is safe
     const phaseState = this.phaseManager.determinePhase(entity as Entity, options);
     

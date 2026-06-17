@@ -19,7 +19,17 @@
     "footingAttached": "{count, plural, =0 {No column attached} one {Attached # column to the footing} other {Attached # columns to the footing}}",
     "footingDetached": "{count, plural, =0 {No column detached} one {Detached # column from the footing} other {Detached # columns from the footing}}",
     "loadsComputed": "{count, plural, one {# member received an automatic load} other {# members received automatic loads}}",
-    "loadsComputedEmpty": "No member was loaded — make sure columns/beams/slabs exist (and are attached), the building has storeys, and area loads G/Q are set."
+    "loadsComputedEmpty": "No member was loaded — make sure columns/beams/slabs exist (and are attached), the building has storeys, and area loads G/Q are set.",
+    "proactiveCancel": "No, thanks",
+    "addFootingTitle": "Missing footing",
+    "addFootingMessage": "A column cannot stand on its own — add a footing below it on the Foundation level?",
+    "addFootingConfirm": "Add footing",
+    "extendFootingTitle": "Nearby footing",
+    "extendFootingMessage": "There is a nearby footing — extend it to also cover this column (single organism)?",
+    "extendFootingConfirm": "Extend footing",
+    "reinforceOrganismTitle": "Unified reinforcement",
+    "reinforceOrganismMessage": "The footing was connected to the column — compute the unified reinforcement (dowels/anchorages/laps)?",
+    "reinforceOrganismConfirm": "Compute reinforcement"
   },
   "structural": {
     "code": {

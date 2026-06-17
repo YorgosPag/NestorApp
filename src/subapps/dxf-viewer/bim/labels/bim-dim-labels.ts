@@ -54,6 +54,14 @@ import {
 /** Hide the centred pill when the screen footprint span is below this (px). */
 export const BIM_LABEL_MIN_FOOTPRINT_PX = 20;
 
+/**
+ * Downward screen offset (px) of the dimension pill from the entity centre, so it
+ * clears the centred 4-arrow MOVE glyph (ADR-397) and stays readable instead of
+ * sitting right on top of it (Giorgio 2026-06-17). Sized to clear the hovered
+ * (enlarged) arm + a small gap.
+ */
+export const BIM_LABEL_CENTER_OFFSET_Y_PX = 34;
+
 /** Integer mm rounding (label tokens are always integer millimetres). */
 const r = (v: number): number => Math.round(v);
 
@@ -170,5 +178,6 @@ export function drawEntityDimLabel(
   if (span < BIM_LABEL_MIN_FOOTPRINT_PX) return;
   const lines = formatBimDimLabels(entity);
   if (lines.length === 0) return;
-  drawDimPill(ctx, lines, (minS.x + maxS.x) / 2, (minS.y + maxS.y) / 2);
+  // Offset DOWN (screen +Y) so the pill clears the centred MOVE glyph (ADR-397).
+  drawDimPill(ctx, lines, (minS.x + maxS.x) / 2, (minS.y + maxS.y) / 2 + BIM_LABEL_CENTER_OFFSET_Y_PX);
 }

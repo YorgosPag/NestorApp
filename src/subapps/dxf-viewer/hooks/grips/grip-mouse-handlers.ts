@@ -10,7 +10,6 @@
  * @see useUnifiedGripInteraction.ts — owner hook + state
  * @see wall-hot-grip-fsm.ts — hot-grip decision SSoT
  */
-import type { Dispatch, MutableRefObject, SetStateAction } from 'react';
 import type { Point2D } from '../../rendering/types/Types';
 import { unlockGripSnapPosition } from '../../systems/cursor/GripSnapStore';
 import { gripStyleStore } from '../../stores/GripStyleStore';
@@ -18,13 +17,18 @@ import { findNearestGrip } from './grip-hit-testing';
 import {
   resolveHotGripMouseDown, resolveHotGripMouseUp, isWallHotGripKind,
   hotGripOpForKind, initialHotGripStep, hotGripKindOf,
-  type WallHotGripOp, type HotGripStep,
 } from './wall-hot-grip-fsm';
 import { BimRotateHotGripStore } from '../../bim/grips/bim-rotate-hotgrip-store';
-import { commitDxfGripDragModeAware, type DxfCommitDeps, type OverlayCommitDeps } from './grip-commit-adapters';
+import { commitDxfGripDragModeAware, type DxfCommitDeps } from './grip-commit-adapters';
 import { commitHotGripCopy } from './grip-parametric-commits';
 import { applyGripStepSnap } from '../../bim/grips/grip-step-quantize';
 import { applyMoveConstraints } from '../../bim/grips/grip-move-constraints';
+// ADR-397 Φ2 — directional move-by-value: classify the clicked MOVE arm, prompt for
+// a distance (the rotation-angle PromptDialog SSoT), translate along that local axis.
+import {
+  resolveMoveGlyphZoneForGrip, directionForZone, isDirectionalZone,
+} from '../../bim/grips/move-glyph-zones';
+import { getPromptDialogStore } from '../../systems/prompt-dialog';
 import { CtrlKeyTracker } from '../../keyboard/CtrlKeyTracker';
 import {
   commitOverlayVertexDrag,
@@ -45,79 +49,58 @@ import { setActiveDragGrip } from '../../systems/cursor/GripDragStore';
 import { getImmediateTransform } from '../../systems/cursor/ImmediateTransformStore';
 import type {
   UnifiedGripInfo,
-  UnifiedGripPhase,
-  UseUnifiedGripInteractionParams,
   SelectedGrip,
   DraggingVertexState,
-  DraggingEdgeMidpointState,
-  DraggingOverlayBodyState,
 } from './unified-grip-types';
 import { applyHotGripHint, advanceHotGripPick, commitRotateReference } from './grip-hotgrip-actions';
+import type { GripMouseDownCtx, GripMouseUpCtx } from './grip-mouse-handlers.types';
 
-export interface GripMouseDownCtx {
-  mouseDownInProgressRef: MutableRefObject<boolean>;
-  activeGrip: UnifiedGripInfo | null;
-  anchorRef: MutableRefObject<Point2D | null>;
-  onToolChangeRef: MutableRefObject<UseUnifiedGripInteractionParams['onToolChange']>;
-  resetToIdle: () => void;
-  isGripMode: boolean;
-  allGrips: UnifiedGripInfo[];
-  phase: UnifiedGripPhase;
-  effectiveTolerance: number;
-  hoveredGrip: UnifiedGripInfo | null;
-  selectedGrips: SelectedGrip[];
-  setSelectedGrips: Dispatch<SetStateAction<SelectedGrip[]>>;
-  setActiveGrip: Dispatch<SetStateAction<UnifiedGripInfo | null>>;
-  setPhase: Dispatch<SetStateAction<UnifiedGripPhase>>;
-  setCurrentWorldPos: Dispatch<SetStateAction<Point2D | null>>;
-  hotGripOpRef: MutableRefObject<WallHotGripOp | null>;
-  hotGripStepRef: MutableRefObject<HotGripStep>;
-  hotGripAwaitingFirstReleaseRef: MutableRefObject<boolean>;
-  hotGripMovedRef: MutableRefObject<boolean>;
-  hotGripBaseRef: MutableRefObject<Point2D | null>;
-  // ADR-363 Phase 1G.3 — rotate-reference (6-click) line points.
-  hotGripRefStartRef: MutableRefObject<Point2D | null>;
-  hotGripRefEndRef: MutableRefObject<Point2D | null>;
-  hotGripAlignStartRef: MutableRefObject<Point2D | null>;
-  warmTimerRef: MutableRefObject<ReturnType<typeof setTimeout> | null>;
-  universalSelection: UseUnifiedGripInteractionParams['universalSelection'];
-  setDraggingVertices: Dispatch<SetStateAction<DraggingVertexState[] | null>>;
-  setDragPreviewPosition: Dispatch<SetStateAction<Point2D | null>>;
-  overlayStoreRef: UseUnifiedGripInteractionParams['overlayStoreRef'];
-  currentOverlays: UseUnifiedGripInteractionParams['currentOverlays'];
-  setDraggingEdgeMidpoint: Dispatch<SetStateAction<DraggingEdgeMidpointState | null>>;
-}
+// Ctx types live in `grip-mouse-handlers.types.ts` (file-size split). Re-export
+// for callers (useUnifiedGripInteraction).
+export type { GripMouseDownCtx, GripMouseUpCtx } from './grip-mouse-handlers.types';
 
-export interface GripMouseUpCtx {
-  mouseUpInProgressRef: MutableRefObject<boolean>;
-  phase: UnifiedGripPhase;
-  hotGripAwaitingFirstReleaseRef: MutableRefObject<boolean>;
-  hotGripStepRef: MutableRefObject<HotGripStep>;
-  hotGripMovedRef: MutableRefObject<boolean>;
-  hotGripBaseRef: MutableRefObject<Point2D | null>;
-  hotGripOpRef: MutableRefObject<WallHotGripOp | null>;
-  // ADR-363 Phase 1G.3 — rotate-reference (6-click) line points.
-  hotGripRefStartRef: MutableRefObject<Point2D | null>;
-  hotGripRefEndRef: MutableRefObject<Point2D | null>;
-  hotGripAlignStartRef: MutableRefObject<Point2D | null>;
-  activeGrip: UnifiedGripInfo | null;
-  anchorRef: MutableRefObject<Point2D | null>;
-  dxfCommitDeps: DxfCommitDeps;
-  overlayCommitDeps: OverlayCommitDeps;
-  resetToIdle: () => void;
-  setCurrentWorldPos: Dispatch<SetStateAction<Point2D | null>>;
-  markDragFinished: () => void;
-  draggingVertices: DraggingVertexState[] | null;
-  setDraggingVertices: Dispatch<SetStateAction<DraggingVertexState[] | null>>;
-  draggingEdgeMidpoint: DraggingEdgeMidpointState | null;
-  setDraggingEdgeMidpoint: Dispatch<SetStateAction<DraggingEdgeMidpointState | null>>;
-  draggingOverlayBody: DraggingOverlayBodyState | null;
-  setDraggingOverlayBody: Dispatch<SetStateAction<DraggingOverlayBodyState | null>>;
-  setSelectedGrips: Dispatch<SetStateAction<SelectedGrip[]>>;
-  setDragPreviewPosition: Dispatch<SetStateAction<Point2D | null>>;
-  // ADR-397 — rotating entity's grip world-points provider, consumed by
-  // advanceHotGripPick to arm the rotation snap targets at centre-pick.
-  rotatingEntityGripsWorld?: () => ReadonlyArray<{ entityId: string; gripIndex: number; point: Point2D }>;
+// ============================================================================
+// ADR-397 Φ2 — DIRECTIONAL MOVE-BY-VALUE
+// ============================================================================
+/**
+ * Open the distance prompt (the shared rotation-angle `PromptDialog` SSoT) and, on
+ * confirm, translate the entity by `distance × the clicked arm's world axis`. The
+ * typed value is millimetres → canvas units via the grip's `moveGlyphMmScale`. The
+ * move is committed through the SAME `commitDxfGripDragModeAware` the drag flow uses
+ * — no new command. Cancel (`null`) / non-positive input → no-op.
+ */
+async function runDirectionalMove(
+  grip: UnifiedGripInfo,
+  zone: 'x+' | 'x-' | 'y+' | 'y-',
+  deps: DxfCommitDeps,
+): Promise<void> {
+  const frame = grip.moveGlyphFrame;
+  if (!frame) return;
+  const dir = directionForZone(zone, frame);
+  if (!dir) return;
+  const raw = await getPromptDialogStore().prompt({
+    title: i18next.t('dxf-viewer-wizard:promptDialog.moveDistance'),
+    label: i18next.t('dxf-viewer-wizard:promptDialog.moveDistanceLabel'),
+    placeholder: i18next.t('dxf-viewer-wizard:promptDialog.distancePlaceholder'),
+    inputType: 'number',
+    unit: 'mm',
+    validate: (v) => {
+      const n = parseFloat(v);
+      // Negatives allowed (AutoCAD direct-distance parity): the clicked arm is the
+      // positive direction, a negative value moves the opposite way. Reject only
+      // non-numeric / zero (no-op).
+      return !Number.isFinite(n) || n === 0
+        ? i18next.t('dxf-viewer-wizard:promptDialog.invalidNumber')
+        : null;
+    },
+  });
+  if (raw === null) return;
+  const mm = parseFloat(raw);
+  if (!Number.isFinite(mm) || mm === 0) return;
+  // Signed: positive → along the clicked arm; negative → opposite direction.
+  const canvas = mm * (grip.moveGlyphMmScale ?? 1);
+  const delta: Point2D = { x: dir.x * canvas, y: dir.y * canvas };
+  commitDxfGripDragModeAware(grip, delta, deps, GripModeStore.getSnapshot());
 }
 
 // ============================================================================
@@ -132,6 +115,7 @@ export function runGripMouseDown(worldPos: Point2D, isShift: boolean, ctx: GripM
     hotGripRefStartRef, hotGripRefEndRef, hotGripAlignStartRef,
     warmTimerRef, universalSelection, setDraggingVertices, setDragPreviewPosition,
     overlayStoreRef, currentOverlays, setDraggingEdgeMidpoint,
+    dxfCommitDeps, gripSizePx, markDragFinished,
   } = ctx;
   if (mouseDownInProgressRef.current) return false;
   // ADR-357 Phase 12 — pick-mode interception: BasePoint and Reference picks
@@ -218,6 +202,25 @@ export function runGripMouseDown(worldPos: Point2D, isShift: boolean, ctx: GripM
     // the corner becomes a base-point move handle.
     if (!altMove && resolveHotGripMouseDown(phase, hotGripKindOf(nearGrip)) === 'enter') {
       const op = hotGripOpForKind(hotGripKindOf(nearGrip))!; // non-null: 'enter' ⇒ hot kind
+      // ADR-397 Φ2 — MOVE glyph: a click on a directional ARM (not the centre disc)
+      // opens a distance prompt and translates the entity along that local axis. A
+      // click on the CENTRE falls through to the existing 3-click await-base flow.
+      if (op === 'move' && nearGrip.moveGlyphFrame) {
+        const zone = resolveMoveGlyphZoneForGrip({
+          cursorWorld: worldPos,
+          centerWorld: nearGrip.position,
+          frame: nearGrip.moveGlyphFrame,
+          gripSizePx,
+          scale: getImmediateTransform().scale,
+        });
+        if (isDirectionalZone(zone)) {
+          // Fire-and-forget: the prompt is async; the entity stays selected
+          // (markDragFinished suppresses the trailing click) while the user types.
+          void runDirectionalMove(nearGrip, zone, dxfCommitDeps);
+          markDragFinished();
+          return true;
+        }
+      }
       setActiveGrip(nearGrip);
       setPhase('hotGrip');
       unlockGripSnapPosition();

@@ -9,6 +9,7 @@
 
 import type { Point2D } from '../types/Types';
 import type { GripShape } from './types';
+import type { MoveGlyphZone } from '../../bim/grips/move-glyph-zones';
 import { renderSquareGrip } from '../entities/shared/geometry-rendering-utils';
 // 🏢 ADR-058/064: Centralized Canvas Primitives
 import { addCirclePath, addDiamondPath } from '../primitives/canvasPaths';
@@ -85,7 +86,9 @@ export class GripShapeRenderer {
     fillColor: string,
     outlineColor: string,
     outlineWidth: number,
-    glyphRotationRad?: number
+    glyphRotationRad?: number,
+    hoveredZone?: MoveGlyphZone,
+    highlightColor?: string
   ): void {
     switch (shape) {
       case 'square':
@@ -103,7 +106,7 @@ export class GripShapeRenderer {
 
       // ADR-393 v2 — BIM parametric handle icon glyphs.
       case 'move':
-        this.renderMoveGlyph(ctx, position, size, fillColor, glyphRotationRad);
+        this.renderMoveGlyph(ctx, position, size, fillColor, glyphRotationRad, hoveredZone, highlightColor);
         break;
 
       case 'rotation':
@@ -250,6 +253,11 @@ export class GripShapeRenderer {
    * ADR-397 (Giorgio 2026-06-17) — `glyphRotationRad` (screen-space) rotates the
    * cross so it follows the entity's orientation. Drawn around the grip origin via
    * `translate + rotate`; omitted/0 keeps the legacy axis-aligned cross.
+   *
+   * ADR-397 Φ2 — per-arm hover highlight: when `hoveredZone` is one of the four
+   * arms, the cross is drawn in `color` (cold) and ONLY that arm is re-drawn in
+   * `highlightColor` (warm); `'center'` highlights the central disc (free move).
+   * Without `hoveredZone` the whole cross renders in `color` exactly as before.
    */
   private renderMoveGlyph(
     ctx: CanvasRenderingContext2D,
@@ -257,26 +265,48 @@ export class GripShapeRenderer {
     size: number,
     color: string,
     glyphRotationRad?: number,
+    hoveredZone?: MoveGlyphZone,
+    highlightColor?: string,
   ): void {
     const arm = Math.max(5, size);
     const head = Math.max(2.5, size * 0.5);
+    // The four arms in the glyph's LOCAL frame (matches resolveMoveGlyphZone).
+    const ARMS: ReadonlyArray<{ zone: MoveGlyphZone; ux: number; uy: number }> = [
+      { zone: 'x+', ux: 1, uy: 0 },
+      { zone: 'x-', ux: -1, uy: 0 },
+      { zone: 'y+', ux: 0, uy: 1 },
+      { zone: 'y-', ux: 0, uy: -1 },
+    ];
     ctx.save();
     ctx.translate(position.x, position.y);
     if (glyphRotationRad) ctx.rotate(glyphRotationRad);
-    ctx.strokeStyle = color;
-    ctx.fillStyle = color;
-    ctx.lineWidth = RENDER_LINE_WIDTHS.NORMAL;
     ctx.lineCap = 'round';
-    ctx.beginPath();
-    ctx.moveTo(-arm, 0);
-    ctx.lineTo(arm, 0);
-    ctx.moveTo(0, -arm);
-    ctx.lineTo(0, arm);
-    ctx.stroke();
-    this.fillArrowHead(ctx, arm, 0, 1, 0, head);
-    this.fillArrowHead(ctx, -arm, 0, -1, 0, head);
-    this.fillArrowHead(ctx, 0, -arm, 0, -1, head);
-    this.fillArrowHead(ctx, 0, arm, 0, 1, head);
+    const hot = highlightColor ?? color;
+    // ADR-397 Φ2 — the hovered arm grows (longer shaft + larger head + thicker line)
+    // so it reads as the active pick target (Revit-style affordance), Giorgio request.
+    const HOVER_ARM_SCALE = 1.6;
+    const HOVER_HEAD_SCALE = 1.6;
+    for (const a of ARMS) {
+      const lit = hoveredZone === a.zone;
+      const len = lit ? arm * HOVER_ARM_SCALE : arm;
+      const h = lit ? head * HOVER_HEAD_SCALE : head;
+      const c = lit ? hot : color;
+      ctx.strokeStyle = c;
+      ctx.fillStyle = c;
+      ctx.lineWidth = lit ? RENDER_LINE_WIDTHS.NORMAL * 1.6 : RENDER_LINE_WIDTHS.NORMAL;
+      ctx.beginPath();
+      ctx.moveTo(0, 0);
+      ctx.lineTo(len * a.ux, len * a.uy);
+      ctx.stroke();
+      this.fillArrowHead(ctx, len * a.ux, len * a.uy, a.ux, a.uy, h);
+    }
+    // Central free-move disc highlight (only when the centre zone is hovered).
+    if (hoveredZone === 'center') {
+      ctx.fillStyle = hot;
+      ctx.beginPath();
+      addCirclePath(ctx, { x: 0, y: 0 }, Math.max(2, size * 0.35));
+      ctx.fill();
+    }
     ctx.restore();
   }
 

@@ -97,6 +97,13 @@ export interface GripRenderConfig {
    */
   glyphRotationRad?: number;
 
+  /**
+   * ADR-397 Φ2 — the MOVE-glyph arm under the cursor, in the DRAWN local frame.
+   * When set, `renderMoveGlyph` draws the cross cold and lights ONLY this arm
+   * (per-arm hover highlight). Undefined → no per-arm highlight.
+   */
+  hoveredZone?: import('../../bim/grips/move-glyph-zones').MoveGlyphZone;
+
   /** Size multiplier override (default: 1.0) */
   sizeMultiplier?: number;
 

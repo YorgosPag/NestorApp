@@ -348,6 +348,8 @@
     "rotationAngle": "Γωνία Περιστροφής",
     "enterAngle": "Εισαγάγετε γωνία σε μοίρες",
     "anglePlaceholder": "π.χ. 45",
+    "moveDistance": "Κατευθυντική Μετακίνηση",
+    "moveDistanceLabel": "Απόσταση",
     "editLabel": "Επεξεργασία Ετικέτας Οδηγού",
     "enterLabel": "Ετικέτα για αυτόν τον οδηγό",
     "arcSegmentCount": "Τμήματα Τόξου",

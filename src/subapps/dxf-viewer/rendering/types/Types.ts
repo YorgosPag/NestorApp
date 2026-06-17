@@ -128,6 +128,13 @@ export interface GripInfo {
   // `BaseEntityRenderer.renderGrips` (from `resolveMoveGlyphFrame` via worldToScreen).
   // Undefined → axis-aligned glyph (default). Ignored by non-glyph shapes.
   glyphRotationRad?: number;
+
+  // ADR-397 Φ2 (Giorgio 2026-06-17) — the MOVE-glyph arm under the cursor, in the
+  // glyph's DRAWN local frame (already mapped from the world hover zone via
+  // `worldZoneToLocalArm`). Set in `BaseEntityRenderer.renderGrips` from
+  // `MoveGlyphZoneStore`; the renderer lights ONLY that arm (warm) over a cold
+  // cross. Undefined → whole cross drawn in its temperature colour (default).
+  moveHoveredZone?: import('../../bim/grips/move-glyph-zones').MoveGlyphZone;
 }
 
 export interface GripSettings {

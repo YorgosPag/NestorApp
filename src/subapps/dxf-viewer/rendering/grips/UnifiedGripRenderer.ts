@@ -146,6 +146,10 @@ export class UnifiedGripRenderer {
 
     // Step 4: Render shape
     const shape = config.shape || 'square';
+    // ADR-397 Φ2 — warm colour for the hovered MOVE arm (cold cross underneath).
+    const highlightColor = config.hoveredZone
+      ? this.colorManager.getColor('warm', config.type, undefined, settings)
+      : undefined;
     this.shapeRenderer.renderShape(
       this.ctx,
       screenPos,
@@ -154,7 +158,9 @@ export class UnifiedGripRenderer {
       fillColor,
       outlineColor,
       1,
-      config.glyphRotationRad
+      config.glyphRotationRad,
+      config.hoveredZone,
+      highlightColor
     );
 
     // Step 5: Overlay rings (polygon-specific indicators)
@@ -246,7 +252,10 @@ export class UnifiedGripRenderer {
       // ADR-397 — the move-glyph rotation is per-entity, so it MUST be part of the
       // group key: otherwise two selected entities at different angles would batch
       // into one group and render both 4-arrow handles at the first one's angle.
-      const key = `${temperature}\0${shape}\0${grip.customColor ?? ''}\0${grip.glyphRotationRad ?? ''}`;
+      // ADR-397 Φ2 — the per-arm hover zone is likewise per-grip; without it in the
+      // key the hovered move handle would share a group with same-angle handles and
+      // light the wrong (or every) arm.
+      const key = `${temperature}\0${shape}\0${grip.customColor ?? ''}\0${grip.glyphRotationRad ?? ''}\0${grip.hoveredZone ?? ''}`;
       let g = groups.get(key);
       if (!g) {
         g = { positions: [], config: grip };
@@ -265,8 +274,15 @@ export class UnifiedGripRenderer {
       if (shape === 'square') {
         this.shapeRenderer.renderSquareGripsBatch(this.ctx, positions, size, fillColor, outlineColor);
       } else {
+        // ADR-397 Φ2 — warm colour for the hovered MOVE arm (cold cross underneath).
+        const highlightColor = config.hoveredZone
+          ? this.colorManager.getColor('warm', config.type, undefined, settings)
+          : undefined;
         for (const pos of positions) {
-          this.shapeRenderer.renderShape(this.ctx, pos, size, shape, fillColor, outlineColor, 1, config.glyphRotationRad);
+          this.shapeRenderer.renderShape(
+            this.ctx, pos, size, shape, fillColor, outlineColor, 1,
+            config.glyphRotationRad, config.hoveredZone, highlightColor,
+          );
         }
       }
     }

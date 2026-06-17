@@ -18,6 +18,13 @@ import { computeDxfEntityGrips } from '../grip-computation';
 import { calculateMidpoint } from '../../rendering/entities/shared/geometry-utils';
 import type { UnifiedGripInfo } from './unified-grip-types';
 import { useGripStyle } from '../../stores/GripStyleStore';
+// ADR-397 Φ2 — directional move: attach the entity's local frame + mm scale to its
+// MOVE grip so the click handler can move along a typed distance without the scene.
+import { resolveMoveGlyphFrame } from '../../bim/grips/move-glyph-frame';
+import { hotGripKindOf, hotGripOpForKind } from './wall-hot-grip-fsm';
+import { mmScaleFor } from '../../utils/scene-units';
+import type { Entity } from '../../types/entities';
+import type { SceneUnits } from '../../utils/scene-units';
 
 // ============================================================================
 // PURE: Wrap DXF GripInfo → UnifiedGripInfo
@@ -170,13 +177,22 @@ export function useGripRegistry({
         const entity = entityMap.get(entityId);
         if (entity) {
           const dxfGrips = computeDxfEntityGrips(entity);
+          // ADR-397 Φ2 — resolve the entity's local frame + mm scale ONCE; attach to
+          // its MOVE grip so the directional click can translate by a typed distance.
+          const moveFrame = resolveMoveGlyphFrame(entity as unknown as Entity);
+          const mmScale = moveFrame
+            ? mmScaleFor(((entity as { params?: { sceneUnits?: SceneUnits | null } }).params) ?? {})
+            : 1;
           let count = 0;
           for (const grip of dxfGrips) {
             if (count >= maxGripsPerEntity) break;
             const wrapped = wrapDxfGrip(grip);
             if (!showMidpoints && wrapped.type === 'edge') continue;
             if (!showCenters && wrapped.type === 'center') continue;
-            result.push(wrapped);
+            const withFrame = moveFrame && hotGripOpForKind(hotGripKindOf(wrapped)) === 'move'
+              ? { ...wrapped, moveGlyphFrame: moveFrame, moveGlyphMmScale: mmScale }
+              : wrapped;
+            result.push(withFrame);
             count++;
           }
         }

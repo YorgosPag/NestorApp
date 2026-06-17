@@ -173,16 +173,26 @@ export class GripPhaseRenderer {
       gripSize: style.gripSize,
       dpiScale: 1.0,
     };
-    const gripConfigs: GripRenderConfig[] = grips.map((grip, i) => ({
-      position: grip.position,
-      type: ((grip.type ?? 'vertex') as GripRenderConfig['type']),
-      temperature: this.getGripTemperature(entity.id, grip.gripIndex ?? i, state),
-      // ADR-393 v2 — honour a per-grip shape hint (BIM move/rotation icon
-      // glyphs); default to the AutoCAD square otherwise.
-      shape: grip.shape ?? 'square',
-      // ADR-397 — screen-space rotation for the MOVE 4-arrow glyph (entity-aligned).
-      ...(grip.glyphRotationRad !== undefined ? { glyphRotationRad: grip.glyphRotationRad } : {}),
-    }));
+    const gripConfigs: GripRenderConfig[] = grips.map((grip, i) => {
+      // ADR-397 Φ2 — when ONE arm of a MOVE glyph is hovered, draw the cross COLD
+      // and let `renderMoveGlyph` light only that arm (warm). Forcing cold here is
+      // what makes the rest of the cross stay cold instead of the whole grip warming.
+      const moveHoveredZone = grip.moveHoveredZone;
+      return {
+        position: grip.position,
+        type: ((grip.type ?? 'vertex') as GripRenderConfig['type']),
+        temperature: moveHoveredZone
+          ? ('cold' as const)
+          : this.getGripTemperature(entity.id, grip.gripIndex ?? i, state),
+        // ADR-393 v2 — honour a per-grip shape hint (BIM move/rotation icon
+        // glyphs); default to the AutoCAD square otherwise.
+        shape: grip.shape ?? 'square',
+        // ADR-397 — screen-space rotation for the MOVE 4-arrow glyph (entity-aligned).
+        ...(grip.glyphRotationRad !== undefined ? { glyphRotationRad: grip.glyphRotationRad } : {}),
+        // ADR-397 Φ2 — per-arm hover highlight zone (drawn local frame).
+        ...(moveHoveredZone ? { hoveredZone: moveHoveredZone } : {}),
+      };
+    });
     this.gripRenderer.renderGripSetBatched(gripConfigs, settings);
   }
 

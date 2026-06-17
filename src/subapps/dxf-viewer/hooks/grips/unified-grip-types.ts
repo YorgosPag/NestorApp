@@ -293,6 +293,21 @@ export interface UnifiedGripInfo {
    * direct scene patch (translate basePoint or rotate direction).
    */
   readonly rayGripKind?: RayGripKind;
+  /**
+   * ADR-397 Φ2 (Giorgio 2026-06-17) — the owning entity's local frame (world unit
+   * axes) for MOVE-glyph grips, from `resolveMoveGlyphFrame`. Attached in
+   * `useGripRegistry` (which has the entity). Lets the directional move-by-value
+   * click classify the cursor (`resolveMoveGlyphZoneForGrip`) and translate along
+   * `axisX`/`axisY` without re-resolving the entity. Absent for non-move grips and
+   * entities with no planar orientation (the glyph stays free-move only).
+   */
+  readonly moveGlyphFrame?: import('../../bim/grips/move-glyph-frame').MoveGlyphFrame;
+  /**
+   * ADR-397 Φ2 — mm→canvas scale for the owning entity (`mmScaleFor(params)`), so
+   * a typed distance in millimetres becomes a canvas-unit delta. Paired with
+   * `moveGlyphFrame`.
+   */
+  readonly moveGlyphMmScale?: number;
 }
 
 /**

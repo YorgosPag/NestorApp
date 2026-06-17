@@ -26,8 +26,10 @@ import {
 import { runReinforcementChecks } from '../bim/structural/organism/reinforcement-checks';
 import { runFootingDesignChecks } from '../bim/structural/footing-design/footing-design-checks';
 import { StructuralDiagnosticsStore } from '../bim/structural/organism/structural-diagnostics-store';
+import { buildOrganismScene } from '../bim/structural/organism/cross-level-organism-scene';
 import { resolveStructuralCode } from '../bim/structural/codes';
 import { useStructuralSettingsStore } from '../state/structural-settings-store';
+import { useFoundationLevelStore } from '../state/foundation-level-store';
 import type { Entity } from '../types/entities';
 import type { SceneModel } from '../types/scene';
 
@@ -76,8 +78,24 @@ export function useStructuralOrganism(props: { levelManager: LevelManagerLike })
         StructuralDiagnosticsStore.set([]);
         return;
       }
-      const entities = scene.entities as unknown as readonly Entity[];
-      const graph = buildStructuralGraph(entities);
+      const activeEntities = scene.entities as unknown as readonly Entity[];
+      // ADR-459 Phase 0 — cross-level: merge τα πέδιλα του ορόφου Θεμελίωσης
+      // (foundation-level-store) σε απόλυτα Z ώστε η footing-bearing ακμή
+      // (πέδιλο Θεμελίωσης ↔ κολόνα ισογείου) να προκύπτει σωστά. Single-level
+      // (κενός store target) → active-only + empty offset map → byte-for-byte η παλιά συμπεριφορά.
+      const fl = useFoundationLevelStore.getState();
+      const merged = fl.target
+        ? buildOrganismScene({
+            activeEntities,
+            activeFloorElevationMm: fl.activeFloorElevationMm,
+            foundationEntities: fl.entities,
+            foundationFloorElevationMm: fl.target.floorElevationMm,
+          })
+        : { entities: activeEntities, floorElevationByEntityId: undefined };
+      const entities = merged.entities;
+      const graph = buildStructuralGraph(entities, {
+        floorElevationByEntityId: merged.floorElevationByEntityId,
+      });
       // ADR-459 Φ4d — geometry connectivity (graph-only) + reinforcement διαγνωστικά
       // (entities + active code provider) σε ΕΝΑ low-freq store write (ADR-040 safe).
       const settings = useStructuralSettingsStore.getState();
@@ -109,10 +127,14 @@ export function useStructuralOrganism(props: { levelManager: LevelManagerLike })
     // Αλλαγή building-level κανονισμού (Ευρωκώδικες↔ΕΚΩΣ) μεταβάλλει τα ρ-όρια →
     // re-derive τα reinforcement warnings (low-freq → ADR-040 safe).
     const unsubSettings = useStructuralSettingsStore.subscribe(schedule);
+    // ADR-459 Phase 0 — αλλαγή του foundation-level snapshot (φόρτωση/μεταβολή
+    // πεδίλων Θεμελίωσης) → re-derive ο cross-level οργανισμός (low-freq, ADR-040 safe).
+    const unsubFoundation = useFoundationLevelStore.subscribe(schedule);
     schedule(); // initial pass
     return () => {
       unsubs.forEach((u) => u());
       unsubSettings();
+      unsubFoundation();
     };
   }, [levelManager]);
 }

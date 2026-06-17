@@ -348,6 +348,8 @@
     "rotationAngle": "Rotation Angle",
     "enterAngle": "Enter angle in degrees",
     "anglePlaceholder": "e.g. 45",
+    "moveDistance": "Directional Move",
+    "moveDistanceLabel": "Distance",
     "editLabel": "Edit Guide Label",
     "enterLabel": "Label for this guide",
     "arcSegmentCount": "Arc Segment Count",

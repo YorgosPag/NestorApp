@@ -65,6 +65,11 @@ import { clearActiveDragGrip } from '../../systems/cursor/GripDragStore';
 import { setGripStepAnchor, clearGripStepAnchor } from '../../systems/cursor/GripStepAnchorStore';
 // ADR-040 Phase XXII.A — transform reads from SSoT (orchestrator-decoupling).
 import { getImmediateTransform } from '../../systems/cursor/ImmediateTransformStore';
+// ADR-397 Φ2 — per-arm MOVE-glyph hover highlight (Giorgio 2026-06-17): classify the
+// cursor into a move arm (world frame) and publish it so the renderer lights only it.
+import { MoveGlyphZoneStore } from '../../bim/grips/move-glyph-zone-store';
+import { resolveMoveGlyphZoneForGrip } from '../../bim/grips/move-glyph-zones';
+import { markSystemsDirty } from '../../rendering/core/UnifiedFrameScheduler';
 // Re-export types for consumers
 export type { UseUnifiedGripInteractionParams, UseUnifiedGripInteractionReturn, DxfProjection };
 export type { OverlayProjection } from './unified-grip-types';
@@ -237,6 +242,30 @@ export function useUnifiedGripInteraction(
     toolHintOverrideStore.setOverride(null);
     clearActiveDragGrip();
   }, []);
+  // ADR-397 Φ2 — classify the cursor into a MOVE-glyph arm (entity WORLD frame) and
+  // publish it to `MoveGlyphZoneStore`; repaint the DXF canvas only on change so the
+  // per-arm highlight tracks the cursor. Clears (and repaints) for non-move grips.
+  const updateMoveGlyphHoverZone = useCallback(
+    (grip: UnifiedGripInfo, worldPos: Point2D) => {
+      const frame = grip.moveGlyphFrame;
+      if (!frame || !grip.entityId) {
+        if (MoveGlyphZoneStore.clear()) markSystemsDirty(['dxf-canvas']);
+        return;
+      }
+      const zone = resolveMoveGlyphZoneForGrip({
+        cursorWorld: worldPos,
+        centerWorld: grip.position,
+        frame,
+        gripSizePx: (gripSettings.gripSize ?? 5) * (gripSettings.dpiScale ?? 1),
+        scale: getImmediateTransform().scale,
+      });
+      const changed = zone
+        ? MoveGlyphZoneStore.set(grip.entityId, grip.gripIndex, zone)
+        : MoveGlyphZoneStore.clear();
+      if (changed) markSystemsDirty(['dxf-canvas']);
+    },
+    [gripSettings.gripSize, gripSettings.dpiScale],
+  );
   // ── MOUSE MOVE ──
   const handleMouseMove = useCallback(
     (worldPos: Point2D, _screenPos: Point2D) => {
@@ -287,15 +316,22 @@ export function useUnifiedGripInteraction(
           if (warmTimerRef.current) clearTimeout(warmTimerRef.current);
           warmTimerRef.current = setTimeout(() => { setPhase('warm'); warmTimerRef.current = null; }, WARM_DELAY_MS);
         }
+        // ADR-397 Φ2 — per-arm hover highlight. Runs even when the grip id is
+        // unchanged (cursor moving BETWEEN arms of the same MOVE handle), so the lit
+        // arm tracks the cursor. Only MOVE grips carry a frame; classify in the
+        // entity's WORLD frame and publish + repaint on change (the grip id alone
+        // would not re-trigger React, and a plain cursor move marks no canvas dirty).
+        updateMoveGlyphHoverZone(nearGrip, worldPos);
       } else if (hoveredGrip && phase !== 'dragging') {
         setHoveredGrip(null);
         unlockGripSnapPosition();
         setPhase('idle');
         if (warmTimerRef.current) { clearTimeout(warmTimerRef.current); warmTimerRef.current = null; }
+        if (MoveGlyphZoneStore.clear()) markSystemsDirty(['dxf-canvas']);
       }
     },
     // ADR-040 XXII.A: scale removed from deps — SSoT read at event time.
-    [isGripMode, allGrips, phase, activeGrip, hoveredGrip, effectiveTolerance],
+    [isGripMode, allGrips, phase, activeGrip, hoveredGrip, effectiveTolerance, updateMoveGlyphHoverZone],
   );
   // ── MOUSE DOWN ──
   const handleMouseDown = useCallback(
@@ -308,9 +344,12 @@ export function useUnifiedGripInteraction(
         hotGripRefStartRef, hotGripRefEndRef, hotGripAlignStartRef,
         warmTimerRef, universalSelection, setDraggingVertices, setDragPreviewPosition,
         overlayStoreRef, currentOverlays, setDraggingEdgeMidpoint,
+        // ADR-397 Φ2 — directional move-by-value: deps for the click→prompt→commit path.
+        dxfCommitDeps, gripSizePx: (gripSettings.gripSize ?? 5) * (gripSettings.dpiScale ?? 1),
+        markDragFinished,
       }),
     // ADR-040 XXII.A: scale removed from deps — SSoT read at event time.
-    [isGripMode, allGrips, phase, activeGrip, hoveredGrip, effectiveTolerance, selectedGrips, universalSelection, overlayStoreRef, currentOverlays, resetToIdle],
+    [isGripMode, allGrips, phase, activeGrip, hoveredGrip, effectiveTolerance, selectedGrips, universalSelection, overlayStoreRef, currentOverlays, resetToIdle, dxfCommitDeps, gripSettings.gripSize, gripSettings.dpiScale, markDragFinished],
   );
   // ── MOUSE UP ──
   const handleMouseUp = useCallback(

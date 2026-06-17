@@ -43,8 +43,24 @@ function toPlan(vertices: readonly { x: number; y: number }[]): OrganismPoint[] 
 
 // ─── Node builders ───────────────────────────────────────────────────────────
 
+/**
+ * ADR-459 Phase 0 (cross-level) — options για τον graph builder. Όταν δίνεται
+ * `floorElevationByEntityId`, το Z κάθε μέλους μετατοπίζεται στο **απόλυτο**
+ * datum-relative frame (FFL του ορόφου του) ώστε μέλη από διαφορετικές σκηνές
+ * (κολόνα ισογείου ↔ πέδιλο Θεμελίωσης) να συγκρίνονται σωστά. Παράλειψη / κενός
+ * χάρτης → 0 (single-level, byte-for-byte η προηγούμενη συμπεριφορά).
+ */
+export interface BuildGraphOptions {
+  readonly floorElevationByEntityId?: ReadonlyMap<string, number>;
+}
+
+/** Απόλυτο FFL (mm) ενός entity μέσω του χάρτη· 0 fallback (single-level). */
+function elevationFor(options: BuildGraphOptions | undefined, id: string): number {
+  return options?.floorElevationByEntityId?.get(id) ?? 0;
+}
+
 /** Footing node (πέδιλο/πεδιλοδοκός/συνδετήρια ή εδαφόπλακα) μέσω SSoT summary. */
-function footingNode(e: Entity): StructuralNode | null {
+function footingNode(e: Entity, floorElevationMm: number): StructuralNode | null {
   const s = resolveFootingSummary(e);
   if (!s) return null;
   return {
@@ -52,15 +68,15 @@ function footingNode(e: Entity): StructuralNode | null {
     memberKind: 'footing',
     entityType: s.entityType,
     footprint: s.footprint,
-    baseZmm: s.baseZmm,
-    topZmm: s.topZmm,
+    baseZmm: s.baseZmm + floorElevationMm,
+    topZmm: s.topZmm + floorElevationMm,
   };
 }
 
-function columnNode(c: ColumnEntity): StructuralNode | null {
+function columnNode(c: ColumnEntity, floorElevationMm: number): StructuralNode | null {
   const verts = c.geometry?.footprint?.vertices;
   if (!verts || verts.length < 3) return null;
-  const baseZmm = resolveColumnBaseZmm(c.params, { floorElevationMm: 0 });
+  const baseZmm = resolveColumnBaseZmm(c.params, { floorElevationMm });
   return {
     id: c.id,
     memberKind: 'column',
@@ -72,7 +88,7 @@ function columnNode(c: ColumnEntity): StructuralNode | null {
   };
 }
 
-function beamNode(b: BeamEntity): StructuralNode {
+function beamNode(b: BeamEntity, floorElevationMm: number): StructuralNode {
   const input = beamHostInput(b);
   const perScene = mmToSceneUnits(b.params.sceneUnits ?? 'mm');
   return {
@@ -85,18 +101,19 @@ function beamNode(b: BeamEntity): StructuralNode {
       halfWidth: (b.params.width / 2) * perScene,
     },
     supportType: b.params.supportType ?? 'simple',
-    baseZmm: input.undersideZmm,
-    topZmm: input.topsideZmm ?? input.undersideZmm,
+    baseZmm: input.undersideZmm + floorElevationMm,
+    topZmm: (input.topsideZmm ?? input.undersideZmm) + floorElevationMm,
   };
 }
 
-function buildNodes(entities: readonly Entity[]): StructuralNode[] {
+function buildNodes(entities: readonly Entity[], options?: BuildGraphOptions): StructuralNode[] {
   const nodes: StructuralNode[] = [];
   for (const e of entities) {
+    const elev = elevationFor(options, e.id);
     let node: StructuralNode | null = null;
-    if (isFootingElement(e)) node = footingNode(e);
-    else if (isColumnEntity(e)) node = columnNode(e);
-    else if (isBeamEntity(e)) node = beamNode(e);
+    if (isFootingElement(e)) node = footingNode(e, elev);
+    else if (isColumnEntity(e)) node = columnNode(e, elev);
+    else if (isBeamEntity(e)) node = beamNode(e, elev);
     if (node) nodes.push(node);
   }
   return nodes;
@@ -169,8 +186,11 @@ function buildFramingAndAttachEdges(
  * Build the DERIVED structural organism graph από τα entities ενός ορόφου.
  * Pure — μηδέν side-effects, μηδέν mutation των entities.
  */
-export function buildStructuralGraph(entities: readonly Entity[]): StructuralGraph {
-  const nodes = buildNodes(entities);
+export function buildStructuralGraph(
+  entities: readonly Entity[],
+  options?: BuildGraphOptions,
+): StructuralGraph {
+  const nodes = buildNodes(entities, options);
   const nodeIds = new Set(nodes.map((n) => n.id));
   const edges = [
     ...buildFootingEdges(nodes),

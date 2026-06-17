@@ -47,7 +47,10 @@ import { useStructuralAutoReinforce } from '../hooks/useStructuralAutoReinforce'
 import { useStructuralLoadTakedown } from '../hooks/useStructuralLoadTakedown';
 import { useStructuralFootingConnect } from '../hooks/useStructuralFootingConnect';
 import { useStructuralOrganism } from '../hooks/useStructuralOrganism';
+import { useFoundationLevelSync } from '../hooks/useFoundationLevelSync';
 import { useColumnAdjacencyNotification } from '../hooks/useColumnAdjacencyNotification';
+import { useColumnFootingNotification } from '../hooks/useColumnFootingNotification';
+import { useStructuralOrganismNotification } from '../hooks/useStructuralOrganismNotification';
 import { useViewportUrlSync } from '../hooks/canvas/useViewportUrlSync';
 // 📐 ADR-345 Fase 4: i18n for the "Coming Soon" toast on unwired ribbon buttons.
 import { useTranslation } from '@/i18n/hooks/useTranslation';
@@ -255,8 +258,11 @@ export const DxfViewerContent = React.memo<DxfViewerAppProps>((props) => {
   useStructuralAutoReinforce({ levelManager }); // ADR-459 Φ4d — «Αυτόματος Οπλισμός» (auto-apply command)
   useStructuralLoadTakedown({ levelManager }); // ADR-464 Φ4 — «Υπολογισμός Φορτίων» (tributary takedown)
   useStructuralFootingConnect({ levelManager }); // ADR-459 Φ4f — manual κολόνα↔πέδιλο connectivity (Ανάλυση)
+  useFoundationLevelSync({ levelManager }); // ADR-459 Phase 0 — foundation-level SSoT (cross-level organism)
   useStructuralOrganism({ levelManager }); // ADR-459 Phase 1 — cross-entity structural diagnostics («λείπει το πέδιλο»)
   useColumnAdjacencyNotification({ levelManager }); // ADR-363 — post-creation adjacent-columns→shear-wall merge toast
+  useColumnFootingNotification({ levelManager }); // ADR-459 Φ2/3 — proactive «βάλε/επέκτεινε πέδιλο» (cross-level)
+  useStructuralOrganismNotification({ levelManager }); // ADR-459 Φ4 — proactive «ενιαίος οπλισμός οργανισμού»
   // ADR-345/353/358/363 — ribbon command assembly (contextual trigger + BIM/array/text bridges).
   const { ribbonCommands, ribbonContextualTabs, activeContextualTrigger } = useDxfViewerRibbon({
     levelManager, universalSelection, activeTool,
