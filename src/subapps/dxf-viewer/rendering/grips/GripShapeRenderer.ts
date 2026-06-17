@@ -84,7 +84,8 @@ export class GripShapeRenderer {
     shape: GripShape,
     fillColor: string,
     outlineColor: string,
-    outlineWidth: number
+    outlineWidth: number,
+    glyphRotationRad?: number
   ): void {
     switch (shape) {
       case 'square':
@@ -102,7 +103,7 @@ export class GripShapeRenderer {
 
       // ADR-393 v2 — BIM parametric handle icon glyphs.
       case 'move':
-        this.renderMoveGlyph(ctx, position, size, fillColor);
+        this.renderMoveGlyph(ctx, position, size, fillColor, glyphRotationRad);
         break;
 
       case 'rotation':
@@ -245,31 +246,37 @@ export class GripShapeRenderer {
    * ADR-393 v2 — MOVE handle glyph: a 4-way arrow (basePoint translate). Arm
    * length scales with the grip size so it reads as an icon, not a dot. Drawn
    * in the temperature `color` so it warms/heats on hover/drag.
+   *
+   * ADR-397 (Giorgio 2026-06-17) — `glyphRotationRad` (screen-space) rotates the
+   * cross so it follows the entity's orientation. Drawn around the grip origin via
+   * `translate + rotate`; omitted/0 keeps the legacy axis-aligned cross.
    */
   private renderMoveGlyph(
     ctx: CanvasRenderingContext2D,
     position: Point2D,
     size: number,
     color: string,
+    glyphRotationRad?: number,
   ): void {
     const arm = Math.max(5, size);
     const head = Math.max(2.5, size * 0.5);
-    const { x, y } = position;
     ctx.save();
+    ctx.translate(position.x, position.y);
+    if (glyphRotationRad) ctx.rotate(glyphRotationRad);
     ctx.strokeStyle = color;
     ctx.fillStyle = color;
     ctx.lineWidth = RENDER_LINE_WIDTHS.NORMAL;
     ctx.lineCap = 'round';
     ctx.beginPath();
-    ctx.moveTo(x - arm, y);
-    ctx.lineTo(x + arm, y);
-    ctx.moveTo(x, y - arm);
-    ctx.lineTo(x, y + arm);
+    ctx.moveTo(-arm, 0);
+    ctx.lineTo(arm, 0);
+    ctx.moveTo(0, -arm);
+    ctx.lineTo(0, arm);
     ctx.stroke();
-    this.fillArrowHead(ctx, x + arm, y, 1, 0, head);
-    this.fillArrowHead(ctx, x - arm, y, -1, 0, head);
-    this.fillArrowHead(ctx, x, y - arm, 0, -1, head);
-    this.fillArrowHead(ctx, x, y + arm, 0, 1, head);
+    this.fillArrowHead(ctx, arm, 0, 1, 0, head);
+    this.fillArrowHead(ctx, -arm, 0, -1, 0, head);
+    this.fillArrowHead(ctx, 0, -arm, 0, -1, head);
+    this.fillArrowHead(ctx, 0, arm, 0, 1, head);
     ctx.restore();
   }
 

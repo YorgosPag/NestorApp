@@ -153,7 +153,8 @@ export class UnifiedGripRenderer {
       shape,
       fillColor,
       outlineColor,
-      1
+      1,
+      config.glyphRotationRad
     );
 
     // Step 5: Overlay rings (polygon-specific indicators)
@@ -242,7 +243,10 @@ export class UnifiedGripRenderer {
     for (const grip of grips) {
       const temperature = grip.temperature ?? 'cold';
       const shape = grip.shape ?? 'square';
-      const key = `${temperature}\0${shape}\0${grip.customColor ?? ''}`;
+      // ADR-397 — the move-glyph rotation is per-entity, so it MUST be part of the
+      // group key: otherwise two selected entities at different angles would batch
+      // into one group and render both 4-arrow handles at the first one's angle.
+      const key = `${temperature}\0${shape}\0${grip.customColor ?? ''}\0${grip.glyphRotationRad ?? ''}`;
       let g = groups.get(key);
       if (!g) {
         g = { positions: [], config: grip };
@@ -262,7 +266,7 @@ export class UnifiedGripRenderer {
         this.shapeRenderer.renderSquareGripsBatch(this.ctx, positions, size, fillColor, outlineColor);
       } else {
         for (const pos of positions) {
-          this.shapeRenderer.renderShape(this.ctx, pos, size, shape, fillColor, outlineColor, 1);
+          this.shapeRenderer.renderShape(this.ctx, pos, size, shape, fillColor, outlineColor, 1, config.glyphRotationRad);
         }
       }
     }

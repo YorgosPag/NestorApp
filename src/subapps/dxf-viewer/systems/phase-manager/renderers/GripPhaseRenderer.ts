@@ -180,6 +180,8 @@ export class GripPhaseRenderer {
       // ADR-393 v2 — honour a per-grip shape hint (BIM move/rotation icon
       // glyphs); default to the AutoCAD square otherwise.
       shape: grip.shape ?? 'square',
+      // ADR-397 — screen-space rotation for the MOVE 4-arrow glyph (entity-aligned).
+      ...(grip.glyphRotationRad !== undefined ? { glyphRotationRad: grip.glyphRotationRad } : {}),
     }));
     this.gripRenderer.renderGripSetBatched(gripConfigs, settings);
   }

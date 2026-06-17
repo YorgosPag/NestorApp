@@ -12,6 +12,7 @@ import { PhaseManager } from '../../systems/phase-manager/PhaseManager';
 // 🏢 ADR-397 — rotation snap SSoT: cyan 'snappable' marks ONLY the grip the cursor
 // is currently snapped to (proximity), not the whole set.
 import { getActiveRotationGripSnapKey } from '../../bim/grips/rotation-snap-store';
+import { withMoveGlyphRotation } from '../../bim/grips/move-glyph-frame';
 import type { EntityModel, RenderOptions, GripInfo } from '../types/Types';
 import type { Entity } from '../../types/entities';
 import { DEFAULT_TOLERANCE } from '../../config/tolerance-config';
@@ -127,7 +128,11 @@ export abstract class BaseEntityRenderer {
       // return; // ✅ Commented out για να δουλέψουν τα grips
     }
 
-    const grips = this.getGrips(entity);
+    const grips = withMoveGlyphRotation(
+      this.getGrips(entity),
+      entity as Entity,
+      this.worldToScreen.bind(this),
+    );
     // 🏢 ENTERPRISE: EntityModel is alias for Entity, type assertion is safe
     const phaseState = this.phaseManager.determinePhase(entity as Entity, options);
     

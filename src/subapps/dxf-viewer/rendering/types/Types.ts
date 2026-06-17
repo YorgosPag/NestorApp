@@ -122,6 +122,12 @@ export interface GripInfo {
   // StairRenderer.getGrips for the move/rotation handles), GripPhaseRenderer
   // uses it instead of the default 'square'. Generic — no entity coupling.
   shape?: GripShape;
+
+  // ADR-397 (Giorgio 2026-06-17) — screen-space rotation (radians) for the MOVE
+  // 4-arrow glyph so it follows the entity's orientation. Attached centrally in
+  // `BaseEntityRenderer.renderGrips` (from `resolveMoveGlyphFrame` via worldToScreen).
+  // Undefined → axis-aligned glyph (default). Ignored by non-glyph shapes.
+  glyphRotationRad?: number;
 }
 
 export interface GripSettings {

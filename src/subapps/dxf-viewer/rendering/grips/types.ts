@@ -91,6 +91,12 @@ export interface GripRenderConfig {
   /** Shape type override (default: square) */
   shape?: GripShape;
 
+  /**
+   * ADR-397 — screen-space rotation (radians) for the MOVE 4-arrow glyph so it
+   * follows the entity's orientation. Undefined → axis-aligned (default).
+   */
+  glyphRotationRad?: number;
+
   /** Size multiplier override (default: 1.0) */
   sizeMultiplier?: number;
 

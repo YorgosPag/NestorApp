@@ -65,6 +65,12 @@ function isPolylineVertex(grip: UnifiedGripInfo, vertexCount: number): boolean {
 export function resolveMenuActions(entity: Entity, grip: UnifiedGripInfo): GripMenuActionMeta[] {
   const stretch = META.stretch;
 
+  // ADR-397 — whole-entity MOVE grips (the 4-arrow glyph: column-center,
+  // wall-midpoint, beam-midpoint, *-move on every BIM entity) carry NO hover menu.
+  // The lone «Έλξη» (stretch == move) entry confused users (Giorgio 2026-06-17) and
+  // the 4-arrow handle now owns directional move on click — so suppress it here.
+  if (grip.movesEntity) return [];
+
   switch (entity.type) {
     case 'line':
       return isLineEndpoint(grip) ? [stretch, META.lengthen] : [stretch];
