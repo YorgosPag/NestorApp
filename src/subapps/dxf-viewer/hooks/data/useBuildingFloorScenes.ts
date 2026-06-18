@@ -47,6 +47,7 @@ import { loadFloorBimEntities } from '../../bim/persistence/cross-floor-bim-load
 import {
   stripForeignFloorBim,
   replaceFootingsFromModel,
+  stripAllFoundations,
 } from '../../systems/levels/scene-bim-load-policy';
 // ADR-484 Slice 3 — file-level cross-floor guard (belt-and-suspenders πάνω από το
 // per-entity stripForeignFloorBim· legacy shared sceneFileId δεν διαρρέει).
@@ -207,10 +208,11 @@ export function useBuildingFloorScenes(active: boolean): readonly BuildingFloorS
       // Strip foreign-floor BIM (cross-level leak) so a floor's underlay shows only
       // its own entities (ADR-459 Φ7 — defense-in-depth vs legacy baked snapshots).
       const stripped = stripForeignFloorBim(raw, t.floorId);
-      // ο όροφος Θεμελίωσης παίρνει τα cross-level auto πέδιλα από το model SSoT.
+      // ο όροφος Θεμελίωσης παίρνει τα cross-level auto πέδιλα από το model SSoT· ADR-484
+      // Slice 5 — κάθε ΑΛΛΟΣ όροφος ΔΕΝ δείχνει πέδιλα (Revit-canonical· legacy blob garbage).
       const model = isFoundationFloor
         ? replaceFootingsFromModel(stripped, modelFootings)
-        : stripped;
+        : stripAllFoundations(stripped);
       out.push({ levelId: t.levelId, floorId: t.floorId, model });
     }
     return out;

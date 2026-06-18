@@ -21,6 +21,9 @@ import { LevelSceneManagerAdapter } from '../../systems/entity-creation/LevelSce
 import { CreateFoundationsCommand } from '../../core/commands/entity-commands/CreateFoundationsCommand';
 import { DeleteFoundationsCommand } from '../../core/commands/entity-commands/DeleteFoundationsCommand';
 import { RehostFoundationsCommand } from '../../core/commands/entity-commands/RehostFoundationsCommand';
+// ADR-484 Slice 6 — cross-level routing: όλο το reconcile delta μέσω του foundation writer.
+import { ReconcileCrossLevelFoundationsCommand } from '../../core/commands/entity-commands/ReconcileCrossLevelFoundationsCommand';
+import type { FoundationCrossLevelWriter } from './foundation-cross-level-writer';
 import { CompoundCommand } from '../../core/commands/CompoundCommand';
 import {
   buildStripGridFromGuides,
@@ -52,6 +55,19 @@ export interface FoundationGridCommitDeps {
   readonly overrides?: FoundationParamOverrides;
   /** ADR-441 — έδραση περιμετρικών λωρίδων (center/inner/outer· default inner). */
   readonly perimeterMode?: GridPerimeterMode;
+  /**
+   * ADR-484 Slice 6 — cross-level routing. Όταν ο ενεργός όροφος ΔΕΝ είναι η Θεμελίωση,
+   * ο bridge περνά writer + authoritative foundation-level strips ώστε το reconcile να
+   * γράφει στον foundation level (Firestore foundation scope + foundation scene + store),
+   * ΟΧΙ στον ενεργό. `null` → single-level active path (zero regression).
+   */
+  readonly foundationWriter?: FoundationCrossLevelWriter | null;
+  /**
+   * ADR-484 Slice 6 — authoritative πεδιλοδοκοί του ορόφου Θεμελίωσης (από το
+   * `foundation-level-store`), ως «existing» στο reconcile όταν cross-level. Scene-independent
+   * (το foundation scene μπορεί να μην είναι loaded). Αγνοείται όταν `foundationWriter` null.
+   */
+  readonly foundationExisting?: readonly FoundationEntity[];
 }
 
 export interface FoundationGridCommitResult {
@@ -187,7 +203,12 @@ export function commitFoundationGridFromGuides(
     return { ok: false, reason: target.reason ?? 'insufficient-guides', created: 0, deleted: 0, unchanged: 0, rehosted: 0, reJustified: 0 };
   }
 
-  const existing = existingFoundations(deps.getLevelScene, deps.levelId);
+  // ADR-484 Slice 6 — cross-level: τα existing strips έρχονται από το foundation-level-store
+  // (authoritative, scene-independent), ΟΧΙ από την ενεργή σκηνή. Single-level → ενεργή σκηνή.
+  const crossLevelWriter = deps.foundationWriter ?? null;
+  const existing = crossLevelWriter
+    ? (deps.foundationExisting ?? []).filter((e) => e.params.kind === 'strip')
+    : existingFoundations(deps.getLevelScene, deps.levelId);
 
   // ADR-441 Slice 6b — re-host ορφανών ΠΡΙΝ το reconcile: ο rehosted υιοθετεί το
   // signature του target φατνώματος → ο reconciler τον βλέπει ως `unchanged`
@@ -216,8 +237,14 @@ export function commitFoundationGridFromGuides(
     return { ok: false, reason, created: 0, deleted: 0, unchanged, rehosted: 0, reJustified: 0 };
   }
 
-  const adapter = new LevelSceneManagerAdapter(deps.getLevelScene, deps.setLevelScene, deps.levelId);
-  deps.executeCommand(buildReconcileCommand(updates, toDelete, create, adapter));
+  // ADR-484 Slice 6 — cross-level: όλο το delta μέσω του foundation writer (atomic undo,
+  // foundation scope). Single-level → ο κανονικός LevelSceneManagerAdapter command.
+  if (crossLevelWriter) {
+    deps.executeCommand(new ReconcileCrossLevelFoundationsCommand(create, toDelete, updates, crossLevelWriter));
+  } else {
+    const adapter = new LevelSceneManagerAdapter(deps.getLevelScene, deps.setLevelScene, deps.levelId);
+    deps.executeCommand(buildReconcileCommand(updates, toDelete, create, adapter));
+  }
   return {
     ok: true,
     created: toCreate.length,

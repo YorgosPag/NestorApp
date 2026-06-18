@@ -62,8 +62,9 @@ const DIAGRAM_HEIGHT_FRACTION = 0.35;
 
 /** Στυλ ανά εντατικό μέγεθος — Robot σύμβαση: Μ κόκκινο / V πράσινο / N μπλε. */
 const COMPONENT_STYLE: Record<DiagramComponent, DiagramDrawStyle> = {
-  // Ροπή: ζώνες T/C — θετική (sagging) κόκκινο/εφελκ. κάτω, αρνητική (hogging) μπλε/εφελκ. άνω.
-  moment: { stroke: 'rgba(200,30,40,0.95)', fill: 'rgba(200,30,40,0.16)', fillNegative: 'rgba(40,90,200,0.16)' },
+  // Ροπή — ζώνες T/C. ΣΥΜΒΑΣΗ SOLVER (calibrated): sagging = ΑΡΝΗΤΙΚΟ. Άρα:
+  // θετική τιμή (hogging) → μπλε/εφελκ. άνω· αρνητική (sagging) → κόκκινο/εφελκ. κάτω.
+  moment: { stroke: 'rgba(200,30,40,0.95)', fill: 'rgba(40,90,200,0.16)', fillNegative: 'rgba(200,30,40,0.16)' },
   shear: { stroke: 'rgba(30,150,70,0.95)', fill: 'rgba(30,150,70,0.16)' },
   axial: { stroke: 'rgba(40,90,200,0.95)', fill: 'rgba(40,90,200,0.16)' },
 };
@@ -156,27 +157,6 @@ export function StructuralDiagramOverlay({ transform, viewport }: StructuralDiag
     return out;
   }, [active, model, units]);
 
-  // 🔬 ΠΡΟΣΩΡΙΝΟ ΔΙΑΓΝΩΣΤΙΚΟ (ADR-483 troubleshooting) — αφαιρείται μετά την επαλήθευση.
-  useEffect(() => {
-    if (!active || !diagramSet) return;
-    // eslint-disable-next-line no-console
-    console.log('🔬 [ΔΙΑΓΝΩΣΤΙΚΟ ADR-483]', {
-      reliable: diagramSet.reliable,
-      combinationKind: diagramSet.combinationKind,
-      nodes: model.nodes.length,
-      supports: model.supports.length,
-      supportPoints: supportPoints.length,
-      paths: diagramSet.paths.map((p) => ({
-        id: p.memberId,
-        Mi: Number(p.samples[0]?.value.toFixed(2)),
-        Mj: Number(p.samples[p.samples.length - 1]?.value.toFixed(2)),
-        max: Number(p.extremum.value.toFixed(2)),
-        maxF: p.extremum.f,
-        q: Number(p.appliedUdlKnM.toFixed(2)),
-      })),
-    });
-  }, [active, diagramSet, supportPoints, model]);
-
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -201,10 +181,8 @@ export function StructuralDiagramOverlay({ transform, viewport }: StructuralDiag
     const reliable = diagramSet.reliable;
     const style: DiagramDrawStyle = reliable ? baseStyle : { ...baseStyle, stroke: CAUTION_STROKE };
     const unit = COMPONENT_UNIT[diagramSet.component];
-    const tcLabels = {
-      tensionBottom: t('ribbon.commands.analysisDiagrams.tensionBottom'),
-      tensionTop: t('ribbon.commands.analysisDiagrams.tensionTop'),
-    };
+    const tensionBottomLabel = t('ribbon.commands.analysisDiagrams.tensionBottom');
+    const tensionTopLabel = t('ribbon.commands.analysisDiagrams.tensionTop');
 
     ctx.save();
     ctx.setLineDash([]);
@@ -220,8 +198,13 @@ export function StructuralDiagramOverlay({ transform, viewport }: StructuralDiag
       // Σημεία μηδενισμού (M=0) πάνω στον άξονα — κάτω από τα pills.
       drawInflectionMarkers(ctx, si, sj, path);
       // Ζώνες εφελκυσμού/θλίψης μόνο για τη ροπή & μόνο όταν τα αποτελέσματα είναι έγκυρα.
+      // Calibrated: θετική τιμή = hogging = εφελκ. άνω (μπλε)· αρνητική = sagging = εφελκ. κάτω (κόκκινο).
       if (diagramSet.component === 'moment' && reliable) {
-        drawTensionZoneLabels(ctx, si, sj, path, tcLabels, TC_TENSION_BOTTOM_COLOR, TC_TENSION_TOP_COLOR);
+        drawTensionZoneLabels(
+          ctx, si, sj, path,
+          tensionTopLabel, TC_TENSION_TOP_COLOR,
+          tensionBottomLabel, TC_TENSION_BOTTOM_COLOR,
+        );
       }
       // Βέλη φορτίου από το q που χρησιμοποίησε η ανάλυση (ανακτημένο από την καμπύλη).
       if (path.appliedUdlKnM > 0) drawMemberLoadArrows(ctx, si, sj, path.appliedUdlKnM, UNIT_LINE_LOAD, LOAD_ARROW_STYLE);

@@ -194,17 +194,31 @@ export function useFloors3DAggregator(active: boolean): void {
   // Resolve a floor's entities: live (active) → in-memory scene → loaded snapshot.
   const resolveEntities = useCallback(
     (t: TargetFloor): Bim3DEntities | null => {
-      if (t.levelId === activeLevelId) return liveActive;
+      if (t.levelId === activeLevelId) {
+        // ADR-484 Slice 5 — Revit-canonical: τα πέδιλα ζουν ΜΟΝΟ στον foundation level.
+        // Όταν ο ενεργός όροφος ΔΕΝ είναι αυτός (`foundationLevelId != null` ⟺ ο foundation
+        // level είναι ΑΛΛΟΣ· επιβεβαιωμένο: target=null μόνο όταν ενεργός=Θεμελίωση), drop
+        // τυχόν baked/legacy footings από τη live σκηνή (π.χ. πεδιλοδοκοί στο Ισόγειο).
+        if (foundationLevelId != null && liveActive.foundations.length > 0) {
+          return { ...liveActive, foundations: [] };
+        }
+        return liveActive;
+      }
       const scene = getLevelScene?.(t.levelId);
       const base =
         scene && scene.entities.length > 0
           ? extractBim3DEntities(stripForeignFloorBim(scene, t.floorId))
           : loaded.get(t.levelId) ?? null;
+      // ADR-484 Slice 5 — Revit-canonical: τα πέδιλα ζουν ΜΟΝΟ στον foundation level.
+      // Κάθε foundation entity baked σε non-foundation blob (legacy garbage σε λάθος
+      // όροφο, π.χ. πεδιλοδοκοί στο Ισόγειο) ΔΕΝ εμφανίζεται — drop foundations.
+      if (t.levelId !== foundationLevelId) {
+        return base && base.foundations.length > 0 ? { ...base, foundations: [] } : base;
+      }
       // ADR-459 Φ7 — ο όροφος Θεμελίωσης (non-active): τα cross-level auto πέδιλα δεν
       // είναι ποτέ στο scene snapshot· έρχονται από το model SSoT (floorplan_foundations).
       // Override της κατηγορίας `foundations` με τα authoritative model footings· synthetic
       // entry όταν δεν υπάρχει καθόλου snapshot αλλά υπάρχουν πέδιλα.
-      if (t.levelId !== foundationLevelId) return base;
       if (!base && modelFootings.length === 0) return null;
       return { ...(base ?? EMPTY_BIM_ENTITIES), foundations: modelFootings };
     },

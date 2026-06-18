@@ -47,6 +47,15 @@ import {
   commitTieBeamGridFromGuides,
   type TieBeamGridCommitResult,
 } from '../../../bim/foundations/tie-beam-grid-commit';
+// ADR-484 Slice 6 — cross-level routing: εσχάρα/συνδετήριες πεδίλων ΠΑΝΤΑ στον foundation
+// level (ίδιο SSoT με το manual add-foundation-to-scene), ΟΧΙ στον ενεργό όροφο.
+import {
+  createFoundationCrossLevelWriter,
+  type FoundationCrossLevelWriter,
+} from '../../../bim/foundations/foundation-cross-level-writer';
+import { useFoundationLevelStore } from '../../../state/foundation-level-store';
+import { useLevelsOptional } from '../../../systems/levels/useLevels';
+import { useAuthOptional } from '@/auth/contexts/AuthContext';
 import type { GridPerimeterMode } from '../../../bim/foundations/foundation-grid-justification';
 import { foundationGridSettingsStore } from './bridge/foundation-grid-settings-store';
 import {
@@ -143,6 +152,32 @@ export function useRibbonFoundationBridge(
   const { levelManager, universalSelection } = props;
   const { execute: executeCommand } = useCommandHistory();
   const { t } = useTranslation('dxf-viewer-shell');
+  // ADR-484 Slice 6 — auth/levels για το cross-level scope (optional → null εκτός provider,
+  // π.χ. στα bridge unit tests· τότε ο writer factory επιστρέφει null → active path).
+  const auth = useAuthOptional();
+  const levelsCtx = useLevelsOptional();
+
+  // ADR-484 Slice 6 — resolve cross-level grid routing. Όταν ο ενεργός όροφος ΔΕΝ είναι η
+  // Θεμελίωση (`foundation-level-store.target` ≠ null), επιστρέφει writer + authoritative
+  // foundation-level entities ώστε το grid reconcile να γράφει στον foundation level. Μηδέν
+  // foundation level / degenerate scope → `{ null, undefined }` → single-level active path.
+  const resolveFoundationGridRouting = useCallback((): {
+    readonly foundationWriter: FoundationCrossLevelWriter | null;
+    readonly foundationExisting: readonly FoundationEntity[] | undefined;
+  } => {
+    const store = useFoundationLevelStore.getState();
+    const target = store.target;
+    if (!target) return { foundationWriter: null, foundationExisting: undefined };
+    const projectId =
+      levelsCtx?.levels?.find((l) => l.id === levelManager.currentLevelId)?.projectId ?? null;
+    const writer = createFoundationCrossLevelWriter(
+      { companyId: auth?.user?.companyId, projectId, userId: auth?.user?.uid },
+      target,
+      levelManager,
+    );
+    if (!writer) return { foundationWriter: null, foundationExisting: undefined };
+    return { foundationWriter: writer, foundationExisting: store.entities.filter(isFoundationEntity) };
+  }, [auth, levelsCtx, levelManager]);
 
   const toolHandle = foundationToolBridgeStore.use();
 
@@ -262,6 +297,7 @@ export function useRibbonFoundationBridge(
     const levelId = levelManager.currentLevelId;
     if (!levelId) return null;
     const scene = levelManager.getLevelScene(levelId);
+    const { foundationWriter, foundationExisting } = resolveFoundationGridRouting();
     return commitFoundationGridFromGuides({
       guideReader: getGlobalGuideStore(),
       getLevelScene: levelManager.getLevelScene,
@@ -271,8 +307,11 @@ export function useRibbonFoundationBridge(
       executeCommand,
       // ADR-441 — έδραση περιμετρικών από τον SSoT store (κουμπί ΚΑΙ auto-settle ίδιο mode).
       perimeterMode: foundationGridSettingsStore.get(),
+      // ADR-484 Slice 6 — cross-level routing (null → active path).
+      foundationWriter,
+      foundationExisting,
     });
-  }, [levelManager, executeCommand]);
+  }, [levelManager, executeCommand, resolveFoundationGridRouting]);
 
   // ADR-441 Slice 6 — idempotent re-run: το 'up-to-date' ΔΕΝ είναι αποτυχία (Revit
   // «ενημερωμένο»). Εκπέμπεται ως success-style summary με created=0,deleted=0.
@@ -304,6 +343,7 @@ export function useRibbonFoundationBridge(
     const levelId = levelManager.currentLevelId;
     if (!levelId) return;
     const scene = levelManager.getLevelScene(levelId);
+    const { foundationWriter, foundationExisting } = resolveFoundationGridRouting();
     const result: TieBeamGridCommitResult = commitTieBeamGridFromGuides({
       guideReader: getGlobalGuideStore(),
       getLevelScene: levelManager.getLevelScene,
@@ -311,6 +351,9 @@ export function useRibbonFoundationBridge(
       levelId,
       sceneUnits: scene ? resolveSceneUnits(scene) : 'mm',
       executeCommand,
+      // ADR-484 Slice 6 — cross-level routing (null → active path).
+      foundationWriter,
+      foundationExisting,
     });
     if (result.ok || result.reason === 'up-to-date') {
       EventBus.emit('bim:tie-beams-from-grid', {
@@ -321,7 +364,7 @@ export function useRibbonFoundationBridge(
     } else {
       EventBus.emit('bim:tie-beams-from-grid-failed', { reason: result.reason ?? 'insufficient-guides' });
     }
-  }, [levelManager, executeCommand]);
+  }, [levelManager, executeCommand, resolveFoundationGridRouting]);
 
   // ADR-441 Slice 7 — auto re-split/reflow στο follow-move: όταν ένας άξονας «κάθεται»
   // μετά από μετακίνηση (`bim:grid-guides-settled`), τρέχει το ΙΔΙΟ managed reconcile
@@ -331,17 +374,20 @@ export function useRibbonFoundationBridge(
   useEffect(() => {
     const off = EventBus.on('bim:grid-guides-settled', ({ levelId }) => {
       if (levelManager.currentLevelId !== levelId) return;
-      const scene = levelManager.getLevelScene(levelId);
       // Kind-partition (ADR-441 Slice GEN-TIE): auto re-split μόνο αν υπάρχει grid-managed
       // **πεδιλοδοκός** — μια born-bound συνδετήρια ΔΕΝ πρέπει να σκανδαλίζει ολόκληρη εσχάρα.
-      if (
-        !scene ||
-        !scene.entities.some(
-          (e) => isFoundationEntity(e) && e.params.kind === 'strip' && hasGuideBindings(e),
-        )
-      ) {
-        return;
-      }
+      // ADR-484 Slice 6 — cross-level: τα grid-managed strips ζουν στη **Θεμελίωση** (store),
+      // ΟΧΙ στην ενεργή σκηνή· αλλιώς το auto-settle reconcile δεν θα τρέχει ποτέ (η ενεργή
+      // σκηνή πια καθαρή από πέδιλα). Single-level → έλεγχος στην ενεργή σκηνή (αμετάβλητο).
+      const foundationStore = useFoundationLevelStore.getState();
+      const hasGridStrip = foundationStore.target
+        ? foundationStore.entities.some(
+            (e) => isFoundationEntity(e) && e.params.kind === 'strip' && hasGuideBindings(e),
+          )
+        : !!levelManager.getLevelScene(levelId)?.entities.some(
+            (e) => isFoundationEntity(e) && e.params.kind === 'strip' && hasGuideBindings(e),
+          );
+      if (!hasGridStrip) return;
       const result = runFoundationGridCommit();
       if (
         result?.ok &&

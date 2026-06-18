@@ -180,3 +180,29 @@ describe('GEN-TIE kind-partition — συνδετήριες ↔ πεδιλοδο
     expect(result.deleted).toBe(0);
   });
 });
+
+describe('commitTieBeamGridFromGuides — ADR-484 Slice 6 cross-level routing', () => {
+  const writer = () => ({ create: jest.fn(), update: jest.fn(), remove: jest.fn() });
+
+  it('writer-routed: existing από foundationExisting (η ενεργή σκηνή ΑΓΝΟΕΙΤΑΙ)', () => {
+    const w = writer();
+    const executed: ICommand[] = [];
+    // Η ενεργή σκηνή ΓΕΜΑΤΗ συνδετήριες — αν διαβαζόταν → up-to-date. Cross-level πρέπει να
+    // διαβάζει foundationExisting (άδειο) → all create μέσω writer.
+    const activeFull = sceneWithTieBeams([...X3, ...Y3]);
+    const result = commitTieBeamGridFromGuides({
+      guideReader: reader([...X3, ...Y3]),
+      getLevelScene: () => activeFull,
+      setLevelScene: () => { throw new Error('cross-level ΔΕΝ γράφει στην ενεργή σκηνή'); },
+      levelId: '0', sceneUnits: 'mm',
+      executeCommand: (c) => { executed.push(c); c.execute(); },
+      foundationWriter: w,
+      foundationExisting: [],
+    });
+    expect(result.ok).toBe(true);
+    expect(result.created).toBe(12);
+    expect(executed).toHaveLength(1);
+    expect(w.create).toHaveBeenCalledTimes(12);
+    expect(w.remove).not.toHaveBeenCalled();
+  });
+});

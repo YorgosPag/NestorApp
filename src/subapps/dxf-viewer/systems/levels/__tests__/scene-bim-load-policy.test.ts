@@ -13,6 +13,7 @@ import {
   isBimOrStairEntity,
   stripForeignFloorBim,
   replaceFootingsFromModel,
+  stripAllFoundations,
 } from '../scene-bim-load-policy';
 import type { SceneModel } from '../../../types/scene';
 import type { Entity } from '../../../types/entities';
@@ -139,6 +140,19 @@ describe('stripForeignFloorBim', () => {
   it('does NOT strip a foreign-floor pure-DXF entity (only BIM is floor-scoped)', () => {
     const s = scene([entF('line_x', 'line', 'floorF')]);
     expect(stripForeignFloorBim(s, 'floorGround').entities).toHaveLength(1);
+  });
+});
+
+describe('stripAllFoundations (ADR-484 Slice 5 — foundations μόνο στον foundation level)', () => {
+  it('αφαιρεί ΟΛΑ τα foundation entities, κρατά τα υπόλοιπα', () => {
+    const s = scene([ent('w1', 'wall'), ent('f1', 'foundation'), ent('f2', 'foundation'), ent('c1', 'column')]);
+    const result = stripAllFoundations(s);
+    expect(result.entities.map((e) => e.id)).toEqual(['w1', 'c1']);
+  });
+
+  it('same-reference no-op όταν δεν υπάρχει πέδιλο', () => {
+    const s = scene([ent('w1', 'wall'), ent('c1', 'column')]);
+    expect(stripAllFoundations(s)).toBe(s);
   });
 });
 

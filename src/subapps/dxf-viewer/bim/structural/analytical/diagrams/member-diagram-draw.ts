@@ -40,14 +40,6 @@ export interface DiagramDrawOptions {
   readonly dashed?: boolean;
 }
 
-/** Ετικέτες ζωνών εφελκυσμού (ADR-483 Slice 4b) — i18n από τον overlay (N.11). */
-export interface TensionZoneLabels {
-  /** Ζώνη θετικής ροπής (sagging) — εφελκυσμός κάτω ίνας. */
-  readonly tensionBottom: string;
-  /** Ζώνη αρνητικής ροπής (hogging) — εφελκυσμός άνω ίνας. */
-  readonly tensionTop: string;
-}
-
 const LABEL_FONT = '11px sans-serif';
 const ZONE_FONT = '10px sans-serif';
 const PILL_PAD_X = 5;
@@ -65,7 +57,7 @@ const ZONE_LABEL_GAP_PX = 11;
  */
 const ZONE_LABEL_SHIFT_FRAC = 0.24;
 /** Ακτίνα (px) του δείκτη σημείου μηδενισμού (M=0). */
-const INFLECTION_RADIUS = 2.6;
+const INFLECTION_RADIUS = 3.4;
 const INFLECTION_FILL = '#ffffff';
 const INFLECTION_STROKE = 'rgba(40,44,52,0.9)';
 
@@ -232,19 +224,20 @@ function zoneLabelF(peakF: number): number {
 }
 
 /**
- * ADR-483 Slice 4b — ετικέτες ζωνών εφελκυσμού (μόνο ροπή): «εφελκ. κάτω» (θερμό) στη
- * ζώνη θετικής ροπής, «εφελκ. άνω» (ψυχρό) στη ζώνη αρνητικής. Αγκυρώνονται στον
- * **άξονα του μέλους** (όχι στην κορυφή της καμπύλης) + οριζόντια μετατόπιση από την
- * κορυφή → **δεν συμπίπτουν με το value pill** (που κάθεται στην κορυφή). Κάτω-ίνα →
- * κάτω από τη δοκό (screen-down)· άνω-ίνα → πάνω (screen-up), ανεξάρτητα προσανατολισμού.
+ * ADR-483 Slice 4b — ετικέτες ζωνών εφελκυσμού (μόνο ροπή). Ο **caller** ορίζει την
+ * αντιστοίχιση πρόσημο→ετικέτα/χρώμα (calibration ανά σύμβαση solver): `posLabel/posColor`
+ * για τη ζώνη **θετικής** τιμής, `negLabel/negColor` για **αρνητικής**. Αγκυρώνονται στον
+ * **άξονα του μέλους** + οριζόντια μετατόπιση από την κορυφή → δεν συμπίπτουν με το value
+ * pill. Η θετική ετικέτα μπαίνει screen-up, η αρνητική screen-down (ανεξ. προσανατολισμού).
  */
 export function drawTensionZoneLabels(
   ctx: CanvasRenderingContext2D,
   si: Point2D,
   sj: Point2D,
   path: MemberDiagramPath,
-  labels: TensionZoneLabels,
+  posLabel: string,
   posColor: string,
+  negLabel: string,
   negColor: string,
 ): void {
   const normal = perpUnit(si, sj);
@@ -252,8 +245,8 @@ export function drawTensionZoneLabels(
   const up = { x: -down.x, y: -down.y };
   const pos = signedExtremum(path.samples, true);
   const neg = signedExtremum(path.samples, false);
-  if (pos) drawZoneTag(ctx, lerp(si, sj, zoneLabelF(pos.f)), down, labels.tensionBottom, posColor);
-  if (neg) drawZoneTag(ctx, lerp(si, sj, zoneLabelF(neg.f)), up, labels.tensionTop, negColor);
+  if (pos) drawZoneTag(ctx, lerp(si, sj, zoneLabelF(pos.f)), up, posLabel, posColor);
+  if (neg) drawZoneTag(ctx, lerp(si, sj, zoneLabelF(neg.f)), down, negLabel, negColor);
 }
 
 /** Τιμή σε pill σε σημείο οθόνης `p`. `unit` = SI σύμβολο. */
@@ -276,9 +269,10 @@ function isInteriorExtremum(f: number): boolean {
 }
 
 /**
- * Ετικέτα ακραίας τιμής σε pill, στη στάθμη μέγιστης |τιμής| — **μόνο όταν είναι
- * εσωτερική** (στο άνοιγμα). Στα άκρα την δείχνει το {@link drawDiagramEndValues}
- * → μηδέν διπλό pill. `unit` = SI σύμβολο.
+ * Ετικέτα της **ακραίας τιμής στο άνοιγμα** (max-abs ανάμεσα στις εσωτερικές στάθμες)
+ * σε pill — π.χ. η ροπή ανοίγματος (sagging) σε πλαισιακό δοκάρι, που διαφέρει από τις
+ * ροπές στήριξης. Τα **άκρα** τα δείχνει το {@link drawDiagramEndValues} → μηδέν διπλό
+ * pill. `unit` = SI σύμβολο.
  */
 export function drawDiagramExtremum(
   ctx: CanvasRenderingContext2D,
@@ -288,9 +282,14 @@ export function drawDiagramExtremum(
   pxScale: number,
   unit: string,
 ): void {
-  if (!isInteriorExtremum(path.extremum.f)) return;
+  let best: DiagramSample | null = null;
+  for (const s of path.samples) {
+    if (!isInteriorExtremum(s.f)) continue;
+    if (!best || Math.abs(s.value) > Math.abs(best.value)) best = s;
+  }
+  if (!best) return;
   const normal = perpUnit(si, sj);
-  drawValuePill(ctx, offsetPoint(si, sj, normal, path.extremum, pxScale), path.extremum.value, unit);
+  drawValuePill(ctx, offsetPoint(si, sj, normal, best, pxScale), best.value, unit);
 }
 
 /**

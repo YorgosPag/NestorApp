@@ -14,6 +14,7 @@ import { renderHook, waitFor } from '@testing-library/react';
 import { useFloors3DAggregator } from '../useFloors3DAggregator';
 import { useBim3DEntitiesStore } from '../../../bim-3d/stores/Bim3DEntitiesStore';
 import { getMultiFloorStack, setMultiFloorStack } from '../../../bim-3d/scene/multi-floor-3d-source';
+import { useFoundationLevelStore } from '../../../state/foundation-level-store';
 
 const mockUseLevelsOptional = jest.fn();
 const mockLoadFileV2 = jest.fn();
@@ -50,7 +51,7 @@ function wallScene(id: string) {
 function baseStore() {
   useBim3DEntitiesStore.setState({
     walls: [{ id: 'w1', type: 'wall' } as never],
-    columns: [], beams: [], slabs: [], slabOpenings: [], openings: [], stairs: [],
+    columns: [], beams: [], foundations: [], slabs: [], slabOpenings: [], openings: [], stairs: [],
     activeLevelId: 'L1',
     floors: [
       { id: 'f1', elevation: 0, buildingId: 'b1' },
@@ -86,6 +87,9 @@ beforeEach(() => {
   });
   setMultiFloorStack([]);
   baseStore();
+  // ADR-484 — default: ενεργός = foundation level (target null) ώστε τα υπάρχοντα tests
+  // να μην επηρεάζονται από το Slice 5 active-floor strip.
+  useFoundationLevelStore.setState({ target: null, entities: [] });
 });
 
 describe('useFloors3DAggregator — ADR-399 Phase B', () => {
@@ -157,5 +161,38 @@ describe('useFloors3DAggregator — ADR-399 Phase B', () => {
 
     renderHook(() => useFloors3DAggregator(false));
     await waitFor(() => expect(getMultiFloorStack()).toHaveLength(0));
+  });
+});
+
+describe('useFloors3DAggregator — ADR-484 Slice 5 render isolation', () => {
+  it('ο ενεργός μη-foundation όροφος ΔΕΝ δείχνει πέδιλα (legacy baked → drop)', async () => {
+    // Cross-level: ο foundation level είναι ΑΛΛΟΣ (target.levelId='Lf') → ο ενεργός L1
+    // (Ισόγειο) δεν πρέπει να ζωγραφίζει τυχόν baked πεδιλοδοκούς της live σκηνής.
+    useFoundationLevelStore.setState({
+      target: { levelId: 'Lf', floorId: 'ff', sceneFileId: null, floorElevationMm: -1000 },
+      entities: [],
+    });
+    useBim3DEntitiesStore.setState({ foundations: [{ id: 'fnd1', type: 'foundation' } as never] });
+    const getLevelScene = jest.fn((id: string) => (id === 'L2' ? wallScene('w2') : null));
+    mockUseLevelsOptional.mockReturnValue(ctx(getLevelScene));
+
+    renderHook(() => useFloors3DAggregator(true));
+
+    await waitFor(() => expect(getMultiFloorStack()).toHaveLength(2));
+    const active = getMultiFloorStack().find((s) => s.levelId === 'L1');
+    expect(active?.entities.foundations).toEqual([]);
+  });
+
+  it('ο ενεργός foundation όροφος (target null) ΚΡΑΤΑ τα πέδιλά του', async () => {
+    useFoundationLevelStore.setState({ target: null, entities: [] });
+    useBim3DEntitiesStore.setState({ foundations: [{ id: 'fnd1', type: 'foundation' } as never] });
+    const getLevelScene = jest.fn((id: string) => (id === 'L2' ? wallScene('w2') : null));
+    mockUseLevelsOptional.mockReturnValue(ctx(getLevelScene));
+
+    renderHook(() => useFloors3DAggregator(true));
+
+    await waitFor(() => expect(getMultiFloorStack()).toHaveLength(2));
+    const active = getMultiFloorStack().find((s) => s.levelId === 'L1');
+    expect(active?.entities.foundations.map((f) => f.id)).toEqual(['fnd1']);
   });
 });

@@ -29,6 +29,20 @@ jest.mock('../../../../bim/foundations/foundation-grid-commit', () => ({
   })),
 }));
 
+// ── ADR-484 Slice 6 — neutralize cross-level writer + auth (firebase import chain) ──
+// Ο bridge εισάγει τώρα τον foundation-cross-level-writer (→ firestore → firebase/auth) και
+// useAuthOptional (→ @/lib/firebase). Στο jsdom env αυτά σπάνε στο load (`fetch is not defined`).
+// Δεν εξετάζονται από αυτό το suite (cross-level routing = grid-commit.test) → mock σε null.
+jest.mock('../../../../bim/foundations/foundation-cross-level-writer', () => ({
+  createFoundationCrossLevelWriter: jest.fn(() => null),
+}));
+jest.mock('@/auth/contexts/AuthContext', () => ({
+  useAuthOptional: () => null,
+}));
+jest.mock('../../../../systems/levels/useLevels', () => ({
+  useLevelsOptional: () => null,
+}));
+
 // ── Mock react-i18next (bridge calls useTranslation for delete confirm) ───────
 jest.mock('react-i18next', () => ({
   useTranslation: () => ({ t: (key: string) => key }),

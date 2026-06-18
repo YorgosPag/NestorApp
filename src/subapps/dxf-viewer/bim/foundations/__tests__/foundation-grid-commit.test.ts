@@ -240,3 +240,49 @@ describe('commitFoundationGridFromGuides — reconcile', () => {
     expect(result.deleted).toBe(0);
   });
 });
+
+describe('commitFoundationGridFromGuides — ADR-484 Slice 6 cross-level routing', () => {
+  const writer = () => ({ create: jest.fn(), update: jest.fn(), remove: jest.fn() });
+
+  it('writer-routed: existing από foundationExisting (η ενεργή σκηνή ΑΓΝΟΕΙΤΑΙ)', () => {
+    const w = writer();
+    const executed: ICommand[] = [];
+    // Η ενεργή σκηνή είναι ΓΕΜΑΤΗ strips — αν διαβαζόταν ως «existing» → up-to-date.
+    // Cross-level πρέπει να αγνοεί την ενεργή και να διαβάζει foundationExisting (άδειο).
+    const activeFull = sceneWith([...X3, ...Y3]);
+    const result = commitFoundationGridFromGuides({
+      guideReader: reader([...X3, ...Y3]),
+      getLevelScene: () => activeFull,
+      setLevelScene: () => { throw new Error('cross-level ΔΕΝ πρέπει να γράφει στην ενεργή σκηνή'); },
+      levelId: '0', sceneUnits: 'mm',
+      executeCommand: (c) => { executed.push(c); c.execute(); },
+      foundationWriter: w,
+      foundationExisting: [], // ο όροφος Θεμελίωσης άδειος → all create
+    });
+    expect(result.ok).toBe(true);
+    expect(result.created).toBe(12);
+    expect(executed).toHaveLength(1);
+    expect(w.create).toHaveBeenCalledTimes(12); // routed μέσω cross-level writer
+    expect(w.remove).not.toHaveBeenCalled();
+  });
+
+  it('writer-routed up-to-date: foundationExisting ταιριάζει με target → 0 commands, writer άθικτος', () => {
+    const w = writer();
+    const existing = buildStripGridFromGuides(reader([...X3, ...Y3]), {}, '0', 'mm')
+      .strips as unknown as Entity[];
+    const executed: ICommand[] = [];
+    const result = commitFoundationGridFromGuides({
+      guideReader: reader([...X3, ...Y3]),
+      getLevelScene: () => emptyScene(),
+      setLevelScene: () => {},
+      levelId: '0', sceneUnits: 'mm',
+      executeCommand: (c) => executed.push(c),
+      foundationWriter: w,
+      foundationExisting: existing,
+    });
+    expect(result.ok).toBe(false);
+    expect(result.reason).toBe('up-to-date');
+    expect(executed).toHaveLength(0);
+    expect(w.create).not.toHaveBeenCalled();
+  });
+});

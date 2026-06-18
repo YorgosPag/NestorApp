@@ -94,6 +94,18 @@ function isFoundationLike(entity: Entity): boolean {
 }
 
 /**
+ * ADR-484 Slice 5 — Revit-canonical foundation isolation. Τα πέδιλα ζουν **ΜΟΝΟ**
+ * στον όροφο Θεμελίωσης. Αφαιρεί ΟΛΑ τα foundation entities από ένα scene — το
+ * καλούν οι all-floors aggregators για κάθε **μη-foundation** όροφο, ώστε legacy
+ * foundation entities baked σε λάθος blob (π.χ. πεδιλοδοκοί στο Ισόγειο) να μην
+ * εμφανίζονται ποτέ. Pure + idempotent· same-reference no-op όταν δεν υπάρχει πέδιλο.
+ */
+export function stripAllFoundations(scene: SceneModel): SceneModel {
+  const entities = scene.entities.filter((e) => !isFoundationLike(e));
+  return entities.length === scene.entities.length ? scene : { ...scene, entities };
+}
+
+/**
  * ADR-459 Φ7 — αντικαθιστά τα foundation entities (πέδιλα) ενός scene με τα
  * authoritative `modelFootings` που αντλούνται από το model SSoT
  * (`floorplan_foundations`, keyed-by-`floorId`). Τα cross-level auto πέδιλα ΔΕΝ

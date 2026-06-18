@@ -29,6 +29,9 @@ import type { SceneModel } from '../../types/scene';
 import { LevelSceneManagerAdapter } from '../../systems/entity-creation/LevelSceneManagerAdapter';
 import { CreateFoundationsCommand } from '../../core/commands/entity-commands/CreateFoundationsCommand';
 import { RehostFoundationsCommand } from '../../core/commands/entity-commands/RehostFoundationsCommand';
+// ADR-484 Slice 6 — cross-level routing: create + miter-update μέσω του foundation writer.
+import { ReconcileCrossLevelFoundationsCommand } from '../../core/commands/entity-commands/ReconcileCrossLevelFoundationsCommand';
+import type { FoundationCrossLevelWriter } from './foundation-cross-level-writer';
 import { CompoundCommand } from '../../core/commands/CompoundCommand';
 import { isFoundationEntity } from '../../types/entities';
 import { hasGuideBindings } from '../hosting/guide-binding-types';
@@ -51,6 +54,17 @@ export interface TieBeamGridCommitDeps {
   readonly executeCommand: (command: ICommand) => void;
   /** Προαιρετικά param overrides (v1: tie-beam defaults). */
   readonly overrides?: FoundationParamOverrides;
+  /**
+   * ADR-484 Slice 6 — cross-level routing (ίδιο με την εσχάρα): όταν ο ενεργός όροφος
+   * ΔΕΝ είναι η Θεμελίωση, ο writer δρομολογεί τις συνδετήριες στον foundation level.
+   * `null` → single-level active path.
+   */
+  readonly foundationWriter?: FoundationCrossLevelWriter | null;
+  /**
+   * ADR-484 Slice 6 — authoritative grid-managed συνδετήριες του ορόφου Θεμελίωσης (από το
+   * `foundation-level-store`), ως «existing» όταν cross-level. Αγνοείται όταν writer null.
+   */
+  readonly foundationExisting?: readonly FoundationEntity[];
 }
 
 export interface TieBeamGridCommitResult {
@@ -136,7 +150,14 @@ export function commitTieBeamGridFromGuides(
     return { ok: false, reason: 'insufficient-guides', created: 0, skipped: 0, jointed: 0 };
   }
 
-  const existing = existingGridTieBeams(deps.getLevelScene, deps.levelId);
+  // ADR-484 Slice 6 — cross-level: existing συνδετήριες από το foundation-level-store
+  // (kind-partition + grid-managed), αλλιώς από την ενεργή σκηνή.
+  const crossLevelWriter = deps.foundationWriter ?? null;
+  const existing = crossLevelWriter
+    ? (deps.foundationExisting ?? []).filter(
+        (f) => f.params.kind === 'tie-beam' && hasGuideBindings(f),
+      )
+    : existingGridTieBeams(deps.getLevelScene, deps.levelId);
   const existingKeys = tieBeamSegmentKeys(existing);
   const toCreate = target.strips.filter((t) => {
     const key = segmentKeyFromBindings(t.guideBindings ?? []);
@@ -153,7 +174,13 @@ export function commitTieBeamGridFromGuides(
     return { ok: false, reason: 'up-to-date', created: 0, skipped, jointed: 0 };
   }
 
-  const adapter = new LevelSceneManagerAdapter(deps.getLevelScene, deps.setLevelScene, deps.levelId);
-  deps.executeCommand(buildTieCommand(updates, create, adapter));
+  // ADR-484 Slice 6 — cross-level: create + miter-update μέσω writer (μηδέν delete στις
+  // συνδετήριες). Single-level → ο κανονικός adapter command.
+  if (crossLevelWriter) {
+    deps.executeCommand(new ReconcileCrossLevelFoundationsCommand(create, [], updates, crossLevelWriter));
+  } else {
+    const adapter = new LevelSceneManagerAdapter(deps.getLevelScene, deps.setLevelScene, deps.levelId);
+    deps.executeCommand(buildTieCommand(updates, create, adapter));
+  }
   return { ok: true, created: toCreate.length, skipped, jointed: updates.length };
 }
