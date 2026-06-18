@@ -8,7 +8,7 @@
  * Fixtures: canvas = mm (sceneUnits:'mm' → 1mm/unit) → /1000 = m.
  */
 
-import { computeSlabBeamTributary } from '../slab-beam-support';
+import { computeSlabBeamTributary, computeSlabSupportConditions } from '../slab-beam-support';
 import type { Entity } from '../../../../types/entities';
 
 /** Δοκός: άξονας startPoint→endPoint (mm). */
@@ -115,5 +115,45 @@ describe('computeSlabBeamTributary', () => {
       slab('s1', 0, 0, 5000, 2000, 0),
     ]);
     expect(map.size).toBe(0);
+  });
+});
+
+describe('computeSlabSupportConditions (ADR-498)', () => {
+  it('πρόβολος: 1 φέρουσα δοκός → cantilever + μήκος = κάθετη προβολή', () => {
+    // δοκός κατά X [0,5]· πλάκα 5×2m στο +Y → πρόβολος βάθους 2m.
+    const map = computeSlabSupportConditions([
+      beam('b1', 0, 0, 5000, 0),
+      slab('s1', 0, 0, 5000, 2000, 10),
+    ]);
+    const c = map.get('s1');
+    expect(c?.supportType).toBe('cantilever');
+    expect(c?.supportCount).toBe(1);
+    expect(c?.cantileverLengthM).toBeCloseTo(2, 6);
+  });
+
+  it('αμφιέρειστη: 2 φέρουσες δοκοί → simple, μηδέν πρόβολος', () => {
+    const map = computeSlabSupportConditions([
+      beam('b1', 0, 0, 5000, 0),
+      beam('b2', 0, 3000, 5000, 3000),
+      slab('s1', 0, 0, 5000, 3000, 15),
+    ]);
+    const c = map.get('s1');
+    expect(c?.supportType).toBe('simple');
+    expect(c?.supportCount).toBe(2);
+    expect(c?.cantileverLengthM).toBe(0);
+  });
+
+  it('αιωρούμενη (καμία φέρουσα δοκός) → simple, count 0', () => {
+    const map = computeSlabSupportConditions([
+      beam('bFar', 0, 10000, 5000, 10000),
+      slab('s1', 0, 0, 5000, 2000, 10),
+    ]);
+    const c = map.get('s1');
+    expect(c?.supportType).toBe('simple');
+    expect(c?.supportCount).toBe(0);
+  });
+
+  it('καμία πλάκα → κενό map', () => {
+    expect(computeSlabSupportConditions([beam('b1', 0, 0, 5000, 0)]).size).toBe(0);
   });
 });

@@ -195,7 +195,9 @@ function buildLshapeLocal(width: number, depth: number, s: number, override?: Co
 /**
  * T-shape CCW (anchor-frame): horizontal flange στο top + vertical web στο
  * bottom-center. flangeLength = πλάτος πέλματος (default = width),
- * webThickness = πάχος κορμού (default = depth/3).
+ * webThickness = πάχος κορμού (default = depth/3), flangeThickness = πάχος
+ * πέλματος / flange depth (default = depth/3· ADR-496 Phase 2 — override-able
+ * ώστε το smart-fit να το ορίζει ίσο με το πλάτος του συνεχόμενου δοκαριού).
  *
  * flipY=true: flange moves to bottom (set by mirror — ADR-363 Phase 7.2).
  * y-flip reverses CCW winding, so vertices are reversed to restore it.
@@ -204,7 +206,7 @@ function buildTshapeLocal(width: number, depth: number, s: number, override?: Co
   // All mm scalars scaled by s → canvas units for correct 2D placement.
   const flangeLength = Math.max(s, (override?.flangeLength ?? width) * s);
   const webThickness = Math.max(s, (override?.webThickness ?? depth / 3) * s);
-  const flangeDepth = Math.max(s, (depth / 3) * s);
+  const flangeDepth = Math.max(s, (override?.flangeThickness ?? depth / 3) * s);
   const flipY = override?.flipY ?? false;
   const hw = (width * s) / 2;
   const hd = (depth * s) / 2;

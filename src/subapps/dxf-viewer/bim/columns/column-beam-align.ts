@@ -43,11 +43,36 @@
 
 import type { ColumnEntity, ColumnParams } from '../types/column-types';
 import type { BeamEntity } from '../types/beam-types';
+import type { Point2D } from '../../rendering/types/Types';
 import type { Point3D } from '../types/bim-base';
-import { rotateVector, unitVector } from '../grips/grip-math';
+import { rotateVector, rotationDegToAlignLocalY, unitVector } from '../grips/grip-math';
+import { lineIntersectionPoint } from '../geometry/shared/polygon-utils';
 import { mmToSceneUnits } from '../../utils/scene-units';
 
-const DEG_PER_RAD = 180 / Math.PI;
+/** |dot| δύο μοναδιαίων διευθύνσεων κάτω από αυτό ⇒ «κάθετα» (~15° ανοχή). */
+const PERPENDICULAR_DOT_TOL = 0.26;
+
+/**
+ * Τα άκρα ενός δοκαριού ταξινομημένα ως προς απόσταση από σημείο `(px,py)` — ΕΝΑ SSoT για
+ * κάθε «ποιο άκρο είναι κοντά/μακριά» ερώτημα του module (πλησιέστερο πλαισιωτικό δοκάρι,
+ * near/far-end του bearing arm, terminating-vs-passing για το T-junction). Πριν ήταν 3
+ * inline `Math.hypot` επαναλήψεις (N.0.2 de-dup).
+ */
+interface BeamEndsByProximity {
+  readonly near: Point3D;
+  readonly far: Point3D;
+  readonly nearDist: number;
+  readonly farDist: number;
+}
+function beamEndsByProximity(beam: BeamEntity, px: number, py: number): BeamEndsByProximity {
+  const s = beam.params.startPoint;
+  const e = beam.params.endPoint;
+  const dS = Math.hypot(s.x - px, s.y - py);
+  const dE = Math.hypot(e.x - px, e.y - py);
+  return dS <= dE
+    ? { near: s, far: e, nearDist: dS, farDist: dE }
+    : { near: e, far: s, nearDist: dE, farDist: dS };
+}
 
 /**
  * Διαλέγει το πλησιέστερο πλαισιωτικό δοκάρι: εκείνο του οποίου το **εγγύτερο άκρο**
@@ -60,9 +85,7 @@ function nearestFramingBeam(beams: readonly BeamEntity[], column: ColumnEntity):
   let best = beams[0];
   let bestDist = Number.POSITIVE_INFINITY;
   for (const b of beams) {
-    const s = b.params.startPoint;
-    const e = b.params.endPoint;
-    const dNear = Math.min(Math.hypot(s.x - cx, s.y - cy), Math.hypot(e.x - cx, e.y - cy));
+    const dNear = beamEndsByProximity(b, cx, cy).nearDist;
     if (dNear < bestDist) {
       best = b;
       bestDist = dNear;
@@ -92,25 +115,18 @@ export function alignColumnToFramingBeam(
   if (framingBeams.length === 0) return null;
 
   const beam = framingBeams.length === 1 ? framingBeams[0] : nearestFramingBeam(framingBeams, column);
-  const start = beam.params.startPoint;
-  const end = beam.params.endPoint;
 
   // near-end = το άκρο του δοκαριού πλησιέστερα στο κέντρο της κολώνας = η παρειά #1 όπου
   // πατά το bearing arm. far-end ορίζει το `u_span` (φορά προς το άνοιγμα).
   const cx = column.params.position.x;
   const cy = column.params.position.y;
-  const dStart = Math.hypot(start.x - cx, start.y - cy);
-  const dEnd = Math.hypot(end.x - cx, end.y - cy);
-  const nearEnd = dStart <= dEnd ? start : end;
-  const farEnd = dStart <= dEnd ? end : start;
+  const { near: nearEnd, far: farEnd } = beamEndsByProximity(beam, cx, cy);
 
   // u_span = μοναδιαία φορά near-end → far-end (προς το άνοιγμα). Reuse `unitVector` SSoT
   // (grip-math, ίδιο module με το `rotateVector`) — μηδέν χειροκίνητο normalize· null σε
   // εκφυλισμένο (μηδενικού μήκους) δοκάρι.
   const uSpan = unitVector(nearEnd, farEnd);
   if (!uSpan) return null;
-  const ux = uSpan.x;
-  const uy = uSpan.y;
 
   const s = mmToSceneUnits(nextParams.sceneUnits ?? 'mm');
   const armWidth = beam.params.width; // mm — πάχος bearing arm = πλάτος δοκαριού (απαίτηση 3)
@@ -122,8 +138,7 @@ export function alignColumnToFramingBeam(
   const D = Math.max(nextParams.depth, armWidth);
 
   // rotation θ: τοπικό +Y (bearing arm, ελεύθερο άκρο στην κορυφή) → άξονας δοκαριού u_span.
-  //   R(θ)·(0,1) = (−sinθ, cosθ) = (ux, uy) → sinθ = −ux, cosθ = uy.
-  const rotationDeg = Math.atan2(-ux, uy) * DEG_PER_RAD;
+  const rotationDeg = rotationDegToAlignLocalY(uSpan);
 
   // near-end centerline του bearing arm σε LOCAL mm (flipY=false: σκέλος αριστερά
   // x∈[−W/2, −W/2+armWidth], ελεύθερο άκρο στην κορυφή y=+D/2).
@@ -147,4 +162,160 @@ export function alignColumnToFramingBeam(
     depth: D,
     lshape: { ...nextParams.lshape, armWidth, flipY: false },
   };
+}
+
+// ─── ADR-496 Phase 2 — T-shape dual-beam alignment (T-junction) ───────────────
+
+/** Άξονας ενός δοκαριού: η οντότητα + η μοναδιαία διεύθυνσή του (start→end). */
+interface BeamAxis {
+  readonly beam: BeamEntity;
+  readonly u: { x: number; y: number };
+}
+
+/** Beams → άξονες (skip τα εκφυλισμένα μηδενικού μήκους). */
+function beamAxes(beams: readonly BeamEntity[]): BeamAxis[] {
+  const out: BeamAxis[] = [];
+  for (const beam of beams) {
+    const u = unitVector(beam.params.startPoint, beam.params.endPoint);
+    if (u) out.push({ beam, u });
+  }
+  return out;
+}
+
+/**
+ * Διαλέγει το καλύτερο ΚΑΘΕΤΟ ζεύγος δοκαριών — εκείνο του οποίου ο κόμβος (τομή των
+ * αξόνων) είναι **πλησιέστερα στο κέντρο** της κολώνας (= η πραγματική συμβολή Τ). Για το
+ * στιγμιότυπο (ακριβώς 2 κάθετα) υπάρχει ένα μόνο ζεύγος· >2 διαλέγει το γνήσιο junction.
+ */
+function bestPerpendicularPair(
+  axes: readonly BeamAxis[],
+  cx: number,
+  cy: number,
+): { a: BeamAxis; b: BeamAxis; node: Point2D } | null {
+  let best: { a: BeamAxis; b: BeamAxis; node: Point2D } | null = null;
+  let bestDist = Number.POSITIVE_INFINITY;
+  for (let i = 0; i < axes.length; i++) {
+    for (let j = i + 1; j < axes.length; j++) {
+      const dot = Math.abs(axes[i].u.x * axes[j].u.x + axes[i].u.y * axes[j].u.y);
+      if (dot > PERPENDICULAR_DOT_TOL) continue; // όχι κάθετα → skip
+      const node = lineIntersectionPoint(
+        axes[i].beam.params.startPoint, axes[i].u,
+        axes[j].beam.params.startPoint, axes[j].u,
+      );
+      if (!node) continue;
+      const d = Math.hypot(node.x - cx, node.y - cy);
+      if (d < bestDist) {
+        best = { a: axes[i], b: axes[j], node };
+        bestDist = d;
+      }
+    }
+  }
+  return best;
+}
+
+/**
+ * ADR-496 Phase 2 — ταιριάζει μια κολώνα που αλλάζει τύπο σε **Τ (T-shape)** σε ΔΥΟ
+ * κάθετα πλαισιωτικά δοκάρια (T-junction), ώστε **κάθε σκέλος του Τ να γίνεται δομική
+ * συνέχεια του αντίστοιχου δοκαριού**:
+ *
+ *   · **πέλμα (flange)** ∥ το **συνεχόμενο** δοκάρι (αυτό που «περνά ευθεία» — ο κόμβος
+ *     είναι εσωτερικός στο span του)· `flangeThickness = flangeBeam.width`, flange
+ *     centerline ≡ άξονάς του.
+ *   · **κορμός (web)** ∥ το **καταλήγον** δοκάρι (το ένα άκρο του στον κόμβο)·
+ *     `webThickness = webBeam.width`, web centerline ≡ άξονάς του.
+ *
+ * Επειδή `πάχος σκέλους == πλάτος δοκαριού` ΚΑΙ `centerline ≡ άξονας`, **και οι δύο
+ * παρειές** κάθε σκέλους πέφτουν flush αυτόματα (το «flush» = συνέπεια της συνέχειας).
+ *
+ * **Κλειστή λύση (anchor='center', ίδιο μοτίβο με το single-beam {@link alignColumnToFramingBeam}):**
+ *   · τοπικό +Y (κορμός→πέλμα) = `−u_webOut` (αντίθετο της φοράς που εκτείνεται ο κορμός-
+ *     δοκάρι) → `rotationDegToAlignLocalY(−u_webOut)`.
+ *   · `P_local = (0, D/2 − flangeThickness/2)` = ο κόμβος σε τοπικές mm (τομή flange-
+ *     centerline × web-centerline) → `position = N − R(θ)·(P_local·s)`.
+ *
+ * Reuse: `unitVector` + `rotateVector` + `rotationDegToAlignLocalY` (grip-math SSoT),
+ * `lineIntersectionPoint` (polygon-utils SSoT), `mmToSceneUnits`. Πλήρως pure + unit-testable.
+ *
+ * @returns νέα `ColumnParams` (override `position/anchor/rotation/width/depth/tshape`) ή
+ *   `null` όταν δεν βρεθεί κάθετο ζεύγος (caller κρατά τα raw catalog params — μηδέν regression).
+ */
+export function alignTShapeColumnToFramingBeams(
+  column: ColumnEntity,
+  nextParams: ColumnParams,
+  framingBeams: readonly BeamEntity[],
+): ColumnParams | null {
+  if (nextParams.kind !== 'T-shape') return null;
+
+  const cx = column.params.position.x;
+  const cy = column.params.position.y;
+  const pair = bestPerpendicularPair(beamAxes(framingBeams), cx, cy);
+  if (!pair) return null;
+
+  // flange-beam = «περνά ευθεία» (μεγαλύτερη απόσταση κόμβου από τα άκρα του = εσωτερικός)·
+  // web-beam = «καταλήγει» (το ένα άκρο στον κόμβο = μικρότερη απόσταση). Reuse του ΕΝΟΣ
+  // `beamEndsByProximity` SSoT (near = το πλησιέστερο άκρο, far = η φορά που εκτείνεται).
+  const { node } = pair;
+  const endsA = beamEndsByProximity(pair.a.beam, node.x, node.y);
+  const endsB = beamEndsByProximity(pair.b.beam, node.x, node.y);
+  const aIsFlange = endsA.nearDist >= endsB.nearDist;
+  const flangeBeam = (aIsFlange ? pair.a : pair.b).beam;
+  const webBeam = (aIsFlange ? pair.b : pair.a).beam;
+  const webEnds = aIsFlange ? endsB : endsA;
+
+  // u_webOut = φορά που εκτείνεται το σώμα του κορμού-δοκαριού από τον κόμβο (node → far).
+  const uWebOut = unitVector(node, webEnds.far);
+  if (!uWebOut) return null;
+
+  // rotation: τοπικό +Y (κορμός→πέλμα) = −u_webOut (αντίθετο της φοράς που εκτείνεται ο κορμός).
+  const rotationDeg = rotationDegToAlignLocalY({ x: -uWebOut.x, y: -uWebOut.y });
+
+  const s = mmToSceneUnits(nextParams.sceneUnits ?? 'mm');
+  const webThickness = webBeam.params.width; // mm — πάχος κορμού = πλάτος καταλήγοντος δοκαριού
+  const flangeThickness = flangeBeam.params.width; // mm — πάχος πέλματος = πλάτος συνεχόμενου
+
+  // bbox: W ≥ webThickness (ο κορμός χωρά κατά X)· D ≥ flangeThickness + webThickness
+  // (θετικό μήκος κορμού κάτω από το πέλμα). Κρατά catalog defaults όταν επαρκούν.
+  const W = Math.max(nextParams.width, webThickness);
+  const D = Math.max(nextParams.depth, flangeThickness + webThickness);
+
+  // P_local = ο κόμβος (τομή flange-centerline y=D/2−ft/2 × web-centerline x=0) σε τοπικές mm.
+  const pLocalY = D / 2 - flangeThickness / 2;
+  const rotated = rotateVector({ x: 0, y: pLocalY * s }, rotationDeg);
+
+  const position: Point3D = {
+    x: node.x - rotated.x,
+    y: node.y - rotated.y,
+    z: nextParams.position.z,
+  };
+
+  return {
+    ...nextParams,
+    position,
+    anchor: 'center',
+    rotation: rotationDeg,
+    width: W,
+    depth: D,
+    // flangeLength = W ⇒ το πέλμα καλύπτει όλο το bbox-πλάτος (πλήρης συνέχεια στο
+    // συνεχόμενο δοκάρι). webThickness/flangeThickness = πλάτη δοκαριών· flipY=false.
+    tshape: { ...nextParams.tshape, flangeLength: W, webThickness, flangeThickness, flipY: false },
+  };
+}
+
+/**
+ * ADR-496 — dispatcher ανά kind για το command-time smart-fit κατά την αλλαγή τύπου.
+ * Single-beam L-shape (Phase 1) → {@link alignColumnToFramingBeam}· dual-beam T-shape
+ * (Phase 2) → {@link alignTShapeColumnToFramingBeams}· κάθε άλλο kind → `null` (ο caller
+ * κρατά τα raw params). ΕΝΑ σημείο routing ώστε ο hook (`useColumnParamsDispatcher`) να
+ * μένει thin — μηδέν per-kind branching εκεί.
+ */
+export function alignColumnOnTypeChange(
+  column: ColumnEntity,
+  nextParams: ColumnParams,
+  framingBeams: readonly BeamEntity[],
+): ColumnParams | null {
+  switch (nextParams.kind) {
+    case 'L-shape': return alignColumnToFramingBeam(column, nextParams, framingBeams);
+    case 'T-shape': return alignTShapeColumnToFramingBeams(column, nextParams, framingBeams);
+    default:        return null;
+  }
 }

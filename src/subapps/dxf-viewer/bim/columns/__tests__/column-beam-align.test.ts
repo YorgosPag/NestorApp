@@ -10,7 +10,11 @@
  * + catalog fallback (κανένα δοκάρι → null) + non-L kind → null + width clamp.
  */
 
-import { alignColumnToFramingBeam } from '../column-beam-align';
+import {
+  alignColumnToFramingBeam,
+  alignTShapeColumnToFramingBeams,
+  alignColumnOnTypeChange,
+} from '../column-beam-align';
 import { rotateVector } from '../../grips/grip-math';
 import { mmToSceneUnits } from '../../../utils/scene-units';
 import type { Point2D } from '../../../rendering/types/Types';
@@ -158,5 +162,133 @@ describe('alignColumnToFramingBeam (ADR-496)', () => {
     const col = rectColumn(0, 0);
     const tShape = { ...lshapeNext(), kind: 'T-shape' } as unknown as ColumnParams;
     expect(alignColumnToFramingBeam(col, tShape, [beam({ x: 0, y: 0 }, { x: 3000, y: 0 })])).toBeNull();
+  });
+});
+
+// ─── ADR-496 Phase 2 — T-shape dual-beam (T-junction) ─────────────────────────
+
+/** T-shape catalog nextParams (placeholder defaults — το smart-fit τα υπερισχύει). */
+function tshapeNext(width = 400, depth = 400): ColumnParams {
+  return {
+    kind: 'T-shape', position: { x: 0, y: 0, z: 0 }, anchor: 'center',
+    width, depth, height: 3000, rotation: 0, sceneUnits: 'mm',
+    baseBinding: 'storey-floor', topBinding: 'storey-ceiling', baseOffset: 0, topOffset: 0,
+    tshape: { flangeLength: width, webThickness: depth / 3 },
+  } as unknown as ColumnParams;
+}
+
+/** Flange centerline σε LOCAL mm (τομή flange-centerline × web-centerline = ο κόμβος). */
+function flangeWebNodeLocal(p: ColumnParams): Point2D {
+  const ft = p.tshape?.flangeThickness ?? 0;
+  return { x: 0, y: p.depth / 2 - ft / 2 };
+}
+
+describe('alignTShapeColumnToFramingBeams (ADR-496 Phase 2)', () => {
+  it('H-flange (περνά ευθεία) + V-web (καταλήγει) — πάχη + προσανατολισμός + flush κόμβος', () => {
+    // Οριζόντιο δοκάρι (w=300) περνά ευθεία από τον κόμβο (-3000..3000)· κατακόρυφο (w=250)
+    // καταλήγει στον κόμβο (0,0)→(0,-3000). Κόμβος = (0,0).
+    const col = rectColumn(0, 0);
+    const flangeBeam = beam({ x: -3000, y: 0 }, { x: 3000, y: 0 }, 300);
+    const webBeam = beam({ x: 0, y: 0 }, { x: 0, y: -3000 }, 250);
+    const fit = alignTShapeColumnToFramingBeams(col, tshapeNext(), [flangeBeam, webBeam]);
+    expect(fit).not.toBeNull();
+    if (!fit) return;
+
+    // πάχη = πλάτη δοκαριών· flange = συνεχόμενο (300), web = καταλήγον (250).
+    expect(fit.tshape?.flangeThickness).toBe(300);
+    expect(fit.tshape?.webThickness).toBe(250);
+    expect(fit.anchor).toBe('center');
+    expect(fit.tshape?.flipY).toBe(false);
+
+    // τοπικό +Y (κορμός→πέλμα) → (0,1) (ο κορμός εκτείνεται προς -Y = κάτω).
+    const dir = rotateVector({ x: 0, y: 1 }, fit.rotation);
+    expect(dir.x).toBeCloseTo(0, 6);
+    expect(dir.y).toBeCloseTo(1, 6);
+
+    // ο κόμβος (flange-centerline × web-centerline) πέφτει flush στην τομή των αξόνων (0,0).
+    const w = worldOfLocal(fit, flangeWebNodeLocal(fit));
+    expect(w.x).toBeCloseTo(0, 6);
+    expect(w.y).toBeCloseTo(0, 6);
+  });
+
+  it('διαγώνιο κάθετο ζεύγος (45°) — generic axis alignment, μηδέν hard-coded X/Y', () => {
+    const col = rectColumn(0, 0);
+    // flange ∥ (1,1) περνά ευθεία· web ∥ (1,-1) καταλήγει στον κόμβο (0,0).
+    const flangeBeam = beam({ x: -2121, y: -2121 }, { x: 2121, y: 2121 }, 300);
+    const webBeam = beam({ x: 0, y: 0 }, { x: 2121, y: -2121 }, 250);
+    const fit = alignTShapeColumnToFramingBeams(col, tshapeNext(), [flangeBeam, webBeam]);
+    expect(fit).not.toBeNull();
+    if (!fit) return;
+
+    expect(fit.tshape?.flangeThickness).toBe(300);
+    expect(fit.tshape?.webThickness).toBe(250);
+
+    // u_webOut = (1,-1)/√2 → target = (-1,1)/√2 → τοπικό +Y ευθυγραμμίζεται σε αυτό.
+    const inv = 1 / Math.SQRT2;
+    const dir = rotateVector({ x: 0, y: 1 }, fit.rotation);
+    expect(dir.x).toBeCloseTo(-inv, 6);
+    expect(dir.y).toBeCloseTo(inv, 6);
+
+    const w = worldOfLocal(fit, flangeWebNodeLocal(fit));
+    expect(w.x).toBeCloseTo(0, 6);
+    expect(w.y).toBeCloseTo(0, 6);
+  });
+
+  it('bbox μεγαλώνει ώστε να χωρά πέλμα+κορμό (D ≥ flangeThickness + webThickness)', () => {
+    const col = rectColumn(0, 0);
+    // Φαρδιά δοκάρια: 500 (flange) + 400 (web) = 900 > catalog depth 400.
+    const flangeBeam = beam({ x: -3000, y: 0 }, { x: 3000, y: 0 }, 500);
+    const webBeam = beam({ x: 0, y: 0 }, { x: 0, y: -3000 }, 400);
+    const fit = alignTShapeColumnToFramingBeams(col, tshapeNext(400, 400), [flangeBeam, webBeam]);
+    expect(fit).not.toBeNull();
+    if (!fit) return;
+    expect(fit.depth).toBe(900); // max(400, 500 + 400)
+    expect(fit.width).toBe(400); // max(400, 400)
+    expect(fit.tshape?.flangeLength).toBe(400); // = W (πλήρες bbox-πλάτος)
+  });
+
+  it('< 2 framing beams → null (μηδέν regression)', () => {
+    const col = rectColumn(0, 0);
+    expect(alignTShapeColumnToFramingBeams(col, tshapeNext(), [beam({ x: 0, y: 0 }, { x: 3000, y: 0 })])).toBeNull();
+    expect(alignTShapeColumnToFramingBeams(col, tshapeNext(), [])).toBeNull();
+  });
+
+  it('μη-κάθετο ζεύγος → null (catalog fallback)', () => {
+    const col = rectColumn(0, 0);
+    // Δύο ~παράλληλα δοκάρια (dot ≈ 1) → κανένα κάθετο ζεύγος.
+    const b1 = beam({ x: -3000, y: 0 }, { x: 3000, y: 0 }, 300);
+    const b2 = beam({ x: -3000, y: 50 }, { x: 3000, y: 50 }, 250);
+    expect(alignTShapeColumnToFramingBeams(col, tshapeNext(), [b1, b2])).toBeNull();
+  });
+
+  it('non-T kind → null', () => {
+    const col = rectColumn(0, 0);
+    const flangeBeam = beam({ x: -3000, y: 0 }, { x: 3000, y: 0 }, 300);
+    const webBeam = beam({ x: 0, y: 0 }, { x: 0, y: -3000 }, 250);
+    expect(alignTShapeColumnToFramingBeams(col, lshapeNext(), [flangeBeam, webBeam])).toBeNull();
+  });
+});
+
+describe('alignColumnOnTypeChange (ADR-496 dispatcher)', () => {
+  const col = rectColumn(0, 0);
+  const hBeam = beam({ x: -3000, y: 0 }, { x: 3000, y: 0 }, 300);
+  const vBeam = beam({ x: 0, y: 0 }, { x: 0, y: -3000 }, 250);
+
+  it('T-shape → dual-beam fit', () => {
+    const fit = alignColumnOnTypeChange(col, tshapeNext(), [hBeam, vBeam]);
+    expect(fit).not.toBeNull();
+    expect(fit?.tshape?.webThickness).toBe(250);
+    expect(fit?.tshape?.flangeThickness).toBe(300);
+  });
+
+  it('L-shape → single-beam fit (Phase 1, αμετάβλητο)', () => {
+    const fit = alignColumnOnTypeChange(col, lshapeNext(), [hBeam]);
+    expect(fit).not.toBeNull();
+    expect(fit?.lshape?.armWidth).toBe(300);
+  });
+
+  it('rectangular (ή άλλο kind) → null', () => {
+    const rectNext = { ...lshapeNext(), kind: 'rectangular' } as unknown as ColumnParams;
+    expect(alignColumnOnTypeChange(col, rectNext, [hBeam, vBeam])).toBeNull();
   });
 });

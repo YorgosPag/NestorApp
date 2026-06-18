@@ -25,6 +25,7 @@ import type { ICommand, ISceneManager, SceneEntity, SerializedCommand } from '..
 import type { Entity } from '../../../types/entities';
 import type { StructuralCodeProvider } from '../../../bim/structural/codes/structural-code-types';
 import type { BeamSupportType } from '../../../bim/types/beam-types';
+import type { SlabSupportCondition } from '../../../bim/structural/loads/slab-beam-support';
 import { buildReinforcePatch, type ReinforceableParams } from '../../../bim/structural/reinforce-patch';
 import { generateEntityId } from '../../../systems/entity-creation/utils';
 import { signalEntitiesAttached } from './attach-persist-signal';
@@ -53,6 +54,8 @@ export class AutoReinforceOrganismCommand implements ICommand {
     private readonly supportTypeByBeamId?: ReadonlyMap<string, BeamSupportType>,
     // ADR-491 — DERIVED FEM ροπή φορέα ανά κολώνα στήριξης (πρόβολος → M-N οπλισμός).
     private readonly columnFemMomentById?: ReadonlyMap<string, number>,
+    // ADR-498 — DERIVED topology-aware συνθήκη στήριξης ανά πλάκα (πρόβολος → hogging άνω σχάρα).
+    private readonly slabSupportConditionBySlabId?: ReadonlyMap<string, SlabSupportCondition>,
   ) {
     this.id = generateEntityId();
     this.timestamp = Date.now();
@@ -86,6 +89,7 @@ export class AutoReinforceOrganismCommand implements ICommand {
         this.provider,
         this.supportTypeByBeamId?.get(entityId),
         this.columnFemMomentById?.get(entityId),
+        this.slabSupportConditionBySlabId?.get(entityId),
       );
       if (!patch) continue; // idempotent: non-structural ή ήδη οπλισμένο
       this.patches.push({ entityId, prev: patch.prev, next: patch.next });

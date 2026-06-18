@@ -96,6 +96,13 @@ export interface ColumnTshapeParams {
   /** mm. Πάχος κορμού (Y-axis web). */
   readonly webThickness?: number;
   /**
+   * mm. Πάχος πέλματος (Y-axis flange depth). ADR-496 Phase 2: ΠΡΙΝ ήταν hard-coded
+   * `depth/3` μέσα στο `buildTshapeLocal` — τώρα override-able ώστε το smart-fit
+   * (`alignTShapeColumnToFramingBeams`) να το θέτει ίσο με το **πλάτος του συνεχόμενου
+   * δοκαριού** (flange = δομική συνέχεια). Absent → fallback `depth/3` (back-compat).
+   */
+  readonly flangeThickness?: number;
+  /**
    * Flange at bottom instead of top. Set by mirror operations (ADR-363 Phase 7.2).
    * Proof: local mirror transform T[1][1] = -1 for all axisAngle+rotation.
    */

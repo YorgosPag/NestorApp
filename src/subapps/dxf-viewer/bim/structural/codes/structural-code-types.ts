@@ -287,6 +287,13 @@ export interface SlabFoundationSectionContext {
   readonly designLoadKpa?: number;
   /** Κατηγορία σκυροδέματος (DEFER — για μελλοντικό f_cd σε strength). Absent ⇒ default code grade. */
   readonly concreteGrade?: ConcreteGrade;
+  // ─── ADR-498 — topology-aware support (mirror δοκαριού· πρόβολος → hogging άνω σχάρα) ──
+  /** Τύπος στήριξης (DERIVED, ADR-498). 'cantilever' ⇒ M_Ed = q·L²/2 στην **άνω** σχάρα.
+   *  Absent ⇒ 'simple' (αμφιέρειστο q·L²/8 κάτω σχάρα — μηδέν regression). */
+  readonly supportType?: BeamSupportType;
+  /** Μήκος προβόλου L (mm) — το άνοιγμα σχεδιασμού όταν supportType==='cantilever'
+   *  (κάθετη προβολή ως την ελεύθερη παρειά· αντικαθιστά το maxFreeSpanMm στη ροπή). */
+  readonly cantileverSpanMm?: number;
 }
 
 /**
@@ -343,6 +350,11 @@ export interface StructuralCodeProvider {
    * SSoT ανά κώδικα — το `member-sizing` το χρησιμοποιεί για d_req = span / limit.
    */
   beamSpanDepthLimit(ctx: BeamSectionContext): number;
+  /**
+   * ADR-498 — μέγιστος επιτρεπτός λόγος L/d **πλάκας** (EC2 §7.4.2 Table 7.4N· slab-basic ×
+   * K). Ο έλεγχος βέλους προβόλου: d_req = cantileverSpan / limit· πάχος < απαιτούμενο → warning.
+   */
+  slabSpanDepthLimit(ctx: SlabFoundationSectionContext): number;
   /**
    * ADR-459 Phase 4b — footing detailing limits (mat/strip). Για `tie-beam` ctx
    * επιστρέφει τα ισοδύναμα beam limits (είναι δοκός).

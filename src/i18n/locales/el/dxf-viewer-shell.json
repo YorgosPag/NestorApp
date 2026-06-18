@@ -43,7 +43,8 @@
       "bearingInadequate": "Η τάση έδρασης εδάφους p_max={pMax} kPa υπερβαίνει την επιτρεπόμενη σ_all={capacity} kPa (αξιοποίηση {utilization}%).",
       "padEccentricHogging": "Έκκεντρο πέδιλο (e/L={ratio}% > {kern}% πυρήνα) — μερική αποκόλληση βάσης· απαιτείται άνω σχάρα (hogging).",
       "punchingInadequate": "Ανεπαρκής διάτρηση: v_Ed={vEd} MPa > v_Rd,c={vRd} MPa (αξιοποίηση {utilization}%) — αύξησε πάχος ή κατηγορία σκυροδέματος.",
-      "oneWayShearInadequate": "Ανεπαρκής τέμνουσα: v_Ed={vEd} MPa > v_Rd,c={vRd} MPa (αξιοποίηση {utilization}%) — αύξησε πάχος πεδίλου."
+      "oneWayShearInadequate": "Ανεπαρκής τέμνουσα: v_Ed={vEd} MPa > v_Rd,c={vRd} MPa (αξιοποίηση {utilization}%) — αύξησε πάχος πεδίλου.",
+      "cantileverSlabTooThin": "Πλάκα-πρόβολος L={span}m: πάχος {thickness}mm ανεπαρκές — λόγος L/d={ldRatio} > όριο {ldLimit} (έλεγχος βέλους). Αύξησε το πάχος της πλάκας."
     },
     "autoReinforced": "{count, plural, =0 {Κανένα μέλος δεν χρειαζόταν οπλισμό} one {Οπλίστηκε # μέλος} other {Οπλίστηκαν # μέλη}}",
     "footingAttached": "{count, plural, =0 {Καμία κολόνα δεν συνδέθηκε} one {Συνδέθηκε # κολόνα στο πέδιλο} other {Συνδέθηκαν # κολόνες στο πέδιλο}}",

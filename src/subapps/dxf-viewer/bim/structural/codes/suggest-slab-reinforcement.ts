@@ -11,7 +11,7 @@
  */
 
 import { nextRebarDiameterMm, rebarFydMpa } from '../rebar-catalog';
-import { footingEffectiveDepthMm, resolveMatMesh } from './suggest-reinforcement';
+import { footingEffectiveDepthMm, resolveMatMesh, spanMomentDivisor } from './suggest-reinforcement';
 import type { SlabFoundationReinforcement } from '../reinforcement/slab-foundation-reinforcement-types';
 import type {
   SlabFoundationSectionContext,
@@ -22,21 +22,32 @@ import type {
 const SLAB_LEVER_ARM_FACTOR = 0.9;
 
 /**
- * ADR-476 — απαιτούμενη As ανά μέτρο πλάτους **αναρτημένης** πλάκας από καμπτική
- * αντοχή (EC2 §6.1, μοχλοβραχίονας z=0.9·d): λωρίδα 1m υπό ομοιόμορφο επιφανειακό
- * φορτίο q_Ed (kPa = kN/m²) → M_Ed = q_Ed·L²/8 (kNm/m), A_s = M_Ed/(z·f_yd).
- * Επιστρέφει 0 χωρίς φορτίο/άνοιγμα ⇒ ο ρ_min κυριαρχεί (μηδέν regression). Συντηρητικό
- * αμφιέρειστο μοντέλο (÷8)· συνέχεια/δι-διευθυντική κατανομή = DEFER (ADR-476 §4).
+ * Άνοιγμα σχεδιασμού (mm) που οδηγεί τη ροπή της αναρτημένης πλάκας: **πρόβολος** (ADR-498) →
+ * το μήκος προβόλου `cantileverSpanMm` (κάθετη προβολή)· αλλιώς το ελεύθερο `maxFreeSpanMm`.
+ */
+function slabDesignSpanMm(ctx: SlabFoundationSectionContext): number {
+  return ctx.supportType === 'cantilever'
+    ? (ctx.cantileverSpanMm ?? 0)
+    : (ctx.maxFreeSpanMm ?? 0);
+}
+
+/**
+ * ADR-476/498 — απαιτούμενη As ανά μέτρο πλάτους **αναρτημένης** πλάκας από καμπτική αντοχή
+ * (EC2 §6.1, μοχλοβραχίονας z=0.9·d): λωρίδα 1m υπό ομοιόμορφο q_Ed (kPa) → M_Ed = q_Ed·L²/c,
+ * A_s = M_Ed/(z·f_yd). Ο συντελεστής `c` = `spanMomentDivisor(supportType)` (ΕΝΑ SSoT, mirror
+ * δοκαριού): αμφιέρειστο ÷8 (κάτω), **πρόβολος ÷2** (hogging, άνω σχάρα — ADR-498). 0 χωρίς
+ * φορτίο/άνοιγμα ⇒ ρ_min κυριαρχεί (μηδέν regression). Συνέχεια/two-way = DEFER (ADR-476 §4).
  */
 function asStrengthSlabPerMetreMm2(
   ctx: SlabFoundationSectionContext,
   dEffMm: number,
 ): number {
   const qEd = ctx.designLoadKpa ?? 0;
-  const spanMm = ctx.maxFreeSpanMm ?? 0;
+  const spanMm = slabDesignSpanMm(ctx);
   if (qEd <= 0 || spanMm <= 0 || dEffMm <= 0) return 0;
   const spanM = spanMm / 1000;
-  const mEdNmmPerM = ((qEd * spanM * spanM) / 8) * 1e6; // kNm/m → N·mm/m
+  const divisor = spanMomentDivisor(ctx.supportType ?? 'simple');
+  const mEdNmmPerM = ((qEd * spanM * spanM) / divisor) * 1e6; // kNm/m → N·mm/m
   return mEdNmmPerM / (SLAB_LEVER_ARM_FACTOR * dEffMm * rebarFydMpa());
 }
 
@@ -60,11 +71,16 @@ export function suggestSlabFoundationReinforcementFrom(
   const asMinPerMetre = limits.minRatio * 1000 * dEff;
 
   if (ctx.kind === 'suspended') {
-    const asBottomPerMetre = Math.max(asMinPerMetre, asStrengthSlabPerMetreMm2(ctx, dEff));
-    const bottom = resolveMatMesh(asBottomPerMetre, seedDia, limits.maxBarSpacingMm);
-    const top = resolveMatMesh(asMinPerMetre, seedDia, limits.maxBarSpacingMm);
-    const bottomLayer = { diameterMm: bottom.diameterMm, spacingMm: bottom.spacingMm };
-    const topLayer = { diameterMm: top.diameterMm, spacingMm: top.spacingMm };
+    const asStrength = Math.max(asMinPerMetre, asStrengthSlabPerMetreMm2(ctx, dEff));
+    const strengthMesh = resolveMatMesh(asStrength, seedDia, limits.maxBarSpacingMm);
+    const minMesh = resolveMatMesh(asMinPerMetre, seedDia, limits.maxBarSpacingMm);
+    const strengthLayer = { diameterMm: strengthMesh.diameterMm, spacingMm: strengthMesh.spacingMm };
+    const minLayer = { diameterMm: minMesh.diameterMm, spacingMm: minMesh.spacingMm };
+    // ADR-498 — πρόβολος: hogging → η strength σχάρα πάει ΕΠΑΝΩ (στήριξη), κάτω = ρ_min.
+    // Αμφιέρειστο: strength ΚΑΤΩ (άνοιγμα), άνω = ρ_min (τρέχουσα συμπεριφορά).
+    const cantilever = ctx.supportType === 'cantilever';
+    const bottomLayer = cantilever ? minLayer : strengthLayer;
+    const topLayer = cantilever ? strengthLayer : minLayer;
     return {
       bottomMeshX: bottomLayer,
       bottomMeshY: bottomLayer,

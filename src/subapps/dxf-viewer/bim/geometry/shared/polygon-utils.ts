@@ -441,6 +441,7 @@ export type {
 export {
   projectPointOnAxis,
   projectPolygonOnAxis,
+  lineIntersectionPoint,
 } from './polygon-axis-projection';
 
 /**

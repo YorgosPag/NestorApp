@@ -32,7 +32,7 @@
 import type { Entity } from '../../../types/entities';
 import { isSlabEntity, isBeamEntity } from '../../../types/entities';
 import type { SlabEntity } from '../../types/slab-types';
-import type { BeamEntity } from '../../types/beam-types';
+import type { BeamEntity, BeamSupportType } from '../../types/beam-types';
 import { projectPolygonOnAxis } from '../../geometry/shared/polygon-axis-projection';
 import { beamEndpointsM } from './member-load-geometry';
 import { mmToSceneUnits } from '../../../utils/scene-units';
@@ -76,31 +76,48 @@ function slabOutlineM(slab: SlabEntity): Pt2M[] {
   return slab.params.outline.vertices.map((v) => ({ x: toM(v.x), y: toM(v.y) }));
 }
 
+/** Επικάλυψη πλάκας↔δοκού: καλυμμένο μήκος (m) + **κάθετο βάθος** (m) στην μακρινή παρειά. */
+interface BeamCoverage {
+  /** Διαμήκες καλυμμένο μήκος δοκού (m)· 0 = μη-φέρουσα. */
+  readonly cov: number;
+  /** Κάθετη απόσταση (m) από τον άξονα της δοκού ως την **μακρινή** παρειά της πλάκας
+   *  (= μήκος προβόλου όταν η πλάκα είναι ολόκληρη στη μία πλευρά). */
+  readonly perpDepthM: number;
+}
+
 /**
- * Καλυμμένο μήκος δοκού (m) όπου η πλάκα την κρατά. 0 όταν η πλάκα δεν ακουμπά τον άξονα
- * (καμία παρειά κατά μήκος) ή δεν υπάρχει διαμήκης επικάλυψη.
+ * Επικάλυψη μιας πλάκας πάνω σε έναν άξονα δοκού. Φέρουσα (`cov > 0`) μόνο όταν μία παρειά
+ * της πλάκας τρέχει πάνω/δίπλα στον άξονα + υπάρχει διαμήκης επικάλυψη. Το `perpDepthM`
+ * (μέγιστη κάθετη έκταση) είναι το μήκος προβόλου όταν η πλάκα προεξέχει στη μία πλευρά.
  */
-function coveredBeamLengthM(slabPtsM: readonly Pt2M[], axis: BeamAxisM): number {
+function beamCoverage(slabPtsM: readonly Pt2M[], axis: BeamAxisM): BeamCoverage {
   const p = projectPolygonOnAxis(slabPtsM, axis.ax, axis.ay, axis.ux, axis.uy);
-  // Φέρουσα μόνο όταν μία παρειά της πλάκας τρέχει πάνω/δίπλα στον άξονα της δοκού.
-  if (Math.min(Math.abs(p.perpMin), Math.abs(p.perpMax)) > EDGE_TOL_M) return 0;
+  if (Math.min(Math.abs(p.perpMin), Math.abs(p.perpMax)) > EDGE_TOL_M) return { cov: 0, perpDepthM: 0 };
   const lo = Math.max(p.alongMin, 0);
   const hi = Math.min(p.alongMax, axis.lengthM);
   const cov = hi - lo;
-  return cov > COVERAGE_EPS_M ? cov : 0;
+  if (cov <= COVERAGE_EPS_M) return { cov: 0, perpDepthM: 0 };
+  return { cov, perpDepthM: Math.max(Math.abs(p.perpMin), Math.abs(p.perpMax)) };
 }
 
-/** Φέρουσες δοκοί μιας πλάκας + καλυμμένο μήκος (m) η καθεμία. */
+/** Φέρουσα δοκός μιας πλάκας: id + καλυμμένο μήκος (m) + κάθετο βάθος (m). */
+interface BearingBeam {
+  readonly id: string;
+  readonly cov: number;
+  readonly perpDepthM: number;
+}
+
+/** Φέρουσες δοκοί μιας πλάκας + άθροισμα καλυμμένων μηκών. */
 function bearingBeams(
   slabPtsM: readonly Pt2M[],
   axes: readonly BeamAxisM[],
-): { covered: Array<{ id: string; cov: number }>; totalCov: number } {
-  const covered: Array<{ id: string; cov: number }> = [];
+): { covered: BearingBeam[]; totalCov: number } {
+  const covered: BearingBeam[] = [];
   let totalCov = 0;
   for (const axis of axes) {
-    const cov = coveredBeamLengthM(slabPtsM, axis);
+    const { cov, perpDepthM } = beamCoverage(slabPtsM, axis);
     if (cov > 0) {
-      covered.push({ id: axis.id, cov });
+      covered.push({ id: axis.id, cov, perpDepthM });
       totalCov += cov;
     }
   }
@@ -137,6 +154,59 @@ export function computeSlabBeamTributary(entities: readonly Entity[]): Map<strin
     for (const { id, cov } of covered) {
       out.set(id, (out.get(id) ?? 0) + areaM2 * (cov / totalCov));
     }
+  }
+  return out;
+}
+
+// ─── ADR-498 — Topology-aware slab support condition (mirror ADR-486 δοκαριού) ───
+
+/**
+ * DERIVED συνθήκη στήριξης μιας πλάκας από τη ζωντανή τοπολογία (spatial, αφού οι πλάκες
+ * ΔΕΝ είναι κόμβοι του structural graph). Mirror του beam `BeamSupportCondition`.
+ */
+export interface SlabSupportCondition {
+  /** Τύπος στήριξης που οδηγεί ροπή/οπλισμό ΤΩΡΑ: 'cantilever' όταν ακριβώς 1 φέρουσα δοκός. */
+  readonly supportType: BeamSupportType;
+  /** Πλήθος φερουσών δοκών (0=αιωρούμενη, 1=πρόβολος, 2+=αμφιέρειστη/πολλαπλή). */
+  readonly supportCount: number;
+  /** Μήκος προβόλου (m) = κάθετη προβολή ως την ελεύθερη παρειά· 0 όταν δεν είναι πρόβολος. */
+  readonly cantileverLengthM: number;
+}
+
+/**
+ * Συνθήκη στήριξης μιας πλάκας από τις φέρουσες δοκούς της. **Συντηρητικό (mirror ADR-486):**
+ * μόνο «ακριβώς 1 φέρουσα δοκός» → 'cantilever' (το μήκος προβόλου = η κάθετη προβολή στη μακρινή
+ * παρειά). 0 ή 2+ → 'simple' (αιωρούμενη καλύπτεται από diagnostics· 2+ = αμφιέρειστη, μηδέν
+ * regression). Συνέχεια/two-way = DEFER.
+ */
+function slabSupportCondition(slabPtsM: readonly Pt2M[], axes: readonly BeamAxisM[]): SlabSupportCondition {
+  const { covered } = bearingBeams(slabPtsM, axes);
+  if (covered.length === 1) {
+    return { supportType: 'cantilever', supportCount: 1, cantileverLengthM: covered[0].perpDepthM };
+  }
+  return { supportType: 'simple', supportCount: covered.length, cantileverLengthM: 0 };
+}
+
+/**
+ * ADR-498 — `Map<slabId → SlabSupportCondition>` για ΟΛΕΣ τις πλάκες της σκηνής. Mirror του
+ * `buildBeamSupportTypeMap` (ADR-486) αλλά **entity-based** (spatial), αφού οι πλάκες δεν
+ * ζουν στον graph. Reuse του ΙΔΙΟΥ `bearingBeams` — μηδέν διπλότυπη geometry. Κενό χωρίς πλάκες/δοκούς.
+ */
+export function computeSlabSupportConditions(
+  entities: readonly Entity[],
+): Map<string, SlabSupportCondition> {
+  const out = new Map<string, SlabSupportCondition>();
+  const slabs = entities.filter(isSlabEntity);
+  if (slabs.length === 0) return out;
+  const axes = entities
+    .filter(isBeamEntity)
+    .map(beamAxisM)
+    .filter((a): a is BeamAxisM => a !== null);
+
+  for (const slab of slabs) {
+    const ptsM = slabOutlineM(slab);
+    if (ptsM.length < 3) continue;
+    out.set(slab.id, slabSupportCondition(ptsM, axes));
   }
   return out;
 }

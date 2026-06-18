@@ -129,7 +129,9 @@ export type StructuralDiagnosticCode =
   | 'analyticalModelUnstable'
   // ADR-481 — static FEM solver diagnostics (T3).
   | 'staticAnalysisUnstable'
-  | 'staticAnalysisMemberSkipped';
+  | 'staticAnalysisMemberSkipped'
+  // ADR-498 — cantilever slab design.
+  | 'cantileverSlabTooThin';
 
 /**
  * Ένα cross-entity εύρημα. `primaryEntityId` = το μέλος που «φταίει» (οδηγεί το

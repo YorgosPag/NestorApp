@@ -29,6 +29,7 @@ import type { BeamReinforcement } from './reinforcement/beam-reinforcement-types
 import type { SlabFoundationReinforcement } from './reinforcement/slab-foundation-reinforcement-types';
 import type { TieBeamReinforcement } from './reinforcement/footing-reinforcement-types';
 import type { StructuralCodeProvider } from './codes/structural-code-types';
+import type { SlabSupportCondition } from './loads/slab-beam-support';
 import {
   resolveActiveColumnReinforcement,
   resolveActiveBeamReinforcement,
@@ -134,6 +135,7 @@ export function buildReinforcePatch(
   provider: StructuralCodeProvider,
   supportType?: BeamSupportType,
   columnFemMomentKnm?: number,
+  slabSupportCondition?: SlabSupportCondition,
 ): ReinforcePatch | null {
   if (isColumnEntity(entity)) {
     const stored = entity.params.reinforcement;
@@ -163,9 +165,10 @@ export function buildReinforcePatch(
     //   absent → νέα πρόταση (auto:true)· manual (!auto) → null· auto → re-derive + guard.
     const stored = entity.params.structuralReinforcement;
     if (stored && !stored.auto) return null; // manual override → ΠΟΤΕ overwrite
+    // ADR-498 — topology-aware συνθήκη στήριξης (πρόβολος → hogging άνω σχάρα) και στις δύο διαδρομές.
     const fresh: SlabFoundationReinforcement = stored
-      ? resolveActiveSlabReinforcement(entity, provider) ?? stored
-      : { ...provider.suggestSlabFoundationReinforcement(buildSlabFoundationSectionContext(entity)), auto: true };
+      ? resolveActiveSlabReinforcement(entity, provider, slabSupportCondition) ?? stored
+      : { ...provider.suggestSlabFoundationReinforcement(buildSlabFoundationSectionContext(entity, slabSupportCondition)), auto: true };
     if (stored && !slabReinforcementMateriallyDiffers(stored, fresh)) return null;
     return { prev: entity.params, next: { ...entity.params, structuralReinforcement: fresh } };
   }

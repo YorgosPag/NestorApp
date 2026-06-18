@@ -30,6 +30,8 @@ import { AutoReinforceOrganismCommand } from '../core/commands/entity-commands/A
 // ADR-486 — DERIVED topology-aware τύπος στήριξης δοκαριού (pure· κρατά το module jest-clean).
 import { buildStructuralGraph } from '../bim/structural/organism/structural-graph';
 import { buildBeamSupportTypeMap } from '../bim/structural/organism/derive-beam-support';
+// ADR-498 — DERIVED topology-aware συνθήκη στήριξης πλάκας (spatial· πρόβολος → hogging άνω σχάρα).
+import { computeSlabSupportConditions } from '../bim/structural/loads/slab-beam-support';
 import { isColumnEntity, isBeamEntity, isFoundationEntity, isSlabEntity } from '../types/entities';
 // ADR-491 — DERIVED FEM ροπή φορέα ανά κολώνα στήριξης. Το engaged gate ζει στο ΕΝΑ SSoT
 // `resolveEngagedAnalysisResult` (κοινό με τον render path active-reinforcement — μηδέν διπλό gate).
@@ -92,7 +94,11 @@ export function runOrganismAutoReinforce(
     resolveEngagedAnalysisResult(),
     entities.filter(isColumnEntity).map((e) => e.id),
   );
-  const command = new AutoReinforceOrganismCommand(ids, sm, provider, supportTypeByBeamId, columnFemMomentById);
+  // ADR-498 — συνθήκη στήριξης ανά πλάκα (spatial): ο πρόβολος ξανα-σχεδιάζεται με q·L²/2 άνω σχάρα.
+  const slabSupportConditionBySlabId = computeSlabSupportConditions(entities);
+  const command = new AutoReinforceOrganismCommand(
+    ids, sm, provider, supportTypeByBeamId, columnFemMomentById, slabSupportConditionBySlabId,
+  );
   const reinforced = command.getReinforcedEntityIds();
   if (reinforced.length === 0) {
     // Όλα ήδη οπλισμένα / μη-δομικά — no-op (κανένα undo entry).

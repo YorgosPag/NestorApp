@@ -14,10 +14,10 @@
  * @see docs/centralized-systems/reference/adrs/ADR-459-structural-organism-connectivity.md §6g
  */
 
-import { barAreaMm2 } from '../rebar-catalog';
 import {
   footingEffectiveDepthMm,
   meshDirectionTotals,
+  meshReinforcementRatio,
 } from './footing-reinforcement-compute';
 import type { RebarMesh, SlabFoundationReinforcement } from './slab-foundation-reinforcement-types';
 import type { SlabFoundationSectionContext } from '../codes/structural-code-types';
@@ -63,9 +63,12 @@ export function computeSlabFoundationReinforcementQuantities(
   const top = meshPairTotals(r.topMeshX, r.topMeshY, ctx, cover);
 
   const dEff = footingEffectiveDepthMm(ctx.thicknessMm, cover);
-  const ratio = dEff > 0 && r.bottomMeshX.spacingMm > 0
-    ? barAreaMm2(r.bottomMeshX.diameterMm) / (r.bottomMeshX.spacingMm * dEff)
-    : 0;
+  // ADR-498 — ρ = το ΚΥΡΙΑΡΧΟ στρώμα: κάτω για άνοιγμα (sagging), **άνω** για πρόβολο (hogging).
+  // Reuse του ΕΝΟΣ SSoT `meshReinforcementRatio` (κοινό με το πέδιλο — N.0.2).
+  const ratio = Math.max(
+    meshReinforcementRatio(r.bottomMeshX, dEff),
+    meshReinforcementRatio(r.topMeshX, dEff),
+  );
 
   return {
     bottomLengthM: bottom.lengthM,

@@ -79,3 +79,28 @@ export function projectPolygonOnAxis(
   }
   return { alongMin, alongMax, perpMin, perpMax };
 }
+
+/**
+ * Τομή δύο **απείρων** ευθειών, καθεμία ορισμένη από ένα σημείο `(p0)` + διεύθυνση `(u)`
+ * (όχι κατ' ανάγκη μοναδιαία). Λύνει `a0 + s·ua = b0 + t·ub` με Cramer πάνω στο
+ * `denom = ua×ub` (cross 2D). Επιστρέφει `null` όταν οι ευθείες είναι **παράλληλες ή
+ * συγγραμμικές** (`|denom|` κάτω από `EPS`). Pure SSoT (N.0.2) — οι υπάρχουσες
+ * `intersection-calculators` του snapping είναι Entity-coupled (DXF lines/circles)· εδώ
+ * δουλεύουμε σε σκέτα σημεία/διευθύνσεις (π.χ. άξονες δοκαριών στο `column-beam-align`,
+ * ADR-496 Phase 2). Παίρνει υπόψη ΟΛΟΚΛΗΡΗ την ευθεία (όχι το ευθύγραμμο τμήμα) — άρα η
+ * τομή των αξόνων δύο δοκαριών βγαίνει σωστά ακόμη κι αν τα άκρα τους έχουν trim-αριστεί
+ * πίσω στην παρειά της κολώνας (frame-into, ADR-441/458).
+ */
+export function lineIntersectionPoint(
+  a0: { readonly x: number; readonly y: number },
+  ua: { readonly x: number; readonly y: number },
+  b0: { readonly x: number; readonly y: number },
+  ub: { readonly x: number; readonly y: number },
+): { x: number; y: number } | null {
+  const denom = ua.x * ub.y - ua.y * ub.x; // cross(ua, ub)
+  if (Math.abs(denom) < 1e-9) return null; // παράλληλες / συγγραμμικές
+  const dx = b0.x - a0.x;
+  const dy = b0.y - a0.y;
+  const s = (dx * ub.y - dy * ub.x) / denom;
+  return { x: a0.x + s * ua.x, y: a0.y + s * ua.y };
+}

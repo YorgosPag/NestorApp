@@ -30,6 +30,9 @@ import { StructuralDiagnosticsStore } from '../bim/structural/organism/structura
 // ADR-486 — DERIVED topology-aware τύπος στήριξης δοκαριού → transient store για το render path.
 import { buildBeamSupportTypeMap } from '../bim/structural/organism/derive-beam-support';
 import { BeamSupportConditionStore } from '../bim/structural/organism/beam-support-condition-store';
+import { computeSlabSupportConditions } from '../bim/structural/loads/slab-beam-support';
+import { SlabSupportConditionStore } from '../bim/structural/organism/slab-support-condition-store';
+import { runSlabChecks } from '../bim/structural/organism/slab-checks';
 // ADR-488 §6.1 — DERIVED effective βάση κολώνας (στατική συνέχεια κολώνα→πέδιλο) → transient store.
 import { buildColumnBaseContinuityMap } from '../bim/structural/organism/derive-column-base-continuity';
 import { ColumnBaseContinuityStore } from '../bim/structural/organism/column-base-continuity-store';
@@ -110,6 +113,8 @@ export function useStructuralOrganism(props: { levelManager: LevelManagerLike })
       // στο transient store ώστε το per-entity render path (active-reinforcement) να τον
       // διαβάζει synchronous, χωρίς να ξαναχτίζει τον graph σε κάθε render (ADR-040 safe).
       BeamSupportConditionStore.set(buildBeamSupportTypeMap(graph));
+      // ADR-498 — DERIVED topology-aware συνθήκη στήριξης πλάκας (spatial: πλάκες εκτός graph).
+      SlabSupportConditionStore.set(computeSlabSupportConditions(entities));
       // ADR-488 §6.1 — publish την DERIVED effective βάση κάθε κολώνας (άνω παρειά
       // στηρίζοντος πεδίλου) στο transient store ώστε το 3Δ render path (syncColumns)
       // να κατεβάζει τη βάση στο πέδιλο (στατική συνέχεια), χωρίς να ξαναχτίζει graph.
@@ -128,6 +133,8 @@ export function useStructuralOrganism(props: { levelManager: LevelManagerLike })
           deadAreaLoadKpa: settings.deadAreaLoadKpa ?? 0,
           liveAreaLoadKpa: settings.liveAreaLoadKpa ?? 0,
         }, buildActiveFootingFemAxialMap(entities)),
+        // ADR-498 — έλεγχος βέλους πλάκας-προβόλου (πολύ λεπτή → warning, αλλιώς σιωπηλό).
+        ...runSlabChecks(entities, provider),
         // ADR-480 (T2) — χτίσε & δημοσίευσε τον DERIVED αναλυτικό φορέα + προκαταρκτικά
         // diagnostics ευστάθειας στο ΙΔΙΟ low-freq pass (single diagnostics writer).
         ...runStructuralAnalyticalModel({ entities, graph, getOffset: makeGuideOffsetLookup() }),

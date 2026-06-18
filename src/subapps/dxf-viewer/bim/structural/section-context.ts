@@ -25,6 +25,7 @@ import type { SlabEntity } from '../types/slab-types';
 import { mmToSceneUnits } from '../../utils/scene-units';
 import { combineSls, combineUls, EN1990_ULS_FACTORS } from './loads/load-combinations';
 import { isZeroMemberLoad, resolveAppliedMemberLoad } from './loads/structural-loads-types';
+import type { SlabSupportCondition } from './loads/slab-beam-support';
 import { DEFAULT_CONCRETE_GRADE } from './concrete-grades';
 import { nominalColumnMomentKnm } from './codes/suggest-reinforcement';
 import { resolveColumnReinforcementSection } from './reinforcement/column-section-outline';
@@ -281,10 +282,13 @@ export function resolveActiveBeamReinforcement(
 export function resolveActiveSlabReinforcement(
   slab: SlabEntity,
   provider: StructuralCodeProvider,
+  supportCondition?: SlabSupportCondition,
 ): SlabFoundationReinforcement | undefined {
   const r = slab.params.structuralReinforcement;
   if (!r || !r.auto) return r;
-  const fresh = provider.suggestSlabFoundationReinforcement(buildSlabFoundationSectionContext(slab));
+  const fresh = provider.suggestSlabFoundationReinforcement(
+    buildSlabFoundationSectionContext(slab, supportCondition),
+  );
   return { ...fresh, auto: true };
 }
 
@@ -420,7 +424,10 @@ export function buildFootingSectionContextFromParams(p: FoundationParams): Footi
  * kind-aware: foundation vs suspended· οι αναρτημένες παίρνουν span (από
  * `geometry.maxFreeSpanM`) + φορτίο σχεδιασμού (q_Ed) για strength-driven κάτω σχάρα.
  */
-export function buildSlabFoundationSectionContext(slab: SlabEntity): SlabFoundationSectionContext {
+export function buildSlabFoundationSectionContext(
+  slab: SlabEntity,
+  supportCondition?: SlabSupportCondition,
+): SlabFoundationSectionContext {
   const perScene = mmToSceneUnits(slab.params.sceneUnits ?? 'mm');
   const verts = slab.params.outline.vertices;
   let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
@@ -434,6 +441,9 @@ export function buildSlabFoundationSectionContext(slab: SlabEntity): SlabFoundat
   const lengthMm = verts.length > 0 ? (maxY - minY) / perScene : 0;
   const grossAreaMm2 = Math.max(0, widthMm) * Math.max(0, lengthMm);
   const kind = resolveSlabReinforcementKind(slab);
+  // ADR-498 — πρόβολος: το άνοιγμα σχεδιασμού = η κάθετη προβολή (cantileverLengthM), ΟΧΙ το
+  // ελεύθερο άνοιγμα μεταξύ στηρίξεων. Absent override ⇒ 'simple' (μηδέν regression).
+  const isCantilever = supportCondition?.supportType === 'cantilever';
   return {
     widthMm,
     lengthMm,
@@ -442,6 +452,8 @@ export function buildSlabFoundationSectionContext(slab: SlabEntity): SlabFoundat
     kind,
     maxFreeSpanMm: Math.max(0, slab.geometry.maxFreeSpanM) * M_TO_MM,
     concreteGrade: slab.params.concreteGrade ?? DEFAULT_CONCRETE_GRADE,
+    ...(supportCondition ? { supportType: supportCondition.supportType } : {}),
+    ...(isCantilever ? { cantileverSpanMm: Math.max(0, supportCondition!.cantileverLengthM) * M_TO_MM } : {}),
     ...resolveSlabDesignLoad(slab, grossAreaMm2),
   };
 }

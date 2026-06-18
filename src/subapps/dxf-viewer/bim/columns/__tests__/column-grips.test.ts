@@ -531,7 +531,8 @@ describe('column-grips — applyColumnGripDrag T-shape variants (Phase 4.5b)', (
       originalParams: params,
       delta: { x: 50, y: 0 },
     });
-    expect(next.tshape).toEqual({ flangeLength: 1000, webThickness: 300 });
+    // ADR-496 Phase 2 — mergeTshape πλέον διατηρεί flangeThickness (default depth/3, depth=400).
+    expect(next.tshape).toEqual({ flangeLength: 1000, webThickness: 300, flangeThickness: 400 / 3 });
   });
 
   it('34. web-thickness drag +X → 2× factor (symmetric)', () => {
@@ -540,7 +541,7 @@ describe('column-grips — applyColumnGripDrag T-shape variants (Phase 4.5b)', (
       originalParams: params,
       delta: { x: 25, y: 0 },
     });
-    expect(next.tshape).toEqual({ flangeLength: 900, webThickness: 350 });
+    expect(next.tshape).toEqual({ flangeLength: 900, webThickness: 350, flangeThickness: 400 / 3 });
   });
 
   it('35. flange-length drag clamps στο MIN_COLUMN_DIMENSION_MM', () => {
@@ -571,8 +572,9 @@ describe('column-grips — applyColumnGripDrag T-shape variants (Phase 4.5b)', (
       originalParams: params,
       delta: { x: 50, y: 0 },
     });
-    // materialized base flangeLength = 900; webThickness = 900/3 = 300; new flange = 900 + 100
-    expect(next.tshape).toEqual({ flangeLength: 1000, webThickness: 300 });
+    // materialized base flangeLength = 900; webThickness = 900/3 = 300; new flange = 900 + 100·
+    // flangeThickness default depth/3 = 300 (ADR-496 Phase 2, διατηρείται από το mergeTshape).
+    expect(next.tshape).toEqual({ flangeLength: 1000, webThickness: 300, flangeThickness: 300 });
   });
 
   it('38. flange-length drag preserves width / depth / rotation / anchor', () => {
@@ -712,12 +714,13 @@ describe('column-grips — materialize helpers (Phase 4.5b)', () => {
     });
   });
 
-  it('45. materializeTshape default flangeLength=width, webThickness=depth/3', () => {
+  it('45. materializeTshape default flangeLength=width, webThickness=depth/3, flangeThickness=depth/3', () => {
     const params = buildDefaultColumnParams({ x: 0, y: 0 }, 'T-shape', {
       width: 500,
       depth: 900,
     });
-    expect(materializeTshape(params)).toEqual({ flangeLength: 500, webThickness: 300 });
+    // ADR-496 Phase 2 — flangeThickness default depth/3 = 300 (ΕΝΑ SSoT default με τη γεωμετρία).
+    expect(materializeTshape(params)).toEqual({ flangeLength: 500, webThickness: 300, flangeThickness: 300 });
   });
 });
 

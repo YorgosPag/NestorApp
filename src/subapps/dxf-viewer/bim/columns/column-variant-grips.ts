@@ -74,14 +74,18 @@ export function materializeLshape(
 /**
  * Materialize T-shape variant params με defaults mirror των
  * `computeColumnGeometry`: `flangeLength = width` (full bbox width),
- * `webThickness = depth/3`. Exported για unit-test reuse.
+ * `webThickness = depth/3`, `flangeThickness = depth/3` (ADR-496 Phase 2 —
+ * πρώην hard-coded `depth/3` τόσο εδώ όσο και στο `buildTshapeLocal`· τώρα ΕΝΑ
+ * SSoT default ώστε τα grips + η γεωμετρία να μη διαφωνούν ποτέ). Exported για
+ * unit-test reuse.
  */
 export function materializeTshape(
   params: ColumnParams,
-): { flangeLength: number; webThickness: number } {
+): { flangeLength: number; webThickness: number; flangeThickness: number } {
   return {
     flangeLength: params.tshape?.flangeLength ?? params.width,
     webThickness: params.tshape?.webThickness ?? params.depth / 3,
+    flangeThickness: params.tshape?.flangeThickness ?? params.depth / 3,
   };
 }
 
@@ -116,9 +120,9 @@ export function armWidthHandlePosition(params: ColumnParams): Point2D {
  * του `computeColumnGeometry` flange clamp (`halfFlange = min(width/2, flangeLength/2)`).
  */
 export function flangeLengthHandlePosition(params: ColumnParams): Point2D {
-  const { flangeLength } = materializeTshape(params);
+  const { flangeLength, flangeThickness } = materializeTshape(params);
   const halfFlange = Math.min(params.width / 2, flangeLength / 2);
-  const flangeDepth = Math.max(1, params.depth / 3);
+  const flangeDepth = Math.max(1, flangeThickness);
   const local: Point2D = { x: halfFlange, y: params.depth / 2 - flangeDepth / 2 };
   return localToWorld(local, params);
 }
@@ -129,9 +133,9 @@ export function flangeLengthHandlePosition(params: ColumnParams): Point2D {
  * τη flange base). Drag κατά +X αυξάνει `webThickness` με 2× factor (symmetric).
  */
 export function webThicknessHandlePosition(params: ColumnParams): Point2D {
-  const { webThickness } = materializeTshape(params);
+  const { webThickness, flangeThickness } = materializeTshape(params);
   const halfWeb = Math.min(params.width / 2, webThickness / 2);
-  const flangeDepth = Math.max(1, params.depth / 3);
+  const flangeDepth = Math.max(1, flangeThickness);
   const local: Point2D = { x: halfWeb, y: -flangeDepth / 2 };
   return localToWorld(local, params);
 }
@@ -160,12 +164,17 @@ function mergeLshape(
  */
 function mergeTshape(
   original: ColumnParams,
-  patch: Partial<{ flangeLength: number; webThickness: number }>,
+  patch: Partial<{ flangeLength: number; webThickness: number; flangeThickness: number }>,
 ): ColumnTshapeParams {
   const base = materializeTshape(original);
+  const flipY = original.tshape?.flipY;
   return {
     flangeLength: patch.flangeLength ?? base.flangeLength,
     webThickness: patch.webThickness ?? base.webThickness,
+    // ADR-496 Phase 2 — διατήρησε το smart-fit flange thickness (+ flipY, mirror
+    // του mergeIshape) σε grip drags flange-length/web-thickness, αλλιώς χανόταν.
+    flangeThickness: patch.flangeThickness ?? base.flangeThickness,
+    ...(flipY !== undefined ? { flipY } : {}),
   };
 }
 

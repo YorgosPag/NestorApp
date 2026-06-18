@@ -35,6 +35,7 @@ import {
 } from './suggest-reinforcement';
 import { suggestSlabFoundationReinforcementFrom } from './suggest-slab-reinforcement';
 import { EN1990_ULS_FACTORS } from '../loads/load-combinations';
+import type { BeamSupportType } from '../../types/beam-types';
 
 /** Μελετητική ενεργός διατομή δοκού d ≈ 0.9·h. */
 const BEAM_EFFECTIVE_DEPTH_FACTOR = 0.9;
@@ -110,10 +111,10 @@ const EUROCODE_BASIC_SPAN_DEPTH = 14;
 
 /**
  * EC2 §7.4.2 Table 7.4N — συντελεστής δομικού συστήματος K επί του basic l/d:
- * αμφιέρειστη 1.0 · αμφίπακτη (εσωτερικό φάτνωμα) 1.5 · πρόβολος 0.4.
+ * αμφιέρειστη 1.0 · αμφίπακτη (εσωτερικό φάτνωμα) 1.5 · πρόβολος 0.4. ΕΝΑ SSoT (δοκάρι+πλάκα).
  */
-function eurocodeSpanDepthSystemFactor(ctx: BeamSectionContext): number {
-  switch (ctx.supportType) {
+function eurocodeSpanDepthSystemFactor(supportType: BeamSupportType | undefined): number {
+  switch (supportType) {
     case 'cantilever':
       return 0.4;
     case 'fixed':
@@ -125,7 +126,16 @@ function eurocodeSpanDepthSystemFactor(ctx: BeamSectionContext): number {
 
 /** ADR-475 — μέγιστο επιτρεπτό L/d_eff = K · basic (EC2 §7.4.2). */
 function eurocodeBeamSpanDepthLimit(ctx: BeamSectionContext): number {
-  return eurocodeSpanDepthSystemFactor(ctx) * EUROCODE_BASIC_SPAN_DEPTH;
+  return eurocodeSpanDepthSystemFactor(ctx.supportType) * EUROCODE_BASIC_SPAN_DEPTH;
+}
+
+/**
+ * EC2 §7.4.2 Table 7.4N — βασικός l/d **πλάκας** (λιγότερο καταπονούμενη από δοκό → 20).
+ * ADR-498 — μέγιστο L/d πλάκας = K · slab-basic· πρόβολος K=0.4 → 8 (έλεγχος βέλους προβόλου).
+ */
+const EUROCODE_SLAB_BASIC_SPAN_DEPTH = 20;
+function eurocodeSlabSpanDepthLimit(ctx: SlabFoundationSectionContext): number {
+  return eurocodeSpanDepthSystemFactor(ctx.supportType) * EUROCODE_SLAB_BASIC_SPAN_DEPTH;
 }
 
 /**
@@ -219,6 +229,7 @@ export const EUROCODE_PROVIDER: StructuralCodeProvider = {
     return suggestBeamReinforcementFrom(this, ctx);
   },
   beamSpanDepthLimit: eurocodeBeamSpanDepthLimit,
+  slabSpanDepthLimit: eurocodeSlabSpanDepthLimit,
   footingReinforcementLimits: eurocodeFootingLimits,
   suggestFootingReinforcement(ctx: FootingSectionContext): FootingReinforcement {
     return suggestFootingReinforcementFrom(this, ctx);

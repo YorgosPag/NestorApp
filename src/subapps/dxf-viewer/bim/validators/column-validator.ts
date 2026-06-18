@@ -159,11 +159,16 @@ function validateVariantParams(
     }
   }
   if (params.kind === 'T-shape' && params.tshape) {
-    const { webThickness, flangeLength } = params.tshape;
+    const { webThickness, flangeLength, flangeThickness } = params.tshape;
     if (webThickness !== undefined && (webThickness <= 0 || webThickness > params.width)) {
       hardErrors.push('column.validation.hardErrors.invalidTshapeWeb');
     }
     if (flangeLength !== undefined && (flangeLength <= 0 || flangeLength > params.width)) {
+      hardErrors.push('column.validation.hardErrors.invalidTshapeFlange');
+    }
+    // ADR-496 Phase 2 — flange depth (Y) μέσα στο bbox depth. > depth ⇒ το πέλμα
+    // καταπίνει όλο το βάθος → εκφυλισμένος κορμός (μηδενικού μήκους web).
+    if (flangeThickness !== undefined && (flangeThickness <= 0 || flangeThickness > params.depth)) {
       hardErrors.push('column.validation.hardErrors.invalidTshapeFlange');
     }
   }

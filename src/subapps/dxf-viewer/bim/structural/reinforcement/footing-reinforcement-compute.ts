@@ -101,6 +101,18 @@ export function footingEffectiveDepthMm(thicknessMm: number, coverMm: number): n
   return Math.max(0, thicknessMm - coverMm);
 }
 
+/**
+ * Ποσοστό οπλισμού ρ μιας **σχάρας** (As ανά μέτρο πλάτους / ενεργό βάθος): `barArea/(spacing·d)`.
+ * ΕΝΑ SSoT (N.0.2) — το μοιράζονται πέδιλο (κάτω σχάρα + strip εγκάρσιες) ΚΑΙ πλάκα (ADR-498
+ * κάτω/άνω σχάρα). Μηδέν για εκφυλισμένη είσοδο (d≤0 ή βήμα≤0).
+ */
+export function meshReinforcementRatio(
+  mesh: { readonly diameterMm: number; readonly spacingMm: number },
+  dEffMm: number,
+): number {
+  return dEffMm > 0 && mesh.spacingMm > 0 ? barAreaMm2(mesh.diameterMm) / (mesh.spacingMm * dEffMm) : 0;
+}
+
 /** Μήκος+βάρος μίας διεύθυνσης σχάρας (ράβδοι // `barDim`, βήμα κατά `perpDim`). */
 export function meshDirectionTotals(
   mesh: RebarMesh,
@@ -136,9 +148,7 @@ function computePadQuantities(
   }
 
   const dEff = footingEffectiveDepthMm(ctx.thicknessMm, cover);
-  const ratio = dEff > 0 && r.bottomMeshX.spacingMm > 0
-    ? barAreaMm2(r.bottomMeshX.diameterMm) / (r.bottomMeshX.spacingMm * dEff)
-    : 0;
+  const ratio = meshReinforcementRatio(r.bottomMeshX, dEff);
 
   return {
     mainLengthM,
@@ -187,9 +197,7 @@ function computeStripQuantities(
     : 0;
 
   const dEff = footingEffectiveDepthMm(ctx.thicknessMm, cover);
-  const ratio = dEff > 0 && r.transverse.spacingMm > 0
-    ? barAreaMm2(r.transverse.diameterMm) / (r.transverse.spacingMm * dEff)
-    : 0;
+  const ratio = meshReinforcementRatio(r.transverse, dEff);
 
   return {
     mainLengthM: transverse.lengthM,

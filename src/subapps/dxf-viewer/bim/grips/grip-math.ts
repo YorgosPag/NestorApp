@@ -40,6 +40,19 @@ export function rotateVector(v: Point2D, angleDeg: number): Point2D {
 }
 
 /**
+ * ADR-496 — rotation (μοίρες CCW) ώστε το τοπικό **+Y** ενός centre-anchored σχήματος να
+ * ευθυγραμμιστεί με μια δοθείσα world διεύθυνση `target`. Κλειστή λύση: `R(θ)·(0,1) =
+ * (−sinθ, cosθ) = target` ⇒ `θ = atan2(−target.x, target.y)`. SSoT για column→beam
+ * alignment (L-shape bearing arm + T-shape dual-beam, `column-beam-align.ts`) — το μη-
+ * προφανές sign-pattern ζει ΜΙΑ φορά με την απόδειξη, αντί να ξαναγράφεται raw `atan2`.
+ * `target` δεν χρειάζεται να είναι ακριβώς μοναδιαίο (η γωνία είναι scale-invariant).
+ * Pair με `rotateVector` (→ `rotatePoint`, ADR-188) για εφαρμογή στο footprint.
+ */
+export function rotationDegToAlignLocalY(target: Point2D): number {
+  return Math.atan2(-target.x, target.y) * (180 / Math.PI);
+}
+
+/**
  * ADR-397 §D3 — project a world-space vector onto an entity's local axes rotated
  * by `angleDeg` (the inverse rotation). Returns the components along the local
  * +X / +Y axes. Equivalent to `rotateVector(v, -angleDeg)`.

@@ -31,6 +31,8 @@ import { useStructuralSettingsStore } from '../../state/structural-settings-stor
 // ADR-486 — DERIVED topology-aware τύπος στήριξης δοκαριού (πρόβολος όταν 1 στήριξη).
 import type { BeamSupportType } from '../types/beam-types';
 import { BeamSupportConditionStore } from './organism/beam-support-condition-store';
+import { SlabSupportConditionStore } from './organism/slab-support-condition-store';
+import type { SlabSupportCondition } from './loads/slab-beam-support';
 import { resolveBeamRebarLayout, type BeamRebarLayout } from './reinforcement/beam-rebar-layout';
 // ADR-491 — DERIVED FEM ροπή φορέα (πρόβολος → wL²/2 στη στήριξη), engaged-gated μέσω
 // του ΕΝΟΣ SSoT `resolveEngagedAnalysisResult` (μηδέν διπλό gate με τον auto-reinforce core).
@@ -177,14 +179,26 @@ export function resolveActiveBeamRebarLayout(
 }
 
 /**
+ * ADR-498 — η DERIVED topology-aware συνθήκη στήριξης μιας πλάκας (πρόβολος → hogging) από το
+ * transient `SlabSupportConditionStore` (synchronous, ADR-040 safe). `undefined` → fallback
+ * 'simple' στον consumer. Mirror του `resolveActiveBeamSupportType`.
+ */
+export function resolveActiveSlabSupportCondition(slabId: string): SlabSupportCondition | undefined {
+  return SlabSupportConditionStore.get(slabId);
+}
+
+/**
  * ADR-476 — `resolveActiveSlabReinforcement` με τον ενεργό κανονισμό από το settings store.
- * Fast-path: manual/absent → επιστρέφει το stored χωρίς να αγγίξει τον provider. Δέχεται
- * `SlabEntity` (το context εξαρτάται από params + geometry.maxFreeSpanM — geometry-is-SSoT).
+ * Fast-path: manual/absent → επιστρέφει το stored χωρίς να αγγίξει τον provider.
+ *
+ * ADR-498 — διαβάζει τη DERIVED συνθήκη στήριξης (`SlabSupportConditionStore`) και την περνά
+ * ως override → ο πρόβολος (1 φέρουσα δοκός) οπλίζεται με `q·L²/2` στην **άνω** σχάρα. Store
+ * miss (πλάκα εκτός οργανισμού) → fallback 'simple' (μηδέν regression).
  */
 export function resolveActiveSlabReinforcementForEntity(
   slab: SlabEntity,
 ): SlabFoundationReinforcement | undefined {
   if (!slab.params.structuralReinforcement?.auto) return slab.params.structuralReinforcement;
   const provider = resolveStructuralCode(useStructuralSettingsStore.getState().codeId);
-  return resolveActiveSlabReinforcement(slab, provider);
+  return resolveActiveSlabReinforcement(slab, provider, resolveActiveSlabSupportCondition(slab.id));
 }

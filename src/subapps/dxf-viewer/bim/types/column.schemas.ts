@@ -79,6 +79,7 @@ const ColumnTshapeParamsSchema = z
   .object({
     flangeLength: z.number().positive().optional(),
     webThickness: z.number().positive().optional(),
+    flangeThickness: z.number().positive().optional(),
     flipY: z.boolean().optional(),
   })
   .strict();

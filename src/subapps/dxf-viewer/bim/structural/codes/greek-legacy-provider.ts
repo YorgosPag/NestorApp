@@ -36,6 +36,7 @@ import {
 } from './suggest-reinforcement';
 import { suggestSlabFoundationReinforcementFrom } from './suggest-slab-reinforcement';
 import { EN1990_ULS_FACTORS } from '../loads/load-combinations';
+import type { BeamSupportType } from '../../types/beam-types';
 
 /** Μελετητική ενεργός διατομή δοκού d ≈ 0.9·h. */
 const BEAM_EFFECTIVE_DEPTH_FACTOR = 0.9;
@@ -104,9 +105,9 @@ function greekLegacyBeamLimits(
  */
 const GREEK_LEGACY_BASIC_SPAN_DEPTH = 13;
 
-/** ΕΚΩΣ §16.4 — συντελεστής δομικού συστήματος K (όπως EC2 Table 7.4N). */
-function greekLegacySpanDepthSystemFactor(ctx: BeamSectionContext): number {
-  switch (ctx.supportType) {
+/** ΕΚΩΣ §16.4 — συντελεστής δομικού συστήματος K (όπως EC2 Table 7.4N). ΕΝΑ SSoT δοκάρι+πλάκα. */
+function greekLegacySpanDepthSystemFactor(supportType: BeamSupportType | undefined): number {
+  switch (supportType) {
     case 'cantilever':
       return 0.4;
     case 'fixed':
@@ -118,7 +119,13 @@ function greekLegacySpanDepthSystemFactor(ctx: BeamSectionContext): number {
 
 /** ADR-475 — μέγιστο επιτρεπτό L/d_eff = K · basic (ΕΚΩΣ §16.4). */
 function greekLegacyBeamSpanDepthLimit(ctx: BeamSectionContext): number {
-  return greekLegacySpanDepthSystemFactor(ctx) * GREEK_LEGACY_BASIC_SPAN_DEPTH;
+  return greekLegacySpanDepthSystemFactor(ctx.supportType) * GREEK_LEGACY_BASIC_SPAN_DEPTH;
+}
+
+/** ΕΚΩΣ §16.4 — βασικός l/d **πλάκας** (συντηρητικότερος από EC2: 18). ADR-498 — πρόβολος K=0.4. */
+const GREEK_LEGACY_SLAB_BASIC_SPAN_DEPTH = 18;
+function greekLegacySlabSpanDepthLimit(ctx: SlabFoundationSectionContext): number {
+  return greekLegacySpanDepthSystemFactor(ctx.supportType) * GREEK_LEGACY_SLAB_BASIC_SPAN_DEPTH;
 }
 
 /**
@@ -214,6 +221,7 @@ export const GREEK_LEGACY_PROVIDER: StructuralCodeProvider = {
     return suggestBeamReinforcementFrom(this, ctx);
   },
   beamSpanDepthLimit: greekLegacyBeamSpanDepthLimit,
+  slabSpanDepthLimit: greekLegacySlabSpanDepthLimit,
   footingReinforcementLimits: greekLegacyFootingLimits,
   suggestFootingReinforcement(ctx: FootingSectionContext): FootingReinforcement {
     return suggestFootingReinforcementFrom(this, ctx);
