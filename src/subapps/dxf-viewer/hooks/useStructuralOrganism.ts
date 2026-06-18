@@ -25,6 +25,7 @@ import {
 } from '../bim/structural/organism/organism-checks';
 import { runReinforcementChecks } from '../bim/structural/organism/reinforcement-checks';
 import { runFootingDesignChecks } from '../bim/structural/footing-design/footing-design-checks';
+import { buildActiveFootingFemAxialMap } from '../bim/structural/active-reinforcement';
 import { StructuralDiagnosticsStore } from '../bim/structural/organism/structural-diagnostics-store';
 // ADR-486 — DERIVED topology-aware τύπος στήριξης δοκαριού → transient store για το render path.
 import { buildBeamSupportTypeMap } from '../bim/structural/organism/derive-beam-support';
@@ -121,11 +122,12 @@ export function useStructuralOrganism(props: { levelManager: LevelManagerLike })
         ...runOrganismChecks(graph),
         ...runReinforcementChecks(graph, entities, provider),
         // ADR-464 — έλεγχος έδρασης πεδίλου + raft (αδρανές χωρίς σ_allow / φορτίο).
+        // ADR-497 — engaged FEM αντίδραση βάσης ανά πέδιλο (πρόβολος → single source of truth).
         ...runFootingDesignChecks(entities, provider, settings.soilBearingCapacityKpa, {
           storeyCount: storeyCountRef.current,
           deadAreaLoadKpa: settings.deadAreaLoadKpa ?? 0,
           liveAreaLoadKpa: settings.liveAreaLoadKpa ?? 0,
-        }),
+        }, buildActiveFootingFemAxialMap(entities)),
         // ADR-480 (T2) — χτίσε & δημοσίευσε τον DERIVED αναλυτικό φορέα + προκαταρκτικά
         // diagnostics ευστάθειας στο ΙΔΙΟ low-freq pass (single diagnostics writer).
         ...runStructuralAnalyticalModel({ entities, graph, getOffset: makeGuideOffsetLookup() }),

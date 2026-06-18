@@ -26,6 +26,7 @@ import { computeDetailSheetLayout } from '../../../bim/structural/detail-sheet/d
 import { useStructuralSettingsStore } from '../../../state/structural-settings-store';
 import { resolveStructuralCode } from '../../../bim/structural/codes';
 import { buildPadFootingDesignInput } from '../../../bim/structural/footing-design/footing-design-input';
+import { resolveActiveFootingFemAxial } from '../../../bim/structural/active-reinforcement';
 import { computeFootingDesign } from '../../../bim/structural/footing-design/footing-design';
 import type { FootingDesignResult } from '../../../bim/structural/footing-design/footing-design-types';
 import {
@@ -110,7 +111,9 @@ export function FoundationDetailHost({
     let design: FootingDesignResult | null = null;
     if (soilBearingCapacityKpa && dialogState.levelId) {
       const entities = (levelManager.getLevelScene(dialogState.levelId)?.entities ?? []) as unknown as readonly Entity[];
-      const input = buildPadFootingDesignInput(footing, resolveStructuralCode(codeId), soilBearingCapacityKpa, entities);
+      // ADR-497 — engaged FEM αντίδραση βάσης (πρόβολος → single source of truth, αλλιώς tributary).
+      const femAxial = resolveActiveFootingFemAxial(footing.id, entities);
+      const input = buildPadFootingDesignInput(footing, resolveStructuralCode(codeId), soilBearingCapacityKpa, entities, femAxial);
       if (input) design = computeFootingDesign(input);
     }
     return buildFootingDetailSheet({

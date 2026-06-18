@@ -35,7 +35,12 @@ import { resolveBeamRebarLayout, type BeamRebarLayout } from './reinforcement/be
 // ADR-491 — DERIVED FEM ροπή φορέα (πρόβολος → wL²/2 στη στήριξη), engaged-gated μέσω
 // του ΕΝΟΣ SSoT `resolveEngagedAnalysisResult` (μηδέν διπλό gate με τον auto-reinforce core).
 import { resolveColumnFemMomentKnm } from './analytical/column-fem-moment';
+// ADR-497 — DERIVED FEM αξονικό βάσης κολώνας (πρόβολος → αντίδραση), engaged-gated.
+import { resolveColumnFemAxial, type ColumnFemAxial } from './analytical/column-fem-axial';
 import { resolveEngagedAnalysisResult } from './analytical/engaged-analysis-result';
+import type { Entity } from '../../types/entities';
+import { isFoundationEntity } from '../../types/entities';
+import { resolveSupportingColumn } from './footing-design/footing-support-column';
 
 /**
  * `resolveActiveColumnReinforcement` με τον ενεργό κανονισμό από το settings store.
@@ -63,6 +68,46 @@ export function resolveActiveColumnReinforcementForParams(
  */
 export function resolveActiveColumnFemMoment(columnId: string): number | undefined {
   return resolveColumnFemMomentKnm(resolveEngagedAnalysisResult(), columnId);
+}
+
+/**
+ * ADR-497 — το DERIVED FEM αξονικό βάσης (SLS/ULS, kN) μιας κολώνας, **engaged-gated**
+ * (μηδέν override εκτός engaged → tributary fallback). Mirror του `resolveActiveColumnFemMoment`·
+ * κοινό engaged gate (`resolveEngagedAnalysisResult`). Pure store read (ADR-040 safe).
+ */
+export function resolveActiveColumnFemAxial(columnId: string): ColumnFemAxial | undefined {
+  return resolveColumnFemAxial(resolveEngagedAnalysisResult(), columnId);
+}
+
+/**
+ * ADR-497 — η DERIVED FEM αντίδραση βάσης (SLS/ULS, kN) που η **στηρίζουσα κολώνα**
+ * παραδίδει στο πέδιλο, engaged-gated. Βρίσκει την κολώνα μέσω του explicit FK
+ * `ColumnParams.footingId` (organism, ίδιο pattern με `resolveSupportingColumnDims`).
+ * `undefined` (χωρίς attached κολώνα / εκτός engaged / μηδέν φορτίο) → tributary fallback.
+ */
+export function resolveActiveFootingFemAxial(
+  footingId: string,
+  entities: readonly Entity[],
+): ColumnFemAxial | undefined {
+  const column = resolveSupportingColumn(footingId, entities);
+  return column ? resolveActiveColumnFemAxial(column.id) : undefined;
+}
+
+/**
+ * ADR-497 — `Map<footingId → ColumnFemAxial>` για ΟΛΑ τα pad πέδιλα της σκηνής (engaged-gated).
+ * Ο diagnostics runner (`runFootingDesignChecks`) το παίρνει pure ώστε να μένει unit-testable
+ * (το store coupling ζει εδώ, ΟΧΙ μέσα στον pure runner). Κενό εκτός engaged → tributary fallback.
+ */
+export function buildActiveFootingFemAxialMap(
+  entities: readonly Entity[],
+): ReadonlyMap<string, ColumnFemAxial> {
+  const map = new Map<string, ColumnFemAxial>();
+  for (const e of entities) {
+    if (!isFoundationEntity(e) || e.params.kind !== 'pad') continue;
+    const axial = resolveActiveFootingFemAxial(e.id, entities);
+    if (axial) map.set(e.id, axial);
+  }
+  return map;
 }
 
 /**

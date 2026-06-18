@@ -24,6 +24,7 @@ import { buildPadFootingDesignInput } from './footing-design-input';
 import { computeRaftBearing } from './raft-bearing';
 import { isFoundationSlabEntity } from '../section-context';
 import type { StructuralDiagnostic } from '../organism/structural-organism-types';
+import type { ColumnFemAxial } from '../analytical/column-fem-axial';
 
 /**
  * ADR-464 Slice 5 — building-level παράμετροι του raft bearing (tributary area-load
@@ -70,18 +71,25 @@ function pushBearingInadequate(out: StructuralDiagnostic[], entityId: string, be
  * Τρέξε τους ελέγχους σχεδιασμού θεμελίωσης πάνω στα entities της σκηνής. Pure —
  * απαιτεί τον code provider (συντελεστές) + την εδαφική παραδοχή σ_allow. Επιστρέφει
  * κενό όταν δεν έχει οριστεί σ_allow (advisory — δεν ελέγχεται χωρίς έδαφος).
+ *
+ * ADR-497 — `femAxialByFooting` (προαιρετικό): η engaged FEM αντίδραση βάσης ανά πέδιλο
+ * (από `buildActiveFootingFemAxialMap`). Όταν δοθεί, η έδραση/διάτρηση/τέμνουσα ελέγχονται
+ * με το FEM αξονικό (πρόβολος ADR-495) αντί του grid-tributary — single source of truth.
  */
 export function runFootingDesignChecks(
   entities: readonly Entity[],
   provider: StructuralCodeProvider,
   soilBearingCapacityKpa: number | undefined,
   raftLoad?: RaftLoadContext,
+  femAxialByFooting?: ReadonlyMap<string, ColumnFemAxial>,
 ): StructuralDiagnostic[] {
   if (!soilBearingCapacityKpa || soilBearingCapacityKpa <= 0) return [];
   const out: StructuralDiagnostic[] = [];
   for (const footing of entities) {
     if (!isFoundationEntity(footing)) continue;
-    const input = buildPadFootingDesignInput(footing, provider, soilBearingCapacityKpa, entities);
+    const input = buildPadFootingDesignInput(
+      footing, provider, soilBearingCapacityKpa, entities, femAxialByFooting?.get(footing.id),
+    );
     if (!input) continue;
     const { bearing, flexure, punching, oneWayShear } = computeFootingDesign(input);
 

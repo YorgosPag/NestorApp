@@ -44,13 +44,10 @@
 import type { ColumnEntity, ColumnParams } from '../types/column-types';
 import type { BeamEntity } from '../types/beam-types';
 import type { Point3D } from '../types/bim-base';
-import { rotateVector } from '../grips/grip-math';
+import { rotateVector, unitVector } from '../grips/grip-math';
 import { mmToSceneUnits } from '../../utils/scene-units';
 
 const DEG_PER_RAD = 180 / Math.PI;
-
-/** Διανυσματικό μήκος (scene units) κάτω από το οποίο ο άξονας θεωρείται εκφυλισμένος. */
-const MIN_AXIS_LEN = 1e-6;
 
 /**
  * Διαλέγει το πλησιέστερο πλαισιωτικό δοκάρι: εκείνο του οποίου το **εγγύτερο άκρο**
@@ -107,12 +104,13 @@ export function alignColumnToFramingBeam(
   const nearEnd = dStart <= dEnd ? start : end;
   const farEnd = dStart <= dEnd ? end : start;
 
-  const spanX = farEnd.x - nearEnd.x;
-  const spanY = farEnd.y - nearEnd.y;
-  const spanLen = Math.hypot(spanX, spanY);
-  if (spanLen < MIN_AXIS_LEN) return null;
-  const ux = spanX / spanLen;
-  const uy = spanY / spanLen;
+  // u_span = μοναδιαία φορά near-end → far-end (προς το άνοιγμα). Reuse `unitVector` SSoT
+  // (grip-math, ίδιο module με το `rotateVector`) — μηδέν χειροκίνητο normalize· null σε
+  // εκφυλισμένο (μηδενικού μήκους) δοκάρι.
+  const uSpan = unitVector(nearEnd, farEnd);
+  if (!uSpan) return null;
+  const ux = uSpan.x;
+  const uy = uSpan.y;
 
   const s = mmToSceneUnits(nextParams.sceneUnits ?? 'mm');
   const armWidth = beam.params.width; // mm — πάχος bearing arm = πλάτος δοκαριού (απαίτηση 3)

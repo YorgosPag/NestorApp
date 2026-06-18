@@ -31,6 +31,7 @@ import {
   type TakedownSettings,
 } from '../loads/load-takedown';
 import { columnCenterM, columnSelfWeightPerStoreyKn } from '../loads/member-load-geometry';
+import { resolveSupportingColumn } from './footing-support-column';
 
 export type { TakedownSettings };
 
@@ -60,7 +61,7 @@ export function computeFootingTakedownLoads(
   for (const footing of entities) {
     if (!isFoundationEntity(footing) || footing.params.kind !== 'pad') continue;
     if (!isTakedownWritable(footing.params.appliedLoad)) continue;
-    const column = columns.find((c) => c.params.footingId === footing.id);
+    const column = resolveSupportingColumn(footing.id, entities);
     if (!column) continue; // χωρίς στηρίζουσα κολώνα → καμία πηγή φορτίου (skip)
     const tributaryAreaM2 = tributaryById.get(column.id) ?? 0;
     const load = computeMemberTakedown({

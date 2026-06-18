@@ -936,6 +936,7 @@
 | **ADR-494** | Footprint-based kind-agnostic αναγνώριση στήριξης δοκαριού→κολώνας (L/T/U/I/τοιχείο/polygon — λύνει cantilever bug σε αλλαγή τύπου) | ✅ APPROVED | [View](./adrs/ADR-494-footprint-based-kind-agnostic-beam-column-framing.md) |
 | **ADR-495** | Slab→Beam load propagation (slab-aware δοκός tributary — η πλάκα/πρόβολος φορτίζει τον οργανισμό· mirror ADR-478) | ✅ Slice 1 | [View](./adrs/ADR-495-slab-beam-load-propagation.md) |
 | **ADR-496** | Έξυπνη ευθυγράμμιση κολώνας στο πλαισιωτικό δοκάρι κατά την αλλαγή τύπου (L-shape bearing-arm fit — flush/axis/width· command-time, full re-study) | ✅ APPROVED | [View](./adrs/ADR-496-smart-column-type-change-align-to-beam.md) |
+| **ADR-497** | FEM-authoritative axial — single source of truth κολώνα-N→πέδιλο (engaged FEM υπερισχύει του grid-tributary· ο πρόβολος ADR-495 φτάνει στο πέδιλο· mirror ADR-491) | ✅ Slice 2A | [View](./adrs/ADR-497-fem-authoritative-axial-footing.md) |
 | **ADR-UI-001** | Visual Primitive Ownership & Semantic Tokens | ✅ APPROVED | [View](./adrs/ADR-UI-001.md) |
 
 ---
