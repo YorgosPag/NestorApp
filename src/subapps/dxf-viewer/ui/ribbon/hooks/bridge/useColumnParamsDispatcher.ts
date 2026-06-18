@@ -16,9 +16,12 @@
 
 import { useCallback } from 'react';
 import type { ColumnEntity, ColumnParams } from '../../../../bim/types/column-types';
+import type { Entity } from '../../../../types/entities';
 import { useCommandHistory } from '../../../../core/commands';
 import { UpdateColumnParamsCommand } from '../../../../core/commands/entity-commands/UpdateColumnParamsCommand';
 import { detachSidesAffectedByVerticalEdit } from '../../../../bim/entities/entity-attach-detach';
+import { findBeamsFramingColumn } from '../../../../bim/columns/column-structural-attach-coordinator';
+import { alignColumnToFramingBeam } from '../../../../bim/columns/column-beam-align';
 import { LevelSceneManagerAdapter } from '../../../../systems/entity-creation/LevelSceneManagerAdapter';
 import { EventBus } from '../../../../systems/events/EventBus';
 import type { useLevels } from '../../../../systems/levels';
@@ -43,16 +46,28 @@ export function useColumnParamsDispatcher(
   return useCallback(
     (column: ColumnEntity, nextParams: ColumnParams): void => {
       if (!levelManager.currentLevelId) return;
-      // ADR-401 Phase F.3 — manual height/baseOffset edit breaks the matching
-      // top/base structural attach first (Revit «edit breaks attach»), so the
-      // explicit numeric value wins over the host follow. Detach + edit collapse
-      // into one undo step.
-      const next = detachSidesAffectedByVerticalEdit(column.params, nextParams);
       const sm = new LevelSceneManagerAdapter(
         levelManager.getLevelScene,
         levelManager.setLevelScene,
         levelManager.currentLevelId,
       );
+      // ADR-496 — έξυπνη ευθυγράμμιση στο πλαισιωτικό δοκάρι όταν αλλάζει ο τύπος σε
+      // ασύμμετρη διατομή (L-shape v1): το νέο σχήμα μπαίνει αλλιώς έκκεντρο γύρω από το
+      // ίδιο insertion point. Command-time fit ΠΡΙΝ το command — ΕΝΑ command/emit, ΟΧΙ
+      // reactive (μάθημα ADR-492 freeze). Ο proactive κύκλος (organism/foundation/loads/
+      // reinforce) ακούει ήδη το `bim:column-params-updated` → πλήρης αυτόματη επανα-μελέτη.
+      let fittedParams = nextParams;
+      if (nextParams.kind !== column.params.kind && nextParams.kind === 'L-shape') {
+        const entities = sm.getEntities() as unknown as readonly Entity[];
+        const framingBeams = findBeamsFramingColumn(column, entities);
+        const aligned = alignColumnToFramingBeam(column, nextParams, framingBeams);
+        if (aligned) fittedParams = aligned;
+      }
+      // ADR-401 Phase F.3 — manual height/baseOffset edit breaks the matching
+      // top/base structural attach first (Revit «edit breaks attach»), so the
+      // explicit numeric value wins over the host follow. Detach + edit collapse
+      // into one undo step.
+      const next = detachSidesAffectedByVerticalEdit(column.params, fittedParams);
       executeCommand(
         new UpdateColumnParamsCommand(column.id, next, column.params, sm, false),
       );

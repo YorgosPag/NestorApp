@@ -8,7 +8,7 @@
  *
  *   · Κολώνα/Πέδιλο → tributary area × όροφοι × area-loads + ίδιο βάρος (= ADR-464).
  *     Footing = αντίδραση βάσης της εδραζόμενης κολώνας (ίδιο φορτίο).
- *   · Δοκάρι → tributary strip πλάκας (μ.ό. ευθύνης ακρο-κολονών, 1 όροφος) + ίδιο βάρος.
+ *   · Δοκάρι → εμβαδό ευθύνης πλάκας (ADR-495 slab-aware· fallback μ.ό. ακρο-κολονών) + ίδιο βάρος.
  *   · Πλάκα → εμβαδόν panel × area-loads (1 όροφος) — πληροφοριακό / slab design.
  *
  * Η κολώνα **ΔΕΝ** αθροίζει αντιδράσεις δοκαριών (Revit-mode, μηδέν double-count) —
@@ -57,6 +57,7 @@ import {
   footingColumnId,
 } from './load-path-walk';
 import { computeWallBeamDeadLoads } from './wall-beam-support';
+import { computeSlabBeamTributary } from './slab-beam-support';
 import type { StructuralGraph } from '../organism/structural-organism-types';
 import type { GuideOffsetLookup } from '../../hosting/derive-slots';
 
@@ -110,19 +111,24 @@ function columnLoad(c: ColumnEntity, tributaryM2: number, s: TakedownSettings): 
 }
 
 /**
- * Φορτίο δοκαριού: μ.ό. tributary ακρο-κολονών (1 όροφος) + ίδιο βάρος δοκαριού +
- * γραμμικό φορτίο τοιχοποιίας που πατά επάνω της (ADR-478, `wallDeadKn` ως πρόσθετο
- * μόνιμο αξονικό· smear-άρεται σε UDL → M_Ed downstream).
+ * Φορτίο δοκαριού: εμβαδό ευθύνης (1 όροφος) + ίδιο βάρος δοκαριού + γραμμικό φορτίο
+ * τοιχοποιίας που πατά επάνω της (ADR-478, `wallDeadKn` ως πρόσθετο μόνιμο αξονικό·
+ * smear-άρεται σε UDL → M_Ed downstream).
+ *
+ * **ADR-495 — slab-aware tributary:** όταν η δοκός φέρει πλάκα(ες) (`slabTribM2 != null`),
+ * το πραγματικό εμβαδό ευθύνης της πλάκας **ΥΠΕΡΙΣΧΥΕΙ** του column-grid proxy — έτσι
+ * προσθήκη/πρόβολος/αλλαγή πλάκας αλλάζει το φορτίο (μηδέν double-count). Χωρίς πλάκα →
+ * fallback στο μ.ό. tributary ακρο-κολονών (μηδέν regression για γυμνά δοκάρια).
  */
 function beamLoad(
   b: BeamEntity, graph: StructuralGraph, tributary: ReadonlyMap<string, number>,
-  s: TakedownSettings, wallDeadKn: number,
+  s: TakedownSettings, wallDeadKn: number, slabTribM2: number | undefined,
 ): MemberLoad {
   const cols = beamSupportColumnIds(graph, b.id);
   const sum = cols.reduce((acc, id) => acc + (tributary.get(id) ?? 0), 0);
-  const avg = cols.length > 0 ? sum / cols.length : 0;
+  const gridAvg = cols.length > 0 ? sum / cols.length : 0;
   return computeMemberTakedown({
-    tributaryAreaM2: avg,
+    tributaryAreaM2: slabTribM2 != null ? slabTribM2 : gridAvg,
     storeyCount: 1,
     deadAreaLoadKpa: s.deadAreaLoadKpa,
     liveAreaLoadKpa: s.liveAreaLoadKpa,
@@ -159,6 +165,7 @@ export function computeLoadPathPatches(
   const byId = new Map(entities.map((e) => [e.id, e]));
   const tributary = buildColumnTributary(entities, getOffset);
   const wallDeadByBeam = computeWallBeamDeadLoads(entities);
+  const slabTribByBeam = computeSlabBeamTributary(entities); // ADR-495 — slab-aware δοκός tributary
   const columnLoadById = new Map<string, MemberLoad>();
   const patches: MemberLoadPatch[] = [];
 
@@ -170,7 +177,8 @@ export function computeLoadPathPatches(
       pushPatch(patches, writablePatch(entity, load));
     } else if (node.memberKind === 'beam' && entity && isBeamEntity(entity)) {
       const wallKn = wallDeadByBeam.get(node.id) ?? 0;
-      pushPatch(patches, writablePatch(entity, beamLoad(entity, graph, tributary, settings, wallKn)));
+      const slabTrib = slabTribByBeam.get(node.id); // undefined → grid fallback (μηδέν regression)
+      pushPatch(patches, writablePatch(entity, beamLoad(entity, graph, tributary, settings, wallKn, slabTrib)));
     } else if (
       node.memberKind === 'footing' && entity &&
       isFoundationEntity(entity) && entity.params.kind === 'pad'

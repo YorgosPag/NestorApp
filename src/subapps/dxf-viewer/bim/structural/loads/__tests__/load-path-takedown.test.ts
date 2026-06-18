@@ -151,6 +151,61 @@ describe('computeLoadPathPatches', () => {
   });
 });
 
+// ─── ADR-495 — slab-aware δοκός tributary (repro guard) ──────────────────────
+
+/** Δοκός με ρητό άξονα (startPoint→endPoint, mm) — για slab spatial projection. */
+function beamAx(id: string, x0: number, y0: number, x1: number, y1: number): Entity {
+  return {
+    id, type: 'beam', kind: 'rectangular',
+    params: {
+      kind: 'rectangular', width: 250, sceneUnits: 'mm',
+      startPoint: { x: x0, y: y0 }, endPoint: { x: x1, y: y1 },
+    },
+    geometry: { volume: 0.5 },
+  } as unknown as Entity;
+}
+
+/** Πλάκα-πρόβολος με ορθογώνιο outline (mm) + εμβαδό (m²). */
+function slabPoly(id: string, x0: number, y0: number, x1: number, y1: number, areaM2: number): Entity {
+  return {
+    id, type: 'slab', kind: 'roof',
+    params: {
+      kind: 'roof', sceneUnits: 'mm',
+      outline: { vertices: [
+        { x: x0, y: y0, z: 0 }, { x: x1, y: y0, z: 0 },
+        { x: x1, y: y1, z: 0 }, { x: x0, y: y1, z: 0 },
+      ] },
+    },
+    geometry: { area: areaM2, netArea: areaM2 },
+  } as unknown as Entity;
+}
+
+describe('ADR-495 — slab→δοκός φορτίο', () => {
+  const beamGraph: StructuralGraph = {
+    nodes: [gNode('c1', 'column'), gNode('c2', 'column'), gNode('b1', 'beam')],
+    edges: [gEdge('c1', 'b1', 'column-bearing'), gEdge('c2', 'b1', 'column-bearing')],
+  };
+  const cols = [column('c1', 0, 0), column('c2', 5000, 0)];
+
+  it('χωρίς πλάκα → grid fallback (μηδέν regression)', () => {
+    const patches = computeLoadPathPatches([...cols, beamAx('b1', 0, 0, 5000, 0)], beamGraph, SETTINGS);
+    const b = patchById(patches, 'b1');
+    const selfKn = 0.5 * 2400 * 9.81 / 1000;
+    expect(b?.liveAxialKn).toBeCloseTo(12.5 * 2, 1);           // grid tributary 12.5 m²
+    expect(b?.deadAxialKn).toBeCloseTo(12.5 * 6 + selfKn, 1);
+  });
+
+  it('με πλάκα-πρόβολο → φορτίο δοκού αλλάζει (slab-aware υπερισχύει του grid)', () => {
+    // πρόβολος 5×4m = 20 m² (≠ grid 12.5) → η δοκός παίρνει 20 m².
+    const entities = [...cols, beamAx('b1', 0, 0, 5000, 0), slabPoly('s1', 0, 0, 5000, 4000, 20)];
+    const patches = computeLoadPathPatches(entities, beamGraph, SETTINGS);
+    const b = patchById(patches, 'b1');
+    const selfKn = 0.5 * 2400 * 9.81 / 1000;
+    expect(b?.liveAxialKn).toBeCloseTo(20 * 2, 1);             // 40 (≠ 25 του grid)
+    expect(b?.deadAxialKn).toBeCloseTo(20 * 6 + selfKn, 1);    // 120 + self
+  });
+});
+
 describe('REGRESSION — no-beam footing loads == computeFootingTakedownLoads (ADR-464)', () => {
   it('κάναβος 2 κολονών 5m → footing patches ίδια με το ADR-464 path', () => {
     const entities = [

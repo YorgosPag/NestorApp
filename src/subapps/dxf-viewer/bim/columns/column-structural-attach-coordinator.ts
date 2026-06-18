@@ -234,3 +234,20 @@ export function findColumnsFramedByBeamForGraph(beam: Entity, entities: readonly
   }
   return out;
 }
+
+/**
+ * ADR-496 — reverse του {@link findColumnsFramedByBeamForGraph}: βρες τα **δοκάρια** που
+ * πλαισιώνουν μια **κολώνα** (kind-agnostic footprint-based, ίδιο `beamFramesColumn` SSoT
+ * ADR-494). Pure detection — καμία mutation. Επιστρέφει τα `BeamEntity` (όχι ids) ώστε ο
+ * caller (`alignColumnToFramingBeam`) να διαβάσει άξονα/πλάτος. Χρησιμοποιεί την **τρέχουσα**
+ * γεωμετρία της κολώνας (η φυσική σύνδεση πριν από οποιοδήποτε reshape).
+ */
+export function findBeamsFramingColumn(column: ColumnEntity, entities: readonly Entity[]): BeamEntity[] {
+  const out: BeamEntity[] = [];
+  for (const e of entities) {
+    if (!isBeamEntity(e)) continue;
+    if (!beamFramesColumn(e, column)) continue;
+    out.push(e);
+  }
+  return out;
+}
