@@ -12,6 +12,9 @@
  *     (Μ/V/N, ένα κάθε φορά όπως στο Robot)· default 'moment'.
  *   · `showUtilization` (ADR-485 Slice 4c) — overlay επάρκειας (As_req/As_prov)
  *     που βάφει το footprint κάθε μέλους πράσινο/πορτοκαλί/κόκκινο· default OFF.
+ *   · `analysisLive` (ADR-488) — latch «η στατική ανάλυση είναι ενεργή». Οπλίζεται
+ *     από το ρητό κουμπί «Ανάλυση»· όσο true, ο FEM solver ξανα-τρέχει proactive σε
+ *     κάθε στατική κίνηση (ζωντανός οργανισμός, ADR-487 §4). default OFF.
  *
  * Όπως το `pipe-sizing-view-store` (ADR-422 L3) — **transient analysis mode**: δεν
  * αποθηκεύεται, μηδενίζεται στο reload (όπως ένα Robot results-view tab). Ξεχωριστό
@@ -37,6 +40,27 @@ interface AnalysisDiagramViewState {
   /** true ⇒ overlay επάρκειας (utilization fill ανά μέλος) ορατό — ADR-485 Slice 4c. */
   readonly showUtilization: boolean;
   setShowUtilization: (showUtilization: boolean) => void;
+  /** true ⇒ latch ζωντανής ανάλυσης ενεργό (ADR-488) — proactive re-solve σε κάθε κίνηση. */
+  readonly analysisLive: boolean;
+  setAnalysisLive: (analysisLive: boolean) => void;
+}
+
+/** Τα πεδία που καθορίζουν αν ο μηχανικός «κοιτά» στατικά (ADR-488 engaged predicate). */
+export interface AnalysisEngagedState {
+  readonly analysisLive: boolean;
+  readonly showAnalysisDiagrams: boolean;
+  readonly showUtilization: boolean;
+}
+
+/**
+ * ADR-488 SSoT predicate — ο FEM solver είναι «ζωντανός» (proactive re-solve σε κάθε
+ * κίνηση) όταν ο μηχανικός παρατηρεί αποτελέσματα: ρητό latch «Ανάλυση» ή οποιοδήποτε
+ * results overlay (διαγράμματα / utilization) ορατό. Αλλιώς dormant → μηδέν κόστος
+ * solver (διατηρεί την απόφαση ADR-481). ΕΝΑ predicate → ομοιόμορφο gating όλων των
+ * consumers του `AnalysisResultsStore` (diagram + readouts + utilization).
+ */
+export function isAnalysisEngaged(state: AnalysisEngagedState): boolean {
+  return state.analysisLive || state.showAnalysisDiagrams || state.showUtilization;
 }
 
 export const useAnalysisDiagramViewStore = create<AnalysisDiagramViewState>((set) => ({
@@ -51,5 +75,9 @@ export const useAnalysisDiagramViewStore = create<AnalysisDiagramViewState>((set
   showUtilization: false,
   setShowUtilization(showUtilization) {
     set({ showUtilization });
+  },
+  analysisLive: false,
+  setAnalysisLive(analysisLive) {
+    set({ analysisLive });
   },
 }));

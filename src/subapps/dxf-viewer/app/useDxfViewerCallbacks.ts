@@ -24,6 +24,7 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { nowISO } from '@/lib/date-local';
 import { openDimTextOverride } from '../ui/panels/dimensions/DimTextOverrideStore';
 import { EventBus } from '../systems/events/EventBus';
+import { useAnalysisDiagramViewStore } from '../state/analysis-diagram-view-store';
 import { useAnimationStore } from '../bim-3d/animation/AnimationStore';
 import { useCameraTargetStore } from '../bim-3d/stores/CameraTargetStore';
 import { buildTurntablePath, type SceneBbox } from '../bim-3d/animation/core/TurntablePathBuilder';
@@ -221,7 +222,10 @@ export function useDxfViewerCallbacks(params: DxfViewerCallbacksParams): DxfView
     }
     // ADR-482 (T3-UI): «Ανάλυση» — explicit trigger του στατικού FEM solver (ADR-481).
     // Ο dormant `useProactiveStructuralAnalysis` ξυπνά → K·u=F → AnalysisResultsStore.
+    // ADR-488: το πάτημα οπλίζει το engaged latch → ο solver μένει ΖΩΝΤΑΝΟΣ (proactive
+    // re-solve σε κάθε επόμενη κίνηση), ώστε το διάγραμμα να ακολουθεί την τοπολογία.
     if (action === 'organism.run-analysis') {
+      useAnalysisDiagramViewStore.getState().setAnalysisLive(true);
       EventBus.emit('bim:run-structural-analysis', {});
       return;
     }

@@ -240,7 +240,9 @@ export interface BimEventMap {
   // ADR-481 — ο στατικός FEM solver (T3) επέλυσε τον φορέα: M/V/N + διαγράμματα
   // γράφτηκαν στο `AnalysisResultsStore`. `combinationCount` = συνδυασμοί που λύθηκαν·
   // `unstable` = βρέθηκε μηχανισμός (singular K). Υποδοχή για downstream consumers.
-  'bim:analysis-solved': { combinationCount: number; unstable: boolean };
+  // ADR-488 — `silent`=true στο proactive (ζωντανός solver) → ο notification hook
+  // δεν κάνει toast spam σε κάθε κίνηση· loud (ρητή «Ανάλυση») → toast.
+  'bim:analysis-solved': { combinationCount: number; unstable: boolean; silent?: boolean };
   // ADR-395 G6 — opening persisted/deleted → host wall re-computes net BOQ area
   'bim:opening-persisted': { wallId: string };
   // ADR-395 G2 — slab-opening persisted/deleted → host slab re-computes net BOQ volume

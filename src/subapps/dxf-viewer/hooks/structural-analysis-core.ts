@@ -42,11 +42,20 @@ export interface StructuralAnalysisOutput {
   readonly diagnostics: readonly StructuralDiagnostic[];
 }
 
+/** Επιλογές εκτέλεσης — ADR-488: `silent` στο proactive (ζωντανός solver, μηδέν toast). */
+export interface RunStructuralAnalysisOptions {
+  /** true ⇒ το `bim:analysis-solved` φέρει `silent` → ο notification hook δεν κάνει toast. */
+  readonly silent?: boolean;
+}
+
 /**
  * Επίλυσε & δημοσίευσε τη στατική γραμμική ανάλυση. Το φορτίο μέλους αντλείται ΜΟΝΟ
  * από δοκάρια (`appliedLoad`, ADR-467/472 — η αξονική κολόνας προκύπτει από το πλαίσιο).
  */
-export function runStructuralAnalysis(input: StructuralAnalysisInput): StructuralAnalysisOutput {
+export function runStructuralAnalysis(
+  input: StructuralAnalysisInput,
+  options?: RunStructuralAnalysisOptions,
+): StructuralAnalysisOutput {
   const byId = new Map(input.entities.map((e) => [e.id, e]));
   const sectionProvider = (m: AnalyticalMember) => resolveMemberSectionProperties(m, byId.get(m.entityId));
   const loadProvider = (m: AnalyticalMember): MemberLoad | null => {
@@ -58,6 +67,10 @@ export function runStructuralAnalysis(input: StructuralAnalysisInput): Structura
     model: input.model, sectionProvider, loadProvider, combinations: buildLoadCombinations(),
   });
   AnalysisResultsStore.set(result);
-  EventBus.emit('bim:analysis-solved', { combinationCount: result.combinations.length, unstable: result.unstable });
+  EventBus.emit('bim:analysis-solved', {
+    combinationCount: result.combinations.length,
+    unstable: result.unstable,
+    silent: options?.silent,
+  });
   return { result, diagnostics: runAnalysisDiagnostics(result, input.model.members.map((m) => m.id)) };
 }

@@ -23,7 +23,10 @@ export function useStructuralAnalysisNotification(): void {
   const { t } = useTranslation('dxf-viewer-shell');
 
   useEffect(() => {
-    const onSolved = ({ combinationCount, unstable }: { combinationCount: number; unstable: boolean }): void => {
+    const onSolved = ({ combinationCount, unstable, silent }: { combinationCount: number; unstable: boolean; silent?: boolean }): void => {
+      // ADR-488 — proactive (ζωντανός solver) re-solve είναι σιωπηλό: toast μόνο στη
+      // ρητή «Ανάλυση» (mirror reinforce/loads — background behaviour = no toast spam).
+      if (silent) return;
       if (unstable) {
         toast.warning(t('staticAnalysis.solvedUnstable'));
         return;

@@ -57,4 +57,5 @@ NEW `bim/structural/analytical/__tests__/analysis-diagnostics-store.test.ts` —
 ---
 
 ## Changelog
+- **2026-06-18 (Opus, UNCOMMITTED) — ADR-488:** το κουμπί «Ανάλυση» (`organism.run-analysis`) πλέον **οπλίζει** το engaged latch (`setAnalysisLive(true)`) πριν το emit → ο solver μένει ζωντανός. Ο `useStructuralAnalysisNotification` γίνεται **σιωπηλός** στο proactive (`silent` flag στο `bim:analysis-solved`) → toast μόνο στη ρητή «Ανάλυση». Λεπτομέρειες → ADR-488.
 - **2026-06-18 (Opus, UNCOMMITTED):** Δημιουργία T3-UI. Slice 1 (ribbon button «Ανάλυση» + action routing + `useStructuralAnalysisNotification` toast + icon `struct-run-analysis` + i18n)· Slice 2 (`useEntityAnalysisForces` + `AnalysisForcesSection` read-only readout στα column/beam panels + i18n forces)· Slice 3 (κοινός `diagnostics-index` [Boy-Scout] + `AnalysisDiagnosticsStore` + writer στο proactive hook + `useEntityAnalysisDiagnostics` + reader-side union στο `EntityWarningsSection`). 7 jest GREEN + 122 γειτονικά. 🔴 tsc(Giorgio)+browser-verify+commit (git add ΜΟΝΟ δικά μου).
