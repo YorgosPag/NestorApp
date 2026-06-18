@@ -25,7 +25,7 @@ import type { Point2D } from '../../rendering/types/Types';
 import type { ColumnEntity } from '../types/column-types';
 import type { GuideBinding, GuideBindingSlot } from '../hosting/guide-binding-types';
 import { mmToSceneUnits, type SceneUnits } from '../../utils/scene-units';
-import { projectPointOnAxis } from '../geometry/shared/polygon-utils';
+import { projectPointOnAxis, projectPolygonOnAxis } from '../geometry/shared/polygon-utils';
 
 /** Tolerance (mm) center-match κολώνας↔άκρου στοιχείου (grid columns κάθονται ακριβώς στην τομή). */
 const COLUMN_MATCH_TOL_MM = 5;
@@ -98,8 +98,9 @@ export interface AxisFootprintProjection {
  *   · `[alongMin, alongMax]` = διαμήκης έκταση footprint κατά μήκος του άξονα — οι ΠΑΡΕΙΕΣ
  *     (alongMax = παρειά προς +u, alongMin = παρειά προς −u), position-independent.
  *
- * Reuse `projectPointOnAxis` (polygon-utils, ADR-493) per vertex για το along/perp — μηδέν
- * διπλότυπη projection math· το πρόσημο (side) υπολογίζεται μόνο για ανίχνευση straddle.
+ * **Thin entity wrapper** πάνω στο pure `projectPolygonOnAxis` (polygon-utils SSoT) — μηδέν
+ * δικός μου vertex loop. Προσθέτει ΜΟΝΟ τη framing-semantic: το footprint που **τέμνει** τον
+ * άξονα (πρόσημα κάθετης εκατέρωθεν) → `perp = 0`· αλλιώς η ελάχιστη απόλυτη κάθετη απόσταση.
  * Κοινό από `beamFramesColumn` (framing/graph) ΚΑΙ `reframeBeamEndpointsToColumns` (ADR-492).
  * Degenerate footprint (<1 κορυφή) → fallback στο `position` ως σημείο (μηδέν crash).
  */
@@ -115,21 +116,10 @@ export function projectColumnFootprintOnAxis(
     const c = projectPointOnAxis(column.params.position.x, column.params.position.y, ax, ay, ux, uy);
     return { alongMin: c.along, alongMax: c.along, perp: c.perp };
   }
-  let alongMin = Infinity;
-  let alongMax = -Infinity;
-  let minPerp = Infinity;
-  let sawPos = false;
-  let sawNeg = false;
-  for (const v of verts) {
-    const { along, perp } = projectPointOnAxis(v.x, v.y, ax, ay, ux, uy);
-    if (along < alongMin) alongMin = along;
-    if (along > alongMax) alongMax = along;
-    if (perp < minPerp) minPerp = perp;
-    const side = (v.x - ax) * uy - (v.y - ay) * ux; // signed perp → ανίχνευση straddle
-    if (side > 0) sawPos = true;
-    else if (side < 0) sawNeg = true;
-  }
-  return { alongMin, alongMax, perp: sawPos && sawNeg ? 0 : minPerp };
+  const { alongMin, alongMax, perpMin, perpMax } = projectPolygonOnAxis(verts, ax, ay, ux, uy);
+  const straddles = perpMin <= 0 && perpMax >= 0; // κορυφές εκατέρωθεν → τέμνει την ευθεία
+  const perp = straddles ? 0 : Math.min(Math.abs(perpMin), Math.abs(perpMax));
+  return { alongMin, alongMax, perp };
 }
 
 /** Η πλησιέστερη κολώνα της οποίας το κέντρο πέφτει εντός `tol` (scene units) του σημείου. */

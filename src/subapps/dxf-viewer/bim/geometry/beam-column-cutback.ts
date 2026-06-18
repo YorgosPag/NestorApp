@@ -27,7 +27,13 @@
 import type { Pair, Polygon } from 'polygon-clipping';
 import type { Point3D } from '../types/bim-base';
 import { safeDifference } from './shared/safe-polygon-boolean';
-import { multiPolygonArea, pointInPolygon, polygonCentroid, projectPointOnAxis } from './shared/polygon-utils';
+import {
+  multiPolygonArea,
+  pointInPolygon,
+  polygonCentroid,
+  projectPointOnAxis,
+  projectPolygonOnAxis,
+} from './shared/polygon-utils';
 import type { Pt2 } from './shared/segment-polygon-coverage';
 
 /** Σχετικό εμβαδικό όριο: αν αφαιρεθεί λιγότερο από αυτό → «μηδέν τομή» (identity). */
@@ -265,12 +271,8 @@ export function computeBeamAxisToColumnContact(
 
 /** Half-width του outline = μέγιστη κάθετη απόσταση κορυφής από τον άξονα (canvas units). */
 function outlineHalfWidth(outline: readonly Pt2[], ax: Pt2, ux: number, uy: number): number {
-  let best = 0;
-  for (const v of outline) {
-    const perp = projectPointOnAxis(v.x, v.y, ax.x, ax.y, ux, uy).perp;
-    if (perp > best) best = perp;
-  }
-  return best;
+  const { perpMin, perpMax } = projectPolygonOnAxis(outline, ax.x, ax.y, ux, uy);
+  return Math.max(Math.abs(perpMin), Math.abs(perpMax));
 }
 
 /** Pt2 footprint → Point3D[] (z=0) για το `polygonCentroid` (z-agnostic) SSoT. */
@@ -303,11 +305,8 @@ function framingInwardExtent(
     const centre = projectPointOnAxis(c.x, c.y, endpoint.x, endpoint.y, ix, iy);
     if (centre.along <= 0) continue; // κολώνα όχι εσωτερικά αυτού του άκρου (π.χ. mid-span)
     if (centre.perp > halfWidth) continue; // κέντρο εκτός πλάτους δοκαριού
-    let nearProj = Infinity; // κοντινή παρειά κολώνας κατά (ix,iy) από το άκρο
-    for (const v of fp) {
-      const ip = projectPointOnAxis(v.x, v.y, endpoint.x, endpoint.y, ix, iy).along;
-      if (ip < nearProj) nearProj = ip;
-    }
+    // Κοντινή παρειά κολώνας κατά (ix,iy) από το άκρο = alongMin (reuse polygon SSoT).
+    const nearProj = projectPolygonOnAxis(fp, endpoint.x, endpoint.y, ix, iy).alongMin;
     if (nearProj > halfWidth) continue; // κολώνα μακριά από το άκρο → όχι framing join
     if (centre.along > best) best = centre.along;
   }

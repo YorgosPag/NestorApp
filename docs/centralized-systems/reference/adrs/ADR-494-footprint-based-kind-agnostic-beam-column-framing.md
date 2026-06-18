@@ -43,20 +43,33 @@ kind) (α) **τέμνει ή απέχει ≤ halfWidth+tol** από την ευ
 έκταση** του επικαλύπτει το span. Δουλεύει για κάθε διατομή: rectangular/circular/L/T/U/I/
 τοιχείο/polygon/composite.
 
-### SSoT — `projectColumnFootprintOnAxis` (NEW, κοινό)
+### SSoT — δύο επίπεδα (pure primitive + entity wrapper)
 
-`bim/columns/column-face-trim.ts`:
+**(α) `projectPolygonOnAxis` (NEW pure primitive)** — `bim/geometry/shared/polygon-utils.ts`,
+δίπλα στο `projectPointOnAxis` (ADR-493):
+
+```ts
+projectPolygonOnAxis(vertices, ax, ay, ux, uy): { alongMin, alongMax, perpMin, perpMax }
+```
+
+Η ΜΙΑ πηγή αλήθειας για κάθε «πολύγωνο εναντίον άξονα»: διαμήκης έκταση + **προσημασμένη**
+κάθετη έκταση (πρόσημα εκατέρωθεν `perpMin<0<perpMax` ⇒ το πολύγωνο **τέμνει** την ευθεία).
+Reuse `projectPointOnAxis` (point-level) για το `along` — μηδέν διπλότυπη projection math.
+
+**(β) `projectColumnFootprintOnAxis` (entity wrapper)** — `bim/columns/column-face-trim.ts`:
 
 ```ts
 projectColumnFootprintOnAxis(column, ax, ay, ux, uy): { alongMin, alongMax, perp }
 ```
 
-- Προβάλλει **ΟΛΕΣ τις κορυφές** του footprint (reuse `projectPointOnAxis` — polygon-utils,
-  ADR-493 — μηδέν διπλότυπη projection math).
-- `perp` = ελάχιστη κάθετη απόσταση footprint→ευθεία· **0** όταν κορυφές βρίσκονται
-  **εκατέρωθεν** (το footprint τέμνει τον άξονα) → στήριξη ανεξαρτήτως σχήματος.
-- `[alongMin, alongMax]` = διαμήκης έκταση = οι **παρειές** (position-independent).
-- Degenerate footprint → fallback στο `position` (μηδέν crash).
+Thin wrapper πάνω στο (α): ξετυλίγει το `geometry.footprint` + προσθέτει ΜΟΝΟ τη
+framing-semantic (straddle → `perp=0`· αλλιώς ελάχιστη απόλυτη κάθετη). Degenerate footprint →
+fallback στο `position`.
+
+**Κεντρικοποίηση των ήδη-υπαρχόντων hand-rolled loops (N.0.2 boy-scout):** οι helpers του
+ADR-493 cutback `outlineHalfWidth` (= `max|perp|`) και `framingInwardExtent` (near-face =
+`alongMin`) έκαναν τον **ίδιο** per-vertex υπολογισμό footprint↔άξονα χειροκίνητα → τώρα
+**delegate** στο `projectPolygonOnAxis`. Μηδέν conceptual duplicate.
 
 ### Consumers (κοινό SSoT — N.0.2 boy-scout)
 
@@ -80,9 +93,12 @@ projectColumnFootprintOnAxis(column, ax, ay, ux, uy): { alongMin, alongMax, perp
 
 ## 5. Αρχεία
 
-- **MOD** `bim/columns/column-face-trim.ts` — NEW exported `projectColumnFootprintOnAxis` + `AxisFootprintProjection` (reuse `projectPointOnAxis`).
+- **MOD** `bim/geometry/shared/polygon-utils.ts` — NEW pure SSoT `projectPolygonOnAxis` + `PolygonAxisProjection`.
+- **MOD** `bim/columns/column-face-trim.ts` — NEW `projectColumnFootprintOnAxis` (delegate στο `projectPolygonOnAxis`).
 - **MOD** `bim/columns/column-structural-attach-coordinator.ts` — `beamFramesColumn` footprint-based (import swap).
 - **MOD** `bim/beams/beam-column-reframe.ts` — footprint perp-gate (ADR-492 set).
+- **MOD** `bim/geometry/beam-column-cutback.ts` — `outlineHalfWidth` + `framingInwardExtent` delegate στο `projectPolygonOnAxis` (de-dup, ADR-493 set).
+- **MOD** `bim/geometry/shared/__tests__/polygon-utils-projection.test.ts` — `projectPolygonOnAxis` unit tests.
 - **MOD** `bim/columns/__tests__/column-structural-attach-coordinator.test.ts` — L/T/τοιχείο/circular/graph fixtures.
 - **MOD** `bim/beams/__tests__/beam-column-reframe.test.ts` — L-shape reframe.
 
