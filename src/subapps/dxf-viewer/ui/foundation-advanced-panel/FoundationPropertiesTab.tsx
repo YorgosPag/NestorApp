@@ -15,6 +15,7 @@ import React from 'react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useLevels } from '../../systems/levels';
 import { isFoundationEntity } from '../../types/entities';
+import { useResolvedSelectedEntity } from '../../hooks/selection/useResolvedSelectedEntity';
 import { useStructuralSettingsStore } from '../../state/structural-settings-store';
 import { useFoundationParamsDispatcher } from '../ribbon/hooks/bridge/useFoundationParamsDispatcher';
 import { FoundationAdvancedPanel } from './FoundationAdvancedPanel';
@@ -42,11 +43,12 @@ export function FoundationPropertiesTab({
   // ADR-464 — re-render όταν αλλάζει το σ_allow (combo «έδραση» + bearing readouts).
   useStructuralSettingsStore((s) => s.soilBearingCapacityKpa);
 
-  const footing = React.useMemo<FoundationEntity | null>(() => {
-    if (!primarySelectedId || !currentScene) return null;
-    const entity = currentScene.entities.find((e) => e.id === primarySelectedId);
-    return entity && isFoundationEntity(entity) ? entity : null;
-  }, [primarySelectedId, currentScene]);
+  // ADR-484 — κοινός SSoT resolver (active scene + cross-level foundation fallback).
+  const selected = useResolvedSelectedEntity(primarySelectedId, currentScene);
+  const footing = React.useMemo<FoundationEntity | null>(
+    () => (selected && isFoundationEntity(selected) ? selected : null),
+    [selected],
+  );
 
   if (!footing) {
     return (

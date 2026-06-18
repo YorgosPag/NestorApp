@@ -28,6 +28,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useAuth } from '@/auth/hooks/useAuth';
 import { useProjectHierarchyOptional } from '../../contexts/ProjectHierarchyContext';
 import { isBimEntity } from '../../types/entities';
+import { useResolvedSelectedEntity } from '../../hooks/selection/useResolvedSelectedEntity';
 import { BimPropertiesRouter } from '../wall-advanced-panel/BimPropertiesRouter';
 import { BimBoqTab } from '../../bim-3d/properties/tabs/BimBoqTab';
 import { BimCommentsTab } from '../../bim-3d/properties/tabs/BimCommentsTab';
@@ -62,10 +63,9 @@ export function BimPropertiesShell(
   const companyId = user?.companyId ?? '';
   const projectId = props.projectId ?? hierarchy?.selectedProject?.id ?? '';
 
-  const selected = React.useMemo(() => {
-    if (!primarySelectedId || !currentScene) return null;
-    return currentScene.entities.find((e) => e.id === primarySelectedId) ?? null;
-  }, [primarySelectedId, currentScene]);
+  // ADR-484 — κοινός SSoT resolver (active scene + cross-level foundation fallback)
+  // ώστε ένα cross-level πέδιλο να ανοίγει τις υπο-καρτέλες (Παράμετροι/ΒΚΕ/…).
+  const selected = useResolvedSelectedEntity(primarySelectedId, currentScene);
 
   const bimType = selected && isBimEntity(selected) ? selected.type : null;
 

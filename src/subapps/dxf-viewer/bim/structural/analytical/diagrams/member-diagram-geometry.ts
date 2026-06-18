@@ -50,11 +50,24 @@ export interface MemberDiagramPath {
   readonly extremum: DiagramSample;
 }
 
-/** Σύνολο διαδρομών + global max-abs (για auto-fit της pixel κλίμακας). */
+/** Σύνολο διαδρομών + global max-abs + μήκος αναφοράς (για model-space auto-fit). */
 export interface MemberDiagramSet {
   readonly component: DiagramComponent;
   readonly paths: readonly MemberDiagramPath[];
+  /** Μέγιστη απόλυτη τιμή σε όλα τα μέλη — ορίζει την κλίμακα ύψους. */
   readonly globalMaxAbs: number;
+  /**
+   * Μέσο μήκος μέλους σε **canvas units** (model space). Ο overlay ορίζει το ύψος
+   * της μέγιστης τιμής ως ποσοστό αυτού → το διάγραμμα κλιμακώνεται **μαζί** με το
+   * μοντέλο στο zoom (Revit/Robot model-space diagrams), όχι σταθερό pixel ύψος.
+   */
+  readonly referenceLengthCanvas: number;
+  /**
+   * ADR-483 Slice 4b — `false` όταν ο επιλεγμένος συνδυασμός βρήκε μηχανισμό
+   * (`result.unstable` / singular K) → οι τιμές είναι ύποπτες. Ο overlay τις
+   * σχεδιάζει αμπέρ-διακεκομμένες χωρίς γέμισμα (Robot «unreliable results»).
+   */
+  readonly reliable: boolean;
 }
 
 export interface BuildMemberDiagramOptions {
@@ -64,7 +77,17 @@ export interface BuildMemberDiagramOptions {
   readonly component?: DiagramComponent;
 }
 
-const EMPTY: MemberDiagramSet = { component: 'moment', paths: [], globalMaxAbs: 0 };
+const EMPTY: MemberDiagramSet = {
+  component: 'moment', paths: [], globalMaxAbs: 0, referenceLengthCanvas: 0, reliable: true,
+};
+
+/** Μέσο μήκος μέλους (canvas units) από τις διαδρομές — μήκος αναφοράς κλίμακας. */
+function meanPathLength(paths: readonly MemberDiagramPath[]): number {
+  if (paths.length === 0) return 0;
+  let sum = 0;
+  for (const p of paths) sum += Math.hypot(p.jCanvas.x - p.iCanvas.x, p.jCanvas.y - p.iCanvas.y);
+  return sum / paths.length;
+}
 
 function clamp01(t: number): number {
   return t < 0 ? 0 : t > 1 ? 1 : t;
@@ -176,5 +199,5 @@ export function buildMemberDiagramPaths(
     paths.push(path);
   }
 
-  return { component, paths, globalMaxAbs };
+  return { component, paths, globalMaxAbs, referenceLengthCanvas: meanPathLength(paths) };
 }

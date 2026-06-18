@@ -55,8 +55,28 @@ function offsetPoint(
 }
 
 /**
- * Σχεδίασε το διάγραμμα ενός μέλους: γέμισμα (άξονας→καμπύλη→άξονας) + καμπύλη +
- * baseline. `si`/`sj` = άκρα i/j σε οθόνη· `pxScale` = px ανά μονάδα τιμής.
+ * Smooth path μέσα από τα σημεία `pts` με midpoint quadratic-bezier (η πένα
+ * θεωρείται ήδη στο `pts[0]`). Περνά ακριβώς από τα άκρα `pts[0]`/`pts[last]` και
+ * εξομαλύνει τα ενδιάμεσα → η parabola της UDL ροπής φαίνεται ομαλή (όχι σπασμένη
+ * polyline) χωρίς αλλαγή στις σταθμές του solver. <3 σημεία → ευθείες (fallback).
+ */
+function buildSmoothThrough(ctx: CanvasRenderingContext2D, pts: readonly Point2D[]): void {
+  if (pts.length < 3) {
+    for (let k = 1; k < pts.length; k++) ctx.lineTo(pts[k]!.x, pts[k]!.y);
+    return;
+  }
+  let i = 1;
+  for (; i < pts.length - 2; i++) {
+    const xc = (pts[i]!.x + pts[i + 1]!.x) / 2;
+    const yc = (pts[i]!.y + pts[i + 1]!.y) / 2;
+    ctx.quadraticCurveTo(pts[i]!.x, pts[i]!.y, xc, yc);
+  }
+  ctx.quadraticCurveTo(pts[i]!.x, pts[i]!.y, pts[i + 1]!.x, pts[i + 1]!.y);
+}
+
+/**
+ * Σχεδίασε το διάγραμμα ενός μέλους: γέμισμα (άξονας→ομαλή καμπύλη→άξονας) +
+ * καμπύλη + baseline. `si`/`sj` = άκρα i/j σε οθόνη· `pxScale` = px ανά μονάδα τιμής.
  */
 export function drawMemberDiagram(
   ctx: CanvasRenderingContext2D,
@@ -67,26 +87,23 @@ export function drawMemberDiagram(
   style: DiagramDrawStyle,
 ): void {
   const normal = perpUnit(si, sj);
+  const pts = path.samples.map((s) => offsetPoint(si, sj, normal, s, pxScale));
+  if (pts.length === 0) return;
 
-  // Translucent ribbon between the member axis and the diagram curve.
+  // Translucent ribbon: axis-start → smooth curve → axis-end → close.
   ctx.beginPath();
   ctx.moveTo(si.x, si.y);
-  for (const s of path.samples) {
-    const p = offsetPoint(si, sj, normal, s, pxScale);
-    ctx.lineTo(p.x, p.y);
-  }
+  ctx.lineTo(pts[0]!.x, pts[0]!.y);
+  buildSmoothThrough(ctx, pts);
   ctx.lineTo(sj.x, sj.y);
   ctx.closePath();
   ctx.fillStyle = style.fill;
   ctx.fill();
 
-  // Diagram curve.
+  // Smooth diagram curve.
   ctx.beginPath();
-  path.samples.forEach((s, idx) => {
-    const p = offsetPoint(si, sj, normal, s, pxScale);
-    if (idx === 0) ctx.moveTo(p.x, p.y);
-    else ctx.lineTo(p.x, p.y);
-  });
+  ctx.moveTo(pts[0]!.x, pts[0]!.y);
+  buildSmoothThrough(ctx, pts);
   ctx.strokeStyle = style.stroke;
   ctx.lineWidth = CURVE_WIDTH;
   ctx.stroke();

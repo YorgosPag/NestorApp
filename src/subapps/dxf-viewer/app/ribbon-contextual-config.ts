@@ -53,6 +53,8 @@ import { useMepCircuitEditorStore } from '../bim/mep-systems/mep-circuit-editor-
 import { CONTEXTUAL_ELECTRICAL_PANEL_TAB, ELECTRICAL_PANEL_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-electrical-panel-tab';
 import { isPipeNetworkSourceEntity } from '../bim/mep-systems/pipe-network-source';
 import { isMepSegmentEntity } from '../types/entities';
+import { useFoundationLevelStore } from '../state/foundation-level-store';
+import { resolveSelectedEntityFrom } from '../systems/selection/resolve-selected-entity';
 
 const BIM_KIND_TYPES: ReadonlySet<string> = new Set([
   'wall', 'opening', 'slab', 'slab-opening', 'column', 'beam', 'foundation', 'stair', 'roof',
@@ -158,6 +160,9 @@ export function useActiveContextualTrigger({
   // Revit "click a wire to select it": a directly-selected circuit (wire click,
   // no entity selected) surfaces the «Κύκλωμα» tab — the wire IS the selection.
   const activeSystemId = useMepCircuitEditorStore((s) => s.activeSystemId);
+  // ADR-484 — cross-level footings (foundation-level store, low-freq → ADR-040-safe)
+  // ώστε ένα cross-level πέδιλο να εμφανίζει το «Ιδιότητες Θεμελίωσης» contextual tab.
+  const crossLevelEntities = useFoundationLevelStore((s) => s.entities);
   return React.useMemo<string | null>(() => {
     if (animationToolActive) return ANIMATION_CONTEXTUAL_TRIGGER;
     // Wire-selected circuit (no competing entity selection) → «Κύκλωμα» tab.
@@ -220,8 +225,9 @@ export function useActiveContextualTrigger({
       if (bimCount >= 2) return MULTI_SELECTION_CONTEXTUAL_TRIGGER;
     }
 
-    const entity = primarySelectedId && currentScene
-      ? currentScene.entities.find((e) => e.id === primarySelectedId) : null;
+    const entity = resolveSelectedEntityFrom(
+      primarySelectedId, currentScene?.entities, crossLevelEntities,
+    );
     const fromSelection = entity ? resolveContextualTrigger(entity) : null;
     if (fromSelection) return fromSelection;
     if (activeTool === 'stair') return STAIR_CONTEXTUAL_TRIGGER;
@@ -318,7 +324,7 @@ export function useActiveContextualTrigger({
       activeTool === 'ellipse'
     ) return LINE_TOOL_CONTEXTUAL_TRIGGER;
     return null;
-  }, [primarySelectedId, selectedEntityIds, currentScene, activeTool, animationToolActive, mepSystems, activeSystemId]);
+  }, [primarySelectedId, selectedEntityIds, currentScene, activeTool, animationToolActive, mepSystems, activeSystemId, crossLevelEntities]);
 }
 
 export function resolveContextualTrigger(entity: EntityLike): string | null {

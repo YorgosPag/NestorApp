@@ -19,6 +19,7 @@
 import React from 'react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { isWallEntity, isStairEntity, isColumnEntity, isBeamEntity, isFoundationEntity, isSlabEntity } from '../../types/entities';
+import { useResolvedSelectedEntity } from '../../hooks/selection/useResolvedSelectedEntity';
 import { StairPropertiesTab } from '../stair-advanced-panel/StairPropertiesTab';
 import { WallPropertiesTab } from './WallPropertiesTab';
 import { ColumnPropertiesTab } from '../column-advanced-panel/ColumnPropertiesTab';
@@ -40,10 +41,9 @@ export function BimPropertiesRouter(
   const { primarySelectedId, currentScene } = props;
   const { t } = useTranslation('dxf-viewer-shell');
 
-  const selected = React.useMemo(() => {
-    if (!primarySelectedId || !currentScene) return null;
-    return currentScene.entities.find((e) => e.id === primarySelectedId) ?? null;
-  }, [primarySelectedId, currentScene]);
+  // ADR-484 — κοινός SSoT resolver (active scene + cross-level foundation fallback)
+  // ώστε ένα cross-level πέδιλο να εμφανίζει το per-type panel του.
+  const selected = useResolvedSelectedEntity(primarySelectedId, currentScene);
 
   if (selected && isWallEntity(selected)) {
     return <WallPropertiesTab {...props} />;

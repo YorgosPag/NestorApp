@@ -43,8 +43,12 @@ import { resolveSceneUnits, sceneUnitsToMeters } from '../../utils/scene-units';
 import { getDevicePixelRatio } from '../../systems/cursor/utils';
 import type { ViewTransform, Viewport } from '../../rendering/types/Types';
 
-/** Ακραία ροπή → σταθερό ύψος διαγράμματος (px) ανεξαρτήτως zoom. */
-const TARGET_OFFSET_PX = 60;
+/**
+ * Ύψος της μέγιστης τιμής ως ποσοστό του μέσου μήκους μέλους (model space). Το
+ * διάγραμμα ζει στο model space → κλιμακώνεται **μαζί** με το μοντέλο στο zoom
+ * (Revit/Robot moment diagrams), σταθερή αναλογία με το δοκάρι — όχι σταθερό pixel.
+ */
+const DIAGRAM_HEIGHT_FRACTION = 0.35;
 /** Στυλ διαγράμματος ροπής (κόκκινο — Robot bending moment convention). */
 const MOMENT_STYLE: DiagramDrawStyle = {
   stroke: 'rgba(200,30,40,0.95)',
@@ -102,8 +106,11 @@ export function StructuralDiagramOverlay({ transform, viewport }: StructuralDiag
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     ctx.clearRect(0, 0, viewport.width, viewport.height);
 
-    if (!active || !diagramSet || diagramSet.globalMaxAbs <= 0) return;
-    const pxScale = TARGET_OFFSET_PX / diagramSet.globalMaxAbs;
+    if (!active || !diagramSet || diagramSet.globalMaxAbs <= 0 || diagramSet.referenceLengthCanvas <= 0) return;
+    // Model-space ύψος (canvas units) της μέγιστης τιμής → screen px μέσω
+    // `transform.scale` ⇒ κλιμακώνεται με το zoom (σταθερή αναλογία με το δοκάρι).
+    const modelHeightForMax = diagramSet.referenceLengthCanvas * DIAGRAM_HEIGHT_FRACTION;
+    const pxScale = (modelHeightForMax / diagramSet.globalMaxAbs) * transform.scale;
 
     ctx.save();
     ctx.setLineDash([]);

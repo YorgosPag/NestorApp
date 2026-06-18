@@ -71,6 +71,8 @@ describe('buildMemberDiagramPaths', () => {
     expect(path.samples.map((s) => s.f)).toEqual([0, 0.5, 1]);
     expect(path.iCanvas).toEqual({ x: 0, y: 0 });
     expect(path.jCanvas).toEqual({ x: 4000, y: 0 }); // 4 m × 1000
+    // model-space reference = μέσο μήκος μέλους (canvas units) για zoom-stable κλίμακα
+    expect(set.referenceLengthCanvas).toBe(4000);
   });
 
   it('picks the extremum station (max |moment|) and reports global max-abs', () => {
