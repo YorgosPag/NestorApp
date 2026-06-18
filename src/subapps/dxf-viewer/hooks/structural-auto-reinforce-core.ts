@@ -27,6 +27,9 @@ import type { ICommand } from '../core/commands/interfaces';
 import { EventBus } from '../systems/events/EventBus';
 import { LevelSceneManagerAdapter } from '../systems/entity-creation/LevelSceneManagerAdapter';
 import { AutoReinforceOrganismCommand } from '../core/commands/entity-commands/AutoReinforceOrganismCommand';
+// ADR-486 — DERIVED topology-aware τύπος στήριξης δοκαριού (pure· κρατά το module jest-clean).
+import { buildStructuralGraph } from '../bim/structural/organism/structural-graph';
+import { buildBeamSupportTypeMap } from '../bim/structural/organism/derive-beam-support';
 import { isColumnEntity, isBeamEntity, isFoundationEntity, isSlabEntity } from '../types/entities';
 import type { Entity } from '../types/entities';
 import type { SceneModel } from '../types/scene';
@@ -76,7 +79,10 @@ export function runOrganismAutoReinforce(
     levelManager.setLevelScene,
     levelId,
   );
-  const command = new AutoReinforceOrganismCommand(ids, sm, provider);
+  // ADR-486 — topology-aware τύπος στήριξης ανά δοκάρι από τη ζωντανή συνδεσιμότητα, ώστε ο
+  // πρόβολος να ξανα-σχεδιάζεται με wL²/2 (αλλιώς ο command θα έβλεπε stale 'simple' → «κανένα»).
+  const supportTypeByBeamId = buildBeamSupportTypeMap(buildStructuralGraph(entities));
+  const command = new AutoReinforceOrganismCommand(ids, sm, provider, supportTypeByBeamId);
   const reinforced = command.getReinforcedEntityIds();
   if (reinforced.length === 0) {
     // Όλα ήδη οπλισμένα / μη-δομικά — no-op (κανένα undo entry).

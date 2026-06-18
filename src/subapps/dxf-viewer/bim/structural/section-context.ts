@@ -19,7 +19,7 @@
 import type { Entity } from '../../types/entities';
 import { isColumnEntity, isBeamEntity, isFoundationEntity, isSlabEntity } from '../../types/entities';
 import type { ColumnEntity, ColumnParams } from '../types/column-types';
-import type { BeamEntity, BeamParams } from '../types/beam-types';
+import type { BeamEntity, BeamParams, BeamSupportType } from '../types/beam-types';
 import type { FoundationEntity, FoundationParams, PadFootingParams, TieBeamParams } from '../types/foundation-types';
 import type { SlabEntity } from '../types/slab-types';
 import { mmToSceneUnits } from '../../utils/scene-units';
@@ -163,8 +163,17 @@ export function resolveActiveColumnReinforcement(
  * ADR-471 — δέχεται `Pick<…,'params'|'geometry'>` (geometry-is-SSoT: εξαρτάται ΜΟΝΟ
  * από params + geometry.length) ώστε να καλείται και με το DXF beam wrapper των 2Δ/3Δ
  * renderers (που δεν φέρει IFC mixin) χωρίς cast. Full `BeamEntity` ικανοποιεί το Pick.
+ *
+ * ADR-486 — `supportTypeOverride` (προαιρετικό): ο **topology-aware** τύπος στήριξης
+ * (DERIVED από τη ζωντανή συνδεσιμότητα, π.χ. πρόβολος όταν 1 στήριξη) που υπερισχύει
+ * του stored. Απών → η προηγούμενη συμπεριφορά (stored ?? 'simple'). Η συνάρτηση μένει
+ * **pure**: ο caller που έχει τον graph (organism/checks/auto-reinforce) παράγει & περνά
+ * τον override· οι graphless callers (isolated tests/BOQ) πέφτουν στο stored — μηδέν regression.
  */
-export function buildBeamSectionContext(beam: Pick<BeamEntity, 'params' | 'geometry'>): BeamSectionContext {
+export function buildBeamSectionContext(
+  beam: Pick<BeamEntity, 'params' | 'geometry'>,
+  supportTypeOverride?: BeamSupportType,
+): BeamSectionContext {
   const p = beam.params;
   const spanMm = beam.geometry.length * M_TO_MM;
   return {
@@ -172,7 +181,7 @@ export function buildBeamSectionContext(beam: Pick<BeamEntity, 'params' | 'geome
     depthMm: p.depth,
     spanMm,
     grossAreaMm2: Math.max(0, p.width) * Math.max(0, p.depth),
-    supportType: p.supportType ?? 'simple',
+    supportType: supportTypeOverride ?? p.supportType ?? 'simple',
     ...resolveBeamDesignLoad(p, spanMm),
   };
 }
@@ -209,10 +218,11 @@ function resolveBeamDesignLoad(
 export function resolveActiveBeamReinforcement(
   beam: Pick<BeamEntity, 'params' | 'geometry'>,
   provider: StructuralCodeProvider,
+  supportTypeOverride?: BeamSupportType,
 ): BeamReinforcement | undefined {
   const r = beam.params.reinforcement;
   if (!r || !r.auto) return r;
-  const fresh = provider.suggestBeamReinforcement(buildBeamSectionContext(beam));
+  const fresh = provider.suggestBeamReinforcement(buildBeamSectionContext(beam, supportTypeOverride));
   return {
     ...fresh,
     auto: true,
@@ -260,6 +270,7 @@ export function resolveActiveMemberReinforcement(
 export function resolveActiveMemberReinforcement(
   entity: BeamEntity,
   provider: StructuralCodeProvider,
+  supportTypeOverride?: BeamSupportType,
 ): BeamReinforcement | undefined;
 export function resolveActiveMemberReinforcement(
   entity: SlabEntity,
@@ -268,13 +279,16 @@ export function resolveActiveMemberReinforcement(
 export function resolveActiveMemberReinforcement(
   entity: Entity,
   provider: StructuralCodeProvider,
+  supportTypeOverride?: BeamSupportType,
 ): ColumnReinforcement | BeamReinforcement | SlabFoundationReinforcement | undefined;
 export function resolveActiveMemberReinforcement(
   entity: Entity,
   provider: StructuralCodeProvider,
+  supportTypeOverride?: BeamSupportType,
 ): ColumnReinforcement | BeamReinforcement | SlabFoundationReinforcement | undefined {
   if (isColumnEntity(entity)) return resolveActiveColumnReinforcement(entity.params, provider);
-  if (isBeamEntity(entity)) return resolveActiveBeamReinforcement(entity, provider);
+  // ADR-486 — ο topology-aware τύπος στήριξης (πρόβολος) υπερισχύει του stored στον οπλισμό.
+  if (isBeamEntity(entity)) return resolveActiveBeamReinforcement(entity, provider, supportTypeOverride);
   if (isSlabEntity(entity)) return resolveActiveSlabReinforcement(entity, provider);
   // ADR-477 — συνδετήρια δοκός = δοκός: ENΕΡΓΟΣ οπλισμός (auto-aware, parity κολόνας/δοκού)·
   // επιστρέφει `TieBeamReinforcement` (⊂ BeamReinforcement → assignable στο union).

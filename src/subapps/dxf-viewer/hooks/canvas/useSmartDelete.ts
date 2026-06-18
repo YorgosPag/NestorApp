@@ -34,10 +34,7 @@ import { collectBimDeleteIds, emitBimDeleteEvents } from './smart-delete-bim-eve
 // ενώ ο ενεργός όροφος είναι άλλος → ο level-scoped adapter δεν το βρίσκει.
 import { DeleteCrossLevelFootingsCommand } from '../../core/commands/entity-commands/DeleteCrossLevelFootingsCommand';
 import { useFoundationLevelStore } from '../../state/foundation-level-store';
-import {
-  createFoundationCrossLevelWriter,
-  type FoundationWriteScope,
-} from '../../bim/foundations/foundation-cross-level-writer';
+import { resolveFoundationCrossLevelWriter } from '../../bim/foundations/foundation-write-scope';
 import { useSelection3DStore } from '../../bim-3d/stores/Selection3DStore';
 import { isFoundationEntity, type Entity } from '../../types/entities';
 import type { FoundationEntity } from '../../bim/types/foundation-types';
@@ -244,12 +241,13 @@ export function useSmartDelete({
           .map((id) => fl.entities.find((e) => e.id === id))
           .filter((e): e is FoundationEntity => e !== undefined && isFoundationEntity(e));
         if (crossFootings.length > 0) {
-          const scope: FoundationWriteScope = {
-            companyId: user?.companyId,
-            projectId: levelManager.levels.find((l) => l.id === levelManager.currentLevelId)?.projectId,
-            userId: user?.uid,
-          };
-          const writer = createFoundationCrossLevelWriter(scope, fl.target, levelManager);
+          const writer = resolveFoundationCrossLevelWriter({
+            user,
+            levels: levelManager.levels,
+            levelId: levelManager.currentLevelId,
+            io: levelManager,
+            target: fl.target,
+          });
           if (writer) {
             const footingIds = new Set(crossFootings.map((f) => f.id));
             const adapter = new LevelSceneManagerAdapter(

@@ -22,7 +22,7 @@ import { isBeamEntity } from '../../../types/entities';
 import type { BeamEntity } from '../../../bim/types/beam-types';
 import { buildBeamDetailSheet } from '../../../bim/structural/detail-sheet/beam-detail-sheet';
 import { computeDetailSheetLayout } from '../../../bim/structural/detail-sheet/detail-sheet-layout';
-import { resolveActiveBeamReinforcementForEntity } from '../../../bim/structural/active-reinforcement';
+import { resolveActiveBeamReinforcementForEntity, resolveActiveBeamSupportType } from '../../../bim/structural/active-reinforcement';
 import {
   captureBeamDetail3d,
   type BeamDetail3dCapture,
@@ -101,6 +101,8 @@ export function BeamDetailHost({
     return buildBeamDetailSheet({
       beam,
       reinforcement: resolveActiveBeamReinforcementForEntity(beam),
+      // ADR-486 — topology-aware supportType ώστε η όψη/διατομή PDF === live 2Δ/3Δ.
+      supportType: resolveActiveBeamSupportType(beam.id),
       perspective3d,
       labels: {
         plan: t('beamDetail.regions.plan'),

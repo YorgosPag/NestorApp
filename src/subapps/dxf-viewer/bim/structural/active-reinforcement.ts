@@ -23,6 +23,9 @@ import type { SlabFoundationReinforcement } from './reinforcement/slab-foundatio
 import { resolveActiveColumnReinforcement, resolveActiveBeamReinforcement, resolveActiveSlabReinforcement } from './section-context';
 import { resolveStructuralCode } from './codes';
 import { useStructuralSettingsStore } from '../../state/structural-settings-store';
+// ADR-486 — DERIVED topology-aware τύπος στήριξης δοκαριού (πρόβολος όταν 1 στήριξη).
+import type { BeamSupportType } from '../types/beam-types';
+import { BeamSupportConditionStore } from './organism/beam-support-condition-store';
 
 /**
  * `resolveActiveColumnReinforcement` με τον ενεργό κανονισμό από το settings store.
@@ -40,13 +43,28 @@ export function resolveActiveColumnReinforcementForParams(
  * ADR-471 — `resolveActiveBeamReinforcement` με τον ενεργό κανονισμό από το settings store.
  * Fast-path: manual/absent → επιστρέφει το stored χωρίς να αγγίξει τον provider. Δέχεται
  * `BeamEntity` (όχι params) γιατί το άνοιγμα = derived `geometry.length` (geometry-is-SSoT).
+ *
+ * ADR-486 — διαβάζει τον DERIVED topology-aware τύπο στήριξης από το `BeamSupportConditionStore`
+ * (synchronous, ADR-040 safe) και τον περνά ως override → ο πρόβολος (1 στήριξη) οπλίζεται με
+ * `wL²/2`. Store miss (δοκάρι εκτός οργανισμού / πριν το πρώτο pass) → fallback stored.
+ * Χρειάζεται `id` για το store lookup (οι renderers/overlays περνούν full `BeamEntity`).
  */
 export function resolveActiveBeamReinforcementForEntity(
-  beam: Pick<BeamEntity, 'params' | 'geometry'>,
+  beam: Pick<BeamEntity, 'id' | 'params' | 'geometry'>,
 ): BeamReinforcement | undefined {
   if (!beam.params.reinforcement?.auto) return beam.params.reinforcement;
   const provider = resolveStructuralCode(useStructuralSettingsStore.getState().codeId);
-  return resolveActiveBeamReinforcement(beam, provider);
+  return resolveActiveBeamReinforcement(beam, provider, resolveActiveBeamSupportType(beam.id));
+}
+
+/**
+ * ADR-486 — ο DERIVED topology-aware τύπος στήριξης ενός δοκαριού από το transient store
+ * (γράφεται στο organism pass). Convenience ώστε ΚΑΙ οι renderers (2Δ/3Δ rebar) που χτίζουν
+ * δικό τους `BeamSectionContext` για το layout να περνούν τον ΙΔΙΟ override (πρόβολος → άνω
+ * κύριος οπλισμός) → preview === committed. `undefined` → fallback stored στον consumer.
+ */
+export function resolveActiveBeamSupportType(beamId: string): BeamSupportType | undefined {
+  return BeamSupportConditionStore.get(beamId);
 }
 
 /**

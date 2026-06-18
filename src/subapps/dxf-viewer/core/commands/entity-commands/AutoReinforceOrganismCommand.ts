@@ -24,6 +24,7 @@
 import type { ICommand, ISceneManager, SceneEntity, SerializedCommand } from '../interfaces';
 import type { Entity } from '../../../types/entities';
 import type { StructuralCodeProvider } from '../../../bim/structural/codes/structural-code-types';
+import type { BeamSupportType } from '../../../bim/types/beam-types';
 import { buildReinforcePatch, type ReinforceableParams } from '../../../bim/structural/reinforce-patch';
 import { generateEntityId } from '../../../systems/entity-creation/utils';
 import { signalEntitiesAttached } from './attach-persist-signal';
@@ -48,6 +49,8 @@ export class AutoReinforceOrganismCommand implements ICommand {
     private readonly entityIds: readonly string[],
     private readonly sceneManager: ISceneManager,
     private readonly provider: StructuralCodeProvider,
+    // ADR-486 — DERIVED topology-aware τύπος στήριξης ανά δοκάρι (πρόβολος → wL²/2).
+    private readonly supportTypeByBeamId?: ReadonlyMap<string, BeamSupportType>,
   ) {
     this.id = generateEntityId();
     this.timestamp = Date.now();
@@ -76,7 +79,7 @@ export class AutoReinforceOrganismCommand implements ICommand {
     for (const entityId of this.entityIds) {
       const entity = this.sceneManager.getEntity(entityId) as unknown as Entity | undefined;
       if (!entity) continue;
-      const patch = buildReinforcePatch(entity, this.provider);
+      const patch = buildReinforcePatch(entity, this.provider, this.supportTypeByBeamId?.get(entityId));
       if (!patch) continue; // idempotent: non-structural ή ήδη οπλισμένο
       this.patches.push({ entityId, prev: patch.prev, next: patch.next });
     }

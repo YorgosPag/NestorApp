@@ -35,7 +35,7 @@ import { useFoundationLevelStore } from '../state/foundation-level-store';
 import { useStructuralSettingsStore } from '../state/structural-settings-store';
 import { resolveStructuralCode } from '../bim/structural/codes';
 import { buildReinforcePatch } from '../bim/structural/reinforce-patch';
-import { createFoundationCrossLevelWriter, type FoundationWriteScope } from '../bim/foundations/foundation-cross-level-writer';
+import { resolveFoundationCrossLevelWriter } from '../bim/foundations/foundation-write-scope';
 import { ReinforceColumnFootingCommand } from '../core/commands/entity-commands/ReinforceColumnFootingCommand';
 import { isFoundationEntity, type Entity } from '../types/entities';
 import type { FoundationEntity } from '../bim/types/foundation-types';
@@ -91,12 +91,13 @@ export function useStructuralOrganismNotification(props: { levelManager: LevelMa
       }
       const fl = useFoundationLevelStore.getState();
       if (footing && footing.crossLevel && fl.target && isFoundationEntity(footing.entity)) {
-        const scope: FoundationWriteScope = {
-          companyId: user?.companyId,
-          projectId: levelManager.levels.find((l) => l.id === levelId)?.projectId,
-          userId: user?.uid,
-        };
-        const writer = createFoundationCrossLevelWriter(scope, fl.target, levelManager);
+        const writer = resolveFoundationCrossLevelWriter({
+          user,
+          levels: levelManager.levels,
+          levelId,
+          io: levelManager,
+          target: fl.target,
+        });
         if (writer) {
           const cmd = new ReinforceColumnFootingCommand(
             columnIds, footing.entity as FoundationEntity, writer, adapterFor(levelId), provider,

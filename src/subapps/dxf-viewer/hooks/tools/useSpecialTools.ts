@@ -49,7 +49,7 @@ import { addWallToScene } from '../../bim/walls/add-wall-to-scene';
 import { useWallAutoTyping } from '../../bim/family-types/useWallAutoTyping';
 import { addColumnToScene } from '../../bim/columns/add-column-to-scene';
 import { addFoundationToScene } from '../../bim/foundations/add-foundation-to-scene';
-import type { FoundationWriteScope } from '../../bim/foundations/foundation-cross-level-writer';
+import { buildFoundationWriteScope } from '../../bim/foundations/foundation-write-scope';
 import { useAuth } from '@/auth/hooks/useAuth';
 // ADR-397 — slab / roof / beam draw delegate to the `appendEntityToScene` SSoT.
 // Column draw + Ctrl-copy go through `addColumnToScene` (same SSoT, 'column' tag).
@@ -313,11 +313,7 @@ export function useSpecialTools(props: UseSpecialToolsProps): UseSpecialToolsRet
   const foundationTool = useFoundationTool({
     currentLevelId: levelManager.currentLevelId || '0',
     onFoundationCreated: (foundationEntity) => {
-      const scope: FoundationWriteScope = {
-        companyId: user?.companyId,
-        projectId: levelManager.levels.find((l) => l.id === levelManager.currentLevelId)?.projectId,
-        userId: user?.uid,
-      };
+      const scope = buildFoundationWriteScope(user, levelManager.levels, levelManager.currentLevelId);
       addFoundationToScene(foundationEntity, levelManager, scope);
     },
     getSceneUnits: () => {

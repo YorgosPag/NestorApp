@@ -26,6 +26,9 @@ import {
 import { runReinforcementChecks } from '../bim/structural/organism/reinforcement-checks';
 import { runFootingDesignChecks } from '../bim/structural/footing-design/footing-design-checks';
 import { StructuralDiagnosticsStore } from '../bim/structural/organism/structural-diagnostics-store';
+// ADR-486 — DERIVED topology-aware τύπος στήριξης δοκαριού → transient store για το render path.
+import { buildBeamSupportTypeMap } from '../bim/structural/organism/derive-beam-support';
+import { BeamSupportConditionStore } from '../bim/structural/organism/beam-support-condition-store';
 import { buildOrganismScene } from '../bim/structural/organism/cross-level-organism-scene';
 import { runStructuralAnalyticalModel } from './structural-analytical-core';
 import { makeGuideOffsetLookup } from '../bim/hosting/guide-store-offset-lookup';
@@ -99,6 +102,10 @@ export function useStructuralOrganism(props: { levelManager: LevelManagerLike })
       const graph = buildStructuralGraph(entities, {
         floorElevationByEntityId: merged.floorElevationByEntityId,
       });
+      // ADR-486 — publish τον DERIVED topology-aware τύπο στήριξης (πρόβολος όταν 1 στήριξη)
+      // στο transient store ώστε το per-entity render path (active-reinforcement) να τον
+      // διαβάζει synchronous, χωρίς να ξαναχτίζει τον graph σε κάθε render (ADR-040 safe).
+      BeamSupportConditionStore.set(buildBeamSupportTypeMap(graph));
       // ADR-459 Φ4d — geometry connectivity (graph-only) + reinforcement διαγνωστικά
       // (entities + active code provider) σε ΕΝΑ low-freq store write (ADR-040 safe).
       const settings = useStructuralSettingsStore.getState();

@@ -58,11 +58,8 @@ import { buildDefaultFoundationParams, buildFoundationEntity } from './drawing/f
 // ADR-484 Slice 4 — η στάθμη του auto πεδίλου παράγεται από το FFL ορόφου Θεμελίωσης
 // (ρυθμίσεις), ΟΧΙ από τη βάση της κολώνας (planned.topElevationMm = col.baseZmm).
 import { resolveFoundationTopElevationMm } from '../bim/types/foundation-types';
-import {
-  createFoundationCrossLevelWriter,
-  type FoundationCrossLevelWriter,
-  type FoundationWriteScope,
-} from '../bim/foundations/foundation-cross-level-writer';
+import type { FoundationCrossLevelWriter } from '../bim/foundations/foundation-cross-level-writer';
+import { resolveFoundationCrossLevelWriter } from '../bim/foundations/foundation-write-scope';
 import {
   ApplyFoundationLayoutCommand,
   type FoundationCreateStep,
@@ -233,14 +230,14 @@ export function useAutoFoundationDesign(props: { levelManager: LevelManagerLike 
     const adapterFor = (levelId: string): LevelSceneManagerAdapter =>
       new LevelSceneManagerAdapter(levelManager.getLevelScene, levelManager.setLevelScene, levelId);
 
-    const writerFor = (target: FoundationLevelTarget): FoundationCrossLevelWriter | null => {
-      const scope: FoundationWriteScope = {
-        companyId: user?.companyId,
-        projectId: levelManager.levels.find((l) => l.id === levelManager.currentLevelId)?.projectId,
-        userId: user?.uid,
-      };
-      return createFoundationCrossLevelWriter(scope, target, levelManager);
-    };
+    const writerFor = (target: FoundationLevelTarget): FoundationCrossLevelWriter | null =>
+      resolveFoundationCrossLevelWriter({
+        user,
+        levels: levelManager.levels,
+        levelId: levelManager.currentLevelId,
+        io: levelManager,
+        target,
+      });
 
     const recompute = (): void => {
       scheduled = false;

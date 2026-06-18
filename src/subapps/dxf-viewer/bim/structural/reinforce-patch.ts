@@ -21,7 +21,7 @@
 import type { Entity } from '../../types/entities';
 import { isColumnEntity, isBeamEntity, isFoundationEntity, isSlabEntity } from '../../types/entities';
 import type { ColumnParams } from '../types/column-types';
-import type { BeamParams } from '../types/beam-types';
+import type { BeamParams, BeamSupportType } from '../types/beam-types';
 import type { FoundationParams, FoundationEntity, TieBeamParams } from '../types/foundation-types';
 import type { SlabParams } from '../types/slab-types';
 import type { ColumnReinforcement } from './reinforcement/column-reinforcement-types';
@@ -118,10 +118,16 @@ export function slabReinforcementMateriallyDiffers(
  *   - `auto:true`        → re-derive από ΤΡΕΧΟΥΣΑ γεωμετρία+φορτίο (SSoT `resolveActive*`)·
  *                          patch ΜΟΝΟ αν `materiallyDiffers` (convergence guard).
  * Πέδιλα/εδαφόπλακα: αμετάβλητο idempotent skip (re-size μέσω ADR-464).
+ *
+ * ADR-486 — `supportType` (προαιρετικό): ο **topology-aware** τύπος στήριξης δοκαριού
+ * (πρόβολος όταν 1 στήριξη) που ο caller (auto-reinforce core) παράγει από τον graph.
+ * Έτσι ο πρόβολος ξανα-σχεδιάζεται με `wL²/2` → `materiallyDiffers` → patch → ο
+ * persisted οπλισμός ΚΑΙ το toast ακολουθούν τη νέα τοπολογία (όχι «κανένα μέλος»).
  */
 export function buildReinforcePatch(
   entity: Entity,
   provider: StructuralCodeProvider,
+  supportType?: BeamSupportType,
 ): ReinforcePatch | null {
   if (isColumnEntity(entity)) {
     const stored = entity.params.reinforcement;
@@ -135,9 +141,10 @@ export function buildReinforcePatch(
   if (isBeamEntity(entity)) {
     const stored = entity.params.reinforcement;
     if (stored && !stored.auto) return null; // manual override → ΠΟΤΕ overwrite (parity με κολόνα)
+    // ADR-486 — topology-aware supportType override (πρόβολος → wL²/2) και στις δύο διαδρομές.
     const fresh: BeamReinforcement = stored
-      ? resolveActiveBeamReinforcement(entity, provider) ?? stored
-      : { ...provider.suggestBeamReinforcement(buildBeamSectionContext(entity)), auto: true };
+      ? resolveActiveBeamReinforcement(entity, provider, supportType) ?? stored
+      : { ...provider.suggestBeamReinforcement(buildBeamSectionContext(entity, supportType)), auto: true };
     if (stored && !beamReinforcementMateriallyDiffers(stored, fresh)) return null;
     return { prev: entity.params, next: { ...entity.params, reinforcement: fresh } };
   }

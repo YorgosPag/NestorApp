@@ -232,7 +232,7 @@ export function drawGhostEntity(
       // Ίδιο pure SSoT + visibility gate με το committed cache pass (drawMemberReinforcement2D).
       if (beam.params && beam.geometry?.axisPolyline && isReinforcementVisible()) {
         const pxPerMm = mmToSceneUnits(beam.params.sceneUnits ?? 'mm') * transform.scale;
-        drawBeamRebar2D(ctx, entity as unknown as Pick<BeamEntity, 'params' | 'geometry'>, pxPerMm, toScreen);
+        drawBeamRebar2D(ctx, entity as unknown as Pick<BeamEntity, 'id' | 'params' | 'geometry'>, pxPerMm, toScreen);
       }
       return;
     }

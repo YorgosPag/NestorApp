@@ -20,7 +20,7 @@
  */
 
 import type { Point2D } from '../../../rendering/types/Types';
-import type { BeamEntity } from '../../types/beam-types';
+import type { BeamEntity, BeamSupportType } from '../../types/beam-types';
 import { buildBeamSectionContext } from '../section-context';
 import { resolveBeamRebarLayout, type BeamRebarBar, type BeamRebarLayout } from '../reinforcement/beam-rebar-layout';
 import { DEFAULT_STIRRUP_TYPE, type BeamReinforcement } from '../reinforcement/beam-reinforcement-types';
@@ -79,9 +79,10 @@ export function buildBeamElevationRegion(
   beam: BeamEntity,
   r: BeamReinforcement | undefined,
   region: RectMm,
+  supportType?: BeamSupportType, // ADR-486 — topology-aware (πρόβολος → άνω κύριος οπλισμός)
 ): BeamElevationResult {
   if (!r) return { primitives: [] };
-  const layout = resolveBeamRebarLayout(buildBeamSectionContext(beam), r);
+  const layout = resolveBeamRebarLayout(buildBeamSectionContext(beam, supportType), r);
   if (!layout) return { primitives: [] };
   return buildLinearMemberElevationRegion(layout, r, region);
 }

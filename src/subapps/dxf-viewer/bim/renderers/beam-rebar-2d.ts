@@ -26,7 +26,7 @@
 import type { Point2D } from '../../rendering/types/Types';
 import type { BeamEntity } from '../types/beam-types';
 import { buildBeamSectionContext } from '../structural/section-context';
-import { resolveActiveBeamReinforcementForEntity } from '../structural/active-reinforcement';
+import { resolveActiveBeamReinforcementForEntity, resolveActiveBeamSupportType } from '../structural/active-reinforcement';
 import { resolveBeamRebarLayout } from '../structural/reinforcement/beam-rebar-layout';
 import { DEFAULT_STIRRUP_TYPE } from '../structural/reinforcement/beam-reinforcement-types';
 import { drawLinearMemberRebar2D } from './linear-member-rebar-2d';
@@ -40,14 +40,15 @@ import { drawLinearMemberRebar2D } from './linear-member-rebar-2d';
  */
 export function drawBeamRebar2D(
   ctx: CanvasRenderingContext2D,
-  beam: Pick<BeamEntity, 'params' | 'geometry'>,
+  beam: Pick<BeamEntity, 'id' | 'params' | 'geometry'>,
   pxPerMm: number,
   worldToScreen: (p: Point2D) => Point2D,
 ): void {
   // ADR-471 (parity με κολόνα) — auto ⇒ φρέσκο design από την τρέχουσα γεωμετρία· manual ⇒ stored.
   const r = resolveActiveBeamReinforcementForEntity(beam);
   if (!r) return;
-  const layout = resolveBeamRebarLayout(buildBeamSectionContext(beam), r);
+  // ADR-486 — ίδιος topology-aware τύπος στήριξης στο layout (πρόβολος → άνω κύριος οπλισμός).
+  const layout = resolveBeamRebarLayout(buildBeamSectionContext(beam, resolveActiveBeamSupportType(beam.id)), r);
   if (!layout) return;
   drawLinearMemberRebar2D(
     ctx,

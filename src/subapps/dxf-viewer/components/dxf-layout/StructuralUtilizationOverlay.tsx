@@ -42,6 +42,7 @@ import {
 import {
   resolveActiveBeamReinforcementForEntity,
   resolveActiveColumnReinforcementForParams,
+  resolveActiveBeamSupportType,
 } from '../../bim/structural/active-reinforcement';
 import { CoordinateTransforms } from '../../rendering/core/CoordinateTransforms';
 import { getDevicePixelRatio } from '../../systems/cursor/utils';
@@ -141,7 +142,7 @@ export function StructuralUtilizationOverlay({ transform, viewport }: Structural
         const verts = e.geometry?.footprint?.vertices;
         if (util && verts && verts.length >= 3) out.push({ vertices: verts, color: utilizationFillColor(util.ratio) });
       } else if (isBeamEntity(e)) {
-        const util = beamUtilization(e, resolveActiveBeamReinforcementForEntity(e));
+        const util = beamUtilization(e, resolveActiveBeamReinforcementForEntity(e), resolveActiveBeamSupportType(e.id));
         const verts = e.geometry?.displayOutline?.vertices ?? e.geometry?.outline?.vertices;
         if (util && verts && verts.length >= 3) out.push({ vertices: verts, color: utilizationFillColor(util.ratio) });
       }

@@ -49,10 +49,8 @@ import {
 } from '../../../bim/foundations/tie-beam-grid-commit';
 // ADR-484 Slice 6 — cross-level routing: εσχάρα/συνδετήριες πεδίλων ΠΑΝΤΑ στον foundation
 // level (ίδιο SSoT με το manual add-foundation-to-scene), ΟΧΙ στον ενεργό όροφο.
-import {
-  createFoundationCrossLevelWriter,
-  type FoundationCrossLevelWriter,
-} from '../../../bim/foundations/foundation-cross-level-writer';
+import type { FoundationCrossLevelWriter } from '../../../bim/foundations/foundation-cross-level-writer';
+import { resolveFoundationCrossLevelWriter } from '../../../bim/foundations/foundation-write-scope';
 import { useFoundationLevelStore } from '../../../state/foundation-level-store';
 import { useLevelsOptional } from '../../../systems/levels/useLevels';
 import { useAuthOptional } from '@/auth/contexts/AuthContext';
@@ -166,15 +164,13 @@ export function useRibbonFoundationBridge(
     readonly foundationExisting: readonly FoundationEntity[] | undefined;
   } => {
     const store = useFoundationLevelStore.getState();
-    const target = store.target;
-    if (!target) return { foundationWriter: null, foundationExisting: undefined };
-    const projectId =
-      levelsCtx?.levels?.find((l) => l.id === levelManager.currentLevelId)?.projectId ?? null;
-    const writer = createFoundationCrossLevelWriter(
-      { companyId: auth?.user?.companyId, projectId, userId: auth?.user?.uid },
-      target,
-      levelManager,
-    );
+    const writer = resolveFoundationCrossLevelWriter({
+      user: auth?.user,
+      levels: levelsCtx?.levels ?? [],
+      levelId: levelManager.currentLevelId,
+      io: levelManager,
+      target: store.target,
+    });
     if (!writer) return { foundationWriter: null, foundationExisting: undefined };
     return { foundationWriter: writer, foundationExisting: store.entities.filter(isFoundationEntity) };
   }, [auth, levelsCtx, levelManager]);

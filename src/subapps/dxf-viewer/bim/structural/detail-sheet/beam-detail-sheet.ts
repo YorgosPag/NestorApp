@@ -31,7 +31,7 @@ import { buildColumnPerspectiveRegion } from './column-detail-perspective';
 import { buildBeamScheduleRegion } from './beam-detail-schedule';
 import { buildBeamTitleBlockRegion } from './beam-detail-titleblock';
 import type { BeamDetail3dCapture } from './render/beam-detail-3d-capture';
-import type { BeamEntity } from '../../types/beam-types';
+import type { BeamEntity, BeamSupportType } from '../../types/beam-types';
 import type { BeamReinforcement } from '../reinforcement/beam-reinforcement-types';
 import type {
   BeamDetailSheetLabels,
@@ -48,6 +48,12 @@ export interface BeamDetailSheetInput {
    * → the drawing regions lay out empty (no reinforcement designed yet).
    */
   readonly reinforcement: BeamReinforcement | undefined;
+  /**
+   * ADR-486 — ο DERIVED topology-aware τύπος στήριξης (πρόβολος όταν 1 στήριξη). Ο host
+   * τον resolve-άρει store-aware (`resolveActiveBeamSupportType`) ώστε η όψη/διατομή του
+   * PDF να ταυτίζεται με το live 2Δ/3Δ. Απών → stored fallback (graphless / pre-organism).
+   */
+  readonly supportType?: BeamSupportType;
   /** Pre-resolved region headings + table/field labels (host injects — N.11-safe). */
   readonly labels: BeamDetailSheetLabels;
   /** Layout override (paper / margin / gutter); defaults to A3 landscape. */
@@ -64,10 +70,10 @@ export function buildBeamDetailSheet(input: BeamDetailSheetInput): DetailSheetMo
   const layoutInput = input.layoutInput ?? DEFAULT_DETAIL_SHEET_LAYOUT_INPUT;
   const layout = computeDetailSheetLayout(layoutInput);
   const { regions } = layout;
-  const { labels, beam, reinforcement: r } = input;
+  const { labels, beam, reinforcement: r, supportType } = input;
 
-  const section = buildBeamSectionRegion(beam, r, regions.plan);
-  const elevation = buildBeamElevationRegion(beam, r, regions.elevation);
+  const section = buildBeamSectionRegion(beam, r, regions.plan, supportType);
+  const elevation = buildBeamElevationRegion(beam, r, regions.elevation, supportType);
   const perspective = buildColumnPerspectiveRegion(regions.perspective, input.perspective3d ?? null);
   const schedule = buildBeamScheduleRegion(beam, r, regions.schedule, labels.scheduleTable);
   const titleBlock = buildBeamTitleBlockRegion(beam, r, regions['title-block'], labels.titleFields);

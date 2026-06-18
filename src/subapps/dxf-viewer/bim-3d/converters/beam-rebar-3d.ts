@@ -27,7 +27,7 @@
 import * as THREE from 'three';
 import type { BeamEntity } from '../../bim/types/beam-types';
 import { buildBeamSectionContext } from '../../bim/structural/section-context';
-import { resolveActiveBeamReinforcementForEntity } from '../../bim/structural/active-reinforcement';
+import { resolveActiveBeamReinforcementForEntity, resolveActiveBeamSupportType } from '../../bim/structural/active-reinforcement';
 import { resolveBeamRebarLayout } from '../../bim/structural/reinforcement/beam-rebar-layout';
 import { DEFAULT_STIRRUP_TYPE } from '../../bim/structural/reinforcement/beam-reinforcement-types';
 import { buildLinearMemberRebarCage } from './linear-member-rebar-3d';
@@ -50,7 +50,8 @@ export function buildBeamRebarCage(
 ): THREE.Group | null {
   const r = resolveActiveBeamReinforcementForEntity(beam);
   if (!r) return null;
-  const layout = resolveBeamRebarLayout(buildBeamSectionContext(beam), r);
+  // ADR-486 — ίδιος topology-aware τύπος στήριξης στο layout (πρόβολος → άνω κύριος οπλισμός).
+  const layout = resolveBeamRebarLayout(buildBeamSectionContext(beam, resolveActiveBeamSupportType(beam.id)), r);
   if (!layout) return null;
 
   const group = buildLinearMemberRebarCage({

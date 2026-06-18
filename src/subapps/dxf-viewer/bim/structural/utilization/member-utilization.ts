@@ -21,7 +21,7 @@
  */
 
 import type { ColumnEntity } from '../../types/column-types';
-import type { BeamEntity } from '../../types/beam-types';
+import type { BeamEntity, BeamSupportType } from '../../types/beam-types';
 import type { ColumnReinforcement } from '../reinforcement/column-reinforcement-types';
 import type { BeamReinforcement } from '../reinforcement/beam-reinforcement-types';
 import { barAreaMm2 } from '../rebar-catalog';
@@ -55,9 +55,10 @@ function toRatio(entityId: string, asRequiredMm2: number, asProvidedMm2: number)
 export function beamUtilization(
   beam: Pick<BeamEntity, 'id' | 'params' | 'geometry'>,
   reinforcement: BeamReinforcement | undefined,
+  supportType?: BeamSupportType, // ADR-486 — topology-aware As,req (πρόβολος → wL²/2)
 ): MemberUtilization | null {
   if (!reinforcement) return null;
-  const ctx = buildBeamSectionContext(beam);
+  const ctx = buildBeamSectionContext(beam, supportType);
   const asRequired = asStrengthBeamMm2(ctx, BEAM_EFFECTIVE_DEPTH_FACTOR * ctx.depthMm);
   const asProvided = reinforcement.bottom.count * barAreaMm2(reinforcement.bottom.diameterMm);
   return toRatio(beam.id, asRequired, asProvided);
