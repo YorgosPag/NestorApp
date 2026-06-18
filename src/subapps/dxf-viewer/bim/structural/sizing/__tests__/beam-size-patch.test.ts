@@ -55,4 +55,13 @@ describe('buildBeamSizePatch', () => {
     const column = { type: 'column', id: 'col_x', params: {} } as unknown as ColumnEntity;
     expect(buildBeamSizePatch(column, GREEK_LEGACY_PROVIDER)).toBeNull();
   });
+
+  // ADR-486 §C — topology-aware support type → ο πρόβολος (wL²/2 + αυστηρό l/d)
+  // διαστασιολογείται ΒΑΘΥΤΕΡΑ από το stored 'simple' (αλλιώς ρ > ρ_max, η ρίζα του bug).
+  it('sizes a cantilever DEEPER than the simple default (supportType override)', () => {
+    const simple = buildBeamSizePatch(makeBeam(), GREEK_LEGACY_PROVIDER);
+    const cantilever = buildBeamSizePatch(makeBeam(), GREEK_LEGACY_PROVIDER, 'cantilever');
+    expect(cantilever).not.toBeNull();
+    expect(cantilever!.next.depth).toBeGreaterThan(simple!.next.depth);
+  });
 });

@@ -26,6 +26,7 @@ import type { Entity } from '../../../types/entities';
 import type { BeamGeometry, BeamParams } from '../../../bim/types/beam-types';
 import type { StructuralCodeProvider } from '../../../bim/structural/codes/structural-code-types';
 import { buildBeamSizePatch } from '../../../bim/structural/sizing/beam-size-patch';
+import { resolveActiveBeamSupportType } from '../../../bim/structural/active-reinforcement';
 import { computeBeamGeometry } from '../../../bim/geometry/beam-geometry';
 import { validateBeamParams } from '../../../bim/validators/beam-validator';
 import { generateEntityId } from '../../../systems/entity-creation/utils';
@@ -75,7 +76,9 @@ export class AutoSizeMembersCommand implements ICommand {
     for (const entityId of this.entityIds) {
       const entity = this.sceneManager.getEntity(entityId) as unknown as Entity | undefined;
       if (!entity) continue;
-      const patch = buildBeamSizePatch(entity, this.provider);
+      // ADR-486 §C — topology-aware τύπος στήριξης (ADR-486): ο πρόβολος (1 στήριξη)
+      // διαστασιολογείται με wL²/2 ώστε ρ≤ρ_max, ίδιο SSoT με τον οπλισμό (μηδέν διπλή αλήθεια).
+      const patch = buildBeamSizePatch(entity, this.provider, resolveActiveBeamSupportType(entityId));
       if (!patch) continue; // idempotent: μη-δοκάρι / locked / converged
       this.patches.push({ entityId, prev: patch.prev, next: patch.next });
     }

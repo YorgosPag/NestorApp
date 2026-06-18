@@ -40,7 +40,9 @@ Pure engine παράγει το βάθος από τον οργανισμό· τ
 | Αρχείο | Ρόλος |
 |---|---|
 | `bim/structural/organism/derive-column-base-continuity.ts` **(NEW)** | `buildColumnBaseContinuityMap(graph)` → `Map<columnId, effectiveBaseZmm>` από footing-bearing ακμές· μόνο προς τα κάτω· βαθύτερο πέδιλο νικά (pad −1000 αντί tie-beam −500). Pure. |
-| `bim/structural/organism/column-base-continuity-store.ts` **(NEW)** | Transient transport (mirror `BeamSupportConditionStore`, ADR-486)· writer=`useStructuralOrganism`, reader=`syncColumns`· low-freq → ADR-040 safe. |
+| `bim/structural/organism/derived-map-store.ts` **(NEW — N.0.2 centralization)** | Generic `createDerivedMapStore<T>()` SSoT factory για το «transient DERIVED `Map<string,T>`» boilerplate· **migrate-άρει ΚΑΙ** το `column-base-continuity-store` **ΚΑΙ** το committed `beam-support-condition-store` (ADR-486) → μηδέν διπλό boilerplate. |
+| `bim/structural/organism/column-base-continuity-store.ts` **(NEW)** | `ColumnBaseContinuityStore = createDerivedMapStore<number>()`· writer=`useStructuralOrganism`, reader=`syncColumns`· low-freq → ADR-040 safe. |
+| `bim/structural/organism/beam-support-condition-store.ts` (MOD — N.0.2) | Migrated στο `createDerivedMapStore<BeamSupportType>()` (ίδιο API· consumers `active-reinforcement`/`useStructuralOrganism` αμετάβλητοι). |
 | `hooks/useStructuralOrganism.ts` | `ColumnBaseContinuityStore.set(buildColumnBaseContinuityMap(graph))` δίπλα στο beam-support set — live σε κάθε structural event (μηδέν νέο event). |
 | `bim-3d/converters/bim-three-structural-converters.ts` `columnToMesh` | Νέα param `effectiveBaseZmm?`· flat path: `baseDropMm = max(0, nominalBaseAbs − effectiveBase)`, ύψος `+=baseDropMm`, `position.y −=baseDropMm` → βάση στο πέδιλο, κορυφή σταθερή. Σοβάς/οπλισμός παίρνουν το επιμηκυμένο ύψος. Attached-prism path = DEFER. |
 | `bim-3d/scene/bim-scene-attach-syncs.ts` `syncColumns` | Διαβάζει `ColumnBaseContinuityStore.get(column.id)` (ΟΧΙ για ρητά base-attached) → περνά `effectiveBaseZmm`. Κοινός path single + multi-floor. |
@@ -48,7 +50,7 @@ Pure engine παράγει το βάθος από τον οργανισμό· τ
 ### §6.2
 | Αρχείο | Ρόλος |
 |---|---|
-| `src/types/building/derived-foundation-depth.ts` **(NEW, shared)** | `resolveDerivedFoundationDepthMm(input)` — pure. `depth = max(maxFootingThk + (tie?rise:0) + cover, slab + cover, frostMin)`, module 50mm. Input ΧΩΡΙΣ elevation → μη-κυκλικό. SHARED (viewer + building-management, μηδέν dependency-direction violation). `seedDerivedFoundationDepthMm()` = 1200mm bootstrap (πέδιλο 500 + συνδετήριες 500 + κάλυψη 200). |
+| `src/types/building/derived-foundation-depth.ts` **(NEW, shared)** | `resolveDerivedFoundationDepthMm(input)` — pure. `depth = max(maxFootingThk + (tie?rise:0) + cover, slab + cover, frostMin)`, module 50mm. Input ΧΩΡΙΣ elevation → μη-κυκλικό. SHARED (viewer + building-management, μηδέν dependency-direction violation). **`tieBeamRiseMm` = injectable input** (ο viewer περνά το `TIE_BEAM_RISE_MM` SSoT· το engine ΔΕΝ κρατά ανταγωνιστικό αντίγραφο — μόνο EC8 fallback)· cover/frost/module = §6.2-policy SSoT (δεν υπάρχουν αλλού). `seedDerivedFoundationDepthMm()` = 1200mm bootstrap. |
 | `src/types/building/elevation.schemas.ts` + `contracts.ts` + `building-services.ts` | Νέο `foundationDepthAuto?: boolean` (default true) στο building doc. |
 | `components/building-management/tabs/BuildingVerticalSetupForm.tsx` | `foundationDepthIsAuto` toggle· Auto → read-only derived display + badge + «Χειροκίνητη υπέρβαση»· override → editable + «Επαναφορά σε αυτόματο». persist `foundationDepthAuto` + effective depth. |
 | i18n `el/en building-tabs.json` | `foundationDepthAutoBadge/DerivedFrom/Override/AutoReset`. |

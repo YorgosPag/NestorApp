@@ -100,9 +100,12 @@ function checkBeamUnsupportedEnd(graph: StructuralGraph): StructuralDiagnostic[]
     const cols = framingColumnsOf(graph, node.id);
     const startOk = paramCovered(cols, s, ux, uy, 0, halfWidth);
     const endOk = paramCovered(cols, s, ux, uy, len, halfWidth);
-    const cantilever = node.supportType === 'cantilever';
-    const fails = cantilever ? !startOk && !endOk : !startOk || !endOk;
-    if (!fails) continue;
+    // ADR-486 §C — 1 στήριξη = έγκυρος πρόβολος: αυτο-διαστασιολογείται σιωπηλά
+    // (ADR-475 wL²/2 + ADR-486 topology), ΔΕΝ είναι σφάλμα → καμία ειδοποίηση. Warning
+    // ΜΟΝΟ όταν ΚΑΝΕΝΑ άκρο δεν στηρίζεται (αιωρούμενο δοκάρι — επιπλέον αναλυτικό
+    // error → επισήμανση ADR-490). Ο αρχιτέκτονας δεν παρεμβαίνει για έγκυρο πρόβολο.
+    const coveredCount = (startOk ? 1 : 0) + (endOk ? 1 : 0);
+    if (coveredCount >= 1) continue;
     out.push({
       id: `beamUnsupportedEnd:${node.id}`,
       code: 'beamUnsupportedEnd',

@@ -9,7 +9,7 @@ import {
   resolveDerivedFoundationDepthMm,
   seedDerivedFoundationDepthMm,
   FOUNDATION_FROST_MIN_MM,
-  FOUNDATION_TIE_BEAM_RISE_MM,
+  DEFAULT_TIE_BEAM_RISE_MM,
   FOUNDATION_SOIL_COVER_MM,
 } from '../derived-foundation-depth';
 
@@ -17,7 +17,7 @@ describe('resolveDerivedFoundationDepthMm (ADR-488 §6.2)', () => {
   it('seed (τυπικό πέδιλο 500 + συνδετήριες + κάλυψη) = 1200mm', () => {
     expect(seedDerivedFoundationDepthMm()).toBe(1200);
     // 500 (pad) + 500 (tie rise) + 200 (cover) = 1200
-    expect(FOUNDATION_TIE_BEAM_RISE_MM + FOUNDATION_SOIL_COVER_MM + 500).toBe(1200);
+    expect(DEFAULT_TIE_BEAM_RISE_MM + FOUNDATION_SOIL_COVER_MM + 500).toBe(1200);
   });
 
   it('thickness-driven: παχύτερο πέδιλο → βαθύτερη θεμελίωση', () => {
@@ -37,7 +37,7 @@ describe('resolveDerivedFoundationDepthMm (ADR-488 §6.2)', () => {
     // Παχύ πέδιλο (800) ώστε ΚΑΙ τα δύο σκέλη να ξεπερνούν το frost min → η διαφορά = tie rise.
     const withTie = resolveDerivedFoundationDepthMm({ footingThicknessesMm: [800], hasTieBeam: true });
     const noTie = resolveDerivedFoundationDepthMm({ footingThicknessesMm: [800], hasTieBeam: false });
-    expect(withTie - noTie).toBe(FOUNDATION_TIE_BEAM_RISE_MM);
+    expect(withTie - noTie).toBe(DEFAULT_TIE_BEAM_RISE_MM);
   });
 
   it('όρος εδαφόπλακας μετράει όταν είναι ο βαθύτερος', () => {

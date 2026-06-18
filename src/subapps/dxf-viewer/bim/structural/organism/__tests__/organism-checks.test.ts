@@ -102,20 +102,22 @@ describe('beamUnsupportedEnd', () => {
     expect(runOrganismChecks(g).some((d) => d.code === 'beamUnsupportedEnd')).toBe(false);
   });
 
-  it('warns when one end is unsupported', () => {
+  // ADR-486 §C — 1 στήριξη = έγκυρος πρόβολος (auto-διαστασιολογείται σιωπηλά) →
+  // ΚΑΜΙΑ ειδοποίηση. Ο αρχιτέκτονας δεν παρεμβαίνει· ο «στατικός» (εφαρμογή) διορθώνει.
+  it('one supported end = valid cantilever → no warning (ADR-486 §C)', () => {
     const g = framed(beam('B1'), [columnAt('C1', 0)]);
-    const d = runOrganismChecks(g).find((x) => x.code === 'beamUnsupportedEnd');
-    expect(d).toMatchObject({ severity: 'warning', primaryEntityId: 'B1' });
+    expect(runOrganismChecks(g).some((d) => d.code === 'beamUnsupportedEnd')).toBe(false);
   });
 
-  it('cantilever with one supported end is OK', () => {
+  it('cantilever type with one supported end is OK', () => {
     const g = framed(beam('B1', 'cantilever'), [columnAt('C1', 0)]);
     expect(runOrganismChecks(g).some((d) => d.code === 'beamUnsupportedEnd')).toBe(false);
   });
 
-  it('cantilever with zero support still warns', () => {
-    const g = graph([beam('B1', 'cantilever')]);
-    expect(runOrganismChecks(g).some((d) => d.code === 'beamUnsupportedEnd')).toBe(true);
+  it('warns ONLY when no end is supported (floating beam)', () => {
+    const g = framed(beam('B1'), []);
+    const d = runOrganismChecks(g).find((x) => x.code === 'beamUnsupportedEnd');
+    expect(d).toMatchObject({ severity: 'warning', primaryEntityId: 'B1' });
   });
 });
 

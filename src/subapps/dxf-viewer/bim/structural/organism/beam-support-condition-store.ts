@@ -19,21 +19,11 @@
  */
 
 import type { BeamSupportType } from '../../types/beam-types';
+import { createDerivedMapStore } from './derived-map-store';
 
-const EMPTY: ReadonlyMap<string, BeamSupportType> = new Map();
-
-let byBeamId: ReadonlyMap<string, BeamSupportType> = EMPTY;
-
-export const BeamSupportConditionStore = {
-  /** Αντικατάστησε τον χάρτη DERIVED τύπων στήριξης (organism pass). */
-  set(next: ReadonlyMap<string, BeamSupportType>): void {
-    byBeamId = next.size === 0 ? EMPTY : next;
-  },
-  /**
-   * Ο DERIVED τύπος στήριξης ενός δοκαριού, ή `undefined` αν δεν έχει υπολογιστεί
-   * (π.χ. δοκάρι εκτός οργανισμού) → ο caller κάνει fallback στο stored.
-   */
-  get(beamId: string): BeamSupportType | undefined {
-    return byBeamId.get(beamId);
-  },
-} as const;
+/**
+ * `beamId → DERIVED supportType`, ή `undefined` αν δεν έχει υπολογιστεί (δοκάρι εκτός
+ * οργανισμού) → ο caller fallback στο stored. Χρησιμοποιεί το ΕΝΑ SSoT
+ * `createDerivedMapStore` (N.0.2 — κοινό boilerplate με το `ColumnBaseContinuityStore`).
+ */
+export const BeamSupportConditionStore = createDerivedMapStore<BeamSupportType>();

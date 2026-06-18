@@ -88,5 +88,6 @@ MOD: `codes/structural-code-types.ts` (provider method + ctx field), `codes/euro
 
 ## Changelog
 
+- **2026-06-18** (Opus) — **ADR-486 §C cross-ref:** το `buildBeamSizePatch` δέχεται πλέον `supportTypeOverride` και ο `AutoSizeMembersCommand` περνά τον topology-aware τύπο στήριξης (`resolveActiveBeamSupportType`). Έλυσε τη διπλή αλήθεια sizer↔reinforcer για τον πρόβολο (wL²/2). Λεπτομέρειες → ADR-486 §C changelog.
 - **2026-06-18** (Opus) — ADR-475 αρχική υλοποίηση (Slices 1-5). Core sizing + provider l/d limit +
   autoSized lock + proactive pipeline + belt-and-suspenders validator. 18 νέα jest. UNCOMMITTED.
