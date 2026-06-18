@@ -49,6 +49,8 @@ import { useProactiveMemberSizing } from '../hooks/useProactiveMemberSizing';
 import { useStructuralLoadTakedown } from '../hooks/useStructuralLoadTakedown';
 import { useProactiveStructuralLoads } from '../hooks/useProactiveStructuralLoads';
 import { useProactiveTieBeamTieForce } from '../hooks/useProactiveTieBeamTieForce';
+import { useProactiveStructuralAnalysis } from '../hooks/useProactiveStructuralAnalysis';
+import { useStructuralSettingsRecompute } from '../hooks/useStructuralSettingsRecompute';
 import { useStructuralFootingConnect } from '../hooks/useStructuralFootingConnect';
 import { useStructuralComponentOverride } from '../hooks/useStructuralComponentOverride';
 import { useStructuralOrganism } from '../hooks/useStructuralOrganism';
@@ -264,6 +266,7 @@ export const DxfViewerContent = React.memo<DxfViewerAppProps>((props) => {
   useProactiveMemberSizing({ levelManager }); // ADR-475 — PROACTIVE auto-size διατομής (ΠΡΙΝ τον οπλισμό ⇒ οπλίζεται στη νέα διατομή)
   useProactiveOrganismReinforce({ levelManager }); // ADR-459 Φ8 — PROACTIVE auto-reinforce (organism grows → οπλίζεται μόνο του)
   useStructuralLoadTakedown({ levelManager }); // ADR-464 Φ4 — «Υπολογισμός Φορτίων» (ribbon manual trigger)
+  useStructuralSettingsRecompute(); // ADR-479 Slice 2b — building-level settings change (preset/ribbon) → άμεσος επανυπολογισμός φορτίων→οπλισμού→σχεδίων
   // ADR-459 Φ9 — PROACTIVE φορτία (το ΠΡΩΤΟ σκαλί της αλυσίδας). ΣΕΙΡΑ: mounted ΠΡΙΝ
   // από organism/auto-foundation ⇒ ο load handler τρέχει+emit-άρει πρώτος στο microtask
   // flush, ώστε το foundation re-sizing να διαβάσει το φρέσκο appliedLoad (ΕΝΑ pass).
@@ -273,6 +276,7 @@ export const DxfViewerContent = React.memo<DxfViewerAppProps>((props) => {
   useStructuralComponentOverride({ levelManager }); // ADR-470 — per-element σώμα/σοβάς/οπλισμός visibility override
   useFoundationLevelSync({ levelManager }); // ADR-459 Phase 0 — foundation-level SSoT (cross-level organism)
   useStructuralOrganism({ levelManager }); // ADR-459 Phase 1 — cross-entity structural diagnostics («λείπει το πέδιλο»)
+  useProactiveStructuralAnalysis({ levelManager }); // ADR-481 (T3) — on-demand στατικός FEM solver (K·u=F → M/V/N), explicit «Ανάλυση» trigger
   useColumnAdjacencyNotification({ levelManager }); // ADR-363 — post-creation adjacent-columns→shear-wall merge toast
   useAutoFoundationDesign({ levelManager }); // ADR-459 Φ7 — Αυτόματος Σχεδιασμός Θεμελίωσης (level-wide auto + info)
   useStructuralOrganismNotification({ levelManager }); // ADR-459 Φ7 — αυτόματος ενιαίος οπλισμός οργανισμού (no prompt)

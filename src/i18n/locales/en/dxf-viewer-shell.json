@@ -13,6 +13,12 @@
       "slsCharacteristic": "Serviceability limit state — characteristic (G + Q)"
     }
   },
+  "staticAnalysis": {
+    "diagnostics": {
+      "unstable": "The structure is a mechanism — static analysis does not converge (insufficient supports/connections).",
+      "memberSkipped": "Member skipped from analysis — missing a valid section or geometry."
+    }
+  },
   "structuralOrganism": {
     "diagnostics": {
       "title": "Structural Check",
@@ -57,6 +63,12 @@
       "selectorLabel": "Structural project template",
       "sectionDescription": "Pre-loads code, materials, seismic and soil for the whole building.",
       "custom": "Custom",
+      "confirm": {
+        "title": "Change structural template?",
+        "description": "All structural settings of the building will be replaced with “{preset}” and loads and reinforcement will be recomputed. Continue?",
+        "confirm": "Apply template",
+        "cancel": "Cancel"
+      },
       "greekRcEc8": {
         "label": "Greek RC (Eurocodes)",
         "description": "Reinforced-concrete building per Eurocodes (EC2/EC8)."

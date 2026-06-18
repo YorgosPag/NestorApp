@@ -1,6 +1,6 @@
 # ADR-479 — Structural Project Presets (Revit-grade templates) + reference cross-check
 
-**Status:** 🟢 Slices 1-2 DONE 2026-06-18 (Opus), UNCOMMITTED & jest-verified (39 tests GREEN: 21 cross-check + 12 store + 6 active-preset). 🔴 tsc-confirm (Giorgio full) + browser-verify (preset → settings + persist) + commit. DEFER: Slice 3 (persisted user/company presets — mirror `StairPresetsService`)· confirm dialog πριν το full-replace.
+**Status:** 🟢 Slices 1-2-2b-2c DONE 2026-06-18 (Opus), UNCOMMITTED & jest-verified (44 tests GREEN: 21 cross-check + 12 store + 6 active-preset + 5 recompute-guard). 🔴 tsc-confirm (Giorgio full) + browser-verify (preset → confirm → settings + persist + **οπλισμός/σχέδια ανανεώνονται**· cancel → revert) + commit. DEFER: Slice 3 (persisted user/company presets — mirror `StairPresetsService`).
 **Discipline:** Δομοστατικά / Structural Engineering
 **Scope:** Μετατροπή των canonical structural defaults — μαζί με τις τιμές πραγματικής εγκεκριμένης μελέτης (STATICS 2025, Θέρμη 288/08, Κ1/Κ2/Κ3) — σε **named, applicable Structural Presets** που αρχικοποιούν τα building-level `StructuralSettings` (σαν Revit project template). + **cross-check regression test** που εγγυάται ότι τα engine defaults είναι συνεπή με την πραγματική μελέτη (το reference γίνεται ζωντανό συμβόλαιο). Συμπληρώνει ADR-456 (structural settings SSoT), ADR-474 (occupancy auto loads), ADR-477 (σεισμικές παράμετροι).
 
@@ -56,25 +56,36 @@ seismicGroundAccelRatio, soilBearingCapacityKpa, ...`) + SSoT normalizer
 |---|---|---|
 | **NEW** `resolveActivePresetKind(settings)` (pure) | `bim/structural/presets/resolve-active-preset.ts` | ποιο preset ταυτίζεται με τα τρέχοντα settings (resolve+full-field equality)· `null` = «Προσαρμοσμένο» (Revit απόκλιση από template) |
 | barrel export | `bim/structural/presets/index.ts` | + `resolveActivePresetKind` |
-| **NEW** `StructuralPresetSelector` | `ui/components/StructuralPresetSelector.tsx` | canonical `@/components/ui/select` (ADR-001· ΟΧΙ RibbonCombobox—ribbon-context-bound)· value=active kind, onChange→`applyStructuralPreset` **+ `EventBus.emit('bim:compute-loads-requested')`** (άμεσος επανυπολογισμός — βλ. παρακάτω) |
+| **NEW** `StructuralPresetSelector` | `ui/components/StructuralPresetSelector.tsx` | canonical `@/components/ui/select` (ADR-001· ΟΧΙ RibbonCombobox—ribbon-context-bound)· value=active kind, onChange→`applyStructuralPreset` (recompute = κεντρικός, βλ. Slice 2b) |
+| **NEW** `useStructuralSettingsRecompute` (+`shouldRecomputeOnSettingsChange` pure) | `hooks/useStructuralSettingsRecompute.ts` | **Slice 2b** — κεντρικός store subscriber· κάθε user-initiated settings change (preset/ribbon/Slice 3) → `bim:compute-loads-requested`· mounted στο `DxfViewerContent` |
+| mount + 5 jest | `app/DxfViewerContent.tsx`, `hooks/__tests__/useStructuralSettingsRecompute.test.ts` | δίπλα στους proactive hooks· guard predicate tests |
 | mount | `ui/components/FloorManagementDialog.tsx` | selector πάνω από `FloorsTabContent` (building present)· building-wide = σωστή Revit-αντιστοιχία (ADR-468 modal) |
-| i18n keys `structural.preset.*` | `i18n/locales/{el,en}/dxf-viewer-shell.json` | selectorLabel/sectionDescription/custom + 3 presets label/description (N.11 ΠΡΩΤΑ) |
+| i18n keys `structural.preset.*` | `i18n/locales/{el,en}/dxf-viewer-shell.json` | selectorLabel/sectionDescription/custom + `confirm.*` + 3 presets label/description (N.11 ΠΡΩΤΑ) |
+| **Confirm πριν το full-replace** | `StructuralPresetSelector` (`pendingKind` state) | reuse `BuildingSpaceConfirmDialog` (SSoT confirm, ΟΧΙ νέο dialog)· cancel/ESC → store αμετάβλητο → controlled Select revert φυσικά· variant="warning" |
 | **NEW** test (6) | `bim/structural/presets/__tests__/resolve-active-preset.test.ts` | exact-match κάθε preset, blank=defaults, custom=null, EC8≠legacy, omit-invariant |
 
 **Revit-grade:** ο selector δείχνει **κατάσταση** (active preset ή «Προσαρμοσμένο»),
-δεν είναι fire-and-forget. Apply = full-replace building settings (ήδη persist). Confirm
-dialog πριν το replace = DEFER (το active-state display ήδη καθιστά την επιλογή σαφή).
+δεν είναι fire-and-forget. Apply = full-replace building settings (ήδη persist) → **confirm
+dialog** (reuse `BuildingSpaceConfirmDialog`, SSoT) πριν το destructive replace· cancel/ESC →
+store αμετάβλητο → controlled Select revert χωρίς χειροκίνητο reset.
 
-**Άμεσος επανυπολογισμός (Revit «apply template = κτίριο ενημερώνεται»):** ο
-`applyStructuralPreset` (store) μένει **pure** (μόνο set+persist, μηδέν event — zero-React
-import-graph invariant). Ο **selector** εκπέμπει `bim:compute-loads-requested` μετά το apply
-— **το ίδιο event** με το ρητό ribbon «Υπολογισμός Φορτίων» (`useDxfViewerCallbacks`), μηδέν
-νέο event type / μηδέν άγγιγμα στο `drawing-event-map-bim.ts`. Αλυσίδα:
-`compute-loads-requested` → `useStructuralLoadTakedown` → `runStructuralLoadTakedown` →
-`bim:structural-loads-computed` → proactive reinforce / auto-foundation / tie-force /
-member-sizing → re-render 2Δ/3Δ οπλισμού + readouts/BOQ + live detail sheets. Ο takedown
-διαβάζει τα φρέσκα settings (`getState()`) event-time (set είναι sync → emit μετά = φρέσκο).
-⚠️ Slice 3 (programmatic apply): να εκπέμπει κι αυτό το event ή να κεντρικοποιηθεί το emit.
+**Άμεσος επανυπολογισμός — Slice 2b (Revit «αλλαγή building setting = μελέτη ενημερώνεται»):**
+ο `applyStructuralPreset` + ΟΛΟΙ οι building-level setters (store) μένουν **pure** (μόνο
+set+persist, μηδέν event — zero-React import-graph invariant). **ΕΝΑΣ** κεντρικός subscriber
+`useStructuralSettingsRecompute` (mounted στο `DxfViewerContent`) ανιχνεύει κάθε
+**user-initiated** μεταβολή και εκπέμπει `bim:compute-loads-requested` — **το ίδιο event** με
+το ρητό ribbon «Υπολογισμός Φορτίων», μηδέν νέο event type / μηδέν άγγιγμα στο
+`drawing-event-map-bim.ts`, μηδέν σκόρπιο emit στα bridges. Αλυσίδα: `compute-loads-requested`
+→ `useStructuralLoadTakedown` → `runStructuralLoadTakedown` → `bim:structural-loads-computed` →
+proactive reinforce / auto-foundation / tie-force / member-sizing → re-render 2Δ/3Δ οπλισμού +
+readouts/BOQ + live detail sheets.
+
+**User-vs-sync guard:** οι setters ορίζουν `lastLocalMutationAt = Date.now()` (>0)· ο
+`loadForBuilding` (server echo) → `0`. Το `shouldRecomputeOnSettingsChange(state,prev)` εκπέμπει
+μόνο όταν `lastLocalMutationAt > 0 && ≠ prev` → ΟΧΙ recompute σε κάθε φόρτωση/sync. Coalesced
+ανά microtask (batched set → ΕΝΑ recompute). **Loop-safe:** η αλυσίδα γράφει σε entities, ΟΧΙ
+settings → ο subscriber δεν re-fire-άρει. Καλύπτει preset + ribbon setters + Slice 3 από ΕΝΑ
+σημείο (SSoT). ADR-040 safe: store.subscribe + useEffect (μηδέν re-render orchestrator).
 
 ### Slice 3 — persisted user/company presets (DEFER)
 Mirror `StairPresetsService` (scope user/company/project, Firestore
@@ -110,12 +121,20 @@ Mirror `StairPresetsService` (scope user/company/project, Firestore
 ---
 
 ## Changelog
+- **2026-06-18 (Opus):** Slice 2c — confirm dialog πριν το destructive full-replace. Reuse
+  `BuildingSpaceConfirmDialog` (SSoT confirm, μηδέν νέο dialog)· `pendingKind` state στο selector·
+  cancel/ESC → store αμετάβλητο → controlled Select revert φυσικά· i18n `structural.preset.confirm.*`
+  (EL+EN). UNCOMMITTED.
 - **2026-06-18 (Opus):** Slice 2 — UI preset selector. `resolveActivePresetKind` (pure,
   active-state detection) + `StructuralPresetSelector` (canonical `ui/select`, ADR-001) mounted
   στο `FloorManagementDialog` (building-wide, ADR-468)· i18n `structural.preset.*` (EL+EN, N.11)·
-  +6 jest. onChange→`applyStructuralPreset` (Slice 1 path) **+ emit `bim:compute-loads-requested`**
-  (reuse ρητού ribbon event) → άμεσος επανυπολογισμός φορτίων→οπλισμού→πεδίλων→σχεδίων/αναφορών·
-  store μένει pure (emit από το UI layer). UNCOMMITTED.
+  +6 jest. onChange→`applyStructuralPreset` (Slice 1 path). UNCOMMITTED.
+- **2026-06-18 (Opus):** Slice 2b — συμμετρία recompute. NEW `useStructuralSettingsRecompute`
+  (κεντρικός store subscriber· `shouldRecomputeOnSettingsChange` pure guard via `lastLocalMutationAt`)
+  mounted στο `DxfViewerContent` → ΚΑΘΕ user-initiated building-level settings change (preset ΚΑΙ
+  ribbon setters codeId/occupancy/soil/seismic) εκπέμπει `bim:compute-loads-requested` (reuse ρητού
+  ribbon event· μηδέν νέο event type, μηδέν άγγιγμα bridges). Ο selector ΔΕΝ εκπέμπει πια (ΕΝΑ
+  σημείο, SSoT). +5 jest. UNCOMMITTED.
 - **2026-06-18 (Opus):** Slice 1 — preset SSoT (`reference-static-report.ts`,
   `structural-preset-{types,defaults}.ts`, index), `applyStructuralPreset` +
   σεισμικοί setters στο store, cross-check regression test (22) + store test (+6),

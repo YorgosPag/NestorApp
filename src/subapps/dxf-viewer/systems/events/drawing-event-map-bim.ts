@@ -234,6 +234,13 @@ export interface BimEventMap {
   // ξαναχτίστηκε (T2). Υποδοχή για μελλοντικούς consumers (FEM solver T3, φασματική
   // σεισμική T4) — το T2 δεν τον επιλύει. `nodeCount`/`memberCount` = μέγεθος μοντέλου.
   'bim:analytical-model-built': { nodeCount: number; memberCount: number };
+  // ADR-481 — explicit «Ανάλυση» trigger: ζητείται στατική γραμμική επίλυση
+  // (K·u=F) του τρέχοντος αναλυτικού φορέα. Heavy → on-demand, ΟΧΙ eager σε edits.
+  'bim:run-structural-analysis': Record<string, never>;
+  // ADR-481 — ο στατικός FEM solver (T3) επέλυσε τον φορέα: M/V/N + διαγράμματα
+  // γράφτηκαν στο `AnalysisResultsStore`. `combinationCount` = συνδυασμοί που λύθηκαν·
+  // `unstable` = βρέθηκε μηχανισμός (singular K). Υποδοχή για downstream consumers.
+  'bim:analysis-solved': { combinationCount: number; unstable: boolean };
   // ADR-395 G6 — opening persisted/deleted → host wall re-computes net BOQ area
   'bim:opening-persisted': { wallId: string };
   // ADR-395 G2 — slab-opening persisted/deleted → host slab re-computes net BOQ volume

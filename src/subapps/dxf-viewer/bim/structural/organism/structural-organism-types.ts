@@ -126,7 +126,10 @@ export type StructuralDiagnosticCode =
   | 'oneWayShearInadequate'
   // ADR-480 — analytical model diagnostics (T2).
   | 'analyticalMemberUnsupported'
-  | 'analyticalModelUnstable';
+  | 'analyticalModelUnstable'
+  // ADR-481 — static FEM solver diagnostics (T3).
+  | 'staticAnalysisUnstable'
+  | 'staticAnalysisMemberSkipped';
 
 /**
  * Ένα cross-entity εύρημα. `primaryEntityId` = το μέλος που «φταίει» (οδηγεί το

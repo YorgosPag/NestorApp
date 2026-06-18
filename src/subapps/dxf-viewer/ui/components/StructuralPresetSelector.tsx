@@ -8,22 +8,29 @@
  * πεδίο. Thin reader/writer του `useStructuralSettingsStore`:
  *  - value = {@link resolveActivePresetKind} επί των τρεχόντων settings (null ⇒
  *    «Προσαρμοσμένο» — ο μηχανικός απέκλινε από κάθε template, όπως στο Revit).
- *  - onChange ⇒ `applyStructuralPreset(kind)` (ήδη persist-άρει στο ενεργό building),
- *    ΚΑΙ εκπέμπει `bim:compute-loads-requested` ώστε η αλλαγή κανονισμού/υλικών/φορτίων/
- *    σεισμικών να **επανυπολογίσει αμέσως** τη διαδρομή φορτίων → οπλισμό → πέδιλα →
- *    σχέδια/αναφορές (Revit «apply template = κτίριο ενημερώνεται»). Mirror του ρητού
- *    ribbon «Υπολογισμός Φορτίων» (`useDxfViewerCallbacks` → ίδιο event)· ο
- *    `useStructuralLoadTakedown` διαβάζει τα φρέσκα settings (`getState()`) event-time.
+ *  - onChange ⇒ **confirm** (full-replace guard, βλ. παρακάτω) → `applyStructuralPreset(kind)`.
+ *
+ * **Confirm πριν το full-replace:** το apply αντικαθιστά ΟΛΑ τα building-level settings +
+ * επανυπολογίζει οπλισμό/σχέδια — destructive. Ζητά επιβεβαίωση μέσω του κεντρικού
+ * {@link BuildingSpaceConfirmDialog} (SSoT confirm, ΟΧΙ νέο dialog). Το `value` είναι
+ * controlled (=active kind)· αν ο χρήστης ακυρώσει, το store μένει αμετάβλητο → το Select
+ * επανέρχεται φυσικά στο προηγούμενο (μηδέν χειροκίνητο revert).
+ *
+ * **Άμεσος επανυπολογισμός:** ΔΕΝ εκπέμπει event εδώ — ο `applyStructuralPreset` ορίζει
+ * `lastLocalMutationAt` και ο κεντρικός {@link useStructuralSettingsRecompute} (mounted
+ * στο shell) ανιχνεύει κάθε user-initiated αλλαγή settings (preset ΚΑΙ ribbon setters) και
+ * εκπέμπει `bim:compute-loads-requested` → φορτία → οπλισμός → πέδιλα → σχέδια/αναφορές.
+ * ΕΝΑ σημείο εκπομπής (SSoT· μηδέν διπλό recompute).
  *
  * Canonical `@/components/ui/select` (ADR-001 — ΟΧΙ RibbonCombobox: αυτό εξαρτάται από
  * το ribbon command context, εδώ είμαστε σε modal). Mount: {@link FloorManagementDialog}.
  *
  * @see ../../bim/structural/presets — οι ορισμοί + factory + active-preset detection
- * @see ../../hooks/useStructuralLoadTakedown — ο consumer του compute-loads event
+ * @see ../../hooks/useStructuralSettingsRecompute — ο κεντρικός recompute trigger
  * @see docs/centralized-systems/reference/adrs/ADR-479-structural-project-presets.md
  */
 
-import React, { useCallback } from 'react';
+import React, { useCallback, useState } from 'react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import {
   Select,
@@ -32,14 +39,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { BuildingSpaceConfirmDialog } from '@/components/building-management/shared/BuildingSpaceConfirmDialog';
 import {
   STRUCTURAL_PRESET_DEFINITIONS,
   STRUCTURAL_PRESET_ORDER,
   isStructuralPresetKind,
   resolveActivePresetKind,
+  type StructuralPresetKind,
 } from '../../bim/structural/presets';
 import { useStructuralSettingsStore } from '../../state/structural-settings-store';
-import { EventBus } from '../../systems/events/EventBus';
 
 export const StructuralPresetSelector: React.FC = () => {
   const { t } = useTranslation('dxf-viewer-shell');
@@ -49,19 +57,27 @@ export const StructuralPresetSelector: React.FC = () => {
   const activeKind = useStructuralSettingsStore((s) => resolveActivePresetKind(s));
   const applyStructuralPreset = useStructuralSettingsStore((s) => s.applyStructuralPreset);
 
-  const handleValueChange = useCallback(
-    (next: string) => {
-      if (!isStructuralPresetKind(next)) return;
-      // 1) set + persist building settings (sync set → getState() is φρέσκο μετά).
-      applyStructuralPreset(next);
-      // 2) επανυπολογισμός αλυσίδας (φορτία → οπλισμός → πέδιλα → σχέδια/αναφορές).
-      //    Ίδιο event με το ρητό ribbon «Υπολογισμός Φορτίων» — μηδέν διπλότυπο path.
-      EventBus.emit('bim:compute-loads-requested', {});
-    },
-    [applyStructuralPreset],
-  );
+  // Το preset που εκκρεμεί επιβεβαίωση (null = κλειστό confirm). Radix Select δεν
+  // fire-άρει onValueChange για ίδια τιμή → confirm μόνο σε πραγματική αλλαγή.
+  const [pendingKind, setPendingKind] = useState<StructuralPresetKind | null>(null);
+
+  const handleValueChange = useCallback((next: string) => {
+    if (isStructuralPresetKind(next)) setPendingKind(next); // ζήτα confirm (μηδέν apply ακόμη)
+  }, []);
+
+  const handleConfirm = useCallback(() => {
+    // set + persist· ο κεντρικός useStructuralSettingsRecompute εκπέμπει το recompute
+    // (ανιχνεύει το lastLocalMutationAt) → φορτία → οπλισμός → σχέδια/αναφορές.
+    if (pendingKind) applyStructuralPreset(pendingKind);
+    setPendingKind(null);
+  }, [pendingKind, applyStructuralPreset]);
+
+  const handleConfirmOpenChange = useCallback((open: boolean) => {
+    if (!open) setPendingKind(null); // cancel / ESC → store αμετάβλητο → Select revert φυσικά
+  }, []);
 
   const selectorLabel = t('structural.preset.selectorLabel');
+  const pendingLabel = pendingKind ? t(STRUCTURAL_PRESET_DEFINITIONS[pendingKind].labelKey) : '';
 
   return (
     <section className="flex flex-col gap-1.5">
@@ -82,6 +98,16 @@ export const StructuralPresetSelector: React.FC = () => {
         </SelectContent>
       </Select>
       <p className="text-xs text-muted-foreground">{t('structural.preset.sectionDescription')}</p>
+      <BuildingSpaceConfirmDialog
+        open={pendingKind !== null}
+        onOpenChange={handleConfirmOpenChange}
+        title={t('structural.preset.confirm.title')}
+        description={t('structural.preset.confirm.description', { preset: pendingLabel })}
+        confirmLabel={t('structural.preset.confirm.confirm')}
+        cancelLabel={t('structural.preset.confirm.cancel')}
+        onConfirm={handleConfirm}
+        variant="warning"
+      />
     </section>
   );
 };
