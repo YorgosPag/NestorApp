@@ -96,6 +96,51 @@ describe('πρόβολος υπό ομοιόμορφο φορτίο', () => {
   });
 });
 
+/**
+ * Regression (ADR-481 fix 2026-06-18): στηριγμένο portal + ΑΚΑΜΠΤΟ διάφραγμα δεν
+ * πρέπει να αναφέρεται ως μηχανισμός. Το penalty διαφράγματος (~1e6×) εκτόξευε το
+ * max διαγώνιο → το (σχετικό) κατώφλι μηδενικού pivot ανέβαινε ώστε «έκοβε» γνήσια
+ * μικρά pivots → false-singular σε έγκυρο πλαίσιο. Fix: το κατώφλι βασίζεται στη
+ * ΦΥΣΙΚΗ κλίμακα ακαμψίας (πριν το penalty). Το διάφραγμα παραμένει πλήρως άκαμπτο.
+ */
+describe('portal με άκαμπτο διάφραγμα (false-singular regression)', () => {
+  const baseNode = (id: string, xM: number): AnalyticalNode =>
+    ({ id, position: { xM, yM: 0, zM: 0 }, restraint: FIXED_DOF, levelId: 'lvl-0' });
+  const topNode = (id: string, xM: number): AnalyticalNode =>
+    ({ id, position: { xM, yM: 0, zM: 3 }, restraint: FREE_DOF, levelId: 'lvl-1' });
+
+  function portal(withDiaphragm: boolean): AnalyticalModel {
+    return {
+      nodes: [baseNode('nb0', 0), baseNode('nb1', SPAN_M), topNode('nt0', 0), topNode('nt1', SPAN_M)],
+      members: [
+        { id: 'c1', entityId: 'c1', memberType: 'column', iNodeId: 'nb0', jNodeId: 'nt0', lengthM: 3 },
+        { id: 'c2', entityId: 'c2', memberType: 'column', iNodeId: 'nb1', jNodeId: 'nt1', lengthM: 3 },
+        { id: 'b1', entityId: 'b1', memberType: 'beam', iNodeId: 'nt0', jNodeId: 'nt1', lengthM: SPAN_M },
+      ],
+      supports: [
+        { nodeId: 'nb0', supportType: 'fixed', entityId: 'f1' },
+        { nodeId: 'nb1', supportType: 'fixed', entityId: 'f2' },
+      ],
+      diaphragms: withDiaphragm ? [{ levelId: 'lvl-1', nodeIds: ['nt0', 'nt1'], masterNodeId: 'nt0' }] : [],
+      levels: [{ id: 'lvl-0', elevationM: 0 }, { id: 'lvl-1', elevationM: 3 }],
+    };
+  }
+
+  const solve = (m: AnalyticalModel) =>
+    solveStaticFrame({ model: m, sectionProvider, loadProvider, combinations: buildStandardCombinations() });
+
+  it('στηριγμένο portal + rigid διάφραγμα → ΟΧΙ μηχανισμός', () => {
+    expect(solve(portal(true)).unstable).toBe(false);
+  });
+
+  it('το penalty διαφράγματος δεν αλλοιώνει τη βαρυτική ροπή δοκαριού (≈ χωρίς διάφραγμα, <1%)', () => {
+    const mWith = solve(portal(true)).envelopeByMember.get('b1')?.maxAbsMoment ?? 0;
+    const mNo = solve(portal(false)).envelopeByMember.get('b1')?.maxAbsMoment ?? 0;
+    expect(mWith).toBeGreaterThan(0);
+    expect(Math.abs(mWith - mNo)).toBeLessThan(mNo * 0.01);
+  });
+});
+
 describe('ευστάθεια', () => {
   it('φορέας χωρίς στήριξη → μηχανισμός (unstable)', () => {
     const model = beamModel(FREE_DOF, FREE_DOF);

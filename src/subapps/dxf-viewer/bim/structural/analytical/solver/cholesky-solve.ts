@@ -85,11 +85,18 @@ function backwardSolve(lower: number[][], z: Vector): MutableVector {
  * Επίλυσε το συμμετρικό σύστημα K·u = F. Επιστρέφει `singular: true` (+ μηδενική
  * λύση) όταν το K είναι μηχανισμός — ο caller το μετατρέπει σε diagnostic, ΔΕΝ
  * εμπιστεύεται το `solution`.
+ *
+ * `stiffnessScale` (προαιρετικό): η **φυσική** κλίμακα ακαμψίας (max διαγώνιο ΠΡΙΝ
+ * το penalty διαφράγματος) ως αναφορά για το κατώφλι μηδενικού pivot. Όταν δίνεται,
+ * η ανίχνευση μηχανισμού είναι ανεξάρτητη του penalty inflation: ένα penalty-stiffened
+ * διαγώνιο (~1e6× μεγαλύτερο) δεν ανεβάζει το tol ώστε να «κόβει» γνήσια μικρά pivots
+ * (false-singular σε έγκυρο πλαίσιο). Default = `maxAbsDiagonal(k)` (legacy).
  */
-export function solveSymmetric(k: Matrix, f: Vector): SolveResult {
+export function solveSymmetric(k: Matrix, f: Vector, stiffnessScale?: number): SolveResult {
   const n = k.length;
   if (n === 0) return { solution: [], singular: false };
-  const tol = Math.max(maxAbsDiagonal(k) * PIVOT_REL_TOL, Number.MIN_VALUE);
+  const scale = stiffnessScale !== undefined ? stiffnessScale : maxAbsDiagonal(k);
+  const tol = Math.max(scale * PIVOT_REL_TOL, Number.MIN_VALUE);
   const fac = factorize(k, tol);
   if (fac.singular) return { solution: zeroVector(n), singular: true };
   const y = forwardSolve(fac.lower, f);

@@ -69,7 +69,7 @@ function solveCombination(
   assembled: AssembledStiffness, combination: LoadCombination, input: SolveFrameInput,
 ): CombinationResult {
   const f = buildLoadVector(assembled.elements, combination, input.loadProvider, assembled.dofMap.dofCount, assembled.restrained);
-  const { solution, singular } = solveSymmetric(assembled.k, f);
+  const { solution, singular } = solveSymmetric(assembled.k, f, assembled.physicalStiffnessScale);
   const stations = input.diagramStations ?? DEFAULT_DIAGRAM_STATIONS;
   const memberForces = singular ? [] : assembled.elements.map((el) => buildMemberForce(el, combination, input.loadProvider, solution, stations));
   return {

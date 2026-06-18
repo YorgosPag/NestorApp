@@ -14,7 +14,7 @@
  * @see ./frame-solver.ts — ο orchestrator
  */
 
-import { scatterAdd, zeroMatrix, type Matrix } from './dense-matrix';
+import { scatterAdd, zeroMatrix, maxAbsDiagonal, type Matrix } from './dense-matrix';
 import { buildElementStiffness, type ElementStiffness } from './frame-element-stiffness';
 import { applyDiaphragmPenalty } from './diaphragm-constraints';
 import { buildDofMap, elementDofs, restrainMatrix, restrainedDofs, type DofMap } from './dof-map';
@@ -39,6 +39,12 @@ export interface AssembledStiffness {
   readonly elements: readonly AssembledElement[];
   /** Μέλη χωρίς έγκυρη διατομή/γεωμετρία — παραλείφθηκαν (diagnostic). */
   readonly skippedMemberIds: readonly string[];
+  /**
+   * Φυσική κλίμακα ακαμψίας (max διαγώνιο ΠΡΙΝ το penalty διαφράγματος). Αναφορά για
+   * το κατώφλι μηδενικού pivot του solver — ανεξάρτητη του penalty inflation ώστε να
+   * μην προκύπτει false-singular σε έγκυρο πλαίσιο (ADR-481 fix 2026-06-18).
+   */
+  readonly physicalStiffnessScale: number;
 }
 
 /** Scatter ενός μέλους στο K· επιστρέφει το cache element ή null (skip). */
@@ -75,8 +81,11 @@ export function assembleGlobalStiffness(
     if (el) elements.push(el);
     else skippedMemberIds.push(member.id);
   }
+  // Φυσική κλίμακα ΠΡΙΝ το penalty — αναφορά για την ανίχνευση μηχανισμού (ώστε το
+  // penalty inflation να μην παράγει false-singular σε έγκυρο φορέα).
+  const physicalStiffnessScale = maxAbsDiagonal(k);
   applyDiaphragmPenalty(k, model.diaphragms, model.nodes, dofMap);
   const restrained = restrainedDofs(model.nodes, dofMap);
   restrainMatrix(k, restrained);
-  return { k, dofMap, restrained, elements, skippedMemberIds };
+  return { k, dofMap, restrained, elements, skippedMemberIds, physicalStiffnessScale };
 }
