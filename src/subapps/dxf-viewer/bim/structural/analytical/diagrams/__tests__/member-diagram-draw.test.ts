@@ -36,7 +36,7 @@ function path(values: number[]): MemberDiagramPath {
   const samples: DiagramSample[] = values.map((value, i) => ({ f: i / (values.length - 1), value }));
   let extremum = samples[0]!;
   for (const s of samples) if (Math.abs(s.value) >= Math.abs(extremum.value)) extremum = s;
-  return { memberId: 'b1', iCanvas: { x: 0, y: 0 }, jCanvas: { x: 4, y: 0 }, samples, extremum };
+  return { memberId: 'b1', iCanvas: { x: 0, y: 0 }, jCanvas: { x: 4, y: 0 }, samples, extremum, appliedUdlKnM: 0 };
 }
 
 describe('drawInflectionMarkers — σημεία M=0', () => {

@@ -98,6 +98,12 @@ describe('buildMemberDiagramPaths', () => {
     expect(buildMemberDiagramPaths(model(), result('uls', false), OPTS).combinationKind).toBe('uls');
   });
 
+  it('ADR-483 Slice 4b+ — recovers UDL q from moment curvature (load arrows)', () => {
+    // diagram [−20, 50, −20] over L=4, dx=2 → w = |−20−2·50−20| / 2² = 140/4 = 35 kN/m.
+    const set = buildMemberDiagramPaths(model(), result('uls', false), OPTS);
+    expect(set.paths[0]!.appliedUdlKnM).toBeCloseTo(35);
+  });
+
   it('returns empty (no throw) for an empty model', () => {
     const empty: AnalyticalModel = { nodes: [], members: [], supports: [], diaphragms: [], levels: [] };
     const set = buildMemberDiagramPaths(empty, result('uls', false), OPTS);

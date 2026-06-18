@@ -28,6 +28,26 @@ describe('buildDefaultFoundationParams', () => {
     expect(p.topElevationMm).toBe(-1500);
     expect(p.anchor).toBe('ne');
   });
+
+  // ADR-484 Slice 4 — στάθμη από το FFL ορόφου Θεμελίωσης (ρυθμίσεις).
+  it('derives topElevation από το foundationLevelElevationMm (ρυθμίσεις)', () => {
+    const pad = buildDefaultFoundationParams({ x: 0, y: 0 }, 'pad', { foundationLevelElevationMm: -1500 });
+    expect(pad.topElevationMm).toBe(-1500);
+    const tie = buildDefaultFoundationParams({ x: 0, y: 0 }, 'tie-beam', { foundationLevelElevationMm: -1500 });
+    expect(tie.topElevationMm).toBeGreaterThan(-1500); // συνδετήρια ψηλότερα (EC8)
+  });
+
+  it('ρητό topElevationMm υπερισχύει του derived FFL', () => {
+    const p = buildDefaultFoundationParams({ x: 0, y: 0 }, 'pad', {
+      foundationLevelElevationMm: -1500, topElevationMm: -800,
+    });
+    expect(p.topElevationMm).toBe(-800);
+  });
+
+  it('χωρίς FFL → default constants (μηδέν regression)', () => {
+    const p = buildDefaultFoundationParams({ x: 0, y: 0 }, 'pad');
+    expect(p.topElevationMm).toBe(-1000);
+  });
 });
 
 describe('buildFoundationEntity', () => {

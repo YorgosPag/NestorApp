@@ -44,6 +44,9 @@ import {
 import { foundationToolBridgeStore } from '../../ui/ribbon/hooks/bridge/foundation-tool-bridge-store';
 import { foundationPreviewStore } from '../../bim/foundations/foundation-preview-store';
 import { pickWallEntityAt, buildStripFromWall } from '../../bim/foundations/foundation-from-wall';
+// ADR-484 Slice 4 — η στάθμη του χειροκίνητου πεδίλου παράγεται από το FFL ορόφου
+// Θεμελίωσης (ρυθμίσεις), μέσω override στο `buildDefaultFoundationParams`.
+import { resolveActiveFoundationLevelElevationMm } from '../../bim/foundations/foundation-level-elevation';
 import { isWallEntity, type Entity } from '../../types/entities';
 import type { WallEntity } from '../../bim/types/wall-types';
 import { TOLERANCE_CONFIG } from '../../config/tolerance-config';
@@ -228,7 +231,13 @@ export function useFoundationTool(options: UseFoundationToolOptions = {}): UseFo
   // ── commit: pad single-click (Slice 1) ───────────────────────────────────
   const commitFromState = useCallback(
     (s: FoundationToolState, clickPoint: Readonly<Point2D>): boolean => {
-      const overridesWithKind: FoundationParamOverrides = { ...s.overrides, kind: s.kind, anchor: s.anchor };
+      const ffl = resolveActiveFoundationLevelElevationMm();
+      const overridesWithKind: FoundationParamOverrides = {
+        ...s.overrides,
+        kind: s.kind,
+        anchor: s.anchor,
+        ...(ffl != null ? { foundationLevelElevationMm: ffl } : {}),
+      };
       const sceneUnits = getSceneUnitsRef.current?.() ?? 'mm';
       const params = buildDefaultFoundationParams(clickPoint, s.kind, overridesWithKind, sceneUnits);
       const result = buildFoundationEntity(params, currentLevelId);
@@ -248,7 +257,9 @@ export function useFoundationTool(options: UseFoundationToolOptions = {}): UseFo
     (s: FoundationToolState, endPoint: Readonly<Point2D>): boolean => {
       if (s.startPoint === null) return false;
       const sceneUnits = getSceneUnitsRef.current?.() ?? 'mm';
-      const result = completeFoundationFromTwoClicks(s.startPoint, endPoint, currentLevelId, s.kind, s.overrides, sceneUnits);
+      const ffl = resolveActiveFoundationLevelElevationMm();
+      const overrides = ffl != null ? { ...s.overrides, foundationLevelElevationMm: ffl } : s.overrides;
+      const result = completeFoundationFromTwoClicks(s.startPoint, endPoint, currentLevelId, s.kind, overrides, sceneUnits);
       if (!result.ok) {
         setState({ ...s, error: result.hardErrors[0] ?? null });
         return false;
@@ -273,7 +284,9 @@ export function useFoundationTool(options: UseFoundationToolOptions = {}): UseFo
         return false;
       }
       const sceneUnits = getSceneUnitsRef.current?.() ?? 'mm';
-      const result = buildStripFromWall(wall as WallEntity, s.overrides, currentLevelId, sceneUnits);
+      const ffl = resolveActiveFoundationLevelElevationMm();
+      const overrides = ffl != null ? { ...s.overrides, foundationLevelElevationMm: ffl } : s.overrides;
+      const result = buildStripFromWall(wall as WallEntity, overrides, currentLevelId, sceneUnits);
       if (!result.ok) {
         setState({ ...s, error: result.hardErrors[0] ?? null });
         return false;

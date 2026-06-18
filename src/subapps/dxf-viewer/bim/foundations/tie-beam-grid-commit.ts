@@ -35,6 +35,8 @@ import { hasGuideBindings } from '../hosting/guide-binding-types';
 import type { FoundationEntity } from '../types/foundation-types';
 import type { FoundationParamOverrides, SceneUnits } from '../../hooks/drawing/foundation-completion';
 import { buildStripGridFromGuides, type AxisGuideReader } from './foundation-from-grid';
+// ADR-484 Slice 4 — οι συνδετήριες εσχάρας παίρνουν στάθμη από το FFL ορόφου Θεμελίωσης.
+import { resolveActiveFoundationLevelElevationMm } from './foundation-level-elevation';
 import { segmentKeyFromBindings } from './foundation-grid-segments';
 import { computeGridJunctionExtends } from './foundation-grid-junctions';
 import type { RehostedStrip } from './foundation-grid-rehost';
@@ -121,9 +123,10 @@ export function commitTieBeamGridFromGuides(
 ): TieBeamGridCommitResult {
   // Κεντραρισμένες (mode='center'): η διατομή κάθεται στον άξονα· οι γωνίες κλείνουν
   // μέσω junction-miter (όχι μέσω inward justification όπως οι πεδιλοδοκοί).
+  const ffl = resolveActiveFoundationLevelElevationMm();
   const target = buildStripGridFromGuides(
     deps.guideReader,
-    deps.overrides ?? {},
+    ffl != null ? { ...deps.overrides, foundationLevelElevationMm: ffl } : deps.overrides ?? {},
     deps.levelId,
     deps.sceneUnits,
     'center',

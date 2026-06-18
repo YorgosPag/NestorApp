@@ -48,6 +48,13 @@ export interface MemberDiagramPath {
   readonly samples: readonly DiagramSample[];
   /** Στάθμη μέγιστης απόλυτης τιμής — εκεί μπαίνει η ετικέτα. */
   readonly extremum: DiagramSample;
+  /**
+   * ADR-483 Slice 4b+ — το ομοιόμορφο φορτίο q (kN/m) που **όντως χρησιμοποίησε η
+   * ανάλυση**, ανακτημένο από την **καμπυλότητα της ροπής** (`w = |d²M/dx²|`) — ίδια
+   * πηγή με το διάγραμμα (self-consistent), όχι το tributary του scene. Οδηγεί τα
+   * βέλη φορτίου. 0 για αφόρτιστο μέλος.
+   */
+  readonly appliedUdlKnM: number;
 }
 
 /** Σύνολο διαδρομών + global max-abs + μήκος αναφοράς (για model-space auto-fit). */
@@ -130,6 +137,25 @@ function dominantShearKey(diagram: readonly DiagramStation[]): 'shearY' | 'shear
   return z >= y ? 'shearZ' : 'shearY';
 }
 
+/**
+ * Ανάκτηση του ομοιόμορφου φορτίου q (kN/m) από την **καμπυλότητα της ροπής**: για
+ * UDL ισχύει `M(x) = a + b·x − (w/2)·x²` → `w = −d²M/dx²` (σταθερό). Δεύτερη διαφορά
+ * των ισαπεχουσών σταθμών ροπής, μέσος όρος εσωτερικών → robust. 0 αν <3 σταθμές.
+ */
+function recoverUdlKnM(moment: readonly number[], lengthM: number): number {
+  const n = moment.length;
+  if (n < 3 || lengthM <= 0) return 0;
+  const dx = lengthM / (n - 1);
+  if (dx <= 0) return 0;
+  let sum = 0;
+  let count = 0;
+  for (let k = 1; k < n - 1; k++) {
+    sum += Math.abs(moment[k - 1]! - 2 * moment[k]! + moment[k + 1]!) / (dx * dx);
+    count++;
+  }
+  return count > 0 ? sum / count : 0;
+}
+
 /** Τιμή μιας στάθμης για το επιλεγμένο component (κυρίαρχος άξονας ανά μέλος). */
 function stationValue(
   st: DiagramStation,
@@ -166,12 +192,17 @@ function buildMemberPath(
     return { f, value };
   });
 
+  // Φορτίο για τα βέλη: από την καμπυλότητα της ΡΟΠΗΣ (ανεξάρτητα από το επιλεγμένο
+  // component) → πάντα ίδιο με το φορτίο της ανάλυσης, μηδέν εξάρτηση από scene tributary.
+  const appliedUdlKnM = recoverUdlKnM(force.diagram.map((st) => st[momentKey]), length);
+
   return {
     memberId: member.id,
     iCanvas: { x: pi.xM * toCanvas, y: pi.yM * toCanvas },
     jCanvas: { x: pj.xM * toCanvas, y: pj.yM * toCanvas },
     samples,
     extremum,
+    appliedUdlKnM,
   };
 }
 

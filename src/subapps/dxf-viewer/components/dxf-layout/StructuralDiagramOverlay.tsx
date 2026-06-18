@@ -47,9 +47,7 @@ import {
 } from '../../bim/structural/analytical/diagrams/member-diagram-draw';
 import { drawMemberLoadArrows } from '../../bim/structural/analytical/diagrams/member-load-arrows';
 import { drawSupportGlyph } from '../../bim/structural/analytical/diagrams/support-glyphs';
-import { buildBeamSectionContext } from '../../bim/structural/section-context';
 import type { AnalyticalSupportType } from '../../bim/structural/analytical/analytical-model-types';
-import { isBeamEntity } from '../../types/entities';
 import { CoordinateTransforms } from '../../rendering/core/CoordinateTransforms';
 import { resolveSceneUnits, sceneUnitsToMeters } from '../../utils/scene-units';
 import { getDevicePixelRatio } from '../../systems/cursor/utils';
@@ -143,19 +141,6 @@ export function StructuralDiagramOverlay({ transform, viewport }: StructuralDiag
     });
   }, [active, model, result, units, component]);
 
-  // ADR-483 Slice 4b — γραμμικό φορτίο w_Ed ανά δοκάρι (entityId → kN/m) από το scene
-  // (μέλος.id === entityId, 1:1, ADR-480). designLineLoadKnM = ULS UDL (ADR-472).
-  const loadByEntityId = useMemo<ReadonlyMap<string, number>>(() => {
-    const map = new Map<string, number>();
-    if (!active || !scene) return map;
-    for (const e of scene.entities) {
-      if (!isBeamEntity(e)) continue;
-      const w = buildBeamSectionContext(e).designLineLoadKnM ?? 0;
-      if (w > 0) map.set(e.id, w);
-    }
-    return map;
-  }, [active, scene]);
-
   // ADR-483 Slice 4b+ — δεσμευμένοι κόμβοι (στηρίξεις) προβεβλημένοι σε canvas units
   // (μέτρα × toCanvasFromMeters, ίδια μετατροπή με τα paths). Robot boundary glyphs.
   const supportPoints = useMemo<readonly SupportPoint[]>(() => {
@@ -170,6 +155,27 @@ export function StructuralDiagramOverlay({ transform, viewport }: StructuralDiag
     }
     return out;
   }, [active, model, units]);
+
+  // 🔬 ΠΡΟΣΩΡΙΝΟ ΔΙΑΓΝΩΣΤΙΚΟ (ADR-483 troubleshooting) — αφαιρείται μετά την επαλήθευση.
+  useEffect(() => {
+    if (!active || !diagramSet) return;
+    // eslint-disable-next-line no-console
+    console.log('🔬 [ΔΙΑΓΝΩΣΤΙΚΟ ADR-483]', {
+      reliable: diagramSet.reliable,
+      combinationKind: diagramSet.combinationKind,
+      nodes: model.nodes.length,
+      supports: model.supports.length,
+      supportPoints: supportPoints.length,
+      paths: diagramSet.paths.map((p) => ({
+        id: p.memberId,
+        Mi: Number(p.samples[0]?.value.toFixed(2)),
+        Mj: Number(p.samples[p.samples.length - 1]?.value.toFixed(2)),
+        max: Number(p.extremum.value.toFixed(2)),
+        maxF: p.extremum.f,
+        q: Number(p.appliedUdlKnM.toFixed(2)),
+      })),
+    });
+  }, [active, diagramSet, supportPoints, model]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -203,10 +209,6 @@ export function StructuralDiagramOverlay({ transform, viewport }: StructuralDiag
     ctx.save();
     ctx.setLineDash([]);
 
-    // Σύμβολα στηρίξεων (κάτω από τις καμπύλες/pills) + caption συνδυασμού.
-    for (const sp of supportPoints) {
-      drawSupportGlyph(ctx, CoordinateTransforms.worldToScreen({ x: sp.x, y: sp.y }, transform, viewport), sp.type);
-    }
     if (diagramSet.combinationKind) {
       drawCombinationCaption(ctx, t('ribbon.commands.analysisDiagrams.combinationCaption', { kind: diagramSet.combinationKind }));
     }
@@ -221,14 +223,19 @@ export function StructuralDiagramOverlay({ transform, viewport }: StructuralDiag
       if (diagramSet.component === 'moment' && reliable) {
         drawTensionZoneLabels(ctx, si, sj, path, tcLabels, TC_TENSION_BOTTOM_COLOR, TC_TENSION_TOP_COLOR);
       }
-      const wKnM = loadByEntityId.get(path.memberId);
-      if (wKnM) drawMemberLoadArrows(ctx, si, sj, wKnM, UNIT_LINE_LOAD, LOAD_ARROW_STYLE);
+      // Βέλη φορτίου από το q που χρησιμοποίησε η ανάλυση (ανακτημένο από την καμπύλη).
+      if (path.appliedUdlKnM > 0) drawMemberLoadArrows(ctx, si, sj, path.appliedUdlKnM, UNIT_LINE_LOAD, LOAD_ARROW_STYLE);
       // Τιμές στα άκρα (M_i/M_j) + ακραία στο άνοιγμα — pills πάνω από όλα.
       drawDiagramEndValues(ctx, si, sj, path, pxScale, unit);
       drawDiagramExtremum(ctx, si, sj, path, pxScale, unit);
     }
+
+    // Σύμβολα στηρίξεων ΤΕΛΕΥΤΑΙΑ → πάνω από το γέμισμα (αλλιώς κρύβονται).
+    for (const sp of supportPoints) {
+      drawSupportGlyph(ctx, CoordinateTransforms.worldToScreen({ x: sp.x, y: sp.y }, transform, viewport), sp.type);
+    }
     ctx.restore();
-  }, [active, diagramSet, loadByEntityId, supportPoints, transform, viewport, t]);
+  }, [active, diagramSet, supportPoints, transform, viewport, t]);
 
   return (
     <canvas

@@ -26,6 +26,8 @@ import {
   buildStripGridFromGuides,
   type AxisGuideReader,
 } from './foundation-from-grid';
+// ADR-484 Slice 4 — οι πεδιλοδοκοί εσχάρας παίρνουν στάθμη από το FFL ορόφου Θεμελίωσης.
+import { resolveActiveFoundationLevelElevationMm } from './foundation-level-elevation';
 import {
   DEFAULT_GRID_PERIMETER_MODE,
   type GridPerimeterMode,
@@ -173,9 +175,10 @@ function foldJunctions(
 export function commitFoundationGridFromGuides(
   deps: FoundationGridCommitDeps,
 ): FoundationGridCommitResult {
+  const ffl = resolveActiveFoundationLevelElevationMm();
   const target = buildStripGridFromGuides(
     deps.guideReader,
-    deps.overrides ?? {},
+    ffl != null ? { ...deps.overrides, foundationLevelElevationMm: ffl } : deps.overrides ?? {},
     deps.levelId,
     deps.sceneUnits,
     deps.perimeterMode ?? DEFAULT_GRID_PERIMETER_MODE,

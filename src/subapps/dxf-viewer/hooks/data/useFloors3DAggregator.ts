@@ -42,6 +42,9 @@ import { buildActiveStoreyContext } from '../../systems/levels/active-storey-con
 // ADR-459 Φ7 — foreign-floor BIM guard: το stack entry κάθε ορόφου περιέχει ΜΟΝΟ τα
 // δικά του entities (cross-level πέδιλο baked σε λάθος snapshot δεν εμφανίζεται 3Δ).
 import { stripForeignFloorBim } from '../../systems/levels/scene-bim-load-policy';
+// ADR-484 Slice 3 — file-level cross-floor guard: skip a snapshot whose fileRecord
+// belongs to ANOTHER floor (legacy shared `sceneFileId`), independent of entity tags.
+import { resolveFloorScopedScene } from '../../systems/levels/cross-floor-link';
 // ADR-469 — file-less / orphaned floor fallback: one-shot per-entity BIM source so
 // a floor with no `.scene.json` snapshot still shows its entities in «all floors» 3Δ.
 import { resolveBimPersistenceScope } from '../../bim/persistence/bim-floor-scope';
@@ -225,11 +228,13 @@ export function useFloors3DAggregator(active: boolean): void {
       for (const t of missing) {
         try {
           let scene: SceneModel | null = null;
-          // 1. `.scene.json` snapshot (file-linked, has a valid record).
+          // 1. `.scene.json` snapshot (file-linked, has a valid record). ADR-484
+          // Slice 3 — null when the record belongs to another floor (shared fileId)
+          // → falls through to the ADR-469 own-floor per-entity fallback below.
           if (t.sceneFileId) {
             const rec = await DxfFirestoreService.loadFileV2(t.sceneFileId);
             if (cancelled) return;
-            if (rec?.scene && Array.isArray(rec.scene.entities)) scene = rec.scene as SceneModel;
+            scene = resolveFloorScopedScene(rec, t.floorId);
           }
           // 2. ADR-469 — no snapshot (file-less or orphaned): one-shot per-entity BIM.
           if (!scene) {

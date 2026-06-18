@@ -10,6 +10,8 @@
 import {
   buildDefaultFoundationParams,
   defaultFoundationTopElevationMm,
+  resolveFoundationTopElevationMm,
+  TIE_BEAM_RISE_MM,
   FOUNDATION_IFC_MAP,
   DEFAULT_FOUNDATION_TOP_ELEVATION_MM,
   DEFAULT_TIE_BEAM_TOP_ELEVATION_MM,
@@ -74,6 +76,36 @@ describe('buildDefaultFoundationParams', () => {
     expect(p.start).toEqual({ x: 0, y: 0, z: 0 });
     expect(p.end.x).toBeGreaterThan(0);
     expect(p.width).toBe(DEFAULT_TIE_BEAM_WIDTH_MM);
+  });
+});
+
+describe('resolveFoundationTopElevationMm (ADR-484 Slice 4 — από τις ρυθμίσεις)', () => {
+  it('FFL γνωστό → pad/strip = FFL· tie-beam = FFL + rise', () => {
+    expect(resolveFoundationTopElevationMm(-1500, 'pad')).toBe(-1500);
+    expect(resolveFoundationTopElevationMm(-1500, 'strip')).toBe(-1500);
+    expect(resolveFoundationTopElevationMm(-1500, 'tie-beam')).toBe(-1500 + TIE_BEAM_RISE_MM);
+  });
+
+  it('FFL = default (-1000) → ακριβώς τα παλιά constants (μηδέν regression)', () => {
+    for (const kind of ALL_KINDS) {
+      expect(resolveFoundationTopElevationMm(DEFAULT_FOUNDATION_TOP_ELEVATION_MM, kind)).toBe(
+        defaultFoundationTopElevationMm(kind),
+      );
+    }
+  });
+
+  it('FFL null/undefined → fallback στα default constants', () => {
+    for (const kind of ALL_KINDS) {
+      expect(resolveFoundationTopElevationMm(null, kind)).toBe(defaultFoundationTopElevationMm(kind));
+      expect(resolveFoundationTopElevationMm(undefined, kind)).toBe(defaultFoundationTopElevationMm(kind));
+    }
+  });
+
+  it('TIE_BEAM_RISE_MM = διαφορά των constants (συνεπές)', () => {
+    expect(TIE_BEAM_RISE_MM).toBe(
+      DEFAULT_TIE_BEAM_TOP_ELEVATION_MM - DEFAULT_FOUNDATION_TOP_ELEVATION_MM,
+    );
+    expect(TIE_BEAM_RISE_MM).toBeGreaterThan(0);
   });
 });
 

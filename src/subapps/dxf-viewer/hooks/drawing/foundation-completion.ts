@@ -23,7 +23,7 @@ import type { Point3D } from '../../bim/types/bim-base';
 import {
   DEFAULT_FOUNDATION_ANCHOR,
   DEFAULT_FOUNDATION_ROTATION_DEG,
-  defaultFoundationTopElevationMm,
+  resolveFoundationTopElevationMm,
   DEFAULT_PAD_LENGTH_MM,
   DEFAULT_PAD_THICKNESS_MM,
   DEFAULT_PAD_WIDTH_MM,
@@ -64,8 +64,14 @@ export interface FoundationParamOverrides {
   readonly thicknessMm?: number;
   /** Μοίρες CCW (pad only). */
   readonly rotation?: number;
-  /** mm. Στάθμη άνω παρειάς (τυπικά αρνητική). */
+  /** mm. Στάθμη άνω παρειάς (τυπικά αρνητική). User-set → υπερισχύει του derived. */
   readonly topElevationMm?: number;
+  /**
+   * mm. FFL του ορόφου Θεμελίωσης (ADR-484 Slice 4). Όταν δοθεί ΚΑΙ δεν υπάρχει ρητό
+   * `topElevationMm`, η στάθμη άνω παρειάς παράγεται από τις ρυθμίσεις ορόφου
+   * (`resolveFoundationTopElevationMm`). `undefined` → default constants.
+   */
+  readonly foundationLevelElevationMm?: number;
   readonly material?: string;
   /** Pad vertical profile (Slice 1 = 'flat'). */
   readonly profile?: FoundationProfile;
@@ -114,7 +120,11 @@ export function buildDefaultFoundationParams(
   const dims = getKindDimensionDefaults(kind);
   const width = overrides.width ?? dims.width;
   const thicknessMm = overrides.thicknessMm ?? dims.thicknessMm;
-  const topElevationMm = overrides.topElevationMm ?? defaultFoundationTopElevationMm(kind);
+  // ADR-484 Slice 4 — η στάθμη παράγεται από το FFL ορόφου Θεμελίωσης (ρυθμίσεις)·
+  // ρητό user-set `topElevationMm` (ribbon) υπερισχύει· άγνωστο FFL → default constants.
+  const topElevationMm =
+    overrides.topElevationMm ??
+    resolveFoundationTopElevationMm(overrides.foundationLevelElevationMm, kind);
   const material = overrides.material;
   const catalogProfile = overrides.catalogProfile;
 

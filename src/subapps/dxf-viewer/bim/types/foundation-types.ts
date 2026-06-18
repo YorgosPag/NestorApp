@@ -353,6 +353,32 @@ export function defaultFoundationTopElevationMm(kind: FoundationKind): number {
 }
 
 /**
+ * mm. Πόσο **ψηλότερα** κάθεται η συνδετήρια δοκός από την πεδιλοδοκό/πέδιλο (EC8
+ * §5.4.1.2 — συνδέει τις κεφαλές των θεμελίων ψηλότερα). Παράγωγο των constants ώστε
+ * να μένει συνεπές αν αλλάξουν.
+ */
+export const TIE_BEAM_RISE_MM =
+  DEFAULT_TIE_BEAM_TOP_ELEVATION_MM - DEFAULT_FOUNDATION_TOP_ELEVATION_MM;
+
+/**
+ * SSoT στάθμης άνω παρειάς θεμελίωσης **ΑΠΟ ΤΙΣ ΡΥΘΜΙΣΕΙΣ ΟΡΟΦΟΥ** (ADR-484 Slice 4).
+ *
+ * Revit-canonical: τα πέδιλα κάθονται στη στάθμη του ορόφου Θεμελίωσης (FFL, π.χ. -1m
+ * όταν «Βάθος θεμελίωσης = 1m»), ΟΧΙ σε hardcoded σταθερά ή στη βάση της κολώνας. Η
+ * συνδετήρια κάθεται `TIE_BEAM_RISE_MM` ψηλότερα (EC8).
+ *
+ * `foundationLevelElevationMm` `null/undefined` (άγνωστος όροφος θεμελίωσης) → πέφτει
+ * στα constants → **ακριβώς** τα παλιά defaults (-1000 / -500) ⇒ μηδέν regression.
+ */
+export function resolveFoundationTopElevationMm(
+  foundationLevelElevationMm: number | null | undefined,
+  kind: FoundationKind,
+): number {
+  const ffl = foundationLevelElevationMm ?? DEFAULT_FOUNDATION_TOP_ELEVATION_MM;
+  return ffl + (kind === 'tie-beam' ? TIE_BEAM_RISE_MM : 0);
+}
+
+/**
  * Pure default params ανά kind (mirror `buildDefaultColumnParams`). Δεν παράγει
  * enterprise-id — η οντότητα χτίζεται από το `createFoundationEntity` factory.
  */

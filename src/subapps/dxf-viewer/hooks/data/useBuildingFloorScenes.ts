@@ -48,6 +48,9 @@ import {
   stripForeignFloorBim,
   replaceFootingsFromModel,
 } from '../../systems/levels/scene-bim-load-policy';
+// ADR-484 Slice 3 — file-level cross-floor guard (belt-and-suspenders πάνω από το
+// per-entity stripForeignFloorBim· legacy shared sceneFileId δεν διαρρέει).
+import { resolveFloorScopedScene } from '../../systems/levels/cross-floor-link';
 import { useFoundationLevelStore } from '../../state/foundation-level-store';
 import { isFoundationEntity, type Entity } from '../../types/entities';
 import { EMPTY_BOUNDS } from '../../config/geometry-constants';
@@ -140,11 +143,13 @@ export function useBuildingFloorScenes(active: boolean): readonly BuildingFloorS
       for (const t of missing) {
         try {
           let model: SceneModel | null = null;
-          // 1. `.scene.json` snapshot (file-linked, has a valid record).
+          // 1. `.scene.json` snapshot (file-linked, has a valid record). ADR-484
+          // Slice 3 — null όταν το record ανήκει σε άλλον όροφο (shared fileId)
+          // → πέφτει στο ADR-469 own-floor per-entity fallback παρακάτω.
           if (t.sceneFileId) {
             const rec = await DxfFirestoreService.loadFileV2(t.sceneFileId);
             if (cancelled) return;
-            if (rec?.scene && Array.isArray(rec.scene.entities)) model = rec.scene as SceneModel;
+            model = resolveFloorScopedScene(rec, t.floorId);
           }
           // 2. ADR-469 — no snapshot (file-less or orphaned): one-shot per-entity BIM.
           if (!model) {

@@ -6,7 +6,8 @@
  * scene" bug (a floor's level was linked to another floor's `sceneFileId`).
  */
 
-import { isCrossFloorSceneLink } from '../cross-floor-link';
+import type { SceneModel } from '../../../types/scene';
+import { isCrossFloorSceneLink, resolveFloorScopedScene } from '../cross-floor-link';
 
 describe('isCrossFloorSceneLink', () => {
   it('flags a floor-scoped file that belongs to a DIFFERENT floor', () => {
@@ -41,5 +42,45 @@ describe('isCrossFloorSceneLink', () => {
   it('is null/undefined safe on the fileRecord', () => {
     expect(isCrossFloorSceneLink(null, 'flr_B')).toBe(false);
     expect(isCrossFloorSceneLink(undefined, 'flr_B')).toBe(false);
+  });
+});
+
+describe('resolveFloorScopedScene (ADR-484 Slice 3)', () => {
+  const sceneOf = (n: number): SceneModel =>
+    ({ entities: Array.from({ length: n }, (_, i) => ({ id: `e${i}` })) } as unknown as SceneModel);
+
+  it('returns the scene of a same-floor record', () => {
+    const scene = sceneOf(2);
+    expect(
+      resolveFloorScopedScene({ entityType: 'floor', entityId: 'flr_A', scene }, 'flr_A'),
+    ).toBe(scene);
+  });
+
+  it('returns null for a cross-floor record (legacy shared sceneFileId)', () => {
+    expect(
+      resolveFloorScopedScene({ entityType: 'floor', entityId: 'flr_A', scene: sceneOf(5) }, 'flr_B'),
+    ).toBeNull();
+  });
+
+  it('allows a building/project-scoped shared scene (conservative — not floor-scoped)', () => {
+    const scene = sceneOf(3);
+    expect(
+      resolveFloorScopedScene({ entityType: 'building', entityId: 'bldg_A', scene }, 'flr_B'),
+    ).toBe(scene);
+  });
+
+  it('returns null when the record has no scene or non-array entities', () => {
+    expect(resolveFloorScopedScene({ entityType: 'floor', entityId: 'flr_A' }, 'flr_A')).toBeNull();
+    expect(
+      resolveFloorScopedScene(
+        { entityType: 'floor', entityId: 'flr_A', scene: {} as unknown as SceneModel },
+        'flr_A',
+      ),
+    ).toBeNull();
+  });
+
+  it('is null/undefined safe on the fileRecord', () => {
+    expect(resolveFloorScopedScene(null, 'flr_A')).toBeNull();
+    expect(resolveFloorScopedScene(undefined, 'flr_A')).toBeNull();
   });
 });

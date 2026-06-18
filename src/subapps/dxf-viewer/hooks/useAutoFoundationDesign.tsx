@@ -55,6 +55,9 @@ import { collectFoundationFootings } from '../bim/foundations/foundation-footing
 import { footingSupportsColumnBase, polygonCentroid } from '../bim/foundations/footing-column-coverage';
 import { resolveColumnBaseZmm } from '../bim/geometry/column-vertical-profile';
 import { buildDefaultFoundationParams, buildFoundationEntity } from './drawing/foundation-completion';
+// ADR-484 Slice 4 — η στάθμη του auto πεδίλου παράγεται από το FFL ορόφου Θεμελίωσης
+// (ρυθμίσεις), ΟΧΙ από τη βάση της κολώνας (planned.topElevationMm = col.baseZmm).
+import { resolveFoundationTopElevationMm } from '../bim/types/foundation-types';
 import {
   createFoundationCrossLevelWriter,
   type FoundationCrossLevelWriter,
@@ -195,7 +198,10 @@ function buildAutoFooting(
     {
       width: planned.widthMm,
       length: planned.lengthMm,
-      topElevationMm: planned.topElevationMm,
+      // ADR-484 Slice 4 — στάθμη από το FFL ορόφου Θεμελίωσης (ρυθμίσεις), ΟΧΙ από τη
+      // βάση κολώνας (planned.topElevationMm). Έτσι το auto πέδιλο κάθεται στη σωστή
+      // στάθμη θεμελίωσης (π.χ. -1000 για «Βάθος 1m»), όχι στο 0.
+      topElevationMm: resolveFoundationTopElevationMm(target.floorElevationMm, 'pad'),
       rotation: planned.rotationDeg, // follow περιστροφής κολώνας (Revit hosted)
     },
     sceneUnits,

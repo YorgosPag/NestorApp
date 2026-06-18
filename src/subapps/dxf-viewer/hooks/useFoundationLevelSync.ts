@@ -42,6 +42,9 @@ import {
   foundationDocToEntity,
 } from '../bim/foundations/foundation-firestore-service';
 import { resolveBimPersistenceScope } from '../bim/persistence/bim-floor-scope';
+// ADR-484 Slice 3 — file-level cross-floor guard: ο όροφος Θεμελίωσης δεν παίρνει
+// base entities από scene που ανήκει σε άλλον όροφο (legacy shared sceneFileId).
+import { resolveFloorScopedScene } from '../systems/levels/cross-floor-link';
 import {
   resolveBuildingFoundationLevel,
   resolveBuildingIdForLevel,
@@ -169,10 +172,11 @@ export function useFoundationLevelSync(props: { levelManager: LevelManagerLike }
       try {
         const rec = await DxfFirestoreService.loadFileV2(targetSceneFileId);
         if (cancelled) return;
-        const ents =
-          rec?.scene && Array.isArray(rec.scene.entities)
-            ? ((rec.scene as SceneModel).entities as unknown as readonly Entity[])
-            : [];
+        // ADR-484 Slice 3 — null όταν το record ανήκει σε άλλον όροφο (shared fileId):
+        // καμία διαρροή base entities· τα footings έρχονται ανεξάρτητα από το
+        // floorId-scoped model subscription.
+        const ents = (resolveFloorScopedScene(rec, targetFloorId)?.entities ??
+          []) as unknown as readonly Entity[];
         setBaseEntities(stripFootings(ents));
       } catch {
         if (!cancelled) setBaseEntities([]);
@@ -181,7 +185,7 @@ export function useFoundationLevelSync(props: { levelManager: LevelManagerLike }
     return () => {
       cancelled = true;
     };
-  }, [targetLevelId, targetSceneFileId, levelManager, refreshTick]);
+  }, [targetLevelId, targetSceneFileId, targetFloorId, levelManager, refreshTick]);
 
   // ── Publish: base + model footings + pending optimistic ───────────────────────
   useEffect(() => {
