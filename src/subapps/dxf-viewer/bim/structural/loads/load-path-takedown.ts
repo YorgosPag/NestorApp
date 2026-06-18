@@ -56,6 +56,7 @@ import {
   beamSupportColumnIds,
   footingColumnId,
 } from './load-path-walk';
+import { computeWallBeamDeadLoads } from './wall-beam-support';
 import type { StructuralGraph } from '../organism/structural-organism-types';
 import type { GuideOffsetLookup } from '../../hosting/derive-slots';
 
@@ -108,9 +109,14 @@ function columnLoad(c: ColumnEntity, tributaryM2: number, s: TakedownSettings): 
   });
 }
 
-/** Φορτίο δοκαριού: μ.ό. tributary ακρο-κολονών (1 όροφος) + ίδιο βάρος δοκαριού. */
+/**
+ * Φορτίο δοκαριού: μ.ό. tributary ακρο-κολονών (1 όροφος) + ίδιο βάρος δοκαριού +
+ * γραμμικό φορτίο τοιχοποιίας που πατά επάνω της (ADR-478, `wallDeadKn` ως πρόσθετο
+ * μόνιμο αξονικό· smear-άρεται σε UDL → M_Ed downstream).
+ */
 function beamLoad(
-  b: BeamEntity, graph: StructuralGraph, tributary: ReadonlyMap<string, number>, s: TakedownSettings,
+  b: BeamEntity, graph: StructuralGraph, tributary: ReadonlyMap<string, number>,
+  s: TakedownSettings, wallDeadKn: number,
 ): MemberLoad {
   const cols = beamSupportColumnIds(graph, b.id);
   const sum = cols.reduce((acc, id) => acc + (tributary.get(id) ?? 0), 0);
@@ -120,7 +126,7 @@ function beamLoad(
     storeyCount: 1,
     deadAreaLoadKpa: s.deadAreaLoadKpa,
     liveAreaLoadKpa: s.liveAreaLoadKpa,
-    extraDeadAxialKn: beamSelfWeightKn(b),
+    extraDeadAxialKn: beamSelfWeightKn(b) + wallDeadKn,
   });
 }
 
@@ -152,6 +158,7 @@ export function computeLoadPathPatches(
 
   const byId = new Map(entities.map((e) => [e.id, e]));
   const tributary = buildColumnTributary(entities, getOffset);
+  const wallDeadByBeam = computeWallBeamDeadLoads(entities);
   const columnLoadById = new Map<string, MemberLoad>();
   const patches: MemberLoadPatch[] = [];
 
@@ -162,7 +169,8 @@ export function computeLoadPathPatches(
       columnLoadById.set(node.id, load);
       pushPatch(patches, writablePatch(entity, load));
     } else if (node.memberKind === 'beam' && entity && isBeamEntity(entity)) {
-      pushPatch(patches, writablePatch(entity, beamLoad(entity, graph, tributary, settings)));
+      const wallKn = wallDeadByBeam.get(node.id) ?? 0;
+      pushPatch(patches, writablePatch(entity, beamLoad(entity, graph, tributary, settings, wallKn)));
     } else if (
       node.memberKind === 'footing' && entity &&
       isFoundationEntity(entity) && entity.params.kind === 'pad'

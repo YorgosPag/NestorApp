@@ -28,6 +28,15 @@ import {
 import type { StructuralCodeId } from '../bim/structural/codes';
 import type { ConcreteGrade } from '../bim/structural/concrete-grades';
 import type { OccupancyCategory } from '../bim/structural/loads/occupancy-loads';
+import {
+  isSeismicGroundType,
+  isValidGroundAccelRatio,
+  type SeismicGroundType,
+} from '../bim/structural/loads/seismic-params';
+import {
+  buildStructuralSettingsForPreset,
+  type StructuralPresetKind,
+} from '../bim/structural/presets';
 
 // ── Debounce helper (per building) ──────────────────────────────────────────
 
@@ -94,6 +103,22 @@ export interface StructuralSettingsState extends StructuralSettings {
    * kPa). Persist αν υπάρχει building. `undefined` → καθαρίζει (πέφτει σε default).
    */
   setOccupancy(occupancy: OccupancyCategory | undefined): void;
+  /**
+   * ADR-477 Slice 3 — Όρισε την κατηγορία εδάφους EC8 (A–E). Μη-έγκυρη/`undefined`
+   * → καθαρίζει (πέφτει στο default B στο read). Persist αν υπάρχει building.
+   */
+  setSeismicGroundType(groundType: SeismicGroundType | undefined): void;
+  /**
+   * ADR-477 Slice 3 — Όρισε τον λόγο επιτάχυνσης αναφοράς εδάφους a_gR/g. Μη-θετική/
+   * `undefined` → καθαρίζει (πέφτει στο default). Persist αν υπάρχει building.
+   */
+  setSeismicGroundAccelRatio(ratio: number | undefined): void;
+  /**
+   * ADR-479 — Εφάρμοσε built-in Structural Preset (Revit project template):
+   * αντικαθιστά ΟΛΑ τα building-level settings με το preset payload και persist-άρει.
+   * Idempotent· τα optional πεδία που λείπουν στο preset καθαρίζονται (default at read).
+   */
+  applyStructuralPreset(kind: StructuralPresetKind): void;
 }
 
 export const useStructuralSettingsStore = create<StructuralSettingsState>((set, get) => {
@@ -195,6 +220,40 @@ export const useStructuralSettingsStore = create<StructuralSettingsState>((set, 
     setOccupancy(occupancy) {
       if (get().occupancy === occupancy) return; // idempotent — no-op write
       set({ occupancy, lastLocalMutationAt: Date.now() });
+      const { currentBuildingId } = get();
+      if (currentBuildingId) debounceWrite(currentBuildingId, raw(get()));
+    },
+
+    setSeismicGroundType(groundType) {
+      const next = isSeismicGroundType(groundType) ? groundType : undefined;
+      if (get().seismicGroundType === next) return; // idempotent — no-op write
+      set({ seismicGroundType: next, lastLocalMutationAt: Date.now() });
+      const { currentBuildingId } = get();
+      if (currentBuildingId) debounceWrite(currentBuildingId, raw(get()));
+    },
+
+    setSeismicGroundAccelRatio(ratio) {
+      const next = isValidGroundAccelRatio(ratio) ? ratio : undefined;
+      if (get().seismicGroundAccelRatio === next) return; // idempotent — no-op write
+      set({ seismicGroundAccelRatio: next, lastLocalMutationAt: Date.now() });
+      const { currentBuildingId } = get();
+      if (currentBuildingId) debounceWrite(currentBuildingId, raw(get()));
+    },
+
+    applyStructuralPreset(kind) {
+      // resolve → κρατά το omit-when-absent invariant (Firestore-safe· ADR-390 Φ4).
+      const resolved = resolveStructuralSettings(buildStructuralSettingsForPreset(kind));
+      set({
+        codeId: resolved.codeId,
+        defaultConcreteGrade: resolved.defaultConcreteGrade,
+        soilBearingCapacityKpa: resolved.soilBearingCapacityKpa,
+        deadAreaLoadKpa: resolved.deadAreaLoadKpa,
+        liveAreaLoadKpa: resolved.liveAreaLoadKpa,
+        occupancy: resolved.occupancy,
+        seismicGroundType: resolved.seismicGroundType,
+        seismicGroundAccelRatio: resolved.seismicGroundAccelRatio,
+        lastLocalMutationAt: Date.now(),
+      });
       const { currentBuildingId } = get();
       if (currentBuildingId) debounceWrite(currentBuildingId, raw(get()));
     },

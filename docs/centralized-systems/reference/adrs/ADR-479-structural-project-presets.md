@@ -1,0 +1,95 @@
+# ADR-479 — Structural Project Presets (Revit-grade templates) + reference cross-check
+
+**Status:** 🟢 Slice 1 DONE 2026-06-18 (Opus), UNCOMMITTED & jest-verified (33 tests GREEN: 21 cross-check + 12 store). 🔴 tsc-confirm (Giorgio full) + browser-verify (αν γίνει Slice 2 UI) + commit. DEFER: Slice 2 (UI preset selector), Slice 3 (persisted user/company presets — mirror `StairPresetsService`).
+**Discipline:** Δομοστατικά / Structural Engineering
+**Scope:** Μετατροπή των canonical structural defaults — μαζί με τις τιμές πραγματικής εγκεκριμένης μελέτης (STATICS 2025, Θέρμη 288/08, Κ1/Κ2/Κ3) — σε **named, applicable Structural Presets** που αρχικοποιούν τα building-level `StructuralSettings` (σαν Revit project template). + **cross-check regression test** που εγγυάται ότι τα engine defaults είναι συνεπή με την πραγματική μελέτη (το reference γίνεται ζωντανό συμβόλαιο). Συμπληρώνει ADR-456 (structural settings SSoT), ADR-474 (occupancy auto loads), ADR-477 (σεισμικές παράμετροι).
+
+---
+
+## 1. Context & Problem
+
+Κωδικοποιήσαμε 3 πραγματικά εγκεκριμένα τεύχη STATICS 2025 σε υβριδικό reference
+(`docs/centralized-systems/reference/structural-guides/`: MD οδηγός + JSON
+παραμέτρων). Ο Giorgio ζήτησε να γίνει **ενεργό, όπως οι μεγάλοι παίκτες (Revit)**:
+full enterprise + full SSoT.
+
+**Τι κάνει η Revit:** δεν κρατά μελέτες ως PDF — τις «σπάει» σε **Project Template
+(.rte)** που προ-φορτώνει defaults (υλικά, covers, φορτία, σεισμικά, συνδυασμούς)
+σε κάθε νέο έργο. Το τεύχος είναι το **OUTPUT** μιας μελέτης· το template το **INPUT**.
+(Η ιδιομορφική/σεισμική ανάλυση = Robot Structural Analysis — εκτός scope, βλ. §5.)
+
+**Εύρημα έρευνας (100% ειλικρίνεια):** το `StructuralSettings` (ADR-456) **ήδη** έχει
+όλα τα απαραίτητα πεδία (`codeId, defaultConcreteGrade, occupancy, seismicGroundType,
+seismicGroundAccelRatio, soilBearingCapacityKpa, ...`) + SSoT normalizer
+`resolveStructuralSettings`. Δεν υπήρχε όμως **κανένα** named preset/template — μόνο
+το γυμνό `DEFAULT_STRUCTURAL_SETTINGS`. Επίσης οι τιμές της μελέτης κουμπώνουν 1:1 με
+τα engine defaults (C25/30, B500C, residential q=2.0, ground B, a_gR 0.16, ULS
+1.35/1.50) — επομένως ένα preset = **σύνθεση** υπαρχόντων SSoT, ΟΧΙ re-hardcode.
+
+---
+
+## 2. Decision
+
+Νέο `bim/structural/presets/` module + store apply action + cross-check test.
+**Αρχή SSoT:** το engine ορίζει τις τιμές (providers/constants)· το preset τις
+**συνθέτει**· το test γεφυρώνει engine ↔ πραγματική μελέτη.
+
+### Slice 1 — preset SSoT + apply + cross-check (✅ DONE)
+
+| Αλλαγή | Αρχείο | Τι κάνει |
+|---|---|---|
+| **NEW** `THERMI_288_08: StaticReportReference` (frozen) | `bim/structural/presets/reference-static-report.ts` | machine SSoT της πραγματικής μελέτης — υλικά/φορτία/σεισμικά/έδαφος/επικαλύψεις/ιδιοπεριόδους Κ1-Κ3 |
+| **NEW** `StructuralPresetKind`, `StructuralPresetDefinition` (+ DEFER scope/doc types) | `bim/structural/presets/structural-preset-types.ts` | τύποι preset· persisted scope types δηλωμένα έτοιμα για Slice 3 |
+| **NEW** `buildStructuralSettingsForPreset(kind)`, `STRUCTURAL_PRESET_DEFINITIONS`, `STRUCTURAL_PRESET_ORDER`, `isStructuralPresetKind` | `bim/structural/presets/structural-preset-defaults.ts` | pure factory (mirror `buildDefaultVariantFor`)· συνθέτει `greekRcSettings(codeId)` από `THERMI_288_08` + `DEFAULT_STRUCTURAL_SETTINGS` |
+| **NEW** barrel | `bim/structural/presets/index.ts` | exports |
+| **NEW** cross-check + docs-sync + preset test (22) | `bim/structural/presets/__tests__/reference-static-report.test.ts` | equality (engine==μελέτη), `engineMin ≤ study` covers (2 providers via public limits API), preset correctness, docs JSON ↔ code sync guard, `it.todo` ψ1/ψ2 gap |
+| `setSeismicGroundType/AccelRatio` (missing setters) + **`applyStructuralPreset(kind)`** | `state/structural-settings-store.ts` | apply preset = resolve→set all fields→debounced persist (reuse υπάρχον path· omit-when-absent invariant) |
+| store test +6 | `state/__tests__/structural-settings-store.test.ts` | σεισμικοί setters + apply preset (state + persist) |
+| docs SSoT note | `structural-guides/{README.md, static-report-reference-parameters.json}` | «machine SSoT = `reference-static-report.ts`· JSON = human mirror, guarded από test» |
+
+**Built-in presets:** `greek-rc-ec8` (eurocode + τιμές Θέρμη), `greek-rc-legacy`
+(ΕΚΩΣ-ΕΑΚ, ίδιες φυσικές τιμές, μόνο `codeId` αλλάζει), `blank` (= defaults).
+
+### Slice 2 — UI preset selector (DEFER)
+Dropdown στο structural-settings panel / FloorsTab modal → `applyStructuralPreset(kind)`.
+i18n keys (`structural.preset.*`) ήδη ορισμένα στα labelKeys· locales EL+EN πρώτα (N.11).
+
+### Slice 3 — persisted user/company presets (DEFER)
+Mirror `StairPresetsService` (scope user/company/project, Firestore
+`companies/{id}/structural_presets/{id}`, enterprise IDs). Types δηλωμένα έτοιμα.
+
+---
+
+## 3. SSoT map (μηδέν διπλότυπο)
+
+| Τιμή | SSoT (single owner) | Consumers |
+|---|---|---|
+| Concrete grade | `DEFAULT_CONCRETE_GRADE` (concrete-grades) | preset, μελέτη reference, test |
+| Occupancy q_k | `OCCUPANCY_IMPOSED_KPA` (occupancy-loads) | preset (via THERMI), test |
+| Σεισμικά defaults | `DEFAULT_SEISMIC_*` (seismic-params) | preset, store setters, test |
+| ULS factors | `EN1990_ULS_FACTORS` (load-combinations) | providers, test |
+| Covers (code-min) | provider `*ReinforcementLimits().nominalCoverMm` | test (≤ study) |
+| Settings normalize | `resolveStructuralSettings` (structural-settings) | store apply, loadForBuilding |
+| Τιμές μελέτης | `THERMI_288_08` (reference-static-report) | preset factory, test, docs JSON mirror |
+
+**Insight (Revit-grade):** οι επικαλύψεις της μελέτης (col/beam 35, slab 30, found 60)
+είναι **≥** τα code minima των providers (30/30/25/50) — σχέση `engineMin ≤ study`.
+Σωστό: η μελέτη επιλέγει cover ≥ ελάχιστο. Το test το επιβάλλει (όχι equality).
+
+## 4. Documented gap
+ψ1/ψ2 (frequent/quasi-permanent, ψ1=0.5, ψ2=0.3 στη μελέτη) ΔΕΝ υπάρχουν στο engine
+(μόνο θεμελιώδης συνδυασμός 6.10). `it.todo` στο test. Robot-equivalent gap.
+
+## 5. Verification
+- `npx jest reference-static-report structural-settings-store` → 33 GREEN (21+12).
+- tsc: targeted clean (jest ts compile passed)· full = Giorgio (N.17).
+- Browser (Slice 2 only): preset «Ελληνικό RC (EC8)» → panel C25/30/eurocode/ground B/soil 150· persist+reload κρατά.
+
+---
+
+## Changelog
+- **2026-06-18 (Opus):** Slice 1 — preset SSoT (`reference-static-report.ts`,
+  `structural-preset-{types,defaults}.ts`, index), `applyStructuralPreset` +
+  σεισμικοί setters στο store, cross-check regression test (22) + store test (+6),
+  docs SSoT note. 33 jest GREEN. UNCOMMITTED. ADR-478 ήταν πιασμένο (Wall Line-Loads)
+  → renumbered ADR-479.

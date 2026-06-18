@@ -85,4 +85,62 @@ describe('structural-settings-store', () => {
     expect(mockedSave).not.toHaveBeenCalled();
     jest.useRealTimers();
   });
+
+  // ── ADR-477 Slice 3 — σεισμικοί setters ────────────────────────────────────
+
+  it('setSeismicGroundType έγκυρο/άκυρο', () => {
+    useStructuralSettingsStore.getState().setSeismicGroundType('D');
+    expect(useStructuralSettingsStore.getState().seismicGroundType).toBe('D');
+    useStructuralSettingsStore.getState().setSeismicGroundType('bogus' as never);
+    expect(useStructuralSettingsStore.getState().seismicGroundType).toBeUndefined();
+  });
+
+  it('setSeismicGroundAccelRatio θετικό/μη-θετικό', () => {
+    useStructuralSettingsStore.getState().setSeismicGroundAccelRatio(0.24);
+    expect(useStructuralSettingsStore.getState().seismicGroundAccelRatio).toBe(0.24);
+    useStructuralSettingsStore.getState().setSeismicGroundAccelRatio(0);
+    expect(useStructuralSettingsStore.getState().seismicGroundAccelRatio).toBeUndefined();
+  });
+
+  // ── ADR-479 — applyStructuralPreset (Revit project template) ───────────────
+
+  it('applyStructuralPreset(greek-rc-ec8) θέτει όλα τα building settings', () => {
+    useStructuralSettingsStore.getState().applyStructuralPreset('greek-rc-ec8');
+    const s = useStructuralSettingsStore.getState();
+    expect(s.codeId).toBe('eurocode');
+    expect(s.defaultConcreteGrade).toBe('C25/30');
+    expect(s.occupancy).toBe('residential');
+    expect(s.seismicGroundType).toBe('B');
+    expect(s.seismicGroundAccelRatio).toBe(0.16);
+    expect(s.soilBearingCapacityKpa).toBe(150);
+  });
+
+  it('applyStructuralPreset(greek-rc-legacy) αλλάζει μόνο τον κανονισμό', () => {
+    useStructuralSettingsStore.getState().applyStructuralPreset('greek-rc-legacy');
+    expect(useStructuralSettingsStore.getState().codeId).toBe('greek-legacy');
+    expect(useStructuralSettingsStore.getState().seismicGroundType).toBe('B');
+  });
+
+  it('applyStructuralPreset(blank) καθαρίζει τα optional πεδία', () => {
+    useStructuralSettingsStore.getState().applyStructuralPreset('greek-rc-ec8');
+    useStructuralSettingsStore.getState().applyStructuralPreset('blank');
+    const s = useStructuralSettingsStore.getState();
+    expect(s.codeId).toBe('eurocode');
+    expect(s.occupancy).toBeUndefined();
+    expect(s.seismicGroundType).toBeUndefined();
+    expect(s.soilBearingCapacityKpa).toBeUndefined();
+  });
+
+  it('applyStructuralPreset με building → persist (debounced)', async () => {
+    jest.useFakeTimers();
+    useStructuralSettingsStore.getState().loadForBuilding('bld-preset', null);
+    useStructuralSettingsStore.getState().applyStructuralPreset('greek-rc-ec8');
+    jest.advanceTimersByTime(600);
+    await flushMicrotasks();
+    expect(mockedSave).toHaveBeenCalledWith(
+      'bld-preset',
+      expect.objectContaining({ codeId: 'eurocode', seismicGroundType: 'B', soilBearingCapacityKpa: 150 }),
+    );
+    jest.useRealTimers();
+  });
 });

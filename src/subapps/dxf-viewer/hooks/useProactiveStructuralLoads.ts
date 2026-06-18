@@ -54,12 +54,16 @@ const PROACTIVE_LOAD_EVENTS: readonly DrawingEventType[] = [
   'bim:column-params-updated', // grip-resize / ribbon edit (διατομή → tributary)
   'bim:beam-params-updated',
   'bim:slab-params-updated', // ADR-476 — αλλαγή πλάκας → re-derive tributary/area load
+  'bim:wall-params-updated', // ADR-478 — πάχος/υλικό/ύψος τοίχου → re-derive γραμμικό φορτίο δοκού
   'bim:entities-moved', // drag-move → re-derive tributary
   'bim:column-delete-requested',
   'bim:beam-delete-requested',
+  'bim:wall-delete-requested', // ADR-478 — αφαίρεση τοίχου → μειώνεται το φορτίο δοκού
   'bim:columns-from-grid',
   'bim:beams-from-grid',
   'bim:foundations-from-grid',
+  'bim:walls-from-grid', // ADR-478 — batch τοίχοι από κάναβο
+  'bim:walls-from-perimeter', // ADR-478 — batch τοίχοι από περίμετρο
 ];
 
 /**
@@ -71,6 +75,7 @@ const GEOMETRY_EDIT_TRIGGERS: ReadonlySet<DrawingEventType> = new Set([
   'drawing:entity-created',
   'bim:column-params-updated',
   'bim:beam-params-updated',
+  'bim:wall-params-updated', // ADR-478 — atomic undo group με το user wall-edit command
   'bim:entities-moved',
 ]);
 

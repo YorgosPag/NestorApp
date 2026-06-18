@@ -1,0 +1,212 @@
+{
+  "$schema": "./static-report-reference-parameters.schema.json",
+  "meta": {
+    "title": "Παράμετροι αναφοράς στατικής μελέτης — Θέρμη 288/08",
+    "description": "Machine-consumable παράμετροι εξαγμένες από τα τεύχη στατικών υπολογισμών STATICS 2025 (κτίρια Κ1, Κ2, Κ3). Χρησιμεύουν ως πραγματικό worked-example reference για τη μηχανή auto-reinforcement (bim/structural) και ως cross-check έναντι Eurocode/Greek-legacy providers.",
+    "machineSourceOfTruth": "src/subapps/dxf-viewer/bim/structural/presets/reference-static-report.ts (THERMI_288_08). Αυτό το JSON είναι human-readable mirror — guarded έναντι του code SSoT από το reference-static-report.test.ts (ADR-479). Αλλαγή τιμής → ενημέρωσε ΚΑΙ τα δύο, αλλιώς το test σπάει.",
+    "source": {
+      "software": "STATICS 2025",
+      "documents": [
+        "ΤΕΥΧΟΣ -k1.pdf (196 σελ.)",
+        "ΤΕΥΧΟΣ -k2.pdf (258 σελ.)",
+        "ΤΕΥΧΟΣ - k3.pdf (261 σελ.)"
+      ],
+      "project": "2η Αναθεώρηση της 288/08 οικ. αδείας",
+      "location": "ΟΔΟΣ ΕΛΕΥΘΕΡΙΑΣ & ΕΛΠΙΔΟΣ, ΟΤ Γ142, Δ.Ε. ΘΕΡΜΗΣ — ΔΗΜΟΣ ΘΕΡΜΗΣ, Π.Ε. ΘΕΣ/ΝΙΚΗΣ",
+      "engineer": "ΓΡΗΓΟΡΙΟΣ ΠΑΓΩΝΗΣ — ΠΟΛΙΤΙΚΟΣ ΜΗΧΑΝΙΚΟΣ",
+      "owner": "ΠΑΓΩΝΗΣ ΕΝΕΡΓΕΙΑΚΗ ΚΑΤΑΣΚΕΥΑΣΤΙΚΗ Α.Ε.",
+      "permitDate": "2026-01-29",
+      "extractedOn": "2026-06-18"
+    },
+    "units": {
+      "length": "m (στους πίνακες μελών) / mm (επικαλύψεις, διάμετροι)",
+      "areaLoad": "kN/m²",
+      "volumeWeight": "kN/m³",
+      "modulus": "GPa (υλικά) / kN/m² (έδαφος)",
+      "rebarArea": "cm² (στήλη As)"
+    }
+  },
+
+  "shared": {
+    "_note": "Ταυτόσημες παραδοχές και στα 3 κτίρια. Διαφέρουν ΜΟΝΟ οι ιδιοπερίοδοι (βλ. buildings[].dynamics).",
+
+    "materials": {
+      "concrete": {
+        "grade": "C25/30",
+        "elasticModulusGPa": 31.0
+      },
+      "steel": {
+        "longitudinalGrade": "B500C",
+        "stirrupGrade": "B500C",
+        "elasticModulusGPa": 200.0
+      }
+    },
+
+    "permanentLoads": {
+      "reinforcedConcreteUnitWeightKnM3": 25.0,
+      "floorFinishKnM2": 1.20,
+      "roofFinishKnM2": 1.20,
+      "brickworkSolidKnM2": 3.60,
+      "brickworkPerforatedKnM2": 2.10
+    },
+
+    "liveLoads": {
+      "residentialKnM2": 2.00,
+      "shopsKnM2": 5.00,
+      "balconiesKnM2": 5.00,
+      "roofKnM2": 1.50,
+      "stairsKnM2": 3.50
+    },
+
+    "seismic": {
+      "country": "ΕΛΛΑΔΑ",
+      "hazardZone": "I",
+      "groundAccelerationAgRatio": 0.16,
+      "importanceFactorGammaI": 1.00,
+      "ductilityClass": "ΚΠΜ (Μέση πλαστιμότητα / DCM)",
+      "behaviourFactor": { "qx": 2.00, "qy": 2.00 },
+      "liveLoadCombinationFactors": { "psi1": 0.50, "psi2": 0.30 },
+      "soilCategory": "B",
+      "spectrumParameters": { "S": 1.20, "Tb": 0.15, "Tc": 0.50, "Td": 2.50 }
+    },
+
+    "soil": {
+      "type": "αργιλώδες",
+      "undrainedShearStrengthSuKnM2": 70,
+      "allowableBearingPressureKnM2": 150,
+      "elasticModulusKnM2": 50000
+    },
+
+    "durability": {
+      "exposureClassExternal": "XC3",
+      "exposureClassInternal": "XC3",
+      "concreteCoverMm": {
+        "slabs": 30,
+        "beams": 35,
+        "columns": 35,
+        "foundations": 60
+      }
+    },
+
+    "analysis": {
+      "model": "Χωρικό πλαίσιο, 6 βαθμοί ελευθερίας ανά ελεύθερο κόμβο (Μέθοδος Μετακινήσεων)",
+      "matrixSolver": "Cholesky — Skyline",
+      "memberStiffnessStage": "Στάδιο ΙΙ — δυσκαμψίες ίσες με το ήμισυ των αρηγμάτωτων (EC απαίτηση)",
+      "verticalLoadIdealization": "DIN 1045",
+      "slabMethod": "Czerny",
+      "slabReactionsDistribution": "DIN 1045 — γεωμετρικός μερισμός επιφανειών φόρτισης στις περιμετρικές δοκούς",
+      "seismicMethodModal": {
+        "modeCountFormula": "EC8 §4.3.3.3.1, τύποι 4.14a/4.14b",
+        "modalCombination": "CQC (πλήρης τετραγωνική επαλληλία)",
+        "directionalCombination": "Newmark — ±1.0·Xx ±0.3·Xy και ±0.3·Xx ±1.0·Xy"
+      },
+      "massSource": "M = (G + ψ2·Q) / 9.81",
+      "foundationModel": "Winkler (ελατήρια, δείκτης εδάφους Κ) για πεδιλοδοκούς/κοιτοστρώσεις",
+      "basementWallModel": "Χιαστί άκαμπτες ράβδοι (Statics προσομοίωση τοιχωμάτων)"
+    },
+
+    "designCombinations": {
+      "ulsStatic": "Sd = 1.35·G + 1.50·Q",
+      "seismic": "Sd = G + ψ2·Q ± E(G + φ·ψ2·Q)",
+      "psi2Reference": "EN 1990:2002, Παράρτημα A1",
+      "phiReference": "EN 1998-1:2004 §4.2.4",
+      "foundationCapacityDesign": "Efd = Efg + γRd·Ω·Efe (EC8 §4.4.2.6, σχέση 4.30)",
+      "columnCombinationSet": [
+        "1: 1.35·G + 1.50·Q",
+        "2-9: G + ψ2·Q + n·(±Σx1/Σy1 με ±0.30 ετεροδιεύθυνση) — 1η ομάδα ιδιομορφών",
+        "10-17: G + ψ2·Q + n·(±Σx2/Σy2 με ±0.30 ετεροδιεύθυνση) — 2η ομάδα ιδιομορφών",
+        "18: G + Q",
+        "19: G + 0.30·Q"
+      ]
+    },
+
+    "codes": [
+      { "code": "ΕΚ0", "en": "EN 1990", "scope": "Βάσεις σχεδιασμού δομημάτων" },
+      { "code": "ΕΚ1", "en": "EN 1991-1-1", "scope": "Δράσεις — πυκνότητες, ίδια βάρη, επιβαλλόμενα φορτία" },
+      { "code": "ΕΚ1", "en": "EN 1991-1-3", "scope": "Δράσεις — φορτία χιονιού" },
+      { "code": "ΕΚ1", "en": "EN 1991-1-4", "scope": "Δράσεις — δράσεις ανέμου" },
+      { "code": "ΕΚ2", "en": "EN 1992-1-1", "scope": "Σχεδιασμός κατασκευών από σκυρόδεμα" },
+      { "code": "ΕΚ3", "en": "EN 1993-1-1", "scope": "Σχεδιασμός κατασκευών από χάλυβα" },
+      { "code": "ΕΚ3", "en": "EN 1993-1-8", "scope": "Σχεδιασμός κόμβων χάλυβα" },
+      { "code": "ΕΚ4", "en": "EN 1994-1-1", "scope": "Σύμμικτες κατασκευές χάλυβα-σκυροδέματος" },
+      { "code": "ΕΚ5", "en": "EN 1995-1-1", "scope": "Ξύλινες κατασκευές" },
+      { "code": "ΕΚ6", "en": "EN 1996-1-1", "scope": "Κατασκευές από τοιχοποιία" },
+      { "code": "ΕΚ7", "en": "EN 1997-1", "scope": "Γεωτεχνικός σχεδιασμός" },
+      { "code": "ΕΚ8", "en": "EN 1998-1", "scope": "Αντισεισμικός σχεδιασμός — γενικοί κανόνες" },
+      { "code": "ΕΚ8", "en": "EN 1998-3", "scope": "Αντισεισμικός — αποτίμηση & επεμβάσεις" }
+    ],
+    "nationalAnnex": "Εθνικά Προσαρτήματα — ΦΕΚ 2692 / 31-12-2008",
+
+    "generalChecks": [
+      "Αποφυγή μηχανισμού ορόφου",
+      "Επάρκεια και καλή τοποθέτηση τοιχωμάτων",
+      "Επιρροές 2ας τάξεως",
+      "Αποφυγή ψαθυρών μορφών διατμητικής αστοχίας",
+      "Ευστρεψία ορόφων",
+      "Περίσφιξη υποστυλωμάτων",
+      "Έλεγχος κοντού υποστυλώματος"
+    ],
+
+    "foundationChecks": {
+      "inactiveAreaLimit": "Αδρανής επιφάνεια πεδίλου ≤ 50% της συνολικής",
+      "eccentricityRectangular": "εx² + εy² < 1/9 (γενικά), < 1/16 (σεισμικά ευπαθή εδάφη)"
+    }
+  },
+
+  "buildings": [
+    {
+      "id": "K1",
+      "studyCode": "XL-PAGONIS-K1",
+      "use": "ΠΟΛΥΚΑΤΟΙΚΙΑ",
+      "constructionType": "ΚΟΙΝΗ — φέρων οργανισμός από οπλισμένο σκυρόδεμα",
+      "futureFloorsProvision": 0,
+      "documentPages": 196,
+      "dynamics": {
+        "naturalPeriodTxSec": 0.32,
+        "naturalPeriodTySec": 0.36,
+        "designSpectrumSdx": 2.35,
+        "designSpectrumSdy": 2.35
+      }
+    },
+    {
+      "id": "K2",
+      "studyCode": "XL-PAGONIS-K2",
+      "use": "ΠΟΛΥΚΑΤΟΙΚΙΑ",
+      "constructionType": "ΚΟΙΝΗ — φέρων οργανισμός από οπλισμένο σκυρόδεμα",
+      "futureFloorsProvision": 0,
+      "documentPages": 258,
+      "dynamics": {
+        "naturalPeriodTxSec": 0.35,
+        "naturalPeriodTySec": 0.31,
+        "designSpectrumSdx": 2.35,
+        "designSpectrumSdy": 2.35
+      }
+    },
+    {
+      "id": "K3",
+      "studyCode": "XL-PAGONIS-K3",
+      "use": "ΠΟΛΥΚΑΤΟΙΚΙΑ",
+      "constructionType": "ΚΟΙΝΗ — φέρων οργανισμός από οπλισμένο σκυρόδεμα",
+      "futureFloorsProvision": 0,
+      "documentPages": 261,
+      "dynamics": {
+        "naturalPeriodTxSec": 0.36,
+        "naturalPeriodTySec": 0.35,
+        "designSpectrumSdx": 2.35,
+        "designSpectrumSdy": 2.35
+      },
+      "exampleColumnDimensioning": {
+        "_legend": "Στήλες πίνακα ΔΙΑΣΤΑΣΙΟΛΟΓΗΣΗ ΥΠΟΣΤΥΛΩΜΑΤΩΝ (βλ. guide §6)",
+        "columns": "ΣΤ ΥΠ ΤΑ dx dy h vds vde As κ.οπλ π.οπλ ε.οπλ συνδ. 2x#Τχ ΔΣΦ",
+        "sampleRows": [
+          { "story": 2, "column": 1, "dxCm": 25, "dyCm": 64, "heightM": 1.40, "asCm2": 6.8, "cornerBars": "4Φ16", "sideBars": "4Φ14", "stirrups": "Φ8/15" },
+          { "story": 2, "column": 14, "dxCm": 50, "dyCm": 25, "heightM": 1.40, "asCm2": 6.3, "cornerBars": "4Φ16", "sideBars": "4Φ14", "midBars": "4Φ14", "stirrups": "Φ8/15" }
+        ]
+      },
+      "exampleMaterialTakeoff": {
+        "reinforcementRatioKgPerM3": 88.6,
+        "totals": { "steelTn": 21.63, "concreteM3": 244.1, "formworkM2": 1558, "slabAreaM2": 580 }
+      }
+    }
+  ]
+}

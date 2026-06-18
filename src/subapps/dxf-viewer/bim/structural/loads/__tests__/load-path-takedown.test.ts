@@ -15,6 +15,7 @@ import { ComputeLoadPathCommand } from '../../../../core/commands/entity-command
 import { computeFootingTakedownLoads } from '../../footing-design/footing-load-takedown';
 import { isColumnEntity, type Entity } from '../../../../types/entities';
 import type { AppliedMemberLoad } from '../structural-loads-types';
+import { resolveWallLineLoadKnm } from '../wall-line-loads';
 import { DEFAULT_BAY_SPAN_M } from '../load-takedown';
 import type {
   StructuralEdge,
@@ -229,6 +230,51 @@ describe('grid-anchored tributary (corner-anchored 5×5 columns)', () => {
     // Κεντροειδή 4.6m μεταξύ τους → γωνιακό half-bay 2.3 ανά άξονα → 5.29 m².
     expect(c?.liveAxialKn).toBeCloseTo(5.29 * 4 * 2, 0);         // ~42.3 (centroid)
     expect(c!.liveAxialKn).toBeLessThan(6.25 * 4 * 2);           // < grid → fallback ενεργό
+  });
+});
+
+// ─── ADR-478 — wall masonry line-loads on beams ──────────────────────────────
+
+/** Πλήρες δοκάρι (startPoint/endPoint) ώστε να παράγεται footprint outline. */
+function fullBeam(id: string, x0: number, x1: number, volumeM3 = 0.625): Entity {
+  return {
+    id, type: 'beam', kind: 'rectangular',
+    params: {
+      kind: 'rectangular',
+      startPoint: { x: x0, y: 0, z: 0 }, endPoint: { x: x1, y: 0, z: 0 },
+      width: 250, depth: 500, topElevation: 3000, zOffset: 0, sceneUnits: 'mm',
+    },
+    geometry: { volume: volumeM3, length: Math.abs(x1 - x0) / 1000 },
+  } as unknown as Entity;
+}
+
+/** Τοιχοποιία (τούβλο core) κατά X· geometry.length = μήκος (m). */
+function masonryWall(id: string, x0: number, x1: number): Entity {
+  return {
+    id, type: 'wall', kind: 'straight',
+    params: {
+      start: { x: x0, y: 0, z: 0 }, end: { x: x1, y: 0, z: 0 },
+      height: 3000, thickness: 250, material: 'mat-brick-masonry', baseBinding: 'storey-floor',
+    },
+    geometry: { length: Math.abs(x1 - x0) / 1000 },
+  } as unknown as Entity;
+}
+
+describe('ADR-478 — γραμμικό φορτίο τοιχοποιίας στη φέρουσα δοκό', () => {
+  const graph: StructuralGraph = {
+    nodes: [gNode('c1', 'column'), gNode('c2', 'column'), gNode('b1', 'beam')],
+    edges: [gEdge('c1', 'b1', 'column-bearing'), gEdge('c2', 'b1', 'column-bearing')],
+  };
+
+  it('τοίχος πάνω σε δοκό → +deadAxialKn = lineLoad × καλυμμένο μήκος (live αμετάβλητο)', () => {
+    const base = [column('c1', 0, 0), column('c2', 5000, 0), fullBeam('b1', 0, 5000)];
+    const wall = masonryWall('w1', 1000, 4000); // 3m πλήρως εντός δοκού
+    const without = patchById(computeLoadPathPatches(base, graph, SETTINGS), 'b1');
+    const withWall = patchById(computeLoadPathPatches([...base, wall], graph, SETTINGS), 'b1');
+    const lineLoad = resolveWallLineLoadKnm({ thickness: 250, material: 'mat-brick-masonry', height: 3000 });
+    expect(withWall!.deadAxialKn - without!.deadAxialKn).toBeCloseTo(lineLoad * 3, 3);
+    expect(withWall!.liveAxialKn).toBeCloseTo(without!.liveAxialKn, 6); // τοιχοποιία = μόνο G
+    expect(withWall!.source).toBe('takedown');
   });
 });
 
