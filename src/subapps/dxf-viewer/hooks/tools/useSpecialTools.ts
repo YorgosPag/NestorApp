@@ -49,6 +49,8 @@ import { addWallToScene } from '../../bim/walls/add-wall-to-scene';
 import { useWallAutoTyping } from '../../bim/family-types/useWallAutoTyping';
 import { addColumnToScene } from '../../bim/columns/add-column-to-scene';
 import { addFoundationToScene } from '../../bim/foundations/add-foundation-to-scene';
+import type { FoundationWriteScope } from '../../bim/foundations/foundation-cross-level-writer';
+import { useAuth } from '@/auth/hooks/useAuth';
 // ADR-397 — slab / roof / beam draw delegate to the `appendEntityToScene` SSoT.
 // Column draw + Ctrl-copy go through `addColumnToScene` (same SSoT, 'column' tag).
 import { appendEntityToScene } from '../../bim/scene/append-entity-to-scene';
@@ -106,6 +108,9 @@ export interface UseSpecialToolsReturn extends SelectionToolsReturn, PlacementTo
  */
 export function useSpecialTools(props: UseSpecialToolsProps): UseSpecialToolsReturn {
   const { activeTool, levelManager } = props;
+  // ADR-484 — auth scope για το Revit-canonical foundation level redirect
+  // (πέδιλα πάντα στον foundation level μέσω cross-level writer όταν ο ενεργός διαφέρει).
+  const { user } = useAuth();
   // ADR-358 Phase 9 — Q17 floor link source for the stair tool. Any populated
   // `floorId` on the save context activates the bridge; the builder seeds
   // `multiStoryConfig.storyHeight` (mm) from the floor `height` (m) at commit
@@ -307,7 +312,14 @@ export function useSpecialTools(props: UseSpecialToolsProps): UseSpecialToolsRet
   // (shared `appendEntityToScene` SSoT, 'foundation' tag).
   const foundationTool = useFoundationTool({
     currentLevelId: levelManager.currentLevelId || '0',
-    onFoundationCreated: (foundationEntity) => addFoundationToScene(foundationEntity, levelManager),
+    onFoundationCreated: (foundationEntity) => {
+      const scope: FoundationWriteScope = {
+        companyId: user?.companyId,
+        projectId: levelManager.levels.find((l) => l.id === levelManager.currentLevelId)?.projectId,
+        userId: user?.uid,
+      };
+      addFoundationToScene(foundationEntity, levelManager, scope);
+    },
     getSceneUnits: () => {
       const levelId = levelManager.currentLevelId;
       if (!levelId) return 'mm';

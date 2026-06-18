@@ -21,6 +21,7 @@ import { HeatLoadOverlay } from './HeatLoadOverlay';
 import { PipeSizingOverlay } from './PipeSizingOverlay';
 import { HydraulicBalancingOverlay } from './HydraulicBalancingOverlay';
 import { StructuralDiagramOverlay } from './StructuralDiagramOverlay';
+import { StructuralUtilizationOverlay } from './StructuralUtilizationOverlay';
 import type { ViewTransform, Viewport } from '../../rendering/types/Types';
 
 export interface CanvasLayerStack2DOverlaysProps {
@@ -54,9 +55,15 @@ export function CanvasLayerStack2DOverlays({ transform, viewport }: CanvasLayerS
           Read-only, pointer-events-none. Self-gated to showBalancing && mode==='2d'.
           STAGE ADR-040. */}
       <HydraulicBalancingOverlay transform={transform} viewport={viewport} />
-      {/* ADR-483 T3-UI Slice 4 — static-analysis moment diagrams ανά δοκάρι
-          (Robot/Revit results overlay). Read-only, pointer-events-none. Self-gated
-          to showAnalysisDiagrams && mode==='2d'. STAGE ADR-040. */}
+      {/* ADR-485 T3-UI Slice 4c — reinforcement-utilization fill (As,req/As,prov)
+          ανά φέρον μέλος + υπόμνημα. Read-only, pointer-events-none. Self-gated
+          to showUtilization && mode==='2d'. Πριν τα διαγράμματα ώστε το γέμισμα να
+          μένει κάτω από τις καμπύλες. STAGE ADR-040. */}
+      <StructuralUtilizationOverlay transform={transform} viewport={viewport} />
+      {/* ADR-483 T3-UI Slice 4/4b — static-analysis M/V/N diagrams ανά δοκάρι +
+          ζώνες T/C + βέλη φορτίου (Robot/Revit results overlay). Read-only,
+          pointer-events-none. Self-gated to showAnalysisDiagrams && mode==='2d'.
+          STAGE ADR-040. */}
       <StructuralDiagramOverlay transform={transform} viewport={viewport} />
     </>
   );

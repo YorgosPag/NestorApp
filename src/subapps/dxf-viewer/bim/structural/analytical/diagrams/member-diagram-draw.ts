@@ -22,13 +22,48 @@ import type { MemberDiagramPath, DiagramSample } from './member-diagram-geometry
 export interface DiagramDrawStyle {
   readonly stroke: string;
   readonly fill: string;
+  /**
+   * ADR-483 Slice 4b — όταν οριστεί, το γέμισμα **χωρίζεται στα zero-crossings**
+   * (ζώνες εφελκυσμού/θλίψης): θετικές τιμές → `fill` (θερμό, sagging → εφελκ.
+   * κάτω ίνα), αρνητικές → `fillNegative` (ψυχρό, hogging → εφελκ. άνω ίνα). Μόνο
+   * για ροπή — η V/N κρατά μονόχρωμο γέμισμα (`fill`).
+   */
+  readonly fillNegative?: string;
+}
+
+/** Επιλογές σχεδίασης διαγράμματος (ADR-483 Slice 4b). */
+export interface DiagramDrawOptions {
+  /**
+   * Caution (αστάθεια): αμπέρ **διακεκομμένη** καμπύλη χωρίς γέμισμα — οι τιμές του
+   * συνδυασμού είναι ύποπτες (singular K). Robot «unreliable results».
+   */
+  readonly dashed?: boolean;
+}
+
+/** Ετικέτες ζωνών εφελκυσμού (ADR-483 Slice 4b) — i18n από τον overlay (N.11). */
+export interface TensionZoneLabels {
+  /** Ζώνη θετικής ροπής (sagging) — εφελκυσμός κάτω ίνας. */
+  readonly tensionBottom: string;
+  /** Ζώνη αρνητικής ροπής (hogging) — εφελκυσμός άνω ίνας. */
+  readonly tensionTop: string;
 }
 
 const LABEL_FONT = '11px sans-serif';
+const ZONE_FONT = '10px sans-serif';
 const PILL_PAD_X = 5;
 const PILL_HEIGHT = 16;
 const CURVE_WIDTH = 1.25;
 const BASELINE_WIDTH = 0.75;
+/** Μήκος διακεκομμένης (caution) σε px. */
+const CAUTION_DASH: readonly number[] = [5, 4];
+/** Μικρή απόσταση (px) της ετικέτας ζώνης T/C από τον άξονα του μέλους. */
+const ZONE_LABEL_GAP_PX = 11;
+/**
+ * Οριζόντια μετατόπιση (κλάσμα μήκους) της ετικέτας ζώνης T/C **μακριά από την
+ * κορυφή** — εκεί κάθεται το value pill· έτσι «εφελκ. κάτω» δεν συμπίπτει με το
+ * «16,7 kNm». Μετατόπιση προς το πλησιέστερο άκρο (μένει εντός μέλους).
+ */
+const ZONE_LABEL_SHIFT_FRAC = 0.24;
 
 function lerp(a: Point2D, b: Point2D, t: number): Point2D {
   return { x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t };
@@ -74,9 +109,66 @@ function buildSmoothThrough(ctx: CanvasRenderingContext2D, pts: readonly Point2D
   ctx.quadraticCurveTo(pts[i]!.x, pts[i]!.y, pts[i + 1]!.x, pts[i + 1]!.y);
 }
 
+/** Κλειστό τρίγωνο/τετράπλευρο γεμισμένο με `color` (T/C ζώνη — segment quad). */
+function fillPolygon(ctx: CanvasRenderingContext2D, points: readonly Point2D[], color: string): void {
+  ctx.beginPath();
+  ctx.moveTo(points[0]!.x, points[0]!.y);
+  for (let i = 1; i < points.length; i++) ctx.lineTo(points[i]!.x, points[i]!.y);
+  ctx.closePath();
+  ctx.fillStyle = color;
+  ctx.fill();
+}
+
+/** Μονόχρωμο γέμισμα (V/N): axis-start → ομαλή καμπύλη → axis-end → close. */
+function fillSingleRibbon(
+  ctx: CanvasRenderingContext2D, si: Point2D, sj: Point2D, pts: readonly Point2D[], color: string,
+): void {
+  ctx.beginPath();
+  ctx.moveTo(si.x, si.y);
+  ctx.lineTo(pts[0]!.x, pts[0]!.y);
+  buildSmoothThrough(ctx, pts);
+  ctx.lineTo(sj.x, sj.y);
+  ctx.closePath();
+  ctx.fillStyle = color;
+  ctx.fill();
+}
+
 /**
- * Σχεδίασε το διάγραμμα ενός μέλους: γέμισμα (άξονας→ομαλή καμπύλη→άξονας) +
- * καμπύλη + baseline. `si`/`sj` = άκρα i/j σε οθόνη· `pxScale` = px ανά μονάδα τιμής.
+ * Γέμισμα ζωνών T/C (ροπή): ανά τμήμα μεταξύ διαδοχικών σταθμών, quad
+ * [baseA, ptA, ptB, baseB] με χρώμα ανά πρόσημο· σε zero-crossing σπάει στον άξονα
+ * (όπου value=0 → offset=base) σε δύο τρίγωνα. `posColor` = εφελκ. κάτω, `negColor` = άνω.
+ */
+function fillSignedRibbon(
+  ctx: CanvasRenderingContext2D, si: Point2D, sj: Point2D,
+  pts: readonly Point2D[], samples: readonly DiagramSample[], posColor: string, negColor: string,
+): void {
+  for (let k = 0; k < pts.length - 1; k++) {
+    const a = samples[k]!, b = samples[k + 1]!;
+    const baseA = lerp(si, sj, a.f), baseB = lerp(si, sj, b.f);
+    if (a.value >= 0 && b.value >= 0) { fillPolygon(ctx, [baseA, pts[k]!, pts[k + 1]!, baseB], posColor); continue; }
+    if (a.value <= 0 && b.value <= 0) { fillPolygon(ctx, [baseA, pts[k]!, pts[k + 1]!, baseB], negColor); continue; }
+    const t = Math.abs(a.value) / (Math.abs(a.value) + Math.abs(b.value));
+    const baseCross = lerp(si, sj, a.f + (b.f - a.f) * t);
+    fillPolygon(ctx, [baseA, pts[k]!, baseCross], a.value >= 0 ? posColor : negColor);
+    fillPolygon(ctx, [baseCross, pts[k + 1]!, baseB], b.value >= 0 ? posColor : negColor);
+  }
+}
+
+/** Άξονας μέλους (baseline) — λεπτή ευθεία i→j. */
+function strokeBaseline(ctx: CanvasRenderingContext2D, si: Point2D, sj: Point2D, stroke: string): void {
+  ctx.beginPath();
+  ctx.moveTo(si.x, si.y);
+  ctx.lineTo(sj.x, sj.y);
+  ctx.strokeStyle = stroke;
+  ctx.lineWidth = BASELINE_WIDTH;
+  ctx.setLineDash([]);
+  ctx.stroke();
+}
+
+/**
+ * Σχεδίασε το διάγραμμα ενός μέλους: γέμισμα (μονόχρωμο ή ζώνες T/C ανά πρόσημο) +
+ * ομαλή καμπύλη + baseline. `si`/`sj` = άκρα i/j σε οθόνη· `pxScale` = px ανά μονάδα
+ * τιμής. `options.dashed` ⇒ caution: αμπέρ διακεκομμένη καμπύλη ΧΩΡΙΣ γέμισμα.
  */
 export function drawMemberDiagram(
   ctx: CanvasRenderingContext2D,
@@ -85,35 +177,79 @@ export function drawMemberDiagram(
   path: MemberDiagramPath,
   pxScale: number,
   style: DiagramDrawStyle,
+  options: DiagramDrawOptions = {},
 ): void {
   const normal = perpUnit(si, sj);
   const pts = path.samples.map((s) => offsetPoint(si, sj, normal, s, pxScale));
   if (pts.length === 0) return;
 
-  // Translucent ribbon: axis-start → smooth curve → axis-end → close.
-  ctx.beginPath();
-  ctx.moveTo(si.x, si.y);
-  ctx.lineTo(pts[0]!.x, pts[0]!.y);
-  buildSmoothThrough(ctx, pts);
-  ctx.lineTo(sj.x, sj.y);
-  ctx.closePath();
-  ctx.fillStyle = style.fill;
-  ctx.fill();
+  if (!options.dashed) {
+    if (style.fillNegative) fillSignedRibbon(ctx, si, sj, pts, path.samples, style.fill, style.fillNegative);
+    else fillSingleRibbon(ctx, si, sj, pts, style.fill);
+  }
 
-  // Smooth diagram curve.
+  // Smooth diagram curve (διακεκομμένη όταν caution).
   ctx.beginPath();
   ctx.moveTo(pts[0]!.x, pts[0]!.y);
   buildSmoothThrough(ctx, pts);
   ctx.strokeStyle = style.stroke;
   ctx.lineWidth = CURVE_WIDTH;
+  ctx.setLineDash(options.dashed ? [...CAUTION_DASH] : []);
   ctx.stroke();
+  ctx.setLineDash([]);
 
-  // Member axis baseline.
-  ctx.beginPath();
-  ctx.moveTo(si.x, si.y);
-  ctx.lineTo(sj.x, sj.y);
-  ctx.lineWidth = BASELINE_WIDTH;
-  ctx.stroke();
+  strokeBaseline(ctx, si, sj, style.stroke);
+}
+
+/** Ακραίο δείγμα δοθέντος προσήμου (max θετικό / min αρνητικό) ή null αν λείπει. */
+function signedExtremum(samples: readonly DiagramSample[], positive: boolean): DiagramSample | null {
+  let best: DiagramSample | null = null;
+  for (const s of samples) {
+    if (positive ? s.value > 0 : s.value < 0) {
+      if (!best || (positive ? s.value > best.value : s.value < best.value)) best = s;
+    }
+  }
+  return best;
+}
+
+/** Μικρή ετικέτα ζώνης T/C (χωρίς pill — ελαφριά), λίγο έξω από τον άξονα. */
+function drawZoneTag(ctx: CanvasRenderingContext2D, anchor: Point2D, outward: Point2D, text: string, color: string): void {
+  ctx.font = ZONE_FONT;
+  ctx.fillStyle = color;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(text, anchor.x + outward.x * ZONE_LABEL_GAP_PX, anchor.y + outward.y * ZONE_LABEL_GAP_PX);
+}
+
+/** f της ετικέτας ζώνης: μετατόπιση από την κορυφή προς το πλησιέστερο άκρο. */
+function zoneLabelF(peakF: number): number {
+  const shifted = peakF <= 0.5 ? peakF + ZONE_LABEL_SHIFT_FRAC : peakF - ZONE_LABEL_SHIFT_FRAC;
+  return Math.min(0.92, Math.max(0.08, shifted));
+}
+
+/**
+ * ADR-483 Slice 4b — ετικέτες ζωνών εφελκυσμού (μόνο ροπή): «εφελκ. κάτω» (θερμό) στη
+ * ζώνη θετικής ροπής, «εφελκ. άνω» (ψυχρό) στη ζώνη αρνητικής. Αγκυρώνονται στον
+ * **άξονα του μέλους** (όχι στην κορυφή της καμπύλης) + οριζόντια μετατόπιση από την
+ * κορυφή → **δεν συμπίπτουν με το value pill** (που κάθεται στην κορυφή). Κάτω-ίνα →
+ * κάτω από τη δοκό (screen-down)· άνω-ίνα → πάνω (screen-up), ανεξάρτητα προσανατολισμού.
+ */
+export function drawTensionZoneLabels(
+  ctx: CanvasRenderingContext2D,
+  si: Point2D,
+  sj: Point2D,
+  path: MemberDiagramPath,
+  labels: TensionZoneLabels,
+  posColor: string,
+  negColor: string,
+): void {
+  const normal = perpUnit(si, sj);
+  const down = normal.y >= 0 ? normal : { x: -normal.x, y: -normal.y };
+  const up = { x: -down.x, y: -down.y };
+  const pos = signedExtremum(path.samples, true);
+  const neg = signedExtremum(path.samples, false);
+  if (pos) drawZoneTag(ctx, lerp(si, sj, zoneLabelF(pos.f)), down, labels.tensionBottom, posColor);
+  if (neg) drawZoneTag(ctx, lerp(si, sj, zoneLabelF(neg.f)), up, labels.tensionTop, negColor);
 }
 
 /** Ετικέτα ακραίας τιμής σε pill, στη στάθμη μέγιστης |τιμής|. `unit` = SI σύμβολο. */

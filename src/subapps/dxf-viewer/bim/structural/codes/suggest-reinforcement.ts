@@ -143,7 +143,7 @@ function asMomentColumnMm2(ctx: ColumnSectionContext): number {
  * ~0 όταν σκυρόδεμα+ελάχιστη ροπή επαρκούν ⇒ ο ρ_min κυριαρχεί (μηδέν regression χωρίς
  * φορτίο). Biaxial / λυγηρότητα (§5.8) / ικανοτικός σεισμικός = DEFER (ADR-472 §4).
  */
-function asStrengthColumnMm2(ctx: ColumnSectionContext): number {
+export function asStrengthColumnMm2(ctx: ColumnSectionContext): number {
   const nEdKn = ctx.designAxialKn ?? 0;
   if (nEdKn <= 0) return 0;
   const fcd = concreteFcdMpa(ctx.concreteGrade ?? DEFAULT_CONCRETE_GRADE); // N/mm²
@@ -255,7 +255,7 @@ export function spanMomentDivisor(supportType: BeamSupportType): number {
  * Επιστρέφει 0 χωρίς γραμμικό φορτίο/άνοιγμα ⇒ ο ρ_min κυριαρχεί (μηδέν regression).
  * Χωρίς ανακατανομή ροπών / έλεγχο θλιβόμενης ζώνης (ADR-472 §4).
  */
-function asStrengthBeamMm2(ctx: BeamSectionContext, effectiveDepthMm: number): number {
+export function asStrengthBeamMm2(ctx: BeamSectionContext, effectiveDepthMm: number): number {
   const wEd = ctx.designLineLoadKnM ?? 0;
   if (wEd <= 0 || ctx.spanMm <= 0 || effectiveDepthMm <= 0) return 0;
   const spanM = ctx.spanMm / 1000;

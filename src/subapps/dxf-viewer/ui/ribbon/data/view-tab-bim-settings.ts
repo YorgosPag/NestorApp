@@ -192,6 +192,32 @@ const ANALYSIS_DIAGRAMS_BUTTON: RibbonButton = {
   },
 };
 
+/** ADR-483 Slice 4b — Μ/V/N diagram-component selector (Robot M/V/N switch). */
+const DIAGRAM_COMPONENT_BUTTON: RibbonButton = {
+  type: 'widget',
+  size: 'small',
+  widgetId: 'diagram-component-select',
+  command: {
+    id: 'view.diagramComponent',
+    labelKey: 'ribbon.commands.diagramComponent.label',
+    icon: '',
+    commandKey: 'diagram-component-select',
+  },
+};
+
+/** ADR-485 Slice 4c — utilization (As_req/As_prov) overlay master toggle (Robot "Stress"). */
+const UTILIZATION_BUTTON: RibbonButton = {
+  type: 'widget',
+  size: 'small',
+  widgetId: 'show-utilization-toggle',
+  command: {
+    id: 'view.utilization',
+    labelKey: 'ribbon.commands.utilization.label',
+    icon: '',
+    commandKey: 'show-utilization-toggle',
+  },
+};
+
 /** ADR-422 L5 — μηχανολογική μελέτη θέρμανσης PDF export (Revit "Reports/Schedules"). */
 const THERMAL_STUDY_BUTTON: RibbonButton = {
   type: 'widget',
@@ -250,7 +276,7 @@ export const BIM_GRAPHICS_PANEL: RibbonPanelDef = {
       // ADR-470 — τα «Σοβατισμένη όψη» (FINISH_SKIN_BUTTON) + «Οπλισμός»
       // (REINFORCEMENT_BUTTON) subsumed από το ενοποιημένο «Ορατότητα στοιχείων»
       // control στο VIEW_VISUAL_STYLES_PANEL (σώμα/σοβάς/οπλισμός + per-element).
-      buttons: [VISIBILITY_GRAPHICS_BUTTON, HIDE_BIM_BUTTON, MEP_WIRE_BUTTON, DRAIN_PIPE_BUTTON, COLOR_BY_SYSTEM_BUTTON, HEAT_LOAD_BUTTON, PIPE_SIZING_BUTTON, BALANCING_BUTTON, ANALYSIS_DIAGRAMS_BUTTON, THERMAL_STUDY_BUTTON, DISCIPLINE_BUTTON],
+      buttons: [VISIBILITY_GRAPHICS_BUTTON, HIDE_BIM_BUTTON, MEP_WIRE_BUTTON, DRAIN_PIPE_BUTTON, COLOR_BY_SYSTEM_BUTTON, HEAT_LOAD_BUTTON, PIPE_SIZING_BUTTON, BALANCING_BUTTON, ANALYSIS_DIAGRAMS_BUTTON, DIAGRAM_COMPONENT_BUTTON, UTILIZATION_BUTTON, THERMAL_STUDY_BUTTON, DISCIPLINE_BUTTON],
     },
   ],
 };

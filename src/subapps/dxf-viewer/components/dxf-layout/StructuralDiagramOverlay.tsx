@@ -4,26 +4,29 @@
  * ⚠️  ARCHITECTURE-CRITICAL FILE — READ ADR-040 BEFORE EDITING
  * docs/centralized-systems/reference/adrs/ADR-040-preview-canvas-performance.md
  *
- * ADR-483 (T3-UI / Slice 4) — Static-analysis diagram overlay (Revit/Robot
- * moment-shear diagrams πάνω στο μοντέλο).
+ * ADR-483 (T3-UI / Slices 4 + 4b) — Static-analysis diagram overlay (Revit/Robot
+ * moment-shear-axial diagrams πάνω στο μοντέλο).
  *
  * Read-only overlay canvas που, όταν είναι ON το toggle «Διαγράμματα Μ/V/N», σχεδιάζει
- * για κάθε φέρον **δοκάρι** του ενεργού ορόφου το διάγραμμα ροπών — καμπύλη offset
- * κάθετα στον άξονα, auto-fit κλίμακα ώστε η μέγιστη ροπή να αντιστοιχεί σε σταθερό
- * pixel ύψος, + ετικέτα ακραίας τιμής. Τα δεδομένα είναι **derived** (ADR-481 solver)
- * — μηδέν persistence, μηδέν επανυπολογισμός εδώ.
+ * για κάθε φέρον **δοκάρι** του ενεργού ορόφου το διάγραμμα του επιλεγμένου εντατικού
+ * μεγέθους (`diagramComponent`: ροπή Μ / τέμνουσα V / αξονική Ν) — καμπύλη offset κάθετα
+ * στον άξονα, auto-fit κλίμακα, ετικέτα ακραίας τιμής. Slice 4b προσθέτει: ζώνες
+ * εφελκυσμού/θλίψης (ροπή), βέλη ομοιόμορφου φορτίου (UDL), caution σε αστάθεια. Τα
+ * δεδομένα είναι **derived** (ADR-481 solver) — μηδέν persistence, μηδέν επανυπολογισμός.
  *
  * ADR-040 micro-leaf: subscribes ΜΟΝΟ εδώ — `useAnalysisDiagramViewStore`
- * (showAnalysisDiagrams), `ViewMode3DStore` (mode), `AnalysisResultsStore` +
- * `AnalyticalModelStore` (LOW-FREQ — γράφονται μόνο στην «Ανάλυση»). Ο shell
- * `CanvasLayerStack` δεν αποκτά νέο subscription (CHECK 6C safe). Ξεχωριστό canvas +
- * `pointer-events-none` → καμία επίδραση σε selection/hit-test/bitmap cache.
+ * (showAnalysisDiagrams + diagramComponent), `ViewMode3DStore` (mode),
+ * `AnalysisResultsStore` + `AnalyticalModelStore` (LOW-FREQ — γράφονται μόνο στην
+ * «Ανάλυση»). Ο shell `CanvasLayerStack` δεν αποκτά νέο subscription (CHECK 6C safe).
+ * Ξεχωριστό canvas + `pointer-events-none` → καμία επίδραση σε selection/hit-test/cache.
  *
  * @see ../../bim/structural/analytical/diagrams/member-diagram-geometry.ts — pure SSoT
+ * @see ../../bim/structural/analytical/diagrams/member-load-arrows.ts — UDL βέλη (4b)
  * @see docs/centralized-systems/reference/adrs/ADR-483-static-analysis-canvas-diagrams.md
  */
 
 import { useEffect, useMemo, useRef, useSyncExternalStore } from 'react';
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useViewMode3DStore } from '../../bim-3d/stores/ViewMode3DStore';
 import { useAnalysisDiagramViewStore } from '../../state/analysis-diagram-view-store';
 import { useLevelsOptional } from '../../systems/levels/useLevels';
@@ -31,13 +34,18 @@ import { AnalysisResultsStore } from '../../bim/structural/analytical/solver/ana
 import { AnalyticalModelStore } from '../../bim/structural/analytical/analytical-model-store';
 import {
   buildMemberDiagramPaths,
+  type DiagramComponent,
   type MemberDiagramSet,
 } from '../../bim/structural/analytical/diagrams/member-diagram-geometry';
 import {
   drawMemberDiagram,
   drawDiagramExtremum,
+  drawTensionZoneLabels,
   type DiagramDrawStyle,
 } from '../../bim/structural/analytical/diagrams/member-diagram-draw';
+import { drawMemberLoadArrows } from '../../bim/structural/analytical/diagrams/member-load-arrows';
+import { buildBeamSectionContext } from '../../bim/structural/section-context';
+import { isBeamEntity } from '../../types/entities';
 import { CoordinateTransforms } from '../../rendering/core/CoordinateTransforms';
 import { resolveSceneUnits, sceneUnitsToMeters } from '../../utils/scene-units';
 import { getDevicePixelRatio } from '../../systems/cursor/utils';
@@ -49,13 +57,24 @@ import type { ViewTransform, Viewport } from '../../rendering/types/Types';
  * (Revit/Robot moment diagrams), σταθερή αναλογία με το δοκάρι — όχι σταθερό pixel.
  */
 const DIAGRAM_HEIGHT_FRACTION = 0.35;
-/** Στυλ διαγράμματος ροπής (κόκκινο — Robot bending moment convention). */
-const MOMENT_STYLE: DiagramDrawStyle = {
-  stroke: 'rgba(200,30,40,0.95)',
-  fill: 'rgba(200,30,40,0.16)',
+
+/** Στυλ ανά εντατικό μέγεθος — Robot σύμβαση: Μ κόκκινο / V πράσινο / N μπλε. */
+const COMPONENT_STYLE: Record<DiagramComponent, DiagramDrawStyle> = {
+  // Ροπή: ζώνες T/C — θετική (sagging) κόκκινο/εφελκ. κάτω, αρνητική (hogging) μπλε/εφελκ. άνω.
+  moment: { stroke: 'rgba(200,30,40,0.95)', fill: 'rgba(200,30,40,0.16)', fillNegative: 'rgba(40,90,200,0.16)' },
+  shear: { stroke: 'rgba(30,150,70,0.95)', fill: 'rgba(30,150,70,0.16)' },
+  axial: { stroke: 'rgba(40,90,200,0.95)', fill: 'rgba(40,90,200,0.16)' },
 };
 /** SI σύμβολο μονάδας ανά εντατικό μέγεθος (kNm ροπή / kN τέμνουσα-αξονική). */
-const UNIT_MOMENT = 'kNm';
+const COMPONENT_UNIT: Record<DiagramComponent, string> = { moment: 'kNm', shear: 'kN', axial: 'kN' };
+/** Caution (αστάθεια): αμπέρ διακεκομμένη χωρίς γέμισμα. */
+const CAUTION_STROKE = 'rgba(217,119,6,0.96)';
+/** Χρώματα ετικετών ζωνών T/C (συμφωνούν με τα fills της ροπής). */
+const TC_TENSION_BOTTOM_COLOR = 'rgba(200,30,40,0.95)';
+const TC_TENSION_TOP_COLOR = 'rgba(40,90,200,0.95)';
+/** Στυλ βελών φορτίου (ουδέτερο γκρι ώστε να μην συγχέεται με τα χρώματα Μ/V/N). */
+const LOAD_ARROW_STYLE = { stroke: 'rgba(80,80,90,0.85)', fill: 'rgba(80,80,90,0.85)' };
+const UNIT_LINE_LOAD = 'kN/m';
 
 export interface StructuralDiagramOverlayProps {
   readonly transform: ViewTransform;
@@ -64,9 +83,11 @@ export interface StructuralDiagramOverlayProps {
 
 export function StructuralDiagramOverlay({ transform, viewport }: StructuralDiagramOverlayProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const { t } = useTranslation('dxf-viewer-shell');
 
-  // Leaf subscriptions (ADR-040): toggle + render mode + low-freq derived stores.
+  // Leaf subscriptions (ADR-040): toggle + component + render mode + low-freq stores.
   const showDiagrams = useAnalysisDiagramViewStore((s) => s.showAnalysisDiagrams);
+  const component = useAnalysisDiagramViewStore((s) => s.diagramComponent);
   const mode = useViewMode3DStore((s) => s.mode);
   const result = useSyncExternalStore(
     AnalysisResultsStore.subscribe, AnalysisResultsStore.get, AnalysisResultsStore.get,
@@ -76,7 +97,7 @@ export function StructuralDiagramOverlay({ transform, viewport }: StructuralDiag
   );
   const active = showDiagrams && mode === '2d';
 
-  // Active-floor scene only to resolve units (meters → canvas-units factor). Read
+  // Active-floor scene only to resolve units + read beam line-loads (4b arrows). Read
   // directly (mirror HeatLoadOverlay) so a scene replacement is picked up.
   const levelsCtx = useLevelsOptional();
   const currentLevelId = levelsCtx?.currentLevelId ?? null;
@@ -87,10 +108,23 @@ export function StructuralDiagramOverlay({ transform, viewport }: StructuralDiag
   const diagramSet = useMemo<MemberDiagramSet | null>(() => {
     if (!active) return null;
     return buildMemberDiagramPaths(model, result, {
-      component: 'moment',
+      component,
       toCanvasFromMeters: 1 / sceneUnitsToMeters(units),
     });
-  }, [active, model, result, units]);
+  }, [active, model, result, units, component]);
+
+  // ADR-483 Slice 4b — γραμμικό φορτίο w_Ed ανά δοκάρι (entityId → kN/m) από το scene
+  // (μέλος.id === entityId, 1:1, ADR-480). designLineLoadKnM = ULS UDL (ADR-472).
+  const loadByEntityId = useMemo<ReadonlyMap<string, number>>(() => {
+    const map = new Map<string, number>();
+    if (!active || !scene) return map;
+    for (const e of scene.entities) {
+      if (!isBeamEntity(e)) continue;
+      const w = buildBeamSectionContext(e).designLineLoadKnM ?? 0;
+      if (w > 0) map.set(e.id, w);
+    }
+    return map;
+  }, [active, scene]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -112,16 +146,31 @@ export function StructuralDiagramOverlay({ transform, viewport }: StructuralDiag
     const modelHeightForMax = diagramSet.referenceLengthCanvas * DIAGRAM_HEIGHT_FRACTION;
     const pxScale = (modelHeightForMax / diagramSet.globalMaxAbs) * transform.scale;
 
+    const baseStyle = COMPONENT_STYLE[diagramSet.component];
+    const reliable = diagramSet.reliable;
+    const style: DiagramDrawStyle = reliable ? baseStyle : { ...baseStyle, stroke: CAUTION_STROKE };
+    const unit = COMPONENT_UNIT[diagramSet.component];
+    const tcLabels = {
+      tensionBottom: t('ribbon.commands.analysisDiagrams.tensionBottom'),
+      tensionTop: t('ribbon.commands.analysisDiagrams.tensionTop'),
+    };
+
     ctx.save();
     ctx.setLineDash([]);
     for (const path of diagramSet.paths) {
       const si = CoordinateTransforms.worldToScreen(path.iCanvas, transform, viewport);
       const sj = CoordinateTransforms.worldToScreen(path.jCanvas, transform, viewport);
-      drawMemberDiagram(ctx, si, sj, path, pxScale, MOMENT_STYLE);
-      drawDiagramExtremum(ctx, si, sj, path, pxScale, UNIT_MOMENT);
+      drawMemberDiagram(ctx, si, sj, path, pxScale, style, { dashed: !reliable });
+      drawDiagramExtremum(ctx, si, sj, path, pxScale, unit);
+      // Ζώνες εφελκυσμού/θλίψης μόνο για τη ροπή & μόνο όταν τα αποτελέσματα είναι έγκυρα.
+      if (diagramSet.component === 'moment' && reliable) {
+        drawTensionZoneLabels(ctx, si, sj, path, tcLabels, TC_TENSION_BOTTOM_COLOR, TC_TENSION_TOP_COLOR);
+      }
+      const wKnM = loadByEntityId.get(path.memberId);
+      if (wKnM) drawMemberLoadArrows(ctx, si, sj, wKnM, UNIT_LINE_LOAD, LOAD_ARROW_STYLE);
     }
     ctx.restore();
-  }, [active, diagramSet, transform, viewport]);
+  }, [active, diagramSet, loadByEntityId, transform, viewport, t]);
 
   return (
     <canvas

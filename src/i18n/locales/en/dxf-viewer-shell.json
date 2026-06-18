@@ -3555,7 +3555,28 @@
         "enable": "Show",
         "disable": "Hide",
         "tooltipEnable": "Show the bending-moment diagram per load-bearing beam from the static analysis (along the member axis)",
-        "tooltipDisable": "Hide internal-force diagrams"
+        "tooltipDisable": "Hide internal-force diagrams",
+        "tensionBottom": "tens. bottom",
+        "tensionTop": "tens. top"
+      },
+      "diagramComponent": {
+        "label": "Quantity",
+        "options": {
+          "moment": "Moment M",
+          "shear": "Shear V",
+          "axial": "Axial N"
+        }
+      },
+      "utilization": {
+        "label": "Utilization",
+        "enable": "Show",
+        "disable": "Hide",
+        "tooltipEnable": "Colour members by reinforcement utilization (As,req/As,prov): green adequate, orange marginal, red over-utilized",
+        "tooltipDisable": "Hide utilization colouring",
+        "legendTitle": "Reinforcement utilization",
+        "legendOk": "Adequate (≤ 85%)",
+        "legendWarn": "Marginal (85–100%)",
+        "legendOver": "Over-utilized (> 100%)"
       },
       "balancing": {
         "label": "Hydraulic Balancing",

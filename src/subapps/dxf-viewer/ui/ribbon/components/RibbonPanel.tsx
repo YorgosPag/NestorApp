@@ -35,6 +35,8 @@ import { ShowFinishSkinToggle } from './ShowFinishSkinToggle';
 import { ShowReinforcementToggle } from './ShowReinforcementToggle';
 import { ShowPipeSizingToggle } from './ShowPipeSizingToggle';
 import { ShowAnalysisDiagramsToggle } from './ShowAnalysisDiagramsToggle';
+import { DiagramComponentSelect } from './DiagramComponentSelect';
+import { ShowUtilizationToggle } from './ShowUtilizationToggle';
 import { ShowBalancingToggle } from './ShowBalancingToggle';
 import { ExportThermalStudyButton } from './ExportThermalStudyButton';
 import { VisualStyleSelect } from './VisualStyleSelect';
@@ -141,6 +143,12 @@ function renderButton(button: RibbonButton): React.ReactNode {
     }
     if (button.widgetId === 'show-analysis-diagrams-toggle') {
       return <ShowAnalysisDiagramsToggle key="show-analysis-diagrams-toggle-widget" />;
+    }
+    if (button.widgetId === 'diagram-component-select') {
+      return <DiagramComponentSelect key="diagram-component-select-widget" />;
+    }
+    if (button.widgetId === 'show-utilization-toggle') {
+      return <ShowUtilizationToggle key="show-utilization-toggle-widget" />;
     }
     if (button.widgetId === 'export-thermal-study') {
       return <ExportThermalStudyButton key="export-thermal-study-widget" />;

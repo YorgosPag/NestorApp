@@ -87,6 +87,13 @@ describe('buildMemberDiagramPaths', () => {
     expect(set.globalMaxAbs).toBe(0);
   });
 
+  it('ADR-483 Slice 4b — reliable flag mirrors result.unstable', () => {
+    const stable = buildMemberDiagramPaths(model(), result('uls', false), OPTS);
+    expect(stable.reliable).toBe(true);
+    const unstable: AnalysisResult = { ...result('uls', false), unstable: true };
+    expect(buildMemberDiagramPaths(model(), unstable, OPTS).reliable).toBe(false);
+  });
+
   it('returns empty (no throw) for an empty model', () => {
     const empty: AnalyticalModel = { nodes: [], members: [], supports: [], diaphragms: [], levels: [] };
     const set = buildMemberDiagramPaths(empty, result('uls', false), OPTS);

@@ -199,5 +199,11 @@ export function buildMemberDiagramPaths(
     paths.push(path);
   }
 
-  return { component, paths, globalMaxAbs, referenceLengthCanvas: meanPathLength(paths) };
+  return {
+    component,
+    paths,
+    globalMaxAbs,
+    referenceLengthCanvas: meanPathLength(paths),
+    reliable: !result.unstable,
+  };
 }
