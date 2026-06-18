@@ -64,6 +64,10 @@ const ZONE_LABEL_GAP_PX = 11;
  * «16,7 kNm». Μετατόπιση προς το πλησιέστερο άκρο (μένει εντός μέλους).
  */
 const ZONE_LABEL_SHIFT_FRAC = 0.24;
+/** Ακτίνα (px) του δείκτη σημείου μηδενισμού (M=0). */
+const INFLECTION_RADIUS = 2.6;
+const INFLECTION_FILL = '#ffffff';
+const INFLECTION_STROKE = 'rgba(40,44,52,0.9)';
 
 function lerp(a: Point2D, b: Point2D, t: number): Point2D {
   return { x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t };
@@ -252,7 +256,30 @@ export function drawTensionZoneLabels(
   if (neg) drawZoneTag(ctx, lerp(si, sj, zoneLabelF(neg.f)), up, labels.tensionTop, negColor);
 }
 
-/** Ετικέτα ακραίας τιμής σε pill, στη στάθμη μέγιστης |τιμής|. `unit` = SI σύμβολο. */
+/** Τιμή σε pill σε σημείο οθόνης `p`. `unit` = SI σύμβολο. */
+function drawValuePill(ctx: CanvasRenderingContext2D, p: Point2D, value: number, unit: string): void {
+  const text = `${value.toLocaleString('el-GR', { maximumFractionDigits: 1 })} ${unit}`;
+  ctx.font = LABEL_FONT;
+  const boxW = ctx.measureText(text).width + PILL_PAD_X * 2;
+  pillPath(ctx, p.x - boxW / 2, p.y - PILL_HEIGHT / 2, boxW, PILL_HEIGHT, 3);
+  ctx.fillStyle = PILL_BG_COLOR;
+  ctx.fill();
+  ctx.fillStyle = contrastTextColor(PILL_BG_COLOR);
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(text, p.x, p.y);
+}
+
+/** True όταν η ακραία τιμή είναι στο **εσωτερικό** (όχι στα άκρα — εκεί την δείχνουν τα end pills). */
+function isInteriorExtremum(f: number): boolean {
+  return f > 0.02 && f < 0.98;
+}
+
+/**
+ * Ετικέτα ακραίας τιμής σε pill, στη στάθμη μέγιστης |τιμής| — **μόνο όταν είναι
+ * εσωτερική** (στο άνοιγμα). Στα άκρα την δείχνει το {@link drawDiagramEndValues}
+ * → μηδέν διπλό pill. `unit` = SI σύμβολο.
+ */
 export function drawDiagramExtremum(
   ctx: CanvasRenderingContext2D,
   si: Point2D,
@@ -261,18 +288,55 @@ export function drawDiagramExtremum(
   pxScale: number,
   unit: string,
 ): void {
+  if (!isInteriorExtremum(path.extremum.f)) return;
   const normal = perpUnit(si, sj);
-  const p = offsetPoint(si, sj, normal, path.extremum, pxScale);
-  const text = `${path.extremum.value.toLocaleString('el-GR', { maximumFractionDigits: 1 })} ${unit}`;
+  drawValuePill(ctx, offsetPoint(si, sj, normal, path.extremum, pxScale), path.extremum.value, unit);
+}
 
-  ctx.font = LABEL_FONT;
-  const boxW = ctx.measureText(text).width + PILL_PAD_X * 2;
-  pillPath(ctx, p.x - boxW / 2, p.y - PILL_HEIGHT / 2, boxW, PILL_HEIGHT, 3);
-  ctx.fillStyle = PILL_BG_COLOR;
-  ctx.fill();
+/**
+ * ADR-483 Slice 4b+ — τιμές στα **άκρα** του μέλους (M_i / M_j) σε pills, πάνω στην
+ * καμπύλη στις στάθμες f=0 και f=1 (Robot/SAP end values — ροπές στήριξης σε συνεχή
+ * δοκό). Δείχνει όποιο εντατικό μέγεθος σχεδιάζεται (M/V/N).
+ */
+export function drawDiagramEndValues(
+  ctx: CanvasRenderingContext2D,
+  si: Point2D,
+  sj: Point2D,
+  path: MemberDiagramPath,
+  pxScale: number,
+  unit: string,
+): void {
+  const normal = perpUnit(si, sj);
+  const first = path.samples[0];
+  const last = path.samples[path.samples.length - 1];
+  if (first) drawValuePill(ctx, offsetPoint(si, sj, normal, first, pxScale), first.value, unit);
+  if (last && last !== first) drawValuePill(ctx, offsetPoint(si, sj, normal, last, pxScale), last.value, unit);
+}
 
-  ctx.fillStyle = contrastTextColor(PILL_BG_COLOR);
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'middle';
-  ctx.fillText(text, p.x, p.y);
+/**
+ * ADR-483 Slice 4b+ — σημεία μηδενισμού του εντατικού μεγέθους (M=0 inflection /
+ * σημεία αλλαγής προσήμου): μικρός λευκός κύκλος **στον άξονα** του μέλους (όπου
+ * value=0 → offset=base) σε κάθε αλλαγή προσήμου. Χρήσιμο για διακοπή ράβδων.
+ */
+export function drawInflectionMarkers(
+  ctx: CanvasRenderingContext2D,
+  si: Point2D,
+  sj: Point2D,
+  path: MemberDiagramPath,
+): void {
+  for (let k = 0; k < path.samples.length - 1; k++) {
+    const a = path.samples[k]!;
+    const b = path.samples[k + 1]!;
+    if ((a.value > 0) === (b.value > 0) || a.value === 0 || b.value === 0) continue;
+    const t = Math.abs(a.value) / (Math.abs(a.value) + Math.abs(b.value));
+    const p = lerp(si, sj, a.f + (b.f - a.f) * t);
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, INFLECTION_RADIUS, 0, Math.PI * 2);
+    ctx.fillStyle = INFLECTION_FILL;
+    ctx.fill();
+    ctx.lineWidth = 1;
+    ctx.strokeStyle = INFLECTION_STROKE;
+    ctx.setLineDash([]);
+    ctx.stroke();
+  }
 }

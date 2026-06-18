@@ -51,8 +51,16 @@ Overlay = leaf subscriber σε **low-freq** stores (γράφονται μόνο 
 
 **Reuse:** geometry/draw/overlay/view-store Slice 4· `section-context.designLineLoadKnM`· `VisualStyleSelect` (selector πρότυπο)· `canvas-pill`. **NEW:** `member-load-arrows.ts`, `DiagramComponentSelect.tsx`. **MOD:** view-store (+`diagramComponent`/`showUtilization`), geometry (+`reliable`), draw (+T/C split/caution/zone-labels), overlay (per-component style+unit, load arrows, caution), ribbon data/panel, i18n.
 
-### Changelog (Slice 4b)
-- **2026-06-18 (Opus, UNCOMMITTED):** Slice 4b. NEW `member-load-arrows.ts` (+jest 3 GREEN), `DiagramComponentSelect.tsx`. MOD `analysis-diagram-view-store` (+diagramComponent +showUtilization), `member-diagram-geometry` (+reliable, +jest assertion), `member-diagram-draw` (T/C sign-split fill + caution dashed + tension zone labels), `StructuralDiagramOverlay` (component style/unit map, load arrows, caution), `view-tab-bim-settings`/`RibbonPanel` (selector wiring), i18n el/en (`diagramComponent.*`, `analysisDiagrams.tension*`). 🔴 tsc(Giorgio) + browser-verify (calibrate sagging=tension-bottom) + commit.
+### Slice 4b+ — Robot/SAP εμπλουτισμοί διαγράμματος (Giorgio req)
+Επιπλέον πληροφορίες όπως στους «μεγάλους» (Robot/SAP2000/ETABS), χωρίς να πνίγουν το διάγραμμα:
+5. **Τιμές στα άκρα μέλους (M_i / M_j)** — `drawDiagramEndValues` (pills στις στάθμες f=0/1)· το span-max pill (`drawDiagramExtremum`) δείχνεται **μόνο όταν είναι εσωτερικό** (dedup με τα end pills). Κρίσιμο για ροπές στήριξης σε συνεχείς δοκούς.
+6. **Σύμβολα στηρίξεων** — NEW pure `support-glyphs.ts` (`drawSupportGlyph`: άρθρωση=κενό τρίγωνο+έδαφος / πάκτωση=γεμάτο+hatch)· ο overlay προβάλλει τους δεσμευμένους κόμβους (`model.supports`+`nodes.position`, μέτρα×toCanvasFromMeters).
+7. **Ετικέτα συνδυασμού** — `combinationKind` εκτεθειμένο στο `MemberDiagramSet`· caption HUD πάνω-αριστερά «Συνδυασμός: {kind}» (i18n ICU).
+8. **Σημεία μηδενισμού (M=0)** — `drawInflectionMarkers` (λευκός κύκλος στον άξονα σε κάθε αλλαγή προσήμου· διακοπή ράβδων). Για όλα τα μεγέθη (zero του σχεδιαζόμενου).
+
+### Changelog (Slice 4b / 4b+)
+- **2026-06-18 (Opus, UNCOMMITTED):** Slice 4b. NEW `member-load-arrows.ts` (+jest), `DiagramComponentSelect.tsx`. MOD `analysis-diagram-view-store` (+diagramComponent +showUtilization), `member-diagram-geometry` (+reliable), `member-diagram-draw` (T/C sign-split fill + caution dashed + tension zone labels), `StructuralDiagramOverlay` (component style/unit map, load arrows, caution), `view-tab-bim-settings`/`RibbonPanel`, i18n el/en. browser-verify fix: tension zone labels αγκύρωση στον άξονα + οριζόντια μετατόπιση (δεν συμπίπτουν με value pill).
+- **2026-06-18 (Opus, UNCOMMITTED) — Slice 4b+:** end values M_i/M_j (+interior-only span max) · NEW `support-glyphs.ts` · combination caption (`combinationKind` στο geometry + i18n `combinationCaption`) · inflection markers M=0. +jest (`member-diagram-draw.test.ts` 3, geometry combinationKind). Σύνολο 13 diagram jest GREEN. 🔴 tsc(Giorgio) + browser-verify (calibrate sagging=tension-bottom· end values· σύμβολα στηρίξεων· caption· M=0) + commit.
 
 ## 7. Validation
 - `member-diagram-geometry.test.ts` (5 GREEN): δοκάρια-μόνο (κολόνες excluded)· `f=xM/L`· μέτρα→canvas· ακραία στάθμη + global max-abs· skip singular· empty model no-throw.

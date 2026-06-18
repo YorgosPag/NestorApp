@@ -3557,7 +3557,8 @@
         "tooltipEnable": "Εμφάνιση διαγράμματος ροπών ανά φέρον δοκάρι από τη στατική ανάλυση (κατά μήκος του άξονα)",
         "tooltipDisable": "Απόκρυψη διαγραμμάτων εντατικών μεγεθών",
         "tensionBottom": "εφελκ. κάτω",
-        "tensionTop": "εφελκ. άνω"
+        "tensionTop": "εφελκ. άνω",
+        "combinationCaption": "Συνδυασμός: {kind}"
       },
       "diagramComponent": {
         "label": "Μέγεθος",

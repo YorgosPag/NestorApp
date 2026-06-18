@@ -94,6 +94,10 @@ describe('buildMemberDiagramPaths', () => {
     expect(buildMemberDiagramPaths(model(), unstable, OPTS).reliable).toBe(false);
   });
 
+  it('ADR-483 Slice 4b+ — exposes the drawn combination kind (caption)', () => {
+    expect(buildMemberDiagramPaths(model(), result('uls', false), OPTS).combinationKind).toBe('uls');
+  });
+
   it('returns empty (no throw) for an empty model', () => {
     const empty: AnalyticalModel = { nodes: [], members: [], supports: [], diaphragms: [], levels: [] };
     const set = buildMemberDiagramPaths(empty, result('uls', false), OPTS);

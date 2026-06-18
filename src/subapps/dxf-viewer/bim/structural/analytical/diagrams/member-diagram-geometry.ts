@@ -68,6 +68,11 @@ export interface MemberDiagramSet {
    * σχεδιάζει αμπέρ-διακεκομμένες χωρίς γέμισμα (Robot «unreliable results»).
    */
   readonly reliable: boolean;
+  /**
+   * ADR-483 Slice 4b+ — ταυτότητα του σχεδιαζόμενου συνδυασμού (Robot caption «ποιον
+   * συνδυασμό βλέπω»). Κενό όταν δεν υπάρχει έγκυρος συνδυασμός.
+   */
+  readonly combinationKind: string;
 }
 
 export interface BuildMemberDiagramOptions {
@@ -78,7 +83,7 @@ export interface BuildMemberDiagramOptions {
 }
 
 const EMPTY: MemberDiagramSet = {
-  component: 'moment', paths: [], globalMaxAbs: 0, referenceLengthCanvas: 0, reliable: true,
+  component: 'moment', paths: [], globalMaxAbs: 0, referenceLengthCanvas: 0, reliable: true, combinationKind: '',
 };
 
 /** Μέσο μήκος μέλους (canvas units) από τις διαδρομές — μήκος αναφοράς κλίμακας. */
@@ -205,5 +210,6 @@ export function buildMemberDiagramPaths(
     globalMaxAbs,
     referenceLengthCanvas: meanPathLength(paths),
     reliable: !result.unstable,
+    combinationKind: combination.combinationKind,
   };
 }

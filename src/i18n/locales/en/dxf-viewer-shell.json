@@ -3557,7 +3557,8 @@
         "tooltipEnable": "Show the bending-moment diagram per load-bearing beam from the static analysis (along the member axis)",
         "tooltipDisable": "Hide internal-force diagrams",
         "tensionBottom": "tens. bottom",
-        "tensionTop": "tens. top"
+        "tensionTop": "tens. top",
+        "combinationCaption": "Combination: {kind}"
       },
       "diagramComponent": {
         "label": "Quantity",

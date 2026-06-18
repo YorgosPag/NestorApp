@@ -40,11 +40,15 @@ import {
 import {
   drawMemberDiagram,
   drawDiagramExtremum,
+  drawDiagramEndValues,
+  drawInflectionMarkers,
   drawTensionZoneLabels,
   type DiagramDrawStyle,
 } from '../../bim/structural/analytical/diagrams/member-diagram-draw';
 import { drawMemberLoadArrows } from '../../bim/structural/analytical/diagrams/member-load-arrows';
+import { drawSupportGlyph } from '../../bim/structural/analytical/diagrams/support-glyphs';
 import { buildBeamSectionContext } from '../../bim/structural/section-context';
+import type { AnalyticalSupportType } from '../../bim/structural/analytical/analytical-model-types';
 import { isBeamEntity } from '../../types/entities';
 import { CoordinateTransforms } from '../../rendering/core/CoordinateTransforms';
 import { resolveSceneUnits, sceneUnitsToMeters } from '../../utils/scene-units';
@@ -75,6 +79,32 @@ const TC_TENSION_TOP_COLOR = 'rgba(40,90,200,0.95)';
 /** Στυλ βελών φορτίου (ουδέτερο γκρι ώστε να μην συγχέεται με τα χρώματα Μ/V/N). */
 const LOAD_ARROW_STYLE = { stroke: 'rgba(80,80,90,0.85)', fill: 'rgba(80,80,90,0.85)' };
 const UNIT_LINE_LOAD = 'kN/m';
+/** Caption συνδυασμού — σταθερή θέση HUD πάνω-αριστερά. */
+const CAPTION_FONT = '11px sans-serif';
+const CAPTION_BG = 'rgba(255,255,255,0.92)';
+const CAPTION_TEXT = 'rgb(40,44,52)';
+const CAPTION_PAD = 6;
+const CAPTION_MARGIN = 14;
+
+/** Προβεβλημένος κόμβος στήριξης (canvas units) + τύπος. */
+interface SupportPoint {
+  readonly x: number;
+  readonly y: number;
+  readonly type: AnalyticalSupportType;
+}
+
+/** Ετικέτα συνδυασμού (Robot caption) σε pill πάνω-αριστερά. */
+function drawCombinationCaption(ctx: CanvasRenderingContext2D, text: string): void {
+  ctx.font = CAPTION_FONT;
+  const boxW = ctx.measureText(text).width + CAPTION_PAD * 2;
+  const boxH = 18;
+  ctx.fillStyle = CAPTION_BG;
+  ctx.fillRect(CAPTION_MARGIN, CAPTION_MARGIN, boxW, boxH);
+  ctx.fillStyle = CAPTION_TEXT;
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(text, CAPTION_MARGIN + CAPTION_PAD, CAPTION_MARGIN + boxH / 2);
+}
 
 export interface StructuralDiagramOverlayProps {
   readonly transform: ViewTransform;
@@ -126,6 +156,21 @@ export function StructuralDiagramOverlay({ transform, viewport }: StructuralDiag
     return map;
   }, [active, scene]);
 
+  // ADR-483 Slice 4b+ — δεσμευμένοι κόμβοι (στηρίξεις) προβεβλημένοι σε canvas units
+  // (μέτρα × toCanvasFromMeters, ίδια μετατροπή με τα paths). Robot boundary glyphs.
+  const supportPoints = useMemo<readonly SupportPoint[]>(() => {
+    if (!active) return [];
+    const toCanvas = 1 / sceneUnitsToMeters(units);
+    const posById = new Map(model.nodes.map((n) => [n.id, n.position]));
+    const out: SupportPoint[] = [];
+    for (const s of model.supports) {
+      const pos = posById.get(s.nodeId);
+      if (!pos) continue;
+      out.push({ x: pos.xM * toCanvas, y: pos.yM * toCanvas, type: s.supportType });
+    }
+    return out;
+  }, [active, model, units]);
+
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -157,20 +202,33 @@ export function StructuralDiagramOverlay({ transform, viewport }: StructuralDiag
 
     ctx.save();
     ctx.setLineDash([]);
+
+    // Σύμβολα στηρίξεων (κάτω από τις καμπύλες/pills) + caption συνδυασμού.
+    for (const sp of supportPoints) {
+      drawSupportGlyph(ctx, CoordinateTransforms.worldToScreen({ x: sp.x, y: sp.y }, transform, viewport), sp.type);
+    }
+    if (diagramSet.combinationKind) {
+      drawCombinationCaption(ctx, t('ribbon.commands.analysisDiagrams.combinationCaption', { kind: diagramSet.combinationKind }));
+    }
+
     for (const path of diagramSet.paths) {
       const si = CoordinateTransforms.worldToScreen(path.iCanvas, transform, viewport);
       const sj = CoordinateTransforms.worldToScreen(path.jCanvas, transform, viewport);
       drawMemberDiagram(ctx, si, sj, path, pxScale, style, { dashed: !reliable });
-      drawDiagramExtremum(ctx, si, sj, path, pxScale, unit);
+      // Σημεία μηδενισμού (M=0) πάνω στον άξονα — κάτω από τα pills.
+      drawInflectionMarkers(ctx, si, sj, path);
       // Ζώνες εφελκυσμού/θλίψης μόνο για τη ροπή & μόνο όταν τα αποτελέσματα είναι έγκυρα.
       if (diagramSet.component === 'moment' && reliable) {
         drawTensionZoneLabels(ctx, si, sj, path, tcLabels, TC_TENSION_BOTTOM_COLOR, TC_TENSION_TOP_COLOR);
       }
       const wKnM = loadByEntityId.get(path.memberId);
       if (wKnM) drawMemberLoadArrows(ctx, si, sj, wKnM, UNIT_LINE_LOAD, LOAD_ARROW_STYLE);
+      // Τιμές στα άκρα (M_i/M_j) + ακραία στο άνοιγμα — pills πάνω από όλα.
+      drawDiagramEndValues(ctx, si, sj, path, pxScale, unit);
+      drawDiagramExtremum(ctx, si, sj, path, pxScale, unit);
     }
     ctx.restore();
-  }, [active, diagramSet, loadByEntityId, transform, viewport, t]);
+  }, [active, diagramSet, loadByEntityId, supportPoints, transform, viewport, t]);
 
   return (
     <canvas
