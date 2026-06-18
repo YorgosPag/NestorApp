@@ -27,7 +27,7 @@
 import type { Pair, Polygon } from 'polygon-clipping';
 import type { Point3D } from '../types/bim-base';
 import { safeDifference } from './shared/safe-polygon-boolean';
-import { multiPolygonArea, pointInPolygon } from './shared/polygon-utils';
+import { multiPolygonArea, pointInPolygon, polygonCentroid, projectPointOnAxis } from './shared/polygon-utils';
 import type { Pt2 } from './shared/segment-polygon-coverage';
 
 /** Σχετικό εμβαδικό όριο: αν αφαιρεθεί λιγότερο από αυτό → «μηδέν τομή» (identity). */
@@ -267,21 +267,15 @@ export function computeBeamAxisToColumnContact(
 function outlineHalfWidth(outline: readonly Pt2[], ax: Pt2, ux: number, uy: number): number {
   let best = 0;
   for (const v of outline) {
-    const perp = Math.abs((v.x - ax.x) * uy - (v.y - ax.y) * ux);
+    const perp = projectPointOnAxis(v.x, v.y, ax.x, ax.y, ux, uy).perp;
     if (perp > best) best = perp;
   }
   return best;
 }
 
-/** Μέσο σημείο (avg κορυφών) ενός footprint — προσέγγιση κέντρου για το framing extent. */
-function footprintMean(fp: readonly Pt2[]): Pt2 {
-  let x = 0;
-  let y = 0;
-  for (const v of fp) {
-    x += v.x;
-    y += v.y;
-  }
-  return { x: x / fp.length, y: y / fp.length };
+/** Pt2 footprint → Point3D[] (z=0) για το `polygonCentroid` (z-agnostic) SSoT. */
+function toXY0(fp: readonly Pt2[]): { x: number; y: number; z: number }[] {
+  return fp.map((p) => ({ x: p.x, y: p.y, z: 0 }));
 }
 
 /**
@@ -290,32 +284,32 @@ function footprintMean(fp: readonly Pt2[]): Pt2 {
  * το footprint κολώνας που πλαισιώνει αυτό το άκρο. Επιστρέφει την προβολή του κέντρου
  * (clamp στο centroid). 0 όταν καμία κολώνα δεν πλαισιώνει: (α) κέντρο εσωτερικά του
  * άκρου, (β) κέντρο εντός μισού-πλάτους από τον άξονα, (γ) κοντινή παρειά κοντά στο άκρο.
+ *
+ * Reuse SSoT (N.0.2): `polygonCentroid` (κέντρο footprint) + `projectPointOnAxis`
+ * (along/perp) — μηδέν διπλότυπη geometry· ίδιο projection core με `projectColumnCenterOnAxis`.
  */
 function framingInwardExtent(
   endpoint: Pt2,
   ix: number,
   iy: number,
-  ux: number,
-  uy: number,
   halfWidth: number,
   footprints: readonly (readonly Pt2[])[],
 ): number {
   let best = 0;
   for (const fp of footprints) {
     if (fp.length < 3) continue;
-    const c = footprintMean(fp);
-    const rx = c.x - endpoint.x;
-    const ry = c.y - endpoint.y;
-    const inwardCentre = rx * ix + ry * iy; // κέντρο κολώνας προς τα μέσα του άκρου
-    if (inwardCentre <= 0) continue; // κολώνα όχι εσωτερικά αυτού του άκρου (π.χ. mid-span)
-    if (Math.abs(rx * uy - ry * ux) > halfWidth) continue; // κέντρο εκτός πλάτους δοκαριού
+    const c = polygonCentroid(toXY0(fp));
+    // Κέντρο κολώνας ως προς το άκρο, προβολή στον ΕΣΩΤΕΡΙΚΟ άξονα (ix,iy): along + perp.
+    const centre = projectPointOnAxis(c.x, c.y, endpoint.x, endpoint.y, ix, iy);
+    if (centre.along <= 0) continue; // κολώνα όχι εσωτερικά αυτού του άκρου (π.χ. mid-span)
+    if (centre.perp > halfWidth) continue; // κέντρο εκτός πλάτους δοκαριού
     let nearProj = Infinity; // κοντινή παρειά κολώνας κατά (ix,iy) από το άκρο
     for (const v of fp) {
-      const ip = (v.x - endpoint.x) * ix + (v.y - endpoint.y) * iy;
+      const ip = projectPointOnAxis(v.x, v.y, endpoint.x, endpoint.y, ix, iy).along;
       if (ip < nearProj) nearProj = ip;
     }
     if (nearProj > halfWidth) continue; // κολώνα μακριά από το άκρο → όχι framing join
-    if (inwardCentre > best) best = inwardCentre;
+    if (centre.along > best) best = centre.along;
   }
   return best;
 }
@@ -342,8 +336,8 @@ export function extendBeamOutlineIntoFramingColumns(
   const halfWidth = outlineHalfWidth(beamOutline, axisStart, ux, uy);
   if (halfWidth <= 0) return null;
 
-  const startExt = framingInwardExtent(axisStart, -ux, -uy, ux, uy, halfWidth, columnFootprints);
-  const endExt = framingInwardExtent(axisEnd, ux, uy, ux, uy, halfWidth, columnFootprints);
+  const startExt = framingInwardExtent(axisStart, -ux, -uy, halfWidth, columnFootprints);
+  const endExt = framingInwardExtent(axisEnd, ux, uy, halfWidth, columnFootprints);
   if (startExt <= 0 && endExt <= 0) return null;
 
   // Διαμέρισε κορυφές ανά διαμήκη προβολή: < μέσον → start edge (−u), ≥ μέσον → end edge (+u).

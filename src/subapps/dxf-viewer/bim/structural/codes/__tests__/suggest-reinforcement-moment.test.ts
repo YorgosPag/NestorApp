@@ -119,4 +119,12 @@ describe('ADR-493 — circular lever arm (πλαστικός δακτύλιος 
     const perim = EUROCODE_PROVIDER.suggestColumnReinforcement({ ...CIRC, mode: 'perimeter', designAxialKn: 0, designMomentKnm: 0 });
     expect(circ.longitudinal).toEqual(perim.longitudinal);
   });
+
+  it('κυκλική → συνεχής σπείρα (#7, EC2 §9.5.3)· περιμετρική → κλειστός default', () => {
+    for (const provider of [EUROCODE_PROVIDER, GREEK_LEGACY_PROVIDER]) {
+      expect(provider.suggestColumnReinforcement(CIRC).stirrups.type).toBe('spiral');
+      // περιμετρική → type absent ⇒ DEFAULT_STIRRUP_TYPE (closed-hooked)
+      expect(provider.suggestColumnReinforcement({ ...CIRC, mode: 'perimeter' }).stirrups.type).toBeUndefined();
+    }
+  });
 });

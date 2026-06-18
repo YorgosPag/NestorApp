@@ -429,6 +429,20 @@ export function polygonCentroid(vertices: readonly Point3D[]): { x: number; y: n
   return { x: sumX / n, y: sumY / n };
 }
 
+// ─── Polygon ↔ axis projection (SSoT) ─────────────────────────────────────────
+//
+// Moved to sibling module `polygon-axis-projection.ts` (N.7.1 500-line cap).
+// Re-exported here so all existing importers keep working unchanged.
+
+export type {
+  AxisProjection,
+  PolygonAxisProjection,
+} from './polygon-axis-projection';
+export {
+  projectPointOnAxis,
+  projectPolygonOnAxis,
+} from './polygon-axis-projection';
+
 /**
  * CCW order of points around their centroid. Gives perimeter order for a convex footprint
  * regardless of the input order (grip-emission order, diagonal-anchor order, polygon

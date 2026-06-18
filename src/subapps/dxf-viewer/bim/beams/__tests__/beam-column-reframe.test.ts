@@ -129,4 +129,28 @@ describe('reframeBeamEndpointsToColumns', () => {
     const cols = [column('c1', 0, 0, 200), column('c2', 400, 0, 200)];
     expect(reframeBeamEndpointsToColumns(b, cols)).toBeNull();
   });
+
+  // ─── ADR-494 — kind-agnostic footprint reframe (ασύμμετρη L-shape) ───────────
+  it('ADR-494: L-shape με offset position → το άκρο κόβεται στην παρειά (footprint τέμνει τον άξονα)', () => {
+    // L-shape στο αριστερό άκρο: insertion point y=200 (perp 200 > halfWidth+tol 130 → ο παλιός
+    // center-based gate ΑΓΝΟΟΥΣΕ την κολώνα → start έμενε στο 0). Footprint y∈[-200,300] τέμνει
+    // τον άξονα → perp 0 → συγγραμμική· παρειά προς +u = alongMax = 200.
+    const lShape = {
+      id: 'cL', type: 'column', kind: 'L-shape',
+      params: { kind: 'L-shape', position: { x: 0, y: 200, z: 0 }, sceneUnits: 'mm' },
+      geometry: {
+        footprint: {
+          vertices: [
+            { x: -200, y: -200, z: 0 }, { x: 200, y: -200, z: 0 }, { x: 200, y: 300, z: 0 },
+            { x: 0, y: 300, z: 0 }, { x: 0, y: 0, z: 0 }, { x: -200, y: 0, z: 0 },
+          ],
+        },
+      },
+    } as unknown as ColumnEntity;
+    const b = beam({ x: 0, y: 0 }, { x: 4000, y: 0 });
+    const r = reframeBeamEndpointsToColumns(b, [lShape, column('c2', 4000, 0, 200)]);
+    expect(r).not.toBeNull();
+    expect(r!.startPoint).toEqual({ x: 200, y: 0, z: 0 });
+    expect(r!.endPoint).toEqual({ x: 3800, y: 0, z: 0 });
+  });
 });

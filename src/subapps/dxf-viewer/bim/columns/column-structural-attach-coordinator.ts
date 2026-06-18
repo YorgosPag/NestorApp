@@ -33,7 +33,7 @@ import {
   type Pt2,
 } from '../geometry/wall-host-plan-builder';
 import { resolveColumnBaseZmm } from '../geometry/column-vertical-profile';
-import { columnSupportAlong, projectColumnCenterOnAxis } from './column-face-trim';
+import { projectColumnFootprintOnAxis } from './column-face-trim';
 import { mmToSceneUnits } from '../../utils/scene-units';
 import type { ColumnEntity } from '../types/column-types';
 import type { BeamEntity } from '../types/beam-types';
@@ -163,10 +163,14 @@ export function findColumnsToAutoAttachBaseToHost(host: Entity, entities: readon
 const FRAMING_TOL_MM = 5;
 
 /**
- * True αν το δοκάρι frame-into-άρει στην κολώνα: το κέντρο της κολώνας προβάλλεται
- * στον άξονα του δοκαριού με κάθετη απόσταση ≤ (μισό πλάτος δοκαριού) και διαμήκη
- * θέση εντός [−support, L+support] (η support distance είναι το ίδιο μισό-πλάτος
- * κολώνας που τραβά το frame-into trim → πιάνει τα trimmed άκρα).
+ * True αν το δοκάρι frame-into-άρει στην κολώνα — **kind-agnostic footprint-based**
+ * (ADR-494). Το πραγματικό `footprint` της κολώνας (όχι το insertion point `position`):
+ * (1) απέχει κάθετα ≤ (μισό πλάτος δοκαριού + tol) από την ευθεία του άξονα — ή τον
+ *     **τέμνει** (`perp===0`) — δηλ. βρίσκεται μέσα στη λωρίδα του δοκαριού, ΚΑΙ
+ * (2) η διαμήκης έκταση του footprint `[alongMin, alongMax]` επικαλύπτει το span
+ *     `[−tol, L+tol]` (οι παρειές πιάνουν τα frame-into-trimmed άκρα).
+ * Έτσι αναγνωρίζεται ΚΑΘΕ διατομή (rectangular/circular/L/T/U/I/τοιχείο/polygon) ακόμη
+ * και όταν το `position` είναι ασύμμετρα μετατοπισμένο (η ρίζα του cantilever bug).
  */
 function beamFramesColumn(beam: BeamEntity, column: ColumnEntity): boolean {
   const s = beam.params.startPoint;
@@ -180,10 +184,9 @@ function beamFramesColumn(beam: BeamEntity, column: ColumnEntity): boolean {
   const perScene = mmToSceneUnits(beam.params.sceneUnits ?? 'mm');
   const halfWidth = (beam.params.width / 2) * perScene;
   const tol = FRAMING_TOL_MM * perScene;
-  const { along: t, perp } = projectColumnCenterOnAxis(column, s.x, s.y, ux, uy);
+  const { alongMin, alongMax, perp } = projectColumnFootprintOnAxis(column, s.x, s.y, ux, uy);
   if (perp > halfWidth + tol) return false;
-  const support = columnSupportAlong(column, ux, uy);
-  return t >= -support - tol && t <= len + support + tol;
+  return alongMax >= -tol && alongMin <= len + tol;
 }
 
 /**

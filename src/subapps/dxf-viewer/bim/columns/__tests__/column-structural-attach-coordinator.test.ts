@@ -10,6 +10,7 @@ import {
   findColumnsToAutoAttachToHost,
   findColumnsToAutoAttachBaseToHost,
   findColumnsFramedByBeam,
+  findColumnsFramedByBeamForGraph,
 } from '../column-structural-attach-coordinator';
 import type { Entity } from '../../../types/entities';
 import type { BeamEntity } from '../../types/beam-types';
@@ -199,5 +200,99 @@ describe('findColumnsFramedByBeam (frame-into column→beam)', () => {
   it('returns [] for a non-beam host (slab does not frame)', () => {
     const slab = slabAt(3000);
     expect(findColumnsFramedByBeam(slab as unknown as Entity, [column('c1', 1000, 1000)])).toEqual([]);
+  });
+});
+
+// ─── ADR-494 — kind-agnostic footprint-based framing (asymmetric L/T/U/I/τοιχείο) ──
+//
+// Η ρίζα του cantilever bug: η παλιά detection χρησιμοποιούσε το insertion point
+// `params.position`. Για ασύμμετρη διατομή (L-shape) το `position` μετατοπίζεται κάθετα
+// στον άξονα του δοκαριού > halfWidth+tol → η κολώνα χανόταν → πρόβολος. Τώρα η detection
+// κοιτά το πραγματικό `geometry.footprint` (τέμνει/εφάπτεται τη λωρίδα του δοκαριού).
+
+/** Κολώνα με ΡΗΤΟ footprint (mm) + ξεχωριστό insertion point `position` (ασύμμετρη διατομή). */
+function columnWithFootprint(
+  id: string,
+  position: { x: number; y: number },
+  vertices: readonly { x: number; y: number }[],
+  overrides: Record<string, unknown> = {},
+): Entity {
+  return {
+    id, type: 'column', kind: 'L-shape',
+    params: {
+      kind: 'L-shape', topBinding: 'storey-ceiling', baseBinding: 'storey-floor',
+      baseOffset: 0, height: 3000, position: { x: position.x, y: position.y, z: 0 }, ...overrides,
+    },
+    geometry: { footprint: { vertices: vertices.map((v) => ({ x: v.x, y: v.y, z: 0 })) } },
+  } as unknown as Entity;
+}
+
+describe('ADR-494 — footprint-based framing για ασύμμετρες διατομές', () => {
+  // Beam axis (0,0)→(4000,0), width 250 → halfWidth 125, tol 5 → παλιό perp-όριο 130mm.
+  // L-shape στο αριστερό άκρο: το insertion point είναι στο y=200 (perp 200 > 130 → ο παλιός
+  // center-test ΑΠΕΡΡΙΠΤΕ → bug), αλλά το footprint διασταυρώνει τον άξονα (y∈[-200,300]).
+  const lShapeStart = (): Entity =>
+    columnWithFootprint('cL', { x: 0, y: 200 }, [
+      { x: -200, y: -200 }, { x: 200, y: -200 }, { x: 200, y: 300 },
+      { x: 0, y: 300 }, { x: 0, y: 0 }, { x: -200, y: 0 },
+    ]);
+
+  it('🐛 REPRO: L-shape με offset position αναγνωρίζεται ΩΣ στήριξη (footprint τέμνει τον άξονα)', () => {
+    const beam = beamOver();
+    expect(findColumnsFramedByBeam(beam as unknown as Entity, [lShapeStart()])).toEqual(['cL']);
+  });
+
+  it('graph variant: L-shape παράγει column-bearing edge → ΟΧΙ πρόβολος (το διάγραμμα ροπών διορθώνεται)', () => {
+    const beam = beamOver();
+    // 2 κολώνες (L αριστερά + ορθογωνική δεξιά) → 2 στηρίξεις → αμφιέρειστο, όχι cantilever.
+    const rect = column('cR', 4000, 0, 200);
+    expect(findColumnsFramedByBeamForGraph(beam as unknown as Entity, [lShapeStart(), rect]).sort())
+      .toEqual(['cL', 'cR']);
+  });
+
+  it('T-shape: footprint εκατέρωθεν του άξονα (κορμός κάτω, πέλμα πάνω) → στήριξη', () => {
+    const beam = beamOver();
+    // Τ ανεστραμμένο: πέλμα στο y∈[100,300], κορμός κατεβαίνει στο y=-300· position offset στο πέλμα.
+    const tShape = columnWithFootprint('cT', { x: 2000, y: 200 }, [
+      { x: 1800, y: 100 }, { x: 2200, y: 100 }, { x: 2200, y: 300 }, { x: 1800, y: 300 },
+      { x: 1900, y: 300 }, { x: 1900, y: -300 }, { x: 2100, y: -300 }, { x: 2100, y: 300 },
+    ]);
+    expect(findColumnsFramedByBeam(beam as unknown as Entity, [tShape])).toEqual(['cT']);
+  });
+
+  it('τοιχείο (shear-wall) που ο άξονας ΤΕΜΝΕΙ → στήριξη', () => {
+    const beam = beamOver();
+    // Μακρόστενο τοιχείο 1200×200, διαμήκες στον y, τέμνεται από τον άξονα y=0 στο x≈4000.
+    const wall = columnWithFootprint('cW', { x: 4000, y: 0 }, [
+      { x: 3900, y: -600 }, { x: 4100, y: -600 }, { x: 4100, y: 600 }, { x: 3900, y: 600 },
+    ], { kind: 'shear-wall' });
+    expect(findColumnsFramedByBeam(beam as unknown as Entity, [wall])).toEqual(['cW']);
+  });
+
+  it('τοιχείο μακριά από τον άξονα (δεν το τέμνει) → ΟΧΙ στήριξη', () => {
+    const beam = beamOver();
+    // Ίδιο τοιχείο αλλά μετατοπισμένο στο y=2000 → footprint y∈[1400,2600], perp 1400 ≫ 130.
+    const wall = columnWithFootprint('cW', { x: 4000, y: 2000 }, [
+      { x: 3900, y: 1400 }, { x: 4100, y: 1400 }, { x: 4100, y: 2600 }, { x: 3900, y: 2600 },
+    ], { kind: 'shear-wall' });
+    expect(findColumnsFramedByBeam(beam as unknown as Entity, [wall])).toEqual([]);
+  });
+
+  it('κυκλική (footprint = πολύγωνο προσέγγισης) που εφάπτεται στον άξονα → στήριξη', () => {
+    const beam = beamOver();
+    // Octagon ακτίνας 200 κεντραρισμένο στο (2000,0) — footprint τέμνει y=0.
+    const r = 200;
+    const oct = Array.from({ length: 8 }, (_, i) => {
+      const a = (Math.PI / 4) * i;
+      return { x: 2000 + r * Math.cos(a), y: r * Math.sin(a) };
+    });
+    const circ = columnWithFootprint('cC', { x: 2000, y: 0 }, oct, { kind: 'circular' });
+    expect(findColumnsFramedByBeam(beam as unknown as Entity, [circ])).toEqual(['cC']);
+  });
+
+  it('γνήσιος πρόβολος: ΜΟΝΟ μία κολώνα framing → ο graph δίνει 1 edge (παραμένει cantilever)', () => {
+    const beam = beamOver();
+    // Μόνο η L αριστερά· καμία δεξιά → 1 column-bearing edge → derive-beam-support: cantilever.
+    expect(findColumnsFramedByBeamForGraph(beam as unknown as Entity, [lShapeStart()])).toEqual(['cL']);
   });
 });

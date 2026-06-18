@@ -56,14 +56,14 @@
 | 4 | Αξονικό As = (N−f_cd·Ac)/f_yd | Ac ακριβές | ✅ ΣΩΣΤΟ | EC2 §6.1 |
 | 5 | e₀ = max(d/30, 20mm) | h=d (bbox) | ✅ ΣΩΣΤΟ | EC2 §6.1(4) |
 | 6 | **M-N μοχλοβραχίονας z** | ~~rectangular 0.81·d~~ → **πλαστικός δακτύλιος D_s/π** | ✅ **ΔΙΟΡΘΩΘΗΚΕ** (ADR-493) | EC2 §6.1 circular |
-| 7 | Περίσφιγξη (κλειστός συνδετήρας vs **σπείρα**) | μόνο κλειστός συνδετήρας | ⚠️ DEFER (λείπει σπείρα option) | EC2 §9.5.3 / EC8 §5.4.3.2.2 |
+| 7 | Περίσφιγξη (κλειστός συνδετήρας vs **σπείρα**) | suggester έδινε closed-hooked και σε κύκλο → **τώρα `type='spiral'`** | ✅ **ΔΙΟΡΘΩΘΗΚΕ** (ADR-493) | EC2 §9.5.3 / EC8 §5.4.3.2.2 |
 | 8 | Utilization As_req/As_prov | shape-aware Ac, self-consistent | ✅ ΣΩΣΤΟ | ADR-485 |
 | 9 | FEM M_Ed (39.58 kNm) → designMoment | FEM ανεξάρτητο διατομής για M | ✅ ΣΩΣΤΟ | ADR-491 |
 | 10 | Όγκος/ποσότητες (0.368 m³ καθαρό) | Ac·h − cutback | ✅ ΣΩΣΤΟ | — |
 
 **Διόρθωση #6 (Slice B1):** Ένας πλήρως διαρρέων δακτύλιος χάλυβα ολικού εμβαδού `A_s` σε διάμετρο `D_s` δίνει `M = A_s·f_yd·(D_s/π)` → **`z = D_s/π` ≈ 0.27·d**, πολύ μικρότερο από τον ορθογώνιο `0.81·d` (όπου ο οπλισμός είναι σε δύο παρειές). Η χρήση του `0.81·d` σε κύκλο **υπερεκτιμούσε** το z → **υποεκτιμούσε** το A_s,M (μη-συντηρητικό). Νέος SSoT `columnLeverArmMm(ctx, h)` στο `suggest-reinforcement.ts`: κυκλική → `0.85·d/π` (D_s ≈ pitch-circle, cover-agnostic seed)· αλλιώς `0.81·h`. Σε χαμηλό M (κυριαρχεί ρ_min) μηδέν αλλαγή· σε υψηλό M → ~3× moment-steel (conservative).
 
-**#7 σπείρα (DEFER):** νέος τύπος εγκάρσιου οπλισμού σε όλη την αλυσίδα (layout/render/BOQ) — εκτός των 2 ερωτημάτων ADR-493. Ο κλειστός συνδετήρας είναι έγκυρος (EC2/EC8 επιτρέπουν circular hoops)· η σπείρα δίνει μεγαλύτερη περίσφιγξη/ductility.
+**Διόρθωση #7 (Slice B2 — Giorgio: «ΝΑΙ ΘΕΛΩ»):** Η **spiral infrastructure ΥΠΑΡΧΕΙ ΗΔΗ** (`StirrupType='spiral'`, `spiralPitchMm`, `column-circular-layout.ts`, `column-confinement.ts`, 2Δ detail-sheet, 3Δ `column-rebar-3d`, BOQ, schema, UI dropdown «Τύπος συνδετήρα») — η αρχική εκτίμηση «λείπει» ήταν **ΛΑΘΟΣ**. Το πραγματικό gap: ο `suggestColumnReinforcementFrom` έδινε ΠΑΝΤΑ `DEFAULT_STIRRUP_TYPE` (closed-hooked) → ο auto-οπλισμός κυκλικής έβγαζε κλειστό συνδετήρα αντί σπείρα. FIX: για `ctx.mode==='circular'` → `stirrups.type='spiral'` (EC2 §9.5.3 / EC8 §5.4.3.2.2 — προτιμώμενη περίσφιγξη κυκλικής, καλύτερη ductility)· reuse ΟΛΗΣ της υπάρχουσας infra, μηδέν νέα γεωμετρία· user-overridable (manual→auto=false). `spiralPitchMm` absent ⇒ = `spacingMm`.
 
 ---
 
@@ -77,14 +77,18 @@
 
 | Αρχείο | Αλλαγή |
 |---|---|
-| `bim/geometry/beam-column-cutback.ts` | **NEW** `extendBeamOutlineIntoFramingColumns` + helpers (`outlineHalfWidth`, `footprintMean`, `framingInwardExtent`) |
+| `bim/geometry/shared/polygon-utils.ts` | **NEW SSoT** `projectPointOnAxis` + `AxisProjection` (canonical along/perp· canonical core του entity wrapper `projectColumnCenterOnAxis`) |
+| `bim/geometry/beam-column-cutback.ts` | **NEW** `extendBeamOutlineIntoFramingColumns` + helpers· **reuse** `polygonCentroid` + `projectPointOnAxis` (ΟΧΙ ίδιο vertex-mean/projection — κεντρικοποιήθηκε) |
 | `hooks/canvas/dxf-scene-beam-cutback.ts` | carve-outline = extended (2Δ committed + preview)· contact = αρχικό |
 | `bim-3d/converters/bim-three-structural-converters.ts` | **NEW** `buildBeam3DCarveOutline` (3Δ parity) |
-| `bim/structural/codes/suggest-reinforcement.ts` | **NEW** `columnLeverArmMm` (circular z=D_s/π)· wire στο `asMomentColumnMm2` |
+| `bim/structural/codes/suggest-reinforcement.ts` | **NEW** `columnLeverArmMm` (#6 circular z=D_s/π)· **#7** circular → `stirrups.type='spiral'` (reuse spiral infra) |
 | `bim/geometry/__tests__/beam-column-cutback.test.ts` | +5 jest (κυκλικό carve, ορθογ. regression, mid-span/far null) |
-| `bim/structural/codes/__tests__/suggest-reinforcement-moment.test.ts` | +2 jest (circular > perimeter lever arm· μηδέν-ροπή regression) |
+| `bim/geometry/shared/__tests__/polygon-utils-projection.test.ts` | **NEW** +4 jest (projectPointOnAxis along/perp) |
+| `bim/structural/codes/__tests__/suggest-reinforcement-moment.test.ts` | +3 jest (#6 circular>perimeter lever arm· μηδέν-ροπή regression· #7 spiral default) |
 
-**jest:** 698/698 GREEN (44 suites, geometry+structural). **🔴 ΕΚΚΡΕΜΕΙ:** tsc (Giorgio) + browser-verify (2Δ+3Δ, διάφορες γωνίες δοκαριού) + commit.
+**Κεντρικοποίηση (N.0.2):** το αρχικό `footprintMean` (vertex-mean) ήταν διπλότυπο του `polygonCentroid` → **διορθώθηκε** (reuse). Η along/perp προβολή εξήχθη ως canonical pure `projectPointOnAxis` (polygon-utils)· το entity `projectColumnCenterOnAxis` (column-face-trim, **ADR-492 set — coordinate**) flagged να delegate-άρει (pending-ratchet).
+
+**jest:** όλα τα touched suites GREEN (cutback 17, projection 4, moment 8, multishape, stirrup-types, preview-parity). 2 pre-existing raft/slab fails = ADR-476 (ΟΧΙ δικά μου). **🔴 ΕΚΚΡΕΜΕΙ:** tsc (Giorgio) + browser-verify (2Δ+3Δ, διάφορες γωνίες δοκαριού· circular auto-οπλισμός→σπείρα) + commit.
 
 ---
 
@@ -92,8 +96,8 @@
 
 - Κοίλη/σύνθετη παρειά (L/T) framing — centroid μπορεί να πέφτει σε notch· τρέχουσα λύση εγγυημένη για κυρτές (κύκλος/ορθογ./πολύγωνο).
 - BOQ net-volume: η οπτική επέκταση δεν αλλάζει το persisted μήκος δοκαριού (corner-sliver bearing αμελητέο).
-- #7 σπείρα ως detailing option.
 - Biaxial circular M-N / πλήρες interaction diagram.
+- `projectColumnCenterOnAxis` + `footprintCentroid` (column-face-trim / attach-coordinator, **ADR-492 set**) → delegate σε `projectPointOnAxis`/`polygonCentroid` on-touch (pending-ratchet, coordinate).
 
 ---
 
@@ -101,4 +105,5 @@
 
 | Ημ/νία | Αλλαγή |
 |---|---|
-| 2026-06-18 | **Δημιουργία.** (A) Revit-grade derived carve-extension για κυκλική/υποχωρούσα παρειά (μηνίσκος-κενό) — pure SSoT `extendBeamOutlineIntoFramingColumns`, 2Δ+3Δ parity, μηδέν persisted churn / ADR-492 collision. (B) Πίνακας ορθότητας κυκλικής + διόρθωση #6 (M-N lever arm `0.81·d` → πλαστικός δακτύλιος `D_s/π`). 7 νέα jest, 698 GREEN. |
+| 2026-06-18 | **Δημιουργία.** (A) Revit-grade derived carve-extension για κυκλική/υποχωρούσα παρειά (μηνίσκος-κενό) — pure SSoT `extendBeamOutlineIntoFramingColumns`, 2Δ+3Δ parity, μηδέν persisted churn / ADR-492 collision. (B) Πίνακας ορθότητας κυκλικής + διόρθωση #6 (M-N lever arm `0.81·d` → πλαστικός δακτύλιος `D_s/π`). |
+| 2026-06-18 | **Κεντρικοποίηση + #7.** Διόρθωση μικρο-διπλότυπου: `footprintMean`→`polygonCentroid`· εξαγωγή canonical `projectPointOnAxis` (polygon-utils) + flag delegation του entity wrapper (pending-ratchet). **#7** (Giorgio «ΝΑΙ ΘΕΛΩ»): circular auto-οπλισμός → `stirrups.type='spiral'` (reuse υπάρχουσας spiral infra· η εκτίμηση «λείπει» ήταν ΛΑΘΟΣ). +4 projection jest, +1 spiral jest. |

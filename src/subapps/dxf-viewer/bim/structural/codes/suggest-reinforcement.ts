@@ -18,6 +18,8 @@ import { rectRestrainedBarIntervals } from '../reinforcement/column-reinforcemen
 import type { BeamSupportType } from '../../types/beam-types';
 import type {
   ColumnReinforcement,
+  ColumnStirrups,
+  StirrupType,
   WallReinforcementIntent,
 } from '../reinforcement/column-reinforcement-types';
 import type { BeamRebarLayer, BeamReinforcement } from '../reinforcement/beam-reinforcement-types';
@@ -206,13 +208,20 @@ export function suggestColumnReinforcementFrom(
   // Stirrup rules εξαρτώνται από την τελική διάμετρο διαμήκους → δεύτερο call.
   const limits = provider.columnReinforcementLimits(ctx, diameterMm);
 
+  // ADR-493 — ΚΥΚΛΙΚΗ διατομή → συνεχής **σπείρα** (EC2 §9.5.3 / EC8 §5.4.3.2.2: η
+  // προτιμώμενη περίσφιγξη κυκλικής, καλύτερη ductility)· ορθογ./λοιπά → DEFAULT (κλειστός
+  // συνδετήρας). Reuse ΟΛΗΣ της υπάρχουσας spiral infra (layout/3Δ/detail/BOQ)· ο χρήστης
+  // μπορεί να το override-άρει (manual → auto=false). spiralPitchMm absent ⇒ = spacingMm.
+  const stirrupType: StirrupType | undefined = ctx.mode === 'circular' ? 'spiral' : undefined;
+  const stirrups: ColumnStirrups = {
+    diameterMm: limits.minStirrupDiameterMm,
+    spacingMm: roundSpacingDown(limits.maxStirrupSpacingMm),
+    spacingCriticalMm: roundSpacingDown(limits.criticalStirrupSpacingMm),
+    ...(stirrupType ? { type: stirrupType } : {}),
+  };
   const base: ColumnReinforcement = {
     longitudinal: { diameterMm, count },
-    stirrups: {
-      diameterMm: limits.minStirrupDiameterMm,
-      spacingMm: roundSpacingDown(limits.maxStirrupSpacingMm),
-      spacingCriticalMm: roundSpacingDown(limits.criticalStirrupSpacingMm),
-    },
+    stirrups,
     coverMm: limits.nominalCoverMm,
   };
   // ADR-460 — τοίχωμα: πρόσθεσε boundary elements + κατανεμημένο κορμό (EC8 §5.4.3.4).
