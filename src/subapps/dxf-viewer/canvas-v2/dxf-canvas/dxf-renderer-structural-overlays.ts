@@ -51,7 +51,7 @@ export function drawMemberReinforcement2D(
       if (!isStructuralComponentVisible('reinforcement', entity)) continue;
       if (isHiddenByCutPlane(entity, bimSettings.viewRange, bimSettings.cutPlaneActive)) continue;
       const pxPerMm = mmToSceneUnits(entity.params.sceneUnits ?? 'mm') * transform.scale;
-      drawColumnRebar2D(ctx, entity.params, pxPerMm, worldToScreen);
+      drawColumnRebar2D(ctx, entity.params, pxPerMm, worldToScreen, entity.id); // ADR-491 — FEM-aware
     } else if (entity.type === 'beam') {
       if (!entity.params.reinforcement) continue; // ADR-471 — δοκάρι με ορισμένο/auto οπλισμό
       if (!isStructuralComponentVisible('reinforcement', entity)) continue;

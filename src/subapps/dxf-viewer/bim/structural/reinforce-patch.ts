@@ -123,18 +123,27 @@ export function slabReinforcementMateriallyDiffers(
  * (πρόβολος όταν 1 στήριξη) που ο caller (auto-reinforce core) παράγει από τον graph.
  * Έτσι ο πρόβολος ξανα-σχεδιάζεται με `wL²/2` → `materiallyDiffers` → patch → ο
  * persisted οπλισμός ΚΑΙ το toast ακολουθούν τη νέα τοπολογία (όχι «κανένα μέλος»).
+ *
+ * ADR-491 — `columnFemMomentKnm` (προαιρετικό): η **FEM ροπή του φορέα** στη στήριξη του
+ * προβόλου (`wL²/2`) που ο caller (auto-reinforce core) διαβάζει από το engaged-gated FEM
+ * store. Έτσι η κολώνα στήριξης ξανα-σχεδιάζεται M-N για τη ροπή → patch → persisted οπλισμός
+ * επαρκής (utilization ≤ 1). Mirror του beam `supportType` (αναλυτικός override).
  */
 export function buildReinforcePatch(
   entity: Entity,
   provider: StructuralCodeProvider,
   supportType?: BeamSupportType,
+  columnFemMomentKnm?: number,
 ): ReinforcePatch | null {
   if (isColumnEntity(entity)) {
     const stored = entity.params.reinforcement;
     if (stored && !stored.auto) return null; // manual override → ΠΟΤΕ overwrite
     const fresh: ColumnReinforcement = stored
-      ? resolveActiveColumnReinforcement(entity.params, provider) ?? stored
-      : { ...provider.suggestColumnReinforcement(buildColumnSectionContext(entity)), auto: true };
+      ? resolveActiveColumnReinforcement(entity.params, provider, columnFemMomentKnm) ?? stored
+      : {
+          ...provider.suggestColumnReinforcement(buildColumnSectionContext(entity, columnFemMomentKnm)),
+          auto: true,
+        };
     if (stored && !columnReinforcementMateriallyDiffers(stored, fresh)) return null;
     return { prev: entity.params, next: { ...entity.params, reinforcement: fresh } };
   }

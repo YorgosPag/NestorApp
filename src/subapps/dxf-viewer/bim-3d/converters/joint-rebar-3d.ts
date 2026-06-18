@@ -34,7 +34,7 @@ import type { BeamEntity } from '../../bim/types/beam-types';
 import { columnLocalMmToWorld } from '../../bim/geometry/column-geometry';
 import { scalePoints } from '../../rendering/entities/shared/geometry-vector-utils';
 import { sceneUnitsToMeters } from '../../utils/scene-units';
-import { resolveActiveColumnReinforcementForParams } from '../../bim/structural/active-reinforcement';
+import { resolveActiveColumnReinforcementForEntity } from '../../bim/structural/active-reinforcement';
 import { resolveActiveFootingReinforcementForParams } from '../../bim/structural/active-footing-reinforcement';
 import { resolveColumnReinforcementSection } from '../../bim/structural/reinforcement/column-section-outline';
 import { resolveColumnRebarLayout } from '../../bim/structural/reinforcement/column-rebar-layout-resolve';
@@ -85,7 +85,7 @@ function footprintFarReach(
 function columnBarPositions(
   colEntity: ColumnEntity,
 ): { x: number; y: number }[] | null {
-  const r = resolveActiveColumnReinforcementForParams(colEntity.params);
+  const r = resolveActiveColumnReinforcementForEntity(colEntity); // ADR-491 — FEM-aware, engaged-gated
   if (!r) return null;
   const section = resolveColumnReinforcementSection(colEntity.params);
   const layout = resolveColumnRebarLayout(r, section);

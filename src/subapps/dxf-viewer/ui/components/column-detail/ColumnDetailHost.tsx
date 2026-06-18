@@ -27,7 +27,7 @@ import type { ColumnEntity } from '../../../bim/types/column-types';
 // ADR-456/460 (Giorgio 2026-06-16) — the detail sheet must show the ACTIVE reinforcement:
 // auto-mode columns re-derive a fresh code design from the current geometry. Resolved ONCE
 // here (SSoT) so every pure leaf builder + the 3D capture stay unchanged and consistent.
-import { resolveActiveColumnReinforcementForParams } from '../../../bim/structural/active-reinforcement';
+import { resolveActiveColumnReinforcementForEntity } from '../../../bim/structural/active-reinforcement';
 import { buildColumnDetailSheet } from '../../../bim/structural/detail-sheet/column-detail-sheet';
 import { computeDetailSheetLayout } from '../../../bim/structural/detail-sheet/detail-sheet-layout';
 import { captureColumnDetail3d } from '../../../bim/structural/detail-sheet/render/column-detail-3d-capture';
@@ -72,7 +72,8 @@ function resolveColumn(
  * all consistent without touching the pure leaf builders.
  */
 function toEffectiveColumn(column: ColumnEntity): ColumnEntity {
-  const reinforcement = resolveActiveColumnReinforcementForParams(column.params);
+  // ADR-491 — …ForEntity: το detail sheet δείχνει τον FEM-aware οπλισμό (πρόβολος → wL²/2).
+  const reinforcement = resolveActiveColumnReinforcementForEntity(column);
   if (reinforcement === column.params.reinforcement) return column;
   return { ...column, params: { ...column.params, reinforcement } };
 }

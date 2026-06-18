@@ -1,0 +1,60 @@
+# ADR-492 — Associative beam re-frame όταν μετακινείται η κολώνα (το άκρο ξανα-κόβεται στην παρειά)
+
+**Status:** ✅ Implemented (UNCOMMITTED 2026-06-18) — browser-verify pending
+**Date:** 2026-06-18
+**Σχετικά:** ADR-441 (frame-into trim SSoT — `columnSupportAlong`) · ADR-458 (beam-column cutback — DERIVED display, complementary) · ADR-363 §1E (`useWallRetrimEffect` — το πατέρν on-move) · ADR-467/471/472/481 (αναλυτικό μήκος μέλους — γιατί stored re-frame, όχι display-only) · ADR-040 (debounced low-freq)
+
+---
+
+## 1. Πρόβλημα (στιγμιότυπο-απόδειξη `Στιγμιότυπο οθόνης 2026-06-18 212609.jpg`)
+
+2 κολώνες με πέδιλα, ένα δοκάρι που τις ενώνει (frame-into, clear span). Ο χρήστης μετακινεί **μεμονωμένα** τη δεξιά κολώνα προς τα αριστερά → το δοκάρι **περνά ΜΕΣΑ από την κολώνα και προεξέχει από τη δεξιά της παρειά** (stub).
+
+**Root cause (από τον κώδικα):** το stored `BeamParams.endPoint` **δεν ακολουθεί** την κολώνα όταν αυτή κινείται μόνη της. Το frame-into εφαρμόζεται μόνο:
+- στο **placement** (`trimSegmentEndpointsToColumns` → pull-back στην παρειά), και
+- **grid-coupled** (`GuideBinding.extend` — σταθερό σχετικά με τον άξονα, δουλεύει μόνο όταν ο κάναβος κινεί ΚΑΙ κολώνα ΚΑΙ άκρο μαζί).
+
+Μεμονωμένη μετακίνηση κολώνας → το stored άκρο μένει στο **παλιό** κέντρο → το δοκάρι εκτείνεται πέρα από τη νέα θέση. Ο ADR-458 cutback αφαιρεί σωστά τον όγκο της κολώνας στο render, **αλλά αφήνει το stub** πέρα από τη μακρινή παρειά — γιατί το δοκάρι όντως εκτείνεται ως εκεί (δεν είναι bug του cutback).
+
+## 2. Απόφαση (Revit-canonical — **stored re-frame**, επιλογή Giorgio 2026-06-18)
+
+Το δοκάρι είναι **associatively attached** στις κολώνες που frame-into. Όταν μετακινείται μια κολώνα, το αντίστοιχο **άκρο του δοκαριού επανα-υπολογίζεται στην κοντινή παρειά** της — και το stored `startPoint`/`endPoint` ακολουθεί.
+
+**Α (stored) ΟΧΙ Β (display-only):** το αναλυτικό μήκος μέλους πρέπει να ακολουθεί — τροφοδοτεί load-path/οπλισμό/FEM (ADR-467/471/472/481). Display-only θα έδειχνε σωστά αλλά οι στατικοί υπολογισμοί θα έβλεπαν το παλιό (μακρύ) δοκάρι.
+
+**Idempotent — υπολογισμός από τη ΘΕΣΗ της κολώνας, ΟΧΙ από το τρέχον endpoint:** νέο άκρο = προβολή του κέντρου της κολώνας στην ευθεία του άξονα, τραβηγμένη πίσω κατά `columnSupportAlong` (μισό πλάτος κολώνας προς το άνοιγμα). Τα νέα άκρα μένουν ΠΑΝΩ στην αρχική ευθεία → η διεύθυνση `u` δεν αλλάζει → re-run δίνει το ίδιο αποτέλεσμα (δεν «μαζεύεται», επιμηκύνεται όταν η κολώνα γυρίζει). Διατηρεί την perpendicular justification (edge-beam flush) γιατί κινεί μόνο κατά μήκος του άξονα.
+
+## 3. SSoT — μηδέν νέα face-offset/cutback math
+
+- **Face offset** = `columnSupportAlong` (ADR-441 — το ίδιο μισό-πλάτος που χρησιμοποιεί το placement trim ΚΑΙ το graph `beamFramesColumn`). **Reuse, μηδέν διπλότυπο.**
+- **Συγγραμμικότητα** (perp ≤ μισό πλάτος δοκαριού) = ίδιο κριτήριο με το `beamFramesColumn`.
+- **Persistence** = το υπάρχον `bim:entities-moved` → `useBimEntityMovedPersistEffect` (carries entities). **Μηδέν νέα persistence.**
+- **Cutback (ADR-458)** = παραμένει DERIVED, complementary: μετά το re-frame το άκρο κάθεται στην παρειά → μηδέν stub να κόψει· σε ενδιάμεσες θέσεις ο cutback καθαρίζει την επικάλυψη όπως πάντα.
+
+**Γιατί ΟΧΙ `findColumnsFramedByBeamForGraph` για τη συσχέτιση:** εκείνο είναι **span-clamped** (t εντός [−support, L+support]) — σωστό για τον στατικό graph, αλλά χάνει την κολώνα μόλις αυτή ξεφύγει **έξω** από το (ήδη κομμένο) άκρο → το δοκάρι δεν θα **επιμηκυνόταν πίσω** όταν η κολώνα γυρίζει προς τα έξω. Η συσχέτιση εδώ γίνεται **ανά άκρο** (πλησιέστερη συγγραμμική κολώνα σε κάθε άκρο), ώστε το άκρο να ακολουθεί ΚΑΙ μέσα ΚΑΙ έξω. Η perp-guard καλύπτει το «η κολώνα φεύγει πλάγια → άκρο σταματά».
+
+## 4. ADR-040 (debounced low-freq, mirror wall-retrim)
+
+NEW `useBeamReframeEffect` = **ακριβής ανάλογος** του `useWallRetrimEffect`: listen `bim:column-params-updated` + `bim:entities-moved` (φιλτραρισμένο σε κίνηση **κολώνας**) → debounce 200ms → reframe όλα τα straight δοκάρια → patch `startPoint`/`endPoint` + `computeBeamGeometry` → `setLevelScene` + emit `bim:entities-moved` με τα reframed δοκάρια (entities-only payload → δεν ξανα-triggάρει, μηδέν loop· εξάλλου idempotent). Καμία subscription σε high-freq store. Μετακίνηση δοκαριού **δεν** re-frame-άρει (Revit: μόνο η στήριξη σύρει το άκρο).
+
+## 5. Αρχεία (NEW/MOD — δικά μου)
+
+- **NEW** `bim/beams/beam-column-reframe.ts` — pure `reframeBeamEndpointsToColumns(beam, columns)` (per-end συσχέτιση + face offset). **+ test** (10 jest).
+- **NEW** `hooks/tools/useSpecialTools-beam-reframe.ts` — `useBeamReframeEffect` (orchestration, mirror wall-retrim).
+- **MOD** `hooks/tools/useSpecialTools.ts` — wire `useBeamReframeEffect(levelManager)` δίπλα στο wall-retrim.
+
+## 6. Επαλήθευση
+
+2 κολώνες + δοκάρι (frame-into) → μετακίνησε τη δεξιά κολώνα προς τα μέσα → το **stub εξαφανίζεται**, το άκρο κάθεται στην εσωτερική παρειά. Μετακίνησε την κολώνα πίσω → το δοκάρι **επιμηκύνεται** και ακολουθεί. Μετακίνησε την κολώνα πλάγια εκτός δοκαριού → το άκρο **σταματά να ακολουθεί**. Edge beam (justified) → η perpendicular θέση διατηρείται.
+
+## 7. DEFER
+
+- **Curved / split** δοκάρια (μεσαίο column που χωρίζει το δοκάρι) — identity, parity με ADR-458 DEFER.
+- **Undo** ως ξεχωριστό atomic βήμα μαζί με τη μετακίνηση κολώνας (τώρα: το re-frame persist-άρεται σαν entity-move· συνεπές με wall-retrim).
+- Outward-follow όταν η κολώνα **τηλεμεταφέρεται** πολύ μακριά κατά μήκος του ίδιου άξονα πάνω σε άλλο δοκάρι (η ανά-άκρο πλησιέστερη συγγραμμική κολώνα είναι το πρακτικό όριο).
+
+## 8. Changelog
+
+| Ημ/νία | Αλλαγή |
+|--------|--------|
+| 2026-06-18 | Αρχική υλοποίηση (Α stored re-frame). NEW pure `beam-column-reframe` (per-end συσχέτιση, reuse `columnSupportAlong`· idempotent· διατηρεί justification) + `useBeamReframeEffect` (mirror wall-retrim). 10 jest GREEN. UNCOMMITTED. |

@@ -14,7 +14,7 @@
  * @see ./section-context.ts — resolveActiveColumnReinforcement (pure SSoT)
  */
 
-import type { ColumnParams } from '../types/column-types';
+import type { ColumnEntity, ColumnParams } from '../types/column-types';
 import type { BeamEntity } from '../types/beam-types';
 import type { SlabEntity } from '../types/slab-types';
 import type { ColumnReinforcement } from './reinforcement/column-reinforcement-types';
@@ -32,10 +32,18 @@ import { useStructuralSettingsStore } from '../../state/structural-settings-stor
 import type { BeamSupportType } from '../types/beam-types';
 import { BeamSupportConditionStore } from './organism/beam-support-condition-store';
 import { resolveBeamRebarLayout, type BeamRebarLayout } from './reinforcement/beam-rebar-layout';
+// ADR-491 — DERIVED FEM ροπή φορέα (πρόβολος → wL²/2 στη στήριξη), engaged-gated μέσω
+// του ΕΝΟΣ SSoT `resolveEngagedAnalysisResult` (μηδέν διπλό gate με τον auto-reinforce core).
+import { resolveColumnFemMomentKnm } from './analytical/column-fem-moment';
+import { resolveEngagedAnalysisResult } from './analytical/engaged-analysis-result';
 
 /**
  * `resolveActiveColumnReinforcement` με τον ενεργό κανονισμό από το settings store.
  * Fast-path: manual/absent → επιστρέφει το stored χωρίς να αγγίξει τον provider.
+ *
+ * **Graphless fallback (μηδέν FEM):** δεν διαθέτει `id` → δεν διαβάζει τη FEM ροπή· σχεδιάζει
+ * με την ονομαστική e₀ μόνο. Χρησιμοποιείται μόνο όπου ΔΕΝ υπάρχει entity id (π.χ. ghost drag).
+ * Οι κανονικοί renderers/overlay χρησιμοποιούν το `…ForEntity` (FEM-aware, ADR-491).
  */
 export function resolveActiveColumnReinforcementForParams(
   params: ColumnParams,
@@ -43,6 +51,32 @@ export function resolveActiveColumnReinforcementForParams(
   if (!params.reinforcement?.auto) return params.reinforcement;
   const provider = resolveStructuralCode(useStructuralSettingsStore.getState().codeId);
   return resolveActiveColumnReinforcement(params, provider);
+}
+
+/**
+ * ADR-491 — η DERIVED FEM ροπή σχεδιασμού (kNm) μιας κολόνας από το `AnalysisResultsStore`,
+ * **engaged-gated** (Revit «analytical results enabled»): επιστρέφει τη ροπή ΜΟΝΟ όταν ο
+ * μηχανικός «παρατηρεί στατικά» (`isAnalysisEngaged`, ADR-488). Εκτός engaged → `undefined`
+ * → η κολώνα επανέρχεται στην ονομαστική e₀ (αποφυγή stale FEM influence όταν κλείσουν τα
+ * overlays). Mirror του `resolveActiveBeamSupportType`. Το engaged gate ζει στο ΕΝΑ SSoT
+ * `resolveEngagedAnalysisResult` (κοινό με τον persisted path). Pure store read (ADR-040 safe).
+ */
+export function resolveActiveColumnFemMoment(columnId: string): number | undefined {
+  return resolveColumnFemMomentKnm(resolveEngagedAnalysisResult(), columnId);
+}
+
+/**
+ * ADR-491 — `resolveActiveColumnReinforcement` με τον ενεργό κανονισμό + τη **FEM ροπή του
+ * φορέα** (πρόβολος → `wL²/2` στη στήριξη) από το engaged-gated `resolveActiveColumnFemMoment`.
+ * Χρειάζεται `id` για το store lookup (οι renderers/overlays περνούν full `ColumnEntity`).
+ * Fast-path: manual/absent → stored χωρίς provider. Mirror του `resolveActiveBeamReinforcementForEntity`.
+ */
+export function resolveActiveColumnReinforcementForEntity(
+  column: Pick<ColumnEntity, 'id' | 'params'>,
+): ColumnReinforcement | undefined {
+  if (!column.params.reinforcement?.auto) return column.params.reinforcement;
+  const provider = resolveStructuralCode(useStructuralSettingsStore.getState().codeId);
+  return resolveActiveColumnReinforcement(column.params, provider, resolveActiveColumnFemMoment(column.id));
 }
 
 /**

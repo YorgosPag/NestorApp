@@ -51,6 +51,12 @@ const PROACTIVE_REINFORCE_EVENTS: readonly DrawingEventType[] = [
   // takedown ΔΕΝ ακούει → η αλυσίδα loads→reinforce είναι terminal (μηδέν oscillation).
   // Διπλό δίχτυ: `buildReinforcePatch` convergence guard (ίδιο φορτίο → μηδέν patch).
   'bim:structural-loads-computed',
+  // ADR-491 — φρέσκο FEM αποτέλεσμα (ο πρόβολος ξανα-έλυσε → νέα ροπή κολώνας στήριξης) →
+  // re-study του M-N οπλισμού κολόνας. Loop-safe: ο proactive FEM (useProactiveStructuralAnalysis)
+  // ΔΕΝ ακούει `bim:structural-auto-reinforced`/`bim:entities-attached`, και ο additive οπλισμός
+  // δεν αλλάζει δυσκαμψία → ο FEM δεν ξανα-τρέχει από τον οπλισμό (terminal). Εκπέμπεται μόνο
+  // engaged (ο FEM solve-άρει μόνο engaged) → η FEM ροπή εφαρμόζεται μόνο όταν παρατηρείς στατικά.
+  'bim:analysis-solved',
 ];
 
 /**

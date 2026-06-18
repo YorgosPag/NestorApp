@@ -23,7 +23,10 @@ import {
   resolveColumnCrossTies,
 } from '../structural/reinforcement/column-rebar-layout-resolve';
 import { resolveColumnReinforcementSection } from '../structural/reinforcement/column-section-outline';
-import { resolveActiveColumnReinforcementForParams } from '../structural/active-reinforcement';
+import {
+  resolveActiveColumnReinforcementForParams,
+  resolveActiveColumnReinforcementForEntity,
+} from '../structural/active-reinforcement';
 import { DEFAULT_STIRRUP_TYPE } from '../structural/reinforcement/column-reinforcement-types';
 // ADR-471 Slice 6 — χρώμα οπλισμού από το ΕΝΑ SSoT (μελετητική σύμβαση — κόκκινο/crimson).
 import { REBAR_COLOR_HEX as REBAR_COLOR } from '../structural/rebar-catalog';
@@ -52,16 +55,23 @@ function strokePath(
 /**
  * Ζωγραφίζει τον οπλισμό μιας κολώνας στην κάτοψη (κάθε σχήμα). No-op αν δεν έχει
  * ορισμένο οπλισμό ή εκφυλισμένη διατομή. `pxPerMm` = scene-units-per-mm × scale.
+ *
+ * ADR-491 — `columnId` (προαιρετικό): όταν δίνεται (committed overlay path) ο οπλισμός
+ * γίνεται **FEM-aware** μέσω `…ForEntity` (πρόβολος → wL²/2 στη στήριξη, engaged-gated).
+ * Απών (ghost drag preview) → `…ForParams` (e₀ — η FEM ροπή δεν έχει ξανα-λυθεί mid-drag).
  */
 export function drawColumnRebar2D(
   ctx: CanvasRenderingContext2D,
   p: ColumnParams,
   pxPerMm: number,
   worldToScreen: (p: Point2D) => Point2D,
+  columnId?: string,
 ): void {
   // ADR-456/460 (Giorgio 2026-06-16) — auto-mode ⇒ φρέσκο design από την τρέχουσα γεωμετρία
   // (real-time στο resize)· manual ⇒ stored. ΕΝΑ SSoT (resolveActiveColumnReinforcement).
-  const r = resolveActiveColumnReinforcementForParams(p);
+  const r = columnId
+    ? resolveActiveColumnReinforcementForEntity({ id: columnId, params: p })
+    : resolveActiveColumnReinforcementForParams(p);
   if (!r) return;
   const section = resolveColumnReinforcementSection(p);
   const layout = resolveColumnRebarLayout(r, section);

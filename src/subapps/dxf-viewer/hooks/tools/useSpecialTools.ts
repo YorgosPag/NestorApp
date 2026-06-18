@@ -27,6 +27,7 @@ import { useBeamTool } from '../drawing/useBeamTool';
 import { useSlabOpeningTool } from '../drawing/useSlabOpeningTool';
 import { buildSlabOpeningResolvers } from './useSpecialTools-slab-opening';
 import { useWallRetrimEffect } from './useSpecialTools-wall-retrim';
+import { useBeamReframeEffect } from './useSpecialTools-beam-reframe';
 import { buildOpeningResolvers } from './useSpecialTools-opening';
 import { useToolLifecycle } from './useToolLifecycle';
 // ADR-419 — region tool-id → method SSoT (split του «σε περιοχή» σε 3 εντολές).
@@ -403,6 +404,8 @@ export function useSpecialTools(props: UseSpecialToolsProps): UseSpecialToolsRet
   useToolLifecycle(activeTool === 'slab-opening', slabOpeningTool.activate, slabOpeningTool.deactivate);
   // ADR-363 Phase 1E — Re-trim all walls after a grip commit settles (extracted helper).
   useWallRetrimEffect(levelManager);
+  // ADR-492 — Re-frame beams to column faces after a column move/edit settles.
+  useBeamReframeEffect(levelManager);
   // AUTO AREA — clear result panel when tool changes away
   useEffect(() => {
     if (activeTool !== 'auto-measure-area') {

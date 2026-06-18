@@ -35,7 +35,7 @@ import {
 import { resolveColumnReinforcementSection } from '../../bim/structural/reinforcement/column-section-outline';
 // ADR-404 Bug A — point-shear SSoT (reuse· ΟΧΙ ξανα-υλοποίηση της σύμβασης shear).
 import { applyColumnTiltToPoints } from './mesh-slope-shear';
-import { resolveActiveColumnReinforcementForParams } from '../../bim/structural/active-reinforcement';
+import { resolveActiveColumnReinforcementForEntity } from '../../bim/structural/active-reinforcement';
 import { DEFAULT_STIRRUP_TYPE } from '../../bim/structural/reinforcement/column-reinforcement-types';
 import type { Point2D } from '../../rendering/types/Types';
 // ADR-463 — shared 3Δ rebar primitives (SSoT κολώνα+θεμελίωση· pure, μηδέν store import).
@@ -137,7 +137,8 @@ export function buildColumnRebarCage(
 ): THREE.Group | null {
   const p = column.params;
   // ADR-456/460 (Giorgio 2026-06-16) — auto-mode ⇒ real-time re-derive από γεωμετρία· ΕΝΑ SSoT.
-  const r = resolveActiveColumnReinforcementForParams(p);
+  // ADR-491 — …ForEntity: FEM-aware (πρόβολος → wL²/2 στη στήριξη), engaged-gated.
+  const r = resolveActiveColumnReinforcementForEntity(column);
   if (!r) return null;
   const heightM = Math.max(0, heightMm) * MM_TO_M;
   if (heightM <= 0) return null;

@@ -31,6 +31,10 @@ import { AutoReinforceOrganismCommand } from '../core/commands/entity-commands/A
 import { buildStructuralGraph } from '../bim/structural/organism/structural-graph';
 import { buildBeamSupportTypeMap } from '../bim/structural/organism/derive-beam-support';
 import { isColumnEntity, isBeamEntity, isFoundationEntity, isSlabEntity } from '../types/entities';
+// ADR-491 — DERIVED FEM ροπή φορέα ανά κολώνα στήριξης. Το engaged gate ζει στο ΕΝΑ SSoT
+// `resolveEngagedAnalysisResult` (κοινό με τον render path active-reinforcement — μηδέν διπλό gate).
+import { buildColumnFemMomentMap } from '../bim/structural/analytical/column-fem-moment';
+import { resolveEngagedAnalysisResult } from '../bim/structural/analytical/engaged-analysis-result';
 import type { Entity } from '../types/entities';
 import type { SceneModel } from '../types/scene';
 import type { StructuralCodeProvider } from '../bim/structural/codes/structural-code-types';
@@ -82,7 +86,13 @@ export function runOrganismAutoReinforce(
   // ADR-486 — topology-aware τύπος στήριξης ανά δοκάρι από τη ζωντανή συνδεσιμότητα, ώστε ο
   // πρόβολος να ξανα-σχεδιάζεται με wL²/2 (αλλιώς ο command θα έβλεπε stale 'simple' → «κανένα»).
   const supportTypeByBeamId = buildBeamSupportTypeMap(buildStructuralGraph(entities));
-  const command = new AutoReinforceOrganismCommand(ids, sm, provider, supportTypeByBeamId);
+  // ADR-491 — FEM ροπή φορέα ανά κολώνα (engaged-gated μέσω του ΕΝΟΣ SSoT): η κολώνα στήριξης
+  // προβόλου οπλίζεται M-N για wL²/2. Μη-engaged → EMPTY → κενός χάρτης → μηδέν override (e₀).
+  const columnFemMomentById = buildColumnFemMomentMap(
+    resolveEngagedAnalysisResult(),
+    entities.filter(isColumnEntity).map((e) => e.id),
+  );
+  const command = new AutoReinforceOrganismCommand(ids, sm, provider, supportTypeByBeamId, columnFemMomentById);
   const reinforced = command.getReinforcedEntityIds();
   if (reinforced.length === 0) {
     // Όλα ήδη οπλισμένα / μη-δομικά — no-op (κανένα undo entry).

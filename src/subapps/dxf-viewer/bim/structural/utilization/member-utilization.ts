@@ -67,13 +67,19 @@ export function beamUtilization(
 /**
  * Utilization κολόνας: As,req = αξονική+καμπτική απαίτηση (asStrengthColumn)· As,prov =
  * συνολικός διαμήκης οπλισμός. `reinforcement` = ο ενεργός οπλισμός.
+ *
+ * ADR-491 — `designMomentOverrideKnm` (FEM end-moment, π.χ. πρόβολος → wL²/2): η As,req
+ * γίνεται FEM-aware (max με e₀) ώστε το utilization να αποκαλύπτει την ανεπάρκεια του
+ * προβόλου ΠΡΙΝ τον οπλισμό (>1, κόκκινο) και να δείχνει επάρκεια μετά (≤1). Ο caller
+ * περνά την ΙΔΙΑ engaged-gated ροπή που τροφοδότησε το As,prov → req & prov συμφωνούν.
  */
 export function columnUtilization(
   column: ColumnEntity,
   reinforcement: ColumnReinforcement | undefined,
+  designMomentOverrideKnm?: number,
 ): MemberUtilization | null {
   if (!reinforcement) return null;
-  const ctx = buildColumnSectionContext(column);
+  const ctx = buildColumnSectionContext(column, designMomentOverrideKnm);
   const asRequired = asStrengthColumnMm2(ctx);
   const asProvided = reinforcement.longitudinal.count * barAreaMm2(reinforcement.longitudinal.diameterMm);
   return toRatio(column.id, asRequired, asProvided);

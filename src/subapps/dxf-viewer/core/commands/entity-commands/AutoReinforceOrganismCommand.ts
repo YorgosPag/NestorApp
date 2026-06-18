@@ -51,6 +51,8 @@ export class AutoReinforceOrganismCommand implements ICommand {
     private readonly provider: StructuralCodeProvider,
     // ADR-486 — DERIVED topology-aware τύπος στήριξης ανά δοκάρι (πρόβολος → wL²/2).
     private readonly supportTypeByBeamId?: ReadonlyMap<string, BeamSupportType>,
+    // ADR-491 — DERIVED FEM ροπή φορέα ανά κολώνα στήριξης (πρόβολος → M-N οπλισμός).
+    private readonly columnFemMomentById?: ReadonlyMap<string, number>,
   ) {
     this.id = generateEntityId();
     this.timestamp = Date.now();
@@ -79,7 +81,12 @@ export class AutoReinforceOrganismCommand implements ICommand {
     for (const entityId of this.entityIds) {
       const entity = this.sceneManager.getEntity(entityId) as unknown as Entity | undefined;
       if (!entity) continue;
-      const patch = buildReinforcePatch(entity, this.provider, this.supportTypeByBeamId?.get(entityId));
+      const patch = buildReinforcePatch(
+        entity,
+        this.provider,
+        this.supportTypeByBeamId?.get(entityId),
+        this.columnFemMomentById?.get(entityId),
+      );
       if (!patch) continue; // idempotent: non-structural ή ήδη οπλισμένο
       this.patches.push({ entityId, prev: patch.prev, next: patch.next });
     }

@@ -41,7 +41,8 @@ import {
 } from '../../bim/structural/utilization/utilization-color';
 import {
   resolveActiveBeamReinforcementForEntity,
-  resolveActiveColumnReinforcementForParams,
+  resolveActiveColumnReinforcementForEntity,
+  resolveActiveColumnFemMoment,
   resolveActiveBeamSupportType,
 } from '../../bim/structural/active-reinforcement';
 import { resolveMemberFootprintVertices } from '../../bim/structural/member-footprint-2d';
@@ -140,7 +141,13 @@ export function StructuralUtilizationOverlay({ transform, viewport }: Structural
     for (const e of scene.entities) {
       // ADR-490 — footprint resolution = κοινό SSoT (`resolveMemberFootprintVertices`).
       if (isColumnEntity(e)) {
-        const util = columnUtilization(e, resolveActiveColumnReinforcementForParams(e.params));
+        // ADR-491 — η ΙΔΙΑ engaged-gated FEM ροπή τροφοδοτεί As,prov (μέσω …ForEntity) ΚΑΙ
+        // As,req (3ο arg) → req & prov συμφωνούν (πρόβολος: >1 πριν, ≤1 μετά τον M-N οπλισμό).
+        const util = columnUtilization(
+          e,
+          resolveActiveColumnReinforcementForEntity(e),
+          resolveActiveColumnFemMoment(e.id),
+        );
         const verts = resolveMemberFootprintVertices(e);
         if (util && verts) out.push({ vertices: verts, color: utilizationFillColor(util.ratio) });
       } else if (isBeamEntity(e)) {

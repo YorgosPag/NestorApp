@@ -204,6 +204,10 @@ events). Χρειάζεται μόνο: (α) ο πυρήνας `runOrganismAutoR
 
 ## 7. Changelog
 
+- **2026-06-18 (ADR-491 cross-ref):** Ο M-N σχεδιασμός κολόνας S4 (`designMomentKnm`) δέχεται πλέον
+  και την **πραγματική ροπή του φορέα** (FEM end-moment προβόλου, `wL²/2`) μέσω της γέφυρας
+  **ADR-491** (`designMomentOverrideKnm`, `M_Ed = max(N·e₀, M_FEM)`, engaged-gated). Ο engine S4
+  παραμένει ΑΜΕΤΑΒΛΗΤΟΣ — μόνο η πηγή της ροπής εμπλουτίζεται (από e₀ σε max(e₀, FEM)).
 - **2026-06-17 (S4 υλοποίηση, UNCOMMITTED):** Auto ονομαστική ροπή M_Ed (EC2 §6.1(4)) + M-N
   σχεδιασμός κολόνας (axial + steel-couple). Zero-input (Revit-grade). Output types αμετάβλητα.
   Συνεργάζεται με ADR-474 (auto φορτία) → πλήρως αυτόματος δομικός σχεδιασμός. Λεπτομέρειες §6γ.

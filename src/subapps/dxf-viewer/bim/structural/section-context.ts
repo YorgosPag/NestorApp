@@ -85,12 +85,26 @@ function padEccentricityRatio(params: PadFootingParams): number {
  * → δουλεύει ορθά σε ορθογ./κυκλική/τοίχωμα. (SSoT — πρώην inline στο
  * `column-structural-bridge`· εξήχθη εδώ, N.0.2.)
  */
-export function buildColumnSectionContext(column: ColumnEntity): ColumnSectionContext {
-  return buildColumnSectionContextFromParams(column.params);
+export function buildColumnSectionContext(
+  column: ColumnEntity,
+  designMomentOverrideKnm?: number,
+): ColumnSectionContext {
+  return buildColumnSectionContextFromParams(column.params, designMomentOverrideKnm);
 }
 
-/** Params-based variant (το context εξαρτάται ΜΟΝΟ από params — geometry-is-SSoT). */
-export function buildColumnSectionContextFromParams(params: ColumnParams): ColumnSectionContext {
+/**
+ * Params-based variant (το context εξαρτάται ΜΟΝΟ από params — geometry-is-SSoT).
+ *
+ * ADR-491 — `designMomentOverrideKnm` (προαιρετικό): η **πραγματική ροπή του φορέα** (FEM
+ * end-moment, π.χ. `wL²/2` προβόλου στη στήριξη) που υπερισχύει της ονομαστικής e₀ όταν
+ * είναι μεγαλύτερη. Mirror του beam `supportTypeOverride`: ο caller με πρόσβαση στο FEM store
+ * (proactive reinforce / render path) παράγει & περνά τον override· οι graphless callers
+ * (isolated tests/BOQ) πέφτουν στην e₀ — μηδέν regression. Η συνάρτηση μένει **pure**.
+ */
+export function buildColumnSectionContextFromParams(
+  params: ColumnParams,
+  designMomentOverrideKnm?: number,
+): ColumnSectionContext {
   const section = resolveColumnReinforcementSection(params);
   return {
     widthMm: section.bboxWidthMm,
@@ -101,7 +115,7 @@ export function buildColumnSectionContextFromParams(params: ColumnParams): Colum
     maxDimensionMm: section.maxDimensionMm,
     perimeterMm: section.perimeterMm,
     mode: section.mode,
-    ...resolveColumnDesignLoad(params, section.minThicknessMm),
+    ...resolveColumnDesignLoad(params, section.minThicknessMm, designMomentOverrideKnm),
   };
 }
 
@@ -114,18 +128,30 @@ export function buildColumnSectionContextFromParams(params: ColumnParams): Colum
  * ADR-472 S4 — επιπλέον **αυτόματη** ονομαστική ροπή `M_Ed = N_Ed·e₀` (EC2 §6.1(4),
  * SSoT `nominalColumnMomentKnm`)· `e₀` από το βάθος διατομής (ασθενής άξονας =
  * `minThicknessMm`, conservative). Μηδέν input μηχανικού (Revit-grade auto-sizing).
+ *
+ * ADR-491 — `designMomentOverrideKnm` (FEM end-moment του φορέα): `M_Ed = max(N_Ed·e₀, M_FEM)`
+ * — superposition, ΟΧΙ διπλομέτρηση (η e₀ = κατώφλι, η FEM = πραγματική ροπή). Το αξονικό N
+ * παραμένει από tributary (ο FEM v1 δεν δίνει gravity column axial αξιόπιστα, ADR-481). Όταν
+ * το tributary είναι μηδενικό αλλά υπάρχει FEM ροπή (πρόβολος σε αφόρτιστη-tributary κολώνα),
+ * σχεδιάζουμε ΚΑΘΑΡΑ για τη ροπή ώστε η κολώνα να μη μένει ανεπαρκής (ΟΡΑΜΑ §4 «σε κάθε κίνηση»).
  */
 function resolveColumnDesignLoad(
   params: ColumnParams,
   sectionDepthMm: number,
+  designMomentOverrideKnm?: number,
 ): Pick<ColumnSectionContext, 'designAxialKn' | 'concreteGrade' | 'designMomentKnm'> {
   const load = resolveAppliedMemberLoad(params.appliedLoad);
-  if (isZeroMemberLoad(load)) return {};
+  const femMomentKnm = designMomentOverrideKnm && designMomentOverrideKnm > 0 ? designMomentOverrideKnm : 0;
+  if (isZeroMemberLoad(load)) {
+    return femMomentKnm > 0
+      ? { concreteGrade: params.concreteGrade ?? DEFAULT_CONCRETE_GRADE, designMomentKnm: femMomentKnm }
+      : {};
+  }
   const designAxialKn = combineUls(load, EN1990_ULS_FACTORS).axialKn;
   return {
     designAxialKn,
     concreteGrade: params.concreteGrade ?? DEFAULT_CONCRETE_GRADE,
-    designMomentKnm: nominalColumnMomentKnm(designAxialKn, sectionDepthMm),
+    designMomentKnm: Math.max(nominalColumnMomentKnm(designAxialKn, sectionDepthMm), femMomentKnm),
   };
 }
 
@@ -139,15 +165,24 @@ function resolveColumnDesignLoad(
  *
  * Διατηρεί τις καθαρά-detailing προτιμήσεις (τύπος συνδετήρα + μοτίβο cross-tie) που δεν
  * αλλάζουν διαμήκη/ρ — ώστε η περιστροφή/resize να μην τις «σβήνει». Pure (provider arg)
- * ⇒ unit-testable· οι renderers χρησιμοποιούν το `…ForParams` convenience παρακάτω.
+ * ⇒ unit-testable.
+ *
+ * ADR-491 — `designMomentOverrideKnm` (FEM end-moment): ο πρόβολος μεταφέρει `wL²/2` στη
+ * στήριξη → η κολώνα οπλίζεται γι' αυτή τη ροπή (max με e₀). Οι renderers/overlay
+ * χρησιμοποιούν το store+engaged-coupled `resolveActiveColumnReinforcementForEntity`
+ * (active-reinforcement.ts) που διαβάζει τη ροπή από το FEM store· το `…ForParams` μένει
+ * graphless fallback (μηδέν FEM).
  */
 export function resolveActiveColumnReinforcement(
   params: ColumnParams,
   provider: StructuralCodeProvider,
+  designMomentOverrideKnm?: number,
 ): ColumnReinforcement | undefined {
   const r = params.reinforcement;
   if (!r || !r.auto) return r;
-  const fresh = provider.suggestColumnReinforcement(buildColumnSectionContextFromParams(params));
+  const fresh = provider.suggestColumnReinforcement(
+    buildColumnSectionContextFromParams(params, designMomentOverrideKnm),
+  );
   return {
     ...fresh,
     auto: true,
