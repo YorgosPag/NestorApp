@@ -56,7 +56,7 @@ seismicGroundAccelRatio, soilBearingCapacityKpa, ...`) + SSoT normalizer
 |---|---|---|
 | **NEW** `resolveActivePresetKind(settings)` (pure) | `bim/structural/presets/resolve-active-preset.ts` | ποιο preset ταυτίζεται με τα τρέχοντα settings (resolve+full-field equality)· `null` = «Προσαρμοσμένο» (Revit απόκλιση από template) |
 | barrel export | `bim/structural/presets/index.ts` | + `resolveActivePresetKind` |
-| **NEW** `StructuralPresetSelector` | `ui/components/StructuralPresetSelector.tsx` | canonical `@/components/ui/select` (ADR-001· ΟΧΙ RibbonCombobox—ribbon-context-bound)· value=active kind, onChange→`applyStructuralPreset` |
+| **NEW** `StructuralPresetSelector` | `ui/components/StructuralPresetSelector.tsx` | canonical `@/components/ui/select` (ADR-001· ΟΧΙ RibbonCombobox—ribbon-context-bound)· value=active kind, onChange→`applyStructuralPreset` **+ `EventBus.emit('bim:compute-loads-requested')`** (άμεσος επανυπολογισμός — βλ. παρακάτω) |
 | mount | `ui/components/FloorManagementDialog.tsx` | selector πάνω από `FloorsTabContent` (building present)· building-wide = σωστή Revit-αντιστοιχία (ADR-468 modal) |
 | i18n keys `structural.preset.*` | `i18n/locales/{el,en}/dxf-viewer-shell.json` | selectorLabel/sectionDescription/custom + 3 presets label/description (N.11 ΠΡΩΤΑ) |
 | **NEW** test (6) | `bim/structural/presets/__tests__/resolve-active-preset.test.ts` | exact-match κάθε preset, blank=defaults, custom=null, EC8≠legacy, omit-invariant |
@@ -64,6 +64,17 @@ seismicGroundAccelRatio, soilBearingCapacityKpa, ...`) + SSoT normalizer
 **Revit-grade:** ο selector δείχνει **κατάσταση** (active preset ή «Προσαρμοσμένο»),
 δεν είναι fire-and-forget. Apply = full-replace building settings (ήδη persist). Confirm
 dialog πριν το replace = DEFER (το active-state display ήδη καθιστά την επιλογή σαφή).
+
+**Άμεσος επανυπολογισμός (Revit «apply template = κτίριο ενημερώνεται»):** ο
+`applyStructuralPreset` (store) μένει **pure** (μόνο set+persist, μηδέν event — zero-React
+import-graph invariant). Ο **selector** εκπέμπει `bim:compute-loads-requested` μετά το apply
+— **το ίδιο event** με το ρητό ribbon «Υπολογισμός Φορτίων» (`useDxfViewerCallbacks`), μηδέν
+νέο event type / μηδέν άγγιγμα στο `drawing-event-map-bim.ts`. Αλυσίδα:
+`compute-loads-requested` → `useStructuralLoadTakedown` → `runStructuralLoadTakedown` →
+`bim:structural-loads-computed` → proactive reinforce / auto-foundation / tie-force /
+member-sizing → re-render 2Δ/3Δ οπλισμού + readouts/BOQ + live detail sheets. Ο takedown
+διαβάζει τα φρέσκα settings (`getState()`) event-time (set είναι sync → emit μετά = φρέσκο).
+⚠️ Slice 3 (programmatic apply): να εκπέμπει κι αυτό το event ή να κεντρικοποιηθεί το emit.
 
 ### Slice 3 — persisted user/company presets (DEFER)
 Mirror `StairPresetsService` (scope user/company/project, Firestore
@@ -102,7 +113,9 @@ Mirror `StairPresetsService` (scope user/company/project, Firestore
 - **2026-06-18 (Opus):** Slice 2 — UI preset selector. `resolveActivePresetKind` (pure,
   active-state detection) + `StructuralPresetSelector` (canonical `ui/select`, ADR-001) mounted
   στο `FloorManagementDialog` (building-wide, ADR-468)· i18n `structural.preset.*` (EL+EN, N.11)·
-  +6 jest. onChange→`applyStructuralPreset` (Slice 1 path). UNCOMMITTED.
+  +6 jest. onChange→`applyStructuralPreset` (Slice 1 path) **+ emit `bim:compute-loads-requested`**
+  (reuse ρητού ribbon event) → άμεσος επανυπολογισμός φορτίων→οπλισμού→πεδίλων→σχεδίων/αναφορών·
+  store μένει pure (emit από το UI layer). UNCOMMITTED.
 - **2026-06-18 (Opus):** Slice 1 — preset SSoT (`reference-static-report.ts`,
   `structural-preset-{types,defaults}.ts`, index), `applyStructuralPreset` +
   σεισμικοί setters στο store, cross-check regression test (22) + store test (+6),
