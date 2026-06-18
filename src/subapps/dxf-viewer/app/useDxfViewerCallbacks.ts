@@ -219,6 +219,12 @@ export function useDxfViewerCallbacks(params: DxfViewerCallbacksParams): DxfView
       EventBus.emit('bim:compute-loads-requested', {});
       return;
     }
+    // ADR-482 (T3-UI): «Ανάλυση» — explicit trigger του στατικού FEM solver (ADR-481).
+    // Ο dormant `useProactiveStructuralAnalysis` ξυπνά → K·u=F → AnalysisResultsStore.
+    if (action === 'organism.run-analysis') {
+      EventBus.emit('bim:run-structural-analysis', {});
+      return;
+    }
     // ADR-459 Φ4f: manual κολόνα↔πέδιλο connectivity (selection-driven· ο
     // useStructuralFootingConnect hook αναλύει την επιλογή + εκτελεί το command).
     if (action === 'organism.footing-attach') {

@@ -29,6 +29,7 @@ import type { DispatchBeamParams } from '../ribbon/hooks/bridge/useBeamParamsDis
 import { BEAM_PROPERTY_GROUPS } from './beam-property-fields';
 import { BimPropertyRow } from '../bim-properties/BimPropertyRow';
 import { EntityWarningsSection } from '../structural-warnings/EntityWarningsSection';
+import { AnalysisForcesSection } from '../structural-analysis/AnalysisForcesSection';
 
 export interface BeamAdvancedPanelProps {
   readonly beam: BeamEntity;
@@ -54,6 +55,8 @@ export function BeamAdvancedPanel({
     <div className={containerClassName ?? 'flex flex-col gap-3 p-2'}>
       {/* ADR-459 — στατικός οργανισμός: «λείπει η στήριξη/κολώνα» cross-entity warnings */}
       <EntityWarningsSection entityId={beam.id} />
+      {/* ADR-482 — εντατικά μεγέθη envelope από τον στατικό FEM solver (read-only) */}
+      <AnalysisForcesSection entityId={beam.id} />
       {BEAM_PROPERTY_GROUPS.map((group) => {
         if (group.visibilityKey && !resolveBeamPanelVisibility(group.visibilityKey, beam.params)) {
           return null;

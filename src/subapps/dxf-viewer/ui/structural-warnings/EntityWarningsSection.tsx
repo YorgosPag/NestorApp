@@ -15,6 +15,7 @@
 import React from 'react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useEntityStructuralDiagnostics } from '../../bim/structural/organism/useEntityStructuralDiagnostics';
+import { useEntityAnalysisDiagnostics } from '../structural-analysis/useEntityAnalysisDiagnostics';
 
 export interface EntityWarningsSectionProps {
   /** Entity id (κολόνα/δοκάρι/πέδιλο) του οποίου τα διαγνωστικά εμφανίζονται. */
@@ -48,7 +49,14 @@ export function EntityWarningsSection({
   entityId,
 }: EntityWarningsSectionProps): React.ReactElement | null {
   const { t } = useTranslation('dxf-viewer-shell');
-  const diagnostics = useEntityStructuralDiagnostics(entityId);
+  // ADR-459 (οργανισμός) + ADR-482 (στατική ανάλυση): ένα warnings panel, δύο πηγές.
+  // Reader-side union — ο single-writer invariant κάθε store μένει ανέπαφος.
+  const organismDiagnostics = useEntityStructuralDiagnostics(entityId);
+  const analysisDiagnostics = useEntityAnalysisDiagnostics(entityId);
+  const diagnostics = React.useMemo(
+    () => [...organismDiagnostics, ...analysisDiagnostics],
+    [organismDiagnostics, analysisDiagnostics],
+  );
   if (diagnostics.length === 0) return null;
 
   // Κυρίαρχος τόνος = υψηλότερη σοβαρότητα παρούσα (error > warning > info).

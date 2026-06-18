@@ -21,6 +21,7 @@
 import { useEffect } from 'react';
 import { EventBus } from '../systems/events/EventBus';
 import { AnalyticalModelStore } from '../bim/structural/analytical/analytical-model-store';
+import { AnalysisDiagnosticsStore } from '../bim/structural/analytical/analysis-diagnostics-store';
 import { runStructuralAnalysis } from './structural-analysis-core';
 import type { Entity } from '../types/entities';
 import type { LoadTakedownLevelManager } from './structural-load-takedown-core';
@@ -39,7 +40,12 @@ export function useProactiveStructuralAnalysis(props: { levelManager: LoadTakedo
       if (!scene) return;
       const model = AnalyticalModelStore.get();
       if (model.members.length === 0) return; // κανένα φέρον μέλος → no-op
-      runStructuralAnalysis({ entities: scene.entities as unknown as readonly Entity[], model });
+      // ADR-482: ο core γράφει το AnalysisResultsStore + emit `bim:analysis-solved`·
+      // εδώ (single-writer) δημοσιεύουμε τα diagnostics ευστάθειας στο warnings panel.
+      const { diagnostics } = runStructuralAnalysis({
+        entities: scene.entities as unknown as readonly Entity[], model,
+      });
+      AnalysisDiagnosticsStore.set(diagnostics);
     };
 
     const schedule = (): void => {

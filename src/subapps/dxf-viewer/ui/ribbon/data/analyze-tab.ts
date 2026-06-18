@@ -150,6 +150,20 @@ export const STRUCTURAL_REINFORCE_PANEL: RibbonPanelDef = {
     {
       isInFlyout: false,
       buttons: [
+        // ADR-482 — «Ανάλυση»: explicit trigger του στατικού FEM solver (ADR-481).
+        // emit `bim:run-structural-analysis` → dormant hook ξυπνά → K·u=F → M/V/N.
+        {
+          type: 'simple',
+          size: 'large',
+          command: {
+            id: 'analyze.run-analysis',
+            labelKey: 'ribbon.commands.runStructuralAnalysis',
+            icon: 'struct-run-analysis',
+            commandKey: 'organism.run-analysis',
+            action: 'organism.run-analysis',
+            tooltipKey: 'ribbon.tooltips.runStructuralAnalysis',
+          },
+        },
         {
           type: 'simple',
           size: 'large',

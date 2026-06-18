@@ -17,6 +17,16 @@
     "diagnostics": {
       "unstable": "The structure is a mechanism — static analysis does not converge (insufficient supports/connections).",
       "memberSkipped": "Member skipped from analysis — missing a valid section or geometry."
+    },
+    "solved": "Static analysis: solved {count, plural, one {# load combination} other {# load combinations}}.",
+    "solvedUnstable": "Static analysis detected a mechanism — the structure cannot be solved (insufficient supports/connections).",
+    "forces": {
+      "title": "Internal forces (Analysis)",
+      "axial": "N_Ed: {value} kN",
+      "shear": "V_Ed: {value} kN",
+      "moment": "M_Ed: {value} kNm",
+      "torsion": "T_Ed: {value} kNm",
+      "empty": "No results — run «Analysis»."
     }
   },
   "structuralOrganism": {
@@ -3793,6 +3803,7 @@
         }
       },
       "print": "Print",
+      "runStructuralAnalysis": "Analysis",
       "autoReinforceOrganism": "Auto-Reinforce",
       "computeTakedownLoads": "Compute Loads",
       "footingConnect": {
@@ -3807,7 +3818,8 @@
       "thermalEnvelope": "Apply a unified external thermal envelope (ETICS) to the floor",
       "print": "Print the drawing to PDF, printer or plotter (from 2D or 3D)",
       "autoReinforceOrganism": "Auto-reinforce the selected structural members (or the whole floor) with the minimum valid reinforcement per the active code",
-      "computeTakedownLoads": "Auto footing loads: column tributary area × storeys × area loads (G/Q) → service design load (never overwrites manual loads)"
+      "computeTakedownLoads": "Auto footing loads: column tributary area × storeys × area loads (G/Q) → service design load (never overwrites manual loads)",
+      "runStructuralAnalysis": "3D frame static linear analysis (K·u=F) → real internal forces M/V/N + per-member diagrams (informational — does not replace tributary design loads)"
     },
     "symbolPicker": {
       "title": "Symbol Picker",

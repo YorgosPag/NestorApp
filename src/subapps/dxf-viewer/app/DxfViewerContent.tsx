@@ -50,6 +50,7 @@ import { useStructuralLoadTakedown } from '../hooks/useStructuralLoadTakedown';
 import { useProactiveStructuralLoads } from '../hooks/useProactiveStructuralLoads';
 import { useProactiveTieBeamTieForce } from '../hooks/useProactiveTieBeamTieForce';
 import { useProactiveStructuralAnalysis } from '../hooks/useProactiveStructuralAnalysis';
+import { useStructuralAnalysisNotification } from '../hooks/useStructuralAnalysisNotification';
 import { useStructuralSettingsRecompute } from '../hooks/useStructuralSettingsRecompute';
 import { useStructuralFootingConnect } from '../hooks/useStructuralFootingConnect';
 import { useStructuralComponentOverride } from '../hooks/useStructuralComponentOverride';
@@ -277,6 +278,7 @@ export const DxfViewerContent = React.memo<DxfViewerAppProps>((props) => {
   useFoundationLevelSync({ levelManager }); // ADR-459 Phase 0 — foundation-level SSoT (cross-level organism)
   useStructuralOrganism({ levelManager }); // ADR-459 Phase 1 — cross-entity structural diagnostics («λείπει το πέδιλο»)
   useProactiveStructuralAnalysis({ levelManager }); // ADR-481 (T3) — on-demand στατικός FEM solver (K·u=F → M/V/N), explicit «Ανάλυση» trigger
+  useStructuralAnalysisNotification(); // ADR-482 (T3-UI) — toast στο `bim:analysis-solved` (πλήθος συνδυασμών / μηχανισμός)
   useColumnAdjacencyNotification({ levelManager }); // ADR-363 — post-creation adjacent-columns→shear-wall merge toast
   useAutoFoundationDesign({ levelManager }); // ADR-459 Φ7 — Αυτόματος Σχεδιασμός Θεμελίωσης (level-wide auto + info)
   useStructuralOrganismNotification({ levelManager }); // ADR-459 Φ7 — αυτόματος ενιαίος οπλισμός οργανισμού (no prompt)

@@ -15,6 +15,7 @@
  */
 
 import type { StructuralDiagnostic } from './structural-organism-types';
+import { indexDiagnosticsByEntity } from './diagnostics-index';
 
 const EMPTY: readonly StructuralDiagnostic[] = Object.freeze([]);
 
@@ -24,26 +25,11 @@ let all: readonly StructuralDiagnostic[] = EMPTY;
 let byEntity: ReadonlyMap<string, readonly StructuralDiagnostic[]> = new Map();
 const listeners = new Set<Listener>();
 
-/** Index ανά εμπλεκόμενο entityId (ένα εύρημα φαίνεται σε ΟΛΑ τα entityIds του). */
-function indexByEntity(
-  diagnostics: readonly StructuralDiagnostic[],
-): ReadonlyMap<string, readonly StructuralDiagnostic[]> {
-  const map = new Map<string, StructuralDiagnostic[]>();
-  for (const d of diagnostics) {
-    for (const id of d.entityIds) {
-      const bucket = map.get(id);
-      if (bucket) bucket.push(d);
-      else map.set(id, [d]);
-    }
-  }
-  return map;
-}
-
 export const StructuralDiagnosticsStore = {
   /** Αντικατάστησε τα ευρήματα + ειδοποίησε subscribers. */
   set(next: readonly StructuralDiagnostic[]): void {
     all = next.length === 0 ? EMPTY : next;
-    byEntity = indexByEntity(all);
+    byEntity = indexDiagnosticsByEntity(all);
     listeners.forEach((l) => l());
   },
   /** Όλα τα τρέχοντα ευρήματα (stable reference μέχρι το επόμενο set). */
