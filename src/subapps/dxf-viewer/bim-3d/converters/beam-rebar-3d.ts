@@ -26,9 +26,7 @@
 
 import * as THREE from 'three';
 import type { BeamEntity } from '../../bim/types/beam-types';
-import { buildBeamSectionContext } from '../../bim/structural/section-context';
-import { resolveActiveBeamReinforcementForEntity, resolveActiveBeamSupportType } from '../../bim/structural/active-reinforcement';
-import { resolveBeamRebarLayout } from '../../bim/structural/reinforcement/beam-rebar-layout';
+import { resolveActiveBeamRebarLayout } from '../../bim/structural/active-reinforcement';
 import { DEFAULT_STIRRUP_TYPE } from '../../bim/structural/reinforcement/beam-reinforcement-types';
 import { buildLinearMemberRebarCage } from './linear-member-rebar-3d';
 
@@ -48,17 +46,15 @@ export function buildBeamRebarCage(
   bottomFaceY: number,
   levelId?: string,
 ): THREE.Group | null {
-  const r = resolveActiveBeamReinforcementForEntity(beam);
-  if (!r) return null;
-  // ADR-486 — ίδιος topology-aware τύπος στήριξης στο layout (πρόβολος → άνω κύριος οπλισμός).
-  const layout = resolveBeamRebarLayout(buildBeamSectionContext(beam, resolveActiveBeamSupportType(beam.id)), r);
-  if (!layout) return null;
+  // ADR-471/486 — ΕΝΑΣ SSoT: ενεργός (auto-aware) οπλισμός + topology-aware layout (πρόβολος).
+  const rebar = resolveActiveBeamRebarLayout(beam);
+  if (!rebar) return null;
 
   const group = buildLinearMemberRebarCage({
     axisPts: beam.geometry.axisPolyline.points,
     sceneUnits: beam.params.sceneUnits,
-    layout,
-    stirrupType: r.stirrups.type ?? DEFAULT_STIRRUP_TYPE,
+    layout: rebar.layout,
+    stirrupType: rebar.reinforcement.stirrups.type ?? DEFAULT_STIRRUP_TYPE,
     bottomFaceY,
   });
   if (!group) return null;

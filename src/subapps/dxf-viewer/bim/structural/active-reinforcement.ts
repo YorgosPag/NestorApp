@@ -20,12 +20,18 @@ import type { SlabEntity } from '../types/slab-types';
 import type { ColumnReinforcement } from './reinforcement/column-reinforcement-types';
 import type { BeamReinforcement } from './reinforcement/beam-reinforcement-types';
 import type { SlabFoundationReinforcement } from './reinforcement/slab-foundation-reinforcement-types';
-import { resolveActiveColumnReinforcement, resolveActiveBeamReinforcement, resolveActiveSlabReinforcement } from './section-context';
+import {
+  resolveActiveColumnReinforcement,
+  resolveActiveBeamReinforcement,
+  resolveActiveSlabReinforcement,
+  buildBeamSectionContext,
+} from './section-context';
 import { resolveStructuralCode } from './codes';
 import { useStructuralSettingsStore } from '../../state/structural-settings-store';
 // ADR-486 — DERIVED topology-aware τύπος στήριξης δοκαριού (πρόβολος όταν 1 στήριξη).
 import type { BeamSupportType } from '../types/beam-types';
 import { BeamSupportConditionStore } from './organism/beam-support-condition-store';
+import { resolveBeamRebarLayout, type BeamRebarLayout } from './reinforcement/beam-rebar-layout';
 
 /**
  * `resolveActiveColumnReinforcement` με τον ενεργό κανονισμό από το settings store.
@@ -59,12 +65,36 @@ export function resolveActiveBeamReinforcementForEntity(
 
 /**
  * ADR-486 — ο DERIVED topology-aware τύπος στήριξης ενός δοκαριού από το transient store
- * (γράφεται στο organism pass). Convenience ώστε ΚΑΙ οι renderers (2Δ/3Δ rebar) που χτίζουν
- * δικό τους `BeamSectionContext` για το layout να περνούν τον ΙΔΙΟ override (πρόβολος → άνω
- * κύριος οπλισμός) → preview === committed. `undefined` → fallback stored στον consumer.
+ * (γράφεται στο organism pass). `undefined` → fallback stored στον consumer. Pure store read.
  */
 export function resolveActiveBeamSupportType(beamId: string): BeamSupportType | undefined {
   return BeamSupportConditionStore.get(beamId);
+}
+
+/** Ο ενεργός οπλισμός + το layout ράβδων ενός δοκαριού (topology-aware). */
+export interface ActiveBeamRebar {
+  readonly reinforcement: BeamReinforcement;
+  readonly layout: BeamRebarLayout;
+}
+
+/**
+ * ADR-486 — **ΕΝΑΣ SSoT** για το ζευγάρι «ενεργός οπλισμός + layout ράβδων» ενός δοκαριού,
+ * topology-aware. Ενοποιεί το επαναλαμβανόμενο τρίπτυχο (resolve reinforcement → resolve
+ * supportType → `buildBeamSectionContext` → `resolveBeamRebarLayout`) που ζούσε copy-paste
+ * στους live renderers (2Δ `beam-rebar-2d` + 3Δ `beam-rebar-3d`) → μηδέν διπλότυπο pattern,
+ * εγγυημένη parity 2Δ===3Δ. `null` αν δεν υπάρχει ενεργός οπλισμός ή εκφυλισμένη γεωμετρία.
+ *
+ * Store-coupled (διαβάζει settings + support-condition store)· γι' αυτό ζει εδώ και ΟΧΙ στους
+ * pure detail-sheet builders (που παίρνουν `supportType` ως param ώστε να μένουν unit-testable).
+ */
+export function resolveActiveBeamRebarLayout(
+  beam: Pick<BeamEntity, 'id' | 'params' | 'geometry'>,
+): ActiveBeamRebar | null {
+  const reinforcement = resolveActiveBeamReinforcementForEntity(beam);
+  if (!reinforcement) return null;
+  const ctx = buildBeamSectionContext(beam, resolveActiveBeamSupportType(beam.id));
+  const layout = resolveBeamRebarLayout(ctx, reinforcement);
+  return layout ? { reinforcement, layout } : null;
 }
 
 /**

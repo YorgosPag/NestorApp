@@ -65,5 +65,9 @@ resolveBeamSupportCondition(graph, beamId, stored) → { supportType, supportCou
 - Συνέχεια (2+ στηρίξεις → continuous beam negative moments, αρνητικός οπλισμός στήριξης).
 - beam-on-wall / beam-on-beam έδραση ως connectivity.
 
-## 6. Changelog
-- **2026-06-18** — Phase A+B υλοποίηση. NEW `derive-beam-support.ts` + `beam-support-condition-store.ts`· override threading σε section-context/reinforce-patch/checks/command/core/render/detail/utilization. 13 jest GREEN (6 derive + 7 topology-aware-beam-support). Pre-existing 2 raft/slab failures (ADR-476 fixture) άσχετα. UNCOMMITTED.
+## 6. Centralization (Boy-Scout, N.0.2)
+
+Το τρίπτυχο **«resolve reinforcement → resolve supportType → `buildBeamSectionContext` → `resolveBeamRebarLayout`»** ζούσε copy-paste στους live renderers. Ενοποιήθηκε σε **ΕΝΑ** store-coupled SSoT `resolveActiveBeamRebarLayout(beam) → { reinforcement, layout } | null` (`active-reinforcement.ts`) → `beam-rebar-2d` + `beam-rebar-3d` το καλούν με ΕΝΑ read (εγγυημένη parity 2Δ===3Δ, μηδέν διπλότυπο pattern). Οι **pure** detail-sheet builders ΔΕΝ το χρησιμοποιούν (κρατούν `supportType` param ώστε να μένουν unit-testable χωρίς store) — σωστό purity boundary.
+
+## 7. Changelog
+- **2026-06-18** — Phase A+B υλοποίηση. NEW `derive-beam-support.ts` + `beam-support-condition-store.ts`· override threading σε section-context/reinforce-patch/checks/command/core/render/detail/utilization. + Boy-Scout κεντρικοποίηση `resolveActiveBeamRebarLayout` (ΕΝΑ SSoT για live renderers). 35 jest GREEN. Pre-existing 2 raft/slab failures (ADR-476 fixture) άσχετα. UNCOMMITTED.
