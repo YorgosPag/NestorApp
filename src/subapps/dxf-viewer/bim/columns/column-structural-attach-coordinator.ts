@@ -33,7 +33,7 @@ import {
   type Pt2,
 } from '../geometry/wall-host-plan-builder';
 import { resolveColumnBaseZmm } from '../geometry/column-vertical-profile';
-import { columnSupportAlong } from './column-face-trim';
+import { columnSupportAlong, projectColumnCenterOnAxis } from './column-face-trim';
 import { mmToSceneUnits } from '../../utils/scene-units';
 import type { ColumnEntity } from '../types/column-types';
 import type { BeamEntity } from '../types/beam-types';
@@ -180,10 +180,7 @@ function beamFramesColumn(beam: BeamEntity, column: ColumnEntity): boolean {
   const perScene = mmToSceneUnits(beam.params.sceneUnits ?? 'mm');
   const halfWidth = (beam.params.width / 2) * perScene;
   const tol = FRAMING_TOL_MM * perScene;
-  const rx = column.params.position.x - s.x;
-  const ry = column.params.position.y - s.y;
-  const t = rx * ux + ry * uy;
-  const perp = Math.abs(rx * uy - ry * ux);
+  const { along: t, perp } = projectColumnCenterOnAxis(column, s.x, s.y, ux, uy);
   if (perp > halfWidth + tol) return false;
   const support = columnSupportAlong(column, ux, uy);
   return t >= -support - tol && t <= len + support + tol;

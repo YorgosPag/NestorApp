@@ -27,21 +27,40 @@
 ## 3. SSoT — μηδέν νέα face-offset/cutback math
 
 - **Face offset** = `columnSupportAlong` (ADR-441 — το ίδιο μισό-πλάτος που χρησιμοποιεί το placement trim ΚΑΙ το graph `beamFramesColumn`). **Reuse, μηδέν διπλότυπο.**
-- **Συγγραμμικότητα** (perp ≤ μισό πλάτος δοκαριού) = ίδιο κριτήριο με το `beamFramesColumn`.
+- **Projection κέντρου κολώνας στον άξονα** (διαμήκης `along` + κάθετη `perp`) = NEW exported SSoT `projectColumnCenterOnAxis` στο `column-face-trim.ts` (δίπλα στο `columnSupportAlong`). **Boy-scout (N.0.2):** αυτή η geometry ήταν inline-θαμμένη στο private `beamFramesColumn` (framing detection)· εξήχθη ΚΑΙ καταναλώνεται από **τα δύο** (framing + reframe) → μηδέν διπλότυπη projection/collinearity math. Η συγγραμμικότητα (perp ≤ μισό πλάτος δοκαριού) είναι ίδιο κριτήριο με το `beamFramesColumn`· η διαφορά είναι μόνο ο span-clamp (βλ. κάτω).
 - **Persistence** = το υπάρχον `bim:entities-moved` → `useBimEntityMovedPersistEffect` (carries entities). **Μηδέν νέα persistence.**
 - **Cutback (ADR-458)** = παραμένει DERIVED, complementary: μετά το re-frame το άκρο κάθεται στην παρειά → μηδέν stub να κόψει· σε ενδιάμεσες θέσεις ο cutback καθαρίζει την επικάλυψη όπως πάντα.
 
 **Γιατί ΟΧΙ `findColumnsFramedByBeamForGraph` για τη συσχέτιση:** εκείνο είναι **span-clamped** (t εντός [−support, L+support]) — σωστό για τον στατικό graph, αλλά χάνει την κολώνα μόλις αυτή ξεφύγει **έξω** από το (ήδη κομμένο) άκρο → το δοκάρι δεν θα **επιμηκυνόταν πίσω** όταν η κολώνα γυρίζει προς τα έξω. Η συσχέτιση εδώ γίνεται **ανά άκρο** (πλησιέστερη συγγραμμική κολώνα σε κάθε άκρο), ώστε το άκρο να ακολουθεί ΚΑΙ μέσα ΚΑΙ έξω. Η perp-guard καλύπτει το «η κολώνα φεύγει πλάγια → άκρο σταματά».
 
-## 4. ADR-040 (debounced low-freq, mirror wall-retrim)
+## 4. Αρχιτεκτονική — cascade ΜΕΣΑ στο move command (ΟΧΙ reactive effect)
 
-NEW `useBeamReframeEffect` = **ακριβής ανάλογος** του `useWallRetrimEffect`: listen `bim:column-params-updated` + `bim:entities-moved` (φιλτραρισμένο σε κίνηση **κολώνας**) → debounce 200ms → reframe όλα τα straight δοκάρια → patch `startPoint`/`endPoint` + `computeBeamGeometry` → `setLevelScene` + emit `bim:entities-moved` με τα reframed δοκάρια (entities-only payload → δεν ξανα-triggάρει, μηδέν loop· εξάλλου idempotent). Καμία subscription σε high-freq store. Μετακίνηση δοκαριού **δεν** re-frame-άρει (Revit: μόνο η στήριξη σύρει το άκρο).
+**Cascade-στην-εντολή, ακριβής ανάλογος του `cascadeHostedOpeningsForWalls`:** το
+`MoveEntityCommand`/`MoveMultipleEntitiesCommand` (execute/undo/redo), **αφού** εφαρμόσει
+τη μετακίνηση + τον openings cascade, καλεί `cascadeBeamReframeForColumns(movedIds, sceneManager)`
+→ reframe όλων των straight δοκαριών (idempotent → αλλάζουν μόνο τα επηρεασμένα) → `updateEntities`
+batch → τα reframed δοκάρια ταξιδεύουν στο **ΙΔΙΟ** `bim:entities-moved` της εντολής (persist μέσω
+`useBimEntityMovedPersistEffect` + ο οργανισμός βλέπει σωστή γεωμετρία σε ΕΝΑ pass).
+
+**⚠️ Γιατί ΟΧΙ reactive effect (κρίσιμο — η ρίζα ενός freeze):** η πρώτη υλοποίηση ήταν
+`useBeamReframeEffect` (mirror wall-retrim) που άκουγε `bim:entities-moved`/`bim:column-params-updated`
+και **ξανα-εξέπεμπε** `bim:entities-moved`. Αυτό το emit τροφοδοτούσε τον **engaged proactive
+στατικό κύκλο** (ADR-488): organism→reinforce(ADR-491 FEM-driven)/loads/sizing→params-updated→
+ο effect ξανα-fire-άρει→emit→… → **storm με βαρύ LDLᵀ solve ανά iteration → η εφαρμογή κόλλαγε μόλις
+πατούσες «Ανάλυση»** (που ενεργοποιεί τον engaged solver). **Μάθημα:** ποτέ reactive effect που
+re-emit-άρει geometry event μέσα σε proactive analysis cascade. Το cascade-στην-εντολή τρέχει
+συγχρονισμένα, μία φορά, χωρίς νέο reactive trigger. (Undo: το column emit μένει πρώτο για το
+race-guard του· τα reframed beams πάνε σε ξεχωριστό, μη-loop emit.)
 
 ## 5. Αρχεία (NEW/MOD — δικά μου)
 
 - **NEW** `bim/beams/beam-column-reframe.ts` — pure `reframeBeamEndpointsToColumns(beam, columns)` (per-end συσχέτιση + face offset). **+ test** (10 jest).
-- **NEW** `hooks/tools/useSpecialTools-beam-reframe.ts` — `useBeamReframeEffect` (orchestration, mirror wall-retrim).
-- **MOD** `hooks/tools/useSpecialTools.ts` — wire `useBeamReframeEffect(levelManager)` δίπλα στο wall-retrim.
+- **NEW** `bim/beams/beam-column-reframe-cascade.ts` — `cascadeBeamReframeForColumns(movedIds, sceneManager)` (command-time orchestration, mirror `wall-opening-coordinator`). **+ test** (4 jest).
+- **MOD** `core/commands/entity-commands/MoveEntityCommand.ts` — `MoveEntityCommand` + `MoveMultipleEntitiesCommand` (execute/undo/redo) καλούν τον cascade + συμπεριλαμβάνουν τα reframed beams στο `bim:entities-moved`.
+- **MOD** `bim/columns/column-face-trim.ts` — NEW exported SSoT `projectColumnCenterOnAxis` (+ `AxisColumnProjection`).
+- **MOD** `bim/columns/column-structural-attach-coordinator.ts` — `beamFramesColumn` καταναλώνει το νέο SSoT (boy-scout de-dup, μηδέν αλλαγή συμπεριφοράς· 22 jest GREEN).
+
+**Αρχικά γραμμένα & αφαιρέθηκαν** (causing freeze, βλ. §4): `hooks/tools/useSpecialTools-beam-reframe.ts` (reactive effect) + το wiring του στο `useSpecialTools.ts`.
 
 ## 6. Επαλήθευση
 
@@ -52,9 +71,11 @@ NEW `useBeamReframeEffect` = **ακριβής ανάλογος** του `useWall
 - **Curved / split** δοκάρια (μεσαίο column που χωρίζει το δοκάρι) — identity, parity με ADR-458 DEFER.
 - **Undo** ως ξεχωριστό atomic βήμα μαζί με τη μετακίνηση κολώνας (τώρα: το re-frame persist-άρεται σαν entity-move· συνεπές με wall-retrim).
 - Outward-follow όταν η κολώνα **τηλεμεταφέρεται** πολύ μακριά κατά μήκος του ίδιου άξονα πάνω σε άλλο δοκάρι (η ανά-άκρο πλησιέστερη συγγραμμική κολώνα είναι το πρακτικό όριο).
+- **Column grip-resize** (αλλαγή πλάτους κολώνας → μετακίνηση παρειάς) δεν re-frame-άρει ακόμη — ο cascade τρέχει μόνο στα move commands. Το resize περνά από `bim:column-params-updated` (dispatcher)· μελλοντικά hook στην αντίστοιχη εντολή (ΟΧΙ reactive listener — βλ. §4 μάθημα).
 
 ## 8. Changelog
 
 | Ημ/νία | Αλλαγή |
 |--------|--------|
-| 2026-06-18 | Αρχική υλοποίηση (Α stored re-frame). NEW pure `beam-column-reframe` (per-end συσχέτιση, reuse `columnSupportAlong`· idempotent· διατηρεί justification) + `useBeamReframeEffect` (mirror wall-retrim). 10 jest GREEN. UNCOMMITTED. |
+| 2026-06-18 | Αρχική υλοποίηση (Α stored re-frame). NEW pure `beam-column-reframe` (per-end συσχέτιση, reuse `columnSupportAlong`· idempotent· διατηρεί justification). 10 jest GREEN. |
+| 2026-06-18 | **Freeze fix + αρχιτεκτονική αλλαγή:** ο αρχικός reactive `useBeamReframeEffect` έμπαινε σε βρόχο με τον engaged proactive στατικό κύκλο (storm στο «Ανάλυση»). Αντικαταστάθηκε με cascade-στην-εντολή `cascadeBeamReframeForColumns` (mirror `cascadeHostedOpeningsForWalls`, μηδέν reactive emit). + boy-scout de-dup `projectColumnCenterOnAxis` SSoT. 36 jest GREEN. UNCOMMITTED. |

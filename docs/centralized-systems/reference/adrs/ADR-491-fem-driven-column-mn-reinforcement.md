@@ -52,15 +52,19 @@
 - `section-context.ts` — `designMomentOverrideKnm?` σε `resolveColumnDesignLoad` (`M_Ed = max(e₀, M_FEM)`) → `buildColumnSectionContext(FromParams)` → `resolveActiveColumnReinforcement`. Παραμένει **pure**.
 - `active-reinforcement.ts` — `resolveActiveColumnFemMoment(columnId)` (engaged-gated store read, mirror `resolveActiveBeamSupportType`) + `resolveActiveColumnReinforcementForEntity(column)` (FEM-aware, mirror `…BeamForEntity`). Το `…ForParams` μένει graphless fallback (ghost).
 
-### Persisted path (proactive auto-reinforce)
+### Persisted path (ΜΟΝΟ ρητό κουμπί «Αυτόματος Οπλισμός» — one-shot, ΟΧΙ proactive)
 - `reinforce-patch.ts` — `buildReinforcePatch(entity, provider, supportType?, columnFemMomentKnm?)` → column branch.
 - `AutoReinforceOrganismCommand` — ctor `columnFemMomentById?` (mirror `supportTypeByBeamId`).
-- `structural-auto-reinforce-core.ts` — χτίζει τον χάρτη (engaged-gated: `AnalysisResultsStore` ή `EMPTY`) → command.
-- `useProactiveOrganismReinforce` — +trigger `bim:analysis-solved` (ΟΧΙ geometry-edit group).
+- `structural-auto-reinforce-core.ts` — χτίζει τον χάρτη (engaged-gated μέσω `resolveEngagedAnalysisResult`) → command.
+- ⚠️ **Ο proactive auto-reinforce ΔΕΝ ακούει `bim:analysis-solved`** (βλ. §4 — θα έκλεινε infinite loop). Η ζωντανή
+  ενημέρωση γίνεται read-only μέσω των active resolvers· το persisted M-N βάφεται μόνο στο ρητό κουμπί.
+
+### Live display (read-only, ΧΩΡΙΣ persisted mutation — ο πραγματικός «ζωντανός» μηχανισμός)
+- Active resolvers (`resolveActiveColumnReinforcementForEntity`, engaged-gated) → render 2Δ/3Δ + utilization δείχνουν τη FEM-aware τιμή ζωντανά (`auto:true` → re-derive σε κάθε read· μηδέν Firestore churn).
 
 ### Utilization (ADR-485, εργαλείο επαλήθευσης)
 - `member-utilization.ts` — `columnUtilization(column, reinforcement, designMomentOverrideKnm?)` → As,req FEM-aware (mirror beam `supportType`).
-- `StructuralUtilizationOverlay.tsx` — η ΙΔΙΑ engaged-gated ροπή τροφοδοτεί As,prov (`…ForEntity`) ΚΑΙ As,req (3ο arg) → req & prov συμφωνούν.
+- `StructuralUtilizationOverlay.tsx` — η ΙΔΙΑ engaged-gated ροπή τροφοδοτεί As,prov (`…ForEntity`) ΚΑΙ As,req (3ο arg) → req & prov συμφωνούν. **Leaf subscription στο `AnalysisResultsStore`** (`useSyncExternalStore`, low-freq → ADR-040 safe) → repaint όταν λύνει ο FEM.
 
 ### Render parity (5 call-sites `…ForParams` → `…ForEntity`)
 - `column-rebar-3d.ts`, `joint-rebar-3d.ts`, `ColumnDetailHost.tsx`, `StructuralUtilizationOverlay.tsx`, `column-rebar-2d.ts` (+optional `columnId`· ghost μένει e₀). Caller `dxf-renderer-structural-overlays.ts` περνά `entity.id`.
@@ -71,12 +75,13 @@
 
 ## 4. Συνέπειες
 
-- ✅ Ο πρόβολος → η κολώνα στήριξης οπλίζεται αυτόματα (σιωπηλά, σε κάθε κίνηση) για M=wL²/2· το `columnUtilization` δείχνει >1 πριν, ≤1 μετά.
+- ✅ Ο πρόβολος → η κολώνα στήριξης δείχνει ζωντανά (engaged) τον FEM-aware M-N οπλισμό (render + utilization)· το `columnUtilization` δείχνει >1 πριν την επάρκεια, ≤1 όταν ο οπλισμός καλύπτει το M=wL²/2.
 - ✅ Μηδέν νέος M-N engine· πλήρες mirror του ADR-486 §C.
-- ⚠️ Διπλό reinforce pass σε move (e₀ στο `bim:entities-moved` → FEM στο `bim:analysis-solved`) → πιθανό 2ο undo entry (μη-grouped). Convergence guard το κάνει terminal. Atomic grouping του FEM pass = DEFER.
-- ⚠️ Ο `asStrengthColumnMm2` (ADR-472) early-returns 0 χωρίς αξονικό → η FEM ροπή προσθέτει χάλυβα μόνο όταν υπάρχει αξονικό (πάντα ισχύει για κολώνα στήριξης προβόλου). Moment-only column (μηδέν αξονικό) = engine limitation, εκτός scope.
+- 🐞 **INFINITE LOOP (διορθώθηκε):** η πρώτη υλοποίηση πρόσθεσε `bim:analysis-solved` στους proactive reinforce triggers → κύκλος `analysis-solved → reinforce → bim:structural-auto-reinforced → useStructuralOrganism rebuild → bim:structural-organism-updated → FEM solve (engaged) → analysis-solved → …`. Αυτοσυντηρούνταν ακόμη και σε steady state επειδή ο `runOrganismAutoReinforce` εκπέμπει event και σε no-op (count:0). **FIX:** ο proactive reinforce ΔΕΝ ακούει `bim:analysis-solved`· η ζωντανή ενημέρωση γίνεται **read-only** μέσω active resolvers + leaf subscription του overlay στο `AnalysisResultsStore` (μηδέν persisted mutation → μηδέν βρόχος, μηδέν Firestore churn). Το persisted M-N βάφεται μόνο στο ρητό κουμπί «Αυτόματος Οπλισμός» (one-shot).
+- ⚠️ Τα 2Δ/3Δ rebar drawings ενημερώνονται FEM-aware στο επόμενο repaint (scene interaction)· μόνο το utilization overlay κάνει άμεσο repaint-on-solve (verification tool). Άμεσο rebar repaint-on-solve = DEFER.
+- ⚠️ Ο `asStrengthColumnMm2` (ADR-472) early-returns 0 χωρίς αξονικό → η FEM ροπή προσθέτει χάλυβα μόνο όταν υπάρχει αξονικό (πάντα ισχύει για κολώνα στήριξης προβόλου). Moment-only column = engine limitation, εκτός scope.
 
-**Google-level:** ✅ YES — proactive, idempotent, loop-safe (terminal chain + convergence guard), single source of truth ανά concern, engaged-gated (μηδέν stale).
+**Google-level:** ✅ YES (μετά τη διόρθωση loop) — read-only live display (μηδέν persisted churn), loop-free (terminal chains), single source of truth ανά concern, engaged-gated (μηδέν stale), idempotent.
 
 ---
 
@@ -98,4 +103,5 @@ ADR-487 (ΟΡΑΜΑ) · **ADR-472** (M-N engine κολόνας S4 — ο engine)
 
 | Ημ/νία | Αλλαγή |
 |---|---|
-| 2026-06-18 | **Δημιουργία + υλοποίηση.** Γέφυρα FEM column end-moment → `designMomentKnm` (max με e₀), engaged-gated, mirror ADR-486 §C. 1 νέο pure module + 10 modified. 13 νέα jest GREEN. UNCOMMITTED. |
+| 2026-06-18 | **Δημιουργία + υλοποίηση.** Γέφυρα FEM column end-moment → `designMomentKnm` (max με e₀), engaged-gated, mirror ADR-486 §C. 2 νέα modules (`column-fem-moment` + `engaged-analysis-result` SSoT gate) + 10 modified. 13 νέα jest GREEN. UNCOMMITTED. |
+| 2026-06-18 | **Διόρθωση INFINITE LOOP (browser freeze στο «Ανάλυση»).** Αφαιρέθηκε ο proactive trigger `bim:analysis-solved → reinforce` (έκλεινε κύκλο FEM↔reinforce). Η ζωντανή ενημέρωση γίνεται read-only μέσω active resolvers + leaf subscription του utilization overlay στο `AnalysisResultsStore`. Persisted M-N μόνο στο ρητό κουμπί. |

@@ -52,6 +52,29 @@ export function columnSupportAlong(column: ColumnEntity, dirX: number, dirY: num
   return best;
 }
 
+/**
+ * Προβολή του κέντρου μιας κολώνας πάνω στην ευθεία ενός γραμμικού άξονα (scene units).
+ * `along` = διαμήκης θέση `(center − a)·u` (μπορεί <0 ή >μήκος)· `perp` = |κάθετη απόσταση|
+ * από την ευθεία. Exported SSoT (N.0.2) — κοινό από το `beamFramesColumn` (framing
+ * detection, +span-clamp) ΚΑΙ το `reframeBeamEndpointsToColumns` (ADR-492 per-end
+ * συσχέτιση, +collinearity threshold). Kind-agnostic: ο caller δίνει το (a, u) του άξονα.
+ */
+export interface AxisColumnProjection {
+  readonly along: number;
+  readonly perp: number;
+}
+export function projectColumnCenterOnAxis(
+  column: ColumnEntity,
+  ax: number,
+  ay: number,
+  ux: number,
+  uy: number,
+): AxisColumnProjection {
+  const rx = column.params.position.x - ax;
+  const ry = column.params.position.y - ay;
+  return { along: rx * ux + ry * uy, perp: Math.abs(rx * uy - ry * ux) };
+}
+
 /** Η πλησιέστερη κολώνα της οποίας το κέντρο πέφτει εντός `tol` (scene units) του σημείου. */
 function findColumnAtPoint(
   columns: readonly ColumnEntity[],

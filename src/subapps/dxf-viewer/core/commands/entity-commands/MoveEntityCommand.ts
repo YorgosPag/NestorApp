@@ -31,6 +31,9 @@ import { EventBus } from '../../../systems/events/EventBus';
 // ADR-363 §5.4 — when a moved entity is a wall, recompute its hosted openings
 // against the moved wall so they follow (same offsetFromStart).
 import { cascadeHostedOpeningsForWalls } from '../../../bim/walls/wall-opening-coordinator';
+// ADR-492 — when a moved entity is a column, re-frame the beams that frame into it so
+// their endpoints follow to the new column faces (mirror of the openings cascade).
+import { cascadeBeamReframeForColumns } from '../../../bim/beams/beam-column-reframe-cascade';
 
 /**
  * Command for moving a single entity by delta
@@ -70,15 +73,19 @@ export class MoveEntityCommand implements ICommand {
       // Apply updates
       this.sceneManager.updateEntity(this.entityId, updates);
       cascadeHostedOpeningsForWalls([this.entityId], this.sceneManager);
+      // ADR-492 — re-frame beams that frame into a moved column (no-op for non-columns).
+      const reframedBeams = cascadeBeamReframeForColumns([this.entityId], this.sceneManager);
       this.wasExecuted = true;
       // Symmetry with MoveMultipleEntitiesCommand: emit so BIM persistence hooks
       // (useBimEntityMovedPersistEffect — fixture/panel/wall/…) save the new
       // position to Firestore. Without this a single-entity 3D gizmo move was
       // applied to the scene but never persisted (reverted on refresh). Built
       // from snapshot+updates (no getLevelScene — stale at synchronous emit time).
+      // ADR-492 — reframed beams ride along in the SAME emit (persist + organism see
+      // the corrected geometry in one pass; no second event → no reactive loop).
       const movedEntity = { ...this.entitySnapshot, ...updates } as SceneEntity;
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      EventBus.emit('bim:entities-moved', { movedEntities: [movedEntity] as any });
+      EventBus.emit('bim:entities-moved', { movedEntities: [movedEntity, ...reframedBeams] as any });
     }
   }
 
@@ -99,6 +106,11 @@ export class MoveEntityCommand implements ICommand {
         EventBus.emit('bim:entities-moved', { movedEntities: [revertedEntity] as any });
         this.sceneManager.updateEntity(this.entityId, reversedUpdates);
         cascadeHostedOpeningsForWalls([this.entityId], this.sceneManager);
+        // ADR-492 — re-frame beams against the reverted column, then persist them in a
+        // separate emit (the column's race-guarded emit must stay first).
+        const reframedBeams = cascadeBeamReframeForColumns([this.entityId], this.sceneManager);
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        if (reframedBeams.length > 0) EventBus.emit('bim:entities-moved', { movedEntities: reframedBeams as any });
       }
     }
   }
@@ -256,6 +268,8 @@ export class MoveMultipleEntitiesCommand implements ICommand {
     if (updatesMap.size > 0) {
       this.sceneManager.updateEntities(updatesMap);
       cascadeHostedOpeningsForWalls(this.entityIds, this.sceneManager);
+      // ADR-492 — re-frame beams that frame into any moved column (no-op if none).
+      const reframedBeams = cascadeBeamReframeForColumns(this.entityIds, this.sceneManager);
       this.wasExecuted = true;
       // Build post-move entities from snapshots+updates (safe: no getLevelScene call,
       // which would return stale React state at synchronous emit time).
@@ -264,8 +278,9 @@ export class MoveMultipleEntitiesCommand implements ICommand {
         const snapshot = this.entitySnapshots.get(entityId);
         if (snapshot) movedEntities.push({ ...snapshot, ...updates } as SceneEntity);
       }
+      // ADR-492 — reframed beams ride along in the SAME emit (one pass, no reactive loop).
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      EventBus.emit('bim:entities-moved', { movedEntities: movedEntities as any });
+      EventBus.emit('bim:entities-moved', { movedEntities: [...movedEntities, ...reframedBeams] as any });
     }
   }
 
@@ -299,6 +314,11 @@ export class MoveMultipleEntitiesCommand implements ICommand {
       EventBus.emit('bim:entities-moved', { movedEntities: revertedEntities as any });
       this.sceneManager.updateEntities(updatesMap);
       cascadeHostedOpeningsForWalls(this.entityIds, this.sceneManager);
+      // ADR-492 — re-frame beams against the reverted columns; persist in a separate
+      // emit (the race-guarded revert emit must stay first).
+      const reframedBeams = cascadeBeamReframeForColumns(this.entityIds, this.sceneManager);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      if (reframedBeams.length > 0) EventBus.emit('bim:entities-moved', { movedEntities: reframedBeams as any });
     }
   }
 
@@ -321,8 +341,10 @@ export class MoveMultipleEntitiesCommand implements ICommand {
     if (updatesMap.size > 0) {
       this.sceneManager.updateEntities(updatesMap);
       cascadeHostedOpeningsForWalls(this.entityIds, this.sceneManager);
+      // ADR-492 — re-frame beams that frame into any moved column (no-op if none).
+      const reframedBeams = cascadeBeamReframeForColumns(this.entityIds, this.sceneManager);
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      EventBus.emit('bim:entities-moved', { movedEntities: movedEntities as any });
+      EventBus.emit('bim:entities-moved', { movedEntities: [...movedEntities, ...reframedBeams] as any });
     }
   }
 

@@ -23,10 +23,11 @@
  * @see docs/centralized-systems/reference/adrs/ADR-485-utilization-overlay.md
  */
 
-import { useEffect, useMemo, useRef } from 'react';
+import { useEffect, useMemo, useRef, useSyncExternalStore } from 'react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useViewMode3DStore } from '../../bim-3d/stores/ViewMode3DStore';
 import { useAnalysisDiagramViewStore } from '../../state/analysis-diagram-view-store';
+import { AnalysisResultsStore } from '../../bim/structural/analytical/solver/analysis-results-store';
 import { useStructuralSettingsStore } from '../../state/structural-settings-store';
 import { useLevelsOptional } from '../../systems/levels/useLevels';
 import { isColumnEntity, isBeamEntity } from '../../types/entities';
@@ -127,6 +128,14 @@ export function StructuralUtilizationOverlay({ transform, viewport }: Structural
   const mode = useViewMode3DStore((s) => s.mode);
   const codeId = useStructuralSettingsStore((s) => s.codeId);
   const active = showUtilization && mode === '2d';
+  // ADR-491 — leaf subscription στο FEM store (low-freq → ADR-040 safe): όταν λύνει η
+  // «Ανάλυση», η As,req/As,prov κολόνας γίνεται FEM-aware (πρόβολος → wL²/2) μέσω των active
+  // resolvers· εδώ απλώς ξανα-βάφουμε (read-only, μηδέν persisted mutation → μηδέν βρόχος).
+  const analysisResult = useSyncExternalStore(
+    AnalysisResultsStore.subscribe,
+    AnalysisResultsStore.get,
+    AnalysisResultsStore.get,
+  );
 
   // Active-floor scene — read DIRECTLY (mirror HeatLoadOverlay) so a scene replacement
   // is picked up. Members carry geometry footprint + reinforcement intent.
@@ -158,7 +167,8 @@ export function StructuralUtilizationOverlay({ transform, viewport }: Structural
     }
     return out;
     // codeId: ο ενεργός κανονισμός (active-reinforcement reads getState) → repaint σε αλλαγή.
-  }, [active, scene, codeId]);
+    // analysisResult: φρέσκο FEM solve → repaint με FEM-aware utilization (ADR-491).
+  }, [active, scene, codeId, analysisResult]);
 
   useEffect(() => {
     const canvas = canvasRef.current;

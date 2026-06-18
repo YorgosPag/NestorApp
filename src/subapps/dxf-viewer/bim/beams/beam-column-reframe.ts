@@ -50,7 +50,7 @@ import type { Point3D } from '../types/bim-base';
 import type { BeamEntity } from '../types/beam-types';
 import { MIN_BEAM_LENGTH_MM } from '../types/beam-types';
 import type { ColumnEntity } from '../types/column-types';
-import { columnSupportAlong } from '../columns/column-face-trim';
+import { columnSupportAlong, projectColumnCenterOnAxis } from '../columns/column-face-trim';
 import { mmToSceneUnits } from '../../utils/scene-units';
 
 /**
@@ -110,13 +110,12 @@ export function reframeBeamEndpointsToColumns(
   const collinearTol = COLLINEAR_TOL_MM * perScene;
 
   // Συγγραμμικές κολώνες (κέντρο εντός μισού πλάτους δοκαριού από την ευθεία του άξονα).
+  // Κοινό projection SSoT με το `beamFramesColumn` (μηδέν διπλότυπη geometry — N.0.2).
   const axisColumns: AxisColumn[] = [];
   for (const col of columns) {
-    const rx = col.params.position.x - a.x;
-    const ry = col.params.position.y - a.y;
-    const perp = Math.abs(rx * uy - ry * ux);
+    const { along, perp } = projectColumnCenterOnAxis(col, a.x, a.y, ux, uy);
     if (perp > halfWidth + collinearTol) continue;
-    axisColumns.push({ col, proj: rx * ux + ry * uy });
+    axisColumns.push({ col, proj: along });
   }
   if (axisColumns.length === 0) return null;
 

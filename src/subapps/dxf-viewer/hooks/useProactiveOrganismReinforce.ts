@@ -51,13 +51,17 @@ const PROACTIVE_REINFORCE_EVENTS: readonly DrawingEventType[] = [
   // takedown ΔΕΝ ακούει → η αλυσίδα loads→reinforce είναι terminal (μηδέν oscillation).
   // Διπλό δίχτυ: `buildReinforcePatch` convergence guard (ίδιο φορτίο → μηδέν patch).
   'bim:structural-loads-computed',
-  // ADR-491 — φρέσκο FEM αποτέλεσμα (ο πρόβολος ξανα-έλυσε → νέα ροπή κολώνας στήριξης) →
-  // re-study του M-N οπλισμού κολόνας. Loop-safe: ο proactive FEM (useProactiveStructuralAnalysis)
-  // ΔΕΝ ακούει `bim:structural-auto-reinforced`/`bim:entities-attached`, και ο additive οπλισμός
-  // δεν αλλάζει δυσκαμψία → ο FEM δεν ξανα-τρέχει από τον οπλισμό (terminal). Εκπέμπεται μόνο
-  // engaged (ο FEM solve-άρει μόνο engaged) → η FEM ροπή εφαρμόζεται μόνο όταν παρατηρείς στατικά.
-  'bim:analysis-solved',
 ];
+
+// ADR-491 (διόρθωση infinite loop) — ΣΚΟΠΙΜΑ ΔΕΝ ακούμε `bim:analysis-solved` εδώ. Θα έκλεινε
+// κύκλο: analysis-solved → reinforce → `bim:structural-auto-reinforced` → useStructuralOrganism
+// rebuild → `bim:structural-organism-updated` → FEM solve (engaged) → analysis-solved → … (ο
+// no-op reinforce εκπέμπει event ακόμη και με count:0, άρα ο κύκλος αυτοσυντηρείται σε steady
+// state). Η ΖΩΝΤΑΝΗ ενημέρωση του οπλισμού κολόνας με τη FEM ροπή γίνεται **read-only** μέσω των
+// active resolvers (`resolveActiveColumnReinforcementForEntity`, engaged-gated) → render/utilization
+// δείχνουν τη FEM-aware τιμή ΧΩΡΙΣ persisted mutation/Firestore churn/βρόχο. Ο persisted M-N
+// οπλισμός βάφεται μόνο στο ΡΗΤΟ κουμπί «Αυτόματος Οπλισμός» (one-shot· το `columnFemMomentById`
+// threading στο command/core παραμένει γι' αυτό).
 
 /**
  * Triggers που είναι **άμεσες geometry edits** του χρήστη (έχουν δικό τους command
