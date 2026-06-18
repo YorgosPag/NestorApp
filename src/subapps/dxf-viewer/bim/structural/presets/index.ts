@@ -27,3 +27,4 @@ export {
   type ReferenceSoil,
   type ReferenceBuildingDynamics,
 } from './reference-static-report';
+export { resolveActivePresetKind } from './resolve-active-preset';

@@ -72,3 +72,23 @@ export function columnSelfWeightPerStoreyKn(c: ColumnEntity): number {
 export function beamSelfWeightKn(b: BeamEntity): number {
   return concreteSelfWeightKn(b.geometry?.volume ?? 0);
 }
+
+/** Σημείο plan σε μέτρα (x/y). */
+export interface PointM {
+  readonly xM: number;
+  readonly yM: number;
+}
+
+/**
+ * Άκρα δοκαριού (m) — `startPoint`/`endPoint` (canvas units) → μέτρα, ίδια
+ * μετατροπή μονάδων με το {@link columnCenterM} (canvas → mm → m). SSoT για τους
+ * analytical κόμβους δοκαριού (ADR-480) ώστε να μην ξαναϋπολογίζεται η κλίμακα.
+ */
+export function beamEndpointsM(b: BeamEntity): { start: PointM; end: PointM } {
+  const perScene = mmToSceneUnits(b.params.sceneUnits ?? 'mm');
+  const toM = (canvas: number): number => canvas / perScene / 1000;
+  return {
+    start: { xM: toM(b.params.startPoint.x), yM: toM(b.params.startPoint.y) },
+    end: { xM: toM(b.params.endPoint.x), yM: toM(b.params.endPoint.y) },
+  };
+}

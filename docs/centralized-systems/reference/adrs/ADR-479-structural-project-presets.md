@@ -1,6 +1,6 @@
 # ADR-479 — Structural Project Presets (Revit-grade templates) + reference cross-check
 
-**Status:** 🟢 Slice 1 DONE 2026-06-18 (Opus), UNCOMMITTED & jest-verified (33 tests GREEN: 21 cross-check + 12 store). 🔴 tsc-confirm (Giorgio full) + browser-verify (αν γίνει Slice 2 UI) + commit. DEFER: Slice 2 (UI preset selector), Slice 3 (persisted user/company presets — mirror `StairPresetsService`).
+**Status:** 🟢 Slices 1-2 DONE 2026-06-18 (Opus), UNCOMMITTED & jest-verified (39 tests GREEN: 21 cross-check + 12 store + 6 active-preset). 🔴 tsc-confirm (Giorgio full) + browser-verify (preset → settings + persist) + commit. DEFER: Slice 3 (persisted user/company presets — mirror `StairPresetsService`)· confirm dialog πριν το full-replace.
 **Discipline:** Δομοστατικά / Structural Engineering
 **Scope:** Μετατροπή των canonical structural defaults — μαζί με τις τιμές πραγματικής εγκεκριμένης μελέτης (STATICS 2025, Θέρμη 288/08, Κ1/Κ2/Κ3) — σε **named, applicable Structural Presets** που αρχικοποιούν τα building-level `StructuralSettings` (σαν Revit project template). + **cross-check regression test** που εγγυάται ότι τα engine defaults είναι συνεπή με την πραγματική μελέτη (το reference γίνεται ζωντανό συμβόλαιο). Συμπληρώνει ADR-456 (structural settings SSoT), ADR-474 (occupancy auto loads), ADR-477 (σεισμικές παράμετροι).
 
@@ -50,9 +50,20 @@ seismicGroundAccelRatio, soilBearingCapacityKpa, ...`) + SSoT normalizer
 **Built-in presets:** `greek-rc-ec8` (eurocode + τιμές Θέρμη), `greek-rc-legacy`
 (ΕΚΩΣ-ΕΑΚ, ίδιες φυσικές τιμές, μόνο `codeId` αλλάζει), `blank` (= defaults).
 
-### Slice 2 — UI preset selector (DEFER)
-Dropdown στο structural-settings panel / FloorsTab modal → `applyStructuralPreset(kind)`.
-i18n keys (`structural.preset.*`) ήδη ορισμένα στα labelKeys· locales EL+EN πρώτα (N.11).
+### Slice 2 — UI preset selector (✅ DONE)
+
+| Αλλαγή | Αρχείο | Τι κάνει |
+|---|---|---|
+| **NEW** `resolveActivePresetKind(settings)` (pure) | `bim/structural/presets/resolve-active-preset.ts` | ποιο preset ταυτίζεται με τα τρέχοντα settings (resolve+full-field equality)· `null` = «Προσαρμοσμένο» (Revit απόκλιση από template) |
+| barrel export | `bim/structural/presets/index.ts` | + `resolveActivePresetKind` |
+| **NEW** `StructuralPresetSelector` | `ui/components/StructuralPresetSelector.tsx` | canonical `@/components/ui/select` (ADR-001· ΟΧΙ RibbonCombobox—ribbon-context-bound)· value=active kind, onChange→`applyStructuralPreset` |
+| mount | `ui/components/FloorManagementDialog.tsx` | selector πάνω από `FloorsTabContent` (building present)· building-wide = σωστή Revit-αντιστοιχία (ADR-468 modal) |
+| i18n keys `structural.preset.*` | `i18n/locales/{el,en}/dxf-viewer-shell.json` | selectorLabel/sectionDescription/custom + 3 presets label/description (N.11 ΠΡΩΤΑ) |
+| **NEW** test (6) | `bim/structural/presets/__tests__/resolve-active-preset.test.ts` | exact-match κάθε preset, blank=defaults, custom=null, EC8≠legacy, omit-invariant |
+
+**Revit-grade:** ο selector δείχνει **κατάσταση** (active preset ή «Προσαρμοσμένο»),
+δεν είναι fire-and-forget. Apply = full-replace building settings (ήδη persist). Confirm
+dialog πριν το replace = DEFER (το active-state display ήδη καθιστά την επιλογή σαφή).
 
 ### Slice 3 — persisted user/company presets (DEFER)
 Mirror `StairPresetsService` (scope user/company/project, Firestore
@@ -88,6 +99,10 @@ Mirror `StairPresetsService` (scope user/company/project, Firestore
 ---
 
 ## Changelog
+- **2026-06-18 (Opus):** Slice 2 — UI preset selector. `resolveActivePresetKind` (pure,
+  active-state detection) + `StructuralPresetSelector` (canonical `ui/select`, ADR-001) mounted
+  στο `FloorManagementDialog` (building-wide, ADR-468)· i18n `structural.preset.*` (EL+EN, N.11)·
+  +6 jest. onChange→`applyStructuralPreset` (Slice 1 path). UNCOMMITTED.
 - **2026-06-18 (Opus):** Slice 1 — preset SSoT (`reference-static-report.ts`,
   `structural-preset-{types,defaults}.ts`, index), `applyStructuralPreset` +
   σεισμικοί setters στο store, cross-check regression test (22) + store test (+6),

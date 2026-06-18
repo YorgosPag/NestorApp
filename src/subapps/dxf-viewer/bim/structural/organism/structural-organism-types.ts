@@ -123,7 +123,10 @@ export type StructuralDiagnosticCode =
   | 'bearingInadequate'
   | 'padEccentricHogging'
   | 'punchingInadequate'
-  | 'oneWayShearInadequate';
+  | 'oneWayShearInadequate'
+  // ADR-480 — analytical model diagnostics (T2).
+  | 'analyticalMemberUnsupported'
+  | 'analyticalModelUnstable';
 
 /**
  * Ένα cross-entity εύρημα. `primaryEntityId` = το μέλος που «φταίει» (οδηγεί το

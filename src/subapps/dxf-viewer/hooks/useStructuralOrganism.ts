@@ -27,6 +27,8 @@ import { runReinforcementChecks } from '../bim/structural/organism/reinforcement
 import { runFootingDesignChecks } from '../bim/structural/footing-design/footing-design-checks';
 import { StructuralDiagnosticsStore } from '../bim/structural/organism/structural-diagnostics-store';
 import { buildOrganismScene } from '../bim/structural/organism/cross-level-organism-scene';
+import { runStructuralAnalyticalModel } from './structural-analytical-core';
+import { makeGuideOffsetLookup } from '../bim/hosting/guide-store-offset-lookup';
 import { resolveStructuralCode } from '../bim/structural/codes';
 import { useStructuralSettingsStore } from '../state/structural-settings-store';
 import { useFoundationLevelStore } from '../state/foundation-level-store';
@@ -110,6 +112,9 @@ export function useStructuralOrganism(props: { levelManager: LevelManagerLike })
           deadAreaLoadKpa: settings.deadAreaLoadKpa ?? 0,
           liveAreaLoadKpa: settings.liveAreaLoadKpa ?? 0,
         }),
+        // ADR-480 (T2) — χτίσε & δημοσίευσε τον DERIVED αναλυτικό φορέα + προκαταρκτικά
+        // diagnostics ευστάθειας στο ΙΔΙΟ low-freq pass (single diagnostics writer).
+        ...runStructuralAnalyticalModel({ entities, graph, getOffset: makeGuideOffsetLookup() }),
       ];
       StructuralDiagnosticsStore.set(diagnostics);
       EventBus.emit('bim:structural-organism-updated', {

@@ -30,6 +30,7 @@ import { Spinner } from '@/components/ui/spinner';
 import { FloorsTabContent } from '@/components/building-management/tabs/FloorsTabContent';
 import { useBuildingById } from '../../hooks/data/useBuildingById';
 import { FloorManagementDialogStore } from '../../stores/FloorManagementDialogStore';
+import { StructuralPresetSelector } from './StructuralPresetSelector';
 
 interface FloorManagementDialogProps {
   /** Ενεργό buildingId του viewer (από τα levels· null όταν δεν έχει συνδεθεί κτίριο). */
@@ -62,7 +63,11 @@ export const FloorManagementDialog: React.FC<FloorManagementDialogProps> = ({
           <DialogDescription>{t('floorManagementDialog.description')}</DialogDescription>
         </DialogHeader>
         {building ? (
-          <FloorsTabContent building={building} />
+          <>
+            {/* ADR-479 — Δομοστατικό πρότυπο έργου (building-wide, Revit project template). */}
+            <StructuralPresetSelector />
+            <FloorsTabContent building={building} />
+          </>
         ) : (
           <section className="flex items-center justify-center gap-2 py-8 text-sm text-muted-foreground">
             {loading ? <Spinner size="small" /> : null}

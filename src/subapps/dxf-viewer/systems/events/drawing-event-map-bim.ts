@@ -230,6 +230,10 @@ export interface BimEventMap {
   // ADR-464 Slice 4 — N πέδιλα έλαβαν αυτόματο φορτίο (takedown command). `count` =
   // πόσα πράγματι (skip χειροκίνητων). Trigger organism re-derive (έδραση) + toast.
   'bim:structural-loads-computed': { entityIds: string[]; count: number };
+  // ADR-480 — ο DERIVED αναλυτικός φορέας (κόμβοι/μέλη/στηρίξεις/διάφραγμα)
+  // ξαναχτίστηκε (T2). Υποδοχή για μελλοντικούς consumers (FEM solver T3, φασματική
+  // σεισμική T4) — το T2 δεν τον επιλύει. `nodeCount`/`memberCount` = μέγεθος μοντέλου.
+  'bim:analytical-model-built': { nodeCount: number; memberCount: number };
   // ADR-395 G6 — opening persisted/deleted → host wall re-computes net BOQ area
   'bim:opening-persisted': { wallId: string };
   // ADR-395 G2 — slab-opening persisted/deleted → host slab re-computes net BOQ volume

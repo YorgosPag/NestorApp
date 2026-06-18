@@ -1,4 +1,18 @@
 {
+  "analyticalModel": {
+    "diagnostics": {
+      "memberUnsupported": "Member is not connected to any support — analytical mechanism (unstable).",
+      "modelUnstable": "Analytical model has no supports — it cannot be solved."
+    },
+    "loadCases": {
+      "permanent": "Permanent actions (G)",
+      "variable": "Variable actions (Q)"
+    },
+    "combinations": {
+      "ulsFundamental": "Ultimate limit state — fundamental (1.35G + 1.50Q)",
+      "slsCharacteristic": "Serviceability limit state — characteristic (G + Q)"
+    }
+  },
   "structuralOrganism": {
     "diagnostics": {
       "title": "Structural Check",
@@ -38,6 +52,23 @@
     "code": {
       "eurocode": "Eurocodes",
       "greekLegacy": "Greek legacy (ΕΚΩΣ/ΕΑΚ)"
+    },
+    "preset": {
+      "selectorLabel": "Structural project template",
+      "sectionDescription": "Pre-loads code, materials, seismic and soil for the whole building.",
+      "custom": "Custom",
+      "greekRcEc8": {
+        "label": "Greek RC (Eurocodes)",
+        "description": "Reinforced-concrete building per Eurocodes (EC2/EC8)."
+      },
+      "greekRcLegacy": {
+        "label": "Greek RC (ΕΚΩΣ-ΕΑΚ)",
+        "description": "Reinforced-concrete building per ΕΚΩΣ/ΕΑΚ (legacy code)."
+      },
+      "blank": {
+        "label": "Blank",
+        "description": "Bare defaults — set every structural option manually."
+      }
     }
   },
   "constructionMaterials": {
