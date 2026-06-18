@@ -20,6 +20,7 @@ import { RiserThroughOverlay } from './RiserThroughOverlay';
 import { HeatLoadOverlay } from './HeatLoadOverlay';
 import { PipeSizingOverlay } from './PipeSizingOverlay';
 import { HydraulicBalancingOverlay } from './HydraulicBalancingOverlay';
+import { StructuralDiagramOverlay } from './StructuralDiagramOverlay';
 import type { ViewTransform, Viewport } from '../../rendering/types/Types';
 
 export interface CanvasLayerStack2DOverlaysProps {
@@ -53,6 +54,10 @@ export function CanvasLayerStack2DOverlays({ transform, viewport }: CanvasLayerS
           Read-only, pointer-events-none. Self-gated to showBalancing && mode==='2d'.
           STAGE ADR-040. */}
       <HydraulicBalancingOverlay transform={transform} viewport={viewport} />
+      {/* ADR-483 T3-UI Slice 4 — static-analysis moment diagrams ανά δοκάρι
+          (Robot/Revit results overlay). Read-only, pointer-events-none. Self-gated
+          to showAnalysisDiagrams && mode==='2d'. STAGE ADR-040. */}
+      <StructuralDiagramOverlay transform={transform} viewport={viewport} />
     </>
   );
 }

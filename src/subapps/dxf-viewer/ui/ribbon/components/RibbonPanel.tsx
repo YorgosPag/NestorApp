@@ -34,6 +34,7 @@ import { ShowHeatLoadToggle } from './ShowHeatLoadToggle';
 import { ShowFinishSkinToggle } from './ShowFinishSkinToggle';
 import { ShowReinforcementToggle } from './ShowReinforcementToggle';
 import { ShowPipeSizingToggle } from './ShowPipeSizingToggle';
+import { ShowAnalysisDiagramsToggle } from './ShowAnalysisDiagramsToggle';
 import { ShowBalancingToggle } from './ShowBalancingToggle';
 import { ExportThermalStudyButton } from './ExportThermalStudyButton';
 import { VisualStyleSelect } from './VisualStyleSelect';
@@ -137,6 +138,9 @@ function renderButton(button: RibbonButton): React.ReactNode {
     }
     if (button.widgetId === 'show-balancing-toggle') {
       return <ShowBalancingToggle key="show-balancing-toggle-widget" />;
+    }
+    if (button.widgetId === 'show-analysis-diagrams-toggle') {
+      return <ShowAnalysisDiagramsToggle key="show-analysis-diagrams-toggle-widget" />;
     }
     if (button.widgetId === 'export-thermal-study') {
       return <ExportThermalStudyButton key="export-thermal-study-widget" />;

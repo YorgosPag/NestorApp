@@ -3550,6 +3550,13 @@
         "tooltipEnable": "Show proposed diameter (DN) + velocity per heating pipe (velocity + friction)",
         "tooltipDisable": "Hide pipe sizing"
       },
+      "analysisDiagrams": {
+        "label": "M/V/N Diagrams",
+        "enable": "Show",
+        "disable": "Hide",
+        "tooltipEnable": "Show the bending-moment diagram per load-bearing beam from the static analysis (along the member axis)",
+        "tooltipDisable": "Hide internal-force diagrams"
+      },
       "balancing": {
         "label": "Hydraulic Balancing",
         "enable": "Show",
