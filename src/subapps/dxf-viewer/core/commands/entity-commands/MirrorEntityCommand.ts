@@ -24,6 +24,14 @@ import type { Entity } from '../../../types/entities';
 import { calculateBimMirroredGeometry } from '../../../bim/transforms/bim-mirror-geometry';
 // ADR-363 §5.4 — recompute hosted openings against mirrored walls (in-place mode).
 import { cascadeHostedOpeningsForWalls } from '../../../bim/walls/wall-opening-coordinator';
+// ADR-492 Φ2 — an in-place mirrored beam (or column) re-frames the associated beams to the
+// column faces, then announces transformed + reframed in ONE `bim:entities-moved`. Command-time,
+// single emit, no reactive loop. copy+mirror clones carry no association (handled separately).
+import {
+  reframeBeamsAndEmit,
+  emitRestoredEntities,
+  reframeBeamsAndEmitAfterRestore,
+} from '../../../bim/beams/beam-column-reframe-cascade';
 // ADR-363 §7.2 — copy+mirror clones of BIM entities need a fresh enterprise ID +
 // the create/delete/restore EventBus broadcasts the draw + delete paths use, or
 // the Firestore subscription drops the clone on the next snapshot.
@@ -64,6 +72,8 @@ export class MirrorEntityCommand implements ICommand {
     this.entitySnapshots.clear();
     this.createdEntities = [];
 
+    // ADR-492 Φ2 — in-place mirrored entities (snapshot+updates), for the reframe announce.
+    const transformed: SceneEntity[] = [];
     for (const entityId of this.entityIds) {
       const entity = this.sceneManager.getEntity(entityId);
       if (!entity) continue;
@@ -75,8 +85,10 @@ export class MirrorEntityCommand implements ICommand {
         // ADR-363 §7.2 — first Firestore save for BIM clones (no-op otherwise).
         broadcastBimCloneCreated(clone);
       } else {
+        const updates = this.computeMirrorUpdates(entity);
         this.entitySnapshots.set(entityId, deepClone(entity));
-        this.sceneManager.updateEntity(entityId, this.computeMirrorUpdates(entity));
+        this.sceneManager.updateEntity(entityId, updates);
+        transformed.push({ ...entity, ...updates } as SceneEntity);
       }
     }
 
@@ -86,7 +98,12 @@ export class MirrorEntityCommand implements ICommand {
 
     // ADR-363 §5.4 — in-place mirror: hosted openings follow the mirrored wall.
     // (copy+mirror clones carry no hosted openings.)
-    if (!this.keepOriginals) cascadeHostedOpeningsForWalls(this.entityIds, this.sceneManager);
+    if (!this.keepOriginals) {
+      cascadeHostedOpeningsForWalls(this.entityIds, this.sceneManager);
+      // ADR-492 Φ2 — an in-place mirrored beam re-snaps its ends to the column faces;
+      // transformed + reframed announced in ONE emit (persist + organism + footing-follow).
+      reframeBeamsAndEmit(transformed, this.entityIds, this.sceneManager);
+    }
   }
 
   /**
@@ -129,12 +146,17 @@ export class MirrorEntityCommand implements ICommand {
         broadcastBimCloneDeleted(clone);
       }
     } else {
+      // ADR-492 Φ2 — race-guarded restore-first emit (mark dirty before scene mutation: the doc
+      // still holds the MIRRORED geometry). SSoT helper — same ordering as Move/Rotate/Scale undo.
+      emitRestoredEntities([...this.entitySnapshots.values()]);
       for (const [entityId, snapshot] of this.entitySnapshots) {
         const { id: _id, type: _type, layer: _layer, visible: _visible, ...geometry } = snapshot;
         this.sceneManager.updateEntity(entityId, geometry);
       }
       // ADR-363 §5.4 — re-derive hosted openings against the restored walls.
       cascadeHostedOpeningsForWalls(this.entityIds, this.sceneManager);
+      // ADR-492 Φ2 — re-frame beams against the restored geometry; separate emit (restore first).
+      reframeBeamsAndEmitAfterRestore(this.entityIds, this.sceneManager);
     }
   }
 
@@ -147,15 +169,19 @@ export class MirrorEntityCommand implements ICommand {
         broadcastBimCloneRestored(clone);
       }
     } else {
+      const transformed: SceneEntity[] = [];
       for (const entityId of this.entityIds) {
         const snapshot = this.entitySnapshots.get(entityId);
         if (snapshot) {
           const updates = this.computeMirrorUpdates(snapshot);
           this.sceneManager.updateEntity(entityId, updates);
+          transformed.push({ ...snapshot, ...updates } as SceneEntity);
         }
       }
       // ADR-363 §5.4 — hosted openings follow the re-mirrored walls.
       cascadeHostedOpeningsForWalls(this.entityIds, this.sceneManager);
+      // ADR-492 Φ2 — reframe beams + announce transformed + reframed in ONE emit (mirror execute).
+      reframeBeamsAndEmit(transformed, this.entityIds, this.sceneManager);
     }
   }
 

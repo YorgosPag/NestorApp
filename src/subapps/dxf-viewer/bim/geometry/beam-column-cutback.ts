@@ -248,3 +248,110 @@ export function computeBeamAxisToColumnContact(
     tEnd !== null ? lerp2(axisStart, axisEnd, tEnd) : axisEnd,
   ];
 }
+
+// ─── ADR-493 — framing-end extension (Revit-grade derived carve, any face) ────
+//
+// Πρόβλημα: το persisted άκρο ενός δοκαριού κόβεται στην ΕΠΙΠΕΔΗ παρειά της κολώνας
+// (location-line = παρειά, ADR-441/363 §5.7). Όταν η κολώνα γίνει ΚΥΚΛΙΚΗ (ή λοξή/
+// σύνθετη), η παρειά ΥΠΟΧΩΡΕΙ ενώ το άκρο μένει ευθύ → beam (έξω) και κολώνα (μέσα)
+// εφάπτονται σε ΕΝΑ σημείο → `safeDifference` αφαιρεί ~0 → identity → ευθύ άκρο πάνω
+// σε υποχωρούσα άψιδα → ορατό **μηνίσκος-κενό**.
+//
+// Λύση (Revit «location-line → node, join derived»): πριν το boolean, επέκτεινε ΜΟΝΟ
+// το derived carve-outline του πλαισιωμένου άκρου ΕΣΩΤΕΡΙΚΑ μέχρι το ΚΕΝΤΡΟ της κολώνας
+// (όχι την απέναντι παρειά — αλλιώς μένουν far-side stubs σε κοίλη/κυκλική παρειά). Το
+// `safeDifference` τότε σκαλίζει την ΑΚΡΙΒΗ παρειά (άψιδα/επίπεδη/σύνθετη) για κάθε σχήμα.
+// Persisted axis/outline ΑΜΕΤΑΒΛΗΤΑ — μηδέν persisted churn, μηδέν επαφή με ADR-492.
+
+/** Half-width του outline = μέγιστη κάθετη απόσταση κορυφής από τον άξονα (canvas units). */
+function outlineHalfWidth(outline: readonly Pt2[], ax: Pt2, ux: number, uy: number): number {
+  let best = 0;
+  for (const v of outline) {
+    const perp = Math.abs((v.x - ax.x) * uy - (v.y - ax.y) * ux);
+    if (perp > best) best = perp;
+  }
+  return best;
+}
+
+/** Μέσο σημείο (avg κορυφών) ενός footprint — προσέγγιση κέντρου για το framing extent. */
+function footprintMean(fp: readonly Pt2[]): Pt2 {
+  let x = 0;
+  let y = 0;
+  for (const v of fp) {
+    x += v.x;
+    y += v.y;
+  }
+  return { x: x / fp.length, y: y / fp.length };
+}
+
+/**
+ * Πόση εσωτερική επέκταση (canvas units) χρειάζεται το άκρο `endpoint` κατά τον
+ * μοναδιαίο `(ix,iy)` (= −u για start, +u για end) ώστε το carve-outline να καλύψει
+ * το footprint κολώνας που πλαισιώνει αυτό το άκρο. Επιστρέφει την προβολή του κέντρου
+ * (clamp στο centroid). 0 όταν καμία κολώνα δεν πλαισιώνει: (α) κέντρο εσωτερικά του
+ * άκρου, (β) κέντρο εντός μισού-πλάτους από τον άξονα, (γ) κοντινή παρειά κοντά στο άκρο.
+ */
+function framingInwardExtent(
+  endpoint: Pt2,
+  ix: number,
+  iy: number,
+  ux: number,
+  uy: number,
+  halfWidth: number,
+  footprints: readonly (readonly Pt2[])[],
+): number {
+  let best = 0;
+  for (const fp of footprints) {
+    if (fp.length < 3) continue;
+    const c = footprintMean(fp);
+    const rx = c.x - endpoint.x;
+    const ry = c.y - endpoint.y;
+    const inwardCentre = rx * ix + ry * iy; // κέντρο κολώνας προς τα μέσα του άκρου
+    if (inwardCentre <= 0) continue; // κολώνα όχι εσωτερικά αυτού του άκρου (π.χ. mid-span)
+    if (Math.abs(rx * uy - ry * ux) > halfWidth) continue; // κέντρο εκτός πλάτους δοκαριού
+    let nearProj = Infinity; // κοντινή παρειά κολώνας κατά (ix,iy) από το άκρο
+    for (const v of fp) {
+      const ip = (v.x - endpoint.x) * ix + (v.y - endpoint.y) * iy;
+      if (ip < nearProj) nearProj = ip;
+    }
+    if (nearProj > halfWidth) continue; // κολώνα μακριά από το άκρο → όχι framing join
+    if (inwardCentre > best) best = inwardCentre;
+  }
+  return best;
+}
+
+/**
+ * Revit-grade DERIVED pre-pass: επεκτείνει το carve-outline ευθύγραμμου δοκαριού στα
+ * άκρα που πλαισιώνονται από κολώνα, ώστε το επόμενο `safeDifference` να σκαλίσει την
+ * ακριβή (υποχωρούσα) παρειά. Επιστρέφει νέο outline ή `null` (κανένα άκρο δεν χρειάζεται
+ * επέκταση → ο caller κρατά το αρχικό, μηδέν regression). Μόνο straight 2-σημείων άξονας.
+ */
+export function extendBeamOutlineIntoFramingColumns(
+  beamOutline: readonly Pt2[],
+  axisStart: Pt2,
+  axisEnd: Pt2,
+  columnFootprints: readonly (readonly Pt2[])[],
+): Pt2[] | null {
+  if (beamOutline.length < 3 || columnFootprints.length === 0) return null;
+  const dx = axisEnd.x - axisStart.x;
+  const dy = axisEnd.y - axisStart.y;
+  const len = Math.hypot(dx, dy);
+  if (len < AXIS_T_EPS) return null;
+  const ux = dx / len;
+  const uy = dy / len;
+  const halfWidth = outlineHalfWidth(beamOutline, axisStart, ux, uy);
+  if (halfWidth <= 0) return null;
+
+  const startExt = framingInwardExtent(axisStart, -ux, -uy, ux, uy, halfWidth, columnFootprints);
+  const endExt = framingInwardExtent(axisEnd, ux, uy, ux, uy, halfWidth, columnFootprints);
+  if (startExt <= 0 && endExt <= 0) return null;
+
+  // Διαμέρισε κορυφές ανά διαμήκη προβολή: < μέσον → start edge (−u), ≥ μέσον → end edge (+u).
+  const mid = len / 2;
+  return beamOutline.map((v) => {
+    const proj = (v.x - axisStart.x) * ux + (v.y - axisStart.y) * uy;
+    if (proj < mid && startExt > 0) return { x: v.x - ux * startExt, y: v.y - uy * startExt };
+    if (proj >= mid && endExt > 0) return { x: v.x + ux * endExt, y: v.y + uy * endExt };
+    return { x: v.x, y: v.y };
+  });
+}

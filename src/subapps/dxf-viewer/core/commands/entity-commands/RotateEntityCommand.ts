@@ -25,6 +25,14 @@ import type { Entity } from '../../../types/entities';
 import { calculateBimRotatedGeometry } from '../../../bim/transforms/bim-rotate-geometry';
 // ADR-363 §5.4 — recompute hosted openings against rotated walls.
 import { cascadeHostedOpeningsForWalls } from '../../../bim/walls/wall-opening-coordinator';
+// ADR-492 Φ2 — a rotated beam (or a rotated column) re-frames the associated beams to the
+// column faces, then announces transformed + reframed in ONE `bim:entities-moved` (persist +
+// organism + footing-follow). Command-time, single emit, no reactive loop (the freeze lesson).
+import {
+  reframeBeamsAndEmit,
+  emitRestoredEntities,
+  reframeBeamsAndEmitAfterRestore,
+} from '../../../bim/beams/beam-column-reframe-cascade';
 
 /**
  * Command for rotating multiple entities around a pivot point.
@@ -67,6 +75,8 @@ export class RotateEntityCommand implements ICommand {
     this.entitySnapshots.clear();
     this.createdEntityIds = [];
 
+    // ADR-492 Φ2 — in-place rotated entities (snapshot+updates), for the reframe announce.
+    const transformed: SceneEntity[] = [];
     for (const entityId of this.entityIds) {
       const entity = this.sceneManager.getEntity(entityId);
       if (!entity) continue;
@@ -80,6 +90,7 @@ export class RotateEntityCommand implements ICommand {
       } else {
         this.entitySnapshots.set(entityId, deepClone(entity));
         this.sceneManager.updateEntity(entityId, updates);
+        transformed.push({ ...entity, ...updates } as SceneEntity);
       }
     }
 
@@ -89,7 +100,12 @@ export class RotateEntityCommand implements ICommand {
 
     // ADR-363 §5.4 — in-place rotation: hosted openings follow the rotated wall.
     // (Copy mode clones carry no hosted openings, so nothing to cascade.)
-    if (!this.copyMode) cascadeHostedOpeningsForWalls(this.entityIds, this.sceneManager);
+    if (!this.copyMode) {
+      cascadeHostedOpeningsForWalls(this.entityIds, this.sceneManager);
+      // ADR-492 Φ2 — a rotated beam re-snaps its ends to the now-collinear column faces;
+      // transformed + reframed announced in ONE emit (persist + organism + footing-follow).
+      reframeBeamsAndEmit(transformed, this.entityIds, this.sceneManager);
+    }
   }
 
   /**
@@ -123,6 +139,10 @@ export class RotateEntityCommand implements ICommand {
       return;
     }
 
+    // ADR-492 Φ2 — race-guarded restore-first emit (mark dirty before the scene mutation:
+    // the Firestore doc still holds the ROTATED geometry; a snapshot arriving mid-undo would
+    // re-apply it unless dirty is set). SSoT helper — same ordering as the Move/Scale/Mirror undo.
+    emitRestoredEntities([...this.entitySnapshots.values()]);
     for (const [entityId, snapshot] of this.entitySnapshots) {
       // Extract geometry fields from snapshot (exclude id, type, layer, visible which are identity fields)
       const { id: _id, type: _type, layer: _layer, visible: _visible, ...geometry } = snapshot;
@@ -130,6 +150,8 @@ export class RotateEntityCommand implements ICommand {
     }
     // ADR-363 §5.4 — re-derive hosted openings against the restored walls.
     cascadeHostedOpeningsForWalls(this.entityIds, this.sceneManager);
+    // ADR-492 Φ2 — re-frame beams against the restored geometry; separate emit (restore stays first).
+    reframeBeamsAndEmitAfterRestore(this.entityIds, this.sceneManager);
   }
 
   /**
@@ -157,15 +179,19 @@ export class RotateEntityCommand implements ICommand {
       return;
     }
 
+    const transformed: SceneEntity[] = [];
     for (const entityId of this.entityIds) {
       const snapshot = this.entitySnapshots.get(entityId);
       if (snapshot) {
         const updates = this.computeRotateUpdates(snapshot);
         this.sceneManager.updateEntity(entityId, updates);
+        transformed.push({ ...snapshot, ...updates } as SceneEntity);
       }
     }
     // ADR-363 §5.4 — hosted openings follow the re-rotated walls.
     cascadeHostedOpeningsForWalls(this.entityIds, this.sceneManager);
+    // ADR-492 Φ2 — reframe beams + announce transformed + reframed in ONE emit (mirror execute).
+    reframeBeamsAndEmit(transformed, this.entityIds, this.sceneManager);
   }
 
   /**

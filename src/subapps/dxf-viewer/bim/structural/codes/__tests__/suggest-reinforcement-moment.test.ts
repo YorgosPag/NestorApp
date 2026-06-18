@@ -88,3 +88,35 @@ describe('ADR-472 S4 — M-N σχεδιασμός κολόνας', () => {
     expect(light.longitudinal.diameterMm).toBe(base.longitudinal.diameterMm);
   });
 });
+
+describe('ADR-493 — circular lever arm (πλαστικός δακτύλιος z=D_s/π)', () => {
+  // Ø400, ίδια περίμετρος/seed → η ΜΟΝΗ διαφορά circular↔perimeter είναι ο μοχλοβραχίονας.
+  const CIRC: ColumnSectionContext = {
+    widthMm: 400,
+    depthMm: 400,
+    heightMm: 3000,
+    grossAreaMm2: Math.PI * 200 * 200,
+    minThicknessMm: 400,
+    maxDimensionMm: 400,
+    perimeterMm: Math.PI * 400,
+    mode: 'circular',
+    designAxialKn: 500,
+    designMomentKnm: 400,
+    concreteGrade: 'C25/30',
+  };
+
+  it('κυκλική απαιτεί ΠΕΡΙΣΣΟΤΕΡΟ χάλυβα από περιμετρική ίδιας διατομής (μικρότερος z)', () => {
+    for (const provider of [EUROCODE_PROVIDER, GREEK_LEGACY_PROVIDER]) {
+      const circ = provider.suggestColumnReinforcement(CIRC);
+      const perim = provider.suggestColumnReinforcement({ ...CIRC, mode: 'perimeter' });
+      expect(providedMm2(circ.longitudinal.count, circ.longitudinal.diameterMm))
+        .toBeGreaterThan(providedMm2(perim.longitudinal.count, perim.longitudinal.diameterMm));
+    }
+  });
+
+  it('χωρίς ροπή ⇒ ο τρόπος δεν επηρεάζει (As,M=0 και στις δύο, μηδέν regression)', () => {
+    const circ = EUROCODE_PROVIDER.suggestColumnReinforcement({ ...CIRC, designAxialKn: 0, designMomentKnm: 0 });
+    const perim = EUROCODE_PROVIDER.suggestColumnReinforcement({ ...CIRC, mode: 'perimeter', designAxialKn: 0, designMomentKnm: 0 });
+    expect(circ.longitudinal).toEqual(perim.longitudinal);
+  });
+});

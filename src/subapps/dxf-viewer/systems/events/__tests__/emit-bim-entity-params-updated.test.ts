@@ -7,6 +7,7 @@ import { EventBus } from '../EventBus';
 import { emitBimEntityParamsUpdated } from '../emit-bim-entity-params-updated';
 import { emitStructuralChangeAfterEdit } from '../../../bim-3d/animation/bim3d-edit-structural-emit';
 import { MoveEntityCommand, MoveMultipleEntitiesCommand } from '../../../core/commands/entity-commands/MoveEntityCommand';
+import { RotateEntityCommand } from '../../../core/commands/entity-commands/RotateEntityCommand';
 import { CompoundCommand } from '../../../core/commands/CompoundCommand';
 
 /** A non-move/non-compound command (rotate/resize/tilt/vertical) → must emit. */
@@ -74,12 +75,20 @@ describe('emitStructuralChangeAfterEdit — 3D commit announcement + move skip',
   const smFor = (type: string) =>
     ({ getEntity: () => ({ type }) }) as unknown as Parameters<typeof emitStructuralChangeAfterEdit>[2];
 
-  it('emits column-params-updated after a non-move edit (rotate/resize self-emit nothing)', () => {
-    const rotateLike = {} as EditCmd; // not a Move*/Compound → needs the explicit emit
+  it('emits column-params-updated after a non-move edit (resize/tilt/vertical self-emit nothing)', () => {
+    const resizeLike = {} as EditCmd; // not a Move*/Rotate/Compound → needs the explicit emit
     const payload = captureEvent<{ columnId: string }>('bim:column-params-updated', () => {
-      emitStructuralChangeAfterEdit(rotateLike, ['col-1'], smFor('column'));
+      emitStructuralChangeAfterEdit(resizeLike, ['col-1'], smFor('column'));
     });
     expect(payload).toEqual({ columnId: 'col-1' });
+  });
+
+  it('SKIPS the emit for a rotate (ADR-492 Φ2 — RotateEntityCommand self-emits bim:entities-moved)', () => {
+    const rotate = Object.create(RotateEntityCommand.prototype) as RotateEntityCommand;
+    const spy = jest.spyOn(EventBus, 'emit');
+    emitStructuralChangeAfterEdit(rotate, ['col-1'], smFor('column'));
+    expect(spy).not.toHaveBeenCalled();
+    spy.mockRestore();
   });
 
   it('SKIPS the emit for a plan move (MoveEntityCommand self-emits bim:entities-moved)', () => {

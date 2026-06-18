@@ -20,6 +20,14 @@ import { scaleEntity } from '../../../systems/scale/scale-entity-transform';
 import type { Entity } from '../../../types/entities';
 // ADR-363 §5.4 — recompute hosted openings against scaled walls (in-place mode).
 import { cascadeHostedOpeningsForWalls } from '../../../bim/walls/wall-opening-coordinator';
+// ADR-492 Φ2 — a scaled beam (or scaled column) re-frames the associated beams to the column
+// faces, then announces transformed + reframed in ONE `bim:entities-moved`. Command-time, single
+// emit, no reactive loop (the freeze lesson). Undo keeps the race-guarded restore-first ordering.
+import {
+  reframeBeamsAndEmit,
+  emitRestoredEntities,
+  reframeBeamsAndEmitAfterRestore,
+} from '../../../bim/beams/beam-column-reframe-cascade';
 
 export type ScaleParams =
   | { mode: 'uniform'; factor: number }
@@ -59,6 +67,8 @@ export class ScaleEntityCommand implements ICommand {
 
     const { sx, sy } = this.getSxSy();
 
+    // ADR-492 Φ2 — in-place scaled entities (snapshot+updates), for the reframe announce.
+    const transformed: SceneEntity[] = [];
     for (const entityId of this.entityIds) {
       const entity = this.sceneManager.getEntity(entityId);
       if (!entity) continue;
@@ -73,6 +83,7 @@ export class ScaleEntityCommand implements ICommand {
       } else {
         this.entitySnapshots.set(entityId, deepClone(entity));
         this.sceneManager.updateEntity(entityId, updates);
+        transformed.push({ ...entity, ...updates } as SceneEntity);
       }
     }
 
@@ -81,7 +92,12 @@ export class ScaleEntityCommand implements ICommand {
       : this.entitySnapshots.size > 0;
 
     // ADR-363 §5.4 — in-place scale: hosted openings follow the scaled wall.
-    if (!this.copyMode) cascadeHostedOpeningsForWalls(this.entityIds, this.sceneManager);
+    if (!this.copyMode) {
+      cascadeHostedOpeningsForWalls(this.entityIds, this.sceneManager);
+      // ADR-492 Φ2 — a scaled beam re-snaps its ends to the column faces; transformed +
+      // reframed announced in ONE emit (persist + organism + footing-follow).
+      reframeBeamsAndEmit(transformed, this.entityIds, this.sceneManager);
+    }
   }
 
   undo(): void {
@@ -92,12 +108,17 @@ export class ScaleEntityCommand implements ICommand {
         this.sceneManager.removeEntity(id);
       }
     } else {
+      // ADR-492 Φ2 — race-guarded restore-first emit (mark dirty before scene mutation: the doc
+      // still holds the SCALED geometry). SSoT helper — same ordering as Move/Rotate/Mirror undo.
+      emitRestoredEntities([...this.entitySnapshots.values()]);
       for (const [entityId, snapshot] of this.entitySnapshots) {
         const { id: _id, layer: _layer, visible: _visible, ...geometry } = snapshot;
         this.sceneManager.updateEntity(entityId, geometry);
       }
       // ADR-363 §5.4 — re-derive hosted openings against the restored walls.
       cascadeHostedOpeningsForWalls(this.entityIds, this.sceneManager);
+      // ADR-492 Φ2 — re-frame beams against the restored geometry; separate emit (restore first).
+      reframeBeamsAndEmitAfterRestore(this.entityIds, this.sceneManager);
     }
   }
 
@@ -116,14 +137,18 @@ export class ScaleEntityCommand implements ICommand {
         this.createdEntityIds.push(newId);
       }
     } else {
+      const transformed: SceneEntity[] = [];
       for (const entityId of this.entityIds) {
         const snapshot = this.entitySnapshots.get(entityId);
         if (!snapshot) continue;
         const updates = scaleEntity(snapshot as unknown as Entity, this.basePoint, sx, sy);
         this.sceneManager.updateEntity(entityId, updates);
+        transformed.push({ ...snapshot, ...updates } as SceneEntity);
       }
       // ADR-363 §5.4 — hosted openings follow the re-scaled walls.
       cascadeHostedOpeningsForWalls(this.entityIds, this.sceneManager);
+      // ADR-492 Φ2 — reframe beams + announce transformed + reframed in ONE emit (mirror execute).
+      reframeBeamsAndEmit(transformed, this.entityIds, this.sceneManager);
     }
   }
 

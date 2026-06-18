@@ -20,7 +20,7 @@ import type { Point3D } from '../../bim/types/bim-base';
 import { getElementMaterial3D } from '../materials/MaterialCatalog3D';
 import { buildShape, extrudeAndRotate, extrudeShapesAndRotate, tagMesh, pushHoles, hangDownMeshY } from './bim-three-shape-helpers';
 import { scalePoints } from '../../rendering/entities/shared/geometry-vector-utils';
-import { computeBeamCutbackOutline } from '../../bim/geometry/beam-column-cutback';
+import { computeBeamCutbackOutline, extendBeamOutlineIntoFramingColumns } from '../../bim/geometry/beam-column-cutback';
 import { ensureWorldUvs } from './bim-uv-helpers';
 import { applyBeamSlope, applySlabSlope, applyColumnTilt } from './mesh-slope-shear';
 import { buildColumnPrismGeometry } from './column-piece-geometry';
@@ -286,6 +286,29 @@ function attachBeamRebar(
 
 // ── Beam ──────────────────────────────────────────────────────────────────────
 
+/**
+ * ADR-493 — carve-outline 3Δ (parity με 2Δ `buildBeamCutbackDisplay`): επεκτείνει το
+ * πλαισιωμένο άκρο ευθύγραμμου δοκαριού ώστε το επόμενο cutback να σκαλίσει την ακριβή
+ * υποχωρούσα παρειά (κυκλική/λοξή). Καμπύλο/εκφυλισμένο → outline αυτούσιο (μηδέν regression).
+ * Ο άξονας (startPoint/endPoint) κλιμακώνεται με το ΙΔΙΟ `sceneToM` (κοινός χώρος μέτρων).
+ */
+function buildBeam3DCarveOutline(
+  beam: BeamEntity,
+  verts: readonly Point3D[],
+  hostFootprints: readonly (readonly { x: number; y: number }[])[],
+  sceneToM: number,
+): { x: number; y: number }[] {
+  const flat = verts.map((v) => ({ x: v.x, y: v.y }));
+  if (beam.params.kind === 'curved') return flat;
+  const ext = extendBeamOutlineIntoFramingColumns(
+    flat,
+    { x: beam.params.startPoint.x * sceneToM, y: beam.params.startPoint.y * sceneToM },
+    { x: beam.params.endPoint.x * sceneToM, y: beam.params.endPoint.y * sceneToM },
+    hostFootprints,
+  );
+  return ext ?? flat;
+}
+
 export function beamToMesh(
   beam: BeamEntity,
   levelId?: string,
@@ -315,13 +338,14 @@ export function beamToMesh(
     // DERIVED (ποτέ persisted)· τα column footprints είναι ήδη rotated/composite-baked.
     // `null` → καμία τομή → ίσιο box extrude (byte-for-byte). Πολλά κομμάτια → ένα geometry.
     // ADR-462 — outline ΚΑΙ host footprints κλιμακώνονται με ΤΟ ΙΔΙΟ sceneToM (κοινός χώρος μέτρων).
-    const trimmed = computeBeamCutbackOutline(
-      verts.map((v) => ({ x: v.x, y: v.y })),
-      columns
-        .map((c) => c.geometry?.footprint?.vertices)
-        .filter((f): f is NonNullable<typeof f> => !!f && f.length >= 3)
-        .map((f) => scalePoints(f, sceneToM)),
-    );
+    const hostFootprints = columns
+      .map((c) => c.geometry?.footprint?.vertices)
+      .filter((f): f is NonNullable<typeof f> => !!f && f.length >= 3)
+      .map((f) => scalePoints(f, sceneToM).map((p) => ({ x: p.x, y: p.y })));
+    // ADR-493 — parity με 2Δ: επέκτεινε το πλαισιωμένο άκρο ώστε το safeDifference να
+    // σκαλίσει την ακριβή υποχωρούσα παρειά (κυκλική/λοξή) ΚΑΙ στο 3Δ. Straight axis μόνο.
+    const carveVerts = buildBeam3DCarveOutline(beam, verts, hostFootprints, sceneToM);
+    const trimmed = computeBeamCutbackOutline(carveVerts, hostFootprints);
     if (trimmed === null) {
       const shape = buildShape(verts);
       if (!shape) return null;

@@ -98,8 +98,29 @@ const NOMINAL_ECCENTRICITY_DEPTH_DIVISOR = 30;
 /** Κολόνα: ενεργό βάθος d ≈ factor·h (cover-agnostic seed, mirror δοκού). */
 const COLUMN_EFFECTIVE_DEPTH_FACTOR = 0.9;
 
-/** Κολόνα: μοχλοβραχίονας z ≈ factor·d (απλοποιημένο EC2 §6.1 κάμψη). */
+/** Κολόνα: μοχλοβραχίονας z ≈ factor·d (απλοποιημένο EC2 §6.1 κάμψη, ορθογ./περιμετρική). */
 const COLUMN_LEVER_ARM_FACTOR = 0.9;
+
+/**
+ * ADR-493 — ΚΥΚΛΙΚΗ διατομή: μοχλοβραχίονας ισοδύναμου πλαστικού δακτυλίου χάλυβα. Ένας
+ * πλήρως διαρρέων δακτύλιος ολικού εμβαδού A_s σε διάμετρο D_s δίνει M = A_s·f_yd·(D_s/π)
+ * → **z = D_s/π** (≈ 0.27·d), ΠΟΛΥ μικρότερος από τον ορθογώνιο 0.81·d (όπου ο οπλισμός
+ * συγκεντρώνεται σε δύο παρειές). Χρήση του 0.81·d σε κύκλο ΥΠΕΡΕΚΤΙΜΑ το z → υποεκτιμά
+ * το A_s,M (μη-συντηρητικό). `D_s ≈ pitch-circle ≈ 0.85·d` (cover-agnostic seed, mirror
+ * του `COLUMN_EFFECTIVE_DEPTH_FACTOR`). EC2 §6.1 / §9.5.2 (circular interaction).
+ */
+const CIRCULAR_PITCH_DIAMETER_FACTOR = 0.85;
+
+/**
+ * Μοχλοβραχίονας εσωτερικών δυνάμεων κολόνας (mm) ανά τρόπο διατομής (SSoT): κυκλική →
+ * πλαστικός δακτύλιος `D_s/π`· ορθογώνια/περιμετρική/τοίχωμα → `0.81·h` (0.9·d, d=0.9·h).
+ */
+function columnLeverArmMm(ctx: ColumnSectionContext, hMm: number): number {
+  if (ctx.mode === 'circular') {
+    return (CIRCULAR_PITCH_DIAMETER_FACTOR * hMm) / Math.PI;
+  }
+  return COLUMN_LEVER_ARM_FACTOR * COLUMN_EFFECTIVE_DEPTH_FACTOR * hMm;
+}
 
 /**
  * ADR-472 S4 — EC2 §6.1(4) ονομαστική (ελάχιστη) εκκεντρότητα `e₀ = max(h/30, 20mm)`
@@ -122,16 +143,18 @@ export function nominalColumnMomentKnm(nEdKn: number, sectionDepthMm: number): n
 }
 
 /**
- * ADR-472 S4 — πρόσθετη As από **καμπτική** συνιστώσα κολόνας (steel couple): A_s,M =
- * M_Ed / (z·f_yd), `z ≈ 0.81·h` (= 0.9·d, d=0.9·h). `h` = ελάχιστο πάχος (ασθενής άξονας
- * — conservative). Additive στην αξονική As (preliminary M-N· ΟΧΙ πλήρες interaction
- * diagram, ADR-472 §4). 0 χωρίς ροπή ⇒ μηδέν regression στον καθαρά-αξονικό σχεδιασμό.
+ * ADR-472 S4 / ADR-493 — πρόσθετη As από **καμπτική** συνιστώσα κολόνας (steel couple):
+ * A_s,M = M_Ed / (z·f_yd). Μοχλοβραχίονας `z` shape-aware (`columnLeverArmMm`): ορθογ./
+ * περιμετρική `0.81·h`· **κυκλική `D_s/π`** (πλαστικός δακτύλιος, ADR-493). `h` = ελάχιστο
+ * πάχος (ασθενής άξονας — conservative). Additive στην αξονική As (preliminary M-N· ΟΧΙ
+ * πλήρες interaction diagram, ADR-472 §4). 0 χωρίς ροπή ⇒ μηδέν regression αξονικού σχεδ.
  */
 function asMomentColumnMm2(ctx: ColumnSectionContext): number {
   const mEdKnm = ctx.designMomentKnm ?? 0;
   if (mEdKnm <= 0) return 0;
   const hMm = ctx.minThicknessMm ?? Math.min(ctx.widthMm, ctx.depthMm);
-  const zMm = COLUMN_LEVER_ARM_FACTOR * COLUMN_EFFECTIVE_DEPTH_FACTOR * hMm;
+  // ADR-493 — circular → πλαστικός δακτύλιος (z=D_s/π)· αλλιώς ορθογώνιο 0.81·h.
+  const zMm = columnLeverArmMm(ctx, hMm);
   if (zMm <= 0) return 0;
   return (mEdKnm * 1e6) / (zMm * rebarFydMpa());
 }

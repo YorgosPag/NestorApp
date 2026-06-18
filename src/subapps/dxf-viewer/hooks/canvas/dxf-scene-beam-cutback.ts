@@ -22,7 +22,11 @@
 
 import type { DxfEntityUnion, DxfBeam, DxfColumn } from '../../canvas-v2/dxf-canvas/dxf-types';
 import type { Point3D } from '../../bim/types/bim-base';
-import { computeBeamCutbackOutline, computeBeamAxisToColumnContact } from '../../bim/geometry/beam-column-cutback';
+import {
+  computeBeamCutbackOutline,
+  computeBeamAxisToColumnContact,
+  extendBeamOutlineIntoFramingColumns,
+} from '../../bim/geometry/beam-column-cutback';
 import type { Polyline3D } from '../../bim/types/bim-base';
 
 /**
@@ -87,7 +91,19 @@ export function buildBeamCutbackDisplay(
 ): BeamCutbackDisplay | null {
   if (beamOutline.length < 3 || columnFootprints.length === 0) return null;
   const outline2D = beamOutline.map((v) => ({ x: v.x, y: v.y }));
-  const pieces = computeBeamCutbackOutline(outline2D, columnFootprints);
+  // ADR-493 — Revit-grade: όταν το επίπεδο persisted άκρο εφάπτεται σε υποχωρούσα παρειά
+  // (κυκλική/λοξή/σύνθετη), επέκτεινε ΜΟΝΟ το carve-outline του πλαισιωμένου άκρου ώστε το
+  // safeDifference να σκαλίσει την ακριβή άψιδα (μηδέν persisted churn). Το location-line
+  // contact μένει στο ΑΡΧΙΚΟ outline (μηδέν over-extend του άξονα μέσα στην κολώνα).
+  const carveOutline = axisPts.length === 2
+    ? (extendBeamOutlineIntoFramingColumns(
+        outline2D,
+        { x: axisPts[0].x, y: axisPts[0].y },
+        { x: axisPts[1].x, y: axisPts[1].y },
+        columnFootprints,
+      ) ?? outline2D)
+    : outline2D;
+  const pieces = computeBeamCutbackOutline(carveOutline, columnFootprints);
   if (pieces === null) return null;
   const displayOutline: Point3D[][] = pieces.map((ring) => ring.map((p) => ({ x: p.x, y: p.y, z: 0 })));
 
