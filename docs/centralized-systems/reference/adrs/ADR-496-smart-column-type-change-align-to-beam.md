@@ -159,9 +159,68 @@ override-able· default `depth/3` (back-compat). De-dup σε ΕΝΑ SSoT default
   `>2` → καλύτερο κάθετο ζεύγος (κόμβος πλησιέστερα στο κέντρο κολώνας).
 - Beam endpoints μετά το reshape: ο cutback (ADR-458) τα χειρίζεται οπτικά· αναλυτικό μήκος → ADR-492 reframe.
 
+## 10. Phase 3 — L-shape dual-beam corner (Γ στη ΓΩΝΙΑ)
+
+`Στιγμιότυπο οθόνης 2026-06-19 014157.jpg`.
+
+**Πρόβλημα:** ορθογωνικό πλαίσιο δοκαριών με **κολώνες τύπου Γ (L-shape) στις ΓΩΝΙΕΣ**· σε κάθε γωνία
+**ΔΥΟ κάθετα δοκάρια ΚΑΤΑΛΗΓΟΥΝ** (corner junction). Η αλλαγή σε Γ καλούσε τη Phase 1 (single-beam
+bearing-arm) → ευθυγραμμιζόταν **ΜΟΝΟ** το ένα σκέλος στο πλησιέστερο δοκάρι· το δεύτερο σκέλος έμενε
+catalog-default (`armLength = depth/3`) → **δεν πατούσε** στην παρειά του 2ου δοκαριού (μπακάλικο).
+
+**Διαφορά από Phase 2 (T):** το Τ έχει συμμετρικό πέλμα + ένα δοκάρι «περνά ευθεία»· το **Γ είναι
+ασύμμετρο** και **ΚΑΙ ΤΑ ΔΥΟ δοκάρια καταλήγουν** → handedness και στους δύο άξονες.
+
+**Απόφαση (Revit-canonical):** κάθε σκέλος του Γ γίνεται **δομική συνέχεια** του αντίστοιχου δοκαριού:
+- **κατακόρυφο σκέλος** (πάχος `armWidth`, τοπικό +Y) ∥ το ένα δοκάρι· `armWidth = (vertical-leg
+  beam).width`, centerline ≡ άξονάς του.
+- **οριζόντιο σκέλος / foot** (πάχος `armLength`, τοπικό +X) ∥ το άλλο· `armLength = (foot beam).width`,
+  centerline ≡ άξονάς του.
+
+Η **γωνία** του Γ κάθεται στον **κόμβο** N = τομή των δύο αξόνων· τα δύο ελεύθερα άκρα βλέπουν προς
+τα ανοίγματα. Επειδή `πάχος σκέλους == πλάτος δοκαριού` ΚΑΙ `centerline ≡ άξονας`, **και οι δύο
+παρειές** κάθε σκέλους πέφτουν flush αυτόματα (συνέπεια της συνέχειας).
+
+### 10.1 Handedness — κλειστή λύση cross-product (ΟΧΙ 4 hard-coded γωνίες)
+
+**Κρίσιμη επαλήθευση (γιατί ΔΕΝ χρειάζεται `flipX`/`flipY`):** μετά το `rotationDegToAlignLocalY(u_v)`
+ισχύει `R(θ)·(0,1) = u_v` (CCW), άρα `R(θ)·(1,0) = (u_v.y, −u_v.x)` ⇒ ο foot δείχνει **πάντα** στη φορά
+με `cross(u_v, foot_out) = −1`. Επομένως αρκεί να **διαλέξουμε ποιο δοκάρι είναι το κατακόρυφο σκέλος**
+βάσει του **προσήμου του cross-product** των δύο outward διευθύνσεων (`crossZ(outA, outB) < 0`): η σωστή
+γωνία και για τις 4 γωνίες προκύπτει από τη **συνεχή rotation + τη χειρότητα** — scale/rotation-invariant,
+μηδέν per-corner if. Το πιθανό gap «`ColumnLshapeParams` έχει μόνο `flipY`» **δεν υφίσταται** για το corner
+case: `flipY` παραμένει `false`.
+
+### 10.2 Μαθηματικά (κλειστή λύση, anchor='center' — ίδιο μοτίβο §4/§9.2)
+
+- **κόμβος** `N` = τομή των δύο αξόνων (`bestPerpendicularPair` → `lineIntersectionPoint`).
+- **outward** κάθε δοκαριού από τον κόμβο = `unitVector(N, beamEndsByProximity(beam, N).far)`.
+- **rotation:** `θ = rotationDegToAlignLocalY(u_verticalOut)`.
+- **`P_local`** = `(−W/2 + armWidth/2, −D/2 + armLength/2)` (mm· ο κόμβος = τομή leg-centerlines,
+  flipY=false) → **`position = N − R(θ)·(P_local·s)`**.
+- **bbox:** `W = max(width, armWidth)`, `D = max(depth, armLength)`.
+
+### 10.3 Υλοποίηση (extend — μηδέν διπλότυπα)
+
+| # | Αλλαγή | Αρχείο |
+|---|--------|--------|
+| 1 | **NEW** `alignLShapeColumnToFramingBeams` (reuse `bestPerpendicularPair`/`beamAxes`/`beamEndsByProximity`/`unitVector`/`rotateVector`/`rotationDegToAlignLocalY`/`mmToSceneUnits`) + local `crossZ` (2-vector chirality, single-use· δεν υπάρχει shared 2-vector cross SSoT — οι υπάρχοντες είναι 3-point `crossZ(o,a,b)` ή Vec3 ή inline line-intersection denominators) | `bim/columns/column-beam-align.ts` |
+| 2 | Dispatcher L branch → `alignLShapeColumnToFramingBeams(...) ?? alignColumnToFramingBeam(...)` (dual-leg όταν 2 κάθετα· αλλιώς single-beam Phase 1 — μηδέν regression) | `bim/columns/column-beam-align.ts` |
+| 3 | **+9 jest** (Γ στις 4 γωνίες ορθογωνίου: άξονας≡δοκάρι + πάχος=beam.width + κόμβος flush + handedness ανά γωνία· bbox grow· `<2`/μη-κάθετα/non-L → null· dispatcher dual-leg) | `bim/columns/__tests__/column-beam-align.test.ts` |
+
+**Ο hook `useColumnParamsDispatcher` δεν αλλάζει** — καλεί ήδη τον dispatcher (command-time, ΕΝΑ emit →
+ADR-492 safe). **Full automation** ήδη wired (`bim:column-params-updated` → organism/foundation/loads/
+reinforce → διατομές/οπλισμός κολώνας + πέδιλο + δοκάρια). Μηδέν νέο trigger.
+
+### 10.4 Edge cases / DEFER
+- **Ακριβώς 2 κάθετα σε γωνία** → ιδανικό Γ. **1 δοκάρι** → single-beam bearing-arm (Phase 1, μηδέν
+  regression). **>2** → καλύτερο κάθετο ζεύγος (κόμβος πλησιέστερα στο κέντρο). **μη-κάθετα** → `null`.
+- Beam endpoints μετά το reshape: cutback (ADR-458) οπτικά· αναλυτικό μήκος → ADR-492 reframe.
+
 ## 8. Changelog
 
 - **2026-06-19** — Αρχική υλοποίηση (Phase 1, L-shape). 7 jest GREEN. UNCOMMITTED.
 - **2026-06-19** — SSoT audit (Giorgio): de-dup χειροκίνητου unit-vector → reuse `unitVector` (grip-math). 7 jest GREEN.
 - **2026-06-19** — **Phase 2 (T-shape dual-beam, §9):** NEW `flangeThickness` field + `alignTShapeColumnToFramingBeams` + `alignColumnOnTypeChange` dispatcher + `lineIntersectionPoint` SSoT + de-dup `flangeDepth`. column-beam-align 16 jest / 147 touched-suite jest GREEN. UNCOMMITTED.
 - **2026-06-19** — **SSoT audit (Giorgio):** de-dup 2 μοτίβα που είχαν μείνει — (α) raw `atan2(−x,y)` ×2 → NEW `rotationDegToAlignLocalY` (grip-math), (β) near/far endpoint ×3 → ΕΝΑ `beamEndsByProximity`. 133 jest GREEN, tsc 0 errors στα touched files (τα 7 project errors = άλλων agents).
+- **2026-06-19** — **Phase 3 (L-shape dual-beam corner, §10):** NEW `alignLShapeColumnToFramingBeams` — Γ σε γωνία με 2 κάθετα δοκάρια που καταλήγουν· κάθε σκέλος = δομική συνέχεια του δοκαριού του· **handedness με πρόσημο cross-product** (ΟΧΙ 4 hard-coded γωνίες· επαληθεύτηκε ότι `flipX`/`flipY` ΔΕΝ χρειάζονται). Dispatcher L branch → dual-leg ?? single-beam fallback. **+9 jest → 25 column-beam-align GREEN.** UNCOMMITTED.

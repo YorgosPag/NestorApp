@@ -935,9 +935,10 @@
 | **ADR-493** | Κυκλική κολώνα: σύνδεση δοκαριού στην παρειά (derived carve-extension) + επαλήθευση υπολογισμών (M-N lever arm circular) | ✅ APPROVED | [View](./adrs/ADR-493-circular-column-beam-attachment-and-calc-verification.md) |
 | **ADR-494** | Footprint-based kind-agnostic αναγνώριση στήριξης δοκαριού→κολώνας (L/T/U/I/τοιχείο/polygon — λύνει cantilever bug σε αλλαγή τύπου) | ✅ APPROVED | [View](./adrs/ADR-494-footprint-based-kind-agnostic-beam-column-framing.md) |
 | **ADR-495** | Slab→Beam load propagation (slab-aware δοκός tributary — η πλάκα/πρόβολος φορτίζει τον οργανισμό· mirror ADR-478) | ✅ Slice 1 | [View](./adrs/ADR-495-slab-beam-load-propagation.md) |
-| **ADR-496** | Έξυπνη ευθυγράμμιση κολώνας στα πλαισιωτικά δοκάρια κατά την αλλαγή τύπου (Phase 1 L-shape bearing-arm· **Phase 2 T-shape dual-beam T-junction** — κάθε σκέλος συνέχεια δοκαριού· command-time, full re-study) | ✅ Phase 2 | [View](./adrs/ADR-496-smart-column-type-change-align-to-beam.md) |
+| **ADR-496** | Έξυπνη ευθυγράμμιση κολώνας στα πλαισιωτικά δοκάρια κατά την αλλαγή τύπου (Phase 1 L-shape bearing-arm· **Phase 2 T-shape dual-beam T-junction**· **Phase 3 L-shape dual-leg corner** — Γ σε γωνία με 2 κάθετα δοκάρια, handedness cross-product· command-time, full re-study) | ✅ Phase 3 | [View](./adrs/ADR-496-smart-column-type-change-align-to-beam.md) |
 | **ADR-497** | FEM-authoritative axial — single source of truth κολώνα-N→πέδιλο (engaged FEM υπερισχύει του grid-tributary· ο πρόβολος ADR-495 φτάνει στο πέδιλο· mirror ADR-491) | ✅ Slice 2A | [View](./adrs/ADR-497-fem-authoritative-axial-footing.md) |
 | **ADR-498** | Cantilever-aware slab design (πλάκα-πρόβολος → q·L²/2 hogging άνω σχάρα + L/d warning· topology-aware spatial, mirror ADR-486) | ✅ Slice 1+2 | [View](./adrs/ADR-498-cantilever-slab-design.md) |
+| **ADR-499** | Αυτο-διορθούμενος οργανισμός: flexural-capacity ceiling (M_Ed ≤ M_Rd,lim· cap αντί ψεύτικου Ø25/75) + auto-size διατομών + στρέψη + global feasibility (υλοποιεί ADR-487) | 🟡 Slice A | [View](./adrs/ADR-499-auto-correcting-organism.md) |
 | **ADR-UI-001** | Visual Primitive Ownership & Semantic Tokens | ✅ APPROVED | [View](./adrs/ADR-UI-001.md) |
 
 ---

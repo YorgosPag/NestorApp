@@ -129,6 +129,13 @@ function greekLegacySlabSpanDepthLimit(ctx: SlabFoundationSectionContext): numbe
 }
 
 /**
+ * ΕΚΩΣ 2000 §17 — οριακό βάθος θλιβόμενης ζώνης ξ_lim = x/d ≈ 0.45 (B500C), ίδια
+ * μηχανική με EC2 Annex A ⇒ μ_lim ≈ 0.295 (ADR-499). Η μέθοδος επιτρέπει μελλοντική
+ * code-specific απόκλιση χωρίς να σπάει το SSoT.
+ */
+const GREEK_LEGACY_FLEXURAL_LIMIT_MU = 0.295;
+
+/**
  * ΕΚΩΣ 2000 §17 (θεμελιώσεις) όρια θεμελιακού στοιχείου — ελαφρώς συντηρητικότερα
  * από EC2 (μεγαλύτερο ρ_min, πυκνότερο μέγιστο βήμα). `tie-beam` = δοκός →
  * ισοδύναμα beam limits.
@@ -222,6 +229,9 @@ export const GREEK_LEGACY_PROVIDER: StructuralCodeProvider = {
   },
   beamSpanDepthLimit: greekLegacyBeamSpanDepthLimit,
   slabSpanDepthLimit: greekLegacySlabSpanDepthLimit,
+  flexuralLimitMuLim(): number {
+    return GREEK_LEGACY_FLEXURAL_LIMIT_MU;
+  },
   footingReinforcementLimits: greekLegacyFootingLimits,
   suggestFootingReinforcement(ctx: FootingSectionContext): FootingReinforcement {
     return suggestFootingReinforcementFrom(this, ctx);

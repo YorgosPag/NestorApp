@@ -301,12 +301,110 @@ export function alignTShapeColumnToFramingBeams(
   };
 }
 
+// ─── ADR-496 Phase 3 — L-shape dual-beam corner alignment (Γ στη ΓΩΝΙΑ) ───────
+
+/** 2D cross-product z-component `a × b` — πρόσημο = chirality του ζεύγους διευθύνσεων. */
+function crossZ(a: { x: number; y: number }, b: { x: number; y: number }): number {
+  return a.x * b.y - a.y * b.x;
+}
+
+/**
+ * ADR-496 Phase 3 — ταιριάζει μια κολώνα που αλλάζει τύπο σε **Γ (L-shape)** σε ΔΥΟ
+ * κάθετα πλαισιωτικά δοκάρια που **καταλήγουν στην ίδια γωνία** (corner junction), ώστε
+ * **κάθε σκέλος του Γ να γίνεται δομική συνέχεια του αντίστοιχου δοκαριού**:
+ *
+ *   · **κατακόρυφο σκέλος** (πάχος `armWidth`, εκτείνεται κατά τοπικό +Y) ∥ το ένα δοκάρι·
+ *     `armWidth = (vertical-leg beam).width`, centerline ≡ άξονάς του.
+ *   · **οριζόντιο σκέλος / foot** (πάχος `armLength`, εκτείνεται κατά τοπικό +X) ∥ το άλλο·
+ *     `armLength = (foot beam).width`, centerline ≡ άξονάς του.
+ *
+ * Η **γωνία** του Γ κάθεται στον **κόμβο** N = τομή των δύο αξόνων· τα δύο ελεύθερα άκρα
+ * βλέπουν προς τα ανοίγματα. Επειδή `πάχος σκέλους == πλάτος δοκαριού` ΚΑΙ `centerline ≡
+ * άξονας`, **και οι δύο παρειές** κάθε σκέλους πέφτουν flush αυτόματα (συνέπεια της συνέχειας).
+ *
+ * **Handedness (κλειστή λύση, ΟΧΙ hard-coded ανά γωνία):** μετά το
+ * `rotationDegToAlignLocalY(u_v)` ισχύει `R(θ)·(+X) = (u_v.y, −u_v.x)`, άρα ο foot δείχνει
+ * πάντα στη φορά με `crossZ(u_v, foot_out) = −1`. Διαλέγουμε λοιπόν ποιο δοκάρι είναι το
+ * **κατακόρυφο σκέλος** βάσει του προσήμου του `crossZ` των δύο outward διευθύνσεων ⇒ καμία
+ * ανάγκη για `flipY`/`flipX` — η σωστή γωνία και για τις 4 περιπτώσεις προκύπτει από τη
+ * συνεχή rotation + τη χειρότητα (scale/rotation-invariant).
+ *
+ * **Κλειστή λύση (anchor='center', ίδιο μοτίβο §4/§9.2):** `P_local = (−W/2 + armWidth/2,
+ * −D/2 + armLength/2)` = ο κόμβος σε τοπικές mm (τομή leg-centerlines) → `position =
+ * N − R(θ)·(P_local·s)`.
+ *
+ * @returns νέα `ColumnParams` (override `position/anchor/rotation/width/depth/lshape`) ή
+ *   `null` όταν δεν βρεθεί κάθετο ζεύγος / εκφυλισμένος άξονας (ο caller κάνει fallback στο
+ *   single-beam {@link alignColumnToFramingBeam} — μηδέν regression).
+ */
+export function alignLShapeColumnToFramingBeams(
+  column: ColumnEntity,
+  nextParams: ColumnParams,
+  framingBeams: readonly BeamEntity[],
+): ColumnParams | null {
+  if (nextParams.kind !== 'L-shape') return null;
+
+  const cx = column.params.position.x;
+  const cy = column.params.position.y;
+  const pair = bestPerpendicularPair(beamAxes(framingBeams), cx, cy);
+  if (!pair) return null;
+
+  // outward κάθε δοκαριού από τον κόμβο N (φορά προς το ελεύθερο άκρο = προς το άνοιγμα).
+  const { node } = pair;
+  const outA = unitVector(node, beamEndsByProximity(pair.a.beam, node.x, node.y).far);
+  const outB = unitVector(node, beamEndsByProximity(pair.b.beam, node.x, node.y).far);
+  if (!outA || !outB) return null;
+
+  // Chirality: το foot (τοπικό +X μετά την rotation) πέφτει στη φορά με crossZ(u_v, foot)=−1.
+  // Διαλέγουμε ως κατακόρυφο σκέλος το δοκάρι που αφήνει το άλλο σε αυτή τη φορά — ΕΝΑ
+  // πρόσημο cross-product καλύπτει και τις 4 γωνίες (αντί 4 hard-coded if).
+  const aIsVerticalLeg = crossZ(outA, outB) < 0;
+  const vBeam = (aIsVerticalLeg ? pair.a : pair.b).beam; // κατακόρυφο σκέλος (∥ τοπικό +Y)
+  const hBeam = (aIsVerticalLeg ? pair.b : pair.a).beam; // foot / οριζόντιο σκέλος (∥ τοπικό +X)
+  const uVerticalOut = aIsVerticalLeg ? outA : outB;
+
+  const s = mmToSceneUnits(nextParams.sceneUnits ?? 'mm');
+  const armWidth = vBeam.params.width; // mm — πάχος κατακόρυφου σκέλους = πλάτος δοκαριού του
+  const armLength = hBeam.params.width; // mm — πάχος foot = πλάτος δοκαριού του
+
+  // bbox: το κατακόρυφο σκέλος έχει πάχος armWidth κατά X → W ≥ armWidth· ο foot έχει πάχος
+  // armLength κατά Y → D ≥ armLength. Κρατά τα catalog defaults όταν επαρκούν.
+  const W = Math.max(nextParams.width, armWidth);
+  const D = Math.max(nextParams.depth, armLength);
+
+  // rotation: τοπικό +Y (κατακόρυφο σκέλος) → outward διεύθυνση του δοκαριού του.
+  const rotationDeg = rotationDegToAlignLocalY(uVerticalOut);
+
+  // P_local = ο κόμβος (τομή leg-centerlines) σε τοπικές mm (flipY=false: κατακόρυφο σκέλος
+  // αριστερά x∈[−W/2,−W/2+armWidth], foot κάτω y∈[−D/2,−D/2+armLength]).
+  const pLocalX = -W / 2 + armWidth / 2;
+  const pLocalY = -D / 2 + armLength / 2;
+  const rotated = rotateVector({ x: pLocalX * s, y: pLocalY * s }, rotationDeg);
+
+  const position: Point3D = {
+    x: node.x - rotated.x,
+    y: node.y - rotated.y,
+    z: nextParams.position.z,
+  };
+
+  return {
+    ...nextParams,
+    position,
+    anchor: 'center',
+    rotation: rotationDeg,
+    width: W,
+    depth: D,
+    lshape: { ...nextParams.lshape, armWidth, armLength, flipY: false },
+  };
+}
+
 /**
  * ADR-496 — dispatcher ανά kind για το command-time smart-fit κατά την αλλαγή τύπου.
- * Single-beam L-shape (Phase 1) → {@link alignColumnToFramingBeam}· dual-beam T-shape
- * (Phase 2) → {@link alignTShapeColumnToFramingBeams}· κάθε άλλο kind → `null` (ο caller
- * κρατά τα raw params). ΕΝΑ σημείο routing ώστε ο hook (`useColumnParamsDispatcher`) να
- * μένει thin — μηδέν per-kind branching εκεί.
+ * L-shape → **dual-beam corner** (Phase 3, {@link alignLShapeColumnToFramingBeams}) όταν
+ * υπάρχουν 2 κάθετα δοκάρια σε γωνία· αλλιώς fallback στο **single-beam** bearing-arm
+ * (Phase 1, {@link alignColumnToFramingBeam}). T-shape (Phase 2) →
+ * {@link alignTShapeColumnToFramingBeams}· κάθε άλλο kind → `null` (ο caller κρατά τα raw
+ * params). ΕΝΑ σημείο routing ώστε ο hook (`useColumnParamsDispatcher`) να μένει thin.
  */
 export function alignColumnOnTypeChange(
   column: ColumnEntity,
@@ -314,7 +412,9 @@ export function alignColumnOnTypeChange(
   framingBeams: readonly BeamEntity[],
 ): ColumnParams | null {
   switch (nextParams.kind) {
-    case 'L-shape': return alignColumnToFramingBeam(column, nextParams, framingBeams);
+    case 'L-shape':
+      return alignLShapeColumnToFramingBeams(column, nextParams, framingBeams)
+        ?? alignColumnToFramingBeam(column, nextParams, framingBeams);
     case 'T-shape': return alignTShapeColumnToFramingBeams(column, nextParams, framingBeams);
     default:        return null;
   }

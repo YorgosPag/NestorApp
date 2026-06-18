@@ -14,6 +14,7 @@ import {
   rebarFydMpa,
 } from '../rebar-catalog';
 import { concreteFcdMpa, DEFAULT_CONCRETE_GRADE } from '../concrete-grades';
+import { flexuralCapacityCapFactor, limitMomentNmm } from './flexural-capacity';
 import { rectRestrainedBarIntervals } from '../reinforcement/column-reinforcement-types';
 import type { BeamSupportType } from '../../types/beam-types';
 import type {
@@ -282,16 +283,27 @@ export function spanMomentDivisor(supportType: BeamSupportType): number {
 }
 
 /**
+ * ADR-499 — ροπή σχεδιασμού ανοίγματος δοκαριού `M_Ed = w_Ed·L²/c` (N·mm) υπό UDL.
+ * Extracted SSoT: τη μοιράζονται ο οπλισμός (`asStrengthBeamMm2`) και η φυσική πύλη
+ * επάρκειας (`flexural-capacity`). 0 χωρίς γραμμικό φορτίο/άνοιγμα.
+ */
+export function beamDesignMomentNmm(ctx: BeamSectionContext): number {
+  const wEd = ctx.designLineLoadKnM ?? 0;
+  if (wEd <= 0 || ctx.spanMm <= 0) return 0;
+  const spanM = ctx.spanMm / 1000;
+  return ((wEd * spanM * spanM) / spanMomentDivisor(ctx.supportType)) * 1e6; // kNm→N·mm
+}
+
+/**
  * ADR-472 — απαιτούμενη As κάτω οπλισμού δοκαριού από **καμπτική αντοχή** (EC2 §6.1,
  * απλοποιημένος μοχλοβραχίονας z=0.9·d): M_Ed = w_Ed·L²/c, A_s = M_Ed/(z·f_yd).
  * Επιστρέφει 0 χωρίς γραμμικό φορτίο/άνοιγμα ⇒ ο ρ_min κυριαρχεί (μηδέν regression).
- * Χωρίς ανακατανομή ροπών / έλεγχο θλιβόμενης ζώνης (ADR-472 §4).
+ * Χωρίς ανακατανομή ροπών (το όριο θλιβόμενης ζώνης = `flexural-capacity` cap, ADR-499).
  */
 export function asStrengthBeamMm2(ctx: BeamSectionContext, effectiveDepthMm: number): number {
-  const wEd = ctx.designLineLoadKnM ?? 0;
-  if (wEd <= 0 || ctx.spanMm <= 0 || effectiveDepthMm <= 0) return 0;
-  const spanM = ctx.spanMm / 1000;
-  const mEdNmm = ((wEd * spanM * spanM) / spanMomentDivisor(ctx.supportType)) * 1e6; // kNm→N·mm
+  if (effectiveDepthMm <= 0) return 0;
+  const mEdNmm = beamDesignMomentNmm(ctx);
+  if (mEdNmm <= 0) return 0;
   return mEdNmm / (BEAM_LEVER_ARM_FACTOR * effectiveDepthMm * rebarFydMpa());
 }
 
@@ -306,10 +318,17 @@ export function suggestBeamReinforcementFrom(
 ): BeamReinforcement {
   const seed = provider.beamReinforcementLimits(ctx, 16);
   const effectiveDepthMm = BEAM_EFFECTIVE_DEPTH_FACTOR * ctx.depthMm;
-  // ADR-472 — max(ελάχιστο ρ_min επί b·d, απαίτηση καμπτικής αντοχής).
+  // ADR-499 — φυσική πύλη: όταν M_Ed > M_Rd,lim, ο εφελκυόμενος χάλυβας κορεστεί στο
+  // A_s,lim (η θλιβόμενη ζώνη αστοχεί — περισσότερο σίδερο ΔΕΝ λύνει). Ο cap αποτρέπει
+  // ψεύτικη λύση (π.χ. 4Ø32 σε 250×400)· η ανεπάρκεια διορθώνεται με μεγαλύτερη
+  // διατομή (auto-size, ADR-499 Slice B). cap = 1 όταν επαρκεί ⇒ μηδέν regression.
+  const fcd = concreteFcdMpa(ctx.concreteGrade ?? DEFAULT_CONCRETE_GRADE);
+  const mLimNmm = limitMomentNmm(ctx.widthMm, effectiveDepthMm, fcd, provider.flexuralLimitMuLim());
+  const capFactor = flexuralCapacityCapFactor(beamDesignMomentNmm(ctx), mLimNmm);
+  // ADR-472 — max(ελάχιστο ρ_min επί b·d, capped απαίτηση καμπτικής αντοχής).
   const asBottomMm2 = Math.max(
     seed.minRatio * ctx.widthMm * effectiveDepthMm,
-    asStrengthBeamMm2(ctx, effectiveDepthMm),
+    asStrengthBeamMm2(ctx, effectiveDepthMm) * capFactor,
   );
   const seedDia = nextRebarDiameterMm(seed.minBarDiameterMm);
 

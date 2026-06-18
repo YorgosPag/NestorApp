@@ -139,6 +139,12 @@ function eurocodeSlabSpanDepthLimit(ctx: SlabFoundationSectionContext): number {
 }
 
 /**
+ * EC2 Annex A — οριακός ανηγμένος συντελεστής ροπής μ_lim = 0.8·ξ_lim·(1 − 0.4·ξ_lim)
+ * για ξ_lim = x/d = 0.45 (χωρίς ανακατανομή, δ = 1) ⇒ μ_lim ≈ 0.295 (ADR-499).
+ */
+const EUROCODE_FLEXURAL_LIMIT_MU = 0.295;
+
+/**
  * EC2 §9.8.2 (πέδιλα) + §9.3.1.1 (slab-like κάτω σχάρα) όρια θεμελιακού στοιχείου.
  * `tie-beam` = δοκός → ισοδύναμα beam limits. Cover μεγαλύτερο (EC2 §4.4.1.3 —
  * έδραση σε προετοιμασμένο έδαφος/blinding).
@@ -230,6 +236,9 @@ export const EUROCODE_PROVIDER: StructuralCodeProvider = {
   },
   beamSpanDepthLimit: eurocodeBeamSpanDepthLimit,
   slabSpanDepthLimit: eurocodeSlabSpanDepthLimit,
+  flexuralLimitMuLim(): number {
+    return EUROCODE_FLEXURAL_LIMIT_MU;
+  },
   footingReinforcementLimits: eurocodeFootingLimits,
   suggestFootingReinforcement(ctx: FootingSectionContext): FootingReinforcement {
     return suggestFootingReinforcementFrom(this, ctx);

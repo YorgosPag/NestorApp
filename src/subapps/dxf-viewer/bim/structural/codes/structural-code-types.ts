@@ -356,6 +356,14 @@ export interface StructuralCodeProvider {
    */
   slabSpanDepthLimit(ctx: SlabFoundationSectionContext): number;
   /**
+   * ADR-499 — οριακός ανηγμένος συντελεστής καμπτικής ροπής μ_lim για τη ΦΥΣΙΚΗ ΠΥΛΗ
+   * επάρκειας διατομής (EC2 Annex A): `M_Rd,lim = μ_lim·f_cd·b·d²`. Πάνω από αυτό η
+   * θλιβόμενη ζώνη σκυροδέματος αστοχεί ΑΣΧΕΤΑ με τον χάλυβα ⇒ η διατομή είναι
+   * ανεπαρκής ⇒ απαιτείται μεγαλύτερη διατομή (auto-size), όχι περισσότερος οπλισμός.
+   * ΕΝΑ SSoT ανά κώδικα (ξ_lim = x/d ≈ 0.45 ⇒ μ_lim ≈ 0.295).
+   */
+  flexuralLimitMuLim(): number;
+  /**
    * ADR-459 Phase 4b — footing detailing limits (mat/strip). Για `tie-beam` ctx
    * επιστρέφει τα ισοδύναμα beam limits (είναι δοκός).
    */
