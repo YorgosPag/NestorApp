@@ -121,8 +121,8 @@
 | Οπλισμός πλακών (εδαφόπλακα/δάπεδο/οροφή) | **ADR-476** unified slab reinforcement |
 | Συνδετήρια δοκάρια (οπλισμός + render) | **ADR-477** tie-beam reinforcement |
 | Analytical model / FEM / διαγράμματα M-V-N | **ADR-480 / ADR-481 / ADR-483** |
-| Δυναμικό βάθος θεμελίωσης + storey-assignment πεδίλων | **ΑΝΟΙΧΤΟ** (§6.2 — νέο ADR όταν αποφασιστεί) |
-| Στατική συνέχεια κολώνα→πέδιλο (μηδέν κενό) | **ΑΝΟΙΧΤΟ** (§6.1) |
+| Δυναμικό βάθος θεμελίωσης + storey-assignment πεδίλων | **ADR-489** §6.2 (Derived+override "Auto"· engine + dialog· live viewer-reconciler DEFER) |
+| Στατική συνέχεια κολώνα→πέδιλο (μηδέν κενό) | **ADR-489** §6.1 (derived organism continuity — κολώνα κατεβαίνει στο πέδιλο) |
 | Auto re-study σε κάθε κίνηση (proactive) | **ADR-472/475/476** proactive hooks (`*-params-updated`, `loads-computed`) |
 
 ---

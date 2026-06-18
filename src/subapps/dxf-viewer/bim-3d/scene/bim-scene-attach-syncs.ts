@@ -13,6 +13,8 @@ import {
   makeColumnHostResolver,
 } from '../../bim/geometry/column-vertical-profile';
 import { isColumnTilted } from '../../bim/geometry/column-tilt';
+// ADR-488 §6.1 — DERIVED effective βάση κολώνας (στατική συνέχεια κολώνα→πέδιλο).
+import { ColumnBaseContinuityStore } from '../../bim/structural/organism/column-base-continuity-store';
 import { filterHostedOpenings } from './bim-scene-hosted-opening-filters';
 import type { SyncContext } from './bim-scene-context';
 import type { EntityResolution } from './BimSceneLayer';
@@ -120,6 +122,10 @@ export function syncColumns(
     // Degenerate params → undefined → legacy fallback to params.height.
     const rawColTop = resolveColumnNominalTopZmm(column.params, colVctx) - resolveColumnBaseZmm(column.params, colVctx);
     const nominalHeightMm = Number.isFinite(rawColTop) ? rawColTop : undefined;
+    // ADR-488 §6.1 — DERIVED effective βάση (άνω παρειά στηρίζοντος πεδίλου) ώστε η κολώνα
+    // να εδραστεί στο πέδιλο (στατική συνέχεια). ΟΧΙ για ρητά base-attached κολώνες (κρατούν
+    // τον δικό τους attach profile). undefined → flat path κρατά τη nominal βάση.
+    const effectiveBaseZmm = baseAttached ? undefined : ColumnBaseContinuityStore.get(column.id);
     const mesh = columnToMesh(
       column, ctx.floorElevationMm, ctx.activeLevelId, r.baseElevation, topProfile, baseProfile, nominalHeightMm,
       entities.walls, // ADR-449 Slice 2 — obstacles + exterior classifier για τον σοβά
@@ -128,6 +134,7 @@ export function syncColumns(
       // ADR-404 Bug A — ΕΞΑΙΡΕΣΗ: κεκλιμένη κολώνα ΔΕΝ μπαίνει στο flat union (δεν shear-άρεται
       // ως merged) → παίρνει per-element σοβά (suppress=false) που ακολουθεί την κλίση.
       !isColumnTilted(column.params),
+      effectiveBaseZmm,
     );
     if (mesh) { mesh.userData['buildingId'] = r.buildingId; group.add(mesh); }
   }

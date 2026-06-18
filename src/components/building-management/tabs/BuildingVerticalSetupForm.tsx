@@ -38,8 +38,11 @@ import {
 } from './building-vertical-setup';
 import {
   DEFAULT_BUILDING_FOUNDATION_DEPTH_M,
+  DEFAULT_BUILDING_FOUNDATION_DEPTH_AUTO,
   DEFAULT_BUILDING_STAIR_PENTHOUSE_HEIGHT_M,
 } from '@/types/building/elevation.schemas';
+// ADR-488 §6.2 — δυναμικό βάθος θεμελίωσης (shared engine· seed στο bootstrap).
+import { seedDerivedFoundationDepthMm } from '@/types/building/derived-foundation-depth';
 
 interface FloorMutationResponse {
   floorId?: string;
@@ -76,7 +79,16 @@ export function BuildingVerticalSetupForm({
   const [uppers, setUppers] = useState('2');
   const [typicalHeight, setTypicalHeight] = useState(DEFAULT_TYPICAL_STOREY_HEIGHT_M.toFixed(2));
   const [hasFoundation, setHasFoundation] = useState(true);
+  // ADR-488 §6.2 — το βάθος θεμελίωσης παράγεται δυναμικά (Auto) by default· ο μηχανικός
+  // μπορεί να κάνει χειροκίνητη υπέρβαση. Στο bootstrap (καθόλου πέδιλα ακόμη) χρησιμοποιούμε
+  // το seed του engine (τυπικό πέδιλο + συνδετήριες = 1,20μ) αντί για χειροκίνητη σταθερά.
+  const [foundationDepthIsAuto, setFoundationDepthIsAuto] = useState(DEFAULT_BUILDING_FOUNDATION_DEPTH_AUTO);
+  const derivedFoundationDepthM = useMemo(() => seedDerivedFoundationDepthMm() / 1000, []);
   const [foundationDepth, setFoundationDepth] = useState(DEFAULT_BUILDING_FOUNDATION_DEPTH_M.toFixed(2));
+  // Το ενεργό βάθος που οδηγεί stack + persist: derived (Auto) ή χειροκίνητο (υπέρβαση).
+  const effectiveFoundationDepthM = foundationDepthIsAuto
+    ? derivedFoundationDepthM
+    : parseFloat(foundationDepth) || DEFAULT_BUILDING_FOUNDATION_DEPTH_M;
   const [hasStairPenthouse, setHasStairPenthouse] = useState(true);
   const [stairPenthouseHeight, setStairPenthouseHeight] = useState(DEFAULT_BUILDING_STAIR_PENTHOUSE_HEIGHT_M.toFixed(2));
   const [busy, setBusy] = useState(false);
@@ -90,11 +102,11 @@ export function BuildingVerticalSetupForm({
       upperCount: parseCount(uppers),
       typicalHeightM: parseFloat(typicalHeight) || DEFAULT_TYPICAL_STOREY_HEIGHT_M,
       hasFoundation,
-      foundationDepthM: parseFloat(foundationDepth) || DEFAULT_BUILDING_FOUNDATION_DEPTH_M,
+      foundationDepthM: effectiveFoundationDepthM,
       hasStairPenthouse,
       stairPenthouseHeightM: parseFloat(stairPenthouseHeight) || DEFAULT_BUILDING_STAIR_PENTHOUSE_HEIGHT_M,
     }),
-    [basements, uppers, typicalHeight, hasFoundation, foundationDepth, hasStairPenthouse, stairPenthouseHeight],
+    [basements, uppers, typicalHeight, hasFoundation, effectiveFoundationDepthM, hasStairPenthouse, stairPenthouseHeight],
   );
 
   // Idempotent (Revit-grade): only create storeys that don't already exist —
@@ -147,7 +159,9 @@ export function BuildingVerticalSetupForm({
         buildingId,
         updates: {
           hasFoundation,
-          foundationDepth: hasFoundation ? parseFloat(foundationDepth) || 0 : 0,
+          foundationDepth: hasFoundation ? effectiveFoundationDepthM : 0,
+          // ADR-488 §6.2 — διατήρησε αν το βάθος είναι Auto (παράγεται) ή χειροκίνητη υπέρβαση.
+          foundationDepthAuto: foundationDepthIsAuto,
           hasStairPenthouse,
           stairPenthouseHeight: hasStairPenthouse ? parseFloat(stairPenthouseHeight) || 0 : 0,
         },
@@ -168,7 +182,7 @@ export function BuildingVerticalSetupForm({
     } finally {
       setBusy(false);
     }
-  }, [newSpecs, skippedCount, buildingId, projectId, hasFoundation, foundationDepth, hasStairPenthouse, stairPenthouseHeight, t, success, notifyError, onComplete]);
+  }, [newSpecs, skippedCount, buildingId, projectId, hasFoundation, effectiveFoundationDepthM, foundationDepthIsAuto, hasStairPenthouse, stairPenthouseHeight, t, success, notifyError, onComplete]);
 
   return (
     <section className="flex flex-col gap-3 rounded-lg border border-border bg-muted/30 p-3" role="group">
@@ -206,8 +220,30 @@ export function BuildingVerticalSetupForm({
         </label>
         {hasFoundation && (
           <fieldset className="flex flex-col gap-1">
-            <label className={cn('text-xs font-medium', colors.text.muted)}>{t('tabs.floors.quickSetup.foundationDepth')}</label>
-            <Input type="number" step="0.01" min="0" value={foundationDepth} onChange={(e) => setFoundationDepth(e.target.value)} className="h-9 w-28" disabled={busy} />
+            <span className="flex items-center gap-1.5">
+              <label className={cn('text-xs font-medium', colors.text.muted)}>{t('tabs.floors.quickSetup.foundationDepth')}</label>
+              {foundationDepthIsAuto && (
+                <span className={cn('rounded border px-1.5 py-0.5 text-[10px] font-semibold uppercase', getStatusColor('info', 'border'), getStatusColor('info', 'text'))}>
+                  {t('tabs.floors.quickSetup.foundationDepthAutoBadge')}
+                </span>
+              )}
+            </span>
+            {foundationDepthIsAuto ? (
+              <>
+                <Input type="number" value={derivedFoundationDepthM.toFixed(2)} className="h-9 w-28" disabled readOnly />
+                <span className={cn('text-[10px]', colors.text.muted)}>{t('tabs.floors.quickSetup.foundationDepthDerivedFrom')}</span>
+                <Button type="button" variant="link" size="sm" className="h-auto justify-start p-0 text-[10px]" onClick={() => { setFoundationDepth(derivedFoundationDepthM.toFixed(2)); setFoundationDepthIsAuto(false); }} disabled={busy}>
+                  {t('tabs.floors.quickSetup.foundationDepthOverride')}
+                </Button>
+              </>
+            ) : (
+              <>
+                <Input type="number" step="0.01" min="0" value={foundationDepth} onChange={(e) => setFoundationDepth(e.target.value)} className="h-9 w-28" disabled={busy} />
+                <Button type="button" variant="link" size="sm" className="h-auto justify-start p-0 text-[10px]" onClick={() => setFoundationDepthIsAuto(true)} disabled={busy}>
+                  {t('tabs.floors.quickSetup.foundationDepthAutoReset')}
+                </Button>
+              </>
+            )}
           </fieldset>
         )}
         <label htmlFor="vs-has-stair-penthouse" className="flex items-center gap-2 text-xs font-medium cursor-pointer">

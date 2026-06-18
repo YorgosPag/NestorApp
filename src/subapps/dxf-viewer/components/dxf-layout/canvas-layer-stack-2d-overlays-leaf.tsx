@@ -22,6 +22,7 @@ import { PipeSizingOverlay } from './PipeSizingOverlay';
 import { HydraulicBalancingOverlay } from './HydraulicBalancingOverlay';
 import { StructuralDiagramOverlay } from './StructuralDiagramOverlay';
 import { StructuralUtilizationOverlay } from './StructuralUtilizationOverlay';
+import { StructuralWarningOverlay } from './StructuralWarningOverlay';
 import type { ViewTransform, Viewport } from '../../rendering/types/Types';
 
 export interface CanvasLayerStack2DOverlaysProps {
@@ -65,6 +66,11 @@ export function CanvasLayerStack2DOverlays({ transform, viewport }: CanvasLayerS
           pointer-events-none. Self-gated to showAnalysisDiagrams && mode==='2d'.
           STAGE ADR-040. */}
       <StructuralDiagramOverlay transform={transform} viewport={viewport} />
+      {/* ADR-490 — structural warning highlight (κόκκινο/amber halo + badge ⚠ ανά
+          μέλος με στατικό σφάλμα, π.χ. δοκάρι στον αέρα = μηχανισμός). Read-only,
+          pointer-events-none, always-on (self-gated mode==='2d'). Τελευταίο =
+          topmost ώστε η επισήμανση να φαίνεται πάνω από τα άλλα overlays. STAGE ADR-040. */}
+      <StructuralWarningOverlay transform={transform} viewport={viewport} />
     </>
   );
 }

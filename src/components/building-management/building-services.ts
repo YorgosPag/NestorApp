@@ -51,6 +51,8 @@ export interface BuildingUpdatePayload {
   hasFoundation?: boolean;
   /** ADR-451 — METRES — foundation depth below the lowest storey FFL. */
   foundationDepth?: number;
+  /** ADR-488 §6.2 — `foundationDepth` παράγεται δυναμικά (Auto, default true) ή χειροκίνητη υπέρβαση. */
+  foundationDepthAuto?: boolean;
   /** ADR-461 — building has a stair-penthouse special level above the top storey (default true when ≥1 storey). */
   hasStairPenthouse?: boolean;
   /** ADR-461 — METRES — stair-penthouse (απόληξη κλιμακοστασίου) storey height (default 2.40). */

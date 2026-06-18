@@ -44,6 +44,7 @@ import {
   resolveActiveColumnReinforcementForParams,
   resolveActiveBeamSupportType,
 } from '../../bim/structural/active-reinforcement';
+import { resolveMemberFootprintVertices } from '../../bim/structural/member-footprint-2d';
 import { CoordinateTransforms } from '../../rendering/core/CoordinateTransforms';
 import { getDevicePixelRatio } from '../../systems/cursor/utils';
 import type { ViewTransform, Viewport, Point2D } from '../../rendering/types/Types';
@@ -137,14 +138,15 @@ export function StructuralUtilizationOverlay({ transform, viewport }: Structural
     if (!active || !scene) return [];
     const out: UtilizationFill[] = [];
     for (const e of scene.entities) {
+      // ADR-490 — footprint resolution = κοινό SSoT (`resolveMemberFootprintVertices`).
       if (isColumnEntity(e)) {
         const util = columnUtilization(e, resolveActiveColumnReinforcementForParams(e.params));
-        const verts = e.geometry?.footprint?.vertices;
-        if (util && verts && verts.length >= 3) out.push({ vertices: verts, color: utilizationFillColor(util.ratio) });
+        const verts = resolveMemberFootprintVertices(e);
+        if (util && verts) out.push({ vertices: verts, color: utilizationFillColor(util.ratio) });
       } else if (isBeamEntity(e)) {
         const util = beamUtilization(e, resolveActiveBeamReinforcementForEntity(e), resolveActiveBeamSupportType(e.id));
-        const verts = e.geometry?.displayOutline?.vertices ?? e.geometry?.outline?.vertices;
-        if (util && verts && verts.length >= 3) out.push({ vertices: verts, color: utilizationFillColor(util.ratio) });
+        const verts = resolveMemberFootprintVertices(e);
+        if (util && verts) out.push({ vertices: verts, color: utilizationFillColor(util.ratio) });
       }
     }
     return out;

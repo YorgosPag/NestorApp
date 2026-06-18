@@ -64,6 +64,10 @@ export function columnToMesh(
   // ADR-449 Slice 7 — ο scene-level ενιαίος σοβάς (silhouette) αναλαμβάνει το skin·
   // το per-element path το παραλείπει (ghosts/previews κρατούν per-element = false).
   suppressFinishSkin = false,
+  // ADR-488 §6.1 — DERIVED effective βάση (απόλυτο mm = άνω παρειά στηρίζοντος πεδίλου).
+  // Όταν δοθεί & είναι ΧΑΜΗΛΟΤΕΡΗ από τη nominal βάση, η κολώνα επιμηκύνεται ΠΡΟΣ ΤΑ ΚΑΤΩ
+  // ώστε να εδραστεί στο πέδιλο (στατική συνέχεια)· η ΚΟΡΥΦΗ μένει σταθερή. Μόνο flat path.
+  effectiveBaseZmm?: number,
 ): THREE.Mesh | THREE.Group | null {
   const rawVerts = column.geometry.footprint.vertices;
   if (rawVerts.length < 3) return null;
@@ -120,14 +124,22 @@ export function columnToMesh(
   const shape = buildShape(verts);
   if (!shape) return null;
 
-  const geo = extrudeAndRotate(shape, flatColumn.params.height * MM_TO_M);
+  // ADR-488 §6.1 — στατική συνέχεια κολώνα→πέδιλο: όταν δόθηκε DERIVED effective βάση
+  // χαμηλότερα από τη nominal, η κολώνα επιμηκύνεται ΠΡΟΣ ΤΑ ΚΑΤΩ ώστε να εδραστεί στην
+  // άνω παρειά του πεδίλου — η ΚΟΡΥΦΗ μένει σταθερή. `baseDropMm=0` → byte-for-byte παλιό.
+  const nominalBaseAbsMm = floorElevationMm + column.params.baseOffset;
+  const baseDropMm = effectiveBaseZmm !== undefined ? Math.max(0, nominalBaseAbsMm - effectiveBaseZmm) : 0;
+  const effectiveHeightMm = flatColumn.params.height + baseDropMm;
+
+  const geo = extrudeAndRotate(shape, effectiveHeightMm * MM_TO_M);
   ensureWorldUvs(geo); // ADR-413 — aoMap uv2 (ExtrudeGeometry auto-UVs in meters).
   // ADR-404 — raking column: shear το X/Z βάσει ύψους (η κορυφή γέρνει). No-op flat.
   applyColumnTilt(geo, flatColumn.params);
   const mesh = new THREE.Mesh(geo, getElementMaterial3D('column'));
   // ADR-402 — `baseOffset` lifts the whole column (vertical move). ONLY on this flat
   // path: the attached-prism path bakes baseOffset into its profile z. baseOffset=0 → no change.
-  mesh.position.y = (floorElevationMm + column.params.baseOffset) * MM_TO_M + buildingBaseElevationM;
+  // ADR-488 §6.1 — −baseDropMm κατεβάζει τη βάση στο πέδιλο (κορυφή αμετάβλητη).
+  mesh.position.y = (nominalBaseAbsMm - baseDropMm) * MM_TO_M + buildingBaseElevationM;
   const tagged = tagMesh(mesh, column.id, 'column', matId, levelId);
   attachEdgesProjection(tagged, 'column');
 
@@ -135,12 +147,13 @@ export function columnToMesh(
   // Ενεργό μόνο όταν η κολόνα έχει ενεργό `finish` ΚΑΙ δόθηκαν walls (απών στο ghost
   // path → πυρήνας-only). ADR-449 Slice 5 — view-level gate `showFinishSkin`.
   // ADR-470 — core gate: κρύβει το σώμα της κολώνας αν ανενεργό (σοβάς/οπλισμός μένουν).
+  // ADR-488 §6.1 — σοβάς/οπλισμός παίρνουν το επιμηκυμένο ύψος ώστε να φτάνουν στο πέδιλο.
   return applyStructuralCoreVisibility3D(
     attachColumnRebar(
       composeColumnWithFinish(
-        tagged, column, walls, beams, mesh.position.y, levelId, flatColumn.params.height, suppressFinishSkin,
+        tagged, column, walls, beams, mesh.position.y, levelId, effectiveHeightMm, suppressFinishSkin,
       ),
-      column, mesh.position.y, flatColumn.params.height, levelId,
+      column, mesh.position.y, effectiveHeightMm, levelId,
     ),
     tagged, column,
   );

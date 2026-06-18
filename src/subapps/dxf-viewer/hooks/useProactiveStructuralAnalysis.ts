@@ -45,6 +45,7 @@ import {
   isAnalysisEngaged,
 } from '../state/analysis-diagram-view-store';
 import { runStructuralAnalysis } from './structural-analysis-core';
+import { createMicrotaskCoalescer } from './proactive-coalescer';
 import type { Entity } from '../types/entities';
 import type { LoadTakedownLevelManager } from './structural-load-takedown-core';
 
@@ -52,13 +53,11 @@ export function useProactiveStructuralAnalysis(props: { levelManager: LoadTakedo
   const { levelManager } = props;
 
   useEffect(() => {
-    let scheduled = false;
     // Αν το coalesced batch περιέχει τη ρητή «Ανάλυση» → loud (toast)· αλλιώς proactive
     // re-solve = silent (μηδέν toast spam, mirror reinforce/loads).
     let loud = false;
 
     const recompute = (): void => {
-      scheduled = false;
       const runLoud = loud;
       loud = false;
       const levelId = levelManager.currentLevelId;
@@ -76,11 +75,7 @@ export function useProactiveStructuralAnalysis(props: { levelManager: LoadTakedo
       AnalysisDiagnosticsStore.set(diagnostics);
     };
 
-    const schedule = (): void => {
-      if (scheduled) return;
-      scheduled = true;
-      queueMicrotask(recompute);
-    };
+    const { schedule } = createMicrotaskCoalescer(recompute);
 
     // Ρητή «Ανάλυση» → πάντα solve, loud (ανεξάρτητα engaged).
     const onExplicit = (): void => {

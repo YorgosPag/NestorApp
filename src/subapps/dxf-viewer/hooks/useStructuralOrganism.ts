@@ -29,6 +29,9 @@ import { StructuralDiagnosticsStore } from '../bim/structural/organism/structura
 // ADR-486 — DERIVED topology-aware τύπος στήριξης δοκαριού → transient store για το render path.
 import { buildBeamSupportTypeMap } from '../bim/structural/organism/derive-beam-support';
 import { BeamSupportConditionStore } from '../bim/structural/organism/beam-support-condition-store';
+// ADR-488 §6.1 — DERIVED effective βάση κολώνας (στατική συνέχεια κολώνα→πέδιλο) → transient store.
+import { buildColumnBaseContinuityMap } from '../bim/structural/organism/derive-column-base-continuity';
+import { ColumnBaseContinuityStore } from '../bim/structural/organism/column-base-continuity-store';
 import { buildOrganismScene } from '../bim/structural/organism/cross-level-organism-scene';
 import { runStructuralAnalyticalModel } from './structural-analytical-core';
 import { makeGuideOffsetLookup } from '../bim/hosting/guide-store-offset-lookup';
@@ -106,6 +109,10 @@ export function useStructuralOrganism(props: { levelManager: LevelManagerLike })
       // στο transient store ώστε το per-entity render path (active-reinforcement) να τον
       // διαβάζει synchronous, χωρίς να ξαναχτίζει τον graph σε κάθε render (ADR-040 safe).
       BeamSupportConditionStore.set(buildBeamSupportTypeMap(graph));
+      // ADR-488 §6.1 — publish την DERIVED effective βάση κάθε κολώνας (άνω παρειά
+      // στηρίζοντος πεδίλου) στο transient store ώστε το 3Δ render path (syncColumns)
+      // να κατεβάζει τη βάση στο πέδιλο (στατική συνέχεια), χωρίς να ξαναχτίζει graph.
+      ColumnBaseContinuityStore.set(buildColumnBaseContinuityMap(graph));
       // ADR-459 Φ4d — geometry connectivity (graph-only) + reinforcement διαγνωστικά
       // (entities + active code provider) σε ΕΝΑ low-freq store write (ADR-040 safe).
       const settings = useStructuralSettingsStore.getState();
