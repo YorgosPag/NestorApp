@@ -28,7 +28,10 @@ import { registerRenderCallback, RENDER_PRIORITIES } from '../../rendering';
 import { PANEL_LAYOUT } from '../../config/panel-tokens';
 import { setImmediateSnap, clearImmediateSnap, setFullSnapResult } from './ImmediateSnapStore';
 import { findColumnDrawCornerSnap } from '../../bim/columns/column-corner-snap';
-import { resolveColumnGhostStatusFromSnap } from '../../bim/columns/column-placement-snap-context';
+import {
+  resolveColumnDrawSnap,
+  resolveColumnGhostStatusFromSnap,
+} from '../../bim/columns/column-placement-snap-context';
 import {
   setColumnGhostStatus,
   clearColumnGhostStatus,
@@ -104,41 +107,29 @@ function applyColumnGhostStatus(
 function runSnapDetection(input: SnapDetectionInput): void {
   const colHandle = input.activeTool === 'column' ? columnToolBridgeStore.get() : null;
   try {
-    // ADR-398 — Column draw: project the would-be column's corners; a corner
-    // match wins over the plain center-cursor snap. The indicator shows the
-    // target corner; the ghost anchor (ImmediateSnap.point) is shifted to
-    // `adjustedCursorPos` so the corner lands on the target. Beam-axis snap comes
-    // from the unified `findSnapPoint` (NearestSnapEngine `bim-beam`) — ΕΝΑ pipeline.
-    const drawCorner = colHandle?.isActive
-      ? findColumnDrawCornerSnap(
-          input.worldPos,
-          { ...colHandle.overrides, kind: colHandle.kind, anchor: colHandle.anchor },
-          colHandle.getSceneUnits(),
-          input.findSnapPoint,
-        )
-      : null;
-
-    const snapResult = drawCorner
-      ? drawCorner.snapResult
-      : input.findSnapPoint(input.worldPos.x, input.worldPos.y);
-
-    // 🔍 TEMP DEBUG (ADR-398 snap-indicator investigation) — REMOVE after diagnosis.
+    // ADR-398 — Column draw: the would-be column's corners project onto targets, AND the
+    // crosshair queries the unified snap (BIM corner/mid/center + beam-axis). `resolveColumnDrawSnap`
+    // picks Revit-grade: visible corner-projection > visible cursor characteristic > silent grid
+    // alignment. (Bugfix: a corner-projection landing on a SILENT grid no longer hides the BIM
+    // characteristic snap under the crosshair.) Non-column tools keep the plain cursor snap.
+    let snapResult: ProSnapResult | null;
+    let ghostPoint: Point2D | null;
     if (colHandle?.isActive) {
-      const cursorSnap = input.findSnapPoint(input.worldPos.x, input.worldPos.y);
-      // eslint-disable-next-line no-console
-      console.log('[SNAP-DBG column]', {
-        drawCorner: drawCorner ? (drawCorner.snapResult.activeMode ?? 'no-mode') : 'null',
-        used_found: snapResult?.found,
-        used_type: snapResult?.activeMode,
-        used_entity: snapResult?.snapPoint?.entityId,
-        used_desc: snapResult?.snapPoint?.description,
-        cursorOnly_found: cursorSnap?.found,
-        cursorOnly_type: cursorSnap?.activeMode,
-        cursorOnly_desc: cursorSnap?.snapPoint?.description,
-      });
+      const drawCorner = findColumnDrawCornerSnap(
+        input.worldPos,
+        { ...colHandle.overrides, kind: colHandle.kind, anchor: colHandle.anchor },
+        colHandle.getSceneUnits(),
+        input.findSnapPoint,
+      );
+      const resolved = resolveColumnDrawSnap(input.worldPos, drawCorner, input.findSnapPoint);
+      snapResult = resolved?.snapResult ?? null;
+      ghostPoint = resolved?.ghostPoint ?? null;
+    } else {
+      snapResult = input.findSnapPoint(input.worldPos.x, input.worldPos.y);
+      ghostPoint = snapResult?.snappedPoint ?? null;
     }
 
-    if (snapResult && snapResult.found && snapResult.snappedPoint) {
+    if (snapResult && snapResult.found && snapResult.snappedPoint && ghostPoint) {
       const sx = snapResult.snappedPoint.x;
       const sy = snapResult.snappedPoint.y;
       const snapMoved = Math.abs(sx - lastSnapX) > 0.001 || Math.abs(sy - lastSnapY) > 0.001;
@@ -156,8 +147,8 @@ function runSnapDetection(input: SnapDetectionInput): void {
         setFullSnapResult(snapResult);
         setImmediateSnap({
           found: true,
-          // ADR-398 — ghost anchor follows the corner-aligned cursor.
-          point: drawCorner ? drawCorner.adjustedCursorPos : snapResult.snappedPoint,
+          // ADR-398 — ghost anchor follows the corner-aligned cursor (when a corner won).
+          point: ghostPoint,
           mode: snapResult.activeMode || 'endpoint',
           entityId: snapResult.snapPoint?.entityId,
         });

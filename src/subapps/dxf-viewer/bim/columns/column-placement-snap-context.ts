@@ -28,6 +28,61 @@ import type { Entity } from '../../types/entities';
 import { isBeamEntity, isColumnEntity } from '../../types/entities';
 import { isPointInPolygon } from '../../utils/geometry/GeometryUtils';
 import type { ColumnGhostStatus } from '../../systems/cursor/ColumnPlacementGhostStatusStore';
+import { ExtendedSnapType, type ProSnapResult } from '../../snapping/extended-types';
+import type { CornerProjectionResult } from '../../systems/cursor/corner-projection-snap';
+
+/**
+ * Ένα snap που ο `SnapIndicatorOverlay` **όντως ζωγραφίζει** γλυφή. Τα `grid`/`guide` είναι
+ * σιωπηλά (ο overlay τα κρύβει ρητά — AutoCAD convention) → δεν μετράνε ως «ορατό» feedback.
+ * Mirror του hide-rule στο `SnapIndicatorOverlay.tsx` (`type === 'grid' || 'guide'`).
+ */
+function isVisibleIndicatorSnap(r: ProSnapResult | null): boolean {
+  if (!r?.found || !r.snappedPoint) return false;
+  return r.activeMode !== ExtendedSnapType.GRID && r.activeMode !== ExtendedSnapType.GUIDE;
+}
+
+/** Το επιλεγμένο snap για την τοποθέτηση κολώνας: η γλυφή/ετικέτα (`snapResult`) + το σημείο
+ *  στο οποίο κουμπώνει το ghost (`ghostPoint`, με την corner-διόρθωση όταν υπάρχει). */
+export interface ColumnDrawSnap {
+  readonly snapResult: ProSnapResult;
+  readonly ghostPoint: Point2D;
+}
+
+/**
+ * Επιλέγει το snap που θα δειχθεί + θα κουμπώσει το ghost κατά την τοποθέτηση κολώνας, με
+ * **Revit-grade προτεραιότητα** (λύνει το bug «οι έλξεις εξαφανίζονται στο εργαλείο Κολώνα»):
+ *
+ *   1. **Ορατό corner-projection** — μια γωνία της would-be κολώνας κουμπώνει σε **διακριτό**
+ *      στόχο (γωνία/άκρο/τομή): κρατάμε την ευθυγράμμιση γωνίας (γλυφή στον στόχο).
+ *   2. **Ορατό cursor snap** — BIM χαρακτηριστικό (Γωνία/Μέσο/Κέντρο στήλης/δοκαριού, ή άξονας
+ *      δοκαριού) κάτω από το σταυρόνημα: **η ρητή πρόθεση** του χρήστη. (Πριν το έκρυβε ένα
+ *      corner-projection που κουμπούσε σε **σιωπηλό grid** → καμία γλυφή.)
+ *   3. **Σιωπηλό fallback** — grid/guide ευθυγράμμιση (corner > cursor) για να μη χαθεί το
+ *      placement-snap όταν δεν υπάρχει ορατό χαρακτηριστικό.
+ *
+ * Pure. `drawCorner` = το αποτέλεσμα του `findColumnDrawCornerSnap` (ο scheduler το υπολογίζει,
+ * αφού κατέχει το column-tool handle). `findSnapPoint` = ο ενιαίος snap engine (cursor query).
+ */
+export function resolveColumnDrawSnap(
+  cursorPos: Readonly<Point2D>,
+  drawCorner: CornerProjectionResult | null,
+  findSnapPoint: (x: number, y: number) => ProSnapResult | null,
+): ColumnDrawSnap | null {
+  if (drawCorner && isVisibleIndicatorSnap(drawCorner.snapResult)) {
+    return { snapResult: drawCorner.snapResult, ghostPoint: drawCorner.adjustedCursorPos };
+  }
+  const cursorSnap = findSnapPoint(cursorPos.x, cursorPos.y);
+  if (isVisibleIndicatorSnap(cursorSnap)) {
+    return { snapResult: cursorSnap!, ghostPoint: cursorSnap!.snappedPoint };
+  }
+  if (drawCorner) {
+    return { snapResult: drawCorner.snapResult, ghostPoint: drawCorner.adjustedCursorPos };
+  }
+  if (cursorSnap?.found && cursorSnap.snappedPoint) {
+    return { snapResult: cursorSnap, ghostPoint: cursorSnap.snappedPoint };
+  }
+  return null;
+}
 
 /** Η πρώτη υπάρχουσα κολώνα της οποίας το footprint περιέχει τον cursor (`null` αν καμία). */
 export function findColumnOverlap(

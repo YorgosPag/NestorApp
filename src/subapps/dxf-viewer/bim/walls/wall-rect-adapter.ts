@@ -39,10 +39,12 @@ import type { WallParams } from '../types/wall-types';
 // clamp) on the `{start,end,width}` patch — «παντού ίδιος κώδικας, μηδέν διπλότυπα».
 import {
   applyAxisBoxGripDrag,
+  applyAxisBoxEdgeDrag,
   invertAxisBoxRoleMap,
   type AxisBoxParams,
   type AxisBoxGripRole,
 } from '../grips/axis-box-grips';
+import type { RectEdge, RectSign } from '../grips/rect-frame';
 import { minThicknessFloorFor, maxThicknessCeilingFor } from './wall-grip-math';
 
 /**
@@ -134,5 +136,37 @@ export function applyRectWallGrip(
     minWidthMm: minThicknessFloorFor(params.thickness),
   });
   if (!patch) return params;
+  return wallParamsFromPatch(patch, params);
+}
+
+/**
+ * Column-parity extra mid-edge drags (Giorgio 2026-06-20): the −perp thickness face
+ * (`wall-thickness-far`) and the START short edge (`wall-edge-length-start`) — the 2
+ * edges the shared `axis-box-grips` SSoT does not emit. Reuses the SAME
+ * opposite-element-fixed `applyAxisBoxEdgeDrag` SSoT as `wall-thickness` /
+ * `wall-edge-length`, just on the opposite-sign `RectEdge` (the far thickness face
+ * RESPECTS `flip` via `widthFaceSign`), then layers the wall semantics through the
+ * SAME `wallParamsFromPatch` helper (clamp thickness scene-aware, clear miters, drop
+ * `dna`). Returns `null` for curved/polyline walls or non-extra kinds → the caller
+ * falls through to the bespoke handlers. Zero re-derived frame/limits/resize.
+ */
+export function applyWallExtraEdgeGrip(
+  gripKind: WallGripKind,
+  params: WallParams,
+  delta: Point2D,
+): WallParams | null {
+  if (!isRectWall(params)) return null;
+  let edge: RectEdge | null = null;
+  if (gripKind === 'wall-thickness-far') {
+    // OPPOSITE perp face from the single `wall-thickness` handle (= `widthFaceSign`).
+    const farSign: RectSign = params.flip ? 1 : -1;
+    edge = { axis: 'y', sign: farSign };
+  } else if (gripKind === 'wall-edge-length-start') {
+    edge = { axis: 'x', sign: -1 }; // START short edge (existing length-edge is the END +1).
+  }
+  if (!edge) return null;
+  const patch = applyAxisBoxEdgeDrag(
+    wallAxisBoxParams(params), edge, delta, minThicknessFloorFor(params.thickness),
+  );
   return wallParamsFromPatch(patch, params);
 }

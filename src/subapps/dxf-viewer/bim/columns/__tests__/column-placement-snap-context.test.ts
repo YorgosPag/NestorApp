@@ -9,10 +9,24 @@
 
 import {
   findColumnOverlap,
+  resolveColumnDrawSnap,
   resolveColumnGhostStatusFromSnap,
 } from '../column-placement-snap-context';
 import type { Entity } from '../../../types/entities';
 import type { BeamEntity } from '../../types/beam-types';
+import { ExtendedSnapType, type ProSnapResult } from '../../../snapping/extended-types';
+import type { CornerProjectionResult } from '../../../systems/cursor/corner-projection-snap';
+
+function proSnap(mode: ExtendedSnapType, x: number, y: number, found = true): ProSnapResult {
+  return {
+    found, snapPoint: found ? { point: { x, y }, type: mode, description: mode, distance: 0, priority: 0 } : null,
+    allCandidates: [], originalPoint: { x, y }, snappedPoint: { x, y }, activeMode: found ? mode : null, timestamp: 0,
+  } as ProSnapResult;
+}
+
+function cornerProj(snapResult: ProSnapResult, ax: number, ay: number): CornerProjectionResult {
+  return { snapResult, adjustedCursorPos: { x: ax, y: ay } };
+}
 
 function beam(id: string, sx: number, sy: number, ex: number, ey: number, width = 250): BeamEntity {
   return {
@@ -91,5 +105,41 @@ describe('resolveColumnGhostStatusFromSnap — precedence overlap > beam > neutr
 
   it('snapEntityId άγνωστο (δεν βρίσκεται) → neutral', () => {
     expect(resolveColumnGhostStatusFromSnap({ x: 4000, y: 0 }, [beam('b1', 0, 0, 10000, 0) as unknown as Entity], 'ghost-id')).toBe('neutral');
+  });
+});
+
+describe('resolveColumnDrawSnap — Revit-grade precedence (bugfix: grid corner δεν κρύβει χαρακτηριστικό)', () => {
+  const cursor = { x: 1000, y: 2000 };
+
+  it('ΟΡΑΤΟ corner-projection (bim_corner) → νικά, ghost στη corner-διόρθωση', () => {
+    const corner = cornerProj(proSnap(ExtendedSnapType.BIM_CORNER, 1050, 2050), 1010, 2010);
+    const out = resolveColumnDrawSnap(cursor, corner, () => proSnap(ExtendedSnapType.GRID, 1000, 2000));
+    expect(out?.snapResult.activeMode).toBe(ExtendedSnapType.BIM_CORNER);
+    expect(out?.ghostPoint).toEqual({ x: 1010, y: 2010 });
+  });
+
+  it('corner σε ΣΙΩΠΗΛΟ grid + cursor σε bim_center → δείχνει το cursor χαρακτηριστικό (το bug)', () => {
+    const corner = cornerProj(proSnap(ExtendedSnapType.GRID, 1100, 2100), 1020, 2020);
+    const out = resolveColumnDrawSnap(cursor, corner, () => proSnap(ExtendedSnapType.BIM_CENTER, 1005, 2005));
+    expect(out?.snapResult.activeMode).toBe(ExtendedSnapType.BIM_CENTER);
+    expect(out?.ghostPoint).toEqual({ x: 1005, y: 2005 }); // κουμπώνει στο χαρακτηριστικό, όχι corner-grid
+  });
+
+  it('χωρίς corner + cursor σε άξονα δοκαριού (nearest) → δείχνει το beam-axis', () => {
+    const out = resolveColumnDrawSnap(cursor, null, () => proSnap(ExtendedSnapType.NEAREST, 1000, 1990));
+    expect(out?.snapResult.activeMode).toBe(ExtendedSnapType.NEAREST);
+    expect(out?.ghostPoint).toEqual({ x: 1000, y: 1990 });
+  });
+
+  it('corner grid + cursor grid → σιωπηλό fallback: corner alignment (ghost στη corner-διόρθωση)', () => {
+    const corner = cornerProj(proSnap(ExtendedSnapType.GRID, 1100, 2100), 1030, 2030);
+    const out = resolveColumnDrawSnap(cursor, corner, () => proSnap(ExtendedSnapType.GRID, 1000, 2000));
+    expect(out?.snapResult.activeMode).toBe(ExtendedSnapType.GRID);
+    expect(out?.ghostPoint).toEqual({ x: 1030, y: 2030 });
+  });
+
+  it('χωρίς corner + κανένα cursor snap → null', () => {
+    const out = resolveColumnDrawSnap(cursor, null, () => proSnap(ExtendedSnapType.GRID, 0, 0, false));
+    expect(out).toBeNull();
   });
 });

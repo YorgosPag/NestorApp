@@ -29,7 +29,7 @@ import {
 } from './wall-grip-math';
 // ADR-363 Slice D — straight-wall corner/edge resize delegates to the shared
 // rect-grip-engine (opposite-element-fixed), same code as column/foundation.
-import { applyRectWallGrip } from './wall-rect-adapter';
+import { applyRectWallGrip, applyWallExtraEdgeGrip } from './wall-rect-adapter';
 // ADR-397 §D3 — rotate-about-pivot is shared SSoT: `rotateAxisPointsAboutPivot`
 // (swept angle from grip-math + canonical rotatePoint, ADR-188) is consumed by
 // both the wall and beam rotation grips. No re-implemented cos/sin here.
@@ -114,6 +114,11 @@ export function applyWallGripDrag(
   // curve / vertex / endpoint / midpoint) → fall through to the bespoke handlers.
   const rect = applyRectWallGrip(gripKind, input.originalParams, input.delta);
   if (rect) return rect;
+  // Column-parity extra mid-edges (−perp thickness face, START short edge) — same
+  // axis-box edge SSoT, wall-only roles the shared engine does not emit (Giorgio
+  // 2026-06-20). Returns null για curved/polyline OR non-extra kinds → fall through.
+  const extraEdge = applyWallExtraEdgeGrip(gripKind, input.originalParams, input.delta);
+  if (extraEdge) return extraEdge;
   if (gripKind === 'wall-start') return moveStart(input);
   if (gripKind === 'wall-end') return moveEnd(input);
   if (gripKind === 'wall-midpoint') return moveMidpoint(input);

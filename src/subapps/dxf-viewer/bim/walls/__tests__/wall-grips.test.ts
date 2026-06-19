@@ -56,16 +56,14 @@ describe('wall-grips (Phase 1C)', () => {
 
   // ─── getWallGrips ──────────────────────────────────────────────────────
 
-  // ADR-363 Φ1G.5 Slice 2 — the central MOVE marker (`wall-midpoint`) is no longer
-  // emitted on any kind (Alt+drag moves the whole wall). It is still PUSHED then
-  // filtered, so the `applyWallGripDrag('wall-midpoint', …)` transform tests below
-  // (drag math retained) keep passing.
-  it('1. straight wall → 7 VISIBLE grips (thickness + length edges + 4 corners + rotation; ADR-363 Slice D)', () => {
+  // Column-parity completion (Giorgio 2026-06-20): the straight wall now emits the
+  // full 10-grip set — the shared axis-box 7 (thickness + length edge + 4 corners +
+  // rotation) PLUS the 2 OPPOSITE mid-edges (`wall-thickness-far`,
+  // `wall-edge-length-start`) and the centre 4-arrow MOVE glyph (`wall-midpoint`),
+  // exactly like the column/beam.
+  it('1. straight wall → 10 column-parity grips (thickness + length edges + 4 corners + rotation + 2 far mid-edges + centre move)', () => {
     const entity = makeStraight();
     const grips = getWallGrips(entity);
-    // Slice D: straight wall now exposes the shared 7-grip rect set. Only the
-    // endpoint translates (wall-start/wall-end) + central move (wall-midpoint)
-    // stay suppressed; the thickness + length edge midpoints are first-class.
     expect(grips.map((g) => g.wallGripKind)).toEqual([
       'wall-thickness',
       'wall-edge-length',
@@ -74,23 +72,28 @@ describe('wall-grips (Phase 1C)', () => {
       'wall-corner-end-pos',
       'wall-corner-end-neg',
       'wall-rotation',
+      'wall-thickness-far',
+      'wall-edge-length-start',
+      'wall-midpoint',
     ]);
   });
 
-  it('2. curved wall → 4 grips (start/end/thickness + curve control; midpoint removed)', () => {
+  it('2. curved wall → 5 grips (start/end/thickness + curve control + centre move)', () => {
     const entity = makeCurved();
     const grips = getWallGrips(entity);
-    expect(grips).toHaveLength(4);
+    expect(grips).toHaveLength(5);
     expect(grips[3].wallGripKind).toBe('wall-curve');
+    expect(grips[4].wallGripKind).toBe('wall-midpoint'); // appended last (stable indices)
   });
 
-  it('3. polyline wall → 3 + N-2 grips (interior vertices only; midpoint removed)', () => {
+  it('3. polyline wall → 3 base + N-2 interior vertices + centre move', () => {
     const entity = makePolyline();
     const grips = getWallGrips(entity);
-    // 3 base (start/end/thickness) + 2 interior vertices (idx 1, 2 of 4).
-    expect(grips).toHaveLength(5);
+    // 3 base (start/end/thickness) + 2 interior vertices (idx 1, 2 of 4) + midpoint.
+    expect(grips).toHaveLength(6);
     expect(grips[3].wallGripKind).toBe('wall-vertex-1');
     expect(grips[4].wallGripKind).toBe('wall-vertex-2');
+    expect(grips[5].wallGripKind).toBe('wall-midpoint');
   });
 
   it('4. straight wall hides wall-start / wall-end but SHOWS thickness + length edges (Slice D)', () => {
@@ -101,10 +104,14 @@ describe('wall-grips (Phase 1C)', () => {
     expect(kinds).toContain('wall-edge-length');
   });
 
-  it('5. central move grip (wall-midpoint) is NOT emitted (Slice 2 declutter)', () => {
+  it('5. central move grip (wall-midpoint) IS emitted with movesEntity:true (column parity, Giorgio 2026-06-20)', () => {
     const grips = getWallGrips(makeStraight());
-    expect(grips.map((g) => g.wallGripKind)).not.toContain('wall-midpoint');
-    // First visible grip is now the thickness edge handle (Slice D).
+    const move = grips.find((g) => g.wallGripKind === 'wall-midpoint');
+    expect(move).toBeDefined();
+    expect(move!.movesEntity).toBe(true);
+    expect(move!.type).toBe('center');
+    expect(move!.position).toEqual({ x: 500, y: 0 }); // axis midpoint
+    // First grip is still the thickness edge handle (axis-box set leads).
     expect(grips[0].wallGripKind).toBe('wall-thickness');
   });
 
@@ -407,6 +414,72 @@ describe('wall-grips (Phase 1C)', () => {
     expect(next.start.y).toBeCloseTo(0, 6);
     expect(next.end.y).toBeCloseTo(0, 6);
     expect(next.thickness).toBeCloseTo(t, 6);
+  });
+
+  // ─── Column-parity mid-edges: all 4 faces + far/start drag + flip ──────────
+
+  it('25c. straight wall exposes a midpoint handle on ALL 4 faces (column parity)', () => {
+    const entity = makeStraight(); // (0,0)→(1000,0), thickness t (mm scene, s=1)
+    const grips = getWallGrips(entity);
+    const t = entity.params.thickness;
+    const at = (k: string) => grips.find((g) => g.wallGripKind === k)!.position;
+    // +perp / −perp long faces at the axial midpoint, opposite Y signs.
+    expect(at('wall-thickness')).toEqual({ x: 500, y: t / 2 });
+    expect(at('wall-thickness-far')).toEqual({ x: 500, y: -t / 2 });
+    // END / START short edges at the perpendicular centre, opposite X.
+    expect(at('wall-edge-length')).toEqual({ x: 1000, y: 0 });
+    expect(at('wall-edge-length-start')).toEqual({ x: 0, y: 0 });
+  });
+
+  it('25d. wall-thickness-far drag grows thickness with the NEAR (+perp) face fixed + drops dna', () => {
+    const entity = makeStraight();
+    const t = entity.params.thickness;
+    expect(entity.params.dna).toBeDefined();
+    // Dragging the −perp face −150 (further from axis) holds the +perp face →
+    // thickness grows by 150, axis recenters by −75 (half the displacement).
+    const next = applyWallGripDrag('wall-thickness-far', {
+      originalParams: entity.params,
+      delta: { x: 0, y: -150 },
+      currentPos: { x: 500, y: -t / 2 - 150 },
+    });
+    expect(next.thickness).toBeCloseTo(t + 150, 6);
+    expect(next.start.y).toBeCloseTo(-75, 6);
+    expect(next.end.y).toBeCloseTo(-75, 6);
+    expect(next.dna).toBeUndefined(); // manual override drops DNA
+    // +perp face stays put: axis_y_new + thickness_new/2 == original +t/2.
+    expect(next.start.y + next.thickness / 2).toBeCloseTo(t / 2, 6);
+  });
+
+  it('25e. wall-edge-length-start drag resizes length with the END fixed', () => {
+    const entity = makeStraight();
+    const t = entity.params.thickness;
+    // Dragging the START short edge −200 along the axis lengthens the wall from the
+    // start while the end stays put (opposite-edge-fixed). Thickness unchanged.
+    const next = applyWallGripDrag('wall-edge-length-start', {
+      originalParams: entity.params,
+      delta: { x: -200, y: 0 },
+      currentPos: { x: -200, y: 0 },
+    });
+    expect(next.end.x).toBeCloseTo(1000, 6); // end fixed
+    expect(next.start.x).toBeCloseTo(-200, 6); // start moved out
+    expect(next.start.y).toBeCloseTo(0, 6);
+    expect(next.end.y).toBeCloseTo(0, 6);
+    expect(next.thickness).toBeCloseTo(t, 6);
+  });
+
+  it('25f. flip=true places the far/start faces on the correct (flipped) sides', () => {
+    const entity = makeStraight();
+    const t = entity.params.thickness;
+    const flipped: WallParams = { ...entity.params, flip: true };
+    const grips = getWallGrips({ ...entity, params: flipped });
+    const at = (k: string) => grips.find((g) => g.wallGripKind === k)!.position;
+    // flip swaps which perp face the single `wall-thickness` handle sits on: now −Y,
+    // so the `wall-thickness-far` handle moves to +Y (always the OPPOSITE face).
+    expect(at('wall-thickness').y).toBeCloseTo(-t / 2, 6);
+    expect(at('wall-thickness-far').y).toBeCloseTo(t / 2, 6);
+    // Short edges are flip-independent (axial), unchanged.
+    expect(at('wall-edge-length').x).toBeCloseTo(1000, 6);
+    expect(at('wall-edge-length-start').x).toBeCloseTo(0, 6);
   });
 
   // ─── Phase 1C-ter: move/rotation glyphs + wall-rotation grip ──────────────

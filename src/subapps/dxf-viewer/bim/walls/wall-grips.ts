@@ -52,7 +52,11 @@ import { gripGlyphShape } from '../grips/grip-glyph-registry';
 // (same code as beam + foundation strip). The role↔kind map + AxisBoxParams adapter
 // live in `wall-rect-adapter` so emission + drag read ONE mapping (no cycle: the
 // adapter does not import this module).
-import { getAxisBoxGrips } from '../grips/axis-box-grips';
+// Column-parity mid-edge extras (Giorgio 2026-06-20): the 2 OPPOSITE wall faces
+// reuse the SAME axis-box edge SSoT (`axisBoxEdgeMidpoint`) as the width-edge /
+// length-edge — zero-duplication geometry, no re-derived frame in this module.
+import { getAxisBoxGrips, axisBoxEdgeMidpoint, type AxisBoxParams } from '../grips/axis-box-grips';
+import type { RectEdge, RectSign } from '../grips/rect-frame';
 import { WALL_ROLE_TO_KIND, wallAxisBoxParams } from './wall-rect-adapter';
 
 // Public API re-exports (consumers import from this module).
@@ -68,6 +72,11 @@ export type { WallGripDragInput } from './wall-grip-transforms';
  */
 export function wallGripGlyphShape(kind: WallGripKind | undefined): GripShape {
   return gripGlyphShape(kind);
+}
+
+/** Axis midpoint (scene units) of the centre-axis box — the `wall-midpoint` MOVE anchor. */
+function axisMidpoint(params: AxisBoxParams): Point2D {
+  return { x: (params.start.x + params.end.x) / 2, y: (params.start.y + params.end.y) / 2 };
 }
 
 // ─── Grip position computation (ADR-363 §6 Phase 1C) ─────────────────────────
@@ -108,7 +117,8 @@ export function getWallGrips(entity: Readonly<WallEntity>): GripInfo[] {
   // miters do not move the grips). `widthFaceSign = flip` keeps the single width-edge
   // + rotation handles on the drawn +perp face.
   if (kind !== 'curved' && kind !== 'polyline') {
-    return getAxisBoxGrips(wallAxisBoxParams(params)).map((g, i) => ({
+    const axisParams = wallAxisBoxParams(params);
+    const grips: GripInfo[] = getAxisBoxGrips(axisParams).map((g, i) => ({
       entityId: entity.id,
       gripIndex: i,
       type: g.type,
@@ -116,11 +126,46 @@ export function getWallGrips(entity: Readonly<WallEntity>): GripInfo[] {
       movesEntity: false,
       wallGripKind: WALL_ROLE_TO_KIND[g.role],
     }));
+
+    // ── Column-parity completion (Giorgio 2026-06-20) ────────────────────────
+    // (1) The 2 OPPOSITE mid-edge grips so ALL 4 faces carry a midpoint handle
+    //     (mirror της κολόνας / δοκαριού 4 μεσοπλευρικών). The shared axis-box SSoT
+    //     emits only the `widthFaceSign` thickness face + the END short edge; these
+    //     extras are the OTHER two faces, built from the SAME edge SSoT
+    //     (`axisBoxEdgeMidpoint`) on the opposite-sign `RectEdge`, RESPECTING `flip`:
+    //       - existing `wall-thickness` sits on `{y, faceSign}` (faceSign = flip?-1:1);
+    //         far thickness face → `{y, -faceSign}`.
+    //       - existing `wall-edge-length` is the END `{x, +1}`; start short edge → `{x, -1}`.
+    // (2) The centre 4-arrow MOVE glyph (`wall-midpoint`): identical behaviour to the
+    //     column/beam — the shared move-glyph render / per-arm hover-zone / click→dialog
+    //     SSoT activates the moment the grip is emitted (kind already registered in the
+    //     glyph registry + hot-grip FSM + `moveMidpoint` transform).
+    const faceSign: RectSign = params.flip ? -1 : 1;
+    const farThicknessEdge: RectEdge = { axis: 'y', sign: (faceSign === 1 ? -1 : 1) };
+    const startLengthEdge: RectEdge = { axis: 'x', sign: -1 };
+    grips.push({
+      entityId: entity.id, gripIndex: grips.length, type: 'edge',
+      position: axisBoxEdgeMidpoint(axisParams, farThicknessEdge),
+      movesEntity: false, wallGripKind: 'wall-thickness-far',
+    });
+    grips.push({
+      entityId: entity.id, gripIndex: grips.length, type: 'edge',
+      position: axisBoxEdgeMidpoint(axisParams, startLengthEdge),
+      movesEntity: false, wallGripKind: 'wall-edge-length-start',
+    });
+    grips.push({
+      entityId: entity.id, gripIndex: grips.length, type: 'center',
+      position: axisMidpoint(axisParams),
+      movesEntity: true, wallGripKind: 'wall-midpoint',
+    });
+    return grips;
   }
 
   // ── Curved / polyline → bespoke (no rectangular footprint to read corners) ───
   // start + end translate + single thickness handle (+ curve control / interior
-  // vertices). The central MOVE marker is NOT emitted (Alt+drag translates).
+  // vertices) + the centre 4-arrow MOVE glyph (column/beam parity, Giorgio
+  // 2026-06-20 — `moveMidpoint`/`translateWallParams` already translate both
+  // endpoints + curveControl + polyline vertices, so the move is correct here too).
   const grips: GripInfo[] = [];
   const start = project2D(params.start);
   const end = project2D(params.end);
@@ -171,6 +216,17 @@ export function getWallGrips(entity: Readonly<WallEntity>): GripInfo[] {
       });
     }
   }
+
+  // Centre 4-arrow MOVE glyph (column/beam parity). Appended last so the existing
+  // bespoke gripIndices (start/end/thickness/curve/vertices) stay stable.
+  grips.push({
+    entityId: entity.id,
+    gripIndex: grips.length,
+    type: 'center',
+    position: mid,
+    movesEntity: true,
+    wallGripKind: 'wall-midpoint',
+  });
 
   return grips;
 }

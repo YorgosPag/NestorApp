@@ -102,6 +102,14 @@ export type DimensionGripKind =
  * ROTATION glyph — same icon vocabulary as the stair base/direction grips
  * (`stairGripGlyphShape`). `wall-rotation` rotates the whole wall around its
  * midpoint (anchor-relative swept angle, mirror of stair `rotateDirection`).
+ *
+ * Column-parity mid-edge completion (Giorgio 2026-06-20): the 2 OPPOSITE mid-edge
+ * grips so all 4 faces carry a midpoint handle (mirror της κολόνας / δοκαριού 4
+ * μεσοπλευρικών). They reuse the SAME `axis-box-grips` edge SSoT as
+ * `wall-thickness` / `wall-edge-length`, just on the opposite-sign face (respecting
+ * `flip`), with the wall semantics (drop `dna`, clamp thickness, clear miters):
+ *   - `wall-thickness-far`      → resize thickness on the −perp face (near face fixed).
+ *   - `wall-edge-length-start`  → resize length at the START short edge (end fixed).
  */
 export type WallGripKind =
   | 'wall-start'
@@ -109,6 +117,8 @@ export type WallGripKind =
   | 'wall-midpoint'
   | 'wall-thickness'
   | 'wall-edge-length'
+  | 'wall-thickness-far'
+  | 'wall-edge-length-start'
   | 'wall-rotation'
   | 'wall-corner-start-pos'
   | 'wall-corner-start-neg'
