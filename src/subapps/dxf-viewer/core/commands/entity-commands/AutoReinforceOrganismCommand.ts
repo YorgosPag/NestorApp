@@ -59,6 +59,8 @@ export class AutoReinforceOrganismCommand implements ICommand {
     // ADR-499 §6.3-c — DERIVED στρεπτική ροπή T_Ed ανά δοκάρι (μονόπλευρη πρόβολος-πλάκα →
     // στρεπτικοί κλειστοί συνδετήρες + γωνιακοί διαμήκεις).
     private readonly beamTorsionByBeamId?: ReadonlyMap<string, number>,
+    // ADR-504 Φ2 — DERIVED υπο-άνοιγμα συνεχούς δοκού ανά δοκάρι (wL_sub²/10 + συμμετρικός χάλυβας).
+    private readonly beamSpanByBeamId?: ReadonlyMap<string, number>,
   ) {
     this.id = generateEntityId();
     this.timestamp = Date.now();
@@ -94,6 +96,7 @@ export class AutoReinforceOrganismCommand implements ICommand {
         this.columnFemMomentById?.get(entityId),
         this.slabSupportConditionBySlabId?.get(entityId),
         this.beamTorsionByBeamId?.get(entityId),
+        this.beamSpanByBeamId?.get(entityId),
       );
       if (!patch) continue; // idempotent: non-structural ή ήδη οπλισμένο
       this.patches.push({ entityId, prev: patch.prev, next: patch.next });

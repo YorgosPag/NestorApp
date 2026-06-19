@@ -140,6 +140,10 @@ export function slabReinforcementMateriallyDiffers(
  * πρόβολος-πλάκα) που ο caller διαβάζει από το `computeBeamDesignTorsion`. Η δοκός παίρνει
  * στρεπτικούς κλειστούς συνδετήρες + γωνιακούς διαμήκεις (in-place στον suggester). Mirror
  * του `supportType` (per-beam override).
+ *
+ * ADR-504 Φ2 — `beamSpanMm` (προαιρετικό): το DERIVED υπο-άνοιγμα συνεχούς δοκού
+ * (`deriveBeamSpanModel`) που ο caller διαβάζει από τον graph. Η ροπή/οπλισμός υπολογίζονται
+ * για το max sub-span (wL_sub²/10) + συμμετρικός άνω χάλυβας. Mirror του `supportType`.
  */
 export function buildReinforcePatch(
   entity: Entity,
@@ -148,6 +152,7 @@ export function buildReinforcePatch(
   columnFemMomentKnm?: number,
   slabSupportCondition?: SlabSupportCondition,
   beamTorsionKnm?: number,
+  beamSpanMm?: number,
 ): ReinforcePatch | null {
   if (isColumnEntity(entity)) {
     const stored = entity.params.reinforcement;
@@ -168,9 +173,11 @@ export function buildReinforcePatch(
     // ADR-499 §6.3-c — + DERIVED στρέψη (πρόβολος-πλάκα) ώστε ο persisted οπλισμός να φέρει τους
     // στρεπτικούς κλειστούς συνδετήρες + γωνιακούς διαμήκεις (mirror του supportType threading).
     const fresh: BeamReinforcement = stored
-      ? resolveActiveBeamReinforcement(entity, provider, supportType, beamTorsionKnm) ?? stored
+      ? resolveActiveBeamReinforcement(entity, provider, supportType, beamTorsionKnm, beamSpanMm) ?? stored
       : {
-          ...provider.suggestBeamReinforcement(buildBeamSectionContext(entity, supportType, beamTorsionKnm)),
+          ...provider.suggestBeamReinforcement(
+            buildBeamSectionContext(entity, supportType, beamTorsionKnm, beamSpanMm),
+          ),
           auto: true,
         };
     if (stored && !beamReinforcementMateriallyDiffers(stored, fresh)) return null;

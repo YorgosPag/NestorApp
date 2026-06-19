@@ -8,11 +8,20 @@
 import {
   findHostedOpenings,
   findHostedSlabOpenings,
+  findAttachedColumns,
   partitionBimHosts,
   expandSelectionForDelete,
   expandSelectionForMove,
 } from '../bim-cascade-resolver';
 import type { Entity } from '../../../types/entities';
+
+/** Column with explicit top/base bindings + attach lists (ADR-401 host-delete reverse lookup). */
+function attachedColumn(
+  id: string,
+  params: { topBinding?: string; baseBinding?: string; attachTopToIds?: string[]; attachBaseToIds?: string[] },
+): Entity {
+  return { id, type: 'column', kind: 'rectangular', params } as unknown as Entity;
+}
 
 function wall(id: string): Entity {
   return { id, type: 'wall', kind: 'straight' } as unknown as Entity;
@@ -178,6 +187,38 @@ describe('ADR-363 Phase 7A — BIM cascade resolver', () => {
       const result = expandSelectionForMove(['s1', 'so1'], { entities });
       expect(result.ids).toEqual(['s1', 'so1']);
       expect(result.cascadedSlabOpeningIds).toEqual([]);
+    });
+  });
+
+  // ─── findAttachedColumns (ADR-401 host-deletion detach reverse lookup) ───
+
+  describe('findAttachedColumns', () => {
+    it('partitions top/base columns whose attach list references a deleted host', () => {
+      const entities = [
+        attachedColumn('cTop', { topBinding: 'attached', attachTopToIds: ['beam1'] }),
+        attachedColumn('cBase', { baseBinding: 'attached', attachBaseToIds: ['beam1'] }),
+        attachedColumn('cBoth', { topBinding: 'attached', attachTopToIds: ['beam1'], baseBinding: 'attached', attachBaseToIds: ['beam1'] }),
+        attachedColumn('cOther', { topBinding: 'attached', attachTopToIds: ['beam2'] }),
+      ];
+      const { topIds, baseIds } = findAttachedColumns(new Set(['beam1']), entities);
+      expect(topIds.sort()).toEqual(['cBoth', 'cTop']);
+      expect(baseIds.sort()).toEqual(['cBase', 'cBoth']);
+    });
+
+    it('skips columns whose side binding is not "attached"', () => {
+      const entities = [
+        attachedColumn('c1', { topBinding: 'storey-ceiling', attachTopToIds: ['beam1'] }),
+        attachedColumn('c2', { baseBinding: 'storey-floor', attachBaseToIds: ['beam1'] }),
+      ];
+      const { topIds, baseIds } = findAttachedColumns(new Set(['beam1']), entities);
+      expect(topIds).toEqual([]);
+      expect(baseIds).toEqual([]);
+    });
+
+    it('no-ops on an empty host set or non-column entities', () => {
+      const entities = [attachedColumn('c1', { topBinding: 'attached', attachTopToIds: ['beam1'] }), wall('w1')];
+      expect(findAttachedColumns(new Set(), entities)).toEqual({ topIds: [], baseIds: [] });
+      expect(findAttachedColumns(new Set(['beam1']), [wall('w1')])).toEqual({ topIds: [], baseIds: [] });
     });
   });
 });

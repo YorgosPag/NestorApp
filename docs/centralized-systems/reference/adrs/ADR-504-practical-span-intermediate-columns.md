@@ -1,6 +1,6 @@
 # ADR-504 — Practical-span advisory + opt-in ενδιάμεσες κολώνες (Revit-grade)
 
-**Status:** 🟡 Φάση 1 DONE (practical-span soft warning + πρόταση ενδιάμεσων κολωνών, PURE) — UNCOMMITTED 2026-06-19
+**Status:** 🟡 Φάση 1 DONE (practical-span soft warning, PURE) · Φάση 2 ΣΕ ΕΞΕΛΙΞΗ (S0-S3 DONE: continuous μηχανική + topology span model + SSoT wiring· S4-S6 PENDING) — UNCOMMITTED 2026-06-19
 **Date:** 2026-06-19
 **Υλοποιεί:** ADR-487 §8.4 (ο άνθρωπος υπογράφει, το σύστημα προειδοποιεί) + §9 (scope guard: Revit-grade, ΟΧΙ Robot/SAP)
 **Σχετικά:** ADR-499 (auto-correcting organism / global feasibility §D — το hard `error` επίπεδο), ADR-475 (auto member sizing), ADR-486 (topology-aware beam support), ADR-448/450 (storey context SSoT)
@@ -61,13 +61,25 @@ practical max depth = storeyHeightMm − requiredClearUnderBeam(storeyKind)
 
 **SSoT reuse (μηδέν νέα φυσική):** `suggestBeamSection`, `buildBeamSectionContext`, `resolveBeamSupportCondition`, `ActiveStoreyContext`, `FloorKind`.
 
-## 5. Φάση 2 — opt-in action (DEFER, κρίσιμη ανοιχτή απόφαση)
+## 5. Φάση 2 — opt-in action (ΣΕ ΕΞΕΛΙΞΗ)
 
-Κουμπί/💡 που **με τη συγκατάθεση** του μηχανικού εκτελεί την πρόταση: K κολώνες + αυτόματα πέδιλα (reconciler) → ο δοκός μικραίνει. **Ανοιχτή απόφαση (πριν την υλοποίηση):**
-- **Επιλογή A (συνιστάται, SSoT):** inter-support span derivation — ο δοκός μένει ΕΝΑ element, το sizing-span = μέγιστο καθαρό υπο-άνοιγμα μεταξύ στηρίξεων· συνέπεια = συνεχής δοκός (αλλάζει το μοντέλο ροπών `wL²/8 → wL²/10..12` + hogging).
-- **Επιλογή B:** beam-split σε K+1 αμφιέρειστα (mirror wall-split ADR-363 Phase X) — μεγαλύτερο scope (νέο command/undo/persistence/grip).
+Κουμπί/💡 που **με τη συγκατάθεση** του μηχανικού εκτελεί την πρόταση: K κολώνες + αυτόματα πέδιλα (reconciler) → ο δοκός μικραίνει. **Αποφάσεις (Giorgio 2026-06-19):**
+- **Μηχανισμός = Επιλογή A** (inter-support span, ΕΝΑ element· industry standard Revit/Robot — ποτέ beam-split). Ο δοκός γίνεται **`'continuous'`**, sizing-span = μέγιστο καθαρό υπο-άνοιγμα.
+- **Scope = Επίπεδο 1+2 (Robot-grade):** closed-form **εφεδρεία** (`'continuous'` divisor 10 = envelope hogging 1ης εσωτερικής στήριξης· συμμετρικός άνω/κάτω οπλισμός για hogging· l/d K=1.5) **+** FEM subdivision (S5, authoritative όταν engaged). SSoT ιεραρχία mirror ADR-497: μία πηγή ακρίβειας (FEM)· συντηρητική εφεδρεία (δεν διπλασιάζει τον FEM → μηδέν double-truth).
+
+### 5.1 Sub-slices
+- **S0 i18n (DONE):** `structuralOrganism.addIntermediateColumns{Action,Title,Message,Confirm,Done}` (el+en, ICU plural).
+- **S1 continuous μηχανική (DONE):** `BeamSupportType += 'continuous'`· `spanMomentDivisor('continuous')=10`· συμμετρικός άνω οπλισμός (`topReinforcementAreaMm2`)· l/d K=1.5 (eurocode+greek-legacy providers)· `StructuralNode.supportType` → canonical `BeamSupportType`.
+- **S2 topology span model (DONE):** NEW `deriveBeamSpanModel`/`buildBeamSpanModelMap` (≥3 στηρίξεις → continuous + max sub-span από προβολή footprint στον άξονα, reuse `projectColumnFootprintOnAxis`+`beamSupportColumnIds`)· NEW `BeamSpanStore` + `resolveActiveBeamSpanMm`· `buildBeamSectionContext(+sizingSpanOverrideMm)` (spanMm από sub-span, **w από πλήρες** άνοιγμα)· threaded σε sizing (`buildBeamSizePatch`+`AutoSizeMembersCommand`)+reinforce (`buildReinforcePatch`+`AutoReinforceOrganismCommand`+core)+checks (`reinforcement-checks`)+utilization· publish 2 stores από ΕΝΑ pass στον organism core.
+- **S3 Φ1 alignment (DONE):** `suggestIntermediateColumnCount` προτείνει με `'continuous'` (συμφωνία Φ1↔Φ2).
+- **S4 θέσεις κολωνών (PENDING):** pure even-split + build `ColumnEntity[]` (clone framing section, Enterprise IDs N.6).
+- **S5 FEM subdivision (PENDING):** `analytical-model-builder` υποδιαιρεί τον beam member στις mid-span στηρίξεις → πραγματικός συνεχής δοκός (sagging+hogging envelope). Ενημέρωση ADR-480/481.
+- **S6 action+confirm (PENDING):** κουμπί στο `EntityWarningsSection` → confirm dialog → `CompoundCommand`[`CreateColumnsCommand`(K)]· πέδιλα+resize αυτόματα (proactive, μηδέν νέος reactive trigger)· ΕΝΑ atomic undo.
 
 Πάντα **confirm**, ποτέ σιωπηλά (ADR-487 §8.4).
+
+### 5.2 Tests (S0-S3, από repo ROOT) — GREEN
+`derive-beam-span-model.test.ts` (13: base/continuous/map + divisor 10 + span override w-invariance + συμμετρικός top/bottom). Affected suites 89 pass· 2 raft fails = pre-existing ADR-476 (slab path, ΟΧΙ δικά μου).
 
 ## 6. Tests (από repo ROOT)
 
@@ -77,4 +89,5 @@ Pre-existing baseline fails (ΟΧΙ δικά μου): 6 raft (ADR-476) + 1 Assig
 
 ## 7. Changelog
 
+- **2026-06-19 (Φάση 2 S0-S3, UNCOMMITTED)** — Μηχανισμός Α + Robot-grade (Επίπεδο 1+2) αποφασίστηκαν. **S0** i18n (5 keys el+en). **S1** `'continuous'` τύπος + divisor 10 + συμμετρικός άνω οπλισμός + l/d K=1.5 (2 providers) + node-type sync. **S2** NEW `derive-beam-span-model.ts` (`deriveBeamSpanModel`/`buildBeamSpanModelMap`) + NEW `beam-span-store.ts` + `resolveActiveBeamSpanMm` + `buildBeamSectionContext(+sizingSpanOverrideMm)` (w-invariant) threaded σε sizing/reinforce/checks/utilization (18 αρχεία) + publish 2 stores από ΕΝΑ organism pass. **S3** Φ1 alignment. 13 νέα jest GREEN (89 affected pass· 2 pre-existing raft ADR-476). **S4-S6 PENDING** (θέσεις κολωνών + FEM subdivision + action/confirm). 🔴 ολοκλήρωση S4-S6 + browser-verify + commit (commit/tsc = Giorgio).
 - **2026-06-19** — Φάση 1 DONE (UNCOMMITTED). NEW `clear-height-under-beam.ts` (SSoT καθαρού ύψους, δυναμικό threshold από ΝΟΚ/Κτιριοδομικό Άρθρο 8 + ΚΠΝ στάθμευσης + κουφώματα) + NEW `practical-span-checks.ts` (soft warning + πρόταση ενδιάμεσων κολωνών, reuse `suggestBeamSection`) + `beamSpanImpractical` code + wiring ΕΝΑ σημείο στον organism core + i18n el+en + 12 jest. Φάση 2 (opt-in εισαγωγή κολωνών) = DEFER μετά από απόφαση μοντέλου ροπών (§5). 🔴 browser-verify + commit (commit/tsc = Giorgio).

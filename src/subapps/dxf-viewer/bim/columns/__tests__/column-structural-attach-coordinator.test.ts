@@ -185,9 +185,23 @@ describe('findColumnsFramedByBeam (frame-into column→beam)', () => {
     expect(findColumnsFramedByBeam(beam as unknown as Entity, [col])).toEqual([]);
   });
 
-  it('skips columns whose topBinding is not "storey-ceiling"', () => {
+  it('skips a column VALIDLY attached to a LIVE host (δεν διαταράσσει έγκυρο attach)', () => {
+    const beam = beamOver(); // id 'beam_1'
+    const col = column('c1', 4000, 0, 200, { topBinding: 'attached', attachTopToIds: ['beam_1'] });
+    // beam_1 ζωντανό (μέσα στα entities) → ΟΧΙ stale → skip.
+    expect(findColumnsFramedByBeam(beam as unknown as Entity, [col, beam as unknown as Entity])).toEqual([]);
+  });
+
+  it('ADR-401 re-link: κολώνα attached ΜΟΝΟ σε STALE (διαγραμμένο) host ΕΙΝΑΙ ξανά επιλέξιμη (self-heal)', () => {
     const beam = beamOver();
-    const col = column('c1', 4000, 0, 200, { topBinding: 'attached', attachTopToIds: ['x'] });
+    const col = column('c1', 4000, 0, 200, { topBinding: 'attached', attachTopToIds: ['beam_DELETED'] });
+    // beam_DELETED εκτός σκηνής → stale → δεν μπλοκάρει το re-link στο νέο δοκάρι.
+    expect(findColumnsFramedByBeam(beam as unknown as Entity, [col])).toEqual(['c1']);
+  });
+
+  it('skips unconnected/absolute κολώνες (ρητή επιλογή, ΟΧΙ stale)', () => {
+    const beam = beamOver();
+    const col = column('c1', 4000, 0, 200, { topBinding: 'unconnected', unconnectedHeight: 2400 });
     expect(findColumnsFramedByBeam(beam as unknown as Entity, [col])).toEqual([]);
   });
 

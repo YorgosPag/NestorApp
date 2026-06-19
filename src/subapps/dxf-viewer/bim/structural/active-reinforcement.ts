@@ -33,6 +33,7 @@ import type { BeamSupportType } from '../types/beam-types';
 import { BeamSupportConditionStore } from './organism/beam-support-condition-store';
 import { SlabSupportConditionStore } from './organism/slab-support-condition-store';
 import { BeamTorsionStore } from './organism/beam-torsion-store';
+import { BeamSpanStore } from './organism/beam-span-store';
 import type { SlabSupportCondition } from './loads/slab-beam-support';
 import { resolveBeamRebarLayout, type BeamRebarLayout } from './reinforcement/beam-rebar-layout';
 // ADR-491 — DERIVED FEM ροπή φορέα (πρόβολος → wL²/2 στη στήριξη), engaged-gated μέσω
@@ -181,8 +182,10 @@ export function resolveActiveBeamReinforcementForEntity(
   const provider = resolveStructuralCode(useStructuralSettingsStore.getState().codeId);
   // ADR-499 §6.3-c — + DERIVED στρέψη (πρόβολος-πλάκα) ώστε ο live 2Δ/3Δ οπλισμός να δείχνει
   // τους στρεπτικούς κλειστούς συνδετήρες + γωνιακούς διαμήκεις (μηδέν αλλαγή render path).
+  // ADR-504 Φ2 — + DERIVED υπο-άνοιγμα συνεχούς δοκού (ροπή/βέλος από max sub-span).
   return resolveActiveBeamReinforcement(
     beam, provider, resolveActiveBeamSupportType(beam.id), resolveActiveBeamTorsion(beam.id),
+    resolveActiveBeamSpanMm(beam.id),
   );
 }
 
@@ -192,6 +195,17 @@ export function resolveActiveBeamReinforcementForEntity(
  */
 export function resolveActiveBeamSupportType(beamId: string): BeamSupportType | undefined {
   return BeamSupportConditionStore.get(beamId);
+}
+
+/**
+ * ADR-504 Φ2 — το DERIVED **άνοιγμα διαστασιολόγησης** ενός δοκαριού από το transient
+ * `BeamSpanStore` (γράφεται στο organism pass από `buildBeamSpanModelMap`): το max καθαρό
+ * υπο-άνοιγμα όταν συνεχής (≥1 ενδιάμεση στήριξη). `undefined` → ο consumer πέφτει στο πλήρες
+ * `geometry.length` (μηδέν regression). Pure store read (ADR-040 safe). Mirror
+ * `resolveActiveBeamSupportType` — ζευγαρώνουν (continuous type ↔ sub-span).
+ */
+export function resolveActiveBeamSpanMm(beamId: string): number | undefined {
+  return BeamSpanStore.get(beamId);
 }
 
 /**

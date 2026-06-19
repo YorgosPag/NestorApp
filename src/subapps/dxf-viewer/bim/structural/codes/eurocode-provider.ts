@@ -118,6 +118,7 @@ function eurocodeSpanDepthSystemFactor(supportType: BeamSupportType | undefined)
     case 'cantilever':
       return 0.4;
     case 'fixed':
+    case 'continuous': // ADR-504 Φ2 — συνεχής/εσωτερικό φάτνωμα: K=1.5 (EC2 Table 7.4N)
       return 1.5;
     default:
       return 1.0;

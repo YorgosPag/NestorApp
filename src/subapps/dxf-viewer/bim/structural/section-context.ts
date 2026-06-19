@@ -22,10 +22,8 @@ import type { ColumnEntity, ColumnParams } from '../types/column-types';
 import type { BeamEntity, BeamParams, BeamSupportType } from '../types/beam-types';
 import type { FoundationEntity, FoundationParams, PadFootingParams, TieBeamParams } from '../types/foundation-types';
 import type { SlabEntity } from '../types/slab-types';
-import { mmToSceneUnits } from '../../utils/scene-units';
 import { combineSls, combineUls, EN1990_ULS_FACTORS } from './loads/load-combinations';
 import { isZeroMemberLoad, resolveAppliedMemberLoad } from './loads/structural-loads-types';
-import type { SlabSupportCondition } from './loads/slab-beam-support';
 import { DEFAULT_CONCRETE_GRADE } from './concrete-grades';
 import { nominalColumnMomentKnm } from './codes/suggest-reinforcement';
 import { resolveColumnReinforcementSection } from './reinforcement/column-section-outline';
@@ -37,30 +35,19 @@ import type {
   BeamSectionContext,
   ColumnSectionContext,
   FootingSectionContext,
-  SlabFoundationSectionContext,
-  SlabReinforcementKind,
   StructuralCodeProvider,
 } from './codes/structural-code-types';
+// ADR-459 Φ4e/E3 + ADR-476 — slab section-context (N.7.1 file-size split, αυτόνομο module).
+// Εισάγεται για τοπική χρήση (member-agnostic facade) ΚΑΙ ξανα-εξάγεται παρακάτω.
+import {
+  isFoundationSlabEntity,
+  isSuspendedSlabEntity,
+  resolveSlabReinforcementKind,
+  resolveActiveSlabReinforcement,
+  buildSlabFoundationSectionContext,
+} from './section-context-slab';
 
 const M_TO_MM = 1000;
-
-/** True αν η πλάκα είναι εδαφόπλακα/raft (kind foundation/ground). */
-export function isFoundationSlabEntity(e: Entity): e is SlabEntity {
-  return isSlabEntity(e) && (e.kind === 'foundation' || e.kind === 'ground');
-}
-
-/** ADR-476 — True αν η πλάκα είναι **αναρτημένη** (kind floor/ceiling/roof). */
-export function isSuspendedSlabEntity(e: Entity): e is SlabEntity {
-  return isSlabEntity(e) && (e.kind === 'floor' || e.kind === 'ceiling' || e.kind === 'roof');
-}
-
-/**
- * ADR-476 — δομική οικογένεια οπλισμού της πλάκας: foundation/ground → 'foundation'
- * (raft, EC2 §9.8.2)· floor/ceiling/roof → 'suspended' (EC2 §9.3.1). ΕΝΑ SSoT mapping.
- */
-export function resolveSlabReinforcementKind(slab: SlabEntity): SlabReinforcementKind {
-  return slab.kind === 'foundation' || slab.kind === 'ground' ? 'foundation' : 'suspended';
-}
 
 /** Μήκος άξονα (mm) από δύο σημεία mm-world (πεδιλοδοκός/συνδετήρια). */
 function axisLengthMm(a: { x: number; y: number }, b: { x: number; y: number }): number {
@@ -209,21 +196,30 @@ export function resolveActiveColumnReinforcement(
  * ADR-499 §6.3 — `designTorsionKnm` (προαιρετικό): η DERIVED στρεπτική ροπή `T_Ed` (kNm)
  * από μονόπλευρη πρόβολο-πλάκα. Absent/≤0 → καμία στρέψη (μηδέν regression). Ίδιο pattern
  * με το `supportTypeOverride`: ο caller με τον graph (organism) την παράγει & περνά.
+ *
+ * ADR-504 Φ2 — `sizingSpanOverrideMm` (προαιρετικό): το **μέγιστο καθαρό υπο-άνοιγμα**
+ * ενός **συνεχούς** δοκού (`deriveBeamSpanModel`), όταν υπάρχουν ενδιάμεσες στηρίξεις.
+ * Υπερισχύει του πλήρους μήκους **μόνο για ροπή/βέλος** (`spanMm`)· το γραμμικό φορτίο w
+ * (kN/m) μένει από το ΠΛΗΡΕΣ άνοιγμα (το φορτίο ανά μέτρο δεν αλλάζει — αλλάζει μόνο το
+ * μήκος που κάμπτει). Absent/≤0 → πλήρες μήκος (μηδέν regression). Ίδιο pattern override.
  */
 export function buildBeamSectionContext(
   beam: Pick<BeamEntity, 'params' | 'geometry'>,
   supportTypeOverride?: BeamSupportType,
   designTorsionKnm?: number,
+  sizingSpanOverrideMm?: number,
 ): BeamSectionContext {
   const p = beam.params;
-  const spanMm = beam.geometry.length * M_TO_MM;
+  const fullSpanMm = beam.geometry.length * M_TO_MM;
+  const spanMm =
+    sizingSpanOverrideMm !== undefined && sizingSpanOverrideMm > 0 ? sizingSpanOverrideMm : fullSpanMm;
   return {
     widthMm: p.width,
     depthMm: p.depth,
     spanMm,
     grossAreaMm2: Math.max(0, p.width) * Math.max(0, p.depth),
     supportType: supportTypeOverride ?? p.supportType ?? 'simple',
-    ...resolveBeamDesignLoad(p, spanMm),
+    ...resolveBeamDesignLoad(p, fullSpanMm),
     ...(designTorsionKnm !== undefined && designTorsionKnm > 0 ? { designTorsionKnm } : {}),
   };
 }
@@ -262,13 +258,15 @@ export function resolveActiveBeamReinforcement(
   provider: StructuralCodeProvider,
   supportTypeOverride?: BeamSupportType,
   designTorsionKnm?: number,
+  sizingSpanOverrideMm?: number,
 ): BeamReinforcement | undefined {
   const r = beam.params.reinforcement;
   if (!r || !r.auto) return r;
   // ADR-499 §6.3-c — η DERIVED στρέψη (πρόβολος-πλάκα) προστίθεται στον code-suggested
   // οπλισμό (γωνιακοί A_sl + πυκνότεροι κλειστοί συνδετήρες A_st/s) μέσα στον suggester.
+  // ADR-504 Φ2 — `sizingSpanOverrideMm`: συνεχής δοκός → ροπή από υπο-άνοιγμα (wL_sub²/10).
   const fresh = provider.suggestBeamReinforcement(
-    buildBeamSectionContext(beam, supportTypeOverride, designTorsionKnm),
+    buildBeamSectionContext(beam, supportTypeOverride, designTorsionKnm, sizingSpanOverrideMm),
   );
   return {
     ...fresh,
@@ -279,28 +277,6 @@ export function resolveActiveBeamReinforcement(
       ...(r.stirrups.legs ? { legs: r.stirrups.legs } : {}),
     },
   };
-}
-
-/**
- * ADR-476 (parity με κολόνα/δοκάρι) — **ο «ενεργός» οπλισμός μιας πλάκας**:
- *   - absent           → `undefined` (δεν έχει οριστεί· κανείς δεν ζωγραφίζει).
- *   - manual (`!auto`) → το stored design ως έχει (κλειδωμένο, ο χρήστης το όρισε).
- *   - auto (`auto`)    → **φρέσκο code-suggested design από την ΤΡΕΧΟΥΣΑ γεωμετρία**
- *                        (πάχος/outline/span/φορτίο) → resize ⇒ real-time re-study.
- * Διατηρεί το `auto:true` flag. Pure (provider arg) ⇒ unit-testable· οι renderers
- * χρησιμοποιούν το store-coupled `resolveActiveSlabReinforcementForEntity`.
- */
-export function resolveActiveSlabReinforcement(
-  slab: SlabEntity,
-  provider: StructuralCodeProvider,
-  supportCondition?: SlabSupportCondition,
-): SlabFoundationReinforcement | undefined {
-  const r = slab.params.structuralReinforcement;
-  if (!r || !r.auto) return r;
-  const fresh = provider.suggestSlabFoundationReinforcement(
-    buildSlabFoundationSectionContext(slab, supportCondition),
-  );
-  return { ...fresh, auto: true };
 }
 
 /**
@@ -321,6 +297,8 @@ export function resolveActiveMemberReinforcement(
   entity: BeamEntity,
   provider: StructuralCodeProvider,
   supportTypeOverride?: BeamSupportType,
+  designTorsionKnm?: number,
+  sizingSpanOverrideMm?: number,
 ): BeamReinforcement | undefined;
 export function resolveActiveMemberReinforcement(
   entity: SlabEntity,
@@ -330,15 +308,23 @@ export function resolveActiveMemberReinforcement(
   entity: Entity,
   provider: StructuralCodeProvider,
   supportTypeOverride?: BeamSupportType,
+  designTorsionKnm?: number,
+  sizingSpanOverrideMm?: number,
 ): ColumnReinforcement | BeamReinforcement | SlabFoundationReinforcement | undefined;
 export function resolveActiveMemberReinforcement(
   entity: Entity,
   provider: StructuralCodeProvider,
   supportTypeOverride?: BeamSupportType,
+  designTorsionKnm?: number,
+  sizingSpanOverrideMm?: number,
 ): ColumnReinforcement | BeamReinforcement | SlabFoundationReinforcement | undefined {
   if (isColumnEntity(entity)) return resolveActiveColumnReinforcement(entity.params, provider);
-  // ADR-486 — ο topology-aware τύπος στήριξης (πρόβολος) υπερισχύει του stored στον οπλισμό.
-  if (isBeamEntity(entity)) return resolveActiveBeamReinforcement(entity, provider, supportTypeOverride);
+  // ADR-486/504 — ο topology-aware τύπος στήριξης + το υπο-άνοιγμα συνεχούς δοκού υπερισχύουν.
+  if (isBeamEntity(entity)) {
+    return resolveActiveBeamReinforcement(
+      entity, provider, supportTypeOverride, designTorsionKnm, sizingSpanOverrideMm,
+    );
+  }
   if (isSlabEntity(entity)) return resolveActiveSlabReinforcement(entity, provider);
   // ADR-477 — συνδετήρια δοκός = δοκός: ENΕΡΓΟΣ οπλισμός (auto-aware, parity κολόνας/δοκού)·
   // επιστρέφει `TieBeamReinforcement` (⊂ BeamReinforcement → assignable στο union).
@@ -428,62 +414,13 @@ export function buildFootingSectionContextFromParams(p: FoundationParams): Footi
   }
 }
 
-/**
- * Πλάκα → `SlabFoundationSectionContext` (universal, ADR-459 Φ4e/E3 + ADR-476). bbox
- * dims από το `outline` (canvas units → mm μέσω `sceneUnits`, geometry-is-SSoT — όπως ο
- * graph footprint). Οι σχάρες τρέχουν στο περιβάλλον ορθογώνιο (πλακοειδής σύμβαση).
- * kind-aware: foundation vs suspended· οι αναρτημένες παίρνουν span (από
- * `geometry.maxFreeSpanM`) + φορτίο σχεδιασμού (q_Ed) για strength-driven κάτω σχάρα.
- */
-export function buildSlabFoundationSectionContext(
-  slab: SlabEntity,
-  supportCondition?: SlabSupportCondition,
-): SlabFoundationSectionContext {
-  const perScene = mmToSceneUnits(slab.params.sceneUnits ?? 'mm');
-  const verts = slab.params.outline.vertices;
-  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-  for (const v of verts) {
-    if (v.x < minX) minX = v.x;
-    if (v.x > maxX) maxX = v.x;
-    if (v.y < minY) minY = v.y;
-    if (v.y > maxY) maxY = v.y;
-  }
-  const widthMm = verts.length > 0 ? (maxX - minX) / perScene : 0;
-  const lengthMm = verts.length > 0 ? (maxY - minY) / perScene : 0;
-  const grossAreaMm2 = Math.max(0, widthMm) * Math.max(0, lengthMm);
-  const kind = resolveSlabReinforcementKind(slab);
-  // ADR-498 — πρόβολος: το άνοιγμα σχεδιασμού = η κάθετη προβολή (cantileverLengthM), ΟΧΙ το
-  // ελεύθερο άνοιγμα μεταξύ στηρίξεων. Absent override ⇒ 'simple' (μηδέν regression).
-  const isCantilever = supportCondition?.supportType === 'cantilever';
-  return {
-    widthMm,
-    lengthMm,
-    thicknessMm: slab.params.thickness,
-    grossAreaMm2,
-    kind,
-    maxFreeSpanMm: Math.max(0, slab.geometry.maxFreeSpanM) * M_TO_MM,
-    concreteGrade: slab.params.concreteGrade ?? DEFAULT_CONCRETE_GRADE,
-    ...(supportCondition ? { supportType: supportCondition.supportType } : {}),
-    ...(isCantilever ? { cantileverSpanMm: Math.max(0, supportCondition!.cantileverLengthM) * M_TO_MM } : {}),
-    ...resolveSlabDesignLoad(slab, grossAreaMm2),
-  };
-}
-
-/**
- * ADR-476 — φορτίο σχεδιασμού επιφανείας q_Ed (kPa = kN/m², ULS) μιας **αναρτημένης**
- * πλάκας από το tributary `appliedLoad` (ADR-467): q_Ed = W_Ed(ULS)[kN] / area[m²].
- * Μηδενικό/απών φορτίο ή μη-θετικό εμβαδό ⇒ κενό ⇒ min-detailing (μηδέν regression,
- * όπως κολόνα/δοκάρι). Οι εδαφόπλακες αγνοούν το q (raft = εδαφική αντίδραση, §9.8.2).
- */
-function resolveSlabDesignLoad(
-  slab: SlabEntity,
-  grossAreaMm2: number,
-): Pick<SlabFoundationSectionContext, 'designLoadKpa'> {
-  if (slab.kind === 'foundation' || slab.kind === 'ground') return {};
-  const areaM2 = grossAreaMm2 / 1e6;
-  if (areaM2 <= 0) return {};
-  const load = resolveAppliedMemberLoad(slab.params.appliedLoad);
-  if (isZeroMemberLoad(load)) return {};
-  const totalUlsKn = combineUls(load, EN1990_ULS_FACTORS).axialKn;
-  return { designLoadKpa: totalUlsKn / areaM2 };
-}
+// ADR-459 Φ4e/E3 + ADR-476 — ο slab section-context ζει στο `./section-context-slab.ts`
+// (N.7.1 file-size split, αυτόνομο)· ξανα-εξάγεται εδώ ώστε οι callers να συνεχίζουν να
+// εισάγουν από το ΕΝΑ `section-context`.
+export {
+  isFoundationSlabEntity,
+  isSuspendedSlabEntity,
+  resolveSlabReinforcementKind,
+  resolveActiveSlabReinforcement,
+  buildSlabFoundationSectionContext,
+};

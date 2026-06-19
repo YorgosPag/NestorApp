@@ -67,7 +67,12 @@
     "extendFootingConfirm": "Επέκταση πεδίλου",
     "reinforceOrganismTitle": "Ενιαίος οπλισμός",
     "reinforceOrganismMessage": "Το πέδιλο συνδέθηκε με την κολόνα — να υπολογιστεί ο ενιαίος οπλισμός (αναμονές/αγκυρώσεις/ματίσεις);",
-    "reinforceOrganismConfirm": "Υπολογισμός οπλισμού"
+    "reinforceOrganismConfirm": "Υπολογισμός οπλισμού",
+    "addIntermediateColumnsAction": "Πρόσθεσε ενδιάμεσες κολόνες",
+    "addIntermediateColumnsTitle": "Μεγάλο άνοιγμα δοκού",
+    "addIntermediateColumnsMessage": "Η δοκός χρειάζεται ύψος {depth}mm για άνοιγμα {span}m. Να προστεθούν {columns, plural, one {# ενδιάμεση κολόνα} other {# ενδιάμεσες κολόνες}} (με αυτόματα πέδιλα) ώστε να γίνει συνεχής και να μικρύνει σε ~{suggestedDepth}mm; Σε αίθριο ή πυλωτή ίσως προτιμάς το μεγάλο δοκάρι — η ενέργεια είναι προαιρετική.",
+    "addIntermediateColumnsConfirm": "Προσθήκη κολονών",
+    "addIntermediateColumnsDone": "{count, plural, one {Προστέθηκε # ενδιάμεση κολόνα} other {Προστέθηκαν # ενδιάμεσες κολόνες}} — η δοκός θα μικρύνει αυτόματα"
   },
   "autoFoundation": {
     "applied": "Αυτόματος σχεδιασμός θεμελίωσης — νέα πέδιλα: {created} (combined: {combined}, ενημερώθηκαν: {updated}, αφαιρέθηκαν: {removed})"

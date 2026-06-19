@@ -17,6 +17,8 @@
  * @see docs/centralized-systems/reference/adrs/ADR-459-structural-organism-connectivity.md
  */
 
+import type { BeamSupportType } from '../../types/beam-types';
+
 /** Plan-space σημείο (canvas units — ίδιο space με footprints/άξονες). */
 export interface OrganismPoint {
   readonly x: number;
@@ -58,8 +60,12 @@ export interface StructuralNode {
   readonly footprint?: readonly OrganismPoint[];
   /** Άξονας (canvas units) — beams. */
   readonly axis?: StructuralMemberAxis;
-  /** Beam-only: support condition (cantilever ⇒ θεμιτό ελεύθερο άκρο). */
-  readonly supportType?: 'simple' | 'fixed' | 'cantilever';
+  /**
+   * Beam-only: support condition (cantilever ⇒ θεμιτό ελεύθερο άκρο). Canonical
+   * `BeamSupportType` (SSoT). Στον node κρατά την **stored** τιμή· το `'continuous'`
+   * είναι DERIVED (ADR-504 Φ2) και παράγεται από `deriveBeamSpanModel`, δεν αποθηκεύεται.
+   */
+  readonly supportType?: BeamSupportType;
   /**
    * Column-only (ADR-459 Phase 2): αναλυτικό FK προς το footing node που στηρίζει
    * τη βάση (`ColumnParams.footingId`). Όταν υπάρχει & δείχνει σε υπαρκτό footing

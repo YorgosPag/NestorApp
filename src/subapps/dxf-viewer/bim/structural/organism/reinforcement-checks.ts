@@ -44,8 +44,7 @@ import {
 } from './reinforcement-continuity';
 // ADR-486 — topology-aware τύπος στήριξης δοκαριού (πρόβολος όταν 1 στήριξη) ώστε ο
 // ρ-check να τρέχει στη ΣΩΣΤΗ ροπή σχεδιασμού (wL²/2), όχι στο stale stored (wL²/8).
-import { buildBeamSupportTypeMap } from './derive-beam-support';
-import type { BeamSupportType } from '../../types/beam-types';
+import { buildBeamSpanModelMap, type BeamSpanModel } from './derive-beam-span-model';
 import type { StructuralDiagnostic, StructuralGraph } from './structural-organism-types';
 
 /** i18n key prefix (ns `dxf-viewer-shell`). */
@@ -100,7 +99,7 @@ function missingReinforcementFinding(e: Entity): StructuralDiagnostic | null {
 function ratioBoundsOf(
   e: Entity,
   provider: StructuralCodeProvider,
-  supportTypeByBeamId: ReadonlyMap<string, BeamSupportType>,
+  beamSpanModelByBeamId: ReadonlyMap<string, BeamSpanModel>,
 ): RatioBounds | null {
   if (isColumnEntity(e) && e.params.reinforcement) {
     // ADR-456/460 — auto → φρέσκο design από την τρέχουσα γεωμετρία· manual → stored.
@@ -113,9 +112,13 @@ function ratioBoundsOf(
     // ADR-471 — parity με κολόνα: auto → φρέσκο design από την τρέχουσα γεωμετρία/φορτίο·
     // manual → stored (πριν διάβαζε πάντα stored → false ρ-warning σε auto δοκάρι μετά resize).
     // ADR-486 — topology-aware supportType override (πρόβολος → wL²/2 αντί wL²/8).
-    const support = supportTypeByBeamId.get(e.id);
-    const r = resolveActiveMemberReinforcement(e, provider, support) ?? e.params.reinforcement;
-    const ctx = buildBeamSectionContext(e, support);
+    // ADR-504 Φ2 — + υπο-άνοιγμα συνεχούς δοκού (wL_sub²/10) ώστε ο ρ-έλεγχος να μην
+    // βγάζει ψεύτικο warning σε συνεχή δοκό (full span → υπερεκτιμημένη ροπή/ρ).
+    const model = beamSpanModelByBeamId.get(e.id);
+    const support = model?.supportType;
+    const spanMm = model?.supportType === 'continuous' ? model.sizingSpanMm : undefined;
+    const r = resolveActiveMemberReinforcement(e, provider, support, undefined, spanMm) ?? e.params.reinforcement;
+    const ctx = buildBeamSectionContext(e, support, undefined, spanMm);
     const lim = provider.beamReinforcementLimits(ctx, r.bottom.diameterMm);
     return { ratio: computeBeamReinforcementQuantities(ctx, r).ratio, minRatio: lim.minRatio, maxRatio: lim.maxRatio };
   }
@@ -139,9 +142,9 @@ const pct = (x: number): string => (x * 100).toFixed(2);
 function ratioFinding(
   e: Entity,
   provider: StructuralCodeProvider,
-  supportTypeByBeamId: ReadonlyMap<string, BeamSupportType>,
+  beamSpanModelByBeamId: ReadonlyMap<string, BeamSpanModel>,
 ): StructuralDiagnostic | null {
-  const b = ratioBoundsOf(e, provider, supportTypeByBeamId);
+  const b = ratioBoundsOf(e, provider, beamSpanModelByBeamId);
   if (!b) return null;
   const base = { code: 'ratioOutOfRange' as const, severity: 'warning' as const, primaryEntityId: e.id, entityIds: [e.id] };
   if (b.ratio < b.minRatio) {
@@ -247,8 +250,8 @@ export function runReinforcementChecks(
   provider: StructuralCodeProvider,
 ): StructuralDiagnostic[] {
   const nodeIds = new Set(graph.nodes.map((n) => n.id));
-  // ADR-486 — DERIVED topology-aware τύπος στήριξης ανά δοκάρι (graph-only, μία φορά).
-  const supportTypeByBeamId = buildBeamSupportTypeMap(graph);
+  // ADR-486/504 — DERIVED span model ανά δοκάρι (τύπος στήριξης incl. 'continuous' + sub-span).
+  const beamSpanModelByBeamId = buildBeamSpanModelMap(graph, entities);
   const out: StructuralDiagnostic[] = [];
   for (const e of entities) {
     if (!nodeIds.has(e.id)) continue; // μόνο μέλη του οργανισμού
@@ -257,7 +260,7 @@ export function runReinforcementChecks(
       out.push(missing);
       continue; // χωρίς οπλισμό → δεν έχει νόημα έλεγχος ρ
     }
-    const ratio = ratioFinding(e, provider, supportTypeByBeamId);
+    const ratio = ratioFinding(e, provider, beamSpanModelByBeamId);
     if (ratio) out.push(ratio);
   }
   out.push(...barMismatchFindings(graph, entities, provider));

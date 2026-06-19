@@ -45,6 +45,7 @@ import {
   resolveActiveColumnReinforcementForEntity,
   resolveActiveColumnDesignMoment,
   resolveActiveBeamSupportType,
+  resolveActiveBeamSpanMm,
 } from '../../bim/structural/active-reinforcement';
 import { resolveMemberFootprintVertices } from '../../bim/structural/member-footprint-2d';
 import { CoordinateTransforms } from '../../rendering/core/CoordinateTransforms';
@@ -160,7 +161,10 @@ export function StructuralUtilizationOverlay({ transform, viewport }: Structural
         const verts = resolveMemberFootprintVertices(e);
         if (util && verts) out.push({ vertices: verts, color: utilizationFillColor(util.ratio) });
       } else if (isBeamEntity(e)) {
-        const util = beamUtilization(e, resolveActiveBeamReinforcementForEntity(e), resolveActiveBeamSupportType(e.id));
+        const util = beamUtilization(
+          e, resolveActiveBeamReinforcementForEntity(e),
+          resolveActiveBeamSupportType(e.id), resolveActiveBeamSpanMm(e.id),
+        );
         const verts = resolveMemberFootprintVertices(e);
         if (util && verts) out.push({ vertices: verts, color: utilizationFillColor(util.ratio) });
       }

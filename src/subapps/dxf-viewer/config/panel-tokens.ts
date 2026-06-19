@@ -1670,6 +1670,10 @@ export const PANEL_ANCHORING = {
     CAD_STATUS_BAR: '[data-testid="cad-status-bar"]',
     CANVAS_CONTAINER: '[data-testid="dxf-canvas-container"]',
     SIDEBAR: '[data-testid="dxf-sidebar"]',
+    /** Horizontal-section (cut-plane) slider on the right canvas edge (ADR-452) */
+    SECTION_SLIDER_HORIZONTAL: '[data-testid="section-slider-horizontal"]',
+    /** 3D ViewCube canvas (top-right of the 3D viewport) */
+    VIEW_CUBE: '[data-testid="dxf-view-cube"]',
   },
 
   // ─────────────────────────────────────────────────────────────────────────
@@ -1684,6 +1688,8 @@ export const PANEL_ANCHORING = {
     TOOLBAR_GAP: 0,
     /** Status bar to panel gap */
     STATUSBAR_GAP: 4,
+    /** Guide panel gap from the section slider (left) and the ViewCube (top) */
+    GUIDE_PANEL_GAP: 8,
   },
 
   // ─────────────────────────────────────────────────────────────────────────
@@ -1696,6 +1702,10 @@ export const PANEL_ANCHORING = {
     STATUSBAR_HEIGHT: 32,
     /** Windows taskbar height (approximate) */
     WINDOWS_TASKBAR: 40,
+    /** Section slider left edge distance from viewport right (right-3=12px + w-12=48px) */
+    SECTION_SLIDER_LEFT_FROM_RIGHT: 60,
+    /** ViewCube bottom edge from viewport top (top:12px + 160px canvas size) */
+    VIEW_CUBE_BOTTOM: 172,
   },
 
   // ─────────────────────────────────────────────────────────────────────────
@@ -1767,6 +1777,37 @@ export const PanelPositionCalculator = {
   },
 
   /**
+   * Calculate position for the Guide panel (Οδηγοί & Σημεία) — Giorgio 2026-06-19.
+   *
+   * Tucked into the right side of the canvas:
+   *  • Horizontal: panel RIGHT edge = horizontal-section slider LEFT edge − 8px.
+   *    Fallback (slider absent, e.g. no storey range): 60px in from the viewport right.
+   *  • Vertical: panel TOP = ViewCube BOTTOM edge + 8px.
+   *    Fallback (2D mode — ViewCube not mounted): 172px (where the ViewCube sits in 3D),
+   *    so the panel keeps a consistent top across modes.
+   */
+  getGuidePanelPosition: (panelWidth: number): { x: number; y: number } => {
+    const { SELECTORS, OFFSETS, FALLBACKS } = PANEL_ANCHORING;
+
+    // 🎯 Horizontal anchor — left of the section slider
+    const slider = document.querySelector(SELECTORS.SECTION_SLIDER_HORIZONTAL);
+    const sliderLeft = slider
+      ? slider.getBoundingClientRect().left
+      : window.innerWidth - FALLBACKS.SECTION_SLIDER_LEFT_FROM_RIGHT;
+
+    // 🎯 Vertical anchor — below the ViewCube
+    const viewCube = document.querySelector(SELECTORS.VIEW_CUBE);
+    const viewCubeBottom = viewCube
+      ? viewCube.getBoundingClientRect().bottom
+      : FALLBACKS.VIEW_CUBE_BOTTOM;
+
+    return {
+      x: Math.max(OFFSETS.VIEWPORT_MARGIN, sliderLeft - OFFSETS.GUIDE_PANEL_GAP - panelWidth),
+      y: viewCubeBottom + OFFSETS.GUIDE_PANEL_GAP,
+    };
+  },
+
+  /**
    * Calculate position for BOTTOM-RIGHT anchored panel (above status bar)
    *
    * Anchor: Panel BOTTOM edge aligns with status bar TOP edge
@@ -1805,49 +1846,4 @@ export const PanelPositionCalculator = {
   },
 } as const;
 
-// ============================================================================
-// EXPORTS - ENTERPRISE MODULE INTERFACE
-// ============================================================================
-
-export default PANEL_TOKENS;
-
-/**
- * 🏗️ USAGE EXAMPLES
- *
- * @example PanelTabs component
- * ```tsx
- * import { PANEL_TOKENS, PanelTokenUtils } from './config/panel-tokens';
- *
- * const getTabClass = (tabId: PanelType) => {
- *   const disabled = disabledPanels[tabId];
- *   const isActive = activePanel === tabId;
- *   return PanelTokenUtils.getTabButtonClasses(isActive, disabled);
- * };
- * ```
- *
- * @example LevelPanel component
- * ```tsx
- * import { PANEL_TOKENS } from './config/panel-tokens';
- *
- * <div className={PANEL_TOKENS.LEVEL_PANEL.CONTAINER.BASE}>
- *   <h3 className={PANEL_TOKENS.LEVEL_PANEL.HEADER.TEXT}>
- *     <Building2 className={PANEL_TOKENS.LEVEL_PANEL.HEADER.ICON} />
- *     Επίπεδα Έργου
- *   </h3>
- * </div>
- * ```
- *
- * @example DxfSettingsPanel component
- * ```tsx
- * import { PANEL_TOKENS, PanelTokenUtils } from './config/panel-tokens';
- *
- * <div className={PANEL_TOKENS.DXF_SETTINGS.CONTAINER.BASE}>
- *   <button
- *     className={PanelTokenUtils.getDxfSettingsTabClasses(activeMainTab === 'general')}
- *     onClick={() => setActiveMainTab('general')}
- *   >
- *     Γενικές Ρυθμίσεις
- *   </button>
- * </div>
- * ```
- */
+// ==============

@@ -14,6 +14,14 @@ import type { AnySceneEntity } from '../../../types/scene';
 // wall without its top support. The wall auto-falls-back to baseline geometry
 // (resolveWallTopProfile); this surfaces a non-blocking warning.
 import { notifyWallsOnHostDeletion } from '../../../bim/walls/wall-structural-attach-coordinator';
+// ADR-401 — deleting a structural host (beam/slab) must DETACH the columns that
+// referenced it: otherwise their `attachTopToIds` dangle to a ghost host, which
+// blocks re-attach when a new beam is later created (column stuck «attached to a
+// ghost»). Mirror of the wall warning path, but an actual undoable detach.
+import { findAttachedColumns } from '../../../bim/cascade/bim-cascade-resolver';
+import { DetachColumnsCommand, type ColumnDetachTarget } from './DetachColumnsCommand';
+import type { Entity } from '../../../types/entities';
+import type { ColumnKind } from '../../../bim/types/column-types';
 
 // ADR-390 — BIM entity types eligible για symmetric undo→Firestore restore.
 const BIM_ENTITY_TYPES = new Set<string>([
@@ -64,6 +72,40 @@ function emitBimRestoreIfApplicable(snapshot: SceneEntity): void {
 }
 
 /**
+ * ADR-401 — after removing structural host(s), detach the columns that referenced
+ * them so their binding resets to default (cleared `attachTopToIds`/`attachBaseToIds`).
+ * Reuses the tested `DetachColumnsCommand` (snapshot + geometry recompute + persist
+ * + undo) once per affected side. Returns the executed commands so the owning delete
+ * command undoes/redoes them atomically (ONE undo entry, Revit-style). No-op when the
+ * scene manager has no `getEntities` or no column is affected.
+ *
+ * NOTE: a column attached to MULTIPLE hosts (stepped top) is fully detached on the
+ * affected side even if only one host is deleted — acceptable: it then re-auto-attaches
+ * to the surviving/new beams via the coordinator's stale-eligibility path.
+ */
+function detachColumnsOnHostDeletion(
+  deletedHostIds: readonly string[],
+  sceneManager: ISceneManager,
+): ICommand[] {
+  if (deletedHostIds.length === 0) return [];
+  const all = (sceneManager as { getEntities?(): readonly SceneEntity[] }).getEntities?.();
+  if (!all) return [];
+  const { topIds, baseIds } = findAttachedColumns(new Set(deletedHostIds), all as unknown as readonly Entity[]);
+  if (topIds.length === 0 && baseIds.length === 0) return [];
+  const byId = new Map(all.map((e) => [e.id, e]));
+  const toTargets = (ids: string[]): ColumnDetachTarget[] =>
+    ids.map((id) => ({
+      columnId: id,
+      kind: ((byId.get(id) as { kind?: ColumnKind } | undefined)?.kind ?? 'rectangular') as ColumnKind,
+    }));
+  const cmds: ICommand[] = [];
+  if (topIds.length > 0) cmds.push(new DetachColumnsCommand('top', toTargets(topIds), sceneManager));
+  if (baseIds.length > 0) cmds.push(new DetachColumnsCommand('base', toTargets(baseIds), sceneManager));
+  for (const c of cmds) c.execute();
+  return cmds;
+}
+
+/**
  * Command for deleting an entity
  */
 export class DeleteEntityCommand implements ICommand {
@@ -74,6 +116,8 @@ export class DeleteEntityCommand implements ICommand {
 
   private entitySnapshot: SceneEntity | null = null;
   private wasExecuted = false;
+  /** ADR-401 — child detach commands for columns that referenced the deleted host. */
+  private hostDeletionDetaches: ICommand[] = [];
 
   constructor(
     private readonly entityId: string,
@@ -97,6 +141,8 @@ export class DeleteEntityCommand implements ICommand {
       // ADR-401 Phase C — warn if this entity was a structural host for an
       // attached wall (the wall already fell back to baseline; this is the signal).
       notifyWallsOnHostDeletion([this.entityId], this.sceneManager);
+      // ADR-401 — detach columns that referenced this host (clears ghost attach).
+      this.hostDeletionDetaches = detachColumnsOnHostDeletion([this.entityId], this.sceneManager);
     }
   }
 
@@ -112,6 +158,8 @@ export class DeleteEntityCommand implements ICommand {
     if (this.entitySnapshot && this.wasExecuted) {
       this.sceneManager.addEntity(this.entitySnapshot);
       emitBimRestoreIfApplicable(this.entitySnapshot);
+      // ADR-401 — re-attach the columns AFTER the host is back in the scene.
+      for (const c of this.hostDeletionDetaches) c.undo();
     }
   }
 
@@ -121,6 +169,7 @@ export class DeleteEntityCommand implements ICommand {
   redo(): void {
     if (this.entitySnapshot) {
       this.sceneManager.removeEntity(this.entitySnapshot.id);
+      for (const c of this.hostDeletionDetaches) c.redo();
     }
   }
 
@@ -185,6 +234,8 @@ export class DeleteMultipleEntitiesCommand implements ICommand {
 
   private entitySnapshots: SceneEntity[] = [];
   private wasExecuted = false;
+  /** ADR-401 — child detach commands for columns that referenced any deleted host. */
+  private hostDeletionDetaches: ICommand[] = [];
 
   constructor(
     private readonly entityIds: string[],
@@ -215,6 +266,8 @@ export class DeleteMultipleEntitiesCommand implements ICommand {
     // attached wall (walls already fell back to baseline; this is the signal).
     if (this.wasExecuted) {
       notifyWallsOnHostDeletion(this.entityIds, this.sceneManager);
+      // ADR-401 — detach columns that referenced any deleted host (clears ghost attach).
+      this.hostDeletionDetaches = detachColumnsOnHostDeletion(this.entityIds, this.sceneManager);
     }
   }
 
@@ -230,6 +283,8 @@ export class DeleteMultipleEntitiesCommand implements ICommand {
         this.sceneManager.addEntity(entity);
         emitBimRestoreIfApplicable(entity);
       }
+      // ADR-401 — re-attach the columns AFTER the hosts are back in the scene.
+      for (const c of this.hostDeletionDetaches) c.undo();
     }
   }
 
@@ -240,6 +295,7 @@ export class DeleteMultipleEntitiesCommand implements ICommand {
     for (const entity of this.entitySnapshots) {
       this.sceneManager.removeEntity(entity.id);
     }
+    for (const c of this.hostDeletionDetaches) c.redo();
   }
 
   /**

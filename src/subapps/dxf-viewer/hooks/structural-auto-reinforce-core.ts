@@ -27,9 +27,11 @@ import type { ICommand } from '../core/commands/interfaces';
 import { EventBus } from '../systems/events/EventBus';
 import { LevelSceneManagerAdapter } from '../systems/entity-creation/LevelSceneManagerAdapter';
 import { AutoReinforceOrganismCommand } from '../core/commands/entity-commands/AutoReinforceOrganismCommand';
-// ADR-486 — DERIVED topology-aware τύπος στήριξης δοκαριού (pure· κρατά το module jest-clean).
+// ADR-486/504 — DERIVED span model δοκαριού (topology-aware τύπος στήριξης incl. 'continuous'
+// + sizing-span, pure· κρατά το module jest-clean).
 import { buildStructuralGraph } from '../bim/structural/organism/structural-graph';
-import { buildBeamSupportTypeMap } from '../bim/structural/organism/derive-beam-support';
+import { buildBeamSpanModelMap } from '../bim/structural/organism/derive-beam-span-model';
+import type { BeamSupportType } from '../bim/types/beam-types';
 // ADR-498 — DERIVED topology-aware συνθήκη στήριξης πλάκας (spatial· πρόβολος → hogging άνω σχάρα).
 import { computeSlabSupportConditions } from '../bim/structural/loads/slab-beam-support';
 // ADR-499 §6.3-c — DERIVED στρεπτική ροπή δοκού (μονόπλευρη πρόβολος-πλάκα → στρεπτικός οπλισμός).
@@ -88,9 +90,15 @@ export function runOrganismAutoReinforce(
     levelManager.setLevelScene,
     levelId,
   );
-  // ADR-486 — topology-aware τύπος στήριξης ανά δοκάρι από τη ζωντανή συνδεσιμότητα, ώστε ο
-  // πρόβολος να ξανα-σχεδιάζεται με wL²/2 (αλλιώς ο command θα έβλεπε stale 'simple' → «κανένα»).
-  const supportTypeByBeamId = buildBeamSupportTypeMap(buildStructuralGraph(entities));
+  // ADR-486/504 — span model ανά δοκάρι από τη ζωντανή συνδεσιμότητα: ο πρόβολος (wL²/2) & ο
+  // συνεχής δοκός (wL_sub²/10 + συμμετρικός χάλυβας) ξανα-σχεδιάζονται σωστά (αλλιώς stale 'simple').
+  const beamSpanModels = buildBeamSpanModelMap(buildStructuralGraph(entities), entities);
+  const supportTypeByBeamId = new Map<string, BeamSupportType>();
+  const beamSpanByBeamId = new Map<string, number>();
+  for (const [id, m] of beamSpanModels) {
+    supportTypeByBeamId.set(id, m.supportType);
+    if (m.supportType === 'continuous') beamSpanByBeamId.set(id, m.sizingSpanMm);
+  }
   // ADR-491 — FEM ροπή φορέα ανά κολώνα (engaged-gated μέσω του ΕΝΟΣ SSoT): η κολώνα στήριξης
   // προβόλου οπλίζεται M-N για wL²/2. Μη-engaged → EMPTY → κενός χάρτης → μηδέν override (e₀).
   const columnFemMomentById = buildColumnFemMomentMap(
@@ -104,7 +112,7 @@ export function runOrganismAutoReinforce(
   const beamTorsionByBeamId = computeBeamDesignTorsion(entities);
   const command = new AutoReinforceOrganismCommand(
     ids, sm, provider, supportTypeByBeamId, columnFemMomentById, slabSupportConditionBySlabId,
-    beamTorsionByBeamId,
+    beamTorsionByBeamId, beamSpanByBeamId,
   );
   const reinforced = command.getReinforcedEntityIds();
   if (reinforced.length === 0) {

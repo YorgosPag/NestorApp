@@ -35,9 +35,12 @@ import {
   buildActiveColumnDesignMomentMap,
 } from '../bim/structural/active-reinforcement';
 import { StructuralDiagnosticsStore } from '../bim/structural/organism/structural-diagnostics-store';
-// ADR-486 — DERIVED topology-aware τύπος στήριξης δοκαριού → transient store για το render path.
-import { buildBeamSupportTypeMap } from '../bim/structural/organism/derive-beam-support';
+// ADR-486/504 — DERIVED span model δοκαριού (topology-aware τύπος στήριξης incl. 'continuous'
+// + sizing-span) → 2 transient stores για το render/sizing path.
+import { buildBeamSpanModelMap } from '../bim/structural/organism/derive-beam-span-model';
+import type { BeamSupportType } from '../bim/types/beam-types';
 import { BeamSupportConditionStore } from '../bim/structural/organism/beam-support-condition-store';
+import { BeamSpanStore } from '../bim/structural/organism/beam-span-store';
 import { computeSlabSupportConditions } from '../bim/structural/loads/slab-beam-support';
 import { SlabSupportConditionStore } from '../bim/structural/organism/slab-support-condition-store';
 import { computeBeamDesignTorsion } from '../bim/structural/loads/beam-torsion';
@@ -110,7 +113,18 @@ export function runOrganismDiagnostics(
   });
   // ADR-486/498/499/488 — δημοσίευσε τους DERIVED transient χάρτες για το per-entity
   // render path (synchronous reads, μηδέν re-build του graph σε κάθε render — ADR-040 safe).
-  BeamSupportConditionStore.set(buildBeamSupportTypeMap(graph));
+  // ADR-486/504 — ΕΝΑ DERIVED span-model pass: ο τύπος στήριξης (incl. 'continuous') ΚΑΙ το
+  // υπο-άνοιγμα ζευγαρώνουν → 2 stores από την ίδια πηγή (μηδέν διπλή αλήθεια). Span μόνο για
+  // συνεχείς (αλλιώς undefined → fallback πλήρες μήκος στον consumer).
+  const beamSpanModels = buildBeamSpanModelMap(graph, entities);
+  const beamSupportTypes = new Map<string, BeamSupportType>();
+  const beamSpans = new Map<string, number>();
+  for (const [id, m] of beamSpanModels) {
+    beamSupportTypes.set(id, m.supportType);
+    if (m.supportType === 'continuous') beamSpans.set(id, m.sizingSpanMm);
+  }
+  BeamSupportConditionStore.set(beamSupportTypes);
+  BeamSpanStore.set(beamSpans);
   SlabSupportConditionStore.set(computeSlabSupportConditions(entities));
   BeamTorsionStore.set(computeBeamDesignTorsion(entities));
   ColumnSupportMomentStore.set(buildColumnSupportMomentMap(entities, graph)); // ADR-502 §Slice2

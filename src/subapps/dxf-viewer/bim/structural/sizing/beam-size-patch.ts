@@ -58,11 +58,12 @@ function resolveActiveBeamSection(
   provider: StructuralCodeProvider,
   supportTypeOverride?: BeamSupportType,
   designTorsionKnm?: number,
+  sizingSpanOverrideMm?: number,
 ): BeamSizing | undefined {
   if (!isBeamAutoSized(beam.params)) return undefined;
   return suggestBeamSection(
     provider,
-    buildBeamSectionContext(beam, supportTypeOverride, designTorsionKnm),
+    buildBeamSectionContext(beam, supportTypeOverride, designTorsionKnm, sizingSpanOverrideMm),
   );
 }
 
@@ -92,15 +93,22 @@ function beamSectionMateriallyDiffers(
  * ADR-499 §6.3-b — `designTorsionKnm`: ο caller περνά την DERIVED στρεπτική ροπή
  * (`resolveActiveBeamTorsion`) ώστε ο sizer να μεγαλώνει το ύψος ώστε
  * `T_Ed/T_Rd,max + V_Ed/V_Rd,max ≤ 1`. Απών/≤0 → καμία στρέψη (μηδέν regression).
+ *
+ * ADR-504 Φ2 — `sizingSpanOverrideMm`: ο caller περνά το DERIVED υπο-άνοιγμα συνεχούς δοκού
+ * (`resolveActiveBeamSpanMm`) ώστε ο sizer να μικραίνει το ύψος (ροπή/βέλος από max sub-span).
+ * Απών/≤0 → πλήρες μήκος (μηδέν regression). Αυτό κάνει ΠΡΑΞΗ το «η δοκός μικραίνει».
  */
 export function buildBeamSizePatch(
   entity: Entity,
   provider: StructuralCodeProvider,
   supportTypeOverride?: BeamSupportType,
   designTorsionKnm?: number,
+  sizingSpanOverrideMm?: number,
 ): MemberSizePatch | null {
   if (!isBeamEntity(entity)) return null;
-  const suggested = resolveActiveBeamSection(entity, provider, supportTypeOverride, designTorsionKnm);
+  const suggested = resolveActiveBeamSection(
+    entity, provider, supportTypeOverride, designTorsionKnm, sizingSpanOverrideMm,
+  );
   if (!suggested) return null;
   const p = entity.params;
   if (!beamSectionMateriallyDiffers(p, suggested)) return null;
@@ -131,10 +139,13 @@ export function isBeamSectionAdequate(
   next: BeamParams,
   supportTypeOverride?: BeamSupportType,
   designTorsionKnm?: number,
+  sizingSpanOverrideMm?: number,
 ): BeamSectionAdequacy {
   const suggested = suggestBeamSection(
     provider,
-    buildBeamSectionContext({ ...beam, params: next }, supportTypeOverride, designTorsionKnm),
+    buildBeamSectionContext(
+      { ...beam, params: next }, supportTypeOverride, designTorsionKnm, sizingSpanOverrideMm,
+    ),
   );
   return { adequate: next.depth >= suggested.depthMm, minDepthMm: suggested.depthMm };
 }
@@ -169,13 +180,14 @@ export function resolveBeamSectionLock(
   nextParams: BeamParams,
   supportTypeOverride?: BeamSupportType,
   designTorsionKnm?: number,
+  sizingSpanOverrideMm?: number,
 ): BeamSectionLockResolution {
   const sectionChanged = nextParams.width !== prevParams.width || nextParams.depth !== prevParams.depth;
   if (!sectionChanged) {
     return { params: nextParams, rejected: false, minDepthMm: nextParams.depth };
   }
   const { adequate, minDepthMm } = isBeamSectionAdequate(
-    provider, beam, nextParams, supportTypeOverride, designTorsionKnm,
+    provider, beam, nextParams, supportTypeOverride, designTorsionKnm, sizingSpanOverrideMm,
   );
   if (adequate) {
     return { params: { ...nextParams, autoSized: false }, rejected: false, minDepthMm };

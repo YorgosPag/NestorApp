@@ -67,7 +67,12 @@
     "extendFootingConfirm": "Extend footing",
     "reinforceOrganismTitle": "Unified reinforcement",
     "reinforceOrganismMessage": "The footing was connected to the column — compute the unified reinforcement (dowels/anchorages/laps)?",
-    "reinforceOrganismConfirm": "Compute reinforcement"
+    "reinforceOrganismConfirm": "Compute reinforcement",
+    "addIntermediateColumnsAction": "Add intermediate columns",
+    "addIntermediateColumnsTitle": "Long beam span",
+    "addIntermediateColumnsMessage": "The beam needs a {depth}mm depth for a {span}m span. Add {columns, plural, one {# intermediate column} other {# intermediate columns}} (with automatic footings) so it becomes continuous and shrinks to ~{suggestedDepth}mm? In an atrium or pilotis you may prefer the large beam — this action is optional.",
+    "addIntermediateColumnsConfirm": "Add columns",
+    "addIntermediateColumnsDone": "{count, plural, one {Added # intermediate column} other {Added # intermediate columns}} — the beam will shrink automatically"
   },
   "autoFoundation": {
     "applied": "Auto foundation design — new footings: {created} (combined: {combined}, updated: {updated}, removed: {removed})"

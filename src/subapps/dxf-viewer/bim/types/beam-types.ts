@@ -57,8 +57,13 @@ export type BeamKind = 'straight' | 'curved' | 'cantilever';
  * Structural support type. Cantilever beams MUST have `supportType: 'cantilever'`
  * (validator-enforced σε αυτή τη φάση). Straight / curved beams default σε
  * `'simple'` (simply supported — pin/roller). `'fixed'` = αμφίπακτη.
+ *
+ * ADR-504 Φ2 — `'continuous'`: συνεχής δοκός πάνω από ≥1 ενδιάμεσες στηρίξεις. **DERIVED**
+ * τύπος (όπως το `'cantilever'`): παράγεται από τη ζωντανή τοπολογία (`deriveBeamSpanModel`)
+ * όταν υπάρχουν mid-span στηρίξεις — ΔΕΝ είναι user-selectable. Μοντέλο ροπών envelope
+ * `wL²/10` (hogging 1ης εσωτερικής στήριξης κυβερνά) + l/d K=1.5 (εσωτερικό φάτνωμα).
  */
-export type BeamSupportType = 'simple' | 'fixed' | 'cantilever';
+export type BeamSupportType = 'simple' | 'fixed' | 'cantilever' | 'continuous';
 
 /**
  * Steel section profile type.

@@ -24,6 +24,7 @@ import { resolveBeamSectionLock } from '../../../../bim/structural/sizing/beam-s
 import {
   resolveActiveBeamSupportType,
   resolveActiveBeamTorsion,
+  resolveActiveBeamSpanMm,
 } from '../../../../bim/structural/active-reinforcement';
 import { resolveStructuralCode } from '../../../../bim/structural/codes';
 import { useStructuralSettingsStore } from '../../../../state/structural-settings-store';
@@ -63,6 +64,7 @@ export function useBeamParamsDispatcher(
       const lock = resolveBeamSectionLock(
         provider, beam, beam.params, nextParams,
         resolveActiveBeamSupportType(beam.id), resolveActiveBeamTorsion(beam.id),
+        resolveActiveBeamSpanMm(beam.id),
       );
       executeCommand(
         new UpdateBeamParamsCommand(beam.id, lock.params, beam.params, sm, false),

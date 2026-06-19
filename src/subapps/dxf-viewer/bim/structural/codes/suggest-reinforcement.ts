@@ -268,7 +268,9 @@ export const BEAM_LEVER_ARM_FACTOR = 0.9;
 /**
  * Συντελεστής ροπής ανοίγματος M_Ed = w·L²/c υπό ομοιόμορφο φορτίο (UDL), ανά
  * συνθήκη στήριξης: αμφιέρειστη 8· αμφίπακτη 12 (ροπή στήριξης)· πρόβολος 2 (πάκτωση).
- * SSoT — reuse ADR-475 member-sizing (καμπτική επάρκεια διατομής).
+ * ADR-504 Φ2 — συνεχής δοκός 10: envelope ισαπεχουσών ανοιγμάτων, η hogging της 1ης
+ * εσωτερικής στήριξης (≈ wL²/10) κυβερνά της sagging — preliminary/Revit-grade εφεδρεία
+ * (η ακριβής λύση = FEM, ADR-481). SSoT — reuse ADR-475 member-sizing.
  */
 export function spanMomentDivisor(supportType: BeamSupportType): number {
   switch (supportType) {
@@ -276,6 +278,8 @@ export function spanMomentDivisor(supportType: BeamSupportType): number {
       return 2;
     case 'fixed':
       return 12;
+    case 'continuous':
+      return 10;
     default:
       return 8;
   }
@@ -361,6 +365,25 @@ function resolveBeamStirrups(
 }
 
 /**
+ * ADR-504 Φ2 — απαιτούμενη επιφάνεια ΑΝΩ διαμήκους χάλυβα. Συνεχής δοκός (`'continuous'`):
+ * πάνω από τις ενδιάμεσες στηρίξεις αναπτύσσεται hogging ≈ η ροπή ανοίγματος (envelope
+ * wL²/10) → συμμετρικός οπλισμός (άνω = κάτω καμπτικός). Αλλιώς EC8 §5.4.3.1.2(5)
+ * αναρτήρες: άνω ≥ 0.25·κάτω (διαμήκη). + στρεπτικός γωνιακός A_sl/2 (additive, και στις δύο).
+ */
+function topReinforcementAreaMm2(
+  supportType: BeamSupportType,
+  asBottomFlexuralMm2: number,
+  bottom: { readonly count: number; readonly diameterMm: number },
+  asTorsionPerFaceMm2: number,
+): number {
+  const flexuralTopMm2 =
+    supportType === 'continuous'
+      ? asBottomFlexuralMm2
+      : BEAM_TOP_TO_BOTTOM_RATIO * bottom.count * barAreaMm2(bottom.diameterMm);
+  return flexuralTopMm2 + asTorsionPerFaceMm2;
+}
+
+/**
  * Επιλέγει ελάχιστο-έγκυρο διαμήκη (κάτω/άνω) + εγκάρσιο οπλισμό δοκαριού,
  * εγγυώμενος ρ_κάτω ≥ ρ_min επί της ενεργού διατομής b·d (d ≈ 0.9h). Reuse του
  * SSoT `resolveBarSet` (μηδέν duplicate). Καλείται από κάθε provider.
@@ -386,16 +409,18 @@ export function suggestBeamReinforcementFrom(
   // ADR-499 §6.3-c — γωνιακός στρεπτικός χάλυβας A_sl κατανεμημένος συμμετρικά (μισό κάτω, μισό άνω).
   const torsion = resolveBeamTorsionDemand(ctx);
   const asTorsionPerFaceMm2 = torsion ? torsion.longitudinalAreaMm2 / 2 : 0;
-  // ADR-472 — max(ελάχιστο ρ_min επί b·d, capped απαίτηση καμπτικής αντοχής) + στρεπτικός γωνιακός.
-  const asBottomMm2 = Math.max(
+  // ADR-472 — max(ελάχιστο ρ_min επί b·d, capped απαίτηση καμπτικής αντοχής).
+  const asBottomFlexuralMm2 = Math.max(
     seed.minRatio * ctx.widthMm * effectiveDepthMm,
     asStrengthBeamMm2(ctx, effectiveDepthMm) * capFactor,
-  ) + asTorsionPerFaceMm2;
+  );
+  // + στρεπτικός γωνιακός A_sl/2 (μισό κάτω, μισό άνω).
+  const asBottomMm2 = asBottomFlexuralMm2 + asTorsionPerFaceMm2;
   const seedDia = nextRebarDiameterMm(seed.minBarDiameterMm);
 
   const bottom = resolveBarSet(asBottomMm2, Math.max(seed.minBottomBarCount, 2), seedDia);
   const top = resolveBarSet(
-    BEAM_TOP_TO_BOTTOM_RATIO * bottom.count * barAreaMm2(bottom.diameterMm) + asTorsionPerFaceMm2,
+    topReinforcementAreaMm2(ctx.supportType, asBottomFlexuralMm2, bottom, asTorsionPerFaceMm2),
     Math.max(seed.minTopBarCount, 2),
     seedDia,
   );

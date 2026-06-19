@@ -111,6 +111,7 @@ function greekLegacySpanDepthSystemFactor(supportType: BeamSupportType | undefin
     case 'cantilever':
       return 0.4;
     case 'fixed':
+    case 'continuous': // ADR-504 Φ2 — συνεχής/εσωτερικό φάτνωμα: K=1.5 (ΕΚΩΣ §16.4)
       return 1.5;
     default:
       return 1.0;

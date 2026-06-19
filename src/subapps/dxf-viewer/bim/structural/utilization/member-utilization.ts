@@ -56,9 +56,10 @@ export function beamUtilization(
   beam: Pick<BeamEntity, 'id' | 'params' | 'geometry'>,
   reinforcement: BeamReinforcement | undefined,
   supportType?: BeamSupportType, // ADR-486 — topology-aware As,req (πρόβολος → wL²/2)
+  sizingSpanOverrideMm?: number, // ADR-504 Φ2 — συνεχής δοκός → As,req από sub-span (wL_sub²/10)
 ): MemberUtilization | null {
   if (!reinforcement) return null;
-  const ctx = buildBeamSectionContext(beam, supportType);
+  const ctx = buildBeamSectionContext(beam, supportType, undefined, sizingSpanOverrideMm);
   const asRequired = asStrengthBeamMm2(ctx, BEAM_EFFECTIVE_DEPTH_FACTOR * ctx.depthMm);
   const asProvided = reinforcement.bottom.count * barAreaMm2(reinforcement.bottom.diameterMm);
   return toRatio(beam.id, asRequired, asProvided);

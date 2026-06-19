@@ -51,6 +51,25 @@ const AUTO_ATTACH_Z_GATE_MM = 1;
  */
 const ACTIVE_LEVEL_FLOOR_MM = 0;
 
+/**
+ * ADR-401 — μια κολώνα είναι επιλέξιμη για (re-)auto-attach της **κορυφής** της όταν:
+ *   • `topBinding==='storey-ceiling'` (default — δεν έχει attach-άρει ποτέ), Ή
+ *   • `topBinding==='attached'` ΑΛΛΑ **ΟΛΑ** τα `attachTopToIds` είναι **stale** (δείχνουν
+ *     σε host που δεν υπάρχει πλέον — π.χ. διαγραμμένο δοκάρι).
+ *
+ * Το stale-attach ΔΕΝ πρέπει να μπλοκάρει το re-link σε νέο host: ο host-delete (ADR-401
+ * Phase C) δεν καθάριζε το column binding, οπότε η κολώνα έμενε «κολλημένη σε φάντασμα» και
+ * τα νέα δοκάρια δεν την ξανά-έπιαναν. Εδώ self-heal-άρει. Attach σε **ζωντανό** host ή
+ * `unconnected`/`absolute` → ΟΧΙ (δεν διαταράσσουμε έγκυρη/ρητή επιλογή).
+ */
+function columnTopEligibleForAutoAttach(column: ColumnEntity, liveIds: ReadonlySet<string>): boolean {
+  const b = column.params.topBinding;
+  if (b === 'storey-ceiling') return true;
+  if (b !== 'attached') return false;
+  const ids = column.params.attachTopToIds;
+  return !ids || ids.length === 0 || ids.every((id) => !liveIds.has(id));
+}
+
 /** Host footprint-input από beam/slab, αλλιώς null (όχι structural). */
 function hostInputOf(host: Entity): HostFootprintInput | null {
   if (isBeamEntity(host)) return beamHostInput(host);
@@ -106,10 +125,11 @@ export function findColumnsToAutoAttachToHost(host: Entity, entities: readonly E
   const hostInput = hostInputOf(host);
   if (!hostInput) return [];
 
+  const liveIds = new Set(entities.map((e) => e.id));
   const out: string[] = [];
   for (const e of entities) {
     if (!isColumnEntity(e)) continue;
-    if (e.params.topBinding !== 'storey-ceiling') continue;
+    if (!columnTopEligibleForAutoAttach(e, liveIds)) continue;
     const footprint = e.geometry?.footprint?.vertices;
     if (!footprint || footprint.length < 3) continue;
     if (!hostCoversColumn(hostInput.footprint, footprint, isBeamEntity(host))) continue;
@@ -203,10 +223,11 @@ export function findColumnsFramedByBeam(host: Entity, entities: readonly Entity[
   const beamTop = beamHostInput(host).topsideZmm;
   if (beamTop === undefined) return [];
 
+  const liveIds = new Set(entities.map((e) => e.id));
   const out: string[] = [];
   for (const e of entities) {
     if (!isColumnEntity(e)) continue;
-    if (e.params.topBinding !== 'storey-ceiling') continue;
+    if (!columnTopEligibleForAutoAttach(e, liveIds)) continue;
     if (!beamFramesColumn(host, e)) continue;
     const baseZmm = resolveColumnBaseZmm(e.params, { floorElevationMm: ACTIVE_LEVEL_FLOOR_MM });
     if (beamTop <= Math.max(baseZmm, ACTIVE_LEVEL_FLOOR_MM) + AUTO_ATTACH_Z_GATE_MM) continue;

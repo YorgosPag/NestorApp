@@ -36,6 +36,7 @@ import { buildColumnSizePatch } from '../../../bim/structural/sizing/column-size
 import {
   resolveActiveBeamSupportType,
   resolveActiveBeamTorsion,
+  resolveActiveBeamSpanMm,
   resolveActiveSlabSupportCondition,
   resolveActiveColumnDesignMoment,
 } from '../../../bim/structural/active-reinforcement';
@@ -105,9 +106,12 @@ export class AutoSizeMembersCommand implements ICommand {
         // με wL²/2 ώστε ρ≤ρ_max, ίδιο SSoT με τον οπλισμό (μηδέν διπλή αλήθεια).
         // ADR-499 §6.3-b — + DERIVED στρέψη από μονόπλευρη πρόβολο-πλάκα: το ύψος μεγαλώνει
         // ώστε T_Ed/T_Rd,max + V_Ed/V_Rd,max ≤ 1 (ίδιο SSoT με τον sensor/classifier).
+        // ADR-504 Φ2 — + DERIVED υπο-άνοιγμα συνεχούς δοκού: το ύψος ΜΙΚΡΑΙΝΕΙ (ροπή/βέλος από
+        // max sub-span μεταξύ ενδιάμεσων στηρίξεων). Αυτό κάνει πράξη το «η δοκός μικραίνει».
         const patch = buildBeamSizePatch(
           entity, this.provider,
           resolveActiveBeamSupportType(entityId), resolveActiveBeamTorsion(entityId),
+          resolveActiveBeamSpanMm(entityId),
         );
         if (patch) this.patches.push({ entityId, entityType: 'beam', prev: patch.prev, next: patch.next });
       } else if (isSlabEntity(entity)) {

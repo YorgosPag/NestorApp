@@ -36,6 +36,7 @@ import {
   isSlabOpeningEntity,
   isWallEntity,
   isSlabEntity,
+  isColumnEntity,
 } from '../../types/entities';
 
 // ─── Building blocks ────────────────────────────────────────────────────────
@@ -98,6 +99,32 @@ export function findAttachedWalls(
     if (ids && ids.some((id) => hostIds.has(id))) out.push(e.id);
   }
   return out;
+}
+
+/**
+ * Finds `attached` column ids whose `attachTopToIds` / `attachBaseToIds` reference
+ * any host in `hostIds` (ADR-401 — host-deletion **detach** reverse lookup for
+ * columns). Mirror of {@link findAttachedWalls}, but partitioned by side so the
+ * caller can run a `DetachColumnsCommand` per affected side. Columns with a
+ * non-`attached` binding (or no attach list) on a given side are skipped there.
+ *
+ * Call AFTER the host removal lands: the affected columns remain in the scene
+ * (only their host is gone), so the reverse lookup still resolves them.
+ */
+export function findAttachedColumns(
+  hostIds: ReadonlySet<string>,
+  entities: readonly Entity[],
+): { topIds: string[]; baseIds: string[] } {
+  const topIds: string[] = [];
+  const baseIds: string[] = [];
+  if (hostIds.size === 0) return { topIds, baseIds };
+  for (const e of entities) {
+    if (!isColumnEntity(e)) continue;
+    const p = e.params;
+    if (p.topBinding === 'attached' && p.attachTopToIds?.some((id) => hostIds.has(id))) topIds.push(e.id);
+    if (p.baseBinding === 'attached' && p.attachBaseToIds?.some((id) => hostIds.has(id))) baseIds.push(e.id);
+  }
+  return { topIds, baseIds };
 }
 
 // ─── Composition helpers ────────────────────────────────────────────────────

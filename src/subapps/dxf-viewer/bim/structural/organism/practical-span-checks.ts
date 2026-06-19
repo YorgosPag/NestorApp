@@ -73,6 +73,10 @@ export interface IntermediateColumnSuggestion {
  * ανοίγματα· το γραμμικό φορτίο (kN/m) είναι span-independent → ίδιο ctx με μειωμένο `spanMm`.
  * **Reuse `suggestBeamSection` — μηδέν νέα φυσική.** Επιστρέφει το πρώτο `k` που πετυχαίνει το
  * όριο· αν κανένα ως MAX → clamp στο MAX (η καλύτερη διαθέσιμη πρόταση).
+ *
+ * ADR-504 Φ2 — η πρόταση χτίζει το ίδιο μοντέλο που θα παράξει η εκτέλεση: ο δοκός με ≥1
+ * ενδιάμεση στήριξη γίνεται **`'continuous'`** (wL_sub²/10, K=1.5 βέλος) → το προτεινόμενο ύψος
+ * συμφωνεί με αυτό που θα δώσει ο sizer μετά την εισαγωγή των κολωνών (μηδέν διπλή αλήθεια Φ1↔Φ2).
  */
 export function suggestIntermediateColumnCount(
   provider: StructuralCodeProvider,
@@ -81,7 +85,9 @@ export function suggestIntermediateColumnCount(
 ): IntermediateColumnSuggestion {
   for (let k = 1; k <= MAX_INTERMEDIATE_COLUMNS; k++) {
     const subSpanMm = ctx.spanMm / (k + 1);
-    const suggestedDepthMm = suggestBeamSection(provider, { ...ctx, spanMm: subSpanMm }).depthMm;
+    const suggestedDepthMm = suggestBeamSection(
+      provider, { ...ctx, spanMm: subSpanMm, supportType: 'continuous' },
+    ).depthMm;
     if (suggestedDepthMm <= practicalDepthLimitMm || k === MAX_INTERMEDIATE_COLUMNS) {
       return { columns: k, subSpanMm, suggestedDepthMm };
     }
