@@ -35,7 +35,7 @@ export class GripSizeCalculator {
     cold: GRIP_SIZE_MULTIPLIERS.COLD,
     warm: GRIP_SIZE_MULTIPLIERS.WARM,
     hot:  GRIP_SIZE_MULTIPLIERS.HOT,
-    armed: GRIP_SIZE_MULTIPLIERS.ARMED, // ADR-370 — armed/selected (multi-grip), +25%
+    armed: GRIP_SIZE_MULTIPLIERS.ARMED, // ADR-501 — armed/selected (multi-grip), +25%
     snappable: GRIP_SIZE_MULTIPLIERS.COLD, // ADR-397 — cyan snap target, normal size (colour-only cue)
   };
   /**

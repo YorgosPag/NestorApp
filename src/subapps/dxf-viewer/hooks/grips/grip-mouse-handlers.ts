@@ -26,7 +26,7 @@ import {
   resolveMoveGlyphZoneForGrip, directionForZone, isDirectionalZone,
 } from '../../bim/grips/move-glyph-zones';
 import { getPromptDialogStore } from '../../systems/prompt-dialog';
-// ADR-370 — armed-grip SSoT: click a cold grip → arm it orange (multi-grip move).
+// ADR-501 — armed-grip SSoT: click a cold grip → arm it orange (multi-grip move).
 import { GripArmedStore } from '../../systems/grip/GripArmedStore';
 import { GripModeStore } from '../../systems/grip/GripModeStore';
 import { GripBasePointStore } from '../../systems/grip/GripBasePointStore';
@@ -177,7 +177,7 @@ export function runGripMouseDown(worldPos: Point2D, isShift: boolean, ctx: GripM
     ?? (hoveredGrip?.source === 'dxf' && isWallHotGripKind(hotGripKindOf(hoveredGrip)) ? hoveredGrip : null);
   if (!nearGrip) {
     if (!isShift && selectedGrips.length > 0) setSelectedGrips([]);
-    // ADR-370 — a click that misses every grip (without Shift) clears the armed
+    // ADR-501 — a click that misses every grip (without Shift) clears the armed
     // selection, so the orange grips revert to cold (AutoCAD: click-away deselects).
     // The mousedown still falls through (return false) to lasso / entity selection.
     if (!isShift) GripArmedStore.clear();

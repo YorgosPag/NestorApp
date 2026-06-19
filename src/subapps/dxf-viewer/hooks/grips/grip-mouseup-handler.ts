@@ -18,7 +18,7 @@ import { applyGripStepSnap } from '../../bim/grips/grip-step-quantize';
 import { applyMoveConstraints } from '../../bim/grips/grip-move-constraints';
 import { CtrlKeyTracker } from '../../keyboard/CtrlKeyTracker';
 import { ShiftKeyTracker } from '../../keyboard/ShiftKeyTracker';
-// ADR-370 — armed-grip SSoT: click a cold grip → arm it orange (multi-grip move).
+// ADR-501 — armed-grip SSoT: click a cold grip → arm it orange (multi-grip move).
 import { GripArmedStore } from '../../systems/grip/GripArmedStore';
 import {
   commitOverlayVertexDrag,
@@ -33,13 +33,13 @@ import type { UnifiedGripInfo } from './unified-grip-types';
 import { advanceHotGripPick, commitRotateReference, commitFreeRotate } from './grip-hotgrip-actions';
 import type { GripMouseUpCtx } from './grip-mouse-handlers.types';
 
-// ADR-370 — click-vs-drag threshold (screen px). A press-release on a DXF grip that
+// ADR-501 — click-vs-drag threshold (screen px). A press-release on a DXF grip that
 // moves the cursor LESS than this counts as a CLICK → arm the grip (orange) for a
 // multi-grip move; moving more is a real drag → the existing stretch/move commit.
 const ARM_CLICK_MAX_MOVE_PX = 4;
 
 /**
- * ADR-370 — apply a click on a (non-hot) DXF grip to the armed-grip selection:
+ * ADR-501 — apply a click on a (non-hot) DXF grip to the armed-grip selection:
  * Shift → toggle this grip in/out of the set; plain → make it the only armed grip.
  */
 function applyGripArmClick(grip: UnifiedGripInfo): void {
@@ -127,7 +127,7 @@ export async function runGripMouseUp(worldPos: Point2D, ctx: GripMouseUpCtx): Pr
       // re-anchored the drag through the right-click menu, the displacement
       // is measured from the user-picked anchor instead of `grip.position`.
       const effectiveAnchor = GripBasePointStore.getSnapshot().overrideAnchor ?? anchorRef.current;
-      // ADR-370 — click-vs-drag: a press-release that barely moved the cursor is a
+      // ADR-501 — click-vs-drag: a press-release that barely moved the cursor is a
       // CLICK, not a drag → arm the grip (orange) for a multi-grip move instead of
       // committing a (near-)zero-delta stretch. Alt-move (whole-entity base-point
       // move) keeps its drag intent and is excluded. Real drags (moved ≥ threshold)

@@ -462,7 +462,9 @@ export function slabToMesh(
   ensureWorldUvs(geo); // ADR-413 — aoMap uv2 (ExtrudeGeometry auto-UVs in meters).
   applySlabSlope(geo, slab.params);
   const matId = slab.params.material ?? 'elem-slab';
-  const mesh = new THREE.Mesh(geo, getElementMaterial3D('slab'));
+  // 🚨 TEMP DIAGNOSTIC (slab two-tone bisection) — unlit flat red. ΑΦΑΙΡΕΣΕ μετά.
+  // Uniform κόκκινο ⇒ two-tone από lighting/normals (warped quad). Κόκκινο + tan μισό ⇒ ξεχωριστό coplanar mesh (z-fight).
+  const mesh = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ color: 0xff0000, side: THREE.DoubleSide }));
   // ADR-369 §2.1: levelElevation = top face (FFL). Slab hangs DOWN by thickness.
   // floor:0 → -0.20..0m, ceiling/roof:3000 → 2.80..3.00m, foundation:0 → -0.50..0m.
   // ADR-448 §4.1 — levelElevation is FLOOR-RELATIVE, so add the storey FFL via the

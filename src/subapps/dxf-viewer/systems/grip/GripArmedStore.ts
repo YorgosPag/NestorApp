@@ -1,5 +1,5 @@
 /**
- * ADR-370 — Armed-grip SSoT (module singleton).
+ * ADR-501 — Armed-grip SSoT (module singleton).
  *
  * Holds the set of grips the user has CLICKED to select for a multi-grip move
  * (AutoCAD "hot grips"). Armed grips render orange ('armed' temperature) and stay
@@ -20,7 +20,7 @@
  * 60fps drag subscription.
  *
  * @see rendering/grips/grip-temperature.ts — `armedKeys` → 'armed' (orange)
- * @see docs/centralized-systems/reference/adrs/ADR-370-dxf-grip-multi-arm-group-move.md
+ * @see docs/centralized-systems/reference/adrs/ADR-501-dxf-grip-multi-arm-group-move.md
  */
 
 import { gripKey, type GripRef } from '../../rendering/grips/grip-temperature';

@@ -52,7 +52,7 @@ export interface GripTemperatureState {
   readonly active?: GripRef;
   readonly dragging?: GripRef;
   /**
-   * ADR-370 — grips the user CLICKED to select for a multi-grip move, keyed by
+   * ADR-501 — grips the user CLICKED to select for a multi-grip move, keyed by
    * {@link gripKey}. They render orange ('armed') and stay so until cleared,
    * regardless of hover. The grip under active drag still wins ('hot'). Empty /
    * absent → no grip is armed.
@@ -86,7 +86,7 @@ function matches(ref: GripRef | undefined, entityId: string, gripIndex: number):
  *
  * Priority (AutoCAD / BricsCAD / Revit-grade):
  * 1. `dragging` or `active` (the pressed / manipulated grip)  → `hot`
- * 2. grip is in `armedKeys` (clicked-to-select, ADR-370)      → `armed` (orange)
+ * 2. grip is in `armedKeys` (clicked-to-select, ADR-501)      → `armed` (orange)
  * 3. grip is in `snappableKeys` (active snap target, ADR-397) → `snappable` (cyan)
  * 4. `hovered` (cursor over the grip)                         → `warm`
  * 5. otherwise                                                → `cold`
@@ -114,7 +114,7 @@ export function resolveGripTemperature(
     return 'hot';
   }
 
-  // Priority 2: clicked-to-select grip (ADR-370) → armed (orange). Above snappable
+  // Priority 2: clicked-to-select grip (ADR-501) → armed (orange). Above snappable
   // and hover so a selected grip stays orange through hover.
   if (state.armedKeys?.has(gripKey(entityId, gripIndex))) {
     return 'armed';

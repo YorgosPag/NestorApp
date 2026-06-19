@@ -57,7 +57,7 @@ export abstract class BaseEntityRenderer {
   protected gripInteraction: {
     hovered?: { entityId: string; gripIndex: number };
     active?: { entityId: string; gripIndex: number };
-    /** ADR-370 — grip keys clicked-to-select for a multi-grip move (orange). */
+    /** ADR-501 — grip keys clicked-to-select for a multi-grip move (orange). */
     armedKeys?: ReadonlySet<string>;
   } = {};
   protected phaseManager: PhaseManager;
@@ -177,7 +177,7 @@ export abstract class BaseEntityRenderer {
       hoveredGrip: this.gripInteraction.hovered,
       selectedGrip: this.gripInteraction.active,
       dragginGrip: undefined,
-      // ADR-370 — clicked-to-select grips render orange ('armed').
+      // ADR-501 — clicked-to-select grips render orange ('armed').
       armedKeys: this.gripInteraction.armedKeys,
       snappableKeys: snappedKey ? new Set([snappedKey]) : undefined,
     };

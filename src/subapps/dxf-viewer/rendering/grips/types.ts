@@ -33,7 +33,7 @@ export type GripTemperature =
   | 'cold'       // Normal state (default color - blue)
   | 'warm'       // Hover state (highlight color - orange)
   | 'hot'        // Active/drag state (active color - red)
-  | 'armed'      // ADR-370 — clicked/selected for a multi-grip move (orange)
+  | 'armed'      // ADR-501 — clicked/selected for a multi-grip move (orange)
   | 'snappable'; // ADR-397 — active snap target during rotation (cyan)
 
 /**
@@ -142,7 +142,7 @@ export interface GripInteractionState {
   };
 
   /**
-   * ADR-370 — grip keys (`${entityId}_${gripIndex}`) that the user has CLICKED to
+   * ADR-501 — grip keys (`${entityId}_${gripIndex}`) that the user has CLICKED to
    * select for a multi-grip move → render orange ('armed'). Hot (active drag) wins.
    * Fed from {@link GripArmedStore}. Absent/empty → no grip is armed.
    */

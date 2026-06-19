@@ -206,6 +206,91 @@ describe('ADR-495 — slab→δοκός φορτίο', () => {
   });
 });
 
+// ─── ADR-502 — reaction-aware overhang (πρόβολος → στηρίζουσες κολώνες + πέδιλα) ──
+
+/** Δεύτερη παράλληλη δοκός κατά X (για slab που εδράζεται σε 2 δοκούς = μη-πρόβολος). */
+describe('ADR-502 — αντίδραση πρόβολου-πλάκας στις κολώνες/πέδιλα', () => {
+  // 2 κολώνες + 2 πέδιλα + δοκάρι ανάμεσα + πλάκα-πρόβολος (20 m²) που κρέμεται από τη δοκό.
+  const cols = [column('c1', 0, 0, 'f1'), column('c2', 5000, 0, 'f2')];
+  const pads = [pad('f1'), pad('f2')];
+  const graph: StructuralGraph = {
+    nodes: [
+      gNode('c1', 'column'), gNode('c2', 'column'), gNode('b1', 'beam'),
+      gNode('f1', 'footing'), gNode('f2', 'footing'),
+    ],
+    edges: [
+      gEdge('c1', 'b1', 'column-bearing'), gEdge('c2', 'b1', 'column-bearing'),
+      gEdge('f1', 'c1', 'footing-bearing'), gEdge('f2', 'c2', 'footing-bearing'),
+    ],
+  };
+  const base = [...cols, ...pads, beamAx('b1', 0, 0, 5000, 0)];
+  const cantilever = slabPoly('s1', 0, 0, 5000, 4000, 20); // ολόκληρη στη μία πλευρά → πρόβολος
+
+  it('πρόβολος σε δοκό 2 στηρίξεων → αντίδραση 50/50 σε ΑΜΦΟΤΕΡΕΣ κολώνες + πέδιλα', () => {
+    const without = computeLoadPathPatches(base, graph, SETTINGS);
+    const withSlab = computeLoadPathPatches([...base, cantilever], graph, SETTINGS);
+    // Μερίδιο ανά κολώνα = 20 m² × area-loads (1 όροφος) / 2 στηρίξεις.
+    const dShare = 20 * 6 / 2; // 60 kN
+    const lShare = 20 * 2 / 2; // 20 kN
+    for (const colId of ['c1', 'c2']) {
+      const a = patchById(without, colId)!;
+      const b = patchById(withSlab, colId)!;
+      expect(b.deadAxialKn - a.deadAxialKn).toBeCloseTo(dShare, 3);
+      expect(b.liveAxialKn - a.liveAxialKn).toBeCloseTo(lShare, 3);
+    }
+    // Το πέδιλο ακολουθεί την αυξημένη αντίδραση της κολώνας του (footing == column).
+    for (const [colId, fId] of [['c1', 'f1'], ['c2', 'f2']] as const) {
+      expect(patchById(withSlab, fId)!.deadAxialKn).toBeCloseTo(patchById(withSlab, colId)!.deadAxialKn, 6);
+      expect(patchById(withSlab, fId)!.liveAxialKn).toBeCloseTo(patchById(withSlab, colId)!.liveAxialKn, 6);
+    }
+  });
+
+  it('μεγαλύτερος πρόβολος → μεγαλύτερη αντίδραση (μήκος προβόλου ρέει live)', () => {
+    const small = patchById(computeLoadPathPatches([...base, slabPoly('s1', 0, 0, 5000, 2000, 10)], graph, SETTINGS), 'c1')!;
+    const large = patchById(computeLoadPathPatches([...base, slabPoly('s1', 0, 0, 5000, 6000, 30)], graph, SETTINGS), 'c1')!;
+    expect(large.deadAxialKn).toBeGreaterThan(small.deadAxialKn); // 30 m² > 10 m²
+    expect(large.liveAxialKn).toBeGreaterThan(small.liveAxialKn);
+  });
+
+  it('πρόβολος σε δοκό-πρόβολο (1 στήριξη) → 100% στη μοναδική κολώνα', () => {
+    const oneSupport: StructuralGraph = {
+      nodes: [gNode('c1', 'column'), gNode('b1', 'beam'), gNode('f1', 'footing')],
+      edges: [gEdge('c1', 'b1', 'column-bearing'), gEdge('f1', 'c1', 'footing-bearing')],
+    };
+    const oneBase = [column('c1', 0, 0, 'f1'), pad('f1'), beamAx('b1', 0, 0, 5000, 0)];
+    const without = patchById(computeLoadPathPatches(oneBase, oneSupport, SETTINGS), 'c1')!;
+    const withSlab = patchById(computeLoadPathPatches([...oneBase, cantilever], oneSupport, SETTINGS), 'c1')!;
+    expect(withSlab.deadAxialKn - without.deadAxialKn).toBeCloseTo(20 * 6, 3); // 100% = 120 kN
+    expect(withSlab.liveAxialKn - without.liveAxialKn).toBeCloseTo(20 * 2, 3); // 40 kN
+  });
+
+  it('idempotent: ίδια γεωμετρία → ίδιο φορτίο (convergence)', () => {
+    const a = patchById(computeLoadPathPatches([...base, cantilever], graph, SETTINGS), 'c1')!;
+    const b = patchById(computeLoadPathPatches([...base, cantilever], graph, SETTINGS), 'c1')!;
+    expect(a.deadAxialKn).toBeCloseTo(b.deadAxialKn, 9);
+    expect(a.liveAxialKn).toBeCloseTo(b.liveAxialKn, 9);
+  });
+
+  it('αμφιέρειστη πλάκα (2 φέρουσες δοκοί) → ΜΗΔΕΝ αντίδραση κολώνας (μηδέν double-count)', () => {
+    // Πλάκα 0..4000 σε Y, εδραζόμενη σε δοκούς στο y=0 (b1) ΚΑΙ y=4000 (b2) → 'simple', όχι πρόβολος.
+    const twoBeamGraph: StructuralGraph = {
+      nodes: [
+        gNode('c1', 'column'), gNode('c2', 'column'), gNode('b1', 'beam'), gNode('b2', 'beam'),
+        gNode('f1', 'footing'), gNode('f2', 'footing'),
+      ],
+      edges: [
+        gEdge('c1', 'b1', 'column-bearing'), gEdge('c2', 'b1', 'column-bearing'),
+        gEdge('f1', 'c1', 'footing-bearing'), gEdge('f2', 'c2', 'footing-bearing'),
+      ],
+    };
+    const twoBeamBase = [...cols, ...pads, beamAx('b1', 0, 0, 5000, 0), beamAx('b2', 0, 4000, 5000, 4000)];
+    const without = patchById(computeLoadPathPatches(twoBeamBase, twoBeamGraph, SETTINGS), 'c1')!;
+    const withSlab = patchById(computeLoadPathPatches([...twoBeamBase, slabPoly('s1', 0, 0, 5000, 4000, 20)], twoBeamGraph, SETTINGS), 'c1')!;
+    expect(withSlab.deadAxialKn).toBeCloseTo(without.deadAxialKn, 6); // καμία αντίδραση (slab σε 2 δοκούς)
+    expect(withSlab.liveAxialKn).toBeCloseTo(without.liveAxialKn, 6);
+  });
+});
+
 describe('REGRESSION — no-beam footing loads == computeFootingTakedownLoads (ADR-464)', () => {
   it('κάναβος 2 κολονών 5m → footing patches ίδια με το ADR-464 path', () => {
     const entities = [

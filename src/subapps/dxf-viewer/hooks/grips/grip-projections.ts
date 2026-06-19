@@ -246,7 +246,7 @@ export function buildGripInteractionState(
 ): DxfGripInteractionState {
   const state: DxfGripInteractionState = {};
 
-  // ADR-370 — clicked-to-select grips render orange ('armed'). Independent of the
+  // ADR-501 — clicked-to-select grips render orange ('armed'). Independent of the
   // hover/drag phase: an armed grip stays orange while the cursor is elsewhere.
   if (armedKeys && armedKeys.size > 0) {
     state.armedKeys = armedKeys;

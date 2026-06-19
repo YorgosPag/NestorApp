@@ -42,7 +42,7 @@ export class GripColorManager {
     cold: DEFAULT_GRIP_COLORS.COLD,
     warm: DEFAULT_GRIP_COLORS.WARM,
     hot:  DEFAULT_GRIP_COLORS.HOT,
-    armed: DEFAULT_GRIP_COLORS.ARMED, // ADR-370 — orange armed/selected (multi-grip)
+    armed: DEFAULT_GRIP_COLORS.ARMED, // ADR-501 — orange armed/selected (multi-grip)
     snappable: DEFAULT_GRIP_COLORS.SNAPPABLE, // ADR-397 — cyan rotation snap target
   };
   /**
@@ -78,7 +78,7 @@ export class GripColorManager {
     }
 
     // Priority 3: Temperature color from settings (cold/warm/hot only — 'snappable'
-    // (ADR-397) and 'armed' (ADR-370) have no user-facing override, they fall
+    // (ADR-397) and 'armed' (ADR-501) have no user-facing override, they fall
     // through to their default colours).
     if (settings?.colors && temperature !== 'snappable' && temperature !== 'armed') {
       const settingsColor = settings.colors[temperature];

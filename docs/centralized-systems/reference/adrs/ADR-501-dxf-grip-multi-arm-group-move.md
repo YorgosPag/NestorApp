@@ -4,7 +4,13 @@
 **Discipline:** DXF Viewer · Grip interaction · Canvas rendering (ADR-040-sensitive)
 **Related:** ADR-397 (grip glyph/temperature SSoT), ADR-363 (grip system phases), ADR-040 (canvas performance / micro-leaf subscribers), ADR-183 (unified grip system)
 
-> ⚠️ Numbering: CLAUDE.md listed «ADR-370 = next free» but that is stale (ADRs exist up to ADR-500). This ADR took the next sequential free number **ADR-501**. Code comments authored before this note may reference «ADR-370» for this feature — they mean ADR-501.
+> ⚠️ Numbering: CLAUDE.md listed «ADR-370 = next free» but that is stale (ADRs exist up to ADR-500). This ADR took the next sequential free number **ADR-501** (the only actual `ADR-501-*.md` file). Code comments were corrected to ADR-501 (an earlier draft mistakenly wrote «ADR-370», which is the unrelated corner-snap ADR).
+>
+> 🔶 **Collision flag:** a concurrent agent has a staged HANDOFF named
+> `HANDOFF_2026-06-19_ADR-501_live-reaction-aware-takedown-…` that also claims ADR-501
+> for a different (structural load-takedown) feature. Since this grip ADR is the actual
+> ADR-501 file, the takedown work should renumber to the next free (ADR-502+). Flagged to
+> Giorgio for cross-agent coordination.
 
 ---
 
@@ -98,7 +104,11 @@ colour repaint is a single low-frequency React re-render.
 - `hooks/grip-computation-types.ts` (`DxfGripInteractionState.armedKeys`)
 - `hooks/grips/grip-projections.ts` (`buildGripInteractionState(..., armedKeys)`)
 - `hooks/grips/useUnifiedGripInteraction.ts` (subscribe + Esc clears armed)
-- `hooks/grips/grip-mouse-handlers.ts` (click-vs-drag → arm; click-away clears)
+- `hooks/grips/grip-mouse-handlers.ts` (click-away clears armed in `runGripMouseDown`)
+- `hooks/grips/grip-mouseup-handler.ts` (click-vs-drag → arm; `applyGripArmClick` +
+  `ARM_CLICK_MAX_MOVE_PX`). NOTE: a concurrent refactor by another agent split
+  `runGripMouseUp` out of `grip-mouse-handlers.ts` into this new file and carried the
+  arming logic verbatim — the click-to-arm intercept lives here.
 
 ## 5. Google-level checklist (N.7.2)
 

@@ -40,7 +40,7 @@ import { runGripMouseMove } from './grip-mouse-move-handler';
 import type { DxfCommitDeps, OverlayCommitDeps } from './grip-commit-adapters';
 import { GripBasePointStore } from '../../systems/grip/GripBasePointStore';
 import { GripAltMoveStore } from '../../systems/grip/GripAltMoveStore';
-// ADR-370 — armed-grip SSoT (clicked-to-select grips render orange for multi-grip move).
+// ADR-501 — armed-grip SSoT (clicked-to-select grips render orange for multi-grip move).
 import { GripArmedStore } from '../../systems/grip/GripArmedStore';
 import { GripCopyModeStore } from '../../systems/grip/GripCopyModeStore';
 import { GripReferenceStore } from '../../systems/grip/GripReferenceStore';
@@ -323,7 +323,7 @@ export function useUnifiedGripInteraction(
       resetToIdle();
       handled = true;
     }
-    // ADR-370 — ESC also clears the armed-grip selection (AutoCAD: Esc deselects
+    // ADR-501 — ESC also clears the armed-grip selection (AutoCAD: Esc deselects
     // grips) even when idle, so the orange grips revert to cold.
     if (GripArmedStore.size > 0) {
       GripArmedStore.clear();
@@ -420,7 +420,7 @@ export function useUnifiedGripInteraction(
     // (keystrokes don't change currentWorldPos).
     [phase, activeGrip, currentWorldPos, typedRotate],
   );
-  // ADR-370 — subscribe to the armed-grip set so the canvas repaints (orange grips)
+  // ADR-501 — subscribe to the armed-grip set so the canvas repaints (orange grips)
   // when the user clicks/shift-clicks/marquees grips. Low-frequency (click), not a
   // 60fps drag subscription → ADR-040 compliant.
   const armedKeys = useSyncExternalStore(

@@ -69,11 +69,14 @@ function beamAxisM(b: BeamEntity): BeamAxisM | null {
   return { id: b.id, ax: start.xM, ay: start.yM, ux: dx / len, uy: dy / len, lengthM: len };
 }
 
-/** Slab outline → σημεία σε m (ίδιο canvas→m transform με `beamEndpointsM`). */
+/** Slab outline → σημεία σε m (ίδιο canvas→m transform με `beamEndpointsM`). Κενό όταν
+ *  λείπει το outline (πλάκα χωρίς γεωμετρία → εκτός spatial support detection). */
 function slabOutlineM(slab: SlabEntity): Pt2M[] {
+  const verts = slab.params.outline?.vertices;
+  if (!verts) return [];
   const perScene = mmToSceneUnits(slab.params.sceneUnits ?? 'mm');
   const toM = (canvas: number): number => canvas / perScene / 1000;
-  return slab.params.outline.vertices.map((v) => ({ x: toM(v.x), y: toM(v.y) }));
+  return verts.map((v) => ({ x: toM(v.x), y: toM(v.y) }));
 }
 
 /** Επικάλυψη πλάκας↔δοκού: καλυμμένο μήκος (m) + **κάθετο βάθος** (m) στην μακρινή παρειά. */

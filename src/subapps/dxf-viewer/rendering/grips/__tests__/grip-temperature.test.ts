@@ -132,6 +132,56 @@ describe('resolveGripTemperature — SSoT', () => {
     });
   });
 
+  describe('armed → orange (clicked-to-select, ADR-501)', () => {
+    const armedState = (...keys: string[]): GripTemperatureState => ({
+      armedKeys: new Set(keys),
+    });
+
+    it('armed when the grip key is in armedKeys', () => {
+      expect(resolveGripTemperature(ENTITY, GRIP, armedState(gripKey(ENTITY, GRIP)))).toBe('armed');
+    });
+
+    it('cold when the grip key is NOT in armedKeys', () => {
+      expect(resolveGripTemperature(ENTITY, GRIP, armedState(gripKey(ENTITY, OTHER_GRIP)))).toBe('cold');
+    });
+
+    it('hot wins over armed (the dragged grip turns red even while selected)', () => {
+      const state: GripTemperatureState = {
+        active: ref(ENTITY, GRIP),
+        armedKeys: new Set([gripKey(ENTITY, GRIP)]),
+      };
+      expect(resolveGripTemperature(ENTITY, GRIP, state)).toBe('hot');
+    });
+
+    it('armed wins over hover (a selected grip stays orange under the cursor)', () => {
+      const state: GripTemperatureState = {
+        hovered: ref(ENTITY, GRIP),
+        armedKeys: new Set([gripKey(ENTITY, GRIP)]),
+      };
+      expect(resolveGripTemperature(ENTITY, GRIP, state)).toBe('armed');
+    });
+
+    it('armed wins over snappable (selection orange beats rotation cyan)', () => {
+      const state: GripTemperatureState = {
+        armedKeys: new Set([gripKey(ENTITY, GRIP)]),
+        snappableKeys: new Set([gripKey(ENTITY, GRIP)]),
+      };
+      expect(resolveGripTemperature(ENTITY, GRIP, state)).toBe('armed');
+    });
+
+    it('supports several armed grips at once (multi-select)', () => {
+      const state = armedState(gripKey(ENTITY, GRIP), gripKey(OTHER_ENTITY, OTHER_GRIP));
+      expect(resolveGripTemperature(ENTITY, GRIP, state)).toBe('armed');
+      expect(resolveGripTemperature(OTHER_ENTITY, OTHER_GRIP, state)).toBe('armed');
+      expect(resolveGripTemperature(ENTITY, OTHER_GRIP, state)).toBe('cold');
+    });
+
+    it('empty armedKeys behaves like no armed grips', () => {
+      const state: GripTemperatureState = { armedKeys: new Set(), hovered: ref(ENTITY, GRIP) };
+      expect(resolveGripTemperature(ENTITY, GRIP, state)).toBe('warm');
+    });
+  });
+
   describe('gripKey', () => {
     it('composes a stable entity_index key', () => {
       expect(gripKey('wall-1', 3)).toBe('wall-1_3');
