@@ -224,6 +224,10 @@ export interface BimEventMap {
   // ADR-459 Φ4d — N μέλη οπλίστηκαν (auto-apply command). `count` = πόσα πράγματι
   // οπλίστηκαν (idempotent skip). Trigger organism re-derive + toast.
   'bim:structural-auto-reinforced': { entityIds: string[]; count: number };
+  // ADR-503 Slice 2 — ο μηχανικός όρισε χειροκίνητα υποδιαστασιολογημένη διατομή κολώνας:
+  // το lock μπλοκαρίστηκε (μένει AUTO), το σύστημα κράτησε την ελάχιστη επαρκή. Toast-only
+  // (το command έχει ήδη γράψει την ασφαλή διατομή). `w×d` = τι ζητήθηκε, `minW×minD` = τι κρατήθηκε.
+  'bim:column-section-rejected': { columnId: string; w: number; d: number; minW: number; minD: number };
   // ADR-464 Slice 4 — «Υπολογισμός Φορτίων» request (από ribbon action). Tributary
   // load takedown σε όλα τα εγγράψιμα πέδιλα του ενεργού ορόφου (χωρίς scope επιλογής).
   'bim:compute-loads-requested': Record<string, never>;

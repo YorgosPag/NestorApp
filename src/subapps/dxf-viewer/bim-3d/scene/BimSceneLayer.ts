@@ -54,48 +54,8 @@ import { filterHostedSlabOpenings } from './bim-scene-hosted-opening-filters';
 import { syncPointEntities } from './bim-scene-point-syncs';
 import type { BimCategory } from '../../config/bim-object-styles';
 import type { SceneLayer } from '../../types/entities';
-
-// 🚨 TEMP DIAGNOSTIC (slab two-tone) — override υλικού σώματος πλάκας. ΑΦΑΙΡΕΣΕ μετά.
-// Flat MeshStandard ΧΩΡΙΣ texture, roughness=1, metalness=0, envMapIntensity=0.
-// Uniform ⇒ αιτία = texture/normalMap (realistic). Παραμένει ⇒ shading.
-function overrideSlabBodyMaterialTEMP(root: THREE.Object3D): void {
-  root.traverse((obj) => {
-    const m = obj as THREE.Mesh;
-    if (!(m instanceof THREE.Mesh)) return;
-    m.material = new THREE.MeshBasicMaterial({ color: 0x00ff00, side: THREE.DoubleSide });
-  });
-}
-
-// 🚨 TEMP DIAGNOSTIC (slab two-tone) — ολόκληρη η συνάρτηση ΑΦΑΙΡΕΣΕ μετά.
-// Σκανάρει ΟΛΑ τα meshes· βρίσκει επιφάνειες/τρίγωνα με world-Y≈3.0 (slab top) πάνω από το footprint.
-let __coplanarDumped = false;
-function dumpCoplanarAtSlabTopOnce(group: THREE.Object3D): void {
-  if (__coplanarDumped || typeof document === 'undefined') return;
-  __coplanarDumped = true;
-  group.updateMatrixWorld(true);
-  const lines: string[] = ['=== FULL MESH INVENTORY ==='];
-  const box = new THREE.Box3(); const ctr = new THREE.Vector3(); const sz = new THREE.Vector3();
-  let meshN = 0;
-  group.traverse((obj) => {
-    const m = obj as THREE.Mesh;
-    if (!(m instanceof THREE.Mesh) || !m.geometry?.getAttribute) return;
-    meshN++;
-    box.setFromObject(m);
-    box.getCenter(ctr); box.getSize(sz);
-    const inst = (m as THREE.InstancedMesh).isInstancedMesh ? `INSTANCED(${(m as THREE.InstancedMesh).count})` : '';
-    lines.push(
-      `#${meshN} type=${m.userData['bimType']} id=${String(m.userData['bimId'] ?? '?').slice(0, 20)} matId=${m.userData['matId'] ?? '?'} ${inst}\n` +
-      `   center=(${ctr.x.toFixed(2)},${ctr.y.toFixed(2)},${ctr.z.toFixed(2)}) size=(${sz.x.toFixed(2)},${sz.y.toFixed(2)},${sz.z.toFixed(2)}) visible=${m.visible} parentType=${m.parent?.userData?.['bimType'] ?? m.parent?.type}`,
-    );
-  });
-  lines.push(`(σύνολο ${meshN} meshes)`);
-  const blob = new Blob([lines.join('\n')], { type: 'text/plain' });
-  const url = URL.createObjectURL(blob);
-  const el = document.createElement('a');
-  el.href = url; el.download = 'coplanar-scan.txt';
-  document.body.appendChild(el); el.click(); el.remove();
-  setTimeout(() => URL.revokeObjectURL(url), 1000);
-}
+// 🚨 TEMP DIAGNOSTIC (slab two-tone) — ΑΦΑΙΡΕΣΕ μαζί με bim-scene-slab-diagnostics.ts μετά.
+import { overrideSlabBodyMaterialTEMP, dumpCoplanarAtSlabTopOnce } from './bim-scene-slab-diagnostics';
 
 export interface EntityResolution {
   readonly layer: SceneLayer | null;
@@ -380,7 +340,7 @@ export class BimSceneLayer {
       const mesh = slabToMesh(slab, openingsForSlab, ctx.activeLevelId, r.baseElevation, ctx.floorElevationMm);
       if (mesh) {
         mesh.userData['buildingId'] = r.buildingId;
-        overrideSlabBodyMaterialTEMP(mesh); // 🚨 TEMP DIAGNOSTIC (slab two-tone) — ΑΦΑΙΡΕΣΕ μετά.
+        overrideSlabBodyMaterialTEMP(mesh, slab.params); // 🚨 TEMP DIAGNOSTIC (slab two-tone) — ΑΦΑΙΡΕΣΕ μετά.
         this.group.add(mesh);
       }
     }

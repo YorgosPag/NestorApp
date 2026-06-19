@@ -22,6 +22,10 @@ import { UpdateColumnParamsCommand } from '../../../../core/commands/entity-comm
 import { detachSidesAffectedByVerticalEdit } from '../../../../bim/entities/entity-attach-detach';
 import { findBeamsFramingColumn } from '../../../../bim/columns/column-structural-attach-coordinator';
 import { alignColumnOnTypeChange } from '../../../../bim/columns/column-beam-align';
+import { resolveColumnSectionLock } from '../../../../bim/structural/sizing/column-size-patch';
+import { resolveActiveColumnDesignMoment } from '../../../../bim/structural/active-reinforcement';
+import { resolveStructuralCode } from '../../../../bim/structural/codes';
+import { useStructuralSettingsStore } from '../../../../state/structural-settings-store';
 import { LevelSceneManagerAdapter } from '../../../../systems/entity-creation/LevelSceneManagerAdapter';
 import { EventBus } from '../../../../systems/events/EventBus';
 import type { useLevels } from '../../../../systems/levels';
@@ -70,10 +74,19 @@ export function useColumnParamsDispatcher(
       // explicit numeric value wins over the host follow. Detach + edit collapse
       // into one undo step.
       const next = detachSidesAffectedByVerticalEdit(column.params, fittedParams);
+      // ADR-503 Slice 2 — safety-gated lock: χειροκίνητη διατομή ≥ επαρκές → lock (autoSized:false)·
+      // < επαρκές → ΜΠΛΟΚ (μένει AUTO, σύστημα κρατά την ελάχιστη επαρκή + toast). ΕΝΑ SSoT.
+      const provider = resolveStructuralCode(useStructuralSettingsStore.getState().codeId);
+      const lock = resolveColumnSectionLock(provider, column.params, next, resolveActiveColumnDesignMoment(column.id));
       executeCommand(
-        new UpdateColumnParamsCommand(column.id, next, column.params, sm, false),
+        new UpdateColumnParamsCommand(column.id, lock.params, column.params, sm, false),
       );
       EventBus.emit('bim:column-params-updated', { columnId: column.id });
+      if (lock.rejected) {
+        EventBus.emit('bim:column-section-rejected', {
+          columnId: column.id, w: next.width, d: next.depth, minW: lock.minWidthMm, minD: lock.minDepthMm,
+        });
+      }
     },
     [executeCommand, levelManager],
   );

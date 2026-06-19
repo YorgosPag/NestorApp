@@ -6,6 +6,7 @@
 import { EUROCODE_PROVIDER } from '../../codes/eurocode-provider';
 import {
   suggestColumnSection,
+  isColumnSectionAdequate,
   MAX_PRACTICAL_COLUMN_DIMENSION_MM,
 } from '../column-sizing';
 import type { ColumnParams } from '../../../types/column-types';
@@ -102,5 +103,38 @@ describe('suggestColumnSection — ADR-503 two-way + ν-floor (EC8)', () => {
     )!;
     expect(second.widthMm).toBe(first.widthMm);
     expect(second.depthMm).toBe(first.depthMm);
+  });
+});
+
+describe('isColumnSectionAdequate — ADR-503 Slice 2 (safety-gated lock)', () => {
+  const LIVE_LOAD = { deadAxialKn: 430.09, liveAxialKn: 105.65, source: 'takedown' as const };
+
+  it('χειροκίνητη 200×200 (κάτω από EC8 MIN 250) → ΑΝΕΠΑΡΚΗΣ, min=ελάχιστο επαρκές', () => {
+    const r = isColumnSectionAdequate(EUROCODE_PROVIDER, makeParams({ width: 200, depth: 200, appliedLoad: LIVE_LOAD }));
+    expect(r.adequate).toBe(false);
+    expect(r.minWidthMm).toBe(300);
+    expect(r.minDepthMm).toBe(300);
+  });
+
+  it('χειροκίνητη 250×250 με φορτίο → ΑΝΕΠΑΡΚΗΣ (ν≈0.71 > 0.65, EC8)', () => {
+    const r = isColumnSectionAdequate(EUROCODE_PROVIDER, makeParams({ width: 250, depth: 250, appliedLoad: LIVE_LOAD }));
+    expect(r.adequate).toBe(false);
+    expect(r.minWidthMm).toBe(300);
+  });
+
+  it('χειροκίνητη 300×300 (το ελάχιστο επαρκές) → ΕΠΑΡΚΗΣ (ν≈0.49 ✓)', () => {
+    const r = isColumnSectionAdequate(EUROCODE_PROVIDER, makeParams({ width: 300, depth: 300, appliedLoad: LIVE_LOAD }));
+    expect(r.adequate).toBe(true);
+  });
+
+  it('χειροκίνητη 500×500 (υπερδιαστασιολογημένη) → ΕΠΑΡΚΗΣ (lock OK· min=300 για διάγνωση)', () => {
+    const r = isColumnSectionAdequate(EUROCODE_PROVIDER, makeParams({ width: 500, depth: 500, appliedLoad: LIVE_LOAD }));
+    expect(r.adequate).toBe(true);
+    expect(r.minWidthMm).toBe(300);
+  });
+
+  it('μη-ορθογώνια (circular) → adequate:true (no-op· shape-grow DEFER)', () => {
+    const r = isColumnSectionAdequate(EUROCODE_PROVIDER, makeParams({ kind: 'circular', width: 200, depth: 200 }));
+    expect(r.adequate).toBe(true);
   });
 });

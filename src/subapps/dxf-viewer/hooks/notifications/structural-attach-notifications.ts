@@ -72,6 +72,15 @@ export function registerStructuralAttachNotifications(t: TFunction): Array<() =>
       toast.info(t('structuralOrganism.autoReinforced', { count }));
     }),
 
+    // ADR-503 Slice 2 — η χειροκίνητη διατομή κολώνας ήταν υποδιαστασιολογημένη: το lock
+    // μπλοκαρίστηκε, το σύστημα κράτησε την ελάχιστη επαρκή. Stable `id` ⇒ ένα toast κατά το
+    // συνεχές section-grip drag (μηδέν storm), όχι ένα ανά frame.
+    EventBus.on('bim:column-section-rejected', ({ w, d, minW, minD }) => {
+      toast.warning(t('structuralOrganism.columnSectionRejected', { w, d, minW, minD }), {
+        id: 'column-section-rejected',
+      });
+    }),
+
     // ADR-464 Slice 4 — «Υπολογισμός Φορτίων»: N πέδιλα έλαβαν tributary φορτίο.
     // count=0 → καμία πηγή (χωρίς κολώνες σε πέδιλα / ορόφους) → οδηγία διάγνωσης.
     EventBus.on('bim:structural-loads-computed', ({ count }) => {

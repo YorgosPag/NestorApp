@@ -77,21 +77,23 @@ function roundUpToModule(value: number, module: number): number {
 }
 
 /**
- * Είναι ΕΠΑΡΚΗΣ μια **τετράγωνη** trial διατομή `s×s`; Ελέγχει ΤΑΥΤΟΧΡΟΝΑ:
+ * Είναι ΕΠΑΡΚΗΣ μια **ορθογώνια** trial διατομή `w×d`; Ελέγχει ΤΑΥΤΟΧΡΟΝΑ τις δύο **πύλες
+ * αντοχής** (ΟΧΙ τη γεωμετρική λυγηρότητα/MIN — αυτές ζουν στον caller ως floor):
  *   (α) **ανηγμένο αξονικό** `ν = N_Ed/(A_c·f_cd) ≤ MAX_AXIAL_LOAD_RATIO` (EC8, η πύλη που
  *       κάνει το shrink ασφαλές — ίδιο `f_cd` SSoT με το `asStrengthColumnMm2`)·
  *   (β) **χωράει ο διαμήκης οπλισμός** `As,req ≤ ρ_max·A_c`.
- * Ξαναχτίζει το context για την trial **τετράγωνη** διατομή `s×s` (ΟΧΙ `max(orig,s)` —
- * two-way: η αναζήτηση ξεκινά από το κάτω φράγμα κι ανεβαίνει στο **ελάχιστο επαρκές**,
- * ώστε μια υπερδιαστασιολογημένη κολώνα να μπορεί να μικρύνει).
+ * Ξαναχτίζει το context για την trial διατομή `w×d`. Δέχεται **μη-τετράγωνη** ώστε ο ίδιος
+ * έλεγχος αντοχής να εξυπηρετεί ΚΑΙ την αναζήτηση `s×s` (ADR-503 two-way) ΚΑΙ τον έλεγχο
+ * επάρκειας χειροκίνητης διατομής (`isColumnSectionAdequate`, Slice 2 lock-gate).
  */
-function columnSectionFits(
+function rectangularSectionFits(
   provider: StructuralCodeProvider,
   baseParams: ColumnParams,
   femMomentKnm: number | undefined,
-  sMm: number,
+  wMm: number,
+  dMm: number,
 ): boolean {
-  const ctx = buildColumnSectionContextFromParams({ ...baseParams, width: sMm, depth: sMm }, femMomentKnm);
+  const ctx = buildColumnSectionContextFromParams({ ...baseParams, width: wMm, depth: dMm }, femMomentKnm);
   // (α) όριο ανηγμένου αξονικού (EC8) — N_Ed σε N· f_cd·A_c = αντοχή θλίψης σκυροδέματος.
   const fcd = concreteFcdMpa(ctx.concreteGrade ?? DEFAULT_CONCRETE_GRADE);
   const nEdN = Math.max(0, ctx.designAxialKn ?? 0) * 1000;
@@ -100,6 +102,26 @@ function columnSectionFits(
   const maxRatio = provider.columnReinforcementLimits(ctx, COLUMN_FIT_PROBE_DIAMETER_MM).maxRatio;
   if (maxRatio <= 0) return true;
   return asStrengthColumnMm2(ctx) <= maxRatio * ctx.grossAreaMm2;
+}
+
+/**
+ * Είναι ΕΠΑΡΚΗΣ μια **τετράγωνη** trial διατομή `s×s`; Thin wrapper του
+ * `rectangularSectionFits(s, s)` — two-way: η αναζήτηση ξεκινά από το κάτω φράγμα κι
+ * ανεβαίνει στο **ελάχιστο επαρκές**, ώστε μια υπερδιαστασιολογημένη κολώνα να μικραίνει.
+ */
+function columnSectionFits(
+  provider: StructuralCodeProvider,
+  baseParams: ColumnParams,
+  femMomentKnm: number | undefined,
+  sMm: number,
+): boolean {
+  return rectangularSectionFits(provider, baseParams, femMomentKnm, sMm, sMm);
+}
+
+/** Γεωμετρικό κάτω φράγμα διάστασης κολώνας (mm): λυγηρότητα EC2 `height/λ_max` ∨ EC8 MIN. */
+function columnDimensionFloorMm(heightMm: number): number {
+  const slenderMinMm = MAX_SLENDERNESS_RATIO > 0 ? heightMm / MAX_SLENDERNESS_RATIO : 0;
+  return roundUpToModule(Math.max(slenderMinMm, MIN_COLUMN_DIMENSION_MM), COLUMN_DIMENSION_MODULE_MM);
 }
 
 /**
@@ -125,7 +147,7 @@ export function suggestColumnSection(
   if (params.kind !== 'rectangular') return undefined;
 
   const slenderMinMm = MAX_SLENDERNESS_RATIO > 0 ? params.height / MAX_SLENDERNESS_RATIO : 0;
-  const floorMm = roundUpToModule(Math.max(slenderMinMm, MIN_COLUMN_DIMENSION_MM), COLUMN_DIMENSION_MODULE_MM);
+  const floorMm = columnDimensionFloorMm(params.height);
 
   let s = floorMm;
   let grewForStrength = false;
@@ -160,4 +182,42 @@ export function isColumnInfeasibleAtMaxSection(
 ): boolean {
   if (params.kind !== 'rectangular') return false;
   return !columnSectionFits(provider, params, femMomentKnm, MAX_PRACTICAL_COLUMN_DIMENSION_MM);
+}
+
+/** Αποτέλεσμα ελέγχου επάρκειας **χειροκίνητης** διατομής κολώνας (ADR-503 Slice 2). */
+export interface ColumnSectionAdequacy {
+  /** Περνά ΚΑΙ τις πύλες αντοχής (ν + οπλισμός) ΚΑΙ το γεωμετρικό floor (λυγηρότητα/MIN); */
+  readonly adequate: boolean;
+  /** Η ελάχιστη επαρκής διάσταση (το «ασφαλές» που κρατά το σύστημα αν `!adequate`). */
+  readonly minWidthMm: number;
+  readonly minDepthMm: number;
+}
+
+/**
+ * ADR-503 Slice 2 — είναι ΕΠΑΡΚΗΣ η **χειροκίνητη** διατομή που όρισε ο μηχανικός; (safety-gated
+ * lock). Ελέγχει την **πραγματική** `params.width×params.depth` (ΟΧΙ τετράγωνο trial) ώστε:
+ *   - `adequate` ⇔ περνά τις δύο πύλες αντοχής (`rectangularSectionFits`: ν≤0.65 EC8 + οπλισμός)
+ *     **ΚΑΙ** `min(width,depth) ≥ columnDimensionFloorMm` (λυγηρότητα EC2 + MIN EC8). Τότε ο
+ *     caller κλειδώνει (`autoSized:false` — user wins, Revit).
+ *   - `!adequate` (υποδιαστασιολόγηση) ⇒ ο caller **ΜΠΛΟΚΑΡΕΙ** το lock: κρατά AUTO + την
+ *     ελάχιστη επαρκή `minWidthMm×minDepthMm`. Invariant: καμία persisted κολώνα κάτω από το επαρκές.
+ *
+ * Τα `min*` προέρχονται από το `suggestColumnSection` (ΕΝΑ call → ο caller έχει και το μήνυμα).
+ * Μη-ορθογώνια / μη-εφαρμόσιμο sizing → `adequate:true` (no-op: ο gate δεν αφορά shape-grow DEFER).
+ */
+export function isColumnSectionAdequate(
+  provider: StructuralCodeProvider,
+  params: ColumnParams,
+  femMomentKnm?: number,
+): ColumnSectionAdequacy {
+  const suggested = suggestColumnSection(provider, params, femMomentKnm);
+  if (!suggested) return { adequate: true, minWidthMm: params.width, minDepthMm: params.depth };
+  const floorMm = columnDimensionFloorMm(params.height);
+  const meetsFloor = Math.min(params.width, params.depth) >= floorMm;
+  const meetsStrength = rectangularSectionFits(provider, params, femMomentKnm, params.width, params.depth);
+  return {
+    adequate: meetsFloor && meetsStrength,
+    minWidthMm: suggested.widthMm,
+    minDepthMm: suggested.depthMm,
+  };
 }

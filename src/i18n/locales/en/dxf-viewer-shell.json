@@ -49,6 +49,7 @@
       "sectionInfeasibleAtMaxSize": "{memberKind, select, slab {Cantilever slab L={span}m: infeasible even at the maximum practical thickness {maxThickness}mm — the moment exceeds the concrete capacity. Design change required (e.g. support the free edge or reduce the cantilever).} column {Column: infeasible even at the maximum practical section {maxSize}×{maxSize}mm — the required reinforcement exceeds the maximum ratio. Design change required (reduce load or span).} beam {Beam width {width}mm: torsion T_Ed={tEd} kNm > capacity T_Rd,max={tRd} kNm even at the maximum practical depth {maxDepth}mm — infeasible. Design change required (e.g. support the free cantilever edge).} other {Section infeasible at the maximum practical size — design change required.}}"
     },
     "autoReinforced": "{count, plural, =0 {No member needed reinforcement} one {Reinforced # member} other {Reinforced # members}}",
+    "columnSectionRejected": "Section {w}×{d}mm is inadequate (under-sized) — kept the minimum adequate {minW}×{minD}mm. The column stays auto-sized until you set a safe section.",
     "footingAttached": "{count, plural, =0 {No column attached} one {Attached # column to the footing} other {Attached # columns to the footing}}",
     "footingDetached": "{count, plural, =0 {No column detached} one {Detached # column from the footing} other {Detached # columns from the footing}}",
     "loadsComputed": "{count, plural, one {# member received an automatic load} other {# members received automatic loads}}",
