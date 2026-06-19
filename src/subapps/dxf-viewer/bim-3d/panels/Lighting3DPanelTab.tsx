@@ -18,7 +18,7 @@ export function Lighting3DPanelTab() {
     useViewMode3DStore.getState,
   );
 
-  const { hdriPresetId, isLoading, loadError, customHdriUrl } = useSyncExternalStore(
+  const { hdriPresetId, isLoading, loadError, customHdriUrl, backgroundMode } = useSyncExternalStore(
     useEnvironmentStore.subscribe,
     useEnvironmentStore.getState,
     useEnvironmentStore.getState,
@@ -61,6 +61,20 @@ export function Lighting3DPanelTab() {
           id="bim3d-auto-preview"
           checked={autoPreviewEnabled}
           onCheckedChange={(v) => useViewMode3DStore.getState().setAutoPreviewEnabled(v)}
+          className="scale-90 origin-right data-[state=checked]:bg-[hsl(var(--text-success))]"
+        />
+      </div>
+
+      {/* ADR-446 §2 — «σαν 2Δ» dark background: black bg + bright per-category edge lines. */}
+      <div className="flex items-center justify-between rounded border border-white/10 px-2 py-1.5">
+        <label htmlFor="bim3d-dark-bg" className="flex cursor-pointer select-none flex-col">
+          <span>{t('lighting.darkBackground.label')}</span>
+          <span className="text-[10px] text-white/40">{t('lighting.darkBackground.hint')}</span>
+        </label>
+        <Switch
+          id="bim3d-dark-bg"
+          checked={backgroundMode === 'dark'}
+          onCheckedChange={(v) => useEnvironmentStore.getState().setBackgroundMode(v ? 'dark' : 'environment')}
           className="scale-90 origin-right data-[state=checked]:bg-[hsl(var(--text-success))]"
         />
       </div>

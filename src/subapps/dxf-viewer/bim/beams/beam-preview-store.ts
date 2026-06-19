@@ -28,6 +28,15 @@ export interface BeamPreviewState {
   readonly kind: BeamKind;
   readonly overrides: BeamParamOverrides;
   /**
+   * ADR-398 §Smart beam ghost (2026-06-20) — `true` όταν το `startPoint` κλειδώθηκε
+   * από **face-snap** σε κολόνα (το ghost-before-click κούμπωσε σε παρειά). Τότε το
+   * `startPoint` είναι ΗΔΗ το τελικό centerline → το awaitingEnd preview/commit
+   * χρησιμοποιεί `buildDefaultBeamParams` (centerline mode), ΟΧΙ το location-line
+   * auto-flush (`buildAnchoredBeamParams`) που θα ξανα-μετατόπιζε το start ±width/2.
+   * `false` (default) → υπάρχουσα location-line συμπεριφορά (ADR-363 §5.7).
+   */
+  readonly startAnchored: boolean;
+  /**
    * ADR-458 (2026-06-17) — column footprints (2Δ) της σκηνής, ώστε το WYSIWYG
    * preview να εφαρμόζει το ΙΔΙΟ beam-to-column cutback (frame-into) με το committed
    * δοκάρι. Γράφεται από το `useBeamTool` (`setColumns`, on activate)· διατηρείται
@@ -41,6 +50,7 @@ const EMPTY: BeamPreviewState = Object.freeze({
   endPoint: null,
   kind: 'straight' as BeamKind,
   overrides: Object.freeze({}) as BeamParamOverrides,
+  startAnchored: false,
   columnFootprints: Object.freeze([]) as readonly (readonly Point2D[])[],
 });
 
@@ -81,11 +91,13 @@ export const beamPreviewStore = {
    * `columnFootprints` ΔΕΝ περνά εδώ (αλλάζει σπάνια) — διατηρείται από το
    * `currentState` (set via `setColumns`).
    */
-  set(next: Omit<BeamPreviewState, 'columnFootprints'>): void {
+  set(next: Omit<BeamPreviewState, 'columnFootprints' | 'startAnchored'> & { startAnchored?: boolean }): void {
+    const nextAnchored = next.startAnchored ?? false;
     if (
       pointsEqual(currentState.startPoint, next.startPoint) &&
       pointsEqual(currentState.endPoint, next.endPoint) &&
       currentState.kind === next.kind &&
+      currentState.startAnchored === nextAnchored &&
       overridesEqual(currentState.overrides, next.overrides)
     ) {
       return;
@@ -95,6 +107,7 @@ export const beamPreviewStore = {
       endPoint: next.endPoint ? { x: next.endPoint.x, y: next.endPoint.y } : null,
       kind: next.kind,
       overrides: { ...next.overrides },
+      startAnchored: nextAnchored,
       columnFootprints: currentState.columnFootprints,
     };
     for (const l of listeners) l();

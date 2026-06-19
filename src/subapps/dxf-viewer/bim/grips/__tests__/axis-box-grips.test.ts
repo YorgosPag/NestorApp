@@ -84,6 +84,23 @@ describe('getAxisBoxGrips', () => {
   it('returns no grips on a degenerate (zero-length) axis', () => {
     expect(getAxisBoxGrips({ start: { x: 5, y: 5 }, end: { x: 5, y: 5 }, width: 20 })).toEqual([]);
   });
+
+  it('emits 9 grips with extraMidEdges (the 2 OPPOSITE mid-edges, appended last)', () => {
+    const grips = getAxisBoxGrips(horizontalBox(), { extraMidEdges: true });
+    expect(grips).toHaveLength(9);
+    expect(grips.slice(7).map((g) => g.role)).toEqual(['width-edge-far', 'length-edge-start']);
+    const byRole = Object.fromEntries(grips.map((g) => [g.role, g.position]));
+    expect(byRole['width-edge-far']).toEqual({ x: 50, y: -10 }); // −perp face midpoint (opposite of width-edge)
+    expect(byRole['length-edge-start']).toEqual({ x: 0, y: 0 }); // START short edge (opposite of length-edge)
+  });
+
+  it('extra width-edge-far honours widthFaceSign (flip → opposite face flips too)', () => {
+    const byRole = Object.fromEntries(
+      getAxisBoxGrips({ ...horizontalBox(), widthFaceSign: -1 }, { extraMidEdges: true }).map((g) => [g.role, g.position]),
+    );
+    expect(byRole['width-edge']).toEqual({ x: 50, y: -10 }); // flipped to −perp
+    expect(byRole['width-edge-far']).toEqual({ x: 50, y: 10 }); // far face is now +perp
+  });
 });
 
 describe('applyAxisBoxGripDrag', () => {
@@ -156,6 +173,31 @@ describe('applyAxisBoxGripDrag', () => {
     expect(patch!.start.y).toBeCloseTo(-50);
     expect(patch!.end.x).toBeCloseTo(50);
     expect(patch!.end.y).toBeCloseTo(50);
+    expect(patch!.width).toBeCloseTo(20);
+  });
+
+  it('width-edge-far grows width on the −perp face, +perp face fixed', () => {
+    const patch = applyAxisBoxGripDrag('width-edge-far', {
+      originalParams: horizontalBox(),
+      delta: { x: 0, y: -5 },
+      minWidthMm: MIN_W,
+    });
+    expect(patch).not.toBeNull();
+    // −perp face moves −5, +perp face holds → width 20→25, centre −2.5.
+    expect(patch!.width).toBeCloseTo(25);
+    expect(patch!.start.y).toBeCloseTo(-2.5);
+    expect(patch!.end.y).toBeCloseTo(-2.5);
+  });
+
+  it('length-edge-start moves the START short edge, END fixed', () => {
+    const patch = applyAxisBoxGripDrag('length-edge-start', {
+      originalParams: horizontalBox(),
+      delta: { x: -40, y: 0 },
+      minWidthMm: MIN_W,
+    });
+    expect(patch).not.toBeNull();
+    expect(patch!.start.x).toBeCloseTo(-40); // start −40
+    expect(patch!.end).toEqual({ x: 100, y: 0 }); // end held
     expect(patch!.width).toBeCloseTo(20);
   });
 

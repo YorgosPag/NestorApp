@@ -488,3 +488,23 @@ faces), and the cut elevation is unified to a single FFL-relative frame across 2
   (b) **Toggle = cube faces:** the active state rests at `opacity-60` and lifts to `opacity-100` on hover
   (the cube faces go 0.5 → 1.0); `transition-all` animates it. Files: `globals.css` (hover rules under the
   scoped utility), `CutPlaneSliderControl.tsx` (class + button opacity). Shared `Slider` untouched.
+- **2026-06-20** — v2.21 — **«Όλοι οι όροφοι»: ο cut-plane slider ακούει ολόκληρο το occupied envelope
+  (incl. θεμελίωση)** (Giorgio: σε «Όλοι οι όροφοι» 3Δ, το slider της οριζόντιας τομής να καλύπτει ΟΛΟΥΣ
+  τους ορόφους με DXF/BIM οντότητες — χαμηλότερο γεμάτο → υψηλότερο γεμάτο· ενδιάμεσοι κενοί μέσα, εξωτερικοί
+  έξω). **Ρίζα Α (scope):** range (`computeCutPlaneRange`=`0…storeyHeight`) + world-Y (`resolveCutPlaneWorldY`
+  =`activeFloorElevationMm+cutPlaneMm`) ήταν **κλειδωμένα στον ΕΝΕΡΓΟ όροφο** (Revit per-level View Range) →
+  σε all-floors το slider «άκουγε» μόνο 1 όροφο. **Ρίζα Β (foundation, Giorgio follow-up «δεν αντιλαμβάνεται
+  τη θεμελίωση»):** πρώτη εκδοχή χρησιμοποίησε floor FFL band `[floorElevationMm, ceiling]` — αλλά τα πέδιλα
+  έχουν `topElevationMm` **αρνητικό** και κρέμονται ΚΑΤΩ από το FFL → εκτός band. **Λύση (scope-aware, FULL
+  SSoT, entity-envelope):** (1) NEW pure `multi-floor-cut-range.ts` (`computeMultiFloorCutRange`) — ένωση των
+  πραγματικών material envelopes `[minMm,maxMm]` (datum-relative) όλων των γεμάτων ορόφων → συνεχές band.
+  (2) `useCutPlaneRange` scope-aware: `is3D && floor3DScope==='all'` → διαβάζει τα ΥΠΑΡΧΟΝΤΑ stacks
+  (`multi-floor-3d-source` BIM + `multi-floor-dxf-source` DXF· μηδέν νέα aggregation)· per-entity Z κάνει
+  **reuse το render-path SSoT `getEntityZExtents`** (το `DxfEntityUnion` περιλαμβάνει τα raw BIM entities →
+  μηδέν διπλό Z-math) lifted στο datum frame με `+ floorElevationMm`· storey band `[ffl,ceiling]` ως seed
+  (DXF-only floors + null-extent entities). (3) `resolveCutPlaneWorldY` σε all-floors ΔΕΝ προσθέτει το
+  active-FFL offset (το `cutPlaneMm` ήδη datum-relative). Το 2Δ path (`isHiddenByCutPlane`, FFL-relative)
+  αμετάβλητο. **ΜΑΘΗΜΑ:** το vertical envelope ΔΕΝ ταυτίζεται με το storey FFL band — πέδιλα/foundations
+  κρέμονται κάτω· χρησιμοποίησε πραγματικά entity Z-extents. 6 νέα jest (Giorgio 1ος+3ος→1-3, FOUNDATION
+  below-datum, degenerate), 44 cut/axis-cut GREEN. Files: NEW `multi-floor-cut-range.ts` + test, MOD
+  `useCutPlaneRange.ts` + `cut-plane-3d.ts`. UNCOMMITTED — 🔴 browser-verify + commit (tsc=Giorgio).

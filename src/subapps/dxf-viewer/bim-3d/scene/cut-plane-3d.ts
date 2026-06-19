@@ -12,6 +12,7 @@ import type * as THREE from 'three';
 import { useBimRenderSettingsStore } from '../../state/bim-render-settings-store';
 import { useActiveStoreyStore } from '../../systems/levels/active-storey-store';
 import { useBim3DEntitiesStore } from '../stores/Bim3DEntitiesStore';
+import { useViewMode3DStore } from '../stores/ViewMode3DStore';
 import { computeCutPlaneWorldY, buildCutPlane, buildAxisCutPlane, type CutAxis } from './cut-plane-3d-math';
 
 export { computeCutPlaneWorldY, buildCutPlane, buildAxisCutPlane, MM_TO_M, type CutAxis } from './cut-plane-3d-math';
@@ -56,7 +57,15 @@ const CUT_PLANE_KEEP_EPSILON_M = 0.001;
 export function resolveCutPlaneWorldY(): number | null {
   const rs = useBimRenderSettingsStore.getState();
   if (!rs.cutPlaneActive) return null;
-  const floorElevationMm = useActiveStoreyStore.getState().context?.floorElevationMm ?? 0;
+  // «Όλοι οι όροφοι» (ADR-399): the slider value is already datum-relative building
+  // mm (it spans the whole occupied stack — see `multi-floor-cut-range`), so the
+  // active-storey FFL offset must NOT be added; the value lives in the same datum
+  // frame as `computeCutPlaneWorldY`'s `floorElevationMm` input. Single-floor scope
+  // keeps the FFL-relative behaviour (Revit per-level View Range).
+  const allFloors = useViewMode3DStore.getState().floor3DScope === 'all';
+  const floorElevationMm = allFloors
+    ? 0
+    : useActiveStoreyStore.getState().context?.floorElevationMm ?? 0;
   return computeCutPlaneWorldY(
     floorElevationMm,
     rs.viewRange.cutPlaneMm,

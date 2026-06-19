@@ -1,10 +1,15 @@
 import * as THREE from 'three';
 import { RGBELoader } from 'three/addons/loaders/RGBELoader.js';
 import type { LightPreset } from './lighting-presets';
+import type { BackgroundMode } from '../stores/EnvironmentStore';
 
 const ENV_WIDTH = 512;
 const ENV_HEIGHT = 256;
 const BLEND_ZONE = 0.2;
+
+/** ADR-446 §2 — flat dark background for the «σαν 2Δ» view (matches the 2D canvas
+ * `#1a1a1a` AND the renderer `setClearColor`). */
+const DARK_BG_COLOR = 0x1a1a1a;
 
 export class EnvmapGenerator {
   private readonly renderer: THREE.WebGLRenderer;
@@ -13,6 +18,10 @@ export class EnvmapGenerator {
   private currentEnvmap: THREE.Texture | null = null;
   private currentBackground: THREE.Texture | null = null;
   private hdriActive = false;
+  /** Last env-derived sky colour (gradient fallback) — restored when leaving dark mode. */
+  private currentSkyColor = new THREE.Color(0x87ceeb);
+  /** ADR-446 §2 — visible-background mode. `scene.background` is resolved from this. */
+  private backgroundMode: BackgroundMode = 'environment';
 
   constructor(renderer: THREE.WebGLRenderer, scene: THREE.Scene) {
     this.renderer = renderer;
@@ -25,13 +34,36 @@ export class EnvmapGenerator {
     this.applyGradientFallback(preset);
   }
 
+  /**
+   * ADR-446 §2 — switch the VISIBLE background between the lighting environment and
+   * a flat dark colour, WITHOUT touching `scene.environment` (so PBR faces keep
+   * their IBL lighting/reflections in either mode). Sole writer of `scene.background`
+   * alongside the section-stencil save/restore.
+   */
+  setBackgroundMode(mode: BackgroundMode): void {
+    this.backgroundMode = mode;
+    this.applyBackground();
+  }
+
+  /** Resolve `scene.background` from the current mode + last env-derived source. */
+  private applyBackground(): void {
+    if (this.backgroundMode === 'dark') {
+      this.scene.background = new THREE.Color(DARK_BG_COLOR);
+      return;
+    }
+    this.scene.background = this.hdriActive && this.currentBackground
+      ? this.currentBackground
+      : new THREE.Color(this.currentSkyColor);
+  }
+
   applyGradientFallback(preset: LightPreset): void {
     if (this.hdriActive) return;
     const envMap = this.buildGradientEnvmap(preset);
     const prev = this.currentEnvmap;
     this.currentEnvmap = envMap;
     this.scene.environment = this.currentEnvmap;
-    this.scene.background = new THREE.Color(preset.skyColor);
+    this.currentSkyColor.set(preset.skyColor);
+    this.applyBackground();
     prev?.dispose();
   }
 
@@ -52,7 +84,7 @@ export class EnvmapGenerator {
           this.hdriActive = true;
 
           this.scene.environment = this.currentEnvmap;
-          this.scene.background = this.currentBackground;
+          this.applyBackground();
 
           prevEnv?.dispose();
           prevBg?.dispose();

@@ -27,6 +27,8 @@ import type { WaypointDragHandleRenderer } from '../animation/WaypointDragHandle
 export interface SceneManagerDisposeDeps {
   readonly renderer: THREE.WebGLRenderer;
   readonly envStoreUnsub: () => void;
+  /** ADR-446 §2 — visible-background mode subscription teardown. */
+  readonly bgModeUnsub: () => void;
   readonly focusUnsub: () => void;
   readonly sectionController: SectionSceneController;
   readonly waypointDragHandleRenderer: WaypointDragHandleRenderer;
@@ -49,6 +51,7 @@ export interface SceneManagerDisposeDeps {
 
 export function disposeSceneManagerResources(deps: SceneManagerDisposeDeps): void {
   deps.envStoreUnsub();
+  deps.bgModeUnsub();
   deps.sectionController.dispose();
   deps.waypointDragHandleRenderer.dispose();
   const dom = deps.renderer.domElement;

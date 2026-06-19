@@ -50,18 +50,16 @@ import {
   getAxisBoxGrips,
   applyAxisBoxGripDrag,
   invertAxisBoxRoleMap,
-  // Column-parity mid-edge extras (Giorgio 2026-06-20): the 2 beam-only faces reuse
-  // the SAME axis-box edge SSoT as width-edge/length-edge — zero-duplication geometry
-  // + opposite-element-fixed drag (no re-derived frame/limits/resize in this module).
-  applyAxisBoxEdgeDrag,
-  axisBoxEdgeMidpoint,
   type AxisBoxParams,
   type AxisBoxGripRole,
   type AxisBoxPatch,
 } from '../grips/axis-box-grips';
-import type { RectEdge } from '../grips/rect-frame';
 
-/** Map a shared axis-box grip ROLE → the beam discriminator kind (stable order). */
+/**
+ * Map a shared axis-box grip ROLE → the beam discriminator kind (stable order). Now
+ * includes the 2 opt-in column-parity mid-edges (`width-edge-far`/`length-edge-start`)
+ * → their emission AND drag go through the shared axis-box SSoT (no beam-only helper).
+ */
 const BEAM_ROLE_TO_KIND: Readonly<Record<AxisBoxGripRole, BeamGripKind>> = {
   'width-edge': 'beam-width',
   'length-edge': 'beam-edge-length',
@@ -69,6 +67,8 @@ const BEAM_ROLE_TO_KIND: Readonly<Record<AxisBoxGripRole, BeamGripKind>> = {
   'corner-start-neg': 'beam-corner-start-neg',
   'corner-end-pos': 'beam-corner-end-pos',
   'corner-end-neg': 'beam-corner-end-neg',
+  'width-edge-far': 'beam-width-far',
+  'length-edge-start': 'beam-edge-length-start',
   rotation: 'beam-rotation',
 };
 
@@ -165,7 +165,10 @@ export function getBeamGrips(entity: Readonly<BeamEntity>): GripInfo[] {
   // μένει για τον read-only depth indicator του renderer).
   if (kind !== 'curved') {
     const axisParams = beamAxisBoxParams(params);
-    const grips: GripInfo[] = getAxisBoxGrips(axisParams).map((g, i) => ({
+    // 7 standard + 2 opt-in column-parity mid-edges (ALL 4 faces carry a midpoint
+    // handle) via the shared axis-box SSoT — ίδιος κώδικας με τοίχο/πεδιλοδοκό, μηδέν
+    // διπλότυπο (η sign-logic των αντίθετων παρειών ζει στο axis-box, όχι εδώ).
+    const grips: GripInfo[] = getAxisBoxGrips(axisParams, { extraMidEdges: true }).map((g, i) => ({
       entityId: entity.id,
       gripIndex: i,
       type: g.type,
@@ -174,26 +177,11 @@ export function getBeamGrips(entity: Readonly<BeamEntity>): GripInfo[] {
       beamGripKind: BEAM_ROLE_TO_KIND[g.role],
     }));
 
-    // ── Column-parity completion (Giorgio 2026-06-20) ────────────────────────
-    // (1) The 2 OPPOSITE mid-edge grips so ALL 4 faces carry a midpoint handle
-    //     (mirror της κολόνας 4 μεσοπλευρικών). The shared axis-box SSoT emits only
-    //     the +perp width face + the END short edge; walls/foundations stay at 2 —
-    //     these extras are beam-only, built from the SAME rect SSoT (`rectEdgeWorld`).
-    // (2) The centre 4-arrow MOVE glyph (`beam-midpoint`): identical behaviour to the
-    //     column (shared move-glyph render / per-arm hover-zone / click→dialog SSoT
-    //     activates the moment the grip is emitted — kind already registered).
+    // Centre 4-arrow MOVE glyph (`beam-midpoint`) — appended last (gripIndex 9). Moves
+    // start+end+curveControl (see `moveMidpoint`); the shared move-glyph render /
+    // hover-zone / click→dialog SSoT activates the moment the kind is emitted.
     grips.push({
-      entityId: entity.id, gripIndex: 7, type: 'edge',
-      position: axisBoxEdgeMidpoint(axisParams, { axis: 'y', sign: -1 }),
-      movesEntity: false, beamGripKind: 'beam-width-far',
-    });
-    grips.push({
-      entityId: entity.id, gripIndex: 8, type: 'edge',
-      position: axisBoxEdgeMidpoint(axisParams, { axis: 'x', sign: -1 }),
-      movesEntity: false, beamGripKind: 'beam-edge-length-start',
-    });
-    grips.push({
-      entityId: entity.id, gripIndex: 9, type: 'center',
+      entityId: entity.id, gripIndex: grips.length, type: 'center',
       position: axisMidpoint2D(params),
       movesEntity: true, beamGripKind: 'beam-midpoint',
     });
@@ -277,12 +265,11 @@ export function applyBeamGripDrag(
   // Straight beam corner / width-edge / length-edge resize → shared axis-box engine
   // (opposite-element-fixed, ίδιος κώδικας με τοίχο/πεδιλοδοκό). Returns null για
   // curved beams OR non-rect kinds → fall through στους bespoke handlers.
+  // Straight beam corners (4) + ALL 4 mid-edges (width/length + far/start) → shared
+  // axis-box engine (opposite-element-fixed). The 2 column-parity extras are now plain
+  // roles in `BEAM_ROLE_TO_KIND`, so no beam-only edge handler is needed.
   const rect = applyBeamRectGrip(gripKind, input);
   if (rect) return rect;
-  // Column-parity extra mid-edges (−perp width face, start short edge) — same rect
-  // SSoT, beam-only roles the shared axis-box engine does not emit (Giorgio 2026-06-20).
-  const extraEdge = applyBeamExtraEdgeGrip(gripKind, input);
-  if (extraEdge) return extraEdge;
   if (gripKind === 'beam-start') return moveStart(input);
   if (gripKind === 'beam-end') return moveEnd(input);
   if (gripKind === 'beam-midpoint') return moveMidpoint(input);
@@ -328,30 +315,6 @@ function axisPatchToBeamParams(originalParams: BeamParams, patch: AxisBoxPatch):
     endPoint: { x: patch.end.x, y: patch.end.y, z: originalParams.endPoint.z ?? 0 },
     width: patch.width,
   };
-}
-
-/**
- * Column-parity extra mid-edge drags (Giorgio 2026-06-20): the −perp width face
- * (`beam-width-far`) and the START short edge (`beam-edge-length-start`) — the 2
- * edges the shared `axis-box-grips` SSoT does not emit. Reuses the SAME rect SSoT
- * (`axisToRectFrame` + opposite-element-fixed `applyRectEdgeDrag` + `rectFrameToAxis`)
- * as every other edge, just with the opposite-sign `RectEdge`. Returns `null` for
- * curved beams or non-extra kinds → caller falls through to the bespoke handlers.
- */
-function applyBeamExtraEdgeGrip(
-  gripKind: BeamGripKind,
-  input: Readonly<BeamGripDragInput>,
-): BeamParams | null {
-  if (!isRectBeam(input.originalParams)) return null;
-  let edge: RectEdge | null = null;
-  if (gripKind === 'beam-width-far') edge = { axis: 'y', sign: -1 };
-  else if (gripKind === 'beam-edge-length-start') edge = { axis: 'x', sign: -1 };
-  if (!edge) return null;
-  // Same axis-box edge SSoT as width-edge/length-edge (opposite-element-fixed).
-  const patch = applyAxisBoxEdgeDrag(
-    beamAxisBoxParams(input.originalParams), edge, input.delta, MIN_BEAM_WIDTH_MM,
-  );
-  return axisPatchToBeamParams(input.originalParams, patch);
 }
 
 /**

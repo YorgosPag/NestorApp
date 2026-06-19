@@ -138,6 +138,10 @@
       "label": "Live photorealism",
       "hint": "Path-traces on every camera pause (heavy)"
     },
+    "darkBackground": {
+      "label": "Dark background (like 2D)",
+      "hint": "Black background + bright entity lines, like the plan view"
+    },
     "hdri": {
       "label": "HDRI Environment",
       "noonGrass": "Noon",

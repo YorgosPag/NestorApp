@@ -83,6 +83,8 @@ export class ThreeJsSceneManager {
 
   private readonly performanceCollector: PerformanceCollector;
   private readonly envStoreUnsub: () => void;
+  /** ADR-446 §2 — visible-background mode subscription (dark «σαν 2Δ» ↔ environment). */
+  private readonly bgModeUnsub: () => void;
   private readonly sectionController: SectionSceneController;
   /** Phase 4.2: single animation manager, ticked by main RAF (ADR-040 compliant). */
   private readonly animationManager: AnimationManager;
@@ -164,6 +166,14 @@ export class ThreeJsSceneManager {
       (s) => s.hdriUrl,
       (url) => { if (url) void this.loadHdriEnvironment(url); },
     );
+    // ADR-446 §2 — visible-background mode (dark «σαν 2Δ» ↔ environment). The
+    // EnvmapGenerator owns `scene.background`; flip it imperatively + repaint. The
+    // matching edge-colour swap is rebuilt React-side (use-bim3d-vg-resync).
+    this.envmapGenerator.setBackgroundMode(useEnvironmentStore.getState().backgroundMode);
+    this.bgModeUnsub = useEnvironmentStore.subscribe(
+      (s) => s.backgroundMode,
+      (mode) => { this.envmapGenerator.setBackgroundMode(mode); this.markSceneDirty(); },
+    );
     // ADR-366 §A.3 Phase 7.0 — Section Cuts wiring (delegated to controller).
     this.sectionController = new SectionSceneController({
       renderer: this.renderer, scene: this.scene, getCamera: () => this.viewport.camera,
@@ -239,27 +249,18 @@ export class ThreeJsSceneManager {
   /** Expose live camera for screen-projection (FocusIndicator3D label positioning). */
   getCamera(): THREE.Camera { return this.viewport.camera; }
 
-  // ── ADR-366 §C.1.b — Waypoint drag-handle public surface (delegations) ──
-  /** Waypoint handles Group για raycast picking (null when hidden). */
+  // ── ADR-366 §C.1.b — Waypoint drag-handle public surface (delegations to WaypointDragHandleRenderer) ──
   getWaypointHandlesRoot(): THREE.Group | null {
     return this.disposed ? null : this.waypointDragHandleRenderer.getHandlesGroup();
   }
-
-  /** Hover/drag highlight για waypoint handles (null = clear). */
   setWaypointHoverState(role: 'position' | 'target' | null): void {
     if (this.disposed) return;
-    this.waypointDragHandleRenderer.setHoverState(role);
-    this.markSceneDirty();
+    this.waypointDragHandleRenderer.setHoverState(role); this.markSceneDirty();
   }
-
-  /** Sync axis lock visual with gizmo arrows. */
   setDragAxisLock(axis: 'X' | 'Y' | 'Z' | null): void {
     if (this.disposed) return;
-    this.waypointDragHandleRenderer.setAxisLockVisual(axis);
-    this.markSceneDirty();
+    this.waypointDragHandleRenderer.setAxisLockVisual(axis); this.markSceneDirty();
   }
-
-  /** Raycast gizmo arrows for axis-click detection. */
   pickWaypointAxisArrow(
     domElement: HTMLElement, camera: import('three').Camera, clientX: number, clientY: number,
   ): 'X' | 'Y' | 'Z' | null {
@@ -271,8 +272,7 @@ export class ThreeJsSceneManager {
 
   /** Phase 4.3: propagate user compass visibility preference to the ViewCube. */
   setViewCubeCompassVisible(visible: boolean): void {
-    this.viewCube.setCompassVisible(visible);
-    this.markSceneDirty();
+    this.viewCube.setCompassVisible(visible); this.markSceneDirty();
   }
 
   /**
@@ -481,7 +481,7 @@ export class ThreeJsSceneManager {
     // BEFORE dispose() is invoked, guaranteeing no in-flight tick can race with teardown.
     disposeSceneManagerResources({
       renderer: this.renderer,
-      envStoreUnsub: this.envStoreUnsub, focusUnsub: this.focusUnsub,
+      envStoreUnsub: this.envStoreUnsub, bgModeUnsub: this.bgModeUnsub, focusUnsub: this.focusUnsub,
       sectionController: this.sectionController,
       waypointDragHandleRenderer: this.waypointDragHandleRenderer,
       animationManager: this.animationManager,

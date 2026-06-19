@@ -2,6 +2,7 @@
 
 import { useEffect, type RefObject } from 'react';
 import { useBimRenderSettingsStore } from '../../state/bim-render-settings-store';
+import { useEnvironmentStore } from '../stores/EnvironmentStore';
 import { type Bim3DEntities, EMPTY_BIM_ENTITIES, useBim3DEntitiesStore } from '../stores/Bim3DEntitiesStore';
 import { subscribeEnvelopeSpec } from '../../bim/stores/envelope-spec-store';
 import { subscribeEnvelopeFloorSlabs } from '../../bim/stores/envelope-floor-slabs-store';
@@ -94,6 +95,17 @@ export function useBim3DVgResync(
       resync();
     });
 
+    // (h) ADR-446 §2 — «σαν 2Δ» dark background flips the edge colour (uniform
+    // near-black ⟷ per-category 2D line work). The colour is baked at edge-build
+    // time in `bim-three-edges.ts`, so a mode flip must rebuild to re-attach the
+    // overlays. (The `scene.background` half flips imperatively in the manager.)
+    let prevBgMode = useEnvironmentStore.getState().backgroundMode;
+    const unsubBgMode = useEnvironmentStore.subscribe((state) => {
+      if (state.backgroundMode === prevBgMode) return;
+      prevBgMode = state.backgroundMode;
+      resync();
+    });
+
     return () => {
       unsubVg();
       unsubEnvelope();
@@ -102,6 +114,7 @@ export function useBim3DVgResync(
       unsubTextures();
       unsubVisualStyle();
       unsubStructuralOverlays();
+      unsubBgMode();
     };
   }, [managerRef, externalEntitiesMode, bimEntities]);
 }

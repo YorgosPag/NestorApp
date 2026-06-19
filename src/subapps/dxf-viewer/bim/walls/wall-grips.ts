@@ -48,15 +48,13 @@ import type { WallEntity } from '../types/wall-types';
 import { mmScaleFor } from '../../utils/scene-units';
 import { unitAxis, perpUnit, project2D } from './wall-grip-math';
 import { gripGlyphShape } from '../grips/grip-glyph-registry';
-// ADR-363 (2026-06-11) — straight-wall 7-grip emission is the shared axis-box SSoT
+// ADR-363 (2026-06-11) — straight-wall grip emission is the shared axis-box SSoT
 // (same code as beam + foundation strip). The role↔kind map + AxisBoxParams adapter
 // live in `wall-rect-adapter` so emission + drag read ONE mapping (no cycle: the
-// adapter does not import this module).
-// Column-parity mid-edge extras (Giorgio 2026-06-20): the 2 OPPOSITE wall faces
-// reuse the SAME axis-box edge SSoT (`axisBoxEdgeMidpoint`) as the width-edge /
-// length-edge — zero-duplication geometry, no re-derived frame in this module.
-import { getAxisBoxGrips, axisBoxEdgeMidpoint, type AxisBoxParams } from '../grips/axis-box-grips';
-import type { RectEdge, RectSign } from '../grips/rect-frame';
+// adapter does not import this module). The 2 column-parity mid-edge extras
+// (Giorgio 2026-06-20) are now opt-in roles emitted by `getAxisBoxGrips({extraMidEdges})`
+// — zero wall-only geometry here (the far-thickness sign respects `flip` in the SSoT).
+import { getAxisBoxGrips, type AxisBoxParams } from '../grips/axis-box-grips';
 import { WALL_ROLE_TO_KIND, wallAxisBoxParams } from './wall-rect-adapter';
 
 // Public API re-exports (consumers import from this module).
@@ -118,7 +116,11 @@ export function getWallGrips(entity: Readonly<WallEntity>): GripInfo[] {
   // + rotation handles on the drawn +perp face.
   if (kind !== 'curved' && kind !== 'polyline') {
     const axisParams = wallAxisBoxParams(params);
-    const grips: GripInfo[] = getAxisBoxGrips(axisParams).map((g, i) => ({
+    // 7 standard + 2 opt-in column-parity mid-edges (ALL 4 faces carry a midpoint
+    // handle) via the shared axis-box SSoT — IDENTICAL code to beam + foundation strip.
+    // The far-thickness face respects `flip` through `widthFaceSign` inside the SSoT,
+    // so there is zero wall-only sign logic here («παντού ίδιος κώδικας, μηδέν διπλότυπα»).
+    const grips: GripInfo[] = getAxisBoxGrips(axisParams, { extraMidEdges: true }).map((g, i) => ({
       entityId: entity.id,
       gripIndex: i,
       type: g.type,
@@ -127,32 +129,9 @@ export function getWallGrips(entity: Readonly<WallEntity>): GripInfo[] {
       wallGripKind: WALL_ROLE_TO_KIND[g.role],
     }));
 
-    // ── Column-parity completion (Giorgio 2026-06-20) ────────────────────────
-    // (1) The 2 OPPOSITE mid-edge grips so ALL 4 faces carry a midpoint handle
-    //     (mirror της κολόνας / δοκαριού 4 μεσοπλευρικών). The shared axis-box SSoT
-    //     emits only the `widthFaceSign` thickness face + the END short edge; these
-    //     extras are the OTHER two faces, built from the SAME edge SSoT
-    //     (`axisBoxEdgeMidpoint`) on the opposite-sign `RectEdge`, RESPECTING `flip`:
-    //       - existing `wall-thickness` sits on `{y, faceSign}` (faceSign = flip?-1:1);
-    //         far thickness face → `{y, -faceSign}`.
-    //       - existing `wall-edge-length` is the END `{x, +1}`; start short edge → `{x, -1}`.
-    // (2) The centre 4-arrow MOVE glyph (`wall-midpoint`): identical behaviour to the
-    //     column/beam — the shared move-glyph render / per-arm hover-zone / click→dialog
-    //     SSoT activates the moment the grip is emitted (kind already registered in the
-    //     glyph registry + hot-grip FSM + `moveMidpoint` transform).
-    const faceSign: RectSign = params.flip ? -1 : 1;
-    const farThicknessEdge: RectEdge = { axis: 'y', sign: (faceSign === 1 ? -1 : 1) };
-    const startLengthEdge: RectEdge = { axis: 'x', sign: -1 };
-    grips.push({
-      entityId: entity.id, gripIndex: grips.length, type: 'edge',
-      position: axisBoxEdgeMidpoint(axisParams, farThicknessEdge),
-      movesEntity: false, wallGripKind: 'wall-thickness-far',
-    });
-    grips.push({
-      entityId: entity.id, gripIndex: grips.length, type: 'edge',
-      position: axisBoxEdgeMidpoint(axisParams, startLengthEdge),
-      movesEntity: false, wallGripKind: 'wall-edge-length-start',
-    });
+    // Centre 4-arrow MOVE glyph (`wall-midpoint`) — appended last. The shared move-glyph
+    // render / per-arm hover-zone / click→dialog SSoT activates the moment the kind is
+    // emitted (registered in the glyph registry + hot-grip FSM + `moveMidpoint`).
     grips.push({
       entityId: entity.id, gripIndex: grips.length, type: 'center',
       position: axisMidpoint(axisParams),

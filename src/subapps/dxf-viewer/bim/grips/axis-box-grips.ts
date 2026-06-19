@@ -71,6 +71,14 @@ export type AxisBoxGripRole =
   | 'corner-end-neg'
   | 'width-edge'
   | 'length-edge'
+  // Opt-in extra mid-edge handles (Giorgio 2026-06-20 «4 μεσοπλευρικές, parity κολόνας»),
+  // emitted only when `getAxisBoxGrips(params, { extraMidEdges: true })`. They are the
+  // OPPOSITE faces of the two standard edge handles, so ALL 4 faces carry a midpoint grip:
+  //   · `width-edge-far`     → the −`widthFaceSign` perp face (opposite of `width-edge`).
+  //   · `length-edge-start`  → the START short edge (opposite of the END `length-edge`).
+  // Consumed by wall + beam; foundation stays at the 7-grip default.
+  | 'width-edge-far'
+  | 'length-edge-start'
   | 'rotation';
 
 /** `corner-*` role → local-axis signs (local +X = axis start→end, +Y = +perp). */
@@ -192,23 +200,29 @@ function axisBoxResizeLimits(params: AxisBoxParams, minWidthMm: number): RectRes
 }
 
 /**
- * World midpoint of ANY one rect edge of the axis box (shared `rect-frame` SSoT).
- * The single accessor for placing mid-edge grips — including the 2 faces
- * `getAxisBoxGrips` does not itself emit, so a consumer (e.g. the beam's column-
- * parity −perp width face + start short edge) never re-derives the frame geometry.
+ * The 4 EDGE roles → their `RectEdge` (axis + sign), honouring `widthFaceSign` for
+ * the two width faces. The single SSoT consumed by BOTH grip emission and the drag,
+ * so the opposite-face sign logic lives in exactly one place (no per-entity copy —
+ * replaces the former `applyBeamExtraEdgeGrip` / `applyWallExtraEdgeGrip` sign maps).
+ * Corner / rotation roles → `null`.
  */
-export function axisBoxEdgeMidpoint(params: AxisBoxParams, edge: RectEdge): Point2D {
-  return rectEdgeWorld(axisToRectFrame(params), edge);
+function axisBoxEdgeForRole(role: AxisBoxGripRole, faceSign: RectSign): RectEdge | null {
+  const farSign: RectSign = faceSign === 1 ? -1 : 1;
+  switch (role) {
+    case 'width-edge': return { axis: 'y', sign: faceSign };
+    case 'width-edge-far': return { axis: 'y', sign: farSign };
+    case 'length-edge': return { axis: 'x', sign: 1 };
+    case 'length-edge-start': return { axis: 'x', sign: -1 };
+    default: return null;
+  }
 }
 
 /**
- * Resize ONE rectangle edge (opposite edge fixed) → axis patch. The single SSoT
- * for axis-box edge drags: used by the standard `width-edge` / `length-edge` roles
- * AND by any entity adding EXTRA mid-edge handles on the other two faces (e.g. the
- * beam's −perp width face + start short edge — column parity, Giorgio 2026-06-20),
- * so the opposite-element-fixed math + clamp live in exactly one place.
+ * Resize ONE rectangle edge (opposite edge fixed) → axis patch. Opposite-element-fixed
+ * math + clamp live here in exactly one place; consumed by `applyAxisBoxGripDrag` for
+ * every edge role (standard width/length + the opt-in `width-edge-far`/`length-edge-start`).
  */
-export function applyAxisBoxEdgeDrag(
+function applyAxisBoxEdgeDrag(
   params: AxisBoxParams,
   edge: RectEdge,
   delta: Point2D,
@@ -232,14 +246,19 @@ export function applyAxisBoxEdgeDrag(
  *
  * Skips everything on a degenerate axis (`start === end`) — there is no footprint.
  */
-export function getAxisBoxGrips(params: AxisBoxParams): AxisBoxGrip[] {
+export function getAxisBoxGrips(
+  params: AxisBoxParams,
+  opts: { readonly extraMidEdges?: boolean } = {},
+): AxisBoxGrip[] {
   const dx = params.end.x - params.start.x;
   const dy = params.end.y - params.start.y;
   if (Math.hypot(dx, dy) < 1e-6) return [];
 
   const frame = axisToRectFrame(params);
   const faceSign: RectSign = params.widthFaceSign ?? 1;
-  const widthEdgePos = rectEdgeWorld(frame, { axis: 'y', sign: faceSign });
+  // Edge positions via the shared role→edge SSoT (honours `widthFaceSign`).
+  const edgePos = (role: AxisBoxGripRole): Point2D =>
+    rectEdgeWorld(frame, axisBoxEdgeForRole(role, faceSign)!);
   // Rotation handle via the shared rotation-handle policy SSoT: it stands off the
   // perp face OPPOSITE the `width-edge`, so the two never coincide (Revit rule —
   // rotation is a distinct control, never coincident with a dimension handle). The
@@ -251,11 +270,11 @@ export function getAxisBoxGrips(params: AxisBoxParams): AxisBoxGrip[] {
   );
   const rotationPos = rectLocalWorld(frame, 0, rotationPerp);
 
-  return [
-    // width edge (perpendicular dimension, +perp face midpoint)
-    { role: 'width-edge', type: 'edge', position: widthEdgePos },
+  const grips: AxisBoxGrip[] = [
+    // width edge (perpendicular dimension, `widthFaceSign` face midpoint)
+    { role: 'width-edge', type: 'edge', position: edgePos('width-edge') },
     // length edge (axial dimension, END short edge midpoint)
-    { role: 'length-edge', type: 'edge', position: rectEdgeWorld(frame, { axis: 'x', sign: 1 }) },
+    { role: 'length-edge', type: 'edge', position: edgePos('length-edge') },
     // four corners
     { role: 'corner-start-pos', type: 'vertex', position: rectCornerWorld(frame, AXIS_BOX_CORNER_MAP['corner-start-pos']) },
     { role: 'corner-start-neg', type: 'vertex', position: rectCornerWorld(frame, AXIS_BOX_CORNER_MAP['corner-start-neg']) },
@@ -265,6 +284,16 @@ export function getAxisBoxGrips(params: AxisBoxParams): AxisBoxGrip[] {
     // width-edge; the drag is anchor-relative swept angle, so position is click-target only)
     { role: 'rotation', type: 'vertex', position: rotationPos },
   ];
+
+  // Opt-in column-parity extras (Giorgio 2026-06-20): the 2 OPPOSITE mid-edges so all
+  // 4 faces carry a midpoint handle. Appended AFTER the 7 standard grips so existing
+  // `gripIndex` order stays stable (consumers map array index → grip-kind).
+  if (opts.extraMidEdges) {
+    grips.push({ role: 'width-edge-far', type: 'edge', position: edgePos('width-edge-far') });
+    grips.push({ role: 'length-edge-start', type: 'edge', position: edgePos('length-edge-start') });
+  }
+
+  return grips;
 }
 
 // ─── Drag transforms ─────────────────────────────────────────────────────────
@@ -304,12 +333,12 @@ export function applyAxisBoxGripDrag(
       p.sceneUnits,
     );
   }
+  // All 4 edge roles (standard `width-edge`/`length-edge` + opt-in `width-edge-far`/
+  // `length-edge-start`) → the shared edge SSoT (opposite-element-fixed), same code.
   const faceSign: RectSign = p.widthFaceSign ?? 1;
-  if (role === 'width-edge') {
-    return applyAxisBoxEdgeDrag(p, { axis: 'y', sign: faceSign }, delta, input.minWidthMm);
-  }
-  if (role === 'length-edge') {
-    return applyAxisBoxEdgeDrag(p, { axis: 'x', sign: 1 }, delta, input.minWidthMm);
+  const edge = axisBoxEdgeForRole(role, faceSign);
+  if (edge) {
+    return applyAxisBoxEdgeDrag(p, edge, delta, input.minWidthMm);
   }
   return null;
 }

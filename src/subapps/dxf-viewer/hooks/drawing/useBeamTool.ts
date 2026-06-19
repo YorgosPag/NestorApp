@@ -23,10 +23,12 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { Point2D } from '../../rendering/types/Types';
-import type {
-  BeamEntity,
-  BeamKind,
+import {
+  DEFAULT_BEAM_WIDTH_MM,
+  type BeamEntity,
+  type BeamKind,
 } from '../../bim/types/beam-types';
+import { resolveBeamGhostSnapFromStore } from '../../bim/beams/beam-column-face-snap';
 import {
   buildAnchoredBeamParams,
   buildBeamEntity,
@@ -126,9 +128,35 @@ export function useBeamTool(options: UseBeamToolOptions = {}): UseBeamToolResult
   const stateRef = useRef<BeamToolState>(state);
   stateRef.current = state;
 
+  // Stable getter ref for the scene entities. `options.getSceneEntities` is an inline
+  // arrow (new identity every render), so reading it through a ref keeps the callbacks
+  // that depend on it (`syncColumnsToStore` → `activate`) referentially STABLE. Critical:
+  // `activate` is passed to `useToolLifecycle`'s effect deps — an unstable `activate`
+  // re-runs the effect every render → `activate()` → setState → infinite render loop.
+  const getSceneEntitiesRef = useRef(getSceneEntities);
+  getSceneEntitiesRef.current = getSceneEntities;
+
   // Unmount cleanup — reset store when hook teardown (tool panel unmount).
   useEffect(() => {
     return () => beamPreviewStore.reset();
+  }, []);
+
+  // ADR-458 (2026-06-17) — κατέγραψε τα column footprints της σκηνής στο preview
+  // store ώστε το WYSIWYG rubber-band να εφαρμόζει το ΙΔΙΟ beam-to-column cutback
+  // (frame-into) με το committed δοκάρι. ADR-398 §Smart beam ghost (2026-06-20):
+  // καλείται ΚΑΙ στο activate, ώστε το ghost-before-click face-snap (resolver) να
+  // έχει τις κολόνες πριν καν το 1ο κλικ. Οι κολόνες αλλάζουν σπάνια στη διάρκεια
+  // ενός placement.
+  const syncColumnsToStore = useCallback(() => {
+    const entities = getSceneEntitiesRef.current?.() ?? [];
+    const footprints: Point2D[][] = [];
+    for (const e of entities) {
+      if (e.type !== 'column') continue;
+      const verts = (e as { geometry?: { footprint?: { vertices?: readonly { x: number; y: number }[] } } })
+        .geometry?.footprint?.vertices;
+      if (verts && verts.length >= 3) footprints.push(verts.map((v) => ({ x: v.x, y: v.y })));
+    }
+    beamPreviewStore.setColumns(footprints);
   }, []);
 
   // ── lifecycle ────────────────────────────────────────────────────────────
@@ -138,6 +166,7 @@ export function useBeamTool(options: UseBeamToolOptions = {}): UseBeamToolResult
 
   const activate = useCallback(() => {
     const prev = stateRef.current;
+    syncColumnsToStore();
     beamPreviewStore.set({ startPoint: null, endPoint: null, kind: prev.kind, overrides: prev.overrides });
     setState({ ...INITIAL_STATE, kind: prev.kind, placementMode: prev.placementMode, overrides: prev.overrides, phase: 'awaitingStart' });
     // ADR-461 — soft warning (once per activation): ένα κανονικό δοκάρι στη στάθμη
@@ -146,7 +175,7 @@ export function useBeamTool(options: UseBeamToolOptions = {}): UseBeamToolResult
     if (shouldWarnBeamOnFoundation()) {
       EventBus.emit('bim:beam-on-foundation-storey', {});
     }
-  }, []);
+  }, [syncColumnsToStore]);
 
   const setKind = useCallback((kind: BeamKind) => {
     const prev = stateRef.current;
@@ -210,8 +239,12 @@ export function useBeamTool(options: UseBeamToolOptions = {}): UseBeamToolResult
       // (συγχρονισμένα στο 1ο κλικ μέσω `syncColumnsToStore`) ώστε το justification να
       // είναι ΤΑΥΤΟΣΗΜΟ με το preview WYSIWYG ghost (preview === commit).
       // Straight/cantilever μόνο· curved κρατά centerline (commitCurvedFromState).
-      const cols = beamPreviewStore.get().columnFootprints;
-      const params = buildAnchoredBeamParams(s.startPoint, endPoint, s.kind, s.overrides, sceneUnits, cols);
+      // ADR-398 §Smart beam ghost — αν το start κλειδώθηκε από face-snap (centerline),
+      // commit centerline (ΟΧΙ location-line auto-flush) ώστε commit === preview.
+      const preview = beamPreviewStore.get();
+      const params = preview.startAnchored
+        ? buildDefaultBeamParams(s.startPoint, endPoint, s.kind, s.overrides, sceneUnits)
+        : buildAnchoredBeamParams(s.startPoint, endPoint, s.kind, s.overrides, sceneUnits, preview.columnFootprints);
       const result = buildBeamEntity(params, currentLevelId, sceneUnits);
       if (!result.ok) {
         setState({ ...s, error: result.hardErrors[0] ?? null });
@@ -297,21 +330,23 @@ export function useBeamTool(options: UseBeamToolOptions = {}): UseBeamToolResult
     [getSceneEntities, commitForWall],
   );
 
-  // ADR-458 (2026-06-17) — κατέγραψε τα column footprints της σκηνής στο preview
-  // store ώστε το WYSIWYG rubber-band να εφαρμόζει το ΙΔΙΟ beam-to-column cutback
-  // (frame-into) με το committed δοκάρι. Καλείται στο πρώτο κλικ (awaitingStart):
-  // οι κολόνες αλλάζουν σπάνια κατά τη διάρκεια ενός placement.
-  const syncColumnsToStore = useCallback(() => {
-    const entities = getSceneEntities?.() ?? [];
-    const footprints: Point2D[][] = [];
-    for (const e of entities) {
-      if (e.type !== 'column') continue;
-      const verts = (e as { geometry?: { footprint?: { vertices?: readonly { x: number; y: number }[] } } })
-        .geometry?.footprint?.vertices;
-      if (verts && verts.length >= 3) footprints.push(verts.map((v) => ({ x: v.x, y: v.y })));
-    }
-    beamPreviewStore.setColumns(footprints);
-  }, [getSceneEntities]);
+  // ADR-398 §Smart beam ghost — το 1ο κλικ κλειδώνει το START. Αν ο κέρσορας
+  // κούμπωνε σε παρειά κολόνας (face-snap), κλειδώνουμε στο προτεινόμενο centerline
+  // (ΟΧΙ στον raw cursor) + σημαία `anchored` ώστε το 2ο κλικ να τραβά centerline
+  // (χωρίς location-line auto-flush). Καλεί τον ΙΔΙΟ resolver με το preview (το store
+  // έχει ήδη συγχρονισμένες κολόνες) → preview === commit.
+  const resolveStartAnchor = useCallback(
+    (point: Readonly<Point2D>): { start: Point2D; anchored: boolean } => {
+      const widthMm = stateRef.current.overrides.width ?? DEFAULT_BEAM_WIDTH_MM;
+      const sceneUnits = getSceneUnits?.() ?? 'mm';
+      const cols = beamPreviewStore.get().columnFootprints;
+      const snap = resolveBeamGhostSnapFromStore(point, cols, widthMm, sceneUnits);
+      return snap
+        ? { start: snap.start, anchored: true }
+        : { start: { x: point.x, y: point.y }, anchored: false };
+    },
+    [getSceneUnits],
+  );
 
   // ── click pipeline ───────────────────────────────────────────────────────
   const onCanvasClick = useCallback(
@@ -326,10 +361,11 @@ export function useBeamTool(options: UseBeamToolOptions = {}): UseBeamToolResult
 
       if (s.kind === 'curved') {
         if (s.phase === 'awaitingStart') {
-          const startPoint = { x: point.x, y: point.y };
           syncColumnsToStore();
+          // ADR-398 §Smart beam ghost — face-snap το start (αν κοντά σε κολόνα).
+          const { start: startPoint, anchored } = resolveStartAnchor(point);
           // Sync before setState: next mousemove reads correct startPoint immediately.
-          beamPreviewStore.set({ startPoint, endPoint: null, kind: s.kind, overrides: s.overrides });
+          beamPreviewStore.set({ startPoint, endPoint: null, kind: s.kind, overrides: s.overrides, startAnchored: anchored });
           setState({ ...s, phase: 'awaitingEnd', startPoint, endPoint: null, error: null });
           return true;
         }
@@ -347,11 +383,12 @@ export function useBeamTool(options: UseBeamToolOptions = {}): UseBeamToolResult
 
       // Straight / cantilever — 2-click chain
       if (s.phase === 'awaitingStart') {
-        const startPoint = { x: point.x, y: point.y };
         syncColumnsToStore();
+        // ADR-398 §Smart beam ghost — face-snap το start (αν κοντά σε κολόνα).
+        const { start: startPoint, anchored } = resolveStartAnchor(point);
         // Sync before setState: next mousemove reads correct startPoint immediately,
         // no useEffect-delay window where stale null would produce a cursor-dot flash.
-        beamPreviewStore.set({ startPoint, endPoint: null, kind: s.kind, overrides: s.overrides });
+        beamPreviewStore.set({ startPoint, endPoint: null, kind: s.kind, overrides: s.overrides, startAnchored: anchored });
         setState({ ...s, phase: 'awaitingEnd', startPoint, error: null });
         return true;
       }
@@ -360,7 +397,7 @@ export function useBeamTool(options: UseBeamToolOptions = {}): UseBeamToolResult
       }
       return false;
     },
-    [commitTwoClickFromState, commitCurvedFromState, commitFromWall, syncColumnsToStore],
+    [commitTwoClickFromState, commitCurvedFromState, commitFromWall, syncColumnsToStore, resolveStartAnchor],
   );
 
   // ── ADR-363 «Δοκάρι από τοίχο» — 3D pick bridge ───────────────────────────
@@ -371,8 +408,7 @@ export function useBeamTool(options: UseBeamToolOptions = {}): UseBeamToolResult
   // Mirror of the column `bim:place-column-3d` bridge.
   const commitForWallRef = useRef(commitForWall);
   commitForWallRef.current = commitForWall;
-  const getSceneEntitiesRef = useRef(getSceneEntities);
-  getSceneEntitiesRef.current = getSceneEntities;
+  // `getSceneEntitiesRef` is declared once near the top (stable getter for the scene).
   useEffect(() => {
     return EventBus.on('bim:beam-from-wall-picked-3d', ({ wallId }) => {
       const wall = getSceneEntitiesRef.current?.().find(
