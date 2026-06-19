@@ -45,6 +45,8 @@ export interface SectionSliderShellProps {
   readonly positionClassName?: string;
   /** Optional extra control (e.g. the X/Y flip-arrow button), placed after the toggle. */
   readonly extraControl?: React.ReactNode;
+  /** Optional `data-testid` for panel anchoring (e.g. the Guide panel anchors to the horizontal cut). */
+  readonly dataTestId?: string;
 }
 
 export const SectionSliderShell = React.memo(function SectionSliderShell({
@@ -64,10 +66,12 @@ export const SectionSliderShell = React.memo(function SectionSliderShell({
   onValueChange,
   positionClassName = '',
   extraControl,
+  dataTestId,
 }: SectionSliderShellProps) {
   const horizontal = orientation === 'horizontal';
   return (
     <aside
+      data-testid={dataTestId}
       onMouseEnter={() => setImmediatePosition(null)}
       className={`cut-plane-slider-accent pointer-events-auto absolute flex cursor-default items-center gap-2 ${
         horizontal ? 'flex-row' : 'flex-col'

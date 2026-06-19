@@ -65,6 +65,7 @@ export const CutPlaneSliderControl = React.memo(function CutPlaneSliderControl({
   return (
     <SectionSliderShell
       orientation="vertical"
+      dataTestId="section-slider-horizontal"
       active={active}
       onToggle={handleToggle}
       toggleAriaLabel={active ? t('cutPlane.disable') : t('cutPlane.enable')}

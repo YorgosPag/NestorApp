@@ -1704,7 +1704,9 @@ export const PANEL_ANCHORING = {
     WINDOWS_TASKBAR: 40,
     /** Section slider left edge distance from viewport right (right-3=12px + w-12=48px) */
     SECTION_SLIDER_LEFT_FROM_RIGHT: 60,
-    /** ViewCube bottom edge from viewport top (top:12px + 160px canvas size) */
+    /** Section slider TOP offset inside the canvas container (Tailwind top-14 = 56px) */
+    SECTION_SLIDER_TOP: 56,
+    /** ViewCube bottom offset inside the canvas container (top:12px + 160px canvas size) */
     VIEW_CUBE_BOTTOM: 172,
   },
 
@@ -1789,17 +1791,28 @@ export const PanelPositionCalculator = {
   getGuidePanelPosition: (panelWidth: number): { x: number; y: number } => {
     const { SELECTORS, OFFSETS, FALLBACKS } = PANEL_ANCHORING;
 
-    // 🎯 Horizontal anchor — left of the section slider
-    const slider = document.querySelector(SELECTORS.SECTION_SLIDER_HORIZONTAL);
-    const sliderLeft = slider
-      ? slider.getBoundingClientRect().left
+    // 🎯 Horizontal anchor — left of the section slider (present in both 2D & 3D).
+    // Guard against a degenerate rect (element present but hidden → width 0): use fallback.
+    const sliderRect = document.querySelector(SELECTORS.SECTION_SLIDER_HORIZONTAL)?.getBoundingClientRect();
+    const sliderVisible = !!sliderRect && sliderRect.width > 0;
+    const sliderLeft = sliderRect && sliderVisible
+      ? sliderRect.left
       : window.innerWidth - FALLBACKS.SECTION_SLIDER_LEFT_FROM_RIGHT;
 
-    // 🎯 Vertical anchor — below the ViewCube
-    const viewCube = document.querySelector(SELECTORS.VIEW_CUBE);
-    const viewCubeBottom = viewCube
-      ? viewCube.getBoundingClientRect().bottom
-      : FALLBACKS.VIEW_CUBE_BOTTOM;
+    // 🎯 Vertical anchor — below the ViewCube.
+    const viewCubeRect = document.querySelector(SELECTORS.VIEW_CUBE)?.getBoundingClientRect();
+    let viewCubeBottom: number;
+    if (viewCubeRect && viewCubeRect.height > 0) {
+      // 3D: ViewCube is mounted — use its real bottom edge (window coords).
+      viewCubeBottom = viewCubeRect.bottom;
+    } else if (sliderRect && sliderVisible) {
+      // 2D: ViewCube is hidden/unmounted (rect all zeros). Reconstruct its resting bottom
+      // from the slider, which shares the same canvas offset parent (slider top-14 = 56px,
+      // ViewCube bottom = 172px → the ViewCube bottom sits 116px below the slider top).
+      viewCubeBottom = sliderRect.top + (FALLBACKS.VIEW_CUBE_BOTTOM - FALLBACKS.SECTION_SLIDER_TOP);
+    } else {
+      viewCubeBottom = FALLBACKS.VIEW_CUBE_BOTTOM;
+    }
 
     return {
       x: Math.max(OFFSETS.VIEWPORT_MARGIN, sliderLeft - OFFSETS.GUIDE_PANEL_GAP - panelWidth),
@@ -1846,4 +1859,49 @@ export const PanelPositionCalculator = {
   },
 } as const;
 
-// ==============
+// ============================================================================
+// EXPORTS - ENTERPRISE MODULE INTERFACE
+// ============================================================================
+
+export default PANEL_TOKENS;
+
+/**
+ * 🏗️ USAGE EXAMPLES
+ *
+ * @example PanelTabs component
+ * ```tsx
+ * import { PANEL_TOKENS, PanelTokenUtils } from './config/panel-tokens';
+ *
+ * const getTabClass = (tabId: PanelType) => {
+ *   const disabled = disabledPanels[tabId];
+ *   const isActive = activePanel === tabId;
+ *   return PanelTokenUtils.getTabButtonClasses(isActive, disabled);
+ * };
+ * ```
+ *
+ * @example LevelPanel component
+ * ```tsx
+ * import { PANEL_TOKENS } from './config/panel-tokens';
+ *
+ * <div className={PANEL_TOKENS.LEVEL_PANEL.CONTAINER.BASE}>
+ *   <h3 className={PANEL_TOKENS.LEVEL_PANEL.HEADER.TEXT}>
+ *     <Building2 className={PANEL_TOKENS.LEVEL_PANEL.HEADER.ICON} />
+ *     Επίπεδα Έργου
+ *   </h3>
+ * </div>
+ * ```
+ *
+ * @example DxfSettingsPanel component
+ * ```tsx
+ * import { PANEL_TOKENS, PanelTokenUtils } from './config/panel-tokens';
+ *
+ * <div className={PANEL_TOKENS.DXF_SETTINGS.CONTAINER.BASE}>
+ *   <button
+ *     className={PanelTokenUtils.getDxfSettingsTabClasses(activeMainTab === 'general')}
+ *     onClick={() => setActiveMainTab('general')}
+ *   >
+ *     Γενικές Ρυθμίσεις
+ *   </button>
+ * </div>
+ * ```
+ */

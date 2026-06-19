@@ -5,7 +5,8 @@
  * @description Floating panel showing all guides and construction points with per-item actions.
  *
  * Pattern: CursorSettingsPanel (FloatingPanel ADR-084 compound component).
- * Position: Top-right, 320x480px, draggable.
+ * Position: Right side — 8px left of the horizontal-section slider, 8px below the 3D
+ *   ViewCube (Giorgio 2026-06-19). 320px wide, draggable.
  * Toggle: Toolbar button + keyboard chord G→L.
  *
  * @see ADR-189 §4.13 (Guide Panel UI)
@@ -41,8 +42,10 @@ const GUIDE_PANEL_DIMENSIONS = {
 
 const SSR_FALLBACK_POSITION = { x: 100, y: 100 };
 
+// Position: tucked into the right side — left of the horizontal-section slider and below
+// the 3D ViewCube (Giorgio 2026-06-19). See PanelPositionCalculator.getGuidePanelPosition.
 const getClientPosition = () => {
-  return PanelPositionCalculator.getTopRightPosition(
+  return PanelPositionCalculator.getGuidePanelPosition(
     GUIDE_PANEL_DIMENSIONS.width,
   );
 };

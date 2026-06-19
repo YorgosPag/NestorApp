@@ -74,6 +74,8 @@ export function createViewCube(opts: ViewCubeOptions): ViewCubeEngine {
   const { container, getCamera, getTarget, onFaceSnap, onDirSnap, onRoll, onHome, onDragRotate, onSnapToView, getNorthAngleDeg, onContextMenuRequest } = opts;
 
   const canvas = document.createElement('canvas');
+  // Stable anchor for floating-panel positioning (e.g. the Guide panel sits below it).
+  canvas.dataset.testid = 'dxf-view-cube';
   const dpr = Math.min(window.devicePixelRatio, MAX_PIXEL_RATIO);
   const size = CUBE_CANVAS_SIZE;
   canvas.width = size * dpr; canvas.height = size * dpr;
