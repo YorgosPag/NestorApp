@@ -93,7 +93,7 @@ describe('runOrganismAutoReinforce', () => {
     const cap = captureReinforced();
     const n = runOrganismAutoReinforce(lm, [], EUROCODE_PROVIDER, realExec);
     cap.stop();
-    expect(n).toBe(1);
+    expect(n).toHaveLength(1);
     expect(reinfOf(lm, col.id)).toBeDefined();
     expect(cap.events).toEqual([{ entityIds: [col.id], count: 1 }]);
   });
@@ -103,7 +103,7 @@ describe('runOrganismAutoReinforce', () => {
     const other = makeColumn();
     const lm = makeLevelManager([fresh as unknown as Entity, other as unknown as Entity]);
     const n = runOrganismAutoReinforce(lm, [fresh.id], EUROCODE_PROVIDER, realExec);
-    expect(n).toBe(1);
+    expect(n).toHaveLength(1);
     expect(reinfOf(lm, fresh.id)).toBeDefined();
     expect(reinfOf(lm, other.id)).toBeUndefined();
   });
@@ -116,7 +116,7 @@ describe('runOrganismAutoReinforce', () => {
       executed++;
     });
     cap.stop();
-    expect(n).toBe(0);
+    expect(n).toHaveLength(0);
     expect(executed).toBe(0);
     expect(cap.events).toEqual([{ entityIds: [], count: 0 }]);
   });
@@ -126,7 +126,7 @@ describe('runOrganismAutoReinforce', () => {
     const done = reinforcedColumn();
     const lm = makeLevelManager([fresh as unknown as Entity, done as unknown as Entity]);
     const n = runOrganismAutoReinforce(lm, [], EUROCODE_PROVIDER, realExec);
-    expect(n).toBe(1);
+    expect(n).toHaveLength(1);
     expect(reinfOf(lm, fresh.id)).toBeDefined();
   });
 
@@ -135,7 +135,7 @@ describe('runOrganismAutoReinforce', () => {
     const cap = captureReinforced();
     const n = runOrganismAutoReinforce(lm, [], EUROCODE_PROVIDER, realExec);
     cap.stop();
-    expect(n).toBe(0);
+    expect(n).toHaveLength(0);
     expect(cap.events).toHaveLength(0);
   });
 
@@ -144,7 +144,7 @@ describe('runOrganismAutoReinforce', () => {
     const cap = captureReinforced();
     const n = runOrganismAutoReinforce(lm, [], EUROCODE_PROVIDER, realExec);
     cap.stop();
-    expect(n).toBe(0);
+    expect(n).toHaveLength(0);
     expect(cap.events).toEqual([{ entityIds: [], count: 0 }]);
   });
 });

@@ -180,6 +180,8 @@ export interface GripSettings {
 export interface GripInteractionState {
   hovered?: { entityId: string; gripIndex: number };
   active?: { entityId: string; gripIndex: number };
+  /** ADR-370 — grip keys clicked-to-select for a multi-grip move (orange). */
+  armedKeys?: ReadonlySet<string>;
 
   // Legacy compatibility
   hoveredGripId?: string;

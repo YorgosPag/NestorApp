@@ -7,7 +7,7 @@
  * @compliance CLAUDE.md Enterprise Standards - NO magic numbers
  */
 
-import { UI_COLORS, GRIP_COLD_COLOR, GRIP_WARM_COLOR, GRIP_HOT_COLOR, GRIP_CONTOUR_COLOR, GRIP_SNAPPABLE_COLOR } from '../../config/color-config';
+import { UI_COLORS, GRIP_COLD_COLOR, GRIP_WARM_COLOR, GRIP_HOT_COLOR, GRIP_CONTOUR_COLOR, GRIP_SNAPPABLE_COLOR, GRIP_ARMED_COLOR } from '../../config/color-config';
 
 // ============================================================================
 // GRIP SIZE MULTIPLIERS (AutoCAD/BricsCAD Standards)
@@ -25,6 +25,7 @@ export const GRIP_SIZE_MULTIPLIERS = {
   COLD: 1.0,   // Normal state
   WARM: 1.25,  // Hover state (+25%)
   HOT: 1.5,    // Active/drag state (+50%)
+  ARMED: 1.25, // ADR-370 — armed/selected (multi-grip), +25% like warm for visibility
 } as const;
 
 /**
@@ -42,6 +43,7 @@ export const EDGE_GRIP_SIZE_MULTIPLIERS = {
   COLD: 1.0,   // Normal state
   WARM: 1.4,   // Hover state (+40%)
   HOT: 1.6,    // Active/drag state (+60%)
+  ARMED: 1.4,  // ADR-370 — armed/selected (multi-grip), matches warm edge emphasis
 } as const;
 
 // ============================================================================
@@ -60,7 +62,8 @@ export const EDGE_GRIP_SIZE_MULTIPLIERS = {
 export const DEFAULT_GRIP_COLORS = {
   COLD: GRIP_COLD_COLOR,  // SSOT → color-config.ts (σιελ)
   WARM: GRIP_WARM_COLOR,  // SSOT → color-config.ts (orange, hover) — was hardcoded
-  HOT: GRIP_HOT_COLOR,    // SSOT → color-config.ts (red, selected) — was hardcoded
+  HOT: GRIP_HOT_COLOR,    // SSOT → color-config.ts (red, active drag) — was hardcoded
+  ARMED: GRIP_ARMED_COLOR, // ADR-370 — orange, armed/selected (multi-grip)
   SNAPPABLE: GRIP_SNAPPABLE_COLOR, // Cyan — snap target during rotation (ADR-397)
   CONTOUR: GRIP_CONTOUR_COLOR, // SSOT → color-config.ts (black outline) — was hardcoded
 } as const;

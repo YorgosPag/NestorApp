@@ -41,24 +41,25 @@ export interface MemberSizeLevelManager {
  * @param levelManager  ενεργός όροφος + scene accessors
  * @param provider      ενεργός κανονισμός (injected — light module)
  * @param exec          executor από command history (`execute` ή `executeGrouped`)
- * @returns ο αριθμός των δοκαριών που πράγματι διαστασιολογήθηκαν (0 = no-op)
+ * @returns τα ids των μελών που πράγματι διαστασιολογήθηκαν (κενό = no-op). ADR-500 —
+ *          ο convergence loop τα ταξινομεί ανά τύπο για το per-kind report (§7.2).
  */
 export function runMemberAutoSize(
   levelManager: MemberSizeLevelManager,
   provider: StructuralCodeProvider,
   exec: (cmd: ICommand) => void,
-): number {
+): readonly string[] {
   const levelId = levelManager.currentLevelId;
-  if (!levelId) return 0;
+  if (!levelId) return [];
   const scene = levelManager.getLevelScene(levelId);
-  if (!scene) return 0;
+  if (!scene) return [];
 
   const entities = scene.entities as unknown as readonly Entity[];
   // ADR-499 — member-generic scope: δοκάρι (ύψος) + πλάκα-πρόβολος (πάχος) + κολώνα
   // (διατομή, §B2). Το command skip-άρει σιωπηλά όσα δεν αλλάζουν (null patch) → ασφαλές super-set.
   const sizeable = entities.filter((e) => isBeamEntity(e) || isSlabEntity(e) || isColumnEntity(e));
   const ids = sizeable.map((e) => e.id);
-  if (ids.length === 0) return 0;
+  if (ids.length === 0) return [];
 
   const sm = new LevelSceneManagerAdapter(
     levelManager.getLevelScene,
@@ -67,12 +68,12 @@ export function runMemberAutoSize(
   );
   const command = new AutoSizeMembersCommand(ids, sm, provider);
   const resized = command.getResizedEntityIds();
-  if (resized.length === 0) return 0; // converged / locked → no-op (κανένα undo entry)
+  if (resized.length === 0) return []; // converged / locked → no-op (κανένα undo entry)
 
   exec(command);
   // Persist + re-chain (φορτία→οπλισμός) στη νέα διατομή ανά τύπο μέλους (ΕΝΑ SSoT
   // emit helper, ADR-459 Φ7)· loop-safe μέσω convergence guard.
   const typeById = new Map(sizeable.map((e) => [e.id, e.type]));
   for (const id of resized) emitBimEntityParamsUpdated(typeById.get(id) ?? '', id);
-  return resized.length;
+  return resized;
 }

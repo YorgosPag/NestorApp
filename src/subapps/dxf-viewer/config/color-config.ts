@@ -11,7 +11,12 @@
 // ============================================================================
 export const GRIP_COLD_COLOR = '#007FFF' as const;  // Σιελ/azure — normal (cold). Distinct from snappable cyan #00BCD4 (Giorgio 2026-06-17)
 export const GRIP_WARM_COLOR = '#FF7F00' as const;  // Orange — hover (warm)
-export const GRIP_HOT_COLOR  = '#FF0000' as const;  // Red    — selected/active (hot)
+export const GRIP_HOT_COLOR  = '#FF0000' as const;  // Red    — active drag (hot)
+// ADR-370 — «armed» grip state: a cold grip the user CLICKED to select for a multi-grip
+// move (orange, Giorgio's request «να γίνονται πορτοκαλί»). A deeper/redder orange than
+// the fleeting hover-warm #FF7F00 so a persistently-selected grip reads distinct from a
+// momentary hover. Hot (#FF0000 red) stays reserved for the grip under active drag.
+export const GRIP_ARMED_COLOR = '#FF6A00' as const; // Orange — armed/selected (multi-grip)
 export const GRIP_CONTOUR_COLOR = '#000000' as const; // Black — outline
 // ADR-397 — «snappable» grip state: a grip that is an active snap target during a
 // rotation operation. Cyan (= UI_COLORS_BASE.GUIDE_X '#00BCD4', construction/guide

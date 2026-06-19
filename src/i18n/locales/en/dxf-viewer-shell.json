@@ -68,7 +68,7 @@
     "applied": "Auto foundation design — new footings: {created} (combined: {combined}, updated: {updated}, removed: {removed})"
   },
   "autoStudy": {
-    "report": "Auto Study — finished in {rounds, plural, one {# round} other {# rounds}}: sized {sized}, reinforced {reinforced}, fixed {footed} footings",
+    "report": "Auto Study — finished in {rounds, plural, one {# round} other {# rounds}}: changed {columns} columns, {beams} beams, {slabs} slabs, {footings} footings",
     "remaining": "{count, plural, one {# issue needs you} other {# issues need you}} — see the structural warnings"
   },
   "structural": {

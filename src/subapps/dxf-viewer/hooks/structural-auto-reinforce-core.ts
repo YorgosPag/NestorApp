@@ -61,25 +61,26 @@ export function isReinforceable(e: Entity): boolean {
  * @param entityIds     ρητό scope (selection)· κενό → όλος ο reinforceable οργανισμός
  * @param provider      ενεργός κανονισμός (injected — light module)
  * @param exec          executor από command history (`execute` ή `executeGrouped`)
- * @returns ο αριθμός των μελών που πράγματι οπλίστηκαν (0 = idempotent no-op)
+ * @returns τα ids των μελών που πράγματι οπλίστηκαν (κενό = idempotent no-op). ADR-500 —
+ *          ο convergence loop τα ταξινομεί ανά τύπο για το per-kind report (§7.2).
  */
 export function runOrganismAutoReinforce(
   levelManager: ReinforceLevelManager,
   entityIds: readonly string[],
   provider: StructuralCodeProvider,
   exec: (cmd: ICommand) => void,
-): number {
+): readonly string[] {
   const levelId = levelManager.currentLevelId;
-  if (!levelId) return 0;
+  if (!levelId) return [];
   const scene = levelManager.getLevelScene(levelId);
-  if (!scene) return 0;
+  if (!scene) return [];
 
   const entities = scene.entities as unknown as readonly Entity[];
   // Scope (Revit-grade): επιλογή → επιλεγμένα· αλλιώς όλος ο οργανισμός ορόφου.
   const ids = entityIds.length > 0 ? entityIds : entities.filter(isReinforceable).map((e) => e.id);
   if (ids.length === 0) {
     EventBus.emit('bim:structural-auto-reinforced', { entityIds: [], count: 0 });
-    return 0;
+    return [];
   }
 
   const sm = new LevelSceneManagerAdapter(
@@ -109,7 +110,7 @@ export function runOrganismAutoReinforce(
   if (reinforced.length === 0) {
     // Όλα ήδη οπλισμένα / μη-δομικά — no-op (κανένα undo entry).
     EventBus.emit('bim:structural-auto-reinforced', { entityIds: [], count: 0 });
-    return 0;
+    return [];
   }
 
   exec(command);
@@ -117,5 +118,5 @@ export function runOrganismAutoReinforce(
     entityIds: reinforced,
     count: reinforced.length,
   });
-  return reinforced.length;
+  return reinforced;
 }

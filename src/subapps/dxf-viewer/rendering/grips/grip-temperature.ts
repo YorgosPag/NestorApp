@@ -52,6 +52,13 @@ export interface GripTemperatureState {
   readonly active?: GripRef;
   readonly dragging?: GripRef;
   /**
+   * ADR-370 — grips the user CLICKED to select for a multi-grip move, keyed by
+   * {@link gripKey}. They render orange ('armed') and stay so until cleared,
+   * regardless of hover. The grip under active drag still wins ('hot'). Empty /
+   * absent → no grip is armed.
+   */
+  readonly armedKeys?: ReadonlySet<string>;
+  /**
    * Grips that are currently active SNAP TARGETS (ADR-397) — keyed by
    * {@link gripKey}. During a rotation operation every visible grip of the
    * rotated entity is a snap reference, so it renders cyan ('snappable') instead
@@ -78,13 +85,15 @@ function matches(ref: GripRef | undefined, entityId: string, gripIndex: number):
  * Resolve the temperature of a single grip from the interaction state.
  *
  * Priority (AutoCAD / BricsCAD / Revit-grade):
- * 1. `dragging` or `active` (the pressed / manipulated grip) → `hot`
- * 2. grip is in `snappableKeys` (active snap target, ADR-397)→ `snappable` (cyan)
- * 3. `hovered` (cursor over the grip)                        → `warm`
- * 4. otherwise                                               → `cold`
+ * 1. `dragging` or `active` (the pressed / manipulated grip)  → `hot`
+ * 2. grip is in `armedKeys` (clicked-to-select, ADR-370)      → `armed` (orange)
+ * 3. grip is in `snappableKeys` (active snap target, ADR-397) → `snappable` (cyan)
+ * 4. `hovered` (cursor over the grip)                         → `warm`
+ * 5. otherwise                                                → `cold`
  *
- * `hot` wins over `snappable` so the pressed rotation handle stays red even while
- * the entity's other grips show cyan as snap references.
+ * `hot` wins over `armed` so the grip under active drag turns red even though it is
+ * still in the armed set. `armed` wins over `hovered` so a selected grip stays orange
+ * while the cursor passes over it.
  *
  * @param entityId - Entity owning the grip
  * @param gripIndex - Index of the grip within the entity
@@ -105,12 +114,18 @@ export function resolveGripTemperature(
     return 'hot';
   }
 
-  // Priority 2: active snap target during rotation → snappable (cyan)
+  // Priority 2: clicked-to-select grip (ADR-370) → armed (orange). Above snappable
+  // and hover so a selected grip stays orange through hover.
+  if (state.armedKeys?.has(gripKey(entityId, gripIndex))) {
+    return 'armed';
+  }
+
+  // Priority 3: active snap target during rotation → snappable (cyan)
   if (state.snappableKeys?.has(gripKey(entityId, gripIndex))) {
     return 'snappable';
   }
 
-  // Priority 3: hovered grip → warm
+  // Priority 4: hovered grip → warm
   if (matches(state.hovered, entityId, gripIndex)) {
     return 'warm';
   }

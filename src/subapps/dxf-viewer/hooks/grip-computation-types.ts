@@ -161,6 +161,11 @@ export interface DxfGripDragPreview {
 export interface DxfGripInteractionState {
   hoveredGrip?: GripIdentifier;
   activeGrip?: GripIdentifier;
+  /**
+   * ADR-370 — grip keys (`${entityId}_${gripIndex}`) clicked-to-select for a
+   * multi-grip move → render orange ('armed'). Fed from {@link GripArmedStore}.
+   */
+  armedKeys?: ReadonlySet<string>;
 }
 
 /** Return type of useDxfGripInteraction */

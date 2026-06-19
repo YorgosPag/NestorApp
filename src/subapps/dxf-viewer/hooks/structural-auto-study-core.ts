@@ -48,7 +48,13 @@ import type { StructuralCodeProvider } from '../bim/structural/codes/structural-
 import type { TakedownSettings } from '../bim/structural/loads/load-takedown';
 import type { GuideOffsetLookup } from '../bim/hosting/derive-slots';
 import type { FoundationWriterUser } from '../bim/foundations/foundation-write-scope';
-import type { Entity } from '../types/entities';
+import {
+  isColumnEntity,
+  isBeamEntity,
+  isSlabEntity,
+  isFoundationEntity,
+  type Entity,
+} from '../types/entities';
 
 /** Όριο γύρων (§7.4 — ταλάντωση Α↔Β). Χωρίς αυτό = ατέρμονος βρόχος. */
 export const MAX_STUDY_ROUNDS = 10;
@@ -72,24 +78,60 @@ export interface AutoStudyDeps {
   readonly maxRounds?: number;
 }
 
-/** Αποτέλεσμα της μελέτης (για report + exit-to-human). */
+/**
+ * Αποτέλεσμα της μελέτης (για report + exit-to-human). ADR-500 DEFER A — **unique
+ * per-kind counts** (όπως το όραμα §7.2 «6 κολώνες, 3 δοκάρια, 2 πέδιλα»): κάθε μέλος
+ * μετριέται ΜΙΑ φορά, ακόμη κι αν άλλαξε σε πολλούς γύρους ή και διαστασιολογήθηκε ΚΑΙ
+ * οπλίστηκε.
+ */
 export interface AutoStudyResult {
   readonly rounds: number;
-  /** Σύνολο διαστασιολογήσεων μελών (αθροισμένο ανά γύρο). */
-  readonly sized: number;
-  /** Σύνολο οπλισμών μελών (αθροισμένο ανά γύρο). */
-  readonly reinforced: number;
-  /** Σύνολο αλλαγών πεδίλων (create+update+remove, αθροισμένο ανά γύρο). */
-  readonly footed: number;
+  readonly columns: number;
+  readonly beams: number;
+  readonly slabs: number;
+  readonly footings: number;
   /** True αν μηδέν blocking diagnostics στο τέλος (πλήρης σύγκλιση). */
   readonly converged: boolean;
   /** Τα blocking (error|warning) diagnostics που απομένουν → «χρειάζομαι εσένα». */
   readonly remaining: readonly StructuralDiagnostic[];
 }
 
+/** Συσσωρευτές unique ids ανά τύπο μέλους (de-dup σε γύρους + size↔reinforce overlap). */
+interface ChangedMembers {
+  readonly columns: Set<string>;
+  readonly beams: Set<string>;
+  readonly slabs: Set<string>;
+  readonly footings: Set<string>;
+}
+
 /** Blocking = error ή warning (το «κόκκινο» που πρέπει να λυθεί). */
 function isBlocking(d: StructuralDiagnostic): boolean {
   return d.severity === 'error' || d.severity === 'warning';
+}
+
+/**
+ * Ταξινομεί τα αλλαγμένα member ids ανά τύπο (από τη σκηνή του ενεργού ορόφου) στους
+ * unique συσσωρευτές. Πέδιλα του ορόφου Θεμελίωσης προστίθενται ξεχωριστά (footingIds).
+ */
+function classifyChangedMembers(
+  levelManager: AutoStudyLevelManager,
+  memberIds: readonly string[],
+  acc: ChangedMembers,
+): void {
+  if (memberIds.length === 0) return;
+  const levelId = levelManager.currentLevelId;
+  if (!levelId) return;
+  const scene = levelManager.getLevelScene(levelId);
+  if (!scene) return;
+  const byId = new Map((scene.entities as unknown as readonly Entity[]).map((e) => [e.id, e]));
+  for (const id of memberIds) {
+    const e = byId.get(id);
+    if (!e) continue;
+    if (isColumnEntity(e)) acc.columns.add(id);
+    else if (isBeamEntity(e)) acc.beams.add(id);
+    else if (isSlabEntity(e)) acc.slabs.add(id);
+    else if (isFoundationEntity(e)) acc.footings.add(id);
+  }
 }
 
 /**
@@ -132,9 +174,12 @@ export function runAutoStudy(
     }
   };
 
-  let sizedTotal = 0;
-  let reinforcedTotal = 0;
-  let footedTotal = 0;
+  const changed: ChangedMembers = {
+    columns: new Set(),
+    beams: new Set(),
+    slabs: new Set(),
+    footings: new Set(),
+  };
   let rounds = 0;
   let remaining: readonly StructuralDiagnostic[] = [];
 
@@ -145,28 +190,28 @@ export function runAutoStudy(
     // 2→4. μεγάλωσε → όπλισε → διόρθωσε πέδιλα (geometry → steel → foundation).
     const sized = runMemberAutoSize(levelManager, deps.provider, exec);
     const reinforced = runOrganismAutoReinforce(levelManager, [], deps.provider, exec);
-    const footed = foundationChangeCount(
-      runAutoFoundationDesign(levelManager, { user: deps.user, exec }),
-    );
+    const foundation = runAutoFoundationDesign(levelManager, { user: deps.user, exec });
     // 5. re-derive ΣΥΓΧΡΟΝΑ → convergence signal (graph + αναλυτικός φορέας + diagnostics).
     const diags = runOrganismDiagnostics(levelManager, { storeyCount: deps.storeyCount });
     // 6. FEM refresh για τον επόμενο γύρο (engaged-gated reuse).
     maybeSolveFem(levelManager);
 
-    sizedTotal += sized;
-    reinforcedTotal += reinforced;
-    footedTotal += footed;
+    // Unique per-kind (DEFER A): size∪reinforce ταξινομημένα + designed πέδιλα.
+    classifyChangedMembers(levelManager, [...sized, ...reinforced], changed);
+    for (const id of foundation.footingIds) changed.footings.add(id);
     remaining = diags.filter(isBlocking);
 
-    if (sized + reinforced + footed === 0) break; // τίποτα δεν άλλαξε → σύγκλιση/κόλλημα
+    const changedThisRound = sized.length + reinforced.length + foundationChangeCount(foundation);
+    if (changedThisRound === 0) break; // τίποτα δεν άλλαξε → σύγκλιση/κόλλημα
     if (remaining.length === 0) break; // μηδέν κόκκινο → πλήρης σύγκλιση
   }
 
   return {
     rounds,
-    sized: sizedTotal,
-    reinforced: reinforcedTotal,
-    footed: footedTotal,
+    columns: changed.columns.size,
+    beams: changed.beams.size,
+    slabs: changed.slabs.size,
+    footings: changed.footings.size,
     converged: remaining.length === 0,
     remaining,
   };

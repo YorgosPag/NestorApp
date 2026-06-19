@@ -105,6 +105,12 @@ export interface GripInteractionState {
   /** Currently dragging grip (mouse down + move) */
   dragginGrip?: GripIdentifier;
   /**
+   * ADR-370 — grip keys (`${entityId}_${gripIndex}`) the user clicked to select for
+   * a multi-grip move → render orange ('armed'). Fed from {@link GripArmedStore}.
+   * Absent/empty → no grip is armed.
+   */
+  armedKeys?: ReadonlySet<string>;
+  /**
    * ADR-397 — grip keys (`${entityId}_${gripIndex}`) that are active snap targets
    * during a rotation operation → render cyan ('snappable'). Fed from the
    * RotationSnapStore. Absent/empty outside a rotation.

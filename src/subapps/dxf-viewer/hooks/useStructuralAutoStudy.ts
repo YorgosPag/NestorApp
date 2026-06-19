@@ -24,6 +24,7 @@ import { EventBus } from '../systems/events/EventBus';
 import { useCommandHistory } from '../core/commands/useCommandHistory';
 import { resolveStructuralCode } from '../bim/structural/codes';
 import { useStructuralSettingsStore } from '../state/structural-settings-store';
+import { useAnalysisDiagramViewStore } from '../state/analysis-diagram-view-store';
 import { resolveEffectiveAreaLoads } from '../bim/structural/loads/occupancy-loads';
 import { makeGuideOffsetLookup } from '../bim/hosting/guide-store-offset-lookup';
 import { useBuildingStoreyCount } from './useBuildingStoreyCount';
@@ -52,22 +53,36 @@ export function useStructuralAutoStudy(props: { levelManager: AutoStudyLevelMana
         explicitLiveKpa: settings.liveAreaLoadKpa,
         occupancy: settings.occupancy ?? occupancyRef.current,
       });
-      const result = runAutoStudy(levelManager, {
-        provider: resolveStructuralCode(settings.codeId),
-        loadSettings: { storeyCount: storeyCountRef.current, ...areaLoads },
-        getOffset: makeGuideOffsetLookup(),
-        user,
-        storeyCount: storeyCountRef.current,
-        execute,
-        executeGrouped,
-      });
-      // §7.2 — «Τελείωσα. N γύροι. Διαστασιολόγησα X, όπλισα Y, διόρθωσα Z πέδιλα.»
+      // DEFER B — frame-action σύγκλιση: force-engage την ανάλυση ΜΟΝΟ για τη διάρκεια
+      // της μελέτης ώστε ο FEM solver να μετρά (το `resolveEngagedAnalysisResult` gate)
+      // ακόμη κι όταν τα διαγράμματα είναι κλειστά. Επαναφορά μετά → καμία μόνιμη αλλαγή UI
+      // (ο latch `analysisLive` δεν δείχνει overlay· μόνο ενεργοποιεί το FEM gate).
+      const view = useAnalysisDiagramViewStore.getState();
+      const prevAnalysisLive = view.analysisLive;
+      view.setAnalysisLive(true);
+      const result = (() => {
+        try {
+          return runAutoStudy(levelManager, {
+            provider: resolveStructuralCode(settings.codeId),
+            loadSettings: { storeyCount: storeyCountRef.current, ...areaLoads },
+            getOffset: makeGuideOffsetLookup(),
+            user,
+            storeyCount: storeyCountRef.current,
+            execute,
+            executeGrouped,
+          });
+        } finally {
+          if (!prevAnalysisLive) useAnalysisDiagramViewStore.getState().setAnalysisLive(false);
+        }
+      })();
+      // §7.2 — «Τελείωσα. N γύροι. Άλλαξα X κολώνες, Y δοκάρια, Z πλάκες, W πέδιλα.»
       toast.success(
         t('autoStudy.report', {
           rounds: result.rounds,
-          sized: result.sized,
-          reinforced: result.reinforced,
-          footed: result.footed,
+          columns: result.columns,
+          beams: result.beams,
+          slabs: result.slabs,
+          footings: result.footings,
         }),
       );
       // §7.4 — exit-to-human: αν απομένει κόκκινο, «εδώ χρειάζομαι εσένα».

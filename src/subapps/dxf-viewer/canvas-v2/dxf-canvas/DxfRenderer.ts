@@ -56,7 +56,7 @@ export class DxfRenderer {
    * Set grip interaction state (hovered/active grip) for AutoCAD-style visual feedback.
    * Delegates to EntityRendererComposite → BaseEntityRenderer pipeline.
    */
-  setGripInteractionState(state: { hovered?: { entityId: string; gripIndex: number }; active?: { entityId: string; gripIndex: number } }): void {
+  setGripInteractionState(state: { hovered?: { entityId: string; gripIndex: number }; active?: { entityId: string; gripIndex: number }; armedKeys?: ReadonlySet<string> }): void {
     this.entityComposite.setGripInteractionState(state);
   }
 
@@ -122,7 +122,7 @@ export class DxfRenderer {
       : options;
     // 🏢 GRIP EDITING: Update grip interaction state for visual feedback (always set, even when empty)
     const gripOpts = effectiveOptions.gripInteractionState;
-    this.setGripInteractionState(gripOpts ? { hovered: gripOpts.hoveredGrip, active: gripOpts.activeGrip } : {});
+    this.setGripInteractionState(gripOpts ? { hovered: gripOpts.hoveredGrip, active: gripOpts.activeGrip, armedKeys: gripOpts.armedKeys } : {});
     // Rebuild selection Set for O(1) lookups in renderEntityUnified
     this._selectionSet = new Set(effectiveOptions.selectedEntityIds);
     // ADR-040 Phase IX: viewport culling — skip entities whose bbox does not
@@ -251,7 +251,7 @@ export class DxfRenderer {
     this.entityComposite.setTransform(transform);
     // ADR-049 SSOT (2026-05-12): 'drag-preview' mode removed — dragged entity renders as 'selected'.
     const gripOpts = mode === 'selected' ? interaction.gripInteractionState : undefined;
-    this.setGripInteractionState(gripOpts ? { hovered: gripOpts.hoveredGrip, active: gripOpts.activeGrip } : {});
+    this.setGripInteractionState(gripOpts ? { hovered: gripOpts.hoveredGrip, active: gripOpts.activeGrip, armedKeys: gripOpts.armedKeys } : {});
     const syntheticOptions: DxfRenderOptions = {
       showGrid: false, showLayerNames: false, wireframeMode: false,
       selectedEntityIds: mode === 'selected' ? [entity.id] : [],

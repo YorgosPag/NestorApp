@@ -242,8 +242,15 @@ export function buildGripInteractionState(
   hoveredGrip: UnifiedGripInfo | null,
   activeGrip: UnifiedGripInfo | null,
   phase: UnifiedGripPhase,
+  armedKeys?: ReadonlySet<string>,
 ): DxfGripInteractionState {
   const state: DxfGripInteractionState = {};
+
+  // ADR-370 — clicked-to-select grips render orange ('armed'). Independent of the
+  // hover/drag phase: an armed grip stays orange while the cursor is elsewhere.
+  if (armedKeys && armedKeys.size > 0) {
+    state.armedKeys = armedKeys;
+  }
 
   if (hoveredGrip?.source === 'dxf' && (phase === 'hovering' || phase === 'warm')) {
     state.hoveredGrip = {

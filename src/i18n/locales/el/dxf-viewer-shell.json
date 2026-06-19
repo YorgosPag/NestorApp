@@ -68,7 +68,7 @@
     "applied": "Αυτόματος σχεδιασμός θεμελίωσης — νέα πέδιλα: {created} (combined: {combined}, ενημερώθηκαν: {updated}, αφαιρέθηκαν: {removed})"
   },
   "autoStudy": {
-    "report": "Αυτόματη Μελέτη — τελείωσα σε {rounds, plural, one {# γύρο} other {# γύρους}}: διαστασιολόγησα {sized}, όπλισα {reinforced}, διόρθωσα {footed} πέδιλα",
+    "report": "Αυτόματη Μελέτη — τελείωσα σε {rounds, plural, one {# γύρο} other {# γύρους}}: άλλαξα {columns} κολώνες, {beams} δοκάρια, {slabs} πλάκες, {footings} πέδιλα",
     "remaining": "{count, plural, one {# θέμα χρειάζεται εσένα} other {# θέματα χρειάζονται εσένα}} — δες τις προειδοποιήσεις στον φορέα"
   },
   "structural": {

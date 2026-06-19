@@ -505,6 +505,8 @@ export interface DxfRenderOptions {
   gripInteractionState?: {
     hoveredGrip?: { entityId: string; gripIndex: number };
     activeGrip?: { entityId: string; gripIndex: number };
+    /** ADR-501 — grip keys clicked-to-select for a multi-grip move (orange). */
+    armedKeys?: ReadonlySet<string>;
   };
   // ADR-049 SSOT (2026-05-12): the `dragPreview` field used to live here so
   // DxfRenderer could mutate the entity in-place during grip drag. It has

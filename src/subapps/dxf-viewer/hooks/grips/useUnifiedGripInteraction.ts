@@ -12,7 +12,7 @@
  * @see grip-hit-testing.ts — proximity detection
  * @see grip-commit-adapters.ts — commit logic
  */
-import { useState, useCallback, useRef, useMemo, useEffect } from 'react';
+import { useState, useCallback, useRef, useMemo, useEffect, useSyncExternalStore } from 'react';
 import type { Point2D } from '../../rendering/types/Types';
 import type { Overlay } from '../../overlays/types';
 import { GRIP_CONFIG } from '../useGripMovement';
@@ -34,11 +34,14 @@ import { isReferenceFlowKey, type WallHotGripOp, type HotGripStep } from './wall
 import { WallRotateHotGripStore } from '../../bim/walls/wall-rotate-hotgrip-store';
 // ADR-397 — rotation snap targets SSoT (arm on centre-pick, clear on reset).
 import { getGlobalRotationSnapStore } from '../../bim/grips/rotation-snap-store';
-import { runGripMouseDown, runGripMouseUp } from './grip-mouse-handlers';
+import { runGripMouseDown } from './grip-mouse-handlers';
+import { runGripMouseUp } from './grip-mouseup-handler';
 import { runGripMouseMove } from './grip-mouse-move-handler';
 import type { DxfCommitDeps, OverlayCommitDeps } from './grip-commit-adapters';
 import { GripBasePointStore } from '../../systems/grip/GripBasePointStore';
 import { GripAltMoveStore } from '../../systems/grip/GripAltMoveStore';
+// ADR-370 — armed-grip SSoT (clicked-to-select grips render orange for multi-grip move).
+import { GripArmedStore } from '../../systems/grip/GripArmedStore';
 import { GripCopyModeStore } from '../../systems/grip/GripCopyModeStore';
 import { GripReferenceStore } from '../../systems/grip/GripReferenceStore';
 import { GripSessionUndoStore } from '../../systems/grip/GripSessionUndoStore';
@@ -312,14 +315,21 @@ export function useUnifiedGripInteraction(
   );
   // ── ESCAPE ──
   const handleEscape = useCallback((): boolean => {
+    let handled = false;
     // ADR-363 Phase 1G — ESC / right-click also cancels an active corner hot-grip.
     if (phase === 'dragging' || phase === 'hotGrip') {
       setDraggingVertices(null); setDraggingEdgeMidpoint(null);
       setDraggingOverlayBody(null); setDragPreviewPosition(null);
       resetToIdle();
-      return true;
+      handled = true;
     }
-    return false;
+    // ADR-370 — ESC also clears the armed-grip selection (AutoCAD: Esc deselects
+    // grips) even when idle, so the orange grips revert to cold.
+    if (GripArmedStore.size > 0) {
+      GripArmedStore.clear();
+      handled = true;
+    }
+    return handled;
   }, [phase, resetToIdle]);
   // ── ADR-397 Σ2 — ROTATE-FREE KEYBOARD ──
   // Window-level key during the free rotate (`phase==='hotGrip'`, op rotate, step
@@ -410,9 +420,17 @@ export function useUnifiedGripInteraction(
     // (keystrokes don't change currentWorldPos).
     [phase, activeGrip, currentWorldPos, typedRotate],
   );
+  // ADR-370 — subscribe to the armed-grip set so the canvas repaints (orange grips)
+  // when the user clicks/shift-clicks/marquees grips. Low-frequency (click), not a
+  // 60fps drag subscription → ADR-040 compliant.
+  const armedKeys = useSyncExternalStore(
+    GripArmedStore.subscribe,
+    GripArmedStore.getKeysSnapshot,
+    GripArmedStore.getKeysSnapshot,
+  );
   const gripInteractionState = useMemo(
-    () => buildGripInteractionState(hoveredGrip, activeGrip, phase),
-    [hoveredGrip, activeGrip, phase],
+    () => buildGripInteractionState(hoveredGrip, activeGrip, phase, armedKeys),
+    [hoveredGrip, activeGrip, phase, armedKeys],
   );
   // ADR-363 Phase 1G — hotGrip counts as "following" so upstream snap applies to
   // the live rubber-band move and the lasso gate (`!isGripDragging`) stays closed.

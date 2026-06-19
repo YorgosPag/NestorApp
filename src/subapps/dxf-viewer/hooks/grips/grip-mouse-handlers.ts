@@ -15,26 +15,19 @@ import { unlockGripSnapPosition } from '../../systems/cursor/GripSnapStore';
 import { gripStyleStore } from '../../stores/GripStyleStore';
 import { findNearestGrip } from './grip-hit-testing';
 import {
-  resolveHotGripMouseDown, resolveHotGripMouseUp, isWallHotGripKind,
+  resolveHotGripMouseDown, isWallHotGripKind,
   hotGripOpForKind, initialHotGripStep, hotGripKindOf,
 } from './wall-hot-grip-fsm';
 import { BimRotateHotGripStore } from '../../bim/grips/bim-rotate-hotgrip-store';
 import { commitDxfGripDragModeAware, type DxfCommitDeps } from './grip-commit-adapters';
-import { commitHotGripCopy } from './grip-parametric-commits';
-import { applyGripStepSnap } from '../../bim/grips/grip-step-quantize';
-import { applyMoveConstraints } from '../../bim/grips/grip-move-constraints';
 // ADR-397 Φ2 — directional move-by-value: classify the clicked MOVE arm, prompt for
 // a distance (the rotation-angle PromptDialog SSoT), translate along that local axis.
 import {
   resolveMoveGlyphZoneForGrip, directionForZone, isDirectionalZone,
 } from '../../bim/grips/move-glyph-zones';
 import { getPromptDialogStore } from '../../systems/prompt-dialog';
-import { CtrlKeyTracker } from '../../keyboard/CtrlKeyTracker';
-import {
-  commitOverlayVertexDrag,
-  commitOverlayEdgeMidpointDrag,
-  commitOverlayBodyDrag,
-} from './overlay-grip-commit-adapters';
+// ADR-370 — armed-grip SSoT: click a cold grip → arm it orange (multi-grip move).
+import { GripArmedStore } from '../../systems/grip/GripArmedStore';
 import { GripModeStore } from '../../systems/grip/GripModeStore';
 import { GripBasePointStore } from '../../systems/grip/GripBasePointStore';
 import { GripAltMoveStore } from '../../systems/grip/GripAltMoveStore';
@@ -52,8 +45,8 @@ import type {
   SelectedGrip,
   DraggingVertexState,
 } from './unified-grip-types';
-import { applyHotGripHint, advanceHotGripPick, commitRotateReference, commitFreeRotate } from './grip-hotgrip-actions';
-import type { GripMouseDownCtx, GripMouseUpCtx } from './grip-mouse-handlers.types';
+import { applyHotGripHint } from './grip-hotgrip-actions';
+import type { GripMouseDownCtx } from './grip-mouse-handlers.types';
 
 // Ctx types live in `grip-mouse-handlers.types.ts` (file-size split). Re-export
 // for callers (useUnifiedGripInteraction).
@@ -184,6 +177,10 @@ export function runGripMouseDown(worldPos: Point2D, isShift: boolean, ctx: GripM
     ?? (hoveredGrip?.source === 'dxf' && isWallHotGripKind(hotGripKindOf(hoveredGrip)) ? hoveredGrip : null);
   if (!nearGrip) {
     if (!isShift && selectedGrips.length > 0) setSelectedGrips([]);
+    // ADR-370 — a click that misses every grip (without Shift) clears the armed
+    // selection, so the orange grips revert to cold (AutoCAD: click-away deselects).
+    // The mousedown still falls through (return false) to lasso / entity selection.
+    if (!isShift) GripArmedStore.clear();
     return false;
   }
   // DXF grip
@@ -337,139 +334,4 @@ export function runGripMouseDown(worldPos: Point2D, isShift: boolean, ctx: GripM
     }
   }
   return false;
-}
-
-// ============================================================================
-// MOUSE UP
-// ============================================================================
-export async function runGripMouseUp(worldPos: Point2D, ctx: GripMouseUpCtx): Promise<boolean> {
-  const {
-    mouseUpInProgressRef, phase, hotGripAwaitingFirstReleaseRef, hotGripStepRef,
-    hotGripMovedRef, hotGripOpRef, activeGrip, anchorRef,
-    dxfCommitDeps, overlayCommitDeps, resetToIdle, markDragFinished,
-    draggingVertices, setDraggingVertices, draggingEdgeMidpoint, setDraggingEdgeMidpoint,
-    draggingOverlayBody, setDraggingOverlayBody, setSelectedGrips, setDragPreviewPosition,
-  } = ctx;
-  if (mouseUpInProgressRef.current) return false;
-  mouseUpInProgressRef.current = true;
-  try {
-    // ADR-363 Phase 1G — wall hot-grip release. 1st-click release arms (stays hot);
-    // subsequent deliberate (moved) clicks advance the pick steps; the terminal
-    // step's click commits. mouseup snap is already applied upstream
-    // (mouse-handler-up), so each picked point is snapped (vs the un-snapped down).
-    const hotOp = hotGripOpRef.current;
-    const hotUp = resolveHotGripMouseUp(
-      hotOp, phase, hotGripAwaitingFirstReleaseRef.current, hotGripStepRef.current, hotGripMovedRef.current,
-    );
-    if (hotUp !== 'none' && activeGrip?.source === 'dxf') {
-      if (hotUp === 'arm') {
-        // 1st-click release — arm the move, stay hot. Re-baseline the move flag
-        // so the cursor must leave the anchor before the next click counts.
-        hotGripAwaitingFirstReleaseRef.current = false;
-        hotGripMovedRef.current = false;
-        return true;
-      }
-      if (hotUp === 'stay') {
-        // Stray same-spot release (e.g. 2nd fire of the canvas+container mouseup
-        // pair) — keep hot, do NOT advance/commit, so the flow survives the click.
-        return true;
-      }
-      if (hotUp === 'advance') {
-        // Deliberate click on a non-terminal step — record its point + step on.
-        advanceHotGripPick(worldPos, ctx);
-        hotGripMovedRef.current = false;
-        return true;
-      }
-      // commit (terminal step).
-      if (hotOp === 'rotate') {
-        // ADR-397 — free rotate (default) vs the opt-in 6-click reference flow.
-        if (hotGripStepRef.current === 'rotate-free') {
-          commitFreeRotate(worldPos, activeGrip, ctx);
-        } else {
-          commitRotateReference(worldPos, activeGrip, ctx);
-        }
-        return true;
-      }
-      // move / corner — needs an anchor (base point / grip position).
-      if (!anchorRef.current) return true;
-      const effectiveAnchor = GripBasePointStore.getSnapshot().overrideAnchor ?? anchorRef.current;
-      // ORTHO (F8) locks a "move" hot-grip to the H/V axis; corner reshape keeps its
-      // own geometry. SNAP-MODE (F9) step then quantizes (both no-op when OFF).
-      const rawDelta = { x: worldPos.x - effectiveAnchor.x, y: worldPos.y - effectiveAnchor.y };
-      const delta: Point2D = hotOp === 'move' ? applyMoveConstraints(rawDelta) : applyGripStepSnap(rawDelta);
-      // ADR-363 Phase 1G.4 + ADR-397 — Ctrl (or ⌘) held at the terminal click of
-      // a MOVE hot-grip copies the entity (AutoCAD MOVE→COPY) instead of
-      // translating it. Dispatched entity-agnostically (wall-midpoint /
-      // column-center) via `commitHotGripCopy`; falls through to the move commit
-      // when the kind has no copy path. Single copy — the flow resets afterwards.
-      const copied =
-        hotOp === 'move' && CtrlKeyTracker.getSnapshot() &&
-        commitHotGripCopy(activeGrip, delta, dxfCommitDeps);
-      if (!copied) {
-        commitDxfGripDragModeAware(activeGrip, delta, dxfCommitDeps, GripModeStore.getSnapshot());
-      }
-      GripBasePointStore.clear();
-      resetToIdle();
-      return true;
-    }
-    if (phase === 'dragging' && activeGrip?.source === 'dxf' && anchorRef.current) {
-      // ADR-357 Phase 12 — honor the `Base Point` override: when the user
-      // re-anchored the drag through the right-click menu, the displacement
-      // is measured from the user-picked anchor instead of `grip.position`.
-      const effectiveAnchor = GripBasePointStore.getSnapshot().overrideAnchor ?? anchorRef.current;
-      // ORTHO (F8) locks the displacement to the H/V axis when the WHOLE entity
-      // translates (a `movesEntity` grip or an Alt move-from-base-point); parametric
-      // resize grips skip it. SNAP-MODE (F9) step then quantizes (both no-op when OFF).
-      const rawDelta = { x: worldPos.x - effectiveAnchor.x, y: worldPos.y - effectiveAnchor.y };
-      const movesWhole = activeGrip.movesEntity === true || GripAltMoveStore.getActive();
-      const delta: Point2D = movesWhole ? applyMoveConstraints(rawDelta) : applyGripStepSnap(rawDelta);
-      commitDxfGripDragModeAware(activeGrip, delta, dxfCommitDeps, GripModeStore.getSnapshot());
-      // The override is a per-drag modifier — clear it at commit so the
-      // next drag starts from the natural grip anchor.
-      GripBasePointStore.clear();
-      resetToIdle();
-      return true;
-    }
-    if (draggingVertices && draggingVertices.length > 0) {
-      const delta = applyGripStepSnap({ x: worldPos.x - draggingVertices[0].startPoint.x, y: worldPos.y - draggingVertices[0].startPoint.y });
-      const vertexGrips: UnifiedGripInfo[] = draggingVertices.map((dv) => ({
-        id: `overlay_${dv.overlayId}_v${dv.vertexIndex}`, source: 'overlay' as const,
-        overlayId: dv.overlayId, gripIndex: dv.vertexIndex, type: 'vertex' as const,
-        position: dv.originalPosition, movesEntity: false,
-      }));
-      await commitOverlayVertexDrag(vertexGrips, delta, overlayCommitDeps);
-      // Clear selection so the dragged grip drops out of the 'hot' visual
-      // state on release — otherwise the renderer keeps painting it red
-      // because `isSelected` maps to the hot color in layer-polygon-renderer.
-      setSelectedGrips([]);
-      setDraggingVertices(null); setDragPreviewPosition(null); markDragFinished(); resetToIdle();
-      return true;
-    }
-    if (draggingEdgeMidpoint) {
-      const edgeGrip: UnifiedGripInfo = {
-        id: `overlay_${draggingEdgeMidpoint.overlayId}_e${draggingEdgeMidpoint.edgeIndex}`,
-        source: 'overlay', overlayId: draggingEdgeMidpoint.overlayId,
-        gripIndex: draggingEdgeMidpoint.edgeIndex, type: 'edge',
-        position: worldPos, movesEntity: false, edgeInsertIndex: draggingEdgeMidpoint.insertIndex,
-      };
-      await commitOverlayEdgeMidpointDrag(edgeGrip, worldPos, draggingEdgeMidpoint.newVertexCreated, overlayCommitDeps);
-      setSelectedGrips([]);
-      setDraggingEdgeMidpoint(null); setDragPreviewPosition(null); markDragFinished(); resetToIdle();
-      return true;
-    }
-    if (draggingOverlayBody) {
-      // DEFER (ADR-363): ORTHO (F8) for overlay-body move is intentionally not applied
-      // here — its live ghost is drawn in the polygon renderer (ADR-040 leaf), so
-      // axis-locking only the commit would break WYSIWYG. Overlays stay free until the
-      // ghost is locked in the same pass. SNAP-MODE step still applies.
-      const delta = applyGripStepSnap({ x: worldPos.x - draggingOverlayBody.startPoint.x, y: worldPos.y - draggingOverlayBody.startPoint.y });
-      await commitOverlayBodyDrag(draggingOverlayBody.overlayId, delta, overlayCommitDeps);
-      setSelectedGrips([]);
-      setDraggingOverlayBody(null); setDragPreviewPosition(null); markDragFinished(); resetToIdle();
-      return true;
-    }
-    return false;
-  } finally {
-    mouseUpInProgressRef.current = false;
-  }
 }

@@ -86,9 +86,11 @@ export interface FoundationDesignResult {
   readonly combined: number;
   readonly updated: number;
   readonly removed: number;
+  /** ADR-500 — ids των πεδίλων που σχεδιάστηκαν/ενημερώθηκαν (unique per-kind report). */
+  readonly footingIds: readonly string[];
 }
 
-const ZERO: FoundationDesignResult = { created: 0, combined: 0, updated: 0, removed: 0 };
+const ZERO: FoundationDesignResult = { created: 0, combined: 0, updated: 0, removed: 0, footingIds: [] };
 
 /** Footing candidate (cross-level): foundation-level πέδιλα + active-scene πέδιλα. */
 interface CandidateFooting {
@@ -285,6 +287,8 @@ export function runAutoFoundationDesign(
     combined: cmd.combinedCount(),
     updated: cmd.updatedCount(),
     removed: cmd.removedCount(),
+    // Τα designed πέδιλα (created + updated) — τα removed δεν προστίθενται (έπαψαν να υπάρχουν).
+    footingIds: [...createSteps.map((s) => s.footing.id), ...updateSteps.map((s) => s.next.id)],
   };
 }
 
