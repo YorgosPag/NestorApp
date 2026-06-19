@@ -243,6 +243,11 @@ export type FloorFinishGripKind =
  *   - `beam-corner-{start,end}-{pos,neg}` → 2-DOF corner (opposite corner fixed).
  *   - `beam-edge-length` → resize length along axis (END short edge, start fixed).
  *   - `beam-width` → reused ως το width-edge (perpendicular, opposite face fixed).
+ *
+ * Column-parity mid-edge completion (Giorgio 2026-06-20): the 2 OPPOSITE mid-edge
+ * grips so all 4 faces carry a midpoint handle (mirror της κολόνας 4 μεσοπλευρικών):
+ *   - `beam-width-far` → resize width on the −perp face (near face fixed).
+ *   - `beam-edge-length-start` → resize length at the START short edge (end fixed).
  */
 export type BeamGripKind =
   | 'beam-start'
@@ -252,6 +257,8 @@ export type BeamGripKind =
   | 'beam-curve'
   | 'beam-width'
   | 'beam-edge-length'
+  | 'beam-width-far'
+  | 'beam-edge-length-start'
   | 'beam-corner-start-pos'
   | 'beam-corner-start-neg'
   | 'beam-corner-end-pos'

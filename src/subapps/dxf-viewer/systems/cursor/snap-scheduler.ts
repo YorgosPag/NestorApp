@@ -28,11 +28,12 @@ import { registerRenderCallback, RENDER_PRIORITIES } from '../../rendering';
 import { PANEL_LAYOUT } from '../../config/panel-tokens';
 import { setImmediateSnap, clearImmediateSnap, setFullSnapResult } from './ImmediateSnapStore';
 import { findColumnDrawCornerSnap } from '../../bim/columns/column-corner-snap';
-import { resolveColumnPlacementContext } from '../../bim/columns/column-placement-snap-context';
+import { resolveColumnGhostStatusFromSnap } from '../../bim/columns/column-placement-snap-context';
 import {
   setColumnGhostStatus,
   clearColumnGhostStatus,
 } from './ColumnPlacementGhostStatusStore';
+import type { ColumnToolBridgeHandle } from '../../ui/ribbon/hooks/bridge/column-tool-bridge-store';
 import { columnToolBridgeStore } from '../../ui/ribbon/hooks/bridge/column-tool-bridge-store';
 import type { ProSnapResult } from '../../snapping/extended-types';
 import type { SnapResultItem } from './mouse-handler-types';
@@ -76,55 +77,38 @@ function clearSnapState(setSnapResults: (r: SnapResultItem[]) => void): void {
 }
 
 /**
- * ADR-398 §Column→Beam axis snap — γράφει το snap SSoT στο σημείο πάνω στον άξονα του
- * δοκαριού (dedup ίδιο με το corner/center path). Το ghost κουμπώνει εκεί (πράσινο).
+ * ADR-398 §ghost coloring (bugfix 2026-06-19) — θέτει το ghost status ως **thin reader**
+ * του ενιαίου snap: 🟢 δοκάρι / 🔴 κολώνα (overlap) / ⚪ neutral, παραγόμενο από το
+ * `snapResult.snapPoint.entityId` + light footprint-overlap. ΔΕΝ καταπνίγει το snap pipeline
+ * (το `fullSnapResult` παραμένει → γλυφές + ετικέτες εμφανίζονται). Όχι column → reset.
  */
-function writeBeamAxisSnap(input: SnapDetectionInput, point: Point2D, beamId: string): void {
-  const snapMoved = Math.abs(point.x - lastSnapX) > 0.001 || Math.abs(point.y - lastSnapY) > 0.001;
-  if (snapMoved || !lastSnapFound) {
-    lastSnapX = point.x;
-    lastSnapY = point.y;
-    input.setSnapResults([{ point, type: 'nearest', entityId: beamId, distance: 0, priority: 0 }]);
-    setFullSnapResult(null); // δεν υπάρχει ProSnapResult· ο ghost χρωματισμός είναι το σήμα
-    setImmediateSnap({ found: true, point, mode: 'nearest', entityId: beamId });
-  }
-  lastSnapFound = true;
-}
-
-/**
- * ADR-398 §Column→Beam axis snap — όταν τοποθετείται κολώνα, αναλύει τι βρίσκεται κάτω
- * από τον cursor και θέτει το ghost status. **Δοκάρι ΝΙΚΑ**: snap στον άξονά του → `true`
- * (short-circuit του corner/center snap). Αλλιώς status overlap/neutral + `false` (πέφτει
- * στο κανονικό snap). Όταν δεν τοποθετείται κολώνα → reset status.
- */
-function applyColumnPlacementContext(input: SnapDetectionInput): boolean {
-  const colHandle = input.activeTool === 'column' ? columnToolBridgeStore.get() : null;
+function applyColumnGhostStatus(
+  colHandle: ColumnToolBridgeHandle | null,
+  input: SnapDetectionInput,
+  snapResult: ProSnapResult | null,
+): void {
   if (!colHandle?.isActive) {
     clearColumnGhostStatus();
-    return false;
+    return;
   }
-  const ctx = resolveColumnPlacementContext(input.worldPos, input.getEntities?.() ?? []);
-  setColumnGhostStatus(ctx.status);
-  if (ctx.status === 'beam') {
-    writeBeamAxisSnap(input, ctx.point, ctx.beamId);
-    return true;
-  }
-  return false;
+  setColumnGhostStatus(
+    resolveColumnGhostStatusFromSnap(
+      input.worldPos,
+      input.getEntities?.() ?? [],
+      snapResult?.snapPoint?.entityId ?? null,
+    ),
+  );
 }
 
 /** The heavy work — runs in the RAF slot, NEVER inside the mousemove handler. */
 function runSnapDetection(input: SnapDetectionInput): void {
+  const colHandle = input.activeTool === 'column' ? columnToolBridgeStore.get() : null;
   try {
-    // ADR-398 §Column→Beam axis snap — beam ΝΙΚΑ (η ρητή «hover→place» πρόθεση): όταν ο
-    // cursor είναι πάνω σε δοκάρι, snap στον άξονά του + ghost 🟢. Αλλιώς status overlap(🔴)/
-    // neutral και πέφτουμε στο κανονικό snap (corner/center) χωρίς regression.
-    if (applyColumnPlacementContext(input)) return;
-
     // ADR-398 — Column draw: project the would-be column's corners; a corner
     // match wins over the plain center-cursor snap. The indicator shows the
     // target corner; the ghost anchor (ImmediateSnap.point) is shifted to
-    // `adjustedCursorPos` so the corner lands on the target.
-    const colHandle = input.activeTool === 'column' ? columnToolBridgeStore.get() : null;
+    // `adjustedCursorPos` so the corner lands on the target. Beam-axis snap comes
+    // from the unified `findSnapPoint` (NearestSnapEngine `bim-beam`) — ΕΝΑ pipeline.
     const drawCorner = colHandle?.isActive
       ? findColumnDrawCornerSnap(
           input.worldPos,
@@ -137,6 +121,22 @@ function runSnapDetection(input: SnapDetectionInput): void {
     const snapResult = drawCorner
       ? drawCorner.snapResult
       : input.findSnapPoint(input.worldPos.x, input.worldPos.y);
+
+    // 🔍 TEMP DEBUG (ADR-398 snap-indicator investigation) — REMOVE after diagnosis.
+    if (colHandle?.isActive) {
+      const cursorSnap = input.findSnapPoint(input.worldPos.x, input.worldPos.y);
+      // eslint-disable-next-line no-console
+      console.log('[SNAP-DBG column]', {
+        drawCorner: drawCorner ? (drawCorner.snapResult.activeMode ?? 'no-mode') : 'null',
+        used_found: snapResult?.found,
+        used_type: snapResult?.activeMode,
+        used_entity: snapResult?.snapPoint?.entityId,
+        used_desc: snapResult?.snapPoint?.description,
+        cursorOnly_found: cursorSnap?.found,
+        cursorOnly_type: cursorSnap?.activeMode,
+        cursorOnly_desc: cursorSnap?.snapPoint?.description,
+      });
+    }
 
     if (snapResult && snapResult.found && snapResult.snappedPoint) {
       const sx = snapResult.snappedPoint.x;
@@ -166,8 +166,12 @@ function runSnapDetection(input: SnapDetectionInput): void {
     } else {
       clearSnapState(input.setSnapResults);
     }
+
+    // ADR-398 §ghost coloring — thin reader του ενιαίου snap result (όχι παράλληλη ανίχνευση).
+    applyColumnGhostStatus(colHandle, input, snapResult);
   } catch {
     clearSnapState(input.setSnapResults);
+    clearColumnGhostStatus();
   }
 }
 

@@ -159,6 +159,14 @@ export function drawDimPill(
 // ─── Renderer integration helper (one-liner per renderer) ────────────────────
 
 /**
+ * Vertical placement of the dimension pill on the entity footprint:
+ *  • `center-below` (default) — footprint centre, nudged DOWN to clear the MOVE glyph.
+ *  • `top-mid` — on the line joining the TOP-face mid-point to the centre, halfway
+ *    along it (upper-middle). Used by columns (Giorgio 2026-06-19).
+ */
+export type DimLabelPlacement = 'center-below' | 'top-mid';
+
+/**
  * Draw the centred dimension pill for a BIM entity: screen bbox-centre +
  * min-footprint-px gate + `formatBimDimLabels` + `drawDimPill`. Each renderer
  * calls this once (gated on highlighted || selected) for zero duplication.
@@ -171,6 +179,7 @@ export function drawEntityDimLabel(
   entity: Entity,
   bbox: BoundingBox3D,
   worldToScreen: (p: Point2D) => Point2D,
+  placement: DimLabelPlacement = 'center-below',
 ): void {
   const minS = worldToScreen({ x: bbox.min.x, y: bbox.min.y });
   const maxS = worldToScreen({ x: bbox.max.x, y: bbox.max.y });
@@ -178,6 +187,13 @@ export function drawEntityDimLabel(
   if (span < BIM_LABEL_MIN_FOOTPRINT_PX) return;
   const lines = formatBimDimLabels(entity);
   if (lines.length === 0) return;
-  // Offset DOWN (screen +Y) so the pill clears the centred MOVE glyph (ADR-397).
-  drawDimPill(ctx, lines, (minS.x + maxS.x) / 2, (minS.y + maxS.y) / 2 + BIM_LABEL_CENTER_OFFSET_Y_PX);
+
+  const cx = (minS.x + maxS.x) / 2;
+  const centerY = (minS.y + maxS.y) / 2;
+  // `top-mid`: halfway between the centre and the TOP face (smaller screen Y). Otherwise
+  // offset DOWN (screen +Y) so the pill clears the centred MOVE glyph (ADR-397).
+  const cy = placement === 'top-mid'
+    ? (centerY + Math.min(minS.y, maxS.y)) / 2
+    : centerY + BIM_LABEL_CENTER_OFFSET_Y_PX;
+  drawDimPill(ctx, lines, cx, cy);
 }

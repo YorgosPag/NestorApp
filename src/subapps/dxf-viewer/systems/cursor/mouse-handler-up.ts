@@ -34,7 +34,6 @@ import {
   findColumnDrawCornerSnap,
   isColumnCornerSnapGrip,
 } from '../../bim/columns/column-corner-snap';
-import { resolveColumnPlacementContext } from '../../bim/columns/column-placement-snap-context';
 import type { ColumnGripKind } from '../../hooks/useGripMovement';
 import { columnToolBridgeStore } from '../../ui/ribbon/hooks/bridge/column-tool-bridge-store';
 import { resolveSnapConnectorElevationMm } from '../../bim/mep-segments/mep-snap-connector-elevation';
@@ -214,16 +213,12 @@ export function useMouseUpHandler({ props, cursor, refs, snap }: MouseUpHandlerD
       setSnapDrawingMode(isInDrawingMode(activeTool, overlayMode));
       if (snapEnabled && findSnapPoint && !dimLineRefPhase) {
         // ADR-398 — Column draw: a corner projection match shifts the commit
-        // anchor so the corner lands on the target (matches the ghost). Falls
-        // back to the plain cursor snap when no corner is near a target.
+        // anchor so the corner lands on the target (matches the ghost). Beam-axis
+        // snap comes from the unified `findSnapPoint` (NearestSnapEngine `bim-beam`),
+        // ίδιο pipeline με το move → commit ≡ ghost. Center-anchor (κέντρο ≡ άξονας)
+        // επιβάλλεται στο `useColumnTool` μέσω `getColumnGhostStatus()==='beam'`.
         const colHandle = activeTool === 'column' ? columnToolBridgeStore.get() : null;
-        // ADR-398 §Column→Beam axis snap — beam ΝΙΚΑ (η ρητή «hover→place» πρόθεση): η κολώνα
-        // κουμπώνει στον άξονα του δοκαριού (κέντρο ≡ άξονας), ώστε το commit να ταυτίζεται με
-        // το πράσινο ghost. Υπερισχύει του corner/center snap.
-        const beamCtx = colHandle?.isActive && scene
-          ? resolveColumnPlacementContext(worldPoint, scene.entities ?? [])
-          : null;
-        const drawCorner = colHandle?.isActive && (!beamCtx || beamCtx.status !== 'beam')
+        const drawCorner = colHandle?.isActive
           ? findColumnDrawCornerSnap(
               worldPoint,
               { ...colHandle.overrides, kind: colHandle.kind, anchor: colHandle.anchor },
@@ -231,9 +226,7 @@ export function useMouseUpHandler({ props, cursor, refs, snap }: MouseUpHandlerD
               findSnapPoint,
             )
           : null;
-        if (beamCtx && beamCtx.status === 'beam') {
-          worldPoint = beamCtx.point;
-        } else if (drawCorner) {
+        if (drawCorner) {
           worldPoint = drawCorner.adjustedCursorPos;
         } else {
           const snapResult = findSnapPoint(worldPoint.x, worldPoint.y);

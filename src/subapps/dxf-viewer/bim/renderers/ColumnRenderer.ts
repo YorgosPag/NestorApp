@@ -188,12 +188,13 @@ export class ColumnRenderer extends BaseEntityRenderer {
   }
 
   /**
-   * Phase 8F — Revit-style centred dimension pill. Now routed through the shared
-   * `drawEntityDimLabel` SSoT (bbox centre + min-footprint gate + formatter +
-   * `drawDimPill`) — identical behaviour, zero duplication across BIM renderers.
+   * Phase 8F — Revit-style dimension pill. Routed through the shared
+   * `drawEntityDimLabel` SSoT (bbox + min-footprint gate + formatter + `drawDimPill`).
+   * Columns place it `top-mid` — on the line joining the top-face mid-point to the
+   * centre, halfway along it (Giorgio 2026-06-19) — instead of the default centre-below.
    */
   private drawCenterDimLabel(column: ColumnEntity): void {
-    drawEntityDimLabel(this.ctx, column, column.geometry.bbox, (p) => this.worldToScreen(p));
+    drawEntityDimLabel(this.ctx, column, column.geometry.bbox, (p) => this.worldToScreen(p), 'top-mid');
   }
 
   getGrips(entity: EntityModel): GripInfo[] {

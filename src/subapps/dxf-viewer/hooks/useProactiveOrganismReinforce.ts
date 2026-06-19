@@ -27,13 +27,11 @@
  * @see docs/centralized-systems/reference/adrs/ADR-459-structural-organism-connectivity.md §Phase 8
  */
 
-import { useEffect } from 'react';
-import { EventBus, type DrawingEventType } from '../systems/events/EventBus';
-import { useCommandHistory } from '../core/commands/useCommandHistory';
+import { type DrawingEventType } from '../systems/events/EventBus';
 import { resolveStructuralCode } from '../bim/structural/codes';
 import { useStructuralSettingsStore } from '../state/structural-settings-store';
 import { runOrganismAutoReinforce, type ReinforceLevelManager } from './structural-auto-reinforce-core';
-import { isGeometryEditTrigger } from './structural-geometry-edit-triggers';
+import { useGroupedStructuralReaction } from './useGroupedStructuralReaction';
 
 /** Στατικές μεταβολές που δημιουργούν/μεγαλώνουν τον οργανισμό → re-reinforce. */
 const PROACTIVE_REINFORCE_EVENTS: readonly DrawingEventType[] = [
@@ -64,36 +62,12 @@ const PROACTIVE_REINFORCE_EVENTS: readonly DrawingEventType[] = [
 // οπλισμός βάφεται μόνο στο ΡΗΤΟ κουμπί «Αυτόματος Οπλισμός» (one-shot· το `columnFemMomentById`
 // threading στο command/core παραμένει γι' αυτό).
 
-// Η ταξινόμηση «άμεση geometry edit χρήστη → ομαδοποίηση στο ίδιο atomic undo step»
-// ζει πλέον στο SSoT `isGeometryEditTrigger` — μηδέν τοπικό αντίγραφο (superset-safe:
-// ο reinforce δεν συνδρομεί σε *-delete-requested, άρα η συμπεριφορά του είναι αμετάβλητη).
-
 export function useProactiveOrganismReinforce(props: { levelManager: ReinforceLevelManager }): void {
   const { levelManager } = props;
-  const { execute, executeGrouped } = useCommandHistory();
 
-  useEffect(() => {
-    let scheduled = false;
-    // Αν το batch περιέχει geometry-edit trigger, ομαδοποίησε τον οπλισμό στο ίδιο
-    // undo step με το user command (atomic, Revit-grade).
-    let groupable = false;
-
-    const recompute = (): void => {
-      scheduled = false;
-      const shouldGroup = groupable;
-      groupable = false;
-      const provider = resolveStructuralCode(useStructuralSettingsStore.getState().codeId);
-      runOrganismAutoReinforce(levelManager, [], provider, shouldGroup ? executeGrouped : execute);
-    };
-
-    const schedule = (ev: DrawingEventType): void => {
-      if (isGeometryEditTrigger(ev)) groupable = true;
-      if (scheduled) return;
-      scheduled = true;
-      queueMicrotask(recompute);
-    };
-
-    const unsubs = PROACTIVE_REINFORCE_EVENTS.map((ev) => EventBus.on(ev, () => schedule(ev)));
-    return () => unsubs.forEach((u) => u());
-  }, [levelManager, execute, executeGrouped]);
+  // SSoT wiring (coalescing + atomic-undo grouping) → `useGroupedStructuralReaction`.
+  useGroupedStructuralReaction(PROACTIVE_REINFORCE_EVENTS, (exec) => {
+    const provider = resolveStructuralCode(useStructuralSettingsStore.getState().codeId);
+    runOrganismAutoReinforce(levelManager, [], provider, exec);
+  });
 }

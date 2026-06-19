@@ -50,9 +50,16 @@ import {
   getAxisBoxGrips,
   applyAxisBoxGripDrag,
   invertAxisBoxRoleMap,
+  // Column-parity mid-edge extras (Giorgio 2026-06-20): the 2 beam-only faces reuse
+  // the SAME axis-box edge SSoT as width-edge/length-edge — zero-duplication geometry
+  // + opposite-element-fixed drag (no re-derived frame/limits/resize in this module).
+  applyAxisBoxEdgeDrag,
+  axisBoxEdgeMidpoint,
   type AxisBoxParams,
   type AxisBoxGripRole,
+  type AxisBoxPatch,
 } from '../grips/axis-box-grips';
+import type { RectEdge } from '../grips/rect-frame';
 
 /** Map a shared axis-box grip ROLE → the beam discriminator kind (stable order). */
 const BEAM_ROLE_TO_KIND: Readonly<Record<AxisBoxGripRole, BeamGripKind>> = {
@@ -157,7 +164,8 @@ export function getBeamGrips(entity: Readonly<BeamEntity>): GripInfo[] {
   // plan behavior — επεξεργάζεται στο Properties / 3Δ· το `beamDepthHandlePosition`
   // μένει για τον read-only depth indicator του renderer).
   if (kind !== 'curved') {
-    return getAxisBoxGrips(beamAxisBoxParams(params)).map((g, i) => ({
+    const axisParams = beamAxisBoxParams(params);
+    const grips: GripInfo[] = getAxisBoxGrips(axisParams).map((g, i) => ({
       entityId: entity.id,
       gripIndex: i,
       type: g.type,
@@ -165,6 +173,31 @@ export function getBeamGrips(entity: Readonly<BeamEntity>): GripInfo[] {
       movesEntity: false,
       beamGripKind: BEAM_ROLE_TO_KIND[g.role],
     }));
+
+    // ── Column-parity completion (Giorgio 2026-06-20) ────────────────────────
+    // (1) The 2 OPPOSITE mid-edge grips so ALL 4 faces carry a midpoint handle
+    //     (mirror της κολόνας 4 μεσοπλευρικών). The shared axis-box SSoT emits only
+    //     the +perp width face + the END short edge; walls/foundations stay at 2 —
+    //     these extras are beam-only, built from the SAME rect SSoT (`rectEdgeWorld`).
+    // (2) The centre 4-arrow MOVE glyph (`beam-midpoint`): identical behaviour to the
+    //     column (shared move-glyph render / per-arm hover-zone / click→dialog SSoT
+    //     activates the moment the grip is emitted — kind already registered).
+    grips.push({
+      entityId: entity.id, gripIndex: 7, type: 'edge',
+      position: axisBoxEdgeMidpoint(axisParams, { axis: 'y', sign: -1 }),
+      movesEntity: false, beamGripKind: 'beam-width-far',
+    });
+    grips.push({
+      entityId: entity.id, gripIndex: 8, type: 'edge',
+      position: axisBoxEdgeMidpoint(axisParams, { axis: 'x', sign: -1 }),
+      movesEntity: false, beamGripKind: 'beam-edge-length-start',
+    });
+    grips.push({
+      entityId: entity.id, gripIndex: 9, type: 'center',
+      position: axisMidpoint2D(params),
+      movesEntity: true, beamGripKind: 'beam-midpoint',
+    });
+    return grips;
   }
 
   // ── Curved beam → bespoke (no rectangular footprint to read corners from) ────
@@ -176,6 +209,10 @@ export function getBeamGrips(entity: Readonly<BeamEntity>): GripInfo[] {
 
   grips.push({ entityId: entity.id, gripIndex: 0, type: 'vertex', position: start, movesEntity: false, beamGripKind: 'beam-start' });
   grips.push({ entityId: entity.id, gripIndex: 1, type: 'vertex', position: end, movesEntity: false, beamGripKind: 'beam-end' });
+
+  // 2 — centre 4-arrow MOVE glyph (column parity, Giorgio 2026-06-20). Moves
+  // start + end + curveControl together (see `moveMidpoint`).
+  grips.push({ entityId: entity.id, gripIndex: 2, type: 'center', position: mid, movesEntity: true, beamGripKind: 'beam-midpoint' });
 
   // 3 — curve control. Seed στο midpoint όταν undefined.
   const curvePos = params.curveControl ? project2D(params.curveControl) : mid;
@@ -242,6 +279,10 @@ export function applyBeamGripDrag(
   // curved beams OR non-rect kinds → fall through στους bespoke handlers.
   const rect = applyBeamRectGrip(gripKind, input);
   if (rect) return rect;
+  // Column-parity extra mid-edges (−perp width face, start short edge) — same rect
+  // SSoT, beam-only roles the shared axis-box engine does not emit (Giorgio 2026-06-20).
+  const extraEdge = applyBeamExtraEdgeGrip(gripKind, input);
+  if (extraEdge) return extraEdge;
   if (gripKind === 'beam-start') return moveStart(input);
   if (gripKind === 'beam-end') return moveEnd(input);
   if (gripKind === 'beam-midpoint') return moveMidpoint(input);
@@ -276,12 +317,41 @@ function applyBeamRectGrip(
     minWidthMm: MIN_BEAM_WIDTH_MM,
   });
   if (!patch) return input.originalParams;
+  return axisPatchToBeamParams(input.originalParams, patch);
+}
+
+/** Spread an axis-box `{start,end,width}` patch over full beam params (Z preserved). */
+function axisPatchToBeamParams(originalParams: BeamParams, patch: AxisBoxPatch): BeamParams {
   return {
-    ...input.originalParams,
-    startPoint: { x: patch.start.x, y: patch.start.y, z: input.originalParams.startPoint.z ?? 0 },
-    endPoint: { x: patch.end.x, y: patch.end.y, z: input.originalParams.endPoint.z ?? 0 },
+    ...originalParams,
+    startPoint: { x: patch.start.x, y: patch.start.y, z: originalParams.startPoint.z ?? 0 },
+    endPoint: { x: patch.end.x, y: patch.end.y, z: originalParams.endPoint.z ?? 0 },
     width: patch.width,
   };
+}
+
+/**
+ * Column-parity extra mid-edge drags (Giorgio 2026-06-20): the −perp width face
+ * (`beam-width-far`) and the START short edge (`beam-edge-length-start`) — the 2
+ * edges the shared `axis-box-grips` SSoT does not emit. Reuses the SAME rect SSoT
+ * (`axisToRectFrame` + opposite-element-fixed `applyRectEdgeDrag` + `rectFrameToAxis`)
+ * as every other edge, just with the opposite-sign `RectEdge`. Returns `null` for
+ * curved beams or non-extra kinds → caller falls through to the bespoke handlers.
+ */
+function applyBeamExtraEdgeGrip(
+  gripKind: BeamGripKind,
+  input: Readonly<BeamGripDragInput>,
+): BeamParams | null {
+  if (!isRectBeam(input.originalParams)) return null;
+  let edge: RectEdge | null = null;
+  if (gripKind === 'beam-width-far') edge = { axis: 'y', sign: -1 };
+  else if (gripKind === 'beam-edge-length-start') edge = { axis: 'x', sign: -1 };
+  if (!edge) return null;
+  // Same axis-box edge SSoT as width-edge/length-edge (opposite-element-fixed).
+  const patch = applyAxisBoxEdgeDrag(
+    beamAxisBoxParams(input.originalParams), edge, input.delta, MIN_BEAM_WIDTH_MM,
+  );
+  return axisPatchToBeamParams(input.originalParams, patch);
 }
 
 /**

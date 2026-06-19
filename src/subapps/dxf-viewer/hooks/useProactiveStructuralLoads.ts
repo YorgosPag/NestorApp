@@ -38,16 +38,14 @@
  * @see docs/centralized-systems/reference/adrs/ADR-459-structural-organism-connectivity.md §Phase 9
  */
 
-import { useEffect, useRef } from 'react';
-import { EventBus, type DrawingEventType } from '../systems/events/EventBus';
-import { useCommandHistory } from '../core/commands/useCommandHistory';
+import { type DrawingEventType } from '../systems/events/EventBus';
 import { makeGuideOffsetLookup } from '../bim/hosting/guide-store-offset-lookup';
 import { useStructuralSettingsStore } from '../state/structural-settings-store';
 import { resolveEffectiveAreaLoads } from '../bim/structural/loads/occupancy-loads';
 import { useBuildingStoreyCount } from './useBuildingStoreyCount';
 import { useBuildingOccupancy } from './useBuildingOccupancy';
 import { runStructuralLoadTakedown, type LoadTakedownLevelManager } from './structural-load-takedown-core';
-import { isGeometryEditTrigger } from './structural-geometry-edit-triggers';
+import { useGroupedStructuralReaction } from './useGroupedStructuralReaction';
 
 /** Στατικές μεταβολές που αλλάζουν τη διαδρομή φορτίων → recompute. */
 const PROACTIVE_LOAD_EVENTS: readonly DrawingEventType[] = [
@@ -67,55 +65,22 @@ const PROACTIVE_LOAD_EVENTS: readonly DrawingEventType[] = [
   'bim:walls-from-perimeter', // ADR-478 — batch τοίχοι από περίμετρο
 ];
 
-// Η ταξινόμηση «άμεση geometry edit χρήστη → ομαδοποίηση στο ίδιο atomic undo step»
-// ζει πλέον στο SSoT `isGeometryEditTrigger` (incl. *-delete-requested) — μηδέν τοπικό
-// αντίγραφο, συνεπής συμπεριφορά σε όλους τους proactive hooks.
-
 export function useProactiveStructuralLoads(props: { levelManager: LoadTakedownLevelManager }): void {
   const { levelManager } = props;
-  const { execute, executeGrouped } = useCommandHistory();
   const storeyCount = useBuildingStoreyCount();
-  // Ref ώστε ο event callback να διαβάζει το τρέχον storeyCount χωρίς re-subscribe.
-  const storeyCountRef = useRef(storeyCount);
-  storeyCountRef.current = storeyCount;
   // ADR-474 — structural occupancy κληρονομημένη από building.category (SSoT).
   const occupancy = useBuildingOccupancy();
-  const occupancyRef = useRef(occupancy);
-  occupancyRef.current = occupancy;
 
-  useEffect(() => {
-    let scheduled = false;
-    // Αν το batch περιέχει geometry-edit trigger, ομαδοποίησε τα φορτία στο ίδιο
-    // undo step με το user command (atomic, Revit-grade).
-    let groupable = false;
-
-    const recompute = (): void => {
-      scheduled = false;
-      const shouldGroup = groupable;
-      groupable = false;
-      const settings = useStructuralSettingsStore.getState();
-      // ADR-474 — explicit kPa κερδίζει· αλλιώς auto από occupancy + γεωμετρία πλάκας.
-      const areaLoads = resolveEffectiveAreaLoads({
-        explicitDeadKpa: settings.deadAreaLoadKpa,
-        explicitLiveKpa: settings.liveAreaLoadKpa,
-        occupancy: settings.occupancy ?? occupancyRef.current, // override → building category → default
-      });
-      runStructuralLoadTakedown(
-        levelManager,
-        { storeyCount: storeyCountRef.current, ...areaLoads },
-        makeGuideOffsetLookup(),
-        shouldGroup ? executeGrouped : execute,
-      );
-    };
-
-    const schedule = (ev: DrawingEventType): void => {
-      if (isGeometryEditTrigger(ev)) groupable = true;
-      if (scheduled) return;
-      scheduled = true;
-      queueMicrotask(recompute);
-    };
-
-    const unsubs = PROACTIVE_LOAD_EVENTS.map((ev) => EventBus.on(ev, () => schedule(ev)));
-    return () => unsubs.forEach((u) => u());
-  }, [levelManager, execute, executeGrouped]);
+  // SSoT wiring (coalescing + atomic-undo grouping) → `useGroupedStructuralReaction`·
+  // εδώ μένει ΜΟΝΟ η μοναδική λογική recompute φορτίων.
+  useGroupedStructuralReaction(PROACTIVE_LOAD_EVENTS, (exec) => {
+    const settings = useStructuralSettingsStore.getState();
+    // ADR-474 — explicit kPa κερδίζει· αλλιώς auto από occupancy + γεωμετρία πλάκας.
+    const areaLoads = resolveEffectiveAreaLoads({
+      explicitDeadKpa: settings.deadAreaLoadKpa,
+      explicitLiveKpa: settings.liveAreaLoadKpa,
+      occupancy: settings.occupancy ?? occupancy, // override → building category → default
+    });
+    runStructuralLoadTakedown(levelManager, { storeyCount, ...areaLoads }, makeGuideOffsetLookup(), exec);
+  });
 }

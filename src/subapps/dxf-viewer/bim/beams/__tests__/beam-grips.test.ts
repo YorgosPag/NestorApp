@@ -76,12 +76,14 @@ function makeCurvedWithoutControl(): BeamEntity {
 describe('beam-grips (Phase 5.5a)', () => {
   // ─── getBeamGrips ──────────────────────────────────────────────────────────
 
-  it('1. straight beam emits 7 wall-parity grips (4 corners + width edge + length edge + rotation)', () => {
-    // ADR-363 (2026-06-11) — straight beam unified with the wall via the shared
-    // axis-box SSoT: 7 grips, ίδιος κώδικας. `beam-depth` δεν εκπέμπεται πλέον.
+  it('1. straight beam emits 10 column-parity grips (4 corners + 4 mid-edges + rotation + centre move)', () => {
+    // Giorgio 2026-06-20 — beam grip parity with the column: the shared axis-box
+    // SSoT 7 (width edge + length edge + 4 corners + rotation) PLUS the 2 opposite
+    // mid-edges (beam-width-far, beam-edge-length-start) and the centre 4-arrow MOVE
+    // glyph (beam-midpoint). `beam-depth` δεν εκπέμπεται πλέον.
     const beam = makeStraight();
     const grips = getBeamGrips(beam);
-    expect(grips).toHaveLength(7);
+    expect(grips).toHaveLength(10);
     expect(grips.map((g) => g.beamGripKind)).toEqual([
       'beam-width',
       'beam-edge-length',
@@ -90,13 +92,16 @@ describe('beam-grips (Phase 5.5a)', () => {
       'beam-corner-end-pos',
       'beam-corner-end-neg',
       'beam-rotation',
+      'beam-width-far',
+      'beam-edge-length-start',
+      'beam-midpoint',
     ]);
   });
 
-  it('2. cantilever beam emits the same 7 wall-parity grips as straight', () => {
+  it('2. cantilever beam emits the same 10 column-parity grips as straight', () => {
     const beam = makeCantilever();
     const grips = getBeamGrips(beam);
-    expect(grips).toHaveLength(7);
+    expect(grips).toHaveLength(10);
     expect(grips.map((g) => g.beamGripKind)).toEqual([
       'beam-width',
       'beam-edge-length',
@@ -105,17 +110,22 @@ describe('beam-grips (Phase 5.5a)', () => {
       'beam-corner-end-pos',
       'beam-corner-end-neg',
       'beam-rotation',
+      'beam-width-far',
+      'beam-edge-length-start',
+      'beam-midpoint',
     ]);
   });
 
-  it('3. curved beam emits 5 grips (start / end / curve / width / rotation — no rect footprint, no depth)', () => {
+  it('3. curved beam emits 6 grips (start / end / move / curve / width / rotation — no rect footprint, no depth)', () => {
     // Curved beam keeps the bespoke path (no rectangular footprint); depth dropped.
+    // Now also carries the centre MOVE glyph (column parity, Giorgio 2026-06-20).
     const beam = makeCurvedWithControl();
     const grips = getBeamGrips(beam);
-    expect(grips).toHaveLength(5);
+    expect(grips).toHaveLength(6);
     expect(grips.map((g) => g.beamGripKind)).toEqual([
       'beam-start',
       'beam-end',
+      'beam-midpoint',
       'beam-curve',
       'beam-width',
       'beam-rotation',
@@ -123,37 +133,78 @@ describe('beam-grips (Phase 5.5a)', () => {
   });
 
   it('4. grip positions match params.startPoint / endPoint / curveControl', () => {
-    // ADR-363 Φ1G.5 Slice 2: grips[2] is now beam-curve (was beam-midpoint).
-    // grips[3] is now beam-width. Indices shifted down by 1 after the midpoint removal.
+    // Curved order: start(0) / end(1) / move(2) / curve(3) / width(4) / rotation(5).
     const beam = makeCurvedWithControl();
     const grips = getBeamGrips(beam);
     expect(grips[0].position).toEqual({ x: 0, y: 0 });
     expect(grips[1].position).toEqual({ x: 4000, y: 0 });
-    // ADR-363 Φ1G.5 Slice 2: grips[2] = beam-curve (was grips[3])
-    expect(grips[2].beamGripKind).toBe('beam-curve');
-    expect(grips[2].position).toEqual({ x: 2000, y: 800 });
+    expect(grips[3].beamGripKind).toBe('beam-curve');
+    expect(grips[3].position).toEqual({ x: 2000, y: 800 });
   });
 
   it('5. curved beam without curveControl seeds curve grip at axis midpoint', () => {
-    // Curved array: start(0) / end(1) / curve(2) / width(3) / rotation(4) — no depth.
+    // Curved array: start(0) / end(1) / move(2) / curve(3) / width(4) / rotation(5).
     const beam = makeCurvedWithoutControl();
     const grips = getBeamGrips(beam);
-    expect(grips).toHaveLength(5);
-    expect(grips[2].beamGripKind).toBe('beam-curve');
+    expect(grips).toHaveLength(6);
+    expect(grips[3].beamGripKind).toBe('beam-curve');
     // Axis midpoint of (0,0)→(4000,0) is (2000,0).
-    expect(grips[2].position).toEqual({ x: 2000, y: 0 });
-    expect(grips[3].beamGripKind).toBe('beam-width');
-    expect(grips[4].beamGripKind).toBe('beam-rotation');
+    expect(grips[3].position).toEqual({ x: 2000, y: 0 });
+    expect(grips[4].beamGripKind).toBe('beam-width');
+    expect(grips[5].beamGripKind).toBe('beam-rotation');
   });
 
-  it('6. beam-midpoint is NOT emitted; all remaining grips have movesEntity=false', () => {
-    // ADR-363 Φ1G.5 Slice 2: beam-midpoint grip removed — no grip has movesEntity=true.
+  it('6. beam-midpoint centre MOVE glyph is emitted with movesEntity=true; all others false', () => {
+    // Giorgio 2026-06-20 — column parity: the centre 4-arrow MOVE glyph is back as
+    // the ONLY movesEntity=true grip (reverses ADR-363 Φ1G.5 Slice 2).
     const beam = makeCurvedWithControl();
     const grips = getBeamGrips(beam);
-    // Confirm beam-midpoint is absent entirely
-    expect(grips.some((g) => g.beamGripKind === 'beam-midpoint')).toBe(false); // ADR-363 Φ1G.5 Slice 2
-    // All remaining grips must have movesEntity=false
-    expect(grips.every((g) => g.movesEntity === false)).toBe(true); // ADR-363 Φ1G.5 Slice 2
+    const moveGrips = grips.filter((g) => g.movesEntity === true);
+    expect(moveGrips).toHaveLength(1);
+    expect(moveGrips[0].beamGripKind).toBe('beam-midpoint');
+    expect(moveGrips[0].type).toBe('center');
+  });
+
+  it('6b. straight beam exposes a midpoint handle on ALL 4 faces (column parity)', () => {
+    // The 4 mid-edge grips: +perp (beam-width), −perp (beam-width-far), END short
+    // edge (beam-edge-length), START short edge (beam-edge-length-start).
+    const beam = makeStraight(); // (0,0)→(4000,0), width default
+    const grips = getBeamGrips(beam);
+    const w = beam.params.width;
+    const byKind = (k: string) => grips.find((g) => g.beamGripKind === k)!.position;
+    // +perp / −perp long faces at the axial midpoint, opposite Y signs.
+    expect(byKind('beam-width')).toEqual({ x: 2000, y: w / 2 });
+    expect(byKind('beam-width-far')).toEqual({ x: 2000, y: -w / 2 });
+    // END / START short edges at the perpendicular centre, opposite X.
+    expect(byKind('beam-edge-length')).toEqual({ x: 4000, y: 0 });
+    expect(byKind('beam-edge-length-start')).toEqual({ x: 0, y: 0 });
+  });
+
+  it('6c. beam-width-far drag grows width with the NEAR (+perp) face fixed', () => {
+    // Mirror of test 17 (beam-width) but the opposite face: dragging the −perp face
+    // −100 (further from axis) holds the +perp face → width 300→400, axis shifts −50.
+    const base = buildDefaultBeamParams({ x: 0, y: 0 }, { x: 4000, y: 0 }, 'straight');
+    const params: BeamParams = { ...base, width: 300 };
+    const next = applyBeamGripDrag('beam-width-far', {
+      originalParams: params,
+      delta: { x: 0, y: -100 },
+    });
+    expect(next.width).toBeCloseTo(400);
+    expect(next.startPoint.y).toBeCloseTo(-50);
+    expect(next.endPoint.y).toBeCloseTo(-50);
+  });
+
+  it('6d. beam-edge-length-start drag resizes length with the END fixed', () => {
+    // Dragging the START short edge −500 along the axis lengthens the beam from the
+    // start while the end stays put (opposite-edge-fixed). Length 4000→4500.
+    const base = buildDefaultBeamParams({ x: 0, y: 0 }, { x: 4000, y: 0 }, 'straight');
+    const params: BeamParams = { ...base };
+    const next = applyBeamGripDrag('beam-edge-length-start', {
+      originalParams: params,
+      delta: { x: -500, y: 0 },
+    });
+    expect(next.endPoint.x).toBeCloseTo(4000); // end fixed
+    expect(next.startPoint.x).toBeCloseTo(-500); // start moved out
   });
 
   // ─── applyBeamGripDrag ─────────────────────────────────────────────────────

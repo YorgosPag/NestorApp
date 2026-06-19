@@ -47,7 +47,7 @@
 import type { Point2D } from '../../rendering/types/Types';
 import type { SceneUnits } from '../../utils/scene-units';
 import { mmScaleFor } from '../../utils/scene-units';
-import type { RectFrame, RectCorner, RectSign } from './rect-frame';
+import type { RectFrame, RectCorner, RectSign, RectEdge } from './rect-frame';
 import { rectCornerWorld, rectEdgeWorld, rectLocalWorld } from './rect-frame';
 import {
   applyRectCornerDrag,
@@ -191,6 +191,35 @@ function axisBoxResizeLimits(params: AxisBoxParams, minWidthMm: number): RectRes
   return { minHalfWidth: half, minHalfLength: half };
 }
 
+/**
+ * World midpoint of ANY one rect edge of the axis box (shared `rect-frame` SSoT).
+ * The single accessor for placing mid-edge grips — including the 2 faces
+ * `getAxisBoxGrips` does not itself emit, so a consumer (e.g. the beam's column-
+ * parity −perp width face + start short edge) never re-derives the frame geometry.
+ */
+export function axisBoxEdgeMidpoint(params: AxisBoxParams, edge: RectEdge): Point2D {
+  return rectEdgeWorld(axisToRectFrame(params), edge);
+}
+
+/**
+ * Resize ONE rectangle edge (opposite edge fixed) → axis patch. The single SSoT
+ * for axis-box edge drags: used by the standard `width-edge` / `length-edge` roles
+ * AND by any entity adding EXTRA mid-edge handles on the other two faces (e.g. the
+ * beam's −perp width face + start short edge — column parity, Giorgio 2026-06-20),
+ * so the opposite-element-fixed math + clamp live in exactly one place.
+ */
+export function applyAxisBoxEdgeDrag(
+  params: AxisBoxParams,
+  edge: RectEdge,
+  delta: Point2D,
+  minWidthMm: number,
+): AxisBoxPatch {
+  return rectFrameToAxis(
+    applyRectEdgeDrag(axisToRectFrame(params), edge, delta, axisBoxResizeLimits(params, minWidthMm)),
+    params.sceneUnits,
+  );
+}
+
 // ─── Grip emission ───────────────────────────────────────────────────────────
 
 /**
@@ -268,19 +297,19 @@ export function applyAxisBoxGripDrag(
     return { start: rotated[0], end: rotated[1], width: p.width };
   }
 
-  const frame = axisToRectFrame(p);
-  const limits = axisBoxResizeLimits(p, input.minWidthMm);
-  const faceSign: RectSign = p.widthFaceSign ?? 1;
-
   const corner = AXIS_BOX_CORNER_MAP[role];
   if (corner) {
-    return rectFrameToAxis(applyRectCornerDrag(frame, corner, delta, limits), p.sceneUnits);
+    return rectFrameToAxis(
+      applyRectCornerDrag(axisToRectFrame(p), corner, delta, axisBoxResizeLimits(p, input.minWidthMm)),
+      p.sceneUnits,
+    );
   }
+  const faceSign: RectSign = p.widthFaceSign ?? 1;
   if (role === 'width-edge') {
-    return rectFrameToAxis(applyRectEdgeDrag(frame, { axis: 'y', sign: faceSign }, delta, limits), p.sceneUnits);
+    return applyAxisBoxEdgeDrag(p, { axis: 'y', sign: faceSign }, delta, input.minWidthMm);
   }
   if (role === 'length-edge') {
-    return rectFrameToAxis(applyRectEdgeDrag(frame, { axis: 'x', sign: 1 }, delta, limits), p.sceneUnits);
+    return applyAxisBoxEdgeDrag(p, { axis: 'x', sign: 1 }, delta, input.minWidthMm);
   }
   return null;
 }

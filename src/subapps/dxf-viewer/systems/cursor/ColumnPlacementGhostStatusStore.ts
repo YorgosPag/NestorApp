@@ -2,7 +2,8 @@
  * COLUMN PLACEMENT GHOST STATUS STORE — zero-React singleton (ADR-398 §ghost coloring).
  *
  * Κατά την τοποθέτηση κολώνας, ο decoupled snap-scheduler γράφει εδώ το σημασιολογικό
- * status του σημείου κάτω από το σταυρόνημα (`resolveColumnPlacementContext`):
+ * status του σημείου κάτω από το σταυρόνημα (`resolveColumnGhostStatusFromSnap` — thin
+ * reader του ενιαίου snap result, ADR-398 bugfix 2026-06-19):
  *   · `beam`    → 🟢 πράσινο ghost (snap στον άξονα δοκαριού — το σημείο ρέει μέσω
  *                 `ImmediateSnapStore`).
  *   · `overlap` → 🔴 κόκκινο ghost (πάνω σε υπάρχουσα κολώνα — σύγκρουση).

@@ -20,18 +20,16 @@
  * @see docs/centralized-systems/reference/adrs/ADR-459-structural-organism-connectivity.md §Phase 7
  */
 
-import { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { useAuth } from '@/auth/hooks/useAuth';
-import { EventBus, type DrawingEventType } from '../systems/events/EventBus';
-import { useCommandHistory } from '../core/commands/useCommandHistory';
+import { type DrawingEventType } from '../systems/events/EventBus';
 import {
   runAutoFoundationDesign,
   foundationChangeCount,
   type FoundationDesignLevelManager,
 } from './auto-foundation-design-core';
-import { isGeometryEditTrigger } from './structural-geometry-edit-triggers';
+import { useGroupedStructuralReaction } from './useGroupedStructuralReaction';
 
 /** Στατικές μεταβολές που επανα-διαστασιολογούν τη θεμελίωση. */
 const AUTO_DESIGN_EVENTS: readonly DrawingEventType[] = [
@@ -42,49 +40,23 @@ const AUTO_DESIGN_EVENTS: readonly DrawingEventType[] = [
   'bim:structural-loads-computed',
 ];
 
-// Η ταξινόμηση «άμεση geometry edit χρήστη → ομαδοποίηση στο ίδιο atomic undo step»
-// ζει πλέον στο SSoT `isGeometryEditTrigger` (incl. bim:column-delete-requested) —
-// μηδέν τοπικό αντίγραφο: η διαγραφή κολώνας ομαδοποιεί το footing re-derive (1× Ctrl+Z).
-
 export function useAutoFoundationDesign(props: { levelManager: FoundationDesignLevelManager }): void {
   const { levelManager } = props;
-  const { execute, executeGrouped } = useCommandHistory();
   const { t } = useTranslation('dxf-viewer-shell');
   const { user } = useAuth();
 
-  useEffect(() => {
-    let scheduled = false;
-    // Αν το batch περιέχει geometry-edit trigger, ομαδοποίησε το footing re-derive στο
-    // ίδιο undo step με το column command (atomic, Revit-grade).
-    let groupable = false;
-
-    const recompute = (): void => {
-      scheduled = false;
-      const shouldGroup = groupable;
-      groupable = false;
-      const result = runAutoFoundationDesign(levelManager, {
-        user,
-        exec: shouldGroup ? executeGrouped : execute,
-      });
-      if (foundationChangeCount(result) === 0) return; // idempotent no-op → μηδέν toast
-      toast.success(
-        t('autoFoundation.applied', {
-          created: result.created,
-          combined: result.combined,
-          updated: result.updated,
-          removed: result.removed,
-        }),
-      );
-    };
-
-    const schedule = (ev: DrawingEventType): void => {
-      if (isGeometryEditTrigger(ev)) groupable = true;
-      if (scheduled) return;
-      scheduled = true;
-      queueMicrotask(recompute);
-    };
-
-    const unsubs = AUTO_DESIGN_EVENTS.map((ev) => EventBus.on(ev, () => schedule(ev)));
-    return () => unsubs.forEach((u) => u());
-  }, [levelManager, execute, executeGrouped, t, user]);
+  // SSoT wiring (coalescing + atomic-undo grouping) → `useGroupedStructuralReaction`·
+  // εδώ μένει ΜΟΝΟ η μοναδική λογική footing re-derive + toast.
+  useGroupedStructuralReaction(AUTO_DESIGN_EVENTS, (exec) => {
+    const result = runAutoFoundationDesign(levelManager, { user, exec });
+    if (foundationChangeCount(result) === 0) return; // idempotent no-op → μηδέν toast
+    toast.success(
+      t('autoFoundation.applied', {
+        created: result.created,
+        combined: result.combined,
+        updated: result.updated,
+        removed: result.removed,
+      }),
+    );
+  });
 }

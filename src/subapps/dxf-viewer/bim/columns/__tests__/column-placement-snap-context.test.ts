@@ -1,14 +1,15 @@
 /**
- * ADR-398 §Column→Beam axis snap — `column-placement-snap-context` (pure).
+ * ADR-398 §ghost coloring (bugfix 2026-06-19) — `column-placement-snap-context` (pure).
  *
- * Επαληθεύει: κάθετη προβολή στον άξονα δοκαριού (snap point στον centerline)· clamp στο
- * segment (όχι προέκταση)· capture = πάνω στο σώμα (width-based)· nearest beam· context
- * precedence (δοκάρι > overlap κολώνας > neutral). Fixtures: canvas = mm.
+ * Επαληθεύει το **thin reader** ghost-status: παράγεται από το ΑΠΟΤΕΛΕΣΜΑ του ενιαίου snap
+ * (`snapResult.snapPoint.entityId`) + light footprint-overlap, με precedence
+ * **overlap > beam > neutral**. (Η beam-axis projection/snap ζει πια ΜΟΝΟ στο
+ * `NearestSnapEngine` — μηδέν διπλότυπο εδώ.) Fixtures: canvas = mm.
  */
 
 import {
-  findColumnBeamAxisSnap,
-  resolveColumnPlacementContext,
+  findColumnOverlap,
+  resolveColumnGhostStatusFromSnap,
 } from '../column-placement-snap-context';
 import type { Entity } from '../../../types/entities';
 import type { BeamEntity } from '../../types/beam-types';
@@ -38,78 +39,57 @@ function columnFootprint(id: string, cx: number, cy: number, half = 200): Entity
   } as unknown as Entity;
 }
 
-describe('findColumnBeamAxisSnap — προβολή στον άξονα', () => {
-  it('cursor πάνω στο σώμα → snap στον centerline (κάθετη προβολή)', () => {
-    const b = beam('b1', 0, 0, 10000, 0, 250); // οριζόντιος άξονας y=0
-    const snap = findColumnBeamAxisSnap({ x: 4000, y: 80 }, [b]);
-    expect(snap).not.toBeNull();
-    expect(snap!.beamId).toBe('b1');
-    expect(snap!.point.x).toBeCloseTo(4000, 6);
-    expect(snap!.point.y).toBeCloseTo(0, 6); // κουμπώνει στον άξονα
+describe('findColumnOverlap — footprint hit-test', () => {
+  it('cursor μέσα σε footprint κολώνας → id', () => {
+    expect(findColumnOverlap({ x: 8000, y: 0 }, [columnFootprint('c1', 8000, 0)])).toBe('c1');
   });
 
-  it('cursor μακριά από τον άξονα (εκτός width) → null', () => {
-    const b = beam('b1', 0, 0, 10000, 0, 250); // capture = 125*1.5 = 187.5mm
-    expect(findColumnBeamAxisSnap({ x: 4000, y: 300 }, [b])).toBeNull();
+  it('cursor εκτός κάθε footprint → null', () => {
+    expect(findColumnOverlap({ x: 50000, y: 50000 }, [columnFootprint('c1', 0, 0)])).toBeNull();
   });
 
-  it('εκτός segment (πέρα από το άκρο) → null (όχι προέκταση)', () => {
-    const b = beam('b1', 0, 0, 10000, 0);
-    expect(findColumnBeamAxisSnap({ x: 12000, y: 0 }, [b])).toBeNull();
-    expect(findColumnBeamAxisSnap({ x: -500, y: 0 }, [b])).toBeNull();
-  });
-
-  it('διαγώνιος άξονας → προβολή κάθετη στον άξονα', () => {
-    const b = beam('b1', 0, 0, 10000, 10000, 400);
-    const snap = findColumnBeamAxisSnap({ x: 5100, y: 4900 }, [b]);
-    expect(snap).not.toBeNull();
-    expect(snap!.point.x).toBeCloseTo(5000, 0);
-    expect(snap!.point.y).toBeCloseTo(5000, 0);
-  });
-
-  it('δύο δοκάρια → νικά το πλησιέστερο (μικρότερο κάθετο)', () => {
-    const b1 = beam('b1', 0, 0, 10000, 0, 250);
-    const b2 = beam('b2', 0, 100, 10000, 100, 250); // y=100
-    const snap = findColumnBeamAxisSnap({ x: 5000, y: 90 }, [b1, b2]);
-    expect(snap!.beamId).toBe('b2'); // perp 10 < 90
+  it('αγνοεί μη-κολώνες (δοκάρι) → null', () => {
+    expect(findColumnOverlap({ x: 4000, y: 0 }, [beam('b1', 0, 0, 10000, 0) as unknown as Entity])).toBeNull();
   });
 });
 
-describe('resolveColumnPlacementContext — precedence', () => {
-  it('πάνω σε δοκάρι → status beam (+ snap point)', () => {
-    const ctx = resolveColumnPlacementContext({ x: 4000, y: 50 }, [beam('b1', 0, 0, 10000, 0) as unknown as Entity]);
-    expect(ctx.status).toBe('beam');
-    if (ctx.status === 'beam') expect(ctx.point.y).toBeCloseTo(0, 6);
+describe('resolveColumnGhostStatusFromSnap — precedence overlap > beam > neutral', () => {
+  it('snap σε δοκάρι (όχι σε footprint) → beam (🟢)', () => {
+    const entities = [beam('b1', 0, 0, 10000, 0) as unknown as Entity];
+    expect(resolveColumnGhostStatusFromSnap({ x: 4000, y: 0 }, entities, 'b1')).toBe('beam');
   });
 
-  it('ΥΠΑΡΧΟΥΣΑ κολώνα ΝΙΚΑ το δοκάρι (ενδιάμεση κολώνα στη μέση δοκαριού → 🔴, όχι 🟢)', () => {
-    // Σενάριο Giorgio: τρίτη κολώνα στο μέσο δοκαριού· hover πάνω της → overlap (μην βάλεις διπλή).
+  it('snap σε υπάρχουσα κολώνα → overlap (🔴)', () => {
+    const entities = [columnFootprint('c1', 30000, 0)]; // μακριά → όχι footprint hit στο cursor
+    expect(resolveColumnGhostStatusFromSnap({ x: 4000, y: 0 }, entities, 'c1')).toBe('overlap');
+  });
+
+  it('cursor μέσα σε footprint κολώνας → overlap ΑΚΟΜΗ κι αν το snap είναι δοκάρι (ενδιάμεση κολώνα)', () => {
+    // Σενάριο Giorgio: τρίτη κολώνα στο μέσο δοκαριού· snap στον άξονα αλλά cursor πάνω της → 🔴.
     const entities = [
       beam('b1', 0, 0, 10000, 0) as unknown as Entity,
       columnFootprint('c1', 5000, 0),
     ];
-    const ctx = resolveColumnPlacementContext({ x: 5000, y: 0 }, entities);
-    expect(ctx.status).toBe('overlap');
-    if (ctx.status === 'overlap') expect(ctx.columnId).toBe('c1');
+    expect(resolveColumnGhostStatusFromSnap({ x: 5000, y: 0 }, entities, 'b1')).toBe('overlap');
   });
 
-  it('κενό σημείο δοκαριού (όχι πάνω σε κολώνα) → beam (🟢)', () => {
+  it('κενό σημείο δοκαριού (μακριά από κολώνα) + snap δοκάρι → beam (🟢)', () => {
     const entities = [
       beam('b1', 0, 0, 10000, 0) as unknown as Entity,
       columnFootprint('c1', 5000, 0),
     ];
-    const ctx = resolveColumnPlacementContext({ x: 3000, y: 0 }, entities); // μακριά από την c1
-    expect(ctx.status).toBe('beam');
+    expect(resolveColumnGhostStatusFromSnap({ x: 3000, y: 0 }, entities, 'b1')).toBe('beam');
   });
 
-  it('μέσα σε κολώνα (όχι σε δοκάρι) → status overlap', () => {
-    const ctx = resolveColumnPlacementContext({ x: 8000, y: 0 }, [columnFootprint('c1', 8000, 0)]);
-    expect(ctx.status).toBe('overlap');
-    if (ctx.status === 'overlap') expect(ctx.columnId).toBe('c1');
+  it('cursor μέσα σε footprint, snap null → overlap (light fallback)', () => {
+    expect(resolveColumnGhostStatusFromSnap({ x: 8000, y: 0 }, [columnFootprint('c1', 8000, 0)], null)).toBe('overlap');
   });
 
-  it('κενός χώρος → status neutral', () => {
-    const ctx = resolveColumnPlacementContext({ x: 50000, y: 50000 }, [columnFootprint('c1', 0, 0)]);
-    expect(ctx.status).toBe('neutral');
+  it('κενός χώρος, snap null → neutral', () => {
+    expect(resolveColumnGhostStatusFromSnap({ x: 50000, y: 50000 }, [columnFootprint('c1', 0, 0)], null)).toBe('neutral');
+  });
+
+  it('snapEntityId άγνωστο (δεν βρίσκεται) → neutral', () => {
+    expect(resolveColumnGhostStatusFromSnap({ x: 4000, y: 0 }, [beam('b1', 0, 0, 10000, 0) as unknown as Entity], 'ghost-id')).toBe('neutral');
   });
 });

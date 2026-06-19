@@ -33,13 +33,11 @@
  * @see docs/centralized-systems/reference/adrs/ADR-475-auto-member-sizing.md
  */
 
-import { useEffect } from 'react';
-import { EventBus, type DrawingEventType } from '../systems/events/EventBus';
-import { useCommandHistory } from '../core/commands/useCommandHistory';
+import { type DrawingEventType } from '../systems/events/EventBus';
 import { resolveStructuralCode } from '../bim/structural/codes';
 import { useStructuralSettingsStore } from '../state/structural-settings-store';
 import { runMemberAutoSize, type MemberSizeLevelManager } from './member-auto-size-core';
-import { isGeometryEditTrigger } from './structural-geometry-edit-triggers';
+import { useGroupedStructuralReaction } from './useGroupedStructuralReaction';
 
 /**
  * Μεταβολές που απαιτούν re-sizing. ΟΧΙ `bim:beam-params-updated` (self-emit → loop)·
@@ -53,34 +51,12 @@ const PROACTIVE_SIZE_EVENTS: readonly DrawingEventType[] = [
   'bim:structural-loads-computed',
 ];
 
-// Η ταξινόμηση «άμεση geometry edit χρήστη → ομαδοποίηση στο ίδιο atomic undo step»
-// ζει πλέον στο SSoT `isGeometryEditTrigger` — μηδέν τοπικό αντίγραφο (superset-safe:
-// ο sizing συνδρομεί μόνο σε created/moved/from-grid/loads-computed, άρα αμετάβλητος).
-
 export function useProactiveMemberSizing(props: { levelManager: MemberSizeLevelManager }): void {
   const { levelManager } = props;
-  const { execute, executeGrouped } = useCommandHistory();
 
-  useEffect(() => {
-    let scheduled = false;
-    let groupable = false;
-
-    const recompute = (): void => {
-      scheduled = false;
-      const shouldGroup = groupable;
-      groupable = false;
-      const provider = resolveStructuralCode(useStructuralSettingsStore.getState().codeId);
-      runMemberAutoSize(levelManager, provider, shouldGroup ? executeGrouped : execute);
-    };
-
-    const schedule = (ev: DrawingEventType): void => {
-      if (isGeometryEditTrigger(ev)) groupable = true;
-      if (scheduled) return;
-      scheduled = true;
-      queueMicrotask(recompute);
-    };
-
-    const unsubs = PROACTIVE_SIZE_EVENTS.map((ev) => EventBus.on(ev, () => schedule(ev)));
-    return () => unsubs.forEach((u) => u());
-  }, [levelManager, execute, executeGrouped]);
+  // SSoT wiring (coalescing + atomic-undo grouping) → `useGroupedStructuralReaction`.
+  useGroupedStructuralReaction(PROACTIVE_SIZE_EVENTS, (exec) => {
+    const provider = resolveStructuralCode(useStructuralSettingsStore.getState().codeId);
+    runMemberAutoSize(levelManager, provider, exec);
+  });
 }

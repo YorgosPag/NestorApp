@@ -520,16 +520,22 @@ NEW `hooks/__tests__/structural-load-takedown-core.test.ts` (6 jest) · MOD `hoo
   `useAutoFoundationDesign`) κρατούσαν ο καθένας **δικό του** `GEOMETRY_EDIT_TRIGGERS` set· τα `*-delete-requested`
   μπήκαν στις λίστες συνδρομής (`PROACTIVE_*_EVENTS`) αλλά **ξεχάστηκαν** στα geom-edit sets των loads + foundation
   → ο recalc δρομολογούνταν standalone (`execute`) αντί grouped (`executeGrouped`/`appendToLast`) → δεύτερο entry.
-  **Fix (SSoT, μηδέν νέος μηχανισμός):** NEW `hooks/structural-geometry-edit-triggers.ts` (`GEOMETRY_EDIT_TRIGGERS`
-  + `isGeometryEditTrigger`, incl. και τα 5 `*-delete-requested`) — αντικαθιστά τα 4 inline αντίγραφα. Superset-safe
-  (ο predicate ερωτάται μόνο για subscribed events) → behavior-preserving για sizing/reinforce, προσθέτει **μόνο** την
-  ομαδοποίηση της διαγραφής σε loads + foundation. Reuse 100% του υπάρχοντος `CommandHistory.appendToLast` /
-  `CompositeCommand` (v8.3). 1× Ctrl+Z αναιρεί τη `DeleteEntityCommand` (+ ADR-401 detach children) **μαζί** με τον
-  παράγωγο recalc, όπως η Revit. 12 jest (5 classification + behavioral «διαγραφή→ΕΝΑ undo entry» + from-grid
-  standalone· composite-command suite άθικτο). **DEFER:** η δεύτερη βαθμίδα της αλυσίδας (sizing/reinforce που
-  πυροδοτούνται από `bim:structural-loads-computed`) παραμένει standalone — pre-existing, κοινό με move/create,
-  no-op σε καθαρή διαγραφή· πλήρης transaction-scope grouping = ξεχωριστό task (handoff §3 option 3). 🔴 browser-verify
-  + commit (Giorgio).
+  **Fix (πλήρης SSoT, μηδέν νέος grouping μηχανισμός):** δύο εξαγωγές. (1) NEW
+  `hooks/structural-geometry-edit-triggers.ts` (`GEOMETRY_EDIT_TRIGGERS` + `isGeometryEditTrigger`, incl. και τα 5
+  `*-delete-requested`) — η classification SSoT. (2) NEW `hooks/useGroupedStructuralReaction.ts` — η **wiring SSoT** του
+  pattern «proactive structural reaction με atomic-undo grouping»: ενοποιεί το αντιγραμμένο 4× boilerplate
+  (`scheduled`/`groupable`/`queueMicrotask`/`exec`-selection/subscribe) **υιοθετώντας** τον υπάρχοντα coalescer SSoT
+  `createMicrotaskCoalescer` (ADR-488 — εκκρεμές pending-ratchet, τώρα 4/8 αντίγραφα καθαρά) + τον classifier (1).
+  Και οι 4 hooks (loads/sizing/reinforce/foundation) καλούν πλέον `useGroupedStructuralReaction(events, run(exec))` —
+  κρατούν ΜΟΝΟ τη μοναδική λογική recompute τους (≈3-6 γραμμές). Superset-safe (ο predicate ερωτάται μόνο για
+  subscribed events) → behavior-preserving για sizing/reinforce, προσθέτει **μόνο** την ομαδοποίηση διαγραφής σε
+  loads + foundation. Reuse 100% του υπάρχοντος `CommandHistory.appendToLast` / `CompositeCommand` (v8.3). 1× Ctrl+Z
+  αναιρεί τη `DeleteEntityCommand` (+ ADR-401 detach children) **μαζί** με τον παράγωγο recalc, όπως η Revit. 12 jest
+  (5 classification + behavioral «διαγραφή→ΕΝΑ undo entry» end-to-end μέσω του helper + from-grid standalone)·
+  proactive-coalescer + composite-command suites άθικτα. **DEFER:** η δεύτερη βαθμίδα της αλυσίδας (sizing/reinforce
+  που πυροδοτούνται από `bim:structural-loads-computed`, + `useProactiveTieBeamTieForce` που ακούει μόνο αυτό)
+  παραμένει standalone — pre-existing, κοινό με move/create, no-op σε καθαρή διαγραφή· πλήρης transaction-scope
+  grouping = ξεχωριστό task (handoff §3 option 3). 🔴 browser-verify + commit (Giorgio).
 - **2026-06-17 (v10, Opus):** **Phase 9 Slice 1 — PROACTIVE real-time φορτία (§6l).** Ο load-path engine
   (ADR-467) έτρεχε ΜΟΝΟ με ribbon κουμπί· τώρα τα φορτία γίνονται **proactive** σε κάθε load-topology μεταβολή
   (mirror Φ7/Φ8) → η αλυσίδα `φορτία → sizing πεδίλων → διαγνωστικά` τρέχει αυτόματα. **SSoT extraction:** NEW
