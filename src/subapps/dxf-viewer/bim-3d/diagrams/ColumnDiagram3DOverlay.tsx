@@ -75,9 +75,6 @@ export function ColumnDiagram3DOverlay({ managerRef }: ColumnDiagram3DOverlayPro
   useEffect(() => {
     const manager = managerRef.current;
     if (!manager || !group) return;
-    // 🔎 TEMP-DIAGNOSTIC (ADR-483 fix#3 — z-fight πλάκας· ⚠️ ΑΦΑΙΡΕΣΕ ΠΡΙΝ ΤΟ COMMIT):
-    // εκθέτει τη σκηνή στην κονσόλα ώστε ο Giorgio να τρέξει το coplanar/z-fight διαγνωστικό.
-    (window as unknown as { __bimScene?: THREE.Scene }).__bimScene = manager.scene;
     manager.scene.add(group);
 
     // Billboard: κάθε per-column pivot στρέφεται γύρω από τον κατακόρυφο άξονα ώστε να

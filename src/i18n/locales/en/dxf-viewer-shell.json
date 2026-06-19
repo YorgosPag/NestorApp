@@ -67,6 +67,10 @@
   "autoFoundation": {
     "applied": "Auto foundation design — new footings: {created} (combined: {combined}, updated: {updated}, removed: {removed})"
   },
+  "autoStudy": {
+    "report": "Auto Study — finished in {rounds, plural, one {# round} other {# rounds}}: sized {sized}, reinforced {reinforced}, fixed {footed} footings",
+    "remaining": "{count, plural, one {# issue needs you} other {# issues need you}} — see the structural warnings"
+  },
   "structural": {
     "code": {
       "eurocode": "Eurocodes",
@@ -3836,6 +3840,7 @@
       },
       "print": "Print",
       "runStructuralAnalysis": "Analysis",
+      "autoStudyOrganism": "Auto Study",
       "autoReinforceOrganism": "Auto-Reinforce",
       "computeTakedownLoads": "Compute Loads",
       "footingConnect": {
@@ -3849,6 +3854,7 @@
       "bimSchedule": "Open BIM Schedule — export structural elements",
       "thermalEnvelope": "Apply a unified external thermal envelope (ETICS) to the floor",
       "print": "Print the drawing to PDF, printer or plotter (from 2D or 3D)",
+      "autoStudyOrganism": "Studies the whole floor by itself: iterates loads → sizing → reinforcement → footings → check, until nothing is red (or up to 10 rounds). One Ctrl+Z undoes the whole study",
       "autoReinforceOrganism": "Auto-reinforce the selected structural members (or the whole floor) with the minimum valid reinforcement per the active code",
       "computeTakedownLoads": "Auto footing loads: column tributary area × storeys × area loads (G/Q) → service design load (never overwrites manual loads)",
       "runStructuralAnalysis": "3D frame static linear analysis (K·u=F) → real internal forces M/V/N + per-member diagrams (informational — does not replace tributary design loads)"

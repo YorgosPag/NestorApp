@@ -227,6 +227,10 @@ export interface BimEventMap {
   // ADR-464 Slice 4 — «Υπολογισμός Φορτίων» request (από ribbon action). Tributary
   // load takedown σε όλα τα εγγράψιμα πέδιλα του ενεργού ορόφου (χωρίς scope επιλογής).
   'bim:compute-loads-requested': Record<string, never>;
+  // ADR-500 (ADR-487 §7) — «Αυτόματη Μελέτη» request (από ribbon action). One-shot
+  // σύγχρονος convergence loop (φορτία→size→reinforce→footing→diagnostics) μέχρι μηδέν
+  // κόκκινο ή MAX_STUDY_ROUNDS. Ο handler (`useStructuralAutoStudy`) εκδίδει report toast.
+  'bim:auto-study-requested': Record<string, never>;
   // ADR-464 Slice 4 — N πέδιλα έλαβαν αυτόματο φορτίο (takedown command). `count` =
   // πόσα πράγματι (skip χειροκίνητων). Trigger organism re-derive (έδραση) + toast.
   'bim:structural-loads-computed': { entityIds: string[]; count: number };

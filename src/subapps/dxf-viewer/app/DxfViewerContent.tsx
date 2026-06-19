@@ -6,6 +6,7 @@ import { useFullscreen } from '@/hooks/useFullscreen';
 import { FullscreenOverlay } from '@/core/containers/FullscreenOverlay';
 import React from 'react';
 import type { DxfViewerAppProps } from '../types';
+import type { ToolType } from '../ui/toolbar/types';
 import { useDxfViewerState } from '../hooks/useDxfViewerState';
 import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';
 import { useLayerCommandShortcuts } from '../hooks/useLayerCommandShortcuts';
@@ -44,6 +45,7 @@ import { useDxfViewerEffects } from './useDxfViewerEffects';
 import { useDxfViewerNotifications } from '../hooks/useDxfViewerNotifications';
 import { useStructuralAutoAttach } from '../hooks/useStructuralAutoAttach';
 import { useStructuralAutoReinforce } from '../hooks/useStructuralAutoReinforce';
+import { useStructuralAutoStudy } from '../hooks/useStructuralAutoStudy';
 import { useProactiveOrganismReinforce } from '../hooks/useProactiveOrganismReinforce';
 import { useProactiveMemberSizing } from '../hooks/useProactiveMemberSizing';
 import { useStructuralLoadTakedown } from '../hooks/useStructuralLoadTakedown';
@@ -135,6 +137,18 @@ export const DxfViewerContent = React.memo<DxfViewerAppProps>((props) => {
   const overlayStore = useOverlayStore();
   const universalSelection = useUniversalSelection();
   const levelManager = useLevelManager();
+  // ADR-442 / ADR-345 §5.4 — Revit-grade: ξεκινώντας εργαλείο οδηγών αποεπιλέγει την
+  // τρέχουσα οντότητα, ώστε το priority cascade του useActiveContextualTrigger να μη
+  // μένει κλειδωμένο στο tab της επιλογής (fromSelection > tool) και να αναδυθεί το tab
+  // «Οδηγοί». Reuse του ίδιου SSoT (universalSelection.clearAll()) που καλούν ήδη τα MEP
+  // ribbon bridges στην ενεργοποίηση εργαλείου. Mutation σε event (tool activation), ΟΧΙ
+  // σε effect → ADR-040-safe (μηδέν race με το render path).
+  const wrappedHandleToolChange = React.useCallback((tool: ToolType) => {
+    if (tool.startsWith('guide-')) {
+      universalSelection.clearAll();
+    }
+    handleToolChange(tool);
+  }, [handleToolChange, universalSelection]);
   // ADR-375 Phase B.2 — load BimRenderSettings for active level on every switch / Firestore push
   useBimRenderSettingsSync({
     currentLevelId: levelManager.currentLevelId,
@@ -217,8 +231,14 @@ export const DxfViewerContent = React.memo<DxfViewerAppProps>((props) => {
     ...state,
     selectedEntityIds,  // SSoT: override stale raw useState with live universalSelection value
     handleAction: wrappedHandleAction,
-    onAction: wrappedHandleAction
-  }), [state, selectedEntityIds, wrappedHandleAction]);
+    onAction: wrappedHandleAction,
+    // ADR-442 / ADR-345 §5.4 — override BOTH handleToolChange + onToolChange alias με το
+    // wrapped (deselect-on-guides). Το keyboard-chord path (useDxfToolbarShortcuts μέσω
+    // NormalView.onToolChange) διαβάζει το onToolChange από εδώ· χωρίς αυτό, το «X» chord
+    // θα παρέκαμπτε το deselect → ίδιο bug από το πληκτρολόγιο. Ένα wrapped entry point.
+    handleToolChange: wrappedHandleToolChange,
+    onToolChange: wrappedHandleToolChange,
+  }), [state, selectedEntityIds, wrappedHandleAction, wrappedHandleToolChange]);
   // Overlay drawing hook — retained for its registration side-effects (outputs unused here).
   useOverlayDrawing({
     overlayMode, activeTool, overlayKind, overlayStatus, overlayStore,
@@ -264,6 +284,7 @@ export const DxfViewerContent = React.memo<DxfViewerAppProps>((props) => {
   useDimAssociationObserver(levelManager.getLevelScene, levelManager.setLevelScene, () => levelManager.currentLevelId);
   useStructuralAutoAttach({ levelManager }); // ADR-401 Phase D — auto-attach walls under new beam/slab
   useStructuralAutoReinforce({ levelManager }); // ADR-459 Φ4d — «Αυτόματος Οπλισμός» (ribbon manual trigger)
+  useStructuralAutoStudy({ levelManager }); // ADR-500 (ADR-487 §7) — «Αυτόματη Μελέτη» (ντετερμινιστικός βρόχος σύγκλισης)
   useProactiveMemberSizing({ levelManager }); // ADR-475 — PROACTIVE auto-size διατομής (ΠΡΙΝ τον οπλισμό ⇒ οπλίζεται στη νέα διατομή)
   useProactiveOrganismReinforce({ levelManager }); // ADR-459 Φ8 — PROACTIVE auto-reinforce (organism grows → οπλίζεται μόνο του)
   useStructuralLoadTakedown({ levelManager }); // ADR-464 Φ4 — «Υπολογισμός Φορτίων» (ribbon manual trigger)
@@ -285,7 +306,7 @@ export const DxfViewerContent = React.memo<DxfViewerAppProps>((props) => {
   // ADR-345/353/358/363 — ribbon command assembly (contextual trigger + BIM/array/text bridges).
   const { ribbonCommands, ribbonContextualTabs, activeContextualTrigger } = useDxfViewerRibbon({
     levelManager, universalSelection, activeTool,
-    handleToolChange, handleRibbonComingSoon, wrappedHandleAction,
+    handleToolChange: wrappedHandleToolChange, handleRibbonComingSoon, wrappedHandleAction,
     canUndo, canRedo, primarySelectedId, selectedEntityIds, currentScene,
   });
   return (
@@ -352,7 +373,7 @@ export const DxfViewerContent = React.memo<DxfViewerAppProps>((props) => {
           showCopyableNotification={showCopyableNotification}
           showGrid={showGrid}
           activeTool={activeTool}
-          handleToolChange={handleToolChange}
+          handleToolChange={wrappedHandleToolChange}
           testModalOpen={ui.testModalOpen}
           setTestModalOpen={ui.setTestModalOpen}
           testReport={ui.testReport}
@@ -386,7 +407,7 @@ export const DxfViewerContent = React.memo<DxfViewerAppProps>((props) => {
           setOverlayStatus={setOverlayStatus}
           setOverlayKind={setOverlayKind}
           snapEnabled={snapEnabled}
-          handleToolChange={handleToolChange}
+          handleToolChange={wrappedHandleToolChange}
           canUndo={canUndo}
           canRedo={canRedo}
           overlayStore={overlayStore}

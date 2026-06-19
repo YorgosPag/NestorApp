@@ -19,37 +19,11 @@
 import { useEffect, useRef } from 'react';
 import { EventBus, type DrawingEventType } from '../systems/events/EventBus';
 import { useBuildingStoreyCount } from './useBuildingStoreyCount';
-import {
-  buildStructuralGraph,
-  runOrganismChecks,
-} from '../bim/structural/organism/organism-checks';
-import { runReinforcementChecks } from '../bim/structural/organism/reinforcement-checks';
-import { runFootingDesignChecks } from '../bim/structural/footing-design/footing-design-checks';
-import {
-  buildActiveFootingFemAxialMap,
-  buildActiveColumnFemMomentMap,
-} from '../bim/structural/active-reinforcement';
-import { StructuralDiagnosticsStore } from '../bim/structural/organism/structural-diagnostics-store';
-// ADR-486 — DERIVED topology-aware τύπος στήριξης δοκαριού → transient store για το render path.
-import { buildBeamSupportTypeMap } from '../bim/structural/organism/derive-beam-support';
-import { BeamSupportConditionStore } from '../bim/structural/organism/beam-support-condition-store';
-import { computeSlabSupportConditions } from '../bim/structural/loads/slab-beam-support';
-import { SlabSupportConditionStore } from '../bim/structural/organism/slab-support-condition-store';
-import { computeBeamDesignTorsion } from '../bim/structural/loads/beam-torsion';
-import { BeamTorsionStore } from '../bim/structural/organism/beam-torsion-store';
-import { runSlabChecks } from '../bim/structural/organism/slab-checks';
-import { runBeamTorsionChecks } from '../bim/structural/organism/beam-torsion-checks';
-import { runFeasibilityChecks } from '../bim/structural/organism/feasibility-checks';
-// ADR-488 §6.1 — DERIVED effective βάση κολώνας (στατική συνέχεια κολώνα→πέδιλο) → transient store.
-import { buildColumnBaseContinuityMap } from '../bim/structural/organism/derive-column-base-continuity';
-import { ColumnBaseContinuityStore } from '../bim/structural/organism/column-base-continuity-store';
-import { buildOrganismScene } from '../bim/structural/organism/cross-level-organism-scene';
-import { runStructuralAnalyticalModel } from './structural-analytical-core';
-import { makeGuideOffsetLookup } from '../bim/hosting/guide-store-offset-lookup';
-import { resolveStructuralCode } from '../bim/structural/codes';
 import { useStructuralSettingsStore } from '../state/structural-settings-store';
 import { useFoundationLevelStore } from '../state/foundation-level-store';
-import type { Entity } from '../types/entities';
+// ADR-500 — ο re-derive πυρήνας βγήκε σε SSoT module ώστε να τον μοιράζονται ο reactive
+// shell (εδώ) ΚΑΙ ο σύγχρονος convergence loop (`runAutoStudy`) — μηδέν διπλότυπο.
+import { runOrganismDiagnostics } from './structural-organism-core';
 import type { SceneModel } from '../types/scene';
 
 interface LevelManagerLike {
@@ -92,75 +66,10 @@ export function useStructuralOrganism(props: { levelManager: LevelManagerLike })
 
     const recompute = (): void => {
       scheduled = false;
-      const levelId = levelManager.currentLevelId;
-      const scene = levelId ? levelManager.getLevelScene(levelId) : null;
-      if (!levelId || !scene) {
-        StructuralDiagnosticsStore.set([]);
-        return;
-      }
-      const activeEntities = scene.entities as unknown as readonly Entity[];
-      // ADR-459 Phase 0 — cross-level: merge τα πέδιλα του ορόφου Θεμελίωσης
-      // (foundation-level-store) σε απόλυτα Z ώστε η footing-bearing ακμή
-      // (πέδιλο Θεμελίωσης ↔ κολόνα ισογείου) να προκύπτει σωστά. Single-level
-      // (κενός store target) → active-only + empty offset map → byte-for-byte η παλιά συμπεριφορά.
-      const fl = useFoundationLevelStore.getState();
-      const merged = fl.target
-        ? buildOrganismScene({
-            activeEntities,
-            activeFloorElevationMm: fl.activeFloorElevationMm,
-            foundationEntities: fl.entities,
-            foundationFloorElevationMm: fl.target.floorElevationMm,
-          })
-        : { entities: activeEntities, floorElevationByEntityId: undefined };
-      const entities = merged.entities;
-      const graph = buildStructuralGraph(entities, {
-        floorElevationByEntityId: merged.floorElevationByEntityId,
-      });
-      // ADR-486 — publish τον DERIVED topology-aware τύπο στήριξης (πρόβολος όταν 1 στήριξη)
-      // στο transient store ώστε το per-entity render path (active-reinforcement) να τον
-      // διαβάζει synchronous, χωρίς να ξαναχτίζει τον graph σε κάθε render (ADR-040 safe).
-      BeamSupportConditionStore.set(buildBeamSupportTypeMap(graph));
-      // ADR-498 — DERIVED topology-aware συνθήκη στήριξης πλάκας (spatial: πλάκες εκτός graph).
-      SlabSupportConditionStore.set(computeSlabSupportConditions(entities));
-      // ADR-499 §6.3 — DERIVED στρεπτική ροπή σχεδιασμού δοκού T_Ed από μονόπλευρη πρόβολο-
-      // πλάκα ώστε το per-entity sizing/reinforce path (active-reinforcement) να τη διαβάζει
-      // synchronous, χωρίς να ξαναϋπολογίζει τη spatial τοπολογία προβόλου (ADR-040 safe).
-      BeamTorsionStore.set(computeBeamDesignTorsion(entities));
-      // ADR-488 §6.1 — publish την DERIVED effective βάση κάθε κολώνας (άνω παρειά
-      // στηρίζοντος πεδίλου) στο transient store ώστε το 3Δ render path (syncColumns)
-      // να κατεβάζει τη βάση στο πέδιλο (στατική συνέχεια), χωρίς να ξαναχτίζει graph.
-      ColumnBaseContinuityStore.set(buildColumnBaseContinuityMap(graph));
-      // ADR-459 Φ4d — geometry connectivity (graph-only) + reinforcement διαγνωστικά
-      // (entities + active code provider) σε ΕΝΑ low-freq store write (ADR-040 safe).
-      const settings = useStructuralSettingsStore.getState();
-      const provider = resolveStructuralCode(settings.codeId);
-      const diagnostics = [
-        ...runOrganismChecks(graph),
-        ...runReinforcementChecks(graph, entities, provider),
-        // ADR-464 — έλεγχος έδρασης πεδίλου + raft (αδρανές χωρίς σ_allow / φορτίο).
-        // ADR-497 — engaged FEM αντίδραση βάσης ανά πέδιλο (πρόβολος → single source of truth).
-        ...runFootingDesignChecks(entities, provider, settings.soilBearingCapacityKpa, {
-          storeyCount: storeyCountRef.current,
-          deadAreaLoadKpa: settings.deadAreaLoadKpa ?? 0,
-          liveAreaLoadKpa: settings.liveAreaLoadKpa ?? 0,
-        }, buildActiveFootingFemAxialMap(entities)),
-        // ADR-498 — έλεγχος βέλους πλάκας-προβόλου (πολύ λεπτή → warning, αλλιώς σιωπηλό).
-        ...runSlabChecks(entities, provider),
-        // ADR-499 §C — στρέψη δοκού από μονόπλευρη πρόβολο-πλάκα (T_Ed > T_Rd,max → warning).
-        ...runBeamTorsionChecks(entities),
-        // ADR-499 §D — έσχατη παρέμβαση: μέλος ανέφικτο στο πρακτικό μέγιστο μέγεθος (πλάκα/
-        // κολώνα/δοκός-στρέψη) → error «απαιτείται αλλαγή σχεδιασμού». Η FEM ροπή κολώνας ίδια
-        // με τον auto-sizer B2 (engaged-gated map → μηδέν διπλή αλήθεια).
-        ...runFeasibilityChecks(entities, provider, buildActiveColumnFemMomentMap(entities)),
-        // ADR-480 (T2) — χτίσε & δημοσίευσε τον DERIVED αναλυτικό φορέα + προκαταρκτικά
-        // diagnostics ευστάθειας στο ΙΔΙΟ low-freq pass (single diagnostics writer).
-        ...runStructuralAnalyticalModel({ entities, graph, getOffset: makeGuideOffsetLookup() }),
-      ];
-      StructuralDiagnosticsStore.set(diagnostics);
-      EventBus.emit('bim:structural-organism-updated', {
-        diagnosticCount: diagnostics.length,
-        levelId,
-      });
+      // ADR-500 — όλη η re-derive λογική ζει πλέον στο SSoT `runOrganismDiagnostics`
+      // (graph → transient stores → diagnostics + analytical model → single store write).
+      // Ο σύγχρονος convergence loop καλεί τον ίδιο πυρήνα → ένα μέρος, καμία απόκλιση.
+      runOrganismDiagnostics(levelManager, { storeyCount: storeyCountRef.current });
     };
 
     const schedule = (): void => {

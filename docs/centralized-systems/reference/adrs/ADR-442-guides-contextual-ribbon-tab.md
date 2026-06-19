@@ -1,6 +1,6 @@
 # ADR-442 — Guides & Grid Contextual Ribbon Tab (Revit-grade)
 
-**Status:** 🟢 v1 implemented — pending browser-verify + commit (2026-06-12)
+**Status:** 🟢 v1.3 implemented — pending browser-verify + commit (2026-06-19)
 **Discipline:** DXF Viewer · Ribbon UI
 **Related:** ADR-345 (Ribbon data model & contextual-tab framework), ADR-189 (Construction Grid & Guide System), ADR-034 (guide-commands split), ADR-357 (line-tool contextual tab — sibling pattern)
 
@@ -39,6 +39,26 @@ tool is active (`useGuideWorkflowState`) and clears on tool change. Therefore th
 "tool active" check covers BOTH the tool-active and the guide-selected case with one
 prefix test, no new state. (Sibling to ADR-357's `line-tool-active`.) Guide actions
 (`guides-visibility`, `grid`) do not set `activeTool`, so toggling them keeps the tab open.
+
+### Deselect-on-activation — προϋπάρχουσα επιλογή δεν μπλοκάρει το tab (v1.3)
+
+`useActiveContextualTrigger` είναι **priority cascade**: ελέγχει την επιλεγμένη οντότητα
+(`fromSelection`) **ΠΡΙΝ** το `activeTool.startsWith('guide-')`. Όταν ο χρήστης είχε ήδη
+επιλεγμένη οντότητα (ανοιχτό το tab της) και ενεργοποιούσε εργαλείο οδηγών, η επιλογή
+παρέμενε → το cascade επέστρεφε το tab της οντότητας → το tab «Οδηγοί» **δεν αναδυόταν**
+(το auto-switch του `RibbonRoot` έχει `if (ids === prev) return;` guard).
+
+**Λύση (Revit-grade):** στο Revit η **εκκίνηση εντολής** Grid/Guides **αποεπιλέγει**. Άρα
+όταν ενεργοποιείται `guide-` tool, καλείται `universalSelection.clearAll()` **ατομικά με
+το tool activation** (mutation σε event, ΟΧΙ effect → ADR-040-safe) → `fromSelection`=null
+→ trigger=`GUIDES` αμέσως. **SSoT reuse:** ίδιο `universalSelection.clearAll()` που ήδη
+καλούν τα 9 MEP ribbon bridges στην ενεργοποίηση εργαλείου — μηδέν νέο deselect path.
+
+**Single wrapped entry point:** το `wrappedHandleToolChange` (στο `DxfViewerContent`)
+overrides **και** το `handleToolChange` **και** το `onToolChange` alias στο `wrappedState`,
+ώστε ΟΛΑ τα trigger paths να μοιράζονται ένα deselect: ribbon split-button, **keyboard
+chords** (X/Z/K… μέσω `useDxfToolbarShortcuts`→`NormalView.onToolChange`) και
+`level-panel:tool-change`. Surgical scope: ΜΟΝΟ `guide-` tools — modify/dim/drawing άθικτα.
 
 ### Chicken-and-egg — persistent entry preserved
 
@@ -93,6 +113,7 @@ removed in a follow-up. Both use the identical `grid` action/icon — zero behav
 - `src/subapps/dxf-viewer/app/ribbon-contextual-config.ts` (import + registry + `guide-` trigger)
 - `src/i18n/locales/el/dxf-viewer-shell.json` (1 tab + 5 panel keys)
 - `src/i18n/locales/en/dxf-viewer-shell.json` (1 tab + 5 panel keys)
+- `src/subapps/dxf-viewer/app/DxfViewerContent.tsx` (v1.3 — `wrappedHandleToolChange` deselect-on-`guide-`-activation· override `handleToolChange`+`onToolChange` στο `wrappedState`)
 
 ## 5. Google-level checklist (N.7.2)
 
@@ -121,3 +142,10 @@ removed in a follow-up. Both use the identical `grid` action/icon — zero behav
   compact split-button launcher (Revit "Grid" entry pattern). Legacy 33-variant mega-dropdown
   removed; dropdown trimmed to 5 starters + open-panel. Resolves the "how do I reach guides
   if Home is cleaned" chicken-and-egg. `home-tab-guides.ts` MOD.
+- **2026-06-19** — v1.3 (Opus 4.8). **Deselect-on-guides-activation** (§2): προϋπάρχουσα
+  επιλογή οντότητας μπλόκαρε το tab «Οδηγοί» (priority cascade `fromSelection` > tool +
+  `RibbonRoot` `ids===prev` guard). Fix: `wrappedHandleToolChange` καλεί
+  `universalSelection.clearAll()` σε `guide-` activation (SSoT reuse — MEP bridges pattern),
+  override `handleToolChange`+`onToolChange` στο `wrappedState` ώστε ribbon + keyboard chords
+  + LevelPanel να μοιράζονται ένα deselect path. ADR-040-safe (event, όχι effect). Surgical:
+  μόνο `guide-`. `DxfViewerContent.tsx` MOD. Pending browser-verify + commit.

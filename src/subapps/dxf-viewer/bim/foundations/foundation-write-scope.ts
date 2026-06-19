@@ -28,7 +28,7 @@ import { useFoundationLevelStore } from '../../state/foundation-level-store';
 import type { FoundationLevelTarget } from '../../systems/levels/building-foundation-level';
 
 /** Ελάχιστο σχήμα του auth user (companyId/uid). */
-type FoundationWriterUser =
+export type FoundationWriterUser =
   | { readonly companyId?: string | null; readonly uid?: string | null }
   | null
   | undefined;

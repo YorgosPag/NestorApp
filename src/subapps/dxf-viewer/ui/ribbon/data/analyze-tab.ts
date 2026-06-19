@@ -150,6 +150,21 @@ export const STRUCTURAL_REINFORCE_PANEL: RibbonPanelDef = {
     {
       isInFlyout: false,
       buttons: [
+        // ADR-500 (ADR-487 §7) — «Αυτόματη Μελέτη»: ντετερμινιστικός βρόχος σύγκλισης
+        // που μελετά όλον τον όροφο μόνος του (φορτία→size→reinforce→footing→diagnostics)
+        // μέχρι μηδέν κόκκινο ή MAX_STUDY_ROUNDS, με ΕΝΑ atomic undo + report toast.
+        {
+          type: 'simple',
+          size: 'large',
+          command: {
+            id: 'analyze.auto-study',
+            labelKey: 'ribbon.commands.autoStudyOrganism',
+            icon: 'struct-run-analysis',
+            commandKey: 'organism.auto-study',
+            action: 'organism.auto-study',
+            tooltipKey: 'ribbon.tooltips.autoStudyOrganism',
+          },
+        },
         // ADR-482 — «Ανάλυση»: explicit trigger του στατικού FEM solver (ADR-481).
         // emit `bim:run-structural-analysis` → dormant hook ξυπνά → K·u=F → M/V/N.
         {

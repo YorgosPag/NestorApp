@@ -220,6 +220,13 @@ export function useDxfViewerCallbacks(params: DxfViewerCallbacksParams): DxfView
       EventBus.emit('bim:compute-loads-requested', {});
       return;
     }
+    // ADR-500 (ADR-487 §7): «Αυτόματη Μελέτη» — ντετερμινιστικός βρόχος σύγκλισης που
+    // μελετά όλον τον όροφο μόνος του (φορτία→size→reinforce→footing→diagnostics) μέχρι
+    // μηδέν κόκκινο. Ο useStructuralAutoStudy hook εκτελεί τον loop + report toast.
+    if (action === 'organism.auto-study') {
+      EventBus.emit('bim:auto-study-requested', {});
+      return;
+    }
     // ADR-482 (T3-UI): «Ανάλυση» — explicit trigger του στατικού FEM solver (ADR-481).
     // Ο dormant `useProactiveStructuralAnalysis` ξυπνά → K·u=F → AnalysisResultsStore.
     // ADR-488: το πάτημα οπλίζει το engaged latch → ο solver μένει ΖΩΝΤΑΝΟΣ (proactive
