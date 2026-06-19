@@ -1,6 +1,6 @@
 # ADR-503 — Two-way auto-size + safety-gated lock (μηδέν σπατάλη + μηδέν ανασφαλές κλείδωμα)
 
-**Status:** 🟡 Slice 1 + Slice 2 DONE (two-way column section + ν-floor + safety-gated lock) — UNCOMMITTED 2026-06-19 · Slice 3 (organism-wide: δοκό/πλάκα/πέδιλο) = ΕΠΟΜΕΝΗ ΣΥΝΕΔΡΙΑ
+**Status:** 🟡 Slice 1 + Slice 2 + Slice 3 DONE (two-way column section + ν-floor + safety-gated lock κολώνα **+ organism-wide lock: δοκός/πλάκα/πέδιλο**) — UNCOMMITTED 2026-06-19
 **Date:** 2026-06-19
 **Υλοποιεί:** ADR-487 §4 (live αυτο-διόρθωση) + §5 (δυναμική επανα-διαστασιολόγηση) + §8.4 (ο άνθρωπος υπογράφει, το σύστημα προειδοποιεί)
 **Σχετικά:** ADR-499 (auto-correcting organism / column sizing B2), ADR-502 (live reaction-aware takedown), ADR-475 (auto member sizing)
@@ -43,9 +43,19 @@
 - Toast: NEW typed event `bim:column-section-rejected` + registrar στο `structural-attach-notifications.ts` με **stable `id`** (μηδέν storm κατά το συνεχές section-grip drag). i18n `structuralOrganism.columnSectionRejected` (el+en).
 - **Jest:** +5 `isColumnSectionAdequate` (200/250→ανεπαρκές, 300/500→επαρκές, circular→no-op) +3 `resolveColumnSectionLock` (pass-through / lock OK / ΜΠΛΟΚ-clamp). 28/28 sizing GREEN· 1226 pass structural+commands (7 pre-existing fails: 6 raft ADR-476 + 1 AssignWallType).
 
-## 4. Slice 3 — Organism-wide (ΕΠΟΜΕΝΗ ΣΥΝΕΔΡΙΑ)
+## 4. Slice 3 — Organism-wide safety-gated lock (DONE 2026-06-19)
 
-Ίδιο two-way + lock-gate σε δοκό (`member-sizing`) / πλάκα (`slab-sizing`) / πέδιλο. Κοινός helper.
+**Εύρημα:** οι sizers (`suggestBeamSection`/`suggestSlabThickness`/`suggestPadDimensions`) ήταν **ήδη two-way** → το Slice 3 πρόσθεσε **ΜΟΝΟ** το lock-gate (reject-if-inadequate), per-member, mirror του `resolveColumnSectionLock`.
+
+**Δοκός** (`sizing/beam-size-patch.ts`): NEW pure `isBeamSectionAdequate(provider, beam, next, support?, torsion?)` (depth-driven· `adequate ⇔ next.depth ≥ suggested.depthMm`, ctx από τα **next** params + topology-aware `resolveActiveBeamSupportType`/`resolveActiveBeamTorsion`) + `resolveBeamSectionLock` (ΕΝΑ SSoT). Αντικατέστησε το inline `sectionChanged ? {...,autoSized:false} : ...` σε 2 σημεία: `commitBeamGripDrag` (grip) + `useBeamParamsDispatcher` (panel/ribbon).
+
+**Πλάκα** (`sizing/slab-size-patch.ts`): NEW `isSlabSectionAdequate` + `resolveSlabSectionLock` (composite `dna` → pass-through· `suggestSlabThickness` cantilever-only → `undefined` = no-op gate, αλλά κλειδώνει manual πάχος). Wiring `useSlabParamsDispatcher` — που **δεν κλείδωνε καθόλου** (διορθώνει και το pre-existing gap: χειροκίνητο πάχος έμενε AUTO → ο proactive κύκλος το ξαναέγραφε).
+
+**Πέδιλο** (`sizing/pad-size-patch.ts`): NEW `isPadAutoSized` (lock-flag = **`autoDesigned`**, ΟΧΙ νέο field — το `FoundationParams` δεν έχει `autoSized`· το μόνο που ξαναδιαστασιολογεί pad είναι ο `auto-foundation-layout` reconciler, gated σε `autoDesigned===true`) + pure `buildPadSizingInput` (διαστάσεις στηρίζουσας κολώνας μέσω explicit FK `footingId` + service N=G+Q + σ_allow) + `isPadSectionAdequate`/`resolvePadSectionLock` (reuse `suggestPadDimensions`). **Adequate → `autoDesigned:false`** (κλειδώνει από τον reconciler, επιτρέπεται over-dimensioned)· **inadequate → clamp στην ελάχιστη επαρκή, διατηρεί `autoDesigned`** + reject. Wiring 2 pad width/length sites: `commitFoundationGripDrag` (grip) + `useRibbonFoundationBridge.dispatchParams` (ribbon numeric). strip/tie-beam → pass-through.
+
+**Toast (per-member, mirror):** 3 typed events `bim:{beam,slab,foundation}-section-rejected` + 3 registrar handlers με **stable `id` ανά τύπο** (μηδέν storm στο grip drag) + i18n `{beam,slab,footing}SectionRejected` (el+en). Το `columnSectionRejected` αμετάβλητο.
+
+**Jest:** +5 beam (13/13), +7 slab (16/16), +10 NEW pad → 88/88 sizing GREEN.
 
 ## 5. Tests (από repo ROOT)
 

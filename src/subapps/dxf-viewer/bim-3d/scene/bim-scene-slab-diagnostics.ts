@@ -79,9 +79,11 @@ export function dumpCoplanarAtSlabTopOnce(group: THREE.Object3D): void {
     box.setFromObject(m);
     box.getCenter(ctr); box.getSize(sz);
     const inst = (m as THREE.InstancedMesh).isInstancedMesh ? `INSTANCED(${(m as THREE.InstancedMesh).count})` : '';
+    const mat = Array.isArray(m.material) ? m.material[0] : m.material;
+    const off = (mat as THREE.Material)?.polygonOffset ? `off=${(mat as THREE.MeshStandardMaterial).polygonOffsetUnits}` : 'off=none';
     lines.push(
-      `#${meshN} type=${m.userData['bimType']} id=${String(m.userData['bimId'] ?? '?').slice(0, 20)} matId=${m.userData['matId'] ?? '?'} ${inst}\n` +
-      `   center=(${ctr.x.toFixed(2)},${ctr.y.toFixed(2)},${ctr.z.toFixed(2)}) size=(${sz.x.toFixed(2)},${sz.y.toFixed(2)},${sz.z.toFixed(2)}) visible=${m.visible} parentType=${m.parent?.userData?.['bimType'] ?? m.parent?.type}`,
+      `#${meshN} type=${m.userData['bimType']} matId=${m.userData['matId'] ?? '?'} finish=${m.userData['structuralFinish'] ?? false} ${inst} ${off}\n` +
+      `   maxY=${box.max.y.toFixed(3)} center=(${ctr.x.toFixed(2)},${ctr.y.toFixed(2)},${ctr.z.toFixed(2)}) size=(${sz.x.toFixed(2)},${sz.y.toFixed(2)},${sz.z.toFixed(2)})`,
     );
   });
   lines.push(`(σύνολο ${meshN} meshes)`);
